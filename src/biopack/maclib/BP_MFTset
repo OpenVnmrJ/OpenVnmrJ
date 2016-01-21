@@ -1,0 +1,50 @@
+"macro BP_MFTset"
+flush
+$folder_name=curexp+'/acqfil'
+cp(curexp+'/curpar',$folder_name+'/procpar')
+exists(timetab_name, 'file'):$ttn
+    if ($ttn=0) then
+    banner('file with timetab '+timetab_name+' does not exist ')
+    return
+endif
+
+$procpar_name=$folder_name+'/procpar'
+$fid_name=$folder_name+'/fid'
+exists($procpar_name, 'file'):$ttn
+    if ($ttn=0) then
+    banner('file with procpar '+$procpar_name+' does not exist ')
+    return
+endif
+exists($fid_name, 'file'):$ttn
+    if ($ttn=0) then
+    banner('file with fid '+$fid_name+' does not exist ')
+    return
+endif
+$out_f=output_format
+on('range0'):$r0act
+on('range1'):$r1act
+BPfindfile('ToASTD_3D'):$path
+if($out_f='s') then
+	$set=$path+' '+$folder_name+' '+timetab_name+' '+'0'
+else
+	$set=$path+' '+$folder_name+' '+timetab_name+' '+'1'
+endif
+if($r0act=0) then
+	$set=$set
+elseif($r1act=0) then
+	$srange0='' format(range0,6,2):$srange0
+	$set=$set+' '+$srange0
+else
+	$srange0='' format(range0,6,2):$srange0
+	$srange1='' format(range1,6,2):$srange1
+	$set=$set+' '+$srange0+' '+$srange1
+
+endif
+$set=$set+' >'+$folder_name+'/out.txt&'
+shell('cp '+timetab_name+' '+curexp+'/acqfil') "save sampling schedule in current experiment"
+shell($set)
+if($out_f='s') then
+	banner(' Transformation started, look for '+curexp+'/acqfil/ucsf file')
+else
+	banner(' Transformation started, look for NMRDraw files in the folder '+curexp+'/acqfil')
+endif

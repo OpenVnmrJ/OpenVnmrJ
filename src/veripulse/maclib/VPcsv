@@ -1,0 +1,162 @@
+"macro VPcsv"
+
+if ($# = 0) then
+  $action = 'now'
+else
+  $action = $1
+endif
+
+if ($action='cancel') THEN
+
+  atcmd('VPscheduledtests','cancel')
+  atcmd
+  shell('rm '+userdir+'/csvlib/IPtestschedule'):$dum
+  write('line3','Scheduled system tests cancelled')
+  vnmrjcmd('pnew','IPdispsched')
+  return
+ENDIF
+
+exists(userdir+'/csvlib','directory'):$ex
+if ($ex<0.5) then mkdir(userdir+'/csvlib') endif
+
+
+if ($action='now') then
+   systemtime('%Y_%m_%d_%H_%M_%S'):IPrunid
+   $csvfile=userdir+'/csvlib/IPselectedtests_'+IPrunid+'.csv'
+else
+   IPrunid='RUNID'
+   $csvfile=userdir+'/csvlib/IPscheduledtests.csv'
+   $tuneinfofile=userdir+'/csvlib/IPtuneinfo'
+   exists($tuneinfofile,'file'):$tfileex
+   if ($tfileex) then rm($tuneinfofile) endif
+endif
+write('reset',$csvfile)
+write('file',$csvfile,'"location","IPrunid","solvent","samplename","explist","adirtmplt","sdirtmplt","svftmplt","emailaddr","emessage","pltopt","wshim","method","alock","Gmap"')
+
+$loc='' 
+$emessage='y'
+$adirtmplt=IPdatadir+'/'+probe
+$sdirtmplt='$samplename$_$IPrunid$%R0%'
+$svftmplt='$samplename$_'
+$i=1
+$numTest=size('VPtests')
+$j=0
+$loc=''
+$historydir=IPdatadir+'/'+probe+'/History'
+exists($historydir,'directory'):$ex
+if ($ex<0.5) then mkdir('-p',$historydir) endif
+$plotdir=IPdatadir+'/'+probe+'/Plots'
+exists($plotdir,'directory'):$ex
+if ($ex<0.5) then mkdir($plotdir) endif
+$listfile=$historydir+'/'+IPrunid+'.testlist'
+
+write('reset',$listfile)
+while ($j < $numTest) do
+  $j=$j+1
+  teststr('VPorder',VPtests[$j]):$index
+  teststr('VPsampID',VPsample[$index]):$sindex
+  if (VPloc[$sindex] = 'NA') then
+    $loc='0'
+  else
+    $loc=VPloc[$sindex]
+  endif
+
+  $solv=''
+  format(VPsolvent[$sindex],'lower'):$solv
+  $Gmap='lk'
+  if ($solv='d2o_10') then $Gmap='H1' endif
+
+  write('file',$csvfile,'%s,"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"',
+                   $loc,IPrunid,VPsolvent[$sindex],VPsamplename[$index],VPmacro[$index],$adirtmplt,$sdirtmplt,$svftmplt,IPemailaddr,$emessage,pltopt,VPwshim[$index],VPshimmethod[$index],VPalock[$index],$Gmap)
+  VPwritetestinfo(VPtests[$j])
+      if ((traymax=0) or (atune<>'y')) then
+        //write('line3','No sample changer/ProTune, writing %s %s',VPsampLabel[$sindex],VPtune[$index])
+        $ls=systemdir+'/tmp/VPlastsamp'
+        exists($ls,'file'):$lsex
+        if ($lsex) then rm($ls) endif
+        if ($action='now') then
+	    IPmodule('savetuneinfo',VPsampLabel[$sindex],VPtune[$index])
+	else
+	    IPmodule('savetune4sched',VPsampLabel[$sindex],VPtune[$index])
+	endif
+      endif
+
+endwhile
+
+   //Add CMD protocol to email report when done
+  $macro='VPemailreports' $wshim='n' $alock='n' $method='pfg' $samplename='VeriPulse_report'
+  write('file',$csvfile,'%s,"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"',
+                   $loc,IPrunid,VPsolvent[$sindex],$samplename,$macro,$adirtmplt,$sdirtmplt,$svftmplt,IPemailaddr,$emessage,pltopt,$wshim,$method,$alock,$Gmap)
+
+if ((traymax=0) or (atune<>'y')) then
+  VPwritetestinfo('VPemailreports')
+  if ($action='now') then
+     IPmodule('savetuneinfo','none','NA,NA')
+   else
+     IPmodule('savetune4sched','none','NA,NA')
+  endif
+endif
+
+IF ($action='now') THEN
+
+   VPstart('sysok'):$ok
+   if not $ok then return endif
+   write('line3','Submitting selected tests to the Study Queue')
+   //Save module before submitting
+   IPmodule('save')
+   IPmodule('savetestlist')
+   cpADMIN('Start')
+   $cpp17=cpprefs[17]
+   $cpp18=cpprefs[18]
+   $cpp19=cpprefs[19]
+   $cpp63=cpprefs[63]
+   cpprefs[46]='yes'
+   cpprefs[17]=''
+   cpprefs[18]=''
+   cpprefs[19]=''
+   cpprefs[63]=''
+   cpADMIN('save')
+   csv2cpQ($csvfile,'rpv','VeriPulse')
+
+   //Multi-submit must be switched off after submission
+   cpADMIN('Start')
+   cpprefs[46]='no'
+   cpprefs[17]=$cpp17
+   cpprefs[18]=$cpp18
+   cpprefs[19]=$cpp19
+   cpprefs[63]=$cpp63
+   cpADMIN('save')
+
+ELSE
+
+   VPstart('sysok'):$ok
+   if not $ok then return endif
+
+   write('line3','Test shedule created')
+   if (IPsched_day='') or (IPsched[2]='') or (IPsched[3]='') then
+       write('line3','You must enter a day & time for scheduled tests')
+       return
+  endif
+  if (IPsched_day='all') then
+    $days='sun mon tue wed thu fri sat'
+  else
+    $days=IPsched_day
+  endif
+
+  if ($days='once') then
+    $time=IPsched[2]+':'+IPsched[3]
+  else
+    $time=IPsched[2]+':'+IPsched[3]+' '+$days
+  endif
+
+  write('line3','VeriPulse tests scheduled for %s',$time)
+
+  atcmd('VPscheduledtests',$time,'start')
+  $showfile=userdir+'/persistence/IPtestschedule'
+  shell('cp '+$showfile+' '+userdir+'/csvlib'):$dum
+  vnmrjcmd('pnew','IPdispsched')
+
+  IPmodule('save4sched')
+  //IPmodule('savetestlist')
+endif
+

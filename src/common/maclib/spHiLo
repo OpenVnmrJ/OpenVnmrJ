@@ -1,0 +1,91 @@
+"macro spHiLo"
+// spHiLo - get best (spLo) and two worst (spHi spNextHi) vertexs
+
+spLo = 1
+if (spYval[1] > spYval[2]) then
+  spHi = 1
+  spNextHi = 2
+else
+  spHi = 2
+  spNextHi = 1
+endif
+ 
+$i = 1
+while ($i <= spDim+1) do
+  if (spYval[$i] <= spYval[spLo]) then
+    spLo = $i
+  endif
+  if (spYval[$i] > spYval[spHi]) then
+    spNextHi = spHi
+    spHi = $i
+  elseif ( (spYval[$i] > spYval[spNextHi]) and ($i <> spHi) ) then
+    spNextHi = $i
+  endif
+  $i = $i + 1
+endwhile
+
+$j = 0
+$maxj=0
+$index = ''
+$maxdiff = -1e6
+while ($j < spDim) do
+  $j = $j + 1
+  $i = 0
+  $max = -1e6
+  $min=1e6
+  while ($i < spDim+1) do
+    $i = $i + 1
+    format($i,0,0):$index
+    $vec = 'spVec' + $index
+    if ({$vec}[$j] < $min) then
+      $min = {$vec}[$j]
+    endif
+    if ({$vec}[$j] > $max) then
+      $max = {$vec}[$j]
+    endif
+  endwhile
+  if ($max < 0) then
+    $max = -trunc(-$max)
+  else
+    $max = trunc($max)
+  endif
+  if ($min < 0) then
+    $min = -trunc(-$min)
+  else
+    $min = trunc($min)
+  endif
+  $diff = $max - $min
+  if ($diff > $maxdiff) then
+    $maxdiff = $diff
+    $maxj=$j
+  endif
+endwhile
+spTolExp = $maxdiff
+spTolExpIndex = $maxj
+
+// an alternate method for setting a tolerance,
+// based on the values of the vertices
+
+// abs(spYval[spHi] - spYval[spLo]):$t1
+// abs(spYval[spHi]):$t2hi
+// abs(spYval[spLo]):$t2lo
+// $t2 = $t2hi + $t2lo
+// if ($t2 = 0) then
+//   spTolExp = 0
+// else
+//   spTolExp = 2 * $t1 / $t2
+// endif
+
+
+if (spTolExp <= spTol) then
+  spStage = 'pass'
+elseif (spIter > spMaxIter) then
+  spStage = 'fail'
+elseif (spTime[3] - spTime[1] > spTime[2]) then
+  spStage = 'timefail'
+else
+  spTry('test',-1)
+  spStage = 'eval'
+  {spSet}
+endif
+

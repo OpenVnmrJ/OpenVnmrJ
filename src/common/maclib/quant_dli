@@ -1,0 +1,155 @@
+"macro quant_dli"
+"quant_dli macro - to replace dli command"
+"NOT USED NOW but a potential holding spot"
+"display list of integrals"
+
+"find integrals"
+if $#>1.5 then
+  nli($1,$2)
+else
+  if $#>0.5 then
+    nli($1)
+  else
+    nli
+  endif
+endif
+
+isvnmrj:$isj
+$nsize=size('liamp')
+
+if $nsize>0.5 then
+
+  "set regions"
+  if $nsize<1.5 then
+    $regions='n'
+  else
+    if intmod='partial' then
+      $regions='y'
+    else
+      if intmod='full' then
+        $regions='n'
+      else "intmod='off'"
+        on('lifrq'):$on
+        if $on>0.5 then
+          $regions='y'
+        else
+          $regions='n'
+        endif
+      endif
+    endif
+  endif
+
+  "title"
+  $file=curexp+'/dli.out'
+  write('reset',$file)
+  if $isj>0.5 then
+    if $regions='y' then
+      if axis='p' then
+        $title='region   start(ppm)   end      integral'
+      else
+        $title='region   start(Hz)    end      integral'
+      endif
+    else
+      if axis='p' then
+        $title='index   freq(ppm)      intensity'
+      else
+        $title='index   freq(Hz)       intensity'
+      endif
+    endif
+    write('file',$file,'%s',$title)
+  endif
+
+  "normalization constants"
+  $normInt = 'n'
+  $insval = 1.0
+  exists('ins','parameter'):$e1
+  if $e1>0.5 then
+    $insval = ins
+    on('insref'):$o2
+    if ($o2 > 0.5) then
+      if (insref > 0.0) then
+        $insval = $insval / insref
+      endif
+    else
+      if ($o2 > -0.5) then
+        $normInt = 'y'
+      endif
+    endif
+  endif
+  if ($insval <= 0.0) then
+    $insval = 1.0
+  endif
+  if $normInt='n' then
+    $insval = $insval / fn
+  endif
+
+  "init"
+  $rflrfp = rfl - rfp
+  $ifrq = 1.0 / reffrq
+  $start = (sp + wp)
+  if axis='p' then $start = $start * $ifrq endif
+  $edge = $start
+
+  "normalization"
+  if ($normInt = 'y') then
+    $norm = 0.0
+    $n=0
+    repeat
+      $n=$n+1
+      $frq = (lifrq[$n] - $rflrfp)
+      if axis='p' then $frq = $frq * $ifrq endif
+      if ($frq < $edge) then
+        $amp = liamp[$n]
+        if $regions='y' then
+          if (($n/2) = trunc($n/2)) then
+            $norm = $norm + $amp
+          endif
+        else
+          $norm = $norm + $amp
+        endif
+      endif
+    until ($n>=$nsize)
+    if $norm=0.0 then
+      $vs1 = 1.0
+    else
+      $vs1 = $insval / $norm
+    endif
+  else
+    $vs1 = $insval
+  endif
+  if $vs1 = 0.0 then
+    $vs1 = 1.0
+  endif
+
+  "number conversion, write to file"
+  $n=0
+  repeat
+    $n=$n+1
+    $frq = (lifrq[$n] - $rflrfp)
+    if axis='p' then $frq = $frq * $ifrq endif
+    if ($frq < $edge) then
+      if axis='p' then
+        if ($frq < sp * $ifrq) then $frq = sp * $ifrq endif
+      else
+        if ($frq < sp) then $frq = sp endif
+      endif
+      $amp = liamp[$n] * $vs1
+      if $regions='y' then
+        if (($n/2) = trunc($n/2)) then
+          write('file',$file,'%4d  %10g    %10g  %10g',$n/2,$start,$frq,$amp)
+        else
+          $start = $frq
+        endif
+      else
+        write('file',$file,'%4d  %10g     %10g',$n,$frq,$amp)
+      endif
+    endif
+  until ($n>=$nsize)
+
+  "output"
+  if $isj>0.5 then
+    curexp=curexp
+  endif
+  clear
+  cat($file)
+endif

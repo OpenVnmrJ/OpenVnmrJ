@@ -1,0 +1,70 @@
+"macro NUSrsw"
+"CSrsw - reduce the sw in the direct dimension. Eriks Kupce, Oxford April 2009 "
+"         2011 - updated to allow more options "
+
+$dir='' $rsw='' $rswfid='' $log='' $cmd = '' $sp='' $wp='' $opt=''
+
+//BPfindfile('rsw'):$rsw
+getbinpath('rsw'):$rsex,$rsw
+$opt = ' -f'   "the default option "
+$dir = curexp + '/procdir'
+$rswfid = $dir + '/rsw.fid'
+$log = $dir + '/rsw.log'
+
+if($#) then 
+  if($1) then
+    $opt = ' -t'
+  endif
+endif
+
+exists('CSwp','parameter'):$e
+if not ($e) then
+  write('error','parameter CSwp does not exist')
+  return (0)
+endif
+
+if(CSwp<2) then
+  CSwp=fn
+  CSsp=0
+endif
+
+exists('CSsp','parameter'):$e
+if not ($e) then
+  write('error','parameter CSsp does not exist')
+  return (0)
+endif
+
+exists($dir,'directory'):$e 
+if not ($e) then
+  $cmd='mkdir '+$dir
+  shell($cmd)
+  exists('BPsvf','maclib'):$bpmac
+  if ($bpmac) then
+	BPsvf($dir+'/orig.fid')
+  else
+  	svf($dir+'/orig.fid')
+  endif
+endif
+
+format(CSsp,5,0):$sp
+format(CSwp,5,0):$wp
+$cmd = $rsw +' ' + curexp + ' ' + $rswfid + ' ' + $sp + ' ' + $wp + $opt + ' >> ' + $log
+
+wft
+flush
+write('reset',$log)
+write('file',$log,$cmd) 
+shell($cmd)
+
+exists($rswfid+'/fid','file'):$e
+if($e) then
+  write('line3','CS data size reduction finished.')
+  return (1)
+else
+  write('error','CS data size reduction failed.')
+  dtext($log)
+  return (0)
+endif
+
+
+

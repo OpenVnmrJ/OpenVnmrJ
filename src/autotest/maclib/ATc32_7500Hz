@@ -1,0 +1,159 @@
+"macro ATc32_7500Hz"
+"ATc32_7500Hz      C13 Decoupling Stability"
+
+"        First a 7.5kHz decoupling profile is determined at a power level limited"
+"        by user-defined limit. Stability is determined by average and standard"
+"        deviation of 20 spectra done with on-resonance waltz16 decoupling and"
+"        also for 20 off-resonance decoupled spectra (at edge of bandwidth)."
+"        Next, 10 trials of 20 off-resonance spectra each are used in which the amplitude of"
+"        each spectrum is compared with the average value in the on-resonance"
+"        data. If the amplitude changes by +-30% a failure is determined and the"
+"        raw data saved in the data.failed autotest directory, with time-stamp"
+"        Recycle delay and acquisition time set for normal indirect detection"
+
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   dn='C13' 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   d1=1 at=.1
+   seqfil='s2pul'
+   lb='n' sb=at/4 s1 av
+   r7=0
+   r6=0
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   wnt=''
+   wexp='ATc32_7500Hz(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft sp=2.4p wp=2p vsadj(20)
+   text('Waltz16 Decoupling Profile')
+   lb=10 sb=-.07 gf='n' sbs='n'
+
+   ln(33.33/at_pwx90Lowpowerc):$ln  "set pw90 for decoupling to 33.33usec (7.5kHz)"
+   dpwr=at_pwx90Lowpowerlvlc-20.0*$ln*0.43429
+   $dpwr=dpwr+0.5
+   dpwr=trunc($dpwr)
+   dmf=1e6/33.33
+   dmfadj
+ 
+ if (dpwr>at_max_dpwr) then
+  write('line3','Decoupling Power Requested Exceeds Defined Power Limit (at_max_dpwr)')
+  write('line3',' Power Reduced to Permitted Level (at_max_dpwr)')
+  n1='Decoupling Power Requested Exceeds Defined Power Limit (at_max_dpwr)'
+  n2=' Power Reduced to Permitted Level (at_max_dpwr)'
+  atext(n1) atext(n2)
+  $diff=dpwr - at_max_dpwr
+  $count=1
+  repeat
+    dmf =dmf/1.12 
+    dpwr=dpwr - 1
+    $count=$count+1
+  until $count>$diff
+  dmfadj
+ endif
+   at_currenttest='C13Decoupling_profile_7500Hz'
+
+   seqfil='PRESAT' satpwr=6 satfrq=tof satmode='ynn' satdly=1.5 d1=0 
+   parfidss ssfilter=100 ssntaps=200
+   ssorder='n'
+   sb=at sbs=-at lb='n' fn=np np=fn fn=2*fn
+
+   r7=dof   "save value of on-resonance dof"
+   dmm='ccw' dm='nns'  "use synchronus decoupling (s) instead of asynchronus (y)" 
+   array('dof',41,dof-80*dfrq,4*dfrq)
+   wnt='ATwft vsadj(20) cdc vp=0 dssh'
+   wexp='ATc32_7500Hz(`PART2`)'
+   ATcycle au
+
+elseif ($1='PART2') then
+   wft sp=2.4p wp=2p vsadj(20)
+   ATsvf
+   ATpldecsc
+
+   $count=19
+   select(20) peak:$htstd
+   repeat
+    select($count) peak:$ht
+    if $ht<.7*$htstd then
+     "save dof value for later testing of sensitive part of decoupling profile"
+     r6=dof[$count+1]
+     $count=1
+    endif
+    $count=$count-1
+   until
+    $count=0
+
+   dof=r7        "restore on-resonance value of dof"
+
+   array('nt',20,1,0)
+   text('13C 7.5kHz Decoupling Stability: 20 trials on resonance')
+   at_currenttest='C13decstab_onres_7500Hz'
+   wnt='ATwft vsadj dssh'
+   wexp='ATc32_7500Hz(`PART3`)'
+   ATcycle au
+
+elseif ($1=`PART3`) then
+
+   wft sp=2.4p wp=2p vsadj(20)
+   ATsvf
+   ATplot:$avht,$stddev
+   r1=trunc(10*$avht)/10
+   r2=trunc(1000*$stddev)/1000
+   dof=r6         "set dof value for testing of sensitive part of decoupling profile"
+   text('13C 7.5kHz Decoupling Stability: 20 trials off resonance')
+   at_currenttest='C13decstab_offres_7500Hz'
+   wexp='ATc32_7500Hz(`PART4`)'
+   ATcycle au
+
+elseif ($1=`PART4`) then
+
+   wft sp=2.4p wp=2p vsadj(20)
+   ATsvf
+   ATplot:$avht,$stddev
+   r3=trunc(10*$avht)/10
+   r4=trunc(1000*$stddev)/1000
+
+   ATrecord('C13DECSTAB_7500Hz_c','13C 7500Hz Decoupling Stability (20 trials )','stability(off_res)',100-r4,' height(off_res)',r3,' std_dev(off_res)',r4,' stability(on_res)',100-r2,' height(on-res)',r1,' std_dev(on_res)',r2)
+   write('file',autotestdir+'/REPORT','13C 7500Hz Decoupling Stability (20 trials on resonance): %3.2f percent',100-r2)
+   write('file',autotestdir+'/REPORT','13C 7500Hz Decoupling Stability (20 trials off resonance): %3.2f percent',100-r4)
+   
+   r5=10    "repeats off-resonance stability test 10 times with fids saved if ampl is +-30%"
+   wexp='ATc32_7500Hz(`PART5`)'
+   ATcycle au
+
+elseif ($1='PART5') then
+
+   wft sp=2.4p wp=2p vsadj(20)
+   slw=slw+arraydim  "keeps record of # of fids"
+   $count=1 
+   $fail='n'
+   repeat
+    select($count) peak:$ht
+    if (($ht<.7*r3) or ($ht>1.3*r3)) then
+     $fail='y'
+    endif
+    $count=$count+1
+   until
+    $count>arraydim
+    if ($fail='y') then
+      ATfail('C13DECSTAB_7500Hz_c')     "saves fid in data.failed directory"
+    endif
+   r5=r5-1
+   if r5=0 then
+    ATnext return
+   else
+    wexp='ATc32_7500Hz(`PART5`)'
+    ATcycle au
+   endif
+endif

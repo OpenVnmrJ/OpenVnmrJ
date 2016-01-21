@@ -1,0 +1,129 @@
+**************************************************************
+*							     *
+*   wtfile   -   t2 user-written weighting module filename   *
+*  wtfile1   -   t1 user-written weighting module filename   *
+*							     *
+**************************************************************
+
+wtfile (or wtfile1) is set to the name of the file containing
+the user-written weighting function, hereafter referred to as
+"wtfile" (or "wtfile1").  The macro/shellscript wtgen is used
+to compile the user-written weighting function into an executable
+program.  The source file is stored in the directory $vnmruser/wtlib
+and has a ".c" file extension; the executable file, also in
+$vnmruser/wtlib, has the same name as the source file but has no
+file extension.
+
+If the parameter wtfile (or wtfile1) does not exist, it can be
+created with the following commands in Vnmr:
+
+		create('wtfile','flag')
+		setgroup('wtfile','processing')
+		setlimit('wtfile',15,0,0)
+
+
+If wtfile = '' (the NULL string), Vnmr does not look for a user-
+written weighting function, i.e., wtfile is inactive.  User-written
+weighting functions are enabled by setting wtfile = 'filename' where
+filename is the name of the executable weighting function.  The
+executable function has been created by compiling the weighting
+function source code with the UNIX shellscript wtgen.
+
+
+Vnmr first checks to see if the file "wtfile" (or "wtfile1") exists
+in $vnmruser/wtlib.  If the file exists in that directory, Vnmr
+then checks to see if the file "wtfile".wtp, which may contain
+the values for up to 10 internal weighting parameters, exists in
+the current experiment directory.  If "wtfile".wtp does not exist
+in the current experiment directory, the 10 internal weighting param-
+eters are set to 1.  Vnmr executes the "wtfile" program, using the
+optional file "wtfile".wtp as the source for parameter input, which
+subsequently creates the binary file "wtfile".wtf in the current
+experiment directory.  This binary file contains the weighting vector
+that will be read in by Vnmr.  The total weighting vector used by
+Vnmr is a vector-vector product of this external weighting vector
+and the internal Vnmr weighting vector, the latter being calculated
+from the parameters LB(1), GF(1), GFS(1), SB(1), SBS(1), and AWC(1).
+The parameter AWC(1) still provides an overall additive contribution
+to the total weighting vector.  Although one cannot modify the
+external weighting vector with WTI, one can modify the total weighting
+vector with WTI by modifying the internal Vnmr weighting vector.
+
+
+If the executable program "wtfile" does not exist in $vnmruser/wtlib,
+Vnmr looks for a text file in the current experiment directory with
+the name "wtfile".  This file contains the actual values for the
+external weighting function in floating point format (e.g., 0.025, but
+not 2.5e-2) with one value per line.
+
+
+All user-written weighting functions must follow a prescribed format,
+in analogy to pulse sequence programming.  This format is described
+below:
+
+
+	#include "weight.h"
+
+	wtcalc(wtpntr, npoints, delta_t)
+	int	npoints;
+	float	*wtpntr,
+		delta_t;
+	{
+	   /* user-written part */
+	}
+
+
+The variable wtpntr is a pointer and must be dealt with differently
+than an ordinary variable, e.g., delta_t.  wtpntr contains the address
+in memory of the first element of the user-calculated weighting
+vector; *wtpntr is the value of that first element.  "*wtpntr++ = x"
+implies that *wtpntr is set equal to x and the pointer wtpntr is then
+incrementd 4 bytes (4 bytes/float variable) to the address of the
+second element of the weighting vector.
+
+
+EXAMPLES
+--------
+
+
+1.  Source file "wtfile".c in $vnmruser/wtlib:
+
+	#include "weight.h"
+
+	wtcalc(wtpntr, npoints, delta_t)
+	int	npoints;	/* number of complex data points	*/
+	float	*wtpntr,	/* pointer to weighting vector 		*/
+		delta_t;	/* dwell time				*/
+	{
+   	   int	i;
+
+   	   for (i = 0; i < npoints; i++)
+      	      *wtpntr++ = (float) (exp(-(delta_t*i*wtconst[0])));
+	}
+
+	/* wtconst[0] to wtconst[9] are the 10 internal weighting
+	   parameters which have default values of 1.  These
+	   parameters are of type "float". */
+
+
+
+
+2.  Optional parameter file "wtfile".wtp in the current experiment directory:
+
+	 0.35		-  this is the value placed in wtconst[0]
+	-2.4		-  this is the value placed in wtconst[1], etc.
+
+
+
+
+3.  Text file "wtfile" in the current experiment directory:
+
+
+	 0.9879		-  value of the FIRST weighting vector element
+	 0.8876		-  value of the SECOND weighting vector element
+	-0.2109		-  value of the THIRD weighting vector element
+	 0.4567		-  value of the FOURTH weighting vector element
+	   .
+	   .
+	   .
+	 0.1234		-  value of the LAST weighting vector element

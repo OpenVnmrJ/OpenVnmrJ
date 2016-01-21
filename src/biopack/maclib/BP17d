@@ -1,0 +1,34 @@
+"macro BP17d"
+" BP17d "
+fn=2*np wft av
+select(1) vsadj(10)
+full
+$bestone=1 $counter=1
+$best=10
+repeat
+  sp=-1p wp=8p dc
+  select($counter)
+  sp=-1p wp=5p 
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) ph
+BPaph0
+gzlvl2=gzlvl2[$bestone]
+$hcch_gzlvl1='' format(gzlvl1,6,0):$hcch_gzlvl1
+BPsetparams('hcch_gzlvl1',$hcch_gzlvl1,'C13')
+$hcch_gzlvl2='' format(gzlvl2,6,0):$hcch_gzlvl2
+BPsetparams('hcch_gzlvl2',$hcch_gzlvl2,'C13')
+
+vsadj(50)
+BPsvf(userdir+'/AutoTripRes/ghcch_tocsy_gzlvl2cal_2')
+dssh pl('all') pap BPpage
+nt=nt*2 f
+wnt=''
+if (r7=9) then
+ BPprobe
+ banner('Fast AutoCalibration Finished')
+else
+ wexp='BP18' au dps
+endif

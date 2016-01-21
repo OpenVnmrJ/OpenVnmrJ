@@ -1,0 +1,27 @@
+"macro BPautoWetproc3"
+"BPautoWetproc3"
+$bestone=1
+BPprotref(4.66)
+vp=0 $counter=1 sp=4p wp=2p
+select(1) vsadj(180) $best=180
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+wetpw=wetpw[$bestone]
+write('line3','best soft pulse width is %4f us',wetpw)
+$wetpw='' format(wetpw,4,1):$wetpw  "update probefile"
+BPsetparams('wetpw',$wetpw,'H1')
+$wetpwr='' format(wetpwr,2,1):$wetpwr
+BPsetparams('wetpwr',$wetpwr,'H1')
+BPsetparams('wetshape',wetshape,'H1')
+select($bestone) vsadj(100)
+wnt='' wexp='wft BPaph0 BPprotref(4.66) f full ds dscale'
+if (seqfil='wnoesy') then
+  wetpw1=wetpw wetpwr1=wetpwr wetshape1=wetshape gswet1=gswet
+  gzlvlw1=gzlvlw gtw1=gtw
+endif
+ph nt=4 getparam('BPgain','H1'):gain
+au

@@ -1,0 +1,267 @@
+"macro AC10C"
+"AC10C: continue with F19 and P31 autocalibration "
+
+" arguments/options: "
+" (none)  : process initial spectrum, set up first Haupt array "
+" refine  : refine pw90 estimate using initial Haupt results "
+" setpwr  : set tpwr for pw90 <= 10, or to 60 "
+"  array  : set up 360 degree pw array "
+" save90  : process array spectra, update probe file "
+"     cf  : set up compression factor array "
+" savecf  : process cf array, update probe file "
+
+probeid('enabled'):$probeid
+
+IF ($# < 1) then
+  "initial Haupt set up, after preliminary spectrum has been acquired "
+
+  "process initial spectrum"
+
+  wft dc  aph0
+  vp = 0  vsadj(wc2max/2)
+
+  if tn = 'C13' then
+    d1 = d1_temp
+  elseif tn = 'H1' then
+    d1 = 40  " still not really 5*T1 for any of the lines "
+  else
+    d1 = 10  "measured T1 of TFT is 3 sec, so this isn't too bad "
+  endif
+
+  alock = 'n'  wshim = 'n'
+
+  if (pw = 10) and (tpwr = 51) then
+   "default initial conditions- begin at the beginning "
+    pw = 6,12  "initial Haupt array "
+    gain = 'y' 
+    if tn = 'F19' then gain = gain-6 endif  "in case initial flip was small"
+    wexp = 'AC10C(`refine`)'
+  else
+    pw = trunc(20*pw90/3)/10
+    pw = pw, 2*pw
+    gain = 'y'
+    wexp = 'AC10C(`setpwr`)'
+  endif
+
+  ss = 0  wnt = 'wft dssh(`dodc`)'  
+  da
+  write('alpha','\nChecking pw90 at tpwr %d',tpwr)
+  au('wait','next')
+  return
+
+ELSEIF ($1 = 'refine') then
+  "refine initial Haupt result, try for reasonably good pw90 estimate "
+
+  dssh('dodc')
+  select(1)  aph0 vsadj(100)  
+  if tn = 'H1' then 
+    th = 15
+  else
+    th = 60  
+  endif
+  nll
+  fp  pw_haupt:$pw90
+
+  pw = trunc(20*$pw90/3)/10
+  pw = pw, 2*pw
+  da
+  write('alpha','\nrefining pw90 estimate at tpwr %d',tpwr)
+
+  alock = 'n'  wshim = 'n'
+  wexp = 'AC10C(`setpwr`)'
+  au('next','wait')
+  return
+
+ELSEIF ($1 = 'setpwr') then
+  " set tpwr &/or pw to what should be the final value, assuming we "
+  " now have a good estimate of pw90 at the present power level "
+
+  " Rule: For F19 or P31 try for pw90 <= 10, or limit tpwr to <= 60 "
+  " For C13, try for pw90max "
+
+  dssh('dodc')
+  select(1) aph0 vsadj(100) th = 60  nll fp
+  pw_haupt:$pw90
+
+  if tn = 'C13' or tn = 'H1' then $target = pw90max else $target = 10 endif
+
+  if (($pw90 <= 1.08*$target) and ($pw90 >= 0.92*$target)) or (tpwr = 60) then
+    " we are there- set up array at present tpwr "
+    AC10C(`array`,$pw90)
+    return
+
+  else
+    " set pw & tpwr as best we can "
+
+    $factor = $pw90/$target  " $target is target pw90 "
+    ln($factor):$lnfactor
+    ln(10):$ln10
+    $tpwrdiff = 20*$lnfactor/$ln10 
+    if $tpwrdiff > 0 then
+	$tpwrdiff = trunc($tpwrdiff + 0.5)
+    else
+	$tpwrdiff = trunc($tpwrdiff - 0.5)
+    endif
+	"round to nearest whole dB "
+  endif
+
+  if ((tpwr + $tpwrdiff) <= 60) then
+    tpwr = tpwr + $tpwrdiff
+    pw = trunc(20*$target/3)/10
+    pw = pw, 2*pw
+
+  else
+    $pwrdiff = 60 - tpwr
+    tpwr = 60
+
+    "estimate pw90 at this tpwr"
+
+    exp(-1*$ln10*$pwrdiff/20):$factor
+    $pw = $pw90 * $factor
+    pw = trunc(20*$pw/3)/10
+    pw = pw, 2*pw
+
+  endif
+
+  da
+  write('alpha','\nEstimating pw90 at tpwr %d',tpwr)
+
+  wexp = 'AC10C(`setpwr`)'
+  au('wait','next')
+  return
+
+ELSEIF ($1 = 'array') then
+  " set up pw360 array at current tpwr, assuming a good pw90 estimate "
+
+  $pw90 = trunc(10*$2)/10
+  $pw15 = trunc(1.67*$pw90)/10
+    " approx. 15 degrees, to the nearest .1 usec "
+
+  array('pw',7,3.5*$pw90, $pw15)
+   " should be ca. 315 to 405 in 15 deg. steps "
+
+  d1 = d1/2  "2 * T1, good enough near a 360 degree pulse "
+   if d1 > 15 then d1 = 15 endif  " ca. T1 for H1 "
+
+  wnt = 'wft(`acq`) dssh(`dodc`)'
+  vp = wc2max/2 - 10
+  wexp = 'AC10C(`save90`)'
+
+  au('wait','next')
+  return
+
+ELSEIF ($1 = 'save90') then
+  "process pw360 array, update probe file & set up compression array "
+
+  select(arraydim) aph0
+  fp  pw360cal:$pw90
+
+  if ($pw90 = 0) then
+    write('error','Autocalibration failed! Calibrate manually')
+    abort
+  else
+    pw90 = trunc(10*$pw90 + 0.5)/10
+  endif
+
+  $pwstr = '' $pwrstr = ''
+  format($pw90+0.049,0,1):$pwstr
+  format(tpwr,0,0):$pwrstr
+
+  setparams('tpwr',$pwrstr)
+  setparams('pw90',$pwstr)
+
+  atext('pw90 calibrated as '+$pwstr+' at tpwr '+$pwrstr)
+  Autocalsave(tn+'pw90')
+
+  " check to see if tpwr_cf needs to be calibrated "
+  if $probeid then
+    $fex=0 $file='' probeid('get'):$fex,$file
+  else
+    exists(probe+'/'+probe,'probes'):$fex,$file
+  endif
+
+  if not $fex then  "strange situation! "
+    write('error','no probe file found!')
+    return
+  endif
+
+  $ret = ''
+  lookup('mfile',$file,tn+'tpwr_cf','read'):$ret
+
+  if $probeid then probeid('cleanup',$file) endif
+
+  if $ret <> '' then
+  "set up initial Haupt to estimate compression factor "
+
+    tpwr = tpwr - 12
+    pw = trunc(80*$pw90/3)/10
+    " $pw90 is pw90 at high power; expect it to be ~4x as long "
+    " at 12 dB lower power.  We want a nominal 60 degree pulse "
+    " at the lower power, which would be 2*(4*$pw90)/3; multiplying "
+    " by 10, truncating & dividing by 10 gives the desired pw "
+    " rounded to the nearest 0.1 usec. "
+
+    pw = pw, 2*pw  da
+    d1 = 10
+    wexp = 'AC10C(`cf`)'
+    write('alpha','\nEstimating %stpwr compression factor',tn)
+    au('wait')
+    return
+
+  else
+    "no compression factor to calibrate"
+    banner(tn+' autocalibration is done')
+    if tn = 'C13' then AC8S(1) else ACreport endif
+    return
+  endif
+
+ELSEIF ($1 = 'cf') THEN
+  "process Haupt spectra, set up array "
+  wft  select(1) dc aph0 vsadj(100) th=90 nll fp
+  pw_haupt:$pw90
+
+  $step = trunc(3.333*$pw90)/10  "$pw90/3, to nearest 0.1 "
+  array('pw',7,3*$pw90,$step)
+
+  write('alpha','\nCalibrating %stpwr compression factor',tn)
+
+  wexp = 'AC10C(`savecf`)'
+  d1 = 5
+
+  au('wait','next')
+  return
+
+ELSEIF ($1 = 'savecf') then
+  "process compression factor array, update probe file, save data"
+  
+  select(arraydim) aph0
+  fp  pw360cal:$pw90
+
+  if ($pw90 = 0) then
+    write('error','Autocalibration failed! Calibrate manually')
+    abort
+  endif
+
+  getparam('pw90'):$hipwr90
+  if ($hipwr90 = 0) then
+     write('error','pw90 must be calibrated before compression factor!')
+     abort
+  endif
+
+  $cf = $pw90/(4*$hipwr90)
+    "$cf < 1 if there is compression "
+
+  $strcf = ''
+  format($cf,0,3):$strcf
+
+  setparams('tpwr_cf',$strcf)
+
+  atext(tn+' tpwr compresion factor calibrated as '+$strcf)
+
+  Autocalsave(tn+'tpwr_cf')
+
+  ACreport
+
+  banner(tn+' autocalibration is done')
+
+ENDIF

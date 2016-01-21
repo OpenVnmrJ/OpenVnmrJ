@@ -1,0 +1,141 @@
+"macro fixcpdoneQ"
+$cpdoneq=$1+'/cpdoneQ'
+$cpdonedayq=$1+'/cpdonedayQ'
+$cperrorq=$1+'/cperrorQ'
+$expfidlog=$1+'/expfidlog'
+$fidlog=$1+'/fidlog'
+
+exists($cpdoneq,'file'):$fileex
+if ($fileex) then
+   $words=0
+   shell('(cat '+$cpdoneq+' | head -n 1 | wc -w)'):$words
+   if ($words > 4) or ($words=0) then $fileex=0 endif
+endif
+exists($cpdonedayq,'file'):$fileex2
+if ($fileex2) then
+   $words=0
+   shell('(cat '+$cpdonedayq+' | head -n 1 | wc -w)'):$words
+   if ($words > 4) or ($words=0) then $fileex2=0 endif
+endif
+exists($cperrorq,'file'):$fileex3
+if ($fileex3) then
+   $words=0
+   shell('(cat '+$cperrorq+' | head -n 1 | wc -w)'):$words
+   if ($words>4) or ($words=0) then $fileex3=0 endif
+endif
+$mkfidlog=0
+exists($expfidlog,'file'):$fileex4
+if ($fileex4) then
+  shell('(cat '+$expfidlog+' | wc -l)'):$fileex4
+endif
+if ($fileex4=0) then
+   exists($fidlog,'file'):$mkfidlog
+endif
+
+if ($fileex=0) and ($fileex2=0) and ($fileex3=0) and ($mkfidlog=0) then return endif
+
+if ($fileex) then
+   write('reset',$cpdoneq+'1')
+   $key=$cpdoneq
+   $ret=2
+   while $ret>1 do
+	lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+	if ($ret>1) then
+	    $locdir='' $owner=''
+	    substr($line,4):$locdir
+	    if ($locdir<>'') then
+		$owner=''
+		rtv($1+'/'+$locdir+'/sampleglobal','noabort','studyowner'):$owner
+		if ($owner='') then
+		   rtv($1+'/'+$locdir+'/sampleglobal','noabort','operator_'):$owner
+		endif
+	    endif
+		if ($owner='') then $owner=owner endif
+		write('file',$cpdoneq+'1','%s %s',$line,$owner)
+	endif
+   endwhile
+   shell('mv '+$cpdoneq+'1 '+$cpdoneq):$dum
+endif
+
+if ($fileex2) then
+   write('reset',$cpdonedayq+'1')
+   $key=$cpdonedayq
+   $ret=2
+   while $ret>1 do
+        lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+        if ($ret>1) then
+            $locdir='' $owner=''
+            substr($line,4):$locdir
+	    if ($locdir<>'') then
+                $owner=''
+                rtv($1+'/'+$locdir+'/sampleglobal','noabort','studyowner'):$owner
+                if ($owner='') then
+                   rtv($1+'/'+$locdir+'/sampleglobal','noabort','operator_'):$owner
+                endif
+	    endif
+                if ($owner='') then $owner=owner endif
+                write('file',$cpdonedayq+'1','%s %s',$line,$owner)
+        endif
+   endwhile
+   shell('mv '+$cpdonedayq+'1 '+$cpdonedayq):$dum
+endif
+
+if ($fileex3) then
+   write('reset',$cperrorq+'1')
+   $key=$cperrorq
+   $ret=2
+   while $ret>1 do
+        lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+        if ($ret>1) then
+            $locdir='' $owner=''
+            substr($line,4):$locdir
+            if ($locdir<>'') then
+                $owner=''
+                rtv($1+'/'+$locdir+'/sampleglobal','noabort','studyowner'):$owner
+                if ($owner='') then
+                   rtv($1+'/'+$locdir+'/sampleglobal','noabort','operator_'):$owner
+                endif
+	    endif
+                if ($owner='') then $owner=owner endif
+                write('file',$cperrorq+'1','%s %s',$line,$owner)
+        endif
+   endwhile
+   shell('mv '+$cperrorq+'1 '+$cperrorq):$dum
+endif
+
+if ($mkfidlog) then
+   write('reset',$expfidlog)
+   $tmpfile=userdir+'/persistence/tmpfile'
+   write('reset',$tmpfile)
+   shell('(cat '+$fidlog+' | sed -e \'s|"| |g\' | awk \'{print $3}\' > '+$tmpfile+')'):$dum
+   $s1='' $s2=''
+   readfile($tmpfile,'$s1','$s2','','local'):$tot
+   shell('rm -f '+$tmpfile):$dum
+   if ($tot>0) then
+     $i=1
+     repeat
+	$fc='' substr($s1[$i],1,1):$fc
+	if ($fc<>'/') then
+	    $fid=userdir+'/data/'+$s1[$i]
+	else
+	    $fid=$s1[$i]
+	endif
+	exists($fid+'.REC/acqfil/procpar','file'):$fileex
+	if ($fileex=0) then
+	    exists($fid+'.rec/acqfil/procpar','file'):$fileex
+	endif
+	if ($fileex=0) then
+	    exists($fid+'.fid/procpar','file'):$fileex
+	endif
+	if ($fileex) then
+	    $explist=''
+	    rtv($fid,'noabort','explist'):$explist
+	    if ($explist='') then
+		rtv($fid,'noabort','pslabel'):$explist
+	    endif
+	    write('file',$expfidlog,'%s %s',$explist,$s1[$i])
+	endif
+	$i=$i+1
+     until $i > $tot
+   endif
+endif

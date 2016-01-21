@@ -1,0 +1,155 @@
+"macro ATc200"
+"ATc200 C13 HSQC 1D Test"
+ if (at_c13tests='n') then ATnext return endif
+
+  if ($#=0) then
+   ATrtp('standard')
+    dn='C13' at=.1 d1=1 
+    pwx=at_pwx90c pwxlvl=at_pwx90lvlc
+    tpwr=at_tpwr pw=at_pw90
+    create('hsglvl','real') hsglvl=2000
+    create('hsgt','delay') hsgt=.002
+    create('mult','real') mult=0
+    exists('PFGflg','parameter'):$e
+    if $e=0 then create('PFGflg','flag') endif PFGflg='y'
+    create('nullflg','flag') nullflg='n'
+    create('null','delay') null=0
+    create('j1xh','real') j1xh=140
+    par_2d
+    ni=0 phase=1 sw1=10000 sw=20000 np=4096 fn='n'
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   gain=at_gain
+
+   at_currenttest='C13hsqc_s2pul_1D' 
+
+ $count=1
+ if (pwxlvl>at_max_pwxlvl) then
+  write('line3','13C Pulse Power Requested Exceeds Defined Power Limit (at_max_pwxlvl)')
+  write('line3','13C Pulse Power Reduced to Permitted Level %2.0f (at_max_pwxlvl)',at_max_pwxlvl)
+  n1='13C Pulse Power Requested Exceeds Defined Power Limit (at_max_pwxlvl)'
+  n2=' Power Reduced to Permitted Level (at_max_pwxlvl)'
+  atext(n1) atext(n2)
+  $diff=pwxlvl - at_max_pwxlvl
+  repeat
+    pwx =pwx*1.12 
+    pwxlvl=pwxlvl - 1
+    $count=$count+1
+  until $count>$diff
+ endif
+
+   dpwr=at_pwx90Lowpowerlvlc-3
+   dmf=1e6/(at_pwx90Lowpowerc*1.4)
+
+   vp=0 dmm='ccw'
+   dm='nns' "use synchronous (s) rather than asynchronous (y)" 
+   d1=1.5
+   dm2='nnn' 
+   array('nt',32,1,0) phase=1
+   ss=16 ph
+
+   seqfil='PRESAT' satfrq=tof satpwr=6 satmode='ynn' satdly=1.5 d1=0 
+   parfidss ssfilter=100 ssntaps=200
+   ssorder='n'
+   sb=at sbs=-at lb='n' fn=np np=fn fn=2*fn
+
+   wnt='ATwft select(1) aph0 sp=2.8p wp=2p vsadj(100) dssh'
+   wexp='ATc200(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ sb=-at sbs=sb fn=4*np gf='n' lb='n'
+ wft 
+ z(7p,0)
+ select(1) aph0 vsadj(100) 
+ select(arraydim) aph0 
+ $avht=0 $stddev=0
+ s1
+ select(1) 
+ vsadj(100)
+ ATplot3:$avht,$stddev 
+ sp=2p wp=10p
+ cr=8p delta=2p
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r1=trunc($sumsn/arraydim)   "average s/n for one-pulse experiment"
+ if (at_plotauto='y') then 
+   write('plotter',120,120,'Average Decoupled Methanol S/N for 32 Trials = %5.0f for One-pulse Experiment',r1)
+   pltext(80,wc2max-2)
+   ATpage('C13hsqc_s2pul_1D_1') 
+ endif
+ r3=trunc(10*$avht)/10
+ r4=trunc(1000*$stddev)/1000
+ ATsvf satmode='nnn' d1=satdly
+
+ seqfil='HSQC' ss=4 satdly=0
+ array('nt',24,1,0)
+ at_currenttest='C13hsqc_HSQC_1D' 
+ wexp='ATc200(`PART2`)'
+ av th=150 sp=2.8p wp=2p
+ wnt='ATwft select(1) peak:th if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13HSQC_1D`) ATnext return endif endif  dssh'
+
+ "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+ "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+ au
+
+elseif ($1='PART2') then
+ wft
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) 
+     ATpage('C13hsqc_s2pul_1D_2') 
+
+   endif 
+ endif
+ select(arraydim) aph0
+ $avht=0 $stddev=0
+ select(1) 
+ ATplot3:$avht,$stddev 
+ sp=2p wp=10p
+ cr=8p delta=2p
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',120,120,'Average Decoupled Methanol S/N for 1024 Trials = %5.0f for HSQC Experiment',r2)
+   pltext(80,wc2max-2)
+   ATpage('C13hsqc_s2pul_1D_3') 
+ endif
+ $stddev=trunc(1000*$stddev)/1000
+ $ratio=trunc($avht*1000/r3)/1000
+ $avht=trunc($avht*10)/10
+ $ratio1=trunc(r2*100/r1)/100
+ ATrecord('C13SN_c','Decoupled methanol: s2pul vs HSQC 1D','S2PUL_SN',r1,' HSQC_SN',r2,' ratio',$ratio1,' oversamp',oversamp)
+ ATrecord('C13HSQC_1D_c','C13HSQC 1D','HSQC:s2pul',$ratio,' s2pul_int.',r3,' std_dev',r4,'  HSQC_int.',$avht,' std.dev', $stddev,' oversamp',oversamp)
+ ATsvf
+ write('file',autotestdir+'/REPORT','C13 HSQC/s2pul Int. ratio= %2.3f; SN ratio=%1.3f; S2PUL SN=%5.0f; HSQC SN=%5.0f ',$ratio,$ratio1,r1,r2)
+
+ATnext
+endif

@@ -1,0 +1,61 @@
+"macro ATrfhomocal2"
+"rfhomocal"
+
+
+$counter=1
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                  "finds 90 "
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>12)
+
+$pw90=pw[$bestindex]
+$90maxindex=$bestindex
+$90maxheight=$bestheight
+
+$counter=12     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                  "finds 450 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>22)
+
+$pw450=pw[$bestindex]
+$450maxindex=$bestindex
+$450maxheight=$bestheight
+
+$counter=23     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                    "finds 810 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>arraydim)
+
+$pw810=pw[$bestindex]
+$810maxindex=$bestindex
+$810maxheight=$bestheight
+
+$ratio1=$450maxheight/$90maxheight
+$ratio2=$810maxheight/$90maxheight
+$ratio1=trunc(100*$ratio1)/100
+$ratio2=trunc(100*$ratio2)/100
+$pw90=trunc(10*$pw90)/10
+$pw450=trunc(10*$pw450)/10
+$pw810=trunc(10*$pw810)/10
+return($pw90,$pw450,$pw810,$ratio1,$ratio2)
+

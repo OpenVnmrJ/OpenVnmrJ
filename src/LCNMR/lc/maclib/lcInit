@@ -1,0 +1,35 @@
+"macro lcInit"
+/*-*- MAGICAL -*-*/
+"macro lcInit"
+
+// This is called either on startup, by the "bootup" macro,
+// or from VJ when a 'lccmd' command has been received without the
+// LC having been initialized.  In the latter case, we are called with
+// two arguments, 'cmd' and a string containing the lccmd.
+
+if (traymax <> 1) then
+  write('error','For the LC interface, the "Sample Changer" type must be set to LC-NMR in Edit/SystemSettings...')
+endif
+
+lcpars('update')
+
+if (jviewport <> 1) then
+  $gotlock = 0  // Only viewport #1 talks to LC
+elseif (system = 'datastation') then
+  $gotlock = 0
+  write('error','Warning: This is a DataStation: connection to LC modules is not allowed')
+else
+  locklc:$gotlock
+  if ($gotlock = 0) then
+    write('error','Warning: Another user has exclusive control of the LC modules')
+  endif
+endif
+lccmd('init', $gotlock)
+lcRunActive = 0
+
+if ($# = 2) then
+  if ($1 = 'cmd') then
+    $cmd = $2
+    lccmd($cmd)           // Resend previous command
+  endif
+endif

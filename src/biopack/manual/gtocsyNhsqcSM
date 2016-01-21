@@ -1,0 +1,123 @@
+    gtocsyNhsqcSM.c - BioPack pulse sequence adapted for Small Molecules  
+                      Eriks Kupce, Oxford, 2005 
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    3D TOCSY-HSQC gradient sensitivity enhanced version for 15N, with
+    H1-H1 TOCSY in the first dimension, and N15 shifts in the second.
+
+    optional magic-angle coherence transfer gradients
+
+    Standard features include optional 13C sech/tanh pulse on CO and Cab to 
+    refocus 13C coupling during t1 and t2; one lobe sinc pulse to put H2O back 
+    along z (the sinc one-lobe is significantly more selective than gaussian, 
+    square, or seduce 90 pulses); preservation of H20 along z during t1 and the 
+    relaxation delays; option of obtaining spectrum of only NH2 groups;
+
+    pulse sequence: 	Kay, Keifer and Saarinen, JACS, 114, 10663 (1992)
+    			Zhang et al, J Biol NMR, 4, 845 (1994)
+    sech/tanh pulse: 	Silver, Joseph and Hoult, JMR, 59, 347 (1984)
+			Bendall, JMR, A116, 46 (1995)
+         
+    Written by MRB, January 1998, starting with gNhsqc from BioPack.
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1998, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+
+    Modified the amplitude of the flipback pulse(s) (pwHs) to permit user adjustment around
+    theoretical value (tpwrs). If tpwrsf < 4095.0 the value of tpwrs is increased 6db and
+    values of tpwrsf of 2048 or so should give equivalent amplitude. In cases of severe
+    radiation damping( which happens during pwHs) the needed flip angle may be much less than
+    90 degrees, so tpwrsf should be lowered to a value to minimize the observed H2O signal in 
+    single-scan experiments (with ssfilter='n').(GG jan01)
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [H1]  and t2 [N15].
+   
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1 and f2180='n' for (0,0) in N15.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gtocsyNhsqcSM
+         
+    1. Centre H1, C13 and N15 frequencies as required for your sample.
+
+    2. Ensure that H1, C13 and N15 pulse widths (pw, pwC, pwN), power levels 
+       (tpwr, pwClvl, pwNlvl) and compression factors (compH, compC, compN) are
+       correct. All waveforms are generated and calibrated automatically based 
+       on these numbers. 
+       
+    3. Make sure the gzlvl2 coherence gradient is fine tuned for maximum signal.
+
+    4. Splitting of resonances in the 1st or 2nd dimension by C13 coupling in 
+       C13-enriched samples can be removed by setting C13refoc='y'.
+
+    5. In aqueous solutions the signal loss due to exchange is achieved by 
+       preserving H2O magnetization according to Kay et al. This option is 
+       enabled by setting pwHs to 1500 us. The tpwrsf is then fine tuned for
+       minimum residual water signal. 
+
+    6. NH2 GROUPS:
+       A spectrum of NH2 groups, with NH groups cancelled, can be obtained
+       with flag NH2only='y'.  This utilises a 1/2J (J=94Hz) period of NH 
+       J-coupling evolution added to t1 which cancels NH resonances and 
+       inverts NH2 resonances (normal INEPT behaviour).  A 180 degree phase
+       shift is added to a N15 90 pulse to provide positive NH2 signals.  The 
+       NH2 resonances will be smaller (say 80%) than when NH2only='n'.
+
+    7. Radiation Damping:
+       At fields 600MHz and higher with high-Q probes, radiation damping is a
+       factor to be considered. Its primary effect is in the flipback pulse
+       calibration. Radiation damping causes a rotation back to the +Z axis
+       even without a flipback pulse. Hence, the pwHs pulse often needs to 
+       be reduced in its flip-angle. This can be accomplished by using the
+       parameter tpwrsf. If this value is less than 4095.0 the value of tpwrs
+       (calculated in the psg code) is increased by 6dB, thereby permitting
+       the value of tpwrsf to be optimized to obtain minimum H2O in the 
+       spectrum. The value of tpwrsf is typically lower than 2048 (half-maximum
+       to compensate for the extra 6dB in tpwrs). 
+
+    8. ADIABATIC (WURST) SPINLOCK.
+       Setting wumix='y' uses a Pbox-generated spinlock.
+
+    9. Low power long-range C-13 WURST decoupling.   
+       Setting the flag wudec='y' activates low power C-13 WURST decoupling to
+       remove long-range C-H couplings in C-13 labelled samples. The decoupling 
+       waveform is generated "on-the-fly" from within the pulse sequence using 
+       Pbox.  
+       
+   10. PROJECTION-RECONSTRUCTION and TILT experiments:  
+       PR and TILT experiments are enabled by setting the projection angle, pra 
+       to values between 0 and 90 degrees (0 < pra < 90). Note, that for these 
+       experiments axis='ph', ni>1, ni2=0, phase=1,2 and phase2=1,2 must be used. 
+       Processing: use wft2dx macro to obtain positive tilt angles and wft2dy for  
+       negative tilt angles. For array='phase,phase2' the macros correspond to:
+       wft2dx = wft2d(1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,1,0)
+       wft2dy = wft2d(1,0,-1,0,0,1,0,1,0,1,0,1,-1,0,1,0)
+       The following relationships can be used to inter-convert the frequencies (in Hz) 
+       between the tilted, F1(+)F3, F1(-)F3 and the orthogonal, F1F3, F2F3 planes:       
+         F1(+) = F1*cos(pra) + F2*sin(pra)  
+         F1(-) = F1*cos(pra) - F2*sin(pra)
+         F1 = 0.5*[F1(+) + F1(-)]/cos(pra)
+         F2 = 0.5*[F1(+) - F1(-)]/sin(pra)
+       References: 
+       PROJECTION-RECONSTRUCTION:
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 125, pp. 13958-13959 (2003).
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 126, pp. 6429-6440 (2004).
+       TILT:
+       E.Kupce and R.Freeman, J. Magn. Reson., vol. 172, pp. 329-332 (2005).
+       E.Kupce, et al, Magn. Reson. Chem., vol. 43, pp. 791-794 (2005).
+       
+       Eriks Kupce, Oxford, 26.08.2004.       
+
+

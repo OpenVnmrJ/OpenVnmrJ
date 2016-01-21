@@ -1,0 +1,284 @@
+<?xml version='1.0' encoding='us-ascii'?>
+<!--
+ !
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+<mainmenu>
+        <submenu label="Study Clones..."
+                vq="owner operator"
+                style="Menu4"
+        >
+            <mchoice label="Clone a New Study"
+                vq="seqfil customflag cppauseflag"
+                show="$SHOW=((seqfil&lt;&gt;'Submitq') and (customflag&lt;&gt;'y') and (cppauseflg&lt;&gt;'y'))"
+                vc="walkupQ('clone')"
+                style="Menu4"
+            />
+            <mchoice label="Clone Current Study"
+                vq="seqfil customflag cppauseflag"
+                show="if ((seqfil='Submitq') or (customflag='y') or (cppauseflg='y')) then $SHOW=(resumeQ='') else $SHOW=1 endif"
+                vc="xmhaha('clonestudy')"
+                style="Menu4"
+                toolTip="&lt;html&gt;This tool creates a composite experiment button &lt;br&gt; from the current study queue"
+            />
+            <mchoice label="Clone Current Experiment"
+                vq="seqfil customflag cppauseflag"
+                show="$SHOW=((seqfil&lt;&gt;'Submitq') and (customflag&lt;&gt;'y') and (cppauseflg&lt;&gt;'y'))"
+                style="Menu4"
+                vc="xmhaha('cloneexp')"
+                toolTip="&lt;html&gt;This tool creates an experiment button from the &lt;br&gt; parameters in the current experiment workspace"
+            />
+            <mchoice label="Clone Location Queue"
+                vq="seqfil customflag cppauseflag"
+                show="$SHOW=((seqfil&lt;&gt;'Submitq') and (customflag&lt;&gt;'y') and (cppauseflg&lt;&gt;'y'))"
+                style="Menu4"
+                vc="vjcloneQ"
+                toolTip="&lt;html&gt;This tool creates a composite experiment button &lt;br&gt; from the current robot location queue"
+            />
+            <mchoice label="Command and Protocol Buttons"
+                vq="owner operator"
+                vc="editprotocol"
+                style="Menu4"
+                toolTip="This tool creates command protocols and new experiment protocols"
+            />
+            <mchoice label="Edit Parlib..."
+                vq="owner operator"
+                vc="editparlib"
+                style="Menu4"
+                toolTip="This tool edits core parameter library settings"
+            />
+            <mchoice label="Show Library..."
+                vc="makeStudy"
+                style="Menu4"
+                toolTip="This tool allows control of all user studies"
+            />
+        </submenu>
+        <submenu label="Study Queue Actions..."
+                style="Menu4"
+        >
+            <mchoice label="Refresh StudyQueue"
+                vc="xmhaha('refreshSQ')"
+                style="Menu4"
+            />
+            <mchoice label="Clear StudyQueue"
+                vc="xmhaha('clearSQ')"
+                style="Menu4"
+            />
+        </submenu>
+       <submenu label="Tray Actions.." style="Menu4"
+          vq="traymax opentray"
+          show="is_submitmode:$submit on('traymax','systemglobal'):$on $SHOW=($on&gt;0 and $submit&gt;0 and traymax&gt;1)*2-1"
+       >
+        <mchoice label="Show Tray" vc="showtray('toggle','auto')" />
+        <mchoice label="Hide Tray" vc="showtray('closesq')" />
+        <mchoice label="Recall and resubmit Study from a Location" vc="submitagain" />
+        <mchoice label="Recall and edit Study from a Location" vc="vjeditQ" />
+        <mchoice label="Delete pending Study from a Location" vc="vjdeleteQ" />
+       </submenu>
+        <mchoice label="Workspace Information..."
+                vc="explibPopup"
+                style="Menu4"
+        />
+        <submenu label="Probe Tuning"
+            vq="system operator"
+            show="is_spectrometer('value'):$vjmmenus operights('maytuneprobe'):$RT $SHOW=($RT and $vjmmenus>0.5)*2-1"
+            style="Menu1"
+        >
+<!--
+*            <mchoice label="Auto Tune Setup..."
+*                vc="settune"
+*                show="rights('enableautosetup',0):$rt $SHOW=($rt)*2-1"
+*                style="Menu1"
+*            />
+-->
+            <mchoice label="Auto Tune Probe..."
+                vq="atune"
+                vc="protune('popup')"
+                show="$SHOW=(atune='y')*2-1"
+                style="Menu1"
+            />
+            <mchoice label="Manually Tune Probe..."
+                vc="mtune"
+                style="Menu1"
+            />
+        </submenu>
+        <submenu label="Standard Calibration Experiments"
+            show="operights('candocalibrations',-1):$SHOW"
+            vq="system operator"
+            seperator="yes"
+            style="Menu1"
+        >
+            <mchoice label="Calibrate Probe..."
+                show="exists('probelist','maclib'):$SHOW"
+                vc="probelist('init') vnmrjcmd('popup','mode:modeless','file:Probe.xml','location:controlPanel','title:Probe')"
+                style="Menu4"
+            />
+            <mchoice label="Set Up Gradient Shimming"
+                vc="gmapsys"
+                style="Menu1"
+            />
+            <mchoice label="Set Up 3D Gradient Shimming"
+                show="exists('gxyzmapsys','maclib'):$vjmmenum if ($vjmmenum) then $SHOW=1 else $SHOW=-1 endif"
+                vc="gxyzmapsys"
+                style="Menu1"
+            />
+            <mchoice label="Start Autotest..."
+                     vc="autotest"
+                     vq="Console"
+                     style="Menu1"
+                     show="exists('autotest','maclib',-1):$SHOW"
+            />
+            <mchoice label="Autotest Settings..."
+                vc="ATglobal vnmrjcmd('popup', 'mode:modal',
+                               'file:autotest.xml',
+                               'location:topMenuBar',
+                               'help:/vnmr/jhelp/dialog/autotest.html',
+                               'title:Autotest settings')"
+                     vq="Console"
+                     style="Menu1"
+                     show="exists('autotest','maclib',-1):$SHOW"
+            />
+        </submenu>
+        <mchoice label="Load Biopack"
+                vc="loadbiopack"
+                style="Menu4"
+                show="exists('loadbiopack','maclib'):$vjmmenue $SHOW=($vjmmenue)*2-1"
+        />
+        <submenu label="Update Locator"
+            vq="operator"
+            show="rights('enablelocupdate',-1):$SHOW"
+            style="Menu1"
+            seperator="yes"
+        >
+            <mchoice label="Update All"
+                     vc="vnmrjcmd('util', 'updatetable', 'all')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Vnmr_data"
+                     vc="vnmrjcmd('util', 'updatetable', 'vnmr_data')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Vnmr_par"
+                     vc="vnmrjcmd('util', 'updatetable', 'vnmr_par')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Vnmr_record"
+                     vc="vnmrjcmd('util', 'updatetable', 'vnmr_record')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Protocol"
+                     vc="vnmrjcmd('util', 'updatetable', 'protocol')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Study"
+                     vc="vnmrjcmd('util', 'updatetable', 'study')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Automation"
+                     vc="vnmrjcmd('util', 'updatetable', 'automation')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Macro"
+                     vc="vnmrjcmd('util', 'updatetable', 'macro')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Workspace"
+                     vc="$i=0 $s='' repeat $i=$i+1 format($i,1,0):$s vnmrjcmd('VP '+$s+' flush') until($i&gt;=jviewports[1]) vnmrjcmd('util', 'updatetable', 'workspace')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Shims"
+                     vc="vnmrjcmd('util', 'updatetable', 'shims')"
+                     style="Menu1"
+            />
+            <mchoice label="Update Panels_n_components"
+                     vc="vnmrjcmd('util', 'updatetable', 'panels_n_components')"
+                     style="Menu1"
+            />
+            </submenu>
+        <mchoice label="Import Files to Locator..."
+                vc="vnmrjcmd('util', 'importPanel', 'help:/vnmr/jhelp/dialog/importpanel.html')"
+                vq="operator"
+                show="rights('enablelocupdate',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Save Custom Locator Statement..."
+                vc="vnmrjcmd('util', 'saveCustomLocStatement', 'help:/vnmr/jhelp/dialog/savecustomlocstatement.html')"
+                vq="operator"
+                show="rights('enablelocupdate',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Delete Custom Locator Statement..."
+                vc="vnmrjcmd('util', 'deleteCustomLocStatement', 'help:/vnmr/jhelp/dialog/deletecustomlocstatement.html')"
+                vq="operator"
+                show="rights('enablelocupdate',-1):$SHOW"
+                style="Menu1"
+        />
+        <submenu label="Molecular Structures"
+              style="Menu1"
+              seperator="yes"
+              vq="operator"
+              show="rights('showmol',-1):$SHOW"
+        >
+	   <mchoice label="Display All"
+		vc="imagefile('displayall')"
+		style="Menu1"
+	   />
+	   <mchoice label="Plot All"
+		vc="imagefile('plotall')"
+		style="Menu1"
+	   />
+   	   <mchoice label="JChempaint..."
+		vc="vnmrjcmd('mol', 'open', 'mode:JChempaint', 'userdir:MOLLIB', 'file:/vnmr/java/jchempaint.jar')"
+		style="Menu1"
+		seperator="yes"
+	   />
+	   <mchoice label="Jmol..."
+		vc="vnmrjcmd('mol', 'open', 'mode:Jmol', 'userdir:MOLLIB', 'file:/vnmr/java/jmol.jar')"
+		style="Menu1"
+	   />
+	</submenu>
+        <mchoice label="Change Password..."
+                vc="vnmrjcmd('util', 'loginpassword', 'help:/vnmr/jhelp/dialog/loginpassword.html')"
+                vq="operator"
+                show="rights('mayeditpassword',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Browser..."
+                vq="operator"
+                vc="vnmrjcmd('LOC browserPanel')"
+              show="rights('browserOK',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Locator..."
+                vq="operator"
+                vc="vnmrjcmd('LOC locatorPanel')"
+                show="rights('locatorOK',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Select Optional Files..."
+                vq="operator"
+                vc="optionalFiles"
+                show="rights('locatorOK',-1):$SHOW"
+                style="Menu1"
+        />
+        <mchoice label="Sample in Magnet..."
+                vq="traymax"
+                vc="sim"
+                show="$SHOW=(traymax&gt;1)*2-1"
+                style="Menu1"
+        />
+        <mchoice label="View Cryogens..."
+                vq="cryomonitor"
+                vc="shell('cryomon -vnmrj &amp;')"
+                show="exists('cryomonitor','parameter','systemglobal'):$e if($e&gt;0) then if(cryomonitor='y') then $VALUE=1 else $VALUE=0 endif else $VALUE=0 endif"
+                style="Menu1"
+        />
+        <mchoice label="Convert pre-VnmrJ 3.0 data ..."
+                vc="import2cp"
+                style="Menu1"
+        />
+</mainmenu>

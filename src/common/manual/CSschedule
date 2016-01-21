@@ -1,0 +1,77 @@
+CSschedule - generate a NUS schedule
+
+The CSschedule command will generate a schedule for non-uniform sampling.
+With no arguments, it uses the following parameters.
+
+ni, ni2, and ni3 are used to define the total size of the data matrix.
+If they exist, are greater than 1 and not set to "Not used", they will be
+used to define the matrix.
+
+CSdensity is the percentage of points in the data matrix that are acquired.
+All other points will be treated as zeros. Default is 100.0, that is, use
+uniform sampling.
+
+The CSpars parameter will override the default selection of the indirect dimensions.
+For example, if the parameter set is a 3D parameter set with both ni and ni2 set, the CSpars
+parameter can be set to make just the first or second or both indirect dimensions sparse by
+setting CSpars='d2' or CSpars='d3' or CSpars='d2','d3' , respectively. If the CSpars parameter
+does not exist or is set to the empty string (CSpars=''), the default behavior with ni, ni2, etc
+will be used.
+
+CSseed parameter (integer) containing the seed for the random number
+generator used to create the sampling schedules. A positive number indicates
+that the sampling schedule is executed sequentially.  A negative number
+indicates that the sampling schedule is applied randomly.  Default value
+is 169.
+
+It writes the schedule as a text file in the current experiment directory as sampling.sch.
+
+Arguments can be supplied to the CSsampling command to override the defaults.
+
+If an argument starts with 'seed ', then the number in the 'seed ' string will
+override the CSseed parameter. This will also set the value of the CSseed parameter.
+
+Any string parameter that does not start with 'seed ' will be used as the filename
+of the schedule as it is stored in the current experiment.
+
+The first real number overrides the CSdensity parameter. Its range is 0 < densitiy <= 100.0.
+If it falls outside this range, it will be set to 100.0. This will also set the
+value of the CSdensity parameter.
+
+Subsequent real numbers define the sizes of the first, second, etc indirect
+dimensions. They override the values of ni, ni2, etc. respectively.
+
+Acquisition related parameters.
+
+The sampling parameter is used to select sparse sampling.
+sampling='sparse' selects sparse data sampling.
+sampling='e' selects ellipitical data sampling, used by imaging applications.
+Any other value of sampling selects standard uniform data sampling.
+
+The CStype parameter specifies the type of sampling schedule that will be used by acquisition.
+Sampling schedules are of two types. One contains a list of indexes of the increments in
+the indirect dimensions. For the first indirect dimension, these indexes would fall between
+0 and ni-1.  Each index is multiplied by the dwell time in the indirect dimension (1/sw1).
+The second type of schedule is a list of the actual delay times for the indirect dimension.
+
+  CStype='a' to automatically generate an index schedule.
+
+  CStype='i' to use a pre-existing index schedule. 
+
+  CStype='d' to use a pre-existing delay schedule. 
+
+  CStype='p1' to automatically generate a Poisson distribution weighted gap index schedule with sine weighting from 0 to 180 degrees. This weights the sampling schedule so as to have more sampling points in the beginning and at the end of the uniform grid.
+
+  CStype='p2' to automatically generate a Poisson distribution weighted gap index schedule with sine weighting from 0 to 90 degrees. This weights the sampling schedule so as to have more sampling points in the beginning of the uniform grid.
+
+The default is CStype='a'. If CStype='a', the above parameters (CSdensity, CDpars, CSseed) will
+be used to generate the sampling schedule.
+
+
+Examples.
+
+CSschedule
+CSschedule('seed 33')
+CSschedule('seed 33',10.0, 512, 256)
+CSschedule('seed -78')
+

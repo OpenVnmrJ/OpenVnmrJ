@@ -1,0 +1,59 @@
+"macro locprotoexec"
+"locprotoexec - Add and execute a protocol dropped"
+"  from the locator onto the graphics canvas.     "
+
+if $#<0.5 then
+  return
+endif
+
+if $1='next' then
+  $cmd='xmaction(\'doubleclick\',\'' + copyid[1] + '\')'
+  vnmrjcmd('VP 1 '+$cmd)
+  return
+endif
+
+$file=$1
+$s='' substr($file,1,1):$s
+if $s<>'/' then
+  return
+endif
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+$activestudy='null'
+
+if ($appmode='imaging' or $appmode='walkup') then
+  $activestudy=activestudy[1]
+endif
+testacquire? /*CMP*/
+if ($activestudy<>'null' and ($appmode='imaging' or ($appmode='walkup' and testacquire<>'y'))) then
+" add protocol and customize"
+  if (jviewport = 1) then
+    xmmakenode('xml',$file,'null')
+    $cmd='xmaction(\'doubleclick\',\'' + copyid[1] + '\')'
+  else
+    $cmd='xmmakenode(\'xml\',\'' + $file + '\',\'null\') '
+    $cmd=$cmd + $0+'(\'next\')'
+  endif
+  vnmrjcmd('VP 1 '+$cmd)
+  if $appmode='walkup' then
+    $cmd='VP 1 vnmrjcmd(`VP 1 xmtime`)'
+    vnmrjcmd($cmd)
+  endif
+else
+" execute last macro in protocol"
+  lookup('mfile',$file,'filekey'):$key
+  $i=0 $j=0 $eof=1
+  $macro=''
+  repeat
+    $j=$j+1
+    lookup('mfile',$key,'delimiter','="</>! ','macro','read','filekey'):$word,$key,$eof
+    if ($eof>1.5) then
+      $i=$i+1
+      $macro[$i]=$word
+    endif
+  until ($eof<1.5 or $j>1000) "avoid infinite loop"
+  if ($i>0.5) then
+    exec($macro[$i])
+  endif
+endif

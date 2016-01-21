@@ -1,0 +1,198 @@
+"macro xmwritesq"
+"macro to write enterSQ file"
+
+"problem??? - data field is in $nodeid/prop, also in enterSQ"
+"can they get out of sync???  one comes from java, the other from unix"
+"should not depend on enterSQ data field being correct?"
+
+if (jcurwin[jviewport]=0) then
+  return
+endif
+
+xm1('studydir'):$sdir
+$activestudy=activestudy[1]
+if ($#=0 or $#=1) then
+
+  if ($sdir='' or $activestudy='null') then
+    return
+  endif
+
+  if (appmode='walkup' or appmode='lc') then
+    $cmd = 'SQ get nodes in '+studyid+' id sqattr ' + $0 + '(0,\''
+  else
+    $cmd = 'SQ get all nodes id sqattr ' + $0 + '(0,\''
+  endif
+"SQ get nodes >= ... fails, order wrong; could always get grandp explicitly"
+"does not return if no tmpstudy, should it set sqattr=''?"
+"or get all nodes, sort them out in $#=3 ?"
+  if ($# = 1) then $cmd = $cmd + $1 endif
+  $cmd = $cmd + '\',0)'
+  vnmrjcmd($cmd)
+
+elseif ($#=2) then
+
+  if ($1 = 'write') then
+"   write study.xml from background engine"
+"   starting from enterSQ/prop files"
+"   assume java not available"
+    if (appmode<>'walkup' and appmode<>'lc' and $activestudy<>studyid) then
+      write('line3','No study active, cannot write study.xml file.')
+      return
+    endif
+
+    xm1('studydir'):$sdir
+    $enfile=$sdir+'/enterSQ'
+    exists($enfile,'file'):$e
+    if $e<0.5 then
+      return
+    endif
+
+    $ids='' $val=''
+    readfile($enfile,'$ids','$val','','local'):$qsize
+
+    $type='' $status='' $lock='' $title='' $exp=''
+    $time='' $macro='' $data=''
+"   $required='' why doesn't it work? doesn't always exist?"
+    $mac='' $ltr='' $word=''
+    $i=0
+    repeat
+      $i=$i+1
+      xmgetatts($ids[$i],'type','status','lock','title','exp','time','macro','data'):$type[$i],$status[$i],$lock[$i],$title[$i],$exp[$i],$time[$i],$mac,$data[$i]
+      $word=''
+      if ($mac<>'') then
+        length($mac):$len
+        $j=0  "other special characters?"
+        repeat
+          $j=$j+1
+          substr($mac,$j,1):$ltr
+          if $ltr='\'' then
+            $word=$word+'&apos;'
+          else
+            $word=$word+$ltr
+          endif
+        until ($j>=$len)
+      endif
+      $macro[$i]=$word
+    until ($i>=$qsize)
+
+"write enterSQ file, in case lock or data has changed"
+    $cpenfile=$enfile+'cp'
+    write('reset',$cpenfile)
+    $i=0
+    repeat
+      $i=$i+1
+      $edata=$data[$i]
+      if $edata='null' then $edata='' endif
+      write('file',$cpenfile,'%s %s lock%s %s',$ids[$i],$exp[$i],$lock[$i],$edata)
+    until ($i>=$qsize)
+    mv($cpenfile,$enfile)
+
+"write study.xml file"
+    $cpfile=$sdir+'/studycp.xml'
+    write('reset',$cpfile)
+    write('file',$cpfile,'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE template>\n<template>')
+    $i=0 $prflag='n'
+    repeat
+      $i=$i+1
+      if ($status[$i]='protocol') then
+        if $prflag='y' then
+          write('file',$cpfile,'  </protocol>')
+        endif
+        write('file',$cpfile,'  <protocol type="%s" id="%s" lock="%s" title="%s" exp="%s" status="%s" >',$type[$i],$ids[$i],$lock[$i],$title[$i],$exp[$i],$status[$i])
+        $prflag='y'
+      else
+        write('file',$cpfile,'    <action type="%s" id="%s" status="%s" lock="%s" title="%s" exp="%s" time="%s" macro="%s" data="%s" />',$type[$i],$ids[$i],$status[$i],$lock[$i],$title[$i],$exp[$i],$time[$i],$macro[$i],$data[$i])
+      endif
+    until ($i>=$qsize)
+    if $prflag='y' then
+      write('file',$cpfile,'  </protocol>')
+    endif
+    write('file',$cpfile,'</template>')
+    $file=$sdir+'/study.xml'
+    mv($cpfile,$file)
+  endif
+  if ($2 = 'show') then
+    $file=$sdir+'/study.xml'
+    $b=0 bgmode_is:$b
+    if $b<0.5 then
+"why doesn't it execute? -not if acq running"
+      xm1('read "'+$file+'"')
+    else
+      if (auto<>'y') then "for bg Vnmr, auto needs different cmd"
+        $cmd='send2Vnmr '+userdir+'/persistence/.talk2j "vnmrjcmd(\'SQ pause; read '+$file+'\')"'
+"       write('line3','shell: %s',$cmd)"
+"       shell($cmd):$x"
+      endif
+    endif
+  endif
+
+elseif ($#=3) then
+
+  $sqdir=sqdir
+  $studyid=studyid
+  if ($2<>'') then
+    exec($2)
+    xm1('studydir'):$sdir
+  endif
+
+  $file = $sdir+'/enterSQ'
+  $tfile = $sdir+'/enterSQ.tmp'
+  write('reset',$tfile)
+  $id='' $sqv='' $sqt='' $sqd=''
+  $v=0
+  if (appmode='walkup' or appmode='lc') then
+    $v=1
+  endif
+ $len=size('sqattr') $len=trunc($len+0.5)
+ if ($len < $v+0.5) then
+  mv($tfile,$file)
+  $xfile=$sdir+'/study.xml'
+  exists($xfile,'file'):$e
+  if ($e) then rm($xfile):$x endif
+  if ($v=1) and (studyid='tmpstudy') then
+    $idir=$sdir+'/info'
+    exists($idir,'directory'):$d
+    if ($d) then
+      shell('cd "'+$idir+'";echo *'):$ilist
+      $i=1 $f='' substr($ilist,$i):$f
+      while ($f<>'') do
+        if ($f<>'') then xm1('delete '+$f) endif
+        $i=$i+1 $f='' substr($ilist,$i):$f
+      endwhile
+    endif
+    sqfilemenu('Clear Study','silent')
+  endif
+ else
+  repeat
+    $v=$v+1
+    $id=sqattr[$v]
+    if ((appmode='walkup' or appmode='lc') and studyid<>'tmpstudy') then
+      strstr($id,studyid+'_'):$pos,$s1,$id
+    endif
+    if ($id<>'' and $id<>'null') then
+      xmgetatts($id,'exp','lock','data'):$sqv,$sqt,$sqd
+      if $id='' then $id='null' endif
+      if $sqv='' then $sqv='null' endif
+      if $sqt='' then $sqt='off' endif
+      write('file',$tfile,'%s %s lock%s %s',$id,$sqv,$sqt,$sqd)
+    endif
+  until ($v >= $len)
+  mv($tfile,$file)
+  xmwritesq('write','')
+" vnmrjcmd('SQ write '+$sdir+'/study.xml')"
+"if I can't do partial xml file write, call xmwritesq('write','') here"
+ endif
+  studyid=$studyid
+  sqdir=$sqdir
+  if (actionid<>'null') then
+    xmaction('click',actionid)
+  else
+    xmaction('click',$id)
+  endif
+" if appmode='walkup' then xmtime endif"
+
+  // NOTE: This is part of a sleazy workaround for cloning multiple nodes
+  // See: vnmr/ui/QueuePanel.java
+  vnmrjcmd('SQ WriteSqDone')
+
+endif

@@ -1,0 +1,160 @@
+"macro BPcal"
+" BPcal"
+
+"For version 5.1 software and later"
+
+" Calculates all the shaped pulses for the BioPack pulse sequences.  "
+" Requires no prior calibration"
+
+"macro BPcal"
+"  modified for BioPack, G. Gray, August 2002"
+
+exists(userdir+'/shapelib','directory'):$exists
+if $exists<1 then mkdir(userdir+'/shapelib') endif
+
+" 180 degree inversion pulse across 200ppm, centered on dof, to invert  "
+" all C13 nuclei when dof=70ppm "
+BPmakestC200
+
+" 180 degree inversion pulse across 140ppm, centered on dof, to invert  "
+" all C13 nuclei when dof=70ppm "
+BPmakestC140
+
+" 180 degree inversion pulse across 80ppm, centered on dof, to invert  "
+" all aliphatic C13 nuclei without perturbing protein aromatic or CO C13  "
+" nuclei when dof=35ppm"
+BPmakestC80
+
+" 180 degree inversion pulse across 30ppm, centered on dof, to invert  "
+" all aromatic C13 nuclei without perturbing protein aliphatic C13 nuclei "
+" when dof=125ppm, OR to invert Ca's without perturbing protein aromatic or  "
+" CO  C13 nuclei when dof=56ppm"
+BPmakestC30
+
+" 3 ms 180 degree pulse across 50ppm, with the 10% left-hand edge of the "
+" inversion at 50 ppm when dof=56ppm, to invert Cb's to the right of the Ca's "
+BPmakestC50_3r
+
+" 5 ms 180 degree pulse across 50ppm, with the 3% left-hand edge of the "
+" inversion at 50 ppm when dof=56ppm, to invert Cb's to the right of the Ca's "
+BPmakestC50_5r
+
+" 3 ms 180 degree pulse across 50ppm, with the 10% right-hand edge of the "
+" inversion at 63 ppm when dof=56ppm, to invert Cb's to the left of the Ca's "
+" A narrower inversion can be used, but it is handy for all other aspects "
+" to be the same as stC50r"
+BPmakestC50_3l
+
+" 5 ms 180 degree pulse across 50ppm, with the 3% right-hand edge of the "
+" inversion at 63 ppm when dof=56ppm, to invert Cb's to the left of the Ca's "
+" A narrower inversion can be used, but it is handy for all other aspects "
+" to be the same as stC50r"
+BPmakestC50_5l
+
+" 10 ms 180 degree pulse across 12.5ppm, from 50ppm to 62.5ppm relative to dof "
+" at 35ppm, to invert Ca's and not touch almost all Cb's  "
+BPmakestC12_10
+
+" 180 degree inversion pulse across 30ppm, centered on dof, to invert  "
+" all RNA aromatic C2/C6/C8 (dof=150ppm) C13 nuclei without perturbing "
+" RNA pyrimidine C5 and ribose C13 nuclei "
+rna_makestC30
+
+" 180 degree inversion pulse across 50ppm, centered on dof, to invert  "
+" all RNA ribose and pyrimidine C5 (dof=85ppm) C13 nuclei without perturbing "
+" RNA aromatic C2/C6/C8 C13 nuclei "
+rna_makestC50
+
+" 180 degree inversion pulse across 80ppm, centered on dof, to invert  "
+" all RNA aromatic C5/C6/C8 (dof=125ppm) C13 nuclei without "
+" perturbing RNA ribose nuclei "
+rna_makestC80
+
+" 180 degree inversion pulse across 60ppm, centered on dof, to invert  "
+" all RNA ribose C1' and aromatic C6/C8 (dof=115ppm) C13 nuclei without "
+" perturbing RNA ribose C2' and aromatic C2 C13 nuclei "
+rna_makestC60
+
+" 180 degree inversion pulse across 140ppm, centered on dof, to invert  "
+" all C13 nuclei when dof=110ppm "
+rna_makestC140
+
+" 180 degree inversion pulse across 50ppm, centered on dof2, to invert  "
+" all aromatic N1/N9 N15 nuclei when dof2=155ppm "
+rna_makestN50
+
+" 180 degree inversion pulse across 100ppm, centered on dof2 "
+rna_makestN100
+
+"90 degree selective one-lobe pulse on H2O (1.2 ppm), < 1% excitation off resonance"
+rna_makeH2Osinc
+
+"90 degree selective one-lobe pulse on H2O (0.5 ppm), < 1% excitation off resonance"
+rna_makeH2Osinc1     
+
+"flopsy8 decoupling pattern will be made only if not already present"
+rna_makeflopsy8
+
+"dipsi2 decoupling pattern will be made only if not already present"
+rna_makedipsi2
+
+"90 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency at CO."
+" Generates offC13.RF"
+BPmake90Ca_CO
+
+"180 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency at CO."
+" Generates offC3.RF"
+BPmake180Ca_CO
+
+"180 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency at Cab."
+" Generates offC4.RF"
+BPmake180Ca
+
+"90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at Ca. Generates offC2.RF"
+BPmake90CO_Ca
+
+"90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at Cab. Generates offC5.RF"
+BPmake90CO
+
+"90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at CO. Generates offC6.RF"
+BPmake90CO_CO
+
+"180 degree selective sinc one-lobe pulse on Cab.  C13 "
+"frequency at CO.  Generates offC27.RF"
+BPmake180Cab_CO
+
+"180 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at Cab.  Generates offC7.RF"
+BPmake180CO
+
+"180 degree selective sinc one-lobe pulse on Ca, first null at CO.  C13 "
+"frequency at CO.  Generates offC17.RF"
+BPmake180Ca_COs
+
+"180 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at CO.  Generates offC8.RF"
+BPmake180CO_CO
+
+"180 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at Ca.  Generates offC9.RF"
+BPmake180CO_Ca
+
+"180 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 "
+"frequency at 35ppm.  Generates offC10.RF"
+BPmake180COa
+
+"90 degree selective one-lobe pulse on H2O, < 1% excitation off resonance"
+if (wexp<>'BP10')     "wexp=BP10 for autocalibrate process where H2Osinc.RF is made"
+ then BPmakeH2Osinc endif     
+
+BPmakeH2Osinc1
+
+"dipsi2 decoupling pattern will be made only if not already present"
+BPmakedipsi2
+
+"180-degree cosine-modulated pulse on NH, leaving H2O unaffected (180's at"
+" +4ppm and -4ppm from H2O"
+BPmakecosinemodulate 

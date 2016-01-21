@@ -1,0 +1,123 @@
+//@copy-c-declaration /*
+//@copy-c-declaration *
+//@copy-c-declaration * Varian,Inc. All Rights Reserved.
+//@copy-c-declaration * This software contains proprietary and confidential
+//@copy-c-declaration * information of Varian, Inc. and its contributors.
+//@copy-c-declaration * Use, disclosure and reproduction is prohibited without
+//@copy-c-declaration * prior consent.
+//@copy-c-declaration */
+//@copy-c-declaration /*
+//@copy-c-declaration *  Author: Greg Brissey  4/28/2004
+//@copy-c-declaration */
+
+// #include "ndds/ndds_c.h"
+//@copy-c-declaration #include "NDDS_Obj.h"
+
+
+//@copy-c-declaration /* cmd types */
+
+const long CNTLR_CMD_ROLLCALL = 1;    /* master initiated roll call */
+const long CNTLR_CMD_HERE = 2;        /* controller responce to roll call */
+const long CNTLR_CMD_SET_DEBUGLEVEL = 3;
+const long CNTLR_CMD_REBOOT = 4;
+const long CNTLR_CMD_APARSER = 5;
+const long CNTLR_CMD_READY4SYNC = 6;
+const long CNTLR_CMD_STATE_UPDATE = 7;
+const long CNTLR_CMD_FFS_UPDATE = 8;
+const long CNTLR_CMD_FFS_COMMIT  = 9;
+const long CNTLR_CMD_FFS_DELETE  = 10;
+const long CNTLR_CMD_TUNE_QUIET  = 11;
+const long CNTLR_CMD_TUNE_ENABLE  = 12;
+const long CNTLR_CMD_TUNE_FINI  = 13;
+
+const long CNTLR_CMD_SET_ACQSTATE = 14;
+const long CNTLR_CMD_SET_SHIMDAC = 15;
+const long CNTLR_CMD_SET_FIFOTICK = 16;
+
+const long CNTLR_CMD_DDR_AT_BARRIER = 20;
+const long CNTLR_CMD_SET_NUM_ACTIVE_DDRS = 21;
+const long CNTLR_CMD_SET_UPLINK_CNTDWN = 22;
+
+const long CNTLR_RTVAR_UPDATE = 23;
+
+const long CNTLR_CMD_SET_WRKING_GRP = 24;
+const long CNTLR_CMD_NEXT_WRKING_GRP = 25;
+
+//@copy-c-declaration /* topic name form */
+//@copy-c-declaration /* topic names form: h/rf1/dwnld/strm, rf1/h/dwnld/reply */
+
+const string CNTLR_COMM_MULTICAST_IP = "225.0.0.10";
+const string EXCEPTION_COMM_MULTICAST_IP = "225.0.0.11";
+const string DDRSYNC_COMM_MULTICAST_IP = "225.0.0.12";
+
+const string MASTER_PUB_COMM_TOPIC_FORMAT_STR = "master/cntlr/cmd";
+const string CNTLR_SUB_COMM_TOPIC_FORMAT_STR = "master/cntlr/cmd";
+
+const string CNTLR_PUB_COMM_TOPIC_FORMAT_STR = "%s/master/cmd";
+const string MASTER_SUB_COMM_PATTERN_TOPIC_STR = "*/master/cmd";
+const string MASTER_SUB_COMM_TOPIC_FORMAT_STR = "%s/master/cmd";
+
+const string CNTLR_PUB_COMM_M21TOPIC_FORMAT_STR =  "cntlr/master/cmd";
+const string MASTER_SUB_COMM_M21TOPIC_FORMAT_STR = "cntlr/master/cmd";
+
+const string EXCEPTION_PUB_COMM_TOPIC_FORMAT_STR = "cntlr/excp";
+const string EXCEPTION_SUB_COMM_TOPIC_FORMAT_STR = "cntlr/excp";
+ 
+const string MASTERBARRIER_PUB_COMM_TOPIC_FORMAT_STR = "master/ddr_barrier";
+/* const DDRBARRIER_PUB_COMM_TOPIC_FORMAT_STR = "cntlr/ddr_barrier"; */
+const string DDRBARRIER_SUB_COMM_TOPIC_FORMAT_STR = "cntlr/ddr_barrier";
+ 
+const string DDRBARRIER_PUB_COMM_TOPIC_FORMAT_STR = "%s/ddr_barrier";
+/* const DDRBARRIER_SUB_COMM_TOPIC_FORMAT_STR = "%s/ddr_barrier"; */
+const string DDRBARRIER_SUB_PATTERN_TOPIC_FORMAT_STR = "*/ddr_barrier";
+
+const string DDRGRPBARRIER_PUB_COMM_TOPIC_FORMAT_STR = "%s/ddr_grpbarrier";
+const string DDRGRPBARRIER_SUB_PATTERN_TOPIC_FORMAT_STR = "*/ddr_grpbarrier";
+
+/* DDR query to Recvproc on number of FID buffers available */
+const string CNTLR_PUB_UPLOAD_BUFREQ_TOPIC_FORMAT_STR = "%s/h/upload/query";
+const string HOST_SUB_UPLOAD_BUFREQ_TOPIC_FORMAT_STR  = "%s/h/upload/query";
+
+//@copy-c-declaration /* download types */
+
+const  long DATA_FID =  1;
+
+
+const long MAX_IPv4_UDP_SIZE_BYTES  =  65535;   /* IPv4 UDP max Packet size */
+const long COMM_MAX_STR_SIZE = 256;
+
+struct Cntlr_Comm {
+        long key; //@key     many to one using single topic requires the special NDDS idl key
+        char cntlrId[16];    /* controller ID String, e.g. rf1. Gradient1, ddr1, etc... */
+        long cmd;
+        long errorcode;
+        long warningcode;
+        long arg1;
+        long arg2;
+        long arg3;
+	unsigned long crc32chksum;  /* CRC-32 checksum */
+        string<COMM_MAX_STR_SIZE> msgstr;
+};
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration     extern "C" {
+//@copy-c-declaration #endif
+
+//@copy-c-declaration extern void getCntlr_CommInfo(NDDS_OBJ *pObj);
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration }
+//@copy-c-declaration #endif
+
+// //@copy-c-declaration #if 0
+// //@copy-c /* Direct Code from Codes_Downld.x */
+// //@copy-c void getCntlr_CommInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Cntlr_CommNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Cntlr_CommNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Cntlr_CommAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Cntlr_CommMaxSize;
+// //@copy-c }
+// //@copy-c-declaration #endif
+

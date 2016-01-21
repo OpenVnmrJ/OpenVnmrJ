@@ -1,0 +1,109 @@
+"macro AT14"
+"AT14" "Small-Angle Phase Shift Test  "
+
+if ($#=0) then
+   ATrtp('standard')
+   gain=gain-6
+   text('Small-Angle Phase Shift Test')
+   atext('Phase is rotated by 10 degrees')
+   seqfil='ATphtest'
+   at_currenttest='phasetest_ch1'
+   stpsiz=1 cancel='n' dec='n'
+   r3=10
+   array('mphase',37,0,r3)
+   wnt='AT14(`WNT`,50)'
+   wexp='AT14(`PART1`)'
+   ATcycle
+   au
+   write('line3','Small-Angle Phase Shift Test:10 degree ')
+   dps
+elseif ($1='WNT') then
+   ATwft
+   select(1)
+   ph
+   f
+   vp=70
+   aph0
+   peak:$ht,$frq
+   wp=1p sp=$frq-0.5p
+   if ($# = 2) then
+     vsadj($2)
+   else
+     vsadj(50)
+   endif
+   dssh dtext
+elseif ($1='PART1') then
+   wft
+   f peak:$ht,$frq
+   wp=1p sp=$frq-0.5p
+   ATsvf
+   ATplot
+   s1
+   if (at_printparams='y') then
+    pap ATpltext
+    pps(120,0,wcmax-120,90)
+    ATpage('phasetest3_ch1')
+   endif
+   text('Small-Angle phase shift\\Each spectrum is rotated by exactly\\10 degrees\\Intensities are used to calculate\\stability')
+   ATanalyz(r3):$stab,$avht,$stddev
+   ATrecord('PSHIFT_10deg','Phase-rotated by 10 degrees','stability',$stab,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','10 degree Small-Angle Phase Shift : %3.2f percent',100-$stddev)
+   r3=1
+   at_currenttest='phasetest_1deg_ch1'
+   array('mphase',361,0,r3)
+   wnt='AT14(`WNT`,50)'
+   wexp='AT14(`PART2`)'
+   ATcycle
+   text('Small-Angle phase shift\\Each spectrum is rotated by exactly \\1 degree. Intensities are used to \\calculate stability')
+   au
+   write('line3','Small-Angle Phase Shift Test: 1deg ')
+   dps
+elseif ($1='PART2') then
+   wft
+   f peak:$ht,$frq
+   wp=1p sp=$frq-0.5p
+   ATsvf
+   ATplot
+   s1
+   if (at_printparams='y') then
+    pap ATpltext
+    pps(120,0,wcmax-120,90)
+    ATpage('phasetest3_ch1')
+   endif
+   ATanalyz(r3):$stab,$avht,$stddev
+   ATrecord('PSHIFT_1deg','Phase-rotated by 1 degree','stability',$stab,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','1 degree Small-Angle Phase Shift : %3.2f percent',100-$stddev)
+   getlimit('tpwr'):$max,$min,$step
+   if ($step=1) then ATnext return endif
+   stpsiz=0.011 r3=stpsiz
+   at_currenttest='phasetest_0.011deg_ch1'
+   array('mphase',100,0,164)
+   wnt='AT14(`WNT`,75)'
+   wexp='AT14(`PART3`)'
+   ATcycle
+   au
+   write('line3','Small-Angle Phase Shift Test: 0.011deg ')
+   text('Small-Angle phase shift\\Each spectrum is rotated by exactly \\1.804 degree. Intensities are used to \\calculate stability')
+   dps
+elseif ($1='PART3') then
+   wft
+   f peak:$ht,$frq
+   wp=1p sp=$frq-0.5p
+   ATsvf
+   if (at_plotauto='y') then
+     pl('all')
+     ATpltext
+     ATpage
+   endif
+   s1
+   ATanalyz(r3):$stab,$avht,$stddev
+   ATrecord('PSHIFT_0.11deg','Phase-rotated by 0.011 degrees','stability',$stab,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','0.011 degree Small-Angle Phase Shift : %3.2f percent',100-$stddev)
+   if (at_printparams='y') then
+    pap ATpltext
+    pps(120,0,wcmax-120,90)
+    ATpage('phasetest4_ch1')
+   endif
+
+ATnext
+endif

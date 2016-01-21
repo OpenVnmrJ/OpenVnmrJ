@@ -1,0 +1,57 @@
+"macro moveswPRESAT"
+"moveswPRESAT "
+
+$oldtof=tof 
+
+$rflrfp = rfl-rfp                       "referencing"
+$center = cr-delta/2                    "center between cursors"
+$oldtof = tof
+$oldsw  = sw
+$newtof = $oldtof + $center - (sw/2) + $rflrfp
+if ($#>0) then
+   $newsw=$1                        "set new sw"
+else
+   $newsw=2*(cr-$center)
+   if (2*($center-(cr-delta))>$newsw) then
+      $newsw=2*($center-(cr-delta))
+   endif
+endif
+
+exists('slpsat','parameter'):$slpsatex
+if ($slpsatex) then
+    if slpsat='n' then $slpsatex=0 endif
+endif
+if (satfrq=$oldtof) and ($slpsatex=0) then
+  $diff=2*($oldtof-$newtof)
+  if ($diff < 0) then $diff=-1*$diff endif
+  $newtof=$oldtof
+else
+  $diff=0
+endif
+sw=$newsw+$diff
+$shift  = ($oldsw/2-sw/2)-($oldtof-$newtof)
+if (rfl<>0)or(rfp<>0) then rfl = rfl-$shift endif
+wp      = sw
+sp      = $shift+rfp-rfl
+cr      = cr+$shift
+if (tn = 'none') then
+   sfrq = sfrq + ($newtof * 1e-6)
+else
+   tof = $newtof
+   on('fn'):$fnon
+   if ($fnon<1) then
+        //  Readjust np ONLY if fn is OFF
+        //  When fn is OFF, it is a good idea
+        //     to collect data with np set to nearest
+        //     (higher) Fourier number to avoid
+        //     truncation artificats after FT
+        //  However, respect user setting if fn is ON
+        //         - Krish Dec, 2007
+        $np=np fn=np np=fn fn='n'
+        if (np > 1.5*$np) then
+           np=$np/2 fn=np np=fn fn='n'
+        endif
+        sw=sw
+   endif
+endif
+

@@ -1,0 +1,46 @@
+"macro ATxrfhomocal2"
+"Xrfhomocal"
+
+
+$counter=1
+select(1) peak:$firstmaxheight $bestindex=$counter
+
+$counter=2     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                  "finds 360 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>22)
+
+$pwx360=pwx[$bestindex]
+$360maxindex=$bestindex
+$360maxheight=$bestheight
+
+$counter=23     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                    "finds 720 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>arraydim)
+
+$pwx720=pwx[$bestindex]
+$720maxindex=$bestindex
+$720maxheight=$bestheight
+
+$ratio1=$360maxheight/$firstmaxheight
+$ratio2=$720maxheight/$firstmaxheight
+$ratio1=trunc(100*$ratio1)/100
+$ratio2=trunc(100*$ratio2)/100
+$pwx90=trunc(10*$pwx720/8)/10
+return($pwx90,$pwx360,$pwx720,$ratio1,$ratio2)
+

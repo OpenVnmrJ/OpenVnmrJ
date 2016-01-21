@@ -1,0 +1,47 @@
+"macro setgcoil"
+" The macro setgcoil allows VNMR users to change gcoil assigment "
+" as the hardware configuration panel does.			 "
+" Usage : setgcoil('filename')					 "
+
+if ($#<>1)and($#<>2) then 
+	write('error','Usage : setgcoil\(\'filename\'\)')
+	abort
+endif
+
+if ($1 = 'unknown') then
+"-- Give some advisory msg ------"
+  if ($#>1) then
+    write('error','gcoil is `unknown` (%s). Gradient Coil Id disconnected?',$2)
+  else
+    write('error','gcoil is `unknown`. Gradient Coil Id disconnected?')
+  endif
+else
+  "-- Check existence of file in gradtables -----------------"
+  $table = systemdir+'/imaging/gradtables/'+$1
+  exists($table,'file'):$ex1
+  if $ex1 < 0.5 then
+    write('error','Cannot find requested gcoil `%s` in gradtables dir',$1)
+    abort
+  endif
+endif
+
+if (sysgcoil=$1) then
+  if ($1 <> 'unknown') then
+    updtgcoil
+  endif
+  return
+endif
+
+$conparfil=systemdir+'/conpar'
+$tempfil='/tmp/conpartmp'
+$updtconpar=systemdir+'/bin/cptoconpar'
+fread($conparfil,'systemglobal')
+sysgcoil=$1
+fsave($tempfil,'systemglobal')
+shell($updtconpar)
+rm('-f',$tempfil):$e
+if ($1 <> 'unknown') then
+  updtgcoil
+else
+  setvalue('gcoil','unkown')
+endif

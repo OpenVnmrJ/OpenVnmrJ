@@ -1,0 +1,120 @@
+"macro BP_PRproc1"
+"BP_PRproc1 - PR F2 processing macro "
+
+$file = ''
+$file2 = ''
+$ni = ''
+$sw = ''
+$sw1 = ''
+$pra = ''
+$rp=0 $lp=0  
+$BPaph0=0
+
+$ni = $1
+if($#>1) then
+  $BPaph0 = 1
+endif
+
+if($ni='ni2') then
+  $file = 'F2.ll'
+  $file2 = 'F2.pk'
+  format(sw2,4,2):$sw1 
+  BPsetlp2(2*ni2,ni2)
+  fn2=1k 
+else 
+  if($ni='ni') then
+    $file = 'F1.ll'
+    $file2 = 'F1.pk'
+    format(sw1,4,2):$sw1  
+    BPsetlp1(2*ni,ni)
+    fn1=1k 
+  else
+    write('error','unrecognized PR-processing option')
+    return
+  endif
+endif
+
+format(sw,4,2):$sw
+
+fn=4*np 
+wft(1)
+setref
+if($ni='ni2') then
+  setref2('N15')
+else
+  setref1('C13')
+endif
+
+f
+sp=PRsp wp=PRwp  
+if($ni='ni2') then
+  sp2=sp2+100 wp2=wp2-200
+else
+  sp1=sp1+100 wp1=wp1-200
+endif
+
+if($BPaph0>0) then
+  BPaph0
+  PRrp=rp PRlp=lp
+endif
+trace='f2'
+lvl=0.0 tlt=0.0
+wft2da($ni)
+rp=PRrp lp=PRlp 
+sp=PRsp wp=PRwp
+dconi
+
+if(PRnpeaks[PRn]<1) then
+  BP_PRvs2d
+else 
+  BP_PRvs2d(PRnpeaks[PRn])
+endif
+
+ll2d('volume')
+ll2d('writetext',$file)
+ll2d('reset')
+
+"find location of program"
+BPfindfile('getpr1'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/getpr1' then
+ cp($path1,userdir+'/../bin')  
+endif
+
+$thr = ''
+format(PRthr[PRn],4,2):$thr
+$cmd='getpr1 ' + $file + ' 0.0 '+ $sw + ' ' + $sw1 + ' ' + $thr 
+
+if(PRpos[PRn]='y') then
+  $cmd=$cmd + ' -p'
+endif
+
+shell($cmd)
+
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/getpr1' then
+ rm(userdir+'/../bin/getpr1') 
+endif
+
+if(PRsetlim='y') then
+  $mn=0.0 $mx=0.0
+  BP_PRgetlim($file2):$mn,$mx
+  PRsp=$mn*sfrq
+  PRwp=($mx-$mn)*sfrq
+  PRsp=PRsp-200 
+  PRwp=PRwp+400
+  sp=PRsp wp=PRwp
+  PRsetlim='n'
+endif
+
+if(PRnpeaks[PRn]<1) then 
+  BP_PRgetnpks($file2):PRnpeaks[PRn]
+endif
+ 
+
+

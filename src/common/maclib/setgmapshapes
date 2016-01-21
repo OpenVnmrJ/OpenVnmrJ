@@ -1,0 +1,63 @@
+"macro setgmapshapes"
+
+if ($#<0.5) then $bw=400 else $bw=$1 endif
+
+exists('shaped','parameter'):$e
+if not $e then create('shaped','flag') shaped='n' endif
+exists('shapedpw90','parameter'):$e
+if not $e then create('shapedpw90','pulse') setlimit('shapedpw90',1e6,0,0) endif
+exists('shapedpw180','parameter'):$e
+if not $e then create('shapedpw180','pulse') setlimit('shapedpw180',1e6,0,0) endif
+exists('shapedpwr90','parameter'):$e
+if not $e then create('shapedpwr90','real') endif
+exists('shapedpwr180','parameter'):$e
+if not $e then create('shapedpwr180','real') endif
+exists('shapename90','parameter'):$e
+if not $e then create('shapename90','string') endif
+exists('shapename180','parameter'):$e
+if not $e then create('shapename180','string') endif
+setlimit('shapedpw90',1000000,0,0.025)
+setlimit('shapedpw180',1000000,0,0.025)
+
+getparam('pw90',tn):pw90
+$tpwr_cf=1
+getparam('tpwr_cf',tn):$tpwr_cf
+$ref_pw90=pw90*$tpwr_cf
+$ref_pwr=tpwr
+$gmapshape90=''
+$gmapshape180=''
+
+assignshapename(seqfil+'_'+tn+'_90'):$gmapshape90
+assignshapename(seqfil+'_'+tn+'_180'):$gmapshape180
+
+$shapefile90=$gmapshape90+'.RF'
+$shapefile180=$gmapshape180+'.RF'
+
+//90 degree pulse
+opx($shapefile90)
+putwave('seduce',$bw,0.0,0,0,0,30)
+pboxpar('bscor','y')
+cpx($ref_pw90,$ref_pwr):$dum
+pbox_pw($shapefile90):$pwgmap90
+pbox_pwr($shapefile90):$pwrgmap90
+
+//180 degree pulse
+opx($shapefile180)
+putwave('av180',$bw,0.0,0,0,0,180)
+pboxpar('bscor','y')
+cpx($ref_pw90,$ref_pwr):$dum
+pbox_pw($shapefile180):$pwgmap180
+pbox_pwr($shapefile180):$pwrgmap180
+
+if ($## > 0) then
+   return($pwgmap90,$pwrgmap90,$gmapshape90,$pwgmap180,$pwrgmap180,$gmapshape180)
+else
+   shapedpw90=$pwgmap90
+   shapedpwr90=$pwrgmap90
+   shapename90=$gmapshape90
+   shapedpw180=$pwgmap180
+   shapedpwr180=$pwrgmap180
+   shapename180=$gmapshape180
+   saveshapes('add','tnshapes','shapename90','shapedpwr90','shapedpw90')
+   saveshapes('add','tnshapes','shapename180','shapedpwr180','shapedpw180')
+endif

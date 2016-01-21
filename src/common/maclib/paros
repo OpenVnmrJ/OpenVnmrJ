@@ -1,0 +1,73 @@
+"macro paros"
+"*********************************************************"
+"*                                                        *"
+"*     paros    -    creates the parameters necessary     *"
+"*			for oversampling and digital	  *"
+"*			filtering			  *"
+"*                                                        *"
+"*********************************************************"
+
+exists('osfilt','parameter'):$e
+if (not $e) then
+  create('osfilt','string')
+  setenumeral('osfilt',5,'a','A','b','B','')
+  osfilt=''
+endif
+
+if (Console='vnmrs') then
+  return
+endif
+
+exists('oversamp','parameter'):$e
+if (not $e) then
+  create('oversamp','integer')
+  setlimit('oversamp',20,0,1)
+  setprotect('oversamp','on',9)
+  setgroup('oversamp','acquisition')
+  oversamp=1
+  if (Console='uplus' or Console='inova') then
+     alfa=6.6
+     if (tn='H1') then
+        rof2=2.0 "Typical values to give good baselines"
+     endif
+  endif
+endif
+
+exists('oscoef','parameter'):$e
+if (not $e) then
+  create('oscoef','integer')
+  setlimit('oscoef',49999,3,2)
+  setprotect('oscoef','on',1)
+  setgroup('oscoef','acquisition')
+  oscoef=31
+endif
+
+exists('oslsfrq','parameter'):$e
+if (not $e) then
+  create('oslsfrq','real')
+  setprotect('oslsfrq','on',1)
+  setgroup('oslsfrq','acquisition')
+  oslsfrq='n'
+endif
+
+exists('osfb','parameter'):$e
+if (not $e) then
+  create('osfb','real')
+  setlimit('osfb',100000,0,0)
+  setprotect('osfb','on',1)
+  setgroup('osfb','acquisition')
+  osfb='n'
+endif
+
+exists('filtfile','parameter'):$e
+if (not $e) then
+  create('filtfile','string')
+  filtfile=''
+endif
+
+exists('def_osfilt','parameter','global'):$e
+if ($e < 0.5) then
+  create('def_osfilt','string','global')
+  setenumeral('def_osfilt',4,'a','A','b','B','global')
+  def_osfilt='a'
+endif

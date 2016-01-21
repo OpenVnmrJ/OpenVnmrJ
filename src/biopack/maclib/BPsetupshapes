@@ -1,0 +1,407 @@
+"macro BPsetupshapes"
+" BPsetupshapes     for alphas,aliphatics, aromatics or allC "
+" creates waveforms WURSTxx.DEC, where xx is the number of 13C ppm bandwidth"
+" if BPpwrlimits=1, power levels may reduced, but bandwidths remain, at"
+"   the expense of increased sidebands"
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+exists('BPspinlock','parameter','global'):$e2
+if $e2=1 then
+   if BPspinlock=0 then 
+    BPspinlock=50*dfrq            "set C-13 spinlock bandwidth to default value"
+   endif
+else 
+   create('BPspinlock','real','global')
+   BPspinlock=50*dfrq            "set C-13 spinlock bandwidth to default value"
+endif
+            "check BPspinlock relative to user-defined maximum BPdpwrspinlock"
+if BPpwrlimits=1 then
+  if BPdpwrspinlock<BPspinlock then
+    BPspinlock=BPdpwrspinlock
+  endif
+endif
+
+format(BPspinlock,9,1):$bw    " set C-13 spinlock bandwidth to global stored value"
+
+ $wave = 'WURST2m' + $bw + '/0.08ms'
+ opx			          " setup CC spinlock "
+ setwave($wave)  
+ pbox_rst
+ pboxpar('name', 'cctocsy.DEC')
+ pboxpar('stepsize', '1.0')
+ pboxpar('sfrq', dfrq)
+ pboxpar('sucyc', 't9,t5,m4')
+ pboxpar('ref_pwr', pwClvl)
+ pboxpar('ref_pw90', pwC*compC)
+ " pboxpar('reps', '0')  - to suppress the Pbox output "
+ shell('Pbox')
+ if BPpwrlimits=1 then
+  BPpboxget('cctocsy.DEC'):$name,$par,$dpwr,$par,$par,$par
+  if $dpwr>BPdpwrmax then
+     pboxpar('attn',$attn)
+     echo($attn)
+     shell('Pbox')
+  endif
+ endif
+ BPmoveshape('cctocsy.DEC')
+
+format(90.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 80 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst80.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst80.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst80.DEC')
+
+format(130.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 110 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'wurst110.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst110.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst110.DEC')
+
+format(60.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 50 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst50.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst50.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst50.DEC')
+
+format(45.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 40 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst40.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst40.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst40.DEC')
+
+format(160.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 140 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst140.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst140.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst140.DEC')
+
+opx			          " set Cb decoupling "
+setwave('WURST2 22p/5m 36p')   " main Cb band "
+setwave('WURST2  6p/5m 71p')   " Threonines "
+setwave('WURST2  6p/5m 15p')   " Alanines "
+pbox_rst
+pboxpar('name', 'cbdec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+pboxpar('$3 adb', '1.2')
+pboxpar('$4 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cbdec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cbdec.DEC')
+
+opx			          " set Cb decoupling "
+setwave('WURST2 22p/5m 36p')   " main Cb band "
+setwave('WURST2  6p/5m 71p')   " Threonines "
+setwave('WURST2  6p/5m 15p')   " Alanines "
+pbox_rst
+pboxpar('name', 'cb43dec.DEC')   "c13 will be at 43ppm for this"
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '43p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+pboxpar('$3 adb', '1.2')
+pboxpar('$4 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cb43dec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cb43dec.DEC')
+
+opx			          " set COCb decoupling "
+setwave('WURST2 20p/5m 175p')  " CO decoupling "
+setwave('WURST2 22p/5m 36p')   " main Cb band "
+setwave('WURST2  6p/5m 71p')   " Threonines "
+setwave('WURST2  6p/5m 15p')   " Alanines "
+pbox_rst
+pboxpar('name', 'cocbdec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+pboxpar('$3 adb', '1.2')
+pboxpar('$4 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cocbdec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cocbdec.DEC')
+
+opx			          " set COCa decoupling "
+setwave('WURST2 20p/5m 174p')  " CO decoupling "
+setwave('WURST2 22p/5m 30p')   " Ca decoupling "
+pbox_rst
+pboxpar('name', 'cocadec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cocadec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cocadec.DEC')
+
+opx			          " set CO decoupling "
+setwave('WURST2 20p/5m 174p')  " CO decoupling "
+pbox_rst
+pboxpar('name', 'codec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '35p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('codec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('codec.DEC')
+
+opx	          " CO decoupling when dof is at alpha C  "
+setwave('WURST2 20p/5m 174p')  " CO decoupling "
+pbox_rst
+pboxpar('name', 'codec2.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('codec2.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('codec2.DEC')
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+$dmmyshp=''
+$freq = (150-46)*dfrq  " distance from Cab to the middle of CO and aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 0' "ph=0 st=0"
+
+opx
+setwave($wave1)
+
+pbox_rst
+pboxpar('name', 'CgCO1.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+
+$freq = (150-46)*dfrq  " distance from Cab to the middle of CO and aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 1' "ph=0 st=1 time-inversed"
+
+opx
+setwave($wave1)
+
+pbox_rst
+pboxpar('name', 'CgCO2.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+BPmoveshape('CgCO1.RF')
+BPmoveshape('CgCO2.RF')
+
+"make CaCO.DEC"
+$bw1 = ''
+$bw2 = ''
+$wave1 = ''
+$wave2 = ''
+$offset = ''
+
+$freq = -(174-56)*dfrq           " distance to alpha carbon region"
+format(40.0*dfrq,9,1):$bw1   " set Ca decoupling bandwidth to 40 ppm "
+format(20.0*dfrq,9,1):$bw2   " set CO decoupling bandwidth to 20 ppm "
+format($freq,9,1):$offset   
+$wave1 = 'WURST2' + $bw1 + '/1.01ms' + $offset
+$wave2 = 'WURST2' + $bw2 + '/1.01ms'
+opx
+setwave($wave1)
+setwave($wave2)
+pbox_rst
+pboxpar('name', 'CaCO.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+
+BPmoveshape('CaCO.DEC')
+n3=$n3
+

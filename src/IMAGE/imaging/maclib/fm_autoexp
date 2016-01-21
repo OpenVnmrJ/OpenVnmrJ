@@ -1,0 +1,95 @@
+"macro fm_autoexp"
+"***************************************************************************"
+"									    "
+" fm_autoexp - Macro to start fastmap shimming from any experiment	    "
+"									    "
+" Usage: fm_autoexp<('startshim' | 'manual' | 'setpars' | 'svp' | 'exit')>  "
+"        fm_autoexp<('menu'<,'linear3proj' | 'linear6proj' | 'quad9proj'>)> "
+"        fm_autoexp - assumes 'startshim' by default 			    "
+"									    "
+" Details: Starting from any experiment, retrieve fastmap parameters.	    "
+"	   Shimming uses linear 3 projection, linear 6 projection,	    "
+"	   or quadratic 9 projection.  fm_setvox defines the region to	    "
+"	   shim.  wexp is then set, and acquisition started.  When	    "
+"	   acquisition completes, shimming adjustments are made.	    "
+"									    "
+"   fm_autoexp('startshim') starts shimming, retrieves previous		    "
+"	   parameters when done.					    "
+"   fm_autoexp('manual') starts shimming, does not retrieve previous	    "
+"	   parameters when done.					    "
+"   fm_autoexp('setpars') stores starting parameters, and retrieves	    "
+"	   fastmap parameters.						    "
+"   fm_autoexp('svp') saves current parameters in fastmap.par.		    "
+"   fm_autoexp('menu') selects parameters for different projections.	    "
+"   fm_autoexp('exit') retrieves previous parameters.			    "
+"***************************************************************************"
+
+$method='startshim'
+if $#>0.5 then
+  $method=$1
+endif
+$manual='n'
+if $#>0.5 then
+  if $1='manual' then
+    $manual='y'
+  endif
+endif
+
+exists(userdir+'/fastmap','file'):$e
+if $e<0.5 then mkdir(userdir+'/fastmap') endif
+
+if $method='setpars' then  "save previous exp, set up fastmap parameters"
+  if ((seqfil <> 'fastestmap') and (seqfil <> 'fastestmapT1')) then
+    exists(curexp+'/fmcp','file'):$e
+    if $e>0.5 then rm('-r',curexp+'/fmcp'):$x endif
+"   save copies of image planning parameters here"
+"   $vpsi=vpsi $vphi=vphi $vtheta=vtheta $vox1=vox1 $vox2=vox2 $vox3=vox3 $pos1=pos1 $pos2=pos2 $pos3=pos3"
+    tmpsave('fmcp')
+    cp(curexp+'/text',curexp+'/fmcp/text')
+"   Are fastmap parameters coil dependent?  Need multiple parameter sets?"
+    rtppar('fastestmap')
+"   set image planning parameters"
+"   fm_setvox($vpsi,$vphi,$vtheta,$vox1,$vox2,$vox3,$pos1,$pos2,$pos3)"
+  endif
+elseif $method='exit' then
+  exists(curexp+'/fmcp','file'):$e
+  if $e<0.5 then
+    write('error','FASTMAP: Cannot retrieve previous parameter set.')
+  else
+    mv(curexp+'/fmcp/text',curexp+'/text')
+    tmpreturn('fmcp')
+    dg  "updates pslabel display"
+  endif
+elseif $method='svp' then  "save current parameters in parlib"
+  if not ((seqfil = 'fastestmap') or (seqfil = 'fastestmapT1')) then
+    write('error','Cannot save fastmap parameters, seqfil=\'%s\'.',seqfil)
+  else
+    $pfile=userdir+'/parlib/fastmap.par'
+"   exists($pfile,'file'):$e if $e>0.5 then rm('-r',$pfile):$x endif"
+    svp($pfile) "asks to overwrite, could remove"
+  endif
+elseif $method='menu' then "select parameters from menu"
+" set parameters here, need to save them in fastmap.par"
+  $projs=3
+  if $#>1.5 then
+    $projs=$2
+  endif
+  fm_autoexp('setpars')
+  if $projs=6 then
+" or look at maxproj=3,6,9?"
+"   write('error','Linear shimming with 6 projections not yet implemented.')"
+    fm_setmap(2) wexp='fm_calcshim(2) fm_showmap fm_setshims'
+  elseif $projs=9 then
+"   write('error','Quadratic shimming with 9 projections not yet implemented.')"
+    fm_setmap(3) wexp='fm_calcshim(3) fm_showmap fm_setshims'
+  else   " $projs=3 "
+    fm_setmap(1) wexp='fm_calcshim(1) fm_showmap fm_setshims'
+  endif
+else  "$method='startshim' or 'manual' - start shimming"
+  fm_autoexp('setpars')
+" don't set most parameters here, they're retrieved from fastmap.par"
+  if $method <> 'manual' then
+    wexp=wexp+' fm_autoexp(\'exit\')'
+  endif
+  au
+endif

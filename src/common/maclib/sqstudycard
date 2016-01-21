@@ -1,0 +1,421 @@
+"macro sqstudycard"
+"sqstudycard - creates new imaging study card, using first argument as the title"
+
+if ($# = 1) then
+  create('anatomy','string','current','')
+  create('protocol','string','current','')
+  create('species','string','current','')
+  if (studyNodes = '') then
+    write('error','No study queue scans selected.')
+    abort
+  endif
+
+"make a composite protocol from study queue, $1 is name"
+  exists('protoAttr','parameter'):$x
+  if $x<0.5 then
+    create('protoAttr','string')
+    setgroup('protoAttr','display')
+    setprotect('protoAttr','on',16+256+32768)
+  endif
+  exists('protoVal','parameter'):$x
+  if $x<0.5 then
+    create('protoVal','string')
+    setgroup('protoVal','display')
+    setprotect('protoVal','on',16+256+32768)
+  endif
+  exists('studyFile','parameter','global'):$x
+  if $x<0.5 then
+    create('studyFile','string','global')
+    setgroup('studyFile','display','global')
+    setprotect('studyFile','on',16+256+32768,'global')
+  endif
+  if (size('studyFile') < 12) then
+      studyFile[2]=''
+      studyFile[3]=''
+      studyFile[4]=''
+      studyFile[5]=''
+      // cqprotocol uses [6] and [7] for something.  create those as space holders
+      // but we will not be using them.
+      studyFile[6]=''
+      studyFile[7]=''
+      // Use 8-11 for label, tab, menu1 and menu2
+      studyFile[8]=''
+      studyFile[9]='Enter Tab Name'
+      studyFile[10]=''
+      studyFile[11]=''
+      studyFile[12]='false'
+  endif
+  strstr($1,'/'):$es
+  if $es>0.5 then
+    write('error','Illegal character \'/\' in study card name.')
+    abort
+  endif
+  if ($1 = '') then
+    write('error','Specify study card name.')
+    abort
+  endif
+  if ( (studyFile[12]='false') and (studyFile[9]='Enter Tab Name') ) then
+    write('error','Specify a Tab Name for the Experiment Selector.')
+    abort
+  endif
+  substr($1,'wc'):$cnt
+  if ($cnt > 1) then
+    write('error','Study card name can only be a single word.')
+    abort
+  endif
+  $name=$1
+  exists('anatomy','parameter'):$x
+  if $x<0.5 then $anatomy='none' else $anatomy=anatomy endif
+  $datestr='' shell('date +%\Y%\m%\dT%\H%\M%\S'):$datestr
+  $f=userdir+'/studycardlib/'+$name
+  exists($f,'file'):$exml
+  if ($exml > 0.5) then
+    confirm('Overwrite study card '+$name+'?'):$ans
+    if $ans=0 then
+      return
+    endif
+  endif
+  shell('rm -rf '+userdir+'/studycardlib/'+$name):$x
+  mkdir('-p',userdir+'/studycardlib/'+$name)
+  shell('rm -f '+userdir+'/templates/vnmrj/protocols/'+$name+'.xml')
+  if ($exml < 0.5) then
+    studyFile[2]='n'
+  else
+    studyFile[2]='y'
+  endif
+  $f = $f+'/'+$name+'.xml'
+  studyFile[1]=$f
+  off('studyFile','global')
+  write('reset',studyFile[1])
+  write('file',studyFile[1],'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+  write('file',studyFile[1],'<template type="study card" name="%s" author="%s" operator_="%s" investigator="%s"',$1,operator,operator,investigator)
+  write('file',studyFile[1],'    ExpSelNoShow="%s" application="%s" apptype="%s" label="%s" tabname="%s" menu1="%s" menu2="%s" time_created="%s"',studyFile[12],appmode,apptype,studyFile[8],studyFile[9],studyFile[10],studyFile[11],$datestr)
+    write('fileline',$f,`    rfcoil="%s" anatomy="%s" species="%s" gcoil="%s" field="%s" `,RFCOIL,anatomy,species,studyFile[7],studyFile[6])
+  $cmd=`get all actions title protoAttr sqstudycard('`+$1+`',1)`  "$1 or $name"
+  xm1($cmd)
+elseif ($# = 2) then
+  if ($2 = 1) then
+     $cmd=`get all actions type protoVal sqstudycard('`+$1+`',2)`
+     xm1($cmd)
+  elseif ($2 = 2) then
+/*
+     $num = size('protoVal')
+     $i = 1
+     $scans=''
+     while ($i <= $num) do
+       if (protoVal[$i] = 'REQ') or (protoVal[$i] = 'LIB') then
+         $label = protoAttr[$i]
+         if ($scans = '') then
+           $scans = $label
+         else
+           $scans = $scans + ',' + $label
+         endif
+       endif
+       $i = $i + 1
+     endwhile
+     write('file',studyFile[1],'    scans="%s">',$scans)
+     write('file',studyFile[1],'  <protocol title="%s" type="protocol">',$1)
+ */
+     xm1('get action > null protoAttr protoVal sqstudycard(\''+$1+'\',0,0)')
+  endif
+elseif ($# = 3) then
+  if (protoAttr[1] = '') then
+"last protocol node empty, done writing composite protocol"
+    destroy('protoAttr')
+    destroy('protoVal')
+    on('studyFile','global'):$ok
+    if ($ok = 1) then
+      exists(studyFile[1]+'.scans','file'):$e
+      if ($e) then
+        write('file',studyFile[1]+'.scans','">') 
+        shell('cat '+studyFile[1]+'.scans >> ' + studyFile[1] +';cat'):$e 
+        delete(studyFile[1]+'.scans')
+      else
+        write('file',studyFile[1],'>') 
+      endif
+      write('file',studyFile[1],'  <protocol title="%s" type="protocol">',$1)
+      shell('cat '+studyFile[1]+'.protos >> ' + studyFile[1] +';cat'):$e 
+      write('file',studyFile[1],'  </protocol>')
+      write('file',studyFile[1],'</template>')
+      delete(studyFile[1]+'.protos')
+      lookup('mfile',studyFile[1],'delimiter',' ="\n\t','seek','name','delimiter','="','read'):$bs
+      if (studyFile[2]='n') then
+        write('line3','study card "%s" added',$bs)
+      else
+        write('line3','study card "%s" updated',$bs)
+      endif
+      exists(userdir+'/templates/vnmrj/protocols','directory'):$x
+      if ($x<0.5) then
+        mkdir('-p',userdir+'/templates/vnmrj/protocols')
+      endif
+      $f=userdir+'/templates/vnmrj/protocols/'+$bs+'.xml'
+      shell('rm -f '+$f)
+      cp(studyFile[1],$f)
+      vnmrjcmd('LOC add protocol "'+$f+'"')
+      if (studyFile[12] = 'false') then
+        vnmrjcmd('util','updateexpsel', studyFile[3], studyFile[8], studyFile[9], studyFile[10], studyFile[11])
+        updateExpSelector          // recreate local user ExperimentSelector.xml file
+      endif
+      vnmrjcmd('LOC protocolBrowserSCupdate ' + $1)
+    else
+      write('line3','No actions were found in the study queue')
+      delete(studyFile[1])
+    endif
+"   destroy('studyFile','global') "
+  else
+"protocol node found, add to composite protocol"
+    $id='' $j=0 teststr('protoAttr','id'):$j
+    if $j>0.5 then $id=protoVal[$j] endif
+    substr(studyNodes,'find',$id):$j
+    if (studyNodes = 'all') or ($j > 0) then
+
+    $j=0 teststr('protoAttr','status'):$j
+    $jmac=0 teststr('protoAttr','macro'):$jmac
+    if $j>0.5 then
+      if (activestudy[1] <> 'null') then
+        xmselect('savepar','saveonly')
+        if $jmac>0.5 then
+          protoVal[$jmac] = 'xmrtpar'
+        endif
+      endif
+    endif
+    $num = size('protoVal')
+    $attr = ''
+    if ($jmac = 0) then  // get macro from prop file
+       $num=$num+1
+       protoAttr[$num]='macro'
+       xmgetatts($id,'macro'):protoVal[$num]
+    endif
+    $j=0 teststr('protoAttr','exp'):$j
+    if ($j = 0) then  // get exp from prop file
+       $num=$num+1
+       protoAttr[$num]='exp'
+       xmgetatts($id,'exp'):protoVal[$num]
+    endif
+    $i = 1
+    $name=$1
+    $file=''
+    $seqfil=''
+    while ($i <= $num) do
+      if (protoAttr[$i] <> 'id') and (protoAttr[$i] <> 'element') then
+         if (protoAttr[$i] = 'data') then
+           $attr = $attr + ' ' + protoAttr[$i] + '=""'
+         elseif (protoAttr[$i] = 'lock') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="off"'
+         elseif (protoAttr[$i] = 'status') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="Ready"'
+         elseif (protoAttr[$i] = 'macro') then
+           $j=0 teststr('protoAttr','exp'):$j
+           $exp='' if $j>0.5 then $exp=protoVal[$j] endif
+           if (protoVal[$i] = 'xmrtpar') then
+             if ($exp = '') then
+               $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+             else
+// copy customized parameter set into parlib, and set into macro
+               Svfname(userdir+'/studycardlib/'+$name+'/'+$exp+'_%R2%','.par','.xml'):$pfile
+               xm1('studydir'):$sdir
+               $par=$sdir+'/info/'+$id+'/savepar'
+               exists($par,'file'):$e
+               if $e>0.5 then
+                 mkdir($pfile)
+                 cp($par,$pfile+'/procpar')
+                 cp(curexp+'/text',$pfile+'/text')
+                 rtv($par,'noabort','seqfil'):$seqfil
+               else
+                 exists($exp,'parlib'):$e,$path
+                 if ($e) then
+                   shell('cp -r ' + $path + ' ' +$pfile)
+                   rtv($path,'noabort','seqfil'):$seqfil
+                 endif
+               endif
+               $dir=''
+               substr($pfile,'dirname'):$dir,$file,$ext
+               substr($dir,'basename'):$dir
+               $attr = $attr + ' ' + protoAttr[$i] + '="sqexp(\'studycard\',\'' + $dir +'\',\'' + $file + '\')"'
+               $tmpProto=protocol
+               protocol=$file
+               writeparam($pfile+'/procpar','protocol','add')
+               protocol=$tmpProto
+             endif
+           else
+             $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+             Svfname(userdir+'/studycardlib/'+$name+'/'+$exp+'_%R2%','.xml'):$pfile
+             substr($pfile,'dirname'):$dir,$file,$ext
+           endif
+           if ($file <> '') then
+             exists(studyFile[1]+'.scans','file'):$e
+             if ($e) then
+               write('fileline',studyFile[1]+'.scans',',%s',$file)
+             else
+               write('fileline',studyFile[1]+'.scans','\n    scans="%s',$file)
+             endif
+           endif
+         elseif (protoAttr[$i] <> 'tooltext') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+         endif
+      endif
+      $i = $i + 1
+    endwhile
+    write('file',studyFile[1]+'.protos','    <action %s />',$attr)
+    $datestr='' shell('date +%\Y%\m%\dT%\H%\M%\S'):$datestr
+    substr($pfile,'dirname'):$f,$pf,$ext
+    $f = $f + '/' +$pf+'.xml'
+    write('file',$f,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
+    write('file',$f,`<template type="basic" name="%s" author="%s" investigator="%s"`,$file,operator,investigator)
+    write('file',$f,`  ExpSelNoShow="%s" application="%s" rfcoil="%s" anatomy="%s" species="%s" time_created="%s"`,studyFile[12],appmode,RFCOIL,anatomy,species,$datestr)
+//    write('file',$f,`  parfile="%s" apptype="%s" label="%s" tabname="%s" menu1="%s" menu2="%s" scans="%s" seqfil="%s">`,$pf,apptype,studyFile[8],studyFile[9],studyFile[10],studyFile[11],$file,seqfil)
+    write('file',$f,`  parfile="%s" apptype="%s" label="%s" scans="%s" seqfil="%s">`,$pf,apptype,studyFile[8],$file,$seqfil)
+    write('file',$f,`  <protocol title="%s" type="protocol">`,$file)
+    write('file',$f,`    <action  %s />`,$attr)
+    write('file',$f,`  </protocol>`)
+    write('file',$f,`</template>`)
+
+    endif
+    on('studyFile','global')
+"repeat macro to get next node attributes"
+    $cmd='get action > ' + $id + ' protoAttr protoVal sqstudycard(\''+$1+'\',0,0)'
+    xm1($cmd)
+  endif
+elseif ($# = 4) then
+  exists('studyFile','parameter','global'):$x
+  if $x<0.5 then
+    create('studyFile','string','global')
+    setgroup('studyFile','display','global')
+    setprotect('studyFile','on',16+256+32768,'global')
+  endif
+  exists('studyNodes','parameter','global'):$x
+  if $x<0.5 then
+    create('studyNodes','string','global')
+    setgroup('studyNodes','display','global')
+    setprotect('studyNodes','on',16+256+32768,'global')
+  endif
+  if ($4=3) then
+    if ($1=1) then
+      $p2=apptype
+      $p3=studyFile[3]
+      $p4=studyFile[4]
+      $p5=studyFile[5]
+// check if $p3 is a CMD protocol, for xmcmdedit
+      exists($p3+'.xml','templates/vnmrj/protocols'):$e,$file
+      if $e>0.5 then
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','apptype=','delimiter','="','read'):$app,$nret
+        if $nret>0.5 then $p2=$app endif
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','macro=','delimiter','="','read'):$cmd,$nret
+        if $nret>0.5 then $p4=$cmd endif
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','time=','delimiter','="','read'):$time,$nret
+        if $nret>0.5 then
+//        xmtime('getsec',$time):$t1
+//        $t1=trunc($t1/60+0.5)
+//        format($t1,0,0):$p5
+          sqstudycard(3,$time,0,3):$p5
+        endif
+//      studyFile[2]=$p2
+        apptype=$p2
+        studyFile[4]=$p4
+        studyFile[5]=$p5
+      endif
+    elseif ($1=2) then  // convert time to string
+      $st='' substr($2,1):$st
+      format($st,'isreal'):$is
+      if not ($is) then
+        $st='10'
+//    else
+//      format($st,0,0):$sn
+//      if $sn<1 then $st='1' endif
+      endif
+      format($st,0,0):$st
+//    $st=$st+' sec'
+      return($st)
+    elseif ($1=3) then  // convert string to time
+      $st='' substr($2,1):$st
+      format($st,'isreal'):$is
+      if not ($is) then
+        $t1=10
+      else
+        xmtime('getsec',$2):$t1
+      endif
+      $t1=trunc($t1+0.01)
+      $p5='' format($t1,0,0):$p5
+      return($p5)
+    else
+      studyFile[1]=''
+      studyFile[2]=''
+      studyFile[3]=''
+      studyFile[4]=''
+      studyFile[5]=''
+      // cqprotocol uses [6] and [7] for something.  create those as space holders
+      // but we will not be using them.
+      studyFile[6]=''
+      studyFile[7]=''
+      // Use 8-11 for label, tab, menu1 and menu2
+      studyFile[8]=''
+      studyFile[9]=''
+      studyFile[10]=''
+      studyFile[11]=''
+      studyFile[12]='false'
+    endif
+    return
+  elseif ($1=1) then
+    exists('actionid','parameter'):$e
+    if ($e) then
+      if (actionid<>'null' and activestudy[1]<>'null') then
+        xmgetatts(actionid,'type'):$type
+        if $type='CMD' then
+          xmselect('savepar')
+          sqfilemenu('cleanupActive','only')
+        endif
+      endif
+    endif
+  endif
+  studyFile[1]=''
+  studyFile[2]='n'
+  studyFile[3]=''
+  studyFile[4]=''
+  studyFile[5]=''
+  studyFile[6]=''
+  studyFile[7]=gcoil
+  // Use 8 as Label to be displayed
+  studyFile[8]=''
+  
+  studyFile[9]='Enter Tab Name'
+  // Empty the menu entries
+  studyFile[10]=''
+  studyFile[11]=''
+  studyFile[12]='false'
+
+" make menufile for rfcoil from vnmrsys/pulsecal "
+  $menufile=userdir+'/persistence'
+  exists($menufile,'file'):$e
+  if $e<0.5 then mkdir($menufile) endif
+  $menufile=$menufile+'/rfcoil_list'
+  exists($menufile,'file'):$e
+  if $e>0.5 then rm($menufile):$x endif
+  $rffile=userdir+'/pulsecal'
+  exists($rffile,'file'):$e
+  if $e<0.5 then
+    $rffile=systemdir+'/pulsecal'
+    exists($rffile,'file'):$e
+  endif
+  if $e<0.5 then
+    write('file',$menufile,'"none" "none"')
+  else
+    nrecords($rffile):$lines
+    $lines = $lines - 4
+    lookup('mfile',$rffile,'seek','rfcoil','filekey'):$key
+    $i=0
+    $word=''
+    repeat
+      $i=$i+1
+      lookup('mfile',$key,'skip',4,'read','filekey'):$word,$key
+      write('file',$menufile,'"%s" "%s"',$word,$word)
+    until ($i>=$lines)
+  endif
+elseif ($# = 0) then
+  destroy('protoAttr'):$e
+  destroy('protoVal'):$e
+  destroy('studyFile','global'):$e
+  destroy('studyNodes','global'):$e
+endif

@@ -1,0 +1,66 @@
+"macro AT04"
+"AT04" "Finding T1 and Linewidth"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat T1"
+
+if ($#=0) then
+   ATrtp('standard')
+   ph vp=90
+   pw=pw90 d1=2 dn='C13' 
+   gain='n'              "set to find best gain"
+   wnt='ATwft full ph aph0 vsadj(50) ds'
+   wexp='AT04(`PART1`)'
+   write('line3', 'Using Autogain to Optimize Gain Setting')
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+   wft ph aph0 
+   write('line3', 'performing inversion-reconvery T1 experiment')
+   p1=2*pw90 pw=pw90 d1=2
+   d2=.01,.03,.06,.1,.2,.4,.8,2
+   gain='y'
+   ATrecord('AUTOGAIN','Autogain Result','gain',gain)
+   write('file',autotestdir+'/REPORT','Autogain Result = %2.0f ',gain)
+   if gain>30 then gain=30 endif  "sufficient gain for full sensitivity"
+   at_gain=gain
+
+   wnt='ATwft select(1) vsadj(40) dssh'
+   wexp='AT04(`PART2`)' ATcycle
+   au
+
+elseif ($1='PART2') then
+   wft
+   write('line3','calculating  T1')
+   av
+   select(1) vsadj(90)
+   th=30 nll    
+   text('T1 Determination')
+
+   ATsvf('T1')   
+   ph fp t1 center expl wc=80
+
+   if (at_plotauto='y') then pexpl ATplreg pap ATpage('T1') endif
+   ATt1cal:at_T1
+   write('line3','T1 estimate is %1.3f sec ',at_T1)
+   at_T1=trunc(1000*at_T1)/1000
+
+   write('file',autotestdir+'/REPORT','Water Resonance Frequency = %4.1f .  T1 = %1.3f sec. at %2.1f C.',tof,at_T1,temp)
+
+   write('line3','relaxation delays will be set to >10T1 for tests')
+   ATrecord('T1','T1 Relaxation time','T1  ',at_T1,'temperature',temp)
+   if (at_T1>0.3) or (at_T1<0.03) then
+      echo('T1 is inappropriate for AutoTest')
+      abort
+   endif  
+
+   fn=4*np ft(arraydim) ph aph0 f vsadj peak:$ht,cr
+   if ($ht<0) then rp=rp+180 endif
+   dres:at_linewidth     "linewidth will later determine acquisition times"
+   vp=0 f full 
+   d2=0 p1=0 at=3/at_linewidth d1=10*at_T1-at 
+   wexp='' wnt=''
+   fsave(autotestdir+'/parameters/standard.par/procpar')
+                          "has proper tof,pw,pw90,gain,temp,d1,at"
+   ATnext
+endif

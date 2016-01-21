@@ -1,0 +1,61 @@
+"macro sv3dat"
+"**************************************************************************"
+"	svdat: Macro to save the contents of a VNMR experiment datdir      "
+"              files into a filename.dat format                            "
+
+"	svdat('filename')
+
+"	Version 1: SPARC 3D WIP                                            "
+"		  @(#)svdat.mac	3.1   4/16/93                "
+"**************************************************************************"
+
+
+"*Constants****************************************************************"
+$prog='svdat: '
+$ext='.dat'
+$exdata=curexp+'/datdir/data'
+$exphase=curexp+'/datdir/phasefile'
+$extext=curexp+'/text'
+
+
+"*Input Check**************************************************************"
+if ($# <0.5) or ($# > 1.5)
+then
+   write('error','%s',$prog+'Use svdat("filename")')
+   abort
+endif
+
+
+
+"*Check For Existance Of The File******************************************"
+$file=$1+$ext
+exists($file,'file'):$ex1
+
+if ($ex1 > 0.5)
+then
+    input('Over write the existing file ? (y/n) :> '):$ans
+    
+    if ($ans <> 'y')
+    then
+       write('line3','%s',$prog+'Save data aborted')
+       abort
+    endif
+endif
+
+"*Create fielname.dat directory and files**********************************"
+$procpar=$file+'/procpar'
+$data=$file+'/data'
+$phasefile=$file+'/phasefile'
+$text=$file+'/text'
+
+mkdir($file)
+fsave($procpar,'current')
+cp($exdata,$data)
+cp($exphase,$phasefile)
+cp($extext,$text)
+
+write('line3','%s',$prog+'Save data complete')
+
+
+"********************************THE END************************************"
+    

@@ -1,0 +1,106 @@
+"macro jwin"
+
+$newwin=$1
+if ($newwin = curwin[1]) then
+    return
+endif
+
+$curexp=0
+jexp:$curexp
+if (curwin[1] > 0) then
+  $startwinmacro=''
+  format(curwin[1],0,0):$startwinmacro
+  $startwinmacro=curexp+'/startwin'+$startwinmacro
+  write('reset',$startwinmacro)
+
+  "write out a macro to restore parameter values"
+  "when focus returns to this window"
+  $saveparamlist='sp', 'wp', 'sp1', 'wp1', 'sp2', 'wp2',  \
+                 'sf', 'wf', 'sf1', 'wf1', 'sf2', 'wf2',  \
+                 'sc', 'wc', 'sc2', 'wc2',                \
+                 'vp', 'ho', 'vo',                        \
+                 'vs', 'vs2d', 'vsproj','aig',            \
+                 'crmode'
+  $limit=size( '$saveparamlist' )
+  $e=0
+  $iter=1
+  while ($iter <= $limit) do
+    exists( $saveparamlist[ $iter ], 'parameter'):$e
+    if ($e <> 0) then
+
+"use typeof to distinguish string parameters from numeric parameters"
+"string parameter values require quotes; numeric parameter values do not"
+
+        if (typeof( $saveparamlist[ $iter ])) then
+           write('file',$startwinmacro,'%s=\'%s\'',
+			$saveparamlist[ $iter ], {$saveparamlist[ $iter ]})
+        else
+           write('file',$startwinmacro,'%s=%s',
+			$saveparamlist[ $iter ], {$saveparamlist[ $iter ]})
+        endif
+    endif
+    $iter=$iter+1
+  endwhile
+  write('file',$startwinmacro,'write(`graphics`,`xor`,10,wc2max-10,`exp: %d`)',$curexp)
+  write('graphics',10,wc2max-10,'exp: %d',$curexp)
+
+  "if there is a current graphics command and it is interactive,"
+  "arrange to have the macro run that command at its conclusion"
+  $graphcmd=''
+  graphis:$graphcmd
+  if ($graphcmd <> '') then
+    exists($graphcmd,'interactive'):$e
+    if ($e <> 0) then
+      if (($graphcmd = 'ds') or ($graphcmd = 'df')) then
+        $grapharg=''
+        select:$grapharg
+        write('file',$startwinmacro,'%s(\'%s\')',$graphcmd,$grapharg)
+        menu('display_1D') "this removes the cursors"
+      else
+        write('file',$startwinmacro,'%s',$graphcmd)
+      endif
+    endif
+  endif
+  mapwin[ curwin[ 1 ] ]=$curexp
+endif
+
+"now finished with the current window.  move to the new window"
+
+setwin($1)
+
+$newexp=mapwin[ curwin[ 1 ] ]
+$jexpcmd=''
+format($newexp,0,0):$jexpcmd
+exists(userdir+'/exp'+$jexpcmd,'file'):$e
+if ($e < 0.5) then
+  $newexp=$curexp
+  mapwin[curwin[1]]=$curexp
+endif
+if ($newexp <> $curexp and $newexp > 0) then
+    $jexpcmd='jexp('+$jexpcmd+')'
+    exec($jexpcmd)
+    tcl('stopUpdate')
+    dg
+    tcl('set seqfil '+seqfil+';set curexp '+curexp+' ;startUpdate')
+    menu('main')
+endif
+
+"look for a macro to restore parameter values saved with this window"
+
+$startwinmacropath=''
+format($newwin,0,0):$startwinmacropath
+$startwinmacropath=curexp+'/startwin'+$startwinmacropath
+exists($startwinmacropath,'file'):$e
+if ($e <> 0) then
+    macrold($startwinmacropath):$e    "suppress message with a return argument"
+
+"remove the macro file BEFORE running the macro -"
+"avoids deactivating an interactive graphics command"
+
+    rm($startwinmacropath):$x
+    $startwinmacroname=''
+    format($newwin,0,0):$startwinmacroname
+    $startwinmacroname='startwin'+$startwinmacroname
+    {$startwinmacroname}
+    purge($startwinmacroname)
+endif

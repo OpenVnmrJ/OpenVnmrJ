@@ -1,0 +1,112 @@
+"macro saveAs"
+" Usage: saveAs('record'):$file "
+" Usage: saveAs('recData'):$file "
+" Usage: saveAs('fid'):$file "
+
+" order of path: "
+" use activestudy if not empty, "
+" else use svfdir "
+
+$file =''
+
+if(svfname = '') then
+   svfname = '$seqfil$_'
+endif
+
+if(svfdir = '') then
+   svfdir = userdir + '/data'
+endif
+
+$suffix = ''
+$nosuffix = '.fid, .img, .rec, .REC'
+$s1=''
+
+$activestudy=activestudy[1]
+if (auto='y') then
+  $activestudy=studyid
+endif
+
+if ($1 = 'fid') then
+
+/*
+   $suffix = '.fid'
+
+   if ($activestudy<>'null') then
+      $svfname=autoname
+   else
+      $svfname=svfname
+   endif
+   substr($svfname,1,1):$s1
+   if $s1<>'/' then
+      if ($activestudy<>'null') then
+         xm1('studydir'):$sdir  "get sqdir"
+         $svfname=$sdir+'/'+$svfname
+      else
+         $svfname=svfdir+'/'+$svfname
+      endif
+   endif
+   Svfname($svfname,$suffix,$nosuffix):$file 
+ */
+   dataPath('save'):$file
+
+elseif ($1 = 'record' or $1 = 'recData') then
+
+   if(recordSave < 0.5) then
+      write('line3', 'Set recordSave = 1 or 2 to save records.')
+      return('')
+   endif
+
+   isFDAdir(svfdir):$FDA 
+   isFDAdata:$FDAdata 
+   if ($FDA and $FDAdata) then 
+      $suffix = '.REC'
+   else
+      $suffix = '.rec'
+   endif
+
+   if ($FDA < 0.5 and $activestudy<>'null') then
+      $svfname=autoname
+   else
+      $svfname=svfname
+   endif
+   substr($svfname,1,1):$s1
+   if $s1<>'/' then
+      if ($FDA < 0.5 and $activestudy<>'null') then
+         xm1('studydir'):$sdir  "get sqdir"
+         $svfname=$sdir+'/'+$svfname
+      else
+         $svfname=svfdir+'/'+$svfname
+      endif
+   endif
+   Svfname($svfname,$suffix,$nosuffix):$file 
+
+   if ($1 = 'recData') then
+
+     if(datname = '') then
+        $name = 'datdir'
+     else
+        $name = datname
+     endif
+
+     strstr(file,$suffix,'last'):$ret,$s1,$s2
+     if($ret < 0.5) then
+	$path = $file +'/' + $name
+	Svfname($path +'%R3%', '',''):$file
+     else
+	$path = $s1 + $suffix + '/' + $name
+	Svfname($path +'%R3%', '',''):$file
+     endif
+
+   endif
+
+else
+   return('')
+endif
+
+substr($file,1,1):$char
+if ($char <> '/') then
+  pwd:$pwd
+  $file=$pwd+'/'+$file
+endif
+
+return($file)

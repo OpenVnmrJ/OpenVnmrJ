@@ -1,0 +1,36 @@
+"macro ROESYAD_ES_setup"
+"********************************************************"
+"Questionable adjustment of delays & phase after spinlock"
+"Should be edited appropriately after running a reference"
+"first increment spectrum                                "
+"********************************************************"
+if (zfilt = 'n') then
+   if (Console = 'mercury') then
+     alfa=alfa-9 rp=rp-14                     
+     rp1=23 lp1=-(6*360*sw1)/1e6 rp1=rp1-(lp1/2) 
+   endif
+   if (wet='y') then
+     rof2 = rof2+4
+   endif
+endif
+rp1=rp1+180
+"********************************************************"
+
+
+setslgh2('roesy')
+spinlockR=sw*.8
+setpower(spinlockR,tn):slpwrR,slpwR
+getpower(slpwrR,tn):spinlockR
+
+exists('tiltfactor','parameter'):$e
+if not $e then create('tiltfactor') endif
+exists('tiltangle','parameter'):$te
+if not $te then create('tiltangle') endif
+tiltangle=60
+$tmp=tiltangle*(3.141/180)  "convert to radians"
+tan($tmp):tiltfactor
+zfilt='y'
+gzlvlz=500
+fixgrd(5):gzlvlz
+
+prg_flg='n'

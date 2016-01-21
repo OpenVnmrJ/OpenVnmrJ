@@ -1,0 +1,55 @@
+"macro main"
+"  ****  M E N U :   M A I N   ****  "
+
+lastmenu=''
+mlabel=''
+mstring=''
+micon=''
+
+getdim:$vjmdim
+
+mlabel[1]='Display FID'
+micon[1]='dfid.gif'
+dssi:$arraydim
+if $arraydim > 1.5 then
+  mstring[1]='menu(`fiddisp_1D`)'
+else
+  mstring[1]='lastmenu=`main` df'
+endif
+
+mlabel[2]='1D Spectrum'
+micon[2]='dspec.gif'
+graphis:$dm
+$sel=1
+exists('dsSelect','parameter'):$e
+if($e) then
+  $sel=size('dsSelect')
+endif
+isCSIMode:$split
+if($split and $sel=1) then
+  mstring[2]='lastmenu=`main` ds'
+elseif($arraydim > 1.5 and $dm<>'dpf') then
+  mstring[2]='menu(`display_1D`)'
+else
+  mstring[2]='lastmenu=`main` ds'
+endif
+
+if $vjmdim>1.5 then
+  if appmode='imaging' then
+    $vjm = 3
+    mlabel[$vjm]='Data plot'
+    mstring[$vjm]='dconi(`dcon`,`gray`,`linear`)'
+    micon[$vjm]='2D1cur.gif'
+    $vjm = $vjm+1
+
+    mlabel[$vjm]='Image'
+    mstring[$vjm]='aipSetState(1) menu(`aip`)'
+    micon[$vjm]='2Dimage.gif'
+    $vjm = $vjm+1
+
+  else
+    mlabel[3]='2D Spectrum'
+    mstring[3]='menu(`display_2D`)'
+    micon[3]='2Dcontour.gif'
+  endif
+endif

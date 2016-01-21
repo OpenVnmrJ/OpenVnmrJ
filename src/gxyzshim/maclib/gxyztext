@@ -1,0 +1,31 @@
+"macro gxyztext"
+if ($1='xycalib') then write('graphics','red',4,wc2max-10,'XY shim calibration in progress, please do not change experiment!') endif
+if ($1='smapping') then 
+	$i=0
+	repeat
+        	$i=$i+1
+        	$shimname=''
+        	substr(mapshims,$i):$shimname
+	until $shimname=''
+	$nmapshims=$i-1
+	exptime:$timepermap
+	$timepermap=$timepermap+pad
+	$totaltime=$timepermap*($nmapshims+1)
+	$timeleft=($nmapshims+1-shimno)/($nmapshims+1)*$totaltime/60
+	if shimno > 0 then
+				substr(mapshims,shimno):$shimname
+				if (auto='y') then
+					write('line3','Mapping %s shim',$shimname)
+					write('line3','Estimated time remaining until completion of all shim maps: %d minutes', $timeleft)
+				else
+					write('graphics','red',4,wc2max-10,'Mapping %s shim',$shimname)
+				endif
+	else
+				write('graphics','red',4,wc2max-10,'Shim mapping in progress')
+	endif
+	write('graphics','red',4,wc2max-20,'Estimated time remaining until completion of all shim maps: %d minutes', $timeleft)
+	write('graphics','red',4,wc2max-30,'Please do not change experiment!')
+endif
+if ($1='fmapping') then write('graphics','red',4,wc2max-10,'Field mapping in progress, please do not change experiment!') endif
+if ($1='shimming') then write('graphics','red',4,wc2max-10,'Shimming iteration no. %d of %d in progress, please do not change experiment!',cycle,ncycles) endif
+

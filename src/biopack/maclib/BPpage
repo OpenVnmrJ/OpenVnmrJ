@@ -1,0 +1,96 @@
+"macro BPpage"
+" BPpage - utility macro for plotting / saving plots to file(s) "
+
+exists('BPplot','parameter','global'):$eplot
+if not($eplot) then
+  page
+else
+  if ((BPplot='off') or (BPplot='')) then
+    page('clear')
+  elseif BPplot='file' then
+    $plotdir=''
+    exists('BPplotdir','parameter','global'):$eplotdir
+    if $eplotdir then
+      $ch1=''
+      substr(BPplotdir,1,1):$ch1
+      if $ch1='/' then
+	$plotdir=BPplotdir
+      elseif BPplotdir<>'' then
+	shell('dirname',userdir):$plotdir
+	$plotdir=$plotdir+'/'+BPplotdir
+      endif
+    endif
+    if $plotdir='' then
+      shell('dirname',userdir):$plotdir
+      $plotdir=$plotdir+'/BPplots'
+    endif
+    exists($plotdir,'directory'):$e
+    if not($e) then
+      shell('mkdir -p',$plotdir):$dummy
+    endif
+    exists($plotdir,'file','rwx'):$e
+    if not($e) then
+      write('error','Unable to create plot dir %s',$plotdir)
+      shell('dirname',userdir):$plotdir
+      $plotdir=$plotdir+'/BPplots'
+      shell('mkdir -p',$plotdir):$dummy
+      write('line3','Saving BioPack plots in %s',$plotdir)
+    endif
+    $numfile=$plotdir+'/BPplotnum'
+    $plotnumstr='' $plotnum=0
+    exists($numfile,'file'):$e
+    if $e then
+      shell('cat',$numfile):$plotnumstr
+      format($plotnumstr,'isreal'):$r
+      if not($r) then
+        $plotnumstr=''
+      else
+        format($plotnumstr,'lower'):$plotnum
+        $plotnum=$plotnum+1
+        format($plotnum,'04',0):$plotnumstr
+        length($plotnumstr):$len
+        while $len<4 do
+          $plotnumstr='0'+$plotnumstr
+          $len=$len+1
+        endwhile
+	shell('rm -f',$numfile):$dum
+        write('file',$numfile,'%d',$plotnum)
+      endif
+    endif
+    if $plotnumstr='' then
+      $plotnum=1
+      $plotnumstr='0001'
+      shell('echo 1 >',$numfile):$dummy
+    endif
+
+    " determine plot output language "
+    $pltt=''
+    plotinfo(plotter):$pltt
+    lookup('file','/vnmr/devicetable','seek','Example','readline',2)
+    $devtype='' $res=1
+    while ($devtype<>$pltt) and ($res=1) do
+      lookup('seek','PrinterType','read'):$devtype,$res
+    endwhile
+    $ext=''
+    if $devtype=$pltt then
+      $raster=''
+      lookup('seek','raster','read'):$raster
+      if $raster='0' then
+	$ext='.pgl'
+      elseif ($raster='3')or($raster='4') then
+        $ext='.ps'
+      endif
+    endif
+
+    " For now we use an automatic name template '%date%_%%_%seqfil%' - "
+    " we may add parameter / name template control later "
+    $plotfile=''
+    shell('date "+%Y-%m-%d"'):$plotfile
+    $plotfile=$plotfile+'_'+$plotnumstr+'_'+seqfil+$ext
+    $plotfile=$plotdir+'/'+$plotfile
+    page($plotfile)
+    write('line3','Plot written  to file %s',$plotfile)
+  else
+    page
+  endif
+endif

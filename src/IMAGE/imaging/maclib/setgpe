@@ -1,0 +1,77 @@
+"macro setgpe"
+"***************************************************************"
+" setgpe:							"
+"	Used to be named setpgrad.				"
+"                                                               "
+" Macro to set phase encode gradients  so that the shortest     "
+" practical phase encode pulse is selected.                     "
+"***************************************************************"
+
+
+"-- Constants ---------------------------------------------"
+$prog = 'setgpe: '
+$gamma = (sfrq*1e6)/B0
+$small = 1e-6
+
+
+"-- Check nD and gradient calibration parameters ----------"
+if (nD < 1.5) then
+    write('error',$prog+'1D experiments have no phase encode!')
+    abort
+endif
+
+if (gmax <= 0) or (trise <= 0) then
+    write('error','%s',$prog+'Gradient calibration gmax or trise <= 0')
+    abort
+endif
+
+
+"-- Target Parameter Lists --------------------------------"
+$nD = 1,2,3
+$lpe = 'lpe','lpe2','lpe3'
+$gpe = 'gpe','gpe2','gpe3'
+$tpe = 'tpe','tpe2','tpe3'
+$nv = 'nv','nv2','nv3'
+$sw = 'sw1','sw2','sw3'
+
+
+"-- Default Matrix Size -----------------------------------"
+if (nD = 2)  then  $defmat = 256  endif
+if (nD = 3)  then  $defmat = 128  endif
+if (nD = 4)  then  $defmat = 32   endif
+
+
+"-- Calculate & Set Gradient, Timing & Bandwidth ----------"
+$k = 1
+$klim = size('$gpe')
+repeat
+
+  if (nD > $nD[$k]) and ({$lpe[$k]} > 0.0) then 
+      if ({$nv[$k]} < 0.5) then 
+          $matrix = $defmat
+          {$nv[$k]} = $defmat
+      else    
+          $matrix = {$nv[$k]}
+      endif
+
+      $tpeE = 2.0*trise
+      $gpeE = 1/($gamma*$tpeE*{$lpe[$k]})
+      $gpeM = gmax/$matrix
+                
+      if ($gpeE > $gpeM) then 
+          $gpeE = $gpeM 
+      endif
+
+      "*SET PARAMETERS*************************"
+      {$gpe[$k]} = (gmax/gradstepsz)*trunc($gpeE*gradstepsz/gmax)
+      {$tpe[$k]} = 1/($gamma*{$gpe[$k]}*{$lpe[$k]})
+      {$sw[$k]} = 1/{$tpe[$k]}
+      {$gpe[$k]} = {$gpe[$k]} + $small
+  else
+      if (nD > $nD[$k]) then 
+          write('error',$prog+$gpe[$k]+' could not be set')
+      endif
+  endif
+
+  $k=$k+1
+until ($k > $klim)

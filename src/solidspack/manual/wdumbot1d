@@ -1,0 +1,58 @@
+Protocol: Wdumbot1d  Sequence: wdumbot1d.c  Apptype: solidseq1d
+
+Description: 
+ 
+   A 1D acquisition with windowed DUMBO on "X", using tilt pulses around the 
+   windows, wDUMBOt. 
+
+Additional Software 
+
+   reset_wdumbot1d - Sets aXwdumbot and pwXwdumbot to create a 6-pi 
+   DUMBO pulse. Set the window tauXwdumbo1d to be at least 4 us with 
+   a 1 us of receiver on. Reset scalesw to 1/sqrt(3) the nominal scale 
+   factor.  Set the prep1 pulses form aX90 and pwX90. Set r1=.5, r2=.5
+   and r3 = .5 for wdumbotX. 
+
+Parameter Groups:
+
+prepX:  Module:  no
+Sequence:  br24q.c
+Description:  Implements a variable length pulse to provide quadrature
+              detection about a tilted precession axis. Typically
+              followed by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses.
+       pwXprep - 90-degree flip on the obs channel.
+       phXprep - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+
+wdumbotX:  Module:  yes
+Sequence:   wdumbot1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling on obs
+              with acquisition in the window.  Tilt pulses around the
+              acquisition window allow non-quadrature detection.
+Parameters:  Sequence Page
+       aXwdumbot - amplitude of DUMBO on obs.
+       pw1Xwdumbot - 1080-degree flip on obs (the length of a full
+              DUMBO cycle).
+       pw2Xwdumbot - nominal 54.7-degree flip on obs for tilt pulses.
+       r1Xwdumbot - prepulse delay (similar to rof1).
+       r2Xwdumbot - postpulse delay (similar to rd or rof2).
+       r3Xwdumbot - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXwdumbot - time for one DUMBO cycle including the window.
+       npaXwdumbot - number of 100 ns ticks in the detection window.
+       phXwdumbot - overall small-angle phase for DUMBO to align the
+              tilted precession axis in the XY plane.
+       chXwdumbot = 'obs' must be set (not shown).
+Implementation:  WMPA wdumbot = getwdumbot("wdumbotX");
+Underscore function: _wdumbot(wdumbot,phXwdumbot);  phXwdumbot is the
+              overall phase table.

@@ -1,0 +1,220 @@
+"macro xmhaha2"
+"******************************************************************"
+"xmhaha2 - this is a 2nd gateway macro for chempack studyqueue actions"
+
+"******************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+IF ($1 = 'getparent') THEN
+    if ($# < 3) then $3=cursqexp+'/tmpstudy' endif
+    $ret=''
+    $id=$2
+    $sdir=$3
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+      $ids='' $val='' $type='' $qsize=0
+      readfile($sqfile,'$ids','$val','','local'):$qsize
+      teststr('$ids',$id,'local'):$pos
+      substr($val[$pos],1):$type
+      if ($pos) and ($type='parent') then
+        $ret=$type
+      elseif ($pos>1.5) then
+        $i=$pos
+        repeat
+          $i=$i-1
+          substr($val[$i],1):$type
+        until ($i<=1 or $type='parent')
+        if $type='parent' then
+          $ret=$ids[$i]
+        endif
+      endif
+    endif
+    return($ret)
+"*******************************************************************"
+ELSEIF ($1 = 'getchild') THEN
+    if ($# < 3) then $3=cursqexp+'/tmpstudy' endif
+    $ret=''
+    $id=$2
+    $sdir=$3
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e=0) then return($ret) endif
+
+      $ids='' $val='' $type='' $qsize=0
+      readfile($sqfile,'$ids','$val','','local'):$qsize
+      teststr('$ids',$id,'local'):$pos
+      if ($pos=0) then return($ret) endif
+      substr($val[$pos],1):$type
+      if ($type<>'parent') then
+	return('child')
+      endif
+      if ($pos=$qsize) then return($ret) endif
+
+	$i=$pos $j=1
+	repeat
+	  $i=$i+1
+	  substr($val[$i],1):$type
+	  if ($type<>'parent') then
+		$ret[$j]=$ids[$i]
+		$j=$j+1
+	  endif
+	until ($i>=$qsize or $type='parent')
+   return($ret)
+	
+"*******************************************************************"
+ELSEIF ($1='parentlist') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $ret='' $ret2=''
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+	$tmpfile=userdir+'/persistence/tmpenterSQ'
+	write('reset',$tmpfile)
+	shell('(cat '+$sqfile+' | grep -w parent | awk \'{print $1" "$2}\' > '+$tmpfile+')'):$dum
+	$s1=''
+	readfile($tmpfile,'$ret','$ret2','','local')
+	shell('rm -f '+$tmpfile):$dum
+    endif
+    return($ret,$ret2)
+
+"*******************************************************************"
+ELSEIF ($1='childlist') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $ret='' $ret2=''
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+        $tmpfile=userdir+'/persistence/tmpenterSQ'
+        write('reset',$tmpfile)
+        shell('(cat '+$sqfile+' | grep -wv parent | awk \'{print $1" "$2}\' > '+$tmpfile+')'):$dum
+        $s1=''
+        readfile($tmpfile,'$ret','$ret2','','local')
+        shell('rm -f '+$tmpfile):$dum
+    endif
+    return($ret,$ret2)
+
+"*******************************************************************"
+ELSEIF ($1='isautoSQ') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    $xmlfile=$sdir+'/study.xml'
+    exists($xmlfile,'file'):$e
+    shell('(cat '+$xmlfile+' | grep -c LCautomationQueue)'):$e3
+    if ($e3) then return(0,0) endif
+
+    $e2=1
+    if ($e) then
+	shell('(cat '+$xmlfile+' | grep -c automationQueue)'):$e
+    endif
+    if ($e=0) then
+//  For slowSQ 
+      exists($sqfile,'file'):$e
+      if ($e) then
+	  shell('(cat '+$sqfile+' | grep -wc AutoPriorityQ)'):$e
+      endif
+    else
+	shell('(cat '+$xmlfile+' | grep -c automationQueue4)'):$e2
+    endif
+    return($e,$e2)
+
+"*******************************************************************"
+ELSEIF ($1='getautoQnodes') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    $total=0 shell('(cat '+$sqfile+' | wc -l)'):$total
+    
+    $tmpfile='/vnmr/tmp/tmpfile'
+    write('reset',$tmpfile)
+    shell('(cat -n '+$sqfile+' | grep -w parent | awk \'{print $1"  "$2}\' | grep Qn > '+$tmpfile+')'):$dum
+    $pos=0 $s1=''
+    readfile($tmpfile,'$pos','$s1','','local'):$posnum
+    shell('rm -f '+$tmpfile):$dum
+    if ($posnum<1) then $pos=$total+1 $posnum=1 endif
+    if ($posnum<2) then $pos[2]=$total+1 $posnum=2 endif
+    if ($posnum<3) then $pos[3]=$total+1 $posnum=3 endif
+    if ($posnum<4) then $pos[4]=$total+1 $posnum=4 endif
+    if ($posnum<5) then $pos[5]=$total+1 $posnum=5 endif
+    if ($posnum<6) then $pos[6]=$total+1 $posnum=6 endif
+    if ($posnum<7) then $pos[7]=$total+1 $posnum=7 endif
+    return($pos)
+"*******************************************************************"
+ELSEIF ($1='locationlist') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    $tmpfile='/vnmr/tmp/tmpfile'
+    write('reset',$tmpfile)
+    shell('(cat '+$sqfile+' | grep \'^loc\' > '+$tmpfile+')'):$dum
+    $ret='' $s1=''
+    readfile($tmpfile,'$ret','$s1','','local'):$posnum
+    shell('rm -f '+$tmpfile):$dum
+    return($ret)
+"*******************************************************************"
+ELSEIF ($1='nodelist') THEN
+    if ($# < 2) then $2=cursqexp+'/tmpstudy' endif
+    $sdir=$2
+    $sqfile=$sdir+'/enterSQ'
+    $ret='' $s1=''
+    readfile($sqfile,'$ret','$s1','','local')
+    return($ret)
+"*******************************************************************"
+ELSEIF ($1='moveSQ') THEN
+    if ($# < 4) then $4=cursqexp+'/tmpstudy' endif
+    if ($3='') then return endif
+
+    $2childs='' xmhaha2('getchild',$2,$4):$2childs
+    if ($2childs<>'child') then
+       $2=$2,$2childs
+    endif
+    $3childs='' xmhaha2('getchild',$3,$4):$3childs
+    if ($3childs<>'child') then
+       $3size=size('$3childs')
+       $3=$3childs[$3size]
+    endif
+
+    $sqfile=$4+'/enterSQ'
+    $tmp=$sqfile+'1'
+    shell('cp '+$sqfile+' '+$tmp):$dum
+    $size=size('$2')
+    $2line=''
+    $i=1
+    repeat
+	$line=''
+	shell('(cat '+$tmp+' | grep \'^'+$2[$i]+'\')'):$line
+	$2line[$i]=$line
+	shell('(cat '+$tmp+' | grep -v \'^'+$2[$i]+'\' > '+$tmp+'X)'):$dum
+	shell('mv '+$tmp+'X '+$tmp):$dum
+	$i=$i+1
+    until $i > $size
+    $head=''
+    shell('(cat -n '+$tmp+' | awk \'{print $1" "$2}\' | grep -w '+$3+' | awk \'{print $1}\')'):$head
+    format($head,'isreal'):$real
+    if ($real=0) then 
+	shell('rm -f '+$tmp):$dum
+	return
+    endif
+    $totlines=0
+    $top=0
+    shell('(cat '+$tmp+' | wc -l)'):$totlines
+    format($head,'lower'):$top
+    shell('(head -n '+$head+' '+$tmp+' > '+$tmp+'X)'):$dum
+    $i=1
+    repeat
+	write('file',$tmp+'X','%s',$2line[$i])
+	$i=$i+1
+    until $i > $size
+    if ($totlines-$top > 0) then
+	$tail='' format($totlines-$top,0,0):$tail
+	shell('(cat '+$tmp+' | '+$tailX+' -n '+$tail+' >> '+$tmp+'X)'):$dum
+    endif
+    shell('mv '+$tmp+'X '+$sqfile):$dum
+    shell('rm -f '+$tmp):$dum
+
+ENDIF
+

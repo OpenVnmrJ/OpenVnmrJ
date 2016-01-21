@@ -1,0 +1,52 @@
+	crinept
+
+	a [15N,1H]-CRINEPT-TROSY using States/TPPI.
+
+
+       See "Polarization transfer by cross-correlated relaxation in solution NMR
+       with very large molecules. Rolan Riek, Gerhard Wider, Konstantin Pervushin 
+       and Kurt Wuthrich. PNAS 1999 vol 96, 4918-4923.
+
+       You can also find some optimization notes in...
+
+       "Solution NMR Techniques for Large Molecular and Supramolecular Structures."
+       Roland Reik, Jocelyne Fiaux, Eric, Eric B. Bertelsen, Arthur L. Horwich and Kurt
+       Wuthrich,JACS 2002 vol 124, 12141-12153.
+
+	Run as four fid experiment, for phase=1,2 and psi2=1,2 
+	with array='phase,psi2'. 
+
+	The quartet of fids collected are...
+	
+	fid1 = inphase(?) & real t1
+	fid2 = antiphase(?) & real t1
+	fid3 = inphase(?) & imaginary t1
+	fid4 = antiphase(?) & imaginary t1
+
+        For Non-VNMR Processing:
+	Data is processed by adding fid1 to fid2 and then phase correcting 
+	90 degrees for the real t1 point. Imaginary t1 point is likewise
+	obtained by subtracting fid4 from fid3 and phase correcting the result 
+	by 90 degrees.
+
+        For VNMR Processing:
+         wft2d(1,1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,-1)
+
+	Set:
+	d2	= 0
+        corr    =      empirical delay for obtaining lp=0
+                       run 2D, phase in f1/f2, enter "crof2", note change in rof2+alfa and
+                       use this for "corr". Rerun 2D, rephase and lp should be closer to zero.
+	tauT	= 3 to 5.4 msec
+	psi2	= 1,2  for inphase/antiphase separation
+        phase   = 1,2  for States/TPPI
+
+	gt1	= 400 usec
+	gzlvl1  = 15 G/cm
+
+        phincr_d       optional phase shifting for soft pulse. If BioPack-optimized pulse is
+                        present (at H2Osinc_d.RF), it has a phase correction built-in. This
+                        variable permits further shifting.Set to zero normally.
+       
+	Contributed by Mark Rance and Jack Howarth, U. Cincinnati
+        adapted for BioPack by G.G Mar 2004

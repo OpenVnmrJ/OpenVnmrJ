@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoSetup" element="groups" type="acquisition" >
+
+   <group size="400 155"
+     style="Heading1"
+     bg="transparent"
+     reference="craft_autoSetup"
+     expanded="yes"
+     useref="no"
+     >
+<!--  More than one viewport open?  -->
+        <group loc="0 0" size="400 155"
+          style="Heading1"
+      	  bg="transparent"
+	  vq="jviewports craftnmrparRef"
+	  show="$SHOW=(jviewports[1]&gt;1)"
+      	  expanded="yes"
+	  useref="no"
+      	  >
+          <label loc="20 75" size="370 20"
+            style="Heading5"
+	    vq="jviewports file"
+	    label="write('line3','ALERT: %d active viewports',jviewports[1]):$v $VALUE=$v"
+	    justify="Center"
+	  />
+          <label loc="20 95" size="370 20"
+            style="Heading5"
+	    vq="jviewports file"
+	    label="write('line3','Exit CRAFT or close other viewports'):$v $VALUE=$v"
+	    justify="Center"
+	  />
+	</group>
+
+<!-- Is craftspace busy? -->
+        <group loc="0 0" size="400 155"
+          style="Heading1"
+      	  bg="transparent"
+	  vq="jviewports craftnmrparRef"
+	  show="$v='' craft_getInfo(craftspace,'Saved2Study'):$v $SHOW=(($v&lt;&gt;'') and (jviewports[1]=1))"
+      	  expanded="yes"
+	  useref="no"
+      	  >
+          <label loc="15 35" size="380 20"
+            style="Heading1"
+	    vq="jviewports file"
+	    label="Current CRAFT workspace is not empty"
+	    justify="Center"
+	  />
+	  <group loc="15 60" size="380 60"
+	    vq="craftnmrparRef craftspace"
+	    show="craft_abort('status'):$stat $lock=0 craft('islock',craftspace):$lock $SHOW=(($lock&gt;0.5) and ($stat&lt;0.5))"
+	    >
+	    <label loc="0 0" size="380 20"
+	      style="Heading1"
+	      label="CRAFT analysis is in progress"
+	      justify="Center"
+	      />
+            <button loc="0 25" size="140 25"
+              style="Heading2"
+              label="Show progress"
+              vc="craft_progress"
+              bg="transparent"
+              />
+	    </group>
+	  <group loc="15 60" size="380 20"
+	    vq="craftnmrparRef craftspace"
+	    show="craft_abort('status'):$stat $lock=0 craft('islock',craftspace):$lock $SHOW=(($lock&gt;0.5) and ($stat&gt;0.5))"
+	    >
+	    <label loc="0 0" size="380 20"
+	      style="Heading1"
+	      label="CRAFT analysis aborted"
+	      justify="Center"
+	      />
+	    </group>
+            <group loc="245 85" size="140 25"
+              vq="craftnmrparRef craftspace craftAutoPar"
+              show="$r=0 craft('islock',craftspace):$r $SHOW=($r&gt;0.5)"
+              >
+              <button loc="0 0" size="140 25"
+                style="Heading5"
+                label="Abort CRAFT"
+                vq="craftnmrparRef craftspace craftAutoPar"
+                vc="craft_abort('all')"
+                bg="transparent"
+                />
+              </group>
+
+            <button loc="130 85" size="110 25"
+              style="Heading2"
+              label="Analysis log"
+              vq="craftnmrparRef craftspace craftAutoPar"
+              vc="craft('showAnalLog',craftspace)"
+	      show="$ENABLE=(craftAutoPar[2]='n')*2-1"
+	      bg="transparent"
+              />
+	</group>
+
+        <group loc="0 0" size="400 155"
+          style="Heading1"
+      	  bg="transparent"
+	  vq="jviewports craftnmrparRef"
+	  show="$v='' craft_getInfo(craftspace,'Saved2Study'):$v $SHOW=(($v='') and (jviewports[1]=1))"
+      	  expanded="yes"
+	  useref="no"
+      	  >
+	  <textmessage loc="65 22" size="160 20"
+	      style="Info"
+	      vq="craftnmrparRef"
+	      set="$VALUE='Number of FIDs: '+craftnmrpar[25]"
+	      />
+	  <textmessage loc="225 22" size="160 20"
+	      style="Info"
+	      vq="craftnmrparRef"
+	      set="$size=size('craftDmark') $v='' format($size/2,0,0):$v $VALUE='ROIs per FID: '+$v"
+	      />
+	   <group loc="45 42" size="305 60"
+            style="Heading1"
+            bg="transparent"
+	    vq="craftnmrparRef craftDispPar"
+            border="Raised"
+            subtype="Basic"
+            expanded="yes"
+            >
+	    <group loc="0 0" size="305 60"
+	      vq="craftnmrparRef craftDispPar craftAutoPar"
+	      show="$SHOW=(((craftDispPar[15]&lt;&gt;'Process OrigData') and (craftDispPar[15]&lt;&gt;'')) or (craftAutoPar[2]='y'))"
+	      >
+	      <label loc="20 20" size="265 20"
+	        label="Display initial data in workspace"
+	        style="Info"
+		justify="Center"
+	        />
+	      </group>
+	    <group loc="0 0" size="305 60"
+	      vq="craftnmrparRef craftDispPar craftAutoPar"
+	      show="$SHOW=(((craftDispPar[15]='Process OrigData') or (craftDispPar[15]='')) and (craftAutoPar[2]='n'))"
+	      >
+	      <group loc="20 10" size="40 40"
+	        >
+	        <button loc="0 0" size="40 40"
+                  style="Heading2"
+                  icon="roi_auto.gif"
+                  vq="craftnmrparRef craftDispPar"
+                  vc="craft_autoroi"
+                  bg="transparent"
+		  tooltip="Auto-define ROIs between cursors"
+                  />
+	        </group>
+	      <group loc="65 0" size="240 60"
+	        vq="craftnmrparRef craftDispPar"
+                expanded="no"
+	        useref="yes"
+	        reference="craft_RoiTools"
+	        />
+	      </group>
+            </group>
+          <label loc="20 108" size="360 20"
+            style="Label1"
+            label="Read ROI information from"
+            />
+          <filemenu loc="15 128" size="365 20"
+            style="PlainText"
+            vq="craftnmrparRef craftAutoPar"
+            vc="craft_ZOOM('deselectall') craft_readBandInfo('$VALUE')"
+            set="$VALUE=''"
+            file="$VALUE=userdir+'/cnmrmodels/Files4xml/workspaceMenu5'"
+            show="$v='' substr(craftDispPar[15],2):$v $ENABLE=((($v='OrigData') or ($v='')) and (craftAutoPar[2]='n'))*2-1"
+	    type="file"
+            vq2="craftnmrparRef"
+            />
+          </group>
+	</group>
+
+</template>

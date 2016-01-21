@@ -1,0 +1,196 @@
+"macro xmmenuaction"
+/*-*- MAGICAL -*-*/
+
+// This macro is used by xmGetMenuForNode to handle commands to be executed
+// on one or more nodes.
+// $1 is a command key
+// $2 is a list of nodes: the primary node followed by a list of all the
+// selected nodes in the order they were selected.
+// (The primary node will appear twice in the list.)
+
+//write('line3','%s(%s, %s)', $0, $1, $2)
+
+$iarg = 1
+xmConfirmDataDelete:$confirm
+if ($# > 0) then
+    if ($1 = 'ok') then
+        $confirm = 0
+        $iarg = $iarg + 1
+    endif
+endif
+
+if ($# = $iarg + 1) then
+    $cmd = ${$iarg}
+    $list = ${$iarg+1}
+    if ($cmd = 'delete') then
+      if (appmode<>'imaging') then
+// For delete action, send the entire list to xmhaha and let
+//  xmhaha_delete macro deal with it
+	    xmhaha($cmd,$list)
+      else
+        if ($confirm) then
+            // Are we trying to delete completed data?
+            $isData = 0
+            $i = 2
+            $node = ''
+            substr($list, $i):$node
+            while ($node <> '') do
+                getNodeProperty($node, 'status'):$status
+                //$status='Completed'/*DBG*/
+                if ($status = 'Completed') then
+                    xmConfirmDataDelete($cmd, $list)
+                    // We will get called again with 'ok' arg if confirmed
+                    return
+                endif
+                $i = $i + 1
+                $node = ''
+                substr($list, $i):$node
+            endwhile
+        endif
+        $i = 2
+        $node = ''
+        substr($list, $i):$node
+        while ($node <> '') do
+            xmaction($cmd, $node)
+            $i = $i + 1
+            $node = ''
+            substr($list, $i):$node
+        endwhile
+      endif
+
+    elseif ($cmd = 'clone') then
+        $i = 2
+        $node = ''
+        substr($list, $i):$node
+        while ($node <> '') do
+            xmaction('click', $node) xmaction('copy', 'last')
+            $i = $i + 1
+            $node = ''
+            substr($list, $i):$node
+        endwhile
+    elseif ($cmd = 'swapqueue') then
+	exists('xmhaha_swapqueue','maclib'):$macex
+	if ($macex) then
+            $i = 2
+            $node = ''
+            substr($list, $i):$node
+            while ($node <> '') do
+		xmhaha_swapqueue($node)
+                $i = $i + 1
+                $node = ''
+                substr($list, $i):$node
+            endwhile
+	endif
+    elseif ($cmd = 'attribute') then
+	substr($list,1):$node
+	xmhaha_attribute($node)
+
+    elseif ($cmd = 'squish') then
+        $i = 2
+        $node = ''
+        substr($list, $i):$node
+        while ($node <> '') do
+            vnmrjcmd('SQ set '+ $node +' squished true')
+            $i = $i + 1
+            $node = ''
+            substr($list, $i):$node
+        endwhile
+
+    elseif ($cmd = 'unsquish') then
+        // Do these in reverse order for efficiency
+        $i = 2
+        $node = ''
+        substr($list, $i):$node
+        while ($node <> '') do
+            $i = $i + 1
+            $node = ''
+            substr($list, $i):$node
+        endwhile
+        $i = $i - 1
+        while ($i >= 2) do
+            substr($list, $i):$node
+            vnmrjcmd('SQ set '+ $node +' squished false')
+            $i = $i - 1
+        endwhile
+
+    elseif ($cmd = 'open') then
+        $node = ''
+        substr($list, 1):$node
+        xmaction('doubleclick', $node)
+
+    elseif ($cmd = 'fovslice') then
+        $node = ''
+        substr($list, 1):$node
+        xmaction('click', $node) xmaction('fovslice', $node)
+
+    elseif ($cmd = 'fovvoxel') then
+        $node = ''
+        substr($list, 1):$node
+        xmaction('click', $node) xmaction('fovvoxel', $node)
+
+    elseif ($cmd = 'fovvolume') then
+        $node = ''
+        substr($list, 1):$node
+        xmaction('click', $node) xmaction('fovvolume', $node)
+
+    elseif ($cmd = 'start') then
+        $node = ''
+        $i = 1
+        substr($list,'wc'):$num
+        while ($i < $num) do
+          $i= $i+ 1
+          substr($list, $i):$node
+          $st= ''
+          xmgetatts($node,'status'):$st
+          if ($st='Ready') or ($st='Customized') or ($st='Queued') then
+            setvalue('copyid','null',2,'global')
+            xmaction('doubleclick', $node)
+            acquire
+          elseif ($st='Active') then
+            acquire
+          endif
+          xmlockup
+        endwhile
+
+    elseif ($cmd = 'queue') then
+        $node = ''
+        $i = 1
+        substr($list,'wc'):$num
+        while ($i < $num) do
+          $i= $i+ 1
+          substr($list, $i):$node
+          $st= ''
+          if actionid=$node then
+             if appmode='imaging' then
+               xmselect('savepar')
+             else
+               xmselect('saveid')
+             endif
+             actionid='null'
+          endif
+          xmgetatts($node,'status'):$st
+          if ($st='Ready') or ($st='Customized') or ($st='Active') then
+             xmsetatts($node,'status','Queued')
+          endif
+        endwhile
+    elseif ($cmd = 'dequeue') then
+        $node = ''
+        substr($list,'wc'):$num
+        while ($num > 1) do
+          substr($list,$num):$node
+          $st= ''
+          $data=''
+          xmgetatts($node,'status','data'):$st,$data
+          if ($st = 'Submitted') and ($data <> '') then
+            acqdequeue($data):$res
+            if ($res) then
+              xmsetatts($node,'status','Customized','data','','lock','off')
+            endif
+          elseif ($st = 'Queued') then
+            xmsetatts($node,'status','Customized')
+          endif
+          $num = $num - 1
+        endwhile
+
+    endif
+endif

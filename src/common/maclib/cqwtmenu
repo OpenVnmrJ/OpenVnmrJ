@@ -1,0 +1,137 @@
+"macro cqwtmenu"
+"menu choices for weighting functions"
+"i.e. cqwtmenu('1D','get'):$VALUE "
+"     cqwtmenu('1D','set',$VALUE) "
+"     cqwtmenu('2D','get'):$VALUE "
+"     cqwtmenu('2D','set',$VALUE) "
+
+if $#<1.5 then
+  write('line3','%s requires at least two arguments')
+else
+
+  $getset='get'
+  if $2='set' then
+    $getset='set'
+  endif
+
+  if $1='1D' then
+
+    if $getset='set' then
+
+      lb='n' gf='n' gfs='n' sb='n' sbs='n' awc='n'
+      if $3='exp' then
+        lb=1/at
+      elseif $3='gauss' then
+        gf=at/2
+      elseif $3='sine' then
+        sinebell
+      elseif $3='sqsine' then
+        sqsinebell
+      elseif $3='cosine' then
+        sb=at sbs=-at
+      elseif $3='sqcosine' then
+        sb=-at sbs=-at
+      elseif $3='pseudo' then
+        pseudo
+      endif
+
+    else "$getset='get'"
+
+      $ret=''
+      on('lb'):$onlb on('gf'):$ongf on('gfs'):$ongfs
+      on('sb'):$onsb on('sbs'):$onsbs on('awc'):$onawc
+      if ($onlb) and not ($ongf or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='exp'
+      elseif ($ongf) and not ($onlb or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='gauss'
+      elseif ($onlb and $ongf) and not ($ongfs or $onsb or $onsbs or $onawc) then
+        $ret='pseudo'
+      elseif ($onsb) and not ($onlb or $ongf or $ongfs or $onsbs or $onawc) then
+        if sb<0 then
+          $ret='sqsine'
+        else
+          $ret='sine'
+        endif
+      elseif ($onsb and $onsbs) and not ($onlb or $ongf or $ongfs or $onawc) then
+        if sb<0 then
+          $ret='sqcosine'
+        else
+          $ret='cosine'
+        endif
+      elseif not ($onsb and $onsbs and $onlb or $ongf or $ongfs or $onawc) then
+        $ret='none'
+      endif
+      return($ret)
+
+    endif
+
+  elseif $1='2D' then
+
+    if $getset='set' then
+
+      lb='n'  gf='n'  gfs='n'  sb='n'  sbs='n'  awc='n'
+      lb1='n' gf1='n' gfs1='n' sb1='n' sbs1='n' awc1='n'
+      if $3='exponential' then
+        lb1=ni/(2.0*sw1) lb=1/at
+      elseif $3='gaussian' then
+        gaussian
+      elseif $3='sinebell' then
+        sinebell
+      elseif $3='sqsinebell' then
+        sqsinebell
+      elseif $3='cosine' then
+        cosine
+      elseif $3='sqcosine' then
+        sqcosine
+      elseif $3='pseudoecho' then
+        pseudoecho
+      elseif $3='resenhance' then
+        resenhance
+      elseif $3='pi4ssbsq' then
+        pi4ssbsq
+      endif
+
+    else "$getset='get'"
+
+      $ret=''
+      on('lb1'):$onlb on('gf1'):$ongf on('gfs1'):$ongfs
+      on('sb1'):$onsb on('sbs1'):$onsbs on('awc1'):$onawc
+      if ($onlb) and not ($ongf or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='exponential'
+      elseif ($ongf) and not ($onlb or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='gaussian'
+      elseif ($onlb and $ongf) and not ($ongfs or $onsb or $onsbs or $onawc) then
+        $ni=ni if ($ni<1) then $ni=1 endif
+        if (gf1 > 0.28*$ni/sw1) then
+          $ret='resenhance'
+        else
+          $ret='pseudoecho'
+        endif
+      elseif ($onsb) and not ($onlb or $ongf or $ongfs or $onsbs or $onawc) then
+        if sb1<0 then
+          $ret='sqsinebell'
+        else
+          $ret='sinebell'
+        endif
+      elseif ($onsb and $onsbs) and not ($onlb or $ongf or $ongfs or $onawc) then
+        if sb1<0 then
+          if (sbs1=sb1) then
+            $ret='sqcosine'
+          else
+            $ret='pi4ssbsq'
+          endif
+        else
+          $ret='cosine'
+        endif
+      elseif not ($onsb and $onsbs and $onlb or $ongf or $ongfs or $onawc) then
+        $ret='none'
+      endif
+      return($ret)
+    endif
+
+  else
+    write('line3','%s: type %s not supported',$0,$1)
+  endif
+
+endif
+return('')

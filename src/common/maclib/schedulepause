@@ -1,0 +1,114 @@
+"macro schedulepause"
+if ($# < 1) then $1='init' endif
+
+$date=''
+shell('date +%Y%m%d'):$date
+$service=autodir+'/enterQ.macdir/SERVICE_'+$date
+if (operator<>owner) then
+   write('error','operator (%s) is not owner (%s).  Service pause is disallowed',operator,owner)
+   return
+endif
+
+IF ($1='init') THEN
+	"starts the popup for scheduled time entry"
+
+    exists('autoservice','parameter','global'):$parex
+    if ($parex=0) then
+	create('autoservice','string','global')
+    endif
+    setprotect('autoservice','on',256,'global')
+    autoservice='',''
+    exists($service,'file'):$svex
+    if ($svex) then
+	$s1='' $s2=''
+	readfile($service,'$s1','$s2','SERVICE','local'):$total
+	teststr('$s1','SERVICE_PAUSE_TIME:','local'):$ret
+	teststr('$s1','SERVICE_DURATION:','local'):$ret2
+	if ($ret=0) or ($ret2=0) then
+	    shell('rm -f '+$service):$dum
+	else
+	    autoservice[1]=$s2[$ret]
+	    autoservice[2]=$s2[$ret2]
+	endif
+    endif
+
+    vnmrjcmd('pnew','autoservice')
+    vnmrjcmd('popup','mode:modeless','file:autoservice.xml','rebuild:yes','pnewupdate:true','title:Service Pause')
+
+ELSEIF ($1='clear') THEN
+	"clears scheduledpause file"
+    shell('rm -f '+$service)
+    autoservice[1]=''
+    autoservice[2]=''
+    getautosaflag(autodir+'/enterQ'):$autosaflag
+    if ($autosaflag='service') then
+	resumeautomation
+	atcmd('resumeautomation','cancel')
+    endif
+    vnmrjcmd('pnew','autoservice')
+
+ELSEIF ($1='save') THEN
+	"saves schduledpause file"
+    if (autoservice[1]='') or (autoservice[2]='') then 
+	return
+    endif
+    strstr(autoservice[1],':'):$ret,$HR,$MIN
+    strstr(autoservice[2],':'):$ret1,$hr,$min
+    if ($ret=0) then
+	write('error','Start time must be in 24Hr format (HR:MIN)')
+	return
+    endif
+    if ($ret1=0) then
+	write('error','Duration must be in the hr:min format')
+	return
+    endif
+    if  typeof('$HR') or
+	typeof('$MIN') or
+	typeof('$hr') or
+	typeof('$min') then
+	write('error','wrong Start_time or duration format')
+	return
+    endif
+    $pausetime=$HR*3600+$MIN*60
+    shell('date +%H'):$hour shell('date +%M'):$minutes
+    $curtime=$hour*3600+$minutes*60
+    if ($pausetime < $curtime) then
+	write('error','Start_time is before current time')
+	return
+    endif
+    $remtime=0
+    $currentQ=autodir+'/enterQ.macdir/currentQ'
+    exists($currentQ,'file'):$cqex
+    if ($cqex) then
+	$s1='' $t2=0
+	readfile($currentQ,'$s1','$t2','','local'):$total
+	if ($s1[1]='SAMPLE_CHANGE_TIME') then
+	    $remtime=$t2[$total]
+	else
+	    checkautoexp:$remtime
+	    $remtime=$remtime-$t2[1]+$t2[$total]
+	endif
+    endif
+    if ($pausetime < $curtime+$remtime) then
+	write('error','Automation cannot be paused before the current sample completes')
+	return
+    endif
+
+    write('reset',$service)
+    write('file',$service,'SERVICE_PAUSE_TIME: %s',autoservice[1])
+    write('file',$service,'SERVICE_DURATION: %s',autoservice[2])
+    write('line3','Automation will pause at %s for %s Hr:Min',autoservice[1],autoservice[2])
+
+    $resumetime=''
+    $minX=$MIN+$min
+    $hrX=trunc($minX/60)
+    $resumemin=$minX-($hrX*60)
+    $resumehr=$HR+$hr+$hrX
+    $shr='' format($resumehr,0,0):$shr
+    $smin='' format($resumemin,0,0):$smin
+    $resumetime=$shr+':'+$smin
+    atcmd('resumeautomation','cancel')
+    atcmd('resumeautomation',$resumetime)
+    atcmd
+
+ENDIF

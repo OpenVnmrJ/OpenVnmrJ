@@ -1,0 +1,84 @@
+******************************************************************************
+aspRoi('load',fullpath) - load and display ROIs in a file specified by fullpath.
+aspRoi('save',fullpath) - save currently displayed ROIs in a file specified by fullpath.
+aspRoi('show/hide') - show/hide ROIs
+aspRoi('add') - add a ROI defined by two cursors.
+aspRoi('add',ppm1,ppm2) - add a ROI band defined by two chemical shifts.
+aspRoi('add',ppm1,ppm2,ppm3,ppm4) - add a ROI box defined by four chemical shifts.
+aspRoi('add',ppm1,ppm2,....,'setColor',color,'setOpaque',opaque,'setHeight',height) 
+	- add one or more ROI bands and set color, opaque, height for these rois.
+aspRoi('autoadjust','on'/'off') - turn on/off auto adjust Roi when a new Roi is created.
+aspRoi('autoadjust') - auto adjust displayed Rois to remove overlap.
+aspRoi('autodefine'<,ppm1,ppm2>) -auto define ROIS between two cursors or two ppm values.
+		Rois below noise*noiseMultiply (default 3) are purged.
+		if noiseMultiply=0, threshold (th) will be used to purge Rois.
+		Default Roi size is defined by aspPref[4]
+		minimum Roi size is defined by aspPref[5]
+		noiseMultiply is defined by aspPref[6]
+aspRoi('delete') - delete ROIs celected by one or tow cursors.
+aspRoi('clear') - delete all ROIs 
+aspRoi('setColor', colorName) - set ROI color. See below for valid color names 
+aspRoi('setOpaque', ) - set opaque of ROI area (0-100 from transparent to total opaque)
+aspRoi('setHeight', ) - set height of ROI for 1D spectra (0-100% of plot box height).
+******************************************************************************
+
+ROIs can be loaded from a file, or created interactively in ROI "create" mode.
+aspSetState(3) command sets "band" mode to create 1D ROIs. 
+aspSetState(5) sets "box" mode to create 2D ROIs.
+To creating multiple ROIs, drag mouse cursor while holding ctrl key.
+
+Release mouse without ctrl key will exit create mode.
+
+ROIs can be modified in "select" mode.
+aspSetState(1) enters select mode. In select mode, mouse over a ROI will highlight the ROI.
+If mouse is near a vertical border line of the ROI, the line will be selected to resize.
+If mouse is inside, the ROI will be selected to move.
+
+For 2D ROIs, horizontal border lines, or corners can also be selected to resize.
+Holding ctrl or shift key will disable selecting border or corner (i.e., disable resize).
+
+In select mode, ROIs can be deleted by right mouse click or drag over ROIs.
+
+ROIs can be saved to a file and retrieved to any spectrum. 
+ROIs are defined in ppm in the following format (for example):
+
+# Created by hel on Fri Jul 12 13:36:49 2013 at machine fv-box1.
+# in PPM
+# rank name... freq... label color opaque height
+1 H1    3.822   3.152   Roi 2 30 60
+1 H1    2.985   2.482   Roi 2 30 60
+1 H1    2.296   1.812   Roi 2 30 60
+1 H1    1.347   0.863   Roi 2 30 60
+1 H1    6.270   5.227   Roi 2 30 60
+
+1st column defines the rank of ROI, which can be 1 or 2 for 1D or 2D ROIs.
+2nd column is nucleus name
+3rd, 4th columns are frequencies. 
+5th column is label, which is not used currently.
+6-9th columns define color, opaque, height of the ROIs. These columns are optional. If missing or value is set to -1, they will be defined globally by aspPref parameter. 
+
+If aspPref[1]=-1, ROI color is defined by "Display Options" (on Graphics->DisplayColors page).
+If aspPref[1]>=0, the value is color ID. The following maps a color ID to a color name:
+0	black
+1	red
+2	yellow
+3	green
+4	cyan
+5	blue
+6	magenta
+7	white
+56	orange
+63	pink
+64	gray
+
+Opaque is defined by aspPref[2]=0 to 100.
+Height is defined by aspPref[3]=0 to 100.
+
+The following defines 2D ROIs over a 2D spectrum:
+2 H1 C13        7.992   6.912   32.874  40.482  Roi9 2 30
+2 H1 C13        9.904   9.103   80.171  64.288  Roi9 2 30
+The first two frequencies are for the first nucleus, the next two frequencies are for the second nucleus. 
+
+The following defines 2D ROIs over a 1D spectrum:
+2 H1 amp        9.904   9.103   0.171   0.288   Roi9 2 30
+The third and fourth floating values are vertical height in absolute value.

@@ -1,0 +1,144 @@
+  ghn_coca_cbA.c
+
+    3D HN(COCA)CB gradient sensitivity enhanced version.
+    Designed for triply labeled proteins with H2(>80%), C13 and 15N.
+
+
+    Correlates Cb(i) with N(i-1) and  NH(i-1).  Uses
+    constant time evolution for the 15N shifts and 13Cb shifts.
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+    pulse sequence: Wittekind and Mueller, JMR B101, 201 (1993)
+		    Muhandiram and Kay, JMR, B103, 203 (1994)
+		    Kay, Xu, and Yamazaki, JMR, A109, 129-133 (1994)
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+    TROSY:	    Weigelt, JACS, 120, 10778 (1998)
+ 
+    Modified from hnco_3c_pfg_laue.c by RM 12/11/92 to add gradient SE.
+    Modified by LEK Sept. 19, 1993, Nov 26, 1993, and Dec. 22, 1993 to minimally
+    excite water etc.
+
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1997, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+    TROSY added Dec 98, based on similar addition to gNhsqc. (Version Dec 1998).
+    Modified from ghn_cacb.c by NN, March 1999.
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+    The waltz16 field strength is enterable (waltzB1).
+    Typical values would be ~6-8ppm, (3500-5000 Hz at 600 MHz).
+  
+  
+    Must set = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghn_coca_cb
+                    
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghn_coca_cb may be printed using:
+                                      "printon man('ghn_coca_cb') printoff".
+             
+    2. Apply the setup macro "ghn_coca_cb".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       At the middle of the t1 period, the 180 degree pulses on CO and 15N are
+       swapped to a 180 degree pulse on Ca, for the first increment of t1, to
+       refocus Ca chemical-shift evolution ensuring a zero first-order phase
+       correction in F1. This is also the case for the 1D spectral check, or
+       for 2D/15N spectra, when ni=0.
+
+   3.  The delay tauCC is set to 0.6 ms for 1D spectra or for 2D/15N spectra
+       to provide a large positive signal. The normal value for 2D/13C or 3D 
+       nmr is 0.0035 (3.5 ms) which yields Ca and Cb signals of opposite sign.
+       These approximately cancel in the 1D spectrum (see JMR B101, 201 for an 
+       explanation).  tauCC is automatically reset to the value in the dg2 
+       parameter set (normally 3.5 ms) for 2D/13C and 3D work (ie when ni>1).  
+
+       The delay tauCC is set to 3.3ms which yields Cb signals. 
+
+    4. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 46ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       46ppm, ie at CaCb throughout the sequence.
+
+    5. The normal 13C 180 degree pulse on CO at the middle of t1 induces a
+       phase shift, which should be field-invariant, and so this phase shift has
+       been calibrated and compensated in the pulse sequence. This phase shift
+       can be checked by setting ni=1 whereby a special 1D method is invoked
+       in which both the 13C CO 180 degree pulse and the simultaneous 15N 180
+       degree pulse are applied just as for all t1 times other than t1=0.  First
+       eliminate the CO pulse by setting pwC7=0 and obtain a 1D spectrum. This
+       spectrum will have reduced intensity compared to ni=0 because of 13Ca
+       chemical-shift evolution during the time of the 180 pulses. If the
+       phase shift is adequately compensated, a second very similar 1D spectrum
+       will be obtained with pwC7=pwC7a.  Unlike ghn_co and ghn_ca, the most 
+       sensitive comparison of the two spectra with pwC7=0,pwC7a is obtained
+       with phase=1 rather than phase=2.  If not adequately compensated, the
+       first increment will be out of phase with all succeeding increments and a
+       zero-order phase-shift will be necessary in F1, which is easily done
+       after the 2D/3D transform. Alternatively, change the calibration by
+       changing the phshift7 parameter in the INITIALIZE VARIABLES section of
+       the code. The pulse pwC7 is automatically reset to its calibrated value
+       (=pwC7a) within the pulse sequence code for 3D work and 2D/t1 studies.
+       DO NOT CHANGE pwC7a from its calibrated value.
+
+    6. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.
+
+    7. Another difference from the work of Kay et al is that the phases of the
+       first and last Cab 90 degree pulses are alternated to eliminate artifacts
+       from the CO 180 degree pulse.
+ 
+    8. tauCC (3.5 ms) and timeTN (12.5 ms, determined for alphalytic 
+       protease) and are listed in dg2 for possible readjustment by the user.
+
+    9. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghn_coca_cb so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.
+       For ghn_c... type sequences, H1 decoupling during the first timeTN is
+       replaced by a pi pulse at kappa/2 to reduce S/N loss for large molecules
+       during the first TN period.  For these sequences H2O flipback is 
+       achieved with two sinc one-lobe pulses, an additional one just before
+       the SE train, similar to gNhsqc.
+
+   10. The autocal and checkofs flags are generated automatically in Pbox_bio.h
+       If these flags do not exist in the parameter set, they are automatically 
+       set to 'y' - yes. In order to change their default values, create the  
+       flag(s) in your parameter set and change them as required. 
+       The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+       The offset (tof, dof, dof2 and dof3) checks can be switched off  
+       individually by setting the corresponding argument to zero (0.0).
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+       shapes are created), 's' (semi-automatic mode - allows access to user  
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code).

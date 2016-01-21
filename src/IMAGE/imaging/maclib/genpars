@@ -1,0 +1,415 @@
+"macro genpars"
+"*********************************************************************"
+"                                                                     "
+" genpars: Macro to generate parameters                               "
+"                                                                     "
+"*********************************************************************"
+
+"Default option"
+$action = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+
+"Magnetization Transfer parameters"
+if ($action = 'mt') then
+  create('mt','flag','current','n')
+  create('flipmt','real','current',900)
+  create('pmt','pulse','current',10000)
+  create('mtfrq','real','current',2000)
+  create('gcrushmt','real','current',2)
+  create('tcrushmt','delay','current',0.004)
+  create('mtpat','string','current','sinc')
+  create('tpwrmt','integer','current',0)
+  setlimit('tpwrmt',63,-16,1)
+  create('tpwrmtf','real','current',0)
+  create('pmtpars','real','current',0)
+  setprotect('pmtpars','on',256)
+  if (size('pmtpars') = 1) then genpars('setpulsepars','pmtpars') endif
+endif
+
+"Spatial Satbands parameters"
+if ($action = 'sat') then
+  create('sat','flag','current','n')
+  create('satorient','string','current','cor')
+  create('nsat','real','current',1)
+  create('sorient','string','current','cor')
+  create('satpos','real','current',0)
+  create('satthk','real','current',5)
+  create('spsi','real','current',0)
+  create('sphi','real','current',0)
+  create('stheta','real','current',90)
+  create('flipsat','real','current',90)
+  create('psat','pulse','current',2000)
+  create('gcrushsat','real','current',2)
+  create('tcrushsat','delay','current',0.001)
+  create('satpat','string','current','sinc')
+  create('satpwr','real','current',0)
+  setlimit('satpwr',63,-16,1)
+  create('satpwrf','real','current',0)
+  create('psatpars','real','current',0)
+  setprotect('psatpars','on',256)
+  if (size('psatpars') = 1) then genpars('setpulsepars','psatpars') endif
+endif
+
+"Fat Saturation parameters"
+if ($action = 'fsat') then
+  create('fsat','flag','current','n')
+  create('flipfsat','real','current',90)
+  create('pfsat','pulse','current',8000)
+  create('fsatfrq','real','current',Prescan_FatOffset)
+  create('autooffset','flag','current','y')
+  create('gcrushfs','real','current',2)
+  create('tcrushfs','delay','current',0.004)
+  create('satpat','string','current','sinc')
+  create('fsatpulses','integer','current',1)
+  create('fsatswap','flag','current','n')
+  create('fsatswapref','flag','current','n')
+  create('tpwrfsat','real','current',0)
+  setlimit('tpwrfsat',63,-16,1)
+  create('tpwrfsatf','real','current',0)
+  create('pfsatpars','real','current',0)
+  setprotect('pfsatpars','on',256)
+  if (size('pfsatpars') = 1) then genpars('setpulsepars','pfsatpars') endif
+endif
+
+"Inversion Recovery parameters"
+if ($action = 'ir') then
+  create('ir','flag','current','n')
+  create('minti','string','current','n')
+  create('ti','delay','current',0.02)
+  create('thkirfact','real','current',1)
+  create('startti','real','current',0.01)
+  create('endti','real','current',1.5)
+  create('approxt1','real','current',1.8)
+  create('blockslices','real','current',0)
+  create('nsblock','integer','current',1)
+  create('gcrushir','real','current',2)
+  create('tcrushir','delay','current',0.004)
+  create('flipir','real','current',180)
+  create('pi','pulse','current',4000)
+  create('pipat','string','current','HS-AFP')
+  create('tpwri','real','current',0)
+  setlimit('tpwri',63,-16,1)
+  create('tpwrif','real','current',0)
+  create('pipars','real','current',0)
+  setprotect('pipars','on',256)
+  if (size('pipars') = 1) then genpars('setpulsepars','pipars') endif
+endif
+
+"Sequential Inversion Recovery"
+if ($action = 'irseq') then
+  create('irsequential','real','current',0)
+endif
+
+"Inversion Recovery Array"
+if ($action = 'irnti') then
+  create('nti','real','current',8)
+endif
+
+"Diffusion parameters"
+if ($action = 'diff') then
+  create('diff','flag','current','n')
+  create('diffscheme','string','current','zero_gf')
+  create('gdiff','real','current',1)
+  create('tdelta','delay','current',0.004)
+  create('tDELTA','delay','current',0.016)
+  create('max_bval','real','current',0)
+  create('nbdirs','real','current',0)
+  create('nbzero','real','current',0)
+  create('nbval','real','current',1)
+  create('nbval0','real','current',1)
+  create('dstart','real','current',0)
+  create('dro','real','current',0)
+  setlimit('dro',1,-1,0)
+  setprotect('dro','on',8)
+  create('dpe','real','current',0)
+  setlimit('dpe',1,-1,0)
+  setprotect('dpe','on',8)
+  create('dsl','real','current',0)
+  setlimit('dsl',1,-1,0)
+  setprotect('dsl','on',8)
+  create('bvalue','real','current',0)
+  setgroup('bvalue','processing')
+  create('bvalrr','real','current',0)
+  setgroup('bvalrr','processing')
+  create('bvalpp','real','current',0)
+  setgroup('bvalpp','processing')
+  create('bvalss','real','current',0)
+  setgroup('bvalss','processing')
+  create('bvalrp','real','current',0)
+  setgroup('bvalrp','processing')
+  create('bvalrs','real','current',0)
+  setgroup('bvalrs','processing')
+  create('bvalsp','real','current',0)
+  setgroup('bvalsp','processing')
+  create('bvalSave','real','current',max_bval)
+  create('sviblist','string','current','')
+  setgroup('sviblist','processing')
+  "Add dro,dpe,dsl,bvalue to sviblist"
+  if (sviblist<>'') then
+    $sviblist=''
+    $nvals=1
+    length(sviblist):$length
+    $i=0
+    repeat
+      $i=$i+1
+      "Read each character from sviblist string in turn"
+      substr(sviblist,$i,1):$svib[$i]
+      if ($svib[$i]=',') then
+        "If character is a , then initialise a new $sviblist string"
+        $nvals = $nvals+1
+        $sviblist[$nvals]=''
+      else
+        "Add the character to the current $sviblist string"
+        $sviblist[$nvals]=$sviblist[$nvals]+$svib[$i]
+      endif 
+    until ($i=$length)
+    "Set sviblist to dro,dpe,dsl,bvalue" 
+    sviblist='dro,dpe,dsl,bvalue'
+    "Add any other parameters that were in the string"
+    $i=1
+    while ($i<=$nvals) do
+      if ($sviblist[$i]<>'dro' AND $sviblist[$i]<>'dpe' AND $sviblist[$i]<>'dsl' AND $sviblist[$i]<>'bvalue') then 
+        sviblist=sviblist+','+$sviblist[$i]
+      endif
+      $i=$i+1
+    endwhile
+  else
+    sviblist='dro,dpe,dsl,bvalue'
+  endif
+endif
+
+"Vascular Suppression parameters"
+if ($action = 'vascsup') then
+  create('vascsup','string','current','n')
+endif
+
+"ASL parameters"
+if ($action = 'asl') then
+  create('asl','string','current','n')
+  exists('asltype','parameter'):$e
+  if ($e=0) then tr=4 endif
+  create('asltype','string','current','CASL')
+  create('aslOptions','real','current',0)
+  create('aslplan','string','current','n')
+  create('asltag','real','current',0)
+  create('aslpmax','real','current',40)
+  setlimit('aslpmax',40,-16,0.00001)
+  create('asllimb1max','real','current',0)
+  b1max(rfcoil,'asllimb1max',aslpmax)
+  create('asltagcoil','string','current','n')
+  create('aslrfcoil','string','current','')
+  create('aslb1max','real','current',0)
+  create('asltagcoilpmax','real','current',40)
+  setlimit('asltagcoilpmax',40,-16,0.00001)
+  create('paslpat','string','current','HS-AFP')
+  create('pasl','pulse','current',10000)
+  setlimit('pasl',25000,0,0.0125)
+  create('paslpars','real','current',0)
+  setprotect('paslpars','on',256)
+  if (size('paslpars') = 1) then genpars('setpulsepars','paslpars') endif
+  create('flipasl','real','current',180)
+  create('tpwrasl','real','current',20)
+  create('tpwraslf','real','current',4000)
+  create('asltagrev','string','current','n')
+  create('pcaslpat','string','current','hard')
+  create('pcasl','pulse','current',3000000)
+  setlimit('pcasl',10000000,0,0.0125)
+  create('pcaslpars','real','current',0)
+  setprotect('pcaslpars','on',256)
+  if (size('pcaslpars') = 1) then genpars('setpulsepars','pcaslpars') endif
+  "CASL pulses are long so set shape resolution to 40 us"
+  pcaslpars[1]=40
+  create('pcaslctrlpars','real','current',0)
+  setprotect('pcaslctrlpars','on',256)
+  if (size('pcaslctrlpars') = 1) then genpars('setpulsepars','pcaslctrlpars') endif
+  "CASL pulses are long so set shape resolution to 40 us"
+  pcaslctrlpars[1]=40
+  create('flipcasl','real','current',180)
+  create('tpwrcasl','real','current',20)
+  create('tpwrcaslf','real','current',4000)
+  create('caslb1','real','current',200)
+  create('caslctrl','string','current','')
+  create('caslphaseramp','string','current','n')
+  create('starctrl','string','current','')
+  create('aslthk','real','current',5)
+  create('asladdthk','real','current',0)
+  create('asltagthk','real','current',5)
+  create('aslgap','real','current',1)
+  create('aslpos','real','current',0)
+  create('aslpsi','real','current',0)
+  create('aslphi','real','current',0)
+  create('asltheta','real','current',0)
+  create('aslorient','string','current','')
+  create('aslctrlthk','real','current',0)
+  create('aslctrlpos','real','current',0)
+  create('aslctrlpsi','real','current',0)
+  create('aslctrlphi','real','current',0)
+  create('aslctrltheta','real','current',0)
+  create('aslctrlorient','string','current','')
+  create('controlpos','real','current',0)
+  setprotect('controlpos','on',256)
+  create('caslgamp','real','current',3.5)
+  create('gasl','real','current',0)
+  create('tasl','real','current',0)
+  create('gspoilasl','real','current',5)
+  create('tspoilasl','real','current',0.001)
+  create('aslti','real','current',0.25)
+  create('minaslti','string','current','n')
+  create('slicetr','real','current',0.1)
+  create('minslicetr','string','current','n')
+  create('ips','string','current','n')
+  create('ipsplan','string','current','n')
+  create('ipspat','string','current','SGLsinc')
+  create('pips','pulse','current',2000)
+  create('pipspars','real','current',0)
+  setprotect('pipspars','on',256)
+  if (size('pipspars') = 1) then genpars('setpulsepars','pipspars') endif
+  create('flipips','real','current',90)
+  create('flipipsf','real','current',1)
+  create('tpwrips','real','current',20)
+  create('tpwripsf','real','current',4000)
+  create('nips','real','current',4)
+  create('ipsthk','real','current',thk)
+  create('ipsaddthk','real','current',0)
+  create('ipspos','real','current',0)
+  create('ipspsi','real','current',0)
+  create('ipsphi','real','current',0)
+  create('ipstheta','real','current',0)
+  create('ipsorient','string','current','')
+  create('gips','real','current',0)
+  create('tips','real','current',0)
+  create('gspoilips','real','current',10)
+  create('tspoilips','real','current',0.002)
+  create('wetips','string','current','y')
+  create('ipstime','real','current',0)
+  create('mir','string','current','n')
+  create('mirpat','string','current','HS-AFP')
+  create('pmir','pulse','current',5000)
+  create('pmirpars','real','current',0)
+  setprotect('pmirpars','on',256)
+  if (size('pmirpars') = 1) then genpars('setpulsepars','pmirpars') endif
+  create('flipmir','real','current',180)
+  create('tpwrmir','real','current',20)
+  create('tpwrmirf','real','current',4000)
+  create('nmir','real','current',1)
+  create('mirt1','real','current',1.8)
+  setprotect('mirt1','on',256)
+  create('gspoilmir','real','current',10)
+  create('tspoilmir','real','current',0.001)
+  create('irduration','real','current',0.0)
+  create('autoirtime','string','current','y')
+  create('irtime','real','current',0)
+  setprotect('irtime','on',256)
+  create('mirtime','real','current',0)
+  create('ps','string','current','n')
+  create('psplan','string','current','n')
+  create('pspat','string','current','SGLsinc')
+  create('pps','pulse','current',2000)
+  create('ppspars','real','current',0)
+  setprotect('ppspars','on',256)
+  if (size('ppspars') = 1) then genpars('setpulsepars','ppspars') endif
+  create('flipps','real','current',90)
+  create('flippsf','real','current',1)
+  create('tpwrps','real','current',20)
+  create('tpwrpsf','real','current',4000)
+  create('nps','real','current',4)
+  create('psthk','real','current',thk)
+  create('psaddthk','real','current',0)
+  create('pspos','real','current',0)
+  create('pspsi','real','current',0)
+  create('psphi','real','current',0)
+  create('pstheta','real','current',0)
+  create('psorient','string','current','')
+  create('gps','real','current',0)
+  create('tps','real','current',0)
+  create('gspoilps','real','current',10)
+  create('tspoilps','real','current',0.002)
+  create('wetps','string','current','y')
+  create('pstime','real','current',0)
+  create('q2tips','string','current','n')
+  create('q2plan','string','current','n')
+  create('q2pat','string','current','SGLsinc')
+  create('pq2','pulse','current',2000)
+  create('pq2pars','real','current',0)
+  setprotect('pq2pars','on',256)
+  if (size('pq2pars') = 1) then genpars('setpulsepars','pq2pars') endif
+  create('flipq2','real','current',90)
+  create('tpwrq2','real','current',20)
+  create('tpwrq2f','real','current',4000)
+  create('nq2','real','current',4)
+  create('q2thk','real','current',thk)
+  create('q2pos','real','current',0)
+  create('q2psi','real','current',0)
+  create('q2phi','real','current',0)
+  create('q2theta','real','current',0)
+  create('q2orient','string','current','')
+  create('gq2tips','real','current',0)
+  create('tq2tips','real','current',0)
+  create('gspoilq2','real','current',5)
+  create('tspoilq2','real','current',0.001)
+  create('q2ti','real','current',0.1)
+  create('minq2ti','string','current','n')
+  create('q2time','real','current',0)
+  create('gvs','real','current',10)
+  create('tdeltavs','real','current',0.003)
+  create('bvalvs','real','current',12)
+  create('vstime','real','current',0)
+  create('images','real','current',1)
+  create('image','real','current',1)
+  create('show_aslrf','real','current',0)
+  create('asltestmode','string','current','n')
+  create('aslteststring','string','current','')
+  create('asltestpars','string','current','')
+  setprotect('asltestpars','on',256)
+  create('asltest','string','current','')
+  create('asltesttag','real','current',0)
+  setprotect('asltesttag','on',256)
+  create('testorient','string','current','')
+  create('testtheta','real','current',0)
+  create('testpsi','real','current',0)
+  create('testphi','real','current',0)
+  create('testlro','real','current',4)
+  create('testlpe','real','current',4)
+  create('testlpe2','real','current',0)
+  create('testpro','real','current',0)
+  create('testppe','real','current',0)
+  create('testpss0','real','current',0)
+  create('testpss','real','current',0)
+  create('testthk','real','current',2)
+  create('testgap','real','current',0)
+  create('testns','real','current',1)
+  create('testnp','real','current',256)
+  create('testnv','real','current',128)
+  create('testte','real','current',0.005)
+  create('mintestte','string','current','y')
+  create('testtr','real','current',0.01)
+  create('mintesttr','string','current','y')
+  create('testflip','real','current',20)
+  create('pelist','real','current',0)
+  setgroup('pelist','processing')
+  create('tagcoilOptions','real','current',0)
+  create('tagcoilcalib','real','current',0)
+  create('tagcoiltr','real','current',2)
+  create('mintagcoiltr','string','current','n')
+  create('tagcoilp1','pulse','current',2000)
+  create('tagcoiltpwr','real','current',50)
+endif
+
+if ($action = 'setpulsepars') then
+  if ($# < 2) then
+    return
+  endif
+  $par=$2
+  exists($par,'parameter'):$x
+  if ($x=0) then return endif
+  {$par}[1]=0.4    "resolution"
+  {$par}[2]=5000   "bandwidth"
+  {$par}[3]=5      "lobes"
+  {$par}[4]=1      "cutoff"
+  {$par}[5]=6      "mu"
+  {$par}[6]=2600   "beta"
+  {$par}[7]=200    "modulation"
+endif

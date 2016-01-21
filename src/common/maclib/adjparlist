@@ -1,0 +1,65 @@
+"macro adjparlist"
+
+"***If sw/tof is in $1, make sure to include obsSW***"
+"*** if np is in $1, make sure fn is ON****"
+
+   $issw=0
+   teststr('$1','sw','local'):$issw
+   if ($issw=0) then
+	teststr('$1','tof','local'):$issw
+   endif
+   if ($issw) then
+        setobsSW
+	teststr('$1','obsSW','local'):$is
+	if ($is=0) then $1=$1,'obsSW' endif
+   endif
+
+   $offpar='tof'
+   exists('refsource1','parameter'):$rex
+   if ($rex) then
+     if refsource1='dfrq' then $offpar='dof'
+     elseif refsource1='dfrq2' then $offpar='dof2'
+     elseif refsource1='dfrq3' then $offpar='dof3'
+     else $rex=0
+     endif
+     $issw=0
+     teststr('$1','sw1','local'):$issw
+     if ($issw=0) and ($rex) then
+	teststr('$1',$offpar,'local'):$issw
+     endif
+     if ($issw) then
+        setf1SW
+        teststr('$1','f1SW','local'):$is
+        if ($is=0) then $1=$1,'f1SW' endif
+     endif
+   endif
+
+   $offpar='tof'
+   exists('refsource2','parameter'):$rex
+   if ($rex) then
+     if refsource2='dfrq' then $offpar='dof'
+     elseif refsource2='dfrq2' then $offpar='dof2'
+     elseif refsource2='dfrq3' then $offpar='dof3'
+     else $rex=0
+     endif
+     $issw=0
+     teststr('$1','sw2','local'):$issw
+     if ($issw=0) and ($rex) then
+        teststr('$1',$offpar,'local'):$issw
+     endif
+     if ($issw) then
+        setf2SW
+	teststr('$1','f2SW','local'):$is
+        if ($is=0) then $1=$1,'f2SW' endif
+     endif
+   endif
+
+   $isnp=0
+   teststr('$1','np','local'):$isnp
+   if ($isnp) then
+	on('fn')
+	teststr('$1','fn','local'):$isfn
+	if ($isfn=0) then $1=$1,'fn' endif
+   endif
+
+   return($1)

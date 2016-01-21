@@ -1,0 +1,84 @@
+"macro addparams"
+"***************************************************************************"
+"*	addparams    -	adds new parameter name and value to an 	   *"
+"*			existing probe file 				   *"
+"***************************************************************************"
+"usage:                                                                     "
+" addparams(parameter, value, nucleus <,file>)             "
+"                                                                           "
+"---------------------------------------------------------------------------"
+
+if ($# < 3) then
+  write('error','usage: addparams(parameter, value, nucleus <,file>)')
+  return
+endif
+if ($# < 4) then $4=probe endif
+
+$e=0 $file='' $rw=0
+getProbePath($4,'alert'):$e,$file,$rw
+if ($rw=0) then return endif
+
+$ret=''
+$param = $1 $value = $2 $nuc=$3
+
+$param = $nuc + $param
+$datepar = $nuc + 'date'
+$date='' shell('date +%d-%b-%Y-%T'):$date
+
+// read probe file
+$attr='' $val=''
+readfile($file,'$attr','$val','','local'):$size
+
+$findpar=0 $Datepar=0
+teststr('$attr',$param,'local'):$findpar
+teststr('$attr',$datepar,'local'):$Datepar
+if ($findpar=0) and ($Datepar=0) then
+   $attr[$size+1]=$nuc+':' $val[$size+1]='Parameters'
+   $attr[$size+2]=$param $val[$size+2]=$value
+   $attr[$size+3]=$datepar $val[$size+3]=$date
+elseif ($findpar) then
+   $val[$findpar]=$value
+   if ($Datepar) then
+      $val[$Datepar]=$date
+   endif
+else
+   $size=size('$attr')
+   $newattr='' $newval=''
+   $i=1 $j=1
+   repeat
+	$newattr[$j]=$attr[$i]
+	$newval[$j]=$val[$i]
+	$i=$i+1
+	$j=$j+1
+   until $i >= $Datepar
+   $newattr[$j]=$param
+   $newval[$j]=$value
+   $j=$j+1
+   $i=$Datepar
+   repeat
+	$newattr[$j]=$attr[$i]
+	$newval[$j]=$val[$i]
+	$i=$i+1
+	$j=$j+1
+   until $i > $size
+   $attr=$newattr $val=$newval
+endif
+
+$newattr=$attr $newval=$val
+$size = size('$newattr')
+
+// write probe file
+$tfile=userdir+'/persistence/probe_tmpadd'
+write('reset',$tfile)
+$j=1 $isdate=0
+repeat
+  strstr($newattr[$j],'date'):$isdate
+  if ($isdate) then
+    write('file',$tfile,'%-17s %s\n',$newattr[$j],$newval[$j])
+  else
+    write('file',$tfile,'%-17s %s',$newattr[$j],$newval[$j])
+  endif
+  $j=$j+1
+until ($j > $size)
+
+mv($tfile,$file)

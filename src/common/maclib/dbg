@@ -1,0 +1,34 @@
+"macro dbg"
+"-- restart debug to the debug file --"
+if $# = 0 then $1='on' endif
+
+if $1 = 'off' then 
+  debug('C')
+  return
+endif  
+shell('whoami'):$me
+
+// establish a default debug log file if not already set (user can override)
+exists('dbg_file','parameter','current'):$dfn
+if not $dfn then
+  create('dbg_file','string','current','/tmp/vj.'+$me+'.dbg')
+endif
+
+// if the file exists, then put the last 1K statements in a backup file
+exists(dbg_file,'file'):$df 
+if $df then // pick a name with good editor auto-completion characteristics
+  $backup = '/tmp/1k'
+  shell('tail -1000 $df > '+$backup)
+  write('line3','last 1000 lines of old debug saved in '+$backup)
+endif
+
+// establish a default debug level if not already set (user can override)
+exists('dbg_level','parameter','current'):$de
+if not $de then
+  create('dbg_level','string','current','c3')
+endif
+
+debug('C')                   // turn off debugging
+rm(dbg_file):$del            // remove the huge debug file
+debug(dbg_level)             // restart debugging
+jFunc(55,dbg_file)           // reassign debug file

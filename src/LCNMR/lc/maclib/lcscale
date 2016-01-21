@@ -1,0 +1,117 @@
+"macro lcscale"
+/*-*- MAGICAL -*-*/
+"macro lcscale"
+"scale"
+
+// Read arguments
+$plotflag = 0
+$fullflag = 0
+$sideflag = 0
+$i=1
+while $i<=$# do
+  if ${$i} = 'plot' then $plotflag = 1
+  elseif ${$i} = 'side' then $sideflag = 1
+  elseif ${$i} = 'full' then $fullflag = 1
+  elseif ${$i} = 'det2' then $det2flag = 1
+  endif
+  $i=$i+1
+endwhile
+
+// $offset(min) = onflowdelay(s) / 60
+exists('onflowdelay','parameter'):$e
+if $e then $offset=onflowdelay/60 else $offset=0 endif
+
+$color='black'
+if $plotflag then
+  pen('plotter','pen1') $device='plotter'
+else
+  $color='white' pen('graphics',$color) $device='graphics'
+endif
+if $sideflag then 
+  if $fullflag then $startmm=wcmax else $startmm=wcmax-wc-sc-15 endif
+  $mmf=wc2/wf1
+else 
+  $startmm=wcmax-wc-sc
+  $mmf=wc/wf1
+endif
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar=0.7*$htchar else $wthchar=0.5*$htchar endif
+
+if $sideflag then $tic=0.75 else $tic=1.5 endif
+
+$scaleoffset=-10
+
+if ((wf1<5) and not $sideflag) then
+  $ticinc=0.02
+  $ticmult=10
+  $labelmult=5
+else
+  $ticinc=.2
+  $ticmult=1
+  $labelmult=1
+endif
+
+
+
+$t=wf1+sf1
+$mm=($t-sf1+$offset)*$mmf 
+
+if $sideflag then 
+  $y0=0 $y1=$mm $x0=$startmm-$scaleoffset/1.5 $x1=$x0
+else 
+  $x0=$startmm $x1=$startmm+$mm  $y0=$scaleoffset $y1=$scaleoffset
+endif
+
+
+move($x0,$y0)
+draw($x1,$y1) 
+
+$t=sf1
+repeat
+  $mm=($t-sf1+$offset)*$mmf
+  if $sideflag then 
+    $y1=$mm $x1=$x0 
+  else 
+    $x1=$startmm+$mm $y1=$y0
+  endif
+  move($x1,$y1)
+  $tt=trunc($t*$ticmult+.001)
+  abs($t*$ticmult-$tt):$tt
+  if $tt<.001 then $ttic=1.5*$tic else $ttic=$tic endif
+  $ttlabel=trunc($t*$labelmult+.001)
+  abs($t*$labelmult-$ttlabel):$ttlabel
+  if $ttlabel<.001 then
+    if $sideflag then 
+      draw($x1+2*$ttic,$y1)
+      write($device,$color,$x1+$wthchar,$y1-0.3*$htchar,$t)
+    else
+      draw($x1,$y1-$ttic)
+      if $x1+$htchar<wcmax then
+        write($device,$color,$x1-$wthchar,$y1-2*$ttic-$htchar,'%1.1f',$t)
+      endif
+    endif 
+  else 
+    if $sideflag then
+      draw($x1+$ttic,$y1)
+    else
+      draw($x1,$y1-$ttic)
+    endif
+  endif
+
+  $t=$t+$ticinc
+
+
+until $t>=wf1+sf1
+
+if $sideflag then
+  write($device,$color,$x1+2*$tic,$y1,'min')
+else
+  write($device,$color,wcmax-$htchar,$y1-2*$ttic-$htchar,'min')
+endif
+
+
+
+
+
+
+

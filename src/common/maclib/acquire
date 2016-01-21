@@ -1,0 +1,272 @@
+"macro acquire"
+"acquire initiates an acquisition"
+
+if ($# = 0) then
+  $arg = 'start'
+else
+  $arg = $1
+endif
+if ($arg = 'start') then
+  readhw('status'):$hwval
+  if ($hwval = 17) then
+    sethw(`start`,1):$e
+    return
+  endif
+endif
+if $#>0.5 then sqmode='pause' endif
+xm1('studydir'):$sdir
+$testacq='n'
+$vp=''
+isvnmrj:$j
+"if ($j<0.5 and auto<>'y') then"
+"  $activestudy='null'"
+"else"
+  exists('testacquire','parameter','global'):$e
+  if $e>0.5 then $testacq=testacquire endif
+  $activestudy=activestudy[1]
+  xm1('vp'):$vp
+  if (appmode='imaging' and $testacq<>'y' and ($vp='review' or $vp='current')) then
+    if not ($vp='current' and sqmode='go') then
+      write('line3','join Plan viewport to start scan')
+      return
+    endif
+  endif
+"endif"
+  if (appmode='imaging' and $testacq<>'y') then
+    if (size('activestudy')>1.5) then if activestudy[2]='beginstudy' then
+       $reqparReturnValue=0
+       reqpartest($0+'(\''+$arg+'\')'):$reqparReturnValue
+       if ($reqparReturnValue > 0) then
+         return
+       endif
+       xmcreate
+       exec($0+'(\''+$arg+'\')'):$e
+       return
+    endif endif
+  endif
+
+if (apptype = 'im3Dshim') or (apptype = 'im2Dshim') then
+  write('error','"Start scan" not allowed for this protocol')
+  return
+endif
+
+$autoname=autoname
+if ($activestudy<>'null' and $testacq<>'y') then
+  if (seqfil='info') then
+    write('error','Pulse sequence "info" does not exist - please create a node.')
+    return
+  endif
+
+"check if $id is valid"
+  $id=''
+  exists('actionid','parameter'):$ea
+  if $ea<0.5 then
+    fixpar
+    actionid=sqval[1]
+  endif
+
+  $id=actionid
+  $status='null'
+  if ($id<>'' and $id<>'null') then
+    xmgetatts($id,'status'):$status
+  endif
+" $status='null' means $id='' or $id='null' "
+" $status='' means the node directory does not exist"
+" $status='protocol' means the node is not an action"
+" $status for normal action: "
+"   'Completed','Error','Ready','Customized','Skipped','Active','Executing'"
+
+  $act='none'
+  if ($status='Completed' or $status='Error') then
+    $act='copy'
+  elseif ($status='null' or $status='' or $status='protocol') then
+    $act='make'  "$id is invalid"
+  elseif (($status='Executing' or $status='Submitted' or $status='Processing' or $status='AcqDone') and appmode='imaging') then
+    $act='copy'  "$id is invalid"
+  endif
+
+  if ($act = 'copy') then  "copy a node"
+    xmmakenode('copy','action'):$id
+    if $id='' then
+      $act='make'
+    else
+      actionid=$id
+      exists('actionid','parameter','processed'):$e
+      if ($e) then setvalue('actionid',$id,'processed') endif
+      xmsetatts($id,'status','Active')
+    endif
+  endif
+  if ($act = 'make') then  "generate a new node"
+//    xmmakenode('new','protocol'):$id
+    xmmakenode('new','action'):$id
+    if ($id<>'null' and $id<>'') then
+      actionid=$id
+      exists('actionid','parameter','processed'):$e
+      if ($e) then setvalue('actionid',$id,'processed') endif
+      xmsetatts($id,'status','Active')
+    else
+      write('line3','could not generate valid node id (%s)',$id)
+    endif
+  endif
+
+  if (appmode = 'imaging') then
+    sqsavestudy
+    if (seqfil <> 's2pul') and (seqfil <> 'spuls') and (seqfil <> 'gecc') then
+      $file= $sdir+'/info/'+$id+'/rx'
+      exists($file,'file'):$e
+      saverx($file)
+      if ($e<0.5) then
+        write('file',$sdir+'/plans','"%s %s" "plan info/%s/rx"',pslabel,$id,$id)
+      endif
+    endif
+" else"
+"   cqsavestudy"
+"don't need this? only in startq, xmnext(empty enterSQ), xmwerr?"
+  endif
+  wdone='xmwexp'
+  werr='xmwerr'
+  if (prescan[7]='Pause2') then
+    prescan[7]='Complete'
+  endif
+  if (prescan[7]<>'Not done') then "usually Complete"
+    if (appmode='imaging') then 
+      wexp='abortoff procplot save acqWexp aborton'
+    else
+      wexp='abortoff procplot save aborton'
+    endif    
+  endif
+  if (auto='y') then
+    if (prescan[7]<>'Not done') then
+      wexp='abortoff flush procplot aborton'
+    endif
+    if (auto='y' and prescan[7]='Not done' and prescan[9]<>'on') then
+      autoname='_PRESCAN_%R0%'
+    endif
+"file parameter is set after go is done"
+    autoname:$fpath
+    length($fpath):$len
+    substr($fpath,1,$len-4):$npath
+    $rpath=$npath
+    strstr($npath,$sdir):$pos
+    if $pos>0.5 then
+      length($sdir):$alen
+      length($npath):$plen
+      substr($npath,$alen+2,$plen-$alen-1):$rpath
+    endif
+    xmsetatts(actionid,'data',$rpath)
+  endif
+
+"spectrum unsuitable for autophasing aborts"
+"save does not save if testacquire='y' "
+  copyid[2]=actionid
+  setvalue('copyid',actionid,2,'global')
+else "not running a study"
+  wdone=''
+  werr=''
+  wexp='abortoff procplot aborton'
+  copyid[2]='null'
+  setvalue('copyid','null',2,'global')
+endif
+
+on('execprep'):$e
+if ($e>0.5) then
+  exec(execprep)
+endif
+if (appmode<>'imaging') then
+  on('execprescan'):$e
+  if ($e>0.5) then
+    exec(execprescan)
+  endif
+else
+  go('check','checksilent')
+  exists('sglarray','parameter'):$sgl
+  if ($sgl) then
+    if (sglarray = 1) then
+      write('line3','Warning: Advisory: sglarray=1. Computing shapes for every array element will slow down experiment startup')
+    endif
+  endif
+endif
+
+if (auto='y') then
+  werr='xmreact(`wait`)'
+  if ($arg = 'prep') then
+    $acmd='au(`next`,`wait`,`prep`)'
+  else
+    if (prescan[7]='Not done' or prescan[7]='Pause') then
+      if (prescan[9]='off') then
+        $acmd='au(`next`,`wait`,`shimming`)'
+      else
+        $acmd='au(`next`,`wait`)'
+      endif
+    else
+      xmendq('findreq'):$req
+      if ($req = 'y') then
+        $acmd='au(`next`,`wait`)'
+      else
+        $acmd='au'
+        werr='xmreact'
+      endif
+    endif
+  endif
+else
+  if ($arg = 'prep') then
+    $acmd='au(`sync`,`prep`,`vp`)'
+  else
+    $acmd='au(`sync`,`vp`,`noop`)'
+  endif
+endif
+
+$acmd=$acmd+' acqmode=``'
+
+if ($activestudy<>'null' and $testacq<>'y') then
+  $scmd=' xm1(`start`,``)'
+  if (appmode='imaging') then
+    Acq('go','vpcheck'):$vpmode
+    if ($vp='plan') then
+      xmselect('savepar')
+      if (jcurwin[2] < 0.5) then
+        write('error','\'%s\' viewport has illegal experiment number!',jviewportlabel[2])
+        return
+      endif
+      if ($vpmode) then
+        $scmd=' xm1(`start`,`Submitted`)'
+        reserveDisk('save',$sdir,$id):$e
+        if ($e) then
+           write('error','Not enough disk space to save the data')
+           return
+        endif
+      else
+        $scmd=' xm1(`start`,`Executing`)'
+      endif
+    endif
+    $dowait=''
+    acqInit('init'):$dowait
+  endif
+  if ($dowait='wait') then
+    substr($acmd,'find','noop','delimiter','`'):$i,$index
+    if ($i) then
+      substr($acmd,$index,4,'wait'):$acmd
+    endif
+  endif
+  $cmd=$acmd+$scmd
+  exec($cmd)
+  if (appmode='imaging') then
+    if ($vpmode) then
+      acqInit('reset')
+      getvalue('go_id','processed'):$val
+      xmsetatts($id,'data',$val)
+      if ($arg = 'start') then
+         xmq('start','nomsg')
+      endif
+    endif
+  endif
+else
+  exec($acmd)
+  xm1('time')
+  if (appmode='imaging' and $j>0.5) then
+    aipDeleteData
+  endif
+  clear(2)
+  menu('main')
+endif
+autoname=$autoname

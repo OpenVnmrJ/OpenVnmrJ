@@ -1,0 +1,153 @@
+"macro xmsetatts"
+"find node, read node file, store in $pars, set an attribute, write out"
+"combine xmreadnode, xmsetattr, xmwritenode"
+"it does not use sqval,sqattr"
+
+if ($# < 2.5) then return(0) endif
+if (jviewport > 1.5) then
+  $cmd=$0+'(\''+$1+'\''
+  $j=1
+  repeat
+    $j=$j+1
+    $cmd=$cmd+',\''+${$j}+'\''
+  until ($j >= $#)
+  $cmd=$cmd+')'
+  vnmrjcmd('VP 1 '+$cmd)
+  return
+endif
+
+$id=$1
+xm1('studydir'):$sdir
+
+$file=$sdir+'/info/'+$id+'/prop'
+exists($file,'file'):$e
+if $e<0.5 then
+" write('line3','%s: file not found %s',$0,$file)"
+  return(0)
+endif
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+
+$sqattr='' $sqval=''
+readfile($file,'$sqattr','$sqval','','local'):$size
+if $size>0.5 then
+  $sqattr='id',$sqattr
+  $sqval=$id,$sqval
+endif
+
+$time=0
+$j=2
+repeat
+  if ($j < $#) then
+     $attr=${$j}
+     if ($attr='time') then $time=1 $j=$j+1 $timeval=${$j} $j=$# endif
+  endif
+  $j=$j+2
+until $j > $#
+
+if ($time>0) then
+   teststr('$sqattr','type','local'):$ret
+   if ($ret=0) then $time=0
+   else
+        if ($sqval[$ret]<>'LIB') and ($sqval[$ret]<>'CMD') then $time=0 endif
+   endif
+endif
+if ($time>0) and (appmode<>'imaging') then
+   teststr('$sqattr','title','local'):$ret
+   if ($ret) then
+        $title=$sqval[$ret]
+	$sx1='' $sx2='' $sx3=$title
+	strstr($sx3,']','last'):$ret2,$sx1,$sx2
+	substr($sx2,1):$sx2
+	if ($ret2=0) then
+	  if ($timeval<>'') then
+	    $title=$sx3+' ['+$timeval+']'
+	  endif
+	else
+	  if ($sx2='') then
+	    strstr($sx1,'[','last'):$ret2,$sx3
+	    if ($ret2) and ($timeval<>'') then
+		$title=$sx3+'['+$timeval+']'
+	    endif
+	  endif
+	endif
+        $sqval[$ret]=$title
+   endif
+endif
+
+bgmode_is:$b
+"see xmsetattr"
+"check pairs of arguments (2,3),(4,5),..., set values for attributes"
+$j=1 $sc=''
+repeat
+  $j=$j+1
+  $attr=${$j}
+  $j=$j+1
+  if ($j <= $#) then
+    $val=${$j}
+    if ($attr<>'id' and $attr<>'node') then
+      teststr('$sqattr',$attr,'local'):$found
+      if ($found=0) then
+	$sqattr=$sqattr,$attr
+	$sqval=$sqval,$val
+      else
+	$sqval[$found]=$val
+      endif
+      if ($attr='time') and ($time>0) then
+         if (appmode<>'imaging') then $val='' endif
+      endif
+      if $b<0.5 then
+        $sc=$sc+'set '+$id+' '+$attr+' "'+$val+'"; '
+      elseif ($appmode='walkup' and auto='y') then
+        $sc=$sc+'set '+studyid+'_'+$id+' '+$attr+' \\\"'+$val+'\\\"; '
+      else
+        $sc=$sc+'set '+$id+' '+$attr+' \\\"'+$val+'\\\"; '
+      endif
+    endif
+  endif
+until ($j >= $#)
+
+if ($time) and (appmode<>'imaging') then
+     $sc=$sc+'set '+$id+' title "'+$title+'"; '
+endif
+
+if ($sc <> '') then
+  teststr('$sqattr','title','local'):$i
+  $tt=$sqval[$i]+' '
+  teststr('$sqattr','id','local'):$i
+  if ($appmode='walkup' and auto='y') then
+    $tt=$tt+studyid+'_'
+  endif
+  $tt=$tt+$sqval[$i]
+  teststr('$sqattr','status','local'):$i
+  if ($sqval[$i]<>'protocol') then $tt=$tt+' ['+$sqval[$i]+']' endif
+  if $b<0.5 then
+    $sc=$sc+'set '+$id+' tooltext "'+$tt+'"'
+  elseif ($appmode='walkup' and auto='y') then
+    $sc=$sc+'set '+studyid+'_'+$id+' tooltext \\\"'+$tt+'\\\"'
+  else
+    $sc=$sc+'set '+$id+' tooltext \\\"'+$tt+'\\\"'
+  endif
+  if ($appmode='walkup' and auto='y') then
+    xm1('sendsq',$sc)
+  else
+    xm1($sc)
+  endif
+endif
+
+$file=$sdir+'/info/'+$sqval[1]+'/prop'
+$j=0 $ws=''
+$size=size('$sqattr')
+repeat
+  $j=$j+1
+  if ($sqattr[$j]<>'id') then
+    $ws=$ws+$sqattr[$j]+' '+$sqval[$j]
+    if $j<$size then $ws=$ws+'\n' endif
+  endif
+until ($j >= $size)
+if $ws<>'' then
+  write('reset',$file)
+  write('file',$file,'%s',$ws)
+endif
+

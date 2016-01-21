@@ -1,0 +1,72 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# targets
+ddlStaticTarget = 'libddl.a'
+ddlSharedTarget = 'libddl.so'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+ibPath    = os.path.join(cwd, os.pardir, 'ib')
+ibHdrList = ['crc.h',
+             'ddl_c_interface.h',
+             'ddllib.h',
+             'ddlnode2.h',
+             'macrolist.h',
+             'parser.h',
+             'scanner.h',
+             'symbol.h']
+ibFileList = ['ddlnode2.c',
+              'ddlsymtab.c',
+              'scanner.c',
+              'parser.c',
+              'misc.c',
+              'action.c',
+              'crc.c',
+              'ddl_c_interface.c']
+
+aipPath    = os.path.join(cwd, os.pardir, 'aip')
+aipHdrList = ['generic.h']
+
+ddlPath    = os.path.join(cwd, os.pardir, 'vobj', 'sol','proglib','ddl')
+ddlFileList = ['ddl.c']
+
+# build environment
+env = Environment(CC = 'g++',
+                  CPPFLAGS   = '-m32 -O -Wno-deprecated -Wall',
+                  CPPDEFINES = ['LINUX'],
+                  LINKFLAGS  = '-m32',
+                  CPPPATH    = [cwd, ddlPath])
+
+buildMethods.makeSymLinks(env, ddlStaticTarget, cwd, ibPath, ibFileList)
+buildMethods.makeSymLinks(env, ddlStaticTarget, cwd, ibPath, ibHdrList)
+buildMethods.makeSymLinks(env, ddlStaticTarget, cwd, aipPath, aipHdrList)
+buildMethods.makeSymLinks(env, ddlStaticTarget, cwd, ddlPath, ddlFileList)
+
+# actual builds
+ddlStatic = env.StaticLibrary(target = ddlStaticTarget,
+                              source = ibFileList + ddlFileList,
+                              LIBS   = 'm')
+
+ddlShared = env.SharedLibrary(target = ddlSharedTarget,
+                              source = ibFileList + ddlFileList,
+                              LIBS   = 'm')
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+env.AddPostAction(ddlStatic,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, ddlStaticTarget))))
+env.AddPostAction(ddlShared,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, ddlSharedTarget))))
+

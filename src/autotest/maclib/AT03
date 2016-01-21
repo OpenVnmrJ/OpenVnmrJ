@@ -1,0 +1,72 @@
+"macro AT03"
+"AT03"    "amplifier compression test"
+if ($#=0) then
+   ATrtp('standard')
+   gain=10 vp=70
+   write('line3','finding estimate of Amplifier Compression ')
+   tpwr=at_tpwr-12
+   temp=at_temp
+   $startval=16*at_pw90 - 3.2*at_pw90
+   array('pw',20,$startval,0.32*at_pw90)
+   wnt='ATwft dssh'
+   wexp='AT03(`PART1`)' 
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+   wft
+   av
+   ATpw90cal('pw'):$pw90
+   ATsvf('amplifier_compression_test_1')
+   ph
+   array('pw',20,4.0*$pw90 -0.08*$pw90,.008*$pw90)
+   wnt='ATwft dssh'
+   wexp='AT03(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+   wft av
+   ATpw90cal('pw'):$pw90
+   ATsvf('amplifier_compression_test_2')
+   ph
+   at_pw90Lowpower=trunc(100*$pw90)/100  "store in global for later user" 
+   at_tpwrLowpower=tpwr
+   at_ampl_compr=trunc(100*$pw90/(4*at_pw90))/100
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       writeparam(userdir+'/global','at_ampl_compr','global','add')
+       writeparam(userdir+'/global','at_tpwrLowpower','global','add')
+       writeparam(userdir+'/global','at_pw90Lowpower','global','add')
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+   write('line3','Highband Amplifier Compression =  %1.3f',at_ampl_compr)
+   ATrecord('HIAMPCOMP','Highband Amplifier Compression','compression',at_ampl_compr,'at_tpwr',tpwr+12)
+   write('file',autotestdir+'/REPORT','High Frequency Amplifier Compression = %1.2f at tpwr = %2.0f ',at_ampl_compr,tpwr+12)
+   rtp(autotestdir+'/parameters/standard')
+   wdone=''          "do not want wdone in autotest"
+   tpwr=at_tpwr
+   pw90=at_pw90
+   ref_pwr=at_tpwrLowpower
+   ref_pw90=at_pw90Lowpower
+   sw=9p sw=1000*trunc(sw/1000) np=4096
+   f 
+   ATsvp('standard')
+   if (at_plotauto='y') then
+      printon 
+         echo('1H 90 Degree Pulses at Various Powers ')
+         echo('For the probe   ',at_probetype)
+         echo('Determined at the Power Level   ',at_tpwrLowpower)
+         echo('Amplifier Compression =',at_ampl_compr)
+         echo('Done on    ',date)
+         ATatten(ref_pw90,ref_pwr)
+      printoff
+   else
+      ATatten(ref_pw90,ref_pwr)
+   endif
+
+   ATnext
+endif

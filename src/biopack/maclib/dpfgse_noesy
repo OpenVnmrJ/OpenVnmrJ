@@ -1,0 +1,21 @@
+"macro dpfgse_noesy"
+"************************************************************************"
+" dpfgse_noesy - convert parameter set to dpfgse noesy experiment "
+"************************************************************************"
+BPrtppar('dpfgse_noesy')
+gcal_local=gzcal
+getparam('rfsize','Probe'):coil_size
+if coil_size=0 then coil_size=18 endif
+zqflg='n' 
+
+substr(gradtype,3,1):$ss
+if $ss='l' then
+  setlimit('gzlvl0',2047.0,-2047.0,1.0) gzlvl0=900
+  setlimit('gzlvl1',2047.0,-2047.0,1.0) gzlvl1=1000
+  setlimit('gzlvl2',2047.0,-2047.0,1.0) gzlvl2=1600
+endif
+BPupdate_wrefshape BPupdate_flipshape BPupdate_zqshape
+ni=1 phase=1 f full sb=-at sbs=sb pmode='full' pfgon='nny'
+satmode='nnnn' sw1=sw rfl1=rfl rfp1=rfp dm='n'
+d1=1.5 ss=4 dg dps
+man(seqfil)

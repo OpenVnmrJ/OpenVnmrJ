@@ -1,0 +1,53 @@
+"macro nextgo"
+"*******************************************************"
+" nextgo -  Continues chempack queue			"
+"*******************************************************"
+
+if ($# < 1) then $1='acquire' endif
+
+$ok=1
+cpnext:$ok
+if ($ok) then
+  cpprego($1):$go
+  if ($1 ='setup') then $go=1 endif
+  if ($go) then
+	$oldpad=pad
+	Autoexmac('walkupQ')
+	Autobkupmac('walkupQ')
+//	Autoexmac(explist[1]+'_walkupQ')
+//	Autobkupmac(explist[1]+'_walkupQ')
+	Autoexmac('firstNode_walkupQ')
+	Autobkupmac('firstNode_walkupQ')
+	$newpad=pad[1]
+	pad=$oldpad
+	if ($newpad > pad[1]) then
+		pad[1]=$newpad
+	endif
+    if ($1 <> 'setup') then
+	cpgo
+    else
+	expactive('current'):$expactive
+	if ($expactive = 0) then
+		if (spinopt = 'y') then change else su endif
+	endif
+  	$maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+  	if (wexp='chempackQ') then
+        	cpqadjexpfile(explist,$maclibdir,'Active')
+  	endif
+  	exptimelog('start')
+	write('line3','Tune probe now.  Start Acq. with Acquire button')
+	banner('Tune Probe NOW\\   Start Acquisition\\      with the "Go!" button')
+    endif
+/*
+    if (auto='y') then
+	$ret=0 $nodes=''
+	xmhaha_baQ('buildQ'):$ret,$nodes
+	if ($ret=1) then $nodes='' endif
+	if ($ret>0) or ($nodes<>'') then
+    	   xmhaha_sqwatch('init',$nodes)
+	endif
+    endif
+*/
+  endif
+endif
+

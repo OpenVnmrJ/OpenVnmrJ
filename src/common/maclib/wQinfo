@@ -1,0 +1,92 @@
+"macro wQinfo"
+if ($# < 1) then $1='' endif
+// More often than not a user equivalent to this macro
+//  would be to replace its functionality.  So, it is called
+//  at the beginning.  A return value of 0 would skip the parent
+//  macro.  A return value of 1 (or no return value) would 
+//  continue the parent macro
+//  Do not use dousermacro utility, because it doesn't provide 
+//  return value
+
+    $return=1
+    exists('userwQinfo','maclib'):$umacex
+    if ($umacex) then
+	userwQinfo($1):$return
+    endif
+    if ($return<0.5) then return endif
+
+// now proceed as usual
+if (wqinit='auto') then
+  $autodir=autodir
+  $autofile='enterQ'
+elseif (wqinit='enter') then
+  $autodir=globalenter
+  shell('basename '+globalenter):$autofile
+else
+  $autodir=''
+  $autofile=''
+endif
+
+  $priority='no'
+  if (prioritysample[1]='yes') then $priority='priority' endif
+
+  if ($priority='priority') and ($autofile<>'') then
+	$maxsamples=0 $ret=1
+	checkpriority(operator,$autodir+'/'+$autofile):$ret,$maxsamples
+	if ($ret=0) then
+		write('error','Priority Samples exceed max allowed: %d',$maxsamples)
+		abort
+	endif
+  endif
+
+  module('list','cpQdefaults'):$wQpar
+  $macfile=cursqexp+'/macdir/walkupQacq'
+  write('reset',$macfile)
+  write('file',$macfile,'loaddefaultshims')
+
+  exists('ptuneatsample','parameter'):$parex
+  if ($parex) then
+     if (ptuneatsample='yes') then
+	ptuneatsample='auto'
+     endif
+     if ($autofile<>'') then
+	strstr(ptuneatsample,'auto'):$ptune
+     else
+	strstr(ptuneatsample,'wkup'):$ptune
+     endif
+     $s1='' $s2=''
+     strstr(wtune,'s'):$ret,$s1,$s2
+     if ($ptune) then
+         if ($ret=0) then wtune=wtune+'s' endif
+     else
+         if ($ret) then
+             if ($s1 + $s2 = '') then
+                 wtune = 'n'
+             else
+                 wtune = $s1 + $s2
+             endif
+         endif
+     endif
+  endif
+
+  $parfile=$macfile+'pars'
+  write('reset',$parfile)
+  if ($wQpar<>'') then
+	writeparam($parfile,$wQpar)
+  endif
+
+  $macfile2=cursqexp+'/macdirlong/walkupQacq'
+  $parfile2=$macfile2+'pars'
+  shell('cp '+$macfile+' '+$macfile2):$dum
+  shell('cp '+$parfile+' '+$parfile2):$dum
+
+  operights('candovtinautomation'):$ok4vt
+  if (($1='autodir') or ($autofile<>'')) and ($ok4vt>0) then
+        $Tempfile=cursqexp+'/macdir/sampleTempacq'
+        write('reset',$Tempfile)
+        write('file',$Tempfile,'  temp=%0.1f',temp)
+	write('file',$Tempfile,'checktemplimit')
+  	$Tempfile2=cursqexp+'/macdirlong/sampleTempacq'
+	shell('cp '+$Tempfile+' '+$Tempfile2):$dum
+  endif
+

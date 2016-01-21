@@ -1,0 +1,69 @@
+"macro findpwr2"
+"************************************************************************"
+"                                                                        "
+" findpwr2 - macro to determine the 90/180 degree pulse                  "
+"           Called by findpwr                                            "
+"                                                                        "
+" Usage:   findpwr      interactive mode, requests start and end value   "
+"          findpwr(start_value,end_value)                                "
+"          findpwr(0)   non-interactive mode, updates pulsecal file      "
+"                                                                        "
+"************************************************************************"
+
+av
+$counter=1
+select(1) vsadj(10) $high=10 $low=10
+$lowest=1 $highest=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$low then $low=$ht $lowest=$counter endif
+  if $ht>$high then $high=$ht $highest=$counter endif
+  $counter=$counter+1
+until $counter > arraydim
+$pwrhi=tpwr2[$highest]
+select($highest) vp=0 vsadj dssh dssl('list=tpwr1')
+write('line3','highest profile: #%d tpwr2=%5.0f',$highest, $pwrhi)
+
+"reset au parameters"
+wnt=''
+wexp=''
+"if ($pwrhi = tpwr2[6]) then"
+"  tpwr2=$pwrhi"
+"  tpwr1=$pwrhi-6"
+"  abort"
+"endif"
+tpwr2=$pwrhi
+tpwr1=$pwrhi-6
+
+" Interactive mode to update pulsecal"
+"  input('Do you want to update the pulsecal database? [y/n]: '):$input"
+"  if ($input = 'y') then"
+"    input('Enter new name: '):$name"
+"    pulsecal($name,p2pat,p2,180,tpwr2)"
+"    rfcoil=$name"
+"    RFCOIL=$name"
+"    write('line3','RFCOIL updated to %s',RFCOIL)"
+"  endif"
+
+"  pulsecal(RFCOIL,'remove')"
+  rfcoil=RFCOIL 
+  Mpulsecal(RFCOIL,p2pat,p2,180,tpwr2)
+  exists('rfupdate','parameter'):$e
+  if($e > 0) then
+    rfupdate='n'
+  endif
+
+if (($highest = 1) OR ($highest = arraydim)) then
+  rfupdate = 'y'
+  findpwr(0)
+endif
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  "
+"                                                                        "
+"970505(ss) First version created and tested                             "
+"990203(ss) RFCOIL updated; non-interactive mode                         "
+"990412(ss) Mpulsecal checks for rfupdate "
+"************************************************************************"
+

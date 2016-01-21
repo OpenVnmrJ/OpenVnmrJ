@@ -1,0 +1,164 @@
+"macro vsadjh"
+"******************************************************"
+" vsadjh<(height<,xxx>)> adjust vs for proton specta   "
+"	  height - desired maximum peak height	       "
+"		   values <= 0 default to 0.8*wc2max   "
+"	  any second argument makes it NOT disregard   "
+"		   the solvent signal		       "
+"  If only one peak it will be allowed to go off scale "
+"  solvent (if $#<2) and TMS peaks are disregarded     "
+"******************************************************"
+
+$max=0.9*(wc2max-vp-sc2)
+if ($#>0) then
+  if ($1>0) then
+    $max=$1
+  endif
+endif
+if ($#>1) then
+  $usesolvent=1
+else
+  $usesolvent=0
+endif
+
+$sp=sp $wp=wp
+
+$width=2/at					"estimation for signal width"
+on('lb'):$lbon
+if $lbon>0.5 then
+  $width=$width+lb
+endif
+" extend signal width to the 1% level (assuming lorentzian lines)"
+$width=5*$width
+ai peak:$height,$freq
+if $height<0 then $height=0-$height endif
+vs = vs*($max/$height)				"scale to $max mm"
+
+" find solvent signal, determine excluded region"
+if ($usesolvent>0.5) then
+  $sfreq=0 $swidth=1
+else
+  solppm:$sppm,$swidth				"get solvent parameters"
+  $swidth=$swidth+$width
+  $sfreq=$sppm*sfrq
+  if solvent='CD2Cl2' then
+    $swidth=2*$swidth
+  else
+    $swidth=0.6*$swidth
+  endif
+endif
+if ($sfreq<(sw-rfl+rfp)) and ($sfreq>0-rfl+rfp) then
+  if ($sfreq-0.2*sfrq<0-rfl+rfp) then
+    $hilimit=0-rfl+rfp
+  else
+    $hilimit=$sfreq-0.2*sfrq
+  endif
+  if ($sfreq+0.2*sfrq>(sw-rfl+rfp)) then
+    $lolimit=sw-rfl+rfp
+  else
+    $lolimit=$sfreq+0.2*sfrq
+  endif
+  peak($hilimit,$lolimit):$dum,$sfreq		"exact solvent freq"
+else                                            "solvent is not in acquisition window"
+  if (0.0>(sw-rfl+rfp)) or (0<0-rfl+rfp) then   "if TMS is not in acquisition window, return"
+    return
+  endif
+endif
+
+" check both sides of the solvent: lowfield side of solvent"
+if ($sfreq+$swidth)<($sp+$wp) then
+  if $sp<($sfreq+$swidth) then
+    wp=$sp+$wp-($sfreq+$swidth)
+    sp=$sfreq+$swidth
+  endif
+  peak:$lmax
+  if $lmax<0 then $lmax=0-$lmax endif
+  th=$lmax/3
+  nll:$llines
+  if $llines=1 then
+    $count=0
+    repeat
+      th=th/2 nll:$llines
+      $count=$count+1
+    until ($llines>1)or($count>15)
+    $ix=1 $lmax2=0
+    repeat
+      $size=llamp[$ix]*vs
+      if $size<0 then $size=0-$size endif
+      if ($size>$lmax2)and($size<0.5*$lmax) then $lmax2=$size endif
+      $ix=1+$ix
+    until ($ix>$llines)
+  else
+    $lmax2=$lmax
+  endif
+else
+  $lmax=0 $lmax2=0
+endif
+
+" check both sides of the solvent: highfield side of solvent"
+if $sp<0.4*sfrq then				"hifield region limits"
+  if $sp<-0.6*sfrq then
+    $hitms=-0.6*sfrq
+  else
+    $hitms=$sp
+  endif
+  peak($hitms,0.4*sfrq):$dummy,$rhifield
+  $rhifield=$rhifield+$width
+else
+  $rhifield=$sp
+endif
+if ($sp+$wp)>($sfreq-$swidth) then
+  $rlofield=$sfreq-$swidth
+else
+  $rlofield=$sp+$wp
+endif
+if $rlofield>$rhifield then			"right side maximum"
+  sp=$rhifield
+  wp=$rlofield-$rhifield
+  peak:$rmax
+  if $rmax<0 then $rmax=0-$rmax endif
+  th=$rmax/3
+  nll:$rlines
+  if $rlines=1 then
+    $count=0
+    repeat
+      th=th/2 nll:$rlines
+      $count=$count+1
+    until ($rlines>1)or($count>15)
+    $ix=1 $rmax2=0
+    repeat
+      $size=llamp[$ix]*vs
+      if $size<0 then $size=0-$size endif
+      if ($size>$rmax2)and($size<0.5*$rmax) then $rmax2=$size endif
+      $ix=1+$ix
+    until ($ix>$rlines)
+  else
+    $rmax2=$rmax
+  endif
+else
+  $rmax=0 $rmax2=0
+endif
+
+" collect and bubble sort maximum peaks"
+$list[1]=$lmax $list[2]=$lmax2 $list[3]=$rmax $list[4]=$rmax2
+if $list[1]>$list[2] then $temp=$list[2] $list[2]=$list[1] $list[1]=$temp endif
+if $list[2]>$list[3] then $temp=$list[3] $list[3]=$list[2] $list[2]=$temp endif
+if $list[3]>$list[4] then $temp=$list[4] $list[4]=$list[3] $list[3]=$temp endif
+if $list[2]>$list[3] then $temp=$list[3] $list[3]=$list[2] $list[2]=$temp endif
+if $list[1]>$list[2] then $temp=$list[2] $list[2]=$list[1] $list[1]=$temp endif
+if $list[2]>$list[3] then $temp=$list[3] $list[3]=$list[2] $list[2]=$temp endif
+
+if $list[4]=0 then $list[4]=$max endif
+if $list[3]=0 then $list[3]=$list[4] endif
+
+if $list[3]<$list[4]/3 then			"relevant highest peak"
+  $smax=$list[3]
+else
+  $smax=$list[4]
+endif
+
+if $smax>0 then					"scale up vs if necessary" 
+  vs=vs*($max/$smax)
+endif
+
+sp=$sp wp=$wp

@@ -1,0 +1,30 @@
+"macro crcom"
+" ******************************************************"
+" *** crcom - create a macro without using an editor ***"
+" ******************************************************"
+if ($#<>2) then
+   write('error','usage - crcom(\'name\',\'text\')')
+   return
+endif
+$macropath = userdir + '/maclib/' + $1
+exists($macropath,'file'):$e
+if ($e<>0) then
+   input('macro exists, overwrite? '):$answer
+   if (($answer<>'y') and ($answer<>'yes')) then
+       write('error','macro not saved')
+       return
+   endif
+endif
+length($1):$namelength
+$starstring = ''
+$i = 1
+repeat
+  $starstring = $starstring+'*'
+  $i = $i+1
+until ($i>$namelength)
+write('reset',$macropath)
+write('file',$macropath,'" **********'+$starstring+'**** "')
+write('file',$macropath,'" *** macro '+$1+' *** "')
+write('file',$macropath,'" **********'+$starstring+'**** "')
+write('file',$macropath,'%s',$2)
+cat($macropath)

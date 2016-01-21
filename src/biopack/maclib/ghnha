@@ -1,0 +1,49 @@
+"macro ghnha"
+BPrtppar('ghnha')
+setfrq BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+ getparam('NHgrad1_time','N15'):gt1 
+ getparam('NHgrad1_lvl','N15'):gzlvl1 
+ getparam('NHgrad2_lvl','N15'):gzlvl2 
+ getparam('swN','N15'):sw2 
+ dm2='nny' sw1=sw
+spin='n' ni=0  ni2=0 phase=1 phase2=1
+
+
+"make CaCO.DEC"
+$bw1 = ''
+$bw2 = ''
+$wave1 = ''
+$wave2 = ''
+$offset = ''
+
+$freq = -(174-56)*dfrq           " distance to alpha carbon region"
+format(40.0*dfrq,9,1):$bw1   " set Ca decoupling bandwidth to 40 ppm "
+format(20.0*dfrq,9,1):$bw2   " set CO decoupling bandwidth to 20 ppm "
+format($freq,9,1):$offset
+$wave1 = 'WURST2' + $bw1 + '/1.01ms' + $offset
+$wave2 = 'WURST2' + $bw2 + '/1.01ms'
+opx
+setwave($wave1)
+setwave($wave2)
+pbox_rst
+pboxpar('name', 'CaCO.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+
+BPpboxget('CaCO.DEC'):cdecshp,$dmmy,cdecpwr,$dmmy,cdecdres,cdecdmf
+BPmoveshape('CaCO.DEC')
+

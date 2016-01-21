@@ -1,0 +1,126 @@
+#!
+
+import os
+import sys
+import datetime
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+platform = sys.platform
+
+#
+# define function to convert SUA paths to Windows
+#
+def Sua2WinPath(suaPath):
+   if ( '/dev/fs/' in suaPath ):
+     dLetter = suaPath[8:9]
+     # print dLetter
+     return dLetter + ':' + suaPath[9:]
+   else:
+      return suaPath
+
+# target
+jplotTarget = 'jplot.jar'
+
+# current working directory
+cwd = os.getcwd()
+
+env = Environment()
+
+# paths
+if ( 'linux' in platform):
+   javaBinPath = os.path.join(ovjtools, 'java', 'bin')
+   jarBin = os.path.join(javaBinPath, 'jar')
+elif ( 'darwin' in platform):
+   javaBinPath = os.path.join('/', 'usr', 'bin')
+   jarBin = os.path.join(javaBinPath, 'jar')
+elif ( 'interix6' in platform): # Interix
+   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files (x86)\'','Java','jdk1.6.0_23')
+   javaBinPath = os.path.join('/','dev','fs','C','"Program Files (x86)"','Java','jdk1.6.0_23','bin')
+   jarBin = os.path.join(javaBinPath, 'jar.exe')
+elif ( 'interix3' in platform): # Interix
+   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files\'','Java','jdk1.6.0_23')
+   javaBinPath = os.path.join('/','dev','fs','C','"Program Files"','Java','jdk1.6.0_23','bin')
+   jarBin = os.path.join(javaBinPath, 'jar.exe')
+else:
+   print "Unknown Platform: ", platform
+   sys.exit()
+
+#print javaBinPath
+#print jarBin
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+
+# define build environment
+if ( 'linux' in platform):
+   jEnv = Environment(ENV = {'JAVA_HOME' : javaBinPath,
+                          'CLASSPATH' : classesPath,
+                          'PATH' : javaBinPath + ':' + os.environ['PATH']})
+elif ( 'darwin' in platform) :
+   jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
+                          'PATH' : javaBinPath + ':' + os.environ['PATH']})
+else:
+   fbpath = Sua2WinPath(cwd)
+   jEnv = Environment( JAVAC = os.path.join(javaBinPath,'javac.exe'),
+                       JAVACLASSPATH = [
+                                         os.path.join(fbpath, 'classes'),
+                                       ],
+                       ENV = {'JAVA_HOME' : javaBinPath,
+                              'CLASSPATH' : [ 'classes', os.path.join(fbpath, 'classes') ],
+                             'PATH' : javaBinPath + ':' + os.environ['PATH']})
+
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+jEnv.Java(JAVACFLAGS = '-J-mx128m',
+          target     = classesPath,
+          source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd,'Manifest')
+f = open(manifestFile,'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: setMainClass\n')
+f.close()
+
+if ( 'interix' in platform):
+  # cdCmd = 'cd ' + os.path.join(classesPath,os.pardir) +' ; '
+  cdCmd = 'cd ' + cwd +' ; '
+  jarCmd = cdCmd + jarBin + ' -cfm jplot.jar ' + Sua2WinPath(manifestFile) + ' -C ' + Sua2WinPath(classesPath) + ' .'
+  jarBuildObject = jEnv.Command(target = jplotTarget,
+               source = [ classesPath, manifestFile],
+               action = jarCmd,
+              )
+  jEnv.Depends( target = jplotTarget,
+                dependency = [ classesPath, manifestFile],
+              )
+
+else:
+  jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = jplotTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, jplotTarget))))
+

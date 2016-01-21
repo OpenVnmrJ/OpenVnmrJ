@@ -1,0 +1,102 @@
+ CNHSQC-NOE-CNHSQC4D  
+     Time-shared (TS), up to 4D:
+
+15N/13C-HSQC(t3,ni3) --> H-H  NOE (t2,ni2) --> hnTROSY/CHseHSQC (t1,ni; acq)
+
+	in 3D/4D form this provides following NOE correlation:
+        HN  <-> HN
+        H3C <-> H3C
+	HN   -> H3C
+        H3C  -> HN
+        
+        Original pulse sequence reference: Frueh, Vosburg, Walsh, Wagner, 
+        J. BioNMR 2006 v34 pp31-40 
+
+
+ Sample is assumed to be all deuterated+12C, except 13CH3-IVLMAT,15NH.
+ No care taken for N-CA, N-CO, C-C [de]coupling, no ZQ filters during NOE
+
+    
+    2012 CORRECTIONS FOR INOVA-TYPE APDELAYS ARE IN, NOT TESTED 
+    2012 DECOUPLING OF 15N FROM CA/CO IS NOT FULLY IMPLEMENTED
+
+    
+    swN - spectral width in 15N
+    swC - spectral width in 13C
+    sw2 - spectral width in 1H (NOE) dimension. 
+    Folding recommended, sw2=6ppm seems to good.
+
+    pwC, pwN, pw, pwClvl, pwNlvl, tpwr etc - standard BioPack Parameters
+
+    Coherence selection gradients:
+
+	15N encoded by (gzlvl4+gzlvl5)*gt4, decoded by gzlvl6*gt6
+	13C encoded by (gzlvl4-gzlvl5)*gt4, decoded by gzlvl6*gt6
+     
+	coherence selection optimization:
+
+     1. array gzlvl4 +/- 10% of the default value, maximize HN signals
+
+     2. array gzlvl4, gzlvl5  around found vaules, keeping gzlvl5+gzlvl4
+        constant,NH signals should stay unchanged, maximize CH3 signals
+
+   Decoupling from CO/CA [NOT FULLY IMPLEMENTED AS OF MAY 2012] decCACO='y'
+
+
+   Experiment type: exp_mode setting
+
+   '2D' - Time-Shared (TS) 15N TROSY/ 13C seHSQC
+   '3D' - NOESY(t2)-(TS 15N TROSY/ 13C seHSQC, t1)
+   '4D'- (TS 15N/13C HSQC, t3)-NOESY(t2)-(TS 15N TROSY/ 13C seHSQC, t1)
+   '4Da'-(TS 15N/13C HSQC, t3)-NOESY(t2)-(TS 15N TROSY/ 13C seHSQC, t1), 
+	  phases phi5/phi7 are inverted so that (HN<->H3C) cross-peaks
+          are of a opposite sign of H3C<->H3C and HN<->HN  peaks
+
+   fourth character in the exp_mode determines whether NOE(t2) part is
+   flanked by selective water pulses as in paper (default). A 45-degree
+   shift is used in NOE(t2) for exp_mode='***t'
+
+   to run a "full" 4D  version:
+	set ni,ni2,ni3 accordingly, 
+	phase=1,2 phase2=1,2 phase3=1,2 exp_mode='4D' or '4Da'
+	array='phase,phase2,phase3,exp_mode'
+			  												
+  exp_mode='4x' - special case for test 3D version 
+	(TS 15N/13C HSQC, t2)-NOESY-(TS 15N TROSY/ 13C seHSQC, t1)
+	 set ni3=1, phase3=1 !!! 
+
+   Phasing in direct dimension.
+
+   In general, one will need to process CH and HN part of the
+   spectra separately. There will be different phasing parameters fo
+   CH3 and HN in direct dimension. However, phasing differences between
+   HN and CH3 can be minimized by adjusting parameter ch90corr around
+   default value.
+	
+   ch90corr defines how last 1H-methyl selective 90 degree pulse
+   is aligned around last 90 pulse on 15N. ch90corr depends upon the
+   shape used for that selective pulse and has value range between
+   0.0 and 1.0, ch90corr=0.5 means that the ch90 selective
+   pulse is centered around last 90 pulse on 15N.
+
+   How to adjust ch90corr:
+   1. acquire high-S/N 1D with default value of ch90corr. Phase the HN region.
+   2. array ch90corr around default value with steps of 0.01,
+      choose one that gives spectra properly phased on both HN and CH3 parts.
+
+   Phasing in indirect dimensions.
+
+   The pulse sequence flows as follows:
+
+   15N/13C-H[S/M]QC(t3) --> H-H  NOE (t2) --> hnTROSY/CHseHSQC (t1, acq)
+
+   (NOT IMPLEMENTED): set f1180='y' to start at half-dwell time in t1 direction
+         (Time-shared 15N-TROSY /13C-seHSQC)
+
+   set f2180='y' to start at half-dwell time in t2 direction (H-H NOE)
+	 
+   t3 is hard-coded to start at half-dwell time, in this dimension use
+   90,-180 phase corrections and first-point multiplier = 1.0
+*/
+
+

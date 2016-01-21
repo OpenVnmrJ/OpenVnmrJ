@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="Diffusion" element="groups" type="acquisition" >
+  <group size="210 230"
+    style="Heading1"
+    label="Diffusion"
+    vq="diff"
+    bg="transparent"
+    border="Etched"
+    side="Top"
+    justify="Left"
+    tab="no"
+    enable="no"
+    reference="Diffusion"
+    useref="no"
+    subtype="Major"
+    expanded="yes"
+    >
+    <menu loc="95 20" size="110 20"
+      style="PlainText"
+      label="menu"
+      vq="diff diffscheme"
+      vc="if (diffscheme='zero_gf') then max_bval=bvalSave endif diffscheme='$VALUE' {'$VALUE'} if (diffscheme&lt;&gt;'zero_gf') then target_bval(bvalSave) else go('check') endif"
+      set="$VALUE = diffscheme "
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      bg="VJBackground"
+      editable="No"
+      >
+      <mlabel 
+        label="Off"
+        chval="zero_gf"
+        />
+      <mlabel 
+        label="Readout"
+        chval="diffRO"
+        />
+      <mlabel 
+        label="Phase"
+        chval="diffPE"
+        />
+      <mlabel 
+        label="Slice"
+        chval="diffSL"
+        />
+      <mlabel 
+        label="All"
+        chval="diff111"
+        />
+      <mlabel 
+        label="Trace"
+        chval="diffTR"
+        />
+      <mlabel 
+        label="Dual"
+        chval="dual_1"
+        />
+      <mlabel 
+        label="Dual(2)"
+        chval="dual"
+        />
+      <mlabel 
+        label="Jones6"
+        chval="diff_jones6"
+        />
+      <mlabel 
+        label="Jones30"
+        chval="diff_jones30"
+        />
+      <mlabel 
+        label="UCL42"
+        chval="diffUCL42"
+        />
+    </menu>
+    <check loc="5 20" size="85 20"
+      style="PlainText"
+      label="Diffusion"
+      vq="diff"
+      vc="diff='y' diffarray('set') prep go('check')"
+      vc2="diff='n' diffarray('save') zero_gf prep go('check')"
+      set="$VALUE=(diff='y')"
+      />
+    <entry loc="95 100" size="60 20"
+      style="PlainText"
+      vq="gdiff diff tdelta tDELTA max_bval"
+      vc="target_bval($VALUE)"
+      set="$VALUE = max_bval"
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      digits="1"
+      />
+    <label loc="160 200" size="50 20"
+      style="PlainText"
+      label="[-1,1]"
+      justify="Left"
+      />
+    <label loc="5 200" size="90 20"
+      style="Label1"
+      label="b scale, 1 -&gt;"
+      justify="Left"
+      />
+    <label loc="155 120" size="50 20"
+      style="PlainText"
+      label="s/mm2"
+      justify="Left"
+      />
+    <entry loc="95 200" size="60 20"
+      style="PlainText"
+      vq="dstart diff nbval"
+      vc="dstart = $VALUE diffsetbvals go('check')"
+      set="$VALUE = dstart"
+      show="if (diff='y' AND nbval&gt;1) then $VALUE = 1 else $VALUE = -1 endif"
+      digits="2"
+      disable="Grayed out"
+      />
+    <check loc="160 180" size="50 20"
+      style="PlainText"
+      label="b=0"
+      vq="nbval0 nbval"
+      vc="nbval0=1 diffsetbvals go('check')"
+      vc2="nbval0=0 diffsetbvals go('check')"
+      set="$VALUE=nbval0"
+      show="if (nbval&gt;1) then $VALUE = 1 else $VALUE = -1 endif"
+      />
+    <entry loc="95 180" size="60 20"
+      style="PlainText"
+      vq="nbval"
+      vc="nbval = $VALUE diffsetbvals go('check')"
+      set="$VALUE = nbval"
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      digits="0"
+      disable="Grayed out"
+      />
+    <label loc="5 180" size="80 20"
+      style="Label1"
+      label="# bvalues"
+      justify="Left"
+      />
+    <group loc="5 140" size="200 20"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Untitled"
+      >
+      <textmessage loc="90 0" size="60 20"
+        style="PlainText"
+        label="3"
+        vq="nbdirs"
+        set="$VALUE=nbdirs"
+        />
+      <label loc="0 0" size="80 20"
+        style="Label1"
+        label="# directions"
+        justify="Left"
+        />
+    </group>
+    <label loc="5 120" size="90 20"
+      style="Label1"
+      label="Max bvalue"
+      justify="Left"
+      />
+    <textmessage loc="95 120" size="60 20"
+      style="PlainText"
+      label="800.0"
+      vq="max_bval gdiff diff bvalue"
+      set="arraymax('bvalue'):$VALUE $VALUE = $VALUE*(diff='y')"
+      show="$VALUE = (diff='y')"
+      digits="1"
+      statpar="max_bval"
+      />
+    <label loc="155 100" size="50 20"
+      style="PlainText"
+      label="s/mm2"
+      justify="Left"
+      />
+    <label loc="5 100" size="90 20"
+      style="Label1"
+      label="Target bvalue"
+      justify="Left"
+      />
+    <entry loc="95 80" size="60 20"
+      style="PlainText"
+      vq="tDELTA diff"
+      vc="tDELTA = $VALUE/1000 go('check') if (diffscheme&lt;&gt;'zero_gf') then bvalSave=max_bval endif"
+      set="$VALUE = tDELTA*1000"
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      digits="2"
+      disable="Grayed out"
+      />
+    <label loc="155 80" size="30 20"
+      style="PlainText"
+      label="ms"
+      justify="Left"
+      />
+    <entry loc="95 60" size="60 20"
+      style="PlainText"
+      vq="tdelta diff"
+      vc="tdelta = $VALUE/1000 go('check') if (diffscheme&lt;&gt;'zero_gf') then bvalSave=max_bval endif"
+      set="$VALUE = tdelta*1000"
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      digits="2"
+      disable="Grayed out"
+      />
+    <label loc="155 60" size="30 20"
+      style="PlainText"
+      label="ms"
+      justify="Left"
+      />
+    <entry loc="95 40" size="60 20"
+      style="PlainText"
+      vq="gdiff diff"
+      vc="gdiff = $VALUE go('check') if (diffscheme&lt;&gt;'zero_gf') then bvalSave=max_bval endif"
+      set="$VALUE = gdiff"
+      show="if (diff='y') then $VALUE = 1 else $VALUE = -1 endif"
+      digits="2"
+      disable="Grayed out"
+      />
+    <label loc="155 40" size="40 20"
+      style="PlainText"
+      label="G/cm"
+      justify="Left"
+      />
+    <group loc="5 160" size="200 20"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Untitled"
+      >
+      <textmessage loc="90 0" size="60 20"
+        style="PlainText"
+        label="1"
+        vq="nbzero"
+        set="$VALUE=nbzero"
+        />
+      <label loc="0 0" size="80 20"
+        style="Label1"
+        label="# b=0"
+        justify="Left"
+        />
+    </group>
+    <label loc="5 80" size="80 20"
+      style="Label1"
+      label="Separation"
+      justify="Left"
+      />
+    <label loc="5 60" size="80 20"
+      style="Label1"
+      label="Duration"
+      justify="Left"
+      />
+    <label loc="5 40" size="80 20"
+      style="Label1"
+      label="Amplitude"
+      justify="Left"
+      />
+  </group>
+</template>

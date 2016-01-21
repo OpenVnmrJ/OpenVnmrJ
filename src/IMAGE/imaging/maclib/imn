@@ -1,0 +1,32 @@
+"macro imn"
+" imn - define noise region for snr measurement in an image"
+
+" Details: display the image using the vnmrj interface"
+"          specify a box and place it in the noise region"
+"          ims will display the snr = ims/imn"
+"          previously determined ims value is used for signal value"
+"          if the noise region is not specified, move the box to"
+"          the noise region and type imn"
+
+" Author: S. Sukumar, Varian, Palo Alto, CA, USA"
+
+exists('imn', 'parameter'):$ex
+if($ex = 0) then
+   create('imn')
+endif
+$imn=''
+substr(aipStatMeanMsg,2):$imn
+
+format($imn,0,6):imn
+exists('ims', 'parameter'):$ex
+if($ex > 0) then
+  if(imn = 0) then
+    write('line3','Mean noise value: %f',imn)
+  else
+   write('line3','SNR value: \(%f/%f\) = %5.2f',ims,imn,(ims-imn)/imn)
+  endif
+else
+   write('line3','Mean noise value: %f',imn)
+endif
+
+

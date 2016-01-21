@@ -1,0 +1,40 @@
+"macro dcmserv"
+
+" uses storescu utility to send dcm files to server"
+
+if($# < 1.0) then
+    write('error', 'Usage: dcmserv(\'dicomfiles\')')
+    return('')
+endif
+
+$dir=$1
+$indir=$dir
+
+
+exists($dir,'directory'):$e
+if ($e > 0.5) then
+	$indir=$dir
+else
+exists($dir,'file'):$e
+if ($e > 0.5) then
+	substr($dir,'basename'):$base,$ext
+        if($ext='dcm') then
+          $indir=$dir
+	else
+	 write('error', 'input file must be of type dcm')
+         return('')
+        endif
+endif
+endif
+
+
+
+$dpath='setenv DCMDICTPATH /vnmr/lib; echo $DCMDICTPATH;'
+$command=$dpath+'dicom_store '+$indir
+
+
+write('line3',$command)
+
+shell($command)
+
+

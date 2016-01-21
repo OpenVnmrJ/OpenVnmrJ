@@ -1,0 +1,41 @@
+"macro fnfn1"
+"get and set values for fn, fn1 - used in templates"
+if ($#=0 or $#=2 or $#>3.5) then
+  write('line3','Usage: %s(\'get\'):$string  OR  %s(\'set\', 0.5 * fn, 0.5 * fn1)',$0,$0)
+  return
+endif
+
+$getset='get'
+if $#>2.5 then if $1='set' then
+  $getset='set'
+endif endif
+
+if ($getset = 'set') then
+
+  format($2,'isreal'):$real
+  if ($real) then
+    fn = 2 * $2
+  else
+    fn = $2
+  endif
+  format($3,'isreal'):$real
+  if ($real) then
+    fn1 = 2 * $3
+  else
+    fn1 = $3
+  endif
+
+else "$getset = 'get'"
+
+  $str='' $str1='' $str2=''
+  format(fn1 * 0.5,1,0):$str2
+  format(fn  * 0.5,1,0):$str1
+  on('fn'):$on
+  on('fn1'):$on1
+  if $on=0 then $str1='`n`' endif
+  if $on1=0 then $str2='`n`' endif
+  $str='fn='+$str1+' fn1='+$str2
+  $str=$str1+','+$str2
+  return($str)
+
+endif

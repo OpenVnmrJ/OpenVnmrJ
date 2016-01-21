@@ -1,0 +1,136 @@
+"macro vjactiveQ"
+if ($# < 1) then $1='current' endif
+$fileex=0
+$tailX='tail'
+whichtail:$tailX
+if ($# < 2) then $2='' endif
+
+IF ($1 = 'current') THEN
+
+   $sampglobal=autodir+'/enterQ.macdir/currentsampleglobal'
+   exists($sampglobal,'file'):$fileex
+   if ($fileex) then
+   	$loc='' $locdir='' $sample='' $archive=''
+   	rtv($sampglobal,'noabort','sample'):$sample
+   	rtv($sampglobal,'noabort','archivedir'):$archive
+	getlocid('current'):$loc,$locdir
+   	if ($archive='') or ($sample='') or ($locdir='') then
+	   $fileex=0
+   	endif
+   endif
+   if ($fileex=0) then
+	$ret=0
+   	vjactiveQ('last'):$ret
+   	if ($ret=0) and (traymax>1) and ($2<>'quiet') then
+   	   write('error','There is no active queue in %s',autodir)
+   	endif
+   	return
+   endif
+
+   $archsamp=$archive+'/'+$sample
+   $timeest='' $timeest2=''
+   estimatestart('getexptime',$locdir,'Active'):$timeest,$timeest2
+   $loc='' strstr($locdir,'_'):$ret,$loc
+
+ELSEIF ($1 = 'last') THEN
+
+	"Get the last queue from the last entry in expfidlog"
+	"  Other places could be misleading"
+
+   $fidlog=autodir+'/enterQ.macdir/expfidlog'
+   exists($fidlog,'file'):$fileex
+   $archsamp='' $locdir=''
+   if ($fileex) then
+   	$last='' 
+	shell('('+$tailX+' -n 1 '+$fidlog+')'):$last
+	substr($last,2):$archsamp
+	if ($archsamp='') then $fileex=0 endif
+   endif
+   if ($fileex) then
+    	$firstchar=''
+    	substr($archsamp,1,1):$firstchar
+    	if ($firstchar<>'/') then
+	    $archsamp=userdir+'/data/'+$archsamp
+    	endif
+        $studypar=$archsamp+'/studypar'
+    	exists($studypar,'file'):$fileex
+   endif
+   
+   if ($fileex=0) then
+   	return(0)
+   endif
+   shell('basename '+$archsamp):$sample
+   $realloc=0 $loc=''
+   rtv($studypar,'noabort','loc_'):$realloc
+   fromat($realloc,0,0):$loc
+   $loc='loc'+$loc
+   $timeest=''
+   $timeest2=''
+
+ENDIF
+
+   is_submitmode:$submit
+   if ($submit) then
+   	walkupQ('clear','all')
+    	if (cppauseflg='y') or (customflag='y') then
+	    write('error','Cannot view ActiveQ')	
+	    return(-1)
+   	endif
+   endif
+
+   $LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+   if ($loc<>'') and ($loc<>'0') then
+	$loc=$sample+' ('+$loc+')'
+   else
+	$loc=$sample
+   endif
+//   if ($timeest2<>'') then
+//	$timeest=$timeest,'grandma',' [Completes at: '+$timeest2+']'
+//   endif
+   $fileex=0
+   if ($locdir<>'') then
+      $locxml=autodir+'/enterQ.macdir/'+$locdir+'/xmldir/Active'
+      exists($locxml,'directory'):$fileex
+      if ($fileex) then
+ 	  xmhaha_baQ('showSQ',$locdir):$fileex
+      endif
+   endif
+   if ($fileex=0) then
+      xmhaha('buildsq',$archsamp,$LIST,'lock',$loc,$timeest)
+   else
+      $childs='' $s2=''
+      exists(cursqexp+'/tmpstudy/enterSQ','file'):$size
+      if ($size) then
+         readfile(cursqexp+'/tmpstudy/enterSQ','$childs','$s2','','local'):$size
+      endif
+      if ($size) then
+         $i=1
+         repeat
+           $cnode=$childs[$i]
+           $title='' $cpname=''
+           xmgetatts($cnode,'title','CPnode'):$title,$cpname
+           if ($cpname<>'') then
+             teststr('$timeest',$cpname,'local'):$ret
+             if ($ret) then
+                substr($title,1):$title
+                $title=$title+$timeest[$ret+1]
+                vnmrjcmd('SQ set '+$cnode+' title \"'+$title+'\"')
+             endif
+           endif
+           $i=$i+1
+         until $i > $size
+      endif
+   endif
+
+//Watch for changes in this SQ
+//   shell('dirname '+$archsamp):$archivedir
+//   SQWatch('active', cursqexp, autodir, $archivedir, $sample, 'vjactiveQ')
+
+   is_submitmode:$submit
+   if ($submit) then
+  	mkpar('string','activeQflg','y')
+  	activeQflg='y'
+	return(1)
+   endif
+   return(1,$archsamp)
+

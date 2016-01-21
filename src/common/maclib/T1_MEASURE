@@ -1,0 +1,46 @@
+"macro T1_MEASURE"
+"The apptype for T1_MEASURE is T1_MEASURE"
+
+if ($# < 1) then $1='' endif
+
+if ($1='') then on('gain'):$gainon cpsetup($0) gainUP(-6,$gainon) return endif
+
+"*******************************************************************"
+IF ($1='setup') THEN
+   module('combine','presat wet gradient',newmodules):newmodules
+   execpars('create')
+   module($1)
+
+"*******************************************************************"
+ELSEIF ($1='acquisition') THEN
+
+seqfil=seqfil
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='y' else satmode='n' endif
+
+exists('ni','parameter'):$niex
+if ($niex) then ni=1 endif
+exists('phase','parameter'):$phex
+if ($phex) then phase=1 endif
+exists('phase2','parameter'):$ph2ex
+if ($ph2ex) then phase2=1 endif
+
+ss=2
+pw=pw90 p1=2*pw90
+
+T1setup(0.5,5,0.2,'y')
+module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+module($1)
+execprocess='T1process'
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+module($1)
+execplot='T1plot'
+
+"**********************************************"
+ENDIF
+

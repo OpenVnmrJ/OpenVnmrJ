@@ -1,0 +1,57 @@
+"macro AT08"
+"AT08" "Phase-cycle cancellation (lock test) "
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATcancel'
+   text('Phase-cycle cancellation (test of lock)')
+   at_currenttest='cancellation'
+   d1=20*at_T1-at
+   ss=4 p1=pw pw=0 nt=1,1,1,1,2,2,2,2,4,4,4,4
+   lvl=0 tlt=0
+   wnt='ATwft crl rfl=sw/2 rfp=0 sp=-1p wp=2p select(1) av vsadj dssh dtext'
+   wexp='AT08(`PART1`)'
+   ATcycle
+   au
+   write('line3','')
+   dps
+elseif ($1='PART1') then
+  lvl=0 tlt=0
+  wft
+
+  if (at_plotauto='y') then
+   if (at_printparams='y') then dn2='' pap 
+      pps(120,0,wcmax-120,90)
+      ATpltext ATpage
+   endif
+  endif
+  atext('vertical scale x100 in expansions')
+  if (at_plotauto='y') then
+   pl('all') ATpltext(100,wc2max-20)
+   dssh dtext
+   vp=vp+30 sc=146 vs=vs*100 pl(5,12) dssn(5,12) ATpage
+  endif
+  r1=1 $htsum1=0 $htsum2=0 $htsum3=0
+  repeat
+   select(r1) peak:$ht $htsum1=$htsum1+$ht
+   r1=r1+1 
+   until r1=5 
+  r1=5
+  repeat
+   select(r1) peak:$ht $htsum2=$htsum2+$ht
+   r1=r1+1 
+   until r1=9 
+  r1=9
+  repeat
+   select(r1) peak:$ht $htsum3=$htsum3+$ht
+   r1=r1+1 
+   until r1=13 
+  $av1=$htsum1/4 $av2=$htsum2/4 $av3=$htsum3/4
+  $resid2=trunc(100*100*$av2/$av1)/100  $resid3=trunc(100*100*$av3/$av1)/100
+  ATrecord('CANCEL','Residual Signal in Phase-Cycle Cancellation Test','2_scans',$resid2,'4_scans',$resid3) 
+
+  write('file',autotestdir+'/REPORT','Phase-Cycle Cancellation Residual (percent): %1.3f (nt=2)  %1.3f (nt=4)',$resid2,$resid3)
+
+   ATsvf
+  ATnext
+endif

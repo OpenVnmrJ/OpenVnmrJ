@@ -1,0 +1,85 @@
+"macro pboxget"
+" ***************************************************************** "
+" ***         pboxget - get pbox output parameters              *** "
+" ***            Pbox 6.1d, Eriks Kupce 01/08/00                *** "
+" ***************************************************************** "
+
+" Usage : pboxget(<'name.EXT'>):$name,$par1,$par2,$par3,$par4,$par5,$par6,$par7 "
+" Macro returns exp-al parameters stored in pbox.cal or shape file in the       "
+" following order : name, pw, pwr, pwrf, dres, dmf, dcyc, pw90                  "
+" !!! Warning, Parameter is not changed by this macro if it was set to 'n' (not "
+" used)                                                                         "
+
+$type=0
+$name='' $ext='' $paswd='' $dummy=''
+$par1='' $par2='' $par3='' $par4='' $par5='' $par6='0' $par7=''
+
+" argument checking "
+
+if $#>0 then
+  $name=$1
+  $filepath=userdir+'/shapelib/'+$name 
+  exists($filepath,'file'):$e 
+  if not($e) then
+    write('error','pboxget: input file %s not found', $filepath)
+    return
+  endif
+  getext($name):$1,$ext
+  if ($ext='RF') or ($ext='DEC') then                 ".RF & .DEC"
+    $type=6
+    lookup('file',$filepath)
+    lookup('read',9):$dummy,$paswd,$par1,$par2,$par3,$par4,$par5,$par6,$par7
+    if ($paswd<>'Pbox') then
+      write('error','Pbox shapefile header is missing')
+      return
+    endif    
+  else 
+    if ($ext='GRD') then
+      write('error','.GRD files not supported by this macro') ".GRD etc "
+      return
+    else 
+      write('error','incorrect filename extension')      "other "
+      return
+    endif
+  endif
+  $name = $1
+else
+  $filepath = userdir+'/shapelib/pbox.cal'
+  exists($filepath,'file'):$e
+  if not($e) then 
+    write('error','calibration data not found !')
+    return
+  else
+    nrecords($filepath):$type
+    if $type=6 then                                   ".RF & .DEC"
+      lookup('file',$filepath)
+      lookup('read',6):$name,$par1,$par2,$par3,$par4,$par5
+    else
+      write('error','Unsupported data type.')         ".GRD etc "
+      return
+    endif
+  endif
+endif
+
+if $type=6 then                                         ".RF & .DEC"
+  format($par1,6,1):$pw
+  format($par2,3,0):$pwr
+  format($par3,4,0):$pwrf
+  format($par4,4,1):$dres
+  format($par5,6,0):$dmf
+  format($par6,6,4):$dcyc
+  if ($dcyc > 0.0) then
+    format($par7,10,6):$pw90
+    if($pw90 > 0.0) then 
+      $pw90=250.0/$pw90 
+      return($name,$pw,$pwr,$pwrf,$dres,$dmf,$dcyc,$pw90)
+    else
+      return($name,$pw,$pwr,$pwrf,$dres,$dmf,$dcyc)
+    endif
+  else
+    return($name,$pw,$pwr,$pwrf,$dres,$dmf)
+  endif
+else
+  return
+endif
+

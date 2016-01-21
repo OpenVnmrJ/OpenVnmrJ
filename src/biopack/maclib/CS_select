@@ -1,0 +1,79 @@
+"macro CS_select"
+"**************************************************************************"
+" CS_select - select the starting point and size of the region of interest "
+"**************************************************************************"
+$crmode=''  
+
+wft(1)
+ds
+
+if($# < 1) then
+  write('error','the CS_select macro requires an argument - reduction factor')
+  return
+endif
+
+if($1 < 0) then     "use the current cursors"
+  if (crmode='b') then
+    CSwp = fn*delta/sw
+  else              " use all sw "
+    CSwp = 0
+  endif
+elseif($1 < 2) then "if $1=0 endorse the existing selection "
+  if (crmode='b') then
+    if(CSwp<1) then "if not selected yet then use default "
+      CSwp = fn/4
+      delta=sw/4
+    endif
+    $crmode = 'b'
+  else        " in a single coursor mode use default CSwp "
+    CSwp=fn/4
+    delta=sw/4
+    $crmode = 'c'
+  endif
+else            " start from scratch "
+  CSwp = 0
+  if not (crmode='b') then
+    ds('toggle')
+  endif
+  fn=fn
+  CSwp = fn/$1
+  delta = sw/$1
+  $crmode='b'
+endif
+
+$fn = fn/2
+$s2 = CSwp/2 
+
+$rflrfp = rfl-rfp		
+$s1 = sw - cr - $rflrfp 
+$s1 = $fn*$s1/sw
+
+if(($s1+$s2) > $fn) then
+  $s1 = $fn - $s2
+endif
+if($s1 < 0) then 
+  $s1 = 0
+endif
+CSsp = 2*trunc($s1)
+
+if(stype='e') then    "calculate MFT range"
+  $range1 = (sw-$rflrfp)/sfrq
+  if(CSwp=0) then
+    $range0 = $range1 - sw/sfrq
+  else
+    $range1 = $range1 - sw*CSsp/(fn*sfrq)
+    $range0 = $range1 - sw*CSwp/(fn*sfrq)
+  endif
+  write('line3','spectral window from %.0f, to %.0f ppm', $range0, $range1)
+else
+  write('line3','spectral window from: %.0f, width: %.0f pts', CSsp, CSwp) 
+endif
+
+if not (crmode='b') and ($crmode='b') then
+  ds('toggle')  " keep the crmode "
+else
+  ds
+endif
+
+
+

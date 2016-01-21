@@ -1,0 +1,45 @@
+"macro cdump"
+if ($#=1) then
+  if printformat='' then
+    write('error','File format must be selected')
+    return
+  endif
+  if $1='' then
+    write('error','File name must be selected')
+    return
+  endif
+  substr($1,1,1):$ch
+  if ($ch = '/') then
+    $file = $1
+  else
+    $file = userdir+'/print/'+$1
+    exists(userdir+'/print','directory'):$e
+    if ($e < 0.5) then
+      mkdir(userdir+'/print')
+    endif
+  endif
+  vnmrjcmd('GRAPHICS','cdump','"'+$file+'"',printformat)
+  write('line3','file saved as %s.%s',$file,printformat)
+else
+  setplotdev:$fmt,$host,$ppmm,$raster
+  $file = curexp+'/plt'
+  if ($raster = 2) or ($raster = 4) then
+    $args = 'landscape'
+  else
+    $args = 'portrait'
+  endif
+  if ($fmt = 'DICOM') then
+    $fmt = 'ps'
+    $dpi=trunc(25.4*$ppmm+0.5)
+    $dpistr = ''
+    format($dpi,1,0):$dpistr
+    dicomhdr(curexp+'/tmp.tag')
+    $args = $args + ' "' + curexp+'/tmp.tag" "'+ curexp+'/tmp.dcm" ' + $dpistr
+  elseif ($raster = 3) or ($raster = 4) then
+    $fmt = 'ps'
+  else
+    $fmt = 'pcl'
+  endif
+  $file='"'+$file+'"'
+  vnmrjcmd('GRAPHICS','cdump',$file,'ps','vnmr_cdump '+$file+'.ps '+plotter+' '+$fmt+' '+$args)
+endif

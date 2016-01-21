@@ -1,0 +1,141 @@
+BioPack using Pbox
+**********************
+
+
+Several BioPack pulse sequences (ending in "P") have been written
+to use Pbox (Pandora's Box) shaped pulse creation software. These 
+employ high-level, but user-friendly, pulse elements that simplify
+pulse sequences. The shapes created by the macro "proteincal" (offC3.RF
+etc.) are not used, but created at the time of "dps" or "go",
+based on arguments of the pulse statements. Read the bionmr.h file in the
+BioPack psglib for details.
+
+Vnmr6.1B has a declared value of the apdelay constant PWRF_DELAY. However, 6.1A
+and earlier versions do not. Therefore, this delay has been included in the
+bionmr.h file. Since this delay is different for unityINOVA and unityPLUS
+consoles, two files are provided: bionmr.h.inova and bionmr.h.unityplus. The 
+macro "propack1" copies the proper file to bionmr.h in your psglib prior to
+the pulse sequence compilation. Therefore, sequences should be compiled via
+the menu buttons, not manually. If sequences are compiled manually without
+the bionmr.h file being produced, the sequences will not compile.
+
+A version of Pbox_psg.h is included and stored in ~/vnmrsys/psglib. It
+is needed for the *P.c sequences and is used instead of /vnmr/psg/Pbox_psg.h.
+(note: this is not needed for VNMR6.1C or VNMRJ)
+
+Parameter sets using the pulse sequences are different in that the
+dof value is set for carbonyl carbons in all of these sequences. The
+actual 13C offset is set by the pulse sequence elements.
+
+The small-angle phase correction phi7cal is usually quite different from that
+used in the standard BioPack sequences. For example, phi7cal might be
+0 degrees in the standard sequence, but 80 degrees in the *P.c sequences
+using phi7cal.
+
+Automatic Calibration of BioNMR Experiments
+*******************************************
+
+Automatic calibration is done in the same way as in the standard experiments.  
+The menu buttons are used as:  Setup...Proteins...BioNMR Expts...Calibrate,
+(for VNMR) followed by the desired option. For VNMRJ, use the "Calibrations"
+page in the Setup folder. 
+
+The only difference between the BioNMR and standard automatic calibration is the
+phi7cal determination. The macros below initiate the automatic process. 
+
+BioNMR parameter sets are accessible directly either by entering the macro, e.g.
+ghn_co_caP, or by using the menu buttons(for VNMR):  Setup....Proteins...
+BioNMR Expts followed by choosing the desired button. For VNMRJ, use the "Pulse
+Sequence" page in the Acquire folder. In both cases select the desired button.
+
+REMEMBER: the dof value for all *P.c pulse sequences should be set for the
+carbonyl region. (The propack2 macro does update BioNMR parameter sets.)
+
+The phi7cal value in either standard or BioNMR parameter sets is not updated
+by BPpropack2, but is determined in the automatic calibration process, which
+updates either the standard parameter sets or the BioNMR parameter sets (e.g.
+ghn_co.par vs ghn_coP.par). Parameter sets not ending in P.par have identical
+settings, except for dof. Those sequences using the phi7cal variable
+(ghc_co_nhP, gc_co_nhP, and gcbca_co_nhP) should be run using the phi7cal
+value determined in the BioNMR automatic calibration.
+
+************************************************************************************
+IMPORTANT:
+Since shapes are calculated using the current pwC/pwClvl, do not array pwC or pwClvl 
+to find maximum signals. Rather, use a non-bionmr sequence such as hcch_tocsy.
+************************************************************************************
+ 
+_____________________________________________________________________________________
+
+Summary of BioNMR psg elements:
+
+Offset:
+******
+set_c13offset(fband)
+
+C13 Pulses:
+**********
+c13pulsepw(excband, nullband, c13shape, c13flip) 
+c13pulse(excband, nullband, c13shape, c13flip, phase2, rofa, rofb) 
+c13adiab_inv_pulse(excband, bandwidth, c13shape, pulsewidth, phase2, rofa, rofb)
+
+Simultaneous 1H/13C Pulses:
+**************************
+sim_c13pulse(obsshape, excband, nullband, c13shape, obspw, c13flip,
+						phase1, phase2, rofa, rofb) 
+sim_c13adiab_inv_pulse(obsshape, excband, bandwidth, c13shape, obspw, 
+					pulsewidth, phase1, phase2, rofa, rofb) 
+
+Simultaneous 1H/13C/15N Pulses:
+**************************
+sim3_c13pulse(obsshape, excband, nullband, c13shape, dec2shape,  
+               obspw, c13flip, dec2pw, phase1, phase2, phase3, rofa, rofb) 
+sim3_c13adiab_inv_pulse(obsshape, excband, bandwidth, c13shape, dec2shape,  
+               obspw, pulsewidth, dec2pw, phase1, phase2, phase3, rofa, rofb) 
+
+Frequency-Shifted 1H Shaped Pulse:
+*********************************
+shiftedpulse(anyshape, pwbw, flip, shift, phase1, rofa, rofb) 
+
+Frequency-Shifted 13C Shaped Pulse:
+*********************************
+decshiftedpulse(anyshape, pwbw, flip, shift, phase2, rofa, rofb) 
+
+Frequency-Shifted 15N Shaped Pulse:
+*********************************
+dec2shiftedpulse(anyshape, pwbw, flip, shift, phase3, rofa, rofb) 
+
+Frequency-Shifted 1H/13C/15N Simultaneous Centered Shaped Pulses:
+****************************************************************
+sim3shiftedpulse(obsshape, anyshape, dec2shape, obspw, pwbw, flip, shift, 
+				dec2pw, phase1, phase2, phase3, rofa, rofb) 
+13C Decoupling:
+**************
+c13decon(decband, c13shape, decbandwidth)
+c13decoff()
+c13decouple(decband, c13shape, decbandwidth, duration)
+
+1H Decoupling:
+**************
+h1decon(h1shape, decbandwidth, shift)
+h1decoff()
+h1decouple(h1shape, decbandwidth, shift, duration)
+h1waltzon(h1shape, decbandwidth, shift)
+h1waltzoff(h1shape, decbandwidth, shift)
+
+N15 t2 Evolution with 13C Refocussing and Sensitivity-Enhancement
+*****************************************************************
+nh_evol_se_train(excband, nullband)
+
+Identify Desired Decoupling Waveform for Pbox
+*********************************************
+installdecshape(decshape)
+
+Shape File Parameter Extraction Tools( obtain parameters from Pbox-generated shapes)
+************************************************************************************
+c13shapefiles(excband, nullband, c13shape, c13flip);
+fshapefiles(anyshape, pwbw, flip, shift)
+c13adiab_files(excband, bandwidth, c13shape, pulsewidth)
+c13decfiles(decband, c13shape, decbandwidth)
+h1decfiles(h1shape, decbandwidth, shift)
+

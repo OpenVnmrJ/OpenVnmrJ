@@ -1,0 +1,452 @@
+"macro walkupQ_addstudy"
+"****************************************************************"
+"   walkupQ_addstudy - add a study from studylib to queue   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+   $list=$1 $oldnode=$2
+   if ($# < 3) then $3='' endif
+
+   $when=$3
+   if (replaceQ[1]='ActiveNight') then
+        write('line3','This is an Active night acquisition')
+	$when='long'
+   endif
+   if (wqinit='acq') then $when='no' endif
+
+   $studyex=0 $studypath=''
+   getfilepath($list,'studylib'):$studyex,$studypath
+   if ($studyex=0) then
+	return($oldnode)
+   endif
+   $lock='no' $type='LIB' $label=$list
+   getattr($studypath+'/'+$list+'.xml','action','lock'):$lock
+   getattr($studypath+'/'+$list+'.xml','action','type'):$type
+   getattr($studypath+'/'+$list+'.xml','template','label'):$label
+   if ($label='') then $label=$list endif
+
+   exists($studypath+'/sampleglobal','file'):$fileex
+   if ($fileex) then
+	lookup('mfile',$studypath+'/sampleglobal','countline'):$fileex
+   endif
+   if ($fileex) then
+	getsampglobal($studypath)
+   endif
+
+   write('reset',cursqexp+'/tmpEXPLIST')
+   write('reset',cursqexp+'/tmpLONGLIST')
+   write('reset',cursqexp+'/tmpCMDnodes')
+
+   $sexplist='' $slonglist=''
+   $setime='' $sltime=''
+   $setime2='' $sltime2=''
+   $etime=0 $ltime=0
+   $seexp='' $slexp=''
+   $totdaytime=0
+   $totnitetime=0
+   exists($studypath+'/EXPLIST','file'):$EXPex
+   if ($EXPex) then
+	shell('(cat '+$studypath+'/EXPLIST | grep -w Queued >> '+cursqexp+'/tmpEXPLIST)'):$dum
+   endif
+     $s2=''
+     readfile(cursqexp+'/tmpEXPLIST','$sexplist','$s2','','local'):$total
+     shell('rm -f '+cursqexp+'/tmpEXPLIST'):$dum
+     if ($total>0) then
+	$i=1
+	repeat
+	   $rtime=0
+	   substr($s2[$i],1):$rtime
+	   $totdaytime=$totdaytime+$rtime
+	   $etime[$i]=$rtime
+	   formattime($rtime):$setime2[$i],$setime[$i]
+	   $retx=0 $sx1='' $sx2=''
+	   strstr($sexplist[$i],'_','last'):$retx,$sx1,$sx2
+           if ($retx) then format($sx2,'isreal'):$retx endif
+	   if ($retx) then $seexp[$i]=$sx1 else
+	      substr($s2[$i],2):$seexp[$i]
+	   endif
+	   $i=$i+1
+	until $i > $total
+     endif
+	$etotal=$total
+	$timecheck='no'
+
+   exists($studypath+'/LONGLIST','file'):$LONGex
+   if ($LONGex) then
+        shell('(cat '+$studypath+'/LONGLIST | grep -w Queued >> '+cursqexp+'/tmpLONGLIST)'):$dum
+   endif
+     $s2=''
+     readfile(cursqexp+'/tmpLONGLIST','$slonglist','$s2','','local'):$total
+     shell('rm -f '+cursqexp+'/tmpLONGLIST'):$dum
+     if ($total>0) then
+        $i=1
+        repeat
+           $rtime=0
+           substr($s2[$i],1):$rtime
+           $totnitetime=$totnitetime+$rtime
+           $ltime[$i]=$rtime
+           formattime($rtime):$sltime2[$i],$sltime[$i]
+	   $sx1='' $sx2='' $retx=0
+	   strstr($slonglist[$i],'_','last'):$retx,$sx1,$sx2
+	   if ($retx) then format($sx2,'isreal'):$retx endif
+	   if ($retx) then $slexp[$i]=$sx1 else
+	      substr($s2[$i],2):$slexp[$i]
+	   endif
+           $i=$i+1
+        until $i > $total
+     endif
+	$ntotal=$total
+
+    $reqexp='' $reqtime=0 $reqwhen=$when
+    $totalnodes=$etotal+$ntotal
+    if ($totalnodes=1) then
+// Check for REQexp ONLY if the total number of experiments in
+//   the clone is one.
+	if ($etotal) then
+	    $exp1='' cpattribute('get',$studypath+'/macdir/'+$sexplist[1],'StudyName'):$exp1
+	    if ($exp1='') then $exp1=$seexp[1] endif
+	    getREQexp($exp1,$sexplist[1],$studypath+'/macdir'):$reqexp
+	else
+            $exp1='' cpattribute('get',$studypath+'/macdirlong/'+$slonglist[1],'StudyName'):$exp1
+            if ($exp1='') then $exp1=$slexp[1] endif
+            getREQexp($exp1,$slonglist[1],$studypath+'/macdirlong'):$reqexp
+	    $reqwhen='long'
+	endif
+	if ($reqexp<>'') then
+	    getEXPinfo($reqexp):$req2,$reqtime
+	endif
+	if ($etotal) then $totdaytime=$totdaytime+$reqtime else
+	    $totnitetime=$totnitetime+$reqtime
+	endif
+    endif
+        "******Following section checks for max. time option******"
+        "*******Modify as appropriate************************************"
+  if (clonemod='no') then
+     if (wqinit<>'acq') then
+	$autonight='no' getadminfo('autonight'):$autonight
+        $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        $night='no'
+        walkupQ('gettime'):$olddtime,$oldntime
+        if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+                is_night:$night
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+	if ($when<>'long') then
+	   $add2night=0
+           $newtime=trunc((($olddtime+$totdaytime)/60)+0.5)
+	   if ($night='yes') then
+		$maxtime=$maxnighttime
+	   else
+		$maxtime=$maxdaytime
+	   endif
+           $maxtime=trunc(($maxtime/60)+0.5)
+           if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+           endif
+           if ($maxtime=0) then $maxtime=$newtime+1 endif
+           if ($maxtime < $newtime) then
+	     if (($etotal=1) or ($type='CMP')) and ($autonight='yes') then
+                $add2night=$totdaytime
+                $timecheck='yes'
+	     else
+		write('error','DayQ time (%d min) exceeds max (%d min) allowed',$newtime,$maxtime)
+                walkupQ('time')
+                return($oldnode)
+	     endif
+           endif
+
+           $newtime=trunc((($oldntime+$totnitetime+$add2night)/60)+0.5)
+           $maxtime=$maxnighttime
+           $maxtime=trunc(($maxtime/60)+0.5)
+           if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+           endif
+	   if ($maxtime=0) then $maxtime=$newtime+1 endif
+           if ($maxtime < $newtime) then
+                write('error','NightQ time (%d min) exceeds max (%d min) allowed',$newtime,$maxtime)
+                walkupQ('time')
+                return($oldnode)
+           endif
+	else
+           $newtime=trunc((($olddtime+$oldntime+$totdaytime+$totnitetime)/60)+0.5)
+           $maxtime=$maxnighttime
+           $maxtime=trunc(($maxtime/60)+0.5)
+           if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+           endif
+           if ($maxtime=0) then $maxtime=$newtime+1 endif
+           if ($maxtime < $newtime) then
+		write('error','Queue time (%d min) exceeds max (%d min) allowed',$newtime,$maxtime)
+		walkupQ('time')
+		return($oldnode)
+	   endif
+	endif
+     endif
+  endif
+        "********End of max time check**********************************"
+
+"Now add the experiments to the queue"
+//  There are three scenarios.
+//  1. There is only one experiment in the study clone - Add a node with the 
+//	studyclone name with appropriate experiment call in the Attr file
+//  2. There are more than one experiment in the study clone; and 
+//	the study is composite - Add a node with the
+//	studyclone name with appropriate experiment call in the Attr file
+//  3. There are more than one experiment in the study clone; but
+//	the study is not a composite - Add every
+//	experiment as a node to the queue.  
+
+
+   $oldmacdir=$studypath+'/macdir'
+   $oldmacdirlong=$studypath+'/macdirlong'
+   shell('(cat '+$oldmacdir+'/CMDnodes >> '+cursqexp+'/tmpCMDnodes)'):$dum
+   shell('(cat '+$oldmacdir+'long/CMDnodes >> '+cursqexp+'/tmpCMDnodes)'):$dum
+   $cmd='' $cmdx=''
+   readfile(cursqexp+'/tmpCMDnodes','$cmd','$cmdx','','local')
+   shell('rm -f '+cursqexp+'/tmpCMDnodes'):$dum
+
+IF ($totalnodes=1) THEN
+		//Scenario 1
+   $LIST='' $TIME=0 $LONG='no'
+   if ($sexplist[1]<>'') then
+        $LIST=$sexplist[1] $TIME=$etime[1]
+        if ($when='long') then $LONG='long' endif
+   else
+        $LIST=$slonglist[1] $TIME=$ltime[1]
+        if (wqinit<>'acq') then $LONG='long' endif
+        $oldmacdir=$oldmacdirlong
+   endif
+   if ($LIST<>'') then
+        $newsqnode='' $newmacdir=$maclibdir
+        teststr('$cmd',$LIST,'local'):$iscmd
+        $a1='no' $a2='no' $a3='notimecheck' $a4='noreqcheck'
+        $a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+        $a9=$TIME $a10='no'
+
+        if ($timecheck='yes') then $a3='no' endif
+        if ($LONG='long') then $a1='long' $newmacdir=$maclibdir+'long' endif
+        if ($lock='on') then $a2='lock' endif
+        if ($iscmd) then $a10='CMD' $a9=0 endif
+
+	if ($reqexp<>'') then
+            write('line3','Warning: %s was automatically added for %s.',$reqexp,$label)
+	    walkupQ('add',$reqexp,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$reqtime,$a10):$newsqnode
+	    if ($newsqnode<>'') then $oldnode=$newsqnode $a8=$oldnode endif
+	endif
+//        walkupQ('add',$list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+	walkupQ_add($list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10,'cpnode',$label):$newsqnode
+        if ($newsqnode<>'') then
+                getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+                $newcpnode=$newmacdir+'/'+$newcpnode
+                write('reset',$newcpnode+'acq')
+                write('reset',$newcpnode+'acqpars')
+                write('reset',$newcpnode+'_Attr')
+                shell('cp '+$oldmacdir+'/'+$LIST+'acq '+$newcpnode+'acq'):$dum
+                shell('cp '+$oldmacdir+'/'+$LIST+'acqpars '+$newcpnode+'acqpars'):$dum
+            exists($oldmacdir+'/'+$LIST+'_Attr','file'):$attrex
+            if ($attrex) then
+                shell('cp '+$oldmacdir+'/'+$LIST+'_Attr '+$newcpnode+'_Attr'):$dum
+            else
+                $attr='' write('line3','SetupMacro %s',$exp1):$attr
+                cpattribute('set',$newcpnode,$attr)
+            endif
+            if (clonemod='no') then
+                $attr='' write('line3','StudyName %s',$list):$attr
+                cpattribute('set',$newcpnode,$attr)
+            endif
+	    cpattribute('unset',$newcpnode,'AllowCustomization')
+	    if ($lock='on') then
+		cpattribute('set',$newcpnode,'AllowCustomization No')
+	    else
+                cpattribute('set',$newcpnode,'AllowCustomization Yes')
+	    endif
+            $oldnode=$newsqnode
+        endif
+   endif
+
+ELSEIF ($type='CMP') THEN
+		//Scenario 2
+		// In this case the study is untangled at
+		// run time.
+//  There are 2 sub-scenarios here
+
+    if ($when='long') or (wqinit='acq') then
+	$tooltip=''
+	array2string($seexp,$slexp):$tooltip
+//  Add a single node
+	$TIME=$totdaytime+$totnitetime
+        $newsqnode='' $newmacdir=$maclibdir
+        $a1='no' $a2='lock' $a3='notimecheck' $a4='noreqcheck'
+        $a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+        $a9=$TIME $a10='no'
+        if ($when='long') then $a1='long' $newmacdir=$maclibdir+'long' endif
+//        walkupQ('add',$list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+        walkupQ_add($list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10,'cpnode',$label):$newsqnode
+        if ($newsqnode<>'') then
+                getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+                if ($list<>$label) then
+                    $cpname='' $ext=''
+                    strstr($newcpnode,'_','last'):$real,$cpname,$ext
+                    format($ext,'isreal'):$real
+                    if not $real then $ext='' endif
+                    if ($ext<>'') then
+                        $cpname=$label+'_'+$ext
+                        $sTIME='' $sTIME2='' formattime($TIME):$sTIME2,$sTIME
+                        if (wqinit<>'acq') then
+                                $cpname=$cpname+'_night'
+                        endif
+                        xmhaha_setprop($newsqnode,'title',$cpname,'time',$sTIME,'tooltext',$tooltip)
+                    endif
+                endif
+                $newcpnode=$newmacdir+'/'+$newcpnode
+                write('reset',$newcpnode+'acq')
+                write('reset',$newcpnode+'acqpars')
+                write('reset',$newcpnode+'_Attr')
+                write('file',$newcpnode+'acq','ACQtime=%d',$TIME)
+                $attr='' write('line3','SetupMacro setupComposit(\'%s\',\'both\')',$list):$attr
+                cpattribute('set',$newcpnode,$attr)
+		cpattribute('set',$newcpnode,'AllowCustomization No')
+		write('line3','ToolText %s',$tooltip):$attr2
+		cpattribute('set',$newcpnode,$attr2)
+                $oldnode=$newsqnode
+        endif
+    else
+//  Add 2 nodes
+      if ($sexplist[1]<>'') then
+	$tooltip='' array2string($seexp):$tooltip
+        $TIME=$totdaytime
+        $newsqnode='' $newmacdir=$maclibdir
+        $a1='no' $a2='lock' $a3='notimecheck' $a4='noreqcheck'
+        $a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+        $a9=$TIME $a10='no'
+
+        if ($timecheck='yes') then $a3='no' endif
+        if ($when='long') then $a1='long' $newmacdir=$maclibdir+'long' endif
+//        walkupQ('add',$list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+        walkupQ_add($list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10,'cpnode',$label):$newsqnode
+        if ($newsqnode<>'') then
+                xmhaha_setprop($newsqnode,'tooltext',$tooltip)
+                getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+                $newcpnode=$newmacdir+'/'+$newcpnode
+                write('reset',$newcpnode+'acq')
+                write('reset',$newcpnode+'acqpars')
+                write('reset',$newcpnode+'_Attr')
+		write('file',$newcpnode+'acq','ACQtime=%d',$totdaytime)
+                $attr='' write('line3','SetupMacro setupComposit(\'%s\',\'day\')',$list):$attr
+                cpattribute('set',$newcpnode,$attr)
+                cpattribute('set',$newcpnode,'AllowCustomization No')
+                write('line3','ToolText %s',$tooltip):$attr2
+                cpattribute('set',$newcpnode,$attr2)
+                $oldnode=$newsqnode
+        endif
+      endif
+      if ($slonglist[1]<>'') then
+        $tooltip='' array2string($slexp):$tooltip
+        $TIME=$totnitetime
+        $newsqnode='' $newmacdir=$maclibdir
+        $a1='no' $a2='lock' $a3='notimecheck' $a4='noreqcheck'
+        $a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+        $a9=$TIME $a10='no'
+
+        if (wqinit<>'acq') then $a1='long' $newmacdir=$maclibdir+'long' endif
+//        walkupQ('add',$list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+        walkupQ_add($list,$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10,'cpnode',$label):$newsqnode
+        if ($newsqnode<>'') then
+                xmhaha_setprop($newsqnode,'tooltext',$tooltip)
+                getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+                $newcpnode=$newmacdir+'/'+$newcpnode
+                write('reset',$newcpnode+'acq')
+                write('reset',$newcpnode+'acqpars')
+                write('reset',$newcpnode+'_Attr')
+                write('file',$newcpnode+'acq','ACQtime=%d',$totnitetime)
+                $attr='' write('line3','SetupMacro setupComposit(\'%s\',\'night\')',$list):$attr
+                cpattribute('set',$newcpnode,$attr)
+                cpattribute('set',$newcpnode,'AllowCustomization No')
+                write('line3','ToolText %s',$tooltip):$attr2
+                cpattribute('set',$newcpnode,$attr2)
+                $oldnode=$newsqnode
+        endif
+      endif
+    endif
+
+ELSE
+		// Scenario 3
+   $total=size('$sexplist')
+   if ($sexplist[1]<>'') then
+      $i=1
+      repeat
+	$newsqnode='' $newmacdir=$maclibdir
+	teststr('$cmd',$sexplist[$i],'local'):$iscmd
+	$a1='no' $a2='no' $a3='notimecheck' $a4='noreqcheck' 
+	$a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+	$a9=$etime[$i] $a10='no'
+
+	if ($timecheck='yes') then $a3='no' endif
+	if ($when='long') then $a1='long' $newmacdir=$maclibdir+'long' endif
+	if ($lock='on') then $a2='lock' endif
+	if ($iscmd) then $a10='CMD' $a9=0 endif
+
+	walkupQ('add',$seexp[$i],$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+
+	if ($newsqnode<>'') then
+		getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+		$newcpnode=$newmacdir+'/'+$newcpnode
+		write('reset',$newcpnode+'acq')
+		write('reset',$newcpnode+'acqpars')
+		write('reset',$newcpnode+'_Attr')
+		shell('cp '+$oldmacdir+'/'+$sexplist[$i]+'acq '+$newcpnode+'acq'):$dum
+                shell('cp '+$oldmacdir+'/'+$sexplist[$i]+'acqpars '+$newcpnode+'acqpars'):$dum
+                shell('cp '+$oldmacdir+'/'+$sexplist[$i]+'_Attr '+$newcpnode+'_Attr'):$dum
+		$oldnode=$newsqnode
+	endif
+	$i=$i+1
+     until $i > $total
+   endif
+
+   $total=size('$slonglist')
+   if ($slonglist[1]<>'') then
+      $i=1
+      repeat
+        $newsqnode='' $newmacdir=$maclibdir
+        teststr('$cmd',$slonglist[$i],'local'):$iscmd
+        $a1='no' $a2='no' $a3='notimecheck' $a4='noreqcheck'
+        $a5='nostudycheck' $a6='nodialog' $a7='sqnode' $a8=$oldnode
+        $a9=$ltime[$i] $a10='no'
+
+        if (wqinit<>'acq') then $a1='long' $newmacdir=$maclibdir+'long' endif
+        if ($lock='on') then $a2='lock' endif
+        if ($iscmd) then $a10='CMD' $a9=0 endif
+
+        walkupQ('add',$slexp[$i],$a1,$a2,$a3,$a4,$a5,$a6,$a7,$a8,$a9,$a10):$newsqnode
+
+        if ($newsqnode<>'') then
+                getcpnode('rev',cursqexp,$newsqnode):$newcpnode
+                $newcpnode=$newmacdir+'/'+$newcpnode
+                write('reset',$newcpnode+'acq')
+                write('reset',$newcpnode+'acqpars')
+                write('reset',$newcpnode+'_Attr')
+                shell('cp '+$oldmacdirlong+'/'+$slonglist[$i]+'acq '+$newcpnode+'acq'):$dum
+                shell('cp '+$oldmacdirlong+'/'+$slonglist[$i]+'acqpars '+$newcpnode+'acqpars'):$dum
+                shell('cp '+$oldmacdirlong+'/'+$slonglist[$i]+'_Attr '+$newcpnode+'_Attr'):$dum
+                $oldnode=$newsqnode
+        endif
+        $i=$i+1
+     until $i > $total
+   endif
+ENDIF
+
+   walkupQ('time')
+   return($oldnode)
+"****************************************************************"

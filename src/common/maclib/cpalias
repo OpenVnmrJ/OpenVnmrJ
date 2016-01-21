@@ -1,0 +1,115 @@
+"macro cpalias"
+if ($# > 2) then
+   $maclib=$3
+else
+   Automacrodir:$maclib
+endif
+if ($# < 2) then $2='' endif
+
+$return='' $where=0
+
+"**Always check the last entry in any of the files***"
+"***********Check alias file*****************"
+
+$s1='' $s2=''
+if ($where=0) then
+   $file=$maclib+'/alias'
+   exists($file,'file'):$fileex
+   if ($fileex) then
+	$tot=0
+	readfile($file,'$s1','$s2',$1+':','local'):$tot
+	if ($tot>0) then
+		$return=$s2[$tot]
+		$where=1
+	endif
+   endif
+endif
+
+"***********Act if arg2 = remove*******************"
+if ($2='remove') then
+   if ($where) then 
+	$alias=$file
+   	shell('(cat '+$alias+' | grep -v \'^'+$1+':\' > '+$alias+'1)'):$dum
+   	shell('mv '+$alias+'1 '+$alias):$dum
+   	shell('(cat '+$alias+' | wc -l)'):$tlines
+   	if ($tlines=0) then
+        	shell('rm -f '+$alias):$dum
+   	endif
+   endif
+   return
+endif
+
+"**************Check Attr file*******************"
+// This will always supercede EXPalias file
+$s1='' $s2=''
+if ($where=0) then
+    cpattribute('get',$maclib+'/'+$1,'SetupMacro'):$return
+    if ($return<>'') then
+// The $where return argument is same as EXPalias
+        $where=2
+    endif
+endif
+
+"**************Check EXPalias file*********************"
+// This is for back compatibility.  The Attr file
+//  will have the macro to be executed.
+$s1='' $s2=''
+if ($where=0) then
+   $file=$maclib+'/EXPalias'
+   exists($file,'file'):$fileex
+   if ($fileex) then
+	$tot=0
+	readfile($file,'$s1','$s2',$1,'local'):$tot
+	if ($tot>0) then
+		$return=$s2[$tot]
+		$where=2
+	endif
+   endif
+endif
+
+"**************Check EXPLIST file*********************"
+$s1='' $s2=''
+if ($where=0) then
+   $file=$maclib+'/EXPLIST'
+   exists($file,'file'):$fileex
+   if ($fileex) then
+	$tot=0
+	readfile($file,'$s1','$s2',$1,'local'):$tot
+	if ($tot>0) then
+		substr($s2[$tot],2):$return
+		$where=3
+	endif
+   endif
+endif
+
+"**************Check LONGLIST file*********************"
+$s1='' $s2=''
+if ($where=0) then
+   $file=$maclib+'/LONGLIST'
+   exists($file,'file'):$fileex
+   if ($fileex) then
+        $tot=0
+        readfile($file,'$s1','$s2',$1,'local'):$tot
+        if ($tot>0) then
+                substr($s2[$tot],2):$return
+                $where=4
+        endif
+   endif
+endif
+
+"*************Check if this is CMD protocol*************"
+if ($where>0) then
+   $iscmd=0
+   $s1='' $s2=''
+   $file=$maclib+'/CMDnodes'
+   exists($file,'file'):$fileex
+   if ($fileex) then
+	readfile($file,'$s1','$s2','','local')
+	teststr('$s1',$1,'local'):$iscmd
+   endif
+   if ($iscmd) then $where=5 endif
+endif
+"****************Return result**************************"
+if ($return='') then return($1,0) endif
+return($return,$where)
+

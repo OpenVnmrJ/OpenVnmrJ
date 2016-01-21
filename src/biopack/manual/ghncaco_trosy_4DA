@@ -1,0 +1,93 @@
+  ghncaco_trosy_4DA.c - auto-calibrated version 
+ 
+    This pulse sequence will allow one to perform the following
+    experiment:
+
+    4D hncaco with deuterium decoupling
+	F1 	C-alpha
+	F2 	Co
+	F3 	N + JNH/2
+	F-acq	HN- JNH/2
+
+    This sequence uses the four channel configuration
+         1)  1H             - carrier @ 4.7 ppm [H2O]
+         2) 13C             - carrier @ 56 ppm (CA) and 174 ppm(Co)
+         3) 15N             - carrier @ 120 ppm  
+         4) 2H		    - carrier @ 4.5 ppm 
+
+    Set dm = 'nnn', dmm = 'ccc' 
+    Set dm2 = 'nnn', dmm2 = 'ccc' 
+    Set dm3 = 'nnn', dmm2 = 'ccc' 
+
+    Must set phase = 1,2, phase2=1,2, and phase3 = 1,2 for States-TPPI
+    acquisition in t1 [Ca],t2[Co],and t2 [N]. [The fids must be manipulated
+    (add/subtract) with 'grad_sort_nd' program (or equivalent) before regular
+    processing for non-VNMR processing.]
+    
+    Flags
+	fsat		'y' for presaturation of H2O
+	fscuba		'y' for apply scuba pulse after presaturation of H2O
+	f1180		'y' for 180 deg linear phase correction in F1 
+		        	otherwise 0 deg linear phase correction
+	f2180		'y' for 180 deg linear phase correction in F2
+			    otherwise 0 deg linear phase correction
+	fc180   	'y' for Co refocusing in t2
+        sel_flg         'y' for active suppression of the anti-TROSY peak
+        sel_flg         'n' for relaxation suppression of the anti-TROSY peak
+
+	Standard Settings
+   fsat='n',fscuba='n',mess_flg='n',f1180='n',f2180='y',f3180='n',fc180='n'
+
+   Use ampmode statement = 'dddp'
+   Note the final coherence transfer gradients have been split
+   about the last 180 (H)
+
+   Calibration of carbon pulses
+	
+	pwc       hard pulse (about 12 us at 600 MHz) at dhpwr
+        pwc90     delta/sqrt(15) selective pulse applied at d_c90
+        pwca180   delta/sqrt(3) selective pulse applied at d_c180
+        pwca180dec pwca180+pad
+        pwcareb   reburp 180 pulse (about 1600 us at 600MHz) applied at d_creb
+	pwcosed    delta/sqrt(3) pulse applied at d_sed
+                 USE delta/sqrt(3) and not seduce pulse
+               In the case that jab_evolve == y
+                  can use 250 us g3 pulses centered at 191.5 ppm at 800 MHz
+        pwrbhp at d_rbhp (shrbhp) reburp pulses centered at 42 ppm; only used
+                 when composite_flg == n
+
+   Calibration of small agnle phase shift (set ni=1, ni2=1, ni3=1, phase=1,
+   phase2=1,phase3=1)
+        sphase  set fc180='y' and change sphase until get a null(no sginal).
+                The right sphase is the value at the null plus 45 degrees
+
+        sphase1 about zero.  Calibration is the same as that for sphase
+
+    Ref:  Daiwen Yang and Lewis E. Kay, J.Am.Chem.Soc., 121, 2571(1999)
+          Diawen Yang and Lewis E. Kay, J.Biomol.NMR, 13, 3(1999)
+
+ 
+
+Written by Daiwen Yang on Sep. 9, 1998
+Modified by L.E.Kay on Sep. 27, 1999 to include sel_flg 
+
+Modified by L.E.Kay on Aug. 5, 2001 to include composite_flg. In the published
+  version of the experiment during 13Ca evolution (periods A-D in Fig. 1
+  of the paper) the 13Ca and 13Co 180 pulses are applied simultaneously using
+  a composite 180. Need 14 us for 500, 12 us for 600 and 10 us for 800 for
+  greater than 97% inversion/refocusing. If composite_flg == y then this is
+  the approach to be taken. If composite_flg == n then C' and Ca pulses are
+  applied as delta/sq(3) pulses.
+
+There is an additional option and that is to ignore the evolution of Ca-Cb
+couplings. At 800 MHz this may be the best alternative as the acq. times
+have to be short of necessity. Set  jab_evolve = y
+
+To set up as in Jacs paper: jab_evolve = n, composite_flg = y
+To refocus jab (c-c alfa-beta couplings) set composite_flg = n and jab_evolve = n
+To allow jab to evolve set jab_evolve = y
+
+  Modified by E. Kupce, Jan 2005 for autocalibration of
+     hncaco_trosy_4D_ydw.c
+  Modified by G. Gray, Feb 2005 for BioPack
+

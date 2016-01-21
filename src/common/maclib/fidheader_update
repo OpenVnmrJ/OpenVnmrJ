@@ -1,0 +1,43 @@
+"macro fidheader_update"
+"************************************************************"
+"           MACRO: fidheader_update                          "
+"           To update the header of fid (ct)                 "
+"           Last update: Feb 13, 2007                        "
+"           Written by:  Ivan TKAC                           "
+"************************************************************"
+
+if ($# <> 1) then
+   clear(4)
+   write('line3','ERROR (fidheader_update): Incorrect number of arguments')
+   write('alpha','ERROR (fidheader_update): Incorrect number of arguments')
+   abort
+endif
+
+$ex = 0
+exists('fid','file'):$ex
+if ($ex = 0) then
+   write('line3','ERROR: fid was not found in the current directory')
+   write('line3','ERROR: fid was not found in the current directory')
+   abort
+endif
+
+exists('fid.tmp','file'):$ex
+if ($ex = 0) then
+   shell('cp fid fid.tmp')
+endif
+
+$path = ''
+pwd:$path
+write('line3','CURRENT DIRECTORY: %s',$path)
+
+
+// $homedir=''
+// shell('echo $HOME'):$homedir
+// $program = $homedir + '/bin/header_change'
+exists('header_change','bin'):$e,$program
+
+$new_ct = $1
+$new_ctF = ''
+format($new_ct,5,0):$new_ctF
+shell($program,'fid.tmp','fid',$new_ctF)
+shell('rm fid.tmp')

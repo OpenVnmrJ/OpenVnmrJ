@@ -1,0 +1,42 @@
+"macro writeHT"
+" writeHT - write HT frequency list into a file, htll.htfrq1 "
+" Eriks Kupce, Varian R&D "
+
+$filepath=''
+
+exists('htfrq1','parameter'):$e
+if not ($e) then
+  write('error','HT frequency list - htfrq1 - not found.')
+  return
+endif
+
+$nlines = size('htfrq1')
+$filepath = curexp+'/htll.htfrq1'
+
+exists('httof','parameter'):$e
+if ($e) then $tof=httof else $tof=tof endif
+exists('htsw','parameter'):$ee
+if ($ee) then $sw=htsw else $sw=sw endif
+
+write('reset',$filepath)
+write('file',$filepath,'# %s %s %.1f %.1f', tn, solvent, $tof, $sw)
+write('file',$filepath,'# Total of %d lines', $nlines)
+write('file',$filepath,'# line    frequency (Hz)')
+
+$i=1
+repeat
+  write('file',$filepath,' %4d  %8.2f ', $i, htfrq1[$i])
+  $i=$i+1
+until $i>$nlines
+
+exists('is_submitmode','maclib'):$macex
+if ($macex) then
+   is_submitmode:$submit
+else
+   $submit=0
+endif
+if ($submit) then
+   htlist2cpq('export')
+endif
+return
+

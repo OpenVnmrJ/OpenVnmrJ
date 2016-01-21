@@ -1,0 +1,76 @@
+"macro plot"
+" plot - universal automatic plotting macro "
+
+"  Usage: plot is usually called through the 'procplot' macro		"
+"	  but can also be called 'by hand'				"
+"  plot is designed as a 'universal plotting macro'; customization	"
+"  (if required) should NOT happen here, but rather through parameters	"
+"  or macros that are called within 'plot', directly or indirectly.	"
+
+" Rules:								"
+"      - for 1D spectra:						"
+"	   - non-arrayed:						"
+"	       - use standard 1D plotting macro (plot1d)		"
+"	   - arrayed:							"
+"	       - for seqfil='dept*' use pldept				"
+"	       - otherwise use minimal array plotting (plarray)		"
+"      - for 2D								"
+"	   - homonuclear correlations: use plcosy			"
+"	   - heteronuclear correlations: use plhxcor			"
+"      - no plot for nD with n>2					"
+
+"***************************************************"
+"***Added by CP3.1:  userplot macro at the beginning"
+"			if execplot='' then continue"
+"***************************************************"
+
+dousermacro($0)
+
+on('execplot'):$e
+if ($e > 0.5) then
+  $s=''
+  substr(execplot,1):$s
+//  skIpExEcplOt is a keyword to skip execplot
+  if ($s='') or $s='skIpExEcplOt' then $e=0 endif
+endif
+if ($e > 0.5) then
+  $execplot=execplot
+// put a keyword
+  execplot='skIpExEcplOt'
+  exec($execplot):$e
+// if execplot is still the keyword, the $execplot
+//  routine didn't change its value, if so, put the original
+//  value back, else leave it alone.
+  if execplot='skIpExEcplOt' then execplot=$execplot endif
+
+  if ($e) then
+    return 
+  endif
+endif
+
+exists('pl_'+pslabel,'maclib'):$ppex
+if ($ppex) then
+    exec('pl_'+pslabel)
+    return
+endif
+
+format(seqfil,'lower'):$seqfil
+getdim:$dim
+
+if $dim=1 then
+  if arraydim=1 then		" non-arrayed 1D spectra "
+      plot1d			" other non-arrayed 1D spectra "
+  else			" arrayed 1D spectra "
+    substr($seqfil,1,4):$seq4
+    if ($seq4='dept') and (arraydim=4) then
+      pldept			" dept / deptgl arrays "
+    else
+      plarray			" other arrayed 1D spectra "
+    endif
+  endif
+elseif ($dim=2) then				" nD plotting "
+	Autoplot2D
+else				" 3D, 4D spectra: no plot "
+    pltmod='off'
+endif
+

@@ -1,0 +1,34 @@
+"macro parlist"
+" parlist - list complete parameters in simple form "
+
+" 1995-03-26 - r.kyburz, started "
+" 2007-03-15 - r.kyburz, adjusted for VnmrJ 2.2C "
+
+
+" check arguments "
+if $#>1 then
+  write('error','Usage:  parlist<(parameter_group)>')
+  return
+endif
+
+if $#=1 then
+  if not(typeof('$1')) then
+    write('error','parlist: argument (parameter group) must be a string')
+    return
+  endif
+  $group=$1
+else
+  $group='acquisition'
+endif
+
+$listparam='' $isok=0
+getbinpath('listparam'):$isok,$listparam
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'listparam\' not found, aborting.', $0)
+  return
+endif
+
+flush
+clear
+
+shell($listparam,curexp+'/curpar',$group,'| sort; cat')

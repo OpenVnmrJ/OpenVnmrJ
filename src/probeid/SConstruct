@@ -1,0 +1,129 @@
+#!
+
+import os
+import shutil
+import datetime
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# target
+probeidTarget = 'probeid.jar'
+probeidDashOTarget = 'probeid.jar.dasho'
+probeidProGuardTarget = 'probeid.jar.pro'
+
+# current working directory
+cwd = os.getcwd()
+
+# get options environment
+boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
+execfile(boFile)
+
+# paths
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+vjclientPath = os.path.join(cwd, os.pardir, 'vjclient', 'src', 'vnmr', 'vjclient')
+vjclientDstPath = os.path.join(cwd, 'src', 'vnmr', 'vjclient')
+vjclientFileList = [
+	       	   'DebugOutput.java',
+	       	   'Messages.java',
+	       	   'RegexFileFilter.java',
+	       	   'VnmrIO.java',
+	       	   'VnmrProxy.java',
+		  ]
+
+jUnitPath = os.path.join(ovjtools, 'junit')
+jUnitJar  = os.path.join(jUnitPath, 'junit.jar')
+
+#vjclientPath = os.path.join(cwd, os.pardir, 'vjclient')
+#vjclientJar  = os.path.join(vjclientPath, 'vjclient.jar')
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+jarBin = os.path.join(javaPath, 'jar')
+
+# define build environment
+jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'CLASSPATH' : jUnitJar, # + ':' + vjclientJar,
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# actual builds
+srcPath    = os.path.join(cwd, 'src')
+
+# create source hardlinks at scons interpretation time
+# in java SDK 1.3+ javac doesn't follow symlinks
+buildMethods.hardLinkNow(jEnv, vjclientDstPath, vjclientPath, vjclientFileList);
+
+javaBuildObj = jEnv.Java(JAVACFLAGS = '-J-mx128m -g',
+                         target     = classesPath,
+                         source     = srcPath)
+
+# Depends(classesPath, vjclientPath)
+# SConscript(os.path.join(vjclientPath, 'SConstruct'))
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+shortDate = datetime.datetime.now().strftime("%Y-%m-%d %T")
+manifestFile = os.path.join(cwd,'Manifest')
+f = open(manifestFile,'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: vnmr.probeid.ProbeIdIO\n')
+f.write('Implementation-Version: ')
+f.write(shortDate)
+f.write('\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = probeidTarget,
+                          source   = [classesPath, manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+probeidPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'probeid')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+if not os.path.exists(probeidPath):
+   os.makedirs(probeidPath)
+
+# actions to be performed after targets are built
+if boEnv['dasho']=='y' or boEnv['probeid_0']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(os.path.join(cwd,'ProbeIdProGuard.sh')))
+
+if boEnv['probeid_0']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(os.path.join(installPath,probeidTarget),
+                               os.path.join(cwd, probeidProGuardTarget))))
+else:
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, probeidTarget))))
+
+fileList = [ 'addenda',
+             'synonyms',
+           ]
+
+for i in fileList:
+   shutil.copy2(os.path.join(cwd, i), os.path.join(probeidPath,i))
+   os.chmod(os.path.join(probeidPath, i),0644)
+
+# install macros
+#SConscript(SConscript.maclib)
+
+# install XML
+#SConscript(SConscript.xml)

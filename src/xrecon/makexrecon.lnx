@@ -1,0 +1,209 @@
+# 
+# Copyright (c) 1999-2000 Varian,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential
+# information of Varian, Inc. and its contributors.
+# Use, disclosure and reproduction is prohibited without
+# prior consent.
+#
+#
+# makexrecon makefile
+
+MAKEFLE=makexrecon.lnx
+
+ZIPFILE= Xrecon.tar.gz
+
+SCCSDIR=$(sccsdir)
+
+CC=gcc
+CFLAGS= -O -DLINUX
+CPPFLAGS=-I/sw/LinuxTools/fftw/fftw-3.1.2/api
+#LDFLAGS=-lgsl -lgslcblas -lfftw3 -ltiff -lm
+LDFLAGS=-L/sw/LinuxTools/fftw/fftw-3.1.2
+LIBS= -lgsl -lgslcblas -lfftw3 -ltiff -lm
+TARGET_ARCH=
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+LINK.c= $(CC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH)
+TARGET_DIR=$(vcommondir)/IMAGE_SENSE/imaging/src/Xrecon
+
+
+
+#--- SCCS Sources ----
+XRECON_SCCS_SRC=$(SCCSDIR)/$(PROJCAT)xrecon/SCCS/s.
+VNMR_SCCS_SRC=$(SCCSDIR)/$(PROJCAT)vnmr/SCCS/s.
+
+#---  SCCS Extraction Commands -----
+XRECON_SGET = sccs -d$(SCCSDIR)/$(PROJCAT)xrecon get
+VNMR_SGET = sccs -d$(SCCSDIR)/$(PROJCAT)vnmr get
+
+#------------------------------------------------------
+#  File lists
+#------------------------------------------------------
+TEXT_FILES=		\
+        COPYING         \
+        INSTALL         \
+        Makefile        \
+	data.h		\
+        README		\
+	Xrecon.h
+
+TOP_FILES=		\
+	Xrecon.c
+
+TOP_OBJ= $(TOP_FILES:.c=.o)
+
+COMMON_FILES=		\
+	dhead.c		\
+	dutils.c	\
+	options.c	\
+	pars.c		\
+	utils.c
+
+COMMON_OBJ= $(COMMON_FILES:.c=.o)
+
+COMMON2D_FILES=		\
+	dmask2D.c	\
+	dproc2D.c	\
+	dread2D.c	\
+	dutils2D.c	\
+	fdfwrite2D.c	\
+	noise2D.c	\
+	rawwrite2D.c	\
+	tifwrite2D.c
+
+COMMON2D_OBJ= $(COMMON2D_FILES:.c=.o)
+
+RECON2D_FILES=		\
+	default2D.c	\
+	mask2D.c	\
+	recon2D.c	\
+	sense2D.c	\
+	sensi2D.c	\
+	smap2D.c
+
+RECON2D_OBJ= $(RECON2D_FILES:.c=.o)
+
+RECON3D_FILES=		\
+	recon3D.c
+
+RECON3D_OBJ= $(RECON3D_FILES:.c=.o)
+
+RECONEPI_FILES=		\
+	reconEPI.c
+
+RECONEPI_OBJ= $(RECONEPI_FILES:.c=.o)
+
+#VNMR_FILES=		\
+#	data.h
+
+#
+ALLSRC= $(TEXT_FILES) $(TOP_FILES) $(COMMON_FILES)  $(COMMON2D_FILES)	\
+	$(RECON2D_FILES) $(RECON3D_FILES) 		\
+	$(RECONEPI_FILES)
+
+#----- Targets -------------------------
+LINUX std : localdirs $(ZIPFILE) Xrecon
+
+Source : $(MAKEFILE) $(ALLSRC)
+
+
+$(ZIPFILE) : Source
+	 @( if ( test  ! -d $(TARGET_DIR) ); then			\
+              mkdir -p $(TARGET_DIR);      				\
+            fi;                         				\
+            cp $(TEXT_FILES) $(TOP_FILES)  $(TARGET_DIR);	\
+            cd $(TARGET_DIR);						\
+	    chmod 644 $(TEXT_FILES) $(TOP_FILES) )
+	@( if ( test  ! -d $(TARGET_DIR)/common); then	\
+	      mkdir -p $(TARGET_DIR)/common;		\
+	    fi;						\
+	    cp common/* $(TARGET_DIR)/common;	\
+            chmod 644 $(TARGET_DIR)/common/* )
+	@( if ( test  ! -d $(TARGET_DIR)/common2D); then	\
+	      mkdir -p $(TARGET_DIR)/common2D;			\
+	    fi;							\
+	    cp common2D/* $(TARGET_DIR)/common2D;	\
+            chmod 644 $(TARGET_DIR)/common2D/* )
+	@( if ( test  ! -d $(TARGET_DIR)/recon2D); then	\
+	      mkdir -p $(TARGET_DIR)/recon2D;		\
+	    fi;						\
+	    cp recon2D/* $(TARGET_DIR)/recon2D;	\
+            chmod 644 $(TARGET_DIR)/recon2D/* )
+	@( if ( test  ! -d $(TARGET_DIR)/recon3D); then	\
+	      mkdir -p $(TARGET_DIR)/recon3D;		\
+	    fi;						\
+	    cp recon3D/* $(TARGET_DIR)/recon3D;	\
+            chmod 644 $(TARGET_DIR)/recon3D/* )
+	@( if ( test  ! -d $(TARGET_DIR)/reconEPI); then	\
+	      mkdir -p $(TARGET_DIR)/reconEPI;			\
+	    fi;							\
+	    cp reconEPI/* $(TARGET_DIR)/reconEPI;	\
+            chmod 644 $(TARGET_DIR)/reconEPI/* )
+
+localdirs:
+	@(if ( test ! -d common ); then \
+		mkdir common;		\
+	  fi;				\
+	  if ( test ! -d common2D ); then \
+		mkdir common2D;		\
+	  fi;				\
+	  if ( test ! -d recon2D ); then \
+		mkdir recon2D;		\
+	  fi;				\
+	  if ( test ! -d recon3D ); then \
+		mkdir recon3D;		\
+	  fi;				\
+	  if ( test ! -d reconEPI ); then \
+		mkdir reconEPI;		\
+	  fi;				\
+	 )
+
+Xrecon : $(TOP_OBJ) $(COMMON_OBJ) $(COMMON2D_OBJ) \
+	 $(RECON2D_OBJ) $(RECON3D_OBJ) $(RECONEPI_OBJ) localdirs
+	@(echo $(LINK.c) )
+	@($(LINK.c) -o $@ *.o $(LIBS) )
+
+         
+#------ makefile extraction via SCCS allways. -------
+$(MAKEFILE) :
+        $(XERCON_SGET) $@
+
+#------- Source Extraction via SCCS or Links --------------
+$(TEXT_FILES) : % : $(XRECON_SCCS_SRC)%
+	$(XRECON_SGET) $@
+
+$(TOP_FILES) : % : $(XRECON_SCCS_SRC)%
+	$(XRECON_SGET) $@
+
+$(COMMON_FILES) : % : $(XRECON_SCCS_SRC)%
+	cd common; $(XRECON_SGET) $@
+
+$(COMMON2D_FILES) : % : $(XRECON_SCCS_SRC)%
+	cd common2D; $(XRECON_SGET) $@
+
+$(RECON2D_FILES) : % : $(XRECON_SCCS_SRC)%
+	cd recon2D; $(XRECON_SGET) $@
+
+$(RECON3D_FILES) : % : $(XRECON_SCCS_SRC)%
+	cd recon3D; $(XRECON_SGET) $@
+
+$(RECONEPI_FILES) : % : $(XRECON_SCCS_SRC)%
+	cd reconEPI; $(XRECON_SGET) $@
+
+$(TOP_OBJ) : $(TOP_FILES)
+	( umask 2; $(COMPILE.c) $(@:.o=.c))
+
+$(COMMON_OBJ) :  $(COMMON_FILES)
+	( umask 2; $(COMPILE.c) common/$(@:.o=.c))
+
+$(COMMON2D_OBJ) : $(COMMON2D_FILES)
+	( umask 2; $(COMPILE.c) common2D/$(@:.o=.c))
+
+$(RECON2D_OBJ) : $(RECON2D_FILES)
+	( umask 2; $(COMPILE.c) recon2D/$(@:.o=.c))
+
+$(RECON3D_OBJ) :  $(RECON3D_FILES)
+	( umask 2; $(COMPILE.c) recon3D/$(@:.o=.c))
+
+$(RECONEPI_OBJ) : $(RECONEPI_FILES)
+	( umask 2; $(COMPILE.c) reconEPI/$(@:.o=.c))
+

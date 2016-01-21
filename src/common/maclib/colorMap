@@ -1,0 +1,68 @@
+"macro colorMap"
+
+// Primarily used for color translation in macros
+//  VJ42 definitions have preVJ42 fallbacks
+//  This is rarely used to convert a color code to color string
+
+// For a supplied string or real argument, it will return
+// the color id as well as the color string.
+// For craftver 2, the craft colors are specifically defined.
+// For craftver 1, the craft colors are re-interpreted to old style
+// For craftver 1, the return value might be different than
+//   the supplied value.  For example, colorMap('expSpec') will
+//   return 11 and spectrum as the return variables.
+
+is_craft:$craftver
+
+$colors='spectrum','threshold','parameter','integral','cursor'
+$colors=$colors,'black','red','yellow','green','cyan','blue','magenta','white','gray'
+$colors=$colors,'spectrum2','spectrum3','spectrum4','spectrum5'
+$colors=$colors,'spectrum6','spectrum7','spectrum8','spectrum9'
+$colors=$colors,'expSpec','dsSpec','craftSpec','residSpec'
+$colors=$colors,'sumSpec','modelSpec','refSpec','notUsed','roli'
+$colors=$colors,'craftRois','alignRois','align2Rois','align3Rois','segRois'
+
+$ID='11','15','13','12','18'
+$ID=$ID,'0','1','2','3','4','5','6','7','64'
+$ID=$ID,'16','17','257','258'
+$ID=$ID,'259','260','261','262'
+
+if $craftver>1.5 then
+    $ID=$ID,'306','307','308','309'
+    $ID=$ID,'310','311','312','313','314'
+    $ID=$ID,'315','316','317','318','319'
+else
+    $ID=$ID,'11','12','13','18'
+    $ID=$ID,'12','15','6','258'
+    $ID=$ID,'13','13','15','18','12'
+endif
+
+if typeof('$1') then
+    $retval=$1
+    $ret=0
+    teststr('$colors',$1,'local'):$ok
+    if $ok then 
+	format($ID[$ok],'lower'):$ret
+	if $craftver<1.5 then
+	    teststr('$ID',$ID[$ok],'local'):$ok2
+	    $retval=$colors[$ok2]
+	endif
+    endif
+//    if not $ret then $ret=11 $retval='spectrum' endif
+// default color code is 11
+    if not $ret then $ret=11 endif
+    if ($## < 1) then
+	write('line3','The color code for %s is %d',$1,$ret)
+    endif
+    return($ret,$retval)
+else
+    $ret=0
+    $s1='' format($1,0,0):$s1
+    teststr('$ID',$s1,'local'):$ok
+    if not $ok then $retval='spectrum' $ret=11 
+    else $retval=$colors[$ok] $ret=$1 endif
+    if ($## < 1) then
+	write('line3','The code %d represents %s color',$1,$retval)
+    endif
+    return($ret,$retval)
+endif

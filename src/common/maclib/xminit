@@ -1,0 +1,96 @@
+"macro xminit"
+"globalauto, autodir, sqdir - study queue directories"
+"sqname - basename for data storage"
+"studyid=basename of study queue directory"
+"activestudy=basename of active study directory"
+"actionid=node id of the current set of parameters and or data"
+"activeid=node id of the next set of parameters to be used for acquisition"
+
+if ($# = 2) then
+  if ($1 = 'vp') then
+    jexp:$e
+    if ($e < 0.5) then return endif
+    sqpars
+    actionid=`null`
+    if($2='all') then
+      sqreset
+    else
+      sqresetpartial
+    endif
+    aipDeleteData
+    menu(`main`)
+    clear(2)
+    layout=`info`
+    return
+  endif
+endif
+
+$dir=globalauto
+
+if ($dir = '') then
+  "pick a default directory"
+  $dir = userdir + '/data/studies'
+endif
+substr($dir,1,1):$char
+if ($char <> '/') then
+  pwd:$pwd
+  $dir=$pwd+'/'+$dir
+endif
+exists($dir,'file'):$e
+if $e<0.5 then
+  mkdir('-p',$dir)
+  exists($dir,'file'):$e
+  if $e < 0.5 then
+     write('error','Cannot study container directory %s',$dir)
+     return
+  endif
+endif
+
+exists('actionid','parameter'):$e
+if ($e < 0.5) then
+  sqpars
+endif
+
+activestudy = 'null','beginstudy'
+
+exists('sqattr','parameter','global'):$e
+if $e < 0.5 then
+  create('sqattr','string','global')
+  setprotect('sqattr','on',16+256+32768,'global')
+endif
+exists('sqval','parameter','global'):$x
+if $x<0.5 then
+  create('sqval','string','global')
+  setprotect('sqval','on',16+256+32768,'global')
+endif
+exists('sqtval','parameter','global'):$x
+if $x<0.5 then
+  create('sqtval','string','global')
+  setprotect('sqtval','on',16+256+32768,'global')
+endif
+exists('testacquire','parameter','global'):$x
+if $x>0.5 then
+  testacquire='n'
+endif
+
+xm1('delete all')
+xm1('setids')
+vnmrjcmd('LOC show protocol')
+xm1('pause')
+sqmode='pause'
+
+$act=' xminit(`vp`,`'+$1+'`)'
+$i=0 $s=''
+repeat
+  $i=$i+1
+  format($i,1,0):$s
+  $cmd='VP '+$s+$act
+  vnmrjcmd($cmd)
+until ($i>=2)
+
+if (appmode = 'imaging') then
+  exists('VCOILREF','parameter','global'):$e 
+  if ($e>0) then VCOILREF='' endif  
+  exists('SENSEREF','parameter','global'):$e 
+  if ($e>0) then SENSEREF='' endif  
+endif

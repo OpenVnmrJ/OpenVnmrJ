@@ -1,0 +1,214 @@
+# 
+# Copyright (c) 1999-2000 Varian,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential
+# information of Varian, Inc. and its contributors.
+# Use, disclosure and reproduction is prohibited without
+# prior consent.
+#
+###########################################################
+#							  #
+#    makeuserpsg   -   UNIX makefile for creating a new   #
+#		       user PSG library			  #
+#							  #
+#    This is the MERCURY version			  #
+#							  #
+###########################################################
+
+
+MAKEFILE= makeuserpsg.lnx
+
+#-----  The system and user PSG directories
+PSG_DIR= $(vnmrsystem)/psg/
+LIB_DIR= $(vnmrsystem)/lib/
+USR_PSG_DIR= $(vnmruser)/psg/
+
+#-----  Normal operational compile flags
+CDEFINE= -DLINUX -DSUN -DULONG -DG2000 -DMERCURY -Wno-format
+CFLAGS= -O -m32 -fPIC
+CPPFLAGS= -U_FORTIFY_SOURCE 
+LDFLAGS= -shared
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(CDEFINE) -c
+LINK.c= $(CC) $(CFLAGS) $(LDFLAGS)
+
+#-----  Link commands for needed sources and makefile
+PSG_LN= ln -s $(PSG_DIR)$(@)
+REV_ID=6.0
+
+#------------------------------------------------------------------------
+#-----  PSG sources files 
+#------------------------------------------------------------------------
+
+PSG_SRC=			\
+                abort.c         \
+                active.c        \
+		apshape_pulse.c	\
+		aptable.c	\
+		array.c		\
+		autofuncs.c	\
+		convert.c	\
+		eventoverhead.c	\
+		freq_list.c	\
+                getparm.c       \
+		gradient.c	\
+		hash.c		\
+		hwlooping.c	\
+		initauto.c	\
+		initHSlines.c	\
+		lc_hdl.c	\
+		lc_index.c	\
+		looping.c	\
+		meat.c		\
+                P_receive.c     \
+		pre_fid_seq.c	\
+		raparms.c	\
+                sendasync.c     \
+                setparm.c       \
+		signalhandler.c	\
+                stubs.c         \
+		treefuncs.c	\
+		wetfuncs.c	\
+		wg.c		\
+		xmath.c		\
+		xmtr.c
+
+DPS_DUMMY_SRC=			\
+                x_ps.c
+
+DPS_DUMMY_OBJ= $(DPS_DUMMY_SRC:.c=.o)
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+#-----  Acqproc header files that are needed
+PSG_HDR=			\
+		abort.h	\
+		acodes.h	\
+		acqparms2.h	\
+		apdelay.h	\
+		aptable.h	\
+		asm.h		\
+		data.h		\
+		cps.h		\
+		dpsdef.h	\
+		dsp.h		\
+		expDoneCodes.h	\
+		group.h		\
+		lc_gem.h	\
+		lc_index.h	\
+		mfileObj.h	\
+		params.h	\
+		pvars.h		\
+		PboxM_psg.h	\
+		Pbox_psg.h	\
+		REV_NUMS.h	\
+		rfconst.h	\
+		shims.h		\
+		shrexpinfo.h	\
+		standard.h	\
+		symtab.h	\
+		tools.h		\
+		variables.h	\
+		vfilesys.h	\
+		vnmrsys.h	\
+		wetfuncs.h
+
+#----- PSG sources that require conditional compilation
+CND_PSG_SRC=			\
+                psg.c           
+
+CND_PSG_OBJ= $(CND_PSG_SRC:.c=.o)
+
+
+#-----  All sources and headers are required for compilation
+ALLSRC=	$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) $(DPS_DUMMY_SRC)
+ALL_C_SRC=$(PSG_SRC) $(CND_PSG_SRC) $(DPS_DUMMY_SRC)
+LIBS=	-lm
+
+
+#------------------------------------------------------------------------
+#-----  Targets
+#------------------------------------------------------------------------
+
+lib : message Source libpsglib.so
+	@echo
+	@echo PSG Libraries for MERCURY Complete.
+
+#  libpsglib.so removed as a Target for Solaris for the interum...
+#  the -w in CFLAGS will inhibit warning messages produced by GNU C
+
+fixlib : message libpsglib.so libpsglib.a
+	@echo
+	@echo PSG Libraries for MERCURY Complete.
+
+message :
+	@echo Compiling Linux PSG Library...
+	( rm -f libpsglib*; rm -f *.o)
+
+#------------------------------------------------------------------------
+#-----  Recursive Targets
+#------------------------------------------------------------------------
+Source :
+	@echo Creating additional source links...
+	( cd $(USR_PSG_DIR); $(MAKE) -f $(MAKEFILE) src )
+
+src :	$(MAKEFILE) $(ALLSRC)
+
+libpsglib.a : $(PSG_OBJ) $(CND_PSG_OBJ)
+	@(umask 2; ar r $@ $(PSG_OBJ) $(CND_PSG_OBJ) >/dev/null 2>&1 )
+
+libpsglib.so : $(PSG_OBJ) $(CND_PSG_OBJ)
+	@(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(REV_ID) $(PSG_OBJ) $(CND_PSG_OBJ))
+	@(umask 2; ln -s $@.$(REV_ID) $@)
+
+depend: src
+	makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(ALL_C_SRC) 2>/dev/null
+#------------------------------------------------------------------------
+#-----  Object dependencies
+#------------------------------------------------------------------------
+
+$(PSG_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+$(CND_PSG_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+#------------------------------------------------------------------------
+#-----  Source extraction via soft links
+#------------------------------------------------------------------------
+
+$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) : % :$(PSG_DIR)%
+	$(PSG_LN) $@
+
+$(DPS_DUMMY_SRC) : % :$(PSG_DIR)%
+	$(PSG_LN) $@
+
+# DO NOT DELETE THIS LINE -- make depend uses it
+
+abort.o: group.h
+active.o: variables.h group.h
+apshape_pulse.o: acodes.h rfconst.h acqparms2.h vnmrsys.h vfilesys.h
+aptable.o: acqparms2.h acodes.h aptable.h symtab.h variables.h group.h vfilesys.h
+array.o: group.h variables.h acqparms2.h shims.h lc_gem.h
+autofuncs.o: group.h acodes.h rfconst.h acqparms2.h shims.h
+convert.o: REV_NUMS.h acodes.h group.h acqparms2.h aptable.h expDoneCodes.h abort.h
+eventoverhead.o: apdelay.h
+freq_list.o: vnmrsys.h acqparms2.h lc_gem.h acodes.h
+gradient.o: group.h acodes.h acqparms2.h abort.h
+hwlooping.o: acodes.h rfconst.h acqparms2.h lc_gem.h dsp.h
+initauto.o: acodes.h rfconst.h acqparms2.h group.h shims.h
+initHSlines.o: acodes.h rfconst.h group.h acqparms2.h
+lc_hdl.o: lc_gem.h acodes.h lc_index.h group.h shrexpinfo.h variables.h abort.h
+lc_index.o: lc_index.h
+looping.o: acodes.h rfconst.h acqparms2.h
+meat.o: params.h group.h variables.h lc_gem.h acodes.h rfconst.h 
+meat.o: aptable.h dsp.h
+meat.o: shrexpinfo.h pvars.h abort.h
+P_receive.o: group.h symtab.h variables.h
+raparms.o: data.h acqparms2.h lc_gem.h shrexpinfo.h mfileObj.h
+treefuncs.o: group.h symtab.h params.h variables.h
+wetfuncs.o: acqparms2.h rfconst.h
+wg.o: acodes.h rfconst.h acqparms2.h vfilesys.h
+xmath.o: REV_NUMS.h group.h variables.h dpsdef.h acqparms2.h lc_gem.h
+xmath.o: aptable.h Pbox_psg.h
+xmtr.o: rfconst.h
+psg.o: group.h variables.h lc_gem.h lc_index.h asm.h data.h pvars.h
+psg.o: shrexpinfo.h abort.h vfilesys.h

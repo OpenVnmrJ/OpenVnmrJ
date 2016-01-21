@@ -1,0 +1,127 @@
+******************************************************************************
+gin:$x,$y,$b1,$b2,$b3                return the pointer position immediately
+gin('B1_press'):$x,$y,$b1,$b2,$b3    wait until button 1 is pressed
+                                     or any key pressed
+gin('B2_press'):$x,$y,$b1,$b2,$b3    wait until button 2 is pressed
+                                     or any key pressed
+gin('B3_press'):$x,$y,$b1,$b2,$b3    wait until button 3 is pressed
+                                     or any key pressed
+gin('Ba_press'):$x,$y,$b1,$b2,$b3    wait until any button is pressed
+                                     or any key pressed
+gin('B1_release'):$x,$y,$b1,$b2,$b3  wait until button 1 is released
+                                     or any key pressed
+gin('B2_release'):$x,$y,$b1,$b2,$b3  wait until button 2 is released
+                                     or any key pressed
+gin('B3_release'):$x,$y,$b1,$b2,$b3  wait until button 3 is released
+                                     or any key pressed
+gin('Ba_release'):$x,$y,$b1,$b2,$b3  wait until any button is released
+                                     or any key pressed
+******************************************************************************
+  
+gin will report the pointer position related to the graphics window.
+The range of x is 0 at the left edge of the chart and wcmax at the
+right edge of the chart.  The range of y is -20 at the bottom of the
+chart and wc2max at the top.  The first and second return values
+($x and $y in the examples above) are in millimeters.
+If the pointer position is outside the graphics window in the x direction,
+the x value will be returned as -1.  If the pointer is outside the
+graphics window in the y direction, the y value will be returned as
+-10000.
+
+The third, fourth, and fifth return arguments ($b1, $b2, and
+$b3 in the examples above) return the state of the left, middle, and
+right mouse buttons.  The value will be 1 if the corresponding mouse
+button is down.  The value will be 0 if the corresponding mouse button
+is up.
+
+If gin is called without any arguments, it returns immediately with the
+mouse position and button values.  If gin is called with the Bn_press
+argument, where Bn refers to button 1, 2, 3, or any (left, middle, right, any),
+the gin command will wait until the appropriate button is pressed.
+Similarly, if gin is called with the Bn_release argument, the gin
+command will wait until the appropriate button is released.  For both
+the Bn_press and Bn_release cases, the gin command will return if any
+keyboard key is typed.  In this case, if the command was waiting for
+a press, all buttons will be set to released (0).  If the command
+was waiting for a release, all buttons will be set to pressed (1).
+
+The gin command will often be used with the move and draw commands.
+Some magical macro examples illustrate potential functionality.
+
+Macro 1: Draw a "rubber band"
+
+gin('B1_press'):$xs,$ys,$b1    "remember anchor point as $xs and $ys"
+if ($b1 < 0.5) then            "if a keyboard key is typed, exit"
+  return
+endif
+pen('graphics','yellow')
+move(wcmax-$xs,$ys)
+draw('xor',wcmax-$xs,$ys)      "draw line to current mouse position"
+$xn=$xs
+$yn=$ys
+while ($b1 > 0.5) do           "while mouse button 1 is held down"
+  gin:$xn2,$yn2,$b1
+  if (($xn2 <> $xn) or ($yn2 <> $yn)) then "if any mouse movement"
+    move(wcmax-$xs,$ys)
+    draw('xor',wcmax-$xn,$yn)  "erase previous line"
+    move(wcmax-$xs,$ys)        "move back to anchor point"
+    $xn = $xn2
+    $yn = $yn2
+    draw('xor',wcmax-$xn,$yn)  "draw line to new mouse position"
+  endif
+endwhile
+
+Macro 2:  Move a vertical cursor.
+
+gin('B1_press'):$xs,$ys,$b1
+if ($b1 < 0.5) then            "if a keyboard key is typed, exit"
+  return
+endif
+if ($xs < sc) then             "make sure cursor is between sc and sc+wc"
+   $xs = sc
+elseif ($xs > sc+wc) then
+   $xs = sc+wc
+endif
+pen('graphics','yellow')
+move(wcmax-$xs,-20)
+draw('xor',wcmax-$xs,wc2max)    "draw the initial cursor"
+$hz= (($xs-sc)/wc)*wp + sp      "convert mm to Hz"
+write('graphics','xor',wcmax-$xs+1,wc2max-10,'%f',$hz) "display Hz value"
+while ($b1 > 0.5) do      "while mouse button 1 is held down"
+  gin:$xn,$ys,$b1         "get new mouse position and button 1 state"
+  if ($xn < sc) then
+     $xn = sc
+  elseif ($xn > sc+wc) then
+     $xn = sc+wc
+  endif
+  if ($xs <> $xn) then    "redraw only if the mouse has moved in x direction"
+    move(wcmax-$xs,-20)
+    draw('xor',wcmax-$xs,wc2max)   "erase the cursor at the previous position"
+    write('graphics','xor',wcmax-$xs+1,wc2max-10,'%f',$hz) "erase of Hz value"
+    $xs = $xn
+    move(wcmax-$xs,-20)
+    draw('xor',wcmax-$xs,wc2max)   "draw the cursor at the new position"
+    $hz= (($xs-sc)/wc)*wp + sp
+    write('graphics','xor',wcmax-$xs+1,wc2max-10,'%f',$hz) "display new Hz"
+  endif
+endwhile
+
+Macro 3:  A quiz for the user.  What does this one do?
+
+gin('B1_press'):$xs,$ys,$b1
+if ($b1 < 0.5) then
+  return
+endif
+pen('graphics','yellow')
+move(wcmax-$xs,$ys)
+draw('normal',wcmax-$xs,$ys)
+$xn=$xs
+$yn=$ys
+while ($b1 > 0.5) do
+  gin:$xn2,$yn2,$b1
+  if (($xn2 <> $xn) or ($yn2 <> $yn)) then
+    $xn = $xn2
+    $yn = $yn2
+    draw(wcmax-$xn,$yn)
+  endif
+endwhile

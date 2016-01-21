@@ -1,0 +1,112 @@
+"macro hregions"
+"***************************************************"
+" hregions - adjust integral regions for 1H spectra "
+"***************************************************"
+
+"region: arg1 = noise tail in Hz				"
+"		called $noisetail below				"
+"	 arg2 = splitting - 100 -> no splitting			"
+"			      1 -> LOTS of regions		"
+"		called $split below				"
+"	 arg3 = sensitivity - <= .3 -> very sensitive		"
+"			       > 1 -> insensitive		"
+"		called $sens below				"
+"	 arg4 = min. number of points per 'peak'		"
+"			('spike suppression')			"
+"		called $ptpeak below				"
+
+" hregions does a check on its own result:			"
+"     - if the number of regions is below $minregions then it	"
+"	tries again with a lower splitting parameter		"
+"     - if more than $maxinteg (percents) of the spectrum are	"
+"	integrated, it tries again with lower sensitivity	"
+" We are NOT trying to cover all cases, but let's try to get	"
+" most of them!							"
+
+$noisetail=25
+$split=1
+$minregions=3
+$maxinteg=75
+$sens=0.4
+$ptpeak=4
+
+" previous combination: 100/20/.5/12 "
+" previous combination: 100/15/.8/12 "
+
+$wp=wp $sp=sp
+f full
+$sfull=sp $wfull=wp
+
+$solv=''
+format(solvent,'lower'):$solv
+
+solppm:$sppm,$swidth				"get solvent parameters"
+if $solv='dmso' then $sppm=3.3 endif
+$sfreq=$sppm*sfrq
+if ($solv='d2o' or $solv='d2o_10' or $solv='dmso') and ($sfreq<(sw-rfl+rfp)) and ($sfreq>0-rfl+rfp) then
+  $specsplit=1
+  $hilimit=$sfreq-0.5*sfrq
+  $lolimit=$sfreq+0.5*sfrq
+else
+  $specsplit=0
+endif
+
+if $specsplit=1 then
+  dsnmax(300):$dsnsolv
+  wp=$hilimit-$sfull sp=$sfull  // spectrum part right of solvent peak
+  dsnmax(300):$dsnhi
+  wp=$wfull-($lolimit-$sfull) sp=$lolimit  // spectrum part left of solvent peak
+  dsnmax(300):$dsnlo
+  if $dsnhi>$dsnlo then $dsn=$dsnhi $is='hi' else $dsn=$dsnlo $is='lo' endif
+else
+  dsnmax(300):$dsn
+endif
+
+$sens=$dsn/2000
+wp=$wp sp=$sp
+
+on('lb'):$lbon
+if $lbon then $lb=lb endif
+select:$trace
+
+"first try - assume aph called already"
+lb=1.5 wft
+ds($trace)
+cz region($noisetail,$split,$sens,$ptpeak):$numreg
+
+"if too few regions found, try to get more splitting"
+if $numreg<$minregions then    
+  write('alpha','< %1.0d regions, trying to get more splitting',$minregions)
+  ds($trace) region($noisetail,0.4*$split,$sens,$ptpeak):$numreg
+endif
+
+"if too high a proportion of the spectrum integrated, try reducing sensitivity"
+if ($numreg = 0) then
+  $intreg=sw
+else
+  $ix=1 $intreg=0
+  repeat
+    $intreg=$intreg+lifrq[2*$ix-1]-lifrq[2*$ix]
+    $ix=1+$ix
+  until $ix>$numreg
+endif
+if $intreg/sw>0.75 then
+  write('alpha','> %2.0f %s integration, reducing sensitivity',$maxinteg,'%')
+  region($noisetail,$split,2*$sens,$ptpeak):$numreg
+endif
+
+if $lbon then lb=$lb else lb='n' endif
+wft select($trace)
+if $specsplit=1 then
+  if $is='hi' then
+    wp=$hilimit-$sfull sp=$sfull
+  else
+    wp=$wfull-($lolimit-$sfull) sp=$lolimit
+  endif
+  isadj
+  wp=$wp sp=$sp
+else
+ isadj 
+endif
+"return number of regions found"
+return($numreg)

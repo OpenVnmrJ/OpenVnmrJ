@@ -1,0 +1,25 @@
+"macro sysputval"
+" ************************************************************* "
+" sysputval(expno,name,value<,index>)				"
+"	This macro sets a real, or string value into the given 	"
+"	experiment's current and processing parameter sets.	"
+" ************************************************************* "
+if ($# > 4) or ($# < 3)  then
+   write('error','usage - sysputval(expno,name,value<,index>)')
+   abort
+endif
+$index=1
+$texpnum=0
+jexp:$texpnum
+if ($# > 3) then
+   $index = $4
+endif
+if ($1 <> $texpnum) then
+   jexp($1)
+   setvalue($2,$3,$index)
+   setvalue($2,$3,$index,'processed')
+   jexp($texpnum)
+else
+   setvalue($2,$3,$index)
+   setvalue($2,$3,$index,'processed')
+endif

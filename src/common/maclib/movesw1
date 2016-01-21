@@ -1,0 +1,40 @@
+"macro movesw1"
+"*************************************************************************"
+" movesw1   -   movesw1('rf_offset')                                      "
+"                                                                         "
+"               move 'rf_offset', e.g., tof, and adjust sw1 so that       "
+"               the F1 region between the cursors is used                 "
+"*************************************************************************"
+if($#>1) then
+  setfrqCmd('movesw',1,$1,$2):$e 
+  if($e>0) then // new method
+    return
+  endif
+endif
+
+if ($# < 1) then
+   write('error','movesw1:  usage - movesw1(`rf_offset`)')
+   return
+endif
+
+$rflrfp1   = rfl1 - rfp1		"referencing"
+$center    = cr1 - delta1/2		"center between cursors"
+$oldoffset = {$1}
+{$1}       = $center + {$1} - (sw1/2) +  $rflrfp1	"set new tof"
+$center    = {$1} - ($oldoffset - (sw1/2)) - $rflrfp1   "new center"
+$oldsw1    = sw1
+
+sw1 = 2*(cr1 - $center)                  "set new sw1"
+if ( 2*($center - cr1 + delta1) > sw1 ) then
+   sw1 = 2*($center - cr1 + delta1)
+endif
+
+$shift1 = ($oldsw1/2 - sw1/2) - ($oldoffset - {$1})
+if ((rfl1 <> 0) or (rfp1 <> 0)) then
+   rfl1 = rfl1 - $shift1
+endif
+
+wp1     = sw1
+sp1     = $shift1 + rfp1 - rfl1
+cr1     = cr1 + $shift1
+write('line3','sw1 moved as requested')

@@ -1,0 +1,24 @@
+"macro make_wselshape"
+"update_wsewlhape - macro to update the water selection shape         "
+"          for sequences wlogsy and CLEANEX-PM sequences              "
+"   the macro takes the current shapename (wselshape) and             "
+"   pulsewidth (wselpw) and recreates the shape and updates the        "
+"   corresponding power level (wselpwr)                               "
+"   for the shape type a gaussian-180 shape is set by the macro        "
+
+if ((wselshape='')or(wselpw<3000)or(wselpw>30000)) then
+  write('error','wselshape is out of range 3-30 msec')
+endif
+$wselpw='' $wselpwr='' $wselpwban=''
+ format(wselpw*1e-6,6,6):$wselpw 
+ format(wselpw,1,1):$wselpwban
+$wave='gaus '+$wselpw+' 0 0 0 180.0'
+opx(wselshape)
+setwave($wave)
+cpx(pw*tpwr_cf, tpwr):$dum
+ pbox_pw(wselshape+'.RF'):$wselpw1 wselpw=$wselpw1
+ pbox_pwr(wselshape+'.RF'):$wselpwr1 wselpwr=$wselpwr1
+ format(wselpwr,0,0):$wselpwr
+if ($## < 1) then
+    write('line3','wselshape = %s, wselpw = %s us, wselpwr = %s dB ',wselshape,$wselpwban,$wselpwr)
+endif

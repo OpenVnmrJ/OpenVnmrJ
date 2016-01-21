@@ -1,0 +1,32 @@
+"macro is_param"
+$type='' $tree=''
+if ($# > 1) then  
+    $tree=$2
+    exists($1,'parameter',$tree):$is
+else
+    $tree='current'
+    exists($1,'parameter',$tree):$is
+    if not $is then
+    	$tree='global'
+    	exists($1,'parameter',$tree):$is
+    endif
+    if not $is then
+    	$tree='systemglobal'
+    	exists($1,'parameter',$tree):$is
+    endif
+    if not $is then
+    	$tree='processed'
+    	exists($1,'parameter',$tree):$is
+    endif
+    if not $is then
+    	$tree='usertree'
+    	exists($1,'parameter',$tree):$is
+    endif
+endif
+if ($is) then
+    isreal($1,$tree):$real
+    if ($real) then $type='real' else $type='string' endif
+else
+    $tree=''
+endif
+return($is,$tree,$type)

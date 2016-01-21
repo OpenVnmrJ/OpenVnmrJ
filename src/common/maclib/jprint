@@ -1,0 +1,52 @@
+"macro jprint"
+
+$a = ''
+"aipGetPrintFrames:$a"
+
+if (printsend='file' and printfile='') then
+   write('error','Filename not set')
+   return
+endif
+
+if (printsend='file') then
+$vjcmd='print'+' region:'+printregion+' layout:'+printlayout+' "file:'+printfile + '" pformat:' + printformat+ ' iformat:' + printsaveformat+' dpi:'+printsavedpi+' paper:'+papersize+' size:' + printsize
+else
+$vjcmd='print'+' region:'+printregion+' layout:'+printlayout+' "file:'+printfile + '" pformat:' + printformat+ ' iformat:' + printsaveformat+' dpi:'+printdpi+' paper:'+papersize+' size:' + printsize
+endif	
+
+vnmrjcmd($vjcmd)
+
+if (printsend='file') then
+$vjcmd='print'+' color:'+printsavecolor+' lw:'+printlw+' plotter:' + plotter
+else
+$vjcmd='print'+' color:'+printcolor+' lw:'+printlw+' plotter:' + plotter
+endif	
+
+exists('aipWindowSplit', 'parameter'):$e
+if ($e < 0.5) then
+    exists( 'aipWindowSplit', 'parameter', 'global'):$e
+endif
+if ($e <> 0) then
+    $r1=''
+    format(aipWindowSplit[1],0,0):$r1
+    $vjcmd=$vjcmd+' aiprows:'+$r1
+    format(aipWindowSplit[2],0,0):$r1
+    $vjcmd=$vjcmd+' aipcols:'+$r1
+endif
+
+if (printregion='frames') then
+   aipGetPrintFrames('sel'):$a
+   if ($a<>'0') then
+      $vjcmd=$vjcmd+' frames:'+$a
+   else
+      write('line3', 'Please select frames to print')
+      return
+   endif
+elseif (printregion='allframes') then
+   aipGetPrintFrames:$a
+   $vjcmd=$vjcmd+' frames:'+$a
+endif	
+vnmrjcmd($vjcmd)
+
+$vjcmd='print exec'+' device:'+printsend
+vnmrjcmd($vjcmd)

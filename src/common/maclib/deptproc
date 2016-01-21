@@ -1,0 +1,29 @@
+"macro deptproc"
+"*********************************"
+" deptproc - process dept spectra "
+"*********************************"
+
+wft
+$sp=sp $wp=wp
+f ai
+vp=0
+select(1)
+aph
+			"phase spectrum with all peaks positive"
+vsadj(wc2max/4.5)
+th = wc2max / (4.5 * 5) "set threshhold equal 20% of largest peak"
+full
+vo = wc2max / 4
+
+bgmode_is:$bg
+if ($bg=0) then
+  dss dscale
+endif  
+" if required, perform adept, else just display spectrum "
+if (arraydim=4)  then
+  f adept		   "do the analysis"
+  sp=$sp wp=$wp
+  if ($bg = 0) then
+    dss dscale
+  endif
+endif  

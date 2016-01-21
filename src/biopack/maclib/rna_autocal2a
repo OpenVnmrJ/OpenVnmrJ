@@ -1,0 +1,24 @@
+"macro rna_autocal2a"
+$bestone=1 $counter=1
+wft
+setref av select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) 
+vsadj(50) $best=20
+vsadj(50) 
+$counter=1
+write('plotter',100,wc2max,'Determination of 1H pw90 at tpwr (coarse)')
+pl('all','dodc') pap dssh('dodc') 
+BPpage
+BPsvf(userdir+'/AutoRna/H1pw90cal_coarse')
+gain=gain+12 pw=pw[$bestone]
+vs=vs/2
+array('pw',11,pw-1.0,0.2)
+wnt='wft dssh(\'dodc\')'
+wexp='rna_autocal2b'  au  
+

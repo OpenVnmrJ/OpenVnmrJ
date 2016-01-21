@@ -1,0 +1,96 @@
+"macro gs_maptime"
+"****************************************************************************"
+"                                                                            "
+" gs_maptime - macro to calculate shim mapping time for 3D gradient shimming "
+"                                                                            "
+"****************************************************************************"
+
+"Check existence of maptime parameter"
+create('maptime','string','current','')
+
+"Get the time of single scan"
+exptime:$time 
+
+"Calculate time string for all shim iterations"
+"Each map comprises of 3 scans, 2nd and 3rd with extra tau"
+"Add 10s for processing time for each iteration"
+$i=1
+$shimtime=0
+while ($i<5) do
+  $shimtime = $shimtime + shcycle[$i]*($time*3+nv*nv2*(shdel[$i]+delref)+10)
+  $i=$i+1
+endwhile
+$hours = trunc($shimtime/3600)
+$shimtime = $shimtime - $hours*3600
+$minutes = trunc($shimtime/60)
+$seconds = $shimtime - $minutes*60
+$hstr = ''
+$mstr = ''
+$sstr = ''
+format($hours,0,0):$hstr
+format($minutes,0,0):$mstr
+if ($hours OR $minutes) then $decimal = 0 else $decimal = 1 endif
+format($seconds,0,$decimal):$sstr
+if ($hours) then
+  $maptime = $hstr+'h:'+$mstr+'m:'+$sstr+'s'
+elseif ($minutes) then
+  $maptime = $mstr+'m:'+$sstr+'s'
+else
+  $maptime = $sstr+'s'
+endif
+shimtime = $maptime
+
+"Set shimtime in SQ"
+if ((activestudy <> 'null') AND (actionid <> 'null')) then
+  xmgetatts(actionid,'status'):$st
+  if ($st='Active') then
+    xmsetatts(actionid, 'time',shimtime)
+  endif
+endif
+
+"Calculate time string for a single map"
+"Add 8s for processing time for each iteration"
+$smaptime=$time*3+nv*nv2*(shimmapdel+delref)+8
+$time=$smaptime
+$hours = trunc($smaptime/3600)
+$smaptime = $smaptime - $hours*3600
+$minutes = trunc($smaptime/60)
+$seconds = $smaptime - $minutes*60
+format($hours,0,0):$hstr
+format($minutes,0,0):$mstr
+if ($hours OR $minutes) then $decimal = 0 else $decimal = 1 endif
+format($seconds,0,$decimal):$sstr
+if ($hours) then
+  $maptime = $hstr+'h:'+$mstr+'m:'+$sstr+'s'
+elseif ($minutes) then
+  $maptime = $mstr+'m:'+$sstr+'s'
+else
+  $maptime = $sstr+'s'
+endif
+smaptime = $maptime
+
+"Adjust for the number of maps selected"
+"There is base map as well"
+"Add 20s for z2 settle time"
+"Add 3s additonal processing for each map"
+$time=$time+3
+if (shimmapsel='1') then $time=$time*4 endif
+if (shimmapsel='1&2') then $time=$time*9+20 endif
+if (shimmapsel='12&3') then $time=$time*16+20 endif
+if (shimmapsel='123&4') then $time=$time*25+20 endif
+$hours = trunc($time/3600)
+$time = $time - $hours*3600
+$minutes = trunc($time/60)
+$seconds = $time - $minutes*60
+format($hours,0,0):$hstr
+format($minutes,0,0):$mstr
+if ($hours OR $minutes) then $decimal = 0 else $decimal = 1 endif
+format($seconds,0,$decimal):$sstr
+if ($hours) then
+  $maptime = $hstr+'h:'+$mstr+'m:'+$sstr+'s'
+elseif ($minutes) then
+  $maptime = $mstr+'m:'+$sstr+'s'
+else
+  $maptime = $sstr+'s'
+endif
+maptime = $maptime

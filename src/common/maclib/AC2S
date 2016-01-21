@@ -1,0 +1,30 @@
+"macro AC2S"
+"Auto calibrate"
+
+if ((r1 < 1) and (tn = 'H1')) then
+   lb=1 wft f ds
+   tmsref ai 
+   sp=.5p wp=1.5p vsadj(20)
+   d1=20  vp=wc2max/2
+else
+   if ((r1 < 1) and (tn<>'H1')) then
+     lb=2 wft f av ai dc
+     vsadj(50) ds
+     peak:$ht,$frq
+     cr=$frq
+     movetof f full
+   endif
+endif
+getparam('tpwr'):$power
+if (tpwr = $power) then    "if the power came from a probe file use finer step"
+   array('pw',10,4,2)
+else
+   array('pw',10,5,5)
+endif
+wnt='wft vsadj(10) dssh'
+wexp='AC3S'
+alock='n' wshim='n'
+clear(2)
+text('Determining Proper System Power Level\\This will take several minutes')
+dtext
+au('wait')

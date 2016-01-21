@@ -1,0 +1,54 @@
+"macro AT12"
+"AT12" "30 Degree Stability  "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('30-Degree Pulse Stability on Channel 1')
+   at_currenttest='30stability_ch1'
+   array('nt',20,1,0) pw(30)
+   pw=pw "forces 0.1usec resolution"
+   f
+   lvl=0 tlt=0
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT12(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 30-Degree Pulse Stability ')
+   dps
+elseif ($1='PART1') then
+   wft
+
+   ATsvf
+   peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+echo($stddev)
+   ATrecord('STAB30ch1','30 Degree Pulse Stability ','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+echo($stddev)
+   write('file',autotestdir+'/REPORT','30 Degree Pulse Stability : %3.2f percent',100-$stddev)
+   pw=1
+   text('1 usec pulse stability')
+   at_currenttest='1stability_ch1'
+   lvl=0 tlt=0
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT12(`PART2`)'
+   ATcycle
+   au
+   write('line3','Determining 1 usec Pulse Stability ')
+   dps
+elseif ($1='PART2') then
+   wft
+
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+echo($stddev)
+   ATrecord('STAB1usecch1','1usec Pulse Stability ','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+echo($stddev)
+   write('file',autotestdir+'/REPORT','1 usec Pulse Stability : %3.2f percent',100-$stddev)
+
+  ATnext
+endif

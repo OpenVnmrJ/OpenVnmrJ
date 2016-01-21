@@ -1,0 +1,120 @@
+"macro xmemail"
+// email messages from experiment queue
+
+if appmode='imaging' then
+  return  // add options if needed
+endif
+
+if $#<0.5 then $1='study' endif
+$activestudy=activestudy[1]
+
+exists('email_','parameter'):$e
+if ($e) then
+  if email_<>'' then
+    substr(prescan[8],1,1):$s
+    substr(prescan[8],2,1):$f
+    substr(prescan[8],3,1):$er
+    $locstr=''
+    if (auto='y') and ($s='y' or $f='y') then
+      if (appmode='lc') then
+        $floc='' format(lcpeak,1,0):$floc
+        $locstr=$locstr+'   PEAK#: '+$floc+'\n'
+      else
+        $floc='' format(loc,1,0):$floc
+        if (traymax=96 or traymax=768) then
+          $fzone='' format(vzone,1,0):$fzone
+          $frack='' format(vrack,1,0):$frack
+          $locstr=$locstr+'   ZONE#: '+$fzone+'\n'
+          $locstr=$locstr+'   RACK#: '+$frack+'\n'
+        endif
+        $locstr=$locstr+' SAMPLE#: '+$floc+'\n'
+      endif
+    endif
+    xm1('studydir'):$sdir
+    if ($1='fid' and $f='y') then
+      $data='' $stat=''
+      xmgetatts(actionid,'data','status'):$data,$stat
+      if actionid='null' or $data='' then $data=file endif
+      $cmd='printf "'
+      $cmd=$cmd+$locstr
+      $cmd=$cmd+'    USER: '+operator+'\n'
+      $cmd=$cmd+'  SAMPLE: '+samplename+'\n'
+      $cmd=$cmd+' EXPLIST: '+pslabel+'\n'
+      $cmd=$cmd+' SOLVENT: '+solvent+'\n'
+      $cmd=$cmd+'NOTEBOOK: '+notebook+'\n'
+      $cmd=$cmd+'    PAGE: '+page+'\n'
+      $cmd=$cmd+'    DATA: '+$data+'\n'
+      if ($activestudy<>'null') then
+        $cmd=$cmd+'   STUDY: '+$sdir+'\n'
+        if ($stat<>'') then
+          $cmd=$cmd+'  STATUS: '+$stat+'\n'
+        endif
+      endif
+      $cmd=$cmd+'\nFid complete on '+instrument+'.\n'
+      isvnmrj('linux'):$e
+      if ($e>0.5) then
+        $cmd=$cmd+'" |mail -s "Fid complete" '+email_+';cat'
+      else
+        $cmd=$cmd+'" |mailx -s "Fid complete" '+email_+';cat'
+      endif
+      shell($cmd):$x
+    elseif ($1='study' and $s='y') then
+      $exp='' $stat=''
+      if ($activestudy<>'null') then
+        exists($sdir+'/studypar','file'):$e
+        if $e>0.5 then
+          rtv($sdir+'/studypar','scans','studystatus'):$exp,$stat
+        endif
+      endif
+      $cmd='printf "'
+      $cmd=$cmd+$locstr
+      $cmd=$cmd+'    USER: '+operator_+'\n'
+      $cmd=$cmd+'  SAMPLE: '+samplename+'\n'
+      $cmd=$cmd+' EXPLIST: '+$exp+'\n'
+      $cmd=$cmd+' SOLVENT: '+solvent+'\n'
+      $cmd=$cmd+'NOTEBOOK: '+notebook+'\n'
+      $cmd=$cmd+'    PAGE: '+page+'\n'
+      $cmd=$cmd+'   STUDY: '+$sdir+'\n'
+      $cmd=$cmd+'  STATUS: '+$stat+'\n'
+      if appmode='lc' then
+        $cmd=$cmd+'\nPeak complete on '+instrument+'.\n'
+      else
+        $cmd=$cmd+'\nStudy complete on '+instrument+'.\n'
+      endif
+      isvnmrj('linux'):$e
+      $std='Study'
+      if appmode='lc' then $std='Peak '+$floc endif
+      if ($e>0.5) then
+        $cmd=$cmd+'" |mail -s "'+$std+' complete" '+email_+';cat'
+      else
+        $cmd=$cmd+'" |mailx -s "'+$std+' complete" '+email_+';cat'
+      endif
+      shell($cmd):$x
+    elseif ($1='endrun' and $er='y') then
+      $stat='Complete'
+      if (appmode='lc') then
+        filepath(svfdir,lcid):$dir
+        $run='Run '+lcid
+      else
+        $dir=autodir
+        $run='Run '+autodir
+      endif
+      $cmd='printf "'
+      $cmd=$cmd+'    USER: '+operator_+'\n'
+      $cmd=$cmd+'  SAMPLE: '+samplename+'\n'
+      $cmd=$cmd+' SOLVENT: '+solvent+'\n'
+      $cmd=$cmd+'NOTEBOOK: '+notebook+'\n'
+      $cmd=$cmd+'    PAGE: '+page+'\n'
+      $cmd=$cmd+'     RUN: '+$dir+'\n'
+      $cmd=$cmd+'  STATUS: '+$stat+'\n'
+      $cmd=$cmd+'\nRun complete on '+instrument+'.\n'
+      isvnmrj('linux'):$e
+      if ($e>0.5) then
+        $cmd=$cmd+'" |mail -s "'+$run+' complete" '+email_+';cat'
+      else
+        $cmd=$cmd+'" |mailx -s "'+$run+' complete" '+email_+';cat'
+      endif
+      shell($cmd):$x
+    endif
+  endif
+endif

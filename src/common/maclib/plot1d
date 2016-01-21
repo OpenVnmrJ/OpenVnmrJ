@@ -1,0 +1,61 @@
+"macro plot1d"
+" plot1d - plotting macro for 1D spectra "
+
+$plotted=0
+$vp=vp $wc=wc $vs=vs $is=is $io=io
+
+" construct plotting macro name from 'pl' and character part of nucleus "
+format(tn,'lower'):$tn
+substr($tn,1,1):$tn1
+length($tn):$tnlen
+if $tnlen>2 then
+    substr($tn,2,1):$tn2
+    if typeof('$tn2') then
+    	$tn=$tn1+$tn2
+    else
+    	$tn=$tn1
+    endif
+else
+    if $tn<>'lk' then $tn=$tn1 endif
+endif
+$plmacro='pl'+$tn
+exists($plmacro,'maclib'):$e
+if $e then
+    exec($plmacro)		  " plh, plc, etc. "
+    $plotted=1
+endif
+if $plotted=0 then
+    $plotoptions='molecule','pl','axis','comments','params','logo','header','miniplot'
+    if auto='y' then f endif 
+    if intmod='full' then
+   	integ(sp,sp+wp):$maxint
+   	cz
+   	isadj($maxint)
+    endif
+    if intmod<>'off' then
+   	isadj(wc2max/5)
+    endif
+    if intmod = 'partial' then
+  	numreg:$numreg                    "must have regions for pir"
+  	if ($numreg > 0.5) then           "there are regions"
+    	    if vp < 12 then vp=12 endif
+    	    exists('intstyle','parameter','global'):$e
+    	    if $e then
+      		exec(intstyle)
+    	    else
+      		$plotoptions=$plotoptions,'intlist'
+    	    endif
+  	endif
+    endif
+    exists('pkpick','parameter','global'):$e
+    if $e then
+  	if pkpick<>'' then
+    	    exec(pkpick)
+    	    $plotoptions=$plotoptions,'linelist'
+  	endif
+    endif
+
+    doplotoption($plotoptions)
+    vp=$vp wc=$wc vs=$vs is=$is io=$io
+    page
+endif

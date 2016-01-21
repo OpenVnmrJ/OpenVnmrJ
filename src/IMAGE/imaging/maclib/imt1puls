@@ -1,0 +1,101 @@
+"macro imt1puls"
+"**********************************************************"
+"Setup and Processing for 1D T1 spectroscopy sequence"
+
+" Details: Run the t1puls sequence and set parameters
+"       p1 - 90 deg pulse
+"       p2 - 180 deg pulse
+"       tpwr1,tpwr2 - power levels calculated by imprep
+"       ti - inversion delay list; d2 is set to ti for sequence
+"
+" d2=ti array is set and T1 data collected
+" The spectral peak is found and T1 calculated from the spectra
+" ti is the inversion list. d2 is used in the pulse sequence
+" The sample must be shimmed to a single peak
+" or else T1's for multiple peaks are printed
+" The threshold must be set manually by the user
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  tof=resto-restol
+  rfl=rfl+rfladjust+rfloffset rfladjust=0 rfloffset=0
+  roff=roff+roffadjust roffadjust=0
+  imprep
+  wysiwyg='n'
+  d2=ti
+  if(ir <> 'y') then
+     write('error','ir flag not set')
+     abort
+  endif 
+
+  execseq('prep')  "Execute any sequence specific preparation"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+   f full wft(arraydim) ph aph0 "phase reference on last spectrum"
+   wft select(1) vsadj(40) dssh  "display all spectra"
+
+   write('line3','calculating  T1')
+   av
+   select(arraydim) vsadj(90) 
+//   th=30 
+   clear
+   dll
+   text('T1 Determination')
+   ph fp t1 center expl wc=80
+
+   "if (at_plotauto='y') then pexpl ATplreg pap page endif"
+
+   "extract the t1 value from the analyze.out file"
+   exists('t1','parameter'):$ex
+   if($ex < 1) then
+     create('t1')
+   endif
+
+   lookup('file',curexp+'/analyze.out')
+   lookup('skip',10,'read',1):t1
+   write('line3','T1 estimate is %1.3f sec ',t1)
+   t1=trunc(1000*t1)/1000
+
+   fn=4*np ft(arraydim) ph aph0 f vsadj peak:$ht,cr
+   if ($ht<0) then rp=rp+180 endif
+   dres
+   vp=0 f full
+   wexp=''
+   wnt=''
+   expl
+
+   execseq('proc')  "Execute any sequence specific processing"
+
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  imt1puls('prep')
+  
+  "not implemented"
+  if ($do = '') then
+    $do = prescan_exec[prescan_control[2]]
+  endif
+  
+  wexp = ''
+endif

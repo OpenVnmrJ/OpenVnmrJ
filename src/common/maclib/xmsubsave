@@ -1,0 +1,79 @@
+"macro xmsubsave"
+// save Active node of Queued sample
+
+if (appmode='walkup' or appmode='lc') and (studyid='tmpstudy' and sqsaveid<>'null' and actionid<>'null') then
+
+  $studyid=studyid
+  $sqdir=sqdir
+  $dir='' $dir=sqsaveid
+  $ch='' strstr($dir,1,1):$ch
+  if $ch<>'/' then $dir=autodir+'/'+$dir endif
+  sqdir=$dir
+  studyid=sqsaveid
+
+  xmselect('saveid')
+  xmgetatts(actionid,'status','time','title'):$nst,$ntime,$ntitle
+// check if node status is Active?
+
+// check if time over limit
+  $aq='' $op='' $aqstat='' $sttime=0
+  $aqfile=sqdir+'/studypar'
+  exists($aqfile,'file'):$e
+  if ($e) then
+    rtv($aqfile,'queue','studytime','operator_','studystatus'):$aq,$sttime,$op,$aqstat
+  endif
+  xmtime  // includes Active id's
+
+  $ret=1 $remain=0
+  sqsaveid='null'  // set before xmtime so it is ignored
+  if $aq='nightQ' then
+    $daystep=0
+    xmtime('nightmax'):$ret,$remain
+  elseif traymax>1.5 then
+    xmtime('daystep'):$daystep
+    $daystep=$daystep*60
+    if (studytime > $daystep) then $ret = -1 endif
+    $remain = $daystep - studytime
+  endif
+
+  if ($ret = -1) then
+    xmsetatts(actionid,'status','Skipped')
+    xm1('set',studyid+'_'+actionid,'status','Skipped')
+  endif
+
+  xmtime  // skip Skipped id's
+  xmtime('savepar',studytime)
+
+  if ($ret = -1) then
+    if ($aq<>'nightQ') then $remain=trunc(($daystep-studytime)/60) endif
+    write('error','Skipped %s, %g min remaining on sample %s.',$ntitle,$remain,studyid)
+  endif
+
+// set study tooltip
+  $tt=studyid+' '+$op+' '+$aq
+  if ($aqstat<>'Error' and $aqstat<>'Completed') then
+    formattime(studytime,'minutes'):$time
+    $tt=$tt+' ['+$time+']'
+  endif
+  $tt=$tt+' ['+$aqstat+']'
+  xm1('set',studyid,'tooltext',$tt)
+// set time in queue file
+  $sec = -($sttime - studytime)
+  if $aq='nightQ' then
+    xmtime('addnight',$sec)
+  else
+    xmtime('addday',$sec)
+  endif
+  xmwritesq('studyid=\\\''+studyid+'\\\' sqdir=\\\''+sqdir+'\\\'')
+
+  sqfilemenu('cleanupActive','only')
+// actionid='null'
+  studytime=0
+  studyid=$studyid
+  sqdir=$sqdir
+
+endif
+if (appmode='walkup' or appmode='lc') then
+  sqsaveid='null'
+  studyid='tmpstudy'
+endif

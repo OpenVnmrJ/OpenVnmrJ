@@ -1,0 +1,91 @@
+"macro setdsp"
+" setdsp  - adjust oversampling factor "
+"           three arguments required. first is 'on' to turn oversampling on "
+"           and 'off' to turn oversampling off"
+"           if on, then the second argument is the maximum possible sw "
+"           if on, then the third argument is the maximum np "
+
+if ($# <> 3) then
+   write('error','setdsp macro requires three arguments')
+   return
+endif
+exists('oversamp','parameter'):$e
+if ($1 = 'off') then
+   if ($e > 0.5) then
+      setvalue('oversamp',1)
+   endif
+   on('fb')
+   return
+else
+  if ($e > 0.5) then
+    on('oversamp'):$on
+    if ($on < 0.5) then
+      on('fb')
+      return
+    endif
+  endif
+endif
+if ($1 = 'on') then
+   exists('osfilt','parameter'):$e
+   if ($e < 0.5) then
+      paros
+   endif
+   if ($2 > 200001) then
+      $os = trunc(400001 / sw)
+      exists('qcomp','parameter','global'):$e
+      if ($e > 0.5) then
+        if (qcomp='y') then
+          $os=trunc(200001 / sw)
+        endif
+      endif
+      if (dsp = 'i') and ($os*(np+4) > $3) then
+         $os = trunc($3/(np+4))  " max np from _sw, 64k for G200HC, others 128k"
+         if $os > 20 then $os = 20 endif
+      endif
+      setlimit('oversamp',68,0,1)
+      if ($os > 68) then 
+         $os = 68
+      endif
+   else
+      $os = trunc($2 / sw)
+      if ($os > 20) then 
+         $os = 20
+      endif
+      "make sure $os doesn't make np too large"
+      if (dsp = 'i') and ($os*(np+4) > $3) then
+         $os = trunc($3/(np+4))  " max np from _sw, 64k for G200HC, others 128k"
+      endif
+      if (Console = 'mercury') then
+         if (($os * fb > 24999) and ($os * fb < 39999)) then
+            $os = trunc(25000 / fb)
+         endif
+      endif
+      substr(rftype,1,1):$rfchar
+      if (Console='g2000' and $rfchar='e') then
+         $swmax=2*fb    "fb set in _sw"
+         if ($os * sw > $swmax) then
+            $os = trunc($swmax / sw)
+         endif
+      endif
+      if (dsp = 'r') and (sw > 42000) then
+         if (osfilt = 'b') or (osfilt = 'B') then
+            $os = 1
+         endif
+      endif
+   endif
+   if ($os >= 2.0) then
+      oversamp = $os
+      sw = sw * oversamp  " this makes sure oversampled dwell periods are okay "
+      sw = sw / oversamp
+      if (dsp = 'i') then
+         oscoef = trunc(7.5 * oversamp)
+      else
+         oscoef = 'n'
+      endif
+      _fsq
+      off('fb')
+   else
+      oversamp = 1
+      on('fb')
+   endif
+endif

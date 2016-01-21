@@ -1,0 +1,85 @@
+"macro gs_testimg"
+
+"/***********************************************************************
+
+"gs_testimg - Acquire a test image
+
+"Details - A 3D image is acquired, processed and displayed
+"          testimg.fdf, testimg.fid saved in gshimdir/data
+
+
+
+"************************************************************************/
+$GSDIR = userdir+'/gshimdir/data'
+
+if(orient = 'oblique') then
+  write('error','%s: Illegal orientation, orient cannot be oblique',$macro)
+  abort
+endif  
+pss = pss0  "remove pss array for ge3dshim" 
+
+  "initialize fn parameters"
+  fn=np fn1=nv*2 fn2=nv2*2    "default fn parameters"
+  $zf = 1    "no zerofill done"
+  exists('zflag','parameter'):$ex
+  if($ex = 1) then
+    if(zflag = 'y') then
+      fn=np*2 fn1=nv*4 fn2=nv2*4  "zerofilled size for fdf header"
+      $zf = 2    "zerofill factor"
+    endif
+  endif
+
+shimmapfid=$GSDIR+'/testimg' 
+  
+rm('-rf',shimmapfid+'*'):$x
+$name = $GSDIR+'/testimg.param'
+"generate testimg.param file" 
+  write('reset',$name)  "create param file"
+  write('file',$name,'#DATASIZE')
+  write('file',$name,'%3d  %3d  %3d %3d',fn/2,fn1/2,fn2/2,$zf)  "zerofill 1=no; 2=yes"
+  write('file',$name,'#FOV-MM')
+  write('file',$name,'%4.0f  %4.0f  %4.0f ',lro*10,lpe*10,lpe2*10)   
+  write('file',$name, '#DELAY-MSEC')
+  $del = del*1000   "delay in msec"
+  write('file',$name, '%6.1f',$del)  
+  write('file',$name, '#THRESHOLD-PERCENT')
+  write('file',$name, '%6.0f ',thresh)      
+  write('file',$name, '#REFERENCE-DELAY-MSEC')
+  $delref = delref*1000   "delay in msec for ref scan; 0 otherwise"
+  write('file',$name, '%6.3f',$delref) 
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',orient,psi,phi,theta)
+  write('file',$name, '#OFFSET-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',pro*10,ppe*10,ppe2*10)
+  write('file',$name, '#SIZELIMIT-POINTS-RO-PE-PE2')  
+  write('file',$name, '%3d  %3d  %3d',rlimit,plimit,slimit)
+  write('file',$name, '#SLICE-THK-MM')
+  write('file',$name, '%6.1f ',thk)    
+  write('file',$name, '#SLICES')  
+  $ns = size('pss')
+  write('file',$name, '  %3d',$ns)  
+  write('file',$name, '#SLICE-POSITION-MM')  
+  $i=1
+  while ($i <= $ns) do
+    write('file',$name, '%6.1f',pss[$i]*10)
+    $i = $i+1
+  endwhile
+im3D('prep')
+
+"init fn parameters"
+gs_fdfhdr($GSDIR)   "create fdf header"
+$hdr = $GSDIR+'/testimg.hdr'
+rm('-f',$hdr):$x
+mv($GSDIR+'/header',$hdr)
+
+wdone='' werr=''
+wexp='filter(12) gf2=gf1 gfs2=gfs1 im3Dshim(`proc`) svf(shimmapfid) \
+      cp(curexp+`/datadir3d/data/img_slab001image001echo001.fdf`,shimmapfid+`.fdf`) gs_image(`testimg`)'     
+au
+
+"*****************************************************************
+"		Modification History
+
+" 20060915 - zerofill flag checked
+
+"*****************************************************************

@@ -1,0 +1,193 @@
+#!
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+ibUiTarget       = 'ib_ui'
+ibGraphicsTarget = 'ib_graphics'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ddlPath = os.path.join(cwd, os.pardir, 'ddl')
+SConscript(os.path.join(ddlPath, 'SConstruct'))
+SConscript(os.path.join(cwd, 'SConstruct.libsis'))
+SConscript(os.path.join(cwd, 'SConstruct.libparams'))
+libMagicalPath = os.path.join(cwd, 'magical')
+SConscript(os.path.join(libMagicalPath, 'SConstruct.libmagical'))
+
+# source files
+browserFile = 'browser'
+
+aipPath    = os.path.join(cwd, os.pardir, 'aip')
+aipHdrList = ['generic.h']
+
+sharedFileList = ['message.c']
+
+uiFileList = ['win_ui.c']
+
+sisFileList = ['graphics.c',
+               'siscms.c',
+               'image.c',
+               'image2.c',
+               'image3.c',
+               'image4.c',
+               'contrast.c',
+               'spline.c',
+               'filelist.c',
+               'expfile.c',
+               'menu_dir.c',
+               'initstart.c',
+               'ipgwin.c',
+               'msgprt.c',
+               'prim_line.c',
+               'confirmwin.c']
+
+ddlFileList = ['ddlnode2.c',
+               'ddlsymtab.c',
+               'scanner.c',
+               'parser.c',
+               'misc.c',
+               'action.c',
+               'ddl.c']
+
+paramsFileList = ['error.c',
+                  'debug_alloc.c',
+                  'params.c',
+                  'tree.c',
+                  'stack.c']
+
+ibFileList = ['common.c',
+              'imagelist.c',
+              'interrupt.c',
+              'macroexec.c',
+              'parmlist.c',
+              'win_graphics.c']
+
+gToolsFrozenFileList = ['edgelist.c',
+                        'stringedit.c',
+                        'xview-keycodes.c']
+
+gToolsDebugFileList = ['box.c',
+                       'file_format.c',
+                       'frame_data.c',
+                       'frame_select.c',
+                       'gframe.c',
+                       'gtools.c',
+                       'ib_gframe.c',
+                       'label.c',
+                       'line.c',
+                       'oval.c',
+                       'polygon.c',
+                       'point.c',
+                       'roitool.c',
+                       'voldata.c',
+                       'vs.c',
+                       'zoom.c']
+
+gToolsFileList = gToolsFrozenFileList + gToolsDebugFileList
+
+processFileList = ['arithmetic.c',
+                   'filter.c',
+                   'axis.c',
+                   'histenhance.c',
+                   'math.c',
+                   'statistics.c',
+                   'win_arithmetic.c',
+                   'win_math.c',
+                   'win_filter.c',
+                   'win_histenhance.c',
+                   'win_rotation.c',
+                   'win_stat.c']
+
+infoFileList = ['win_point_info.c',
+                'win_line_info.c']
+
+movieFileList = ['win_movie.c',
+                 'framelist.c']
+
+sisFileList = ['sisfile.c',
+               'ddlfile.c',
+               'imginfo.c']
+
+convertFileList = ['convert.c']
+
+inputWinFileList = ['inputwin.c']
+
+gluerFileList = ['crc.c']
+
+graphicsFileList = ibFileList + \
+                   gToolsFileList + \
+                   processFileList + \
+                   movieFileList + \
+                   infoFileList + \
+                   sisFileList + \
+                   convertFileList + \
+                   inputWinFileList + \
+                   gluerFileList
+
+frozenFileList = inputWinFileList + \
+                 gluerFileList + \
+                 convertFileList + \
+                 gToolsFrozenFileList + \
+                 sharedFileList
+
+# openwin/lib location of xview library    GMB
+# some systems /usr/openwin is 64-bit thus on those
+# we've created the /usr/openwin32 
+openWinHome = os.path.join(os.sep, 'usr', 'openwin')
+openWinHome32 = os.path.join(os.sep, 'usr', 'openwin32')
+
+# build environments
+ibEnv = Environment(CC         = 'g++',
+                    CCFLAGS    = '-m32 -O',
+                    CPPDEFINES = ['LINUX'], #DEBUG
+                    LINKFLAGS  = '-m32 -Bstatic -Wl,-rpath /vnmr/lib ',
+                    CPPPATH    = [cwd,
+                                  os.path.join(openWinHome32, 'include'),
+                                  os.path.join(openWinHome, 'include')],
+                    LIBPATH    = [cwd,
+                                  libMagicalPath,
+                                  ddlPath,
+                                  os.path.join(os.sep, 'usr', 'X11R6', 'lib'),
+                                  os.path.join(openWinHome32, 'lib'),
+                                  os.path.join(openWinHome, 'lib')],
+                    LIBS       = ['sis', 'params', 'xview', 'olgx',
+                                  'dl', 'ddl', 'magical', 'Xt', 'X11',
+                                  'Xm', 'm'])
+
+buildMethods.makeSymLinks(ibEnv, ibGraphicsTarget, cwd, aipPath, aipHdrList)
+
+# actual builds
+sharedObjs = ibEnv.SharedObject(source = sharedFileList)
+ibEnv.Depends(target     = sharedObjs,
+              dependency = os.path.join(libMagicalPath, 'libmagical.a'))
+
+ibUi = ibEnv.Program(target = ibUiTarget,
+                     source = [uiFileList,
+                               sharedObjs])
+
+ibGraphics = ibEnv.Program(target = ibGraphicsTarget,
+                           source = [graphicsFileList,
+                                     sharedObjs])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+ibEnv.AddPostAction(ibUi,
+                    Action(Copy(installPath, os.path.join(cwd, ibUiTarget))))
+ibEnv.AddPostAction(ibUi,
+                    Action(Copy(installPath, os.path.join(cwd, browserFile))))
+ibEnv.AddPostAction(ibGraphics,
+                    Action(Copy(installPath, os.path.join(cwd, ibGraphicsTarget))))
+

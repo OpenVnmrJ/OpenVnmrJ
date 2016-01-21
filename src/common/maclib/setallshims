@@ -1,0 +1,40 @@
+"macro setallshims"
+
+if (system <> 'spectrometer') then
+  write('error','Cannot set shims from a datastation.')
+  return
+endif
+
+"note no z0"
+$dacname=''
+if ($#) then
+  $names=$1
+  substr($names,'wc'):$ns
+  if ($ns < 1) then return endif
+else
+  shimnames:$names,$ns
+endif
+$v = 1
+while ($v <= $ns) do
+  substr($names,$v):$dacname[$v]
+  $v = $v + 1
+endwhile
+
+"set up to 9 shims at a time"
+$num = 9
+$v=0
+while ($v < $ns) do
+  $v = $v + 1
+  $set  = 'sethw('
+  $set = $set + '\'nowait\','
+  $set  = $set + '\'' + $dacname[$v] + '\',' + $dacname[$v]
+  $c=1
+  while ($v < $ns) and ($c < $num) do
+    $v = $v + 1
+    $set  = $set + ',\'' + $dacname[$v] + '\',' + $dacname[$v]
+    $c=$c+1
+  endwhile
+  $set = $set + '):$e'
+  exec($set)
+endwhile
+load='n'

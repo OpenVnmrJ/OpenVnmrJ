@@ -1,0 +1,182 @@
+"macro refreshtraycolor"
+"***************************************************************"
+" refreshtraycolor - A utility macro to refresh tray display	"
+"   for any color errors.  					"
+"   1. If the location is the current sample in showstat:       "
+"       Color is updated as Blue (Active)                       "
+"   2. If the location is in enterQ or overnightQ:		"
+"	Color is updated based on the last entry for that loc	"
+"   3. If the location is not in eQ or nQ, but is in cpdoneQ:	"
+"	Color is updated as Green (Completed)			"
+"   4. If the location is not in eQ or nQ, but is in cperrorQ:	"
+"	Color is updated as Red (Error)				"
+"   5. All else:						"
+"	Color is set to gray (empty location)			"
+"   Usage:  refreshtraycolor(startloc,<endloc>)			"
+"   Requires a tray to be displayed to begin with		"
+"***************************************************************"
+$tailX='tail'
+whichtail:$tailX
+if (traymax<2) then return endif
+
+	"Check proper conditions"
+if ($# <> 2) and ($# <> 4) then
+   write('error','Usage: refreshtraycolor(startloc,endloc,<zone,rack>)')
+   return
+endif
+if typeof('$1') then format($1,'lower'):$start else $start=$1 endif
+if typeof('$2') then format($2,'lower'):$end else $end=$2 endif
+
+"****************************************************************"
+	"Determine if the display is globalenter or autodir"
+$autodir2=autodir
+strstr(autodir,'studytray'):$isenter
+if ($isenter) then
+   $autodir=globalenter
+   $basename=''
+   shell('basename '+globalenter):$basename
+else
+   $autodir=autodir
+   $basename='enterQ'
+   $autodir2=$autodir+'/enterQ.macdir/studytray'
+endif
+
+$rack='' $zone='' $subtray=''
+if (traymax=96) or (traymax=768) then
+   format(vrack,'lower'):$rack
+   format(vzone,'lower'):$zone
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+endif
+if ($# > 3) then
+   format($3,'lower'):$zone
+   format($4,'lower'):$rack
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+endif
+   if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+$eQ=$autodir+'/'+$basename
+$nQ=$autodir+'/'+$basename+'.macdir/overniteQ'
+expactive('auto'):$isauto
+checksample:$cursample
+
+$refloc=0
+$lastsample='current'
+getadminfo('lastsample'):$lastsample
+format($lastsample,'isreal'):$real
+if ($real) then
+    format($lastsample,'lower'):$refloc
+elseif ($lastsample='traymax') then
+    $refloc=traymax
+    if (traymax=97) then $refloc=96 endif
+endif
+if (traymax=96) or (traymax=768) then $refloc=0 endif
+
+"****************************************************************"
+	"For every location between $start to $end do...."
+        $lastsample='current'
+        getadminfo('lastsample'):$lastsample
+
+$i=$start
+repeat
+    write('reset',curexp+'/tempQ')
+    $location='' $loc=$i
+    format($i,0,0):$location
+    $sdir=$autodir2+$subtray+'/loc'+$location
+    $done=0
+    $macro='' $locdir='' $when='' $status=''
+
+	"******Is it the active location?"
+    if ($isauto>0) and ($cursample=$i) and ($basename='enterQ') and ($done=0) then
+	shell('(cat '+$eQ+'.macdir/currentsampleinfo | grep -w MACRO:)'):$macro
+    	if ($macro<>'') then
+		$status='Active'
+        	substr($macro,2):$macro
+        	$s1='' $s2='' $s3=''
+        	strstr($macro,'\''):$ret,$s1,$s2
+        	strstr($s2,'\''):$ret,$locdir,$s1
+		$done=1
+	endif
+    endif
+
+	"*****Is it in enterQ or overniteQ?"
+    if ($done=0) then
+    	shell('(cat '+$eQ+' | grep -w MACRO: | grep loc'+$location+'_ > '+curexp+'/tempQ)'):$dum
+    	shell('(cat '+$nQ+' | grep -w MACRO: | grep loc'+$location+'_ >> '+curexp+'/tempQ)'):$dum
+    	shell('(cat '+curexp+'/tempQ | '+$tailX+' -n 1)'):$macro
+	if ($macro<>'') then
+        	substr($macro,2):$macro
+        	$s1='' $s2='' $s3=''
+        	strstr($macro,'\''):$ret,$s1,$s2
+        	strstr($s2,'\''):$ret,$locdir,$s1
+        	strstr($s1,'\''):$ret,$s3,$s2
+        	strstr($s2,'\''):$ret,$when
+		$status='Queued'
+		if ($when='night') then $status='NightQueue' endif
+		$done=1
+	endif
+    endif
+
+	"*****Is it in cpdoneQ?"
+    if ($done=0) then
+	$sampnum='SAMPLE#: '+$location
+	shell('(cat '+$eQ+'.macdir/cpdoneQ | grep -w "'+$sampnum+'")'):$macro
+	if ($macro<>'') then
+	   	$status='Complete'
+		substr($macro,4):$locdir
+	   	$done=1	
+	endif
+    endif
+
+        "****Is it in cperrorQ?"
+    if ($done=0) then
+        $sampnum='SAMPLE#: '+$location
+        shell('(cat '+$eQ+'.macdir/cperrorQ | grep -w "'+$sampnum+'")'):$macro
+        if ($macro<>'') then
+                $status='Error'
+                substr($macro,4):$locdir
+                $done=1
+        endif
+    endif
+
+	"*** Is it a reference location?***"
+    if ($done=0) and ($i=$refloc) then
+		$status='Active'
+		$status='Reference'
+		$locdir=''
+		$done=1
+    endif
+
+    if ($locdir<>'') then
+	exists($eQ+'.macdir/'+$locdir+'/Studypar','file'):$fileex
+	if ($fileex) then
+	   exists($sdir,'directory'):$direx
+	   if ($direx=0) then shell('mkdir -p '+$sdir):$dum endif
+	   shell('cp '+$eQ+'.macdir/'+$locdir+'/Studypar '+$sdir+'/studypar'):$dum
+	endif
+    endif
+    if ($done=0) then
+        exists($sdir,'directory'):$direx
+	if ($direx) then shell('rm -rf '+$sdir):$dum endif
+    endif
+    exists($sdir+'/studypar','file'):$fileex
+    if ($fileex) then
+      if ($## < 1) then
+        write('line3','Updating location %d',$i)
+      endif
+	$return=0
+        updatestatus($autodir,$i,$status,$zone,$rack):$return
+	if ($return=0) then
+	   write('error','Location %d color update failed',$i)
+	endif
+    else
+	if ($## < 1) then
+		clearloccolor($i,$i,$zone,$rack)
+	else
+		clearloccolor($i,$i,$zone,$rack):$dum
+	endif
+    endif
+
+    $i=$i+1
+until $i > $end
+
+"****************************************************************"

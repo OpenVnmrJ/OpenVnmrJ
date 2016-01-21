@@ -1,0 +1,96 @@
+"macro BP_mdd2v"
+"           BP_mdd2v(name1,name2,'se' or 'states') for VJ data->MDD ->VJ fid"
+"           BP_mdd2v(name1,name2) for conversion of existing MDD data to VJ fid"
+
+$fname1='' $fname2=''  $port='' $cmd=''  $ok = ''  $log = '' 
+
+BPfindfile('mdd2v'):$mdd2v
+BPfindfile('BPmdd_wait'):$BPmdd_wait
+BPcopy_to_bin('mddnmr4varian')  "copies mddnmr4varian program to user bin"
+                                "if not present in user bin or /vnmr/bin "
+
+serverport:$port
+
+if($#<2) then
+  write('error','usage: BP_mdd2v(origfile, newfile, <SE or STATES>)')
+  return
+endif
+
+$fname1=$1  " VJ panel name entered is svfdir/svfname"
+$fname2=$2  " VJ panel name is automatically svfdir/svfname+'_mdd'"
+
+getext($fname1):$cmd,$ok     " check for the .fid extensions "
+if not ($ok = 'fid') then 
+  $fname1 = $fname1+'.fid'
+endif
+
+getext($fname2):$cmd,$ok
+if not ($ok = 'fid') then 
+  $fname2 = $fname2+'.fid'
+endif
+
+exists($fname2,'directory'):$e   
+if($e) then
+  $cmd = 'file ' + $fname2 + ' exists. Remove ? (y/n) : '
+  input($cmd):$ok
+  if($ok='y') then 
+    $cmd = 'rm -r ' + $fname2
+    shell($cmd)
+  else return
+  endif
+endif
+
+if($# > 2) then                      " full processing "
+  BP_v2mdd($fname1,$3)         
+  exists($fname1+'/fid.v2m','file'):$e  "conversion worked"
+  if($e) then
+    BPrun_mdd($fname1)               "start MDD processing"
+    shell('sleep 2')
+    exists($fname1+'/regions.runs','file'):$e
+    if($e) then                      "MDD is working"
+      write('line3','The MDD data processing has started.')
+      banner('The MDD processing has started.')
+    else
+      $log = $fname1+'/BPmdd.log'
+      exists($log,'file'):$e
+      if ($e) then
+        write('error','The MDD processing failed to start. See %s for details',$log)
+        cat($log)
+        return
+      else                           "wait a little longer "
+        shell('sleep 2')
+        exists($fname1+'/regions.runs','file'):$e
+        if($e) then                      "MDD is working"
+          write('line3','The MDD data processing has started.')
+          banner('The MDD processing has started.')
+        else
+          write('error','The MDD processing failed to start.')
+          exists($log,'file'):$e
+          if($e) then 
+            cat($log)
+          endif
+          return
+        endif
+      endif        
+    endif
+  else
+    write('line3','BP_mdd2v: VnmrJ to MDD conversion failed')
+    return
+  endif
+  $cmd = $BPmdd_wait +' ' + $fname1 + ' ' + $fname2 + ' ' +$mdd2v+ ' ' + $port + ' &'
+  shell($cmd)         "wait until done and then make VJ fid"
+  return
+else                  "simple conversion of MDD data to VJ data"
+  $log = $fname2 + '/mdd2v.log'
+  $cmd = $mdd2v +' '+$fname1+' '+$fname2+' > mdd2v.log; mv mdd2v.log '+$log
+  shell($cmd)
+  exists($fname2+'/fid','file'):$e
+  if not ($e) then
+    write('error','BP_mdd2v: MDD to VJ data conversion failed')
+  else
+    write('line3','The MDD to VJ data conversion finished. See %s for details. \n', $log)
+    rt($fname2)
+    ft(1)
+    vsadj
+  endif
+endif

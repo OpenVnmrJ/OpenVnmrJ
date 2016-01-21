@@ -1,0 +1,109 @@
+Protocol: Wisetancp2d  Sequence: wisetancp2d.c  Apptype: solidseq1d
+
+Description: 
+
+2D correlation between the X chemical shift and the proton wideline 
+spectrum using constant, linear or tangent-ramped cross polarization 
+(CP) between proton and X with a choice of SPINAL64 or TPPM decoupling. 
+Used for separation of the proton wideline spectra of 13C-1H pairs with 
+tHmix = 0 and for spin diffusion measurements with tHmix > 0.0.  
+
+Additional Software: 
+
+reset_wisetancp2d - This macro sets par2d and is run with the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Wisetancp2d.   For a 
+new nucleus calibrate CP with Onepul and Tancpx and the select 
+Tancpxtoss.  
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file 
+onepul describes calibration of decoupling. 
+
+Select 2D acquisition on the Acquisition page and set sw1 = 2.0e5 to 
+5.0e5. Set ni = 32 and phase =1,2. 
+
+Select a spin diffusion mixing period tHmix = 0 if the goal is just to 
+separate wideline data in the second dimension.  Motionally averaged 
+groups have narrow wideline spectra and rigid groups have spectra of 
+the order of 50 kHz wide. Set tHmix > 0.0 to correlate domains of 
+motion with rigid domains through spin diffusion.  tHmix is short (0.0 
+to 1.0 ms) to correlate molecular sites and can be greater to correlate 
+large domains. 
+
+Collect a 2D spectrum and process with wft2da. 
+
+Parameter Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c 
+Description:  Provides a 90-degree pulse on dec that can be used as a
+              preparation pulse. Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the 
+              channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).  
+       dHX - amplitude width of the ramp. A negative width sets a ramp 
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be 
+              set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be set 
+              - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phXhx);  
+
+tHmix: - (parameter) the time for spin diffusion mixing.
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c    
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+              getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes 
+Sequence:  tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented with 
+              phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec); 
+              and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec); 
+              and _dseqoff(dec);   

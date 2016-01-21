@@ -1,0 +1,185 @@
+"macro HTcal"
+"Hadamard Calibration Routines "
+"Eriks Kupce, Varian R&D, Oxford"
+
+$ok='Hadamard calibration finished.'
+$err='Hadamard calibration failed. Do basic calibration.'
+
+if ($#<1) then
+  write('error','HTcal: arguments required.')
+  return
+endif
+
+if (tn<>'H1') then
+  write('error','HTcal: tn must be H-1. Aborting...')
+  return
+endif
+
+exists('HTcexp','parameter'):$e
+if not ($e) then
+  create('HTcexp','string')
+endif
+
+if ($1='H1') then
+  HTcexp=seqfil
+  $size = size('htfrq1')
+  if ($size<2) then
+    if(lb1<5) then 
+      lb1=20
+    endif
+    moveHT
+  endif
+  $pw=pw 
+  if not (seqfil='tocsyHT') then
+    tocsyHT
+  else
+    $mix = mix
+  endif
+  vnmrjcmd('setpage','Acquire','Cal_HT')
+  mix=0 pw=$pw
+  htcal1=ni
+  ni=0 
+  r1=0 r2=0 r3=0 r4=0   
+  array('htpwr1',11,-5,1)
+  wnt='HTcal(`proc1`)'
+  wexp='HTcal(`proc2`)'
+  au 
+elseif ($1='proc1') then
+
+  if (celem=1) then 
+    wft f dc vsadj(20)
+  endif
+  wft dssh('dodc')
+  select(celem) 
+  f dc peak:r1,r2   
+  if(r1>r3) then 
+    r3=r1 r4=celem 
+  endif 
+ 
+  if (r4>1) and (r4<celem) and (r1<0) then
+    aa 
+    if(array='Gratio') then 
+      HTcal('proc3')
+    else
+      HTcal('proc2')
+    endif
+  endif
+
+elseif ($1='proc2') then
+  if (r4>9) or(r4<3) then 
+    write('error','%s', $err)
+    return
+  else
+    if(r4=6) then
+      banner('Calibration correct.')
+      ph ni=htcal1 htcal1=0 htpwr1=0 wexp='' wnt='' {HTcexp}
+      return
+    endif  
+    $db=htpwr1[r4]
+    HTfla(r4):$m1       
+    $m1 = 90/$m1         
+    exp($db*2.303/20):$m2    
+    if(seqfil='hsqcHT') then
+      compX=compX*$m1*$m2  
+      write('line3','new compression factor = %.4f', compX)
+      $comp=compX $c13=1
+    else
+      compH=compH*$m1*$m2  
+      write('line3','new compression factor = %.4f', compH)
+      $comp=compH $c13=0
+    endif
+    banner($ok) 
+    ph ni=htcal1 htcal1=0 htpwr1=0 wexp='' wnt='' 
+    $pw=pw 
+    {HTcexp}
+    pw=$pw
+    if($c13) then compX=$comp
+    else compH=$comp
+    endif
+  endif  
+elseif ($1='proc3') then
+  if(r5>3) then
+    write('calibration error','%s', $err)
+    return
+  endif
+  if (r5<0.5) then 
+    $g=Gratio[r4]-0.05
+    array('Gratio',11,$g,0.01)
+    r1=0 r2=0 r3=0 r4=0
+    au
+  elseif (r4>9) or(r4<3) then 
+    $g=Gratio[r4]-0.05
+    array('Gratio',11,$g,0.01)
+    r1=0 r2=0 r3=0 r4=0
+    au
+  else
+    $pw=pw $pwx=pwx $g=Gratio[r4]
+    write('line3','new Gratio = %.4f', Gratio[r4])   
+    banner($ok)
+    ni=htcal1 htcal1=0 htpwr1=0 wexp='' wnt='' 
+    {HTcexp}
+    pw=$pw pwx=$pwx Gratio=$g ph 
+  endif    
+  r5=r5+1
+elseif ($1='C13') then
+  HTcexp=seqfil
+  if not (seqfil='hsqcHT') then
+    $pw=pw 
+    exists('pwx','parameter'):$e
+    if($e) then
+      $pwx=pwx
+    endif
+    hsqcHT pw=$pw
+    if($e) then
+      $pwx=pwx
+    endif 
+    if (r7>0) then
+      importHT(r7)
+    endif 
+  endif
+
+  htcal1=ni zz='y'
+  ni=0 r1=0 r2=0 r3=0 r4=0  
+  if (nt<2) then 
+    nt=2
+  endif 
+  array('htpwr1',11,-5,1)
+  wnt='HTcal(`proc1`)'
+  wexp='HTcal(`proc2`)'
+  av
+  au 
+elseif ($1='grad') then
+  HTcexp=seqfil
+  if not (seqfil='hsqcHT') then
+    $pw=pw 
+    exists('pwx','parameter'):$e
+    if($e) then
+      $pwx=pwx
+    endif
+    hsqcHT pw=$pw
+    if($e) then
+      $pwx=pwx
+    endif 
+    if (r7>0) then
+      importHT(r7)
+    endif 
+  endif
+
+  htcal1=ni
+  ni=0 r1=0 r2=0 r3=0 r4=0  
+  if (nt<4) then 
+    nt=4 
+  endif 
+  if (seqfil='hsqcHT') then
+    zz='n' 
+  endif
+  r5=0 $g=Gratio-0.20
+  array('Gratio',11,$g,0.04)
+  wnt='HTcal(`proc1`)'
+  wexp='HTcal(`proc3`)'
+  av
+  au 
+endif
+
+
+  

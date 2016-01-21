@@ -1,0 +1,447 @@
+"macro BuildPersonaXml"
+"****************************************************************************"
+
+    $dir=userdir+'/templates/vnmrj/panelitems'
+    exists($dir,'directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$dir):$dum
+    endif
+    exists('PersonaBuilder_ParamConfig.xml','templates/vnmrj/panelitems'):$ex1
+    exists('PersonaBuilder_ToolPanelsConfig.xml','templates/vnmrj/panelitems'):$ex2
+    exists('PersonaBuilder_VertPanelsConfig.xml','templates/vnmrj/panelitems'):$ex3
+    exists('PersonaBuilder_MenuConfig.xml','templates/vnmrj/panelitems'):$ex4
+
+    if ($ex1) and ($ex2) and ($ex3) and ($ex4) and ($##>0) then
+	$build=0
+    else
+	$build=1
+    endif
+
+// Define parameters
+    $ppA='' $ppB='' $ppC='' $ppD='' $ppE=''
+    $pp1='Parameter','open','BASIC','other_panels','open','OTHER'
+    $i=1
+
+// VJ31 panel group
+    $ppA[$i]='start_login','open',''                                      $i=$i+3
+    $ppA[$i]='start_standard','open',''                                   $i=$i+3
+    $ppA[$i]='start_lock','open','Lock'                                   $i=$i+3
+    $ppA[$i]='start_shim','open','Shim'                                   $i=$i+3
+    $ppA[$i]='start_proshim','open','Proshim'                             $i=$i+3
+    $ppA[$i]='start_spintemp','open','Spin/Temp'                          $i=$i+3
+
+//postVJ31 panel group
+//    $ppA[$i]='setup_login','open',''                                      $i=$i+3
+//    $ppA[$i]='setup_standard','open',''                                   $i=$i+3
+//    $ppA[$i]='setup_lock','open','Lock'                                   $i=$i+3
+//    $ppA[$i]='setup_shim','open','Shim'                                   $i=$i+3
+//    $ppA[$i]='setup_proshim','open','Proshim'                             $i=$i+3
+//    $ppA[$i]='setup_spintemp','open','Spin/Temp'                          $i=$i+3
+
+// VJ31 and postVJ31 panel group
+    $i=1
+    $ppB[$i]='acquire_default','open',''                                  $i=$i+3
+    $ppB[$i]='acquire_acquisition','open','Acquisition'                   $i=$i+3
+    $ppB[$i]='acquire_pulsesequence','open','PulseSequence'               $i=$i+3
+    $ppB[$i]='acquire_presat','open','PRESAT'                             $i=$i+3
+    $ppB[$i]='acquire_wet','open','WET'                                   $i=$i+3
+    $ppB[$i]='acquire_parameters','open',''                     $i=$i+3
+    $ppB[$i]='acquire_channels','open','Channels'                         $i=$i+3
+    $ppB[$i]='acquire_flags','open','Flags'                               $i=$i+3
+    $ppB[$i]='acquire_futureactions','open','Future Actions'              $i=$i+3
+    $ppB[$i]='acquire_overview','open','Overview'                         $i=$i+3
+    $ppB[$i]='acquire_procplotadv','open','Advanced Customization'        $i=$i+3
+
+// VJ31 panel group
+    $i=1
+    $ppC[$i]='process_basic','open','Basic'                                    $i=$i+3
+    $ppC[$i]='process_default','open','Default'                                  $i=$i+3
+    $ppC[$i]='process_weighting','open','Weighting'                       $i=$i+3
+    $ppC[$i]='process_display','open','Display'                           $i=$i+3
+    $ppC[$i]='process_more1d','open','More1D'                             $i=$i+3
+    $ppC[$i]='process_more2d','open','More2D'                             $i=$i+3
+    $ppC[$i]='process_integration','open','Integration'                   $i=$i+3
+    $ppC[$i]='process_cursorslinelist','open','Cursors LineList'          $i=$i+3
+    $ppC[$i]='process_plot1d','open','Plot1D'                             $i=$i+3
+    $ppC[$i]='process_plot2d','open','Plot2D'                             $i=$i+3
+    $ppC[$i]='process_quantitation','open','qNMR'                         $i=$i+3
+    $ppC[$i]='process_relaxanalysis','open','T1/T2 Analysis'              $i=$i+3
+    $ppC[$i]='process_textoutput','open',''                    $i=$i+3
+
+//postVJ31 panel gruops
+//    $ppC[$i]='process_basic','open','Basic'                                    $i=$i+3
+//    $ppC[$i]='process_default','open','Default'                                  $i=$i+3
+//    $ppC[$i]='process_weighting','open','Weighting'                       $i=$i+3
+//    $ppC[$i]='process_more1d','open','More1D'                             $i=$i+3
+//    $ppC[$i]='process_more2d','open','More2D'                             $i=$i+3
+//    $ppC[$i]='process_quantitation','open','qNMR'                         $i=$i+3
+//    $ppC[$i]='process_relaxanalysis','open','T1/T2 Analysis'              $i=$i+3
+//    $ppC[$i]='process_textoutput','open',''                    $i=$i+3
+
+//    $i=1
+//    $ppD[$i]='display_default','open','Default'                           $i=$i+3
+//    $ppD[$i]='display_display','open','Display'                           $i=$i+3
+//    $ppD[$i]='display_integration','open','Integration'                   $i=$i+3
+//    $ppD[$i]='display_linelist','open','LineList'          $i=$i+3
+//    $ppD[$i]='display_peaks','open','Peaks'                               $i=$i+3
+
+//    $i=1
+//    $ppE[$i]='plot_basic','open','Basic'                                  $i=$i+3
+//    $ppE[$i]='plot_plot1d','open','Plot1D'                             $i=$i+3
+//    $ppE[$i]='plot_plot2d','open','Plot2D'                             $i=$i+3
+
+    $Enabled='start_standard','Standard','acquire_default','Default','process_textoutput','Text Output'
+//    $Enabled='setup_standard','Standard','acquire_default','Default','process_textoutput','Text Output'
+
+    $i=1
+    $tp[$i]='cmdLine','yes','Command Line'                     $i=$i+3
+    $tp[$i]='HardwareTool','open','Hardware Toolbar'           $i=$i+3
+    $tp[$i]='SystemTool','open','System Toolbar'               $i=$i+3
+    $tp[$i]='UserTool','open','User Toolbar'                   $i=$i+3
+    $tp[$i]='GraphicsTool','open','Graphics Toolbar'           $i=$i+3
+
+    $i=1
+    $vp[$i]='Frame','open','Frame Panel'                       $i=$i+3
+    $vp[$i]='QuickSubmit','open','QuickSubmit Panel'           $i=$i+3
+    $vp[$i]='Viewport','open','Viewport Panel'                 $i=$i+3
+    $vp[$i]='ProcessPlot','open','ProcessPlot Panel'           $i=$i+3
+    $vp[$i]='Cryo','open','Cryo Panel'                         $i=$i+3
+    $vp[$i]='ArrayedSpectra','open','ArrayedSpectra Panel'     $i=$i+3
+    $vp[$i]='ExperimentSelector','open','Experiment Selector'  $i=$i+3
+    $vp[$i]='ExperimentSelTree','open','Experiment SelTree'	$i=$i+3
+    $vp[$i]='Sq','open','Study Queue'                          $i=$i+3
+
+    $i=1
+    $mp[$i]='MainMenuFile','show','File'                $i=$i+3
+    $mp[$i]='MainMenuEdit','show','Edit'                $i=$i+3
+    $mp[$i]='MainMenuExpts','show','Experiments'        $i=$i+3
+    $mp[$i]='MainMenuAcquire','show','Acquisition'      $i=$i+3
+    $mp[$i]='MainMenuAuto','show','Automation'          $i=$i+3
+    $mp[$i]='MainMenuProcess','show','Process'          $i=$i+3
+    $mp[$i]='MainMenuTools','show','Tools'              $i=$i+3
+    $mp[$i]='MainMenuHelp','show','Help'                $i=$i+3
+
+    $i=1
+    $mp2[$i]='MainMenuFile2','show','File'              $i=$i+3
+    $mp2[$i]='MainMenuEdit2','show','Edit'              $i=$i+3
+
+	$p1=$tp,$vp
+	$p2=$mp,$mp2
+	$p3=$pp1,$ppA,$ppB,$ppC
+//	$p3=$p3,$ppD,$ppE
+	if ($build = 0) then return($p1,$p2,$p3) endif
+
+// Now build the panelitems
+
+// ParamConfig 
+    $xml=$dir+'/PersonaBuilder_ParamConfig.xml'
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<!-- Do NOT edit this file manually.  Use %s macro -->',$0)
+    write('file',$xml,'<template name="PersonaBuilder_ParamConfig" element="groups" type="acquisition" >')
+
+    write('file',$xml,'   <group size="710 370"')
+    write('file',$xml,'     bg="transparent"')
+    write('file',$xml,'     border="None"')
+    write('file',$xml,'     useref="no"')
+    write('file',$xml,'     tab="no"')
+    write('file',$xml,'     subtype="Basic"')
+    write('file',$xml,'     expanded="yes"')
+    write('file',$xml,'     >')
+
+    write('file',$xml,'     <check loc="15 0" size="300 20" style="Heading1"')
+    write('file',$xml,'       fg="darkRed" label="Enable Parameter Panels"')
+    write('file',$xml,'       vq="personaPpPar"')
+    write('file',$xml,'       vc="personaPpPar[2]=\'open\'" vc2="personaPpPar[2]=\'close\'"')
+    write('file',$xml,'       set="$VALUE=(personaPpPar[2]=\'open\')"')
+    write('file',$xml,'       />')
+
+    write('file',$xml,'     <check loc="320 0" size="300 20" style="Label1"')
+    write('file',$xml,'       fg="darkRed" label="Enable all other Panels Not listed below"')
+    write('file',$xml,'       vq="personaPpPar"')
+    write('file',$xml,'       show="$ENABLE=(personaPpPar[2]=\'open\')*2-1"')
+    write('file',$xml,'       vc="personaPpPar[5]=\'open\'" vc2="personaPpPar[5]=\'close\'"')
+    write('file',$xml,'       set="$VALUE=(personaPpPar[5]=\'open\')"')
+    write('file',$xml,'       />')
+
+    $t1=size('$ppA')
+    $t2=size('$ppB')
+    $t3=size('$ppC')
+    $t4=size('$ppD')
+    $t5=size('$ppE')
+
+    $x=5
+//    write('file',$xml,'    <group loc="%d 30" size="220 150"',$x)
+    write('file',$xml,'    <group loc="%d 30" size="220 340"',$x)
+    write('file',$xml,'      border="Etched" bg="transparent"')
+    write('file',$xml,'      subtype="Basic"')
+    write('file',$xml,'      >')
+//    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Setup Panels" />')
+    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Start Panels" />')
+    $i=1
+    $y=30
+    while $i < $t1 do
+	$message=0
+	if ($ppA[$i+2]='') then teststr('$Enabled',$ppA[$i],'local'):$message endif
+	if ($ppA[$i+2]<>'') then
+            write('file',$xml,'    <check loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      label="%s" set="$VALUE=(personaPpPar[%d]=\'open\')"',$ppA[$i+2],$i+7)
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      vc="personaPpPar[%d]=\'open\'"',$i+7)
+            write('file',$xml,'      vc2="personaPpPar[%d]=\'close\'"',$i+7)
+            write('file',$xml,'      show="$ENABLE=((personaPpPar[2]=\'open\') and (personaPpPar[%d]&lt;&gt;\'notused\'))*2-1"',$i+7)
+            write('file',$xml,'      />')
+	    $y=$y+20
+	elseif ($message>0.5) then
+            write('file',$xml,'    <textmessage loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      set="$VALUE=\'\' if (personaPpPar[2]=\'open\') then $VALUE=\'%s panel is enabled\' endif"',$Enabled[$message+1])
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      />')
+	    $y=$y+20
+	endif
+	$i=$i+3
+    endwhile
+    write('file',$xml,'    </group>')
+
+//    write('file',$xml,'    <group loc="%d 220" size="220 150"',$x)
+//    write('file',$xml,'      border="Etched" bg="transparent"')
+//    write('file',$xml,'      subtype="Basic"')
+//    write('file',$xml,'      >')
+//    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Display Panels" />')
+//    $i=1
+//    $y=30
+//    while $i < $t4 do
+//        $message=0
+//        if ($ppD[$i+2]='') then teststr('$Enabled',$ppD[$i],'local'):$message endif
+//        if ($ppD[$i+2]<>'') then
+//            write('file',$xml,'    <check loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+//            write('file',$xml,'      label="%s" set="$VALUE=(personaPpPar[%d]=\'open\')"',$ppD[$i+2],$i+7)
+//            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+//            write('file',$xml,'      vc="personaPpPar[%d]=\'open\'"',$i+7)
+//            write('file',$xml,'      vc2="personaPpPar[%d]=\'close\'"',$i+7)
+//            write('file',$xml,'      show="$ENABLE=(personaPpPar[2]=\'open\')*2-1"')
+//            write('file',$xml,'      />')
+//            $y=$y+20
+//        elseif ($message>0.5) then
+//            write('file',$xml,'    <textmessage loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+//            write('file',$xml,'      set="$VALUE=\'\' if (personaPpPar[2]=\'open\') then $VALUE=\'%s panel is enabled\' endif"',$Enabled[$message+1])
+//            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+//            write('file',$xml,'      />')
+//            $y=$y+20
+//        endif
+//        $i=$i+3
+//    endwhile
+//    write('file',$xml,'    </group>')
+
+    $x=$x+240
+    write('file',$xml,'    <group loc="%d 30" size="220 340"',$x)
+    write('file',$xml,'      border="Etched" bg="transparent"')
+    write('file',$xml,'      subtype="Basic"')
+    write('file',$xml,'      >')
+    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Acquire Panels" />')
+    $i=1
+    $y=30
+    while $i < $t2 do
+        $message=0
+        if ($ppB[$i+2]='') then teststr('$Enabled',$ppB[$i],'local'):$message endif
+        if ($ppB[$i+2]<>'') then
+            write('file',$xml,'    <check loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      label="%s" set="$VALUE=(personaPpPar[%d]=\'open\')"',$ppB[$i+2],$i+$t1+7)
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      vc="personaPpPar[%d]=\'open\'"',$i+$t1+7)
+            write('file',$xml,'      vc2="personaPpPar[%d]=\'close\'"',$i+$t1+7)
+            write('file',$xml,'      show="$ENABLE=((personaPpPar[2]=\'open\') and (personaPpPar[%d]&lt;&gt;\'notused\'))*2-1"',$i+$t1+7)
+            write('file',$xml,'      />')
+	    $y=$y+20
+        elseif ($message>0.5) then
+            write('file',$xml,'    <textmessage loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      set="$VALUE=\'\' if (personaPpPar[2]=\'open\') then $VALUE=\'%s panel is enabled\' endif"',$Enabled[$message+1])
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      />')
+            $y=$y+20
+        endif
+        $i=$i+3
+    endwhile
+    write('file',$xml,'    </group>')
+
+    $x=$x+240
+//    write('file',$xml,'    <group loc="%d 30" size="220 210"',$x)
+    write('file',$xml,'    <group loc="%d 30" size="220 340"',$x)
+    write('file',$xml,'      border="Etched" bg="transparent"')
+    write('file',$xml,'      subtype="Basic"')
+    write('file',$xml,'      >')
+    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Process Panels" />')
+    $i=1
+    $y=30
+    while $i < $t3 do
+	$message=0
+        if ($ppC[$i+2]='') then teststr('$Enabled',$ppC[$i],'local'):$message endif
+        if ($ppC[$i+2]<>'') then
+            write('file',$xml,'    <check loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      label="%s" set="$VALUE=(personaPpPar[%d]=\'open\')"',$ppC[$i+2],$i+$t1+$t2+7)
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      vc="personaPpPar[%d]=\'open\'"',$i+$t1+$t2+7)
+            write('file',$xml,'      vc2="personaPpPar[%d]=\'close\'"',$i+$t1+$t2+7)
+            write('file',$xml,'      show="$ENABLE=((personaPpPar[2]=\'open\') and (personaPpPar[%d]&lt;&gt;\'notused\'))*2-1"',$i+$t1+$t2+7)
+            write('file',$xml,'      />')
+	    $y=$y+20
+        elseif ($message>0.5) then
+            write('file',$xml,'    <textmessage loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+            write('file',$xml,'      set="$VALUE=\'\' if (personaPpPar[2]=\'open\') then $VALUE=\'%s panel is enabled\' endif"',$Enabled[$message+1])
+            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+            write('file',$xml,'      />')
+            $y=$y+20
+        endif
+        $i=$i+3
+    endwhile
+    write('file',$xml,'    </group>')
+
+//    write('file',$xml,'    <group loc="%d 260" size="220 110"',$x)
+//    write('file',$xml,'      border="Etched" bg="transparent"')
+//    write('file',$xml,'      subtype="Basic"')
+//    write('file',$xml,'      >')
+//    write('file',$xml,'      <label loc="10 5" size="155 20" style="Heading3" fg="navy" label="Plot Panels" />')
+//    $i=1
+//    $y=30
+//    while $i < $t5 do
+//        $message=0
+//        if ($ppE[$i+2]='') then teststr('$Enabled',$ppE[$i],'local'):$message endif
+//        if ($ppE[$i+2]<>'') then
+//            write('file',$xml,'    <check loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+//            write('file',$xml,'      label="%s" set="$VALUE=(personaPpPar[%d]=\'open\')"',$ppE[$i+2],$i+$t1+$t2+7)
+//            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+//            write('file',$xml,'      vc="personaPpPar[%d]=\'open\'"',$i+$t1+$t2+7)
+//            write('file',$xml,'      vc2="personaPpPar[%d]=\'close\'"',$i+$t1+$t2+7)
+//            write('file',$xml,'      show="$ENABLE=(personaPpPar[2]=\'open\')*2-1"')
+//            write('file',$xml,'      />')
+//            $y=$y+20
+//        elseif ($message>0.5) then
+//            write('file',$xml,'    <textmessage loc="35 %d" size="180 20" style="Label1" fg="navy"',$y)
+//            write('file',$xml,'      set="$VALUE=\'\' if (personaPpPar[2]=\'open\') then $VALUE=\'%s panel is enabled\' endif"',$Enabled[$message+1])
+//            write('file',$xml,'      vq="personaPpPar personaPopupPar"')
+//            write('file',$xml,'      />')
+//            $y=$y+20
+//        endif
+//        $i=$i+3
+//    endwhile
+//    write('file',$xml,'    </group>')
+
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+
+// ToolPanelsConfig
+    $xml=$dir+'/PersonaBuilder_ToolPanelsConfig.xml'
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<!-- Do NOT edit this file manually.  Use %s macro -->',$0)
+    write('file',$xml,'<template name="PersonaBuilder_ToolPanelsConfig" element="groups" type="acquisition" >')
+    write('file',$xml,'   <group size="200 135"')
+    write('file',$xml,'     bg="transparent"')
+    write('file',$xml,'     border="None"')
+    write('file',$xml,'     useref="no"')
+    write('file',$xml,'     tab="no"')
+    write('file',$xml,'     subtype="Basic"')
+    write('file',$xml,'     expanded="yes"')
+    write('file',$xml,'     >')
+
+    write('file',$xml,'     <label loc="10 5" size="155 20" style="Heading3"')
+    write('file',$xml,'       fg="navy" label="Tools" />')
+
+    $tot=size('$tp')
+    $i=1 $y=30
+    while $i < $tot do
+	if ($tp[$i]='cmdLine') then $val='yes' $val2='no' else $val='open' $val2='close' endif
+        write('file',$xml,'    <check loc="25 %d" size="170 20" style="Label1" fg="navy"',$y)
+        write('file',$xml,'      label="%s" set="$VALUE=(personaTpPar[%d]=\'%s\')"',$tp[$i+2],$i+1,$val)
+        write('file',$xml,'      vq="personaTpPar personaPopupPar"')
+        write('file',$xml,'      vc="personaTpPar[%d]=\'%s\'"',$i+1,$val)
+        write('file',$xml,'      vc2="personaTpPar[%d]=\'%s\'"',$i+1,$val2)
+        write('file',$xml,'      show="$ENABLE=(personaTpPar[%d]&lt;&gt;\'notused\')*2-1"',$i+1)
+        write('file',$xml,'      />')
+        $y=$y+20
+        $i=$i+3
+    endwhile
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+//VertPanelsConfig
+    $xml=$dir+'/PersonaBuilder_VertPanelsConfig.xml'
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<!-- Do NOT edit this file manually.  Use %s macro -->',$0)
+    write('file',$xml,'<template name="PersonaBuilder_VertPanelsConfig" element="groups" type="acquisition" >')
+    write('file',$xml,'   <group size="270 225"')
+    write('file',$xml,'     bg="transparent"')
+    write('file',$xml,'     border="None"')
+    write('file',$xml,'     useref="no"')
+    write('file',$xml,'     tab="no"')
+    write('file',$xml,'     subtype="Basic"')
+    write('file',$xml,'     expanded="yes"')
+    write('file',$xml,'     >')
+    $j=size('$tp')
+    $tot=size('$vp')
+
+    write('file',$xml,'     <label loc="10 5" size="155 20" style="Heading3"')
+    write('file',$xml,'       fg="navy" label="Vertical Panels" />')
+
+    $i=1 $y=30
+    while $i < $tot do
+        $val='open' $val2='close'
+        write('file',$xml,'    <check loc="25 %d" size="170 20" style="Label1" fg="navy"',$y)
+        write('file',$xml,'      label="%s" set="$VALUE=(personaTpPar[%d]=\'%s\')"',$vp[$i+2],$i+$j+1,$val)
+        write('file',$xml,'      vq="personaTpPar personaPopupPar"')
+        write('file',$xml,'      vc="personaTpPar[%d]=\'%s\'"',$i+$j+1,$val)
+        write('file',$xml,'      vc2="personaTpPar[%d]=\'%s\'"',$i+$j+1,$val2)
+        write('file',$xml,'      show="$ENABLE=(personaTpPar[%d]&lt;&gt;\'notused\')*2-1"',$i+$j+1)
+        write('file',$xml,'      />')
+        $y=$y+20
+        $i=$i+3
+    endwhile
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+// MenuConfig
+    $xml=$dir+'/PersonaBuilder_MenuConfig.xml'
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<!-- Do NOT edit this file manually.  Use %s macro -->',$0)
+    write('file',$xml,'<template name="PersonaBuilder_MenuConfig" element="groups" type="acquisition" >')
+    write('file',$xml,'   <group size="200 225"')
+    write('file',$xml,'     bg="transparent"')
+    write('file',$xml,'     border="None"')
+    write('file',$xml,'     useref="no"')
+    write('file',$xml,'     tab="no"')
+    write('file',$xml,'     subtype="Basic"')
+    write('file',$xml,'     expanded="yes"')
+    write('file',$xml,'     >')
+
+    write('file',$xml,'     <label loc="10 5" size="155 20" style="Heading3"')
+    write('file',$xml,'       fg="navy" label="Menus" />')
+
+    $tot=size('$mp')
+    $i=1 $y=30
+    while $i < $tot do
+	$is=0
+	teststr('$mp2',$mp[$i+2],'local'):$is
+	write('file',$xml,'    <check loc="25 %d" size="170 20" style="Label1" fg="navy"',$y)
+	write('file',$xml,'      label="%s Menu" set="$VALUE=(personaMvPar[%d]=\'show\')"',$mp[$i+2],$i+1)
+	write('file',$xml,'      vq="personaMvPar personaPopupPar"')
+	if ($is) then
+	    write('file',$xml,'      vc="personaMvPar[%d]=\'show\' personaMvPar[%d]=\'show\'"',$i+1,$tot+$is-1)
+            write('file',$xml,'      vc2="personaMvPar[%d]=\'hide\' personaMvPar[%d]=\'hide\'"',$i+1,$tot+$is-1)
+	else
+            write('file',$xml,'      vc="personaMvPar[%d]=\'show\'"',$i+1)
+            write('file',$xml,'      vc2="personaMvPar[%d]=\'hide\'"',$i+1)
+	endif
+        write('file',$xml,'      show="$ENABLE=(personaMvPar[%d]&lt;&gt;\'notused\')*2-1"',$i+1)
+	write('file',$xml,'      />')
+	$y=$y+20
+	$i=$i+3
+    endwhile
+
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+    return($p1,$p2,$p3)
+

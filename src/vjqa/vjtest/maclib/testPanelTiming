@@ -1,0 +1,101 @@
+"macro testPanelTiming"
+$del=0
+if ($#=0) then
+  vvLog('Test','Timing various panel operations')
+  atcmd($0+`('step0')`,10,'active','start')
+else
+  if ($1='exptime') then
+    return(40)
+  elseif ($1='step0') then
+    $t=0
+    traymax=0
+    newsample
+    walkupQ('logout','check')
+    shell('rm -f '+curexp+'/starttime')
+    systemtime:$t
+    write('file',curexp+'/starttime','%d',$t)
+    locaction('DragNDrop','protocol','',systemdir+'/templates/vnmrj/protocols/PROTON.xml','StudyQueue','null')
+    atcmd($0+`('step1')`,$del,'active','start')
+  elseif ($1='step1') then
+    vnmrjcmd('setpage','Acquire')
+    atcmd($0+`('step2')`,$del,'active','start')
+  elseif ($1='step2') then
+    vnmrjcmd('setpage','Acquire','Default H1')
+    atcmd($0+`('step3')`,$del,'active','start')
+  elseif ($1='step3') then
+    nt=64
+    atcmd($0+`('step4')`,$del,'active','start')
+  elseif ($1='step4') then
+    vnmrjcmd('setpage','Process')
+    atcmd($0+`('step5')`,$del,'active','start')
+  elseif ($1='step5') then
+    vnmrjcmd('setpage','Process','Basic')
+    atcmd($0+`('step6')`,$del,'active','start')
+  elseif ($1='step6') then
+    fn=256k
+    atcmd($0+`('step7')`,$del,'active','start')
+  elseif ($1='step7') then
+    vnmrjcmd('setpage','Start')
+    atcmd($0+`('step8')`,$del,'active','start')
+  elseif ($1='step8') then
+    vnmrjcmd('setpage','Start','Standard')
+    atcmd($0+`('step9')`,$del,'active','start')
+  elseif ($1='step9') then
+    solvent='D2O'
+    atcmd($0+`('step10')`,$del,'active','start')
+  elseif ($1='step10') then
+    newsample
+    atcmd($0+`('step11')`,$del,'active','start')
+  elseif ($1='step11') then
+    locaction('DragNDrop','protocol','',systemdir+'/templates/vnmrj/protocols/PROTON.xml','StudyQueue','null')
+    atcmd($0+`('step12')`,$del,'active','start')
+  elseif ($1='step12') then
+    xmaction('doubleclick','n002')
+    atcmd($0+`('step13')`,$del,'active','start')
+  elseif ($1='step13') then
+    vnmrjcmd('setpage','Acquire')
+    atcmd($0+`('step14')`,$del,'active','start')
+  elseif ($1='step14') then
+    vnmrjcmd('setpage','Acquire','Default H1')
+    atcmd($0+`('step15')`,$del,'active','start')
+  elseif ($1='step15') then
+    nt=64
+    atcmd($0+`('step16')`,$del,'active','start')
+  elseif ($1='step16') then
+    vnmrjcmd('setpage','Process')
+    atcmd($0+`('step17')`,$del,'active','start')
+  elseif ($1='step17') then
+    vnmrjcmd('setpage','Process','Basic')
+    atcmd($0+`('step18')`,$del,'active','start')
+  elseif ($1='step18') then
+    fn=256k
+    atcmd($0+`('step19')`,$del,'active','start')
+  elseif ($1='step19') then
+    vnmrjcmd('setpage','Acquire')
+    atcmd($0+`('step20')`,$del,'active','start')
+  elseif ($1='step20') then
+    customizepar('savequit')
+    atcmd($0+`('step21')`,$del,'active','start')
+  elseif ($1='step21') then
+    walkupQ('logout','check')
+    atcmd($0+`('step22')`,$del,'active','start')
+  elseif ($1='step22') then
+    vnmrjcmd('setpage','Acquire')
+    atcmd($0+`('step23')`,$del,'active','start')
+  elseif ($1='step23') then
+    dps
+    atcmd($0+`('step24')`,$del,'active','start')
+  elseif ($1='step24') then
+    $t1=0
+    $t2=0
+    systemtime:$t2
+    lookup('file',curexp+'/starttime','read'):$t1
+    write('line3','Test time %d sec (goal is less than 16 sec)',$t2-$t1):$msg
+    delete(curexp+'/starttime')
+    if ($t2-$t1 < 16) then
+      vvLog('Pass',$msg)
+    else
+      vvLog('Fail',$msg)
+    endif
+  endif
+endif

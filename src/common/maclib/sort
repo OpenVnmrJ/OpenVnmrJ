@@ -1,0 +1,74 @@
+"macro sort"
+"***************************************************************"
+" sort: Sort input array to output array                        "
+"                                                               "
+" Usage: sort(parameter_name<,option>)                          "
+"        where option is r, u, or ru                            "
+"***************************************************************"
+
+if not $# then
+  write('error','macro "sort" called with no agruments!')
+  return
+endif
+
+"** Specify temporary output file for Unix sort routine ***"
+$pid=''
+substr(vnmraddr,3):$pid
+$filename = userdir+'/persistence/sortTmpFile_'+$pid
+write('reset',$filename)
+$size = size('$1')
+
+"Find out if the supplied argument is a parametername or a local variable"
+"  If the size of $1 is 1 and if it exists as a parameter, then"
+"    $param is set to the value of $1 else $param is set to $1"
+"  This avoids breaking any non-CP macros using sort - such as HT macros"
+  $isparam=0
+  if ($size > 1) then 
+	$param=$1
+  else
+      is_param($1):$isparam
+      if ($isparam) then
+	$param={$1}
+      else
+	$param=$1
+      endif
+  endif
+
+$size=size('$param')
+"** If optional 'r' argument, sort in reverse order *******"
+$rev = ''
+if ($# > 1) then
+  if ($2 = 'r') or ($2 = 'u') or ($2 = 'ru') then
+	" reverse, unique or both "
+    $rev = '-'+$2
+  endif
+endif
+
+"** Write array values to temporary file ******************"
+$i = 0
+repeat
+  $i = $i + 1
+  if typeof('$param') then
+	write('file',$filename,'%d    %s',$i,$param[$i])
+  else
+  	write('file',$filename,'%d     %f',$i,$param[$i])
+  endif
+until ($i = $size)
+
+"** Call Unix sort to sort lines *******"
+$index=0
+if typeof('$param') then
+   shell('sort '+$rev+' -k 2 '+$filename+' -o '+$filename+'_sort'):$junk
+   $result=''
+else
+   shell('sort '+$rev+' -n -k 2 '+$filename+' -o '+$filename+'_sort'):$junk
+   $result=0
+endif
+
+"** Read in values of sorted file to new array(s) *********"
+readfile($filename+'_sort','$index','$result','','local')
+if ($index[1]=0) then $index[1]=1 endif
+delete($filename)
+delete($filename+'_sort')
+return($index,$result)
+

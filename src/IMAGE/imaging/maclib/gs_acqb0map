@@ -1,0 +1,578 @@
+"macro gs_acqb0map"
+"*****************************************************************************"
+" gs_acqb0map - Acquire field map data for 3D gradient shimming"
+"
+" Details: Assume ge3dshim sequence loaded and ready to go. "
+"          B0.{1,2}.fid datasets are acquired with tau=0, del"
+"          fieldmap files are stored as B0.'gcoil'.{param,f}"
+"	   checks are made for gcoil and fov compatibility"
+"	   If delref > 0, B0.{1,A,B}.fid acquired"
+"          prescan_control = 0 starts shimmap acquisition
+"          prescan_control = -1 init only
+
+" Usage: gs_acqb0map " 
+"        gs_acqb0map(0) - first pass, initialize only"
+"
+" Warning: B0.param - new size limit parameters added before slice parameters
+"          gs_mkslicemap need to be modified
+
+"*****************************************************************************"
+
+$GSDIR = userdir+'/gshimdir/data'
+$GSCAL = userdir+'/gshimdir/calib'
+$VCAL = '/vnmr/gshimdir/calib'
+$macro = $0
+$B0 = 'B0'  "ge3dshim"
+
+$init = 0  "initialize only flag"  
+if($# = 0 ) then  "check if first pass"
+  $1 = 0
+  $init = 1
+//elseif ($1 = 0) then
+ // if(prescan_control[1] > 0) then
+  //  write('line3','%s:  prescan_control[1] = %d; set to -1  ',$macro,prescan_control[1])
+  //endif
+ // prescan_control[1] = -1   "init only don't acquire data"
+endif
+
+if ($1 = 0) then    "** new cycle? **" 
+  ldrf      "initialize rfcoil, rcvrs"
+  setloop
+  profile='nn'
+  exists('phasearray','parameter'):$ex
+  if($ex = 0) then
+    create('phasearray','integer')
+    phasearray = 0
+  endif
+  "set phasearray = no of coils/rcvrs; phasearray=0 single"
+  $nrcvrs = 1
+  $ch = ''
+  length(rcvrs):$length
+  $k = 2
+  while($k <= $length) do
+    substr(rcvrs,$k,1):$ch
+    if($ch = 'y') then
+      $nrcvrs = $nrcvrs+1
+    endif
+    $k = $k + 1
+  endwhile
+  if($nrcvrs = 1) then
+    phasearray = 0
+  else
+    phasearray = $nrcvrs
+  endif
+  if(seqcon <> 'ncccn') then
+    error('gs_acqb0map: seqcon must be set to ncccn')
+    abort
+  endif
+  if(phasearray > 0) then
+    "do some checks"
+    if(phasearray > numrcvrs) OR (phasearray = 1) then  
+      error('gs_acqb0map: Illegal no of array coils, phasearray = %d',phasearray)
+      abort
+    endif 
+    write('line3','numrcvrs=%d rcvrs=%s phasearray=%d',numrcvrs,rcvrs,phasearray)  
+    if ((Prescan_ShimMethod <> 'ge3dshim') and (Prescan_ShimMethod <> 'gemsshim')) then
+      write('error','%s: illegal shimming method (%s)',$macro,Prescan_ShimMethod)
+      abort
+    endif
+  endif
+
+  "interleaved shimming parameters"
+  exists('intshimcnt','parameter','global'):$ex  "counter for interleaved shimming"
+  if($ex = 0) then
+    create('intshimcnt','integer','global')
+  endif
+  intshimcnt = 1
+  if(intshimflag = 'y') AND (intshim < 1) then
+    write('error','%s: no of interleaved acquisitions must be > 0',$macro)
+    abort
+  endif
+
+  if(cnt = 1) then
+    $l = $GSDIR+'/gshim.line'
+    rm('-rf',$l+'*'):$x
+    shell('rm -f "'+userdir+'"/shims/start{1,2,3,4}')
+  endif
+  "check shim-cycle counter and init for next cycle"  
+  if (cnt<1) or (cnt>4) then
+    write('error','Error: shim cycle counter=%d',cnt)
+    return
+  endif
+  $done=0
+  while($done = 0) do
+   if (shcycle[cnt]=0) then
+     cnt=cnt+1
+     if(cnt>4) then
+       if(intshimflag = 'y') then
+         if(intshimcnt > intshim) then
+           write('line3','Interleaved acquisition Complete')
+           return
+         else
+           cnt = 1
+           gs_acqb0map(6)   "next interleaved acquisition"
+           return
+         endif
+       else
+         shims='gs_final'
+         svs('gs_final')
+         gs_shimlist
+         write('line3','Shimcycles Complete')
+         return
+       endif
+     endif
+   else
+     shimregion=shregion[cnt]    "initialize parameters for next cycle"
+     shimsel=shsel[cnt]
+     del=shdel[cnt]   
+     $done=1
+   endif 
+  endwhile
+  
+  "** first pass; init parameters **"
+  exists(userdir+'/gshimdir','file'):$ex
+  if($ex = 0) then mkdir(userdir+'/gshimdir') endif
+  exists($GSDIR,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSDIR)
+  endif
+  $GD = userdir+'/prescan'          "create directory"
+  exists($GD,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GD)
+  endif 
+  exists('shimpass','parameter'):$ex2
+  if ($ex2=0) then
+    create('shimpass','real')
+    setgroup('shimpass','processing')
+  endif
+  exists('shimmapfid','parameter'):$ex2
+  if ($ex2=0) then
+    create('shimmapfid','string')
+    setgroup('shimmapfid','processing')
+  endif
+  exists('shimpar','parameter'):$ex2
+  if ($ex2=0) then
+    create('shimpar','string')
+    setgroup('shimpar','processing')
+    shimpar='---'
+  endif
+  if ((pro < 1) and (pro > -1)) then  "remove the roundoff error in pro"
+    pro=0
+  endif  
+  if ((ppe < 1) and (ppe > -1)) then
+    ppe=0
+  else
+    write('error','%s: ppe=%4.2f; PE offset must be set to zero',$macro,ppe)
+    abort
+  endif  
+  if((ppe2 < 1) and (ppe2 > -1)) then
+    ppe2=0
+  else
+    write('error','%s: ppe2=%4.2f; PE#2 offset must be set to zero',$macro,ppe2)
+    abort
+  endif 
+  "round off fov parameters and init shimmap parameter filename"
+  format(lro,3,1):lro
+  format(lpe,3,1):lpe
+  format(lpe2,3,1):lpe2
+  $lr0 = lro*10  "mm"
+  $lr1 = lpe*10
+  $lr2 = lpe2*10
+  $l0='' $l1='' $l2=''
+  format($lr0,0,0):$l0
+  format($lr1,0,0):$l1
+  format($lr2,0,0):$l2
+
+  "select shimmap file for shimming"
+  shell('rm -f '+$GSDIR+'/tmp'):$xx
+  shell('touch '+$GSDIR+'/tmp'):$xx
+  $list=''
+  pwd:$cdir
+
+  exists($VCAL,'file'):$ex
+  if($ex = 1) then
+    cd($VCAL):$xx
+    shell('echo -----System_files----- >> '+$GSDIR+'/tmp'):$xx        
+    shell('ls shimmap.'+gcoil+'*.f >> '+$GSDIR+'/tmp'):$xx
+    shell('echo -----Local_files----- >> '+$GSDIR+'/tmp'):$xx
+  endif
+
+  exists($GSCAL,'file'):$ex
+  if($ex = 1) then
+    cd($GSCAL):$xx
+    shell('ls shimmap.'+gcoil+'*.f >> '+$GSDIR+'/tmp')
+  endif
+
+  cd($cdir):$xx   "go back to previous working directory"
+  nrecords($GSDIR+'/tmp'):$lines
+  exists('shimmapname','parameter'):$ex
+  if($ex = 0) then
+    create('shimmapname','string')
+    shimmapname = 'shimmap.'+gcoil+'.f'   "default name"
+  endif
+
+  $maplist = $GSDIR+'/maplist'
+  shell('rm -f '+$maplist):$xx
+  shell('touch '+$maplist):$xx
+  lookup('file',$GSDIR+'/tmp')
+  write('reset',$maplist)  "init for write"
+  $i = 1
+  $f = ''   
+  while($i <= $lines) do
+    lookup('read',1):$f
+    write('file',$maplist,'"'+$f+'"  "'+$f+'"')
+    $i = $i + 1
+  endwhile
+
+  if($init <> 1) then "return if init only"
+     return
+  endif
+	
+  "check if shimmap file exists"
+  $name = $GSCAL+'/shimmap.'+gcoil+shimpar+'.f'
+  $name2 = $VCAL+'/shimmap.'+gcoil+shimpar+'.f'
+  exists($name,'file'):$ex  "check if shim calibration file exists in userdir"
+  exists($name2,'file'):$ex2  "check if shim calibration file exists in userdir"
+  if($init <> 1) then "message not printed if init only"
+    if (($ex = 0) and ($ex2 = 0)) then
+      write('line3','%s or %s do not exist',$name,$name2)
+      return
+    endif
+  endif
+  $name = $GSCAL+'/shimmap.'+gcoil+shimpar+'.param'
+  $name2 = $VCAL+'/shimmap.'+gcoil+shimpar+'.param'
+  exists($name,'file'):$ex  "check if param file exists"
+    exists($name2,'file'):$ex2
+  if($ex > 0) then
+    $shimpar = $name    "use system file"
+  elseif ($ex2 > 0) then
+    $shimpar = $name2
+  else
+    write('line3','Files: %s or %s do not exist',$name,$name2)
+    abort
+  endif 
+
+  " read in shimmap parameters, matrix,zerofill_factor; "
+  lookup('mfile',$shimpar,'filekey'):$key
+  $zfs=''
+  lookup('mfile',$key,'seek','#DATASIZE','read','read','read','read'):$sz1,$sz2,$sz3,$zfs
+  lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+
+  "check matrix size and zerofill parameters"
+  exists('zflag','parameter'):$ex
+  if($ex = 0) then
+    create('zflag','flag')
+    zflag = 'n'
+  endif
+
+  "if shimmap zero filled, set zerofill flag"
+  if($zfs = '2') then    "on old files zf parameter may not be set"
+    zflag = 'y'
+    $zf = 2    "zerofill factor"
+  else
+    zflag = 'n'
+    $zf = 1    "no zerofill"
+  endif
+
+  "check FOV"
+  exists('shimmapfov','parameter'):$ex
+  if($ex = 0) then
+    create('shimmapfov','flag')
+  endif
+  if(shimmapfov = 'y') then
+    lro = $f1/10
+    lpe = $f2/10
+    lpe2 = $f3/10
+    np = 2*$sz1/$zf
+    nv = $sz2/$zf
+    nv2 = $sz3/$zf
+    thk = $f3*slabfract
+    orient = 'sag'
+  endif
+  fn=np*$zf fn1=nv*2*$zf fn2=nv2*2*$zf  "zerofilled size for fdf header"
+
+  if( ((fn/2 <> $sz1) or (fn1/2 <> $sz2)) or (fn2/2 <> $sz3) ) then
+    write('error','shimmap/B0map size mismatch: %d %d %d /%d; %d %d %d /%d',
+                     $sz1,$sz2,$sz3,$zf,fn/2,fn1/2,fn2/2,$zf)
+    abort
+  endif
+
+  if(Prescan_ShimMethod = 'gemsshim') then
+    if ( (orient = 'oblique') or (orient = '3planes') ) then            
+      write('error','%s: Illegal orientation, %s, slice plane must be axial',$macro,orient)
+      abort   
+    endif
+    lpe2 = 0   "BUG*** cannot set to 0!!!! ***"      
+    $l2 = '0'
+    ppe2 = 0   
+    gs_hdr2d($GSDIR)   "create 2D fdf header"
+    $hdr = $GSDIR+'/B0sl.hdr'
+    mv('-f',$GSDIR+'/hdr2d',$hdr)
+  endif
+    format(fn/2,0,0):$s0
+    format(fn1/2,0,0):$s1
+    format(fn2/2,0,0):$s2
+  if(Prescan_ShimMethod = 'ge3dshim') then  "check shimmap file and parameters"
+    if(orient = 'oblique') then
+      write('error','%s: Illegal orientation, orient cannot be oblique',$macro)
+      abort
+    endif  
+    "initialize fn parameters"
+    gs_fdfhdr($GSDIR)   "Note: fdf header created at run time; zflag checked for fn sizes"
+    $hdr = $GSDIR+'/B0.hdr'
+    rm('-f',$hdr):$x
+    mv($GSDIR+'/header',$hdr)       
+    pss = pss0  "remove pss array for ge3dshim" 
+  endif  
+ 
+  "check FOV limit parameters"
+  if(rlimit > fn/8) or (rlimit < 0) then
+    write('line3','%s: Invalid rlimit=%d; reset to 0',$macro,rlimit)
+    rlimit = 0
+  endif
+  if(plimit > fn1/8) or (plimit < 0) then
+    write('line3','%s: Invalid plimit=%d; reset to 0',$macro,plimit)
+    plimit = 0
+  endif
+  if(slimit > fn2/8) or (slimit < 0) then
+    write('line3','%s: Invalid slimit=%d; reset to 0',$macro,slimit)
+    slimit = 0
+  endif
+
+  "generate B0{sl}.param file"
+  $name = $B0+'.param' 
+  $name = $GSDIR+'/'+$name
+  rm('-f',$name):$x
+
+  write('reset',$name)  "create param file"
+  write('file',$name,'#DATASIZE')
+  write('file',$name,'%3d  %3d  %3d %3d',fn/2,fn1/2,fn2/2,$zf)  "zerofill 1=no; 2=yes"
+  write('file',$name,'#FOV-MM')
+  write('file',$name,'%4.0f  %4.0f  %4.0f ',lro*10,lpe*10,lpe2*10)   
+  write('file',$name, '#DELAY-MSEC')
+  $del = del*1000   "delay in msec"
+  write('file',$name, '%6.1f',$del)  
+  write('file',$name, '#THRESHOLD-PERCENT')
+  write('file',$name, '%6.0f ',thresh)      
+  write('file',$name, '#REFERENCE-DELAY-MSEC')
+  $delref = delref*1000   "delay in msec for ref scan; 0 otherwise"
+  write('file',$name, '%6.3f',$delref) 
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',orient,psi,phi,theta)
+  write('file',$name, '#OFFSET-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',pro*10,ppe*10,ppe2*10)
+  write('file',$name, '#SIZELIMIT-POINTS-RO-PE-PE2')  
+  write('file',$name, '%3d  %3d  %3d',rlimit,plimit,slimit)
+
+  "*****NOTE: slice information moved; gs_mkslicemap need to be modified "
+  write('file',$name, '#SLICE-THK-MM')
+  write('file',$name, '%6.1f ',thk)    
+  write('file',$name, '#SLICES')  
+  $ns = size('pss')
+  write('file',$name, '  %3d',$ns)  
+  write('file',$name, '#SLICE-POSITION-MM')  
+  $i=1
+  while ($i <= $ns) do
+    write('file',$name, '%6.1f',pss[$i]*10)
+    $i = $i+1
+  endwhile
+
+  $name3 = $GSDIR+'/b0.param'   "b0.param, copy containing original params"
+  rm('-f',$name3):$x
+  cp($name,$name3)
+
+  
+  shimpass=1
+  tau = 0    "1st expt. te_1"
+  "remove old shim map fid files"
+  shimmapfid = $GSDIR+'/'+$B0+'.1'
+  rm('-rf',shimmapfid+'.fid'):$x
+  ldrf setloop 
+  profile='nn'
+  rm('-rf',userdir+'/shims/gs_final'):$x
+  gs_shimlist
+elseif ($1 = 1) then
+  tau = del  "2nd echo, te_2"
+  shimpass=2
+  shimmapfid = $GSDIR+'/'+$B0+'.2'
+  rm('-rf',shimmapfid+'.fid'):$x
+elseif ($1 = 2) then
+  if (delref > 0) then
+    tau = delref  "3rd echo, te_2"
+    shimpass=3
+    shimmapfid = $GSDIR+'/'+$B0+'.3'
+    rm('-rf',shimmapfid+'.fid'):$x
+  else   "no reference scan, exit"
+    rm('-rf',userdir+'/shims/start0'):$x
+    shims='start0'
+    svs('start0')   "shim file saved as reference"
+    gs_shimlist
+    write('line3','Fieldmap data acquisition complete')
+    return
+  endif
+elseif ($1 = 3) then
+  "rename files for ref. scan acquisition"  
+  "del=> .2=>B; delref .3=>A"
+  rm('-rf',$GSDIR+'/'+$B0+'.B.fid'):$x
+  mv($GSDIR+'/'+$B0+'.2.fid',$GSDIR+'/'+$B0+'.B.fid')
+  rm('-rf',$GSDIR+'/'+$B0+'.A.fid'):$x
+  mv($GSDIR+'/'+$B0+'.3.fid',$GSDIR+'/'+$B0+'.A.fid')  
+  rm('-rf',userdir+'/shims/start0'):$x
+  shims='start0'
+  svs('start0')   "shim file saved as reference"
+  $cnt=''
+  format(cnt,0,0):$cnt
+  rm('-rf',userdir+'/shims/gs_start'+$cnt):$x
+  shims='gs_start'+$cnt
+  svs('gs_start'+$cnt)
+  gs_shimlist
+  exists('H1offset0','parameter'):$ex  "save original H1offset"
+  if($ex = 0) then
+    create('H1offset0','real')
+  endif
+  H1offset0=H1offset  
+    write('line3','Cycle#: %d Fieldmap data acquisition complete',cnt)
+  if (shimcalc = 1) then
+    if(Prescan_ShimMethod = 'ge3dshim') then
+      gs_calc
+    elseif(Prescan_ShimMethod = 'gemsshim') then
+      gs_calcslice
+    endif
+    if(shimload <> 1) then
+      write('line3','Done')   "shims not loaded, so exit"
+      abort
+    endif
+  else
+    write('line3','Done')   "no calculations, so exit"
+    abort
+  endif
+  
+  if(shimload = 1) then
+    gs_setshims
+
+    "set H1offset if shims are loaded"
+    if(setres = 'y') then
+      shimpass = 5 "note shimpass is a local variable"
+      gs_params('save')   "save current parameters"
+      
+      "gs_setres  old spuls call commented out"
+
+      prescan_data('load','freq'):$ex  "load prescan-frequency parameters from study dir"
+      if($ex = 0) then
+        write('error','Run Prescan-Frequency manually to create parameter file')
+        abort
+      endif             
+ 
+      wexp='gs_acqb0map(5)'
+      wdone='' werr=''            
+      au
+      return
+    else
+      shimpass=4
+      gs_acqb0map(shimpass) "do next iteration"
+      return
+    endif
+  endif    
+elseif ($1 = 4) then  
+  "check and do next iteration"  
+  cnt = cnt+1  "bump shim-cycle counter"
+  if(cnt > 4) then  "upto 4 iterations allowed"
+    if(intshimflag = 'y') then
+      if(intshimcnt > intshim) then
+        write('line3','%d Interleaved acquisitions completed',intshim)
+        return
+      else
+        cnt = 1  "more interleaves, reset shim iteration counter"
+        gs_acqb0map
+        return
+      endif
+    else
+      write('line3','%s: Done',$macro)
+      return
+    endif
+  else
+    gs_acqb0map
+    return
+  endif
+elseif($1 = 5) then
+"  gs_setres(2) "  "process and set H1offset; restore shim parameters" 
+"  $f = $GSDIR+'/gshim.line'  "
+"  $c = ''  "
+"  format(cnt,1,0):$c  "
+"  $fn = $GSDIR+'/gshim.line.'+$c  "
+"  exists($f,'file'):$e  "
+"  if($e = 0) then  "
+"    write('line3','%s-File does not exist:%s',$macro,$f)  "
+"  endif  "
+"  save the linewidth info in gshim.line.cnt"
+"  cp($f,$fn)  "   
+   "save info in gshim.out file"
+"  $out = $GSDIR+'/gshim.out'  "
+"  $outn = $GSDIR+'/gshim.out.'+$c  "
+"  shell('cat '+$f+' >> '+$out)  "
+"  shell('cat '+$f+' >> '+$outn)  "
+
+  prescan_frequency('proc','man') "do prescan frequency"
+  gs_params('load')  "retrieve shim parameters"
+  shimpass=4
+  gs_acqb0map(shimpass)    "do next iteration"
+  return
+elseif($1 = 6) then
+  gs_params('save')   "save current parameters"
+  gs_intshim "retrieve parameters for interleaved acquisition" 
+  wexp='gs_acqb0map(7)'
+  wdone='' werr=''            
+  au    "interleaved acquisition"
+  return      
+elseif($1 = 7) then   "interleaved acquisition done"
+  gs_intshim(intshimcnt)  "save interleaved data"
+  gs_params('load')  "retrieve shim parameters"
+  intshimcnt = intshimcnt+1  "global file counter"
+  if(intshimcnt > intshim) then
+    write('line3','Interleaved acquisition done')
+    return
+  else 
+    prescan_control[1] = 0
+    cnt = 1   "shim iterations counter reset"
+    wexp = '' wdone = '' werr = ''
+    gs_acqb0map   "start shimming from the beginning"
+    return
+  endif
+endif
+
+write('line3','Prepared for field map# %d, cycle# %d',shimpass,cnt)
+
+if(prescan_control[1] = 0 ) then
+  if(shimpass = 1) then
+    if(del=delref) then
+      $time = (tr*nt*nv*nv2*2)
+    else
+      $time = (tr*nt*nv*nv2*3)
+    endif
+    formattime($time):time_exp
+    write('line3','Scan time %s',time_exp)
+  endif
+  wexp = 'svf(shimmapfid) gs_acqb0map(shimpass)' 
+  wdone = ''
+  au
+endif
+
+"********************************************************************************"
+"		Modification History
+
+" 07feb05(ss) - mods for setres
+" 01jun05(ss) - offset,psi,phi,theta saved in B0.param file
+" 03jun05     - B0.hdr created
+" 01aug05     - shimfiles for each iteration saved, e.g. start{1,2,3,4}
+" 14sep06     - zero fill option added; zf option not tested with gemsshim
+" 18oct06     - prescan-frequency parameters loaded from study dir
+" 20oct06     - zero fill parameter may not be set in old shimmap param file
+" 15nov07     - phase array coils supported
+" 04dec07     - shimmapfov
+" 11feb08     - default parameters, fov/matrix/orient set
+" 12feb08     - rcvrs checked
+
+" 22jul08     - interleaved shimming
+
+

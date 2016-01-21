@@ -1,0 +1,149 @@
+"macro AT19_lowpower"
+"AT19_lowpower" "Modulator Accuracy test-low power  " 
+
+if ($#=0) then
+   ATrtp('standard')
+   create('list1','real','current',0)   
+   create('list2','real','current',0)   
+   create('list3','real','current',0)   
+   "permit arrays without affecting acquisition"
+   setgroup('list1','processing')    
+   setgroup('list2','processing')    
+   setgroup('list3','processing')    
+   text('Modulator Test -low power') 
+   at_currenttest='mod_array_linearity' 
+   if (at_new='n') then
+    if (fifolpsize<1024) then   "only unity+ or inova has modulator"
+     write('line3','No Linear Modulator Present. Test Skipped')
+     ATnext return
+    endif
+   endif
+    bs=1 il='y' nt=4
+    tof=at_tof
+    tpwr=-16 pw=5000
+    array('tpwrf',103,15,40)
+    if (sfrq<500) then nt=2*nt endif
+    ph f vp=0
+    cdc
+
+    wnt='AT19_lowpower(`WNT`)' 
+    wexp='AT19_lowpower(`PART1`)' 
+
+    ATcycle
+    au
+    write('line3','Modulator Test ')
+    dps
+
+elseif ($1='WNT') then
+  ATwft
+  f peak:$ht,$frq
+  wp=2p sp=$frq-1p
+  lvl=0 tlt=0
+  if(celem>1) then
+    select(celem) aph0:$ht
+  endif
+  peak:$ht
+  if $ht<0 then rp=-rp endif
+  vsadj(150) dssh dtext
+elseif ($1='PART1') then
+   wft
+   
+   $count1=arraydim-10
+   $ok = 0
+   while ((not $ok) and ($count1<arraydim)) do
+     select($count1) aph:$ok
+     $count1= $count1 + 1
+   endwhile
+   $count1=arraydim-15
+   $rpsum=0 $count2=1
+   repeat
+    select($count1)
+    aph0:$ok
+    if ($ok) then
+       $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+       $count2=$count2+1
+    endif
+    $count1=$count1+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   dssh('dodc') dtext
+   ATsvf('mod_array_lowpower_linearity')
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage('mod_array_lowpower_pars')
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    ATpage('mod_lowpower_array')
+   endif
+   ATrecord('MOD1r_lowpower','Modulator Accuracy Test (low power)','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Linearity (Low Power): tpwr=%2.0f  ) - Std Dev:  %1.3f',tpwr,$dev)
+
+
+"data reduction"
+  ATgetphase_modulator_lowpower(1,arraydim)
+  ATgetpeaks_modulator(1,arraydim):$vs
+  list1=list2  "make same size array"
+  $i=1
+  repeat "scale intensities,store in list1"
+   list1[$i]=list2[$i]*(tpwrf[arraydim]/tpwrf[$i]) 
+   $i=$i+1                     
+  until $i>arraydim
+
+  $filename=curexp+'/linear_mod_lowpower.out'    "output file of scaled intensities"
+  write('reset',$filename)
+  write('file',$filename,'modulator value             response')
+  $i=1
+  repeat
+    write('file',$filename,'%10s                 %5.1f',tpwrf[$i],list2[$i])
+    $i=$i+1
+  until $i>arraydim
+
+  $filename=curexp+'/linear_mod_lowpower.inp'    "output file of scaled intensities for regression analysis"
+  write('reset',$filename)
+  write('file',$filename,'modulator value')
+  write('file',$filename,'normalized nmr response')
+  write('file',$filename,'1  103')
+  $i=1
+  repeat
+    write('file',$filename,'%10s                 %5.1f',tpwrf[$i],list1[$i])
+    $i=$i+1
+  until $i>arraydim
+
+  cp(curexp+'/linear_mod_lowpower.out',userdir+'/autotest/data/linear_mod_lowpower.out')
+  mv(curexp+'/regression.inp',curexp+'/regression.inp.lowpower.mod')
+  cp(curexp+'/linear_mod_lowpower.inp',curexp+'/regression.inp')
+  full wc2=wc2max
+  clear(2)
+  expl('regression')
+  analyze('expfit','regression','poly1','list')
+  if (at_plotauto='y') then
+      wc2=30 pexpl ATplregr(0,wc2max)
+      ATpage('mod_array_linear_lowpower.reg')
+      wc2=wc2max-10 pexpl ATplregr(0,wc2max)
+      ATpage('mod_array_linear2_lowpower.reg')
+  endif
+
+  mv(curexp+'/regression.inp',curexp+'/regression.inp.lowpower')
+  cp(curexp+'/mod_array_phase_lowpower.inp',curexp+'/regression.inp')
+  full wc2=wc2max
+  clear(2)
+  expl('regression')
+  analyze('expfit','regression','poly1','list')
+  if (at_plotauto='y') then
+      wc2=30 pexpl ATplregr(0,wc2max)
+      ATpage('mod_array_phasediff_lowpower.reg')
+      wc2=wc2max-10 pexpl ATplregr(0,wc2max)
+      ATpage('mod_array_phasediff2_lowpower.reg')
+  endif
+
+  ATnext
+endif

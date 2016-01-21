@@ -1,0 +1,257 @@
+"macro proshimEdit"
+
+$xmlfile=curexp+'/tmpapp.xml'
+$cfile='shimmenuInfo'
+$filename= '/templates/vnmrj/choicefiles/'+$cfile
+if ($# = 0) then
+  rights('canEditShimMenu'):$e
+  if ($e <> 1) then
+    return
+  endif
+  destroy('psOnOff'):$e
+  destroy('psMethod'):$e
+  destroy('psMapname'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+
+  $file=userdir+$filename
+  exists($file,'file'):$e
+  if (not $e) then
+    exists($cfile,'templates/vnmrj/choicefiles'):$e,$file
+  endif
+  if (not $e) then
+    write('line3','Cannot edit shim menu. %s file not found.',$cfile)
+    return
+  endif
+
+  create('psOnOff','string')
+  create('psMethod','string')
+  create('psMapname','string')
+  create('psLabel','string')
+  create('psSave','string')
+  setgroup('psOnOff','display')
+  setgroup('psMethod','display')
+  setgroup('psMapname','display')
+  setgroup('psLabel','display')
+  setgroup('psSave','display')
+  psSave='0'
+  $i = 0
+  $j = 0
+  lookup('mfile',$file,'readline','filekey'):$str,$key,$res
+  while ($res = 2) do
+    $i = $i + 1
+    $j = $j + 1
+    psMethod[$i]= ''
+    psMapname[$i]= ''
+    psOnOff[$i]='-1'
+    psLabel[$i]=''
+    $i = $i + 1
+    $label=''
+    $meth=''
+    $gmap=''
+    $attr=''
+    psOnOff[$i]='on'
+    substr($str,1,'delimiter','"'):$label
+    psLabel[$i]= $label
+    substr($str,3,'delimiter','"'):$attr
+    substr($attr,2,'delimiter',` '=\n`):$meth
+    psMethod[$i]=$meth
+    substr($attr,4,'delimiter',` '=\n`):$gmap
+    psMapname[$i]=$gmap
+    lookup('mfile',$key,'readline','filekey'):$str,$key,$res
+  endwhile
+  $i = $i + 1
+  psOnOff[$i]='-1'
+  psMethod[$i]=''
+  psMapname[$i]=''
+  psLabel[$i]=''
+  exists(systemdir+$filename,'file','rw'):$perm
+  $ysize = 60 + $i*30 + $perm*30
+  $ys = ''
+  format($ysize,0,0):$ys
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="620 `+$ys+`"  \n\
+    style="Heading2"  \n\
+    label="Appdir"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="135 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Shim menu label" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="295 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Shim method" \n\
+      justify="Left" \n\
+      /> \n
+   <label loc="455 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Gradient shim mapname" \n\
+      justify="Left" \n\
+      /> \n`)
+  $num = 0
+  $yp=''
+  $numch=''
+  while ($num < $i) do
+    $num=$num + 1
+    $ypos = 30 + $num * 20
+    format($ypos,0,0):$yp
+    format($num,0,0):$numch
+    write('file',$xmlfile,`\n
+    <filemenu loc="455 `+$yp+`" size="150 20"
+      style="PlainText"
+      vq="gmapname"
+      vc="`+$0+`('set',`+$numch+`,'map','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'map'):$VALUE"
+      file="$VALUE=userdir+'/persistence/gmapshim'"
+      type="file"
+      editable="No"
+      vq2="gmapname"
+      statshow="yes"
+      elastic="no"
+      modalclose="no"
+      display="yes"
+      />
+    <entry loc="295 `+$yp+`" size="150 20"
+      style="PlainText"
+      vc="`+$0+`('set',`+$numch+`,'method','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'method'):$VALUE"
+      disable="Grayed out"
+      />
+    <entry loc="135 `+$yp+`" size="150 20"
+      style="PlainText"
+      vc="`+$0+`('set',`+$numch+`,'label','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <menu loc="20 `+$yp+`" size="105 20"
+      style="PlainText"
+      label="menu"
+      vc="`+$0+`('set',`+$numch+`,'flag','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'flag'):$VALUE"
+      editable="No"
+      >
+      <mlabel
+        label="Keep"
+        chval="on"
+        />
+     <mlabel
+        label="Remove"
+        chval="-1"
+        />
+    </menu> \n`)
+
+
+  endwhile
+  if ($perm = 1) then
+    $ypos = $ypos + 30
+    format($ypos,0,0):$yp
+    write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as system shim menu" \n\
+      vc="psSave='2'" \n\
+      set="$VALUE=(psSave='2')" \n\
+      />`)
+  endif
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as private shim menu" \n\
+      vq="psSave" \n\
+      vc="psSave='0'" \n\
+      set="$VALUE=(psSave='0')" \n\
+      />`)
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Reset to system default shim menu" \n\
+      vq="psSave" \n\
+      vc="psSave='1'" \n\
+      set="$VALUE=(psSave='1')" \n\
+      />`)
+  write('file',$xmlfile,'  </group>\n</template>')
+  
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', \
+   'cancel:'+$0+'(`cancel`)', 'ok:'+$0+'(`ok`)', \
+   'title:Shim Menu Editor')
+
+elseif ($1 = 'set') then
+  if ($3 = 'flag') then
+    psOnOff[$2] = $4
+  elseif ($3 = 'method') then
+    psMethod[$2] = $4
+  elseif ($3 = 'label') then
+    psLabel[$2] = $4
+  elseif ($3 = 'map') then
+    psMapname[$2] = $4
+  endif
+
+elseif ($1 = 'get') then
+  if ($3 = 'flag') then
+    return(psOnOff[$2])
+  elseif ($3 = 'method') then
+    return(psMethod[$2])
+  elseif ($3 = 'label') then
+    return(psLabel[$2])
+  elseif ($3 = 'map') then
+    return(psMapname[$2])
+  endif
+
+elseif ($1 = 'ok') then
+  delete($xmlfile)
+  if (psSave[1] = '1') then      // return to default
+    rm('-f',userdir+$filename):$e
+  else
+    $file = curexp+'/tmpapp'
+    $num = size('psOnOff')
+    $i = 0
+    write('reset',$file)
+    while ($i < $num) do
+      $i = $i + 1
+      if (psOnOff[$i] <> '-1') and (psMethod[$i] <> '') and (psLabel[$i] <> '') then
+        write('file',$file,`"%s" "method='%s' Gmapname='%s'"`, \
+               psLabel[$i], psMethod[$i], psMapname[$i])
+      endif
+    endwhile
+    if (psSave = '0') then  // save locally
+      shell('mkdir -p '+userdir+'/templates/vnmrj/choicefiles'):$e
+      copy($file,userdir+$filename)
+    else                           // save globally
+      copy($file,systemdir+$filename)
+    endif
+    delete($file)
+  endif
+  method=method
+  destroy('psOnOff'):$e
+  destroy('psMethod'):$e
+  destroy('psMapname'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+elseif ($1 = 'cancel') then
+  delete($xmlfile)
+  destroy('psOnOff'):$e
+  destroy('psMethod'):$e
+  destroy('psMapname'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+endif

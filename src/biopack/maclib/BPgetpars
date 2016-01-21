@@ -1,0 +1,37 @@
+"macro BPgetpars"
+  $file='' $file=$1
+  length($file):$size
+  if $size>4 then
+    $t=''
+    substr($file,$size-3,4):$t
+    if $t<>'.par' then
+      $file=$file+'.par'
+    endif
+  else
+    $file=$file+'.par'
+  endif
+  $name='' $name='/vnmr/maclib/rtppar'
+  exists($name,'file'):$e
+  if $e=1 then   "rtppar uses appdir path(VnmrJ2.2 or later)"
+   exists('prescan','parameter'):$e
+   if($e>0.5) then destroy('prescan') fixpar endif
+   rtppar($file)
+  else                         "use either /vnmr or user path"
+   $fpath=userdir+'/parlib/'+$file
+   exists($fpath,'file'):$e
+   if $e<0.5 then
+     $fpath=systemdir+'/parlib/'+$file
+     exists($fpath,'file'):$f
+     if $f<0.5 then
+       write('error','%s: could not find \'%s\'',$0,$fpath)
+       return
+     endif
+   endif
+
+   exists('prescan','parameter'):$e if($e>0.5) then destroy('prescan') fixpar endif
+
+   "Recall parameter set"
+   "write('alpha','%s: retrieving \'%s\'',$0,$fpath)"
+   rtp($fpath)
+  endif
+

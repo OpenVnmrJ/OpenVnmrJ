@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<p>Count numbers: <output id="result"></output></p>
+<button onclick="startWorker()">Start Worker</button> 
+<button onclick="stopWorker()">Stop Worker</button>
+<br><br>
+
+<script>
+var w;
+
+function startWorker()
+{
+  if (typeof(Worker)!=="undefined")
+  {
+    if (typeof(w)=="undefined")
+    {
+      w=new Worker("js/ww-test.js");
+    }
+    w.onmessage = function(event) {
+      msg = event.data;
+      switch (msg.type) {
+      case 'data':
+        console.log('result')
+        document.getElementById("result").innerHTML=event.data.value;
+        break;
+      case 'alert':
+        console.log('alert')
+        document.getElementById("result").innerHTML="?"
+        w.postMessage('pause');
+        alert(msg.value);
+        w.postMessage('resume');
+        break;
+      case 'log':
+        console.log(msg.value);
+        break;
+      }
+    };
+  }
+  else
+  {
+    document.getElementById("result").innerHTML="Sorry, your browser does not support Web Workers...";
+  }
+}
+
+function stopWorker()
+{ 
+  w.terminate();
+}
+</script>
+
+</body>
+</html>

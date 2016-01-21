@@ -1,0 +1,746 @@
+"macro psCmd"
+//
+// A prescanInfo file is used to define what prescans will be run and in what order.
+// psMain($path) is used to run prescans defined by the file. 
+// prescanInfo files are in template/vnmrj/choicefiles directory.
+// 
+// For example, prescanInfo may look like this:
+// # macro    on/off;label;
+// psPreacq   on;Pre-acquisition delay;
+// psLock     on;Lock sample;
+// psTune     on;Probe tuning;
+// psGshim    on;Gradient shimming;
+// psGain     on;Auto gain;
+// ....
+//
+// "macro" is the macro to run the prescan. 
+// "on/off" is used to determine whether the prescan is 'on' or 'off'
+// "label" is a label for the prescan
+//
+// see comments in psGain for prescan macro implementation
+// prescan parameters will be created and initilaized automatically based on prescanInfo file. 
+// prescanInfo also defines the order in which prescans will be run.
+//
+//--------------------------------------------
+// psCmd('createPars'<,prescanInfoPath>)
+//         create and initialize prescan parameters if not exist.
+// psCmd('set','name1',value1,'name2',value2, ...)
+//	   A global parameter named "psclipboard" is used to save name:value pairs.
+//	   This is used to save values (such as min/max, error code etc...) for later use. 
+//	   It is also used to save the stage of prescans.
+//	   psclipboard will be reset in psMain('init') by psCmd('reset').
+//         Values can be real or string. But in one call, they should be all real or all string.
+// psCmd('get','name1','name2','names3', ...):$value1,$values2,$value3,...
+//         get real or string values by names.  Can get up to five values in one call.
+//         In one call, the values should be all real or all string
+//
+//         The psX macros can register which errors they want to handle.
+//         All other errors will be handled by the werr parameter of the
+//         original protocol.
+//	   psCmd('set','errors','103 104 801')
+//	   psCmd('get','errors'):$errs
+//	   To handle all errors, use the keyword all, as show below
+//	   psCmd('set','errors','all')
+//
+//         Some prescans proceed in multiple stages. 'stage' can be used to track this:
+//         psCmd('set','stage',$stage)
+//         psCmd('get','stage'):$stage
+//
+//	   psCmd('set','max',$maxval,'min',$minval,'step',$stepval,'stat',0)
+//	   psCmd('get','max','min','step','stat'):$maxval,$minval,$stepval,$a2
+//
+// psCmd('reset')
+//         reset psclipboard 
+// psCmd('resetX')
+//         reset psclipboard for psX  
+// psCmd('svp')
+//         save parameters of current protocol for which the prescan is running.
+// psCmd('rtp',...)
+//         command to do an rtp on various SQ based parameter sets.
+//         psCmd('rtp','current') retrieves parameters for the protocol
+//         for which the prescan is running.
+//         psCmd('rtp','start') retrieves parameters for the "startpar"
+//         parameter set for the protocol.
+//         psCmd('rtp','name') retrieves parameters for the name protocol.
+//	   protocol name may be set by psX('init'):
+//	   psCmd('set','protocol','...')
+// psCmd('getInfo',macroName/paramName/index):$macro,$param,$default/$value
+//         get all attributes for a prescan specified by macroName, or paramName, or index.
+// psCmd('getProperty',macroName):$label,$choices,$time
+//	   called by psCmd('getInfo') to get label of given macro.
+// psCmd('record', string)
+//         Saves string as macro Line. It will be executed as a macro by the 'update' option.
+// psCmd('resetRecord') 
+//	   reset macro record.
+// psCmd('update')
+//         retrieve "current" parameters, execute all the saved macroLines, and save "current"
+//         parameters. This is used to transfer
+//         information from the prescans to the original protocol.
+// psCmd('psError'):$n
+//         called by werr. return 1 if acqstatus[2] match one of the errors
+//         registered by the prescan, otherwise return 0.
+// psCmd('psPath'):$path
+//         get prescan path, where prescan related files will be saved.
+// psCmd('tmpparPath'):$path
+//         get path (a subdir in psPath) to save current parameters.
+// psCmd('psInfoPath'):$path
+//         get path to prescanInfo file
+// psCmd('psPropertyPath'):$path
+//         get path to prescanProperty file
+// psCmd('psMax'):$n
+//         return max # of prescans
+// psCmd('getRec'):$path,$n
+//         return macro record path and # of macro lines
+// psCmd('lines', file):$n
+//         return # of lines for a given file
+// psCmd('saveInfo'<,path>)
+//	   save prescanInfo to default path (psPath+'/prescanInfo') or a given path
+//	   based on current prescan parameters.
+// psCmd('getTime'<,macroName/path>):$v
+// 	   get estimated time to run a given prescan macro, or all selected macros defined by 
+// 	   prescanInfo (fullpath to prescanInfo is required). 
+// 	   If $2 is not given, then get estimated total time based on current prescan parameters.
+//
+// psCmd('time','start') to record start time
+// psCmd('time','current'):$t to record and return current time relative to startTime
+// psCmd('time') or psCmd('time','total'):$t to return total time. psMain records 'current'
+// time at the end of each prescan so total time reflect how much time was actually taken.
+//
+// the following is not done
+// psCmd('option',i):$num
+//         returns i'th option specified for the prescan. It is assumed
+//         the macro knows what the options are.
+//
+
+if ($#=0) then
+   write('error','psCmd: no arguments found')
+   return
+endif
+
+// create and initialize prescan parameters if not exist
+// psCmd('createPars')
+// psCmd('createPars', path)
+if ($1 = 'createPars') then
+
+   // this parameter is used to save parameters to be used in a later stage of the prescan
+   // values are saved as name:value pair as array element of the string parameter.
+   create('psclipboard','string','global',''):$e
+   setprotect('psclipboard','on',256+32768,'global')
+   return
+endif
+
+// pdCmd('set',name1,value1,name2,value2,etc...) 
+// save real or string values to psclipboard 
+// values should be all real or all string
+if($1='set') then
+   if($# < 3) then
+      write('line3',`Usage: psCmd('set',name1,value1,name2,value2,etc...).`)
+      return
+   endif
+
+   $n = ($#-1)/2
+   $i=0
+   while($i < $n) do
+      $i=$i+1
+      $name=${$i*2}
+      $value=${$i*2+1}
+      setvalue4name('psclipboard',$name,$value)
+   endwhile
+
+   return
+endif
+
+// psCmd('get',name1, name2, name3,...) get upto 5 real or string values from psclipboard by names
+// values should be all real or all string
+if($1='get') then
+
+   if($# < 2) then
+      write('line3','Usage: getVal(paramName,name1, name2,...):$value1,$value2,...') 
+      return
+   endif
+
+   $n = ($#-1)
+   $i=0
+   while($i < $n) do
+      $i=$i+1
+      $name=${$i+1}
+      getvalue4name('psclipboard',$name):$value
+      $values[$i]=$value
+   endwhile
+
+   if($# > 5) then
+      return($values[1],$values[2],$values[3],$values[4],$values[5])
+   elseif($# > 4) then
+      return($values[1],$values[2],$values[3],$values[4])
+   elseif($# > 3) then
+      return($values[1],$values[2],$values[3])
+   elseif($# > 2) then
+      return($values[1],$values[2])
+   elseif($# > 1) then
+      return($values[1])
+   endif
+   return('')
+endif
+
+// get the path where prescan parameters/data will be saved
+if ($1 = 'psPath') then
+   if (auto='y') then
+      $path=autodir+'/prescan'
+   else
+      $path=curexp+'/prescan'
+   endif
+   exists($path,'directory'):$e
+   if($e < 1) then
+      shell('mkdir -p '+$path):$e
+   endif
+   return($path)
+endif
+
+if ($1 = 'tmpparPath') then
+   psCmd('psPath'):$file
+   return($file+'/savepar')
+endif 
+
+// prescan is run on the behalf of current exp. psX macro may bring in its own parameters.
+// The main control macro prescan('init') will call pscmd('svp') to save current parameters.
+// Current parameters will be retrieved by pscmd('rtp','current') by psX macros or prescan macro.
+if ($1 = 'svp') then
+   psCmd('tmpparPath'):$file
+   exists($file+'.par','file'):$e
+   if $e > 0.5 then
+      delete($file)
+   endif
+   svp($file,'nodb')
+   exists($file+'.par','directory'):$direx
+   if ($direx=0) then
+      return(0)
+   else
+      return(1)
+   endif
+endif
+
+if ($1 = 'rtp') then
+   $type='current'
+   if($# > 1.5) then $type=$2 endif
+
+   if($type = 'current') then
+      psCmd('tmpparPath'):$file
+      exists($file+'.par','file'):$e
+      if $e > 0.5 then
+        fread($file+'.par/procpar','current','reset')
+        cp($file+'.par/text',curexp+'/text')
+	acqdisp
+        vnmrjcmd('pnew','layout','pslabel')
+      endif
+      psCmd('get','autoname'):autoname
+
+   elseif($type = 'start') then
+      // may need to call AutoStrtfid?? or simply use current strtpar??
+      exists('strtpar','parameter'):$e
+      if($e > 0) then
+         $file=strtpar
+         exists($file,'file'):$e
+         if $e > 0.5 then
+           rtp($file,'nomenu')
+         else
+           write('line3','Cannot find start parameters %s.', $file+'.par')
+         endif
+      else
+         write('line3','startpar parameter is not defined.')
+      endif
+
+   else // $type='name'
+      exists($name,'parlib'):$e,$file
+      if $e > 0.5 then
+        rtp($file,'nomenu')
+      else
+        write('line3','Cannot find parameters for protocol %s.', $file+'.par')
+      endif
+   endif
+   return
+endif
+
+// get label, choices, estimatedTime for given prescan macro
+if($1='getProperty' and $# > 1) then
+   psCmd('psPropertyPath'):$path
+   exists($path,'file'):$e
+   if($e = 0) then
+      return('','','')
+   endif
+
+   $name=$2
+   lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+   while ($ret = 2) do
+      substr($line,1,1):$ch
+      if ($ch <> '#') then
+         strstr($line,';'):$ret
+         if ($ret > 1) then
+            substr($line,1,'delimiter',';\n'):$macro
+            if($macro = $name) then
+                substr($line,2,'delimiter',';\n'):$label
+                substr($line,3,'delimiter',';\n'):$choices
+                substr($line,4,'delimiter',';\n'):$time
+                return($label,$choices,$time)
+              endif
+            endif
+        endif
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      return('','','')
+      // not found
+endif
+
+// psCmd('getInfo',macroName<,prescanInfoPath>)
+// psCmd('getInfo',paramName<,prescanInfoPath>)
+// psCmd('getInfo',index<,prescanInfoPath>)
+// prescanInfo format:
+// #index;Macro Name;Parameter Name;Label;Default Parameter Value;Protocol
+/* Not used
+if($1='getInfo' and $# > 1) then
+   // this command returns all 5 fields of a prescan entry in prescanInfo
+   // the entry can be specified by macro name or parameter name
+   // or a integer number by counting the lines (not including lines start with #)
+
+   if($# < 2) then
+     write('line3', 'Usage: psCmd(`getInfo`,macroName/paramName/index)')
+     return('','','','')
+   endif
+
+   if($# > 2) then
+      psCmd('psInfoPath',$3):$path
+   else
+      psCmd('psInfoPath'):$path
+   endif
+
+   exists($path,'file'):$e
+   if($e = 0) then
+      return('','','','')
+   endif
+
+   if(typeof('$2')) then // string type
+     $name=$2
+     $num=-1
+   else
+     $num=$2
+   endif
+
+   $macro=''
+   $param=''
+   $default=''
+   $protocol=''
+   lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+   if($num < 0) then // look up by macro or param name
+      while ($ret = 2) do
+        substr($line,1,1):$ch
+        if ($ch <> '#') then
+           strstr($line,';'):$ret
+           if ($ret > 1) then
+              substr($line,2,'delimiter',';\n'):$macro
+              substr($line,3,'delimiter',';\n'):$param
+              if($macro = $name or $param = $name) then
+                substr($line,5,'delimiter',';\n'):$default
+                substr($line,6,'delimiter',';\n'):$protocol
+                return($macro,$param,$default,$protocol)
+              endif
+            endif
+        endif
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      return('','','','') // not found
+
+   else // look up by line number (not including lines start with #)
+      while ($ret = 2) do
+        substr($line,1,1):$ch
+        if ($ch <> '#') then
+           strstr($line,';'):$ret
+           if ($ret > 1) then
+              substr($line,1,'delimiter',';\n'):$index
+              if($index=$num) then
+                substr($line,2,'delimiter',';\n'):$macro
+                substr($line,3,'delimiter',';\n'):$param
+                substr($line,5,'delimiter',';\n'):$default
+                substr($line,6,'delimiter',';\n'):$protocol
+                return($macro,$param,$default,$protocol)
+              endif
+            endif
+        endif
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      return('','','','') // not found
+   endif
+endif
+ */
+
+// psCmd('record', 'reset') to reset macro record
+// psCmd('record', $macroLine) to save macroline to the record
+if($1='record' and $# > 1) then
+   psCmd('getRec'):$rec
+
+   exists($rec,'file'):$e
+   if($e < 1) then 
+      write('reset',$rec)
+   endif
+
+   write('file',$rec, $2) 
+   return
+endif
+
+if($1='resetRecord') then
+   psCmd('getRec'):$rec
+write('line3',$rec)
+   write('reset',$rec)
+   return
+endif
+
+// psCmd('update') to retirve "current" parameters, execute recorded macro lines in $rec.
+// and save "current" parameters.
+// assume if $rec exist, it is a valid macro
+// macro_record is purged and $rec is removed after executed
+if($1='update') then
+   psCmd('getRec'):$rec,$n
+
+   if($n > 0) then 
+      psCmd('rtp','current')
+      macrold($rec):$e
+      macro_record
+      psCmd('svp')
+      purge('macro_record')
+      delete($rec) 
+   endif
+
+   return
+endif
+
+// return macro record path and # of lines 
+if($1='getRec') then
+   psCmd('psPath'):$rec
+   $rec=$rec+'/macro_record'
+
+   psCmd('lines',$rec):$n 
+   return($rec,$n)
+endif
+
+// return # of lines for a given file
+if($1='lines' and $# > 1) then
+   exists($2,'file'):$e
+   if($e < 1) then return(0) endif
+
+   shell('wc -l '+$2):$s
+   substr($s,1):$n
+   return($n)
+endif
+
+if($1='reset') then
+   exists('psclipboard','parameter','global'):$e
+   if($e) then
+     psclipboard=''
+     psclipboard='psstage:','stage:','errors:','stat:0','acqpause:0','autoname:'+autoname
+   endif
+   return
+endif
+
+if($1='resetX') then
+   psCmd('set','stage','')
+   psCmd('set','errors','')
+   psCmd('set','errormessage','')
+   psCmd('set','stat',0)
+   psCmd('get','autoname'):autoname
+   return
+endif
+
+if($1='psError') then
+   psCmd('get','errors'):$errs
+   if(not typeof('$errs')) then
+       if(acqstatus[2] = $errs) then
+	 return(1)
+       else return(0) endif
+   else
+       if ($errs = 'all') then return(1) endif
+       if ($errs = '') then return(0) endif
+       substr($errs,1):$err
+       if(not typeof('$err')) then
+	 $prev=$err+1
+	 $i=1
+         while($err <> $prev) do
+	    if(acqstatus[2] = $err) then
+		return(1)
+	    else
+		$prev=$err
+		$i=$i+1
+		substr($errs,$i):$err
+	    endif
+	 endwhile
+       endif
+       return(0)
+   endif
+endif
+
+if($1='psMax') then
+   psCmd('psInfoPath'):$path
+   psCmd('lines',$path):$n
+   return($n)
+endif
+
+if($1='psPropertyPath') then
+   $path=userdir+'/templates/vnmrj/choicefiles/prescanProperty'
+   exists($path,'file'):$e
+   if($e = 0) then
+     $path=systemdir+'/templates/vnmrj/choicefiles/prescanProperty'
+   endif
+   exists($path,'file'):$e
+   if($e = 0) then
+      return('')
+   else
+      return($path)
+   endif
+endif
+
+// if not specified by a name or fullpath, then get infoPath from clipboard.
+if($1='psInfoPath') then
+   $path=''
+   if($# > 1) then 
+      $file=$2
+   else
+      psCmd('get','infoPath'):$file
+      if($file = '') then
+        $file='prescanInfo'
+      endif
+   endif
+
+   substr($file,1,1):$s
+   if($s<>'/') then
+      exists($file,'templates/vnmrj/choicefiles'):$e,$path
+   else
+      $path=$file
+      exists($path,'file'):$e
+   endif
+   
+   if($e = 0) then
+      return('')
+   else
+      return($path)
+   endif
+endif
+
+// save prescanInfo in psPath
+/*
+ * not currently used
+ *
+if($1='saveInfo') then
+   psCmd('psInfoPath'):$path
+   exists($path,'file'):$e
+   if($e = 0) then
+      write('line3','File %s does not exist.',$path)
+      return
+   endif
+
+   if($# > 1) then
+      $mypath=$2
+   else
+      psCmd('psPath'):$mypath
+      $mypath=$mypath+'/prescanInfo'
+   endif
+
+   exists($mypath,'file'):$e
+   if $e > 0.5 then
+      delete($mypath)
+   endif
+   write('file',$mypath,'#index;macroName;paramName;paramTree;value')
+
+   lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+   while ($ret = 2) do
+      substr($line,1,1):$ch
+      if ($ch <> '#') then
+         strstr($line,';'):$ret
+         if ($ret > 1) then
+	   $index=''
+           substr($line,1,'delimiter',';\n'):$index
+           substr($line,2,'delimiter',';\n'):$macro
+           substr($line,3,'delimiter',';\n'):$param
+           substr($line,4,'delimiter',';\n'):$tree
+	   $value = {$param}
+	   write('file',$mypath,$index+';'+$macro+';'+$param+';'+$tree+';'+$value)
+         endif
+       endif
+       lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    endwhile
+    write('line3', 'prescanInfo is saved in %s',$mypath)
+endif 
+ */
+
+// psCmd('getTime'<,macroName/path>):$v
+// get estimated time to run a given prescan macro, or all selected macros defined by 
+// prescanInfo (fullpath to prescanInfo is required). 
+// If $2 is not given, then get estimated total time based on current prescan parameters.
+/* Not used
+if($1='getTime') then
+   
+   if($# > 1) then
+      substr($2,1,1):$s
+      if($s <> '/') then
+	psCmd('getProperty', $2):$label,$choices,$time
+	if($label = '') then
+	  write('line3','Prescan macro %s does not exist.', $2)
+	  return(0)
+	else
+	  return($time)
+        endif
+      endif
+   endif
+
+   if($# > 1) then // full path
+      $current=0 // use value in prescanInfo
+      psCmd('psInfoPath',$2):$path
+   else
+      $current=1  // use current ps parameters and default prescanInfo
+      psCmd('psInfoPath'):$path
+   endif
+   
+   $total=0
+   lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+   while ($ret = 2) do
+      substr($line,1,1):$ch
+      if ($ch <> '#') then
+         strstr($line,';'):$ret
+         if ($ret > 1) then
+           substr($line,2,'delimiter',';\n'):$macro
+ 	   if($current > 0) then
+             substr($line,3,'delimiter',';\n'):$param
+	     $value = {$param}
+ 	   else 
+             substr($line,5,'delimiter',';\n'):$value
+ 	   endif
+	   if($value <> 'off') then
+	      psCmd('getProperty', $macro):$label,$choices,$time
+	      $total = $total + $time	
+	   endif
+         endif
+       endif
+       lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    endwhile
+    return($total)
+endif
+ */
+
+// psCmd('time','start') to record start time
+// psCmd('time','current'):$t to record and return current time relative to startTime
+// psCmd('time') or psCmd('time','total'):$t to return total time. psMain records 'current'
+// time at the end of each prescan so total time reflect how much time was actually taken.
+if($1='time') then
+   if($# > 1) then
+      if($2 = 'start') then
+	unixtime:$t
+        psCmd('set','startTime',$t)
+        psCmd('set','totalTime',0)
+	return(0)
+      elseif($2 = 'current') then
+	unixtime:$t
+        psCmd('get','startTime'):$st
+        $tt = $t-$st
+        psCmd('set','totalTime',$tt)
+	return($tt)
+      else
+        psCmd('get','totalTime'):$tt
+	return($tt)
+      endif
+   else
+      psCmd('get','totalTime'):$tt
+      return($tt)
+   endif
+endif
+
+if($1='next') then
+   psCmd('getPrescans'):$prescans
+   $ps=''
+   substr($prescans,1):$ps
+   psCmd('set','psstage',$ps)
+   if($ps <> '') then
+      $label=''
+      $labels=''
+      psCmd('get','labels'):$labels
+      if ($labels<>'') then
+        substr($labels, 1, 'delimiter',';\n'):$label
+      endif
+      psCmd('set','label',$label)
+      psCmd('remove',$ps)
+   endif
+   return($ps)
+endif
+
+if($1='active') then
+   $ps=''
+   psCmd('get','psstage'):$ps
+   if($ps = '') then
+     return(0)
+   else
+     return(1)
+   endif
+endif
+
+if($1='setPrescans') then
+
+   if($# > 1) then
+      psCmd('psInfoPath',$2):$path
+   else 
+      psCmd('psInfoPath'):$path
+   endif 
+   exists($path,'file'):$e
+   if($e = 0) then
+      return
+   endif
+
+   $prescans=''
+   $labels=''
+   $label=''
+   $onoff=''
+   $macros=''
+   $attrs=''
+   readfile($path,'$macros','$attrs','','local'):$num
+   $i = 0
+   while ($i < $num) do
+     $i = $i + 1
+     substr($attrs[$i],1,'delimiter',';\n'):$onoff
+     if ($onoff = 'on') then
+       $prescans=$prescans+' '+$macros[$i]
+       substr($attrs[$i],2,'delimiter',';\n'):$label
+       if ($labels='') then
+         $labels=$label
+       else
+         $labels=$labels+';'+$label
+       endif
+     endif
+   endwhile
+   psCmd('set','prescans',$prescans)
+   psCmd('set','labels',$labels)
+   return
+endif
+
+if($1='getPrescans') then
+   psCmd('get','prescans'):$prescans
+   return($prescans)
+endif 
+
+if($1='remove') then
+   
+   psCmd('get','prescans'):$prescans
+   if($# > 1) then
+     $psX=$2
+   else
+     substr($prescans,1):$psX
+   endif
+
+   $ps='' 
+   $pss=''
+   substr($prescans, 'find',$psX):$n,$n2,$n3,$pss
+   psCmd('set','prescans', $pss)
+   if ($n >= 1) then
+     $prescans=''
+     psCmd('get','labels'):$prescans
+     if ($prescans<>'') then
+       $rem=''
+       substr($prescans, $n, 'delimiter',';\n'):$lab,$n2,$n3,$rem
+       psCmd('set','labels',$rem)
+     endif
+   endif
+
+endif

@@ -1,0 +1,24 @@
+"macro rna_makesinc"
+"rna_makesinc - makes a sinc one-lobe pulse shape with any number of steps"
+"macro rna_makesinc"
+"usage: BPmakesinc(#steps<,amplitude>)"
+" The output is a file in your personal shapelib named"
+"  rna_sincs#steps.RF, e.g., rna_sincs256.RF"
+
+$num=''
+format($1,0,0):$num
+$file=userdir+'/shapelib/rna_sincs'+$num+'.RF'
+shell('rm -f',$file):$dummy
+$phase=0
+$amp = $2
+$i=0
+write('line3','Writing data to %s...',$file)
+write('reset',$file)
+$1 = 2.0*trunc($1/2) + 1
+repeat
+  $x = -3.13 + $i*6.26/$1
+  sin($x):$y     $amp = $2*$y/$x      $amp = trunc($amp + 0.5)
+  write('file',$file,'%5.1f\t%6.1f\t1.0',$phase,$amp)
+  $i=$i+1
+until $i>$1
+write('line3','Done!')

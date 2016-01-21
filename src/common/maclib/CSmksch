@@ -1,0 +1,133 @@
+"macro CSmksch"
+$nimin='' $nimax='' $cmd='' $niargs='' $log='' $mkCSsch='' $seed =''
+
+on('ni'):$niactive
+if ($niactive) then
+    if (CSdensity=100) then
+    	write('line3','Sampling density is 100%%, no schedule displayed')
+    	if (CStype<>'a') then $CStype=CStype CStype='a' CSschedule CStype=$CStype endif
+    	clear(2)
+    	return
+    endif
+endif
+
+getbinpath('mkCSsch'):$infex,$mkCSsch
+$log = curexp + '/CSmksch.log'
+
+on('CSseed'):$e
+if $e>0 then
+  format(CSseed,3,0):$seed
+endif
+$n1=0 $n2=0 $niactive=0 $nimin='0' $nimax='1'
+on('ni'):$niactive
+if $niactive>0 then
+  on('nimax'):$e
+  if $e>0 then
+    $n1=ni
+    $n2=nimax
+  else
+    on('CSdensity'):$e
+    if $e>0 then
+      $n1=CSdensity*ni/100.0
+      $n2=ni
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax  
+  endif
+endif
+
+$niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+
+$n1=0 $n2=0 $niactive=0 $nimin='0' $nimax='1'
+on('ni2'):$niactive
+if $niactive>0 then
+  on('ni2max'):$e
+  if $e>0 then
+    $n1=ni2
+    $n2=ni2max
+  else
+    on('CSdensity2'):$e
+    if $e>0 then
+      $n1=CSdensity2*ni2/100.0
+      $n2=ni2
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax  
+  endif
+endif
+
+$niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+
+$n1=0 $n2=0 $niactive=0 $nimin='0' $nimax='1'
+on('ni3'):$niactive
+if $niactive>0 then
+  on('ni3max'):$e
+  if $e>0 then
+    $n1=ni3
+    $n2=ni3max
+  else
+    on('CSdensity3'):$e
+    if $e>0 then
+      $n1=CSdensity3*ni3/100.0
+      $n2=ni3
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax  
+  endif
+endif
+
+$niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+
+$f2=curexp+'/sampling.sch'
+exists($f2,'file'):$e
+if($e) then 
+  delete($f2)
+endif
+
+
+$cmd = $mkCSsch
+
+if CSwt = 'y' then
+  if ($niactive) then
+	$pro_file=curexp+'/sampling_ni.pro'
+	exists($pro_file,'file'):$ex
+	if not ($ex) then write('error','Weighting schedule does not exist - select desired schedule weighting and click "Make and show"') return endif
+  endif
+
+  $cmd = $cmd + ' -w '
+else
+  $cmd = $cmd + '  '
+endif
+
+$cmd = $cmd + curexp + '/sampling.sch'+$niargs
+if $seed <> '' then
+$cmd = $cmd + ' '+$seed
+endif
+
+write('reset', $log)
+write('file',$log,'%s', $cmd)
+
+$cmd = $cmd + ' >> ' + $log
+
+shell($cmd)
+shell('sleep 1')
+exists($f2,'file'):$e
+
+if($e) then 
+  write('line3','CSmksch: Sampling schedule done.')
+else
+  write('error','CSmksch: Failed to create sampling schedule.')
+  return
+endif
+
+if CSshowsch='y' then
+  CSdsch
+endif
+
+

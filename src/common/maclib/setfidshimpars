@@ -1,0 +1,38 @@
+"macro setfidshimpars"
+"setfidshimpars - macro to  check for FidShimPars file in parlib and use if found else use probefile"
+
+if (pslabel<>'PROTON') then PROTON endif
+
+//spin=0
+setoffset(tn,8.28):tof
+sw=2.5p
+gain=44
+at=1.3 $shimd1=0.8 $pwrdelta=33 $pw90=8 $tpwr=56 $shimnt=1 $shimsolvent='acetone'
+
+exists('FidShimPars.par','parlib'):$e,$parfile
+if ($e>0.5) then
+	write('line3','Using FidShimPars file for fidshim')
+	lookup('file',$parfile)
+	lookup('seek','tpwr','read',1):$tpwr
+	lookup('seek','pw90','read',1):$pw90
+	lookup('seek','pwrdelta','read',1):$pwrdelta
+	lookup('seek','shimd1','read',1):$shimd1
+	lookup('seek','shimnt','read',1):$shimnt
+	lookup('seek','shimsolvent','read',1):$shimsolvent
+	
+else
+	write('line3','Using probefile pars for fidshim')
+	getparam('tpwr',tn):$tpwr
+	getparam('pw90',tn):$pw90
+	getparam('pwrdelta',tn):$pwrdelta
+	getparam('shimd1',tn):$shimd1
+	getparam('shimnt',tn):$shimnt
+	getparam('shimsolvent',tn):$shimsolvent
+endif
+
+tpwr=$tpwr-$pwrdelta
+d1=$shimd1 nt=$shimnt
+solvent=$shimsolvent
+pw90=$pw90 pw(90)
+vf=77 nm full wf=at
+dps

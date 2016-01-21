@@ -1,0 +1,148 @@
+Protocol: Wpmlg2d  Sequence: wpmlg2d.c  Apptype: solidseq1d
+
+Description: 
+
+2D homonuclear correlation with PMLG in F1, a spin diffusion mixing 
+period and quadrature windowed PMLG (wPMLG) for multiple-pulse 
+acquisition in F2.  This sequence uses a composite preparation pulse to 
+put the magnetization along -Y perpendicular to the PMLG axis of 
+precession.  After F1 PMLG a tilt pulse returns precession to the XY 
+plane and tilts the Y axis to Z for cosine peaks and the X axis to Z 
+for sine peaks. A delay of tXmix allows mixing by spin diffusion. A 
+quadrature wPMLG sequence similar to wpmlg1d.c then samples the Z axis 
+magnetization in F2. PMLG and wPMLG are used with moderate-speed 
+spinning (8 to 14 kHz). 
+ 
+Additional Software
+
+reset_wpmlg2d - This macro uses the calibrated values of pwH90 and aH90 
+and srate to set up PMLG and wPMLG. The macro defaults to PMLG5 and 
+wPMLG5 and sets a window for acquisition equal to two steps or 4 
+microseconds, which ever is greater.  This macro is run from the 
+protocol.
+
+Setup: 
+
+Load a calibrated data set and select the protocol Wpmlg2d.  For a new 
+nucleus set the desired observe nucleus and calibrate pw90X with 
+Onepul, Xx and Xmx.  Obtain a good 1D spectrum with Wpmlg1d and then 
+run Wpmlg2d. 
+
+Run the macro reset_wpmlg2d to do the calculations in the following 6 
+steps.  This macro was automatically run with the protocol. 
+
+1. Set aXprep1 = aH90.  Set pw1Xprep1 = pwX90, pw2Xprep1 = 
+pwX90*54.7/90.0.
+2. Set aXwpmlg = aX90.  Set pwXwpmlg = sqrt(2/3)*4.0*pwX90. The value 
+of pwXwpmlg is rounded to a 12.5 ns grid and the value of aXwpmlg is 
+adjusted to reflect the change. 
+3. Set tauXwpmlg = (6/5)*2.0*pwXwpmlg, allowing a window of 1/6 of a 
+cycle or a minimum of 4.0 us. 
+4. Set sw = 1.0/tauXwpmlg. 
+5. Set aXpmlg = aX90 and set pwXpmlg = sqrt(2.0/3.0)*4.0*pwX90. The 
+value of pwXpmlg is rounded to a 100 ns grid and the value of aXpmlg is 
+adjusted to reflect the change. 
+6.  Set sw1 = 1/(10*pwXpmlg), ni = 64 and phase = 1,2. 
+
+Set qXwpmlg = -5.  qXwpmlg = 5 is incorrect.   qXwpmlg can be reset to 
+a larger value to provide wPMLGN.  The maximum value of qXwpmlg is 
+determined by pwXwpmlg/qXwpmlg >= 50 ns and large values will generate 
+an acquisition error. 
+
+Set qXpmlg = -5.  qXpmlg = 5 is incorrect.   qXpmlg can be reset to a 
+larger value to provide PMLGN.  The maximum value of qXpmlg is 
+determined by pwXpmlg/qXpmlg >= 100 ns and large values will generate 
+an acquisition error. 
+
+Use Xx and Xmx to optimize the sample window.  For defaults set 
+tauXwpmlg = 10 us set npaXwpmlg = 10.  Set r1Xwpmlg = 0.5 us, r2Xwpmlg 
+= 0.5uus and r3Xwpmlg = 1.0uus.  Set rof3 = r3Xwpmlg on the Receiver 
+page (important!!). 
+
+Set scalesw = sqrt(3) and scalesw1 = sqrt(3) for an approximate default 
+set of scale factors. 
+
+If this data is to show spin diffusion mixing, set tHmix  > 0.0. 
+
+Run the 2D data set and transform with wft2da.  If a good 1D data set 
+was obtained, the 2D data should also be calibrated.   See the 
+discussion of Wpmlg1d for optimization procedures.
+
+Referencing and Scaling Wpmlg2d:
+
+Fine-adjust the scale factor with two lines of known ppm.  A good test 
+sample is n.a. glycine where the two methylene lines are 1.0 ppm apart.  
+To set the F2 scale factor put a cursor on each methylene line and set 
+scalesw = (ppm2- ppm1)*sfrq/delta.  To set the F1 scale factor put a 
+cursor on each methylene line and set scalesw1 = (ppm2-
+ppm1)*sfrq/delta1.  To reference F2 of the scaled 2D spectrum put a 
+cursor on the line of interest and type rl(ppm*sfrq/scalesw).  To 
+reference F1 of the scaled 2D spectrum put a cursor on the line of 
+interest and type rl1(ppm*sfrq/scalesw1). 
+ 
+Parameter Groups: 
+
+prep1X:  Module:  no 
+Sequence:  c7inadwpmlg2d.c       
+Description:  Implements a composite pulse consisting of a 90-degree 
+              flip followed by a smaller flip-angle to implement 
+              quadrature detection about a tilted precession axis.  
+              Typically followed by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses. 
+       pw1Xprep1 - 90-degree flip on the obs channel. 
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse.
+
+scalef1X: (processing)  Module:  no 
+Sequence:  c7inadwpmlg2d.c   
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the 
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the inverse of 
+              the mutiple-pulse scale factor.
+
+pmlgX:  Module:  yes 
+Sequence:  c7inad2dwpmlg.c      
+Description:  Implements "phase modulated Lee Goldburg", PMLG, 
+              homonuclear decoupling on the obs channel.
+Parameters:  Sequence Page
+       aXpmlg - amplitude of PMLG obs pulses.
+       pwXpmlg - 360-degree flip on obs, off resonance (the length of 
+              each of the two PMLG pulses).  
+       nXpmlg - PMLG cycles represented in the .DEC file. 
+       qXpmlg - number of phase steps in that make up pwXpmlg. A 
+              negative value implements descending phases in the first pulse. 
+       chXpmlg = 'dec' must be set (not shown). 
+Implementation: MPSEQ pmlg = getpmlg("pmlgX",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.   
+
+scaleX: (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.       
+
+wpmlgX:  Module: yes
+Sequence:  wpmlg1d.c  
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwpmlg - amplitude of PMLG on obs.
+       pwXwpmlg - 360-degree flip on obs, off resonance (the length of 
+              each of the two PMLG pulses).  
+       qXwpmlg - number of phase steps that make up pwXpmlg. A negative 
+              value implements descending phases in the first pulse.
+       r1Xwpmlg - pre-pulse delay (similar to rof1). 
+       r2Xwpmlg - post_pulse delay (similar to rd or rof2).
+       r3Xwpmlg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined. 
+       tauXwpmlg - time for one PMLG cycle including the window.
+       npaXwpmlg - number of 100 ns ticks in the detection window.
+       chXwpmlg = 'obs' must be set (not shown).
+Implementation:  WMPA wpmlg = getwpmlg("wpmlgX");
+Underscore function: _wpmlg(wpmlg,phXwpmlg);  phXwpmlg is the overall 
+              phase table. 

@@ -1,0 +1,1643 @@
+"macro studyCluster"
+// supports one or more arguments 
+// Supported arg1 are:
+//   absolute pathname - This is a special case.  
+//	This will initiate 'NewCluster' mode, add all fids from the
+//	supplied (arg1) directory, add all fids from all the sub-directories
+//	in the pathname supplied and allow the user to save the cluster
+
+//   build (default) - build a SQ based on clusterfids file for a cluster
+//   studyqueue - display (build it needed) cluster in SQ
+//   editqueue - edits all the xml files but not set lastclusterdir parameter
+//   setqueue - similar to the set option for xmhaha_fullSQ
+//   getqueue - similar to the get option for xmhaha_fullSQ 
+//   new - Make a new cluster via SQ - enter editmode
+//   edit - Edit an existing cluster via SQ - enter editmode
+//   addlist - add a list of fids from a file to SQ.  The file would
+//		a flat file with a series of absolute paths for all the fids
+//   add - add fid to cluster group (arg2 is the fidpath) - in editmode
+//   delete - delete a fid from the cluster group (arg2 is the fidpath) - in editmode
+//   save - save current cluster group and quit editmode
+//		mkdir/build/studyqueue are implicit in save
+//   quit - quit the editmode for cluster
+//   iscluster - evaluetes if file in curexp is a cluster fid or not
+//   array2cluster - converts an arrayed 1D to behave like a cluster.  In this case,
+//			the fid is kept in the same study directory.
+//   align  - align selected ROIs
+//   alignanalyte - align against analyte spectrum
+//   ok4study2cluster - evalutes current study to see if ALL fids in the study
+//	are of the same type (tn,sw,pslabel are evaluated - not np)
+//   study2cluster - generates a cluster using all the fids in current study
+//	but must meet the ok4study2cluster criteria
+//   makespecarray - generates a spectra array and saves the vfs file
+//	This is the most preferred array as phase values of individual elements
+//	can be independent of one another (as against the fid array)
+//   makeonlyspecarray - same as makespecarray
+//   makespecsum - generates a spectral sum from the arrayed spectra
+//   makearray - generates a fid array
+//   makesum - generates a fid sum
+//   updatelib - updates the library list
+//   buildlib - builds menu for the popup
+//   library - library popup
+//   backup - obsolete function
+//   getlist - used by the library popup to display the member list of the cluster
+//   validateStudies - evaluates operators rights to use other users studies/fids
+//	for his/her own cluster
+//   
+
+$dum='' $devnull=''
+
+if ($# < 1) then $1='build' endif
+$scdir=userdir+'/persistence/'+$0
+$sclist=$scdir+'/fidlist'
+$scmenu=$scdir+'/clustermenu'
+exists($scdir,'directory'):$direx
+if ($direx=0) then mkdir('-p',$scdir):$dum endif
+
+"*************************************************************************"
+// An absolute path as the first argument is a special case
+
+$firstchar=''
+substr($1,1,1):$firstchar
+IF $firstchar='/' THEN
+    {$0}('validateStudies',$1):$ok
+    if $ok < 0.5 then return endif
+
+    is_submitmode:$submit
+    if $submit then
+	if (clustermod<>'yes') then
+	    write('error','StudyQ is in submit mode')
+	    return
+	endif
+    else
+	walkupQ('cluster')
+    endif
+    exists($1+'/dirinfo','directory'):$direx
+    if $direx then
+	{$0}('addstudy',$1)
+    else
+    	{$0}('addstudies',$1)
+    endif
+    return
+ENDIF
+    
+"*************************************************************************"
+IF ($1='iscluster') THEN
+    exists('CFIDlist','parameter'):$parex
+    $size=0
+    if $parex then 
+	$size=size('CFIDlist') 
+	if $size<2 and CFIDlist='' then $size=0 endif
+    endif
+    return($size)
+"*************************************************************************"
+ELSEIF ($1='build') THEN
+//  do xmhaha_subSQ equivalent based on clusterfids list
+    if ($# < 2) then $2=lastclusterdir[1] endif
+    $ret=0
+    $LIST='clusterlog','spectrumlog','fidlog','craftlog'
+    if ($# > 2) then $LIST=$3 endif
+    xmhaha_subSQ($2,$LIST):$ret
+    if ($ret) then studyCluster('setqueue',$2+'/dirinfo/xmldir') endif
+
+    return
+"*************************************************************************"
+ELSEIF ($1='studyqueue') or ($1='editqueue') THEN
+//  do xmhaha_fastSQ equivalent
+    if ($# < 2) then $2=archivedir+'/'+sample endif
+    if ($# < 3) then $3='' endif
+    is_submitmode:$submit
+    if ($submit) and ($1='studyqueue') then
+        write('error','current workspace is in submit mode.  %s aborted',$0)
+        return
+    endif
+    $xmldir=$2+'/dirinfo/xmldir'
+    exists($xmldir,'directory'):$xmldirex
+    if ($3='rbld') then $xmldirex=0 endif
+    // Sanity check
+    if ($xmldirex) then
+        $Ncount1=0 $Ncount2=0 $Ncount3=0
+        shell('(cat '+$xmldir+'/cpnodeinfo | wc -l)'):$Ncount1
+        shell('(ls -1d '+$xmldir+'/info/* | wc -l)'):$Ncount2
+	shell('(diff '+$2+'/dirinfo/clusterfids '+$xmldir+'/clusterfids | wc -l)'):$Ncount3
+        if ($Ncount1<>$Ncount2) or ($Ncount3>0) then
+            rm('-rf',$xmldir):$dum
+            $xmldirex=0
+        endif
+    endif
+    if ($xmldirex=0) then
+        studyCluster('build',$2)
+    else
+// Check to see if cluster have been moved from one location
+//    to another.  If so, rebuild fidlog subxml file
+    	$studypath=''
+    	rtv($2+'/studypar','noabort','studypath'):$studypath
+    	if ($studypath<>$2) then
+//  The cluster directory is moved from its previous
+//   location.  Rebuild xml to reflect the new
+//   studypath.  The xmhaha_subSQ will update the
+//   studypath parameter in studypar
+	    studyCluster('build',$2,'fidlog')
+        endif
+    endif
+    exists($xmldir+'/sqdir','directory'):$sqdirex
+    if ($sqdirex=0) then
+        studyCluster('setqueue',$xmldir)
+    endif
+    $ret=0 $retnode=''
+    studyCluster('getqueue',$xmldir):$ret,$retnode
+    if ($ret) and ($1='studyqueue') then
+	lastclusterdir[1]=$2
+	lastclusterdir[2]=''
+	substr($2,'basename'):lastclusterdir[2]
+	studyCluster('updatelib')
+    endif
+    return($retnode)
+"*************************************************************************"
+ELSEIF ($1='setqueue') THEN
+//  xmhaha_fullSQ('set') equivalent
+    $xmldir=$2
+    $sqdir=$2+'/sqdir'
+    $xml=$sqdir+'/study.xml'
+    $xml2=$sqdir+'/study.xml_clusteronly'
+    $esq=$sqdir+'/enterSQ'
+    $info=$sqdir+'/info'
+
+    exists($sqdir,'directory'):$direx
+    if ($direx) then
+        rm('-rf',$sqdir):$dum
+    endif
+    mkdir($sqdir):$dum
+
+    $archsamp=''
+    strstr($xmldir,'/dirinfo/'):$ret,$archsamp
+    $cpnodes='' $cpnodes2=''
+    $sample='' $samplename=''
+    substr($archsamp,'basename'):$sample
+    exists($archsamp+'/dirinfo/macdir/sampleglobal','file'):$sgex
+    if ($sgex) then
+        rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','samplename'):$samplename
+    else
+        return
+    endif
+
+    exists($xmldir+'/clusterlog','file'):$xmlfileex
+    if ($xmlfileex) then
+	lookup('mfile',$xmldir+'/clusterlog','countline'):$xmlfileex
+    endif
+    if ($xmlfileex=0) then return endif
+    $xmlreturn=$xmldir+'/clusterlog'
+
+    $ttxt=$samplename
+    $tt=$sample
+    write('reset',$xml)
+    write('reset',$xml2)
+    write('reset',$esq)
+    mkdir($info):$dum
+
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8"?>')
+    write('file',$xml,'<!DOCTYPE template>')
+    write('file',$xml,'')
+    write('file',$xml,'<template>')
+    write('fileline',$xml,'  <protocol title="%s" ',$tt)
+    write('fileline',$xml,'type="protocol" exp="grandparent" lock="off" ')
+    write('fileline',$xml,'id="tmpstudy" tooltext="%s" expanded="true">\n',$ttxt)
+
+    shell('(cat '+$xmldir+'/clusterlog >> '+$xml+')'):$devnull
+    shell('(cp '+$xml+' '+$xml2+')'):$devnull
+    shell('(cat '+$xmldir+'/fidlog >> '+$xml+')'):$devnull
+    shell('(cat '+$xmldir+'/spectrumlog >> '+$xml+')'):$devnull
+    exists($xmldir+'/craftlog','file'):$fex
+    if $fex then
+	lookup('mfile',$xmldir+'/craftlog','countline'):$fex
+    endif
+    if $fex then
+	shell('(cat '+$xmldir+'/craftlog >> '+$xml+')'):$devnull
+	write('file',$xml,'</protocol>')
+    endif
+    shell('(cat '+$xmldir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$devnull
+    shell('(cp -r '+$xmldir+'/info/* '+$info+')'):$devnull
+
+    write('file',$xml,'  </protocol>')
+    write('file',$xml,'</template>')
+    write('file',$xml2,'  </protocol>')
+    write('file',$xml2,'</template>')
+    return
+
+"*************************************************************************"
+ELSEIF ($1='getqueue') THEN
+//  xmhaha_fullSQ('get') equivalent
+    is_submitmode:$submit
+    $xmldir=$2
+    $sqdir=$2+'/sqdir'
+    $xmlfile=$sqdir+'/study.xml'
+    $xmlfile2=$sqdir+'/study.xml_clusteronly'
+    $esqfile=$sqdir+'/enterSQ'
+    $info=$sqdir+'/info'
+    $retnode='' $retok=0
+    if ($submit) then $xmlfile=$xmlfile2 endif
+
+    exists($xmlfile,'file'):$retok
+    if ($retok) then
+        exists($esqfile,'file'):$retok
+    endif
+    if ($retok) then
+        exists($info,'directory'):$retok
+    endif
+    if ($retok) then
+        cqinitCP
+        shell('cp -r '+$sqdir+'/* '+cursqexp+'/tmpstudy'):$devnull
+	if ($submit) then
+	    rename(cursqexp+'/tmpstudy/study.xml_clusteronly',cursqexp+'/tmpstudy/study.xml'):$dum
+	endif
+        vnmrjcmd('SQ delete tmpstudy')
+        vnmrjcmd('SQ read '+cursqexp+'/tmpstudy/study.xml')
+	if (not $submit) then
+		setvalue('sqdisplay','cluster',0,'global')
+		xmhaha_sqwatch('Clear')
+		vnmrjcmd('pnew','sqdisplayRef')
+	endif
+	$s1='' $s2=''
+        readfile($esqfile,'$s1','$s2','','local'):$rtot
+	if ($rtot) then 
+	    $retnode=$s1[$rtot] 
+	    reconcileSQfids
+	endif
+    endif
+    return($retok,$retnode)
+
+"*************************************************************************"
+ELSEIF ($1='ok4study2cluster') THEN
+
+    substr(file,'dirname'):$curas
+    if ($# < 2) then $2='' endif
+    if ($# < 3) then $3='' endif
+    if ($3='') then $3=$curas endif
+    $archsamp=$3
+    if ($# < 4) then $4='' endif
+
+    exists($archsamp+'/dirinfo/fidlog','file'):$fileex
+    if not $fileex then
+	if $4<>'quiet' then
+	    write('error','no valid fid found in %s',$archsamp)
+	endif
+	return(0,'')
+    endif
+    
+    $s1='' $s2=''
+    if $2<>'' then
+    	readfile($archsamp+'/dirinfo/fidlog','$s1','$s2',$2+':','local'):$total
+    else
+    	readfile($archsamp+'/dirinfo/fidlog','$s1','$s2','','local'):$total
+    endif
+    if not $total then 
+	if $4<>'quiet' then
+             write('error','no valid fid found in %s',$archsamp)
+	endif
+	return(0,'')
+    endif
+    if $total<2 then
+	if $4<>'quiet' then
+	    write('error','There is only one fid in this study')
+	endif
+	return(0,'')
+    endif
+    $cfids=$archsamp+'/dirinfo/clusterfids'
+    exists($cfids,'file'):$fileex
+    if $fileex then
+	lookup('mfile',$cfids,'countline'):$fileex
+    endif
+    if $fileex then
+	if $4<>'quiet' then
+	    write('error','%s exists',$cfids)
+	endif
+	return(0,'')
+    endif
+
+    $cfids=userdir+'/persistence/'+$0+'_'+$1
+    write('reset',$cfids)
+    $i=1
+    repeat   
+	$fidname=$archsamp+'/'+$s2[$i]+'.REC'
+	exists($fidname,'directory'):$direx
+	if not $direx then
+	    $fidname=$archsamp+'/'+$s2[$i]+'.rec'
+	    exists($fidname,'directory'):$direx
+	endif
+	if not $direx then
+	    $fidname=$archsamp+'/'+$s2[$i]+'.fid'
+	    exists($fidname,'directory'):$direx
+	endif
+	if $direx then
+    	    fread('','usertree')
+	    fread($fidname+'/procpar','usertree')
+	    getvalue('tn','usertree'):$tn
+	    getvalue('pslabel','usertree'):$pslabel
+	    getvalue('np','usertree'):$np
+	    getvalue('sw','usertree'):$sw
+	    getvalue('gain','usertree'):$gain
+	    getvalue('nt','usertree'):$nt
+	    fread('','usertree')
+
+	    format($pslabel,'lower'):$pslabel
+	    if ($tn='H1') then
+	        if ($pslabel='presat') or ($pslabel='wet1d') or ($pslabel='ps1d') then $pslabel='proton' endif
+	    endif
+	    write('file',$cfids,'%s %s %s %d %d %d %d',$fidname,$tn,$pslabel,$np,$sw,$gain,$nt)
+	endif
+	$i=$i+1
+    until $i > $total
+	    $tmpfile=$cfids+'_tmp'
+            write('reset',$tmpfile)
+            shell('(cat '+$cfids+' | awk \'{print $1" "$2" "$3" "$5}\' > '+$tmpfile+')'):$devnull
+            $s1='' $s2='' $total=0 $s3=''
+            readfile($tmpfile,'$s1','$s2','','local'):$total
+            rm('-f',$tmpfile):$dum
+            sort($s2,'u'):$index,$s3
+            $s3size=size('$s3')
+
+    if $total<2 then 
+	rm('-f',$cfids):$dum
+	if ($4<>'quiet') then
+	    if $total<1 then
+	    	write('error','no valid fids found')
+	    else
+	    	write('error','only one fid found')
+	    endif
+	endif
+	return(0,'')
+    endif
+    if ($s3size<>1) or ($s3='') then
+	if ($4<>'quiet') then
+	    write('error','All fids do not share same acquisition parameters')
+	endif
+        rm('-f',$cfids):$dum
+        return(0,'')
+    endif
+
+    return(1,$cfids)
+
+"*****************************************************************************"
+ELSEIF ($1='study2cluster') THEN
+    substr(file,'dirname'):$curas
+    if ($# < 2) then $2='' endif
+    if ($# < 3) then $3='' endif
+    if ($3='') then $3=$curas endif
+    $archsamp=$3
+
+    {$0}('ok4study2cluster',$2,$3):$ret,$cfid
+    if not $ret then return endif
+    rename($cfid,$3+'/dirinfo/clusterfids'):$dum
+    $retval1=0 $retval2=''
+    $samplename=''
+    getsampglobal('','samplename'):$samplename
+    fread('','usertree')
+    getmodule('sampleglobal',$archsamp+'/dirinfo/macdir','usertree')
+    exists('samplename','parameter','usertree'):$parex
+    if $parex then
+	setvalue('samplename','','usertree')
+        savemodule('sampleglobal',$archsamp+'/dirinfo/macdir','usertree')
+    endif
+    fread('','usertree')
+    {$0}('makearray',$archsamp,'noxml'):$retval1,$retval2
+    samplename=$samplename
+    savesampglobal('','samplename','current')
+    if $2<>'' then
+    	rename($cfid,$archsamp+'/dirinfo/'+$pslabel+'_clusterfids'):$dum
+    endif
+    if $archsamp=$curas then SQDisplay('refresh') endif
+    return($retval1,$retval2)
+
+"*************************************************************************"
+ELSEIF ($1='downsize') THEN
+    exists('downsizefid','command'):$cmdex
+    if not $cmdex then
+	write('error','downsize option is not supported in this version of VJ')
+	return
+    endif
+
+    exists('CFIDlist','parameter'):$parex
+    if not $parex then
+	write('error','data in curexp is not a cluster')
+	return
+    endif
+    if $2 >= at then
+	write('error','Current acquisition time is equal to or less than %g',$2)
+	return
+    endif
+    $fids=CFIDlist
+    $totfid=size('$fids')
+    $i=1
+    repeat
+	$fc='' substr($fids[$i],1,1):$fc
+	if $fc<>'/' then $fids[$i]=userdir+'/data/'+$fids[$i] endif
+	$i=$i+1
+    until $i > $totfid
+    $i=1 $fidname='' $fidname2=''
+    repeat
+	rtv($fids[$i],'at'):$at
+	if $2 > $at then
+	    write('error','Acq time for in %s is less than %g',$fids[$i],$2)
+	    return
+	endif
+	substr($fids[$i],'dirname'):$d,$b,$e
+	$fidname[$i]=$b
+	substr($d,'basename'):$s
+	$fidname2[$i]=$s+'_'+$b
+	$i=$i+1
+    until $i > $totfid
+    if $totfid>1 then
+	sort($fidname,'u'):$index,$fidname3
+	$totfid2=size('$fidname3')
+	if $totfid2<>$totfid then
+	    $fidname=$fidname2
+	endif
+    endif
+    savesampglobal('cp')
+    archivedir='' sample=''
+    Automkdir
+    $newa=archivedir $news=sample
+    $cf=$newa+'/'+$news+'/dirinfo/clusterfids'
+    getsampglobal('cp')
+    archivedir=$newa sample=$news
+    savesampglobal($newa+'/'+$news+'/dirinfo/macdir')
+    write('reset',$cf)
+    $i=1
+    repeat
+	rt($fids[$i])
+	downsizefid(sw*$2*2/np)
+	archivedir=$newa sample=$news
+	setvalue('archivedir',$newa,'processed')
+	setvalue('sample',$news,'processed')
+	off('fn') expfilt('acq')
+	svf(archivedir+'/'+sample+'/'+$fidname[$i],'force')
+	write('file',$cf,'%s/%s/%s %s %s %d %d %d %d',$newa,$news,$fidname[$i],tn,pslabel,np,sw,gain,nt)
+	$i=$i+1
+    until $i > $totfid
+    rt($newa+'/'+$news+'/'+$fidname[1])
+    wft
+    getsampglobal($newa+'/'+$news+'/dirinfo/macdir')
+    lastclusterdir[1]=$newa+'/'+$news
+    lastclusterdir[2]=$news
+    lastclusterdir[3]=lastclusterdir[1]
+
+    $retval1=0 $retval2=''
+    {$0}('makearray'):$retval1,$retval2
+    if $retval1 then
+	exists($retval2+'.vfs','directory'):$vfsex
+	if $vfsex then dndvfs($retval2)
+	else dndfid($retval2) endif
+    endif
+
+"*****************************************************************************"
+ELSEIF ($1='align') or ($1='alignanalyte') THEN
+    exists('craftglobals','modules'):$mex,$cmodule
+    if ($mex) then
+        fread($cmodule,'global','newonly')
+    else
+	write('error','Alignment tool does not exist')
+	return
+    endif
+    if $1='align' then
+	{$0}('iscluster'):$cluster
+	if not $cluster then
+            write('error','data in curexp is not a cluster')
+	    return
+	endif
+    endif
+	substr(file,'dirname'):$d
+	exists($d+'/dirinfo/SpectralAlignment/Files4xml','directory'):$direx
+	if not $direx then mkdir('-p',$d+'/dirinfo/SpectralAlignment/Files4xml'):$dum endif
+	write('file',$d+'/dirinfo/SpectralAlignment/beforePopup','%s',file)
+    if $1='align' then
+	craft_doAlign('popup',$d+'/dirinfo/SpectralAlignment','cluster')
+    else
+	craft_doAlignAnalyte('popup',$d+'/dirinfo/SpectralAlignment','cluster')
+    endif
+
+"*************************************************************************"
+ELSEIF ($1='Remakearray') THEN
+    studyCluster('makearray',lastclusterdir[1],'',$2)
+"*************************************************************************"
+ELSEIF ($1='makespecarray') or ($1='makeonlyspecarray') THEN
+// arg3 could be a string to supply svftmplt or a real
+//  to supply lb 
+
+    $file=$2
+    if ($1='makeonlyspecarray') then
+	exists($file,'file'):$fileex
+	if not $fileex then return endif
+    endif
+
+    $ds='' graphis:$ds
+    tmpsqcopy($0)
+    if ($1='makespecarray') then
+    	rt($file) 
+	expfilt('acq')
+	$LB=lb
+	$FN=fn
+	$s1=CFIDlist
+    else
+	$s1='' $s2=''
+	readfile($file,'$s1','$s2','','local')
+    endif
+    $addsuborig=addsubexp
+    nextexp:addsubexp
+    clradd:$dum
+    $total=size('$s1')
+    $i=1 $maxfn=0 $maxlb=0
+    $firsts1=''
+    if ($1='makeonlyspecarray') then
+      repeat
+        $s2=$s1[$i]
+        $firstchar='' substr($s2,1,1):$firstchar
+        if ($firstchar<>'/') then $s2=userdir+'/data/'+$s2 endif
+	if $i=1 then $firsts1=$s2 endif
+        rt($s2)
+	fn=np if fn<np then fn=2*fn endif
+	expfilt('acq')
+	if $maxfn<fn then $maxfn=fn endif
+	if $maxlb<lb then $maxlb=lb endif
+	$i=$i+1
+      until $i > $total
+	$FN=$maxfn
+	$LB=$maxlb
+    endif
+    $i=1
+    repeat
+        $s2=$s1[$i]
+        $firstchar='' substr($s2,1,1):$firstchar
+        if ($firstchar<>'/') then $s2=userdir+'/data/'+$s2 endif
+        rt($s2)
+        if ($i=1) then $rfl=rfl-rfp $gain=gain endif
+        lsfrq=$rfl-(rfl-rfp)
+        abs(gain-$gain):$deltagain
+        exp($deltagain*2.302585/20):$mult
+        if gain=$gain then $mult=1
+        elseif gain>$gain then
+            $mult=1/$mult
+        else
+            $mult=$mult
+        endif
+	fn=$FN
+	lb=$LB
+	on('ssfilter'):$ison
+	if $ison>0.5 then off('ssfilter') endif
+        wft('nods') select(1)
+        intmod='off' f full ai dc
+        if ($i=1) then clradd:$dum spadd:$dum else spadd('new',$mult):$dum endif
+        $i=$i+1
+    until $i > $total
+
+    if ($1='makespecarray') then
+    	rt($file) 
+    else
+	rt($firsts1)
+    endif
+
+    exists('execprocess','parameter'):$parex
+    if $parex then
+	$execprocess=''
+        substr(execprocess,1):$execprocess
+        if $execprocess='' then $parex=0 endif
+    endif
+    if $parex then exec(execprocess):$parex endif
+    if not $parex then wft('nods') endif
+
+    if ($1='makeonlyspecarray') then
+	$macdir='' substr($file,'dirname'):$macdir
+	$macdir=$macdir+'/macdir'
+    	getsampglobal($macdir)
+    	exists($macdir+'/sampleglobal','file'):$fileex
+    	if ($fileex) then
+            fread($macdir+'/sampleglobal','processed')
+    	endif
+    	create('CFIDlist','string','current',''):$dum
+    	setprotect('CFIDlist','on',256,'current')
+    	exists($file+'_orig','file'):$origex
+    	if $origex then
+	    $es1='' $es2=''
+	    readfile($file+'_orig','$es1','$es2','','local')
+            create('CFIDlistOrig','string','current',''):$dum
+            setprotect('CFIDlistOrig','on',256,'current')
+            CFIDlistOrig=$es1
+    	endif
+    	CFIDlist=$s1
+    	writeparam(curexp+'/CFIDlist','CFIDlist CFIDlistOrig')
+    	fread(curexp+'/CFIDlist','processed')
+    	rm('-f',curexp+'/CFIDlist'):$dum
+
+	svftmplt='$pslabel$_specarray'
+    	if ($# > 2) then
+	    if typeof('$3') then
+		svftmplt=$3
+	    else
+                svftmplt=svftmplt+'%R2%'
+	    endif
+    	else
+            svftmplt=svftmplt+'%R0%'
+    	endif
+    	setvalue('svftmplt',svftmplt,'processed')
+	strstr($file,'/dirinfo/'):$ret,$archsamp
+        substr($archsamp,'dirname'):archivedir,sample
+        setvalue('archivedir',archivedir,'processed')
+        setvalue('sample',sample,'processed')
+        Svfname($archsamp+'/'+svftmplt,'.vfs','.vfs, .fid'):$filename
+//	strstr($filename,'spectrum.vfs'):$ret,$ss
+//	$filename=$ss+'.vfs'
+	vo=wc2max/2/$total
+	vp=0
+    else
+	substr($file,'dirname'):$archsamp,$basename,$ext
+	strstr($basename,'_fidarray'):$ret,$ss
+	if not $ret then $ss=$basename endif
+	$filename=$archsamp+'/'+$ss+'_specarray.vfs'
+    endif
+    setvalue('arraydim',$total)
+    setvalue('arraydim',$total,'processed')
+    $alist='' $alist2=''
+    module('arraylist','sampleglobal'):$alist
+    module('arraylist','usersampleglobal'):$alist2
+    if $alist2[1]<>'' then $alist=$alist,$alist2 endif
+    $execprocess='ds(1) full studyClusterAttr(\'setdssicolors\') dssi'
+    create('execprocess','string'):$dum
+    setgroup('execprocess','display')
+    execprocess=$execprocess
+    $alist=$alist,'arraydim','dssicolors','CFIDlist','vo','execprocess','CFIDlistOrig'
+    tlt=0 lvl=0 $alist=$alist,'tlt','lvl'
+    write('line3','%s/exp%d',userdir,addsubexp):$addsub
+    writeparam($addsub+'/curpar','$alist','current','add')
+    writeparam($addsub+'/procpar','$alist','current','add')
+    copy(curexp+'/text',$addsub):$dum
+//    if ($1='makespecarray') then
+//        substr($file,'dirname'):$d,$b,$e
+//    else
+	substr($filename,'dirname'):$d,$b,$e
+//    endif
+//    svaddsub($d+'/'+$b+'spectrum','force')
+    svaddsub($d+'/'+$b,'force')
+    exists($d+'/dirinfo/spectrumlog','file'):$fex
+    if $fex then
+	$s1='' $s2=''
+	readfile($d+'/dirinfo/spectrumlog','$s1','$s2','','local')
+	teststr('$s2',$b,'local'):$fex
+    endif
+    if not $fex then
+	write('file',$d+'/dirinfo/spectrumlog','%s: %s',pslabel,$b)
+    endif
+//    write('line3','Arrayed spectrum %s/%sspectrum created',$d,$b)
+    tmpsqreturn($0)
+    if $ds<>'' then exec($ds) endif
+    clradd:$dum
+    addsubexp=$addsuborig
+    $LIST='clusterlog','spectrumlog','fidlog'
+    xmhaha_subSQ($d,$LIST)
+
+//    is_craft:$craftver
+//    if $craftver<1.5 then
+    	$str='' $ret=0
+    	strstr($b,'_specarray'):$ret,$str
+    	$sumfid=$d+'/scoutfids/'+$str+'_fidsum'
+    	{$0}('makespecsum',$d+'/'+$b,$sumfid)
+//    endif
+    return($d+'/'+$b)
+"*************************************************************************"
+ELSEIF ($1='makespecsum') THEN
+
+    tmpsqcopy($0)
+    if $# < 2 then $2='' endif
+    if $2<>'' then
+    	rtvfs($2)
+    endif
+    getvalue('arraydim','processed'):$total
+    jexp:$curexp
+
+    $addsuborig=addsubexp
+    nextexp:addsubexp
+    clradd:$cok
+    $i=1
+    repeat
+        ds($i) select($i)
+        spadd:$cok
+        $i=$i+1
+    until $i>$total
+    $nexp=addsubexp
+    addsubexp=$addsuborig
+    newexp('quiet'):$nexp2
+    write('line3',`Vnmrbg -mback -n%d "ft('inverse',%d,1)"`,$nexp,$nexp2):$cmd
+    shell($cmd):$sdum
+    delexp($nexp):$rdum
+    mf($nexp2,$curexp)
+    delexp($nexp2):$rdum
+    lsfrq=0 off('lsfrq')
+    CPwtmenu('acq','set','none')
+    setvalue('arraydim',1)
+    setvalue('arraydim',1,'processed')
+    if $# < 3 then
+	substr(file,'dirname'):$d,$b,$e
+	strstr($b,'_fidarray'):$ret,$str
+	if not $ret then
+	    strstr($b,'_specarray'):$ret,$str
+	endif
+	if not $ret then
+	    $3=$d+'/scoutfids/'+$b+'_fidsum'
+	else
+	    $3=$d+'/scoutfids/'+$str+'_fidsum'
+	endif
+    endif
+    svf($3,'force')
+//    write('line3','Sum fid %s created',$3)
+    tmpsqreturn($0)
+    return(1,$3)
+
+"*************************************************************************"
+ELSEIF ($1='makearray') or ($1='makesum') THEN
+
+    $retval1=0 $retval2=''
+    if ($# < 2) then $2=lastclusterdir[1] endif
+    $cfids=$2+'/dirinfo/clusterfids'
+    $tmpfile=userdir+'/persistence/'+$0+'_'+$1
+    write('reset',$tmpfile)
+    shell('(cat '+$cfids+' | awk \'{print $1" "$2" "$3" "$4" "$5}\' > '+$tmpfile+')'):$devnull
+    $s1='' $s2='' $total=0 $s3=''
+    readfile($tmpfile,'$s1','$s2','','local'):$total
+    rm('-f',$tmpfile):$dum
+    if ($total<2) then return($retval1,$retval2) endif
+
+    $list=$s1
+    $list2='' $es3=''
+    $error=0
+    $i=1 $j=1
+    $es1=''
+    readfile($cfids,'$es1','$es3','','local')
+    repeat
+	substr($list[$i],'dirname'):$d2,$b2,$e2
+        substr($d2,'basename'):$d2
+        teststr('$list2',$d2+'/'+$b2,'local'):$ok
+        if $ok then
+	    $error=1
+	else
+	    $list2[$j]=$d2+'/'+$b2
+	    $es1[$i]=''
+	    $j=$j+1
+        endif
+        $i=$i+1
+    until $i > $total
+    $list2=''
+    if $error then
+	mkdir($2+'/CFids'):$dum
+	$cf=$cfids+'_tmp'
+	write('reset',$cf)
+	$i=1
+	repeat
+	    $nlist=$list[$i]
+	    if $es1[$i]<>'' then
+		$list2=$list[$i]
+	        substr($list2,1,1):$firstchar
+	    	if $firstchar<>'/' then $list2=userdir+'/data/'+$list2 endif
+	    	substr($list2,'dirname'):$d,$b,$e
+		substr($d,'basename'):$s
+		mkdir($2+'/CFids/'+$s):$dum
+	    	if $i<10 then
+	            write('line3','%s/CFids/%s/Fid00%d_%s.%s',$2,$s,$i,$b,$e):$nlist
+	    	elseif $i<100 then
+	            write('line3','%s/CFids/%s/Fid0%d_%s.%s',$2,$s,$i,$b,$e):$nlist
+	    	else
+	            write('line3','%s/CFids/%s/Fid%d_%s.%s',$2,$s,$i,$b,$e):$nlist
+	    	endif
+	    	copy('-r',$list2,$nlist):$dum
+	    endif
+	    write('file',$cf,'%s %s',$nlist,$es3[$i])
+	    $i=$i+1
+	until $i > $total
+	rename($cfids,$cfids+'_orig'):$dum
+	rename($cf,$cfids):$dum
+    	write('reset',$tmpfile)
+    	shell('(cat '+$cfids+' | awk \'{print $1" "$2" "$3" "$4" "$5}\' > '+$tmpfile+')'):$devnull
+    	$s1='' $s2='' $total=0 $s3=''
+    	readfile($tmpfile,'$s1','$s2','','local'):$total
+    	rm('-f',$tmpfile):$dum
+    else
+	rm('-f',$cfids+'_orig'):$dum
+    endif
+    exists($cfids+'_orig','file'):$origex
+
+    $i=1 $error=0
+    repeat
+	$fidname=$s1[$i]
+        $firstchar='' substr($fidname,1,1):$firstchar
+        if $firstchar<>'/' then $fidname=userdir+'/data/'+$fidname endif
+        $dname='' $bname='' $ext=''
+        substr($fidname,'dirname'):$dname,$bname,$ext
+	$fidname=$dname+'/'+$bname
+        if ($ext='') then
+            $ext='REC'
+            exists($fidname+'.'+$ext+'/acqfil/fid','file'):$direx
+            if not $direx then
+                $ext='rec'
+                exists($fidname+'.'+$ext+'/acqfil/fid','file'):$direx
+            endif
+            if not $direx then
+                $ext='fid'
+            endif
+        endif
+        if $ext='REC' or $ext='rec' then
+            $fid=$fidname+'.'+$ext+'/acqfil/fid'
+        else
+            $fid=$fidname+'.'+$ext+'/fid'
+        endif
+        readheader($fid):$nt,$fdim
+        if $fdim>1 then $error=1 $i=$total endif
+        $i=$i+1
+    until $i > $total
+    if $error then return endif
+
+    sort($s2,'u'):$index,$s3
+    $s3size=size('$s3')
+    if ($s3size<>1) or ($s3='') then
+	if ($1='makearray') and ($s3<>'') then
+	    write('reset',$tmpfile)
+	    shell('(cat '+$cfids+' | awk \'{print $1" "$2" "$3" "$5}\' > '+$tmpfile+')'):$devnull
+	    $s1='' $s2='' $total=0 $s3=''
+	    readfile($tmpfile,'$s1','$s2','','local'):$total
+	    rm('-f',$tmpfile):$dum
+	    sort($s2,'u'):$index,$s3
+	    $s3size=size('$s3')
+	    if ($s3size=1) then
+		if $# > 3 then
+		    {$0}('makeonlyspecarray',$cfids,$4):$retval2
+		else
+                    {$0}('makeonlyspecarray',$cfids):$retval2
+		endif
+		if $origex then rename($cfids+'_orig',$cfids):$dum endif
+		if $retval2='' then return(0,$retval2) endif
+    		if ($# < 3) then $3='' endif
+    		if $3<>'noxml' then
+    		    studyCluster('setqueue',$2+'/dirinfo/xmldir')
+    		endif
+	    else
+                if $error then rename($cfids+'_orig',$cfids):$dum endif
+	    endif
+	endif
+	if $retval2<>'' then $retval1=1 endif
+	return($retval1,$retval2)
+    endif
+
+    jexp:$cexp
+    tmpsqcopy($0)
+    $rp=0
+    $addsuborig=addsubexp
+    nextexp:addsubexp
+
+  if ($1='makearray') then
+    clradd:$dum
+    $i=1
+    repeat
+	$s2=$s1[$i]
+	$firstchar='' substr($s2,1,1):$firstchar
+	if ($firstchar<>'/') then $s2=userdir+'/data/'+$s2 endif
+	rt($s2)
+	if ($i=1) then $rfl=rfl-rfp endif
+	lsfrq=$rfl-(rfl-rfp)
+	phfid=rp-$rp
+	rp=$rp
+	if ($i=1) then add:$dum else add('new'):$dum endif
+	$i=$i+1
+    until $i > $total
+    mf(addsubexp,$cexp)
+    setvalue('arraydim',$total)
+    setvalue('arraydim',$total,'processed')
+    getsampglobal($2+'/dirinfo/macdir')
+    exists($2+'/dirinfo/macdir/sampleglobal','file'):$fileex
+    if ($fileex) then
+	fread($2+'/dirinfo/macdir/sampleglobal','processed')
+    endif
+    fn=np if fn<np then fn=2*fn endif
+    CPwtmenu('acq','set','none')
+    if $# > 3 then lb=$4 $fn=2*sw/$4 if fn<$fn then fn=$fn endif else expfilt('acq') endif
+    wft select(1) intmod='off' f full
+    dssa 
+    vo=vo/2
+    $execprocess='wft select(1) full studyClusterAttr(\'setdssicolors\') dssi'
+    create('execprocess','string'):$dum
+    setgroup('execprocess','display')
+    create('dssicolors','string','current',''):$dum
+    setprotect('dssicolors','on',256)
+    setgroup('dssicolors','display')
+    execprocess=$execprocess
+
+    create('CFIDlist','string','current',''):$dum
+    setprotect('CFIDlist','on',256,'current')
+    if $origex then
+	create('CFIDlistOrig','string','current',''):$dum
+	setprotect('CFIDlistOrig','on',256,'current')
+	CFIDlistOrig=$list
+    endif
+    CFIDlist=$s1
+    writeparam(curexp+'/CFIDlist','CFIDlist CFIDlistOrig')
+    fread(curexp+'/CFIDlist','processed')
+    rm('-f',curexp+'/CFIDlist'):$dum
+    svftmplt='$pslabel$_fidarray'
+    if ($# > 3) then
+	svftmplt=svftmplt+'%R2%'
+    else
+    	svftmplt=svftmplt+'%R0%'
+    endif
+    setvalue('svftmplt',svftmplt,'processed')
+    if $2<>archivedir+'/'+sample then
+	substr($2,'dirname'):archivedir,sample
+	setvalue('archivedir',archivedir,'processed')
+	setvalue('sample',sample,'processed')
+    endif
+    Svfname($2+'/'+svftmplt,'.fid','.fid'):$file
+    exists($file,'directory'):$fidex
+    if ($fidex) then
+	svf($file,'force')
+    else
+	file='exp'
+	savefid(svftmplt):$ok
+	$file=file
+    endif
+    $retval1=1 $retval2=$file
+    $arrayname=''
+    substr($file,'basename'):$arrayname,$ext
+//    write('line3','Arrayed fid %s created',$arrayname)
+
+  elseif ($1='makesum') then
+    clradd:$dum
+    $i=1
+    repeat
+        $s2=$s1[$i]
+        $firstchar='' substr($s2,1,1):$firstchar
+        if ($firstchar<>'/') then $s2=userdir+'/data/'+$s2 endif
+        rt($s2)
+	if ($i=1) then $rfl=rfl-rfp endif
+        phfid=rp-$rp
+	lsfrq=$rfl-(rfl-rfp)
+        rp=$rp
+	add:$dum
+        $i=$i+1
+    until $i > $total
+    mf(addsubexp,$cexp)
+    setvalue('arraydim',1)
+    setvalue('arraydim',1,'processed')
+    getsampglobal($2+'/dirinfo/macdir')
+    exists($2+'/dirinfo/macdir/sampleglobal','file'):$fileex
+    if ($fileex) then
+        fread($2+'/dirinfo/macdir/sampleglobal','processed')
+    endif
+    fn=np if fn<np then fn=2*fn endif
+    CPwtmenu('acq','set','none')
+    if $# > 3 then lb=$4 $fn=2*sw/$4 if fn<$fn then fn=$fn endif else expfilt('acq') endif
+    wft intmod='off' f full
+    destroy('execprocess'):$dum
+    destroy('execprocess','processed'):$dum
+    svftmplt='$pslabel$_fidsum%R0%'
+    setvalue('svftmplt',svftmplt,'processed')
+
+    create('CFIDlist','string','current',''):$dum
+    setprotect('CFIDlist','on',256,'current')
+    if $origex then
+        create('CFIDlistOrig','string','current',''):$dum
+        setprotect('CFIDlistOrig','on',256,'current')
+        CFIDlistOrig=$list
+    endif
+    CFIDlist=$s1
+    writeparam(curexp+'/CFIDlist','CFIDlist CFIDlistOrig')
+    fread(curexp+'/CFIDlist','processed')
+    rm('-f',curexp+'/CFIDlist'):$dum
+
+    Svfname(archivedir+'/'+sample+'/'+svftmplt,'.fid','.fid'):$file
+    exists($file,'directory'):$fidex
+    if ($fidex) then
+        svf($file,'force')
+    else
+        file='exp'
+        savefid(svftmplt):$dum
+        $file=file
+    endif
+    $retval1=1 $retval2=$file
+    $arrayname=''
+    substr($file,'basename'):$arrayname,$ext
+//    write('line3','Sum fid %s created',$arrayname)
+  endif
+    tmpsqreturn($0)
+    clradd:$dum
+    addsubexp=$addsuborig
+
+    if ($1='makearray') then
+	if $# > 3 then 
+	    {$0}('makespecarray',$file,$4):$retval2
+	else
+	    {$0}('makespecarray',$file):$retval2
+	endif
+    endif
+    if $origex then
+	rename($cfids+'_orig',$cfids):$dum
+    endif
+    if ($# < 3) then $3='' endif
+    if $3<>'noxml' then
+        studyCluster('setqueue',$2+'/dirinfo/xmldir')
+    endif
+    return($retval1,$retval2)
+
+"*************************************************************************"
+ELSEIF ($1='updatelib') THEN
+
+    if ($# < 2) then $2='' endif
+    exists($scmenu,'file'):$scmenuex
+    if not $scmenuex then write('reset',$scmenu) endif
+    $num=0
+    lookup('mfile',$scmenu,'countline'):$num
+    if not ($num) then
+	studyCluster('buildlib')
+	return
+    endif
+
+    if (lastclusterdir[1]<>'') then
+	substr(lastclusterdir[1],'basename'):lastclusterdir[2]
+        getappdirs:$atot,$adirs,$alabels
+        shell('(cat '+$scmenu+' | grep -v \'"'+lastclusterdir[1]+'"\' > '+$scmenu+'1)'):$devnull
+        $ret=0 $thisapps=''
+        $thisapplabel=''
+        strstr(lastclusterdir[1],'/clusterlib/'):$ret,$thisapps
+        if ($ret) then
+           teststr('$adirs',$thisapps,'local'):$ret2
+           if ($ret2) then
+                $thisapplabel=' ['+$alabels[$ret2]+']'
+           endif
+        endif
+        write('reset',$scmenu)
+        write('file',$scmenu,'"%s%s" "%s"',lastclusterdir[2],$thisapplabel,lastclusterdir[1])
+	shell('(cat '+$scmenu+'1 >> '+$scmenu+')'):$devnull
+	rm('-f',$scmenu+'1'):$dum
+    endif
+    lastclusterdir[3]=lastclusterdir[1]
+    studyCluster('getlist',lastclusterdir[1])
+    vnmrjcmd('pnew','lastclusterdir')
+
+	return
+"*************************************************************************"
+ELSEIF ($1='buildlib') THEN
+
+    $tmpfile=$scmenu+'_tmp'
+    write('reset',$tmpfile)
+    getappdirs:$atot,$adirs,$alabels
+    $i=1
+    repeat
+	shell('(ls -1d '+$adirs[$i]+'/clusterlib/* >> '+$tmpfile+')'):$devnull
+	$i=$i+1
+    until $i > $atot
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$tot
+    write('reset',$tmpfile)
+    if ($tot) then
+	$i=1
+	repeat
+	    shell('(cat '+$s1[$i]+'/dirinfo/chronlog | head -n 1 | awk \'{print $1$3" '+$s1[$i]+'"}\' >> '+$tmpfile+')'):$devnull
+	    $i=$i+1
+	until $i > $tot
+	shell('(sort -r -k 1 '+$tmpfile+' -o '+$tmpfile+'2)'):$devnull
+	rename($tmpfile+'2',$tmpfile):$dum
+    endif
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$tot
+    write('reset',$scmenu)
+    if ($tot) then
+	$i=1
+	repeat
+	    substr($s2[$i],'dirname'):$dir,$base
+	    substr($dir,'dirname'):$dir
+	    teststr('$adirs',$dir,'local'):$r1
+	    $thisapp=$alabels[$r1]
+	    write('file',$scmenu,'"%s [%s]" "%s"',$base,$thisapp,$s2[$i])
+	    $i=$i+1
+	until $i > $tot
+	lastclusterdir[1]=$s2[1]
+	substr(lastclusterdir[1],'basename'):lastclusterdir[2]
+	lastclusterdir[3]=lastclusterdir[1]
+    else
+	write('file',$scmenu,'"" ""')
+    endif
+    rm('-rf',$tmpfile):$dum
+    rm('-rf',$tmpfile+'2'):$dum
+
+    {$0}('getlist',lastclusterdir[1])
+    vnmrjcmd('pnew','lastclusterdir')
+
+    return
+    
+"*************************************************************************"
+ELSEIF ($1='library') THEN
+    studyCluster('buildlib')
+    $title='Cluster Library'
+    vnmrjcmd('pnew','lastclusterdir')
+    vnmrjcmd('popup','mode:modeless','file:studyCluster.xml','rebuild:yes','pnewupdate:true','title: "'+$title+'"')
+    return
+"*************************************************************************"
+ELSEIF ($1='backup') THEN
+    if ($# < 2) then return endif
+    if ($2='') then return endif
+    $bname=''
+    substr($2,'basename'):$bname
+
+    $bkup=userdir+'/clusterlib_bkup'
+    exists($bkup,'directory'):$direx
+    if ($direx=0) then
+	mkdir($bkup):$dum
+    endif
+    exists($bkup+'/'+$bname,'directory'):$direx
+    if ($direx) then
+	rm('-rf',$bkup+'/'+$bname):$dum
+	exists($bkup+'/'+$bname,'directory'):$direx
+    endif
+    if ($direx) then
+	write('error','Could not remove %s/%s',$bkup,$bname)
+    else
+	rename($2,$bkup+'/'+$bname):$dum
+	if ($2=lastclusterdir[1]) then
+	    lastclusterdir[1]=''
+	    lastclusterdir[2]=''
+	    lastclusterdir[3]=''
+	endif
+	studyCluster('updatelib')
+    endif
+    return
+"*************************************************************************"
+ELSEIF ($1='getlist') THEN
+    write('reset',$sclist)
+    if ($2<>'') then
+       shell('(cat '+$2+'/dirinfo/clusterfids | awk \'{print $1}\' > '+$sclist+')'):$devnull
+    endif
+    lastclusterdir=lastclusterdir
+    return
+"*************************************************************************"
+ELSEIF ($1='array2cluster') THEN
+    is_cpfid(file):$cp
+    if not $cp then
+    	write('error','fid in curexp is not saved under chempack study architechture')
+    	return
+    endif
+    substr(file,'dirname'):$d,$b,$e
+    if $e='REC' or $e='rec' then
+        write('error','%s cannot be applied to secured records',$0)
+        return
+    endif
+    exists($d+'/'+$b+'.fid','directory'):$fidex
+    if not $fidex then
+        write('error','%s/%s.fid not found',$d,$b)
+        return
+    endif
+    $dim=arraydim
+    if $dim<1.5 then
+	write('error','data in curexp is not an arrayed experiment')
+	return
+    endif
+    getdim:$dim
+    if ($dim>1.5) then
+	write('error','data in curexp is a %dD experiment',$dim)
+	return
+    endif
+    exists('CFIDlist','parameter'):$parex
+    if $parex then
+	write('error','data in curexp may already be a cluster')
+	return
+    endif
+
+    $addsubexp=addsubexp
+    newexp('quiet'):addsubexp
+    jexp:$cexp
+
+    $dim=arraydim
+    $subfiddir=$d+'/dirinfo/subfids/'+$b
+    exists($subfiddir,'directory'):$direx
+    if not $direx then mkdir('-p',$subfiddir):$dum endif
+
+    $x=1 $fids=''
+    repeat
+        tmpsqcopy($0+$1)
+        clradd:$dum
+        select($x)
+        $par='' $val='' $rval=0
+        arrayvals($x):$par,$val,$rval
+        add:$dum
+        mf(addsubexp,$cexp)
+        $parsize=size('$par')
+        $z=1
+        while $z<=$parsize do
+           $param=$par[$z]
+           format({$param},'isreal'):$real
+           if ($real) then
+                {$param}=$rval[$z]
+                setvalue($param,{$param},'processed')
+           else
+                {$param}=$val[$z]
+                setvalue($param,{$param},'processed')
+           endif
+           $z=$z+1
+        endwhile
+        setvalue('arraydim',1)
+        setvalue('arraydim',1,'processed')
+        Svfname($subfiddir+'/trace','.fid'):$fidname
+        svf($fidname)
+        $fids[$x]=$fidname
+        tmpsqreturn($0+$1)
+        $x=$x+1
+    until $x>$dim
+
+    clradd:$dum
+    addsubexp=$addsubexp
+    create('CFIDlist','string','current',''):$dum
+    create('CFIDlist','string','processed',''):$dum
+    setprotect('CFIDlist','on',256,'current')
+    setprotect('CFIDlist','on',256,'processed')
+    $x=1
+    repeat
+        setvalue('CFIDlist',$fids[$x],$x,'current')
+        setvalue('CFIDlist',$fids[$x],$x,'processed')
+        $x=$x+1
+    until $x>$dim
+    writeparam($d+'/'+$b+'.fid/procpar','CFIDlist','current','add')
+    write('line3','Warning: Done!')
+
+"*************************************************************************"
+ELSEIF ($1='new') THEN
+// Similar to walkupQ_new
+    if ($# < 2) then $2='' endif
+    operights('maycreateclusters'):$right
+    if ($right=0) then
+        write('error','%s cannot create clusters',operator)
+        return
+    endif
+
+  if ($2='curstudy') then
+    $archsamp=''
+    is_cpsample:$ok
+    if ($ok) then
+        substr(file,'dirname'):$archsamp
+    endif
+  elseif ($2='vps') then
+    $i=1 $j=0
+    $txtfile=userdir+'/persistence/'+$0+'_tmplist'
+    write('reset',$txtfile)
+    $farray=''
+    repeat
+        if (jvpexps[$i]>0.5) then
+            $exp='' format(jcurwin[$i],'lower'):$exp
+            $curpar=userdir+'/exp'+$exp+'/curpar'
+            exists($curpar,'file'):$fileex
+            if ($fileex) then
+                $file=''
+                rtv($curpar,'noabort','file'):$file
+                is_cpfid($file):$fileex
+            endif
+            if ($fileex) then
+		write('file',$txtfile,'%s',$file)
+		$j=1
+	    endif
+        endif
+        $i=$i+1
+    until $i > jviewports[1]
+  elseif ($2='curexp') then
+	$farray='' $j=0
+        is_cpfid:$j
+        if ($j) then
+            $farray=file
+        endif
+  endif
+
+    if ($2='curstudy') then
+	if ($archsamp='') then
+	    write('error','The study in current workspace is incompatible')
+	    return
+	endif
+	walkupQ('cluster')
+	studyCluster('addstudy',$archsamp)
+    elseif ($2='vps') then
+	if not ($j) then
+	    write('error','The data in any of the viewport is incompatible')
+	    return
+	endif
+	walkupQ('cluster')
+        studyCluster('addlist',$txtfile):$lastnode
+	rm('-f',$txtfile):$dum
+    elseif ($2='curexp') then
+        if not ($j) then
+            write('error','The data in current workspace is incompatible')
+            return
+        endif
+	walkupQ('cluster')
+	studyCluster('add',$farray[1])
+    else
+        walkupQ('cluster')
+    endif
+    return
+"*************************************************************************"
+ELSEIF ($1='edit') THEN
+// Similar to walkupQ_addq
+    exists(lastclusterdir[1]+'/dirinfo','file','w'):$writable
+    if ($writable=0) then
+	write('error','%s do not have write access to this cluster')
+	return
+    endif
+    $spar=lastclusterdir[1]+'/studypar'
+    $studyowner=''
+    exists($spar,'file'):$fileex
+    if ($fileex) then
+	rtv($spar,'noabort','studyowner'):$studyowner
+    endif
+    if (operator<>$studyowner) and ($studyowner<>'') then
+	operights('editallopstudies'):$right
+	if ($right=0) then
+            write('error','%s cannot edit a cluster owned by %s',operator,$studyowner)
+	    return
+	endif
+    endif
+
+    $sqflag=sqflag
+    sqflag='n'
+    walkupQ('cluster')
+    sqflag='y'
+    SQDisplay('submit')
+    $md=lastclusterdir[1]+'/dirinfo/macdir'
+    getsampglobal($md)
+    copy(lastclusterdir[1]+'/dirinfo/clusterfids',cursqexp):$dum
+    $retnode=''
+    studyCluster('editqueue',lastclusterdir[1]):$retnode
+    if ($retnode='') then xmhaha('grandma') endif
+    samplename=samplename
+    resumeQ='addq'
+    return
+"*************************************************************************"
+ELSEIF ($1='validateStudies') THEN
+
+    operights('viewallopstudies'):$ok
+    if $ok then return(1) endif
+
+    $lastnode='' $firstchar=''
+    $dir=$2
+    substr($dir,1,1):$firstchar
+    if ($firstchar<>'/') then
+        $dir=userdir+'/data/'+$dir
+    endif
+    exists($dir,'directory'):$direx
+
+    if not $direx then return(0) endif
+    $txtfile=userdir+'/persistence/'+$0+'_tmplist'
+    write('reset',$txtfile)
+
+    shell('(ls -1d '+$dir+'/dirinfo >> '+$txtfile+')'):$devnull
+    shell('(ls -1d '+$dir+'/**/dirinfo >> '+$txtfile+')'):$devnull
+    $s1='' $s2=''
+    readfile($txtfile,'$s1','$s2','','local'):$tot
+    if not $tot then return(0) endif
+
+    $i=1
+    repeat
+        $studyowner='' getsampglobal($s1[$i]+'/macdir','studyowner'):$studyowner
+        if operator<>$studyowner and $studyowner<>'' then
+            return(-1)
+        endif
+        $i=$i+1
+    until $i >$tot
+    return(1)
+ENDIF
+"*************************************************************************"
+// The preceeding sections are NOT in submit mode
+"*************************************************************************"
+"*************************************************************************"
+// The following sections are in submit mode
+$submit=0
+is_submitmode:$submit
+if not $submit then return endif
+
+"*************************************************************************"
+IF ($1='addlist') THEN
+// arg2 can be an absolute path OR relative path w.r.t. userdir/clusterlib
+    $txtfile=$2
+    $firstchar=''
+    substr($txtfile,1,1):$firstchar
+    if ($firstchar<>'/') then
+	$txtfile=userdir+'/clusterlib/'+$2
+    endif
+    exists($txtfile,'file'):$fex
+    if ($fex=0) then return endif
+    $s1='' $s2=''
+    readfile($txtfile,'$s1','$s2','','local'):$total
+    $lastnode=''
+    if ($total) then
+	$i=1
+	repeat
+	    $node=''
+	    studyCluster('add',$s1[$i]):$node
+	    if ($node<>'') then $lastnode=$node endif
+	    $i=$i+1
+	until $i > $total
+    endif
+    if ($lastnode<>'') then
+	studyCluster('wrxml')
+    endif
+    return($lastnode)
+"*************************************************************************"
+ELSEIF ($1='addstudies') THEN
+    $lastnode='' $firstchar=''
+    $dir=$2
+    substr($dir,1,1):$firstchar
+    if ($firstchar<>'/') then $dir=userdir+'/data/'+$dir endif
+    exists($dir,'directory'):$direx
+    if ($direx=0) then return($lastnode) endif
+
+    $txtfile=userdir+'/persistence/'+$0+'_tmplist'
+    write('reset',$txtfile)
+
+    shell('(ls -1d '+$dir+'/**/dirinfo >> '+$txtfile+')'):$devnull
+    $s1='' $s2=''
+    readfile($txtfile,'$s1','$s2','','local'):$tot
+    rm('-f',$txtfile):$dum
+    if not $tot then return($lastnode) endif
+    write('reset',$txtfile)
+    $i=1
+    repeat
+        substr($s1[$i],'dirname'):$dirX
+        shell('(cat '+$s1[$i]+'/fidlog | awk \'{print "'+$dirX+'/"$2}\' >> '+$txtfile+')'):$devnull
+        $i=$i+1
+    until $i > $tot
+    studyCluster('addlist',$txtfile):$lastnode
+    rm('-f',$txtfile):$dum
+    return($lastnode)
+"*************************************************************************"
+ELSEIF ($1='addstudy') or ($1='addcluster') THEN
+    $lastnode='' $firstchar=''
+    $dir=$2
+    substr($dir,1,1):$firstchar
+    if ($firstchar<>'/') then
+	if ($1='addstudy') then $dir=userdir+'/data/'+$dir endif
+	if ($1='addcluster') then $dir=userdir+'/clusterlib/'+$dir endif
+    endif
+    exists($dir,'directory'):$direx
+    if ($direx=0) then return($lastnode) endif
+
+    $txtfile=userdir+'/persistence/'+$0+'_tmplist'
+    write('reset',$txtfile)
+    if ($1='addcluster') then
+	shell('(cat '+$dir+'/dirinfo/clusterfids | awk \'{print $1}\' > '+$txtfile+')'):$devnull
+    endif
+    if ($1='addstudy') then
+        shell('(cat '+$dir+'/dirinfo/fidlog | awk \'{print "'+$dir+'/"$2}\' > '+$txtfile+')'):$devnull
+    endif
+    studyCluster('addlist',$txtfile):$lastnode
+    rm('-f',$txtfile):$dum
+    return($lastnode)
+"*************************************************************************"
+ELSEIF ($1='add') THEN
+// arg2 can be an absolute path OR relative path w.r.t. userdir/data
+    $fidname=$2
+    $firstchar=''
+    substr($fidname,1,1):$firstchar
+    if ($firstchar<>'/') then
+	$fidname=userdir+'/data/'+$fidname
+    endif
+
+    $bname='' $ext='' 
+    getext($fidname):$bname,$ext
+    if ($ext='') then
+    	exists($fidname+'.REC','directory'):$direx
+	if ($direx) then
+	    $fidname=$fidname+'.REC'
+	else
+	    exists($fidname+'.rec','directory'):$direx
+	    if ($direx) then $fidname=$fidname+'.rec' endif
+	endif
+        if ($direx=0) then
+	    $fidname=$fidname+'.fid'
+	endif
+    endif
+    exists($fidname,'directory'):$direx
+    if ($direx=0) then
+	write('error','%s not found',$2)
+	return('')
+    endif
+    $rlok=0 $rlf1='' $relfidname=''
+    strstr($fidname,userdir+'/data/'):$rlok,$rlf1,$relfidname
+    if ($rlok<>1) then $relfidname=$fidname endif
+    $allfidlist='' $rlf1=''
+    exists(cursqexp+'/clusterfids','file'):$cfex
+    if not $cfex then write('reset',cursqexp+'/clusterfids') endif
+    readfile(cursqexp+'/clusterfids','$allfidlist','$rlf1','','local')
+    teststr('$allfidlist',$fidname,'local'):$isin
+    if not $isin then
+	teststr('$allfidlist',$relfidname,'local'):$isin
+    endif
+    if ($isin) then return('') endif
+    fread('','usertree')
+    fread($fidname+'/procpar','usertree')
+
+    $sname='' $acqtime=0
+    exists('samplename','parameter','usertree'):$ex
+    if $ex then getvalue('samplename','usertree'):$sname endif
+    exists('ACQtime','parameter','usertree'):$ex
+    if $ex then getvalue('ACQtime','usertree'):$acqtime endif
+
+// include any other parameter to be recalled to evaluate a potential array
+//   of the clusterfids
+    getvalue('tn','usertree'):$tn
+    getvalue('pslabel','usertree'):$pslabel
+    getvalue('np','usertree'):$np
+    getvalue('sw','usertree'):$sw
+    getvalue('gain','usertree'):$gain
+    getvalue('nt','usertree'):$nt
+
+    fread('','usertree')
+
+    format($pslabel,'lower'):$pslabel
+    if ($tn='H1') then
+	if ($pslabel='presat') or ($pslabel='wet1d') or ($pslabel='ps1d') then $pslabel='proton' endif
+    endif
+
+    write('file',cursqexp+'/clusterfids','%s %s %s %d %d %d %d',$relfidname,$tn,$pslabel,$np,$sw,$gain,$nt)
+    if (sqflag='n') then return('') endif
+
+    $name='' substr($fidname,'basename'):$name,$ext
+	substr($fidname,'dirname'):$dname
+	substr($dname,'basename'):$dname
+	$name=$dname+'/'+$name
+	$stime='' $stime2=''
+    formattime($acqtime):$stime2,$stime
+    $atx=1
+    $attr[$atx]='status','Completed' $atx=$atx+2
+    $attr[$atx]='data',$relfidname  $atx=$atx+2
+    $attr[$atx]='time',$stime  $atx=$atx+2
+    $attr[$atx]='macro','return'  $atx=$atx+2
+    xmhaha('mknode',$name,$attr):$sqnode
+    return($sqnode)
+"*************************************************************************"
+ELSEIF ($1='wrxml') THEN
+    vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+    return
+"*************************************************************************"
+ELSEIF ($1='delete') THEN
+    $status='' $data=''
+    if ($2='') then return endif
+    xmgetatts($2,'status','data'):$status,$data
+    $data2=$data $dok=0 $ds1=''
+    strstr($data,userdir+'/data/'):$dok,$ds1,$data2
+    if ($dok<>1) then $data2=$data endif
+
+    if ($status='Completed') and ($data<>'') then
+    	shell('(cat '+cursqexp+'/clusterfids | grep -wc "'+$data+'")'):$isin
+	if ($isin=0) then
+	    shell('(cat '+cursqexp+'/clusterfids | grep -wc "'+$data2+'")'):$isin
+	endif
+    	if ($isin=0) then return endif
+    	shell('(cat '+cursqexp+'/clusterfids | grep -vw "'+$data+'" > '+cursqexp+'/clusterfids1)'):$devnull
+    	mv(cursqexp+'/clusterfids1',cursqexp+'/clusterfids'):$dum
+        shell('(cat '+cursqexp+'/clusterfids | grep -vw "'+$data2+'" > '+cursqexp+'/clusterfids1)'):$devnull
+        mv(cursqexp+'/clusterfids1',cursqexp+'/clusterfids'):$dum
+    	$file=sqdir+'/enterSQ'
+    	vnmrjcmd('SQ delete '+$2)
+    	shell('(cat '+$file+' | grep -wv '+$2+' > '+$file+'1)'):$devnull
+    	mv($file+'1',$file):$dum
+    endif
+    return
+"*************************************************************************"
+ELSEIF ($1='quit') THEN
+    rm('-f',cursqexp+'/clusterfids'):$dum
+    walkupQ('logout')
+    return
+"*************************************************************************"
+ELSEIF ($1='save') or ($1='save2') THEN
+
+    show_n_pause('close')
+    if (resumeQ='') then
+	adirtmplt=userdir+'/clusterlib'
+	exists(adirtmplt,'directory'):$direx
+	if ($direx=0) then mkdir(adirtmplt):$dum endif
+	sdirtmplt='$samplename$_%DATE%_'
+	svftmplt='$pslabel$_'
+    endif
+    checktemplates:$return
+    if ($return=0) then return endif
+    if (archivedir='') or (sample='') or (resumeQ='') then
+	Automkdir
+    endif    
+    write('reset',archivedir+'/'+sample+'/dirinfo/clusterfids')
+    shell('(cat '+curexp+'/text | wc -w)'):$txtwords
+    if ($txtwords=0) then text(samplename):$dum endif
+    wraptext(curexp+'/text')
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    savesampglobal($md)
+    copy(cursqexp+'/clusterfids',archivedir+'/'+sample+'/dirinfo'):$dum
+    $archsamp=archivedir+'/'+sample
+    $sample=sample
+    studyCluster('quit')
+    $fidtot=0 lookup('mfile',$archsamp+'/dirinfo/clusterfids','countline'):$fidtot
+    if ($fidtot) and ($1='save') then
+	studyCluster('makearray',$archsamp)
+    	lastclusterdir[1]=$archsamp
+	lastclusterdir[2]=$sample
+    	SQDisplay('cluster')
+    endif
+
+    return($archsamp)
+"*************************************************************************"
+ENDIF

@@ -1,0 +1,238 @@
+******************************************************************************
+asp1D is a command to display one or more 1D spectra. The command can be used to display currently loaded 1D experiment data, or any 1D spectra of the same nucleus saved in fdf format. Current experiment data will be displayed only if fdf data is not loaded.
+
+See asp1D('load',...) and asp1D('clear') for loading and unloading fdf data.
+
+asp1D - disply current trace
+asp1D('next') - display next trace
+asp1D('prev') - display previous trace
+asp1D(selection) - display selected traces (see below for details) 
+asp1D('dssh'<,selection>) - display horizontally arrayed traces
+asp1D('dss'<,selection>) - display arrayed traces according to ho, vo parameters
+asp1D('nxm'<,selection>) - display arrayed traces in nxm grid.
+	default trace selection for dssh, dss, and nxm is 'all'.
+	'nxm' could be replaced by numbers, such as '3x4'.
+
+asp1D('load', fdf_file<,key,color,voff,vscale,minPPM,maxPPM,shiftPPM,firstTrace<,lastTrace,step>>) 
+	- load spectra saved in fdf format
+	all arguments except fdf_file are optional
+	kay is a user specified name for the data. If empty, an auto generated 
+		name will be used.
+	color is a string (see below), if empty, default spectrum color will be used.
+	voff is an vertical offset factor (miltiplied to vo), defalt is 0.0.
+	vscale is vertical scaling (final scaling will be vscale*vs), default is 1.0
+	minPPM,maxPPM specify the region of data to be used, default is full width.
+	firstTrace,lastTrace,step select traces to be loaded. 
+
+	data are sorted according to the order of loading. 
+	Multiple copies of the same data can be loaded with different keys. 
+	But if the data is loaded again with the same key, previously 
+	loaded data of the same key will by overridden.
+asp1D('add'/'sub'/'rep', traceInd, fdf_file<,key,color,voff,vscale,shiftPPM,minPPM,maxPPM,dcPad,firstTrace<,lastTrace,step>>) 
+asp1D('add'/'sub'/'rep', fdf_file<,key,color,voff,vscale,shiftPPM,minPPM,maxPPM,dcPad,firstTrace<,lastTrace,step>>) 
+	add/subtract/replace a new trace to an existing trace specified by traceInd. 
+	if traceInd is not specified, add to the first trace.
+	The rest of arguments are identical to 'load' option. 
+	minPPM,maxPPM of the new trace can be different from that of the existing trace.
+	dcPad is a small padding (in PPM) adds before minPPM and after maxPPM for dc correction.
+	voff,color of the new trace are ignored. 
+asp1D('load_dc',...) - same as asp1D('load',...) but with drift correction (dc)
+asp1D('add_dc',...) - same as asp1D('add',...) but dc before adding
+asp1D('sub_dc',...) - same as asp1D('sub',...) but dc before subtracting
+asp1D('rep_dc',...) - same as asp1D('rep',...) but dc before replace 
+
+asp1D('align'<,peakListFile>) - align traces according to peak postions.
+	manually define peaks to be aligned using peak picking tool,
+	or provide a previously saved peak list file which contains a peak for each trace.
+	if there are more than one peak per trace, the right-most peak is used.
+	traces are aligned to the first trace.
+
+asp1D('trace','hide'<,ind>) - hide a trace
+asp1D('trace','remove'<,ind>) - remove a trace (unload corresponding fdf data)
+
+asp1D('setColor',color<,selection>) - set color for selected traces. If selection is 
+	not specified, all traces will have the same color.
+asp1D('setRange',traceIndex,minPPM,maxPPM) - set ppm range of specified trace.
+asp1D('clear') - clear display and fdf data
+asp1D('exit') - exit asp1D display mode, clear window, clear fdf data.
+
+asp1D('again') - redisplay
+asp1D('expand'<,freq1,freq2>) - display a spectral region selected by cursors or arguments
+asp1D('f') - display spectra in full range 
+asp1D('full') - display spectra in full size 
+asp1D('cursor') - toggle one or two cursor(s),
+asp1D('phase') - nteractive phasing mode
+asp1D('thresh') - toggle to display spectra with/without threshold line 
+
+asp1D('dscale') - display horizontal scales
+asp1D('vscale') - display horizontal and vertical scales (in absolute intensity)
+		intensity y at vertical position specified by mm is y=(mm-vp)/vs ).
+asp1D('nscale') - no scale 
+asp1D('dindex') - display trace indexes.
+asp1D('dlabel'<,label1,label2,...>) - display trace label
+	display key:ind if label1,label2,... are not supplied.
+
+asp1D('nlabel') - clear trace label display
+asp1D('nindex') - clear trace index display
+
+The following commands can be used to query display info:
+
+asp1D:$mode,$ntraces,$ctrace - return display mode (ds,dss,dssh,or nxm), 
+	# of displayed traces, current trace
+asp1D('traces'):$n1,$n2,$traceIndexes - return total number of traces $n1, and displayed traces $n2
+asp1D('scale'):$ret -return scale mode 'dscale','vscale', or 'nscale'
+asp1D('cursor'):$n - return cursor mode 0,1,2 for no cursor, one cursors, two cursors
+asp1D('thresh'):$show - return 1 or 0 if threshold is shown or not shown 
+asp1D('index'):$show - return 1 or 0 if indexes are shown or not shown.
+asp1D('label'):$show - return 1 or 0 if labels are shown or not shown.
+asp1D('pix'):$x,$y,$w,$h - get box in pixel units 
+asp1D('val'):$x,$y,$w,$h - get box in value units 
+asp1D('px2v',pix):$val - convert x pixel points to value (ppm) 
+asp1D('py2v',pix):$val - convert y pixel points to value (absolute intensity) 
+asp1D('fdf'):$e,$n - return 1 if fdf spectrum is loaded, 0 if not, $n is number traces
+asp1D('path',traceIndex):$fullpath - return full path of specified trace
+asp1D('key',traceIndex):$key - return key of specified trace
+ 
+******************************************************************************
+
+1. LOAD SPECTRAL DATA
+
+Use rt(fid_path) to load a fid data (or double click a fid to load and process it). 
+Note, only one fid data can be loaded in a viewport.
+
+Use asp1D('load',fdf_path<,label,color,voff>) to load fdf spectral data. This command loads only fdf data that has the same nucleus name as specified by current tn parameter. 
+
+Use aipLoadSpec(fdf_path<,key>) to load any fdf spectral data.
+
+Multiple spectral data can be loaded. Only spectral data with tn nucleus will be displayed. These spectra can have different spectral width or resolution.
+
+Use aipRemoveSpec(key) to remove a specific fdf data.
+Use aipRemoveSpec('all'), or asp1D('clear'), or  asp1D('exit') to remove all fdf data.
+
+If fdf spectra are loaded, asp1D command will display only fdf spectra. If no fdf data is loaded, asp1D will display spectra of current experiment (i.e., phasefile).
+
+When multiple fdf files are loaded, the traces are sorted according to the alphabatic order of the keys. But if the keys are not provide (this is the case for asp1D('load',...) command), the traces will be sorted by the order of loading.
+
+A fdf file may contains multiple traces (arrayed data). 
+If multiple such data are loaded, the traces are sorted by total indexes.
+
+2. SELECT SPECTRA BY INDEXES (similar to mspec).
+
+The following commands select traces by indexes
+
+asp1D(index1,index2, index3,...<,color1,color2,...>) or
+asp1D(index1,color1,index2,color2,...)
+  e.g., asp1D(1,3,5,'blue') to display traces 1,3,5 in blue.
+	asp1D(1,'blue',2,'cyan',3,'yellow')
+ 
+asp1D('all'<,color1, color2,...>) 
+	select all traces in arrayed data, up to 64.
+
+asp1D('first-last:step'<,color1, color2,...>)
+  e.g., asp1D('1-') to select all traces
+	asp1D('65-') to select 65 to last trace 
+	asp1D('1-:2') to select every other traces
+	asp1D('10-20:2') to select traces 10,12,14,16,18,20
+
+If color is not specified, the default spectrum color (i.e., 'spectrum') will be used.
+If fewer color(s) than spectra are specified, the color(s) will be recycled.
+
+Colors are specified by names: 
+	'red','green','blue','cyan','magenta','yellow','orange','black','white',
+	'pink','gray' 'spectrum','spectrum2' to 'spectrum9','cursor','integral',
+	'threshold','scale','fid','imaginary','parameter'.
+
+
+3. SELECT SPECTRA BY KEYS (similar to mspec) 
+
+A spectrum key is a name given when a fdf spectra data is loaded 
+(see CPR for savefdfspec and aipLoadSpec commands). 
+
+The following are special keys reserved for data in current experiment:
+  'FID' - data in current fid buffer,
+  'SPEC' - data in current phasefile buffer,
+  'BASE' - data in current baseline buffer.
+
+comboKey is a string to combine (add/subtract/scale) spectra, or select a trace.
+
+For examples:
+key1='SPEC' -current trace in SPEC
+key2='spec' -current trace in spec
+key3='SPEC-spec' -difference between current traces in SPEC and spec
+key3='spec:2' - second trace in spec
+key4='spec*0.5' - scale current trace in spec by half.
+
+The following commands select spectra by keys or comboKeys (see below).
+
+asp1D(key1,key2,key3,...) 
+	key1,key2,... are spectrum keys or comboKeys. 
+	Note, all arguments should be string, and are interpreted as keys or comboKeys.
+
+asp1D(n,comboKey,yoff,color) 
+	This selects one spectrum at a time. 
+        Note, the comboKey has to contain ':', so it will not be confused with colorNames. 
+        Spectrum n is specified by a given key, and 
+	will be displayed with vertical offset yoff, in a given color.
+        yoff is specified in milllimiters, color is specified by name.
+
+e.g., asp1D(1,'spec:1', 0, 'cyan')
+      asp1D(2,'baseline:1', 0, 'yellow')
+      asp1D(3,'spec:1-baseline:1', 40, 'red')
+
+This will display the first trace of a spectral data, and the first trace of a baseline data at the same vertical offset, and display the difference 40mm above.
+
+4. Mouse MODES
+
+The following modes can be set by aspSetState(mode) command.
+
+0 - no mode (this allows the modes for ds and dconi work properly) 
+
+1 - select mode. 
+	Move mouse over a spctral trace, a ROI or threshold line to highlight the object.
+	 Trace: left mouse drag to pan all traces.
+		right mouse click to remove selected trace.
+	   ROI: left mouse drag edge to resize the ROI
+		left mouse drag box to move the ROI. 
+		right mouse click to remove the ROI.
+	Threshold: left mouse drag to move threshold, 
+		right mouse click to remove threshold line.
+3 - create 1D ROI (see aspRoi)
+4 - modify 1D ROI (see aspRoi)
+5 - create 2D ROI (see aspRoi)
+6 - modify 2D ROI (see aspRoi)
+7 - one cursor. 
+	Left mouse click to place the first cursor. 
+	Right mouse click to place the second cursor.
+	if the threshold line is displayed, move mouse over threshold line to highlight, 
+	drag threshold line to change position. 
+8 - two cursors. 
+	Left mouse click to move both cursors. 
+	Right mouse click to move the second cursor. 
+	if the threshold line is displayed, move mouse over threshold line to highlight, 
+	drag threshold line to change position. 
+9 - zoom.  
+	Left mouse ctrl/click to zoom out to full spectral width.
+	Left mouse click to zoom in
+	right mouse click to zoom out 
+	Left mouse drag down to right to zoom in
+	Left mouse drag up to left to zoom out 
+10 - pan 
+	Left mouse ctrl/click to reset vp=0
+	Left mouse click to center clicked position.
+	Left mouse drag to pan both horizontally and vertically.
+	Left mouse ctrl/drag to pan horizontally only		
+	Left mouse ctrl/drag within 10 picels to left border to pan vertically only		
+	right mouse drag up to zoom out, drag down to zoom in.
+11 - array 
+	Left mouse ctrl/click to reset vo, ho to zero.
+	Left mouse ctrl/doubleclick reset vo, ho, vp to zero 	
+	Left mouse drag to change vo or vp
+	Left mouse ctrl/drag to change ho.
+12 - F1 trace 
+13 - F2 trace 
+14 - F1F2 traces 
+15 - phasing 
+	Left mouse ctrl/click to perform auto zero order phasing.
+	Left mouse drag to perform coarse zero order phasing
+	Right mouse drag to perform fine zero order phasing
+

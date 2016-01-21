@@ -1,0 +1,22 @@
+"macro tpwrmap"
+"*************************************************************************"
+" Set up parameters for:                                                                                          "
+" tpwrmap - calibration of iCAT attenuator errors            "
+"*************************************************************************"
+
+exists(userdir+'/parlib','file'):$e
+if ($e<>0) then
+  exists(userdir+'/parlib/'+$0+'.par','file'):$e 
+endif
+if ($e<>0) then 
+  $rtvfile=userdir+'/parlib/'+$0
+else
+  $rtvfile=systemdir+'/parlib/'+$0
+  exists($rtvfile+'.par','file'):$e 
+  if ($e=0) then
+    write('error','No parameters for protocol %s',$0)
+    return
+  endif
+endif
+vnmrjcmd('setpage','Acquire','Tpwr')
+rtp($rtvfile)

@@ -1,0 +1,87 @@
+"macro rna_makeSTUDpp"
+"rna_makeSTUDpp  -  makes waveforms for STUD+ decoupling under optimum conditions"
+"		for bandwidths of 30, 80, and 140ppm as required for the     "
+"               aromatic, ribose, or whole C13 spectrum of RNA"
+
+    "Robin Bendall, Jan 98, reference Bendall and Skinner, JMR submitted"
+    " rewritten by Peter Lukavsky, Stanford, October 1998"
+
+
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then
+  exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+  if $e then
+    $global=0
+  else
+    $global=1
+  endif
+else
+  $global=0
+endif
+
+"140ppm STUD+ with centerband amplitude at 85% or more:			      "
+		"input requirements, maximum J of 150 Hz assumed"
+r1 = 140.0*dfrq/1000.0      		  	 "required effective bandwidth"
+r2 = 85.0      			   "required minimum centerband amplitude in %"
+
+if $global=1 then
+ n1='/vnmr/shapelib/stCdec140.DEC'
+else
+ n1=userdir+'/shapelib/stCdec140'+'.DEC'
+endif
+rna_STUDcal			 "calculates parameters for optimum efficiency"
+	                           "and writes decoupling waveform to shapelib"
+
+			"parameter names for pulse sequence"
+exists('dmf140','parameter'):$e if ($e=0) then
+create('dmf140','real','current')   endif
+exists('rf140','parameter'):$e if ($e=0) then
+create('rf140','real','current')   endif
+dmf140 = r4				"dmf to be read by pulse sequence code"
+rf140 = r3 			"RFmax in Hz to be read by pulse sequence code"
+
+write('line3','Getting there!')
+
+
+"80ppm STUD+ with centerband amplitude at 90% or more:			      "
+
+r1 = 80.0*dfrq/1000.0      		  	
+r2 = 90.0      			   
+
+if $global=1 then
+ n1='/vnmr/shapelib/stCdec80.DEC'
+else
+ n1=userdir+'/shapelib/stCdec80'+'.DEC'
+endif
+rna_STUDcal				
+exists('dmf80','parameter'):$e if ($e=0) then
+create('dmf80','real','current')   endif
+exists('rf80','parameter'):$e if ($e=0) then
+create('rf80','real','current')   endif
+dmf80 = r4			
+rf80 = r3 			
+
+write('line3','Still getting there!')
+
+
+"30ppm STUD+ with centerband amplitude at 95% or more:                        "
+
+r1 = 30.0*dfrq/1000.0
+r2 = 95.0
+
+if $global=1 then
+ n1='/vnmr/shapelib/stCdec30.DEC'
+else
+ n1=userdir+'/shapelib/stCdec30'+'.DEC'
+endif
+rna_STUDcal
+exists('dmf30','parameter'):$e if ($e=0) then
+create('dmf30','real','current')   endif
+exists('rf30','parameter'):$e if ($e=0) then
+create('rf30','real','current')   endif
+dmf30 = r4
+rf30 = r3
+
+write('line3','Finished STUD+ !')

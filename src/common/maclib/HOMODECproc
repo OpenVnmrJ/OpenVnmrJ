@@ -1,0 +1,152 @@
+"macro HOMODECproc"
+// Utility macro for HOMODEC
+
+if ($# < 1) then $1='setfrq' endif
+
+IF ($1='setfrq') THEN
+
+// This section converts selfrq parameters to
+//   homonuclear decoupling parameter values
+//   The satfrq/satpwr are also set if satmode='n'
+//   hdpsmode is presaturation flag at 
+//   decoupling frequencies
+//   Solvent suppression (PRESAT) and presat at hdof
+//	are mutually exclusive
+
+   if homo='n' then return endif
+   if (mfslp='n') then
+
+//	Not shaped decoupling
+      hdof=selfrqc
+      $factor=1/dutyc
+      ln($factor):$lnfactor
+      $diff=trunc(20*0.43429*$lnfactor)
+      $pwr=0
+      $size=size('selfrqw')
+      $i=1
+      repeat
+        setpower(selfrqw[$i],tn):$pwr[$i]
+	hdpwr[$i]=$pwr[$i]+$diff
+	$i=$i+1
+      until $i > $size
+      hdfrqc=selfrqc
+      hdfrqw=selfrqw
+
+//    set satfrq and satpwr ONLY if satmode='n'
+      if (satmode='n') then
+      	satfrq=selfrqc
+	satpwr=$pwr
+      endif
+
+//    set array parameter appropriately
+      if ($size>1) then
+	 if (satmode='n') then
+         	array='(satfrq,satpwr,hdof,hdpwr)'
+	 else
+		array='(hdof,hdpwr)'
+	 endif
+      endif
+
+   else
+
+// presat section
+//  shape is generated on the fly
+    if (satmode='n') then
+      sort(selfrqw,'r'):$index,$selfrqw
+      presatgh2=$selfrqw[1]
+      setpower(presatgh2,tn):satpwr,$pw
+                "Adjust satpwr to accomodate number of frequencies"
+      $selfrqsize=size('$selfrqw')
+      ln($selfrqsize):$lnsize
+      $attnval=trunc(20*0.43429*$lnsize)
+      satpwr=satpwr+$attnval+1
+      if (satpwr > 30) then satpwr=30 endif
+                "satpwr adjusted"
+      getpower(satpwr,tn):presatgh2
+      satfrq=tof
+      pstof=selfrqc
+   endif
+// decoupling section
+      hdof=tof
+      hdfrqc=selfrqc
+      hdfrqw=selfrqw
+      hdseq=''
+
+      $size=size('hdfrqc')
+      $size2=size('hdfrqw')
+      if ($size2<$size) then
+        $i=$size2+1
+	   repeat
+	      hdfrqw[$i]=hdfrqw[$i-1]
+	      $i=$i+1
+	   until $i > $size
+      endif
+
+// Make decoupling shape
+      if (hdwave='') then hdwave='SEDUCE1' endif
+      assignshapename(pslabel,'DEC'):$name
+      $shape=$name+'.DEC'
+      opx($shape)
+      $i=1
+      repeat
+	  write('line3','%s  %0.1f  %0.1f',hdwave,hdfrqw[$i],hdfrqc[$i]-tof):$wave
+	  setwave($wave)
+	  $i=$i+1
+      until $i>$size
+      pboxpar('dcyc',dutyc)
+      cpx(pw90*tpwr_cf,tpwr):$dum
+      pbox_pwr($shape):hdpwr
+      pbox_dmf($shape):hdmf
+      pbox_dres($shape):hdres
+      hdseq=$name
+
+   endif
+   resetselfrq
+
+ELSEIF ($1='continue') THEN
+
+  HOMODECproc('iscphomodec','processed'):$ret
+//  iscphomodec('processed'):$ret
+  if ($ret=0) then
+        write('error','Spectrum in curexp is not a homodec spectrum with apptype=\'sel1D\'')
+        return
+  endif
+  if (procdim=0) then
+        wft
+  endif
+  if (procdim<>1) then
+        write('error','a processed 1D spectrum is not in curexp')
+        return
+  endif
+        wds='suselfrq'
+	selfrqc=hdfrqc
+	selfrqw=hdfrqw
+        showfreq
+
+ELSEIF ($1='iscphomodec') THEN
+
+  $apptype=apptype $pslabel=pslabel
+  if ($# < 2) then $2='current' endif
+  if ($2='processed') then
+     getvalue('pslabel','processed'):$pslabel
+     on('apptype','processed'):$on
+     if ($on>-1) then 
+        getvalue('apptype','processed'):$apptype
+     else
+        $apptype=''
+     endif
+  endif
+
+  if ($apptype<>'sel1D') then return(0) endif
+  format($pslabel,'lower'):$pslabel
+  strstr($pslabel,'homodec'):$ret
+  return($ret)
+
+ELSEIF ($1='reset') THEN
+
+        hdof=tof
+        hdfrqw=10
+        hdfrqc=0 off('hdfrqc')
+        hdseq=''
+
+ENDIF

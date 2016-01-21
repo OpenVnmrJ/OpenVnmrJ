@@ -1,0 +1,36 @@
+"This works only for VJ21B, but doesn't hurt for earlier versions"
+
+return
+if ($# < 1) then $1='auto' endif
+if ($1='userdir') then
+  $date='' shell('date +%Y%m%d'):$date
+  exists(userdir+'/acqlogs','directory'):$direx
+  if ($direx=0) then shell('mkdir '+userdir+'/acqlogs'):$dum endif
+  $acqlog=userdir+'/acqlogs/acqlog_'+$date
+else
+  $acqlog=autodir+'/enterQ.macdir/acqlog'
+endif
+
+  exists($acqlog,'file'):$acqex
+  if ($acqex=0) then
+        shell('touch '+$acqlog):$dum
+        shell('chmod a+w '+$acqlog):$dum
+	exists('/vnmr/tmp/acqlog','file'):$lastacqex
+	$lastacqlog=''
+	if ($lastacqex) then
+	   shell('(ls -l /vnmr/tmp/acqlog | awk \'{print $NF}\')'):$lastacqlog
+	endif
+	if ($lastacqlog<>'') and ($lastacqlog<>'acqlog') then
+	   write('file',$acqlog,'Previous acqlog path: %s',$lastacqlog)
+	endif
+  endif
+  exists($acqlog,'file'):$acqex
+  if ($acqex) then
+	//********There could be a stale /vnmr/tmp/acqlog link to a non-existing
+	// ******* acqlog in old autodir or other userdir 
+                shell('rm -f /vnmr/tmp/acqlog'):$dum
+	//******Create a softlink to current acqlog
+                shell('ln -s '+$acqlog+' /vnmr/tmp/acqlog'):$dum
+  endif
+
+return($acqlog)

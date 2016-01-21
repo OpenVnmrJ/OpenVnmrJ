@@ -1,0 +1,122 @@
+"macro xmq"
+// xmq - queue protocols
+// usage: xmq('select')   - queue currently Active protocol
+//        xmq('all')      - queue all available protocols
+//        xmq('none')     - unqueue all available protocols
+//        xmq('abort')    - unqueue and abort all started protocols
+
+$arg='all'
+if $#>0.5 then $arg=$1 endif
+
+xm1('studydir'):$sdir
+$sqfile=$sdir+'/enterSQ'
+exists($sqfile,'file'):$ex
+if not ($ex) then
+  return(-1)
+endif
+
+$actionid=actionid
+
+if $arg='select' then
+
+  if $actionid<>'null' then
+    xmgetatts($actionid,'status'):$st
+    if appmode='imaging' then
+      xmselect('savepar')
+    else
+      xmselect('saveid')
+    endif
+    if ($st='Ready' or $st='Customized' or $st='Active') then
+      xmsetatts($actionid,'status','Queued')
+    endif
+    actionid='null'
+  endif
+  vnmrjcmd('pnew','actionid')
+
+elseif $arg='none' then
+
+  xmq('select')
+  $ids='' $val='' $type='' $qsize=0 $i=0
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  repeat
+    $i=$i+1
+    xmgetatts($ids[$i],'status'):$st
+    if ($st='Queued') then
+      if ($ids[$i]=$actionid) then
+        if appmode='imaging' then
+          xmselect('savepar')
+        else
+          xmselect('saveid')
+        endif
+        actionid='null'
+      endif
+      xmsetatts($ids[$i],'status','Customized')
+    endif
+  until ($i>=$qsize)
+
+elseif $arg='all' then
+
+  $ids='' $val='' $type='' $qsize=0 $i=0
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  repeat
+    $i=$i+1
+    xmgetatts($ids[$i],'status'):$st
+    if ($st='Ready' or $st='Customized' or $st='Active') then
+      if ($ids[$i]=$actionid) then
+        if appmode='imaging' then
+          xmselect('savepar')
+        else
+          xmselect('saveid')
+        endif
+        actionid='null'
+      endif
+      xmsetatts($ids[$i],'status','Queued')
+    endif
+  until ($i>=$qsize)
+
+elseif $arg='start' then
+  $ids='' $val='' $type='' $qsize=0 $i=0
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  $found=0
+  $run=0
+  repeat
+    $i=$i+1
+    xmgetatts($ids[$i],'status'):$st
+    if ($st='Queued') then
+       actionid='null'
+       setvalue('copyid','null',2,'global')
+       xmaction('doubleclick', $ids[$i])
+       acquire('nostart')
+       xmlockup
+       $found=1
+    elseif ($# = 1) and (($st='Executing') or ($st='Submitted')) then
+       $run=1
+       $i = $qsize
+    endif
+  until ($i>=$qsize)
+  if ($run) then
+    write('line3','The queue is already started')
+  elseif (not $found) and ($# = 1) then
+    write('line3','Use right mouse menu over scans in Study Queue to queue them')
+  endif
+
+elseif $arg='abort' then
+  $ids='' $val='' $type='' $qsize=0 $i=0
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  while ($qsize > 0) do
+    $st= ''
+    $data=''
+    xmgetatts($ids[$qsize],'status','data'):$st,$data
+    if ($st = 'Submitted') and ($data <> '') then
+      acqdequeue($data):$res
+      if ($res) then
+        xmsetatts($ids[$qsize],'status','Customized','data','','lock','off')
+      endif
+    elseif ($st = 'Complete') then
+      $qsize=1
+    endif
+    $qsize = $qsize - 1
+  endwhile
+  aa
+
+endif

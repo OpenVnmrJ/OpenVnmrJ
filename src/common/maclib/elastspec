@@ -1,0 +1,49 @@
+"macro elastspec"
+$tailX='tail'
+whichtail:$tailX
+
+if (auto='y') then 
+   write('line3','elastspec is not functional under automation')
+   return
+endif
+
+if (emailflag='n') then
+        write('line3','Email option is NOT turned on')
+        return
+endif
+
+if ($# < 1) then $1=emailaddr endif
+if ($1='') then
+    write('line3','Usage elastspec(<address>). emailaddr is empty string')
+    return
+endif
+
+isnewexp:$isnew
+if ($isnew) then
+  write('line3','Data in curexp has not been saved. Cannot access last dx file')
+  return
+else
+  shell('dirname '+file):$archive
+  shell('basename '+file+' .fid'):$expname
+endif
+
+  pwd:$curdir
+  cd($archive):$dum
+  $specname=''
+  shell('(cat dirinfo/spectrumlist | grep '+$expname+'_spec | '+$tailX+' -n 1)'):$specname
+  substr($specname,5):$specname
+  if ($specname<>'') then
+	exists('spectra/'+$specname,'file'):$specex
+	if ($specex=0) then $specname='' endif
+  endif
+  cd($curdir):$dum
+  if ($specname='') then
+	write('line3','No dx file found for %s. Use espec option',$expname)
+	cd($curdir):$dum
+	return
+  endif
+
+  cd($archive):$dum
+  vnmremail('spectra/'+$specname,$1)
+  cd($curdir):$dum
+  write('line3','%s sent to %s',$specname,$1)

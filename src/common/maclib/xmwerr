@@ -1,0 +1,40 @@
+"macro xmwerr"
+"recover from acquisition error in study"
+if (acqstatus[1] = 13) or (acqstatus[1] = 15) or (acqstatus[1] = 16) then
+  $appmode=appmode
+  if (appmode='lc') then $appmode='walkup' endif
+  xm1('studydir'):$sdir
+  $activestudy=activestudy[1]
+  if $appmode='walkup' then
+    $activestudy=studyid
+  endif
+  sqmode='pause'
+  if ($sdir<>'' and $activestudy<>'null') then
+    if $appmode<>'walkup' then xm1('pause') endif
+    exists('actionid','parameter'):$e
+    if ($e>0.5 and not ($appmode='walkup' and studyid='tmpstudy')) then
+      if (actionid<>'null' and actionid<>'') then
+        reserveDisk('delete',$sdir,actionid)
+        xmsetatts(actionid,'status','Error','time','null','data','null')
+        $acqlog=curexp+'/acqfil/log'
+        $dest=$sdir+'/info/'+actionid
+        exists($acqlog,'file'):$a
+        exists($dest,'directory'):$d
+        if ($a>0.5 and $d>0.5) then
+          cp($acqlog,$dest+'/acqlog'):$x
+        endif
+      endif
+      if $appmode='imaging' then
+        sqsavestudy
+      elseif $appmode='walkup' then
+        exists('getbarcode','maclib'):$e
+        if $e>0.5 then getbarcode endif
+        cqsavestudy($sdir,studyid,'Error')
+        xmtime('update')
+      else
+        cqsavestudy
+      endif
+    endif
+  endif
+  acqmode=''
+endif

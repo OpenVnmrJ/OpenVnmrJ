@@ -1,0 +1,215 @@
+"Copyright (c) Varian Inc.  All Rights Reserved."
+" dataNamePopup - handle Data naming "
+/*
+   globalauto = Parent directory of automation / studies
+   autodirtmplt = Sample/Study template
+   autodir = Value of expanded templates
+   studyid = Basename of autodir
+ */
+$xmlfile=curexp+'/tmpdn3.xml'
+if ($# = 0) then
+  rights('canEditAutodir'):$e
+  if ($e <> 1) then
+    return
+  endif
+  create('dataprefTmp','string','global',''):$e
+  setgroup('dataprefTmp','display','global')
+  $i = 1
+  if (globalauto = '') then globalauto='$userdir$/Automation'
+  dataprefTmp[$i] = globalauto
+  $i = $i + 1
+  if (autodirtmplt = '') then autodirtmplt='s_%DATE%_' endif
+  dataprefTmp[$i] = autodirtmplt
+  $i = $i + 1
+  dataprefTmp[$i] = '',''
+  strstr(dataprefTmp[1]):$dum,$apars,dataprefTmp[3]
+  ckstring(dataprefTmp[3],5):dataprefTmp[3]
+  strstr(dataprefTmp[2]):$dum,$spars,dataprefTmp[4]
+  ckstring(dataprefTmp[4],5):dataprefTmp[4]
+  if (($apars <> '') or ($spars<>'') ) then
+    if ($apars <> '') then
+       dataprefTmp[3] = dataprefTmp[3] + `(The following cannot be set to '': `+$apars+`)`
+    endif
+    if ($spars <> '') then
+       dataprefTmp[4] = dataprefTmp[4] + `(The following cannot be set to '': `+$spars+`)`
+    endif
+  endif
+
+  exists('autodirfile','templates/vnmrj/choicefiles'):$e,$adirpath
+  exists('studydirfile','templates/vnmrj/choicefiles'):$e,$sdirpath
+  
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="1000 330"  \n\
+    style="Heading2"  \n\
+    label="Automation / Study Setup"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="700 30" size="200 20" \n\
+      style="Heading2" \n\
+      label="Common choices" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 90" size="180 20" \n\
+      style="PlainText" \n\
+      label="Sample/study directory" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 120" size="180 20" \n\
+      style="PlainText" \n\
+      label="Data file name" \n\
+      justify="Left" \n\
+        /> `)
+    write('file',$xmlfile,`\n
+    <label loc="20 60" size="160 20" \n\
+      style="PlainText" \n\
+      label="Parent directory" \n\
+      justify="Left" \n\
+      /> \n\
+    <entry loc="250 60" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','adir','$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get','adir'):$VALUE"
+      disable="Grayed out"
+      /> `)
+    write('file',$xmlfile,`\n
+    <entry loc="250 90" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','sdir','$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get','sdir'):$VALUE"
+      disable="Grayed out"
+      /> \n`)
+    write('file',$xmlfile,`\n
+    <selfilemenu loc="700 60" size="300 20"
+      label="Parent directory choices"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','adir','$VALUE') vnmrjcmd('Modeless')"
+      file="$VALUE='`+$adirpath+`'"
+      type="file"
+      bg="default"
+      /> `)
+    write('file',$xmlfile,`\n
+    <selfilemenu loc="700 90" size="300 20"
+      label="Sample/study directory choices"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','sdir','$VALUE') vnmrjcmd('Modeless')"
+      file="$VALUE='`+$sdirpath+`'"
+      type="file"
+      bg="default"
+      /> \n`)
+    write('file',$xmlfile,`\n
+    <label loc="20 180" size="100 20"
+      style="Heading2"
+      label="Example:"
+      fg="darkGreen"
+      />
+    <label loc="20 210" size="160 20" \n\
+      style="PlainText" \n\
+      label="Parent directory" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 240" size="180 20" \n\
+      style="PlainText" \n\
+      label="Sample/study directory" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 300" size="180 20" \n\
+      style="PlainText" \n\
+      label="Full name" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+        /> \n\
+    <textmessage loc="250 210" size="400 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="$VALUE=dataprefTmp[3]"
+      />
+    <textmessage loc="250 240" size="400 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="$VALUE=dataprefTmp[4]"
+      />
+    <textmessage loc="250 300" size="800 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="`+$0+`('get','fullpath'):$VALUE"
+      /> \n`)
+
+  write('file',$xmlfile,'  </group>\n</template>')
+  
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/'+$0+'.html', \
+   'pnewupdate:true', 'cancel:'+$0+'(`cancel`)', 'ok:'+$0+'(`ok`)', \
+   'title:Automation / Study Setup')
+
+elseif ($1 = 'set') then
+  if ($2 = 'adir') then
+    dataprefTmp[1] = $3
+    strstr($3):$dum,$pars,dataprefTmp[3]
+    ckstring(dataprefTmp[3],5):dataprefTmp[3]
+      if ($pars <> '') then
+        dataprefTmp[3] = dataprefTmp[3] + `(The following cannot be set to '': `+$pars+`)`
+      endif
+  elseif ($2 = 'sdir') then
+    dataprefTmp[2] = $3
+    strstr($3):$dum,$pars,dataprefTmp[4]
+    ckstring(dataprefTmp[4],5):dataprefTmp[4]
+      if ($pars <> '') then
+        dataprefTmp[4] = dataprefTmp[4] + `(The following cannot be set to '': `+$pars+`)`
+      endif
+  endif
+
+elseif ($1 = 'get') then
+  if ($2 = 'adir') then
+    return(dataprefTmp[1])
+  elseif ($2 = 'sdir') then
+    return(dataprefTmp[2])
+  elseif ($2 = 'svfname') then
+    return(dataprefTmp[3])
+  elseif ($2 = 'fullpath') then
+      strstr(dataprefTmp[1]):$dum,$dum2,$adir
+      strstr(dataprefTmp[2]):$dum,$dum2,$sdir
+      ckstring($adir,5):$adir
+      ckstring($sdir,5):$sdir
+      if ($sdir <> '') then
+         $adir = $adir + '/' + $sdir
+      endif
+      Svfname($adir,'',''):$adir
+      return($adir)
+  endif
+
+elseif ($1 = 'ok') then
+  globalauto = dataprefTmp[1]
+  autodirtmplt = dataprefTmp[2]
+//  destroy('dataprefTmp','global'):$e
+  delete($xmlfile)
+elseif ($1 = 'cancel') then
+  destroy('dataprefTmp','global'):$e
+  delete($xmlfile)
+else
+  return(-1)
+endif

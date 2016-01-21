@@ -1,0 +1,128 @@
+"macro suselfrq1"
+"*********************************************************************"
+" suselfrq - macro to setup selective frequency pulse, power, and     "
+"		shape and continue exp chain.   Used by tocsy1d     "
+"		and noesy1d macros.              		      "
+"*********************************************************************"
+
+$list=''
+$nexplist=''
+if (wexp='chempackQ') then
+   $list='chain'
+   $maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+   $shapedir=archivedir+'/'+sample+'/dirinfo/shapelib'
+   $nexplist=explist[1]
+   if (wstart=$0) then 
+   	cpexplist('next',$maclibdir):$nexplist
+   endif
+endif
+if ($nexplist='') then $list='' endif
+
+        $seltype='dpfgseF1'
+        exists('seltype','parameter'):$sltex
+        if ($sltex) then
+           $seltype=seltype
+        endif
+        if ($seltype='') then return endif
+
+        if ($seltype='invF1') then
+                $parshape1='selpwx180shp'
+                $parshape2='selpwx180shpR'
+                $parpw1='selpwx180'
+                $parpw2='selpwx180'
+                $parpwr1='selpwxlvl180'
+                $parpwr2='selpwxlvl180'
+        elseif ($seltype='excitF1') then
+                $parshape1='selpwx90shp'
+                $parshape2='selpwx90shpR'
+                $parpw1='selpwx90'
+                $parpw2='selpwx90'
+                $parpwr1='selpwxlvl90'
+                $parpwr2='selpwxlvl90'
+	elseif ($seltype='dpfgseF1') then
+                $parshape1='selpwxshpA'
+                $parshape2='selpwxshpB'
+                $parpw1='selpwxA'
+                $parpw2='selpwxB'
+                $parpwr1='selpwxlvlA'
+                $parpwr2='selpwxlvlB'
+        else
+		return
+        endif
+
+        if (refsource1='dfrq') then
+		$nuc=dn $f1of='dof' $shapepar='dnshapes'
+        elseif (refsource1='dfrq2') then
+		$nuc=dn2 $f1of='dof2' $shapepar='dn2shapes'
+        elseif (refsource1='dfrq3') then
+		$nuc=dn3 $f1of='dof3' $shapepar='dn3shapes'
+        else
+                $nuc=tn $f1of='' $shapepar='tnshapes'
+        endif
+
+        $array=array array=''
+	if ($list='chain') then
+		$ok=1 wds='' wstart=$0
+		selfrq_yarrA($nexplist,$0):$ok
+		if ($ok=0) then $list='' endif
+	endif
+
+	sel1ppm2frq
+        on('selfrq1c'):$ison
+        if ($ison=0) then
+                write('error','%s - selective frequency not defined',$0)
+		array = $array
+                return
+        endif
+
+	$selfrqcsize=size('selfrq1c')
+     	$i=1
+     	repeat
+		assignshapename(pslabel):$name
+		setF1selshp(selfrq1w[$i],0,$name):$shape1[$i],$shape2[$i],$selpwr1[$i],$selpwr2[$i],$selpw1[$i],$selpw2[$i]
+		if ($list='chain') then
+       			shell('cp '+userdir+'/shapelib/'+$shape1[$i]+'.RF '+$shapedir):$dum
+        		shell('cp '+userdir+'/shapelib/'+$shape2[$i]+'.RF '+$shapedir):$dum
+		endif
+		$sw1[$i]=selfrq1w[$i]
+		$dof[$i]=selfrq1c[$i]
+		$i=$i+1
+        until $i > $selfrqcsize
+
+        sw1=$sw1[1]
+        if ($f1of<>'') then {$f1of}=$dof[1] endif
+	reff1:$dum
+        sw1=$sw1 
+	if ($f1of<>'') then {$f1of}=$dof endif
+	{$parshape1}=$shape1
+	{$parshape2}=$shape2
+	{$parpw1}=$selpw1
+        {$parpw2}=$selpw2
+	{$parpwr1}=$selpwr1
+        {$parpwr2}=$selpwr2
+
+	saveshapes('add',$shapepar,$parshape1,$parpwr1,$parpw1)
+	saveshapes('add',$shapepar,$parshape2,$parpwr2,$parpw2)
+
+	if ($selfrqcsize > 1) then
+	    $newarray='(sw1,'+$parshape1+','+$parshape2+','+$parpw1+','+$parpwr1
+	    if ($f1of<>'') then
+		$newarray=$newarray+','+$f1of
+	    endif
+	    if ($seltype='dpfgseF1') then
+		$newarray=$newarray+','+$parpw2+','+$parpwr2
+	    endif
+	    array=$newarray+')'
+	    if ($array<>'') then array=array+','+$array endif
+	else
+	    if ($array<>'') then array=$array endif
+	endif
+
+EXPtime:ACQtime
+selfrq1c=0 off('selfrq1c')
+selfrq1ppm=0 off('selfrq1ppm')
+selfrq1w=10
+wds='' wstart=''
+if (auto<>'y') then dps endif
+write('line3','shapes are ready for %s',pslabel)
+

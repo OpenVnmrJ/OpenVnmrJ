@@ -1,0 +1,391 @@
+"macro gs_setvox"
+"***************************************************************************"
+"
+" gs_setvox - Macro to set voxel position and size for 3D grad shimming"
+"
+" Usage: gs_setvox - load voxel dimension and position"
+"
+" Details: "
+"          Note: only trans, sag, cor scout orientations are allowed"
+"          The voxel defines the region to shim. The current experiment is"
+"          assumed to be loaded with the ge3dshim.c sequence"
+"          The plan routine intializes the following parameters: vpsi, "
+"          vphi, vtheta, pos1-3, vox1-3. gs_setvox then initializes the  "
+"          parameters X0,Y0,Z0 (cm), lx,ly,lz (mm)"
+"	   In the current implementation only vphi=vpsi=vtheta=0 is allowed"
+"          upper and lower limits in points are then determined for gshimcalc"
+"          Note: ge3dshim acquired with orient = sag; i.e. ro/pe1/pe2 z/y/x"
+
+"***************************************************************************"
+ 
+$GSDIR = userdir+'/gshimdir/data'
+$logfile = $GSDIR+'/'+Prescan_ShimMethod+'.log' 
+"current expt ge3dshim; voxel parameters transferred to current expt from"
+" scout image via voxel-planning"
+" Assume ge3dshim to be acquired with orient='sag'   "
+$macro=$0
+
+"get FOV information from shimmap.param file, i.e. for reference image"
+  $name = $GSDIR+'/shimmap.param'   " .../data/shimmap.param created by gs_calc"
+  exists($name,'file'):$ex
+  if ($ex = 0) then
+    write('error','%s: %s file does not exist',$macro,$name)
+    abort
+  endif  
+  "**  3rd dimension size and FOV  got from parameter file**"
+  lookup('mfile',$name,'filekey'):$key
+  lookup('mfile',$key,'seek','#DATASIZE','read','read','read'):$sz1,$sz2,$sz3
+  lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+  $np = $sz1
+  $lro = $f1/10
+  $nv = $sz2
+  $lpe = $f2/10 
+  $nv2 = $sz3
+  $lpe2 = $f3/10
+"read in voxel or slab ROI information"
+"orth-voxel/slab code need to be removed"
+if(shimregion='orthvoxel') then
+  "Set up voxel for shimming"
+  $shim_params = userdir + '/prescan/voxel.par'
+  exists($shim_params,'file'):$e
+  if ($e = 0) then
+    write('error','%s: Voxel for shimming has not been selected',$macro)
+    abort
+  endif
+  rtv($shim_params, 'vtheta', 'vphi', 'vpsi', 'vox1', 'vox2','vox3', 'pos1', 'pos2', 'pos3')
+      
+  "convert voxel parameters to physical parameters, i.e. wrt x,y,z gradients "
+  "Note: only trans voxel definition allowed; i.e. vorient='trans' "
+  if ((vpsi=0) and (vphi=0) and (vtheta=0)) then     "trans"
+  
+    Y0 = -pos1  "cm"
+    X0 = -pos2
+    Z0 = -pos3
+
+    $lx = vox2/10.0  "cm"
+    $ly = vox1/10.0
+    $lz = vox3/10.0
+  
+    "Note: parameters for sagital orientation initialized"
+    "Assume ge3dshim, read/pe1/pe2 Z/Y/X) "
+  
+    if(($lx < 0.1) or ($ly <= 0.1) or ($lz <= 0.1) ) then
+      write('error', '%s: Error: voxel size is too small; x=%4.1f y=%4.1f z=%4.1f',$lx,$ly,$lz)
+      abort
+    endif  
+    "voxel region defined in points for gs_calc"
+    "position to pixel info; expanded for clarity"
+    "if voxel between zero position, additional point generated due to roundoff"
+    $up_1 = Z0+($lz/2.0)   "upper voxel edge in pos3 or z in cm"
+    $up_1 = $up_1/($lro/($np-1))  "upper voxel edge in points"
+    if($up_1 < 0) then
+      $up_1 = $up_1 - 0.5   
+    else
+      $up_1 = $up_1 + 0.5
+    endif
+    $up_1 = $up_1 - 0.5   "points represented -N/2 to -(N/2)-1 by gscalc"
+
+    $lo_1 = (($np-1)/$lro)*(Z0-($lz/2.0))
+    if($lo_1 < 0) then
+      $lo_1 = $lo_1 - 1
+    endif
+    $up_2 = (($nv-1)/$lpe)*(Y0+($ly/2.0))
+    if($up_2 < 0) then
+      $up_2 = $up_2 - 1
+    endif
+    $lo_2 = (($nv-1)/$lpe)*(Y0-($ly/2.0))
+    if($lo_2 < 0) then
+      $lo_2 = $lo_2 - 1
+    endif
+    $up_3 = (($nv2-1)/$lpe2)*(X0+($lx/2.0))
+    if($up_3 < 0) then
+      $up_3 = $up_3 - 1
+    endif
+    $lo_3 = (($nv2-1)/$lpe2)*(X0-($lx/2.0))
+    if($lo_3 < 0) then
+      $lo_3 = $lo_3 - 1
+    endif      
+  endif 
+  "write shimroi.param file; (used by gsmapmask for oblique voxel)"
+  $name = $GSDIR+'/shimroi.param'
+  rm('-f',$name):$x
+
+  write('reset',$name)  "create param file"
+  write('file',$name,'#SHIM-REGION')
+  write('file',$name,'voxel')
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',vorient,vpsi,vphi,vtheta) 
+  write('file',$name, '#OFFSET-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',pos1*10,pos2*10,pos3*10)  "mm"
+  write('file',$name, '#VOXEL-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',vox1,vox2,vox3)  "mm"
+elseif(shimregion='orthslab') then
+  "Set up oblique slice/slab for shimming"
+  $shim_params = userdir + '/prescan/slab.par'
+  exists($shim_params,'file'):$e
+  if ($e = 0) then
+    write('error','%s: slab/slice for shimming has not been selected',$macro)
+    abort
+  endif
+    
+  "retrieve slice info; x,y,z refer to pe2,pe,ro respectively; lengths in cm "
+  rtv($shim_params, 'orient2', 'theta2', 'phi2', 'psi2', 'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')
+  
+  "write shimroi.param file; (used by gsmapmask for oblique slabs)"  
+  $name = $GSDIR+'/shimroi.param'
+  rm('-f',$name):$x
+  write('reset',$name)  "create param file"
+  write('file',$name,'#SHIM-REGION')
+  write('file',$name,'slab')
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',orient2,psi2,phi2,theta2) 
+  write('file',$name, '#OFFSET-RO-PE-PE2')
+  write('file',$name, '%6.2f  %6.2f %6.2f',Z0*10,Y0*10,X0*10)   "mm" 
+  write('file',$name, '#VOXEL-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',lz*10,ly*10,lx*10)   "mm"       
+ 
+  if((lx < 0.1) or (ly <= 0.1) or (lz <= 0.1) ) then
+      write('error', '%s: Error: voxel size is too small; x=%4.1f y=%4.1f z=%4.1f',$macro,lx,ly,lz)
+      abort
+  endif    
+  "Note: parameters for sagital orientation initialized"
+  "Assume ge3dshim, read/pe1/pe2 Z/Y/X) "  
+  "slice-voxel region defined in points for gs_calc"
+  "position to pixel info; expanded for clarity"
+  $up_1 = Z0+(lz/2.0)   "upper voxel edge along z in cm"
+  
+  $up_1 = $up_1/($lro/($np-1))  "upper voxel edge in points"
+  if($up_1 < 0) then
+    $up_1 = $up_1 - 0.5   "roundoff"
+  else
+    $up_1 = $up_1 + 0.5
+  endif
+  $up_1 = $up_1 - 0.5   "points represented -N/2 to -(N/2)-1 by gscalc"
+  $lo_1 = (($np-1)/$lro)*(Z0-(lz/2.0))
+  if($lo_1 < 0) then
+    $lo_1 = $lo_1 - 1
+  endif
+  $up_2 = (($nv-1)/$lpe)*(Y0+(ly/2.0))
+  if($up_2 < 0) then
+    $up_2 = $up_2 - 1
+  endif
+  $lo_2 = (($nv-1)/$lpe)*(Y0-(ly/2.0))
+  if($lo_2 < 0) then
+    $lo_2 = $lo_2 - 1
+  endif
+  $up_3 = (($nv2-1)/$lpe2)*(X0+(lx/2.0))
+  if($up_3 < 0) then
+    $up_3 = $up_3 - 1
+  endif
+  $lo_3 = (($nv2-1)/$lpe2)*(X0-(lx/2.0))
+  if($lo_3 < 0) then
+    $lo_3 = $lo_3 - 1
+  endif
+elseif(shimregion='voxel' OR shimregion='slab') then
+    "Set up oblique voxel for shimming"
+    $shim_params = userdir + '/prescan/'+shimregion+'.par'
+    exists($shim_params,'file'):$e
+    if ($e = 0) then
+      write('error','%s: %s for shimming has not been selected',$macro,shimregion)
+      abort
+    endif
+    
+  rtv($shim_params, 'vtheta', 'vphi', 'vpsi', 'vox1', 'vox2','vox3', 'pos1', 'pos2', 'pos3')
+  "write shimroi.param file"
+  $name = $GSDIR+'/shimroi.param'
+  rm('-f',$name):$x
+  write('reset',$name)  "create param file"
+  write('file',$name,'#SHIM-REGION')
+  write('file',$name,'voxel')
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',vorient,vpsi,vphi,vtheta) 
+  write('file',$name, '#OFFSET-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',pos1*10,pos2*10,pos3*10)
+  write('file',$name, '#VOXEL-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',vox1,vox2,vox3)     
+ 
+  "set oblique voxel limits to global limits"   
+  $up_1=($np/2.0)-1
+  $lo_1=(-$np/2.0)+1
+  $up_2=($nv/2.0)-1
+  $lo_2=(-$nv/2.0)+1
+  $up_3=($nv2/2.0)-1
+  $lo_3=(-$nv2/2.0)+1 
+elseif(shimregion='slab_old') then
+  "Set up oblique slice/slab for shimming"
+  $shim_params = userdir + '/prescan/slab.par'
+  exists($shim_params,'file'):$e
+  if ($e = 0) then
+    write('error','%s: slab/slice for shimming has not been selected',$macro)
+    abort
+  endif
+    
+  "retrieve slice info; x,y,z refer to pe2,pe,ro respectively "
+  rtv($shim_params, 'orient2', 'theta2', 'phi2', 'psi2', 'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')
+  
+  "write shimroi.param file"  
+  $name = $GSDIR+'/shimroi.param'
+  rm('-f',$name):$x
+  write('reset',$name)  "create param file"
+  write('file',$name,'#SHIM-REGION')
+  write('file',$name,'slab')
+  write('file',$name, '#ORIENT-PSI-PHI-THETA')  
+  write('file',$name, '  %s %6.2f  %6.2f %6.2f',orient2,psi2,phi2,theta2) 
+  write('file',$name, '#OFFSET-RO-PE-PE2')
+  write('file',$name, '%6.2f  %6.2f %6.2f',Z0*10,Y0*10,X0*10)  "mm"
+  write('file',$name, '#VOXEL-RO-PE-PE2')  
+  write('file',$name, '%6.2f  %6.2f %6.2f',lz*10,ly*10,lx*10)  "mm"      
+ 
+  "set oblique voxel limits to global limits"   
+  $up_1=($np/2.0)-1
+  $lo_1=(-$np/2.0)+1
+  $up_2=($nv/2.0)-1
+  $lo_2=(-$nv/2.0)+1
+  $up_3=($nv2/2.0)-1
+  $lo_3=(-$nv2/2.0)+1
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'gs_setvox: shimregion=slab; shimroi.param')
+  shell('cat "'+$name+ '" >> "'+$logfile+'"'):$x
+else   "setup parameters global shim region"
+  if(shimregion = 'roi') then
+     $f=$GSDIR+'/shimroi.mag'
+     exists($f,'file'):$ex
+     if($ex = 0) then
+       write('error','%s: Shim ROI file does not exist: %s',$macro,$f)
+       abort
+     endif
+  endif 
+  pos1=0 pos2=0 pos3=0 
+  $up_1=($np/2.0)-1
+  $lo_1=(-$np/2.0)+1
+  $up_2=($nv/2.0)-1
+  $lo_2=(-$nv/2.0)+1
+  $up_3=($nv2/2.0)-1
+  $lo_3=(-$nv2/2.0)+1
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'gs_setvox: shimregion=%s',shimregion) 
+endif
+
+if( (shimregion = 'slab') or (shimregion = 'voxel') ) then
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'gs_setvox: shimregion=voxel; shimroi.param')  
+  shell('cat "'+$name+ '" >> "'+$logfile+'"'):$x
+endif
+"check limits"
+$up_1s='' $lo_1s='' $up_2s='' $lo_2s='' $up_3s='' $lo_3s=''
+"read dimension - define upper and lower limits (pts)"
+format($up_1,3,0):$up_1s
+format($lo_1,3,0):$lo_1s
+format($up_1,3,0):up0
+format($lo_1,3,0):lo0
+
+"phase#1 dimension"
+format($up_2,3,0):$up_2s
+format($lo_2,3,0):$lo_2s
+format($up_2,3,0):up1
+format($lo_2,3,0):lo1
+
+"phase#2 dimension"
+format($up_3,3,0):$up_3s
+format($lo_3,3,0):$lo_3s
+format($up_3,3,0):up2
+format($lo_3,3,0):lo2
+
+"check voxel limits; if +/- dim_size, adjust limit"
+"limits set to -(nv/2)+1 and (nv/2)-1 e.g. -15 to +15 (why?)"
+if(shimregion='voxel' OR shimregion='slab') then 
+  if(up0 = ($np/2.0) ) then  
+    up0 = ($np/2.0)-1
+  elseif( up0 > $np/2.0) then
+    write('error', '%s:  Warning: Voxel is outside the %3.1f mm FOV region along Z; (%s to %s points)',$macro,$f1,$lo_1s,$up_1s)
+    abort       
+  endif    
+  if(lo0 = -($np/2.0) ) then
+    lo0 = -($np/2.0)+1
+  elseif( lo0 < -($np/2.0) ) then
+    write('error', '%s: Warning: Voxel is outside the %3.1f mm FOV region along Z; (%s to %s points)',$macro,$f1,$lo_1s,$up_1s)
+    abort     
+  endif  
+  if(up1 = ($nv/2.0) ) then
+    up1 = ($nv/2.0)-1
+  elseif( up1 > $nv/2.0 ) then
+    write('error', '%s: Warning: Voxel is outside the %3.1f mm FOV region along Y; (%s to %s points)',$macro,$f2,$lo_2s,$up_2s) 
+    abort    
+  endif
+  if (lo1 = -($nv/2.0) ) then
+    lo1 = ($nv/2.0)-1
+  elseif(lo1 < -($nv/2.0) ) then
+    write('error', '%s: Warning: Voxel is outside the %3.1f mm FOV region along Y; (%s to %s points)',$macro,$f2,$lo_2s,$up_2s) 
+    abort 
+  endif
+  if(up2 = ($nv2/2.0) ) then
+    up2 = ($nv2/2.0)-1
+  elseif( up2 > $nv2/2.0 ) then
+    write('error', '%s: Warning: Voxel is outside the %3.1f mm FOV region along X; (%s to %s points)',$macro,$f3,$lo_3s,$up_3s) 
+    abort 
+  endif
+  if(lo2 = -($nv2/2.0) ) then
+    lo2 = -($nv2/2.0)+1
+  elseif( lo2 < -($nv2/2.0) ) then
+    write('error', '%s: Warning: Voxel is outside the %3.1f mm FOV region along X; (%s to %s points)',$macro,$f3,$lo_3s,$up_3s) 
+    abort   
+  endif
+endif 
+
+if( (shimregion='slab') or (shimregion='voxel') ) then
+  if(up0 > (($np/2.0)-1) ) then
+    up0=($np/2.0)-1 
+  endif
+  if(lo0 < ((-$np/2.0)+1) ) then
+    lo0=(-$np/2.0)+1 
+  endif
+  if(up1 > (($nv/2.0)-1) ) then
+    up1=($nv/2.0)-1 
+  endif
+  if(lo1 < ((-$nv/2.0)+1) ) then
+    lo1=(-$nv/2.0)+1 
+  endif 
+  if(up2 > (($nv2/2.0)-1) ) then
+    up2=($nv2/2.0)-1 
+  endif
+  if(lo2 < ((-$nv2/2.0)+1) ) then
+    lo2=(-$nv2/2.0)+1 
+  endif     
+endif
+"write('line3','%s,%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f',$macro,up0,lo0,up1,lo1,up2,lo2)"
+
+
+$p = up0-lo0
+$error=0
+if($p < 2) then
+  write('error','%s: No of pixels along z must be >2 points',$macro)
+  $error = 1
+endif
+$p = up1-lo1
+if($p < 2) then
+  write('error','%s: No of pixels along y must be >2 points',$macro)
+  $error = 1
+endif
+$p = up2-lo2
+if($p < 2) then
+  write('error','%s: No of pixels along x must be >2 points',$macro)
+  $error = 1
+endif
+if($error = 1) then
+  abort
+endif
+
+"*********************************************************************************"
+"			Modification History
+
+"24nov04(ss) - slab related bugs fixed
+"27jan05(ss) - iplanDefaultType not rtv'd
+"03feb05(ss) - voxel limits checked; if dim_size/2, adjust limits to fit
+"07jun05       no of pixels checked
+"22jun05       FOV parameters taken from shimmap.param
+"14jul05       oblique voxel
+"22jul05       large voxel region allowed
+"30jun08       if voxel > fov abort
+
+"*********************************************************************************"
+

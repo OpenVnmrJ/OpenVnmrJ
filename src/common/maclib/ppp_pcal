@@ -1,0 +1,22 @@
+"macro ppp_pcal"
+"returns nominal watts at tpwr = 47 .. pcal"
+"set pcal from alpha (625), pw90 (5), pwr (56)"
+$alpha = 2500 
+$pw90 = 7
+$pwr = 56
+if ($# > 2) then
+$alpha = $1
+$pw90 = $2
+$pwr = $3
+endif
+ln(10.0):$a
+$u = ($pwr - 47)/10
+"10 ^ $u "
+exp(-$u*$a):$x
+$pcal = $alpha*$x/($pw90*$pw90)
+"clip to reasonable high limit"
+if ($pcal > 100) then
+  $pcal = 100
+endif
+return($pcal)
+

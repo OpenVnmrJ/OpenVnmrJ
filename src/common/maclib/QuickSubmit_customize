@@ -1,0 +1,315 @@
+"macro QuickSubmit_customize"
+" Varian"
+
+"*********************************************************************"
+if ($# < 2) then return endif
+$arg=$1
+
+$QSdir=userdir+'/persistence/QuickSubmit/'+operator
+exists($QSdir,'directory'):$direx
+if ($direx=0) then shell('mkdir -p '+$QSdir):$dum endif
+
+$file1=$QSdir+'/QSfile'
+$expfile=$QSdir+'/QSfile_EXPLIST'
+$longfile=$QSdir+'/QSfile_LONGLIST'
+$customfile=$QSdir+'/QSfile_Customization'
+$customparfile=$QSdir+'/QSfile_custompar'
+$customdefpar=$QSdir+'/QSfile_defaultpar'
+$fidlog=$QSdir+'/QSfile_FidLog'
+$vbgacqlog=$QSdir+'/QSfile_vbgacqlog'
+$msglog=$QSdir+'/QSfile_MsgLog'
+$file2=$QSdir+'/QSfile_param'
+$xmlname=$QSdir+'/QSfile_param'
+$file3=$QSdir+'/QSfile_param_fresh'
+$file4=$QSdir+'/QSfile_queue2'
+$file5=$QSdir+'/QSfile_queue3'
+$error=$QSdir+'/QSfile_error'
+$message=$QSdir+'/QSfile_message'
+$tmpcsv=$QSdir+'/QuickSubmit.csv'
+$newstudy=$QSdir+'/QSfile_newstudy'
+
+"*********************************************************************"
+
+   if ($2='setparams') then
+//  arg3 = expname
+//  arg4 = day or night
+//  arg5 = nt value as a string
+//  arg6 = ni value as a string
+	$par=QScustompar
+	teststr('$par',$3,'local'):$ok
+	if ($ok) then
+	    if ($par[$ok+1]<>$4) then
+		$par[$ok]=''
+		teststr('$par',$3,'local'):$ok
+	    endif
+	endif
+	if ($ok) then
+	    if $par[$ok+2]='study' then $ok=0 endif
+	endif
+	$par=QScustompar
+	if ($ok) then
+	    if ($5<>'') and ($5<>'0') then 
+		$acqtime=0 $oldnt=1
+		format($par[$ok+3],'lower'):$acqtime
+		format($par[$ok+4],'lower'):$oldnt
+		if ($oldnt<0) then $oldnt=-1*$oldnt endif
+		$nt=1
+		format($5,'lower'):$nt
+		if ($nt<0) then $nt=-1*$nt endif
+		format($acqtime*$nt/$oldnt,0,0):$par[$ok+3]
+		$par[$ok+4]=$5 
+	    endif
+	    if ($6<>'') and ($6<>'0') then
+                $acqtime=0 $oldni=1
+                format($par[$ok+3],'lower'):$acqtime
+                format($par[$ok+5],'lower'):$oldni
+		if ($oldni<0) then $oldni=-1*$oldni endif
+                $ni=1
+                format($6,'lower'):$ni
+		if ($ni<0) then $ni=-1*$ni endif
+                format($acqtime*$ni/$oldni,0,0):$par[$ok+3]
+                $par[$ok+5]=$6 
+            endif
+	    $oldt=0 format(QScustompar[$ok+3],'lower'):$oldt
+	    $newt=0 format($par[$ok+3],'lower'):$newt
+	    $addt=$newt-$oldt
+
+// Need to do time check here?
+	    $dtime=0 $ltime=0
+	    invformattime(QSpar[8]):$dtime
+	    invformattime(QSpar[10]):$ltime
+
+//	    format(QSpar[8],'lower'):$dtime
+//	    format(QSpar[10],'lower'):$ltime
+	    if ($3='day') then $dtime=$dtime+$addt else $ltime=$ltime+$addt endif
+	    if (QSpar[16]='autodir') then
+        	$newdtime=trunc(($dtime/60)+0.5)
+        	$newntime=trunc(($ltime/60)+0.5)
+        	getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        	$night='no' is_night:$night
+        	if ($night='yes') then
+            	    $maxdtime=trunc(($maxnighttime/60)+0.5)
+        	else
+            	    $maxdtime=trunc(($maxdaytime/60)+0.5)
+        	endif
+        	$maxntime=trunc(($maxnighttime/60)+0.5)
+        	$err=0
+           	$msg=''
+        	if ($maxdtime=0) then $maxdtime=$newdtime+1 endif
+        	if ($maxntime=0) then $maxntime=$newntime+1 endif
+        	if ($newdtime>$maxdtime) then
+            	    write('line3','day time (%d min) exceeds max (%d min) allowed.',$newdtime,$maxdtime):$msg
+            	    $err=1
+        	endif
+        	if ($newntime>$maxntime) then
+            	    if ($msg<>'') then
+                	write('line3','day (%d min) and night (%d min) time exceeds max allowed',$newdtime,$newntime):$msg
+            	    else
+                	write('line3','night time (%d min) exceeds max (%d min) allowed.',$newntime,$maxntime):$msg
+            	    endif
+            	    $err=1
+        	endif
+        	if ($err>0) then
+                    write('error','%s',$msg)
+		    return
+		endif
+            endif
+	    QScustompar=$par
+   	endif
+ 	return
+    elseif ($2='save') then
+	$par=QScustompar
+        $ppt=60
+        getadminfo('prpltime'):$ppt
+        $size=size('$par')
+        $i=1 $dtime=0 $ltime=0
+        while $i < $size do
+            $r=0
+            format($par[$i+3],'lower'):$r
+            if ($par[$i+1]='day') then
+                $dtime=$dtime+$r+$ppt
+            else
+                $ltime=$ltime+$r+$ppt
+            endif
+            $i=$i+10
+        endwhile
+	formattime($dtime):QSpar[8]
+	formattime($ltime):QSpar[10]
+//        format($dtime,0,0):QSpar[8]
+//        format($ltime,0,0):QSpar[10]
+        QuickSubmit('update')
+	write('reset',$customparfile)
+	writeparam($customparfile,'QScustompar','global')
+	vnmrjcmd('pnew','QScustompar')
+        return
+
+    elseif ($2='defaults') then
+	fread($customdefpar,'global')
+	vnmrjcmd('pnew','QScustompar')
+
+    elseif ($2='cancel') then
+	fread($customparfile,'global')
+	return
+
+    elseif ($2='popup') then
+	writeparam($customparfile,'QScustompar','global')
+        fread($customdefpar,'global')
+	$par=QScustompar
+	fread($customparfile,'global')
+	$xml=$xmlname+'_'+$arg+'.xml'
+	write('reset',$xml)
+	$total=size('$par')
+	if ($total/10<0.99) then return endif
+
+	$y=trunc($total/10+0.5)*22+10
+	$yoff=50
+	$y=$y+$yoff+40
+	$ys=$y
+
+    	write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    	write('file',$xml,'<template name="QScustompopup" element="groups" type="acquisition" >')
+    	write('file',$xml,'  <group size="500 %d" loc="5 5"',$y)
+    	write('file',$xml,'    bg="transparent"')
+    	write('file',$xml,'    border="Etched"')
+    	write('file',$xml,'    tab="no"')
+    	write('file',$xml,'    reference="parampopup"')
+    	write('file',$xml,'    useref="no"')
+    	write('file',$xml,'    subtype="Basic"')
+    	write('file',$xml,'    expanded="yes"')
+    	write('file',$xml,'    >')
+
+        write('file',$xml,'     <textmessage loc="15 5" size="200 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        vq="QScustompar"')
+        write('file',$xml,'        set="$VALUE=\'Experiment\'"')
+        write('file',$xml,'        />')
+
+        write('file',$xml,'     <textmessage loc="220 5" size="120 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        vq="QScustompar"')
+        write('file',$xml,'        set="$VALUE=\'Scans (per inc.)\'"')
+        write('file',$xml,'        />')
+
+        write('file',$xml,'     <textmessage loc="350 5" size="120 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        vq="QScustompar"')
+        write('file',$xml,'        set="$VALUE=\'Increments (2D)\'"')
+        write('file',$xml,'        />')
+
+	$i=1 $k=0
+	repeat
+	    $y=$yoff+($k*22) - 10
+                if ($par[$i+2]='study') then $type='(study)' else $type='' endif
+        	write('file',$xml,'     <textmessage loc="15 %d" size="200 20"',$y)
+        	write('file',$xml,'        style="Label1"')
+                write('file',$xml,'        vq="QScustompar"')
+		if ($type='(study)') then
+		    write('file',$xml,'		fg="darkRed"')
+                    write('file',$xml,'        set="$VALUE=\'%s %s\'"',$par[$i],$type)
+		else
+        	    write('file',$xml,'        set="$VALUE=\'%s (%sQ)\'"',$par[$i],$par[$i+1])
+		endif
+        	write('file',$xml,'        />')
+
+		if ($type='(study)') then
+        	    write('file',$xml,'     <textmessage loc="220 %d" size="120 20"',$y)
+        	    write('file',$xml,'        style="Label1"')
+                    write('file',$xml,'         fg="darkRed"')
+        	    write('file',$xml,'        vq="QScustompar"')
+        	    write('file',$xml,'        set="$VALUE=\'N/A\'"')
+        	    write('file',$xml,'        />')
+		else
+                    write('file',$xml,'     <menu loc="220 %d" size="120 20"',$y)
+                    write('file',$xml,'        style="Label1"')
+                    write('file',$xml,'        vq="QScustompar"')
+		    write('file',$xml,'        vc="QuickSubmit(\'customize\',\'setparams\',\'%s\',\'%s\',\'$VALUE\',\'\')"',$par[$i],$par[$i+1])
+		    write('file',$xml,'	       set="$VALUE=QScustompar[%d]"',$i+4)
+		    write('file',$xml,'		>')
+		    $r=0 format($par[$i+4],'lower'):$r
+		    if ($r<0.5) then $r=-1*$r endif
+		    $s='' format($r,0,0):$s
+		    $l='2','4','8','16','32','64' $v=$l
+		    teststr('$v',$s,'local'):$svk
+		    if ($svk) then
+			$l[$svk]=$l[$svk]+' (default)' $v[$svk]=$par[$i+4]
+		    else
+			$l=$s+' (default)',$l $v=$par[$i+4],$v
+		    endif
+		    $vi=1
+		    $vtot=size('$v')
+		    repeat
+			write('file',$xml,'		<mlabel label="%s" chval="%s" />',$l[$vi],$v[$vi])
+			$vi=$vi+1
+		    until $vi > $vtot
+		    write('file',$xml,'		</menu>')
+
+		endif
+
+		if ($type='(study)') or ($par[$i+5]='-1') or ($par[$i+5]='0') or ($par[$i+5]='1') then
+       		    write('file',$xml,'     <textmessage loc="350 %d" size="120 20"',$y)
+        	    write('file',$xml,'        style="Label1"')
+                    write('file',$xml,'         fg="darkRed"')
+        	    write('file',$xml,'        vq="QScustompar"')
+        	    write('file',$xml,'        set="$VALUE=\'N/A\'"')
+        	    write('file',$xml,'        />')
+		else
+                    write('file',$xml,'     <menu loc="350 %d" size="120 20"',$y)
+                    write('file',$xml,'        style="Label1"')
+                    write('file',$xml,'        vq="QScustompar"')
+                    write('file',$xml,'        vc="QuickSubmit(\'customize\',\'setparams\',\'%s\',\'%s\',\'\',\'$VALUE\')"',$par[$i],$par[$i+1])
+                    write('file',$xml,'        set="$VALUE=QScustompar[%d]"',$i+5)
+                    write('file',$xml,'         >')
+                    $r=0 format($par[$i+5],'lower'):$r
+                    if ($r<0.5) then $r=-1*$r endif
+                    $s='' format($r,0,0):$s
+                    $l='32','64','96','128','200','256' $v=$l
+                    teststr('$v',$s,'local'):$svk
+                    if ($svk) then
+                        $l[$svk]=$l[$svk]+' (default)' $v[$svk]=$par[$i+5]
+                    else
+                        $l=$s+' (default)',$l $v=$par[$i+5],$v
+                    endif
+                    $vi=1
+                    $vtot=size('$v')
+                    repeat
+                        write('file',$xml,'             <mlabel label="%s" chval="%s" />',$l[$vi],$v[$vi])
+                        $vi=$vi+1
+                    until $vi > $vtot
+                    write('file',$xml,'         </menu>')
+		endif
+	    $i=$i+10 $k=$k+1
+	until $i > $total
+
+	$y=$ys-40
+	write('file',$xml,'    <button loc="100 %d" size="130 30"',$y)
+	write('file',$xml,'	   style="Heading1"')
+	write('file',$xml,'	   vq="QScustompar"')
+	write('file',$xml,'	   label="Save Changes"')
+	write('file',$xml,'	   vc="QuickSubmit(\'customize\',\'save\')"')
+	write('file',$xml,'	   fg="black"')
+	write('file',$xml,'	   decor1="yes"')
+	write('file',$xml,'	   />')
+
+        write('file',$xml,'    <button loc="270 %d" size="130 30"',$y)
+        write('file',$xml,'        style="Heading1"')
+        write('file',$xml,'        vq="QScustompar"')
+        write('file',$xml,'        label="Get Defaults"')
+        write('file',$xml,'        vc="QuickSubmit(\'customize\',\'defaults\')"')
+        write('file',$xml,'        fg="blue"')
+        write('file',$xml,'        decor1="yes"')
+        write('file',$xml,'        />')
+
+	write('file',$xml,'</template>')
+
+           $vjcmd='vnmrjcmd(\'popup\',\'mode:modeless\','
+           $vjcmd=$vjcmd+'\'file:'+$xml+'\','
+           $vjcmd=$vjcmd+'\'rebuild:yes\','
+           $vjcmd=$vjcmd+'\'pnewupdate:true\','
+           $vjcmd=$vjcmd+'\'title:"Customize"\')'
+           exec($vjcmd)
+
+	   vnmrjcmd('pnew','QScustompar')
+	return
+    endif
+ 
+  return

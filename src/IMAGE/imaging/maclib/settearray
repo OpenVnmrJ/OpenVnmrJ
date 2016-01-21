@@ -1,0 +1,38 @@
+"macro settearray"
+"********************************************************************
+"
+"
+" NAME:
+"    _ne
+"
+" DESCRIPTION:
+"    Interface macro to populate te2 array in the multiecho case
+"
+"********************************************************************
+
+if (ne > 1) then
+    $size=size('te2')
+    if (ne > $size + 1 ) then
+       if ($size < 1) then
+          "force a value for te2"
+          $delta = te
+          te2[1] = te + $delta
+       else
+          if ($size = 1) then
+             $delta = te2[1] - te
+          else
+             $delta = te2[$size] - te2[$size - 1]
+          endif
+       endif
+    endif
+    $size=size('te2')
+    $cnt = $size + 1
+    repeat
+       if ($cnt < ne) then                      "create new value if index does not exist"
+          te2[$cnt] = te2[$cnt-1] + $delta    
+	  $temp1 = te2[$cnt] * 100000
+          te2[$cnt]=trunc($temp1 + 0.5) / 100000
+       endif
+       $cnt = $cnt + 1
+    until ($cnt > ne-1)
+endif 

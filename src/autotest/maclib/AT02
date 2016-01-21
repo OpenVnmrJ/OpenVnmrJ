@@ -1,0 +1,91 @@
+"macro AT02"
+"AT02"
+if ($#=0) then
+   ATrtp('standard')
+   gain=10 sw=10000 nt=1 ss=0 spin='n'
+   at=1 fn=4*np lb='n' 
+   temp=at_temp
+   tpwr=at_tpwr
+   if (at_linewidth=1) then at_pw90=at_pw90_estimate endif
+   pw=at_pw90/3
+   wnt=''
+   wexp='AT02(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+   ft f full cdc ph aph0 vsadj peak:$ht,cr 
+   if ($ht<0) then rp=rp+180 endif
+   dres:at_linewidth     "linewidth will later determine acquisition times"
+   at_linewidth=trunc(10*at_linewidth)/10
+   movetof 
+   at_tof=trunc(10*tof)/10
+
+   ATrtp('standard')
+   text('Determining RF Homogeneity (1H)')
+   at=3/at_linewidth
+   fn=np np=fn
+   at_currenttest='rfhomo'
+   $a=40*at_pw90/7 $a=trunc($a) $a=$a/40
+   tpwr=at_tpwr d1=1 tof=at_tof
+   array('pw',100,$a,$a)
+   write('file',curexp+'/text','increment size = %1.3f usec',$a)
+   gain=10 ph vp=90
+   cdc
+   wnt='ATwft select(1) f aph0 peak:$int,$frq sp=$frq-0.65p wp=1.3p if ($int<0) then rp=rp+180 endif vsadj(10) dssh dtext'
+   wexp='AT02(`PART2`)' 
+   ATcycle
+   au
+   dps text dtext
+
+elseif ($1='PART2') then
+   wft
+   s1
+   ATrfhomocal:$ratio1,$ratio2,$pw90,$pw450,$pw810
+   ATpw90cal2('pw'):pw90,$bestindex
+   if ((at_plotauto='y') and (at_printparams='n'))
+       then ATpltext(wcmax-95,wc2max-6)
+   endif
+   ATsvf
+   ATplot
+   fr1 vp=90
+   select($bestindex) ph vsadj(75) 
+   pw=$pw90-0.2*$pw90,$pw90-.16*$pw90,$pw90-.12*$pw90,$pw90-.08*$pw90,$pw90-.04*$pw90,$pw90,$pw90+.04*$pw90,$pw90+.08*$pw90,$pw90+.12*$pw90,$pw90+.16*$pw90,$pw90+.2*$pw90 
+pw[12]=$pw450-0.2*$pw90,$pw450-.16*$pw90,$pw450-.12*$pw90,$pw450-.08*$pw90,$pw450-.04*$pw90,$pw450,$pw450+.04*$pw90,$pw450+.08*$pw90,$pw450+.12*$pw90,$pw450+.16*$pw90,$pw450+.2*$pw90 
+pw[23]=$pw810-0.2*$pw90,$pw810-.16*$pw90,$pw810-.12*$pw90,$pw810-.08*$pw90,$pw810-.04*$pw90,$pw810,$pw810+.04*$pw90,$pw810+.08*$pw90,$pw810+.12*$pw90,$pw810+.16*$pw90,$pw810+.2*$pw90 
+   wnt='ATwft dssh'
+   ATcycle
+   at_currenttest='rfhomo2'
+   wexp='AT02(`PART3`)'
+   text('H1 RF Homogeneity: pw90 array, pw450 array, pw810 array')
+   wnt='ATwft select(1) vp=0 vsadj(80) dssh dtext'
+   au
+
+elseif ($1='PART3') then
+   wft
+   ATrfhomocal2:$pw90,$pw450,$pw810,$ratio1,$ratio2
+   pw=$pw90 "force 0.1usec stepsize"
+   $pw90=pw at_pw90=pw
+   echo('pw90 = ',$pw90)
+   ATrecord('H1RFHOMO','H1 RFhomo','power',tpwr,'pw90',$pw90,'pw450',$pw450,'pw810',$pw810,'pw450/90',$ratio1,'pw810/90',$ratio2)
+
+   write('file',autotestdir+'/REPORT','H1 RF HOMO: pw450 = %3.1f 450/90 = %1.2f pw810 = %3.1f 810/90 = %1.2f at tpwr= %2.0f ',$pw450,$ratio1,$pw810,$ratio2,tpwr)
+   if ((at_plotauto='y') and (at_printparams='n'))
+       then ATpltext(wcmax-95,wc2max-6)
+   endif
+   ATsvf
+   select(6) vp=0 vsadj dssh
+   ATplot
+   rtp(autotestdir+'/parameters/standard') "resets curpar to standard values"
+   wdone=''                 "do not want wdone in autotest"
+   at=3/at_linewidth
+   pw=$pw90 $pw90=pw        "forces 0.1usec stepsize"
+   pw90=$pw90               "saves estimated pw90 in curpar"
+   fsave(autotestdir+'/parameters/standard.par/procpar') "updates standard.par"
+   ATnext
+endif
+
+is_IP:$isIP
+if (($isIP) and auto='y')  then
+    savemodule('atglobal',userdir+'/modules','global')
+    xmhaha('sendcmd','IPupdateATglobalfg')
+endif

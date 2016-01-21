@@ -1,0 +1,112 @@
+*************************************************************
+wetnoesy - macro for creating wetnoesy parameters from a WET parameter set
+        (see the dglc parameter screen)
+*************************************************************
+
+  wet - a y/n flag determining whether the WET element is used
+        (which uses pwwet, wetpwr, wetshape, gtw, gzlvlw, and gswet).
+  wetpwr - the power level for the WET element.
+  pwwet - the pw90 pulse width at wetpwr.
+  wetshape - the pulse shape used during the wet element.
+  gtw - the duration of the spoiling gradient (in sec).
+  gzlvlw - the amplitude of the gtw gradient. 
+  gswet - the recovery time following each gradient (try 0.002).
+
+  c13wet - a y/n flag controlling the selective 13C decoupling used during WET
+        (which uses dorwet, dpwrwet, and dmfwet; hardcoded to be WALTZ).
+  dofwet - the 13C decoupler offset used during WET.
+  dpwrwet - the decoupler power level for c13wet.
+  dmfwet - the dmf value used for c13wet.
+
+  dz - the delay following the wet element to allow longitudinal recovery
+        (like a T1IR or WEFT inversion recovering through zero).
+  composit - a y/n flag determining whether a composite read pulse is used.
+
+************************************************************************
+noesy:		help file for the laboratory frame Overhauser experiment
+                or the 2D exchange experiment
+************************************************************************
+
+         PW              PW              PW
+        (v2)            (v1)            (v3)       (oph)
+
+        ****            ****            ****
+        *  *            *  *            *  *
+   D1   *  *     D2     *  *    MIX     *  *         AT
+        *  *            *  *            *  *
+***************************************************************
+         |               |               |
+   <A>   |      <B>      |      <C>      |         <D>
+         |               |               |
+
+
+PW = 90 degree pulse on the observed nucleus (power = TPWR)
+D1 = relaxation delay  (1-3*T1)
+D2 = evolution time (t1 period)
+AT = acquisition time (t2 period)
+SW = spectral width   (SW1 = SW usually, except for PHASE = 3)
+NI = number of t1 increments   (set up so that SW1/NI = 12)
+MIX = mixing time for magnetization exchange
+PHASE = 1,2   (suggested value)
+        Note:  For PHASE = 3, remember that sw1 = 2*sw (for homonuclear
+               experiments) or that sw1 must be set to TWICE the desired
+               value (for heteronuclear experiments).
+        Note:  If MIX is arrayed, then PHASE = 3 is necessary in order
+               to be able to process the data with the WFT2DAC macro.
+
+SSPUL = 'y':  activates a homospoil-90-homospoil sequence which
+              precedes D1; used to achieve a less oscillatory
+              steady-state for 2D experiments where the recycle
+              time is shorter than T1.
+              Note: GEMINI 2000 does not support homospoil and
+                    the parameter SSPUL is ignored.
+
+SS = number of steady-state transients;  if ss < 0, then -ss
+     transients (with phasecycling of pulses and receiver) are
+     performed before EACH experiment in either an arrayed or 2D
+     experiment; if ss > 0, then ss transients are performed before
+     only the first experiment in such cases.
+
+PRESAT = decoupler presaturation period using a decoupler power
+         specified by DHP or DPWR; does not depend on DM but does
+	 depend on DMM; activated as a part of D1 if PRESAT > 0.
+         Note: GEMINI 2000 does not suppport the PRESAT parameter,
+               the parameter is ignored. DM must be equal 'nnnn'.
+
+DM = 'NNNN':  no decoupler presaturation (unless PRESAT > 0)
+     'NYNN':  decoupler presaturation during evolution period
+     'NNYN':  decoupler presaturation during mixing period
+     'NNNY':  homonuclear decoupling during t2
+
+     RECOMMENDED:  DM = 'NYYN'
+
+NT = multiple of 8 (PHASE = 1,2 or 3)  (minimum)
+     multiple of 16 (PHASE = 0)  (minimum)
+
+
+v1  = phasecycle for the second PW pulse
+v2  = phasecycle for the first PW pulse
+v3  = phasecycle for the third PW pulse
+oph = phasecycle for receiver
+
+v1  =  x  x  x  x  x  x  x  x  y  y  y  y  y  y  y  y
+      -x -x -x -x -x -x -x -x -y -y -y -y -y -y -y -y
+
+v2  =  x -x  x -x  x -x  x -x  y -y  y -y  y -y  y -y
+
+v3  =  x  x  y  y -x -x -y -y  y  y -x -x -y -y  x  x 
+
+oph =  x -x  y -y -x  x -y  y  y -y -x  x -y  y  x -x
+      -x  x -y  y  x -x  y -y -y  y  x -x  y -y -x  x
+
+
+These phases are for PHASE = 1.  For PHASE = 2, add 90 degrees
+to v1.  For PHASE = 3, add 90*(ix - 1) degrees to v1 where ix
+is the increment counter.  For PHASE = 0, the P-type selection
+subcycle is added in after the first 8 steps in the phasecycle.
+
+PHASE =   0:  P-type peak selection for AV display
+PHASE = 1,2:  2D hypercomplex data (States-Haberkorn method)
+PHASE =   3:  2D TPPI data
+
+NOTE: wetgnoesy is not supplied with Mercury or GEMINI 2000.

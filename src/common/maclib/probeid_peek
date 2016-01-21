@@ -1,0 +1,35 @@
+"macro probeid_peek"
+// usage: probeid_peek(<probe file> <, 'user'|'system'|appdir>)
+exists('probeidattr','parameter','global'):$e
+
+if $e then if probeidattr[1]='y' then
+  $sys='' $probefile=''
+  if $#=0 then 
+    $probefile=probe
+  elseif $1='system' or $1='user' then 
+    $probefile=probe $sys=$1 
+  else
+    $probefile=$1
+  endif
+
+  // check for matching probe file name
+  if $probefile<>probeidattr[2] then return(0) endif
+
+  // 'user' and 'system' argument is always the last one
+  if $#>1.5 then $sys=$2 endif
+
+  // system has to match user version, if specified
+  if $sys<>'' and probeidattr[3]<>'' and $sys<>probeidattr[3] then
+    return(0)  
+  endif
+
+  // use the cached file if there is one
+  if probeidattr[5]<>'' then
+     exists(probeidattr[5],'file'):$e
+     if $e then 
+       return($e,probeidattr[5])
+     endif
+  endif
+endif endif
+
+return(0)

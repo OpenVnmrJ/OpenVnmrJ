@@ -1,0 +1,28 @@
+"macro showacqlog"
+"macro showacqlog"
+if ($# < 1) then
+  $acqlog=autodir+'/enterQ.macdir/acqlog'
+else
+  if ($1='sqLog') then
+    sqLog:$acqlog
+    $geom='--geometry=120x25'
+  else
+    $acqlog=$1+'/enterQ.macdir/acqlog'
+    $geom=''
+  endif
+endif
+exists($acqlog,'file'):$aex
+if ($aex=0) then
+  write('error','Acquisition log does not exist (yet)')
+  return
+endif
+if ($# > 1) then
+  shell('uname'):$os
+  if ($os='Linux') then
+    shell('gnome-terminal '+$geom+' -e "/usr/bin/tail -f '+$acqlog+'" &'):$dum
+  else
+    shell('xterm -e "/usr/bin/tail -f '+$acqlog+'" &'):$dum
+  endif
+else
+  shell('gedit '+$acqlog+'&'):$dum
+endif

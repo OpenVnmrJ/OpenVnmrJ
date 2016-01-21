@@ -1,0 +1,79 @@
+"macro submit2fg"
+//write the sampleinfo for the fg acquisition in submittedQ
+//   file.  Create a locdir for spectrometer view option
+
+checkautodir
+$autodir=autodir $autofile='enterQ'
+$filename=$autodir+'/'+$autofile+'.macdir/submittedQ'
+$info=cursqexp+'/sampleinfo'
+write('reset',$info)
+$maclibdir=cursqexp+'/macdir'
+$dtime=0 $ltime=0
+walkupQ('gettime'):$dtime
+$text=text_string[1]
+$locdir='' $LOCdir=''
+Svfname($autodir+'/'+$autofile+'.macdir/loc0_%R3%',''):$LOCdir
+$day=$LOCdir+'/day'
+$night=$LOCdir+'/night'
+shell('mkdir -p '+$day):$dum
+shell('mkdir -p '+$night):$dum
+shell('basename '+$LOCdir):$locdir
+$logmsg='' write('line3','%s Submitted in foreground',sample):$logmsg
+//eLogAction('write',autodir+'/enterQ',$locdir,$logmsg)
+eventLog('StudySubmit',$logmsg,$locdir)
+
+shell('cp -r '+$maclibdir+'/* '+$day):$dum
+write('reset',$day+'/EXPLIST')
+write('reset',$day+'/LONGLIST')
+shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$day+'/EXPLIST)'):$dum
+write('reset',$day+'/TtimeQ')
+write('file',$day+'/TtimeQ','enterQ_TOTALTIME %d',$dtime)
+write('file',$day+'/TtimeQ','overniteQ_TOTALTIME %d',$ltime)
+shell('cp -r '+$day+'/* '+$night):$dum
+
+write('file',$info,'SAMPLE#: 0')
+if (traymax=96) or (traymax=768) then
+    write('file',$info,'RACK: %d',vrack)
+    write('file',$info,'ZONE: %d',vzone)
+endif
+
+write('file',$info,'USER: %s',operator)
+write('file',$info,'MACRO: cpautoQ(\'%s\',\'day\')',$locdir)
+if (traymax = 96) then
+	write('file',$info,'PROTOCOL: %s',vproto)
+elseif (traymax = 768) then
+        write('file',$info,'PROTOCOL: None')
+        write('file',$info,'CONDITION: 10')
+        write('file',$info,'EXPTIME: %d',$dtime)
+endif
+write('file',$info,'SOLVENT: %s',solvent)
+write('file',$info,'TEXT: %s',$text)
+write('file',$info,'SampleDir: %s',sample)
+write('file',$info,'USERDIR: %s',userdir)
+write('file',$info,'DATA:')
+write('file',$info,'STATUS: Queued')
+write('file',$info,'---------------------------------------------')
+shell('cp '+$info+' '+$day)
+$sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
+shell('('+$sedcmd0+' '+$info+' > '+$night+'/sampleinfo)'):$dum
+savesampglobal($day)
+savesampglobal($night)
+savesampglobal($LOCdir)
+shell('(cat '+$info+' >> '+$filename+')'):$dum
+
+shell('cp '+$day+'/sampleglobal '+$autodir+'/'+$autofile+'.macdir/currentsampleglobal'):$dum
+shell('cp '+$day+'/sampleinfo '+$autodir+'/'+$autofile+'.macdir/currentsampleinfo'):$dum
+write('reset',$autodir+'/'+$autofile+'.macdir/currentQ'):$dum
+shell('rm -rf '+$LOCdir+'/current.fid'):$dum
+shell('mkdir '+$LOCdir+'/current.fid'):$dum
+
+locdir=$locdir
+studystatus='Active'
+savestudypar($LOCdir)
+shell('mv '+$LOCdir+'/studypar '+$LOCdir+'/Studypar'):$dum
+$locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+write('reset',$locpath)
+write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$locdir)
+xmhaha_subautoSQ($autodir,'',$locdir)
+
+

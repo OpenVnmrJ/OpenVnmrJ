@@ -1,0 +1,59 @@
+"macro mqf1ref9qsp"
+"mqf1ref9q -  references F1 of 9Q MQMAS spectra for spin"
+"values I = 9/2 using the method of Massiot etal." 
+
+"For a standard shearing transformation:" 
+
+"The value of 'ratio' is the shearing constant 'k'. B/A = ratio"
+"where A/(A+B) is the 9Q dwell and B/(A+B) is the time during" 
+"the acquisition to refocus the 1Q coherence." 
+
+"scalesw = A/(A+B)"
+"$mqscale = ABS(mQ - ratio) where mQ = 9. mQ = -9 if ival = |mQ|/2." 
+
+"For a Split t1 Spectrum:"
+
+"The dwell is the full split t1 dwell dd2*(1 + ratio) = dd2*(A+B)/A and"
+"F1 needs no scaling. $mqscale = ABS(mQ - ratio)*(A/(A+B)) = ABS(A*mQ-B)/(A+B)"
+
+"scalesw1 = 1.0"
+"$mqscale = ABS(mQ - ratio)*A/(A+B)"
+
+exists('ival','parameter'):$ival
+if ($ival=0) then 
+   create('ival')
+   setgroup('ival','processing')
+   ival=0.5
+endif
+
+exists('scalesw1','parameter'):$scalesw1
+if ($scalesw1=0) then
+   create('scalesw1')
+   setgroup('scalesw1','processing')
+endif
+
+if (ival = 4.5) then     "ratio = 31/6" 
+   scalesw1 = 1
+   $mqscale = 85/37
+   write('line3','Scaling and Referencing MQMAS f1 axis for Spin 9/2')
+else
+   write('error','Set ival to the correct spin number (4.5).')
+endif
+
+rfl=rfl-rfp
+$delta_rfl = rfl - sw/2
+rfp=0.0
+
+exists('refpos','parameter'):$refpos
+if ($refpos>0.0) then 
+   reffrq = sfrq + $delta_rfl/1e6
+   refpos = 0.0
+endif
+
+$delta_rfl1=$delta_rfl*$mqscale
+rfl1 = $delta_rfl1 + sw1/2
+exists('lsfrq1','parameter'):$lsfrq1
+if ($lsfrq1 > 0) then 
+   rfl1 = rfl1 + lsfrq1
+endif
+rfp1 = 0.0

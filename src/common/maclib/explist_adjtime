@@ -1,0 +1,43 @@
+"macro explist_adjtime"
+   $list=$1
+   $file=$2+'/EXPLIST'
+   $file2=$2+'/LONGLIST'
+   $line='' $line2='' $line3=''
+   $line4='' $line5=''
+   readfile($file,'$line','$line2','','local'):$total
+   readfile($file2,'$line4','$line5','','local'):$total2
+
+   $editfile=0 $editfile2=0
+   $1tot=size('$1')
+   $i=1
+   repeat
+   	teststr('$line',$1[$i],'local'):$ret
+        if ($ret) then
+            string2array($line2[$ret]):$line3
+            format($3[$i],0,0):$line3[1]
+            array2string($line3):$line2[$ret]
+	    $editfile=1
+	else
+            string2array($line5[$ret]):$line3
+            format($3[$i],0,0):$line3[1]
+            array2string($line3):$line5[$ret]
+            $editfile2=1
+        endif
+	$i=$i+1
+   until $i > $1tot
+   if ($editfile) then
+   	write('reset',$file)
+   	$i=1
+   	repeat
+            write('file',$file,'%s %s',$line[$i],$line2[$i])
+            $i=$i+1
+   	until $i > $total
+   endif
+   if ($editfile2) then
+        write('reset',$file2)
+        $i=1
+        repeat
+            write('file',$file2,'%s %s',$line4[$i],$line5[$i])
+            $i=$i+1
+        until $i > $total2
+   endif

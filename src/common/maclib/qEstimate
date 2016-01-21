@@ -1,0 +1,120 @@
+"macro qEstimate"
+
+"qEstimate - macro to initialize raw Quantitation tools"
+"Scales integrals to display mM concentration"
+"Requires acquisition of a precisively known sample to establish probe file"
+"First normalize integrals to millimolar concentration Xs protons for a peak"
+"That value is set into ins (Integral Area entry) on Integration page then set"
+"Click Set Integral Value button or type ds_setint"
+"To set onto probe file qEstimate('setproBefile')"
+"Suggest pw=pw90, ss=0 nt=1 gain=30 for the calibrant experiment"
+
+"After that at any time go to Integration panel type qEstimate."
+"Click Display List of Integrals or type dli"
+
+if $#>0 then $action=$1 else $action='get' endif
+
+IF ($action='setproBefile') THEN
+  write('line3','Updating probefile Quant parameters')
+  $probe=probe
+  getProbePath(probe,'alert'):$e,$probefile,$rw
+  if ($rw=0) then return endif
+
+"first set Qparameters into probefile if needed"
+ $i=1
+ $param[$i]='Qgain'   $i=$i+1
+ $param[$i]='Qmult'   $i=$i+1
+ $param[$i]='Qins'    $i=$i+1
+ $param[$i]='Qinsref' $i=$i+1
+ $x=1
+ repeat
+   write('line3','Grep arg is %s%s %s',tn,$param[$x],$probefile)
+   $parex=''
+   shell('grep '+tn+$param[$x]+' '+probe):$parex
+   if ($parex = '') then
+     write('line3','Adding par %s',$param[$x])
+     addparams($param[$x],'0',tn,$probe)
+   endif
+   $x=$x+1
+ until $x = $i
+ "next pass actual values"
+ $Qgain='' $Qmult='' $Qins='' $Qinsref='' 
+ format(gain,2,0):$Qgain
+ format(pw/pw90,2,2):$Qmult
+ format(ins,6,2):$Qins
+ format(insref,10,9):$Qinsref
+ setparams('Qgain',$Qgain,tn)
+ setparams('Qmult',$Qmult,tn)
+ setparams('Qins',$Qins,tn)
+ setparams('Qinsref',$Qinsref,tn)
+ setvalue('Qgain',gain,'processed'):$e
+ setvalue('Qmult',pw/pw90,'processed'):$e
+ setvalue('Qins',ins,'processed'):$e
+ setvalue('Qinsref',insref,'processed'):$e
+ setvalue('Qgain',gain,'current'):$e
+ setvalue('Qmult',pw/pw90,'current'):$e
+ setvalue('Qins',ins,'current'):$e
+ setvalue('Qinsref',insref,'current'):$e
+ 
+ELSEIF ($action='get') THEN
+
+exists('Qinsref','parameter'):$qe
+
+if ($qe>0.5) then
+
+ if (Qins>0) then
+   $Qins=Qins
+   $Qinsref=Qinsref
+   $Qmult=Qmult
+   $Qgain=Qgain
+ else
+   write('line3','Quant parameters do not appear to be set')
+   return
+ endif
+
+else
+
+ $Qins=-1
+ getparam('Qins',tn):$Qins
+ if ($Qins<0) then
+  if (not $##) then
+    write('error','No Quant calibrations in the probe file !!')
+  endif
+  return(0,1)
+ endif
+ getparam('Qinsref',tn):$Qinsref
+ getparam('Qgain',tn):$Qgain
+ getparam('Qmult',tn):$Qmult
+
+endif
+
+ $ins=$Qins $insref=$Qinsref 
+ "Add adjustment delta for gain & tip-angle and multiply insref"
+ if ($Qgain<>gain) then
+   abs($Qgain-gain):$deltagain
+   exp($deltagain*2.302585/20):$gscale
+   if ($Qgain>gain) then
+     $insref=$insref/$gscale
+   elseif (gain>$Qgain) then
+     $insref=$insref*$gscale
+   endif
+ endif
+ if ($Qgain=gain) then $gscale=1.000 endif
+
+ $Qtip=$Qmult*90  "tip angle for calibration"
+ $tip=pw/pw90*90  "tip angle for experiment"
+ sin($Qtip*0.0174533):$sinCal
+ sin($tip*0.0174533):$sinTip
+ $tipfactor=$sinTip/$sinCal
+ $insref=$insref*$tipfactor
+ if ($##) then
+   return($ins,$insref)
+ endif
+ write('line3','Setting integral scaling from probe stds..')
+ write('line3','Values -> Qins = %2.2f ; Qinsref = %1.9f ; Qgain = %2.0f Qmult = %2.1f',$Qins,$Qinsref,$Qgain,$Qmult)
+ write('line3','Pulse width scaling factor is %1.3f and gain scaling factor is %2.3f',$tipfactor,$gscale)
+ ins= $ins
+ insref = $insref
+ dli 
+ENDIF
+

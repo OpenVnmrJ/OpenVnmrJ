@@ -1,0 +1,53 @@
+"macro lcFixElutionMethods"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcFixElutionMethods"
+
+// Adjust times on current elution methods for current flow config.
+
+$first = startloop
+$last = endloop
+if ($# > 0) then
+    $first = $1
+endif
+if ($# > 1) then
+    $last = $2
+endif
+
+$loop = $first
+while ($loop <= $last) do
+
+    " Read the elution method for this loop "
+    $method = lcElutionMethods[$loop]
+    $path = userdir + '/lc/lcmethods/' + $method
+
+    fread($path, 'temporary')		" Read in std template method "
+
+    " Set the time of the stop for timed elution "
+    // TODO: Check these Xfer delay calculations
+    if ((lcXferRefChannel > 0) and (lcXferRefChannel <= 3)) then
+        ////" ref time index is (chan + type * nchans);  type=3, nchans=3 "
+        ////$time = lcXferDelay[7] - lcXferDelay[lcXferRefChannel + 9]
+        lcXferDelay('get', 'time', 'loop', 2):$time
+        lcXferDelay('get', 'time', 'ref', 2):$reftime
+        $time = $time - $reftime
+    else
+        // Loop-to-NMR time for type=elution=2
+        lcXferDelay('get', 'time', 'loop', 2):$time
+        $time = $time + lcXferRefTime
+        ////$time = (lcXferDelayLoopToNmr + lcXferRefTime) / 60
+    endif
+    $time = $time / 60      // Convert time to minutes
+    $time? /*CMP*/
+
+    setvalue('lcTime', $time, 2, 'temporary') "NB: 2 is row of timedElution cmd"
+
+    " Set run duration to a long time, it should never complete normally "
+    setvalue('lcTime', 60, 3, 'temporary') "NB: 3 is last row of method"
+
+    writeparam($path, lcMethodParameters, 'temporary')
+    if ($method = lcMethodFile) then
+        lcMethod('read',lcMethodFile)
+    endif
+
+    $loop = $loop + 1
+endwhile

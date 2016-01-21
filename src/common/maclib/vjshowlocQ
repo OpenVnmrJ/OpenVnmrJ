@@ -1,0 +1,140 @@
+"macro vjshowlocQ"
+"  This macro is applicable ONLY to SMS automation "
+"  This macro is not linked to vjshowQ as of 2010-01-20"
+
+$tailX='tail'
+whichtail:$tailX
+is_submitmode:$is
+if ($is) then 
+   write('error','ShowStudy option not applicable during submit mode')
+   return 
+endif
+if (autodir='') then return endif
+
+IF $# < 1 then
+   vnmrjcmd('submitstudy '+$0)
+   vnmrjcmd('tray update')
+   return
+ENDIF
+
+$loc=''
+substr($4,1):$loc
+if ($loc = '0') or ($loc='') then
+	write('error','Select location to show')
+	return
+endif
+
+$rack='' $zone=''
+substr($2,1):$rack
+substr($3,1):$zone
+
+if (traymax <> 96) and (traymax<>768) then
+   $rack='' $zone=''
+endif
+
+"***Where to get info****"
+  strstr(autodir,'studytray'):$enter
+  if ($enter) then
+	shell('dirname '+autodir):$dir
+	shell('dirname '+$dir):$dir
+	shell('basename '+$dir):$file
+  else
+  	$dir=autodir
+  	$file='enterQ'
+  endif
+
+$autofile=$dir+'/'+$file
+$cpdoneq=$autofile+'.macdir/cpdoneQ'
+exists($cpdoneq,'file'):$doneqex
+$cpdonedayq=$autofile+'.macdir/cpdonedayQ'
+exists($cpdonedayq,'file'):$donedayqex
+
+$status='' $who='' $samplename='' $locdir='' $sampdir=''
+if ($# > 4) then 
+   $locdir=$5 $sampdir=$6 
+   $status=$7
+else
+	"****if called via tray display, get locdir from studytray"
+   checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+   if ($status='') then
+	updatestatus($dir,$loc,'Empty',$zone,$rack)
+        write('error','Sample %s not found',$loc)
+        return
+   endif
+   	updatestatus($dir,$loc,$status,$zone,$rack)
+	if ($samplename='ReFeReNCe') then
+		write('error','Location %s is a reference location',$loc)
+		return
+	endif
+
+endif
+
+if ($sampdir='') then 
+	"*****if sampdir is empty, get it from cpdoneQ or cpdonedayQ"
+    if ($doneqex) then
+        $line=''
+        shell('(cat '+$cpdoneq+' | grep -w SAMPLE#: | grep -w '+$locdir+' | '+$tailX+' -n 1)'):$line
+        substr($line,3):$sampdir
+    endif
+    if ($sampdir='') and ($donedayqex) then
+        $line=''
+        shell('(cat '+$cpdonedayq+' | grep -w SAMPLE#: | grep -w '+$locdir+' | '+$tailX+' -n 1)'):$line
+        substr($line,3):$sampdir
+    endif
+endif
+
+if ($sampdir='') then
+	"*****If sampdir is still empty, get it from sampleglobal"
+     $sampleglobal=$autofile+'.macdir/'+$locdir+'/sampleglobal'
+     exists($sampleglobal,'file'):$sampgex
+     if ($sampgex) then
+	$archive='' $sample=''
+	rtv($sampleglobal,'noabort','sample'):$sample
+        rtv($sampleglobal,'noabort','archivedir'):$archive
+	rtv($sampleglobal,'noabort','samplename'):$samplename
+	if ($sample<>'') and ($archive<>'') then
+		$sampdir=$archive+'/'+$sample
+		exists($sampdir,'directory'):$direx
+		if ($direx=0) then
+		   exists(userdir+'/data/'+$sample,'directory'):$direx
+		   if ($direx) then
+			$sampdir=userdir+'/data/'+$sample
+		   endif
+		endif
+	endif
+     endif
+endif
+
+if ($sampdir<>'') then
+	"*****Make sure sampdir is absolute pathname"
+    $firstchar='' substr($sampdir,1,1):$firstchar
+    if ($firstchar<>'/') then
+	$sampdir=userdir+'/data/'+$sampdir
+    endif
+    exists($sampdir+'/dirinfo','directory'):$sampex
+    if ($sampex=0) then
+	$sampdir=''
+    endif
+endif
+
+$locQ=$autofile+'.macdir/'+$locdir+'/day'
+$timeest=''
+if ($dir=cpautodir) then
+	estimatestart('getexptime',$locdir,$status):$timeest
+endif
+
+if ($sampdir='') then
+        $LIST='EXPLIST','LONGLIST'
+else
+        $LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+endif
+
+if (sqdisplay[1] <> 'location') then
+       SQDisplay('location')
+endif
+if ($sampdir='') then
+        xmhaha('readloc',$locQ,$samplename,$timeest)
+else
+        xmhaha('buildsq',$sampdir,$LIST,'lock','',$timeest)
+endif
+

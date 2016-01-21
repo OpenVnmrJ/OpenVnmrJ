@@ -1,0 +1,67 @@
+"macro pwxcal"
+
+"*************************************************"
+" pwxcal - sequence to calibrate decouplers     "
+"*************************************************"
+if (seqfil <> 'pwxcal') then
+   psgset('pwxcal','ap','dg','jC13','jN15','jP31','jname','pwx1','pwx2','pwx3')
+endif
+
+exists('pwxlvl1','parameter'):$e
+  if ($e < 0.5) then create('pwxlvl1')
+  setlimit('pwxlvl1',63,-16,1)
+  endif
+exists('pwxlvl2','parameter'):$e
+  if ($e < 0.5) then create('pwxlvl2')
+  setlimit('pwxlvl2',63,-16,1)
+  endif
+exists('pwxlvl3','parameter'):$e
+  if ($e < 0.5) then create('pwxlvl3')
+  setlimit('pwxlvl3',63,-16,1)
+  endif
+$ans = '1'
+if (numrfch > 2) then
+   if (numrfch = 4) then
+      input('Use decoupler 1, 2, or 3? [1] '):$ans
+   else
+      input('Use decoupler 1 or 2? [1] '):$ans
+   endif
+   if (($ans <> '2') and ($ans <> '3')) then
+      $ans = '1'
+   endif
+endif
+$ans2='C13'
+input('Calibrate C13, N15, or P31? [C13] '):$ans2
+if (($ans2 <> 'N15') and ($ans2 <> 'P31')) then
+   $ans2 = 'C13'
+endif
+jname= $ans2
+if ($ans = '1') then
+   dn = $ans2
+   pwx1 = 1
+   pwx2 = 0
+   pwx3 = 0
+   write('line3','array pwx1 for calibrating %s on decoupler 1',dn)
+   if (numrfch > 2) then
+      dm2 = 'n'
+      dmm2 = 'c'
+   endif
+else
+   dm = 'n'
+   dmm = 'c'
+   pwx1 = 0
+   if ($ans = '2') then
+      dn2 = $ans2
+      pwx2 = 1
+      pwx3 = 0
+      write('line3','array pwx2 for calibrating %s on decoupler 2',dn2)
+   else
+      dn3 = $ans2
+      pwx2 = 0
+      pwx3 = 1
+      write('line3','array pwx3 for calibrating %s on decoupler 3',dn3)
+   endif
+endif
+
+banner('Use pwxlvl1, pwxlvl2, pwxlvl3 for \\power levels for pwx1, pwx2,pwx3')
+

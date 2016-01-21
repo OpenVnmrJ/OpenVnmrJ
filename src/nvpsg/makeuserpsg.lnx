@@ -1,0 +1,488 @@
+# 
+#
+###########################################################
+#							  #
+#    makeuserpsg   -   UNIX makefile for creating a new   #
+#		       user PSG library			  #
+#							  #
+###########################################################
+# Main MAIN main
+
+MAKEFILE= makeuserpsg.lnx
+CCC=g++
+CC=gcc
+
+#-----  The system and user PSG directories
+PSG_DIR= $(vnmrsystem)/psg/
+LIB_DIR= $(vnmrsystem)/lib/
+USR_PSG_DIR= $(vnmruser)/psg/
+
+#-----  Normal operational compile flags
+CDEFINE = -Wno-format-security
+NVFLAGS = -Dcodeint=int -Dcodelong=int
+CFLAGS= -O -fPIC -m32 
+CPPFLAGS= -DSUN -DLINUX -DPSG_LC -DNVPSG -U_FORTIFY_SOURCE
+LDOPTIONS   = -O
+LDFLAGS= -shared -m32
+
+PSG_LN= ln -s $(PSG_DIR)$(@)
+SHAREDLIB_VER=6.0
+
+#-----  Link commands for needed sources and makefile
+COMPILE.c   = $(CC)  $(CFLAGS) $(CPPFLAGS) $(CDEFINE) $(NVFLAGS) -c
+COMPILE.cc  = $(CCC) $(CFLAGS) $(CPPFLAGS) $(CDEFINE) -c
+LINK.c      = $(CCC) $(LDFLAGS)
+
+#------------------------------------------------------------------------
+#-----  PSG sources files 
+#------------------------------------------------------------------------
+
+PSG_SRC=                        \
+                abort.c         \
+                active.c        \
+                autofuncs.c     \
+                ecc_setup.c     \
+		ecc_worstCase.c	\
+                eventoverhead.c \
+                freqfuncs.c     \
+                getparm.c       \
+                hash.c          \
+                init_u_glbl.c   \
+                initauto.c      \
+                lockfuncs.c     \
+                pre_exp_seq.c   \
+                pre_fid_seq.c   \
+                presequence.c   \
+                P_receive.c     \
+                Pbox_HT.c       \
+                Pbox_psg.c      \
+                sendasync.c     \
+                setparm.c       \
+                signalhandler.c \
+                sis_initpar.c   \
+                sis_position.c  \
+                treefuncs.c     \
+                wetfuncs.c	\
+                xmath.c
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+DPS_DUMMY_SRC=			\
+                x_ps.c
+
+DPS_DUMMY_OBJ= $(DPS_DUMMY_SRC:.c=.o)
+
+#-----  PSG header files that are needed
+PSG_HDR=			\
+                Pbox_HT.h       \
+                Pbox_psg.h      \
+                REV_NUMS.h      \
+                abort.h         \
+                apdelay.h       \
+                arrayfuncs.h    \
+                cmed.h          \
+                cps.h          \
+                CSfuncs.h       \
+                dsp.h           \
+		ecc.h		\
+                objerror.h      \
+                oopc.h          \
+                power.h         \
+                prescan.h       \
+                psg_utils.h     \
+                rfconst.h       \
+                standard.h      \
+                vfilesys.h      \
+                vnmrsys.h       \
+                wetfuncs.h
+
+
+#----- PSG sources that require conditional compilation
+NVPSG_SRC=			\
+                aptable.c   \
+                arrayfuncs.c   \
+                chempack.c	\
+                cps.c   \
+                initacqparms.c   \
+                lc_hdl.c   \
+                math.c          \
+                nvstubs.c   \
+		spinfuncs.c	\
+                vtfuncs.c   \
+                rtcontrol.c
+
+
+
+NVPSG_OBJ= $(NVPSG_SRC:.c=.o)
+
+NVPSG_CPP_SRC = \
+                AcodeBuffer.cpp \
+                AcodeManager.cpp        \
+                Bridge.cpp      \
+                Console.cpp     \
+                Controller.cpp  \
+                DDRController.cpp       \
+                InitAcqObject.cpp       \
+                GradientController.cpp  \
+                GradientBridge.cpp  \
+                GradientBase.cpp    \
+                LockController.cpp      \
+                MasterController.cpp    \
+                PFGController.cpp       \
+                RFController.cpp        \
+                Synthesizer.cpp        \
+		WaveformUtility.cpp     \
+                psgmain.cpp
+
+NVPSG_CPP_OBJ= $(NVPSG_CPP_SRC:.cpp=.o)
+
+NVPSG_HDR=                      \
+                ACode32.h       \
+                AcodeBuffer.h   \
+                AcodeManager.h  \
+                Bridge.h        \
+                Console.h       \
+                Controller.h    \
+                DDRController.h \
+                FFKEYS.h        \
+                GradientBridge.h        \
+                GradientBase.h          \
+                GradientController.h    \
+                LockController.h        \
+                InitAcqObject.h		\
+                MasterController.h      \
+                PFGController.h \
+                PSGFileHeader.h \
+                RFController.h  \
+                Synthesizer.h        \
+                WaveformUtility.h \
+                acodes.h        \
+                acqparms.h      \
+                aptable.h       \
+                chempack.h	\
+                cpsg.h  	\
+                ddr_symbols.h   \
+                ddr_fifo.h      \
+                lc.h    	\
+                macros.h        \
+                pvars.h         \
+                shrexpinfo.h	\
+		sgl.c		\
+		sgl_ws.c	\
+		sgl.h		\
+		sglWrappers.c	\
+		sglWrappers.h	\
+		sglCommon.c	\
+		sglCommon.h	\
+		sglHelper.c	\
+		sglHelper.h	\
+		sglPrepulses.c	\
+		sglPrepulses.h	\
+		sglRF.c		\
+		sglRF.h		\
+		sglEPI.c	\
+		sglEPI.h	\
+		sglAdditions.c	\
+		sglAdditions.h	\
+		sglGradientLists.c	\
+		sglGradientLists.h	\
+		sglDutyCycle.c	\
+		sglDutyCycle.h	\
+		spinner.h	\
+		tangentcp1.h
+
+OTHER_HDR=                      \
+                asm.h           \
+                data.h          \
+                errorcodes.h    \
+                group.h         \
+                params.h        \
+                shims.h         \
+                symtab.h        \
+                dpsdef.h        \
+                variables.h	\
+                wjunk.h		\
+                expDoneCodes.h	\
+                mfileObj.h	\
+                tools.h
+
+
+
+#-----  All sources and headers are required for compilation
+ALLSRC=	$(PSG_SRC) $(PSG_HDR) $(DPS_DUMMY_SRC) $(NVPSG_SRC) $(NVPSG_HDR) \
+        $(NVPSG_CPP_SRC) $(OTHER_HDR)
+ALLOBJS= $(PSG_OBJ) $(DPS_DUMMY_OBJ) $(NVPSG_OBJ)
+ALL_CPP_OBJS= $(NVPSG_CPP_OBJ)
+
+LIBS=	-lm
+
+
+#------------------------------------------------------------------------
+#-----  Targets
+#------------------------------------------------------------------------
+
+lib : message Source libpsglib.so libpsglib.a
+	@echo
+	@echo PSG Library Complete.
+
+fixlib : message libpsglib.so libpsglib.a
+	@echo
+	@echo PSG Library Complete.
+
+message :
+	@echo Compiling Linux PSG Library...
+	( rm -f libpsglib*)
+
+maclib : macmessage Source
+	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS -Wno-format-security" maclibpsglib.a)
+	@echo
+	@echo PSG Library Complete.
+
+macfixlib : macmessage
+	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS -Wno-format-security" maclibpsglib.a)
+	@echo
+	@echo PSG Library Complete.
+
+macmessage:
+	@echo Compiling Mac PSG Library...
+	( rm -f libpsglib*)					\
+
+depend: src
+	makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(ALLSRC) 2>/dev/null
+
+
+
+#------------------------------------------------------------------------
+#-----  Recursive Targets
+#------------------------------------------------------------------------
+Source :
+	@echo Source Creating additional source links...
+	( cd $(USR_PSG_DIR); $(MAKE) -f $(MAKEFILE) src )
+
+src :	$(MAKEFILE) $(ALLSRC)
+
+libpsglib.a : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+	(umask 2; ar r $@ $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ) >/dev/null 2>&1 )
+
+libpsglib.so : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+	@(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(SHAREDLIB_VER) $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ);	\
+	ln -s $@.$(SHAREDLIB_VER) $@;)
+
+maclibpsglib.a : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+
+#------------------------------------------------------------------------
+#-----  Object dependencies
+#------------------------------------------------------------------------
+
+$(ALLOBJS) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+$(ALL_CPP_OBJS) : $(@:.o=.cpp)
+	(umask 2; $(COMPILE.cc) $(@:.o=.cpp) )
+
+#------------------------------------------------------------------------
+#-----  Source extraction via soft links
+#------------------------------------------------------------------------
+
+$(PSG_SRC) $(PSG_HDR) $(NVPSG_SRC) $(NVPSG_HDR) $(NVPSG_CPP_SRC) $(OTHER_HDR) : % :$(PSG_DIR)%
+	$(PSG_LN) $@
+
+$(DPS_DUMMY_SRC) : % : $(PSG_DIR)%
+	$(PSG_LN) $@
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+abort.o: group.h pvars.h abort.h cps.h
+active.o: variables.h group.h pvars.h
+autofuncs.o: group.h acodes.h ACode32.h rfconst.h acqparms.h shims.h macros.h
+autofuncs.o: Bridge.h abort.h cps.h
+ecc_setup.o: vnmrsys.h acodes.h ACode32.h group.h ecc.h abort.h pvars.h
+ecc_setup.o: acqparms.h
+ecc_worstCase.o: vnmrsys.h group.h ecc.h tools.h pvars.h wjunk.h
+eventoverhead.o: apdelay.h
+freqfuncs.o: group.h variables.h params.h pvars.h
+getparm.o: abort.h pvars.h
+hash.o: abort.h
+init_u_glbl.o: oopc.h acqparms.h
+initauto.o: acodes.h ACode32.h rfconst.h acqparms.h group.h shims.h abort.h
+initauto.o: cps.h
+lockfuncs.o: group.h ACode32.h acqparms.h expDoneCodes.h Bridge.h
+pre_exp_seq.o: oopc.h acqparms.h
+pre_fid_seq.o: oopc.h acqparms.h
+presequence.o: oopc.h acqparms.h
+P_receive.o: group.h abort.h symtab.h variables.h
+Pbox_HT.o: group.h variables.h rfconst.h acqparms.h aptable.h Pbox_psg.h
+Pbox_HT.o: Pbox_HT.h abort.h pvars.h cps.h
+Pbox_psg.o: oopc.h group.h rfconst.h acqparms.h aptable.h apdelay.h macros.h
+Pbox_psg.o: Bridge.h Pbox_psg.h vfilesys.h abort.h cps.h
+sendasync.o: abort.h
+setparm.o: abort.h pvars.h cps.h
+sis_initpar.o: vnmrsys.h oopc.h group.h variables.h acqparms.h rfconst.h
+sis_initpar.o: macros.h Bridge.h abort.h pvars.h cps.h
+sis_position.o: oopc.h acqparms.h rfconst.h macros.h Bridge.h abort.h
+treefuncs.o: group.h symtab.h params.h tools.h abort.h pvars.h variables.h
+wetfuncs.o: oopc.h acqparms.h rfconst.h macros.h Bridge.h cps.h
+xmath.o: REV_NUMS.h group.h variables.h dpsdef.h abort.h pvars.h acqparms.h
+xmath.o: lc.h apdelay.h aptable.h Pbox_psg.h cps.h
+standard.o: oopc.h abort.h acqparms.h rfconst.h aptable.h power.h macros.h
+standard.o: Bridge.h apdelay.h group.h pvars.h wetfuncs.h Pbox_psg.h cps.h
+wetfuncs.o: acqparms.h
+aptable.o: acqparms.h ACode32.h aptable.h symtab.h variables.h group.h
+aptable.o: vfilesys.h pvars.h abort.h lc.h
+arrayfuncs.o: group.h variables.h acqparms.h abort.h pvars.h shims.h cps.h
+arrayfuncs.o: PSGFileHeader.h
+chempack.o: group.h wetfuncs.h acqparms.h macros.h Bridge.h Pbox_psg.h cps.h
+cps.o: group.h symtab.h variables.h acqparms.h aptable.h macros.h Bridge.h
+cps.o: expDoneCodes.h abort.h pvars.h cps.h
+initacqparms.o: mfileObj.h variables.h data.h group.h pvars.h abort.h
+initacqparms.o: ACode32.h acqparms.h cps.h lc.h shrexpinfo.h
+lc_hdl.o: lc.h ACode32.h
+math.o: ACode32.h acqparms.h
+nvstubs.o: acqparms.h pvars.h abort.h
+spinfuncs.o: group.h ACode32.h acqparms.h expDoneCodes.h spinner.h pvars.h
+spinfuncs.o: Bridge.h
+vtfuncs.o: group.h ACode32.h acqparms.h expDoneCodes.h pvars.h Bridge.h
+rtcontrol.o: ACode32.h macros.h Bridge.h acqparms.h abort.h
+AcodeBuffer.o: PSGFileHeader.h
+AcodeManager.o: AcodeBuffer.h PSGFileHeader.h
+Console.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+Console.o: RFController.h MasterController.h GradientController.h
+Console.o: GradientBase.h PFGController.h LockController.h DDRController.h
+Console.o: InitAcqObject.h
+Controller.o: AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+DDRController.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+GradientBase.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+GradientController.o: GradientBase.h Controller.h AcodeManager.h
+GradientController.o: AcodeBuffer.h PSGFileHeader.h
+LockController.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+InitAcqObject.o: AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+MasterController.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+PFGController.o: GradientBase.h Controller.h AcodeManager.h AcodeBuffer.h
+PFGController.o: PSGFileHeader.h
+RFController.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+WaveformUtility.o: Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+WaveformUtility.o: RFController.h
+acodes.o: ACode32.h
+chempack.o: Pbox_psg.h
+cpsg.o: group.h pvars.h cps.h abort.h
+macros.o: Bridge.h
+sgl.o: sgl.h sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sgl.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sgl.o: wetfuncs.h Pbox_psg.h cps.h sglWrappers.h sglPrepulses.h sglHelper.h
+sgl.o: sglGradientLists.h sglAdditions.h sglDutyCycle.h sglEPI.h sglRF.h
+sgl.o: sglCommon.c vfilesys.h sglHelper.c sglWrappers.c sglPrepulses.c
+sgl.o: sglGradientLists.c sglAdditions.c sglDutyCycle.c sglEPI.c sgl_ws.c
+sgl.o: sgl_ws2.c sglRF.c
+sgl.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h aptable.h
+sgl.o: power.h macros.h Bridge.h apdelay.h group.h pvars.h wetfuncs.h
+sgl.o: Pbox_psg.h cps.h sglWrappers.h sglPrepulses.h sglHelper.h
+sgl.o: sglGradientLists.h sglAdditions.h sglDutyCycle.h sglEPI.h sglRF.h
+sglWrappers.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglWrappers.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglWrappers.o: wetfuncs.h Pbox_psg.h cps.h sglWrappers.h
+sglCommon.o: standard.h oopc.h abort.h acqparms.h rfconst.h aptable.h power.h
+sglCommon.o: macros.h Bridge.h apdelay.h group.h pvars.h wetfuncs.h
+sglCommon.o: Pbox_psg.h cps.h sgl.h sglCommon.h sglWrappers.h sglPrepulses.h
+sglCommon.o: sglHelper.h sglGradientLists.h sglAdditions.h sglDutyCycle.h
+sglCommon.o: sglEPI.h sglRF.h vfilesys.h
+sglCommon.o: standard.h oopc.h abort.h acqparms.h rfconst.h aptable.h power.h
+sglCommon.o: macros.h Bridge.h apdelay.h group.h pvars.h wetfuncs.h
+sglCommon.o: Pbox_psg.h cps.h
+sglHelper.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglHelper.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglHelper.o: wetfuncs.h Pbox_psg.h cps.h sglHelper.h
+sglPrepulses.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglPrepulses.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglPrepulses.o: wetfuncs.h Pbox_psg.h cps.h sglPrepulses.h
+sglRF.o: sglRF.h sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglRF.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglRF.o: wetfuncs.h Pbox_psg.h cps.h
+sglRF.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h aptable.h
+sglRF.o: power.h macros.h Bridge.h apdelay.h group.h pvars.h wetfuncs.h
+sglRF.o: Pbox_psg.h cps.h
+sglEPI.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglEPI.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglEPI.o: wetfuncs.h Pbox_psg.h cps.h sglEPI.h
+sglAdditions.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglAdditions.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglAdditions.o: wetfuncs.h Pbox_psg.h cps.h sglAdditions.h
+sglAdditions.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglAdditions.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglAdditions.o: wetfuncs.h Pbox_psg.h cps.h
+sglGradientLists.o: sglCommon.h standard.h oopc.h abort.h acqparms.h
+sglGradientLists.o: rfconst.h aptable.h power.h macros.h Bridge.h apdelay.h
+sglGradientLists.o: group.h pvars.h wetfuncs.h Pbox_psg.h cps.h
+sglGradientLists.o: sglGradientLists.h sglAdditions.h
+sglDutyCycle.o: sglCommon.h standard.h oopc.h abort.h acqparms.h rfconst.h
+sglDutyCycle.o: aptable.h power.h macros.h Bridge.h apdelay.h group.h pvars.h
+sglDutyCycle.o: wetfuncs.h Pbox_psg.h cps.h sglDutyCycle.h
+AcodeBuffer.o: cpsg.h group.h pvars.h cps.h abort.h FFKEYS.h ACode32.h
+AcodeBuffer.o: AcodeBuffer.h PSGFileHeader.h
+AcodeManager.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h
+AcodeManager.o: PSGFileHeader.h RFController.h MasterController.h
+AcodeManager.o: GradientController.h GradientBase.h PFGController.h
+AcodeManager.o: LockController.h DDRController.h InitAcqObject.h cpsg.h
+AcodeManager.o: group.h pvars.h cps.h abort.h
+Bridge.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+Bridge.o: RFController.h MasterController.h GradientController.h
+Bridge.o: GradientBase.h PFGController.h LockController.h DDRController.h
+Bridge.o: InitAcqObject.h FFKEYS.h Bridge.h acqparms.h ACode32.h lc.h cpsg.h
+Bridge.o: group.h pvars.h cps.h abort.h
+Console.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h
+Console.o: PSGFileHeader.h RFController.h MasterController.h
+Console.o: GradientController.h GradientBase.h PFGController.h
+Console.o: LockController.h DDRController.h InitAcqObject.h cpsg.h group.h
+Console.o: pvars.h cps.h abort.h ACode32.h acqparms.h Bridge.h
+Controller.o: cpsg.h group.h pvars.h cps.h abort.h FFKEYS.h ACode32.h
+Controller.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h
+Controller.o: PSGFileHeader.h RFController.h MasterController.h
+Controller.o: GradientController.h GradientBase.h PFGController.h
+Controller.o: LockController.h DDRController.h InitAcqObject.h vnmrsys.h
+Controller.o: vfilesys.h
+DDRController.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h
+DDRController.o: PSGFileHeader.h RFController.h MasterController.h
+DDRController.o: GradientController.h GradientBase.h PFGController.h
+DDRController.o: LockController.h DDRController.h InitAcqObject.h FFKEYS.h
+DDRController.o: ACode32.h cpsg.h group.h pvars.h cps.h abort.h ddr_symbols.h
+DDRController.o: ddr_fifo.h acqparms.h
+InitAcqObject.o: InitAcqObject.h AcodeManager.h AcodeBuffer.h PSGFileHeader.h
+InitAcqObject.o: cpsg.h group.h pvars.h cps.h abort.h lc.h
+GradientController.o: GradientController.h GradientBase.h Controller.h
+GradientController.o: AcodeManager.h AcodeBuffer.h PSGFileHeader.h FFKEYS.h
+GradientController.o: ACode32.h cpsg.h group.h pvars.h cps.h abort.h
+GradientBridge.o: Console.h Controller.h AcodeManager.h AcodeBuffer.h
+GradientBridge.o: PSGFileHeader.h RFController.h MasterController.h
+GradientBridge.o: GradientController.h GradientBase.h PFGController.h
+GradientBridge.o: LockController.h DDRController.h InitAcqObject.h ACode32.h
+GradientBridge.o: FFKEYS.h Bridge.h GradientBridge.h cpsg.h group.h pvars.h
+GradientBridge.o: cps.h abort.h
+GradientBase.o: GradientBase.h Controller.h AcodeManager.h AcodeBuffer.h
+GradientBase.o: PSGFileHeader.h FFKEYS.h ACode32.h cpsg.h group.h pvars.h
+GradientBase.o: cps.h abort.h acqparms.h
+LockController.o: LockController.h Controller.h AcodeManager.h AcodeBuffer.h
+LockController.o: PSGFileHeader.h ACode32.h
+MasterController.o: MasterController.h Controller.h AcodeManager.h
+MasterController.o: AcodeBuffer.h PSGFileHeader.h expDoneCodes.h Console.h
+MasterController.o: RFController.h GradientController.h GradientBase.h
+MasterController.o: PFGController.h LockController.h DDRController.h
+MasterController.o: InitAcqObject.h shims.h FFKEYS.h ACode32.h cpsg.h group.h
+MasterController.o: pvars.h cps.h abort.h spinner.h
+PFGController.o: PFGController.h GradientBase.h Controller.h AcodeManager.h
+PFGController.o: AcodeBuffer.h PSGFileHeader.h FFKEYS.h ACode32.h cpsg.h
+PFGController.o: group.h pvars.h cps.h abort.h
+RFController.o: RFController.h Controller.h AcodeManager.h AcodeBuffer.h
+RFController.o: PSGFileHeader.h FFKEYS.h ACode32.h Console.h
+RFController.o: MasterController.h GradientController.h GradientBase.h
+RFController.o: PFGController.h LockController.h DDRController.h
+RFController.o: InitAcqObject.h cpsg.h group.h pvars.h cps.h abort.h
+RFController.o: aptable.h WaveformUtility.h
+WaveformUtility.o: WaveformUtility.h Controller.h AcodeManager.h
+WaveformUtility.o: AcodeBuffer.h PSGFileHeader.h RFController.h cpsg.h
+WaveformUtility.o: group.h pvars.h cps.h abort.h FFKEYS.h
+psgmain.o: cpsg.h group.h pvars.h cps.h abort.h ACode32.h Controller.h
+psgmain.o: AcodeManager.h AcodeBuffer.h PSGFileHeader.h MasterController.h
+psgmain.o: RFController.h GradientController.h GradientBase.h PFGController.h
+psgmain.o: DDRController.h InitAcqObject.h FFKEYS.h Console.h
+psgmain.o: LockController.h Bridge.h GradientBridge.h ddr_symbols.h symtab.h
+psgmain.o: variables.h params.h REV_NUMS.h asm.h shims.h vfilesys.h tools.h

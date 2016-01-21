@@ -1,0 +1,498 @@
+"macro dicomhdr"
+" dicomhdr - 	Write DICOM3 Header Based on Template "
+
+" Usage:  	dicomhdr(outfile<,single|multi><,template>) "
+
+" Arguments:	outfile: path to output file name			"
+"		template (optional): DICOM header template; default
+"			Default is userdir+'/templates/dicom/'+seqfil' followed by"
+"			           {dicompath}+'/'+seqfil, followed by	"
+"			           userdir+'/templates/dicom/default'	"
+"			           {dicompath}+'/default', followed by	"
+"			systemdir+'/user_templates/plot/dicom.default'       "
+
+" Version: 2006-04-02
+
+
+$DEBUG=0
+if $DEBUG then clear endif
+
+$template=''
+$outfile=''
+$dicompath=''
+exists('dicompath','parameter','global'):$e
+if $e then
+  $dicompath=dicompath
+endif
+
+" check argument(s) "
+$imagesout = 'single'  "default output"
+if ($# = 0) then
+  write('error','%s: argument (output file, <single|multi>) expected - aborting',$0)
+  return(1)
+elseif($# = 2) then
+  $imagesout = $2
+  $outfile = $1
+else
+  $outfile=$1
+endif
+
+" +-----------------------+ "
+" | locate DICOM template | "
+" +-----------------------+ "
+if $#>2 then
+  $template=$3
+  exists($template,'file'):$e
+else
+  " first try finding pulse sequence-specific template "
+  $template=userdir+'/templates/dicom/'+seqfil
+  exists($template,'file'):$e
+  if (not($e))and($dicompath<>'') then
+    $template=$dicompath+'/'+seqfil
+    exists($template,'file'):$e
+  endif
+  if not($e) then
+    $template=systemdir+'/user_templates/dicom/'+seqfil
+    exists($template,'file'):$e
+  endif
+
+  " no pulse sequence-specific template found - use default "
+  if not($e) then
+    $template=userdir+'/templates/dicom/default'
+    exists($template,'file'):$e
+    if (not($e))and($dicompath<>'') then
+      $template=$dicompath+'/default'
+      exists($template,'file'):$e
+    endif
+    if not($e) then
+      $template=systemdir+'/user_templates/plot/dicom.default'
+      exists($template,'file'):$e
+    endif
+  endif
+endif
+if not($e) then
+  write('error','%s: DICOM template not found, aborting',$0)
+  return(1)
+endif
+write('line3','%s: Template - %s',$0,$template)
+
+
+" make sure output file can be created "
+write('reset',$outfile)
+exists($outfile,'file'):$e
+if not($e) then
+  write('error','%s: Cannot create DICOM output file, aborting',$0)
+  return(1)
+endif
+
+
+" +--------------------------------------------------+ "
+" | ================================================ | "
+" | read template and create DICOM 3.0 header output | "
+" | ================================================ | "
+" +--------------------------------------------------+ "
+
+"initialize some parameters"
+$dim = 2   "2D default"
+exists('nv2','parameter'):$ex
+if($ex > 0) then
+  if(nv2 > 0 ) then
+    $dim = 3
+  endif
+endif
+"fix some vnmr parameters"
+exists('flip1','parameter'):$ex
+if($ex = 0) then
+  create('flip1')
+  flip1 = fliplist[1]
+endif
+exists('institution','parameter'):$ex
+if($ex = 0) then
+  create('institution','string')
+endif
+
+    
+
+$line='' $ch1='' $lastch='' $r=0 $len=0 $ix=0
+$tag='' $VR='' $tvalue='' $value='' $actual='' $comment=''
+$outline='' $parval='' $numval=0
+
+lookup('file',$template,'readline'):$line,$r
+while $r>0 do
+  substr($line,1,1):$ch1
+  if ($line='')or($ch1='#') then
+    write('file',$outfile,'%s',$line)
+  else
+    " read tag and value representation (VR) "
+    $tag='' $VR=''
+    substr($line,1):$tag
+    substr($line,2):$VR
+    $outline=$tag+' '+$VR+'    '
+    if $DEBUG then write('alpha','reading tag=%s VR=%s',$tag,$VR) endif
+
+    $tvalue='' $ch1='' $lastch=''
+    substr($line,3):$tvalue
+    substr($tvalue,1,1):$ch1
+    length($tvalue):$len
+    substr($tvalue,$len,1):$lastch
+
+    " make sure we read the entire value "
+    if $ch1='[' then
+      $value=$tvalue
+      $ix=4
+      while ($tvalue<>'')and($lastch<>']') do
+	$tvalue='' $lastch=''
+        substr($line,$ix):$tvalue
+        $ix=$ix+1
+        length($tvalue):$len
+        substr($tvalue,$len,1):$lastch
+        $value=$value+' '+$tvalue
+      endwhile
+      $tvalue=$value
+    elseif $ch1='(' then
+      $value=$tvalue
+      $ix=4
+      while ($tvalue<>'')and($lastch<>')') do
+	$tvalue='' $lastch=''
+        substr($line,$ix):$tvalue
+        $ix=$ix+1
+        length($tvalue):$len
+        substr($tvalue,$len,1):$lastch
+        $value=$value+' '+$tvalue
+      endwhile
+      $tvalue=$value
+    endif
+    if $DEBUG then write('alpha','    template value = "%s"',$tvalue) endif
+
+
+    " +-------------------------------+ "
+    " | ============================= | "
+    " | Use tag recognition to fill   | "
+    " | specific tags in the template | "
+    " | ============================= | "
+    " +-------------------------------+ "
+    if $tag='(0008,0012)' then		" InstanceCreationDate "
+      $cmd='date \'+%Y' + '%m' + '%d\''
+      shell($cmd):$value
+      $value='['+$value+']'
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+    elseif $tag='(0008,0013)' then	" InstanceCreationTime "
+      $cmd='date \'+%H' + '%M' + '%S\''
+      shell($cmd):$value
+      $value='['+$value+']'
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+    elseif $tag='(0008,1090)' then	" ManufacturersModelName "
+      "instrument model"
+      $console='' $model=''
+      shell('tail -1 /vnmr/vnmrrev'):$console
+      if ($console='vnmrs') then
+        $model='VNMRS-'
+      elseif ($console='inova')or($console='inova.sol') then
+        $model='UNITY INOVA-'
+      elseif $console='uplus' then
+        $model='UNITYplus-'
+      elseif $console='unity' then
+        if Console='vxrs' then
+          $model='VXR-'
+        else
+          $model='UNITY-'
+        endif
+      elseif $console='mercplus' then
+        $model='MERCURYplus-'
+      elseif $console='mercvx' then
+        $model='MERCURY-Vx '
+      elseif $console='mercury' then
+        $model='MERCURY-'
+      elseif $console='g2000' then
+        $model='GEMINI 2000 '
+      else
+        $model=$console+'-'
+      endif
+
+      "add frequency"
+      $freq=''
+      format(h1freq,1,0):$freq
+      if ($console='unity')and(Console='vxrs') then
+        $model=$model+$freq+'S'
+      else
+        $model=$model+$freq
+      endif
+      $value='['+$model+']'
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+    elseif $tag='(0018,0087)' then	" SoftwareVersions "
+      format(h1freq/42.577,3,1):$value
+      $value='['+$value+']'
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+    elseif $tag='(0018,1020)' then	" SoftwareVersions "
+      $value='['+rev+'; '+revdate+']'
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+    " +----------------------------------+ "
+    " | ================================ | "
+    " | Create imaging parameter tags    | "
+    " | ================================ | "
+    " +----------------------------------+ "
+
+         
+    elseif $tag='(0018,0088)' then	" slice spacing for multi-planar data  "      
+      if($dim = 3) then
+        on('fn2'):$on		"3D data"
+        if($on) then
+          $pe2 = fn2/2.0
+        else
+          $pe2 = nv2
+        endif
+        $thk = lpe2*10/$pe2
+        $thks=''	
+        format($thk,0,5):$thks	
+        $value='['+$thks+']'   
+             
+      else	"multi-slice not implemented"
+        $thk = 1    "2D -used as index for multi-frame images"
+        $thks=''	
+        format($thk,0,5):$thks	
+        $value='['+$thks+']'      	      
+      endif   
+         
+    elseif $tag='(0018,0050)' then	" slice thickness for multi-planar data  "      
+      if($dim = 3) then
+        on('fn2'):$on		"3D data"
+        if($on) then
+          $pe2 = fn2/2.0
+        else
+          $pe2 = nv2
+        endif
+        $thk = lpe2*10/$pe2
+        $thks=''	
+        format($thk,0,5):$thks	
+        $value='['+$thks+']'   
+             
+      else	"multi-slice not implemented"
+        $thk = 1    "2D -used as index for multi-frame images"
+        $thks=''	
+        format($thk,0,5):$thks	
+        $value='['+$thks+']'      	      
+      endif      
+            
+    elseif $tag='(0028,0008)' then	" no of frames "
+      $dim = 2  "default 2D"
+      exists('nv2','parameter'):$ex     
+      if($ex > 0) then
+        if(nv2 > 0) then
+          on('fn2'):$on		"3D data"
+          if($on) then
+            $pe2 = fn2/2.0
+          else
+            $pe2 = nv2
+          endif         
+          $dim = 3
+        endif
+      endif
+      
+      if ($dim = 3) then
+        $f = $pe2    "no of frames for 3D"
+      else 
+        substr(seqcon,3,1):$spe1    
+        if($spe1 = 's') then
+          $f = (ns * (arraydim/nv) * ne)   "sems type"
+        else
+          $f = (ns * arraydim * ne)	"compressed gems type"
+        endif            
+        if($imagesout='single') then  
+          $f = $f	"single image output: frames=(no_of_slices * array_size * ne)"
+        else
+          $f = 1				" single frame"
+        endif
+      endif     
+     $fs='' 
+      format($f,0,0):$fs
+      $value='['+$fs+']'      
+      if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+   
+   "note: ft3d causes nv/np to be swapped"   
+   elseif $tag='(0028,0010)' then	 " Rows"
+     if($dim = 3) then	"if 3D rows = nv"
+       on('fn1'):$on
+       if($on) then
+         $pe = fn1/2.0
+       else
+         $pe = nv
+       endif	
+       $pes=''	
+       format($pe,0,0):$pes	
+       $value='['+$pes+']'  
+        
+     else		"if 2D no of rows = np/2"
+        on('fn'):$on
+        if($on) then
+          $ro = fn/2.0
+        else
+          $ro = np/2.0
+        endif      	
+        $ros=''	
+        format($ro,0,0):$ros	
+        $value='['+$ros+']'
+     endif
+      	         
+   elseif $tag='(0028,0011)' then	" Columns  "
+     if($dim = 3) then	"if 3D columns = np/2"
+       on('fn'):$on
+       if($on) then
+         $ro = fn/2.0
+       else
+         $ro = np/2.0
+       endif      	
+       $ros=''	
+       format($ro,0,0):$ros	
+       $value='['+$ros+']'   
+     else     
+       on('fn1'):$on
+       if($on) then
+        $pe = fn1/2.0
+      else
+        $pe = nv
+      endif	
+      $pes=''	
+      format($pe,0,0):$pes	
+      $value='['+$pes+']'
+    endif
+       
+    elseif $tag='(0028,0030)' then	" pixel spacing "
+      if($dim = 3) then
+        $r=lro*10/$ro    "$ro and $pe were calculated earlier"
+        $p=lpe*10/$pe
+        $rs='' $ps=''
+        format($r,0,5):$rs
+        format($p,0,5):$ps
+        $value='['+$ps+'\\'+$rs+']'      "rows\cols swapped for 3D"   
+      else
+        $r=lro*10/$ro    "$ro and $pe were calculated earlier"
+        $p=lpe*10/$pe
+        $rs='' $ps=''
+        format($r,0,5):$rs
+        format($p,0,5):$ps
+        $value='['+$rs+'\\'+$ps+']' 
+      endif
+           
+        if $DEBUG then write('alpha','    new value = "%s"',$value) endif
+
+            
+    " more tags ... "
+
+
+    " +----------------------------------+ "
+    " | ================================ | "
+    " | Now deal with all the other tags | "
+    " | ================================ | "
+    " +----------------------------------+ "
+
+    
+    " +------------------------------------+ "
+    " | read bracketed value from template | "
+    " +------------------------------------+ "
+    elseif $ch1='[' then
+      $value=$tvalue $actual=''
+      length($value):$len
+      substr($value,2,$len-2):$actual
+
+      " +------------------------+ "
+      " | fill in real tag value | "
+      " +------------------------+ "
+      $firstch=''
+      substr($actual,1,1):$firstch
+
+      " +-------------------------------------------+ "
+      " | first check for values that can be filled | "
+      " | from VNMR parameter value or expression   | "
+      " +-------------------------------------------+ "
+      if $firstch='=' then
+        $parval=''
+        substr($actual,2,$len-3):$parval
+        if $DEBUG then write('alpha','    VNMR value = "%s"',$parval) endif
+        if ($VR='US') or ($VR='UI') or ($VR='UL') then
+	  $numval={$parval}
+          format($numval,0,0):$actual
+        elseif ($VR='IS') or ($VR='DS') then
+          $numval={$parval}        
+          shell('echo',$numval):$actual
+        elseif ($VR='CS') or ($VR='SH') then
+          $actual={$parval}
+        else
+          $actual={$parval}       "new change ss "
+	endif
+	$value='['+$actual+']'
+      endif
+
+
+    " +-----------------------------------------+ "
+    " | read value in parentheses from template | "
+    " +-----------------------------------------+ "
+    elseif $ch1='(' then
+      $value=$tvalue $actual=''
+      length($value):$len
+      substr($value,2,$len-2):$actual	" actual value not checked right now "
+
+    " +-----------------------+ "
+    " | read value behind '=' | "
+    " +-----------------------+ "
+    elseif $ch1='=' then
+      $ix=4
+      $value=$tvalue $actual=''
+      length($tvalue):$len
+      substr($tvalue,2,$len-1):$actual	" actual value not checked right now "
+    else
+      $ix=4
+      $value=$tvalue			" actual value not checked right now "
+    endif
+
+    if $DEBUG then write('alpha','    value = "%s"',$value) endif
+    $outline=$outline+$value
+
+    $str=''
+    substr($line,$ix):$str		" should be '#' "
+    if $str<>'' then
+      $outline=$outline+' '
+
+      " Fill to 57 chars - try to align comments "
+      length($outline):$len
+      while $len<57 do
+        $outline=$outline+' '
+        $len=$len+1
+      endwhile
+
+      $outline=$outline+$str
+      $ix=$ix+1
+      $str=''
+      substr($line,$ix):$str
+    endif
+    while $str<>'' do
+      $outline=$outline+' '+$str
+      $ix=$ix+1
+      $str=''
+      substr($line,$ix):$str
+    endwhile
+
+    " +-----------------------------------+ "
+    " | escape backslashes in output line | "
+    " +-----------------------------------+ "
+    $i=1 $ch='' length($outline):$len
+    $newval=''
+    repeat
+      substr($outline,$i,1):$ch
+      $newval=$newval+$ch
+      $i=$i+1
+      if $ch='\\' then $newval=$newval+$ch endif
+    until $i>$len
+
+    " add line to output file  (need to use shell due to backslashes) "
+    shell('echo \''+$newval+'\' >> '+$outfile+'; cat'):$dummy
+  endif
+
+  " read next line "
+  lookup('readline'):$line,$r
+endwhile
+

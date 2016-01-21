@@ -1,0 +1,30 @@
+"macro deletenucleus"
+"deletenucleus('nucleus') - delete nucleus from probe file"
+
+if ($# < 1) then
+   write('error','%s requires 1 argument (nucleus)',$0)
+   return
+endif
+$nucleus=$1
+
+
+getProbePath(probe,'alert'):$pex,$ppath,$rw
+if ($rw=0) then return endif
+
+  $probenew=$ppath+'.new'
+  $key=$ppath
+  write('reset',$probenew)
+
+  $line=''
+  length($nucleus):$l
+  lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+  while ( $ret>1 ) do
+     substr($line,1,$l):$linestart
+     if ($linestart <> $nucleus) then
+        write('file',$probenew,'%s',$line)
+     endif
+     lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+  endwhile
+
+  shell('mv '+$probenew+' '+$ppath)
+

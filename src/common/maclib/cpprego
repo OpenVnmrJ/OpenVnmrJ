@@ -1,0 +1,71 @@
+"macro cpprego"
+
+$md=archivedir+'/'+sample+'/dirinfo/macdir'
+$explist=''
+cpexplist('next',$md):$explist
+if ($explist='') then 
+  return(0)
+endif
+if ($explist='PAUSE') then
+  cpexplist('drop',$md)
+//  cppauseflg='y'
+  if (auto<>'y') then
+     $editqatpause='no'
+     getadminfo('editqatpause'):$editqatpause
+     if ($editqatpause='yes') then
+	walkupQ_addq('force')
+     endif
+  endif
+  return(0)
+endif
+
+explist=$explist
+if ($1='auto') then
+	wrcurrentQ('auto')
+else
+	wrcurrentQ('current')
+endif
+if (auto='y') or ($1='auto') then
+        $date=''
+        shell('date'):$date
+        write('line3','%s  loc%d  %s',$date,loc,$explist)
+endif
+
+cpexplist('drop',$md)
+
+if (auto='n') then EXPtime:ACQtime endif
+
+if (wds <> '') and (auto='n') then
+   if (apptype='lstd1D') or (apptype='sel1D') then
+	write('line3','Select peaks interactively')
+   endif
+   return(0)
+endif
+
+"********Scout experiments saved with a tag**************"
+"This happens only if explist has (pslabel)scout string"
+"  and the next explist has SetUp string"
+"********************************************************"
+if (auto='y') then
+    strstr(explist,pslabel+'scout'):$isscout
+    if ($isscout) then
+   	$nexplist=''
+   	cpexplist('next',$md):$nexplist
+   	strstr($nexplist,'SetUp'):$isscout
+    endif
+    if ($isscout) then
+   	exists('scoutinfo','parameter'):$parex
+   	if ($parex) then if (scoutinfo='') then $parex=0 endif endif
+	if ($parex=0) then 
+   	    eventLog('ExpSetup','Scout experiment') 
+	else
+	    eventLog('ExpSetup',scoutinfo)
+	endif
+    else
+     	eventLog('ExpSetup')
+    endif
+endif
+"********************************************************"
+dousermacro($0)
+
+return(1)

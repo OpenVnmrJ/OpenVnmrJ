@@ -1,0 +1,139 @@
+"macro startq"
+"start study queue"
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+
+if ($appmode='imaging' and jviewports[1]>1.5 and jviewport>1.5) then
+  vnmrjcmd('VP 1 startq')  "VP 2?"
+  return
+endif
+
+if (auto<>'y') then
+    if ($# > 0.5) then
+        $callbackString = 'startq(`' + $1 + '`)'
+    else
+        $callbackString = 'startq'
+    endif
+    reqpartest('showgui', $callbackString):$reqparReturnValue
+    if ($reqparReturnValue>0) then
+      return
+    endif
+endif
+
+if (activestudy[1]<>'null') then
+
+  fixpar  "shouldn't need this? only for automation?"
+
+  if (auto='y') then
+
+    if ($# > 0.5) then
+      studyid=$1
+      exists('studyid_','parameter'):$e
+      if ($e) then studyid_=$1 endif
+    else  "not used"
+"     lookup curexp+'/sampleinfo' for SAMPLE# ?"
+      $tfile=autodir+'/autostudies'
+      $t1='' $t2=''
+      readfile($tfile,'$t1','$t2','','local'):$tsize
+      $floc='' format(loc,1,0):$floc
+      $i=$tsize+1 $studyid=''
+      repeat
+        $i=$i-1 
+        if ($t1[$i] = $floc) then
+          $studyid = $t2[$i]
+        endif
+      until ($studyid<>'' or $i<=1)
+      if $studyid<>'' then
+        studyid = $studyid
+      else
+        write('line3','%s: could not find study for loc=%g.',$0,loc)
+        return
+      endif
+    endif
+
+"   set sqdir here"
+    xm1('studydir'):$sdir
+    exists($sdir+'/enterSQ','file'):$d
+    if $d<0.5 then
+      write('error','%s: could not find %s/enterSQ.',$0,$sdir)
+      return
+    endif
+    sqdir=$sdir
+
+  endif
+
+  readhw('status'):$e
+  if ($e<>10 and $e<>17 and auto<>'y') then
+    if ($e<0.5) then
+      write('line3','Acquisition inactive, cannot proceed with study queue.')
+    else
+      write('line3','Acquisition active, cannot proceed with study queue.')
+    endif
+    return
+  endif
+
+  if ($appmode='imaging') then
+    sqmode='go'
+  else
+    sqmode='pause'
+  endif
+  if (auto<>'y') then
+    if (actionid<>'null') then
+      if ($appmode='imaging') then
+        xmselect('savepar')
+      else
+        xmselect('saveid')
+      endif
+      actionid='null'
+    endif
+    sqfilemenu('init')
+    vnmrjcmd('pnew','1 studyid')
+  endif
+
+  xm1('studydir'):$sdir
+  exists($sdir+'/studypar','file'):$ex
+  if (auto='y' and $ex>0.5) then
+"reread prescan from submitted study for automation"
+    fread($sdir+'/studypar')
+  endif
+"send new studystatus to db"
+  prescan[7]='Complete' prescan[9]='off' prescan[10]=''
+  if $appmode='imaging' then
+    xmtime
+    sqsavestudy
+  else
+    if $appmode='walkup' then
+      prescan[5]=''
+      if (prescan[1]='Not done') then
+        prescan[11]='Not done'
+      else
+        prescan[11]='Complete'
+      endif
+    endif
+    $stat=''
+    exists('studystatus','parameter'):$e
+    if $e>0.5 then $stat=studystatus endif
+    $qstatus='Active'
+    if ($stat<>$qstatus) then
+      if $appmode='walkup' then
+        activestudy[2]=studyid
+        xmtime('startstudy')
+        xmtune('initstudy')
+      endif
+      cqsavestudy($sdir,studyid,$qstatus)
+    endif
+  endif
+  if ($appmode='imaging' and jviewports[1]>1.5 and jviewport<>2) then
+    flush
+    $cmd='VP 2 mp(jcurwin[1],jcurwin[2]) sqmode=\'go\' xmnext'
+    vnmrjcmd($cmd)
+    $file=userdir+'/persistence/.talk2j'
+    write('reset',$file)
+    write('file',$file,'%s',vnmraddr)
+    shell('chmod 666 "'+$file+'"'):$x
+  else
+    xmnext
+  endif
+
+endif

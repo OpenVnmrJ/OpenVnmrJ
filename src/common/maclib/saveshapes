@@ -1,0 +1,171 @@
+"macro saveshapes"
+"***********Macro to record shapes in (nuc)shapes parameter******"
+"***********************************************************************"
+
+if ($# < 3) then return endif
+
+IF ($1='add') or ($1='remove') THEN
+   if ($# < 5) then return endif
+   if ($3='') or ($4='') or ($5='') then return endif
+
+   $shapepars={$2}[1]
+   $2size=size($2)
+   if ($2size<3) then
+	$shapepars=''
+	$powerpars=''
+	$pulsepars=''
+   endif
+   if ($2size>1) then
+      $powerpars={$2}[2]
+   endif
+   if ($2size>2) then
+      $pulsepars={$2}[3]
+   endif
+
+   string2array($shapepars):$shapepars
+   string2array($powerpars):$powerpars
+   string2array($pulsepars):$pulsepars
+   $shapesize=size('$shapepars')
+   $powersize=size('$powerpars')
+   $pulsesize=size('$pulsepars')
+   if ($shapesize<>$powersize) or ($shapesize<>$powersize) then
+        write('error','The 3 values for %s has unequal size!  They are now reset.',$2)
+	fixsaveshapes($2)
+   	$shapepars={$2}[1]
+      	$powerpars={$2}[2]
+      	$pulsepars={$2}[3]
+   	string2array($shapepars):$shapepars
+   	string2array($powerpars):$powerpars
+   	string2array($pulsepars):$pulsepars
+   endif
+   if ($shapepars[1]='') then
+   	{$2}[1]=$3
+	{$2}[2]=$4
+	{$2}[3]=$5
+   	return
+   endif
+
+   teststr('$shapepars',$3,'local'):$ret
+   if ($1='add') then
+	if ($ret=0) then 
+	    $shapepars=$shapepars,$3
+	    $powerpars=$powerpars,$4
+	    $pulsepars=$pulsepars,$5
+	 endif
+   elseif ($1='remove') then
+	if ($ret) then 
+	   $shapepars[$ret]='' 
+	   $powerpars[$ret]=''
+	   $pulsepars[$ret]=''
+ 	endif
+   endif
+
+   {$2}='','',''
+   array2string($shapepars):{$2}[1]
+   array2string($powerpars):{$2}[2]
+   array2string($pulsepars):{$2}[3]
+
+ELSEIF ($1='reconstruct') THEN
+
+   $2size=size($2)
+   if ($2size<3) then
+	return
+   endif
+   exists($3,'directory'):$direx
+   if ($direx=0) then return endif
+
+        $shapepars={$2}[1]
+        $powerpars={$2}[2]
+        $pulsepars={$2}[3]
+        string2array($shapepars):$shapepars
+        string2array($powerpars):$powerpars
+        string2array($pulsepars):$pulsepars
+
+   if ($shapepars[1]='') then
+	return
+   endif
+
+   if ($2='tnshapes') then
+	$ref_pwr=tpwr $ref_pw90=pw90*tpwr_cf
+   elseif ($2='dnshapes') then
+	$ref_pwr=pwxlvl $ref_pw90=pwx*pwxlvl_cf
+   elseif ($2='dn2shapes') then
+	$ref_pwr=pwx2lvl $ref_pw90=pwx2*pwx2lvl_cf
+   elseif ($2='dn3shapes') then
+	$ref_pwr=pwx3lvl $ref_pw90=pwx3*pwx3lvl_cf
+   else
+	return
+   endif
+
+   $total=size('$shapepars')
+   $i=1
+   repeat
+	$shapename=$shapepars[$i]
+	$powername=$powerpars[$i]
+	$pulsename=$pulsepars[$i]
+	$shapes={$shapename}
+	$subtot=size('$shapes')
+	$j=1
+	repeat
+	    exists($3+'/'+$shapes[$j]+'.RF','file'):$fileex
+	    if ($fileex) then
+		$wave='' $offset=0 $width=0
+		pbox_shapeinfo($shapes[$j]+'.RF',$3):$wave,$width,$offset
+		if ($wave[1]<>'') then
+//		    assignshapename(pslabel):$newname
+		    $newname=$shapes[$j]
+		    opx($newname+'.RF')
+		    $wavetot=size('$wave')
+		    $k=1
+		    repeat
+			if ($offset[$k]=0) then
+			   putwave($wave[$k],$width[$k])
+			else
+			   putwave($wave[$k],$width[$k],0.0,$offset[$k])
+			endif
+			$k=$k+1
+		    until $k > $wavetot
+		    cpx($ref_pw90,$ref_pwr):$dum
+		    pbox_pw($newname+'.RF'):$newpulse
+		    pbox_pwr($newname+'.RF'):$newpower
+		    setvalue($shapename,$newname,$j)
+		    setvalue($powername,$newpower,$j)
+		    setvalue($pulsename,$newpulse,$j)
+		endif
+	    else
+	      exists($3+'/'+$shapes[$j]+'.DEC','file'):$fileex
+	      if ($fileex) then
+                $wave='' $offset=0 $width=0 $pwidth=0
+                pbox_shapeinfo($shapes[$j]+'.DEC',$3):$wave,$width,$offset,$pwidth
+                if ($wave[1]<>'') then
+//                  assignshapename(pslabel):$newname
+                    $newname=$shapes[$j]
+                    opx($newname+'.DEC')
+                    $wavetot=size('$wave')
+                    $k=1
+                    repeat
+			
+                        if ($offset[$k]=0) then
+                           putwave($wave[$k],$width[$k],$pwidth[$k])
+                        else
+                           putwave($wave[$k],$width[$k],$pwidth[$k],$offset[$k])
+                        endif
+                        $k=$k+1
+                    until $k > $wavetot
+                    cpx($ref_pw90,$ref_pwr):$dum
+                    pbox_dmf($newname+'.DEC'):$newdmf
+                    pbox_pwr($newname+'.DEC'):$newpower
+                    setvalue($shapename,$newname,$j)
+                    setvalue($powername,$newpower,$j)
+                    setvalue($pulsename,$newdmf,$j)
+                endif
+	      endif
+	    endif
+	    $j=$j+1
+	until $j > $subtot
+	$i=$i+1
+   until $i > $total
+
+
+ENDIF
+

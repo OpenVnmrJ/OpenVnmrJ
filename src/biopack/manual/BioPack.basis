@@ -1,0 +1,157 @@
+                The PHILOSOPHY of BioPack
+
+BioPack includes a parcel of commonly-used triple resonance (or
+quadruple resonance if 2H decoupling is used) 3D pulse sequences for 
+isotopically-labelled high resolution protein  polynucleotide NMR.
+
+The protein pulse sequences are predominantly those developed by the Bax and
+Kay groups.  The sequence codes have been rewritten in a common format
+most often from the Varian codes written by Kay and co-workers.
+
+The RNA pulse sequences are predominantly those developed by the Bax,Puglasi,Pardi and
+Kay groups.
+
+The basic philosophy was to reduce the number of calibrations necessary
+to run each sequence, to a minimum.  This goal has been achieved in
+that only six major parameters need to be calibrated for all the pulse
+sequences to function well.
+
+Three major parameters need to be calibrated for each spectrometer - 
+frequency offsets, tof, dof and dof2 for 1H, 13C and 15N (and dof3
+for optional 2H decoupling).  Three major parameters are required for
+each probe - the 90 pulse lengths for 1H (pw), 13C (pwC) and 15N (pwN)
+at chosen power levels (and dmf3 for optional 2H decoupling).
+
+Optimization of the 13C pulses is obtained by calibration of the 13C
+amplifier compression via the parameter, compC.  This parameter
+should only need to be calibrated once for each spectrometer at the
+maximum power level used for 13C pulses, pwClvl.
+
+A series of shaped and/or frequency shifted pulses are calculated by
+the macro, "BPcal", and stored in your user shapelib.  No input
+parameters are required by the user to run this macro. It is run as part of
+the "BPsetupshapes" macro.
+
+All other calibrations are automatically calculated from the
+above parameters within the pulse sequence code.
+
+With the above calibrations it is expected that each sequence will
+function at,or near, optimum levels.  Gains of a further few percent
+may be obtained by tweaking the three 90 degree pulse times (especially 
+pw and pwC) by up to 10% to maximise S/N in a 1D spectral check.  
+(This may be done using the automated functions available by menu).
+
+			    GENERAL INSTRUCTIONS
+
+1. Calibrate 90 degree pulse lengths for 1H (pw), 13C (pwC) and 15N 
+(pwN) at the chosen power levels, tpwr, pwClvl and pwNlvl respectively 
+using a standard method of your choice. These ppower 
+levels should be those for normal "hard pulse" experiments 
+(not band-selective). Power levels for these pulses are typically 
+chosen to be as short as possible without arcing.
+ 
+  Calibration can be done in an automatic mode using the macro "AutoProteinCal"
+for proteins and a similar one for nucleotides. This is accessible via the menu
+Main..Setup...Proteins...Calibrate in VNMR6.1, or via a button in the
+"Calibrate" apge in the Setup folder in VNMRJ.
+
+2. You should check, at least once, the C13 amplifier compression.  
+At a particular pwClvl (eg 60) and dpwrf=4095, measure the C13 90 -
+this is pwC of course.  Repeat this measurement at dpwrf=2047. Do not 
+decouple during acq. A compression factor, "compC" is then determined by 
+the relation:
+
+  compC = (C13pw90 @ dpwrf=2047&pwClvl) / (2.0 * C13pw90 at dpwrf=4095&pwClvl)
+
+If compC is less than 0.95 serious loss of S/N may occur because the 
+amplitudes of the soft C13 pulses will not be accurately calibrated.  
+Either reduce pwClvl until compC > 0.95, or set the value of the compC 
+parameter provided to this compression factor. The default is compC=1.0.  
+As an example, in one test, setting compC=0.85 as determined above 
+reduced the loss in S/N from 30% to 3%. If compC > 0.95, a small 
+advantage may result in setting compC to the measured value.
+
+The values of compC, as well as the associated values of compN and compH are
+automatically determined in the autocalibration process.
+
+3. The SLP pulses (shifted laminar pulses - pulses shifted off-
+resonance) and other shaped pulses will have been calculated using 
+the macro "BPcal". These pulses are stored in your shapelib and 
+automatically called by the pulse sequence code.  This calculation takes 
+into account the spectrometer frequency (eg 400 or 800 MHz), and it 
+in theory only needs to be done once for each system. The calculated lengths of 
+the SLP pulses (pwC3, pwC4, pwC5 etc) used in each sequence are 
+displayed to provide confidence to the user that everything
+has been set up properly - do not change these since these SLP pulse 
+lengths are determined only by dfrq and do not depend on pwC.  All 
+other pulse powers and pulse lengths are automatically calculated within 
+the pulse sequence code from pw, pwC, pwN, compC, associated power levels, 
+and the lengths of pwC3, pwC4 etcas determined by the macro, and these
+ calculations take into account the spectrometer frequency.
+      
+4. Centre 1H frequency (tof) on H2O (4.7ppm), and the 15N frequency 
+(dof2) on the amide region (120 ppm).  The C13 frequency (dof) will 
+be centered in the aliphatic region(46 or 35 ppm),Ca region (56 ppm) or the 
+CO region (174 ppm) as specified in the detailed instructions for each 
+pulse sequence.  If optional H2 decoupling is used, set dof3 to the 
+center of the 2H aliphatic spectrum (ie 2.5 ppm).
+
+5. The individual pulse sequence macros, eg "gc_co_nh", load the 
+parameter sets for that sequence, set ni=ni2=0 and phase=phase2=1 
+ready for a 1D spectral check. 
+
+6. Most gradient levels and durations require no adjustment.  The 
+coherence pathway gradients, gzlvl1 and gzlvl2, should be adjusted 
+for maximum signal in a 1D spectrum. Set gzlvl1 (eg 13000) and vary 
+gzlvl2 by up to 2% or so around this number.  Typical values are 
+13000/13080 + or -100 with the duration gt1=0.0025.  This pair will be 
+common to all BioPack sequences except for a small change
+for ghcch_tocsy (hcch_tocsy does not use coherence gradients).  
+The suppressed water signal can produce echos 
+during signal acquisition, and this echo may be minimised by 
+trial-and-error adjustment of gzlvl5 and gzlvl6 which should not be 
+equal.  Set ssfilter=0 to observe maximum H2O signal. If magic-angle
+coherence transfer gradients are used, the gzlvl2 value may be
+significantly different and in the opposite direction from gzlvl1.
+
+7. All echo times within each sequence have been adjusted to provide 
+maximum signal for the protein alphalytic protease.  For simplicity, 
+only the most major delays are listed  and may be readjusted by 
+the user.  All other echo times are not under parameter adjustment, 
+but can be changed within the sequence code.  They are listed in the 
+DECLARE AND LOAD VARIABLES section of each pulse sequence code as for 
+example, zeta=0.0033 (ie delay zeta is 3.3 ms).
+
+To change a delay, simply edit the number and recompile the sequence.
+Alternatively, change zeta=0.0033 for example to zeta=getval("d4"), 
+recompile the sequence, maximise 1D signals with an array of d4, and 
+then reedit as zeta=newnumber and recompile.  Alternatively, edit as 
+zeta=getval("zeta"), recompile the sequence, create the parameter in 
+your parameter set using themacro, "create('zeta','delay')", and 
+(optionally) list zeta in dg2 using themacro "paramvi('dg2').
+
+8. Deuterium decoupling is optional for spectrometers having 4 
+channels and may be applied, whilst CaCb magnetization is transverse, 
+and during any 1H shift evolution, for all BioPack sequences 
+except ghn_co (which does not generate transverse CaCb magnetization).  
+Type dm3='nyn' to invoke 2H decoupling and list the associated 
+parameters in dg2.  Adjust dof3, dpwr3, dmf3 in the usual way.
+The 2H magnetization is preserved in all sequences except hcch_tocsy 
+and ghcch_tocsy.  In the latter cases disturbance of the lock signal 
+may be observed.  In sequences where preservation of 2H magnetization 
+is achieved, trim gradients around refocusing pulses are switched off 
+during the 2H decoupling, so additional artifacts are possible.    
+ 
+Note that 2H decoupling is done via dm3='nyn'. No status(B) statement 
+is present in the pulse sequences but dm3 is just used as a flag to 
+call the setstatus statement. All the normal decoupling paramters 
+such as dpwr3,dof3,dmm3,dmf3 etc. are active, however, and should be 
+set properly. The 2H Decoupling Accessory should be used to couple in 
+Channel 4 and the Lock to the lock circuitry of the probe.
+The parameter "ampmode" should be set to 'dddp' when 2H decoupling is 
+used. This parameter is present and is set to 'dddp' for all parameter 
+sets having 2H decoupling as an option.
+
+When dm3='nyn', the dg2 page will show channel 4 parameters. 
+Otherwise no channel 4 parameters are visible.
+

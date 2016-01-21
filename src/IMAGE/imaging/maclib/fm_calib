@@ -1,0 +1,255 @@
+"macro fm_calib"
+"FASTMAP_CALIB reads field coefficients from file in $vnmuser/shims specified by $1 and writes  accepted values to calibration file $2"
+
+if $#<0.5 then $1='fastmap.calib' endif
+if $#<1.5 then $2=gcoil endif
+$calibfile = userdir+'/fastmap/'+$1
+$fastmap=userdir+'/fastmap'
+$corrfile = $fastmap+'/correlation'
+
+$sys='' $sysowner=''
+shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+if (owner = $sysowner) then
+  $outfile = systemdir+'/fastmap/calib/.'+$2
+  $swapfile = systemdir+'/fastmap/calib/'+$2+'_swap'
+  $dacfile = systemdir+'/fastmap/dacmap.'+$2
+  exists(systemdir+'/fastmap','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap') endif
+  exists(systemdir+'/fastmap/calib','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap/calib') endif
+else
+  $outfile = $fastmap+'/calib/.'+$2
+  $swapfile = $fastmap+'/calib/'+$2+'_swap'
+  $dacfile = $fastmap+'/dacmap.'+$2
+endif
+
+"note that the coil labels will change for different shim sets"
+$coilname = 'x1','y1','z1','xz','yz','z2','xy','x2y2'
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil = 'x1','y1','z1c','xz','yz','z2c','xy','x2y2'
+else
+  $coil = 'x1','y1','z1','xz','yz','z2','xy','x2y2'
+endif
+
+$z0file = $fastmap+'/'+gcoil+'_z2z0'
+exists($z0file,'file'):$e
+if ($e < 0.5) then
+  write('error','Run get_z2z0 before processing, file not found: %s',$z0file)
+  ABORT
+endif
+
+write('reset',$outfile)
+write('reset',$corrfile)
+
+"loop through each shim coil"
+$j = 1
+while ($j <= 8) do
+
+  lookup('file',$calibfile,'count',$coil[$j]+'='):$nentry
+  if ($nentry>3) then
+    write('line3','reading was successful with %d values',$nentry)
+    write('file',$corrfile,'reading was successful with %d values',$nentry)
+  else
+    write('error','not enough values found in calib file skipping this shim coil')
+    write('file',$corrfile,'not enough values found in calib file skipping this shim coil')
+    return
+  endif
+
+"loop through all the entries for coil $j"
+  $i = 1
+  $dac=0 $x1=0 $y1=0 $z1=0 $xz=0 $yz=0 $z2=0 $xy=0 $x2y2=0
+  lookup('file',$calibfile)
+
+  while ($i <= $nentry) do
+    lookup('seek',$coil[$j]+'=','read',9):$dac[$i],$x1[$i],$y1[$i],$z1[$i],$xz[$i],$yz[$i],$z2[$i],$xy[$i],$x2y2[$i],$nret
+    if $nret<8.5 then
+      write('error','%s: couldn\'t read entry for coil %s',$0,$coil[$j])
+      write('file',$fastmap+'/fastmap.log','%s: couldn\'t read entry for coil %s',$0,$coil[$j])
+      return
+    endif
+    "write('line3','%d %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e ',\"
+    "  $dac[$i],$x1[$i],$y1[$i],$z1[$i],$xz[$i],$yz[$i],$z2[$i],$xy[$i],$x2y2[$i])"
+    $i = $i + 1      
+  endwhile
+
+  $i = 1
+  while ($i <= 8) do
+
+    fm_slope($dac,${$coilname[$i]}):$slope[$i],$intcpt,$correlation
+    $diff=0
+    abs($i-$j):$diff
+    if (($diff=0 and $j<4) or ($j>3 and $i<=3) or ($diff<=1 and $j>3) and ($i>3)) then
+      write('line3','%s->%s  Slope = %.3e   Correlation = %6.4f', $coilname[$j], $coilname[$i], $slope[$i], $correlation) 
+      write('file',$corrfile,'%s->%s  Slope = %.3e   Correlation = %6.4f', $coilname[$j], $coilname[$i], $slope[$i], $correlation) 
+      abs($correlation):$abscorr
+"     if ($abscorr>0.97) then"
+"     if ($abscorr>0.90) then"
+      if ($abscorr>0.95) then
+        $answer='y'
+        "input('Do you want to include this term (y/n)? '):$answer"
+      else
+        $answer='n'
+      endif
+    else
+      $answer = 'n'
+    endif
+
+    if ($answer <> 'y') then
+      if ($i = $j) then
+        $slope[$i] = 1e3
+      else
+        $slope[$i] = 1e-9
+      endif
+    endif
+    $i = $i + 1
+  endwhile
+
+  write('file',$outfile,'%11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e ',\
+      $slope[1],$slope[2],$slope[3],$slope[4],$slope[5],$slope[6],$slope[7],$slope[8])
+
+  $j = $j + 1
+endwhile
+
+$hz_dac=0.0
+lookup('file',$z0file,'skip',1,'read',1):$hz_dac
+write('file',$outfile,'%11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e ',\
+    1e-9,1e-9,1e-9,1e-9,1e-9,$hz_dac,1e-9,1e-9)
+
+"fm_swapshimcalib"
+
+exists('DAC_xz','parameter'):$ex1
+if ($ex1<0.5) then
+  create('DAC_xz','integer')
+  setprotect('DAC_xz','on',8192)
+  setlimit('DAC_xz',19,19,19)
+  DAC_xz=0
+endif
+exists('DAC_yz','parameter'):$ex1
+if ($ex1<0.5) then
+  create('DAC_yz','integer')
+  setprotect('DAC_yz','on',8192)
+  setlimit('DAC_yz',19,19,19)
+  DAC_yz=0
+endif
+exists('DAC_xy','parameter'):$ex1
+if ($ex1<0.5) then
+  create('DAC_xy','integer')
+  setprotect('DAC_xy','on',8192)
+  setlimit('DAC_xy',19,19,19)
+  DAC_xy=0
+endif
+exists('DAC_x2y2','parameter'):$ex1
+if ($ex1<0.5) then
+  create('DAC_x2y2','integer')
+  setprotect('DAC_x2y2','on',8192)
+  setlimit('DAC_x2y2',19,19,19)
+  DAC_x2y2=0
+endif
+
+$idx=1
+"lookup('file',$fastmap+'/calib/.'+gcoil)"
+lookup('file',$outfile)
+while ($idx<=9) do
+  $j=1
+  while $j<=8 do
+    lookup('read'):$scal[($idx-1)*8+$j],$nret
+    if $nret<0.5 then
+      write('error','%s: couldn\'t read file',$0)
+      write('file',$fastdir+'/fastmap.log','%s: couldn\'t read file %s',$0,$outfile)
+      return
+    endif
+    $j=$j+1
+  endwhile
+$idx=$idx+1
+endwhile
+
+$idx=1
+abs($scal[3*8+4]):$ascal1
+abs($scal[3*8+5]):$ascal2
+abs($scal[4*8+4]):$ascal3
+abs($scal[4*8+5]):$ascal4
+abs($scal[6*8+7]):$ascal6
+abs($scal[6*8+8]):$ascal7
+abs($scal[7*8+7]):$ascal8
+abs($scal[7*8+8]):$ascal9
+
+while($idx<=3) do
+      write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+$idx=$idx+1
+endwhile
+
+if (($ascal3>$ascal4) or ($ascal2>$ascal1) or ($ascal1>100 and $ascal4>100)) then
+  $nam_xz='yz'
+  $nam_yz='xz'
+  if ($scal[($idx)*8+5]=1.0e-9)   then $scal[($idx)*8+5]=1.0e3    endif
+  if ($scal[($idx)*8+6]=1.0e3)    then $scal[($idx)*8+6]=1.0e-9   endif
+  if ($scal[($idx-1)*8+5]=1.0e3)  then $scal[($idx-1)*8+5]=1.0e-9 endif
+  if ($scal[($idx-1)*8+6]=1.0e-9) then $scal[($idx-1)*8+6]=1.0e3  endif
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx)*8+1],$scal[($idx)*8+2],$scal[($idx)*8+3],$scal[($idx)*8+4],$scal[($idx)*8+5],$scal[($idx)*8+6],$scal[($idx)*8+7],$scal[($idx)*8+8])
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+else
+  $nam_xz='xz'
+  $nam_yz='yz'
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx)*8+1],$scal[($idx)*8+2],$scal[($idx)*8+3],$scal[($idx)*8+4],$scal[($idx)*8+5],$scal[($idx)*8+6],$scal[($idx)*8+7],$scal[($idx)*8+8])
+endif
+
+$idx=$idx+2
+
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+
+$idx=$idx+1
+
+if (($ascal8>$ascal9) or ($ascal7>$ascal6) or ($ascal6>100 and $ascal9>100)) then
+  $nam_xy='x2y2'
+  $nam_x2y2='xy'
+  if ($scal[($idx)*8+7]=1.0e-9)   then $scal[($idx)*8+7]=1.0e3    endif
+  if ($scal[($idx)*8+8]=1.0e3)    then $scal[($idx)*8+8]=1.0e-9   endif
+  if ($scal[($idx-1)*8+7]=1.0e3)  then $scal[($idx-1)*8+7]=1.0e-9 endif
+  if ($scal[($idx-1)*8+8]=1.0e-9) then $scal[($idx-1)*8+8]=1.0e3  endif
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx)*8+1],$scal[($idx)*8+2],$scal[($idx)*8+3],$scal[($idx)*8+4],$scal[($idx)*8+5],$scal[($idx)*8+6],$scal[($idx)*8+7],$scal[($idx)*8+8])
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+else
+  $nam_xy='xy'
+  $nam_x2y2='x2y2'
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx)*8+1],$scal[($idx)*8+2],$scal[($idx)*8+3],$scal[($idx)*8+4],$scal[($idx)*8+5],$scal[($idx)*8+6],$scal[($idx)*8+7],$scal[($idx)*8+8])
+endif
+
+$idx=$idx+2
+
+  write('file',$swapfile,' %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e %11.3e',$scal[($idx-1)*8+1],$scal[($idx-1)*8+2],$scal[($idx-1)*8+3],$scal[($idx-1)*8+4],$scal[($idx-1)*8+5],$scal[($idx-1)*8+6],$scal[($idx-1)*8+7],$scal[($idx-1)*8+8])
+
+"mv(userdir+'/fastmap/'+gcoil+'_swap',$fastmap+'/calib/.'+gcoil)"
+mv($swapfile,$outfile)
+
+$psi=0.0
+$sys='' $sysowner=''
+shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+if (owner = $sysowner) then
+  $psifile = systemdir+'/fastmap/psi_'+gcoil
+  exists(systemdir+'/fastmap','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap') endif
+  exists(systemdir+'/fastmap/calib','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap/calib') endif
+else
+  $psifile = $fastmap+'/psi_'+gcoil
+endif
+exists($psifile,'file'):$e
+if $e>0.5 then
+  lookup('file',$psifile,'read',1):$psi,$f
+
+  if ($f <> 1) then
+    write('error','Fastmap psi file is wrong using psi=0 Rerun calibration')
+    abort
+  endif
+else
+  $psi=0.0
+endif
+
+
+
+write('reset',$dacfile)
+write('file',$dacfile,'%s %s %s %s %11.5e', $nam_xz, $nam_yz, $nam_xy, $nam_x2y2, $psi)

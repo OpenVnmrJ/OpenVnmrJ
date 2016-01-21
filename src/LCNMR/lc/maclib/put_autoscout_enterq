@@ -1,0 +1,39 @@
+"macro put_autoscout_enterq"
+/*-*-MAGICAL-*-*/
+"macro put_autoscout_enterq"
+"put_autoscout_enterq - writes an autoscout enter q into /vnmr/asm"
+$file='/vnmr/asm/autoscout_enterq'
+
+exists('/vnmr/asm', 'file', 'rwx'):$e
+if (not $e) then
+  write('error', 'No write permission in ' + '/vnmr/asm')
+  abort
+endif
+
+write('reset',$file)
+$sample=1
+if (traymax=1) then
+  $label= 'PEAK#: '
+  $maxpeaks=96
+else
+  $label= 'SAMPLE#: '
+  $maxpeaks=traymax
+endif
+repeat
+ $string=''
+ format($sample,0,0):$string
+ write('file',$file,$label+$string)
+ if traymax=96 then
+   write('file',$file,'RACK: 1')
+   write('file',$file,'ZONE: 1')
+ endif
+ write('file',$file,'USER: auto')
+ write('file',$file,'MACRO: autoscout')
+ write('file',$file,'SOLVENT: D2O')
+ write('file',$file,'TEXT: ')
+ write('file',$file,'USERDIR: '+userdir)
+ write('file',$file,'DATA: ')
+ write('file',$file,'STATUS: Queued')
+ write('file',$file,'--------------------------------------------------')
+ $sample=$sample+1
+until $sample>$maxpeaks

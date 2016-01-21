@@ -1,0 +1,193 @@
+"macro AT19"
+"AT19" "Modulator test-high power  " 
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Modulator Test -high power') 
+   at_currenttest='mod_array_ch1' 
+    tpwr=at_tpwrLowpower pw90=at_pw90Lowpower pw(10)
+    array('tpwrf',102,0,40)
+    if (sfrq<500) then nt=4 endif
+    ph f vp=0
+
+    wnt='AT19(`WNT`)' 
+    wexp='AT19(`PART1`)' 
+
+    ATcycle
+    au
+    write('line3','Modulator Test ')
+    dps
+
+elseif ($1='WNT') then
+  ATwft
+  f peak:$ht,$frq
+  wp=2p sp=$frq-1p
+  lvl=0 tlt=0
+  if(celem>1) then
+    select(celem) aph0:$ht
+  endif
+  peak:$ht
+  if $ht<0 then rp=-rp endif
+  vsadj(150) dssh dtext
+elseif ($1='PART1') then
+   wft
+   
+   $count1=arraydim-10
+   $ok = 0
+   while ((not $ok) and ($count1<arraydim)) do
+     select($count1) aph:$ok
+     $count1= $count1 + 1
+   endwhile
+   $count1=arraydim-15
+   $rpsum=0 $count2=1
+   repeat
+    select($count1)
+    aph0:$ok
+    if ($ok) then
+       $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+       $count2=$count2+1
+    endif
+    $count1=$count1+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   dssh('dodc') dtext
+   ATsvf
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    at_currenttest='mod_array_ch1_1'
+    ATpage
+   endif
+   ATrecord('MOD1','Modulator Test','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Linearity: tpwr=%2.0f  ) - Standard Deviation:  %1.3f',tpwr,$dev)
+   "calculate a new pw based on the pw90 at 20dB down"
+   $diff=tpwr-(-16)
+   $factorsoften=trunc($diff/20)
+   pw90=10*$factorsoften*at_pw90*(at_pw90Lowpower/at_pw90)*10
+   pw(20)
+   atext('   \\rf attenuator set at 79 db attenuation\\rf modulator run over full range\\producing 139db of attenuation for spectrum #1')
+   tpwr=-16 dn='C13'
+   text('Modulator Test -reduced power') 
+   at_currenttest='mod_array2_ch1'
+   vp=0
+   wnt='AT19(`WNT`)' 
+   wexp='AT19(`PART2`)'
+   ATcycle au
+   write('line3','Modulator Test-reduced power ')
+   dps
+
+elseif ($1='PART2') then
+   wft
+
+   $count1=arraydim-10
+   $ok = 0
+   while ((not $ok) and ($count1<arraydim)) do
+     select($count1) aph:$ok
+     $count1= $count1 + 1
+   endwhile
+   $count1=arraydim-15
+   $rpsum=0 $count2=1
+   repeat
+    select($count1)
+    aph0:$ok
+    if ($ok) then
+       $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+       $count2=$count2+1
+    endif
+    $count1=$count1+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   dssh('dodc') dtext
+   ATsvf
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    at_currenttest='mod_array2_ch1_1'
+    ATpage
+   endif
+   ATrecord('MOD1LO','Modulator Test:low power range ','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Linearity: tpwr=%2.0f ) - Standard Deviation:  %1.3f',tpwr,$dev)
+
+   ATrtp('standard')
+   getlimit('tpwr'):$max,$min,$stepsize
+   if $stepsize=1.0 then ATnext return endif   "this test checks newest rf"
+   text('Modulator Test -fine power precision') 
+   at_currenttest='mod_array_fine_ch1' 
+   pw=at_pw90*20
+   array('tpwrf',100,0,0.25)
+   if (sfrq<500) then nt=4 endif
+   ph f vp=0
+
+    wnt='AT19(`WNT`)' 
+    wexp='AT19(`PART3`)' 
+
+    ATcycle
+    au
+    write('line3','Modulator precision Test ')
+    dps
+
+elseif ($1='PART3') then
+   wft
+   s1 
+   $count=1
+   repeat
+    select($count) dc $count=$count+1 
+   until $count>arraydim
+   r1
+   $count1=arraydim-10
+   $ok = 0
+   while ((not $ok) and ($count1<arraydim)) do
+     select($count1) aph:$ok
+     $count1= $count1 + 1
+   endwhile
+   $count1=arraydim-15
+   $rpsum=0 $count2=1
+   repeat
+    select($count1)
+    aph0:$ok
+    if ($ok) then
+       $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+       $count2=$count2+1
+    endif
+    $count1=$count1+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   dssh('dodc') dtext
+   ATsvf
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    at_currenttest='mod_array_fine_ch1_1' 
+    ATpage
+   endif
+   ATrecord('MODPRECISION','Modulator Precision Test','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Precision: tpwr=%2.0f  ) - Standard Deviation:  %1.3f',tpwr,$dev)
+   ATnext
+endif

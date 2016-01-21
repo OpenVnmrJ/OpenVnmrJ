@@ -1,0 +1,68 @@
+"macro decctool_save"
+clear
+$filename=''
+$filename=$1
+/* length($filename):$l
+/* $i=1 $j=$l+10
+/* $chr=''
+/* while ($i<=$l) do
+/*    substr($filename,$i,1):$chr
+/*    if ($chr='.') then $j=$i endif
+/*    $i=$i+1
+/* endwhile
+/* if ($j<=$l) then
+/*    substr($filename,1,$j-1):$filename
+/* endif
+/* $version=1
+/* if ($j<$l) then
+/*    substr($1,$j+1,$l):$version
+/* endif
+
+/* $i=$version
+/* $cnt=''
+/* $tstfile=systemdir+'/imaging/decclib/'+$filename+'.'
+/* repeat
+/*   format($i,1,0):$cnt
+/*   exists($tstfile+$cnt,'file'):$e
+/*   $i=$i+1
+/* until ($e<0.5)
+/* 
+/* $filename=$tstfile+$cnt
+/* */
+$filename=systemdir+'/imaging/decclib/'+$filename
+write('line3','Saving to file `%s`',$filename)
+write('reset',$filename)
+write('file',$filename,'filename\t\t%s',$1)
+shell('date'):$date
+write('file',$filename,'date\t%s',$date)
+
+$terms='xx','yx','zx','xy','yy','zy','xz','yz','zz','xb0','yb0','zb0','b0b0'
+$nterms=6,3,3,3,6,3,3,3,6,4,4,4,4
+
+$i=1 $j=1 $k=0
+while ($j<14) do
+   $str='' $tmp=''
+   $k=$k+$nterms[$j]
+   while ( $i <= $k ) do
+      if (enabled[$i]='n') then $str=$str+'*' endif
+      if (taus[$i]<0.000001) then
+         $tmp='0'
+      else
+         format(taus[$i]/1000.0,5,6):$tmp
+      endif
+      $str=$str+$tmp
+      format(ampls[$i]/100.0,5,5):$tmp
+      $str=$str+' '+$tmp+'\t'
+      $i=$i+1
+   endwhile
+   write('file',$filename,'%s\t%s',$terms[$j],$str)
+   $j=$j+1
+endwhile
+
+write('file',$filename,'eccscale\t%f\t%f\t%f\t%f',scales[1],scales[2],scales[3],scales[4])
+write('file',$filename,'shimscale\t%f\t%f\t%f',scales[5],scales[6],scales[7])
+write('file',$filename,'totalscale\t%f\t%f\t%f',scales[8],scales[9],scales[10])
+
+write('file',$filename,'slewlimit\t%g\t%g\t%g\t%g',limits[1],limits[2],limits[3],limits[4])
+write('file',$filename,'dutylimit\t%f\t%f\t%f\t%f',limits[5],limits[6],limits[7],limits[8])
+

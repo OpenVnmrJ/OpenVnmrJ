@@ -1,0 +1,36 @@
+"macro rna_auto1d4"
+
+ssfilter=100 wft f full select(1)
+lp=0 ph BPaph0
+setref wc=.7*wc vp=0 vo=60 ho=0 
+sp=0p wp=10p
+vsadj(60)
+ds pl pscale pap dscale
+lp=0 rp=0 $count=2
+repeat
+ select($count) BPaph0
+ peak:$int if $int<0 then rp=rp+180 endif
+ vp=vp+vo
+ dssn($count,$count) pl($count) 
+ $count=$count+1
+until $count>3
+vp=0
+write('graphics',80,vp+10,'All Carbons')
+write('graphics',80,vp+10+vo,'Ribose Carbons Only')
+write('graphics',80,vp+10+2.0*vo,'Aromatic Carbons Only')
+write('plotter',180,vp+10,'All Carbons')
+write('plotter',180,vp+10+vo,'Ribose Carbons Only')
+write('plotter',180,vp+10+2.0*vo,'Aromatic Carbons Only')
+BPpage
+$gain=gain
+BPsvf(userdir+'/AutoRNA_1D/rna_gChsqc_1Ds')
+
+rna_gNhsqc
+gain=$gain
+d1=.4,1,2.1 nt=16,8,4 array='(d1,nt)'
+full ssfilter=300
+wexp='rna_auto1d5'
+wnt='wft setref BPaph0 vsadj'
+sw=22*sfrq np=1024 
+ss=4 ni=0 phase=1
+au

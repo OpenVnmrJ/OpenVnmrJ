@@ -1,0 +1,37 @@
+"macro Augmapz0"
+"********************************************************"
+"Augmapz0 -	Automatic lk gradient mapping            "
+"		and z0 hz-to-dac calibration		 "
+"********************************************************"
+
+$gradtype=gradtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then is_postvj22b:$e endif
+if ($e) then $gradtype=tmpgradtype endif
+
+if ($# < 2) then 
+ if ($gradtype='nnh') then $2='hs' else $2 = 'lk' endif
+endif
+
+getProbePath(probe,'alert'):$e,$ppath,$rw
+if ($rw=0) then return endif
+
+//updateprobe(probe)
+cleanexp
+if $gradtype='nnh' then $nuc='hs' else $nuc='lk' endif
+PROTON('D2O')
+explist='findz0'
+Autocalpar
+wexp='Augmap(0,\''+$2+'\')' wnt='' werr=''
+pw=pw90
+macro=$0 seqfil='s2pul' at=1 lb=1 
+if (spintype<>'tach') then spin=0 endif
+alock='n' wshim='n'
+wstart='alock=\'n\' wshim=\'n\''
+if (dsp <> 'n') then oversamp=1 endif
+nt=1 clear(2) d1=1 wbs='' gain='n' ss=1 
+if (Console = 'mercury') then gain=0 else gain=20 endif
+
+intmod='off' pltmod='off'
+dg
+banner('Use Doped D2O sample\\ \\Set z0 exactly on-resonance\\ before starting acquisition')

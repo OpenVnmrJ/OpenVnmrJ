@@ -1,0 +1,424 @@
+"macro BPgetrefs"
+"BPgetrefs-macro to output nuclear reference values"
+" that are the referenced shift values for the center(s) of indirect dimension(s)"
+" format of value is (nuc)ref(f#) where nuc=h1,c13, or n15; f#=f1,f2 or f3 as indirect dimensions"
+"center frequency chemical shifts in ppm are stored in (nuc)ref(f#)"
+
+"initialize new variables"
+$h1reff1=0.0 $h1reff2=0.0 $h1reff3=0.0
+$c13reff1=0.0 $c13reff2=0.0 $c13reff3=0.0
+$n15reff1=0.0 $n15reff2=0.0 $n15reff3=0.0
+
+exists('ni','parameter'):$2D
+exists('ni2','parameter'):$3D
+exists('ni3','parameter'):$4D
+
+"get dimension parameter to find out the nuclei for the indirect dimension(s)"
+"dimension parameter ends with detected nucleus (final dimension)"
+
+$t1nuc='' $t2nuc='' $t3nuc='' $t4nuc='' 
+substr(dimension,'wc'):$num_dimensions
+substr(dimension,1):$t1nuc
+
+reffrq=sfrq "This covers the case of a 1D spectrum using 2D/3D/4D sequence"
+
+if $num_dimensions=2 then 
+ substr(dimension,2):$t2nuc 
+ if $t2nuc='H1'  then 
+  if $t1nuc='H1'  then reffrq1=sfrq endif
+  if $t1nuc='C13' then reffrq1=dfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+ endif
+ if $t2nuc='C13' then 
+  if $t1nuc='H1'  then reffrq1=dfrq endif
+  if $t1nuc='C13' then reffrq1=sfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+ endif
+ if $t2nuc='N15' then 
+  if $t1nuc='H1'  then reffrq1=dfrq endif
+  if $t1nuc='C13' then reffrq1=dfrq2 endif
+  if $t1nuc='N15' then reffrq1=sfrq endif
+ endif
+endif
+
+if $num_dimensions=3 then 
+ substr(dimension,2):$t2nuc 
+ substr(dimension,3):$t3nuc 
+ if $t3nuc='H1'  then 
+  if $t1nuc='H1'  then reffrq1=sfrq endif
+  if $t1nuc='C13' then reffrq1=dfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+  if $t2nuc='H1'  then reffrq2=sfrq endif
+  if $t2nuc='C13' then reffrq2=dfrq endif
+  if $t2nuc='N15' then reffrq2=dfrq2 endif
+ endif
+ if $t3nuc='C13' then 
+  if $t1nuc='H1'  then reffrq1=dfrq endif
+  if $t1nuc='C13' then reffrq1=sfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+  if $t2nuc='H1'  then reffrq2=dfrq endif
+  if $t2nuc='C13' then reffrq2=sfrq endif
+  if $t2nuc='N15' then reffrq2=dfrq2 endif
+ endif
+ if $t3nuc='N15' then 
+  if $t1nuc='H1'  then reffrq1=dfrq2 endif
+  if $t1nuc='C13' then reffrq1=dfrq endif
+  if $t1nuc='N15' then reffrq1=sfrq endif
+  if $t2nuc='H1'  then reffrq2=dfrq2 endif
+  if $t2nuc='C13' then reffrq2=dfrq endif
+  if $t2nuc='N15' then reffrq2=sfrq endif
+ endif
+endif
+if $num_dimensions=4 then 
+ substr(dimension,2):$t2nuc 
+ substr(dimension,3):$t3nuc 
+ substr(dimension,4):$t4nuc 
+ if $t4nuc='H1'  then 
+  if $t1nuc='H1'  then reffrq1=sfrq endif
+  if $t1nuc='C13' then reffrq1=dfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+  if $t2nuc='H1'  then reffrq2=sfrq endif
+  if $t2nuc='C13' then reffrq2=dfrq endif
+  if $t2nuc='N15' then reffrq2=dfrq2 endif
+  if $t3nuc='H1'  then reffrq3=sfrq endif
+  if $t3nuc='C13' then reffrq3=dfrq endif
+  if $t3nuc='N15' then reffrq3=dfrq2 endif
+ endif
+ if $t4nuc='C13' then 
+  if $t1nuc='H1'  then reffrq1=dfrq endif
+  if $t1nuc='C13' then reffrq1=sfrq endif
+  if $t1nuc='N15' then reffrq1=dfrq2 endif
+  if $t2nuc='H1'  then reffrq2=dfrq endif
+  if $t2nuc='C13' then reffrq2=sfrq endif
+  if $t2nuc='N15' then reffrq2=dfrq2 endif
+  if $t3nuc='H1'  then reffrq3=dfrq endif
+  if $t3nuc='C13' then reffrq3=sfrq endif
+  if $t3nuc='N15' then reffrq3=dfrq2 endif
+ endif
+ if $t3nuc='N15' then 
+  if $t1nuc='H1'  then reffrq1=dfrq2 endif
+  if $t1nuc='C13' then reffrq1=dfrq endif
+  if $t1nuc='N15' then reffrq1=sfrq endif
+  if $t2nuc='H1'  then reffrq2=dfrq2 endif
+  if $t2nuc='C13' then reffrq2=dfrq endif
+  if $t2nuc='N15' then reffrq2=sfrq endif
+  if $t3nuc='H1'  then reffrq3=dfrq2 endif
+  if $t3nuc='C13' then reffrq3=dfrq endif
+  if $t3nuc='N15' then reffrq3=sfrq endif
+ endif
+endif
+
+"calulate referenced positions from VnmrJ variables. Output is in ppm"
+if $2D then 
+ $f1centerppm=(0.5*sw1-rfl1+rfp1)/reffrq1
+ $f1centerppm=trunc(100.0*$f1centerppm)/100
+endif
+if $3D then 
+ $f1centerppm=(0.5*sw1-rfl1+rfp1)/reffrq1 
+ $f2centerppm=(0.5*sw2-rfl2+rfp2)/reffrq2 
+ $f1centerppm=trunc(100.0*$f1centerppm)/100
+ $f2centerppm=trunc(100.0*$f2centerppm)/100
+endif
+if $4D then 
+   if reffrq3<>0 then
+    $f1centerppm=(0.5*sw1-rfl1+rfp1)/reffrq1 
+    $f2centerppm=(0.5*sw2-rfl2+rfp2)/reffrq2 
+    $f3centerppm=(0.5*sw3-rfl3+rfp3)/reffrq3 
+    $f1centerppm=trunc(100.0*$f1centerppm)/100
+    $f2centerppm=trunc(100.0*$f2centerppm)/100
+    $f3centerppm=trunc(100.0*$f3centerppm)/100
+   endif
+endif
+
+
+$obscenterppm=(0.5*sw-rfl+rfp)/reffrq 
+
+"update defaults for $(nuc)ref(f#) variables depending on value of dimension"
+if $2D then
+ if $t1nuc='C13' then $c13reff1=$f1centerppm endif
+ if $t1nuc='N15' then $n15reff1=$f1centerppm endif
+ if $t1nuc='H1'  then $h1reff1=$f1centerppm endif
+endif
+if $3D then
+ if $t1nuc='C13' then $c13reff1=$f1centerppm endif
+ if $t1nuc='N15' then $n15reff1=$f1centerppm endif
+ if $t1nuc='H1' then $h1reff1=$f1centerppm endif
+ if $t2nuc='H1' then $h1reff2=$f2centerppm endif
+ if $t2nuc='C13' then $c13reff2=$f2centerppm endif
+ if $t2nuc='N15' then $n15reff2=$f2centerppm endif
+endif
+if $4D then
+ if $t1nuc='C13' then $c13reff1=$f1centerppm endif
+ if $t1nuc='N15' then $n15reff1=$f1centerppm endif
+ if $t1nuc='H1'  then $h1reff1=$f1centerppm endif
+ if $t2nuc='H1'  then $h1reff2=$f2centerppm endif
+ if $t2nuc='C13' then $c13reff2=$f2centerppm endif
+ if $t2nuc='N15' then $n15reff2=$f2centerppm endif
+ if $t3nuc='H1'  then $h1reff3=$f3centerppm endif
+ if $t3nuc='C13' then $c13reff3=$f3centerppm endif
+ if $t3nuc='N15' then $n15reff3=$f3centerppm endif
+endif
+
+"change values for $(nuc)ref(f#) depending on seqfil (those cases where offsets have changed)"
+if (seqfil='ghc_co_nhP' or seqfil='ghn_cacbP' or seqfil='ghn_cacb' or seqfil='gcbca_co_nhP' or seqfil='gcbca_nhP' or seqfil='ghc_co_nhP' or seqfil='ghn_cacbCTP') then 
+  $c13reff1=46
+endif
+
+if (seqfil='CTgChmqc' or seqfil='gChmqc' or seqfil='gChsqc' or seqfil='gChsqcP' or seqfil='gChsqcA') then
+  if allC='y' then $c13reff1=70 endif
+  if arom='y' then $c13reff1=125 endif
+  if alphaC='y' then $c13reff1=56 endif
+  exists('aliph','parameter'):$e
+  if $e=1 then
+   if aliph='y' then $c13reff1=35 endif
+  endif
+endif
+ 
+if (seqfil='gnoesyChsqc' or seqfil='gnoesyChsqcSE' or seqfil='gnoesyChsqcA' or seqfil='gCNfilnoesyChsqcSE') then
+  if arom='y' then $c13reff2=125 endif
+  exists('aliph','parameter'):$e
+  if $e=1 then
+   if aliph='y' then $c13reff2=43 endif
+   if seqfil='gCNfilnoesyChsqcSE' then $c13reff2=43 endif
+  endif
+endif
+ 
+if (seqfil='PR42_gChmqcnoesyNhsqcA') then
+  $h1reff1=4.7-(tof-tofali)/sfrq
+endif
+if (seqfil='CN4Dnoesy_trosyA') then
+  $h1reff1=4.7-(tof-tof_me)/sfrq
+endif
+if (seqfil='gChmqcnoesyNhsqc' or seqfil='gChmqcnoesyNhsqcA') then
+  $h1reff1=4.7-(tof-tofh)/sfrq
+endif
+if (seqfil='gcacb_tocsy_cmhmA' or seqfil='gcacb_tocsy_cmhm_sqA') then
+  $c13reff1=34 $c13reff2=19
+endif
+if (seqfil='hmcmcbcaA' or seqfil='hmcmcgcbcaA' or seqfil='hmcmcgcbcacoA') 
+ then
+  $c13reff1=40 $c13reff2=20 
+endif
+if (seqfil='gnoesyChsqcA' or seqfil='gnoesyChsqc' or seqfil='gCNfilnoesyChsqcA') then
+  if arom='y' then $c13reff2=125 else $c13reff2=43 endif
+endif
+if (seqfil='ghncn' or seqfil='ghncnA' or seqfil='ghncaco_trosy_3DA' or seqfil='ghn_ca_coNLS' or seqfil='ghn_ca_co' or seqfil='ghn_ca_coA' ) then $c13reff1=174 endif
+if (seqfil='ghca_co_canh' or seqfil='ghca_co_n' or seqfil='ghnca_coA' or seqfil='ghca_co') then $c13reff1=174 $c13reff2=56 endif
+if (seqfil='ghncaco_trosy_4DA') then $c13reff2=174 endif
+if (seqfil='ghncoca_sim_trosy_4DA' or seqfil='ghncoca_seq_trosy_4DA') then
+    $c13reff2=56
+endif
+if (seqfil='gnoesyChsqc_CNfil') then
+  $c13reff2=35-(dof-dof_t1)/dfrq
+endif
+if (seqfil='hbcbcacocahaA') then
+  $c13reff1=43 $c13reff2=56
+endif
+if (seqfil='hbcbcaconnhA') then
+  $c13reff1=43
+endif
+if (seqfil='ghcch_tocsy_cmhm1') then
+  $c13reff2=19
+endif
+if (seqfil='ghcch_tocsy_cmhm1') then
+  $c13reff2=19
+endif
+if (seqfil='ghcch_tocsy_cmhm1' or seqfil='ghcch_tocsy_cmhm2' or seqfil='ghcch_tocsy_cmhm3' or seqfil='ghcch_tocsy_cmhm4') then
+  $c13reff2=38 $c13reff3=19
+endif
+
+if (seqfil='rna_gCtrosy' or seqfil='rna_gCtrosyA' or seqfil='rna_gChsqc_CCdec' or seqfil='rna_CTgChmqcA' or seqfil='rna_CTgChmqc' or seqfil='rna_gChmqc' or seqfil='rna_gChsqcA' or seqfil='rna_gChsqc') then
+  if ribose='y' then $c13reff1=85 endif
+  if aromatic='y' then $c13reff1=145 endif
+  exists('aliph','parameter'):$e
+  if $e=1 then
+   if aliph='y' then $c13reff1=35 endif
+  endif
+endif
+if (seqfil='rna_ghcch_tocsy' or seqfil='rna_hmqc_tocsy') then $c13reff1=80 endif 
+if (seqfil='gnoesyChsqc_wg') then
+  if aliph='y' then $c13reff2=35 endif
+  if allC='y' then $c13reff2=70 endif
+  if arom='y' then $c13reff2=125 endif
+endif
+if (seqfil='rna_gnoesyChsqcA') then
+  if aliph='y' then $c13reff2=86 else $c13reff2=125 endif
+endif
+if (seqfil='rna_gnoesyChsqc') then
+  if arom='y' then $c13reff2=125 else $c13reff2=43 endif
+endif
+if (seqfil='rna_hcch_tocsy') then
+  if ribose='y' then $c13reff2=80 else $h1reff1=7.2 $c13reff2=145 endif
+endif
+if (seqfil='rna_ghcch_cosy' or seqfil='rna_ghcch_cosyA') then
+  if ribose='y' then $c13reff2=80 else $c13reff2=120 endif
+endif
+if (seqfil='rna_HCN') then
+  if AROonly='y' then $c13reff2=135 
+   elseif RIBonly='y' then $c13reff2=90
+   else $c13reff2=115
+  endif
+  $n15reff1=155
+endif
+if (seqfil='rna_HNNcosy' or seqfil='rna_HNNcosyA') then
+   $n15reff1=190
+endif
+if (seqfil='rna_mqHCN' or seqfil='rna_mqHCNA') then
+   $c13reff1=115 $n15reff2=155
+endif
+if (seqfil='rna_HCP') then $c13reff2=75 endif
+if (seqfil='rna_gnoesyChsqc_CCdec') then
+  if ribose='y' then $c13reff2=80 endif
+  if arom='y' then $c13reff2=115 endif
+  if Both='y' then $c13reff2=116 endif
+  $h1reff1=6
+endif
+if (seqfil='rna_cchcosy_CCdec') then 
+  $c13reff1=75 $c13reff2=57.5
+endif
+if (seqfil='rna_cchtocsy_CCdec') then 
+  $c13reff1=80 $c13reff2=92.5
+endif
+if (seqfil='rna_11noesy') then
+  if (tof1<>tof) then $h1reff1=4.7-(tof-tof1)/sfrq endif
+endif
+if (seqfil='rna_Ahnctocsych') then
+  $h1reff1=4.7-(tof-tof_75)/sfrq
+  $n15ref=81
+endif
+if (seqfil='rna_gNhmqc' or seqfil='rna_gNhsqc' or seqfil='rna_gNhsqcA' or seqfil='rna_CPMGgNhsqc' or seqfil='rna_gnoesyNhsqc' or seqfil='rna_gnoesyNhsqcA') then
+  if imino='y' then $n15reff1=155 endif
+  if amino='y' then $n15reff1=85 endif
+endif
+if (seqfil='rna_gnoesyNhsqc' or seqfil='rna_gnoesyNhsqcA') then
+  if imino='y' then $n15reff2=155 endif
+  if amino='y' then $n15reff2=85 endif
+endif
+if (seqfil='rna_CPMGnoesy') then
+  $n15reff1=85
+endif
+if (seqfil='rna_CUhnccch') then
+  if URA='y' then $h1reff1=12 endif
+  if CYT='y' then $h1reff1=7.5 endif
+endif
+if (seqfil='rna_CUhnccch_CCdec') then
+  if C6='y' then $c13reff1=141 endif
+  if (URA='y' and C5='y') then $c13reff1=104 endif
+  if (URA='y') then $n15reff2=160 endif
+  if (CYT='y' and C5='y') then $c13reff1=98 endif
+endif
+if (seqfil='rna_Ghnctocsych') then
+   $h1reff1=12
+endif
+
+if (seqfil='best_hncocacbP') then $c13reff1=46 endif
+if (seqfil='best_hncacbP') then $c13reff1=46 endif
+if (seqfil='best_ihncacbP') then $c13reff1=46 endif
+if (seqfil='gcbca_co_nhP') then $c13reff1=46 endif
+if (seqfil='gcbca_nhP') then $c13reff1=46 endif
+if (seqfil='gc_co_nhP') then $c13reff1=46 endif
+if (seqfil='ghc_co_nhP') then $c13reff1=46 endif
+if (seqfil='ghn_cacbCTP') then $c13reff1=46 endif
+if (seqfil='ghncacb_intraP') then $c13reff1=46 endif
+if (seqfil='PR42_ghncacbP') then $c13reff1=46 endif
+if (seqfil='PR42_ghncacbP_TROSY') then $c13reff1=46 endif
+if (seqfil='ghn_cacbP') then $c13reff1=46 endif
+if (seqfil='best_ihncaP') then $c13reff1=56 endif
+if (seqfil='best_hncaP') then $c13reff1=56 endif
+if (seqfil='best_hncocaP') then $c13reff1=56 endif
+if (seqfil='ghnca_intraP') then $c13reff1=56 endif
+if (seqfil='ghn_caP') then $c13reff1=56 endif
+if (seqfil='ghn_co_caP') then $c13reff1=56 endif
+if (seqfil='PR42_ghn_co_caP') then $c13reff1=56 $c13reff2=174 endif
+if (seqfil='PR42_gha_caco_nhP') then $c13reff2=56 endif
+if (seqfil='PR42_ghacanhP') then $c13reff2=56 endif
+if (seqfil='PR42_ghn_ca_coP') then $c13reff1=56 $c13reff2=174 endif
+if (seqfil='PR42_ghn_ca_coP_TROSY') then $c13reff1=56 $c13reff2=174 endif
+if (seqfil='PR42_ghn_coca_cbP') then $c13reff1=46 $c13reff2=56 endif
+if (seqfil='PR42_ghn_coca_cbP_TROSY') then $c13reff1=46 $c13reff2=56 endif
+if (seqfil='PR42_intra_ghncacbP_TROSY') then $c13reff1=46 $c13reff2=46 endif
+if (seqfil='PR42_sim_ghnco_caP') then $c13reff1=174 $c13reff2=56 endif
+if (seqfil='PR43_ghc_co_nhP' or seqfil='PR43_intra_gc_c_nhP') then
+  $h1reff1=4.7-(tof-(tof-Hali_offset))/sfrq
+  $c13reff2=43
+endif
+if (seqfil='PR42_sim_ghnco_caP_TROSY') then $c13reff1=174 $c13reff2=56 endif
+$obscenterppm=trunc(1000*$obscenterppm)/1000
+if $num_dimensions=1 then return($obscenterppm) endif
+
+
+exists('h1reff1','parameter','current'):$e
+if $e=0 then create('h1reff1','real','current') endif
+exists('h1reff2','parameter','current'):$e
+if $e=0 then create('h1reff2','real','current') endif
+exists('h1reff3','parameter','current'):$e
+if $e=0 then create('h1reff3','real','current') endif
+exists('c13reff1','parameter','current'):$e
+if $e=0 then create('c13reff1','real','current')  endif
+exists('c13reff2','parameter','current'):$e
+if $e=0 then create('c13reff2','real','current')  endif
+exists('c13reff3','parameter','current'):$e
+if $e=0 then create('c13reff3','real','current')  endif
+exists('n15reff1','parameter','current'):$e
+if $e=0 then create('n15reff1','real','current') endif
+exists('n15reff2','parameter','current'):$e
+if $e=0 then create('n15reff2','real','current')  endif
+exists('n15reff3','parameter','current'):$e
+if $e=0 then create('n15reff3','real','current') 
+endif
+exists('obscenterppm','parameter','current'):$e
+if $e=0 then create('obscenterppm','real','current')
+endif
+
+"Set all values into curpar variables"
+ setvalue('obscenterppm',$obscenterppm,'current')
+ setvalue('n15reff3',$n15reff3,'current')
+ setvalue('h1reff1',$h1reff1,'current')
+ setvalue('n15reff2',$n15reff2,'current')
+ setvalue('n15reff1',$n15reff1,'current')
+ setvalue('c13reff3',$c13reff3,'current')
+ setvalue('c13reff2',$c13reff2,'current')
+ setvalue('c13reff1',$c13reff1,'current')
+ setvalue('h1reff3',$h1reff3,'current')
+ setvalue('h1reff2',$h1reff2,'current')
+ setvalue('h1reff1',$h1reff1,'current')
+  
+
+
+exists('h1reff1','parameter','processed'):$e
+if $e=0 then create('h1reff1','real','processed') endif
+exists('h1reff2','parameter','processed'):$e
+if $e=0 then create('h1reff2','real','processed') endif
+exists('h1reff3','parameter','processed'):$e
+if $e=0 then create('h1reff3','real','processed') endif
+exists('c13reff1','parameter','processed'):$e
+if $e=0 then create('c13reff1','real','processed')  endif
+exists('c13reff2','parameter','processed'):$e
+if $e=0 then create('c13reff2','real','processed')  endif
+exists('c13reff3','parameter','processed'):$e
+if $e=0 then create('c13reff3','real','processed')  endif
+exists('n15reff1','parameter','processed'):$e
+if $e=0 then create('n15reff1','real','processed') endif
+exists('n15reff2','parameter','processed'):$e
+if $e=0 then create('n15reff2','real','processed')  endif
+exists('n15reff3','parameter','processed'):$e
+if $e=0 then create('n15reff3','real','processed') 
+endif
+exists('obscenterppm','parameter','processed'):$e
+if $e=0 then create('obscenterppm','real','processed')
+endif
+
+"Set all values into procpar variables"
+ setvalue('obscenterppm',$obscenterppm,'processed')
+ setvalue('n15reff3',$n15reff3,'processed')
+ setvalue('h1reff1',$h1reff1,'processed')
+ setvalue('n15reff2',$n15reff2,'processed')
+ setvalue('n15reff1',$n15reff1,'processed')
+ setvalue('c13reff3',$c13reff3,'processed')
+ setvalue('c13reff2',$c13reff2,'processed')
+ setvalue('c13reff1',$c13reff1,'processed')
+ setvalue('h1reff3',$h1reff3,'processed')
+ setvalue('h1reff2',$h1reff2,'processed')
+ setvalue('h1reff1',$h1reff1,'processed')
+  
+"Now center frequency chemical shifts in ppm are stored in (nuc)reff(#)"

@@ -1,0 +1,337 @@
+"macro psMain"
+// This is the controlling macro to go through requested prescans based
+// on prescanInfo file and prescan parameters.
+// 
+// psMain to run prescan based on default file prescanInfo. 
+// psMain($path) to run prescans based a given file.
+// psMain('init') to start prescans from beginning.
+// psMain('next') move to next prescan $psX
+// psMain('continue', $psX) to start prescan of given macro $psX
+// psMain('continue') to start current prescan $psX in auto mode by calling $psX('init'):$ret
+// psMain('wexp') to call $psX('exp'):$ret 
+// psMain('werr') to call $psX('err'):$ret if error is registered by $psX,
+//	otherwise call psMain('abort') if fatal, or call psMain('next') to do next prescan. 
+// psMain('proc',$ret) to process $psX return values.
+// psMain('abort') to restore parameters and end prescans.
+// psMain('done') to update parameters and end prescans.
+// psMain('stop') to pause current prescan psX.
+// psMain($psX) to run the given prescan macro as stand alone.
+// 
+if ($# = 0) then
+  exec($0+`('setup')`)
+  $action='start'
+else
+  $action = $1
+endif
+$debug=0  // set this to 1 for messages
+
+if ($action = 'start') then
+   // record start time
+   psCmd('time','start')
+   // start or continue prescan
+   exec($0+`('next')`)
+   psCmd('get','retValue'):$ret
+   if ($ret='psAcquiring') then
+     psCmd('psPath'):$path
+     writeparam($path+'/clipboard','psclipboard','global','add')
+     shell('chmod 666 '+$path+'/clipboard'):$e
+   endif
+   return($ret)
+
+elseif ($action = 'setup') then
+
+   // create parameters and set to default if needed
+   psCmd('createPars')
+
+   // Initialize psclipboard. Note, the first thing to do is to set infoPath. 
+   psCmd('reset') 
+   if($# > 1) then
+      psCmd('psInfoPath',$2):$path 
+   else
+      psCmd('psInfoPath'):$path 
+   endif
+   psCmd('set','infoPath',$path)
+
+   psCmd('setPrescans')
+
+   // Save current parameters. 
+   psCmd('svp')
+
+
+elseif ($action = 'next') then
+   psCmd('next'):$psX
+   if ($psX = '') then
+      exec($0+`('done')`)
+      psCmd('set','retValue','psDone')
+      return
+   endif
+
+   psCmd('rtp','current')
+   exists('explist','parameter'):$e
+   if ($e) then pauselock(explist[1]) endif
+   psCmd('resetX') 
+   psCmd('set','macro',$psX)
+   if ($debug) then
+     psCmd('get','label'):$label
+     write('line3','Start prescan "%s".',$label)
+   endif
+   exec($psX+`('init'):$ret`)
+   exec($0+`('proc','`+$ret+`')`)
+
+elseif ($action = 'wexp') then
+   psCmd('psPath'):$path
+   fread($path+'/clipboard','global')
+   psCmd('get','macro'):$psX
+   exec($psX+`('exp'):$ret`)
+   if (auto='y') and ($ret='done') then
+     psCmd('get','label'):$label
+     eventLog('PreScan',$label + ' '+$ret)
+   endif
+   exec($0+`('proc','`+$ret+`')`)
+   writeparam($path+'/clipboard','psclipboard','global','add')
+   shell('chmod 666 '+$path+'/clipboard'):$e
+
+elseif ($action = 'werr') then
+   psCmd('psPath'):$path
+   fread($path+'/clipboard','global')
+   if ($debug) then
+     geterror(acqstatus[2]):$str
+     write('line3',$str)
+   endif
+
+   psCmd('psError'):$e // $e=1 if acqstatus[2] is registered by psX
+   if($e > 0) then
+
+// psX('err') may set error stat then return '', so error can be handled when wexp calls psX('exp')
+// or psX('err') may return a sandard return value
+// If shimabort is returned,  aborted acquisition will return here and do the exec line instead of the if clause
+
+      psCmd('get','macro'):$psX
+      exec($psX+`('err'):$ret`)
+      if ($ret='shimabort') then
+        return
+      endif
+      if (auto='y') and ($ret='done') then
+        psCmd('get','label'):$label
+        eventLog('PreScan',$label + ' '+$ret)
+      endif
+      exec($0+`('proc','`+$ret+`')`)
+
+   else
+
+// determine if error is fatal
+// abort prescan and experiment if it is fatal
+// if not fatal continue
+
+      $str=''
+      cpreact:$str  // might return abort, next, or nothing
+      if($str = 'abort') then
+         exec($0+`('abort')`)
+         psCmd('set','retValue','psAbort')
+      elseif ($str = 'next') then
+         exec($0+`('next')`)
+      endif
+
+   endif 
+   writeparam($path+'/clipboard','psclipboard','global','add')
+   shell('chmod 666 '+$path+'/clipboard'):$e
+
+elseif ($action = 'proc' and $# > 1) then
+   $ret=$2
+   psCmd('get','label'):$label
+   if (auto='y') then
+     if ($ret='doau') then
+       eventLog('PreScan',$label + ' Start')
+     endif
+   endif
+   if($ret = 'doau') then
+      // do not set wbs and wnt here. they are set by psX('init') 
+      // set wexp=$0+`('wexp')` werr=$0+`('werr')`
+      if ($debug) then
+        write('line3','start acquisition for prescan "%s".',$label)
+      endif
+      wexp=$0+`('wexp')` werr=$0+`('werr')`
+      psCmd('get','auArgs'):$argList // update "current" parameters
+      if ($argList <> '') then
+        substr($argList,'wc'):$num
+        substr($argList,1):$args
+        $i = 1
+        while ($i < $num) do
+          $i = $i + 1
+          substr($argList,$i):$arg
+          $args = $args+'\',\''+$arg
+        endwhile
+        psCmd('get','nextflag'):$arg
+        if ($arg = 'next') then
+          $args = $args+'\',\''+$arg
+        else
+          psCmd('set','nextflag','next')  // add next to following prescans
+        endif
+        exec('au(\'' + $args + '\'):$res'):$e
+      else
+        au:$res
+      endif
+      if ($res = 0) then
+        psCmd('update') // update "current" parameters
+        exec($0+`('next')`)
+        return
+      endif
+      psCmd('set','retValue','psAcquiring')
+      sqLog('Prescan',$label)
+
+   elseif($ret = 'doatcmd') then
+      atcmd($0+`('wexp')`,1,'active','start')
+      psCmd('set','retValue','psAcquiring')
+
+   elseif($ret = 'done') then
+      if ($debug) then
+        psCmd('time','current'):$tt
+        write('line3','prescan "%s" complete. Total time %f (sec).',$label,$tt)
+      endif
+      psCmd('update') // update "current" parameters
+      exec($0+`('next')`)
+
+   elseif($ret = 'pause') then
+      if ($debug) then write('line3','pause prescan "%s".',$label) endif
+      exec($0+`('stop')`)
+      psCmd('set','retValue','psStop')
+
+   elseif($ret = 'quit') then
+      if ($debug) then
+        psCmd('time','current'):$tt
+        write('line3','quit prescan "%s". Total time %f (sec).',$label, $tt) 
+      endif
+      exec($0+`('next')`)
+
+   elseif($ret = 'abort') then
+      if ($debug) then write('line3','abort due to prescan "%s" failure.',$label) endif
+      exec($0+`('abort')`)
+      psCmd('set','retValue','psAbort')
+      
+
+   endif
+   
+elseif ($action = 'stop') then
+   psCmd('get','label'):$label
+   write('line3','Prescan "%s" stopped.',$label) 
+   write(`line3`,`Proceed manaully, then type psMain('next') to start next prescan.`)
+   write(`line3`,`or type psMain('continue') now to start "%s" automatically,`,$label)
+
+elseif ($action = 'abort') then
+//  bring back original parameters
+   psCmd('rtp','current')
+   if ($debug) then
+     psCmd('time','current'):$tt
+     write('line3','prescan aborted. Total time %f (sec).',$tt)
+   endif
+   psCmd('reset')
+
+elseif ($action = 'done') then
+//  bring back original parameters.
+//  update with new parameters from prescans.
+   psCmd('rtp','current')
+   if ($debug) then
+     psCmd('time','current'):$tt
+     write('line3','prescans complete. Total time %f (sec).',$tt)
+   endif
+   psCmd('get','afterPs'):$cmd
+   if ($cmd = 'acquire') then
+     psCmd('get','acqpause'):$delay
+     if ($delay > 0) then
+       systemtime:$t2
+       $t2 = $delay - $t2
+       if ($t2 > 1) then
+         if ($t2 > 15) then $t2 = 15 endif
+         $t2s=''
+         format($t2,0,0):$t2s
+         write('line3','Wait for %s sec. z0 settling time',$t2s)
+         shell('sleep '+$t2s):$e
+       endif
+     endif
+        "*******Check error conditions***************************************"
+        $error=''
+        if (wexp = 'AutoSKIP') then
+           $error='Queue Error'
+        endif
+        if ($error<>'') then
+           if (auto = 'y') then
+                emessage('error')
+                write('line3','SAMPLE#: %d  Error: %s',loc,$error)
+		eventLog('StudyError',$error)
+           else
+                write('error','')
+                $y=wc2max-50
+                write('graphics','red',20,wc2max-50,'Error: %s',$error):$ys
+                $y=$y-$ys
+                dtext(curexp+'/text',30,$y)
+           endif
+           sqLog('ExpError',$error)
+           return
+        endif
+        "*****Error conditions check done*********************************"
+
+     preau:$res
+     if ($res='shimming') then
+       au('wait','shimming')
+       psCmd('get','autoname'):autoname
+     else
+       psCmd('get','nextflag'):$arg
+       psCmd('reset')
+       if ($arg='next') then
+         au('next','wait')
+       else
+         au('wait')
+       endif
+     endif
+   else
+     psCmd('reset')
+     exec($cmd):$e
+   endif
+
+elseif ($action = 'acquireAfterPs') then
+   psCmd('psPath'):$path
+   fread($path+'/clipboard','global')
+   psCmd('set','afterPs','acquire')
+   writeparam($path+'/clipboard','psclipboard','global','add')
+   shell('chmod 666 '+$path+'/clipboard'):$e
+
+elseif ($action = 'execAfterPs') then
+  if ($# = 2) then
+    psCmd('psPath'):$path
+    fread($path+'/clipboard','global')
+    psCmd('set','afterPs',$2)
+    writeparam($path+'/clipboard','psclipboard','global','add')
+    shell('chmod 666 '+$path+'/clipboard'):$e
+  endif
+
+else // run a list of prescan macros
+// $1 is one or more prescan macros 
+// (a string with macro names separated by space)
+  expactive('current'):$active
+  if ($active>0) then
+    write('error','Acquisition is active')
+    return('done')
+  endif
+  expactive('auto'):$active2
+  if ($active2>0) then
+    write('error','Automation in progress')
+    return('done')
+  endif
+   
+   exec($0+`('setup')`)
+   psCmd('set','prescans',$1)
+   psCmd('set','labels','')
+
+   // record start time
+   psCmd('time','start')
+   // start or continue prescan
+   exec($0+`('next')`)
+   psCmd('get','retValue'):$ret
+   if ($ret='psAcquiring') then
+     psCmd('psPath'):$path
+     writeparam($path+'/clipboard','psclipboard','global','add')
+     shell('chmod 666 '+$path+'/clipboard'):$e
+   endif
+   return($ret)
+
+endif

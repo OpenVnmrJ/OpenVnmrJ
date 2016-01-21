@@ -1,0 +1,126 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+		<title>NMR Status | Tuning</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<link href="css/bootstrap.css" rel="stylesheet">
+		<link href="css/bootstrap-responsive.css" rel="stylesheet">
+		<link href="css/rsu.css" rel="stylesheet">
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"/>
+	
+		<style type="text/css" media="screen">
+			path {
+				stroke: #0085d5;
+				stroke-width: 2;
+				fill: none;
+			}
+		</style>
+    </head>
+
+    <body>
+
+    <!--[if lte IE 9]>
+    <div class="browser">
+    <p>The browser you are using does not support this site. It is best viewed in <strong>Google Chrome v.34</strong> or higher.</p>
+    <img class="logo" style="margin-top: 30px" src="img/agilent_logo.png">
+    </div
+    <![endif] -->
+
+    <!--[if !IE]> -->  
+  
+    <div class="navbar span12">
+    <div class="navbar-inner">
+    <div class="container">
+	<!-- Be sure to leave the brand out there if you want it shown -->
+    <ul class="nav">
+	<li><img src="img/agilent_logo.png" class="logo"></li>
+	<li class="brand hidden-phone">NMR Status</li>
+	<li class="divider-vertical hidden-phone"></li>
+	<li id="specName" class="hidden-phone"></li>
+	</ul>
+	<div class="container">
+	<form class="navbar-form pull-right">
+		<button class="btn btn-info" type="button" onclick="location.href='index.html'"><i class="icon-chevron-left"></i></button>
+		<button class="btn btn-info" onclick="location.href='tuning.html'" ><i class="icon-refresh"></i></button>
+	</form>
+	</div>
+    </div>
+    </div>
+    </div><!-- end navbar -->
+	
+	<div class="tuning span12"> 
+	<h5>Tuning Curve</h5>
+		<div class="tuning-buttons">
+<!-- 		<input type="button" id="TestButton" onclick=";test();" value="Test" class="btn btn-info"> --> 
+		</div>
+		<div id="vis">
+		</div>
+	</div>
+
+	<!-- scripts -->
+        <script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
+	    <script type="text/javascript" src="js/d3.min.js"></script>
+	    <script type="text/javascript" src="js/TuneWebClient.js"></script>
+	    <script type="text/javascript" src="js/ChartFunctions.js"></script>
+	    
+	    <script type="text/javascript">
+	        var numtimes = 0;
+	        
+	    	function startData() 
+	    	{
+		         d3.csv("spec1.10.csv", function (d) 
+		         {
+	            	for (var i = 0; i < d.length; i++)
+	    			{
+		    			d[i] = d[i].pwr;
+		   			}
+		            if (numtimes < 1) {
+			    		
+		                chartFunction(d,1);
+		            }
+		            else {
+		                updateChart(d,1);
+		            }
+		            numtimes += 1;
+		         });
+	    	}
+	    	
+	    	
+	    	function connect()
+	    	{
+	    		var hostIPAddress = "notConnected";
+	    		// **************************************  Set host IP Address
+	    		var ipstr = window.location.href;
+	    		if (ipstr.indexOf("http://") != -1)
+	    		{
+	    	    	var n=ipstr.split("/");
+	    	    	var address = n[2];
+	    	    	var m=address.split(":");
+	    	    	hostIPAddress = m[0];
+	    	    	
+	    		}
+
+	    		connectTuningServer(hostIPAddress);
+	    	}
+	    	connect();
+
+    		function test()
+    		{
+    		    handleError();
+    		}
+	    	
+	    	window.onbeforeunload = pageExit;
+	    	function pageExit()
+	    	{
+				stopRequest();
+    		};
+    		
+	    </script>
+    <!-- <![endif]-->
+    </body>
+    </html>

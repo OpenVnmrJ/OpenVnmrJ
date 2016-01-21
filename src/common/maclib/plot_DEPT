@@ -1,0 +1,172 @@
+"macro plot_DEPT"
+"*************************************************"
+" pldept - plot out dept data, edited or unedited "
+"*************************************************"
+$deptdim=deptdim
+$qsize=size('qphase')
+
+IF ($# < 2) THEN
+
+   if ($# < 1) then $1='' endif
+  exists('execplot','parameter'):$epex
+  if ($epex) then $execplot=execplot endif
+
+"***************************************************************************"
+		"If qphase has one value - go through standard plot routine"
+  $qsize=size('qphase')
+  if ($qsize < 2) then
+    if ($epex) then execplot='' endif
+    if $1='nopage' then
+	pldept('nopage')
+    else
+	pldept
+    endif
+    if ($epex) then execplot=$execplot endif
+    return
+  endif
+
+"***************************************************************************"
+		"If the processed dimension is quaternary carbons"
+		"  simply do plot1d"
+  if ($deptdim='Cq') then
+    if ($epex) then execplot='' endif
+    if $1='nopage' then
+	pl
+    else
+        plot1d
+    endif
+    if ($epex) then execplot=$execplot endif
+    setvalue('deptdim',$deptdim)
+    return
+  endif
+
+"***************************************************************************"
+		"If the processed dimension is Call (but not Ced)"
+		"  then mult size is less than 4 - do plarray"
+  if ($deptdim='Call') then
+    if ($epex) then execplot='' endif
+    if $1='nopage' then
+	pl('all')
+    else
+        plarray
+    endif
+    if ($epex) then execplot=$execplot endif
+    setvalue('deptdim',$deptdim)
+    return
+  endif
+
+"***************************************************************************"
+		"If the processed dimension is CHn, but the"
+		"  mult size is less than 4 - do plarray or plot1d"
+  $multdim=arraydim/$qsize
+  if ($deptdim='CHn') and ($multdim<4) then
+    if ($epex) then execplot='' endif
+    if ($multdim>1) then
+	if $1='nopage' then
+	    pl('all')
+	else
+	    plarray
+	endif
+    else
+	if $1='nopage' then
+	    pl
+	else
+	    plot1d
+	endif
+    endif
+    if ($epex) then execplot=$execplot endif
+    setvalue('deptdim',$deptdim)
+    return
+  endif
+
+"***************************************************************************"
+		" Now proceed.  This is an edited dept"
+
+$vs=vs
+        // Do all necessary adjustments befor executing the pldept
+        // with appropriate arguments
+         "find the largest peak in all spectra and adjust vs"
+    $ix=1
+    $lpeak=0                       "$lpeak=largest peak in any spectrum"
+    repeat                                 "check each spectrum"
+        select($ix)
+        peak:$peak
+        if $peak<0 then $peak=-$peak endif
+        if $peak>$lpeak then $lpeak=$peak endif
+        $ix=$ix+1
+    until $ix>$multdim
+    $vsize=wc2max/6
+    s(23)
+    $vs=vs
+    vs=($vsize/$lpeak)*vs
+    th=$vsize*0.4
+    vp=0
+    $wc=wc $sc=sc $vp=vp
+    full
+    vo=(wc2max-sc2 - vp -10)/$multdim
+    cutoff=vo-2,vo-2
+    vs=$vs
+
+	" look for CARBON 1D, use that instead of first edited spectrum, if found"
+    $cex = 0  $cfile = ''
+    if ($deptdim='CHn') then
+  	AutoCheck('CARBON'):$cex,$cfile
+    endif
+    if not $cex then $cfile='' endif
+    write('line3','%s(`%s`,`%s`)',$0,$cfile,$deptdim):$custompl
+    if $1='nopage' then
+	exec($custompl)
+    else
+    	$plotoptions='custompl',$custompl
+    	$plotoptions=$plotoptions,'molecule','axis','comments','params','logo','header','miniplot'
+    	doplotoption($plotoptions)
+    	page
+    endif
+    wc=$wc sc=$sc vp=$vp
+    r(23)
+    dss
+    setvalue('deptdim',$deptdim)
+    off('cutoff')
+
+ELSE
+
+    $multdim=arraydim/$qsize
+    write('plotter',0,0,''):$ys
+    gap(24*$ys/2,10,50):$dum,$xpos     "x-coordinate of label"
+    $ht=vo/2 +sc2
+    $cfile=$1 $deptdim=$2
+    $origvp=vp
+    if $cfile<> '' then
+            " find & create new experiment "
+	tmpcopy('depttmp')
+        s1
+        rt($cfile)
+        wft f
+        $savewpC=wp $savespC=sp
+        $protonated = ''
+        r1
+        if trunc(wp) > trunc($savewpD) then wp=$savewpD sp=$savespD endif
+        vsadjc(vo)
+        cutoff = vo-5
+        pl
+        write('plotter',$xpos,vp+$ht,'All carbons')
+	tmpreturn('depttmp')
+    else
+        select(1) pl nll
+     	if ($deptdim='Ced') then
+	    write('plotter',$xpos,vp+$ht,'quaternary carbons')
+        else
+            write('plotter',$xpos,vp+$ht,'protonated carbons')
+        endif
+    endif
+
+    $label='','CH','CH2','CH3'
+    $i=2
+    repeat
+        vp=vp+vo
+    	select($i) pl
+     	write('plotter',$xpos,vp+$ht,'%s carbons',$label[$i])
+    	$i=$i+1
+    until $i > $multdim
+    vp=$origvp
+ENDIF

@@ -1,0 +1,45 @@
+"macro gs_shimselect"
+"**************************************************************************************"
+"      gs_shimselect - macro to manually select shims
+"
+" Details: If select option is chosen, the current shimfit array is used in selecting the
+"          the shims. The shims can be manually selected using the Settings page
+"          For example to disable the xz (2nd order) shim, first select Shim Selection
+"          choice 1&2 or 12&3. This will initialize all entries in teh shimfit array.
+"          Then deselect the xz shim choice in the Settings page.
+"
+"          To permanently disable the shims,  edit this macro and set the 
+"          shimfit parameter - e.g. x4 and y4, are disabled by setting shimfit parameter
+"
+"**************************************************************************************"
+
+  "initialize shimfit array. must be equal to maxshims"
+    " Check and initialize shims coils to be used for shimming"
+    "*** shimname = 'x1','y1','z1',  'xz','yz','z2','xy','x2y2'    "
+    "               'x3','y3','z3','xz2','yz2','zxy','zx2y2',      "
+    "***            'z3x','z3y','z2x2y2','z2xy','zx3','zy3','x4','y4','z4','z5'    "
+    if (shimsel='1') then
+      "shimming using 1st order shims"
+      shimfit=      1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    elseif (shimsel='1&2') then  "1st and 2nd order shims selected for shimming"
+      shimfit=      1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    elseif (shimsel='1&z2') then "1st order and z2"
+      shimfit=      1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    elseif (shimsel='12&3') then "1, 2 and 3rd order; z4 included"
+      shimfit=      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0 
+    elseif (shimsel='123&4') then "1, 2, 3 and 4th order; Note x4, y4 omitted"
+      "**** x4, y4 omitted "
+      shimfit=      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1         
+    elseif (shimsel='select') then "shimfit set manually"
+      exists(userdir+'/gshimdir/data/select.par','file'):$ex
+      if($ex = 0) then
+        write('error','Shims not selected and saved')
+        abort
+      else
+        rtv(userdir+'/gshimdir/data/select.par','shimfit')
+      endif
+    else
+      write('error','Illegal shim selection %s\n',shimsel)
+      abort
+    endif
+

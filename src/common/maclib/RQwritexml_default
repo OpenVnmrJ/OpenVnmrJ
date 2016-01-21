@@ -1,0 +1,30 @@
+"macro RQwritexml_default"
+"Usage: RQwritexml_default(full_dir_path, #_of_files)"
+
+if($# < 1.5) then return ('') endif
+
+$path = $1
+$tmp = $2
+$expnd = 'yes'
+if $# > 2.5 then $expnd = $3 endif
+
+$count=''
+format($2,0,0):$count
+
+$owner=''
+$size=''
+$time=''
+
+getfilestat($path, 'owner'):$owner
+getfilestat($path, 'size'):$size
+getfilestat($path, 'mtime'):$time
+
+strstr($path,'/','last'):$e,$dir,$name
+
+exists($path,'directory'):$e
+if $e > 0.5 then
+     return('<filenode path="'+$path+'" dir="'+$dir+'" name="'+$name+'" type="dir" group="'+$count+'" last_modified="'+$time+'" owner="'+$owner+'" size="'+$size+'" expand="'+$expnd+'" >')
+else
+     return('<filenode path="'+$path+'" dir="'+$dir+'" name="'+$name+'" type="file" last_modified="'+$time+'" owner="'+$owner+'" size="'+$size+'" />')
+endif
+

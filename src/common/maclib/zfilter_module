@@ -1,0 +1,61 @@
+"macro zfilter_module"
+"zfilter_module - This is a setup macro for zfilter module"
+
+$module='zfilter'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+        "Setup zfilter parameter"
+
+   fixgrd(20):gzlvlz
+   gtz=.002
+   $psath2=0
+   getpower(satpwr,tn):$psath2
+   if (satmode='n') then $psath2=0 endif
+   if (wet='y') then $psath2=50 endif
+   if ($psath2 > 25) and (PFGflg='y') and (prgflg<>'y') then
+        zfilt='y'
+   else
+        zfilt='n'
+   endif
+   flipback='n'
+        "flipback will be reset by either rtx or pslabel_setup macros"
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

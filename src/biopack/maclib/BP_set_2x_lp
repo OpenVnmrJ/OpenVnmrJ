@@ -1,0 +1,126 @@
+"macro BP_set_2x_lp"
+// Macro for setting up 2X linear prediction in ni or ni2 dimension
+// Should work on truncated (not fully completed) datasets
+// input argument either 'ni' or 'ni2'
+// returns either 'ft' or 'lp' depending whether LP is possible in selected dimension
+
+//declare minimum required number of complex points for LP
+$min_allowed_points=6
+
+//some boundaries/limits for lp parameters
+$lpnupts_max=100
+$lpext_max=100
+$lpfilt_max=8
+
+//returns argument for proc:
+$ret='ft' //default
+if ($# <> 1 )  then
+  $msg='usage: BP_set_2x_lp(\'ni\') or BP_set_2x_lp(\'ni2\') ' 	
+  write('line3',$msg)   write('alpha',$msg)	
+  return($ret)
+else 
+  if ( ($1 <> 'ni') and ($1<>'ni2') )  then 
+   $msg='usage: BP_set_2x_lp(\'ni\') or BP_set_2x_lp(\'ni2\') '
+   write('line3',$msg)   write('alpha',$msg)
+   return($ret)
+  endif
+endif 
+
+$proc_idx='1'
+$dim='phase'
+if ($1='ni2') then 
+ $dim='phase2'
+ $proc_idx='2'
+endif
+
+$niX=$1
+$ndim=1
+
+// common checks
+// no checks whther  phase or phase2 have '1,2' array
+  
+$err_msg='Just a warning: Using regular FT. Incorrect type of array or insufficient number of points for LP' + ' in ' + $niX + ' dimension. '
+
+if ( (array<>'phase') and (array <> 'phase2') and (array<>'phase,phase2') and (array<>'phase2,phase') ) then
+       write('line3',$err_msg)   write('alpha',$err_msg)
+       return($ret)
+endif 
+
+if (arraydim > 1) then
+    arrayvals(1):$a_pars,$svaluelist,$rvaluelist
+endif
+
+$ndim=size('$a_pars')
+$i=0
+
+$arrayed_par='xxx'     
+$arrayed_par_array='xxx'
+$a_idx=1
+  	
+while ($i < $ndim) do
+ $i=$i+1
+ if( ($a_pars[$i]=$dim) ) then 
+  $arrayed_par='correct'   
+  $a_idx=$i   // index of phase/phase2 in 'array' parameter
+ endif   
+endwhile 
+
+if ($arrayed_par <> 'correct') then
+ write('line3',$err_msg)   write('alpha',$err_msg)
+ return($ret)
+endif
+
+// setting up linear prediction according to a number of  complete elements
+// array=phase,phase2 -> phase2 is fastest array,  'ni' gets completed first
+// array=phase2,phase -> phase is fastest array, 'ni2' gets completed first
+
+$complete_points=0
+if ( $ndim=1 ) then
+  $complete_points=trunc(celem/2) 
+else
+  if (array='phase,phase2') then
+   $complete_ni=trunc(celem/2/2) 
+   if ( $complete_ni>ni) then
+     $complete_ni=ni 
+   else 
+     $complete_ni=0 
+   endif
+   $complete_ni2=trunc(celem/ni/2/2)
+  else
+   $complete_ni=trunc(celem/ni2/2/2)
+   $complete_ni2=trunc(celem/2/2) 
+   if ( $complete_ni2>ni2) then $complete_ni2=ni2 else $complete_ni2=0 endif
+  endif
+   $complete_points= {'$complete_'+$niX}
+endif
+
+if ($complete_points<$min_allowed_points) then
+  write('line3',$err_msg)   write('alpha',$err_msg)
+  return($ret)
+endif
+
+// setting up lp
+
+$ret='lp'
+
+$lpfilt=trunc($complete_points/2)-1
+if ($lpfilt >$lpfilt_max)  then $lpfilt=$lpfilt_max endif
+
+$lpnupts=$complete_points
+if($lpnupts>$lpnupts_max)  then $lpnupts=$lpnupts_max endif
+
+$lpext=$complete_points
+if ($lpext>$lpext_max) then $lpext=$lpext_max endif
+
+{'lpalg'+$proc_idx}   ='lpfft'
+{'lpopt'+$proc_idx}   ='f'
+{'lpfilt'+$proc_idx}  = $lpfilt
+{'lpnupts'+$proc_idx} = $lpnupts
+{'strtlp'+$proc_idx}  =$complete_points
+{'lpext'+$proc_idx}   =$lpext
+{'strtext'+$proc_idx} =$complete_points+1
+
+return($ret)
+
+
+s

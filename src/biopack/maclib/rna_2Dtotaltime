@@ -1,0 +1,110 @@
+"macro rna_2Dtotaltime"
+"rna_2Dtotaltime"
+svp(userdir+'/temp')
+input('Input number of transients per increment  '):$nt
+$totaltime=0
+
+rna_gChsqc
+allC='y' ribose='n' aromatic='n' CH2only='n'
+ZZ='n' SE='y' CT='y' JCH=160 CTdelay=1/35
+BPsetwurstparams
+sw=10*sfrq np=1024 sw1=110*dfrq
+ss=8 nt=$nt ni=128 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d2a' 
+
+
+
+allC='n' ribose='y' aromatic='n' CH2only='n'
+BPsetwurstparams JCH=145
+sw1=50*dfrq
+ni=64 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d2b' 
+
+
+
+allC='n' ribose='n' aromatic='y' CH2only='n'
+BPsetwurstparams JCH=180
+sw1=70*dfrq
+ni=64 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d2c' 
+$nt=nt
+rna_gNhsqc
+imino='y' amino='n' NH2only='n'
+sw=22*sfrq np=2048 sw1=25*dfrq2
+ss=8 nt=$nt ni=32 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d3' 
+
+imino='n' amino='y' NH2only='n'
+sw=22*sfrq np=2048 sw1=25*dfrq2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d3a' 
+$nt=nt
+rna_CPMGgNhsqc
+imino='n' amino='y'
+sw=22*sfrq np=2048 sw1=50*dfrq2
+ss=8 nt=$nt ni=32 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d4' 
+
+imino='y' amino='n'
+sw=22*sfrq np=2048 sw1=50*dfrq2
+ni=32
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d4a' 
+$nt=nt
+rna_gNhmqc
+imino='y' amino='n' Naro='n'
+sw=22*sfrq np=2048 sw1=25*dfrq2 diff=8*sfrq
+ss=8 nt=$nt ni=32 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d5' 
+
+imino='n' amino='y' Naro='n'
+sw=12*sfrq np=2048 sw1=40*dfrq2 diff=2*sfrq
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d5a' 
+
+imino='n' amino='n' Naro='y'
+sw1=80*dfrq2 diff=2*sfrq
+JNH=22
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d5b' 
+$nt=nt
+rna_WGgNhsqc
+gain=(gain-10)
+imino='n' amino='n' Naro='y' JNH=22
+sw=10*sfrq np=1024 sw1=90*dfrq2
+ss=8 nt=$nt ni=32 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d6a' 
+imino='y' amino='n' Naro='n' JNH=95
+sw1=25*dfrq2
+ni=16 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2d6b' 
+imino='n' amino='y' Naro='n' JNH=95
+sw1=40*dfrq2
+ni=16 phase=1,2
+rna_2Dtime:$time
+$totaltime=$totaltime +$time
+wexp='rna_auto2dlast' 
+
+write('line3','Total time = %4f minutes ( %2.1f hours)  ',$totaltime,$totaltime/60)
+rtp(userdir+'/temp')
+shell('rm -r',userdir+'/temp.par'):$dum

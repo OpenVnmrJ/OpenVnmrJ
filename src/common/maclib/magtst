@@ -1,0 +1,375 @@
+"macro magtst"
+// Magical Test Infrastructure
+//
+// The frequent instances of the form {$0}(arg1, ...) in the macro code
+// below are where this macro calls itself recursively - this is the
+// Magical alternative to function calls.
+//
+$tmp_dir = userdir+'/tmp/'
+$default_logfile = $tmp_dir + 'vj.tst.log'
+
+"------------------------------<test infrastructure>--------------------------"
+if $1='init' then
+  // check to see if 'init' has already been called
+  exists('tst_pass_cnt','parameter','current'):$ep
+  if $ep then
+    {$0}('warn','previous test didn\'t complete with '+$0+'(\'done\')')
+  endif
+  if $# < 2 then
+    {$0}('fatal',$0+'(\''+$1+'\',$0) requires calling macro as 2nd argument')
+  endif
+    
+  // get rid of residual from previous test in case it aborted
+  {$0}('cleanup')
+
+  {$0}('log','create',$tmp_dir+$2+'.log') // start logging
+
+  // TODO: verify that the 2nd arg is a valid macro, or even better, the caller
+  create('tst_error_cnt','real','current',0):$ee    // total test errors
+  create('tst_pass_cnt','real','current',0):$ep     // total tests passed
+  create('tst_fail_cnt','real','current',0):$ef     // total tests failed
+  create('tst_abort_cnt','real','current',0):$et    // total tests aborted
+  create('tst_complete_cnt','real','current',0):$et // total tests run
+  create('tst_todo_cnt','real','current',0):$et     // tests in "TODO" status
+  create('tst_incomplete_cnt','real','current',0):$ei
+  create('tst_status','string','current',''):$es    // current test status
+  create('tst_assert_0','real','current',0):$e0     // assertions passed
+  create('tst_assert_1','real','current',0):$e1     // assertions failed
+  create('tst_id_name','string','current',''):$en   // sub-test name
+  create('tst_tmp_files','string','current'):$en    // list of tmp files created
+  create('tst_fail_action','string','current'):$eo  // ask to continue or abort
+
+  // TODO: set permissions on this macro so that it isn't changeable
+  create('tst_macro_name','string','current',$2):$em
+  
+  tstlog('init',$0+' starting <'+tst_macro_name+'>')
+
+  // let user set up initial test fixtures
+  exec(tst_macro_name+'(\'@beforeall\')'):$tst_beforeall_out
+  return
+
+elseif $1='before' then
+  if $# < 2 then
+    {$0}('error',$0+'('+$1+',...) takes at least 2 arguments')
+    return(0)
+  endif
+  exists('tst_status','parameter','current'):$e
+  if not $e then
+    {$0}('fatal',
+         'test called without calling '+$0+'(\'start\',\'<test macro>\')')
+    return(0)
+  endif
+  if $# < 3 then $3='initializing test infrastructure' endif
+  tstlog('init',$2+': '+$3)
+  $before_ret=1     // assume everything's good unless the test says otherwise
+  exec(tst_macro_name+'(\'@before\')'):$tst_before_out
+  tst_status=''
+  return($before_ret)
+
+elseif $1='test' then
+  // TODO: add the tests to a list and don't run until magtst('done')?
+  if $# < 2 then
+    {$0}('fatal',$0+'('+$1+'...) takes at least 2 arguments')
+  endif
+  $standalone=0  
+
+  exists('tst_id_name','parameter','current'):$em
+  if not $em then     // it looks like a standalone test
+    if $# < 2.5 then
+      {$0}('fatal','test called without calling '+$0+'(\'start\',\'<test macro>\')')
+    else // it's a standalone test
+      {$0}('init',$2) // invokes callers '@beforeall'
+      $2=$3
+      $standalone=1
+    endif
+  endif
+  tst_id_name=$2
+
+  {$0}('before',$2)
+  exec(tst_macro_name+'(\''+$2+'\')'):$tst_out
+  if $tst_out=0 and tst_status<>'fail' then
+    tst_status='aborted'
+  else
+    tst_complete_cnt = tst_complete_cnt + 1
+  endif
+  {$0}('after',$2)
+  if $standalone then {$0}('done') endif
+
+  return(0)
+
+elseif $1='after' then
+  if tst_status='fail' then
+    tst_fail_cnt = tst_fail_cnt + 1
+  elseif tst_status='pass' then // explicit call to 'pass'
+    tst_pass_cnt = tst_pass_cnt + 1
+  elseif tst_status='' then     // absence failure is success
+    tst_pass_cnt = tst_pass_cnt + 1
+    {$0}('pass')
+  elseif tst_status='todo' then
+    tst_todo_cnt = tst_todo_cnt + 1
+  elseif tst_status='aborted' then
+    tst_abort_cnt = tst_abort_cnt + 1
+  else // mangled?
+    tst_incomplete_cnt = tst_incomplete_cnt + 1
+  endif
+  if $# < 2 then
+    {$0}('error',$0+'('+$1+'...) takes at least 2 arguments')
+  endif
+  tstlog('post',$2)
+  exec(tst_macro_name+'(\'@after\')'):$tst_after_out
+  return
+
+elseif $1='pass' then
+  //-- shouldn't normally be called by the test macro, but it will be deduced
+  //   by the the test framework itself.
+  if $# < 2 then $2 = tst_id_name endif
+  exists('tst_pass_cnt','parameter','current'):$e
+  if not($e) then
+    {$0}('fatal',$0+'(\''+$1+'\') called without calling '+$0+'(\'start\') first')
+  endif
+  if tst_status = '' then
+    tstlog('pass',tst_id_name+': '+$2)
+    tst_status='pass'
+  endif
+  return(1)
+
+elseif $1='fail' then
+  if $# < 2 then $2 = '' endif
+  exists('tst_fail_cnt','parameter','current'):$e
+  if not($e) then
+    {$0}('fatal',$0+'(\''+$1+'\') called without calling '+$0+'(\'start\') first')
+  endif
+  if tst_status <> 'fail' then
+    tstlog('fail',tst_id_name+': '+$2)
+    tst_status='fail'
+  endif
+  // assume caller handles the failure if an output value has been requested
+  if $## > 0 then abort endif
+  return(0)
+
+elseif $1='todo' then
+  exists('tst_todo_cnt','parameter','current'):$e
+  if not($e) then
+    {$0}('fatal',$0+'(\''+$1+'\') called without calling '+$0+'(\'start\') first')
+  endif
+
+  // keep status as 'todo' unless the test has already failed
+  if tst_status <> 'fail' then
+    tst_status='todo'
+  endif
+
+  // go ahead and record the todo item in the log even if status='fail'
+  tstlog('todo',tst_id_name+': '+$2)
+  return(0)
+
+elseif $1='info' then
+  tstlog($1,$2)
+  return
+
+elseif $1='warn' then
+  tstlog('WARNING',$2)
+  return
+
+elseif $1='abort' then
+  tstlog('abort',$2)
+  abort
+  return
+
+elseif $1='log' then
+  $narg=$#
+  if $# < 1.5 then $2=$default_logfile endif
+  if $# < 2.5 then $3=$2 $2='create' endif
+
+  exists('tst_log','parameter','current'):$pe
+  if not $pe then
+    create('tst_log','string','current',$3):$pe
+  else
+    tst_log=$3
+  endif
+
+  rename($3, $3+'.backup')
+  return
+
+elseif $1='assert' or $1='assertTrue' or $1='assertFalse' then
+  //-- records success or failure, returns 1 if assertion is true or 0 if false
+  //   usage: assert(condition <,'msg' <,'fail msg'> >)
+  if $# < 1.5 then
+    {$0}('error',$0+'(\''+$1+'\',...) requires at least 2 arguments')
+    return
+  endif
+  if $# < 2.5 then $3 = $2 endif
+  if $# < 3.5 then $4 = $3 endif
+  format($2,'isreal'):$is2real
+  if not $is2real then
+    write('error',$0+' \''+$1+'\' invalid non-integer argument')
+    abort
+  endif
+  if $1='assertFalse' then $expr=not($2) else $expr=$2 endif
+  if $expr then
+     tstlog('++++',tst_id_name,$3)
+     $ret=1
+  else
+     tstlog('----',tst_id_name,$4)
+     {$0}('fail','assertion failed'):$ret
+     $ret=0
+  endif
+  return($ret)
+
+elseif $1='assertEqualExceptType' then
+  // -- convert both arguments to strings and then compare
+  format($2,'isreal'):$r2
+  format($3,'isreal'):$r3
+  if ($r2) then format($2,0,0):$arg1 else $arg1=$2 endif
+  if ($r3) then format($2,0,0):$arg2 else $arg2=$3 endif
+
+  // send to assertEqual with the right number of arguments
+  if $#=3 then {$0}('assertEqual',$arg1,$arg2):$ret    	  endif
+  if $#=4 then {$0}('assertEqual',$arg1,$arg2,$4):$ret 	  endif
+  if $#=5 then {$0}('assertEqual',$arg1,$arg2,$4,$5):$ret endif
+  return($ret)
+  
+elseif $1='assertEqual' then
+  // -- assert that $2 and $3 are equal 
+  //    (and get around the type match issue with constants)
+  // usage: assertEqual(value1, value2 <,msg <, failure msg> >)
+  $ret=1                            // return value
+  $r1='' $r2=''
+  if $# < 2.5 then 
+    {$0}('error','\''+$1+'\' takes at least 2 additional arguments')
+    return(0)
+  endif
+  if $# < 3.5 then $4='' endif
+  if $# < 4.5 then $5=$4 endif
+
+  // convert args to strings
+  format($2,'isreal'):$r1real
+  format($3,'isreal'):$r2real
+  if $r1real then format($2,8,8):$r1 else $r1=$2 endif
+  if $r2real then format($3,8,8):$r2 else $r2=$3 endif
+
+  if $r1=$r2 then
+    tstlog('++++',tst_id_name,$4+' \''+$r1+'\' matched')
+  else
+    tstlog('----',tst_id_name,$5+' \''+$r1+'\' doesn\`t match \''+$r2+'\'')
+     {$0}('fail','assertion failed'):$ret
+  endif
+  return($ret)
+
+elseif $1='assert>' or $1='assertGreater' then
+  // -- assert that $2 > $3
+  if $# < 2.5 then
+    {$0}('fatal','\''+$1+'\' takes at least 2 arguments') 
+    return(0)
+  endif
+  {$0}('assert',$2 > $3):$ret
+  return($ret)
+
+elseif $1='assert<' or $1='assertLess' then
+  // -- assert that $2 < $3
+  if $# < 2.5 then
+    {$0}('fatal','\''+$1+'\' takes at least 2 arguments') 
+    return(0)
+  endif
+  {$0}('assert',$3 > $4):$ret
+  return($ret)
+
+elseif $1='report' then
+  // tst_pass_cnt, tst_fail_cnt, and tst_todo_cnt global parameter counters.
+  //
+  tstlog('done', tst_macro_name, 
+	 tst_pass_cnt, tst_fail_cnt, tst_todo_cnt, tst_abort_cnt)
+  return
+
+elseif $1='cleanup' then
+  destroy('tst_log','global'):$el
+  destroy('tst_pass_cnt','current'):$ep
+  destroy('tst_fail_cnt','current'):$ef
+  destroy('tst_abort_cnt','current'):$ef
+  destroy('tst_complete_cnt','current'):$ef
+  destroy('tst_todo_cnt','current'):$et
+  destroy('tst_incomplete_cnt','current'):$ei
+  destroy('tst_macro_name','current'):$em
+  destroy('tst_id_name','current'):$en
+  //destroy('tst_status','current'):$es // persist past test completion
+  destroy('tst_assert_0','current'):$e0
+  destroy('tst_assert_1','current'):$e1
+  $i=1 while ($i < size('tst_tmp_files')) do $i=$i+1 // a for(;;) loop!
+    rm(tst_tmp_files[$i]):$rmo
+  endwhile
+  destroy('tst_tmp_files','current'):$el
+  return
+
+elseif $1='compare' then
+  //-- compare probe files in 3rd and 4th parameters, 
+  //   ignoring the value specified in 2nd parameter
+  $ret=0
+  if $# < 4.5 then
+    $5=$3 $6=$4           // file descriptions default to file paths
+  endif
+  $compare   = 'diff -bBw '+$3+' '+$4
+  shell('echo /tmp/probeid_test.$$.out'):$out
+  $filter    = ' | grep -v '+$2+' | tee '+$out
+  $synopsize = ' | wc -l '
+  $clean     = ' ; rm -f '+$out
+  $cmd       = $compare+$filter+$synopsize // +$clean
+  $delta     = 1
+  info('comparing files: '+$cmd)
+  shell($cmd):$delta
+  $match     = $delta=0
+  if $delta then
+    {$0}('info','differences are in file '+$out)
+  endif
+  {$0}('assert', $match,$5+' matches '+$6,$5+' doesn\'t match '+$6):$ret
+  return($ret)
+
+elseif $1='done' then
+  //-- complete tests
+  //   let test tear down residual test fixtures
+  if tst_status<>'done' then
+    exec(tst_macro_name+'(\'@afterall\')'):$tst_afterall_out 
+    {$0}('report')
+    {$0}('cleanup')
+  endif
+  tst_status='done'
+  return
+
+elseif $1='error' then
+  //-- a test implementation error (syntax, etc) occurred.  For now we
+  //   abort the test because that makes it really easy to identify the
+  //   source of the problem (and that one occurred).
+  if $# < 1.5 then
+    tstlog('ERROR',tst_macro_name+' encountered a test implementation error')
+  else 
+    tstlog('ERROR',$2)
+  endif
+  setvalue('tst_status','error','current')
+  {$0}('fatal')
+  return(0)
+
+elseif $1='fatal' then
+  if $# < 2 then $2='aborting '+tst_macro_name endif
+  {$0}('cleanup')
+  tstlog('FATAL',$2)
+  abort
+
+elseif $1='tmpfile' then
+  $tmp_ext1 = 'vj'
+  $tmp_ext2 = 'tmp'
+  $get_tmp_file='mktemp '+$tmp_dir+$tmp_ext1+'.'+$tmp_ext2+'.XXXXXXX'
+  shell($get_tmp_file):$tmp
+  tst_tmp_files[size('tst_tmp_files')+1] = $tmp
+  return($tmp)
+
+else
+  if $# = 1 then                     // user is kicking off test suite $1
+    {$0}('init',$1)                  // initialize test environment
+    exec($1+'(\'@tests\')'):$tst_out // run the user's test suite
+    {$0}('done',$1)                  // wrap up the test
+  elseif $# = 2 then                 // assume $1 is a single unit test
+    {$0}('log','create',$tmp_dir+$1+'.'+$2)
+    {$0}('cleanup')                  // cleanup leftovers from previous test
+    {$0}('test',$1,$2)               // run the test case
+  else
+    {$0}('fatal','unknown '+$0+' operation: \''+$1+'\'')
+  endif
+endif

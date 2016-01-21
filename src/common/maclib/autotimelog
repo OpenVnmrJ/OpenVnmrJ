@@ -1,0 +1,145 @@
+"macro autotimelog"
+$tailX='tail'
+whichtail:$tailX
+
+IF ($1 = 'start') or ($1 = 'end') THEN
+
+   if (auto='n') then return endif
+   $tfile=autodir+'/enterQ.macdir/AutoTimeLog'
+   exists($tfile,'file','w'):$tex
+   if ($tex=0) then return endif
+
+   format($2,'isreal'):$is2real
+   $s2=''
+   if ($is2real) then format($2,'lower'):$s2 $s2='loc'+$s2 else $s2=$2 endif
+
+   $sampinfo=autodir+'/enterQ.macdir/'+$s2+'/sampleinfo'
+   exists($sampinfo,'file'):$sampex
+   if ($sampex=0) then return endif
+   $priority=''
+   shell('(cat '+$sampinfo+' | grep -w USER:)'):$USER
+   substr($USER,3):$priority 
+   shell('(cat '+$sampinfo+' | grep -w MACRO: | grep -c night)'):$niteex
+   if ($niteex) then $when='overniteQ'
+   elseif ($priority='priority') then $when='priorityQ'
+   else $when='dayQ' endif
+   $loc='' strstr($s2,'/'):$ret,$loc
+   if ($ret=0) then $loc=$s2 endif
+
+   if ($# < 3) then $3=sample endif
+   if ($3='') then $3=samplename endif
+   $date='' $submitdate=''
+   shell('date +%Y%m%d%H%M%S'):$date
+   $line='' $subline=''
+   shell('(cat '+$tfile+' | grep -w "'+$loc+'" | grep -w "'+$3+'" | grep -w "'+$when+'" | '+$tailX+' -n 1)'):$line
+
+   if ($line = '') then return endif
+
+	string2array($line):$subline
+	$subline[2]=sample
+      if ($1='start') then
+	$subline[6]=$date
+	autotimelog('getddiff',$subline[6],$subline[5]):$subline[8]
+      elseif ($1 = 'end') then
+	$subline[7]=$date
+	autotimelog('getddiff',$subline[7],$subline[6]):$subline[9]
+      endif
+	shell('(cat '+$tfile+' | grep -vw "'+$line+'" > '+$tfile+'1)'):$dum
+	shell('mv '+$tfile+'1 '+$tfile):$dum
+	array2string($subline):$line
+	write('file',$tfile,'%s',$line)
+
+	if ($when<>'overniteQ') then
+	   $line2=''
+	   shell('(cat '+$tfile+' | grep -w "'+$loc+'" | grep -w "'+$3+'" | grep -w "overniteQ" | '+$tailX+' -n 1)'):$line2
+	   if ($line2 <> '') then
+		$subline=''
+		string2array($line2):$subline
+		$subline[2]=sample
+		shell('(cat '+$tfile+' | grep -vw "'+$line2+'" > '+$tfile+'1)'):$dum
+		shell('mv '+$tfile+'1 '+$tfile):$dum
+		array2string($subline):$line2
+		write('file',$tfile,'%s',$line2)
+	   endif
+	endif
+
+ELSEIF ($1 = 'getddiff') THEN
+  $start='' $end=''
+  $end=$2 $start=$3
+  if ($end='0') or ($start='0') then return endif
+
+  $eS=0 $eM=0 $eH=0 $ed=0 $em=0 $ey=0
+  $sS=0 $sM=0 $sH=0 $sd=0 $sm=0 $sy=0
+
+  substr($end,1,4):$ey
+  substr($end,5,2):$em
+  substr($end,7,2):$ed
+  substr($end,9,2):$eH
+  substr($end,11,2):$eM
+  substr($end,13,2):$eS
+
+  substr($start,1,4):$sy
+  substr($start,5,2):$sm
+  substr($start,7,2):$sd
+  substr($start,9,2):$sH
+  substr($start,11,2):$sM
+  substr($start,13,2):$sS
+
+  $dS=$eS-$sS
+  $dM=$eM-$sM
+  $dH=$eH-$sH
+  $dd=$ed-$sd
+  $dm=$em-$sm
+  $dy=$ey-$sy
+
+  if ($dm < 0) then "Year rolled over - Don't bother"
+	return('0')
+  endif
+  if ($dd < 0) then "Month rolled over"
+	if ($sm=1) or ($sm=3) or ($sm=5) or ($sm=7) or ($sm=8) or ($sm=10) or ($sm=12) then
+	   $dd= (31-$sd)+$ed
+	elseif ($sm=4) or ($sm=6) or ($sm=9) or ($sm=11) then
+	   $dd= (30-$sd)+$ed
+	else "Ignore leap year !"
+	   $dd= (28-$sd)+$ed 
+	endif
+  endif
+  if ($dH < 0) then  "day rolled over"
+	$dd=$dd-1
+	$dH=$dH+24
+  endif
+  if ($dM < 0) then "Hour rolled over"
+	$dH=$dH-1
+	$dM=$dM+60
+  endif
+  if ($dS < 0) then "Minute rolled over"
+	$dM=$dM-1
+	$dS=$dS+60
+  endif
+
+    $time = ((((($dd*24)+$dH)*60)+$dM)*60)+$dS
+    $stime = ''
+    format($time,0,0):$stime
+    return($stime)
+
+ELSEIF ($1 = 'reset') THEN
+
+   $log=$2+'/enterQ.macdir/AutoTimeLog'
+   exists($log,'file','w'):$lex
+   if ($lex=0) then return endif
+   $date='' shell('date +%Y%m%d%H%M%S'):$date
+   $s1='' $s2=''
+   readfile($log,'$s1','$s2','','local')
+   $total=size('$s1')
+   write('reset',$log)
+   $i=1
+   repeat
+	$s3=''
+	string2array($s2[$i]):$s3
+	$s3[4]=$date
+	array2string($s3):$s3
+	write('file',$log,'%s %s',$s1[$i],$s3)
+	$i=$i+1
+   until $i > $total
+
+ENDIF

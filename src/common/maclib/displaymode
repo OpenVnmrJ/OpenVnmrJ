@@ -1,0 +1,67 @@
+"macro displaymode"
+// ***************************
+// **** macro displaymode ****
+// ***************************
+//
+// Sets the displaymode parameter, which determines what 'df' displays.
+// Usage:
+//   displaymode('riaef') [Any combination of the characters 'r', 'i',
+//                        'a', and 'e' to show the real, imaginary,
+//                        absval, and envelope traces. If 'f' is present
+//                        the display will be "filled".]
+//   displaymode('+r')   [To add the selected trace(s) to the display.]
+//   displaymode('-r')   [To remove the selected trace(s) from the display.]
+//
+//   displaymode(---, 'parname') [To operate on the parameter 'parname' instead
+//                                of 'displaymode'.]
+//
+//      If a command would result in nothing being displayed, real
+//      alone will be displayed.
+//
+
+length($1):$cmdlen
+
+$parname = 'displaymode'
+if ($# > 1) then
+    $parname = $2
+endif
+
+// Get the possible operand char
+$op = ''
+substr($1, 1, 1):$op
+if ($op = '+') then
+    $i = 2
+    while ($i <= $cmdlen) do
+        substr($1, $i, 1):$chr                  // Get command char
+        strstr({$parname}, $chr):$j
+        if ($j = 0) then
+            {$parname} = {$parname} + $chr        // Add to displaymode string
+        endif
+        $i = $i + 1
+    endwhile
+elseif ($op = '-') then
+    $i = 2
+    while ($i <= $cmdlen) do
+        substr($1, $i, 1):$chr                  // Get command char
+        repeat
+            strstr({$parname}, $chr):$j
+            if ($j > 0) then
+                substr({$parname}, $j, 1, ''):{$parname}
+            endif
+        until ($j = 0)
+        $i = $i + 1
+    endwhile
+else
+    {$parname} = $1
+endif
+
+if ({$parname} = '') then
+    {$parname} = 'r'
+elseif ({$parname} = 'f') then
+    {$parname} = 'rf'
+endif
+
+strstr({$parname},'f'):$isfill
+if ($isfill) then
+    dotflag = 'n'
+endif

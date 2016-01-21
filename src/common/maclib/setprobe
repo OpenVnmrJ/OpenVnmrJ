@@ -1,0 +1,140 @@
+"macro setprobe"
+probeid('enabled'):$probeid
+
+if (auto='y') then return endif
+if ($# < 1) then
+
+  clear(2)
+  write('graphics',0,0,''):$ys
+  $x=5 $y=0.95*wc2max
+  $y=$y-$ys
+  write('graphics','red',$x,$y,'********   Current Probe:   %s   *********',probe)
+  write('reset',curexp+'/probelist')
+  write('file',curexp+'/probelist',' ')
+
+  write('file',curexp+'/probelist','****System Probes****')
+  write('reset',curexp+'/probelist1')
+  if $probeid > 0.5 then
+    probeid('list',curexp+'/probelist1','system')
+  else
+    shell('ls '+systemdir+'/probes >> '+curexp+'/probelist1')
+  endif
+  $res=2
+  $key=curexp+'/probelist1'
+  while $res>1 do
+   $probe=''
+   lookup('mfile',$key,'read',1,'filekey'):$probe,$key,$res
+   if ($res>1) then
+        if $probeid > 0.5 then
+          probeid('fexists',$probe,'probes/'+$probe,'system'):$probedir
+        else
+	  exists(systemdir+'/probes/'+$probe+'/'+$probe,'file'):$probedir
+        endif
+	if ($probedir) then 
+	  write('file',curexp+'/probelist','%s',$probe)
+	endif
+   endif
+  endwhile
+  write('file',curexp+'/probelist',' ')
+
+  write('file',curexp+'/probelist','****User Probes****')
+  write('reset',curexp+'/probelist1')
+  if $probeid > 0.5 then
+    probeid('list',curexp+'/probelist1','user')
+  else
+    shell('ls '+userdir+'/probes >> '+curexp+'/probelist1')
+  endif
+  $res=2
+  $key=curexp+'/probelist1'
+  while $res>1 do
+   $probe=''
+   lookup('mfile',$key,'read',1,'filekey'):$probe,$key,$res
+   if ($res>1) then
+        if $probeid > 0.5 then
+          probeid('fexists',$probe,'probes/'+$probe):$probedir
+        else
+          exists(userdir+'/probes/'+$probe+'/'+$probe,'file'):$probedir
+        endif
+        if ($probedir) then 
+          write('file',curexp+'/probelist','%s',$probe)
+        endif
+   endif
+  endwhile
+
+  dtext(curexp+'/probelist',$x,$y)
+  shell('rm '+curexp+'/probelist'):$dum
+  shell('rm '+curexp+'/probelist1'):$dum
+else
+  
+  length($1):$length
+  $tmplt=''
+  if ($length > 5) then
+    substr($1,$length-4,5):$tmplt
+  endif
+  if ($tmplt = 'tmplt') then
+    write('error','probe could not be set to %s',$1)
+    return
+  endif
+  if $probeid > 0.5 then
+    probeid('fexists',$1,'/probes/'+$1):$probeex
+  else // legacy probe
+    exists(userdir+'/probes/'+$1+'/'+$1,'file'):$probeex
+    if ($probeex=0) then
+     exists(systemdir+'/probes/'+$1+'/'+$1,'file'):$probeex
+    endif
+  endif
+  if ($probeex=0) then
+    write('error','A probe file for %s does not exist',$1)
+    input('Create one? (y or n):'):$create
+    if ($create='y') then
+       addprobe($1)
+    else
+       return
+    endif
+  endif
+  probe=$1
+  $banner='probe parameter set to '+$1
+    $lkmap='' $hsmap='' $H1map=''
+    getparam('lkmap','Probe'):$lkmap
+    if ($lkmap <> '') and ($lkmap <> 'n') then
+	$banner=$banner+'\\Lock Gradient map: '+$lkmap
+    endif
+    getparam('hsmap','Probe'):$hsmap
+    if ($hsmap <> '') and ($hsmap <> 'n') then
+	$banner=$banner+'\\Lock Homospoil map: '+$hsmap
+    endif
+    getparam('H1map','Probe'):$H1map
+    if ($H1map <> '') and ($H1map <> 'n') then
+	$banner=$banner+'\\1H Gradient map: '+$H1map
+    endif
+  $shimdate='' $date1='' $date2='' $date3='' $colon=''
+  $shimfile=userdir+'/shims/'+probe+'_lk_d2o'
+  exists($shimfile,'file'):$shimex
+  if ($shimex=0) then
+	$shimfile=systemdir+'/shims/'+probe+'_lk_d2o'
+	exists($shimfile,'file'):$shimex
+  endif
+  if ($shimex) then
+    shell(`(ls -alF `+$shimfile+` | awk '{print $6}')`):$date1
+    shell(`(ls -alF `+$shimfile+` | awk '{print $7}')`):$date2
+    shell(`(ls -alF `+$shimfile+` | awk '{print $8}')`):$date3
+    substr($date3,3,1):$colon
+    $shimdate=$date1+' '+$date2
+    if ($colon <> ':') then
+	$shimdate=$shimdate+' '+$date3
+    endif
+    $banner2='Default Shims: '+probe+'_lk_d2o\\   created on: '+$shimdate
+    banner($banner2)
+    $answer=''
+    $question='Load Default shims for the '+$1+' probe? (y or n):'
+    input($question):$answer
+    if ($answer='y') then
+      rts(probe+'_lk_d2o')
+      setallshims
+      load='n'
+      $banner=$banner+'\\  AND shims loaded'
+    endif
+  endif
+
+  banner($banner)
+endif

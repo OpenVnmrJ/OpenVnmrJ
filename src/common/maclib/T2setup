@@ -1,0 +1,75 @@
+"macro T2setup"
+"*********************************"
+" T2setup - setup a t2 experiment "
+"*********************************"
+
+"usage: T2setup(min. t2 expected, max. t2 expected, total time (hours))"
+       "or T2setup (in this case, interactive input is invoked)"
+
+exists('T2min','parameter'):$epar
+if $#=3 "expect three arguments"
+then "read arguments"
+ $mint2=$1 $maxt2=$2 $time=$3
+elseif ($#=0 and $epar) then
+  $mint2=T2min $maxt2=T2max $time=T2exptime 
+else "interactive input if three arguments not present"
+  input('Enter minimum T2 expected (s): '):$mint2
+  input('Enter maximum T2 expected (s): '):$maxt2
+  input('Enter total experiment time (hours): '):$time
+endif
+if $mint2=0 then 
+  write('error','Min T2 must be > 0!') return 
+endif
+
+format(seqfil,'lower'):$seqfil
+if (seqfil<>'T2meas') and ($seqfil<>'cpmgt2') then
+  Autopsgset('T2meas','bigtau','dg','ap','ss','tau','spin')
+endif
+"calculate tau values"
+$ntaus=1 bigtau=0 array='bigtau' "reset array" bigtau[1]=$mint2/8
+gain='y'
+repeat "set up array"
+ $ntaus=$ntaus+1
+ bigtau[$ntaus]=2*bigtau[$ntaus-1]
+until (bigtau[$ntaus]>2.5*$maxt2) and ($ntaus>5)
+"set pulse sequence parameters"
+pw=pw90 p1=2*pw90 d1=5*$maxt2
+if at>3*$maxt2 then at=3*$maxt2 endif
+gain='y'
+if dm='y' then              "decoupler was on, switch mode"
+   if waltz='y' then
+      dmm='scs'
+   else
+      dmm='ece'
+   endif
+endif
+"set display parameters"
+vp=0 th=wc2max/8 ai vo=0
+"calculate nt based on time desired"
+$averagetau=2*bigtau[$ntaus]/$ntaus
+$time_per_transient=$ntaus*(at+d1+$averagetau)
+$nt=(($time*3600)/$time_per_transient)+0.5
+if nt>2 then "make nt a multiple of 4" 
+  $nt=$nt/4 format($nt,0,0):nt nt=4*nt 
+endif
+
+if (nt>4 and dsp<>'i' and fsq<>'y') then
+  if Console='vnmrs' then il='n' else il='y' endif bs=4
+  while bs<nt/8 do bs=bs+4 endwhile
+  exists('oversamp','parameter'):$e
+  if ($e>0.5) then oversamp=1 endif
+else
+  il='n'
+endif
+
+$hours=trunc((nt*$time_per_transient)/3600)
+//format($hours,0,0):$hours
+$minutes=(nt*$time_per_transient)/60 - 60*$hours
+ 
+if auto='y' then
+  write('alpha','Experiment set up using %d tau values',$ntaus)
+  write('alpha','Approximate acquisition time %.0f hours %.0f minutes',$hours,$minutes)
+else
+  write('line3','Using %d tau values, acquisition time approx. %.0f h %.0f min',$ntaus,$hours,$minutes)
+endif
+ 

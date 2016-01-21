@@ -1,0 +1,90 @@
+  groesyChsqcSM.c - BioPack pulse sequence adapted for Small Molecules 
+                      Eriks Kupce, Oxford, 2005 
+
+    3D C13-H1 ROESY-HSQC with sensitivity-enhancement in 13C dimension. 
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 43 ppm  (for aliphatic C-s)
+                            - carrier @ 125 ppm (for aromatic C-s)
+         3) 15N (optional)  - carrier @ 120 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (90, -180) in F1 and (90, -180) in  F2.    
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gnoesyChsqcSM
+         
+    1. Centre H1, C13 and N15 frequencies as required for your sample.
+
+    2. Ensure that H1, C13 and N15 pulse widths (pw, pwC, pwN), power levels 
+       (tpwr, pwClvl, pwNlvl) and compression factors (compH, compC, compN) are
+       correct. All waveforms are generated and calibrated automatically based 
+       on these numbers. 
+       
+    3. Make sure the gzlvl2 coherence gradient is fine tuned for maximum signal.
+
+    4. N15/C13 decoupling in t1:
+       For simultaneous N15/C13 decoupling (CNrefoc='y') the N15 and C13 power
+       levels should be reduced by 3dB (parameters pwNlw and pwClw). 
+       - pwNlvl and pwClvl can be set manually by the user
+       OR
+       - if pwNlvl and pwClvl are set to 0, the pulse sequence will estimate their 
+	 value from the corresponding hard pulses.
+
+    5. LP in t2:
+       The finite delays necessary during 13C evolution make the first few data
+       points in t2 distorted in intensity. The timing is correct so that lp2
+       may be set to zero, but the intensity distortion, particularly of the
+       second complex point, lead to a "dish" aspect of the baseline. This is not
+       due to the presence of a first-order phase correction (lp2), so adjustment
+       of the timing of the pulse sequence events is not needed.
+   
+       One solution is to use a smaller sw2 with intentional folding. This can make
+       the second d2 value large enough so there is enough time for the C=O
+       refocusing pulse to be executed. For larger sw2's there is not enough time.
+ 
+       A solution to this is to use linear prediction in t2, the 13C dimension.
+       In VNMR you can both "fix up" the first few points using the rest of the
+       data table as the basis set, as well as extend the data set for better F2
+       resolution and less distortion from truncation. The macro "setlp2" can be
+       used in the format "setlp2(desired ni2, acquired ni2, #fixed)". Set
+       "desired ni2" to be the final extended data size, "acquired ni2" to be the
+       total # of increments to be used as a basis (it may be less than ni2, for
+       example if the experiment is running), and "#fixed" to the number of
+       initial points in t2 to be predicted (typically 2-4). Try this with a 2D
+       data set for varying numbers of fixed points until the baseline is sufficiently
+       flat in F2.
+
+    6. WURST DECOUPLING. 
+       If the required decoupling bandwidth can not be covered by conventional    
+       decoupling schemes, setting the flag wudec='y' overrides the decoupling 
+       parameters listed in dg2 and applies WURST decoupling instead. The waveform 
+       is generated automatically from within the pulse sequence by Pbox.  
+       
+    7. PROJECTION-RECONSTRUCTION and TILT experiments:  
+       PR and TILT experiments are enabled by setting the projection angle, pra 
+       to values between 0 and 90 degrees (0 < pra < 90). Note, that for these 
+       experiments axis='ph', ni>1, ni2=0, phase=1,2 and phase2=1,2 must be used. 
+       Processing: use wft2dx macro to obtain positive tilt angles and wft2dy for  
+       negative tilt angles. For array='phase,phase2' the macros correspond to:
+       wft2dx = wft2d(1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,1,0)
+       wft2dy = wft2d(1,0,-1,0,0,1,0,1,0,1,0,1,-1,0,1,0)
+       The following relationships can be used to inter-convert the frequencies (in Hz) 
+       between the tilted, F1(+)F3, F1(-)F3 and the orthogonal, F1F3, F2F3 planes:       
+         F1(+) = F1*cos(pra) + F2*sin(pra)  
+         F1(-) = F1*cos(pra) - F2*sin(pra)
+         F1 = 0.5*[F1(+) + F1(-)]/cos(pra)
+         F2 = 0.5*[F1(+) - F1(-)]/sin(pra)
+       References: 
+       PROJECTION-RECONSTRUCTION:
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 125, pp. 13958-13959 (2003).
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 126, pp. 6429-6440 (2004).
+       TILT in small molecules:
+       E.Kupce and R.Freeman, J. Magn. Reson., vol. 172, pp. 329-332 (2005).
+       E.Kupce, et al, Magn. Reson. Chem., vol. 43, pp. 791-794 (2005).
+       
+       Eriks Kupce, Oxford, 26.08.2004.       

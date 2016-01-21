@@ -1,0 +1,33 @@
+"macro is_cpsample"
+$archsamp=''
+if ($#=0) then
+   isnewexp:$new
+   if ($new=1) then 
+   	$archsamp=archivedir+'/'+sample
+   else
+        shell('dirname '+file):$archsamp
+	strstr($archsamp,'/scoutfids'):$ret,$s1
+	if ($ret) then $archsamp=$s1 endif
+   endif
+else
+   $archsamp=$1
+endif
+$iscpsamp=0
+exists($archsamp+'/dirinfo/macdir','directory'):$iscpsamp
+if ($iscpsamp=0) then $archsamp='' endif
+
+if ($iscpsamp=0) and ($#<1) then
+	// Perhaps curexp has data from acquisition in progress
+	//   in automation
+   $ret=0 $ret2=0
+   if (autodir<>'') then
+      strstr(file,autodir):$ret
+   endif
+   strstr(file,'current'):$ret2
+   if ($ret) and ($ret2) then
+	exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$iscpsamp
+   endif
+   if ($iscpsamp>0) then $archsamp=archivedir+'/'+sample endif
+endif
+   
+return($iscpsamp,$archsamp)

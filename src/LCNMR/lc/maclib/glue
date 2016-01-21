@@ -1,0 +1,80 @@
+"macro glue"
+/*-*- Mode: MAGICAL -*-*/
+"macro glue"
+"glue - Process LC-NMR data"
+"modified to read from savefile directory and return to current exp"
+
+if $# > 0 then $numscans = $1 else $numscans = nscans endif
+$y=''
+"input('Make a \'pseudo-2D\' experiment (y) or add all FIDs together (n)? '):$y"
+"$makearray=($y='y') or ($y='Y')"
+$makearray=(1=1)
+$file=''
+
+if file='exp' then
+  $savefile = savefile
+else
+  length(file):$length
+  $i=$length
+  $ch=''
+  repeat
+    substr(file,$i,1):$ch
+    $done=$ch='/'
+    $i=$i-1
+  until ($done or ($i<=0))
+  substr(file,1,$i):$savefile
+endif
+//$savefile?
+
+$curscan=1
+clradd
+$hr1=0 $min1=0 $sec1=0 $hr2=0 $min2=0 $sec2=0
+$timestr=''
+$done=0
+repeat
+  format($curscan,0,0):$file
+  $file=$savefile+'/'+$file
+  exists($file+'.fid','file'):$e
+  if $e=1 then
+    write('line3','Reading data from file %s',$file)
+    if $curscan=1 then
+      lookup('file',$file+'.fid/log','readline'):$timestr
+    endif
+    rt($file,'nodg')
+    $i = 1
+    repeat
+      select($i)
+      if $makearray then add('new') else add endif
+      $i = $i +1
+    until $i > ni
+    $lastfile=$file
+    $curscan=$curscan+1 "Keeps track of which one we're on"
+  else
+    $done=1
+    $numscans=$curscan-1
+  endif
+until (($curscan > $numscans) or $done)
+lookup('file',$lastfile+'.fid/log','readline'):$timestr2
+
+if ni=0 then ni=1 endif
+$n = $numscans*ni
+write('alpha',$n)
+jexp:$curexp
+mf(addsubexp,$curexp)
+clradd
+copy($lastfile+'.fid/text',curexp+'/text')
+if $makearray then
+  ni=$n
+  fn1=2*ni
+  setvalue('arraydim',$n,'processed')
+  setvalue('ni',$n,'processed')
+  unixtime('%a %b %d %T %Y:',$timestr):$time1
+  unixtime('%a %b %d %T %Y:',$timestr2):$time2
+  $time=($time2-$time1)/($numscans-1)
+  if ($time1 < 0) or ($time2 < 0) or ($time < 0) then
+    $time=1
+  endif
+  setlimit('sw1',50000000,0.01,-1.25e-08) "This may not be needed, but is put in for safety"
+  sw1=60/$time
+  setvalue('sw1',sw1,'processed')
+endif

@@ -1,0 +1,25 @@
+"macro rna_auto2d1"
+"Agilent rna_auto2d1(<arg.for vj>)"
+$date=''
+BPgetdate:$date
+exists(userdir+'/AutoRNA_H2O_2D','file'):$e
+$dir=userdir+'/BioPack.dir/backups'
+if ($e=1) then
+  exists($dir,'directory'):$e
+  if not($e) then
+    shell('mkdir -p '+$dir):$dum
+  endif
+  mv(userdir+'/AutoRNA_H2O_2D',userdir+'/BioPack.dir/backups/AutoRNA_H2O_2D_'+$date) 
+endif
+mkdir(userdir+'/AutoRNA_H2O_2D')
+if ($#=0) then
+ rna_gChsqc
+ input('Input number of transients per increment  '):nt
+endif
+allC='y' ribose='n' aromatic='n' CH2only='n'
+ZZ='n' SE='y' CT='y' JCH=160 CTdelay=1/35
+BPsetwurstparams
+sw=10*sfrq np=1024 sw1=130*dfrq
+ss=8 ni=128 phase=1,2
+rna_2Dtime
+wexp='rna_auto2d2a' au

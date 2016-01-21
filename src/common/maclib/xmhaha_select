@@ -1,0 +1,221 @@
+"macro xmhaha_select"
+  $node=$1
+  $sqattr='' $sqval=''
+  $prop=cursqexp+'/tmpstudy/info/'+$node+'/prop'
+  exists($prop,'file'):$fileex
+  if ($fileex=0) then return(1) endif
+  $sqattr='' $sqval=''
+  readfile($prop,'$sqattr','$sqval','','local')
+  $type='' $status='' $title='' $data='' $lock='' $macro=''
+
+  teststr('$sqattr','type','local'):$x1 $type=$sqval[$x1]
+  teststr('$sqattr','status','local'):$x1 $status=$sqval[$x1]
+  teststr('$sqattr','data','local'):$x1 $data=$sqval[$x1]
+  teststr('$sqattr','lock','local'):$x1 $lock=$sqval[$x1]
+  teststr('$sqattr','title','local'):$x1 $title=$sqval[$x1]
+  teststr('$sqattr','macro','local'):$x1 $macro=$sqval[$x1]
+  substr($title,1):$title
+
+   if ($type='protocol' or $type='grandparent') then
+      return(0)
+   endif
+
+  if ($status='Active') then
+        return(1)
+  endif
+  is_submitmode:$issubmit
+  if (( ($status='Queued') or 
+	($status='Ready') or 
+	($status='Customized')) and ($lock='on')) then
+     if ($issubmit=0) then
+      	write('line3','Cannot open a locked protocol')
+     else
+	write('line3','Cannot customize this experiment')
+     endif
+      return(1)
+  endif
+
+  if ($type='CMD') then
+    if ($issubmit=0) then
+           exec($macro)
+    endif
+        return(1)
+  endif
+
+"*********************************************************************"
+if ($status='Completed') then
+   if ($data='') then return(1) endif
+   $fc='' substr($data,1,1):$fc
+   if ($fc<>'/') then $data=userdir+'/data/'+$data endif
+
+   $e=''
+   substr($data,'dirname'):$d,$b,$e
+   $data=$d+'/'+$b
+   if $e='' then
+	$e='fid'
+	exists($data+'.'+$e,'directory'):$dataex
+        if ($dataex=0) then
+            $e='REC'
+            exists($data+'.'+$e,'directory'):$dataex
+        endif
+        if ($dataex=0) then
+            $e='rec'
+            exists($data+'.'+$e,'directory'):$dataex
+        endif
+	if $dataex=0 then
+	    $e='vfs'
+	    exists($data+'.'+$e,'directory'):$dataex
+	endif
+        if ($dataex=0) then return(1) endif
+    endif
+
+    if ($issubmit>0) then
+	if (cppauseflg='y') or (customflag='y') then
+	    customizepar('savequit')
+	endif
+	if $e='vfs' then
+	    show_n_pause('openspec',$data)
+	else
+	    show_n_pause('open',$data)
+	endif
+    else
+        vnmrjcmd('tray close')
+        opentray[1]='close'
+	if $e='vfs' then
+	    dndvfs($data)
+	else
+	    dndfid($data)
+	endif
+    endif
+    return(1)
+endif
+"********************************************************************"
+if ($status='Executing') then
+//  There are 3 possibilities.  Executing in autodir, curexp or another exp
+
+    strstr($data,'/enterQ.macdir/'):$current,$adir
+    if ($current) then
+		//Executing in autodir
+	$locdir='' $loc='' $when=''
+	getlocid($adir+'/enterQ.macdir/currentsampleinfo'):$loc,$locdir,$when
+	$paused=0 
+	$pauselock=$adir+'/enterQ.macdir/'+$locdir+'/'+$when+'/pauselock'
+	shell('(cat '+$pauselock+' | wc -l)'):$paused
+	if ($paused) then
+	    write('line3','This experiment is in prescan mode. Cannot open data')
+	    return(1)
+	endif
+      if ($issubmit>0) then
+        if (cppauseflg='y') or (customflag='y') then
+            customizepar('savequit')
+        endif
+        show_n_pause('open',$data,$current)
+      else
+        vnmrjcmd('tray close')
+        opentray[1]='close'
+	rtNprocess($data)
+      endif
+      return(1)
+    endif
+
+//  Cannot be executing in a foreground VJ and still be in
+//  for submit mode.   
+    if ($issubmit) then return(1) endif
+
+    if ($data=curexp) then
+		// Executing in current workspace
+	$paused=0
+	$pauselock=cursqexp+'/pauselock'
+	shell('(cat '+$pauselock+' | wc -l)'):$paused
+	if ($paused) then
+            write('line3','This experiment is in prescan mode. Cannot open data')
+            return(1)
+        endif
+
+	exists('sampling','parameter'):$samplingex
+	if ($samplingex) then
+   	    if (sampling='sparse') then wft(1) return(1) endif
+	endif
+
+        vnmrjcmd('tray close')
+        opentray[1]='close'
+        getdim:$dim
+        if ($dim>1) then
+            wft('nods'):$dum,celem 
+	    if proc='lp' then setLP1 endif
+	    gaussian
+            if (dmg='av') then sqsinebell('acq') endif
+            if (dmg1='av1') then sqsinebell('f1') endif
+        endif
+        execpslabel('process')
+        process f full
+      return(1)
+    endif
+
+    strstr($data,'vnmrsys/exp'):$isaq
+    expactive:$isactive
+    if ($isactive=0) and ($isaq) then
+// Since this is an active, the dirname of file and archivedir/sample
+//	will continue to be the same.
+		//Executing in another workspace
+	$cactive=0 $cuser=owner
+	is_activeQ(archivedir+'/'+sample):$cactive,$cuser
+	if ($cactive>0) then
+	    $activeuserdir='' strstr($data,'/exp'):$ret,$activeuserdir
+	    if ($activeuserdir<>userdir) then $cactive=0 endif
+	endif
+	if ($cactive>0) then
+	    jexp:$curexp
+	    $sexp='' format($cactive,0,0):$sexp
+	    $paused=0
+	    $pauselock=userdir+'/studies/exp'+$sexp+'/pauselock'
+	    shell('(cat '+$pauselock+' | wc -l)'):$paused
+	    if ($paused) then
+               write('line3','This experiment is in prescan mode. Cannot open data')
+               return(1)
+            endif
+	    mf($cactive,$curexp)
+            vnmrjcmd('tray close')
+            opentray[1]='close'
+            getdim:$dim
+            if ($dim>1) then
+            	wft('nods'):$dum,celem 
+	        if proc='lp' then setLP1 endif
+		gaussian
+            	if (dmg='av') then sqsinebell('acq') endif
+            	if (dmg1='av1') then sqsinebell('f1') endif
+            endif
+            execpslabel('process')
+            process f full
+	endif
+	return(1)
+    endif
+endif
+"********************************************************************"
+// Other status are valid ONLY for submit mode
+if ($issubmit>0) then
+   $cpnode='' $when='no'
+   getcpnode('rev',cursqexp,$node):$cpnode,$when
+   if (cppauseflg='y') then
+	show_n_pause('close')
+   endif
+   if (customflag='y') then
+        if ($cpnode <> layoutargs[1]) then
+            customizepar('savequit')
+        endif
+   endif
+   if (cppauseflg<>'n') or (customflag<>'n') then
+	return(1)
+   endif
+   if ($cpnode='') then return(1) endif
+   $editOK=1
+   operights('caneditstudynode'):$editOK
+   if (not $editOK) then
+    	write('line3','Warning: Operator does not have right to edit protocols')
+   endif
+   if ($editOK=0) then return(1) endif
+
+   customizepar('start',$cpnode,$when)
+endif
+"********************************************************************"
+return(1)

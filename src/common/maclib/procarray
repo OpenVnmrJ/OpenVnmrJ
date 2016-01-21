@@ -1,0 +1,114 @@
+"macro procarray"
+" procarray - process arrayed 1D spectra "
+
+format(seqfil,'lower'):$seqfil
+strstr($seqfil,'s2pul'):$ret
+if ($ret) then
+   $seqfil='s2pul'
+endif
+
+if ($seqfil<>'s2pul') then
+      wft f ai select(1) aph vsadj(wc2max/arraydim) dssa
+      return
+endif
+
+" initial transformation and parameter adjustments "
+$sp=sp $wp=wp
+wft f ai
+intmod='off'
+
+" first look for the spectrum with the highest intensity "
+$maxpos=0 $ixpos=0
+$ix=1	 
+repeat 
+  select($ix) 
+  peak:$ht 
+  if $ht<0 then $ht=0-$ht endif
+  if $ht>$maxpos then 
+    $maxpos=$ht 
+    $ixpos=$ix 
+  endif 
+  $ix=1+$ix 
+until $ix>arraydim 
+
+" phase up spectrum "
+select($ixpos)
+aph
+sp=$sp wp=$wp
+
+" now check for the spectra with the largest positive and negative sugnals "
+$maxpos=0 $ixpos=0
+$maxneg=0 $ixneg=0
+$ix=1
+repeat
+  select($ix)
+  peak:$ht
+  if $ht>$maxpos then
+    $maxpos=$ht
+    $ixpos=$ix
+  else
+    if $ht<$maxneg then
+      $maxneg=$ht
+      $ixneg=$ix
+    endif
+  endif
+  $ix=1+$ix
+until $ix>arraydim
+$maxneg=0-$maxneg
+
+" select largest spectrum "
+if $maxpos>$maxneg then
+  select($ixpos)
+else
+  select($ixneg)
+endif
+thadj(wcmax/4,4)
+nll:$numlines
+  
+" if arraydim<7 do vertically stacked plots "
+if arraydim<7 then
+  $stackmode='vertical'
+else
+  if (((wcmax-(arraydim-1)*2)/($numlines*arraydim)) < 1) then
+    $stackmode='diagonal'
+  else
+    $stackmode='horizontal'
+  endif
+endif
+
+" automatic stack mode can be overridden using a parameter 'stackmode'	  "
+" possible values for that parameter are 'vertical','horizontal','tilted' "
+exists('stackmode','parameter'):$epar
+if $epar then
+  if stackmode<>'' then
+    $stackmode=stackmode
+  endif
+endif
+
+" adjust vs, limit the noise, adjust plot parameters "
+$range=$maxpos+$maxneg
+if $stackmode='horizontal' then
+  vs=vs*(wc2max-10)/$range
+  noislm
+  vp=$maxneg/$range*(wc2max-10)
+  vo=0 wc=(wcmax-(arraydim-1)*2)/arraydim
+  sc=wcmax-wc ho=-(wc+2)
+  if (auto='n') then dss endif
+else
+  if $stackmode='vertical' then
+    vs=(vs*(wc2max-10)/arraydim-3)/$range
+    noislm(2/arraydim+0.5)
+    full
+    ho=0 vo=(wc2max-10)/arraydim
+    select(1) peak:$firstmax
+    if $firstmax<0 then vp=0-$firstmax endif
+  else
+    vs=vs*((wc2max-20)/arraydim+20)/$range
+    noislm(2/arraydim+0.5)
+    sc=50 wc=wcmax-50
+    ho=-50/(arraydim-1) vo=(wc2max-20)/arraydim
+    select(1) peak:$firstmax
+    if $firstmax<0 then vp=0-$firstmax else vp=0 endif
+  endif
+  if (auto='n') then dss dscale(-5) endif
+endif

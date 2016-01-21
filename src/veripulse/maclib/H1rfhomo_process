@@ -1,0 +1,189 @@
+"macro H1rfhomo_process"
+
+$phase='dophase'
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+VPgettarget('H1pw90'):$target
+$targets=''
+format($target,1,1):$targets
+$IPteststatus='FAIL'
+
+if ($phase='dophase') then select(10) aph endif
+//Determine pw90
+thadj(1)
+nll
+fp
+pw360cal:$pw90
+
+if ($pw90<=$target) then $IPteststatus='PASS' endif
+
+//Add the sample info to the text file
+VPtext
+
+write('line3','1H 90-degree pulse width \(direct\)'):$line
+atext($line)
+write('line3','pw90: %.1f us at power level %.1f dB',$pw90,tpwr):$line
+atext($line)
+CalibrationResults=$line
+write('line3','Target <= %.1f us',$target):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest($pw90) endif
+
+//Add amp power information if calibration table exists
+exists('VPgetpower','maclib'):$vpex
+if ($vpex) then
+   VPgetpower('check'):$pwrtabex
+   if ($pwrtabex) then
+	VPgetpower(VPpowertabpath,'H1','direct',tpwr,$pw90,$target):$atext
+        atext($atext)
+   endif
+endif
+
+//write history file
+VPhistory($pw90,tpwr)
+
+VPgettarget('H1rfhomo'):$target450,$target810
+if (VPspecinfo[5]='N/A') then
+   $ep='' write('line3','wft wp=%0.1f sp=%0.1f ph select(10) aph0 vsadj(50) dssh',4.2p,1p):$ep
+   execprocess=$ep+' darray(\'CalibrationResults\')'
+   setvalue('execprocess',execprocess,'processed')
+   return
+endif
+
+format(solvent,'lower'):$solv
+lb='n'
+if ($solv='d2o') then lb=10 endif
+wft
+
+$counter=1
+select(1)
+if $phase='dophase' then lp=0 aph0 endif
+peak:$bestheight $bestindex=$counter
+repeat
+   select($counter)
+   peak:$ht,$freq
+   if ($ht>$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+      cr=$freq
+      dres(cr,0.5):$lw
+   endif
+   $counter=$counter+1
+until ($ht<.5*$bestheight) or ($counter>arraydim)
+$firstmaxindex=$bestindex
+$firstmaxheight=$bestheight
+
+if ($bestindex>20) then
+   write('line3','not enough increments to determine rf homogeneity. Make sure desired power and approx. pw90 are correct and restart')
+   return
+endif
+
+$counter=$firstmaxindex+2.0*$firstmaxindex          "approx array member for next (negative) maximum"
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter=6*$firstmaxindex) or ($counter>arraydim)
+$pw450=pw[$bestindex]
+$secondmaxindex=$bestindex
+$secondmaxheight=$bestheight
+
+$counter=$secondmaxindex+2.0*$firstmaxindex          "approx array member for next negative maximum"
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht
+   if ($ht>$bestheight) then
+      $bestheight=$ht 
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter=10*$firstmaxindex) or ($counter>arraydim)
+$pw810=pw[$bestindex]
+$thirdmaxindex=$bestindex
+$thirdmaxheight=$bestheight
+
+$ratio1=$secondmaxheight/$firstmaxheight
+$ratio2=$thirdmaxheight/$firstmaxheight
+$ratio1=trunc(1000*$ratio1+0.5)/10
+$ratio2=trunc(1000*$ratio2+0.5)/10
+$pw90=trunc(1000*$pw810/9)/1000
+
+write('line3','450/90=%.1f, 810/90=%.1f',$ratio1,$ratio2)
+
+$ratio1s='' $ratio2s=''
+format($ratio1,1,1):$ratio1s
+format($ratio2,1,1):$ratio2s
+
+write('line3','RF homogeneity - \(450/90\):%.1f, \(810/90\):%.1f',$ratio1,$ratio2):$text
+atext($text)
+CalibrationResults=$text
+   
+if ($target450 > 0) then
+   // 450/90
+   $text='1H RF homogeneity (450/90): '+$ratio1s+'%'
+   atext($text)
+   $IPteststatus450='PASS'
+   $targets450=''
+   $IPteststatus='FAIL'
+   format($target450,1,1):$targets450
+   if ($ratio1 < $target450) then $IPteststatus450='FAIL' endif
+   $text='450/90 Specification: >= '+$targets450+'%'
+   atext($text)
+   CalibrationResults=CalibrationResults,$text
+   $text='Test status: '+$IPteststatus450
+   atext($text)
+   CalibrationResults=CalibrationResults,$text
+endif
+
+if ($target810 > 0) then
+   // 810/90
+   $text='1H RF homogeneity (810/90): '+$ratio2s+'%'
+   atext($text)
+   $targets810=''
+   $IPteststatus810='PASS'
+   format($target810,1,1):$targets810
+   if ($ratio2 < $target810) then $IPteststatus810='FAIL' endif
+   $text='810/90 Specification: >= '+$targets810+'%'
+   atext($text)
+   CalibrationResults=CalibrationResults,$text
+   $text='Test status: '+$IPteststatus810
+   atext($text)
+   CalibrationResults=CalibrationResults,$text
+endif
+
+$lws=''
+format($lw,1,1):$lws
+$text='Resolution: '+$lws+' Hz'
+atext($text)
+
+ds(10)
+vsadj(50)
+dssh
+darray('CalibrationResults')
+
+$ep='' write('line3','wft wp=%0.1f sp=%0.1f ph select(10) aph0 vsadj(50) dssh',4.2p,1p):$ep
+execprocess=$ep+' darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($ratio1,$ratio2)
+
+return($ratio1,$ratio2,$pw90)

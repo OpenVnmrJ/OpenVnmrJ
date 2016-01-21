@@ -1,0 +1,29 @@
+"macro rna_autocal7"
+setref $bestone=1 $counter=1
+av select(1) vsadj(20) $best=20
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone)  
+vsadj(50)
+ 
+BPsvf(userdir+'/AutoRna/gNhsqc_gzlvl2cal')
+write('plotter',100,wc2max,'15N Coherence Transfer Gradient Calibration')
+dssh('dodc') pl('all','dodc') pap BPpage 
+gzlvl2=gzlvl2[$bestone] 
+nt=16 wnt='wft f full'
+
+BPbiopack2   "to update probefile"
+
+rna_WGgNhsqc
+
+sw=20p sw1=40*dfrq2
+ni=0  phase=1  av dm2='nnn' 
+vp=0 ssfilter='n' gain=gain-12
+wnt='wft setref select(1) f vsadj(120) f full dssh' wexp='rna_autocal8'
+nt=1 ss=2 intmod='off'
+array('finepwrf',40,1600,20)
+au

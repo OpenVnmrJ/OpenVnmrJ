@@ -1,0 +1,75 @@
+"macro is_NUS2d"
+// Chempacker macro
+
+if $# > 0 then $file=$1 else $file=file endif
+    $e='' $fidex=0
+    substr($file,'dirname'):$d,$b,$e
+    if $e='' then
+    	$file=$d+'/'+$b+'.REC'
+    	exists($file+'/procpar','file'):$fidex
+    	if not $fidex then
+            $file=$d+'/'+$b+'.rec'
+            exists($file+'/procpar','file'):$fidex
+    	endif
+    	if not $fidex then
+            $file=$d+'/'+$b+'.fid'
+            exists($file+'/procpar','file'):$fidex
+    	endif
+    else
+	exists($file+'/procpar','file'):$fidex
+    endif
+    if not $fidex then return(0) endif
+    exists($file+'/sampling.sch','file'):$schex
+    if not $schex then return(0) endif
+
+    fread('','usertree')
+    fread($file+'/procpar','usertree')
+    $ni=0 $ni2=0
+    exists('ni','parameter','usertree'):$parex
+    if $parex then getvalue('ni','usertree'):$ni endif
+    exists('ni2','parameter','usertree'):$parex
+    if $parex then getvalue('ni2','usertree'):$ni2 endif
+    if ($ni2<2 and $ni<2) then 
+	fread('','usertree') return(0)
+    endif
+    if ($ni2>1 and $ni2>1) then
+	fread('','usertree') return(0)
+    endif
+    if $ni>1 then
+	$ppar='phase'
+	$CSdpar='CSdensity'
+    else
+	$ppar='phase2'
+	$CSdpar='CSdensity2'
+	$ni=$ni2
+    endif
+
+    exists('sampling','parameter','usertree'):$parex
+    if not $parex then fread('','usertree') return(0) endif
+    $sampling=''
+    getvalue('sampling','usertree'):$sampling
+    if $sampling<>'sparse' then fread('','usertree') return(0) endif
+
+    exists($CSdpar,'parameter','usertree'):$parex
+    if not $parex then fread('','usertree') return(0) endif
+
+    getvalue($CSdpar,'usertree'):$CSdensity
+    if $CSdensity=100 then fread('','usertree') return(0) endif
+
+    exists('CScleaned','parameter','usertree'):$parex
+    if $parex then
+        getvalue('CScleaned','usertree'):$CScleaned
+        if $CScleaned='y' then fread('','usertree') return(0) endif
+    endif
+                                                                 
+    exists($ppar,'parameter','usertree'):$parex
+    if not $parex then fread('','usertree') return(0) endif
+    getvalue($ppar,'size','usertree'):$psize
+
+    fread('','usertree')
+
+    readheader($file+'/fid'):$np,$realdim
+    if $realdim>= $ni*$psize then return(0) endif
+
+    return(1)
+

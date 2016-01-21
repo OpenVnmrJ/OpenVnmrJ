@@ -1,0 +1,111 @@
+"macro rescal"
+"****************************************************************************"
+"     rescal: Macro to calculate pixel size (spatial resolution) of an       "
+"             image. Rescal can be used inside other macros using the        "
+"             silent option                                                  "
+"             The information is returned as the pixel dimensions in         "
+"             units of millimetres. First for the read out direction         "
+"             collected, displayed, then for the phase encoding axis         "
+"             collected, displayed.                                          "
+"****************************************************************************"
+
+"david foxall: 18th june 1987: interface version #1"
+" @(#)rescal	7.1 7/1/91 "
+
+"[1] parameter existance trap"
+exists('ni','parameter'):$ex1
+if $ex1 < 0.5
+then
+write('error','%s','rescal: missing the ni parameter')
+abort
+endif
+
+if ni < 0.5
+then
+write('error','%s','rescal: ni is zero ?')
+abort
+endif
+
+exists('lro','parameter'):$ex2
+if $ex2 < 0.5
+then
+write('error','%s','rescal: missing the parameter lro')
+abort
+endif
+
+exists('lpe','parameter'):$ex3
+if $ex3 < 0.5
+then
+write('error','%s','rescal: missing the parameter lpe')
+abort
+endif
+
+exists('fn1','parameter'):$ex4
+if $ex4 < 0.5
+then
+write('error','%s','rescal: missing the parameter fn1')
+abort
+endif
+
+"[2] Input parameter count"
+if $# < 0.5
+then
+$state='notsilent'
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+   if $1='silent'
+   then
+   $state='silent'
+   else
+   $state='notsilent'
+   write('error','%s','rescal: Use rescal(<"silent">)  ')
+   endif
+endif
+
+if $# > 1.5
+then
+write('error','%s','rescal: Use rescal(<"silent">) ')
+$state='notsilent'
+endif
+
+"[3] Calculations"
+$pixrc=(10*lro)/(0.5*np)
+$pixrd=(10*lro)/(0.5*fn)
+$pixpc=(10*lpe)/ni
+$pixpd=(10*lpe)/(0.5*fn1)
+format($pixrc,6,3):$disrc
+format($pixrd,6,3):$disrd
+format($pixpc,6,3):$dispc
+format($pixpd,6,3):$dispd
+
+
+"[4] Return to user"
+if $state='silent'
+then
+return($pixrc,$pixrd,$pixpc,$pixpd)
+else
+clear(4)
+echo('Digital Resolution Of The Current Image(s)')
+echo
+echo('Read Out Direction')
+echo
+echo('-n','The pixel size collected in the dataset is:   ',$disrc)
+echo('-n',' mm')
+echo
+echo('-n','The pixel size as displayed on the screen is: ',$disrd)
+echo('-n',' mm')
+echo
+echo
+echo('Phase Encoding Direction')
+echo
+echo('-n','The pixel size collected in the dataset is:   ',$dispc)
+echo('-n',' mm')
+echo
+echo('-n','The pixel size as displayed on the screen is: ',$dispd)
+echo('-n',' mm')
+return($pixrc,$pixrd,$pixpc,$pixpd)
+endif
+
+"**********************************THE END**********************************"

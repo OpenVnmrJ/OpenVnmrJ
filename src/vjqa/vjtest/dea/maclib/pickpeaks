@@ -1,0 +1,100 @@
+" pickpeaks "
+
+
+" if a numeric argument, this will be the number of hz "
+" on either side of peaks for integral"
+
+$width=25  " Distance from detected peak "
+
+" $dresmult is the peak width multiplier."
+" The peaks at the edges of the integral have their peak width determined."
+" This number is multiplied times that peak width and the integral setpoint "
+" is moved that many Hz from the peak.  $width moves this setpoint out that many more Hz. "
+" A value of 16 for $dresmult should get the integral to the edge of the peak base. "
+
+$dresmult=0
+$dres1=1  $dres2=1
+
+if ($# = 1) then $width=$1 endif
+if ($# = 2) then $width=$1 $dresmult=$2 endif
+
+if auto<>'y' and $# <1 then 
+  input('how many Hz on side of peak for reset point? '):$width 
+  input('do you want to use peak widths to adjust integral setpoints? (y or n)'):$answer
+  if $answer='y' then
+    input('How many multiples of peak width do you want? (16 is common) '):$dresmult
+  else
+    $dresmult=0
+  endif
+endif
+
+f full  $sp_original=sp $wp_original=wp
+
+if tn='C13' then f full else sp=-0.4p wp=12p endif
+
+dll
+nll:$nlines
+if $nlines=0 then write('line3','no peaks detected for pickpeaks') return endif
+
+" loop to detect less than 500 peaks by adjusting threshhold "
+
+$a=1
+repeat
+  if $nlines>500 then th=th+1 write('line3','adjusting th higher; too many peaks') endif
+  dll nll:$nlines
+  $a=$a+1
+until $a>20 or $nlines<500
+
+if $nlines>500 then write('line3','threshold still not high enough') endif
+
+"  make the integrals 25 (or $width) Hz from peak  "
+f full
+
+cz
+$location1=0 $location2=0
+
+getll:$ht,$location1 cr=$location1 dres:$dres1  
+
+if $dres1>1.5 then  " peaks with dres>1.5 may be close multiple peaks, use slope to define dres then "
+  $dum1=0 $dum2=0 $dumht=0 mark(cr):$dumht cr=cr+1 mark(cr):$dum1 exp(2.827*$dum1/$dumht):$dum2 $dres1=$dum2*0.4813 
+  cr=cr-2 mark(cr):$dum1 exp(2.827*$dum1/$dumht):$dum2 $dum2=$dum2*0.4813 if $dres1>$dum2 then $dres1=$dum2 endif
+endif
+
+
+if ($width+$dres1*$dresmult)>sfrq then $dres1=(sfrq-$width)/$dresmult endif
+
+if ($location1+$width+$dresmult*$dres1)>($sp_original+$wp_original-0.5p) then z($sp_original+$wp_original-0.5p) else z($location1+$width+$dresmult*$dres1) endif
+
+if $nlines=1 then 
+  if ($location1-$width-$dresmult*$dres1)<($sp_original+0.5p) then z($sp_original+0.5p) else z($location1-$width-$dresmult*$dres1) endif
+else
+  $i=1
+  repeat
+    getll($i):$ht,$location1    cr=$location1 dres:$dres1
+      if $dres1>1.5 then  " peaks with dres>1.5 may be close multiple peaks, use slope of peak to define dres then "
+        $dum1=0 $dum2=0 $dumht=0 mark(cr):$dumht cr=cr-1 mark(cr):$dum1 exp(2.827*$dum1/$dumht):$dum2 $dres1=$dum2*0.4813 
+      endif
+      if $dres1<0.5 then $dres1=0.5 endif
+      if ($width+$dres1*$dresmult)>sfrq then $dres1=(sfrq-$width)/$dresmult endif
+
+    getll($i+1):$ht,$location2  cr=$location2 dres:$dres2  
+      if $dres2>1.5 then  " peaks with dres>1.5 may be close multiple peaks, use slope to define dres then "
+        $dum1=0 $dum2=0 $dumht=0 mark(cr):$dumht cr=cr+1 mark(cr):$dum1 exp(2.827*$dum1/$dumht):$dum2 $dres2=$dum2*0.4813 
+      endif
+      if $dres2<0.5 then $dres2=0.5 endif
+      if ($width+$dres2*$dresmult)>sfrq then  $dres2=(sfrq-$width)/$dresmult endif
+
+    if ($location1-$location2)>($width*2+$dresmult*($dres1+$dres2)+1) then 
+      z($location1-$width-$dresmult*$dres1,$location2+$width+$dresmult*$dres2)
+    endif
+    $i=$i+1
+  until ($i=$nlines)
+
+  cr=$location2   ds
+  if ($location2-$width-$dresmult*$dres2)<($sp_original+0.5p) then z($sp_original+0.5p) else z($location2-$width-$dresmult*$dres2) endif
+endif
+
+f full
+ds dscale
+intmod='partial'
+isadj

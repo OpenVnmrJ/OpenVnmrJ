@@ -1,0 +1,57 @@
+"macro TempGrad_process"
+"Agilent"
+"macro TempGrad_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+wft
+setref
+if ($phase='dophase') then aph endif
+wp=4p
+sp=1p
+vsadj
+VPthadj(2)
+
+tempcalc('noplot'):$temp,$tempgrad,$lw1,$lw2
+
+VPtext
+VPgettarget('TempGrad'):$target
+$IPteststatus='PASS'
+$tempgrads=''
+format($tempgrad,1,1):$tempgrads //formant converts string 
+if ($tempgrad>$target) then $IPteststatus='FAIL' endif
+$targets=''
+format($target,1,1):$targets //converts $target into string 
+
+$text='Temperature Gradient'
+atext($text) //atext add a line of text to current exp text file
+$text='Temperature gradient measured at '+$tempgrads +' Hz/deg. C'
+atext($text)
+$text='Test status: '+$IPteststatus
+atext($text)
+
+write('line3','temperature gradient test'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','calculated temperature gradient %.3e',$tempgrad):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Specfication: temperature gradient < %.1f ',$target):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($tempgrad)

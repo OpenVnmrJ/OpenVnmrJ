@@ -1,0 +1,132 @@
+"macro pldosyproj"
+
+$reffrq=reffrq
+$reffrq1=reffrq1
+$plt2Darg=plt2Darg
+$trace=trace
+
+$dosywp=wp $dosysp=sp $dosywp1=wp1 $dosysp1=sp1
+$savewc=wc $savesc=sc $savewc2=wc2 $savesc2=sc2
+
+if ((($1='plotside') and (trace='f1')) or
+    (($1='plottop')  and (trace='f2'))) then
+
+        exists('dosyprojexp','parameter','global'):$e
+// Why can't we use the newexp tool?
+        if not $e then create('dosyprojexp','integer','global') dosyprojexp=7000 endif
+        $proj='' format(dosyprojexp,'lower'):$proj
+        exists(userdir+'/exp'+$proj+'/dosy_proj_experiment','file'):$exfile "OK to use exp"
+        if $exfile then
+            $projexp=dosyprojexp
+        else  "otherwise search new workspace"
+            $i=7000 $ok=''
+            repeat
+                $istr=''
+                format($i,'lower'):$istr
+                exists(userdir+'/exp'+$istr,'file'):$e
+                if not $e then cexp($i):$dum $ok=$istr endif
+                $i=$i+20
+            until $ok<>''
+            $projexp=$i-20
+        endif
+        jexp:$curexp
+        trace='f2' proj($projexp) trace=$trace
+        dosyprojexp=$projexp
+        jexp(dosyprojexp) trace=$trace
+        shell('touch '+userdir+'/exp'+$proj+'/dosy_proj_experiment')
+        $savewp=wp/$reffrq  $savesp=sp/$reffrq
+
+elseif ((($1='plotside') and (trace='f2')) or
+    (($1='plottop') and (trace='f1'))) then
+        $reffrq=1 $reffrq1=1
+        writeparam(curexp+'/saveparam','vs cutoff intmod wc sc wp sp wc2 sc2 vp')
+        sdp:$dum                "DOSY diffusion projection"
+        $savewp=wp1/$reffrq1 $savesp=sp1/$reffrq1
+        $reffrq=$reffrq1
+endif
+
+	f full dc
+	$newwc=$savewc $newsc=$savesc $newwc2=$savewc2 $newsc2=$savesc2
+	$savewp=$savewp*$reffrq $savesp=$savesp*$reffrq
+	intmod='off'
+
+    if ($1='plotside') then
+	$edge=sp vp=0
+	if $savesp > $edge then 
+	  sp=$savesp
+	  $width=sw-sp+$edge
+	  if ($width > $savewp) then
+	    wp=$savewp
+	  else
+	    wp=$width 
+	    $newwc2= wp*$newwc2/$savewp 
+	    $newsc2= $newsc2 + ($savewc2 - $newwc2)
+	  endif
+	else
+	  sp=$edge
+          $wp=$savewp - (sp-$savesp)
+	  $newwc2=$newwc2*$wp/$savewp
+	  $width = sw
+	  if ($width > $wp) then
+	    wp=$wp
+	  else
+	    wp=$width 
+	    $wc2=$newwc2
+	    $newwc2=wp*$newwc2/$wp
+	    $newsc2= $newsc2 + ($wc2 - $newwc2)
+	  endif
+	endif	 
+
+        wc=$newwc-4 wc2=$newwc2 sc=$newsc sc2=$newsc2
+        if (parstyle='' or parstyle='bpa') then $wcmax=wcmax*0.98 else $wcmax=wcmax*0.75 endif
+	vsadj(($wcmax-wc)*0.4)
+        cutoff=(wcmax-$savewc)/3
+
+        pl('side')
+    else
+        $edge=sp
+        if $savesp > $edge then
+          sp=$savesp
+          $width=sw-sp+$edge
+          if ($width > $savewp) then
+            wp=$savewp
+          else
+            wp=$width
+          endif
+            $newwc= wp*$newwc/$savewp
+        else
+          sp=$edge
+          $wp=$savewp - sp+$savesp
+          $newwc=$newwc*$wp/$savewp
+          $newsc = $newsc + ($savewc - $newwc)
+          $width = sw
+          if ($width > $wp) then
+           wp=$wp
+          else
+           wp=$width
+           $wc=$newwc
+           $newwc=wp*$newwc/$wp
+           $newsc= $newsc + ($wc - $newwc)
+          endif
+        endif
+
+        wc=$newwc wc2=$newwc2 sc=$newsc sc2=$newsc2
+        $sc2=sc2 $vp=vp
+        vp=sc2-5 sc2=0
+        vsadj((wc2max*0.98-wc2)*0.75)
+    	pl('top')
+    	vp=$vp sc2=$sc2
+    endif
+
+    if ((($1='plotside') and (trace='f2')) or
+        (($1='plottop') and (trace='f1'))) then
+          fread(curexp+'/saveparam')
+          shell('rm -f '+curexp+'/saveparam'):$dum
+          redosy trace=$trace wc=$savewc sc=$savesc wc2=$savewc2 sc2=$savesc2
+          wp=$dosywp sp=$dosysp wp1=$dosywp1 sp1=$dosysp1
+    endif
+    if ((($1='plotside') and (trace='f1')) or
+        (($1='plottop') and (trace='f2'))) then
+	  jexp($curexp) dconi
+    endif
+    plt2Darg=$plt2Darg

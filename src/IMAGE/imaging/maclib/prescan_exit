@@ -1,0 +1,89 @@
+"macro prescan_exit"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_exit
+"
+" DESCRIPTION:
+"    Update system parameters with prescan results.
+"
+" Ex.: prescan_exit(<argument_1>)
+"
+"         <argument_1> = 'none'  - restore scan paramters, reset prescan
+"                                  variables,
+"         <argument_1> = 'abort' - same as 'none', but it records that
+"                                  prescan had abnormal termination was
+"                                  aborted
+"         <argument_2> = 'man'   - aborts prescan without restoring scan
+"                                  parameters for manual prescan
+"
+"********************************************************************
+"------------------------------------"
+" Assigne and initialize variables   "
+"------------------------------------"
+$macro_name = 'prescan_exit  '
+$temp_str   = ''
+$action     = ''
+$prescan_flag  = 1                     "index for Prescan flag "
+$manual     = ''                       "Flag for manual prescan" 
+"------------------------------------"
+" Check argument                     "
+"------------------------------------"
+if($# > 2) then
+     write('error','Prescan_exit called with wrong number of arguments!') 
+     prescan_exit('abort')
+endif
+if ($1 <> 'none' and $1 <> 'abort') then
+     write('error',`Use: prescan_exit[('<mode>')] -- <mode> is  none | abort`)    
+     prescan_exit('abort') 
+else
+     $action = $1          
+endif
+if ($# = 2) then
+     if ($2 <> 'man') and ($2 <> '')then
+          write('line3','Illegal 2nd argument - only <man> is valid!')
+	  abort 
+     else
+          $manual = 'man'
+     endif
+endif
+"------------------------------------"
+" Cleanup after prescan              "
+"------------------------------------"
+prescan_cleanup('remove')
+"------------------------------------------------"
+" Reset prescan parameter and log end of prescan "
+"------------------------------------------------"
+Prescan_AcqStatus = 0                      "Reset prescan acquisition status"
+prescan_control[$prescan_flag] = 0         "Reset prescan flag
+beepon                                     "Now you can make noise again"
+"-----------------------------------"
+"  Abort and exit for Auto-Prescan  "
+"-----------------------------------"
+if ($manual <> 'man') then
+     "------------------------------------------------"
+     " EXIT prescan with abnormal cxondition          "
+     "------------------------------------------------"
+     if ($action = 'abort') then
+	  prescan_params('load')
+	  prescan_log('abort',$macro_name,'Prescan aborted !')
+	  write('line3','- - - - - END OF PRESCAN - - - - -')
+	  prescan_control[$prescan_flag] = 0         "Reset prescan flag"     
+	  abort
+     endif     
+     "------------------------------------------------"
+     " Restore sequence parameter                     "
+     "------------------------------------------------"
+     if ($action = 'none') then
+	  write('line3','Restore last paramter set!')
+	  prescan_params('load')     
+	  prescan_control[$prescan_flag] = 0         "Reset prescan flag"    
+     prescan_log('restore',$macro_name,'Unknown event - Restored scan !')
+     endif	  
+else
+     "---------------------------------"
+     " Simple abort for manual prescan "
+     "---------------------------------"
+     abort
+endif     

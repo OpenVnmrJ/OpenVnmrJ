@@ -1,0 +1,578 @@
+"macro lkZ0"
+
+// works only for gradient lk map
+
+$d3optlk=0,0.25
+if (h1freq<450) then $d3optlk=0,0.18 endif
+$style='db'
+getparam('style','Probe'):$style
+auargs('gradtype_nn')
+
+if ($# < 1) then $1=0 endif
+IF ($1 = 0) THEN
+
+    cplog('PROTON','first'):$file,$asdir
+    if ($file<>'') then rt($asdir+'/'+$file) else abort endif
+    wft
+    execprocess='wft dssh'
+    execplot='execplot=\'\''
+    $pfgon3=''
+    substr(pfgon,3,1):$pfgon3
+    if ($pfgon3='n') then pfgon='nny' endif
+    $dn=dn
+    $LKtpwr=LKtpwr
+    $solvent=solvent
+    is_IP:$isIP
+    savesampglobal('cp')
+
+//    groupcopy('current','processed','acquisition')
+//    groupcopy('current','processed','display')
+//    groupcopy('current','processed','processing')
+
+    gmapsys
+    if ($isIP) then
+	IPmodule('get')
+    else
+	$IPparlist=''
+        module('list','IPpars'):$IPparlist
+        destroy($IPparlist):$e
+    endif
+    solvent=$solvent
+    exists('LKtpwr','parameter'):$parex
+    if ($parex<0.5) then create('LKtpwr') endif
+    LKtpwr=$LKtpwr
+    file='exp'
+    $dum=''
+    beepoff
+    gmapsys('setH2'):$dum
+    if $style='db' then nt=4 else nt=1 endif
+    d1=2 pw=300 tpwr=38
+    getparam('tpwr','lk'):tpwr
+    getparam('pw90','lk'):pw
+    if (tpwr=0) then tpwr=38 endif
+    if (pw=0) then pw=300 endif
+    beepon
+
+    sb=at/3 sbs=sb/2 gf='n' lb='n' awc='n'
+    tn='lk' d3=0 r1=1
+    dn='H1'
+    if (Console = 'mercury') then gain=0 else gain=20 endif
+    wstart='wshim=\'n\' wstart=\'\''
+    $size=16
+    getparam('rfsize','Probe'):$size
+    $size=$size/10
+    if ($size=0) then $size=1.6 endif
+    getgamma(tn):$gamma
+    $gammabar=$gamma/(2*3.1416*10000)
+"Find GperCM that will give a profile with half the sw"
+    $gpercm=(sw/($gammabar*$size))/2
+    format($gpercm,0,1):$gpercm
+    fixgrd($gpercm):gzlvl
+	
+    if (spintype<>'tach') then spin=0 endif
+
+    fread($asdir+'/'+$file+'.fid/procpar','current','newonly')
+    getsampglobal('cp')
+    PFGflg='y'
+    mkpar('real','vtcomplvl',0)
+    vtcomplvl=0
+
+//    wnt='proc=\'ft\' wft f full dssh'
+    wnt=''
+    seqfil='s2pul' p1=0 nt=1 np=np*8 
+    sw=sw*4 tof=0
+    pslabel='s2pul'
+    exists('proc1','parameter'):$pon
+    if ($pon>0) then proc1='ft' endif
+    sinebell
+    execprocess='proc=\'ft\' wft dssh'
+    execplot='return'
+    caliblist=$0
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_findtof'
+    xmhaha_calib('addNode','lkZ0(1)')
+
+    banner('finding offset')
+
+ENDIF
+
+"********************************************************"
+IF ($1 = 1) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft('nodc') setref f full av peak:$ht,cr movetof
+    if $style='db' then nt=4 else nt=1 endif
+    np=np/8 sb=at/3 sbs=sb/2 sw=sw/4
+    seqfil='gmapz'
+    execprocess='proc=\'ft\' wft dssh'
+    execplot='return'
+    calibnode='_profile'
+    xmhaha_calib('addNode','lkZ0(2)')
+
+    banner('Optimizing gradient level')
+ 
+ENDIF
+
+"********************************************************"
+IF ($1 = 2) THEN
+
+    cplog('gmapz','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft f full
+    ai vsadj(100)
+    rfl=sw/2 rfp=0 cr=0
+    dres(cr,.1):$width,$hzpp,$f1,$f2
+    if (r1 > 1) then
+ 	if (($width < 0.25*sw) or ($width > 0.75*sw)) then
+  	    printon
+  	    write('alpha','Gradient map failed')
+  	    write('alpha','Check PFG amplifier and pfgon parameter')
+  	    write('alpha','Gradient map generation aborted')
+  	    printoff
+  	    gmapsys('quit')
+	    abort
+	endif
+    else
+ 	if ($width=0) then $width = sw endif
+    	gzlvl=gzlvl*sw*0.4/$width
+ 	r1=r1+1
+	calibnode='_profile'
+	xmhaha_calib('addNode','lkZ0(2)')
+ 	banner('Optimizing gradient level')
+ 	return
+    endif
+
+    $date=''
+    shell('date +%Y-%m-%d'):$date
+    d3=$d3optlk
+    ss=1
+    $mapname=probe+'_z0calib_'+tn+'_'+$date
+    $ok=''
+    gmaplistfunc('wrshimcal',$mapname):$ok
+    $exec='' gmaplistfunc('unarray'):$ok,$exec
+    exec($exec)
+    gmapset('disable')
+    calibnode='_gzwin'
+    xmhaha_calib('addNode','lkZ0(5)')
+    execprocess='proc=\'ft\' wft dssh'
+
+    banner('Optimizing window')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+    if $style='db' then $gzsize=4 else $gzsize=5 endif
+    gmap_findtof='n'
+    gzlvl = 1.1* gzlvl
+    gmapauto('startmap','nogo','ow')
+    gmapset('setb')
+    gmapset('disable')
+    calibnode='_shimmap'
+    execprocess=wexp+' lkZ0(4)'
+    execplot='pltext(80,wc2max*0.98) gmaprep(\'explmenu\',\'pbase\')'
+    banner('Making Gradient map')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 4) THEN
+
+    $mapname=''
+    gmapshim('mapname'):$mapname
+    $text=tn+' Gradient map for the probe: '+probe
+    $atext='   Mapname : '+$mapname
+    text($text) atext($atext)
+    gmaprep('explmenu','ebase')
+    dtext
+//    if (pltopt='y') then
+//   	pltext(80,wc2max*0.98)
+//   	gmaprep('explmenu','pbase')
+//    endif
+    $dum=''
+    $ffile = userdir+'/gshimlib/shimmaps/'+$mapname+'.fid'
+
+    exists('/vnmr/vnmrrev','file','rw'):$owner
+    if ($owner>0.5) then
+      	exists(systemdir+'/gshimlib/shimmaps','directory'):$xx
+      	if ($xx < 0.5) then
+	    shell('mkdir -p '+systemdir+'/gshimlib/shimmaps'):$dum
+        endif
+      	$tfile = systemdir+'/gshimlib/shimmaps'
+      	$cmd = 'cp -r '+$ffile+' '+$tfile
+      	shell($cmd):$dum
+    endif
+
+// make a copy of the shimmap in study directory
+    $gdir=archivedir+'/'+sample+'/dirinfo/gshimlib'
+    shell('mkdir '+$gdir):$dum
+    shell('mkdir '+$gdir+'/shimmaps'):$dum
+    shell('mkdir '+$gdir+'/data'):$dum
+    shell('cp -r '+$ffile+' '+$gdir+'/shimmaps'):$dum
+    shell('cp '+userdir+'/gshimlib/data/* '+$gdir+'/data'):$dum
+
+    //setparams('lkmap',$mapname,'Probe')
+    $tpwrs='' $pw90s=''
+    format(tpwr,0,0):$tpwrs
+    format(pw,0,1):$pw90s
+//    addlknuc
+//    setlkpars(lockpower,lockgain,lockphase)
+    addparams('tpwr',$tpwrs,'lk')
+    addparams('pw90',$pw90s,'lk')
+    execprocess='lkZ0(8,\'ebase\') dtext'
+    execplot='pltext(80,wc2max*0.98) lkZ0(8,\'pbase\')'
+
+//    gmapsys('quit')
+
+    cplog('PROTON','first'):$file,$asdir
+    $macro=''
+    rtv($asdir+'/'+$file,'macro'):$macro
+    rtv($asdir+'/'+$file,'caliblist'):$caliblist
+    rtv($asdir+'/'+$file,'svftmplt'):$svftmplt
+    $cl=caliblist
+    caliblist=$caliblist
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    xmhaha_calib('addNode',$macro+'(\'repeat\')','top'):$newnode
+    write('file',$md+'/'+$newnode+'acq','wshim=\'e\'')
+    $mapname=''
+    gmapshim('mapname'):$mapname
+    write('file',$md+'/'+$newnode+'acq','Gmapname=\'%s\'',$mapname)
+    write('file',$md+'/'+$newnode+'acq','execprocess=\'%s(7)\'',$0)
+    write('file',$md+'/'+$newnode+'acq','wstart=`svftmplt=\'%s\'`',$svftmplt)
+    caliblist=$cl
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 5) THEN
+
+    cplog('gmapz','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    gmapset('setsw')
+
+    pw=0 tpwr=0
+    getparam('pw90','lk'):pw
+    getparam('tpwr','lk'):tpwr
+    $tpwr=tpwr
+    exists('LKtpwr','parameter'):$parex
+    if ($parex) then $tpwr=LKtpwr endif
+    is_IP:$isIP
+    if ($isIP) then "Force pw90 calib for VeriPulse"
+	$tpwr=0
+    endif
+    if (tpwr=0) or ($tpwr=0) then 
+	seqfil='s2pul'
+	pslabel='s2pul'
+	d3=0 nt=1
+  	if (pw=0) then pw=300 endif
+  	tpwr=38 
+        $probestyle='' $arraydim=15
+        getparam('style','Probe'):$probestyle
+ 	if ($probestyle='one' or $probestyle='cold') then $arraydim=22 endif
+  	array('tpwr',$arraydim,tpwr-7,1)
+	execprocess='return'
+	execplot='return'
+	calibnode='_tpwr'
+	xmhaha_calib('addNode','lkZ0(6)')
+  	banner('Optimizing pulse width')
+    else
+  	full
+  	d3=$d3optlk seqfil='gmapz'
+   	if $style='db' then nt=4 else nt=1 endif
+   	lkZ0(3)
+    endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 6) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft av f full ds(1) vsadj(100)
+    $counter=1
+    repeat
+  	select($counter)
+  	peak:$ht
+  	if $counter=1 then $maxht = $ht $tpwr=tpwr[1] else
+     	    if $ht>$maxht then 
+		$maxht=$ht $tpwr=tpwr[$counter] 
+     	    else 
+		$counter=arraydim 
+	    endif
+  	endif
+  	$counter=$counter+1
+    until ($counter>arraydim)
+
+    ds(1) full
+    tpwr=$tpwr 
+    d3=$d3optlk seqfil='gmapz'
+    if $style='db' then nt=4 else nt=1 endif
+    lkZ0(3)
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 7) then
+    wft
+    $date=''
+    shell('date +%Y-%m-%d_%H%M%S'):$date
+    $probepath='' $pex=0 $appdir=''
+    exists(probe,'probes/'+probe):$pex,$probepath
+    strstr($probepath,'/probes/'):$pex,$appdir
+    exists($appdir+'/shims/'+probe+'_lk_d2o','file'):$shimex
+    if ($shimex) then
+         shell('rm '+$appdir+'/shims/'+probe+'_lk_d2o')
+    endif
+    exists($appdir+'/shims','directory'):$shimdirex
+    if ($shimdirex=0) then
+           shell('mkdir '+$appdir+'/shims'):$dum
+    endif
+    svs($appdir+'/shims/'+probe+'_lk_d2o') 
+    svs($appdir+'/shims/'+probe+'_lk_d2o_'+$date)
+    execprocess='wft'
+    xmhaha_calib('addNode','lkZ0(9)','top')
+
+ENDIF
+"********************************************************"
+IF ($1=8) THEN
+
+    $dirn='' substr(file,'dirname'):$dirn
+    $dirn=$dirn+'/dirinfo/gshimlib/data'
+    exists(curexp+'/expl.out','file'):$e
+    if $e>0.5 then rm(curexp+'/expl.out'):$x endif
+    $jfile=$dirn+'/gshim.bas'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+        write('error','gshim.bas not found')
+	return
+    else
+        wrspec('expl_avg_scale',$jfile)
+    endif
+    if ($2 = 'ebase') then
+    	full
+      	expl('file',$jfile,'tinysymbol')
+    elseif ($2='pbase') then
+      	pexpl('file',$jfile,'tinysymbol')
+      	page
+    endif
+    return
+
+ENDIF
+"********************************************************"
+
+IF ($1 = 9) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    if ($file<>'') then rt($asdir+'/'+$file) else abort endif
+    wft
+    execprocess='wft dssh'
+    execplot='execplot=\'\''
+    addlknuc
+    tn='lk' dn='H1' seqfil='s2pul' pslabel='s2pul' sw=200*sfrq np=16k
+    tof=0 nt=1 ss=0 at=2 f
+    tpwr=45 pw=200
+    getparam('tpwr','lk'):tpwr
+    getparam('pw90','lk'):pw90
+    pw(90)
+    wstart='alock=\'u\' wstart=\'\'' 
+    wnt='' 
+    array=''
+    p1=0 sb='n' dmg='ph' fn=2*np lp=0 
+    caliblist=$0
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_z0init'
+    xmhaha_calib('addNode','lkZ0(10)')
+    if (auto='y') then
+        write('line3','Measuring initial lk spectrum')
+    else
+        banner('Measuring initial lk spectrum')
+    endif
+    //write('line3','Initial z0: %d',z0)
+    
+ENDIF
+
+IF ($1 = 10) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    wft
+    lb=1/at wft('nods') f lp=0 aph0
+    rfl=sw/2 rfp=0
+    peak:$hgt,cr
+    //write('line3','Initial peak position: %f',cr)
+    $ref_tpwrs='' $ref_pw90s=''
+    readhw('z0'):$ref_z0
+    //write('line3','$ref_z0 : %d',$ref_z0)
+    format(tpwr,0,0):$ref_tpwrs
+    format(pw,0,1):$ref_pw90s
+
+    solvent='d2o'
+    setparams('solv',solvent,'lk')
+    //tof and z0 now not needed in probe file
+    setparams('tpwr',$ref_tpwrs,'lk')
+    setparams('pw90',$ref_pw90s,'lk')
+ 
+    $range='hi'
+    if ((shimset < 3) or (shimset = 8) or (shimset = 10)) then
+        $range='lo'
+    endif
+    if $range='hi' then $diff=5000 else $diff=150 endif
+    z0=$ref_z0+$diff
+    sethw('z0',$ref_z0+$diff)
+    //write('line3','z0 after positive DAC change: %d',z0)
+    write('line3','Please wait...')
+//       	shell('sleep 15')		"wait for 15 sec to settle z0"
+    d1=15
+    r5=$diff
+    $arg2='' format($diff,0,0):$arg2
+    //$arg2?
+    calibnode='_z0pos'+$arg2
+    xmhaha_calib('addNode','lkZ0(11,'+$arg2+')')
+    execprocess='wft'
+    execplot='return'
+    banner('z0 moved +'+$arg2)
+
+ENDIF
+
+
+IF ($1 = 11) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    //sw?
+    lb=1/at wft('nods') f lp=0 aph0
+    rfl=sw/2 rfp=0
+    peak:$hgt,cr
+    //write('line3','Peak position after positive DAC change: %f',cr)
+    //cr?
+    r6=cr
+    $ref_z0=0
+    readhw('z0'):$ref_z0
+    //write('line3','z0 after positive DAC change 1: %d',$ref_z0)
+    z0=$ref_z0-2*$2
+    //z0?
+    //write('line3','z0 after negative DAC change: %d',z0)
+    sethw('z0',z0)
+    write('line3','Please wait...')
+//    shell('sleep 15')		"wait for 15 sec to settle z0"
+    d1=15
+    $diff=0
+    format($2,1,0):$diff
+    //$diff?
+    $arg2='' format(-2*$diff,0,0):$arg2
+    //$arg2?
+    $arg3='' format(r6,0,1):$arg3
+    //$arg3?
+    write('line3','_z0neg%d',$2):calibnode
+    execprocess='lkZ0(12,'+$arg2+','+$arg3+')'
+    execplot='return'
+    $arg='' format($2,0,0):$arg
+    banner('z0 moved -'+$arg)
+
+ENDIF
+
+IF ($1 = 12) THEN
+
+    lb=1/at wft('nods') f lp=0 aph0
+    rfl=sw/2 rfp=0 
+    peak:$hgt,cr
+    //write('line3','Peak position after negative DAC change: %f',cr)
+    r4=cr
+    $hzperdac=(r4 - $3)/$2
+    $hpds=''
+    format($hzperdac,0,5):$hpds
+    setparams('hzdac',$hpds,'lk')
+    readhw('z0'):$z0
+
+    //Correct for difference between sfrq and lockfreq
+    $diff=(sfrq-lockfreq)*1e6
+    $deltaz0=($diff+cr)/$hzperdac
+    $newz0 = $z0 - $deltaz0 
+    write('line3','z0 for %s = %d',solvent,$newz0)
+
+//Report if VeriPulse and new z0 is outside range
+    is_IP:$isIP
+    if ($isIP) then
+        abs($newz0):$absnewz0
+        if ((shimset < 3) or (shimset = 8) or (shimset = 10)) then $limit=2047 else $limit=32767 endif
+        if ($absnewz0 > $limit) then
+            write('line3','%d is outside z0 DAC range, check system lock frequency',$newz0):$error
+            sqLog('ExpError',$error)
+            bgmode_is:$b
+            $cmd='IPpopup(\'message\',\''+$error+'\')'
+            if ($b < 0.5) then
+               exec($cmd)
+            else
+                xmhaha('sendcmd',$cmd)
+            endif
+        endif
+    endif "Is VeriPulse"
+
+
+    "hz_per_dac must be calibrated and set in the findz0 parameters "
+    z0=$newz0
+    sethw('z0',$newz0)
+    lockpower=34
+    lockgain=20
+    sethw('lockpower',lockpower)
+    sethw('lockgain',lockgain)
+    write('line3','Setting lockpower to %d, lockgain to %d',lockpower,lockgain)
+    write('line3','Waiting 15 s for field to settle...')
+    shell('sleep 15'):$dum
+    sethw('lock','on')
+    shell('sleep 15'):$dum
+
+    //Now optimize lockpower, gain and phase
+    set_lockpars('calibrate')
+
+    //Write lockparams to probe file
+    readhw('lockpower'):lockpower
+    readhw('lockgain'):lockgain
+    readhw('lockphase'):lockphase
+    setlkpars(lockpower,lockgain,lockphase)
+
+/*
+    $date=''
+    shell('date +%Y-%m-%d_%H%M%S'):$date
+
+    $tn=tn
+    $probepath='' $pex=0 $appdir=''
+    exists(probe,'probes/'+probe):$pex,$probepath
+    strstr($probepath,'/probes/'):$pex,$appdir
+    exists($appdir+'/shims/'+probe+'_'+$tn+'_d2o','file'):$shimex
+    if ($shimex) then
+         shell('rm '+$appdir+'/shims/'+probe+'_'+$tn+'_d2o')
+    endif
+    exists($appdir+'/shims','directory'):$shimdirex
+    if ($shimdirex=0) then
+	   shell('mkdir '+$appdir+'/shims'):$dum
+    endif
+    svs($appdir+'/shims/'+probe+'_'+$tn+'_d2o') 
+    svs($appdir+'/shims/'+probe+'_'+$tn+'_d2o_'+$date)
+*/
+
+    cplog('PROTON','first'):$file,$asdir
+    $macro=''
+    rtv($asdir+'/'+$file,'macro'):$macro
+    rtv($asdir+'/'+$file,'caliblist'):$caliblist
+    rtv($asdir+'/'+$file,'svftmplt'):$svftmplt
+    $cl=caliblist
+    caliblist=$caliblist
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    xmhaha_calib('addNode',$macro+'(\'repeat\')','top'):$newnode
+    //write('file',$md+'/'+$newnode+'acq','alock=\'a\' wshim=\'s\'')
+    write('file',$md+'/'+$newnode+'acq','alock=\'a\' wshim=\'n\'')
+    //write('file',$md+'/'+$newnode+'acq','method=\'xyz_basic\'')
+    write('file',$md+'/'+$newnode+'acq','wstart=`svftmplt=\'%s\'`',$svftmplt)
+    caliblist=$cl
+
+
+ENDIF

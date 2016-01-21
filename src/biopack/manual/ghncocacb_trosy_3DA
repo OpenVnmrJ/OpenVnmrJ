@@ -1,0 +1,119 @@
+  ghncocacb_trosy_3DA.c
+ 
+    This pulse sequence will allow one to perform the following experiment:
+
+     3D hncocacb (Hn,N,Cb) with deuterium decoupling
+     and either CT or non-CT (f_CT == y,n) for 13Cb acquisition, 
+     It is optimized for fully (100 %) labeled proteins.
+
+     F1    Cbeta (CT if f_CT = y, i-1)
+     F2    N + JNH/2 (i)
+     F-acq HN - JNH/2 (i)
+
+    This sequence uses the standard four channel configuration
+         1)  1H             - carrier @ 4.7 ppm [H2O]
+         2) 13C             - carrier @ 43 ppm (CA/CB)
+         3) 15N             - carrier @ 120 ppm  
+	 4)  2H		    - carrier @ 3 ppm  
+
+    Standard flag settings
+	f1180 =   'n'  for (0,0) phase correction in f1.
+	f2180 =   'n'  for (0,0) phase correction in f2
+	fsat =    'n' fscuba = 'n'. don't saturate water
+        sel_flg = 'y' for active purging of the fast component
+                = 'n' no active purging; relaxation attenuation of the
+                   fast relaxation component
+        f_CT    = 'y' for CT evolution of Cb chemical shift 
+        c180_flg= 'n' 
+        cal_sphase 'y' only for calibration of sphase.
+                    set sphase to sphase - 45 check to get no signal.
+                    (array for zero signal and add 45o).
+                    set eta to a small value, gt12=gt13=gt14=0. 
+        shared_CT 'y' for extending the acq in t2 (N15)
+	dm = 'nnn'
+	dm2 = 'nnn' dmm2 = 'ccc' [NO 15N decoupling during acquisition]
+        dm3 = 'nnn' dmm3 = 'ccc'
+        ampmode = 'dddp'
+	
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [Cb]  and t2 [N]. [The fids must be manipulated (add/subtract) with
+    'grad_sort_nd' program (or equivalent) before regular non-VNMR processing.]
+    
+    Use ampmode = 'dddp'
+
+    Pulse scheme is optimized for completely deuterated samples
+ 
+    Pulse scheme uses TROSY principle in 15N and NH with transfer of
+    magnetization achieved using the enhanced sensitivity pfg approach,
+ 
+    Yang and Kay, J. Biomol. NMR, January 1999, 13, 3-9.
+    Yang and Kay, J. Am. Chem. Soc., 1999
+ 
+    If sel_flg =='n' then the component of interest is not actively
+    selected for; relaxation will attenuate the undesired component.
+    Selection is achieved during the first N---> 13C' transfer.
+ 
+    In general it is very difficult to present rules indicating when
+    sel_flg should be set to y or n. In the case of applications at
+    750 or 800 MHz and for correlation times in excess of 20 ns the
+    sel_flg can be set to no and selection via relaxation should suffice.
+ 
+    At lower field or for smaller molecules set sel_flg == 'y', for
+    example at 500 or 600 MHz and for correlation times between 15 and 25ns
+    set sel_flg=='y'. We have used sel_flg=='n' for a molecule with a
+    correlation time of 43 ns and not observed any residual signal from
+    the undesired component.
+ 
+    See Figure 3 in Yang and Kay, J. Biomol NMR, Jan 1999.
+ 
+ 
+    Ref:  Shan et. al. J. Am. Chem. Soc. 118, 6570-6579, (1996)
+          Pervushin et al. PNAS, 94, 12366-12371 (1997)
+          Pervushin et al. J. Biomol. NMR Aug 1998
+          Yang and Kay, J. Biomol. NMR, Jan 1999
+          Yang and Kay, J. Am. Chem. Soc., 1999. 
+
+    Written by L.E.Kay on Oct. 28, 1998
+
+   Setup: See Shan et al. JACS, 1996 for details. Note that the expt. can
+          be run as non-CT in Cb dimension (see Yamazaki et al. JACS 116,
+          11655, 1994 for details).
+
+          The "a" part of the sequence (pulses during this period have
+           the suffex a) has the carrier at 174 (C') ppm.
+          The "b" part of the sequence (pulses during this period have
+           the suffex b) has the carrier at 43 (Ca/Cb) ppm. 
+
+       Define delta as the distance in Hz between 174 (C') and 56 (Ca) ppm
+       Define delta1 as the distance in Hz between 174 (C') and 43 (Ca/Cb) ppm
+
+          pwco90a:  C' 90, applied with a stength of delta/sq(15), on res (174).
+          pwco180a: C' 180, (seduce), on res (174 ppm).
+          pwca180a: Ca 180, strength of delta/sq(3), off resonance
+          pwca90b:  Ca/Cb 90,  strength of delta1/sq(15), on res (43 ppm).
+          pwca180b: Ca/Cb 180, strength of delta1/sq(3), on res (43 ppm).
+            (used only for calibration of sphase).
+          pwcreb:   C 180 (reburp), on res (43 ppm).
+          pwcgcob:  g3 pulse, inverts C' and Cg of aromatics, off res. 
+          pwcgcobi: g3 pulse, inverts C' and Cg of aromatics, off res.
+             (this is a time inverted g3 pulse ---> can use pwcgcob instead). 
+
+    Based on hncocacb_CT_D_sel_pfg_600.c
+
+    Modified by L.E.Kay on March 3, 1999 to insert C' 90 purge after 15N
+    evolution to ensure in case where the N-C' refocussing is not complete
+    (2*bigTN < 1/2JNC') that the remaining NxCz' magnetization which
+    becomes NHxCz' is not present. This will remove a dispersive contribution
+    to the F3 lineshape   
+
+  Modified by L.E.Kay on Nov. 22, 2001 to include shared CT
+  Modified by L.E.Kay on Dec. 6, 2001 to extend phase cycle
+
+  Modified by L.E.Kay to add a nietl_flg so that the anti-trosy
+  component is eliminated in an active manner with no less in s/n.
+                        (D.Nietlispach,J.Biomol.NMR, 31,161(2005))
+
+  pw_sl1, tpwrsl1 used only if nietl_flg == y
+	
+  Modified by E.Kupce from  hncocacb_D_trosy_lek_500a.c for autocalibration
+  Modified by G.Gray, Feb2005, for BioPack

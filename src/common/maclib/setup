@@ -1,0 +1,74 @@
+"macro setup"
+"***********************************************"
+" setup - set up standard experiment parameters "
+"***********************************************"
+" usage - setup(nucleus,solvent) or setup "
+" setup without arguments will use menu system to get information "
+" first argument only sets solvent to default (CDCl3) "
+
+probeid('enabled'):$probeid
+
+if ($# > 2) then                   " too many arguments "
+   write('error','usage - setup(nucleus,solvent)')
+   abort
+endif
+
+if ($# > 0) then " nucleus argument is provided, set up parameters "
+   exists(userdir+'/stdpar','file'):$e
+   if ($e<>0) then
+      exists(userdir+'/stdpar/'+$1+'.par','file'):$e 
+   endif
+   if ($e<>0) then 
+      $stdpar = userdir+'/stdpar/'+$1
+   else
+      $stdpar = systemdir+'/stdpar/'+$1
+   endif
+   exists($stdpar+'.par','file'):$e 
+   if ($e = 0) then
+      exists(systemdir+'/stdpar/','file'):$f
+      if ($f = 0) then
+         write('error','setup - use \'config\' to set stdpar directory.')
+      else
+         write('error','setup - no parameters for nucleus %s in stdpar',$1)
+      endif
+      abort
+   endif
+   " return standard parameters for this file "
+   rtp($stdpar)
+   if ($# > 1) then                "solvent argument is provided"
+      solvent = $2
+   else
+      solvent = 'CDCl3'
+   endif
+   seqfil=seqfil		"This executes _seqfil macro"
+   file = 'exp'
+   exists('lockfreq_','parameter'):$lfex
+   if ($lfex) then
+     destroy('lockfreq_')
+   endif
+   setref
+
+   if $probeid then
+     probeid('fexists',probe):$e
+   else // legacy probe
+     exists(probe,'probes'):$e
+   endif
+   if (probe <> '') then 
+      if ($e>0) then
+	 $pw90=pw90
+         getparam('pw90',$1):$pw90
+         getparam('tpwr',$1):tpwr
+         if ($pw90 <> 0) then pw90=$pw90 endif
+         if (tn <> 'H1')and(tn <> 'F19') then
+            getparam('dpwr','H1'):dpwr
+            getparam('dmf','H1'):dmf
+            if (dmf < 200) then
+              dmf = 200
+            endif
+         endif
+      endif
+   endif
+   write('line3','Standard parameters have been selected')
+else " no arguments, use menu mode to get nucleus and solvent "
+   menu('nucleus')
+endif

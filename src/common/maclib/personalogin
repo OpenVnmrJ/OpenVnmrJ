@@ -1,0 +1,207 @@
+"macro personalogin"
+
+bgmode_is:$bg
+if ($bg) then return endif
+
+exists('personaType','parameter','global'):$parex
+if ($parex=0) then return endif
+$personadir=userdir+'/persistence/PersonaManager'
+$plist=$personadir+'/PERSONAassignment'
+exists($plist,'file'):$pex
+$ADMpersona=''
+PersonaManager('OwnerPersona'):$ADMpersona
+
+if ($# < 1) then
+    personalogin('login')
+    personalogin('adjappdir')
+    personalogin('toolPanel')
+//    updateExpSelector
+    return
+else
+    if ($1<>'login') and ($1<>'adjappdir') and ($1<>'toolPanel') and ($1<>'bootup') then
+	personalogin('login',$1)
+	personalogin('adjappdir',$1)
+	personalogin('toolPanel',$1)
+	return
+    endif
+endif
+
+"*****************************************************************"
+IF ($1='login') THEN
+// As part of login, make sure that the given personalib
+//   directory is placed in the top tier of the appdir list
+
+    if ($# > 1) then 
+	personaType=$2
+    else
+	if ($pex=0) and ($ADMpersona='') then return endif
+        personaType=''
+        $s1='' $s2=''
+        if ($pex) then
+            readfile($plist,'$s1','$s2','','local'):$pex
+        endif
+    	teststr('$s1',operator,'local'):$pex
+    	if ($pex) then personaType=$s2[$pex] else personaType=$ADMpersona endif
+    endif
+
+    $fex=0 $fpath=''
+    if (personaType<>'') then
+	exists('RightsConfig_'+personaType+'.txt','personalib/'+personaType+'/adm'):$fex,$fpath
+    endif
+    if ($fex) then
+	write('line3','Persona set to %s',personaType)
+        shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+	return
+    endif
+// Unassigned Operators take either Default persona or Owner persona
+    exists('RightsConfig_Default.txt','personalib/Default/adm'):$fex,$fpath
+    if ($fex) and (operator<>owner) then
+// Do not allow owner to take Default persona
+        write('line3','Persona set to Default')
+	personaType='Default'
+        shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+        return
+    endif
+    if $ADMpersona<>'' then
+        exists('RightsConfig_'+$ADMpersona+'.txt','personalib/'+$ADMpersona+'/adm'):$fex,$fpath
+        if ($fex) then
+            personaType=$ADMpersona
+            write('line3','Persona set to %s',$ADMpersona)
+            copy($fpath,userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+            return
+        endif
+    else
+        exists('RightsConfig_Owner.txt','personalib/Owner/adm'):$fex,$fpath
+        if ($fex) then
+            write('line3','Persona set to Owner')
+            personaType='Owner'
+            shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+            return
+        endif
+    endif
+
+"*****************************************************************"
+ELSEIF ($1='adjappdir') THEN
+// include persona directory as an appdir
+
+    $afile=userdir+'/persistence/appdir_'+operator
+    exists($afile,'file'):$afex
+    $update=0
+    if ($afex) then
+            shell('(cat '+$afile+' | grep -c \'\/personalib\/\')'):$ok
+            if ($ok) then $update=1 endif
+    endif
+
+    $pdir='' $direx=0
+    if (personaType<>'') then
+	exists(personaType,'personalib'):$direx,$pdir
+        $firstlabel='' $firstpath=''
+        appdir('info',1):$firstlabel,$firstpath
+        if ($pdir=$firstpath) then return endif
+	if not ($afex) and ($direx) then $update=1 endif
+    endif
+    if ($update) then
+    	$tmpfile=userdir+'/persistence/tmpapp'
+    	write('reset',$tmpfile)
+    	shell('date'):$date
+    	write('file',$tmpfile,'# Updated by %s on %s',owner,$date)
+    	appdir('file'):$file
+    	$s1='' $s2=''
+    	readfile($file,'$s1','$s2','','local'):$total
+    	$i=1
+    	repeat
+	    strstr($s1[$i],'/personalib/'):$is
+	    if ($is=0) then
+	    	write('file',$tmpfile,'%s %s',$s1[$i],$s2[$i])
+	    endif
+	    $i=$i+1
+    	until $i > $total
+    	copy($tmpfile,userdir+'/persistence/appdir_'+operator)
+    	delete($tmpfile)
+    endif
+    $update2=0
+    if ($direx) then
+    	adjappdir('add',$pdir,personaType+' appdir',operator,1):$update2
+    	if ($update2) then appdir('reset') endif
+    endif
+
+"******************************************************************"
+ELSEIF ($1='toolPanel') THEN
+
+    if ($# > 1) then personalogin('login',$2) endif
+    if ($# < 2) and ($pex=0) and ($ADMpersona='') then return endif
+    $i=1
+    $tp[$i]='HardwareTool','open'		$i=$i+2
+    $tp[$i]='SystemTool','open'   		$i=$i+2
+    $tp[$i]='UserTool','open'  			$i=$i+2
+    $tp[$i]='GraphicsTool','open'  		$i=$i+2
+    $tp[$i]='Parameter','open'  		$i=$i+2
+    $tp[$i]='Frame','open'  			$i=$i+2
+//    $tp[$i]='QuickSubmit','open'  		$i=$i+2
+    $tp[$i]='Viewport','open'  			$i=$i+2
+    $tp[$i]='ProcessPlot','open'  		$i=$i+2
+    $tp[$i]='Cryo','open'  			$i=$i+2
+    $tp[$i]='ArrayedSpectra','open' 		$i=$i+2
+    $tp[$i]='Sq','open'                         $i=$i+2
+    $tp[$i]='QuickSubmit','open'                $i=$i+2
+    $tp[$i]='ExperimentSelTree','open' 		$i=$i+2
+    $tp[$i]='ExperimentSelector','open'		$i=$i+2
+//    $tp[$i]='Sq','open'  			$i=$i+2
+    $tp[$i]='cmdLine','yes'			$i=$i+2
+
+    $cex=0 $conf=''
+    if (personaType<>'') then
+	exists('toolPanelConfig_'+personaType+'.txt','personalib/'+personaType+'/adm'):$cex,$conf
+    else
+	exists('toolPanelConfig_Owner.txt','personalib/Owner/adm'):$cex,$conf
+    endif
+    $p1='' $p2=''
+    if ($cex) then
+    	readfile($conf,'$p1','$p2','','local')
+    endif
+
+    operights('mayusequicksubmit'):$qsok
+    if ($qsok<0.5) then
+        teststr('$p1','QuickSubmit','local'):$qsok2
+        if ($qsok2) then $p2[$qsok2]='close' endif
+    endif
+
+    $tpsize=size('$tp')
+    $i=1
+    repeat
+    	$j=0
+    	teststr('$p1',$tp[$i],'local'):$j
+	if ($tp[$i]='cmdLine') and (owner=operator) then $j=0 endif
+    	if ($j) then
+	    $tp[$i+1]=$p2[$j]
+    	endif
+    	$i=$i+2
+    until $i > $tpsize
+
+    $i=1
+    repeat
+	if $tp[$i]='cmdLine' then
+	    vnmrjcmd($tp[$i],$tp[$i+1])
+	else
+	    if $tp[$i+1]='open' then $tp[$i+1]='show' endif
+    	    vnmrjcmd('toolpanel',$tp[$i],$tp[$i+1])
+	endif
+    	$i=$i+2
+    until $i>$tpsize
+
+    return
+"*******************************************************************"
+ELSEIF ($1='bootup') THEN
+    if not ($pex) and ($ADMpersona='') then return endif
+    $numop=0
+    shell('(cat '+systemdir+'/adm/users/profiles/user/'+owner+' | grep -w \'^operators\' | wc -l)'):$numop
+    if ($numop<1.5) then
+        personalogin('login')
+        if (personaType<>'') then
+            personalogin
+            return
+        endif
+    endif
+
+ENDIF
+"***********************************************************************"

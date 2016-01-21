@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_doAlign" element="groups" type="acquisition" >
+    <group size="400 575"
+      bg="transparent"
+      border="Etched"
+      vq="craftnmrparRef"
+      reference="craft_doAlign"
+      subtype="Basic"
+      expanded="yes"
+      >
+	<group loc="1 1" size="398 24"
+	  border="Raised"
+	  vq="craftPopupPar"
+	  show="$SHOW=(craftPopupPar&lt;&gt;'')"
+	  bg="darkGray"
+	  />
+	<group loc="1 1" size="398 24"
+	  border="Raised"
+	  vq="craftPopupPar"
+	  show="$SHOW=(craftPopupPar='')"
+	  bg="darkGray"
+	  >
+	  <label loc="10 2" size="360 20"
+	    style="Heading3"
+	    label="Spectral Peak Alignment"
+	    />
+	  <button loc="376 2" size="20 20"
+	    style="Heading2"
+	    label="X"
+	    tooltip="Close"
+	    vc="craft_doAlign('close')"
+	    />
+	  </group>
+        <group loc="5 30" size="390 545"
+          >
+	  <group loc="0 5" size="390 50" border="Etched" >
+	    <label loc="10 5" size="160 20"
+	      label="Table name template"
+	      style="Label1"
+	      />
+            <entry loc="165 5" size="210 20"
+              style="PlainText"
+              vq="craftAlignPar"
+              vc="$V='' chkname('$VALUE'):$dpar,$V craftAlignPar[10]=$V"
+              set="$VALUE=craftAlignPar[10]"
+              />
+	    <textmessage loc="10 27" size="390 20"
+	      style="Info"
+	      vq="craftAlignPar"
+	      set="Svfname(craftAlignPar[1]+'/AlignBandInfo/AlignTables/'+craftAlignPar[10],''):$n substr($n,'basename'):$n $VALUE='Next alignment table name: '+$n"
+	      />
+	     </group>
+          <group loc="0 60" size="390 215"
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Etched"
+	    vq="craftAlignPar"
+       	    label="Alignment regions of interest (ROIs)"
+      	    subtype="Titled"
+      	    expanded="yes"
+	    useref="no"
+      	    >
+            <group loc="40 25" size="315 110"
+              style="Heading1"
+              bg="transparent"
+	      vq="craftAlignPar"
+              border="Raised"
+              subtype="Basic"
+              expanded="yes"
+              >
+
+	      <group loc="25 10" size="40 40"
+	        >
+	        <button loc="0 0" size="40 40"
+                  style="Heading2"
+                  icon="1x3.gif"
+                  vq="craftnmrparRef craftDispPar"
+                  vc="craft_autoroi"
+                  bg="transparent"
+		  tooltip="Import CRAFT analysis ROIs"
+                  />
+	        </group>
+	      <group loc="70 0" size="240 60"
+	        vq="craftnmrparRef craftDispPar"
+                expanded="no"
+	        useref="yes"
+	        reference="craft_RoiTools"
+	        />
+	      <button loc="20 60" size="225 20"
+                style="Heading2"
+                label="Import earlier alignment ROIs"
+                vq="craftnmrparRef craftAlignPar"
+                vc="craft_doAlign('readaligninfo',craftAlignPar[9])"
+		show="$ENABLE=(craftAlignPar[9]&lt;&gt;'')*2-1"
+                bg="transparent"
+                />
+              <filemenu loc="70 82" size="220 20"
+                style="PlainText"
+                vq="craftAlignPar"
+                vc="craftAlignPar[9]='$VALUE'"
+                set="$VALUE=craftAlignPar[9]"
+                file="$VALUE=userdir+'/cnmrmodels/Files4xml/AlignBandTableMenu'"
+                type="file"
+                vq2="craftAlignPar"
+                />
+	      </group>
+	    <label loc="50 140" size="130 20"
+	      style="Label1"
+	      value="Frequency reference"
+	      />
+	    <radio loc="180 140" size="120 20"
+	      style="Label1"
+	      label="Trace number"
+	      vq="craftAlignPar"
+	      vc="craftAlignPar[12]='y'"
+	      vc2="craftAlignPar[12]='n'"
+	      set="$VALUE=(craftAlignPar[12]='y')"
+	      />
+	    <entry loc="300 140" size="40 20"
+	      style="Label1"
+	      vq="craftAlignPar"
+	      vc="format('$VALUE','isreal'):$real if $real then getvalue('arraydim','processed'):$dim format('$VALUE','lower'):$val if $val&lt;1 then $val=1 elseif ($val&gt;$dim) then $val=$dim endif format($val,0,0):craftAlignPar[11] vnmrjcmd('pnew','craftAlignPar') else craftAlignPar[11]=craftAlignPar[11] endif"
+	      set="$VALUE=craftAlignPar[11]"
+	      show="$ENABLE=(craftAlignPar[12]='y')*2-1"
+	      />
+	    <radio loc="180 160" size="180 20"
+	      style="Label1"
+	      label="Trace with max amplitude"
+	      vq="craftAlignPar"
+	      vc="craftAlignPar[12]='n'"
+	      vc2="craftAlignPar[12]='y'"
+	      set="$VALUE=(craftAlignPar[12]='n')"
+	      />
+            <button loc="40 185" size="315 25"
+	      style="Heading2"
+	      label="Align spectra in the defined ROIs"
+	      vq="craftAlignPar craftAlignTable"
+	      vc="craft_doAlign('align')"
+	      />
+      	    </group>
+	  <group loc="0 280" size="390 75"
+	    style="Heading1"
+	    border="Etched"
+	    label="Display alignment results"
+	    subtype="Titled"
+	    vq="craftAlignPar craftAlignTable"
+	    expanded="no"
+	    reference="craft_AlignTable"
+	    useref="yes"
+	    >
+	    </group>
+	  <group loc="0 360" size="390 150"
+	    style="Heading1"
+	    border="Etched"
+	    label="Manage alignment tables"
+	    subtype="Titled"
+	    vq="craftAlignPar"
+	    >
+	    <label loc="10 25" size="70 20"
+	      label="Select1"
+	      style="Label1"
+	      />
+            <filemenu loc="80 25" size="295 20"
+              style="PlainText"
+              vq="craftAlignPar"
+              vc="craftAlignPar[6]='$VALUE'"
+              set="$VALUE=craftAlignPar[6]"
+              file="$VALUE=userdir+'/cnmrmodels/Files4xml/AlignBandTableMenu'"
+              type="file"
+              vq2="craftAlignPar"
+              />
+            <button loc="80 47" size="95 21"
+              style="Heading2"
+              label="Display #1"
+              vq="craftAlignPar"
+              vc="craft_doAlign('displayaligninfo','',craftAlignPar[6])"
+              bg="transparent"
+	      show="$ENABLE=(craftAlignPar[6]&lt;&gt;'')*2-1"
+              />
+            <button loc="180 47" size="95 21"
+              style="Heading2"
+              label="Delete"
+              vq="craftAlignPar"
+              vc="craft_doAlign('deletealigninfo',craftAlignPar[6])"
+              bg="transparent"
+	      show="$ENABLE=(craftAlignPar[6]&lt;&gt;'')*2-1"
+              />
+            <button loc="280 47" size="95 21"
+              style="Heading2"
+              label="Undo delete"
+              vq="craftAlignPar"
+              vc="craft_doAlign('undeletealigninfo',craftAlignPar[8])"
+              bg="transparent"
+	      show="$ENABLE=(craftAlignPar[8]&lt;&gt;'')*2-1"
+              />
+	    <label loc="10 70" size="70 20"
+	      label="Select2"
+	      style="Label1"
+	      />
+            <filemenu loc="80 70" size="295 20"
+              style="PlainText"
+              vq="craftAlignPar"
+              vc="craftAlignPar[7]='$VALUE'"
+              set="$VALUE=craftAlignPar[7]"
+              file="$VALUE=userdir+'/cnmrmodels/Files4xml/AlignBandTableMenu'"
+              type="file"
+              vq2="craftAlignPar"
+              />
+            <button loc="80 92" size="95 21"
+              style="Heading2"
+              label="Display #2"
+              vq="craftAlignPar"
+              vc="craft_doAlign('displayaligninfo','',craftAlignPar[7])"
+              bg="transparent"
+	      show="$ENABLE=(craftAlignPar[7]&lt;&gt;'')*2-1"
+              />
+            <button loc="200 92" size="155 21"
+              style="Heading2"
+              label="Display #1 and #2"
+              vq="craftAlignPar"
+              vc="craft_doAlign('displayaligninfo',craftAlignPar[6],craftAlignPar[7])"
+	      show="$ENABLE=((craftAlignPar[6]&lt;&gt;'') and (craftAlignPar[7]&lt;&gt;''))*2-1"
+              bg="transparent"
+              />
+            <button loc="80 117" size="295 25"
+              style="Heading2"
+              label="Merge selected alignments"
+              vq="craftAlignPar"
+              vc="craft_doAlign('merge')"
+              bg="transparent"
+	      show="$ENABLE=((craftAlignPar[6]&lt;&gt;'') and (craftAlignPar[7]&lt;&gt;''))*2-1"
+              />
+	    </group>
+<!--
+	  <group loc="0 475" size="390 50" border="Etched" >
+	    <label loc="10 5" size="160 20"
+	      label="Table name template"
+	      style="Label1"
+	      />
+            <entry loc="165 5" size="210 20"
+              style="PlainText"
+              vq="craftAlignPar"
+              vc="$V='' chkname('$VALUE'):$dpar,$V craftAlignPar[10]=$V"
+              set="$VALUE=craftAlignPar[10]"
+              />
+	    <textmessage loc="10 27" size="390 20"
+	      style="Info"
+	      vq="craftAlignPar"
+	      set="Svfname(craftAlignPar[1]+'/AlignBandInfo/AlignTables/'+craftAlignPar[10],''):$n substr($n,'basename'):$n $VALUE='Next Alignment table name: '+$n"
+	      />
+	     </group>
+-->
+          </group>
+      </group>
+</template>

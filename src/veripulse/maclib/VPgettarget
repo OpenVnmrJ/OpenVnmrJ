@@ -1,0 +1,152 @@
+"macro VPgettarget"
+// Returns spec targets for tests
+if ($# < 1) then
+  write('error','Usage:%s requires a test name',$0)
+  return
+endif
+$testname=$1
+exists('VPprobes','veripulse'):$e,$path
+if ($e) then
+  $probestyle=''
+  getparam('style','Probe'):$probestyle
+  $attr=''
+  $vals=''
+  readfile($path,'$attr','$vals','','local'):$num
+  teststr('$attr',$probestyle,'local'):$e
+  if ($e) then
+    $probetestfile=''
+    $probesamplefile=''
+    substr($vals[$e],1):$probetestfile
+  else
+    write('error','%s: no Veripulse test file found for probe style %s',$0,$probestyle)
+    return
+  endif
+else
+  write('error','%s: no VeriPulse probe file found',$0)
+  return
+endif
+if ($#=3) then
+  $probetestfile=$3
+endif
+exists($probetestfile,'veripulse'):$e,$path
+if (not $e) then
+  $probetestfile='VPtests_one'
+  exists($probetestfile,'veripulse'):$e,$path
+endif
+$numspec=0
+$specs=0
+$val=''
+destroy('VPspecinfo'):$ex
+create('VPspecinfo','string','current',''):$ex
+setgroup('VPspecinfo','display')
+VPspecinfo=$1
+
+if ($e) and ($testname <> '')  then
+  $targetsread=0
+  $pname='' $pval=0 $pnum=0
+  $attr='' $vals=''
+  $decimal=''
+  $res=0
+  readfile($path,'$attr','$vals','Spec','local'):$num
+  $i=0
+  while ($i < $num) do
+    $i=$i+1
+    substr($vals[$i],1):$spec1
+    if ($spec1 = $testname) then
+      substr($vals[$i],2):$numspec
+      format($numspec,0,0):VPspecinfo[2]
+      substr($vals[$i],2,'delimiter',';'):VPspecinfo[3]
+      $j=0
+      $js=''
+write('line3','spec %s: has %d subspecs',$spec1,$numspec)
+      while ($j < $numspec) do
+        $j=$j+1
+        format($j,0,0):$js
+        $specx=$spec1+'_'+$js
+        $k=0
+        while ($k < $num) do
+          $k=$k+1
+          substr($vals[$k],1):$spec
+          if ($spec=$specx) then
+            substr($vals[$k],2):$type
+            VPspecinfo[($j-1)*5+1+3]=$type
+            substr($vals[$k],3):$val
+            VPspecinfo[($j-1)*5+2+3]=$val
+            substr($vals[$k],4):$decimal
+            VPspecinfo[($j-1)*5+3+3]=$decimal
+            substr($vals[$k],2,'delimiter',';'):VPspecinfo[($j-1)*5+4+3]
+            format($val,'isreal'):$e
+            if ($e = 0) and ($val<>'N/A') then
+              if ($targetsread=0) then
+                $targetsread=1
+                exists('probe_','parameter'):$ex
+                if $ex then $probe=probe_ else $probe=probe endif
+                getProbePath($probe,'alert'):$e,$ppath
+                substr($ppath,'dirname'):$pdir
+                $targetfile=$pdir+'/'+$probe+'_targets'
+                exists($targetfile,'file'):$ex
+                if ($ex<0.5) then
+                  write('error','No targets file exists for this probe!')
+                  VPspecinfo[2]='0'
+                  return
+                endif
+                readfile($targetfile,'$pname','$pval','','local'):$pnum
+              endif
+              strstr($val,','):$e
+              if ($e) then
+                if ($# <> 2) then
+                  write('error','Call to %s for test %s requires gradtype as second argument',$0,VPspecinfo[1])
+                  return
+                endif
+              endif
+              if ($# >= 2) then
+                if ($2 = 'l') then
+                  substr($val,1,'delimiter',','):$val
+                else
+                  substr($val,2,'delimiter',','):$val
+                endif
+                VPspecinfo[($j-1)*5+2+3]=$val
+              endif
+              teststr('$pname',$val,'local'):$e
+              if ($e) then
+write('line3','spec %s: type: %s val: %s',$specx,$type,$val)
+                format($pval[$e],'upper'):VPspecinfo[($j-1)*5+5+3]
+write('line3','val: %s value= %f',$val,$pval[$e])
+                $res[$j]=$pval[$e]
+              endif
+            else
+write('line3','spec %s: type: %s val: %s',$specx,$type,$val)
+              VPspecinfo[($j-1)*5+5+3]=$val
+              if ($val='N/A') then
+                $res[$j]=0
+              else
+                format($val,'upper'):$res[$j]
+              endif
+            endif
+            $k=$num  // exit loop
+          endif
+        endwhile // $k < $num
+      endwhile   // $j < $numspec
+    endif
+  endwhile       // $i < $num
+endif
+
+$num=size('VPspecinfo')
+if ($num=1) then
+  write('error','%s: No spec information for test %s',$0,$1)
+  return
+endif
+if ($## <> $numspec) then
+  write('line3','Warning: Test %s returns %s results',VPspecinfo[1],VPspecinfo[2])
+endif
+if ($numspec=1) then
+  return($res)
+elseif ($numspec=2) then
+  return($res[1],$res[2])
+elseif ($numspec=3) then
+  return($res[1],$res[2],$res[3])
+elseif ($numspec=4) then
+  return($res[1],$res[2],$res[3],$res[4])
+elseif ($numspec=5) then
+  return($res[1],$res[2],$res[3],$res[4],$res[5])
+endif

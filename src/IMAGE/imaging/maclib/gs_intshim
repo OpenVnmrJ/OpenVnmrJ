@@ -1,0 +1,45 @@
+"macro gs_intshim"
+"*******************************************************************************************"
+" gs_intshim - Interleaved shimming macro
+
+" Details - If the intshimflag is set, the ge3dshim routine calls this macro to do
+"           an interleaved acquisition
+"           gs_intshim - recalls parameters from the user's parlib and starts acquisition
+"           In this example the press protocol is recalled (vnmrsys/parlib/intshim.par)
+"           gs_intshim(2) - is called after acquisition to save the data in vnmrsys/data/intshim/intshim#.fid
+"           intshimfid parameter in ge3dshim contains the filename.
+"           
+"
+" Usage: gs_intshim  - first pass
+"        gs_intshim(#) - second pass after data collection; # is intshimcnt
+
+"*******************************************************************************************
+
+$macro = $0
+$GSDAT = userdir+'/data/intshim'
+$GSPAR = userdir+'/parlib/intshim.par'
+
+exists($GSDAT,'file'):$ex
+if ($ex = 0) then mkdir($GSDAT) endif
+if($# = 0) then
+  $pass = 0  "first pass, retrieve parameters"
+else
+  $pass = $1  "intshimcnt - file counter"
+endif  
+if($pass = 0) then
+  "first pass "
+  exists($GSPAR,'file'):$ex
+  if ($ex = 0) then
+    write('error','%s: Parameter file, %s does not exist',$macro,$GSPAR)
+    abort
+  endif
+  rtp($GSPAR)
+  prep
+  write('line3','%s retrieved',$GSPAR)
+else    "second pass, save data"
+  $ns = ''
+  format($pass,0,0):$ns
+  $file = pslabel "protocol name is used as filename"
+  svf($GSDAT+'/'+$file+$ns)
+  write('line3','$s: %s saved',$macro,$file+$ns)
+endif

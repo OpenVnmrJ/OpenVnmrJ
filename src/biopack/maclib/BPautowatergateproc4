@@ -1,0 +1,39 @@
+"macro BPautowatergateproc4"
+"BPautowatergateproc4"
+  $bestone=1
+  BPprotref(4.66)
+  sp=4p wp=1p
+  av $counter=1
+  wft('all')
+  select(1) vsadj $best=250 $highest=10
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$best then $best=$ht $bestone=$counter endif
+    $counter=$counter+1
+  until $counter>arraydim
+    tofwg=tofwg[$bestone]
+    write('line3','best tofwg value is %4f Hz',tofwg)
+ss=4
+if (((flipback='y') and (autosoft='n')) and (seqfil<>'wgnoesy')) then
+  array('phincr1',25,-25,2)
+  wexp='BPautowatergateproc5a'
+else
+  if (((flag3919='y') or (flagW5='y')) ) then
+    wexp='' f full ph nt=4 getparam('BPgain','H1'):gain ga
+    $wtgpwr='' format(flippwr,3,1):$wtgpwr
+    BPsetparams('wtgpwr',$wtgpwr,'H1')
+    $tofwg='' format(tofwg,3,1):$tofwg
+    BPsetparams('tofwg',$tofwg,'H1')
+    $flippw='' format(flippw,4,1):$flippw
+    BPsetparams('flippw',$flippw,'H1')
+  else
+    if (autosoft='n') then
+     array('phincr2',25,-25,2)
+     wexp='BPautowatergateproc5b'
+    else
+     BPautowatergateproc5b return
+    endif
+  endif
+endif
+au

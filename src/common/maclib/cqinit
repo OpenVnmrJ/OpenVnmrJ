@@ -1,0 +1,128 @@
+"macro cqinit"
+"globalauto, autodir, sqdir - study queue directories"
+"sqname - basename for data storage"
+"studyid=basename of study queue directory"
+"activestudy=basename of active study directory"
+"actionid=node id of the current set of parameters and or data"
+
+$reset='y'
+if ($# = 1) then
+  if ($1 = 'vp') then
+    jexp:$e
+    if ($e < 0.5) then return endif
+    cqpars
+    actionid=`null`
+    cqreset
+//  seqfil=`info`  // not needed, done in cqreset
+    menu(`main`)
+    clear(2)
+    return
+  elseif ($1 = 'n') then
+    $reset='n' "do not reset prescans"
+  endif
+endif
+
+$appmode=appmode
+if (appmode='lc') then
+  $appmode='walkup'
+  lcsq('checkgo')
+endif
+
+$dir=globalauto
+if ($dir = '') then $dir = globalauto endif
+if ($dir = '') then
+  "pick a default directory"
+  $dir = userdir + '/data'
+endif
+substr($dir,1,1):$char
+if ($char <> '/') then
+  pwd:$pwd
+  $dir=$pwd+'/'+$dir
+endif
+exists($dir,'file'):$e
+if $e<0.5 then
+  mkdir('-p',$dir)
+  exists($dir,'file'):$e
+  if $e < 0.5 then
+     write('error','Cannot create directory %s.',$dir)
+     return
+  endif
+endif
+if globalauto='' then
+  globalauto=$dir
+endif
+
+exists('actionid','parameter'):$e
+if ($e < 0.5) then
+  cqpars
+endif
+
+if ($appmode='walkup') then
+  $sqname='tmpstudy%R0%'
+else
+  $sqname = sqname
+endif
+$s1='' substr($sqname,1,1):$s1
+if $s1<>'/' then
+  $sqname=$dir+'/'+$sqname
+endif
+Svfname($sqname, ''):$sqdir
+
+$studyid = $sqdir
+if $s1<>'/' then
+  length($dir):$dl
+  length($sqdir):$sl
+  substr($sqdir,$dl+2,$sl-$dl):$studyid
+endif
+studyid = $studyid
+if $appmode<>'walkup' then
+  activestudy = studyid
+endif
+
+exists($sqdir,'file'):$e
+if ($e < 0.5) then
+  mkdir('-p',$sqdir)
+endif
+sqdir=$sqdir "tmp location if auto"
+
+exists('sqattr','parameter','global'):$e
+if $e < 0.5 then
+  create('sqattr','string','global')
+  setprotect('sqattr','on',16+256+32768,'global')
+endif
+exists('sqval','parameter','global'):$x
+if $x<0.5 then
+  create('sqval','string','global')
+  setprotect('sqval','on',16+256+32768,'global')
+endif
+exists('sqtval','parameter','global'):$x
+if $x<0.5 then
+  create('sqtval','string','global')
+  setprotect('sqtval','on',16+256+32768,'global')
+endif
+exists('testacquire','parameter','global'):$x
+if $x>0.5 then
+  testacquire='n'
+endif
+
+copyid = 'null','null'
+exists($sqdir+'/info','file'):$e
+if ($e < 0.5) then
+  mkdir($sqdir + '/info')
+endif
+exists($sqdir+'/data','file'):$e
+if ($e < 0.5) then
+  mkdir($sqdir + '/data')
+endif
+if ($appmode='walkup') then
+  xm1('delete tmpstudy')
+else
+  xm1('delete all')
+  xm1('setids')
+  vnmrjcmd('LOC show protocol')
+endif
+actionid=`null`
+xm1('pause')
+
+if $reset='n' then return endif
+cqinit('vp')

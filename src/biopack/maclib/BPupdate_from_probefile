@@ -1,0 +1,123 @@
+"macro BPupdate_from_probefile"
+
+"BPupdate_from_probefile   updates universal parameters values from probefile"
+
+BPcheckprobefile3  "checks if BioPack entries are in probefile"
+
+
+// this "tof setup" business has to be revised. ET mar 2013
+setoffset('H1',4.63):$tof
+//$tof=-221
+getparam('tofH2O','H1'):tof
+abs($tof-tof):$diff 
+if $diff>10 then tof=$tof endif
+
+getparam('rof1','H1'):rof1
+getparam('rof2','H1'):rof2
+getparam('alfa','H1'):alfa
+getparam('sw','H1'):sw
+getparam('vtc','Probe'):vtc
+
+
+getparam('ref_pw90','H1'):ref_pw90
+getparam('ref_pwr','H1'):ref_pwr
+getparam('pw90','H1'):pw
+getparam('pw90','H1'):pw90
+
+//This stuff needs to be revised/removed too. ET Aug 2013
+// not all experiments should have the same d1, for example - "FAST" ones should differ
+// a temporay fix for now: 
+$num=0    strstr(seqfil,'best'):$num
+$num1=0   strstr(seqfil,'best'):$num1
+$num2=0   strstr(seqfil,'sofast'):$num2
+
+if (($num=0) and ($num1=0) and ($num2=0) ) then
+	getparam('BPd1','H1'):d1
+        getparam('at','H1'):at
+endif
+// make sure that at/np parameters are set correctly
+at=at sw=sw
+
+getparam('tpwr','H1'):tpwr
+getparam('compH','H1'):compH
+getparam('BPgain','H1'):gain
+
+getparam('pwC','C13'):pwC
+getparam('pwClvl','C13'):pwClvl
+getparam('compC','C13'):compC
+getparam('dofCO','C13'):dof
+
+getparam('pwN','N15'):pwN
+getparam('pwNlvl','N15'):pwNlvl
+getparam('compN','N15'):compN
+getparam('dofN15','N15'):dof2
+getparam('dpwr2NH','N15'):dpwr2
+getparam('dmm2NH','N15'):dmm2
+getparam('dseq2NH','N15'):dseq2
+getparam('dres2NH','N15'):dres2
+getparam('dmf2NH','N15'):dmf2
+
+dseq2='wurst40N' // No comments on that one. has tro be fixed ASAP. ET March 2013, March 2014
+
+if Console='vnmrs' then
+  getparam('ddrtc','H1'):ddrtc
+endif
+
+BPcheckprobefile('empty_noise',tn):$e
+if ($e=1) then
+ exists('empty_noise','parameter'):$e
+ if ($e=0) then
+  create('empty_noise','real')
+ endif
+ getparam('empty_noise',tn):empty_noise
+endif
+
+exists('gzcal','parameter'):$e
+if $e then
+ getparam('BPgzcal','N15'):gzcal
+endif
+exists('grecov','parameter'):$e
+if $e then
+ getparam('NHgstab','N15'):grecov
+endif
+exists('gstab','parameter'):$e
+if $e then
+ getparam('NHgstab','N15'):gstab
+endif
+exists('JNH','parameter'):$e
+if $e then
+ getparam('JNH','N15'):JNH
+endif
+exists('STUD','parameter'):$e
+if $e then
+ exists('dmf140','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf140','real')
+ endif
+ exists('dmf80','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf80','real')
+ endif
+ exists('dmf30','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf30','real')
+ endif
+ exists('rf140','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf140','real')
+ endif
+ exists('rf80','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf80','real')
+ endif
+ exists('rf30','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf30','real')
+ endif
+ getparam('dmf140','C13'):dmf140
+ getparam('dmf80','C13'):dmf80
+ getparam('dmf30','C13'):dmf30
+ getparam('rf140','C13'):rf140
+ getparam('rf80','C13'):rf80
+ getparam('rf30','C13'):rf30
+endif

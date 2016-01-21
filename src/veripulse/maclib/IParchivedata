@@ -1,0 +1,22 @@
+"macro IParchivedata"
+"Archive IP data into IParchivedir"
+
+if (IPautoarchive<>'y') then return endif
+exists('IParchivedir','parameter'):$ex
+if ($ex<0.5) then module('setup','IPpars') endif
+if (IParchivedir='') then return endif
+
+$basename=''
+shell('dirname '+archivedir):$dirname
+shell('dirname '+$dirname):$dirname2
+shell('basename '+archivedir):$basename
+$zipfilename='VeriPulse_data_archive_'+$basename+'.zip'
+
+//Copy acqlog to data directory
+shell('cp /vnmr/tmp/acqlog '+archivedir+'/acqlog.'+IPrunid):$dum
+
+write('line3','Zipping and copying data, please wait...')
+$str='cd '+$dirname+'; zip -r -q '+IParchivedir+'/'+$zipfilename+' '+$basename+' &'
+
+shell($str):$dum
+write('line3','Zipping and copying done')

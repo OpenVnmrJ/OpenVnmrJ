@@ -1,0 +1,29 @@
+"macro setwqinitmenu"
+
+$file=userdir+'/persistence/wqinitmenu'
+write('reset',$file)
+$submitopt='fgbgauto'
+getadminfo('submitoption'):$submitopt
+
+strstr($submitopt,'fg'):$wkup
+strstr($submitopt,'auto'):$auto
+strstr($submitopt,'bg'):$bgacq
+
+if (traymax<2) then $auto=0 endif
+
+if ($auto) and (system='spectrometer') and (appmode<>'lc') then
+   write('file',$file,'"Automation" "auto curexp"')
+endif
+if ($wkup) then
+   write('file',$file,'"Foreground" "acq curexp"')
+endif
+if ($bgacq) then
+   write('file',$file,'"Background" "acq autodir"')
+endif
+if ($auto) and (system='datastation') and (appmode<>'lc') then
+   write('file',$file,'"AutoFile" "enter curexp"')
+endif
+
+shell('(cat '+$file+' | wc -l)'):$lines
+if ($lines < 2) or (appmode='lc') then shell('rm -f '+$file):$dum endif
+

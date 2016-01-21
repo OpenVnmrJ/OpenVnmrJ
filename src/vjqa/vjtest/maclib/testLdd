@@ -1,0 +1,52 @@
+"macro testLdd"
+"macro testLdd"
+
+getdirs('bin'):$dirs
+$dirs=$dirs,systemdir+'/lib/'
+$num=size('$dirs')
+$j=0
+$faillog=curexp+'/faillog'
+$resFile=curexp+'/resFile'
+write('reset',$faillog)
+$ext=''
+$ans=''
+while ($j < $num) do
+  $j = $j+1
+  $dir = $dirs[$j]
+  getfile($dir):$nfiles
+  write('line3','Program ldd test of %s',$dir):$msg
+  vvLog('Test',$msg)
+  $pass=0
+  $fail=0
+  $i=0
+  while ($i<$nfiles) do
+     $i=$i+1
+     getfile($dir,$i):$filename,$ext
+     if ($ext = '') then
+       $path = $dir + $filename
+     else
+       $path = $dir + $filename + '.' + $ext
+     endif
+
+     shell('ldd '+$path+ '| grep "not found" > ' + $resFile + ';cat'):$e
+     lookup('mfile',$resFile,'read'):$ans,$ret
+     if ($ret=0) then
+       $pass=$pass+1
+     else
+       $fail=$fail+1
+       write('file',$faillog,'failed program: %s',$path)
+     endif
+  endwhile
+  if ($pass) then
+    write('line3','%d programs',$pass):$msg
+    vvLog('Pass',$msg)
+  endif
+  if ($fail) then
+    write('line3','%d programs',$fail):$msg
+    vvLog('Fail',$msg)
+    vvLog:$path
+    shell('cat '+$faillog+' >> '+$path+';cat'):$e
+    shell('rm -f '+$faillog):$e
+  endif
+  shell('rm -f '+$resFile):$e
+endwhile

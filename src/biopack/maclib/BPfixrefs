@@ -1,0 +1,86 @@
+"macro BPfixrefs"
+"Create 3D referencing parameters as needed. Set to defaults for HCN"
+"  Observe dimension"
+
+// Changed ET mar 2013 to fix (not cure) refsource1/2/3 situation 
+// gotta be redone: references should be independent from axis parameter
+
+exists('reffrq','parameter'):$e  
+if not($e) then
+  create('reffrq','real')
+endif 
+setgroup('reffrq','display')
+reffrq = sfrq - (sw/2 - rfl + rfp)/1e6
+exists('refpos','parameter'):$e
+if not($e) then
+  create('refpos','frequency')
+endif
+setgroup('refpos','display')
+refpos = 0
+
+"  F1 Dimension "
+exists('refsource1','parameter'):$e
+if not($e) then
+  create('refsource1','string')
+endif
+setgroup('refsource1','display')
+refsource1 = 'dfrq'
+exists('reffrq1','parameter'):$e
+if not($e) then
+  create('reffrq1','real')
+endif 
+setgroup('reffrq1','display')
+$second=''
+substr(axis,2,1):$second
+$reffrq1=sfrq                   "default"
+if $second='p' then $reffrq1=sfrq  refsource1 = 'sfrq' endif
+if $second='d' then $reffrq1=dfrq  refsource1 = 'dfrq' endif
+if $second='2' then $reffrq1=dfrq2 refsource1 = 'dfrq2'endif
+
+exists('sw1','parameter'):$e
+if ($e=0) then
+  reffrq1=$reffrq1
+else
+  reffrq1 = $reffrq1 - (sw1/2 - rfl1 + rfp1)/1e6
+endif
+exists('refpos1','parameter'):$e
+if not($e) then
+  create('refpos1','frequency')
+endif
+setgroup('refpos1','display')
+refpos1 = 0
+refpos1 = 'n'
+
+"  F2 Dimension "
+exists('refsource2','parameter'):$e
+if not($e) then
+  create('refsource2','string')
+endif
+setgroup('refsource2','display')
+refsource2 = 'dfrq2'
+exists('reffrq2','parameter'):$e
+if not($e) then
+  create('reffrq2','real')
+endif 
+setgroup('reffrq2','display')
+
+$third=''
+substr(axis,3,1):$third
+$reffrq2=sfrq
+if $third='p' then $reffrq2=sfrq  refsource2 = 'sfrq'  endif
+if $third='d' then $reffrq2=dfrq  refsource2 = 'dfrq'  endif
+if $third='2' then $reffrq2=dfrq2 refsource2 = 'dfrq2'  endif
+
+exists('sw2','parameter'):$e
+if ($e=0) then
+  reffrq2=$reffrq2
+else
+  reffrq2 = $reffrq2 - (sw2/2 - rfl2 + rfp2)/1e6
+endif
+exists('refpos2','parameter'):$e
+if not($e) then
+  create('refpos2','frequency')
+endif
+setgroup('refpos2','display')
+refpos2 = 0
+refpos2 = 'n'

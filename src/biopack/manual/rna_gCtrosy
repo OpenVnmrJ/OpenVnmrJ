@@ -1,0 +1,116 @@
+/*  rna_gCtrosy.c
+
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    TROSY with gradients for C13/H1 chemical shift correlation with optional
+    N15 refocusing and editing spectral regions.
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    S3 option: [S3='y']:
+    pulse sequence:     Meissner and Sorensen, JMR, 139, 439-442 (1999)
+    TROSY method only applied for carbon nuclei. Need to decouple during
+    aquisition.
+
+    S3 option: [S3='n']:
+    pulse sequence:     according to Weigelt, JACS, 120, 10778 (1998)
+    TROSY method applied for carbon and proton nuclei. No decoupling during
+    aquisition.
+
+    Both sequences are using coherence gradients and the Sensitivity Enhancement
+    train for better H2O suppression for CH resonances very close to H2O.
+
+    The sequence will function correctly with ribose='y'/aromatic='y'/allC='y'.
+    Although, the TROSY enhancement will only be achieved for aromatic nuclei.
+
+    VNMR processing (wft2da):
+    f1coef = '1 0 -1 0 0 -1 0 -1' for nonCT
+    f1coef = '1 0 -1 0 0 1 0 1' for CT
+
+    THE CT OPTION: [CT='y']:
+    This converts the t1 C13 shift evolution to Constant Time and is the recommended
+    usage for S3='y' and S3='n'.
+    The constant time delay, CTdelay(1/Jcc), can be set for optimum S/N for any type
+    of groups, eg 28ms for ribose and 14ms for aromatics. For the allC option
+    it is best to set the CTdelay to 1/Jcc(ribose) which equals 2/Jcc(aromatic).
+    Note that in some options, CTdelays less than 8ms will generate an error
+    message resulting from a negative delay.
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [C13].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in C13.  f1180='y' is ignored if ni=0.
+
+
+                  DETAILED INSTRUCTIONS FOR USE OF rna_gCtrosy
+
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gCtrosy may be printed using:
+                                      "printon man('rna_gCtrosy') printoff".
+
+    2. Apply the setup macro "rna_gCtrosy".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. CHOICE OF C13 REGION:
+       ribose='y' gives a spectrum of ribose/C5 resonances centered on dof=85ppm.
+       This is a common usage.                               Set sw1 to 60ppm.
+
+       aromatic='y' gives a spectrum of aromatic C2/C6/C8 groups.  dof is shifted
+       automatically by the pulse sequence code to 145ppm.  Set sw1 to 30ppm.
+
+       allC='y' gives a spectrum of ribose and aromatic resonances. dof is
+       set by the code to 110ppm.                        Set sw1 to 110ppm.
+
+    5. N15 COUPLING:
+       Splitting of resonances in the C13 dimension by N15 coupling in N15
+       enriched samples is removed by setting N15refoc='y'.  No N15 RF is
+       delivered in the pulse sequence if N15refoc='n'.  N15 parameters are
+       listed in dg2.
+
+    6. 1/4J DELAY TIMES:
+       These are listed in dg/dg2 for possible change by the user. JCH is used
+       to calculate the 1/4J time (lambda=0.94*1/4J) for H1 CH coupling evolution,
+       tCH is the 1/4J time for C13 CH coupling evolution.
+       Lambda is calculated a little lower (0.94) than the theoretical time to
+       minimise relaxation, but tCH should be as close
+       to the theoretical time as possible.  So for:
+         ribose CH/CH2:           JCH=145Hz         tCH = 0.00172
+         aromatic CH:             JCH=180Hz         tCH = 0.00139
+         allC:                    JCH=160Hz         tCH = 0.00156
+
+    7. Wet option: (wet='y'):
+       For optimum H2O-suppression use wet='y'.
+
+    8. TROSY peak selection (bottom and right option if S3='n'):
+
+       Type trace='f1' for display of 2D spectrum
+       with bottom='y' and right='y' the bottom-right peak of the coupled
+       2D gets selected
+       with bottom='y' and right='n' the bottom-left peak of the coupled
+       2D gets selected
+       etc.
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Written for RnaPack by Peter Lukavsky (05/00).     @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

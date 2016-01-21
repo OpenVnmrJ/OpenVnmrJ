@@ -1,0 +1,265 @@
+Processing of Sparse Sampling Data
+
+Compressive Sensing uses random sampling for greater
+resolution with fewer data points. The  processing 
+is based on the CLEAN technique also known 
+as "soft thresholding"
+
+The default data processing software CLEAN can 
+process all randomly sampled data provided the 
+sampling points are on the Fourier grid. That 
+includes data acquired using the Orekhov method, 
+but excludes explicit MFT-type data sampling.
+ 
+The following actions are expected. 
+
+The first section of the panel deals with the 
+processing setup parameters. 
+
+The "Use default processing params" check box 
+is provided for convenience and simplicity. It 
+sets zero filling factor to twice the expected 
+number of data points (e.g., fn1=4*nimax) and 
+applies the optimum squared-sinebell window 
+functions. If not checked, it is up to the user 
+to ensure the desired window functions are set 
+prior to the processing in the normal VnmrJ 
+processing panels.
+
+The "Partial Region" check box and the adjacent 
+selection menu allow the user to reduce the 
+portion of the spectrum used for processing. 
+This greatly accelerates the processing for 
+data sets, such as NH-detected bio-NMR experiments 
+that involve large unused portions of the spectrum 
+that do not include signals. If unchecked, the 
+entire spectral window is used by the subsequent 
+processing. Note that when the check box is activated, 
+the current position of the cursors is read. 
+Therefore, if the cursors are subsequently moved 
+to a new position, the selection menu must be 
+used again or the check box reactivated so that 
+the correct position of the cursors is registered.
+
+The "Sensitivity enhanced data' check box indicates 
+that at least one of the dimensions was recorded 
+using the so called 'sensitivity enhanced" scheme. 
+In practice it detects the setting of f1coef, 
+f2coef and f3coef parameters and uses their current 
+settings. It is up to the user to ensure the correct 
+setting for these parameters. If the box is unchecked, 
+no sensitivity enhancement processing is activated 
+whatever the parameter setting. Note that BioPack 
+setup macros normally set these parameters.
+
+The "Inflate" check box expands the data set according 
+to the nimax (ni2max, ni3max) settings by filling the 
+gaps in the sampling schedule with zeros. This is 
+required for proper functioning of subsequent CLEAN 
+processing, but may not be needed for other types of 
+processing, such as MDD or MFT.
+
+The "CLEAN" check box ensures that the CLEAN 
+software will be applied by the subsequent data 
+processing. If CLEAN check box is not activated, 
+the conventional multi-dimensional Fourier transform 
+can still be applied except the sampling artefacts 
+are not suppressed in any way. 
+
+The adjacent "threshold" entry box allows setting 
+the relative threshold with respect to the noise 
+level for CLEAN processing. A higher threshold speeds 
+up the processing whereas a lower number makes the 
+result more accurate. The minimum allowed threshold 
+is set to 1.0 and the recommended values are 2.0 for 
+2D processing and 4.0 for 3D processing. 
+
+The "de-noise" checkbox activates the de-noising 
+option in CLEAN processing. If activated, the residual 
+noise is not added to the final spectrum. This reduces 
+the appearance of the t1-noise-like artefacts in the 
+final spectrum which helps when displaying and plotting 
+spectra with high dynamic range. Note however,  that 
+depending on the "threshold" setting,  the noise floor 
+may contain individual noise spikes that can resemble 
+weak peaks and the line shape may appear somewhat 
+distorted, particularly in non-constant time experiments. 
+Some weaker peaks may be lost.
+
+Before using the "process" button, all phases 
+in all dimensions should be set properly since 
+the final data will not be phaseable.
+
+The second part of processing panel ("Process") 
+uses the declared processing options. The "process" 
+button will use the processing options set up in the 
+first section of the panel. The following sequence 
+of operations will be executed automatically. First, 
+the procdir directory is created in the current 
+experiment and the old procdir is removed, if it 
+exists. The original data is saved in that directory 
+as orig.fid together with the sampling schedule. The 
+data is first Fourier transformed in the direct 
+dimension and a full arsenal of VJ parameters and 
+options, such as linear prediction (direct dimension), 
+window functions, solvent suppression, baseline 
+correction etc, are active. Make sure that the data 
+is properly phased before the 3D and 4D processing 
+is activated. The processed data is then down-sampled 
+in the direct dimension and the active spectral region 
+is selected and the data saved as rsw.fid by the 
+rsw command. The rsw.log file contains the output 
+from this command and can be consulted in the case 
+of processing failure. Then, if the sensitivity 
+enhancement option is active, the proc_se command 
+is executed and the processing report is saved in 
+the proc_se.log file that can be inspected in the 
+case of processing failure. The recombined data is 
+saved with the same rsw.fid name. Next, the data 
+is inflated (missing points replaced by zeros) by 
+activating the inflateND command. The output data 
+is saved as inf.fid and the processing report is 
+saved as inflateND.log text file. Finally, the 
+optional CLEAN processing is started provided the 
+above operations have been successful. For 2D 
+experiments it is executed by cln2d command and 
+is usually fast. The output data is saved as time 
+domain data in cln2d.fid and the processing report 
+is documented in the cln2d.log file. Once the CLEAN 
+processing is finished the output data can be processed 
+in VJ using the “2D” button or from any other 
+processing panel and all VJ processing options 
+are available. The 3D data sets are processed by 
+cln3d command and the processed data is saved in 
+the cln3d.fid file.
+
+The 3D CLEAN processing can be interrupted using 
+the "Abort" button. In order to re-process the data 
+activate the "restore original data" button which 
+will retrieve the original data set and the processing 
+setup and the subsequent steps can be re-executed 
+as described above. The processing report is saved 
+as cln3d.log text file. Note that 3D processing can 
+be relatively slow, depending on the data size and 
+the processing options. Therefore, the processing is 
+run in the background and messages about the beginning 
+and end of the CLEAN processing are displayed in the 
+VnmrJ message window in due course. Note that the end 
+result is saved as frequency domain data and 
+cannot be re-phased. 
+
+Therefore, it is important that the processing parameters 
+and phases are set before the clean processing is started.
+
+The window functions (appropriate lb, sb, gf) and 
+zero-filling options (fn2, fn3) will be active during 
+the CLEAN processing. The data is then displayed using 
+the ft3d("noft") option via the "3D" button. This will 
+convert the cln3d.fid data into a format that can be 
+displayed by VNMRJ software.
+
+The 3D spectra (projections and individual planes) are 
+displayable by using the other display panels only 
+after the message signalling the end of ft3d processing 
+appears in the VJ window.
+   
+CLEAN Parameters
+
+All the parameters in this section are activated and 
+set via the graphical user interface, but can be 
+accessed also via the command line. 
+
+SPARSE   flag (y or n) indicating whether sparse 
+         sampling is used in the current experiment. 
+         The flag is used to activate sparse sampling panels.
+stype	 flag indicating the sampling type
+   	 y or a indicates automatic sampling scheduling;
+   	 n and any other letter except y and a indicates 
+         that an existing schedule is used.
+   
+skey	- parameter (integer) containing the seed for 
+          the random number generator used to create 
+          the sampling schedules. A positive number indicates 
+          that the sampling schedule is executed sequentially. 
+          A negative number indicates that the sampling schedule 
+          is applied randomly.
+
+nimax	- the maximum number of data points in the t1 domain 
+          that the data set is to be expanded to. This defines 
+          the maximum evolution time in t1.
+CSlines	- (integer) contains the number of sampling schedule 
+          lines to be displayed in the text window at the user request.
+CSsp	- (integer) contains the starting point of the region 
+          of interest (in real data points).
+CSwp	- (integer) contains the width of the region of 
+          interest (in real data points).
+CS_se 	- flag (y or n) indicating whether the sensitivity 
+          enhanced processing will be activated.
+CS_inf	- flag (y or n) indicating whether the data need be inflated.
+CS_cln	- flag (y or n) indicating whether CLEAN processing 
+          will be activated.
+CS_dpars - flag (y or n) indicating whether default processing 
+          parameters will be used.
+CSdnoise - flag (y or n) indicating whether de-noising option 
+          in the CLEAN processing. If CSdnoise is set to y, 
+          the residual noise is not added to the final spectrum. 
+          This reduces the appearance of the t1-noise like 
+          artefacts in the final spectrum and helps when displaying 
+          and plotting spectra with high dynamic range. Note however 
+          that depending on the CSthr setting the noise floor may 
+          contain individual noise spikes that can resemble weak 
+          peaks and the line shape may appear somewhat distorted 
+          particularly in non-constant time experiments. Some weaker 
+          peaks may be lost.
+CSthr -   parameter (real); sets the relative threshold with respect 
+          to the noise level for CLEAN processing. A higher threshold 
+          speeds up the processing whereas a lower number makes the 
+          result more accurate. The minimum allowed threshold is set 
+          to 1.0 and the recommended values are 2.0 for 2D processing 
+          and 4.0 for 3D processing.
+
+CLEAN Macros
+
+All the macros in the CLEAN software are designed for use with the 
+panels and are not expected to be used manually. Therefore this 
+section is rather technical and for documentation purposes only.
+
+parCS 	- creates the parameters required for random sampling 
+          and CLEAN processing.
+cln2d 	- executes 2D CLEAN processing; executes the cln2d 
+          command in a shell.
+cln3d 	- executes 3D CLEAN processing; executes the cln3d 
+          command in a shell; activates the processing monitoring 
+          script cln3dwait which reports end of the cln3d processing.
+CScoef	- checks f1coef, f2coef and f3coef settings and indicates 
+          if any sensitivity enhanced experiment domains are present. 
+          The macro is used to set up flags for the proc_se command.
+CSdensity - calculates the sampling density; used to display sampling 
+          density in the acquisition panel. 
+CSdpars - sets the default processing parameters for the CLEAN processing
+CSinflate - sets up the data expansion options and executes the inflateND 
+          command in a shell;
+CSppp 	- sets up the flags for CLEAN processing panels.
+CSproc	- controls the CLEAN processing flow; executes the individual 
+          processing macros.
+CSproc_se - executes proc_se command in a shell; called by the CSproc macro.
+CSrsw 	- executes rsw command in a shell; Called by the CSproc macro.
+CS_select - selects the region of interest and sets the CSsp and CSwp 
+          parameters. 
+print_sch - prints a number of lines from the sampling.sch file in the 
+          text (alpha) window.
+psg4cs	- modifies an existing pulse sequence to allow use of a sampling 
+          schedule; executes the psg4cs command in a shell; used by the 
+          "psg check" button in the experiment setup panel. 
+xcln3d 	- terminates the 3D CLEAN processing; used by the Abort 
+          button in the processing panels.
+
+
+References for CLEAN: 
+E. Kupce and R. Freeman, J. Magn. Reson., vol. 173, 
+ pp. 317-321 (2006);
+K. Kazimierczuk, et al, J. Magn. Reson., vol. 188, 
+ pp. 344-356 (2007);
+J. Wen, J. Wu and P. Zhou, J. Magn. Reson., vol. 209, 
+ pp. 94-100 (2011);
+

@@ -1,0 +1,78 @@
+"macro readultra"
+"readultra - read the 63 shim sets stored to the Ultra-shim unit"
+"         The floppy disk from the Ultra-Shims should be mounted"
+"         on /pcfs"
+"         A single argument may be supplied which is the number of"
+"         the shim file.  For example, readultra(31) will convert"
+"         file31.dac only.  readultra alone extracts all .dac files."
+
+
+if ($# = 1) then
+   if typeof('$1') then
+      write('error','Argument to %s must be a shim file number between 1 and 63',$0)
+      return
+   else
+      if (($1 < 1) or ($1 > 63)) then
+         write('error','Argument to %s must be a shim file number between 1 and 63',$0)
+         return
+      endif
+      $index=$1
+      $end=$1
+      $svsshim='n'
+   endif
+else
+  $index=1
+  $end=63
+  $svsshim='y'
+endif
+
+shell('vnmr_uname'):$osname
+if (($osname <> 'SOLARIS') and ($osname <> 'SunOS')) then
+  write('error','%s not available on the %s system', $0, $osname)
+  abort
+endif
+if ($osname = 'SOLARIS') then
+  $dir='/floppy/floppy0/file'
+else
+  $dir='/pcfs/file'
+endif
+
+$name=''
+$dum=''
+$num=''
+$outname='usfile'
+$tmpfile=curexp+'/tmpshim'
+$dacname = 'xx','z1c','z2c','z3c','z4c','z5','z6','z7','z8','x1','y1','xz','yz','x2y2','xy','zx2y2','zxy','x3','y3','zx3','zy3','xz2','yz2','z3x','z3y','z2x2y2','z2xy','z3x2y2','z3xy','z2x3','z2y3','z3x3','z3y3','z4x','z4y','z5x','z5y','z4x2y2','z4xy','xx','z1','z2','z3','z4'
+$numdac = size('$dacname')
+
+while ($index <= $end) do
+  format($index,1,0):$num
+  $name=$dir+$num+'.dac'
+  exists($name,'file'):$isthere
+  if ($isthere > 0.5) then
+     shell('dos2unix "' + $name + '" "' + $tmpfile +'"'):$dum
+     lookup('file',$tmpfile)
+     lookup('readline'):$dum
+     $dac=0
+     while ($dac < $numdac) do
+        $tmpval=''
+        lookup('read'):$tmpval
+        if ($tmpval = '') then
+           $val = 0
+        else
+           format($tmpval,1,0):$val
+        endif
+        $dac=$dac+1
+        if ($dacname[$dac] <> 'xx') then
+           {$dacname[$dac]} = $val
+        endif
+     endwhile
+     delete($tmpfile)
+     if ($svsshim = 'y') then
+        svs($outname+$num)
+     endif
+  else
+     write('error','Shim file %s does not exist or cannot be read',$name)
+  endif
+  $index=$index+1
+endwhile

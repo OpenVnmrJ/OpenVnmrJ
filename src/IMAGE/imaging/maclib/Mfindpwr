@@ -1,0 +1,35 @@
+"macro Mfindpwr"
+"*********************************************************************"
+" Mfindpwr - macro to determine power calibration "
+"          The initial parameters are picked up from a file"
+"          The RFCOIL.p.par must exist in pardir or PARDIR"
+"	   or else current parameters or default sems parameters used"
+"          Generally SEMS transverse image is used in calibration"
+"
+"*********************************************************************"
+
+$par = ''
+$par = RFCOIL+'.p.par'
+
+exists(PARDIR+'/'+$par,'file'):$ex
+if($ex = 0) then
+  exists(userdir+'/parlib/'+$par,'file'):$e
+  if ($e = 0) then
+    if (seqfil <> 'sems') then
+      sems    "** load sems parameters **"
+    endif
+    "else use current parameters"
+  else
+    rtp($par)  "get sems.p.par from parlib"
+  endif
+else
+"Load default parameters and update pulsecal"
+  rtp(PARDIR+$par)  
+endif
+exists('rfupdate','parameter'):$e
+if($e = 0) then
+   create('rfupdate','flag') 
+endif
+rfupdate='y'
+
+findpwr(0)

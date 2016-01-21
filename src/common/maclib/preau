@@ -1,0 +1,53 @@
+"macro preau"
+" Called from cpgo or psMain "
+
+//if seqfil = 'gmapz' then
+//  gmapsys('quit')
+//endif
+if (auto='y') then
+        $loc='' $locdir=''
+        getlocid:$loc,$locdir
+           $newname='enterQ.macdir/'+$locdir+'/current'
+           exists(autodir+'/'+$newname+'.fid','directory'):$direx
+           if ($direx) then
+             delete(autodir+'/'+$newname+'.fid')
+           endif
+        $nextexp=''
+        $md=archivedir+'/'+sample+'/dirinfo/macdir'
+        cpexplist('next',$md):$nextexp
+        $issetup=0
+        strstr($nextexp,'SetUp'):$issetup
+        if ($issetup=1) then
+           autoname='_SetUp_$pslabel$_%SAMPLE#:%'
+
+                "The following is for house-cleaning purpose"
+                " The active2error macro deletes all fids in"
+                " autodir/enterQ.macdir/flushQ file"
+                " The active2error is called by cpautoQ"
+           autoname:$path
+           flushQ('write',$path)
+           pauselock(explist[1])
+           mkdir(autodir+'/'+$newname+'.fid')
+
+           exists('scoutinfo','parameter'):$parex
+           if ($parex) then if (scoutinfo='') then $parex=0 endif endif
+           if ($parex=0) then
+               eventLog('ExpStart','Scout')
+           else
+               eventLog('ExpStart',scoutinfo)
+           endif
+
+           return('shimming')
+        else
+	   updatestatus(autodir,$loc,'Active')
+//           $newname='enterQ.macdir/'+$locdir+'/current'
+           autoname=$newname+'%R0%'
+//           exists(autodir+'/'+$newname+'.fid','directory'):$direx
+//           if ($direx) then
+//             delete(autodir+'/'+$newname+'.fid')
+//           endif
+	   eventLog('ExpStart')
+        endif
+endif
+pauselock('')
+return('')

@@ -1,0 +1,88 @@
+"macro cryo_cndspec"
+"cryo_noise_display of fted data "
+
+$plotflag=(1=0)
+$file=curexp+'/specnoise'
+$intmult=2
+$i=1
+while $i<=$# do
+    if ${$i} = 'plot' then $plotflag=(1=1) 
+    else $file = userdir+'/data/testlib/'+${$i} 
+    endif 
+    $i=$i+1
+endwhile
+
+write('line3',$file)
+
+lookup('file',$file)
+lookup('readline',3)
+
+$i=1
+
+"if $plotflag then write('line3','plotting') endif"
+$numregions=30
+if (numrfch>2) then $numbasis=4 else $numbasis=2 endif
+
+$noiseth=.1
+$noiseth2=1
+$deltax=wc/$numregions
+$device='graphics'
+if $plotflag then pen('plotter','pen1') $device='plotter' 
+else clear(2) $color='white' pen('graphics',$color) $device='graphics'
+endif
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar=0.7*$htchar else $wthchar=0.5*$htchar endif
+
+$deltay=wc2/$numbasis
+$deltay=0
+pen($device,'yellow')
+$starty=0 $startx=wcmax-wc-sc
+$numindex=0
+move($startx,$starty)
+repeat
+  $numindex=$numindex+1
+  $x=$startx
+  $index=0
+ 
+  repeat
+  if $numindex=1 then pen($device,'yellow') $lab='13C c'  
+  elseif $numindex=2 then pen($device,'white') $lab='13C w'
+  elseif $numindex=3 then pen($device,'green') $lab='15N c'
+  elseif $numindex=4 then pen($device,'cyan') $lab='15N w' endif
+    $index=$index+1
+    lookup('read','read'):$pwr,$int
+    $newx=($index-1)*$deltax+$startx
+    if (($numindex=1) and ($index=1)) then $offset=$int endif
+    $y=($int-$offset)*$intmult
+    draw($newx,$starty+$y)
+    $lastx=$newx
+    until $index>=$numregions
+  $starty=$starty+$deltay
+  move($startx,$starty)
+  lookup('readline',3):$dum
+  if $numindex=2 then lookup('readline',1):$dum endif
+  write($device,$lastx,$starty+$y,$lab)
+until $numindex>= $numbasis
+
+
+pen($device,'red')
+move($startx,$offset*$intmult*$noiseth) 
+draw($lastx,$offset*$intmult*$noiseth)
+write($device,'red',$startx+3,$offset*$intmult*$noiseth+3,'+%2.0f%s',$noiseth*100,'%')
+
+move($startx,$offset*$intmult*$noiseth2) 
+draw($lastx,$offset*$intmult*$noiseth2)
+write($device,'red',$startx+3,$offset*$intmult*$noiseth2+3,'x2')
+
+
+$date=''
+shell('date +%d-%b-%Y-%T'):$date
+
+if (probe='') then $probestr='Chilly' else $probestr=probe endif
+$label=$probestr+'_specnoise_'+$date
+write($device,'green',40,140,$label)
+
+if $plotflag then cryo_cndscale('plot') page else cryo_cndscale endif
+
+
+

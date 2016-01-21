@@ -1,0 +1,186 @@
+"macro reff1"
+
+" +-----------------------------+ "
+" | check number of argument(s) | "
+" +-----------------------------+ "
+if $#>1 then
+  write('error','Usage: %s<(\'sfrq\'|\'dfrq\'|\'dfrq2\'|\'dfrq3\')>',$0)
+  return(0)
+endif
+
+" +-----------------------------------------+ "
+" | first check whether tn has usable value | "
+" +-----------------------------------------+ "
+$obsnuc = tn
+if (tn='')or(tn='none')or(tn='UNKNOWN') then
+  write('error','%s cannot work with tn=\'%s\'',$0,tn)
+  return(0)
+endif
+
+" +------------------------------------------------------------+ "
+" | determine reference source ('sfrq', 'dfrq', 'dfrq2', etc.) | "
+" +------------------------------------------------------------+ "
+if $#>0 then
+  $refsrc=$1
+  if $0='reff1' then
+    $refsrcname = 'refsource1'
+  else
+    $refsrcname = 'refsource2'
+  endif
+  exists($refsrcname,'parameter'):$e
+  if $e then
+    setvalue($refsrcname,$1)
+  endif
+  $refsrcname='argument'	" used for error feedback "
+else
+  if $0='reff1' then
+    $refsrcname = 'refsource1'
+  else
+    $refsrcname = 'refsource2'
+  endif
+  exists($refsrcname,'parameter'):$e
+  if $e then
+    if $0='reff1' then
+      $refsrc = refsource1
+    else
+      $refsrc = refsource2
+    endif
+  else
+    " 'refsource1' / 'refsource2' not found - try using 'axis' "
+    $axis=''
+    if $0='reff1' then
+      substr(axis,2,1):$axis
+    else
+      substr(axis,3,1):$axis
+    endif
+    if numrfch>4 then
+      $axisval='(p,d,2,3,4)'
+    elseif numrfch>3 then
+      $axisval='(p,d,2,3)'
+    elseif numrfch>2 then
+      $axisval='(p,d,2)'
+    else
+      $axisval='(p,d)'
+    endif
+    if $axis='p' then
+      $refsrc = 'sfrq'
+    elseif $axis='d' then
+      $refsrc = 'dfrq'
+    elseif $axis='2' then
+      $refsrc = 'dfrq2'
+    elseif $axis='3' then
+      $refsrc = 'dfrq3'
+    elseif $axis='4' then
+      $refsrc = 'dfrq4'
+    elseif $0='reff1' then
+      write('error',
+	'%s: \'refsource1\' absent; \'axis[2]\' must be set to a ppm unit %s',
+	$0,$axisval)
+      return(0)
+    else
+      write('error',
+	'%s: \'refsource2\' absent; \'axis[3]\' must be set to a ppm unit %s',
+	$0,$axisval)
+      return(0)
+    endif
+  endif
+endif
+
+" +--------------------------------------------------------------------+ "
+" | set reference nucleus and relevant frequency from reference source | "
+" +--------------------------------------------------------------------+ "
+if $refsrc = 'sfrq' then
+  $refnuc = tn
+  $refnucpar = 'tn'
+  $altfrq = sfrq
+elseif $refsrc = 'dfrq' then
+  $refnuc = dn
+  $refnucpar = 'dn'
+  $altfrq = dfrq
+elseif $refsrc = 'dfrq2' then
+  $refnuc = dn2
+  $refnucpar = 'dn2'
+  $altfrq = dfrq2
+elseif $refsrc = 'dfrq3' then
+  $refnuc = dn3
+  $refnucpar = 'dn3'
+  $altfrq = dfrq3
+elseif $refsrc = 'dfrq4' then
+  $refnuc = dn4
+  $refnucpar = 'dn4'
+  $altfrq = dfrq4
+elseif $#=0 then
+  $refnuc = tn
+  $refnucpar = 'tn'
+  $refsrc = 'sfrq'
+  $altfrq = sfrq
+elseif (numrfch > 4) then
+  write('error',
+    '%s: "%s" must be \'sfrq\',\'dfrq\',\'dfrq2\',\'dfrq3\', or \'dfrq4\'',
+    $0, $refsrcname)
+  return(0)
+elseif (numrfch > 3) then
+  write('error',
+    '%s: "%s" must be \'sfrq\',\'dfrq\',\'dfrq2\', or \'dfrq3\'',$0,$refsrcname)
+  return(0)
+elseif (numrfch > 2) then
+  write('error', '%s: "%s" must be \'sfrq\',\'dfrq\', or \'dfrq2\'',$0,$refsrcname)
+  return(0)
+else
+  write('error', '%s: "%s" must be \'sfrq\' or \'dfrq\'', $0, $refsrcname)
+  return(0)
+endif
+
+" +--------------------------------------------------+ "
+" | check whether reference nucleus has usable value | "
+" +--------------------------------------------------+ "
+if ($refnuc='')or($refnuc='none')or($refnuc='UNKNOWN') then
+  write('error','%s cannot work with %s=\'%s\'',$0,$refnucpar,$refnuc)
+  return(0)
+endif
+
+" +--------------------------------------------------------+ "
+" | extract observe and reference Xi values from nuctabref | "
+" +--------------------------------------------------------+ "
+$tnfreq=0 $freq2=0 $found=0 $found1=0
+getXi($obsnuc):$found,$tnfreq
+getXi($refnuc):$found1,$freq2,$refcmpd,$lit
+if not($found) then
+  write('error','%s: \'%s\' not defined.',$0,$obsnuc)
+  return(0)
+endif
+if not($found1) then
+  write('error','%s: \'%s\' not defined.',$0,$refnuc)
+  return(0)
+endif
+
+" +---------------------------+ "
+" | now calculate referencing | "
+" +---------------------------+ "
+if $0='reff1' then
+  reffrq1 = reffrq/$tnfreq*$freq2
+  rfl1 = sw1/2 - ($altfrq - reffrq1)*1e6
+  rfp1 = 0
+  refpos1 = 0
+  exists('lsfrq1','parameter'):$e
+  if ($e > 0.5) then
+    on('lsfrq1'):$shifted
+    if $shifted then rfl1 = rfl1 + lsfrq1 endif
+  endif
+  if $##=0 then
+    write('line3','F1 referenced from OBS dimension - Xi values: %s',$lit)
+  endif
+else
+  reffrq2 = reffrq/$tnfreq*$freq2
+  rfl2 = sw2/2 - ($altfrq - reffrq2)*1e6
+  rfp2 = 0
+  refpos2 = 0
+  exists('lsfrq2','parameter'):$e
+  if ($e > 0.5) then
+    on('lsfrq2'):$shifted
+    if $shifted then rfl2 = rfl2 + lsfrq2 endif
+  endif
+  if $##=0 then
+    write('line3','F2 referenced from OBS dimension - Xi values: %s',$lit)
+  endif
+endif

@@ -1,0 +1,94 @@
+"macro RQrecon"
+
+$infile = '' 
+$outfile = curexp+'/recon' 
+
+if($# > 0.5) then
+   if($1 = 'replace') then 
+     $outfile = '' 
+   elseif($# > 1.5) then
+     $infile = $1
+     $outfile = $2
+   else
+     $infile = $1
+   endif
+endif
+
+length($infile):$l
+strstr($infile,'.img'):$n,$s1
+if($n = $l-3) then $infile=$s1+'.fid' endif
+
+length($outfile):$l
+strstr($outfile,'.fid'):$n,$s1
+if($n = $l-3) then $infile=$s1+'.img' endif
+
+$recondir = curexp+'/recon'
+ 
+if($infile <> '') then
+   exists($infile,'directory'):$e
+   if($e > 0.5) then
+     rt($infile)
+     exists('recondisplay','parameter','processed'):$e
+     if $e < 0.5 then
+       create('recondisplay','real','processed')
+     endif
+     setgroup('recondisplay','processing','processed')
+     setvalue('recondisplay',0,'processed')
+
+     if($outfile = '') then
+      $outfile = curexp+'/recon'
+     endif
+     recon_all('',$recondir)
+
+     if($outfile <> $recondir) then
+         shell('mv "'+$recondir+'"/* "'+ $outfile+'"'):$x
+     endif
+
+     RQreload($outfile)
+     RQdisplay
+   endif
+else
+     if(reconMode = 0) then reconMode = 1 endif
+     aipGetImgKey(reconMode):$num
+
+     $i=1
+     while ($i <= $num) do
+        aipGetImgKey(reconMode,$i):$path
+        substr($path,1):$dir
+        strstr($dir,'.img'):$n,$s1
+	$raw = $s1+'.fid'
+        exists($raw,'directory'):$e
+        if($e > 0.5 and $infile <> $raw) then
+            $infile = $raw
+	    rt($infile)
+            exists('recondisplay','parameter','processed'):$e
+            if $e < 0.5 then
+                create('recondisplay','real','processed')
+            endif
+            setgroup('recondisplay','processing','processed')
+            setvalue('recondisplay',0,'processed')
+
+            if($outfile = '') then
+write('line3','recon %s\n', $dir)
+               recon_all('',$recondir)
+
+               if($dir <> $recondir) then
+                   shell('mv "'+$recondir+'"/* "'+ $dir+'"'):$x
+               endif
+
+   	       RQreload($dir)
+	    else 
+               recon_all('',$recondir)
+
+               if($outfile <> $recondir) then
+                   shell('mv "'+$recondir+'"/* "'+ $outfile+'"'):$x
+               endif
+
+   	       RQreload($outfile)
+	    endif
+        endif
+	$i=$i+1
+     endwhile
+
+     if($infile <> '') then RQdisplay endif
+endif

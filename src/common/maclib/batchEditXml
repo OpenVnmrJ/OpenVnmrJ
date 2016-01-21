@@ -1,0 +1,125 @@
+"macro batchEditXml"
+// This macro does batch editing of all xml files found recursively in a given directory 
+// to replace the value of a attribute for a given widget (e.g. 'button').
+// To edit multiple attributes and widgets, repeat this macro with appropriate arguments.
+// NOTE, if an output directory is not specified, the input directory will be replaced.
+//
+// $indir - the full path of input directory
+// $widget - widget name
+// $attr - attribute name
+// $value - attribute value, can be a string or integer
+// $outdir - if provided, $indir will not be replaced
+// $debugfile - if provided, changed lines will be recorded.
+
+if($# < 4) then
+  write('line3','Usage: batchEditXml($indir,$widget,$attr,$value<,$outdir<,debugfile>>)')
+endif
+
+$indir=$1  
+exists($indir,'directory'):$e
+if(not $e) then
+   write('line3','Abort: input directory %s does not exist.',$indir)
+endif
+
+$widget='<'+$2
+$attr=$3+'=\"'
+
+if(typeof('$4')) then
+  $value=$4
+else
+  $value=''
+  format($4,0,0):$value
+endif
+
+$outflag=0
+$outdir=$indir+'_new'
+if($#>4) then
+   if($5 <> '') then
+     $outflag=1
+     $outdir=$5
+   endif
+endif
+exists($outdir,'file'):$e
+if(not $e) then
+   shell('mkdir -p '+$outdir) 
+endif
+
+$debugflag=0
+$debugfile=''
+if($# > 5) then
+   $debugflag=1
+   $debugfile=$6
+endif
+
+getfile($indir):$nfiles
+
+write('line3','Do %s %d',$indir,$#)
+
+$count=0
+$i=0
+while($i<$nfiles) do
+  $i=$i+1
+  getfile($indir,$i):$file,$ext
+  if($ext='xml') then
+     $count=$count+1
+     $infile=$indir+'/'+$file+'.'+$ext 
+     $outfile=$outdir+'/'+$file+'.'+$ext 
+     shell('rm -f '+$outfile)
+     lookup('file',$infile,'readline'):$line,$ret
+     $found=0
+     while($ret) do
+        strstr($line,$widget):$n
+	if($n) then $found=1 endif
+        if($found) then
+           $s1='' $s2='' $s3='' $s4=''
+           strstr($line,$attr):$n,$s1,$s2
+	   if($n) then
+	     strstr($s2,'\"'):$n,$s3,$s4
+	     if($n and $value<>$s3) then
+		$line=$s1+$attr+$value+'\"'+$s4
+		if($debugflag) then
+		  write('file',$debugfile,'%s %s %s',$infile, $s3, $line)
+		endif
+	     endif
+	   endif
+           strstr($line,'/>'):$n1
+           strstr($line,'</'):$n2
+	   if($n1 or $n2) then $found=0 endif
+        endif
+
+	write('file',$outfile,'%s',$line)
+
+	lookup('readline'):$line,$ret
+     endwhile 
+  else // recursive
+     $newdir=$indir+'/'+$file
+     exists($newdir,'directory'):$direx
+     strstr($newdir,$outdir):$n
+     if($direx and $n=0) then // is a directory and not insider $outdir
+        $newoutdir=$outdir+'/'+$file
+        if($outflag and $debugflag) then
+	  batchEditXml($newdir,$2,$3,$4,$newoutdir,$debugfile)
+        elseif($outflag) then
+	  batchEditXml($newdir,$2,$3,$4,$newoutdir)
+        elseif($debugflag) then
+	  batchEditXml($newdir,$2,$3,$4,'',$debugfile)
+        else
+	  batchEditXml($newdir,$2,$3,$4)
+	endif
+     endif
+  endif
+endwhile
+
+if($debugflag) then
+  write('file',$debugfile,'%d xml files were edited in %s.',$count,$1)
+endif
+
+if(not $outflag) then // replace $indir with $outdir
+   exists($indir,'file','w'):$e
+   if($e and $count>0) then
+      shell('rm -rf '+$indir)
+      shell('mv -f '+$outdir+' '+$indir)
+   else
+      shell('rm -rf '+$outdir)
+   endif
+endif

@@ -1,0 +1,104 @@
+"macro specviewpref"
+if ($#<1) then $1='init' endif
+
+exists('SpecViewPref','parameter','global'):$parex
+if ($parex=0) then
+   create('SpecViewPref','string','global')
+   SpecViewPref='ACPEQ'
+endif
+setprotect('SpecViewPref','on',256,'global')
+$svpsize=size('SpecViewPref')
+if ($svpsize<2) then SpecViewPref[2]='' endif
+
+IF ($1='init') THEN
+   specviewpref('parse')
+   vnmrjcmd('pnew','SpecViewPref','traymax')
+   vnmrjcmd('popup','mode:modeless','file:specviewpref.xml','rebuild:yes','pnewupdate:true','title:Spectrometer View Preference')
+ELSEIF ($1='ok') THEN
+   SQDisplay('refresh')
+ELSEIF ($1='parse') THEN
+//check the validity of
+//  SpecViewPref parameter value
+
+  $copt=0 $eopt=0 $qopt=0 $sopt=0 $aopt=0 $popt=0 $fopt=0
+  if (traymax=0) then
+	$val1='' $val2=''
+        strstr(SpecViewPref[1],'S'):$sopt,$val1,$val2
+        if ($sopt) then SpecViewPref[1]=$val1+$val2 endif
+  endif
+  $adisp=SpecViewPref[1]
+  strstr($adisp,'F'):$fopt
+  strstr($adisp,'C'):$copt
+  strstr($adisp,'A'):$aopt
+  strstr($adisp,'P'):$popt
+  strstr($adisp,'S'):$sopt
+  strstr($adisp,'E'):$eopt
+  strstr($adisp,'Q'):$qopt
+  if (($copt=0) and
+    ($eopt=0) and
+    ($aopt=0) and
+    ($popt=0) and
+    ($sopt=0) and
+    ($fopt=0) and
+    ($popt=0) and
+    ($adisp<>'')) then
+    specviewpref('defaults'):$adisp
+    write('line3','SpecViewPref parameter reset to default value of %s',$adisp)
+    SpecViewPref[1]=$adisp
+  endif
+
+ELSEIF ($1='defaults') THEN
+
+  $adisp='ACPEQ'
+  $copt=0 $eopt=0 $qopt=0 $sopt=0 $aopt=0 $popt=0 $fopt=0
+  getadminfo('autosqdisplay'):$adisp
+  if (traymax=0) then
+        strstr($adisp,'S'):$sopt,$val1,$val2
+        if ($sopt) then $adisp=$val1+$val2 endif
+  endif
+
+  strstr($adisp,'F'):$fopt
+  strstr($adisp,'C'):$copt
+  strstr($adisp,'A'):$aopt
+  strstr($adisp,'P'):$popt
+  strstr($adisp,'S'):$sopt
+  strstr($adisp,'E'):$eopt
+  strstr($adisp,'Q'):$qopt
+  if (($copt=0) and
+    ($eopt=0) and
+    ($aopt=0) and
+    ($popt=0) and
+    ($sopt=0) and
+    ($fopt=0) and
+    ($popt=0) and
+    ($adisp<>'')) then
+    $adisp='ACPEQ'
+  endif
+  if ($## > 1) then return($adisp) endif
+  SpecViewPref[1]=$adisp
+
+ELSEIF ($1='rebuild2lvl') THEN
+  strstr(autodir,'.macdir'):$isnotauto
+  if ($isnotauto) then
+	rebuildxml('auto',globalenter)
+  else
+	rebuildxml('auto',autodir)
+  endif
+
+ELSEIF ($1='rebuild') THEN
+  strstr(autodir,'.macdir/studytray'):$isnotauto
+  if ($isnotauto) then $autodir=globalenter else $autodir=autodir endif
+  if ($#<2) then $2='' endif
+  if ($2='') or ($2='ActiveQ') then
+	xmhaha_baQ
+  endif
+  if ($2='Queues') then
+	xmhaha_asx($autodir,'PriorityQ')
+	xmhaha_asx($autodir,'DayQ')
+	xmhaha_asx($autodir,'NightQ')
+  else
+  	xmhaha_asx($autodir,$2)
+  endif
+  SQDisplay('refresh')
+
+ENDIF

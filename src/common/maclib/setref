@@ -1,0 +1,274 @@
+"macro setref"
+"*********************************************************"
+" setref - references H1 or C13 spectra to the lock signal"
+"*********************************************************"
+// setref($nucname) - calculate reference freq for given nucleus. 
+//			current lockfreq parameter is used. 
+//			setref('setup') is the same as setref(tn)
+// setref<($refpos)> - calculate reference freq for direct dimension. 
+//			lockfreq_ is used if exists, otherwise use lockfreq.
+//			$refpos is an offset from standard reference.
+// if values are returned, reffrq parameter will not be set.
+ 
+if($# < 1) then refpos=0 endif
+
+if($#>0) then
+  if(not typeof('$1')) then
+    refpos=$1 // shift in Hz from standard
+  else 
+    if($##>0) then
+      setfrqCmd('setref',0,$1):$e,$rfl,$rfp,$reffrq,$refpos
+      if($e>0) then return($rfl,$rfp,$reffrq,$refpos) endif
+    else
+      setfrqCmd('setref',0,$1):$e
+      if($e>0) then return endif
+    endif
+  endif
+endif
+
+if($##>0) then
+  setfrqCmd('setref',0):$e,$rfl,$rfp,$reffrq,$refpos  
+  if($e>0) then return($rfl,$rfp,$reffrq,$refpos) endif
+else
+  setfrqCmd('setref',0):$e
+  if($e>0) then return endif
+endif
+
+format(solvent,'lower'):$solv
+
+$nuc=''
+if ($# > 0.5) then
+  if typeof('$1') then
+  if ($1 <> 'setup') then
+    $nuc=$1
+  endif
+  endif
+endif
+
+if ($nuc <> '') then
+  if $nuc='UNKNOWN' then
+    setfrq(''):$sfrq
+  else
+    exists('lockfreq_','parameter'):$ex
+    if ($ex) then
+         "if lockfreq_ exists, look at the correct nuctable for setfrq"
+      $h1freq=h1freq
+      setvalue('h1freq',trunc((lockfreq_*6.5144/10)+0.5)*10,'systemglobal')
+      setfrq($nuc):$sfrq
+         "Adjust the $sfrq for correct lockfreq_"
+      $sfrq=$sfrq*lockfreq_/lockfreq
+      setvalue('h1freq',$h1freq,'systemglobal')
+    else
+      setfrq($nuc):$sfrq
+    endif
+  endif
+  $sw=0 $tn=$nuc
+else
+  $sfrq=sfrq-(tof/1e6)
+  $sw=sw $tn=tn
+endif
+
+if ($tn='')or($tn='none')or($tn='UNKNOWN') then
+  if ($nuc = '') then
+    off('refpos')
+    reffrq = sfrq - (sw/2)/1e6
+    rfp = 0
+    rfl = 0
+  endif
+  if $##>0.5 then
+    return(0,0,$sfrq,0,'no referencing')
+  else
+    write('error','%s: can\'t set reference for nucleus \'%s\'',$0,$tn)
+    return
+  endif
+endif
+
+" set gamma ratio for referenced nuclei "
+exists('bioref','parameter'):$e
+if not($e) then
+  exists('bioref','parameter','global'):$e
+endif
+if $e then
+  $bioref=bioref
+else
+  $bioref='n'
+endif
+exists(userdir+'/nuctables/nuctabref','file'):$e
+if $e then
+  $nucfil = userdir+'/nuctables/nuctabref'
+else
+  $nucfil = systemdir+'/nuctables/nuctabref'
+endif
+exists(userdir+'/nuctables/nuctabrefBio','file'):$e
+if $e then
+  $nucfilbio = userdir+'/nuctables/nuctabrefBio'
+else
+  $nucfilbio = systemdir+'/nuctables/nuctabrefBio'
+endif
+exists($nucfil,'file'):$e
+exists($nucfilbio,'file'):$ebio
+if not($ebio) then
+  $bioref='n'
+endif
+if $bioref='n' then
+  $file1=$nucfil
+  $file2=''
+else
+  $file1=$nucfilbio
+  $file2=$nucfil
+endif
+$locknuc='H2'
+$tnfreq=0 $lockref=0 $found=0
+$lit=''
+$refcmpd=''
+if $e then
+  lookup('file',$file1)
+  $stnfreq=''
+  lookup('COMMENTEND',$tn,'read'):$stnfreq,$found
+  if $found then
+    format($stnfreq,'lower'):$tnfreq
+    lookup('REF:','readline'):$refcmpd
+    lookup('LIT:','readline'):$lit
+  elseif $file2<>'' then
+    lookup('file',$file2)
+    $stnfreq=''
+    lookup('COMMENTEND',$tn,'read'):$stnfreq,$found
+    if $found then
+      format($stnfreq,'lower'):$tnfreq
+      lookup('REF:','readline'):$refcmpd
+      lookup('LIT:','readline'):$lit
+    endif
+  endif
+  $slockref=''
+  lookup('file',$file1)
+  lookup('COMMENTEND',$locknuc,'read'):$slockref,$found
+  if $found then
+    format($slockref,'lower'):$lockref
+  elseif $file2<>'' then
+    lookup('file',$file2)
+    lookup('COMMENTEND',$locknuc,'read'):$slockref,$found
+    if $found then
+      format($slockref,'lower'):$lockref
+    endif
+  endif
+else
+  write('error','%s: could not open %s',$0,$file1)
+endif
+if ($found=0)or($tnfreq=0)or($solv='none')or($solv='') then
+  if ($nuc = '') then
+    off('refpos')
+    reffrq = sfrq - (sw/2)/1e6
+    rfp = 0
+    rfl = 0
+  endif
+  if $##>0.5 then
+    return(0,0,$sfrq,0,'no referencing')
+  else
+    return
+  endif
+else
+  $gamma = $tnfreq/$lockref
+endif
+
+" use archived lockfreq - if not found, use systemglobal value "
+$console=Console
+exists('lockfreq_','parameter'):$e
+if $e then
+  $lockfreq = lockfreq_
+  exists('console','parameter'):$e
+  if $e then
+    if console<>'' then
+      $console=console
+    endif
+  endif
+else
+  $lockfreq = lockfreq
+endif
+exists('z0_','parameter'):$e
+if $e then
+  on('z0_'):$z0on
+else
+  on('z0','global'):$z0on
+endif
+if $console='inova' then
+  $lkof=0
+  exists('lkof_','parameter'):$e
+  if $e then
+    $lkof=lkof_
+  else
+    exists('lkof','parameter','global'):$e
+    if $e then
+      $lkof=lkof
+    endif
+  endif
+  $lockfreq = $lockfreq + $lkof/1e6
+elseif ($console <> 'mercury') then
+  exists('h1freq_','parameter'):$e
+  if $e then
+    $h1freq = h1freq_
+  else
+    $h1freq = h1freq
+  endif
+
+  " section for UNITY / VXR-S systems "
+  if ($lockfreq < 1.5) or (($lockfreq > 150) and ($h1freq = 600)) then
+    if $h1freq=200 then if ($lockfreq < 1) then $lockfreq = 1.21 endif
+			    $lockfreq = $lockfreq + 29.5    " 1.210 -> 30.710 "
+    elseif $h1freq=300 then $lockfreq = 47.25 - $lockfreq   " 1.206 -> 46.044 "
+    elseif $h1freq=400 then $lockfreq = $lockfreq + 60.25   " 1.145 -> 61.395 "
+    elseif $h1freq=500 then $lockfreq = $lockfreq + 75.25   " 1.479 -> 76.729 "
+    elseif $h1freq=600 then $lockfreq = $lockfreq - 61.75 " 153.845 -> 92.095 "
+    endif
+  endif
+endif
+
+" calculate referencing "
+$refpos = 0
+$rfp = 0
+solvinfo(solvent):$shift
+$refh2 = $lockfreq/(1 + $shift/1e6)
+$reffrq = $gamma*$refh2
+$rfl = $sw/2 - ($sfrq - $reffrq)*1e6
+if ($nuc = '') then
+  exists('oslsfrq','parameter'):$e
+  if ($e > 0.5) then
+    $fsq='n' $e2=0
+    exists('fsq_','parameter'):$e2
+    if ($e2) then $fsq=fsq_
+    else
+      exists('fsq','parameter','global'):$e2
+      if ($e2) then $fsq=fsq endif
+    endif
+    if $e2 then
+      if $fsq='n' then
+        on('oslsfrq'):$shifted
+        if $shifted then $rfl = $rfl + oslsfrq endif
+      endif
+    else
+      on('oslsfrq'):$shifted
+      if $shifted then $rfl = $rfl + oslsfrq endif
+    endif
+  endif
+  // do dslsfrq if oslsfrq is off
+  on('oslsfrq'):$shifted
+  if($shifted < 1) then
+    on('dslsfrq'):$shifted
+    if($shifted > 0) then $rfl = $rfl + dslsfrq endif
+  endif
+
+  exists('lsfrq','parameter'):$e
+  if ($e > 0.5) then
+    on('lsfrq'):$shifted
+    if $shifted then $rfl = $rfl + lsfrq endif
+  endif
+
+  $rfl=$rfl-tof
+  rfl=$rfl rfp=$rfp refpos=$refpos reffrq=$reffrq
+endif
+p11_action('process',$0)
+
+if $##>0.5 then
+  return($rfl,$rfp,$reffrq,$refpos)
+elseif $nuc<>'' then
+  write('line3','Referencing based on estimated lock signal shift')
+endif

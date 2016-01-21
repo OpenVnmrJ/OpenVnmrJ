@@ -1,0 +1,105 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+nautoProcTarget = 'Autoproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'chanLib.h',
+                 'chanLibP.h',
+                 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'semLib.h',
+                 'shrMLib.h',
+                 'sockets.h' ]
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+expProcPath     = os.path.join(cwd,os.pardir,'expproc')
+expProcHdrList = [ 'expQfuncs.h',
+                   'commfuncs.h',
+                   'parser.h',
+                   'hostMsgChannels.h',
+                   'shrexpinfo.h' ]
+expProcFileList = ['excepthandler.c',
+                   'commfuncs.c',
+                   'parser.c',
+                   'daemon.c']
+
+procProcPath     = os.path.join(cwd,os.pardir,'procproc')
+procProcHdrList = ['procQfuncs.h']
+procProcFileList = ['procQfuncs.c']
+
+vnmrPath     = os.path.join(cwd,os.pardir,'vnmr')
+vnmrHdrList = [ 'asm.h',
+                'data.h' ]
+vnmrFileList = ['asmfuncs.c']
+
+vwacqPath = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = [ 'hostAcqStructs.h' ]
+
+
+
+nautoFileList = ['autoproc.c',
+                 'autocmds.c',
+                 'autofuncs.c']
+
+
+# build environment
+nautoProcEnv = Environment(CCFLAGS    = '-O2 -m32 -Wall',
+                           CPPDEFINES = ['LINUX','DEBUG'],
+                           LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                           CPPPATH    = [cwd])
+
+                                         # expProcPath,
+                                         # procProcPath,
+                                         # vnmrPath,
+                                         # ncommPath,
+                                         # os.path.join(cwd, os.pardir, 'vwacq')])
+
+# actual builds
+nautoproc = nautoProcEnv.Program(target  = nautoProcTarget,
+                                 source  = [nautoFileList,
+                                            expProcFileList,
+                                            procProcFileList,
+                                            vnmrFileList],
+                                 LIBPATH = [cwd,
+                                            ncommPath],
+                                 LIBS    = ['acqcomm'])
+
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vnmrPath, vnmrFileList)
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+nautoProcEnv.AddPostAction(nautoproc,
+                           Action(Copy(vnmrInstallPath, os.path.join(cwd, nautoProcTarget))))
+

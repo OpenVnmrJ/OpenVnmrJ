@@ -1,0 +1,65 @@
+*******************************************************************************
+acqi<:$ret>        -  start up the interactive acquisition display process 
+acqi('par')        -  send new FID / SPECTRUM display parameters to acqi.
+acqi('standby')    -  brings up acqi as a button
+acqi('disconnect') -  disconnect from acqi
+acqi('exit')       -  exit from acqi
+gf                 -  macro to prepare parameters for FID / SPECTRUM 
+		      display in acqi.
+dmgf               -  parameter to select AV display of FID data in acqi
+*******************************************************************************
+
+   The interactive acquisition display process (acqi) allows interactive
+   locking and interactive shimming on the lock signal or FID or Spectrum.
+   The pulse sequence and parameter set for the FID / SPECTRUM display may be
+   selected by typing gf or go('acqi') from Vnmr.  Note that if clicking the
+   FID button in acqi causes acqi to "disconnect",  the common cause is
+   that gf or go('acqi') had not been executed from Vnmr.  When acqi is called
+   from Vnmr, the success or failure may be returned to the caller. In
+   this case, no warnings are displayed on line three.
+
+   The FID display is also controlled by the parameters 'lsfid',  'phfid',
+   and 'dmgf'.  These display parameters are automatically sent to acqi
+   when acqi is first invoked.  These parameters may subsequently be
+   changed and sent again to acqi with the command acqi('par').  If 'phfid'
+   is not set to "Not Used" for the FID display in acqi, then a slider will
+   be available in acqi for the interactive adjustment of the 'phfid'
+   parameter.  The slider will be in the IPA set of adjustments.
+
+   If the parameter "dmgf" exists and is set to "av",  then the FID display
+   in acqi will display the square root of the sum of the squares of the
+   real and imaginary channels.  The parameter dmgf has no function outside
+   of the acqi program.  This display mode may cause the displayed FID
+   to exceed the displayed ADC limits in acqi by as much as a factor of
+   root two.
+
+   The SPECTRUM display is also controlled by the parameters 'sp',  'wp',
+   'dmg', 'rp', 'lp', 'rfl', 'rfp', 'vs', 'vp', 'sw', and 'fn'.  These
+   parameters are automatically sent to acqi when acqi is first invoked.
+   These parameters may subsequently be changed and sent again to acqi with
+   the command acqi('par').  The preparation macro "gf" (see below) also
+   calls acqi('par'),  thereby causing these parameters to be sent to acqi.
+   If 'fn' is greater than 64K,  it will be lower to 64K.
+
+   A convenient method of setting these parameters is to acquire a spectrum
+   with go, then ft and adjust the display with the "ds" command options.
+   Once the display is set the way you want it,  type "gf".  The same display
+   should then appear when the SPECTRUM display is selected from acqi.  Note
+   that weighting parameters are not used in the acqi SPECTRUM display.
+
+   acqi('standby') starts acqi and puts it into the standby mode.  In
+   this mode, a button labeled Acqi is present in Vnmr's permanent menu.
+   Acqi may be disconnected or exited with the Vnmr commands acqi('disconnect')
+   and acqi('exit'),  respectively.  acqi('disconnect') is the functional
+   equivalent of clicking the close button;  this puts acqi in the standby
+   mode.
+
+   gf is a macro which can serve as a model for preparing parameters for the
+   FID / SPECTRUM display in acqi.  The standard version of this macro turns off
+   phase cycling,  autoshimming,  autolocking, spin control, temperature
+   control, robot control, and autogain.  It also selects the current pulse
+   sequence and parameter set by issuing the command go('acqi') and the
+   command acqi('par').  The automation parameters cp,  wshim,  alock,  spin,
+   temp, loc,  and gain are then reset to their original values.  Users may
+   wish to customize this macro by copying it into their private maclib and
+   editing that version to suit their needs.

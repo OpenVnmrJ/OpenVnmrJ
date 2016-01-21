@@ -1,0 +1,306 @@
+"macro gs_calc"
+"******************************************************************"
+" gs_calc - macro to calculate shim values for 3D gradient shimming"
+"
+" Details: current expt must contain ge3dshim parameters from B0.{1,2}.fid"
+" 	Plan the voxel from the scout image and transfer the"
+"	parameters to current expt"
+"	gs_setvox sets lo0-2, up0-2, shim region limits in points"
+"       Collects two 3D images and generates the inhomogeneity maps"
+"       Input files: B0.1.fid, B0.2.fid, B0.param"
+"       Output files: B0.f, B0.mag, gshim.out"
+"	The .fdf files are also generated"
+"       The shim information is placed in the file userdir/gshimdir/gshim.out"
+"
+"       shimmap.'gcoil'.'shimmap'.param read in and shimmap.param link file created"
+"       shimmap.'gcoil'.'shimmap'.f = shim reference field (freq) file"
+"
+"       Threshold, shimmapname, parameters grabbed from the curexp"
+"	Threshold and other params in B0.param saved by gs_acqb0map
+"	Threshold for shimmap.param taken from curexp
+"
+" Author: S.Sukumar, Varian NMR, Palo Alto, CA, USA"
+"
+" Version: 20050805"
+
+"******************************************************************"
+$GSDIR = userdir+'/gshimdir/data'
+$GSCAL = userdir+'/gshimdir/calib'
+$VCAL = '/vnmr/gshimdir/calib'
+$rootname = $GSDIR+'/B0'
+$rootname1 = $rootname+'.1'
+$rootnameB = $rootname+'.B'
+$rootnameA = $rootname+'.A'
+$rootnameR = $rootname+'.r'
+$logfile = $GSDIR+'/ge3dshim.log'
+
+$cleanup = 'y'  "if n, keeps all intermed files"
+$macro = 'gs_calc'
+"check shim-cycle counter and init for next cycle"
+if (cnt<1) or (cnt>4) then
+  write('error','Error: shim cycle counter=%d',cnt)
+  abort
+endif
+$logfile = $GSDIR+'/'+Prescan_ShimMethod+'.log'  
+if(cnt=1) then
+  shell('rm -f '+$logfile) 
+  write('reset',$logfile)  "create log file on first pass"  
+  write('file',$logfile,'****************** %s log file ******************',Prescan_ShimMethod)  
+  $name = $GSCAL+'/decc_file.'+gcoil
+  $name2 = $VCAL+'/decc_file.'+gcoil
+  exists($name,'file'):$ex  "check if decc file exists"
+  exists($name2,'file'):$ex2
+  $deccfile = systemdir+'/imaging/decclib/.'+gcoil
+  if($ex > 0) then  
+    write('file',$logfile,'diff %s  %s',$deccfile,$name)
+    shell('diff '+$deccfile+' '+$name+'  >> '+$logfile)      
+  elseif ($ex2 > 0) then
+    write('file',$logfile,'diff .%s  %s',$deccfile,$name2)
+    shell('diff '+$deccfile+' '+$name2+'  >> '+$logfile)
+  else
+    write('file',$logfile,'Warning: Files, %s or %s do not exist',$name,$name2)
+  endif 
+endif 
+$done=0
+while($done = 0) do
+  if (shcycle[cnt]=0) then
+    cnt=cnt+1
+    if(cnt>4) then
+       write('line3','Shimcycles Complete')
+       return
+    endif
+  else
+    shimregion=shregion[cnt]    "initialize parameters for next cycle"
+    shimsel=shsel[cnt]
+    del=shdel[cnt]   
+    $done=1
+  endif 
+endwhile
+
+$rootname = $GSDIR+'/B0' 
+$rootname1 = $rootname+'.1'
+$rootname2 = $rootname+'.2'
+
+$shimmap = $GSDIR+'/shimmap'  
+$out = $GSDIR+'/gshim.out'
+
+"check if parameter file shimmap.gcoil.shimmap.param exists"
+  $name = $GSCAL+'/shimmap.'+gcoil+shimpar+'.param'
+  $name2 = $VCAL+'/shimmap.'+gcoil+shimpar+'.param'
+  exists($name,'file'):$ex  "check if param file exists"
+  exists($name2,'file'):$ex2
+  if($ex > 0) then
+    $shimpar = $name    "use local file"
+  elseif ($ex2 > 0) then
+    $shimpar = $name2    "use system file"
+  else
+    write('line3','Files: %s or %s do not exist',$name,$name2)
+    abort
+  endif
+
+"check if shimmap file exists"  
+$shimmapf = 'shimmap.'+gcoil+shimpar+'.f' 
+$shimmapfl = $GSCAL+'/shimmap.'+gcoil+shimpar+'.f'
+$shimmapfs = $VCAL+'/shimmap.'+gcoil+shimpar+'.f'
+  exists($shimmapfl,'file'):$ex  "check if shim calibration file exists"
+  exists($shimmapfs,'file'):$ex2        
+  if($ex > 0) then
+    $shimmapf1 = $shimmapfl    "use local file"
+  elseif ($ex2 > 0) then
+    $shimmapf1 = $shimmapfs    "use system file"
+  else
+    write('line3','Files: %s or %s do not exist',$shimmapfs,$shimmapfl)
+    abort
+  endif
+
+" read in shimmap parameters; "
+lookup('mfile',$shimpar,'filekey'):$key
+$zfs = ''
+lookup('mfile',$key,'seek','#DATASIZE','read','read','read','read'):$sz1,$sz2,$sz3,$zfs
+
+if($zfs = '2') then  "old param file may not have zf initialized"
+  $zf = 2
+else
+  $zf = 1
+endif
+
+lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+lookup('mfile',$key,'seek','#DELAY-MSEC','read'):$delay
+
+lookup('mfile',$key,'seek','#THRESHOLD-PERCENT','read'):$thresh
+
+lookup('mfile',$key,'seek','#REFERENCE-DELAY-MSEC','read'):$delayref
+
+lookup('mfile',$key,'seek','#NO-OF-SHIMS','read'):$maxshims
+lookup('mfile',$key,'seek','#SHIM','readline','filekey'):$tmp,$key
+
+"** read shim info: #SHIM	OFFSET	UNITS	ADJUST	MAP "
+$i = 1
+while ($i <= $maxshims) do
+  lookup('mfile',$key,'read','read','read','read','read','filekey'):$shim[$i],$st[$i],$u[$i],$map[$i],$aj[$i],$key
+  $i = $i+1
+endwhile
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'shimmap file: %s',$shimpar)
+
+  "** init new parameter file for gshimcalc **"
+  "shimmap.param file is created to include threshold from current parameter set"
+  $name = $shimmap+'.param'   " ...gshimdir/data/shimmap.param created"
+  exists($name,'file'):$ex
+  if ($ex > 0) then
+    shell('/bin/rm -f '+$name)
+  endif
+  
+  write('reset',$name)  "create param file"
+  write('file',$name,'#DATASIZE')
+  write('file',$name,'%3d  %3d  %3d %3d',$sz1,$sz2,$sz3,$zf)
+  write('file',$name,'#FOV-MM')
+  write('file',$name,'%6.0f  %6.0f  %6.0f ',$f1,$f2,$f3)   
+  write('file',$name, '#DELAY-MSEC')
+  write('file',$name, '%6.2f',$delay)     
+  write('file',$name, '#THRESHOLD-PERCENT')
+  $thresh=thresh                            "threshold taken from current parameter set"
+  write('file',$name, '%6.0f ',$thresh)
+  write('file',$name, '#REFERENCE-DELAY-MSEC')  
+  write('file',$name, '%6.3f',$delayref)
+  
+  "*** offset, orient, thk info not used by gshimcalc "
+  "    so skipped here. Need to modify gshimcalc"
+   
+  "** write shim info; note shimfit[i] is defined in current header **"
+  write('file',$name, '#NO-OF-SHIMS')
+  write('file',$name,'%2d',$maxshims)
+  write('file',$name, '#SHIM\tOFFSET\tUNITS\tMAP\tADJUST')  
+  $i=1
+  $unit='DAC'
+  "initialize shimfit array. must be equal to maxshims"
+    " Check and initialize shims coils to be used for shimming"
+    "*** shimname = 'x1','y1','z1','xz','yz','z2','xy','x2y2','x3','y3','z3','xz2','yz2','zxy','zx2y2',   ***"
+    "***           'z3x','z3y','z2x2y2','z2xy','zx3','zy3','x4','y4','z4','z5'   ***"
+
+  gs_shimselect   "select shimcoils for shimming; shimfit parameter is set here"
+
+  $i = 1
+  shimname = $shim  "shimname not used?!"  
+  while ($i <= $maxshims) do
+    " only mapped shims can be adjusted"
+      if ( ($map[$i] = 1) and (shimfit[$i] = 1) ) then
+        shimfit[$i] = 1
+      else
+        shimfit[$i] = 0
+      endif
+      write('file',$name,$shim[$i]+'\t%4d\t%s\t%4d\t%4d',
+                  $st[$i],$u,$map[$i],shimfit[$i])
+    $i=$i+1 
+  endwhile
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: shimmap.param',$macro)
+shell('cat '+$name+' >> '+$logfile)   "shimmap.param"
+gplan('clearStacks') gplan('endIplan')   "clear plan display"
+"***initialize voxel parameters X0,Y0,Z0, lx,ly,lz, up0-2, lo0-2"
+"convert (logical) voxel info. to x,y,z parameters"
+gs_setvox
+clear
+
+write('line3','Shim-cycle#:%d Calculating shim values....',cnt)
+
+gs_refhdr   "create fdf header, shimmap.hdr, using shimmap.param" 
+$hdr = $GSDIR+'/shimmap.hdr'
+
+exists('phasearray','parameter'):$ex
+if($ex = 0) then
+  create('phasearray','integer')
+  phasearray = 0
+endif
+if(phasearray > 0) then
+  gs_arraymap  "generate B0#. files for gshimcalc and fdf's for viewing"
+else  "default, generate single field map"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: %s.param ',$macro,$rootname)
+  shell('cat "'+$rootname+'.param" >> "'+$logfile+'"'):$x
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: gsbin => ',$macro)
+  "generate binary data file from .fid file (single coil)"
+  rm('-f',$rootname+'.?.bin'):$x
+  $msg=''
+  shell('gsbin "'+$rootname1+'" "'+$rootname1+'.bin"'):$msg  "B0.1._"
+  write('file',$logfile,'%s',$msg)
+  shell('gsbin "'+$rootnameB+'" "'+$rootnameB+'.bin"'):$x  "B0.B._"
+  shell('gsbin "'+$rootnameA+'" "'+$rootnameA+'.bin"'):$x  "B0.A._"
+  shell('ls -l "'+$rootname+'".?.bin >> "'+$logfile+'"'):$x
+  gs_mkmap('B0')  "B0.r.f, B0.r.mag created for gshimcalc and fdf's for viewing"
+endif
+
+$rootnameR = $rootname+'.r'
+shell('/bin/rm -f '+$rootnameR+'.pf')
+shell('/bin/rm -f '+$GSDIR+'/shimmap.f')
+shell('ln -s '+$shimmapf1+' '+$GSDIR+'/shimmap.f')
+
+"up0-2, lo0-2 are refer to shim region in pts, initialized by gs_setvox"
+$lo0s='' $up0s='' $lo1s='' $up1s='' $lo2s='' $up2s=''
+format(lo0,3,0):$lo0s
+format(up0,3,0):$up0s
+format(lo1,3,0):$lo1s
+format(up1,3,0):$up1s
+format(lo2,3,0):$lo2s
+format(up2,3,0):$up2s
+
+"0,1,2 correspond to read,phase#1,phase#2/slice dimensions "
+"Input gshimcalc: B0.r{.mag,.f,.param} shimmap.param"
+$cmd = 'gshimcalc -r '+$lo0s+' '+$up0s+' -p '+$lo1s+' '+$up1s+' -s '+$lo2s+' '+$up2s+' -b '+$rootnameR+' '+$shimmap+' > '+$out
+shell($cmd)
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: %s',$macro,$cmd)
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gshimcalc => gshim.out.%d',$macro,cnt)
+write('file',$logfile,'*******************************************************')
+shell('cat '+$out+' >> '+$logfile)   "gshim.out"
+
+"** check if gshim.out file valid **"
+$str = ''
+lookup('mfile',$out,'filekey'):$key
+lookup('mfile',$key,'seek','Shim','read'):$str
+
+if($str <> 'Change') then
+  write('line3','%s: Shim calculations failed; gshim.out file invalid',$macro)
+  abort
+endif
+"print RMS field deviation"
+lookup('mfile',$key,'seek','RMS','read','read','read'):$h,$h,$lw
+lookup('mfile',$key,'seek','Calculated','read','read','read','read','read','read'):$h,$h,$h,$h,$h,$lwp
+write('line3','RMS Field deviation: %s (=> %s )Hz',$lw,$lwp)
+
+shell('/bin/rm -f '+$rootname+'.mask.fdf')
+shell('fdfgluer '+$hdr+' '+$rootnameR+'.mask '+$rootname+'.mask.fdf'):$dum
+
+if ($cleanup = 'y') then
+  shell('/bin/rm -f '+$rootnameR+'.pf') 
+  shell('/bin/rm -f '+$rootnameR+'.mask')
+  shell('/bin/rm -f '+$rootnameR+'.f')
+endif
+
+clear
+cat($out)
+$cc=''
+format(cnt,1,0):$cc
+$cmd = 'cp '+$out+' '+$out+'.'+$cc
+shell($cmd)
+write('line3','Done')
+
+userdir=userdir "Make log display update in VnmrJ"
+
+"******************************************************************************"
+"		Modification History"
+
+" 021105(ss) shimmap.gcoil.fov file checked"
+" 021031(ss) shimfit selects shims for fitting"
+" 021106(ss) .f fdf file created; header created"
+" 030911(ss) shimmap files in system dir. checked"
+" 030915(ss) Bug: shimfit array size"
+" 050601(ss) Input: B0.r{.mag,.f,.param} shimmap.param"
+" 050603     shimmap ID used"
+" 060925		 shimmapname used"
+" 071004      modified for phasearray coils; bin files generated in gs_calc
+
+"******************************************************************************"
+

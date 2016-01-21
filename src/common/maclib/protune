@@ -1,0 +1,1281 @@
+"macro protune"
+/*-*- MAGICAL -*-*/
+"macro protune"
+
+// auto probe tuning
+/*
+ * To tune a probe to a particular nucleus without running automation,
+ * use protune or protune('popup').  This brings up a popup for
+ * selecting a nucleus to tune.  See man('protune') for details.
+ *
+ * To do manual probe tuning or protune calibrations, use
+ * protune('calibrate') or the alias "ptcal".
+ * To view output in this mode, use
+ * 'tail -f /vnmr/tmp/ptuneTextOutput' in a shell window.
+ *
+ * To enable debug output, create the global string parameter
+ * "protuneDebugCategories" and set it to a comma separated list
+ * of the desired debug categories.
+ *
+ * Protune will time out and exit when ct completes.
+ *
+ */
+
+// Stuff that should be done quickly on blocksize:
+$fidpath = systemdir+'/tmp/fid'
+if ($# > 0) then
+  format($1, 'isreal'):$isreal
+  if (not $isreal) and $1 = 'process' then
+    // This is a blocksize call
+
+    // Copy FID safely to stable file
+    $fidpathtmp = $fidpath+'.tmp'
+    $cmd = 'cp -f '+ curexp+'/acqfil/fid ' + $fidpathtmp
+    // NB: Don't count on "mv -f" removing the old file
+    $cmd = $cmd + '; rm -f '+ $fidpath
+    $cmd = $cmd + '; mv -f ' + $fidpathtmp + ' ' + $fidpath
+    shell($cmd):$x
+  endif
+endif
+
+
+probeid('enabled'):$probeid
+probeidez('native'):$native
+$probeidOpt=''
+if $probeid then
+  $probeidOpt=' -probeid true '
+elseif $native then
+  probeidez('tunedir'):$tunedir
+  if $tunedir<>'' then
+    $probeidOpt=' -systunedir '+$tunedir
+  else
+    $msg='ProTune aborted, no system configuration files for probe file '+probe
+    probeidez('id'):$id
+    if $id<>'' and $id<>' ' then $msg=$msg+' or probe '+$id endif
+    if (auto='y') then
+      write('alpha',$msg)
+    else
+      write('line3',$msg)
+    endif
+    if $#>0 then 
+      if $1<>'quit' then
+        protune('quit','failure')
+      endif
+    endif
+  endif
+endif
+
+//$arg=''
+//if (typeof('$1')) then
+//  $arg = $1
+//else
+//  format($1,3,3):$arg
+//endif
+//write('line3', $0 + ' CALLED: arg='+$arg+', tn='+tn)
+
+// exists('xmhaha_tune','maclib'):$cp4ex
+$cp4ex=1
+
+$protuneDebug = 0
+exists('protuneDebug', 'parameter', 'global'):$e
+if ($e) then
+  $protuneDebug = protuneDebug
+endif
+
+$parampath = systemdir+'/tmp/ptuneParams'
+$paramlist = 'tuneTiming sfrq tunesw np tupwr gain tchan'
+$infopath = systemdir + '/tmp/ptuneInfo'
+$infopathtmp = $infopath+'tmp'
+
+$isF19 = 0
+exists('probeConnect','parameter','global'):$exists
+if ($exists) then
+  format(probeConnect, 'lower'):$probeConnect
+  strstr($probeConnect, 'f19'):$isF19
+endif
+
+if ($0 = 'ptcal') then
+  $action = 'calibrate'
+else
+  $action = 'popup'
+endif
+if ($# > 0) then
+  format($1, 'isreal'):$isreal
+  if (not $isreal) then
+    $action = $1
+  else
+    $action = 'tune'
+    $strfreq = ''
+    $strfreq2 = ''
+    $matchdb2 = ''
+    $tunefreq = $1
+    $tunefreq2 = -1
+    format($tunefreq, 0, 4):$strfreq
+    $strfreq = ' -tunefreq ' + $strfreq
+
+    // Add match pw input, only if the first input is frequency
+    $matchdb = ''
+    $tunematch = 5  // default to match 5 percent
+    exists('protuneMatchDefault', 'parameter', 'global'):$exMatchDefault
+    if ($exMatchDefault) then
+      $tunematch = protuneMatchDefault
+    endif
+    if ($# > 1.5) then
+      format($2, 'isreal'):$isreal
+      if ($isreal) then
+        $tunematch = $2
+      endif
+    else
+      exists('tunematch', 'parameter'):$e
+      if ($e) then
+        $tunematch = tunematch
+      endif
+    endif
+    if (auto<>'y') then
+      write('line3','Tuning to %g within %g%% of optimum',$tunefreq,$tunematch)
+    endif
+    protune('formula',$tunematch):$matchdb
+    $matchdb = ' -match ' + $matchdb
+
+    // Second nucleus
+    if ($# > 3.5) then
+      format($3, 'isreal'):$isreal
+      if ($isreal) then
+        $tunefreq2 = $3
+        format($tunefreq2, 0, 4):$strfreq2
+        $strfreq2 = ' -tunefreq2 ' + $strfreq2
+
+        // Add match pw input, only if the first input is frequency
+        $matchdb2 = ''
+        $tunematch = 5  // default to match 5 percent
+        if ($exMatchDefault) then
+          $tunematch = protuneMatchDefault
+        endif
+        format($4, 'isreal'):$isreal
+        if ($isreal) then
+          $tunematch = $4
+        endif
+        if (auto<>'y') then
+          write('line3','Tuning to %g within %g%% of optimum',$tunefreq2,$tunematch)
+        endif
+        protune('formula',$tunematch):$matchdb2
+        $matchdb2 = ' -match2 ' + $matchdb2
+      endif
+    endif
+  endif
+endif
+
+//
+// Set some useful variables
+//
+$tmpdir=curexp+'/protune'
+$hiloBoundary = 0.8 * h1freq
+if (Console = 'inova') then
+  $lobandGain = 0
+  $hibandGain = 0
+  $lobandPower = 63
+  $hibandPower = 63
+elseif (Console = 'mercury') then
+  $lobandGain = 0
+  $hibandGain = 0
+  $lobandPower = 4
+  $hibandPower = 10
+else // Console = vnmrs
+  $lobandGain = 0
+  $hibandGain = 0
+  $lobandPower = 6
+  $hibandPower = 6
+endif
+
+$maxPwr = $hibandPower
+exists('protuneMaxPower', 'parameter', 'global'):$exMaxPower
+if ($exMaxPower) then
+  $maxPwr = protuneMaxPower
+endif
+$k = size('$maxPwr')
+$i = $k
+while ($i < 5) do
+  $i = $i + 1
+  $maxPwr[$i] = $maxPwr[$k]
+endwhile
+
+
+
+if ($action = 'popup') then
+
+  if atune='y' then
+    psCmd('reset')
+    xmtune('addpar')
+    n3='H1 2'
+    vnmrjcmd('popup',
+      'mode:modeless',
+      'rebuild:yes',
+      'file:TuneIt.xml',
+      'location:topMenuBar',
+      'title:Tune Probe')
+  else
+    write('line3','Cannot run %s, tune hardware not available.',$0)
+  endif
+
+elseif ($action = 'info') then
+  $cmd= 'protune -dispInfo -probe "' + probe + '" ' + $probeidOpt
+  shell($cmd):$x
+
+elseif ($action = 'calibrate') then
+
+  // Start acquistion in console
+  psCmd('reset')
+  protune('setup')
+  protune('start')
+
+  write('line3','Starting manual protune with probe %s',probe)
+  $file=systemdir+'/tmp/ptuneTextOutput'
+  exists($file,'file'):$e
+  if ($e) then rm($file):$x endif
+  $cmd = 'touch ' + $file + ';chmod 666 ' + $file
+
+  // Set tuDebugLevel='9001' to turn off periodic TuneMode messages to the motor
+  $debugLevel = '0'
+  exists('tuDebugLevel', 'parameter', 'global'):$e
+  if ($e) then
+      $debugLevel = tuDebugLevel
+  endif
+
+  $cmd = $cmd + ';'
+  $cmd = $cmd + 'protune -probe "' + probe + '" ' + $probeidOpt
+  $cmd = $cmd + ' -debug ' + $debugLevel + ' >' + $file + ' &'
+  if ($protuneDebug) then
+    write('line3', 'Warning: protuneDebug is set. Start apt.jar manually')
+  else
+    shell($cmd):$x
+  endif
+
+elseif ($action = 'setup') then
+  //write('line3','protune(\'setup\')')/*DBG*/
+
+  if (auto <> 'y') then
+    listenon:$dum
+    cp(userdir+'/.talk', userdir+'/persistence/.talk2j')
+  endif
+
+// TODO: Move this back to 'start' section? Execute commands if any there?
+  //Remove older command file
+  shell('rm -f '+systemdir+'/tmp/ptuneCmds'):$x
+
+  if (auto<>'y' and seqfil<>'aptune' and seqfil<>'aptunenv') then
+    exists($tmpdir,'file'):$e
+    if ($e) then rm('-r',$tmpdir):$x endif
+    tmpsave('protune')
+    cp(curexp+'/text',$tmpdir+'/text')
+  endif
+  exists('wtune','parameter'):$et
+  if $et>0.5 then
+    $wtune=wtune
+    $tunemethod=tunemethod
+  endif
+  $actionid=actionid $n3=n3
+  $solv=solvent $alock=alock
+  $temp=temp on('temp'):$ontemp
+  $tin=tin $pad=pad $vtwait=vtwait
+
+  xm1('studydir'):$sdir
+  $usestudy=((activestudy[1]<>'null') and (studyid<>'tmpstudy') and (studyid<>'null') and (studyid<>''))
+  if ($usestudy) then
+    cqsavestudy('paronly')
+  endif
+
+  exists('aptune','parlib'):$e,$path
+  if ($e) then
+    rtp($path)
+    if (Console = 'vnmrs') then
+      seqfil='aptunenv'
+    else
+      seqfil='aptune'
+    endif
+  else
+    write('error','parameters for aptune do not exist')
+    return
+  endif
+
+//  xm1('studydir'):$sdir
+//  exists($sdir+'/studypar','file'):$ex
+//  if ($usestudy and $ex>0.5 and $cp4ex<0.5) then
+//    fread($sdir+'/studypar')
+//  endif
+
+  if $et>0.5 then
+    if ($wtune<> '') then wtune=$wtune endif
+    tunemethod=$tunemethod
+  endif
+  actionid=$actionid
+  n3=$n3
+  solvent=$solv
+  alock=$alock
+  spin=0
+  tin=$tin
+  pad=$pad
+  vtwait=$vtwait
+  temp=$temp
+  if ($ontemp < 0.5) then
+    off('temp')
+  endif
+
+  if (Console = 'inova') then
+    tugain = $hibandGain  // Same for either band
+    tupwr = $hibandPower  // Same for either band
+  elseif (Console = 'mercury') then
+    tugain = 0
+    if (sfrq < 0.8 * h1freq) then
+      tupwr = 4
+    else
+      tupwr = 10
+    endif
+  else
+    tugain = 0
+    tupwr = 20
+  endif
+  tunesw = 10*1e6 // Hz
+  np = 510
+
+  exists('tuppf', 'parameter'):$e
+  if (not $e) then
+    create('tuppf')
+  endif
+  tuppf = 1
+
+  exists('tufreqres', 'parameter'):$e
+  if (not $e) then
+    create('tufreqres')
+  endif
+  tufreqres = 40e3
+
+  exists('tuneTiming', 'parameter'):$e
+  if (not $e) then
+    create('tuneTiming')
+    setgroup('tuneTiming','processing')
+  endif
+  tuneTiming[1] = 0             /* Not Used */
+  tuneTiming[2] = 0             /* Not Used */
+  tuneTiming[3] = 0             /* Not Used */
+  tuneTiming[4] = 0             /* Not Used */
+  tuneTiming[5] = 0             /* Not Used */
+  tuneTiming[6] = 0             /* Not Used */
+  tuneTiming[7] = 0             /* Not Used */
+  tuneTiming[8] = 0             /* Not Used */
+  tuneTiming[9] = 0             /* Not Used */
+  tuneTiming[10] = 0            /* Not Used */
+  tuneTiming[11] = 0            /* Quit if this is non-zero */
+  tuneTiming[12] = 0            /* Not Used */
+
+  if (auto='y') then
+    $autoname = '_PROTUNE_FILE_%R0%'
+    autoname($autoname):$fname
+    exists($fname,'file'):$e
+    if ($e) then rm('-r',$fname):$x endif
+    nt=2048
+  endif
+  if (Console='mercury') then
+    nt=nt*3
+  endif
+
+  gain = tugain
+  psCmd('active'):$psActive
+  if ($psActive=1) then
+    psCmd('set','errors','all')
+  else
+    werr=$0+'(\'error\')'
+  endif
+  wdone=''
+  in='n'
+  pad=0
+  spin = 0
+  ss = 0
+  wbs=''
+  //bs='n'
+  bs=1
+  alock='n'
+  full
+  av
+
+  // Make sure we own these files
+  shell('rm -f '+$infopath):$x
+  shell('touch '+$infopath):$x //Ready for writing into later
+  shell('rm -f '+$infopathtmp):$x
+  shell('touch '+$infopathtmp):$x
+
+  // Write out some properties for ProTune Java to read.
+  // Some properties are always written, others only if certain global parameters
+  // have been created and set.
+  // These properties can also be set in a "protuneConfig" file.
+  // If a property is in both places, the value in protuneConfig is used.
+  // The protuneConfig files can be in /vnmr/tune, /vnmr/tune/<probe>,
+  // vnmrsys/tune, or vnmrsys/tune/<probe>.
+  $propsFile = systemdir+'/tmp/ptuneProperties'
+  exists($propsFile, 'file'):$exists
+  if ($exists) then
+    rm($propsFile):$x
+  endif
+
+  // ...Check if the PTS limits the channel 1 frequency range
+  if (ptsval[1] = 620) then
+    $maxptsfreq = 620 - iffreq - 0.025
+    write('file', $propsFile, 'upperCutoff=%.6f', 1e6 * $maxptsfreq)
+  endif
+
+  // Default gain and power values (in absence of calibrations)
+  write('file', $propsFile, 'lobandGain=%d', $lobandGain)
+  write('file', $propsFile, 'hibandGain=%d', $hibandGain)
+  write('file', $propsFile, 'lobandPower=%d', $lobandPower)
+  write('file', $propsFile, 'hibandPower=%d', $hibandPower)
+  readhw('temp'):$samptemp,$isreg
+  write('file', $propsFile, 'sampleTemp=%.1f', $samptemp)
+  write('file', $propsFile, 'tempReg=%d', $isreg)
+  write('file', $propsFile, 'temp=%.1f', temp)
+
+  // Not currently used; probe name must be in command line
+  write('file', $propsFile, 'probeName=%s', probe)
+
+  // Optionally set match target in (reflection coefficient)^2
+  exists('protuneTargetMatch', 'parameter', 'global'):$ex
+  if ($ex) then
+    write('file', $propsFile, 'targetMatch=%f', protuneTargetMatch)
+  endif
+
+  // NB: protuneTargetFreq is not normally used
+  exists('protuneTargetFreq', 'parameter', 'global'):$ex
+  if ($ex) then
+    write('file', $propsFile, 'targetFreq=%f', protuneTargetFreq)
+  endif
+
+  // Optionally set the approximate probe delay (ns).
+  // Refined by the RF calibration measurement. Default=5 ns.
+  exists('protuneProbeDelay', 'parameter', 'global'):$ex
+  if ($ex) then
+    write('file', $propsFile, 'probeDelay=%f', protuneProbeDelay)
+  endif
+
+  // Optionally set the minimum quality of the CircleFit to the reflection data.
+  // The ratio of the circle radius to the standard deviation of the distance of the
+  // points from the circle. Default=20.
+  exists('protuneFitQuality', 'parameter', 'global'):$ex
+  if ($ex) then
+    write('file', $propsFile, 'minCircleFitSignalToNoise=%f', protuneFitQuality)
+  endif
+
+  // Optional list of debug categories that should generate debug messages.
+  // A comma-separated list with no spaces (case insensitive).
+  exists('protuneDebugCategories', 'parameter', 'global'):$ex
+  if ($ex) then
+    if (protuneDebugCategories <> '') then
+      write('file', $propsFile, 'debugCategories=%s', protuneDebugCategories)
+    endif
+  endif
+
+  // isF19 is non-zero if preampConfig contains F19
+  write('file', $propsFile, 'isF19=%d', $isF19)
+
+  // ProTune uses the H1freq to set the default, generic, RF cal bands
+  write('file', $propsFile, 'H1freq=%d', h1freq)
+
+  // Set the limits on power and gain during tuning for each RF channel.
+  // Except for maxPower, these are just the parameter limits.
+  // For maxPower we use a value that should be safe for all probes and amps.
+  write('file', $propsFile, 'maxPower=%d %d %d %d %d', $maxPwr[1], $maxPwr[2], $maxPwr[3], $maxPwr[4], $maxPwr[5])
+  write('file', $propsFile, 'minPower=%d %d %d %d %d', parmin[17], parmin[9], parmin[18], parmin[21], parmin[23])
+  write('file', $propsFile, 'stepPower=%d %d %d %d %d', parstep[17], parstep[9], parstep[18], parstep[21], parstep[23])
+  getlimit('gain'):$maxGain, $minGain, $stepGain
+  write('file', $propsFile, 'maxGain=%d', $maxGain)
+  write('file', $propsFile, 'minGain=%d', $minGain)
+  write('file', $propsFile, 'stepGain=%d', $stepGain)
+  write('file', $propsFile, 'console=%s', Console)
+
+  if (Console = 'inova') then
+    write('file', $propsFile, 'nCalsAveraged=1')
+  endif
+
+  shell('(strings '+systemdir+'/tune/OptimaFirmware/Optima.bin | grep -iw "version ptopt")'):$optimaFWVersion
+  strstr($optimaFWVersion,' '):$tmp,$str,$optimaFWVersion //Strip "Version" pfx
+  write('file', $propsFile, 'optimaFWVersion=%s', $optimaFWVersion)
+
+  // Write out current parameter values
+  exists($parampath,'file'):$e
+  if ($e) then rm($parampath):$x endif
+  writeparam($parampath, $paramlist, 'current')
+  shell('chmod 666 '+$parampath):$x
+
+
+elseif ($action = 'start') then
+  //write('line3','protune(\'start\'): sfrq=%.3f', sfrq)/*DBG*/
+
+// TODO: Kill other ProTune here; delete /vnmr/tmp/ptuneCmds ?
+
+  // Read in current parameter values
+  fread($parampath, 'current')
+
+  $file=systemdir+'/tmp/ptuneTextOutput'
+  exists($file,'file'):$e
+  if ($e) then rm($file):$x endif
+
+  wbs=$0+'(\'process\')'
+  psCmd('active'):$psActive
+  if ($psActive) then
+    psCmd('set','stage','reset')
+  else
+    wexp=$0+'(\'reset\')'
+  endif
+  prescan[7]='Pause'
+
+//  write('line3','start 1: tupwr=%d, gain=%d', tupwr, gain)/*CMP*/
+  if (Console = 'vnmrs') then
+    if (tchan = 0) then
+      // Set the "tchan" parameter
+      $protonChan = 1
+      $lowChan = 2
+      $fluorineChan = 3
+      $useCombiner = 0
+
+      // Follow probeConnect parameter, if it exists
+      exists('probeConnect','parameter','global'):$exists
+      if ($exists) then
+        format(probeConnect, 'lower'):$probeConnect
+        $chan = 4
+        while ($chan > 0) do
+          $nuc = ''
+          substr($probeConnect, $chan):$nuc
+          if ($nuc = 'h1' or $nuc = 'h') then
+            $protonChan = $chan
+          elseif ($nuc = 'f19') then
+            $useCombiner = 1 // Special channel for F19 implies H-F combiner
+            $fluorineChan = $chan
+          elseif ($nuc <> '') then // Any other nucleus is loband!
+            $lowChan = $chan
+          endif
+          $chan = $chan - 1
+        endwhile
+      endif
+
+      $freq = sfrq // These freqs in MHz
+      $fstart = $freq - (tunesw/2) * 1e-6
+      $fend = $freq + (tunesw/2) * 1e-6
+      $ffluton = 0.97 * h1freq // Boundary between Fluorine and Proton freqs
+      if (sfrq < 0.8 * h1freq) then // Boundary between hiband and loband
+        // Low-band
+        tchan = $lowChan
+        tugain = $lobandGain
+        tupwr = $lobandPower
+      elseif ($useCombiner AND (sfrq < $ffluton)) then
+        // Fluorine
+        tchan =  $fluorineChan
+        tugain = $hibandGain
+        tupwr = $hibandPower
+        dfrq2 = sfrq
+      else
+        // High-band
+        tchan = $protonChan
+        tugain = $hibandGain
+        tupwr = $hibandPower
+      endif
+    endif
+
+    //
+    // Set decimation filter properties
+    // Parameter documentation and creation code are taken from the
+    // ddrpars macro (not included in Vnmr installation).
+    //
+    "ddrcr: max value of filter coefficients factor"
+    " - set automatically for to highest value possible for a given"
+    "   sw if ddrcr=n"
+    exists('ddrcr','parameter'):$exists
+    if (not $exists) then
+      create('ddrcr','real')
+      setlimit('ddrcr',1000,2,0)
+    endif
+
+    "ddrfw1: stage 1 filter transition band factor"
+    "- filter transition point set to ddrfw1*sw1"
+    exists('ddrfw1','parameter'):$e
+    if ($e < 0.5) then
+      create('ddrfw1','real')
+      ddrfw1=1
+    endif
+
+    "ddrfw2: stage 1 filter transition band factor"
+    "- filter transition point is set to ddrfw2*sw2"
+    "- default=1.0"
+    exists('ddrfw2','parameter'):$e
+    if ($e < 0.5) then
+      create('ddrfw2','real')
+      ddrfw2=1
+    endif
+
+    ddrcr = 2
+    ddrfw1 = 2.15
+    ddrfw2 = 2.45
+    alfa = 3
+
+
+    // Set amp to CW on all channels
+    exists('ampmode','parameter'):$exists
+    if (not $exists) then
+        create('ampmode', 'string')
+    endif
+    ampmode = 'cccccc'
+
+  endif
+//  write('line3','start 2: tupwr=%d, gain=%d', tupwr, gain)/*CMP*/
+
+  /**************/
+  d1 = 0.1
+
+  //jFunc(99,'oi') write('line3','go with gain=%d', gain)/*DBG*/
+  sfrq = sfrq
+  exists('probeConnect','parameter','global'):$isPConnect
+  if ($isPConnect) then
+    // Avoid PSG error messages -- don't sent "probeConnect" to PSG.
+    $probeConnect = probeConnect
+    destroy('probeConnect','global')
+  endif
+
+  if (auto = 'y') then
+    if ($psActive) then
+      psCmd('set','autoname',autoname)
+    else
+      $autoname = autoname
+    endif
+    autoname = '_PROTUNE_FILE_%R0%'
+    autoname(autoname):$fname
+    exists($fname,'file'):$e
+    if ($e) then rm('-r',$fname):$x endif
+
+    if ($psActive) then
+      psCmd('set','auArgs','silent tune bsclear next wait shimming')
+    else
+      au('silent','tune','bsclear','next','wait','shimming')
+      autoname = $autoname
+    endif
+  else
+    if ($psActive) then
+      psCmd('set','auArgs','silent tune bsclear next wait shimming')
+    else
+      au('silent','tune','bsclear','next','wait','shimming')
+    endif
+  endif
+
+  if ($isPConnect) then
+    create('probeConnect','string','global')
+    probeConnect = $probeConnect
+  endif
+
+  // Write out current parameter values
+  exists($parampath,'file'):$e
+  if ($e) then rm($parampath):$x endif
+  writeparam($parampath, $paramlist, 'current')
+  shell('chmod 666 '+$parampath):$x
+
+
+elseif ($action = 'reset') then
+  //write('line3','protune(\'reset\')')/*DBG*/
+
+  fread($parampath, 'current')
+  // if ct = nt, protune hardware may not be responding
+  if (ct = nt) then
+      if (auto='y') then
+        write('alpha','quitting protune, acquisition complete')
+      else
+        write('line3','quitting protune, acquisition complete')
+      endif
+      protune('quit','failure')
+      shell('protune -quitgui'):$x  /*Quit protune gui before start next one*/
+      return
+  endif
+
+  // normal protune operation, reset freq or quit
+  if (tuneTiming[11]) then
+      if (tuneTiming[11] = 1) then
+        protune('quit')
+      else
+        protune('quit','failed')
+        return('abort')  // return abort to psTune
+      endif
+  else
+      protune('start')
+  endif
+
+elseif ($action = 'process') then
+  //write('line3','protune(\'process\')')/*DBG*/
+
+  // Read in current tuning parameter values
+  fread($parampath, 'current')
+  //$bn = acqstatus[2]            /* Block number */
+
+  // Maybe write info for Java to read FID file
+  exists($infopathtmp, 'file'):$ex
+  if ($ex) then
+    // FID is found in stable location
+    write('file', $infopath, 'fidpath ' + $fidpath)
+    shell('rm -f '+$infopathtmp):$x
+  else
+    // NB: Update date to signal ProTune that we are working
+    // TODO: Could now modify ProTune to watch date of fid file
+    shell('touch '+$infopath):$x
+  endif
+
+  // Look for commands from ProTune (Java)
+  $cmdfile = systemdir+'/tmp/ptuneCmds'
+  exists($cmdfile, 'file', 'r'):$e
+  if ($e) then
+    ///*DBG*/ write('line3','protune(\'process\') FOUND COMMAND FILE')
+    lookup('file', $cmdfile)
+    $nlines = 0
+    repeat
+      lookup('readline'):$cmd
+      //write('line3','%s: cmd=%s',$0,$cmd)
+      length($cmd):$len
+      if ($len > 0) then
+          $nlines = $nlines + 1
+          $line[$nlines] = $cmd
+      endif
+    until ($len = 0)
+    rm($cmdfile):$rtn
+
+    $i = 1
+    while ($i <= $nlines) do
+      {$line[$i]}
+      $i = $i + 1
+    endwhile
+
+    //jFunc(99,'oi') write('line3','cmds received; gain=%d', gain)/*DBG*/
+
+    // Write out current parameter values
+    writeparam($parampath, $paramlist, 'current')
+    shell('chmod 666 '+$parampath):$x
+
+    // Don't call halt() if protune('done') has already happened
+    if (not tuneTiming[11]) then
+      halt('  ') // Two or more spaces quashes error message
+    endif
+  else
+    // Write out current parameter values
+    writeparam($parampath, $paramlist, 'current')
+    shell('chmod 666 '+$parampath):$x
+  endif
+  ///*DBG*/ write('line3','protune(\'process\') DONE')
+
+
+elseif ($action = 'exec') then
+  ///*DBG*/ write('line3','protune(\'exec\')')
+  $execcommands = ''
+  $i = 2
+  while ($# >= $i) do
+    $stri = ''
+    format($i, 0, 0):$stri
+    $cmdarg = '$'+$stri
+    $execcommands = $execcommands + ' -exec "' + {$cmdarg} + '"'
+    $i = $i + 1
+  endwhile
+
+  // NB: This 'exec' stuff is a hacked-up version of the 'tune' actions
+  // Assume no acq in progress; start up aptune
+  if (seqfil<>'aptune' and seqfil<>'aptunenv') then
+    protune('setup')
+  endif
+
+  protune('start')
+
+  // Quit java gui's before opening another one
+  //shell('protune -quitgui'):$x
+  //shell('sleep 2'):$x
+
+  // Show the appropriate GUI
+  protune('getguiflag'):$guiflag
+
+  // Set tune mode for vnmrs, inova, mercury
+  $tunemode = ' '
+  $tunemode2 = ' '
+
+  //Set upper cutoff freq
+  $suppercutoff = ' '
+  exists('uppercutoff', 'parameter'):$e
+  if ($e) then
+    //If 'uppercutoff' is defined (assume to be real number!!), use it
+    format(uppercutoff, 0, 6):$suppercutoff
+    $suppercutoff = ' -uppercutoff ' + $suppercutoff
+  else
+    //Check if this is a 600MHz system
+    if ((h1freq > 599) and (h1freq < 601)) then
+      //Check if the PTS has limitation on the output
+      if (ptsval[1] = 620) then
+        format(619.999999-iffreq, 0, 6):$suppercutoff
+        $suppercutoff = ' -uppercutoff ' + $suppercutoff
+      endif
+    endif
+  endif
+
+  //Set lower cutoff freq
+  $slowercutoff = ' '
+  exists('lowercutoff', 'parameter'):$e
+  if ($e) then
+    //If 'lowercutoff' is defined (assume to be real number!!), use it
+    format(lowercutoff, 0, 6):$slowercutoff
+    $slowercutoff = ' -lowercutoff ' + $slowercutoff
+  endif
+
+  if (auto = 'y') then
+    $autoflag=' -auto'
+  else
+    $autoflag=''
+  endif
+
+  //Check if plockport exists
+  $splockport = ' '
+  exists('plockport', 'parameter'):$e
+  if ($e) then
+    format(plockport, 0, 0):$splockport
+    $splockport = ' -lockport ' + $splockport
+  endif
+  $cmdline = 'protune -sysdir ' + systemdir + ' -userdir ' + userdir
+        + $probeidOpt
+        + $guiflag + ' -probe "' + probe + '" '
+        + $splockport
+        + ' -sweeptimeout 90000'
+        + ' -debug 2 '
+        + $suppercutoff + $slowercutoff
+        + $autoflag
+        + $execcommands
+        + '&'
+  // write('line3','%s: cmdline %s',$0,$cmdline)
+  if ($protuneDebug) then
+    write('line3', 'Warning: protuneDebug is set. Start apt.jar manually')
+  else
+    shell($cmdline):$x
+  endif
+
+
+elseif ($action = 'tune') then
+  ///*DBG*/ write('line3','protune(\'tune\', ' + $strfreq + ', ' + $strfreq2 + ')')
+
+  // Assume no acq in progress; start up aptune
+  if (seqfil<>'aptune' and seqfil<>'aptunenv') then
+    protune('setup')
+  endif
+
+  protune('start')
+
+  // Quit java gui's before opening another one
+  //shell('protune -quitgui'):$x
+  //shell('sleep 2'):$x
+
+  // Show the appropriate GUI
+  protune('getguiflag'):$guiflag
+
+  // Set tune mode for vnmrs, inova, mercury
+  $tunemode = ' '
+  $tunemode2 = ' '
+
+  //Set upper cutoff freq
+  $suppercutoff = ' '
+  exists('uppercutoff', 'parameter'):$e
+  if ($e) then
+    //If 'uppercutoff' is defined (assume to be real number!!), use it
+    format(uppercutoff, 0, 6):$suppercutoff
+    $suppercutoff = ' -uppercutoff ' + $suppercutoff
+  else
+    //Check if this is a 600MHz system
+    if ((h1freq > 599) and (h1freq < 601)) then
+      //Check if the PTS has limitation on the output
+      if (ptsval[1] = 620) then
+        format(619.999999-iffreq, 0, 6):$suppercutoff
+        $suppercutoff = ' -uppercutoff ' + $suppercutoff
+      endif
+    endif
+  endif
+
+  //Set lower cutoff freq
+  $slowercutoff = ' '
+  exists('lowercutoff', 'parameter'):$e
+  if ($e) then
+    //If 'lowercutoff' is defined (assume to be real number!!), use it
+    format(lowercutoff, 0, 6):$slowercutoff
+    $slowercutoff = ' -lowercutoff ' + $slowercutoff
+  endif
+
+  if (auto = 'y') then
+    $autoflag=' -auto'
+  else
+    $autoflag=''
+  endif
+
+  //Check if plockport exists
+  $splockport = ' '
+  exists('plockport', 'parameter'):$e
+  if ($e) then
+    format(plockport, 0, 0):$splockport
+    $splockport = ' -lockport ' + $splockport
+  endif
+  $cmdline = 'protune -sysdir ' + systemdir + ' -userdir ' + userdir
+        + $guiflag + ' -probe "' + probe + '" ' + $probeidOpt
+        + $strfreq + $strfreq2
+        + $tunemode + $tunemode2 + $splockport
+        + ' -sweeptimeout 90000'
+        + ' -debug 2 '
+        + $autoflag
+        + $matchdb + $matchdb2 + $suppercutoff + $slowercutoff + '&'
+  // write('line3','%s: cmdline %s',$0,$cmdline)
+  if ($protuneDebug) then
+    write('line3', 'Warning: protuneDebug is set. Start apt.jar manually')
+  else
+    shell($cmdline):$x
+  endif
+
+
+elseif ($action = 'nucleus') then
+  // do quick acquisition to perform sample and temperature change
+  // before starting actual protune experiment
+
+  if ($# > 1.5) then
+    probeid('verify')
+    protune('setup')
+    $snt='' format(nt,1,0):$snt
+    $nt=nt nt=1
+    $str = $0 + '(\'nucpreset\''
+    $i=2 $snum=''
+    while ($i <= $#) do
+      format(${$i},'isreal'):$isr
+      if ($isr) then
+        format(${$i},0,3):$snum
+        $str = $str +','+ $snum
+      else
+        $str = $str + ',\''+${$i}+'\''
+      endif
+      $i=$i+1
+    endwhile
+    $str=$str+')'
+    $str='nt='+$snt+' '+$str
+    wbs='' wnt='' wdone=''
+    psCmd('active'):$psActive
+    if ($psActive) then
+      psCmd('set','stage','nucleus')
+      psCmd('set','nucarg',$str)
+    else
+      wexp=$str
+    endif
+    //  write('line3','protune nucleus preset')
+
+// For debugging:
+//{$str}
+//return
+
+    if (auto = 'y') then
+      if ($psActive) then
+        psCmd('set','autoname',autoname)
+      else
+        $autoname = autoname
+      endif
+      autoname = '_PROTUNE_FILE_%R0%'
+      if ($psActive) then
+        psCmd('set','auArgs','silent next wait shimming')
+      else
+        au('silent','next','wait','shimming')
+        autoname = $autoname
+      endif
+    else
+      if ($psActive) then
+        psCmd('set','auArgs','silent next wait shimming')
+      else
+        au('silent','next','wait','shimming')
+      endif
+    endif
+  endif
+
+elseif ($action = 'nucpreset') then
+  // Usage: protune('nucpreset', nuc1, thresh1, nuc2, thresh2 ...)
+  // e.g.:  protune('nucpreset', 'C13', 'Fine', 'H1', 'Fine')
+  //write('line3','- %s(%s)', $0, $1)/*DBG*/
+  if ($# > 1) then
+    // Need to do setup here, otherwise "tn" will not be saved correctly.
+    protune('setup')
+    $cmds = ''
+    $i = 2
+    while ($i <= $#) do
+        // Construct commands like: "TuneTo 399.943 H1 1 Fine;"
+        // Or: "TuneTo 399.943 H1 1 0.5;"
+        // (where "1" is the RF channel)
+        tn = ${$i}
+        $i = $i + 1
+        $sfrqstr = ''
+        format(sfrq, 0, 3):$sfrqstr
+        $rfchanstr = ''
+        protune('getrfchan', tn):$rfchanstr
+        $cmds = $cmds + 'TuneTo ' + $sfrqstr + ' ' + tn + ' ' + $rfchanstr
+        if ($i <= $#) then
+            format(${$i}, 'isreal'):$isreal
+            if ($isreal) then
+                $reflstr = ''
+                // NB: Put decimal point in string for correct ProTune parsing
+                format(${$i}, 0, 3):$reflstr
+            else
+                $reflstr = ${$i}
+            endif
+            $i = $i + 1
+            $cmds = $cmds + ' ' + $reflstr
+        endif
+        $cmds = $cmds + ';'
+    endwhile
+//$cmds?/*DBG*/
+    {$0}('exec', $cmds)
+  endif
+
+elseif ($action = 'formula') then
+//  dblvl = 10 * log10(1 - 1/(1 + 0.01 * relpw90)**2)
+
+  $ret='10'
+  $relpw=10
+  if $#>1.5 then $relpw=$2 endif
+  if $relpw<0.01 then
+    $relpw=0.01
+  elseif $relpw>100 then
+    $relpw=100
+  endif
+
+  ln(10.0):$ln10
+  $a = 1.0 + 0.01 * $relpw
+  $b = 1.0 - 1.0/($a * $a)
+  ln($b):$c
+  $lvl = 10.0 * $c / $ln10
+  $lvl = -$lvl
+  format($lvl, 0, 1):$ret
+  return($ret)
+
+elseif ($action = 'invformula') then
+// relpw90 = 100*(-1 + 1/sqrt(1 - 10**(0.1 * dblvl)))
+
+  $ret='10'
+  $val=-10
+  if $#>1.5 then $val=$2 endif
+  if $val>0.0 then $val = -$val endif
+  if $val < -50 then
+    $val = -50
+  elseif $val > -0.1 then
+    $val = -0.1
+  endif
+
+  ln(10.0):$ln10
+  exp(0.1 * $ln10 * $val):$a
+  $b = sqrt(1.0 - $a)
+  $relpw = 100.0 * (-1.0 + 1.0/$b)
+  if $relpw<0.1 then $relpw=0.1 endif
+  format($relpw, 0, 1):$ret
+  return($ret)
+
+elseif ($action = 'print') then
+  // write('line3', 'protune(\'print\')') /*DBG*/
+
+  // Get the result message
+  exists('tuneResult', 'parameter'):$e
+  if (not $e) then
+    create('tuneResult', 'string')
+  endif
+  if ($# > 1) then
+    tuneResult = $2
+  else
+    tuneResult = '---'
+  endif
+
+  substr(tuneResult,1):$word
+  $tuneResult = tuneResult
+//  if ($word = 'ok') then
+//    $match=1 $str=''
+//    substr($tuneResult,10):$match
+//    protune('invformula',$match):$str
+//    strstr($tuneResult,$match):$pos
+//    substr($tuneResult,1,$pos-1):$str2
+//    $tuneResult=$str2+'within '+$str+' percent of optimum'
+//  endif
+
+  if (auto='y') then
+    write('alpha','Tuning: %s',$tuneResult)
+  else
+    write('line3','Tuning: %s',$tuneResult)
+  endif
+
+elseif ($action = 'getguiflag') then
+
+  $showfggui = 0
+  $showautogui = 0
+  $showsimplegui = 0
+  exists('showprotunegui', 'parameter', 'global'):$exists
+  if ($exists) then
+    strstr(showprotunegui, 'y'):$showfggui
+    strstr(showprotunegui, 'a'):$showautogui
+    strstr(showprotunegui, 's'):$showsimplegui
+  endif
+  $showgui = ((auto <> 'y') and $showfggui)
+  $showgui = $showgui or ((auto <> 'y') and ($0 = 'protunegui'))
+  $showgui = $showgui or $showautogui
+  if ($showgui) then
+    $guiflag = ' '
+  else
+    $guiflag = ' -nogui '
+  endif
+  if ($showsimplegui) then
+    $guiflag = $guiflag + '-simpleGui '
+  endif
+  return($guiflag)
+
+elseif ($action = 'getrfchan') then
+  // protune('getrfchan','C13'):$chan
+  // Either parse the probeConnect parameter, or put hi on #1, lo on #2
+
+  $rfchan = 0
+  format($2, 'lower'):$nuc
+  exists('probeConnect','parameter','global'):$exists
+  if ($exists) then
+    format(probeConnect, 'lower'):$probeConnect
+    repeat // Delete extra spaces
+      strstr($probeConnect,', '):$idx
+      if ($idx) then
+        substr($probeConnect, $idx, 2, ','):$probeConnect
+      endif
+    until (not $idx)
+    repeat // Put dummy nucleus between commas to skip channel
+      strstr($probeConnect,',,'):$idx
+      if ($idx) then
+        substr($probeConnect, $idx, 2, ',Q,'):$probeConnect
+      endif
+    until (not $idx)
+    substr($probeConnect, 'find', $nuc, 'delimiter', ', '):$rfchan
+    if ($rfchan = 0) then
+      substr($probeConnect, 'find', 'x', 'delimiter', ', '):$rfchan
+    endif
+  endif
+
+  if ($rfchan = 0) then
+    if (($nuc = 'h1') or ($nuc = 'f19')) then
+      $rfchan = 1
+    else
+      $rfchan = 2
+    endif
+  endif
+
+  $strChan = ''
+  format($rfchan,0,0):$strChan
+  return($strChan)
+
+elseif ($action = 'error') then
+
+  // NB: acqstatus[1]=14 ==> warning only:  don't quit protune
+  // NB: acqstatus[2]=801 ==> autogain failed:  don't quit protune
+  $acqerr = (acqstatus[1]=14 or acqstatus[2]=801)
+  if not ($acqerr) then
+    // Quit java gui before opening another one
+    shell('protune -quitgui'):$x
+
+    xm1('studydir'):$sdir
+    $usestudy=((activestudy[1]<>'null') and (studyid<>'tmpstudy') and (studyid<>'null') and (studyid<>''))
+
+    if auto='y' then
+      cpreact('wait')
+    elseif ($usestudy) then
+      cpwerr
+    endif
+    protune('quit')
+    return('done')
+  endif
+
+elseif ($action = 'done') then
+  ///*DBG*/ write('line3','protune(\'done\')')
+
+  // Get the result message
+  exists('tuneResult', 'parameter'):$e
+  if (not $e) then
+    create('tuneResult', 'string')
+  endif
+  if ($# > 1) then
+    tuneResult = $2
+  else
+    tuneResult = '---'
+  endif
+
+  substr(tuneResult,1):$word
+  if ($word = 'failed') then
+
+    xm1('studydir'):$sdir
+    $usestudy=((activestudy[1]<>'null') and (studyid<>'tmpstudy') and (studyid<>'null') and (studyid<>''))
+    if ($usestudy and actionid<>'null') then
+      xmsetatts(actionid,'status','Error')
+    endif
+    tuneTiming[11] = 2            /* Signal to quit and failed */
+  else
+    tuneTiming[11] = 1            /* Signal to quit */
+  endif
+
+  ///*DBG*/ write('line3','protune(\'done\'): result=' + tuneResult)
+
+  $tuneResult = tuneResult
+  writeparam($parampath, $paramlist, 'current')
+  shell('chmod 666 '+$parampath):$x
+
+//  if ($word = 'ok') then
+//    $match=1 $str=''
+//    substr($tuneResult,10):$match
+//    protune('invformula',$match):$str
+//    strstr($tuneResult,$match):$pos
+//    substr($tuneResult,1,$pos-1):$str2
+//    $tuneResult=$str2+'within '+$str+' percent of optimum'
+//  endif
+
+  // Stop the acquisition
+  halt('  ') // Two or more spaces quashes error message
+  write('line3','Tuning done: %s',$tuneResult)
+
+
+elseif ($action = 'quit') then
+  ///*DBG*/ write('alpha','protune(\'quit\')')
+
+  exists($tmpdir,'file'):$e
+  if ($e) then
+    exists($tmpdir+'/text','file'):$e
+    if ($e) then
+      cp($tmpdir+'/text',curexp+'/text')
+    endif
+    tmpreturn('protune')
+    dg newdg
+  endif
+  shell('chmod 666 '+systemdir+'/tmp/ptune* 2>/dev/null'):$x
+
+  psCmd('active'):$psActive
+  if ($psActive) then
+    if ($# < 2) then $2='' endif
+    if ($2='failure') or ($2='failed') then
+      psTune('abort')
+    else
+      psTune('done')
+    endif
+    return
+  endif
+
+  if auto='y' then
+    $status=''
+    xm1('studydir'):$sdir
+    $usestudy=((activestudy[1]<>'null') and (studyid<>'tmpstudy') and (studyid<>'null') and (studyid<>''))
+    if ($usestudy and actionid<>'null') then
+      xmgetatts(actionid,'status'):$status
+    endif
+    prescan[7]='Complete'
+    exists('xmtune','maclib'):$e
+    if ($e>0.5 and $usestudy) then
+      if (prescan[4]='y' and actionid='null') then
+        xmtune('next')  // for prescans
+      else
+        xmtune('quit')  // for protocols
+      endif
+    endif
+  endif
+
+  exists('wtunedone', 'parameter'):$e
+  if ($e) then
+    {wtunedone}
+  endif
+
+endif
+

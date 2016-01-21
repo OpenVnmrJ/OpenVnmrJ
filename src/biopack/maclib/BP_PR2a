@@ -1,0 +1,47 @@
+"macro BP_PR2a"
+" PR2  - Projection-Reconstruction macro, Eriks Kupce, 21.07.2005 "
+
+setref1('C13') 
+BP_PRproc1('ni')
+
+BPsvf('f1')
+
+"find location of program"
+BPfindfile('pr3db'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/pr3db' then
+ cp($path1,userdir+'/../bin')  
+endif
+shell('pr3db F1.pk F2.pk 0.5')
+
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/pr3db' then
+ rm(userdir+'/../bin/pr3db') 
+endif
+
+shell('sleep 2')
+if(PRbpa[PRn]='y') or (PRbpa[PRn]='yy') then
+  $file=''
+  pwd:$file
+  exists($file+'/PR.bpa','file'):$e
+  if($e) then
+    BP_PRgetbpa($file+'/PR.bpa'):pra
+  else
+    write('error','PR2: failed to open PR.bpa file')
+    write('file','../PRmessages','PR2: failed to open PR.bpa file')
+    return
+  endif
+else
+  $prainc = 90.0/(PRnpr[PRn] + 1)
+  pra = pra + $prainc
+endif
+
+phase=1,2 phase2=1,2 ni2=0
+wexp='BP_PR3a'
+au
+

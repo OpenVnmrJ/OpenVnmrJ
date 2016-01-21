@@ -1,0 +1,57 @@
+"macro proc1d"
+"************************************"
+" proc1d - process simple 1D spectra "
+"************************************"
+
+format(seqfil,'lower'):$seqfil
+strstr($seqfil,'s2pul'):$ret
+if ($ret) then
+   $seqfil='s2pul'
+endif
+
+format(tn,'lower'):$tn
+$procmacro=$tn+'p'
+exists($procmacro,'maclib'):$e
+if ($e) and ($seqfil='s2pul') then
+  exec($procmacro):$e
+  return
+endif
+
+" transform, phasing "
+wft f init_dis('ds') ai
+substr($seqfil,1,4):$seq4
+
+if ($seq4='dept') then
+    if (mult=1.5) then
+        vp=wc2max/2
+    endif
+elseif ($seqfil='apt') then
+        vp=wc2max/2
+endif
+
+if ($seqfil='apt') then
+  aptaph
+elseif ($seq4='dept') then
+  if  (mult=1.5) then
+    aptaph
+  else
+    aph:$x
+  endif
+else
+  aph:$x
+endif
+
+if ($seqfil='s2pul') then
+" integration "
+	integrate
+endif
+
+" vs control "
+vsadj
+if ($seqfil='s2pul') then
+	noislm
+
+" th control (if required) "
+	thadj
+endif
+setrefpos

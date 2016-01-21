@@ -1,0 +1,72 @@
+import os
+
+#define target directories
+
+autotestFileList = [
+                    'history.example',
+                    'LASTATRECORDREPORT',
+                    'LASTREPORT',
+                    'maclib',
+                    'parameters',
+                    'REPORT',
+                    'reports.example',
+                    'texts']
+
+dirList = [
+                    'data',
+                    'history',
+                    'reports',
+          ]
+                       
+                       
+
+# current working directory
+cwd = os.getcwd()
+
+
+# get an env
+env = Environment()
+
+# define with absolute path where files will be copied
+vnmrAutotestPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,'vnmr', 'autotest')
+
+# copy files (leaves links  as links)
+if not os.path.exists(vnmrAutotestPath):
+   os.makedirs(vnmrAutotestPath)
+
+for i in autotestFileList:
+    dest = os.path.join(vnmrAutotestPath,i)
+    if not os.path.exists(dest):
+       Execute(Copy(dest,os.path.join(cwd,i)))
+
+for i in dirList:
+    dest = os.path.join(vnmrAutotestPath,i)
+    if not os.path.exists(dest):
+       os.makedirs(dest)
+
+# define with absolute path where files will be copied
+consolePath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,'console','ddr','autotest')
+iconsolePath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,'console','inova','autotest')
+
+consoleFileList = ['atdb']
+# copy files (leaves links  as links)
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+if not os.path.exists(iconsolePath):
+   os.makedirs(iconsolePath)
+
+for i in consoleFileList:
+    dest = os.path.join(consolePath,i)
+    if not os.path.exists(dest):
+       Execute(Copy(dest,os.path.join(cwd,i)))
+    dest = os.path.join(iconsolePath,i)
+    if not os.path.exists(dest):
+       Execute(Copy(dest,os.path.join(cwd,i)))
+
+atdbPath = os.path.join(iconsolePath, 'atdb')
+Execute('rm -f '+ os.path.join(atdbPath,'at_groups_file'))
+Execute('rm -f '+ os.path.join(atdbPath,'at_spec_table600'))
+Execute('rm -f '+ os.path.join(atdbPath,'at_tests_file'))
+Execute(Copy(os.path.join(atdbPath,'at_groups_file'),os.path.join(atdbPath,'at_groups_file.inova')))
+Execute(Copy(os.path.join(atdbPath,'at_spec_table600'),os.path.join(atdbPath,'at_spec_table600.inova')))
+Execute(Copy(os.path.join(atdbPath,'at_tests_file'),os.path.join(atdbPath,'at_tests_file.inova')))

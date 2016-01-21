@@ -1,0 +1,79 @@
+"macro wdumboxmx1d_pars"
+// Set the Sequence Name
+
+seqfil = 'wdumboxmx1d'    
+layout = seqfil
+   
+// Make and Replace Standard Parameters
+
+//label1d
+paramgroup('clearparamsinit')
+paramgroup('params','',                                      'BPautonoisecheck','real',0.0,
+                                                             'BPclassic','string','n',
+                                                             'roff','frequency',0.0,
+                                                             'axis','channel','p')
+                                                             
+// Make ap and dg Displays for Standard Parameters
+
+paramgroup('dgapinit')
+paramgroup('apstring','SAMPLE','','',                        'date','string','',
+                                                             'file','string','')
+paramgroup('dgapstring','ACQUISTION','','',                  'sw','frequency',0,
+                                                             'at','delay',0, 
+                                                             'np','integer',0, 
+                                                             'd1','delay',0,
+                                                             'nt','integer',0,
+                                                             'ct','integer',0,
+                                                             'bs','integer',0,
+                                                             'ss','integer',0,
+                                                             'rd','pulse',0, 
+                                                             'ad','pulse',0,
+                                                             'ddrtc','pulse',0,
+                                                             'rof3(rof3)','pulse',0,
+                                                             'gain','integer',0,
+                                                             'roff','frequency',0,
+                                                             'temp','amplitude',0,
+                                                             'srate','amplitude',0)
+
+// Add New Parameters With/Without ap and dg Displays
+
+paramgroup('all','prepX','','',                              'aXprep','amplitude',2000.0,
+                                                             'pwXprep','pulse',4.0,
+                                                             'phXprep','phase',0.0)
+
+paramgroup('params','',                                      'chXwdumbo','channel','obs')
+paramgroup('all','wdumboX','','',                            'aXwdumbo','amplitude',2000.0,
+                                                             'pwXwdumbo','pulse',48.0,
+                                                             'r1Xwdumbo','pulse',1.0,
+                                                             'r2Xwdumbo','pulse',0.5,
+                                                             'r3Xwdumbo','pulse',0.2,
+                                                             'rof3','pulse','0.2',
+                                                             'tauXwdumbo','pulse',52.0,
+                                                             'phXwdumbo','phase',0.0,
+                                                             'npaXwdumbo','integer',10)
+rof3=r3Xwdumbo
+$scalesw=sqrt(3.0)
+paramgroup('all','scaleX','','',                             'scalesw','real',$scalesw)
+paramgroup('clearparams','scalesw')
+setgroup('scalesw','processing')
+                                                                      
+// Make the dg2 Display Directly
+
+setprotect('dg2','clear',4)
+$dg2 = '1:OBSERVE:tn,sfrq:6,tof:1,tpwr:1,aX90:3,pwX90:1;'
+$dg2=$dg2+'1:1D Acquisition:sw:1,np:0,at:7;'
+$dg2=$dg2+'2:DECOUPLE:dn,dfrq:6,dof:1,dpwr:1,aH90:3,pwH90:1;'
+$dg2=$dg2+'3:DECOUPLE2:dn2,dfrq2:6,dof2:1,dpwr2:1,aY90:3,pwY90:1;'
+$dg2=$dg2+'4:DECOUPLE3:dn3,dfrq3:6,dof3:1,dpwr3:1,aZ90:3,pwZ90:1;'
+dg2 = $dg2
+setprotect('dg2','on',4)
+
+// Call a Reset Macro
+
+destroy('wrtp')
+paramgroup('params','','wrtp','string','reset_wdumboxmx1d')
+reset_wdumboxmx1d
+write('line3','Macro %s is complete\n',$0)
+
+
+                                              

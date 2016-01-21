@@ -1,0 +1,1768 @@
+"macro gxyzautocalib"
+"gxyzautocalib"
+"Performs autocalibrations for 3D shimming"
+"version 28x10"
+
+werr=''
+isvnmrj:$isvnmrj
+gxyzsetlocalpars
+psCmd('active'):$psActive
+
+if ($psActive=1) then
+  psCmd('set','errors','all')
+else
+  werr=''
+endif
+
+if ($# < 1) then 
+	write('error','Usage - gxyzautocalib requires an argument')
+	abort
+endif
+if $1='full' then
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif
+	if (probe='') then write('error','Probe parameter not set, please set with "addprobe"') abort endif
+	if ((tn <> 'H1') and (tn <> 'H2') and (tn <> 'lk')) then
+		write('error','Autocalibration not supported for %s',tn)
+		abort
+	endif
+	n1=pltopt
+	if $#<1.5 then
+		//Set the samplepars here as well
+		$solv=''
+		format(solvent,'lower'):$solv
+		//if ($solv='dmso') then gxyzsetsamplepars('ID_2') endif
+		//if ($solv='d2o') then gxyzsetsamplepars('2mM_sucrose') endif
+		gxyzsetsamplepars(gxyzsamplename)
+		// End of temporary mod
+		gxyzcalibset('check','pw90'):$dopw90
+		gxyzcalibset('check','1Dautoshim'):$do1Dautoshim
+		gxyzcalibset('check','xycalib'):$doxycalib
+		if ($dopw90) then $arg=tn+'pw90cal' gxyzautocalib($arg,'auto')
+		elseif ($do1Dautoshim) then gxyzautocalib('gmap1Dinit','auto')
+		elseif ($doxycalib) then gxyzautocalib('xycalib','auto')
+		else
+			gxyzautocalib('godssh','auto')
+		endif
+	else
+		gxyzautocalib($2,'auto')
+	endif
+endif
+if ($1 = 'lkpw90cal') then
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif
+	//$gradtype=gradtypelocal
+        $auto=0
+	$waitflg='n'
+        if ($#>1.5) then
+                if ($2='auto') then $auto=1 endif
+        endif
+	exists(curexp+'/gxyztmp.par','file'):$e
+	if $e > 0.5 then
+		shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	endif
+	if ((gxyzwaitflg='y') and ($auto)) then
+		$waitflg='y'
+		$waittime=gxyzwait
+		gxyzwaitflg='n' "Do this only once!"
+	else
+		$waittime=0.5
+	endif
+ 	groupcopy('current','processed','acquisition')
+        groupcopy('current','processed','display')
+        groupcopy('current','processed','processing')
+	tmpsave('gxyztmp')
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$nuc=''
+	$solv=''
+	$solv=solvent
+	if lkflg='n' then tn='H2' else tn='lk' endif
+	$nuc=tn
+	setup('H1',$solv)
+	gain=10
+	pw=1 d1=0.5
+	lb=1/at
+	exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then
+                        if maxattench1<55 then tpwr=maxattench1 endif
+                endif
+        else
+                tpwr=55
+        endif
+
+	if $tempon >0.5 then temp=$temp endif
+	tn=$nuc
+	if tn='lk' or tn='H2' then tpwr=42 pw=100 dn='H1' endif
+	nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai lsfrq=0
+	pslabel='lkpw90cal'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`lkpw90cal1`,`auto`)' endif
+	else	wexp='gxyzautocalib(`lkpw90cal1`)'
+	endif
+	"Read shims before acquiring"
+	readallshims
+	clear(2)
+	setlimit('pad',172800,0,1.25e-8)
+	pad=$waittime
+ 	gxyz_au
+	if $waitflg='y' then
+		$waittimes=''
+		format($waittime/60,1,0):$waittimes
+		$str='Adjusting transmitter offset - waiting '+$waittimes+ ' min. first'
+		banner($str)
+	else
+		banner('Adjusting transmitter offset')
+	endif
+endif
+if ($1 = 'lkpw90cal1') then
+	lsfrq=0
+	ft('nods') f full lp=0
+	abortoff aph0 aborton
+	dc res
+	dres(cr,0.5):$lw
+	lb=$lw
+	movetof
+	pw=200 "Try and get a 200 us pw90"
+
+	"Check to see if a Cold Probe - lock coil can tolerate higher power than RT probes"
+	$cryo=systemdir+'/acqqueue/Cryosafty'
+	$iscryo='no'
+	exists($cryo,'file'):$cpex
+	if $cpex > 0.5 then shell('grep yes '+$cryo):$iscryo endif
+        $probestyle=''
+	getparam('style','Probe'):$probestyle
+	if ($iscryo='yes' or $probestyle='cold') then array('tpwr',17,36,1) else array('tpwr',13,36,1) endif
+
+	$solvent=''
+	format(solvent,'lower'):$solvent
+	if $solvent='acetone' then d1=10 else d1=4 endif
+	pad=0.5
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`lkpw90cal2`,`auto`)' endif
+	else	wexp='gxyzautocalib(`lkpw90cal2`)'
+	endif
+	banner('Optimizing tpwr')
+ 	gxyz_au
+endif
+if ($1 = 'lkpw90cal2') then
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $tpwr=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $tpwr=tpwr[$i] $index=$i endif
+		$i=$i+1
+	until $i > arraydim
+	tpwr=$tpwr 
+	array('pw',15,50,50)
+	calcdim
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`lkpw90cal3`,`auto`)' endif
+	else	wexp='gxyzautocalib(`lkpw90cal3`)'
+	endif
+	banner('Estimating pw90')
+ 	gxyz_au
+endif
+if ($1 = 'lkpw90cal3') then
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $pw90est=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $pw90est=pw[$i] $index=$i endif
+		$i=$i+1
+	until $i > arraydim
+	if $index=arraydim then "Maximum not found"
+		write('error','Autocalibration failed, determine manually')
+		abort
+	endif
+	write('line3','pw90 estimated to be %d us at %d dB, now refining estimate',$pw90est,tpwr)
+	array('pw',11,$pw90est-50,10) "To nearest 10 us OK"
+	calcdim
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`lkpw90cal4`,`auto`)' endif
+	else	wexp='gxyzautocalib(`lkpw90cal4`)'
+	endif
+	banner('Refining pw90 estimate')
+ 	gxyz_au
+endif
+if ($1 = 'lkpw90cal4') then
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $pw90=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $pw90=pw[$i] endif
+		$i=$i+1
+	until $i > arraydim
+	$tpwr=tpwr
+	write('line3','pw90 = %d us at %d dB',$pw90,tpwr)
+
+	tmpreturn('gxyztmp')
+	shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	clear(2)
+	lkpw90=$pw90
+	lktpwr=$tpwr
+	newdg
+	vnmrjcmd('setpage','Acquire','3D Shim Calibs')
+	
+	$lkpw90calibfile=userdir+'/3Dshimlib/calibs/lkpw90_'+probe
+	write('reset',$lkpw90calibfile)
+	write('file',$lkpw90calibfile,'%.0f\t%d',lkpw90,lktpwr)
+	if tn='lk' or tn='H2' then pw=lkpw90 tpwr=lktpwr endif
+	if ($# > 1.5) then 
+		gxyzcalibset('check','1Dautoshim'):$do1Dautoshim
+		gxyzcalibset('check','xycalib'):$doxycalib
+		if ($do1Dautoshim) then
+			if ($2='auto') then gxyzautocalib('gmap1Dinit','auto') endif
+		elseif ($doxycalib) then
+			if ($2='auto') then gxyzautocalib('xycalib','auto') endif
+		else
+			if ($2='auto') then gxyzautocalib('godssh','auto') endif
+		endif
+	endif
+endif
+if ($1 = 'H1pw90cal') then
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif
+        $auto=0
+	$waitflg='n'
+        if ($#>1.5) then
+                if ($2='auto') then $auto=1 endif
+        endif
+	exists(curexp+'/gxyztmp.par','file'):$e
+	if $e > 0.5 then
+		shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	endif
+	if ((gxyzwaitflg='y') and ($auto)) then
+		$waitflg='y'
+		$waittime=gxyzwait
+		gxyzwaitflg='n' "Do this only once!"
+	
+	else
+		$waittime=0.5
+	endif
+	
+	tmpsave('gxyztmp')
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$nuc=''
+	$solv=''
+	$solv=solvent
+	$samplename=gxyzsamplename
+	setup('H1',$solv)
+	gain='n'
+	pw=1 d1=0.5
+	sw=50p
+	exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then
+                        if maxattench1<55 then tpwr=maxattench1 endif 
+                endif
+	else
+		tpwr=55
+        endif
+	if $tempon >0.5 then temp=$temp endif
+	nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai lsfrq=0
+	pslabel='H1pw90cal'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`H1pw90cal1`,`auto`)' endif
+	else	wexp='gxyzautocalib(`H1pw90cal1`)'
+	endif
+	"Read shims before acquiring"
+	readallshims
+	clear(2)
+	setlimit('pad',172800,0,1.25e-8)
+	pad=$waittime
+	if ($samplename='doped_h2o_20' or $samplename='doped_astm' or $samplename='astm' or  $samplename='2mM_sucrose') then gain=0 else gain=20 lb=5 endif
+	$sampleisdoped=''
+	substr($samplename,1,5):$sampleisdoped
+	if $sampleisdoped='doped' then d1=2 else d1=25 endif
+ 	gxyz_au
+	if $waitflg='y' then
+		$waittimes=''
+		format($waittime/60,1,0):$waittimes
+		$str='Adjusting transmitter offset - waiting '+$waittimes+ ' min. first'
+		banner($str)
+	else
+		banner('Adjusting transmitter offset')
+	endif
+endif
+if ($1 = 'H1pw90cal1') then
+	ft('nods') f full lp=0 lsfrq=0
+	abortoff aph0 aborton
+	res
+	dres(cr,0.5):$lw
+	movetof
+	f
+	pw=24 "Try and get a 12 us pw90"
+	$arraysize=24
+	exists('maxattench1','parameter','global'):$maxattenex
+	if ($maxattenex) then
+		on('maxattench1','global'):$maxattenon
+		if ($maxattenon) then
+			$arraysize=$arraysize-(63-maxattench1)
+		endif
+	endif
+	array('tpwr',$arraysize,40,1)
+	ai
+	vp=60
+	pad=0.5
+	lb=$lw
+	if ($#>1.5) then 
+		if ($2='auto') then wnt='gxyzautocalib(`H1pw180check`,`auto`)' wexp='gxyzautocalib(`H1pw90cal2`,`auto`)' endif
+	else
+		wnt='gxyzautocalib(`H1pw180check`)' wexp='gxyzautocalib(`H1pw90cal2`)'
+	endif
+	banner('Optimizing tpwr')
+ 	gxyz_au
+endif
+if ($1 = 'H1pw180check') then
+	wft('acq',1,celem)
+	select(1)
+	abortoff aph0 aborton
+	select(celem)
+	peak:$ht,$freq
+	if ($ht < 0) then
+		write('line3','Null found, aborting acquisition')
+		halt
+		return
+	else
+		 wft(`acq`,1,celem) select(1) abortoff aph0 aborton vsadj(wc2max/3) dssh dssl('value') 
+	endif
+endif
+if ($1 = 'H1pw90cal2') then
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=0
+	$minht=1e6 $tpwr=0 $index=0
+	repeat
+		$i=$i+1
+		select($i)
+		peak:$ht,$freq
+	until ($ht < 0) or ($i>=celem)
+	tpwr=tpwr[$i]
+	write('line3','tpwr set to %d',tpwr)
+	//Now look for the pw360
+	$sampleisdoped=''
+	//substr(samplename,1,5):$sampleisdoped
+	//if $sampleisdoped='doped' then d1=2 else d1=8 endif
+	if d1=25 then d1=8 else d1=2 endif
+	//array('pw',38,38,0.4)
+	array('pw',48,34,0.4)
+	//array('pw',46,28,0.5)
+	calcdim
+	if ($#>1.5) then 
+		if ($2='auto') then wnt='gxyzautocalib(`H1pw360check`,`auto`)'  wexp='gxyzautocalib(`H1pw90cal3`,`auto`)' endif
+	else
+		wnt='gxyzautocalib(`H1pw360check`)' wexp='gxyzautocalib(`H1pw90cal3`)'
+	endif
+	banner('Estimating pw360')
+	werr=''
+ 	gxyz_au
+endif
+if ($1 = 'H1pw360check') then
+	wft('acq',1,celem)
+	select(celem)
+	peak:$ht,$freq
+	if ($ht > 0) then
+		write('line3','Null found, aborting acquisition')
+		halt
+		return
+	else
+		 wft(`acq`,1,celem) select(1) dc vsadj(wc2max/3) dssh dssl(`value`) 
+	endif
+endif
+
+if ($1 = 'H1pw90cal3') then
+	f full wft
+	select(1)
+	vsadj
+	$i=0
+	$maxht=0 $pw360est=0 $index=0
+	repeat
+		$i=$i+1
+		select($i)
+		peak:$ht,$freq
+	until ($ht > 0) or ($i>=celem)
+	if $i>arraydim then "Maximum not found"
+		write('line3','1H pw90 calibration failed\\Check probe tuning on channel 1 and/or amplifier output')
+		abort
+	endif
+	$pw360est=pw[$i]
+	write('line3','pw360 estimated to be %.1f us at %d dB',$pw360est,tpwr)
+
+	//pw90 set to average of -ve and +ve signals over 4
+	//Easily good enough for 3D shimming
+	$pw90=(pw[$i]+pw[$i-1])/8
+	$tpwr=tpwr
+	format($pw90,0,1):$pw90
+	write('line3','pw90 set to %.1f us at %d dB',$pw90,tpwr)
+        tmpreturn('gxyztmp')
+        shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+
+	$H1pw90calibfile=userdir+'/3Dshimlib/calibs/H1pw90_'+probe
+	write('reset',$H1pw90calibfile)
+	write('file',$H1pw90calibfile,'%.1f\t%d',$pw90,$tpwr)
+	shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	clear(2)
+	pw90=$pw90
+	tpwr=$tpwr
+	
+	//Now set temporary params to pw90 and tpwr
+	exists('gxyzpw90','parameter'):$ex
+	if ($ex<0.5) then
+		create('gxyzpw90','real')
+		gxyzpw90=$pw90
+	endif
+	exists('gxyztpwr','parameter'):$ex
+	if ($ex<0.5) then
+		create('gxyztpwr','integer')
+		gxyztpwr=$tpwr
+	endif
+		
+
+	//If using a single pulse then assume high spin density -> use a 4.5 deg. flip angle
+	//if (steflg='n') then
+		//pw(4.5)
+		//format(pw,0,1):$pw
+		//pw=$pw
+	//else
+		//pw(90)
+		//pw(45)
+	//endif
+	newdg
+
+	//Now set params via gxyzsetsamplepars
+	gxyzsetsamplepars
+
+	vnmrjcmd('setpage','Acquire','3D Shim Calibs')
+	if ($# > 1.5) then
+                gxyzcalibset('check','1Dautoshim'):$do1Dautoshim
+                gxyzcalibset('check','xycalib'):$doxycalib
+                if ($do1Dautoshim) then
+                        if ($2='auto') then gxyzautocalib('gmap1Dinit','auto') endif
+                elseif ($doxycalib) then
+                        if ($2='auto') then gxyzautocalib('xycalib','auto') endif
+                else
+                        if ($2='auto') then gxyzautocalib('godssh','auto') endif
+                endif
+        endif
+endif
+
+if ($1 = 'godssh') then
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif	
+	if ($#>1.5) then 
+		if ($2='auto') then
+			if (tn='H1' and gxyzdoscset<>'y') then gxyzsetge endif
+			wexp='gxyzautocalib(`tofacq`,`auto`)'
+			werr=''
+			r6=ni
+			n1=gxyzshimgroup
+			if autont='y' then nt=1 endif
+		endif
+	else 
+		wexp=''
+	endif
+	gxyzmapsys('unarray') ni=0 ni2=0 pad=5 calcdim 
+	if (arraydim <> 2) then write('error','Please array tau first') abort endif 
+	vp=0 f full ai
+	wnt='wft(`acq`,1,celem) f full ds(1) vsadj dssh'
+	lockpower=0 lockgain=0 alock='n' 
+	"Read shims before acquiring"
+	readallshims
+	banner('Acquiring trial profiles')
+ 	gxyz_au
+endif
+if ($1='gzwinacq') then
+	gxyzmapsys('unarray') ni=0 ni2=0 calcdim
+	wnt='wft(`acq`,1,celem) dssh'
+	werr=''
+	gzwin=100
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`gzwinproc`,`auto`)' endif
+	else
+		wexp='gxyzautocalib(\'gzwinproc\')'
+	endif
+	"Read shims before acquiring"
+	readallshims
+	banner('Adjusting gzwin and lsfrq')
+ 	gxyz_au
+endif
+if ($1='gzwinproc') then
+	// $thper=20
+	$thper=45
+	$thper = $thper/100  
+	lsfrq=0
+	wft(1)
+	av f vsadj
+	lvl=0 tlt=0
+	$sn=1.0  $sn2=1.0
+	$hpt = 0.5 * sw / (fn/2)  "half of a point"
+	$npt = 0.0625 * sw + $hpt
+	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+	$npt = sw - 0.5 * sw / (fn/2)
+	$hpt = sw - 0.0625 * sw + $hpt
+	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+	$sn=0.5*($sn+$sn2)
+//	write('line3','$sn=%f',$sn)
+	if $sn<3 then
+  		write('error','insufficient signal to find gzwin, s/n %g',$sn)
+  		return(1)
+	endif
+	
+	$lw=1 $hzpp=0 $f1=0 $f2=0 $maxht=0 $maxfreq=0
+	"set cr in center"
+	peak:$maxht,$maxfreq
+	$snmin=8
+	if $sn<$snmin/$thper then 
+  		if $sn>2*$snmin then
+    			dres($maxfreq,$snmin/$sn):$lw,$hzpp,$f1,$f2
+  		else
+    			write('line3','low signal-to-noise in profile')
+    			dres($maxfreq,0.5):$lw,$hzpp,$f1,$f2
+  		endif
+	else
+  		dres($maxfreq,$thper):$lw,$hzpp,$f1,$f2
+	endif
+	
+	$gzwintmp = 100*($f1-$f2)/sw
+	cr=$f1
+	delta=$f1-$f2
+	split rl
+	lsfrq=lsfrq+(sw/2-rfl)
+	ds(1)
+	gzwin = $gzwintmp
+	write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
+	if ($# > 1.5) then
+                if($2='auto') then
+                        gxyzautocalib('gmap3Dgodssh','auto')
+                endif
+        endif
+endif
+
+if ($1='gmap3Dgodssh') then
+	banner('Acquiring trial profiles')
+	wnt='wft select(1) vsadj dssh'
+	werr=''
+	if $#>1.5 then
+		if $2='auto' then wexp='gxyzautocalib(`gmap3D_tau2adj`,`auto`)' endif
+	else
+		wexp='gxyzautocalib(`gmap3D_tau2adj`)' 
+	endif
+ 	gxyz_au
+endif
+
+if ($1='gmap3D_tau2adj') then
+	select(1)
+	f full
+	peak:$ht,$frq
+	dres($frq,0.6):$lw,$hzpp,$left,$right
+	cr=$left delta=$left-$right
+	sp=cr-delta wp=delta
+	dres(cr):$lw,$hzpp,$left,$right
+	select(1)
+	vsadj
+	$htmin1=1e8
+	$htmin2=1e8
+	cr=sp
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin1 then $htmin1=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of first profile is %f',$htmin1)
+	cr=sp
+	select(2)
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin2 then $htmin2=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of second profile is %f',$htmin2)
+	
+	if ($htmin2 < $htmin1/3) then 
+		tau[2]=tau[2]/2
+		write('line3','Reducing tau[2] to %.3f s and remeasuring profiles',tau[2])
+		f full
+		if $# > 1.5 then
+			if $2 = 'auto' then gxyzautocalib('gmap3Dgodssh','auto') endif
+		else
+			gxyzautocalib('gmap3Dgodssh')
+		endif
+	else
+		f full
+		if $# > 1.5 then
+			if $2 = 'auto' then gxyzautocalib('tau2acq','auto','init') endif
+		else
+			gxyzautocalib('tau2acq','init')
+		endif
+	endif
+endif
+
+if ($1='tau2acq') then
+	if (seqfil <> 'gmapxyz') then  
+		write('error','Not a 3D shimming experiment! 4')
+		abort
+	endif
+	if ref1Dflg='y' then
+		on('temp'):$tempon
+		if $tempon >0.5 then $temp=temp endif
+		$gain=refgain $pw90=refpw $tn=refnuc $tpwr=reftpwr $refppm=refppm 
+		$solv=solvent
+		exists(curexp+'/gxyztmp.par','file'):$e
+		if $e > 0.5 then
+			shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+		endif
+		tmpsave('gxyztmp')
+		rtp('/vnmr/tests/H1lshp')
+		setsw(11.5,1) tof=0 solvent=$solv fn=2*np
+		tn=$tn gain=$gain pw=$pw90 tpwr=$tpwr in='n'
+		d1=0.5
+		r1=$refppm
+		if $tempon >0.5 then temp=$temp endif
+		werr=''
+		if ($# > 1.5) then
+			if ($2 = 'auto') then 
+				wexp='gxyzautocalib(`tau2proc`,`auto`)'
+			endif
+		else
+			wexp='gxyzautocalib(`tau2proc`)'
+		endif
+		"Read shims before acquiring"
+		readallshims
+ 		gxyz_au
+		clear(2)
+		banner('Optimizing tau[2]')
+	else "Acquire a 3D fieldmap instead"
+		//if ($#>2.5) or ($#<1.5) then
+		//	$tau2=0.0005*h1freq/sfrq
+		//	tau=0,$tau2
+		//endif
+
+		//length(gxyzcode):$length
+        	//if $length=16 then ni=4 ni2=4
+        	//else if $length=36 then ni=6 ni2=6
+        	//else if $length=64 then ni=8 ni2=8
+        	//else ni=4 ni2=4
+        	//endif endif endif
+		gxyzmatrix(4)
+		wnt='wft(`acq`,1,celem) dsshall gxyztext(`fmapping`)'
+		werr=''
+        	if ($# > 1.5) then
+                	if ($2='auto') then
+				if ($# > 2.5) then
+					if ($3='init') then wexp='gxyzautocalib(`tau2proc`,`auto`,`init`)' endif
+				else
+						wexp='gxyzautocalib(`tau2proc`,`auto`)'
+				endif
+			elseif ($2='init') then
+				wexp='gxyzautocalib(`tau2proc`,`init`)'
+			endif
+        	else
+				wexp='gxyzautocalib(`tau2proc`)'
+        	endif
+        	pad=5
+        	readallshims
+        	clear(2)
+        	gxyztext('fmapping')
+        	gxyz_au
+	endif
+endif		
+
+if ($1='tau2proc') then
+	if seqfil='s2pul' then "Using reference 1D for tau[2] adjustment"
+		wft aph crl f vsadj  setref
+		"Find the reference peak"
+		"Assume that the reference peak is the tallest in a 500 Hz wide region centred on refppm"
+		axis='h'
+		wp=500
+		sp=r1*sfrq-250
+		dc res rl
+		dres(cr,0.0011):$lw
+		$tau2=0.5/$lw
+               	tmpreturn('gxyztmp')
+               	shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+		seqfil=seqfil
+		vnmrjcmd('setpage','Acquire','3D Shim Calibs')
+		clear(2)
+		if (tn='lk' or tn='H2') then
+			if (refnuc='H1') then $tau2=$tau2*6.5 endif
+			"Impose 120 ms restriction on tau[2] for lk shim mapping"
+			"This value is based on a maximum 2H frequency spread of around 5 Hz per mapstep"
+			"Maybe can increase tau[2] but don't know exactly how far phase can be unwrapped"
+			if $tau2 > 0.12 then $tau2 = 0.12 endif
+		else
+			"Assume 1H shimming if not 2H"
+			if (refnuc='lk' or refnuc='H2') then $tau2=$tau2/6.5 endif
+			"Impose 20 ms restriction on tau[2] for 1H shim mapping"
+			if $tau2 > 0.020 then $tau2 = 0.020 endif
+		endif
+		format($tau2,1,3):$tau2
+		tau[2]=$tau2
+		write('line3','tau[2] set to %1.3f s',$tau2)
+	else if seqfil='gmapxyz' then
+		gxyzmapfield('map')
+		//if ($#>1.5) then if ($2='auto') then gxyzcentre endif endif
+		gxyzcentre
+		disp3Dmap
+		$inputfile='' $max=-1e10 $min=1e10 $trash='' $num='' $values='' $value=0 $numlines=0 $amax=0 $amin=0
+        	$inputfile=userdir+'/3Dshimlib/data/fieldmap'
+        	shell('wc -l < '+$inputfile+'; cat'):$numlines
+        	exists($inputfile,'file'):$ex
+        	if $ex<0.5 then write('error','No fieldmap!') abort endif
+        	lookup('file',$inputfile)
+        	lookup('readline',5):$trash
+        	$i=1
+        	repeat
+                	lookup('read','read'):$num,$values
+                	format($values,3,6):$value
+                	if $value>$max then $max=$value endif
+                	if $value<$min then $min=$value endif
+                	$i=$i+1
+        	until $i > $numlines-5
+        	$range=$max-$min
+        	//write('line3','Max value was %f',$max)
+        	//write('line3','Min value was %f',$min)
+        	write('line3','Range is %f %s Hz',$range,tn)
+        	$tauopt=1/$range
+        	$taumax=0.025*h1freq/sfrq
+		if (tn='lk' or tn='H2') then $taumax=0.12 endif
+        	if $tauopt>$taumax then $tauopt=$taumax endif
+		tau[2]=$tauopt
+		format(tau[2],1,4):tau[2]
+		write('line3','tau[2] set to %f, done!',tau[2])
+	endif endif
+	if ($# > 1.5) then
+		if ($2='auto') then
+                        if ($# > 2.5) then
+				if $3='init' then			
+					"Reduce gzwin if tau[2] is short"
+					if (tn='lk' or tn='H2') then
+						if tau[2]<0.03 then gzwin=0.8*gzwin endif
+					elseif tn='H1' then
+						if tau[2]<0.002 then gzwin=0.8*gzwin endif
+					endif
+					write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)	
+					//write('line3','About to run second tau2acq')
+					gxyzautocalib('tau2acq','auto')
+				endif
+			else
+				if (tn='lk' or tn='H2') then
+					if (gxyzdoscset='y') then
+						//gxyzshimgroup='scset'
+						gxyzshimgroup='3rd'
+						gxyzsetmap
+        	                                gxyzmatrix(4)
+						gxyzdoscset='n'
+        	                        elseif (tau[2] < 0.04) then
+        	                                if (shimset=1 or shimset=10) then
+							gxyzshimgroup='all'
+        	                                else
+							gxyzshimgroup='3rd'
+        	                                endif
+        	                                gxyzsetmap
+        	                                gxyzmatrix(4)
+        	                        else
+                      		                gxyzshimgroup='all'
+                      	                	gxyzsetmap
+                      	                  	if shimset=9 or shimset=14 or shimset=26 then
+							gxyzmatrix(6)
+                      	                  	else
+							gxyzmatrix(4)
+                      	                  	endif
+                                	endif
+	                        elseif (tn='H1') then
+					if (gxyzdoscset='y') then
+						//gxyzshimgroup='scset'
+						gxyzshimgroup='3rd'
+						gxyzsetmap
+        	                                gxyzmatrix(4)
+						gxyzdoscset='n'
+	                                elseif (tau[2] < 0.010) then
+	                                        if (shimset=1 or shimset=10) then
+							gxyzshimgroup='all'
+	                                        else
+							gxyzshimgroup='3rd'
+	                                        endif
+                                        	gxyzsetmap
+	                                        gxyzmatrix(4)
+        	                        else
+         	                               gxyzshimgroup='all'
+         	                               gxyzsetmap
+         	                               gxyzmatrix(8)
+                                	endif
+	                        endif
+                        	if ($# > 1.5) then
+                               		if $2='auto' then
+						//Remove z7 from the mapping for automation
+						gxyzsetmapshims('check','z7'):$z7set
+						if ($z7set) then gxyzsetmapshims('remove','z7') gxyzsetfitshims('remove','z7')  endif
+						gxyzexclude
+						gxyzmapfield('setup','auto')
+					endif
+				endif
+			endif
+		elseif ($2='init') then
+			gxyzautocalib('tau2acq')
+                endif
+	endif
+endif
+
+
+if ($1='gzwinacq2') then
+	gxyzmapsys('unarray') ni=0 ni2=0 calcdim
+	wnt='wft(`acq`,1,celem) dssh'
+	werr=''
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`gzwinproc2`,`auto`)' endif
+	else
+		wexp='gxyzautocalib(\'gzwinproc2\')'
+	endif
+	"Read shims before acquiring"
+	readallshims
+	banner('Adjusting gzwin and lsfrq')
+ 	gxyz_au
+endif
+if ($1 = 'gzwinproc2') then
+	// $thper=20
+	$thper=45
+	$thper = $thper/100  
+	lsfrq=0
+	wft
+	select(2)
+	av f vsadj
+	lvl=0 tlt=0
+	$sn=1.0  $sn2=1.0
+	$hpt = 0.5 * sw / (fn/2)  "half of a point"
+	$npt = 0.0625 * sw + $hpt
+	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+	$npt = sw - 0.5 * sw / (fn/2)
+	$hpt = sw - 0.0625 * sw + $hpt
+	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+	$sn=0.5*($sn+$sn2)
+	//write('line3','$sn=%f',$sn)
+	if $sn<3 then
+  		write('error','insufficient signal to find gzwin, s/n %g',$sn)
+  		return(1)
+	endif
+	
+	$lw=1 $hzpp=0 $f1=0 $f2=0 $maxht=0 $maxfreq=0
+	"set cr in center"
+	peak:$maxht,$maxfreq
+	$snmin=8
+	if $sn<$snmin/$thper then 
+  		if $sn>2*$snmin then
+    			dres($maxfreq,$snmin/$sn):$lw,$hzpp,$f1,$f2
+  		else
+    			write('line3','low signal-to-noise in profile')
+    			dres($maxfreq,0.5):$lw,$hzpp,$f1,$f2
+  		endif
+	else
+  		dres($maxfreq,$thper):$lw,$hzpp,$f1,$f2
+	endif
+	$gzwintmp = 100*($f1-$f2)/sw
+	cr=$f1
+	delta=$f1-$f2
+	split rl
+	lsfrq=lsfrq+(sw/2-rfl)
+	ds(1)
+	gzwin = $gzwintmp
+	"Reduce gzwin if tau[2] is short"
+	if (tn='lk' or tn='H2') then
+		if tau[2]<0.03 then gzwin=0.8*gzwin endif
+	elseif tn='H1' then
+		if tau[2]<0.01 then gzwin=0.8*gzwin endif
+	endif
+	write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
+
+	if ($# > 1.5) then
+                if($2='auto') then
+			if ($z1=0) then
+				gxyzshimgroup='z1z4'
+				gxyzsetmap
+			elseif (tn='lk' or tn='H2') then
+                                if (tau[2] < 0.02) then
+                                        if (shimset=1 or shimset=10) then gxyzshimgroup='all'
+                                        else gxyzshimgroup='3rd'
+                                        endif
+                                        gxyzsetmap
+                                        gxyzmatrix(4)
+                                else
+                                        gxyzshimgroup='all'
+                                        gxyzsetmap
+                                        if shimset=9 or shimset=14 or shimset=26 then gxyzmatrix(6)
+                                        else gxyzmatrix(4)
+                                        endif
+                                endif
+                        elseif (tn='H1') then
+                                if (tau[2] < 0.005) then
+                                        if (shimset=1 or shimset=10) then gxyzshimgroup='all'
+                                        else gxyzshimgroup='3rd'
+                                        endif
+                                        gxyzsetmap
+                                        gxyzmatrix(4)
+                                else
+                                        gxyzshimgroup='all'
+                                        gxyzsetmap
+                                        if shimset=9 or shimset=14 or shimset=26 then gxyzmatrix(6)
+                                        else gxyzmatrix(4)
+                                        endif
+                                endif
+                        endif
+                        if ($# > 1.5) then
+                                if $2='auto' then gxyzmapfield('setup','auto') endif
+			endif
+                endif
+        endif
+endif
+
+if ($1 = 'gzwinspec') then
+	$delta=delta
+	$oldlsfrq=lsfrq
+	gzwin=delta/sw*100
+	split rl
+	cr=cr+delta
+	delta=$delta
+	lsfrq=lsfrq+(sw/2-rfl)
+	wft
+	cr=cr+(lsfrq-$oldlsfrq)
+	ds
+  	ds('toggle')
+  	shell('sleep 1'):$r
+	write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
+endif
+if ($1 = 'tofacq') then
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment! 3')
+		abort
+	endif
+	exists(curexp+'/gxyztmp.par','file'):$e
+	if $e > 0.5 then
+		shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	endif
+        if (auto='y') then 
+	    svp(autodir+'/gxyztmp','force')
+        else
+	    tmpsave('gxyztmp')
+	endif
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$nuc=''
+	$solv=''
+	$solv=solvent
+	$nuc=tn
+	setup('H1',$solv)
+	pw=1 d1=0.5 tpwr=40
+	exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then if maxattench1<40 then tpwr=maxattench1 endif endif
+        endif
+        if $tempon > 0.5 then temp=$temp endif
+	tn=$nuc
+	sw=20k*sfrq/h1freq
+	pslabel=tn+'tofadj'
+	if tn='lk' or tn='H2' then tpwr=42 pw=100 endif
+	nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai gain='n' lsfrq=0
+	werr=''
+
+        if ($psActive=1) then
+	   $psActive?
+           psCmd('set','stage','tofproc')
+        else
+	   if ($#>1.5) then 
+	      if ($2='auto') then wexp='gxyzautocalib(`tofproc`,`auto`)' endif
+	   else
+              wexp='gxyzautocalib(\'tofproc\')'
+	   endif
+        endif
+	
+	"Read shims before acquiring"
+	readallshims
+	if ($psActive=0) then
+	   banner('Adjusting transmitter offset')
+  	   gxyz_au
+  	   clear(2)
+	endif
+  	return
+
+endif
+if ($1 = 'tofproc') then
+	lsfrq=0
+	ft('nods') f full lp=0
+	abortoff aph0 aborton
+	dc res
+	movetof
+	$tof=tof
+	if (auto='y') then
+	   rtp(autodir+'/gxyztmp')
+	else
+           tmpreturn('gxyztmp')
+	endif
+        shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	clear(2)
+	tof=$tof
+	write('line3','tof set to %.2f, done!',$tof)
+	if $isvnmrj then
+		seqfil=seqfil
+	else
+		tcl('stopUpdate')
+        	dg
+        	tcl('set seqfil '+seqfil+';set curexp '+curexp+' ;startUpdate')
+	endif
+	if ($# > 1.5) then 
+		if($2='auto') then
+			gxyzautocalib('gainacq','auto')
+		endif
+	endif
+endif
+if ($1 = 'xycalib') then
+	if (seqfil <> 'gmapxyz') then
+                write('error','Not a 3D shimming experiment!')
+                abort
+        endif
+	$auto=0
+        $waitflg='n'
+        if ($#>1.5) then
+                if ($2='auto') then $auto=1 endif
+        endif
+
+	$pltopt=pltopt $gxyzshimPS=gxyzshimPS $gxyzshimPSn=gxyzshimPSn
+	$answer='n'
+	if lkflg='n' then
+		input('Have you recabled for H2 observe via the lock port of the probe?'):$answer
+		if $answer<>'y' then write('error','System not cabled correctly - aborting calibration') abort endif
+	endif
+	"Read shims before acquiring"
+	readallshims
+	exists(curexp+'/gxyztmp.par','file'):$e
+	if $e > 0.5 then
+		shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	endif
+	if ((gxyzwaitflg='y') and ($auto)) then
+                $waitflg='y'
+                $waittime=gxyzwait
+                gxyzwaitflg='n' "Do this only once!"
+
+        else
+                $waittime=0.5
+        endif
+	tmpsave('gxyztmp')
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$lkpw90=lkpw90 $lktpwr=lktpwr
+	$lkflg=lkflg
+	$solv=solvent
+	setup('H1',$solv)
+	if (Console='vnmrs') then
+                alfa=10 rof2=25
+                exists('setrc','maclib'):$setrcex
+                exists('setddrtc','maclib'):$setddrtcex
+                if ($setrcex) then
+                        setrc
+                elseif ($setddrtcex) then
+                        setddrtc
+                else
+                        create('ddrtc','real')
+                        ddrtc=rof2+alfa+2*pw/3.14159
+                endif
+        endif
+	pslabel='xycalib'
+	exists('pltopt','parameter'):$pltoptex
+	if $pltoptex<0.5 then create('pltopt','flag') endif
+	pltopt=$pltopt r2=$gxyzshimPSn n2=$gxyzshimPS
+
+	if $tempon>0.5 then temp=$temp endif
+	pw=$lkpw90 tpwr=$lktpwr 
+	if $lkflg='y' then tn='lk' else tn='H2' endif
+	sw=2000 tof=0 dn='H1'
+	dm='nnn' wshim='n' spin=0 gain=30 dsp='n'
+	lb='n' np=8192 fn=2*np nt=1 ai
+	if $solv='acetone' then d1=15 else d1=5 endif
+	lockpower=0 lockgain=0 alock='n'
+	setlimit('pad',172800,0,1.25e-8)
+	pad=$waittime
+	$range=32767 $radius=16000
+	if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 $radius=1000 endif
+	if (x1+$radius > $range) then $radius=$range-x1
+		else if (x1-$radius < -$range) then $radius=$range+x1
+		endif
+	endif
+	if (y1+$radius > $range) then $radius=$range-y1
+		else if (y1-$radius < -$range) then $radius=$range+y1
+		endif
+	endif
+
+	" set up rotating gradient for profile experiment 		"
+	if (arraydim>1) then
+   	write('line3','Please remove any arrays before using gxyzcal')
+   	abort
+	endif
+	
+	$range=32767
+	if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 endif
+	
+	readallshims
+	$x1init=x1
+	$y1init=y1
+	$gxysweep=$radius
+	$n=16
+	if (x1+$gxysweep)>$range  then write('error','sweep radius is too large;  x1 will go out of range') abort endif
+	if (x1-$gxysweep)<-$range then write('error','sweep radius is too large;  x1 will go out of range') abort endif
+	if (y1+$gxysweep)>$range  then write('error','sweep radius is too large;  y1 will go out of range') abort endif
+	if (y1-$gxysweep)<-$range then write('error','sweep radius is too large;  y1 will go out of range') abort endif
+	
+	$i=1
+	$th=0.0
+	repeat
+		cos($th):$c
+		sin($th):$s
+		x1[$i]=$x1init+$gxysweep*$c
+		y1[$i]=$y1init+$gxysweep*$s
+		$th=$th+3.141592654*2.0/$n
+		$i=$i+1
+	until $i>$n
+	x1[$n+1]=$x1init
+	y1[$n+1]=$y1init
+	array='(x1,y1)'
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`xycalib1`,`auto`)' endif
+	else	wexp='gxyzautocalib(`xycalib1`)'
+	endif
+	werr=''
+	wnt='ft(`acq`,1,celem) f full lp=0 abortoff aph0 aborton vsadj dssh gxyztext(`xycalib`)'
+	load='y'
+	da
+	clear(2)
+	r1=1
+	gxyztext('xycalib')
+ 	gxyz_au
+	if $waitflg='y' then write('line3','Waiting %.1f minutes before first measurement',$waittime/60) endif
+endif
+if ($1='gainacq') then
+	gxyzmapsys('unarray') ni=0 ni2=0 pad=5 calcdim 
+	if (arraydim <> 2) then write('error','Please array tau first') abort endif
+	vp=0 f full ai
+	wnt='wft(`acq`,1,celem) f full ds(1) vsadj dssh'
+	werr=''
+	if ($# > 1.5) then
+		if ($2='auto') then
+			wexp='gxyzautocalib(`gainproc`,`auto`)'
+		endif
+	else
+		wexp='gxyzautocalib(`gainproc`)'
+	endif
+	lockpower=0 lockgain=0 alock='n' 
+	"Read shims before acquiring"
+	readallshims
+	werr=''
+	banner('Adjusting gain')
+ 	gxyz_au
+endif
+if ($1='gainproc') then
+	exists(curexp+'/fidtext','file'):$e
+	if $e then rm(curexp+'/fidtext'):$dum endif
+	writefid(curexp+'/fidtext')
+	lookup('file',curexp+'/fidtext')
+	$i=0 $max=0
+	repeat
+        	$i=$i+1
+        	lookup('read','read'):$re,$im
+        	abs($re):$re
+        	abs($im):$im
+        	if $re>$max then $max=$re endif
+        	if $im>$max then $max=$im endif
+	until $i>=np/2
+	if ($max < 32767 or gain=0) then
+        	rm(curexp+'/fidtext'):$dum
+        	ln(32768/$max):$l
+        	gain=gain+$l*(20/2.303)-10
+        	if gain>60 then gain=60 endif
+        	write('line3','Gain set to %d, done!',gain)
+		if ($#>1.5) then 
+			if ($2='auto') then
+				if autont='y' then
+					gxyzautocalib(`ntacq`,`auto`)
+				else
+					gxyzautocalib('gzwinacq','auto')
+				endif
+			endif
+		endif
+	else
+        	write('line3','Reducing gain by 6 dB and reacquiring')
+        	gain=gain-6
+		if ($#>1.5) then 
+			if ($2='auto') then gxyzautocalib(`gainacq`,`auto`) endif
+        	else	gxyzautocalib('gainacq')
+		endif
+	endif
+endif
+if ($1='ntacq') then
+	r1=tau[2]
+	tau=0
+	calcdim
+	array('nt',10,nt,0)
+	calcdim
+	wnt='wft dssh'
+	if ($#>1.5) then 
+		if ($2='auto') then wexp='gxyzautocalib(`ntproc`,`auto`)' endif
+	else
+		wexp='gxyzautocalib(`ntproc`)'
+	endif
+ 	gxyz_au
+endif
+if ($1='ntproc') then
+	$sntot=0
+	f
+	$i=1
+	repeat
+		select($i)
+        	$sn=1.0  $sn2=1.0
+        	$hpt = 0.5 * sw / (fn/2)  "half of a point"
+        	$npt = 0.0625 * sw + $hpt
+        	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+        	$npt = sw - 0.5 * sw / (fn/2)
+        	$hpt = sw - 0.0625 * sw + $hpt
+        	dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+        	$sn=0.5*($sn+$sn2)
+		$sntot=$sntot+$sn
+		$i=$i+1
+	until $i>10
+	$snave=$sntot/10
+	write('line3','Ave S/N of ten profiles is %d:1',$snave)
+	//Use SNR of 300:1 as a reference 
+	$nt=nt*90000/($snave*$snave)
+	//write('line3','$nt=%f',$nt)
+ 	$i=0
+        ln(2):$ln2
+        repeat
+                exp($i*$ln2):$denom
+                $j=$nt/$denom
+                $i=$i+1
+        until $j<1
+        nt=$denom
+        if nt>16 then write('error','Signal-to-noise too low, aborting!') abort endif
+        write('line3','Setting number of scans to %d',nt)
+        //End of nt adjustment
+	tau=0,r1
+	calcdim
+	if ($#>1.5) then 
+		if ($2='auto') then gxyzautocalib(`gzwinacq`,`auto`) endif
+       	else	gxyzautocalib('gzwinacq')
+	endif
+endif
+
+if ($1='xycalib1') then
+	"----------------------------------------------"
+	"  step 1 - measurement of the profile widths  "
+	"----------------------------------------------"
+	ai fpmult=0.5 wft
+	
+	"---set gyromagnetic ratio in radian/(s*T)-----"
+	" Reference: Encyclopedia of NMR,vol.4,pp.3302-3304."
+	
+	if tn='H1' then  $gamma=267522128.00 endif
+	if tn='H2' then  $gamma=41066279.10 endif
+	if tn='lk' then  $gamma=41066279.10 endif
+	if tn='none' then  $gamma=41066279.10 endif
+	if tn='F19' then $gamma=251814800.00 endif
+	if ((tn<>'H1') and (tn<>'H2') and (tn<>'none') and (tn<>'F19') and (tn<>'lk')) then
+                	write('line3','Nucleus not recognised')
+                	abort
+	endif
+	
+	"----------------------------------------------"
+	
+	" default to 5% threshold "
+	$thr=0.05
+	exists('tubeid','parameter','global'):$tid
+	if $tid=0 then 
+  		create('tubeid','real','global')
+  		tubeid=4.2
+  		write('error','Tube inside diameter assumed to be 4.2 mm')
+	endif
+
+	"gcalx, gcaly etc should now be globals - destroy if local "
+	exists('gcalx','parameter','current'):$e1
+	if $e1=1 then destroy('gcalx','current') endif
+	exists('gcaly','parameter','current'):$e1
+	if $e1=1 then destroy('gcaly','current') endif
+	exists('gcalang','parameter','current'):$e1
+	if $e1=1 then destroy('gcalang','current') endif
+	
+	"create and backup gcalx, gcaly etc. if necessary "
+	
+	exists('gcalx','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalx','real','global')
+	else
+		exists('gcalxold','parameter','global'):$e2
+		if $e2=0 then create ('gcalxold','real','global') endif
+		gcalxold=gcalx
+	endif
+	exists('gcaly','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcaly','real','global')
+	else
+		exists('gcalyold','parameter','global'):$e2
+		if $e2=0 then create ('gcalyold','real','global') endif
+		gcalyold=gcaly
+	endif
+	exists('gcalang','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalang','real','global')
+	else
+		exists('gcalangold','parameter','global'):$e2
+		if $e2=0 then create ('gcalangold','real','global') endif
+		gcalangold=gcalang
+	endif
+	exists('gcalxerr','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalxerr','real','global')
+	else
+		exists('gcalxerrold','parameter','global'):$e2
+		if $e2=0 then create ('gcalxerrold','real','global') endif
+		gcalxerrold=gcalxerr
+	endif
+	exists('gcalyerr','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalyerr','real','global')
+	else
+		exists('gcalyerrold','parameter','global'):$e2
+		if $e2=0 then create ('gcalyerrold','real','global') endif
+		gcalyerrold=gcalyerr
+	endif
+	exists('gcalxoff','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalxoff','real','global')
+	else
+		exists('gcalxoffold','parameter','global'):$e2
+		if $e2=0 then create ('gcalxoffold','real','global') endif
+		gcalxoffold=gcalxoff
+	endif
+	exists('gcalyoff','parameter','global'):$e1
+	if $e1=0 then 
+		create ('gcalyoff','real','global')
+	else
+		exists('gcalyoffold','parameter','global'):$e2
+		if $e2=0 then create ('gcalyoffold','real','global') endif
+		gcalyoffold=gcalyoff
+	endif
+	
+	$fn=curexp+'/xydata'
+	write('reset',$fn)
+	write('file',$fn,arraydim-1)
+	refpos='n' crl f
+	$chr=''
+	
+	"Reference 1st profile's centre to zero freq"
+	select(1) axis='h'
+	f full
+	peak:r1,cr
+	rl(0) 
+	f full
+	dssh(1,arraydim)
+	"compile profile widths "
+	$i=1
+	repeat
+  		select($i)
+		f full
+		lp=0
+		abortoff
+		aph0
+		peak:r1,cr
+		//write('line3','Compiling profile widths, profile #%d, cr=%f',$i,cr)
+		dres:$hw
+		//If autophasing fails then linewidths can be bogus
+		//Try and phase with line broadening, then remove line broadening 
+		//for linewidth measurement
+		if ($hw>200) then
+			lb=50
+			wft
+			select($i)
+			aph0
+			lb='n'
+			ft
+			select($i)
+			peak:r1,cr
+			dres:$hw
+		endif
+		cz lifrq=rfl+$hw*1.5,rfl-$hw*1.5,0 
+		bc
+		aborton
+		peak:$int,cr
+		dres(cr,$thr):$w
+		write('file',$fn,'%5d\t%5d\t%10.5f',x1[$i],y1[$i],$w)
+  		$i=$i+1
+	until ($i>=arraydim)
+
+	"compile profile maxima (as temporary approximation to midpoints) "
+	"use extra weighting to bring peak maximum closer to midpoint"
+	select(2)
+	peak:r1,cr
+	dres:$hw
+	cz lifrq=rfl+$hw*1.5,rfl-$hw*1.5,0
+	bc
+	peak:$int,cr
+	dres(cr,$thr):$w
+	$lb=lb
+	on('lb'):$lbon
+	lb=2*$w
+	fpmult=0.5 wft bc
+	if $lbon then lb=$lb else lb='n' endif
+
+	"Re-reference after extra weighting has been applied"
+	select(1)
+	f full
+	peak:r1,cr
+	rl($hw) 
+	
+	$i=1
+	repeat
+  		select($i)
+		peak:r1,cr
+		dres:$hw
+	        //write('line3','Compiling profile centre freqs, profile #%d, cr=%f',$i,cr)
+		write('file',$fn,'%5d\t%5d\t%10.5f',x1[$i],y1[$i],cr)
+  		$i=$i+1
+	until ($i>=arraydim)
+	fpmult=0.5 wft
+	clear
+	"---------------------------------------"
+	"--step 2 - fitting of the parameters --"
+	"---------------------------------------"
+	
+	calibxy:$wx,$wy,gcalang,gcalxerr,gcalyerr,$freq,gcalxoff,gcalyoff
+	
+	"Convert the fitted parameters into G/cm units"
+	
+	gcalx=2*3.14159*$wx*100000.0/($gamma*tubeid)
+	gcaly=2*3.14159*$wy*100000.0/($gamma*tubeid)
+
+	write('line3','gcalx = %f; gcaly = %f',gcalx,gcaly)
+
+	"The following has been added because the xy calibration can sometimes fail during the full autocalibration due to a problem with calibxy"
+	"8v06"
+	if (gcalx < 4e-6) or (gcaly < 4e-6) then
+	   if (r1<2) then
+	      write('error','gcalx/y outside the expected range, retrying calibration')
+	      svf(userdir+'/3Dshimlib/calibs/xycalib_fail','force')
+	      r1=r1+1
+ 	      gxyz_au
+	      return
+	   else
+	      write('error','gcalx/y calibration failed on second attempt - aborting')
+	      return
+	   endif
+	endif
+	
+	"---------------------------------------------------"
+	" if expl.out doesn't exist, need to create it and  "
+	" ensure that autoscale finds suitable parameters   "
+	"---------------------------------------------------"
+	
+	full 
+	shell('touch '+curexp+'/expl.out')
+	expl('regression','link')
+	autoscale
+	expl('regression','link')
+	echo('')
+	echo('gcalx = ',gcalx,'G/cm per DAC point')
+	echo('gcaly = ',gcaly,'G/cm per DAC point')
+	echo('gcalang = ',gcalang,'degrees from orthogonality')
+	
+	x1=x1[arraydim] y1=y1[arraydim]
+	
+	"Save data into userdir/calibs/3Dshimlib"
+	$gxyzcalibdir=userdir+'/3Dshimlib/calibs'
+	exists($gxyzcalibdir,'file'):$e
+	if $e < 0.5 then shell('mkdir '+$gxyzcalibdir):$dum endif
+	shell('date +%h_%d_%g_%H.%M.%S'):$date
+	text('')
+	$str='3D shimming XY calibration carried out on '+$date
+	atext($str)
+	atext('')
+	$str='Probe name: '+probe
+	atext($str)
+	$str=''
+	format(gcalx,8,8):$str
+	$atext='gcalx = '+$str+' G/cm per DAC point'
+	atext($atext)
+	format(gcaly,8,8):$str
+	$atext='gcaly = '+$str+' G/cm per DAC point'
+	atext($atext)
+	format(gcalang,1,1):$str
+	if (gcalang>5 or gcalang<-5) then write('error','Warning: gcalang outside expected range, setting to zero') gcalang=0 endif	
+	$atext='gcalang = '+$str+' degrees from orthogonality'
+	atext($atext)
+	svf($gxyzcalibdir+'/gxyzcal_'+$date)
+        $gcalx=gcalx
+        $gcaly=gcaly
+        $gcalang=gcalang
+	
+	"Plot results"
+	if (plotter <> 'none' and pltopt<>'n') then
+		wc=0.9*wcmax wc2=0.9*wc2max sc=0 sc2=0
+		pexpl('regression','link')
+		pltext(0.2*wc,wc2max)
+		if pltopt='p' then
+			$n='' format(r2,'lower'):$n
+			write('line3','Executing page with ps filename')
+			page(n2+$n+'.ps')
+			r2=r2+1
+		else
+			page
+		endif
+	endif
+	$gxyzshimPSn=r2
+	
+        tmpreturn('gxyztmp')
+        shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	seqfil=seqfil
+        gcalx=$gcalx
+        gcaly=$gcaly
+        gcalang=$gcalang
+
+        gxyzshimPSn=$gxyzshimPSn
+	shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	clear(2)
+	"Now redraw the curves"
+	expl('regression','link')
+	write('line3','X and Y shim calibration complete; data saved into %s/3Dshimlib/calibs',userdir)
+	if ($#>1.5) then 
+		if ($2='auto') then
+			gxyzautocalib('godssh','auto')
+		endif
+	endif
+endif
+
+if ($1='gmap1Dinit') then
+	"First work out what sort of 1D gradient mapping to do"
+	$solvent=solvent
+	$do1Dmap='n'
+	$tof=tof
+	exists('shaped','parameter'):$ex
+	if ($ex>0.5) then $shaped=shaped else $shaped='n' endif
+	$tn=tn
+	if tn='H1' then $pw90=pw90 else $pw90=lkpw90 endif
+	$tpwr=tpwr
+	$zgradtype=''
+	substr(gradtype,3,1):$zgradtype
+	gxyzcalibset('remove','pw90')
+	//Assume 3rd arg is final if 3 or more args
+	if ($#>2.5) then $do1Dmap='y' endif
+	$samplename=gxyzsamplename
+	gmapsys
+	if $tn='H1' then
+		if $zgradtype='h' then
+			gmapsys('setHSforH1')
+		else
+			gmapsys('setH1')
+		endif
+	else
+		if $zgradtype='h' then
+			gmapsys('setHSforH2')
+		else
+			gmapsys('setH2')
+		endif
+	endif
+	exists('gxyzdo1Dmap','parameter'):$ex
+	if ($ex < 0.5) then create('gxyzdo1Dmap','flag')  endif
+	if ($do1Dmap='y') then gxyzdo1Dmap='y' else gxyzdo1Dmap='n' endif
+	wdone=''
+	//tof=0
+	tof=$tof
+
+	//Set up default pw parameters
+	pw90=$pw90 tpwr=$tpwr
+	pw(90) p1=2*pw90
+	nt=4
+	solvent=$solvent
+
+	//Use a small flip angle for sucrose - can extend for other samples
+	if ($samplename='2mM_sucrose' or $samplename='doped_astm' or $samplename='astm') then gain=0 pw(15) endif
+	strstr($samplename,'doped'):$ret
+	if ($ret>0.5) then d1=1 else d1=5 endif
+	$cryo=systemdir+'/acqqueue/Cryosafty'
+	$iscryo='no'
+	exists($cryo,'file'):$cpex
+	if $cpex > 0.5 then shell('grep yes '+$cryo):$iscryo endif
+        $probestyle=''
+	getparam('style','Probe'):$probestyle
+	if ($iscryo='yes' or $probestyle='cold') then pw=pw/3 endif
+
+	//Set up shaped pulses if required
+	if ($shaped='y') then setgmapshapes shaped='y' endif
+
+	//Look up the last field variation and observe nucleus
+	//to see if 1D mapping warrants use of spin echo or not
+	$tmpvarfile=userdir+'/3Dshimlib/calibs/lastvar'
+	exists($tmpvarfile,'file'):$ex
+	//if ($ex > 0.5) then
+		//$lastvar=1000
+		//$lastnuc=''
+		//lookup('file',$tmpvarfile)
+		//lookup('read',2):$lastnuc,$lastvar
+		//write('line3','Reading last field variation: tn=%s, var=%f',$lastnuc,$lastvar)
+		////If 1H 1D shimming then if the field is OK better not to use spin echo
+		//if ($lastnuc='H1') then if ($lastvar < 30) then p1=0 nt=1 endif endif
+	//else
+		//write('line3','Field variation file does not exist, skipping reading')
+	//endif
+
+	//Use a spin echo sequence for temporary maps where the B0 field is 'cold'
+	//Else use a gradient echo for the final map or if the field is 'warm'
+	if ($do1Dmap='y') then p1=0 endif
+	proc1='ft' sinebell full f
+	if $# > 1.5 then
+                if $2 = 'auto' then gxyzautocalib('gmap1Dgodssh','auto') endif
+        else
+                gxyzautocalib('gmap1Dgodssh')
+        endif
+endif
+if ($1='gmap1Dgodssh') then
+	banner('Acquiring trial profiles')
+	wnt='wft select(1) f full vsadj dssh'
+	werr=''
+	if $#>1.5 then
+		if $2='auto' then wexp='gxyzautocalib(`gmap1D_d3adj`,`auto`)' endif
+	else
+		wexp='gxyzautocalib(`gmap1D_d3adj`)' 
+	endif
+ 	gxyz_au
+endif
+
+if ($1='gmap1D_d3adj') then
+	select(1)
+	f full
+	peak:$ht,$frq
+	dres($frq,0.8):$lw,$hzpp,$left,$right
+	cr=$left delta=$left-$right
+	sp=cr-delta wp=delta
+	dres(cr):$lw,$hzpp,$left,$right
+	select(1)
+	vsadj
+	$htmin1=1e8
+	$htmin2=1e8
+	cr=sp
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin1 then $htmin1=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of first profile is %f',$htmin1)
+	cr=sp
+	select(2)
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin2 then $htmin2=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of second profile is %f',$htmin2)
+	
+	if ($htmin2 < $htmin1/2) then 
+		d3[2]=d3[2]/2
+		write('line3','Reducing d3[2] to %.3f s and remeasuring profiles',d3[2])
+		f full
+		if $# > 1.5 then
+			if $2 = 'auto' then gxyzautocalib('gmap1Dgodssh','auto') endif
+		else
+			gxyzautocalib('gmap1Dgodssh')
+		endif
+	else
+		f full
+		gzsize=4
+		exists('gmapname','parameter'):$ex
+		if $ex<0.5 then create('gmapname','string') endif
+		//write('line3','$ex=%f',$ex)
+		gmapname='gxyztmp'
+		gmap_findtof='n'
+		if gxyzdo1Dmap='y' then
+			$mapname=''
+			gzsize=5
+			gmap_findtof='y'
+			gmap_z1z4='y'
+			$date=''
+			shell('date +%d_%m_%y'):$date
+			$zgradtype='' $nuc='lk'
+        		substr(gradtype,3,1):$zgradtype
+     			if $zgradtype='h' then $nuc='hs' else $nuc=tn endif
+			gmapname=probe+'_'+$nuc+'_'+$date
+		endif
+		gmapset('mkdir',2)
+		gmaplistfunc('wrshimcal',gmapname)
+		gmapset('setsw')
+		wdone=''
+		werr=''
+		gxyzautocalib(`1Dmakemap`,`auto`)
+	endif
+endif
+
+if ($1='1Dmakemap') then
+	banner('Making 1D gradient shimmap')
+	gmapauto_xyz('startmap','overwrite')
+	wdone=''
+	werr=''
+ 	groupcopy('current','processed','acquisition')
+        groupcopy('current','processed','display')
+        groupcopy('current','processed','processing')
+endif
+
+if ($1='1Dautoshim') then
+	gmap_findtof='n'
+	gmapauto_xyz('startshim')
+	wdone=''
+	werr=''
+ 	groupcopy('current','processed','acquisition')
+        groupcopy('current','processed','display')
+        groupcopy('current','processed','processing')
+endif
+
+if ($1='1Dautoshimdone') then
+	$done=''
+	$gshimrecfile=userdir+'/gshimlib/data/gshim.rec'
+	shell('grep \'Gradient autoshimming on Z done\'  '+$gshimrecfile):$done 
+	if $done[1]='' then
+		 return
+	else
+		gmapsys('quit')
+		gxyzcalibset('check','xycalib'):$doxycalib
+		if ($doxycalib) then
+			gxyzautocalib('xycalib','auto')
+		else
+			gxyzautocalib('godssh','auto')
+		endif
+	endif
+endif

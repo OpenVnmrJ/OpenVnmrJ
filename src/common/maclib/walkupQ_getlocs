@@ -1,0 +1,23 @@
+"macro walkupQ_getlocs"
+
+if (traymax=96) or (traymax=768) or (traymax=1) then
+    write('error','traymax %d not supported',traymax)
+    return('',0)
+endif
+
+strstr($1,'repeat'):$msub
+if ($msub=0) then
+    strstr($1,'REPEAT'):$msub
+endif
+if ($msub) then
+    $multisubmit='no'
+    getadminfo('multisubmit'):$multisubmit
+    if ($multisubmit='no') then
+	write('error','Multiple submission to the same location not allowed')
+	return('',0)
+    endif
+endif
+
+$ret='' $ok=0
+expandTable($1):$ret,$ok
+return($ret,$ok)

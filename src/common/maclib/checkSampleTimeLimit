@@ -1,0 +1,159 @@
+"macro checkSampleTimeLimit"
+//  This macros evaluates whether the given operator already has
+//    too many samples/time in the queue as per the allocation
+//    by the administrator in the persona.  If the current submission
+//    will exceed that allocation, it will return a value of 0 else
+//    it will return a value of 1.
+// The check is done only if the operator is assigned to a persona and
+//    that persona has allocation limit set.  The allocation limit cannot
+//    set per operator basis
+// Three arguments required
+// arg1 is automation file path 
+// arg2 is the total daytime and total nighttime for 
+//      the current submission.  If arg4 is 'day' or 'night'
+//      then this argument is a single value.  If arg4 is an
+//      empty string, not supplied or has the keyword 'both' then this
+//      argument will be an array of 2 values (daytime,nighttime)
+//      If only one value is supplied, the 2nd value will be set to 0
+// arg3 is the total dayQ samples and total nightQ samples for
+//      the current submission.  If arg4 is 'day' or 'night'
+//	then this argument is a single value.  If arg4 is an
+//	empty string, not supplied or has the keyword 'both' then this
+//	argument will be an array of 2 values (daysamples,nightsamples)
+//	If only one value is supplied, the 2nd value will be set to 0
+// arg4 (optional) is day/night/both - default value is empty string which
+//      is interpreted as the keyword 'both'
+// arg5 (optional) operator
+
+// Get aruments in place
+if ($# < 3) then return(1) endif
+if ($# < 4) then $4='' endif
+if ($# < 5) then $5=operator endif
+if ($4='day') then 
+    $4='day','' 
+    $2=$2[1],0
+    $3=$3[1],0
+elseif ($4='night') then 
+    $4='','night'
+    $2=0,$2[1]
+    $3=0,$3[1]
+elseif ($4='') or ($4='both') then
+    $4='day','night'
+    $2size=size('$2')
+    if $2size<2 then $2[2]=0 endif
+    $3size=size('$3')
+    if $3size<2 then $3[2]=0 endif
+else
+    return(1)
+endif
+
+// If there no persona assignment allow submission
+$personadir=userdir+'/persistence/PersonaManager'
+$plist=$personadir+'/PERSONAassignment'
+exists($plist,'file'):$pex
+$ADMpersona=''
+PersonaManager('OwnerPersona'):$ADMpersona
+
+if not $pex and $ADMpersona='' then
+    return(1)
+endif
+
+// if operator is not assigned to a persona
+//   check Defult persona
+$padmex=0 $padm=''
+$s1='' $s2=''
+readfile($plist,'$s1','$s2','','local')
+teststr('$s1',$5,'local'):$ok
+if ($ok) then
+    exists('PrefConfig_'+$s2[$ok]+'.txt','personalib/'+$s2[$ok]+'/adm'):$padmex,$padm
+else
+    exists('PrefConfig_Default.txt','personalib/Default/adm'):$padmex,$padm
+    if not $padmex and ($ADMpersona<>'') then
+	exists('PrefConfig_'+$ADMpersona+'.txt','personalib/'+$ADMpersona+'/adm'):$padmex,$padm
+    endif
+endif
+if not $padmex then return(1) endif
+
+//  Get allowcated samples/time for this persona
+//  These are different than the per sample limit already checked
+//    but represent maximum samples/time the persona is allowed
+//    a queue (dayQ or nightQ) at any given time.
+//  A negative number represents unlimited samples and/or time
+$maxdaysamples=-1
+$maxnightsamples=-1
+$maxdaytime=-1
+$maxnighttime=-1
+if ($4[1]<>'') then
+    $ok=0
+    getadminfo('maxdaysamples',$padm):$ok,$maxdaysamples
+    if not $ok then $maxdaysamples=-1 endif
+    $ok=0
+    getadminfo('maxdaytime',$padm):$ok,$maxdaytime
+    if not $ok then $maxdaytime=-1 endif
+endif
+if ($4[2]<>'') then
+    $ok=0
+    getadminfo('maxnightsamples',$padm):$ok,$maxnightsamples
+    if not $ok then $maxnightsamples=-1 endif
+    $ok=0
+    getadminfo('maxnighttime',$padm):$ok,$maxnighttime
+    if not $ok then $maxnighttime=-1 endif
+endif
+if (($maxdaysamples<0) and ($maxnightsamples<0) and
+    ($maxdaytime<0) and ($maxnighttime<0)) then
+	return(1)
+endif
+
+// Now find out how many samples and how much time this
+// operator has already submitted in the queue
+$dtotal=0 $dtime=0
+$ntotal=0 $ntime=0
+getOperatorSampleTime($1,$5):$dtotal,$dtime,$ntotal,$ntime
+
+// Calculate total samples/time if the current submission
+//   is allowed
+if ($maxdaysamples<0) then
+    $totdaysamples=$maxdaysamples
+else
+    $totdaysamples=$dtotal+$3[1]
+endif
+if ($maxnightsamples<0) then
+    $totnightsamples=$maxnightsamples
+else
+    $totnightsamples=$ntotal+$3[2]
+endif
+if ($maxdaytime<0) then
+    $totdaytime=$maxdaytime
+else
+    $totdaytime=$dtime+$2[1]
+endif
+if ($maxnighttime<0) then
+    $totnighttime=$maxnighttime
+else
+    $totnighttime=$ntime+$2[2]
+endif
+
+// Report any violation to the allocation
+$ok=1
+if ($4[1]<>'') then
+    if ($totdaysamples>$maxdaysamples) then 
+	write('error','%s is only allowed a maximum of %d samples in dayQ',$5,$maxdaysamples)
+	$ok=0
+    endif
+    if ($totdaytime>$maxdaytime) then
+	write('error','total time exceeds maximum allowed for %s in dayQ',$5)
+	$ok=0
+    endif
+endif
+if ($4[2]<>'') then
+    if ($totnightsamples>$maxnightsamples) then
+	write('error','%s is only allowed a maximum of %d samples in nightQ',$5,$maxnightsamples)
+	$ok=0
+    endif
+    if ($totnighttime>$maxnighttime) then
+	write('error','total time exceeds maximum allowed for %s in nightQ',$5)
+	$ok=0
+    endif
+endif
+// return 1 or 0 to the calling macro
+return($ok)

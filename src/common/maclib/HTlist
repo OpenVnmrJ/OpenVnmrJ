@@ -1,0 +1,158 @@
+"macro HTlist"
+"HTlist macro for auto HT frequency lists"
+"Eriks Kupce, Varian R&D"
+
+$filepath = '' $cmd = '' $cmd2='' $spw='' $spwr = '' $sbw='' $s1='' $s2=''
+exists('is_cpsample','maclib'):$cp
+
+if($1 = 'H1') then
+                  
+  wft('nods',1)
+  if (seqfil='s2pul') and (tn='H1') then
+// If $cp use VJ3/CP4 tools to save data
+    if ($cp) then
+      isnewexp:$new
+      if ($new) then
+	savefid
+	AutoCheck('PROTON'):$e,$filepath
+      else
+	$filepath=file
+      endif
+      localHTfreqs(''):$iscp,$svfdir
+    else
+      setHTdir:$svfdir
+      $filepath = $svfdir+'/H1.fid'
+      exists($filepath, 'directory'):$e
+      if not ($e) then
+         svf($filepath)
+      endif
+    endif
+    lb = lb1 sb='n' gf='n' awc='n' ph wft('nods',1)
+    dc peak:$a th=$a/6.5 htll
+    copy(curexp+'/htll.htfrq1',$svfdir+'/H1.ll') 
+    rt($filepath) 
+  else
+    write('error','autoHT sequences must start with a 1D H-1 spectrum.')
+    return
+  endif
+
+elseif($1 = 'C13') then
+
+// If $cp use VJ3/CP4 tools to query and/or save data
+  if ($cp) then
+    AutoCheck('PROTON'):$e,$filepath
+    if not ($e) then
+      wft('nods',1)
+      if (seqfil='s2pul') and (tn='H1') then
+        savefid
+        AutoCheck('PROTON'):$e,$filepath
+      else
+        write('error','autoHT sequences must start with a 1D H-1 spectrum.')
+        return
+      endif
+    endif
+    localHTfreqs(''):$iscp,$svfdir
+  else
+    setHTdir:$svfdir
+    $filepath = $svfdir + '/H1.fid'
+    exists($filepath, 'directory'):$e
+    if not ($e) then
+      wft('nods',1)
+      if (seqfil='s2pul') and (tn='H1') then
+        svf($filepath)
+      else
+        write('error','autoHT sequences must start with a 1D H-1 spectrum.')
+        return
+      endif
+    endif
+  endif
+
+  rt($filepath)       
+  $dof=tof $pw=20.0*sfrq format($pw,1,1):$sbw  
+  tn='C13' dn='H1' at=0.5 tof=10*sfrq sw=250*sfrq 
+  nt=64 fn=np np=fn fn=2*fn
+
+  if(HTn < 10) and (HTch='y') then
+    ineptr
+    d1=2 dm='nny' dmm='ccw' j=125 mult=2 
+  else
+    d1=5 dm='yyy' dmm='www'
+    getparam('pw90','C13'):pw
+    getparam('tpwr','C13'):tpwr
+    pw=pw/2   
+  endif
+
+  dof=$dof gain=30  
+
+  getparam('pw90','H1'):$pw  "Calibrate WALTZ decoupling "
+  getparam('tpwr','H1'):$tpwr
+  getparam('tpwr_cf','H1'):$compH
+  $pw = $pw*$compH
+  format($pw,1,0):$spw
+  format($tpwr,1,0):$spwr
+  $cmd = 'Pbox cal -w "WALTZ16 ' + $sbw 
+  $cmd2 = ' 0.0" -p ' + $spwr + ' -l ' + $spw  
+  shell($cmd+$cmd2)
+  pbox_pwr:dpwr
+  pbox_dmf:dmf
+
+  bs=4
+  wexp='HTlist(`proc`)'
+  write('reset',curexp+'/text')
+  if(seqfil='s2pul') then 
+    pslabel='CARBON' seqfil='s2pul'
+    wbs = 'HTth(16):r1 if (r1<16) then aa HTlist(`proc`) endif dtext' 
+    write('file',curexp+'/text', 'autoHT: generating the required C13.ll HT frequency list')
+  else
+    wbs = 'HTth(25):r1 if (r1<25) then aa HTlist(`proc`) endif dtext' 
+    write('file',curexp+'/text', 'autoHT: generating the required CH.ll HT frequency list')
+  endif   
+
+  if(dpwr > 47) then
+    write('error','Set up H-1 decoupling manually and type au to begin experiment.')
+    return
+  endif
+
+  setrefs
+  
+  dps
+  au
+
+elseif($1='proc') then
+
+  HTth:th
+// If $cp use VJ3/CP4 tools to save data
+  if ($cp) then
+     savefid
+     localHTfreqs(''):$iscp,$svfdir
+  else
+     setHTdir:$svfdir
+     if (seqfil='s2pul') then
+	svf($svfdir,'/C13.fid')
+     else
+	svf($svfdir,'/CH.fid')
+     endif
+  endif
+
+  llfrq=0
+  nll:$n
+  if $n < 1 then
+    write('error','No lines found. Check th')
+    return
+  endif
+  
+  sp = sp + llfrq[$n] - delta  
+  wp = llfrq[1] - llfrq[$n] + 2*delta
+
+  if(seqfil='s2pul') then
+    htll($svfdir+'/C13.ll')
+  else
+    htll($svfdir+'/CH.ll')
+  endif
+
+  HTn=HTn-1
+  autoHT('next')
+
+endif
+
+

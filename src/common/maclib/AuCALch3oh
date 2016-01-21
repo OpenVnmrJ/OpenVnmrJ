@@ -1,0 +1,121 @@
+"macro AuCALch3oh"
+"***************************************************************"
+"AuCALch3oh - Autocalibration using CH3OH (autotest) sample	"
+"***************************************************************"
+
+if ($# < 1) then 
+   $argold = 1 
+   $argnew = 'd2o'
+else
+   if typeof('$1') then 
+     $argold=1 $argnew=$1
+   else 
+     $argold=$1 $argnew='d2o'
+   endif
+endif
+format($argnew,'lower'):$argnew
+
+"***************************************************************"
+"The first part of the macro is common to old calibration and new "
+" calibration routines"
+"***************************************************************"
+
+IF (($argnew = 'd2o') and ($argold=1)) THEN
+
+   getProbePath(probe,'alert'):$e,$ppath,$rw
+   if ($rw=0) then return endif
+
+//   updateprobe(probe)
+   Autobackup
+
+   shell('basename ',probe):$probe
+
+  cleanexp
+  PROTON('d2o')
+  explist=''
+  Autocalpar
+  pw=pw90
+  ai
+  macro=$0 seqfil='s2pul' at=1 lb=1 
+  $spin=spin spin=0
+  if (spintype='tach') or (spintype='nano') then
+    spin=$spin spin='n'
+  endif
+  "n1=dsp r7=alfa r6=rof2 dsp='n' rof2=10 alfa=10 "
+  if (dsp <> 'n') then oversamp=1 endif
+  nt=1 clear(2) d1=2 wbs='' gain=10 ss=1 
+  intmod='off' pltmod='off'
+  wstart='checkcalmethod'
+  $date=''
+  shell('date +%d%b%Y'):$date
+  $text='Calibration for '+probe+' on '+$date
+  text($text)
+  $atext='Sample : C13 enriched CH3OH in doped D2O (autotest)'
+  atext($atext)
+  sample=$probe+'_calib'
+  samplename=sample
+  sdirtmplt='$samplename$_%DATE%_'
+  dg
+
+  banner('Use Doped/enriched autotest sample')
+
+  return
+
+ENDIF
+
+"***************************************************************"
+exists('CALmethod','parameter'):$calex
+if ($calex) then $CALmethod=CALmethod else $CALmethod='oldcal' endif
+
+IF ($CALmethod = 'oldcal') THEN
+
+	IF ($argold = 2) THEN
+
+	Automkdir
+	setvalue('sample',sample,'processed')
+  	setvalue('samplename',samplename,'processed')
+  	setvalue('nameprefix',nameprefix,'processed')
+	setvalue('archivedir',archivedir,'processed')
+	setref
+	wft f full ph 
+	aph
+	vsadj 
+	cr=7.6p delta=6p movesw:$dum
+	alock='n' wshim='n'
+	wnt='wft f full aph vsadj' 
+	wexp='AuCALch3oh(3) Autocalsave(`H1ref`) Autocalnext(`start`)'
+	werr=''
+	au('next','wait')
+	dg
+
+	ENDIF
+
+	"***************************************************************"
+
+	IF ($argold = 3) THEN
+
+	setref
+	wp=2p sp=4p
+
+	ENDIF
+
+	"***************************************************************"
+
+ELSEIF ($CALmethod = 'newcal') THEN
+
+	IF ($argnew = 'process') THEN
+	
+	Automkdir
+	setvalue('sample',sample,'processed')
+        setvalue('samplename',samplename,'processed')
+        setvalue('nameprefix',nameprefix,'processed')
+        setvalue('sdirtmplt',sdirtmplt,'processed')
+        setvalue('archivedir',archivedir,'processed')
+	setref f lp=0 wft 
+	aph
+	vsadj dss
+	
+	ENDIF
+
+ENDIF
+

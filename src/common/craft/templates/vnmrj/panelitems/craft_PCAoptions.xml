@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_PCAoptions" element="groups" type="acquisition" >
+	<group size="360 155" 
+          style="Heading1"
+      	  bg="transparent"
+       	  border="None"
+	  reference="craft_PCAoptions"
+	  vq="craftAFTpar craftOmicsPar craftPCApar"
+      	  subtype="Basic"
+      	  expanded="yes"
+	  useref="no"
+	  >
+	  <label loc="20 20" size="90 20"
+	    style="Label1"
+	    label="Analysis"
+	    />
+	  <check loc="120 20" size="230 20"
+	    style="Label1"
+	    label="Set missing values with average"
+	    vq="craftPCApar"
+	    vc="craftPCApar[4]='y'"
+	    vc2="craftPCApar[4]='n'"
+	    set="$VALUE=(craftPCApar[4]='y')"
+	    />
+	  <check loc="120 40" size="230 20"
+	    style="Label1"
+	    label="Use mean-centering"
+	    vq="craftPCApar"
+	    vc="craftPCApar[5]='y'"
+	    vc2="craftPCApar[5]='n'"
+	    set="$VALUE=(craftPCApar[5]='y')"
+	    />
+	  <check loc="120 60" size="230 20"
+	    style="Label1"
+	    label="Use variance scaling"
+	    vq="craftPCApar"
+	    vc="craftPCApar[6]='y'"
+	    vc2="craftPCApar[6]='n'"
+	    set="$VALUE=(craftPCApar[6]='y')"
+	    />
+	  <group loc="35 84" size="290 22" 
+	    vq="craftnmrparRef craftnmrpar"
+	    show="$SHOW=(craftnmrpar[14]='faReport')"
+	    >
+            <button loc="0 0" size="290 22"
+              style="Heading4"
+              label="Do/display PCA on this list"
+              vq="craftAFTpar"
+              show="$table=craftAFTpar[18]+'/'+craftAFTpar[6]+'_CRAFTamplitude_table.txt' exists($table,'file'):$fex if $fex then lookup('mfile',$table,'countline'):$fex endif $ENABLE=(($fex) and (craftAFTpar[15]&lt;&gt;'1'))*2-1"
+              vc="craft_FreqAmpReport('doPCA',craftAFTpar[18])"
+            />
+	    </group>
+	  <group loc="35 84" size="290 22" 
+	    vq="craftnmrparRef craftnmrpar"
+	    show="$SHOW=(craftnmrpar[14]='omics')"
+	    >
+            <button loc="0 0" size="290 22"
+              style="Heading4"
+              label="Do/display PCA on this list"
+              vq="craftOmicsPar"
+	      show="exists(userdir+'/cnmrmodels/Files4xml/PCAlist','file'):$fex if $fex then lookup('mfile',userdir+'/cnmrmodels/Files4xml/PCAlist','countline'):$fex endif $ENABLE=($fex)*2-1"
+              vc="craft_omics('doPCA')"
+              />
+	    </group>
+	  <label loc="20 110" size="90 20"
+	    style="Label1"
+	    label="Display"
+	    />
+            <menu loc="120 110"  size="170 20"
+              style="PlainText"
+              vq="craftPCApar"
+              vc="craftPCApar[1]='$VALUE'"
+              set="$VALUE=craftPCApar[1]"
+              editable="no"
+              >
+              <mlabel
+                label="PC1 x PC2"
+                chval="T1T2"
+                />
+              <mlabel
+                label="PC1 x PC3"
+                chval="T1T3"
+                />
+              <mlabel
+                label="PC1 x PC4"
+                chval="T1T4"
+                />
+              <mlabel
+                label="PC2 x PC3"
+                chval="T2T3"
+                />
+              <mlabel
+                label="PC2 x PC4"
+                chval="T2T4"
+                />
+              <mlabel
+                label="PC3 x PC4"
+                chval="T3T4"
+                />
+	    </menu>
+	  <label loc="20 130" size="90 20"
+	    style="Label1"
+	    label="Marker label"
+	    />
+            <menu loc="120 130"  size="170 20"
+              style="PlainText"
+              vq="craftPCApar"
+              vc="craftPCApar[3]='$VALUE'"
+              set="$VALUE=craftPCApar[3]"
+              editable="no"
+              >
+              <mlabel
+                label="FID index"
+                chval="INDEX"
+                />
+              <mlabel
+                label="STUDY/FIDNAME"
+                chval="SAMPLE"
+                />
+              <mlabel
+                label="Primary Attribute"
+                chval="PrimGroup"
+                />
+              <mlabel
+                label="Secondary Attribute"
+                chval="SecGroup"
+                />
+              </menu>
+
+	  </group>
+</template>

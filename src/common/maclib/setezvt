@@ -1,0 +1,33 @@
+"macro setezvt"
+
+// EZVT (easy variable temperature control accessory)
+// may be attached to the probe VT air line.  It is 
+// either present or not.  It is used with the 50 l/min
+// flow meter.
+//
+// This macro sets whether or not the accessory is present.
+// vtezscale values:
+//   1 - not present   2 - present
+//
+// Choices are:
+//   (1) vtflowrange=25 vtezscale=1  -common
+//   (2) vtflowrange=50 vtezscale=2  -common
+//   (3) vtflowrange=50 vtezscale=1  -uncommon
+//   (4) vtflowrange=25 vtezscale=2  -not allowed, insufficient airflow
+
+if $#<0.5 then return endif
+
+if (vtflowrange<49 and $1>1.5) then
+  write('error','Cannot use EZVT.  50 l/min flow meter not installed.')
+  return
+endif
+
+$conparfil=systemdir+'/conpar'
+$tempfil='/tmp/conpartmp'
+$updtconpar=systemdir+'/bin/cptoconpar'
+fread($conparfil,'systemglobal')
+vtezscale=$1
+setvtairlimits
+fsave($tempfil,'systemglobal')
+shell($updtconpar)
+rm('-f',$tempfil):$e

@@ -1,0 +1,160 @@
+"macro writetrace"
+" writetrace<(n)> - write phasefile trace into disk file "
+" writexy<(n)>    - write X,Y file from phasefile trace  "
+" writejxy<(n)>   - write X,Y file from phasefile trace, for JCAMP-DX output "
+
+" 1992-05-02 - r.kyburz, first version "
+" 2000-11-06 - r.kyburz, fixed writexy for f1 traces "
+" 2001-01-18 - r.kyburz, fixed bugs in writexy for 1D spectra & Bruker data "
+" 2002-05-16 - r.kyburz, adjusted for JCAMP-DX output "
+" 2006-02-19 - r.kyburz, adjusted for writetrace C program / Linux + MacOS X "
+" 2007-03-15 - r.kyburz, adjusted for VnmrJ 2.2C "
+" 2007-05-12 - r.kyburz, corrected bug introduced with last update "
+
+$debug=0
+
+" check argument "
+if ($#=0)or(arraydim=1) then
+  select:$ix
+else
+  $ix=$1
+  if $ix<1 then
+    $ix=1
+    write('error','%s: trace numbering starts at 1, doing first trace',$0)
+  endif
+endif
+
+$cmd='' $isok=0
+getbinpath('writetrace'):$isok,$cmd
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'writetrace\' not found, aborting.', $0)
+  return
+endif
+
+"check for correct fn/fn1 "
+on('fn'):$on
+if $on then
+  $fn=fn
+else
+  fn=np $fn=fn off('fn')
+endif
+
+" check for upper trace number limit "
+exists('ni','parameter'):$eni
+exists('sw1','parameter'):$esw1
+if $eni then
+  if ni>1 then
+    $eni=ni
+  else
+    $eni=0
+  endif
+endif
+$f2mode=0
+if ($esw1)and($eni) then
+  $2d=1
+  $trace=trace
+  on('fn1'):$on
+  if $on then
+    $fn1=fn1
+  else
+    fn1=ni $fn1=fn1 off('fn1')
+  endif
+else
+  $2d=0
+  $trace='f2'
+endif
+if $2d then
+  if $trace='f1' then
+    $lasttrace=$fn/2
+  else
+    $lasttrace=$fn1/2
+    $f2mode=1
+  endif
+else
+  $lasttrace=arraydim
+endif
+if $ix>$lasttrace then
+  write('error','%s: last trace number is %d',$0,$lasttrace)
+  return
+endif
+if not($2d) then
+  peak:$max
+  if $max<0 then
+    $max=0-$max
+  endif
+  ai vsadj($max)
+endif
+
+" flush data to the disk (assume either wft, wft1d or wft2d have been done) "
+flush
+
+" source and target file names "
+$phasfile=curexp+'/datdir/phasefile'
+$ixstr='' format($ix,1,0):$ixstr
+if $2d then
+  $ixname=$trace+'trace.'+$ixstr
+else
+  $ixname='trace.'+$ixstr
+endif
+$targetfile=curexp+'/'+$ixname
+if $0<>'writetrace' then
+  $targetfile=curexp+'/tmptrace.'+$ixstr
+endif
+
+" remove target file, if necessary "
+exists($targetfile,'file'):$e
+$res=''
+if $e>0 then shell('rm -f '+$targetfile):$res endif
+
+if $debug then
+  $cmd = $cmd + ' -debug'
+endif
+
+if $f2mode then
+  $cmd = $cmd + ' -f2'
+endif
+$vss = ''
+format(vs,11,9):$vss
+$cmd = $cmd + ' ' + $phasfile + ' ' + $ixstr + ' '
+$cmd = $cmd + '| awk \'{printf("%8.6f\\n",$1*'+$vss+')}\' > '
+$cmd = $cmd + $targetfile + '; cat'
+if $debug then
+  echo($cmd)
+  shell($cmd)
+  shell('ls -l',curexp)
+else
+  shell($cmd):$res
+endif
+
+if $0<>'writetrace' then
+  if $2d then
+    if $trace='f1' then
+      $sw=sw1 $rflrfp=rfl1-rfp1 $fn=$fn1
+    else
+      $sw=sw $rflrfp=rfl-rfp
+    endif
+    $outname=$trace+'xytrace.'+$ixstr
+  else
+    $sw=sw $rflrfp=rfl-rfp
+    $outname='xytrace.'+$ixstr
+  endif
+  $target2=curexp+'/'+$outname
+  if $0='writexy' then
+    shell('cat',$targetfile,' | awk \'BEGIN {p=',$sw-$rflrfp,
+      '} {printf("%5.3f %8.6f\\n",p,$1); p-=',$sw/($fn/2),'}\' > ',
+      $target2,'2>&1; cat'):$res
+    write('alpha','created x,y ascii file %s',$target2)
+    shell('rm -f',$targetfile):$dummy
+  else
+    shell('cat',$targetfile,' | awk \'BEGIN {min=1e9;max=-1e9}',
+      '{if ($1>max) max=$1; if ($1<min) min=$1}',
+      'END {printf("%f\\n%f\\n",min,max)}\' 2>&1; cat'):$min,$max
+    shell('cat',$targetfile,' | awk \'BEGIN {p=',$sw-$rflrfp,
+      '} {printf("%5.3f, %8.6f\\n",p,$1); p-=',$sw/($fn/2),'}\' > ',
+      $target2,'2>&1; cat'):$res
+    shell('rm -f',$targetfile):$dummy
+    return($min,$max,$target2)
+  endif
+else
+  write('alpha','created ascii file %s',$targetfile)
+endif

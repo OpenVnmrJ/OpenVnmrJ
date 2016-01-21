@@ -1,0 +1,32 @@
+"macro _oversamp"
+"     _oversamp    -    check oversampling parameters "
+on('oversamp'):$oson
+if ($oson > 0.5) then
+   exists('maxsw_loband','parameter','systemglobal'):$x
+   if ($x > 0.5) then
+     $maxsw_loband=maxsw_loband + 0.1
+   else
+     $maxsw_loband=100000.1
+   endif
+   if (sw < $maxsw_loband) then
+      $os = trunc($maxsw_loband / sw)
+      if (oversamp > $os) then
+         oversamp = $os
+         write('line3','oversamp reset to maximum of %d',oversamp)
+      endif
+      if (oversamp < 1.5) then
+         setdsp('off',0.0,0.0)
+      else
+         off('fb')
+         sw = sw * oversamp
+         sw = sw / oversamp
+      endif
+   else
+      setdsp('off',0.0,0.0)
+   endif
+   if dsp='i' then
+     oscoef=7.5*oversamp
+   endif
+else
+   on('fb')
+endif

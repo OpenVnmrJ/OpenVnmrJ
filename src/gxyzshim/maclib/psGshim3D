@@ -1,0 +1,118 @@
+"macro psGshim3D"
+"prescan macro for 3D gradient shimming"
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+
+  pauselock(explist[1])
+
+  //Get 3D shim mapname from probe file
+  $mapname='' $samplename=samplename $sample=sample
+  if (Gmapname<>'') then
+    exists(userdir+'/3Dshimlib/shimmaps/'+Gmapname,'directory'):$3Dmapex
+    if ($3Dmapex < 0.5) then
+      getparam('3Dmap','Probe'):$mapname
+    else
+      $mapname=Gmapname
+    endif
+  elseif ($mapname='') then
+    getparam('3Dmap','Probe'):$mapname
+  endif
+  if $mapname='' then return('done') endif
+  exists(userdir+'/3Dshimlib/shimmaps/'+$mapname,'directory'):$3Dmapex
+  if ($3Dmapex < 0.5) then return('done') endif
+
+  //Load 3D shimming sequence
+  gxyzmapsys
+  gxyzrtmap($mapname)
+
+  getparam('3Dmethod','Probe'):fitshims
+  getparam('3Dfieldvar','Probe'):gxyzfieldvar
+
+  samplename=$samplename sample=$sample
+
+  exists('activestudy','parameter','global'):$act
+  if $act>0.5 then
+      if activestudy[1]<>'null' then
+        if auto='y' then
+          psCmd('set','werr','xmreact')
+        else
+          psCmd('set','werr','xmwerr')
+        endif
+      endif
+  endif
+
+  exists('ncycles','parameter'):$e
+  if ($e<0.5) then
+    create('ncycles','real')
+    ncycles=5
+  endif
+  pltopt='n'
+  ref1Dflg='n'
+
+  if auto='y' then
+    on('pad'):$pad_on
+    if ($pad_on>0.5 and pad[1]>0.5) then
+      exists('gmap_padon','parameter'):$pe
+      if $pe<0.5 then
+        create('gmap_padon','real')
+      endif
+      gmap_padon = pad[1]
+      pad = pad[1]
+    endif
+    psCmd('set','autoname',autoname)
+    autoname = '_3DGMAP_FILE_%SAMPLE#:%'
+  endif
+  
+  //First adjust offset
+  gxyzautocalib('tofacq')
+
+  psCmd('set','auArgs','gradtype_aa wait next')
+  return('doau')
+
+elseif ($action='tofproc') then
+
+  //Process offset data
+  gxyzautocalib('tofproc')
+
+  //Now move on to 3D shimming
+  gxyzautoshim
+  if (auto<>'y') then wnt='wft(`acq`,1,celem) ff dsshall gxyztext(`shimming`)' else wnt='gxyztext(`shimming`)' endif
+
+  psCmd('set','auArgs','gradtype_aa wait next')
+  return('doau')
+
+elseif ($action = 'processmap') then
+
+  gxyzautoshim('processmap'):$ret
+
+  return($ret)
+
+elseif ($action = 'exp') then
+  write(`line3`,`'%s' method is not implemented for psGshim3D.`,$action)
+  return('done')
+
+elseif ($action = 'err') then
+  psCmd('get','werr'):$werr
+  if ($werr = 'xmreact') then
+    xmreact:$res
+    return($res)
+  else
+    xmwerr
+    return('done')
+  endif
+
+else
+  write(`line3`,`'%s' method is not implemented for psGshim.`,$action)
+  return('done')
+endif

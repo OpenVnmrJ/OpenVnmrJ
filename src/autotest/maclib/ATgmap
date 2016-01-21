@@ -1,0 +1,117 @@
+"macro ATgmap"
+"ATgmap" "Gradient mapping and shimming"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+substr(pfgon,3,1):$zon
+if ($zon)='n' then
+ write('line3','Z-axis is disabled. Re-set "pfgon". Gradient Tests Skipped') 
+ ATnext return 
+endif
+
+if ($#=0) then
+ at_currenttest='gradientmap'
+ rtp(autotestdir+'/parameters/standard')
+ wdone=''                 "do not want wdone in autotest"
+ seqfil='gmapz' d3=0,.005 sw=100000 
+ if (at_new='n') then
+  at_dsp=dsp dsp='n' su shell('sleep 2')
+ endif
+ setlimit('sb',1000,-1000,.000001)
+ np=512 sb=.00128 lb='n' fn='n'
+ exists('gzwin','parameter'):$e
+ if ($e=0) then create('gzwin','real') endif 
+ exists('gzsize','parameter'):$e
+ exists('gzlvl','parameter'):$e
+ if ($e=0) then create('gzlvl','real') endif 
+ exists('gzsize','parameter'):$e
+ if ($e=0) then create('gzsize','real') endif 
+ gzsize=6 
+ d1=1
+ d2=.001 nt=4 ss=2 av
+ substr(gradtype,3,1):$pfgamp   "performa I has maximum of 2048($pfgamp='l')"
+ if ($pfgamp='l') then gzlvl=512 else gzlvl=2047 endif
+ wnt='wft select(1) f vp=0 full vsadj dssh'
+ wexp='ATgmap(`PART1`)' au
+
+elseif ($1='PART1') then
+
+if (celem<arraydim) then
+   wft('acq')
+else
+   wft('acq')
+endif
+ vsadj dtext
+ select(1) peak:$ht,cr
+ dres(cr,.2):$width1
+ select(2) peak:$ht,cr
+ dres(cr,.2):$width2
+ substr(gradtype,3,1):$pfgamp   "performa I has maximum of 2047($pfgamp='l')"
+ if $width1<40000 then
+     if ($pfgamp<>'l') then
+       if (gzlvl[1]>20000) then 
+        write('line3','Gradient Test Failed: Check Gradient Amplifier Switch')
+        write('file',autotestdir+'/REPORT','Mapping failed. Check Hardware')
+        abort 
+       else
+        gzlvl=2*gzlvl
+        wexp='ATgmap(`PART2`)'
+        au return
+       endif
+     endif
+ endif
+
+elseif ($1='PART2') then
+
+ $start='y'
+ if ($start='y') then
+  write('alpha','starting ATgmap')
+  gmapset('mkdir',2)
+  if (seqfil <> 'gmapz') then
+   $jstr = curexp+'/gtmp'
+   exists($jstr,'file'):$e
+    if $e>0.5 then
+     rm($jstr+'/*')
+     rmdir($jstr)
+    endif
+   tmpsave('gtmp')  "allows use of 'quit'"
+   $jstr = curexp+'/gtmp/startshims'
+   readallshims
+   exists($jstr,'file'):$exj
+   if $exj>0.5 then rm($jstr) endif
+   svs($jstr):$e
+   exists(curexp+'/text','file'):$t
+   if $t>0.5 then cp(curexp+'/text',curexp+'/gtmp') endif
+  endif
+ endif
+
+ $js=''
+ $ok=0
+ $mapname='ATgmap'
+ gmaplistfunc('wrshimcal',$mapname):$ok
+ gmaplistfunc('readzshims'):$ok,$js
+ exec($js)
+ $jfile=userdir+'/gshimlib/shimmaps/'+$mapname+'.fid'
+ exists($jfile,'file'):$efile
+ if $efile>0.5 then
+  write('line3','mapname %s overwritten when done',$mapname)
+ endif
+ exists(autotestdir+'/history/SENSITIVITY','file'):$e
+ if $e=1 then   "set up nt for s/n>40000(works well)in map/shim"
+  lookup('file',autotestdir+'/history/SENSITIVITY')
+  lookup('#Average:','read',1):$sens
+  nt=nt*(40000/$sens)*(40000/$sens) "scales for same s/n by increasing nt"
+  nt=nt/4 nt=nt*4
+ endif
+ gmapset('setgzwin')  "contains au"
+ wexp='gmapset(\'setsw\',0,2)'
+ 
+ RETURN
+
+elseif ($1='end') then
+
+  write('line3','ATgmap done!')
+  dsp=at_dsp shell('sleep 2')
+  ATnext
+
+endif

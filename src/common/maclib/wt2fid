@@ -1,0 +1,24 @@
+"macro wt2fid"
+"wt2fid - convert pbox_wt to pbox.fid. EK July 2012"
+
+$infile = userdir+'/shapelib/pbox_wt'
+$outfile = userdir+'/shapelib/pbox.fid'
+$w=''
+
+exists($infile, 'file'):$e
+if not ($e) then
+  write('error','pbox_wt file does not exist')
+  return
+endif
+
+nrecords($infile):$n     
+lookup('file', $infile)
+write('reset', $outfile)
+
+$j=0
+repeat
+  lookup('read', 1):$w  
+  format($w,10,8):$re
+  write('file',$outfile,' %12.0f    0', $re*1024.0)
+  $j=$j+1
+until ($j >= $n)

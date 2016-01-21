@@ -1,0 +1,40 @@
+"macro BP_PRstart"
+"BP_PRstart('angle_variable1','angle_variable2')"
+
+"This macro is designed to collect a series of PR experiments."
+"The experiment setup macro calls the BP_PRangles_all macro"
+"This sets the arrays PR_anglesY_X."
+"These arrays can be confused as acquisition arrays, which "
+"is why the parameter array is strictly defined in each case"
+"below."
+
+"check for svfdir presence"
+exists(svfdir,'file'):$e
+ if ($e=0) then
+  banner('Save Data Directory not Present. Please use\\"Create this Directory" Button')
+  return
+ endif
+
+exists('dofidsave','parameter'):$e
+if $e=1 then dofidsave='n' endif
+
+"Start the loop counter"
+PR_nN=1
+"Check for flag to skip collecting the orthogonal planes."
+if PR_skipPlanes='y' then PR_nN=4 endif
+
+"Set which set of angles are going to be collected, and"
+"define the arrays."
+format(PR_nTilts,1,0):s1 
+array=''
+if ($#=1) then
+ PR_arrayname1 = 'PR_angles1_' + s1
+ array=''
+ BP_PRloop($1)
+endif
+if ($#=2) then
+ PR_arrayname1 = 'PR_angles1_' + s1
+ PR_arrayname2 = 'PR_angles2_' + s1
+ array=''
+ BP_PRloop($1,$2)
+endif

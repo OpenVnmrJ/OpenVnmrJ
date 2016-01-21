@@ -1,0 +1,45 @@
+"macro wrsampdirchron"
+
+"*********Write time stamp for GxP purposes**************************************"
+  $directory=$1
+
+  exists($directory+'/dirinfo/chronlog','file'):$ex
+  if ($ex=0) then
+    $date=''
+    shell('date +%Y%m%d'):$date
+    $time=''
+    shell('date +%H%M%S'):$time
+
+    $chronentry=$date+' : T'+$time+' : '+archivedir+' : Parent Directory'
+    $chronentry2=$date+' : T'+$time+' : '+sample+' : Created by : '
+
+    if (auto = 'y') then
+     	$username=''
+     	shell('grep -w USER: '+curexp+'/sampleinfo'):$username
+     	substr($username,2):$username
+     	if $username='' then $username=operator endif
+     	$chronentry2=$chronentry2+'auto for '+$username
+    else
+    	$chronentry2=$chronentry2+operator
+    endif
+
+     $uname='' shell('uname -n -s -r'):$uname
+     $vname=Console+'  '+rev+'  '+revdate
+     $pname='NONE'
+     exists(systemdir+'/adm/patch','directory'):$pdirex
+     if ($pdirex) then
+     	shell('(ls -1dt '+systemdir+'/adm/patch/* | head -n 1)'):$pname
+     endif
+     $cname=''
+     cprev:$cname
+     if ($cname = '') then $cname='NONE' endif
+     write('file',$directory+'/dirinfo/chronlog','%s',$chronentry)
+     write('file',$directory+'/dirinfo/chronlog','%s',$chronentry2)
+     write('file',$directory+'/dirinfo/chronlog','Workstation: %s',$uname)
+     write('file',$directory+'/dirinfo/chronlog','VNMR Software: %s',$vname)
+     write('file',$directory+'/dirinfo/chronlog','VNMR Patch: %s',$pname)
+     write('file',$directory+'/dirinfo/chronlog','Chempack Software: ')
+     write('file',$directory+'/dirinfo/chronlog','     %s',$cname)
+     write('file',$directory+'/dirinfo/chronlog','-------------------------------------------------------------')
+  endif
+

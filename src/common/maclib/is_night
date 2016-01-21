@@ -1,0 +1,20 @@
+"macro is_night"
+	$night='no'
+        $longstarttime=0
+        $shortstarttime=0
+        $shortlength=0
+        $longlength=0
+        shell('date +%H'):$hour
+        shell('date +%M'):$minute
+        $currenttime=$hour*3600+$minute*60
+
+        getautoinfo:$shortstarttime,$shortlength,$longstarttime,$longlength
+	if ($shortstarttime<0) or ($shortstarttime>24*3600) then
+		$night='yes'
+        elseif ((($currenttime > $longstarttime) or
+              	($currenttime < $shortstarttime)) and
+		($longstarttime<=24*3600)) then
+                $night='yes'
+        endif
+	return($night)
+

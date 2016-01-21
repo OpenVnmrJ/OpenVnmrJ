@@ -1,0 +1,131 @@
+"macro BPCCLScal2"
+"run arrays to find best tpwrsf and phincr"
+"all other parameters have already been set by parent macro"
+"written by Marco Tonelli @ NMRFAM - August 2003"
+"modified October 2006"
+
+
+if ($#>1) then
+  $CALIBRATE=0
+  $BOTH='' $BOTH=$1
+else
+  $CALIBRATE=$1
+endif
+
+
+if ($CALIBRATE=0) then
+
+"create and set parameters relevant to calibration"
+   exists('ph_ref','parameter'):$e
+   if $e=0 then create('ph_ref','real') endif
+   exists('pstep','parameter'):$e
+   if $e=0 then create('pstep','real') endif
+   exists('tpf_ref','parameter'):$e
+   if $e=0 then create('tpf_ref','real') endif
+   exists('tstep','parameter'):$e
+   if $e=0 then create('tstep','real') endif
+
+   exists('myself','parameter'):$e
+   if $e=0 then create('myself','string') endif
+   myself='fbcal_find_tpwrsf_phincr'	"remember to change this line if you rename the macro"
+
+"set starting value for phincr"
+"its value can be passed on to this macro as the 2nd argument"
+   if ($#>=2) then
+      ph_ref=$2
+   else
+      ph_ref=0
+   endif
+   phincr=ph_ref 
+
+"pstep is the initial increment in phincr"
+   if ($BOTH='tpwrsf') then
+      pstep=99	"calibrate tpwrsf only"
+   else
+      pstep=0
+   endif
+
+   tpf_ref=4095 tstep=100
+
+   spin='n' 
+   ss=2 nt=1 
+   gain=0 
+   ssfilter='n'
+   vp=0 
+   dps
+
+   array('tpwrsf',16,3400,-tstep)
+   f full av da wnt='wft select(1) vsadj dssh dssl'
+   wexp='{myself}(1)' au
+
+else if ($CALIBRATE=1) then
+
+   $arraydim=arraydim
+   BPCCLScal1:$bestone
+   tpwrsf=tpwrsf[$bestone]
+
+   if ($bestone=1) then
+      array('tpwrsf',7,tpwrsf+(5*tstep),-tstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(1)' au
+
+   else if ($bestone=$arraydim) then
+      array('tpwrsf',7,tpwrsf+(2*tstep),-tstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(1)' au
+
+   else if (pstep=0) then
+      pstep=3
+      tpf_ref=tpwrsf
+      array('phincr',11,phincr+(5*pstep),-pstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(2)' au
+
+   else if (pstep=3) or (pstep=1 and tpwrsf<>tpf_ref) then
+      pstep=1
+      tpf_ref=tpwrsf
+      array('phincr',9,phincr+(4*pstep),-pstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(2)' au
+
+   else if (pstep<>0 and pstep<>1 and pstep<>3) and (tstep=100) then
+      tstep=20 
+      array('tpwrsf',9,tpwrsf+(4*tstep),-tstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(1)' au
+
+   else "exit - optimization done, return tpwrsf and phincr to main program"
+      {goback}
+
+   endif endif endif endif endif
+
+
+else if ($CALIBRATE=2) then
+
+   $arraydim=arraydim
+   BPCCLScal1:$bestone
+   phincr=phincr[$bestone]
+
+   if ($bestone=1) then
+      array('phincr',7,phincr+(5*pstep),-pstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(2)' au
+
+   else if ($bestone=$arraydim) then
+      array('phincr',7,phincr+(2*pstep),-pstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(2)' au
+
+   else if (tstep=100) or (tstep=20 and phincr<>ph_ref) then
+      tstep=20 ph_ref=phincr
+      array('tpwrsf',9,tpwrsf+(4*tstep),-tstep)
+      f full av da wnt='wft select(1) vsadj dssh dssl'
+      wexp='{myself}(1)' au
+
+   else "exit - optimization done, return tpwrsf and phincr to main program"
+      {goback}
+
+   endif endif endif
+
+endif endif endif
+

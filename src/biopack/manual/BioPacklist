@@ -1,0 +1,133 @@
+UPDATING the PROBEFILE
+***********************
+
+UPDATE parameters with values appropriate for your spectrometer, then click
+the "Update Probefile with Parameter Values in this Parameter Set" button in 
+the "Globals&Probefile" page in the Setup folder, or ENTER "BPbiopack2".
+
+FIRST TIME
+***********
+When BioPack is activated, reasonable values of sw/tof/dof/dof2 are set. 
+If no particularl knowledge is avaliable for your spectrometer, leave
+these values unchanged. 
+
+POWER LIMITS
+************
+In ANY case in which power limits are desired, activate BioPack Power 
+Limits in the Globals&Probefile page of the Setup Folder (VnmrJ), then  
+click on the "BioPack Power Limits" checkbox. The BioPack 
+power limit entry boxes then can be filled in. 
+
+Set desired values for 
+BPtpwrmax/BPdpwrmax/BPdpwr2max/BPdpwr3max/BPdpwrspinlock
+as maximum powers (consult probe manual for typical values). Alternatively,
+disable these limits and after a full AutoCalibration, examine the power in
+wurst140.DEC in shapelib. This is a useful upper limit for 13C decoupling. The
+15N decoupling power limit can be set by adding 2dB to the power set in the
+probe file after the AutoCalibration. 
+
+BPspinlock is the user-defined "normal" CC spinlock field (in Hz,typ. value 
+is 7000 at 600 MHz). These BP* parameters are global parameters created at
+BioPack install and are used by the "BPcheck*" macros & in 
+update/BPsvp/BPrtppar macros.
+
+ACQUISITION
+***********
+sw           desired sw for normal spectrum (use at least 14ppm)
+sw1(sw2)     desired Carbonyl(Nitrogen) spectral width,~ 20*dfrq (40*dfrq2)
+ni,ni2       set=1
+phase,phase2 set=1
+at           desired acquisition time (usually 0.050-0.075 seconds)
+d1,temp      desired relaxation delay/temperature
+gain         desired "normal" gain for triple resonance/ hsqc experiments
+spin         set to 'n' and turn off spinner (in acqi)
+rof2,alfa    set to values which result in lp=0 for 1D acquisition (typ. 2usec
+             for rof2 and 4usec for rof2 with dsp='r'. For a cold probe use
+             an rof2>25usec.)
+BPpwrlimits  set=1 for power limits to be active
+waltzB1      set to the number of Hz for 1H decoupling when needed (typ. 8ppm)
+
+CHANNEL 1
+*********
+tpwr,pw,pw90 proton "hardpulse" power level and corresponding pw90 (ch1)
+tpwrsf       fine power flipback pulse adjustment (enter if known)
+compH        H1 amplifier compression (H1pw90 at tpwr-6)/(2.0*H1pw90 at tpwr)
+tof          tof position of water
+BPtpwrmax  maximum channel 1 power when using power limits
+
+CHANNEL 2
+*********
+dof         dof must be accurately set for 174ppm in 13C spectrum. 
+            This value is set automatically by the BPbiopack2 macro.
+pwClvl,pwC  carbon "hardpulse" power level and corresponding pw90 (ch2)
+            (consult probe manual for maximum pwClvl when using CRYOGENIC probe)
+compC       (C13pw90 at pwClvl-6)/(2.0*C13pw90 at pwClvl)
+BPdpwrmax  maximum power when using power limits
+BPspinlock  This (global)value will be used for the spinlock field strength (Hz) for 
+            parameter sets using a CC-Tocsy element (*hcch_tocsy*,g*c_co_nh*).
+            Defaults:7000 at 600 MHz, 6000 Hz at 500 MHz, 5000 at 400 MHz. 
+            Care should be given for 750/800/900 MHz, the bandwidth 
+            may have to be reduced to protect the probe/sample.
+CHANNEL 3
+*********
+pwNlvl,pwN  nitrogen "hardpulse" power level and corresponding pw90 (ch3)
+compN       (N15pw90 at pwNlvl-6)/(2.0*N15pw90 at pwNlvl)
+BPdpwr2max maximum power when using power limits
+dpwr2/dof2  broadband decoupling power/freq (~120ppm) (during acquisition)
+            the dof2 value is set automatically by the BPbiopack2 macro.
+dm2         set to 'nny' for N15 decoupling during acquisition
+dmm2        set to 'ccg' for garp, 'ccp' for waveform-based decoupling
+
+PROCESSING  set processing parameters for detected dimension (e.g, gf=0.02)
+**********
+
+DEUTERIUM DECOUPLING   
+********************
+ Channel 4 not Present:     
+  set dm3='nnn' dn3='' dpwr3=0 dmf3=0 
+  dof3 is set automatically by the BPbiopack2 macro to 4ppm
+
+  Refer to BioPack.dir/BioPack.README for details on 2H calibrations. Automatic     
+  calibration is available by button in the "Calibrations" page in the Setup
+  folder (VnmrJ). In VnmrJ there is a manual page available by clicking a 
+  button describing the process.
+  
+ (enter dm3='nyn' dg2 to view parameter values. Update them and set dm3='nnn')
+
+  dn3         set = 'H2'
+  dpwr3       normal 2H broadband decoupling power (during evolution)
+  dm3         set to 'nnn' (later,set to 'nyn' for any sequence but ghn_co for
+              2H decoupling during pulse sequence-not during acquisition) 
+  dmf3        normal dmf3 corresponding to dpwr3
+  dseq3/dres3 set ='', 1.0
+  dmm3        'cgc' for garp, 'cwc' for waltz, etc
+  BPdpwr3max maximum power when using power limits
+
+
+GRADIENTS
+*********
+mag_flg     'y' for magic-angle coherence transfer gradients(triax probe)
+gzcal       set at 0.0020 for probes with 65G/cm output ,0.0010 for others)
+            (check gcal value (stored in global) for last calibrated value,
+             or at_gzcal (AutoTest-derived) in your ~/vnmrsys/global)
+For mag_flg='n' (z-axis or triax probes - pfgon='nny'or 'yyy'):
+gt1         Gradient time (typically ~1-3msec)
+gzlvl1      set at 13000-25000 (probes with 65G/cm output)
+gzlvl2      =gzlvl1
+            (these values may be varied for a better trade-off of water
+             suppression vs. diffusion losses)
+
+For mag_flg='y' (to use magic-angle gradients with triax probes - pfgon='yyy'):
+gzlvl1      set <= 10000 (probes with 65G/cm output )
+gzlvl2      set <= 9700 (probes with 65G/cm output )
+             autocalibration sets gzlvl2 for maximum in NH-detected sequences
+ (Check value of gzlvl2 with and without magic-angle for optimum.)
+
+Set ddrtc=rof2+alfa as inital value
+***
+
+The BioPack probe file can be updated at any time: 
+1. Select HNCO (runs the ghn_co macro)
+2. Update the desired parameter(s) 
+3. Select the "Update Probefile with Parameter Values in this Parameter Set" 
+   button, or enter "BPbiopack2"

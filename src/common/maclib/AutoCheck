@@ -1,0 +1,49 @@
+"macro AutoCheck"
+"************************************************************"
+" AutoCheck  - Checks for the presence of a fid file         "
+"		(Glide use)   If the fid exists returns	     "
+"		a value of 1 and the filename		     "
+"************************************************************"
+
+$filename='' $fidexists=0 $fidname=''
+$archivesample='' $sample='' $archive=''
+$name=$1
+if ($# >2) then
+   shell('dirname '+$3):$archive
+   shell('basename '+$3):$sample
+else
+   $archive=archivedir
+   $sample=sample
+
+   isnewexp:$new
+   if (auto='y') then $new=1 endif
+   if ($new=0) then
+   	shell('dirname '+file):$archivesample
+   	shell('basename '+$archivesample):$sample
+   	shell('dirname '+$archivesample):$archive
+   endif
+   archivedir=$archive
+endif
+
+ if ($archive='') or ($sample='') then
+	return($fidexists,$filename,$fidname)
+ endif
+
+ cplog($name,'last',$archive+'/'+$sample):$name
+
+ $filename=$archive+'/'+$sample+'/'+$name
+ $fidname=$name+'.fid'
+
+ exists($filename+'.fid','file'):$fidexists
+
+ if ($# > 1) then
+  if ($2 <> 'fid') then
+   if ($fidexists = 0) then
+    $fidname=$name+'.par'
+    exists($filename+'.par','file'):$fidexists
+   endif
+  endif
+ endif
+
+
+return($fidexists,$filename,$fidname)

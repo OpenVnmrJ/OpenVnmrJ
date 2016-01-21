@@ -1,0 +1,714 @@
+"macro imagemath"
+"*********************************************************************"
+" imagemath - macro to perform image math, image fitting and          "
+"             associated actions                                      "
+"                                                                     "
+" imagemath('init',aipMathType)                                       "
+"     Initialize aipMathOption, aipFitVar, aipMathTitle               "
+"     according to specified aipMathType                              "
+"                                                                     "
+" imagemath('calc',<'type'>,<'fitvar'>,<threshold>)                   "
+"     Perform image math calculations                                 "
+"     of type:            aipMathType or specified 'type'             "
+"     with fit variable:  aipFitVar or specified 'fitvar'             "
+"     with threshold:     aipThreshold or specified threshold         "
+"                                                                     "
+" imagemath('display',datadir,<ndirs>,<'dirs'>)                       "
+"     Display calculated data                                         "
+"     datadir:            the data directory to display               "
+"     ndirs:              number of refresh directories               "
+"     dirs:               the refresh directory names                 "
+"                                                                     "
+" imagemath('readthreshold')                                          "
+"     Read automatically calculated threshold                         "
+"     (if file userdir+'/aipThreshold' exists)                        "
+"                                                                     "
+" imagemath('copyprocpar','indir','outdir')                           "
+"     Copy procpar file to output .img directory and any .img         "
+"     subdirectories therein                                          "
+"     indir:              the input directory containing procpar      "
+"     outdir:             the output directory to copy to             "
+"                                                                     "
+" imagemath('getrefresh','refreshdir'):ndirs,'dirs'                   "
+"     Return number and names of directories for refresh/redisplay    "
+"     refreshdir:         the output directory to refresh             "
+"     ndirs:              the number of directories for refresh       "
+"     dirs:               the names of directories for refresh        "
+"                                                                     "
+" imagemath('getinout','title'):'indir','outdir'                      "
+"     Get input directory and output directory                        "
+"     title:              the output title name to use                "
+"     indir:              the input directory name                    "
+"     outdir:             the output directory name                   "
+"                                                                     "
+" imagemath('checkecho')                                              "
+"     Check the values of aipStartEcho and aipEndEcho are             "
+"     appropriate given the value of ne                               "
+"                                                                     "
+" imagemath('setechoes')                                              "
+"     Set aipStartEcho is less than (and not equal to) aipEndEcho     "
+"                                                                     "
+" imagemath('setpixel')                                               "
+"     Set value of aipPixel according to position of ROI Point Tool   "
+"     For 2D: ROI point info can be taken from any slice              "
+"     For 3D: Double click extracted slice of interest to display     "
+"             the single extracted slice. Position ROI Point Tool     "
+"             The value of aipCurrentKey is used to figure the        "
+"             extracted slice properties (position, orientation)      "
+"                                                                     "
+" imagemath('addnodetosq','outdir')                                   "
+"     Add node of calculated data to Study Queue                      "
+"     outdir:             the output directory name                   "
+"                                                                     "
+" imagemath('addtosq')                                                "
+"     Determine if the option to add calculated data to Study Queue   "
+"     should be active                                                "
+"     (used by vertical Math panel and 'addnodetosq' option)          "
+"                                                                     "
+" imagemath('fixpar')                                                 "
+"     Fix the parameters required by imagemath                        "
+"     In Review VP set defaults when parameters are loaded            "
+"                                                                     "
+" imagemath('genglobal')                                              "
+"     Generate the global parameters required by imagemath            "
+"                                                                     "
+"*********************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+
+"Initialize aipMathOption, aipFitVar and aipMathTitle"
+if ($action='init') then
+
+  aipMathType='T2'
+  aipFitVar = ''
+
+  if ($# > 1) then aipMathType=$2 endif
+
+  " Initialize aipMathOption, aipFitVar and aipMathTitle        "
+  " aipMathOption  determines the group displayed in Math panel "
+  " aipFitVar      is the variable used for fitting             "
+  " aipMathTitle   determines the output directory name         "
+
+  if (aipMathType = 'T2') then
+    aipMathOption = 'Fit'
+    exists('ne','parameter'):$ex
+    if ($ex=1) then
+      if (ne > 1) then
+        aipFitVar = 'TE'
+      else
+        aipFitVar = 'te'
+      endif
+    else
+      aipFitVar = 'te'
+    endif
+    aipMathTitle = 'T2_maps'
+
+  elseif (aipMathType = 'T1_Rec') then
+    aipMathOption = 'Fit'
+    aipFitVar = 'ti'
+    aipMathTitle = 'T1_maps'
+
+  elseif (aipMathType = 'DIFF') then
+    aipMathOption = 'Fit'
+    aipFitVar = ''
+    aipMathTitle = 'DIFF_maps'
+
+  elseif (aipMathType = 'SumEchoes') then
+    aipMathOption = 'Sum'
+    aipFitVar = ''
+    aipMathTitle = 'SumEchoes'
+
+  endif
+
+endif
+
+
+"Perform the requested math calculations"
+if ($action='calc') then
+
+  $vp = ''
+  xm1('vp'):$vp
+  if ($vp = 'plan') then
+    write('error','imagemath: must be in Current or Review Viewport to process data')
+    abort
+  endif
+
+  "Math Type"
+  $MathType=aipMathType
+  if ($# > 1) then $MathType=$2 endif
+
+  "Fit variable"
+  $FitVar=aipFitVar
+  if ($# > 2) then $FitVar=$3 endif
+
+  "Threshold"
+  $aipThreshold=aipThreshold
+  if ($# > 3) then $aipThreshold=$4 endif
+
+  "Title"
+  $title = $MathType + '_maps'
+  if (aipMathTitle <> '') then $title = aipMathTitle endif
+
+  "Set input directory and output directory"
+  imagemath('getinout',$title):$indir,$outdir
+
+  "Set output directory that requires refresh/redisplay"
+  $refreshdir=$outdir
+
+  "For echo summation refresh/redisplay is for the specific sub directory only" 
+  if ($MathType = 'SumEchoes') then
+    imagemath('setechoes'):$startecho,$endecho
+    $refreshdir=$outdir+'/SumEcho'+$startecho+'-'+$endecho+'.img'
+  endif
+
+  "Return the number and names of directories for refresh/redisplay"
+  imagemath('getrefresh',$refreshdir):$ndirs,$dirs
+
+  "Prepare Threshold option string"
+  $Threshold='' 
+  if (aipAutothreshold<>'y') then
+    shell('printf %.6g ',$aipThreshold):$Threshold
+    $Threshold=' -noise '+$Threshold
+  endif
+
+  "Prepare RMS residual option string"
+  $Residual=''
+  if (aipRMS='y') then $Residual = ' -res' endif
+
+  "Prepare Mask option string"
+  $Mask=''
+  if (aipMask='y') then $Mask = ' -mask' endif
+
+  "Set up math command"
+  $cmd=''
+
+  if ($MathType = 'T2') then
+    $cmd='fdffit'
+    $cmd = $cmd + ' -fittype ' + $MathType
+    $cmd = $cmd + ' -fitvar '  + $FitVar
+    if (ne>1) then
+      if (aipEchoes='odd' OR aipEchoes='even') then
+        $cmd = $cmd + ' -echoes '+aipEchoes
+      endif
+    endif
+
+  elseif ($MathType = 'T1_Rec') then
+    $cmd='t1fit'
+    $cmd = $cmd + ' -fittype ' + $MathType
+    $cmd = $cmd + ' -fitvar '  + $FitVar
+    if (aipM0='y') then $cmd = $cmd + ' -M0' endif
+
+  elseif ($MathType = 'DIFF') then
+    "diffcalc is part of the Imaging_Sequence passworded option"
+    "Check to see if diffcalc is installed"
+    exists(systemdir+'/bin/diffcalc','file','x'):$ex
+    if ($ex=0) then
+      write('error','imagemath: Diffusion Tensor Imaging is part of the Imaging_Sequence passworded option that apparently has not been installed.')
+      return
+    endif
+    $cmd = 'diffcalc '
+    $cmd = $cmd + ' -sort '+aipSort
+
+  elseif ($MathType = 'SumEchoes') then
+    $Threshold=''
+    $Residual=''
+    $Mask=''
+    $cmd='addechoes'
+    $cmd = $cmd + ' -start '+$startecho+' -end '+$endecho
+
+  endif
+
+  "Threshold"
+  $cmd = $cmd + $Threshold
+
+  "RMS residual"
+  $cmd = $cmd + $Residual
+
+  "Mask"
+  $cmd = $cmd + $Mask
+
+  "Debug"
+  if (aipDebug) then
+    $cmd = $cmd + ' -debug'
+    on('aipPixel','global'):$pixelon
+    if ($pixelon) then 
+      $pixel='' shell('printf %d ',aipPixel):$pixel
+      $cmd = $cmd + ' -pixel '+$pixel 
+    endif
+  endif
+
+  "Input and output"
+  $cmd = $cmd + ' -in ' + $indir + ' -out ' + $outdir
+
+  "Execute the command"
+  write('line3','imagemath: %s',$cmd)
+  $cmd = $cmd + ' >'+curexp+'/imagemath.txt 2>&1'
+  shell($cmd):$trash
+  if (aipDebug) then 
+    clear
+    cat(curexp+'/imagemath.txt')
+  endif
+
+  "Check output exists"
+  exists($outdir,'directory'):$ex
+  if ($ex=0) then
+    write('error','imagemath: Check command above and that %s is suitable for %s processing',$indir,aipMathType)
+    abort
+  endif
+
+  "For echo summation don't use the display order output in aipList" 
+  if ($MathType = 'SumEchoes') then
+    rm($outdir+'/aipList'):$trash
+  endif
+
+  "Copy procpar to new .img directory and any .img subdirectories"
+  imagemath('copyprocpar',$indir,$outdir)
+
+  "Read automatically calculated threshold (if userdir+'/aipThreshold' exists)"
+  imagemath('readthreshold')
+
+  "Refresh the display with the calculated data"
+  imagemath('display',$outdir,$ndirs,$dirs)
+
+  "Add node to Study Queue (if requested and study is active)"
+  imagemath('addnodetosq',$outdir)
+
+endif
+
+
+"Display the calculated data"
+if ($action='display') then
+
+  "Output directory"
+  if ($# < 2) then
+    write('error',`imagemath('display'): Must supply output directory as an argument.`)
+    abort
+  endif
+  $outdir=$2
+
+  "If number and names of directories for refresh/redisplay are provided, remove from RQ"
+  if ($# > 3) then
+    $ndirs=$3
+    $dirs=$4
+    "Remove old data from Review Queue if it is there"
+    $i=1 
+    while ($i<=$ndirs) do 
+      substr($dirs,$i):$data 
+      $data=$outdir+'/'+$data 
+      aipRQcommand('remove',$data) 
+      $i=$i+1 
+    endwhile
+  endif
+
+  "Set vertical scaling to work on groups"
+  aipVsMode='groups'
+
+  "Display the data"
+  if (nv2 = 0) then "2D experiment"
+
+    aipRQcommand('remove',$outdir)
+    aipLayoutPolicy=3
+
+    "Check for list of preferential order with which to load"
+    $datalist=$outdir+'/aipList'
+    exists($datalist,'file'):$ex
+    if ($ex=1) then
+      $cmd = 'cat '+ $datalist+' | echo `wc -l` '
+      shell($cmd):$nvals
+      $data=''
+      if ($nvals>0) then 
+        lookup('file',$datalist,'readline'):$data
+        $data=$outdir+'/'+$data
+        aipRQcommand('remove',$data)
+        RQaction('loadData',$data,'dnd')
+      endif
+      $i=2
+      while ($i <= $nvals) do
+        lookup('readline'):$data
+        $data=$outdir+'/'+$data
+        aipRQcommand('remove',$data)
+        RQaction('loadData',$data,'dnd')
+        $i=$i+1
+      endwhile
+    else
+      RQaction('loadData',$outdir,'dnd')
+    endif
+
+  else "3D experiment"
+
+    aip3Dusedir='y'              "Flag to use the specified directory"
+    aip3Ddirectory=$outdir       "Specify the directory"
+    aip3Dextract('set3Dfiles')   "Generate list of 3D files within the specified directory"
+
+    "Attempt to extract something sensible"
+    on('fn'):$onfn on('fn1'):$onfn1 on('fn2'):$onfn2
+    if ($onfn)  then $ro  = fn/2  else $ro  = np/2 endif
+    if ($onfn1) then $pe  = fn1/2 else $pe  = nv   endif
+    if ($onfn2) then $pe2 = fn2/2 else $pe2 = nv2  endif
+
+    "Internal FFT gives matrix size that's a power of 2"
+    if (recon = 'internal') OR (recon = '') then
+      $size=1 while ($size<$ro)  do $size=$size*2 endwhile  $ro=$size
+      $size=1 while ($size<$pe)  do $size=$size*2 endwhile  $pe=$size
+      $size=1 while ($size<$pe2) do $size=$size*2 endwhile $pe2=$size  
+    endif
+    $ro=$ro/2 $pe=$pe/2 $pe2=$pe2/2
+
+    "Use one of the following to display"
+    aip3Dextract('display','all',$pe2,$pe2,1,$pe,$pe,1,$ro,$ro,1)
+    //aip3Dextract('display','xy',$pe2,$pe2,1)
+    //aip3Dextract('display','xz',$pe,$pe,1)
+    //aip3Dextract('display','yz',$ro,$ro,1)
+
+  endif
+
+endif
+
+
+"Read automatically calculated threshold if appropriate"
+if ($action='readthreshold') then
+
+  $thresholdfile=userdir+'/aipThreshold'
+  exists($thresholdfile,'file'):$ex
+  if ($ex=1) then
+    $cmd = 'cat '+ $thresholdfile+' | echo `wc -l` '
+    shell($cmd):$nvals
+    if ($nvals>0) then 
+      lookup('file',$thresholdfile,'readline'):aipThreshold[1]
+    endif
+    $i=2
+    while ($i <=$nvals) do
+      lookup('readline'):aipThreshold[$i]
+      $i=$i+1
+    endwhile
+    rm($thresholdfile):$trash
+  endif
+
+endif
+
+
+"Copy procpar to new .img directory and any .img subdirectories"
+if ($action='copyprocpar') then
+
+  if ($# < 3) then
+    write('error',`imagemath('copyprocpar'): Must supply input and output directories as arguments.`)
+    abort
+  endif
+  $indir=$2
+  $outdir=$3
+
+  $cmd = 'cp '+$indir+'/procpar '+$outdir
+  shell($cmd):$trash
+  $cmd='for i in '+$outdir+'/*.img ; do cp '+$outdir+'/procpar $i/ ; done '
+  shell($cmd):$trash
+
+endif
+
+
+"Return the number and names of directories for refresh/redisplay"
+if ($action='getrefresh') then
+
+  "Default is none"
+  $ndirs=0
+  $dirs=''
+
+  if ($# < 2) then return($ndirs,$dirs) endif
+  $refreshdir=$2
+
+  "Check if the output directory exists, ask for remove if yes"
+  exists($refreshdir,'directory'):$ex
+  if ($ex > 0) then
+    confirm('Output directory ' + $refreshdir + ' exists already - overwrite?'):$yesno
+    if ($yesno = 0) then
+      abort
+    else
+      "Figure what data may be loaded in Review Queue and requires refresh/redisplay"
+      $cmd='ls '+$refreshdir+' | grep ".img" | echo `wc -l` ; n=`ls '+$refreshdir+' | grep ".img"` ; echo $n'
+      shell($cmd):$ndirs,$dirs
+      "Remove data"
+      shell('rm -r ' + $refreshdir):$trash
+    endif
+  else
+    exists($refreshdir,'file'):$ex
+    if ($ex > 0) then rm($refreshdir):$trash endif
+  endif
+
+  return($ndirs,$dirs)
+
+endif
+
+
+"Return input and output directories"
+if ($action='getinout') then
+
+  $title='math'
+  if ($# > 1) then $title=$2 endif
+
+  "Set $file with location of data (without extension)"
+  if (file = 'exp') OR (file = '') then
+    "In Current VP, parameter file is not set with path to and name of saved data"
+    $savedfile = ''
+    xmgetatts(actionid,'data'):$savedfile
+    if ($savedfile = '') then
+      if (aipData = 'saved') OR (aipDataOut = 'saved') then
+        confirm('imagemath: No file name available, use current data/experiment?'):$yesno
+        if ($yesno = 1) then
+          aipData    = 'reprocessed'
+          aipDataOut = 'curexp'
+        else
+          abort
+        endif
+      endif
+    else
+      $savedfile=sqdir + '/' + $savedfile
+    endif
+  else 
+    $savedfile = file
+  endif
+  $file = ''
+  strstr($savedfile,'.fid'):$inx,$file
+  if ($inx = 0) then
+    $file = $savedfile
+  endif
+
+  "Set input data directory"
+  if (aipData = 'saved') then
+    $indir  = $file + '.img'
+  else
+    if (nv2 = 0) then "2D experiment"
+      $indir  = curexp + '/recon'
+    else "3D experiment"
+      if (recon = 'internal') OR (recon = '') then
+        $indir = curexp+'/datadir3d/data'
+      else
+        $indir  = curexp + '/recon'
+      endif
+    endif
+  endif
+
+  "Check that we have input"
+  exists($indir,'directory'):$ex
+  if ($ex = 0) then
+    write('line3','imagemath: can not find input directory %s',$indir)
+    abort
+  endif
+
+  "Set base of output data directory"
+  if (aipDataOut = 'saved') then
+    $outdir = $file + '_' + $title + '.img'
+  else
+    $outdir = curexp + '/' + $title + '.img'
+  endif
+
+  return($indir,$outdir)
+
+endif
+
+
+"Check echo"
+if ($action='checkecho') then
+
+  exists('ne','parameter'):$ex
+  if ($ex = 0) then return endif
+
+  "Check the start and end echoes to add"
+  if (aipStartecho > ne) then aipStartecho = ne endif
+  if (aipStartecho < 1) then aipStartecho = 1 endif
+  if (aipEndecho > ne) then aipEndecho = ne endif
+  if (aipEndecho < 1) then aipEndecho = 1 endif
+
+endif
+
+
+"Set echoes"
+if ($action='setechoes') then
+
+  "If start echo and end echo are equal warn user"
+  if (aipStartecho=aipEndecho) then
+    write('error','imagemath: set Start Echo and End Echo for %s processing',aipMathType)
+    abort
+  endif
+
+  "Check start echo is less than end echo"
+  if (aipStartecho>aipEndecho) then
+    $tmp=aipStartecho
+    aipStartecho=aipEndecho
+    aipEndecho=$tmp
+  endif
+
+  $startecho='' shell('printf %d ',aipStartecho):$startecho
+  $endecho='' shell('printf %d ',aipEndecho):$endecho
+  return($startecho,$endecho)
+
+endif
+
+
+"Set value of aipPixel according to graphical position of ROI Point Tool"
+if ($action='setpixel') then
+
+  $roifile=userdir+'/aipROI'
+  aipSaveRois($roifile,'pixel')
+  exists($roifile,'file'):$ex
+  if ($ex) then
+    lookup('file',$roifile,'seekcs','Point','read',1):$x,$nx
+    lookup('read'):$y,$ny
+    if ($nx>0 AND $ny>0) then
+
+      if (nv2<2) then "2D experiment"
+        on('fn1'):$on 
+        if ($on) then 
+          $stride=fn1/2
+        else
+          exists('nphase','parameter'):$ex
+          if ($ex) then $stride=nphase else $stride=nv endif
+        endif
+        if (recon = 'internal') OR (recon = '') then   "$stride must be power of 2"      
+          $size=1
+          while ($size<$stride) do $size=$size*2 endwhile
+          $stride=$size
+        endif
+        aipPixel=$stride*trunc($y)+trunc($x)
+
+      else "3D experiment"
+        substr(aipCurrentKey,2):$name
+        strstr($name,'.fdf','last'):$pos,$pre,$post
+        if ($pos>0) then
+          substr($post,1,'delimiter','_'):$orient
+          substr($post,3,'delimiter','_'):$slice
+
+          on('fn'):$onfn on('fn1'):$onfn1 on('fn2'):$onfn2
+          if ($onfn)  then $ro  = fn/2  else $ro  = np/2 endif
+          if ($onfn1) then $pe  = fn1/2 else $pe  = nv   endif
+          if ($onfn2) then $pe2 = fn2/2 else $pe2 = nv2  endif
+
+          "Internal FFT gives matrix size that's a power of 2"
+          if (recon = 'internal') OR (recon = '') then
+            $size=1 while ($size<$ro)  do $size=$size*2 endwhile  $ro=$size
+            $size=1 while ($size<$pe)  do $size=$size*2 endwhile  $pe=$size
+            $size=1 while ($size<$pe2) do $size=$size*2 endwhile $pe2=$size  
+          endif
+
+          $x=trunc($x) $y=trunc($y)
+          if ($orient='xy') then aipPixel= $ro*$pe*$slice+$ro*$y+$x endif
+          if ($orient='xz') then aipPixel= $ro*$pe*$y+$ro*$slice+$x endif
+          if ($orient='yz') then aipPixel= $ro*$pe*$y+$ro*$x+$slice endif
+        endif
+      endif
+
+    endif
+    rm($roifile):$trash
+  else
+    write('line3','Use ROI Point Tool to select pixel')           
+  endif
+  return
+
+endif
+
+
+"Add node of calculated data to study queue"
+if ($action='addnodetosq') then
+
+  if (aipMathtosq<>'y') then return endif
+
+  imagemath('addtosq'):$active
+  if ($active<1) then return endif
+
+  if ($# < 2) then
+    write('error',`imagemath('addnodetosq'): Must supply output directory as argument.`)
+    abort
+  endif
+  $outdir=$2
+
+  "Check if a node with the same name is already in Study Queue"
+  substr($outdir,'basename'):$data,$ext
+  substr($outdir,'dirname'):$path
+  $cmd='grep '+$data+' '+$path+'/enterSQ | echo `wc -l`'
+  shell($cmd):$n
+  if ($n>0) then return endif
+
+  "If we have not already returned then add node"
+  $id = ''
+  xmmakenode('new','action'):$id
+  xmsetatts($id,'title',$data,'status','Completed','data',$data,'lock','on')
+
+endif
+
+
+"Should the option to add calculated data to study queue be active"
+if ($action='addtosq') then
+  substr(sqdir,'basename'):$sqdir
+  if (aipDataOut = 'saved') AND (activestudy <> 'null') AND (activestudy = studyid_) AND (activestudy = $sqdir) then 
+    if (file = 'exp') OR (file = '') then
+      return(1)
+    else
+      strstr(file,activestudy):$n
+      if ($n>0) then return(1) else return(-1) endif
+    endif
+  else
+    return(-1)
+  endif
+endif
+
+
+"Fix parameters required by imagemath"
+if ($action='fixpar') then
+
+  "Reset values when parameters are loaded in Review VP"
+  $vp = ''
+  xm1('vp'):$vp
+  if ($vp <> 'plan') then
+    aipData='saved'
+    aipDataOut='saved'
+    aipThreshold=aipThreshold[1]
+    exists('sl','parameter'):$ex
+    if($ex > 0.5) then sl=1 endif
+    aipRMS='n'
+    aipMask='n'
+    aipSort='1'
+    aipDebug=0
+    aipPixel=0
+    if (aipMathType='T2') then
+      if (size('te') > 1) then aipFitVar='te' endif
+      exists('ne','parameter'):$ex
+      if($ex > 0.5) then
+        if (ne>1) then aipFitVar='TE' endif
+      endif
+    endif 
+    if (aipMathType='T1_Rec') then
+      if (size('ti') > 1) then aipFitVar='ti' endif
+    endif
+  endif
+
+  return
+endif
+
+
+"Generate global parameters required by imagemath"
+if ($action='genglobal') then
+
+  create('aipMathType','string','global','T2')       "Type of Math calculation"
+  create('aipMathOption','string','global','Fit')    "Type of Math calculation"
+  create('aipFitVar','string','global','')           "Fit variable"
+  create('aipMathTitle','string','global','')        "Title of math data"
+  create('aipData','string','global','saved')        "Data to process, saved/reprocessed"  
+  create('aipDataOut','string','global','saved')     "Output data, saved/curexp"
+  create('aipMathtosq','string','global','n')        "Add math data to study queue flag"
+  create('aipThreshold','real','global',400)         "The threshold for fitting"
+  setprotect('aipThreshold','on',256,'global')       "Make sure aipThreshold does not cause acquisition array"
+  create('aipAutothreshold','string','global','y')   "Automated threshold flag"
+  create('aipRMS','string','global','n')             "RMS residual map flag"
+  create('aipMask','string','global','n')            "Mask map flag"
+  create('aipEchoes','string','global','all')        "The echoes to use for T2 fitting"
+  create('aipM0','string','global','n')              "M(0) map flag for T1 fitting"
+  create('aipSort','string','global','1')            "Diffusion direction sort for diffcalc"
+  create('aipStartecho','real','global',1)           "The start echo (for adding)"
+  create('aipEndecho','real','global',1)             "The end echo (for adding)"
+  create('aipDebug','integer','global',0)            "aip Debug flag"
+  setlimit('aipDebug',1,0,1,'global')                "Debug flag is 0 or 1"
+  create('aipPixel','real','global',0)               "aip Debug pixel"
+
+endif

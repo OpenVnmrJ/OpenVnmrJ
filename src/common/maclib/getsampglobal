@@ -1,0 +1,53 @@
+"macro getsampglobal"
+" getsampglobal "
+
+if ($# < 1) then $1='' endif
+if ($1='') then
+    Automacrodir:$1
+    if $1='' then return endif
+endif
+
+if ($# < 2) then $2='' endif
+if ($# < 3) then $3='current' endif
+
+if ($2='') or ($## < 1) then
+//  Read the parameter(s) into the requested tree
+    getmodule('sampleglobal',$1,$3)
+    if ($1<>'cp') and (($2='') or ($2='text_string')) and ($3='current') then
+		// text_string is an unique parameter
+	$val='' $txtok=0
+	getmodule('sampleglobal',$1,'','text_string'):$val,$txtok
+	if $txtok then
+		// replace curexp/text ONLY if the module
+		// has text_string parameter
+    	    $txtsize=size('text_string')
+	    write('reset',curexp+'/text')
+	    $i=1
+	    repeat
+	    	write('file',curexp+'/text','%s',text_string[$i])
+	    	$i=$i+1
+	    until $i > $txtsize
+	endif
+    endif
+// Cleanup if the module is in temporary place
+    if ($1='cp') and ($#<2) then
+	Studyprobecal('delete',curexp)
+	if (auto='y') then
+	    rm('-f',autodir+'/sampleglobal'):$dum
+	else
+	    rm('-f',curexp+'/sampleglobal'):$dum
+	endif
+    endif
+    return
+endif
+
+// return the value of the parameter
+// do not define $value type, a priori one doesn't
+//   know if the return value is real or string
+//   or doesn't exist.  Use the 2nd return value.
+//   If there is a 2nd return value the 1st return value
+//   is returned
+
+$ok=0
+getmodule('sampleglobal',$1,'',$2):$value,$ok
+if ($ok) then return($value) endif

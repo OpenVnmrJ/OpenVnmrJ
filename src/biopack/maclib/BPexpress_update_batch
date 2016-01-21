@@ -1,0 +1,86 @@
+"macro BPexpress_update_batch"
+
+// macro for updating one or a set of parameter sets for BioPackExpress
+// To be used, after updating, the parameter set(s) in ~/vnmrsys/BPexpress/parlib should
+// be moved to an active parlib  (vnmrsys/parlib, /vnmr/biopack/parlib, or an appdir parlib)
+
+// useage:
+ // BPexpress_update_batch('name')- update selected parameter set 
+ // BPexpress_update_batch('all') - update all parameter sets and create default and  
+ //		                    "inactive" BPexpress-related parameters in all 
+ //                                 parameter sets from $par_source_dir
+
+ // IMPORTANT!!!!!   Edit following two lines to change source and destination directories
+
+$par_source_dir='/vnmr/biopack/parlib/'
+$par_dest_dir=userdir+'/BPexpress/parlib/'
+
+//By default, update only the selected experiment
+
+$update_selected='y'
+if ($# = 1)  then
+ $update_selected=$1
+endif 
+
+$par_upd_cmd='BPexpress_update_parameters'
+
+// List of experiments defined for BioPack Express. Do not use this macro on any other exp.  
+// Format: par_file_name,nuc_obs,nuc_ni,nuc_ni2,nuc_ni3,reset_option
+
+$pars_row_size=6 //number of parameters per line
+
+  $pars='gNhsqc',      'HN','N',   'dummy','dummy','reset',\
+        'gNfhsqc',      'HN','N',   'dummy','dummy','reset',\
+        'gNhsqcTROSY', 'HN','N',   'dummy','dummy','reset',\
+        'gChsqc_BB',    'HC','Cid',   'dummy','dummy','reset',\
+        'gChsqc',      'HC','Cid',   'dummy','dummy','reset',\
+        'ghn_co',    'HN','CO',   'N','dummy','reset',\
+        'ghn_ca',    'HN','CA',   'N','dummy','reset',\
+	'ghn_cacb',  'HN','CACB', 'N','dummy','reset',\
+	'ghn_co_ca', 'HN','CA',   'N','dummy','reset',\
+	'gc_co_nh',  'HN','CC',   'N','dummy','reset',\
+	'ghc_co_nh', 'HN','HCC',  'N','dummy','reset',\
+	'ghn_ca_co', 'HN','CO',   'N','dummy','reset',\
+	'gcbca_co_nh', 'HN','CBCA',    'N','dummy','reset',\
+        'ghbha_co_nh', 'HN','HBHA',    'N','dummy','reset',\
+	'hcch_tocsy', 'HC','HCC',  'Cid','dummy','reset',\
+	'cch_tocsyA', 'HC','CC',   'Cid','dummy','reset',\
+         'gnoesyNhsqc', 'HN','Hnoe',    'N','dummy','reset',\
+	 'gnoesyNfhsqcA', 'HN','Hnoe',    'N','dummy','reset',\
+	 'gtocsyNhsqc', 'HN','Htocsy',  'N','dummy','reset',\
+	 'gnoesyChsqc_BB','HC', 'Hnoe','Cid','dummy','reset',\
+         'gnoesyChsqc',   'HC', 'Hnoe','Cid','dummy','reset',\
+         'C13observe_BB',       'Cobs','dummy',     'dummy','dummy','reset',\
+ 	 'caco',       'COobs','CA',     'IPAP','dummy','reset',\
+         'cbcaco',     'COobs','CACB',   'CA','dummy','reset',\
+ 	 'N15_T1',      'HN','N',   'T1','dummy','reset'
+
+$npars=size('$pars')
+$i=1
+while ($i<$npars) do
+    $parname=$pars[$i]
+    $BPexpress_name=$pars[$i]+'_express'
+    $nuc_obs=$pars[$i+1]
+    $nuc_ni=$pars[$i+2]
+    $nuc_ni2=$pars[$i+3]
+    $nuc_ni3=$pars[$i+4]
+    $reset=$pars[$i+5]
+    $read_cmd='rtp(\'' + $par_source_dir +'/'+ $parname +'\')' 
+    echo($read_cmd)
+    {$read_cmd}
+    $par_cmd=$par_upd_cmd+'(\''+ $nuc_obs +'\',\'' + $nuc_ni +'\',\''+ $nuc_ni2 +'\',\'' + $nuc_ni3 + '\',\'' +$reset +'\')'
+
+    echo($par_cmd)
+    {$par_cmd}
+    layout=$parname 
+    exec('proc=\'ft\' '):$e1
+    exec('proc1=\'ft\' '):$e1
+    flush
+    $write_par_cmd='svp(\''+$par_dest_dir+ '/' + $parname +'\',\'force\')'
+    echo($write_par_cmd)
+    {$write_par_cmd}
+    $i=$i+$pars_row_size
+endwhile
+
+
+ 

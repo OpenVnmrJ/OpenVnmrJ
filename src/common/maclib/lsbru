@@ -1,0 +1,123 @@
+"macro lsbru"
+"lsbru - set lsfid for data from Bruker 'D' series / Avance spectrometers"
+
+" 1995-10-26 - rk, first version, based on information by W.M.Westler,   "
+"		   obtained via Internet                                 "
+" 2002-03-07 - rk, improved version based on newer input by Juan Carlos  "
+"		   Cobas, Universidade de Santiago de Compostela, Spain  "
+" 2006-04-10 - rk, expansion for TopSpin 1.3 data, according to an AMMRL "
+"                  posting by Virginia Miner, Acorn NMR Inc., 2006-03-30 "
+
+$lsfid=0	" default value - leaves lp / lsfid alone "
+exists('grpdly','parameter'):$e_grpdly
+if $e_grpdly then
+  $lsfid=grpdly
+else
+  exists('decim','parameter'):$e_decim
+  if $e_decim then
+    exists('dspfvs','parameter'):$dspfvs
+    if $dspfvs then
+      $dspfvs=dspfvs
+      " check for usable combinations of DECIM and DPSFVS "
+      if ((decim<2) or
+          ((dspfvs=10) and (decim>2048)) or
+          ((dspfvs=11) and (decim>2048)) or
+	  ((dspfvs=12) and (decim>128))) then
+        $dspfvs=0
+      endif
+    endif
+    if $dspfvs=10 then
+      if     decim=2    then $lsfid=44.7500
+      elseif decim=3    then $lsfid=33.5000
+      elseif decim=4    then $lsfid=66.6250
+      elseif decim=6    then $lsfid=59.0833
+      elseif decim=8    then $lsfid=68.5625
+      elseif decim=12   then $lsfid=60.3750
+      elseif decim=16   then $lsfid=69.5313
+      elseif decim=24   then $lsfid=61.0208
+      elseif decim=32   then $lsfid=70.0156
+      elseif decim=48   then $lsfid=61.3438
+      elseif decim=64   then $lsfid=70.2578
+      elseif decim=96   then $lsfid=61.5052
+      elseif decim=128  then $lsfid=70.3789
+      elseif decim=192  then $lsfid=61.5859
+      elseif decim=256  then $lsfid=70.4395
+      elseif decim=384  then $lsfid=61.6263
+      elseif decim=512  then $lsfid=70.4697
+      elseif decim=768  then $lsfid=61.6465
+      elseif decim=1024 then $lsfid=70.4849
+      elseif decim=1536 then $lsfid=61.6566
+      elseif decim=2048 then $lsfid=70.4924
+      endif
+    elseif $dspfvs=11 then
+      if     decim=2    then $lsfid=46.0000
+      elseif decim=3    then $lsfid=36.5000
+      elseif decim=4    then $lsfid=48.0000
+      elseif decim=6    then $lsfid=50.1667
+      elseif decim=8    then $lsfid=53.2500
+      elseif decim=12   then $lsfid=69.5000
+      elseif decim=16   then $lsfid=72.2500
+      elseif decim=24   then $lsfid=70.1667
+      elseif decim=32   then $lsfid=72.7500
+      elseif decim=48   then $lsfid=70.5000
+      elseif decim=64   then $lsfid=73.0000
+      elseif decim=96   then $lsfid=70.6667
+      elseif decim=128  then $lsfid=72.5000
+      elseif decim=192  then $lsfid=71.3333
+      elseif decim=256  then $lsfid=72.2500
+      elseif decim=384  then $lsfid=71.6667
+      elseif decim=512  then $lsfid=72.1250
+      elseif decim=768  then $lsfid=71.8333
+      elseif decim=1024 then $lsfid=72.0625
+      elseif decim=1536 then $lsfid=71.9167
+      elseif decim=2048 then $lsfid=72.0313
+      endif
+    elseif $dspfvs=12 then
+      if     decim=2   then $lsfid=46.311
+      elseif decim=3   then $lsfid=36.530
+      elseif decim=4   then $lsfid=47.870
+      elseif decim=6   then $lsfid=50.229
+      elseif decim=8   then $lsfid=53.289
+      elseif decim=12  then $lsfid=69.551
+      elseif decim=16  then $lsfid=71.600
+      elseif decim=24  then $lsfid=70.184
+      elseif decim=32  then $lsfid=72.138
+      elseif decim=48  then $lsfid=70.528
+      elseif decim=64  then $lsfid=72.348
+      elseif decim=96  then $lsfid=70.700
+      elseif decim=128 then $lsfid=72.524
+      endif
+    else
+      " +---------------------------------------------------+ "
+      " | No lsfid value available from DECIM/DPSFVS table; | "
+      " | using previous / older algorithm (W.W.Westler)    | "
+      " +---------------------------------------------------+ "
+      if decim=1 then
+        exists('dw','parameter'):$e_dw
+        if $e_dw then
+          if dw=5 then $lsfid=46 endif
+        endif
+      elseif decim=2   then $lsfid=48
+      elseif decim=3   then $lsfid=32
+      elseif decim=4   then $lsfid=67
+      elseif decim=6   then $lsfid=59
+      elseif decim=8   then $lsfid=69
+      elseif decim=12  then $lsfid=60
+      elseif decim=16  then $lsfid=70
+      elseif decim=24  then $lsfid=61
+      elseif decim=32  then $lsfid=70
+      elseif decim=48  then $lsfid=61
+      elseif decim=64  then $lsfid=70
+      elseif decim=96  then $lsfid=61
+      elseif decim=128 then $lsfid=70
+      elseif decim=192 then $lsfid=61
+      elseif decim=256 then $lsfid=70
+      endif
+    endif
+  endif
+endif
+if $lsfid<>0 then
+  setlimit('lp',36000,-36000,0)
+  lp=$lsfid*360
+  lsfid=0
+endif

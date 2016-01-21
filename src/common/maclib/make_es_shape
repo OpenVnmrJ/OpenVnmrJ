@@ -1,0 +1,25 @@
+"macro make_es_shape"
+"es_mkesshape - macro to update the water refocussing shape       "
+"                      for dpfgse water suppression sequences         "
+"   the macro takes the current shapename (esshape) and             "
+"   pulsewidth (essoftpw) and receates the shape and updates the        "
+"   corresponding power level (essoftpwr)                               "
+"   for the shape type a rectangular shape is set by the macro        "
+
+if (essoftpw<500)or(essoftpw>5000) then
+  write('error','Please make sure 500 < essoftpw < 5000 usec!')
+endif
+getparam('tpwr_cf',tn):tpwr_cf
+$essoftpw='' $essoftpwr='' $essoftpwban=''
+ format(essoftpw*1e-6,6,6):$essoftpw 
+ format(essoftpw,1,1):$essoftpwban
+$wave='square '+$essoftpw+' 0 0.5 0 180'
+opx(esshape)
+setwave($wave)
+cpx(pw*tpwr_cf, tpwr):$dum
+ pbox_pw(esshape+'.RF'):$essoftpw1 essoftpw=$essoftpw1
+ pbox_pwr(esshape+'.RF'):$essoftpwr1 essoftpwr=$essoftpwr1
+ format(essoftpwr,0,0):$essoftpwr
+if ($## < 1) then
+    write('line3','esshape = %s, essoftpw = %s us, essoftpwr = %s dB (can optimize essoftpwrf)',esshape,$essoftpwban,$essoftpwr)
+endif

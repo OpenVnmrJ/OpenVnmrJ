@@ -1,0 +1,49 @@
+"macro rna_auto1d7"
+text('N15 Gradient HMQC using Jump-Return (H2O)')
+atext('Jump-Return Delay adjusted for NH-type')
+ph cdc ssfilter=100 wft f full clear(2)
+setref wc=.7*wc  lp=0 vp=0 vo=100 ho=0 
+select(1) BPaph0
+sp=7p wp=11p
+peak:$int if $int<0 then rp=rp+180 endif
+ vsadj(80)
+f pl pscale
+dssn(1,1)
+select(2) BPaph0
+sp=4p wp=6p
+peak:$int if $int<0 then rp=rp-180 endif
+vp=100
+vsadj(80)
+f pl pscale
+dssn(2,2)
+vp=0 pap dscale
+write('graphics',80,vp+10,'Imino NHs')
+write('graphics',80,vp+10+vo,'Amino NHs Optimized')
+write('plotter',80,vp+10,'Imino NHs')
+write('plotter',80,vp+10+vo,'Amino NHs Optimized')
+BPpage
+BPsvf(userdir+'/AutoRNA_1D/rna_gNhmqc_1Ds')
+$d1=d1 $nt=nt 
+$gain=gain $tof=tof $temp=temp 
+
+rna_gChmqc
+
+gain=$gain
+d1=$d1 nt=$nt temp=$temp  ss=4
+ni=0  phase=1  dm2='nnn' 
+
+dm='nny' ribose='y' aromatic='n' BPsetwurstparams
+$dmfribose=dmf $dseqribose=dseq $dpwrribose=dpwr
+dm='nny' ribose='n' aromatic='y' BPsetwurstparams
+$dmfarom=dmf $dseqarom=dseq $dpwrarom=dpwr
+wnt='wft setref select(1) vsadj(40) f full dssa'
+wexp='rna_auto1d8'
+  ribose='y','n'
+aromatic='n','y'
+dmf=$dmfribose,$dmfarom
+dpwr=$dpwrribose,$dpwrarom
+dseq='wurst80','wurst40'
+
+array='(ribose,aromatic,dmf,dpwr,dseq)'
+au
+

@@ -1,0 +1,43 @@
+"macro getLP1"
+"get Linear Prediction parameters - used to set menu choice"
+"inverse of setLP1"
+
+$ret='none'
+exists('proc1','parameter'):$ep
+exists('lpopt1','parameter'):$elp
+if ($ep>0.5 and $elp>0.5) then
+  if (proc1='lp' and lpopt1='f') then
+
+    $elsperinc = trunc((arraydim/ni)+.1)
+    exists('celem','parameter'):$excelem
+    if ($excelem) then
+      if celem < 16 then $celem = arraydim else $celem = celem endif
+    else
+      $celem = arraydim
+    endif
+    $curlenth = trunc($celem/$elsperinc)
+    $xtndlenth = 4*$curlenth
+
+    $strtext1 = $curlenth+1
+    $lpnupts1 = $curlenth  
+    $strtlp1 = $curlenth
+    $lpfilt1 = 8
+
+    if not (strtext1=$strtext1 and lpnupts1=$lpnupts1 and strtlp1=$strtlp1 and lpfilt1=$lpfilt1) then
+      $ret=''  "no match"
+    else
+"     $lpext1 = $xtndlenth - $curlenth "
+      $xxtnd = lpext1 + $curlenth
+"     if ($xxtnd = $xtndlenth) then $ret='def' else"
+      if ($xxtnd = 1024) then
+        $ret='1024'
+      else
+        $val = $xxtnd / ni
+        $s='' format($val,1,0):$s
+        $ret = $s+'*ni'
+      endif
+    endif
+
+  endif
+endif
+return($ret)

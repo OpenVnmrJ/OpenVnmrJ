@@ -1,0 +1,456 @@
+"macro import2cp"
+if ($# < 1) then $1='init' endif
+//isnewexp:$newexp
+//if ($newexp) then return endif
+
+expactive:$active
+if ($active>0) then
+   write('error','Current workspace has active acquisition')
+   return
+endif
+
+exists('import2cppar','parameter','global'):$parex
+if ($parex=0) then
+   create('import2cppar','string','global')
+endif
+setprotect('import2cppar','on',256,'global')
+
+$cdir=userdir+'/persistence/'+$0
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir($cdir) endif
+
+$fidlist=$cdir+'/imp2cp_ALLfids'
+$selected=$cdir+'/imp2cp_fids'
+$fidmenu=$cdir+'/imp2cp_fidmenu'
+$sampletags=$cdir+'/imp2cp_sampletags'
+$exportdir=$cdir+'/imp2cp_exportdir'
+$importdir=$cdir+'/imp2cp_importdir'
+$maxexport=10
+$maximport=10
+is_cpfid:$iscp
+
+IF ($1='init') OR ($1='refresh') OR ($1='updatepopup') THEN
+   if ($iscp=0) then
+	setadirtmplt
+	setsvftmplt
+	setsdirtmplt
+	setsamplename
+   endif
+
+   shell('touch '+$exportdir):$dum
+   shell('touch '+$importdir):$dum
+
+   $basename='' $dirname=''
+   substr(file,'dirname'):$dirname,$basename,$ext
+//   shell('basename '+file+' .fid'):$basename
+//   shell('dirname '+file):$dirname
+   if ($dirname<>'.') then
+   	import2cppar[1]=$dirname+'/'+$basename
+   	import2cppar[2]=$dirname
+   else
+	import2cppar[1]=$basename
+	import2cppar[2]=''
+   endif
+   if ($iscp) then
+      import2cppar[3]='0'
+   else
+      import2cppar[3]='1'
+   endif
+
+   import2cppar[4]='selfid'
+   import2cppar[5]=''
+   if ($1<>'updatepopup') then
+   	write('reset',$selected)
+   	import2cppar[6]='y'
+   	import2cppar[7]=''
+   	import2cppar[8]='' 
+	import2cppar[9]='' 
+	import2cppar[10]=''
+   	import2cppar[11]=svfdir
+   	import2cppar[12]=sampdirtmplt
+   	import2cppar[13]=svfname
+   endif
+   import2cppar[14]=import2cppar[2]
+   if ($iscp) then
+	import2cppar[15]='n'
+   else
+	import2cppar[15]='y'
+   endif
+   shell('(cat '+$selected+' | wc -l)'):$sellines
+   format($sellines,0,0):import2cppar[16]
+
+   if ($1='init') and ($iscp=0) then
+        import2cp('add',import2cppar[1])
+   endif
+   import2cp('updatedir',$dirname)
+   import2cp('populatefid',$dirname)
+   import2cp('examplename')
+   import2cp('sampletags')
+   if ($iscp) then
+        import2cp('updatedir',$dirname,'import')
+   endif
+   shell('(cat '+$importdir+' | wc -l)'):$implines
+   if ($implines<1) then
+        write('file',$importdir,'"" ""')
+   endif
+   shell('(cat '+$exportdir+' | wc -l)'):$explines
+   if ($explines<1) then
+        write('file',$exportdir,'"" ""')
+   endif
+   
+   vnmrjcmd('pnew','import2cppar')
+   if ($1='init') then
+  	vnmrjcmd('popup','mode:modeless','file:import2cp.xml','rebuild:yes','pnewupdate:yes','title:Convert Pre-VnmrJ 3.0 Data')
+   endif
+
+ELSEIF ($1='updatedir') THEN
+
+   if ($# < 2) then return endif
+   if ($# < 3) then $3='export' endif
+/*
+   shell('dirname '+file):$curdirname
+   if ($2=$curdirname) then
+	import2cp('updatepopup')
+	return
+   endif
+*/
+   is_cpsample($2):$cpsample
+   if ($3='import') then 
+	$dirfile=$importdir $linetot=$maximport 
+   else 
+	$dirfile=$exportdir $linetot=$maxexport
+   endif
+
+   shell('(cat '+$dirfile+' | grep -c \'"'+$2+'"\')'):$isin
+   if ($cpsample) and ($3<>'import') then $isin=1 endif
+   if ($isin=0) then
+        shell('(cat '+$dirfile+' | wc -l)'):$length
+        if ($length<$linetot) then $linetot=$length endif
+        $head='' format($linetot-1,0,0):$head
+	write('reset',$dirfile+'1')
+	if ($linetot>1) then
+        	shell('(head -n '+$head+' '+$dirfile+' > '+$dirfile+'1)'):$dum
+	endif
+	write('file',$dirfile+'1','"%s" "%s"',$2,$2)
+        write('reset',$dirfile)
+        shell('(cat '+$dirfile+'1 >> '+$dirfile+')'):$dum
+        write('file',$dirfile,'"" ""')
+	shell('rm -f '+$dirfile+'1'):$dum
+   endif
+   vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='sampletags') THEN
+
+    if ($# < 2) then $2='' endif
+        $info4=$cdir+'/tmpfile'
+    if ($2<>'') then
+	$sampleglobal=$2+'/dirinfo/macdir/sampleglobal'
+	exists($sampleglobal,'file'):$sampglobalex
+    else
+	$sampglobalex=0
+    endif
+    if ($sampglobalex=0) then
+        $sampleglobal=$cdir+'/sampleglobal'
+        savesampglobal($cdir)
+    endif
+        write('reset',$info4)
+        shell('(diffparams '+$sampleglobal+' '+$info4+' | sed -e \'s|\\tundefined||g\'  > '+$sampletags+')'):$dum
+        shell('(sort -k 1 -u '+$sampletags+' -o '+$info4+')'):$dum
+        shell('mv '+$info4+' '+$sampletags):$dum
+    if ($sampleglobal=$cdir+'/sampleglobal') then
+        shell('rm -f '+$sampleglobal):$dum
+    endif
+        "***************************************************"
+        "Some parameters are unique and are not"
+        " typically entered by the operator"
+
+        $sppar='adirtmplt','sdirtmplt','svftmplt','nameprefix','text_string','adir2tmplt'
+        $sppar=$sppar,'sample','archivedir','studyowner','pltopt','emessage','userplotter'
+        $sptotal=size('$sppar')
+        $i=1
+        repeat
+           shell('(cat '+$sampletags+' | grep -vw \'^'+$sppar[$i]+'\' > '+$info4+')'):$dum
+           shell('mv '+$info4+' '+$sampletags):$dum
+           $i=$i+1
+        until $i > $sptotal
+        "***************************************************"
+        shell('rm -f '+$info4):$dum
+   if ($sampglobalex) then
+	import2cppar[15]='n'
+	import2cppar[13]=svftmplt
+   else
+	import2cppar[15]='y'
+	import2cppar[13]=svfname
+   endif
+	vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='popup') THEN
+   $list='' $s1=''
+   readfile($sampletags,'$list','$s1','','local')
+   writeparam($cdir+'/'+$0+'sampleglobal',$list)
+   $arg2='enter'
+   if (import2cppar[6]='n') then
+	exists(import2cppar[7]+'/dirinfo/macdir/sampleglobal','file'):$sampex
+	if ($sampex) then 
+	    getsampglobal(import2cppar[7]+'/dirinfo/macdir')
+	    $arg2='display' 
+	endif
+   endif
+   if ($arg2='enter') then 
+	$ok='import2cp(`samptagsave`)'
+   else
+	$ok='import2cp(`samptagquit`)'
+   endif
+   $cancel='import2cp(`samptagquit`)'
+   $ret=1
+   parampopup($list,$arg2,'modal',$ok,$cancel):$ret
+   if ($ret=0) then
+	import2cp('samptagquit')
+   endif
+
+ELSEIF ($1='samptagquit') then
+	fread($cdir+'/'+$0+'sampleglobal')
+	shell('rm -f '+$cdir+'/'+$0+'sampleglobal'):$dum
+	vnmrjcmd('pnew','import2cppar')
+ELSEIF ($1='samptagsave') then
+	import2cp('sampletags')
+	import2cp('examplename')
+	import2cp('samptagquit')
+
+ELSEIF ($1='populatefid') THEN
+   if ($# < 2) then $2=import2cppar[14] endif
+   if ($2<>'') then
+      exists($2,'directory'):$direx
+      if ($direx=0) then return endif
+   endif
+   if ($2<>'') then
+	exists($2+'/dirinfo/macdir','directory'):$iscpsample
+   else
+	$iscpsample=1
+   endif
+   write('reset',$fidmenu)
+   if ($iscpsample=0) then
+   	$tmpfile=$cdir+'/importtmp'
+   	write('reset',$tmpfile)
+	shell('(ls -1d '+$2+'/*.fid > '+$tmpfile+')'):$dum
+   	$s1='' $s2=''
+   	readfile($tmpfile,'$s1','$s2','','local'):$tot
+   	shell('rm -f '+$tmpfile):$dum
+     if ($tot) then
+      	$i=1
+      	repeat
+          $sx='' $sy=''
+          strstr($s1[$i],'.fid'):$ret,$sx,$sy
+          if ($ret=0) or ($sy<>'') then
+             $sx=$s1[$i]
+          endif
+	  shell('basename '+$sx):$sy
+          write('file',$fidmenu,'"%s" "%s"',$sy,$sx)
+          $i=$i+1
+        until $i > $tot
+     endif
+   endif
+
+   write('file',$fidmenu,'"" ""')
+   vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='examplename') THEN
+   if ($iscp) then
+	shell('dirname '+import2cppar[2]):import2cppar[8]
+	shell('basename '+import2cppar[2]):import2cppar[9]
+	shell('basename '+import2cppar[1]):import2cppar[10]
+	return
+   endif
+   chkname(import2cppar[11],'alnum-/'):$sdum,import2cppar[11]
+   chkname(import2cppar[12],'alnum-'):$sdum,import2cppar[12]
+   chkname(import2cppar[13],'alnum-'):$sdum,import2cppar[13]
+
+   $archsamp='' $fidname=''
+   if (import2cppar[6]='y') then
+	SvfnameCP(import2cppar[11]+'/'+import2cppar[12],''):$archsamp
+   else
+	$archsamp=import2cppar[7]
+	savesampglobal('cp')
+	$md=$archsamp+'/dirinfo/macdir'
+	exists($md,'directory'):$mdex
+	if ($mdex) then
+		getsampglobal($md)
+	endif
+   endif
+   if ($archsamp='') then $archsamp='/' endif
+   shell('dirname '+$archsamp):import2cppar[8]
+   shell('basename '+$archsamp):import2cppar[9]
+   SvfnameCP($archsamp+'/'+import2cppar[13],'','.fid'):$fidname
+   shell('basename '+$fidname):$fidname
+   import2cppar[10]=$fidname
+   getsampglobal('cp')
+
+ELSEIF ($1='add') or ($1='remove') THEN
+   if ($# < 2) then $2=import2cppar[5] endif
+   import2cppar[5]=''
+   if ($2='') then return endif
+//   if ($2=import2cppar[2]) then return endif
+   $isin=0
+   shell('(cat '+$selected+' | grep -wc '+$2+')'):$isin
+   if ($isin=0) and ($1='add') then
+	write('file',$selected,'%s',$2)
+   endif
+   if ($isin>0) and ($1='remove') then
+	shell('(cat '+$selected+' | grep -vw '+$2+' > '+$selected+'2)'):$dum
+	shell('mv '+$selected+'2 '+$selected)
+   endif
+   import2cppar[5]=''
+   shell('(cat '+$selected+' | wc -l)'):$sellines
+   format($sellines,0,0):import2cppar[16]
+   vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='addall') THEN
+//   if (import2cppar[14]=import2cppar[2]) then
+//   	write('reset',$selected)
+//   endif
+   shell('(ls -1d '+import2cppar[14]+'/*.fid | sed -e \'s|.fid||g\' >> '+$selected+')'):$dum
+//   shell('(cat '+$selected+' | sort -u -k 1 | grep -vw '+import2cppar[1]+' > '+$selected+'1)'):$dum
+   shell('(cat '+$selected+' | grep -vw '+import2cppar[1]+' > '+$selected+'1)'):$dum
+   write('reset',$selected)
+   write('file',$selected,'%s',import2cppar[1])
+   shell('(cat '+$selected+'1 >> '+$selected+')'):$dum
+   shell('rm -f '+$selected+'1'):$dum
+   
+   import2cppar[5]=''
+   shell('(cat '+$selected+' | wc -l)'):$sellines
+   format($sellines,0,0):import2cppar[16]
+   vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='removeall') THEN
+   write('reset',$selected)
+   write('file',$selected,'%s',import2cppar[1])
+   import2cppar[5]=''
+   import2cppar[16]='0'
+   vnmrjcmd('pnew','import2cppar')
+
+ELSEIF ($1='import') THEN
+   $list='' $sX=''
+   if import2cppar[4]='thisfid' then
+	$list=import2cppar[1]
+//   elseif (import2cppar[4]='allfid') then
+//	readfile($fidlist,'$list','$sX','','local')
+   elseif (import2cppar[4]='selfid') then
+//	shell('(cat '+$selected+' | sort -u > '+$selected+'1)'):$dum
+//	shell('mv '+$selected+'1 '+$selected):$dum
+	readfile($selected,'$list','$sX','','local')
+   endif
+   if ($list[1]='') then return endif
+   import2cp('importIT',$list)
+
+ELSEIF ($1='importIT') THEN
+
+   if ($# < 2) then return endif
+   $infile=$2
+   if ($infile[1]='') then return endif
+
+   savesampglobal('cp')
+   if (import2cppar[6]='y') then
+   	adirtmplt=import2cppar[11]
+   	sdirtmplt=import2cppar[12]
+   endif
+   	svftmplt=import2cppar[13]
+
+   $list=''
+   checktemplates('current','nopopup'):$return,$list
+   if ($return=0) then 
+	if ($list<>'') then
+	   $ok='import2cp(`sampletag`)'
+	   $cancel='getsampglobal(`cp`)'
+	   parampopup($list,'enter','modal',$ok,$cancel)
+	else
+	    getsampglobal('cp') 
+        endif
+	vnmrjcmd('pnew','import2cppar')
+	return
+   endif
+
+   $archivedir=archivedir $sample=sample
+   archivedir='' sample=''
+   module('add','studypar','basic')
+   savestudypar(curexp)
+   if (import2cppar[6]='y') then
+	Automkdir
+	savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+	$studyparex=0
+   else
+	shell('dirname '+import2cppar[7]):archivedir
+	shell('basename '+import2cppar[7]):sample
+	exists(archivedir+'/'+sample,'directory'):$direx
+	if ($direx=0) then
+	   shell('mkdir -p '+archivedir+'/'+sample):$dum
+	   wrsampdirchron(archivedir+'/'+sample)
+	endif
+	Autockdir(archivedir+'/'+sample)
+	exists(archivedir+'/'+sample+'/studypar','file'):$studyparex
+   endif
+   $md=archivedir+'/'+sample+'/dirinfo/macdir'
+   exists($md,'directory'):$OK
+   if ($OK=0) then
+	write('error','Unable create %s/%s',archivedir,sample)
+	getsampglobal('cp')
+	getstudypar(curexp)
+	shell('rm -f '+curexp+'/studypar'):$dum
+	return
+   elseif (import2cppar[6]='n') then
+/*
+	getsampglobal($md,'adirtmplt'):adirtmplt
+	getsampglobal($md,'sdirtmplt'):sdirtmplt
+*/
+	$svftmplt=svftmplt $archivedir=archivedir $sample=sample
+	getsampglobal($md)
+	svftmplt=$svftmplt archivedir=$archivedir sample=$sample
+   endif
+   if ($studyparex=0) then
+      getstudypar(curexp)
+      if (studyowner='') then studyowner=operator_ endif
+      studyid_=sample
+      savestudypar(archivedir+'/'+sample)
+   endif
+   shell('rm -f '+curexp+'/studypar')
+
+   $indir=archivedir+'/'+sample
+   import2cp('updatedir',$indir,'import')
+
+   module('list','ChemPack'):$list
+   module('list','userChemPack'):$list2
+   $list=$list+' '+$list2
+   savesampglobal('cp')
+   writeparam(curexp+'/chempackpars',$list)
+   $newfile=''
+
+   $total=size('$infile')
+   $i=1
+   repeat
+	   rt($infile[$i])
+        is_cpfid:$cpfid
+	if ($cpfid=0) then
+   	   writeparam(curexp+'/chempackpars',$list)
+	   fread(curexp+'/chempackpars','processed')
+	   shell('rm -f '+curexp+'/chempackpars'):$dum
+	   fread(curexp+'/sampleglobal')
+	   fread(curexp+'/sampleglobal','processed')
+	   wds='' wstart=''
+	   $wqlist=''
+	   module('list','walkupQpars'):$wqlist
+	   $wqlist='chreqexp '+$wqlist
+	   rmpar($wqlist)
+	   rmpar($wqlist,'processed')
+	   exists(seqfil,'seqlib'):$seqex
+	   if ($seqex) then abortoff EXPtime:ACQtime aborton endif
+	   setvalue('ACQtime',ACQtime,'processed')
+	   savefid
+	endif
+	   $newfile[$i]=file
+	$i=$i+1
+   until $i > $total
+   shell('rm -f '+curexp+'/sampleglobal'):$dum
+
+   dndfid($newfile[1])
+   import2cp('refresh')
+
+ENDIF

@@ -1,0 +1,513 @@
+"macro gxyzmapshims"
+" gxyzmapshims								"
+" GAM 28v03								"
+" GAM 11vi03 look for data to merge in pwd before in shimmaps		"
+
+" gxyzmapshims :  set up initial field map experiment			"
+" gxyzmapshims('setup') :  ditto					"
+" gxyzmapshims('start') :  run initial field map experiment;  		"
+"                          each shim in turn is then mapped with	"
+" gxyzmapshims('map')  						"
+" gxyzmapshims('merge') :  merge individual shim maps into arrayed fid 	"
+" gxyzmapshims('process) :  produce shim maps from arrayed fid 		"
+"gxyzmapshims('invert',i) : invert the sign of the ith mapstep"
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"gxyzmapshims :  without argument, set up 3D shim mapping & map 	"
+"               field;  with argument 'map', map shimno'th shim	"
+"GAM 6i03 from GMset3Dshimexp : 11 x 2002 from PBC original 	"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+$function='error'
+if $#=0 then
+        $function='setup'
+else
+        if $1='start' then $function='start' endif
+        if $1='setup' then $function='setup' endif
+        if $1='map' then $function='map' endif
+        if $1='merge' then $function='merge' endif
+        if $1='process' then $function='process' endif
+        if $1='invert' then $function='invert' endif
+endif
+
+if $function='error' then
+        write('line3','invalid argument supplied to gxyzmapshims')
+        abort
+endif
+
+$addsubexp=5
+exists('addsubexp','parameter','global'):$addsubex
+if ($addsubex) then $addsubexp=addsubexp endif
+shimprotect='y'
+werr=''
+
+"***********************************************************************"
+if $function='setup' then
+gxyzsetlocalpars
+jexp:$expno
+if ($expno=$addsubexp) then
+	newexp:$newexp
+	addsubexp=$newexp
+        //write('line3','Cannot use addsubexp for this - needed for assembling new file')
+        //abort
+endif
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"save shims, check parameters and set up first field map	"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$str=''
+$shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+
+clear
+mapname=mapname
+readallshims
+$startshims='tmp'+mapname
+svs($startshims,'overwrite'):$dum
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"check important parameters"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+exists('shimno','parameter'):$exists
+if ($exists = 0) then
+	create('shimno','real')
+endif
+shimno=0
+gxyzmapsys('check')
+gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"*** check and store tau values ***"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$elem[1]=0 $elem[2]=0
+$chktau = size('tau')
+if $chktau <> 2 then 
+   write('line3','Please array tau before using gxyzmapshims')
+   abort
+else
+   $elem[1] = tau[1] $elem[2] = tau[2]
+   tau=0
+endif
+calcdim
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"*** setup shimmap directory ***"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+exists($shimmapdir,'directory'):$exists
+if ($exists = 1) then
+   $yn=''
+   input('shimmap already exists, overwrite? (y/n)'):$yn
+   if ($yn = 'y') then
+      shell('rm -r '+$shimmapdir)
+   else
+      write('line3','setup aborted')
+      abort
+   endif
+endif
+shell('mkdir '+$shimmapdir)
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"*** check that there are no other arrays ***"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$dim=ni*ni2
+if arraydim <> $dim then
+   write('line3','Please set XY matrix first!')
+   tau[1]=$elem[1] tau[2]=$elem[2]
+   calcdim
+   abort
+endif
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"*** reset tau array ***"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+tau[1]=$elem[1] tau[2]=$elem[2]
+calcdim
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+" Check shims to be mapped do not go out of range"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+$range=32767
+if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 endif
+readallshims
+
+$j=0
+repeat
+  $j=$j+1
+  "Instead, let us tend ALL shims to lower values"
+  if ((({$shimtomap[$j]} > 0) and ($change[$j] > 0)) or (({$shimtomap[$j]} < 0) and ($change[$j] < 0))) then
+     //$change[$j]=-1*$change[$j]
+     gxyzmapshims('invert',$j)
+  endif
+until $j >= $nmapshims
+
+write('alpha','')
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"set up storage of unperturbed field map, and next expt	"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+$file=$shimmapdir+'/'+mapname
+format(shimno,1,0):$str
+$file=$file+$str
+if (auto<>'y') then wnt='wft(1,celem) dsshall gxyztext(`smapping`)' else wnt='gxyztext(`smapping`)' endif
+pad=15
+if ($# > 1.5) then 
+	if $2='auto' then wexp='svf(\''+$file+'\') gxyzmapshims(`map`,`auto`)' endif
+else
+	wexp='svf(\''+$file+'\') gxyzmapshims(`map`)'
+endif
+
+return
+endif
+
+"***********************************************************************"
+if $function='start' then
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"set up first field map and start running		"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+if ($# > 1.5) then
+	if ($2='auto') then gxyzmapshims('setup','auto') endif
+else
+	gxyzmapshims('setup')
+endif
+clear(2)
+gxyztext('smapping')
+gxyz_au
+return
+endif
+
+"***********************************************************************"
+if ($function='map') then
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"acquire next shim map 					"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$str=''
+$shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+$file=''
+$file=$shimmapdir+'/'+mapname
+	shimno=shimno+1
+	gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+	$startshims='tmp'+mapname
+	rts($startshims):$dum
+	if (shimno<=$nmapshims) then 
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"change value of shim number shimno and acquire map	"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+		{$shimtomap[shimno]} = {$shimtomap[shimno]} + $change[shimno]
+		load='y'
+
+		$file=$shimmapdir+'/'+mapname
+		format(shimno,1,0):$str
+		$file=$file+$str
+
+		if ($# > 1.5) then 
+			if $2='auto' then wexp='svf(\''+$file+'\') gxyzmapshims(`map`,`auto`)' endif
+		else wexp='svf(\''+$file+'\') gxyzmapshims(\'map\')'
+		endif
+
+		gxyz_au
+
+	else
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+" last map has been acquired, reset original shims,	"
+" merge fids and process shim maps			"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+	"load='y' su load='n'"
+	setallshims
+	gxyzmapshims('merge')
+	if ($# > 1.5) then 
+		if ($2 = 'auto') then gxyzmapshims('process','y','auto') endif
+	else	
+		gxyzmapshims('process','y')
+	endif
+	endif
+return
+endif
+
+"***********************************************************************"
+if $function='merge' then
+
+" from GMcombine - recombine individual shim maps into single fid for processing"
+" NB:  lsfrq has to be turned off before using add('new'), otherwise it gets "
+" applied twice;  amongst other things, this can make a mess of dc correction "
+
+$shimmapdir = ''
+$shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+$str=''
+pwd:$pwd
+
+write('line3','Combining individual shim-maps into single dataset, please wait...')
+
+"~~~~~~~~~~~~~~~~~"
+"check parameters &c"
+"~~~~~~~~~~~~~~~~~"
+$base=$pwd+'/'
+$file=$base+mapname+'0'
+clear echo($file)
+exists($file+'.fid','directory'):$e
+echo($e)
+if ($e=0) then
+$base=$shimmapdir+'/'
+$file=$base+mapname+'0'
+endif
+exists($file+'.fid','directory'):$e
+echo($file)
+if ($e=0) then
+write('error','Experimental data not found in present directory or in shimmaps')
+abort
+endif
+clear echo($file)
+rt($file)
+exists('shimno','parameter'):$exists
+if ($exists = 0) then
+	write('line3','Parameter shimno does not exist')
+	abort
+endif
+shimno=0
+jexp:$expno
+if ($expno=$addsubexp) then
+	newexp:$newexp
+	addsubexp=$newexp
+	//write('line3','Cannot use addsub exp for this - needed for assembling new file')
+	//abort
+endif
+
+gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+$nfids=2*ni*ni2*($nmapshims+1)
+$ni=ni $ni2=ni2
+$lsfrq=lsfrq
+lsfrq=0
+
+"Create right number of zeroed fids in addsub exp"
+
+clradd
+df(1)
+$i=1
+repeat
+	add('new')
+	sub('trace',$i)
+	$i=$i+1
+until $i>$nfids
+
+"Copy fids into correct positions in addsub exp"
+
+$i=0
+repeat
+	$file=$base+mapname
+	format($i,1,0):$str
+	$file=$file+$str
+	"echo($file)"
+	rt($file)
+	ni=$ni ni2=$ni2
+	df(1)
+	lsfrq=0
+	$k=1
+	$l=2*shimno+1
+	$j=1
+	repeat
+		select($k)
+		lsfrq=0
+		add('trace',$l)
+		$k=$k+1
+		$l=$l+1
+		select($k)
+		lsfrq=0
+		add('trace',$l)
+		select($k)
+		$k=$k+1
+		$l=$l+2*$nmapshims+1
+		$j=$j+1
+	until $j>(ni*ni2)
+	$i=$i+1
+until $i> $nmapshims 
+
+$addsubexp=5
+exists('addsubexp','parameter','global'):$addsubex
+if ($addsubex) then $addsubexp=addsubexp endif
+mf($addsubexp,$expno)
+
+ni=$ni
+ni2=$ni2
+
+"~~~~~~~~~~~~~~~~~"
+"setup shim arrays"
+"~~~~~~~~~~~~~~~~~"
+
+$j=0
+repeat
+  $j=$j+1
+  $shimval[$j] = {$shimtomap[$j]} "*** store shim values ***"
+until $j >= $nmapshims
+
+$i=0
+repeat
+  $j=0
+  repeat
+    $j=$j+1
+    if $i=$j then
+       {$shimtomap[$j]}[$i+1] = $shimval[$j] + $change[$j]
+    else
+       {$shimtomap[$j]}[$i+1] = $shimval[$j]
+    endif
+  until $j = $nmapshims
+  $i=$i+1
+until $i = $nmapshims + 1
+ 
+"~~~~~~~~~~~~~~~~~~~~~~~~~"
+"calculate array parameter"
+"~~~~~~~~~~~~~~~~~~~~~~~~~"
+$arraystr='('
+$j=0
+repeat
+  $j=$j+1
+  if $j = $nmapshims then
+     $arraystr = $arraystr + $shimtomap[$j] + ')'
+  else
+     $arraystr = $arraystr + $shimtomap[$j] + ','
+  endif
+until $j >= $nmapshims
+$arraystr = $arraystr + ',tau'
+array=$arraystr
+calcdim
+lsfrq=$lsfrq
+groupcopy('current','processed','acquisition')
+atext('Combined from individual shim mapping experiments')
+$file=$shimmapdir+'/'+mapname
+shell('sleep 2'):$dum
+svf($file)
+shell('sleep 2'):$dum
+//jexp($expno)
+//mf($addsubexp,$expno)
+if auto<>'y' then wft dsshall endif
+clear(2) dg
+endif
+
+"***********************************************************************"
+if $function='process' then
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+" from GMproc3Dshimexp : 9 x 2002 GAM from PBC orig "
+" process 3D shim mapping experiment           "
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"check important parameters"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~"
+clear
+wft
+$origdir=''
+pwd:$origdir
+
+gxyzmapsys('check')
+gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+
+"*** setup shimmap directory ***"
+$shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+exists($shimmapdir,'directory'):$exists
+if $exists = 1 then
+   $yn=''
+   if ($# > 1.5) then
+	if ($2 = 'y') then $yn='y' endif
+   else input('shimmap already exists, overwrite? (y/n)'):$yn
+   endif
+   if ($yn = 'y') then
+      cd($shimmapdir):$dum
+      shell('rm -r '+$shimmapdir+'/shimmap*'):$dum
+      "Remove mapname.fid as well, to avoid any system prompts"
+      "At least individual shimmap FIDs should remain!"
+      shell('rm -r '+$shimmapdir+'/'+mapname+'.fid'):$dum 
+   else
+      write('line3','processing aborted')
+      abort
+   endif
+else
+   shell('mkdir '+$shimmapdir)
+endif
+   cd($shimmapdir):$dum
+   svf(mapname)
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"use gxyzmap to output shimmap data"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+write('alpha','Processing shimmaps.....')
+banner('Processing shimmaps.....')
+
+"*** execute gxyzmap command ***"
+$comstr = 'gxyzmap(\'shimmaps\')'
+exec($comstr)
+
+
+"~~~~~~~~~~~~~"
+"unarray shims"
+"~~~~~~~~~~~~~"
+$i=0
+repeat
+  $i=$i+1
+  {$shimtomap[$i]} = {$shimtomap[$i]}[1]
+until $i >= $nmapshims
+array='tau'
+calcdim
+cd($origdir):$dum
+mapname=mapname
+clear
+write('line3','Shim maps completed')
+banner('Shimmaps completed')
+
+if ($# > 2.5) then
+	if ($3 = 'auto') then
+		exists('gxyzdo3Dshim','parameter'):$ex
+		if ($ex > 0.5) then
+			if (gxyzdo3Dshim='y') then
+				shell('sleep 1'):$dum
+				if (shimset=1 or shimset=10 or shimset=11) then
+				   gxyzfitgroup='all'
+				else
+				   gxyzfitgroup='3rd'
+				endif
+				gxyzfitshims
+				gxyzautoshim(8,'auto')
+			endif
+		endif
+	endif
+endif
+ 
+endif
+
+"*********************************************************************"
+if ($function='invert') then
+	$mapstepno=$2
+	$mapsteps=''
+	$i=0
+	"Decide which mapstep to invert"
+	repeat
+        	$i=$i+1
+        	substr(mapsteps,$i):$mapsteps[$i]
+        	$change[$i]=0
+		if ($mapsteps[$i]<>'') then exec('r7='+$mapsteps[$i]) endif
+                $change[$i]=r7
+        	if ($i=$mapstepno) then $change[$i]=-1*$change[$i] endif
+        	$mapsteps[$i+1]=''
+	until ($mapsteps[$i]='')
+	$j=$i-1
+	
+	"Now reconstruct mapsteps string"
+	$i=0
+	mapsteps=''
+	$mapstep=''
+	repeat
+        	$i=$i+1
+        	format($change[$i],1,0):$mapstep
+        	if ($i=$j) then
+                	mapsteps=mapsteps+$mapstep
+        	else
+                	mapsteps=mapsteps+$mapstep+' '
+        	endif
+	until ($i > $j-1)
+endif
+"*********************************************************************"
+

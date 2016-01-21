@@ -1,0 +1,75 @@
+"macro fm_showmap"
+
+$i=1
+$min=0
+while ($i<10) do
+  if (L[$i]>$min) then $min=L[$i] endif
+  $i=$i+1
+endwhile
+
+vs=400
+rfl=0 rfp=0
+$ivp=(wc2max)/(maxproj)
+vp=wc2max-$ivp/2.0
+wp=sw*$min/lro
+sp=sw-wp
+lp=0 
+
+if (epi[0] = 'y')
+then $start=1
+     $end=arraydim/maxproj
+     $proj=0
+     while ($proj < maxproj) do
+           ph rp=0
+           if ($proj < 1) then dssh($start,$end,1)
+           else dsshn($start,$end,1)
+           endif
+           rp=90
+           dsshn($start,$end,1)
+           $start=$start+arraydim/maxproj
+           $end=$end+arraydim/maxproj
+           vp=vp-$ivp
+           $proj=$proj+1
+     endwhile
+else vp=40 vs=vs*2
+     ph rp=0
+     dssh(2,arraydim,2)
+     rp=90
+     dsshn(2,arraydim,2)
+endif
+
+if (maxproj <= 3) then
+   $label0 = 'X'
+   $label1 = 'Y'
+   $label2 = 'Z'
+else
+   $label0 = 'XY'
+   $label1 = 'YX'
+   $label2 = 'ZY'
+   $label3 = 'YZ'
+   $label4 = 'ZX'
+   $label5 = 'XZ'
+endif
+
+$count=(maxproj+off) mod maxproj
+$index=0
+$fcount=''
+
+if (epi[0] = 'y')
+then sc=10 $isc=0
+     vp=wc2max-$ivp/2.0
+else sc=wcmax/arraydim
+     $isc=2.0*sc
+     vp=40 $ivp=0.0
+endif
+
+while ($index < maxproj) do
+      format($count,1,0):$fcount
+      write('graphics',sc,vp,{'$label' + $fcount})
+      $count=($count+1) mod maxproj
+      vp=vp-$ivp
+      sc=sc+$isc
+      $index=$index+1
+endwhile
+
+vp=0

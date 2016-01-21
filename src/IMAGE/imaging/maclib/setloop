@@ -1,0 +1,158 @@
+"macro setloop"
+/***********************************************************
+* setloop
+*
+* Macro to manage the ne,nv,nv2,nv2,ni,nf,pss,nD and array
+* parameters on changes of sequence loop control configuration
+* or on change of valu1e. Use setvalue to avoid multiple calls
+* to the corresponding _macros
+***********************************************************/
+
+exists('nv','parameter'):$k
+if ($k < 0.5) then
+  return
+endif
+
+/* Decode the seqcon parameter *****************************
+* The seqcon string is checked for length and dissected
+* into its five standard component fields (assumed to be
+* the first five characters). The component fields are
+* checked for validity. Seqcon should be composed of 's',
+* 'c' & 'n' values only. These indicate n=non loop,
+* s=standard loop/array, c=compressed loop.
+***********************************************************/
+length(seqcon):$length
+$k = 1
+while ($k <= $length) do
+  $seqcon[$k] = ''
+  substr(seqcon,$k,1):$seqcon[$k]
+  $k = $k + 1
+endwhile
+
+/* Check for EPI or FSE type experiment using etl or nseg */
+$nseg = nv
+$etl  = 1
+exists('nseg','parameter'):$ex  "nseg takes priority over etl"
+if ($ex > 0) then 
+  $nseg = nseg
+  $etl = trunc(nv/$nseg)
+  if (nv % $nseg <> 0) then $etl=$etl+1 endif
+else                                             // if they don't exists, assume sems acq scheme
+  exists('etl','parameter'):$ex                  // with nv loop and single echo per pe line"
+  if ($ex > 0) then 
+    $etl  = etl
+    $nseg = trunc(nv/$etl)
+    if (nv % $etl <> 0) then $nseg=$nseg+1 endif
+  endif
+endif
+
+/* Decode profile flag ************************************/
+$profile = 'n','n','n'
+exists('profile','parameter'):$x
+if ($x > 0) then 
+  length(profile):$length
+  $k = 1
+  while ($k <= $length) do
+    $profile[$k] = ''
+    substr(profile,$k,1):$profile[$k]
+    $k = $k + 1
+  endwhile
+endif
+if ($profile[1] = 'y') then $nseg = 1 endif
+
+/* Check for Navigator echoes *****************************/
+$navechoes = 0
+exists('navigator','parameter'):$ex
+if ($ex > 0) then
+  //create and set = 1 if it doesn't already exist
+  create('nav_echo','integer','current',1)  
+  $navechoes = size('nav_echo')*(navigator = y)
+endif
+
+/* Echo counter *******************************************/
+if ($seqcon[1] = 'n') then
+  setvalue('ne',1)
+  $ne = 1
+elseif ($seqcon[1] = 'c') then
+  $ne = ne + $navechoes
+  $navechoes = 0 // don't count them again!
+else
+  write('error','%s: seqcon setting "%s" for the echo loop is invalid',$0,$seqcon[1])
+  abort
+endif
+
+/* Slice counter ******************************************/
+if ($seqcon[2] = 'c') then
+  $ns = size('pss') 
+  setvalue('ns', $ns)
+elseif ($seqcon[2] = 's') or ($seqcon[2] = 'n') then
+  setvalue('ns', 1)
+  $ns = 1
+else
+  write('error','%s: seqcon setting "%s" for the slice loop is invalid',$0,$seqcon[2])
+  abort
+endif
+
+/* First phase encode counter *****************************/
+if ($seqcon[3] = 'n') then
+  setvalue('nv', 0)
+else
+  $nv = nv
+  exists('fract_ky','parameter'):$x
+  if ($x) then
+    if fract_ky > nv/2 then
+      $fract_ky = nv/2
+    else
+      $fract_ky = fract_ky
+    endif
+    $nv = nv/2 + $fract_ky
+  endif
+endif
+if (($profile[1] = 'y') or (nv = 0)) then $nseg = 1 endif
+
+/* Second phase encode counter ****************************/
+$nv2 = 1
+if ($seqcon[4] = 'n') then
+  setvalue('nv2', 0)
+elseif ((($seqcon[4] = 'c') or ($seqcon[4] = 's')) and (nv2 > 0)) then
+  $nv2 = nv2
+endif
+if (($profile[2] = 'y') or (nv2 = 0)) then $nv2 = 1 endif
+
+/* Third phase encode counter *****************************/
+$nv3 = 1
+if ($seqcon[5] = 'n') then
+  setvalue('nv3', 0)
+elseif ((($seqcon[5] = 'c') or ($seqcon[5] = 's')) and (nv3 > 0)) then
+  $nv3 = nv3
+endif
+if (($profile[3] = 'y') or (nv3 = 0)) then $nv3 = 1 endif
+
+/* Calculate nf as product of all compressed loops ********/
+create('nfmod','integer','current',1)
+$nf_product = $etl + $navechoes
+if ($seqcon[1] = 'c') then $nf_product = $nf_product*$ne  endif
+if ($seqcon[2] = 'c') then $nf_product = $nf_product*$ns endif
+nfmod = $nf_product
+if ($seqcon[3] = 'c') then 
+  $nf_product = $nf_product*$nseg
+  if ($nseg>1 AND nfmod<64) then nfmod = $nseg*($etl+$navechoes) endif
+endif
+if ($seqcon[4] = 'c') then 
+  $nf_product = $nf_product*$nv2  
+  if ($nv2>1 AND nfmod<64) then nfmod = $nv2 endif
+endif
+if ($seqcon[5] = 'c') then 
+  $nf_product = $nf_product*$nv3  
+  if ($nv3>1 AND nfmod<64) then nfmod = $nv3 endif
+endif
+nf = $nf_product
+
+//write('line3','DEBUG: %d %d %d %d %d',$ne,$ns,$nseg,$nv2,$nv3)
+
+/* Set ni/ni2/ni3 *****************************************/
+create('ni2','integer','current',0)
+create('ni3','integer','current',0)
+if ($seqcon[3] = 's') then ni = $nseg else ni = 1 endif
+if ($seqcon[4] = 's') then ni2 = $nv2 else ni2 = 1 endif
+if ($seqcon[5] = 's') then ni3 = $nv3 else ni3 = 1 endif

@@ -1,0 +1,59 @@
+"macro AT02salt250mM"
+"AT02salt250mM    Assumes standard AutoTest has been run prior to use"
+if ($#=0) then
+   ATrtp('standard')
+   text('Determining RF Homogeneity (1H): 250mM NaCl AutoTest Sample')
+   at=3/at_linewidth
+   fn=np np=fn
+   at_currenttest='rfhomo_salt250mM'
+   $a=40*1.2*at_pw90/7 $a=trunc($a) $a=$a/40
+   tpwr=at_tpwr d1=1 tof=at_tof
+   array('pw',100,$a,$a)
+   write('file',curexp+'/text','increment size = %1.3f usec',$a)
+   gain=10 ph vp=90
+   wnt='ATwft select(1) sp=4p wp=1.3p aph0 peak:$int if ($int<0) then rp=rp+180 endif vsadj(10) dssh dtext' 
+   wexp='AT02salt250mM(`PART1`)' 
+   ATcycle
+   au
+   dps text dtext
+
+elseif ($1='PART1') then
+   wft
+   s1
+   ATrfhomocal:$ratio1,$ratio2,$pw90,$pw450,$pw810
+   ATpw90cal2('pw'):pw90,$bestindex
+   if ((at_plotauto='y') and (at_printparams='n'))
+       then ATpltext(wcmax-95,wc2max-6)
+   endif
+   ATsvf
+   ATplot
+   fr1 vp=90
+   select($bestindex) ph vsadj(75) 
+   pw=$pw90-0.2*$pw90,$pw90-.16*$pw90,$pw90-.12*$pw90,$pw90-.08*$pw90,$pw90-.04*$pw90,$pw90,$pw90+.04*$pw90,$pw90+.08*$pw90,$pw90+.12*$pw90,$pw90+.16*$pw90,$pw90+.2*$pw90 
+pw[12]=$pw450-0.2*$pw90,$pw450-.16*$pw90,$pw450-.12*$pw90,$pw450-.08*$pw90,$pw450-.04*$pw90,$pw450,$pw450+.04*$pw90,$pw450+.08*$pw90,$pw450+.12*$pw90,$pw450+.16*$pw90,$pw450+.2*$pw90 
+pw[23]=$pw810-0.2*$pw90,$pw810-.16*$pw90,$pw810-.12*$pw90,$pw810-.08*$pw90,$pw810-.04*$pw90,$pw810,$pw810+.04*$pw90,$pw810+.08*$pw90,$pw810+.12*$pw90,$pw810+.16*$pw90,$pw810+.2*$pw90 
+   wnt='ATwft dssh'
+   ATcycle
+   at_currenttest='rfhomo2_salt250mM'
+   wexp='AT02salt250mM(`PART2`)'
+   text('H1 RF Homogeneity: pw90 array, pw450 array, pw810 array')
+   wnt='ATwft select(1) vp=0 vsadj(80) dssh dtext'
+   au
+
+elseif ($1='PART2') then
+   wft
+   ATrfhomocal2:$pw90,$pw450,$pw810,$ratio1,$ratio2
+   pw=$pw90 "force 0.1usec stepsize"
+   $pw90=pw at_pw90_salt250mM=pw
+   echo('pw90 = ',$pw90)
+   ATrecord('H1RFHOMOsalt250mM','H1 RFhomo','power',tpwr,'pw90',$pw90,'pw450',$pw450,'pw810',$pw810,'pw450/90',$ratio1,'pw810/90',$ratio2)
+
+   write('file',autotestdir+'/REPORT','H1 RF HOMO(salt250mM): pw450 = %3.1f 450/90 = %1.2f pw810 = %3.1f 810/90 = %1.2f at tpwr= %2.0f ',$pw450,$ratio1,$pw810,$ratio2,tpwr)
+   if ((at_plotauto='y') and (at_printparams='n'))
+       then ATpltext(wcmax-95,wc2max-6)
+   endif
+   ATsvf
+   select(6) vp=0 vsadj dssh
+   ATplot
+   ATnext
+endif

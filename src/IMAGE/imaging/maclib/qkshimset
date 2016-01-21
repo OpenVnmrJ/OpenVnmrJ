@@ -1,0 +1,58 @@
+"macro qkshimset"
+
+"***************************************************************************"
+"
+"  qkshimset - set shims DAC's
+
+
+"shim gain from DECCTOOL used; assume same for all axis"
+
+"***************************************************************************"
+
+$macro = $0
+"check if shim calibration file exists in userdir or systemdir"
+$QSCAL = userdir+'/qshimdir'
+$VCAL = systemdir+'/qshimdir'
+$name = $QSCAL+'/qshim.'+gcoil+'.cal'
+$name2 = $VCAL+'/qshim.'+gcoil+'.cal'
+
+exists($name,'file'):$ex  
+exists($name2,'file'):$ex2  
+if ($ex > 0) then
+  $name = $name
+elseif ($ex2 > 0) then
+  $name = $name2
+else
+  write('line3','%s: %s or %s do not exist',$macro,$name,$name2)
+  abort
+endif
+
+lookup('mfile',$name,'filekey'):$key
+$x='' $y='' $z=''
+lookup('mfile',$key,'seek','#XYZ_POLARITY','read','read','read'):$sx,$sy,$sz
+
+if($sx <> -1) then
+  $sx = 1
+endif
+
+x1 = x1 + $sx*(gbasex/shimscale)
+if($sy <> -1) then
+  $sy = 1
+endif
+y1 = y1 + $sy*(gbasey/shimscale)
+if($sz <> -1) then
+  $sz = 1
+endif
+shimnames:$cname,$ns    "check if z1c, z2c shims used"
+strstr($cname,'z1c'):$c2
+if($c2 > 0.5) then
+  z1c = z1c + $sz*(gbasez/shimscale)
+else
+  z1 = z1 + $sz*(gbasez/shimscale)
+endif
+
+load='y'
+setallshims
+
+
+

@@ -1,0 +1,122 @@
+// Test for various macro run-time errors
+
+
+// This runs all tests
+if ($# = 0) then
+  $num = 16  // set to number of tests
+  $i = 0
+  $is=''
+  while ($i < $num) do
+    $i = $i + 1
+    format($i,0,0):$is
+    exec($0+'('+$is+')'):$e
+  endwhile
+  return
+endif
+
+
+// Individual tests follow
+
+write('line3','Macro test %d:',$1)
+
+if ($1 = 1) then
+  write('line3','Test assigning from non-existant variable')
+  $num = paramDoesNotExist
+
+elseif ($1 = 2) then
+  write('line3','Test assigning from non-existant $variable')
+  $num = $paramDoesNotExist
+
+elseif ($1 = 3) then
+  write('line3','Test passing non-existant variable')
+  getext(paramDoesNotExist):$dir
+
+elseif ($1 = 4) then
+  write('line3','Test passing non-existant $variable')
+  getext($paramDoesNotExist):$dir
+
+elseif ($1 = 5) then
+  write('line3','Test returning string to real $variable')
+  $dir=0
+  getext(systemdir):$dir
+
+elseif ($1 = 6) then
+  write('line3','Test comparing string to real')
+  $strvar=''
+  if ($strvar = 0) then
+    dg
+  endif
+
+elseif ($1 = 7) then
+  write('line3','Test comparing real to string')
+  $rvar=0
+  if ($rvar = '') then
+    dg
+  endif
+
+elseif ($1 = 8) then
+  write('line3','Test using non-existent variable in if statement')
+  if ($rvar) then
+    dg
+  endif
+
+elseif ($1 = 9) then
+  write('line3','Test typeof with variable substitution bug 869')
+  $type = typeof('${$1}')
+  write('line3','Finish test typeof with variable substitution bug 869')
+
+elseif ($1 = 10) then
+  write('line3','Test undefined parameter in an if statement')
+ if tchan=1 then
+    return(sfrq)
+  elseif (tchan=2) then
+    return(dfrq)
+  elseif (tchan=3) then
+    return(dfrq2)
+  elseif (tchan=4) then
+    return(dfrq3)
+  endif
+  if (paramDoesNotExist = 1) then
+    dg
+  endif
+
+elseif ($1 = 11) then
+  write('line3','Non-existent command test')
+  aCommandThatIsNotThere
+
+elseif ($1 = 12) then
+  write('line3','Non-existent command test using $var')
+  $aCommandThatIsNotThere('hello')
+
+elseif ($1 = 13) then
+  write('line3','Non-existent variable test using $var')
+  $val=pw[2]
+
+elseif ($1 = 14) then
+  write('line3','Non-existent variable test with command')
+  $val=1
+  setvalue('pw',$val[2])
+
+elseif ($1 = 15) then
+  write('line3','Non-existent redirected variable')
+  $svar=''
+  $error=0
+  if ({$svar}='') then
+    $error=1
+  endif
+  write('line3','Finish Non-existent redirected variable')
+
+elseif ($1 = 16) then
+  write('line3','Command substitution')
+  $svar=`if (not (auto='y')) then write('line3','auto is n') else write('line3','auto is on') endif`
+  {$svar}
+  write('line3','Finish Command substitution')
+
+elseif ($1 = 1000000) then
+  // Tend to get a lot of these from xml panels. Do not detect until panels are fixed.
+  // See exec.c line 2024
+  write('line3','Test using non-typed variable in assignment')
+  shell('dirname '):$novar
+  $strvar=$novar+'/vnmrsys'
+
+endif

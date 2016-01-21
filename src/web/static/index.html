@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+		<title>NMR Status</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<link href="css/bootstrap.css" rel="stylesheet">
+		<link href="css/bootstrap-responsive.css" rel="stylesheet">
+		<link href="css/rsu.css" rel="stylesheet">
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"/>
+    </head>
+
+    <body>
+
+    <!--[if lte IE 9]>
+    <div class="browser">
+    <p>The browser you are using does not support this site. It is best viewed in <strong>Google Chrome v.34</strong> or higher.</p>
+    <img class="logo" style="margin-top: 30px" src="img/agilent_logo.png">
+    </div
+    <![endif] -->
+
+    <!--[if !IE]> -->
+
+    <div class="navbar span12">
+    <div class="navbar-inner">
+    <div class="container">
+		<ul class="nav">
+		<li><img src="img/agilent_logo.png" class="logo"></li>
+		<li class="brand hidden-phone">NMR Status</li>
+		<li class="divider-vertical hidden-phone"></li>
+		<li><div id="specName" class="hidden-phone"></div></li>
+	</ul>
+<div class="container">
+<!-- .nav, .navbar-search, .navbar-form, etc -->
+	<form class="navbar-form pull-right">
+<!--        <input type="button" class="btn btn-info" value="Error" onclick=";ErrorTestFunction();" /> -->
+		<input type="button" class="btn btn-info" value="Tuning" onclick="location.href='tuning.html'" />
+		<!-- <input type="button" class="btn btn-info" value="Cryo Error" onclick=";setupCryomonError();" /> -->
+		<!-- <input type="button" class="btn btn-info" value="Cryo Chart" onclick=";setupCryomon();" /> -->
+		<button class="btn btn-info" onclick="location.href='index.html'" ><i class="icon-refresh"></i></button>
+	</form>
+    </div>
+    </div>
+    </div>
+    </div><!-- end navbar -->
+    
+	<div class="status span12">
+    <h5>Sample Temperature</h5>
+	<div><span id="sampleTemp"></span><sup>&deg;</sup></div>
+	</div>
+	
+	<div class="status span12">
+	<h5>Lock Level</h5>
+	<div><span id="lockLevel"></span></div>
+	</div> <!-- end status -->
+
+	<div id="AlertArea"></div>
+
+	<div class="status cryo span4">
+    <h5>Cryogen Status</h5>
+	<div>
+	<div id="cryomessage"></div>
+	<div id="cryochart"></div>
+	</div>
+	</div> <!-- end cryogen status -->
+	
+
+	<!-- scripts -->
+	<script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/d3.min.js"></script>
+    <script type="text/javascript" src="js/RSUWebClient.js"></script>
+
+    <script type="text/javascript">
+    
+		// **************************************  Set Globals
+		var activeChannel1 = 0;
+		var activeChannel2 = 0;
+		var activeChannel3 = 0;
+		var activeChannelPFG = 0;
+		
+		var sampletmp = getCurrentState('AcqVTAct')/10;
+		$('#sampleTemp').html(sampletmp);
+	
+		var locklev = 0.0;
+		$('#lockLevel').html(locklev);
+	
+		var hostIPAddress = "notConnected";
+		var startTimerId;
+		
+		// **************************************  Set host IP Address
+		var ipstr = window.location.href;
+		if (ipstr.indexOf("http://") != -1)
+		{
+	    	var n=ipstr.split("/");
+	    	hostIPAddress = n[2];
+		}
+	    console.log("host IP Address: " + hostIPAddress);
+	    
+		function settingsFunction()
+		{
+		    var serverIP = prompt("Enter New Server Address:", hostIPAddress);
+		    hostIPAddress = serverIP;
+		};
+
+		// **************************************  Connect - Disconnect
+ 		function startRequestingData()
+ 		{
+			stopRequestingData();
+ 		    console.log("requesting data from: " + hostIPAddress);
+			SetupServerEvents(hostIPAddress);
+			window.scrollTo(0, 1);
+ 			clearInterval(startTimerId);
+ 		};
+		
+		function stopRequestingData()
+		{
+			stopListening();
+		};
+		
+		function download(file)
+		{
+			window.location=file;
+		}
+
+		// **************************************  FullScreen Mode
+	    //onLoad="setTimeout(function() {window.scrollTo(0, 1)}, 100);"
+	    	
+		// 	    function hideAddressBar(){
+		//     	  if(document.documentElement.scrollHeight<window.outerHeight/window.devicePixelRatio)
+		//     	    document.documentElement.style.height=(window.outerHeight/window.devicePixelRatio)+'px';
+		//     	  setTimeout(window.scrollTo(1,1),0);
+		//     	}
+		//     	window.addEventListener("load",function(){hideAddressBar();});
+		//     	window.addEventListener("orientationchange",function(){hideAddressBar();});
+
+		function setFullScreen(state) 
+		{
+		   if (state == "ON")
+		   {
+//	 		  if (!document.fullscreenElement &&    // alternative standard method
+//	 		      !document.mozFullScreenElement && !document.webkitFullscreenElement) 
+//	 		  {  // current working methods
+			    if (document.documentElement.requestFullscreen) 
+			    {
+			      document.documentElement.requestFullscreen();
+			    } 
+			    else if (document.documentElement.mozRequestFullScreen) 
+			    {
+			      document.documentElement.mozRequestFullScreen();
+			    } 
+			    else if (document.documentElement.webkitRequestFullscreen) 
+			    {
+			      document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+			    }
+//	 		  }
+		   }
+		   else 
+		   {
+			    if (document.cancelFullScreen) 
+			    {
+			      document.cancelFullScreen();
+			    } 
+			    else if (document.mozCancelFullScreen) 
+			    {
+			      document.mozCancelFullScreen();
+			    } 
+			    else if (document.webkitCancelFullScreen) 
+			    {
+			      document.webkitCancelFullScreen();
+			    }
+		   }
+		};
+
+		
+		// **************************************  Cryogen Chart
+		var cryoX;
+		var cryoY;
+		var cryoSvg;
+		var cryoData = []; 
+		var cryoHeight;
+		function setupCryoChart()
+		{
+			var margin = {top: 10, right: 20, bottom: 30, left: 60};
+		    var width = 190 - margin.left - margin.right;
+		    cryoHeight = 250 - margin.top - margin.bottom;
+			barPadding = 2;
+			
+			function CryogenData(elem, lev)
+			{
+				this.element = elem;
+				this.level = lev;
+			}
+			cryoData.push(new CryogenData('N2', 1.0));
+			cryoData.push(new CryogenData('He', 1.0));
+			
+			var formatPercent = d3.format(".0%");
+		
+			cryoX = d3.scale.ordinal()
+		    .rangeRoundBands([0, width], .16);
+		
+			cryoY = d3.scale.linear()
+		    .range([cryoHeight, 0]);
+		
+			var xAxis = d3.svg.axis()
+		    .scale(cryoX)
+		    .orient("bottom");
+		
+			var yAxis = d3.svg.axis()
+		    .scale(cryoY)
+		    .orient("left")
+			.ticks(5)
+		    .tickFormat(formatPercent);
+		
+			cryoSvg = d3.select("#cryochart").append("svg")
+		    .attr("width", width + margin.left + margin.right)
+		    .attr("height", cryoHeight + margin.top + margin.bottom)
+			.append("g")
+		    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			cryoX.domain(cryoData.map(function(d) { return d.element; }));
+			cryoY.domain([0, d3.max(cryoData, function(d) { return d.level; })]);
+		
+			cryoSvg.append("g")
+		      .attr("class", "x axis")
+		      .attr("transform", "translate(0," + cryoHeight + ")")
+		      .call(xAxis);
+		
+			cryoSvg.append("g")
+		      .attr("class", "y axis")
+		      .call(yAxis);
+		
+			cryoSvg.selectAll("rect")
+			    .data(cryoData)
+				.enter().append("rect")
+			    .attr("class", "bar")
+			    .attr("x", function(d) { return cryoX(d.element); })
+			    .attr("width", cryoX.rangeBand())
+			    .attr("y", function(d) { return cryoY(d.level); })
+			    .attr("height", function(d) { return cryoHeight - cryoY(d.level); });
+		}
+		//add labels below
+		function renderCryoChart()
+		{
+			cryoSvg.selectAll("rect")
+		      .data(cryoData)
+			  .transition()
+		      .attr("x", function(d) { return cryoX(d.element); })
+	    	  .attr("width", cryoX.rangeBand())
+		      .attr("y", function(d) { return cryoY(d.level); })
+	      	  .attr("height", function(d) { return cryoHeight - cryoY(d.level); })
+		  	  .style("fill", function(d)
+		  	    {
+		  		  if (d.element == "He")
+		  		  {
+		  		  		if (d.level<.10) return "#cc0000"; 
+		  	  			else if (d.level<.20) return"#ffff00"; 
+		  	  			else return"#08bbf9";
+		  		  }
+		  		  else if (d.element == "N2")
+		  		  {
+		  		  		if (d.level<.20) return "#cc0000"; 
+		  	  			else if (d.level<.50) return"#ffff00"; 
+		  	  			else return"#08bbf9";
+		  		  }
+		  		});
+		};
+		
+		function updateChart(index, val)
+		{
+			cryoData[index].level = val;
+			renderCryoChart();
+		};
+
+
+		// **************************************  Time Display
+    	function ConvertSeconds(seconds) 
+    	{
+    	    var hours = Math.floor(seconds / 3600);
+    	    seconds -= hours*3600;
+    	    var minutes = Math.floor(seconds / 60);
+    	    seconds -= minutes*60;
+
+    	    if (hours   < 10) {hours   = "0"+hours;}
+    	    if (minutes < 10) {minutes = "0"+minutes;}
+    	    if (seconds < 10) {seconds = "0"+seconds;}
+    	    return hours+':'+minutes+':'+seconds;
+    	};
+    	
+		// **************************************  Offline Test Functions
+		var acquireTimeLeft = 0;
+		var chartBar1 = 1.0;
+		var chartBar2 = 0.9;
+    	var runCount = 0;
+		var acquireval = 0;
+		var $bar = $('.bar');
+		function updateGUI() 
+		{
+			runCount++;
+			if (runCount >= 20)
+			{
+				clearInterval(testTimerId);
+			}
+
+			if (sampletmp > 40.0) 
+			{
+				sampletmp = 30.0
+			}
+			else
+			{
+				sampletmp += 1.5;
+			}
+			locklev += 5.0;
+	    	$('#sampleTemp').html(sampletmp);
+	    	$('#lockLevel').html(locklev);
+	    	
+	    	$('#experimentName').html('Sample Temp Test');
+	    	$('#experimentOwner').html('Sample Temp Tester');
+	    	
+	    	chartBar1 -= .05;
+	    	chartBar2 -= .05;
+			updateChart(0, chartBar1);
+			updateChart(1, chartBar2);
+
+	    	
+	    	acquireval += 5;
+	    	acquireTimeLeft += 900;
+	    	//$bar.width(acquireval.toString()+"%");
+	    	$('#acquireBar').width(acquireval.toString()+"%");
+	    	$('#acquireTimeLeft').html(ConvertSeconds(acquireTimeLeft));
+	    };
+
+		var testTimerId;
+		function updateTestFunction()
+		{
+			testTimerId = setInterval(updateGUI,1000);  //1000 milliseconds
+			//displayChart();
+			
+		};
+
+		var numRequest = 0;
+		function alertAreaTestFunction()
+		{
+		    if (numRequest % 3 == 0)
+			{
+		    	setupAcquireAlertArea()
+			}
+		    else if (numRequest % 3 == 1)
+			{
+		    	setupErrorAlertArea('very very bad - no more cryogens')
+			}
+			else if (numRequest % 3 == 2)
+			{
+				setupStatusAlertArea("Idle")
+			}	
+
+			numRequest++;
+		};
+	
+	
+		// **************************************  Set Active Channels
+		function setupChannelData()
+		{
+			var channelData = "";
+			if (activeChannel1 == 1)
+			{
+				channelData += "<div class='channel-label on'>1</div>";
+			}
+			else if (activeChannel1 == 0)
+			{
+				channelData += "<div class='channel-label'>1</div>";
+			}
+			if (activeChannel2 == 1)
+			{
+				channelData += "<div class='channel-label on'>2</div>";
+			}
+			else if (activeChannel2 == 0)
+			{
+				channelData += "<div class='channel-label'>2</div>";
+			}
+			if (activeChannel3 == 1)
+			{
+				channelData += "<div class='channel-label on'>3</div>";
+			}
+			else if (activeChannel3 == 0)
+			{
+				channelData += "<div class='channel-label'>3</div>";
+			}
+			if (activeChannelPFG == 1)
+			{
+				channelData += "<div class='channel-label on'>PFG</div>";
+			}
+			else if (activeChannelPFG == 0)
+			{
+				channelData += "<div class='channel-label'>PFG</div>";
+			}
+
+			return channelData;
+		};
+		
+		// **************************************  Setup Alert Area
+		var alertDiv_data;
+		function setupAcquireAlertArea()
+		{
+			console.log("In setupAcquireAlertArea \n");
+
+			var channelData = setupChannelData();
+			
+			alertDiv_data = "<div id='AlertArea' class='acquire span8'>" +
+			"<div>" +
+			"<h5>Instrument Status</h5>" +
+			"<p class='acquire-title'>Acquiring</p>" +
+			"<div>" +
+			"<span id='acquireTimeLeft' class='acquire-time'>00:00:00</span>" +
+			"</div>" +
+			"<div class='progress progress-striped active'>" +
+		    "<div id='acquireBar' class='bar' style='width: 0%;'></div>" +
+		    "</div>" +
+			"<div class='channels'>" + channelData +
+			"</div>" +
+			"<div class='acquire-text'>" +
+			"<strong>Name:</strong> <span id='experimentName'></span><br />" +
+			"<strong>Account Owner:</strong> <span id='experimentOwner'></span>" +
+			"</div>" +
+			"</div>" +
+			"</div>";
+
+			$("#AlertArea").html(alertDiv_data);
+		};
+
+		function setupErrorAlertArea(errorText)
+		{
+			console.log("In setupErrorAlertArea \n");
+
+			alertDiv_data = "<div id='AlertArea' class='error span8'>" +
+			"<div>" +
+			"<h5>Instrument Status</h5>" +
+			"<p class='error-title'>Error</p>" +
+			"<div class='error-text'>" + errorText + "</div>" +
+			"</div>" +
+			"</div>";
+
+			$("#AlertArea").html(alertDiv_data);
+		};
+		
+		function setupStatusAlertArea(status)
+		{
+			console.log("In setupStatusAlertArea \n");
+
+			alertDiv_data = "<div id='AlertArea' class='idle span8'>" +
+			"<div>" +
+			"<h5>Instrument Status</h5>" +
+			"<p class='idle-title'>" + status + "</p>" +
+			"</div>" +
+			"</div>";
+
+			$("#AlertArea").html(alertDiv_data);
+		};
+	
+		var cryoDiv_data;
+		
+		function setupCryomonError(message) 
+		{
+			cryoDiv_data = message;
+            
+            $("#cryomessage").html(cryoDiv_data);
+			
+			// Set cryo chart levels to zero
+            updateChart(0, 0);
+            updateChart(1, 0);
+        };
+       
+        function setupCryomon() 
+        {
+            cryoDiv_data =  '';
+            $("#cryomessage").html(cryoDiv_data);
+           
+            initCryoData();
+            
+            // Set cryo chart levels to zero
+            //updateChart(0, .6);
+           //updateChart(1, .4);
+        };
+		
+    	window.onbeforeunload = pageExit;
+    	function pageExit()
+    	{
+    		stopRequestingData();
+		};
+		
+		function ErrorTestFunction()
+		{
+			testError(599, 'test ERROR message');
+		}
+		
+		// **************************************  Page Load or Refresh Actions
+    	//setFullScreen('ON');
+		setupCryoChart()	
+		
+		// Set cryo chart levels to zero
+        updateChart(0, 0);
+        updateChart(1, 0);
+
+			
+		//setupStatusAlertArea("IDLE");
+
+		startTimerId = setInterval(startRequestingData,2000);  //2000 milliseconds
+		//startRequestingData();
+		 
+                var cryoTimerId;
+ 		function initCryogenData()
+ 		{
+			initCryoData();
+ 			clearInterval(cryoTimerId);
+ 		};
+		
+                cryoTimerId = setInterval(initCryogenData,5000);
+
+	</script>
+    <!-- <![endif]-->
+	</body>
+</html>

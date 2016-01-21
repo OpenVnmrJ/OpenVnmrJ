@@ -1,0 +1,237 @@
+/*  rna_gChsqc.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    HSQC with gradients for C13/H1 chemical shift correlation with optional
+    N15 refocusing and numerous options for C13 decoupling, editing
+    spectral regions, and measuring relaxation times.
+
+
+    		      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+    
+    THE ZZ OPTION [ZZ='y']:
+    Suppresses H2O with gradients but does not use coherence gradients.  Must
+    use ssfilter/ssntaps for good H2O suppression. It can be broadbanded to
+    cover aromatic and ribose CHn groups by setting allC='y'. Alternatively,
+    ribose='y' selects the dof for the ribose (H1' to H5'') region; and
+    aromatic='y' selects the dof for the aromatic (H5/H6/H8/H2) region.
+
+    THE ALTERNATIVE SE OPTION [SE='y']:
+    Uses coherence gradients and the Sensitivity Enhancement
+    train for better H2O suppression for CH resonances very close to H2O. 
+    A theoretical root2 CH 2D enhancement should be gained.
+    CH2 groups lose up to 50% S/N relative to the ZZ option.
+
+    The sequence will function correctly with ribose='y'/aromatic='y'/allC='y'.
+
+    VNMR processing when SE='y':for VNMR5.3 or later, use f1coef='1 0 -1 0 0 -1 0 -1'
+    and wft2da. For earlier versions of VNMR use these coefficients as arguments
+    for wft2da.
+
+    THE CT OPTION: [CT='y']:
+    This converts the t1 C13 shift evolution to Constant Time. Any combination 
+    of ZZ='y'/SE='y' and ribose='y'/aromatic='y'/allC='y'can be used.
+    The constant time delay, CTdelay(1/Jcc), can be set for optimum S/N for any type
+    of groups, eg 28ms for ribose and 14ms for aromatics. For the allC option
+    it is best to set the CTdelay to 1/Jcc(ribose) which equals 2/Jcc(aromatic).
+    Note that in some options, CTdelays less than 8ms will generate an error
+    message resulting from a negative delay.
+  
+    In all the above cases:
+    * Selecting CH2only='y' will give a spectrum of only CH2 groups. 
+    * A spectrum of only CH groups can be obtained as described in more detail 
+    below.
+    * N15 coupling in doubly-labelled samples is refocused by N15refoc='y'.
+    * H2 coupling in triply-labelled samples is refocused by dm3='nyn'.
+    * Efficient STUD+ decoupling is invoked with STUD='y' without need to 
+    set any parameters.
+    
+    T1, T1rho, and T2 relaxation measurements of C13 nuclei can be made for any 
+    combination of the above options, except for selecting CH2only='y'.
+
+    1D checks of C13 and H1 pulse times can be made using calC and calH.  
+
+
+    pulse sequence:	John, Plant and Hurd, JMR, A101, 113 (1992)
+		 	Kay, Keifer and Saarinen, JACS, 114, 10663 (1992)
+    relaxation times:   Kay et al, JMR, 97, 359 (1992)
+			Farrow et al, Biochemistry, 33, 5984 (1994)
+			Yamazaki et al, JACS, 116, 8266 (1994)
+    STUD+ decoupling    Bendall & Skinner, JMR, A124, 474 (1997) and in press
+     
+    Written by MRB, January 1998, starting with ghn_co from BioPack.
+
+
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	@						       @
+	@   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+	@                                                      @
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+    Not for STUD='y' and allC='y'
+    Set dm3 = 'nnn' for no 2H decoupling, or
+	      'nyn'  and dmm3 = 'w' for 2H decoupling. 
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [C13].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in C13.  f1180='y' is ignored if ni=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF rna_gChsqc
+
+         
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro: 
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gChsqc may be printed using:
+                                      "printon man('rna_gChsqc') printoff".
+             
+    2. Apply the setup macro "rna_gChsqc".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. CHOICE OF C13 REGION:
+       ribose='y' gives a spectrum of ribose resonances centered on dof=80ppm.
+       This is a common usage.                               Set sw1 to 50ppm.
+
+       aromatic='y' gives a spectrum of aromatic groups.  dof is shifted
+       automatically by the pulse sequence code to 130ppm.  Set sw1 to 70ppm.
+
+       allC='y' gives a spectrum of ribose and aromatic resonances. dof is
+       set by the code to 110ppm.                        Set sw1 to 110ppm.
+       C13 shift during the 90 degree C13 pulses is not refocused for the
+       first increment when ZZ='y' and allC='y' (use linear prediction).
+
+    5. CALIBRATION OF pwC AND pw:
+       calC and calH are multipliers of the first C13 and H1 90 degree pulses
+       in the sequence.  They can be used to calibrate the pulses using a 1D
+       spectrum.  Setting either calC or calH = 2.0 should give a S/N null (or 
+       small dispersion signals) corresponding to the pulses being set at 180
+       degrees.  Adjust pwC or pw, respectively, until this occurs.  An array
+       of calC or calH = 1.8, 2.0, 2.2 is also convenient to judge the null at
+       2.0.  calC and calH are automatically reset to 1 for 2D spectra if you   
+       forget to do so.  Because of the width of the RNA ribose/aromatic C13 
+       region, only the central portion of the H1 1D spectrum will be nulled
+       when ribose='y' and calC=2.
+
+    6. AMPLIFIER COMPRESSION AND PHASE SHIFT AT LOWER POWER:
+       For optimum usage of the sequences in RnaPack, the parameter compC
+       should be calibrated for the selected pwClvl.  Measure pwC as in point 5.
+       Lower pwClvl by 6 dB (half RF amplitude) and measure pwC again calling
+       it pwC'.  Then compC=pwC'/(2*pwC). If you do these calibrations using an
+       RNA, it is best to utilise the aromatic region since dof needs to be
+       close to the C13 resonances.
+       If compC is less than 0.9 it is probably best to use a lower pwClvl so that 
+       compC > 0.9 and amplifier compression does not need to be compensated so 
+       heavily.
+       Same procedure is used for compH using the rna_water sequence and compN
+       using the rna_gNhsqc sequence. All values have to be written in the 
+       rna_gChsqc parameter set and will be updated in the adequate sequences by
+       the macro rna_pack3.
+
+    7. N15 COUPLING:
+       Splitting of resonances in the C13 dimension by N15 coupling in N15
+       enriched samples is removed by setting N15refoc='y'.  No N15 RF is
+       delivered in the pulse sequence if N15refoc='n'.  N15 parameters are
+       listed in dg2.
+
+    8. 1/4J DELAY TIMES:
+       These are listed in dg/dg2 for possible change by the user. JCH is used
+       to calculate the 1/4J time (lambda=0.94*1/4J) for H1 CH coupling evolution,
+       tCH is the 1/4J time for C13 CH coupling evolution.
+       Lambda is calculated a little lower (0.94) than the theoretical time to
+       minimise relaxation, but tCH should be as close
+       to the theoretical time as possible.  So for:
+         ribose CH/CH2: 	  JCH=145Hz         tCH = 0.00172
+         aromatic CH:       	  JCH=180Hz         tCH = 0.00139
+	 allC:			  JCH=160Hz         tCH = 0.00156
+
+    9. SPECTRAL EDITING FOR DIFFERENT CHn GROUPS.
+       CH2only='y' provides spectra of just CH2 groups, by inserting two 1/4J
+       periods of CH coupling evolution, where generally the parameter
+			 tCH = 1/4J = 0.0018.
+       CH groups are more accurately nulled using tCH = 0.00173. ZZ='y' is best
+       for CH2's. CH2only flag cannot be used with relaxation time measurements.
+
+       By setting tCH = 0.0009 with CH2only='y', CH2's are nulled.
+       SE='y is best for CH spectra.
+
+   10. T1 MEASUREMENTS OF CH GROUPS.  SET tCH = 0.00172 AND T1='y':
+       An array of 1D or 2D spectra is obtained by arraying the relaxation time 
+       parameter, relaxT, to a multiple of 5 milliseconds including zero.  
+       relaxT corresponds exactly to the relaxation time of the C13 spins.  The 
+       method uses 180 degree H1 pulses every 5ms during relaxT and transverse 
+       magnetization is dephased by a gradient as according to Kay et al.
+       SE='y' is best for CH's.  For aromatic CH's use tCH = 0.00139.
+
+   11. T1 MEASUREMENTS OF CH2:
+       Proceed as for point 10 but set tCH = 0.0009 for CH2 groups
+       Unfortunately the H1 irradiation removes 
+       spin order and about 50% S/N is lost for CH2.  Also 50% of
+       CH intensity is retained so the overall result at relaxT=0 is a 
+       normal 1D spectrum at about half intensity.  However accurate CH2 
+       T1 times can be determined from resolved peaks in a 2D array.  
+       ZZ='y' is best for CH2's.  
+
+   12. T1rho MEASUREMENTS OF CHn GROUPS:
+       Implemented by setting the flag T1rho='y' and arraying relaxT as above
+       for T1.  relaxT corresponds exactly to the relaxation time of the C13 
+       spins.  Spin lock power is set at 2.0 kHz for a 600 Mhz spectrometer,
+       and scaled in proportion to other field strengths.  Increasing this RF
+       (by changing the number 2000 in the DECLARE AND LOAD VARIABLES section
+       of gChsqc.c) causes substantial sample or coil heating as indicated by 
+       deterioration of the lock signal).  Care should be taken for relaxT
+       times greater than 0.25 seconds, and times greater than 0.5 seconds are 
+       automatically aborted.  A dummy period of spinlock RF is delivered at
+       the beginning of each pulse sequence to ensure constant average sample 
+       heating - the code determines this from the maximum relaxT you have set
+       in your array of relaxT.  If T1rho measurements are to be made in 
+       different experiments with different relaxTs, including arrays of 
+       relaxT's, set the parameter maxrelaxT to the maximum relaxT you have
+       set in all experiments - this will ensure constant average sample
+       heating in all experiments.  maxrelaxT does not need to be set for a
+       single array in a single exp.  The spectrum at relaxT=0 may be erroneous
+       because of insufficient dephasing of unlocked spins.
+
+   13. T2 MEASUREMENTS OF CH GROUPS:
+       Implemented by setting the flag T2='y', but not recommended because 
+       homonuclear C13 coupling invalidates the estimated relaxation time.
+       Like T1rho, other parameters and flags are as for T1='y'.  Also, T2='y'
+       delivers more sample heating than T1rho='y' for the same relaxation
+       time.
+
+   14. STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence it is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of RnaPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       efficient conditions to cover 140ppm when allC='y' with all decoupled 
+       peaks being greater than 85% of ideal; 80ppm/90% for ribose='y' and 
+       aromatic='y'.  If you wish to compare different
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The values of 85, 90, and 95% have
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) for 30ppm decoupling say, change the 95% level for the 
+       centerband, by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).

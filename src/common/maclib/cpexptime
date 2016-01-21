@@ -1,0 +1,36 @@
+"macro cpexptime"
+"cpexptime"
+$tailX='tail'
+whichtail:$tailX
+
+$time=0
+$file=$2+'/'+$1+'acq'
+exists($file,'file'):$fex
+
+if ($fex) then
+	$tail1=''
+	shell('(cat '+$file+' | grep \'^ACQtime=\' | '+$tailX+' -n 1)'):$tail1
+	$s1='' $s2=''
+	strstr($tail1,'ACQtime='):$ret,$s1,$s2
+	if ($ret) then substr($s2,1):$time endif
+else
+  $flist='ACQlist','EXPLIST','LONGLIST'
+  $i=1
+  repeat
+    $file=$2+'/'+$flist[$i]
+    exists($file,'file'):$f2ex
+    if ($f2ex) then
+        $tail1=''
+        shell('(cat '+$file+' | grep \'^'+$1+'\' | '+$tailX+' -n 1)'):$tail1
+        $s2=''
+	substr($tail1,2):$s2
+	if ($s2<>'') then 
+	   format($s2,'lower'):$time
+	   $i=3
+	endif
+    endif
+    $i=$i+1
+  until $i > 3
+endif
+
+return($time)

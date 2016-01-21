@@ -1,0 +1,63 @@
+"macro getXi"
+" get Xi, Reference compound and Literature reference "
+"   from appropriate nuctabref"
+
+if($#<1) then return(0,0,'UNKNOWN','') endif
+
+setfrqCmd('getRefstdXi',$1):$freq,$refcmpd,$lit
+if($freq>0) then
+   return(1,$freq,$refcmpd,$lit)
+endif
+
+$freq=0 
+$found=0
+$lit=''
+$refcmpd='UNKNOWN'
+
+if ($1<>'') then 
+
+    $bioref='n'
+    exists('bioref','parameter','global'):$e
+    if $e then $bioref=bioref endif
+
+    $e=0 $euser=0 $ebio=0
+    $nucfil='' $nucfiluser='' $nucfilbio=''
+    getfilepath('usernuctabref','nuctables'):$euser,$nucfiluser
+    getfilepath('nuctabref','nuctables'):$e,$nucfil
+    if ($bioref='y') then
+   	getfilepath('nuctabrefBio','nuctables'):$ebio,$nucfilbio
+    endif
+
+    $sfreq=''
+    if ($found<1.5) and ($nucfiluser<>'') then
+    	$key=$nucfiluser
+    	lookup('mfile',$key,'COMMENTEND',$1,'read','filekey'):$sfreq,$key,$found
+    	if ($found>1.5) then
+        	format($sfreq,'lower'):$freq
+        	lookup('mfile',$key,'REF:','readline','LIT:','readline'):$refcmpd,$lit
+    	endif
+    endif
+
+    if ($found<1.5) and ($nucfilbio<>'') then
+    	$key=$nucfilbio
+    	lookup('mfile',$key,'COMMENTEND',$1,'read','filekey'):$sfreq,$key,$found
+    	if ($found>1.5) then
+        	format($sfreq,'lower'):$freq
+        	lookup('mfile',$key,'REF:','readline','LIT:','readline'):$refcmpd,$lit
+    	endif
+    endif
+
+    if ($found<1.5) and ($nucfil<>'') then
+    	$key=$nucfil
+    	lookup('mfile',$key,'COMMENTEND',$1,'read','filekey'):$sfreq,$key,$found
+    	if ($found>1.5) then
+        	format($sfreq,'lower'):$freq
+        	lookup('mfile',$key,'REF:','readline','LIT:','readline'):$refcmpd,$lit
+    	endif
+    endif
+
+    if ($refcmpd='') then $refcmpd='UNKNOWN' endif
+endif
+if ($found < 1.5) then $found=0 endif
+return($found,$freq,$refcmpd,$lit)
+

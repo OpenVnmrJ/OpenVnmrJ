@@ -1,0 +1,259 @@
+"macro PersonaManager"
+
+bgmode_is:$bg
+if ($bg) then return endif
+
+exists('personaType','parameter','global'):$parex
+if ($parex=0) then
+    create('personaType','string','global')
+endif
+if $0='PersonaManagerAdm' then
+    $personadir=systemdir+'/adm/users/PersonaManager'
+else
+    $personadir=userdir+'/persistence/'+$0
+endif
+exists($personadir,'directory'):$direx
+if ($direx=0) then shell('mkdir '+$personadir):$dum endif
+
+"*****************************************************************"
+IF ($1='OwnerPersona') THEN
+    if ($0='PersonaManagerAdm') then return('') endif
+    $plistadm=systemdir+'/adm/users/PersonaManager/PERSONAassignment'
+    exists($plistadm,'file'):$padmex
+    $ADMpersona=''
+    $s3='' $s4=''
+    if ($padmex) then
+    	readfile($plistadm,'$s3','$s4','','local')
+    	teststr('$s3',owner,'local'):$ok2
+    	if ($ok2) then $ADMpersona=$s4[$ok2] endif
+    endif
+    if $ADMpersona='' then $padmex=0 endif
+    return($ADMpersona)
+ENDIF
+"*****************************************************************"
+IF ($1='readOwnerPersona') THEN
+    if ($0='PersonaManagerAdm') then return endif
+    $persona=''
+    {$0}('OwnerPersona'):$persona
+    if $persona='' then return endif
+// Read ONLY from systemdir personalib.  This is assigned by administrator
+    $pdir=systemdir+'/personalib/'+$persona
+    exists($pdir,'directory'):$pex
+    if ($pex=0) then return endif
+
+// Read ToolPanelConfig table
+    $admin=$pdir+'/adm/toolPanelConfig_'+$persona+'.txt'
+    $s1='' $s2=''
+    exists($admin,'file'):$tot
+    if $tot then
+    	readfile($admin,'$s1','$s2','','local'):$tot
+    endif
+    if ($tot) then
+        $i=1
+        repeat
+	    $ok=0
+            teststr('personaTpPar',$s1[$i],'global'):$ok
+            if ($ok) then 
+		if ($s2[$i]='no') or ($s2[$i]='close') then personaTpPar[$ok+1]='notused' endif
+	    endif
+            $i=$i+1
+        until $i > $tot
+    endif
+
+// Read menuconfig table
+    $admin=$pdir+'/adm/MenuConfig_'+$persona+'.txt'
+    $s1='' $s2=''
+    exists($admin,'file'):$tot
+    if $tot then
+    	readfile($admin,'$s1','$s2','','local'):$tot
+    endif
+    if ($tot) then
+        $i=1
+        repeat
+            $ok=0
+            teststr('personaMvPar',$s1[$i],'global'):$ok
+            if ($ok) then 
+		if ($s2[$i]='hide') then personaMvPar[$ok+1]='notused' endif
+	    endif
+            $i=$i+1
+        until $i > $tot
+    endif
+// Read parameter panel config table
+    $admin=$pdir+'/adm/ParamPanelConfig_'+$persona+'.txt'
+    $s1='' $s2=''
+    exists($admin,'file'):$tot
+    if $tot then
+    	readfile($admin,'$s1','$s2','','local'):$tot
+    endif
+    if ($tot) then
+        $i=1
+        repeat
+            $ok=0
+            teststr('personaPpPar',$s1[$i],'global'):$ok
+            if ($ok) then
+                if ($s1[$i]='start_standard') or ($s1[$i]='acquire_default') or ($s1[$i]='process_textoutput') then
+                    personaPpPar[$ok+1]='open'
+                else
+		    if ($s2[$i]='close') then personaPpPar[$ok+1]='notused' endif
+                endif
+            endif
+            $i=$i+1
+        until $i > $tot
+    endif
+
+ENDIF
+"*****************************************************************"
+IF ($1='ReconcileExpSel') THEN
+    teststr('personaTpPar','ExperimentSelector','global'):$j
+    teststr('personaTpPar','ExperimentSelTree','global'):$j2
+    if $j and $j2 then
+        if personaTpPar[$j+1]='open' and personaTpPar[$j2+1]='open' then
+            personaTpPar[$j2+1]='close'
+        endif
+    endif
+ENDIF
+"*****************************************************************"
+IF ($1='list') THEN
+// Generate a list of existing persona directories
+//   from all valid personalib
+
+    $ADMpersona=''
+    {$0}('OwnerPersona'):$ADMpersona
+
+    $tmp=$personadir+'/Personalist_tmp'
+    write('reset',$tmp)
+
+//  get persona from all valid appdirs
+    getappdirs:$atot,$adirs,$alabels
+    if ($atot>0) then
+	$i=1
+	repeat
+	   $plib=$adirs[$i]+'/personalib'
+	   exists($plib,'directory'):$direx
+	   if ($direx) then
+		shell('(ls -1d '+$plib+'/* >> '+$tmp+')'):$dum
+	   endif
+	   $i=$i+1
+	until $i > $atot
+    endif
+    $s1='' $s2='' $s3='' $s4=''
+    readfile($tmp,'$s3','$s2','','local'):$tot
+    shell('rm -f '+$tmp):$dum
+    if ($tot) then
+	$i=1 $j=1
+	repeat
+	    shell('basename '+$s3[$i]):$s2
+	    teststr('$s1',$s2,'local'):$isin
+// Don't add Owner persona if there is an ADMpersona
+	    if ($s2='Owner') and ($ADMpersona<>'') and ($ADMpersona<>'Owner') then $isin=1 endif
+	    if ($isin=0) then $s1[$j]=$s2 $j=$j+1 endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+
+// Sort them based on the number of toolpanels enabled
+    $pl=30
+    $tot=size('$s1')
+    if ($tot>1) then
+	$i=1
+	repeat
+	    $plvl=''
+	    $pl[$i]=30
+	    exists('toolPanelConfig_'+$s1[$i]+'.txt','personalib/'+$s1[$i]+'/adm'):$tpex,$tpfile
+	    if ($tpex) then
+		shell('(cat '+$tpfile+' | grep -wc open)'):$pl[$i]
+	    endif
+	    $i=$i+1
+	until $i > $tot
+	sort($pl):$n,$pl
+	$i=1
+	repeat
+	    $index=$n[$i]
+	    $s2[$i]=$s1[$index]
+	    $i=$i+1
+	until $i > $tot
+	$s1=$s2
+    endif
+
+//  Write the list
+    $Plist=$personadir+'/PersonaList'
+    write('reset',$Plist)
+    $tot=size('$s1')
+    if ($tot>1) then
+	$i=1
+	repeat
+	    write('file',$Plist,'"%s" "%s"',$s1[$i],$s1[$i])
+	    $i=$i+1
+	until $i > $tot
+	write('file',$Plist,'"" ""')
+    endif
+    vnmrjcmd('pnew','operator','owner','personaType')
+    return
+ENDIF
+"*****************************************************************"
+IF ($1='showInView') THEN
+// Used in MainMenuView.xml to show/noshow a given toolpanel option
+    if (personaType='') then return(1) endif
+    exists('toolPanelConfig_'+personaType+'.txt','personalib/'+personaType+'/adm'):$pmex,$ptp
+    if ($pmex=0) then return(1) endif
+    $s1='' $s2=''
+    readfile($ptp,'$s1','$s2','','local')
+    teststr('$s1',$2,'local'):$ok
+    if ($ok<0.5) then return(1) endif
+    if ($s2[$ok] = 'close') or ($s2[$ok]='no') then return(-1) endif
+    return(1)
+ENDIF
+"******************************************************************"
+IF ($1='showInPanel') THEN
+// Used in acq.xml, proc.xml and sample.xml to show/noshow a given panel
+    if (personaType='') then return(1) endif
+    exists('ParamPanelConfig_'+personaType+'.txt','personalib/'+personaType+'/adm'):$pmex,$ptp
+    if ($pmex=0) then return(1) endif
+    format($2+'_'+$3,'lower'):$ptype
+    $s1='' $s2=''
+    readfile($ptp,'$s1','$s2','','local')
+    teststr('$s1',$ptype,'local'):$ok
+    if ($ok<0.5) then 
+	teststr('$s1','other_panels','local'):$ok2
+	if ($ok2) then if ($s2[$ok2]='close') or ($s2[$ok2]='no') then return(0) endif endif
+    else
+    	if ($s2[$ok] = 'close') or ($s2[$ok]='no') then return(0) endif
+    endif
+    return(1)
+ENDIF
+"******************************************************************"
+IF ($1 = 'menushow') THEN
+// Used in cpmenushow macro to show/noshow a given MainMenu widget
+    $ret='show'
+    if (personaType='') then
+	return($ret)
+    endif
+    $pmenu=''
+    exists('MenuConfig_'+personaType+'.txt','personalib/'+personaType+'/adm'):$pmex,$pmenu
+    if ($pmex=0) then return($ret) endif
+    $s1='' $s2=''
+    readfile($pmenu,'$s1','$s2','','local')
+    teststr('$s1','MainMenu'+$2,'local'):$ok
+    if ($ok) then $ret=$s2[$ok] endif
+    return($ret)
+ENDIF
+"*****************************************************************"
+IF ($1='changePersona') THEN
+//  Administrative tool for convenience.  Used in command line only
+    if ($2='Owner') then $2='' endif
+    personalogin('login',$2)
+    personalogin('toolPanel',$2)
+//    personalogin('parameters',$2)
+ENDIF
+"*****************************************************************"
+IF ($1='login') or ($1='toolPanel') or ($1='parameters') THEN
+// Left over from the first version of this macro. Now replaced with
+//    personalogin macro
+    if ($# > 1) then 
+	personalogin($1,$2)
+    else
+	personalogin($1)
+    endif
+    return 
+ENDIF
+"******************************************************************"

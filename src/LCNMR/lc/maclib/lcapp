@@ -1,0 +1,117 @@
+"macro lcapp"
+// lcapp apptype
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+if ($action = 'setup') then
+
+  $solvent=solvent
+  if ($do = '') then
+    $do = macro
+  endif
+  $path=systemdir+'/tmp/'+$do
+  exists($path+'.par','directory'):$e  // Autoscout
+  if ($e) then
+    rtp($path)
+    fixpar_walkup
+    module('add','presat wet gradient')
+  else
+    exists($do,'parlib'):$e,$path
+    if ($e) then
+      rtp($path)
+      fixpar_walkup
+      newmodules='presat wet gradient'
+      module('setup')
+      module('acquisition')
+    else
+      write('error','parameters for %s do not exist',macro)
+      return
+    endif
+  endif
+  Autosetgpar
+  resetsampglobal
+  solvent=$solvent
+  setobspars
+  setwetpar
+//  prescan[10]='xmHprescan(\'scout\')'
+
+  if (tn = 'H1') then dn='C13' endif
+
+//  setProbepars('force')
+//  homo='n'
+//  setobspars
+//  setdecpars
+  pw=pw90
+  write('line3','pw90 = %s tpwr = %s ',pw90,tpwr)
+  settemp
+
+  if (traymax=96 or traymax=768 or traymax=1) then spin=0 endif
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    exec(wrtp)
+  endif
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+  execseq('setup')  // Execute any sequence specific setup
+  dps newdg dg
+  wexp=''
+  wstart='lc1dproc(\'doscout\')'
+
+elseif ($action = 'process') then
+
+  if (arraydim > 1) then
+    procarray
+  else
+    $sp=sp $wp=wp
+    wft f ai
+    aph:$x
+    if $x<0.5 then
+      aph0:$x
+      if $x<0.5 then
+        write('line3','spectrum unsuitable for autophasing')
+      endif
+    endif
+    hregions
+    integrate
+    if (size('lifrq')>1) then bc endif
+    vsadjh
+    noislm
+    sp=$sp wp=$wp
+    if auto='n' then
+      ds
+    endif
+  endif
+
+  if (auto='y' or sqmode='go') then
+    $file=file
+    exists($file,'directory'):$e
+    if $e<0.5 then
+      $file=$file+'.fid'
+      exists($file,'directory'):$e
+    endif
+    if $e>0.5 then
+      groupcopy('current','processed','display')
+      fsave($file+'/procpar')  "save lifrq etc."
+    endif
+  endif
+
+  execseq('proc') // Execute any sequence specific processing
+
+elseif ($action = 'plot') then
+
+  if arraydim=1 then		" non-arrayed 1D spectra "
+    plot1d			" other non-arrayed 1D spectra "
+  else				" arrayed 1D spectra "
+    plarray			" other arrayed 1D spectra "
+  endif
+
+  execseq('plot') // Custom  sequence-based plots if desired
+
+endif
+

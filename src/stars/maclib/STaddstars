@@ -1,0 +1,56 @@
+"macro STaddstars"
+beepoff
+addstars 
+
+"create additional parameters for VJDATA page" 
+
+exists('mqf1val','parameter'):$mqf1val
+if ($mqf1val<0.5) then 
+   create('mqf1val')
+endif
+
+exists('mqf1val2','parameter'):$mqf1val2
+if ($mqf1val2<0.5) then 
+   create('mqf1val2')
+endif
+
+exists('downsamp','parameter'):$downsamp
+if ($downsamp>0) then
+   on('downsamp'):$downsampv
+   if ($downsampv=0) then 
+      swsim=sw spsim=-rfl+rfp
+   else
+      swsim=sw/downsamp 
+      spsim=(-rfl+rfp)/downsamp
+   endif
+else
+   swsim=sw spsim=-rfl+rfp 
+endif
+
+if (fn>65535) then 
+   fn=65535
+endif 
+if (fn1>65535) then 
+   fn1=65535
+endif 
+
+iter='' lshp='y' 
+csa=0 viso=0 etas=0 cq=0 etaq=0
+sites=1 csa2=0 viso2=0 etas2=0 cq2=0 etaq2=0 
+setvalue('amp',1.0) 
+setvalue('amp2',0.0)
+rfw='n'
+
+clradd 
+spadd
+jexp:$data_exp_number
+
+exists('data_exp','parameter'):$dataexp
+if ($dataexp<0.5) then
+   create('data_exp')
+endif
+
+data_exp=$data_exp_number
+STscreen
+beepon
+

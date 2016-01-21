@@ -1,0 +1,45 @@
+"macro Mmarkslice"
+" Mmark - Slice planning panel "
+
+graphis:$displaymode
+
+"Set up for slice planning"
+if ($displaymode = 'dconi') then
+  if (crmode = 'b') then
+    menu('slice_plan') dconi('restart') dconi('toggle')
+  else
+    menu('slice_plan') dconi('restart') 
+  endif
+else
+    menu('slice_plan') dconi('again') 
+endif
+
+"clear markers and exit"
+if ($1 = 'reset') then
+  slicemark('reset') dconi('again')
+  abort
+endif
+
+$size = size('t_mark')
+
+
+if ( ($size = 1)  and  (t_mark = 0) ) then
+  slicemark dconi('restart')
+else if ($size = 2) then
+  slicemark dconi('restart')
+  $size = size('t_mark')
+  if ($size = 4) then
+    drawslice
+  else 
+    write('error','%s',
+      'WARNING: Inconsistent slice mark information, please clear first')
+  endif
+else if ($size = 4) then  "mark 1 and 2 set, reset mark 2"
+  t_mark[3] = cr
+  t_mark[4] = cr1
+  dconi('again') drawslice
+endif endif endif
+
+
+
+

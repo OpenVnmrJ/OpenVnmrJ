@@ -1,0 +1,59 @@
+"macro arrayvals"
+"***************************************************************"
+" arrayvals                                                     "	
+"                                                               "
+" Return the values of all arrayed parameters for a specified array
+" index.  Two string lists and a real list are returned, a list of the
+" parameter names, a list of the corresponding values as strings, and
+" a list of the values as real numbers.  Floating point values are
+" formatted as strings to supply the string list value.  String
+" parameters get a value of zero in the list of real values.
+"
+" Usage:  arrayvals(index):namelist,svaluelist,rvaluelist
+"***************************************************************"
+
+if (array = '') then
+  return('','',0)
+endif
+
+"** Initialize variables **********************************"
+$array_no = $1
+
+"** Get the list of arrayed parameters ********************"
+arrayparse:$namelist,$ranklist,$sizelist
+
+$number = size('$namelist')
+
+"** Initialize the $valuelist variable, since it will be **"
+"** filled in reverse order.                             **"
+$j = 0
+repeat
+  $j = $j + 1
+  $valuelist[$j] = ''
+  $rvaluelist[$j] = 0
+until ($j = $number)
+
+"** Loop through each array name and write out values *****"
+$namecount = $number
+$mult = 1
+$rank = $ranklist[$number]
+repeat
+  if ($rank <> $ranklist[$namecount]) then
+    $rank = $ranklist[$namecount]
+    $mult = $mult*$sizelist[$namecount+1]
+  endif
+  $index = trunc(($array_no-1)/$mult) % $sizelist[$namecount] + 1
+
+  $param = $namelist[$namecount]
+
+  if (typeof($param)) then
+    $valuelist[$namecount] = {$param}[$index]
+  else
+    format({$param}[$index],0,4):$valuelist[$namecount]
+    $rvaluelist[$namecount] = {$param}[$index]
+  endif
+
+  $namecount = $namecount - 1
+until ($namecount = 0)
+
+return($namelist,$valuelist,$rvaluelist)

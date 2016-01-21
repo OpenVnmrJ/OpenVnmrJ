@@ -1,0 +1,40 @@
+"macro BP4b2"
+" BP4b2"
+$counter=1
+select(1) peak:$best,cr $bestone=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>20
+$bestone_n_best=tpwrsf[$bestone]
+BPsvf(userdir+'/AutoTripRes/flipback_cal2d')
+write('plotter',sc-30,148,'INEPT - Soft Pulse (gNhsqc,TROSY): Fine Power Optimization (flip-up) = %4.0f',tpwrsf[$bestone])
+write('plotter',sc-30,146,'Shape = H2Osinc_n.RF')
+vp=150 dssn(1,20,'dodc') pl(1,20,'dodc')
+pap BPpage
+$tpwrsf_n=''
+tpwrsf=$bestone_n_best
+format(tpwrsf,4,0):$tpwrsf_n
+BPsetparams('tpwrsf_n',$tpwrsf_n,'H1')
+if r7=8 then
+  banner('Water Shaped Pulse Calibration and Creation Finished')
+  return
+endif
+phincr=0 shape='H2Osinc'
+getparam('tpwrsf','H1'):tpwrsf
+vp=0
+
+if BPBioNMR=1 then seqfil='ghn_coP' else seqfil='ghn_co' endif
+satmode=''   "resets parameter used in flipback_cal"
+getparam('BPgain','H1'):gain
+fn=4*np
+setref
+sp=6p wp=4p nt=4 phincr=0 dcg='cdc' lvl=0 tlt=0
+ss=4 ssfilter=200 ssntaps=200 ssorder='n'  vp=0
+wnt='wft select(1) vsadj(2) av dssh(\'dodc\')'
+gzlvl2=trunc(gzlvl2)
+text('HNCO')
+array('gzlvl2',41,gzlvl2-400,40)
+wexp='BP5'  beepon au

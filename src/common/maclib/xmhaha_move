@@ -1,0 +1,167 @@
+"macro xmhaha_move"
+$tailX='tail'
+whichtail:$tailX
+
+walkupQ_init
+
+is_submitmode:$issubmit
+if ($issubmit) then
+
+    if ($# < 3) then $3='' endif
+    if ($2<>$3) then
+	vnmrjcmd('SQ move '+$2+' '+$3)
+	xmhaha2('moveSQ',$2,$3)
+        vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+        xmhaha_bCQ
+    endif
+
+else
+
+	$isautosq=0 $filter=1
+	xmhaha2('isautoSQ'):$isautosq,$filter
+	if ($isautosq=0) or ($filter=1) then
+	     return
+	endif
+        if (owner<>operator) then
+	    write('error','%s does not have permission to rearrange queue',operator)
+	    return
+	endif
+
+	$nodelist=''
+	xmhaha2('nodelist'):$nodelist
+	teststr('$nodelist','Qn009','local'):$r1
+        if ($r1) then
+                write('line3','Cannot rearrange queue while in this view')
+                write('line3','Please revert to DayQ/NightQ view and attempt this move')
+                return
+        endif
+
+	$pqpos=0 $eqpos=0 $nqpos=0
+	$ptot=size('$nodelist')
+	teststr('$nodelist','Qn005','local'):$pqpos
+        teststr('$nodelist','Qn006','local'):$eqpos
+        teststr('$nodelist','Qn007','local'):$nqpos
+	if ($pqpos=0) then $pqpos=$ptot+1 endif
+	if ($eqpos=0) then $eqpos=$ptot+1 endif
+	if ($nqpos=0) then $nqpos=$ptot+1 endif
+
+	$parnodelist=''
+	xmhaha2('locationlist'):$parnodelist
+	$parnodesize=size('$parnodelist')
+
+"************************************************"
+"Get all information about the node being moved"
+        $2par=''
+        xmhaha2('getparent',$2):$2par
+        if ($2par='parent') then $2par=$2 endif
+	teststr('$nodelist',$2par,'local'):$2parpos
+
+	$infonode=0
+	strstr($2par,'Qn'):$infonode
+	if ($infonode>0) then
+            write('error','Cannot move an information node')
+            return
+	endif
+
+        $2title='' $2loc=''
+        if ($2parpos > $nqpos) then
+                $2where='overniteQ'
+        else
+                $2where='enterQ'
+        endif
+	xmgetatts($2par,'title'):$2title
+	strstr($2par,'_','last'):$ret,$2loc
+	if ($ret=0) then return endif
+        substr($2title,1):$2title
+
+"************************************************"
+"Get all information about the destination node"
+	$3par=''
+	if ($3='tmpstudy') then return endif
+        if ($3<>'') and ($3<>'null') then
+                xmhaha2('getparent',$3):$3par
+                if ($3par='parent') then $3par=$3 endif
+        else
+                shell('(cat '+sqdir+'/enterSQ | grep -w parent | '+$tailX+' -n 1)'):$3par
+                substr($3par,1):$3par
+        endif
+	teststr('$nodelist',$3par,'local'):$3parpos
+	if ($3par=$2par) then return endif
+
+	$3title='' $3loc=''
+	if ($3parpos > $nqpos) then
+		$3where='overniteQ'
+	else
+		$3where='enterQ'
+	endif
+	xmgetatts($3par,'title'):$3title
+	strstr($3par,'_','last'):$ret1,$3loc
+	substr($3title,1):$3title
+
+"************************************************"
+"Get all information about the node just below the destination node"
+
+	teststr('$parnodelist',$3par,'local'):$3parpos2
+	if ($3parpos2=$parnodesize) then
+		$4par='' 
+	else
+		$4par=$parnodelist[$3parpos2+1]
+	endif
+	if ($4par<>'') then
+		teststr('$nodelist',$4par,'local'):$4parpos
+        	$4title='' $4loc=''
+        	if ($4parpos > $nqpos) then
+                	$4where='overniteQ'
+        	else
+                	$4where='enterQ'
+        	endif
+        	xmgetatts($4par,'title'):$4title
+        	strstr($4par,'_','last'):$ret1,$4loc
+        	substr($4title,1):$4title
+	else
+		$4where=$3where
+		$4loc=''
+	endif
+
+"************************************************"
+        if ($2where=$3where) and ($2where<>$4where) then
+		$4loc='' $4where=$3where
+	endif
+
+	if ($4where<>$2where) then
+		write('error','Cannot move experiment from %s to %s',$2where,$4where)
+		return
+	endif
+
+//	write('line3','I am here %s  %s  %s',$2loc,$4loc,$2where)
+//   return
+   "Make the move in the automation file"
+	$ok=0
+	vjrearrangeQ($2loc,$4loc,$2where):$ok
+
+   "Now move the parents"
+     if ($ok) then
+            if ($4loc='') then
+                write('line3','Successfully moved %s to the end of %s',$2title,$2where)
+            elseif ($3parpos>$2parpos) then
+                write('line3','Successfully moved %s before %s in %s',$2title,$4title,$2where)
+	    else
+                write('line3','Successfully moved %s after %s in %s',$2title,$3title,$2where)
+            endif
+	    vnmrjcmd('SQ move '+$2par+' '+$3par)
+	    xmhaha2('moveSQ',$2par,$3par)
+
+          if (cpautodir=autodir) then
+		xmhaha_settime
+	  endif
+
+     else
+            if ($4loc='') then
+                write('error','Failed to move %s to the end of %s',$2title,$2where)
+            elseif ($3parpos>$2parpos) then
+                write('line3','Failed to move %s before %s in %s',$2title,$4title,$2where)
+	    else
+                write('line3','Failed to move %s after %s in %s',$2title,$4title,$2where)
+            endif
+     endif
+endif

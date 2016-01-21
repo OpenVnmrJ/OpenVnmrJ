@@ -1,0 +1,211 @@
+"macro nextlocQ"
+"nextlocQ - macro to show find next available location and total empty locations"
+"	 in the automation tray - handles 9 or 50 or 100 samples "
+
+if (traymax=96) or (traymax=768) then
+   return(1)
+endif
+$filename=''
+if ($# < 1) then
+    $filename = 'enterQ'
+    $FILENAME = autodir
+else
+
+  if $1='enterQ' then 
+    $filename= $1
+    $FILENAME=autodir
+  else
+    substr($1,1,1):$char
+    if ($char <> '/') then
+      pwd:$dir
+      $FILENAME = $dir + '/' + $1
+      shell('basename '+$1):$filename
+    else
+      $FILENAME = $1
+      shell('basename '+$FILENAME):$filename
+    endif 
+    if ($filename='enterQ') then
+	shell('dirname '+$FILENAME):$FILENAME
+    endif
+    exists($FILENAME,'directory'):$ex
+     if ($ex=0) then 
+	if ($## < 0.5) then
+           banner('The specified automation directory\\          does NOT exist.')
+	endif
+       return(1)
+     endif
+  endif
+endif
+
+if ($filename='enterQ') then $iseq=1 else $iseq=0 endif
+$filename=$FILENAME+'/'+$filename
+
+$lastsample='current'
+getadminfo('lastsample'):$lastsample
+$traymax=traymax
+if (traymax=1) then $traymax=1000 endif
+if (traymax=97) then $traymax=96 endif
+
+$refno=0
+if ($lastsample='traymax') then
+	$traymax=$traymax-1
+	$refno=traymax
+else
+    format($lastsample,'isreal'):$real
+    if ($real) then
+	format($lastsample,'lower'):$refno
+	$traymax=$traymax-1
+    endif
+endif
+$srefno='' format($refno,0,0):$srefno
+
+        "Find out which sample is being run"
+$sno=0  $rno=0
+if ($iseq>0) then
+   checksample:$sno
+//   $sampleinfo=autodir+'/exp1/sampleinfo'
+   $sampleinfo=$filename+'.macdir/currentsampleinfo'
+   exists($sampleinfo,'file'):$inf
+   expactive('auto'):$expact
+   if ($expact>0)and($inf>0) then
+    	$sline=''
+    	shell('(cat '+$sampleinfo+' | grep -w SAMPLE#:)'):$sline
+	if ($sline<>'') then
+    	   substr($sline,2):$rno
+	endif
+   endif
+endif
+
+$allsamp=$sno,$rno
+$cursamp=0 $cursample=''
+
+$pid=''
+substr(vnmraddr,3):$pid
+$tmpblockq = userdir+'/persistence/blockq'+$pid
+write('reset',$tmpblockq)
+if ($sno) and ($sno<>$refno) then
+  write('file',$tmpblockq,'SAMPLE#: %d',$sno)
+endif
+if ($rno) and ($rno<>$refno) then
+  write('file',$tmpblockq,'SAMPLE#: %d',$rno)
+endif
+
+	"Find out all the blocked locations "
+
+  $dayfile=$filename
+  exists($dayfile,'file'):$fex
+  if $fex then
+  shell('(cat '+$dayfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+  endif
+
+  $laterdayfile=$filename+'.macdir/laterdayQ'
+  exists($laterdayfile,'file'):$fex
+  if $fex then
+  shell('(cat '+$laterdayfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+  endif
+
+  $laterprfile=$filename+'.macdir/laterpriorityQ'
+  exists($laterprfile,'file'):$fex
+  if $fex then
+  shell('(cat '+$laterprfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+  endif
+
+  $nitefile=$filename+'.macdir/overniteQ'
+  exists($nitefile,'file'):$fex
+  if $fex then
+  shell('(cat '+$nitefile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+  endif
+
+  $errorfile=$filename+'.macdir/cperrorQ'
+  exists($errorfile,'file'):$fex
+  if $fex then
+  shell('(cat '+$errorfile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+  endif
+
+  $startfile=$filename+'.macdir/cpstartQ'
+  exists($startfile,'file'):$fex
+  if $fex then
+  shell('(cat '+$startfile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+  endif
+
+  shell('cp '+$tmpblockq+' '+$tmpblockq+'1'):$dum
+  shell('(sort -n -k 2 -u '+$tmpblockq+'1 -o '+$tmpblockq+'1_sort; mv '+$tmpblockq+'1_sort '+$tmpblockq+'1)'):$dum
+
+  $donefile=$filename+'.macdir/cpdoneQ'
+  exists($donefile,'file'):$fex
+  if $fex then
+  shell('(cat '+$donefile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+  endif
+
+  shell('(sort -n -k 2 -u '+$tmpblockq+' -o '+$tmpblockq+'_sort; mv '+$tmpblockq+'_sort '+$tmpblockq+')'):$dum
+
+  $s1='' $s2='' $total=0
+  readfile($tmpblockq,'$s1','$s2','SAMPLE#','local'):$total
+  $s5='' $s6=''
+  readfile($tmpblockq+'1','$s5','$s6','SAMPLE#','local')
+
+  shell('rm -f '+$tmpblockq):$dum
+  shell('rm -f '+$tmpblockq+'1'):$dum
+
+	"There are no sample in this automation run"
+  if ($total=0) then 
+	return(1)
+  endif
+
+  if ($s2[$total]=$srefno) then
+	$s2[$total]=''
+ 	$s1[$total]=''
+	array2array($s1):$s1
+	array2array($s2):$s2
+	$total=size('$s1')
+  endif
+
+   $smslocation='random'
+//   getadminfo('smslocation'):$smslocation
+  if ($smslocation='next') then
+	"The highest sample number is less than traymax"
+      $last=0
+      if ($s2[$total]<>'') then
+  	format($s2[$total],'lower'):$last
+      endif
+      if ($last < $traymax) then
+	return($last+1)
+      endif
+  else
+      $i=1
+      repeat
+	$si='' format($i,0,0):$si
+	teststr('$s2',$si,'local'):$occupied
+	$locok=1
+	ckresloc('blocked',$si):$locok
+	if ($locok=0) then $occupied=1 endif
+	if ($occupied=0) then
+	   $status=''
+	   checklocstatus($filename,$i):$status
+	   if ($status='') then
+	   	return($i)
+	   endif
+	endif
+	$i=$i+1
+      until $i > $traymax
+  endif
+
+	"Find the first available reuselocQ"
+  $reuseq=$filename+'.macdir/reuselocQ'
+  shell('touch '+$reuseq):$dum
+  $s3='' $s4='' $nextloc=0
+  readfile($reuseq,'$s3','$s4','SAMPLE#','local'):$total2
+  if ($total2) then
+	$i=1
+        repeat
+           teststr('$s6',$s4[$i],'local'):$isthere
+           if ($isthere=0) then
+		format($s4[$i],'lower'):$nextloc
+                $i=$total2
+           endif
+           $i=$i+1
+        until $i > $total2
+  endif
+
+  return($nextloc)
+

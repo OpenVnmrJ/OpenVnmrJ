@@ -1,0 +1,37 @@
+"macro setDefaultXmlDir"
+/*-*- MAGICAL -*-*/
+"macro setDefaultXmlDir"
+
+// Set parameter to default value ("default")
+exists('defaultXmlDir','parameter'):$exists
+if (not $exists) then
+   create('defaultXmlDir','string')
+endif
+defaultXmlDir = 'default'
+
+// Look for file giving different default
+$defaultFile = systemdir+'/templates/layout/'+seqfil+'/DEFAULT'
+exists($defaultFile, 'file'):$exists
+if ($exists) then
+   // Parse the file
+   lookup('file',$defaultFile)
+   $moreLines=1
+   while ($moreLines) do
+      $line = ''
+      lookup('readline'):$line,$moreLines
+      $word = ''
+      substr($line, 1):$word
+      if ($word = 'set') then
+         substr($line, 2):$word
+         if ($word = 'default') then
+            $word = ''
+            substr($line, 3):$word
+            if ($word <> '') then
+               defaultXmlDir = $word
+            endif
+         endif
+      endif
+   endwhile
+endif
+return(defaultXmlDir)
+

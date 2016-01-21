@@ -1,0 +1,204 @@
+"macro N15rfhomo_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+//Apply some line broadening for autophasing peak picking
+//Remove afterwards
+lb=2
+
+wft
+$counter=1
+select(1)
+if $phase='dophase' then lp=0 aph endif
+
+$strpwx='' $strpwxlvl=''
+write('line3','%0.1f',N15pwx):$strpwx
+write('line3','%g',pwxlvl):$strpwxlvl
+VPgettarget('N15pwx90'):$target
+$targets=''
+format($target,1,1):$targets
+$IPteststatus='FAIL'
+
+//Need to determine pwx90 for reprocessing
+phase(180)
+VPthadj(1)
+nll
+fp
+pw360cal:$pwx90
+phase(-180)
+
+//Now remove line broadening before RF homo determination
+lb='n'
+wft
+vsadj
+
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest($pwx90) endif
+
+N15pwx=$pwx90
+if (N15pwx<=$target) then $IPteststatus='PASS' endif
+
+//Add the sample info to the text file
+VPtext
+
+write('line3','15N 90-degree pulse width \(indirect\)'):$line
+atext($line)
+write('line3','pwx90: %.1f us at power level %.1f dB',N15pwx,pwxlvl):$line
+atext($line)
+CalibrationResults=$line
+write('line3','Target <= %.1f us',$target):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+//Add amp power information if calibration table exists
+exists('VPgetpower','maclib'):$vpex
+if ($vpex) then
+   VPgetpower('check'):$pwrtabex
+   if ($pwrtabex) then
+	   VPgetpower(VPpowertabpath,'N15','indirect',pwxlvl,N15pwx,$target):$atext
+        atext($atext)
+   endif
+endif
+
+//write history file
+VPhistory(N15pwx,pwxlvl)
+
+VPgettarget('N15rfhomo'):$target360,$target720
+
+//Test for arcing if tools exist
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest endif
+
+peak:$firstmaxheight,$freq
+$bestindex=$counter
+cr=$freq
+dres(cr,0.5):$res
+$ress=''
+format($res,1,1):$ress
+
+//First find where signal goes -ve
+$i=1
+$found=0
+repeat
+   select($i)
+   peak:$ht
+   if ($ht<0) then $firstnegindex=$i $found=1 endif
+   $i=$i+1
+until ($i>=arraydim or $found)
+
+if not ($found) then write('line3','No useable data found') abort endif
+   
+$counter=$firstnegindex    
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                  "finds 360 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>5*$firstnegindex)
+
+$pwx360=pwx[$bestindex]
+$360maxindex=$bestindex
+$360maxheight=$bestheight
+
+$counter=5*$firstnegindex    
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                    "finds 720 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>arraydim)
+
+$pwx720=pwx[$bestindex]
+$720maxindex=$bestindex
+$720maxheight=$bestheight
+
+$ratio1=$360maxheight/$firstmaxheight
+$ratio2=$720maxheight/$firstmaxheight
+$ratio1=trunc(100*$ratio1)/100
+$ratio2=trunc(100*$ratio2)/100
+$pwx90=trunc(10*$pwx720/8)/10
+
+$ratio1s='' $ratio2s=''
+$ratio1=$ratio1*100
+$ratio2=$ratio2*100
+format($ratio1,1,1):$ratio1s
+format($ratio2,1,1):$ratio2s
+
+if (VPspecinfo[5]<>'N/A') then
+
+   write('line3','RF homogeneity - \(360/90\):%.1f, \(720/90\):%.f',$ratio1,$ratio2):$line
+   CalibrationResults=$line
+   atext($line)
+
+   $nuc=dn
+   $target360s='NONE' $target720s='NONE'
+   $teststatus1='PASS' $teststatus2='PASS'
+   
+   $str=$nuc+' RF homogeneity: 360/0='+$ratio1s+'%'
+   atext($str)
+
+   format($target360,1,1):$target360s
+   if ($ratio1 < $target360) then $teststatus1='FAIL' endif
+   $str='Target: >='+$target360s+'%'
+   atext($str)
+   CalibrationResults=CalibrationResults,$str
+   $str='Test status: '+$teststatus1
+   atext($str)
+   CalibrationResults=CalibrationResults,$str
+
+   $str=$nuc+' RF homogeneity: 720/0='+$ratio2s+'%'
+   atext($str)
+
+
+   format($target720,1,0):$target720s
+   if ($ratio2 < $target720) then $teststatus2='FAIL' endif
+   $str='Target: >='+$target720s+'%'
+   atext($str)
+   CalibrationResults=CalibrationResults,$str
+   $str='Test status: '+$teststatus2
+   atext($str)
+   CalibrationResults=CalibrationResults,$str
+
+endif
+
+$str='Resolution: '+$ress+' Hz'
+atext($str)
+CalibrationResults=CalibrationResults,$str
+
+dssh
+darray('CalibrationResults')
+
+//if ($activestudy<>'activestudy') then return endif
+
+$ep='' write('line3','wft wp=%0.1f sp=%0.1f select(1) vsadj dssh',wp,sp):$ep
+execprocess=$ep+' darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+if (VPspecinfo[5]<>'N/A') then
+   //Do reporting
+   VPhistory($ratio1,$ratio2)
+endif
+
+return($pwx90,$pwx360,$pwx720,$ratio1,$ratio2)

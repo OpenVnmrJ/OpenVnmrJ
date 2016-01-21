@@ -1,0 +1,32 @@
+"macro testXmlfile"
+vvLog('Test','Xml syntax')
+lookup('mfile',curexp+'/qapath','read'):$qapath
+$xmlpath=$qapath+'/bin'
+shell('cd '+$xmlpath+'; ./xmltest'):$res
+exists($xmlpath+'/failed.txt','file'):$e
+$fail=0
+if ($e) then
+  nrecords($xmlpath+'/failed.txt'):$fail
+endif
+if ($fail) then
+  write('line3','XML errrors')
+  $ret = 0
+  $line = ''
+  lookup('file',$xmlpath+'/failed.txt')
+  repeat
+    lookup('readline'):$line,$ret
+    if ($ret) then
+       write('line3','   %s',$line)
+    endif
+  until ($ret < 1)
+endif
+shell('grep "parsing..." '+$xmlpath+'/XmlTestResults.txt | wc -l;cat'):$pass
+$pass=$pass - $fail
+write('line3','%d xml files',$pass):$msg
+vvLog('Pass',$msg)
+if ($fail) then
+  write('line3','%d xml files',$fail):$msg
+  vvLog('Fail',$msg)
+  vvLog:$path
+  shell('cat '+$xmlpath+'/failed.txt >> '+$path+';cat'):$e
+endif

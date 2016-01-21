@@ -1,0 +1,132 @@
+"macro AT300a"
+"AT300a" "Find N15 pw90 ,power level, and BB amplifier compression"
+"       Uses channel 2 rf"
+"       requires channel 2 hooked up to an 15N port on probe"
+
+if (at_n15tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   setlimit('pwx',2000,0,.1)
+   at_currenttest='n15pw90_1_ch2'
+
+   seqfil='ATgNhmqc' 
+   dn='N15' j=4  
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   exists('maxattench2','parameter','global'):$e
+   if $e=1 then
+     if at_max_pwx2lvl>maxattench2 then at_max_pwx2lvl=maxattench2 endif
+     pwxlvl=at_max_pwx2lvl
+   endif
+   at_n15pwx90lvla=pwxlvl
+   pwx=35 ss=4
+   at=.3 av nt=2
+   sinebell
+   method='z1z2' wshim='e'  "insure that shimming on z1 is ok"
+
+   fn=64k
+   pwx=40   
+   wnt='ATwft select(1) crl rfl=sw/2 rfp=0 sp=-3.3p wp=1p vsadj(80) dssh dtext'
+   text('Finding 90 Degree 15N Pulse Width')
+   array('pwx',31,0.5*pwx,0.03*pwx)
+
+   wexp='AT300a(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   wft ATsvf
+   write('line3','Determining N15 pwx90 (Channel 3)')
+   ATn1590cal('pwx'):pwx
+   text('Finding 90 Degree 15N Pulse Width')
+
+   array('pwx',21,pwx-0.1*pwx,0.01*pwx)
+   nt=4 wshim='n'
+   at_currenttest='n15pw90_2_ch2'
+   write('line3','N15 pw90 (Channel 2) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+
+   if (at_printparams='y') then
+     pap ATpltext 
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+
+   if (at_plotauto='y') then
+    pltext(0,wc2max-2)
+    ATpltext
+    write('plotter',0,wc2max-40,'N15 pw90 (Channel 2) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+    pl('all') ATpage
+   endif
+     
+   wnt='ATwft dssh dtext'
+   wexp='AT300a(`PART2`)'
+   ATcycle au
+ 
+elseif ($1='PART2') then
+   wft ATsvf
+   write('line3','Determining N15 pwx90 at Reduced Power (Channel 2)')
+   ATn1590cal('pwx'):pwx r4=pwx
+   text('Finding 90 Degree 15N Pulse Width at lower power')
+
+   at_n15pwx90a=trunc(pwx*10)/10
+   pwx=pwx*4.0 pwxlvl=pwxlvl-12
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   at_currenttest='n15pw90_3_ch2'
+   wexp='AT300a(`PART3`)'
+   ATcycle au
+ 
+elseif ($1='PART3') then
+   wft ATsvf
+   at_currenttest='n15pw90_4_ch2'
+
+   ATn1590cal('pwx'):pwx 
+   if (at_printparams='y') then
+     pap ATpltext 
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+
+   if (at_plotauto='y') then
+    pltext(0,wc2max-2)
+    ATpltext
+    write('plotter',0,wc2max-40,'N15 pw90 (Channel 2) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+    pl('all') ATpage
+   endif
+
+   array('pwx',21,pwx-0.1*pwx,0.01*pwx)
+   wexp='AT300a(`PART4`)'
+   ATcycle au
+
+elseif ($1='PART4') then
+   wft ATsvf
+   ATn1590cal('pwx'):pwx 
+
+   at_n15pwx90Lowpowera=trunc(10*pwx)/10
+   at_n15pwx90Lowpowerlvla=pwxlvl
+
+   write('line3','N15 pw90 (Channel 2) =  %3.2f at reduced power level  %2.0f',pwx,pwxlvl)
+
+   if (at_plotauto='y') then
+      printon
+         echo('Pulse Calibration Data for 15N on Channel 3')
+         echo('For the probe   ',at_probetype)
+         echo('Based on Finding a 90 Degree Pulse  =  ',pwx)
+         echo('At Power Level',pwxlvl) 
+         echo('Done on    ',date)
+         ATatten(pwx,pwxlvl)
+      printoff
+   else
+      ATatten(pwx,pwxlvl)
+   endif
+   at_n15LBampl_compra=trunc(100*pwx/(4.0*at_n15pwx90a))/100 
+   ATrecord('N15LOAMPCOMP_ch2','Low-Band Amplifier Compression (ch2)','compression',at_n15LBampl_compra,'  at_n15powera',pwxlvl+12)
+   write('file',autotestdir+'/REPORT','N15 Low-Band Amplifier Compression (ch2) = %1.2f at power level: %2.0f ',at_n15LBampl_compra,pwxlvl+12)
+   ATsvf
+   ATrecord('N15PW90_ch2','N15 Pulse Width Calibration and Amplifier Compression using Channel 2','pw90_hi',at_n15pwx90a,'power1',at_n15pwx90lvla,'pw90_low',pwx,'power2  ',pwxlvl,'comp_power1',at_n15LBampl_compra)
+   write('file',autotestdir+'/REPORT','N15 pw90 (ch2) = %2.1f  at power level: %2.0f ',r4,pwxlvl+12)
+
+ATnext
+endif

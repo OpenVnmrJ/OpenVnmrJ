@@ -1,0 +1,73 @@
+"macro ATcryo_cndscale"
+"scale"
+$plotflag=(1=0) 
+
+
+
+if $#>0 then
+    if $1 = 'plot' then $plotflag=(1=1) 
+    endif 
+endif
+
+$startpwr=-12
+$pwrrange=62
+$color='black'
+if $plotflag then pen('plotter','pen1') $device='plotter' else $color='white' pen('graphics',$color) $device='graphics'endif
+
+  $startmm=wcmax-wc-sc
+  $mmf=wc/$pwrrange
+  $offset=0
+  
+
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar=0.7*$htchar else $wthchar=0.5*$htchar endif
+
+$tic=1.5
+
+$scaleoffset=0
+
+
+
+  $ticinc=2
+  $ticmult=1
+  $labelmult=1
+
+
+$t=$pwrrange
+$mm=($t-$startpwr+$offset)*$mmf 
+
+  $x0=$startmm $x1=$mm  $y0=$scaleoffset $y1=$scaleoffset
+"write('alpha',$startmm)"
+"write('alpha',$mm)"
+move($x0,$y0)
+draw($x1,$y1) 
+
+$t=$startpwr
+repeat
+$mm=($t-$startpwr+$offset)*$mmf
+
+$x1=$startmm+$mm $y1=$y0
+
+move($x1,$y1)
+
+$ttic=$tic
+$ttlabel=trunc($t*$labelmult+0.001)
+if $t>0 then abs($t*$labelmult-$ttlabel):$ttlabel endif
+if $ttlabel<.001 then
+  
+    draw($x1,$y1-$ttic)
+    write($device,$color,$x1-$wthchar,$y1-2*$ttic-$htchar,'%2.0f',$t) 
+ 
+endif
+
+$t=$t+$ticinc
+
+
+until $t>=$pwrrange+$startpwr
+
+  write($device,$color,wcmax-$htchar-2*$htchar,$y1-2*$ttic-2.5*$htchar,'pwr')
+
+
+
+
+

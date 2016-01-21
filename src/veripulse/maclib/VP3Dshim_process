@@ -1,0 +1,19 @@
+"macro VP3Dshim_process"
+
+$varfile=userdir+'/3Dshimlib/calibs/lastvar'
+exists($varfile,'file'):$varex
+if not ($varex) then write('error','Field variation not found') return endif
+
+lookup('file',$varfile)
+lookup('read',2):$nuc,$lastvar
+
+gxyzshimpwr:$shimpwr
+VPtext
+write('line3','Full 3D shim optimization'):$str
+atext($str)
+CalibrationResults=$str
+VPgettarget('shim3D'):$vartarget,$pwrtarget
+VPhistory($lastvar,$shimpwr)
+
+execprocess='ft dscale darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')

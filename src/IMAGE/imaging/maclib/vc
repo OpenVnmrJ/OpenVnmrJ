@@ -1,0 +1,108 @@
+"macro vc"
+
+"*************************************************************************************
+" vc  - Macro to setup vnmrs rf TX/RX control
+
+" Details: The RF Transmit and receive logic is controlled by the local parameters,
+"	volumexmt and volumercv. They are in turn controlled globally by
+"	VOLUMEXMT and VOLUMERCV. This allows one to conveniently switch from
+"	one coiltype to another without the need for modifying the parameters
+"	in the protocols. During a scan, the prep macro (ldrf) sets the local parameters
+"	volumexmt and volumercv according to VOLUMEXMT and VOLUMERCV respectively.
+"       The receiver is also similarly controlled via the global parameter RCVRS. Once
+"	set all protocols will be acquired with rcvrs=RCVRS
+"	If VOLUMEXMT, VOLUMERCV and RCVRS are set to 'l', the local parameters are used.
+
+"	The protocols are generally set to a default condition of volumexmt=y volumercv=y
+"	This is typically used to transmit and receive using a volume coil (High power
+"	mode)
+"
+"	If the string parameter rfcontrol exists, the user can select the coil type
+"	in the prescan setup page.
+"	VOLUMEXMT VOLUMERCV transmit receive     RCVRS
+"	   y          y      volume   volume       y    Volume coil
+"          y          n      volume   surface      y    Actively detuned Volume-surface coil
+"          y          n      volume   array coil  yyyy  Actively detuned Volume-4 coil array)
+"	   n          n      surface  surface      y    Low power transmit/receive
+"	   n          n      volume   volume      yyyy  4, Multi-coil, low power transmit/receive
+"	   n          n      volume   volume       y    Micro-imaging system
+"	   l          l                            l    local control of parameters
+
+"	The vc macro sets the global parameters according to the 'rfcontrol' selection. In the
+"	case of multiple coils, it also checks and sets the RCVRS parameter. Currently, the
+"	number of multiple or array coils is assumed to be 4. If you have for example
+
+"*************************************************************************************************
+
+exists('VOLUMERCV','parameter','global'):$e
+if($e = 0) then
+  create('VOLUMERCV','string','global')
+endif
+exists('VOLUMEXMT','parameter','global'):$e
+if($e = 0) then
+  create('VOLUMEXMT','string','global')
+endif
+exists('RCVRS','parameter','global'):$e
+if($e = 0) then
+  create('RCVRS','string','global')
+endif
+
+if(rfcontrol = 'volume') then
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'y'
+  RCVRS = 'y'
+elseif (rfcontrol = 'surface') then
+  VOLUMEXMT = 'n'
+  VOLUMERCV = 'n'
+  RCVRS = 'y'
+elseif (rfcontrol = 'volume-surface') then
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'n'
+  RCVRS = 'y'
+elseif (rfcontrol = 'volume-array2') then
+  if(numrcvrs >1) then
+   RCVRS = 'yy'
+  else
+    write('error','vc: Illegal number of receivers, numrcvrs=%d',numrcvrs)
+    abort
+  endif
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'n'
+elseif (rfcontrol = 'volume-array4') then
+  if(numrcvrs >3) then
+    RCVRS = 'yyyy'
+  else
+    write('error','vc: Illegal number of receivers, numrcvrs=%d',numrcvrs)
+    abort
+  endif
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'n'
+elseif (rfcontrol = 'volume-array8') then
+  if(numrcvrs >8) then
+    RCVRS = 'yyyyyyyy'
+  else
+    write('error','vc: Illegal number of receivers, numrcvrs=%d',numrcvrs)
+    abort
+  endif
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'n'
+elseif (rfcontrol = 'multicoils') then
+  RCVRS = 'yyyy'
+  VOLUMEXMT = 'n'
+  VOLUMERCV = 'n'
+elseif (rfcontrol = 'microimaging') then
+  VOLUMEXMT = 'n'
+  VOLUMERCV = 'n'
+  RCVRS = 'y'
+elseif (rfcontrol = 'local') then  "local control of RF"
+  VOLUMEXMT = 'l'
+  VOLUMERCV = 'l'
+  RCVRS = 'l'
+  volumexmt = 'y' 
+  volumercv = 'y'
+  rcvrs = 'y'
+else
+  write('error','vc: Illegal entry, rfcontrol=%s',rfcontrol)
+  abort
+endif
+

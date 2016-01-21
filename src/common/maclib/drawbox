@@ -1,0 +1,55 @@
+"macro drawbox"
+//  using supplied arguments draw a box on the screen
+
+// All arguments are optional
+// arg1 (if string) will be the color choice
+//	The string argument MUST be the first argument
+// two optional real arguments (cr and delta)
+// two more additional real arguments can define y limits for the box in mm
+
+//  Usage:  drawbox - draws a box based on cr and delta using spectrum color
+//	    drawbox('threshold') - draws a box based on cr and delta using threshold color
+//	    drawbox(cr,delta) - draws a box using arguments using spectrum color
+//	    drawbox('threshold',cr,delta) - draws a box using supplied real arguments
+//						with thresold color
+
+$cr=cr $delta=delta $color='spectrum9'
+$y1=vp-5 $y2=(wc2max-vp)/4
+
+$x=0
+if ($# > $x) then
+    if typeof('$1') then
+	format($1,'isreal'):$real
+	if not $real then
+	    $color=$1
+	    $x=1
+	endif
+    endif
+endif
+
+if ($# > $x+1) then
+    format(${$x+1},'lower'):$cr
+    format(${$x+2},'lower'):$delta
+    $x=$x+2
+endif
+
+if ($# > $x+1) then
+    format(${$x+1},'lower'):$y1
+    format(${$x+2},'lower'):$y2
+endif
+
+if ($delta=0) then return endif
+
+$hzmm=wp/wc
+pen('graphics',$color)
+if ($cr>sp) and ($cr-$delta < wp+sp) then
+    if ($cr > wp+sp) then $x1=wcmax-wc-sc else
+	$x1=wcmax - sc - ($cr-sp)/$hzmm
+    endif
+    if (($cr-$delta) < sp) then $x2=wcmax - sc else
+	$x2=wcmax - sc - ($cr-$delta-sp)/$hzmm
+    endif
+    
+    box($x1,$x2,$y1,$y2,'nolimit')
+endif
+//write('line3','%s  %g  %g',$color,$cr,$delta)

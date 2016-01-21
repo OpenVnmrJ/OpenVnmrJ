@@ -1,0 +1,311 @@
+"macro episvib"
+"***************************************************************"
+" episvib - Save EPI data files for ImageBrowser                "
+"                                                               "
+" Make ImageBrowser fdf files from Vnmr fid data                "
+" A name argument is required, which is used as the name of the "
+" directory in which the fdf image files will be saved.  Each   "
+" image is saved as a separate file in the directory, with      "
+" binary data in the selected format and plain text header      "
+" information describing the field of view, orientation, etc.   "
+" The image data itself may be saved in several different       "
+" numerical types:                                              "
+"      'f':  floating point, 32 bit                             "
+"      'm':  integer, 16 bit                                    "
+"      'b':  integer, 8 bit                                     "
+" Usage:  svib('directory_name'[,'outfmt'])                     "
+"***************************************************************"
+
+"** Initialize constants and defaults *********************"
+$prog = 'episvib: '			"Program ID"
+$basename = 'image'                     "generic phasefile name"
+$headername = 'header'                  "generic header name"
+$ext = '.dat'				"extension added to directory"
+$outfmt = 'f'				"output data type 'f'=float"
+$arraysize = 1
+$deg_to_rad = 3.141592654/180.0		"degree to radian conversion"
+
+
+"** Check arguments ***************************************"
+if ($# < 0.5) or ($# > 2.5) then
+  write('error','Usage: episvib(\'directory_name\'[,\'output_format\'])')
+  abort
+endif
+
+"** A second argument specifies the output data format ****"
+if ($# > 1.5) then
+  if ($2 = 'm') or ($2 = 'f') or ($2 = 'b') then
+    $outfmt = $2
+  else
+    write('error','Usage: episvib(\'directory_name\'[,\'f\'/\'m\',/\'b\'])')
+    abort
+  endif
+endif
+
+
+"** Check existence of target directory *******************"
+$directory = $1+$ext
+exists($directory,'file'):$exists
+
+if ($exists > 0.5) then
+  write('error',$prog+'A directory '+$directory+' already exists')
+  input('Overwrite it? (y/n): '):$answer 
+
+  if ($answer = 'y') then
+    rm('-r',$directory):$x
+    mkdir($directory)
+  else
+    abort
+  endif
+else
+  mkdir($directory)
+endif
+
+
+"** Check array parameter *********************************"
+if (array <> '') then
+  exists(array,'parameter'):$exists
+  if ($exists = 0) then
+    write('error',$prog+'Can\'t find parameter \'%s\'',array)
+    write('line3','Warning: multiple arrayed parameters not supported')
+    abort
+  else
+    $arraysize = size(array)
+    $value_string = ''
+    $count = 1
+    $valstr = ''
+    $char = ''
+    "** Assemble string to represent list of array values *****"
+    repeat
+      if (typeof(array)) then
+        $value_string = $value_string + {array}[$count]
+      else
+	format({array}[$count],0,8):$valstr
+	length($valstr):$length
+	$i = 0
+	repeat
+	  substr($valstr,$length-$i,1):$char
+	  $i = $i + 1
+	until ($char <> '0'  or  $i = 8)
+	format({array}[$count],0,9-$i):$valstr
+        $value_string = $value_string + $valstr
+      endif
+      if ($count < $arraysize) then  $value_string = $value_string+','  endif
+      $count = $count + 1
+    until ($count > $arraysize)
+  endif
+endif
+
+
+"** Convert Euler angle orientation to nine direction *****"
+" cosines which define the imaging plane orientation       "
+" relative to the magnet frame.                            "
+"**********************************************************"
+cos($deg_to_rad*psi):$cospsi
+sin($deg_to_rad*psi):$sinpsi
+cos($deg_to_rad*phi):$cosphi
+sin($deg_to_rad*phi):$sinphi
+cos($deg_to_rad*theta):$costheta
+sin($deg_to_rad*theta):$sintheta
+
+"** The direction cosine matrix dc is reordered to follow *"
+" the axis definitions in the Vnmr phasefile: traces or   *"
+" F1 axis first. (1<->2, 4<->5, 7<->8)                    *"
+"**********************************************************"
+$dc[1] = -$sinphi*$sinpsi - $cosphi*$costheta*$cospsi
+$dc[2] = $sinphi*$cospsi - $cosphi*$costheta*$sinpsi
+$dc[3] = $sintheta*$cosphi
+
+$dc[4] = $cosphi*$sinpsi - $sinphi*$costheta*$cospsi
+$dc[5] = -$cosphi*$cospsi - $sinphi*$costheta*$sinpsi
+$dc[6] = $sintheta*$sinphi
+
+$dc[7] = $cospsi*$sintheta
+$dc[8] = $sinpsi*$sintheta
+$dc[9] = $costheta
+
+
+"** Define header entries and formats *********************"
+$format[1] =  'float  rank = %d;'
+$format[2] =  'char  *spatial_rank = "%s";'
+$format[3] =  'char  *storage = "%s";'
+$format[4] =  'float  bits = %d;'
+$format[5] =  'char  *type = "%s";'
+$format[6] =  'float  matrix[] = {%d, %d};'
+$format[7] =  'char  *abscissa[] = {"%s", "%s"};'
+$format[8] =  'char  *ordinate[] = { "%s" };'
+$format[9] =  'float  span[] = {%f, %f};'
+$format[10] = 'float  origin[] = {%f, %f};'
+$format[11] = 'char  *nucleus[] = {"%s","%s"};'
+$format[12] = 'float  nucfreq[] = {%f,%f};'
+$format[13] = 'float  location[] = {%f,%f,%f};'
+$format[14] = 'float  roi[] = {%f,%f,%f};'
+$format[15] = 'float  orientation[] = {%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f};'
+$format[16] = 'char  *array_name = "%s";'
+$format[17] = 'float  array_vals[] = {%s};'
+$format[18] = 'float  %s = %f;'
+$format[19] = 'char  *%s = "%s";'
+$format[20] = 'int    array_index = %d;'
+$format[21] = 'char  *file = "%s";'
+
+
+"** Check 'trace' parameter, match lro, lpe, fn, fn1 ******"
+if (trace = 'f1') then
+  $lro = lro  $lpe = lpe  $fn = fn  $fn1 = fn1
+else
+  $lro = lpe  $lpe = lro  $fn = fn1  $fn1 = fn
+endif
+
+
+"** Assemble common information for all headers ***********"
+$rank = nD
+$spatial_rank = '2dfov'
+$type = 'absval'
+$abs[1] = 'cm'
+$abs[2] = 'cm'
+$ord = 'intensity'
+$loc[1] = ppe
+$loc[2] = pro
+$roi[1] = $lpe
+$roi[2] = $lro
+$roi[3] = thk/10
+
+
+"** Specify data format ***********************************"
+if ($outfmt = 'f') then
+  $storage = 'float'
+  $bits = 32
+else if ($outfmt = 'b') then
+  $storage = 'char'
+  $bits = 8
+else
+  $storage = 'integer'
+  $bits = 16
+endif endif 
+
+"** Commented out for epi data"
+
+"** Determine if data is compressed phase encode.  If so **"
+" run flashc to put in standard arrayed 2D format          "
+"**********************************************************"
+"substr(seqcon,1,1):$seqcon_echoes"
+"substr(seqcon,2,1):$seqcon_slices"
+"substr(seqcon,3,1):$seqcon_pe1"
+"$traces = 1"
+"if ($seqcon_pe1 = 'c') then"
+"  exists('flash_converted','parameter','processed'):$exists"
+"  if ($exists < 0.5) then"
+"    if ($seqcon_echoes = 'c') then  $traces = ne  endif"
+"    if ($seqcon_slices = 'c') then  $traces = ns*$traces  endif"
+"    write('line3','%s','Converting Compressed Data')"
+"    flashc('ms',$traces)"
+"  endif"
+"endif"
+
+
+"** Loop through all images, transforming and saving. *****"
+$fmt = 'Processing  echo:%3d    slice:%3d    array:%3d    image:%3d'
+$index = ''
+$count = 0
+$array = 0
+
+"** Loop through array elements ***************************"
+f full
+
+"Generate EPI phase map file from 1st datafile"
+epiph
+
+repeat
+  cf = 0
+  $slice = 0
+  $array = $array + 1
+
+  "** Loop through compressed multislices *******************"
+  repeat
+    $echo = 0
+    $slice = $slice + 1
+    $loc[3] = pss[$slice]
+
+    "** Loop through compressed multiechoes *******************"
+    repeat
+      cf = cf + 1
+      $echo = $echo + 1
+      if ($echo % 2) then
+        $fttype = 'ntype'
+      else
+        $fttype = 'ptype'
+      endif
+      $count = $count + 1
+      write('line3',$fmt,$echo,$slice,$array,$count)
+      "Process epi data"
+      epift($array)
+      
+      image
+
+      "** Construct index string to to attach to base name ******"
+      format($count+10000,5,0):$index
+      substr($index,2,4):$index
+      $datafile = $directory+'/'+$basename+'.'+$index
+      $headerfile = $directory+'/'+$headername+'.'+$index
+
+      "** Save the image data in a temporary file ***************"
+      exists($datafile,'file'):$exists
+      if ($exists > 0.5) then rm($datafile):$x endif
+      svdat($datafile,$outfmt)
+
+      "** Create and write the temporary fdf header file ********"
+      write('reset',$headerfile)
+      write('file',$headerfile,'%s','#!/usr/local/fdf/startup')
+      write('file',$headerfile,$format[1],$rank)
+      write('file',$headerfile,$format[2],$spatial_rank)
+      write('file',$headerfile,$format[3],$storage)
+      write('file',$headerfile,$format[4],$bits)
+      write('file',$headerfile,$format[5],$type)
+      write('file',$headerfile,$format[6],0.5*$fn1,0.5*$fn)
+      write('file',$headerfile,$format[7],$abs[1],$abs[2])
+      write('file',$headerfile,$format[8],$ord)
+      write('file',$headerfile,$format[9],$lpe,$lro)
+      write('file',$headerfile,$format[10],ppe,pro)
+      write('file',$headerfile,$format[11],tn,dn)
+      write('file',$headerfile,$format[12],sfrq,dfrq)
+      write('file',$headerfile,$format[13],$loc[1],$loc[2],$loc[3])	
+      write('file',$headerfile,$format[14],$roi[1],$roi[2],$roi[3])	
+      write('file',$headerfile,$format[15],$dc[1],$dc[2],$dc[3],$dc[4],\
+          $dc[5],$dc[6],$dc[7],$dc[8],$dc[9])
+
+      if ($arraysize > 1) then
+        write('file',$headerfile,$format[16], array)
+        if (typeof(array)) then
+          write('file', $headerfile,$format[17],$value_string)
+          write('file', $headerfile,$format[19],array,{array}[$array])
+        else
+          write('file',$headerfile,$format[17],$value_string)		
+          write('file',$headerfile,$format[18],array,{array}[$array])
+        endif 
+        write('file',$headerfile,$format[20],$array)		
+      else
+        write('file',$headerfile,$format[16], 'none')  
+      endif
+      write('file',$headerfile,$format[21],file)
+
+      "** Glue header and data, put into final fdf file *********"
+      $fdffile = $directory+'/'+$basename+$index+'.'+'fdf'
+      shell('fdfgluer "'+$headerfile+'" "'+$datafile+'" "'+$fdffile+'"'):$trash
+      rm($headerfile):$x
+      rm($datafile):$x
+
+    until ($echo = ne)
+  until ($slice = ns)
+until ($array = $arraysize)
+
+
+"** Write procpar to the new fdf data directory ***********"
+" The procpar from the CURRENT tree is written to the      "
+" target data directory. This allows tags and any settings "
+" used for reconstruction to be passed along with the data "
+"**********************************************************"
+$procpar = $directory+'/procpar'
+fsave($procpar,'current')
+
+"** Processing complete, notify the user ******************"
+write('line3',$prog+'fdf data saved as %s',$directory)

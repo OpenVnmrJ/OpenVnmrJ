@@ -1,0 +1,63 @@
+"macro cln3d"
+"cln3d - CLEAN 3D under-sampled data processing.      "
+"macro cln3d"
+
+$cln3d='' $cln3dwait='' 
+$procdir='' $fn1='' $fn2='' $log='' $cmd='' $opts='' $port='' 
+
+BPfindfile('cln3d'):$cln3d
+BPfindfile('cln3dwait'):$cln3dwait
+
+$procdir=curexp+'/procdir'
+$log = $procdir+'/cln3d.log'
+$fn1 = $procdir+'/inf.fid'
+$fn2 = $procdir+'/cln3d.fid'
+serverport:$port
+
+exists($fn1+'/fid','file'):$e
+if not ($e) then
+  write('line3','pre-processing failed.')
+  return
+endif
+
+mkdir($fn2)
+
+$s=''
+format(CSthr,1,1):$s
+$opts = ' ' + $s
+
+if(CSdnoise='y') then
+  $opts = $opts + ' -d'
+endif
+$opts = $opts + ' -v >> '
+
+$cmd = $cln3d +' '  + $fn1 + ' ' + $fn2 + $opts + $log + ' &' 
+write('reset',$log)
+write('file',$log,$cmd)
+
+shell($cmd)  
+shell('sleep 5')
+
+$fn1=$fn2+'/procpar'
+exists($fn1,'file'):$e  "check if cln3d is working"
+if($e) then                      
+  write('line3','cln3d processing started...')
+  write('alpha','cln3d processing started...')
+else
+  shell('sleep 5')
+  exists($fn1,'file'):$e  "check if cln3d is working"
+  if($e) then
+    write('line3','cln3d processing started...')
+    write('alpha','cln3d processing started...')
+  else
+    write('error','cln3d failed to start.')
+    dtext($procdir+'/cln3d.log')
+  endif
+  return
+endif
+
+$cmd = $cln3dwait +' '+ $fn2 + ' ' + $port + ' &'
+shell($cmd)                  "wait until cln3d done."
+return
+
+

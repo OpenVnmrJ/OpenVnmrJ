@@ -1,0 +1,121 @@
+"macro getEXPinfo"
+if ($1='') then return endif
+//exists($1,'parlib'):$parex,$parlib
+//if ($parex=0) then return endif
+is_postvj22b:$vj22c
+
+IF ($vj22c=0) THEN
+   exists($1,'parlib'):$parex,$parlib
+   if ($parex=0) then return endif
+
+"***********************************************************"
+   $arg='REQexp ACQtime apptype'
+   $REQexp=''
+   $ACQtime=0
+   $apptype=''
+   $tn='' $dn=''
+   $refsource1=''
+
+   string2array($arg):$pars
+   $parsize=size('$pars')
+
+   if (auto='y') then 
+      $tmppar=autodir+'/enterQ.macdir/tmppar'
+   else
+      $tmppar=curexp+'/tmppar'
+   endif
+
+   writeparam($tmppar,$arg)
+
+   $i=1
+   repeat
+      exists($pars[$i],'parameter'):$ex
+      if ($ex) then
+        destroy($pars[$i])
+      endif
+      $i=$i+1
+   until $i > $parsize
+   readparam($parlib+'/procpar',$arg)
+
+   $i=1
+   repeat
+      exists($pars[$i],'parameter'):$ex
+      if ($ex) then 
+	${$pars[$i]}={$pars[$i]}
+	destroy($pars[$i])
+      endif
+      $i=$i+1
+   until $i > $parsize
+
+   rtv($parlib,'tn'):$tn
+   rtv($parlib,'dn'):$dn
+   rtv($parlib,'noabort','refsource1'):$refsource1
+   readparam($tmppar,$arg)
+
+   shell('rm '+$tmppar):$dum
+   if ($apptype='std1D') then $tn='' $dn='' endif
+   if ($REQexp[1]='') then $REQexp[2]='' endif
+   return($REQexp,$ACQtime,$apptype,$tn,$dn,$refsource1)
+
+"**************************************************************" 
+ELSE
+
+   $REQexp='','always'
+   $ACQtime=0
+   $apptype=''
+   $tn='' $dn=''
+   $refsource1=''
+   exists($1,'parlib'):$parex,$parlib
+   if ($parex) then
+   	rtv($parlib,'noabort','REQexp',1):$REQexp[1]
+   	rtv($parlib,'noabort','REQexp',2):$REQexp[2]
+   	rtv($parlib,'noabort','ACQtime'):$ACQtime
+   	rtv($parlib,'noabort','apptype'):$apptype
+   	rtv($parlib,'noabort','tn'):$tn
+	rtv($parlib,'noabort','dn'):$dn
+	rtv($parlib,'noabort','refsource1'):$refsource1
+   endif
+   "***********If ACQtime is zero in parlib, perhaps it is set in the protocols"
+   "***********If REQexp[1]='' then check if it is defined in the protocol"
+   "******Don't check protocols for apptype"
+
+      if ($ACQtime=0) then
+        $stime=''
+	getattr($1,'action','time'):$stime
+        invformattime($stime):$ACQtime
+      endif
+      if ($REQexp[1]='') and ($apptype<>'std1D') then
+        $required=''
+	getattr($1,'action','required'):$required
+        $REQexp[1]=$required
+      endif
+// Add a section for default NUS to adjust ACQtime
+    if $apptype='homo2D' or $apptype='hetero2D' then
+    	$nusdefault='no'
+    	getadminfo('nusdefault'):$nusdefault
+    	if $nusdefault='yes' then $ACQtime=$ACQtime/2 endif
+    endif
+// Add a section for AgileNT to adjust ACQtime
+    exists('AgileNT','maclib'):$macex
+    if ($macex) then
+      AgileNT('time',$1,$ACQtime):$ACQtime
+    endif
+//  AgileNT done
+
+   if ($REQexp[1]='') then $REQexp[2]='' endif
+
+   if (appmode='lc') and ($1<>'Autoscout') then
+        $required=''
+        string2array($REQexp[1]):$required
+        teststr('$required','wet1D','local'):$iswet
+        if ($iswet) then
+            $required[$iswet]='Autoscout Lc11d lc1d wet1D'
+            array2string($required):$REQexp[1]
+        endif
+   endif
+
+   "*********************************************************************"
+   if ($apptype='std1D') then $tn='' $dn='' endif
+   return($REQexp,$ACQtime,$apptype,$tn,$dn,$refsource1)
+"***************************************************************"
+ENDIF

@@ -1,0 +1,41 @@
+"macro reset_ptrfdr"
+//Set the ptrFDR pulses from the Spin Rate
+
+if (srate>500) then
+   $pwXptrfdr = 1.0e6/(3.0*srate)              // pwXptrfdr is 180 pulse equal to TauR/3.0.
+   pwXptrfdr = 0.1*trunc($pwXptrfdr/0.1 + 0.5) // round the pulse width to 100 ns resolution.
+   srate = 1.0e6/(3.0*pwXptrfdr)               // recalculate the exact spin rate.
+   aXptrfdr = aX90*(2.0*pwX90)/pwXptrfdr       // recalculate the exact amplitude.
+   if (aXptrfdr >= 4095) then
+      write('error','reset_ptrfdr Error: aXptrfdr is >= to 4095')
+   endif
+endif
+
+if (qXptrfdr < 1) then qXptrfdr = 1.0 endif    // minimum of 1 element
+
+//Set the ptRFDR pulses from the Spin Rate
+
+if (srate>500) then
+   $pwXptrfdr = 1.0e6/(3.0*srate)              // pwXptrfdr is 180 pulse equal to TauR/3.0.
+   pwXptrfdr = 0.1*trunc($pwXptrfdr/0.1 + 0.5) // round the pulse width to 100 ns resolution.
+   srate = 1.0e6/(3.0*pwXptrfdr)               // recalculate the exact spin rate.
+   aXptrfdr = aX90*(2.0*pwX90)/pwXptrfdr       // recalculate the exact amplitude.
+   if (aXptrfdr >= 4095) then
+      write('error','reset_ptrfdr Error: aXptrfdr is >= to 4095')
+   endif
+endif
+
+if (qXptrfdr < 1) then qXptrfdr = 1.0 endif    // minimum of 1 element
+
+// Syncrhonize tXmix and tXtotal with 12 rotor cycles. 
+
+if (srate>500) then
+   tXmix = 36.0*pwXptrfdr*trunc(tXmix/(36.0*pwXptrfdr)+ 0.5)
+endif
+
+if (srate>500) then
+   tXtotal = 36.0*pwXptrfdr*trunc(tXtotal/(36.0*pwXptrfdr)+ 0.5)
+endif
+
+
+

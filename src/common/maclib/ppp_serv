@@ -1,0 +1,38 @@
+"macro ppp_serv"
+"support for the probe power protection panel"
+if ($# > 1) then
+  $ans=''
+  format($2,1,0):$ans
+  $ans = 'rf'+$ans+'pop'
+"if $ans does not exist create it default it"
+"user global"
+  exists($ans,'parameter','global'):$x 
+  if ($x = 0) then
+   create($ans,'real','global')
+   {$ans} = 2
+  endif
+endif
+if ($1 = 'op') then 
+  return({$ans})
+endif
+"set op  "
+if ($1 = 'setop') then 
+  "write('line3','setop %s',$3) "
+  {$ans} = $3
+  return 
+endif
+"reset "
+if ($1 = 'reset') then
+  $ans = ''
+  $mypar = ''
+  $i=1
+  repeat
+    format($i,1,0):$ans
+    $ans = 'rf'+$ans
+    ppp2($ans,'pop',2)
+    ppp2($ans,'pcal',2)
+    ppp2($ans,'ptc',10)
+    ppp2($ans,'elimit',15)
+    $i = $i + 1
+  until $i > numrfch 
+endif

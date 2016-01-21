@@ -1,0 +1,39 @@
+"macro getSTUDYinfo"
+exists($1,'studylib'):$stex,$studypath
+
+if ($stex=0) then
+   return('',0,'',0,0,0)
+endif
+
+$e='' $et=0 $etime=0 $n='' $nt=0 $ntime=0
+
+$tmp=userdir+'/persistence/'+$0+'_tmp'
+write('reset',$tmp)
+shell('(cat '+$studypath+'/EXPLIST > '+$tmp+')'):$dum
+$s1='' $r1=0
+readfile($tmp,'$s1','$r1','','local'):$tot
+shell('rm -f '+$tmp):$dum
+if ($tot>0) then
+   $i=1 
+   repeat
+	$etime=$etime+$r1[$i]
+	$i=$i+1
+   until $i > $tot
+   $e=$s1 $et=$r1
+endif
+
+write('reset',$tmp)
+shell('(cat '+$studypath+'/LONGLIST > '+$tmp+')'):$dum
+$s1='' $r1=0
+readfile($tmp,'$s1','$r1','','local'):$tot
+shell('rm -f '+$tmp):$dum
+if ($tot>0) then
+   $i=1
+   repeat
+        $ntime=$ntime+$r1[$i]
+        $i=$i+1
+   until $i > $tot
+   $n=$s1 $nt=$r1
+endif
+
+return($e,$et,$n,$nt,$etime,$ntime)

@@ -1,0 +1,123 @@
+"macro setF1selshp"
+
+exists('seltype','parameter'):$ex
+if ($ex=0) then return endif
+exists('shape90','parameter'):$ex
+if ($ex=0) then return endif
+exists('shape180','parameter'):$ex
+if ($ex=0) then return endif
+
+
+  if (refsource1 = 'dfrq') then
+     $nuc=dn $pwx=pwx $pwxlvl=pwxlvl
+	$pwxlvl_cf=pwxlvl_cf
+	$shapepar='dnshapes'
+  elseif (refsource1 = 'dfrq2') then
+     $nuc=dn2 $pwx=pwx2 $pwxlvl=pwx2lvl
+	$pwxlvl_cf=pwx2lvl_cf
+	$shapepar='dn2shapes'
+  elseif (refsource1 = 'dfrq3') then
+     $nuc=dn3 $pwx=pwx3 $pwxlvl=pwx3lvl
+	$pwxlvl_cf=pwx3lvl_cf
+	$shapepar='dn3shapes'
+  else
+     $nuc=tn
+	$pwx=pw90 $pwxlvl=tpwr
+	$pwxlvl_cf=tpwr_cf
+	$shapepar='tnshapes'
+  endif
+
+$type=seltype
+if ($type='') then $type='dpfgseF1' endif
+$wave='wurst2i'
+if ($type='excitF1') then 
+   $wave=shape90
+   if ($wave='') then $wave='G4' endif
+else
+   $wave=shape180
+   if ($wave='') then $wave='wurst2i' endif
+endif
+
+if ($type<>'excitF1') and ($type<>'invF1') and ($type<>'dpfgseF1') then
+	return
+endif
+
+  if ($# < 2) then
+	$2=0
+  endif
+  if ($# < 1) then
+	$sfsize=size('selfrq1c')
+	on('selfrq1c'):$ison
+	if ($ison<1) then $sfsize=0 endif
+	if ($sfsize=1) then
+		$1=selfrq1w[1]
+	else
+		$1=sw1
+	endif
+  endif
+  $bw1='' format($1,0,0):$bw1
+  $offset='' format($2,0,0):$offset
+  if ($# > 2) then
+	$shape=$3
+  else
+	$shape=seqfil+'-'+$wave+'-'+$nuc+'-'+$bw1
+  endif
+  $ampcf=$pwxlvl_cf
+  $ref_pw90=$pwx*$ampcf $ref_pwr=$pwxlvl
+
+		"The following is arbitrary"
+  if ($wave='wurst2i') then $1=$1*1.15 endif
+
+  opx($shape+'.RF')
+  setwave($wave+' '+$bw1+' '+$offset)
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pwr($shape+'.RF'):$selpwr
+  pbox_pw($shape+'.RF'):$selpw
+
+  if ($type='dpfgseF1') then
+     if ($## < 1) then
+	selpwxshpA=$shape
+	selpwxshpB=$shape
+	selpwxlvlA=$selpwr
+	selpwxlvlB=$selpwr
+	selpwxA=$selpw
+	selpwxB=$selpw
+	saveshapes('add',$shapepar,'selpwxshpA','selpwxlvlA','selpwxA')
+        saveshapes('add',$shapepar,'selpwxshpB','selpwxlvlB','selpwxB')
+     else
+	return($shape,$shape,$selpwr,$selpwr,$selpw,$selpw)
+     endif
+
+  elseif ($type='invF1') then
+	$shapeR=$shape+'R'
+	opx($shapeR+'.RF')
+        $spw='' format($selpw/1e6,0,8):$spw
+        setwave($wave+' -'+$bw1+'/'+$spw+' '+$offset)
+	cpx($ref_pw90,$ref_pwr):$dum
+     if ($## < 1) then
+        selpwx180shp=$shape
+        selpwx180shpR=$shapeR
+        selpwxlvl180=$selpwr
+        selpwx180=$selpw
+        saveshapes('add',$shapepar,'selpwx180shp','selpwxlvl180','selpwx180')
+        saveshapes('add',$shapepar,'selpwx180shpR','selpwxlvl180','selpwx180')
+     else
+        return($shape,$shapeR,$selpwr,$selpwr,$selpw,$selpw)
+     endif	
+
+  elseif ($type='excitF1') then
+  	$shapeR=$shape+'R'
+  	opx($shapeR+'.RF')
+	setwave($wave+' '+$bw1+' '+$offset+' 1')
+  	cpx($ref_pw90,$ref_pwr):$dum
+     if ($## < 1) then
+        selpwx90shp=$shape
+        selpwx90shpR=$shapeR
+        selpwxlvl90=$selpwr
+        selpwx90=$selpw
+        saveshapes('add',$shapepar,'selpwx90shp','selpwxlvl90','selpwx90')
+        saveshapes('add',$shapepar,'selpwx90shpR','selpwxlvl90','selpwx90')
+     else
+  	return($shape,$shapeR,$selpwr,$selpwr,$selpw,$selpw)
+     endif
+  endif

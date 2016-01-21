@@ -1,0 +1,50 @@
+"macro BPautopresatproc1"
+"BPautopresatproc1- finds best satfrq"
+$bestone=1
+wft av
+crl rfl=sw/2 rfp=0 reffrq=sfrq sp=-200 wp=400
+$counter=1
+select(1) vsadj(180) $best=180
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) vsadj(10) dssh
+
+"if the minimum is not found, keep going. Marco@NMRFAM (July 2004)"
+if ($bestone=arraydim) then
+  av array('tof',21,tof[$bestone]+4,-0.8) satfrq=tof
+  array='(satfrq,tof)' da wnt='wft f full select(1) vsadj dssh'
+  wexp='BPautopresatproc1' au
+
+"if the minimum is not found, keep going. Marco@NMRFAM (July 2004)"
+else if ($bestone=1) then
+  av array('tof',21,tof[$bestone]+12.8,-0.8) satfrq=tof
+  array='(satfrq,tof)' da wnt='wft f full select(1) vsadj dssh'
+  wexp='BPautopresatproc1' au
+
+"found the minimum, stop looking"
+else 
+  satpwr=satpwr-6
+  satfrq=satfrq[$bestone]
+  tof=trunc(satfrq*10)/10 satfrq=tof
+  ph
+  getparam('BPgain','H1'):gain
+  $tof='' format(tof,4,1):$tof
+  BPsetparams('tofH2O',$tof,'H1')
+  setref
+  nt=4 ssfilter='n' wexp='wft f full vsadj'
+
+"OPTIONAL pw90 CALIBRATION: enable by removing double quotes from lines below"
+"ph vs=vs*264 ssfilter=300 ssntaps=200"
+  "write('line3','Finding pw90 by finding pw360')"
+  "array('pw',11,0.7*pw90,0.2*pw90)"
+  "lb=3 nt=2 gain=20 f vp=0 full"
+  "wnt='wft BPprotref(4.66) select(celem) BPaph0 select(1) vsadj(50) dssh'"
+  "wexp='write(`line3`,`Maximum Corresponds approximately to 90 degree pulse`) BPautopresatproc2'"
+
+au
+
+endif endif

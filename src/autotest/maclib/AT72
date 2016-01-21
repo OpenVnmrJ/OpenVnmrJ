@@ -1,0 +1,136 @@
+"macro AT72"
+"AT72" "Field Recovery Time 30G/cm rect.(z-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   at_pfgon=pfgon
+   substr(gradtype,3,1):$pfgamp   "performa I has maximum of ~25G/cm($pfgamp='l')"
+   substr(pfgon,3,1):$zon
+   if ($pfgamp)='l' then
+     write('line3','Gradient amplifier inappropriate for this test. Test skipped' ) 
+     ATnext return
+   endif
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Gradient test skipped' ) 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+   r1=0 r2=0 
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+    is_IP:$isIP
+    if (($isIP) and auto='y')  then
+        savemodule('atglobal',userdir+'/modules','global')
+        xmhaha('sendcmd','IPupdateATglobalfg')
+    endif
+
+   text('Field Recovery Time following\\ a 30G/cm 1msec Z-axis Gradient')
+   at_currenttest='grec_+z_30'
+   seqfil='ATg2pul' gt1=.001 gzlvl1=30/at_gzcal
+   vchannelmap='0','z'
+   d2=0.00000075,0.000001,0.000003,0.000006,0.000012,.000025,.00005,.0001,.00025,.0005,.001
+   rof1=0.5 
+   gradaxis='z'
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   wnt='ATwft f select(1) av vsadj(10) dssh dtext'
+   wexp='AT72(`PART1`)'
+  method='z1z2' wshim='e'  "insure that shimming on z1 is ok which is important for this test"
+   ATcycle
+   au
+   write('line3','Field Recovery Time following a +30G/cm 1 msec Z-axis Gradient')
+   dps
+
+elseif ($1='PART1') then
+
+   wft select(arraydim) 
+   ph aph0:$ok
+   if $ok then  aph0 else av endif
+   vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_z') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')" 
+    pltext(100,wc2max-20)
+   endif
+   f th=40
+   select(arraydim)
+   nll fp t1 center expl 
+   ATgrec:r1       
+   if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r1*1e6)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   gzlvl1=-gzlvl1
+   at_currenttest='grec_-z_30'
+   wnt='ATwft f dssh dtext'
+   wexp='AT72(`PART2`)'
+   wshim='n'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft text('Field recovery time\\following a 1 msec -30 G/cm \\Rectangular Z gradient pulse')
+   select(arraydim)
+   ph aph0:$ok
+   if $ok then  aph0 else av endif
+   vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_z') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')" 
+    ATpltext(100,wc2max-20)
+   endif
+   select(arraydim)
+   f th=40
+   nll fp t1 center expl 
+   ATgrec:r2       
+   gzlvl1=trunc(gzlvl1) 
+   r1=trunc(1e6*r1)
+   r2=trunc(1e6*r2)
+   if shaped='s' then
+    ATrecord('ZRECOVRECT30Gs','Z-Recovery: Time for signal to recover to >95 percent (30G/cm rectangular gradient):','Time ',r1,'at_Gz_level',-gzlvl1,'Time  ',r2,'at_Gz_level',gzlvl1)
+    write('file',autotestdir+'/REPORT','Z Grad.Rec.(30G/cm autoshaped rect):%3.1f usec(Gz=%5.0f);%3.1f usec(Gz=%5.0f)',r1,-gzlvl1,r2,gzlvl1)
+   else
+    ATrecord('ZRECOVRECT30G','Z-Recovery: Time for signal to recover to >95 percent (30G/cm rectangular gradient):','Time ',r1,'at_Gz_level',-gzlvl1,'Time  ',r2,'at_Gz_level',gzlvl1)
+   endif
+   write('file',autotestdir+'/REPORT','Z Gradient Rec.(30G/cm rect): %3.1f usec (Gz= %5.0f); %3.1f usec (Gz= %5.0f) ',r1,-gzlvl1,r2,gzlvl1)
+   if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r2)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+ATnext
+endif

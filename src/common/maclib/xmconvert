@@ -1,0 +1,436 @@
+"macro xmconvert"
+"macro to convert tmpstudy into submitted study"
+
+$whichq='dayQ'
+$qst='Queued'
+$studyid='test'
+$mvid=''
+if $#>3.5 then
+  $whichq=$1
+  $qst=$2
+  $studyid=$3
+  $mvid=$4
+endif
+
+$tmpfile=autodir+'/tmpstudy.xml'
+
+xm1('studydir'):$sdir
+
+if ($1 = 'mktmp') then
+  xm1('add "'+$tmpfile+'" null')
+  return('')
+elseif ($1 = 'mkgrandma') then
+" cqreset"
+  $snode=studyid
+" xm1('mkdir'):$node,$ldir" "make grandparent an actual node?"
+  xm1('add new protocol null')
+  xm1('set new id '+$snode)
+  xm1('set '+$snode+' title "new sample"')
+  xm1('set '+$snode+' exp grandparent')
+  xm1('set '+$snode+' tooltext "new sample [to be Submitted]"')
+  xm1('pmove '+$snode+' null')
+  return('')
+elseif ($1 = 'getmvid') then
+// get id to move to position in SQ, bottom of dayQ or priorityQ
+// enterQ/nightQ MACRO must be particular format - startq('studyid')
+
+  $mvid=''
+
+  $whichq='dayQ'
+  $eqfile=autodir+'/enterQ'
+  $mqfile=$eqfile
+  $nqfile=autodir+'/nightQ'
+  $curQ='' xmtime('getq'):$curQ    // 'day' | 'night'
+  if $#>1.5 then $whichq=$2 endif  // 'dayQ' | 'nightQ'
+  if $#>2.5 then $mqfile=$3 endif  //  may be enterQ or nightQ
+// $mqfile is already determined by xmsubmit
+
+  $priority='' $penable=0 $puse=''
+  rights('prioritysample'):$penable
+  xmpref('get','PriorityUse'):$puse
+  if (traymax>1.5 and $penable and $puse='y') then
+    $priority='Priority'
+  endif
+
+  $asfile=autodir+'/autostudies'
+  exists($asfile,'file'):$e
+  if ($e) then
+    $ids='' $s1='' $qs='' $ps=''
+    $txt='' $ntxt='' $etxt='' $estart=0
+    readfile($asfile,'$ids','$s1','','local'):$size
+    if $size>0.5 then
+      exists($mqfile,'file'):$me
+      exists($eqfile,'file'):$ee
+      exists($nqfile,'file'):$ne
+
+      if ($me) then
+// find the position of the first item in the enterQ
+        $nw=0
+        lookup('mfile',$mqfile,'MACRO:','delimiter',' ()\'\n\r\t','skip','read'):$txt,$nw
+        if $nw<0.5 then $txt='' endif
+        $ntxt=''
+        if ($whichq='dayQ' and $ne and $size>0.5) then
+          $nw=0
+          lookup('mfile',$nqfile,'MACRO:','delimiter',' ()\'\n\r\t','skip','read'):$ntxt,$nw
+          if $nw<0.5 then $ntxt='' endif
+        endif
+        $etxt=''
+        if ($whichq='nightQ' and $ee and $size>0.5) then
+          $nw=0
+          lookup('mfile',$eqfile,'MACRO:','delimiter',' ()\'\n\r\t','skip','read'):$etxt,$nw
+          if $nw<0.5 then $etxt='' endif
+        endif
+
+        $pos=0 $estart=$size
+        if ($txt<>'') then       // enterQ/nightQ not empty
+          teststr('$ids',$txt,'local'):$estart
+        elseif ($ntxt<>'') then  // enterQ empty, nightQ not empty
+          teststr('$ids',$ntxt,'local'):$estart
+          $estart=$estart-1
+          $pos=$estart
+        elseif ($etxt<>'') then  // nightQ empty, enterQ not empty
+          $estart=$size $pos=$size
+        elseif ($size>0.5) then  // enterQ/nightQ empty, doneQ all Completed
+          $estart=$size $pos=$size
+          $txt=$ids[$size]
+          $sdir=$txt $st='Completed'
+          $s='' substr($sdir,1,1):$s
+          if $s<>'/' then $sdir=autodir+'/'+$sdir endif
+          exists($sdir+'/studypar','file'):$e
+          if ($e) then
+            rtv($sdir+'/studypar','studystatus'):$st
+          endif
+          if ($st<>'Active' and $st<>'Completed' and $st<>'Error') then
+            $i=$estart
+            repeat
+              $i=$i-1
+              $txt=$ids[$i]
+              $sdir=$txt
+              substr($sdir,1,1):$s
+              if $s<>'/' then $sdir=autodir+'/'+$sdir endif
+              exists($sdir+'/studypar','file'):$e
+              if ($e) then
+                rtv($sdir+'/studypar','studystatus'):$st
+              endif
+            until ($i<2 or $st='Active' or $st='Completed' or $st='Error' or $e<0.5)
+            $pos=$i
+          endif
+        endif
+
+        if ($txt<>'' and $pos<0.5) then
+
+          if ($priority<>'Priority') then
+            $pos=$estart
+            if $estart>0.5 then
+              $i=$estart $qs=$whichq
+              while ($i<$size and $qs=$whichq) do
+                $i=$i+1
+                $txt=$ids[$i]
+                substr($s1[$i],1):$qs
+              endwhile
+              if $qs<>$whichq then $i=$i-1 endif
+              $estart=$i
+              $pos=$estart
+            endif
+
+          else    // $priority='Priority'
+
+// Active sample has either all in doneQ, or some in doneQ/some in enterQ
+            if $estart>0.5 then
+              $sdir=$txt $st='Queued'
+              $s='' substr($sdir,1,1):$s
+              if $s<>'/' then $sdir=autodir+'/'+$sdir endif
+              exists($sdir+'/studypar','file'):$e
+              if ($e) then
+                rtv($sdir+'/studypar','studystatus'):$st
+              endif
+              $initst=$st
+
+              if ($st='Active') then
+                $e=0 $i=$estart if $i<0.5 then $i=1 endif
+                $found=0
+                while ($i<$size and $st='Active' and $e<0.5) do
+                  $i=$i+1
+                  $txt=$ids[$i]
+                  $sdir=$txt
+                  substr($sdir,1,1):$s
+                  if $s<>'/' then $sdir=autodir+'/'+$sdir endif
+                  exists($sdir+'/studypar','file'):$e
+                  if ($e) then
+                    rtv($sdir+'/studypar','studystatus'):$st
+                  endif
+                  $found=1
+                endwhile
+                if ($found=1 and $st<>'Active') then $i=$i-1 $txt=$ids[$i] endif
+                $estart=$i
+              endif   // end if ($st='Active')
+
+              if $estart>0.5 then
+                $i=$estart $qs=$whichq
+                substr($s1[$i],2):$ps
+                $initps=$ps
+                while ($i<$size and $qs=$whichq and $ps='Priority') do
+                  $i=$i+1
+                  $txt=$ids[$i]
+                  $qs='' substr($s1[$i],1):$qs
+                  $ps='' substr($s1[$i],2):$ps
+                endwhile
+                if ($qs<>$whichq or $ps<>$initps or ($initst<>'Active' and $ps<>'Priority')) then
+                  $i=$i-1
+                endif
+                $estart=$i
+              endif
+            endif
+            $pos=$estart
+          endif
+        endif
+
+        if ($pos>0.5) then
+          $mvid=$ids[$pos]
+        else
+          $mvid='start'
+        endif
+      endif
+    endif
+  endif
+
+  return($mvid)
+
+elseif ($1 = 'done') then  // clean up after all samples submitted
+//  xm1('set all actions lock on')
+  xm1('write "'+autodir+'/auto.xml"')
+  sqfilemenu('Clear Study','no')
+  exists($tmpfile,'file'):$e
+  if $e>0.5 then delete($tmpfile) endif
+  return('')
+elseif ($1 = 'updatestudy') then
+// update xml file at end of study, from background
+  $autodir=autodir "check autodir, $activestudy"
+  if $#>1.5 then $autodir=$2 endif
+  $studyid=studyid
+  if $#>2.5 then $studyid=$3 endif
+  if (auto<>'y' and $autodir=autodir) then
+    return('')
+  endif
+  $sdir=$studyid
+  substr($sdir,1,1):$s
+  if $s<>'/' then
+    $sdir=$autodir+'/'+$studyid
+  endif
+  $afile=$autodir+'/auto.xml'
+  exists($afile,'file'):$ea
+  $sfile=$sdir+'/study.xml'
+  exists($sfile,'file'):$es
+  if ($ea>0.5 and $es>0.5) then
+    $s1='' $s2='' $s3='' $s4=''
+    $cmd='fgrep -n \'id="'+$studyid+'"\' "'+$afile+'"'
+    shell($cmd):$s1
+    lookup('mfile',$afile,'delimiter',' <!>','id="'+$studyid+'"','read','filekey'):$s2,$key
+    $r2=0 $nogp=0 $i=0
+    repeat  "find next study"
+      $i=$i+1
+      lookup('mfile',$key,'delimiter',' <!>','readline','filekey'):$s2,$key,$nogp
+      strstr($s2,'grandparent'):$r2
+    until ($r2>0.5 or $nogp<1.5 or $i>1000)
+    $r2=$i-1
+    if $s1<>'' then  "studyid found"
+      substr($s1,1):$s1
+      length($s1):$len
+      $r1=0 substr($s1,1,$len-1):$r1
+      $r1=$r1-1
+      format($r1,1,0):$s1
+      $r3=0
+      if $nogp>1.5 then
+        $cmd='wc -l "'+$afile+'"'
+        shell($cmd):$s3
+        $r3=0 substr($s3,1):$r3
+        $r2=$r3-$r1-$r2
+        format($r2,1,0):$s2
+      endif
+      $pfile=$sfile+'p' $str='a'
+      write('reset',$pfile)
+      $st='' $op='' $qu='' $id=$studyid $rtt=''
+      rtv($sdir+'/studypar','studystatus','operator_','queue','studytime'):$st,$op,$qu,$fti
+      if (traymax=1 and appmode='lc') then
+        rtv($sdir+'/studypar','retentiontime_'):$rtt
+      endif
+      $tt=$id+' '+$op+' '+$qu
+      if ($st<>'Error' and $st<>'Completed') then
+        formattime($fti,'minutes'):$ti
+        $tt=$tt+' ['+$ti+']'
+      endif
+      $tt=$tt+' ['+$st+']'
+      $pr=''
+      exists(autodir+'/autostudies','file'):$e
+      if ($e) then
+        lookup('mfile',autodir+'/autostudies',$id,'readline'):$str
+        substr($str,2):$pr
+      endif
+      if (traymax=1 and appmode='lc' and $rtt<>'') then
+        write('file',$pfile,'  <protocol title="%s  [%s min] %s" type="protocol" exp="grandparent" lock="off" id="%s" tooltext="%s" expanded="false">',$id,$rtt,$st,$id,$tt)
+      else
+        write('file',$pfile,'  <protocol title="%s  %s  %s" type="protocol" exp="grandparent" lock="off" id="%s" tooltext="%s" expanded="false">',$id,$st,$pr,$id,$tt)
+      endif
+      lookup('mfile',$sfile,'seek','<template>','filekey'):$key
+      $nret=2 $v1=0 $v2=0 $u1='' $u2='' $u3=''
+      repeat
+        lookup('mfile',$key,'readline','filekey'):$str,$key,$nret
+        if ($str <> '</template>') then
+          strstr($str,'id="'):$v1,$u1,$u2
+          if $v1>0.5 then
+            $str=$u1+'id="'+$studyid+'_'+$u2
+            strstr($u2,'"'):$v2,$u3
+            if $v2>0.5 then
+              $newid=$studyid+'_'+$u3
+              strstr($str,'title="'):$v1,$u1,$u2
+              strstr($u2,'"'):$v2,$title
+              if $v2>0.5 then
+                $tt=$title+' '+$newid
+                substr($str,1):$u1
+                length($str):$len
+                if $u1='<protocol' then
+                  substr($str,1,$len-1):$u1
+                  $str=$u1+' tooltext="'+$tt+'" >'
+                elseif $u1='<action' then
+                  strstr($str,'status="'):$v1,$u1,$u2
+                  strstr($u2,'"'):$v2,$status
+                  $tt=$tt+' ['+$status+']'
+                  substr($str,1,$len-2):$u1
+                  $str=$u1+' tooltext="'+$tt+'" />'
+                endif
+              endif
+            endif
+          endif
+          write('file',$pfile,'  %s',$str)
+        endif
+      until ($str='</template>' or $str='' or $nret<1.5)
+      write('file',$pfile,'  </protocol>')
+      write('reset',$afile+'h')
+      write('reset',$afile+'t')
+      $cmd='head -'+$s1+' "'+$afile+'" >> "'+$afile+'h";'
+      if $nogp>1.5 then
+        $cmd=$cmd+'tail -'+$s2+' "'+$afile+'" >> "'+$afile+'t";'
+      else
+        write('file',$afile+'t','</template>')
+      endif
+      $nfile=$afile+'n'
+      write('reset',$nfile)
+      $cmd=$cmd+'cat "'+$afile+'h" "'+$pfile+'" "'+$afile+'t" >> "'+$nfile+'"'
+      shell($cmd):$x
+      delete($afile+'h',$afile+'t',$pfile)
+      mv($nfile,$afile)
+    endif
+  endif
+  return('')
+endif
+
+// update information in SQ for each submitted sample
+$file=$sdir+'/enterSQ'
+exists($file,'file'):$e
+if $e<0.5 then
+  return('')
+endif
+$ids='' $s1=''
+readfile($file,'$ids','$s1','','local'):$size
+if $size<0.5 then
+  return('')
+endif
+
+$priority='' $penable=0 $puse=''
+rights('prioritysample'):$penable
+xmpref('get','PriorityUse'):$puse
+if ($penable and $puse='y') then
+  $priority='Priority'
+endif
+
+exists($tmpfile,'file'):$e
+if $e<0.5 then
+  xm1('nwrite tmpstudy "'+$tmpfile+'"')
+endif
+if (traymax=1 and appmode='lc') then
+  $tret='' lcsq('getrtime'):$tret
+  $tt=$studyid+'  '+$tret+' '+$qst
+else
+  $tt=$studyid+'  '+$qst
+endif
+if ($priority='Priority') then
+  $tt=$tt+'  '+$priority
+endif
+xm1('set','tmpstudy','title',$tt)
+xm1('set','tmpstudy','operator',operator)
+xm1('set','tmpstudy','queue',$whichq)
+xm1('set','tmpstudy','studystatus',$qst)
+$tt=$studyid+' '+operator+' '+$whichq
+if ($qst<>'Error' and $qst<>'Completed') then
+  formattime(studytime,'minutes'):$time
+  $tt=$tt+' ['+$time+']'
+endif
+$tt=$tt+' ['+$qst+']'
+xm1('set','tmpstudy','tooltext',$tt)
+xm1('set','tmpstudy','id',$studyid)
+
+$i=0
+repeat
+  $i=$i+1
+  xmgetatts($ids[$i],'title','status'):$title,$status
+  $newid=$studyid+'_'+$ids[$i]
+  $tt=$title+' '+$newid
+  if $status<>'protocol' then
+    $tt=$tt+' ['+$status+']'
+  endif
+  xm1('set',$ids[$i],'id',$newid)
+  xm1('set',$newid,'tooltext',$tt)
+until ($i>=$size)
+
+$asfile=autodir+'/autostudies'
+$wras='y'
+
+// move to bottom of dayQ/nightQ/priorityQ list, if needed
+exists($asfile,'file'):$ae
+if ($ae) and ($mvid<>'') then
+
+  $start='n'
+  if $mvid='start' then
+    $start='y'
+    lookup('mfile',$asfile,'read'):$mvid
+    xm1('lmove '+$studyid+' '+$mvid)
+    xm1('lmove '+$mvid+' '+$studyid)
+  else
+    xm1('lmove '+$studyid+' '+$mvid)
+  endif
+
+// write out autostudies file
+  exists($asfile,'file'):$e
+  if $e>0.5 then
+    $ids='' $s1='' $asize=0
+    readfile($asfile,'$ids','$s1','','local'):$asize
+    if $asize>0.5 then
+      $i=$asize+1 $pos=0
+      teststr('$ids',$mvid,'local'):$pos
+      if ($pos>0.5 and $pos<$asize+0.5) then
+        $wras='n'  // don't need to rewrite
+        $asfilecp=$asfile+'cp'
+        if ($start='y') then
+          write('file',$asfilecp,'%s %s %s',$studyid,$whichq,$priority)
+        endif
+        $j=0
+        repeat
+          $j=$j+1
+          write('file',$asfilecp,'%s %s',$ids[$j],$s1[$j])
+          if ($j=$pos and $start<>'y') then
+            write('file',$asfilecp,'%s %s %s',$studyid,$whichq,$priority)
+          endif
+        until ($j>=$asize)
+        mv($asfilecp,$asfile)
+      endif
+    endif
+  endif
+
+  $mvid=$studyid
+endif
+
+// only write if not already written
+if $wras='y' then
+  write('file',$asfile,'%s %s %s',$studyid,$whichq,$priority)
+endif
+return($mvid)

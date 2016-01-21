@@ -1,0 +1,79 @@
+#
+
+import os
+import sys
+import glob
+import shutil
+sys.path.append(os.path.join(os.pardir,os.pardir,'scripts'))
+import myShutil # for better copytree()
+import myShutilsym
+
+# SConscript('SConstruct.tests')
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+dirList = [
+                   'atdb',
+                   'maclib',
+                   'manual',
+                   'modules',
+                   'parlib',
+                   'probe_specs',
+                   'proshimmethods',
+                   'studylib',
+                   'templates',
+                   'veripulse']
+
+
+standardPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','ddr','veripulse')
+if not os.path.exists(standardPath) :
+    os.makedirs(standardPath)
+		     
+#copy the directory
+for i in dirList:
+    myShutil.copytree(i,standardPath,symlinks = False)
+
+# Execute('cd ' + standardPath +'/maclib; ln -s setup_probe install_probe')
+# Execute('cd ' + standardPath +'/maclib; ln -s IPcsv IPcsvrunnow')
+# Execute('cd ' + standardPath +'/maclib; ln -s IPcsv IPDEschedulecsv')
+# Execute('cd ' + standardPath +'/maclib; ln -s VPreport IPreport')
+# Execute('cd ' + standardPath +'/maclib; ln -s VPreport IPmkreport')
+# Execute('cd ' + standardPath +'/maclib; ln -s IPcsv IPschedulecsv')
+# Execute('cd ' + standardPath +'/maclib; ln -s IPcsv IPtestlist')
+
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot C13ETBsens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot C13sens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot F19sens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot H1sens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot N15sens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s VPsens_plot P31sens_plot')
+# os.system('cd ' + standardPath +'/maclib; ln -s C13ETBsens_process C13ETBSN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s C13sens_process C13SN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s H1sens_process H1SN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s F19sens_process F19SN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s N15sens_process N15SN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s P31sens_process P31SN_process')
+# os.system('cd ' + standardPath +'/maclib; ln -s H1_Lshp_nonspin_process H1_Lshp_nonspin_nt4_process')
+
+os.system('chmod 644 ' + standardPath + '/maclib/*')
+os.system('chmod 644 ' + standardPath + '/modules/*')
+
+def runSconsPostAction(dir):
+   dirList = os.listdir(dir)
+   for i in dirList:
+      sconsFile = os.path.join(dir,i,'sconsPostAction')
+      if os.path.exists(sconsFile):
+         cmd='cd '+os.path.join(dir,i)+';chmod +x sconsPostAction; ./sconsPostAction; rm sconsPostAction'
+         print "cmd: ",cmd
+         os.system(cmd)
+
+runSconsPostAction(standardPath)
+
+# Duplicate for Inova
+istandardPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','veripulse')
+if not os.path.exists(istandardPath) :
+    os.makedirs(istandardPath)
+cmd='cd '+standardPath+';zip -ryq tmp.zip *;mv tmp.zip '+istandardPath+';cd '+istandardPath+';unzip -oq tmp.zip; rm -f tmp.zip'
+os.system(cmd)

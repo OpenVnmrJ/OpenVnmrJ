@@ -1,0 +1,58 @@
+make3dcoef - 
+   Usage: make3dcoef(<'t1t2'> or <'t2t1'>) 
+   Makes a 3D coefficients file from 2D coefficients and writes it in
+the curexp.  2D coefficients are supplied as strings in the parameters
+f2coef and f1coef.  This macro is capable of handling 3D data collected
+with any number of data sets (i.e., TPPI, Hypercomplex, Rance SE, Kay SE,
+phase sensitive gradient, etc.  in one or both dimensions!!).  This
+macro is called by the ft3d macro.
+
+f1coef & f2coef:
+ 2D coefficients are supplied as strings in these parameters. The
+coefficients are as one would get by processing with wft2d(2dcoefs).
+[Note that wft2da is equivalent to wft2d(1,0,0,0,0,0,-1,0).  But
+the 3D coefficients created will be used with ntype3d='nn'.].
+Coefficients are separated by spaces and not commas. The f1coef
+and f2coef parameters are created by the par3d macro. Execution of
+make3dcoef macro when these parameters have no value or inconsistent
+values will cause the macro to abort to let the user enter these
+values and reexecute the macro.
+
+FOR EXAMPLE: The value of f1coef when F1 dimension can be processed
+with wft2da will be '1 0 0 0 0 0 -1 0'. The value of f2coef when F2
+dimension can be processed with wft2d(1,0,1,0,0,-1,0,1) will be
+'1 0 1 0 0 -1 0 1'.
+
+ARGUMENT:
+	't1t2' or 't2t1' 
+In a simple hypercomplex data sets 't1t2' means array='phase,phase2'
+and 't2t1' means array='phase2,phase'.   In general with multiple
+data sets 't1t2' means array='t1related','t2related' and 't2t1' means
+array='t2related','t1related'.  
+
+Special case: 
+If array='phase,phase2' or 'phase2,phase' the macro (without any argument)
+automatically decides on 't1t2' or 't2t1', respectively. 
+
+FINAL & CRITICAL NOTE:
+[This is true, in general, for getting proper 3d coefficients from 2d
+coefficients and NOT UNIQUE TO THIS MACRO!!!]
+
+f1coef and f2coef must be 2D coefficients that will give proper ni and
+ni2 first planes with SAME rp (assuming lp is 0 by using calfa!)
+values.   [For example: Processing phase sensitive gradient
+dimension should NOT be done with 1 0 0 1 0 1 1 0 (aka wft2dnp) and
+applying 45 deg phase shift to rp but with 1 0 1 0 0 1 0 -1 or its
+variance that will give same rp value as the other dimension!!
+This also applies to Rance type or Kay type enhanced dimensions.
+Note that enhanced sequences (gradient or otherwise) can be processed
+two different ways to give "orthogonal" data sets.  One must pick
+the proper coefficients that will have the same rp as the other dimension.]
+
+This macro can also handle coefficients that are NOT 1's and 0's.
+
+Example:  If the processing requires that a data set contributes to
+the interferogram after a 30 degree phase shift, one can do so by
+choosing cos(30) and sin(30) as real and imaginary contributions
+during the construction of the interferogram.
+

@@ -1,0 +1,151 @@
+<?xml version='1.0' encoding='us-ascii'?>
+<!--
+ ! 
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+<mainmenu>
+        <mchoice label = "New Workspace"
+                vc = "cexpnext"
+                style="Menu1"
+        />
+	<mchoice label = "Join a NEW Workspace"
+                vc = "jnewexp"
+                style="Menu1"
+        />
+        <mchoice label = "Open..."
+                vc = "vnmrjcmd('LOC openDataPanel')"
+                style="Menu1"
+        />
+        <mchoice label = "Save REC"
+                vc = "saveREC"
+                vq = "paramChanged, svfdir, file"
+                show="isRecUpdated:$a isFDAdata:$b if ($a > 0.5 and $b > 0.5) then $VALUE = 1 else $VALUE = 0 endif"
+                style="Menu1"
+		seperator="yes"
+        />
+        <mchoice label = "Save REC as..."
+                vc = "vnmrjcmd('popup', 'mode:modal',
+                        'file:saveas.xml',
+                        'location:controlPanel',
+                        'title:Save record as')"
+                vq = "paramChanged, svfdir, file, curexp"
+                show="isFDAsystem:$p11 isFDAdata:$a isFDAdir(svfdir):$b if(not $p11) then $VALUE=-1 elseif ($a > 0.5 and $b > 0.5) then $VALUE = 1 else $VALUE = 0 endif"
+                style="Menu1"
+        />
+
+        <submenu label="Save non-controlled data" vq = "paramChanged, svfdir, file, curexp"
+              show="isFDAsystem:$p11 isFDAdata:$a isFDAdir(svfdir):$b if(not $p11) then $VALUE=-1 elseif(not $a or not $b) then $VALUE=1 else $VALUE=0 endif "
+              style="Menu1"
+            >
+          <mchoice label = "Save rec as ..."
+                vc = "vnmrjcmd('popup', 'mode:modal',
+                        'file:saveas.xml',
+                        'location:controlPanel',
+                        'title:Save record as')"
+                font="Menu1" style="Menu1" point="Menu1" fg="Menu1"
+          />
+          <mchoice label = "Save other as..."
+	         vc = "vnmrjcmd('LOC saveAsPanel')"
+	         style="Menu1"
+          />
+        </submenu>
+	<mchoice label = "Save As..."
+                vc = "vnmrjcmd('LOC saveAsPanel')"
+                style="Menu1" seperator="yes"
+	        show="isFDAsystem:$p11 if($p11) then $VALUE=-1 else $VALUE=1 endif"
+        />
+        <mchoice label = "Auto Save"
+                vc = "savefid"
+                style="Menu1"
+        />
+        <mchoice label = "Save Rec As..."
+                vc = "vnmrjcmd('popup', 'mode:modal',
+                        'file:saveas.xml',
+                        'location:controlPanel',
+                        'help:/vnmr/jhelp/dialog/saveas.html',
+                        'title:Save record as')"
+                vq="recordSave"
+                show="isFDAsystem:$p11 rights('showacquire'):$RT if($p11) then $SHOW=-1 else $SHOW=($RT and recordSave)*2-1 endif"
+                style="Menu1"
+        />
+        <mchoice label = "Save Process As..."
+                vc = "vnmrjcmd('popup', 'mode:modal',
+                        'file:saveprocess.xml',
+                        'location:controlPanel',
+                        'help:/vnmr/jhelp/dialog/saveprocess.html',
+                        'title:Save Process As')"
+                vq="recordSave"
+                show="isFDAsystem:$p11 rights('showprocess'):$RT if($p11) then $SHOW=-1 else $SHOW=($RT and recordSave)*2-1 endif"
+                style="Menu1"
+        />
+
+
+
+        <mchoice label = "Printers..."
+                vc = "vjplotmenu vnmrjcmd('popup', 'mode:modeless',
+                        'file:Plotters.xml',
+                        'location:printers',
+                        'help:SYSTEM/jhelp/dialog/plotters.html',
+                        'title:Select printers')"
+                style="Menu1"
+		seperator="yes"
+        />
+	<mchoice label = "Print Screen..."
+                vc = "vnmrjcmd('print', 'graphics')"
+		style="Menu1"
+	/>
+        <mchoice label = "Auto Plot"
+                vc = "plot"
+                style="Menu1"
+        />
+        <mchoice label = "Review PDF Plots..."
+                vc = "reviewplot"
+                style="Menu1"
+        />
+        <mchoice label = "FASTuser Logout..."
+                vq = "FASTenv FASTuser"
+                show = "$SHOW=(FASTenv='y')*2-1"
+                vc = "fastuserlogin('logout')"
+                style="Menu4"
+                fg="brown"
+                seperator="yes"
+        />
+        <mchoice label = "CMD History..."
+	        show="isFDAsystem:$p11 if $p11 then $VALUE = 1 else $VALUE = -1 endif"
+                vc = "flush vnmrjcmd('popup', 'mode:modeless', 
+                        'file:cmdHis.xml', 
+                        'location:topMenuBar', 
+                        'title:Command History')"
+                font="Menu1" style="Menu1" point="Menu1" fg="Menu1"
+        />
+        <mchoice label = "Auditing..."
+	    	show="isFDAsystem:$p11 exists(systemdir+'/p11/part11Config','file','rw'):$b $b=($b*2-1) if(not $p11) then $VALUE=-1 elseif ($b > 0.5) then $VALUE = 1 else $VALUE = 0 endif"
+                vc = "flush vnmrjcmd('popup', 'mode:modeless',
+                        'file:audit.xml',
+                        'location:topMenuBar',
+                        'title:Auditing')"
+                font="Menu1" style="Menu1" point="Menu1" fg="Menu1"
+        />
+	<mchoice label = "Switch Operators..."
+                vc = "operatorlogout"
+                style="Menu4"
+                seperator="yes"
+        />
+       <!-- Add a small space with another seperator to make more space
+        !   between Exit and the other items. 
+       -->
+        <mchoice label = ""
+            show = "$SHOW=-1"
+            style="Menu2"
+            seperator="yes"
+        />
+        <mchoice label = "Exit VnmrJ"
+            vc = "exit"
+            seperator="yes"
+            style="Menu2"
+        />
+</mainmenu>

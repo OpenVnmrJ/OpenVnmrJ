@@ -1,0 +1,119 @@
+"macro getmax"
+"********************************************************************
+"
+"
+" NAME:
+"    getmax
+"
+" DESCRIPTION:
+"    getmax -- finds peak value of an array
+"           -- returns maximum value and its index
+"           -- 2nd argument is optinal
+"           -- peak a[i] < a[j] < a[k] > a[l] > a[m]
+"
+" Ex.: getmax(a,<start index>):max  with a = 1 4 8 12 9 10
+"                                   start index -> start of search
+"
+" returns  max[1] = 12       -> value
+"          max[2] = 4        -> index
+"
+"********************************************************************
+"-------------------------------"
+" check number of arguments     "
+"-------------------------------"
+if ($# > 2) then
+     write('error','Too many arguments in call to get_max !')
+     abort
+endif
+if ($# < 1) then
+     write('error','Insufficient arguments in call to get_max !')
+     abort
+endif
+if ($# < 2) then
+     $start_index =1			"if arg. 2 is empty default to 1"
+else
+     $start_index = $2			
+endif                
+if (size('$start_index') <> 1) then
+     write('error','Second argument in call to getmax is not a scalar !')
+     abort
+endif
+
+"------------------------------"
+" define & initialize variables"
+"------------------------------"
+$macro_name    = 'prescan_getmax    '   "name of macro"
+$value         = $1		        "value"
+$size          = size('$1')		"array size"
+$counter       = $start_index 		"loop counter"
+$max[1]        = 0              	"maximum value"
+$max[2]        = 0			"position of maximum in array"
+$temp_str      = ''			"temporary string variable"
+$prescan_flag  = 1                      "index for Prescan flag "
+if (size('$value') < 2) then
+     write('error','First argument in call to getmax is not an array !')
+     abort
+endif
+
+"-------------------------------"
+" find maximum value            "
+"-------------------------------"
+if (prescan_control[$prescan_flag] <> 0) then
+     "------------------------------------------------"
+     " execute for prescan and make sure it is a peak "
+     "------------------------------------------------"
+     repeat
+	 if $value[$counter] > $max[1] then	"Value larger then previous ?"
+             if ($counter > 1) and ($counter+2 <= $size) then
+"        	   if ($value[$counter] > $value[$counter-1]) and ($value[$counter-1] > $value[$counter-2]) then"
+        	   if ($value[$counter] > $value[$counter-1])  then
+                	if ($value[$counter] > $value[$counter+1]) and ($value[$counter+1] > $value[$counter+2]) then
+		             $max[1]=$value[$counter]	"Assign new amximum"
+                             $max[2]=$counter		"Assign new index"		
+			endif
+        	   endif		   
+	      endif
+	 endif
+	 $counter=$counter+1			"increment counter"
+     until ($counter > $size) or ($max[2] <> 0)      
+else
+    repeat
+	 if $value[$counter] > $max[1] then	"Value larger then previous ?"
+              $max[1]=$value[$counter]	"Assign new amximum"
+              $max[2]=$counter		"Assign new index"		
+	 endif
+	 $counter=$counter+1			"increment counter"
+     until ($counter > $size)      
+endif
+"-----------------------------------"
+" check for error in Prescan Mode   "
+"-----------------------------------"
+if (prescan_control[$prescan_flag] <> 0) then
+     if ($max[2] = $size) or ($max[1] = 0) then
+	 $max[2] = -1			"-1 no valid maxima"
+	 "------------------------------"
+	 " prepare output and log event "
+	 "------------------------------"
+	 $message='No maxima found ! Start index = ' 
+	 format($start_index,0,0):$temp_str
+	 $message=$message+$temp_str+', array size = '
+	 format($size,0,0):$temp_str
+	 $message=$message+$temp_str
+         prescan_log('error',$macro_name,$message)    "log event"
+     endif    
+else
+     if ($max[2] = $size) or ($max[1] = 0) then
+          $max[2] = -1			"-1 no valid maxima"
+          $message='No maxima found ! Start index = ' 
+          format($start_index,0,0):$temp_str
+          $message=$message+$temp_str+', array size = '
+          format($size,0,0):$temp_str
+          $message=$message+$temp_str
+          write('line3',$message)
+     endif  
+endif     
+"------------------------------"
+" return result                "
+"------------------------------"
+return($max)
+

@@ -1,0 +1,130 @@
+"macro calcrc"
+// calculate alfa, rof2 from fid
+// for example, set alfa=4 rof2=2 sw=2.5e6
+
+$fidtxt=curexp+'/alfafid'
+// $out=curexp+'/alfa'
+// $reg=curexp+'/regression.inp'
+
+rm($fidtxt):$x
+writefid($fidtxt)
+
+$minalfa=10 $minrof2=25 $rc=0
+
+// write('reset',$out)
+// write('file',$out,'time\namplitude\n   0   0\nNEXT')
+lookup('mfile',$fidtxt,'filekey'):$key,$ok
+if not $ok then
+  write('error','%s couldn\'t read fid',$0)
+  return($minalfa,$minrof2)
+endif
+
+$size=2000
+if $size>np/2 then $size=np/2 endif
+$x=0 $y=0 $amp=0 $t=0 $del=1/sw
+$i=0
+repeat
+  $i=$i+1
+  lookup('mfile',$key,'read',2,'filekey'):$x,$y,$key,$nret
+  if ($nret>2.5) then
+    $a=sqrt($x * $x + $y * $y)
+    $amp[$i]=$a
+//  write('file',$out,'   %g    %g',$t,$a)
+    $t = $t + $del
+  endif
+until ($i>=$size or $nret<2.5)
+
+rm($fidtxt):$x
+
+// mv($out,$reg)
+// rm(curexp+'/expl.out'):$x
+// expl('r')   // exponential curve fit, not optimal
+// analyze('expfit','regression','exp','list')
+// $anl=curexp+'/analyze.list'
+// lookup('mfile',$anl,'T1','skip',4,'read'):$rc,$nret
+// if ($nret>0 and $rc>0) then
+//   $rc = $rc * 1e6
+//   $minrof2 = 3 * $rc - $minalfa
+//   if $minrof2<2 then $minrof2=2 endif
+// endif
+
+// avg noise at end of fid
+$noise=0 $block=20
+$i=$size-$block-1
+repeat
+  $i=$i+1
+  $noise=$noise+$amp[$i]
+until ($i>=$size)
+$noise=$noise/$block
+
+// std dev of noise
+$sigma=0
+$i=$size-$block-1
+repeat
+  $i=$i+1
+  $sigma=$sigma + ($amp[$i]-$noise) * ($amp[$i]-$noise)
+until ($i>=$size)
+$sigma=sqrt($sigma/($block-1))
+
+$block=10 $level=1.6  // empirical values
+
+// search from end of fid for first data block that exceeds noise
+// search overlapping blocks of data
+
+$target = $noise + $level * $sigma
+$block2=$block/2
+$i=$size-$block+1 $sig1=0 $sig2=0
+repeat
+  $i=$i-1
+  $sig1=$sig1+$amp[$i]
+until ($i<=$size-$block-$block2+1)
+$sig1=$sig1/$block
+
+$rc=0
+repeat
+  $i=$i-1
+  $sig2=$sig2+$amp[$i]
+  if ($i mod $block2 = 0) then
+    $sig2=$sig2/$block
+    $signal=$sig1+$sig2
+    if ($signal > $target) then  // found it
+      $rc = ($i + $block2/2 - 1) * $del
+    else
+      $sig1=$sig2
+      $sig2=0
+    endif
+  endif
+until ($rc<>0 or $i<=1)
+
+if ($rc>0) then
+  $rc = $rc * 1e6
+  $minalfa = 10
+  $minrof2 = $rc - $minalfa
+  if $minrof2<2 then $minrof2=2 endif
+endif
+
+if (probe='') then
+  write('line3','tn=%s minalfa=%g minrof2=%g',tn,$minalfa,$minrof2)
+endif
+if probe<>'' then
+  $alfastr='' format($minalfa,1,1):$alfastr
+  $rof2str='' format($minrof2,1,1):$rof2str
+  $ans='n' $add='n'
+  if ($#>0.5) then if ($1='add') then
+    $add='y' $ans='y'
+  endif endif
+  if ($ans='n' and $##<0.5) then
+    $input='Enter '+tn+' minalfa '+$alfastr+', minrof2 '+$rof2str+' into probe file? [n] '
+    input($input):$ans
+  endif
+  if ($ans='y') then
+    addparams('minalfa',$alfastr,tn)
+    addparams('minrof2',$rof2str,tn)
+    setparams('minalfa',$alfastr,tn)
+    setparams('minrof2',$rof2str,tn)
+    if ($add='y') then
+      write('line3','%s minalfa %s, minrof2 %s entered into probe file.',tn,$minalfa,$minrof2)
+    endif
+  endif
+endif
+return($minalfa,$minrof2)

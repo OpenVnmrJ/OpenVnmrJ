@@ -1,0 +1,236 @@
+"macro gmaprep"
+"  gradient shimming"
+
+if $#<0.5 then
+  return
+  endif
+
+
+IF ($1 = 'shimd') THEN
+
+$dirn = userdir + '/gshimlib/data/'
+cat($dirn+'gshim.list')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'shimp') THEN
+
+$dirn = userdir + '/gshimlib/data/'
+printon cat($dirn+'gshim.list') printoff
+
+RETURN
+ENDIF
+
+
+" process one field map "
+IF ($1 = 'proca') THEN
+
+$ret=0
+$dirn = userdir + '/gshimlib/data/'
+$fname = 'gshim.phase'
+if ($# > 1.5) then
+  $fname = $2
+endif
+
+exists($dirn+$fname,'file'):$e
+if $e>0.5 then
+  rm($dirn+$fname):$x
+endif
+wft('nods')
+"lvl=0 tlt=0"
+if (dmg<>'av') then av endif
+if (auto<>'y') then f endif
+wrspec($dirn+$fname,1,2):$ret
+"wrspec($dirn+$fname,1,2,-2):$ret"
+
+return($ret)  "0 if ok, 1 if not"
+ENDIF
+
+
+"process gzfit results for gradient shimming"
+IF ($1 = 'fita') THEN
+
+$jstr = ''
+$dirn = userdir + '/gshimlib/data/gshim'
+
+$print='y'
+$wtname = 'n'
+$wttrig='f'
+if ($# > 1.5) then
+  $wttrig = $2
+  if $wttrig='ff' then
+    $wttrig='f'
+    $print='n'
+  endif
+endif
+
+$ret=0
+$wtname = $dirn + '.amp'
+exists($wtname,'file'):$e
+if $e>0.5 then rm($wtname):$x endif
+wrspec($wtname,1,2,-1):$ret
+if $ret>0.5 then return($ret) endif
+
+"if ($wttrig = 'f') then"
+"  $wtname = $dirn + '.amp'"
+"  exists($wtname,'file'):$e"
+"  if $e>0.5 then rm($wtname):$x endif"
+"  wrspec($wtname,1,2,-1):$ret"
+"endif"
+
+$bname = $dirn+'.bas'  "set to current from Retrieve Shimmap"
+exists($bname,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.bas does not exist')
+  return(1)
+endif
+
+$fname = $dirn+'.phase'
+exists($fname,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.phase does not exist')
+  return(1)
+endif
+
+$outname = $dirn+'.list'
+exists($outname,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.list does not exist')
+  return(1)
+endif
+exists($dirn+'.fit','file'):$e
+if $e>0.5 then rm($dirn+'.fit'):$x endif
+
+"compare np from $bname to np from $fname, use lookup"
+
+"check dsn, if small use different weighting"
+$sn=1.0
+$hpt = 0.5 * sw / (fn/2)  "half of a point"
+$npt = 0.0625 * sw + $hpt
+dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+"write('alpha','s/n %g',$sn)"
+"dsn doesn't work right if ph not av mode, and if not f"
+
+$ret=0
+if $wttrig='f' then
+  if $sn<5 then
+    gzfit($dirn,'r','nn'):$ret    "fixed 20% trapezoid"
+  else
+    if $sn<10 then
+      gzfit($dirn,'s','nn'):$ret  "smoothing"
+    else
+      gzfit($dirn,'f','nn'):$ret  "normal"
+    endif
+  endif
+else
+  gzfit($dirn,$wttrig,'nn'):$ret
+endif
+"if $ret=2 fit failed, if=1 other error"
+
+if $print='y' then
+  write('alpha','Calculating fit...  done!')
+endif
+write('file',$dirn+'.rec','Calculating fit...  done!')
+
+return($ret)  "$ret=0 if ok, 1 if not"
+ENDIF
+
+
+IF ($1 = 'explmenu') THEN
+
+$dirn=userdir+'/gshimlib/data/'
+exists(curexp+'/expl.out','file'):$e
+"if $e>0.5 then autoscale endif"
+if $e>0.5 then rm(curexp+'/expl.out'):$x endif
+
+if ($# < 1.5) then
+  $jfile=$dirn+'gshim.fit'
+  exists($jfile,'file'):$e
+  if $e<0.5 then
+    write('error','gshim.fit not found')
+  else
+    wrspec('expl_avg_scale',$jfile)
+    expl('file',$jfile,'tinysymbol')
+  endif
+else
+  if ($2 = 'efit') then
+    $jfile=$dirn+'gshim.fit'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+      write('error','gshim.fit not found')
+    else
+      wrspec('expl_avg_scale',$jfile)
+      expl('file',$jfile,'tinysymbol')
+    endif
+  endif
+  if ($2 = 'ebase') then
+    full
+    $jfile=$dirn+'gshim.bas'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+      write('error','gshim.bas not found')
+    else
+      wrspec('expl_avg_scale',$jfile)
+      expl('file',$jfile,'tinysymbol')
+    endif
+  endif
+  if ($2 = 'pfit') then
+    $jfile=$dirn+'gshim.fit'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+      write('error','gshim.fit not found')
+    else
+      wrspec('expl_avg_scale',$jfile)
+      pexpl('file',$jfile,'tinysymbol')
+"      write('line3','fit plot loaded')"
+      page
+    endif
+  endif
+  if ($2 = 'pbase') then
+    $jfile=$dirn+'gshim.bas'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+      write('error','gshim.bas not found')
+    else
+      wrspec('expl_avg_scale',$jfile)
+      pexpl('file',$jfile,'tinysymbol')
+"      write('line3','map file loaded')"
+      page
+    endif
+  endif
+  if ($2 = 'b0') then
+    $jfile=$dirn+'gshim.phase'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+      write('error','gshim.phase not found')
+    else
+      wrspec('expl_avg_scale',$jfile)
+      pexpl('file',$jfile,'tinysymbol')
+"      write('line3','map file loaded')"
+      page
+    endif
+  endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($# > 0.5) THEN
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+
+RETURN
+ENDIF
+
+
+"group into smaller macros, put most-used options first"
+"  readallshims - readhw"
+"  setzshims (setallshims) - sethw"
+"  gmapdisp - setwindow retrbasis setbname shimp explmenu maplist"
+"  gmaprep - proca fita setoldv shimd"  "move setoldv into other macro? "
+"  gmapset - setb procb reprocb setsw svppar par reproca"
+"  gmapshims - seta wrshimcal chkshimcal unarray setnew reset"
+

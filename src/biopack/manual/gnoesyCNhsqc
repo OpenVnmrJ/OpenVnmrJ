@@ -1,0 +1,87 @@
+  gnoesyCNhsqc
+
+    3D C13,N15 edited noesy with separation via the carbon of the destination site
+         recorded on a water sample 
+    includes optional "WET" water suppression in relaxation delay
+    includes optional magic-angle gradients
+
+    pwNlvl and pwClvl should be lowered 3dB each from normal BioPack experiments 
+    because of simultaneous pulses and decoupling.
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 35 ppm (CA/CB)
+         3) 15N             - carrier @ 118 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+    (13C decoupling in t1 is done by a composite pulse)
+    Set dm2 = 'nynn', [15N dec during t1] 
+    Set dm2 = 'nyny', [15N dec during t1 and acquisition] 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (90, -180) in F1 and (90, -180) in  F2.    
+    Use linear prediction in t2 for the first few points to flatten baseline
+      The macro BPsetlp2 could be used, e.g. BPsetlp2(128,32,2) for extending
+      to 128 complex points in t2 from 32 acquired complex points, with the
+      first two complex points in t2 linear predicted, or use the Process in 
+      t2 page in the Process folder to set the LP parameters.
+
+
+   "BPsetlp2(new ni2,ni2 used,frontpoints)"
+    parlp(2)
+    if $#>2 then
+     lpopt2='b','f' strtlp2=$3,$2
+     lpfilt2=8 lpnupts2=$2-$3,$2 lpext2=$3,$1-$2
+     strtext2=$3,$2+1
+     setsb2(2*$1) fn2=2*$1 proc2='lp'
+    else
+     lpopt2='f' strtlp2=$2
+     lpfilt2=8 lpnupts2=$2 lpext2=$1-$2
+     strtext2=$2+1
+     setsb2(2*$1) fn2=2*$1 proc2='lp'
+    endif
+
+
+    Note: Zero order phase correct may not be exactly +90 in F2 due to C=O 
+          decoupling pulse.
+
+    Modified by L. E. Kay to allow for simult N, C acq   July 19, 1993
+    original code: noesyc_pfg_h2o_NC_dps.c
+    Modified for dps and magic angle gradients D.Mattiello, Varian, 6/8/94
+    Modified for vnmr5.2 (new power statements, use status control in t1)
+      GG. Palo Alto  16jan96
+    Modified to use only z-gradients 
+    Modified to use pwC/pwClvl/pwN/pwNlvl/compC as in other BioPack/
+     sequences. The parameter "compN" can be calibrated 
+     to permit accurate lower power
+     N15 pulses. This parameter should be calibrated by determining the pw90
+     for N15 at the normal pwNlvl(pw1) and 3db lower(pw2). Then,      
+     compN=pw2/(1.4*pw1). Use ghn_co or gNfhsqc for these calibrations.
+
+    Modified to use BioPack-style of C=O decoupling
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+       Ref: Pascal et.al.,J.Magn.Reson. B103,197-201(1994)
+       GG, palo alto, 7 july 1998

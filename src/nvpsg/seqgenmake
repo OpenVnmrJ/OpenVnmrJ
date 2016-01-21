@@ -1,0 +1,105 @@
+# 
+#
+# seqgenmake  makefile used by vnmr seqgen macro(s) to compile Pulse Sequences
+#
+#   Modified for Solaris
+#       New target: psgsol.  Be sure this comes AFTER psg target, in case seqgen
+#       calls this script with no target specified on Solaris
+#
+#       Extended the lint check so it's not done on Solaris.  This requires
+#       the symbol SOLARIS to be defined to "y"
+#
+#       New target psgsolstatic for static linking under Solaris / GNU C
+#       New target sol_lint for lint check with GNU lint on Solaris
+#       Errors are written to a file whose name is constructed from the
+#     name of the pulse sequence.  Thus can seqgen compile a whole
+#     series of pulse sequences (/vnmr/psglib/*.c) and catalog the
+#     errors on a per-pulse-sequence basis.
+#       Pulse sequence is written directly to its final destination
+#
+#-- Normal operational compile flags
+#
+SHELL=/bin/sh
+CFLAGS= -O
+NVFLAGS= -Dcodeint=int -Dcodelong=int -DNVPSG
+WFLAGS= -Wall -Wno-return-type -Wno-implicit-int -Wno-unused-variable -Wno-switch -Wno-format-security
+CPPFLAGS=
+LDFLAGS=
+LNFLAGS=
+TARGET_ARCH=
+CCC=/vnmr/gnu/bin/g++
+
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(NVFLAGS) $(WFLAGS) -c
+LINK.c= $(CC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH)
+LINK.cc= $(CCC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH)
+
+CPP.c= $(CC) -P -DLINT $(CPPFLAGS)
+LINT.c= lint -a -c -h -u -z -v -n -DLINT $(CPPFLAGS)
+LINTibm.c= lint -a -c -h -u -v -n -wk -DLINT $(CPPFLAGS)
+LINTsol.c= $(CC) $(LNFLAGS) -DLINT $(CPPFLAGS) $(NVFLAGS) -c
+PSGLINTLIB=$(vnmrsystem)/psg/llib-lpsg.ln
+
+psg : $(PS).ln $(PS).o
+	@echo psg Link Loading...
+	@echo ""
+	    $(LINK.c) $(LFLAGS) -L$(LIB) -o $(SEQLIB)/$(PS) \
+		 $(PS).o $(DPS_DUMMY_OBJ) -lpsglib -lparam -lacqcomm -lm >>$(PS).errors 2>&1;
+
+psgsol : $(PS).o
+	@echo psg Solaris Link Loading...
+	@echo ""
+	    $(LINK.cc) $(LFLAGS) -L$(LIB) -L$(vnmrsystem)/lib \
+	-L/vnmr/gnu/lib/gcc-lib/sparc-sun-solaris2.7/3.2.3  \
+	    -R$(vnmruser)/psg:$(vnmrsystem)/lib:$(vnmrsystem)/gnu/lib -o $(SEQLIB)/$(PS) \
+	    $(PS).o $(DPS_DUMMY_OBJ) -lpsglib -lparam -lacqcomm -lm \
+		 -lsocket -lnsl -lintl -lrt >>$(PS).errors 2>&1;
+
+psgLinux : $(PS).o
+	@echo psg Linux Link Loading...
+	    $(LINK.c) $(LFLAGS) -L$(LIB) -L$(vnmrsystem)/lib \
+	    -o $(SEQLIB)/$(PS) $(PS).o $(DPS_DUMMY_OBJ) \
+	    -lpsglib -lparam -lacqcomm -lm >>$(PS).errors 2>&1;
+
+psgMac : $(PS).o
+	@echo psg MacOS Link Loading...
+	    $(LINK.cc) $(LFLAGS) -L$(LIB) -L$(vnmrsystem)/lib \
+	    -o $(SEQLIB)/$(PS) $(PS).o $(DPS_DUMMY_OBJ) \
+	    -lpsglib -lparam -lacqcomm -lm >>$(PS).errors 2>&1;
+
+psgInterix : $(PS).o
+	@echo psg Windows Link Loading...
+	@echo ""
+	    $(LINK.cc) $(LFLAGS) -L$(LIB) -L$(vnmrsystem)/lib \
+	    -o $(SEQLIB)/$(PS) $(PS).o $(DPS_DUMMY_OBJ) \
+	    -lpsglib -lparam -lacqcomm -lm >>$(PS).errors 2>&1;
+
+psgsolstatic : $(PS).o
+	@echo psg Solaris Static Link Loading...
+	@echo ""
+	    $(LINK.c) -s -L$$vnmrsystem/lib \
+	    -o $(SEQLIB)/$(PS) $(PS).o $(DPS_DUMMY_OBJ) \
+	    -Xlinker -Bstatic -L$(LIB) -lpsglib -lparam -lpsglib -lacqcomm -lm \
+		 -lsocket -lnsl -lintl -lrt -Xlinker -Bdynamic -ldl >>$(PS).errors 2>&1;
+
+$(PS).o : $(PS).c
+	@echo Compiling Sequence...
+	  $(COMPILE.c) $(PS).c >>$(PS).errors 2>&1
+
+
+sol_lint :
+	@echo GNU Check of Sequence...
+	@echo ""
+	  $(LINTsol.c) $(PS).c >>$(PS).errors 2>&1; rm -f $(PS).o;
+
+$(PS).ln :
+	@echo Lint Check of Sequence...
+	@echo ""
+	if (test `uname -s` = IRIX) then \
+	  echo " ";  \
+	else if (test `uname -s` = AIX) then \
+	  echo " ";  \
+	else if (test x$$SOLARIS != "xy") then \
+	  $(LINT.c) $(PS).c $(PSGLINTLIB) >> $(PS).errors 2>&1; \
+	fi; \
+	fi; \
+	fi;

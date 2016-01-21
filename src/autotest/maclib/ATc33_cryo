@@ -1,0 +1,112 @@
+"macro ATc33_cryo"
+"ATc33_cryo" "C13 Adiabatic vs. Waltz16 vs. No Decoupling using Waveform Generators"
+"        Using user-defined power limits. Efficiency may be"
+"        compromised"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   seqfil='s2pul'
+   sw=18p
+   dn='C13' 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   lb='n' sb=at/4 s1 av
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='ATc33_cryo(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft sp=2.4p wp=1.4p vsadj
+   lb=10 sb=-.07 gf='n' sbs='n'
+   dmf=200
+   opx('ATwurst.DEC')
+   setwave('WURST2 14000')
+   pboxpar('$1 adb', '2.0')   "add 2dB for better intensities"
+   cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+   pbox_pwr('ATwurst.DEC'):dpwr
+
+   $n3=n3
+   format(at_max_dpwr,2,0):n3
+   n3=n3+'d'
+   $attn=n3
+
+   if dpwr>at_max_dpwr then
+       pboxpar('attn',$attn)
+       echo($attn)
+       shell('Pbox')
+       pbox_pwr('ATwurst.DEC'):dpwr
+       write('line3','Decoupling Power reduced to Maximum (at_max_dpwr)')
+       n3='Decoupling Power reduced to Maximum (at_max_dpwr)'
+       atext(n3)
+   endif
+
+   pbox_dmf('ATwurst.DEC'):dmf
+   at_currenttest='wurst_waltz_nodec_compare'
+ 
+   vp=0 dmm='ccc','ccw','ccp' dm='nnn','nns','nny'
+   $dmf=dmf dmf=0.3*dmf,0.3*dmf,dmf
+   dres=9.0 dseq='ATwurst' dpwr=dpwr-5,dpwr-5,dpwr
+   array='(dmm,dm,dpwr,dmf)'
+   wnt='wft f aph0 vsadj dssh'
+   wexp='ATc33_cryo(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft
+   ATsvf
+   vp=0 f ds(3) vsadj(1000) sp=-2.6p wp=8p full 
+   aph0 r1=rp sc=0 wc=wcmax-50 s1
+   cr=8p delta=2p dsn:$snwurst
+ r3=$snwurst
+ r1 ds(3) vsadj(1000)
+ peak:r6  "wurst H2O intensity"
+ s1 vs=vs*10 s3 r1
+   text('adiabatic wurst decoupling,on resonance\\water height set at 1000mm and 10000mm')
+   if (at_plotauto='y') then
+    pl pscale pap 
+    r3 pl ATpage r1 endif
+   r1  select(2) aph0 r2=rp cr=8p delta=2p dsn:$snwaltz
+   r4=trunc($snwaltz)
+   r6=trunc(r6)
+   peak:r5  "waltz H2O intensity, same gain and vs as in wurst decoupling"
+   text('waltz16 decoupling')
+   if (at_plotauto='y') then
+    r1 pl pap pscale 
+    r3 pl ATpage r1 endif
+   r1 select(1) aph0 $r5=rp cr=8p delta=2p dsn:$snnodec
+   r3=trunc(r3)
+   r1=trunc(r1*100)/100
+   r2=trunc(r2*100)/100
+   r5=trunc(r5)
+   $r5=trunc($r5*100)/100
+   $r4=trunc($snnodec)
+   text('no decoupling\\same vs and gain as in waltz16 and wurst case')
+   if (at_plotauto='y') then
+    r1 pl pap pscale 
+    r3 pl ATpage
+    text('Comparison of No Decoupling, Waltz16 Decoupling and Wurst Decoupling')
+    f select(1) vsadj(100000) full wc=.7*wc pscale vo=60 ho=0 pl('all') pap ATpage endif
+   r1 peak:$intnodec
+   $intnodec=trunc($intnodec)
+   ATrecord('WURSTWALTZ1c','phase shift','  wurst_rp',r1,' waltz_rp',r2,' nodec_rp',$r5)
+   ATrecord('WURSTWALTZ2c','Intensity and SN','wurst_int',r6,' waltz_int',r5,' nodec_int',$intnodec,'  SN(wurst)',r3,'  SN(waltz)',r4,'  SN(nodec)',$r4)
+
+   write('file',autotestdir+'/REPORT','WURST/WALTZ RP:  wurst_rp = %2.1f   waltz_rp = %2.1f   nodec_rp = %2.1f ',r1,r2,$r5)
+   write('file',autotestdir+'/REPORT','WURST/WALTZ INT: wurst_int = %5.0f   waltz_int = %5.0f   nodec_int = %5.0f ',r6,r5,$intnodec)
+   write('file',autotestdir+'/REPORT','WURST/WALTZ SN:  wurst_sn = %5.0f   waltz_sn = %5.0f   nodec_sn = %5.0f ',r3,r4,$r4)
+
+ATnext
+endif

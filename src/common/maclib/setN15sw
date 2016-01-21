@@ -1,0 +1,57 @@
+"macro setN15sw"
+"*************************************************************"
+"Sets default spectral width of N15 based on reference compound"
+"  Usage: setN15sw(arg1):<$ret>					"
+"     arg1 is sw, sw1 or sw2 					"
+"     $ret is needed for sw1 and sw2				"
+"*************************************************************"
+
+  "Default reference is CH3NO2"
+  $ref='CH3NO2' $ret=0 $lf=-240 $uf=-290 $ret2=0
+
+	"Get reference information from nuctabref"
+  getrefcmpd('N15'):$ref
+
+	"If it is NH3, the default sw1 is 90 to 140"
+  strstr($ref,'NH3'):$r
+  if ($r) then
+     $uf=90 $lf=140
+  else
+        "If it is CH3NO2, the default sw1 is -290 to -240"
+        " CH3NO2 is 380 ppm downfield to NH3"
+
+     strstr($ref,'CH3NO2'):$r
+     if ($r) then
+	$uf=-290 $lf=-240
+     else
+        "If it is Tetramethylammonium, the default sw1 is 45 to 95"
+        " Tetramethylammonium is 44 ppm downfield to NH3"
+
+	strstr($ref,'(CH3)4N'):$r
+	if ($r) then
+	   $uf=45 $lf=95
+	endif
+     endif
+  endif
+
+  if ($## > 0) then
+     if ($1='sw') then
+	$ret2=sw
+	setsw($lf,$uf):$ret,$ret2
+     elseif ($1='sw1') then
+	$ret2=sw1
+	setsw1('N15',$lf,$uf):$ret,$ret2
+     elseif ($1='sw2') then
+	$ret2=sw2
+	setsw2('N15',$lf,$uf):$ret,$ret2
+     endif
+     return($ret,$ret2)
+  else
+     if ($1='sw') then
+        setsw($lf,$uf)
+     elseif ($1='sw1') then
+        setsw1('N15',$lf,$uf)
+     elseif ($1='sw2') then
+        setsw2('N15',$lf,$uf)
+     endif
+  endif

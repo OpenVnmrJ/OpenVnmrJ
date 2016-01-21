@@ -1,0 +1,169 @@
+"macro copypseq"
+"@(#)copypseq 22/05/08"
+"       edited 23/12/09"
+"	appdirs support 05/06/13"
+"V.Zorin, Varian, UK, 2008-2013"
+"copypseq - copies one VNMRJ SolidsPack-type pulse sequence to another"
+
+if ($# < 1) then
+   write('error','Usage: %s([\'source\',]\'destination\')',$0)
+   abort
+endif
+
+clear
+if ($#=1) then
+   $infname=seqfil
+   $outname=$1
+else
+   $infname=$1
+   $outname=$2
+endif
+
+exists($infname,'psglib'):$e,$fullpath
+if $e<0.5 then
+   echo('* Pulse sequence file',$infname,'not found. Abort')
+   abort
+endif
+
+strstr($fullpath,'/psglib/'+$infname):$e,$inpath
+echo('Sequence',$infname,'is found in ',$inpath)
+
+capitalizestring($infname):$infName
+capitalizestring($outname):$outName
+
+//copy the .c file
+
+$seq_c_file=$inpath+'/psglib/'+$infname+'.c'
+$nseq_c_file=userdir+'/psglib/'+$outname+'.c'
+cp($seq_c_file,$nseq_c_file)
+
+//copy the protocol.xml macro and replace the pulse sequence name there
+
+$pro_file=$inpath+'/templates/vnmrj/protocols/'+$infName + '.xml'
+exists($pro_file,'file'):$e
+if $e>0.5 then
+   $npro_file=userdir+'/templates/vnmrj/protocols/'+$outName + '.xml'
+
+   //Check if directory exist or create it otherwise
+
+   exists(userdir+'/templates/vnmrj/protocols/','directory'):$ee
+   if $ee<0.5 then
+       mkdir('-p',userdir+'/templates/vnmrj/protocols/')
+   endif
+	
+//delete previous file
+
+   write('reset',$npro_file)
+
+//read file
+
+   $cmd=''
+
+   $cmd='sed -e \'s/'+$infName+'/'+$outName+'/g\' '+$pro_file+' > '+$npro_file
+   shell($cmd)
+
+   $temp_file = userdir+'/templates/vnmrj/protocols/'+'temp.xml'
+   write('reset',$temp_file)
+
+   $cmd='sed -e \'s/'+$infname+'/'+$outname+'/g\' '+$npro_file+' > '+$temp_file
+   shell($cmd)
+   cp($temp_file,$npro_file)
+   rm('-r',$temp_file):$dummy
+
+else
+   echo('* Protocol',$pro_file,'not found. Continue')
+endif
+
+//copy the main setup macro and replace the pulse seqname there
+
+$mac_file=$inpath+'/maclib/'+$infname + '_pars'
+exists($mac_file,'file'):$e
+
+if $e>0.5 then
+   $nmac_file=userdir+'/maclib/'+$outname + '_pars'
+	
+//delete previous file
+
+   write('reset',$nmac_file)
+
+//read file
+
+$cmd=''
+$cmd='sed -e \'s/'+$infname+'/'+$outname+'/g\' '+$mac_file+' > '+$nmac_file
+shell($cmd)
+
+
+else
+   echo('* Macro',$mac_file,'not found. Continue')
+endif
+
+//copy the capital letter macro
+
+$Mac_file=$inpath+'/maclib/'+$infName
+exists($Mac_file,'file'):$e
+if $e>0.5 then
+   $NMac_file=userdir+'/maclib/'+$outName
+
+//delete previous file
+
+   write('reset',$NMac_file)
+
+//read file
+
+   $cmd=''
+   $cmd='sed -e \'s/'+$infName+'/'+$outName+'/g\' '+$Mac_file+' > '+$NMac_file
+   shell($cmd)
+else
+   echo('* Macro',$Mac_file,'not found. Continue')
+endif
+
+//copy the parameters
+
+$Par_name=$inpath+'/parlib/'+$infName+'.par'
+exists($Par_name,'file'):$e
+if $e>0.5 then
+   $NPar_name=userdir+'/parlib/'+$outName+'.par'
+   exists($Par_name,'file'):$ee
+   rm('-r',$NPar_name):$dummy
+   cp('-r',$Par_name,$NPar_name)
+//echo('* Parameter directory',$Par_name,'\ncopied to',$NPar_name,':')
+   $proc=$NPar_name+'/procpar'
+   $temp=$NPar_name+'/procpar.bak'
+   mv($proc,$temp)
+   write('reset',$proc)
+   
+   $cmd=''
+   $cmd='sed -e \'s/'+$infname+'/'+$outname+'/g\' '+$temp+' > '+$proc
+   shell($cmd)
+
+   delete($temp)
+else
+   echo('* Parameter directory',$Par_name,'not found. Continue')
+endif
+
+//copy the manuals
+
+$man_name=$inpath+'/manual/'+$infname
+exists($man_name,'file'):$e
+if $e>0.5 then
+   $nman_name=userdir+'/manual/'+$outname
+   cp($man_name,$nman_name)
+//7echo('* Manuals',$man_name,'\ncopied to',$nman_name)
+else
+   echo('* Manuals',$man_name,'not found. Continue')
+endif
+
+//copy the templates	
+
+$templ_name=$inpath+'/templates/layout/'+$infname
+exists($templ_name,'file'):$e
+if $e>0.5 then
+   $ntempl_name=userdir+'/templates/layout/'+$outname
+   rm('-r',$ntempl_name):$dummy
+   cp('-r',$templ_name,$ntempl_name)
+//8echo('* Templates directory',$templ_name,'\ncopied to',$ntempl_name)
+else
+   echo('* Templates directory',$templ_name,'not found. Continue')
+endif
+
+write('line3','DONE: All sequence files for %s copied to %s',$infname,$outname)

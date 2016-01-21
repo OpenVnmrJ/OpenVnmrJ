@@ -1,0 +1,22 @@
+"macro NUSprocISTbg"
+"Call NUS IST processing in background"
+
+getbinpath('vnmrpipe'):$ok,$prg
+getbinpath('vj2pipe.com'):$pipeex,$pipe
+
+$file=$1
+$procpar=$2
+$fns=$3
+$fn1s=$4
+
+//First retrieve data into bg workspace
+rt($file)
+write('line3',' vj2pipe.com -cd %s -procpar %s -nograph -noprogress -xZFARG size=%s -yZFARG size=%s; sleep 1',$file,$procpar,$fns,$fn1s):$cmd2
+shell($prg+' '+$cmd2+' ; cat'):$devnull
+wft
+pread($file+'/spec_ist.ft2')
+nm2d
+dconi
+procdim=2
+setvalue('procdim',procdim,'processed')
+savevarspec

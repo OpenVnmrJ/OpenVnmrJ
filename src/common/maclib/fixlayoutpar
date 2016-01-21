@@ -1,0 +1,107 @@
+"macro fixlayoutpar"
+"*************************************************************************"
+"fixlayoutpar  fixs layout parameter in all the parameter sets and data"
+"*************************************************************************"
+//  Allows for single or multiple parameter file(s) to be updated.
+//  arg1 - experiment to be updated (look for parlib entry for arg1)
+//  arg2 - parlib path
+//  Both arguments are optional.
+//  Usage:   
+//	fixlayoutpar - update all files in userdir/parlib
+//	fixlayoutpar('','/vnmr/parlib') - update all files /vnmr/parlib
+//	fixlayoutpar('',userdir+'/parlib') - update all files in userdir/parlib
+//	fixlayoutpar('PROTON') - update 'highest level' appdir/parlib/PROTON.par
+//				If 'highest level' appdir/parlib/PROTON.par 
+//				is not writable make a copy to userdir/parlib
+//				and update userdir/parlib/PROTON.par
+//	fixlayoutpar('PROTON',appdir+'/parlib') - update appdir/parlib/PROTON.par
+//				If appdir/parlib/PROTON.par is not found OR
+//				is not writable, do nothing 
+"*************************************************************************"
+
+$dum='' $devnull=''
+
+if ($# < 1) then $1='' endif
+if ($# < 2) then $2='' endif
+$filename=$1
+$dir=$2
+
+if ($dir='') then
+// parlib not specified. Find one.
+   if ($filename<>'') then
+	exists($filename,'parlib'):$pex,$dir
+	substr($dir,'dirname'):$dir
+   else
+	exists('parlib',''):$pex,$dir
+   endif
+endif
+if ($dir<>'') then
+//  Remove any double forward slashes
+    pwd:$curdir
+    cd($dir):$dum
+    pwd:$dir
+    cd($curdir):$dum
+
+//  Is the directory writable?
+    exists($dir,'file','w'):$ok
+    if ($ok<0.5) then
+	if ($filename<>'') and ($dir<>userdir+'/parlib') and ($# < 2) then
+// If not, should a copy of the parameter be made to userdir?
+	    exists(userdir+'/parlib','directory'):$direx
+	    if ($direx=0) then shell('mkdir '+userdir+'/parlib'):$dum endif
+	    shell('cp -r '+$dir+'/'+$1+'.par '+userdir+'/parlib'):$dum
+	    $dir=userdir+'/parlib'
+	else
+	    write('error','%s does not have write permission to %s',owner,$dir)
+	    return
+	endif
+    endif
+else
+    write('error','parlib directory not found')
+    return
+endif
+
+// Generate the list of parameter directories
+write('reset','/vnmr/tmp/layoutlist')
+if ($filename<>'') then
+    write('file','/vnmr/tmp/layoutlist','%s/%s.par',$dir,$filename)
+else
+    shell('(ls -1d '+$dir+'/*.par > /vnmr/tmp/layoutlist)'):$dum
+endif
+$s1='' $s2=''
+readfile('/vnmr/tmp/layoutlist','$s1','$s2','','local'):$total
+shell('rm -f /vnmr/tmp/layoutlist'):$dum
+
+if ($total=0) then
+	write('line3','No parameter entries in %s',$dir)
+	return
+endif
+
+$i=1
+repeat
+//  Is procpar writable?
+   	$path = $s1[$i]+'/procpar'
+   	exists($path,'file','w'):$e
+   	if ($e < 0.5) then
+	    write('line3','%s does not have write permission to %s',operator,$s1[$i])
+	else
+	    fread('','usertree')
+	    fread($path,'usertree')
+	    create('layout','string','usertree',''):$ex
+	    setgroup('layout','display','usertree')
+	    $layout='' $seqfil=''
+	    getvalue('layout','usertree'):$layout
+	    if $layout='' then
+		getvalue('seqfil','usertree'):$seqfil
+		setvalue('layout',$seqfil,'usertree')
+		fsave($path,'usertree')
+		write('line3','%s updated',$s1[$i])
+	    endif
+	    fread('','usertree')
+	endif
+    $i=$i+1
+until $i > $total
+
+// DONE !!
+write('line3','%s DONE',$0)
+

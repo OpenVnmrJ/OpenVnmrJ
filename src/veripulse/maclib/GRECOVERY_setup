@@ -1,0 +1,42 @@
+"macro GRECOVERY_setup"
+ //Now move on to gradient recovery
+     PROTON
+     setoffset(tn,4.67):tof
+     spin=0
+     ss=1 nt=1
+     //gain='y'
+     gain=26
+     sw=2k
+     at=2
+     gt1=1e-3
+     getparam('pw90','H1'):pw90
+     pw(90)
+     getparam('tpwr','H1'):tpwr
+     seqfil='g2pul'
+     d1=2
+     fn=128k
+     setddrtc
+     array('d2',30,.00005,.00005)
+     d2=d2,0.0025,1
+     getparam('gcal','Probe'):$gcal
+     if $gcal=0 then write('error','gcal not calibrated, aborting') abort endif
+     $gradtype3=''
+     substr(gradtype,3,1):$gradtype3
+     if ($gradtype3 = 'l') then
+       gzlvl1=18/$gcal
+     else
+      gzlvl1=30/$gcal
+     endif
+     gzlvl1=gzlvl1,-gzlvl1
+     array='gzlvl1,d2'
+     wnt='wft(`acq`) dssh'
+
+     exists('execprocess','parameter'):$ep
+     exists('execplot','parameter'):$epl
+     if ($ep<0.5) then create('execprocess','string') endif
+     if ($epl<0.5) then create('execplot','string') endif
+     execprocess='grec_process(\'activestudy\')'
+     execplot='grec_plot'  
+     "add needed module"
+     module('add','IPpars')
+

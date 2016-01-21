@@ -1,0 +1,179 @@
+"macro showdosyfit"
+"showdosyfit(n<,m>):  show fit of n'th peak in the dosy analysis with m-fold vertical expansion of residual "
+"GAM 2iv08 : remove expl.out to ensure correct scaling of graph"
+"GAM 3iv08 : fix hangup with only one decay"
+"GAM 11iv08 : use curexp/dosy not userdir/Dosy"
+"GAM 16iv08 : correct calculation of number of points"
+"30iv08 : allow vertical expansion of residual"
+"MN 13Mar09 : changed to 'tinysymbol' for expl"
+"MN 13Mar09 : added a 'ds' before expl to supress the spurious error message 'Not a 2D experiment'"
+"GM/MN 24iv09 : corrected logic for finding peak chemical shift in annotating bi/triexp data"
+"GM 19May09 : add check for, and write of, number of components actually used by fit "
+
+IF (($#<1) or ($#>2)) then
+	write('error','Usage:  showdosyfit(n<,m>);  requires 1 or 2 arguments')
+	abort
+ENDIF
+
+$multresid=1
+IF ($#=2) then
+	$multresid=$2
+ENDIF
+
+rm(curexp+'/expl.out'):$dum
+
+$text=''
+nrecords(curexp+'/dosy/general_dosy_stats'):$nr
+lookup('file',curexp+'/dosy/general_dosy_stats')
+lookup('read',1):$text
+if ($text='2D') then $3Dflag=0 else $3Dflag=1 endif
+
+$test=''
+
+lookup('seek','Diff')
+        $i=0
+        $j=0
+        repeat
+                lookup('read'):$text
+                length($text):$len
+                $k=0
+                repeat
+                        $k=$k+1
+                        substr($text,$k,1):$test
+                        if ($test='.') then $i=$i+1
+                        endif
+                until ($k>=$len)
+                $j=$j+1
+        until (($text='Frequency') or ($text='Peak') or ($j>4*$nr))
+$np=$i/4
+
+lookup('file',curexp+'/dosy/general_dosy_stats')
+lookup('count','Diff'):$npks
+
+if ($3Dflag=0) then
+
+if ($1>$npks) then
+	write('error','showdosyfit stopped:  there are only %d peaks',$npks)
+	abort
+endif
+
+lookup('file',curexp+'/dosy/general_dosy_stats')
+lookup('seek','Diff')
+if ($1>1) then
+	$i=1
+	repeat
+		$i=$i+1
+		lookup('seek','Diff')
+	until $i>=$1
+endif
+$i=1
+repeat
+	lookup('read',4):$g[$i],$exp[$i],$fit[$i],$diff[$i]
+	$i=$i+1
+until $i>$np
+
+else
+
+lookup('file',curexp+'/dosy/general_dosy_stats')
+$j=0
+repeat
+	$j=$j+1
+	if ($j>$npks) then
+		write('error','showdosy stopped:  peak number %d not found',$1)
+		abort
+	endif
+	lookup('seek','Peak')
+	lookup('seek','number')
+	lookup('read',1):$i
+until ($i=$1)
+
+
+lookup('seek','Diff')
+$i=1
+repeat
+	lookup('read',4):$g[$i],$exp[$i],$fit[$i],$diff[$i]
+	$i=$i+1
+until $i>$np
+
+
+endif
+
+
+write('reset',curexp+'/dosy/dosyplot')
+write('file',curexp+'/dosy/dosyplot','exp 4')
+write('file',curexp+'/dosy/dosyplot','  3 %d',$np)
+write('file',curexp+'/dosy/dosyplot','Gradient area squared in ns/m**2')
+write('file',curexp+'/dosy/dosyplot','')
+write('file',curexp+'/dosy/dosyplot','1 0 0 0')
+$i=1
+repeat
+	write('file',curexp+'/dosy/dosyplot','%f\t%f',$g[$i],$exp[$i])
+	$i=$i+1
+until $i>$np
+write('file',curexp+'/dosy/dosyplot','')
+write('file',curexp+'/dosy/dosyplot','2 0 0 0')
+$i=1
+repeat
+	write('file',curexp+'/dosy/dosyplot','%f\t%f',$g[$i],$fit[$i])
+	$i=$i+1
+until $i>$np
+write('file',curexp+'/dosy/dosyplot','')
+write('file',curexp+'/dosy/dosyplot','3 0 0 0')
+$i=1
+repeat
+	write('file',curexp+'/dosy/dosyplot','%f\t%f',$g[$i],$multresid*$diff[$i])
+	$i=$i+1
+until $i>$np
+
+ds
+full
+autoscale
+expl('tinysymbol','file',curexp+'/dosy/dosyplot')
+
+shell('wc -l < '+curexp+'/dosy/diffusion_display.inp; cat'):$nlines
+$line=1
+	
+$prevf=-9999999
+if (dosy3Dproc='n') then
+	lookup('file',curexp+'/dosy/diffusion_display.inp')
+	$i=0
+	repeat
+	        lookup('read',7):$f,$a1,$d1,$e1,$a2,$d2,$e2
+		$line=$line+1
+		if ($f<>$prevf) then $i=$i+1 endif
+		$prevf=$f	
+	until ($i>=$1)
+	$j=0
+	$f2=$prevf
+	while ($f2=$prevf) and ($line<=$nlines) do
+	        lookup('read',7):$f2,$a1a,$d1a,$e1a,$a2,$d2,$e2
+		$line=$line+1
+		$j=$j+1
+	endwhile
+	write('graphics',wcmax*0.4,wc2max*0.8,'Fit (blue) to experimental decay (red) of peak number %d at chemical shift %8.3f ppm\n',$1,$f/sfrq)
+	if ($j<2) then
+		write('graphics',wcmax*0.4,wc2max*0.7,'Amplitude = %7.2f;  Diffusion coefficient = %5.2f +/- %5.2f * 10**-10 m**2/s\n',$a1,$d1,2*$e1)
+	endif
+else
+	write('graphics',wcmax*0.4,wc2max*0.8,'Fit (blue) to experimental decay (red) of peak number %d in 2D spectrum\n',$1)
+endif
+
+if nugflag='n' then
+	$string=' exponential decay\n'
+else
+	$string=' decay function for measured gradient non-uniformity\n'
+endif
+if (ncomp<2) then
+	write('graphics',wcmax*0.4,wc2max*0.75,'Single component fit to %s',$string)
+else
+	if ($j>1) then
+	write('graphics',wcmax*0.4,wc2max*0.75,'%d component fit to %s, %d components used',ncomp,$string,$j)
+	else
+	write('graphics',wcmax*0.4,wc2max*0.75,'%d component fit to %s attempted, but monoexponential fit was better',ncomp,$string)
+	endif
+endif
+if ($#>1) then
+	write('graphics',wcmax*0.15,wc2max*0.15,'Residual (magenta) expanded * %6.1f\n',$2)
+else
+	write('graphics',wcmax*0.15,wc2max*0.15,'Residual (magenta)\n')
+endif

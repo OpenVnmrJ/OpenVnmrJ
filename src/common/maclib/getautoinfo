@@ -1,0 +1,99 @@
+"macro getautoinfo"
+" macro getautoinfo"
+getfilepath('automation.conf','adm/walkupadm'):$confex,$conf
+
+if $# < 1 then $1='' endif
+
+// sortflag is a special case
+   if ($1='sortflag') then
+	if ($confex=0) or (traymax<1) then
+	   return(0)
+	endif
+
+	$7days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+
+	$x=1
+	repeat
+	   $day=$7days[$x]
+	   $s1='' $s2='' $a2=0
+	   readfile($conf,'$s1','$s2',$day,'local'):$ntot
+	   if ($ntot=0) then return(1) endif
+	        strsv2array($s2,':'):$s2
+		array2array($s2):$s2
+	        $ntot=size('$s2')
+	   if ($ntot<7.5) then return(1) endif
+	   $i=1
+	   repeat
+	        format($s2[$i],'lower'):$a2[$i]
+	        $i=$i+1
+	   until $i > $ntot
+	   if ($a2[1]*60+$a2[2] > 0) and ($a2[1]*60+$a2[2] < 1440) then return(1) endif
+//	   if ($a2[7]*60+$a2[8]) > 0 then return(1) endif
+	   $x=$x+1
+	until $x > 7
+
+	return(0)
+   endif
+
+$day=''
+$7days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+teststr('$7days',$1,'local'):$dayok
+// if $1 is one of the specific 7-day keyword, then use that
+
+if not $dayok then
+    shell('date "+%a"'):$day
+endif
+if ($confex=0) or (traymax<1) then return(0,0,0,0,$day) endif
+
+IF ($1 = 'next') and $# > 1 THEN
+    //  this would be next $2 day from today
+  	teststr('$7days',$day,'local'):$ret
+  	$newret=$ret+$2
+  	if ($newret<1) then $newret=$newret+7 endif
+  	$newret=($newret mod 7)
+  	if ($newret=0) then $newret=7 endif
+  	$day=$7days[$newret]
+ENDIF
+
+   $s1='' $s2='' $a2=0
+   readfile($conf,'$s1','$s2',$day,'local'):$ntot
+   if ($ntot) then
+	strsv2array($s2,':'):$s2
+	array2array($s2):$s2
+	$ntot=size('$s2')
+   endif
+
+   $i=1
+   repeat
+	format($s2[$i],'lower'):$a2[$i]
+	$i=$i+1
+   until $i > $ntot
+   
+   $daystart=0 $daylength=0 $nightstart=0 $nightlength=0
+   $daytotal=0 $nighttotal=0
+   if ($ntot>8.5) and ($0='getenterinfo') then
+	$daytotal=($a2[9]*60+$a2[10])*60
+	$daylength=($a2[11]*60+$a2[12])*60
+	$nighttotal=($a2[13]*60+$a2[14])*60
+	$nightlength=($a2[15]*60+$a2[16])*60
+   elseif ($ntot>7.5) then
+   	$daystart=($a2[1]*60+$a2[2])*60
+   	$daylength=($a2[3]*60+$a2[4])*60
+   	$nightstart=($a2[5]*60+$a2[6])*60
+   	$nightlength=($a2[7]*60+$a2[8])*60
+	$daytotal=$nightstart-$daystart
+//	if ($nightlength=0) then
+//	     $nighttotal=24*3600-$daytotal
+//	else
+//	     $nighttotal=$nightlength
+//	endif
+   endif
+   if ($0='getautoinfo') then
+      if ($1='') then
+	getdayQlimit($daylength,$day):$daylength
+      endif
+   	return($daystart,$daylength,$nightstart,$nightlength,$day)
+   else
+	return($daytotal,$daylength,$nighttotal,$nightlength)
+   endif
+

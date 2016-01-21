@@ -1,0 +1,569 @@
+       The PHILOSOPHY for the development of BioPack
+
+BioPack includes a parcel of commonly-used triple resonance (or quadruple
+resonance if 2H decoupling is used) 3D pulse sequences for isotopically
+labelled high resolution protein and polynucleotide NMR.
+
+The protein pulse sequences are predominantly those developed by the Bax and
+Kay groups. The sequence codes have been rewritten in a common format most
+often from the Varian codes written by Kay and co-workers.
+
+The RNA pulse sequences are predominantly those developed by the Puglisi, Bax,
+Pardi and Kay groups.
+
+The basic philosophy was to reduce the number of calibrations necessary to run
+each sequence, to a minimum. This goal has been achieved in that only six
+major parameters need to be calibrated for all the pulse sequences to function
+well.
+
+Three major parameters need to be calibrated for each spectrometer - frequency
+offsets, tof, dof and dof2 for 1H, 13C and 15N (and dof3 for optional 2H
+decoupling). Three major parameters are required for each probe - the 90 pulse
+lengths for 1H (pw), 13C (pwC) and 15N (pwN) at chosen power levels (and dmf3
+/dpwr3 for optional 2H decoupling).
+
+Optimization of the 13C pulses is obtained by calibration of the 13C amplifier
+compression via the parameter, compC. This seventh parameter should only need
+to be calibrated once for each spectrometer at the maximum power level used
+for 13C pulses, pwClvl. Similar compH and compN values are determined to 
+permit accurate calculation of 1H and 15N power levels for decoupling, spinlocks
+and flipback pulses.
+
+A series of shaped and/or frequency shifted pulses are calculated by the
+macro, "BPcal", and stored in your user shapelib. No input parameters
+are required by the user to run this macro. It creates all shapes.
+Decoupling files are calculated by the macros "BPsetupshapes" and "BPmakeSTUDpp".
+All of these are done as part of the automatic calibration or probefile
+update processes.
+
+All other calibrations are automatically calculated from the above parameters
+within the pulse sequence code.
+
+With the above calibrations it is expected that each sequence will function
+at,or near, optimum levels. Gains of a further few percent may be obtained by
+tweaking the three 90 degree pulse times (especially pw and pwC) by up to 10%
+to maximize S/N in a 1D spectral check. (This may be done using the automated
+functions available by menu). 
+
+			GENERAL INSTRUCTIONS
+
+1. Calibrate 90 degree pulse lengths for 1H (pw), 13C (pwC) and 15N (pwN) at
+   the chosen power levels, tpwr, pwClvl and pwNlvl respectively using a
+   standard method of your choice. Recalibration of these pulse lengths as in
+   point 9 may give a few percent gain in S/N. These power levels should be
+   those for normal "hard pulse" experiments (not band-selective). Power
+   levels for these pulses are typically chosen to be as short as possible
+   without arcing. 
+
+   In general, you should use the AutoCalibration feature
+   on a dilabelled protein (~1mM in H2O) accessible via the menus (6.1) or
+   buttons (VNMRJ in the Setup/Calibrations Page).
+
+2. You should check, at least once, the C13 amplifier compression.
+
+   Automatic Method (preferred):
+   Use automatic calibration menu/button.
+
+   Manual Method:
+   At a particular pwClvl (eg 60) and dpwrf=4095, measure the C13 90 - this is pwC
+   of course. Repeat this measurement at dpwrf=2047. Do not decouple during
+   acq. A compression factor, "compC" is then determined by the relation:
+
+   compC = (C13pw90 @ dpwrf=2047&pwClvl) / (2.0 * C13pw90 at dpwrf=4095&pwClvl)
+
+   If compC is less than 0.95 serious loss of S/N may occur because the
+   amplitudes of the soft C13 pulses will not be accurately calibrated.
+   Either reduce pwClvl until compC > 0.95, or set the value of the compC
+   parameter provided to this compression factor. The default is compC=1.0.
+   As an example, in one test, setting compC=0.85 as determined above reduced
+   the loss in S/N from 30% to 3%. If compC > 0.95, a small advantage may
+   result in setting compC to the measured value.
+
+3. The SLP pulses (shifted laminar pulses - pulses shifted off- resonance) and
+   other shaped pulses will have been calculated using the macro
+   "BPcal". These pulses are stored in your shapelib and automatically
+   called by the pulse sequence code. This calculation takes into account the
+   spectrometer frequency (eg 400 or 800 MHz), and it only needs to be done
+   once for each system. The calculated lengths of the SLP pulses (pwC3, pwC4,
+   pwC5 etc) used in each sequence are displayed by dg2 to provide confidence
+   to the user that everything has been set up properly - do not change these
+   since these SLP pulse lengths are determined only by dfrq and do not depend
+   on pwC. All other pulse powers and pulse lengths are automatically
+   calculated within the pulse sequence code from pw, pwC, pwN, compC,
+   associated power levels, and the lengths of pwC3, pwC4 etcas determined by
+   the macro, and these calculations take into account the spectrometer
+   frequency. BioNMR and automatic Pbox versions (*P.c and *A.c) sequences use
+   Pbox "on-the-fly" to calcluate pulse shapes, powers and widths, derived from
+   pwC/pwClvl/compC.
+
+4. Protein parameters have 1H frequency (tof) on H2O (4.7ppm), and the 15N frequency 
+   (dof2) on the amide region (120 ppm). The C13 frequency (dof) will 
+   be centered in the aliphatic region(46 or 35 ppm),Ca region (56 ppm) or the 
+   CO region (174 ppm) as specified in the detailed instructions for each 
+   pulse sequence. If optional H2 decoupling is used, set dof3 to the 
+   center of the 2H aliphatic spectrum (ie 2.5 ppm). These frequencies are
+   automatically obtained from the probefile and the experiment setup macro
+   and any changes from the probefile value for specific experiments are handled
+   in the experiment setup macro (see the macro "ghn_ca", for example)
+
+5. The individual pulse sequence macros, eg "gc_co_nh", load the parameter
+   sets for that sequence, set ni=ni2=0 and phase=phase2=1 ready for a 1D
+   spectral check.
+
+6. Most gradient levels and durations require no adjustment. The coherence
+   pathway gradients, gzlvl1 and gzlvl2, should be adjusted for maximum signal
+   in a 1D spectrum. Set gzlvl1 (eg 13000) and vary gzlvl2 by up to 2% or so
+   around this number. Typical values are 13000/13080 + or -100 with the
+   duration gt1=0.0025. This pair will be common to all BioPack sequences
+   except for a small change for ghcch_tocsy (hcch_tocsy does not use
+   coherence gradients).  The suppressed
+   water signal echos during signal acquisition, and this echo may be
+   minimised by trial-and-error adjustment of gzlvl5 and gzlvl6 which should
+   not be equal. Set ssfilter=0 to observe maximum H2O signal. If magic-angle
+   coherence transfer gradients are used, the gzlvl2 value may be
+   significantly different and in the opposite direction from gzlvl1.
+
+7. All echo times within each sequence have been adjusted to provide maximum
+   signal for the protein alphalytic protease. For simplicity, only the most
+   major delays are displayed and may be readjusted by the user. All other
+   echo times are not under parameter adjustment, but can be changed within
+   the sequence code. They are listed in the DECLARE AND LOAD VARIABLES
+   section of each pulse sequence code as for example, zeta=0.0033 (ie delay
+   zeta is 3.3 ms).
+
+   To change a delay, simply edit the number and recompile the sequence.
+   Alternatively, change zeta=0.0033 for example to zeta=getval("d4"),
+   recompile the sequence, maximize 1D signals with an array of d4, and then
+   re-edit as zeta=newnumber and recompile. Alternatively, edit as
+   zeta=getval("zeta"), recompile the sequence, create the parameter in your
+   parameter set using the command "create('zeta','delay')", and (optionally)
+   list zeta in printed parameters using the command "paramvi('ap').
+
+8. Deuterium decoupling is optional for spectrometers having 4 channels and
+   may be applied, whilst CaCb magnetization is transverse, and during any 1H
+   shift evolution, for all BioPack sequences except ghn_co (which does not
+   generate transverse CaCb magnetization).  Set dm3='nyn' to invoke 2H
+   decoupling and show the associated parameters in dg2. Adjust dof3, dpwr3,
+   dmf3 in the usual way.  The 2H magnetization is preserved in all sequences
+   except hcch_tocsy and ghcch_tocsy. In the latter cases disturbance of the
+   lock signal may be observed. In sequences where preservation of 2H
+   magnetization is achieved, trim gradients around refocusing pulses are
+   switched off during the 2H decoupling, so additional artifacts are
+   possible.
+
+   Note that 2H decoupling is done via dm3='nyn'. No status(B) statement is
+   present in the pulse sequences but dm3 is just used as a flag to call the
+   setstatus statement. All the normal decoupling paramters such as
+   dpwr3,dof3,dmm3,dmf3 etc. are active, however, and should be set properly.
+   The 2H Decoupling Accessory should be used to couple in Channel 4 and the
+   Lock to the lock circuitry of the probe.  The parameter "ampmode" should be
+   set to 'dddp' when 2H decoupling is used with a BB 4th channel. If a
+   lock/decoupler is used, ampmode='dddd'.  This parameter is present and is
+   set by the macro BPsetampmode for all parameter sets having 2H decoupling
+   as an option.
+
+   When dm3='nyn', the macro "dg2" will show channel 4 parameters.  Otherwise
+   no channel 4 parameters are visible.
+
+Automatic Calibrations:
+***********************
+
+Fully-automatic calibrations are available via the menus or buttons. This
+should be done upon installation of BioPack. You can manually change the
+probefile entries, as well.
+
+Running One Experiment:
+**********************
+
+After all calibrations have been calibrated/updated for your spectrometer, to
+run an experiment just use the proper menu button (6.1) or select from the
+drop-down menu (VNMRJ), or enter a macro command specifying the name of the pulse
+sequence, e.g. rna_gNhmqc. This will recall the stored parameter set from
+parlib, update calibrations, and runs the manual file.  Just set the values of
+ni, ni2, phase, phase2 and nt and enter "go". 
+
+
+Automatic 1D Spectra without Full Calibrations:
+*****************************************
+
+A set of 1D experiments may be automatically acquired by selecting the
+"Setup/Proteins/Standard Experiments/....Auto1D.../Auto1D Options" buttons.
+You will have options for using calibrations stored in the Probefile, or 
+tpwr/pw values in the current parameter set (if you have already calibrated
+1H on your sample). You also have the option of having the 1H pw90 calibrated
+on the current sample first before doing the Auto1D. In this case, the
+Probefile is updated after the calibration so that subsequent experiments
+are setup accurately. This is a much faster way of doing a "screening" run
+if only a sample has been changed following a full autocalibration. Here, only
+the 1H pw90 is likely to change, yet the Auto1D plots can give useful
+information as to sensitivity for the pulse sequences employed. The Auto1D
+run is also much faster, permitting rapid "screening" of a new sample.
+
+Automatic 2D Spectra without Calibrations:
+*****************************************
+
+A full set of 2D experiments may be automatically acquired by selecting the
+"Auto2Dacquire" button in the CHECK menu. This requires that the above
+calibration run be performed first, for proper parameter values. The number or
+transients per fid is enterable. If nt=16 and d1=1 the experiments will take
+about 11 hours. The are options for automatic processing and plotting of the
+2D data. The Auto2Dproc/plot feature 
+performs full processing, including automatic choice of linear prediction and
+weighting functions, display and plotting for all data sets acquired using the
+Auto2Dacquire button. Similar buttons are also available to process/plot only
+amino or imino indirect detection 2D experiments for RNA/DNA. These buttons
+produce plots containing both contour and stacked data.
+
+***********************************************************************************
+
+
+Offsets for RNA and DNA
+***********************
+
+The spectral widths provided are adequate for 600 MHz so they can be scaled to
+your sfrq. The value of dof2 should be 200 ppm for all experiments.
+All dof values are 110ppm. These are changed appropriately in the
+psglib code for the specific pulse sequences. The automatic probefile update
+using the "Update" button will store all calibrations based on the
+tof,dof,dof2 and dof3 values present in the active rna_gChsqc parameter set.
+Estimated tof and dof values will be approximately correct if calculated on
+the basis of 5ppm being at tof=0 and 100ppm being at dof=0. These approximate
+settings are usually sufficient for initial setup. Subsequently, you can reset
+the tof and dof values in the parameter tables to those appropriate for your
+spectrometer, or you can modify your /vnmr/nuctables entry to change your
+spectrometer frequency to make tof=0 and dof=0 give 5 and 100 ppm (see System
+Operation Manual, Chapter 14-"System Administration", section 14.8: "Modifying
+the Nucleus Tables"). To do this you will have to determine from standard
+samples with known chemical shifts how many hertz to change the values in your
+nucleus table.
+
+It is not necessary to use an RNA or DNA sample for AutoCalibration. A
+dilabeled protein sample can be used. RNA
+and DNA sequences use the same parameters as used by the protein experiments. Only
+spectral widths and offsets are different and these are handled by the experiment
+setup macros.
+
+MENUS (VNMR 6.1)
+****************
+
+The standard VNMR "setup" menu is modified to call the BioPack menu. This
+modified menu is placed in your vnmrsys/menulib (an existing file of this name
+is backed out in vnmrsys/BioPack.dir/backups).
+
+The BioPack menu gives the option of probefile update by selecting "Update"
+button.
+
+The BioPack menu gives buttons to access experiments, automatic 1D and 2D
+runs, and a calibration option. Experiment buttons run the relevant simple
+macro to call a parameter set.
+
+
+2H Decoupling (requires 4 channels or Lock/Decoupler)
+*****************************************************
+
+Calibration
+***********
+Direct:
+******
+
+BioPack offers automatic calibration of the 2H pw90 and dmf3/dpwr3 values for
+a 1kHz decoupling field strength. This is done on any protein sample or RNA/DNA
+sample or even a D2O sample. This is done via the menu buttons(VNMR 6.1) or
+by buttons in the Calibrations Page of the Setup/Calibrations panel (VNMRJ).
+
+The experiment involves having tn='lk' and pulsing on the 2H channel. The 
+automatic calibration varys the 2H pulse on the 2H channel and determines
+the proper power and pulse width. Since this channel is the one doing 2H
+decoupling via the same hardware and signal path, it is possible to calculate
+the dpwr3 value for a 1kHz decoupling field. These results are stored in the
+probefile and are accessed by experiment setup macros.
+
+Because this method only works using channel 1 (tn=lk) and BB amplifier #1 without
+recabling, the user must move one cable to use this method. Instructions are 
+available via the menus or buttons, and are also described in the pulse sequence
+code and manual entries.
+
+Indirect:
+********
+
+A pulse sequence (*ddec_pwxcal.c) is supplied that can be used on a C6D6 or
+CDCl3 sample. Example data are stored in the Protein fidlib. Cable the probe
+for C13 observe and connect the channel 4 output to the 2H Decoupling
+Accessory (coupler box). Connect the lock cable normally connected to the
+probe to the same box, and connect the box to the probe at the lock BNC. Use
+the 2H reject filter and low-pass filter at the BB preamp.
+
+Use the menu buttons(VNMR 6.1) or dropdown menu(VNMRJ) for parameters. Adjust the
+C13 pw to the value of a 90 degree pulse and any other appropriate parameters.
+The C6D6 or CDCl3 triplet exhibits a nulling with increasing pw(2H), but the
+outer lines null at a longer time than the inner lines. Use the outer lines to
+find a null and this occurs at pw90(2H).  Use this value to determine dmf3
+(dmf3=1e6/pw90) at the power dpwr3.
+
+The parameter set *ddec_s2pul.par uses the pulse sequence *ddec_s2pul.c
+(s2pul.c with amplifier unblanking and lock sample/hold for channel 4's amp).
+You can verify the proper dof3 value by adjusting the dof3 array values so
+that the results are symmetric with respect to dof3. This means that the
+center value of dof3 corresponds to ~7ppm in the 2H spectrum. The dpwr3 and
+corresponding dmf3 should be large enough to cover +-4ppm 
+experiments, with dof3 set at 3ppm in the 2H spectrum. (It is not necessary to
+decouple over the full 10ppm range since 2H decoupling is usually used to
+decouple only aliphatic deuterons).
+
+You can then check the efficiency by duplicating the experiment stored in the
+Protein fidlib, ddec_s2pul.fid with your values of dpwr3,dmf3 and dof3.
+
+In any of the triple-resonance parameter sets, entering dm3='nyn' activates
+the channel 4 parameters listed in dg2 . The parameter sets in vnmrsys/parlib
+should be updated using the "Install" menu button, or at any later time by
+using the "Update" button, updating the channel 4 parameters.
+In the future, just enter dm3='nyn' for 2H decoupling.
+No change in parameters should be necessary from sample to
+sample.
+
+2H broadband decoupling is handled internally within the pulse sequences by
+the "setstatus" psg command, not by the usual "status" approach. Thus, "dps"
+and "pps" show only status A and C. The dm3 parameter is only used to
+determine that decoupling is desired during relevant portions of the pulse
+sequence and is requested by setting dm3='nyn'. Use of the normal status
+approach will result in other channels being reset to their status values,
+since all channels are set at the same time by any change in status on any
+channel. Hence, C13 decoupling that is initiated by waveform generator psg
+commands (decprgon) at an earlier time would be turned off since dm='n' when
+there would be a normal status change on any other channel.
+
+******************************************************************************
+
+f1coef and f2coef values have been entered within the parameter sets when
+needed. Use standard VNMR macros ft1da, ft2da, wft1da, wft2da and ft3d for
+processing. These use f1coef and f2coef values (if present). Otherwise, they
+use standard States processing. The sequences gChsqc and rna_gChsqc has different
+requirements, depending on the values of SE,CT and ZZ.  Consult manual entry
+for proper value of f1coef. If you use the tcl/tk checkboxes to select the
+method, the value of f1coef is installed properly and wft2da can be used
+without entering an f1coef value.)
+
+The spectra should be phased up absorptive in the detected dimension. 2D
+transforms should have lp1 and lp2 close to zero.
+
+hcch_tocsy and rna_hcch_tocsy are pure States and have f1coef=f2coef=''. CH 2D spectra show
+TOCSY CC transfer since d3 (t2) is prior to the TOCSY transfer.
+
+*ghcch_tocsy is doubly-sensivity-enhanced and uses both f1coef and f2coef.
+CH 2D data do not show CC tocsy transfer (unlike hcch_tocsy) since the d3 (t2)
+evolution occurs after the spinlock. A full 3D spectrum will show all
+crosspeaks
+
+*gChsqc has a sensitivity-enhanced option. Use f1coef='1 0 -1 0 0 -1 0 -1'
+when SE and f1coef='1 0 -1 0 0 1 0 1' when SE/CT.
+
+
+The pulse sequences comprising BioPack are:
+-------------------------------------------
+  COMMON NAME                        SEQUENCE NAME(S)
+PRESAT - includes PRESAT, WET,
+ shaped-pulse PRESAT, jump-return,
+ watergate (soft, 3919, W5)        water
+watergate NOESY                    wgnoesy
+watergate ROESY                    wroesy
+watergate TOCSY                    wgtocsy
+wet NOESY                          wnoesy
+wet ROESY                          wroesy
+"quiet" NOESY                      qwnoesy, qwnoesyA                       NEW
+CPMG-NOESY                         CPMGnoesy
+SS-NOESY                           SSnoesy
+magic-angle DQFCOSY                gmacosy
+z-filtered DIPSI-TOCSY             zdipsitocsy
+CLEANEX N15-HSQC                   gCLNfhsqc, gCLNfhsqcA                   NEW
+Fast N15-HSQC                      gNfhsqc, gNfhsqcA                       NEW
+Fast N15-HSQC with Homodecoupling  gNfhsqcHD, gNfhsqcHDA
+Fast N15-IPAP-HSQC with Homodec.   gNfhsqc_IPAPHD, gNfhsqc_IPAPHDA         NEW
+N15-HMQC                           gNhmqc
+N15-HSQC                           gNhsqc, gNhsqcA                         NEW
+N15-HSQC with Homodecoupling       gNhsqcHD, gNhsqcHDA                     NEW
+N15-HSQC(IPAP)                     gNhsqc_IPAP, gNhsqc_IPAPA               NEW
+CPMG-N15-HSQC                      CPMGgNhsqc
+watergate N15-HSQC                 WGgNhsqc
+N15-T1 (TROSY)                     gNT1
+N15-T2 (TROSY)                     gNT2
+N15-NOE (TROSY)                    gNNOE
+N15-NOE                            gNnoe
+N15-TOCSYHSQC                      gtocsyNhsqc, gtocsyNhsqcA               NEW
+N15-HSQCTOCSY                      gNhsqctocsy, gNhsqctocsyA               NEW
+N15-NOESYHSQC                      gnoesyNhsqc, gnoesyNhsqcA               NEW
+N15-HSQCNOESY                      gNhsqcnoesy, gNhsqcnoesyA               NEW
+C13-HMQCNOESYHSQC(4D)              gChmqcnoesyNhsqc, gChmqcnoesyNhsqcA     NEW
+N15-HMQCNOESYHSQC(4D)              gNhmqcnoesyNhsqc
+N15-HSQCNOESYHSQC(4D)              gNhsqcnoesyNhsqc, gNhsqcnoesyNhsqc      NEW
+N15-HSQCTOCSYNOESYHSQC(4D)         gNhsqctocsynoesyNhsqc,
+                                     gNhsqctocsynoesyNhsqcA                NEW
+C13-NOESYHSQC                      gnoesyChsqc, gnoesyChsqcA               NEW
+C13-HSQCNOESY                      gChsqcnoesy, gChsqcnoesyA               NEW
+C13-TOCSYHSQC                      gtocsyChsqc, gtocsyChsqcA               NEW
+C13-HSQCTOCSY                      gChsqctocsy, gChsqctocsyA               NEW
+N15,C13-NOESYHSQC                  gnoesyCNhsqc, gnoesyCNhsqcA             NEW
+C13-HMQC                           gChmqc
+CT-C13-HMQC                        CTgChmqc
+Fast 13C-HSQC                      gCfhsqc, gCfhsqcA                       NEW
+C13-HSQC                           gChsqc, gChsqcP, gChsqcA                NEW
+2H pw90 calib                      ddec_pwxcal
+2H decoupling                      ddec_s2pul
+C(CO)NH (or C(CC-TOCSY-CO)N-NH )   gc_co_nh, gc_co_nhP, gc_co_nhA          NEW
+H(CCO)NH (or H(CC-TOCSY-CO)N-NH )  ghc_co_nh, ghc_co_nhP, ghc_co_nhA       NEW
+CBCA(CO)NH                         gcbca_co_nh, gcbca_co_nhP, gcbca_co_nhA NEW
+CBCANH                             gcbca_nh, gcbca_nhP, gcbca_nhA          NEW
+HCACO                              ghca_co, ghca_coA                       NEW
+HCACON                             ghca_co_n, ghca_co_nA                   NEW
+HCACOCANH                          ghca_co_canh, ghca_co_canhA             NEW
+HNCO                               ghn_co, ghn_coP, ghn_coA                NEW
+HNCO_JNH                           ghn_co_JNH, ghn_co_JNHA                 NEW
+HNCO_NOE                           ghn_co_noe, ghn_co_noeA                 NEW
+HNCOCO                             ghn_coco, ghn_cocoA                     NEW
+HNHA                               ghnha
+HNHB                               ghnhb
+HNN                                ghnn, ghnnA                             NEW
+HNCN                               ghcn, ghncnA                            NEW
+LR-JCH                             gLRCH
+LR-JCC                             gLRCC
+HN(CO)HB                           ghn_co_hb, ghn_co_hbA                   NEW
+HNCA                               ghn_ca, ghn_caP, ghn_caA                NEW
+CT-HNCA                            ghn_ca_CT, ghn_ca_CTA                   NEW
+HNCACB                             ghn_cacb, ghn_cacbP, ghn_cacbA          NEW
+CT-HNCACB                          ghn_cacbCTP
+HN(CO)CA                           ghn_co_ca, ghn_co_caP, ghn_co_caA       NEW
+HN(CA)CO                           ghn_ca_co, ghn_ca_coP, ghn)ca_coA       NEW
+HN(COCA)CB                         ghn_coca_cb, ghn_coca_cbA               NEW
+HCCH-TOCSY                         hcch_tocsy, hcch_tocsyP, hcch_tocsyA    NEW
+HCCH-COSY                          hcch_cosy, hcch_cosyA                   NEW
+DE-H(C)CH-TOCSY                    ghcch_tocsy
+   (references are given in manual files and psglib codes)
+
+Many sequences have a TROSY option, with gradient selection.
+
+SPINCAD experiments for proteins:
+---------------------------------
+  COMMON NAME                        SEQUENCE NAME(S)
+N15-HSQC                           gNhsqcSP                                NEW
+C(CO)NH (or C(CC-TOCSY-CO)N-NH)    gc_co_nhSP                              NEW
+CBCA(CO)NH                         gcbca_co_nhSP                           NEW
+CBCANH                             gcbca_nhSP                              NEW
+H(CCO)NH (or H(CC-TOCSY-CON-NH)    ghc_co_nhSP                             NEW
+DE-H(C)CH-TOCSY                    ghcch_tocsySP                           NEW
+HCCHTOCSY                          hcch_tocsySP                            NEW
+HNCA                               ghn_caSP                                NEW
+HN(CA)CO                           ghn_ca_coSP                             NEW
+HNCACB                             ghn_cacbSP                              NEW
+HNCO                               ghn_coSP                                NEW
+HN(CO)CA                           ghn_co_caSP                             NEW
+   (these have been written to provide the same features as
+    the above equivalents)
+
+EXPERIMENTS optimized for polynucleotides
+-----------------------------------------
+  COMMON NAME                        SEQUENCE NAME(S)
+1H PRESAT, WET, jump-return,
+  watergate                        rna_water
+1H PRESAT-NOESY                    rna_tnnoesy
+1H PRESAT-DQCOSY                   rna_tndqcosy
+1H WET-ROESY                       rna_wroesy
+1H WATERGATE-ROESY                 rna_wroesy
+1H WATERGATE-NOESY                 rna_WGnoesy
+1H WET-NOESY                       rna_wetnoesy
+1H WET-TOCSY                       rna_wettntocsy
+1H SS-NOESY                        rna_SSnoesy
+13C HSQC                           rna_gChsqc, rna_gChsqcA                 NEW
+13C TROSY                          rna_gCtrosy, rna_gCtrosyA               NEW
+15N HSQC                           rna_gNhsqc, rna_gNhsqcA                 NEW
+15N TROSY                          rna_WGgNtrosy
+13C HMQC                           rna_gChmqc
+13C HMQC-TOCSY                     rna_hmqc_tocsy
+13C CT-HMQC                        rna_CTgChmqc, rna_CTgChqmcA             NEW
+15N HMQC                           rna_gNhmqc
+15N WG-HSQC                        rna_WGgNhsqc
+15N HSQC(long-range)               rna_WGgNhsqc
+15N CPMG-HSQC                      rna_CPMGgNhsqc
+13C NOESY-HSQC                     rna_gnoesyChsqc, rna_gnoesyChsqcA       NEW
+15N NOESY-HSQC                     rna_gnoesyNhsqc, rna_gnoesyNhsqcA       NEW
+gd-HCCH-TOCSY                      rna_hcch_tocsy
+DE-H(C)CH-TOCSY                    rna_ghcch_tocsy
+HCCH-COSY                          rna_hcch_cosy, rna_hcch_cosyA           NEW
+HCCH-RELAY                         rna_hcch_cosy, rna_hcch_cosyA           NEW
+CPMG-NOESY                         rna_CPMG_noesy
+HCN                                rna_HCN                                 NEW
+HCP                                rna_HCP                                 NEW
+HP-COSY                            rna_HPcosyHCP                           NEW
+C-HNCCCH                           rna_CUhnccch
+U-HNCCCH                           rna_CUhnccch
+A-HNC-TOCSY-CH                     rna_Ahncch
+A-HCCH-TOCSY                       rna_hcch_tocsy
+G-HNC-TOCSY-CH                     rna_Ghncch
+HNN-COSY                           rna_HNNcosy, rna_HNNcosyA               NEW
+
+
+        All of these can be run at any field strength after just calibrating
+        the 90's for 1H, 13C and 15N. All power levels are automatically set
+        for proper excitation. 2H decoupling is often available as an option
+        by setting dm3='nyn' (and setting proper values for channel 4
+        decoupling parameters). Operation is valid only for UNITYplus and
+        UNITY INOVA.
+
+        All Rf events including pulses, spinlocks and decoupling are auto-
+        matically created for all field strengths by autocalibrate/autoupdate
+        for all sequences. Power levels for each of these are then set by the
+        pulse sequence itself, not the operator, based on the high-power pw,
+        pwC and pwN calibrations.
+
+        All experiments in which CH protons are the relevant originating
+        magnetizations or are the detected magnetization can be skipped for
+        the case of fully-deuterated proteins (for automatic calibration or
+        automatic 2D).
+
+        Two alternative methods of using phase-ramped pulses is included.
+        These methods call Pbox for shape creation at the time of "dps" and
+        "go". No shapes are required in shapelib for this method. These
+        sequences have a "P" or "A" appended to the normal names. The former
+        must be compiled the "bionmr.h" include file, while the latter require
+        the "Pbox_bio.h" and "Pbox_psg.h" include files.
+
+        The "P" versions use new psg elements which are written with protein
+        13C bandwidths pre-defined so that terms such as "ca", "co" and "cacb"
+        are used. See rthe file "BioPack.bionmr" in "~/vnmrsys/manual" or in
+        "/vnmr/manual/" for details. The operation, parameters and performance
+        of these is at least as good as the standard BioPack sequences. The
+        only differences are that the phi7cal value will be different, and
+        that the "dof" value is always set to the carbonyl carbon frequency
+        for all experiments (contributed by Boban John, Varian, and Robin
+        Bendall)
+
+        The "A" versions include a header section of the pulse sequence in
+        which all shapes are created and parameter values from these shapes
+        are obtained at "go" time. This mode of operation allows conversion of
+        existing pulse sequences to BioPack versions without modification of
+        the underlying codes (contributed by Eriks Kupce, Varian, Sept. 2002).
+        See the file "BioPack.Asequences" in "~/vnmrsys/manual" or in
+        "/vnmr/manual" for details on this approach, and how to convert an
+        existing non-BioPack sequence to a BioPack version.
+
+        For the system administrator, AutoCalibration/Update processes will
+        update parameter sets and shaped pulses in "/vnmr". Any other user can
+        then run BioPack using these calibrated data from "/vnmr"; if such
+        users run AutoCalibration/Update, calibrated parameters and updated
+        pulse shapes and "*.DEC" pattern will be stored in the user's
+        "vnmrsys/shapelib".
+
+        For VnmrJ:  Probefile updates, AutoCalibrations, Auto1D and Auto2D
+        procedures are handled via the "Calibrations" page in the Setup folder.
+        experiment pages. Similar capabilities are in the "BioPack Options"
+        page in the "rna_gChsqc" pages.
+
+        Chempack compatibility: the main VNMR menu has been modified to have
+        either one or two buttons for setup depending on the presence of
+        Chempack and/or BioPack (through the macros "dg2CP" and "dg2BP").
+        If only BioPack was installed ("dg2CP" present) the setup button will
+        call the menu "setupbp". If only Chempack was installed ("dg2BP"
+        present) the setup button will call the menu "setupcp". If both are
+        installed, two buttons will appear. If both packages are installed,
+        the menu "main2" (Main Menu -> More) shows 2 buttons to change Tcl-dg
+        for Chempack or BioPack (need to exit and restart VNMR to activate
+        the change).
+

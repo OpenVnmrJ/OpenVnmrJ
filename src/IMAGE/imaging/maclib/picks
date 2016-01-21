@@ -1,0 +1,39 @@
+"macro picks"
+"*******************************************************"
+" picks - Pick slice for processing 			"
+"							"
+" Details: cf is initialized correctly for processing	"
+" 							"
+" Usage: picks     - input slice number			"
+"        picks(slice_no)				"
+"        picks(slice_no,echo_no)			"
+"*******************************************************"
+
+if ($# = 1) then
+  $slice=$1
+  $echo=1
+elseif ($# = 2) then
+  $slice = $1
+  $echo = $2
+else
+  input('Enter slice number: '):$in
+  if ($in < 1) or ($in > ns) then
+    write('error','shows: illegal slice value:%f', $in)
+    $slice = 1
+    $echo = 1
+    abort
+  else
+    $slice = $in
+    $echo = 1
+  endif
+endif
+sort('pss'):$sliceindex,$slicevalue
+
+cf = $sliceindex[$slice]
+cf = cf*$echo
+
+"*******************************************************"
+"                 Modification History			"
+"							"
+" 990915 - echoes correctly processed.			"
+"*******************************************************"

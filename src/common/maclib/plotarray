@@ -1,0 +1,33 @@
+"macro plotarray"
+
+" *************************************************************"
+" *plotarray($1,$2,$3)--prints array on plotter * "
+" ************************************************************* "
+
+"$2,$3 are x,y coordinates in mm "
+" $3=name of array "
+
+if ($# < 2) then
+ $2=100 $3=wc2max-25
+else
+ if ($# < 3) then
+  $3=wc2max-25
+ endif
+endif
+$name=$1
+if ($name = '') then return endif
+$size=size($name)
+$column=trunc($size/15)+1
+$index=1 $incr=0 $ix=1
+$col=0
+write('plotter',$2,$3,'%s array',$name)
+repeat
+  write('plotter',$2,$3-5-$incr,'%6.1f',{$name}[$index])
+  $ix=$ix+1
+  $index=$index+1
+  $incr=$incr+3
+  if ($ix>15) and ($col<$column) then
+    $2=$2+30 $incr=0 $col=$col+1 $ix=1
+  endif
+until $index>$size
+

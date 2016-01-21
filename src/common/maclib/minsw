@@ -1,0 +1,39 @@
+"macro minsw"
+"**********************************"
+" minsw - minimize spectral window "
+"**********************************"
+" assumes previous region (1h or other) or th adjust (other nuclei) "
+" remember ct value '
+$ct=ct
+
+if tn='H1' then			  "for proton spectra"
+  numreg:$numreg		  "get number of regions"
+  if $numreg<1 then
+    on('lb'):$lbon
+    if $lbon then $lb=lb endif
+    lb=1.5 wft
+    region(100,12,.4,12):$numreg
+    if $lbon then lb=$lb else lb='n' endif
+    wft
+  endif
+  if ($numreg > 1) then
+    getreg(1):$hifield,cr	  "left edge of region 1"
+    getreg($numreg):$rcr	  "right edge of last region"
+  endif
+else				  "for 13C or other nuclei"
+  sp=0-rfl+rfp			  "use line listing"
+  wp=sw
+  nll:$npeaks			  "get number of peaks"
+  getll(1):$dummy,cr		  "get freq. of 1st and last peak"
+  getll($npeaks):$dummy,$rcr
+  $numreg=2
+endif
+if ($numreg > 1) then
+  $extra=0.1*(cr-$rcr)		  "want 10% extra on both sides"
+  cr=cr+$extra $rcr=$rcr-$extra	  "reposition cursors"
+  delta=cr-$rcr
+  movesw			  "adjust sw, tof, and referencing"
+endif
+
+" restore ct value "
+setvalue('ct',$ct)

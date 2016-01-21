@@ -1,0 +1,126 @@
+"macro walkupQ_time"
+"****************************************************************"
+"   walkupQ_time - Rewrite EXPTIME file    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+   walkupQ('readlist'):$parflg,$parlng,$exp2,$lng2
+   exists($maclibdir+'/CMDnodes','file'):$cmdex
+   $cmd='' $cmdx=''
+   if ($cmdex) then
+       readfile($maclibdir+'/CMDnodes','$cmd','$cmdx','','local')
+   endif
+   $parflgsize=0 $parlngsize=0
+   if ($parflg[1]<>'') then $parflgsize=size('$parflg') endif
+   if ($parlng[1]<>'') then $parlngsize=size('$parlng') endif
+   if ($parflgsize=0) and ($parlngsize=0) then
+      write('reset',$timefile)
+      newdg
+      return
+   endif
+   $procplottime=60
+   getadminfo('prpltime'):$procplottime
+   $overnite=0
+   if ($parlngsize) then $overnite=1 endif
+
+   write('reset',$timefile)
+   write('reset',$expdeledit)
+   write('reset',$lngdeledit)
+   daytime='' nighttime=''
+
+   $changetime=0 $sctime=''
+   getPreAcqTime:$changetime,$sctime
+
+   if ($parflg[1]<>'') then
+     write('file',$timefile,'PrepTime (%s)',$sctime)
+     write('file',$timefile,'***************************')
+   endif
+   write('file',$timefile,'EXPLIST:')
+
+   $i=1 $dtime=0
+   if ($parflg[1]<>'') then
+     $cmdct=0
+     repeat
+	$cmdex=0
+     	$Time='' $rtime=0
+	substr($exp2[$i],1):$rtime
+	$dtime=$dtime+$rtime
+	formattime($rtime):$Time
+     	$list=$parflg[$i]
+	teststr('$cmd',$list,'local'):$cmdex
+	if ($cmdex) then $cmdct=$cmdct+1 endif
+     	write('file',$timefile,'   %s (%s)',$list,$Time)
+	write('file',$expdeledit,'"%s" "%s"',$list,$list)
+     	$i=$i+1
+     until $i > $parflgsize
+     $ppttime=($parflgsize-$cmdct)*$procplottime
+     $PPTtime=''
+     formattime($ppttime):$PPTtime
+     write('file',$timefile,'   Proc/Plot (%s)',$PPTtime)
+     $dtime=$dtime+$ppttime
+     $dTime=''
+     formattime($dtime):$dTime
+     $dayTime=''
+     formattime($dtime+$changetime):$dayTime
+     daytime=$dTime
+     if $dTime='unknown' then $dTime='' endif
+     write('file',$timefile,'   TOTAL (%s)',$dTime)
+//     daytime=$dayTime
+   else
+     write('file',$timefile,'   None')
+   endif
+   write('file',$expdeledit,'"None" "NULL"')
+
+   if ($overnite) then
+     write('file',$timefile,'***************************')
+     write('file',$timefile,'PrepTime (%s)',$sctime)
+     write('file',$timefile,'***************************')
+     write('file',$timefile,'LONGLIST:')
+
+     $i=1 $ltime=0
+     $cmdct=0
+     repeat
+       $cmdex=0
+       $Time='' $rtime=0
+       substr($lng2[$i],1):$rtime
+       $ltime=$ltime+$rtime
+       formattime($rtime):$Time
+       $list=$parlng[$i]
+       teststr('$cmd',$list,'local'):$cmdex
+       if ($cmdex) then $cmdct=$cmdct+1 endif
+       write('file',$timefile,'   %s (%s)',$list,$Time)
+       write('file',$lngdeledit,'"%s" "%s"',$list,$list)
+       $i=$i+1
+     until $i > $parlngsize
+     $ppttime=($parlngsize-$cmdct)*$procplottime
+     $PPTtime=''
+     formattime($ppttime):$PPTtime
+     write('file',$timefile,'   Proc/Plot (%s)',$PPTtime)
+
+     $ltime=$ltime+$ppttime
+     $lTime=''
+     formattime($ltime):$lTime
+     $longTime=''
+     formattime($ltime+$changetime):$longTime
+     nighttime=$lTime
+     if ($lTime='unknown') then $lTime='' endif
+     write('file',$timefile,'   TOTAL (%s)',$lTime)
+//     nighttime=$longTime
+   endif
+   write('file',$lngdeledit,'"None" "NULL"')
+
+   vnmrjcmd('pnew','cursqexp','curexp')
+   write('file',$timefile,'***************************')
+   samplename=samplename
+   newdg
+"****************************************************************"

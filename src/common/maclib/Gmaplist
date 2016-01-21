@@ -1,0 +1,217 @@
+"macro Gmaplist"
+
+if ($# < 1) then $1='init' endif
+$system=system
+
+IF ($1='init') THEN
+
+   if ($system='spectrometer') then
+      expactive:$isactive
+      if ($isactive < 0) then
+        $system='datastation'
+      endif
+   endif
+   $maplist=userdir+'/persistence/'+operator+'_Gmaplist'
+   write('reset',$maplist)
+
+	$mapname='' $ok=1
+	if ($system<>'datastation') then
+	   gmapshim('findprobemap','lk'):$ok
+	endif
+	if ($ok) then
+           write('file',$maplist,'"2H gradient (read probe file at runtime)" "lk"')
+	endif
+
+        $mapname='' $ok=1
+        if ($system<>'datastation') then
+           gmapshim('findprobemap','H1'):$ok
+	endif
+        if ($ok) then
+           write('file',$maplist,'"1H gradient (read probe file at runtime)" "H1"')
+        endif
+
+        $mapname='' $ok=1
+        if ($system<>'datastation') then
+           gmapshim('findprobemap','hs'):$ok
+	endif
+        if ($ok) then
+           write('file',$maplist,'"2H homospoil (read probe file at runtime)" "hs"')
+        endif
+
+        $mapname='' $ok=1
+        if ($system<>'datastation') then
+           gmapshim('findprobemap','H1hs'):$ok
+	endif
+        if ($ok) then
+           write('file',$maplist,'"1H homospoil (read probe file at runtime)" "H1hs"')
+        endif
+
+   getfilepath('gradientmaps','probes/'+probe):$prex,$probepath
+
+   if ($prex) then
+     $s1='' $s2=''
+     readfile($probepath,'$s1','$s2','','local'):$total
+     if ($total>0) then
+	$i=1 $j=$total
+	repeat
+	   $ok=1
+	   if ($system<>'datastation') then
+	        gmapshim('findmap',$s1[$j]):$ok
+	   endif
+	   if ($ok) then
+		write('file',$maplist,'"%s %s" "custom_%s"',$s1[$j],$s2[$j],$s1[$j])
+		$i=$i+1
+	   endif
+	   $j=$j-1
+	until ($i > 10) or ($j<1)
+     endif
+   endif
+
+   write('file',$maplist,'"None" "no"')
+
+ELSEIF ($1 = 'set') THEN
+
+   if ($system='spectrometer') then
+      expactive:$isactive
+      if ($isactive < 0) then
+        $system='datastation'
+      endif
+   endif
+
+   $ret=0 $s1='' $s2=''
+   strstr($2,'custom_'):$ret,$s1,$s2
+   if ($ret) then Gmapname=$s2 else Gmapname='' endif
+   if ($2='no') then 
+	Gmap='no' Gmapname='' 
+   elseif ($ret=0) then
+      if ($system='datastation') then
+	$ok=1
+      else
+	gmapshim('findprobemap',$2):$ok
+      endif
+	if ($ok) then Gmap=$2 else Gmap='lk' endif
+   endif
+
+ELSEIF ($1 = 'update') THEN
+
+   if (operator<>owner) then 
+	write('error','%s cannot update Gradient map list',operator)
+	return
+   endif
+
+   getProbePath(probe,'rw'):$pex,$ppath,$rw
+   if ($rw=0) then return endif
+
+   $smaplist=userdir+'/persistence/shimmaplist'
+   write('reset',$smaplist)
+   exists(userdir+'/gshimlib/shimmaps','directory'):$direx
+   if ($direx) then
+       shell('(ls -1td '+userdir+'/gshimlib/shimmaps/* >> '+$smaplist+')'):$dum
+   endif
+   exists(systemdir+'/gshimlib/shimmaps','directory'):$direx
+   if ($direx) then
+	shell('(ls -1td '+systemdir+'/gshimlib/shimmaps/* >> '+$smaplist+')'):$dum
+   endif
+   $s1='' $s2=''
+   readfile($smaplist,'$s1','$s2','','local'):$total
+   shell('rm -f '+$smaplist):$dum
+
+   $maps='' $timesvf=''
+   if ($total>0) then
+     $i=1 $j=1
+     repeat
+	$s3='' $s4='' $s5=''
+	exists($s1[$i]+'/procpar','file'):$ppex
+	if ($ppex) then
+	   rtv($s1[$i],'noabort','time_svfdate'):$s4
+	endif
+	if ($s4<>'') then
+		$mapname=''
+		shell('basename '+$s1[$i]+' .fid'):$maps[$j]
+		$timesvf[$j]=$s4
+		$j=$j+1
+	endif
+	$i=$i+1
+     until $i > $total
+   endif
+   $total=size('$maps')
+   $index=1
+   if ($total>1) then
+	sort($timesvf,'r'):$index,$timesvf
+   endif
+   $i=1
+   repeat
+	$j=$index[$i]
+	Gmaplist('addmapname',$maps[$j]):$dum
+	$i=$i+1
+   until $i>$total
+
+ELSEIF ($1='addmapname') THEN
+
+   $probe='' $date='' $mapname=''
+   if ($# < 2) then
+        if (seqfil<>'gmapz') then return endif
+	$mapname=gmapname
+   else
+	$mapname=$2
+   endif
+   if ($mapname='') then return endif
+   if ($# < 2) then
+        exists('probe_','parameter'):$probeparex
+        if ($probeparex) then $probe=probe_ endif
+        $date=date
+   else
+	getfilepath($mapname+'.fid','gshimlib/shimmaps'):$ppex,$ppath
+	if ($ppex) then
+	    rtv($mapname+'.fid','noabort','probe_'):$probe
+	    rtv($mapname+'.fid','noabort','date'):$date
+	else
+	  if ($## < 0.5) then
+	    write('error','Shimmap %s not found',$mapname)
+	  endif
+	    return
+	endif
+   endif
+   if ($probe='') then
+	if ($## < 0.5) then
+	   write('error','Parameter "probe_" NOT found.  Shimmap %s may not belong to %s',$mapname,probe)
+	endif
+	return
+   endif
+   if ($probe<>probe) then
+	if ($## < 0.5) then
+	   write('error','Shimmap %s is generated for %s probe; current probe is %s',$mapname,$probe,probe)
+	endif
+	return
+   endif
+   if ($date='') then
+	if ($## < 0.5) then
+	   write('error','Could not determine the generation date for shimmap %s',$mapname)
+	endif
+	return
+   endif
+
+   if ($## < 0.5) then
+	getProbePath(probe,'alert'):$pex,$ppath,$rw
+   else
+	getProbePath:$pex,$ppath,$rw
+   endif
+   if ($rw=0) then return endif
+   substr($ppath,'dirname'):$gmaps
+   $gmaps=$gmaps+'/gradientmaps'
+//   $gmaps=$ppath+'/../gradientmaps'
+   shell('touch '+$gmaps):$dum
+   shell('(cat '+$gmaps+' | grep -wc '+$mapname+')'):$isthere
+   if ($isthere) then
+	shell('(cat '+$gmaps+' | grep -w '+$mapname+' | grep -c "('+$date+')")'):$isthere2
+	if ($isthere2=0) then
+	    shell('(cat '+$gmaps+' | grep -vw '+$mapname+' > '+$gmaps+'_temp)'):$dum
+	    shell('mv '+$gmaps+'_temp '+$gmaps):$dum
+	endif
+   endif
+   shell('(cat '+$gmaps+' | grep -wc '+$mapname+')'):$isthere
+   if ($isthere=0) then
+        write('file',$gmaps,'%s (%s)',$mapname,$date)
+   endif
+
+ENDIF 

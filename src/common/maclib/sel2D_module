@@ -1,0 +1,56 @@
+"macro sel2D_module"
+"sel2D_module - This is a setup macro for Generic module"
+
+$module='sel2D'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+      selfrqppm=0 off('selfrqppm')
+      selfrqc=0 off('selfrqc')
+      selfrq1ppm=0 off('selfrq1ppm')
+      selfrq1c=0 off('selfrq1c')
+      wds='' wstart=''
+      if (seltype='invF1') or (seltype='excitF1') or (seltype='dpfgseF1') then
+          if (procdim=2) then wds='suselfrq1' else wstart='setF1selshp' endif
+      elseif (seltype='invF2') or (seltype='excitF2') or (seltype='dpfgseF2') then
+          if (procdim>0) then wds='suselfrq' endif
+      endif
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

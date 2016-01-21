@@ -1,0 +1,252 @@
+"macro lcdatast"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcdatast"
+
+"lcdatast - this version displays LC-NMR 2000 or VJ-LC 1.x format data"
+"           higher versions are passed on to lcdatast2"
+
+" Check to see if lcdata exists "
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if $e=0 then
+  write('line3','lcdata file does not exist in current experiment')
+  abort
+endif
+
+"lcdata file exists"
+lookup('file',$filename)
+
+" Get new version number, if any "
+lookup('readline'):$versionline
+$s1=''
+$ver=''
+strstr($versionline, 'LCD 1.'):$newversion,$s1,$ver
+if ($ver <> '') then
+    $ver = '1.' + $ver
+endif
+
+// For Version 2.x, call lcdatast2 with same arguments
+strstr($versionline, 'LCD 2.'):$newversion,$s1,$ver
+if ($ver <> '') then
+    $cmd = 'lcdatast2'
+    if ($# > 0) then
+        $cmd = $cmd + '('
+        $i = 1
+        while ($i <= $#) do
+            if ($i > 1) then
+                $cmd = $cmd + ','
+             endif
+            $cmd = $cmd + '\'' + ${$i} + '\''
+            $i = $i + 1
+        endwhile
+        $cmd = $cmd + ')'
+    endif
+    {$cmd}      // Call lcdatast2 and quit
+    return
+endif
+
+lookup('readline')
+$version=''
+$dum=''
+lookup('read','readline'):$version,$dum
+if ($newversion > 0) then
+    lookup('seek', 'Title:', 'readline'):$filetext
+else
+    lookup('readline'):$filetext
+endif
+
+$plotflag=0 
+$fullflag=0
+$sideflag=0
+
+$vs= 0.5
+$vs2= 0.5
+$vs3=0.5
+
+exists('vslc','parameter'):$e
+if ($e>0)and(vslc>0.5) then
+  $vs=vslc/2
+else
+  $vs=500 vslc=$vs
+endif
+
+exists('vslc2','parameter'):$e
+if $e then $vs2=vslc2/2 endif
+exists('vslc3','parameter'):$e
+if $e then $vs3=vslc3/2 endif
+$i=1
+
+while $i<=$# do
+  if ${$i} = 'plot' then $plotflag=1 
+  elseif ${$i} = 'side' then $sideflag=1 
+  elseif ${$i} = 'full' then $fullflag=1
+  endif
+  $i=$i+1
+endwhile
+
+
+exists('onflowdelay','parameter'):$e
+if $e then $offset=onflowdelay/60 else $offset=0 endif
+$plbs=1
+exists('lcpeaklabels','parameter'):$e
+if $e then $plbs=(lcpeaklabels='y') endif
+
+if $plotflag then write('plotter','reverse',3,wc2/2,'%s',$filetext) endif
+
+lookup('seek', 'channels:')
+lookup('read','read','readline'):$text1,$text2,$text3   "active detectors"
+$det1flag=($text1='#TRUE#')
+$det2flag=($text2='#TRUE#')
+$det3flag=($text3='#TRUE#')
+
+
+lookup('seek','Incident','readline')
+lookup('readline'):$numtimeevents
+$det=0 
+$eventtime=0
+$eventmv=0
+$eventpoint=0
+$event=1
+while ($event <= $numtimeevents) do
+  $dum='' $r1=0 $r2=0 $r3=0 $r4=0 $r5=0 $r6=0
+  lookup('read','read','read','read','read','read','readline'):$r1,$r2,$r3,$r4,$r5,$r6,$r7
+  
+  if ($newversion = 0) then
+    " LCNMR-2000 version "
+    $det[$event]=$r1
+    $eventpoint[$event]=$r4
+    $eventtime[$event]=$r5
+    $eventmv[$event]=$r4
+  else
+    " VJ version "
+    $det[$event]=$r1
+    $eventpoint[$event]=$r2
+    $eventtime[$event]=$r4
+    $eventmv[$event]=$r3
+  endif
+
+  $event=$event+1
+endwhile
+$eventpoint[$event]=100
+
+exists('plotxypar','parameter'):$e
+if ($e < 0.5) then
+  create('plotxypar','real')
+  setgroup('plotxypar','display')
+endif
+if $sideflag then
+  if $fullflag then
+    plotxypar=0,wcmax,0,wc2max,sf1,sf1+wf1,1,$offset,$vs,-oclc*$vs,90,2
+  else
+    $vs=$vs*(1-wc/wcmax)
+    plotxypar=sc+wc+15,wcmax-wc-sc-15,sc2,wc2,sf1,sf1+wf1,1,$offset,$vs,-oclc*$vs,90,2
+  endif
+else
+  if $fullflag then
+    plotxypar=0,wcmax,0,wc2max,sf1,sf1+wf1,1,$offset,$vs,0,0,2
+  else
+    $vs=$vs*wc2/wc2max
+    plotxypar=sc+wc+20,wcmax-wc-sc-20,sc2,wc2,sf1,sf1+wf1,1,$offset,$vs,0,0,2
+  endif
+endif
+
+if $plotflag then
+  $device='plotter'
+  if ($det1flag) then
+    plotxy(curexp+'/lcdata','plotxypar','pen1')
+  endif
+  if ($det2flag) then
+    plotxypar[12]=3
+    plotxypar[9]=$vs2
+    plotxy(curexp+'/lcdata','plotxypar','pen2')
+  endif
+  if ($det3flag) then
+    plotxypar[12]=4
+    plotxypar[9]=$vs3
+    plotxy(curexp+'/lcdata','plotxypar','pen3')
+  endif
+else
+  $device='graphics'
+  if ($det1flag) then
+    drawxy(curexp+'/lcdata','plotxypar','yellow')
+  endif
+  if ($det2flag) then
+    plotxypar[12]=3
+    plotxypar[9]=$vs2
+    drawxy(curexp+'/lcdata','plotxypar','noclear','green')
+  endif
+  if ($det3flag) then
+    plotxypar[12]=4
+    plotxypar[9]=$vs3
+    drawxy(curexp+'/lcdata','plotxypar','noclear','cyan')
+  endif
+endif
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar=0.7*$htchar else $wthchar=0.5*$htchar endif
+$event=1
+$first = 0
+pen('$device','green') 
+if $sideflag then 
+  $mmf=wc2/wf1
+else 
+  $mmf=plotxypar[2]/wf1
+endif
+$s2=0
+
+if lcexp='enter' then
+  $begin=1 $end=1
+  $event=0
+  repeat
+    $event=$event+1
+    if $eventtime[$event]<=sf1 then
+      $begin=$event+1
+    endif
+    if ($eventtime[$event])<=(sf1+wf1) then
+      $end=$event
+    endif
+  until $event=$numtimeevents
+$event=$begin $numtimeevents=$end
+endif
+
+while ($event <= $numtimeevents) do
+
+  $s2=$eventtime[$event]
+          
+  if $sideflag then 
+    $x = plotxypar[2]
+    $y = plotxypar[3] + ($eventtime[$event] - sf1) * $mmf
+    if $det[$event]=1 then
+      move($x-1,$y) draw($x+5,$y)
+    elseif $det2flag then
+      move($x-1,$y) draw($x+5,$y)
+    endif
+    if $plbs then
+      write($device,'cyan',$x-12*$wthchar,$y-$htchar/2,'%5.2fmin',$s2)
+    endif
+    write($device,'cyan',$x,$y-$htchar/2,'#%2.0f',$event)
+    vp=$y
+    if ($fullflag = 0) then
+      if $plotflag then
+        pl($event)
+        if $first=0 then pscale $first=1 endif
+      else 
+        dssn($event) 
+        if $first=0 then dscale $first=1 endif
+      endif
+    endif
+  else
+    $y = plotxypar[3]
+    $x = ($eventtime[$event] - sf1) * $mmf
+    if $det[$event]=1 then 
+      move($x,$y+2) draw($x,$y-5)
+    elseif $det[$event]=2 then 
+      move($x,$y+2) draw($x,$y-5)
+    endif 
+    if $plbs then
+      write($device,'reverse','cyan',$x-$htchar/1.5,$y+$htchar,'%5.2fmin',$s2)
+    endif
+    write($device,'cyan',$x-$htchar/1.5,0,'#%2.0f',$event)
+  endif
+  $event=$event+1 
+ 
+endwhile

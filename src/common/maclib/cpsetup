@@ -1,0 +1,266 @@
+"macro cpsetup"
+"cpsetup - A generic macro to setup an experiment"
+
+// modified on 2010/06/11 for ExpSetupModule option
+
+    exists('ExpSetupModule','maclib'):$emex
+    if ($# < 2) and ($emex) then
+        $is=0 $ESMpar='' $ESMapptype=''
+        ExpSetupModule('isok',$1):$is,$ESMpar,$ESMapptype
+        exists('apptype','parameter'):$is2
+        if ($is2) then $oldapptype=apptype else $oldapptype='' endif
+        if ($is) then
+//	Remember gain status
+	    on('gain'):$gainon
+	    on('gain')
+            ExpSetupModule('setup',$ESMpar,$ESMapptype,$oldapptype):$ok
+            if ($ok) then 
+// Remove any potential craft parameters leftbehind by someone
+		exists('rmcraftpar','maclib'):$macex
+		if $macex then rmcraftpar endif
+	    	return 
+	    endif
+//	ExpModule skipped setting up the experiment. Put the gain status back
+	    if ($gainon<0.5) then off('gain') endif
+        endif
+    endif
+
+"******Respect current spin value if spintype=tach or nano****"
+$spin=0
+is_param('spintype'):$isst
+if ($isst>0) then
+   if (spintype<>'tach') and (spintype<>'nano') and (spintype<>'mas') then 
+	$isst=0 
+   else
+	// Remember spin value for generic_apptype
+	$spin=spin
+   endif
+endif
+"******the apptype is always locked. Include spin if need be ****"
+$locked='apptype' $li=2
+if $isst  then $locked[$li]='spin'   $li=$li+1 endif
+"************************************************************"
+
+module('add','ChemPack sampleglobal','basic')
+
+exists('AgileNT','maclib'):$antex
+if ($antex) then
+	AgileNT('savepar')
+endif
+
+on('gain')
+newmodules=''
+if ($# > 0) then $seqfil=$1 else $seqfil=seqfil endif
+
+$rtxpar='' $rtex=0
+$oldmodules=modules
+$oldapptype=apptype
+if ($# > 2) then
+   $ext=''
+   getext($3):$rtxpar,$ext
+   if ($ext='') then 
+	$rtxpar=$3+'.par' 
+   else
+	$rtxpar=$3
+   endif
+   exists($rtxpar,'directory'):$rtex
+   $param=$rtxpar+'/procpar'
+else
+   exists($seqfil,'parlib'):$rtex,$rtxpar
+   $param=$rtxpar+'/procpar'
+endif
+
+ 	"Clear key parameters before readparam"
+apptype='' modules='' wrtp='' REQexp[1]='' REQexp[2]='' plotoption=''
+//  use setvalue for layout, to avoid unnecessary panel update at this juncture
+//  The newdg call at the end will do pnew for layout
+setvalue('layout','')
+if ($rtex) then
+          "These ten are always called from parlib"
+   readparam($param,'modules apptype dg ap wrtp seqfil REQexp pslabel ddrpm layout plotoption')
+   explabel=pslabel
+   setgroup('apptype','acquisition')
+   setprotect('apptype','on',1)
+endif
+// if layout is not supplied in parlib, set it equal to seqfil
+if layout='' then setvalue('layout',seqfil) endif
+
+if ($# > 1) then apptype=$2 endif
+
+if (apptype='') then apptype='generic_apptype' endif
+$newapptype=apptype
+
+"**********************************************************************"
+	"This is to make it work with old iact1D apptype"
+	"  - i.e., any potential leftover parlib from CP3"
+if (apptype='iact1D') then
+  if ($seqfil='PRESAT') or ($seqfil='wet1D') then
+	apptype='lstd1D'
+  else
+	apptype='sel1D'
+  endif
+endif
+"**********************************************************************"
+	"remove apptype from modules"
+module('remove',modules,$oldmodules+' '+apptype):newmodules
+modules=$oldmodules+' '+newmodules
+"---------------------------------------------------------------------"
+                "Execute apptype for setup parameters"
+    $appmacro=apptype+'(\'setup\',\''+$seqfil+'\',\''+$rtxpar+'\')'
+    exec($appmacro)
+		"Recall parameters that are not in curpar"
+    if ($rtex) then
+   	fread($param,'current','newonly')
+    endif
+    setprotect('','clear',16384,'current')
+    apptype=$newapptype
+    if ($rtex) then
+	setprotect('$locked','on',16384)
+        rtx($rtxpar,'current','keep','clear')
+	setprotect('$locked','off',16384)
+    endif
+    if (apptype<>'generic_apptype') then on('gain') endif
+"---------------------------------------------------------------------"
+                "Protect sw,sw1 and sw2 if oldapptype=apptype"
+if ($oldapptype=apptype) and (apptype<>'generic_apptype') then
+       Plock('obsSW f1SW f2SW'):$dum
+endif
+"---------------------------------------------------------------------"
+		"Execute apptype for acquisition"
+		"Recall Plocked parameters first"
+    $appmacro=apptype+'(\'acquisition\',\''+$oldapptype+'\')'
+    exec($appmacro)
+    explist=pslabel
+    apptype=$newapptype
+    if ($rtex) then
+        setprotect('$locked','on',16384)
+        rtx($rtxpar,'current','keep','clear')
+        setprotect('$locked','off',16384)
+    endif
+
+"---------------------------------------------------------------------"
+                "Execute apptype for process"
+                "Recall Plocked parameters first"
+    exists('celem','parameter'):$ex
+    if ($ex) and (procdim>0) then
+	celem=0
+    endif
+    $appmacro=apptype+'(\'process\',\''+$oldapptype+'\')'
+    exec($appmacro)
+    apptype=$newapptype
+    if ($rtex) then
+        setprotect('$locked','on',16384)
+        rtx($rtxpar,'current','keep','clear')
+        setprotect('$locked','off',16384)
+    endif
+
+"---------------------------------------------------------------------"
+                "Execute apptype for display"
+                "Recall Plocked parameters first"
+    $appmacro=apptype+'(\'display\',\''+$oldapptype+'\')'
+    exec($appmacro)
+    apptype=$newapptype
+    if ($rtex) then
+        setprotect('$locked','on',16384)
+        rtx($rtxpar,'current','keep','clear')
+        setprotect('$locked','off',16384)
+    endif
+
+"---------------------------------------------------------------------"
+         "The following are common for all apptypes"
+	" Except generic_apptype"
+IF (apptype<>'generic_apptype') THEN
+    wshim='n' 
+    if (alock<>'u') then alock='n' endif
+    spin=$spin
+    pltopt='n'
+    pad=0.5  "This should be reset by rtx or customization"
+    "---------------------------------------------------------------------"
+	"Clear all w-parameters as well as all execpars"
+    wexp='' wnt='' werr='' wbs='' wdone=''
+    execpars('delete')
+//    if (dofidsave='y') then
+//        wexp='procsaveplot'
+//    elseif (doprocess[2]='y') then
+//    if (doprocess[2]='y') then
+        wexp='process'
+//    endif
+	"clear wds if not sel2D and sel1D and lstd1D"
+    $selexp=0
+    module('isthere','sel2D'):$selexp
+    if ($selexp=0) and (apptype<>'lstd1D') and (apptype<>'sel1D') then
+	wds='' wstart=''
+    endif
+    if ($rtex) then
+        setprotect('$locked','on',16384)
+        rtx($rtxpar,'current','keep','clear')
+        setprotect('$locked','off',16384)
+    endif
+    setvalue('parlabel',$seqfil)
+//    parlabel=$seqfil
+	"Final Customizations, if any"
+    if (pslabel<>$seqfil) then
+      $smac=$seqfil+'_setup'
+      getmacropath($smac):$smacex
+      if ($smacex) then
+	   exec($smac)
+      endif
+    endif
+    execpslabel('setup')
+    exec(wrtp) wrtp=''
+    cpsetNUS('pref')
+    dousermacro($seqfil)
+ENDIF
+// Remove any potential craft parameters leftbehind by someone
+exists('rmcraftpar','maclib'):$macex
+if $macex then rmcraftpar endif
+execpars('newonly')
+"---------------------------------------------------------------------"
+        "some parameters cannot be empty string"
+
+if (svftmplt='') then setsvftmplt endif
+if (sdirtmplt='') then setsdirtmplt endif
+if (adirtmplt='') then setadirtmplt endif
+if (strtpar = '') then setstrtpar endif
+if (studyowner = '') then studyowner=operator endif
+if (plotoption='') then plotoption('default','') endif
+newmodules=''
+"---------------------------------------------------------------------"
+setsrate
+setddrtc:$dum
+Plock('obsSW f1SW f2SW','off'):$dum
+"---------------------------------------------------------------------"
+if ($antex) then AgileNT('readpar') AgileNT:$dum2 endif
+
+cpfixpar
+dousermacro($0)
+"---------------------------------------------------------------------"
+"  Always reset customflag "
+customflag='n'
+cppauseflg='n'
+wqinit=''
+zoom=0 fzoom=0
+"---------------------------------------------------------------------"
+EXPtime:ACQtime
+
+"***If this is called for customiation do not proceed***"
+if (gcflg='n') then
+    if (wds <> '') and (procdim=1) then
+   	ds f full 
+    elseif (wds <> '') and (procdim=2) then
+	dconi
+    else
+   	dps
+    endif
+endif
+"*******************************************************"
+newdg 
+
+// set layout parameter to display panels for seqfil
+// BAD idea  - this does not respect a user defined layout in parlib !!
+//    exists('layout','parameter'):$j
+//    if ($j < 0.5) then
+//      create('layout','string')
+//      setgroup('layout','display')
+//    endif
+//    layout = seqfil

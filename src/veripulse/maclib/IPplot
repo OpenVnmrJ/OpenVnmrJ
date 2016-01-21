@@ -1,0 +1,37 @@
+"macro IPplot"
+
+//increase vp so that logo can be plotted
+if (vp<12) then vp=12 endif
+
+//Plot the spectra
+if (arraydim > 1) then
+	dssh
+	wc=wc*0.8 sc=sc*0.8 
+	pl('all')
+	if (arraydim=3) then pscale endif "Assume sensitivity data"
+else
+	full
+	pl
+	pscale
+endif
+
+//Work out what, if anything, is arrayed and plot arrayed parameters
+if (array<>'') then
+	//Assume that no more than two params are arrayed at the same time
+	strstr(array,','):$multiarray,$arrayname[1],$arrayname[2]
+	$arraysize1=size($arrayname[1])
+	$arraysize2=size($arrayname[2])
+	if ((arraydim<>($arraysize1*$arraysize2)) and ($multiarray)) then write('line3','More than two parameters arrayed, skipping IPplarrayparams') page return endif
+	if ($multiarray) then
+		IPplarrayparams(0,0.4*wc2max,'plotter',$arrayname[1]):$xpos
+		IPplarrayparams($xpos+30,0.5*wc2max,'plotter',$arrayname[2])
+	else
+		IPplarrayparams(0,0.4*wc2max,'plotter',array)
+	endif
+endif
+
+pltext
+
+//Issue page
+page
+

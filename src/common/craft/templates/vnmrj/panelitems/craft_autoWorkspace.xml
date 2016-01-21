@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoWorkspace" element="groups" type="acquisition" >
+
+      <group size="400 65"
+        style="Heading1"
+        bg="transparent"
+	reference="craft_autoWorkspace"
+        expanded="yes"
+        useref="no"
+        >
+        <group loc="20 15" size="255 20"
+          vq="craftnmrparRef craftspace"
+          show="$stat=0 craft_abort('status'):$stat $SHOW=($stat=0)"
+          >
+	  <textmessage loc="0 0" size="255 20"
+	    style="Info"
+            vq="craftnmrparRef craftspace"
+	    set="$s='' substr(craftspace,'basename'):$s $r=0 craft('islock',craftspace):$r $v='' craft_getInfo(craftspace,'Saved2Study'):$v if ($r&gt;0.5) then $VALUE=$s+' (Locked)' else if ($v='yes') then $VALUE=$s+' (Saved)' elseif ($v='no') then $VALUE=$s+' (Not saved)' elseif ($v='partial') then $VALUE=$s+' (Partially saved)' else $VALUE=$s+' (Empty)' endif endif"
+	    />
+	  </group>
+	<group loc="20 15" size="255 20"
+	  vq="craftnmrparRef craftspace"
+	  show="$stat=0 craft_abort('status'):$stat $SHOW=($stat&gt;0)"
+	  >
+	  <textmessage loc="0 0" size="255 20"
+	    style="Info"
+	    vq="craftnmrparRef craftspace"
+	    set="$s='' substr(craftspace,'basename'):$s $VALUE=$s+' (Analysis Aborted)'"
+	    />
+	  </group>
+	<group loc="275 15" size="120 20"
+	  vq="craftnmrparRef craftspace"
+          show="$v='' $r=0 craft('islock',craftspace):$r $SHOW=($r=0)"
+          >
+          <button loc="0 0" size="120 20"
+            style="Heading2"
+            label="Clear space"
+	    show="$lock=0 craft('islock',craftspace):$lock $v='' craft_getInfo(craftspace,'Saved2Study'):$v $ENABLE=(($lock=0) and ($v&lt;&gt;'') and ($v&lt;&gt;'none'))*2-1"
+            vq="craftnmrparRef craftspace"
+            vc="craft('clearspace')"
+            bg="transparent"
+            />
+          </group>
+<!--
+        <group loc="275 15" size="120 20"
+          vq="craftnmrparRef craftspace"
+          show="$v='' $r=0 craft('islock',craftspace):$r $SHOW=($r&gt;0)"
+          >
+          <button loc="0 0" size="120 20"
+            style="Heading5"
+            label="Abort CRAFT"
+            vq="craftnmrparRef craftspace"
+            vc="craft_abort('all')"
+            bg="transparent"
+            />
+          </group>
+-->
+	  <label loc="20 39" size="110 20"
+	    style="Heading1"
+	    label="Workspace title"
+	    />
+	  <entry loc="130 39" size="235 20"
+	    style="PlainText"
+	    vq="craftnmrparRef"
+	    vc="ckstring('$VALUE'):craftnmrpar[12] craft('pnew')"
+	    set="$VALUE=craftnmrpar[12]"
+	    />
+        </group>
+
+</template>

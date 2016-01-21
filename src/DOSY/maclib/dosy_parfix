@@ -1,0 +1,226 @@
+"macro dosy_parfix"
+d1=2 satdly=2 
+if ni<2 then at=2 endif
+exists('lkgate_flg','parameter'):$e
+if $e=0 then
+   create('lkgate_flg','flag')
+endif
+lkgate_flg='n'
+
+exists('alt_grd','parameter'):$e
+if $e=0 then
+   create('alt_grd','flag')
+endif
+alt_grd='n'
+
+exists('sspul','parameter'):$e
+if $e=0 then
+   create('sspul','flag')
+endif
+sspul='y'
+
+exists('hsgt','parameter'):$e
+if $e=0 then
+   create('hsgt','delay')
+endif
+hsgt=0.001
+
+exists('gzlvlhs','parameter'):$e
+if $e=0 then
+   create('gzlvlhs','integer')
+endif
+setlimit('gzlvlhs',32767,-32767,1)
+gzlvlhs=5000
+
+setprotect('pw90','off',16384)
+setprotect('tof','off',16384)
+setprotect('rfp','off',16384)
+setprotect('rfl','off',16384)
+exists('tpwr_cf','parameter'):$e
+if $e>0 then setprotect('tpwr_cf','off',16384) endif
+setprotect('tpwr','off',16384)
+setprotect('sw','off',16384)
+exists('PFGflg','parameter'):$e
+if  $e>0 then destroy('PFGflg') endif 
+exists('rfchannel','parameter'):$e
+if  $e>0 then destroy('rfchannel') endif
+setprotect('gain','off',16384)
+setprotect('rof2','off',16384)
+setprotect('satfrq','off',16384)
+setprotect('satpwr','off',16384)
+setprotect('satmode','off',16384)
+setprotect('solvent','off',16384)
+exists('phase','parameter'):$ex
+if $ex>0 then setprotect('phase','off',16384) endif
+exists('sw1','parameter'):$ex
+if $ex>0 then setprotect('sw1','off',16384) endif
+exists('dosy3Dproc','parameter'):$ex
+if $ex>0 then setprotect('dosy3Dproc','off',16384) endif
+setprotect('dg','off',16384) 
+setprotect('ap','off',16384)
+exists('dgdosy','parameter'):$ex
+if $ex>0 then setprotect('dgdosy','off',16384) endif
+
+exists('phasecycleflag','parameter'):$ex
+if $ex>0 then destroy('phasecycleflag') endif
+
+exists('ssfilter','parameter'):$ex
+if $ex>0 then ssfilter=50 ssfilter='n' endif
+
+exists('ssntaps','parameter'):$ex
+if $ex>0 then ssntaps=121 endif
+
+exists('ssorder','parameter'):$ex
+if $ex>0 then ssorder='n' endif
+
+exists('ddrpm','parameter'):$e
+if $e=0 then
+   create('ddrpm','string')
+endif
+ddrpm='e' 
+
+exists('satmode','parameter'):$e
+if $e=0 then
+   create('satmode','flag')
+endif
+satmode='nnn'
+
+exists('satfrq','parameter'):$e
+if $e=0 then
+   create('satfrq','frequency')
+endif
+satfrq=tof
+
+exists('satdly','parameter'):$e
+if $e=0 then
+   create('satdly','delay')
+endif
+satdly=d1
+              
+exists('satpwr','parameter'):$e
+if $e=0 then
+   create('satpwr','integer')
+   getlimit('tpwr'):$max,$min,$step
+   setlimit('satpwr',10,-16,$step)
+endif
+satpwr=0
+
+exists('dosy_peaknum','parameter'):$e
+if $e=0 then
+   create('dosy_peaknum','integer')
+endif
+setgroup('dosy_peaknum','processing')
+setlimit('dosy_peaknum',1000,1,1)
+setvalue('dosy_peaknum',1,'current')
+
+exists('dosy_peakmult','parameter'):$e
+if $e=0 then
+   create('dosy_peakmult','real')
+endif
+setgroup('dosy_peakmult','processing')
+setlimit('dosy_peakmult',10000,0.5,0.001)
+setvalue('dosy_peakmult',10,'current')
+
+exists('dosy_autoincr','parameter'):$e
+if $e=0 then
+   create('dosy_autoincr','flag')
+endif
+setgroup('dosy_autoincr','processing')
+setvalue('dosy_autoincr','n','current')
+
+exists('peakmult','parameter'):$e
+if $e>0 then destroy('peakmult') endif
+
+exists('fn2D','parameter'):$e
+if $e>0 then destroy('fn2D') endif
+
+exists('peaknum','parameter'):$e
+if $e>0 then destroy('peaknum') endif
+
+exists('autoincr','parameter'):$e
+if $e>0 then destroy('autoincr') endif
+
+exists('int_flg','parameter'):$e
+if $e=0 then
+   create('int_flg','flag')
+endif
+setgroup('int_flg','processing')
+setvalue('int_flg','n','current')
+
+exists('gzlvl1_inc','parameter'):$e
+if $e=0 then
+   create('gzlvl1_inc','integer')
+   setlimit('gzlvl1_inc',32767,-32767,1)
+endif
+gzlvl1_inc=15
+
+exists('gzlvl1_min','parameter'):$e
+if $e=0 then
+   create('gzlvl1_min','integer')
+   setlimit('gzlvl1_min',32767,-32767,1)
+endif
+gzlvl1_min=1000
+
+exists('gzlvl1_max','parameter'):$e
+if $e=0 then
+   create('gzlvl1_max','integer')
+   setlimit('gzlvl1_max',32767,-32767,1)
+endif
+gzlvl1_max=25000
+
+exists('lowlim','parameter'):$e
+if $e=0 then
+   create('lowlim','real')
+endif
+setgroup('lowlim','processing')
+setlimit('lowlim',1000.0,0,0.001)
+setvalue('lowlim',0,'current')
+
+exists('uplim','parameter'):$e
+if $e=0 then
+   create('uplim','real')
+endif
+setgroup('lowlim','processing')
+setlimit('uplim',1000.0,0,0.001)
+setvalue('uplim',25,'current')
+
+exists('calibflag','parameter'):$e
+if $e>0 then destroy('calibflag') endif
+
+exists('gt1','parameter'):$e
+if $e<>0 then
+  setlimit('gt1',0.01,0,0.000001)
+endif
+
+exists('gt2','parameter'):$e
+if $e<>0 then
+  setlimit('gt2',0.01,0,0.000001)
+endif
+
+exists('gt3','parameter'):$e
+if $e<>0 then
+  setlimit('gt3',0.01,0,0.000001)
+endif
+
+exists('gt4','parameter'):$e
+if $e<>0 then
+  setlimit('gt4',0.01,0,0.000001)
+endif
+
+exists('gt5','parameter'):$e
+if $e<>0 then
+  setlimit('gt5',0.01,0,0.000001)
+endif
+
+exists('hsgt','parameter'):$e
+if $e<>0 then
+  setlimit('hsgt',0.01,0,0.000001)
+endif
+
+exists('modules','parameter'):$ex
+if $ex=0 then
+        create('modules','string')
+endif
+
+
+

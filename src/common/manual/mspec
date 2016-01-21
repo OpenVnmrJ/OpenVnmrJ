@@ -1,0 +1,79 @@
+******************************************************************************
+mspec - a command to select multiple spectra to display.
+******************************************************************************
+
+mspec can be used to select multiple spectra. Once the spectra are selected, the ds command is in mspec mode, i.e., it will display the selected spectra.
+
+Note, mspec command itself does not display the spectra. 
+
+To exit mspec mode (i.e., return to standard ds mode), use ds(n), or mspec('clear').
+
+To turn off/on mspec mode withtout clearing the selection, use mspec('off') and mspec('on').
+
+In mspec mode, all spectra should have the same spans (spectral width), but each spectrum may have different resolutions (fn).
+
+
+-------------- 1. SELECT SPECTRA BY INDEXES OF ARRAYED DATA ----------------
+
+The following commands select traces from arrayed spectra in current experiment.
+
+mspec(index1,index2, index3,...<,color1,color2,...>) or
+mspec(index1,color1,index2,color2,...)
+  e.g., mspec(1,3,5,'blue') to display traces 1,3,5 in blue.
+	mspec(1,'blue',2,'cyan',3,'yellow')
+ 
+mspec('all'<,color1, color2,...>) 
+	select all traces in arrayed data, up to 64.
+
+mspec('first-last:step'<,color1, color2,...>)
+  e.g., mspec('1-') to select all traces
+	mspec('65-') to select 65 to last trace 
+	mspec('1-:2') to select every other traces
+	mspec('10-20:2') to select traces 10,12,14,16,18,20
+
+If color is not specified, the default spectrum color (i.e., 'spectrum') will be used.
+If fewer color(s) than spectra are specified, the color(s) will be recycled.
+
+Colors are specified by names: 
+	'red','green','blue','cyan','magenta','yellow','orange','black','white',
+	'pink','gray' 'spectrum','spectrum2' to 'spectrum9','cursor','integral',
+	'threshold','scale','fid','imaginary','parameter'.
+
+
+----------------- 2. SELECT SPECTRA BY KEYS -------------------
+
+A spectrum key is a name given when a fdf spectra data is loaded 
+(see CPR for savefdfspec and aipLoadSpec commands). 
+
+The following are special keys reserved for data in current experiment:
+  'FID' - data in current fid buffer,
+  'SPEC' - data in current phasefile buffer,
+  'BASE' - data in current baseline buffer.
+
+comboKey is a string to combine (add/subtract/scale) spectra, or select a trace.
+
+For examples:
+key1='SPEC' -current trace in SPEC
+key2='spec' -current trace in spec
+key3='SPEC-spec' -difference between current traces in SPEC and spec
+key3='spec:2' - second trace in spec
+key4='spec*0.5' - scale current trace in spec by half.
+
+The following commands select spectra by keys or comboKeys (see below).
+
+mspec(key1,key2,key3,...) 
+	key1,key2,... are spectrum keys or comboKeys. 
+	Note, all arguments should be string, and are interpreted as keys or comboKeys.
+
+mspec(n,comboKey,yoff,color) 
+	This selects one spectrum at a time. 
+        Note, the comboKey has to contain ':', so it will not be confused with colorNames. 
+        Spectrum n is specified by a given key, and 
+	will be displayed with vertical offset yoff, in a given color.
+        yoff is specified in milllimiters, color is specified by name.
+
+e.g., mspec(1,'spec:1', 0, 'cyan')
+      mspec(2,'baseline:1', 0, 'yellow')
+      mspec(3,'spec:1-baseline:1', 40, 'red')
+
+This will display the first trace of a spectral data, and the first trace of a baseline data at the same vertical offset, and display the difference 40mm above.

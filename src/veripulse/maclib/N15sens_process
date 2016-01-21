@@ -1,0 +1,126 @@
+"macro N15sens_process"
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+$date='' $time='' $snrs='' $lws='' $pass_threshold=0
+$sumsnr=0 $avesnr=0 $arraydims='' $deltas=''
+$minsnr=1e6 $maxsnr=-1e6 $minsnrspecno=0 $maxsnrspecno=0
+$minsnrs='' $maxsnrs='' $minsnrspecnos='' $maxsnrspecnos=''
+
+lb=0.4
+wft
+ai
+f
+full
+setref
+lp=0
+axis='h'
+
+$i=1
+repeat
+	select($i)
+	abortoff
+	if $phase='dophase' then aph0 endif
+	aborton
+	vsadj
+	dc
+	res
+	dres:$lw
+	write('line3','Weighted linewidth of formamide 15N signal = %f Hz \(FWHH\)',$lw)
+	if ($lw > 1) then write('error','Warning: Line is broad, check shimming') endif
+
+	//region bc
+	cr=-rfl+100
+	delta=100
+	dsnmax(100)
+	dsn:$snr
+	write('line3','rms signal-to-noise ratio=%d:1',$snr)
+	if ($snr<$minsnr) then $minsnr=$snr $minsnrspecno=$i endif
+	if ($snr>$maxsnr) then $maxsnr=$snr $maxsnrspecno=$i endif
+	$sumsnr=$sumsnr+$snr
+	$i=$i+1
+until ($i>arraydim)
+$avesnr=$sumsnr/arraydim
+$snr=$avesnr
+
+format($minsnr,1,0):$minsnrs
+format($minsnrspecno,1,0):$minsnrspecnos
+format($maxsnr,1,0):$maxsnrs
+format($maxsnrspecno,1,0):$maxsnrspecnos
+
+VPtext
+$str='15N signal-to-noise ratio measurement'
+atext($str)
+format($snr,1,0):$snrs
+format(arraydim,1,0):$arraydims
+format(delta,1,0):$deltas
+$str='rms signal-to-noise ratio (average of '+$arraydims+' measurements) = '+$snrs+':1'
+atext($str)
+$str=$deltas+' Hz wide noise region used'
+atext($str)
+$text='Minimum measured signal-to-noise: '+$minsnrs+' (spectrum '+$minsnrspecnos+')'
+atext($text)
+$text='Maximum measured signal-to-noise: '+$maxsnrs+' (spectrum '+$maxsnrspecnos+')'
+atext($text)
+
+$targetvalues=''
+VPgettarget('N15SN'):$targetvalue
+format($targetvalue,1,0):$targetvalues
+$text='Target: >= '+$targetvalues+':1'
+atext($text)
+format($lw,1,1):$lws
+$text='Resolution: '+$lws+' Hz'
+atext($text)
+$IPteststatus='FAIL'
+if ($snr >= $targetvalue) then
+   atext('Test result: PASS')
+   $IPteststatus='PASS'
+else
+   atext('Test result: FAIL')
+endif
+
+//Redisplay spectra
+dssh
+dtext
+
+write('line3','15N Sensitivity Test'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured RMS signal-to-noise ratio %.1f:1',$snr):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target >= %.1f:1',$targetvalue):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+darray('CalibrationResults')
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($snr)
+
+if ($IPteststatus='PASS') then
+
+   "we passed so clear any retestfile counter info"
+   $retestfile=userdir+'/persistence/ReTest'
+   exists($retestfile,'file'):$et
+   if ($et>0.5) then rm($retestfile) endif
+
+elseif ($IPteststatus='FAIL') then
+
+	DoPlanB($0)
+
+endif

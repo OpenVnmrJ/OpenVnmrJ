@@ -1,0 +1,106 @@
+"macro gNhsqcTROSY"
+"gNhsqcTROSY macro for BioPack,2012 Agilent"
+// (re)modified by ET to include T2 series setup option and other stuff
+ 
+   $recalibrate='reset'
+
+if ($# > 0)  then
+ 
+                    $recalibrate=$1      	    
+
+	  endif        
+
+
+if ($recalibrate = 'reset') then
+
+        BPrtppar('gNhsqcTROSY')  
+        setup_macro=$0
+
+	dof=dof-(174-110)*dfrq
+        getparam('NHgrad1_time','N15'):gt4 
+        gt6=gt4*0.1
+        getparam('NHgstab','N15'):gstab
+	getparam('NHgrad1_lvl','N15'):$gN1
+        getparam('NHgrad2_lvl','N15'):$gN2
+         gzlvl4=$gN1
+         gzlvl6=$gN2
+         getparam('swN','N15'):sw1
+       //Note: gzlvl6 ~ $gN2/$gN1*gzlvl4*gt4/gt6*0.1
+
+	dm2='nnn'
+        dn3='' dm3='nnn'
+	ni=0  phase=1  nt=4 ss=4  timeTN=0.0 
+        at=0.1
+        exp_mode='t' peak='LR' // lower-right peak by default, usual TROSY
+        timeTN=0.0 // relaxation time for TRACT, will be arrayed if experiment run with exp_mode='R' ("Relaxation"-TRACT)
+        relaxT=0.1 //seconds, max relaxation time for TRACT, used for calculations only
+
+        ddrtc=alfa
+       // BPprotref1(120.0,'dfrq2')
+
+
+        axis='p2'
+        wnt='' wexp='' spin='n'
+
+ //generate BIP pulse
+
+  write('alpha','Making BIP pulses and setting power levels' )
+  BPmakeBIP(Cshape,pwClvl,pwC):pwCshp  pwCshp_lvl=pwClvl
+
+endif 
+
+
+
+// SETUP TRACT array of relaxation delays
+if ( ($recalibrate = 'larray') or ($recalibrate='tract1d') or ($recalibrate='tract2d' )) then
+     
+         clear
+        
+         $maxpoints=5
+         $npoints=1 
+        
+         $T_step=relaxT/($maxpoints)
+
+         
+	 write('line3','setting at test linear array of relaxation delays up to %.1f s,  ',relaxT )
+
+       
+
+        
+        $i=1        
+        timeTN=0.0
+        
+	REPEAT   
+ 
+           $curr_T= $T_step*($i)           
+                
+            //write('line3','--index %d  TRACT relaxation time is  %.3f  ',$i,$curr_T)
+           timeTN=timeTN,$curr_T
+   
+        $i=$i+1
+        UNTIL ( ($i>$maxpoints)   )
+
+endif
+
+if ( ($recalibrate='tract1d') ) then
+     
+    peak='LR','UR'
+    phase=1 ni=0 
+    array='peak,timeTN'
+    time         
+
+endif
+
+// we do not modify ni here, just set proper array order
+if ( ($recalibrate='tract2d') ) then
+     
+    peak='LR','UR'
+    phase=1,2  
+    array='peak,timeTN,phase'
+    time
+         
+
+endif
+
+
+

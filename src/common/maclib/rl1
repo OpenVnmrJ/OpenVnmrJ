@@ -1,0 +1,40 @@
+"macro rl1"
+"******************************************************"
+" rl1<(rfp1)> - set reference line in second dimension "
+"******************************************************"
+if ($# = 0) then
+  setfrqCmd('rl',1):$e
+else
+  setfrqCmd('rl',1,$1):$e
+endif
+if($e>0) then // new method
+  return
+endif
+
+$rflrfp1 = rfl1 - rfp1
+axis('fn1'):$label,$frq_scl,$scl
+if ($# = 0) then
+  $pos = 0
+else
+  $pos = $1
+endif
+if (refsource1='')or(refsource1='sfrq') then
+   $freq = reffrq
+else
+   getvalue(refsource1,'current'):$freq  " this is an approximation "
+endif
+$pos = $pos/$freq
+$crpos = $freq + ($rflrfp1 + cr1 - sw1/2)/1e6
+reffrq1 = (1/(1 + $pos/1e6))*$crpos
+refpos1 = 0
+rfl1 = sw1/2 - ($freq - reffrq1)*1e6
+rfl1 = rfl1 + ($crpos - reffrq1)*1e6
+rfp1 = ($crpos - reffrq1)*1e6
+sp1 = sp1 - cr1 + rfp1
+cr1 = rfp1
+if ($frq_scl = 1.0) then
+   write('line3','Reference frequency %g %s',cr1,$label)
+else
+   write('line3','Reference frequency %g %s, (%g Hz)',cr1/reffrq1,$label,cr1)
+endif
+p11_action('process','rl1')

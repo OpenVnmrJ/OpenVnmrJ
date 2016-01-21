@@ -1,0 +1,67 @@
+"macro RQreload"
+
+if($# < 0.5) then 
+     aipGetImgKey(reconMode):$num
+
+     $i=1
+     $infile=''
+     while ($i <= $num) do
+        aipGetImgKey(reconMode,$i):$path
+        substr($path,1):$dir
+        exists($dir,'directory'):$e
+        if($e > 0.5 and $infile <> $dir) then
+            $infile = $dir
+write('line3','reload %s\n',$dir)
+            RQreload($dir)
+        endif
+	$i=$i+1
+     endwhile
+
+   return
+endif
+
+$dir = $1
+$show = '' 
+if($# > 1.5) then $show = $2 endif
+
+exists($dir,'directory'):$e
+if $e < 0.5 then 
+   return
+endif
+
+aipDeleteData($dir)
+
+if(jviewport <> 3) then 
+   aipShow($dir)
+else 
+
+aipLoadDir($dir)
+
+
+$type='imgstudy'
+$expand='yes'
+$display='yes'
+rqcount[1] = 0
+$frame = 0
+
+$tmpxml = userdir +'/templates/vnmrj/interface/RQtreetable.xml' 
+rm('-rf',$tmpxml):$x
+
+writefile('open',$tmpxml)
+RQwritexml($type, $dir, 'begin', $frame)
+RQwritexml($type, $dir, $expand, $display, 'parent',$frame)
+RQwritexml($type, $dir, 'end')
+writefile('close')
+
+exists($tmpxml,'file'):$e
+if $e < 0.5 then
+  return
+endif
+
+if $show = '' then 
+vnmrjcmd('RQ reloadimgs '+$dir+' '+$tmpxml)
+else
+vnmrjcmd('RQ reloadimgs '+$dir+' '+$tmpxml +' '+$show)
+endif
+
+endif

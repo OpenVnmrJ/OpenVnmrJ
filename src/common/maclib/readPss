@@ -1,0 +1,51 @@
+"macro readPss"
+if($# < 0.5) then return endif
+
+$path = $1
+strstr($path,'.img'):$n,$scanname
+if($n > 0) then 
+   $file=$scanname+'.fid/procpar'
+else
+   $file = $path+'/procpar'
+endif
+exists($file,'file'):$e
+if($e < 0.5) then return endif
+
+$pss=''
+readpars($file,'pss'):$pss
+
+$i = 1
+$n = 1
+$s = ''
+substr($pss,$i):$s
+$dim[$n] = 0
+$slice[$n] = $s 
+while($s <> '') do
+  $j = 0
+  $found = 0
+  while($j < $n) do 
+    $j = $j + 1
+    if($s = $slice[$j]) then 
+	$dim[$j] = $dim[$j] + 1
+	$found = 1
+    endif
+  endwhile
+  if($found = 0) then
+    $n = $n + 1
+    $dim[$n] = 0
+    $slice[$n] = $s 
+  endif 
+  $i = $i + 1
+  $s = ''
+  substr($pss,$i):$s
+endwhile
+
+$ns = $i - 1
+$i = 0
+$max = 0
+while($i < $n) do
+   $i = $i + 1
+   if($dim[$i] > $max) then $max = $dim[$i] endif
+endwhile
+
+return($n, $max, $ns)

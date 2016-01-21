@@ -1,0 +1,525 @@
+lb='n'  gf='n' 
+if tn='H1' then fn=np*2 else fn=np*4 endif
+$res=sw/fn*2  
+$res?
+$answer=''
+
+wft f full 
+
+if auto='y' then 
+  aph 
+else
+  input('Do you want autophasing?  y or n'):$answer 
+  if $answer='y' then aph endif 
+endif
+ 
+dc
+sp=-1p wp=0.5p vsadj vs=vs/100 th=10
+f 
+if tn='H1' then pickpeaks(50) else pickpeaks(25) f full wft endif
+
+if tn='H1' then sp=-0.5p wp=1p $step=1 else th=30 dll nll:r1 cr=llfrq[r1]+rfp-rfl sp=cr-60 wp=120 $step=1 endif
+$sp1=sp $wp1=wp
+
+th=30 nll:r1  if r1<1 then write('line3','cannot run phasing macro') lb='n' wft return endif
+
+peak:$ht,cr dres:r1  vsadj
+
+if r1<2 then lb=2.5-r1 endif 
+wft
+lb?
+$lb=lb
+
+" ******* coarse rp adjustment ************ "
+
+$pos1=cr
+$direction=0  $dumtest=0  $increment=2
+
+$coarse_counter=1
+repeat
+$counter=1
+repeat
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-4*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+$counter?
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft=$ht[$midpt]
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright=$ht[$midpt]
+
+  if $medianleft<$medianright and $direction=0 then $dumtest=1  endif
+  if $medianleft>$medianright and $direction=0 then $dumtest=-1 endif
+
+  if $medianleft<$medianright then
+    $direction=1 rp=rp+$increment
+    if $dumtest<>$direction then  $counter=1000 endif
+  else
+    $direction=-1  rp=rp-$increment
+    if $dumtest<>$direction then $counter=1000 endif 
+  endif
+
+$counter=$counter+1
+until $counter>10
+
+$increment=$increment/5
+if $increment<0.1 then $increment=0.1 endif
+
+$coarse_counter=$coarse_counter+1
+until $coarse_counter>3
+
+
+
+
+" ********** Fine adjust rp ************ "
+" ********** using 3 measurements ****** "
+
+" right phase moved plus 10 "
+$answer=''
+rp=rp+10 
+
+sp=$sp1 wp=$wp1 peak:$ht,cr
+$pos1=cr
+
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft1=$ht[$midpt]
+$medianleft1?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright1=$ht[$midpt]
+$medianright1?
+
+" middle rp "
+
+rp=rp-10
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a] 
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft=$ht[$midpt]
+$medianleft?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright=$ht[$midpt]
+$medianright?
+
+" minus 10 rp "
+
+rp=rp-10
+
+
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft2=$ht[$midpt]
+$medianleft2?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright2=$ht[$midpt]
+$medianright2?
+
+rp=rp+10
+" calc proper spot for rp "
+
+$adjust=($medianleft-$medianright)/((($medianright1-$medianright2)-($medianleft1-$medianleft2))/20)
+$adjust?
+rp=rp+$adjust
+rp?
+
+
+" ******************************************* "
+" ********  left phase adjustment *********** "
+" ******************************************* "
+
+wft 
+
+" ******* coarse lp adjustment ************ "
+
+if intstd='maleic' and tn='H1' then sp=6p wp=0.6p intstd?
+elseif intstd='dimethylfumarate' and tn='H1' then sp=6.4p wp=0.6p intstd?
+elseif intstd<>'maleic' and intstd<>'dimethylfumarate' and tn='H1' then  
+  write('line3','find singlet above 5 ppm')
+  lb='n' wft f dc sp=-1p wp=0.5p vsadj vs=vs/100 th=10
+  f pickpeaks(50*$step) f full lb=$lb wft 
+  f numreg:$numints
+ 
+  $a=1
+  repeat
+    getreg($a):r2,r3
+    if (r3-r2)<160 then sp=r2 wp=r3-r2 peak:$ht,cr dres:r1 r1?
+      if r1<10 and $ht>30 and r2>3p then cr=(r3+r2)/2 sp=cr-100 wp=200 $a=10000 endif
+    endif
+    $a=$a+1
+  until $a>$numints
+  if $a<1000 then write('line3','cannot do left phasing') lb='n' wft return endif
+endif
+
+if tn='C13' then 
+  sp=-1p wp=0.5p vsadj vs=vs/100 th=30 f full nll:r1 sp=llfrq[1]+rfp-rfl-$step*50 wp=$step*100 
+endif
+
+peak:$ht,cr
+$pos1=cr
+
+$direction=0  $dumtest=0  $increment=2
+
+$coarse_counter=1
+repeat
+
+$counter=1
+repeat
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a] 
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-4*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+$counter?
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft=$ht[$midpt]
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright=$ht[$midpt]
+
+  if $medianleft<$medianright and $direction=0 then $dumtest=1  endif
+  if $medianleft>$medianright and $direction=0 then $dumtest=-1 endif
+
+  if $medianleft<$medianright then
+    $direction=1   lp=lp+1  rp=rp-0.1975
+    if $dumtest<>$direction then  $counter=1000 endif
+  else
+    $direction=-1  lp=lp-1  rp=rp+0.1975
+    if $dumtest<>$direction then $counter=1000 endif 
+  endif
+
+
+$counter=$counter+1
+until $counter>10
+
+$increment=$increment/5
+if $increment<0.1 then $increment=0.1 endif
+
+$coarse_counter=$coarse_counter+1
+until $coarse_counter>3
+
+
+
+" ********** Fine adjust lp ************ "
+
+$answer=''
+lp=lp+10 rp=rp-0.1975*10
+
+$direction=0  $dumtest=0
+
+write('line3','left phase')
+
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft1=$ht[$midpt]
+$medianleft1?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright1=$ht[$midpt]
+$medianright1?
+
+" middle lp "
+
+lp=lp-10  rp=rp+0.1975*10
+
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft=$ht[$midpt]
+$medianleft?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright=$ht[$midpt]
+$medianright?
+
+" minus 10 lp "
+
+lp=lp-10  rp=rp+0.1975*10
+
+  cr=$pos1+50*$step
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1*$step
+    $a=$a+1
+  until cr<$pos1-50*$step
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $medianleft2=$ht[$midpt]
+$medianleft2?
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $medianright2=$ht[$midpt]
+$medianright2?
+
+lp=lp+10  rp=rp-0.1975*10
+" calc proper spot for lp "
+
+$adjust=($medianleft-$medianright)/((($medianright1-$medianright2)-($medianleft1-$medianleft2))/20)
+$adjust?
+lp=lp+$adjust  rp=rp-0.1975*$adjust
+lp?
+
+lb='n' wft 
+if tn='H1' then hregions else sp=-1p wp=0.5p vsadj vs=vs/100 th=10 pickpeaks(50) endif
+bc f
+
+

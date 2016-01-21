@@ -1,0 +1,150 @@
+"macro apply_ecc"
+"************ Automatic ECC correction *******************"
+   
+
+
+
+if (celem > 2) then
+   
+   
+   write('line3','Number of FIDs > 2, exiting!')
+   write('alpha','Number of FIDs > 2, exiting!')
+   clear
+   abort
+endif
+
+//make sure you are in the directory of the file
+ cd(file)
+
+ exists('fid.raw','file'):$ex
+ if ($ex = 0)  then  "create backup of fid- fid.raw"
+      shell('cp fid fid.raw')
+ endif
+
+
+ exists('eddy_log','file'):$exist_ecc
+ if ($exist_ecc = 1) then
+   write('line3','ECC already performed, exiting.... Click Restore Original To Undo!')
+   clear 
+   abort
+ endif
+
+//Need to establish whether wrefname even exists
+
+create('wrefname','string','current','')
+setgroup('wrefname','processing')
+
+
+
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+$newfile=$filename
+
+//cd($newfile)
+
+ //  rt($newfile)
+   
+   $file_exp=''
+   $filename_exp=''
+   $ext=''
+   $length=0
+   $file_exp = $newfile
+   $filename_exp = $file_exp
+   length($file_exp):$length
+   substr($file_exp,$length-2,3):$ext
+   if ($ext <> 'fid') then
+      write('line3','ERROR: Wrong type of selected file!')
+      abort
+   else
+      $file_ref=''
+	
+    if a_watref='y' then
+		write('line3','Watref=y')
+         	$file_ref=wrefname
+        
+         	exists($file_ref,'directory'):$ex
+         if ($ex = 0) then
+            	write('line3','ERROR: File %s does not exists!',$file_ref)
+            	input('Filename of the water reference: '):$file_ref
+            	$file_ref = $file_ref + '.fid'
+            	exists($file_ref,'directory'):$ex
+            		if ($ex = 0) then
+            	   	write('line3','ERROR: Reference file %s does not exists!',$file_ref)
+            	   	write('alpha','Program aborted, ECC was not performed!')
+            	   	abort
+            		endif
+         endif
+      
+    else	//a_watref='n', don't use standard
+
+		write('line3','You are not using Varian standard file %s',$file_ref)
+            	input('Filename of your water reference: '):$file_ref
+            	$file_ref = $file_ref + '.fid'
+            	exists($file_ref,'directory'):$ex
+            		if ($ex = 0) then
+            	   	write('line3','ERROR: Reference file %s does not exists!',$file_ref)
+            	   	write('alpha','Program aborted, ECC was not performed!')
+            	   	abort
+            		endif
+	
+    endif
+endif
+
+   write('line3','File to be corrected: %s',$file_exp)
+   write('line3','File used as a reference: %s',$file_ref)
+
+   write('file','eddy_log','The filename of the water reference:')
+   write('file','eddy_log',$file_ref)
+
+   $lsfid1 = 0
+   rtv($file_exp,'lsfid')
+   on('lsfid'):$on1
+   if ($on1 = 1) then
+      $lsfid1 = lsfid
+   endif
+
+   $lsfid2 = 0
+   rtv($file_ref,'lsfid')
+   on('lsfid'):$on2
+   if ($on2 = 1) then
+      $lsfid2 = lsfid
+   endif
+
+   $flsfid1 = ''
+   $flsfid2 = ''
+   format($lsfid1,3,0):$flsfid1
+   format($lsfid2,3,0):$flsfid2
+   write('line3','lsfid(M) = %d  lsfid(W) = %s',$flsfid1,$flsfid2)
+
+//   $homedir=''
+//   shell('echo $HOME'):$homedir
+//   $program = $homedir + '/bin/ecc4'
+   exists('ecc4','bin'):$e,$program
+   
+   $fid_exp = $file_exp + '/fid'
+   $fid_tmp = $file_exp + '/fid.tmp'
+   $fid_ref = $file_ref + '/fid'
+   
+   shell('mv ' + $fid_exp + ' ' + $fid_tmp)
+   shell($program,$fid_tmp,$fid_ref,$fid_exp,$flsfid1,$flsfid2)
+
+   write('line3','EDDY CURRENT CORRECTION PERFORMED ON "%s" !!',$filename_exp)
+
+   rt($file_exp)
+   lp=0 rp=0
+   f full vp=10
+   lb='n' gf=0.15 gfs=0.0 fn=32767
+   ph wft vsadj(150) dscale dc
+   dg
+   ds dscale
+   
+   
+  shell('rm ' + $fid_tmp)
+   
+//endif
+

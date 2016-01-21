@@ -1,0 +1,32 @@
+"macro plheader"
+"macro plheader"
+if ($# <> 1) then
+  write('error','%s: a filename must be provided',$0)
+  return
+endif
+exists('plotHeader.tmpl','templates/vnmrj/annotation'):$e,$path
+if ($e = 0) then
+  write('line3','plot header template not found')
+  return
+endif
+
+$outfile=$1
+lookup('mfile',$path,'filekey'):$key,$ret
+write('reset',$outfile)
+$ret=2
+repeat
+  lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+  substr($line,1,1):$ch
+  if ($ch <> '#') then
+  if ($ret = 2) then
+    strstr($line,'$VALUE'):$e
+    if $e then
+      $resline=''
+      jFunc(102,$line):$resline
+      write('file',$outfile,'%s',$resline)
+    else
+      write('file',$outfile,$line)
+    endif
+  endif
+  endif
+until ($ret<>2)

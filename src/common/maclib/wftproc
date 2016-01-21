@@ -1,0 +1,75 @@
+"macro wftproc"
+"Process 1D spectra using ftproc parameter"
+
+exists('ftproc','parameter'):$e
+if $e<0.5 then
+  create('ftproc','real')
+  setgroup('ftproc','processing')
+  setprotect('ftproc','on',256)
+  ftproc[1]=1
+  ftproc[2]=0
+endif
+
+getdim:$dim
+if $#>0.5 then
+  $dim=$1
+endif
+
+if $dim=2 then
+
+  $phasedata='n'
+  exists('phase','parameter'):$p
+  if $p>0.5 then
+    if (phase=3) then
+      $phasedata='y'
+    else
+      $size = size('phase')
+      if $size=2 then "phase=1,2 or 1,4"
+        $phasedata='y'
+      endif
+    endif
+  endif
+  if (ftproc[1] = 0) then
+    if $phasedata='y' then
+      write('line3','starting ft2da..')
+      ft2da
+      write('line3','  ft2da done')
+    else
+      write('line3','starting ft2d..')
+      ft2d
+      write('line3','  ft2d done')
+    endif
+  else
+    if $phasedata='y' then
+      write('line3','starting wft2da..')
+      wft2da
+      write('line3','  wft2da done')
+    else
+      write('line3','starting wft2d..')
+      wft2d
+      write('line3','  wft2d done')
+    endif
+  endif
+
+else
+  if $dim=3 then
+    write('line3','starting ft3d')
+    ft3d
+  else  "$dim=1"
+
+    if (ftproc[1] = 0) then
+      if (ftproc[2] > 0) then
+        ft( ftproc[2] )
+      else
+        ft
+      endif
+    else
+      if (ftproc[2] > 0) then
+        wft( ftproc[2] )
+      else
+        wft
+      endif
+    endif
+
+  endif  "$dim=3"
+endif  "$dim=2"

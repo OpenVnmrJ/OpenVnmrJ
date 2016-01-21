@@ -1,0 +1,38 @@
+"macro autoscale"
+" ******************************************************************"
+" *** autoscale - used in regression to set plot scale limits *** "
+" ******************************************************************"
+"    file format is the same as in 'scalelimits' "
+  $filepath = curexp + '/expl.out'
+  exists($filepath,'file'):$e
+  if $e<0.5 then return endif
+  $sc=0
+  $wc=0
+  $sc2=0
+  $wc2=0
+  lookup('mfile',$filepath,'read',4,'filekey'):$sc,$wc,$sc2,$wc2,$key
+  $outfilepath = curexp + '/expl.out'
+  $xstart=''
+  $yfinish=''
+  $ystart=''
+  $yfinish=''
+  $xtype=''
+  $ytype=''
+  lookup('mfile',$key,'read',3,'filekey'):$xstart,$xfinish,$xtype,$key
+  lookup('mfile',$key,'read',3,'filekey'):$ystart,$yfinish,$ytype,$key
+  $xscaleflag=0
+  $yscaleflag=0
+  $setnum=0
+  $xxx='QQQ'
+  lookup('mfile',$key,'read','filekey'):$xxx,$key
+  if ($xxx='FLAGS') then
+      lookup('mfile',$key,'read',3,'filekey'):$xscaleflag,$yscaleflag,$setnum,$key
+  endif
+  
+  rm('-f',$outfilepath):$x
+ 
+  write('file',$outfilepath,'%f %f %f %f',$sc,$wc,$sc2,$wc2)
+  write('file',$outfilepath,'%s %s %s',$xstart,$xfinish,$xtype)
+  write('file',$outfilepath,'%s %s %s',$ystart,$yfinish,$ytype)
+  write('file',$outfilepath,'FLAG %d %d',1,1)
+  write('file',$outfilepath,'%d',$setnum)

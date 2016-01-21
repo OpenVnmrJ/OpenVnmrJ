@@ -1,0 +1,47 @@
+"macro AT09salt100mM"
+"AT09salt100mM" "Spinlock Heating Test using 100mM NaCl sample "  
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Spinlock Heating Test: scale is in degrees C')
+   at_currenttest='spinlktest_salt100mM' 
+   nt=1 f full 
+   wnt=''
+   wexp='AT09salt100mM(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+ wft av f  
+ lb='n' sb=.205 at=.8 
+ sp=2.5p wp=0.8p vsadj th=40 nll
+ getll(1):$int,cr  sp=cr-0.01p wp=.1p
+ d1=1.5-at-0.07 ss=1 
+ pw=at_pw90_salt100mM pw90=pw
+ cp(autotestdir+'/texts/spinlktext_salt100mM',curexp+'/text')
+ ln(25/(at_ampl_compr*pw)):$mult                 "find tpwr to give pw90=25"
+ tpwr=-(((20*$mult)/2.303)-tpwr)
+ setlimit('p1',71000,0,.1) nt=1
+ array('p1',100,70000,0) pw=0
+ vp=0 wc=80 sc=0 fn=2*np axis='h' 
+ create('scalesw','real') scalesw=100/(1.11696*sfrq) "1.11696 determined by calib"
+ vo=1 th=10
+ wnt='ATwft select(1) peak:$int,cr rl(0) vsadj(20) dss dtext dscale'
+ wexp='AT09salt100mM(`PART2`)' 
+ ATcycle dps dtext au
+
+elseif ($1='PART2') then
+ wft
+ select(arraydim) peak:$ht,r3
+ r3=trunc(100*r3*scalesw)/100
+ if (r3<0) then r3=0 endif    "can't have negative heating"
+ ATrecord('SPINLK_HEATsalt100mM','Spinlock Heating Test','Temp_Rise',r3,' Power',tpwr)
+ write('file',autotestdir+'/REPORT','Spinlock Heating (100mM NaCl sample): %1.1f Degrees at power = %2.0f',r3,tpwr)
+ sc=10
+ if (at_plotauto='y') then
+  write('plotter',wcmax-100,wc2max-20,'Temperature Increase = %2.1f Degrees at power = %2.0f',r3,tpwr)
+ endif
+ ATplot
+ ATsvf
+ ATnext
+endif

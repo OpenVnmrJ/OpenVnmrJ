@@ -1,0 +1,293 @@
+"macro findz0_au"
+" in a deuterium spectrum.  Arguments: 'init': record the initial "
+" spectrum; 'move': process spectrum, set z0 and restore initial "
+" parameters. "
+
+$gshim='no'
+$glideau = 'no'
+$setup='no'
+$interactive='no'
+$next='notnext'
+$protune='no'
+$error='no'
+$errval=''
+
+//if ($# = 0) then $1 = 'init' endif
+if ($# =0) then
+    exists('Fastfindz0','maclib'):$fastex
+    if ($fastex) then Fastfindz0 return endif
+    $1='init'
+endif
+
+$x = 2
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'gshim' then $gshim=$val 
+ elseif $val = 'lkshim' then $gshim=$val
+ elseif $val = 'H1shim' then $gshim=$val
+ elseif $val = 'hsshim' then $gshim=$val
+ elseif $val = 'glideau' then $glideau=$val 
+ elseif $val = 'protune' then $protune=$val
+ elseif $val = 'next' then $next=$val
+ elseif $val = 'interactive' then $interactive=$val
+ elseif $val = 'error' then
+	$error=$val
+	$x=$x+1
+	$errval=${$x}
+ endif
+ $x=$x+1
+endwhile
+
+$arg = $1
+
+if $arg = 'setup' then $setup='setup' $arg='init' endif
+
+  IF ($arg = 'init') then
+
+
+     $hzdac=0
+     getparam('hzdac','lk'):$hzdac
+     if ($hzdac=0) then
+       findz0_au('quit',$gshim,$glideau,$next,$protune)
+       return
+     endif
+     
+        groupcopy('current','processed','acquisition')  
+        groupcopy('current','processed','display')	 
+        groupcopy('current','processed','processing')	 
+
+    savesampglobal('cp')
+    exists('s2pul','parlib'):$sparex,$prunepar
+    $prunepar=$prunepar+'/procpar'
+    wdone=''
+    if (auto = 'y') then
+       exists(autodir+'/findz0tmp.par','directory'):$tmpex
+       if ($tmpex) then
+          shell('rm -rf '+autodir+'/findz0tmp.par'):$dum
+       endif
+       svp(autodir+'/findz0tmp')
+    else
+        tmpsave('findz0tmp')
+    endif
+
+        prune($prunepar)
+	exists('proc1','parameter'):$ex
+	if ($ex) then proc1='ft' endif
+        fixpar
+    getsampglobal('cp')
+
+       seqfil='findz0'
+       tn='lk' sw=60*sfrq np=16k
+       newdg
+
+     dn='H1' gain=10 dm='nnn' homo='n'
+     nt=1 ss=0 at=2 wshim='n' d1=2 lsfrq=0
+     if (Console = 'g2000') then alock ='n' gain=0
+     elseif (Console = 'mercury') then
+       gain=0
+       exists('/vnmr/acqbin/Expproc','file'):$expprocex
+       if ($expprocex) then alock = 'u' else alock = 'n' endif
+     else
+       alock='u' 
+     endif
+     getparam('solv','lk'):solvent
+     solvent=solvent
+     //getparam('z0','lk'):z0
+     getparam('tof','lk'):tof
+     getparam('tpwr','lk'):tpwr
+     getparam('pw90','lk'):pw
+     if (rof2 < 10) then rof2=10 endif
+     //sethw('z0',z0)
+
+     //Set tof to zero -> no need for lktof if difference between sfrq and lockfreq is accounted for
+     tof=0
+
+     wnt=''
+     werr=''
+     wbs=''
+     array=''
+     vp=0
+     p1=0 sb='n' dmg='ph' fn=2*np lp=0
+ 
+     if (auto = 'y') then
+           on('pad'):$pad_on
+           if ($pad_on>0.5 and pad[1]>0.5) then
+            create('findz0_padon','real')
+            findz0_padon = pad[1]
+            pad = pad[1]
+           endif
+        if $#>3 then
+           if $4='d2o' then
+               pad=120  "Wait 120 sec. for the temperature to settle"
+           endif
+        endif
+
+//	  if d1 < 10 then d1=10 endif
+            $autoname_tmp = autoname
+          if (traymax = 1) then
+            autoname = '_FINDZ0_FILE_%PEAK#:%'
+	  elseif (traymax = 96) or (traymax = 768) then
+            autoname = '_FINDZ0_FILE_%SAMPLE#:%_%RACK:%_%ZONE:%'
+	  else
+            autoname = '_FINDZ0_FILE_%SAMPLE#:%'
+          endif
+     endif
+     if (pad+d1 < 15.5) then pad=15.5-d1 endif
+     
+     if ($interactive='interactive') then
+          wexp = 'findz0_au(`display`,`'+$gshim+'`,`'+$glideau+'`,`next`,`'+$protune+'`)'
+     else
+          wexp = 'findz0_au(`move`,`'+$gshim+'`,`'+$glideau+'`,`next`,`'+$protune+'`)'
+     endif
+     spin=0 in='n'
+     if ($setup <> 'setup') then
+       if ($interactive='interactive') then
+          banner('Measuring 2H spectrum, please wait...')
+       else
+          banner('Finding z0')
+       endif
+       au('wait','shimming')  
+       if (auto = 'y') then
+           autoname=$autoname_tmp
+       endif
+     endif
+
+  ELSEIF ($arg = 'move') then
+
+    "process H2 spectrum, calculate new z0"
+
+    f expfilt proc='ft' lsfrq=0 wft('nods') lp = 0  av
+    rfl = sw/2  rfp = 0  
+    dsn(-rfl+110,-rfl+10):$sn
+    if ($sn < 25) then
+      write('line3','S/N too low; z0 not changed')
+      dg
+      findz0_au('done','no',$glideau,'next',$protune,'error','Findz0 failed - low S/N')
+    else
+     "makes result independent of referencing in the parameter set"
+      peak:$hgt,cr
+      ph
+      getparam('hzdac','lk'):$hzdac
+      $diff=(sfrq-lockfreq)*1e6
+      $deltaz0=($diff+cr)/$hzdac
+      $newz0 = z0 - $deltaz0 
+      "hz_per_dac must be calibrated and set in the findz0 parameters "
+      sethw('z0',$newz0)
+      write('line3','z0 set to %d', $newz0)
+      dg
+		"Sleep for 15 sec if a real acquisition "
+		"   immediately follows sethw.  Else there "
+		"   will be enough time to settle z0"
+		"   during gradient shimming"
+		"   What about protune? It may or may not happen"
+		"   depending on last sample.  Sleep anyway"
+      if ($gshim='no') and ($glideau<>'no') then
+	  write('line3','Wait for 15 sec...')
+	  shell('sleep 15')
+      endif
+      findz0_au('done',$gshim,$glideau,'next',$protune)
+    endif
+
+
+  ELSEIF ($arg = 'popup') THEN
+
+    vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:findz0_interactive.xml', 'location:expViewArea', 'title:Interactive Find z0')
+
+  ELSEIF ($arg = 'display') THEN
+
+    lsfrq=0
+    vp=0
+    f full
+    expfilt
+    proc='ft'
+    intmod='off'
+    crmode='c'
+    wft
+    lp = 0
+    av
+    rfl = sw/2
+    rfp = 0  
+    axis='h'
+    vsadj
+    peak(sp,sp+wp):$ht,$frq
+    cr=$frq
+    write('line3','Use cursor to select signal to lock on to')
+
+  ELSEIF ($arg = 'moveonly') THEN
+
+      getparam('hzdac','lk'):$hzdac
+      $diff=(sfrq-lockfreq)*1e6
+      $deltaz0=($diff+cr)/$hzdac
+      $newz0 = z0 - $deltaz0 
+      sethw('z0',$newz0)
+      write('line3','z0 set to %d', $newz0)
+      findz0_au('done',$gshim,$glideau,'next',$protune)
+
+  ELSEIF ($arg = 'done') THEN
+    clear(2)
+    if (auto = 'y') then
+        flush
+        $file=file+'.fid'
+        exists($file,'file'):$e
+        if $e<0.5 then
+          $file=autodir+'/'+file+'.fid'
+          exists($file,'file'):$e2
+          if $e2<0.5 then
+            $file=curexp+'/'+file+'.fid'
+            exists($file,'file'):$e3
+            if $e3<0.5 then
+               write('error','file not found, cannot remove: %s',$file)
+            endif
+          endif
+        endif
+	shell('rm -rf '+$file):$dum
+"        rm($file+'/*'):$dum shell('rmdir '+$file):$dum "
+        $findz0_pad=0.5
+        exists('findz0_padon','parameter'):$epa
+	if $epa>0.5 then
+	  $findz0_pad=findz0_padon
+	  destroy('findz0_padon')
+	endif
+	
+          exists(autodir+'/findz0tmp.par','directory'):$findz0tmpex
+          if ($findz0tmpex) then
+            rtp(autodir+'/findz0tmp')
+            shell('rm -r '+autodir+'/findz0tmp.par'):$dum
+          endif
+          
+          if $epa>0.5 then
+	     pad[1]=0.5
+	     EXPtime:ACQtime
+	  endif
+
+    else
+        tmpreturn('findz0tmp')   
+    endif
+  
+	getlkpars 
+
+    if (auto='y') then
+        alock='y'
+    else
+	sethw('lock','on','lockpower',lockpower,'lockgain',lockgain,'lockphase',lockphase)
+        alock='n'
+    endif
+        dsp=dsp
+"***sethw should not be used, particularly under automation ***"
+"***************************************************************"
+
+	if ($error<>'no') and (auto='y') then
+	    $loc='' $locdir='' $when=''
+	    getlocid:$loc,$locdir,$when
+            $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+            write('file',$errlog,'%s',$errval)
+	endif
+	gmapshim_au($gshim,$glideau,'next',$protune)
+
+
+  ELSEIF ($arg = 'quit') THEN
+  
+   	dsp=dsp
+   	gmapshim_au($gshim,$glideau,$next,$protune)
+   	
+  ENDIF

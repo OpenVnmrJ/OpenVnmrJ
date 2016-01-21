@@ -1,0 +1,94 @@
+  ghnco_trosy_3DA.c - auto-calibrated version
+
+    3D HNCO with trosy(enhanced sensitivity PFG)
+    with selective pulses to minimize excitation of water
+                       F1      CO 
+                       F2      15N + JNH/2
+                       F3(acq) 1H (NH) - JNH/2
+
+
+    Pulse scheme uses TROSY principle in 15N and NH with transfer of
+    magnetization achieved using the enhanced sensitivity pfg approach,
+
+    If sel_flg =='n' then the component of interest is not actively 
+    selected for; relaxation will attenuate the undesired component.
+    Selection is achieved during the first N---> 13C' transfer.
+
+    In general it is very difficult to present rules indicating when
+    sel_flg should be set to y or n. In the case of applications at
+    750 or 800 MHz and for correlation times in excess of 20 ns the
+    sel_flg can be set to no and selection via relaxation should suffice.
+ 
+    At lower field or for smaller molecules set sel_flg == 'y', for
+    example at 500 or 600 MHz and for correlation times between 15 and 25ns
+    set sel_flg=='y'. We have used sel_flg=='n' for a molecule with a
+    correlation time of 43 ns and not observed any residual signal from
+    the undesired component.
+
+    See Figure 3 in Yang and Kay, J. Biomol NMR, Jan 1999, 13, 3-9. 
+
+    This sequence uses the standard three channel configuration
+         1)  1H             - carrier (tof) @ 4.7 ppm [H2O]
+         2) 13C             - carrier (dof) @ 174 ppm [CO]
+         3) 15N             - carrier (dof2)@ 120 ppm [centre of amide 15N]  
+    
+    Set dm = 'nnn', dmm = 'ccc' 
+    Set dm2 = 'nnn', dmm2 = 'ccc'
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in t1
+    [CO] and t2 [N].
+    For non-VNMR software: The fids must be manipulated (add/subtract) with 
+    'grad_sort_nd' program (or equivalent) prior to regular processing.
+    
+    Flags
+        fsat            'y' for presaturation of H2O
+        fscuba          'y' for apply scuba pulse after presaturation of H2O
+        f1180           'y' for 180 deg linear phase correction in F1
+                            otherwise 0 deg linear phase correction
+        f2180           'y' for 180 deg linear phase coreection in F2
+                            otherwise 0 deg
+        fc180           'y' for C180 at t2/2 when checking 15N/NH 2D
+
+        sel_flg         'y' for small proteins or fields less than 750
+                        'n' for high fields and/or larger proteins 
+        shared_flg      'y' allows acquisition in F2 for longer than 2bigTN
+                            using the shared constant time principle
+        nietl_flg       'y' active suppression of anti-trosy with no loss in s/n
+                        (D.Nietlispach,J.Biomol.NMR, 31,161(2005))
+
+	Standard Settings
+        fsat='n',fscuba='n',f1180='y',f2180='n',fc180='n'
+
+    
+    Set f1180 to y for (-90,180) in C' and f2180 to n for (0,0) in N
+    Set the carbon carrier on the C' and use the waveform to pulse the
+        c-alpha
+
+    Written by Daiwen Yang on June 1998 and modified by L.E.Kay on Oct. 28, 1998
+
+    References: Pervushin et al. PNAS, 94, 12366-12371 (1997)
+                Pervushin et al. J. Biomol. NMR Aug 1998
+                Yang and Kay, J. Biomol. NMR, Jan 1999, 13, 3-9.
+                Yang and Kay, J. Am. Chem. Soc., 1999, In Press.
+    Modified from hnco_tydw.c
+
+    Modified by L.E.Kay on March 3, 1999 to insert C' 90 purge after 15N
+    evolution to ensure in case where the N-C' refocussing is not complete
+    (2*bigTN < 1/2JNC') that the remaining NxCz' magnetization which
+    becomes NHxCz' is not present. This will remove a dispersive contribution
+    to the F3 lineshape
+
+  Modified by L.E.Kay on January 30, 2002 to improve the shared constant time
+
+  Modified by L.E.Kay to include the Nietlispach method 
+    so that the anti-trosy component is eliminated without setting sel_flg to y
+
+   Usage: nietl_flg == y 
+
+  Calibrate pw_sl, tpwrsl unless sel_flg == y
+  pw_sl1, tpwrsl1 used only with nietl_flg == y
+
+  Modified by E.Kupce, Jan 2005 from  hnco_trosy_dwlek_500.c for auto-calibrated
+  version of the original sequence
+
+  Modified for BioPack by G.Gray, Feb 2005

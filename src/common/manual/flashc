@@ -1,0 +1,118 @@
+****************************************************************************
+flashc	- convert compressed 2D data to standard 2D format
+****************************************************************************
+
+Applicability:	Generally used for imaging, but can be used for any 
+		application needing this type of data conversion.
+
+Syntax:		flashc<(<'nf'><,'ms'|'mi'|'rare'<,traces><,echoes>)>
+
+Description:	Rearranges 2D "fid" data files from compressed formats to 
+		standard format or from standard format to compressed format.  
+		Compressed data is taken using the "nf" parameter to specify 
+		the number of fids in the second dimension of a 2D experiment.
+		In other words compressed data is acquired as one large 
+		uninterrupted "multifid" acquisition.
+
+		Before the 6.0 release, arrayed or multislice compressed
+		images (seqcon='nscnn'), had to be reformatted to a 
+		standard 2D format, using "flashc" before a "ft2d" could 
+		be performed on the data.  Now using "ft2d('nf',<index>)" 
+		this is no longer necessary, and processing time may even 
+		be enhanced by reformatting data from the standard format 
+		(seqcon='ncsnn') to the compressed format.  However for 
+		compressed compressed 2D (seqcon='nccnn'), "flashc(...)" or 
+		"flashc('nf',...)" must be run.
+
+		For 3D data sets "flashc" is not needed.  The "ft3d" 
+		routine will handle standard, compressed (seqcon='nncsn'), 
+		or compressed-compressed (seqcon='nnccn') 3D data.
+
+		The 'flashc' command reads the file "fid" in the "acqfil"
+		subdirectory of the current experiment.  The data is 
+		reordered and written back out to the same "fid" file.
+		Thus, the original "fid" file is lost.  Precautions are 
+		taken so that in the event of an error during processing, 
+		the original "fid" file will be preserved.  Also, before
+		running a simple check is done by 'flashc' to prevent it 
+		from being executed more than once in an experiment on the 
+		same data set.  The simple check against multiple executions 
+		of 'flashc' looks for the parameter 'flash_converted'
+		which "flashc" creates when it is run.  To rerun "flashc"
+		the parameter can be removed with the following commands:
+			destroy('flash_converted')
+			destroy('flash_converted','processed')
+
+
+
+		Compressed-compressed or Standard to Compressed Format
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		Using "ft2d('nf',<index>)", "flashc" really only has to
+		be used to convert a completely compressed multislice, 
+		multiecho, or multi-image sequence.  However, for a large 
+		standard multi-slice experiment (seqcon='ncsnn') a 
+		performance benefit may be achieved in converting the data
+		to a compressed format.  When converting to a compressed
+		format the first argument must always be 'nf'.  When
+		converting completely compressed or "rare"
+		type sequences, the first argument is a string defining the 
+		type of compression. This string can either be 'ms' for
+		multislice, 'mi' for multi-image, or 'rare' for multi-echo
+		"rare" type fast imaging data sets.  The second argument 
+		defines the number of images slices or array elements to 
+		retain.
+
+		The values of four VNMR parameters are changed by "flashc".
+		o "ni" is set to 1 if no argument is provided.
+		o "nf" is set to the value of "nf" divided by the multislice
+		  "ms" or multi-image "mi" value.
+		o "arraydim" is set to the product of its original value and 
+		  the value of the "traces" argument.
+		o "arrayelemts" is set to 1 if no parameters were arrayed 
+		  during data acquisition or to 2 if any parameter was 
+		  arrayed during data acquisition.
+
+Examples:	flashc('nf')        standard to compressed 
+		flashc('nf','ms',ns)  compressed phase-encode and multi-slice
+		flashc('nf','mi',ns)  compressed multi-image and phase-encode
+
+
+		Compressed to Standard Format
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"flashc" can convert a completely compressed multislice, 
+		multiecho, or multi-image sequence.  It can also convert
+		a "rare" type sequence with a compressed phase-encode echo
+		train.	When converting completely compressed or "rare"
+		type sequences, the first argument is a string defining the 
+		type of compression. This string can either be 'ms' for
+		multislice, 'mi' for multi-image, or 'rare' for multi-echo
+		"rare" type fast imaging data sets.  The second argument 
+		defines the number of compressed traces to retain for each 
+		"ni" and "nf" will be set to this number after "flashc" has 
+		been run.
+
+		The values of four VNMR parameters are changed by "flashc".
+		o "nf" is set to the value of the "traces" argument, or to 
+		  1 if no argument is provided.
+		o "ni" is set to the value of "nf" divided by the multislice
+		  "ms" or multi-image "mi" value.
+		o "arraydim" is set to the product of its original value and 
+		  the original value of "nf".
+		o "arrayelemts" is set to 1 if no parameters were arrayed 
+		  during data acquisition or to 2 if any parameter was 
+		  arrayed during data acquisition.
+
+Examples:	flashc              simple compressed phase-encode
+		flashc('ms',ns)     compressed phase-encode and multi-slice
+		flashc('mi',ns)     compressed multi-image and phase-encode
+		flashc('rare',ns,etl)
+ 
+Related		arraydim	Dimension of experiment 	(P)
+		ft2d		Fourier transform 2D data 	(C)
+		ft3d		Fourier transform 3D data 	(C)
+		nf		Number of FIDs			(P)
+		ni		Number of increments in 1st indirectly
+				 detected dimension		(P)
+		seqcon		Acquisition loop control 	(P)
+		

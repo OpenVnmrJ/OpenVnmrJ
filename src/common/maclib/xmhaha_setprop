@@ -1,0 +1,66 @@
+"macro xmhaha_setprop"
+$prop=cursqexp+'/tmpstudy/info/'+$1+'/prop'
+exists($prop,'file'):$fileex
+if ($fileex=0) then return endif
+if ($# < 3) then return endif
+
+$s1='' $s2=''
+readfile($prop,'$s1','$s2','','local'):$ptot
+
+$v1='' $v2='' $k=1
+$sc=''
+$i=2 $ok=0 
+$adjtime=0 $time=''
+while ($i < $#) do
+   $attr=${$i}  $aval=${$i+1}
+   teststr('$s1',$attr,'local'):$ret
+   if ($ret) then 
+	$v1[$k]=$attr $v2[$k]=$aval
+	if ($attr='time') then $adjtime=1 $time=$aval $v2[$k]='' endif
+	$ok=1 $s2[$ret]=$aval 
+	$k=$k+1
+   endif
+   $i=$i+2
+endwhile
+
+if ($ok=0) then return endif
+// time is unique. Make that part of title
+if ($adjtime) then
+   teststr('$v1','title','local'):$ret
+   if ($ret=0) then
+        teststr('$s1','title','local'):$ret
+	$title=$s2[$ret]
+	$v1=$v1,'title'
+	$v2=$v2,$title
+   else
+	$title=$v2[$ret]
+   endif
+   $s3='' $s4=''
+   strstr($title,']','last'):$ret2,$s3
+   if ($ret2) then
+	strstr($s3,'[','last'):$ret3,$s4
+	if ($ret3) then $title=$s4 endif
+   endif
+   if ($time<>'') then
+	teststr('$v1','title','local'):$ret
+	$v2[$ret]=$title+' ['+$time+']'
+	teststr('$s1','title','local'):$ret
+   	$s2[$ret]=$title+' ['+$time+']'
+   endif
+endif
+
+$sc=''
+$vsize=size('$v1')
+$i=1
+repeat
+  $sc=$sc+' set '+$1+' '+$v1[$i]+' "'+$v2[$i]+'";'
+  $i=$i+1
+until $i > $vsize
+vnmrjcmd('SQ '+$sc)
+
+write('reset',$prop)
+$i=1
+repeat
+   write('file',$prop,'%s  %s',$s1[$i],$s2[$i])
+   $i=$i+1
+until $i > $ptot

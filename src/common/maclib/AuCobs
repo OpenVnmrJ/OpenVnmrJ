@@ -1,0 +1,639 @@
+"macro AuCobs"
+"********************************************************"
+"AuCobs - Carbon observe   Autocalibration             "
+"********************************************************"
+
+exists('CALmethod','parameter'):$calex
+if ($calex) then $CALmethod=CALmethod else $CALmethod='oldcal' endif
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+IF ($CALmethod = 'oldcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+if ($# < 1) then $1 = 1 endif
+IF ($1 = 1) THEN
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+explist=$explist
+
+
+tn='C13' dn='H1' crl sw=30k tof=0
+pslabel='CARBON'
+acqdisp
+setddrtc:$dum
+setref
+
+getparam('tpwr'):$power
+"if ($power=0) then getparam('pwxlvl'):$power endif "
+if ($power=0) then C13tpwr=51 else C13tpwr=$power-3 endif
+
+tpwr=C13tpwr pw90=C13pw90 pw=pw90
+dpwr=H1dpwr dmf=H1dmf pplvl=H1pplvl pp=H1pp
+dm='nnn' dmm='ccc'
+d1=20 
+ai at=0.5 fn=4*np lb=1/at nt=1 
+if (Console = 'mercury') then
+  gain=20
+else
+  gain=40
+endif
+wnt=''
+wexp='AuCobs(2)'
+alock='n' wshim='n' r1=1 r3=1
+clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+$solv='' format(solvent,'lower'):$solv
+wft av f full vsadj setref
+if ($solv = 'cdcl3') then
+ cr=0p 
+else
+ cr=75p
+endif
+delta=50p movesw
+//setddrtc:$dum
+ai at=.5 fn=4*np lb=1/at wnt='wft f full vsadj'
+
+getparam('tpwr'):$power
+getparam('pw90'):$oldpw
+"if ($power=0) then     "
+"  getparam('pwxlvl'):$power  "
+"  getparam('pwx'):$oldpw  "
+"endif  "
+
+if ($power <> 0) then
+  $factor = C13pw90/$oldpw
+  ln($factor):$lnfactor
+  $tpwrdiff = trunc(20*0.43429*$lnfactor)
+ if ($tpwrdiff > 2) or ($tpwrdiff < -2) then
+   wexp='f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`C13ref`) AuCobs(3)'
+ else
+  if (($power-$tpwrdiff)>63) then
+     $tpwrdiff=$power-63
+     exp($tpwrdiff*2.303/20):$mult
+     C13pw90=C13pw90*$mult
+  endif
+  tpwr=$power-$tpwrdiff
+  wexp='wft f full vsadj f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`C13ref`) AuCobs(5,C13pw90)'
+ endif
+else
+   wexp='f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`C13ref`) AuCobs(3)'
+endif
+
+alock='n' wshim='n' clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+getparam('tpwr'):$power
+"if ($power=0) then getparam('pwxlvl'):$power endif "
+if (tpwr = $power-3) then    "if the power came from a probe file use finer step"
+   $strtpw=trunc((C13pw90/4) + 0.5)
+   array('pw',20,$strtpw,2)
+else
+   array('pw',20,4,4)
+endif
+vp=wc2max/2
+wnt='wft(`acq`) select(1) vsadj(10) dssh'
+wexp='AuCobs(4)'
+alock='n' wshim='n' r1=1 clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 4) THEN
+
+wft av 
+$counter=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $maxht = $ht $pw90=pw[1] else
+     if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+
+if ($pw90 > 2*C13pw90) then
+  if (r1 < 2) then
+    r1 = r1+1
+    tpwr=tpwr+6
+    au('next','wait')
+    return
+  else
+    write('error','Autocalibration failed on second try -- determine manually')
+    abort
+  endif
+endif
+
+if ($pw90 = C13pw90) then
+ $diff = pw[2] - pw[1]
+ if $diff > 2 then
+  $strtpw=trunc((C13pw90/20) + 2)
+  $totarray=trunc((C13pw90) + 0.5)
+  array('pw',$totarray,$strtpw,2)
+  r3 = r3+1
+  au('next','wait')
+  return
+ else
+  AuCobs(5,$pw90)
+  return
+ endif
+endif
+
+ $factor = C13pw90/$pw90
+ ln($factor):$lnfactor
+ $tpwrdiff = trunc(20*0.43429*$lnfactor)
+ if ((tpwr-$tpwrdiff) > 63) then
+    $tpwrdiff=tpwr-63
+ endif
+
+if ($pw90 < C13pw90) then
+ if (($tpwrdiff <> 0) and (r3 < 2)) then
+  tpwr = tpwr - $tpwrdiff r3=r3+1
+  au('next','wait')
+  return
+ else
+ $diff = pw[2] - pw[1]
+ if $diff > 2 then
+  $strtpw=trunc((C13pw90/20) + 2)
+  $totarray=trunc((C13pw90) + 0.5)
+  array('pw',$totarray,$strtpw,2)
+  r3 = r3+1
+  au('next','wait')
+  return
+ else
+  AuCobs(5,$pw90)
+  return
+ endif
+ endif
+endif
+
+tpwr = tpwr - $tpwrdiff
+$strtpw=trunc((C13pw90/5) + 0.5)
+array('pw',20,$strtpw,$strtpw)
+clear(2) 
+wexp='AuCobs(6)' au('next','wait') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 5) THEN
+
+$pw90=$2
+ds(1)
+array('pw',17,3.2*$pw90,0.1*$pw90)
+clear(2) full
+da d1=10
+r1=1 
+vp=wc2max/2
+wnt='wft(`acq`) select(1) vsadj(10) dssh'
+wexp='AuCobs(7)' 
+au('next','wait')  
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 6) THEN
+
+clear(2)
+wft av 
+$counter=1
+repeat
+  select($counter)
+  peak(sp,sp+wp):$ht
+  if $counter=1 then $maxht = $ht $pw90=pw[1] else
+     if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+select(1)
+
+if (($pw90 < C13pw90) or ($pw90 = C13pw90)) then AuCobs(5,$pw90) return endif
+
+if (tpwr < 63) then
+ $factor = C13pw90/$pw90
+ ln($factor):$lnfactor
+ $tpwrdiff = trunc(20*0.43429*$lnfactor)
+
+ $newtpwr = tpwr-$tpwrdiff
+ if ($newtpwr <> tpwr) then 
+  wexp='AuCobs(6)' 
+  tpwr=$newtpwr
+  clear(2)
+  au('next','wait')
+ else
+  tpwr=tpwr+1
+  AuCobs(5,$pw90) return 
+ endif
+
+else
+ AuCobs(5,$pw90)
+endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 7) THEN
+
+clear(2)
+wft av
+$counter=1
+repeat
+  select($counter)
+  peak(sp,sp+wp):$ht
+  if $counter=1 then $minht = $ht $pw360=pw[1] else
+     if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+
+$pw90=$pw360/4.0
+if ($pw90 > C13pw90) then
+ if (tpwr < 63) then
+  if (r1 < 3) then
+   tpwr=tpwr+1 r1=r1+1
+   array('pw',17,3.2*$pw90,0.1*$pw90)
+   au('wait','next')
+   return
+  endif
+ endif
+endif
+
+pw90=$pw90
+
+$diff = pw[2] - pw[1]
+if ($diff > 1) then
+ array('pw',11,$pw360-4,0.8)
+ au('next','wait')
+ return
+endif
+
+wnt='wft(`acq`) dssh' 
+wexp='select(3) ph aph0 vsadj(50) dssh Autocalsave(`C13pw90`) cpplss Autocalnext'
+$pwinc= trunc((pw90/3)+0.5)
+array('pw',20,$pwinc,$pwinc)
+$strpw90='' $strtpwr=''
+format(pw90,0,1):$strpw90
+format(tpwr,0,0):$strtpwr
+setparams('pw90',$strpw90)
+setparams('tpwr',$strtpwr)
+$text='C13 obs. 90 degree pw: '+$strpw90
+$atext='  at power level: '+$strtpwr
+atext($text)
+atext($atext)
+if (pltopt = 'y') then
+  au('next','wait')
+else
+  wexp='select(3) ph aph0 vsadj(50) dssh Autocalsave(`C13pw90`) cpplss'
+  Autocalsave('C13pw90','par')
+  Autocalnext
+endif
+ENDIF
+
+"********************************************************"
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ELSEIF ($CALmethod = 'newcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+"AuCobs: C13pw90 calibration macro "
+" options/arguments: "
+" (none) : initial setup "
+" 'refine' : refine parameters as needed & initial Haupt result "
+" 'define' : define tpwr for array "
+"  'array' : set up 360 degree pw array "
+" 'save90' : process 360 degree pw array, save data, update probe file "
+
+
+IF ($# < 1) then
+  " initial setup of C13pw90 calibration "
+$explist=explist
+$C13pw90 = C13pw90
+$h1pp=H1pp
+
+$h1ref = '' $filex = 0  $solv = ''
+AutoCheck('H1ref'):$filex,$h1ref
+if $filex then
+  rtv($h1ref,'solvent'):$solv
+  format($solv,'lower'):$solv
+else
+  return
+endif
+
+CARBON($solv)
+Autocalpar
+setref
+if ($solv = 'cdcl3') then
+  cr = 10p  movetof sw = 3000  setref  "set up narrow window"
+  dof = -3.5 * dfrq 
+  "set it about 1.5 ppm to get CH3I and phosphonate"
+else
+  "set up window for CH3OH"
+  dof = -1.6*dfrq  "about where CH3OH should be"
+  cr = 49p  movetof sw = 3000  setref  "set up narrow window"
+endif
+setddrtc:$dum
+
+explist=$explist 
+rtv($h1ref,'pltopt','archivedir','sample')
+tpwr=C13tpwr C13pw90 = $C13pw90 pw90=$C13pw90 
+H1pp = $h1pp
+dmm='w' dm='yyy'
+
+getparam('dpwr','H1'):$dpwr
+if ($dpwr = 0) then           "dpwr calibration not yet done"
+  dn='C13' tn='H1' 
+  getparam('tpwr'):tpwr
+  getparam('pw90'):pw90
+  setpower(3*sfrq,tn):dpwr,$dmf90 
+  tn='C13' dn='H1'
+  dmf = 1e6/$dmf90 dmfadj(90)
+  if (dpwr = 0) then
+    write('error','Proton decoupler power could not be calculated')
+    abort
+  endif
+else
+  setdecpars
+endif
+tpwr=C13tpwr C13pw90 = $C13pw90 pw90=$C13pw90
+$solv='' format(solvent,'lower'):$solv
+
+  if $solv = 'cdcl3' then
+     d1 = 15  at = 5 "T1 for doped phosphonate CH3 ca. 3.5 sec "
+  else
+     d1 = 12  at = 3  "T1 for AutoTest CH3 ca. 3 sec "
+  endif
+
+  nt = 1  ss = 0 
+  ai fn= 4*np  lb=1/at  lp = 0
+
+  getparam('pw90'):$c13pw90
+  if $c13pw90 < 0.5 then "calibrations have not been done"
+    pw = 8,16  "values assume tpwr will be at 51 "
+  else
+    pw = trunc(20*$c13pw90/3 + 0.5)/10
+    pw = pw, 2*pw
+  endif
+
+  if (Console = 'mercury') then
+    gain = 20
+  else
+    gain = 40
+  endif
+
+wnt='wft dssh'
+wexp='AuCobs(`refine`)'
+alock='n' wshim='n' spin = 0 r1=1 r3=1
+gettxt(archivedir+'/'+sample+'/H1ref')
+au('wait','next')
+return
+
+ELSEIF ($1 = 'refine') then
+
+select(1)
+wft f full 
+if (console='vnmrs') then aph0 else aph endif
+
+  cr = sp + wp/10  delta = wp/10
+  dsn:$sn
+  if ($sn < 5) then
+   if (pw[1] = 8) then
+     pw = 12,24  "try larger pulse widths"
+   elseif (nt < 5) then
+     nt = nt*4
+     write('line3','S/N too low, nt increased to %d',nt)
+   else
+	"to get here pw & nt already increased "
+     write('line3','S/N too low; C13 pw calibration aborted')
+     Autocalnext
+     return
+   endif
+    au('wait','next')
+    return
+  else
+    " S/N is adequate;  proceed with calibration "
+    dc 
+    if (console='vnmrs') then aph0 else aph endif
+    vsadj(100) 
+    th = 40  nll
+  endif
+select(2) dc peak:$hgt
+
+abortoff
+if ($hgt > 100) then 
+   if (console='vnmrs') then aph0 else aph endif
+endif
+aborton
+
+fp
+pw_haupt:$pw90
+
+if $pw90 = 0 then
+  write('error','C13 pw90 calibration failed!')
+  abort
+endif
+
+ "initial estimate may not be reliable"
+ "reset pw array & find better estimate at initial tpwr"
+
+ pw = trunc(20*$pw90/3 + 0.5)/10
+ pw = pw, 2*pw
+ da
+ wexp = 'AuCobs(`define`)'
+ au('wait','next')
+ return
+
+ELSEIF ($1 = 'define') THEN
+  " get good pw90 from Haupt array "
+
+  wft f full
+  select(1)
+    dc if (console='vnmrs') then aph0 else aph endif vsadj(100)
+    th = 40  nll
+
+  fp
+  pw_haupt:$pw90
+
+ $factor = C13pw90/$pw90
+ ln($factor):$lnfactor
+ ln(10):$ln10
+ $tpwrdiff = (20*$lnfactor/$ln10)
+ if ($tpwrdiff > 0.7) then
+   $tpwrdiff = trunc($tpwrdiff + 0.5)
+   tpwr = tpwr - $tpwrdiff
+   pw = trunc(20*C13pw90/3 + 0.5)/10
+   pw = pw, 2*pw
+   da
+   au('wait','next')
+   return
+ elseif ($tpwrdiff < -0.7) then
+   $tpwrdiff = trunc($tpwrdiff - 0.5)
+   tpwr = tpwr - $tpwrdiff
+   pw = trunc(20*C13pw90/3 + 0.5)/10
+   pw = pw, 2*pw
+   da
+   au('wait','next')
+   return
+ else
+   "not making a real adjustment to tpwr"
+   $file = archivedir+'/'+sample+'/H1ref'
+   exists($file,'file'):$ex
+   if $ex then gettxt($file) endif
+
+   Autocalsave('C13ref')
+   AuCobs('array',$pw90) 
+   return 
+ endif
+
+ELSEIF ($1 = 'array') then
+
+
+if ($# < 2) then
+  $pw90 = C13pw90
+else
+  $pw90 = $2
+endif
+
+$pw15=trunc(10*$pw90/6 + 0.5)/10
+ds(1) if (console='vnmrs') then aph0 else aph endif
+
+array('pw',9,20*$pw15,$pw15) "from 300 to 420 degrees, in 15 degree steps "
+clear(2) full vp = wc2max/2 - 10  
+d1 = 5   wnt = 'wft dssh(`dodc`)'  wexp='AuCobs(`save90`)'
+if (nt < 4) then nt = 4 endif
+
+au('wait','next')
+return
+
+ELSEIF ($1 = 'save90') then
+
+
+"process 360 degree pulse array, update C13pw90 & C13tpwr"
+
+select(1) f full dc  cr = sp+40 delta=40 crmode = 'b'
+  vsadj(0.25*wc2max)  dssh('dodc')
+
+dsn:$sn,$noise
+$noise = $noise * vs  "scale for comparison with peak heights"
+
+$i = 2
+repeat
+  select($i)  dc
+  $i = $i+1
+until ($i > celem)
+
+fp
+
+$file = curexp+'/fp.out'
+$key=''
+lookup('mfile',$file,'seek','of','read','skip',6,'read',1,'filekey'):$filines,$nspecs,$key
+  if ($nspecs <> celem) then
+    write('error','You must run \"fp\" before using %s',$0)
+    return(0)
+  endif
+  lookup('mfile',$key,'seek','(mm)','filekey'):$key
+
+  $nlines = size('llfrq')
+  if ($filines <> $nlines) then
+    write('error','You must run \"fp\" before using %s',$0)
+    return(0)
+  endif
+
+$j = 1 $k = 0  $pw360 = 0
+repeat  "for each line"
+  $i = 1  $hgt = 0
+  repeat  "in each spectrum"
+     lookup('mfile',$key,'skip',2,'read','filekey'):$hgt[$i],$key
+     $i = $i+1
+  until($i > celem)
+
+" scan intensity array, looking for the last negative & first positive "
+" peak intensities above the noise level "
+
+  $i = 0
+  repeat
+    $i = $i+1
+  until ($hgt[$i] > -2*$noise) or ($i = (celem-1))
+  $lastneg = $i-1
+
+  repeat
+    $i = $i+1
+  until ($hgt[$i] > 2*$noise) or ($i = celem)
+  $firstpos = $i
+
+  if ($hgt[$firstpos] > 2*$noise) then 
+  " calculate 360 degree pulse width by linear interpolation "
+    $frac = -$hgt[$lastneg]/($hgt[$firstpos] - $hgt[$lastneg])
+    $pw360 =  $pw360 + pw[$lastneg] + $frac*(pw[$firstpos] - pw[$lastneg])
+    $k = $k+1
+  else
+    " didn't find a reliable positive peak "
+    write('error',' unreliable result in C13 pw90 calibration!')
+    return
+  endif
+
+  $j = $j+1  "continue with next line"
+until ($j > $nlines)
+
+if ($k < 0.5) then
+  write('error','C13 autocalibration failed!')
+  abort
+else
+  pw90 = 0.25 * $pw360/$k
+
+  $strpw90='' $strtpwr=''  $strc13pw90 = ''
+  format(pw90+0.024,0,1):$strpw90
+  format(tpwr,0,0):$strtpwr
+  format(C13pw90 + 0.049,0,1):$strc13pw90
+  setparams('pw90',$strpw90)
+  setparams('tpwr',$strtpwr)
+
+  gettxt(archivedir+'/'+sample+'/H1ref')
+  $text='C13 obs. 90 degree pw: '+$strpw90
+  $atext='  at power level: '+$strtpwr
+  $atext2 = 'Requested value was '+$strc13pw90
+  atext($text)
+  atext($atext)
+  atext($atext2)
+endif
+
+nt=1 lb=5/at wnt='wft select(1) f peak:$ht,cr wp=100 sp=cr-50 dssh'
+wexp='select(3) ph aph0 vsadj(50) dssh Autocalsave(`C13pw90`) cpplss Autocalnext'
+$pwinc= trunc((pw90/3)+0.5)
+array('pw',20,$pwinc,$pwinc)
+
+if (pltopt = 'y') then
+  au('next','wait')
+else
+  wexp='select(3) ph aph0 vsadj(50) dssh Autocalsave(`C13pw90`) cpplss'
+  Autocalsave('C13pw90','par')
+  Autocalnext
+endif
+
+ENDIF
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ENDIF
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"

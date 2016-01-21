@@ -1,0 +1,95 @@
+"macro ghn_coca_cbA"
+BPrtppar('ghn_coca_cb')
+
+seqfil='ghn_coca_cbA'
+autocal='y'
+setfrq BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+ getparam('NHgrad1_time','N15'):gt1 
+ getparam('NHgrad1_lvl','N15'):gzlvl1 
+ getparam('NHgrad2_lvl','N15'):gzlvl2 
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2 
+ dm2='nny' sw1=80*dfrq 
+ dof=dof-(174-46)*dfrq
+ getparam('waltzB1','H1'):waltzB1 
+ 
+ getparam('gt5','N15'):gt5
+ getparam('gt0','N15'):gt0
+ getparam('gzlvl5','N15'):gzlvl5
+ getparam('gzlvl0','N15'):gzlvl0
+
+
+
+pwC5 = 88.8*600.0/sfrq
+$pw = pwC5*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC5 = ($pw + 1.0)/5.0
+pwC7 = 80.5*600.0/sfrq
+$pw = pwC7*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC7 = ($pw + 1.0)/5.0
+pwC7a = pwC7
+BPmake90CO_Ca
+BPmake90CO
+BPmake180CO
+
+$bw = ''
+$wave = ''
+$name = ''
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+$dmmyshp=''
+$freq = (150-46)*dfrq  " distance from Cab to the middle of CO and aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 0' "ph=0 st=0"
+
+opx
+setwave($wave1)
+
+pbox_rst
+pboxpar('name', 'CgCO1.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+
+$freq = (150-46)*dfrq  " distance from Cab to the middle of CO and aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 1' "ph=0 st=1 time-inversed"
+
+opx
+setwave($wave1)
+
+pbox_rst
+pboxpar('name', 'CgCO2.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+BPmoveshape('CgCO1.RF')
+BPmoveshape('CgCO2.RF')
+
+BPpboxget('CgCO1.RF'):$dmmyshp,pwCgCO,pwCgCO_lvl
+
+ni=0  ni2=0 phase=1 phase2=1

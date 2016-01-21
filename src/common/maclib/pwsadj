@@ -1,0 +1,61 @@
+"macro pwsadj"
+" pwsadj  -  adjust width for a shaped pulse based on granularity  "
+" usage:     pwsadj(shapename, parametername)                      "
+" example:   pwsadj('gauss', 'pws')                                "
+
+
+"Modify the shape name so that 'shape' or 'shape.RF' are both ok"
+length($1):$len  $extension=''
+substr($1,$len-1,$len):$extension
+if $extension<>'RF' then $1=$1+'.RF' endif
+
+
+"Check for the existence of user-level or system-level shape file"
+$shapefile=userdir+'/shapelib/'+$1
+exists($shapefile,'file'):$yes
+if not $yes then
+  $shapefile=systemdir+'/shapelib/'+$1
+  exists($shapefile,'file'):$yes
+endif
+
+if not $yes then
+  write('error','Requested shape does not exist')
+  return
+endif
+
+
+"Open the file, check each line for 'comment' denoter,"
+"then read each element                               "
+lookup('file',$shapefile)
+nrecords($shapefile):$totalnumlines
+$firstchar=''
+$line=''  $c=''
+$sum=0  $i=1
+repeat
+  lookup('readline'):$line
+  substr($line,1,1):$firstchar
+  if $firstchar<>'#' then
+    substr($line,3):$c
+    if ($c <> '') then
+      format($c,3,0):$len
+      $sum=$sum+$len
+    else
+      $sum=$sum+1
+    endif
+  endif
+  $i=$i+1
+until $i>$totalnumlines
+
+
+"Now truncate the relevant parameter accounting for 100 ns granularity"
+$i=1
+repeat           "For each element in the pulse width array"
+  $subpw={$2}[$i]/$sum        "This will be expressed in us"
+  $subpw=trunc(10*$subpw+0.5)/10
+  if ($subpw < 0.2e-6) then
+     write('error','Duration of each pulse increment is too small')
+     return
+  endif
+  {$2}[$i]=$sum*$subpw
+  $i=$i+1
+until $i>size($2)

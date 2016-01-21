@@ -1,0 +1,352 @@
+# '@(#)p_install '
+# 
+#
+
+# The p_install file is an optional file called by patchinstall.
+# The patchinstall script installs the content of the patch. This file
+# is used to handle miscellanous tasks, such as removing files, changing
+# permissions on files, etc.
+
+# The parameter $vnmrsystem will be set. Its typical value will be /vnmr
+# The parameter $tmp_save is the directory into which any files should be put.
+
+# Files should not be deleted, but moved to the $tmp_save directory.
+# That way, patchuninstall can move the file back. The commented example
+# illustrates removing a macro.
+
+# if [ ! -d $tmp_save/maclib ]
+# then
+#    mkdir -p $tmp_save/maclib
+# fi
+# mv $vnmrsystem/maclib/macroA $tmp_save/maclib/macroA
+
+if [ -f $vnmrsystem/psg/meat.c ]
+then
+   rm -rf $vnmrsystem/templates/vnmrj/protocols_ny
+   rm -rf $vnmrsystem/templates/vnmrj/protocols_yn
+   rm -rf $vnmrsystem/templates/vnmrj/protocols_yy
+   rm -rf $vnmrsystem/templates/vnmrj/interface/ESExpts.xml
+   rm -f $vnmrsystem/psg/solidelements.h
+   rm -f $vnmrsystem/psg/solidchoppers.h
+   rm -f $vnmrsystem/psg/solidshapegen.h
+   rm -rf $vnmrsystem/veripulse
+   rm -rf $vnmrsystem/gxyzshim
+   rm -rf $vnmrsystem/biopack
+   rm -rf $vnmrsystem/imaging
+   if [ -d $vnmrsystem/kpsg ]
+   then
+      files=`ls $vnmrsystem/kpsg`
+      for file in $files
+      do
+         mv $vnmrsystem/psg/$file $tmp_save/psg/.
+         mv $vnmrsystem/kpsg/$file $vnmrsystem/psg/.
+      done
+      rm -rf $vnmrsystem/kpsg
+   fi
+   rm -rf $vnmrsystem/ipsg
+   rm -rf $vnmrsystem/ilib
+   rm -rf $vnmrsystem/dosypsg
+   rm -f $vnmrsystem/psg/Pbox_bld.h
+   rm -f $vnmrsystem/psglib/BilevelDec.c
+   rm -f $vnmrsystem/psglib/CRAPT.c
+   rm -f $vnmrsystem/psglib/PSYCHE.c
+   rm -f $vnmrsystem/psglib/PSYCHE_ES.c
+   rm -f $vnmrsystem/psglib/PSYCHE_zTOCSY.c
+   rm -f $vnmrsystem/psglib/gHSQCAD_PS.c
+   rm -f $vnmrsystem/psglib/Ddeptse.c
+   rm -f $vnmrsystem/psglib/Dproject_cc.c
+   rm -f $vnmrsystem/psglib/HETERO2DJ.c
+   rm -f $vnmrsystem/seqlib/BilevelDec
+   rm -f $vnmrsystem/seqlib/CRAPT
+   rm -f $vnmrsystem/seqlib/PSYCHE
+   rm -f $vnmrsystem/seqlib/PSYCHE_ES
+   rm -f $vnmrsystem/seqlib/PSYCHE_zTOCSY
+   rm -f $vnmrsystem/seqlib/gHSQCAD_PS
+   rm -f $vnmrsystem/seqlib/Ddeptse
+   rm -f $vnmrsystem/seqlib/Dproject_cc
+   rm -f $vnmrsystem/seqlib/HETERO2DJ
+   rm -rf $vnmrsystem/templates/layout/CRAPT
+   rm -rf $vnmrsystem/templates/layout/PSYCHE
+   rm -rf $vnmrsystem/templates/layout/PSYCHE_ES
+   rm -rf $vnmrsystem/templates/layout/PSYCHE_zTOCSY
+   rm -rf $vnmrsystem/templates/layout/gHSQCAD_PS
+   rm -rf $vnmrsystem/templates/layout/Ddeptse
+   rm -rf $vnmrsystem/templates/layout/Dproject_cc
+   rm -rf $vnmrsystem/solidspack
+   rm -f $vnmrsystem/user_templates/global
+   mv $vnmrsystem/user_templates/global.merc $vnmrsystem/user_templates/global
+   reboot="no"
+fi
+if [ -f $vnmrsystem/psg/rfchan_device.c ]
+then
+   if [ -d $vnmrsystem/ipsg ]
+   then
+      files=`ls $vnmrsystem/ipsg`
+      for file in $files
+      do
+         mv $vnmrsystem/psg/$file $tmp_save/psg/.
+         mv $vnmrsystem/ipsg/$file $vnmrsystem/psg/.
+      done
+      rm -rf $vnmrsystem/ipsg
+   fi
+   if [ -d $vnmrsystem/dosypsg ]
+   then
+      cp -f $vnmrsystem/dosypsg/psglib/* $vnmrsystem/psglib
+      cp -f $vnmrsystem/dosypsg/seqlib/* $vnmrsystem/seqlib
+      rm -rf $vnmrsystem/dosypsg
+   fi
+   if [ -d $vnmrsystem/iseqlib ]
+   then
+      files=`ls $vnmrsystem/iseqlib`
+      for file in $files
+      do
+         rm -f  $vnmrsystem/psg/$file
+         mv $vnmrsystem/iseqlib/$file $vnmrsystem/psg/.
+      done
+      rm -rf $vnmrsystem/iseqlib
+   fi
+   if [ -d $vnmrsystem/ilib ]
+   then
+      if [ ! -d $tmp_save/lib ]
+      then
+         mkdir -p $tmp_save/lib
+      fi
+      files=`ls $vnmrsystem/ilib`
+      for file in $files
+      do
+         mv $vnmrsystem/lib/$file $tmp_save/lib/.
+         mv $vnmrsystem/ilib/$file $vnmrsystem/lib/.
+      done
+      rm -rf $vnmrsystem/ilib
+   fi
+   rm -rf $vnmrsystem/kpsg
+   rm -f $vnmrsystem/templates/layout/hsqcadtoxy.zip
+   rm -f $vnmrsystem/user_templates/global.merc
+   reboot="no"
+fi
+
+if [ -f $vnmrsystem/templates/layout/hsqcadtoxy.zip ]
+then
+  (cd $vnmrsystem/templates/layout; rm -f HSQCADTOXY/acq.xml; unzip -q hsqcadtoxy.zip; rm -f hsqcadtoxy.zip)
+fi
+
+(cd $vnmrsystem; zip -q layout.zip templates/layout/*/Quickbasic*.xml templates/layout/*/bbox*.xml >& /dev/null)
+if [ -f $vnmrsystem/layout.zip ]
+then
+  mv  $vnmrsystem/layout.zip $tmp_save
+  (cd $tmp_save; unzip -q layout.zip; rm -r layout.zip)
+  rm -f $vnmrsystem/templates/layout/*/Quickbasic*.xml
+  rm -f $vnmrsystem/templates/layout/*/bbox*.xml
+fi
+
+if [ -f $vnmrsystem/templates/layout/gHMBCRELAY/Proc2Ddefault.xml ]
+then
+  if [ ! -d $tmp_save/templates/layout/gHMBCRELAY ]
+  then
+    mkdir -p $tmp_save/templates/layout/gHMBCRELAY
+  fi
+  mv $vnmrsystem/templates/layout/gHMBCRELAY/Proc2Ddefault.xml $tmp_save/templates/layout/gHMBCRELAY/.
+fi
+
+if [ -f $vnmrsystem/imaging/maclib/becc ]
+then
+   if [ ! -d $tmp_save/imaging/maclib ]
+   then
+      mkdir -p $tmp_save/imaging/maclib
+   fi
+   mv -f $vnmrsystem/imaging/maclib/becc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/cecc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/ceccdif $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/ecctool $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/fecc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/showecc $tmp_save/imaging/maclib/.
+fi
+if [ -f $vnmrsystem/conpar.new ]
+then
+  cp $vnmrsystem/conpar $tmp_save/.
+  printf "rm -f $vnmrsystem/conpar.new $vnmrsystem/conpar.400mr.new\n" >> $tmp_save/p_uninstall
+  Vnmrbg -mback -n1 "config('auto')"
+fi
+if [ -f $vnmrsystem/veripulse/maclib/C13SN_process ]
+then
+  rm -f $vnmrsystem/veripulse/maclib/C13SN_process
+  (cd $vnmrsystem/veripulse/maclib; ln -s C13sens_process C13SN_process)
+fi
+if [ -f $vnmrsystem/veripulse/proshimmethods/shimdss ]
+then
+  if [ ! -d $tmp_save/veripulse/proshimmethods ]
+  then
+     mkdir -p $tmp_save/veripulse/proshimmethods
+  fi
+  mv $vnmrsystem/veripulse/proshimmethods/shimdss $tmp_save/veripulse/proshimmethods/.
+fi
+
+if [ -d $vnmrsystem/veripulse/templates/layout ]
+then
+  if [ ! -d $tmp_save/veripulse/templates ]
+  then
+     mkdir -p $tmp_save/veripulse/templates
+  fi
+  mv $vnmrsystem/veripulse/templates/layout $tmp_save/veripulse/templates/.
+fi
+
+if [ -f $vnmrsystem/gxyzshim/maclib/gxyzsetshimtype ]
+then
+  if [ ! -d $tmp_save/gxyzshim/maclib ]
+  then
+     mkdir -p $tmp_save/gxyzshim/maclib
+  fi
+  mv $vnmrsystem/gxyzshim/maclib/gxyzsetshimtype $tmp_save/gxyzshim/maclib/gxyzsetshimtype
+  if [ ! -d $tmp_save/gxyzshim/templates/layout/gmapxyz ]
+  then
+     mkdir -p $tmp_save/gxyzshim/templates/layout/gmapxyz
+  fi
+  mv $vnmrsystem/gxyzshim/templates/layout/gmapxyz/shim3d.xml $tmp_save/gxyzshim/templates/layout/gmapxyz/shim3d.xml
+fi
+
+if [ -f $vnmrsystem/gxyzshim/shimtab.zip ]
+then
+  mv $vnmrsystem/gxyzshim/shimtab $tmp_save/gxyzshim/.
+  (cd $vnmrsystem/gxyzshim; unzip -q shimtab.zip; rm -f shimtab.zip)
+  printf "rm -rf $vnmrsystem/gxyzshim/shimtab\n" >> $tmp_save/p_uninstall
+fi
+
+if [ -f $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml ]
+then
+  mv $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape_fast.xml
+ printf "mv $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape_fast.xml $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml\n" >> $tmp_save/p_uninstall
+fi
+if [ -f $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml ]
+then
+  mv $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape.xml
+ printf "mv $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape.xml $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml\n" >> $tmp_save/p_uninstall
+fi
+
+if [ ! -d $tmp_save/maclib ]
+then
+   mkdir -p $tmp_save/maclib
+fi
+if [ -f $vnmrsystem/maclib/walkup ]
+then
+   mv $vnmrsystem/maclib/walkup $tmp_save/maclib/. >& /dev/null
+   mv $vnmrsystem/maclib/gettext $tmp_save/maclib/. >& /dev/null
+fi
+if [ -f $vnmrsystem/maclib/mqf1ref3qsp ]
+then
+   mv $vnmrsystem/maclib/mqf1ref3qsp $tmp_save/maclib/. >& /dev/null
+   mv $vnmrsystem/maclib/mqf1ref5qsp $tmp_save/maclib/. >& /dev/null
+fi
+
+if [ -f $vnmrsystem/manual/acqmeter ]
+then
+   if [ ! -d $tmp_save/manual ]
+   then
+      mkdir -p $tmp_save/manual
+   fi
+   mv $vnmrsystem/manual/acqmeter $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/acqstat $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/convert $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/cpos_cvt $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/decomp $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Tapedata $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape.half $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape.quarter $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Tapetext $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Totape $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/To_VXR4000 $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/walkup $tmp_save/manual/. >& /dev/null
+fi
+
+if [ ! -f $vnmrsystem/manual/readf1 ]
+then
+  (cd $vnmrsystem/manual; ln -s writef1 readf1)
+  printf "rm -f $vnmrsystem/manual/readf1\n" >> $tmp_save/p_uninstall
+fi
+if [ ! -f $vnmrsystem/manual/systemtime ]
+then
+  (cd $vnmrsystem/manual; ln -s unixtime systemtime)
+  printf "rm -f $vnmrsystem/manual/systemtime\n" >> $tmp_save/p_uninstall
+fi
+
+if [ -f $vnmrsystem/acq/download/lpfgexec.o ]
+then
+  mv $vnmrsystem/acq/download/lpfgexec.o $tmp_save/acq/download/.
+  mv $vnmrsystem/acq/download/lpfgexec.md5 $tmp_save/acq/download/.
+  mv $vnmrsystem/acq/download/lpfgexec.o.pp $vnmrsystem/acq/download/lpfgexec.o
+  mv $vnmrsystem/acq/download/lpfgexec.md5.pp $vnmrsystem/acq/download/lpfgexec.md5
+else
+  rm -f $vnmrsystem/acq/download/lpfgexec.o*
+fi
+
+if [ ! -d $vnmrsystem/craft/bin ]
+then
+  rm -rf $vnmrsystem/craft
+else
+  rm -f $vnmrsystem/craft/Bayes3/bin/Bayes*
+  rm -f $vnmrsystem/craft/Bayes3/bin/bayes_summary3
+  rm -f $vnmrsystem/craft/Bayes3/bin/Craft*
+  rm -f $vnmrsystem/craft/Bayes3/bin/Dens*
+  rm -f $vnmrsystem/craft/Bayes3/bin/spees
+  rm -f $vnmrsystem/craft/Bayes3/lib/[A-J]*
+  rm -f $vnmrsystem/craft/Bayes3/lib/Lo*
+  rm -f $vnmrsystem/craft/Bayes3/lib/[M-Z]*
+  rm -f $vnmrsystem/craft/Bayes3/lib/listing*
+fi
+
+if [ -f $vnmrsystem/biopack/maclib/NUSprocIST ]
+then
+  if [ ! -d $tmp_save/biopack/maclib ]
+  then
+    mkdir -p $tmp_save/biopack/maclib
+  fi
+  mv $vnmrsystem/biopack/maclib/NUSprocIST $tmp_save/biopack/maclib/.
+fi
+
+if [ ! -d $vnmrsystem/lc ]
+then
+  rm -rf $vnmrsystem/lc2
+else
+  if [ ! -d $tmp_save/lc/templates ]
+  then
+    mkdir -p $tmp_save/lc/templates/vnmrj/interface
+    mkdir -p $tmp_save/lc/templates/layout/default
+  fi
+  mv $vnmrsystem/lc/templates/vnmrj/interface/TopPanel.xml $tmp_save/lc/templates/vnmrj/interface/. >& /dev/null
+  mv $vnmrsystem/lc/templates/layout/default/LcMs_action.xml $tmp_save/lc/templates/layout/default/. >& /dev/null
+  mv $vnmrsystem/lc/templates/layout/default/Lock.xml $tmp_save/lc/templates/layout/default/. >& /dev/null
+  mv $vnmrsystem/lc/templates/layout/default/sample_action.xml $tmp_save/lc/templates/layout/default/. >& /dev/null
+  mv $vnmrsystem/lc2/LcMs_action.xml $vnmrsystem/lc/templates/layout/default/. >& /dev/null
+  mv $vnmrsystem/lc2/TopPanel.xml $vnmrsystem/lc/templates/vnmrj/interface/. >& /dev/null
+  rm -rf $vnmrsystem/lc2
+fi
+
+# The patchinstall script may run fixpsg and display messages about
+# rebooting the console or restarting the acquisition communication
+# programs (the "procs"). Setting the following three variables to
+# yes will select those actions. This is typically done automatically
+# by the patchinstall script. You can also set them to "no" to turn of
+# the actions.
+
+# fix_psg="yes"
+# reboot="yes"
+# su_acqproc="yes"
+
+# fix_psg="no"
+# reboot="no"
+# su_acqproc="no"
+
+
+# If an action cannot be undone by reloading the contents of the
+# saved patch directory back onto $vnmrsystem (/vnmr), then an
+# appropriate action should be saved in the p_uninstall script to undo
+# the action. For example, lets say the permissions on bin fileX
+# are 644 and they should be 664. The following will accomplish that.
+# Another example is renaming bin fileA to fileB.
+
+# chmod 664 $vnmrsystem/bin/fileX
+# printf "chmod 644 $vnmrsystem/bin/fileX\n" >> $tmp_save/p_uninstall
+
+# mv $vnmrsystem/bin/fileA $vnmrsystem/bin/fileB
+# printf "mv $vnmrsystem/bin/fileB $vnmrsystem/bin/fileA\n" >> $tmp_save/p_uninstall
+

@@ -1,0 +1,25 @@
+" writespec "
+" writes asci file with spectrum data point positions "
+" for zoomed in screen data points only "
+
+cd(userdir+'/data'):$dir	" default directory if argument filename is not full address "
+$file=curexp+'/tmp'
+if $#=1 then $file=$1 endif
+
+$sp=sp $wp=wp  		" memorizes screen settings "
+f $dd=sw-wp
+wp=$wp sp=$sp
+$res=sw/(fn/2)
+if $dd<$res/2 then
+  $res=sw/(fn/2-1)
+endif
+  mark('reset')
+//  write('line3','Creating file ..%s',$file)
+  write('reset',$file)
+  $delta=$res $f=sp+wp
+  repeat
+    mark($f):$ht
+    write('file',$file,'%f %f',$f,$ht)
+    $f=$f-$delta
+  until $f<sp
+//  write('error','Done!')

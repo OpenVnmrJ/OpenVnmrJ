@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ !
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="probe" element="pages" type="acquisition" >
+  <group size="460 460" style="Heading1"
+    label="Probe"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    reference="probe"
+    useref="no"
+    >
+<!-- probefile selection group when probeID is not enforced -->
+    <group loc="10 10" size="440 150"
+      style="Heading1"
+      label="Current probe"
+      vq="probeidattr"
+      show="$SHOW=((probeidattr[1]&lt;&gt;'y' and probeidattr[1]&lt;&gt;'native'))"
+      border="etched"
+      reference="ProbePopup_Select_legacy"
+      side="Top"
+      justify="Left"
+      tab="no"
+      subtype="Major"
+      useref="no"
+      expanded="yes"
+      >
+      <filemenu loc="30 30" size="400 25"
+        style="PlainText"
+	fg=""
+        vq="ProbeAttrRef probe"
+        vc="ProbePopup('setProbe','$VALUE'):probe"
+        set="$VALUE=probe"
+        file="$VALUE=userdir+'/persistence/ProbePopup/probeid_list'"
+        type="file"
+        bg=""
+        vq2="ProbeAttrRef"
+        />
+      <button loc="30 60" size="195 20"
+        style="Heading2"
+        label="Edit/Show Probefile"
+        vc = "ProbePopup('editshowCurrentProbe')"
+        vq="ProbeAttrRef probe"
+        enabled="yes"
+        />
+<!--
+      <button loc="235 60" size="195 20"
+        style="Heading2"
+        label="Setup Calibration"
+        vc = "ProbePopup('calibrate')"
+        vq="ProbeAttrRef probe"
+        show="$ok=0 ProbePopup('ok2calibrate'):$ok $ENABLE=($ok)*2-1"
+        enabled="yes"
+        />
+-->
+      <group loc="30 115" size="410 20"
+        subtype="Convenience"
+        >
+        <textmessage loc="0 0" size="260 20"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          set="$VALUE='Default Shims: '+ProbeAttr[5]"
+          />
+        <button loc="260 0" size="140 20"
+          style="Heading2"
+          label="Load Shims"
+          vq="ProbeAttrRef"
+          vc="ProbePopup('loadShims')"
+          show="$ENABLE=(ProbeAttr[5]&lt;&gt;'')*2-1"
+          enabled="yes"
+          />
+      </group>
+      <button loc="30 85" size="195 20"
+        style="Heading2"
+        vq="system"
+        label="Tune Sweep"
+        vc="mtune"
+        show="$ENABLE=(system='spectrometer')*2-1"
+        enabled="yes"
+        />
+      <label loc="225 85" size="100 20"
+        style="Label1"
+        fg=""
+        label="Tune Gain"
+        justify="Right"
+        />
+      <entry loc="330 85" size="100 20"
+        style="PlainText"
+        fg=""
+        vq="tugain system"
+        vc="tugain=$VALUE"
+        set="$VALUE=tugain"
+        show="$ENABLE=(system='spectrometer')*2-1"
+      />
+    </group>
+<!-- probefile selection group when probeID is enforced -->
+    <group loc="10 10" size="440 150"
+      style="Heading1"
+      label="Current probe"
+      vq="probeidattr"
+      show="$SHOW=((probeidattr[1]='y' or probeidattr[1]='native'))"
+      border="etched"
+      reference="ProbePopup_Select_ID"
+      side="Top"
+      justify="Left"
+      tab="no"
+      subtype="Major"
+      useref="no"
+      expanded="yes"
+      >
+      <textmessage loc="30 20" size="330 20"
+        style="PlainText"
+        fg=""
+        vq="probeid"
+        set="$VALUE='' $v='' substr(probeid,1):$v if $v='' then $VALUE='Error: Probe is NOT connected' endif"
+        />
+      <textmessage loc="30 20" size="330 20"
+        style="PlainText"
+        vq="probeid"
+        set="$VALUE='' $v='' substr(probeid,1):$v if $v&lt;&gt;'' then $VALUE='Probe ID:  '+probeid endif"
+        />
+      <filemenu loc="30 45" size="400 25"
+        style="PlainText"
+	fg=""
+        vq="ProbeAttrRef probe"
+        vc="ProbePopup('setProbe','$VALUE'):probe"
+        set="$VALUE=probe"
+        file="$VALUE=userdir+'/persistence/ProbePopup/probeid_list'"
+        type="file"
+        bg=""
+        vq2="ProbeAttrRef"
+        />
+      <button loc="30 75" size="195 20"
+        style="Heading2"
+        label="Edit/Show Probefile"
+        vc = "ProbePopup('editshowCurrentProbe')"
+        vq="ProbeAttrRef probe"
+        enabled="yes"
+        />
+<!--
+      <button loc="235 75" size="195 20"
+        style="Heading2"
+        label="Setup Calibration"
+        vc = "ProbePopup('calibrate')"
+        vq="ProbeAttrRef probe"
+        show="$ok=0 ProbePopup('ok2calibrate'):$ok $ENABLE=($ok)*2-1"
+        enabled="yes"
+        />
+-->
+      <button loc="30 100" size="195 20"
+        style="Heading2"
+        vq="system"
+        label="Tune Sweep"
+        vc="mtune"
+        show="$ENABLE=(system='spectrometer')*2-1"
+        enabled="yes"
+        />
+      <label loc="225 100" size="100 20"
+        style="Label1"
+        fg=""
+        label="Tune Gain"
+        justify="Right"
+        />
+      <entry loc="330 100" size="100 20"
+        style="PlainText"
+        fg=""
+        vq="tugain system"
+        vc="tugain=$VALUE"
+        set="$VALUE=tugain"
+        show="$ENABLE=(system='spectrometer')*2-1"
+      />
+      <group loc="30 125" size="410 20"
+        subtype="Convenience"
+        >
+        <textmessage loc="0 0" size="260 20"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          set="$VALUE='Default Shims: '+ProbeAttr[5]"
+          />
+        <button loc="260 0" size="140 20"
+          style="Heading2"
+          label="Load Shims"
+          vq="ProbeAttrRef"
+          vc="ProbePopup('loadShims')"
+          show="$ENABLE=(ProbeAttr[5]&lt;&gt;'')*2-1"
+          enabled="yes"
+          />
+      </group>
+    </group>
+<!-- probefile Management group.  Independent of probeID enforcement -->
+    <group loc="10 160" size="440 275"
+      style="Heading1"
+      label="Manage probe files"
+      border="etched"
+      reference="ProbePopup_Manage"
+      side="Top"
+      justify="Left"
+      tab="no"
+      subtype="Major"
+      useref="no"
+      expanded="yes"
+      >
+        <label loc="10 25" size="185 25"
+          style="Heading1"
+          label="Edit/Show/Delete:"
+          />
+        <filemenu loc="30 55" size="400 25"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          vc="ProbeAttr[1]='$VALUE' vnmrjcmd('pnew','ProbeAttrRef')"
+          set="$VALUE=ProbeAttr[1]"
+          file="$VALUE=userdir+'/persistence/ProbePopup/allprobe_list'"
+          type="file"
+          bg=""
+          vq2="ProbeAttrRef"
+          />
+        <button loc="30 85" size="120 25"
+          style="Heading2"
+          label="Edit"
+          vq="ProbeAttrRef"
+          show="$ok=0 ProbePopup('ok2edit',ProbeAttr[1]):$ok $ENABLE=($ok)*2-1"
+          vc="ProbePopup('editProbe')"
+          enabled="yes"
+          />
+        <button loc="170 85" size="120 25"
+          style="Heading2"
+          label="Show"
+          vq="ProbeAttrRef"
+          show="$ok=0 ProbePopup('ok2show',ProbeAttr[1]):$ok $ENABLE=($ok)*2-1"
+          vc="ProbePopup('showProbe')"
+          enabled="yes"
+          />
+        <button loc="310 85" size="120 25"
+          style="Heading2"
+          label="Delete"
+          vq="ProbeAttrRef"
+          vc="ProbePopup('deleteProbe',ProbeAttr[1])"
+          show="$ok=0 ProbePopup('ok2delete',ProbeAttr[1]):$ok $ENABLE=($ok)*2-1"
+          enabled="yes"
+          />
+        <label loc="10 120" size="100 25"
+          style="Label1"
+          label="Create/Copy:"
+          />
+        <textmessage loc="120 120" size="300 25"
+          style="PlainText"
+          fg=""
+          vq="ProbeAttrRef"
+          set="$VALUE=ProbeAttr[3]"
+          />
+        <label loc="30 145" size="110 20"
+          style="Label1"
+          label="Probe name:"
+          />
+        <entry loc="150 145" size="280 20"
+          style="PlainText"
+          fg=""
+          vq="ProbeAttrRef"
+          vc="$v='' ProbePopup('evalNewName','$VALUE'):$v ProbeAttr[2]=$v"
+          set="$VALUE=ProbeAttr[2]"
+          disable="Grayed out"
+          />
+        <label loc="30 170" size="110 20"
+          style="Label1"
+          label="Probe ID:"
+          />
+        <group loc="150 170" size="280 20"
+          vq="ProbeAttrRef"
+          show="exists(userdir+'/persistence/ProbePopup/probeIDs','file'):$s $SHOW=$s"
+          subtype="Convenience"
+          >
+          <filemenu loc="0 0" size="280 20"
+            style="PlainText"
+            vq="ProbeAttrRef"
+            vc="ProbeAttr[8]='$VALUE' vnmrjcmd('pnew','ProbeAttrRef')"
+            set="$VALUE=ProbeAttr[8]"
+            file="$VALUE=userdir+'/persistence/ProbePopup/probeIDs'"
+            type="file"
+            bg=""
+            vq2="ProbeAttrRef"
+          />
+        </group>
+        <textmessage loc="150 170" size="280 20"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          set="$VALUE='' exists(userdir+'/persistence/ProbePopup/probeIDs','file'):$e if ($e=0) then if (ProbeAttr[8]='nOprObEId') then $VALUE='Probe without ID' else $VALUE=ProbeAttr[8] endif endif"
+          />
+        <label loc="30 195" size="110 20"
+          style="Label1"
+          label="Probe style:"
+          />
+        <filemenu loc="150 195" size="280 20"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          vc="ProbeAttr[9]='$VALUE'"
+          set="$VALUE=ProbeAttr[9]"
+          file="$VALUE=userdir+'/persistence/ProbePopup/probeStyleList'"
+          type="file"
+          bg=""
+          vq2="ProbeAttrRef"
+          />
+<!-- All valid appdirs supported (N/A for VJ31) -->
+<!-- Enable the next 2 widgets for postVJ31 -->
+        <label loc="30 220" size="110 20"
+          style="Label1"
+          label="ApplicationsDir:"
+          />
+        <filemenu loc="150 220" size="280 20"
+          style="PlainText"
+          vq="ProbeAttrRef"
+          vc="ProbeAttr[6]='$VALUE' ProbePopup('evalNewName',ProbeAttr[2])"
+          set="$VALUE=ProbeAttr[6]"
+          file="$VALUE=userdir+'/persistence/ProbePopup/writable_appdirs'"
+          type="file"
+          bg=""
+          vq2="ProbeAttrRef"
+          />
+<!-- ONLY systemdir and userdir are supported (VJ31) -->
+<!-- Disable the next 3 widgets for postVJ31 -->
+<!--
+        <label loc="30 195" size="120 20"
+          style="Label1"
+          label="Create in / Copy to:"
+          />
+        <radio loc="160 195" size="100 20"
+          style="Label1"
+          label="Systemdir"
+          vq="systemdir userdir"
+          show="exists(systemdir+'/probes','file','w'):$ok $ENABLE=$ok*2-1"
+          vc="exists(systemdir+'/probes','file','w'):$ok if ($ok) then ProbeAttr[6]=systemdir else ProbeAttr[6]=useridr endif"
+          vc2="ProbeAttr[6]=userdir"
+          set="$VALUE=(ProbeAttr[6]=systemdir)"
+          />
+        <radio loc="310 195" size="100 20"
+          style="Label1"
+          label="Userdir"
+          vq="userdir systemdir"
+          vc2="exists(systemdir+'/probes','file','w'):$ok if ($ok) then ProbeAttr[6]=systemdir else ProbeAttr[6]=useridr endif"
+          vc="ProbeAttr[6]=userdir"
+          set="$VALUE=(ProbeAttr[6]=userdir)"
+          />
+-->
+        <button loc="150 245" size="130 20"
+          style="Heading2"
+          label="Create"
+          vq="ProbeAttrRef"
+          vc="ProbePopup('makeProbe',ProbeAttr[2])"
+          show="ProbePopup('ok2create'):$ok $ENABLE=($ok)*2-1"
+          enabled="yes"
+          />
+        <button loc="300 245" size="130 20"
+          style="Heading2"
+          label="Copy"
+          vq="ProbeAttrRef"
+          vc="ProbePopup('copyProbe',ProbeAttr[2])"
+          show="ProbePopup('ok2copy'):$ok $ENABLE=($ok)*2-1"
+          enabled="yes"
+          />
+    </group>
+  </group>
+</template>

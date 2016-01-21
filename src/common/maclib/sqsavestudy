@@ -1,0 +1,56 @@
+"macro sqsavestudy"
+"save imaging study parameters"
+xm1('studydir'):$sdir
+if (activestudy='null') or ($sdir='') or (jcurwin[jviewport]=0) then
+  return
+endif
+"$msg='n' if $#>0.5 then $msg=$1 endif"
+exists('studyid_','parameter'):$e
+if $e<0.5 then create('studyid_','string') endif
+setvalue('studyid_',studyid)
+exists('operator_','parameter'):$e
+if $e<0.5 then create('operator_','string') endif
+setvalue('operator_',operator)
+
+exists('studypar','parameter','global'):$e
+if $e<0.5 then
+  create('studypar','string','global')
+  setprotect('studypar','on',256,'global')
+  studypar='name','ident','weight','height','birthday','age','gender','position1','position2','protocols','studyid_','operator_','investigator','rfcoil','gcoil','scans','samplename','prescan','anatomy'
+endif
+
+$psize=size('studypar')
+$parlist=studypar[1]
+$j=1
+while ($j < $psize) do
+  $j=$j+1
+  substr($parlist,'find',studypar[$j]):$pos
+  if $pos<0.5 then
+    $parlist=$parlist+' '+studypar[$j]
+  endif
+endwhile
+
+exists('reqparcheck','parameter','global'):$e
+if ($e) then
+  if reqparcheck='y' then
+    exists('reqparlist','parameter','global'):$e
+    if ($e) then
+      $psize=size('reqparlist')
+      $j=1
+      while ($j < $psize) do
+        $j=$j+1
+        substr($parlist,'find',reqparlist[$j]):$pos
+        if $pos<0.5 then
+          $parlist=$parlist+' '+reqparlist[$j]
+        endif
+      endwhile
+    endif
+  endif
+endif
+
+exists('rev_','parameter'):$e
+if $e>0.5 then $parlist = $parlist+' rev_' endif
+writeparam($sdir+'/studypar',$parlist)
+xm1('write','"'+$sdir+'/study.xml"')  // xmwritesq
+"if $msg='msg' then write('line3','Saving study %s.',$sdir) endif"
+vnmrjcmd('LOC add study "'+$sdir+'"')

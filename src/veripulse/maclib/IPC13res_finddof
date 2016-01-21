@@ -1,0 +1,28 @@
+"macro IPC13res_finddof"
+
+execprocess='return'
+setvalue('execprocess',execprocess,'processed')
+
+fn=4*np
+ft
+f full
+$i=1
+$minlw=1e6
+$bestindex=0
+repeat
+   $lw50=0
+   select($i)
+   aph0
+   peak(sp,sp+wp):$ht,$frq
+   cr=$frq
+   dres(cr,0.5):$lw50
+   write('line3','spectrum # %d: half-height %.2f Hz',$i,$lw50)
+   if ($lw50<$minlw) then $minlw=$lw50 $bestindex=$i endif
+   $i=$i+1
+
+//until ($i>arraydim)
+until ($i>celem)
+
+write('line3','Best dof is %.1f Hz',dof[$bestindex])
+write('line3','dmm=\'c\' dof=%s',dof[$bestindex]):$str
+walkupQ_runtime('customize','','all',$str)

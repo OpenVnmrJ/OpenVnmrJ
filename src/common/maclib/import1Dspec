@@ -1,0 +1,77 @@
+"macro import1Dspec"
+" import1Dspec - Import 1D ASCII Spectrum into VnmrJ / VNMR "
+
+" 2007-03-15 - r.kyburz, adjusted for VnmrJ 2.2C "
+
+
+$import1Dspec='' $isok=0
+getbinpath('import1Dspec'):$isok,$import1Dspec
+if ($isok=0) then
+  write('error','%s: UNIX executable \'import1Dspec\' not found, aborting.', $0)
+  return
+endif
+
+if $#=0 then
+  write('error','Usage:  %s(\'ascii_file\'<,\'av\'>)', $0)
+  return
+endif
+
+exists($1,'file'):$e
+if not($e) then
+  write('error','%s:  file %s not found', $0, $1)
+  return
+endif
+
+if (arraydim > 1) then
+  setup('H1','CDCl3')
+  shell('rm -f',curexp+'/acqfil/*'):$dum
+  groupcopy('current','processed','acquisition')
+  groupcopy('current','processed','processing')
+else
+  setprotect('lp','off',4)
+  setprotect('rp','off',4)
+  setprotect('dmg','off',4)
+endif
+
+$av=0
+if $#>1 then
+  if $2='av' then
+    $av=1
+  endif
+endif
+
+" switch spectrum to av mode, prevent changes to 'dmg' "
+" as the spectrum has no imaginary part and is unphaseable (setting   "
+" 'lp<>0' would even cause intensity distortions across the spectrum  "
+vs=100
+
+" prevent problems from setting lp<>0 or rp<>0: the spectrum has "
+" no imaginary part and is unphaseable; setting 'lp<>0' would    "
+" cause serious intensity distortions across the spectrum.       "
+if $av then
+  " av mode disables 'lp' / 'rp', but also makes nagative parts "
+  " positive - the spectrum may look unusual; however, as there "
+  " is no imaginary part, there is at least not the usual       "
+  " problem with line broadening in absolute value spectra.     "
+  av setprotect('dmg','on',4)
+else
+  " phased mode - preserves negative signals; we lock lp and rp "
+  " top 0 - this may cause error messages when trying to alter  "
+  " the phase within the interactive 'ds' display.              "
+  ph
+  lp=0 setprotect('lp','on',4)
+  rp=0 setprotect('rp','on',4)
+endif
+flush
+shell($import1Dspec+' -vs 100',$1,
+	curexp+'/datdir/phasefile',curexp+'/datdir/data 2>&1')
+
+" read fn from file size "
+$fn = 0
+shell('wc -c <',curexp+'/datdir/phasefile; cat'):$fn
+$fn = $fn - (32 + 28)
+$fn = $fn/2
+setvalue('fn',$fn)
+setvalue('np',$fn)
+groupcopy('current','processed','acquisition')
+groupcopy('current','processed','processing')

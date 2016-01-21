@@ -1,0 +1,59 @@
+"macro P31pwx90_process"
+//Reprocess 31P pwx90 data in VeriPulse
+
+$pwxlvl=0 $pwx90=0
+wft
+
+$phase='dophase'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+select(1)
+if $phase='dophase' then aph endif
+
+//calculate pwx90
+phase(180)
+thadj(1)
+fp
+pw360cal:$pwx90
+phase(-180)
+
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest($pwx90) endif
+
+VPgettarget('P31pwx90'):$target
+$IPteststatus='FAIL'
+if ($pwx90<=$target) then $IPteststatus='PASS' endif
+
+//Add sample info to text file
+VPtext
+write('line3','31P 90-degree pulse width \(indirect\)'):$line
+atext($line)
+CalibrationResults=$line
+write('line3','pwx90: %.2f us at power level %.1f dB',$pwx90,pwxlvl):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Target <= %.2f us',$target):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+//Add amp power information if calibration table exists
+exists('VPgetpower','maclib'):$vpex
+if ($vpex) then
+   VPgetpower('check'):$pwrtabex
+   if ($pwrtabex) then
+       VPgetpower(VPpowertabpath,'P31','indirect',pwxlvl,$pwx90,$target):$atext
+       atext($atext)
+   endif
+endif
+	    
+VPhistory($pwx90,pwxlvl)

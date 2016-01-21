@@ -1,0 +1,88 @@
+*******************************************************************************
+vastglue - assemble related 1D datasets into a 2D (or pseudo-2D) dataset.
+*******************************************************************************
+
+This macro is used to artificially reconstruct a 2D dataset from a series of 
+1D datasets having similar filename. This macro reads in each 1D file, in succession, 
+and adds it to the previous data, but in a 2D format.  The resulting reconstructed 2D 
+dataset will need to be saved in the normal manner (using svf).
+
+
+The new VAST processing and display package uses a new local parameter
+"glueorderarray" to store the order in which the fids were glued.  This parameter is
+created and initialized by the glue program and will be saved when the glued data set is
+saved. The various display programs can now use this parameter to find any given spectra
+in any given order.  Display orders and glue orders can still be created in exactly the same
+manner using plate_glue.  With this package, however, one can glue partial plates or glue
+in different orders and the display can correctly find the required spectra.  The only 
+requirement is that the glue set contain the display set, i.,e. you can not display a 
+spectra the fid for which was not glued.
+
+The problem is actually not quite as easy as it first seems.  The parameter
+"glueorderarray" contains an ordered list of the loc of each of the fids in the order in
+which they were glued.  Thus it knows that the 8th spectrum in the array corresponds to
+loc=9 (or H2) for this particular glue order.  It is a more difficult to know what spectrum
+(8) corresponds to loc=9 or H2. It's sort of like playing Jeopardy.   Thus the various
+display programs internally search glueorderarray for each desired display location and
+construct an inverseglueorderarray to know where to find the relevant spectra as they a
+re needed.
+
+The other new feature of vastglue is that it can construct its default glue order from the
+doneQ stored in the relevant automation directory.  The doneQ contains an ordered record
+of the loc, rack and zone parameters for each sample, as well as the names with which the
+data was stored.  Thus the doneQ order makes a natural basis for the default glue order, as
+now if one wishes to acquire a partial plate or acquire data in landscape mode, the default
+glue order will be appropriate without additional operator input.
+
+Another new feature of vastglue is the ability to handle an automation file composed of
+data from multiple plates, i.e multiple racks and zones. Unfortunately, this is not a trivial
+problem, as different name formats are used in automation depending on whether
+autoname is used, and how it is implemented.  Attempts to automatically construct the
+various file names in the glue macro would therefore be limited to a few of the possible
+file name formats.  Fortunately, the doneQ provides a way of getting at the filenames
+used to store data from different racks and zones regardless of the naming convention
+used.
+
+The processing and display of multiple plate data is plate centric, i.e. only data from one
+plate will be glued together for storage and display.  The operator will however be able to
+specify which plate, or rack and zone numbers are used for any given glue operation.  The
+default operation for vastgluet is rack 1, zone 1 with the data  glued in the order the data
+was acquired.
+
+Multiple plates, and/or multiple racks and zones can be handled by vastglue using two
+different formats.  Vastglue(<rack>,<zone>) extracts the relevant filenames for the
+specified rack and zone from the information in the doneQ.  The default value for both
+rack and zone is 1 if vastglue is executed without arguments.  If one wishes to specify
+rack and zone numbers, both are required.  It is expected that for most applications this
+will be the simplest and most convenient format to use.
+
+The second format vastglue(<glue order>,<plate>) allows a specific glue order to be
+defined based on the order defined in a plate_glue file.  This format also allows a numeric
+plate argument as the second argument if a glue order is specified.  This method of
+accessing data from multiple plates will only work for automations runs where autoname
+was not used.  In this case,  the default automation-name-construction algorithms produce
+0102 for the real spectrum for location  1 in the first plate, and 0104 for location 1 on the
+second plate.  The vastglue(<glue order>,<plate>) format decodes this naming
+convention to access data from the multiple plates.
+
+Currently both formats or modes or operation of vastglue look for the 2nd fid for each
+location, presumably the real (or solvent suppressed) spectrum, as opposed to the scout
+spectrum. It is anticipated that in the near future both modes of operation can be adapted
+to auto-detect  either one or two fids per location and then glue appropriately.  This will
+be necessary for use of this mode with deuterated solvents or in any run where a separate
+scout spectrum is not stored.
+
+Examples:   vastglue(<rack>,<zone>)     vastglue(<glue order>,<plate>)
+
+See manual entries on the entire family of related commands:
+dsvast
+dsvast2d
+plvast
+plvast2d
+intvast
+pintvast
+plateglue
+vastglue
+vastget
+setwell
+

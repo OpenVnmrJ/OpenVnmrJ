@@ -1,0 +1,45 @@
+"macro BP_rsw"
+"BP_rsw - reduce the sw in the direct dimension. Eriks Kupce, Oxford April 2009 "
+
+$rsw=''
+BPfindfile('rsw'):$rsw
+
+$fname=''
+$cmd = ''
+$sp=''
+$wp=''
+
+if($#<1) then
+  write('error','filename required')
+else
+  $fname = $1
+  getext($fname):$sp,$wp
+  if not ($wp = 'fid') then
+    $fname = $fname+'.fid'
+  endif
+endif
+
+BP_select_mdd_region:$s,$w
+format($s,5,0):$sp
+format($w,5,0):$wp
+
+$cmd = $rsw+' ' + curexp + ' ' + $fname + ' ' + $sp + ' ' + $wp + ' -t > BP_rsw.log'
+
+ft
+flush
+
+shell($cmd)
+
+exists('BP_rsw.log','file'):$e
+if($e) then
+  $cmd = 'mv BP_rsw.log ' + $fname + '/.'
+  shell($cmd)
+  write('line3','BP_rsw data size reduction finished. See BP_rsw.log for details. \n')
+  rt($fname)
+  wft(1)
+  dc
+  vsadj
+else
+  write('error','rsw data size reduction failed')
+endif
+

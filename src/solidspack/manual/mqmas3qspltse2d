@@ -1,0 +1,118 @@
+Protocol: Mqmas3qspltse2d  Sequence: mqmas3qspltse2d.c  Apptype: solidseq1d
+
+Description: 
+
+   Two-pulse MQMAS with a 3Q phase cycle, split t1,  a selective echo, with
+   SPINAL or TPPM decoupling. 
+
+Setup: 
+
+   Load a calibrated data set and select the protocol Mqmas3qspltse2d. For 
+   a new nucleus calibrate with Onepul and then select Mqmas3qspltse2d.  
+
+   Select the desired decoupling method, if any, TPPM or SPINAL. The manual
+   file Onepul describes calibration of decoupling. 
+
+   Step 1: With a solid quadrupolar sample determine the maximum of the
+   hard-pulse nutation curve using Onepul. The nutation curve will be 
+   quite distorted and the maximum will be one-half to one-third the 
+   calibrated pwX90 of a solution sample. Record aX90 and pwX90 for the 
+   maximum. 
+
+   Step 2: Redo the nutation measurement with an amplitude 20 to 30 times
+   smaller. It may be necessary to reset tpwr to obtain the smaller 
+   amplitude. This nutation curve will be a sinusoid. Note the 180 degree
+   pulse width. For most applications set 2*pwX90 to 40 to 60 microseconds. 
+
+   Select Mqmas3qspltse2d. Set pw1Xmqmas = pwX90 from Step 1. Set pw2Xmqmas = 
+   3.0*pwX90 from Step 1. Set aXmqmas = aX90 from Step 1. 
+
+   Set pwXechsel = 2.0*pwX90 from Step 2. Set aXechsel = aX90 from Step 2. Set
+   dbXechsel = tpwr from Step 2. 
+
+   Determine the desired acquisition time in F1 (ni-1)/sw1 that will produce
+   data that is not truncated. Divide by 2 and set tXechsel to this number. Set 
+   ival to the spin of the observe nucleus, 1.5, 2.5 etc. 
+
+   Set the F1 Spectral width on the Acquisition Page equal to srate*9/16 for ival 
+   = 1.5 and srate*12/31 for ival = 2.5.  Set ni = 64 and phase = 0. 
+
+   Be sure daslp = 0 and scalesw1 = 1, if they exist. These parameters would be
+   present if a sheared experimented had been run previously in the workspace. 
+   Mqmas3qspltse2d does not require shearing. 
+
+   With ni = 1 and nt = 24 or a multiple, fine adjust pw1Xmqmas and 
+   pw2Xmqmas with a double array. Note that the full phase cycle is 96, 
+   but 24 can give reasonable data. 
+
+   Reset ni and run the 2D experiment. When complete, process with wft2d(1,0,0,1).
+   Presently reference F1 with "rl1" using a known peak. 
+
+Parameter Groups:
+
+mqmasX:  Module:  no
+Sequence:  mqmas3qzf2d.c
+Description:  Implements two-pulse MQMAS on obs with an F1 delay d2 in
+              between the pulses.
+Parameters:  Sequence Page
+       aXmqmas - the amplitude of the obs pulses.
+       pw1Xmqmas - the first pulse of MQMAS, typically a 20 to 40-
+              degree flip angle, based on the solution-state 90-degree 
+              pulse.
+       pw2Xmqmas - the second pulse of MQMAS, typically a 90-degree
+              flip angle based on the solution-state 90-degree pulse.
+
+echselX:  Module:  no
+Sequence:  mqmas3qse2d.c
+Description:  Implements a selective, square refocusing pulse with both
+              amplitude and attenuation control to provide a selective echo
+              in MQMAS and STMAS experiments. The amplitude change requires
+              3.0 ms during the t1Xechsel delay. The attenuation is not reset.
+Parameters:  Sequence Page
+       aXechsel - amplitude of the obs selective echo pulse.
+       dbXechsel - attenuator setting for the obs selective echo pulse.
+       tXechsel - delay before the refocusing pulse requires a minimum
+              value of 3.0 us for the attenuator change.
+       pwXechsel - a selective 180-degree flip on obs.
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL or TPPM decoupling on the dec channel
+             during acquisition
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence: tancpx.c
+Description:  Implements SPINAL decouping on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);

@@ -1,0 +1,60 @@
+"macro dpfgse_module"
+"dpfgse_module - This is a setup macro for dpfgse module"
+
+$module='dpfgse'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+        "Setup double PFG spinecho parameters"
+  fixgrd(-2):gzlvlC
+  fixgrd(8):gzlvlA
+  fixgrd(12):gzlvlB
+  if (Console = 'mercury') then
+        sweeppwr=tpwr
+        sweeppw=2*pw
+        sweepshp=''
+  else
+        sweeppw=1500
+        setpower(5000,tn):sweeppwr
+        sweepshp='sech180'
+  endif
+  selfrq=tof
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

@@ -1,0 +1,72 @@
+"macro BPcheck"
+" BPcheck "
+"This is a macro that will run before every BPsvp"
+"and after every BPrtppar if BPinstall=1"
+
+if BPpwrlimits=1 then               "BPpwrlimits probe in use"
+ if (numrfch>3) then
+  if ((BPtpwrmax<40) or (BPdpwrmax<30) or (BPdpwr2max<30) or (BPdpwr3max<30)) then
+   BPpwrlimits=0                    "disable incorrect power limits"
+   banner('User-entered power limits too low. Power limits have been disabled')
+   write('line3','User-entered power limits too low. Power limits disabled')
+  endif
+ elseif (numrfch>2) then
+  if ((BPtpwrmax<40) or (BPdpwrmax<30) or (BPdpwr2max<30)) then
+   BPpwrlimits=0                    "disable incorrect power limits"
+   banner('User-entered power limits too low. Power limits have been disabled')
+   write('line3','User-entered power limits too low. Power limits disabled')
+  endif
+ else
+  if ((BPtpwrmax<40) or (BPdpwrmax<30)) then
+   BPpwrlimits=0                    "disable incorrect power limits"
+   banner('User-entered power limits too low. Power limits have been disabled')
+   write('line3','User-entered power limits too low. Power limits disabled')
+  endif
+endif
+ 
+ if (tpwr>BPtpwrmax) then            "only for case of too much power"
+    ln(10):$ln10
+    $exp=$ln10/20*(tpwr-BPtpwrmax)
+    exp($exp):$factor
+    pw90=pw90*$factor
+    tpwr=BPtpwrmax
+ endif
+ if (dpwr>BPdpwrmax) then            "only for case of too much power"
+  if ((dmm<>'ccp')or(dmm<>'cccp')or(dmm<>'cpcp'))  "only for non-waveform modulation"
+   then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr-BPdpwrmax)
+    exp($exp):$factor
+    dmf=dmf/$factor
+    dpwr=BPdpwrmax
+  endif
+ endif
+ if dpwr2>BPdpwr2max then            "only for case of too much power"
+  if ((dmm2<>'ccp')or(dmm2<>'cccp')or(dmm2<>'cpcp'))  "only for non-waveform modulation"
+   then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr2-BPdpwr2max)
+    exp($exp):$factor
+    dmf2=dmf2/$factor
+    dpwr2=BPdpwr2max
+  endif
+ endif
+ if (numrfch>3) then
+  if dpwr3>BPdpwr3max then            "only for case of too much power"
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr3-BPdpwr3max)
+    exp($exp):$factor
+    dmf3=dmf3/$factor
+    dpwr3=BPdpwr3max
+  endif
+ endif
+ if (numrfch>4) then
+  if dpwr4>BPdpwr4max then            "only for case of too much power"
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr4-BPdpwr4max)
+    exp($exp):$factor
+    dmf4=dmf4/$factor
+    dpwr4=BPdpwr4max
+  endif
+ endif
+endif

@@ -1,0 +1,418 @@
+parammodule - A multifunctional macro to manage the creation and
+              use of the region and sample modules in SolidsPack
+              automated setup macros and protocols. 
+
+SUMMARY: 
+
+     The parammodule macro contains a set of functions, set 
+     by the first argument, which are used to set the nucleus
+     and spectral limits for automated setup macros in SolidsPack. 
+     Information about the nucleus, acquisition and spectral
+     limits are supplied by the "region module", located in 
+     the modules directory of the user or applications directory. 
+     A call to parammodules will transfer information from the 
+     region module to the current tree in the workspace. A copy
+     of the region module is also stored in the "dirinfo" 
+     directory of the current study, sample directory. Subsequent 
+     calls to the region modules in a study are to the copy in 
+     the study. 
+
+     The paramodule macro also manages the "sample module", which 
+     is an alternate source of acquisition parameters for multi-
+     dimensional spectra. Use of the sample module provides the 
+     opportunity to impose common acquisition parameters on all 
+     experiments in a study.           
+ 
+ARGUMENTS 
+
+     This section describes the primary functions of parammodule, 
+     used in experimental setup macros. The other functions, 
+     described below, are called by the primary functions or used 
+     panels. 
+
+Argument 1
+
+     Argument 1 selects one of several different calls, "actions". 
+     For 1D experiments these are 'setacqlabel', 'setacqregion' 
+     and 'setacqdisplay'.  
+
+     1. 'setacqlabel' returns the nucleus and a region label.
+        The nucleus and label are used with the probeparamgroup
+        macro to load calibrations from the probe file. 
+        The first return argument is an error code for the filename,
+        the second is the nucleus and the third is the label. 
+
+     2. 'setacqregion' sets the transmitter offset (tof, dof etc)
+        and power (tpwr, dpwr, etc.) and loads the set of 
+        acquisition parameters, sw, d1, at, rd, ad, etc. Note that 
+        offset and power are usually set from the module (not the probe 
+        file and so the values may be different from those used 
+        to obtain calibrations. The functions 'setoffsetadjust' and
+        'setpoweradjust' are used to adjust calibration vlaues in 
+        the dataset to account for a difference in the offset or power.
+
+        A region module sets two channels, the first with regnuc1 and
+        the  second (usually the decoupler) with regnuc2. By default 
+        regnuc1 sets obs (tn) and regnuc2 sets dec (dn) and acqusition
+        parameters are those of regnuc1. A third argument, if it exists, 
+        sets an alternate channel (dec, dec2 etc) with regnuc1. A 
+        fourth argument, if it exists sets a channel other than dec 
+        with regnuc2. If either of the 3rd or 4th arguments 
+        are other than obs, dec, dec2 or dec3 then the default is set
+        for that argument. If the 3rd and fourth arguments are the 
+        same then only the nucleus for regnuc1 is set. 
+
+        The first argument is an error code for the filename, the 
+        second is the nucleus and the third is the label. The fourth
+        return is the channel obs, dec, etc of regnuc1 and the fifth
+        argument is the channel of regnuc2. 
+
+        The additional functions 'setd2region' and 'setd3region'
+        are used to set the acquisition of the indirect dimensions
+        The syntax is identical to 'setacqregion' except that 
+        acquisition parameters set sw1, sp1 and wp1 for d2 and sw2,
+        sp2 and wp2 for d3. The values of ni(d2) and ni2 (d3)are 
+        set explicitly from from regat1 and regsw1. 
+
+        It is often the case that each transfer pathway to each indirect 
+        dimension can be set with access to an individual region module. 
+        For example for the sequence AhYXX, 'setd3region' calls a
+        H1-N15 module (15N evolution) 'setd2region' calls a N15-C13 module 
+        (13C evolution) and 'setacqregion' calls a 1H-C13 region for 
+        observe and decouple. 
+   
+        The functions 'setacqregion2','setd2region2' and 'setd3region2'
+        are identical to 'setacqregion','setd2region' and 'setd3region'
+        except that acquisition parameters derive from regnuc2. These 
+        functions can be used to derive both observe and d2 (or d3) from 
+        the same module.  For example the 1H-13C HETCOR experiment can 
+        be set from a single H1 C13 module using 'setacqregion' (C13 
+        observe) and 'setd2region2' for H1 d2 evolution. The indirect
+        1H-13C-1H HETCOR can be set with and single H1 C13 module with 
+       'setacqregion2' (H1 observe) and 'setd2region' (C13 d2). In this
+        case both the forward and reverse CP use calibrations from 
+        the same (H1-C13), avoiding the need for a separate C13-H1
+        module. 
+
+    3. 'setacqdisplay' sets spectral limits, sp and wp, and adjusts
+       the spectral width (sw - originally set with 'setacqregion'),
+       to be just larger than the desired limits.  The 'setacqdisplay'
+       function uses argument #3 to set the mode to 'full' or 'reduced'.
+       For the mode 'full' the sw is retained or it increased to
+       accomodate sp and wp. An increase might be necessary if 
+       the the transmitter frequency is not within the display limits. 
+       For the mode 'reduced' the spectral width, sw, is set 
+       to be just greater than the diplay limits. If the transmitter 
+       offset is outside the spectral limits, the receiver offset, 
+       roff, is set to adjust the receiver to the center of the 
+       display. 
+
+       The additional functions 'setd2display' and 'setd3dsiplay'
+       are used to set the limits of the indirect dimensions. For 
+       reduced modes these functions may set lsfrq1 or lsfrq2 to 
+       a value greater than 0.0.  
+
+    4. 'setsample1d' as Argument #1 loads acquisition parameter 
+       values from a sample module. A numeric value for Argument
+       #2 finds the file name of the sample module in the global
+       parameter SPsamplename#, #=1,N. The filename can also 
+       be found on the Defaults page of the Acquisition tab and 
+       The file can be editted in a manner similar to the region 
+       module.  
+
+       The functions 'setsample2D' and 'setsample3D' are used 
+       to also set values for multidimensional experiments. 
+
+       Values from the sample module are usally set after those
+       set with 'setacqregion' or 'setacqdisplay' and overide 
+       them. The sample module is intended to be used to give 
+       multiple experiments the same set of acquisition parameters
+       for example the same aquisition time or number of scans. 
+
+       One can disable loading of a numeric value from the sample 
+       module by setting the value to -1 and one can disable a 
+       string by setting it to 'none'. 
+         
+       The first return argument "$ret" of parammodule is an integer 
+       designating errors. The return $ret > 0.5 designates correct 
+       operation. $ret = -1 designates that the module file was not 
+       found. $ret = -2 desginates that the global parameter SPregionname
+       was not found. Use $ret to add error messages to setup macros.
+
+Argument 2    
+
+       Argument 2 designates the region module.  If argument #2 is
+       numeric, N = 1,2,3 etc, it designates a global parameter 
+       SPregionname# # = 1,N that contains the filename of the 
+       region module. The sytems first looks for for the module file 
+       in the the dirinfo directory of the current study and then 
+       in the user modules directory. If a module file is found only 
+       in an appdir it is copied to the user modules directory. 
+
+       Module file names are specific to the experiment and the 
+       nucleus of interest. They are either set by a specific macro
+       that is implemented before the experiment, for example as 
+       CARBON and PROTON are used for liquids, or they can be entered
+       into fields in the Defaults page of the Acquisition tab, after
+       experiment is set. 
+
+       If Argument 2 is a string it is interpreted directly as the 
+       module file name. This syntax is used only for special cases. 
+
+       Observe the contents of a region module by entering its name 
+       in the field of the Defaults page of the Aqcusition tab. Push
+       the Edit button to view or change the values in a popup. The 
+       Ok button resaves the module.  The Cancel button simply exits
+       the popup. Edit first looks for the copy of the module in the 
+       current study and then in the modules directory. If a module 
+       is found only in an applications directory it is copied to
+       the user directory before editing. Values in a module exist
+       in the current data set of the workspace and are deleted when 
+       editing is complete. The Clear button removes the name of 
+       module and deletes the copy in the current study. 
+
+SYNTAX:
+
+       For the syntax below: 
+
+           region - is a number or string to represent the modulename.
+        directory - is 'modules' or 'study' to designate the location. 
+                    in the modules directory or /dirinfo in the current 
+                    study.
+             type - is 'region' or 'sample' to designate the type of 
+                    module.
+             $ret - is a number containing the error output (> 0.5 for 
+                    success, -1 for file not found, -2 for SPregionname#
+                    not found, # = 1,N.
+             $geq - is a number, 1, if parameter list 1 is less than parameter
+                    list 2 - else it is 0 - used in 'comparelists'.
+         $retname - is the module name . 
+         $retpath - is the full module path.
+       $paramlist - is the list of parameters in the module.
+     $SPparamname - contains a global parameter name, SPparamname#, # = 1,N.
+       $paramname - contains a current parameter name, SPparamname#, # = 1,N.
+          $retnuc - contains a calibration nucleus.
+        $nuclabel - contains a calibration label, used to label parameters 
+                    in the probe file. 
+   
+ parammodule('definelist',<,type>)<:$ret><,$paramlist>>
+
+       Return a parameter list for a module in the string $paramlist. A "region"
+       macro is the default. If "type" exists and type = 'sample', return a 
+       "sample" parameter list.  
+
+ parammodule('definemod',<type>)<:$ret><,$paramlist>>
+
+       Define a "region" module in the current parameter tree. By default 
+       return a "region" parameter list as $paramlist. If type exists and 
+       type = 'sample', define a sample module in the current parameter 
+       tree and return a "sample" parameter list.  
+
+ parammodule('paramname',<region><,type>>)<:$SPparamname><,$paramname>>
+
+       By default define the global SPregionname# and the current regionname#. 
+       A numeric value of region, 1,N, provides # in the name, 1,N. If type = 
+       'sample', define SPsamplename# and samplename#, where # is region = 1,N. 
+       If the region argument does not exist # = 1.  
+
+ parammodule('removename',<region><,type>>)
+
+       By default remove the global SPregionname# and the current regionname#, 
+       A numeric value of region, 1,N, provides # in the name, 1,N. If type = 
+       'sample', remove SPsamplename# and samplename#, where # is region = 1,N. 
+       If the region argument does not exist # = 1.  
+
+ parammodule('modulename',<region><,type>>)<:$retname>
+
+       Return the module name from SPregionname# as $retname. A numeric value
+       of region, 1,N, provides # in the name, 1,N. If type = 'sample', remove 
+       SPsamplename# and samplename#, where # is region = 1,N. If the region 
+       argument does not exist # = 1.  
+      
+ parammodule('comparelists',<list1><,list2>>)<:$geq>
+
+       Compare two strings that represent parameter lists. Find all the elements
+       of list1 in list2 and return $geq = 1 if found, else return $geq = 0.    
+
+ parammodule('existsmod',<region><,directory>><,type>>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Find a region module file with filename determined by region. If region is 
+       numeric check SPregionname, else read name directly. If directory = 'module'
+       or is not present look in the the user or appdir modules diretory. If 
+       directory = 'study' look in dirinfo of the current study. If directory = 'cp'
+       look in the autodir if auto = 'y', else the current experiment if auto = 'n'. 
+       If directory = 'file' interpret region as a string containing the full path. 
+       If type exists and type = 'sample' check for a sample module from SPsamplename
+       in the input directory. Return $ret > 0.5 if success, $ret = 0 if the module file
+       is not found, $ret = -1 if a module name is not set. Return 
+       $retname, the name, $retpath, the full path and $paramlist the list of 
+       parameters. 
+
+ parammodule('getmod',<region><,directory>><,type>>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Get the values of a module file and represent them as parameters in the 
+       current tree in the dataset, if the module exists. This function uses 
+       'existsmod' to determine the existence of the module and the return values. 
+
+ parammodule('initmod',<region><,type>>>)
+                        <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Get the values of module file in the modules directory of a user or an 
+       appdir and represent them as parameters in the current tree in the 
+       dataset, if the module exists. Uses 'existsmod' to determine the existence 
+       of the module and the return values. If the module does not exist define 
+       the current values with 'definemod' instead and write them to a file in 
+       modules directory.  
+
+ parammodule('savemod',<region><,type>>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Save the new values of a module file from the parameters in the current 
+       tree, for a module determined by region, directory and type. The module 
+       need not previously exist. Uses the syntax of 'existsmod' to determine 
+       the location of the file and the return values. 
+
+ parammodule('updatemod',<region><,directory>><,type>>>)
+                        <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Save new values to a module from the parameters in the current tree if 
+       the module exists. Uses 'existsmod' to determine the existence of the 
+       module and the return values. 
+
+ parammodule('clearmod',<region><,directory>><,type>>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Clear the current parameters of a module from the dataset if the module
+       exists. Use 'existsmod' to determine the existence of the module and the 
+       return values.
+
+ parammodule('deletemod',<region><,directory>><,type>>>)
+                        <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Delete a module file if the module exists. Use 'existsmod' to determine 
+       the existence of the module and the return values.
+
+ parammodule('editmod',<region><,directory>><,type>>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Display the values of an existing module in a popup, if it exists. Use 
+       'existsmod' to determine the existence of the module and the return values.
+       The "ok" button sets 'updatemod' and the cancel button sets 'clearmod'. 
+
+ parammodule('offsetampadjust',<channel><,offset>><,amp1>>> ...<amp10>>>>>>>>>>>>)
+                         <:$retamp1><,$retamp2>>...,$retamp10>>>>>>>>>>
+
+       Select 'obs', 'dec', etc based on channel to select the offset tof, 
+       dof etc. Determine the difference between offset and tof, dof etc
+       and adjust amplitudes amp1 up to amp10 based on the equation for 
+       specific CP. Use only for CP amplitudes, pulse amplitudes are not 
+       compensated.
+
+ parammodule('powerampadjust',<channel><,power>><,amp1>>> ...<amp10>>>>>>>>>>>>)
+                         <:$retpwr><,$retamp1>>...,$retamp10>>>>>>>>>>>
+
+       Select 'obs', 'dec', etc based on channel to select the power tpwr, 
+       dpwr etc. Determine the difference between power and tpwr, dpwr etc
+       and adjust amplitudes amp1 up to amp10 based upon the definition of 
+       the power in decibles and the amplitude in voltage. Use to adjust 
+       all amplitudes if tpwr, dpwr, etc set by the region are different from 
+       those used to obtain calibrations. 
+
+ parammodule('totalamp',<power><,amplitude>>)<:$retamp>
+
+       Return an amplitude of 100000.0 for power = 63 and amplitude = 4095. Use 
+       this macro to check the results of an amplitude change using poweradjust. 
+
+ parammodule('editregionmod',<region><,type>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Display the values of the module defined for a study in a popup. Use 
+       the syntax of 'existsmod' to determine the name of the region. First 
+       look in the dirinfo directory of the current study and second in the 
+       modules directory of the user or the appdir. If a file is found only 
+       in an appdir, copy it to the user modules directory and the study 
+       directory, if in the user modules directory copy it to the study
+       dirinfo directory. The ok button resaves the module with changes in the 
+       dirinfo directory of the study. The cancel button clears the parameters
+       of the module from the dataset. If type = 'sample' then edit a sample 
+       module.  
+
+ parammodule('setacqlabel',<region>)
+                         <:$ret><,$retnuc>>><,$retlabel,>>>
+
+       Return the nucleus and label for parameters for the region associated 
+       with a study. The syntax for selecting the module is the same as that of 
+       'editregionmod'. Also 'setacqlabel2'.
+
+ parammodule('setacqregion',<region>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Set the region, including offset, power and acquisition parameters for a 
+       study. The syntax for selecting the module is the same as that of 
+      'editregionmod'.  Also 'setacqregion2'.
+
+ parammodule('setacqdisplay',<region><,swtype>>)
+                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+       Reset the spectral width based on sp and wp of a region. Accoomodate 
+       and offset outside of sp and sp + wp by changing roff and sw. If swtype
+       is 'full', expand the spectral width to include the offset and display
+       region.  If swtype is 'reduced', compress sw around sp and sp + wp and set 
+       the receiver offset, roff, in the center of the display, leaving the 
+       transmitter offset unchanged. If swtype = '' obtain the mode from the 
+       parameter $regdf1. If the value is still '' or any other string set 'full'. 
+       The syntax for selecting the module is the same as that of 'editregionmod'. 
+       Also 'setacqdisplay2'.
+
+ parammodule('setsampleglobals')
+
+       Copy the sampleglobals from the current dataset to the 'cp' directory, 
+       which is autodir if auto = 'y and curexp if auto = 'n'. 
+
+ parammodule('updatesampleglobals')
+
+       Return the sampleglobals to the current dataset from the 'cp' directory, 
+       which is autodir if auto = 'y and curexp if auto = 'n'. 
+
+ parammodule('setsample1D',<region>)
+
+       Obtain 1D aqcusition parameters from the 'sample' directory of a study. 
+       The syntax for selecting the module is the same as that of 'editregionmod'.    
+
+ parammodule('studydir')
+
+       Define a study directory if it does not already exist, using the value of 
+       'sample'. This macro allows one to setup a study with the procedure used 
+       in procpolotsave found in chempackQ, at the beginning of a setup macro. This 
+       macro ensures that a study is alays defined. 
+
+ parammodule('errorcheck',<$ret><,region>><,message>>><,type>>>>>)
+
+       Print error information based on the value of $ret (argument 2) for a 
+       region (argument 3).  An optional Argument 4 is a message, usually set
+       to the name of the function that is to be checked, for example, 'setacqlabel' 
+       and Argument 5 is the module type, default 'region' or sample. Errors are:
+
+       ($2 < -1.5):'ABORT: "message" - Module Path Does not Exist' 
+       ($2 < -0.5):'ABORT: "message" - A Module File Name is not Set'
+       ($2 < 0.5): 'ABORT: "message" - Module File "modulename" Not Found'
+       (else):     'MODINFO: "message" - Module "modulename" was Set'
+       ABORT conditions abort the setup macro. MODINFO conditions allow the 
+       macro to continue.
+
+ parammodule('infocheck',<$ret><,region>><,message>>><,type>>>>>)
+
+       Print error information based on the value of $ret (argument 2) for a 
+       region (argument 3).  An optional Argument 4 is a message usually set
+       to the name of the function that is to be checked, for example, 'setacqlabel' 
+       and Argument 5 is the module type, default 'region' or sample. Errors are:
+
+       ($2 < -1.5):'ABORT: "message" - Module Path Does not Exist' 
+       ($2 < -0.5):'MODINFO: "message" - A Module File Name is not Set'
+       ($2 < 0.5): 'MODINFO: "message" - Module File "modulename" Not Found'
+       (else):     'MODINFO: "message" - Module "modulename" was Set'
+       ABORT conditions abort the setup macro. MODINFO conditions allow the 
+       macro to continue.
+

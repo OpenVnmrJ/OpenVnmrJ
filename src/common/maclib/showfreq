@@ -1,0 +1,150 @@
+"macro showfreq"
+if ($# < 1) then return endif
+
+
+IF ($1 = 'selfrqc') THEN
+
+   $frqfile=curexp+'/frqinfo'
+   on('selfrqc'):$ison
+   on('selfrqppm'):$ison2
+   if ($ison) then
+    write('reset',$frqfile)
+    write('file',$frqfile,'  ppm (offset)  width')
+    write('file',$frqfile,' -----------------------------')
+    $selfrqsize=size('selfrqc')
+    $selfrqwsize=size('selfrqw')
+    if ($selfrqwsize<$selfrqsize) then
+	$i=$selfrqwsize
+	repeat
+	   selfrqw[$i+1]=selfrqw[$i]
+	   $i=$i+1
+	until $i > $selfrqsize
+    endif
+    $i=1
+    repeat
+      if (procdim<1) then
+         setppm(selfrqc[$i],tn):$selppm
+      else
+	 getppm(selfrqc[$i]):$selppm
+      endif
+      write('file',$frqfile,'%6.2f (%8.1f) %3.0f Hz',$selppm,selfrqc[$i]-tof,selfrqw[$i])
+      $i=$i+1
+    until $i > $selfrqsize
+   elseif ($ison2) then
+    write('reset',$frqfile)
+    write('file',$frqfile,'  ppm (offset)  width')
+    write('file',$frqfile,' -----------------------------')
+    $selfrqsize=size('selfrqppm')
+    $selfrqwsize=size('selfrqw')
+    if ($selfrqwsize<$selfrqsize) then
+        $i=$selfrqwsize
+        repeat
+           selfrqw[$i+1]=selfrqw[$i]
+           $i=$i+1
+        until $i > $selfrqsize
+    endif
+    $i=1
+    repeat
+      if (procdim<1) then
+         setoffset(selfrqppm[$i],tn):$selfrqc
+      else
+	 getoffset(selfrqppm[$i]*reffrq):$selfrqc
+      endif
+      write('file',$frqfile,'%6.2f (%8.1f) %3.0f Hz',selfrqppm[$i],$selfrqc-tof,selfrqw[$i])
+      $i=$i+1
+    until $i > $selfrqsize
+   endif
+
+    exists($frqfile,'file'):$ex
+    if ($ex) then
+        graphis('ds'):$dson
+        if ($dson) then ds endif
+        dtext($frqfile)
+	shell('rm -f '+$frqfile):$dum
+    endif
+
+ELSEIF ($1 = 'selfrq1c') THEN
+
+   if (refsource1='dfrq') then
+	$nuc=dn $offset=dof
+   elseif (refsource1='dfrq2') then
+	$nuc=dn2 $offset=dof2
+   elseif (refsource1='dfrq3') then
+	$nuc=dn3 $offset=dof3
+   else
+	$nuc=tn $offset=tof
+   endif
+
+   $frqfile=curexp+'/frqinfo'
+   on('selfrq1c'):$ison
+   on('selfrq1ppm'):$ison2
+   if ($ison) then
+    write('reset',$frqfile)
+    write('file',$frqfile,'  ppm (offset)  width')
+    write('file',$frqfile,' -----------------------------')
+    $selfrqsize=size('selfrq1c')
+    $i=1
+    repeat
+      if ($nuc=tn) and (procdim>0) then
+	getppm(selfrq1c[$i]):$selppm
+      else
+        setppm(selfrq1c[$i],$nuc):$selppm
+      endif
+      write('file',$frqfile,'%6.2f (%8.1f) %3.0f Hz',$selppm,selfrq1c[$i]-$offset,selfrq1w[$i])
+      $i=$i+1
+    until $i > $selfrqsize
+   elseif ($ison2) then
+    write('reset',$frqfile)
+    write('file',$frqfile,'  ppm (offset)  width')
+    write('file',$frqfile,' -----------------------------')
+    $selfrqsize=size('selfrq1ppm')
+    $i=1
+    repeat
+      if ($nuc=tn) and (procdim>0) then
+	getoffset(selfrq1ppm*reffrq):$selfrqc
+      else
+        setoffset(selfrq1ppm[$i],$nuc):$selfrqc
+      endif
+      write('file',$frqfile,'%6.2f (%8.1f) %3.0f Hz',selfrq1ppm[$i],$selfrqc-$offset,selfrq1w[$i])
+      $i=$i+1
+    until $i > $selfrqsize
+   endif
+
+    exists($frqfile,'file'):$ex
+    if ($ex) then
+        graphis('ds'):$dson
+        if ($dson) then ds('restart') 
+	else
+		graphis('dconi'):$dcon
+		if ($dcon) then dconi endif
+	endif
+        dtext($frqfile)
+        shell('rm -f '+$frqfile):$dum
+    endif
+
+ELSEIF ($1 = 'satfrq') THEN
+
+   if (slpsat='y') then
+	showfreq('selfrqc')
+	return
+   endif
+   $frqfile=curexp+'/frqinfo'
+    if (procdim<1) then
+       setppm(satfrq,tn):$selppm
+    else
+	getppm(satfrq):$selppm
+    endif
+    getpower(satpwr,tn):$gh2
+    write('reset',$frqfile)
+    write('file',$frqfile,'Presat at %6.2f ppm;  Presat gammaH2  %5.1f',$selppm,$gh2)
+    graphis('ds'):$dson
+    if ($dson) then ds endif
+    dtext($frqfile)
+    shell('rm -f '+$frqfile):$dum
+
+ELSEIF ($1 = 'wetfrq') THEN
+
+    wet1Dproc('wetinfo')
+    wet1Dproc('wetinfo','display')
+
+ENDIF

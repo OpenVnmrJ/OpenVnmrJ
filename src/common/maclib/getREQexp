@@ -1,0 +1,72 @@
+"macro getREQexp"
+
+is_submitmode:$submit
+if ($submit=0) then 
+   write('error','%s can only be used in submit mode',$0)
+   return
+endif
+
+$exp=$1
+$node=''
+$maclib=''
+if ($# > 1) then $node=$2 endif
+if ($# > 2) then $maclib=$3 endif
+$acqex=0
+
+if ($node<>'') then
+// If strtpar is already defined, no REQexp
+    exists($maclib+'/'+$node+'acqpars','file'):$acqex
+endif
+if ($acqex) then
+   $strtpar=''
+   rtv($maclib+'/'+$node+'acqpars','noabort','strtpar'):$strtpar
+   if ($strtpar<>'') then
+	return('')
+   endif
+endif
+
+$reqexp='','always'
+if ($acqex) then
+   rtv($maclib+'/'+$node+'acqpars','noabort','REQexp',1):$reqexp[1]
+   rtv($maclib+'/'+$node+'acqpars','noabort','REQexp',2):$reqexp[2]
+endif
+if ($reqexp[1]='') then
+    getEXPinfo($exp):$reqexp
+endif
+$size=size('$reqexp')
+if ($size<2) then $reqexp[2]='' endif
+
+if ($reqexp[2]='ignore') then return('') endif
+if ($reqexp[1]='none') then return('') endif
+
+string2array($reqexp[1]):$reqexp
+$size=size('$reqexp')
+teststr('$reqexp',$exp,'local'):$is
+if ($is) then return('') endif
+
+if ($reqexp[1]='') then return('') endif
+
+$t1=1 $is=0
+$parflg='' $parlng='' $exp2='' $lng2='' $mac2='' $lmac2=''
+walkupQ('readcpnodeexp'):$parflg,$parlng,$exp2,$lng2,$mac2,$lmac2
+repeat
+    teststr('$exp2',$reqexp[$t1],'local'):$is
+    if ($is=0) then
+	teststr('$mac2',$reqexp[$t1],'local'):$is
+    endif
+    if ($is=0) and (longQ='y') then
+	teststr('$lng2',$reqexp[$t1],'local'):$is
+	if ($is=0) then
+	    teststr('$lmac2',$reqexp[$t1],'local'):$is
+	endif
+    endif
+    if ($is) then $t1=$size 
+    elseif (resumeQ<>'') then
+	AutoCheck($reqexp[$t1]):$is
+	if ($is) then $t1=$size endif
+    endif
+    $t1=$t1+1
+until $t1>$size
+
+if ($is=0) then return($reqexp[$size]) else return('') endif
+

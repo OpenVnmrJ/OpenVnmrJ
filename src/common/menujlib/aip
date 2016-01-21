@@ -1,0 +1,210 @@
+"macro aip"
+"  ********************************  "
+"  ****  M E N U :   A I P     ****  "
+"  ********************************  "
+
+mlabel=''
+mstring=''
+micon=''
+
+exists('aipMode','parameter','global'):$e
+if $e<0.5 then
+  write('line3','Parameter \'aipMode\' does not exist.')
+  menu('display_2D')
+  return
+endif
+
+if (aipMode=1) then
+  micon[1]='aipselecton.gif'
+else
+  micon[1]='aipselect.gif'
+endif
+mlabel[1]='Select'
+mstring[1]='aipSetState(1)'
+
+if (aipMode=2) then
+  micon[2]='aipvson.gif'
+else
+  micon[2]='aipvs.gif'
+endif
+mlabel[2]='Vertical Scale'
+mstring[2]='aipSetState(2)'
+
+if (aipMode=8) then
+  micon[3]='aipzoomon.gif'
+else
+  micon[3]='ZoomMode.gif'
+endif
+mlabel[3]='Zoom/Pan'
+mstring[3]='aipSetState(8)'
+
+if (aipMode=3) then
+  micon[4]='aippointon.gif'
+else
+  micon[4]='aippoint.gif'
+endif
+mlabel[4]='Draw Point'
+mstring[4]='aipSetState(3)'
+
+if (aipMode=4) then
+  micon[5]='aiplineon.gif'
+else
+  micon[5]='aipline.gif'
+endif
+mlabel[5]='Draw Line'
+mstring[5]='aipSetState(4)'
+
+if (aipMode=6) then
+  micon[6]='aipcurveon.gif'
+else
+  micon[6]='aipcurve.gif'
+endif
+mlabel[6]='Draw Curve'
+mstring[6]='aipSetState(6)'
+
+if (aipMode=5) then
+  micon[7]='aipboxon.gif'
+else
+  micon[7]='aipbox.gif'
+endif
+mlabel[7]='Draw Box'
+mstring[7]='aipSetState(5)'
+
+if (aipMode=10) then
+  micon[8]='aipovalon.gif'
+else
+  micon[8]='aipoval.gif'
+endif
+mlabel[8]='Draw Oval'
+mstring[8]='aipSetState(10)'
+
+if (aipMode=7) then
+  micon[9]='aipregionon.gif'
+else
+  micon[9]='aipregion.gif'
+endif
+mlabel[9]='Draw Region'
+mstring[9]='aipSetState(7)'
+
+$vc=10
+aipSomeInfoUpdate('roiInfo'):$n
+if($n > 0) then
+  micon[$vc]='aipNoROI.png'
+  mlabel[$vc]='Remove ROIs'
+  mstring[$vc]='aipSelectRois(`all`) aipDeleteRois'
+  $vc=$vc+1
+endif
+
+micon[$vc]='aipAxisFull.png'
+mlabel[$vc]='Show axis'
+mstring[$vc]='showAipAxis'
+$vc=$vc+1
+
+micon[$vc]='aipCenter.png'
+mlabel[$vc]='Show center line'
+mstring[$vc]='if(aipShowCenter=0) then aipShowCenter=1 elseif aipShowCenter=1 then aipShowCenter=2 else aipShowCenter=0 endif aipDisplay(`redisplay`)'
+$vc=$vc+1
+
+if(showObliquePlanesPanel>0) then
+  micon[$vc]='i_3d.gif'
+  mlabel[$vc]='Toggle cursors on/off'
+  mstring[$vc]='aipShow3PCursors'
+  $vc=$vc+1
+
+  micon[$vc]='3x3auto.gif'
+  mlabel[$vc]='Display extraced 2D planes'
+  mstring[$vc]='RQaction(`loadData`,imagedir,`dnd`)'
+  $vc=$vc+1
+
+else
+
+  micon[$vc]='recycle.gif'
+  mlabel[$vc]='Display/redisplay'
+  mstring[$vc]='aipSelectFrames:$c if($c>0) then aipAutoLayout=1 aipDisplay(`sel`) else aipDisplay(`redisplay`) endif'
+  $vc=$vc+1
+
+  micon[$vc]='3x3auto.gif'
+  mlabel[$vc]='Auto Layout all images'
+  mstring[$vc]='aipAutoLayout=1 aipDisplay'
+  $vc=$vc+1
+
+  micon[$vc]='3x3selected.png'
+  mlabel[$vc]='Default Layout'
+  mstring[$vc]='aipAutoLayout=0 aipSplitWindow(aipDefaultWindowSplit[1], aipDefaultWindowSplit[2]) aipDisplay'
+  $vc=$vc+1
+
+  RQaction('is3D',aipCurrentKey):$vdata
+  if($vdata) then
+    micon[$vc]='1x3extract.png'
+    mlabel[$vc]='Extract 3-planes'
+    mstring[$vc]='rmg3dpars aipStartExtract'
+    $vc=$vc+1
+  endif
+
+  if(aipBatches>1) then
+    micon[$vc]='prevfid.gif'
+    mlabel[$vc]='Previous page'
+    mstring[$vc]='if(aipBatch>1) then aipBatch=aipBatch-1 endif aipRQcommand(`displayBatch`,aipBatch)'
+    $vc=$vc+1
+    micon[$vc]='nextfid.gif'
+    mlabel[$vc]='Next page'
+    mstring[$vc]='if(aipBatch<aipBatches) then aipBatch=aipBatch+1 endif aipRQcommand(`displayBatch`,aipBatch)'
+    $vc=$vc+1
+  endif
+
+  //aipSelectFrames:$c
+  //if(showObliquePlanesPanel<1 and $c > 1) then
+  micon[$vc]='aipOverlay.png'
+  mlabel[$vc]='Overlay selected images'
+  mstring[$vc]='aipOverlayFrames(`overlay`)'
+  $vc=$vc+1
+
+  aipOverlayFrames('overlaid'):$overlaid
+  if($overlaid) then
+    micon[$vc]='aipdragoff.gif'
+    mlabel[$vc]='Unoverlay images'
+    mstring[$vc]='aipOverlayFrames(`unoverlay`)'
+    $vc=$vc+1
+/*
+    micon[$vc]='aipNoOverlay.png'
+    mlabel[$vc]='Remove overlaid images'
+    mstring[$vc]='aipViewLayers(`remove`)'
+    $vc=$vc+1
+*/
+  endif
+endif
+
+strstr(apptype,'csi'):$csi
+csiCmd('getCSIPath',file):$csiPath
+aipShowSpec:$n,$split
+if($csi and $csiPath<>'') then
+  if(aipMode=11) then
+    micon[$vc]='2Dhproj_down.gif'
+  else
+    micon[$vc]='2Dhproj.gif'
+  endif
+  mlabel[$vc]='CSI Spectral display'
+  mstring[$vc]='jFunc(88,1) aipSetState(11) aipShowCSIData:$n if($n=0) then aipShowCSIData(`hide`,`frame:all`) endif'
+  $vc=$vc+1
+elseif(jviewport>2 and apptype=`im1D` and $split=0) then
+  micon[$vc]='2Dhproj.gif'
+  mlabel[$vc]='spectral display'
+  mstring[$vc]='jFunc(88,1) aipShowCSIData(`SPEC`,`grid`,`frame:all`) ds'
+  $vc=$vc+1
+elseif(jviewport>2 and apptype=`im1D`) then
+  micon[$vc]='2Dhproj.gif'
+  mlabel[$vc]='spectral display'
+  mstring[$vc]='aipShowCSIData(`SPEC`,`grid`,`frame:all`)'
+  $vc=$vc+1
+endif
+
+if($split>0) then
+  micon[$vc]='aipNoCSISpec.png'
+  mlabel[$vc]='No spectral display'
+  mstring[$vc]='aipShowCSIData(`none`) jFunc(88,0) aipRedisplay aipSetState(1)'
+  $vc=$vc+1
+endif
+
+micon[$vc]='return.gif'
+mlabel[$vc]='Return'
+mstring[$vc]='aipSetState(1) menu(`main`)'

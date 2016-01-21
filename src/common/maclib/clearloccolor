@@ -1,0 +1,79 @@
+"macro clearloccolor"
+" clearloccolor - A utility macro to clear database"
+"   for any color errors.  If a location is not occupied"
+"   but the tray color is anything but gray, it will update"
+"   the database.  Use redisptray macro to update occupied"
+"   locations. "
+"   Usage:  clearloccolor(startlocation,<endlocation>)"
+"   Requires a tray to be displayed"
+"****************************************************************"
+	"Check proper conditions"
+if (traymax<2) then return endif
+if ($# <> 1) and ($# <> 2) and ($# <> 4) then
+   write('error','Usage: clearloccolor(startloc,<endloc>,<zone,rack>)')
+   return
+endif
+
+getfilepath('studypar','modules'):$is,$modpath
+if ($is<1) then
+   write('error','studypar module not found')
+   return
+endif
+
+"****************************************************************"
+	"Determine if the display is globalenter or autodir"
+$autodir2=autodir
+strstr(autodir,'studytray'):$isenter
+if ($isenter) then
+   $autodir=globalenter
+else
+   $autodir=autodir
+   $autodir2=autodir+'/enterQ.macdir/studytray'
+endif
+
+$rack='' $zone='' $subtray=''
+if (traymax=96) or (traymax=768) then
+   format(vrack,'lower'):$rack
+   format(vzone,'lower'):$zone
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+endif
+if ($# > 3) then
+   format($3,'lower'):$zone
+   format($4,'lower'):$rack
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+endif
+if ($rack='') or ($zone='') then $subtray='' endif
+
+if typeof('$1') then format($1,'lower'):$start else $start=$1 endif
+$end=$start
+if ($# > 1) then
+    if typeof('$2') then format($2,'lower'):$end else $end=$2 endif
+endif
+
+"****************************************************************"
+	"For every location between $start to $end do...."
+
+$i=$start
+repeat
+    $location='' $loc=$i
+    format($i,0,0):$location
+    $sdir=$autodir2+$subtray+'/loc'+$location
+
+    "****************************************************************"
+	"if studypar exists, then it is a occupied location"
+    exists($sdir+'/studypar','file'):$sdparex
+    if ($sdparex>0) then
+      if ($## < 1) then
+        write('line3','Location %s is occupied',$location)
+      endif
+    else
+
+    "****************************************************************"
+		"else it is an unoccupied location"
+     if ($## < 1) then
+	write('line3','Clearing location %s',$location)
+     endif
+     vnmrjcmd('tray delta '+$sdir)
+    endif
+    $i=$i+1
+until $i > $end

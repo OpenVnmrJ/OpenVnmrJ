@@ -1,0 +1,31 @@
+"macro AT21"
+"AT21" "90 Degree Stability (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATd2pul'
+   at_currenttest='90stability_ch2'
+   text('90-Degree Pulse Stability (Channel 2)')
+   dof=tof dpwr=tpwr 
+   array('nt',20,1,0) pw=at_pw90_ch2
+   crl rfl=sw/2 rfp=0 f
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT21(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 90-Degree Pulse Stability (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB90ch2','90 Degree Pulse Stability (channel 2)','stabiltiy',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','90 Degree Pulse Stability (channel 2): %3.3f percent',100-$stddev)
+
+ATnext
+endif

@@ -1,0 +1,49 @@
+"macro spins_button"
+// set spin simulation parameters from button
+
+$action='setdvalue'
+if $#>0.5 then $action=$1 endif
+
+if $action='initialize' then
+// initialize iteration parameters
+
+  initialize_iterate
+  dga
+  spins('param','show')
+  cla
+  rm(curexp+'/spins.list'):$x
+  ai vsadj
+  sminf=sp smaxf=sp+wp
+  svs=vs
+  niter=20
+
+  wft
+//  ds
+  peak:$ht,cr
+  dres:slw
+
+elseif $action='setdvalue' then
+// set chemical shift from cr
+
+  graphis:$gr
+  if $gr<>'ds' then
+    write('error','Enter \'ds\' mode to set parameters.')
+  else
+    spins('param','setdvalue',cr)
+  endif
+
+elseif $action='setjvalue' then
+// set j-coupling from delta
+
+  graphis:$gr
+  if $gr<>'ds' then
+    write('error','Enter \'ds\' mode to set parameters.')
+  else
+    if crmode='b' then
+      spins('param','setjvalue',delta)
+    else
+      write('error','Enter box mode in \'ds\' to set parameters.')
+    endif
+  endif
+
+endif

@@ -1,0 +1,56 @@
+"macro AT32a"
+"AT32a" "C13 Decoupling using Built-in Channel 3 Phase Modulators"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')  
+   dn='C13' 
+   create('rfchannel','string')
+   if (numrfch>4) then rfchannel='13245' endif
+   if (numrfch=4) then rfchannel='1324' endif
+   if (numrfch=3) then rfchannel='132' endif
+   if (numrfch<3) then ATnext return endif   "no 3rd channel to test"
+   at_currenttest='Decouplingprofiles_ch3'
+   lb='n' sb=at/4 s1 av
+
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='AT32a(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj
+   text('Phase Modulator Decoupling Profiles Using\\ Channel 3')
+   lb=10 sb=-.07 gf='n' sbs='n'
+
+   ln(150.0/at_pwx90Lowpower_ch3):$ln
+   dpwr=at_pwx90Lowpowerlvl_ch3-20.0*$ln*0.43429
+   $dpwr=dpwr+0.5
+   dpwr=trunc($dpwr)
+   dmf=1e6/150.0
+
+   dmm='ccm','ccx','ccw','ccg' dm='nny' 
+   array('dof',41,dof-80*dfrq,4*dfrq)
+   wnt='ATdmms'
+   wexp='AT32a(`PART2`)'
+   ATcycle au
+
+elseif ($1='PART2') then
+   wft
+   ATsvf
+   ATpldecs
+
+ATnext
+endif

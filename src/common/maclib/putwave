@@ -1,0 +1,178 @@
+"macro putwave"
+" ************************************************************* "
+" ***                       putwave                         *** "
+" ***         put wave parameters into Pbox.inp file        *** "
+" ***                    Eriks Kupce                        *** "
+" ***                 Pbox 5.2 01/08/96                     *** "
+" ************************************************************* "
+" Usage : putwave(sh, <bw, <pw, <ofs, <st, <ph, <fla, <trev>>>>>>>) "
+
+$filepath = userdir+'/shapelib/Pbox.inp'
+$wave = ''
+$tmp = ''
+
+if $#<1 then 
+  write('error','Usage : putwave(sh,<bw,<pw,<ofs,<st,<ph,<fla,<trev>..>)')
+  return
+endif
+
+if not typeof('$1') then 
+  write('error','Usage : putwave(sh,<bw,<pw,<ofs,<st,<ph,<fla,<trev>..>)')
+  return
+endif
+
+$count = 0
+$i = 1
+repeat
+  $p[$i] = 'n'
+  $i = $i + 1
+until $i > 12
+
+$p[1] = $1                                "sh"
+
+if $#>12 then                             "php"  
+  if not typeof('$13') then 
+    format($13,6,6):$p[12]
+      $count=12
+  endif
+endif
+
+if $#>11 then                             "wrp"  
+  if not typeof('$12') then 
+    if $12 <> 0.0 then
+      format($12,4,4):$p[11]
+      if $count=0 then $count=11 endif
+    endif
+  endif
+endif
+
+if $#>10 then                             "d2"  
+  if not typeof('$11') then 
+    if $11 <> 0.0 then
+      format($11,7,7):$p[10]
+      if $count=0 then $count=10 endif
+    endif
+  endif
+endif
+
+if $#>9 then                              "d1" 
+  if not typeof('$10') then 
+    if $10 <> 0.0 then
+      format($10,7,7):$p[9]
+      if $count=0 then $count=9 endif
+    endif
+  else
+    $p[9]=$10 
+  endif
+endif
+
+if $#>8 then                              "d0" 
+  $p[8]='' 
+  if not typeof('$9') then 
+    if $9 <> 0.0 then
+      format($9,7,7):$p[8]
+      if $count=0 then $count=8 endif
+    endif
+  else
+    $p[8]=$9 
+  endif
+endif
+
+if $#>7 then                              "trev" 
+  if not typeof('$8') then 
+    write('error','trev (arg 8) : string value expected')
+    return
+  else
+    $p[7]=$8 
+    if $count=0 and $p[7]<>'n' then 
+      $count=7 
+    endif
+  endif
+endif
+
+if $#>6 then                              "fla" 
+  if not typeof('$7') then 
+    if $7 > 0.0 then
+      format($7,2,1):$p[6]
+      if $count=0 then $count=6 endif
+    endif
+  else
+    $p[6]=$7 
+  endif
+endif
+
+if $#>5 then                              "pha" 
+  if not typeof('$6') then 
+    if $6 > 0.0 then
+      format($6,2,1):$p[5]
+    endif
+  else
+    $p[5]=$6 
+  endif
+
+  if $count=0 and $p[5]<>'n' then 
+    $count=5 
+  endif
+endif
+
+if $#>4 then                              "st"  
+  if not typeof('$5') then 
+    if $5 > 0 then
+      format($5,1,1):$p[4]
+      if $count=0 then $count=4 endif
+    endif
+  else
+    $p[4]=$5 
+  endif
+endif
+
+if $#>3 then                              "ofs"  
+  if not typeof('$4') then 
+    if $4 <> 0 then
+      format($4,4,1):$p[3]
+      if $count=0 then $count=3 endif
+    endif
+  else
+    $p[3]=$4 
+  endif
+endif
+
+  $tmp='n'
+if $#>2 then                              "pw" 
+  if not typeof('$3') then 
+    if $3 > 0 then
+      format($3,1,7):$tmp
+      if $count=0 then $count=2 endif
+    endif
+  else
+    $tmp=$3 
+  endif
+endif
+
+if $#>1 then                              "bw"
+  if not typeof('$2') then 
+    if $2 <> 0 then
+      format($2,3,1):$p[2]
+      if $count=0 then $count=2 endif
+    endif
+  else
+    $p[2]=$2 
+  endif
+endif
+
+  if $tmp <> 'n' and $p[2] <> 'n' then 
+    $p[2] = $p[2] + '/' + $tmp
+  else 
+    if $p[2] = 'n' then
+      $p[2] = $tmp
+    endif
+  endif
+
+$wavw= ''
+$i = 1
+repeat
+  $wave = $wave + ' ' + $p[$i]
+  $i = $i + 1
+until $i > $count
+
+write('file',$filepath,'{%s }', $wave) 

@@ -1,0 +1,38 @@
+"macro updateHTfrqs"
+isnewexp:$new
+if ($new) then return endif
+
+$s='' $nuc='' $sol='' $httof='' $htsw=''
+
+lookup('file',curexp+'/htll.htfrq1')
+lookup('read',5):$s,$nuc,$sol,$httof,$htsw
+write('line3','offset is %s and sw is %s',$httof,$htsw)
+
+exists('httof','parameter'):$e
+if (not $e) then create('httof','frequency') endif
+exists('htsw','parameter'):$ee
+if (not $ee) then create('htsw') endif
+
+format($httof,0,2):httof
+format($htsw,0,2):htsw
+
+$ext=''
+getext(file):$file,$ext
+if ($ext='') then
+    exists($file+'.REC','directory'):$direx
+    if ($direx) then $ext='REC'
+    else
+	exists($file+'.rec','directory'):$direx
+	if ($direx) then $ext='rec'
+	else
+	    exists($file+'.fid','directory'):$direx
+	    if ($direx) then $ext='fid' endif
+	endif
+    endif
+endif
+if ($ext='') then return endif
+if ($ext='fid') then
+   writeparam($file+'.fid/procpar','htfrq1 htbw1 httof htsw','current','add')
+else
+   writeparam($file+'.'+$ext+'/acqfil/procpar','htfrq1 htbw1 httof htsw','current','add')
+endif

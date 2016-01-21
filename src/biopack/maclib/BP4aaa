@@ -1,0 +1,60 @@
+"macro BP4aaa"
+" BP4aaa "
+$bestone=1 $counter=1
+select(1) vsadj(30) $best=30
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoTripRes/pwC90cal3')
+select($bestone) vsadj(50)  dssh pl('all') pap BPpage
+pwC=pwC[$bestone]  "pw90 at 3db down from standard pwClvl"
+
+if seqfil='hcch_tocsy' then
+ $comp=trunc(1000*r4/(2*1.4*pwC))/1000 "r4 is pw90 at 12db down, pwC is pw90 at 3db down"
+ $pwC3db='' $compC3db=''
+ format(pwC,4,3):$pwC3db   "stores value of pwC at pwClvl-3"
+ BPsetparams('pwC3db',$pwC3db,'C13')
+ format($comp,4,3):$compC3db
+ BPsetparams('compC3db',$compC3db,'C13')
+ $pwClvl='' $pwC='' $compC=''
+ compC=trunc(1000*compC)/1000   "compC was determined by macro BP4aa"
+ pwClvl=pwClvl+3                "restore to normal power"
+ format(pwClvl,2,0):$pwClvl  
+ BPsetparams('pwClvl',$pwClvl,'C13')
+ format(r1,4,1):$pwC            "restore to normal pwC"
+ BPsetparams('pwC',$pwC,'C13')
+ format(compC,4,3):$compC
+ BPsetparams('compC',$compC,'C13')
+else
+ $pwC3db='' 
+ format(pwC,4,3):$pwC3db   "stores value of pwC at pwClvl-3"
+ BPsetparams('pwC3db',$pwC3db,'C13')
+ $pwClvl='' $pwC='' $compC=''
+ compC=trunc(1000*pwC/(1.4*r1))/1000   "r1 contains pwC at 3dB higher power"
+ BPsetparams('compC',$compC,'C13')
+ format(r2,2,0):$pwClvl              "r2 contains value of pwClvl at 3dB higher power"
+ BPsetparams('pwClvl',$pwClvl,'C13')
+ format(r1,4,1):$pwC                 "r1 contains value of pwC at 3dB higher power"
+ BPsetparams('pwC',$pwC,'C13')
+ format(compC,4,3):$compC
+ BPsetparams('compC',$compC,'C13')
+endif
+
+$tof=tof $ref_pwr=ref_pwr $ref_pw90=ref_pw90 $compH=compH
+$r7=r7 pwClvl=r2 pwC=r1  "restore normal level/width"
+
+"create wurst waveform now that pwC/pwClvl is known(compC still estimate) "
+BPsetupshapes1 
+
+BPrtppar('gNfhsqc')
+dm2='nnn' 
+d3=.00025*(500/sfrq)
+r7=$r7 sb='n' gf=.01
+wnt='wft av select(1) setref sp=6p wp=4p vsadj(2) dssh' wexp='BP6' spin='n'
+ni=1 phase=1
+setlimit('pwN',1000,0,1)
+array('pwN',25,10,2)
+au

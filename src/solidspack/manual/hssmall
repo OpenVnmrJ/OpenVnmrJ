@@ -1,0 +1,110 @@
+Protocol hssmall  Sequence: hssmall.c  Apptype: solidseq1d
+
+Description:
+
+Provides the sequence "{XYYXXYYX}N" with small angle adjustments to X
+and Y for measurements of small angle phase difference. ph2Xhssmall is
+the difference between the "Y" phase deviation and the "X" phase
+deviation.  ph1Xhssmall is the "X" phase deviation. Set scalesw =
+90.0 *8.0*tauXhssmall*1e-6 with axis = 'h' to display "degrees"
+from - 45.0 to 45.0. 
+
+Note that for VNMRS the actual spectral width is set by the DDR. Use only 
+values of tauXhssmall such that sw = 1.0/(8.0*tauXhssmall*1e-6). A value 
+of 10 us works. 
+
+Additional Software:
+
+reset_hssmall - Uses the calibrated values of pwX90 and aX90 to calculate
+the initial calibrations for hssmallX and it is run from the protocol.
+
+hs90anal(phase,step) - A macro to calculate phases. Processs an array of
+spectra obtained with a constant phase jump, ph2Xhssmall, using an array of
+starting phases, ph1Xhssmall. The argument "phase" is the constant phase
+jump and "step" is the step of starting phase in the array. With one
+argument, step has a default of 1.0 degree.
+
+Process the data with wft('dodc') with a full sinebell and absolute value
+mode. Display the upper sideband and set the threshold to pick the peak. The
+macro picks each peak and records "degrees".  normalize =  'y' averages the
+data to the assigned step. hard copy = 'y' produces a plot.
+
+hssmallanal - A macro to calculate phase deviation of an array of phase
+jumps. Processs an array of spectra obtained with an array of phase jumps, 
+ph2Xhssmall, and a constant starting phase, ph1Xhssmall. Each point is the 
+error from the set phase jump. The accuracy of HS90 is *not* independent of 
+the phase jump unless the sequence is perfectly calibrated. Use this macro 
+only over small arrays of phase. 
+
+hssmallanal2 - A macro to calculate actual phase from an array of phase
+jumps. Processs an array of spectra obtained with an array of phase jumps, 
+ph2Xhssmall, and a constant starting phase, ph1Xhssmall. Each point is the 
+actual phase . The accuracy of HS90 is *not* independent of the phase jump 
+unless the sequence is perfectly calibrated. Use this macro only over small
+arrays of phase. 
+
+Procedure: 
+
+Place a sample of water (20% H2O in D2O to avoid overload)in the probe
+and tune to 1H. Calibrate a 90-degree pulse and set the water on 
+resonance. Obtain reasonable shims. Type Hsmall to setup the sequence. 
+
+Determine whether the defaults are appropriate. A Liquids probe may need 
+longer values of pwXhssmall and tauXhssmall. The defaults set a 25% duty 
+cycle for hssmall. The value of pwXhssmall should not exceed the decoupler
+spec, and one should be cautious if the acquisition time exceeds the spec
+for maximum time on. The maximum time on is for a 100% duty cycle, lower 
+duty cycle may allow you to increase the time, but be cautious - there are 
+no promises. 
+
+Be sure the DDR sets sw = 1.0/(8.0*tauXhssmall*1e-6). 
+
+For good stability run Hssmall with a long recycle, to avoid RF heating 
+of the probe.  Set an array of 1 scan and determine a d1 for which the 
+result is stable. 
+
+Run a test array over aXhssmall to calibrate the result for a fixed phase.
+One will see a center peak with sidebands at the phase jump angle. The macros 
+work with the upper sideband. HS90 is very sensitive to amplitude changes. 
+Be sure you are in a region of stable amplitude calibration. Also be sure you 
+are on resonance.  HS90 is very unstable off resonance. 
+
+To measure stability as a function of starting phase set ph2Xhssmall to the 
+desired phase jump and array ph1Xhssmall over the desired starting phases. 
+Use hs90anal to process. 
+
+To measure an array of phase jumps set ph1Xhssmall to a fixed starting phase 
+and array ph2Xhssmall over the desire phase jumps. Use hssmallanal and 
+hssmallanal2 to process. 
+
+Parameter Groups:
+
+scaleX:  (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+
+hssmallX:  Module:  yes
+Sequence:  hssmall.c
+Description:  Implements HSSMALL on obs with acquisition in the first 
+              window.
+Sequence: hssmall.c
+Parameters:  Sequence Page
+       aXhssmall - amplitude of obs pulses.
+       pwXhssmall - 90-degree flip on obs.
+       r1Xhssmall - prepulse delay (similar to rof1).
+       r2Xhssmall - postpulse delay (similar to rd or rof2).
+       r3Xhssmall - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXhssmall - time for one "one-tau" window and pulse.
+       npaXhssmall - number of 100 ns ticks in the detection window.
+       ph1Xhssmall - small angle phase 1
+       ph2Xhssmall - small angle phase 2
+       chXhssmall = 'obs' must be set (not shown).
+Implementation:  WMPA hs = getmrev8("hssmallX");
+Underscore function: _hssmall(hssmall,phXhssmall);  phXhssmall is the overall
+phase table.
+

@@ -1,0 +1,63 @@
+"macro BPcaco"
+"BPcaco" 
+//generate C pulses
+
+BPmakeBIP(shCBIP,pwClvl,pwC):pwCBIP  
+
+
+// CA(B) 90 degrees
+
+  $shape='CA90'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('Q5  85p 0 0 0 90 ')	cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_90,pwCACB_90,pwrCACB_90 
+  shCACB_90r=shCACB_90
+  BPmoveshape($shape+'.RF')
+// CA(CB) 180
+  $shape='CA180'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('q3  80p 0 0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_180,pwCACB_180,pwrCACB_180
+  BPmoveshape($shape+'.RF')
+// CA(CB) 180 from CO
+  $shape='CA180offCO'
+  $offset='' format(-tof+tofCACB,9,1):$offset
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('q3  80p ' +$offset +' 0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_180off,pwCACB_180,pwrCACB_180
+  BPmoveshape($shape+'.RF')
+// CB 180 from CA 
+  $shape='CB180offCA'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('iburp1  40p -37p  0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCB_180,pwCB_180,pwrCB_180
+  BPmoveshape($shape+'.RF')
+// CO 90 degrees
+  $shape='CO90'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('gaus  80p 0 0 0 90 ')	cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCO_90,pwCO_90,pwrCO_90 
+  BPmoveshape($shape+'.RF')
+// CO 180 degrees
+   $shape='CO180'
+   pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+   setwave('gaus  80p 0 0 0 180 ')	cpx(pwC,pwClvl)   
+   pboxget($shape+'.RF'):shCO_180,pwCO_180,pwrCO_180 
+   BPmoveshape($shape+'.RF')
+// CO 180 shifted  
+   $shape='CO180offCA'
+   $offset='' format(tof-tofCACB,9,1):$offset
+                pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+   setwave('gaus  80p ' +$offset +' 0 0 180 ')	cpx(pwC,pwClvl)   
+   pboxget($shape+'.RF'):shCO_180off,pwCO_180,pwrCO_180 
+   BPmoveshape($shape+'.RF')
+
+//1H decoupling
+  dseq='garp1' dres=1 
+  $pw_dec=5.0/(4*dfrq*4)*1e6 
+  if ($pw_dec > 180) then $pw_dec=180 endif  //   dec covering 4ppm, B1> 1.5kHz
+  ln(pwH*compH/$pw_dec):r3   format(pwHlvl+r3*8.68+0.5,0,0):dpwr 
+  exp((pwHlvl-dpwr)*0.115):r1
+  $pw_dec=pwH*r1*compH dmf=1.0e6/$pw_dec
+write('alpha','...done' )
+

@@ -1,0 +1,101 @@
+"macro plarray"
+" procarray - process arrayed 1D spectra "
+
+$plotoptions='molecule','plarray','axis','comments','params','logo','header','miniplot'
+
+write('plotter',0,0,''):$xs
+$x=3
+$list = ''
+$novals = celem
+$parbelow=0
+
+" initial transformation and parameter adjustments "
+$sc=sc $wc=wc $sp=sp $wp=wp $sc=sc $wc=wc $ho=ho $vo=vo
+intmod='off'
+
+$maxpos=0 $ixpos=0
+$maxneg=0 $ixneg=0
+
+
+" now check for the spectra with the largest positive and negative signals "
+
+$ix=1
+repeat
+  select($ix)
+  peak:$ht
+  if $ht>$maxpos then
+    $maxpos=$ht
+    $ixpos=$ix
+  else
+    if $ht<$maxneg then
+      $maxneg=$ht
+      $ixneg=$ix
+    endif
+  endif
+  $ix=1+$ix
+until $ix>arraydim
+$maxneg=0-$maxneg
+
+" select largest spectrum "
+if $maxpos>$maxneg then
+  select($ixpos)
+else
+  select($ixneg)
+endif
+thadj(wcmax/4,4)
+nll:$numlines
+  
+" if arraydim<7 do vertically stacked plots "
+if arraydim<7 then
+  $stackmode='vertical'
+else
+  if (((wcmax-(arraydim-1)*2)/($numlines*arraydim)) < 1) then
+    $stackmode='diagonal'
+  else
+    $stackmode='horizontal'
+  endif
+endif
+
+" automatic stack mode can be overridden using a parameter 'stackmode'	  "
+" possible values for that parameter are 'vertical','horizontal','tilted' "
+exists('stackmode','parameter'):$epar
+if $epar then
+  if stackmode<>'' then
+    $stackmode=stackmode
+  endif
+endif
+
+" plot parameters / prepare page / chart parameters "
+full
+
+" adjust vs, limit the noise, adjust plot parameters "
+$fullwc=wc $fullsc=sc
+$range=$maxpos+$maxneg
+if $stackmode='horizontal' then
+  vs=vs*(wc2-10)/$range
+  noislm
+  vp=$maxneg/$range*(wc2-10)
+  vo=0 wc=($fullwc-(arraydim-1)*2)/arraydim
+  sc=$fullwc-wc+$fullsc ho=-(wc+2)
+else
+  if $stackmode='vertical' then
+    vs=(vs*(wc2-5)/arraydim-3)/$range
+    noislm(2/arraydim+0.5)
+    ho=0 vo=(wc2-5)/arraydim
+    select(1) peak:$firstmax
+    if $firstmax<0 then vp=0-$firstmax endif
+  else     " diagonal stacking "
+    vs=vs*((wc2-20)/arraydim+20)/$range
+    noislm(2/arraydim+0.5)
+    sc=$fullsc+50 wc=$fullwc-50
+    ho=-50/(arraydim-1) vo=(wc2-20)/arraydim
+    select(1) peak:$firstmax
+    if $firstmax<0 then vp=0-$firstmax else vp=0 endif
+  endif
+endif
+
+doplotoption($plotoptions)
+page
+full
+sc=$sc wc=$wc sp=$sp wp=$wp sc=$sc wc=$wc ho=$ho vo=$vo
+if (auto='n') then dss dscale(vp-5) endif

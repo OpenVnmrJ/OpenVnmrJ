@@ -1,0 +1,463 @@
+"macro studyClusterAttr"
+$rev2=0
+is_craft:$rev,$rev2
+
+if ($# < 1) then $1='init' endif
+IF ($1='init') THEN
+
+                // These 5 parameters are transient for the popup
+        create('scaPar0','real','global',0):$dum
+                // enable or disable (not used by cluster per se, but by craft)
+        create('scaPar','string','global',''):$dum
+                // holds fidpath string
+        create('scaParX','string','global',''):$dum
+		// holds sample string
+        create('scaParY','string','global',''):$dum
+                // holds fid string
+        create('scaPopPar','string','global',''):$dum
+                // popup parameter
+        create('scaParColor','string','global',''):$dum
+                // color attribute
+        create('scaFlgColor','string','global',''):$dum
+                // multi selection attribute
+        create('scaParPrim','string','global',''):$dum
+                // Primary attribute
+        create('scaParSec','string','global',''):$dum
+                // Secondary attribute
+        setprotect('scaPar0','on',256,'global')
+        setprotect('scaPar','on',256,'global')
+        setprotect('scaParX','on',256,'global')
+        setprotect('scaParY','on',256,'global')
+	setprotect('scaPopPar','on',256,'global')
+        setprotect('scaParColor','on',256,'global')
+        setprotect('scaFlgColor','on',256,'global')
+        setprotect('scaParPrim','on',256,'global')
+        setprotect('scaParSec','on',256,'global')
+	scaPar0=0 scaPar='' scaParY='' scaParX='' scaParColor='' scaFlgColor='' scaParPrim='' scaParSec=''
+
+        if ($# < 2) then
+            exists('CFIDlist','parameter'):$parex
+            if $parex then $2=CFIDlist
+            else
+                substr(file,'dirname'):$d,$b,$e
+                $c=$d+'/dirinfo/clusterfids'
+                $s2='' $2=''
+                readfile($c,'$2','$s2','','local')
+                create('CFIDlist','string')
+                setprotect('CFIDlist','on',256)
+                CFIDlist=$2
+                writeparam(curexp+'/tmp'+$0,'CFIDlist')
+                fread(curexp+'/tmp'+$0,'processed')
+                rm('-f',curexp+'/tmp'+$0):$dum
+                writeparam($d+'/'+$b+'.fid/procpar','CFIDlist','current','add')
+            endif
+        endif
+	$cluster=1
+	if ($# < 3) then
+	    substr(file,'dirname'):$d,$b,$e
+	    substr($d,'basename'):$cbase
+	    $attrfile=$d+'/dirinfo/'+$b+'_ClusterAttribute'
+	else
+	    $attrfile=$3+'/ClusterAttribute'
+	    strstr($3,'dirinfo'):$clus
+	    if $clus then
+		substr($3,'dirname'):$d
+		substr($d,'basename'):$cbase
+	    else
+		$cspace=''
+		substr($3,'dirname'):$cspace
+		craft_getInfo('ClusterPath',$cspace):$cbase
+		substr($cbase,'basename'):$cbase
+		$cluster=0
+	    endif
+	endif
+	scaPopPar[1]=$cbase
+
+        $s3='' $s4='' $s5='' $s6='' $s8=''
+        {$0}('get',$attrfile):$s3,$s4,$s5,$s6,$s8
+	scaPopPar[2]=$s8
+	scaPopPar[3]=''
+
+	$s1=$2
+	$total=size('$s1')
+//        $cfids=$2
+//        $s1='' $s2='' $total=0
+//        readfile($cfids,'$s1','$s2','','local'):$total
+        $i=1 $j=1
+        repeat
+            $s2=$s1[$i]
+            $firstchar='' substr($s2,1,1):$firstchar
+            if ($firstchar<>'/') then $s2=userdir+'/data/'+$s2 endif
+            substr($s2,'dirname'):$d,$b,$e
+            substr($d,'basename'):$s
+            scaPar[$j]=$d+'/'+$b
+	    scaParX[$j]=$s
+	    scaParY[$j]=$b
+            scaPar0[$j]=1
+	    scaParColor[$j]=''
+	    scaFlgColor[$j]='n'
+            scaParPrim[$j]=''
+            scaParSec[$j]=''
+            teststr('$s3',$d+'/'+$b,'local'):$ok
+            if ($ok) then
+                scaParColor[$j]=$s4[$ok]
+                scaParPrim[$j]=$s5[$ok]
+                scaParSec[$j]=$s6[$ok]
+            endif
+            $j=$j+1
+            $i=$i+1
+        until $i>$total
+
+	if not $cluster then
+            $excludefile=$cspace+'/ExcludeList'
+	    exists($excludefile,'file'):$ex2
+	    if ($ex2) then
+		$zz='' $zzz=''
+		readfile($excludefile,'$zz','$zzz','','local'):$ztot
+		if ($ztot) then
+		    $z=1
+		    repeat
+			teststr('scaPar',$zz[$z],'global'):$ok
+			if ($ok) then scaPar0[$ok]=0 endif
+			$z=$z+1
+		    until $z>$ztot
+		endif
+	    endif
+	endif
+	    
+    	$bkup=userdir+'/persistence/studyCluster/lastAttrVal'
+	rm('-f',$bkup):$dum
+//  write a menu with know attributes for convenience
+	array2array($s5,$s6):$s7
+	sort($s7,'u'):$index,$s7
+        $menudir=userdir+'/persistence/studyCluster'
+        exists($menudir,'directory'):$direx
+        if not $direx then
+            mkdir($menudir):$dum
+        endif
+        $menu=$menudir+'/'+$0+'_AttrMenu'
+	write('reset',$menu)
+        write('file',$menu,'"" ""')
+        {$0}('add2menu',$s7)
+//        write('file',$menu,'"" ""')
+
+	$colormenu=$menudir+'/'+$0+'_ColorMenu'
+	write('reset',$colormenu)
+        write('file',$colormenu,'"blue" "blue"')
+        write('file',$colormenu,'"cyan" "cyan"')
+	write('file',$colormenu,'"gray" "gray"')
+	write('file',$colormenu,'"green" "green"')
+        write('file',$colormenu,'"magenta" "magenta"')
+        write('file',$colormenu,'"orange" "orange"')
+	write('file',$colormenu,'"red" "red"')
+	write('file',$colormenu,'"yellow" "yellow"')
+
+// write the xml file
+	$tot=size('scaPar')
+	$ys=25*($tot) + 170
+	$xs=1000
+
+	$help=$menudir+'/'+$0+'_help'
+	$xml=$menudir+'/'+$0+'.xml'
+	write('reset',$xml)
+	write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+	write('file',$xml,'<template name="%s" element="pages" type="acquisition" >',$0)
+	write('file',$xml,'  <group size="%d %d" >',$xs,$ys)
+
+	write('file',$xml,'  <group loc="100 20" size="350 35" border="Etched" >')
+	write('file',$xml,'     <button loc="20 5" size="150 25" style="Heading2" label="Save changes"')
+	write('file',$xml,'        vc="%s(\'savechanges\',\'%s\')" />',$0,$attrfile)
+        write('file',$xml,'     <button loc="180 5" size="150 25" style="Heading2" label="Undo" vq="scaPopPar"')
+	write('file',$xml,'        show="exists(\'%s\',\'file\'):$ex $ENABLE=($ex)*2-1"',$bkup)
+        write('file',$xml,'        vc="%s(\'undochanges\',\'%s\')" />',$0,$attrfile)
+	write('file',$xml,'     </group>')
+
+	write('file',$xml,'  <label loc="80 60" size="400 20" style="Label1" label="StudyName/FidName" justify="Center" />')
+
+	write('file',$xml,'  <label loc="515 40" size="150 20" style="Label1" label="Spectrum color"/>')
+        write('file',$xml,'  <check loc="515 60" size="150 20" style="Label1" label="Use defaults" ')
+	write('file',$xml,'	vc="scaPopPar[2]=\'default\'" vc2="scaPopPar[2]=\'\'" set="$VALUE=(scaPopPar[2]=\'default\')" />')
+
+        write('file',$xml,'  <label loc="645 40" size="310 20" style="Label1" label="Set/enter attributes" justify="Center" />')
+//        write('file',$xml,'  <entry loc="650 40" size="140 20" style="PlainText" vq="scaPopPar"')
+//        write('file',$xml,'       vc="chkname(\'$VALUE\',\'alnum-\'):$v scaPopPar[3]=$v" set="$VALUE=scaPopPar[3]" />')
+//        write('file',$xml,'  <button loc="810 40" size="140 20" style="Heading2" vq="scaPopPar"')
+//        write('file',$xml,'       label="Add to menu choice" vc="%s(\'add2menu\',scaPopPar[3])"',$0)
+        write('file',$xml,'       show="$ENABLE=(scaPopPar[3]&lt;&gt;\'\')*2-1" />')
+
+        write('file',$xml,'  <label loc="645 60" size="150 20" style="Label1" label="Primary" justify="Center" />')
+        write('file',$xml,'  <label loc="805 60" size="150 20" style="Label1" label="Secondary" justify="Center" />')
+
+
+	$i=1 $y=85
+	repeat
+	    write('file',$xml,'    <label loc="10 %d" size="30 20" style="Label1" label="%d" justify="Right" />',$y+3,$i)
+	    write('file',$xml,'    <group loc="45 %d" size="940 25" border="Etched" >',$y)
+	    if not ($cluster) then
+		write('file',$xml,'       <radio loc="10 3" size="20 20" ')
+		write('file',$xml,'          vq="scaPar0" vc="scaPar0[%d]=1" vc2="scaPar0[%d]=0"',$i,$i)
+		write('file',$xml,'          set="$VALUE=(scaPar0[%d]=1)"',$i)
+		write('file',$xml,'          />')
+	    endif
+		write('file',$xml,'       <label loc="35 3" size="400 20" style="Label1" label="%s/%s" />',scaParX[$i],scaParY[$i])
+
+// Keep the colorchooser option here.  We may be able to resolve the show and vq update issues
+	    if $rev2>1.5 then
+		write('file',$xml,'       <colorchooser loc="470 3" size="120 20" style="Label1"')
+		write('file',$xml,'             vq="scaParColor" vc="%s(\'setValue\',\'scaParColor\',%d,\'$VALUE\')"',$0,$i)
+		write('file',$xml,'		show="$ENABLE=(scaPopPar[2]&lt;&gt;\'default\')*2-1"')
+                write('file',$xml,'             savekids="false" keyval="%s"',scaParColor[$i])
+                write('file',$xml,'             set="$VALUE=scaParColor[%d]" />',$i)
+		write('file',$xml,'		display="System" />')
+	    else
+                write('file',$xml,'       <filemenu loc="470 3" size="120 20" style="PlainText"')
+                write('file',$xml,'             vq="scaFlgColor scaParColor scaPopPar" vq2="scaFlgColor scaParColor scaPopPar" type="file"')
+                write('file',$xml,'             editable="no"')
+                write('file',$xml,'             show="$ENABLE=(scaPopPar[2]&lt;&gt;\'default\')*2-1"')
+                write('file',$xml,'             file="$VALUE=\'%s\'"',$colormenu)
+                write('file',$xml,'             vc="%s(\'setValue\',\'scaParColor\',%d,\'$VALUE\')"',$0,$i)
+                write('file',$xml,'             statshow="yes" elastic="no" display="yes"')
+                write('file',$xml,'             set="$VALUE=scaParColor[%d]" />',$i)
+	    endif
+                write('file',$xml,'       <check loc="440 3" size="20 20" ')
+                write('file',$xml,'          vq="scaFlgColor scaPopPar scaParColor" vc="%s(\'setValue\',\'scaFlgColor\',%d,\'y\')" vc2="scaFlgColor[%d]=\'n\'"',$0,$i,$i)
+                write('file',$xml,'          set="$VALUE=(scaFlgColor[%d]=\'y\')" />',$i)
+
+                write('file',$xml,'       <filemenu loc="600 3" size="150 20" style="PlainText"')
+                write('file',$xml,'             vq="scaParPrim scaFlgColor" vq2="scaParPrim" type="file"')
+		write('file',$xml,'		editable="yes"')
+		write('file',$xml,'             file="$VALUE=\'%s\'"',$menu)
+                write('file',$xml,'             vc="%s(\'setValue\',\'scaParPrim\',%d,\'$VALUE\')"',$0,$i)
+		write('file',$xml,'		statshow="yes" elastic="no" display="yes"')
+		write('file',$xml,'		set="$VALUE=scaParPrim[%d]" />',$i)
+
+                write('file',$xml,'       <filemenu loc="760 3" size="150 20" style="PlainText"')
+                write('file',$xml,'             vq="scaParSec scaFlgColor" vq2="scaParSec" type="file"')
+                write('file',$xml,'             editable="yes"')
+                write('file',$xml,'             file="$VALUE=\'%s\'"',$menu)
+                write('file',$xml,'             vc="%s(\'setValue\',\'scaParSec\',%d,\'$VALUE\')"',$0,$i)
+                write('file',$xml,'             statshow="yes" elastic="no" display="yes"')
+                write('file',$xml,'             set="$VALUE=scaParSec[%d]" />',$i)
+
+		write('file',$xml,'    </group>')
+		$i=$i+1
+		$y=$y+25
+	until $i > $tot
+
+        write('file',$xml,'  <group loc="100 %d" size="350 35" border="Etched" >',$y+25)
+        write('file',$xml,'     <button loc="20 5" size="150 25" style="Heading2" label="Save changes"')
+        write('file',$xml,'        vc="%s(\'savechanges\',\'%s\')" />',$0,$attrfile)
+        write('file',$xml,'     <button loc="180 5" size="150 25" style="Heading2" label="Undo" vq="scaPopPar"')
+        write('file',$xml,'        show="exists(\'%s\',\'file\'):$ex $ENABLE=($ex)*2-1"',$bkup)
+        write('file',$xml,'        vc="%s(\'undochanges\',\'%s\')" />',$0,$attrfile)
+        write('file',$xml,'     </group>')
+
+	write('file',$xml,'  </group>')
+	write('file',$xml,'</template>')
+
+	{$0}('pnew')
+	{$0}('popup')
+
+//        $cmd='vnmrjcmd(\'popup\''
+//        $cmd=$cmd+',\'mode:modeless\''
+//        $cmd=$cmd+',\'file:'+$xml+'\''
+//        $cmd=$cmd+',\'rebuild:yes\''
+//        $cmd=$cmd+',\'pnewupdate:true\''
+//        $cmd=$cmd+',\'close:'+$0+'(`close`)\''
+//        $cmd=$cmd+',\'title:Attributes for the StudyCluster - '+$cbase+' \''
+//        $cmd=$cmd+')'
+//        exec($cmd)
+
+ELSEIF ($1='popup') THEN
+
+        $menudir=userdir+'/persistence/studyCluster'
+	$xml=$menudir+'/'+$0+'.xml'
+        $cmd='vnmrjcmd(\'popup\''
+        $cmd=$cmd+',\'mode:modeless\''
+        $cmd=$cmd+',\'file:'+$xml+'\''
+        $cmd=$cmd+',\'rebuild:yes\''
+        $cmd=$cmd+',\'pnewupdate:true\''
+        $cmd=$cmd+',\'close:'+$0+'(`close`)\''
+        $cmd=$cmd+',\'title:Attributes for the StudyCluster - '+scaPopPar[1]+' \''
+        $cmd=$cmd+')'
+        exec($cmd)
+	{$0}('pnew')
+
+ELSEIF ($1='setValue') THEN
+
+    if ($2='scaParColor') then
+	{$2}[$3]=$4
+    	$size=size($2)
+    	$i=1
+    	repeat
+	    if scaFlgColor[$i]='y' then {$2}[$i]=$4 scaFlgColor[$i]='n' endif
+	    $i=$i+1
+    	until $i > $size
+	{$0}('pnew')
+    elseif ($2='scaFlgColor') then
+	$size=size('scaFlgColor')
+	{$2}[$3]=$4
+	$x=0
+	if not $x and ($3>1) then
+	    $i=$3-1 $x=0
+	    while $i>0 do
+		if {$2}[$i]=$4 then $x=$i $i=1 endif
+		$i=$i-1
+	    endwhile
+	endif
+	if not $x and $3<$size then
+		$i=$3+1
+		while $i <= $size  do
+		    if {$2}[$i]=$4 then $x=$i $i=$size endif
+		    $i=$i+1
+		endwhile
+	endif
+	if $x then
+		if $x>$3 then
+		    $i=$3
+		    repeat
+			{$2}[$i]=$4
+			$i=$i+1
+		    until $i > $x
+		elseif $x<$3 then
+		    $i=$x
+		    repeat
+			{$2}[$i]=$4
+			$i=$i+1
+		    until $i >= $3
+		endif
+	endif
+	{$0}('pnew')
+    else
+        chkname($4,'alnum-'):$4
+	{$2}[$3]=$4
+        $size=size($2)
+        $i=1
+        repeat
+            if scaFlgColor[$i]='y' then {$2}[$i]=$4 scaFlgColor[$i]='n' endif
+            $i=$i+1
+        until $i > $size
+	{$0}('add2menu',$4)
+    endif
+
+ELSEIF ($1='savechanges') THEN
+    $bkup=userdir+'/persistence/studyCluster/lastAttrVal'
+    write('reset',$bkup)
+    writeparam($bkup,'scaPar scaParX scaParY scaPar0 scaFlgColor scaParColor scaParPrim scaParSec','global')
+    {$0}('writeattr',$2)
+    {$0}('pnew')
+
+ELSEIF ($1='undochanges') THEN
+    $bkup=userdir+'/persistence/studyCluster/lastAttrVal'
+    exists($bkup,'file'):$ex
+    if not $ex then return endif
+    fread($bkup,'global')
+    rm('-f',$bkup):$dum
+    {$0}('writeattr',$2)
+    {$0}('pnew')
+
+ELSEIF ($1='writeattr') THEN
+    $attr=$2+'_tmp'
+    write('reset',$attr)
+    $size=size('scaPar')
+    $i=1
+    repeat
+	$s3=scaParColor[$i] $s4=scaParPrim[$i] $s5=scaParSec[$i]
+	if (scaPopPar[2]='default') then $s3='' endif
+	write('file',$attr,'%s,%s,%s,%s',scaPar[$i],$s3,$s4,$s5)
+	$i=$i+1
+    until $i > $size
+    strstr($2,'/dirinfo/'):$cluster
+    if not $cluster then
+	$cspace='' strstr($2,'/ClusterInfo/'):$ok,$cspace
+	$excludefile=$cspace+'/ExcludeList'
+	write('reset',$excludefile)
+	$i=1
+	repeat
+	    if not scaPar0[$i] then
+		write('file',$excludefile,'%s %s_%s',scaPar[$i],scaParX[$i],scaParY[$i])
+	    endif
+	    $i=$i+1
+	until $i > $size
+    endif
+    rename($attr,$2):$dum
+
+ELSEIF ($1='add2menu') THEN
+        $menudir=userdir+'/persistence/studyCluster'
+        $menu=$menudir+'/'+$0+'_AttrMenu'
+	$menu2=$menu+'2'
+	write('reset',$menu2)
+
+    $size=size('$2')
+    $i=1
+    repeat
+      if ($2[$i]<>'') then
+	$mval='"'+$2[$i]+'"'
+	lookup('mfile',$menu,'countcs',$mval):$ok
+	if not $ok then
+	    chkname($2[$i],'alnum-'):$str
+	    write('file',$menu2,'"%s" "%s"',$str,$str)
+      	endif
+      endif
+      $i=$i+1
+    until $i > $size
+    shell('(cat '+$menu2+' >> '+$menu+')'):$devnull
+//    rename($menu2,$menu):$dum
+    rm('-f',$menu2):$dum
+    {$0}('pnew')
+
+ELSEIF ($1='close') THEN
+        destroy('scaPar0','global'):$dum
+        destroy('scaPar','global'):$dum
+	destroy('scaParX','global'):$dum
+	destroy('scaParY','global'):$dum
+        destroy('scaParColor','global'):$dum
+	destroy('scaFlgColor','global'):$dum
+        destroy('scaParPrim','global'):$dum
+        destroy('scaParSec','global'):$dum
+
+ELSEIF ($1='pnew') THEN
+    vnmrjcmd('pnew','scaPopPar','scaPar','scaParX','scaParY','scaPar0','scaFlgColor','scaParColor','scaParPrim','scaParSec','craftnmrparRef')
+
+ELSEIF ($1='get') THEN
+
+        $s3='' $s4='' $s5='' $s6='' $s8='default'
+        $attrfile=$2
+        exists($attrfile,'file'):$afex
+        if $afex then
+            lookup('mfile',$attrfile,'countline'):$atot
+            $key=$attrfile
+            $j=1 $done=0
+            while $done<0.5 do
+                $line=''
+                lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+                if $ret<1.5 then $done=1 else
+                    $s3[$j]='' $s4[$j]='' $s5[$j]='' $s6[$j]=''
+		    substr($line,'wc','csv'):$words
+		    if $words>0 then
+                    	substr($line,1,'csv'):$s3[$j]
+		    endif
+		    if $words>1 then
+			substr($line,2,'csv'):$s4[$j]
+		    endif
+		    if $words>2 then
+			substr($line,3,'csv'):$s5[$j]
+		    endif
+		    if $words>3 then
+			substr($line,4,'csv'):$s6[$j]
+		    endif
+		    if ($s4[$j]<>'') then $s8='' endif
+                    $j=$j+1
+                endif
+            endwhile
+        endif
+        return($s3,$s4,$s5,$s6,$s8)
+ELSEIF ($1='setdssicolors') THEN
+    exists('dssicolors','parameter'):$parex
+    if not $parex then return endif
+    substr(file,'dirname'):$dir,$b,$e
+    {$0}('get',$dir+'/dirinfo/'+$b+'_ClusterAttribute'):$s1,$s2
+    dssicolors=$s2
+
+ENDIF
+

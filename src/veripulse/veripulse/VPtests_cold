@@ -1,0 +1,206 @@
+# Five types of entries are defined. 
+# Label puts the description on the panel
+# Show applies the macro to the show condition for the following test. Following a semi-colon,
+# an optional description is displayed if the show condition is false. Note: the show condition
+# is evaluated when VeriPulse starts. It is not checked while VeriPulse is running.
+# Test1 defines testID and test description
+# Test2 defines macro, alternate macro, and test description with keyword CHECKBOX.
+# The macro and alternate macro are separated with a comma.
+# The CHECKBOX keyword displays a checkbox. If the checkbox is not checked, the first macro is
+# selected. If the checkbox is checked, the alternate macro is selected.
+# Test3 provides a macro that returns a test, followed by the test description.
+# The trailing capital N on Test1N, Test2N, and Test3N is a signal that these tests are not turned on
+# when the "All tests" checkbox is selected.
+# Info lines contain the macro, sample, duration, and tuning associated with a test.
+# The order of the Info lines determines the order in which the tests are run.
+
+Label
+Label  Shim optimization
+Show   exists('gxyzmapsys','maclib'):$e return(($e>0.5)*2-1);3D shimming appdir not enabled
+Test2  IP3Dshim,IP3Dshim_STE 3D map and shim (ASTM)       CHECKBOX with STE
+Show   exists('gxyzmapsys','maclib'):$e return(($e>0.5)*2-1);3D shimming appdir not enabled
+Test2N IP3Dshim_sucrose,IP3Dshim_STE_sucrose 3D map and shim (sucrose)    CHECKBOX with STE
+Show   VP3Dmap:$e return(($e>0.5)*2-1);3D maps not available 
+Test1  VP3Dshimonly 3D shim only (using mapname from probe file) 
+Test1  Lock_map_Z0 z0 calibration and 2H (lk) gradient map
+Test1  VPHSmap Homospoil gradient map (lk) 
+
+Label  RF calibrations
+Test1  H1_pw90Cal 1H 90-degree pulse width and RF homogeneity
+Test3  $pw90=0 getparam('pw90','H1'):$pw90 if ($pw90=0) then return('HC_ProbeCal') else return('H1_ProbeCal') endif;1H 90-degree pulse width and decoupling
+Test3  $pw90=0 getparam('pw90','C13'):$pw90 if ($pw90=0) then return('HC_ProbeCal') else return('C13_ProbeCal') endif;13C 90-degree pulse width and RF homogeneity
+Test2  N15_ProbeCalAT,N15_ProbeCal 15N 90-degree pulse width CHECKBOX Ind Det #2
+
+Label  Gradient tests
+Test1  G_Profile_n_Recovery Profile and recovery
+
+Label  Lineshape and resolution tests
+Test2 H1_Lshp_nonspin,H1_Lshp_nonspin_nt4 1H non-spin lineshape CHECKBOX 4 scans
+Test1 H1_Lshp_nonspin_noshim 1H non-spin lineshape (no shimming)
+
+Label Sensitivity tests
+Test1 H1sens 1H sensitivity
+Test1  C13sensASTM 13C sensitivity
+Test1N VPsucrosenv Sucrose sensitivity
+Test1  VPsucrosenv2 Sucrose sensitivity (30 min equilibration)
+
+Label Console and magnet tests
+Show  exists('autotest','maclib'):$e return(($e>0.5)*2-1);AutoTest appdir not enabled
+Test1 AutoTest AutoTest
+Test1 IPH1lshpstab 1H lineshape and z0 drift
+
+Label Miscellaneous calibrations
+Test1 H1_qNMR_Cal 1H quantitation
+Show  exists(systemdir+'/conpar','file','rw'):$e return(($e>0.5)*2-1);Lock frequency adjustment (no permission)
+Test1 lockfreq_calib Lock frequency adjustment
+Test1 TempGrad Temperature Gradient
+Test1 VPtempcal VT calibration  (ethylene glycol only)
+
+
+# Sample execution order
+#     Test                 	        Macro                 		   Sample     Samplename         Time  alock wshim  method Tune
+Info  lockfreq_calib       	        lockfreq_calib       		   autotest   Lock_freq_calib       2   n     n     pfg    H1,NA
+Info  IP3Dshim             	        IP3Dshim            		   c13sn      shim3D              120   n     n     pfg    H1,NA
+Info  IP3Dshim_STE         	        IP3Dshim_STE         		   c13sn      shim3D              180   n     n     pfg    H1,NA
+Info  IP3Dshim_sucrose     	        IP3Dshim            		   sucrose    shim3D              120   n     n     pfg    H1,NA
+Info  IP3Dshim_STE_sucrose 	        IP3Dshim_STE         		   sucrose    shim3D              180   n     n     pfg    H1,NA
+Info  Lock_map_Z0          	        Lock_map_Z0          		   doped_d2o   z0gmap_calib        20   n     n     pfg    H1,NA
+Info  VP3Dshimonly 	                VP3Dshimonly        		   sucrose    shim3D                3   a     e     gxyz   H1,NA
+Info  VPHSmap            	        VPHSmap          		   doped_d2o   HSmap_calib         20   n     n     pfg    H1,NA
+Info  H1_pw90Cal           	        H1_pw90Cal           		   doped_d2o   H1pw90Cal           20   a     e     pfg    H1,NA
+Info  N15_ProbeCalAT       	        N15_ProbeCalAT       		   autotest   N15_calibrate        20   a     e     pfg    H1,N15
+Info  AutoTest             	        AutoTest             		   autotest   AutoTest            120   a     e     pfg    H1,C13
+Info  G_Profile_n_Recovery 	        G_Profile_n_Recovery 		   doped_d2o   grad_profile_recovery 6  a     e     pfg    H1,NA
+Info  H1_Lshp_nonspin      	        H1_Lshp_nonspin      		   lineshape  H1_Lshp_nonspin      30   a     e     pfg    H1,NA
+Info  H1_Lshp_nonspin_noshim            H1_Lshp_nonspin_noshim             lineshape  H1_Lshp_nonspin       5   a     e     pfg    H1,NA
+Info  H1_Lshp_nonspin_nt4               H1_Lshp_nonspin_nt4                lineshape  H1_Lshp_nonspin      60   a     e     pfg    H1,NA
+Info  H1_ProbeCal          	        H1_ProbeCal          		   id1        H1_calibrate         50   a     e     pfg    H1,C13
+Info  C13_ProbeCal         	        C13_ProbeCal         		   id1        C13_calibrate        90   a     e     pfg    H1,C13
+Info  HC_ProbeCal          	        HC_ProbeCal          		   id1        H1C13_calibrate      120  a     e     pfg    H1,C13
+Info  H1sens               	        H1sens               		   h1sn       H1sensitivity        40   a     e     pfg    H1,C13
+Info  C13sensASTM          	        C13sensASTM          		   c13sn      C13sensitivityASTM   40   a     e     pfg    H1,C13
+Info  VPsucrosenv      	                VPsucrosenv       		   sucrose    Sucrose_sensitivity  60   a     e     shim_sucrose   H1,NA
+Info  VPsucrosenv2       	        VPsucrosenv2       	           sucrose    Sucrose_sensitivity  75   a     e     shim_sucrose   H1,NA
+Info  H1_qNMR_Cal          	        H1_qNMR_Cal          		   p31sn      H1_qNMR_Cal           5   a     e     pfg    H1,NA
+Info  N15_ProbeCal         	        N15_ProbeCal         		   id2        N15_calibrate        30   a     e     pfg    H1,N15
+Info  IPH1lshpstab         	        IPH1lshpstab         		   lineshape  H1_lineshape_stab   720   a     e     pfg    H1,NA
+Info  VPtempcal                         VPtempcal                          glycol     Temp_calib           12   n     n     pfg    H1,NA
+Info  VPemailreports                    VPemailreports                     none       Email_reports         1   n     n     pfg    NA,NA
+
+# Information for report generation. Some tests report more than one result
+#      Test                 		Reported results
+Report lockfreq_calib       		lockfreq_calib
+Report IP3Dshim             		shim3D
+Report IP3Dshim_STE         		shim3D
+Report VP3Dshimonly         		shim3D
+Report Lock_map_Z0          		z0calib
+Report H1_pw90Cal           		H1rfhomo,H1pw90
+Report H1_ProbeCal          		H1pw90
+Report H1sens               		H1SN
+Report C13_ProbeCal                     C13pw90,C13pwx90
+Report HC_ProbeCal                      H1pw90,C13pw90,C13pwx90
+Report C13sensASTM          		C13SN
+Report H1_qNMR_Cal          		QuantCal
+Report VPsucrosenv        		sucroseSN
+Report VPsucrosenv2       		sucroseSN
+Report N15_ProbeCalAT       		N15pwx90
+Report N15_ProbeCal                     N15pwx90
+Report AutoTest             		AutoTest
+Report H1_Lshp_nonspin      		H1_Lshp_nonspin
+Report H1_Lshp_nonspin_noshim    	H1_Lshp_nonspin
+Report H1_Lshp_nonspin_nt4              H1_Lshp_nonspin_nt4
+Report G_Profile_n_Recovery             profile,grec
+Report IPH1lshpstab         		H1lshpstab
+Report TempGrad                         TempGrad
+Report VPtempcal                        TempCal
+
+# Testname number_of_results ;Description of reported result
+# Testname_x type specname_or_value decimal_places  ;Description of reported result
+# spec type can be min, max, or none
+Spec lockfreq_calib 1   ;Lock frequency calibration
+Spec lockfreq_calib_1   none N/A 6 ;System lock frequency 
+
+Spec shim3D 2 ;3D gradient shimming
+Spec shim3D_1 none N/A 2 ;Field variation (Hz)
+Spec shim3D_2 none N/A 2 ;Shim power dissipation (W)
+
+Spec z0calib 1 ;z0 & 1D gradient map
+Spec z0calib_1 none N/A 0 ;Z0 for D2O
+
+Spec H1rfhomo 2       ;1H RF homogeneity
+Spec H1rfhomo_1  max H1RFHomogeneity450pw90 1 ;RF homogeneity (450/90)
+Spec H1rfhomo_2  max H1RFHomogeneity810pw90 1 ;RF homogeneity (810/90)
+
+Spec H1pw90 2         ;1H 90-degree pulse width (direct)
+Spec H1pw90_1  min H1pw90 1 ;pw90
+Spec H1pw90_2  none N/A     1 ;Pulse power level
+
+Spec H1SN 1           ;1H sensitivity
+Spec H1SN_1 max H1Sensitivity 1 ;RMS signal-to-noise ratio
+
+
+Spec C13SN 1          ;13C sensitivity (ASTM)
+Spec C13SN_1 max C13SensitivityASTM 1 ;RMS signal-to-noise ratio
+
+Spec sucroseSN 1           ;Sucrose sensitivity
+Spec sucroseSN_1 max SucroseSensitivity  1 ;RMS signal-to-noise ratio
+
+Spec C13pw90 2        ;13C 90-degree pulse width (direct)
+Spec C13pw90_1 min C13pw90 1 ;pw90
+Spec C13pw90_2 none N/A      1 ;Pulse power level
+
+Spec C13pwx90 2        ;13C 90-degree pulse width (indirect)
+Spec C13pwx90_1 min C13pw90 1 ;pwx90
+Spec C13pwx90_2 none N/A      1 ;Pulse power level
+
+
+Spec C13rfhomo 2       ;13C RF homogeneity
+Spec C13rfhomo_1  none N/A 1 ;RF homogeneity (360/0)
+Spec C13rfhomo_2  none N/A 1 ;RF homogeneity (720/0)
+
+Spec N15rfhomo 2       ;15N RF homogeneity
+Spec N15rfhomo_1  none N/A  1 ;RF homogeneity (360/0)
+Spec N15rfhomo_2  none N/A  1 ;RF homogeneity (720/0)
+
+
+
+
+Spec N15pwx90 2        ;15N 90-degree pulse width (indirect)
+Spec N15pwx90_1 min N15pw90 1 ;pwx90
+Spec N15pwx90_2 none N/A      1 ;Pulse power level
+
+Spec N15pw90 2        ;15N 90-degree pulse width (direct)
+Spec N15pw90_1 min N15pw90 1 ;pw90
+Spec N15pw90_2 none N/A      1 ;Pulse power level
+
+Spec QuantCal 1       ;1H quantitation calibration
+Spec QuantCal_1 none N/A 1 ;Concentration (mM) 
+
+Spec AutoTest 1       ;AutoTest (standard tests)
+Spec AutoTest_1 none N/A 0  ;Standard Tests
+
+Spec H1_Lshp_nonspin 3 ;1H lineshape (non-spinning)
+Spec H1_Lshp_nonspin_1  min H1CHCl3Lineshape50PercentNonspinning   2 ;50% linewidth
+Spec H1_Lshp_nonspin_2  min H1CHCl3Lineshape0Pt55PercentNonspinning 2 ;.55% linewidth
+Spec H1_Lshp_nonspin_3  min H1CHCl3Lineshape0Pt11PercentNonspinning 2 ;.11% linewidth
+
+
+# VPgettarget reads the Spec fields. VPgettarget decides which of the two comma separated
+# specnames are used based on gradtype.
+Spec profile 1 ;Gradient profile
+Spec profile_1 max ZpfgMax3Amp,ZpfgMax10Amp 1 ;Maximum gradient strength (G/cm)
+
+Spec grec 1            ;Z-axis gradient recovery
+Spec grec_1 none N/A 1;Recovery time (us)
+
+Spec TempCal 2 ;VT calibration
+Spec TempCal_1  none N/A 1   ;VT set point (deg. C)
+Spec TempCal_2  none N/A 1   ;Sample temperature (deg. C)
+
+Spec H1lshpstab 2     ;1H z0 drift and lineshape stability
+Spec H1lshpstab_1  none N/A 2   ;1H frequency drift (Hz/h)
+Spec H1lshpstab_2  none N/A 2   ;.50% linewidth change (Hz)
+
+
+Spec TempGrad 1          ;Temperature Gradient
+Spec TempGrad_1 none N/A 1 ;Temperature difference (Deg. C) 

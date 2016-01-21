@@ -1,0 +1,78 @@
+"macro xmcheckreq"
+"Used by all applications (Imaging, Liquids, etc.)		 "
+"xmcheckreq - check to see if an experiment with the given title"
+"             has already been run"
+
+if ($# < 0.5) then
+  write('error','Usage: %s( name )',$0)
+endif
+
+$found=0 $file=''
+$rreq=$1
+
+$dowalkup=0
+xm1('studydir'):$sdir
+exists('sqsaveid','parameter','global'):$e
+if (auto<>'y' and (appmode='walkup' or appmode='lc') and $e>0.5) then
+  if (studyid='tmpstudy' and sqsaveid<>'null') then
+    $sdir=sqsaveid
+    $dowalkup=1
+    substr($sdir,1,1):$s
+    if $s<>'/' then
+      $sdir=autodir+'/'+$sdir
+    endif
+  endif
+endif
+
+$id=actionid
+if ($id='null' or $id='') then
+  teststr('sqattr','id','global'):$i
+  if $i>0.5 then $id=sqval[$i] endif
+endif
+$enfile=$sdir+'/enterSQ'  "see xmselect('execreq')"
+exists($enfile,'file'):$ex
+if ($ex>0.5 and $id<>'' and $id<>'null') then
+  $attr='' $val='' $qsize=0
+  readfile($enfile,'$attr','$val','','local'):$qsize
+  if ($qsize>0.5) then
+"   $end='q1W2e3'"
+"   $reqs='' teststr('sqattr','required','global'):$ii"
+"   if $ii>0.5 then $reqs=sqval[$ii]+' '+$end endif"
+"   $ii=0 $rr=0"
+"   repeat"
+"     $ii=$ii+1"
+"     substr($reqs,$ii):$ss"
+"     if $ss<>$end then $req[$ii]=$ss $rr=$ii endif"
+"   until ($ss=$end or $ii>100)"
+    if $dowalkup=1 then
+      $sqdir=sqdir sqdir=$sdir
+    endif
+    $i=0
+    repeat
+      $i=$i+1
+      xmgetatts($attr[$i],'exp','data'):$qexp,$qdata
+      $val2[$i]=$qexp
+      $val3[$i]=$qdata
+    until ($i>=$qsize or $attr[$i]=$id)
+    if $i<$qsize then $qsize=$i endif
+    if $dowalkup=1 then
+      sqdir=$sqdir
+    endif
+    $i=$qsize $rfound=0
+    repeat
+      $i=$i-1
+      if ($val2[$i]=$rreq) then
+        $rfound=$i
+      endif
+    until ($i<=1 or $rfound>0.5)
+    if $rfound>0.5 then
+      $file=$val3[$rfound]+'.fid'
+      $s='' substr($file,1,1):$s
+      if $s<>'/' then
+        $file=$sdir+'/'+$file
+      endif
+      exists($file,'file'):$found
+    endif
+  endif
+endif
+return($found,$file)

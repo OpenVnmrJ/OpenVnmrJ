@@ -1,0 +1,572 @@
+"macro dcpXyxmatch"
+//dcpXyxmatch- Obtain a YX match curve for alpha or carbonyl with 
+//             constant aYyx and set aXyx, using the sequence ahYX. aYyx 
+//             is the outer array with values +/- srate/2.0 around 
+//             gB1 = 5/2wr. aXyx is the inner array with values +/-
+//             srate/2.0 around gB1 = 3/2wr. 
+
+//             Argument 1 is the action: 'setup', 'process' or 'plot'. The 
+//             action 'setup' initiates an experiment.  The actions 'process'
+//             and 'plot' are called by chempackQ. 
+
+//             Argument 2 is the nucleus, 'C13' (only). The second nucleus is 
+//             assumed to be 'N15'.
+
+//             Argument 3 is the region:
+//                       'alpha'(13C alpha),DCP code $reg2 = 'NCa', $reg = 'HCa'
+//                       'carbonyl(13C carbonyl), DCP code $reg2 = 'NCO', $reg='HCO' 
+//                        At present: the 15N region if fixed as 'amide, $reg1 = 'HNai'
+
+//                  Also: For calibration with the 13C offset at 100 ppm set:
+//                       'salpha'(13C alpha),DCP code $reg2 = 'sNCa', $reg = 'sHCa'
+//                       'scarbonyl(13C carbonyl), DCP code $reg2 = 'sNCO', $reg='sHCO'
+
+//             Argument 4 is ''. It is not used. 
+
+//==================
+// The SETUP macro
+//==================
+
+if (($#>0) and ($1='setup')) then   
+
+// Set the Nuclei and Region
+
+   parammodule('setsampleglobals')
+   rtppar('Settancpx')
+   AhYX
+   parammodule('updatesampleglobals')
+   parammodule('studydir')
+
+// Set the Observe Region for Pulsewidths, Acquisition and Decoupling.
+
+   $reg='' $pwr='' $nuc=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,1):$reg,$pwr,$nuc'
+   exec($macroname) 
+   $pwr='' 
+
+// Set the Decoupler-2 Region-code for HY CP and dec2.
+
+   $macroname = $0 + '(\'region\',\'N15\',\'amide\',\'\',0):$reg1,$pwr1,$nuc1'
+   exec($macroname) 
+   $pwr1=''
+
+// Set the Double-CP Region-code for YX CP
+
+   $reg2=''
+   if ($reg='HCa') then 
+      $reg2='NCa'
+   elseif ($reg = 'sHCa') then 
+      $reg2='sNCa'
+   elseif ($reg = 'HCO') then 
+      $reg2='NCO'
+   else 
+      $reg2='sNCO'
+   endif 
+
+ // Get the Spinrate
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   else 
+      probeparamgroup('getlocal',$reg,'H1','','srateHX'):srate
+   endif
+
+   if (srate<500) then 
+      write('error','Warning: Error: srate<500, Calibrate srateHX>500 in the Probe File')
+      abort
+   endif
+
+// Check the HY Spinrate
+
+   probeparamgroup('getlocal',$reg1,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: Warning: srate=%f Hz and amide srateHX=%f Hz in the Probe File Disagree\n',srate,$srate)
+   endif
+
+// Set the YX Spinrate
+
+   probeparamgroup('getlocal',$reg2,'N15','','srateYX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: Warning A New Value of srateYX=%f has Been Set in the Probe File',srate)
+   endif
+   probeparamgroup('setlocal',$reg2,'N15','','srateYX',srate)
+
+// Calibrate setddrtc for CP
+
+   exists('ddrpm','parameter'):$e
+   if ($e < 0.5) then
+      create('ddrpm','string')
+      ddrpm='r'
+   endif   
+   rof2=rd-0.6 alfa=ad
+
+// Obtain Pulsewidth Parameters from the Observe Region, $reg.
+
+   probeparamgroup('getlocal',$reg,$nuc,'','ofX90','dbX90'):$tof,tpwr
+   tof=$tof
+   probeparamgroup('get',$reg,$nuc,'90X','a','pw')
+   probeparamgroup('getlocal',$reg,'H1','','ofX90','dbX90'):$dof,dpwr
+   dof=$dof
+   probeparamgroup('get','hp'+$reg,'H1','90H','a','pw')
+
+// Obtain the Decoupler 2 Pulse-Width parameters from $reg1.
+
+   probeparamgroup('getlocal',$reg1,$nuc1,'','ofX90','dbX90'):$dof2,dpwr2
+   dof2=$dof2
+   probeparamgroup('getlocal',$reg1,$nuc1,'90X','a','pw'):aY90,pwY90
+
+// Obtain the HY CP Parameters from the Decoupler 2 Region, $reg1.
+
+   probeparamgroup('getlocal',$reg1,'H1','HX','ch','sh','to','fr',
+                                    'aH','b','d','t','of'):chHY,shHY,toHY,frHY,
+                                    aHhy,bHY,dHY,tHY,ofHY
+
+   probeparamgroup('getlocal',$reg1,$nuc1,'','aXhx'):aYhy
+
+// Obtain Proton Decoupling Parameters from the Observe Region, $reg.
+ 
+   probeparamgroup('get',$reg,'H1','tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,'H1','spinalH','a','pw','ph','alp')
+   Hseq = 'spinal'
+
+// Obtain DCP Parameters from the DCP region, $reg2.
+
+   probeparamgroup('get',$reg2,$nuc1,'YX','ch','sh','to','fr',
+                                    'aY','b','d','t','of')
+   probeparamgroup('get',$reg2,$nuc,'YX','aX')
+   probeparamgroup('get',$reg2,'H1','','aHyx')
+
+// Redo the aXyx Array with Increased Resolution based on aYyx and aXyx
+
+   probeparamgroup('getlocal',$reg2,$nuc,'','aXyx'):$aX32wr_sp
+   probeparamgroup('getlocal',$reg,$nuc,'','aX90'):$aX90_X
+   probeparamgroup('getlocal',$reg,$nuc,'','pwX90'):$pwX90_X
+
+   $B1X32=1.0e6*$aX32wr_sp/(4.0*$pwX90_X*$aX90_X)
+   $ampXmax=$aX32wr_sp*($B1X32 + 0.5*srate)/$B1X32
+   if ($ampXmax > $aX90_X) then $ampXmax = $aX90_X endif
+   $ampXmin=$aX32wr_sp*($B1X32 - 0.5*srate)/$B1X32
+   if ($ampXmax<50.0) then $ampXmax=50 endif 
+   $stepX=trunc(($ampXmax-$ampXmin)*0.05 + 0.5)
+   array('aXyx',21,$aX32wr_sp-10*$stepX,$stepX)
+   nt=4
+
+// Access Sample Module
+
+   exists('SPsamplefilename','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPsamplefilename','string','global')
+      SPsamplefilename=''
+   endif
+
+   exists('samplefilename','parameter'):$e
+   if ($e<0.5) then 
+      create('samplefilename','string')
+      samplefilename=''
+   endif
+
+   samplefilename=''
+   $e=0 $e1=0
+   if (SPsamplefilename<>'') then 
+      $studysamplefilename=archivedir+'/'+sample+'/dirinfo/'+SPsamplefilename
+      exists($studysamplefilename,'file'):$e
+      if ($e>0.5) then
+         shell('touch '+$studysamplefilename):$dum
+         fread($studysamplefilename)
+         samplefilename=SPsamplefilename
+         write('line3','Obtain Sample Module %s from Study',SPsamplefilename)
+      else
+         $usersamplefilename=userdir+'/modules/'+SPsamplefilename
+         exists($usersamplefilename,'file'):$e1
+         if ($e1>0.5) then
+            shell('touch '+$usersamplefilename):$dum
+            fread($usersamplefilename)
+            samplefilename=SPsamplefilename
+            write('line3','Obtain Sample Module %s from Modules Directory',SPsamplefilename)
+         else 
+            write('error','ERROR: Sample Module Does Not Exist')
+         endif
+      endif
+   endif 
+
+   if (samplefilename<>'') then
+      if (tn='C13') then
+         if (C13d1>0.0) then d1=C13d1 endif
+         if (C13nt>0.0) then nt=C13nt endif
+         if (C13sw>0.0) then sw=C13sw endif
+         if (C13at>0.0) then at=C13at endif
+         if (C13np>0.0) then np=C13np endif
+         if (C13ss>0.0) then ss=C13ss endif
+      endif
+
+      if (tn='N15') then
+         if (N15d1>0.0) then d1=N15d1 endif
+         if (N15nt>0.0) then nt=N15nt endif
+         if (N15sw>0.0) then sw=N15sw endif
+         if (N15at>0.0) then at=N15at endif
+         if (N15np>0.0) then np=N15np endif
+         if (N15ss>0.0) then ss=N15ss endif
+      endif
+   endif
+
+// Save Sample Module with Study
+
+   $e=0
+   if (SPsamplefilename<>'') then
+      $studysamplefiledir=archivedir+'/'+sample+'/dirinfo'
+      exists($studysamplefiledir,'directory'):$e
+      if ($e>0.5) then
+         module('list',SPsamplefilename):$list
+         writeparam(archivedir+'/'+sample+'/dirinfo/'+SPsamplefilename,$list,'current')
+         write('line3','Write Sample Module %s to Study',SPsamplefilename)
+      else
+         write('line3','Sample Module not Written')
+      endif
+   endif
+  
+// Set the Auto Display to Absolute Value
+
+   $macroname = $0 + '(\'maxamp\',100)'
+   wnt='vp=0 sb=\'y\' wft setref av ' + $macroname + ' noislm(1.0) dssh'
+
+// Set Macro-Specific Processing and Plotting 
+
+   wexp = 'chempackQ'
+   execprocess = $0 + '(\'process\',\''+$2+'\',\''+$3+'\',\''+$4+'\',0)'
+   execplot = ''
+   clear(2)
+//   au
+   return
+endif
+
+//===========================
+// Macro-Specific Processing
+//===========================
+
+if (($# > 0) and ($1 = 'process')) then 
+
+// Analyze the 1H Nutation Curve
+
+   $macroname = $0 + '(\'matchxxy\',$2,$3,$4,0)'
+   exec($macroname)  
+endif
+
+//===========================
+// Macro-Specific Plotting
+//===========================
+
+if (($# > 0) and ($1 = 'plot')) then 
+   wc = 50 sc = 50
+   plot1d
+   return  
+endif 
+
+//==================================
+// Begin AutoCalibration Utilities
+//==================================
+
+//--------------------
+// The maxamp function
+//--------------------
+
+if (($# > 0) and ($1 = 'maxamp')) then
+   select(celem) 
+   if (celem=1) then 
+      vsadj($2) 
+   endif
+   peak:$ht
+   if ($ht>$2) then 
+      vsadj($2) 
+   endif 
+   return    
+endif  
+
+//--------------------------
+// The  minmaxfit function
+//--------------------------
+
+if (($# > 0) and ($1 = 'minmaxfit')) then 
+
+   $bestone=$2
+   $lim=2
+   if ($#>3) then $lim=$4 endif
+
+// Prepare 'analyze.inp'
+
+   $file=curexp+'/analyze.inp'
+   exists($file,'file'):$a
+   if ($a>0.5) then 
+      write('reset',$file) 
+   endif
+
+   format((2*$lim+1),2,0):$sizes
+
+   write('file',$file,'AMPLITUDE')
+   write('file',$file,'INTENSITY')
+   write('file',$file,'%12s%13s%7s%7s\n','1',$sizes,'linear','linear')
+   format((2*$lim+1),2,0):$sizes
+   write('file',$file,'%8s%5s','NEXT',$sizes)
+   write('file',$file,'1')
+
+   $step=$bestone-$lim
+   repeat
+      select($step)
+      peak:$ht
+      write('file',$file,'%14.1f%12.2f',$step,$ht)
+      $step=$step+1
+   until ($step>$bestone+$lim)
+
+// 'poly2 Analysis with 'expfit'
+
+   analyze('expfit','regression','poly2')
+   $file=curexp+'/analyze.out'
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   format($a1s,8,4):$a1
+   format($a2s,8,4):$a2
+   $inf=-$a1/(2.0*$a2)
+   $infval=$a0+$a1*$inf+$a2*$inf*$inf
+
+// Mean Value from 'poly0' 
+
+   analyze('expfit','regression','poly0')
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   $mean=$a0
+//   write('line3','$inf=%f $infval=%f $mean=%f',$inf,$infval,$mean)
+//   write('line3','$2 = %f',$2)
+
+// Min ($minmax<0) or Max ($minmax>0) or none ($minmax=0)
+
+   $minmax=0 $ret=0.0
+   if (($bestone-$lim)<$inf)and($inf<($bestone+$lim)) then 
+      $ret=$inf
+      if ($infval<$mean) then 
+         $minmax=-1
+      else
+         $minmax=1
+      endif
+   endif
+
+//   write('line3','$xmin = %f $ret = %f $xmax = %f $minmax=%f',$bestone-$lim,$ret,$bestone+$lim,$minmax)
+
+// Return the new $bestone and a Fraction After $bestone,
+// else Return $bestone=$2 and $remainder=0.0 
+
+   $remainder=0 
+   if (($3='min')and($minmax<0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if (($3='max')and($minmax>0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if ($minmax=0) then
+      $bestone=$2 
+      $remainder=0.0
+   endif
+//   write('line3','$bestone=%f',$bestone)
+   return($bestone,$remainder)
+endif 
+
+//---------------------
+// The Xxymatch Macro
+//---------------------
+
+if (($# > 0) and ($1 = 'matchxxy')) then
+
+// Set the Acquisition Region
+
+   $reg='' $pwr='' $nuc=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+   $pwr=''
+
+// Set the Region (1) for the Initial CP
+
+   $macroname = $0 + '(\'region\',\'N15\',\'amide\',\'\',0):$reg1,$pwr1,$nuc1'
+   exec($macroname) 
+   $pwr1=''
+
+// Set the Region Code (2) for XY CP
+
+   $reg2=''
+   if ($reg='HCa') then 
+      $reg2='NCa'
+   elseif ($reg = 'sHCa') then 
+      $reg2='sNCa'
+   elseif ($reg = 'HCO') then 
+      $reg2='NCO'
+   else 
+      $reg2='sNCO'
+   endif 
+
+// Analyze the Fine aXyx Dependence
+
+   $bestone=1 $counter=1 $best=0
+   fn=16*np vp=0 av wft
+   repeat
+      select($counter)
+      peak:$ht
+      if ($ht>$best) then $best=$ht $bestone=$counter endif
+      $counter=$counter+1
+   until ($counter>arraydim)
+
+   $aXyx=aXyx[$bestone]
+   
+   probeparamgroup('setlocal',$reg2,$nuc,'','aXyx',$aXyx)
+endif
+
+//-------------------
+// The Region Macro
+//-------------------
+
+if (($# > 0) and ($1 = 'region')) then
+   $nuc=$2
+   $reg=''
+   $pwr=$4
+   if (($# > 4) and ($5 = 1)) then 
+      if ($2='C13') then 
+         tn='C13' dn='H1' dn2='N15' dn3=''   
+         wc = 200 sc =10
+         ad=4.0 rd=4.0 ddrtc=8.0 rp=0 lp=0 d1=2.0 nt=1 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=50 gain=30
+         ofHX=0.0
+         if ($3='alpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='HCa'
+         elseif ($3='salpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            d1=2.0 nt=1.0
+            setref(tn) setoffset('C13',33.3):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=28p wp=20p
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         tn='N15' dn='H1' dn2='C13'  dn3=''   
+         wc = 200 sc =10
+         ad=16.0 rd=4.0 ddrtc=20.0 rp=0 lp=0 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=0  lb='n' gain=30  
+         ofHX=0.0
+         if ($3='amide') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',115):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=90p wp=50p
+            $reg='HNai'
+         elseif ($3='amine') then
+            d1=2.0 nt=1 
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HNam'
+         elseif ($3='amino') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HN'
+         endif         
+      endif
+      probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof)
+   else
+      if ($2='C13') then 
+         if ($3='alpha') then
+            $reg='HCa'
+         elseif ($3='salpha') then
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         if ($3='amide') then
+            $reg='HNai'
+         elseif ($3='amine') then 
+            $reg='HNam'
+         elseif ($3='amino') then 
+            $reg='HN'
+         endif
+      endif
+   endif
+   return($reg,$pwr,$nuc)
+endif
+
+//---------------------
+// The Spin Rate Macro
+//---------------------
+
+if (($# > 0) and ($1 = 'spinrate')) then
+
+// Get the Current Spin Rate with an Average of 10
+
+   banner('Measuring Spinning Rate and Stability')
+   $count=1 srate=0
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      shell('showstat > ',$dest):$dummy
+ 
+      lookup('file',$dest,'currently', 'at:','read'):$masrate,$ret 
+      if $ret then
+         format($masrate,5,0):srate[$count]
+      endif
+//    echo($masrate)
+      shell('sleep 1')
+      $count=$count+1
+   until ($count>10)
+
+   averag(srate[1],srate[2],srate[3],srate[4],srate[5],srate[6],
+       srate[7],srate[8],srate[9],srate[10]):$avgsrate,$dev
+
+   $avgsrate = trunc($avgsrate + 0.5)  
+
+//Check the Spin Rate 
+
+   if ($avgsrate<500) then 
+      $message='MAS Spin Rate Measurement is Less Than 500 Hz - Aborting with 0.0 '
+      banner($message)
+      srate = 0.0
+//      abort
+   else
+      srate = $avgsrate
+   endif 
+
+// Remove Files Generated by the Spin Rate Measurement
+
+   $count=1
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      rm($dest):$dummy
+      $count=$count+1
+   until ($count>10)
+   return(srate)
+endif 

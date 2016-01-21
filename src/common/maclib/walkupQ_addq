@@ -1,0 +1,223 @@
+"macro walkupQ_addq"
+"****************************************************************"
+"   walkupQ_addq -  More-on-this for acquisition queue   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+    if ($# < 1) then $1='' endif
+    expactive:$active
+    if ($1='force') and ($active>0) then
+        write('error','Current exp is active')
+        return
+    endif
+    if (archivedir='') or (sample='') then
+        write('error','archivedir and/or sample is an empty string')
+        return
+    endif
+
+    is_submitmode:$issubmit
+    $mimic='no'
+    getadminfo('alwaysmimic'):$mimic
+    if ($issubmit<1) and ($mimic='no') then
+       tmpsqcopy('OrigExpPar')
+       isnewexp:$isnew
+       $archsamp=archivedir+'/'+sample
+       $locdir=''
+//       iscurrentfid(explist,$archsamp):$iscurrent,$locdir
+//       if ($iscurrent=0) then
+           iscurrentfid('',$archsamp):$iscurrent,$locdir
+//       else
+//	   shell('dirname '+$locdir):$locdir
+//       endif
+	substr($locdir,'basename'):$locdir
+       if ($iscurrent) then
+           vjeditQ($locdir)
+           return
+       endif
+    endif
+
+    isnewexp:$isnew
+    $archsamp=archivedir+'/'+sample
+    if ($isnew=0) then
+        shell('dirname '+file):$archsamp
+    endif
+
+    Autockdir($archsamp)
+    exists($archsamp+'/dirinfo','directory'):$ex
+    if ($ex=0) then
+        write('error','%s/dirinfo directory not found',$archsamp)
+        return
+    endif
+
+    $cuser=owner $cactive=0 $cexp=''
+    is_activeQ($archsamp):$cactive,$cuser,$cexp
+    if ($cactive>1) then
+          write('error','This sample is currently active in %s',$cexp)
+          return
+    endif
+
+    getsampglobal($archsamp+'/dirinfo/macdir')
+
+    $archivedir='' shell('dirname '+$archsamp):$archivedir
+    if ($archivedir <> archivedir) then
+        archivedir=$archivedir
+        setvalue('archivedir',$archivedir,'processed')
+    endif
+
+    wshim='n' if (alock<>'u') then alock='n' endif
+    customflag='n'
+    cppauseflg='n'
+    explist=''
+    wqinit='acq'
+    longQ='n'
+    prioritysample='no','low','sample'
+    setProbepars('force')
+    getadminfo('protuneatstart'):ptuneatsample
+    getfilepath('cpQdefaults','modules'):$modex,$modpath
+    $autolockshim='NewContinue'
+    getadminfo('autolockshim'):$autolockshim
+    strstr($autolockshim,'Continue'):$modex2
+    if ($modex) and ($modex2) then
+	rtv($modpath,'noabort','wshim'):wshim
+	rtv($modpath,'noabort','alock'):alock
+    endif
+//    Gmaplist
+//    getparam('gradient','Probe'):PFGflg
+
+    $status=''
+    exists($archsamp+'/studypar','file'):$sparex
+    if ($sparex) then
+        rtv($archsamp+'/studypar','noabort','studystatus'):$status
+    endif
+    if ($status='Active') or ($status='preScan') then
+        write('error','CAUTION: %s is in Active acquisition mode',sample)
+    endif
+
+    walkupQ('clear')
+    resumeQ='addq'
+    $defaultQ=''
+    defaultqueue:$defaultQ
+    if ($defaultQ='bgauto') then
+	setvalue('wqacq','autodir',1)
+    else
+	setvalue('wqacq','curexp',1)
+    endif
+    if ($defaultQ='bgauto') then
+        expactive('auto'):$bgauto
+        $isinqueue=0
+        if (autodir<>'') then
+                shell('(cat '+autodir+'/enterQ | grep -cw SAMPLE#:)'):$isinqueue
+        endif
+        if ($bgauto) or ($isinqueue) then
+            write('error','Alert: There are samples in current autodir')
+        endif
+    endif
+
+    walkupQ('renew')
+    file='exp'
+
+    write('reset',$expfile)
+    $origmacdir=$archsamp+'/dirinfo/macdir'
+    $origfidlog=$archsamp+'/dirinfo/fidlog'
+
+    shell('rm -rf '+$maclibdir+'/*'):$dum
+    shell('cp -r '+$origmacdir+'/* '+$maclibdir):$dum
+    shell('rm -f '+$maclibdir+'/EXPLIST'):$dum
+    shell('rm -f '+$maclibdir+'/LONGLIST'):$dum
+    shell('(cat '+$maclibdir+'/ACQlist | grep -vw Error > '+$expfile+')'):$dum
+    shell('rm -f '+$maclibdir+'/ACQlist'):$dum
+//    shell('mv '+$maclibdir+'/ACQlist '+$expfile):$dum
+                        "write FIDlist"
+    $s1='' $s2='' $totfid=0
+    exists($origfidlog,'file'):$fileex
+    if ($fileex) then
+        readfile($origfidlog,'$s1','$s2','','local'):$totfid
+    endif
+    write('reset',$curfidlist)
+    if ($totfid) then
+      $i=1
+      repeat
+        $s3='' $s4=''
+        strstr($s2[$i],samplename+'-'):$ret,$s3,$s4
+        if ($ret<>1) then
+           $s4=$s2[$i]
+        endif
+        write('file',$curfidlist,'"%s.fid" "%s.fid"',$s4,$s4)
+        $i=$i+1
+      until $i > $totfid
+    endif
+
+    $LIST='SampInfo','fidlog','ACQlist'
+    xmhaha('buildsq',archivedir+'/'+sample,$LIST)
+
+    $explist=''
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    cpexplist('read',$md):$explist
+    if ($explist[1]<>'') then
+          $expsize=size('$explist')
+          $i=1
+          repeat
+            $list=$explist[$i]
+            shell('(cat '+$expfile+' | grep -w Queued | grep -wc \'^'+$list+'\')'):$isin
+            if ($isin=0) then
+                $rtime=0
+                cpexptime($list,$maclibdir):$rtime
+                $expname=''
+                strstr($list,'_','last'):$ret,$expname
+                if ($ret=0) then $expname=$list endif
+                $node='' $sqnode='' $ext=''
+                getcpnode('cp',cursqexp,$expname):$node,$ext
+                $stime='' $stime2='' formattime($rtime):$stime2,$stime
+		$attr='title',$node,'time',$stime
+		xmhaha('mknode',$expname,$attr):$sqnode
+                if ($sqnode='') then
+                        $sqnode='xx'+$ext
+                endif
+                write('file',$expfile,'%s  %d  %s  %s  Queued',$node,$rtime,$expname,$sqnode)
+            endif
+          $i=$i+1
+          until $i> $expsize
+	  vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+    endif
+    walkupQ('time')
+
+    expactive('auto'):$bgauto
+    $isactive=0
+		//  The following line is for evaluation convenience
+		//  on a workstation
+    if ($active<0) then $bgauto=$active endif
+    if ($bgauto<>0) then
+        $who='' $status='' $samplename='' $locdir=''
+        checklocstatus(autodir+'/enterQ','0','',''):$status,$who,$samplename,$locdir
+        if (($status='Active') or ($status='preScan')) and ($locdir<>'') then
+	    $curautosampglobal=autodir+'/enterQ.macdir/'+$locdir+'/day/sampleglobal'
+            exists($curautosampglobal,'file'):$sampgex
+            if ($sampgex) then
+                $cursample='' $curarchivedir=''
+                rtv($curautosampglobal,'noabort','sample'):$cursample
+                rtv($curautosampglobal,'noabort','archivedir'):$curarchivedir
+                $curarchsamp=$curarchivedir+'/'+$cursample
+                if ($curarchsamp=$archsamp) then $isactive=1 endif
+            endif
+        endif
+    endif
+    if ($isactive) then
+	replaceQ='ActiveDay','0','0','0'
+	wqacq='autodir',''
+    else
+	replaceQ='','','',''
+    endif
+    newdg
+    if ($mimic='yes') then
+	studymimic('initmimic')
+    endif
+"****************************************************************"

@@ -1,0 +1,31 @@
+"macro N15sens_finddmf"
+
+wft
+ai
+f full
+$i=1
+$minlw=1e6
+$minindex=0
+
+repeat
+   select($i)
+   aph
+   peak(sp,sp+wp):$ht,$frq
+   cr=$frq
+   dres:$lw50
+   if ($lw50<$minlw) then $minlw=$lw50 $minindex=$i endif
+   $i=$i+1
+until ($i>arraydim)
+
+$bestdmf=dmf[$minindex]
+select($minindex)
+vsadj
+
+write('line3','dmf set to %g',$bestdmf)
+write('line3','Optimum dmf: %g Hz',$bestdmf):$line
+atext($line)
+CalibrationResults=$line
+write('line3','dmf=%g',$bestdmf):$str
+walkupQ_runtime('customize','','all',$str)
+execprocess='wft dssh darray(`CalibrationResults`)'
+setvalue('execprocess',execprocess,'processed')

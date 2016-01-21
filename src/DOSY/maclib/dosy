@@ -1,0 +1,717 @@
+"macro dosy"
+"@(#)dosy Manchester version 27iii09 "
+" version for new wft2d/wft2da					"
+
+"remove capitalisation of conditional structures		"
+"adapted from dosynew 16i09 GAM : support phase sensitive 3D 	"
+"dosy assembles peak height (2D DOSY) or volume (3D DOSY) data	"
+"and runs the command dosyfit to calculate diffusion 		"
+"coefficients and standard errors;  these are then used by the	"
+"command ddif to synthesise a 2D spectrum (2D DOSY) or a 2D	"
+"projection of a section through a 3D spectrum (3D DOSY).	"
+
+"Sequence-specific parameters for the fitting are either	"
+"(a)	taken from the variables dosytimecubed and dosygamma	"
+"	where these have been calculated by new-style		"
+"	sequence code (sequences beginning with D)		"
+"(b)	calculated from the variables del, gt1 etc. for		"
+"	known old-style sequences, or				"
+"(c)	requested from the operator				"
+
+"Arguments:							"
+"dosy			standard processing			"
+"dosy('prune')		use operator dialogue to establish	"
+"			which spectra to omit from the analysis	"
+"dosy(d1,d2)		plot only the diffusion range from	"
+"			d1e-10 m2/s to d2e-10 m2/s		"
+"dosy('prune',d1,d2)	combine above options			"
+
+
+"CHANGES TO STANDARD VARIAN MACRO IN IMPLEMENTING OUR NEW CODE		"
+"									"
+" MN9Feb08 Forcing npoint to 0 instead of 6				" 
+" MN9Feb08 Checking/creating /dosy in curexp. Copy all in userdir/dosy to"
+"          /curexp/dosy							" 
+" MN9Feb08 Check/create dosyproc					"
+" MN11Feb08 Check/create continflag,nugflag,nugcal,ncomp					"
+" GAM31iii08 switch to Manchester biexp routine for ncomp=2           "
+" GAM31iii08 neaten up error messages                                 "
+
+" 9iv08	Change to using dosy not Dosy, gcal_ not DAC_to_G		"
+" 30iv08 Change values of dosyproc					"
+" 30iv08 Refuse to handle matrices bigger than 128k x 512		"
+" 14v08	Add new first line to force fail with old Vnmrbg		"
+" 15v08	Handshake with dosyfit('version') to make sure that macro and	"
+"	dosyfit are compatible						"
+" 16x08 trap existence of plain file subexp and remove -shouldn't be    "
+"                                               there, but sometimes is "
+" 16x08 trap fn too large						"
+" 17x08 If parameter dosy3Dflag doesn't exist, create it and set it to	"
+"	'n' if ni<2 (2D processing) and 'y' if ni>1 (3D processing)     "
+" 17x08 If dosy3Dflag='n' then force ni to zero and calcdim		"
+" 17x08 Check that the array dimension is consistent with processing	"
+"	type								"
+" 5ii09 Enter dialogue for calculating dosytimecubed if dosytimecubed 	"
+"       is zero, as it will be if dosytimecubed has just been created	"
+" 5ii09 Save and restore display settings in 3D processing		"
+" 5ii09 Create ll2d subdirectory before ll2d('read',...) if necessary	"
+" 5ii09 Move ll2d('volume') to before amplitude marking section 	"
+" 5ii09 Make 'sequence not recognised' message more informative		"
+" 5ii09 Remove support for individual obsolete sequences, use dialogue	"
+" 11ii09 Add informative error messages if data dimensions inconsistent	"
+" 11ii09 Add informative message if nugflag is y			"
+" 11ii09 Try removing requirement for matrices < 128k x 512             "
+" 16ii09 Force lp1 and rp1 to zero in 2D DOSY display			"
+" 16ii09 Remove limits on data matrix size, but leave warning if v big	"
+" 16ii09 Remove calibflag (no longer used)				"
+" 16ii09 Remove copy back from userdirinto subexp			"
+" 2iii09 Use wft2da($i) for phase sensitive 3D processing in single expt"
+" 2iii09 Set ni to 1 if doing 2D display				"
+" 9iii09 Set dosygamma to 1H value if zero				"
+" 27iii09 rename from dosynew to dosy 27iii09				"
+" 28iii09 change line number check to curexp from userdir, for neatness "
+" 28iii09 neaten logic of final 20 lines				"
+" 28iii09 remove unnecessary final copy to original2d			"
+" 28iii09 remove creation of int_flg - done by makedosyparams		"
+" 28iii09 explain form of 2D display if intflg='y'			"
+" 30iii09 change dosy3Dflag to dosy3Dproc to reflect multipe options	"
+" 30iii09 use dosy3Dproc value to determine if ptype av 3D processing	"
+" 2iv09 Use SPLMOD for all multiexponential fitting			"
+" 3iv09 Use nugcal_[1] in place of gcal_ if nugflag='y'			"
+" 3iv09 Change default lower limit for CONTIN to 0.001			"
+" 8iv09 Save original 2D before f					"
+" 28iv09 PS Remove dosynew occurences from error messages                  "
+" 5v09 GM Change check of arraydim not to force ni=0 if dosyproc3D='n'	"
+" 8v09 GM remove full command before save of 2D DOSY data		"
+" 28v09 GM copy diffusion_spectrum to diffusion_integral_spectrum if (ph) 3D "
+" 4vii09 GM fix wc and sc if display too wide for 2D			"
+" 20x09 GM remove use of userdir/dosy					"
+" 28x09 GM copy diffusion_spectrum to diffusion_integral_spectrum if av 3D "
+" 14ii12 GM relax limits on fn1 to allow low fn1, and warn if fn1 changed" 
+" 14ii12 GM move fn1 check to start, rather than after contin processing"
+
+"Create any missing dosy parameters "
+
+makedosyparams
+
+exists('dosyfitv','command'):$ex
+if ($ex=0) then
+
+        write('error','This version of the macro dosy is not compatible with the current version of VnmrJ')
+	abort
+endif
+dosyfitv:$dosyversion
+if ($dosyversion<>2) then
+        write('error','This version of the macro dosy is not compatible with the current version of VnmrJ')
+	abort
+endif
+
+if (fn1*fn)>512*131072 then
+        write('line3','Warning: very large data matrix ')
+endif
+
+if (fn1<64) then 
+	fn1=64
+	write('line3','fn1 set to lower limit of 64')
+endif
+if (fn1>2048) then 
+	fn1=2048
+	write('line3','fn1 set to upper limit of 2048')
+endif
+" Report the type of processing to be used "
+if (dosyproc='discrete') then
+	continflag='n'
+       if ncomp=1 then
+	write('line3','Standard HRDOSY (monoexponential) processing')
+       else
+               write('line3','Discrete multiexponential DOSY fitting (SPLMOD)')
+       endif
+	if ncomp<1 then
+		write('error','Number of components must be greater than zero for discrete fitting')
+		ABORT
+	endif
+elseif (dosyproc='continuous') then
+	write('line3','Fitting DOSY distributions (CONTIN)')
+	continflag='y'
+
+	if (fn1>512) and (continflag='y') then
+		write('line3','fn1 too high for CONTIN. Reducing to max value (512)')
+		fn1=512 
+	endif
+	if (fn1 > 256) then
+		$fn1string=''
+		format(fn1,5,0):$fn1string
+		$string='Current fn1 is '+$fn1string
+                write('line3',$string)
+                write('line3','CONTIN may be VERY slow with fn1 larger than 256.')
+                write('line3','Fitting time increases exponentially with fn1.')
+                input('Do you want to continue using the current fn1 ?  '):$answer
+                if $answer = 'y' then
+			echo('Fitting using CONTIN')
+                 else
+         	        ABORT
+                 endif
+        endif
+
+
+else
+       write('error','dosy: dosyproc parameter should be \'discrete\' or \'continuous\'')
+	ABORT
+endif 
+
+
+if (nugflag='y') then
+	if dosyproc='discrete' then
+		write('line3','Correcting for non-uniform gradients')
+	endif
+	if ((nugcal_[1]*nugcal_[2])<=0) then
+		write('error','Error in parameters: non-uniform gradient calibration array nugcal_ is incorrect')
+		ABORT
+	endif
+endif
+
+" Check for 3D data "
+$3dflag = 0
+$ngrads=size('gzlvl1')
+$gzlvl1=gzlvl1
+exists('dosy3Dproc','parameter'):$ex
+if $ex then
+	if dosy3Dproc<>'n' then $3dflag=1 else $3dflag=0 endif
+else
+	create('dosy3Dproc','flag','current') 
+	create('dosy3Dproc','flag','processed') 
+	if ni<2 then 
+		setvalue('dosy3Dproc','n','processed')  setvalue('dosy3Dproc','n','current')
+	else
+		setvalue('dosy3Dproc','y','processed')  setvalue('dosy3Dproc','y','current')
+	endif
+endif
+
+" Check that data dimensions are correct "
+
+if dosy3Dproc='n' then 
+	calcdim
+	if (arraydim<>size('gzlvl1')) then
+                write('error','Dimensions of dataset are inconsistent with 2D DOSY but dosy3Dproc=\'n\'')
+                write('error','If data are 3D DOSY then please set dosy3Dproc to \'y\', \'ntype\' or \'ptype\'; if 2D, please set ni to zero')
+		abort
+	endif
+endif
+
+if dosy3Dproc<>'n' then 
+	$3dflag = 1
+	if (arraydim<>size('gzlvl1')*ni) AND  (arraydim<>size('gzlvl1')*ni*2) then
+                write('error','Dimensions of dataset are inconsistent with 3D DOSY but dosy3Dproc <> \'n\'')
+                write('error','If data are 2D DOSY then please set ni to 0 and dosy3Dproc to \'n\'')
+		abort
+	endif
+	if (dosyproc<>'discrete') OR  (ncomp<>1) then
+                write('error','Only monoexponential fitting available for 3D DOSY - check dosyproc and ncomp')
+		abort
+	endif
+	$psflag=0
+	exists('phase','parameter'):$ex
+	if $ex<>0 then
+		if (size('phase')=2) then $psflag=1 endif
+	endif
+	$amp3Dflg=0  " for future implementation - fit amplitudes not volumes "
+
+endif
+
+$answer='n' $prune='n'  $part='n'
+if ($#>3) then
+		write('error','dosy:  incorrect number of arguments')
+		ABORT
+else
+		if ($#=1 OR $#=3) then
+			if ($1='prune') then
+				$prune='y'
+			else
+				write('error','dosy:  incorrect argument')  
+ABORT
+			endif
+		endif
+		if ($#=2) then
+			$lower=$1  	$upper=$2  $part='y'  "not used in phase sensitive 3D "
+		endif
+		if ($#=3) then
+			if ($1='prune') then
+				$prune='y'   $lower=$2  $upper=$3  $part='y'
+			else
+			write('error','dosy:  incorrect argument')  ABORT
+			endif
+		endif
+endif
+
+exists('gstab','parameter'):$e
+if $e=0 then
+	create('gstab','real') gstab=0
+	exists('grise','parameter'):$e
+	if $e=1 then
+		gstab=grise
+	endif
+endif
+
+if ($3dflag=0) then
+        exists(curexp+'/subexp','directory'):$ex1
+        if $ex1>0 then
+                shell('rm -r '+curexp+'/subexp')
+        endif
+        exists(curexp+'/subexp','file'):$ex1
+        if $ex1>0 then
+                shell('rm '+curexp+'/subexp')
+		write('error','dosy:  warning, plain file subexp had to be deleted')
+        endif
+	cptmp('dosy1Ddata')
+	exists('ni','parameter'):$e
+	if $e=0 then
+		par_2d
+	endif
+	exists('ni','parameter','processed'):$e
+	if $e=0 then
+		create('ni','integer','processed')
+		create('phase','integer','processed')
+		create('sw1','real','processed')
+	endif
+	setvalue('ni',0,'processed')  setvalue('ni',0,'current')
+endif
+
+" Set new unit for Diffusion "
+unit('D','D',1)
+
+$dosygamma=267519000.0
+exists('dosygamma','parameter'):$exist
+if ($exist>0.5) then
+	if dosygamma<>0.0 then
+		$dosygamma=dosygamma
+	endif
+else
+	write('line3','No parameter dosygamma, so D values calculated assuming proton gamma')
+endif
+
+if (dosygamma=0) then
+	dosygamma=267519000.0
+	groupcopy('current','processed','acquisition')
+	write('line3','Parameter dosygamma was zero; reset to proton gamma')
+endif
+
+" Set ai mode "
+if (aig <> 'ai')
+	then write('line3','Setting ai mode for Dosy analysis')
+	ai
+endif
+
+$outfile = curexp+'/dosy/dosy_in'
+if $3dflag = 0  then $infile = curexp+'/fp.out'  endif
+
+" Number of parameters set to 2 for the exponential fit, change to 3 is possible "
+$n_fit_params = 2
+
+$cl = 0 
+if $3dflag = 0  then	  write('reset',$infile)  endif
+write('reset',$outfile)
+
+" Check if npoint exists and if not set it to 0 "
+"MN 9Feb07 set npoint to 0"
+exists('npoint','parameter'):$exist
+if $exist = 0
+	then create('npoint','integer')  npoint = 0
+else
+	npoint=0
+endif
+$n=0
+
+write('file',$outfile,'DOSY version 2')
+
+"Discard some of the array values if required"
+if ($prune='y') then
+	input('How many spectra do you want to discard ?  '):$n
+	write('file',$outfile,'%d spectra will be deleted from the analysis : ',$n)
+
+	if $n>0 then
+		$js='' $track=0
+		$i = 1
+		$gzsize=$ngrads
+		$jstr='Enter one increment to be deleted : '
+		REPEAT
+			input($jstr):$x
+			if ($x>0.5 and $x<$gzsize+0.5) then
+				$trackflag='n'
+				$j=0
+				repeat
+					$j=$j+1
+					if $x=$track[$j] then
+						$trackflag='y'
+					endif
+			  	until ($j>=$i-1)
+				if $trackflag='y' then
+					format($x,1,0):$js
+					$jstr='Increment '+$js+' already deleted, enter another increment : '
+					write('error','')
+				else
+					write('file',$outfile,'%d',$x)
+					$track[$i]=$x
+					$i = $i+1
+					$jstr='Enter one increment to be deleted : '
+				endif
+			else
+				format($x,1,0):$js
+				$jstr='Increment '+$js+' outside 1 to '
+				format($gzsize,1,0):$js
+				$jstr=$jstr+$js+', enter one increment to be deleted : '
+				write('error','')
+			endif
+		UNTIL $i > $n
+	endif
+else	$n = 0
+	write('file',$outfile,'%d spectra will be deleted from the analysis : ',$n)
+endif
+
+if $3dflag = 1
+	then
+	write('file',$outfile,'Analysis on 1 peaks')	" dummy number of peaks, corrected by the dosyfit program "
+else
+        if th=0 then th=1 endif
+	if (dosybypoints='n') and (int_flg='n') then
+        	ds nll('pos',0):$peakno
+	endif
+
+	if (dosybypoints='y') then
+		$hzpp=sw*2.0/fn
+		$peakno=wp/$hzpp
+		$warn=1000
+		if ncomp>1 then
+		        $warn=100
+		endif
+		if $peakno>$warn then
+		        write('line3','Warning: processing will be slow')
+		endif
+		$f=sp
+		$j=1
+		$i=1
+		llfrq=0
+		write('line3','Scanning through spectrum to find points above threshold th')
+		repeat
+			$f=$f+$hzpp
+			mark($f):$int
+			if ($int>th) then
+				llfrq[$j]=$f-rfp+rfl
+				$j=$j+1
+			endif
+			$i=$i+1
+		until $i>$peakno
+		$peakno=$j-1
+		echo($peakno)
+       		if ($peakno>8191) then
+      	          write('error','dosy:  too many points, please increase th or reduce fn')
+     	          ABORT
+    	    	endif
+		write('line3','Scanning finished')
+	endif
+        if (int_flg='n') or (dosybypoints='y') then
+            fp         " produce fp.out file using line listing "
+        else
+		"Find peak integrals and write to file fp.out"
+		"requires resets to be set at the appropriate range"
+		"sends midpoint of each integral region to dosyfit"
+
+                write('line3','Calculating diffusion coefficients using signal integrals')
+                write('line3','NB only one peak will be displayed per region')
+		$nints=(size('lifrq')-1)/2
+		$fpintout=curexp+'/fp.out'
+		write('reset',$fpintout)
+		write('file',$fpintout,'List of %d lines in spectrum 1 to spectrum %d',$nints,arraydim)
+		write('file',$fpintout,'peak         frequency (Hz)')
+		$i=1
+		repeat
+		  write('file',$fpintout,'%4d%18.2f',$i,(lifrq[2*$i-1]+lifrq[2*$i])/2-rfl+rfp)
+		  $i=$i+1
+		until $i>$nints
+		write('file',$fpintout,'line    spectrum     amplitude (mm)')
+		$i=1
+		mark('reset')
+		repeat
+		  $j=1
+		  repeat
+		    select($j) 
+		    nli
+		    write('file',$fpintout,'%4d%12d%13.4f',$i,$j,liamp[2*$i])
+		    $j=$j+1
+		  until $j>arraydim
+		  $i=$i+1
+		until $i>$nints
+		mark('reset')
+        endif
+	lookup('file',$infile)
+	lookup('skip',2,'read'):$npeaks
+	write('file',$outfile,'Analysis on %d peaks',$npeaks)
+endif
+write('file',$outfile,'%d points per peaks',($ngrads-$n))
+write('file',$outfile,'%d parameters fit',$n_fit_params)
+
+exists('dosytimecubed','parameter'):$e
+if $e=0 then
+	create('dosytimecubed','real')	
+endif
+if dosytimecubed=0 then
+" Determine the type of sequence used in order to calculate the delays ... "
+        write('line3','Obsolete pulse sequence, please supply details as follows  ')
+	input('What is the diffusion-encoding gradient pulse width in s ?  '):$delta
+	input('What is the diffusion delay in s ?  '):$del
+	input('Does the sequence use bipolar gradient pulses?  '):$answer
+        $tau=0
+        if $answer = 'y' then
+		input('What is the delay in s between the halves of a bipolar pulse pair  ?  '):$tau
+        endif
+	dosytimecubed=$delta*$delta*($del-($delta/3.0)-($tau/2.0))
+	write('line3','Old sequence data:  dosytimecubed calculated')
+endif
+$dosyconstant=$dosygamma
+$dosyconstant=$dosyconstant*$dosyconstant*dosytimecubed
+write('file',$outfile,'dosyconstant = %.10f',$dosyconstant)
+write('file',$outfile,'gradient calibration flag : %d',$cl)
+$gcal_=gcal_
+if (nugflag='y') then
+	$gcal_=nugcal_[1]
+endif
+if $dosyconstant=0 then
+	write('error','Error in parameters:  calculated dosyconstant is zero\nPlease check values of gcal_, dosygamma and dosytimecubed')
+	ABORT
+endif
+"belt and braces: already checked by makedosyparams"
+if ($gcal_<=0) then
+	write('error','Error in parameters: $gcal_ is zero, please correct')
+	ABORT
+endif
+        "gzlvl1 in dac units, convert to gauss/cm"
+$i = 1
+REPEAT
+	write('file',$outfile,'%.4f',$gcal_ * $gzlvl1[$i])
+	$i = $i+1
+UNTIL $i >= ($ngrads+1)
+
+if $3dflag = 0		" 2D DOSY data "
+	then
+	shell('cat '+curexp+'/fp.out  >> '+$outfile)
+	" Check that the dosy_in file has the correct number of lines "
+	$correct_n_lines = 10+arraydim+$npeaks*(1+arraydim)+$n
+	shell('wc -l < '+$outfile+';cat'):$nlines
+	if $nlines <> $correct_n_lines
+		then write('error','The number of lines in dosy_in file is not correct for the analysis')
+		echo('-n','Correct number of lines in dosy_in: ')
+		echo($correct_n_lines)
+		echo('-n','Actual number of lines: ')
+		echo($nlines)
+		$missing_spectra = ($correct_n_lines-$nlines)/$npeaks
+		echo('-n',$missing_spectra)
+		echo(' spectra missing for analysis.')
+    		ABORT
+	endif
+
+        if      (dosyproc='discrete') then
+	        if (ncomp<2) then
+				dosyfit
+		else 
+			splmodprepare
+                        if nugflag='y' then
+                            exists('splmodNUG','bin'):$e,$progPath
+                         else
+                            exists('splmod','bin'):$e,$progPath
+                         endif
+                         if ($e) then
+                            shell($progPath+ ' <'+curexp+'/dosy/dosy_splmod.in >'+curexp+'/dosy/dosy_splmod.out; cat'):$e
+                         else
+                            write('error','dosy: splmodNUG / splmod programs not found')
+                            ABORT
+                         endif
+
+       	         splmodread
+       	         endif
+	elseif (dosyproc='continuous')   then
+        if ($peakno>512) then
+                write('error','Too many lines for CONTIN dosy analysis (max 512) - try increasing th')
+                ABORT
+        endif
+
+		if (continflag='y') and ($part='n') then
+        	$lower=0.001 $upper=25.0
+        	$part='y'
+        	echo('No upper or lower limit specified.')
+        	echo('Using defaults of 0.001 and 25.')
+		endif
+                continprepare($lower,$upper)
+                exists('contin','bin'):$e,$progPath
+                if ($e) then
+                   shell($progPath+' <'+curexp+'/dosy/dosy_contin.in >'+curexp+'/dosy/dosy_contin.out; cat'):$e
+                else
+                   write('error','dosy: contin program not found')
+                   ABORT
+                endif
+                continread
+	else
+       write('error','dosy: dosyproc parameter should be \'discrete\' or \'continuous\'')
+	ABORT
+	endif
+
+	" Display the content of the error file if it is not empty "
+	exists(curexp+'/dosy/fit_errors','file'):$ex1
+	if $ex1=1 then
+		shell('wc -l < '+curexp+'/dosy/fit_errors;cat'):$nlines
+		if $nlines <> 0
+			then cat(curexp+'/dosy/fit_errors')
+		endif
+	endif
+else			" 3D DOSY data "
+        if $amp3Dflg then       "need to mark each 3D peak in each spectrum individually        "
+                dconi
+                ll2d('info','total'):$npks
+                $i=1
+                $lab='' $com=''
+                repeat
+                        ll2d('info',$i):$a,$b,$c,$d,$e,$f,$f1min[$i],$f1max[$i],$f2min[$i],$f2max[$i]
+                        $i=$i+1
+                until $i>$npks
+                ll2d('reset')
+                dconi('restart')
+                dconi('toggle')
+                $i=1
+                repeat
+                        delta1=($f1max[$i]-$f1min[$i])*reffrq delta=($f2max[$i]-$f2min[$i])*reffrq
+                        cr1=$f1max[$i]*reffrq cr=$f2max[$i]*reffrq
+                        ll2d('mark')
+                        $i=$i+1
+                until $i>$npks
+
+        endif
+        if $psflag then
+  		exists('f1coef','parameter'):$f1coefex
+  		if ($f1coefex) then
+   			if (f1coef = '') then
+	    			write('error','Parameter f1coef must be set for phase sensitive 3D DOSY processing')
+				abort
+   			endif
+		else
+	    		write('error','Parameter f1coef must exist for phase sensitive 3D DOSY processing')
+			abort
+  		endif
+
+                ll2dbackup(curexp+'/ll2d/peaks.bin.bk')
+                ll2dbackup('ll2dtmp')
+                cptmp('original2d')
+                s1 f   "f command ensures that no peak gets left out of the Dosy analysis "
+                $i = 1  $st1 = ''
+                $n2 = curexp+'/ll2d/peaks.bin.'
+                REPEAT
+                        write('line3','Increment number %d',$i)
+			wft2da($i)
+                        ins2=1e6
+                        dconi
+			exists(curexp+'/ll2d','directory'):$ex1
+			if $ex1=0 then
+				shell('mkdir '+curexp+'/ll2d')
+			endif
+                        ll2d('read','ll2dtmp') " fails if ll2d subdirectory does not exist "
+                        ll2d('volume')
+                        if $amp3Dflg then       "need to mark each 3D peak in each spectrum individually        "
+                                dconi
+                                ll2d('info','total'):$npks
+                                $j=1
+                                $lab='' $com=''
+                                repeat
+                                        ll2d('info',$j):$a,$b,$c,$d,$e,$lab,$com,$f1min[$j],$f1max[$j],$f2min[$j],$f2max[$j]
+                                        $j=$j+1
+                                until $j>$npks
+                                ll2d('reset')
+                                dconi('restart')
+                                dconi('toggle')
+                                $j=1
+                                repeat
+                                        delta1=($f1max[$j]-$f1min[$j])*reffrq delta=($f2max[$j]-$f2min[$j])*reffrq
+                                        cr1=$f1max[$j]*reffrq cr=$f2max[$j]*reffrq
+                                        ll2d('mark')
+                                        $j=$j+1
+                                until $j>$npks
+                        endif
+                        flush
+                       	format($i,1,0):$st1
+                        $n1 = $n2+$st1
+                        cp(curexp+'/ll2d/peaks.bin',$n1)
+                        $i = $i+1
+                UNTIL $i > $ngrads
+
+                if $amp3Dflg then
+                        dosyfit('3Damp')
+                else
+                        dosyfit('3D')
+                endif
+                shell('sleep 1')
+                shell('cp '+curexp+'/dosy/diffusion_spectrum '+curexp+'/dosy/diffusion_integral_spectrum ')    
+"               shell('rm '+curexp+'/ll2d/peaks.bin.*')    "
+                write('line3','Displaying results')
+                ll2dmode = 'nnny'
+                rttmp('original2d')
+                ll2d('read',curexp+'/ll2d/peaks.bin')
+
+        else   " not phase sensitive "
+
+		" determine the type of the 3D experiment, defaults to n - type "
+		$type = 'ntype'
+		if (dosy3Dproc='ptype') then 
+			$type='ptype'
+		endif
+		ll2dbackup(curexp+'/ll2d/peaks.bin.bk')
+		s1 f   "f command ensures that no peak gets left out of the dosy analysis "
+		$i = 0  $st1 = ''
+		wft2d('t2dc',$type,1)
+		cptmp('original2d')
+		REPEAT
+			write('line3','Increment number %d',$i+1)
+			$j = $i+1
+			if $i > 0
+				then	wft2d('t2dc',$type,$j)
+			endif
+			ll2d('volume')
+			if $i = 0
+				then	ll2d('adjust')
+			endif
+			format($j,1,0):$st1
+			n1 = curexp+'/ll2d/peaks.bin.'+$st1
+			cp(curexp+'/ll2d/peaks.bin',n1)
+			$i = $i+1
+		UNTIL $i = (size('gzlvl1'))
+		dosyfit('3D')
+                shell('sleep 1')
+                shell('cp '+curexp+'/dosy/diffusion_spectrum '+curexp+'/dosy/diffusion_integral_spectrum ')    
+		shell('rm '+curexp+'/ll2d/peaks.bin.*')
+		write('line3','Displaying results')
+		ll2dmode = 'nnny'
+		wft2d('t2dc',$type,1)
+		ll2d('read',curexp+'/ll2d/peaks.bin')
+	endif
+	r1
+endif
+
+if ($3dflag=0) then
+	shell('wc -l < '+curexp+'/dosy/diffusion_display.inp;cat'):$nlines
+	if $nlines=0 then 
+	    write('error','No statistically reasonable diffusion peaks found, so no display generated')
+	else
+		setvalue('ni',1,'processed')
+		setvalue('ni',1,'current')
+		if ($part='y') then
+			ddif('i',$lower,$upper)
+		else
+			ddif('i')
+		endif
+		lp1=0 rp1=0
+		trace='f2'
+		th=0
+		cptmp('dosy2Ddisplay')  
+        	if int_flg='y' then
+	   		 write('line3','Integral fitting used in DOSY; 2D display shows peak closest to centre of each integral region')
+		endif
+	endif
+endif
+if (wc>wcmax*0.9 or wc<wcmax/3) then wc=0.9*wcmax endif
+if (sc<wcmax/40.0 or sc>wcmax/3) then sc=wcmax/40.0 endif
+dconi

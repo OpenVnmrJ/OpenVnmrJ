@@ -1,0 +1,85 @@
+"macro rt"
+" rt - retrieve data set"
+
+if ($# > 0.5) then
+  $args = 'RT(\''+$1
+  $i = 1
+  while ($i<$#) do
+    $i = $i + 1
+    $args = $args+'\',\''+${$i}
+  endwhile
+  $args = $args+'\')'
+  exec($args):$ret
+  if (not $ret) then abort endif
+else
+  RT
+endif
+actionid='null'
+
+$name=''
+$ext=''
+strstr(file,'.','last'):$e,$name,$ext
+$lcdata=$name+'.fid/lcdata'
+exists($lcdata,'file'):$e
+if $e then
+  shell('chmod u+w '+curexp+'/lcdata'):$dum
+  copy($lcdata,curexp+'/lcdata')
+  shell('chmod u+w '+curexp+'/lcdata'):$dum
+else
+  exists(curexp+'/lcdata','file'):$e
+  if $e then rm(curexp+'/lcdata') endif
+endif
+$lcrunlog=$name+'.fid/lcrunlog'
+exists($lcrunlog,'file'):$e
+if $e then
+  copy($lcrunlog,curexp+'/lcrunlog')
+else
+  exists(curexp+'/lcrunlog','file'):$e
+  if $e then rm(curexp+'/lcrunlog') endif
+endif
+
+exists(curexp+'/procdir','file'):$e 
+if $e then
+  strstr(file,'procdir'):$e
+  if not ($e) then
+    $cmd='rm -r '+ curexp+'/procdir'
+    shell($cmd)
+  endif
+endif
+
+exists(curexp+'/proc','file'):$e
+if $e then
+  rmdir(curexp+'/proc') 
+endif
+
+"For Orekhov NUS data"
+$nlshdr_3=$name+'.fid/nls.hdr_3'
+exists($nlshdr_3,'file'):$e
+if $e then
+  copy($nlshdr_3,curexp+'/nls.hdr_3')
+  sparse_dir=curexp
+  setvalue('sparse_dir',curexp,'processed')
+  flushpars
+else
+  exists(curexp+'/nls.hdr_3','file'):$e
+  if $e then rm(curexp+'/nls.hdr_3') endif
+endif
+
+$nlsin=$name+'.fid/nls.in'
+exists($nlsin,'file'):$e
+if $e then
+  copy($nlsin,curexp+'/nls.in')
+else
+  exists(curexp+'/nls.in','file'):$e
+  if $e then rm(curexp+'/nls.in') endif
+endif
+
+"For Kozminski NUS data"
+$EStimetable=$name+'.fid/EStimetable'
+exists($EStimetable,'file'):$e
+if $e then
+  copy($EStimetable,curexp+'/EStimetable')
+  timetab_name=curexp+'/EStimetable'
+endif
+
+dousermacro($0)

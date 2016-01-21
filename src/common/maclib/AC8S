@@ -1,0 +1,69 @@
+"macro AC8S"
+"AC8S - Calibrate Decoupler after C13 pw90 calibration"
+
+if ($# = 0) then  "AC8S called independently (not from AC10C)"
+  if tn <> 'C13' or seqfil <> 's2pul' then
+    setup('C13','c6d6') Autosetgpar
+  endif
+  getparam('pw90'):pw90
+  if not pw90 then
+    write('error','C13 pw90 must be calibrated before H1 decoupler')
+    abort
+  endif
+  pw = pw90
+
+  setsw(69,65)
+
+  setoffset(dn,3.34):dof
+  dm = 'y'  dmm = 'c'
+  if (Console = 'mercury') or (Console = 'gemini') then
+    gain = 20
+  else
+    gain = 40
+  endif
+
+else  "AC8S called by AC10C"
+  getparam('pw90'):pw90
+  pw = pw90
+  getparam('tpwr'):$tpwr
+  if ($tpwr > 0) then
+     tpwr = $tpwr
+  endif
+
+endif
+
+  nt = 1  at = 1
+  gf=at/4 lb='n' fn = 2*np  lp = 0  ai
+
+dof = dof+3d,dof-3d
+
+getparam('dpwr','H1'):$dpwr
+if ($dpwr > 0) then
+   dpwr=$dpwr
+else
+   getparam('tpwr','H1'):$H1tpwr
+   if ($H1tpwr > 1) then
+      getparam('pw90','H1'):$H1pw90
+      $gammaH = 2.5e5/$H1pw90
+      $target = 5.5*h1freq
+
+      $factor = $gammaH/$target  
+      ln($factor):$lnfactor
+      ln(10):$ln10
+      $dpwrdiff = 20*$lnfactor/$ln10
+      if $dpwrdiff > 0 then
+        $dpwrdiff = trunc($dpwrdiff + 0.5)
+      else
+        $dpwrdiff = trunc($dpwrdiff - 0.5)
+      endif
+        "round to nearest whole dB "
+      dpwr = $H1tpwr - $dpwrdiff
+   else
+      dpwr = 30
+   endif
+endif
+
+wexp='AC9S(`h2cal`)'
+write('alpha','measuring gamah2 at dpwr %d',dpwr)
+
+au

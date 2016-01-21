@@ -1,0 +1,27 @@
+"macro mvsampglobal"
+"Move sample tags from exp in arg1 to curexp"
+"  An optional 2nd argument (processed) can be"
+"  given to add the sample tags to processed group"
+
+if ($# < 1) then 
+   write('error','Usage: mvsampglobal(fromexp#)')
+   return 
+endif
+$toexp=0 $tofile=''
+jexp:$toexp,$tofile
+$tofile=userdir+'/'+$tofile
+$fromexp=$1
+
+$processed='no'
+if ($# > 1) then
+   if ($2='processed') then $processed='yes' endif
+endif
+
+jexp($fromexp)
+savesampglobal($tofile)
+jexp($toexp)
+if ($processed='yes') then
+   fread($tofile+'/sampleglobal','processed')
+endif
+getsampglobal('cp')
+seqfil=seqfil

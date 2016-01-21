@@ -1,0 +1,58 @@
+*********************************************************************
+*                                                                   *
+*   fpmult  -  first point multiplier for "np" FID data             *
+*  cfpmult  -  calculates fpmult (for 2D experiments)               *
+*  fpmult1  -  first point multiplier for "ni" interferogram data   *
+*  fpmult2  -  first point multiplier for "ni2" interferogram data  *
+*                                                                   *
+*********************************************************************
+
+For 2D experiments such as NOESY, TOCSY, or ROESY, one should run
+cfpmult on the transformed first increment, prior to typing wft2da,
+to minimize "F2 ridges" in the final 2D spectrum.  This macro cal-
+culates an fpmult value for the dataset (which will then be used
+by wft2da).
+
+One may do this manually for a 2D dataset by typing
+
+		fpmult=1.0 wft(1) cdc
+
+in the VNMR command line and noting whether the spectrum (essentially
+the baseline) moves up or down when "dc" is typed.  One should vary
+fpmult until the "dc" correction (jump in the baseline) is as small as
+possible.  With care, one can set fpmult to two decimal places.
+Typical values for fpmult are 1.00-2.00.  The default value for fpmult
+is 1.0.
+
+This only needs to be performed for cosine-type experiments, such as
+NOESY, ROESY, or TOCSY where both the t2 FID and the t1 interferogram
+decay.  The macro (cfpmult) might give incorrect values for first
+increments of experiments having baseline distortions (i.e. water
+suppression with 11-echo or 1331); in such cases manual optimization
+of fpmult is more suitable.
+
+Why should you bother adjusting fpmult? If the first point in t1 of a
+2D spectrum is misadjusted, the result will be the appearance of a
+series of "F2 ridges".  These ridges can clearly be seen in the noise
+region on the top and bottom of a 2D spectrum (when trace = 'f1') as a
+low-intensity profile of the diagonal.  The sign and intensity  of the
+ridges is controlled by the magnitude of misset of fpmult. 
+
+It has been recognised that the first point of a FID which is sampled
+at exactly t2 = 0  must be multiplied by 0.5 for the Fourier Transform
+to function properly.  The first point of a FID influences the overall
+integral of the resulting spectrum.  The fpmult parameter gives one a
+way to fine-tune the actual correction factor.
+
+NOTE:  When processing 2D data, unless "lp" is approximately 0,
+       FPMULT will affect both the DC offset and the curvature of
+       the spectrum.  See alfa and calfa.
+
+
+fpmult1 and fpmult2 operate on "ni" and "ni2" hypercomplex or complex
+interferogram data, respectively, in a manner analogous to fpmult.  In
+many 2D and 3D experiments, the t1 (ni) and t2 (ni2) values are adjusted
+so that there is no first-order phasing in the F1 and F2 dimensions.
+In this case, fpmult1 and fpmult2 should be 0.5, the default value.  If
+the t1 and t2 values are adjusted so that there is a 180-degree first-
+order phase correction, fpmult1 and fpmult2 should be 1.0.

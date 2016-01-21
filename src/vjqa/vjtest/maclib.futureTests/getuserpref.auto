@@ -1,0 +1,34 @@
+" Varian macro to determine FID name, based on templates."
+" Optionally create the directories"
+
+if ($# = 0) then
+  return('')
+endif
+format($1,'lower'):$arg1
+if ($arg1 = 'adirtmplt') then
+  rights('saveAnywhere'):$right
+  if ($right) then
+    return(datapref[1])
+  else
+    getuserinfo('adirtmplt'):adirtmplt
+    return(adirtmplt)
+  endif
+elseif ($arg1 = 'sdirtmplt') then
+  return(datapref[2])
+elseif ($arg1 = 'svftmplt') then
+  return(datapref[3])
+elseif ($arg1 = 'tmpltparsrequired') then
+  return(datapref[9])
+elseif ($arg1 = 'globalauto') then
+  if (globalauto = '') then globalauto='$userdir$/Automation' endif
+  return(globalauto)
+elseif ($arg1 = 'autodirtmplt') then
+  if (autodirtmplt = '') then autodirtmplt='s_%DATE%_' endif
+  return(autodirtmplt)
+elseif ($arg1 = 'autodir') then
+  if (globalauto = '') then globalauto='$userdir$/Automation' endif
+  if (autodirtmplt = '') then autodirtmplt='s_%DATE%_' endif
+  Svfname(globalauto+'/'+autodirtmplt,'',''):$val
+  return($val)
+endif
+return('')

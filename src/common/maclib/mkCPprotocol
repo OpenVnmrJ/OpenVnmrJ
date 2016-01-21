@@ -1,0 +1,221 @@
+"macro mkCPprotocol"
+"***********************************************************************"
+"mkCPprotocol(optional 6 arguments) - creates a protocol 		"
+"   arg1 - protocol name if $# < 1 then arg1=pslabel			"
+"   arg2 - directory where the protocol will be written			"
+"		if $# < 2 then arg2=userdir+'/templates/vnmrj/protocols	"
+"   arg3 - tabname - name of the ExperimentSelector tab			"
+"		if $# < 3 then arg2=apptype from parlib			"
+"   arg4 - default time (real number) 					"
+"		if $# < 4 then arg2=ACQtime from parlib			"
+"   arg5 - seqfil, if $# < 5 then seqfil from parlib entry or =arg1	"
+"   arg6 - type, if $# < 6 then $arg6='LIB'				"
+"   arg7 - macro, if $# < 7 then $arg7=arg1				"
+"   arg8 - required exp, if $# < 8 then $arg8 is not used               "
+"   arg9 - label if $# < 9 then $arg9 is not used
+"   arg10 - menu1, if $# < 10 then $arg10 is not used			"
+"   arg11 - menu2, if $# < 11 then $arg11 is not used			"
+"   arg12 - dodialog option						"
+"***********************************************************************"
+
+if ($# < 1) then return(0) endif
+$macro='' $apptype='' $acqtime=0 $seqfil='' $pslabel='' $type='LIB'
+$req=''
+$directory=''
+$label='' $menu1='' $menu2='' $dodialog=''
+
+if ($# > 1) then $directory=$2 endif
+if ($directory='') then
+    $directory=userdir+'/templates/vnmrj/protocols'
+endif
+$appdir='' strstr($directory,'/templates/'):$aex,$appdir
+if ($appdir='') then $appdir=userdir endif
+
+IF ($1<>'new') THEN
+"******************************************************************"
+   $pslabel=$1
+   if ($# > 1) then
+       $directory=$2
+   endif
+   if ($directory='') then 
+       $directory=userdir+'/templates/vnmrj/protocols'
+   endif
+
+   exists($directory,'directory'):$direx
+   if ($direx=0) then
+	shell('mkdir -p '+$directory):$dum
+   endif
+   exists($directory,'directory'):$direx
+   if ($direx=0) then
+	write('error','Could not create protocols directory')
+	pslabel=pslabel
+	return(0)
+   endif
+   exists($pslabel,'parlib'):$parex,$parpath
+
+   $acqtime=0 $apptype='Generic' $seqfil=$pslabel 
+
+   if ($# > 2) then
+      $apptype=$3
+   elseif ($parex) then
+      rtv($parpath,'noabort','apptype'):$apptype
+   endif
+   if ($apptype='') then $apptype='SetUp' endif
+
+   if ($# > 3) then
+      $acqtime=$4
+   elseif ($parex) then
+      rtv($parpath,'noabort','ACQtime'):$acqtime
+   endif
+   if ($# > 4) then
+      $seqfil=$5
+   elseif ($parex) then
+      rtv($parpath,'seqfil'):$seqfil
+   endif
+   if ($# > 5) then
+	$type=$6
+   endif
+   $macro=$pslabel
+   if ($# > 6) then
+	$macro=$7
+	if ($macro='rtppar') then
+		$macro='rtppar(\''+$pslabel+'\')'
+	endif
+   endif
+   if ($# > 7) then
+        $req=$8
+   endif
+   if ($# > 8) then
+	$label=$9
+   endif
+   if ($# > 9) then
+	$menu1=$10
+   endif
+   if ($# > 10) then
+	$menu2=$11
+   endif
+   if ($# > 11) then
+	$dodialog=$12
+   endif
+
+"***********************************************************************"
+ELSE
+
+   $pslabel=pslabel
+   exists($directory,'directory'):$direx
+   if ($direx=0) then
+        shell('mkdir -p '+$directory):$dum
+   endif
+   exists($directory,'directory'):$direx
+   if ($direx=0) then
+        write('error','Could not create protocols directory')
+        pslabel=pslabel
+	return(0)
+   endif
+
+   $protex=0 $protpath=''
+   iscpprotocol($pslabel):$protex,$protpath
+   if ($protex) then
+       shell('dirname '+$protpath):$protdir
+       write('error','A chempack protocol exists for %s in %s',$pslabel,$protdir)
+       pslabel=pslabel
+	return(0)
+   endif
+
+   $seqfil=seqfil
+   $apptype=apptype
+   EXPtime:$acqtime
+
+   exists($pslabel,'maclib'):$macex
+   if ($macex) then
+       $macro=$pslabel
+   else
+       	exists($pslabel,'parlib'):$parex
+       	if ($parex=0) then
+	   exists($appdir+'/parlib','directory'):$parlibex
+	   if ($parlibex=0) then
+		shell('mkdir '+$appdir+'/parlib'):$dum
+	   endif
+	   svp($appdir+'/parlib/'+$pslabel)
+   	endif
+     	exists($pslabel,'parlib'):$parex
+   	if ($parex) then
+   	   $macro='rtppar(\''+$pslabel+'\')'
+   	else
+	   write('error','Neither a macro nor a parameter set found for %s',$pslabel)
+	   pslabel=pslabel
+	   return(0)
+   	endif
+   endif
+   if ($apptype='') then $apptype='Generic' endif
+
+ENDIF
+"***********************************************************************"
+if ($seqfil='') or ($pslabel='') or ($macro='') or ($apptype='') then 
+	pslabel=pslabel 
+	return(0)
+endif
+$stime2='0 min' $stime='0:00'
+if ($acqtime>0) then formattime($acqtime):$stime2,$stime endif
+"****************Write protocol entry*******************"
+
+pwd:$curdir
+cd($directory):$dum
+$file=$pslabel+'.xml'
+$tc=''
+shell('date +%Y%m%dT%H%M%S'):$tc
+$tc2=''
+shell('date +%m/%d/%y'):$tc2
+
+write('reset',$file)
+write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+write('file',$file,'<!--')
+write('file',$file,' ! @(#)%s 1.1 %s',$file,$tc2)
+write('file',$file,' !')
+write('file',$file,' -->')
+write('file',$file,'<template type="basic" name="%s" author="chempack" investigator=""',$pslabel)
+
+$line=''
+if ($label<>'') then
+    $line2=''
+    write('line3','label="%s"',$label):$line2
+    $line=$line+' '+$line2
+endif
+if ($menu1<>'') then
+    $line2=''
+    write('line3','menu1="%s"  menu2="%s"',$menu1,$menu2):$line2
+    $line=$line+' '+$line2
+endif
+$line2=''
+substr($line,1):$line2
+if ($line2<>'') then
+        write('file',$file,'        %s',$line)
+endif
+
+write('file',$file,'        time_created="%s" tabname="%s" apptype="%s"',$tc,$apptype,$apptype)
+write('file',$file,'        application="liquids" scans="%s" seqfil="%s">',$pslabel,$seqfil)
+write('file',$file,'  <protocol title="%s" type="protocol">',$pslabel)
+write('file',$file,'    <action  type="%s" status="Ready" lock="off" title="%s" exp="%s"',$type,$pslabel,$pslabel)
+$line=''
+if ($req<>'') then
+	$line2=''
+	write('line3','required="%s"',$req):$line2
+	$line=$line+' '+$line2
+endif
+if ($dodialog<>'') then
+        $line2=''
+        write('line3','dodialog="%s"',$dodialog):$line2
+        $line=$line+' '+$line2
+endif
+$line2=''
+substr($line,1):$line2
+if ($line2<>'') then
+        write('file',$file,'        %s',$line)
+endif
+
+write('file',$file,'        time="%s" macro="%s" data="" \/>',$stime,$macro)
+write('file',$file,'  </protocol>')
+write('file',$file,'</template>')
+cd($curdir):$dum
+pslabel=pslabel
+return(1)

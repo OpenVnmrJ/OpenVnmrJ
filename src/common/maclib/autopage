@@ -1,0 +1,82 @@
+"macro autopage"
+  $dum='' $devnull=''
+  isnewexp:$isnew
+  if (auto='y') then $isnew=1 endif
+  if ($isnew) then
+  	$archive=archivedir+'/'+sample
+  	$expname=pslabel
+  	cplog($expname,'last'):$expname
+  else
+	shell('dirname '+file):$archive
+	shell('basename '+file+' .fid'):$expname
+  endif
+  if ($expname ='') then $expname=pslabel endif
+  if ($3='email') then $2='save' endif
+
+  pwd:$curdir
+  $plf='pcx'
+  getadminfo('plotformat'):$plf
+
+  Svfname($archive+'/plots/'+$expname+'_plot','','.'+$plf):$plotname
+  shell('basename '+$plotname+' .'+$plf):$name
+  write('plotter',0,-20,'Plotname:  %s',$name)
+
+  exists('CPpage','maclib'):$cppex
+//  cd('/vnmr/tmp'):$dum
+  $dir=userdir+'/persistence'
+  cd($dir)
+  if ($cppex) then
+    CPpage($name)
+  else
+    page($name)
+  endif
+  write('line3','Please wait...')
+  if ($plf = 'pdf') then
+        shell('ps2pdfwr '+$name+' '+$name+'.'+$plf):$dum
+  else
+        shell('convert -density 300 '+$name+' '+$name+'.'+$plf):$dum
+  endif
+
+  exists($name+'.'+$plf,'file'):$isok
+  if ($isok=0) then
+        write('error','Generation of %s plot Failed!',$plf)
+	$2='' $3=''
+  endif
+
+  if ($1='plot') and (pltopt='y') then
+   shell('cp '+$dir+'/'+$name+' '+$dir+'/'+$name+'2'):$dum
+   getplottertype(plotter,'osname'):$osplotter
+   shell('vnmrplot '+$dir+'/'+$name+'2 '+ $osplotter):$dum
+  endif
+
+  if ($2='save') then
+    shell('cp '+$dir+'/'+$name+'.'+$plf+' '+$archive+'/plots'):$dum
+    write('line3','Plot saved as %s.%s',$name,$plf)
+    cplog($name,'plot',$plf)
+    datamirror($archive+'/plots/'+$name+'.'+$plf,'plot')
+  endif
+
+  $plotdir=archivedir+'/Plots'
+  exists($plotdir,'directory'):$ex
+  if ($ex) then
+    shell('cp '+$dir+'/'+$name+'.'+$plf+' '+$plotdir):$dum
+  endif
+
+  if ($3='email') then
+     if (emailaddr<>'') then
+	if (emailflag='n') then
+	   write('line3','Email option is NOT turned on')
+	else
+	   copy($dir+'/'+$name+'.'+$plf,'/vnmr/tmp'):$dum
+           vnmremail('/vnmr/tmp/'+$name+'.'+$plf,emailaddr)
+           write('line3','%s.%s sent to %s',$name,$plf,emailaddr)
+	endif
+     else
+        write('line3','The parameter emailaddr is an empty string')
+     endif
+  endif
+
+  shell('rm -f '+$dir+'/'+$name):$dum
+  shell('rm -f '+$dir+'/'+$name+'.'+$plf):$dum
+
+  cd($curdir):$dum

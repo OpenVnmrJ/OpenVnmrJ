@@ -1,0 +1,118 @@
+"macro AuCghmqcIFC"
+"********************************************************"
+"AuCghmqcIFC- Carbon/proton G ratio Autocalibration       "
+"*******************************************************"
+$explist=explist
+
+IF ($# < 1) THEN
+$1=1
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+if ($fileex) then RT($file) else return endif
+wft setref
+peak(1p,3p):$height,cr
+movetof
+
+$archivedir=archivedir
+$sample=sample
+$pltmod=pltmod
+
+ghmqc
+
+exists('archivedir','parameter'):$e3
+if not $e3 then create('archivedir','string') endif
+exists('sample','parameter'):$e4
+if not $e4 then create('sample','string') endif
+exists('pltmod','parameter'):$e5
+if not $e5 then create('pltmod','string') endif
+exists('explist','parameter'):$eek
+if not $eek then create('explist','string') endif
+explist=$explist
+explist?
+archivedir=$archivedir
+sample=$sample
+pltmod=$pltmod
+
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw
+getparam('pwxlvl',dn):pwxlvl
+getparam('pwx',dn):pwx
+
+exists('PFGflg','parameter'):$e1
+if not $e1 then create('PFGflg','flag') endif
+getparam('gradient','Probe'):PFGflg
+PFGflg='y' dm='nnn' dmm='ccc'
+
+ni=1 nt=1 d1=2 at=0.5 dm='nnn' dmm='ccc'
+gain=20 j=137 setoffset(dn,1.38):dof
+$gradtype3=''
+substr(gradtype,3,1):$gradtype3
+if ($gradtype3 = 'l') then
+ gzlvl1=2000
+else
+ fixgrd(30):gzlvl1
+ if (gzlvl1 < 20000) then gzlvl1=20000 endif
+endif
+
+$ratio=3.98
+gzlvl2=gzlvl1
+gzlvl3=(-1.0)*gzlvl1*2/$ratio
+gt1=.002 gt2=.002 gt3=.002
+
+array=''
+if ($gradtype3 = 'l') then
+ array('gzlvl3',61,gzlvl3-25,1)
+else
+ array('gzlvl3',61,gzlvl3-120,4)
+endif
+
+ai fn=8k sinebell
+av
+wnt='array_display_C13'
+wexp='AuCghmqcIFC(2)'
+alock='n' wshim='n' r1=1
+clear(2)
+au('wait','next') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+
+sinebell wft select(1) av 
+select(1)
+$counter=1
+$maxspec=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $maxht = $ht $gzlvl3=gzlvl3[1] else
+     if $ht>$maxht then $maxht=$ht $maxspec=$counter $gzlvl3=gzlvl3[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+
+r2=-$gzlvl3
+$negratio=2*gzlvl1/r2 $strnegratio=''
+format($negratio,0,5):$strnegratio
+
+select($maxspec) vsadj(0.8*wc2max) vp=0.1*wc2max dssh
+n1='C/H gradient ratio: -'+$strnegratio
+wexp='pl(`all`) pltext write(`plotter`,0,wc2max-30,n1) plotarray(array) page'
+
+if (pltmod='fixed') then exec(wexp) endif
+Autocalsave('Cgrad_ghmqc_neg')
+
+$ratio = 2*gzlvl1/r2
+$strratio=''
+format($ratio,0,5):$strratio
+setparams('gHMQCratio',$strratio,dn)
+explist=$explist
+AutoDelCAL('CghmqcIFC') write('alpha','done with ghmqcIFC calib') Autocalnext
+
+ENDIF
+
+"********************************************************"

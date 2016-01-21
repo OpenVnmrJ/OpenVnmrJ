@@ -1,0 +1,92 @@
+Protocol: Repdfs  Sequence: repdfs.c  Apptype: solidseq1d
+
+Description: 
+
+    A repetive onepulse experiment on "X" with a double frequency sweep 
+    preparation pulse for enhancement of sensitivity through population 
+    transfer, with SPINAL and TPPM decoupling. Obtains additional s/n 
+    on subsequent slices because DFS does not saturate the satellite 
+    transitions. 
+
+Additional Software: 
+
+    mfsum - A macro to sum the multifid FIDS of an experiment with nf > 0. 
+
+    mfarray - A macro to show all of the spectra of an experiment with nf > 0. 
+
+    mfshow($1) - A macro to show individual spectra of an experiment with nf > 0. 
+       $1 is the selected value of cf. 
+
+    rtdata - A macro to return the original data. Data is saved as 
+       curexp/subexp/temp.
+
+Parameter Groups:
+
+dfsX:  Module:  yes
+Sequence:  onepuldfs.c (alias dfspX)
+Description:  Implements a "double frequency sweep", DFS, pulse on the
+              obs channel.
+Parameters:  Sequence Page
+       aXdfs - amplitude of obs DFS pulse.
+       pwXdfs - width of the DFS pulse.
+       of1Xdfs - initial frequency.
+       of2Xdfs - final frequency.
+       chXdfs = 'obs' must be set (not shown).
+Implementation:  MPSEQ dfs = getdfs("dfsX",0,0.0,0.0,0,1);
+Underscore function: _mpseq(dfs);
+
+nf:  Standard VNMRJ parameter to set the number of dfs FIDS per 
+     scan. Located on the Sequence page. 
+
+cf:  Standard VNMRJ parameter to select one dfs FID in a multifid 
+     experiment (command line).
+
+90X:  Module:  no
+Sequence:  onepul.c
+Description:  Provides a 90-degree pulse on obs that can be used as a
+              preparation pulse. Also used to store the obs calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

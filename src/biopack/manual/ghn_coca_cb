@@ -1,0 +1,94 @@
+  ghn_coca_cb
+
+    3D HN(COCA)CB gradient sensitivity enhanced version.
+    Designed for triply labeled proteins with H2(>80%), C13 and 15N.
+
+    Correlates Cb(i-1) with N(i) and  NH(i).  Uses
+    constant time evolution for the 15N shifts and 13Cb shifts (optional).
+    TROSY option for   N15/H1 evolution/detection.
+ 
+    pulse sequence: Yamazaki, Lee,Arrowsmith, Muhandiram,
+                    LEK, JACS 116 (1994) p 11655
+    
+    Wittekind and Mueller, JMR B101, 201 (1993)
+		    Muhandiram and Kay, JMR, B103, 203 (1994)
+		    Kay, Xu, and Yamazaki, JMR, A109, 129-133 (1994)
+    
+    TROSY:	    Weigelt, JACS, 120, 10778 (1998)
+    
+    Shaka's BIP (broadband inversion Pulses )
+                 Mari A. Smith, Haitao Hu, and A. J. Shaka
+                Journal of Magnetic Resonance 151, 269 283 (2001)
+     
+    rewritten by Evgeny Tishchenko, Sept 2009, Varian
+      
+                 CHOICE OF DECOUPLING AND 2D MODES
+
+        Set dm = 'nnn', dmm = 'ccc'
+        Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+        Set dm3 = 'nnn' for no 2H decoupling, or
+                  'nyn'  and dmm3 = 'cwc' for 2H decoupling.
+
+
+    Set CT_c='y' only if you have highly (>95%) deuterated protein
+    Deuterium decoupling, dm3='nyn', is not default, but strongly recommended.
+
+    Must set = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+                   DETAILED INSTRUCTIONS FOR USE OF ghn_coca_cb
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro:
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghn_coca_cb may be printed using:
+                                      "printon man('ghn_coca_cb') printoff".
+
+    2. Apply the setup macro "ghn_coca_cb".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       
+
+    3.  The delay tauCC is adjustable, 6.6ms seems to be ok, maybe
+	shortened for bigger proteins.
+
+    4.  set  highSN='y' for samples with high signal-to-noise ratios; this 
+	inserts a gradient filter to remove possible artifacts for a price of 
+	approx 1.5ms delay in CB t1 evolution.
+        Set highSN='n' if you want to maximize signal (large proteins, low S/N)
+       
+    5. Centre H1 frequency on H2O (4.7ppm), C13 frequency (dof) on 46ppm, 
+         C13 frequency dofCO on 174 ppm
+	 and N15 frequency on the amide region (120 ppm). 
+
+    6. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.
+
+    7. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghn_coca_cb so the N15 magnetization has not evolved with respect to the
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there
+       was no coherence gradient - this imparts a 90 degree shift so t8 is
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.
+       For ghn_c... type sequences, H1 decoupling during the first timeTN is
+       replaced by a pi pulse at kappa/2 to reduce S/N loss for large molecules
+       during the first TN period.  For these sequences H2O flipback is
+       achieved with two sinc one-lobe pulses, an additional one just before
+       the SE train, similar to gNhsqc.

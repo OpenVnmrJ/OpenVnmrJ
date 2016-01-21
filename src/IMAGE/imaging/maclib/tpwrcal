@@ -1,0 +1,52 @@
+"macro tpwrcal"
+" Ancestry: tpwrcal   8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+" tpwrcal                                                       "
+"                                                               "
+" Set up tpwr parameters to determine optimum levels for a      "
+" spin-echo imaging experiment.  tpwr1 and tpwr2 are arrayed    "
+" simultaneously in increments of 1 dB, with a constant         "
+" difference of 6 dB, required in a linear system for the       "
+" proper difference in powers between 90 and 180 degree pulses. "
+"                                                               "
+" Usage:  tpwrcal(tpwr2_start, tpwr2_end)                       "
+"***************************************************************"
+
+"-- Check arguments ---------------------------------------"
+if ($# = 2) then
+  if ($1 > $2) then
+    write('error','Usage:  tpwrcal(tpwr2_start, tpwr2_end)')
+    input('Start value for tpwr2: '):$first
+    input('End value for tpwr2: '):$last
+  else
+    $first = $1
+    $last = $2
+  endif
+endif
+
+if ($# <> 2) then
+  write('error','Usage:  tpwrcal(tpwr2_start, tpwr2_end)')
+  input('Start value for tpwr2: '):$first
+  input('End value for tpwr2: '):$last
+endif
+
+
+"-- Initialize parameters ---------------------------------"
+nv = 0
+tpwr1 = 0
+tpwr2 = 0
+
+
+"-- Set array values --------------------------------------"
+$arraylength = $last - $first + 1
+$i = 1
+while ($i <= $arraylength)
+  do
+  tpwr2[$i] = $first + $i - 1
+  tpwr1[$i] = $first + $i - 1 - 6
+  $i = $i + 1
+endwhile
+array='(tpwr1,tpwr2)'
+
+"-- Display arrayed values --------------------------------"
+da

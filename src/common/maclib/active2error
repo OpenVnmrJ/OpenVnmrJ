@@ -1,0 +1,98 @@
+"macro active2error"
+        "Under automation all fids recorded in "
+        "  autodir/enterQ.macdir/flushQ are deleted"
+        "  This list is maintained by gmapshim_au"
+        "  These are typically SetUp experiments"
+
+   if (auto='y') then flushQ('flush') endif
+
+"**************************************************************************"
+   $studytray=autodir+'/enterQ.macdir/studytray'
+   $errorq=autodir+'/enterQ.macdir/cperrorQ'
+   $startq=autodir+'/enterQ.macdir/cpstartQ'
+   exists($studytray,'directory'):$stex
+   $submittedq=autodir+'/enterQ.macdir/submittedQ'
+   if ($stex=0) then return endif
+   exists($submittedq,'file'):$stex
+   if ($stex=0) then return endif
+   
+      exists($studytray+'/enterQ','file'):$eqex
+      if ($eqex) then
+        shell('rm -f '+$studytray+'/enterQ'):$dum
+      endif
+"**************************************************************************"
+
+   $allloc=''
+   $allrack=''
+   $allzone=''
+   $alllocdir=''
+   $when=''
+   if ($# > 0) then
+	format($1,'lower'):$allloc
+	if (traymax=96) or (traymax=768) then
+		format(vrack,'lower'):$allrack
+		format(vzone,'lower'):$allzone
+	endif
+	if ($# > 2) then
+		format($2,'lower'):$allzone
+		format($3,'lower'):$allrack
+	endif
+	$totloc=1
+   else
+	getlocid($submittedq):$allloc,$alllocdir,$when,$allzone,$allrack
+	$totloc=size('$allloc')
+	if ($allloc[1]='') then $totloc=0 endif
+	$totrack=size('$allrack')
+	if ($allrack[1]='') then $totrack=0 endif
+	$totzone=size('$allzone')
+	if ($allzone[1]='') then $totzone=0 endif
+	if ((($totrack=0) or ($totzone=0)) and ($totloc>0)) then
+	    $i=1
+	    repeat
+		$allrack[$i]='' $allzone[$i]=''
+		$i=$i+1
+	    until $i > $totloc
+	endif
+   endif
+
+   if ($totloc<1) then return endif
+   $i=$totloc
+   repeat
+	$rack='' $zone='' $locno=''
+	substr($allrack[$i],1):$rack
+	substr($allzone[$i],1):$zone
+	substr($allloc[$i],1):$locno
+        $status='' $sampname='' $who='' $locdir=''
+	checklocstatus(autodir+'/enterQ',$locno,$zone,$rack):$status,$who,$sampname,$locdir
+        if (($status='Active') or ($status='preScan')) and ($sampname<>'ReFeReNCe') and ($locdir=$alllocdir[$i]) then
+	    if (auto='y') and ($i=$totloc) then
+                    $eaddr=''
+                    rtv(autodir+'/enterQ.macdir/'+$locdir+'/sampleglobal','noabort','emailaddr'):$eaddr
+                    $emessage=emessage
+                    rtv(autodir+'/enterQ.macdir/'+$locdir+'/sampleglobal','noabort','emessage'):emessage
+                    emessage('error',$eaddr)
+                    emessage=$emessage
+	    endif
+	    if (auto='y') then
+              if ($status='preScan') then
+                eventLog('StudyError','preScan error',$locdir)
+              else
+                eventLog('StudyError','Unknown acquisition error',$locdir)
+              endif
+            endif
+	    updatestatus(autodir,$locno,'Error',$zone,$rack)
+	    // Remove this locdir from the startQ
+	    shell('touch '+$startq):$dum
+	    shell('(cat '+$startq+' | grep -vw "'+$locdir+'" > '+$startq+'1)'):$dum
+	    shell('mv '+$startq+'1 '+$startq):$dum
+	    // write this locdir in errorQ
+	    write('file',$errorq,'SAMPLE#: %s %s %s %s',$locno,$sampname,$locdir,$who)
+	    $i=1
+	endif
+	$i=$i-1
+   until $i < 1
+   bgmode_is:$isbg
+   if ($isbg<1) then
+   	showtray(autodir)
+   endif
+   xmhaha_asx(autodir,'ErrorQ')

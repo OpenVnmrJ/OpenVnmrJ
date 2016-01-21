@@ -1,0 +1,88 @@
+"macro sqresetpartial"
+"reset parameters for imaging study but keep certain study params"
+
+
+" If called with an arg (a parameter), this executes a body of code at the "
+" bottom (basically a subroutine) that checks to see if that param is set 
+" to be remembered.  If not, it will be cleared."
+
+
+if $#<0.5 then
+    " Clear study params if they are NOT in remparlist"
+    exists('studypar','parameter','global'):$paramExists
+    if ($paramExists > 0) then
+      if (studypar <> '') then
+	$n = 1
+	repeat
+	  sqresetpartial(studypar[$n])
+	  $n = $n + 1
+	until ($n > size('studypar'))
+      endif
+    endif
+
+    aipDeleteData
+    gplan('endIplan')
+
+
+else
+    " We arrive here if we had an arg.  The arg should be a parameter."
+    " If that parameter is not in the remembered par list, then clear it."
+    " This is basically being used as a subroutine to simplify the code above."
+
+    exists('remparlist','parameter','global'):$paramExists
+    $clearall='false'
+    if not $paramExists then
+       $clearall='true'
+    elseif (remparlist = '') then
+       $clearall='true'
+    endif
+
+    exists($1, 'parameter', 'global'):$paramExistsGlobal
+    exists($1, 'parameter', 'current'):$paramExistsCurrent
+
+    if $paramExistsCurrent then
+        $thisTree = 'current'
+    elseif $paramExistsGlobal then
+        $thisTree = 'global'
+    else
+        write('line3', 'parameter %s in studypar does not exist', $1)
+    endif
+    if ($paramExistsCurrent or $paramExistsGlobal) then
+        isreal($1, $thisTree):$paramIsReal
+	" If $clearall is set, go ahead and clear the param"
+	if($clearall='true') then
+	    $saveit = 0
+        else
+	    $remparListLength = size('remparlist')
+	    $i = 1
+	    $saveit = 0
+	    while ($i <= $remparListLength) do
+		if (remparlist[$i] = $1) then
+		    $saveit=1
+		endif
+		$i= $i + 1
+	    endwhile
+        endif
+	if ($saveit = 0) then
+	    " Treat birthday specially "
+	    if ($1 = 'birthday') then
+		birthday='','','',''
+	    " Treat seqfil specially "
+	    elseif ($1 = 'seqfil') then
+	        seqfil='info'
+	    " Treat gcoil specially "
+	    elseif ($1 = 'gcoil') then
+	        updtgcoil
+	    " Treat rfcoil specially "
+	    elseif ($1 = 'rfcoil') then
+	        rfcoil = RFCOIL
+	    else
+                if $paramIsReal then
+		    {$1}=0
+                else
+		    setvalue($1, '', $thisTree)
+		endif
+	    endif
+	endif
+    endif
+endif

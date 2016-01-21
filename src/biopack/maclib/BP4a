@@ -1,0 +1,78 @@
+"macro BP4a"
+" BP4a "
+text('Flipback Pulse Optimizations')
+vp=0
+$tpwrsf_i_best=2048
+$tpwrsf_t_best=2048
+$tpwrsf_d_best=2048
+$tpwrsf_u_best=2048
+$tpwrsf_n_best=2048
+$counter=1 $max=50 $maxone=1
+select(1) vsadj(50) $best=50 $bestone=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$max then $max=$ht $maxone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>18
+$tpwrsf_i_best=tpwrsf[$bestone]
+select(19) vsadj(50) $best=50 $bestone=19
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$max then $max=$ht $maxone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>36
+$tpwrsf_t_best=tpwrsf[$bestone-18]
+select(37) vsadj(50) $best=50 $bestone=37
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$max then $max=$ht $maxone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>54
+$tpwrsf_u_best=tpwrsf[$bestone-36]
+select(55) vsadj(50) $best=50 $bestone=55
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$max then $max=$ht $maxone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>72
+$tpwrsf_d_best=tpwrsf[$bestone-54]
+select(73) vsadj(50) $best=50 $bestone=73
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$max then $max=$ht $maxone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+$tpwrsf_n_best=tpwrsf[$bestone-72]
+select($maxone) vsadj(25)
+BPsvf(userdir+'/AutoTripRes/flipback_cal1')
+pap(wcmax-90,wc2max)
+sc=wcmax wc=8 ho=-9 vo=0
+write('plotter',0,-2,'INEPT- Soft Pulse: Fine Power Optimization (flip-up) = %4.0f',$tpwrsf_i_best)
+vp=0 dss(1,18,'dodc') pl(1,18,'dodc')
+write('plotter',0,30,'INEPT - Soft Pulse (TROSY): Fine Power Optimization (flip-down) = %4.0f',$tpwrsf_t_best)
+vp=32 dssn(19,36,'dodc') pl(19,36,'dodc')
+write('plotter',0,60,'Hard Pulse - Soft Pulse: Fine Power Optimization (flip-up) = %4.0f',$tpwrsf_u_best)
+vp=62 dssn(37,54,'dodc') pl(37,54,'dodc')
+write('plotter',0,90,'Soft Pulse - Hard Pulse: Fine Power Optimization (flip-down) = %4.0f',$tpwrsf_d_best)
+vp=92 dssn(55,72,'dodc') pl(55,72,'dodc')
+write('plotter',0,120,'INEPT- Soft Pulse (for gNhsqc): Fine Power Optimization (flip-up) = %4.0f',$tpwrsf_n_best)
+vp=122 dssn(73,90,'dodc') pl(73,90,'dodc')
+BPpage
+" note that satmode='i','t','u','d','n' "
+tpwrsf=$tpwrsf_i_best,$tpwrsf_t_best,$tpwrsf_u_best,$tpwrsf_d_best,$tpwrsf_n_best
+array='tpwrsf,satmode'
+array('phincr',41,60,-3)
+array='(tpwrsf,satmode),phincr'
+vp=0
+wnt='wft dss'
+wexp='BP4a1'  au

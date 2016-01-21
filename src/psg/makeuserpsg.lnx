@@ -1,0 +1,363 @@
+# 
+
+MAKEFILE= makeuserpsg.lnx
+
+#-----  The system and user PSG directories
+PSG_DIR= $(vnmrsystem)/psg/
+LIB_DIR= $(vnmrsystem)/lib/
+USR_PSG_DIR= $(vnmruser)/psg/
+
+#-----  Normal operational compile flags
+CDEFINE= -DLINUX -DNESSIE -Wno-format
+CFLAGS= -O -fPIC -m32 -c
+CPPFLAGS= -U_FORTIFY_SOURCE
+LDFLAGS= -shared -m32
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(CDEFINE) -c
+LINK.c= $(CC) $(LDFLAGS)
+
+#-----  Link commands for needed sources and makefile
+PSG_LN= ln -s $(PSG_DIR)$(@)
+SO_LIB_VER=6.0
+
+#------------------------------------------------------------------------
+#-----  PSG sources files 
+#------------------------------------------------------------------------
+
+PSG_SRC=			\
+                abort.c         \
+                active.c        \
+		apshape_pulse.c \
+		aptable.c	\
+		apuserdev.c	\
+		arrayfuncs.c	\
+		autofuncs.c     \
+		convert.c	\
+                convertapbout.c	\
+                convertipa.c	\
+                cps.c           \
+                crb_setup.c     \
+                decfuncs.c      \
+		device.c	\
+		ecc_setup.c	\
+		ecc_worstCase.c	\
+		eventoverhead.c	\
+                formXLwords.c   \
+		freq_device.c	\
+		freq_list.c	\
+		freqfuncs.c	\
+                gate.c          \
+                gatedecoupler.c \
+                getparm.c       \
+		gradient.c	\
+		hash.c		\
+                hsdelay.c       \
+                hwlooping.c     \
+                initHSlines.c   \
+                initacqparms.c  \
+                initauto.c      \
+		initfreqobj.c	\
+                initfunc.c      \
+		initobjects.c	\
+                initrf.c        \
+		init_u_glbl.c	\
+                initval.c       \
+                interlktests.c  \
+		lc_hdl.c	\
+		lc_index.c	\
+		lk_sh.c		\
+                looping.c       \
+                math.c          \
+                miscfuncs.c     \
+                objerror.c      \
+                Pbox_HT.c       \
+                Pbox_psg.c      \
+                phaseing.c      \
+                preacqdelay.c   \
+		presequence.c   \
+		pre_exp_seq.c	\
+		pre_fid_seq.c	\
+                P_receive.c     \
+                psg.c           \
+                rcvrfuncs.c     \
+		rfchanconst.c	\
+                sendasync.c     \
+                setHSlines.c	\
+                setparm.c       \
+		signalhandler.c	\
+		sis_misc.c	\
+		sis_initpar.c	\
+		sis_loop.c	\
+		sis_oblique.c	\
+		sis_position.c	\
+		sisrfpatterns.c	\
+		sli_device.c	\
+		ssha.c		\
+                status.c        \
+                stubs.c         \
+                timerwords.c    \
+		treefuncs.c	\
+                vtfuncs.c	\
+                wetfuncs.c	\
+		wg.c		\
+		xmath.c
+
+DPS_DUMMY_SRC=			\
+                x_ps.c
+
+DPS_DUMMY_OBJ= $(DPS_DUMMY_SRC:.c=.o)
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+#-----  Acqproc header files that are needed
+PSG_HDR=			\
+		ACQ_SUN.h	\
+		REV_NUMS.h	\
+		abort.h		\
+		acodes.h	\
+		acqparms.h	\
+		apbit_device.p	\
+		apdelay.h	\
+		aptable.h	\
+		apuserdev.h	\
+		ap_device.p	\
+		arrayfuncs.h	\
+		asm.h		\
+		attn_device.p	\
+		chanstruct.h	\
+		common.p	\
+		cps.h		\
+		CSfuncs.h	\
+		data.h		\
+                decfuncs.h      \
+		delay.h		\
+		device.p	\
+		dpsdef.h	\
+		dsp.h		\
+		ecc.h		\
+		event_device.p	\
+		expDoneCodes.h	\
+		freq_device.p	\
+		gradient.h	\
+		group.h		\
+		lc.h		\
+		lc_index.h	\
+		macros.h	\
+		mfileObj.h	\
+		objerror.h	\
+		oopc.h		\
+		params.h	\
+		Pbox_HT.h	\
+		Pbox_psg.h	\
+		power.h		\
+		pvars.h		\
+                rcvrfuncs.h     \
+		rfchan_device.p	\
+		rfconst.h	\
+		shims.h		\
+		shrexpinfo.h	\
+		ssha.h		\
+		standard.h	\
+		symtab.h	\
+		tools.h		\
+		variables.h	\
+		vfilesys.h	\
+		vnmrsys.h	\
+		wjunk.h		\
+		wetfuncs.h
+
+#----- PSG sources that require conditional compilation
+CND_PSG_SRC=			\
+                ap_device.c     \
+		apbit_device.c	\
+                attn_device.c   \
+		attr_funcs.c    \
+		attr_valtype.c  \
+                delay.c         \
+		event_device.c  \
+		freqsweep.c	\
+                offset.c        \
+		power.c		\
+                pulses.c        \
+		rfchan_device.c
+
+CND_PSG_OBJ= $(CND_PSG_SRC:.c=.o)
+
+ALLOBJ= $(PSG_OBJ) $(CND_PSG_OBJ) $(DPS_DUMMY_OBJ)
+
+
+#-----  All sources and headers are required for compilation
+ALLSRC=	$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) $(DPS_DUMMY_SRC)
+ALL_C_SRC=$(PSG_SRC) $(CND_PSG_SRC) $(DPS_DUMMY_SRC)
+LIBS=	-lm
+
+
+#------------------------------------------------------------------------
+#-----  Targets
+#------------------------------------------------------------------------
+
+lib : message Source libpsglib.so
+	@echo
+	@echo PSG Library Complete.
+
+fixlib : message libpsglib.so libpsglib.a
+	@echo
+	@echo PSG Library Complete.
+
+message:
+	@echo Compiling Linux PSG Library...
+	( rm -f libpsglib*)					\
+
+maclib : macmessage Source maclibpsglib.a
+	@echo
+	@echo PSG Library Complete.
+
+macfixlib : macmessage
+	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DLINUX -DNESSIE -DMACOS" maclibpsglib.a)
+	@echo
+	@echo PSG Library Complete.
+
+macmessage:
+	@echo Compiling Mac PSG Library...
+	( rm -f libpsglib*)					\
+
+#------------------------------------------------------------------------
+#-----  Recursive Targets
+#------------------------------------------------------------------------
+Source :
+	@echo Creating additional source links...
+	( cd $(USR_PSG_DIR); $(MAKE) -f $(MAKEFILE) src )
+
+src :	$(MAKEFILE) $(ALLSRC)
+
+libpsglib.a : $(PSG_OBJ) $(CND_PSG_OBJ)
+	@(umask 2; ar r $@ $(PSG_OBJ) $(CND_PSG_OBJ) >/dev/null 2>&1 )
+
+maclibpsglib.a : $(PSG_OBJ)
+	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) )
+
+libpsglib.so : $(PSG_OBJ) $(CND_PSG_OBJ)
+	@(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(SO_LIB_VER) $(PSG_OBJ) $(CND_PSG_OBJ))
+	@(umask 2; ln -s $@.$(SO_LIB_VER) $@)
+
+depend: src
+	makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(ALL_C_SRC) 2>/dev/null
+
+#------------------------------------------------------------------------
+#-----  Object dependencies
+#------------------------------------------------------------------------
+
+$(PSG_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+$(CND_PSG_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+#-----  Source extraction via soft links
+#------------------------------------------------------------------------
+
+$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) : % :$(PSG_DIR)%
+	$(PSG_LN) $@
+
+$(DPS_DUMMY_SRC) : % :$(PSG_DIR)%
+	$(PSG_LN) $@
+
+# DO NOT DELETE THIS LINE -- make depend uses it
+
+abort.o: group.h
+active.o: variables.h group.h
+apshape_pulse.o: acodes.h oopc.h acqparms.h rfconst.h aptable.h apdelay.h
+apshape_pulse.o: macros.h
+aptable.o: acqparms.h acodes.h aptable.h symtab.h variables.h group.h
+apuserdev.o: oopc.h acodes.h acqparms.h macros.h
+ap_device.o: acodes.h oopc.h ap_device.p device.p common.p abort.h
+apbit_device.o: oopc.h apbit_device.p ap_device.p device.p common.p
+attn_device.o: acodes.h oopc.h acqparms.h attn_device.p ap_device.p device.p
+attn_device.o: common.p
+attr_funcs.o: oopc.h acodes.h rfconst.h acqparms.h
+attr_valtype.o: oopc.h
+convert.o: acodes.h acqparms.h aptable.h group.h expDoneCodes.h REV_NUMS.h
+convert.o: dsp.h lc_index.h convert.c
+convertipa.o: acodes.h acqparms.h
+crb_setup.o: vnmrsys.h acodes.h acqparms.h group.h macros.h
+delay.o: oopc.h acodes.h acqparms.h macros.h rfconst.h
+device.o: oopc.h device.p common.p
+ecc_setup.o: vnmrsys.h acodes.h acqparms.h group.h ecc.h
+ecc_worstCase.o: vnmrsys.h acqparms.h group.h ecc.h pvars.h wjunk.h
+event_device.o: oopc.h acodes.h rfconst.h event_device.p device.p common.p
+eventoverhead.o: apdelay.h
+formXLwords.o: rfconst.h acqparms.h
+freq_device.o: rfconst.h acodes.h oopc.h freq_device.p ap_device.p device.p
+freq_device.o: common.p
+freq_list.o: vnmrsys.h acodes.h oopc.h ACQ_SUN.h acqparms.h group.h rfconst.h
+freq_list.o: aptable.h macros.h
+freqfuncs.o: group.h variables.h params.h
+gate.o: acodes.h
+gatedecoupler.o: oopc.h acodes.h rfconst.h acqparms.h macros.h apdelay.h
+gradient.o: group.h acodes.h rfconst.h acqparms.h gradient.h macros.h
+gradient.o: aptable.h apdelay.h ACQ_SUN.h
+hsdelay.o: acodes.h apdelay.h rfconst.h macros.h
+initHSlines.o: acodes.h rfconst.h group.h acqparms.h
+initacqparms.o: mfileObj.h variables.h data.h group.h acodes.h rfconst.h
+initacqparms.o: acqparms.h dsp.h lc.h shrexpinfo.h
+initauto.o: acodes.h rfconst.h acqparms.h group.h shims.h
+initfreqobj.o: group.h variables.h params.h acodes.h rfconst.h oopc.h
+initfreqobj.o: acqparms.h chanstruct.h
+initfunc.o: oopc.h group.h rfconst.h acqparms.h acodes.h
+initobjects.o: group.h variables.h params.h acodes.h rfconst.h oopc.h
+initobjects.o: acqparms.h chanstruct.h
+init_u_glbl.o: oopc.h acqparms.h
+initval.o: acqparms.h
+interlktests.o: group.h acodes.h rfconst.h acqparms.h expDoneCodes.h
+lc_hdl.o: lc.h acodes.h lc_index.h
+lc_index.o: lc_index.h
+lk_sh.o: acodes.h acqparms.h
+lockfreqfunc.o: vnmrsys.h group.h
+looping.o: acodes.h rfconst.h acqparms.h
+math.o: acodes.h rfconst.h acqparms.h
+miscfuncs.o: oopc.h acodes.h rfconst.h acqparms.h group.h macros.h
+objerror.o: oopc.h objerror.h
+offset.o: group.h oopc.h acodes.h rfconst.h acqparms.h macros.h
+Pbox_HT.o: group.h variables.h rfconst.h acqparms.h aptable.h Pbox_psg.h Pbox_HT.h
+Pbox_psg.o: oopc.h group.h rfconst.h acqparms.h aptable.h apdelay.h macros.h Pbox_psg.h vfilesys.h
+phaseing.o: oopc.h acodes.h rfconst.h acqparms.h aptable.h macros.h
+power.o: ACQ_SUN.h group.h acodes.h rfconst.h acqparms.h macros.h power.h
+preacqdelay.o: group.h acodes.h rfconst.h acqparms.h macros.h
+presequence.o: oopc.h acqparms.h
+pre_exp_seq.o: oopc.h acqparms.h
+pre_fid_seq.o: oopc.h acqparms.h
+P_receive.o: group.h symtab.h variables.h
+pulses.o: group.h acodes.h oopc.h rfconst.h acqparms.h macros.h apdelay.h
+pulses.o: lc.h aptable.h
+rcvrfuncs.o: variables.h oopc.h acqparms.h rfconst.h group.h macros.h
+rfchanconst.o: chanstruct.h oopc.h rfconst.h acqparms.h
+rfchan_device.o: rfconst.h acodes.h oopc.h acqparms.h aptable.h macros.h
+rfchan_device.o: rfchan_device.p device.p common.p freq_device.p ap_device.p
+sis_misc.o: acodes.h acqparms.h rfconst.h macros.h
+sis_initpar.o: vnmrsys.h oopc.h group.h variables.h acqparms.h rfconst.h
+sis_initpar.o: macros.h
+sis_loop.o: oopc.h acqparms.h rfconst.h macros.h acodes.h lc.h
+sis_oblique.o: vnmrsys.h oopc.h acqparms.h rfconst.h macros.h group.h
+sis_position.o: oopc.h acqparms.h rfconst.h macros.h
+sisrfpatterns.o: oopc.h group.h acodes.h rfconst.h acqparms.h vnmrsys.h
+sisrfpatterns.o: macros.h
+sli_device.o: ACQ_SUN.h acodes.h acqparms.h macros.h
+ssha.o: acodes.h group.h
+status.o: group.h rfconst.h acqparms.h
+treefuncs.o: group.h symtab.h params.h variables.h
+vtfuncs.o: group.h acodes.h rfconst.h acqparms.h expDoneCodes.h
+wetfuncs.o: oopc.h acqparms.h rfconst.h macros.h
+wg.o: oopc.h group.h acodes.h rfconst.h acqparms.h vnmrsys.h macros.h
+wg.o: apdelay.h aptable.h
+xmath.o: REV_NUMS.h group.h variables.h dpsdef.h acqparms.h lc.h apdelay.h
+xmath.o: aptable.h
+arrayfuncs.o: oopc.h group.h variables.h rfconst.h acqparms.h shims.h
+autofuncs.o: group.h acodes.h rfconst.h acqparms.h shims.h macros.h
+cps.o: group.h symtab.h variables.h oopc.h acodes.h rfconst.h acqparms.h
+cps.o: aptable.h macros.h apdelay.h dsp.h
+decfuncs.o: oopc.h group.h acodes.h rfconst.h acqparms.h
+hwlooping.o: oopc.h macros.h apdelay.h group.h acodes.h rfconst.h acqparms.h
+hwlooping.o: shrexpinfo.h dsp.h
+initrf.o: oopc.h acodes.h rfconst.h acqparms.h chanstruct.h group.h apdelay.h
+psg.o: group.h symtab.h variables.h params.h pvars.h REV_NUMS.h asm.h oopc.h
+psg.o: ACQ_SUN.h rfconst.h apdelay.h abort.h vfilesys.h
+setHSlines.o: acodes.h rfconst.h acqparms.h

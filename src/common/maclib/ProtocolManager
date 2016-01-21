@@ -1,0 +1,1170 @@
+"macro ProtocolManager"
+//  This is meant to work ONLY within the PersonaBuilder
+//  RightsConfig from persistence is not used
+
+
+$dir=userdir+'/persistence/PersonaManager'
+$dir2=$dir+'/LastXmlAttr'
+exists($dir2,'directory'):$direx
+if ($direx=0) then shell('mkdir -p '+$dir2):$dum endif
+exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum endif
+exists(userdir+'/templates/vnmrj/panelitems','directory'):$direx
+if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/panelitems'):$dum endif
+
+create('ProtMgr','string','global','')
+setprotect('ProtMgr','on',256,'global')
+
+
+if ($# < 1) then $1='Init' endif
+
+"*******************************************************************************"
+IF ($1='Init') or ($1='Popup') or ($1='Rebuild') THEN
+
+// Check if the last created xml file is ok to use
+    $ok=0
+    {$0}('Ok2useLastXml'):$ok
+    if ($1='Rebuild') then $ok=0 endif
+    if ($ok>0.5) then
+	ProtMgr=''
+	fread($dir2+'/ProtMgr','global')
+	ProtMgr=ProtMgr
+	shell('cp '+$dir2+'/ProtocolManager.xml '+userdir+'/templates/vnmrj/interface'):$dum
+	shell('cp '+$dir2+'/ProtocolManager.xml '+userdir+'/templates/vnmrj/panelitems'):$dum
+	vnmrjcmd('pnew','ProtMgr')
+	if ($1='Popup') then
+            vnmrjcmd('popup','mode:modeless','file:'+$0+'.xml','rebuild:yes','pnewupdate:true','close:'+$0+'(`close`)','title:Protocol Manager')
+	endif
+	return
+    endif
+
+//  First get all the experiments and the associated tab,menu1,menu2
+//    for this owner. 
+
+    $exp='' $tab='' $m1='' $m2='' $label='' $max=1
+    $ut='' $utm='' $utmm=''
+    {$0}('GetAllList'):$exp,$tab,$m1,$m2,$label
+    {$0}('SortAllList',$exp,$tab,$m1,$m2,$label):$exp,$tab,$m1,$m2,$label,$max,$ut,$utm,$utmm
+
+    $tot=size('$exp')
+    if ($exp[1]='') then $tot=0 endif
+    ProtMgr=''
+    if ($tot=0) then return endif
+
+// popuplate the parameter for the popup
+// First 15 values are reserved
+    ProtMgr[1]=''  	// Index number where unique tabs begin
+    ProtMgr[2]=''	// Index number where unique menu1 begin
+    ProtMgr[3]=''	// Index number where unique menu2 begin
+    ProtMgr[4]=''	// Index number where experiments begin
+    ProtMgr[5]=''	// Tab name selected in the filemenu widget
+    ProtMgr[6]=''	// Tabname after ckstring selected in the filemenu widget
+    ProtMgr[7]=''	// select/deselect option at Tab level
+    ProtMgr[8]='null'	// menu1 selected in the filemenu widget
+    ProtMgr[9]='null'	// menu1 after ckstring selected in the filemenu widget
+    ProtMgr[10]='true'	// select/deselect option at the menu1 level
+    ProtMgr[11]='null'	// menu2 selected in the filemenu widget
+    ProtMgr[12]='null'	// menu2 after ckstring selected in the filemenu widget
+    ProtMgr[13]='true'	// select/deselect option at the menu2 level
+    ProtMgr[14]=''	// Maximum number of experiment in any tab_menu1_menu2 group
+    ProtMgr[15]='y'	// NOT USED y/n for mayusesqtosubmit operights (used by PersonaBuilder)
+
+//  Tabs are recorded in groups of 3 values
+//  Tab name, tabname after ckstring, true/false value
+    $j=size('ProtMgr')
+    format($j+1,0,0):ProtMgr[1]
+    $j=$j+1
+    $tot=size('$ut')
+    $i=1
+    repeat
+        $s1='' ckstring($ut[$i]):$s1
+        ProtMgr[$j]=$ut[$i],$s1,'true'
+        $i=$i+1
+        $j=$j+3
+    until $i > $tot
+
+// First level menus are recorded in groups of 3 values
+//  Tab_menu1, Tab_menu1 after ckstring, true/false value
+    format($j,0,0):ProtMgr[2]
+    $tot=size('$utm')
+    $i=1
+    repeat
+        $s1='' ckstring($utm[$i]):$s1
+        ProtMgr[$j]=$utm[$i],$s1,'true'
+        $i=$i+1
+        $j=$j+3
+    until $i > $tot
+
+// 2nd level menus are recorded in gropus of 3 values
+//  Tab_menu1_menu2, Tab_menu1_menu2 after ckstring, true/false value
+    format($j,0,0):ProtMgr[3]
+    $tot=size('$utmm')
+    $i=1
+    repeat
+        $s1='' ckstring($utmm[$i]):$s1
+        ProtMgr[$j]=$utmm[$i],$s1,'true'
+        $i=$i+1
+        $j=$j+3
+    until $i > $tot
+
+// Experiments are recorded in groups of 3 values
+//  Tab_menu1_menu2_expname, label, true/false value
+    format($j,0,0):ProtMgr[4]
+    $tot=size('$exp')
+    $i=1
+    repeat
+	$tmm=$tab[$i]+';'+$m1[$i]+';'+$m2[$i]+';'+$exp[$i]
+	ProtMgr[$j]=$tmm,$label[$i],'true'
+	$j=$j+3
+	$i=$i+1
+    until $i > $tot
+
+    format($max[4],0,0):ProtMgr[14]
+
+// Create filemenus for unique tab, tab_menu1 and tab_menu1_menu2 groups
+    $tabmenu=$dir+'/TabList'
+    write('reset',$tabmenu)
+    $tot=size('$ut')
+    $i=1
+    repeat
+	write('file',$tabmenu,'"%s" "%s"',$ut[$i],$ut[$i])
+	$tabX='' ckstring($ut[$i]):$tabX
+	$menu1=''
+	$tot1=size('$utm')
+	$j=1 $k=1
+	repeat
+	    $s1='' $s2=''
+	    strstr($utm[$j],$ut[$i]+';'):$ret,$s1,$s2
+	    if ($ret) then $menu1[$k]=$s2 $k=$k+1 endif
+	    $j=$j+1
+	until $j > $tot1
+	$tot1=size('$menu1')
+	if ($tot1>1) then
+	    $menu1menu=$dir+'/'+$tabX
+	    write('reset',$menu1menu)
+	    $j=1
+	    repeat
+		write('file',$menu1menu,'"%s" "%s;%s"',$menu1[$j],$ut[$i],$menu1[$j])
+		$menu1X='' ckstring($menu1[$j]):$menu1X
+		$menu1X=$tabX+'_'+$menu1X
+
+		$menu2=''
+		$tot2=size('$utmm')
+		$k=1 $m=1
+		repeat
+		    $s1='' $s2=''
+		    strstr($utmm[$k],$ut[$i]+';'+$menu1[$j]+';'):$ret,$s1,$s2
+		    if ($ret=1) then $menu2[$m]=$s2 $m=$m+1 endif	
+		    $k=$k+1
+		until $k > $tot2
+		$tot2=size('$menu2')
+		if ($tot2>1) then
+		    $menu2menu=$dir+'/'+$menu1X
+		    write('reset',$menu2menu)
+		    $k=1
+		    repeat
+			write('file',$menu2menu,'"%s" "%s;%s;%s"',$menu2[$k],$ut[$i],$menu1[$j],$menu2[$k])
+			$k=$k+1
+		    until $k > $tot2
+		endif
+		$j=$j+1
+	    until $j > $tot1
+	endif
+	$i=$i+1
+    until $i>$tot
+
+// Create xml file
+    {$0}('Buildxml')
+
+// Save all attributes for this xml file
+    {$0}('SaveLastXmlAttr')
+
+// Make sure all personalibs have ExpSelector.xml
+    {$0}('updateExpSel')
+
+    vnmrjcmd('pnew','ProtMgr')
+    if ($1='Popup') then
+    	vnmrjcmd('popup','mode:modeless','file:'+$0+'.xml','rebuild:yes','pnewupdate:true','close:'+$0+'(`close`)','title:Protocol Manager')
+    endif
+
+"*******************************************************************************"
+ELSEIF ($1='close') THEN
+    ProtMgr=''
+
+ELSEIF ($1='Buildxml') THEN
+
+    $xmldir=$dir
+    exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+    if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum endif
+
+    $xml=userdir+'/templates/vnmrj/interface/ProtocolManager.xml'   	// popup that stands by itself
+
+    write('reset',$xml)	
+
+// Build popup xml file
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="ProtocolManager" element="groups" type="acquisition" >')
+    write('file',$xml,'  <group size="750 460"')
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="None"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="ProtocolManager"')
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+// Write tablist menu
+    write('file',$xml,'        <label loc="60 25" size="220 20" label="Protocol group:" style="Heading1" />')
+    write('file',$xml,'        <filemenu loc="270 25" size="130 20"')
+    write('file',$xml,'          style="PlainText"')
+    write('file',$xml,'          vq="ProtMgr" vq2="ProtMgr" file="$VALUE=\'%s/TabList\'"',$dir)
+    write('file',$xml,'          vc="ckstring(\'$VALUE\'):ProtMgr[6] ProtMgr[5]=\'$VALUE\' ProtocolManager(\'updatePar\',ProtMgr[5])"')
+    write('file',$xml,'          set="$VALUE=ProtMgr[5]"')
+    write('file',$xml,'          />')
+    write('file',$xml,'        <check loc="420 25" size="250 20"')
+    write('file',$xml,'          style="Label1"')
+    write('file',$xml,'          vq="ProtMgr" set="$VALUE=(ProtMgr[7]=\'false\')"')
+    write('file',$xml,'          vc="ProtMgr[7]=\'false\' ProtocolManager(\'updatePar\',ProtMgr[5],\'false\')"')
+    write('file',$xml,'          vc2="ProtMgr[7]=\'true\' ProtocolManager(\'updatePar\',ProtMgr[5],\'true\')"')
+    write('file',$xml,'          label="Disable this group"')
+    write('file',$xml,'          />')
+
+// Write menu1 menus
+    $j=0 format(ProtMgr[1],'lower'):$j
+    $k=0 format(ProtMgr[2],'lower'):$k
+
+    write('file',$xml,'        <label loc="60 50" size="220 20" label="Primary subgroup:" style="Heading1" />')
+//    $tot=size('$ut')
+    $i=$j
+    while ($i < $k) do
+	write('file',$xml,'    	   <group loc="270 50" size="460 20"')
+	write('file',$xml,'          subtype="Basic" expanded="yes"')
+	write('file',$xml,'          vq="ProtMgr" show="$SHOW=(ProtMgr[5]=\'%s\')"',ProtMgr[$i])
+	write('file',$xml,'          >')
+	exists($dir+'/'+ProtMgr[$i+1],'file'):$fileex
+	if ($fileex) then
+    	    write('file',$xml,'          <filemenu loc="0 0" size="130 20"')
+    	    write('file',$xml,'            style="PlainText"')
+    	    write('file',$xml,'            vq="ProtMgr" vq2="ProtMgr" file="$VALUE=\'%s/%s\'"',$dir,ProtMgr[$i+1])
+    	    write('file',$xml,'            vc="ckstring(\'$VALUE\'):ProtMgr[9] ProtMgr[8]=\'$VALUE\' ProtocolManager(\'updatePar\',ProtMgr[8])"')
+    	    write('file',$xml,'            set="$VALUE=ProtMgr[8]"')
+    	    write('file',$xml,'            />')
+    	    write('file',$xml,'          <check loc="150 0" size="300 20"')
+    	    write('file',$xml,'            style="Label1"')
+    	    write('file',$xml,'            vq="ProtMgr" set="$VALUE=(ProtMgr[10]=\'false\')"')
+    	    write('file',$xml,'            vc="ProtMgr[10]=\'false\' ProtocolManager(\'updatePar\',ProtMgr[8],\'false\')"')
+            write('file',$xml,'            vc2="ProtMgr[10]=\'true\' ProtocolManager(\'updatePar\',ProtMgr[8],\'true\')"') 
+    	    write('file',$xml,'            show="$ENABLE=(ProtMgr[7]=\'true\')*2-1"')
+	    write('file',$xml,'            label="Disable this subgroup"')
+    	    write('file',$xml,'            />')
+	else
+    	    write('file',$xml,'          <label loc="0 0" size="130 20" label="None" style="Label1" />')
+        endif
+	write('file',$xml,'        </group>')
+        $i=$i+3
+    endwhile
+
+// Write menu2 menus
+    $j=0 format(ProtMgr[2],'lower'):$j
+    $k=0 format(ProtMgr[3],'lower'):$k
+
+    write('file',$xml,'        <label loc="60 75" size="220 20" label="Secondary subgroup:" style="Heading1" />')
+//    $tot=size('$utm')
+    $i=$j
+    while ($i < $k) do
+        write('file',$xml,'        <group loc="270 75" size="460 20"')
+        write('file',$xml,'          subtype="Basic" expanded="yes"')
+        write('file',$xml,'          vq="ProtMgr" show="$SHOW=(ProtMgr[8]=\'%s\')"',ProtMgr[$i])
+        write('file',$xml,'          >')
+        exists($dir+'/'+ProtMgr[$i+1],'file'):$fileex
+        if ($fileex) then
+            write('file',$xml,'          <filemenu loc="0 0" size="130 20"')
+            write('file',$xml,'            style="PlainText"')
+            write('file',$xml,'            vq="ProtMgr" vq2="ProtMgr" file="$VALUE=\'%s/%s\'"',$dir,ProtMgr[$i+1])
+            write('file',$xml,'            vc="ckstring(\'$VALUE\'):ProtMgr[12] ProtMgr[11]=\'$VALUE\' ProtocolManager(\'updatePar\',ProtMgr[11])"')
+            write('file',$xml,'            set="$VALUE=ProtMgr[11]"')
+            write('file',$xml,'            />')
+            write('file',$xml,'          <check loc="150 0" size="300 20"')
+            write('file',$xml,'            style="Label1"')
+            write('file',$xml,'            vq="ProtMgr" set="$VALUE=(ProtMgr[13]=\'false\')"')
+            write('file',$xml,'            vc="ProtMgr[13]=\'false\' ProtocolManager(\'updatePar\',ProtMgr[11],\'false\')"') 
+            write('file',$xml,'            vc2="ProtMgr[13]=\'true\' ProtocolManager(\'updatePar\',ProtMgr[11],\'true\')"')
+            write('file',$xml,'            show="$ENABLE=(ProtMgr[10]=\'true\')*2-1"')
+	    write('file',$xml,'            label="Disable this subgroup"')
+            write('file',$xml,'            />')
+        else
+            write('file',$xml,'          <label loc="0 0" size="130 20" label="None" style="Label1" />')
+        endif
+        write('file',$xml,'        </group>')
+        $i=$i+3
+    endwhile
+
+    $j=0 format(ProtMgr[1],'lower'):$j
+    ProtMgr[5]=ProtMgr[$j]
+    ProtMgr[6]=ProtMgr[$j+1]
+    ProtMgr[7]=ProtMgr[$j+2]
+    ProtocolManager('updatePar',ProtMgr[5])
+
+// Write Experiment check boxes
+
+    $maxpercol=10
+    $maxexp=0 format(ProtMgr[14],'lower'):$maxexp
+    $col=1 format(($maxexp/$maxpercol)+0.5,0,0):$col
+    
+    $xs=190
+    $startx=(750-($col*$xs))/2
+    $startx=150
+    $xwidth=($col*$xs)
+    if ($xwidth<300) then $xwidth=300 endif
+    $starty=110
+    $y=270
+
+    $tot=size('ProtMgr')
+    $curtmm=''
+    format(ProtMgr[4],'lower'):$j
+    $ys=5
+    $i=$j
+    $k=1
+    write('file',$xml,'        <label loc="60 115" size="100 20" label="Protocols:" style="Heading1" />')
+
+    $SX=$startx $SY=$starty $Y=$y
+    $XW=$xwidth
+/*
+    write('file',$xml,'        <group loc="%d %d" size="%d %d"',$startx-5,$starty,$xwidth,$y)
+    write('file',$xml,'          bg="transparent" border="Etched" expanded="yes"')
+    write('file',$xml,'          vq="ProtMgr" style="Heading1" subtype="Basic"')
+    write('file',$xml,'          >')
+
+    write('file',$xml,'          <check loc="20 5" size="%d 20" style="Label1"',($xwidth)-20)
+    write('file',$xml,'            vq="ProtMgr" label="Enable all the protocols"')
+    write('file',$xml,'            set="$VALUE=1 ProtocolManager(\'enableAll\',ProtMgr[11]):$VALUE"')
+    write('file',$xml,'            show="$ENABLE=(ProtMgr[13]=\'true\')*2-1"')
+    write('file',$xml,'            vc="ProtocolManager(\'enableAll\',ProtMgr[11],\'true\')"')
+    write('file',$xml,'            vc2="ProtocolManager(\'enableAll\',ProtMgr[11],\'false\')"')
+    write('file',$xml,'            />')
+
+    write('file',$xml,'        </group>')
+*/
+
+    write('file',$xml,'          <check loc="%d %d" size="%d 20" style="Label1"',$startx+15,$starty+$y+5,$xwidth)
+    write('file',$xml,'            vq="ProtMgr" label="Enable all other protocols not listed above"')
+    write('file',$xml,'            set="$VALUE=(cpprefs[75]=\'true\')"')
+    write('file',$xml,'            vc="cpprefs[75]=\'true\'"')
+    write('file',$xml,'            vc2="cpprefs[75]=\'false\'"')
+    write('file',$xml,'            />')
+
+    $starty=140
+    $y=230
+    while $i < $tot do
+	$s1=''
+	strstr(ProtMgr[$i],';','last'):$ret,$s1
+	if (($s1<>$curtmm)) then
+	    if ($i>$j) then
+		write('file',$xml,'        </group>')
+	    endif
+	    $k=1
+	    $x=$startx
+	    write('file',$xml,'        <group loc="%d %d" size="190 %d"',$x,$starty,$y)
+	    write('file',$xml,'          bg="transparent" border="None" expanded="yes"')
+	    write('file',$xml,'          vq="ProtMgr" style="Heading1" subtype="Basic"')
+	    write('file',$xml,'          show="$SHOW=((ProtMgr[11]=\'%s\'))"',$s1)
+	    write('file',$xml,'          >')
+	    $curtmm=$s1
+	    $ys=15
+	elseif ($k > $maxpercol) then
+            write('file',$xml,'        </group>')
+	    $k=1
+	    $x=$x+$xs
+            write('file',$xml,'        <group loc="%d %d" size="190 %d"',$x,$starty,$y)
+            write('file',$xml,'          bg="transparent" border="None" expanded="yes"')
+            write('file',$xml,'          vq="ProtMgr" style="Heading1" subtype="Basic"')
+            write('file',$xml,'          show="$SHOW=((ProtMgr[11]=\'%s\'))"',$s1)
+            write('file',$xml,'          >')
+	    $ys=15
+        endif
+
+	$tmpfile=$dir+'/tmp'
+	write('reset',$tmpfile)
+	write('file',$tmpfile,'%s',ProtMgr[$i+1])
+	$tmpval=''
+	$key=$tmpfile $done=0
+	lookup('mfile',$key,'readline',1,'filekey'):$stmp,$key,$ret
+	if ($ret<2) then $done=1 else
+	    $tmpval=$stmp
+	endif
+	while $done<1 do
+	    $stmp=''
+	    lookup('mfile',$key,'readline',1,'filekey'):$stmp,$key,$ret
+	    if ($ret<2) then $done=1 else
+		length($stmp):$len
+		if ($len>1) then 
+		    substr($stmp,2,$len-1):$stmp
+		    $tmpval=$tmpval+' '+$stmp
+		endif
+	    endif
+	endwhile
+        if ($tmpval='') then $tmpval=ProtMgr[$i+1] endif
+	$tmpval2=''
+	substr($tmpval,1,22):$tmpval2
+	if ($tmpval2<>$tmpval) then $tmpval=$tmpval2+'..' endif
+	shell('rm -f '+$tmpfile):$dum
+
+	write('file',$xml,'            <check loc="15 %d" size="170 20" style="Label1"',$ys)
+        write('file',$xml,'              vq="ProtMgr" set="$VALUE=(ProtMgr[%d]=\'true\')"',$i+2)
+	write('file',$xml,'              show="$ENABLE=(ProtMgr[13]=\'true\')*2-1"')
+        write('file',$xml,'              label="%s" vc="ProtMgr[%d]=\'true\'"  vc2="ProtMgr[%d]=\'false\'"',$tmpval,$i+2,$i+2)
+	write('file',$xml,'              />')
+	$ys=$ys+20
+	$i=$i+3
+	$k=$k+1
+    endwhile
+    write('file',$xml,'        </group>')
+
+    write('file',$xml,'        <group loc="%d %d" size="%d %d"',$SX-5,$SY,$XW,$Y)
+    write('file',$xml,'          bg="transparent" border="Etched" expanded="yes"')
+    write('file',$xml,'          vq="ProtMgr" style="Heading1" subtype="Basic"')
+    write('file',$xml,'          >')
+
+    write('file',$xml,'          <check loc="20 5" size="%d 20" style="Label1"',($XW)-20)
+    write('file',$xml,'            vq="ProtMgr" label="Enable all the protocols"')
+    write('file',$xml,'            set="$VALUE=1 ProtocolManager(\'enableAll\',ProtMgr[11]):$VALUE"')
+    write('file',$xml,'            show="$ENABLE=(ProtMgr[13]=\'true\')*2-1"')
+    write('file',$xml,'            vc="ProtocolManager(\'enableAll\',ProtMgr[11],\'true\')"')
+    write('file',$xml,'            vc2="ProtocolManager(\'enableAll\',ProtMgr[11],\'false\')"')
+    write('file',$xml,'            />')
+    write('file',$xml,'        </group>')
+
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+    $paneldir=userdir+'/templates/vnmrj/panelitems'
+    exists($paneldir,'directory'):$direx
+    if ($direx=0) then
+	shell('mkdir -p '+$paneldir):$dum
+    endif
+    shell('cp '+$xml+' '+$paneldir):$dum
+"*******************************************************************************"
+ELSEIF ($1 ='enableAll') THEN
+    if ($2<>ProtMgr[11]) then return(1) endif
+    $retval=1 if ($#<3) then $3='' endif
+
+    $k=0 format(ProtMgr[4],'lower'):$k
+    $tot=size('ProtMgr')
+    $i=$k
+    while $i < $tot do
+        strstr(ProtMgr[$i],$2+';'):$ret
+        if ($ret=1) then
+	    if ($3<>'') then
+		ProtMgr[$i+2]=$3
+	    else
+		if (ProtMgr[$i+2]='false') then $retval=0 endif
+	    endif
+        endif
+        $i=$i+3
+    endwhile
+    return($retval)
+"*******************************************************************************"
+ELSEIF ($1 = 'updatePar') THEN
+    $t=0 $m1=0 $m2=0
+    if ($2='') then return endif
+    teststr('ProtMgr',$2,'global'):$ok
+    if ($ok =0) then
+	return
+    elseif ($ok < 7) then "This is a tab"
+	$t=1 
+    elseif ($ok < 10) then "This is menu1"
+	$m1=1
+    elseif ($ok < 13) then "This is menu2"
+	$m2=1
+    else
+	return
+    endif
+// $j is where the header values stop
+    $j=0 format(ProtMgr[1],'lower'):$j
+  
+// First empty the header fields before looking for the
+//   status value
+        $pr=ProtMgr
+        $i=1
+        while $i < $j do
+            $pr[$i]=''
+            $i=$i+1
+        endwhile
+        teststr('$pr',$2,'local'):$ok
+        if ($ok=0) then return endif
+ 
+// If arg3 is supplied, set all value associated with this
+//   group to arg3
+    if ($# > 2) then 
+	$val=$3
+	ProtMgr[$ok+2]=$val
+//        $tot=size('ProtMgr')
+//    	$i=$j
+//    	while $i < $tot do
+//	    strstr(ProtMgr[$i],$2+';'):$ret
+//	    if ($ret=1) then
+//	   	ProtMgr[$i+2]=$val
+//	    endif
+//	    $i=$i+3
+//    	endwhile
+	if ($t) then ProtMgr[10]=$val ProtMgr[13]=$val
+	    teststr('$pr',ProtMgr[8],'local'):$ok
+	    if ($ok) then ProtMgr[$ok+2]=$val endif
+	    teststr('$pr',ProtMgr[11],'local'):$ok
+	    if ($ok) then ProtMgr[$ok+2]=$val endif
+	elseif ($m1) then ProtMgr[13]=$val
+	    teststr('$pr',ProtMgr[11],'local'):$ok
+	    if ($ok) then ProtMgr[$ok+2]=$val endif
+	endif
+    else
+// No status value supplied, assign the status value from
+// the ProtMgr parameter group
+	$val=$pr[$ok+2]
+        $k=0 format(ProtMgr[4],'lower'):$k
+        $k=$k-1
+        if ($t) then 
+//  This is a tab group. Look for the first menu1
+//    for this tab.
+            ProtMgr[7]=$val
+	    $k=0 format(ProtMgr[3],'lower'):$k
+	    $k=$k-1
+	    $j=0 format(ProtMgr[2],'lower'):$j
+	    $firstmenu=''
+	    $i=$j
+	    while $i < $k do
+		strstr(ProtMgr[$i],$2+';'):$ret
+	  	if ($ret=1) then
+		    $s1=''
+		    strsv2array(ProtMgr[$i],';'):$s1
+		    $firstmenu=$s1[1]+';'+$s1[2]
+		    $i=$k
+		endif
+		$i=$i+3
+	    endwhile
+// First menu1 found, now assign its status
+	    if ($firstmenu<>'') then
+		ProtMgr[8]=$firstmenu
+		ckstring($firstmenu):ProtMgr[9]
+		ProtMgr[10]=$val
+		ProtocolManager('updatePar',$firstmenu)
+	    endif
+        elseif ($m1) then 
+//  This is a menu1 group.  Look fo rthe first menu2 for
+//    this tab-menu1
+	    ProtMgr[10]=$val
+            $k=0 format(ProtMgr[4],'lower'):$k
+            $k=$k-1
+            $j=0 format(ProtMgr[3],'lower'):$j
+            $firstmenu=''
+            $i=$j
+            while $i < $k do
+                strstr(ProtMgr[$i],$2+';'):$ret
+                if ($ret=1) then
+                    $s1=''
+                    strsv2array(ProtMgr[$i],';'):$s1
+                    $firstmenu=$s1[1]+';'+$s1[2]+';'+$s1[3]
+                    $i=$k
+                endif
+                $i=$i+3
+            endwhile
+// First menu2 found, now assign its status
+            if ($firstmenu<>'') then
+                ProtMgr[11]=$firstmenu
+                ckstring($firstmenu):ProtMgr[12]
+                ProtMgr[13]=$val
+	    endif
+        elseif ($m2) then 
+// This is a menu2 group.  Just assign its status
+	    ProtMgr[13]=$val
+        endif
+    endif
+
+"*******************************************************************************"
+ELSEIF ($1 ='SaveLastXmlAttr') THEN
+    {$0}('GetProfile'):$profile
+    shell('cp '+$profile+' '+$dir2+'/userProfile.xml'):$dum
+
+    $file=userdir+'/persistence/ExpSelOrder_'+owner+'.xml'
+    exists($file,'file'):$fex
+    if $0='ProtocolManagerAdm' then $fex=0 endif
+    if not $fex then
+    	findExpSelXml:$fex,$file
+    endif
+//    exists('ExperimentSelector.xml','templates/vnmrj/interface'):$fex,$file
+    shell('cp '+$file+' '+$dir2+'/ExperimentSelector.xml'):$dum
+    $file=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+owner+'.xml'
+    exists($file,'file'):$ex
+    if ($ex) then shell('cp '+$file+' '+$dir2):$dum
+    else
+	write('reset',$dir2+'/ExperimentSelector_'+owner+'.xml')
+    endif
+    writeparam($dir2+'/ProtMgr','ProtMgr','global')
+    shell('cp '+userdir+'/templates/vnmrj/panelitems/ProtocolManager.xml '+$dir2):$dum
+
+"*******************************************************************************"
+ELSEIF ($1 ='Ok2useLastXml') THEN
+
+// Let it rebuild always
+    return(0)
+
+    exists($dir2+'/userProfile.xml','file'):$ex
+    if ($ex=0) then return endif
+    exists($dir2+'/ExperimentSelector.xml','file'):$ex
+    if ($ex=0) then return endif
+    exists($dir2+'/ExperimentSelector_'+owner+'.xml','file'):$ex
+    if ($ex=0) then return endif
+    exists($dir2+'/ProtMgr','file'):$ex
+    if ($ex=0) then return endif
+    exists($dir2+'/ProtocolManager.xml','file'):$ex
+    if ($ex=0) then return endif
+    shell('(cat '+$dir2+'/ProtocolManager.xml | grep -c \'not listed above\')'):$ex
+    if ($ex=0) then return endif
+    {$0}('GetProfile'):$profile
+    shell('(diff '+$profile+' '+$dir2+'/userProfile.xml | wc -l)'):$diff
+    if ($diff>0.5) then return endif
+    $file=userdir+'/persistence/ExpSelOrder_'+owner+'.xml'
+    exists($file,'file'):$fex
+    if $0='ProtocolManagerAdm' then $fex=0 endif
+    if not $fex then
+    	findExpSelXml:$fex,$file
+    endif
+//    exists('ExperimentSelector.xml','templates/vnmrj/interface'):$fex,$file
+    if ($fex) then
+	shell('(diff '+$file+' '+$dir2+'/ExperimentSelector.xml | wc -l)'):$diff
+    else
+	$diff=1
+    endif
+    if ($diff>0.5) then return endif
+    $file=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+owner+'.xml'
+    exists($file,'file'):$ex
+    if ($ex=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum shell('touch '+$file):$dum endif
+    shell('(diff '+$file+' '+$dir2+'/ExperimentSelector_'+owner+'.xml | wc -l)'):$diff
+    if ($ex=0) then shell('rm -f '+$file):$dum endif
+    if ($diff>0.5) then return endif
+
+    return(1)
+"*******************************************************************************"
+ELSEIF ($1='GetProfile') THEN
+    $profile=systemdir+'/adm/users/userProfiles/AllLiquids.xml'
+//  Profiles are not used any more
+//  Always start with AllLiquids.xml
+
+/*
+    $olist=systemdir+'/adm/users/operators/operatorlist'
+    $op='' $userprofile=''
+    readfile($olist,'$op','$userprofile','','local')
+    teststr('$op',owner,'local'):$ok
+    if ($ok) then
+        $str=''
+        strsv2array($userprofile[$ok],';'):$str
+        $ok=size('$str')
+        if ($ok>4) then
+            $profile2=systemdir+'/adm/users/userProfiles/'+$str[$ok]+'.xml'
+            exists($profile2,'file'):$fileex
+            if ($fileex) then $profile=$profile2 endif
+        endif
+    endif
+*/
+    return($profile)
+
+"*******************************************************************************"
+ELSEIF ($1 ='GetAllList') THEN
+
+//  Collect the not-approved list from the profile file
+//  Collect all list from the ExperimentSelector.xml
+
+   $gstr='name','label','tab','menu1','menu2'
+
+// Get the profile for this owner
+    {$0}('GetProfile'):$profile
+
+// Get all the disallowed experiments in this profile
+    $disallowed='' $j=1
+    $tmpfile=userdir+'/persistence/protocollist'
+    write('reset',$tmpfile)
+    shell('(cat '+$profile+' | grep \'approve="false"\' | grep \'<protocol\' > '+$tmpfile+')'):$dum
+    $key=$tmpfile
+    $done=0
+    while $done<1 do
+     	lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs','protocol','seekcs','name','filekey'):$key,$ret
+     	if ($ret) then
+            lookup('mfile',$key,'delimiter','=','readline',1,'filekey'):$val,$key,$ret
+            if ($ret<2) then
+           	$done=1
+            else
+           	$s1='' $ret2=0
+           	strstr($val,'"'):$ret2,$s1,$val
+           	if ($ret2=0) then $val='' endif
+           	strstr($val,'"'):$ret2,$val
+           	if ($ret2=0) then $val='' endif
+		$disallowed[$j]=$val
+		$j=$j+1
+            endif
+     	else
+            $done=1
+     	endif
+    endwhile
+    shell('rm -f '+$tmpfile):$dum
+
+//  Get list from ExperimentSelector.xml
+    $exp='' $tab='' $m1='' $m2='' $label='' $j=1
+    $file='' $fex=0
+
+//  Get the ExpSelOrder_owner.xml from persistence
+    $fex=0
+    $file=userdir+'/persistence/ExpSelOrder_'+owner+'.xml'
+    exists($file,'file'):$fex
+    if $0='ProtocolManagerAdm' then $fex=0 endif
+    if $fex then
+	$gstr='name','label','level0','level1','level2'
+    else
+//  Get the ExperimentSelector.xml from the systemdir/personalib
+//   if a persona is assigned to the owner and use that ExperimentSelector.xml
+      if ($0<>'ProtocolManagerAdm') then
+    	$ADMpersona=''
+    	PersonaManager('OwnerPersona'):$ADMpersona
+    	if $ADMpersona<>'' then
+	    $file=systemdir+'/personalib/'+$ADMpersona+'/templates/vnmrj/interface/ExperimentSelector.xml'
+	    exists($file,'file'):$fex
+	endif
+      endif
+    endif
+    if not $fex then
+    	findExpSelXml:$fex,$file
+    endif
+
+//    exists('ExperimentSelector.xml','templates/vnmrj/interface'):$fex,$file
+    if ($fex) then
+        $key=$file
+        $done=0
+        while $done<1 do
+            lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs','protocol','filekey'):$key,$ret
+            if ($ret) then
+		$line=''
+                lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+                if ($ret<2) then
+                    $done=1
+                else
+		    $s1='' $s2='' $exp1=''
+		    strstr($line,$gstr[1]):$ret2,$s1,$s2
+                    $s1='' $ret2=0
+                    strstr($s2,'"'):$ret2,$s1,$exp1
+                    if ($ret2=0) then $exp1='' endif
+                    strstr($exp1,'"'):$ret2,$exp1
+//  Is this experiment disallowed in the profile?
+		    if ($exp1<>'') then
+			teststr('$disallowed',$exp1,'local'):$expok
+			if ($expok) then $exp1='' endif
+		    endif
+// Does a protocol exists for this experiment?
+		    if ($exp1<>'') then
+			exists($exp1+'.xml','templates/vnmrj/protocols'):$expok
+			if ($expok=0) then $exp1='' endif
+		    endif
+
+                    if ($exp1<>'') then
+// get the label
+                        $s1='' $s2='' $label1=''
+                    	strstr($line,$gstr[2]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$label1
+                    	if ($ret2=0) then $label1='' endif
+                    	strstr($label1,'"'):$ret2,$label1
+                        if ($label1='') then $label1=$exp1 endif
+// Get the tab
+                    	$s1='' $s2='' $tab1=''
+                    	strstr($line,$gstr[3]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$tab1
+                    	if ($ret2=0) then $tab1='' endif
+                    	strstr($tab1,'"'):$ret2,$tab1
+// Get the menu1
+                    	$s1='' $s2='' $menu1=''
+                    	strstr($line,$gstr[4]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$menu1
+                    	if ($ret2=0) then $menu1='' endif
+                    	strstr($menu1,'"'):$ret2,$menu1
+			if ($menu1='') then $menu1='null' endif
+// Get the menu2
+                    	$s1='' $s2='' $menu2=''
+                    	strstr($line,$gstr[5]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$menu2
+                    	if ($ret2=0) then $menu2='' endif
+                    	strstr($menu2,'"'):$ret2,$menu2
+			if ($menu2='') then $menu2='null' endif
+
+			$exp[$j]=$exp1
+			$tab[$j]=$tab1
+			$label[$j]=$label1
+			$m1[$j]=$menu1
+			$m2[$j]=$menu2
+			$j=$j+1
+		    endif
+		endif
+            else
+                $done=1
+            endif
+        endwhile
+    endif
+
+//  Get list from local ExperimentSelector_owner.xml in persistence
+    $gstr='name','label','tab','menu1','menu2'
+    $fex=0
+    $file=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+owner+'.xml'
+    exists($file,'file'):$fex,$file
+    if ($fex) then
+        $key=$file
+        $done=0
+        while $done<1 do
+            lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs','protocol','filekey'):$key,$ret
+            if ($ret) then
+                $line=''
+                lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+                if ($ret<2) then
+                    $done=1
+                else
+                    $s1='' $s2='' $exp1=''
+                    strstr($line,$gstr[1]):$ret2,$s1,$s2
+                    $s1='' $ret2=0
+                    strstr($s2,'"'):$ret2,$s1,$exp1
+                    if ($ret2=0) then $exp1='' endif
+                    strstr($exp1,'"'):$ret2,$exp1
+// This list comes from ExperimentSelector_owner. 
+// There is no reason to check if this is disallowed in the profile
+// There is no reason to check if this protocol exists
+
+		    if ($exp1<>'') then
+// Get label
+                    	$s1='' $s2='' $label1=''
+                    	strstr($line,$gstr[2]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$label1
+                    	if ($ret2=0) then $label1='' endif
+                    	strstr($label1,'"'):$ret2,$label1
+                        if ($label1='') then $label1=$exp1 endif
+// Get tab
+                    	$s1='' $s2='' $tab1=''
+                    	strstr($line,$gstr[3]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$tab1
+                    	if ($ret2=0) then $tab1='' endif
+                    	strstr($tab1,'"'):$ret2,$tab1
+// Get menu1
+                    	$s1='' $s2='' $menu1=''
+                    	strstr($line,$gstr[4]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$menu1
+                    	if ($ret2=0) then $menu1='' endif
+                    	strstr($menu1,'"'):$ret2,$menu1
+			if ($menu1='') then $menu1='null' endif
+// Get menu2
+                    	$s1='' $s2='' $menu2=''
+                    	strstr($line,$gstr[5]):$ret2,$s1,$s2
+                    	$s1='' $ret2=0
+                    	strstr($s2,'"'):$ret2,$s1,$menu2
+                    	if ($ret2=0) then $menu2='' endif
+                    	strstr($menu2,'"'):$ret2,$menu2
+			if ($menu2='') then $menu2='null' endif
+
+                        $exp[$j]=$exp1
+                        $tab[$j]=$tab1
+                        $label[$j]=$label1
+                        $m1[$j]=$menu1
+                        $m2[$j]=$menu2
+                        $j=$j+1
+                    endif
+                endif
+            else
+                $done=1
+            endif
+        endwhile
+    endif
+
+    return($exp,$tab,$m1,$m2,$label)
+
+"*******************************************************************************"
+ELSEIF ($1='SortAllList') THEN
+
+    $exp=$2 $tab=$3 $m1=$4 $m2=$5 $label=$6
+
+//  Sort all of these based on tab/menu1/menu2 order
+//   But we don't want to do that using sort.  The order should
+//   be as it is in the ExperimentSelector(s).  This process is a bit cumbersome
+
+    $ne='' $nt='' $nm1='' $nm2='' $nl=''
+    $ut='' $um1='' $um2=''
+    $retmax=1,1,1,1
+
+// $ut are the unique tabs
+// The array order is the order in which they appear in ES
+    $tot=size('$tab')
+    $i=1 $j=1
+    repeat
+	teststr('$ut',$tab[$i],'local'):$tok
+	if ($tok=0) then $ut[$j]=$tab[$i] $j=$j+1 endif
+	$i=$i+1
+    until $i > $tot
+
+// $utm are the unique tab-menu1 combination
+// The array order is the order in which they appear in ES
+    $utm=''
+    $utot=size('$ut')
+    $retmax[1]=$utot
+    $groupmax=0
+    $i=1 $k=1
+    repeat
+	$j=1 $max=0
+	repeat
+	    if ($ut[$i]=$tab[$j]) then
+		teststr('$utm',$ut[$i]+';'+$m1[$j],'local'):$tmok
+		if ($tmok=0) then $utm[$k]=$ut[$i]+';'+$m1[$j] $k=$k+1 $max=$max+1 endif
+	    endif
+	    $j=$j+1
+	until $j > $tot
+	if ($max>$groupmax) then $groupmax=$max endif
+	$i=$i+1
+    until $i > $utot
+    $retmax[2]=$groupmax
+
+// $utmm are the unique tab-menu1-menu2 combination
+// The array order is the order in which they appear in ES
+    $groupmax=0
+    $utmm=''
+    $utot=size('$utm')
+    $i=1 $k=1
+    repeat
+	$j=1 $max=0
+	repeat
+	    if ($utm[$i]=$tab[$j]+';'+$m1[$j]) then
+		teststr('$utmm',$utm[$i]+';'+$m2[$j],'local'):$tmok
+		if ($tmok=0) then $utmm[$k]=$utm[$i]+';'+$m2[$j] $k=$k+1 $max=$max+1 endif
+	    endif
+	    $j=$j+1
+	until $j > $tot
+	if ($max>$groupmax) then $groupmax=$max endif
+	$i=$i+1
+    until $i > $utot
+    $retmax[3]=$groupmax
+
+// Group the experiments and other attributes based on the
+//   the $utmm order
+    $groupmax=0
+    $utot=size('$utmm')
+    $i=1 $k=1
+    repeat
+	$max=0
+	$j=1
+	repeat
+	    if ($utmm[$i]=$tab[$j]+';'+$m1[$j]+';'+$m2[$j]) then
+		$ne[$k]=$exp[$j]
+		$nt[$k]=$tab[$j]
+		$nm1[$k]=$m1[$j]
+		$nm2[$k]=$m2[$j]
+		$nl[$k]=$label[$j]
+		$max=$max+1
+		$k=$k+1
+	    endif
+	    $j=$j+1
+	until $j>$tot
+	if ($max>$groupmax) then $groupmax=$max endif
+   	$i=$i+1
+    until $i > $utot
+    $retmax[4]=$groupmax
+
+//Return all the information back
+    return($ne,$nt,$nm1,$nm2,$nl,$retmax,$ut,$utm,$utmm)
+
+"*******************************************************************************"
+ELSEIF ($1 = 'Reconcile') THEN
+    $ProtMgr=ProtMgr
+    $tot=size('$ProtMgr')
+    $j=0 format($ProtMgr[1],'lower'):$j
+    $k=0 format($ProtMgr[4],'lower'):$k
+    $i=$k-1
+    while $i > $j do
+	if ($ProtMgr[$i]='false') then
+	    $x=$i-5
+	    repeat
+		strstr($ProtMgr[$x],$ProtMgr[$i-2]+';'):$ok
+		if ($ok) then $ProtMgr[$x+2]='false' endif
+		$x=$x+3
+	    until $x > $tot
+	endif
+	$i=$i-3
+    endwhile
+    return($ProtMgr)
+"*******************************************************************************"
+ELSEIF ($1 = 'Save') THEN
+
+    $ProtMgr=ProtMgr
+    {$0}('Reconcile'):$ProtMgr
+
+    $file=$dir+'/ProtocolManager_config'
+    $xml=$dir+'/ExperimentSelector'
+    $rights=$dir+'/RightsConfig'
+
+    write('reset',$file)
+    write('reset',$xml)
+    write('reset',$rights)
+    write('file',$xml,'<ProtocolList>')
+
+    $tot=size('$ProtMgr')
+    $j=0 format($ProtMgr[1],'lower'):$j
+    $i=$j
+    while $i < $tot do
+	if ($# > 1) then
+	    write('file',$file,'%s;%s',$ProtMgr[$i],$2)
+	else
+	    write('file',$file,'%s;%s',$ProtMgr[$i],$ProtMgr[$i+2])
+	endif
+	$i=$i+3
+    endwhile
+
+    if ($# < 2) then
+    	$j=0 format($ProtMgr[4],'lower'):$j
+    	$i=$j
+    	while $i < $tot do
+	    $s1=''
+	    strsv2array($ProtMgr[$i],';'):$s1
+	    if ($s1[2]='null') then $s1[2]='' endif
+	    if ($s1[3]='null') then $s1[3]='' endif
+	    write('file',$rights,'%s %s',$s1[4],$ProtMgr[$i+2])
+	    if ($ProtMgr[$i+2]='true') then
+		$ns1=''
+		strsv2array($ProtMgr[$i+1],'\\n'):$ns1
+		array2strsv($ns1,'\\\\n'):$ns1
+	    	write('fileline',$xml,'    <protocol name="%s" label="%s" tab="%s" menu1="%s" menu2="%s" />\n',$s1[4],$ns1,$s1[1],$s1[2],$s1[3])
+	    endif
+	    $i=$i+3
+    	endwhile
+    endif
+    write('file',$xml,'</ProtocolList>')
+    if ($# > 1) then 
+	shell('rm -f '+$xml):$dum 
+	shell('rm -f '+$rights):$dum
+	return($file,'','') 
+    else
+	shell('(cat '+$rights+' | grep -w true > '+$rights+'1)'):$dum
+	shell('(cat '+$rights+' | grep -vw true >> '+$rights+'1)'):$dum
+	$s1='' $s2=''
+	readfile($rights+'1','$s1','$s2','','local'):$tot
+	$s3=''
+	write('reset',$rights)
+        $i=1 $j=1
+	repeat
+	    teststr('$s3',$s1[$i],'local'):$isin
+	    if ($isin=0) then
+		write('file',$rights,'%s %s',$s1[$i],$s2[$i])
+		$s3[$j]=$s1[$i] $j=$j+1
+	    endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+    return($file,$xml,$rights)
+
+"*******************************************************************************"
+ELSEIF ($1 = 'Read') THEN
+
+    if ($# > 1) then 
+	$key=$2
+    else
+    	$key=$dir+'/ProtocolManager_config'
+    endif
+    exists($key,'file'):$keyex
+    if ($keyex=0) then return endif
+    $ProtMgr=ProtMgr
+    $done=0
+    while $done < 1 do
+	$line=''
+	lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+	if ($ret>1) then
+	    $ok=0 $s1='' $s2=''
+	    strstr($line,';','last'):$ok,$s1,$s2
+	    teststr('$ProtMgr',$s1,'local'):$ok
+	    if ($ok) then $ProtMgr[$ok+2]=$s2 endif
+	else
+	    $done=1
+	endif
+    endwhile
+    if $## > 0 then return($ProtMgr) else ProtMgr=$ProtMgr endif
+
+"*******************************************************************************"
+ELSEIF ($1 = 'updateExpSel') THEN
+    $tmp=$dir+'/Personalist_tmp'
+    write('reset',$tmp)
+//  get persona from all valid appdirs
+    getappdirs:$atot,$adirs,$alabels
+    if ($atot>0) then
+        $i=1
+        repeat
+           $plib=$adirs[$i]+'/personalib'
+           exists($plib,'directory'):$direx
+           if ($direx) then
+                shell('(ls -1d '+$plib+'/* >> '+$tmp+')'):$dum
+           endif
+           $i=$i+1
+        until $i > $atot
+    endif
+    $s1='' $s2='' $s3='' $s4='' $j=0
+    readfile($tmp,'$s3','$s2','','local'):$tot
+    shell('rm -f '+$tmp):$dum
+    if not $tot then return endif
+        $i=1
+        repeat
+	    exists($s3[$i],'file','w'):$writable
+	    if $writable then
+                $esxml=$s3[$i]+'/templates/vnmrj/interface/ExperimentSelector.xml'
+            	exists($esxml,'file','w'):$ex
+	    	if not $ex then
+		    $j=$j+1 $s1[$j]=$s3[$i]
+		endif
+	    endif
+	    $i=$i+1
+	until $i > $tot
+    if not $j then return endif
+    $j=size('$s1')
+    $i=1
+    repeat
+	{$0}('updateESxml',$s1[$i])
+	$i=$i+1
+    until $i > $j
+"*******************************************************************************"
+ELSEIF ($1 = 'updateESxml') THEN
+    
+    substr($2,'basename'):$p
+    $key=$2+'/adm/ProtocolConfig_'+$p+'.txt'
+    exists($key,'file'):$keyex
+    if not $keyex then return endif
+
+    exists($2+'/templates/vnmrj/interface','directory'):$direx
+    if not $direx then mkdir($2+'/templates/vnmrj/interface'):$dum endif
+    exists($2+'/templates/vnmrj/interface','directory'):$direx
+    if not $direx then return endif
+
+    {$0}('Read',$key):$ProtMgr
+    $xml=$2+'/templates/vnmrj/interface/ExperimentSelector.xml'
+    $tot=size('$ProtMgr')
+    write('reset',$xml)
+    write('file',$xml,'<ProtocolList>')
+        $j=0 format($ProtMgr[4],'lower'):$j
+        $i=$j
+        while $i < $tot do
+            $s1=''
+            strsv2array($ProtMgr[$i],';'):$s1
+            if ($s1[2]='null') then $s1[2]='' endif
+            if ($s1[3]='null') then $s1[3]='' endif
+            if ($ProtMgr[$i+2]='true') then
+                $ns1=''
+                strsv2array($ProtMgr[$i+1],'\\n'):$ns1
+                array2strsv($ns1,'\\\\n'):$ns1
+                write('fileline',$xml,'    <protocol name="%s" label="%s" tab="%s" menu1="%s" menu2="%s" />\n',$s1[4],$ns1,$s1[1],$s1[2],$s1[3])
+            endif
+            $i=$i+3
+        endwhile
+    write('file',$xml,'</ProtocolList>')
+
+"*******************************************************************************"
+ENDIF

@@ -1,0 +1,168 @@
+"macro fm_calcshim"
+"Replaces old shimcalc macro and incorporates isotropic sampling into general case"
+"Incorporated check for error file to provide user with SNR feedback from calculation"
+
+if ($#<1) or ($#>2) then 
+  write('error','Usage: %s(<Isotropic length of bar (cm)>,order of polynomial fit)',$0)
+  ABORT
+endif
+
+$ffile=userdir+'/fastmap/calib'
+exists($ffile,'file'):$e
+
+
+  if $e<0.5 then "If fastmap dir doesn't exist in the user directory, check that it's in the system"
+
+   $ffilesys=systemdir+'/fastmap'
+   exists($ffilesys,'file'):$e
+     if $e<0.5 then 
+     write('error','There is no fastmap content found in the system directory')
+     ABORT
+     else
+     shell('cp '+'-rf'+' '+$ffilesys+' '+ userdir)  //fm_calshim binary requires calib files to be in the user dir
+     endif
+ endif
+
+$psi=0.0
+
+$dacfile = userdir+'/fastmap/dacmap.'+gcoil
+exists($dacfile,'file'):$f
+if ($f < 0.5) then
+  $dacfile = systemdir+'/fastmap/dacmap.'+gcoil
+  exists($dacfile,'file'):$f
+  if ($f < 0.5) then
+    write('error','Fastmap must be calibrated')
+    abort
+  endif
+endif
+lookup('file',$dacfile,'read',5):$nam_xz,$nam_yz,$nam_xy,$nam_x2y2,$psi,$f
+if ($f <> 5) then
+  write('error','Fastmap dac mapping file is wrong using psi=0 Rerun calibration')
+  abort
+endif
+
+
+fm_shuffle(nf)
+
+$fov=lro ph wft
+av f full
+vsadj(0.8*wc2max/maxproj)
+$ivp=(wc2max)/(maxproj)
+vp=wc2max+5-$ivp
+
+$start=1
+$end=arraydim/maxproj
+$proj=0
+while ($proj < maxproj) do
+      if ($proj < 1) then dssh($start,$end,1)
+      else dsshn($start,$end,1)
+      endif
+      $start=$start+arraydim/maxproj
+      $end=$end+arraydim/maxproj
+      vp=vp-$ivp
+      $proj=$proj+1
+endwhile
+
+sc=5
+vp=wc2max+5-$ivp/2.0
+$countl = (maxproj+off) mod maxproj
+if (maxproj <= 3) then
+   $label0 = 'X'
+   $label1 = 'Y'
+   $label2 = 'Z'
+else
+   $label0 = 'XY'
+   $label1 = 'YX'
+   $label2 = 'ZY'
+   $label3 = 'YZ'
+   $label4 = 'ZX'
+   $label5 = 'XZ'
+endif
+$index=0
+$fcount=''
+while ($index < maxproj) do
+      format($countl,1,0):$fcount
+      write('graphics',sc,vp,{'$label' + $fcount})
+      $countl=($countl+1) mod maxproj
+      vp=vp-$ivp
+      $index=$index+1
+endwhile
+
+$filename = curexp + '/datdir/data'
+exists($filename,'file'):$e
+if $e<0.5 then
+  write('error','no data acquired in '+$filename+' ?')
+  ABORT
+endif
+
+$count=1
+if ($#=2) then
+  $nord=$2
+  repeat
+    $l[$count]=$1
+    $count=$count+1
+  until $count>9
+endif
+
+if ($#=1) then
+  $nord=$1
+  repeat
+    $l[$count]=L[$count]
+    $count=$count+1
+  until $count>9
+endif
+
+" $progname = '$FASTMAP/code/calshim'"
+  $progname = 'fm_calshim'
+    $t=tau
+
+  write('file',userdir+'/fastmap/fastmap.log','\nuser: %s c-program: %s tau=%+8.4f psi=%+6.4f',userdir,$progname,$t,$psi)
+  shell('date>"$vnmruser"/fastmap/fastmap.tmp;cat "$vnmruser"/fastmap/fastmap.log "$vnmruser"/fastmap/fastmap.tmp > "$vnmruser"/fastmap/fastmap.tmp1;\mv "$vnmruser"/fastmap/fastmap.tmp1 "$vnmruser"/fastmap/fastmap.log;rm "$vnmruser"/fastmap/fastmap.tmp'):$x
+
+flush
+
+$errfile = userdir + '/fastmap/fastmap.err'
+exists($errfile,'file'):$f
+if $f>0.5 then
+  rm($errfile)
+endif
+
+$fastmap=userdir+'/fastmap'
+exists($fastmap+'/calib/.'+gcoil,'file'):$e
+if $e<0.5 then
+  exists(systemdir+'/fastmap/calib/.'+gcoil,'file'):$e
+  if $e<0.5 then
+    write('error','no fastmap calibration for gcoil '+gcoil+' available!')
+    ABORT
+  endif
+endif
+
+if (maxproj = 6) then
+
+     shell($progname,'"'+$filename+'"',$t,$nord,$fov,$l[4]/$fov,$l[5]/$fov,$l[6]/$fov,$l[7]/$fov,$l[8]/$fov,$l[9]/$fov,gcoil,$psi,X0,Y0,Z0,'>"$vnmruser/fastmap/change"'):$x
+
+elseif (maxproj = 3) then 
+
+     shell($progname,'"'+$filename+'"',$t,$nord,$fov,$l[1]/$fov,$l[2]/$fov,$l[3]/$fov,gcoil,$psi,X0,Y0,Z0,'>"$vnmruser/fastmap/change"'):$x
+
+endif
+
+if (tau < 0.0) then tau=-tau endif
+
+$count=1
+$min=0
+while ($count<10) do
+  if ($l[$count]>$min) then $min=$l[$count]
+  endif
+  $count=$count+1
+endwhile
+wp=$min*sw/$fov
+sp=sw*0.5-wp
+$ntof=0 $nx1=0 $ny1=0 $nz1c=0 $nxz=0 $nyz=0 $nz2c=0 $nxy=0 $nx2y2=0
+lookup('file',userdir+'/fastmap/change','read',9):$ntof,$nx1,$ny1,$nz1c,$nxz,$nyz,$nz2c,$nxy,$nx2y2,$nret
+if ($nret<8.5) then
+  write('error','shims not set, out of range')
+  write('file',userdir+'/fastmap/fastmap.log','shims not set, out of range (%s: couldn\'t read file)',$0)
+  abort
+endif
+tof=$ntof+tof

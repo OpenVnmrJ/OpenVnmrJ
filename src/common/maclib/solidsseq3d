@@ -1,0 +1,74 @@
+"macro solidsseq3d"
+// solidsseq3d apptype
+
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+if ($action = 'setup') then
+
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    wrtp = ''
+  endif
+  
+  if ($do = '') then
+    $do = macro   
+  endif
+  fixtancpxpars
+  exists($do,'parlib'):$e,$path
+  if ($e) then
+//    par3d
+    module('add','par2D','basic')
+    module('add','par3D','basic')
+    rtx($path,'current','keep','noclear')
+    rtv($path,'seqfil','layout','pslabel','dg','dg2','ap')
+    exists('wrtp','parameter'):$e
+    if ($e>0.5) then
+       setprotect('wrtp','off',16384)
+    endif
+    exists('clearparams','parameter'):$e
+    if ($e>0.5) then
+       setprotect(clearparams,'off',16384)
+       destroy('clearparams')
+    endif
+  else
+    write('error','parameters for %s do not exist',macro)
+    return
+  endif
+  setrefpos
+
+/* set the layout parameter */
+
+   layout = seqfil
+
+/* run a user customization macro*/
+
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    exec(wrtp)
+  endif
+  
+  setref('setup') 
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+  execseq('setup')  // Execute any sequence specific setup
+  newdg 
+  dg
+
+elseif ($action = 'process') then
+  write('line3','Warning: No Sequence-specfic processing')
+
+elseif ($action = 'plot') then
+  write('line3','Warning: No Sequence-specfic plotting')
+
+endif
+
+
+
+

@@ -1,0 +1,100 @@
+"macro ATc33_cryo_stab"
+"ATc33_cryo_stab" "C13 Adiabatic Decoupling using Waveform Generators"
+"        Using user-defined power limits. Efficiency may be"
+"        compromised"
+"        Tests intensity stablility of H2O peak under decoupling conditions"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   seqfil='s2pul'
+   dn='C13' at=.4 d1=1 ss=2 fn=2*np 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   at_currenttest='water_stability_with_14kHz_13Cdecoupling'
+   lb='n' gf='n' sb='n'  s1 av
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='ATc33_cryo_stab(`PART1`)'
+   au
+ 
+elseif ($1='PART1') then
+
+   wft sp=3.8p wp=2p vsadj
+   opx('ATwurst.DEC')
+   setwave('WURST2 14000')
+   pboxpar('$1 adb', '2.0')   "add 2dB for better intensities"
+   cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+   pbox_pwr('ATwurst.DEC'):dpwr
+
+   $n3=n3
+   format(at_max_dpwr,2,0):n3
+   n3=n3+'d'
+   $attn=n3
+
+   if dpwr>at_max_dpwr then
+       pboxpar('attn',$attn)
+       echo($attn)
+       shell('Pbox')
+       pbox_pwr('ATwurst.DEC'):dpwr
+       write('line3','Decoupling Power reduced to Maximum (at_max_dpwr)')
+       n3='Decoupling Power reduced to Maximum (at_max_dpwr)'
+       atext(n3)
+   endif
+   ph 
+   pbox_dmf('ATwurst.DEC'):dmf
+   wexp='ATc33_cryo_stab(`PART2`)'
+   wnt='ATwft select(1) if (celem<4) then aph0 vsadj  endif dssh'
+   ph dm='nny' dmm='ccp'
+   dseq='ATwurst'
+   dres=9.0 
+   array('d3',400,0,0) nt=1
+   au 
+elseif ($1='PART2') then
+
+   ft
+   ATsvf select(1)
+    aph0 vsadj(80) 
+   peak:$int,cr dres:$h2ores_first
+   $h2ores_first=trunc($h2ores_first*10)/10
+   select(arraydim) peak:$h2olast,cr dres:$h2ores_last
+   $h2olast=trunc($h2olast)
+   $h2ores_last=trunc($h2ores_last*10)/10
+   $h2o=trunc(100 -($h2olast/80)*100)
+   $h2odiff=$h2ores_last-$h2ores_first
+   full vp=0 dssh('dodc') s1
+   if (at_plotauto='y') then
+      text('H2O peak: Adiabatic Decoupling with 10% duty cycle. Repeated Scans every 1.1 sec')
+      pl('all','dodc') pap 
+      ATpage('water_stability_with_14kHz_13Cdecoupling_H2O')
+   endif
+   select(1) full sp=1.8p wp=.3p vsadj(80) s2
+   peak:$int,cr dres:$ch3cnres_first
+   $ch3cnres_first=trunc($ch3cnres_first*10)/10
+   select(arraydim) peak:$ch3cnlast,cr dres:$ch3cnres_last
+   $ch3cnlast=trunc($ch3cnlast)
+   $ch3cnres_last=trunc($ch3cnres_last*10)/10
+   $ch3cn=trunc(100 -($ch3cnlast/80)*100)
+   $ch3cndiff=$ch3cnres_last-$ch3cnres_first
+   dssh
+   if (at_plotauto='y') then
+      text('CH3CN peak: Adiabatic Decoupling with\\ 10% duty cycle. Repeat every 1.1 sec')
+      pl('all','dodc') pap 
+      ATpage('water_stability_with_14kHz_13Cdecoupling_CH3CN')
+   endif
+
+   ATrecord('WURST_stabc','Percent Change in Intensity and Linewidth Change under Decoupling','%(H2O)',$h2o,' %(CH3CN)',$ch3cn,'H2O_lw(1)',$h2ores_first,' H2O_lw(400)',$h2ores_last,' CH3CN_lw(1)',$ch3cnres_first,' CH3CN_lw(400)',$ch3cnres_last)
+
+   write('file',autotestdir+'/REPORT','H2O Int./Lw Change under Decoupling : %3.1f percent, %2.1f Hz, at power= %2.0f ',$h2o,$h2odiff,dpwr)
+   write('file',autotestdir+'/REPORT','CH3CN Int./Lw Change under Decoupling : %3.1f percent, %2.1f Hz, at power= %2.0f ',$ch3cn,$ch3cndiff,dpwr)
+
+ATnext
+endif

@@ -1,0 +1,61 @@
+"macro xmrtsqpar"
+"Used by all applications (Imaging, Liquids, etc.)."
+"retrieve parameters for study while remembering some params"
+$prescan=prescan
+xm1('studydir'):$sdir
+$i=0 teststr('sqattr','id','global'):$i
+$file=$sdir+'/info/'+sqval[$i]+'/savepar'
+$savedtext=$sdir+'/info/'+sqval[$i]+'/text'   
+$currenttext=curexp+'/text'   
+exists($file,'file'):$e
+if $e<0.5 then
+  write('line3','%s could not find %s',$0,$file)
+else
+  "if text has been saved, retrieve it also"
+  exists($savedtext,'file'):$etxt
+  if $etxt>0.5 then
+    shell('cp -p '+$savedtext+' '+$currenttext)         
+  endif
+
+  " Save the params we want to restore"
+  $name = name
+  $ident = ident
+  $weight = weight
+  $height = height
+  $age = age
+  $birthday = birthday
+  $gender = gender
+  $study = study
+  $position1 = position1
+  $position2 = position2
+  $protocols = protocols
+  $anatomy = anatomy
+  $scans = scans
+  $samplename = samplename
+
+  " Read and set parameters from file"
+  fread($file,'current','reset')
+
+  " Restore saved params "
+  name = $name
+  ident = $ident
+  weight = $weight
+  height = $height
+  age = $age
+  birthday = $birthday
+  gender = $gender
+  study = $study
+  position1 = $position1
+  position2 = $position2
+  protocols = $protocols
+  anatomy = $anatomy
+  scans = $scans
+  samplename = $samplename
+
+
+  updtgcoil
+  newdg "update panels"
+  dg "update title bar"
+" delete($file)"
+  prescan=$prescan
+endif

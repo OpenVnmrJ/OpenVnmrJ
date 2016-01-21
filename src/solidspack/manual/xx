@@ -1,0 +1,100 @@
+Protocol: Xx  Sequence: xx.c  Apptype: solidseq1d
+
+Description: 
+
+X pulses with interleaved acquisition.  Used for multipulse calibration 
+of pwX90. Usually performed with a liquid sample or a sample of RTV 
+silicon rubber with slow spinning. Xx can also be used to examine 
+sampling windows and set the blank/unblank delays r1Xxx and r2Xxx. 
+
+Xx subtracts probe ring-down with a two-scan (0,2) phase cycle of the 
+preparation pulse and the receiver.  The module xxX has zero phase for 
+all scans.  For very short values of tauXxx, when probe proton 
+background is present the oscillating pattern will not be symmetric 
+about zero, due to a constant signal from probe ringing and background. 
+Use One scan to see the signal without ringing. 
+
+Additional Software: 
+
+reset_xx -  If the current experiment is Xmx this macro copies the 
+values of xmxX to xxX. Otherwise the values of aXxx and pwXxx are set 
+from aX90 and pwX90.  This macro is run from the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Xx. For a new 
+nucleus set the desired observe nucleus and select Onepul to array 
+pwX90 for a rough calibration before using Xx. 
+
+Set aXprep = aX90 and set pwXprep = pwX90. Set phXprep = 0. Set aXxx = 
+aX90 and set pwXxx = pwX90 and nt = 2. 
+
+Set tauXxx = 10 us and set npaXxx = 10.  Set r1Xxx = 1.0, us, r2Xxx = 
+0.5us and r3Xxx = 1.0 us.  Set rof3 = r3Xxx on the Receiver page 
+(important!!).   It may be necessary to fine adjust r1Xxx and r2Xxx to 
+eliminate ring down from the sampling periods.
+
+Set sw = 1/tauXxx to obtain one point per sampling period or set sw = 
+5.0e6 to observe the sampling windows. Note that because the DDR allows 
+only specific dwell times that it may be necessary to choose sw first 
+and set tauXxx = 1/sw. If tauXxmx does not equal the dwell the FID 
+output will not appear accurate. A sw = 5.0e6 can be used to observe 
+for any value of tauXxx. 
+
+Obtain 2 scans. Adjust aXxx or pwXxx to obtain a FID that is a decaying 
+cosinusoid with 4 points per cycle.  When the optimum is obtained set 
+pwx90 = pwXxx. Alternatively Fourier transform the pattern and measure 
+the splitting delta of the doublet.  The flip angle is 180.0*delta/sw. 
+
+Use Xx to view the sampling window that will be used for multi-pulse 
+experiments and remeasure pwX90 under these conditions.   Set tauXxx to 
+a value that will create a window similar to that of the multipulse 
+experiment (c.f. 6.0-8.0 us for Br24q, etc). Note that the actual 
+window between pulses for Xx is (tauXxx - pwXxx).  Set sw = 5.0e6. 
+Adjust npaXxx to open or close the sampling window. One unit of npaXxx 
+corresponds to 100 ns of acquisition. The FID will now contain multiple 
+points in each acquisition period and appear as a series of square 
+pulses rather than points.  If the value of npaXxx is too large or 
+tauXxx is too small one will see distortion from ring-down in the first 
+points of each sampling window. Determine the best acquisition with the 
+shortest tauXxx.
+
+Parameter Groups: 
+
+prepX:  Module:  no 
+Sequence:  br24q.c      
+Description:  Implements a variable length pulse to provide quadrature 
+              detection about a tilted precession axis. Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses. 
+       pwXprep - 90-degree flip on the obs channel. 
+       phXprep - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse. 
+
+scaleX:  (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.         
+
+xxX:  Module: yes
+Sequence:  xx.c 
+Description:  Implements pulses on obs with acquisition in each window. 
+              Used for measurement of the 90-degree pulse width.  
+Parameters:  Sequence Page
+       aXxx - amplitude of the obs pulses.
+       pwXxx - 90-degree flip on obs.
+       r1Xxx - pre-pulse delay (similar to rof1).         
+       r2Xxx - post_pulse delay (similar to rd or rof2).
+       r3Xxx - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3 
+              is not defined). 
+       tauXxx - cycle time for one window and one pulse. 
+       npaXxx - number of 100 ns ticks in the detection window. 
+       chXxx = 'obs' must be set (not shown).
+Implementation:  WMPA xx = getxx("xxX");
+Underscore function: _xx(xx,phXxx);  phXxx is the overall phase table. 
+
+

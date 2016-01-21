@@ -1,0 +1,35 @@
+"macro movetof"
+"*******************************************************************"
+" movetof - move tof as near as possible to current cursor position "
+"           if an argument is passed, it is used as the frequency   "
+"*******************************************************************"
+if ($#>0) then
+  setfrqCmd('movetof',0,$1):$e // $1 is centerPPM (no 'p'), center is cr.
+  if($e>0) then // new method
+    return
+  endif
+endif
+
+$rflrfp = rfl-rfp			"referencing"
+$center = sw/2-$rflrfp			"center between cursors"
+$oldtof = tof
+if ($# > 0.5) then
+   $pos = $1
+else
+   $pos = cr
+endif
+$newtof = tof+$pos-$center		"set new tof"
+$shift  = -($oldtof-$newtof)
+if (rfl<>0)or(rfp<>0) then rfl = rfl-$shift endif
+cr = $newtof-$oldtof+sw/2
+if ($# < 0.5) then
+   if (cr<sw/2) then sp=0 wp=2*cr 
+   else sp=2*cr-sw wp=2*(sw-cr) endif
+endif
+if (tn = 'none') then
+   sfrq = sfrq + ($newtof * 1e-6)
+   write('line3','tn=\'none\'; sfrq adjusted instead of tof')
+else
+   tof = $newtof
+   write('line3','tof moved as requested')
+endif

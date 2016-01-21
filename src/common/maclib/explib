@@ -1,0 +1,120 @@
+"macro explib"
+"explib - display experiment library"
+
+$expname=''
+$exppath=''
+$explist=''
+$seqfil=''
+$textline=''
+$textline2 = ''
+$val=''
+$dum=''
+$expn=1
+$wordnumber=1
+$expsize=''
+$e=0
+
+"Caution: This construct presents problems if the list of experiments"
+"is longer than 1023 characters, or about 120 to 150 experiments."
+
+"The ls command imposes line breaks, based on the width of the window"
+"from which Vnmr was run.  The shell command only captures the first"
+"line of output, so in general using the ls command instead of echo"
+"will not give satisfactory results."
+
+exists(userdir+'/persistence','directory'):$direx
+if not $direx then
+    mkdir(userdir+'/persistence'):$dum
+endif
+
+$explibtmp=userdir+'/persistence/explibtmp'
+write('reset',$explibtmp)
+$explist='' $s1=''
+shell('(cd '+userdir+'; ls -1d exp? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp?? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp??? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp???? >> '+$explibtmp+')'):$dum
+readfile($explibtmp,'$explist','$s1','','local'):$total
+rm($explibtmp):$dum
+
+clear(4)
+jexp:$e
+if ($e) then
+  flush		"Insure current experiment written to disk"
+endif
+write('alpha','                            EXPERIMENT DIRECTORY')
+write('alpha','  #       Size  Sequence  Text')
+$expNum = ''
+$exptot=size('$explist')
+$i=1
+repeat               "For each experiment..."
+    $exp=$explist[$i]
+//    $exp=''
+//    substr($explist,$wordnumber):$exp
+    substr($exp,4,10):$expNum
+    format($expNum,'isreal'):$e
+    if ($e = 1) then
+        $exppath=userdir+'/'+$exp
+        exists($exppath+'/text','file'):$e
+        if ($e <> 0) then
+            substr($exp,4,4):$expn
+            shell('du -sk ','"'+$exppath+'/."'):$expsize
+            substr($expsize,1):$expsize
+            rtv($exppath+'/curpar','seqfil'):$seqfil
+            lookup('file',$exppath+'/text','readline'):$textline
+            length($textline):$ans
+            lookup('readline'):$textline2,$ret
+            length($seqfil):$len
+            if ($len > 8) then
+               $textlen = 57 - $len
+            else
+               $textlen = 49
+            endif
+            while (($ans < $textlen) and ($ret = 1)) do
+               substr($textline + ' ' + $textline2,1,$textlen+1):$textline
+               length($textline):$ans
+               lookup('readline'):$textline2,$ret
+            endwhile
+            write('alpha','EXP%-4d %6s %8s   %s', $expn, $expsize, $seqfil, $textline )
+            expactive($expn):$acq
+            $subfilepath=$exppath+'/subexp'
+            exists($subfilepath,'directory'):$e
+            if ($e > 0.5) then
+               getfile($subfilepath):$e
+            endif
+            if ($e >= 1) then
+               $sf=''
+               shell('ls -Cm','"'+$subfilepath+'"'):$sf
+            endif
+            if ($acq > 1.5) then
+               $num=''
+               format($acq-0.9,1,0):$num
+               $label = 'Queued ' + $num
+            else
+               $label = 'Active  '
+            endif
+            if ($acq >=1) and ($e >= 1) then
+               write('alpha','      Acq:  %7s      Subfiles:  %s',$label,$sf)
+            else
+               if ($acq >=1) then
+                  write('alpha','      Acq:  %7s',$label)
+               else
+                  if ($e >= 1) then
+                     write('alpha','                         Subfiles:  %s',$sf)
+                  endif
+               endif
+            endif
+        endif
+    endif
+    $i=$i+1
+until $i>$exptot
+isvnmrj:$isvj
+if ($isvj > 0.5) then
+   vnmrjcmd('toolpanel','Parameter','open')
+   vnmrjcmd('setpage','Process')
+   vnmrjcmd('setpage','Process','Text Output')
+endif
+expactive('auto'):$acq
+if ($acq > 0.5) then
+   write('alpha','System is in automation mode')
+endif

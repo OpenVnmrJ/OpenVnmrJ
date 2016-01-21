@@ -1,0 +1,126 @@
+"macro testExpts"
+$expts='MainMenuExpts.xml'
+$expts=$expts,'HadamardExpts.xml'
+$expts=$expts,'HX2DExpts.xml'
+$expts=$expts,'HXYExpts.xml'
+$expts=$expts,'MultipulseExpts.xml'
+$expts=$expts,'QuadrupoleExpts.xml'
+$expts=$expts,'RECXYExpts.xml'
+$expts=$expts,'Solids1DExpts.xml'
+$expts=$expts,'SolidStateExpts.xml'
+$numexpts=size('$expts')
+$pass=0
+$fail=0
+$gopass=0
+$gofail=0
+$timepass=0
+$timefail=0
+$dpspass=0
+$dpsfail=0
+$j=0
+$faillog=curexp+'/faillog'
+write('reset',$faillog)
+$gofaillog=curexp+'/gofaillog'
+write('reset',$gofaillog)
+$timefaillog=curexp+'/timefaillog'
+write('reset',$timefaillog)
+$dpsfaillog=curexp+'/dpsfaillog'
+write('reset',$dpsfaillog)
+vvLog('Test','Experiment menus')
+while ($j < $numexpts) do
+  $j = $j+1
+  $expt = $expts[$j]
+  exists($expt,'templates/vnmrj/interface'):$e,$path
+  lookup('mfile',$path,'filekey'):$key
+  $num=1
+  $tests=0
+  $vc=''
+  $dum=''
+  $cmd=''
+  while ($num >= 1) do
+    lookup('mfile',$key,'seek','vc','readline','filekey'):$vc,$key
+    strstr($vc,'"'):$i,$dum,$cmd
+    strstr($cmd,'"'):$i,$cmd1
+    substr($cmd1,'wc'):$num
+    if ($num) then
+//       write('line3','cmd1= %s',$cmd1)
+       $tests=$tests+1
+       exec($cmd1):$e
+       if ($e) then
+//          write('line3','Pass')
+          $pass=$pass+1
+       else
+//          write('line3','Fail')
+          $fail=$fail+1
+          write('file',$faillog,'failed experiment menu item: %s',$cmd1)
+       endif
+       exec(`go('check','checksilent'):$res`):$e
+       if ($e) then
+          $gopass=$gopass+1
+       else
+          $gofail=$gofail+1
+          write('file',$gofaillog,`go('check') failed for %s`,$cmd1)
+       endif
+       $msg=''
+       exptime:$e,$msg
+       if ($e > 0) then
+          $timepass=$timepass+1
+       else
+          $timefail=$timefail+1
+          write('file',$timefaillog,`exptime failed for %s (%s)`,$cmd1,$msg)
+       endif
+       bgmode_is:$bg
+       if ($bg = 0 ) then
+         dps:$e
+         if ($e = 1) then
+            $dpspass=$dpspass+1
+         else
+            $dpsfail=$dpsfail+1
+            write('file',$dpsfaillog,`dps failed for %s`,$cmd1)
+         endif
+       endif
+    endif
+  endwhile
+endwhile
+if ($pass) then
+  write('line3','%d experiment menu items',$pass):$msg
+  vvLog('Pass',$msg)
+endif
+if ($fail) then
+  write('line3','%d experiment menu items',$fail):$msg
+  vvLog('Fail',$msg)
+  vvLog:$path
+  shell('cat '+$faillog+' >> '+$path+';cat'):$e
+endif
+if ($gopass) then
+  write('line3',`%d experiment go('check')`,$gopass):$msg
+  vvLog('Pass',$msg)
+endif
+if ($gofail) then
+  write('line3',`%d experiment go('check')`,$gofail):$msg
+  vvLog('Fail',$msg)
+  vvLog:$path
+  shell('cat '+$gofaillog+' >> '+$path+';cat'):$e
+endif
+if ($timepass) then
+  write('line3',`%d experiment exptime`,$timepass):$msg
+  vvLog('Pass',$msg)
+endif
+if ($timefail) then
+  write('line3',`%d experiment exptime`,$timefail):$msg
+  vvLog('Fail',$msg)
+  vvLog:$path
+  shell('cat '+$timefaillog+' >> '+$path+';cat'):$e
+endif
+if ($bg = 0) then
+  if ($dpspass) then
+    write('line3',`%d experiment dps`,$dpspass):$msg
+    vvLog('Pass',$msg)
+  endif
+  if ($dpsfail) then
+    write('line3',`%d experiment dps`,$dpsfail):$msg
+    vvLog('Fail',$msg)
+    vvLog:$path
+    shell('cat '+$dpsfaillog+' >> '+$path+';cat'):$e
+  endif
+endif

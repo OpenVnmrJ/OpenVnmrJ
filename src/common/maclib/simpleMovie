@@ -1,0 +1,43 @@
+"macro simpleMovie"
+
+if($#<1) then return endif
+
+$path = '/tmp/myMovie.mov'
+$nimages = 100
+$width = 500
+$height = 500
+$rate = 5
+$src = '/tmp'
+
+if($#>1) then $path=$2 endif
+if($#>2) then $nimages=$3 endif
+if($#>3) then $width=$4 endif
+if($#>4) then $height=$5 endif
+if($#>5) then $rate=$6 endif
+if($#>6) then $src=$7 endif
+
+// make sure file exists.
+shell('dirname "'+$path+'"'):$dir
+shell('basename "'+$path+'"'):$name
+exists($dir,'directory'):$e
+if(not $e) then
+  shell('mkdir -p "'+$dir+'"')
+endif
+substr($path,'basename'):$base,$ext
+if($ext<>'mov') then
+  $path = $base + '.mov'
+endif
+exists($path,'file'):$e
+if(not $e) then 
+  shell('touch '+$path)
+endif
+
+if($1='make') then
+   write('line3','make %s %d %d %d %d',$path,$nimages,$width,$height,$rate)
+   shell('simplemovie','make', '-path',$path,'-size', $nimages, '-width', $width,
+        '-height', $height, '-rate', $rate, '-src', $src)
+elseif($1='play') then
+   write('line3','play %s %d %d %d %d',$path,$nimages,$width,$height,$rate)
+   shell('simplemovie','play','-path',$path,'-width', $width,
+        '-height', $height, '-rate', $rate)
+endif

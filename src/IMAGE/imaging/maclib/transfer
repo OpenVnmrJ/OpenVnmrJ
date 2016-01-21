@@ -1,0 +1,231 @@
+"macro transfer"
+" Ancestry: transfer	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+"  TRANSFER                                                     "
+"                                                               "
+"  Macro to transfer parameter information from one             "
+"  experiment to another.                                       "
+"                                                               "
+"  Usage:  transfer('keyword',<scout#>,target#)                 "
+"                                                               "
+"  The arguments have the following interpretation:             "
+"    keyword           Type of data for transfer                "
+"      valid keywords are: slice, voxel                         "
+"                                                               "
+"    scout#            scout experiment (1-9)                   "
+"    target#           target experiment (1-9)                  "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+" To update the transfer capabilities: add a new type to   "
+" the $validtype list and add a transfer list at the point "
+" $slice and $voxel are defined                            "
+"----------------------------------------------------------"
+$prog='transfer: '
+$maxexp=9999                    "Range of valid experiments"
+$minexp=1
+
+$validtype='slice','voxel'      "List of transfer list names"
+$validsize=size('$validtype')   "Size of the list"
+
+
+"-- Input Processing --------------------------------------"
+" No input: Obtain scout & target numbers from the user    "
+" No values: Use the current experiment as scout and target"
+" One value: Use the current experiment as the scout       "
+" Two values: Use the first as the scout, second as target "
+"----------------------------------------------------------"
+if ($# < 0.5)
+then
+   input('Enter type of transfer (slice or voxel) :>'):$type
+   input('Enter number of scout experiment  (1-9999) :>'):$scout
+   input('Enter number of target experiment (1-9999) :>'):$target
+endif
+
+if ($# > 0.5) and ($# < 1.5) then 
+    $type = $1
+    jexp:$scout
+    $target = $scout
+endif
+
+if ($# > 1.5) and ($# < 2.5) then
+    $type = $1
+    jexp:$scout
+    $target = $2
+endif
+
+if ($# > 2.5) and ($# < 3.5) then 
+    $type = $1
+    $scout = $2
+    $target = $3 
+endif
+
+if ($# > 3.5) then
+    $mess = 'Usage: transfer("transfer_type",<scout exp #>,target exp #)'
+    write('error','%s',$prog+$mess)
+    abort
+endif
+
+
+"-- Check Input -------------------------------------------"
+" Check transfer type, and experiment numbers              "
+"----------------------------------------------------------"
+if (typeof('$type') < 0.5) then
+    write('error','%s',$prog+'Transfer type is not a numeric entry')
+    $mess = 'Usage: transfer("transfer_type",<scout exp #>,target exp #)'
+    write('line3','%s',$mess)
+    abort
+endif
+
+$found = 'no'
+$str = ''
+$k = 1
+repeat
+    substr($validtype[$k],1,1):$str
+    if ($type = $validtype[$k]) or ($type=$str) then
+        $found = 'yes'
+        $type = $validtype[$k]
+    endif
+    $k = $k + 1
+until ($k > $validsize)
+
+if ($found = 'no') then
+    write('error',$prog+'Invalid transfer type entered')
+    abort
+endif
+
+if ($scout < $minexp ) or ($scout > $maxexp) or ($target < $minexp )
+ or ($target > $maxexp)  then
+    $mess='Use experiment numbers 1-9 to indicate the scout expt'
+    write('error','%s',$prog+$mess)
+    abort
+endif
+
+
+"-- Join the scout experiment, if necessary ---------------"
+jexp:$curexp
+if ($curexp <> $scout) then
+    jexp($scout)
+endif
+
+
+"-- Transfer list definitions -----------------------------"
+" The base names of the parameters to be transfered are    "
+" defined as arrays of strings. Each array is associated   "
+" with an object such as slice or voxel.                   "
+"                                                          "
+" To add a new class to the $validtype array of strings    "
+" above, create an additional list parameter at this point "
+" in the code                                              "
+"----------------------------------------------------------"
+"-- Voxel Parameters --------------------------------------"
+$k = 1        $voxel[$k] = 'vpsi'
+$k = $k + 1   $voxel[$k] = 'vphi'
+$k = $k + 1   $voxel[$k] = 'vtheta'
+$k = $k + 1   $voxel[$k] = 'pos1'
+$k = $k + 1   $voxel[$k] = 'pos2'
+$k = $k + 1   $voxel[$k] = 'pos3'
+$k = $k + 1   $voxel[$k] = 'vox1'
+$k = $k + 1   $voxel[$k] = 'vox2'
+$k = $k + 1   $voxel[$k] = 'vox3'
+
+"-- Slice Parameters --------------------------------------"
+$k = 1        $slice[$k] = 'psi'
+$k = $k + 1   $slice[$k] = 'phi'
+$k = $k + 1   $slice[$k] = 'theta'
+$k = $k + 1   $slice[$k] = 'pss'
+$k = $k + 1   $slice[$k] = 'thk'
+
+
+"-- Bring in the Transfer Parameters ----------------------"
+" Create the transfer list ($tlist) as an array of strings "
+" with the names of the target pad parameters t_name.      "
+"                                                          "
+" Pick up the values of these parameters in to macro       "
+" variables referenced by the names in the array $tlist.   "
+"                                                          "
+" NOTES:                                                   "
+"                                                          "
+" ${$type}[$k] is kth element of transfer list and is the  "
+" name of the acquisiton paramter in the target experiment."
+"                                                          "
+" $tlist[$k] is the name: t_??? of the target pad parameter"
+" in the scout experiment.                                 "
+"                                                          "
+" ${$tlist[$k]} is a temporary macro variable $t_??? which "
+" holds the value of t_??? during transfer                 "
+"----------------------------------------------------------"
+$tsize = size('$'+$type)
+
+$k = 1
+repeat
+    $tlist[$k] = 't_'+${$type}[$k]
+    ${$tlist[$k]} = {$tlist[$k]}
+    $k = $k + 1
+until ($k > $tsize)
+
+
+"-- Bring in Special Transfer Parameters ------------------"
+" Special transfer parameters either require special       "
+" treatment, or are parameters common to all experiments,  "
+" such as rfcoil.  Also included in the special list are   "
+" the nucleus parameters  tn & resto. Resto is transfered  "
+" if the target experiment has the same tn as the scout.   "
+"----------------------------------------------------------"
+$tn = tn
+$resto = resto
+$rfcoil = rfcoil
+$gcoil = gcoil
+
+
+"-- Join the target experiment, if necessary --------------"
+" Transfer parameters are now held in $tlist, ready to be  "
+" deposited into the target experiment, or updated in the  "
+" current experiment.                                      "
+"----------------------------------------------------------"
+jexp:$curexp
+if  ($curexp <> $target)  then
+  $expstring = ''
+  format($target,1,0):$expstring
+  {'jexp'+$expstring}
+endif
+
+
+"-- Set Transfer List Parameters In Target ----------------"
+" Parameters whose base names appear in the transfer list  "
+" are set from the values stored in $tlist                 "
+"                                                          "
+" NOTES:                                                   "
+"                                                          "
+" ${$type}[$k] is the name of the parameter being set in   "
+" the target experiment. Hence {${$type}[$k]}= sets the    "
+" value of the target parameter.                           "
+"                                                          "
+" ${$tlist[$k]} is the temporary macro variable holding    "
+" the required value.                                      "
+"--------------------------------------------------------- "
+$k = 1
+repeat
+    {${$type}[$k]} = ${$tlist[$k]}
+    $k = $k + 1
+until ($k > $tsize)
+
+
+"-- Set Special Parameters in Target ----------------------"
+" The values of the special parameters transfered from the "
+" scout are set in the target                              "
+"----------------------------------------------------------"
+rfcoil = $rfcoil
+
+if (gcoil <> $gcoil) then
+    gcoil = $gcoil
+endif
+
+if (tn = $tn) then
+    resto = $resto
+endif
+
+
+"-- Sign Off Message --------------------------------------"
+write('line3','Transfer of '+$type+' complete')
+"dg

@@ -1,0 +1,127 @@
+"macro location"
+" Ancestry: location	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+" location                                                      "
+"                                                               "
+" Macro to provide coordinate information from an image display "
+" using 2D cursors.                                             "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog = 'location: '
+$gamma = sfrq*1e6/B0
+
+
+"-- Find the index number for the slice -------------------"
+" Sort through the pss array and create a slice number     "
+" (spatial order) versus index table                       "
+"----------------------------------------------------------"
+
+"-- Find max and minimum spatial values -------------------"
+$k = 1
+$min = pss[1]
+$max = pss[1]
+$index[1] = 1
+$maxindex = 1
+repeat
+    if (pss[$k] < $min) then
+	$min = pss[$k]
+	$index[1] = $k
+    endif
+
+    if (pss[$k] > $max) then
+        $max = pss[$k]
+	$maxindex = $k
+    endif
+    $k = $k + 1
+until ($k > ns)
+
+
+"-- Recursively sort the array ----------------------------"
+$i = 2
+$oldmin = $min
+repeat
+    $k = 1
+    $curmin = $max
+
+    repeat
+        if (pss[$k] < $curmin) and (pss[$k] > $oldmin) then
+             $curmin = pss[$k]
+             $index[$i] = $k
+        endif
+        $k = $k + 1
+        until ($k > ns)
+
+    $oldmin = $curmin
+    $i = $i + 1
+until ($i > ns)
+$index[ns] = $maxindex
+
+
+"-- Assign the slice index --------------------------------"
+if (slice > 0) then
+    $sliceind = $index[slice]
+else
+    $sliceind = $index[1]
+endif
+
+
+"-- Find values of Euler angles ---------------------------"
+$len = size('psi')
+if ($len > 1.5)  then  $psi=psi[element]  else  $psi=psi  endif
+
+$len = size('phi')
+if ($len > 1.5)  then  $phi=phi[element]  else  $phi=phi  endif
+
+$len = size('theta')
+if ($len > 1.5)  then  $theta=theta[element]  else  $theta=theta  endif
+
+$spsi = ''
+$sphi = ''
+$stheta = ''
+format($psi,6,3):$spsi
+format($phi,6,3):$sphi
+format($theta,6,3):$stheta
+
+
+"-- Logical fram coordinates ------------------------------"
+" Compute these from current cursor position               "
+"----------------------------------------------------------"
+$f2 = cr + rfl- rfp
+$f1 = cr1 + rfl1 - rfp1
+
+$kr = pro + lro*($f2 - 0.5*sw)/sw
+$kp = ppe + lpe*($f1 - 0.5*sw1)/sw1
+$ks = pss[$sliceind]
+
+$skr = ''
+$skp = ''
+$sks = ''
+format($kr,5,2):$skr
+format($kp,5,2):$skp
+format($ks,5,2):$sks
+
+
+"-- Convert to magnet frame coordinates -------------------"
+" Use the log_mag program                                  "
+"----------------------------------------------------------"
+$cmd = 'log_mag '
+$arg1 = $spsi+' '+$sphi+' '+$stheta+' '
+$arg2 = $skr+' '+$skp+' '+$sks
+$unix = $cmd+$arg1+$arg2
+shell($unix):$x,$y,$z
+
+
+"-- Print out results to line3 ----------------------------"
+$out='Logical Frame   R: '+$skr+'   P: '+$skp+'   S: '+$sks
+write('line3','%s',$out)
+
+$xs = ''  $ys = ''  $zs = ''
+format($x,5,2):$xs      format($y,5,2):$ys      format($z,5,2):$zs
+$out='Magnet Frame    X: '+$xs+'   Y: '+$ys+'   Z: '+$zs
+write('line3','%s',$out)
+
+
+"-- Restore interactive view of image ---------------------"
+imconi
+dg

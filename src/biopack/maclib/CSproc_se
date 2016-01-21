@@ -1,0 +1,79 @@
+"macro CSproc_se"
+"CSproc_se - process SE data for Compressed Sensing processing
+"macro CSproc_se"
+    
+$proc_se='' $fname='' $cmd='' $l1='' $l2='' $l3=''
+
+//BPfindfile('proc_se'):$proc_se
+getbinpath('proc_se'):$procsex,$proc_se
+$fname=curexp+'/procdir'
+exists($fname,'directory'):$e
+if not ($e) then
+  write('error','processing directory does not exist.')
+  return
+endif
+
+$log1 = $fname + '/proc_se.log1'
+$log2 = $fname + '/proc_se.log2'
+$log3 = $fname + '/proc_se.log3'
+$fname=$fname+'/rsw.fid'
+exists($fname,'directory'):$e
+if not ($e) then
+  write('error','input data not found.')
+  return (0)
+endif
+
+$cmd = $fname+'.orig'
+exists($cmd,'directory'):$e
+if ($e) then
+  write('error','CSproc_se :-o data already SE-processed.')
+  return (1)
+endif
+
+CScoef:$l1,$l2,$l3                 "check f1coef and f2coef"
+
+if not ($l1 = '0') then
+  $cmd = $proc_se +' ' + $fname + ' ' + $l1 + ' "'+ f1coef+ '" >> ' + $log1 
+  write('reset',$log1)
+  write('file',$log1,$cmd) 
+  shell($cmd) 
+  write('line3','SE processing in F1 done. ')
+endif
+
+$cmd = $fname+'.orig'
+exists($cmd,'directory'):$e
+if ($e) then
+  $cmd = 'rm -r '+$cmd
+  shell($cmd)
+endif
+
+if not ($l2 = '0') then
+  $cmd = $proc_se +' ' + $fname + ' ' + $l2 + ' "'+ f2coef+ '" >> ' + $log2
+  write('reset',$log2)
+  write('file',$log2,$cmd) 
+  shell($cmd) 
+  write('line3','SE processing in F2 done. ')
+endif
+
+$cmd = $fname+'.orig'
+exists($cmd,'directory'):$e
+if ($e) then
+  $cmd = 'rm -r '+$cmd
+  shell($cmd)
+endif
+
+if not ($l3 = '0') then
+  $cmd = $proc_se +' ' + $fname + ' ' + $l3 + ' "'+ f3coef+ '" >> ' + $log3 
+  write('reset',$log3)
+  write('file',$log3,$cmd) 
+  shell($cmd) 
+  write('line3','SE processing in F3 done. ')
+endif
+
+$cmd = $fname+'.orig'
+exists($cmd,'directory'):$e
+if ($e) then
+  $cmd = 'rm -r '+$cmd
+  shell($cmd)
+endif
+

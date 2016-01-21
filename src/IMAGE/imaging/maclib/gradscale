@@ -1,0 +1,150 @@
+"macro gradscale"
+
+"*************************************************************************************
+"  gradscale - Determine gradient scale for decctool
+
+" Details - The testimg.fdf file is used to determine the size of the object.
+"           gsextent is called to determine the size. Signals below 50% are ignored
+"           ge3dshim is used to acquire a test-image, orient sagital: z,y,x = r,p,s
+
+"**************************************************************************************
+
+$macro = $0
+$GSHIMD = userdir+'/gshimdir'        "create gshim directories"
+exists($GSHIMD,'file'):$exx
+if ($exx = 0) then
+    write('error','%s:Directory does not exist- %s',$macro,$GSHIMDIR)
+    abort
+endif
+
+$GSHIMDIR = userdir+'/gshimdir/data' "data files here"
+exists($GSHIMDIR,'file'):$ex1
+if ($ex1 = 0) then
+    write('error','%s:Directory does not exist - %s',$macro,$GSHIMDIR)
+    abort
+endif
+
+$parfile = $GSHIMDIR+'/testimg.param'
+exists($parfile,'file'):$ex1
+if ($ex1 = 0) then
+    write('error','%s:File does not exist - %s/shimmap.param',$macro,$GSHIMDIR)
+    abort
+endif
+"testimg.fdf file, sagital, z,y,x = RO,PE,PE2"
+
+" read in testimg parameters"
+lookup('mfile',$parfile,'filekey'):$key
+$zfs = ''
+lookup('mfile',$key,'seek','#DATASIZE','read','read','read','read'):$sz1,$sz2,$sz3,$zfs
+lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+lookup('mfile',$key,'seek','#DELAY-MSEC','read'):$delay
+lookup('mfile',$key,'seek','#THRESHOLD-PERCENT','read'):$thresh
+lookup('mfile',$key,'seek','#REFERENCE-DELAY-MSEC','read'):$delayref
+$orient = ''
+lookup('mfile',$key,'seek','#ORIENT','read'):$orient
+if($orient <> 'sag') then
+    write('error','%s: Invalid orientation=%s; Must be Sagittal',$macro,$orient)
+    abort
+endif  
+
+$testimg = $GSHIMDIR+'/testimg.fdf'
+exists($testimg,'file'):$ex
+if ($ex = 0) then
+    write('error','%s:File does not exist - %s',$macro,$testimg)
+    abort
+endif
+"split fdf file
+shell('rm -f '+$GSHIMDIR+'/tmp*'):$x
+cp($parfile,$GSHIMDIR+'/tmp.param'):$x
+$cmd='fdfsplit '+$testimg+' '+$GSHIMDIR+'/tmp.1 '+$GSHIMDIR+'/tmp'
+shell($cmd)
+"determine sign of field along each dimension, => RO PE PE2"
+$cmd='gscale '+$GSHIMDIR+'/tmp > '+$GSHIMDIR+'/tmp.scale' 
+shell($cmd)
+$name2 = $GSHIMDIR+'/tmp.scale'
+exists($name2,'file'):$ex2
+if ($ex2 = 0) then
+  write('error','%s: %s does not exist',$macro,$name2)
+  abort
+endif
+lookup('mfile',$name2,'filekey'):$key
+"assume orient=sag"
+lookup('mfile',$key,'seek','Size','read','read','read'):$zcalc,$ycalc,$xcalc
+
+  "make a copy of the decc file for reference"
+  $name1 = '/vnmr/imaging/decclib/.'+gcoil
+  $name2 = $GSHIMDIR+'/decc_file.'+gcoil
+  exists($name1,'file'):$ex  "check if decc-file exists "
+  if ($ex = 0) then
+      write('error','%s: %s does not exist',$macro,$name1)
+      abort
+  endif
+
+  "read shim scaling factor; assume same scaling for all shims"
+  lookup('mfile',$name1,'filekey'):$key
+  lookup('mfile',$key,'seek','totalscale','read','read','read'):$deccx,$deccy,$deccz
+
+if($# = 1) then
+  $zsz = $1  $ysz = $1  $xsz = $1   "sphere"
+elseif($# = 3) then
+  $zsz = $1  $ysz = $2  $xsz = $3
+elseif($# = 0) then
+  write('line3','Measured size(x,y,z) %4.2f, %4.2f, %4.2f',$xcalc,$ycalc,$zcalc) "report only"
+  abort
+endif
+
+"detailed report"  
+if ($xcalc <= 0) then
+  write('line3','measured spread must be greater than 0')
+  return
+endif
+$xval = 100 * $xsz * $deccx / $xcalc
+
+if ($ycalc <= 0) then
+  write('line3','measured spread must be greater than 0')
+  return
+endif
+$yval = 100 * $ysz * $deccy / $ycalc
+
+if ($zcalc <= 0) then
+  write('line3','measured spread must be greater than 0')
+  return
+endif
+$zval = 100 * $zsz * $deccz / $zcalc
+
+$xpc = 100*($xsz-$xcalc)/$xsz
+$ypc = 100*($ysz-$ycalc)/$ysz
+$zpc = 100*($zsz-$zcalc)/$zsz
+
+"write out the information"
+$ATDIR = userdir+'/autotest'   "check and create autotest directory"
+exists($ATDIR,'file'):$ex
+if ($ex = 0) then
+  mkdir($ATDIR)
+endif
+$name = $ATDIR+'/gradient.scale'
+shell('rm -f '+$name)
+write('reset',$name)  "create file"
+write('file',$name,'#GRADIENT_CALIBRATION-X,Y,Z')
+write('file',$name,' ')
+write('file',$name,'#DECC_SCALE')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',$deccx*100,$deccy*100,$deccz*100)
+write('file',$name,' ')
+write('file',$name,'#DECC_SCALE-Calculated')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',$xval,$yval,$zval)
+write('file',$name,' ')
+write('file',$name,'#ACTUAL_SIZE_MM')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',$xsz,$ysz,$zsz)
+write('file',$name,' ')
+write('file',$name,'#MEASURED_SIZE_MM')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',$xcalc,$ycalc,$zcalc)
+write('file',$name,' ')
+write('file',$name,'#ERROR_+/-MM')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',0.5*$f3/$sz3,0.5*$f2/$sz2,0.5*$f1/$sz1)
+write('file',$name,' ')
+write('file',$name,'#PERCENTAGE_CHANGE')
+write('file',$name,'%4.2f  %4.2f  %4.2f ',$xpc,$ypc,$zpc)
+shell('rm -f '+$GSHIMDIR+'/tmp*'):$x
+clear
+cat($name)  "print in text window"
+

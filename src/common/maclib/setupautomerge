@@ -1,0 +1,29 @@
+"macro setupautomerge"
+  atcmd('automerge','cancel')
+  getfilepath('automation.conf','adm/walkupadm'):$e,$conffile
+  if $e>0.5 then
+	$day='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+	$day=$day,$day
+	$today='' shell('date +%a'):$today
+	teststr('$day',$today,'local'):$j
+	$time=''
+	$i=1
+	repeat
+	    $s1='' $s2='' $time=''
+	    readfile($conffile,'$s1','$s2',$day[$j],'local')
+	    substr($s2,3):$time
+	    if ($time<>'') then
+		strstr($time,':'):$r1,$r2,$r3
+		$r1=(($r2*60)+$r3)*60
+		if ($r1>=0) and ($r1<=24*3600) then
+		    $s1=$time+' '+$day[$j]
+		    atcmd('automerge(`'+$1+'`)',$s1)
+		    $i=7
+		endif
+	    else
+		$j=$j+1
+	    endif
+	    $i=$i+1
+	until $i > 7
+    	atcmd
+  endif

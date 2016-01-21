@@ -1,0 +1,73 @@
+#
+
+import os
+import sys
+import glob
+import shutil
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil # for better copytree()
+import myShutilsym
+
+# The console software must be compiled on a Sun. Use the makemi script
+# to accomplish this.
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+
+# dirList = [ 'vxBoot.small',
+#             'vxBoot.big',
+#             'vxBootPPC.small',
+#             'vxBootPPC.big',
+#             'vxBoot.auto']
+
+dirList2 = [ 'maclib',
+             'parlib',
+            'templates']
+
+# define with absolute path where built files will be copied
+# consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+#                          'console', 'inova','acq')
+# if not os.path.exists(consolePath):
+#    os.makedirs(consolePath)
+
+#copy the directory
+# for i in dirList:
+#        myShutil.copytree(i,consolePath,symlinks = False)
+#        Execute('chmod 644 ' + consolePath + '/' + i + '/*')
+
+# Execute(Copy(os.path.join(consolePath,'tms320dsp.ram'),os.path.join(cwd,'tms320dsp.ram')))
+# Execute('cd '+consolePath+'; ln -s vxBoot.small vxBoot')
+# Execute('cd '+consolePath+'; ln -s vxBootPPC.small vxBootPPC')
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+for i in dirList2:
+       myShutil.copytree(i,consolePath,symlinks = False)
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','templates','vnmrj')
+Execute('cd '+consolePath+'; ln -s protocols_nn protocols')
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','user_templates')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+Execute(Copy(os.path.join(consolePath,'global'),os.path.join(cwd,os.pardir,'ddr','global')))
+
+#Biopack file
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','biopack','templates','vnmrj','interface')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+Execute(Copy(os.path.join(consolePath,'ExperimentSelector.xml'),os.path.join(cwd,'biopack','ExperimentSelector.xml')))
+
+# Make a copy for Mercury
+#consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+#                        'console', 'mercury','acq')
+#if not os.path.exists(consolePath):
+#   os.makedirs(consolePath)
+#Execute(Copy(os.path.join(consolePath,'tms320dsp.ram'),os.path.join(cwd,'tms320dsp.ram')))
+

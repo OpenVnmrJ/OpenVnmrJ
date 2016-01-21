@@ -1,0 +1,53 @@
+"macro nm2d"
+"****************************************"
+" nm2d(noisemult) - normalize 2D spectra "
+"****************************************"
+
+if dmg1='ph1' or dmg='ph' then
+  $thmax=6  $peakmax=128
+else
+  $thmax=13 $peakmax=16384
+endif
+
+" determine noise multiplier"
+exists('noisemult','parameter'):$e
+if $e then
+  $safety=noisemult
+elseif (refsource1='sfrq') then   "homonuclear 2D"
+  if dmg = 'ph' or dmg1='ph1' then
+    $safety=64
+  else
+    $safety=32
+  endif
+elseif (tn='H1')or(tn='F19')or(tn='P31') then
+  $safety=4	"high dynamic range nucleus: "
+else	        " artifact level 4x noise threshold"
+  $safety=2	"other cases: artifact level 2x noise threshold"
+endif
+
+if $#>0 then  "the default noise multiplier can be altered by argument"
+  if $1<1.5 then $safety=1.5 else $safety=$1 endif
+endif
+
+$trace=trace
+
+" find maximum signal and noise in entire spectrum and adjust vs2d and th"
+trace='f1' peak2d:$max,$max2,$max3,$max1
+if $max<0 then $max=-$max endif
+
+if $safety*$max1*4/$max>1 then $max=$safety*$max1*4 endif
+
+$max1 = $max1/vs2d
+vs2d=$peakmax*vs2d/$max
+
+$max1 = $safety*$max1*vs2d	   "desired threshold level"
+th=1				   "corresponds to a noise height of 1"
+if $max1<=1 then	"high dynamic range - adjust vs2d rather than th"
+  vs2d=vs2d/$max1
+else
+  repeat th=th+1 $max1=$max1/2 until (th>$thmax)or($max1<=1)
+  if (th<=$thmax) then vs2d=vs2d/$max1 endif
+endif
+
+" restore original trace mode "
+trace=$trace

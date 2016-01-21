@@ -1,0 +1,508 @@
+"macro Pdec"
+
+$probe='' shell('basename '+probe):$probe
+
+mkpar('string','execprocess','','execplot','')
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+execplot='execplot=\'\''
+
+getlimit('pwxlvl'):$max,$min,$dbstep
+if (console='inova') or (console='mercury') then $dbstep=1 endif
+// For now force dbstep to integer or 0.5
+if $dbstep>0.5 then $dbstep=trunc($dbstep+0.5) else $dbstep=0.5 endif
+
+// the newcal method is not built by Bert.
+
+$arg=''
+if ($# < 1) then
+//	$pwxlvl=0
+//	getparam('pwxlvl','P31'):$pwxlvl
+//	if ($pwxlvl=0) then $arg='1' else $arg='init' endif
+	$arg='1'
+else
+    if not typeof('$1') then
+    	format($1,0,0):$arg
+    else
+	$arg=$1
+    endif
+endif
+
+"********************************************************"
+IF ($arg = '1') THEN
+
+	$fileex=0 $file='' $asdir=''
+	cplog('PROTON','first'):$file,$asdir
+	if ($file<>'') then rt($asdir+'/'+$file) else return endif
+	wft
+	execprocess='wft dssh darray(\'CalibrationResults\')'
+	execplot='execplot=\'\''
+	$solv=''
+	format(solvent,'lower'):$solv
+
+	getparam('tpwr',tn):tpwr
+	getparam('pw90',tn):pw90
+	pw=pw90
+
+	seqfil='pwxcalib'
+	ds ph dm='nnn' dmm='ccc' pwxlvl=P31pwxlvl vp=wc2max/2
+	dn='P31' f vsadj
+	if (macro='P31_calibration') then
+	    setoffset(-20,dn):dof
+	    wp=2p sp=6.3p j1xh=1.1 d1=20
+	    array('pwx',25,2,4)
+	else
+	    setoffset(27.5,dn):dof
+	    wp=1.5p sp=3p j1xh=10 d1=1.8
+	    array('pwx',50,2,2)
+	endif
+
+	ai fn=8k at=1 gaussian av sinebell
+	wnt='wft(`acq`) select(1) vsadj(20) dssh'
+	caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+	calibnode='_iteration'
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Pdec(2)')
+	alock='n' wshim='n' r1=1 r3=1
+	clear(2)
+
+"********************************************************"
+ELSEIF ($arg = '2') THEN
+
+	$file='' $asdir=''
+	cplog('pwxcalib','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+	wft select(1) aph0 av 
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	$stop=0
+	repeat
+  	    select($counter)
+ 	    if ($stop < 4) then
+  		peak(sp,wp+sp):$ht
+  		if $counter=1 then $minht = $ht $pwx=pwx[1]  $maxht=$ht
+		else
+     		    if $ht<$minht then 
+			$stop=0
+			$minht=$ht $pwx=pwx[$counter] 
+		    else 
+			$stop=$stop+1 
+     		    endif
+  		endif
+ 	    endif
+  	    $counter=$counter+1
+	until ($counter>arraydim)
+
+        is_IP:$isIP
+    	if $minht/$maxht > 0.5 then
+            write('error','Autocalibration failed (min/max > 0.5) - determine manually')
+	    if ($isIP) then
+               write('line3','31P pw90 calibration failed, target pulse width not achievable'):$str
+	       VPlog('ExpError',$str)
+	       atext($str)
+	       email('FAIL')
+	    endif
+            abort
+    	endif
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.3f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	select(1) 
+
+	if ($pwx > 2*P31pwx) then
+  	    if (r1 < 2) and (pwxlvl < 57) then
+    		r1 = r1+1
+    		pwxlvl=pwxlvl+6
+		write('line3','_pwxlvl%g',pwxlvl):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+		xmhaha_calib('addNode','Pdec(2)')
+    		return
+  	    else
+    		write('error','Autocalibration failed on second try -- determine manually')
+	        if ($isIP) then
+                   write('line3','31P pw90 calibration failed, target pulse width not achievable'):$str
+	           VPlog('ExpError',$str)
+	           atext($str)
+	           email('FAIL')
+	        endif
+    		abort
+  	    endif
+	endif
+
+	PWRcalib($pwx,P31pwx,'pwxlvl'):$pwxlvldiff,$adim,$pwinc
+	if $pwxlvldiff=0 then
+	    Pdec(3,$pwx)
+	else
+	    pwxlvl=pwxlvl+$pwxlvldiff
+	    array('pwx',$adim/2,1,$pwinc)
+            write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Pdec(4)')
+ 	endif
+
+"********************************************************"
+ELSEIF ($arg = '3') THEN
+
+	$pwx=$2
+	gaussian ph ds(1)
+	array('pwx',31,0.7*$pwx,0.02*$pwx)
+	clear(2) full
+	da
+        write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Pdec(5)')
+
+"********************************************************"
+ELSEIF ($arg = '4') THEN
+
+	if $# < 2 then $2='' endif
+	cplog('pwxcalib','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+	clear(2)
+	sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	$stop=0
+	repeat
+  	    select($counter)
+ 	    if ($stop < 4) then
+  		peak(sp,wp+sp):$ht
+  		if $counter=1 then $minht = $ht $pwx=pwx[1] 
+		else
+     		    if $ht<$minht then $minht=$ht $pwx=pwx[$counter] 
+		    else $stop=$stop+1
+     		    endif
+  		endif
+ 	    endif
+  	    $counter=$counter+1
+	until ($counter>arraydim)
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.3f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	select(1) 
+// if this is the last iteration, STOP !
+	PWRcalib($pwx,P31pwx,'pwxlvl'):$pwxlvldiff,$adim,$pwinc
+	if $2='last' and $pwxlvldiff>0 then $pwxlvldiff=0 endif
+	if $pwxlvldiff=0 then
+	    Pdec(3,$pwx)
+	else
+	    pwxlvl=pwxlvl+$pwxlvldiff
+	    array('pwx',$adim/2,1,$pwinc)
+            write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+// if pwrdiff is negative 1 dbstep
+// This would be the last iteration
+            if $pwxlvldiff>=-1*$dbstep and $pwxlvldiff<0 then
+		$2='last'
+	    endif
+	    $arg2='Pdec(4,`'+$2+'`)'
+	    xmhaha_calib('addNode',$arg2)
+	endif
+
+"********************************************************"
+ELSEIF ($arg = '5') THEN
+
+	cplog('pwxcalib','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+	clear(2)
+	sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	repeat
+  	    select($counter)
+  	    peak(sp,wp+sp):$ht
+  	    if $counter=1 then $minht = $ht $pwx=pwx[1] 
+	    else
+     		if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+  	    endif
+  	    $counter=$counter+1
+	until $counter>arraydim
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.3f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	if ($pwx > P31pwx) then
+ 	    if (pwxlvl < 63) then
+  	    	pwxlvl = pwxlvl+$dbstep
+  		array('pwx',31,0.7*$pwx,0.02*$pwx)
+        	write('line3','_pwxlvl%g',pwxlvl):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+		xmhaha_calib('addNode','Pdec(5)')
+  		return
+ 	    endif
+	endif
+
+	$diff = pwx[2] - pwx[1]
+	if ($diff > 0.25) then
+ 	    array('pwx',31,$pwx-3,0.2)
+            write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+	    xmhaha_calib('addNode','Pdec(5)')
+ 	    return
+	endif
+
+	P31pwx=$pwx
+	select(1)
+
+	clear(2)
+	pwxlvl=pwxlvl-12 $pwx=P31pwx*4
+	array('pwx',41,0.5*$pwx,0.025*$pwx)
+	clear(2) full
+	da
+        write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Pdec(6)')
+
+"********************************************************"
+ELSEIF ($arg = '6') THEN
+
+	cplog('pwxcalib','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+	clear(2)
+	sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	repeat
+  	    select($counter)
+  	    peak(sp,wp+sp):$ht
+  	    if $counter=1 then $minht = $ht $pwx=pwx[1] 
+	    else
+     		if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+  	    endif
+  	    $counter=$counter+1
+	until $counter>arraydim
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.3f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	array('pwx',31,$pwx-6,0.4)
+        write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	execprocess='Pdec(7)'
+
+"********************************************************"
+ELSEIF ($arg = '7') THEN
+
+	clear(2)
+	sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	repeat
+  	    select($counter)
+  	    peak(sp,wp+sp):$ht
+  	    if $counter=1 then $minht = $ht $pwx=pwx[1] 
+	    else
+     		if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+  	    endif
+  	    $counter=$counter+1
+	until $counter>arraydim
+
+	select(1) 
+	$ref_pwx90=$pwx
+	$ref_pwxlvl=pwxlvl
+	$pwxlvl_cf = $pwx/4/P31pwx
+        pwxlvl=pwxlvl+12
+        pwx=P31pwx
+
+        $line=''
+        write('line3','%s - refpwxlvl:%g  refpwx:%0.1f',caliblist,$ref_pwxlvl,$ref_pwx90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - compression factor: %0.4f',caliblist,$pwxlvl_cf):$line
+        CalibrationResults=CalibrationResults,$line
+	wnt='wft(`acq`) select(1) ph aph0 dssh' 
+	$strpwx='' $strpwxlvl='' $strref_pwxlvl='' $strref_pwx90=''
+	$strdmf='' $strdpwr='' $sdres='' $strpwxlvl_cf=''
+	write('line3','%0.1f',P31pwx):$strpwx
+	write('line3','%g',pwxlvl):$strpwxlvl
+	write('line3','%g',$ref_pwxlvl):$strref_pwxlvl
+	write('line3','%0.1f',$ref_pwx90):$strref_pwx90
+//	format(P31pwx,0,1):$strpwx
+//	format(pwxlvl,0,0):$strpwxlvl
+//	format($ref_pwxlvl,0,0):$strref_pwxlvl
+//	format($ref_pwx90,0,1):$strref_pwx90
+	format($pwxlvl_cf,0,4):$strpwxlvl_cf
+	setparams('pwx',$strpwx,'P31')
+	setparams('pwxlvl',$strpwxlvl,'P31')
+	setparams('pwxlvl_cf',$strpwxlvl_cf,'P31')
+
+	calcdecshape
+	Pdec('finish')
+
+"*****************************************************************"
+ELSEIF ($arg = 'profile') THEN
+
+	select(1) ph
+        seqfil='s2pul'
+        pwx=P31pwx
+        vp=0
+        dm='nny' dmm='ccw' wp=600 sp=sp-250
+        setdecpars
+        wnt='wft(`acq`) select(1) ph aph0 vsadj(20) dssh'
+        $dof=dof+(125*dfrq)
+        array('dof',51,$dof,-5*dfrq)
+        at=3 d1=10 expfilt('acq')
+        $strdmf='' $strdpwr=''
+        format(dpwr,0,0):$strdpwr
+
+        getparam('pwxlvl_cf','P31'):$attcf
+        getparam('pwx','P31'):$pwx
+        getparam('pwxlvl','P31'):$pwxlvl
+        exp(($pwxlvl-dpwr)*2.303/20):$mult
+        $pwx=$pwx*$mult*$attcf
+        format(250000/$pwx,0,0):$strdmf
+
+        cplog('PROTON','first'):$file,$asdir
+        gettxt($asdir+'/'+$file)
+        $text=dseq+' P31 decoupling profile:'
+        $atext='  +/- 125ppm from on-resonance'
+        $atext0='    in 5ppm steps'
+        $atext1='P31 dec. gammah2: '+$strdmf
+        $atext2 ='   at power level: '+$strdpwr
+        atext($text)
+        atext($atext) atext($atext0) atext($atext1) atext($atext2)
+
+"****************************************************************"
+ELSEIF ($arg='finish') THEN
+
+	$CalibrationResults=CalibrationResults
+        tmpsave('Pdec')
+
+            cplog('PROTON','first'):$file,$asdir
+            rt($asdir+'/'+$file)
+            wft
+            execprocess='wft dssh darray(\'CalibrationResults\')'
+            execplot='execplot=\'\''
+            xmhaha_calib('synonym',$0):caliblist
+
+            getparam('tpwr'):tpwr
+            getparam('pw90'):pw90
+            pw=pw90
+            setdecpars
+            setref
+            if (macro='P31_calibration') then
+            	setoffset(-20,dn):dof
+            	wp=2p sp=6.3p j1xh=1.1
+            else
+            	setoffset(27.5,dn):dof
+            	wp=1.5p sp=3p j1xh=10
+            endif
+
+            seqfil='pwxcalib'
+            vp=wc2max/2 
+            wnt='wft(`acq`) select(1) vsadj ph aph0 dssh'
+
+           $pwinc=pwx/7  //sandra modified
+           format($pwinc,0,1):$pwinc //sandra modified
+           array('pwx',35,$pwinc,$pwinc)  //sandra modified
+
+
+            gaussian ph
+	    $cmd=''
+            execplot='cpplss'
+
+	    // Test for VeriPulse environment
+            is_IP:$isIP
+            if ($isIP) then
+   	       exists('VParcingtest','maclib'):$arcex
+	       if ($arcex) then $cmd='VParcingtest' endif
+               execplot='calibplot'
+               profileflg='y'
+               wnt=''
+               $strpwx='' $strpwxlvl=''
+               $pwxlvl=0 $pwx90=0
+               getparam('pwx','P31'):$pwx90
+               getparam('pwxlvl','P31'):$pwxlvl
+               write('line3','%0.1f',$pwx90):$strpwx
+               write('line3','%g',$pwxlvl):$strpwxlvl
+               substr(ap,'find','pwx(pwx):3','delimiter',',;'):$e
+               if ($e=0) then
+                 substr(ap,'find','p1(p1):3','delimiter',',;'):$e,$index,$len
+                 substr(ap,$index,$len,'p1(p1):3,pwx(pwx):3'):ap
+               endif
+
+               //Since P31pwx no longer holds target, have to retrieve from targets file
+               VPgettarget('P31pwx90'):$target
+               $targets=''
+               format($target,1,1):$targets
+               $IPteststatus='FAIL'
+               if ($pwx90<=$target) then $IPteststatus='PASS' endif
+
+	       //Add sample info to text file
+	       VPtext
+               write('line3','31P 90-degree pulse width \(indirect\)'):$line
+               atext($line)
+               CalibrationResults=$line
+               write('line3','pwx90: %.2f us at power level %.1f dB',$pwx90,$pwxlvl):$line
+               atext($line)
+               CalibrationResults=CalibrationResults,$line
+               write('line3','Target <= %.2f us',$target):$line
+               atext($line)
+               CalibrationResults=CalibrationResults,$line
+               write('line3','Test status: %s',$IPteststatus):$line
+               atext($line)
+               CalibrationResults=CalibrationResults,$line
+
+	       //Add amp power information if calibration table exists
+	       exists('VPgetpower','maclib'):$vpex
+	       if ($vpex) then
+	          VPgetpower('check'):$pwrtabex
+	          if ($pwrtabex) then
+   		       VPgetpower(VPpowertabpath,'P31','indirect',$pwxlvl,$pwx90,$target):$atext
+	               atext($atext)
+	          endif
+	       endif
+	    
+	       wstart='eOptions=IPeOptions'
+	       $ep='' write('line3','wft wp=%0.1f sp=%0.1f select(1) aph0 vsadj dssh %s VPhistory(%.2f,%.2f) rmh',wp,sp,$cmd,$pwx90,$pwxlvl):$ep
+
+            endif
+
+            execprocess=$ep+' darray(\'CalibrationResults\')'
+	    CalibrationResults=$CalibrationResults
+	    calibnode='_PWXnutation'
+            xmhaha_calib('savePar','P31pwx')
+
+ 	    wstart=''
+            Pdec('profile')
+            if (dseq='g') then $dseq='garp1' 
+	    else 
+		strstr(dseq,'W40'):$wok
+		if ($wok) then $dseq='WURST40'
+		else $dseq=dseq endif
+	    endif
+
+            $ep='' write('line3','wft wp=%0.1f sp=%0.1f select(1) aph0 vsadj dssh',wp,sp):$ep
+            execprocess=$ep+' darray(\'CalibrationResults\')'
+            CalibrationResults=$CalibrationResults
+            execplot='cpplss'
+
+	    calibnode='_'+$dseq+'_Profile'
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('savePar','P31dec_profile')
+
+        tmpreturn('Pdec')
+
+ENDIF

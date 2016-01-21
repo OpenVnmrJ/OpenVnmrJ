@@ -1,0 +1,129 @@
+"macro AT410"
+"AT410 Calibrates 2H pw90 using channel 2. The 2H rf is routed"   
+"      to 2H Automation Relay which sends it to the diplexer box and"
+"      then to lock BNC on the probe. Thus the calibration is valid for 2H "
+"      pw90 or decoupling rf field when using channel 2 for 2H"
+
+"      Use AT440 for channel 4 calibrations "
+"      Use AT430 for channel 3 calibrations "
+
+"      IMPORTANT: ampmode must be 'p' for the amplifier used for 2H."
+
+"  For INOVA or UNITYplus:"
+"  Move the Decoupler cable from the top of relay K5022 at the back of the magnet "
+"  leg to the bottom position of relay K5022. This will permit the RF to proceed to
+"  the lock diplexer box when tn=lk"
+"  Remember to restore the cable to normal position after the test"
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Finding 2H pulse power on channel 2 ')
+   gain=10 sw=4000 np=8192
+   at_currenttest='H2pw90_1'
+   if sfrq>600 then pw=200 else pw=125 endif 
+   tn='lk' sethw('lock','off'):$xxx
+   exists('ampmode','parameter'):$e
+   if $e=0 then create('ampmode','string') endif
+   if numrfch=2 then ampmode='dp'dpwr=0 endif
+   if numrfch=3 then ampmode='dpd' dpwr=0 dpwr2=0 endif
+   if numrfch=4 then ampmode='dpdd'dpwr=0 dpwr2=0 dpwr3=0 endif
+   if numrfch=5 then ampmode='dpddd'dpwr=0 dpwr2=0 dpwr3=0 dpwr4=0 endif
+    dn='H1' d2=.001 dof=0
+    n1='tpwr'
+   if at_new='y' then
+    seqfil='ATddec'
+   else
+    seqfil='ATd2pul'
+   endif
+   r4=z0 lockpower=0
+   sethw('nowait','lockpower',lockpower):$x
+   wnt=''
+   wexp='AT410(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   wft f aph0 vsadj(100) peak:$ht,cr movetof
+   at_H2tof=tof
+   exists('maxattench2','parameter','global'):$e
+   if $e=1 then
+    array(n1,30,maxattench2-29,1)
+   else
+    array(n1,30,30,1)
+   endif
+   d1=6*d1   "account for 2H relaxation ~6x longer than 1H"
+   wnt='wft sp=3p wp=3p  select(1) vsadj(10) aph0 dssh ATfind2Hpwr' 
+   write('line3','Determining estimate of 2H pw90 power using Channel 2 ')
+   vp=0 
+   wexp='AT410(`PART2`)'
+   au
+
+elseif ($1='PART2') then
+   wft
+   ATsvf
+  if (at_plotauto='y') then
+      dn2='' pap
+      pps(120,90,wcmax-120,90)
+      pl('all') ATpage
+  endif
+   if at_new='y' then
+    ATfind2Hpw90:$best tpwr=tpwr[$best]
+    if ((tpwr=at_H2tpwr+1.0) or (tpwr=at_H2tpwr-1.0)
+     or (tpwr=at_H2tpwr+2.0) or (tpwr=at_H2tpwr-2.0))
+    then tpwr=at_H2tpwr
+    endif
+   else
+    ATfind2Hpw90:$best tpwr=tpwr[$best]
+    if ((tpwr=at_H2tpwr+1.0) or (tpwr=at_H2tpwr-1.0)
+     or (tpwr=at_H2tpwr+2.0) or (tpwr=at_H2tpwr-2.0))
+    then tpwr=at_H2tpwr
+    endif
+   endif
+   select($best) aph0 vsadj(80) vp=80
+   write('line3','finding first estimate of 2H pw360 using Channel 2')
+   text('Finding estimate of 2H pw360 using Channel 2')
+   array('pw',16,3.0*pw,0.1*pw)
+   wnt='ATwft dssh'
+   at_currenttest='H2pw90_2'
+   wexp='AT410(`PART3`)'
+   au
+
+elseif ($1='PART3') then
+   wft
+   write('line3','calculating first estimate of pw360  using Channel 2')
+   ATsvf
+  if (at_plotauto='y') then
+      dn2='' pap
+      pps(120,0,wcmax-120,90)
+      pl('all') ATpage
+  endif
+   AT2Hpw90cal('pw'):pw
+   write('line3','finding second estimate of 2H pw360 using channel 2 ')
+   array('pw',10,3.8*pw,0.04*pw)
+   at_currenttest='H2pw90_3'
+   wexp='AT410(`PART4`)'
+   au
+
+elseif ($1='PART4') then
+   sethw('z0',r4):$x
+   wft
+   write('line3','calculating final estimate of H2 pw360 using Channel 2')
+   text('Determination of 2H pw360 using Channel 2')
+   ATsvf
+  if (at_plotauto='y') then
+      dn2='' pap ATpltext
+      pps(120,0,wcmax-120,90)
+      pl('all') ATpage
+  endif
+   
+   sethw('lockpower',at_lockpower):$xx
+   AT2Hpw90cal('pw'):at_H2pw90
+   if at_new='y' then at_H2tpwr=tpwr else at_H2tpwr=tpwr endif
+   pw=at_H2pw90 at_H2pw90=pw  "force 0.1usec stepsize"
+   at_H2pw90=trunc(100*at_H2pw90)/100
+   ATrecord('H2PW90','2H pw360/4','pw360/4',at_H2pw90,' at_H2tpwr',at_H2tpwr)
+   write('file',autotestdir+'/REPORT','H2 pw360/4 (CH2) = %3.2f at power = %2.0f  ',at_H2pw90,at_H2tpwr)
+   write('line3','H2pw90 (CH3) = %2.2f',at_H2pw90)
+   tn='H1' sethw('lock','on'):$xxx
+  ATnext
+endif

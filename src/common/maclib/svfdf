@@ -1,0 +1,123 @@
+"macro svfdf"
+"***************************************************************"
+" svfdf "	
+" "
+" Make FDF files from Vnmr FID data "
+" A name argument is required, which is used as the name of the "
+" directory in which the FDF image will be saved.  Each "
+" FID is saved as a separate file in the directory, with "
+" binary data in the selected format and plain text header "
+" information describing the data. "
+" Usage:  svfdf('directory_name') "
+"***************************************************************"
+
+"** Initialize constants and defaults *********************"
+$prog = 'svfdf: '			"Program ID"
+$basename = 'fid#.fdf'                     "generic file name"
+$headername = 'header'                  "generic header name"
+$ext = '.dat'				"extension added to directory"
+$outfmt = 'f'				"output data type 'f'=float"
+$arraysize = 1
+$deg_to_rad = 3.141592654/180.0		"degree to radian conversion"
+
+
+"** Check arguments ***************************************"
+if ($# < 0.5) or ($# > 1.5) then
+  write('error','Usage: '+$prog+'(\'directory_name\')')
+  abort
+endif
+
+"** Check existence of target directory *******************"
+$directory = $1+$ext
+exists($directory,'file'):$exists
+
+if ($exists > 0.5) then
+  write('error',$prog+'A directory '+$directory+' already exists')
+  input('Overwrite it? (y/n): '):$answer 
+
+  if ($answer = 'y') then
+    rm('-r',$directory)
+    mkdir($directory)
+  else
+    abort
+  endif
+else
+  mkdir($directory)
+endif
+
+
+"** Define header entries and formats *********************"
+$format[1] =  'float rank = %d;'
+$format[2] =  'char *spatial_rank = "%s";'
+$format[3] =  'char *storage = "%s";'
+$format[4] =  'float bits = %d;'
+$format[5] =  'char *type = "%s";'
+$format[6] =  'float matrix[] = {%d};'
+$format[7] =  'char *abscissa[] = {"%s"};'
+$format[8] =  'char *ordinate[] = {"%s","%s"};'
+$format[9] =  'float span[] = {%g};'
+$format[10] = 'float origin[] = {%f};'
+$format[11] = 'char *nucleus[] = {"%s","%s"};'
+$format[12] = 'float nucfreq[] = {%f,%f};'
+$format[13] = 'char *array = "%s";'
+$format[14] = 'char *file = "%s";'
+
+
+"** Assemble header info ***********"
+$rank = 1
+$spatial_rank = 'none'
+$type = 'complex'
+$points = np/2
+$abs = 's'
+$ord[1] = 'intensity'
+$ord[2] = 'intensity'
+$span = ($points - 1) / sw
+$origin = 0
+"** Specify data format ***********************************"
+$storage = 'integer'
+if (dp = 'y') then
+  $bits = 32
+else
+  $bits = 16
+endif 
+
+
+"** Create and write the temporary FDF header file ********"
+$headerfile = $directory+'/'+$headername
+write('reset',$headerfile)
+write('file',$headerfile,'%s','#!/usr/local/fdf/startup')
+write('file',$headerfile,$format[1],$rank)
+write('file',$headerfile,$format[2],$spatial_rank)
+write('file',$headerfile,$format[3],$storage)
+write('file',$headerfile,$format[4],$bits)
+write('file',$headerfile,$format[5],$type)
+write('file',$headerfile,$format[6],$points)
+write('file',$headerfile,$format[7],$abs)
+write('file',$headerfile,$format[8],$ord[1],$ord[2])
+write('file',$headerfile,$format[9],$span)
+write('file',$headerfile,$format[10],$origin)
+write('file',$headerfile,$format[11],tn,dn)
+write('file',$headerfile,$format[12],sfrq,dfrq)
+if (array <> '') then
+  write('file',$headerfile,$format[13], array)
+endif
+write('file',$headerfile,$format[14],file)
+
+"** Glue header and data; put into FDF files *********"
+$fdffile = $directory+'/'+$basename
+$fidfile = curexp+'/acqfil/fid'
+shell('fdfgluer -vnmrfile "'+$fidfile+'" -ntraces 1 -outfiles ' \
+	  +'"'+$fdffile+'" "'+$headerfile+'"'):$trash
+rm($headerfile):$x
+
+
+"** Write procpar to the new FDF data directory ***********"
+" The procpar from the CURRENT tree is written to the      "
+" target data directory. This allows tags and any settings "
+" used for reconstruction to be passed along with the data "
+"**********************************************************"
+$procpar = $directory+'/procpar'
+fsave($procpar,'current')
+
+"** Processing complete, notify the user ******************"
+write('line3',$prog+'FDF FID data saved in %s',$directory)

@@ -1,0 +1,258 @@
+"macro gmapdisp"
+
+$arg1='par'
+if $#>0.5 then $arg1=$1 endif
+
+isvnmrj:$isvnmrj
+$ffile='' $tfile=''
+$num=0
+filesinfo('number'):$num
+if ($num = 1) then
+    $f=''
+    filesinfo('name'):$f
+    $name=''
+    $ext=''
+    getext($f):$name,$ext
+    if ($ext = 'par' or $ext = 'fid') then
+        if $arg1='par' then
+          if (seqfil <> 'gmapz') then
+            $jstr = curexp+'/gtmp'
+            exists($jstr,'file'):$e
+            if $e>0.5 then rm('-r',$jstr):$x endif
+            tmpsave('gtmp')
+            exists(curexp+'/text','file'):$t
+            if $t>0.5 then cp(curexp+'/text',curexp+'/gtmp') endif
+          endif
+          gmapset('mkdir')
+          $jfile=$f
+          prune($jfile+'/procpar')
+          rtv($jfile,'seqfil','pslabel','wp','sp','dmg','wnt','wbs','werr','bs','sw','at')
+          rtv($jfile,'dg','dg2','sb','sbs','d2','d3','gzsize','gzlvl','gzwin','tn','tpwr')
+          rtv($jfile,'pw','p1','gain','d1','tof','nt','ss','fn','dn','dpwr')
+	  sw=sw
+	  rtv($jfile,'vtcomplvl','gstab','shift')
+          lb='n' gf='n' gfs='n' awc='n'
+          proc='ft' wexp='' hs='nn' lvl=0 tlt=0
+          alock='n' homo='n' in='n'
+	  exists('oversamp','parameter'):$e
+	  if $e>0.5 then setvalue('oversamp',1) endif
+          $jstr=$jfile+'/gshim.list'
+          exists($jstr,'file'):$e
+          if $e<0.5 then
+            write('error','file not found: %s/gshim.list',$jfile)
+            return
+          endif
+          $js=userdir+'/gshimlib/data/gshim.list'
+          exists($js,'file'):$e
+          if $e>0.5 then rm($js):$x endif
+          cp($jstr,$js)
+          $jss=''
+          lookup('mfile',$js,'mapname','read'):$jss
+          if $jss<>$name then
+            write('error','invalid mapname in %s',$jfile)
+          endif
+          $jstr=$jfile+'/gshim.bas'
+          exists($jstr,'file'):$e
+          if $e<0.5 then
+            write('error','file not found: %s/gshim.bas',$jmap)
+            return
+          endif
+          $js=userdir+'/gshimlib/data/gshim.bas'  "set up gshim.bas, gshim.list"
+          exists($js,'file'):$e
+          if $e>0.5 then rm($js):$x endif
+          cp($jstr,$js)
+	  write('line3','mapname %s loaded',$name)
+
+"         exists('gmap_pwdtmp','parameter'):$xp"
+"         if $xp>0.5 then"
+"           $gmap_pwdtmp=gmap_pwdtmp"
+"           destroy('gmap_pwdtmp')"
+"         endif"
+"         prune($jfile+'/procpar')"
+"         if $xp>0.5 then"
+"           cd($gmap_pwdtmp)"
+"         endif"
+	  $exec=''
+	  gmaplistfunc('unarray'):$ok,$exec
+	  exec($exec)
+          array='d3'
+          lookup('mfile',$jfile,'seek','gmap_findtof','read'):$jstr,$e
+          if $e>0.5 then
+            rtv($jfile,'gmap_findtof')
+          else
+            exists('gmap_findtof','parameter'):$ex
+            if $ex<0.5 then create('gmap_findtof','string') endif gmap_findtof='n'
+          endif
+          lookup('mfile',$jfile,'seek','gmap_z1z4','read'):$jstr,$e
+          if $e>0.5 then
+            rtv($jfile,'gmap_z1z4')
+          else
+            exists('gmap_z1z4','parameter'):$ex
+            if $ex<0.5 then create('gmap_z1z4','string') endif gmap_z1z4='n'
+          endif
+          lookup('mfile',$jfile,'seek','gmapsys_makebutton','read'):$jstr,$e
+          if $e>0.5 then
+            rtv($jfile,'gmapsys_makebutton')
+          else
+            exists('gmapsys_makebutton','parameter'):$ex
+            if $ex<0.5 then create('gmapsys_makebutton','string') endif gmapsys_makebutton='n'
+          endif
+          lookup('mfile',$jfile,'seek','gmapspin','read'):$jstr,$e
+          if $e>0.5 then
+            rtv($jfile,'gmapspin')
+          else
+            exists('gmapspin','parameter'):$ex
+            if $ex<0.5 then
+              create('gmapspin','string')
+              setenumeral('gmapspin',2,'n','y')
+            endif
+            gmapspin='n'
+          endif
+          lookup('mfile',$jfile,'seek','vtcomplvl','read'):$jstr,$e
+          if $e>0.5 then
+            rtv($jfile,'vtcomplvl')
+          else
+            exists('vtcomplvl','parameter'):$ex
+            if $ex<0.5 then
+              create('vtcomplvl','integer')
+              setlimit('vtcomplvl',2,0,1)
+            endif
+            vtcomplvl=0
+          endif
+
+        else if $arg1='fid' then
+          rt($f)
+          $tfile=userdir+'/gshimlib/data'
+          cp($f+'/gshim.list',$tfile+'/gshim.list')
+          cp($f+'/gshim.bas',$tfile+'/gshim.bas')
+          if ($isvnmrj<0.5) then menu('gmap_basisopt') endif
+
+        else if $arg1='loadmap' then
+          gmapset('mkdir')
+          $jfile=$f
+          $jstr=$jfile+'/gshim.list'
+          exists($jstr,'file'):$e
+          if $e<0.5 then
+            write('error','file not found: %s/gshim.list',$jfile)
+            return
+          endif
+          $js=userdir+'/gshimlib/data/gshim.list'
+          exists($js,'file'):$e
+          if $e>0.5 then rm($js):$x endif
+          cp($jstr,$js)
+          $jss=''
+          lookup('mfile',$js,'mapname','read'):$jss
+          if $jss<>$name then
+            write('error','invalid mapname in %s',$jfile)
+          endif
+          $jstr=$jfile+'/gshim.bas'
+          exists($jstr,'file'):$e
+          if $e<0.5 then
+            write('error','file not found: %s/gshim.bas',$jmap)
+            return
+          endif
+          $js=userdir+'/gshimlib/data/gshim.bas'  "set up gshim.bas, gshim.list"
+          exists($js,'file'):$e
+          if $e>0.5 then rm($js):$x endif
+          cp($jstr,$js)
+	  write('line3','mapname %s loaded',$name)
+
+        else if $arg1='rename' then
+          $ffile=$f $js='' $js2='' $js3='' $ext2=''
+          input('enter new mapname: '):$js2
+          if $js2='' then return endif
+          length($js2):$l
+          if $l>4.5 then
+            substr($js2,$l-3,4):$js
+            if ($js='.fid' or $js='.par') then
+              substr($js,2,3):$ext2
+              substr($js2,1,$l-4):$js2
+            endif
+          endif
+          if $ext2='' then $ext2=$ext endif
+          if $ext2<>$ext then
+            exists($js2+'.'+$ext2,'file'):$r
+            if $r>0.5 then
+              write('error','invalid mapname:  %s.%s already exists',$js2,$ext2)
+            else
+              write('error','cannot rename .%s as .%s',$ext,$ext2)
+            endif
+            return
+          endif
+
+          $tfile=$js2+'.fid'
+          exists($tfile,'file'):$e2
+          if $e2>0.5 then
+            if $ext='fid' then
+              input($tfile+' already exists, overwrite? [n] '):$js
+              substr($js,1,1):$js
+              if ($js='y' or $js='Y') then
+                rm('-r',$tfile):$x
+              else
+                return
+              endif
+            else
+              write('error','invalid mapname:  %s already exists',$tfile)
+              return
+            endif
+          else
+            $tfile=$js2+'.par'
+            exists($tfile,'file'):$e2
+            if $e2>0.5 then
+              if $ext='par' then
+                input($tfile+' already exists, overwrite? [n] '):$js
+                substr($js,1,1):$js
+                if ($js='y' or $js='Y') then
+                  rm('-r',$tfile):$x
+                else
+                  return
+                endif
+              else
+                write('error','invalid mapname:  %s already exists',$tfile)
+                return
+              endif
+            endif
+          endif
+
+          $tfile=$js2+'.'+$ext
+          mv($ffile,$tfile)
+          $js=$tfile+'/gshim.list'
+          lookup('mfile',$js,'readline','filekey'):$js3,$key
+          write('file',$js+'2','mapname %s',$js2)
+          repeat
+            lookup('mfile',$key,'readline','filekey'):$js3,$key,$nret
+            if $nret>1.5 then write('file',$js+'2','%s',$js3) endif
+          until ($nret<1.5)
+          rm($js):$x mv($js+'2',$js)
+          $js2=userdir+'/gshimlib/data/gshim.list'
+          exists($js2,'file'):$e if $e>0.5 then rm($js2):$x endif
+          cp($js,$js2)
+          if ($isvnmrj<0.5) then menu('gmap_basisopt') endif
+
+        else if ($arg1='cptosys' or $arg1='cptouser') then
+          if $arg1='cptouser' then
+            $ffile=$f  "from-file"
+            $tfile=userdir+'/gshimlib/shimmaps/'+$f  "to-file"
+	    gmapset('mkdir')
+          else
+            $ffile=$f  "from-file"
+            $tfile=systemdir+'/gshimlib/shimmaps/'+$f  "to-file"
+          endif
+          exists($tfile,'file'):$e
+          if $e>0.5 then
+            $js='Overwrite '+$tfile+'? [n] '
+            input($js):$js substr($js,1,1):$js
+            if ($js='Y' or $js='y') then rm('-r',$tfile):$x
+            else return endif endif
+	    cp('-r',$ffile,$tfile):$x
+        endif endif endif endif endif
+    else
+        write('error','Selected file does not contain NMR parameters')
+        filesinfo('redisplay')
+    endif
+else
+    write('error','Select an entry which contains NMR parameters')
+    if ($num > 0.5) then
+        filesinfo('redisplay')
+    endif
+endif

@@ -1,0 +1,166 @@
+"macro prescan"
+" prescan -  handle prescan functions"
+" prescan[1] to prescan[4] select freq, power, shim, and gain prescans'
+" prescan[5] is node id in study mode"
+" prescan[6] is if freq and power only should be done (init) or all should be done"
+" prescan[7] is no longer used"
+
+$next = 0
+$init = 0
+if ($# = 0) then
+  $init=1
+elseif ($1 = 'all') then
+  if (prescan[1] = 'Complete') and (prescan[2] = 'Complete') and (prescan[3] = 'Complete') \
+      and (prescan[4] <> 'Complete') then
+     prescan_gain
+     return
+  endif
+  $init=1
+elseif ($1 = 'type') then
+  $type='none'
+  if (prescan[1] = 'Active') then
+    $type = 'freq'
+  elseif (prescan[2] = 'Active') then
+    $type = 'power'
+  elseif (prescan[3] = 'Active') then
+    $type = 'shim'
+  elseif (prescan[4] = 'Active') then
+    $type = 'gain'
+  endif
+  if ($## = 0) then
+    write('line3','Prescan type is %s',$type)
+  endif
+  return($type)
+elseif ($1 = 'rtorig') then
+  $file=sqdir+'/info/'+prescan[5]+'/savepar'
+  exists($file+'.par','directory'):$d
+  if (activestudy<>'null' and prescan[5]<>'null' and $d>0.5) then
+    $prescan=prescan
+    rtp($file,'nomenu')
+    exists(sqdir+'/studypar','file'):$e
+    if ($e = 1) then
+      fread(sqdir+'/studypar')
+    endif
+    prescan=$prescan
+    actionid=prescan[5]
+    if actionid<>'null' then
+      xmgetatts(actionid,'status'):$st
+      if $st='Customized' then
+        xmsetatts(actionid,'status','Active')
+      endif
+    endif
+  else "if prescan[5]='savepar' then"
+    $file=curexp+'/savepar'
+    exists($file+'.par','directory'):$d
+    if $d>0.5 then
+      $prescan=prescan
+      rtp($file,'nomenu')
+      prescan=$prescan
+    endif
+  endif
+  prescan[5]='null'
+  return
+endif
+if ($init = 1) then
+  wdone=''
+  $next = 1
+  prescan[5]='null'
+  if ($#=0) then
+    prescan[1]='Not Done'
+    prescan[2]='Not Done'
+    prescan[6]='init'
+  else
+    prescan[6]='all'
+  endif
+  $file=''
+  if (activestudy<>'null' and actionid<>'null') then
+    $file=sqdir+'/info/'+actionid+'/savepar'
+    exists($file+'.par','file'):$e
+    if $e > 0.5 then
+      delete($file)
+    endif
+    svp($file,'nodb')
+    xmselect('savepar','noattr',actionid)  "svp into save.par, sets macro=xmrtpar"
+    xmgetatts(actionid,'status'):$st
+    if $st='Active' then
+      xmsetatts(actionid,'status','Customized')
+    endif
+    prescan[5]=actionid
+    actionid='null'
+  else
+    $file=curexp+'/savepar'
+    exists($file+'.par','file'):$e
+    if $e > 0.5 then
+      delete($file)
+    endif
+    svp($file,'nodb')
+"   prescan[5]='savepar'"
+  endif
+elseif ($1 = 'next') then
+  $next = 1
+endif
+if ($next = 1) then
+  if (prescan[1] <> 'Complete') then
+    prescan_freq
+  elseif (prescan[2] <> 'Complete') then
+    prescan_pwr
+  elseif (prescan[6]= 'init') then
+    prescan('rtorig')
+  elseif (prescan[3] <> 'Complete') then
+    exists('shimmethod','parameter','global'):$e
+    if($e > 0) then 
+      if (shimmethod = 'ge3dshim') then
+        prescan_ge3dshim
+        prescan[1]='Not Done'
+      elseif (shimmethod = 'gemsshim') then
+        prescan_gemsshim
+        prescan[1]='Not Done'
+      elseif (shimmethod = 'fastmap') then
+        prescan_fastmap
+        prescan[1]='Not Done'
+      else
+        write('error','shimmethod not specified')
+        prescan[3]='Complete'
+      endif
+    else
+      create('shimmethod','string','global')
+      write('error','shimmethod not specified')
+      prescan[3]='Complete'
+    endif
+  elseif (prescan[4] <> 'Complete') then
+    prescan('rtorig')
+    prescan_gain
+  elseif (prescan[5] <> 'null') then
+    prescan('rtorig')
+  endif
+elseif ($1 = 'savefastmap') then
+  $file = userdir + '/parlib/prescan_fastmap_' + gcoil + '_' + rfcoil
+  rm('-rf',$file+'.par'):$dum
+  svp($file)
+  write('line3','prescan shim parameters updated')
+  return
+elseif ($1 = 'savege3dshim') then
+  $file = userdir + '/parlib/prescan_ge3dshim_' + gcoil + '_' + rfcoil
+  rm('-rf',$file+'.par'):$dum
+  svp($file)
+  write('line3','prescan 3D shim parameters updated')
+  return
+elseif ($1 = 'savegemsshim') then
+  $file = userdir + '/parlib/prescan_gemsshim_' + gcoil + '_' + rfcoil
+  rm('-rf',$file+'.par'):$dum
+  svp($file)
+  write('line3','prescan 2D shim parameters updated')
+  return
+elseif ($1 = 'savefreq') then
+  $file = userdir + '/parlib/prescan_freq_' + gcoil + '_' + rfcoil
+  rm('-rf',$file+'.par'):$dum
+  svp($file)
+  write('line3','prescan frequency parameters updated')
+  return
+elseif ($1 = 'savepower') then
+  $file = userdir + '/parlib/prescan_pwr_' + gcoil + '_' + rfcoil
+  rm('-rf',$file+'.par'):$dum
+  svp($file)
+  write('line3','prescan power parameters updated')
+  return
+endif

@@ -1,0 +1,50 @@
+"macro is_craft"
+
+// returns 2 values.  The first value is the version used
+//  in a given user's craftrev parameter (this is global)
+// The 2nd return value is the version of /vnmr/craft
+//    taken from the craftrev file
+// A user can switch back-n-forth between version1 and version2
+//    tools, but changing the craftrev (global) parameter
+
+if $# < 1 then $1='' endif
+exists('craft','maclib'):$macex
+if not $macex then
+// No macro...
+//  This section is for non-craft use of this macro
+    return(0,0)
+endif
+
+create('craftrev','string','global',''):$dum
+strstr(craftrev,'Craft Version'):$ok
+if not $ok or $1='setup' then 
+// illegal value for craftrev
+//   Or it is a setup call
+    craftrev='' 
+endif
+
+// default is version 1
+    $rev='Craft Version 1' $crf=''
+//    exists(systemdir+'/craft/craftrev','file'):$fex
+    exists('craftrev',''):$fex,$crf
+    if $fex then
+    	lookup('mfile',$crf,'readline',1):$rev
+    endif
+    strstr($rev,'Craft Version'):$ok
+    if not $ok then $rev='Craft Version 1' endif
+
+if craftrev='' then
+	// set value based on craftrev file
+    craftrev=$rev
+endif
+
+// return the 3rd word from the craftrev parameter value
+$ret=0 $ret2=0
+substr(craftrev,3):$ret
+substr($rev,3):$ret2
+getbinpath('Craft'):$ret3
+if not $ret3 then
+   if $ret2>2 then $re2=2 endif
+   if $ret>2 then $ret=2 endif
+endif
+return($ret,$ret2)

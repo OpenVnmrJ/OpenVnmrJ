@@ -1,0 +1,45 @@
+"macro BPcopy_to_bin"
+"BPcopy_to_bin(name)    copies specified program to user bin if not present"
+"                       in user bin or /vnmr/bin (program in appdir/bin)   "
+$home=''
+shell('echo $HOME'):$home
+
+$pathuser=$home+'/bin/'+$1
+$pathsystem='/vnmr/bin/'+$1
+$2='bin'
+
+"check to see if file is in user directory"
+exists($pathuser,'file'):$userfile
+
+"check to see if file is in vnmrj(system) directory"
+exists($pathsystem,'file'):$systemfile
+
+if ($userfile=1) then
+  $path=$pathuser
+else                                     "look in appdir or /vnmr/bin"
+  exists('/vnmr/maclib/appdirs','file'):$appdirs  "appdir might exist"
+  if $appdirs then                "exists does look in all appdir/bin"
+   exists($1,$2):$ret1,$path 
+     "$ret1 is 1 if program is found and $path is location of program"
+  elseif ($ret1=0) then                              "check /vnmr/bin"
+   if ($systemfile=1) then                   "program is in /vnmr/bin"
+    $path=$pathsystem
+   else
+    banner('program not installed') return
+   endif
+  endif
+  "copy program to user bin"
+  exists($home+'/bin','file'):$binpresent
+  if $binpresent=1 then
+   cp($path,$home+'/bin')
+  else
+   mkdir($home+'/bin')
+   cp($path,$home+'/bin')
+  endif
+   $pathuser?
+   shell('chmod -R 777 '+$pathuser):$dum
+endif
+
+echo('file copied from ',$path)
+echo('into ',$pathuser)
+

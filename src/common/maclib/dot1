@@ -1,0 +1,40 @@
+"macro dot1"
+"dot1 - setup a t1 experiment"
+
+"usage: dot1(min. t1 expected, max. t1 expected, total time (hours))"
+     "or dot1  (in this case, interactive input is invoked)"
+
+"s.l.patt, 15 april 1987"
+
+if $#=3 "expect three arguments"
+then "read arguments"
+ $mint1=$1 $maxt1=$2 $time=$3
+else "interactive input if three arguments not present"
+ input('ENTER MINIMUM T1 EXPECTED (sec): '):$mint1
+ input('ENTER MAXIMUM T1 EXPECTED (sec): '):$maxt1
+ input('ENTER EXPERIMENT TIME (hours): '):$time
+endif
+"calculate tau values"
+$ntaus=1 d2=0 array='d2' "reset array" d2[1]=$mint1/8
+repeat "set up array"
+ $ntaus=$ntaus+1
+ d2[$ntaus]=2*d2[$ntaus-1]
+until (d2[$ntaus]>3.5*$maxt1) and ($ntaus>5)
+"set pulse sequence parameters"
+pw=pw90 p1=2*pw90 d1=4*$maxt1
+"set display parameters"
+vp=wc2max/2 th=wc2max/8 ai vo=0
+"calculate nt based on time desired"
+$averagetau=2*d2[$ntaus]/$ntaus
+$time_per_transient=$ntaus*(at+d1+$averagetau)
+nt=(($time*3600)/$time_per_transient)+0.5
+if nt>2 then "make nt a multiple of 4" nt=nt/4 nt=4*nt endif
+if nt>4 then il='y' bs=4 while bs<nt/8 do bs=bs+4 endwhile
+        else il='n' endif
+"describe result"
+atext('T1 EXPERIMENT')
+da "show array values"
+write('alpha','EXPERIMENT SET UP USING %d TAU VALUES',$ntaus)
+write('alpha','APPROXIMATE ACQUISITION TIME %5.2f HOURS',
+ (nt*$time_per_transient)/3600)
+

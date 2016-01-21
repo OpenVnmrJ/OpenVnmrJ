@@ -1,0 +1,45 @@
+"macro _dsp"
+"     _dsp    -    check oversampling parameters "
+if (Console = 'vnmrs') then dsp='n' endif
+if (dsp = 'r') then
+   if (parmax[5] = 1e6) then
+      write('error',`Real-time DSP not available. Use dsp='n' or dsp='i'`)
+      dsp='n'
+   endif
+endif
+if (dsp = 'n') then
+   exists('oversamp','parameter'):$e
+   if ($e > 0.5) then
+      setvalue('oversamp',1)
+   endif
+   exists('fb','parameter'):$e
+   if ($e > 0.5) then
+     on('fb')
+   endif
+   exists('oscoef','parameter'):$e
+   if ($e > 0.5) then
+      off('oscoef')
+   endif
+   exists('oslsfrq','parameter'):$e
+   if ($e > 0.5) then
+      off('oslsfrq')
+   endif
+   exists('qcomp','parameter','global'):$e
+   if ($e > 0.5) then
+     if (qcomp = 'y') then
+       qcomp='n'
+       write('line3','qcomp disabled since dsp is off')
+     endif
+   endif
+   exists('fsq','parameter','global'):$e
+   if ($e > 0.5) then
+     if (fsq = 'y') then
+       fsq='n'
+       write('line3','fsq disabled since dsp is off')
+     endif
+   endif
+else
+   paros
+   _sw
+   _fsq
+endif

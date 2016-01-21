@@ -1,0 +1,118 @@
+"macro fm_corrshim"
+"[2] Input argument count"
+if ($# > 6.5)  or ($#<4.5)
+then
+  write('error','Usage: %s(dxz,dyz,dz2,dxy,dx2y2,<calib>)',$0)
+  abort
+endif 
+
+$d[1]=0.0 $d[2]=0.0 $d[3]=0.0 
+$d[4]=$1 $d[5]=$2 $d[6]=$3 $d[7]=$4 $d[8]=$5
+
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil1='z1c' $coil2='z2c'
+else
+  $coil1='z1' $coil2='z2'
+endif
+
+if ($#>5.5) then
+  $print=$6
+else
+  $print='n'
+endif
+
+if $print='y' then
+  echo('shim           x        y        z       xz       yz       z2       xy     x2y2  ')
+endif
+$idx=1
+$cx1='' $cy1='' $cz1c='' $cxz='' $cyz='' $cz2c='' $cxy='' $cx2y2=''
+
+$fastmap=userdir+'/fastmap'
+$ffile=$fastmap+'/calib/.'+gcoil
+$flog=userdir+'/fastmap/fastmap.log'
+exists($ffile,'file'):$e
+if $e<0.5 then
+  $ffile=systemdir+'/fastmap/calib/.'+gcoil
+  exists($ffile,'file'):$e
+  if $e<0.5 then
+    write('error','cannot find calibration file for gcoil %s!',gcoil)
+    return
+  endif
+endif
+lookup('file',$ffile)
+while ($idx<=9) do
+  $j=1
+  while $j<=8 do
+    $scal[($idx-1)*8+$j]=0.0
+    lookup('read'):$scal[($idx-1)*8+$j],$nret
+    if $nret<0.5 then
+      write('error','%s: couldn\'t read file',$0)
+      write('file',$flog,'%s: couldn\'t read file %s',$0,$fastmap+'/calib/.'+gcoil)
+      return
+    endif
+    $j=$j+1
+  endwhile
+  if $print='y' then
+    format($scal[($idx-1)*8+1],12,8):$cx1   format($scal[($idx-1)*8+2],12,8):$cy1   format($scal[($idx-1)*8+3],12,8):$cz1c
+    format($scal[($idx-1)*8+4],12,8):$cxz   format($scal[($idx-1)*8+5],12,8):$cyz   format($scal[($idx-1)*8+6],12,8):$cz2c
+    format($scal[($idx-1)*8+7],12,8):$cxy   format($scal[($idx-1)*8+8],12,8):$cx2y2
+    echo('calib ',$cx1,$cy1,$cz1c,$cxz,$cyz,$cz2c,$cxy,$cx2y2)
+  endif
+$idx=$idx+1
+endwhile
+
+$kx1=0.0
+$kx1=$d[4]*$scal[3*8+4]*Z0+$d[7]*$scal[6*8+7]*2.0*Y0+$d[8]*$scal[7*8+8]*2.0*X0-$d[6]*$scal[5*8+6]*X0
+$j=4
+while ($j<=8) do
+  $kx1=$kx1-$d[$j]*$scal[($j-1)*8+1]
+  $j=$j+1
+endwhile
+$d[1]=$kx1/$scal[1]
+
+$ky1=0.0
+$ky1=$d[5]*$scal[4*8+5]*Z0+$d[7]*$scal[6*8+7]*2.0*X0-$d[8]*$scal[7*8+8]*2.0*Y0-$d[6]*$scal[5*8+6]*Y0
+$j=4
+while ($j<=8) do
+  $ky1=$ky1-$d[$j]*$scal[($j-1)*8+2]
+  $j=$j+1
+endwhile
+$d[2]=$ky1/$scal[8+2]
+
+$kz1=0.0
+$kz1=$d[4]*$scal[3*8+4]*X0+$d[5]*$scal[4*8+5]*Y0+$d[6]*$scal[5*8+6]*Z0*2.0
+$j=4
+while ($j<=8) do
+  $kz1=$kz1-$d[$j]*$scal[($j-1)*8+3]
+  $j=$j+1
+endwhile
+$d[3]=$kz1/$scal[2*8+3]
+
+echo('Correcting for current limited shims')
+write('file',$flog,'Correcting for current limited shims')
+
+$ux1=x1-$d[1] $uy1=y1-$d[2] $uz1c={$coil1}-$d[3] 
+x1=x1-$d[1] y1=y1-$d[2] {$coil1}={$coil1}-$d[3]
+
+$kz0=0.0
+$kz0=$d[4]*$scal[3*8+4]*Z0*X0+$d[5]*$scal[4*8+5]*Y0*Z0+$d[7]*$scal[6*8+7]*2.0*X0*Y0+$d[8]*$scal[7*8+8]*(X0*X0-Y0*Y0)+$d[6]*$scal[5*8+6]*(2.0*Z0*Z0-X0*X0-Y0*Y0)
+$kz0=-$kz0
+$j=4
+while ($j<=8) do
+  $kz0=$kz0-$d[$j]*$scal[8*8+$j]
+  $j=$j+1
+endwhile
+tof=tof+$kz0
+
+echo('                 x        y        z         tof')
+write('file',$flog,'                 x        y        z         tof')
+$cx1='' $cy1='' $cz1c='' $cz0c=''
+format(-$d[1],8,0):$cx1   format(-$d[2],8,0):$cy1   format(-$d[3],8,0):$cz1c format($kz0,8,1):$cz0c
+echo('changed by ',$cx1,$cy1,$cz1c,$cz0c)
+write('file',$flog,'changed by %s %s %s %s',$cx1,$cy1,$cz1c,$cz0c)
+$sx1='' $sy1='' $sz1c='' $sz0c=''
+format($ux1,8,0):$sx1   format($uy1,8,0):$sy1   format($uz1c,8,0):$sz1c format(tof,8,1):$sz0c
+echo('changed to ',$sx1,$sy1,$sz1c,$sz0c)
+write('file',$flog,'changed to %s %s %s %s',$sx1,$sy1,$sz1c,$sz0c)

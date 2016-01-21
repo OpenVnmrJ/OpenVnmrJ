@@ -1,0 +1,32 @@
+#!/bin/csh
+
+set thisPID      = $$
+set progressFlag = 1
+set sendName     = nmrProgress.tcl
+
+if ("$1" == "init") then
+    set i = $2
+    set iterCount = $3
+    set thisPID = $4
+    nmrProgress.com -stop -noprogress
+    nmrProgress.tcl &
+    sleep 1
+    set progPct = 0
+    set thisMsg = "nmrProgress -loc $i -pct 0.0 -n $iterCount -fromID 1 -pid $thisPID -title $5 -axis None"
+endif
+
+if ("$1" == "exit") then
+    set thisMsg = "exit"
+else
+    set i = $2
+    set iterCount = $3
+    set thisPID = $4
+    set progPct = (`MATH "100.0*$i/$iterCount"`)
+    if ("$1" == "error") then
+	set thisMsg = "nmrProgress -loc -$i -pct `nmrPrintf %.1f $progPct` -n $iterCount -fromID 1 -pid $thisPID -title $5 -axis None"
+    else
+    	set thisMsg = "nmrProgress -loc $i -pct `nmrPrintf %.1f $progPct` -n $iterCount -fromID 1 -pid $thisPID -title $5 -axis None"
+    endif
+endif
+
+nmrSend -norecv -send $sendName -msg "$thisMsg"

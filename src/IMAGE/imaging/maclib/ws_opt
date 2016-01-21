@@ -1,0 +1,314 @@
+"macro ws_opt"
+"************************************************************************************"
+" ws_opt - Flip angle optimization for water suppression pulse for SGL sequences     "
+" Note: assumes the residual water is the highest signal                             "
+"                                                                                    "
+" Details: ws_opt - ws_opt='cf' does coarse and fine adjustment of power             "
+"          ws_opt('flipC') - does coarse power adjustment only                       "
+"          ws_opt('flipF') - does fine power adjustment only                         "
+"          ws_opt('d1') - does d1 delay adjustment only 
+"          ws_opt('rf') - does last rf power adjustment only                             "
+"                                                                                    "
+"************************************************************************************"
+
+"Check that we have the correct parameters"
+exists('flipws','parameter'):$ex
+if ($ex = 0) then
+   write('error','ws_opt: flipws does not exists, is this an SGL sequence?')
+   abort
+endif
+
+"Make sure tpwr1-tpwr4 and tpwr1f-tpwr4f exist"
+exists('tpwr1','parameter'):$ex if ($ex=0) then create('tpwr1') endif
+exists('tpwr1f','parameter'):$ex if ($ex=0) then create('tpwr1f') endif
+exists('tpwr2','parameter'):$ex if ($ex=0) then create('tpwr2') endif
+exists('tpwr2f','parameter'):$ex if ($ex=0) then create('tpwr2f') endif
+exists('tpwr3','parameter'):$ex if ($ex=0) then create('tpwr3') endif
+exists('tpwr3f','parameter'):$ex if ($ex=0) then create('tpwr3f') endif
+exists('tpwr4','parameter'):$ex if ($ex=0) then create('tpwr4') endif
+exists('tpwr4f','parameter'):$ex if ($ex=0) then create('tpwr4f') endif
+
+exists('d1array','parameter'):$ex
+if($ex = 0) then
+  create('d1array','delay')
+  setgroup('d1array','processing')
+endif
+
+$flips     = 15 "Number of steps"
+$flipstepC = 0.1 "Coarse adjustment"
+$flipstepF = 0.01  "Fine adjustment"
+
+dmg='ph'    "default is phase sensitive mode"
+$paramfile  = 'WS_params.par'
+"writeparam writes multiple params"
+$paramlist1 = 'lb ss nt dmg wnt tpwr1 tpwr1f tpwr2 tpwr2f tpwr3 tpwr3f tpwr4 tpwr4f sglpower'
+"rtv needs individual params"
+$paramlist2 = 'lb','ss','nt','dmg','wnt','sglpower','tpwr1','tpwr1f','tpwr2','tpwr2f','tpwr3','tpwr3f','tpwr4','tpwr4f'
+
+if ($# = 0) then
+  if(apptype = 'im2Dcsi') then
+    im2Dcsi('prep','profile')  "set profile='yy' "
+  else
+    im1D('prep')  "localized spectroscopy, 1D"
+  endif
+  if (size('wsflipf') > 1) then wsflipf = 1 endif
+  ws_opt('flipC')
+
+elseif ($1 = 'flipC') then
+  if (size('d1') > 1) then d1 = 0 endif
+  ws_opt('savepars')
+  $flipstep  = $flipstepC
+  $flip0     = ($flips-1)/2 * $flipstep
+  setarray('wsflipf',wsflipf-$flip0,$flipstep,$flips)
+  fliparray = wsflipf
+  wexp  = 'ws_opt(`procflipC`)'
+  ws_opt('start')
+
+elseif ($1 = 'flipF') then
+  if (size('d1') > 1) then d1 = 0 endif
+  ws_opt('savepars')
+  $flipstep  = $flipstepF
+  $flip0     = ($flips-1)/2 * $flipstep
+  setarray('wsflipf',wsflipf-$flip0,$flipstep,$flips)
+  fliparray = wsflipf
+  wexp  = 'ws_opt(`procflipF`)'
+  ws_opt('start')
+
+elseif($1 = 'd1') then
+  "initialize for d1 optimization"
+  im1D('prep')
+  if (size('wsflipf') > 1) then wsflipf = 1 endif
+  ws_opt('savepars')
+  $d1step = (d1end - d1start)/$flips
+  $d1step = trunc($d1step*100000)/100000
+  setarray('d1',d1start,$d1step,$flips)
+  setarray('d1array',d1start*1000,$d1step*1000,$flips) "d1array in msec"
+  wexp  = 'ws_opt(`procd1`)'
+  ws_opt('start')
+
+elseif ($1 = 'rf') then
+  if (size('d1') > 1) then d1 = 0 endif
+  ws_opt('savepars')
+  $flipstep  = $flipstepC
+  $flip0     = ($flips-1)/2 * $flipstep
+  setarray('wsflipf_last',wsflipf_last-$flip0,$flipstep,$flips)
+  fliparray = wsflipf_last
+  wexp  = 'ws_opt(`procflipRF`)'
+  ws_opt('start')
+
+elseif ($1 = 'tm') then
+  if (size('d1') > 1) then d1 = 0 endif
+  ws_opt('savepars')
+  $flipstep  = $flipstepC
+  $flip0     = ($flips-1)/2 * $flipstep
+  setarray('wsflipftm',wsflipftm-$flip0,$flipstep,$flips)
+  fliparray = wsflipftm
+  wexp  = 'ws_opt(`procflipTM`)'
+  ws_opt('start')
+
+elseif ($1 = 'procd1') then
+  ws_opt('findlowest'):$nr,$rec,$lowest
+  ph wft select($rec) vp=30 vsadj
+  dssh($rec,arraydim,$nr) dssl('list=d1array') f full
+  d1 = d1[$lowest] 
+  ws_opt('resetpars')
+  write('line3','Lowest signal is #%d: %4.2f msec',$lowest,d1*1000)
+  clear 
+  display('d1array')
+  return
+
+elseif ($1 = 'procflipRF') then
+  ws_opt('findlowest'):$nr,$rec,$lowest
+  $ntry=1
+// if ($lowest = 1) OR ($lowest = arraydim/$nr) then
+ if ($lowest = arraydim/$nr) then
+    
+    $flipstep  = $flipstepC
+    $flip0     = ($flips-1)/2 * $flipstep
+    setarray('wsflipf_last',wsflipf_last[$lowest]-$flip0,$flipstep,$flips)
+    $ntry=$ntry+1
+   // write('line3','the number of try #%d',$ntry)
+    write('line3','Lowest signal is #%d, repeating...',$lowest)
+    au
+    return
+  endif
+ 
+  ph wft select($rec) vp=30 vsadj   "phase display"
+  dssh($rec,arraydim,$nr) 
+  dssl('value')
+  //dssl('list=wsflipf_last')
+  f full
+  wsflipf_last = wsflipf_last[$lowest]
+  if(ws_opt='cf') then
+    ws_opt('resetpars')
+    ws_opt('flipF')
+    return
+  else
+    ws_opt('resetpars')
+    write('line3','Lowest signal is #%d: %4.3f',$lowest,wsflipf_last)
+    clear 
+    display('fliparray')
+    return
+  endif
+
+elseif ($1 = 'procflipTM') then
+  ws_opt('findlowest'):$nr,$rec,$lowest
+  $ntry=1
+ // if ($lowest = 1) OR ($lowest = arraydim/$nr) then
+  if ($lowest = arraydim/$nr) then
+    $flipstep  = $flipstepC
+    $flip0     = ($flips-1)/2 * $flipstep
+    setarray('wsflipftm',wsflipftm[$lowest]-$flip0,$flipstep,$flips)
+    $ntry=$ntry+1
+   // write('line3','the number of try #%d',$ntry)
+    write('line3','Lowest signal is #%d, repeating...',$lowest)
+    au
+    return
+  endif
+  
+  ph wft select($rec) vp=30 vsadj   "phase display"
+  dssh($rec,arraydim,$nr) 
+  dssl('value')
+  //dssl('list=wsflipf_last')
+  f full
+  wsflipftm = wsflipftm[$lowest]
+  if(ws_opt='cf') then
+    ws_opt('resetpars')
+    ws_opt('flipF')
+    return
+  else
+    ws_opt('resetpars')
+    write('line3','Lowest signal is #%d: %4.3f',$lowest,wsflipftm)
+    clear 
+    display('fliparray')
+    return
+  endif
+
+elseif ($1 = 'procflipC') then
+  ws_opt('findlowest'):$nr,$rec,$lowest
+  $ntry=1
+ // if ($lowest = 1) OR ($lowest = arraydim/$nr) then
+  if ($lowest = arraydim/$nr) then
+    $flipstep  = $flipstepC
+    $flip0     = ($flips-1)/2 * $flipstep
+    setarray('wsflipf',wsflipf[$lowest]-$flip0,$flipstep,$flips)
+    $ntry=$ntry+1
+    //write('line3','the number of try #%d',$ntry)
+    write('line3','Lowest signal is #%d, repeating...',$lowest)
+    au
+    return
+  endif
+  
+ ph wft select($rec) vp=30 vsadj   "phase display"
+  dssh($rec,arraydim,$nr) dssl('list=wsflipf') f full
+  wsflipf = wsflipf[$lowest]
+  if(ws_opt='cf') then
+    ws_opt('resetpars')
+    ws_opt('flipF')
+    return
+  else
+    ws_opt('resetpars')
+    write('line3','Lowest signal is #%d: %4.3f',$lowest,wsflipf)
+    clear 
+    display('fliparray')
+    return
+  endif
+
+elseif ($1 = 'procflipF') then
+  ws_opt('findlowest'):$nr,$rec,$lowest
+  $ntry=1
+  //if ($lowest = 1) OR ($lowest = arraydim/$nr) then
+  if ($lowest = arraydim/$nr) then
+    $flipstep  = $flipstepF
+    $flip0     = ($flips-1)/2 * $flipstep
+    setarray('wsflipf',wsflipf[$lowest]-$flip0,$flipstep,$flips)
+    $ntry=$ntry+1
+    //write('line3','the number of try #%d',$ntry)
+    write('line3','Lowest signal is #%d, repeating...',$lowest)
+    au
+    return
+  endif
+  ph wft select($rec) vp=30 vsadj   "phase display"
+  dssh($rec,arraydim,$nr) dssl('list=wsflipf') f full
+  wsflipf = wsflipf[$lowest]
+  ws_opt('resetpars')
+  write('line3','Lowest signal is #%d: %4.3f',$lowest,wsflipf)
+  clear 
+  display('fliparray')
+  return
+
+elseif ($1 = 'findlowest') then
+  aipXrecon('nrcvrs'):$nr
+  "For multiple receivers figure which is giving highest signal"
+  $rec = 1
+  wft('nods') vsadj
+  if ($nr>1) then
+    av dssh(1,$nr,1)
+    $counter=1
+    $high=0
+    repeat
+      select($counter) peak:$ht  "Find peak"
+      if ($ht > $high) then 
+        $high = $ht 
+        $rec = $counter 
+      endif
+      $counter=$counter+1
+    until ($counter > $nr)
+  endif
+  select($rec) vsadj(10)
+  av dssh($rec,arraydim,$nr) dssl
+  "For that receiver now figure which is giving lowest signal"
+  $counter=0
+  $low=1e6
+  repeat
+    select($counter*$nr+$rec) centersw cr=cr+ws_delta+roff peak(cr-0.25p,cr+0.25p):$ht  "Find peak"
+    if ($ht < $low) then 
+      $low  = $ht 
+      $lowest  = $counter+1 
+    endif
+    $counter=$counter+1
+  until ($counter = arraydim/$nr)
+  return($nr,$rec,$lowest)
+
+  
+  elseif ($1 = 'start') then
+
+  create('ntopt','integer','current',0)
+  //only let isis or special to have nt>1
+ // if (seqfil='isis' or seqfil='special') then ntopt=1 else ntopt=0 endif //the interface decides whether ntopt=1
+
+
+  if(ntopt=0) then nt=1 endif
+  
+
+  ws = 'y'
+  wsrf = 'y'
+  lb = 5
+  ss = 2
+  
+  //sglarray = 1
+  sglpower = 0
+  vp=0
+  wdone = ''
+  wnt = 'av ft select(1) vsadj vs=vs*0.75 dssh'
+  au
+
+elseif ($1 = 'resetpars') then
+  exists(curexp+'/'+$paramfile,'file'):$ex
+  if ($ex=1) then
+    $n = size('$paramlist2')
+    $inx = 1
+    repeat
+      rtv(curexp+'/'+$paramfile,$paramlist2[$inx])
+      $inx = $inx + 1
+    until ($inx > $n)
+    delete(curexp+'/'+$paramfile)
+  endif
+
+elseif ($1 = 'savepars') then
+  exists(curexp+'/'+$paramfile,'file'):$ex
+  if ($ex=1) then  
+    delete(curexp+'/'+$paramfile) 
+  endif
+  writeparam(curexp+'/'+$paramfile,$paramlist1) 
+endif

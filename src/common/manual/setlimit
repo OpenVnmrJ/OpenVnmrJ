@@ -1,0 +1,105 @@
+
+*******************************************************************************
+setlimit	- 	set the limits of a variable in a tree.
+getlimit	- 	get the limits of a variable in a tree.
+*******************************************************************************
+
+  "setlimit" sets the limits of a variable in a tree.
+ 
+  Usage -- setlimit(name,max,min,step[,tree])
+           setlimit(name,index[,tree])
+
+  The limits are max value, min value and stepsize.
+  Alternatively,  a variable can look up maximum, minimum, and step
+  sizes in a table.  In this case,  the index into the table is
+  provided.  When the three max, min, and step arguments are supplied,
+  the parameter's protection bits (see setprotect command) are set so
+  that table lookup is turned off.  If only a single index argument
+  is supplied,  the parameter's protection bits are set so that table
+  lookup is turned on.
+
+  The table lookup allows is used to give common parameter common limits.
+  The current parameters or types of parameters use the following table indexes.
+
+  Index   Parameter
+  1       sc
+  2       wc
+  3       sc2
+  4       wc2
+  5       sw
+  6       fb
+  7       tof
+  8       dof
+  9       dpwr
+  10      dlp
+  11      dmf
+  12      loc
+  13      "pulse"
+  14      "delay"
+  15      [unused]
+  16      dof2
+  17      tpwr
+  18      dpwr2
+  19      "shim"
+  20      dof3
+  21      dpwr3
+  22      dof4
+  23      dpwr4
+
+  For example, if you want to set the limits on a power parameter so that it has
+  the same limits as dpwr, use setlimit('parname',9).
+
+  The step value is only used if the parameter is a real number.
+
+  If the step value is less than -1, then the parameter is set to the
+  nearest larger value that is a power of 2.  THe fn parameter uses
+  a step of -2 to select this case.
+
+  If the step value is between -1 and 0, then the inverse of the
+  parameter is set to the nearest multiple of the absolute value
+  of the step.  The sw parameter uses a step of negative of the
+  minimum dwell time to select this mode.
+
+  If the step value is a positive value less than 1, then the parameter
+  is set to the nearest multiple of the step value. As an equation,
+  value = n * step where n is a positive or negative integer.
+
+  If the step value is greater than or equal to 1, then the parameter
+  is set to nearest value that is a multiple of step relative to
+  the minimum value.  For example, setlimit('var',3,-3,2) will only
+  allow the values -3, -1, 1, and 3.  As an equation, value = min + n*step
+  where n is an integer >= 0.
+  If this example, the equation is: value = (-3) + (n * 2)
+
+  The variable trees are 'current', 'global', 'processed' and 'systemglobal'.
+  The default tree is 'current'. 
+
+  Examples:
+
+    setlimit('a',10000,0,.3)
+    setlimit('b',1e5,-3e2,1,'global')
+    setlimit('dpwr',9)
+
+
+  "getlimit" displays or returns the limits of a variable in a tree.
+ 
+  Usage -- getlimit(name[,tree]):$max,$min,$step,$index
+
+  Up to four optional return arguments can be used.  The first will
+  return the maximum, the second will return the minimum, and the
+  third will return the step size.  The fourth argument will return
+  a 0 if the parameter is not using an indexed table lookup for the
+  maximum, minimum, and step size.  If the parameter is using the
+  table lookup mechanism, the fourth argument will be set to the index
+  for that table.
+
+  The variable trees are 'current', 'global', 'processed' and 'systemglobal'.
+  The default tree is 'current'. 
+
+  Examples:
+
+    getlimit('np'):$max,$min,$step           sets $max to 128000, $min to 32,
+                                             $step to 2 and $index to 0
+    getlimit('lockfreq','systemglobal'):$max sets $max to 160
+    getlimit('dpwr'):$max,$min,$step,$index  sets $max to 49, $min to 0
+                                             $step to 1 and $index to 9

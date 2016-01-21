@@ -1,0 +1,175 @@
+"macro fixACQtime"
+"fixACQtime  macro fixs ACQtime of all the parameter sets and data"
+//  Allows for single or multiple parameter file(s) to be updated.
+//  arg1 - experiment to be updated (look for parlib entry for arg1)
+//  arg2 - parlib path
+//  Both arguments are optional.
+//  Usage:   
+//	fixACQtime - update all files in userdir/parlib
+//	fixACQtime('','/vnmr/parlib') - update all files /vnmr/parlib
+//	fixACQtime('',userdir+'/parlib') - update all files in userdir/parlib
+//	fixACQtime('PROTON') - update 'highest level' appdir/parlib/PROTON.par
+//				If 'highest level' appdir/parlib/PROTON.par 
+//				is not writable make a copy to userdir/parlib
+//				and update userdir/parlib/PROTON.par
+//	fixACQtime('PROTON',appdir+'/parlib') - update appdir/parlib/PROTON.par
+//				If appdir/parlib/PROTON.par is not found OR
+//				is not writable, do nothing 
+"*************************************************************************"
+
+// Note: Instead of disallowing a specific type of experiment (such as Hadamard)
+//       this macro allows ONLY a specific list.  This list is hardcoded in this
+//       macro itself as a $allowed local variable
+//       Moreover the parlib could be huge (such as Biopack) and the ACQtime
+//	 may not mean anything yet.  We will evolve a better mechanism that 
+//	 is globally applicable.
+//  This allowed list comes from ExperimentSelector.xml
+
+// The following are liquids chempack experiments
+$allowed='PROTON','CARBON','FLUORINE','PHOSPHORUS'
+$allowed=$allowed,'PRESAT','wet1D','gCOSY','HSQCAD'
+$allowed=$allowed,'gHMBCAD','NOESY1D','T1_MEASURE','T2_MEASURE'
+$allowed=$allowed,'APT','DEPT','PS1D','HOMODEC','CARBONecho'
+$allowed=$allowed,'BilevelDec','INADEQUATE','INADQUATEAD'
+$allowed=$allowed,'ADEQUATEAD','COSY','gDQCOSY','DQCOSY','TOCSY'
+$allowed=$allowed,'zTOCSY','ROESY','ROESYAD','NOESY','zCOSY'
+$allowed=$allowed,'HETERO2DJ','HOMO2DJ'
+$allowed=$allowed,'gHSQCAD','HSQC','gHSQC','HMQC','gHMQC'
+$allowed=$allowed,'HETCOR','gHETCOR','ASAPHMQC','gHMBCAD'
+$allowed=$allowed,'gHMBC','gH2BCAD','gH2BC','CIGAR','CIGARAD'
+$allowed=$allowed,'HMBC','gHMBCmeAD','gHMBCRELAY'
+$allowed=$allowed,'NOESY1D','ROESY1D','TOCSY1D','zTOCSY1D'
+$allowed=$allowed,'selexcit','stepNOESY1D','HSQCADTOXY'
+$allowed=$allowed,'gHSQCADTOXY','HSQCTOXY','gHSQCTOXY','HMQCTOXY'
+$allowed=$allowed,'gHMQCTOXY','bsHSQCAD','bsgHSQCAD','bsgHMBC'
+$allowed=$allowed,'EXSIDE','bsHSQCADTOXY','bsgHSQCADTOXY','bsHSQCNOESY'
+$allowed=$allowed,'bsHSQCROESY','bashdROESY','bashdTOCSY','bashdNOESY'
+$allowed=$allowed,'c2hsqcse','c2hsqc','gc2h2bcme','gc2h2bc'
+$allowed=$allowed,'gc2hmbcme','gc2hmbc','gc2hsqcse','gc2hsqc'
+$allowed=$allowed,'FObs_HDec','HObs_FDec','FH_gHETCOR','FH_HOESY'
+
+// The following are DOSY experiments
+// $allowed=$allowed,'Dbppste_cc','Dbppsteinept','Dbppste_wg'
+// $allowed=$allowed,'Dbppste','DgcsteSL_cc','DgcsteSL_dpfgse','DgcsteSL'
+// $allowed=$allowed,'DgsteSL_cc','Doneshot','Dpfgdste','Dbppste_ghsqcse'
+// $allowed=$allowed,'Dcosyidosy','Dgcstecosy','Dgcstehmqc_ps','Dgcstehmqc'
+// $allowed=$allowed,'Dghmqcidosy','Dhom2djidosy'
+
+if ($# < 1) then $1='' endif
+if ($# < 2) then $2='' endif
+$filename=$1
+$dir=$2
+
+if ($dir='') then
+// parlib not specified. Find one.
+   if ($filename<>'') then
+	exists($filename,'parlib'):$pex,$dir
+	substr($dir,'dirname'):$dir
+   else
+	exists('parlib',''):$pex,$dir
+   endif
+endif
+if ($dir<>'') then
+//  Remove any double forward slashes
+    pwd:$curdir
+    cd($dir):$dum
+    pwd:$dir
+    cd($curdir):$dum
+
+//  Is the directory writable?
+    exists($dir,'file','w'):$ok
+    if ($ok<0.5) then
+	if ($filename<>'') and ($dir<>userdir+'/parlib') and ($# < 2) then
+// If not, should a copy of the parameter be made to userdir?
+	    exists(userdir+'/parlib','directory'):$direx
+	    if ($direx=0) then shell('mkdir '+userdir+'/parlib'):$dum endif
+	    shell('cp -r '+$dir+'/'+$1+'.par '+userdir+'/parlib'):$dum
+	    $dir=userdir+'/parlib'
+	else
+	    write('error','%s does not have write permission to %s',owner,$dir)
+	    return
+	endif
+    endif
+else
+    write('error','parlib directory not found')
+    return
+endif
+
+// Generate the list of parameter directories
+write('reset','/vnmr/tmp/acqtimelist')
+if ($filename<>'') then
+    write('file','/vnmr/tmp/acqtimelist','%s/%s.par',$dir,$filename)
+else
+    shell('(ls -1d '+$dir+'/*.par > /vnmr/tmp/acqtimelist)'):$dum
+endif
+$s1='' $s2=''
+readfile('/vnmr/tmp/acqtimelist','$s1','$s2','','local'):$total
+shell('rm -f /vnmr/tmp/acqtimelist'):$dum
+
+if ($total=0) then
+	write('line3','No parameter entries in %s',$dir)
+	return
+endif
+
+// save current tree from current workspace
+flush
+clear(2)
+fsave(curexp+'/'+$0)
+
+$i=1
+repeat
+//  Is it in the allowed list?
+    substr($s1[$i],'basename'):$filename,$ext
+    teststr('$allowed',$filename,'local'):$ok
+    if ($ok<0.5) then
+	if ($1<>'') then
+		write('line3','%s cannot be updated using %s utility',$filename,$0)
+	endif
+    else
+//  Is procpar writable?
+   	$path = $dir + '/' + $filename + '.' + $ext + '/procpar'
+   	exists($path,'file','w'):$e
+   	if ($e > 0.5) then
+// Does a setup macro exist?
+	    exists($filename,'maclib'):$e
+	    if ($e<0.5) then
+	    	write('line3','Setup macro for %s not found',$filename)
+	    endif
+   	else
+	    write('line3','%s does not have write permission to %s/%s.par',operator,$dir,$filename)
+   	endif
+
+   	if ($e > 0.5) then
+// Does a pulse sequence exist?
+	    rtv($path,'seqfil'):$seqfil
+	    exists($seqfil,'seqlib'):$e
+	    if ($e<0.5) then
+	    	write('line3','Pulse sequnece %s not found',$seqfil)
+	    endif
+   	endif
+   	if ($e > 0.5) then
+// Start with default parameters and execute the macro
+// Find the time and update the parameter file
+	    resetsampglobal
+      	    AutoStrtfid($filename)
+      	    ACQtime=0
+       	    exec($filename)
+      	    EXPtime:ACQtime
+      	    format(ACQtime,0,0):ACQtime
+      	    writeparam($path,'ACQtime','current','add')
+	    write('line3','%s/%s.par updated',$dir,$filename)
+   	endif
+
+    endif
+    $i=$i+1
+until $i > $total
+
+// reset current tree in current workspace
+fread(curexp+'/'+$0,'current','reset')
+clear(2)
+seqfil=seqfil
+shell('rm -f '+curexp+'/'+$0):$dum
+
+// DONE !!
+write('line3','ACQtime updated')
+

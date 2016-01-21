@@ -1,0 +1,38 @@
+"macro tiset"
+
+"*****************************************************************************************
+"  tiset  - macro to set ti values
+
+" Details - Sets up an exponential array of ti values for T1 measurement
+"           t1est is the estimated T1
+"
+"****************************************************************************************
+
+exists('t1est','parameter'):$ex
+if($ex = 0) then
+  write('error','t1est parameter does not exist')
+  abort
+endif
+
+if(t1est <= 0) then
+  write('error','Invalid target T1, %6.4f',t1est)
+  abort
+endif
+"calculate tau values"
+$ntaus=1 d2=0 array='d2' "reset array"
+d2[1]=t1est/8
+repeat "set up array"
+  $ntaus=$ntaus+1
+  d2[$ntaus]=2*d2[$ntaus-1]
+until (d2[$ntaus]>3.5*t1est) and ($ntaus>5)
+
+ti = d2
+da
+d2 = ti[1]
+go('check')
+d2 = ti[$ntaus]
+go('check')
+write('line3','TI_min %4.3fms, TI_max %4.3fms',ti[1],ti[$ntaus])
+
+
+

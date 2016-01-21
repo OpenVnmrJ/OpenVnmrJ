@@ -1,0 +1,2270 @@
+"macro QuickSubmit"
+" Varian"
+
+"*********************************************************************"
+if ($0 <> 'QuickSubmit') then
+    // The softlinked macros are called by
+    // vnmrjcmd as part of location selection
+    // Parse the macro name and redirect to 
+    // QuickSubmit macro with appropriate argument
+   if ($# < 4) then return endif
+   $s1='' $s2='' 
+   strstr($0,'QuickSubmit_'):$ret,$s1,$s2
+   QuickSubmit($s2,$2,$3,$4)
+   return
+endif
+"*********************************************************************"
+if ($# < 1) then return endif
+$arg=$1
+
+$QSdir=userdir+'/persistence/QuickSubmit/'+operator
+exists($QSdir,'directory'):$direx
+if ($direx=0) then shell('mkdir -p '+$QSdir):$dum endif
+
+$file1=$QSdir+'/QSfile'
+$expfile=$QSdir+'/QSfile_EXPLIST'
+$longfile=$QSdir+'/QSfile_LONGLIST'
+$customfile=$QSdir+'/QSfile_Customization'
+$customparfile=$QSdir+'/QSfile_custompar'
+$customdefpar=$QSdir+'/QSfile_defaultpar'
+$fidlog=$QSdir+'/QSfile_FidLog'
+$vbgacqlog=$QSdir+'/QSfile_vbgacqlog'
+$msglog=$QSdir+'/QSfile_MsgLog'
+$file2=$QSdir+'/QSfile_param'
+$xmlname=$QSdir+'/QSfile_param'
+$file3=$QSdir+'/QSfile_param_fresh'
+$file4=$QSdir+'/QSfile_queue2'
+$file5=$QSdir+'/QSfile_queue3'
+$error=$QSdir+'/QSfile_error'
+$message=$QSdir+'/QSfile_message'
+$tmpcsv=$QSdir+'/QuickSubmit.csv'
+$newstudy=$QSdir+'/QSfile_newstudy'
+
+"*********************************************************************"
+IF ($arg='init') or ($arg='start') THEN
+
+// First empty all saved MsgLog
+// This is just housecleaning at operatorlogin/bootup time
+
+   shell('rm -f '+$msglog+'*'):$dum
+
+// parameter check
+   exists('QSpar','parameter','global'):$parex
+   if ($parex=0) then
+   	create('QSpar','string','global')
+   endif
+   setprotect('QSpar','on',256,'global')
+   exists('QSexp','parameter','global'):$parex
+   if ($parex=0) then
+        create('QSexp','string','global')
+   endif
+   setprotect('QSexp','on',256,'global')
+   exists('QScustompar','parameter','global'):$parex
+   if ($parex=0) then
+	create('QScustompar','string','global')
+   endif
+   setprotect('QScustompar','on',256,'global')
+
+   $maxsize=23
+   $parsize=size('QSpar')
+   if ($parsize<$maxsize) then
+    	$i=$parsize+1
+    	repeat
+            QSpar[$i]=''
+            $i=$i+1
+    	until $i>$maxsize
+   endif
+
+// Create Parameter menu
+   QSpar[1]=''
+   QuickSubmit('setupparammenu')
+
+// copy solvent menu
+   $menu2=$QSdir+'/QSmenu2'
+   write('reset',$menu2)
+   $m='' exists('solventlist',''):$e,$m
+   copy($m,$menu2)
+
+// Create Experiment menu
+//   QSpar[2]=''
+   QuickSubmit('setupexpmenu')
+
+// Set QS parameter values
+   QuickSubmit('NewStudy')
+
+   if ($arg='init') then
+// Programming convenience
+	$ex=0 $path=''
+	exists('VertQuickSubmit.xml','templates/layout/toolPanels'):$ex,$path
+        $title='' shell('basename '+cpautodir):$title
+	if ($ex) then
+	   $vjcmd='vnmrjcmd(\'popup\',\'mode:modeless\','
+	   $vjcmd=$vjcmd+'\'file:'+$path+'\','
+	   $vjcmd=$vjcmd+'\'rebuild:yes\','
+	   $vjcmd=$vjcmd+'\'pnewupdate:true\','
+	   $vjcmd=$vjcmd+'\'title:"'+$title+'"\')'
+	   exec($vjcmd)
+	endif
+   endif
+"*********************************************************************"
+ELSEIF ($arg='setupparammenu') THEN
+
+// Do all the work in a new workspace
+// But avoid using newexp/cexp/delexp. 
+//	They have unnecessary
+//	line3 echos that might confuse the user
+
+   $sampleglobal='' $archive='' $sample=''
+   if ($# > 1) then
+      $sampleglobal=$2+'/sampleglobal'
+      substr(QSpar[17],'dirname'):$archive,$sample
+   endif
+
+   $exp=0 $nexp=0
+   jexp:$exp
+   flush
+   nextexp:$nexp
+   CEXP($nexp):$cok,$cmsg
+   jexp($nexp)
+
+// Reset sampletags in curexp
+   resetsampglobal
+
+// Collect all template parameters and reqparval parameters
+   $par1='' $par2='' $par3=''
+   listtmpltpars:$par3
+
+// Collect userremembrance parameters
+   $list=''
+   loaduserprefs('local',operator,'list'):$list
+   string2array($list):$list
+   if ($list[1]<>'') then
+	loaduserprefs
+	$par3=$par3,$list
+   endif
+
+// Make it an unique array
+   $par3size=size('$par3')
+   if ($par3[1]<>'') and ($par3size>1) then
+        sort($par3,'u'):$index,$par3
+   endif
+// put samplename in the top of the menu list
+//   for convenience
+   teststr('$par3','samplename','local'):$ok
+   if ($ok) then
+	$par3[$ok]=''
+   endif
+   $par3='samplename',$par3
+
+//  If continue study, collect sampleTags
+   $sTlist=''
+   if ($sampleglobal<>'') then
+      readparam($sampleglobal,'','list'):$sTlist
+//      write('reset',$QSdir+'/par1')
+//      shell('diffparams -list '+$QSdir+'/par1 '+$sampleglobal):$sTlist
+//      shell('rm -f '+$QSdir+'/par1'):$dum
+      string2array($sTlist):$sTlist
+      getsampglobal($2)
+   endif
+
+// Exclude certain parameters from the list
+   $exclude='pslabel','explabel','seqfil','tn','dn','solvent','userdir','loc','vrack','vzone','vloc'
+   $es=size('$exclude')
+   $i=1
+   repeat
+        $is=0
+        teststr('$par3',$exclude[$i],'local'):$is
+        if ($is) then $par3[$is]='' endif
+        $i=$i+1
+   until $i > $es
+
+// Create Parameter file and parameter menu
+   QSpar[1]=''
+   array2string($par3):QSpar[1]   // All required parameters
+   $menu1=$QSdir+'/QSmenu1'
+   write('reset',$menu1)
+   write('reset',$file2)
+   $size=size('$par3')
+   $i=1
+   repeat
+      if ($par3[$i]<>'') then
+          write('file',$menu1,'"%s" "%s"',$par3[$i],$par3[$i])
+	  $param=''
+	  if (typeof($par3[$i])) then
+             $param={$par3[$i]}
+	  else
+	     format({$par3[$i]},'lower'):$param
+	  endif
+          write('file',$file2,'%s %s',$par3[$i],$param)
+      endif
+      $i=$i+1
+   until $i > $size
+   write('file',$menu1,'"" ""')
+   write('file',$file2,'solvent %s',solvent)
+   write('file',$file2,'prioritysample no')
+
+   if ($sampleglobal<>'') then
+	$ssize=size('$sTlist')
+	$si=1
+	repeat
+	   if ($sTlist[$si]<>'') then
+	      $parname=$sTlist[$si]
+	      is_param($parname):$is,$where,$type
+	      if ($where='current') then
+		if ($type='string') then 
+		    $parval={$parname}
+		else
+		    $rparval={$parname}
+		    format($rparval,'lower'):$parval
+		endif
+		if ($parname='archivedir') and ($archive<>'') then
+		    $parval=$archive
+		endif
+		if ($parname='sample') and ($sample<>'') then
+		    $parval=$sample
+		endif
+		write('file',$file2,'%s %s',$parname,$parval)
+	      endif
+	   endif
+	   $si=$si+1
+	until $si>$ssize
+	$resumeQval=QSpar[23]
+	if (QSpar[23]='NewStudy') then $resumeQval='' endif
+	write('file',$file2,'resumeQ %s',$resumeQval)
+   endif
+
+   shell('cp '+$file2+' '+$file3):$dum
+   QSpar[6]=''
+   substr(QSpar[1],1):QSpar[6]
+   QSpar[14]=text_string
+   jexp($exp)
+   DELEXP($nexp):$cok,$cmsg
+//   shell('rm -rf '+userdir+'/exp'+$n):$dum
+   if (QSpar[17]<>'') and ($# > 1) then
+	$s1='' $s2=''
+	strstr(QSpar[17],'/data/'):$is,$s1,$s2
+	if ($is=0) then $s2=QSpar[17] endif
+   	write('file',$msglog,'  Study: %s',$s2)
+	write('file',$msglog,'  Completed Experiments:')
+        shell('(cat '+$fidlog+' >> '+$msglog+')'):$dum
+   endif
+"*********************************************************************"
+ELSEIF ($arg='setupexpmenu') THEN
+
+      $s1=''
+      $menu3=$QSdir+'/QSmenu3'
+      write('reset',$menu3)
+      QuickSubmit('getexplist',operator):$s1
+      QSexp=$s1
+      $e=size('$s1')
+      $i=1
+      repeat
+	   if ($s1[$i]<>'') then
+               write('file',$menu3,'"%s" "%s"',$s1[$i],$s1[$i])
+	   endif
+            $i=$i+1
+      until $i > $e
+      write('file',$menu3,'"" ""')
+
+"*********************************************************************"
+ELSEIF ($arg='NewStudy') then
+
+// Reset parameter file
+   shell('cp '+$file3+' '+$file2):$dum
+
+// Reset queue file
+   write('reset',$expfile)
+   write('reset',$longfile)
+   write('reset',$customfile)
+   write('reset',$customparfile)
+   write('reset',$customdefpar)
+   write('reset',$fidlog)
+   write('reset',$vbgacqlog+'_bgp.log')
+   write('reset',$msglog)
+   write('file',$msglog,'%s(\'%s\')',$0,$arg)
+   QScustompar=''
+
+   $smsloc='random'
+   getadminfo('smslocation'):$smsloc
+
+// Set QS parameter values
+   QuickSubmit('getexplist',operator):$s1
+   QSexp=$s1
+   QSpar[2]='bothQ'	// currentQ status
+   QSpar[3]=''		// Exp Selection
+   QSpar[3]=QSexp[1]
+   QSpar[4]=''          // Next Location
+   $nextloc=0
+   nextlocQ:$nextloc
+   format($nextloc,'lower'):QSpar[4]
+   QSpar[5]=''		// Location Selected by the user
+   if ($smsloc<>'random') then
+	QSpar[5]=QSpar[4]
+   endif
+   QSpar[6]=''          // Parameter name selected in the menu
+   substr(QSpar[1],1):QSpar[6]
+   QSpar[7]=$smsloc	// Location selection preference
+   QSpar[8]=''          // DayQ time
+   QSpar[9]=''          // DayQ experiments
+   QSpar[10]=''         // NightQ time
+   QSpar[11]=''         // NightQ experiments
+   QSpar[12]=''         // Message alert
+   write('reset',$message)
+   QSpar[13]=''         // Error alert
+   write('reset',$error)
+   QSpar[14]=''		// textinformation
+   QSpar[15]=''		// lock condition for buttons
+   defaultqueue:$defaultQ
+   QSpar[16]=$defaultQ	// submission to auto or background
+   QSpar[17]=''		// sampledir path for ContinueStudy
+   QSpar[18]=''		// Display Message History
+			// Values 19-21 are admin options
+   QSpar[19]='no'	// Admin group on or off
+   QSpar[20]=operator   // operator value for explist display
+   QSpar[21]=operator   // operator value for explist edit
+
+   QSpar[22]=''		// Active study information
+   if (QSpar[23]<>'') and (QSpar[23]<>'NewStudy') then
+        QuickSubmit('setupparammenu')
+   endif
+   QSpar[23]=''		// ContinueStudy or NewStudy
+
+   QuickSubmit('queueinfo')
+   QuickSubmit('set','prioritysample','no')
+   QuickSubmit('show')
+   write('reset',$newstudy)
+   write('file',$newstudy,'Ready for a New Study...')
+   expactive:$a
+   expactive('current'):$a2
+   if (QSpar[16]='fgexp') then
+        if ($a>0) then
+            $msg='Active study in current workspace'
+	    QuickSubmit('Write','',$msg)
+	elseif ($a2>0) then
+            $msg='Spectrometer has an active study'
+	    QuickSubmit('Write','',$msg)
+	else
+	    QSpar[23]='NewStudy'
+	    write('reset',$newstudy)
+	    write('file',$newstudy,'Ready for New Study...')
+	endif
+   elseif (QSpar[16]='bgauto') then
+        $isinqueue=0
+        shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+        if ($isinqueue>0) then
+            $msg='There are samples in current autodir'
+	    QuickSubmit('Write','',$msg)
+	else
+	    if ($a>-0.5) then checkautodir endif
+	    setcurrentQ:QSpar[2]
+	    QSpar[23]='NewStudy'
+        endif
+   else
+	if ($a>-0.5) then checkautodir  endif
+	setcurrentQ:QSpar[2]
+	QSpar[23]='NewStudy'
+   endif
+   if (QSpar[23]='NewStudy') then
+	QuickSubmit('defaultexp')
+   endif
+   vnmrjcmd('pnew','QSpar','operator','owner','traymax')
+
+"*********************************************************************"
+ELSEIF ($arg='clear') THEN
+
+   write('file',$msglog,'%s(\'%s\')',$0,$1)
+
+   QSpar[3]=''          // day exp selection
+   QSpar[3]=QSexp[1]
+   QSpar[4]=''          // Next location
+   $nextloc=0
+   nextlocQ:$nextloc
+   format($nextloc,'lower'):QSpar[4] 
+   QSpar[6]=''          // Parameter name selected in the menu
+   substr(QSpar[1],1):QSpar[6]
+   QSpar[8]=''          // DayQ time
+   QSpar[9]=''          // DayQ experiments
+   QSpar[10]=''         // NightQ time
+   QSpar[11]=''         // NightQ experiments
+   QSpar[12]=''         // Message alert
+   write('reset',$message)
+   QSpar[13]=''         // Error alert
+   write('reset',$error)
+   QSpar[15]=''         // lock condition for buttons
+   defaultqueue:$defaultQ
+   QSpar[16]=$defaultQ
+   QSpar[24]=''
+   write('reset',$expfile)
+   write('reset',$longfile)
+   write('reset',$customfile)
+   write('reset',$customparfile)
+   write('reset',$customdefpar)
+   QuickSubmit('show')
+   QuickSubmit('queueinfo')
+   QuickSubmit('set','prioritysample','no')
+
+   vnmrjcmd('pnew','QSpar','operator','owner','traymax')
+
+"*********************************************************************"
+ELSEIF ($arg='parampopup') or ($arg='expresspopup') THEN
+
+  if ($# < 2) then $2='init' endif
+  if ($2='init') then
+
+// Collect all template parameters and reqparval parameters
+    $PAR1='' $PAR2='' $PAR3=''
+    listtmpltpars:$PAR3
+
+    $xml=$xmlname+'_'+$arg+'.xml'
+
+    write('reset',$xml)
+    exists('QSparpopup','parameter','global'):$parex
+    if ($parex=0) then
+	create('QSparpopup','string','global')
+    endif
+    setprotect('QSparpopup','on',256,'global')
+    QSparpopup=''
+    $s1='' $s2=''
+    readfile($file2,'$s1','$s2','','local')
+    $par1='' string2array(QSpar[1]):$par1
+    $size=size('$par1')
+    $i=1 $j=1
+    repeat
+	teststr('$s1',$par1[$i],'local'):$is
+	if ($is) and ($par1[$i]<>'samplename') then 
+	    QSparpopup[$j]=$par1[$i]
+	    QSparpopup[$j+1]=$s2[$is]
+	    $j=$j+2
+	endif
+	$i=$i+1
+    until $i > $size
+    if ($## > 0) then return(QSparpopup) endif
+
+    $total=size('QSparpopup')
+    if (QSparpopup[1]='') then $total=0 endif
+    $y=trunc($total/4 + 0.5)*30+10
+    $yoff=0
+    if ($arg='expresspopup') then
+        $y=$y+100
+        $yoff=100
+    endif
+
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="QSparpopup" element="groups" type="acquisition" >')
+    write('file',$xml,'  <group size="590 %d"',$y)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="Etched"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="parampopup"')
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+    if ($arg='expresspopup') then
+        QSparpopup[$total+1]='samplename'
+        $val='' QuickSubmit('get','samplename'):$val
+        QSparpopup[$total+2]=$val
+        QSparpopup[$total+3]='solvent'
+        $val='' QuickSubmit('get','solvent'):$val
+        QSparpopup[$total+4]=$val
+
+	$red=0
+	teststr('$PAR3','samplename','local'):$red
+        write('file',$xml,'     <label loc="5 5" size="140 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        label="Samplename"')
+	if ($red) then
+	    write('file',$xml,'        fg="darkRed"')
+	endif
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <entry loc="150 5" size="200 25"')
+        write('file',$xml,'        style="Heading2"')
+        if ($red) then
+            write('file',$xml,'        fg="darkRed"')
+        endif
+        write('file',$xml,'        vq="QSparpopup"')
+        write('file',$xml,'        vc="$val=\'\' ckstring(\'$VALUE\'):$val QSparpopup[%d]=$val"',$total+2)
+        write('file',$xml,'        set="$VALUE=QSparpopup[%d]"',$total+2)
+        write('file',$xml,'        />')
+
+	$red=0
+	teststr('$PAR3','solvent','local'):$red
+        write('file',$xml,'     <label loc="5 35" size="140 25"')
+        write('file',$xml,'        style="Heading2"')
+        if ($red) then
+            write('file',$xml,'        fg="darkRed"')
+        endif
+        write('file',$xml,'        label="Solvent"')
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <filemenu loc="150 35" size="200 25"')
+        write('file',$xml,'        style="Heading2"')
+        if ($red) then
+            write('file',$xml,'        fg="darkRed"')
+        endif
+        write('file',$xml,'        vq="QSparpopup"')
+        write('file',$xml,'        vq2="QSparpopup"')
+        write('file',$xml,'        vc="QSparpopup[%d]=\'$VALUE\'"',$total+4)
+        write('file',$xml,'        set="$VALUE=QSparpopup[%d]"',$total+4)
+        write('file',$xml,'        file="$VALUE=userdir+\'/persistence/QuickSubmit/\'+operator+\'/QSmenu2\'"')
+        write('file',$xml,'        type="file"')
+        write('file',$xml,'        display="yes"')
+        write('file',$xml,'        />')
+
+        write('file',$xml,'     <label loc="5 65" size="140 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        label="Comments"')
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <entry loc="150 65" size="250 25"')
+        write('file',$xml,'        style="Heading2"')
+        write('file',$xml,'        vq="QSparpopup QSpar"')
+        write('file',$xml,'        vc="QSpar[14]=\'$VALUE\'"')
+        write('file',$xml,'        set="$VALUE=QSpar[14]"')
+        write('file',$xml,'        />')
+
+    endif
+    if ($total>0) then
+      $i=1 $k=0 
+      repeat
+        $y=$k*30+5+$yoff $x=5
+	$red=0
+	teststr('$PAR3',QSparpopup[$i],'local'):$red
+        write('file',$xml,'     <label loc="%d %d" size="140 25"',$x,$y)
+        write('file',$xml,'        style="Heading2"')
+        if ($red) then
+            write('file',$xml,'        fg="darkRed"')
+        endif
+        write('file',$xml,'        label="%s"',QSparpopup[$i])
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        $x=$x+145
+        write('file',$xml,'     <entry loc="%d %d" size="140 25"',$x,$y)
+        write('file',$xml,'        style="Heading2"')
+        if ($red) then
+            write('file',$xml,'        fg="darkRed"')
+        endif
+        write('file',$xml,'        vq="QSparpopup"')
+        write('file',$xml,'        vc="QSparpopup[%d]=\'$VALUE\'"',$i+1)
+        write('file',$xml,'        set="$VALUE=QSparpopup[%d]"',$i+1)
+        write('file',$xml,'        />')
+        $i=$i+2
+
+        if ($i<$total+1) then
+            $x=$x+150
+	    $red=0
+	    teststr('$PAR3',QSparpopup[$i],'local'):$red
+            write('file',$xml,'     <label loc="%d %d" size="140 25"',$x,$y)
+            write('file',$xml,'        style="Heading2"')
+            if ($red) then
+            	write('file',$xml,'        fg="darkRed"')
+            endif
+            write('file',$xml,'        label="%s"',QSparpopup[$i])
+            write('file',$xml,'        justify="Right"')
+            write('file',$xml,'        />')
+            $x=$x+145
+            write('file',$xml,'     <entry loc="%d %d" size="140 25"',$x,$y)
+            write('file',$xml,'        style="Heading2"')
+            if ($red) then
+            	write('file',$xml,'        fg="darkRed"')
+            endif
+            write('file',$xml,'        vq="QSparpopup"')
+            write('file',$xml,'        vc="QSparpopup[%d]=\'$VALUE\'"',$i+1)
+            write('file',$xml,'        set="$VALUE=QSparpopup[%d]"',$i+1)
+            write('file',$xml,'        />')
+	    $i=$i+2
+        endif
+        $k=$k+1
+      until $i > $total
+    endif
+    write('file',$xml,'    </group>')
+    write('file',$xml,'</template>')
+
+    $title='Populate Parameter values'
+    $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        \'file:'+$xml+'\',
+        \'rebuild:yes\',
+        \'pnewupdate:true\',
+        \'ok:QuickSubmit(`'+$arg+'`,`save`)\',
+        \'cancel:QuickSubmit(`'+$arg+'`,`cancel`)\',
+        \'title:'+$title+'\')'
+    exec($vjcmd)
+
+  elseif ($2='save') then
+    $size=size('QSparpopup')
+    $i=1
+    $experror=0
+    repeat
+   	is_param(QSparpopup[$i]):$ok,$where,$type
+        if $type='real' then
+          if (QSparpopup[$i+1]<>'') then
+            format(QSparpopup[$i+1],'isreal'):$real
+            if not $real then
+		$experror=1
+		write('line3','Expected real value for %s',QSparpopup[$i]):$msg
+		QuickSubmit('Write','',$msg)
+                if ($arg='expresspopup') then write('error',$msg) endif
+		$i=$total
+	    endif
+          endif
+        endif
+	$i=$i+1
+    until $i > $size
+
+    $par='' $val=''
+    readfile($file2,'$par','$val','','local'):$total
+    $i=1
+    repeat
+	teststr('$par',QSparpopup[$i],'local'):$is
+	if ($is) then $val[$is]=QSparpopup[$i+1] endif
+	$i=$i+2
+    until $i > $size
+
+    write('reset',$file2)
+    $i=1
+    repeat
+        write('file',$file2,'%s %s',$par[$i],$val[$i])
+        $i=$i+1
+    until $i > $total
+    QuickSubmit('Write','','')
+    QuickSubmit('show')
+    QuickSubmit('parampopup','cancel')
+    if ($arg='expresspopup') then
+        if ($experror<0.5) then
+            QuickSubmit('Express','proceed')
+        else
+            QuickSubmit('Express','cancel')
+        endif
+    endif
+  elseif $2='cancel' then
+    destroy('QSparpopup','global'):$dum
+    if ($arg='expresspopup') then
+        QuickSubmit('Express','cancel')
+    endif
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg='defaultexp') THEN
+
+   $defaultexp='' getadminfo('defaultexp'):$defaultexp
+   string2array($defaultexp):$defaultexp
+   if ($defaultexp[1]='') then return endif
+   $allowedlist=''
+   $allowedlist=QSexp
+   $tot=size('$defaultexp')
+   $i=1
+   repeat
+//	teststr('$allowedlist',$defaultexp[$i],'local'):$OK
+//	if ($OK) then QuickSubmit('add',$defaultexp[$i],'day') endif
+	QuickSubmit('add',$defaultexp[$i],'day')
+	$i=$i+1
+   until $i > $tot
+
+"*********************************************************************"
+ELSEIF ($arg='add') THEN
+  if (QSpar[15]<>'') then return endif
+
+  write('file',$msglog,'%s(\'%s\',\'%s\',\'%s\')',$0,$arg,$2,$3)
+  $rtime=0 $rtime2=0 $stime='' $stime2=''
+  $ppt=60
+  getadminfo('prpltime'):$ppt
+  $ppt2=$ppt
+  $required='' 
+  exists($2,'studylib'):$study
+  $snt='-1' $sni='-1'
+  if ($study) then
+	$e='' $et=0 $etime=0 $n='' $nt=0 $ntime=0
+	getSTUDYinfo($2):$e,$et,$n,$nt,$etime,$ntime
+	$si=size('$e') if ($e[1]='') then $si=0 endif
+	$ppt=$ppt*$si
+	$si=size('$n') if ($n[1]='') then $si=0 endif
+	$ppt2=$ppt2*$si
+	if ($3='day') then
+	  if (QSpar[16]<>'autodir') then
+	    $rtime=$etime+$ntime
+	    $ppt=$ppt2+$ppt $ppt2=0
+	  else
+	    $rtime=$etime
+	    $rtime2=$ntime
+	  endif
+	else
+	    $rtime2=$etime+$ntime
+	    $ppt2=$ppt2+$ppt $ppt=0
+	endif
+  else
+  	$r=0 $n=''
+  	getEXPinfo($2):$required,$r
+	if ($3='day') then $rtime=$r
+	else $rtime2=$r endif
+
+            exists($2,'parlib'):$parex,$parpath
+            fread('','usertree')
+            fread($parpath+'/procpar','usertree')
+	    $nt=-1 $snt='-1'
+	    exists('nt','parameter','usertree'):$ok
+	    if ($ok) then
+                getvalue('nt','usertree'):$nt
+	    endif
+            if ($nt>0.5) then
+                format(-1*$nt,0,0):$snt
+            endif
+	    $ni=0 $sni='0'
+            exists('ni','parameter','usertree'):$ok
+            if ($ok) then
+                getvalue('ni','usertree'):$ni
+            endif
+            if ($ni>1) then
+                format(-1*$ni,0,0):$sni
+            endif
+	    fread('','usertree')
+  endif
+
+// Check for excluded experiments (i.e., those that require dialog)
+  if not $study then
+	$dialog='no'
+	walkupQ_dialog($2):$dialog
+	if ($dialog='yes') then
+            $msg=''
+            write('line3','%s requires user input. Cannot be added from this submission tool',$2):$msg
+	    QuickSubmit('Write','',$msg,$1)
+	    return
+	endif
+  endif
+//  Check for required experiment
+  if not $study then
+	$reqsize=size('$required')
+   	if ($reqsize<2) then $required[2]='always' endif
+   	$react=$required[2]
+   	string2array($required[1]):$required
+   	if ($react='') or ($react='ignore') then $required='' endif
+   	teststr('$required',$2,'local'):$islist
+   	if ($islist) then $required[$islist]='' endif
+	$approved=QSexp
+   	$total=size('$required') 
+	$reqexp=$required[$total]
+//	$reqexp=''
+//	$i=$total
+//	while $i > 0 do
+//	   $islist=0
+//	   $reqexp=$required[$i]
+//	   if ($reqexp<>'') then
+//		teststr('$approved',$reqexp,'local'):$islist
+//		if ($islist=0) then $reqexp='' else $i=1 endif
+//	   endif
+//	   $i=$i-1
+//	endwhile
+   	if ($required[1] <> '') then
+           $ok=0
+           $t1=1
+           repeat
+	      QuickSubmit('isinqueue',$required[$t1],'day'):$ok
+	      if ($ok=0) and ($3='night') then
+		QuickSubmit('isinqueue',$required[$t1],'night'):$ok
+	      endif
+	      if ($ok=0) and (QSpar[17]<>'') then
+		AutoCheck($required[$t1],'fid',QSpar[17]):$ok
+	      endif
+              if ($ok) then $t1=$total endif
+              $t1=$t1+1
+           until $t1 > $total
+           if ($ok=0) and ($reqexp<>'') then
+		$ok2=0
+                $msg=''
+                write('line3','%s is automatically added for %s.',$reqexp,$2):$msg
+		QuickSubmit('Write',$msg,'',$1)
+		QuickSubmit('add',$reqexp,$3):$ok2
+		if ($ok2=0) then
+		   $msg=''
+		   write('line3','Failed to add %s',$reqexp):$msg
+		   QuickSubmit('Write','',$msg,$1)
+		   return
+		endif
+           endif
+   	endif
+   endif
+//  Required experiment added
+//  Check if the total time is OK
+   if (QSpar[16]='autodir') then
+        $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        invformattime(QSpar[8]):$olddtime
+        invformattime(QSpar[10]):$oldntime
+	$newdtime=trunc((($olddtime+$rtime+$ppt)/60)+0.5)
+	$newntime=trunc((($oldntime+$rtime2+$ppt2)/60)+0.5)
+        getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+	$night='no' is_night:$night
+	if ($night='yes') then
+	    $maxdtime=trunc(($maxnighttime/60)+0.5)
+	else
+	    $maxdtime=trunc(($maxdaytime/60)+0.5)
+	endif
+	$maxntime=trunc(($maxnighttime/60)+0.5)
+	$err=0
+	   $msg=''
+	if ($maxdtime=0) then $maxdtime=$newdtime+1 endif
+	if ($maxntime=0) then $maxntime=$newntime+1 endif
+	if ($rtime>0) and ($newdtime>$maxdtime) then
+            write('line3','day time (%d min) exceeds max (%d min) allowed. Consider NightQ',$newdtime,$maxdtime):$msg
+	    $err=1
+	endif
+        if ($rtime2>0) and ($newntime>$maxntime) then
+	    if ($msg<>'') then
+	 	write('line3','day (%d min) and night (%d min) time exceeds max allowed',$newdtime,$newntime):$msg
+	    else
+            	write('line3','night time (%d min) exceeds max (%d min) allowed.',$newntime,$maxntime):$msg
+	    endif
+            $err=1
+        endif
+	if ($err>0) then 
+		QuickSubmit('Write','',$msg,$1)
+		return(0) 
+	endif
+   endif
+//  Time check done
+
+  formattime($rtime):$stime
+  formattime($rtime2):$stime2
+  $rstime='' $rstime2=''
+  format($rtime,0,0):$rstime
+  format($rtime2,0,0):$rstime2
+
+  if ($3='day') then
+	shell('(cat '+$expfile+' | grep -wc '+$2+':)'):$is
+	if ($is=0) then 
+	    write('file',$expfile,'    %s:  %s',$2,$stime)
+	    if ($study) and ($n[1]<>'') then
+		$msg=''
+		write('line3','%s is a study with day and night experiments',$2):$msg
+		QuickSubmit('Write',$msg,'',$1)
+		write('file',$longfile,'    %s: %s',$2,$stime2)
+	    endif
+	    QSpar[9]=QSpar[9]+' '+$2
+	    QScustompar='' fread($customparfile,'global')
+	    $q=size('QScustompar')
+	    if (QScustompar[1]='') and ($q=1) then $q=0 endif
+	    $q=$q+1
+	    if ($study) then
+		QScustompar[$q]=$2,'day','study',$rstime,$snt,$sni,'-1','-1','-1','-1'
+	    else
+		QScustompar[$q]=$2,'day','exp',$rstime,$snt,$sni,'-1','-1','-1','-1'
+	    endif
+            writeparam($customparfile,'QScustompar','global')
+
+// write default values for the popup utility
+	    fread($customdefpar,'global')
+            if ($study) then
+                QScustompar[$q]=$2,'day','study',$rstime,$snt,$sni,'-1','-1','-1','-1'
+            else
+                QScustompar[$q]=$2,'day','exp',$rstime,$snt,$sni,'-1','-1','-1','-1'
+            endif
+	    writeparam($customdefpar,'QScustompar','global')
+
+	    fread($customparfile,'global')
+	endif
+  else
+        shell('(cat '+$longfile+' | grep -wc '+$2+':)'):$is
+        if ($is=0) then
+            write('file',$longfile,'    %s:  %s',$2,$stime2)
+	    QSpar[11]=QSpar[11]+' '+$2
+            QScustompar='' fread($customparfile,'global')
+            $q=size('QScustompar')
+            if (QScustompar[1]='') and ($q=1) then $q=0 endif
+            $q=$q+1
+            if ($study) then
+                QScustompar[$q]=$2,'night','study',$rstime2,$snt,$sni,'-1','-1','-1','-1'
+            else
+                QScustompar[$q]=$2,'night','exp',$rstime2,$snt,$sni,'-1','-1','-1','-1'
+            endif
+            writeparam($customparfile,'QScustompar','global')
+// write default values for the popup utility
+            fread($customdefpar,'global')
+            if ($study) then
+                QScustompar[$q]=$2,'night','study',$rstime2,$snt,$sni,'-1','-1','-1','-1'
+            else
+                QScustompar[$q]=$2,'night','exp',$rstime2,$snt,$sni,'-1','-1','-1','-1'
+            endif
+            writeparam($customdefpar,'QScustompar','global')
+
+            fread($customparfile,'global')
+        endif
+  endif
+  if ($is=0) then 
+     if ($rtime>0) then
+	QuickSubmit('time',$rtime+$ppt,'day') 
+     endif
+     if ($rtime2>0) then
+	QuickSubmit('time',$rtime2+$ppt2,'night')
+     endif
+  endif
+  QuickSubmit('show')
+  return(1)
+
+"*********************************************************************"
+ELSEIF ($arg='remove') THEN
+  if (QSpar[15]<>'') then return endif
+  write('file',$msglog,'%s(\'%s\',\'%s\',\'%s\')',$0,$arg,$2,$3)
+
+  $rtime=0 $rtime2=0
+  $ppt=60
+  getadminfo('prpltime'):$ppt
+  $ppt2=$ppt
+
+  exists($2,'studylib'):$study
+  if ($study) then
+        $e='' $et=0 $etime=0 $n='' $nt=0 $ntime=0
+        getSTUDYinfo($2):$e,$et,$n,$nt,$etime,$ntime
+        $si=size('$e') if ($e[1]='') then $si=0 endif
+        $ppt=$ppt*$si
+        $si=size('$n') if ($n[1]='') then $si=0 endif
+        $ppt2=$ppt2*$si
+	if ($3='day') and ($n[1]='') then
+		$study=0
+	endif
+	if ($3='night') and (($n[1]='') or ($e[1]='')) then
+		$study=0
+	endif
+  endif
+  $is=0 $is2=0 $is3=0 $is4=0
+  $s1='' $s2=''
+  if ($3='day') then
+	$explist=''
+	readfile($expfile,'$s1','$s2','','local')
+	teststr('$s1',$2+':','local'):$is
+	if ($is) then
+	    invformattime($s2[$is]):$rtime
+            write('reset',$expfile+'1')
+            shell('(cat '+$expfile+' | grep -vw '+$2+': > '+$expfile+'1)'):$dum
+            shell('mv '+$expfile+'1 '+$expfile):$dum
+	    string2array(QSpar[9]):$explist
+	    teststr('$explist',$2,'local'):$is2
+	    if ($is2) then $explist[$is2]='' endif
+	    array2string($explist):QSpar[9]
+	    fread($customparfile,'global')
+	    $par=QScustompar
+	    teststr('$par',$2,'local'):$ok
+	    if ($ok) then
+		if ($par[$ok+1]<>'day') then
+		    $par[$ok]='' $ok=0
+		    teststr('$par',$2,'local'):$ok
+		endif
+	    endif
+	    if ($ok) then
+		QScustompar[$ok]=''
+                QScustompar[$ok+1]=''
+                QScustompar[$ok+2]=''
+                QScustompar[$ok+3]=''
+                QScustompar[$ok+4]=''
+                QScustompar[$ok+5]=''
+                QScustompar[$ok+6]=''
+                QScustompar[$ok+7]=''
+                QScustompar[$ok+8]=''
+                QScustompar[$ok+9]=''
+		array2array(QScustompar):QScustompar
+		writeparam($customparfile,'QScustompar','global')
+
+                fread($customdefpar,'global')
+                $par=QScustompar
+            	teststr('$par',$2,'local'):$ok
+            	if ($ok) then
+                  if ($par[$ok+1]<>'day') then
+                    $par[$ok]='' $ok=0
+                    teststr('$par',$2,'local'):$ok
+                  endif
+            	endif
+            	if ($ok) then
+                    QScustompar[$ok]=''
+                    QScustompar[$ok+1]=''
+                    QScustompar[$ok+2]=''
+                    QScustompar[$ok+3]=''
+                    QScustompar[$ok+4]=''
+                    QScustompar[$ok+5]=''
+                    QScustompar[$ok+6]=''
+                    QScustompar[$ok+7]=''
+                    QScustompar[$ok+8]=''
+                    QScustompar[$ok+9]=''
+                    array2array(QScustompar):QScustompar
+                    writeparam($customdefpar,'QScustompar','global')
+                endif
+
+		fread($customparfile,'global')
+	    endif
+	endif
+     if ($study) and ($is) then
+        readfile($longfile,'$s1','$s2','','local')
+        teststr('$s1',$2+':','local'):$is3
+        if ($is3) then
+            invformattime($s2[$is3]):$rtime2
+            write('reset',$longfile+'1')
+            shell('(cat '+$longfile+' | grep -vw '+$2+': > '+$longfile+'1)'):$dum
+            shell('mv '+$longfile+'1 '+$longfile):$dum
+        endif
+     endif
+     if ($is2) then 
+	string2array(QSpar[9]):$qs9
+	$es=size('$qs9')
+	QSpar[3]=$qs9[$es]
+     endif
+  else
+     readfile($longfile,'$s1','$s2','','local')
+     teststr('$s1',$2+':','local'):$is3
+     if ($study) and ($is3) then
+        readfile($expfile,'$s1','$s2','','local')
+        teststr('$s1',$2+':','local'):$is
+        if ($is) then
+            invformattime($s2[$is]):$rtime
+            write('reset',$expfile+'1')
+            shell('(cat '+$expfile+' | grep -vw '+$2+': > '+$expfile+'1)'):$dum
+            shell('mv '+$expfile+'1 '+$expfile):$dum
+        endif
+     endif
+	$longlit=''
+        readfile($longfile,'$s1','$s2','','local')
+        teststr('$s1',$2+':','local'):$is3
+	if ($is3) then
+            invformattime($s2[$is3]):$rtime2
+            write('reset',$longfile+'1')
+            shell('(cat '+$longfile+' | grep -vw '+$2+': > '+$longfile+'1)'):$dum
+            shell('mv '+$longfile+'1 '+$longfile):$dum
+	    string2array(QSpar[11]):$longlist
+	    teststr('$longlist',$2,'local'):$is4
+	    if ($is4) then $longlist[$is4]='' endif
+	    array2string($longlist):QSpar[11]
+	    fread($customparfile,'global')
+            $par=QScustompar
+            teststr('$par',$2,'local'):$ok
+            if ($ok) then
+                if ($par[$ok+1]<>'night') then
+                    $par[$ok]='' $ok=0
+                    teststr('$par',$2,'local'):$ok
+                endif
+            endif
+            if ($ok) then
+                QScustompar[$ok]=''
+                QScustompar[$ok+1]=''
+                QScustompar[$ok+2]=''
+                QScustompar[$ok+3]=''
+                QScustompar[$ok+4]=''
+                QScustompar[$ok+5]=''
+                QScustompar[$ok+6]=''
+                QScustompar[$ok+7]=''
+                QScustompar[$ok+8]=''
+                QScustompar[$ok+9]=''
+                array2array(QScustompar):QScustompar
+		writeparam($customparfile,'QScustompar','global')
+
+		fread($customdefpar,'global')
+            	$par=QScustompar
+            	teststr('$par',$2,'local'):$ok
+            	if ($ok) then
+                  if ($par[$ok+1]<>'night') then
+                    $par[$ok]='' $ok=0
+                    teststr('$par',$2,'local'):$ok
+                  endif
+            	endif
+            	if ($ok) then
+                    QScustompar[$ok]=''
+                    QScustompar[$ok+1]=''
+                    QScustompar[$ok+2]=''
+                    QScustompar[$ok+3]=''
+                    QScustompar[$ok+4]=''
+                    QScustompar[$ok+5]=''
+                    QScustompar[$ok+6]=''
+                    QScustompar[$ok+7]=''
+                    QScustompar[$ok+8]=''
+                    QScustompar[$ok+9]=''
+                    array2array(QScustompar):QScustompar
+                    writeparam($customdefpar,'QScustompar','global')
+	    	endif
+		fread($customparfile,'global')
+
+            endif
+	endif
+	if ($is4) then
+	    string2array(QSpar[11]):$qs11
+	    $ls=size('$qs11')
+	    QSpar[3]=$qs11[$ls]
+	endif
+  endif
+
+  if QSpar[3]='' then QSpar[3]=QSexp[1] endif
+  $rtime=-1*$rtime-$ppt
+  $rtime2=-1*$rtime2-$ppt2
+
+  if ($is) then QuickSubmit('time',$rtime,'day') endif
+  if ($is3) then QuickSubmit('time',$rtime2,'night') endif
+  QuickSubmit('show')
+
+"*********************************************************************"
+ELSEIF ($arg='isinqueue') THEN
+
+  if ($2='') then return(-1) endif
+  if ($3='day') then
+        shell('(cat '+$expfile+' | grep -wc '+$2+':)'):$is
+  else
+        shell('(cat '+$longfile+' | grep -wc '+$2+':)'):$is
+  endif
+  return($is)
+
+"*********************************************************************"
+ELSEIF ($arg='customize') THEN
+
+    if ($# > 5) then
+        QuickSubmit_customize($1,$2,$3,$4,$5,$6)
+    elseif ($# > 4) then
+        QuickSubmit_customize($1,$2,$3,$4,$5)
+    elseif ($# > 3) then
+        QuickSubmit_customize($1,$2,$3,$4)
+    elseif ($# > 2) then
+        QuickSubmit_customize($1,$2,$3)
+    else
+        QuickSubmit_customize($1,$2)
+    endif
+
+  return
+
+"*********************************************************************"
+ELSEIF ($arg='time') THEN
+  $rtime=0
+  if ($3='day') then
+     if (QSpar[8]<>'') then
+	invformattime(QSpar[8]):$rtime
+     endif
+	$rtime=$rtime+$2
+	formattime($rtime):QSpar[8]
+  else
+     if (QSpar[10]<>'') then
+        invformattime(QSpar[10]):$rtime
+     endif
+        $rtime=$rtime+$2
+        formattime($rtime):QSpar[10]
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg='show') THEN
+  write('reset',$file1)
+  $name=''
+  QuickSubmit('get','samplename'):$name
+  if (QSpar[23]<>'') and (QSpar[23]<>'NewStudy') then
+        write('file',$file1,'Continue Study: %s',$name)
+  else
+        write('file',$file1,'New Study: %s',$name)
+  endif
+	
+  shell('(cat '+$expfile+' | wc -l)'):$t
+  if ($t>0) then
+    if (QSpar[16]='autodir') then
+      write('file',$file1,'  DayQ time:  %s',QSpar[8])
+    else
+      write('file',$file1,'  Queue time:  %s',QSpar[8])
+    endif
+      shell('(cat '+$expfile+' >> '+$file1+')'):$dum
+  endif
+  shell('(cat '+$longfile+' | wc -l)'):$t
+  if ($t>0) then
+      write('file',$file1,'  NightQ time:  %s',QSpar[10])
+      shell('(cat '+$longfile+' >> '+$file1+')'):$dum
+  endif
+
+  shell('(cat '+$fidlog+' | wc -l)'):$t
+  if ($t>0) then
+      write('file',$file1,'-----------------------------------')
+      write('file',$file1,'  Completed Experiments:')
+      shell('(cat '+$fidlog+' >> '+$file1+')'):$dum
+  endif
+  QSpar[13]=''
+  write('reset',$error)
+
+  return
+
+"*********************************************************************"
+ELSEIF ($1='update') THEN
+    $par=QScustompar
+    exists($expfile,'file'):$q
+    $s1='' $s2=''
+    if ($q) then
+        readfile($expfile,'$s1','$s2','','local'):$q
+    endif
+    if ($q) then
+        write('reset',$expfile+'1')
+        $i=1
+        repeat
+            $exp=''
+            strstr($s1[$i],':','last'):$ok,$exp
+            if ($ok) then
+                teststr('$par',$exp,'local'):$ok
+            endif
+            if ($ok) then
+                if ($par[$ok+1]<>'day') then
+                        // It is possible that the same exp is in both day and night queue
+                    $partmp=$par
+                    $partmp[$ok]=''
+                    teststr('$partmp',$exp,'local'):$ok
+                endif
+            endif
+            if ($ok) then
+                if ($par[$ok+1]='day') then
+                    $rtime=0 format($par[$ok+3],'lower'):$rtime
+                    formattime($rtime):$s2[$i]
+                endif
+            endif
+            write('file',$expfile+'1','    %s  %s',$s1[$i],$s2[$i])
+            $i=$i+1
+        until $i > $q
+        rename($expfile+'1',$expfile):$dum
+    endif
+    exists($longfile,'file'):$q
+    $s1='' $s2=''
+    if ($q) then
+        readfile($longfile,'$s1','$s2','','local'):$q
+    endif
+    if ($q) then
+        write('reset',$longfile+'1')
+        $i=1
+        repeat
+            $exp=''
+            strstr($s1[$i],':','last'):$ok,$exp
+            if ($ok) then
+                teststr('$par',$exp,'local'):$ok
+            endif
+            if ($ok) then
+                if ($par[$ok+1]<>'night') then
+                        // It is possible that the same exp is in both day and night queue
+                    $partmp=$par
+                    $partmp[$ok]=''
+                    teststr('$partmp',$exp,'local'):$ok
+                endif
+            endif
+            if ($ok) then
+                if ($par[$ok+1]='night') then
+                    $rtime=0 format($par[$ok+3],'lower'):$rtime
+                    formattime($rtime):$s2[$i]
+                endif
+            endif
+            write('file',$longfile+'1','    %s  %s',$s1[$i],$s2[$i])
+            $i=$i+1
+        until $i > $q
+        rename($longfile+'1',$longfile):$dum
+    endif
+    QuickSubmit('show')
+    return
+
+"*********************************************************************"
+ELSEIF ($arg='get') THEN
+   $par='' $val=''
+   readfile($file2,'$par','$val','','local'):$total
+   teststr('$par',$2,'local'):$is
+   if ($is=0) then return('') endif
+   return($val[$is])
+
+"*********************************************************************"
+ELSEIF ($arg='set') THEN
+
+   is_param($2):$ok,$where,$type
+   if $type='real' then
+        format($3,'isreal'):$real
+        if not $real then 
+	   QSpar=QSpar
+	   return 
+	endif
+   endif
+
+   if ($2='prioritysample') then
+     if ($3='yes') then
+	$maxsamp=0 $ret=1
+	checkpriority(operator):$ret,$maxsamples
+	if ($ret=0) then
+	    write('line3','Priority samples exceed max allowed: %d',$maxsamples):$msg
+	    QuickSubmit('Write','',$msg,$1)
+	    return
+	endif
+     elseif ($3<>'no') then
+	$3='no'
+     endif
+   endif
+   $par='' $val=''
+   readfile($file2,'$par','$val','','local'):$total
+   teststr('$par',$2,'local'):$is
+   if ($is=0) then return endif
+   $val[$is]=$3
+
+   write('reset',$file2)
+   $i=1
+   repeat
+	write('file',$file2,'%s %s',$par[$i],$val[$i])
+	$i=$i+1
+   until $i > $total
+   QuickSubmit('Write','','')
+   if ($2='samplename') then
+	QuickSubmit('show')
+   endif
+
+"*********************************************************************"
+ELSEIF ($arg='Write') THEN
+
+   if ($# < 4) then $4='' endif
+   QSpar[12]='' QSpar[13]='' QSpar[24]=''
+   write('reset',$message)
+   write('reset',$error)
+   if ($2[1]<>'') then
+      QSpar[12]='y'
+      write('file',$msglog,'***Message from %s(\'%s\')',$0,$4)
+      $size=size('$2')
+      $mi=1
+      repeat
+        write('file',$message,'%s',$2[$mi])
+	$mi=$mi+1
+      until $mi>$size
+      shell('(cat '+$message+' >> '+$msglog+')'):$dum
+      write('file',$msglog,'***End of message')
+   endif
+   if ($3[1]<>'') then
+      QSpar[13]='y'
+      write('file',$msglog,'***Error message from %s(\'%s\')',$0,$4)
+      $size=size('$3')
+      $mi=1
+      repeat
+	write('file',$error,'%s',$3[$mi])
+        $mi=$mi+1
+      until $mi>$size
+      shell('(cat '+$error+' >> '+$msglog+')'):$dum
+      write('file',$msglog,'***End of error message')
+   endif
+
+"*********************************************************************"
+ELSEIF ($arg='SaveMsgLog') THEN
+   $date=''
+   shell('date +%Y%m%d%H%M%S'):$date
+   shell('cp '+$msglog+' '+$msglog+'_'+$date):$dum
+
+"*********************************************************************"
+ELSEIF ($arg='clrmsgerr') THEN
+   if (QSpar[16]='autodir') then
+   	QuickSubmit('queueinfo')
+   endif
+   QuickSubmit('Write','','')
+
+"*********************************************************************"
+ELSEIF ($arg='ok2submit') THEN
+   $ret=1 $msg=''
+   $ok2submit=1
+   operights('canusequicksubmit'):$ok2submit
+   if ($ok2submit<0.5) then
+        write('line3','%s does not have permission to use QuickSubmit',operator):$msg
+	write('error','%s',$msg)
+        return(0,$msg)
+   endif
+//  Check acquisition validity
+   if (QSpar[16]='fgexp') then
+	expactive:$a
+	if ($a>0) then
+	    $msg='Active study in current workspace'
+	    return(0,$msg)
+	endif
+	expactive('current'):$a
+	if ($a>0) then
+	    $msg='Spectrometer has an active study'
+	    return(0,$msg)
+	endif
+   elseif (QSpar[16]='bgauto') then
+	$isinqueue=0
+        shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+	if ($isinqueue>0) then
+	    $msg='There are samples in current autodir'
+	    return(0,$msg)
+	endif
+   endif
+	
+// Do selection check
+   $day='' $night=''
+   string2array(QSpar[9]):$day
+   array2string($day):$day
+   string2array(QSpar[11]):$night
+   array2string($night):$night
+   if ($day='') and ($night='') then
+	$msg='No Experiment selected'
+	return(0,$msg)
+   endif
+   if ($night<>'') then $msg='NightQueue' else $msg='Queued' endif
+
+// Do reqparval check
+   $par1='' $par2='' $par3=''
+   listtmpltpars:$par3
+
+   $header='' $value=''
+   readfile($file2,'$header','$value','','local')
+   $size=size('$header')
+   $errorpar='' $err=0
+   $i=1
+   repeat
+	if ($value[$i]='') then
+	    teststr('$par3',$header[$i],'local'):$isreq
+	    if ($isreq) then
+		$errorpar=$errorpar+' '+$header[$i]
+		$err=$err+1
+	    endif
+	endif
+        $i=$i+1
+   until $i > $size
+   if ($err) then
+	if ($err=1) then
+	   $msg=$errorpar+' is an empty string'
+	else
+	   $msg=$errorpar+' are empty strings'
+	endif
+	return(0,$msg)
+   endif
+   return(1,$msg)
+"*********************************************************************"
+ELSEIF ($arg='CheckTime') THEN
+// Do time check
+   $msg=''
+   if (QSpar[16]='autodir') then
+        $olddtime=0 $oldntime=0
+        invformattime(QSpar[8]):$olddtime
+        invformattime(QSpar[10]):$oldntime
+	$olddtime=$olddtime*$2
+	$oldntime=$oldntime*$2
+        $ok=0 $ok2=0
+        checktime(autodir+'/enterQ',$olddtime,'day'):$ok
+        checktime(autodir+'/enterQ',$oldntime,'night'):$ok2
+
+        $ok3=1
+        if ($olddtime=0) then $arg3[1]=0 else $arg3[1]=$2 endif
+        if ($oldntime=0) then $arg3[2]=0 else $arg3[2]=$2 endif
+        $arg2=$olddtime,$oldntime
+        checkSampleTimeLimit(autodir+'/enterQ',$arg2,$arg3):$ok3
+
+     if ($ok=0) or ($ok2=0) or ($ok3=0) then
+	if ($2=1) then 
+           $msg='Not enough time left in autodir for this sample'
+	else
+	   $msg='Not enough time left in autodir for these samples'
+	endif
+	return(0,$msg)
+     endif
+   endif
+   return(1,$msg)
+
+"*********************************************************************"
+ELSEIF ($arg='ContinueStudy') THEN
+
+  if (opentray[1]<>'close') then
+//	Tray is open, so continue study based on
+//	Locations selection. 
+	QuickSubmit('EditStudy')
+	return
+  endif
+//	Tray is not open - continue study in current workspace 
+
+  write('file',$msglog,'%s(\'%s\')',$0,$arg)
+  is_cpsample:$cp,$archsamp
+  if ($cp=0) then
+	QuickSubmit('Write','','Current workspace has no valid study',$1)
+	return
+  endif
+  $locpath=$archsamp+'/dirinfo/locationpath'
+  exists($locpath,'file'):$locpathex
+  if ($locpathex) then
+     $line=''
+     lookup('mfile',$locpath,'read',1):$line
+     strstr($line,autodir):$active
+     if ($active) then
+	shell('dirname '+autodir):$msg
+	$msg='This study is currently active/pending in '+$msg
+	QuickSubmit('Write','',$msg,$1)
+	return
+     endif
+  endif
+  operights('editallopstudies'):$ok
+  if (studyowner<>operator) and (operator<>owner) and ($ok<0.5) then
+	write('line3','Current study is owned by %s',studyowner):$msg
+	write('line3','  %s cannot do %s',operator,$1):$msg2
+	$msg=$msg,$msg2
+	QuickSubmit('Write','',$msg,$1)
+	return
+  endif
+  savesampglobal('cp')
+  QuickSubmit('NewStudy')
+  write('file',$msglog,'%s(\'%s\')',$0,$arg)
+  if (QSpar[16]='autodir') then
+     QSpar[23]='resumeq'
+  else
+     QSpar[23]='addq'
+  endif
+  QSpar[24]=''
+  QSpar[17]=$archsamp
+  shell('(cat '+QSpar[17]+'/dirinfo/fidlog | awk \'{print "    "$0}\' > '+$fidlog+')'):$dum
+  QuickSubmit('setupparammenu',curexp)
+  QuickSubmit('show')
+  getsampglobal('cp')
+
+"*********************************************************************"
+ELSEIF ($arg='EditStudy') THEN
+
+  if ($# < 2) then
+    vnmrjcmd('submitstudy QuickSubmit_'+$arg)
+    return
+  endif
+
+  if ($# > 3) then
+     write('file',$msglog,'%s(\'%s\')',$0,$arg)
+     if ($4='') then
+	QuickSubmit('Write','','Select a location',$1)
+        return
+     endif
+     string2array($4):$4
+     $size=size('$4')
+     $i=1 $locdir='' $status='' $who=''
+     repeat
+	$status=''
+	checklocstatus(autodir+'/enterQ',$4[$i]):$status,$who,$samplename,$locdir
+	if ($status='') then $status='Empty' endif
+	updatestatus(autodir,$4[$i],$status)
+	$i=$i+1
+    until $i > $size
+    if ($size>1) then
+	QuickSubmit('Write','','Cannot select more than one location',$1)
+	return
+    endif
+    if ($status<>'Complete') then
+        $msg='Location: '+$4+' Status: '+$status
+	$msg=$msg,'Only Completed studies can be \"continued\"'
+	QuickSubmit('Write','',$msg,$1)
+        return
+    endif
+    operights('editallopstudies'):$ok
+    if ($who<>operator) and (operator<>owner) and ($ok<0.5) then
+        $msg='Location: '+$4+' StudyOwner: '+$who
+	$msg=$msg,'  '+operator+' cannot do ContinueStudy'
+        QuickSubmit('Write','',$msg,$1)
+	return
+    endif
+    $path=autodir+'/enterQ.macdir/'+$locdir
+    QuickSubmit($arg,$path)
+    return
+  endif
+
+  QuickSubmit('NewStudy')
+  write('file',$msglog,'%s(\'%s\',\'%s\')',$0,$arg,$2)
+  if (QSpar[16]='autodir') then
+     QSpar[23]='resumeq'
+  else
+     QSpar[23]='addq'
+  endif
+  $archsamp='' $archive='' $sample=''
+  getsampglobal($2,'sample'):$sample
+  getsampglobal($2,'archivedir'):$archive
+  if ($archive<>'') and ($sample<>'') then
+	QSpar[17]=$archive+'/'+$sample
+  	shell('(cat '+QSpar[17]+'/dirinfo/fidlog | awk \'{print "    "$0}\' > '+$fidlog+')'):$dum
+  endif
+  QSpar[24]=''
+  QuickSubmit('setupparammenu',$2)
+  QuickSubmit('show')
+
+"*********************************************************************"
+ELSEIF ($arg='submit') THEN
+
+  if ($#<2) then
+     $ret=1 $msg=''
+     QuickSubmit('ok2submit'):$ret,$msg
+     if ($ret=0) then
+	QuickSubmit('Write','',$msg,$1)
+        return
+     endif
+     if QSpar[16]<>'autodir' then
+        QuickSubmit($arg,'')
+     elseif (QSpar[5]<>'') then
+        QuickSubmit($arg,QSpar[5])
+     else
+        write('file',$msglog,'%s(\'%s\')',$0,$arg)
+        $status='Queued' $when='day'
+        if ($msg='NightQueue') then $status=$msg $when='daynight' endif
+        vnmrjcmd('submitstudy QuickSubmit_'+$arg+' '+$when+' '+$status)
+     endif
+     return
+  endif
+
+  if ($# > 3) then
+     if ($4='') then
+	QuickSubmit('Write','','Select a location to submit',$1)
+    	return
+     endif
+     string2array($4):$4
+     $size=size('$4')
+     $reuseerror='no'
+     getadminfo('reuseerrorloc'):$reuseerror
+     $reusecompleted='yes'
+     getadminfo('reusecompletedloc'):$reusecompleted
+     $accept='Complete'
+     if ($reusecompleted='no') then $accept='' endif
+     if ($reuseerror='yes') then $accept=$accept,'Error' endif
+     $err=0 $allmsg=''
+     $i=1
+     repeat
+	$status='' $locok=1
+        checklocstatus(autodir+'/enterQ',$4[$i]):$status
+        updatestatus(autodir,$4[$i],$status)
+        if ($status<>'') then
+           teststr('$accept',$status,'local'):$locok
+           if ($locok=0) then
+                write('line3','Location %s status: %s.  Submission not allowed',$4[$i],$status):$msg
+		$err=1
+		$allmsg=$allmsg,$msg
+	   endif
+        endif
+	$i=$i+1
+     until $i > $size
+     if ($err>0) then
+	QuickSubmit('Write','',$allmsg,$1)
+	return
+     else
+	 array2string($4):$4
+         QuickSubmit($arg,$4)
+     endif
+     return
+  else
+        write('file',$msglog,'%s(\'%s\',\'%s\')',$0,$arg,$2)
+  endif
+
+   $2size=0
+   shell('(echo '+$2+' | wc -w)'):$2size
+   QuickSubmit('CheckTime',$2size):$ret,$msg
+   if ($ret=0) then
+	QuickSubmit('Write','',$msg,'\"CheckTime\"')
+        return
+   endif
+
+
+   $day='' $night=''
+   string2array(QSpar[9]):$day
+   array2string($day):$day
+   string2array(QSpar[11]):$night
+   array2string($night):$night
+   $header='' $value=''
+   readfile($file2,'$header','$value','','local')
+
+   if (QSpar[16]='autodir') then
+     if ($2='') then
+	QuickSubmit('Write','','Location not specified',$1)
+        return
+     endif
+        $loc=$2
+	$header=$header,'location'
+	$value=$value,$loc
+   endif
+
+   $header=$header,'operator','explist','longlist','text_string'
+   $value=$value,operator,$day,$night,QSpar[14]
+   $size=size('$header')
+   write('reset',$tmpcsv)
+   $i=1
+   repeat
+	write('file',$tmpcsv,'%s %s',$header[$i],$value[$i])
+	$i=$i+1
+   until $i > $size
+
+//  write custompars file
+        write('reset',$customfile)
+	fread($customparfile,'global')
+        $par=QScustompar
+        $ppt=60
+        getadminfo('prpltime'):$ppt
+        $size=size('$par')
+        $i=2 $dtime=0 $ltime=0
+        while $i < $size do
+            $nt=1 $ni=0 $r=0
+            format($par[$i+2],'lower'):$r
+            format($par[$i+3],'lower'):$nt
+            format($par[$i+4],'lower'):$ni
+            if ($nt>0.5) or ($ni>1.5) then
+                write('fileline',$customfile,'%s_%scustom: ',$par[$i-1],$par[$i])
+                if ($nt>0.5) then
+                    write('fileline',$customfile,'nt=%d ',$nt)
+                endif
+                if ($ni>1.5) then
+                    write('fileline',$customfile,'ni=%d ',$ni)
+                endif
+                write('fileline',$customfile,'ACQtime = %d\n',$r)
+            endif
+            $i=$i+10
+        endwhile
+
+//  Call csv2cpQ on this csv file
+   $curexpn=''
+   $expn=''
+   if (QSpar[16]<>'fgexp') then
+	$nexp=0
+	nextexp:$nexp
+	CEXP($nexp):$cok,$cmsg
+	format($nexp,0,0):$expn
+
+     $msg=''
+     if (QSpar[16]='autodir') then
+	$2loc=''
+	string2array($2):$2loc
+	array2strsv($2loc,','):$2loc
+        $msg='Submitting to loc '+$2loc
+     elseif (QSpar[16]='bgauto') then
+	$msg='Submitting to background acquisition'
+     else
+        $msg='Submitting to acquisition in current workspace'
+     endif
+     $msg=$msg,'   Please wait...'
+     QuickSubmit('Write',$msg,'',$1)
+     QSpar[15]='lock'
+     $talk2j=userdir+'/persistence/QuickSubmit/talk2j.'+$expn
+     $msgfile=userdir+'/persistence/QuickSubmit/vbgmsg.'+$expn
+     write('reset',$talk2j)
+     write('reset',$msgfile)
+     write('file',$talk2j,'%s',vnmraddr)
+     write('line3',`Vnmrbg -mback -n%d "DELEXP('auto') QuickSubmit('csv2cpQ','%s')" > %s &`,$nexp,QSpar[16],$vbgacqlog):$cmd
+     write('file',$vbgacqlog+'_bgp.log','%s',$cmd)
+     write('file',$msglog,'%s',$cmd)
+     shell($cmd)
+  else
+     QuickSubmit('csv2cpQ',QSpar[16])
+     QuickSubmit('NewStudy')
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg='done') or ($arg='quit') THEN
+
+  write('file',$msglog,'%s(\'%s\')',$0,$arg)
+   if ($#<2) then $2='' endif
+   $msgfile=userdir+'/persistence/QuickSubmit/vbgmsg.'+$2
+   $talk2j=userdir+'/persistence/QuickSubmit/talk2j.'+$2
+   shell('touch '+$msgfile):$dum
+   shell('touch '+$talk2j):$dum
+
+   if ($arg='done') and (QSpar[23]<>'') and (QSpar[23]<>'NewStudy') then
+	QuickSubmit('NewStudy')
+   else
+     QSpar[3]=''
+     QSpar[3]=QSexp[1]
+     QSpar[4]=''          // Next location
+     $nextloc=0
+     nextlocQ:$nextloc
+     format($nextloc,'lower'):QSpar[4]
+     if (QSpar[5]<>'') then
+   	QSpar[5]=QSpar[4]
+     endif
+     QSpar[15]=''		// Release controls
+     defaultqueue:$defaultQ
+     QSpar[16]=$defaultQ     // submission to auto or background
+     QuickSubmit('show')
+     QuickSubmit('queueinfo')
+     QuickSubmit('set','prioritysample','no')
+     if ((opentray[1]<>'close') and 
+	(opentray[1]<>'') and 
+	(opentray[2]=autodir) and 
+	(QSpar[16]='autodir')) then
+   	showtray('auto')
+     endif
+   endif
+   QuickSubmit('Write','','')
+   if ($arg='done') then
+	write('file',$msglog,'***Message from %s(\'%s\')',$0,$1)
+        shell('cp '+$msgfile+' '+$message):$dum
+	shell('(cat '+$message+' >> '+$msglog+')'):$dum
+        write('file',$msglog,'***End of message')
+   	QSpar[12]='y'         // Message alert
+	sides($arg,$message)
+   else
+        write('file',$msglog,'***Error message from %s(\'%s\')',$0,$1)
+        shell('cp '+$msgfile+' '+$error):$dum
+        shell('(cat '+$error+' >> '+$msglog+')'):$dum
+        write('file',$msglog,'***End of error message')
+	QSpar[13]='y'
+	sides($arg,$error)
+   endif
+   $msgtail=''
+   shell('(head -n 1 '+$msgfile+')'):$msgtail
+   if ($msgtail<>'') then
+	if ($arg='done') then
+	    write('line3','%s',$msgtail)
+	else
+	    write('error','%s',$msgtail)
+	endif
+   endif
+   shell('rm -f '+$msgfile):$dum
+   shell('rm -f '+$talk2j):$dum
+   if (sqdisplay[1]='tray') then
+	if size('sqdisplay') < 2 then
+	    SQDisplay('refresh')
+	endif
+   endif
+   vnmrjcmd('pnew','QSpar','operator','owner','traymax')
+
+   if ($arg='done') then
+      $aftersubmit='none'
+      getadminfo('aftersubmit'):$aftersubmit
+      if ($aftersubmit='clearqueue') then
+	QuickSubmit('clear')
+      elseif ($aftersubmit='operatorlogout') then
+	operatorlogout
+      endif
+   endif
+
+"*********************************************************************"
+ELSEIF ($arg='queueinfo') THEN
+
+   $a=0 $active=''
+   expactive:$a
+   if ($a<0) then 
+     QSpar[22]='Inactive'
+   else
+     if ($a>0) then 
+	QSpar[22]='This workspace'
+     else
+	$a=0 $who=''
+	expactive('current'):$a,$who
+	if ($a=0) then 
+	  QSpar[22]='None'
+	else
+	  if ($a>0) then
+	    if ($who=owner) then
+		$msg='' write('line3','Workspace# %d',$a):$msg
+		QSpar[22]=$msg
+	    elseif ($who<>'auto') then
+		QSpar[22]='by '+$who
+	    else
+		$active='' getlocid('current'):$active
+		if ($active='0') then
+		    QSpar[22]='Background'
+		else
+		    QSpar[22]='Location# '+$active
+		endif
+	    endif
+	  endif
+	endif
+     endif
+   endif
+   $infofile=$file4
+   $infofile3=$file5
+   write('reset',$infofile3)
+
+   if (QSpar[16]<>'autodir') then return endif
+
+   $subautodir=''
+   $efile=autodir+'/enterQ'
+   shell('basename '+autodir):$subautodir
+   $dir=autodir
+   if ($dir='') then return endif
+   exists($dir,'directory'):$direx
+   if ($direx=0) then return endif
+
+   $ST=0 $DT=0 $NT=0 $CT=0
+   $DST='' $SST='' $NST=''
+   findstarttime($efile):$ST,$DT,$NT,$CT
+   sec2ampm($ST+$CT):$SST
+   sec2ampm($DT+$CT):$DST
+   sec2ampm($NT+$CT):$NST
+   write('fileline',$infofile3,'   Next Submission will start at...\n')
+   write('fileline',$infofile3,'          PriorityQ : %s\n',$SST)
+   write('fileline',$infofile3,'          DayQ : %s\n',$DST)
+   write('fileline',$infofile3,'          NightQ : %s',$NST)
+
+"*********************************************************************"
+ELSEIF ($arg='csv2cpQ') THEN
+   bgmode_is:$bg
+   if ($bg<0.5) then
+     write('file',$msglog,'%s(\'%s\',\'%s\')',$0,$arg,$2)
+   endif
+   $bgexp='' jexp:$bgexp
+   $vbgmsg=userdir+'/persistence/QuickSubmit/vbgmsg.'+$bgexp
+   $talk2j=userdir+'/persistence/QuickSubmit/talk2j.'+$bgexp
+
+// This section is a stripped down version of csv2cpQ
+   $params='' $parval=''
+   $custompar='' $customval='' $customtotal=0
+   shell('touch '+$tmpcsv):$dum
+   shell('touch '+$customfile):$dum
+   readfile($tmpcsv,'$params','$parval','','local')
+   readfile($customfile,'$custompar','$customval','','local'):$customtotal
+
+   teststr('$params','location','local'):$sampex
+   teststr('$params','explist','local'):$dayex
+   teststr('$params','longlist','local'):$nightex
+
+"**************************************************************"
+"***********Prepare curexp for submission**********"
+   $sqflag=sqflag
+   sqflag='n'
+   if ($2='autodir') then
+      walkupQ('new','auto')
+   else
+      walkupQ('new','acq')
+   endif
+   is_submitmode:$submit
+   if ($2='bgauto') then
+      wqacq='autodir'
+      if (wqacq[1]<>'autodir') then
+	$submit=0
+      endif
+   endif
+   if ($submit=0) then
+        $msg=''
+        write('line3','Error during submission'):$msg
+        if ($bg) then
+	   write('file',$vbgmsg,'%s',$msg)
+           $cmd='send2Vnmr '+$talk2j+' "QuickSubmit(\'quit\',\''+$bgexp+'\')"&'
+           shell($cmd)
+        else
+           write('error','%s',$msg)
+        endif
+	return
+   endif
+"**************************************************************"
+   $totpars=size('$params')
+   if ($sampex) then $params[$sampex]='' endif
+   if ($dayex) then $params[$dayex]='' endif
+   if ($nightex) then $params[$nightex]='' endif
+
+   ABORTOFF
+		"Location information"
+   $multiloc=''
+   if ($sampex) then
+   	$multiloc=$parval[$sampex]
+   endif
+
+   if ($2='autodir') then
+       write('line3','Submitting location %s - Please wait',$multiloc)
+   elseif ($2='bgauto') then
+       write('line3','Submitting to background acquisition - please wait')
+   else
+       write('line3','Submitting to foreground acquisition - please wait')
+   endif
+		"Read all supplied parameters"
+   $x=1
+   repeat
+      if ($params[$x]<>'') then
+          if ($params[$x]='text_string') then
+          text($parval[$x])
+          else
+             $is=0 $where='' $type='' $ismac=0
+             is_param($params[$x]):$is,$where,$type
+	     if ($where<>'current') and ($where<>'global') then $is=0 endif
+	     if ($is) then 
+                if ($type='string') then
+                    setvalue($params[$x],$parval[$x],1,$where)
+                elseif ($type='real') then
+                    format($parval[$x],'lower'):{$params[$x]}[1]
+                endif
+                $usmacro='_'+$params[$x]
+                getmacropath($usmacro):$ismac
+	        if ($ismac) then exec($usmacro) endif
+	     endif
+         endif
+      endif
+      $x=$x+1
+   until $x > $totpars
+
+   if (resumeQ='resumeq') or (resumeQ='addq') then
+	$expfile=cursqexp+'/EXPLIST'
+	$maclibdir=cursqexp+'/macdir'
+	$origmacdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    	shell('rm -rf '+$maclibdir+'/*'):$dum
+    	shell('cp -r '+$origmacdir+'/* '+$maclibdir):$dum
+    	shell('rm -f '+$maclibdir+'/EXPLIST'):$dum
+    	shell('rm -f '+$maclibdir+'/LONGLIST'):$dum
+    	shell('(cat '+$maclibdir+'/ACQlist | grep -v Error > '+$expfile+')'):$dum
+    	shell('rm -f '+$maclibdir+'/ACQlist'):$dum
+   endif
+
+                "EXPLIST information"
+   $explist=$parval[$dayex]
+   string2array($explist):$explist
+   if ($explist[1]<>'') then
+	longQ='n'
+        $exptot=size('$explist')
+        $x=1
+        repeat
+            walkupQ('add',$explist[$x],'noreqcheck','nodialog','notimecheck')
+	    if ($customtotal) then
+	      teststr('$custompar',$explist[$x]+'_daycustom:','local'):$ok
+	      if ($ok) then 
+		$s='' substr($customval[$ok],1):$s
+		if ($s='') then $ok=0 endif
+	      endif
+	      if ($ok) then
+		$lastnode=''
+		$s1='' $s2=''
+		readfile(cursqexp+'/EXPLIST','$s1','$s2',$explist[$x]+'_','local'):$nt
+		if ($nt>0) then 
+		    write('file',cursqexp+'/macdir/'+$s1[$nt]+'acq','%s',$customval[$ok])
+                    $ret=0 $s3='' $s4=''
+                    strstr($customval[$ok],'ACQtime','last'):$ret,$s3,$s4
+                    if ($ret) then
+                        substr($s4,1,'delimiter','= '):$s4 format($s4,'isreal'):$ret
+                    endif
+                    if ($ret) then
+                        $newtime=0
+                        format($s4,'lower'):$newtime
+                        walkupQ('adjtime',$s1[$nt],'no',$newtime)
+                    endif
+		endif
+	      endif
+	    endif
+            $x=$x+1
+        until $x > $exptot
+   endif
+
+                "LONGLIST information"
+   $longlist=$parval[$nightex]
+   string2array($longlist):$longlist
+   if ($longlist[1]<>'') then
+        $lngtot=size('$longlist')
+        $x=1
+        repeat
+            walkupQ('add',$longlist[$x],'long','noreqcheck','nodialog','notimecheck')
+	    if ($customtotal) then
+              teststr('$custompar',$explist[$x]+'_nightcustom:','local'):$ok
+              if ($ok) then
+                $s='' substr($customval[$ok],1):$s
+                if ($s='') then $ok=0 endif
+              endif
+              if ($ok) then
+                $lastnode=''
+                $s1='' $s2=''
+                readfile(cursqexp+'/LONGLIST','$s1','$s2',$explist[$x]+'_','local'):$nt
+                if ($nt>0) then
+                    write('file',cursqexp+'/macdirlong/'+$s1[$nt]+'acq','%s',$customval[$ok])
+                    $ret=0 $s3='' $s4=''
+                    strstr($customval[$ok],'ACQtime','last'):$ret,$s3,$s4
+                    if ($ret) then
+                        substr($s4,1,'delimiter','= '):$s4 format($s4,'isreal'):$ret
+                    endif
+                    if ($ret) then
+                        $newtime=0
+                        format($s4,'lower'):$newtime
+                        walkupQ('adjtime',$s1[$nt],'long',$newtime)
+                    endif
+                endif
+              endif
+	    endif
+            $x=$x+1
+        until $x > $lngtot
+   endif
+   sqflag=$sqflag
+   walkupQ('submit','location',$multiloc)
+
+   ABORTON
+
+   sqflag='n'
+   walkupQ('logout')
+   sqflag=$sqflag
+
+ 	$msg='' $allmsg=''
+	if ($2='autodir') then
+	   $2x=''  string2array($multiloc):$2x
+	   $2loc=$2x
+
+	   $isnight='n'
+	   lookup('mfile',autodir+'/enterQ.macdir/AUTOGLOBAL','seekcs','LONGRUN:','read',1):$isnight
+      	   $ret1='' $ret2=0 $ret3='' $ret4=0 $tottime=0,0 $ret5='' $ret6=''
+	   $locdir='' $status='' $who='' $samplename=''
+      	   estimatestart('init'):$ret1,$ret2,$ret3,$ret4,$tottime,$ret5,$ret6
+	   $2locsize=size('$2loc')
+	   $xi=1
+	   repeat
+	     write('line3','Location %s Accepted',$2loc[$xi]):$msg
+	     $allmsg=$allmsg,$msg
+	     checklocstatus(autodir+'/enterQ',$2loc[$xi]):$status,$who,$samplename,$locdir
+	     if ($explist[1]<>'') then
+                $when='' $ST=-1 $CT=-1
+		estimatestart('get',$locdir,'enterQ',$ret5,$ret2,$tottime):$ST,$CT
+		sec2ampm($ST+$CT):$when
+		if ($when<>'') then
+		    $allmsg=$allmsg,'Day Experiments start at '+$when
+		endif
+	     endif
+	     if ($longlist[1]<>'') then
+                $when='' $ST=-1 $CT=-1
+		if ($isnight='y') then
+                    estimatestart('get',$locdir,'enterQ',$ret5,$ret2,$tottime):$ST,$CT
+		else
+		    estimatestart('get',$locdir,'overniteQ',$ret6,$ret4,$tottime):$ST,$CT
+		endif
+                sec2ampm($ST+$CT):$when
+                if ($when<>'') then
+                    $allmsg=$allmsg,'Night Experiments start at '+$when
+		endif
+             endif
+	     $xi=$xi+1
+	  until $xi>$2locsize
+
+	elseif ($2='bgauto') then
+	   write('line3','Queue submitted to background acquisition'):$msg
+           $allmsg=$allmsg,$msg
+	else
+	   write('line3','Queue submitted'):$msg
+           $allmsg=$allmsg,$msg
+	endif
+	$msgsize=size('$allmsg')
+	if ($bg) then
+	   $i=1
+	   repeat
+	     if ($allmsg[$i]<>'') then
+		write('file',$vbgmsg,'%s',$allmsg[$i])
+	     endif
+		$i=$i+1
+	   until $i > $msgsize
+	   $cmd='send2Vnmr '+$talk2j+' "QuickSubmit(\'done\',\''+$bgexp+'\')"&'
+	   shell($cmd)
+        else
+           $i=1
+           repeat
+             if ($allmsg[$i]<>'') then
+                write('line3','%s',$allmsg[$i])
+             endif
+                $i=$i+1
+           until $i > $msgsize
+	endif
+
+"*********************************************************************"
+ELSEIF ($arg='getexplist') THEN
+
+   if (personaType<>'') and (personaType<>'Owner') then
+	exists('ExperimentList_'+personaType+'.txt','personalib/'+personaType+'/adm'):$ex,$file
+   else
+	$ex=0
+   endif
+   if ($ex=0) then
+   	$file=userdir+'/persistence/ExperimentList_'+$2
+   	exists($file,'file'):$ex
+   endif
+   if ($ex=0) then
+       $file=userdir+'/persistence/ExperimentList_'+owner
+	exists($file,'file'):$ex
+   endif
+   if ($ex=0) then
+	exists('ExperimentList','adm/walkupadm'):$ex,$file
+   endif
+   if ($ex=0) then return('') endif
+
+   $s1='' $s2=''
+   readfile($file,'$s1','$s2','','local'):$total
+   if ($total=0) then return('') endif
+
+   $ProfileList=''
+   getExpList(operator):$ProfileList
+
+   $i=1
+   repeat
+        if ($ProfileList[1]='') then $pex=1
+        else
+            teststr('$ProfileList',$s1[$i],'local'):$pex
+        endif
+        if ($pex) then
+            exists($s1[$i]+'.xml','templates/vnmrj/protocols'):$pex
+        endif
+        if ($pex=0) then $s1[$i]='' endif
+        $i=$i+1
+   until $i > $total
+   array2array($s1):$s1
+   return($s1)
+
+"*********************************************************************"
+ELSEIF ($arg='admin') THEN
+
+   $rv1=0 $rv2=''
+    if ($# > 2) then
+        QuickSubmit_admin($1,$2,$3):$rv1,$rv2
+    elseif ($# > 1) then
+        QuickSubmit_admin($1,$2):$rv1,$rv2
+    else
+        QuickSubmit_admin($1):$rv1,$rv2
+    endif
+   return($rv1,$rv2)
+
+"*********************************************************************"
+ELSEIF ($1='Express') THEN
+
+    if ($# < 2) then $2='' endif
+    if typeof('$2') then
+        if ($2='proceed') then
+	    if (QSpar[5]='0') then
+		write('line3','Warning: Submitting Queue for the sample in the magnet')
+	    else
+            	write('line3','Warning: Submitting to %s.  Please wait..',QSpar[5])
+	    endif
+            QuickSubmit('submit')
+            return
+        elseif ($2='cancel') then
+            QuickSubmit('start')
+            return
+        endif
+    endif
+
+    $defaultexp='' getadminfo('defaultexp'):$defaultexp
+    string2array($defaultexp):$defaultexp
+//    $allowedlist=QSexp
+//    $OK=0
+//    if ($defaultexp[1]<>'') then
+//	$tot=size('$defaultexp')
+//	$i=1
+//	repeat
+//	    $ok2=0
+//	    teststr('$allowedlist',$defaultexp[$i],'local'):$ok2
+//	    if ($ok2) then $OK=1 $i=$tot endif
+//	    $i=$i+1
+//	until $i > $tot
+//    endif
+//    if ($OK=0) then
+    if ($defaultexp[1]='') then
+	write('error','No default experiment assigned to %s',operator)
+	return
+    endif
+
+    if ($# < 4) then
+	if (QSpar[16]='bgauto') or (QSpar[16]='fgexp') then
+	    $loc='0' $rack='1' $zone='1'
+	else
+	    write('error','Wrong usage of the macro.  Usage: %s(\'%s\',rack,zone,loc)',$0,$1)
+	    return
+	endif
+    else
+        $loc='' $rack='' $zone=''
+        format($4,'lower'):$loc
+        format($3,'lower'):$zone
+        format($2,'lower'):$rack
+
+        strstr(autodir,'studytray'):$isenter
+        if ($isenter=0) then
+            $dir=autodir
+            $file='enterQ'
+        else
+            $dir=globalenter
+            shell('basename '+globalenter):$file
+        endif
+        $autofile=$dir+'/'+$file
+        $samplename='' $locdir='' $status='' $who=operator
+        checklocstatus($autofile,$4,$3,$2):$status,$who,$samplename,$locdir
+        if ($samplename='ReFeReNCe') then
+            write('error','Loc %s is a reference location',$4)
+            return
+        endif
+        $reuseerror='no'
+        getadminfo('reuseerrorloc'):$reuseerror
+        $reusecompleted='yes'
+        getadminfo('reusecompletedloc'):$reusecompleted
+        $accept='Complete'
+        if ($reusecompleted='no') then $accept='' endif
+        if ($reuseerror='yes') then $accept=$accept,'Error' endif
+        $locok=1
+        if ($status<>'') then teststr('$accept',$status,'local'):$locok endif
+        if ($locok=0) then
+              write('error','Location %s status is %s - another submission not allowed',$4,$status)
+              return
+        endif
+    endif
+
+        QuickSubmit('start')
+        QSpar[5]=$loc
+        QuickSubmit('expresspopup')
+
+ENDIF
+"*********************************************************************"

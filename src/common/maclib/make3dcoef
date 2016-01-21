@@ -1,0 +1,270 @@
+"macro make3dcoef"
+"*******************************************************"
+"make3dcoef - makes a 3D coef file from 2D coef's       "
+"		2D coefs are supplied as strings	"
+"		in the parameters f2coef and f1coef	"
+"               This macro is used by ft3da macro       "
+"*******************************************************"
+
+ 
+if ($# < 1) then 
+ if ((array = 'phase2,phase') or (array = 'phase')) then
+  $1='t2t1' 
+ else
+  if ((array = 'phase,phase2') or (array = 'phase2') or (array = '')) then
+   $1='t1t2'
+  else
+   write('error','macro aborted')  
+   da 
+   write('alpha','macro could not create coef file when parameters') 
+   write('alpha','   other than phase and phase2 are arrayed!!')
+   write('alpha','Specify the order of t1 and t2 arrays as argument') 
+   write('alpha','   make3dcoef(\'t1t2\') or make3dcoef(\'t2t1\')')
+   abort
+  endif
+ endif
+else
+ if ($# > 1.5) then 
+  write('error','Usage: make3dcoef(<t1t2 or t2t1>). Macro aborted.')
+  abort
+ else
+  if ($1 <> 't1t2') then
+   if ($1 <> 't2t1') then
+    write('error','Usage: make3dcoef(<t1t2 or t2t1>). Macro aborted.')
+    abort
+   endif
+  endif
+ endif
+endif
+
+$first=2
+
+"*******************************************************"
+"   Create f2coef and f1coef if they do not exist       "
+"    & abort macro for user to enter 2D coef values     "
+"*******************************************************"
+
+$abort='n'
+$text=''
+$prec=0
+$i2=$first
+$sub=''
+
+"*******************************************************"
+"   GET F2 COEF'S FROM f2coef PARAMETER                 "
+"   	& convert 2D ntype to ptype coefs		"
+"*******************************************************" 
+length(f2coef):$f2len 
+if $f2len = 0 then
+$abort='y' $text=$text+'f2coef'
+else
+$i=1
+
+$quit=0
+repeat
+ substr(f2coef,$i):$sub
+ if ($sub = '') then
+  $quit = 1
+ else
+  length($sub):$sublen
+  if $sublen > 2 then $prec=4 endif
+  format($sub,0,4):${$i2}
+  $i2=$i2+1
+  $sub=''
+ endif
+ $i=$i+1
+until $quit = 1
+$f2coef=$i2-$first
+
+"** Negate imag - ntype to ptype **"
+
+$i=$i2-$f2coef/2
+repeat
+ $dum=${$i}
+ ${$i} = -1*$dum
+ $i=$i+1
+until $i > $i2-1
+endif
+
+"*******************************************************" 
+"   GET F1 COEF'S FROM f1coef PARAMETER                 "
+"	& convert 2D ntype to ptype coefs		"
+"*******************************************************" 
+length(f1coef):$f1len
+if $f1len = 0 then
+$abort='y' $text=$text+' f1coef' 
+else
+$i=1 
+
+$quit=0
+repeat
+ substr(f1coef,$i):$sub
+ if ($sub='') then 
+  $quit=1
+ else
+  length($sub):$sublen
+  if $sublen > 2 then $prec=4 endif
+  format($sub,0,4):${$i2} 
+  $i2=$i2+1
+  $sub=''
+ endif
+  $i=$i+1
+until $quit = 1
+$total2d=$i2-$first
+$f1coef=$total2d-$f2coef
+
+"** Negate imag - ntype to ptype **" 
+
+$i=$i2-$f1coef/2 
+repeat 
+ $dum=${$i}
+ ${$i} = -1*$dum 
+ $i=$i+1 
+until $i > $i2-1
+endif
+
+if $abort='y' then
+ write('error','%s has(ve) null value.  Enter value(s) and reexecute',$text)
+ abort
+endif
+
+"*********************************************************"
+"            DO SOME CHECKING                             "
+"*********************************************************"
+$check=$f1coef%4
+if $check > 0.1 then
+ $abort='y' $text='f1coef'
+endif
+$check=$f2coef%4
+if $check > 0.1 then
+ $abort='y' $text=$text+' f2coef'
+endif
+if $abort='y' then
+ write('error','%s has(ve) wrong number of coef entries',$text)
+ write('alpha','f1coef=%s',f1coef)
+ write('alpha','f2coef=%s',f2coef)
+ abort
+endif
+
+"*******************************************************" 
+"     First construct 3D coefs that are real in t2      "
+"*******************************************************" 
+
+$f1set=$f1coef/4
+$f2set=$f2coef/4
+
+$f2=$first
+$f1=$f2coef+$f2
+$3d=$total2d+$f2
+
+$i2=0
+$i1=0
+
+repeat
+ $i2=0
+ repeat
+  ${$3d} = ${$f2+$i2}*${$f1+$i1} - ${$f2+$i2+1}*${$f1+$i1+1}
+  ${$3d+1} = ${$f2+$i2+1}*${$f1+$i1} + ${$f2+$i2}*${$f1+$i1+1}
+  $3d=$3d+2
+  $i2=$i2+2
+ until $i2 > $f2coef/2-1
+  $i1=$i1+2
+until $i1 > $f1coef-1
+
+"*******************************************************"
+"     Next construct 3D coefs that are imag in t2       "
+"*******************************************************"
+
+$i1=0
+repeat 
+ $i2=$f2coef/2 
+ repeat
+  ${$3d} = ${$f2+$i2}*${$f1+$i1} - ${$f2+$i2+1}*${$f1+$i1+1}
+  ${$3d+1} = ${$f2+$i2+1}*${$f1+$i1} + ${$f2+$i2}*${$f1+$i1+1} 
+  $3d=$3d+2
+  $i2=$i2+2 
+ until $i2 > $f2coef-1
+  $i1=$i1+2 
+until $i1 > $f1coef-1
+
+$total3d=($f2coef*$f1coef)/2 
+
+"*******************************************************" 
+"   rewrite -0's as 0's                                 "
+"*******************************************************" 
+if $prec=0 then
+$i=0 
+$3d=$total2d+$first 
+repeat 
+ if ${$3d+$i}=-0 then ${$3d+$i}=0 endif 
+ $i=$i+1 
+until $i > $total3d-1 
+endif
+
+"*******************************************************" 
+"   Swap coef's if datasets are reversed                "
+"*******************************************************" 
+$line=$f2set*$f1set*2
+$new3d=$total2d+$total3d+$first
+$old3d=$total2d+$first
+$i=0
+
+$index=1
+if ($1 = 't2t1') then
+repeat
+ $i1=0 $count1=1 $i2=0 $count=1
+ repeat
+  $i2=0 $count=1
+  repeat
+   ${$new3d+$i}=${$old3d+$i1+$i2}
+   ${$new3d+$i+1}=${$old3d+$i1+$i2+1}
+   $count=$count+1
+   $i=$i+2
+   $i2=$i2+(2*$f2set)
+  until ($count > $f1set)
+  $i1=$i1+2
+  $count1=$count1+1
+ until ($count1 > $f2set)
+ $old3d=$old3d+$line
+ $index=$index+1
+until $index > 4
+endif
+
+"*******************************************************"
+"   write 3D coef table                                 "
+"*******************************************************"
+$output=''
+$output=curexp+'/coef'
+write('reset',$output)
+
+$i=0
+$x=0
+if ($1 = 't2t1') then
+$3d=$total2d+$total3d+$first
+else
+$3d=$total2d+$first
+endif
+repeat
+ $x=$x+8
+if ($prec > 0) then
+ write('file',$output,'%1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f',${$3d+$i},${$3d+$i+1},${$3d+$i+2},${$3d+$i+3},${$3d+$i+4},${$3d+$i+5},${$3d+$i+6},${$3d+$i+7})
+else
+ write('file',$output,'%1.0f %1.0f %1.0f %1.0f %1.0f %1.0f %1.0f %1.0f',${$3d+$i},${$3d+$i+1},${$3d+$i+2},${$3d+$i+3},${$3d+$i+4},${$3d+$i+5},${$3d+$i+6},${$3d+$i+7})
+endif
+$i=$i+8
+
+ if($f2set*$f1set*2 > 8) then
+  if ($x+1 > ($f2set*$f1set*2)) then
+   write('file',$output,'')
+   $x=0
+  endif
+ endif
+ 
+until $i > $total3d-1
+if ($prec > 0) then
+write('file',$output,'1.0000 0.0000 0.0000 0.0000 0.0000 0.0000 1.0000 0.0000')
+else
+write('file',$output,'1 0 0 0 0 0 1 0')
+endif
+
+write('line3','3D coef file created in the current exp directory')

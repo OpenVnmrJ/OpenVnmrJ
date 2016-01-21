@@ -1,0 +1,53 @@
+"macro arraylist"
+"***************************************************************"
+" arraylist                                                     "	
+"                                                               "
+" List the arrayed parameter values in correct acquisition      "
+" order.                                                        "
+"***************************************************************"
+
+"** Initialize variables **********************************"
+$i = 0
+exists('nv','parameter'):$exists
+if ($exists) then
+  if (nv > 0) then
+    $arraydim = arraydim/nv
+  endif
+else
+  $arraydim = arraydim
+endif
+
+"** Get the list of arrayed parameters ********************"
+arrayparse:$namelist,$ranklist,$sizelist
+$number = size('$namelist')
+
+"** Initialize the $nameindex variable, since it will be **"
+"** filled in reverse order.                             **"
+$j = 0
+repeat
+  $j = $j + 1
+  $nameindex[$j] = 0
+until ($j = $number)
+
+"** Loop through each arrayed spectrum or image ***********"
+repeat
+
+  $i = $i + 1
+  $namecount = $number
+  $mult = 1
+  $rank = $ranklist[$number]
+  "** Loop through each array name and write out values *****"
+  repeat
+    if ($rank <> $ranklist[$namecount]) then
+      $rank = $ranklist[$namecount]
+      $mult = $mult*$sizelist[$namecount+1]
+    endif
+    $index = trunc(($i-1)/$mult) % $sizelist[$namecount] + 1
+
+    $nameindex[$namecount] = $index
+    $param = $namelist[$namecount]
+    write('alpha','%s = %f',$namelist[$namecount],{$param}[$index])
+    $namecount = $namecount - 1
+
+  until ($namecount = 0)
+until ($i = $arraydim)

@@ -1,0 +1,29 @@
+"macro servicetools"
+
+exists(systemdir+'/vnmrrev','file','rw'):$perm
+if (not $perm) then
+  write('line3','Cannot use %s from this administration account',$0)
+  return
+endif
+exists(systemdir+'/adm/options/servicetools.pwd','file'):$ok
+if (not $ok) then
+  write('line3','Service tools are not installed')
+  return
+endif
+if ($# < 1 ) then
+  write('line3','Servicetools password must be supplied as an argument')
+  return
+endif
+shell('rm -rf '+userdir+'/servicetools')
+shell('cd '+userdir+'; decode '+$1+' '+systemdir+'/adm/options/servicetools.pwd sTmP.tar'):$dum
+shell('cd '+userdir+'; tar jxf sTmP.tar; rm -f sTmP.tar'):$dum
+exists(userdir+'/persistence/appdir_'+operator,'file'):$ok
+if ($ok) then
+  shell('mv '+userdir+'/persistence/appdir_'+operator+' '+userdir+'/persistence/appdir_'+operator+'.serv')
+endif
+write('file',userdir+'/persistence/appdir_'+operator,'1;%s/servicetools;VJ Service tools',userdir)
+write('file',userdir+'/persistence/appdir_'+operator,'1;USERDIR;Home account')
+write('file',userdir+'/persistence/appdir_'+operator,'1;/vnmr;OpenVnmrJ system')
+appdir('reset')
+updateExpSelector
+write('line3','Service tools available')

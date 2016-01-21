@@ -1,0 +1,37 @@
+"macro CPdndfid_process"
+"This macro is called by dndfid"
+"If this is CP, the fid was stored AFTER processing"
+" In this case do not execute process, instead use wft or wft2da"
+
+	bgmode_is:$bg
+	if ($bg=0) then showtray('close') endif
+		// legacy datasets may have wexp set to chempackQ
+		// it is a good idea to reset it back to procplot
+	if wexp='chempackQ' then wexp='procsave' endif
+	getdim:$dim
+	dousermacro('process')
+        exists('execprocess','parameter'):$exex
+        if ($exex) then
+	    $s='' substr(execprocess,1):$s
+	    if ($s='') then $exex=0 endif
+        endif
+        if ($exex) then
+		exec(execprocess):$e
+		if ($e) then execpslabel('display') dousermacro($0) return endif
+	endif
+	if ($dim=1) then
+		wft init_dis('ds') execpslabel('display')
+	elseif ($dim=2) then
+		wft2da 
+		if ((refsource1='sfrq') 	and 
+		   (trunc(sw)=trunc(sw1)) 	and
+		   (dmg='av') 			and 
+		   (dmg1='av1') 		and
+		   (fn=fn1)) 			then
+			exists('foldflg','parameter'):$fflg
+			if ($fflg>0) then if (foldflg='y') then $fflg=0 endif endif
+			if ($fflg=0) then foldt endif
+		endif
+		execpslabel('display')
+	endif
+	dousermacro($0)

@@ -1,0 +1,73 @@
+"macro calc_wspw"
+"calc_wspw: 
+"  calculates the RF pulse width based on a desired "
+"  bandwidth for water suppression, or vice versa   "
+"
+"  Usages: 
+"    calc_wspw(pwpat,linewidth):pw                  "
+"    calc_wspw(pwpat,0,pws):bw                      "
+"
+
+"Figure out which arguments are supplied"
+if ($# < 2) then
+  write('line3','Usage: %s(pwpat,linewidth):pw',$0)
+  return
+endif
+
+$pwpat = $1
+$bw    = $2
+
+if ($# > 2) then
+  $pw = $3
+  if ($bw > 0) then
+    $get_pw = 1
+  else
+    $get_pw = 0
+    if ($pw = 0) then
+      write('error','You must supply either a bandwidth or a pulse width')
+      abort
+    endif
+  endif
+else
+  $get_pw = 1
+  if ($bw = 0) then
+    write('error','You must supply a non-zero bandwidth')
+    abort
+  endif
+endif
+
+
+"*Locate Current RF Pattern*****************"
+$file = userdir + '/shapelib/' + $pwpat + '.RF'
+exists($file,'file'):$ex1
+
+if ($ex1 = 0) then 
+  $file = systemdir+ '/shapelib/' + $pwpat + '.RF'
+  exists($file,'file'):$ex2
+
+  if ($ex2 = 0) then    
+    write('error','Can not find shape %s in shapelib',$pwpat)
+    abort
+  endif
+endif
+
+
+"* Read excitation bandwidth from RF header *"
+$bwref = 0
+lookup('file',$file,'seek','EXCITEWIDTH','read',1):$bwref
+if ($bwref = 0) then 
+  write('error','Can not find bandwidth in RF header of %s.RF',$pwpat)
+  abort
+endif
+
+
+if ($get_pw) then
+  $pw = $bwref*1e6 / $bw
+  //write('line3','Optimal pulse width to hit a line of %.2fHz is %.2fus',$bw,$pw)
+  return($pw)
+else 
+  $bw = $bwref*1e6 / $pw
+  //write('line3','Optimal pulse width to hit a line of %.2fHz is %.2fus',$bw,$pw)
+  return($bw)
+endif
+

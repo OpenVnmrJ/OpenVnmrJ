@@ -1,0 +1,90 @@
+"macro getht"
+
+// get Hadamard frequencies from htfrq1.ll file
+// Usage: getht(<'htfrq1' <,'htbw1'>>)
+//   if no 1st argument, use htfrq1
+//   if no 2nd argument, use htbw1 (if bandwidth is specified in file)
+// Usage: getht(<'save' <,'htfrq1'>>)
+//   if 1st argument is 'save', copy htfrq1.ll from persistence to curexp
+//   if no 2nd argument, use htfrq1 as parameter name
+//   use 2nd argument as parameter name if present (e.g. htfrq2.ll)
+
+// The getht macro is used in the import button of the editht popup.
+// The editht macro opens an interactive tool for setting and 
+//   displaying Hadamard frequency lists.  getht is used by Import button.
+
+// File location is in curexp, e.g.
+//    /export/home/vnmr1/vnmrsys/exp1/htfrq1.ll
+
+// File format: 1st line is optional title, specifying:
+//   frequency [units]  bandwidth [units]
+//   freq units are Hz or ppm.  bandwidth units are ignored, assumed Hz.
+// 2nd and subsequent lines are a list of frequencies and bandwidths.
+//   Hadamard frequencies in Hz are measured from center of spectrum.
+//     The label is set to [Hz from center] to reflect this.
+//   Hadamard frequencies in ppm assume referencing is correct in curexp.
+//   bandwidth column is optional, assumed 20 Hz if not specified.
+
+// Example:
+// freq [ppm]
+//  7.930
+//  5.819
+//  4.134
+//  1.770
+
+// Example:
+// freq [Hz from center]   bw [Hz]
+//  1172.37                20
+//   327.69                20
+//  -346.37                16
+// -1292.10                20
+
+
+$save='n'
+$par = 'htfrq1'
+$bwpar = 'htbw1'
+
+if $#>0.5 then
+  if $1='save' then
+    $save='y'
+  else
+    $par = $1
+  endif
+endif
+if $#>1.5 then
+  if $save='y' then
+    $par = $2
+  else
+    $bwpar = $2
+  endif
+endif
+
+if ($save = 'y') then
+
+  $cmd='htfrqdisp(\'write\',\''+$par+'\',\''+$bwpar+'\')'
+  exec($cmd)
+  $pfile=userdir+'/persistence/htfrq1.ll'
+  exists($pfile,'file'):$e
+  if $e<0.5 then
+    write('error','cannot read file: %s',$pfile)
+    return
+  endif
+  $curfile = curexp+'/'+$par+'.ll'
+  cp($pfile,$curfile)
+
+else
+
+  $curfile=curexp+'/'+$par+'.ll'
+  exists($curfile,'file'):$e
+  if $e<0.5 then
+    write('error','cannot read file: %s',$curfile)
+    return
+  endif
+
+  $pfile = userdir+'/persistence/'+$par+'.ll'
+  cp($curfile,$pfile)
+  $cmd='htfrqdisp(\'read\',\''+$par+'\',\''+$bwpar+'\')'
+  exec($cmd)
+  selecthtfrq1('display')
+
+endif

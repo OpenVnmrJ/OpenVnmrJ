@@ -1,0 +1,62 @@
+******************************************************************************
+svimg 		Generate and Save images as FDF files. 	(macro)
+******************************************************************************
+
+Applicability:	Systems with Imaging Module.
+
+Format: svimg('directory_name'[,'outfmt'])
+
+Description:	
+	The "svimg" command generates images from the current experiment 
+	and saves them into the specified directory as Flexible Data 
+	Format (fdf) files.  It will save one image or a number of images
+	in the case of multislice experiments. 
+
+	Currently the specified directory is made in the user's data 
+	directory, and will be appended with a ".dat".  Image files will 
+	be created under this directory as "image0001.fdf", "image0002.fdf", 
+	and so on.  A "procpar" file will also be saved into this directory.
+
+	The 'outfmt' parameter is an optional character which defines the
+	type of image data.  It can take two character values:
+	'f' - Outputs the data in floating point format.  
+	'm' - Outputs the data in 12 bit integer values in 16 bit words.
+	The default is 'f' (floating point) and currently ImageBrowser only
+	accepts data in floating point values.
+	
+	The macro only saves images with the new imaging parameters that
+	support oblique imaging.  Unlike "svsis" the macro does not care
+	about the name of the sequence.  It does however format the
+	header according to the following parameters.
+ 
+        seqcon          - Sequence loop control flag
+	nD		- Data dimension assumed to be 2.
+
+        tn,dm           - Transmitter Nucleus (string)
+        sfrq,dfrq       - Spectrometer frequency (MHz)
+
+        lro             - Size of FOV for read out axis (cm)
+        lpe             - Size of FOV for phase encode axis (cm)
+        pro             - Position of image center on the read out axis (cm)
+        ppe             - Position of image center on 2D phase encode 
+                          axis (cm)
+
+        thk             - Slice thickness (mm)
+        pss             - Slice position (cm)
+
+	psi,phi,theta	- Euler angles determining direction.
+
+	The macro uses a Vnmr command "svsdfd" to dump the transformed
+	data out to the data file. After dumping the headers out a unix
+	shell command "fdfgluer" is called to glue the headers to the
+	data.  The "svsdfd" command dumps the data in such a way that the 
+	(0,0) coordinates are the first data point in the file.
+
+
+	NOTES: Modifications to the macro should be made in the user's
+	       maclib.
+
+	       The output values of the direction cosines may not be correct.
+
+See Also:
+	svsis

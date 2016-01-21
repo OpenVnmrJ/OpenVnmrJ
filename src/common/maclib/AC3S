@@ -1,0 +1,43 @@
+"macro AC3S"
+"Auto calibrate"
+
+write('error','finding estimate of pw90')
+wft av 
+select(1)
+if tn='H1' then peak(.5p,2p):$ht else peak:$ht endif
+$maxht = $ht $pw90=pw[1]
+$counter=2
+repeat
+   select($counter)
+   if tn='H1' then peak(.5p,2p):$ht else peak:$ht endif
+   if $ht>$maxht then
+      $maxht=$ht $pw90=pw[$counter] 
+   endif
+   $counter=$counter+1
+until ($counter>arraydim)
+
+if ($pw90 > 2*pw90max) then
+  if (r1 < 2) then
+    write('error',' Approximate pw90 = %2.1d ',$pw90)
+    write('error','Increasing power by 6db and trying again')
+    r1 = r1+1
+    tpwr=tpwr+6
+    AC2S
+    return
+  else
+    write('error','Autocalibrate failed on second try -- determine manually')
+    abort
+  endif
+endif
+write('error',' Approximate pw90 = %2.1d ',$pw90)
+if ($pw90 < pw90max) then AC3Sb($pw90) return endif "if pw90 is good proceed"
+
+$factor = ($pw90 - pw90max)/pw90max
+$newtpwr = ($factor * 6) + tpwr
+tpwr = $newtpwr
+array('pw',10,10,2)
+clear(2) 
+text('power changed - finding estimate of new pw90')
+dtext
+wexp='AC3Sa' wnt='wft dssh' au  
+

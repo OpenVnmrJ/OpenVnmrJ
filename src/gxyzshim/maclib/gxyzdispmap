@@ -1,0 +1,148 @@
+"macro gxyzdispmap"
+"gxyzdispmap - displays or plots 3D shim-maps, field-maps, amplitude images"
+"PJB 9xii05"
+
+
+if ($# <1.5) then write('error','Usage: gxyzdispmap\(function,options\)') return endif
+if (seqfil<>'gmapxyz') then write('error','Not 3D shimming data!') return endif
+
+$function=$1
+$option=$2
+$shimmapdir=userdir+'/3Dshimlib/shimmaps/'+mapname
+exists($shimmapdir,'file'):$ex
+if $ex < 0.5 then
+	write('error','Shimmaps %s do not exist!',$shimmapdir) 
+	abort
+endif
+
+$ni=ni $ni2=ni2 $gxyzcode=gxyzcode
+exists('gxyzmapcode','parameter'):$ex
+if ($ex>0.5) then
+   length(gxyzmapcode):$codelength
+   gxyzcode=gxyzmapcode
+else
+   length(gxyzcode):$codelength
+endif
+if $codelength=36 then
+	ni=6 ni2=6
+elseif $codelength=64 then
+	ni=8 ni2=8
+elseif $codelength=144 then
+	ni=12 ni2=12
+endif
+
+if $option='custom' then
+	"First work out which shims to display/plot"
+	$shimname[1]=''
+	$i=0
+	repeat
+		$i=$i+1
+		substr(gxyzshimdisp,$i):$shimname[$i]
+		$shimname[$i+1]=''
+	until $shimname[$i]=''
+	$numshims=$i-1
+	"Now resolve each shim name into its corresponding shimmapn file and remove any shims that don't have maps"
+	$i=0 $j=0 $k=0 $is='' $gxyzshimdisp='' $mapfiles[1]='' $mapindex[1]='' $file=''
+	repeat
+		$j=$j+1	
+		$exists=1 $i=0 $found=0
+		repeat
+			$i=$i+1
+			if ($i < 10) then format($i,1,0):$is else format($i,2,0):$is endif
+			$file='shimmap'+$is
+			exists($shimmapdir+'/'+$file,'file'):$exists
+			if ($exists > 0.5) then
+				lookup('file',$shimmapdir+'/'+$file)
+				lookup('skip',4)
+				lookup('read'):$name
+				if ($shimname[$j]=$name) then
+					$k=$k+1
+					$mapfiles[$k]=$file
+					$mapindex[$k]=$is
+					$mapfiles[$k+1]=''
+					$mapindex[$k+1]='' 
+					$found=1
+				endif
+			endif
+		until ($exists<0.5)
+		if (($found < 0.5) and ($shimname[$j]<>'')) then write('error','No map found for %s, omitting',$shimname[$j]) endif
+	until ($j>$numshims)
+	$numshims=$k
+	if $mapfiles[1]='' then write('error','No shimmaps were found') abort endif
+endif
+
+if $function='display' then
+	if $numshims>1 then 
+		$j=1
+		$exec='disp3Dmap(\'shimmaps\','
+		repeat
+			if $j<$numshims then $exec=$exec+$mapindex[$j]+','
+			else	$exec=$exec+$mapindex[$j]+')'
+			endif
+			$j=$j+1
+		until $j>$numshims
+	else
+		$exec='disp3Dmap(\''+$mapfiles[1]+'\')'
+	endif
+	exec($exec)
+endif
+
+if $function='plot' then 
+	if plotter='none' then write('error','No plotter defined!') abort endif
+	if (pltopt <> 'n') then
+
+		if $option='all' then
+			$i=0 $is='' $exists=1 $exec=''
+			repeat
+				$i=$i+1
+				if ($i < 10) then format($i,1,0):$is else format($i,2,0):$is endif
+				$file='shimmap'+$is
+				exists($shimmapdir+'/'+$file,'file'):$exists
+				if ($exists > 0.5) then
+					$exec='plot3Dmap(\''+$file+'\')'
+					exec($exec)
+					if pltopt='p' then
+						$n='' format(gxyzshimPSn,'lower'):$n
+						page(gxyzshimPS+$n+'.ps')
+						gxyzshimPSn=gxyzshimPSn+1
+					else
+						page
+					endif
+				endif
+			until($exists < 0.5)
+		elseif $option = 'custom' then
+			if $numshims>1 then 
+				$j=1
+				$exec='plot3Dmap(\'shimmaps\','
+				repeat
+					if $j<$numshims then $exec=$exec+$mapindex[$j]+','
+					else	$exec=$exec+$mapindex[$j]+')'
+					endif
+					$j=$j+1
+				until $j>$numshims
+			else
+				$exec='plot3Dmap(\''+$mapfiles[1]+'\')'
+			endif
+			exec($exec)
+	
+			if pltopt='p' then
+				$n='' format(gxyzshimPSn,'lower'):$n
+				page(gxyzshimPS+$n+'.ps')
+				gxyzshimPSn=gxyzshimPSn+1
+			else
+				page
+			endif
+		elseif $option = 'shimamps' then
+			plot3Dmap('shimmaps.amp')
+			if pltopt='p' then
+				$n='' format(gxyzshimPSn,'lower'):$n
+				page(gxyzshimPS+$n+'.ps')
+				gxyzshimPSn=gxyzshimPSn+1
+			else
+				page
+			endif
+		endif
+	endif
+endif
+
+ni=$ni ni2=$ni2 gxyzcode=$gxyzcode

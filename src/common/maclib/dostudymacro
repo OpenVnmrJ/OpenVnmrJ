@@ -1,0 +1,38 @@
+"macro dostudymacro"
+// Chempacker macro
+if ($# < 1) then
+  write('line3','%s requires an argument',$0)
+  return
+endif
+$studymacro='study'+$1
+is_cpfid:$cp
+if not $cp then return endif
+
+substr(file,'dirname'):$dir
+$studymacpath=$dir+'/dirinfo/maclib/'+$studymacro
+exists($studymacpath,'file'):$macex
+
+// Allow for multiple arguments to be passed
+if ($macex > 0) then
+  if $# > 1 then
+    $arg=''
+    $studymacro=$studymacro+'('
+    $i=2
+    repeat
+      format(${$i},'isreal'):$s
+      if ($s=1) then
+        format(${$i},'lower'):$arg
+        $studymacro=$studymacro+$arg
+      else
+        $arg=${$i}
+        $studymacro=$studymacro+'\''+$arg+'\''
+      endif
+      if ($i < $#) then $studymacro=$studymacro+',' endif
+      $i=$i+1
+    until $i > $#
+    $studymacro=$studymacro+')'
+  endif
+  macrold($studymacpath):$dummy
+  exec($studymacro):$e
+  purge($studymacpath)
+endif

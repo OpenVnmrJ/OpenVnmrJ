@@ -1,0 +1,40 @@
+"macro addnucleus"
+"addnucleus('nucleus') - adds nucleus to probe file"
+
+$e=0 $probepath='' $rw=0
+getProbePath(probe,'alert'):$e,$probepath,$rw
+if ($rw=0) then return endif
+
+lookup('mfile',$probepath,'seek',$1+':','read'):$dummy,$cnt
+if ($cnt>0) then
+   write('error','%s already in probefile',$1)
+   return
+endif
+$gH=1
+$nucfrq=0
+getXi($1):$found,$nucfrq
+if ($nucfrq <> 0) then $gH=100.0/$nucfrq endif
+
+write('file',$probepath,$1+':           Parameters')
+write('file',$probepath,$1+'pw90           00')
+write('file',$probepath,$1+'tpwr           00')
+write('file',$probepath,$1+'dmf            00')
+write('file',$probepath,$1+'dpwr           00')
+write('file',$probepath,$1+'pwx            00')
+write('file',$probepath,$1+'pwxlvl         00')
+write('file',$probepath,$1+'pwxlvl_cf      1')
+write('file',$probepath,$1+'gHratio        %f',$gH)
+write('file',$probepath,$1+'dmm            g')
+write('file',$probepath,$1+'dseq           garp1')
+write('file',$probepath,$1+'decwave	    g')
+write('file',$probepath,$1+'dres           1')
+if (Console='vnmrs') or (Console='mr400') then
+   $minrof2=0  $srof2='25'
+   getparam('minrof2','Probe'):$minrof2
+   if ($minrof2) then format($minrof2,'lower'):$srof2 endif
+   write('file',$probepath,$1+'minrof2       %s',$srof2)
+   write('file',$probepath,$1+'minalfa	      10')
+endif
+write('file',$probepath,$1+'date           00-00-00')
+write('file',$probepath,'')
+

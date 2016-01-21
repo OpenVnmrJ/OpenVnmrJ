@@ -1,0 +1,74 @@
+"macro sqdefaultfov"
+/******************************************************************
+*  sqdefaultfov: set FOV parameters from CoilTable default values
+*  using iplanType to determine which values should be set
+*  iplanType = 0  2D slices
+*  iplanType = 1  Radial plan type (not supported in graphical planning)
+*  iplanType = 2  3D
+*  iplanType = 3  Voxel
+*  iplanType = 4  Satbands
+*  iplanType = 5  CSI
+*
+*  coil_param[24] = FOV size for 2D or 3D
+*  coil_param[25] = slice thickness
+*  coil_param[26] = voxel size
+*
+*  Usage:  sqdefaultfov
+*
+*  ARR   Version 1.0   6/6/10 
+*******************************************************************/
+
+/*** Check the 'prescribed' parameter, if 'y' use the parameters stored in procpar ***/
+exists('prescribed','parameter'):$ex
+if ($ex) then
+  if (prescribed = 'y') then return endif        // Exit this macro and use the stored FOV values
+else
+  return
+endif
+
+/*** Check coil_param global parameter ***/
+exists('coil_param','parameter','global'):$ex
+if ($ex = 0) then return endif                   // coil_param does not exist, exit
+if (size('coil_param') < 26) then return endif   // coil_param not up to date, exit
+
+exists('iplanType','parameter'):$ex
+if ($ex = 0) then return endif                   // iplanType does not exist, exit
+
+/*** Set default values from CoilTable ***/
+if (iplanType = 0) then                          // 2D slices
+  exists('lro','parameter'):$ex1                 // check for parameters, exit if any don't exist
+  exists('lpe','parameter'):$ex2
+  exists('thk','parameter'):$ex3
+  if (not($ex1) or not($ex2) or not($ex3)) then return endif
+  lro = coil_param[24]
+  lpe = lro
+  thk = coil_param[25]
+elseif (iplanType = 2) then                      // 3D volume
+  exists('lro','parameter'):$ex1
+  exists('lpe','parameter'):$ex2
+  exists('thk','parameter'):$ex3
+  if (not($ex1) or not($ex2) or not($ex3)) then return endif
+  lro = coil_param[24]
+  lpe = lro
+  lpe2 = lro
+elseif (iplanType = 3) then                      // Voxel
+  exists('vox1','parameter'):$ex1
+  exists('vox2','parameter'):$ex2
+  exists('vox3','parameter'):$ex3
+  if (not($ex1) or not($ex2) or not($ex3)) then return endif
+  vox1 = coil_param[26]
+  vox2 = vox1
+  vox3 = vox1
+elseif (iplanType = 5) then                      // 2D CSI
+  exists('lpe','parameter'):$ex1
+  exists('lpe2','parameter'):$ex2
+  exists('thk','parameter'):$ex3
+  if (not($ex1) or not($ex2) or not($ex3)) then return endif
+  lpe = coil_param[24]
+  lpe2 = lpe
+  thk = 10
+else
+  write('line3','Warning: Invalid iplanType %d, FOV parameters not updated',iplanType)
+endif
+
+

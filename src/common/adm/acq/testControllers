@@ -1,0 +1,250 @@
+#!/bin/bash
+
+#############################
+# testControllers           #
+#                           #
+# John Ryan                 #
+# john_ryan@agilent.com     #
+#                           #
+# Version: 2.02 (21-Aug-15) #
+#                           #
+#############################
+
+# Version 1.00 (30-May-14)
+#  Initial release
+#
+# Version 1.01 (30-May-14)
+#  Now checks both the 172.16.0.x and 10.0.0.x subnets for controllers
+#
+# Version 2.00 (13-Feb-15)
+#  Changed name from testControllers.sh to testControllers
+#  Works for any IP address range
+#  More user-friendly output
+#  Checks for minimum master1, rfx and ddrx on direct drive systems
+#  Checks for non-contiguous rfx or ddrx controllers
+#
+# Version 2.01 (18-Aug-15) [ Heiko Schill, heiko.schill@agilent.com ]
+#  Optional parameter (range 5,000-100,000, def. 5000): Number of packets
+#
+# Version 2.02 (21-Aug-15)
+#  Added option to specify the timeout too
+#  Converted parameter processing to use getopt
+
+SCRIPTNAME="testControllers"
+VERSION="2.02"
+DATE="21-Aug-15"
+COUNT=5000
+WAIT=20
+
+function usage()
+{
+	echo "Usage:"
+	echo " ${SCRIPTNAME} [options]"
+	echo
+	echo "Options:"
+	echo "-c, --count <packetcount> The number of packets to send (default: ${COUNT})"
+	echo "-h, --help                Display this help message"
+	echo "-v, --version             Display version information"
+	echo "-w, --wait <timeout>      The timeout for each flood ping in seconds (default: ${WAIT})"
+}
+#####################
+# START Start start #
+#####################
+
+# Use getopt to parse the command line
+OPTIONS=`getopt --options "c:hvw:" --long "count:,help,version,wait:" -n "${SCRIPTNAME}" -- "$@"`
+if [ $? -ne 0 ]
+then
+	usage
+	exit 1
+fi
+eval set -- "${OPTIONS}"
+
+# Process options
+while true
+do
+	case "$1" in
+	-c|--count)
+		if [[ "$2" =~ ^[0-9]+$ ]]
+		then
+			COUNT=$2
+			shift 2
+		else
+			echo "${SCRIPTNAME}: option '$1' requires a numerical argument"
+			usage
+			exit 1
+		fi
+		;;
+	-h|--help)
+		usage
+		exit 1
+		;;
+	-v|--version)
+		echo "${SCRIPTNAME} v${VERSION}, ${DATE}"
+		exit 1
+		;;
+	-w|--wait)
+		if [[ "$2" =~ ^[0-9]+$ ]]
+		then
+			WAIT=$2
+			shift 2
+		else
+			echo "${SCRIPTNAME}: option '$1' requires a numerical argument"
+			usage
+			exit 1
+		fi
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		# Should never get here!
+		echo "Option processing error."
+		exit 1
+		;;
+	esac
+done
+
+# Check for root user
+USERID="`/usr/bin/id | awk '{print $1}'`"
+if [ ${USERID} != "uid=0(root)" ]
+then
+	echo -e "\nTo run this script you will need to be the system's root user.\n"
+	exit 1
+fi
+
+# Look for wormhole in /etc/hosts and determine IP address range
+IPRANGE=`getent hosts wormhole | awk -F: '{split($1,octet,"."); printf("%d.%d.%d\n"),octet[1],octet[2],octet[3]}'`
+
+if [ "x${IPRANGE}" = "x" ]
+then
+	echo -e "\nERROR: wormhole not found in /etc/hosts!  Please run setacq first.\n"
+	exit 1
+fi
+
+# Determine which addresses are active
+echo -n "Determining which network addresses are active."
+CONTROLLERS=`cat /etc/hosts |grep "^${IPRANGE}" | awk '{print$2}'`
+
+INOVA=0
+MASTER=0
+RF=0
+DDR=0
+CURRENTRF=1
+CURRENTDDR=1
+MISSINGRF=""
+MISSINGDDR=""
+ACTIVE=""
+
+for CONTROLLER in $CONTROLLERS
+do
+	case ${CONTROLLER} in
+	master1)
+		ping -W 1 -c 1 ${CONTROLLER} >/dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			ACTIVE="$ACTIVE $CONTROLLER"
+			MASTER=1
+		fi
+		;;
+	rf*)
+		ping -W 1 -c 1 ${CONTROLLER} >/dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			ACTIVE="${ACTIVE} ${CONTROLLER}"
+			RF=1
+			TEMPRF=`echo ${CONTROLLER} | sed 's/^rf//'`
+			if [ ${TEMPRF} -eq ${CURRENTRF} ]
+			then
+				((++CURRENTRF))
+			else
+				while [ ${TEMPRF} -ne ${CURRENTRF} ]
+				do
+					MISSINGRF="${MISSINGRF} rf${CURRENTRF}"
+					((++CURRENTRF))
+				done
+			fi
+		fi
+		;;
+	ddr*)
+		ping -W 1 -c 1 ${CONTROLLER} >/dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			ACTIVE="${ACTIVE} ${CONTROLLER}"
+			DDR=1
+			TEMPDDR=`echo ${CONTROLLER} | sed 's/^ddr//'`
+			if [ ${TEMPDDR} -eq ${CURRENTDDR} ]
+			then
+				((++CURRENTDDR))
+			else
+				while [ ${TEMPDDR} -ne ${CURRENTDDR} ]
+				do
+					MISSINGDDR="${MISSINGDDR} ddr${CURRENTDDR}"
+					((++CURRENTDDR))
+				done
+			fi
+		fi
+		;;
+	inova)
+		INOVA=1
+		ping -W 1 -c 1 ${CONTROLLER} >/dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			ACTIVE="${ACTIVE} ${CONTROLLER}"
+		fi
+		;;
+	
+	*)
+		ping -W 1 -c 1 ${CONTROLLER} >/dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			ACTIVE="${ACTIVE} ${CONTROLLER}"
+		fi
+		;;
+	esac
+	echo -n .
+done
+echo
+
+# Check for master1, rfx and ddrx on direct drive systems
+if [ ${INOVA} -eq 0 ] && ( [ ${MASTER} -eq 0 ] || [ ${RF} -eq 0 ] || [ ${DDR} -eq 0 ] )
+then
+	echo
+	if [ ${MASTER} -eq 0 ]
+	then
+		echo "WARNING: No master controller detected!"
+	fi
+	if [ ${RF} -eq 0 ]
+	then
+		echo "WARNING: No RF controller detected!"
+	fi
+	if [ ${DDR} -eq 0 ]
+	then
+		echo "WARNING: No DDR controller detected!"
+	fi
+	echo -e "The minimum requirement for the console to boot is a master controller and a minimum of one RF and one DDR controller."
+fi
+
+# Warn if any rfx or ddrx are missing
+if [ "x${MISSINGRF}" != "x" ]
+then
+	echo -e "\nWARNING: Your system has non-contiguous RF controllers."
+	echo "Missing RF controllers:${MISSINGRF}"
+fi
+
+if [ "x${MISSINGDDR}" != "x" ]
+then
+	echo -e "\nWARNING: Your system has non-contiguous DDR controllers."
+	echo "Missing DDR controllers:${MISSINGDDR}"
+fi
+
+# Test communication
+echo -e "\nActive addresses:${ACTIVE}\n"
+for CONTROLLER in $ACTIVE
+do
+	echo -n "$CONTROLLER : "
+	ping -q -w ${WAIT} -c ${COUNT} -f ${CONTROLLER} | grep received
+done
+
+echo "Done."

@@ -1,0 +1,33 @@
+"macro getautoglobaltemp"
+if ($#<1) then $1='' endif
+
+if ($1='auto') then
+    $AUTOGLOBAL=autodir+'/enterQ.macdir/AUTOGLOBAL'
+elseif ($1='enter') then
+    shell('basename '+globalenter):$base
+    $AUTOGLOBAL=globalenter+'/'+$base+'.macdir/AUTOGLOBAL'
+elseif ($1='acq') then
+    return(1)
+else
+    return(0)
+endif
+exists($AUTOGLOBAL,'file'):$fileex
+if ($fileex) then
+    $line='' $stemp=''
+    shell('(cat '+$AUTOGLOBAL+' | grep AUTOGLOBALTEMP:)'):$line
+    if ($line<>'') then
+	substr($line,2):$stemp
+    endif
+    if ($stemp<>'') then
+	format($stemp,'lower'):$rtemp
+	if not typeof('$rtemp') then
+	    if ($## > 0) then return(1)
+	    else
+	       temp=$rtemp
+	       checktemplimit
+	       return(1)
+	    endif
+	endif
+    endif
+endif
+return(0)

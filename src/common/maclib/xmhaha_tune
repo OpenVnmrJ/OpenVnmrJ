@@ -1,0 +1,170 @@
+"macro xmhaha_tune"
+"This is derived from xmtune macro"
+" It is always called by protune_au macro"
+" All checks already passed"
+
+if ($# = 0) then
+  $arg = 'check'
+else
+  $arg = $1
+endif
+$dir='/vnmr/acqqueue'
+        $firstchar='' $fileex=0
+        substr(tunemethod,1,1):$firstchar
+        if ($firstchar='/') then
+                $metfile=tunemethod
+        else
+           $metfile=userdir+'/tune/methods/'+tunemethod
+           exists($metfile,'file'):$fileex
+           if ($fileex=0) then
+                $metfile=systemdir+'/tune/methods/'+tunemethod
+           endif
+        endif
+
+IF ($arg='check') THEN
+
+    $parfile=$dir+'/wtunepars'
+    exists('dn2','parameter'):$ed2
+    exists('dn3','parameter'):$ed3
+    $parlist='tn dn solvent wtune tunemethod'
+    if ($ed2) then $parlist=$parlist+' dn2' endif
+    if ($ed3) then $parlist=$parlist+' dn3' endif
+
+    shell('rm -f '+$parfile):$dum
+    writeparam($parfile,$parlist)
+    shell('chmod a+rw '+$parfile):$x
+
+    $file=$dir+'/wtunekey'
+    shell('rm -f '+$file):$dum
+    write('reset',$file)
+    write('file',$file,'%s',$metfile)
+    shell('chmod a+rw '+$file):$x
+    xmhaha_tune('next'):$reply
+    return($reply)
+
+ELSEIF ($arg='next') THEN
+
+  $val='n'
+  // Put lookup's "filekey" into $key -- originally set by xmtune('check') to
+  //   the filepath of the tunemethod file.
+  // Update $key whenever we read from the tunemethod file.
+  $file=$dir+'/wtunekey'
+  exists($file,'file'):$e // Look for file containing filekey to tunemethod file
+  if (NOT $e) then
+    return($val) // Failure return
+  else
+    lookup('mfile',$file,'readline'):$key // Get the filekey from file
+    rm($file):$x // Delete filekey file
+
+    // Get lists of hi/loband nuclei in tn, dn, dn2, ...
+    xmtune('getnucband'):$hiband,$loband
+
+    $protunecmd = ''
+    while (1) do // Read all lines in method file
+      $ch=''
+      repeat
+        // Read a tunemethod line and update filekey:
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$n
+        substr($line,1,1):$ch  // comment line starts with '#'
+      until ($ch<>'#' or $line='' or $n<1.5)
+
+      if ($line='' or $n<1.5) then
+        // We have read all the lines in the method file
+        if ($protunecmd <> '') then
+          $protunecmd = 'protune(\'nucleus\'' + $protunecmd + ')'
+          //$protunecmd? /* Debugging */
+          {$protunecmd} // Execute the protune command
+        endif
+        return($val) // Normal return
+      endif
+
+      // Decode tunemethod line
+      $parfile=$dir+'/wtunepars'
+      fread($parfile)
+
+      $nuc='' $band='' $nval='' $methodkey=''
+      substr($line,1):$methodkey
+      if ($methodkey = 'exec') then
+          // Just execute whatever is on the rest of the line
+          $methodcmd=''
+          length($line):$len
+          substr($line, 6, $len-5):$methodcmd
+          {$methodcmd}  // Execute the command
+          $val='y'
+
+      else
+        // Decode lines of the form:
+        // "tune <nucspec> within 2 percent of optimum pw"
+        // or "tune <nucspec> Fine"
+        // where Fine may be "Fine", "Medium", "Coarse", or
+        //   a custom value defined in ".../tune/TuneCriteria",
+        //   with lines of form "Fine -20 Medium" (name dB fallback).
+        // and "nucspec" is either:
+        //   a parameter name containing the nucleus (tn, dn, dn2, ...)
+        //   or highband or hiband (first nucleus in "$hiband" list)
+        //   or lowband or loband (first nucleus in "$loband" list)
+        //   or hi1, or hi2, ... (Nth nucleus in "$hiband" list)
+        //   or lo1, or lo2, ... (Nth nucleus in "$loband" list)
+        //   or the nucleus name itself (e.g., 'C13')
+        substr($line,2):$nval
+        substr($nval,1,2):$band  // band is 'hi' 'lo'
+        substr($nval,1,3):$bandc // bandc is 'hig' 'hi2' 'low' 'lo2' ...
+        $chan=1                  // chan will be 1 2 3 ...
+        $ch3=''
+        substr($bandc,3,1):$ch3  // ch3 is '2' '3' '4' or character
+        format($ch3,'isreal'):$realc
+        if ($realc) then format($ch3,1,0):$chan endif
+
+        $lvl = ''
+        substr($line,4):$lvl
+        format($lvl,'isreal'):$isreal
+        if ($isreal) then
+          format($lvl,0,1):$lvl // $lvl is pct of optimum w/ decimal point
+        else
+          substr($line,3):$lvl // $lvl is Coarse, Medium, or Fine
+        endif
+
+        if ($band='hi') then
+          substr($hiband,$chan):$nuc
+        elseif ($band='lo') then
+          substr($loband,$chan):$nuc
+        elseif ($nval='tn' or $nval='dn' or $nval='dn2' or $nval='dn3' or $nval='dn4') then
+          $nuc = {$nval}
+        elseif ($nval <> '') then
+          // Tune specific named nucleus only if it is in $hiband or $loband
+          substr($hiband, 'find', $nval):$n1,$idx,$len,$hiband
+          substr($loband, 'find', $nval):$n2,$idx,$len,$loband
+          if (($n1 = 0) AND ($n2 = 0)) then
+            $nval = ''
+          endif
+          $nuc = $nval
+        endif
+        if ($nuc <> '' and $nuc <> 'lk') then
+          // Valid nucleus; add it to protune command
+          if ($isreal) then
+            write('line3','Tuning %s to within %s percent of optimum\n',$nuc,$lvl)
+          else
+            write('line3','Tuning %s to %s criterion', $nuc, $lvl)
+          endif
+          $protunecmd = $protunecmd + ',\'' + $nuc + '\',\'' + $lvl + '\''
+          $val='y'
+        endif
+      endif
+    endwhile // while(1)
+    // NOT_REACHED
+  endif // "tunekey" file exists
+  // NOT_REACHED
+
+ELSEIF ($arg='quit') or ($arg='done') or ($arg='abort') THEN
+
+  write('line3','protune returned')
+  if auto<>'y' then
+	dg newdg
+  else
+	strstr(file,'.','last'):$ret,$file,$ext
+	if ($ret=0) then $file=file endif
+	shell('rm -rf '+$file+'.fid'):$dum
+  endif
+  protune_au($arg)
+
+ENDIF

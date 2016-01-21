@@ -1,0 +1,333 @@
+AUTOMATIC PBOX SEQUENCES:
+
+    The pulse sequences ending with 'A' (below referred to as 'A'-sequences)
+provide an extensive set of examples demonstrating pulse shaping "on fly" using
+Pbox pulse shaping software. Just like in the so called 'bionmr' sequences, all 
+shaped pulses used within the given pulse sequence are created and calibrated 
+at the 'go' (or 'dps') time. The difference between the 'A'-sequences and the 
+'bionmr' sequences is that the later introduce completely new syntax for
+executing shaped pulses, whereas the 'A' sequences require minimal interference 
+with the existing pulse sequence code. Therefore, the syntax used in the 'A' 
+sequences provides means of quick and easy way to convert long and extensive 
+pulse programs into spectrometer frequency independent, fully automatic Bio-Pack  
+style experiments. The ultimate goal of such experiments is to reduce the 
+portability issues of complex multi-dimensional bio-NMR experiments to a simple 
+3-step setup: 
+
+1) you down load the experiment from an ftp site;
+2) you type go;
+3) you get a spectrum. 
+
+   Below is a typical example of modifications to a cutomer-written 
+pulse sequence. This sequence involves two "shaped" pulses on the 13C
+channel. The "shape" might only involve phase-ramping, or both phase
+and amplitude modulation. Both are illustrated below.
+
+Example
+=======
+
+/*************This part is put at the top of the code***************/
+   /* new definitions of offsets(in ppm) and shapes are made */
+    
+#include "Pbox_bio.h"        /* include standard BioPack functions */
+static double   H1ofs=4.7, C13ofs=46.0, N15ofs=120.0, H2ofs=0.0; 
+static shape offC3, offC6;
+
+/*******************************************************************/
+
+pulsesequence()
+{
+         /* only need these three new parameters declared */
+  double    bw, ofs, ppm, ...            /* bandwidth, offset, ppm */
+  ...
+  ...
+         /* normal statements for parameter declarations*/
+         /* normal statements for parameter getvals/getstrs*/
+  ...
+  ...
+    pwC3 = getval("pwC3");
+    rf3  = (compC*4095.0*pwC*2.0)/pwC3;
+    pwC6 = getval("pwC6");
+ pwC6pwr = getval("pwC6pwr");
+  ...
+  ...
+  ...
+  ...
+  setautocal();                 /* activate auto-calibration flags */ 
+  ...
+  ...
+  ...
+  ...
+
+/**************After parameter declarations are made****************/
+    
+  if (autocal[0] <> 'n')                        /* automatic setup */ 
+  {
+    if(FIRST_FID)      /* calculate all shapes and do it only once */
+    {
+      ppm = getval("dfrq"); 
+      bw = 118.0*ppm; ofs = -118.0*ppm;    /* calculate bw and ofs */          
+
+                  /* Use Pbox to create shape */
+      offC3 = pbox_make("offC3", "square180n", bw, ofs, compC*pwC, pwClvl);
+      offC6 = pbox_make("offC6", "sinc90n", bw, 0.0, compC*pwC, pwClvl);
+
+      ....
+      ....
+
+      if (dm3[B] == 'y') H2ofs = 3.2;         /* check all offsets */
+      ofs_check(H1ofs, C13ofs, N15ofs, H2ofs);
+    }
+                 /* Obtain parameter values from shape file header */
+    pwC3 = offC3.pw; rf3 = offC3.pwrf;      
+    pwC6 = offC6.pw; rf6 = offC6.pwrf;    
+      ....
+                                  /* Optional semi-automatic setup */
+    if ((autocal[0] == 's') || (autocal[1] == 's'))       
+    {                             /* use parameters, if they exist */
+      if (find("pwC3") > 0) pwC3 = getval("pwC3");
+      ...
+    }
+  }
+/**************************************************************/
+ /* The rest of pulse sequence follows as originally written      */
+ /* The same parameter names are used, but their values are       */
+ /* derived from the calibrations pwC,pwClvl and compC            */
+/**************************************************************/
+
+#######################################################################################
+
+DEFINITIONS:
+                       ______________________
+                      |                      |
+                      |  Pbox_bio.h macros   |
+                      |______________________|
+
+setautocal() - Sets up the autocal and checkofs flags. 
+============
+Syntax:  (void) setautocal();
+~~~~~~~
+Description: Creates the autocal and checkofs flags and checks whether 
+they are set in the current experiment. If the flags are not set, they 
+are defaulted to 'y' (yes). The available options for the checkofs flag 
+are: 'y' (yes - by default) and 'n' (no). For the autocal flag the 
+available options are: 'y' (yes - by default), 'q' (quiet mode - suppress 
+Pbox output), 'r' (read from file, no new shapes are created), 's' (semi-
+automatic mode - allows access to user defined parameters) and 'n' (no - 
+use full manual setup).
+
+ofs_check() - Checks carrier frequencies on all 4 channels.
+===========
+Syntax: (void) ofs_check(H1ofs, C13ofs, N15ofs, H2ofs);
+~~~~~~~
+double H1ofs, C13ofs, N15ofs, H2ofs;
+
+Description: The ofs_check() function checks the settings of tof, dof, 
+dof2 and dof3 of four RF channels against the values (in ppm) provided 
+as arguments. The allowed deviations are set internally to 0.2 ppm for 
+H-1 and H-2 and to 2.0 ppm for C-13 and N-15. It is assumed that 
+channel 1 is H1, channel 2 is C-13, channel 3 is N-15 and channel 4 
+is H-2. The offset (tof, dof, dof2 and dof3) checks can be switched 
+off individually by setting the corresponding argument to zero (0.0), 
+or collectively by setting the checkofs flag to 'n'; 
+
+pbox_make() - Create and calibrate a shaped pulse.
+===========
+Syntax: 
+~~~~~~~ 
+  shape   shp;
+  char    shn[MAXSTR], wvn[MAXSTR];
+  double  bw, ofs, ref_pw90, ref_pwr;
+
+  shp = pbox_make(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description: 
+shp - pre-defined shape structure containing all the experimental 
+      parameters that are required in order to execute a shaped pulse 
+      or a decoupling waveform. The shp must be declared as a shape.
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz); alternatively pulse duration in 
+      seconds can also be used;
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The pbox_make() function returns a shape structure (as defined in Pbox_psg.h) 
+that contains all parameters required by the experiment.. For frequency shifted 
+pulses the maximum phase increment is internally restricted to 10 degrees, 
+which guarantees a proper RF performance. The shapes are calibrated to use a
+fixed course attenuator setting that is set at ref_pwr level and a variable 
+fine attenuator setting, as used in bio-pack sequences. 
+
+pbox_makeA() - Create and calibrate an adiabatic pulse. 
+============
+Syntax:
+~~~~~~~	
+  shape   shp; 
+  char    shn[MAXSTR], wvn[MAXSTR];
+  double  bw, pws, ofs, ref_pw90, ref_pwr, nst;
+
+  shp = pbox_makeA(shn, wvn, bw, pws, ofs, ref_pw90, ref_pwr, nst);
+
+Description: 	
+shp - pre-defined shape structure containing all the experimental 
+      parameters that are required in order to execute a shaped pulse 
+      or a decoupling waveform. The shp must be declared as a shape.
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz);
+pws - pulse duration (in seconds);
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+nst - number of steps
+
+The same as pbox_make(), except simultaneous definition of bandwidth 
+(bw) and pulse duration (pws) is allowed. This function is used to 
+create and calibrate adiabatic pulses and waveforms. The nst parameter  
+allows to define the number of steps in the shapefile. If nst is set 
+to zero, the required number of steps is calculated by Pbox. 
+
+pbox_makeR() - Create and calibrate a shaped pulse
+============
+Syntax:	
+~~~~~~~
+   shape   shp;
+   char    shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+
+   shp = pbox_makeR(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description: 	
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz); alternatively pulse duration in 
+      seconds can also be used;
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The same as pbox_make(), except the status parameter is set to 1. The
+result is a time-reversed (de-excitation) pulse.
+
+pbox_Rsh() - Create and calibrate a shaped pulse using course power
+==========
+Syntax:
+~~~~~~~
+   shape   shp;
+   char    shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+
+   shp = pbox_Rsh(shn, wvn, bw, ofs, ref_pw90, ref_pwr)   
+
+Description: 
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz); alternatively pulse duration in 
+      seconds can also be used;
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The same as pbox_make(), except the shapes are calibrated to use the 
+course attenuator setting. The fine attenuator setting remains at 4095.0 
+and internal fine attenuation is used instead.
+
+pbox_Dsh() - Create and calibrate a .DEC waveform using course power
+==========
+Syntax:
+~~~~~~~
+   shape   shp;
+   char    shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+
+   shp = pbox_Dsh(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description: 
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz); alternatively pulse duration in 
+      seconds can also be used;
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The same as pbox_Rsh(), except .DEC type shape file is produced in the
+output.
+
+pbox_Dec() - Create and calibrate a .DEC waveform for a given course 
+==========   power setting.
+
+Syntax:
+~~~~~~~
+   shape   shp;
+   char    shn[MAXSTR], wvn[MAXSTR];
+   double  bw, decpwr, ref_pw90, ref_pwr;
+
+   shp = pbox_Dec(shn, wvn, bw, decpwr, ref_pw90, ref_pwr);
+
+Description: 
+shn - output shape name as used in the pulse sequence;
+wvn - waveform name as in /vnmr/wavelib;
+bw -  excitation bandwidth (in Hz); alternatively pulse duration in 
+      seconds can also be used;
+ofs - excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The pbox_Dec() function is used to create decoupling and mixing 
+waveforms. If a positive decpwr value is supplied, the dmf and dres 
+parameters are calibrated as for the given decpwr; alternatively the 
+required decoupling bandwidth can be used to calculate dpwr, dmf and 
+dres. Note that in mixing experiments the effective mixing bandwidth 
+is usually 2*B1(max) or less. This should be used to set up the bw 
+parameter. The fine attenuator should be set to 4095.0;
+
+pbox_Dcal() - decoupling calibration routine
+===========
+Syntax:
+~~~~~~~
+   shape   shp;
+   char    wvn[MAXSTR];                         /* parameter names */
+   double  bw, decpwr, ref_pw90, ref_pwr;
+
+   shp = pbox_Dcal(wvn, bw, decpwr, ref_pw90, ref_pwr);
+
+Description: 
+wvn - waveform name as in /vnmr/wavelib;
+bw -  required decoupling bandwidth (in Hz), if 0.0 then not used;
+decpwr - required decoupler power, if 0.0 then not used;
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The same as pbox_Dsh(), except no shapefile is created in the output. 
+The experimental parameter set is returned in the form of the shape 
+structure, that contains shape.pwr (course power), shape.pwrf 
+(fine power, set to 4095), shape.dres (dres parameter) and shape.dmf 
+(dmf parameter); 
+
+pbox_Rcal() - selective pulse calibration routine
+===========
+Syntax:
+~~~~~~~
+   shape   shp;
+   char    wvn[MAXSTR];                         /* parameter names */
+   double  bw, ref_pw90, ref_pwr;
+
+   shp = pbox_Rcal(wvn, bw, ref_pw90, ref_pwr);
+
+Description: 
+wvn - waveform name as in /vnmr/wavelib;
+bw -  required decoupling bandwidth; alternatively pulse duration in 
+      seconds can also be used;
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  - reference power level, e.g. pwClvl;
+
+The same as pbox_Dcal() except the shapes are calibrated to use a
+fixed course attenuator setting set at ref_pwr level and a variable 
+fine attenuator setting, as used in bio-pack sequences. The returned 
+shape structure contains parameters required for .RF shape format:
+shape.pwr (course power), shape.pwrf (fine power), shape.pw (pulse
+duration). No shapefile is produced in the output.
+

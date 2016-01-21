@@ -1,0 +1,129 @@
+*******************************************************************************
+ import1Dspec - Import ASCII Spectrum into VnmrJ / VNMR  (M)
+*******************************************************************************
+
+ Syntax:      import1Dspec('ascii_file'<,'av'>)
+
+ Description: "import1Dspec" imports a 1D ASCII spectrum into VnmrJ / VNMR.
+              For the conversion, the ASCII file (Y .. Y or X,Y .. X,Y data,
+	      one Y value per line) is read in, and a UNIX utility with the
+	      same name ("bin/import1Dspec", a C program) is used to build
+	      the binary files "datdir/data" and "datdir/phasefile" in the
+	      current experiment. "vs" is set to 100.
+	      Note that the imaginary part of the data set consists of zeroes
+	      only, i.e., the data cannot be phased - worse than that, setting
+	      "lp" to values other than 0 in "ph" mode would cause serious
+	      intensity distortions across the spectrum. To prevent such
+	      problems, "import1Dspec" offers two options:
+	       - by default, the macro sets lp=0 rp=0 and sets the parameter
+		 protections bits such that these two parameters cannot be
+		 changed. Note that this may cause cause VnmrJ / VNMR to
+		 produce errors when the user (intentionally or inadvertently)
+		 attempts to change the phase within "ds".
+	       - alternatively, you can specify 'av' as second argument. In
+		 this case, the macro switches to "av" mode, and "dmg" is
+		 locked, such that the user cannot switch to "ph" mode. This
+		 has the disadvantage that negative parts of the spectrum are
+		 flipped to positive - but at least you will not have the
+	    	 usual problem with the line broadening (from the imaginary
+		 dispersion tails) that 'av' has with "normal" spectra. The
+		 (minor) advantage of this method is that "lp" and "rp" can be
+		 used to store the original "rp" and "lp" values.
+	      If the current experiment contains nD or arrayed 1D data,
+	      "import1Dspec" first does a "setup('H1','CDCl3')", then imports
+	      the spectrum,
+	      Limitation: only works for simple, non-arrayed 1D spectra. The
+	      values of "rp" and "lp" are meaningless, the only meaningful
+	      parameter that is set from the imported data set is "fn". The
+	      other parameters (notably any applicable acquisition parameter,
+	      such as "sw", "tn", "sfrq", "nt", "ct", "np", "at", as well as
+	      possibly processing parameters such as weighting etc.) need to
+	      be set AFTER THE IMPORTING, along the following scheme:
+		$ct=ct   		"remember 'ct'"
+		tn=.. sw=.. nt=.. at=.. ...
+		setvalue('ct',$ct)	"restore 'ct'"
+		lb=.. sb=..
+		groupcopy('current','processed','acquisition')
+		groupcopy('current','processed','processing')
+	      If you have a series of similar 1D ASCII spectra to process
+	      (e.g., a series of C13 spectra acquired with the same standard
+	      parameters) it is very helpful first to prepare such parameters
+	      according to the scheme above, then, for the importing, FIRST
+	      to retrieve these parameters, then to call "import1Dspec".
+
+ Arguments:   "ascii_file": path to a pure ASCII file with either Y data (such
+	      as from "writetrace") or X,Y data (such as from "writexy").
+	      The optional second argument 'av' selects and locks the spectrum
+	      in absolute value mode (see above); default is 'ph' mode.
+
+ Examples:    import1Dspec('spectrum.xy')
+	      import1Dspec('spectrum.xy','av')
+              import1Dspec('spectrum.txt')
+              import1Dspec('spectrum.txt','av')
+	      import1Dspec('trace.1')
+              import1Dspec('trace.1','av')
+              import1Dspec('xytrace.1')
+              import1Dspec('xytrace.1','av')
+
+ Related: writetrace - Create ascii file from phasefile (f1 or f2) trace (M)
+          writexy - Create x,y ascii file from phasefile (f1 or f2) trace (M)
+          import1Dspec - Create phasefile and data from ASCII spectrum (U)
+
+
+*******************************************************************************
+ import1Dspec - Create phasefile and data from ASCII spectrum  (U)
+*******************************************************************************
+
+ Syntax:      import1Dspec <-fn ##> <-vs #.#> ascii_file <phase_file <data>>
+
+ Description: "import1Dspec" imports a 1D ASCII spectrum into VnmrJ / VNMR.
+
+ Arguments:   "ascii_file": path to a pure ASCII file with either Y data (such
+	      as from "writetrace") or X,Y data (such as from "writexy").
+	      "source/import1Dspec.c" is a C program that can be compiled with
+               		cc -O -o /vnmr/bin/import1Dspec import1Dspec.c -m32
+	      or (for a local installation)
+               		cc -O -o ~/bin/import1Dspec import1Dspec.c -m32
+
+              "phasefile": Optional path to a binary "phasefile" that can
+              afterwards be imported into VNMR / VnmrJ using "import1Dspec";
+              the default output file uses the same name as the ASCII file
+	      (with extensions ".txt" and ".xy" stripped off) but with ".phf"
+              extension.
+
+              "data": Optional path to a binary "data" file that is required
+              when importing "phasefile";  the default data file uses the same
+              name as the phasefile, but with ".dat" extension.
+
+              "-fn ##": Optional, creates a phasefile with the specified
+              number of points (fn/2 in VNMR!!!); should NOT be necessary,
+              unless the ASCII file is somehow truncated; by default,
+              "import1Dspec" will "zerofill" (add flat baseline at the
+              high-field end) if the ASCII file does not contain a power of 2
+              in points; the argument following "-fn" MUST be numeric; if the
+              specified number is NOT a power of 2, it will be rounded UP to
+              the next higher power of 2. If the specified number or its next
+              higher power of 2 are smaller than the number of points in the
+              ASCII file, the spectrum is truncated at the high-field end.
+
+              "-vs ##": Optional, permits specifying a (down)scaling factor.
+              When writing spectra in "ai" (absolute intensity) mode,
+              "writetrace" writes out Y values in mm (spectrum multiplied by
+              "vs"); specifying "-vs" with the value of "vs" from VNMR permits
+              recreating the original ("ai") spectrum. Also here, the argument
+              following "-vs" MUST be numeric and positive. The default "vs"
+              value (downscaling factor) is 1.0.
+
+ Examples:    import1Dspec spectrum.txt
+              import1Dspec spectrum.xy
+              import1Dspec spectrum.txt phasefile 
+              import1Dspec spectrum.txt phasefile data
+              import1Dspec spectrum.xy phasefile data
+              import1Dspec -fn 64000 spectrum.xy datdir/phasefile datdir/data
+              import1Dspec -vs 327.54 spectrum.xy datdir/phasefile datdir/data
+              import1Dspec -vs 327.54 -fn 32000 spectrum.xy
+
+ Related: import1Dspec - Import ASCII spectrum into VnmrJ / VNMR (M)
+          writetrace - Create ascii file from phasefile (f1 or f2) trace (M)
+          writexy - Create x,y ascii file from phasefile (f1 or f2) trace (M)
+

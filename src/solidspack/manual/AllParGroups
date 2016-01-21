@@ -1,0 +1,3434 @@
+A List of Parameter Groups and Pulse Programmimg for Solids NMR
+
+Pulse Programming for Solid-State Experiments.
+
+Experiments for Solid-State NMR use an additional set of "Solids Pulse-
+Sequence Modules" that are contained in an include file,
+/vnmr/psg/solidstandard.h.  These modules are separate from the psg
+pulse-sequence language.  To add the Solids modules to a sequence,
+include the above file with: #include "solidstandard.h" at the top
+of the pulse sequence .c file.  Note that this include will
+lengthen compilation times with seqgen.
+
+Pulse-sequence modules add a set of Solids-specific capabilities to the
+pulse programming language, which can be implemented with a minimum of
+coding.  This note includes a brief description of the set of
+modules and instructions for implementing a module in a pulse program.
+The complete list of modules is growing and it can be found in the
+documentation for SolidsPack in the userlib.
+
+The purpose of this section is to help users implement the predefined
+Solids modules of VNMRJ and SolidsPack in their own sequences and to
+understand the sequences provided in VNMRJ. A list of standard Solids
+sequences in VNMRJ can be found in Chapter 13 of the User Guide.
+
+Note that this section does not have sufficient information for users
+who wish to pulse-program their own modules.  General information about
+module programmimg is found in applications notes and the documentation
+of SolidsPack and users who wish to understand the internal programming
+of modules will need to read the code in solidstandard.h.
+
+Pulse-Sequence Modules
+
+A pulse-sequence module implements a specific NMR function that is used
+often in pulse sequences, for example "ramped cross polarization", "C7
+recoupling" or "TPPM decoupling.  Modules are C-language functions and
+they are written with the standard pulse-sequence statements found in
+Chapter 3 of the User Programmimg Manual. The code is contained in
+two functions, a "get" function that serves to get parameters and do
+calculations, and an "_underscore" function that runs the NMR function
+at the correct time in the pulse sequence.
+
+An example of a pulse-sequence module is the cross polarization module,
+"CP" that is used in tancpx.c and many other sequences.  This module
+consists of two functions, first getcp(), which gets all the parameters
+associated with constant, linear or tangent-ramped CP and second 
+_cp_(), which runs the appropriate cross polarization.  The function
+getcp() contains getval() statements to obtain parameter values, it
+does a calculation of a waveform .DEC file if the CP is linear-ramped
+or tangent ramped and it adds the .DEC file to the user shapelib
+directory.  The function _cp_() runs a Hartmann-Hahn match on two
+selected channels and executes the .DEC files with obsprgon(),
+decprgon(), etc.  To add cross polarization to a pulse sequence requires
+that the user only add these two files in the correct places.
+
+It is important not to confuse pulse-sequence statements and pulse-
+sequence modules.  A module is less than a pulse program, but it is
+more than a pulse-sequence statement.  A pulse-sequence statement is
+a C-Language function, defined in Chapter 3 of the User Programmimg
+Manual, that performs a general pulse-sequence function.  A pulse-sequence
+module is a set of C functions that implement a specific, complex NMR
+function.  Pulse-sequence statements are all documented in VNMRJ, while
+modules are often user software and they may not be explicitly supported
+in VNMRJ.  Presently, modules known to Varian are documented in
+SolidsPack in the User Library.
+
+Parameter Conventions for Pulse-Sequence Modules
+
+Pulse-sequence modules use a specific syntax for parameter naming,
+which is different from historical conventions of VNMR and VNMRJ pulse
+sequences.  A standard syntax is required because one never knows
+which two modules may reside in the same sequence and a unique syntax
+avoids duplication of parameter names in parameter sets.
+
+A parameter called from a get function is usually part of a Parameter
+Group, and there is usually one parameter group per module.  A
+parameter group consists group-template .xml file located in
+/vnmr/templates/panelitems with a naming syntax described below.  A
+parameter group is a pre-made interface that can exist in the pulse-
+sequence template for a sequence.  A user can use the panel editor to
+drag this group into the pulse sequence page for a new sequence
+containing the module.
+
+All parameters in a parameter group have the same format.  The format
+consists of a:
+
+      PREFIX + CHANNEL IDENTIFIER + SUFFIX
+      (lowercase) (uppercase)       (lowercase)
+
+The PREFIX
+
+The Prefix defines the function of the parameter, for example "a" for
+amplitude, "pw" for pulse width, "of" for frequency offset.  If more
+than one parameter of a type is present the prefix is labeled with a
+numeral, for example "pw1" and "pw2".
+
+THE SUFFIX
+
+The Suffix labels the parameter group. For example "c7" labels POST C7
+or "tppm" labels TPPM decoupling. The suffix is also the first part of
+the name of the parameter group.
+
+THE CHANNEL IDENTIFIER
+
+The uppercase Channel Identifier labels the pulse sequence channel to
+which the parameter group applies.  VNMRJ has standard terminology for
+the abstract identifiers of pulse-sequence channels, obs dec,dec2 etc,
+as described Chapter 3 of the User Programming Manual:
+
+      obs - the observe channel
+      dec - the first "decoupler" (which usually provides proton
+            decoupling)
+      dec2 - the second decoupler (the usual "channel 3")
+      dec3 - the third decoupler ("channel 4")
+      dec4 - the fourth decoupler ("channel 5")
+
+For the Solids sequences of VNMRJ the channel identifiers, used in
+parameter groups are aliases of the VNMRJ designations, using a single
+uppercase character, where usually:
+
+      "X" is obs
+      "H" is dec
+      "Y" is dec2
+      "Z" is dec3
+      "W" is dec4
+
+An example parameter is aXc7, which is the amplitude of a POST C7
+waveform applied to the obs or "X" channel of the pulse sequence.
+
+Note that the Channel Identifier, as with obs, dec, etc, is abstract
+and contains no information about the nucleus or NMR frequency used in
+the experiment. Nor does it provide any information about the hardware
+channel used to implement the particular nucleus.  In VNMRJ the nucleus
+is set with the parameters tn, dn, dn2, dn3 and dn4 and the parameters
+probeConnect or rfchannel are used to assign a pulse-sequence
+channel to a hardware channel. Parameter groups never reference the
+nucleus or probeConnect and for that reason channel identifiers must
+remain abstract.
+
+Despite the previous paragraph, it should be noted that the characters
+"X", "H", "Y" and "Z" do provide satisfying parameter names.  For
+example pwX90, the observe 90-degree pulse is a quite satisfactory name
+for experiments with lowband nuclei. pwH90 is a perfectly good first
+pulse for cross polarization. However, strictly "X" means "observe" not
+"lowband" and "H" means "first decoupler" not "protons".  pwX90 is
+still the observe 90-degree pulse for proton NMR and pwH90 would still
+be used for 19F cross polarization
+
+OTHER CONVENTIONS FOR CHANNEL IDENTIFIERS
+
+The usual convention for Channel Identifiers is most descriptive for
+experiments involving lowband, single-channel observe. "X" for observe
+usually brings to mind "lowband". "H" calls to mind "decoupling" and most
+pulse sequences are written with the dec channel used for decoupling.
+
+Dedicated highband-observe (so-called "indirect detection" experiments)
+uses a different convention: "H" = obs,"X" = dec, "Y" = dec2 and "Z" = dec3.
+Experiments with two receivers use the convention "X" = obs,"Y" = dec,
+"H" = dec2 and "Z" = dec3.  For two-receiver experiments VNMRS hardware
+requires that obs be the first receiver and dec be the second receiver.
+These sequences must be written with proton decoupling on dec2 rather
+than dec and so dec2 is given the "H" label.
+
+One will find a note on bottom line of the Channels page if a pulse
+sequence uses one of the additional conventions. One will find the label
+"RECXY" on the Channels page for two-receive experiments and IND for
+indirect experiments.  Indirect pulse-sequence names are usually labelled
+with the characters "id" and two-reciever pulse sequencesare labelled
+with "xyr".
+
+The choice of a convention for channel identifiers is under the control
+of the writer of the pulse sequence. It should be recognized that user
+sequences might use other conventions.
+
+THE PARAMETER-GROUP NAME
+
+The name of the parameter group is:
+
+      SUFFIX + CHANNEL IDENTIFIER.
+      (lowercase) (uppercase)
+
+An example is c7X which is POST C7 applied to the obs channel. Note
+that the order is opposite that of the parameter names.  The file for
+the parameter group in the directory panelitems would be c7X.xml.
+Be aware that there are some obsolete exceptions to this rule, for
+example "Hspinal" is used, not the correct "spinalH" and one will find
+Hspinal.xml in panelitems. 
+
+TWO-CHANNEL PARAMETER GROUPS
+
+A parameter group such as cross polarization involves two channels. In
+this case the channel identifier has 2 characters.  For example
+standard cross polarization is cpHX.
+
+When the same prefix must be used to identify functions of two
+different channels, a single character uppercase channel identifier is
+appended to the prefix.  For example "aX" is the amplitude of the
+observe channel of CP and "aH" is the amplitude of the DEC channel of
+CP. For parameters of this type the channel identifier is in lower case
+(here "hx"), so the two amplitude parameters above are aXhxcp and
+aHhxcp. Note that the "cp" in the actual parameters of the cpHX
+parameter group is suppressed and in practice these two parameter names
+are shortened to aXhx and aHhx.
+
+Pulse Sequence Module Syntax
+
+Pulse sequence modules consist of at least two functions, the "get"
+function and the "_underscore function".  The two functions communicate
+parameter values through a C-language structure variable.
+
+The Get Function
+
+The purpose of the get function is to get all the parameter values
+associated with the parameter group from the dataset and do any
+necessary calculations. A typical example is:
+
+      CP hx = getcp("HX",0.0,0.0,0.0,1);
+
+Here the "hx" variable is of a predefined C-language structure of "CP"
+type whose values are set by the function getcp().
+
+The first argument of the get function is the name of the parameter
+group, in this case "HX" (representing the shortened form of  "cpHX").
+The getcp() function parses the uppercase channel identifiers "H" and
+"X" and the suffix (here ' ' but in the long form 'cp') and
+automatically constructs the parameter names.
+
+Note that the getcp() function also calculates a waveform to be used
+for ramped CP using an additional function make_cp(). The three other
+arguments are used in the waveform calculation to set starting phases.
+The internals of getcp() and the extra arguments are documented with
+the getcp() function itself in SolidsPack. Usually the extra arguments
+are zero.
+
+The _underscore Function
+
+The purpose of the "_underscore Function" is to run the particular NMR
+function at the right time in the pulse sequence. This function begins
+with an underscore (hence it's name) to distinguish it from standard
+pulse sequence statements. A typical example is:
+
+      _cp_(hx,phHhx,phXhx);
+
+Here the function _cp_() takes the "hx" structure variable (with
+parameter values) as an argument and executes cross polarization.
+
+Also this _underscore function may use a waveform written by the getcp()
+function. Waveforms are stored separately as .DEC files in the shapelib
+directory.
+
+Most _underscore functions also have one or more phase-table arguments
+that set the overall phase of the pulses. The _cp_() function above sets
+the "H" phase list with phHhx and the "X" phase list with phXhx. If a
+phase-table argument is not used, the phase must be set explicitly in 
+the body sequence before the _underscore function is executed.
+
+Setting the Channel on which a Module Runs
+
+A parameter group is always implemented by the get function to run on a
+particular channel, obs, dec, etc, using a parameter with the prefix
+"ch".  Separately, the first argument of the get function provides a
+label for parameters.  For example:
+
+      MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1)
+
+looks for the parameter chXc7 which must be set, chXc7 = 'obs'. In
+principle one can move the c7X to other channels by changing the value
+of chXc7, but that practice is not recommended if one uses the standard
+channel identifiers.  If one were to set chXc7 to another value (say
+'dec') the function of the sequence would disagree with the parameter
+label. Instead if C7 were wanted on the decoupler one should define the
+parameter group c7H and set chHc7 = 'dec'.
+
+It may be thought that the channel is being set redundantly, but it
+should be recognized that the actual character used as the channel
+identifier is at the option of the writer of the pulse sequence.  The
+use of "X", "H", "Y" and "Z" for obs, dec, dec2, dec3 is only a
+convention. For example a different user might wish to label the
+observe channel "C" if a sequence were to be written only for 13C NMR.
+This user's parameter group would be "c7C" and for this group chCc7 =
+'obs'.
+
+The ability to use a parameter to set the channel on which a module
+runs is a feature that allows one to construct flexible sequences that
+might run with direct or indirect detection.  However this capability
+is not yet exploited and one will find code in all the Solids pulse
+sequences of VNMRJ that ensure that the "ch" parameter is set
+correctly.  Also Solids protocols and setup macros are written to be
+sure the "ch" parameter is set correctly before the sequence is executed.
+
+For example the C7 module in c7inad2d.c, the channel variable is set
+with the statement:
+
+      strncpy(c7.ch,"obs",3);
+
+and the value 'obs' is written back to the parameter set with:
+
+      putCmd("chXc7='obs'\n");
+      
+Note that the CP module uses the prefix "fr" to designated the channel
+with the intial polarization and "to" to designate the channel to be
+polarized. The "ch" prefix designates the channel with the ramp. Protocols
+and setup macros set the "ch", "fr" and "to" parameters explicitily by
+clearing the protection bit 14, which makes a parameter value vulnerable to
+being overwritten.
+
+Using the Same Module Multiple Times in a Sequence.
+
+Some sequences require that a particular get function be run more than
+once.  There are several cases.
+
+First, the same get function may be run on two different channels with
+different parameters groups. This situation arises in the pisema2d.c
+sequence where FSLG is implemented on both the "X" and the "H"
+channels.  In this circumstance there are two different parameter
+groups fslgH and fslgX.  The get functions are:
+
+      MPSEQ fh = getfslg("fslgH",0,0.0,0.0,0,1);
+      MPSEQ fx = getfslg("fslgX",0,0.0,0.0,0,1);
+
+and they create two different structure variables fh and fx.
+
+A second situation occurs where the get function is run twice with the
+same parameters.  This situation arises in c7inad2d.c with the code:
+
+      MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+      MPSEQ c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
+
+Here there is only one parameter group, c7X, but two different
+structure variables c7 and c7ref.
+
+Also in this example one is calculating c7ref with a starting phase
+determined from the ending phase of c7.  This latter information about
+phases is provided below. 
+
+Accessing Parameter Values Outside of Modules
+
+Sometimes it may be necessary to access individual parameter values of
+a module in the body of a sequence.  For example it may be necessary to
+preset an amplitude at a time previous to the execution of the
+_underscore function.
+
+The parameter values of modules can be accessed using the standard
+conventions of a C structure using the variable name of the structure
+followed by a dot and the parameter name.  For example the amplitude of
+C7 defined above is c7.a.  One would set the amplitude with
+obspwrf(c7.a).  Names in the structure are not necessarily the same as
+parameter names, and it is necessary to read the syntax of the C-
+structure in its source code file to obtain this information.
+
+Particular Conventions of VNMRJ Solids Sequences
+
+The Solids sequences of VNMRJ use particular conventions that are
+different from historical programming conventions of VNMR and VNMRJ.
+While these conventions are not mandatory in user sequences they aid in
+easy programming with pulse sequence modules.
+
+Every pulse sequence un-blanks all channels throughout the run, except
+for obs during acquisition.  It is recommended that all these sequences
+be run in "Solids Mode". In this mode the VNMRS will not blank at an
+time other than when explicitly designated during the sequence. See the
+separate documentation for setting Solids Mode.
+
+For routine 3-channel experiments such as redor1tancp.c it is desirable
+to blank the dec2 channel to avoid noise from the third channel
+amplifier.  Also, users who run 2-channel experiments with a 3-channel
+probe connected would like to avoid turning off or disconnecting the
+third channel amplifier.  The file solidstandard.h provides a pair of
+custom blanking statements, _blank34() and _unblank34() that set the
+blanking of dec2 and dec3 only if numrfch > 3 or numrfch > 4.  To use
+these statements it is necessary to set ampmode = 'ddp' or 'ddpp' in
+the parameter set.
+
+In the pulse-sequence source code one will often find simultaneous,
+similar statements on the same line. The VNMRS has no pulse-
+programming delays - so the ordering of statements that do not
+explicitly contain time is not significant.
+
+The pulse-sequence source code usually presets phase and amplitude
+whenever possible.  Even though the rise time for any event on the NMR
+system is only 50-100 ns, we avoid the situation for which an attribute
+such as phase or amplitude is set during the pulse rise time.
+
+The parameter rof1 (the amplifier un-blank time) is not used in most
+sequences because the amplifiers are always un-blanked.  For modules
+that execute interleaved acquisition (where amplifier blanking is
+necessary) the prefix for "rof1" is "r1", the prefix for "rof2" is "r2"
+and the prefix for "rof3" is "r3".
+
+The acquisition dead time is made up of a receiver delay (rd) and an
+acquisition delay (ad) instead of rof2 and alfa.  Use of rd and ad
+avoids the automatic system setting of the dead time and ddrtc. Solids
+users must manually set ddrtc (ddrtc = rd + ad) to obtain zero first-
+order phase error in spectra.
+
+Solids sequences in VNMRJ never use the status() statement and never
+use the parameters dm and dmm.  Control of the decoupler during
+acquisition is provided by the "Hseq" parameter group that allows TPPM,
+SPINAL, CW decoupling and no decoupling. Decoupling during other times
+is provided by the appropriate decoupler pulse-sequence module.  The
+standard "Liquids" decoupling waveforms are not accessible in Solids
+sequences.
+
+Solids sequences in VNMRJ avoid the use of "flags" that allow more than
+one pulse sequence function in a single sequence unless the flag must
+be arrayed in an experiment. Exceptions are the choice of constant,
+linear or tangent CP in the CP module and the decoupler choices in
+the previous paragraph. However it will be noted here that the choices
+are internal to the repsective modules, not the sequence. 
+
+Phase-table Conventions in Solids Sequences
+
+All phase tables that increment scan-to-scan are explicitly defined in
+the body of pulse sequences in the usual manner described in chapter 3
+of the User Programming Manual. The phase table names t1, t2, etc 
+are often replacedwith descriptive names that reference a module.  
+This replacement is easily accomplished with a  standard C-Language 
+statement such as:
+
+      #define phHdec t1
+
+where the name of the t1 phase table is given a descriptive alias,
+phHdec. The NMR System still recognizes "t1".
+
+Many _underscore functions take a phase table as an argument in a
+manner similar the rgpulse() pulse-sequence statement.  If an
+_underscore function does not take a phase table as an argument the
+user must set the phase directly in the sequence using txphase(),
+decphase(), etc.
+
+Automatic Assignment of Phase Tables and V-variables in Pulse-Sequence
+Modules
+
+Some _underscore functions have internal phase tables that increment
+the phase over a group of pulses within 1 scan.  These modules make use
+of both phase tables and V-variables.   An example is the module for
+XY8 in redor1tancp.c.  Such a module must automatically assign a phase
+table to an unused table name, t1, t2, etc, and assign a V-variable to
+and unused name, v1, v2, etc.  To avoid conflicts with tables that a
+user may define explicitly, the convention is to set an upper table
+number and count down for each automatic assignment.  The pulse
+sequence writer should start from 1 and count upward for each explicit
+assignment.
+
+The file solidsstandard.h provides two custom elements to set 
+the upper table number and V-variable number.   These elements are
+settablenumber() for phase tables and setvvarnumber() for V-variables.
+These elements should be placed within the pulse-sequence function
+before any get functions.  It is up to the pulse-sequence writer to
+set the upper table numbers high enough to avoid conflicts with
+explicitly-named tables.  The values 60 for tables and 30 for v-
+variables are recommended. The need for these statements is noted in
+the documentation for the individual modules in SolidsPack.
+
+Controlling the Frequency Offset and Starting Phase of a Module
+
+Many pulse-sequence modules provide the opportunity to set the frequency
+offset, using the prefix "of".  In modules, a frequency offset is
+always set by phase-ramping a waveform pattern, never by resetting the
+frequency synthesizer.  For that reason the only modules that allow
+frequency offsets are those that make waveforms patterns.  If a module
+uses a waveform pattern, that fact is noted in its documentation and by
+presence of parameters with prefix "of".
+
+Application of a frequency offset to a portion of a pulse sequence can
+be a subtle subject and one must pay attention to the concepts of phase
+continuity and phase coherence of the RF.  Two modules are phase
+continuous when the ending phase of the first module is the same as the
+starting phase of the second.  If two modules with the same offset are
+separated by a period where the frequency is offset, the second module
+is phase coherent with the first if its phase is independent of the
+frequency of the intervening offset. 
+
+For a Solids module, if an offset is applied and no specific phase
+shift is applied, the starting phase is always continuous with the
+output of the synthesizer and the effective LO of the receiver.  When
+the module completes, there is a discontinuous jump and the RF phase
+returns to coherence with the synthesizer phase. Switching frequency in
+a module never affects the RF phase coherence of the receiver, though
+it may phase shift the magnetization if the RF is on during the module.
+
+If two modules are to be phase continuous then one must supply the
+ending phase of the first module as an argument to the second module.
+Two arguments of the get function (phAccum and phInt) are both needed
+to supply the input phase to a module. An example is two periods of C7
+recoupling from the sequence c7inad2d.c:
+
+      MPSEQ c7 = getpostc7("c7X",0.0,0.0,0.0,0,1);
+      MPSEQ c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
+
+The variables c7.phAccum and c7.phInt are supplied as arguments to make
+c7ref.  In this example, if no other phases are changed, the beginning
+phase of c7ref will be equal to the ending phase of c7, for any value 
+of ofXc7.  The parameter c7.iSuper sets the starting supercycle element 
+of the second C7 waveform.
+
+Syntax of General Module Types
+
+Many modules use the standard types, MPSEQ, SHAPE, WMPA and GP. Each
+of these module types is associated with a particular C-structure
+variable type and the get-functions have a general argument syntax.
+MPSEQ modules have their own set of general  _underscore functions as
+well.   Other modules are usually run by dedicated _underscore
+functions with the same name as the get function.
+
+Multiple Pulse Waveforms, MPSEQ, phase, amplitude, gate and offset
+
+The MPSEQ type is used to implement "multiple pulse waveforms" which 
+consist of a repeating pattern of duration steps in a .DEC file. One 
+can set lists for the phase, amplitude and gate for each step.  In 
+addition one can set an offset for each duration. The offset value is 
+used to impose a ramp on the phase column of the .DEC file.  Setting
+an overall offset creates an offset list with a single offset that 
+applies to all steps. It should be understood that application of one 
+or more offsets will expand the size of the .DEC files and increase 
+start-up times. 
+
+All MPSEQ types create a .DEC pattern in shapelib.  The patterns are
+run with obsprgon(), decprgon(), etc, and halted with obsprgoff(),
+decprgoff(), etc. Multiple .DEC patterns can be run simultaneously in
+parallel on different channels and MPSEQ modules share the same
+capability.
+
+The get function of an MPSEQ has syntax similar to the following:
+
+      MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+
+for POST C7.  All MPSEQ's allow the user to specify a base phase list
+as well as a supercycle phase list.  These two phase lists are
+enumerated or calculated in the get function.  MPSEQ's have a wide
+variety of applications, including windowless phase modulated
+decoupling such as DUMBO and TPPM, as well as the   "R" and "C"
+recoupling sequences.  The second argument of the get function iSuper
+allows one to set an individual element of the supercycle phase list as
+the starting phase of the pattern.  If a supercycle is not present this
+argument will not be present.
+
+The MPSEQ type can have a single overall offset that is applied by
+automatic phase ramping.  If an offset is used it may be necessary to
+set the starting phase with arguments 3 and 4 (phAccum and phInt - or
+arguments 2 and 3 if iSuper is not present).   All MPSEQ modules store
+their ending phase in these two variables and the variables can be used
+as input arguments for the next module to set the starting phase.
+
+The second to last argument of the MPSEQ get function is an index to
+distinguishthe .DEC filenames of individual implementations.  The 
+pattern name isa string containing the name of the parameter group of 
+argument 1.
+
+The MPSEQ type is run by the following general underscore functions:
+
+      _mpseqon(MPSEQ x, int phase) - starts the pattern.
+      _mpseqoff(MPSEQ x)           - stops the pattern.
+      _mpseqT(MPSEQ x, int phase)   - runs the pattern for a time
+                                     specified in the get function.
+      _mpseq(MPSEQ x, int phase, double t) - runs the pattern for a time t.
+
+The standard get functions for MPSEQ's are found in the file solidmpseqs.h in 
+the "psg" directory. 
+
+Shaped Pulses, SHAPE
+
+The SHAPE type makes a shaped-pulse .DEC pattern that is designed to
+be run for one cycle.  For example: 
+
+      SHAPE getdfs("dfsX",0.0,0.0,0,1)
+
+implements a double-frequency sweep, DFS, pulse. The arguments 2-
+4 are similar to MPSEQ (iSuper is absent) for phase-continuous 
+applications.
+
+SHAPE differs from MPSEQ in that the user must input an equation for 
+the phase and amplitude in a STATE type function. STATE functions are
+found in solidstates.h.  The SHAPE get functions are found in solidpulses.h
+in the psg directory. 
+
+Pbox Shaped Pulses, PBOXPULSE  The function
+
+      PBOXPULSE getpboxpulse("shapeX",0.0,0.0,0.0,1)
+
+can be used to generate an arbitrary .RF pulse using Pbox.  Pbox contains
+a standard library of shaped pulses that can be accessed from within VNMRJ.
+This particular function does not access reference power and amplitude, but
+related get functions can be written to access reference values.
+
+A PBOXPULSE can be run with the _underscore functions:
+
+      _pboxpulse()
+      _pboxsimpulse()
+      _pboxsim2pulse()
+
+These functions determine the ouput channel of each shape from the
+parameter chXshape of the PBOXPULSE variable and execute the
+appropriate simshaped_pulse() command. Also pulses created with 
+Pbox can be run with the usual commands of the Pbox psg. 
+
+Modules for Timeshared Pulses with Acquisition, WMPA
+
+The WMPA modules output time-shared pulses with acquisition and are
+used for standard CRAMPS experiments such as BR24 and MREV8 as well
+as windowed PMLG and windowed DUMBO.
+
+WMPA modules output standard pulses with an internal phase table and
+they do not make use of patterns.  One cannot set the overall offset of
+a WMPA type.  The WMPA type requires the automatic assignment of its
+internal phase table and so one must use settablenumber() and
+setvvarnumber() functions when this type is in a pulse sequence.
+
+An example implementation of WMPA is the function:
+
+      WMPA br24  = getbr24("br24X")
+
+that provides BR24 CRAMPS.
+
+This module (as all WMPA modules) has a dedicated _underscore function
+of the same name:
+
+      _br24(br24, phXbr24)
+
+where phXbr24 is the overall phase table.
+
+Modules that do time-shared pulses with acquisition automatically
+calculate the number of cycles to fit in the acquisition time at, using
+the cycle time (prefix "tau").  The length of the acquisition window
+is set with prefix "npa", which is defined as the number of 100 ns
+ticks in the acquisition window.
+
+The prefix "r1" is the pre-pulse delay for un-blanking.  The prefix
+"r2" is the post-pulse delay before the receiver is turned on.  The
+prefix "r3" is used to supply the current value of rof3, which
+establishes the length of the rcvron() element.  One must set the "r3"
+parameter equal to rof3 to obtain correct timing.
+
+The prefix "ch" can be used to put the pulses on a channel other than
+the observe channel.  To implement synchronized heteronuclear
+decoupling.  This approach might be used instead of an MPSEQ module on
+the decoupler.  However, usually a WMPA module is used on the observe
+channel to provide homonuclear decoupling without the use of patterns.
+
+The General Pulse Module Type, GP
+
+The general pulse module GP is similar to the WMPA type except that
+it has no facility for acquisition.   The GP type is used to place
+general pulses and delays into a module.
+
+GP modules output standard pulses with an internal phase table and they
+do not make use of patterns.  One cannot set the overall offset of a GP
+type.  The GP type requires the automatic assignment of its internal
+phase table and one must use settablenumber() and setvvarnumber()
+functions when this type is in a pulse sequence.
+
+Specific Module Types
+
+The following list of other module types are employed in specific modules.
+
+TPPM   - Outputs TPPM decoupling waveform - no offset.
+SPINAL - Outputs SPINAL decoupling - no offset.
+DSEQ   - Chooses a decoupling pattern (TPPM or SPINAL)
+CP     - Standard constant, linear or tangent-ramped CP with an offset on
+         the ramped channel.
+RAMP   - Standard constant, linear or tangent-ramped pulse on one
+         channel.
+DREAM  - Constructs a DREAM pulse from RAMP modules.
+
+Control of Waveforms During Arrays - added 2008-10-01
+
+The changes of 2008-10-01 replace the "isarry()" and "logic" methods for determining
+whether to write a new wavefrom file with a new method. The previous method has 
+the problem that anytime a parameter is arrayed - new waveforms are calculated for
+every member of arraydim. Problems arise with 2 paramter arrays where only one 
+parameter affects the waveform - or arrays with 2D spectra where the wavefrom is
+rewritten for all F1 increments - even though such is not necessary.  
+
+The new function parsearry() "parses" the array parameter to determine the number 
+of array loops and which parameters correspond to which loops. The psg element 
+"getarray()"is used to determine the maximum index of each loop. Note that 
+simultaneous arrays are tracked properly to correspond to only one loop. All this 
+information is stored in the AR structure, which is a new member of each module 
+structure.  parsearry() uses the array index "ix" to calculate the array index 
+for each loop. 
+
+The function disarry() ("determine is array") takes a parameter name as an argument, 
+queries the AR structure and sets a 1 in a field of the AR structure corresponding to 
+the array loop in which that parameter changes. Use disarry to examine any parameter 
+that might affect a waveform (just as isarry() was used in the past).
+
+The function hasarry() uses the indcies in the AR structure to calculate a 
+"reduced index" to label waveforms (previously "ix" was used, generating excess
+waveforms). hasarry() returns a "1" if a new index is in fact needed and "0" 
+if the reduced index has not increased. The "choppers" and "make" functions
+now will run only if hasarry returns "1", reducing the number of calculations 
+and files.  
+
+The function arrindex() returns the index itself which is formated into the pattern 
+name as "ix" was in the past. 
+
+The hasarry() function communicates with a "static", "MODULE-type" structure to 
+store the last index.  Note that the structures (c.f MPSEQ etc) for each 
+pulse-sequence module, including the AR structures, are local variables and do 
+not survive from increment to increment. The static "mod" variable is an array 
+of MODULE structures that contain one structure per "get function". The structures 
+are labelled using the root of the pattern character field (the parameter group 
+name).  They presently contain only the current "reduced index" -- but potentially 
+they could contain other information that is not in the .DEC file but that needs 
+to be saved increment to increment. 
+
+The parsearry() function also adds a dummy parameter "xx" as the outer loop member.
+This parameter has a loop dimension greater than 1 if arraydim is greater than 
+the combined dimension of all parameters in "array".  This situation will arise 
+if there are 2D or 3D increments in an experiment. By default "xx" is not enabled
+for waveform calculation - and new waveforms are not generally desired for multi-d 
+increments. One can activate "xx" though with the function disarry() using "xx" 
+as the input for the paramter name.  One need not create an "xx" parameter.  VNMRJ 
+does not have a simple mechanism for making any particular parameter array simultaneous 
+with a 2D or 3D array - and if wavefrom changes are needed during F1 or F2 of a 3D 
+experiment one must calculate them explicitly. Also note that simple activation of
+"xx" will generate new wavefroms for both 2D and 3D increments without distinction. 
+Further programming is needed if one wishes to make a distinction -- and the
+procedure can be provided on request. 
+
+"Updating" a Module after its Implementation - added 2008-10-01
+
+In some cases it is necessary to modify the fields of the structure after 
+the execution of the "get" function. In this case it is desirable to 
+postpone the calculation of the .DEC waveform. 
+
+For pulse sequences relased after October 1 2008 each "get" function has 
+an additional, second integer argument, "calc", following "nRec". Set 
+calc = 0 to suppress the waveform calculation.  Set calc = 1 to enable
+the waveform calculation.  
+
+A set of functions similar to update_mpseq() allow one to calculate the 
+pattern name and execute the .DEC waveform calculation. An example from 
+the sequence hetcorlgcp2d_1.c is: 
+
+   MPSEQ fh = getfslg("fslgH",0,0.0,0.0,1,0);
+   strncpy(fh.ch,"dec",3);
+   putCmd("chHfslg='dec'\n");
+   double pwHfslg = getval("pwHfslg");
+   fh.nelem = (int) (d2/(2.0*pwHfslg) + 0.1);
+   fh.array = disarry("xx", fh.array);           
+   fh = update_mpseq(fh,0,p1.iSuper.phAccum,p1.pars.phInt,1);
+
+Here the last argument of getfslg() is a 0, suppressing the waveform 
+calculation.  The arguments of the "update_mpseq()" function are: 
+
+   fh - the MPSEQ structure variable
+   iSuper - the initial Supercycle element. 
+   phAccum and phInt - the two input phase parameters. 
+   nRec - the waveform index. 
+
+In this particular case the input phase arguments are coming from 
+the pulse "p1.pars" structure of the "p1" SHAPE. 
+
+Note that "calc" is not an argument of update - update always
+generates a waveform. 
+
+Phase-Continuous Offset Programming Requires the Update Procedure. 
+
+Here it was necessary to modify fh.nelm, the number of FSLG cycles 
+written in the .DEC file, so that the waveform would have the required
+number of elements to fit into the "d2" F1 delay. The initial value 
+obtained from the parameter nHfslg was "1". However if an offset is 
+applied to an MPSEQ the number of cycles must be large enough to 
+avoid looping the waveform. Also fh.array = disarry("xx", fh.array); 
+forces a new waveform to be written on each F1 step (see the previous
+section for a discussion of disarry()). 
+
+As an aside - it should be noted here that the FSLG waveform is 
+calculated for every F1 step so that the final values of fh.phAccum 
+and fh.phInt can be used as input arguments of a subsequent pulse p2 
+(generated as a SHAPE module). This construction provides a phase continuous 
+offset for this region of the HETCOR sequence encompassing p1,d2 and p2.
+
+One might note that a more efficient method to accomplish the above
+result would be to separately calculate the phase arguments of p2 and 
+calculate only one FSLG .DEC file using the expressions: 
+
+    
+    double p2phAccum = fh.of*360.0*d2; 
+    double p2phInt = 0.0; 
+    double pwHfslg = getval("pwHfslg");
+    double ni = getval("ni");
+    double sw1 = getval("sw1");
+    fh.nelem = (int) (ni-1)/(2.0*sw1_ pwHfslg) + 0.1);
+
+    where p2phAccum and p2phInt replace fh.phAccum and fh.phInt as 
+    arguments of the p2 SHAPE.  
+
+With this method one would achieve a shorter start-up time and more 
+efficient use of RF controller memory at the expense of programming 
+complexity. 
+
+Managing AP-bus Delays for UnityINOVA.  
+
+The UnityINOVA pulse-sequence instructions that adjust amplitude and 
+small-angle phase, and start waveforms have characteristic lengths, 
+the "AP-bus" delays. All _underscore functions are written in a way 
+to manage INOVA AP-bus delays so as to have a minimum impact upon pulse 
+sequence performance. SolidsPack also provides tools, using "Preset 
+Arguments", by which the user can control the timing of _underscore 
+functions.  The tools which control preset arguments and manage INOVA
+delays are called "Adjustment" functions. 
+
+All AP-bus delays are zero for VNMRS and _underscore functions execute 
+with exact timing on VNMRS.  The discussion below applies only to 
+UnityINOVA.  The "Adjustment" functions are not needed for VNMRS sequences,
+ 
+but an INOVA sequence with such functions will run correctly on VNMRS. 
+
+"Preset Arguments" of Modules.   
+
+Each _underscore function has a set of "preset modes" that determine its
+timing for UnityINOVA. For all types of the waveform-based _underscore 
+functions (MPSEQ, SHAPE, RAMP, DSEQ and CP) the argument "preset1" controls 
+the start-timing and "preset2" controls the stop-timing. In addition 
+"preset3" adds one more capability to the CP module. 
+
+By default preset1 = 0, preset2 = 0 (and preset3 = 0) and if one does no 
+special programming, _underscore functions have default behavior. It is 
+important to read the descriptions of the defaults, so as to understand 
+the expected behavior of the UnityINOVA system. One is also cautioned that
+the behavior of the modules with preset arguments greater than 1 is 
+necessarily intricate. The next few sections require careful reading if 
+one is to make use of preset arguments.  
+
+MPSEQ and SHAPE Default Behavior
+
+      MPSEQ and SHAPE always run a waveform. 
+ 
+      _mpseqon() starts a .DEC waveform. The transmitter and quadrature 
+      phase are set first with no delay. The amplitude is set second in a 
+      500 ns delay. The waveform is started third after an additional 1.25
+      us delay followed by a 450 ns delay (1.7 us total). The 1.25 us delay 
+      sets the waveform generator. The 450 ns is a second delay to coincide
+      with the true waveform start.  In all _mpseqon adds 2.2 us to the 
+      sequence. 
+
+      _mpseqoff() stops a .DEC waveform. The waveform is halted immediately
+      with no delay. A 500 ns delay is added to reset the waveform generator 
+      and the transmitter is gated off at the end of the 500 ns. In all, 
+      _mpseqoff() adds 500 ns of time to the pulse sequence. 
+
+      _mpseq() excecutes an mpseqon(), followed by a delay and then
+      the _mpseqoff().  The transmitter is on throughout (unless deliberate 
+      gate commands are provided in the waveform) and the quadrature phase 
+      applies throughout the run-time, start and stop times. In all, _mpseq()
+      adds 2.7 us in addtion to the delay time.
+ 
+      _shapeon() is identical to _mpseqon().
+      _shapeoff() is identical to _mpseqoff().
+      _shape() is identical to _mpseq(). 
+
+RAMP Default Behavior
+
+      RAMP runs a waveform unless it is set to "constant" mode. In constant
+      mode the the waveform generator is turned off.
+
+      In "linear" and "tangent" modes:
+
+      _rampon() behaves exactly as _mpseqon() above (2.2 us).
+
+      _rampoff() behaves exactly as _mpseqoff() above (500 ns).
+
+      _ramp() behaves exactly as _mpseq() above (2.7 us plus delay).
+
+      In "constant" mode: 
+
+      _rampon() sets the transmitter and phase followed by an amplitude 
+      statement (500 ns).
+
+      _rampoff() gates the transmitter off with no delay (0 ns). 
+      
+      _ramp() executes a _rampon(), followed by a delay and then the _rampoff()
+      (500 ns + delay).
+
+DSEQ Default Behavior
+
+      _dseqon() and _dseqoff() behave exactly as _rampon and _rampoff(), 
+      except that no operation takes place (0 us, 0 us) if the SPINAL or TPPM 
+      amplitude is 0.0. "constant" mode is chosen if the SPINAL or TPPM 
+      phases are zero (500 ns and 0 ns). Behavior is similar "linear" and 
+      "tangent" (2.2 us and 500 ns) if the SPINAL and TPPM phase are greater 
+      than 0.0. 
+
+      There is no _dseq() function. 
+      
+CP Default Behavior
+
+      _cp_() behavior is identical to _ramp() behavior except that an 
+      additional amplitude statement is executed on the "constant" channel
+      (500 ns) after that of the "ramped" channel, but before waveform start. 
+      Total time in "linear" or "tangent" modes is 3.2 us plus the CP delay. 
+      Total time in the "constant" mode is 1 us plus the CP delay.
+
+      There are no "_cpon_()" and "_cpoff_()" functions. 
+
+VNMRS Default Behavior
+
+      The VNMRS has no AP-Bus Delays. _mpseqon(), _shapeon(), _rampon(), 
+      _dseqon(), _mpseqoff(), _shapeoff(), _rampoff(), _dseqoff() add 
+      no time to the sequence.  All events occur simultaneously. 
+
+      _mpseq(), _shape(), _ramp() and _cp_() each generate pulses and 
+      or spinlocks with the entered time.  
+      
+All Modules preset1 > 0
+
+      The argument preset1 determines the timing of _mpseqon(), _shapeon(). 
+      _rampon(), dseqon() and the beginning of _mpseq(), _shape(), _ramp() 
+      and _cp_().   
+
+      If preset1 = 1 then the transmitter and phase (if present) are set 
+      after all of the other delays. For preset = 1 the designated start 
+      delay appears to take place in the delay immideately preceeding the
+      _underscore function. It is desirable to adjust the length of the 
+      previous delay to subtract the start delay form this delay. If the 
+      transmitter is on in the preceeding delay, it may fluctuate during the
+      start time unless one explicitly sets it (see below). 
+
+      If preset1 = 2 the behavior is similar to preset1 = 1, except that the
+      1.25 us delay to set the waveform generator is removed.  In most cases 
+      the amplitude statement (500 ns) is also removed and the total time with
+      preset = 2 is 450 ns. If preset = 2 is used one must set the waveform
+      generator in a delay previous to, but not necessarily contiguous with, 
+      the _underscore function (see below). 
+
+      If preset1 = 2 for _rampon(), _ramp() in "constant" mode an amplitude
+      statement remains and the total time added is 0.95 us. The difference 
+      occurs because the amplitude can be preset if the waveform generator is 
+      on, but the amplitude can not be preset if the waveform generator is off.
+
+      If preset1 = 2 for the _cp_() function the amplitude of the "constant" 
+      channel is set unless preset3 is used.  The amplitude of the "ramped"
+      channel behaves similarly to _rampon() and _ramp(). The time is 0.95 us 
+      when the ramped channel is in "linear" or tangent mode and 1.35 us when 
+      the "ramped" channel is in "constant" mode.
+
+      _desqon() does not allow preset1 = 2. 
+
+All Modules with preset2 > 0.    
+
+      The argument preset2 determines the timing of _mpseqoff(), _shapeoff(). 
+      _rampoff(), dseqoff() and the end of _mpseq(), _shape(), _ramp() and _cp_(). 
+
+      For preset2 = 1 the transmitter is turned off before the 500 ns 
+      delay to reset the waveform generator (if present). For preset2 = 1 
+      the designated stop delay (if present) appears to take place in the 
+      delay immediately after the _underscore function. It is desirable to 
+      adjust the length of the this delay to subtract the stop delay. 
+
+      If preset2 = 2, the 500 ns waveform generator reset delay is postponed 
+      and the stop occurs with zero time.  One must execute the reset of the 
+      wavefrom generator in some later delay.  
+
+      _dseqoff() does not allow preset2 = 2. 
+
+VNMRS Behavior with preset1 > 0 and preset2 > 0. 
+
+      There is no reason to purposely use preset1 > 0 and preset2 > 0 with VNMRS.  
+      However an INOVA sequence with these presets will run on VNMRS with default 
+      behavior. 
+
+Delay-Adjustment Functions for Modules
+
+      Each module, MPSEQ, SHAPE, RAMP, DSEQ and CP has an associated "Adjustment" 
+      function, adj_mpseq(), adj_shape(), adj_ramp(), adj_dseq(), adj_cp_(). 
+
+      The first argument is the structure variable for the module. The function 
+      returns the structure variable as well with any changes. 
+
+      Argument 2 is a pointer to the delay which one desires to compensate for the 
+      module start time. You must preceed the variable name with an "&" and the 
+      variable must be previously defined. 
+
+      Argument 3 is a pointer to the delay which one desires to compensate for the 
+      module stop time.  You must preceed the variable name with an "&" and the 
+      variable must be previously defined.  
+
+      Sometimes it will be desirable to adjust only one delay of the two. In this
+      case one must define a "dummy" variable for the unused argument. 
+
+      Arguments 4 and 5 are preset1 and preset2 repsectively and adj_cp_() has a
+      sixth argument preset3.  
+
+      The adjustment functions set the desired presets and adjust the appropriate 
+      delays. The actual adjustment will vary according to the rules noted above 
+      for module behavior. It is not necessary to understand the intricate preset
+      behavior, the adjustment function takes care of it. 
+
+      "Adjustment" functions must follow the "get" function but preceed execution of
+      the _underscore functions associated with a module. 
+
+      It is possible to modify a delay associated with the structure variable. However 
+      if that is done one must execute an "update" function to recalculate the shape
+      (see above). 
+
+The Generic Delay-Adjustment Function
+
+      The function delayadj() is a generic function to adjust any delay. The first 
+      argument is a pointer to the variable to be adjusted.  The second argument is 
+      the adjustment value. You must preceed the variable name with an "&" and the 
+      variable must be previously defined.  
+
+Amplitude Initialization during the 450 ns Start Period
+
+      VNMRJ scales the amplitude of any waveform so that the value "1023" in the
+      .DEC file represents the current amplitude value set by the last amplitude 
+      statement. If the transmitter is "on" the amplitude can fluctuate during the 
+      start time of the waveform. During the first 1.25 us the amplitude *has the
+      value* set by the previous amplitude statment. During the 450 ns period the 
+      amplitude *has the value of the last step of the last waveform, based upon 
+      the last step of the .DEC file as scaled by the amplitude that had been set 
+      while the wavefrom was running*. Once the waveform starts the amplitude has 
+      the value of the first step scaled by the current amplitude, set before the
+      waveform started. 
+
+      If one wishes to start the waveform during a previous pulse it is desirable
+      to control the amplitude during the 450 ns, so that it has the same 
+      amplitude as that during the 1.25 us start time and the rest of the pulse. 
+      If possible in the sequence, one can accomplish that objective by starting 
+      the waveform with a constant amplitude .DEC file using an internal value of 
+      1023. The waveform must run for at least 1.0 us, and then it can be stopped.
+      On INOVA this process can be accomplished with the transmitter off, so as not
+      to create a pulse of RF. 
+
+      The _underscore functions _init_mpseq(), _init_shape(), _init_ramp() and _init_cp() 
+      take the structure variable as the first argument and an amplitude value as the 
+      second. They initialize the amplitude during the 450 ns start delay for the next
+      waveform. These functions are offten used when a waveform immediately follows 
+      a pulse with a different amplitude and preset1 = 1 or 2. 
+
+      In many cases it is not possible to intialize the 450 ns delay. One must then 
+      either live with the fluctuation or keep the two amplitudes the same. 
+
+      Amplitude intialization must take place before the actual waveform amplitude 
+      is set and before the waveform is started. 
+
+      A set of adjustment functions adj_initmpseq(), adj_initshape(), adj_initramp()
+      and adj_initcp_() can be used to compensate the delay in which the "_init" 
+      statement takes place. "Adjustment" functions must be executed after the 
+      "get" function but before the delay containing the "_init" function.  
+
+ VNMRS Amplitude Initialization
+
+      There is no reason to purposely use amplitude initialization with VNMRS 
+      VNMRS.  However an INOVA sequence with "_init" statements will run on VNMRS
+      with default behavior. One must reatina the amplitude correction following 
+      these statements. 
+
+      Amplitude initialization is not needed for VNMRS.  The underscore functions 
+      _init_mpseq(), _init_shape(), _init_ramp() and _init_cp() each set he amplitude
+      on all channels that are involved in the module and add zero time to the pulse 
+      sequence. Note that the *amplitude needs to be reset* if needed after the "_init" 
+      statements for VNMRS just as for INOVA, 
+
+      The set of adjustment functions adj_initmpseq(), adj_initshape(), adj_initramp()
+      and adj_initcp_() provide a zero adjustment to delay which they compensate. 
+
+_Underscore Functions to be used with preset1 = 2. 
+
+      When preset1 = 2 one must preset the amplitude and start of the waveform 
+      in the delay previous to the delay in which it is run. By implication this
+      delay is not contiguous.  In that case one would have used preset1 = 1.  
+
+      The usual use of preset1 = 2 occurs when the minimum time for a preceeding
+      pulse must be shorter than 1.7 us. With preset1 = 2 it can be 450 ns. 
+
+      The functions _setmpseq(), _setshape(), _setramp() and _setcp_() preset 
+      the amplitude of the waveform, start it and the halt it just before the 
+      first step. One can then execute all instructions except those that start
+      other waveforms on the same channel. 
+
+      A requirement for using a "_set" function is that preset1 = 2.  Otherwise 
+      a second attempt will be made to start the waveform and an error will occur. 
+      One must execute an "adjustment" function for the module so as to set 
+      preset1 = 2. 
+
+      A set of adjustment functions adj_setmpseq(), adj_setshape(), adj_setramp()
+      and adj_setcp_() can be used to compensate the delay in which the "_set" 
+      statement takes place. For _rampon(), _ramp() and _cp_() which can have 
+      "constant" modes the "_set" functions perform the correct operation for the
+      desired state of the waveform and may take different amounts of time.  The 
+      "adjustment" functions adjust for the correct time. They must be set after 
+      the "adjustment" function for the module. 
+
+_Underscore Functions to be used with preset2 = 2. 
+
+      When preset2 = 2 one may delay the reset of the waveform to a later delay. 
+      By implication this delay is not contiguous.  In that case one would have 
+      used preset2 = 1.  
+
+      The usual use of preset2 = 2 occurs when the minimum time for a 
+      post-waveform pulse must be shorter than 500 ns. With preset = 2 it can 
+      be 0 us. 
+
+      The functions _clearmpseq(), _clearshape(), _clearramp() and _clearcp_()
+      reset the waveform generator separately. One can then execute all 
+      instructions before a separate "_clear" statement other than those that 
+      start other waveforms on the same channel. 
+
+      A requirement for using a "_clear" function is that preset2 = 2.  Otherwise 
+      a second attempt will be made to stop the waveform. One must execute an 
+      "adjustment" function for the module so as to set preset2 = 2. 
+
+      A set of adjustment functions adj_cleampseq(), adj_clearshape(), 
+      adj_clearramp() and adj_clearcp_() can be used to compensate the delay in 
+      which the "_clear" statement takes place. For _rampoff(), _ramp() and 
+      _cp_() which can have "constant" modes the "_clear" functions performs
+      the correct operation for the desired state of the waveform and may take 
+      different amounts of time.  The "Adjustment" functions adjust for the
+      correct time.  Adjustment for the "_clear" delay must occur after an 
+      "adjustment" function is executed for the module but before the waveform 
+      is set.   
+
+VNMRS Behavior of _Underscore Functions for preset1 = 2 and preset2 = 2. 
+
+      There is no reason to purposely use preset1 = 2 and preset 2 = 2 with 
+      VNMRS.  However an INOVA sequence with the statements will run on VNMRS
+      with default behavior. 
+
+      The _underscore functions used with preset1 = 2 and preset2 = 2, _setmpseq(), 
+      _setshape(), _setramp() and _setcp_() set the amplitude of the involved 
+      channels and execute in zero time. Note that the *amplitude needs to be 
+      reset* if needed after the "_set" statements for VNMRS just as for INOVA. 
+
+      The functions _clearmpseq(), _clearshape(), _clearramp() and _clearcp_() have 
+      no effect on VNMRS and add no time to the sequence. 
+
+      A set of adjustment functions adj_setmpseq(), adj_setshape(), adj_setramp()
+      and adj_setcp_(), adj_cleampseq(), adj_clearshape(), adj_clearramp() and 
+      adj_clearcp_() provide a zero adjustment to delay which they compensate. 
+
+Synthesizer Offset Control 
+
+      The functions _obsdoffset(), _decdoffset(), _dec2doffset(), _dec2doffset()
+      can be used to provide a frequency offset to a channel by switching of the 
+      frequency synthesizer.  
+
+      _decdoffset() is be used most often to offset the decoupler during acquisition
+      while excecuting TPPM or SPINAL with a DSEQ module. One should use these 
+      functions cautiously as frequency switches of a PTS or a Varian synthesizer
+      may not be phase continuous or coherent. Frequency switches in the middle of a
+      sequence may be detrimental if phase coherence is uncontrolled. Frequency 
+      switches of the "obs" channel may cause phase shifts of the data or loss of 
+      signal averaging. 
+
+      The format is _decdoffset(duration, offset_in_Hz) where the offset is a deviation
+      from the default frequency determined by "dof". The frequency switch time is 
+      subtracted from "duration" so that the statement has a defined duration. 
+
+      One should return the frequency to the default frequency when the offset 
+      period is over and the frequency *must* be reset before the next scan. It is 
+      most convenient convenient to return the frequency with the standard psg element
+      "decoffset(dof)" in a non-critical time period. 
+
+Writing the Structure Data
+
+      The function dump_mpseq() can be used to print the contents of an MPSEQ structure 
+      in the text window during "dps" or acquisition. 
+
+      The syntax is dump_mpseq(name) where "name" is the structure variable defined by 
+      the get function, for example "dump_mpseq(sd);"  
+
+      All contents of the structure are printed and the format is shown below for one 
+      of the two waveforms "sd" of sammy2d.c.
+
+
+ MPSEQ WAVEFORM INFORMATION
+seqName =      smydH : Parameter Group Name
+pattern =   Hsmyd0_0 : Root Filename for Shapes
+nRec    =          0 : Copy Number in Sequence
+ch      =        dec : Channel
+a       =       3000 : Scaled Amplitude
+t       =     124.80 : Pattern Duration (microseconds)
+nelem   =          1 : Base Cycles in Pattern
+telem   =     124.80 : Base Cycle Duration (microseconds)
+n90     =          8 : Ticks (12.5 ns) per Minimum Step
+nphBase =          9 : Base Cycle Steps
+  DURATION      PHASE  AMPLITUDE       GATE     OFFSET
+      18.2        0.0     1023.0        1.0        0.0
+       5.2       90.0     1023.0        1.0        0.0
+      15.6      270.0     1023.0        0.0        0.0
+       5.2      270.0     1023.0        1.0        0.0
+      36.4      180.0     1023.0        1.0        0.0
+       5.2      270.0     1023.0        1.0        0.0
+      15.6       90.0     1023.0        0.0        0.0
+       5.2       90.0     1023.0        1.0        0.0
+      18.2        0.0     1023.0        1.0        0.0
+npw =    9 nph =    9 na =     1 ng =     9 no =     1
+nphSuper=          1 : Super Cycle Steps
+      STEP      PHASE
+         0        0.0
+OFFSET PHASE CONTROL:
+iSuper  =          0 : Next Super Cycle Step
+phAccum =     0.0000 : Degrees of Accumlated Phase
+phInt   =     0.0000 : Degrees Increment of Phase
+ARRAY CONTROL:
+calc    =          1 : = 1 for Calculation Complete
+hasArray=          1 : = 1 for New Shapefile
+INOVA PRESET CONTROL:
+preset1 =          0 : = 0,1,2 for none, partial and full Preset
+preset2 =          0 : = 0,1,2 for none, partial and full Clear
+strtdelay =     0.00 : Start Delay (microseconds)
+offstdelay=     0.00 : Offset Delay (microseconds)
+apdelay =       0.00 : AP Bus Delay (microseconds)
+
+In the Figure above variable names to the left of each "equals" 
+sign (such as "seqName") are exact, For example - this structure 
+variable is "sd", and the group name is accessed in the program 
+as "sd.seqName". The scaled amplitude is "sd.a".   
+
+The Base duration, phase, amplitude, gate and offset are shown in 
+five columns with sd.nphBase rows, indexed from i = 0 to (sd.nphBase - 1). 
+The structure variables are: sd.pw[i], sd.phBase[i], sd.aBase[i], 
+sd.gateBase[i] and sd.of[i]. The values below each column are the 
+repeat indicies of the individual lists: sd.nph, sd.nph, sd.na, sd.ng,
+and sd.no. 
+
+The supercycle steps [i] and phase are shown as two columns with 
+sd.nphSuper rows, indexed from 0 to (nphsuper - 1). 
+
+A New Method for Dutycycle Calculation
+
+      The three modules init_dutycycle, update_dutycycle and abort_dutycycle are used 
+      to calculate the percentage time-on for RF during a sequence. Time-on is defined
+      as RF-on on any channel. The calculation is not sensitive to the amplitude of nor
+      is it sensitive to the number of channels with RF on. The calculation can be made 
+      sensitive to conditionals used to turn RF on and off during a delay. 
+
+      init_dutycycle returns a structure of type DUTY, for example: 
+
+      DUTY d = init_dutycycle();
+
+      where: 
+
+      d.dutyon = time with RF always on.
+      d.dutyoff = time with RF always off. 
+      d.duty = percentage time on (out of 100). 
+      d.c1 = conditional for RF off during delays with conditional RF. 
+      d.t1 = total time off delays with conditional RF off, d.c1. 
+      .
+      .
+      d.c8 = conditional for RF off during delays with conditional RF.
+      d.t8 = total time off delays with conditional RF off, d.c1.
+
+      All of the structure variables are available in the sequence after 
+      initialization.  d.duty is initialized as 105.0 and must be replaced
+      with a calculation. 
+
+      update_dutycycle calculates d.duty form the other variables of the 
+      DUTY structure. 
+
+      abort_dutycycle takes the structure as a first argument and a 
+      percentage (0 to 100) as the second. It aborts the sequence if
+      d.duty is greater than the second argument
+
+      EXAMPLE: 
+
+      The example calculates percentage time on for tancpx.c and aborts if 
+      time-on is greater than 10%. 
+
+// Dutycycle Protection
+
+   DUTY d = init_dutycycle();
+   d.dutyon = getval("pwH90") + getval("tHX");
+   d.dutyoff = d1 + 4.0e-6;
+   d.c1 = ((!strcmp(dec.seq,"tppm")) && (dec.t.a == 0.0));
+   d.t1 = getval("rd") + getval("ad") + at;
+   d.c2 = ((!strcmp(dec.seq,"spinal")) && (dec.s.a == 0.0));
+   d.t2 = getval("rd") + getval("ad") + at;
+   d = update_dutycycle(d);
+   abort_dutycycle(d,10.0);
+
+      Note that the conditionals d.c1 and d.c2 are the RF-off conditionals 
+      for TPPM or SPINAL respectively. 
+
+      HINTS: 
+
+      1.  Use the time-off conditionals only for delays that are always 
+      in the sequence, but where the RF is conditionally on or off. Allways 
+      use the conditional for "off". 
+
+      2.  Pulsewidths on the observe channel belong in d.dutyon, irrespective
+      of whether the conditional RF on another channel is on or off. To be 
+      precise, pulse widths on observe during a period of decoupler-on should 
+      be subtracted from d.t#. Pulse widths contribute to time-on only once. 
+
+      3. Use a conditional outside the structure if it adds or subtracts pulses
+      or delays from the sequence. For example express: 
+
+      if (conditional expression) { 
+         d.dutyon = d.dutyon + (additional pulses)
+         d.dutyoff = d.dutyoff + (additional delays)
+         d.t# = d.t# + (additional delays with conditional RF off) d.c#. 
+      } 
+
+
+PARAMETER GROUPS FOR SOLID-STATE NMR
+
+The following is a list of the current parameter groups that are
+defined in SolidsPack.  Each parameter group has a .xml file of the
+same name in the directory ~/vnmrsys/templates/vnmrj/panelitems that
+can be used to create an interface in a user template.
+
+Some parameter groups are marked (processing only) and do not have
+acquisition functions or associated modules.
+
+Many parameter groups are associated with modules.  The files for
+implementation of the module are shown with the entry.  If a parameter
+group does not have a module, see the recommended pulse sequence for an
+example of its implementation.
+
+All of the descriptions assume the convention X = obs, H = dec, Y = dec2
+and Z = dec3. Indirect seqiences with high band detect, and two-receiver
+experiments have different conventions, and for these experiments one must
+substitute the appropriate value obs, dec, dec2 or dec 3 into the 
+description.
+
+180H:  Module:  no
+Sequence:  tancpht1.c
+Description:  Provides a 180-degree pulse on dec that can be used as
+              an inversion or a refocussing pulse.
+Parameters:  Sequence Page
+      aH180 -  the amplitude of the pulse.
+      pwH180 - the pulse length.
+
+180X:  Module:  no
+Sequence:  twopul.c
+Description:  Provides a 180-degree pulse on obs that can be used as an
+              inversion or a refocussing pulse.
+Parameters:  Sequence Page
+      aX180 -  the amplitude of the pulse.
+      pwX180 - the pulse length.
+
+180Y:  Module:  no
+Sequence:  cncc4ds.c
+Description:  Provides a 180-degree pulse on dec2 that can be used as an
+              inversion or a refocussing pulse.
+Parameters:  Sequence Page
+      aX180 -  the amplitude of the pulse.
+      pwX180 - the pulse length.
+
+90X:  Module:  no
+Sequence:  onepul.c
+Description:  Provides a 90-degree pulse on obs that can be used as a
+              preparation pulse. Also used to store the obs calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:  Provides a 90-degree pulse on dec that can be used as a
+              preparation pulse. Also used to store the dec calibration.
+Parameters:  Channels Page
+      aH90  - the amplitude of the pulse.
+      pwH90 - the pulse length.
+
+90Y:  Module:  no
+Sequence:  none
+Description:  Provides a 90-degree pulse on dec2 that can be used as a
+              preparation pulse. Also used to store the dec2 calibration.
+Parameters:  Channels Page
+       aY90  - the amplitude of the pulse.
+       pwY90 - the pulse length.
+
+90Z:  Module:  no
+Sequence:  none
+Description:  Provides a 90-degree pulse on dec3 that can be used as a
+              preparation pulse.  Also used to store the dec3 calibration.
+Parameters:  Channels Page
+       aZ90  - the amplitude of the pulse.
+       pwZ90 - the pulse length.
+
+3QshearX: (processing)  Module:  no
+Sequence:  mqmas3qzf2d.c
+Description:  Shows the parameters for MQMAS shearing for 3Q sequences.
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros:
+       mqf1shear - sets daslp.
+       mqf1ref3q - scales F1 to correspond to a "split-t1" dwell time.
+       mqf1ref3qs- scales F1 according to the procedure of Amoureux
+              and Pruski.
+
+5QshearX: (processing)  Module:  no
+Sequence:  mqmas5qzf2d.c
+Description:  Shows the parameters for MQMAS shearing for 5Q sequences.
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros:
+       mqf1shear5 - sets daslp.
+       mqf1ref5q - scales F1 to correspond to a "split-t1"  dwell time.
+       mqf1ref5qs - scales F1 according to the procedure of Amoureux
+              and Pruski.
+
+7QshearX: (processing)  Module:  no
+Sequence:  mqmas7qzf2d.c
+Description:  Shows the parameters for MQMAS shearing for 7Q sequences.
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros:
+       mqf1shear7 - sets daslp.
+       mqf1ref7q - scales F1 to correspond to a "split-t1" dwell time.
+       mqf1ref7qs - scales F1 according to the procedure of Amoureux
+              and Pruski.
+
+9QshearX: (processing)  Module:  no
+Sequence:  mqmas9qzf2d.c
+Description:  Shows the parameters for MQMAS shearing for 9Q
+              sequences.
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros:
+       mqf1shear9 - sets daslp.
+       mqf1ref9q - scales F1 to correspond to a "split-t1" dwell time.
+       mqf1ref9qs - scales F1 according to the procedure of Amoureux
+              and Pruski.
+
+aptfHX:  Module: no
+Sequence:  masapt1d.c
+Description:  Shows the parameters for an attached proton test, APT,
+              sequence with an FSLG waveform in between the dec pulses.
+              fslgH must also be defined.
+Parameters:  Sequence Page
+       aHhxaptf - amplitude of dec pulses.
+       aXhxaptf - amplitude of obs pulses.
+       pwHhxaptf - 180-degree flip on obs.
+       pwXhxaptf - 180-degree flip on dec.
+       tHXaptf - delay for J-evolution.
+
+babaH:  Module:  yes
+Sequence:  none
+Description: Implements the back-to-back, BABA, recoupling sequence on
+             the dec channel.
+Parameters:  Sequence Page
+       aHbaba - amplitude of dec pulses.
+       pwHbaba - 90-degree flip on dec.
+       qHbaba - BABA cycles represented in the .DEC file.
+       ofHbaba - overall frequency offset.
+       chHbaba = 'dec' must be set (not shown).
+Implementation:  MPSEQ baba = getbaba("babaH",0,0.0,0.0,0,1);
+Underscore functions:  _MPSEQ functions.
+
+babaX: Module:  yes
+Sequence:  babainad2d.c
+Description:  Implements the back-to-back, BABA, recoupling sequence
+              on the obs channel.
+Parameters:  Sequence Page
+       aXbaba - amplitude of obs pulses.
+       pwXbaba - 360-degree flip on obs.
+       qXbaba - BABA cycles represented in the .DEC file.
+       ofXbaba - overall frequency offset.
+       chXbaba = 'obs' must be set (not shown).
+Implementation: MPSEQ baba = getbaba("babaX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+blewH:  Module:  yes
+Sequence:  tancpxblew.c
+Description:  Implements BLEW24 homonuclear decoupling on the dec
+              channel
+Parameters:  Sequence Page
+       aHblew - amplitude of dec pulses.
+       pwHblew - 360-degree flip on dec, on resonance.
+       nHblew - BLEW24 cycles represented in the .DEC file.
+       ofHblew - overall frequency offset.
+       chHblew = 'dec' must be set (not shown).
+Implementation: MPSEQ blew = getblew("blewH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+br24X: Module:  yes
+Sequence:  br24.c
+Description:  Implements BR24 on obs with acquisition in the first
+              window.
+Parameters:  Sequence Page
+       aXbr24 - amplitude of obs pulses.
+       pwXbr24 - 90-degree flip on obs.
+       r1Xbr24 - prepulse delay (similar to rof1).
+       r2Xbr24 - postpulse delay (similar to rd or rof2).
+       r3Xbr24 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined).
+       tauXbr24 - time for one "one-tau" window and pulse.
+       npaXbr24 - number of 100 ns ticks in the detection window.
+       chXbr24 = 'obs' must be set (not shown).
+Implementation:  WMPA br24 = getbr24("br24X");
+Underscore function: _br24(br24,phXbr24);  phXbr24 is the overall
+              phase table.
+
+c7X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+cdxX: Module:  no
+Sequence:  codex1d.c
+Description:  Implements the CODEX recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXcdx - amplitude of obs pulses.
+       pwXcdx - 360-degree flip on obs.
+       nXcdx - CODEX rotor cycles.
+
+cpmH:  Module:  yes
+Sequence:  tancpxcpm.c
+Description: Implements CPM Decoupling - Used as an alternate to the DSEQ router.
+Parameters:  Sequence Page
+       aHcpm - amplitude of CPM.
+       pwHcpm - approximate 180-degree flip on dec.
+       phHcpm - CPM +/- phase, "phi".
+       ofHspnl - overall frequency offset.
+Implementation: SHAPE cpm = getcpm("cpmH",0.0,0.0,0,1);
+Underscore functions: _SHAPE functions.
+
+cpmgX: Module:  yes
+Sequence:  qcpmg1d.c
+Description:  Implements CPMG on obs with acquisition the windows and
+              during a first echo before the CPMG.
+Parameters:  Sequence Page
+       aXcpmg - amplitude of obs pulses.
+       pwXcpmg - nominal 180-degree flip on obs.
+       r1Xcpmg - prepulse delay (similar to rof1).
+       r2Xcpmg - postpulse delay (similar to rd or rof2).
+       r3Xcpmg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined.
+       tauXcpmg - time for one "one-tau" window and pulse.
+       edXcpmg - number of 100 ns ticks in the detection window.
+       chXcpmg = 'obs' must be set (not shown).
+Implementation:  WMPA cpmg = getcpmg("cpmgX");
+Underscore function: _cpmg(cpmg,phXcpmg);  phXcpmg is the overall phase
+              table.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be set
+              - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore function: _cp_(hx,phHhx,phXhx); phHhx is the overall phase
+              table for the H channel and phXhx is that for the X channel.
+
+cpHY:  Module:  yes
+Sequence:  dcptan.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to dec2.
+Parameters:  Sequence Page
+       shHY - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with
+                      chHY.
+       chHY - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhy - median amplitude of the dec channel.
+       aXhy - median amplitude of the dec2 channel.
+       bHY - tangent curvature (>0 to 1.0e5).
+       dHY - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHY - contact time.
+       ofHY - overall offset on the variable channel.
+       frHY = 'dec' - channel with the initial polarization (must be
+              set - not shown).   
+       toHY = 'dec2' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP hy = getcp("HY",0.0,0.0,0,1);
+Underscore function: _cp_(hy,phHhx,phYhy); phHhx is the overall phase
+              table for the H channel and phYhy is that for the Y channel.
+
+cpXH:  Module:  yes
+Sequence:  hxidmissct2ds.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from obs to dec.
+Parameters:  Sequence Page
+       shXH - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with
+                      chXH.
+       chXH - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHxh - median amplitude of the dec channel.
+       aXxh - median amplitude of the obs channel.
+       bXH - tangent curvature (>0 to 1.0e5).
+       dXH - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tXH - contact time.
+       ofXH - overall offset on the variable channel.
+       frXH = 'obs' - channel with the initial polarization (must be
+              set - not shown).   
+       toXH = 'dec' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP xh = getcp("XH",0.0,0.0,0,1);
+Underscore function: _cp_(xh,phXxh,phHxh); phXhx is the overall phase
+              table for the X channel and phHhx is that for the H channel.
+
+cpYX:  Module:  yes
+Sequence: dcptan.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec2 to obs.
+Parameters:  Sequence Page
+       shYX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chYX.
+       chYX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aYyx - median amplitude of the dec2 channel.
+       aXyx - median amplitude of the obs channel.
+       bYX - tangent curvature (>0 to 1.0e5).
+       dYX - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tYX - contact time.
+       ofYX - overall offset on the variable channel.
+       frYX = 'dec2' - channel with the initial polarization (must be
+              set - not shown).
+       toYX = 'obs' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP yx = getcp("YX",0.0,0.0,0,1);
+Underscore function: _cp_(yx,phYyx,phXhx); phYyx is the overall phase
+              table for the Y channel and phXhx is that for the X channel.
+
+cpXY:  Module:  yes
+Sequence: cncc4ds.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from obs to dec2.
+Parameters:  Sequence Page
+       shXY - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chXY.
+       chXY - the variable-amplitude channel, 'fr' from or 'to', to.
+       aXY - median amplitude of the obs channel.
+       aXxy - median amplitude of the dec2 channel.
+       bXY - tangent curvature (>0 to 1.0e5).
+       dYX - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tYX - contact time.
+       ofYX - overall offset on the variable channel.
+       frXY = 'obs' - channel with the initial polarization (must be
+              set - not shown).
+       toXY = 'dec2' - channel with the final polarization (must be set
+             - not shown).
+Implementation: CP xy = getcp("XY",0.0,0.0,0,1);
+Underscore function: _cp_(xy,phXxy,phYxy); phXxy is the overall phase
+              table for the X channel and phYxy is that for the Y channel.
+
+dcfX:  Module: yes (called by getwdumbogen()) 
+Sequence:   wdumbogen1d.c
+Description:  A set of 12 coefficents - used to calculate DUMBO phases.
+              Includes the parameter "sc" to turn on Z-rotation and "q" 
+              to set the number of phases. Check boxes call reset_edcf
+              (eDUMBO and reset_dcf (standard DUMBO) to set starting 
+              coeeficients. 
+Parameters:  Sequence Page
+       ca#Xdcf - # = 1 to 6. 
+       cb#Xdcf - # = 1 to 6. 
+       scXdcf - supercycle "1" turns on Z-rotation and "0" turns it off. 
+       qXdcf - the number of phases in the 3-pi DUMBO cycle. 
+Implementation: WMPA wdumbo = getwdumbogen("wdumboX") only;
+Underscore function: _wdumbo(wdumbo,phXwdumbo); phXwdumbo is the
+              overall phase table.
+
+decofH: Module: yes
+Sequence: moistlkcp.c 
+Description:  Provide the parameter "ofHdec" to offset TPPM and SPINAL. 
+Parameters:  Sequence Page 
+       ofHdec - offset (delta) from dof during TPPM and SPINAL. 
+Underscore Function:  "_decdoffset(getval("rd"),getval("ofHdec"))"; replaces
+              "delay(getval("rd"))";. Return to dof with decoffset(dof); 
+              after decoupling. These commands change the synthesizer.
+
+dfsX:  Module:  yes
+Sequence:  onepuldfs.c (alias dfspX)
+Description:  Implements a "double frequency sweep", DFS, pulse on the
+              obs channel.
+Parameters:  Sequence Page
+       aXdfs - amplitude of obs DFS pulse.
+       pwXdfs - width of the DFS pulse.
+       of1Xdfs - initial frequency.
+       of2Xdfs - final frequency.
+       ofXdfs - center frequency, 
+       chXdfs = 'obs' must be set (not shown).
+Implementation:  SHAPE dfs = getdfs("dfsX",0,0.0,0.0,0,1);
+Underscore function: _shape(dfs, phXdfs);
+
+drawsX:  Module:  yes
+Sequence: draws1d.c
+Description:  Implements the DRAWS recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXdraws - amplitude of obs pulses.
+       pw1Xdraws - 360-degree flip on obs.
+       pw2Xdraws - 360-degree flip on obs.
+       qXdraws - DRAWS cycles represented in the .DEC file.
+       ofXdraws - overall frequency offset.
+       chXdraws = 'obs'  must be set (not shown).
+Implementation:  MPSEQ draws = getdraws("drawsX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+dreamX:  Module:  yes
+Sequence:  dreamfilt1d.c
+Description: Implements four tangent-ramped shapes on succeeding scans.
+             The shapes are up-down, down-up, up-up and down-down. DREAM
+             causes adiabatic homonuclear decoupling. Set the amplitude
+             at 1/2 the spin rate.
+Parameters:  Sequence Page
+       chXdream = 'obs'  (must be set - not shown)
+       aXdream - median amplitude of the obs channel
+       bXdream - tangent curvature (>0 to 1.0e5).
+       dXdream - +/- amplitude width of the ramp. A negative width sets
+              a ramp that starts high and decreases in amplitude.
+       tXdream - DREAM time.
+       ofXdream - overall offset on the obs channel
+Implementation: DREAM hx = getdream("dreamX",0.0,0.0,0,1);
+Underscore function: _dream(d,phXdream);
+
+dumboH:  Module:  yes
+Sequence:  tancpxdumbo.c
+Description:  Implements DUMBO homonuclear decoupling on the dec
+              channel.
+Parameters:  Sequence Page
+       aHdumbo - amplitude of the DUMBO on dec.
+       pwHdumbo - 1080-degree flip on dec (the length of full a DUMBO
+              cycle).
+       nHdumbo - DUMBO cycles represented in the .DEC file.
+       ofHdumbo - overall frequency offset.
+       phHdumbo - additional starting phase of DUMBO
+       chHdumbo = 'dec' must be set (not shown).
+Implementation:  MPSEQ dumbo = getdumbo("dumboH",0,0.0,0.0,0,1);
+Implementation:  MPSEQ dumbo = getdumboxmx("dumboH",0,0.0,0.0,0,1); z-rotation DUMBO
+Underscore functions: _MPSEQ functions.
+
+dumboX: Module:  yes
+Sequence:  not used
+Description: Implements DUMBO homonuclear decoupling on the obs
+channel.
+Parameters:  Sequence Page
+       aXdumbo - amplitude of the DUMBO on obs.
+       pwXdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       nXdumbo - DUMBO cycles represented in the .DEC file.
+       ofXdumbo - overall frequency offset.
+       phXdumbo - additional starting phase of DUMBO
+       chXdumbo = 'dec' must be set (not shown).
+Implementation: MPSEQ dumbo = getdumbo("dumboX",0,0.0,0.0,0,1);
+Implementation: MPSEQ dumbo = getdumboxmx("dumboX",0,0.0,0.0,0,1); Z-rotation
+Underscore functions: _MPSEQ functions.
+
+echoX: Module:  no
+Sequence:  ssecho1d.c
+Description:  Implements a refocusing pulse with delays before and after
+              the pulse.
+Parameters:  Sequence Page
+       aXecho - amplitude of the obs pulses.
+       t1Xecho - delay before the refocusing pulse.
+       pwXecho - 180-degree flip on obs.
+       t2Xecho - delay after the refocusing pulse.
+
+echselX:  Module:  no
+Sequence:  mqmas3qse2d.c
+Description:  Implements a selective, square refocusing pulse with both
+              amplitude and attenuation control to provide a selective echo
+              in MQMAS and STMAS experiments. The amplitude change requires
+              3.0 ms during the t1Xechsel delay. The attenuation is not reset.
+Parameters:  Sequence Page
+       aXechsel - amplitude of the obs selective echo pulse.
+       dbXechsel - attenuator setting for the obs selective echo pulse.
+       tXechsel - delay before the refocusing pulse requires a minimum
+              value of 3.0 us for the attenuator change.
+       pwXechsel - a selective 180-degree flip on obs.
+
+editHX: Module: no
+Sequence:  tancpxedit.c
+Description:  Implements HX Repolarization/Depolarization for CP editing. 
+Parameters:  Sequence Page 
+        aHhxedit - amplitude of the dec channel.
+        aXhxedit - amplitude of the obs channel. 
+        t1HXedit - depolarization time.  
+        t2HXedit - repolarization time.
+
+fam1X:  Module:  no
+Sequence:  mqmas3qfamspltse2d.c
+Description: Implements a "fast amplitude modulation", FAM, pulse on
+             the obs channel.
+Parameters:  Sequence Page
+       aXfam1 - amplitude of obs FAM pulse.
+       pwfam1 - pulse and delay time on obs.
+       nXfam1 - repetitions of FAM
+
+fam2X:  Module: no
+Sequence:  mqmas3qfam2spltse2d.c
+Description:  Implements a "fast amplitude modulation", FAM2, pulse o
+              the obs channel.
+Parameters:  Sequence Page
+       aXfam2 - amplitude of obs FAM2 pulse.
+       pw1fam2 - pulse time on obs.
+       pw2fam2 - delay time on obs.
+       pw3fam2 - pulse time on obs.
+       pw4fam2 - delay time on obs.
+       nXfam2 - repetitions of FAM2 
+
+fprfdrX:  Module:  yes
+Sequence:  tancp1fpdrfdr.c
+Description:  Implements Finite Pulse RFDR with a single pi pulse
+              that occupies the center third of the rotor period and
+              an XY4 phase cycle.
+Parameters:  Sequence Page
+       aXfprfdr - amplitude of dec pulses.
+       pwXfprfdr - 180-degree flip on obs.
+       qXfprfdr - 4.0*tauR RFDR cycles represented in the .DEC file.
+       ofXfprfdr - overall frequency offset.
+       chXfprfdr = 'obs' must be set (not shown).
+Implementation: MPSEQ fp = getrfdr("fprfdrX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+fslgH:  Module: yes
+Sequence:  tancpxfslg.c
+Description:  Implements "frequency switched Lee Goldburg", FSLG,
+              homonuclear decoupling on the dec channel.
+Parameters:  Sequence Page
+       aHfslg - amplitude of the FSLG dec pulses.
+       pwHfslg - 360-degree flip on dec, off resonance (the length of
+              each of the two FSLG pulses).
+       nHfslg - FSLG cycles represented in the .DEC file.
+       ofdHfslg - +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofHfslg - overall frequency offset.
+       chHfslg = 'dec' must be set (not shown).
+Implementation: MPSEQ fslg = getfslg("fslgH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+fslgX:  Module: yes
+Sequence:  none
+Description:  Implements "frequency switched Lee Goldburg", FSLG,
+              homonuclear decoupling on the obs channel.
+Parameters:  Sequence Page
+       aXfslg - amplitude of FSLG obs pulses.
+       pwXfslg - 360-degree flip on obs, off resonance (the length of
+              each of the two FSLG pulses).
+       nXfslg - FSLG cycles represented in the .DEC file.
+       ofdXfslg - +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofXfslg - overall frequency offset.
+       chXfslg = 'obs' must be set (not shown).
+Implementation: MPSEQ fslg = getfslg("fslgX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+gradZ:  Module:  no
+Sequence:  grad_rec.c
+Description:  Implements a gradient pulse on the Z axis followed 
+              by a recovery time. 
+Parameters:  Sequence Page
+       gaZgrad - gradient amplitude in DAC units
+       gpwZgrad - gradient pulse length
+       gtZgrad - gradient recovery time. 
+Implementation: Use with rgradient or zgradpulse.
+       
+graptX:  Module:  yes
+Sequence:  onepulgrapt.c
+Description:  Implements the Gaussian RAPT sequence on the obs channel.
+Parameters:  Sequence Page
+       aXgrapt - amplitude of obs pulses.
+       pwXgrapt - Pulse length on obs of each Gaussian pulse
+       tXgrapt - Total length of the gRAPT pulse.
+       OfdXgrapt - +/- offset of each Gaussian (+ is first).
+       ofXgrapt - overall frequency offset.
+       chXgrapt = 'obs' must be set (not shown).
+Implementation: MPSEQ grapt = getgrapt("graptX",0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+Hmixseq:  Module: yes 
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec channel during F1 and mixing periods when 
+              Hseq is used for acquisition.
+Parameters:   Sequence Page - the Hmixspinal, Hmixtppm and other groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ mix = getdseq2("H"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(mix); runs decprgoff();
+Underscore functions2:  _dseqon2(mix); runs _tppm(); _spinal2(); or _waltz(); 
+             _dseqoff2(mix); runs decprgoff().
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition. Implements SPINAL2 (2-angle) decoupling with 
+              getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal or (2) is implemented with phases = +/- phHmixspinal, 
+              +/- (phHmixspinal + alpHmixspinal) and +/- (phHmixspinal + 2.0*alpHmixspinal).
+       alpHmixspinal - second angle - set 0.0 for TPPM and phHmixspinal/2.0
+                     for standard SPINAL64.             
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix = getdseq("H");
+Implementation2: SPINAL2 mix = getspinal2s("H"); or DSEQ mix = getdseq2("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+Underscore functions2: _spinal2(mix); and decprgoff(); or _dseqon2(mix);
+             and _dseqoff2(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Implementation2: DSEQ mix = getdseq2("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+Underscore functions: _dseqon2(mix); and _dseqoff2(mix);
+
+hmqcHX:  Module: no
+Sequence:  mashmqc2d.c
+Description:  Implements HMQC modulation of the obs channel with J-
+              coupling between the obs and dec nuclei and applies
+              FSLG decoupling between the dec pulses. Requires
+              implementation of fslgH.
+Parameters:  Sequence Page
+       aHhxhmqc - amplitude of the dec channel.
+       aXhxhmqc - amplitude of the obs channel.
+       pwHhxhmqc - 90-degree flip angle on the dec channel.
+       pmHhxhmqc - 54.7-degree flip angle on the dec channel.
+       pwXhxhmqc - 180-degree flip on the obs channel.
+       tHXhmqc - delay for J evolution.
+
+hmqcYX:  Module:  yes
+Sequence:  hmqcxyonepul.c
+Description: Implements F1 HMQC obs with pulses on dec2.
+Parameters:  Sequence Page
+       aYyxhmqc - amplitude of the dec2 pulses.
+       aXyxhmqc - amplitude of the obs pulse.
+       pwYyxhmqc - 90-degree flip angle on the dec2 channel.
+       pwXyxhmqc - 180-degree flip angle on the obs channel.
+       tYXhmqc - delay for J-evolution.
+       d2 - standard delay for F1, between two dec2 pulses.
+       ch1YXhmqc = 'dec2' must be set (not shown).
+       ch2YXhmqc = 'obs' must be set (not shown).
+Implementation:  WMPA hmqc = gethmqc("hmqcYX");
+Underscore function: _hmqc(hmqc,ph1Yyxhmqc,phXyxhmqc,ph2Yyxhmqc);
+
+hssmallX:  Module:  yes
+Sequence:  hssmall.c
+Description:  Implements HSSMALL on obs with acquisition in the first 
+              window.
+Sequence: hssmall.c
+Parameters:  Sequence Page
+       aXhssmall - amplitude of obs pulses.
+       pwXhssmall - 90-degree flip on obs.
+       r1Xhssmall - prepulse delay (similar to rof1).
+       r2Xhssmall - postpulse delay (similar to rd or rof2).
+       r3Xhssmall - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXhssmall - time for one "one-tau" window and pulse.
+       npaXhssmall - number of 100 ns ticks in the detection window.
+       ph1Xhssmall - small angle phase 1
+       ph2Xhssmall - small angle phase 2
+       chXhssmall = 'obs' must be set (not shown).
+Implementation:  WMPA hs = getmrev8("hssmallX");
+Underscore function: _hssmall(hssmall,phXhssmall);  phXhssmall is the overall
+phase table.
+
+Hseq:  Module: yes 
+Sequence:  tancpx.c and ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec channel during acquisition.
+Parameters:   Sequence Page - The Hspinal, Htppm and other groups
+              overlap.  Hseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec = getdseq("H"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec = getdseq2("H"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec); runs decprgoff(dec);
+Underscore functions2:  _dseqon2(dec); runs _tppm(); _spinal2() or _waltz();
+             _dseqoff2(dec); runs decprgoff();
+
+Hspinal:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition. Implements SPINAL2 (2-angle) decoupling with 
+              getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip.
+       phHspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal or (2) is implemented with phases = +/- phHspinal, 
+              +/- (phHspinal + alpHspinal) and +/- (phHspinal + 2.0*alpHspinal).
+       alpHspinal - second angle - set 0.0 for TPPM and phHspinal/2.0
+                     for standard SPINAL64.             
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = getdseq("H");
+Implementation2: SPINAL2 dec = getspinal2s("H"); or DSEQ dec = getdseq2("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+             and _dseqoff(dec);
+Underscore functions2: _spinal2(dec); and decprgoff(); or _dseqon2(dec);
+             and _dseqoff2(dec);
+        
+Htppm:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Implementation2: DSEQ dec = getdseq2("H");
+Underscore functions: _tppm(dec); and decprgoff(); or _dseqon(dec); and
+              _dseqoff(dec);
+Underscore functions2: _dseqon2(dec); and _dseqoff2(dec);
+
+Hspinal2:  Module:  yes
+Sequence: ahXH.c and ahX
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition using two angles (used in dseq only).
+Parameters:  Sequence Page
+       aHspinal2 - amplitude of the dec channel.
+       pwHspinal2 - approximate 180-degree flip angle on resonance.
+       phHspinal2 - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- phHspinal2, +/- (phHspinal2 + alpHspinal2) 
+              and +/- (phHspinal2 + 2.0*alpHspinal).
+       alpHspinal2 - second angle - set 0.0 for TPPM and phHspinal2/2.0
+                     for standard SPINAL64.
+       chHspinal2 = 'dec' must be set (not shown).
+Implementation: SPINAL2 dec = getspinal2("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _spinal2(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Hwaltz:  Module:  yes
+Sequence: onepul.c, ahX.c
+Description:  Implements WALTZ16 decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHwaltz - amplitude of the dec channel.
+       pwHwaltz - 90-degree flip angle on resonance.       
+       chHwaltz = 'dec' must be set (not shown).
+Implementation: WALTZ dec = getwaltz("H"); or DSEQ dec = getdseq("H");
+Implementation2: DSEQ dec = getdseq2("H");
+Underscore functions: _waltz(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+Underscore functions2: _dseqon2(dec); and _dseqoff2(dec);
+
+hsqcHX:  Module:  no
+Sequence:  mashsqc2d.c
+Description:  Implements HSQC modulation of the obs channel through J-
+              coupling between the obs  and dec nuclei and applies
+              FSLG decoupling between the dec pulses. Requires implementation
+              of fslgH.
+Parameters:  Sequence Page
+       aHhxhsqc - amplitude of the dec channel.
+       aXhxhsqc - amplitude of the obs channel.
+       pw1Hhxhsqc - 90-degree flip angle on the dec channel.
+       pw2Hhxhsqc - 180-degree flip angle on the dec channel.
+       pmHhxhsqc - 54.7-degree flip angle on the dec channel.
+       pw1Xhxhsqc - 90-degree flip on the obs channel.
+       pw2Xhxhsqc - 180-degree flip on the obs channel.
+       tHXhsqc - delay for J evolution.
+
+idrefX:  Module:  yes
+Sequence:  tancpxidref.c
+Description:  Implements interrupted decoupling of the current
+              decoupling sequence on dec with a refocusing pulse
+              on obs. The interrupted decoupling is applied before
+              the refocusing pulse.
+Parameters:  Sequence Page
+       aXidref - amplitude of the obs pulse.
+       pwXidref - 180-degree flip angle on the obs channel.
+       t1Xidref - delay for interrupted decoupling.
+       chXidref = 'obs' must be set (not shown).
+Implementation: WMPA ref = getidref("idrefX"); DSEQ dec = getdseq("H");
+Underscore function: _idref(ref, dec, phXref);  phXref is the phase
+              table of pwXidref.
+
+inadX:  Module:  no
+Sequence: cpinad2d.c
+Description:  Implements a refocused INADEQUATE sequence with an F1
+              delay d2 for double quantum evolution.
+Parameters:  Sequence Page
+       aXinad - amplitude of the obs pulse.
+       pw1Xinad - 180-degree flip angle on the obs channel.
+       pw2Xinad - 90-degree flip angle on the obs channel.
+       t1Xinad - delay for J-evolution.
+       t2Xinad - delay for J-refocusing.
+
+inczfX: Module: no
+Sequence: super2d.c
+Description: Implements an incremental ZF delay between two 90-degree
+             pulses. Used to remove artifacts and improve TOSS.
+Parameters:  tXinczf is internal to the sequence.
+       tXinczf - a delay that cycles between n*tauR/4.0 where n = 0,1,2,3
+       on successive scans.  The two 90 degree pulses use the 90X module.
+
+ineptYX:  Module:  yes
+Sequence:  ineptxyonepul.c
+Description:  Implements an INEPT polarization transfer from dec2 t
+              obs.
+Parameters:  Sequence Page
+       aYyxinept - amplitude of the dec2 pulse.
+       aXyxinept - amplitude of the obs pulse.
+       pw1Yyxinept - 180-degree flip angle on the dec2 channel.
+       pw1Xyxinept - 180-degree flip angle on the obs channel.
+       pw2Yyxinept - 90-degree flip angle on the dec2 channel.
+       pw2Xyxinept - 90-degree flip angle on the obs channel.
+       t1YXinept - delay for J-evolution.
+       t2YXinept - delay for J-refocusing.
+       ch1YXinept = 'dec2' must be set (not shown).
+       ch2YXinept = 'obs' must be set (not shown).
+Implementation:  WMPA inept = getinept("ineptYX");
+Underscore function: _inept(inept,ph1Yyxinept,ph1Xyxinept
+              ph2Yyxinept,ph2Xyxinept); runs INEPT without refocusing.
+Underscore function:_ineptref(inept,ph1Yyxinept,ph1Xyxineptph2Yyxinept
+             ,ph2Xyxinept,ph3Yyxinept, ph3Xyxinept); runs INEPT with 
+             refocusing. The additional arguments are the phase tables
+             of the INEPT pulses as labeled.
+
+lgH:  Module: yes
+Sequence:  lgcp2d.c
+Description:  Implements cw decoupling on H with an offset, used for
+              Lee-Goldburg decoupling and spinlocks.
+Parameters:  Sequence Page
+       aHlg - amplitude of the FSLG dec pulses.
+       qHlg - FSLG cycles represented in the .DEC file.
+       ofHlg - overall frequency offset.
+       chHfslg = 'dec' must be set (not shown).
+Implementation: MPSEQ xlg = getlg("lgH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+lgX:  Module: yes
+Sequence:  lgcp2d.c
+Description:  Implements cw decoupling on X with an offset, used for
+              Lee-Goldburg decoupling and spinlocks.
+Parameters:  Sequence Page
+       aXlg - amplitude of the FSLG dec pulses.
+       qXlg - FSLG cycles represented in the .DEC file.
+       ofXlg - overall frequency offset.
+       chXlg = 'obs' must be set (not shown).
+Implementation: MPSEQ hlg = getlg("lgX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+mdfsX:  Module:  yes
+Sequence:  onepulmdfs.c (alias mdfspX)
+Description:  Implements a "multiple double frequency sweep", MDFS,
+              pulse on the obs channel.
+Parameters:  Sequence Page
+       aXmdfs - amplitude of obs DFS pulse.
+       pwXmdfs - width of the MDFS pulse.
+       of1Xmdfs - initial frequency.
+       of2Xmdfs - final frequency.
+       chXmdfs = 'obs' must be set (not shown).
+Implementation:  MPSEQ mdfs = getmdfs("mdfsX",0,0.0,0.0,0,1);
+Underscore function: _mpseq(mdfs);
+
+mixH:  Module:  no
+Sequence:  wisetancp2d.c
+Description:  Implements a mixing delay in sequences where mixing occurs
+              among the dec nuclei. Typically used for spin diffusion
+              mixing periods and decoupling is never applied.
+Parameters:  Sequence Page
+       tHmix - the mixing delay time. The delay may or may not be rotor
+              synchronized, depending on the sequence.
+
+mixX:  Module:  no
+Sequence:  tancp2drad.c
+Description:  Implements a mixing delay in sequences where mixing occurs
+              among the obs nuclei. CW decoupling is allowed on DEC.
+              Typically used for DARR (RAD) mixing periods where decoupling
+              at a field strength of srate/2.0 enhances obs spin diffusion.
+Parameters:  Sequence Page
+       tXmix - the mixing delay time. The delay may or may not be rotor
+              synchronized, depending on the sequence.
+       aHmix - amplitude of decoupling.
+
+mqmasX:  Module:  no
+Sequence:  mqmas3qzf2d.c
+Description:  Implements two-pulse MQMAS on obs with an F1 delay d2 in
+              between the pulses.
+Parameters:  Sequence Page
+       aXmqmas - the amplitude of the obs pulses.
+       pw1Xmqmas - the first pulse of MQMAS, typically a 20 to 40-
+              degree flip angle, based on the solution-state 90-degree 
+              pulse.
+       pw2Xmqmas - the second pulse of MQMAS, typically a 90-degree
+              flip angle based on the solution-state 90-degree pulse.
+
+mrev8X:  Module:  yes
+Sequence:  mrev8.c
+Description:  Implements MREV8 on obs with acquisition in the first 
+              window.
+Sequence: mrev8.c
+Parameters:  Sequence Page
+       aXmrev8 - amplitude of obs pulses.
+       pwXmrev8 - 90-degree flip on obs.
+       r1Xmrev8 - prepulse delay (similar to rof1).
+       r2Xmrev8 - postpulse delay (similar to rd or rof2).
+       r3Xmrev8 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXmrev8 - time for one "one-tau" window and pulse.
+       npaXmrev8 - number of 100 ns ticks in the detection window.
+       chXmrev8 = 'obs' must be set (not shown).
+Implementation:  WMPA mrev8 = getmrev8("mrev8X");
+Underscore function: _mrev8(mrev8,phXmrev8);  phXmrev8 is the overall
+phase table.
+
+ofXgauss: Module:  no
+Sequence:  seac71d.c
+Description:  Implements a Gaussin pulse on the obs channel. 
+Parameters:  Sequence Page    
+       aXgauss: amplitude of the obs selective Gaussian pulse.
+       dbXgauss: attenator setting for the obs selective Gaussian pulse.
+       pwXgauss: 180-degree flip for the obs selective Gaussian pulse.
+       ofXgauss: frequency offset of the obs selective Gaussian pulse.
+
+pipsH:  Module:  yes
+Sequence:  tancpxpips.c
+Description:  Implements pi-pulse PIPSxy decoupling on the dec channel.
+Parameters:  Sequence Page
+       aHpips - amplitude of dec pulses.
+       pwHpips - 90-degree flip on dec.
+       nHpips - rotor cycles between PI pulses.
+       qHpips - PIPS cycles represented in the .DEC file.
+       ofHpips - overall frequency offset.
+       chHpips = 'dec' must be set (not shown).
+Implementation:  MPSEQ pips = getpipsxy("pipsH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+pipsY:  Module:  yes
+Sequence:  cncc4ds.c
+Description:  Implements pi-pulse PIPSxy decoupling on the dec2 channel.
+Parameters:  Sequence Page
+       aHpips - amplitude of dec pulses.
+       pwHpips - 90-degree flip on dec2.
+       nHpips - rotor cycles between PI pulses.
+       qHpips - PIPS cycles represented in the .DEC file.
+       ofHpips - overall frequency offset.
+       chHpips = 'dec2' must be set (not shown).
+Implementation:  MPSEQ pips = getpipsxy("pipsY",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+pmlgH:  Module:  yes
+Sequence:  tancpxpmlg.c
+Description:  Implements "phase modulated Lee Goldburg", PMLG,
+              homonuclear decoupling on the dec channel.
+Parameters:  Sequence Page
+       aHpmlg - amplitude of PMLG dec pulses.
+       pwHpmlg - 360-degree flip on dec, off resonance (the length of
+              each of the two PMLG pulses).
+       nHpmlg - PMLG cycles represented in the .DEC file.
+       qHpmlg - number of phase steps in that make up pwHpmlg. A
+              negative value implements descending phases in the
+              first pulse.
+       chHpmlg = 'dec' must be set (not shown).
+Implementation: MPSEQ pmlg = getpmlg("pmlgH",0,0.0,0.0,0,1);
+Implementation: MPSEQ pmlg = getpmlgxmx("pmlgH",0,0.0,0.0,0,1); Z-rotation
+Underscore functions: _MPSEQ functions.
+
+pmlgX:  Module:  yes
+Sequence:  c7inad2dwpmlg.c
+Description:  Implements "phase modulated Lee Goldburg", PMLG,
+              homonuclear decoupling on the obs channel.
+Parameters:  Sequence Page
+       aXpmlg - amplitude of PMLG obs pulses.
+       pwXpmlg - 360-degree flip on obs, off resonance (the length of
+              each of the two PMLG pulses).
+       nXpmlg - PMLG cycles represented in the .DEC file.
+       qXpmlg - number of phase steps in that make up pwXpmlg. A
+              negative value implements descending phases in the
+              first pulse.
+       chXpmlg = 'dec' must be set (not shown).
+Implementation: MPSEQ pmlg = getpmlg("pmlgX",0,0.0,0.0,0,1);
+Implementation: MPSEQ pmlg = getpmlgxmx("pmlgX",0,0.0,0.0,0,1); Z-rotation
+Underscore functions: _MPSEQ functions.
+
+prep1X:  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Implements a composite pulse consisting of a 90-degree
+              flip followed by a smaller flip-angle to implement
+              quadrature detection about a tilted precession axis.
+              Typically followed by a windowed multiple-pulse
+              acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses.
+       pw1Xprep1 - 90-degree flip on the obs channel.
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+prepX:  Module:  no
+Sequence:  br24q.c
+Description:  Implements a variable length pulse to provide quadrature
+              detection about a tilted precession axis. Typically
+              followed by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses.
+       pwXprep - 90-degree flip on the obs channel.
+       phXprep - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+presatX:  Module:  no
+Sequence:  cncc4ds.c
+Description:  Provides a pulse on obs that can be used for presaturation on X
+              before HX CP. 
+Parameters:  Sequence Page
+      aX180 -  the amplitude of the pulse.
+      pwX180 - the pulse length.
+
+presatY:  Module:  no
+Sequence:  nccdqm3ds.c
+Description:  Provides a pulse on dec2 that can be used for presaturation on Y
+              before HY CP. 
+Parameters:  Sequence Page
+      aY180 -  the amplitude of the pulse.
+      pwY180 - the pulse length.
+
+pto1HX:  Module:  no
+Sequence:  presto1cp.c
+Description:  Implements a PRESTO1 polarization transfer from dec to obs
+              using R1825 on the dec channel. Requires implementation of
+              r18H.
+Parameters:  Sequence Page
+       aXhxpto1 - the amplitude of the obs channel pulses.
+       pwXhxpto1 - a 180-degree flip angle on the obs channel.
+       t1HXpto1 - delay before the obs refocusing pulse.
+       t2HXpto1 - delay after the obs refocusing pulse.
+
+pto2HX:  Module:  no
+Sequence:  presto2cp.c
+              obs using R1825 on the dec channel. Requires implementation
+              of r18H.
+Parameters:  Sequence Page
+       aXhxpto2 - the amplitude of the obs channel pulses.
+       pw1Xhxpto2 - a 180-degree flip angle on the obs channel.
+       pw2Xhxpto2 - a 90-degree flip angle on the obs channel.
+       t1HXpto2 - delay before the obs refocusing pulse.
+       t2HXpto2 - delay after the obs refocusing pulse.
+       t3HXpto2 - delay after the obs 90-degree pulse.
+
+pto3HX:  Module:  no
+Sequence:  presto3cp.c
+Description:  Implements a PRESTO3 polarization transfer from dec to
+              obs using R1825 on the dec channel. Requires implementation
+              of r18H.
+Parameters:  Sequence Page
+       aXhxpto3 - the amplitude of the obs channel pulses.
+       pw1Xhxpto3 - a 180-degree flip angle on the obs channel.
+       pw2Xhxpto3 - a 90-degree flip angle on the obs channel.
+       t1HXpto3 - delay around the first obs refocusing pulse.
+       t2HXpto3 - delay around the second obs refocusing pulse.
+
+ptrfdrX:  Module:  yes
+Sequence:  tancp1dptrfdr.c
+Description:  Implements PiThirds with Finite Pulse RFDR using a 
+              single pi pulse that occupies the center third of the 
+              rotor period and an XY4 phase cycle.
+Parameters:  Sequence Page
+       aXptrfdr - amplitude of dec pulses.
+       pwXptrfdr - 180-degree flip on obs.
+       qXptrfdr - 4.0*tauR RFDR cycles represented in the .DEC file.
+       ofXptrfdr - overall frequency offset.
+       chXptrfdr = 'obs' must be set (not shown).
+Implementation: MPSEQ pt = getptrfdr("ptrfdrX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+pxyH:  Module:  yes
+Sequence:  hxidmissct2ds.c
+Description:  Implements presaturation with and XY phase cycle
+Parameters:  Sequence Page
+       aHpxy - amplitude of dec pulses.
+       pwHpxy - 180-degree flip on obs.
+       qHpxy - RFDR cycles represented in the .DEC file.
+       ofHpxy - overall frequency offset.
+       chHpxy = 'dec' must be set (not shown).
+Implementation: MPSEQ pxy = getpxy("pxyH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+r12H:  Module:  yes
+Sequence:  dipshftr12dfs.c
+Description:  Implements the R1235 recoupling sequence on the dec
+              channel.
+Parameters:  Sequence Page
+       aHr12 - amplitude of dec pulses.
+       pwHr12 - 360-degree flip on dec.
+       qHr12 - R12 cycles represented in the .DEC file.
+       ofHr12 - overall frequency offset.
+       chHr12 = 'dec' must be set (not shown).
+Implementation: MPSEQ r1235 = getr1235("r12H",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+r14X:  Module:  yes
+Sequence:  r14inad2d.c     
+Description:  Implements the R1462 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXr14 - amplitude of obs pulses.
+       pwXr14 - 360-degree flip on obs.
+       qXr14 - R14 cycles represented in the .DEC file.
+       ofXr14 - overall frequency offset.
+       chXr14 = 'obs' must be set (not shown).
+Implementation: MPSEQ r14 = getr1462("r14X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+r18H:  Module:  yes
+Sequence:  presto1cp.c
+Description:  Implements the R1825 recoupling sequence on the dec
+              channel.
+Parameters:  Sequence Page
+       aHr18 - amplitude of dec pulses.
+       pwHr18 - 360-degree flip on dec.
+       qHr18 - R18 cycles represented in the .DEC file.
+       ofHr18 - overall frequency offset.
+       chHr18 = 'dec' must be set (not shown).
+Implementation: MPSEQ r1825 = getr1825("r18H",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+r18X:  Module:  yes
+Sequence:  rocsa2d.c
+Description:  Implements the R1825 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXr18 - amplitude of dec pulses.
+       pwXr18 - 360-degree flip on obs.
+       qXr18 - R18 cycles represented in the .DEC file.
+       ofXr18 - overall frequency offset.
+       chXr18 = 'obs' must be set (not shown).
+Implementation: MPSEQ r1825 = getr1825("r18X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+r2invX:  Module:  no
+Sequence:  r2inv1d.c
+Description:  Implements a selective inversion pulse on obs between two
+              90-degree pulses with a mixing period after the second
+              pulse to provide a 1D rotational resonance measurement.
+Parameters:  Sequence Page
+       aXr2inv - amplitude of the hard obs pulses.
+       asXr2inv - amplitude of the selective pulse.
+       dbXr2inv - attenautor setting for the selective pulse.
+       pwXr2inv - 90-degree flip of the obs hard pulse.
+       pwsXr2inv - 180-degree flip of the obs selective pulse.
+       tXr2inv - delay period for spin diffusion.
+       ofsXr2inv - offset of the selective pulse.
+
+rampH:  Module:  yes
+Sequence:  tanadrfx.c
+Description:  Implements a constant, linear or tangent ramp on the dec
+              channel with four polarity modes (uu, ud, du (n) and dd).
+Parameters:  Sequence Page
+       shHramp - 'c', constant, 'l', linear and 't', tangent shape
+              on the channel designated with chHramp.
+       chHramp = 'dec' must be set (not shown).
+       pHramp - polarity of ramp (normal 'n' down-up), 'uu' (up-up),
+              'ud' (up-down), 'du' (down-up) and 'dd' (down-down).
+       aHramp - median amplitude of the dec channel.
+       bHramp - tangent curvature (>0 to 1.0e5).
+       dHramp - +/- amplitude width of the ramp. A negative width sets
+              a ramp that starts high and decreases in amplitude.
+       tHramp - ramp time
+       ofHramp - overall offset of the ramp.
+Implementation: RAMP h = getramp("rampH",0.0,0.0,0,1);
+Underscore functions: _ramp(h, phHramp); phHramp is the overall phase
+              table.
+
+rampX:  Module:  yes
+Sequence:  tancpsxy.c
+Description:  Implements a constant, linear or tangent ramp on the obs
+              channel with four polarity modes (uu, ud, du (n) and dd).
+              Used to add a third channel to CP.
+Parameters:  Sequence Pag
+       shXramp - 'c', constant, 'l', linear and 't', tangent shape on
+              the channel designated with chYramp.
+       chHramp = 'obs' must be set (not shown).
+       pXramp - polarity of ramp (normal 'n' down-up), 'uu' (up-up),
+              'ud' (up-down), 'du' (down-up) and 'dd' (down-down).
+       aXramp - median amplitude of the obs channel.
+       bXramp - tangent curvature (>0 to 1.0e5).
+       dXramp - +/- amplitude width of the ramp. A negative width sets
+              a ramp that starts high and decreases in amplitude.
+       tXramp - ramp time
+       ofXramp - overall offset on the ramp.
+Implementation:  RAMP x = getramp("rampX",0.0,0.0,0,1);
+Underscore functions: _ramp(x, phXramp);  phXramp is the overall phase
+              table.
+
+rampY:  Module:  yes
+Sequence:  tancpxyr.c
+Description:  Implements a constant, linear or tangent ramp on the
+              dec2 channel with four polarity modes (uu, ud du (n) and dd).
+	      Used to add a third channel to CP.
+Parameters:  Sequence Page
+       shYramp - 'c', constant, 'l', linear and 't', tangent shape on
+              the channel designated with chYramp.
+       chHramp = 'dec2' must be set (not shown).
+       pYramp - polarity of ramp (normal 'n' down-up), 'uu' (up-up),
+              'ud'(up-down), 'du'(down-up) and 'dd'(down-down).
+       aYramp - median amplitude of the dec2 channel.
+       bYramp - tangent curvature (>0 to 1.0e5).
+       dYramp - +/- amplitude width of the ramp. A negative width sets
+              a ramp that starts high and decreases in amplitude.
+       tYramp - ramp time
+       ofYramp - overall offset on the ramp.
+Implementation: RAMP y = getramp("rampY",0.0,0.0,0,1);
+Underscore functions: _ramp(y, phYramp);  phYramp is the overall phase 
+              table.
+
+raptX:  Module:  yes
+Sequence:  onepulrapt.c
+Description:  Implements the RAPT X-X sequence on the obs channel.
+Parameters:  Sequence Page
+       aXrapt - amplitude of obs pulses.
+       pwXrapt - Pulse length on obs - urapt = 1/(2.0*pwXrapt)
+       qXdrapt - RAPT X-X cycles represented in the .DEC file.
+       ofXrapt - overall frequency offset.
+       chXrapt = 'obs' must be set (not shown).
+Implementation: MPSEQ rapt = getrapt("raptX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+REDORHtppm:  Module:  no
+Sequence:  fsredor.c
+Description:  Implements TPPM on the dec channel during the REDOR
+              evolution period of fsredor.c.
+Parameters:  Sequence Page
+       aRtppm - amplitude of the dec channel.
+       pwRtppm - approximate 180-degree flip.
+       phRtppm - +/- small angle phase. TPPM is implemented with phases
+              = +/- 1.0 times phRtppm.
+
+rfdrH:  Module:  yes
+Sequence:  hxidmissct2ds.c
+Description:  Implements RFDR with a single pi pulse per rotor period
+              and an XY8 phase cycle.
+Parameters:  Sequence Page
+       aHrfdr - amplitude of dec pulses.
+       pwHrfdr - 180-degree flip on obs.
+       qHrfdr - RFDR cycles represented in the .DEC file.
+       ofHrfdr - overall frequency offset.
+       chHrfdr = 'dec' must be set (not shown).
+Implementation: MPSEQ rfdr = getrfdrxy8("rfdrH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+rfdrH:  Module:  yes
+Sequence:  ahXH.c
+Description:  Implements RFDR with a single pi pulse per rotor period
+              and an XY8 phase cycle.
+Parameters:  Sequence Page
+       aHrfdr - amplitude of dec pulses.
+       pwHrfdr - 180-degree flip on dec.
+       qHrfdr - RFDR cycles represented in the .DEC file.
+       ofHrfdr - overall frequency offset.
+       chHrfdr = 'dec' must be set (not shown).
+Implementation: MPSEQ rfdr = getrfdr("rfdrH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+rfdrX:  Module:  yes
+Sequence:  rocsa2d.c
+Description:  Implements RFDR with a single pi pulse per rotor period
+              and an XY8 phase cycle.
+Parameters:  Sequence Page
+       aXrfdr - amplitude of obs pulses.
+       pwXrfdr - 180-degree flip on obs.
+       qXrfdr - RFDR cycles represented in the .DEC file.
+       ofXrfdr - overall frequency offset.
+       chXrfdr = 'obs' must be set (not shown).
+Implementation: MPSEQ rfdr = getrfdr("rfdrX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+samH:  Module:  yes
+Sequence:  hetcorsamlgcp2d_1.c
+Description:  Implements SAMn decoupling on H where the qHsam = 'n',
+              the number of cosine cycles per rotor period.       
+Parameters:  Sequence Page
+       aHsam - amplitude of SAM on dec. 
+       pwHsam - 1 rotor period, set srate = 1.0e6/pwHsam. 
+       qHsam - cosine cycles per period pwHsam. 
+       nHsam - periods of pwHsam represented in the waveform. 
+       ofHsam - overall frequency offset.
+       chHsam = 'dec' must be set (not shown).
+Implementation: MPSEQ sh = getsamn("samH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+satX: Module:  yes
+Sequence:  satrec1d.c
+ 
+Description: Provides a sequence of the saturation pulses 
+             separated by delays.
+Parameters:  Sequence Page
+     aXsat - the amplitude of the pulses.
+     pwXsat - the pulse length.
+     tXsat - the repeat time of pulses.
+     qXsat - the number of the pulses.
+     ofXsat - offset applied on the pulses.
+Implementation:  MPSEQ sat= getsat("satX",0,0.0,0.0,0,1);
+Underscore functions: MPSEQ Functions   
+
+sc14X: Module:  yes
+Sequence:  sc14inad2d.c
+Description:  Implements the SC14 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXsc14 - amplitude of obs pulses.
+       pwXsc14 - 360-degree flip on obs.
+       qXsc14 - C7 cycles represented in the .DEC file.
+       ofXsc14 - overall frequency offset.
+       chXsc14 = 'obs' must be set (not shown).
+Implementation: MPSEQ sc14 = getsc14("sc14X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+scalef1H: (processing)  Module:  no
+Sequence:  hetcorlgcp2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the
+              dec nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the
+              inverse of the mutiple-pulse scale factor.
+
+scalef1X: (processing)  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the
+              inverse of the mutiple-pulse scale factor.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+
+seac7X: Module:  yes
+Sequence:  seac71d.c
+Description:  Implements the shift eveolution assisted Post C7 recoupling
+              sequence on the obs channel.
+Parameters:  Sequence Page
+       aXseac7 - amplitude of obs pulses.
+       pwXseac7 - 360-degree flip on obs.
+       qXseac7 - SEAC7 cycles represented in the .DEC file.
+       mXseac7 - the number of rotor cycles of c7 - must be amultiple of 2. 
+       nXseac7 - the number of rotor cycles of evolution. 
+       ofXseac7 - overall frequency offset.
+       chXseac7 = 'obs' must be set (not shown).
+Implementation: MPSEQ seac7 = getseac7("seac7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+selREDOR: Module:  yes
+Sequence:  fsredor.c
+Description:  Implements selective REDOR on on the obs and dec channels
+              in the sequence fsredor.c using nRotor periods, two dec2
+              pulses per rotor period with the XY8 phase cycle and
+              simultaneous selective Gaussian pulses on obs and dec2.
+Parameters:  Sequence Page
+       Rmode: select 'y' for a dec2 selective pulse or 'n' for the
+              control without a selective dec2 pulse.
+       aY180: amplitude of the dec2 hard pulses of XY8.
+       nRotor: number of rotor periods for REDOR evolution.
+       aYg: amplitude of the dec2 selective Gaussian pulse.
+       dbYg: attenator setting for the dec2 selective Gaussian pulse.
+       aXg: amplitude of the obs selective Gaussian pulse.
+       dbXg: attenator setting for the obs selective Gaussian pulse.
+       pwY180: 180-degree flip for the dec2 hard pulses of XY8.
+       pwXg: 180-degree flip for the obs selective Gaussian pulse.
+       pwYg: 180-degree flip for the dec2 selective Gaussian pulse.
+       ofXg: frequency offset of the obs selective Gaussian pulse.
+       ofYg: frequency offset of the dec2 selective Gaussian pulse.
+
+sfmX:  Module:  yes
+Sequence:  lgfmcp1d.c 
+Description:  Implements a "sinusoidal frequency modulated , SFM, 
+              pulse on the obs channel.
+Parameters:  Sequence Page
+       aXsfm - amplitude of obs SFM pulse.
+       pwXsfm - width of the SFM pulse- one sin cycle is 
+                executed during pwXsfm. 
+       of1Xsfm - total frequency excursion 
+       ofXsfm - center frequency. 
+       chXsfm = 'obs' must be set (not shown).
+Implementation:  SHAPE sfm = getsfm("sfmX",0,0.0,0.0,0,1);
+Underscore function: _shape(sfm, phXsfm);
+
+sfsH:  Module:  yes
+Sequence:  onepulsfs.c 
+Description:  Implements a "single frequency sweep", SFS, pulse on the
+              dec channel.
+Parameters:  Sequence Page
+       aHsfs - amplitude of obs SFS pulse.
+       pwHsfs - width of the SFS pulse.
+       of1Hsfs - initial frequency.
+       of2Hsfs - final frequency.
+       ofHsfs - center frequency. 
+       chHsfs = 'obs' must be set (not shown).
+Implementation:  SHAPE sfs = getsfs("sfsH",0,0.0,0.0,0,1);
+Underscore function: _shape(sfs, phHsfs);
+
+sfsX:  Module:  yes
+Sequence:  onepulsfs.c 
+Description:  Implements a "single frequency sweep", SFS, pulse on the
+              obs channel.
+Parameters:  Sequence Page
+       aXsfs - amplitude of obs SFS pulse.
+       pwXsfs - width of the SFS pulse.
+       of1Xsfs - initial frequency.
+       of2Xsfs - final frequency.
+       ofXsfs - center frequency. 
+       chXsfs = 'obs' must be set (not shown).
+Implementation:  SHAPE sfs = getsfs("sfsX",0,0.0,0.0,0,1);
+Underscore function: _shape(sfs, phXsfs);
+
+sft1A:  Module:  yes
+Sequence:  pboxonepul.c
+Description:  Implements a soft pulse with pBox with selection of any
+              channel.
+Parameters:  Sequence Page
+       chAsft1 = 'obs','dec','dec2','dec3' selected in panel.
+       wvAsft1 = pBox pulse waveshape from wavelib.
+       aAsft1 - amplitude of pBox pulse.
+       dbAsft1 - attenuator setting for pBox pulse.
+       tAsft1 - predelay for pBox pulse.
+       pwAsft1 - width of pBox pulse.
+       phAsft1 - starting small angle phase adjust.
+       stAsft1 - shape parameter � see pBox documentation
+Implementation:  PBOXPULSE sft1 = getpboxpulse("sft1A",0);
+              PBOXPULSE sft2 = getpboxpulse("sft2A",0);
+              PBOXPULSE sft3 = getpboxpulse("sft3A",0);
+Underscore function: _pboxpulse(sft1,phAsft1);
+              _pboxsimpulse(sft1,sft2,phAsft1,phAsft2);
+              _pboxsim3pulse(sft1,sft2,sft3,phAsft1,phAsft2,phAsft3);
+Notes:  No two shapes can be defined on the same channel.  phAsft1
+             (and 2 or 3) is the overall  phase table for the shape.
+             _pboxsimpulse and _pboxsim3pulse cannot accept shapes on
+             dec3.
+
+shp1X:  Module: yes (also shp2H and shp3Y)
+Sequence:  r2inv1ds.c
+Description:  Implements a named shaped pulse in wavelib with 
+              pBox to bused on the obs channel.Used invidually
+              or with other shapes in a simpulse.
+Parameters:  Sequence Page
+       chXshp1 - must be 'obs'. 
+       wvXshp1 - pBox pulse waveshape from wavelib.
+       aXshp1 - amplitude of pBox pulse.
+       dbXshp1 - attenuator setting for pBox pulse.
+       tXshp1 - predelay for pBox pulse.
+       pwXshp1 - width of pBox pulse.
+       phXshp1 - starting small angle phase adjust.
+       stXshp1 - shape parameter - see pBox documentation
+Implementation:  PBOXPULSE shp1 = getpboxpulse("shp1X",0);
+                 PBOXPULSE shp2 = getpboxpulse("shp2H",0);
+                 PBOXPULSE shp3 = getpboxpulse("shp3Y",0);
+Underscore function: _pboxpulse(shp1,phXshp1);
+              _pboxsimpulse(shp1,shp2,phXshp1,phHshp2);
+              _pboxsim3pulse(shp1,shp2,shp3,phXshp1,phHshp2,phYshp3);
+Notes:  phXshp1 (and 2 or 3) is the overall phase table for the shape.
+        _pboxsim(3)pulse uses multiple shapes where the arguments are 
+        obs, dec, dec2 in order.  Label the shapes with the correct 
+        channel identifier X, H, Y using getpboxpulse depending on the 
+        channel for which it is used. _pboxsim(3)pulse cannot accept 
+        shapes on dec (identifier Z). 
+
+shp2H:  Module:  yes  (also shp1X and shp3Y)
+Sequence:  none
+Description:  Implements a named shaped pulse in wavelib with 
+              pBox to bused on the dec channel. Used invidually
+              or with other shapes in a simpulse.              
+Parameters:  Sequence Page
+       chHshp1 - must be 'dec'. 
+       wvHshp1 = pBox pulse waveshape from wavelib.
+       aHshp1 - amplitude of pBox pulse.
+       dbHshp1 - attenuator setting for pBox pulse.
+       tHshp1 - predelay for pBox pulse.
+       pwHshp1 - width of pBox pulse.
+       phHshp1 - starting small angle phase adjust.
+       stHshp1 - shape parameter - see pBox documentation
+Implementation:  PBOXPULSE shp1 = getpboxpulse("shp1X",0);
+                 PBOXPULSE shp2 = getpboxpulse("shp2H",0);
+                 PBOXPULSE shp3 = getpboxpulse("shp3Y",0);
+Underscore function: _pboxpulse(shp1,phHshp1);
+              _pboxsimpulse(shp1,shp2,phXshp1,phHshp2);
+              _pboxsim3pulse(shp1,shp2,shp3,phXshp1,phHshp2,phYshp3);
+Notes:  phHshp1 (and 2 or 3) is the overall phase table for the shape.
+        _pboxsim(3)pulse uses multiple shapes where the arguments are 
+        obs, dec, dec2 in order.  Label the shapes with the correct 
+        channel identifier X, H, Y using getpboxpulse depending on the 
+        channel for which it is used. _pboxsim(3)pulse cannot accept 
+        shapes on dec (identifier Z). 
+
+smydH: Module: yes 
+Sequence: sammy2d.c 
+Description:  Implements the "Proton" Waveform of SAMMY on the 
+              decoupler channel
+
+Parameters: Sequence Page.
+       aXsmyd - amplitude of SAMMY DEC pulses.
+       pwXsmyd - 90-degree flip on DEC
+       qXsmyd - SAMMY cycles represented in the .DEC file. 
+       t1Xsmyd - spinlock correction
+       t2Xsmyd - delay correction 
+       ofXsmyd - overall frequency offset.
+       chXsmyd = 'dec' must be set (not shown). 
+Implementation:  MPSEQ smyd = getsammyd("smydH",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions. 
+
+smyoX: Module: yes 
+Sequence: sammy2d.c 
+Description:  Implements the "Observe" Waveform of SAMMY on the 
+              observe channel
+
+Parameters: Sequence Page
+       aXsmyo - amplitude of SAMMY OBS pulses.
+       pwXsmyo - 90-degree flip on OBS
+       qXsmyo - SAMMY cycles represented in the .DEC file. 
+       t1Xsmyo - spinlock correction
+       t2Xsmyo - delay correction 
+       ofXsmyo - overall frequency offset.
+       chXsmyo = 'obs' must be set (not shown). 
+Implementation:  MPSEQ smyo = getsammyo("smyoX",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.  
+
+spc5X:  Module:  yes
+Sequence:  inad2dspc5.c
+Description:  Implements the SPC5 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXspc5 - amplitude of obs pulses.
+       pwXspc5 - 360-degree flip on obs.
+       qXspc5 - SPC5 cycles represented in the .DEC file.
+       ofXspc5 - overall frequency offset.
+       chXspc5 = 'obs' must be set (not shown).
+Implementation: MPSEQ spc5 = getspc5("spc5X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+spinlockX:  Module:  no
+Sequence:  tancpxt1rho.c.
+Description:  Implements a CW spinlock on obs for T1u measurements with
+              dec CW deoupling.
+Parameters:  Sequence Page
+       aXlock - amplitude of the obs spinlock.
+       tXlock - the spinlock delay.
+       aHlock - the amplitude of CW decoupling on dec.
+
+spnlH:  Module:  yes
+Sequence:  tancpxs.c
+Description:  Implements TPPM, SPINAL16 SPINAL32 and SPINAL64 as a
+              MPSEQ. Used as an alternative to the DSEQ router.
+Parameters:  Sequence Page
+       aHspnl - amplitude of SPINAL or TPPM.
+       pwHspnl - approximate 180-degree flip on dec.
+       nHspnl - 2 for TPPM, 16, 32, 64 for SPINAL.
+       qHspnl - Number of PULSES (not cycles!) in the .DEC file.
+       ph1Hspnl - TPPM +/- phase, "phi".
+       ph2Hspnl - additional SPINAL phase, "alfa".
+       ofHspnl - overall frequency offset.
+
+The Basic SPINAL cycle Q is: [(phi),(-phi)],(phi+alfa),(-phi-alfa),(phi+2alpha),
+                             (-phi-2alpha),(phi+alfa),(-phi-alpha). Note that
+                             the first two elements [(phi),(-phi)] are TPPM.
+SPINAL repeats with: [[Q-Q]-QQ]-QQQ-Q]. where the [] include 16,32 and 64 pulses.
+                     The "Supercycle" of this SPINAL is one PULSE, (not Q).
+Implementation: MPSEQ spnl = getspnl("spnlH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+spnlmH:  Module:  yes
+Sequence:  tancpxs.c
+Description:  Implements TPPM, SPINAL16 SPINAL32 and SPINAL64 as a
+              MPSEQ. Typically used for Mixing or F1 periods. 
+              Used as an alternative to the DSEQ router.
+Parameters:  Sequence Page
+       aHspnlm - amplitude of SPINAL or TPPM.
+       pwHspnlm - approximate 180-degree flip on dec.
+       nHspnlm - 2 for TPPM, 16, 32, 64 for SPINAL.
+       qHspnlm - Number of PULSES (not cycles!) in the .DEC file.
+       ph1Hspnlm - TPPM +/- phase, "phi".
+       ph2Hspnlm - additional SPINAL phase, "alfa".
+       ofHspnlm - overall frequency offset.
+
+The Basic SPINAL cycle Q is: [(phi),(-phi)],(phi+alfa),(-phi-alfa),(phi+2alpha),
+                             (-phi-2alpha),(phi+alfa),(-phi-alpha). Note that
+                             the first two elements [(phi),(-phi)] are TPPM.
+SPINAL repeats with: [[Q-Q]-QQ]-QQQ-Q]. where the [] include 16,32 and 64 pulses.
+                     The "Supercycle" of this SPINAL is one PULSE, (not Q).
+Implementation: MPSEQ spnlm = getspnlm("spnlmH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+spnlX:  Module:  yes
+Sequence:  hxidmissct2ds.c
+Description:  Implements TPPM, SPINAL16 SPINAL32 and SPINAL64 as a
+              MPSEQ. Used as an alternate to the DSEQ router.
+Parameters:  Sequence Page
+       aXspnl - amplitude of SPINAL or TPPM.
+       pwXspnl - approximate 180-degree flip on obs.
+       nXspnl - 2 for TPPM, 16, 32, 64 for SPINAL.
+       qXspnl - Number of PULSES (not cycles!) in the .DEC file.
+       ph1Xspnl - TPPM +/- phase, "phi".
+       ph2Xspnl - additional SPINAL phase, "alfa".
+       ofXspnl - overall frequency offset.
+
+The Basic SPINAL cycle Q is: [(phi),(-phi)],(phi+alfa),(-phi-alfa),(phi+2alpha),
+                             (-phi-2alpha),(phi+alfa),(-phi-alpha). Note that
+                             the first two elements [(phi),(-phi)] are TPPM.
+SPINAL repeats with: [[Q-Q]-QQ]-QQQ-Q]. where the [] include 16,32 and 64 pulses.
+                     The "Supercycle" of this SPINAL is one PULSE, (not Q).
+Implementation: MPSEQ spnl = getspnl("spnlH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+sr4H:  Module:  yes
+Sequence:  dipshftsr4dfs.c.
+Description:  Implements the SR4 (r4-sub1-sup2)3-SUP1 recoupling
+              sequence on the dec channel.
+Parameters:  Sequence Page
+       aHsr4 - amplitude of dec pulses.
+       pwHsr4 - 360-degree flip on dec.
+       qHsr4 - SR4 cycles represented in the .DEC file.
+       ofHsr4 - overall frequency offset.
+       chHsr4 = 'dec' must be set (not shown).
+Implementation: MPSEQ sr4 = getsr4("sr4H",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+stmasX:  Module:  no
+Sequence:  stmas2d.c
+Description:  Implements two-pulse STMAS with an F1 delay d2 between the
+              pulses.
+Parameters:  Sequence Page
+       aXstmas - the amplitude of the obs pulses.
+       pw1Xstmas - the first pulse of STMAS.
+       pw2Xstmas - the second pulse of STMAS.
+
+STshearX: (processing)  Module:  no
+Sequence:  stmas2df2d.c
+Description:  Shows the parameters for STMAS shearing.
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       mval - the Z quantum number
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros:
+       mqf1ref - sets daslp, scales f1 and references it.
+
+superX: Module:  yes
+Sequence:  super2d.c
+Description:  Implements SUPER for Shift Anisotropy Recoupling
+Parameters:  Sequence Page
+       aXsuper - amplitude of obs pulses.
+       pwXsuper - 360-degree flip on obs.
+       t1Xsuper - one rotor period.
+       t2Xsuper - "tau a" delay of the cycle.
+       qXsuper - SUPER cycles represented in the .DEC file.
+       ofXsuper - overall frequency offset.
+       chXsuper = 'obs' must be set (not shown).
+Implementation: MPSEQ super = getsuper("superX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+swwhh4X:  Module:  yes
+Sequence:  swwhh4.c
+Description:  Implements semiwindowless WaHuHa on obs with acquisition
+              in the first window.
+Parameters:  Sequence Page
+       aXswwhh4 - amplitude of obs pulses.
+       pwXswwhh4 - 90-degree flip on obs.
+       r1Xswwhh4 - prepulse delay (similar to rof1).
+       r2Xswwhh4 - postpulse delay (similar to rd or rof2).
+       r3Xswwhh4 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXswwhh4 - time for one "one-tau" window and pulse.
+       npaXswwhh4 - number of 100 ns ticks in the detection window.
+Implementation:  WMPA swwhh4 = getswwhh4("swwhh4X");
+Underscore function: _swwhh4(swwhh4,phXswwhh4);  phXswwhh4 is the
+              overall phase table.
+
+tiltH:  Module:  yes
+Sequence:  hetcorlgcp2dxyr.c
+Description:  Implements a tilt pulse (35.3 or 54.5) on the dec channel
+              with offset.
+Parameters:  Sequence Page
+       aHtilt  - amplitude of the dec pulses.
+       pwHtilt - 35.3 or 54.7 tip angle
+       chHtilt = 'dec' must be set (not shown).
+       ofHtilt - offset of tilt pulse
+Implementation:  SHAPE p1 = getpulse("tiltH",0.0,0.0,1,1);
+Underscore function: _shape(p1,ph1Htilt);  ph1tilt is the overall phase
+              table.
+
+tm5H:  Module:  yes
+Sequence:  hxtm5ct2ds.c
+Description:  Implements the tranverse MREV8 recoupling sequence on the dec
+              channelwith 5 cycles per rotor period.
+Parameters:  Sequence Page
+       aHtm5 - amplitude of dec pulses.
+       pwHtm5 - 360-degree flip on dec.
+       qHtm5 - R18 cycles represented in the .DEC file.
+       ofHtm5 - overall frequency offset.
+       chHtm5 = 'dec' must be set (not shown).
+Implementation: MPSEQ tm5 = gettmrev5("tm5H",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+tossX:  Module:  yes
+Sequence:  tancpxtoss.c
+Description:  Implements four-pulse TOSS sideband suppression on obs.
+Parameters:  Sequence Page
+       aXtoss - amplitude of the obs pulses.
+       pwXtoss - 180-degree flip on obs.
+       chXtoss = 'obs' must be set (not shown).
+Implementation:  WMPA toss = gettoss4("tossX");
+Implementation:  WMPA toss = gettoss5("tossX");
+Underscore function: _toss4(toss,phXtoss);  phXtoss is the 
+              overall phase table.
+Underscore function: _toss5(toss,phXtoss);  phXtoss is the 
+              overall phase table.
+
+trapXH:  Module:  no
+Sequence:  trapdor1d.c     
+Description:  Implements a two-pulse TRAPDOR sequence with an echo on 
+              obs and a tramsitter pulse on dec in the first tau period. 
+Parameters:  Sequence Page
+       aXhxtrap - amplitude of the obs channel.
+       aHxhtrap - amplitude of the dec channel.
+       pw1Xxhtrap - first pulse on obs.
+       t1XHtrap - first tau period - dec transmitter on.
+       pw2Xxhtrap - second pulse on obs.
+       t2XHtrap - second tau period.
+
+trapHY:  Module:  no
+Sequence:  trapdorycpx.c     
+Description:  Implements a two-pulse TRAPDOR sequence with an echo on 
+              dec and a tramsitter pulse on dec2 in the first tau period. 
+Parameters:  Sequence Page
+       aHhytrap - amplitude of the dec channel.
+       aXhytrap - amplitude of the dec2 channel.
+       pw1Hhytrap - first pulse on dec
+       t1HYtrap - first tau period - dec2 transmitter on.
+       pw2Hhytrap - second pulse on dec.
+       t2HYtrap - second tau period. 
+
+tune: Module:  no
+Sequence:  tunerp.c
+Description:  Implements a directional-coupler pulse on a selected channel.
+Parameters:  Sequence Page
+       atune -  the amplitude of the tune pulse.
+       chtune -  the hardware channel to be tuned.
+       pwtune -  the length of the tune pulse.
+
+wdumbotX:  Module:  yes
+Sequence:   wdumbot1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling on obs
+              with acquisition in the window.  Tilt pulses around the
+              acquisition window allow non-quadrature detection.
+Parameters:  Sequence Page
+       aXwdumbot - amplitude of DUMBO on obs.
+       pw1Xwdumbot - 1080-degree flip on obs (the length of a full
+              DUMBO cycle).
+       pw2Xwdumbot - nominal 54.7-degree flip on obs for tilt pulses.
+       r1Xwdumbot - prepulse delay (similar to rof1).
+       r2Xwdumbot - postpulse delay (similar to rd or rof2).
+       r3Xwdumbot - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXwdumbot - time for one DUMBO cycle including the window.
+       npaXwdumbot - number of 100 ns ticks in the detection window.
+       phXwdumbot - overall small-angle phase for DUMBO to align the
+              tilted precession axis in the XY plane.
+       chXwdumbot = 'obs' must be set (not shown).
+Implementation:  WMPA wdumbot = getwdumbot("wdumbotX");
+Underscore function: _wdumbot(wdumbot,phXwdumbot);  phXwdumbot is the
+              overall phase table.
+
+wdumboX:  Module:  yes
+Sequence:  wdumbo1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling with
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwdumbo - amplitude of DUMBO on obs.
+       pwXwdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       r1Xwdumbo - prepulse delay (similar to rof1).
+       r2Xwdumbo - postpulse delay (similar to rd or rof2).
+       r3Xwdumbo - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXwdumbo - time for one DUMBO cycle including the window.
+       npaXwdumbo - number of 100 ns ticks in the detection window.
+       phXwdumbo - overall small-angle phase for DUMBO to align  the
+              tilted precession axis in the XY plane.
+       chXwdumbo = 'obs' must be set (not shown).
+Implementation:  WMPA wdumbo = getwdumbo("wdumboX");
+Implementation:  WMPA wdumbo = getwdumboxmx("wdumboX"); Z-rotation
+Underscore function: _wdumbo(wdumbo,phXwdumbo); phXwdumbo is the
+              overall phase table.
+
+wpmlgX:  Module:  yes
+Sequence:  wpmlg1d.c
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwpmlg - amplitude of PMLG on obs.
+       pwXwpmlg - 360-degree flip on obs, off resonance (the length of
+              each of the two PMLG pulses).
+       qXwpmlg - number of phase steps that make up pwXpmlg. A negative
+              value implements descending phases in the first pulse.
+       r1Xwpmlg - prepulse delay (similar to rof1).
+       r2Xwpmlg - postpulse delay (similar to rd or rof2).
+       r3Xwpmlg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXwpmlg - time for one PMLG cycle including the window.
+       npaXwpmlg - number of 100 ns ticks in the detection window.
+       chXwpmlg = 'obs' must be set (not shown).
+Implementation:  WMPA wpmlg = getwpmlg("wpmlgX");
+Implementation:  WMPA wpmlg = getwpmlgxmx("wpmlgX"); Z-rotation 
+Underscore function: _wpmlg(wpmlg,phXwpmlg);  phXwpmlg is the overall
+              phase table.
+
+wpmlg1X:  Module:  yes
+Sequence:  wpmlg1d1.c  
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window using shapes in loop
+Parameters:  Sequence Page
+       aXwpmlg - amplitude of PMLG on obs.
+       pwXwpmlg - 360-degree flip on obs, off resonance (the length of 
+              each of the two PMLG pulses).  
+       qXwpmlg - number of phase steps that make up pwXpmlg. A negative 
+              value implements descending phases in the first pulse.
+       r1Xwpmlg - pre-pulse delay (similar to rof1). 
+       r2Xwpmlg - post_pulse delay (similar to rd or rof2).
+       r3Xwpmlg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined. 
+       tauXwpmlg - time for one PMLG cycle including the window.
+       npaXwpmlg - number of 100 ns ticks in the detection window.
+       chXwpmlg = 'obs' must be set (not shown).
+       ofXwpmlg - offset value in Hz
+Implementation:  WMPA wpmlg = getwpmlgxmx1("wpmlgX");
+Underscore function: _wpmlg1(wpmlg,phXwpmlg);  phXwpmlg is the overall 
+              phase table. 
+
+Xseq:  Module: yes 
+Sequence:  none
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the obs channel during F1 or mixing periods.
+Parameters:   Sequence Page - the Xspinal, Xtppm and other groups
+              overlap.  Xseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ obs = getdseq("X"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ obs = getdseq2("X"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(obs); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(obs); runs obsprgoff();
+Underscore functions2:  _dseqon2(obs); runs _tppm(); _spinal2(); or _waltz();
+             _dseqoff2(obs); runs obsprgoff();
+
+Xspinal:  Module: yes
+Sequence: none
+Description:  Implements SPINAL decoupling on the obs channel during
+              F1 or mixing periods. Implements SPINAL2 (2-angle) decoupling
+              with getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aXspinal - amplitude of the obs channel.
+       pwXspinal - approximate 180-degree flip.
+       phXspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phXspinal or (2) is implemented with phases = +/- phXspinal, 
+              +/- (phXspinal + alpXspinal) and +/- (phXspinal + 2.0*alpXspinal).
+       alpXspinal - second angle - set 0.0 for TPPM and phXspinal/2.0
+                     for standard SPINAL64.             
+       chXspinal = 'obs' must be set (not shown).
+Implementation: SPINAL obs = getspinal("X"); or DSEQ obs = getdseq("X");
+Implementation2: SPINAL2 obs = getspinal2s("X"); or DSEQ obs = getdseq2("X");
+Underscore functions: _spinal(obs); and obsprgoff(); or _dseqon(obs);
+             and _dseqoff(obs);
+Underscore functions2: _spinal2(obs); and obsprgoff(); or _dseqon2(obs);
+             and _dseqoff2(obs);
+        
+Xtppm:  Module: yes
+Sequence:  none
+Description:  Implements TPPM decoupling on the obs channel during
+              during F1 or mixing periods.
+Parameters:  Sequence Page
+       aXtppm - amplitude of the obs channel.
+       pwXtppm - approximate 180-degree flip angle on resonance.
+       phXtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phXtppm for alternating
+              pulses.
+       chXtppm = 'obs' must be set (not shown).
+Implementation: TPPM obs = gettppm("X"); or DSEQ obs = getdseq("X");
+Implementation2: DSEQ obs = getdseq2("X");
+Underscore functions: _tppm(obs); and obsprgoff(); or _dseqon(obs); and
+              _dseqoff(obs);
+Underscore functions2: _dseqon2(obs); and _dseqoff2(obs);
+
+Xspinal2:  Module:  yes
+Sequence: none
+Description:  Implements SPINAL2 (2-angle) decoupling on the obs channel
+              during F1 or mixing periods (used in getdseq only).
+Parameters:  Sequence Page
+       aXspinal2 - amplitude of the obs channel.
+       pwXspinal2 - approximate 180-degree flip angle on resonance.
+       phXspinal2 - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- phXspinal2, +/- (phXspinal2 + alpXspinal2) 
+              and +/- (phXspinal2 +/-2.0*alpXspinal).
+       alpXspinal2 - second angle - set 0.0 for TPPM and phXspinal2/2.0
+                     for standard SPINAL64.
+       chXspinal2 = 'obs' must be set (not shown).
+Implementation: SPINAL2 obs = getspinal2("X"); or DSEQ obs = getdseq("X");
+Underscore functions: _spinal2(obs); and obsprgoff(); or _dseqon(obs);
+              and _dseqoff(obs);
+
+Xwaltz:  Module:  yes
+Sequence: none
+Description:  Implements WALTZ16 decoupling on the obs channel during
+              F1 or mixing periods.
+Parameters:  Sequence Page
+       aXwaltz - amplitude of the obs channel.
+       pwXwaltz - 90-degree flip angle on resonance.       
+       chXwaltz = 'obs' must be set (not shown).
+Implementation: WALTZ obs = getwaltz("X"); or DSEQ obs = getdseq("X");
+Implementation2: DSEQ obs = getdseq2("X");
+Underscore functions: _waltz(obs); and obsprgoff(); or _dseqon(obs);
+              and _dseqoff(obs);
+Underscore functions2: _dseqon2(obs); and _dseqoff2(obs);
+
+xmxX: Module:  yes
+Sequence:  xmx.c 
+Description:  Implements alternating X and -X pulses on obs with
+              acquisition in each window. Used for removal of phase
+              transient.
+Parameters:  Sequence Page
+       aXxmx - amplitude of the obs pulses.
+       pwXxmx - 90-degree flip on obs.
+       r1Xxmx - prepulse delay (similar to rof1).
+       r2Xxmx - postpulse delay (similar to rd or rof2).
+       r3Xxmx - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined).
+       tauXxmx - cycle time for one window and one pulse.
+       npaXxmx - number of 100 ns ticks in the detection window.
+       chXxmx = 'obs' must be set (not shown).
+Implementation:  WMPA xmx = getxmx("xmxX");
+Underscore function: _xmx(xmx,phXxmx);   phXxmx is the overall phase
+table.
+
+xxX:  Module:  yes
+Sequence:  xx.c 
+Description:  Implements pulses on obs with acquisition in each window.
+              Used for measurement of the 90-degree pulse width.
+Parameters:  Sequence Page
+       aXxx - amplitude of the obs pulses.
+       pwXxx - 90-degree flip on obs.
+       r1Xxx - prepulse delay (similar to rof1).
+       r2Xxx - postpulse delay (similar to rd or rof2).
+       r3Xxx - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined).
+       tauXxx - cycle time for one window and one pulse.
+       npaXxx - number of 100 ns ticks in the detection window.
+       chXxx = 'obs' must be set (not shown).
+Implementation:  WMPA xx = getxx("xxX");
+Underscore function: _xx(xx,phXxx);  phXxx is the overall phase table.
+
+xy8XY: Module:  no
+Sequence:  redor1tancp.c
+Description:  Implements obs pulses at each rotor period with the XY8
+              phase cycle and implements dec2 pulses within each rotor
+              period with the XY8 phase cycle, used for REDOR evolution.
+Parameters:  Sequence Page
+       aXxyxy8 - amplitude of the obs pulses.
+       aYxyxy8 - amplitude of the dec2 pulses.
+       pwXxyxy8 - 180-degree flip on obs.
+       pwYxyxy8 - 180-degree flip on dec2.
+       fXYxy8 - position of the dec2 pulse, 0.5 is the middle of the
+              rotor period.
+       nXYxy8 - number of rotor cycles.
+       onYxyxy8 - "2" provides dec2 pulses and "1" is a control without
+              dec2 pulses.
+
+xy8Y:  Module:  no
+Sequence:  redor2tancp.c
+Description:  Implements dec2 pulses at the middle of each rotor period
+              with the XY8 phase cycle, used for REDOR evolution in
+              pairs about an obs refocusing pulse.
+Parameters:  Sequence Page
+       aYxy8 - amplitude of the dec2 pulses.
+       pwYxy8 - 180-degree flip on dec2.
+       nXYxy8 - two times number of rotor cycles. xy8Y is used in pairs
+              about an obs refocusing pulse.
+       onYxyxy8 - "2" provides dec2 pulses and "1" is a control without
+              dec2 pulses.
+
+Yseq:  Module: yes 
+Sequence:  ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec2 channel during acquisition.
+Parameters:   Sequence Page - the Yspinal, Ytppm and other groups
+              overlap.  Yseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec2 = getdseq("Y"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec2 = getdseq2("Y"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec2); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec2); runs dec2prgoff();
+Underscore functions2:  _dseqon2(dec2); runs _tppm(); _spinal2(); or _waltz()
+             _dseqoff(dec2); runs dec2prgoff();
+
+Yspinal:  Module: yes
+Sequence:  ahX.c
+Description:  Implements SPINAL decoupling on the dec2 channel during
+              acquisition. Implements SPINAL2 (2-ANGLE) decoupling with 
+              getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aYspinal - amplitude of the dec2 channel.
+       pwYspinal - approximate 180-degree flip.
+       phYspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phYspinal or (2) is implemented with phases = +/- phYspinal, 
+              +/- (phYspinal + alpYspinal) and +/- (phYspinal + 2.0*alpYspinal).
+       alpYspinal - second angle - set 0.0 for TPPM and phYspinal/2.0
+                     for standard SPINAL64.             
+       chYspinal = 'dec2' must be set (not shown).
+Implementation: SPINAL dec2 = getspinal("Y"); or DSEQ dec2 = getdseq("Y");
+Implementation2: SPINAL2 dec2 = getspinal2s("Y"); or DSEQ dec2 = getdseq2("Y");
+Underscore functions: _spinal(dec2); and dec2prgoff(); or _dseqon(dec2);
+             and _dseqoff(dec2);
+Underscore functions2: _spinal2(dec2); and dec2prgoff(); or _dseqon2(dec2);
+             and _dseqoff2(dec2);
+        
+Ytppm:  Module: yes
+Sequence:  ahX.c
+Description:  Implements TPPM decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aYtppm - amplitude of the dec2 channel.
+       pwYtppm - approximate 180-degree flip angle on resonance.
+       phYtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phYtppm for alternating
+              pulses.
+       chYtppm = 'dec2' must be set (not shown).
+Implementation: TPPM dec2 = gettppm("Y"); or DSEQ dec2 = getdseq("Y");
+Implementation2: DSEQ dec2 = getdseq2("Y");
+Underscore functions: _tppm(dec2); and dec2prgoff(); or _dseqon(dec2); and
+              _dseqoff(dec2);
+Underscore functions2: _dseqon2(dec2); and _dseqoff2(dec2);
+
+Yspinal2:  Module:  yes
+Sequence: none
+Description:  Implements SPINAL2 (2-angle) decoupling on the dec2 channel
+              during acquisition (used in getdseq only).
+Parameters:  Sequence Page
+       aYspinal2 - amplitude of the dec2 channel.
+       pwYspinal2 - approximate 180-degree flip angle on resonance.
+       phYspinal2 - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- phYspinal2, +/- (phYspinal2 + alpYspinal2) 
+              and +/- (phYspinal2 + 2.0*alpYspinal).
+       alpYspinal2 - second angle - set 0.0 for TPPM and phYspinal2/2.0
+                     for standard SPINAL64.
+       chYspinal2 = 'dec2' must be set (not shown).
+Implementation: SPINAL2 dec2 = getspinal2("Y"); or DSEQ dec2 = getdseq("Y");
+Underscore functions: _spinal2(dec2); and dec2prgoff(); or _dseqon(dec2);
+              and _dseqoff(dec2);
+
+Ywaltz:  Module:  yes
+Sequence: ahX.c
+Description:  Implements WALTZ16 decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aYwaltz - amplitude of the dec2 channel.
+       pwYwaltz - 90-degree flip angle on resonance.       
+       chYwaltz = 'dec2' must be set (not shown).
+Implementation: WALTZ dec2 = getwaltz("Y"); or DSEQ dec = getdseq("Y");
+Implementation2: DSEQ dec = getdseq2("Y");
+Underscore functions: _waltz(dec2); and dec2prgoff(); or _dseqon(dec2);
+              and _dseqoff(dec2);
+Underscore functions2: _dseqon2(dec2); and _dseqoff2(dec2);
+
+zfselY:  Module:  no
+Sequence:  mqmas3qzf2d.c
+Description:  Implements a selective, square 90-degree pulse with both
+              amplitude and attenuation control to provide a Z-filter
+              in MQMAS and STMAS experiments.  The amplitude change takes
+              3.0 us during the t1Xzfsel delay. The attenuation must be
+              reset for further hard pulses.
+Parameters:  Sequence Page
+       aXzfsel - amplitude of the selective obs Z-filter pulse.
+       dbXzfsel - attenuator setting for the selective obs Z-filter
+              pulse.
+       tXzfsel - delay before the refocusing pulse requires a minimum
+              value of 3.0 us for the attenuator change.
+       pwXzfsel - selective 90-degree flip on obs.
+
+zG: Module: no
+Sequence:  onepulhspl.c
+Description:  Sets a Z gradient and allows a predelay and a postdelay.
+Parameters:  Sequence Page
+       gzlvl1 - Standard global Z gradient level - range -32767 to 32767.
+       t1Gz - Optional predelay 
+       t2Gz - Optional postdelay
+
+

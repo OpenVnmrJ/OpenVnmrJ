@@ -1,0 +1,212 @@
+"macro setpwx180ad"
+//   $1 = nucleus
+//   $2 = 'make' (it is a place holder for backcompatibility)
+//   $3 (optional) - waveform (default wurst2i)
+//   $4 (optional) - bandwidth (nucleus dependent default)
+
+if ($# < 1) then return endif
+$arg='make'
+
+if ($0='setpwx180ad') then
+   $decoupler=1
+   if (numrfch > 2) then
+       if (($1<>dn) and ($1=dn2)) then $decoupler=2 endif
+   endif
+else
+   $decoupler=0
+endif
+
+
+  setfrq($1):$dfrq
+  $dfrq=(trunc(($dfrq*1000)+0.5))/1000
+  $basewave='wurst2i' $bandwidth=115*$dfrq
+     "Transition band is approx. 15% for wurst2i"
+  $bwidths='100'
+  if ($1='C13') then
+	$bandwidth=345*$dfrq
+	$bwidths='300'
+  elseif ($1='N15') then
+	$bandwidth=460*$dfrq
+	$bwidths='400'
+  elseif ($1='H1') then
+	$bandwidth=34*$dfrq
+	$bwidths='30'
+	if ($bandwidth < 40000*1.15) then
+		$bandwidth=40000*1.15
+		format($bandwidth/1.15/$dfrq,0,0):$bwidths
+	endif
+  endif
+  if $1='F19' then $basewave='wurst180' endif
+//  if ($1='H1') or ($1='F19') then
+  if ($1='H1') then
+	if ($decoupler>0) then $decoupler=-1 endif
+  endif
+  if ($# > 2) then $basewave=$3 endif
+	"Transition band is approx. 15% for wurst2i"
+  if ($# > 3) then $bandwidth=$4*1.15*$dfrq format($4,0,0):$bwidths endif
+  
+  $ampcf=1
+  $shapefile=''
+  $ref_pwr=0 $ref_pw90=0
+  if ($decoupler=2) then
+      $ref_pw90=pwx2 $ref_pwr=pwx2lvl
+      getcf('pwx2lvl'):$ampcf
+  elseif ($decoupler=1) then
+      $ref_pw90=pwx $ref_pwr=pwxlvl
+      getcf('pwxlvl'):$ampcf
+  elseif ($decoupler=-1) then
+      $ref_pw90=pp $ref_pwr=pplvl
+      getcf('pplvl'):$ampcf
+  else
+      $ref_pw90=pw90
+      $ref_pwr=tpwr
+      getcf('tpwr'):$ampcf
+  endif
+  $ref_pw90 = $ref_pw90*$ampcf
+
+  if ($ref_pwr = 0) then 
+    write('error','Probe file is not set for %s',$1)
+    return(0)
+  endif
+
+ $pulseband=trunc(($bandwidth/1000)+0.5)*1000
+ $pulsewidth=trunc((2e7/$pulseband)+0.5)
+ $pulseband=2e7/$pulsewidth
+ if ($pulsewidth < 400) then $pulsewidth=400 endif
+                "Use a minimum of 400 us pulsewidth"
+
+"**************Find safe power level***********************"
+ $shapefile='tmp_ad_shape'
+ $sbw='' format($pulseband,0,0):$sbw
+
+  if ($1<>'H1') then
+    $maxpwr=$ref_pwr-2
+    $tmppwr=$maxpwr
+    $tmppw=$pulsewidth
+    $done=0
+    $repeats=1
+    while $done < 1 do
+    	$spw=''
+    	format($tmppw/1e6,'lower'):$spw
+    	$wave=$basewave+' '+$sbw+'/'+$spw
+    	opx($shapefile+'.RF')
+    	setwave($wave)
+    	cpx($ref_pw90,$ref_pwr):$dum
+    	pbox_pwr($shapefile+'.RF'):$tmppwr
+    	if ($repeats>10) then $done=1 endif
+    	if ($tmppwr<=$maxpwr) then
+	   $done=1
+    	endif
+//    	if ($done<1) then $tmppw=((trunc($tmppw/100))+1)*100 endif
+	if ($done<1) then
+	    exp(($tmppwr-$maxpwr)*2.303/20):$mult
+	    $tmppw=$tmppw*$mult
+	    $tmppw=(trunc(($tmppw/100)+0.5))*100
+	endif
+    	$repeats=$repeats+1
+    endwhile
+    $pulsewidth=$tmppw
+  else
+    $wave=$basewave+' '+$sbw
+    opx($shapefile+'.RF')
+    setwave($wave)
+    cpx($ref_pw90,$ref_pwr):$dum
+    pbox_pw($shapefile+'.RF'):$tmppw
+    $pulsewidth=$tmppw
+  endif
+  exists(userdir+'/shapelib/tmp_ad_shape.RF','file'):$fileex
+  if ($fileex) then shell('rm -f '+userdir+'/shapelib/tmp_ad_shape.RF'):$dum endif
+"**********************************************************"
+
+ $sbw='' $spw=''
+ format($pulseband,0,0):$sbw
+ format($pulsewidth/1e6,'lower'):$spw
+ $spw='/'+$spw
+ $wave=$basewave+' '+$sbw+$spw
+ $shapefile='_ad'+$bwidths
+ if (($decoupler<>0) and ($1 <> 'C13')) or
+    (($decoupler=0) and ($1 <> 'H1')) then 
+   $shapefile= '_'+$1+'_ad'+$bwidths
+ endif
+
+ $shapefile=probe+$shapefile
+ opx($shapefile+'.RF')
+ setwave($wave)
+ cpx($ref_pw90,$ref_pwr):$dum
+
+ pbox_pwr($shapefile+'.RF'):$pwxlvl180
+ pbox_pw($shapefile+'.RF'):$pwx180
+ $spwxlvl180='' $spwx180=''
+ format($pwxlvl180,'lower'):$spwxlvl180
+ format($pwx180,'lower'):$spwx180
+ $shapefile1=$shapefile
+
+ $wave=$basewave+' -'+$sbw+$spw
+ $shapefile=$shapefile+'R'
+ opx($shapefile+'.RF')
+ setwave($wave)
+ cpx($ref_pw90,$ref_pwr):$dum
+
+   if ($decoupler=2) then
+	pwx2180=$pwx180
+	pwx2180r=$pwx180
+        pwx2lvl180=$pwxlvl180
+	pwx2lvl180r=$pwxlvl180
+     	pwx2180ad=$shapefile1
+     	pwx2180ref=$shapefile1
+	pwx2180adR=$shapefile
+   elseif ($decoupler=1) or ($decoupler=-1) then
+	pwx180=$pwx180
+	pwx180r=$pwx180
+	pwxlvl180=$pwxlvl180
+	pwxlvl180r=$pwxlvl180
+     	pwx180ad=$shapefile1
+     	pwx180ref=$shapefile1
+        pwx180adR=$shapefile
+   else
+        pw180=$pwx180
+        tpwr180=$pwxlvl180
+     	pw180ad=$shapefile1
+   endif
+
+ if ($1 = 'C13') and ($decoupler>-1) then
+   $refocwidth=230*$dfrq
+   $bwidth2='200'
+   $refocband=trunc(($refocwidth/100)+0.5)*100
+   if (Console = 'mercury') then
+      $refocpw=3500.0
+      $basewave='cawurst'
+   else
+      $refocpw=2000.0     "2ms pulsewidth"
+   endif
+                        "  -  this translate to 700us sweep for 180ppm"
+ 
+   $sbw='' $spw=''
+   format($refocband,0,0):$sbw
+   format($refocpw/1e6,'lower'):$spw
+   $wave=$basewave+' '+$sbw+'/'+$spw
+   $shapefile=probe+'_ref'+$bwidth2
+   opx($shapefile+'.RF')
+   setwave($wave)
+   cpx($ref_pw90,$ref_pwr):$dum
+
+   pbox_pwr($shapefile+'.RF'):$pwxlvl180
+   pbox_pw($shapefile+'.RF'):$pwx180
+   $spwxlvl180='' $spwx180=''
+   format($pwxlvl180,'lower'):$spwxlvl180
+   format($pwx180,'lower'):$spwx180
+     if ($decoupler=2) then
+        pwx2180ref=$shapefile
+	pwx2180r=$pwx180
+	pwx2lvl180r=$pwxlvl180
+     elseif ($decoupler=1) then
+        pwx180ref=$shapefile
+	pwx180r=$pwx180
+	pwxlvl180r=$pwxlvl180
+     else
+	pw180ref=$shapefile
+	pw180r=$pwx180
+	tpwr180r=$pwxlvl180
+     endif
+ endif
+

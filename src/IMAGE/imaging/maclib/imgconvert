@@ -1,0 +1,70 @@
+"macro imgconvert"
+
+" convert .img directory to Analyze or Nifti"
+
+if($# < 3.0) then
+    write('error', 'Usage: imgconvert(\'function, fdfdir, outputdir\')')
+    return('')
+endif
+
+$convert=$1
+$dir=$2
+$dir2=$3
+
+
+substr($2,'basename'):$base,$ext
+if($ext='img') then
+ $dir=$2
+else
+ $dir=$2+'.img'
+endif
+
+
+exists($dir,'directory'):$e
+if ($e > 0.5) then
+	$indir=$dir
+else
+	"try current study "	
+	dataPath('save'):$dpath,$dpars
+        substr($dpath,'dirname'):$ddir
+	$indir=$ddir+'/'+$dir
+	exists($indir,'directory'):$ee
+	if ($ee < 0.5) then
+		write('error','Cannot find '+$indir)
+		return('')
+	endif
+endif
+
+" make sure we have a procpar "
+exists($indir+'/procpar','file'):$e
+if ($e < 0.5) then
+   write('error','No procpar found in '+$indir)
+   return('')
+endif
+
+substr($indir,'dirname'):$dir
+
+
+exists($dir2,'directory'):$e
+if ($e > 0.5) then
+	$outdir=$dir2
+else
+	$outdir=$dir+'/'+$dir2
+        avwdir=$outdir
+	exists($outdir,'directory'):$ee
+        if($ee < 0.5) then
+	shell('mkdir '+$outdir)
+        endif
+endif
+
+strstr($convert,'FdfToDcm'):$ret
+if($ret > -.5) then
+  $command=$convert+' -if '+$indir+' -of '+$outdir
+else
+  $command=$convert+' -indir '+$indir+' -outdir '+$outdir
+endif
+
+shell($command)
+write('line3','Result in '+$outdir)
+
+

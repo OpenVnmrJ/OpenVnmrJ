@@ -1,0 +1,32 @@
+"macro annPar"
+"Use aipCurrentKey as image key"
+"return -1 if param not found"
+"return empty str if is an empty str, or index out of range."
+ 
+if($# < 0.5 or aipCurrentKey = '') then
+   return(-1)
+endif
+
+$name = $1
+
+$type =''
+
+if $# > 1.5 then
+   aipGetHeaderParam(aipCurrentKey,$name, $2):$v1,$type
+else
+   aipGetHeaderParam(aipCurrentKey,$name):$v1,$type
+endif
+
+if($type = '') then
+   $ind = 1
+   if($# > 1.5) then $ind = $2 endif
+   substr(aipCurrentKey,1):$dir
+   readpar($dir+'/procpar',$name,$ind):$v2,$type
+   if($type = '') then
+     return(-1) 
+   else
+     return($v2)
+   endif
+else
+   return($v1)
+endif

@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="PulseSequence" element="pages" type="acquisition" >
+  <group size="665 245"
+    style="Heading1"
+    label="Pulse Sequence"
+    vq="panellevel"
+    show="$SHOW=(panellevel&gt;29)"
+    bg=""
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="PulseSequence"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="460 110" size="190 120"
+      style="Heading1"
+      label="Gradient Spinecho"
+      bg=""
+      border="Etched"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <label loc="155 70" size="30 20"
+        style="Heading1"
+        label="ms"
+        />
+      <entry loc="100 70" size="50 20"
+        style="PlainText"
+        vq="gt5 PFGflg"
+        vc="gt5=$VALUE/1000"
+        set="$VALUE=gt5*1000"
+        show="$ENABLE=(PFGflg='y')*2-1"
+        digits="1"
+        />
+      <entry loc="100 50" size="50 20"
+        style="PlainText"
+        vq="gzlvl5 PFGflg"
+        vc="gzlvl5=$VALUE"
+        set="$VALUE=gzlvl5"
+        show="$ENABLE=(PFGflg='y')*2-1"
+        digits="0"
+        />
+      <label loc="10 70" size="75 20"
+        style="Label1"
+        label="Duration"
+        justify="Left"
+        />
+      <label loc="10 50" size="75 20"
+        style="Label1"
+        label="Strength"
+        justify="Left"
+        />
+      <check loc="10 25" size="175 20"
+        style="Label1"
+        label="Gradient Spinecho on/off"
+        vq="PFGflg pfgon"
+        vc="PFGflg='y'"
+        vc2="PFGflg='n'"
+        set="$VALUE=(PFGflg='y')"
+        show="$pf='' substr(pfgon,3,1):$pf $ENABLE=($pf='y')*2-1"
+        />
+    </group>
+    <group loc="235 110" size="220 120"
+      style="Heading1"
+      label="Quaternary Selection"
+      vq="qphase"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <label loc="185 25" size="35 20"
+        style="Heading1"
+        label="deg"
+        />
+      <textmessage loc="145 90" size="60 20"
+        style="PlainText"
+        label="1.0 s"
+        vq="dm qrelax d1 qphase"
+        set="$dt='' format(d1,0,1):$dt $VALUE=$dt+' s'"
+        />
+      <textmessage loc="145 70" size="60 20"
+        style="PlainText"
+        label="1.0 s"
+        vq="dm qrelax d1 qphase"
+        set="$dm='' substr(dm,3,1):$dm if ($dm='y') and (qrelax&gt;d1) and (qphase&lt;&gt;0) then $dt='' format(qrelax-d1,0,1):$dt $VALUE=$dt+' s' else $VALUE='0 s' endif"
+        />
+      <label loc="45 70" size="95 20"
+        style="Label1"
+        label="Decoupler ON:"
+        justify="Left"
+        />
+      <label loc="45 90" size="95 20"
+        style="Label1"
+        label="Decoupler OFF:"
+        justify="Left"
+        />
+      <label loc="185 45" size="35 20"
+        style="Label1"
+        label="s"
+        />
+      <entry loc="145 45" size="35 20"
+        style="PlainText"
+        vq="qtip qphase qrelax d1"
+        vc="qrelax=$VALUE"
+        set="if (qrelax-d1) &gt; 0 then $VALUE=qrelax else $VALUE=d1 endif"
+        show="$ENABLE=(qphase[1]&lt;&gt;0)*2-1"
+        digits="1"
+        />
+      <entry loc="145 25" size="35 20"
+        style="PlainText"
+        vq="qtip qphase"
+        vc="qtip=$VALUE"
+        set="$VALUE=qtip"
+        show="$ENABLE=(qphase[1]&lt;&gt;0)*2-1"
+        digits="0"
+        />
+      <label loc="10 45" size="130 20"
+        style="Label1"
+        label="C13 relaxation delay"
+        justify="Left"
+        />
+      <label loc="10 25" size="130 20"
+        style="Label1"
+        label="Obs. pulse tip angle"
+        justify="Left"
+        />
+    </group>
+    <group loc="235 25" size="415 85"
+      style="Heading1"
+      label="Multiplicity Selection"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <textmessage loc="170 15" size="235 20"
+        style="PlainText"
+        label="[mult=0.5,1.0,1.0,1.5; qphase=1,-1]"
+        vq="mult qphase"
+        set="$qm='' if qphase[1]=0 then $qm='' else array2csv(qphase,0):$qm $qm='; qphase='+$qm endif $sm='' array2csv(mult,1):$sm $VALUE='[mult='+$sm+$qm+']'"
+        />
+      <label loc="10 55" size="125 20"
+        style="Label1"
+        label="Quaternary Carbons"
+        justify="Left"
+        />
+      <menu loc="145 55" size="260 20"
+        style="PlainText"
+        vq="qphase"
+        vc="if ($VALUE=2) then qphase=1,-1 else qphase=$VALUE endif"
+        set="$qsize=size('qphase') if ($qsize&gt;1) then $VALUE=2 else $VALUE=qphase endif"
+        editable="No"
+        >
+        <mlabel 
+          label="Enable editing"
+          chval="2"
+          />
+        <mlabel 
+          label="Suppress"
+          chval="0"
+          />
+        <mlabel 
+          label="Antiphase"
+          chval="-1"
+          />
+        <mlabel 
+          label="In-phase"
+          chval="1"
+          />
+      </menu>
+      <menu loc="145 35" size="260 20"
+        style="PlainText"
+        vq="mult"
+        vc="if $VALUE=100 then mult=0.5,1,1,1.5 elseif $VALUE=101 then mult=1 elseif $VALUE=102 then mult=1.5 elseif $VALUE=103 then mult=1,1.5 elseif $VALUE=104 then mult=0.5 endif"
+        set="$size=size('mult') if ($size=4) then $VALUE=100 elseif ($size=2) then $VALUE=103 else if (mult=1) then $VALUE=101 elseif mult=1.5 then $VALUE=102 elseif mult=0.5 then $VALUE=104 else $VALUE=0 endif endif"
+        editable="No"
+        >
+        <mlabel 
+          label="4 spectra for Full edit"
+          chval="100"
+          />
+        <mlabel 
+          label="XH spins ONLY"
+          chval="101"
+          />
+        <mlabel 
+          label="XH/XH3 up &amp; XH2 down"
+          chval="102"
+          />
+        <mlabel 
+          label="XH/XH3 up &amp; XH2 down PLUS XH only"
+          chval="103"
+          />
+        <mlabel 
+          label="No multiplicity edit"
+          chval="104"
+          />
+      </menu>
+      <label loc="10 35" size="125 20"
+        style="Label1"
+        label="Protonated Carbons"
+        justify="Left"
+        />
+    </group>
+    <group loc="5 25" size="225 80"
+      style="Heading1"
+      label="One-Bond Coupling"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <textmessage loc="130 45" size="60 20"
+        style="PlainText"
+        label="3.425"
+        vq="j1xh"
+        set="$VALUE=500/j1xh"
+        digits="3"
+        />
+      <entry loc="130 25" size="60 20"
+        style="PlainText"
+        vq="j1xh"
+        vc="j1xh=$VALUE"
+        set="$VALUE=j1xh"
+        disable="Grayed out"
+        />
+      <label loc="195 25" size="25 20"
+        style="Label1"
+        label="Hz"
+        justify="Left"
+        />
+      <label loc="195 45" size="25 20"
+        style="Label1"
+        label="ms"
+        justify="Left"
+        />
+      <label loc="10 45" size="115 20"
+        style="Label1"
+        label="Transfer delay"
+        justify="Left"
+        />
+      <label loc="10 25" size="115 20"
+        style="Label1"
+        label="Coupling constant"
+        justify="Left"
+        />
+    </group>
+    <group loc="5 105" size="225 125"
+      style="Heading1"
+      label="X-Inversion"
+      vq="rfwg"
+      show="isrfwg('tn'):$rfwg $SHOW=($rfwg&gt;0)"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="AD-Xinversion"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <check loc="10 40" size="215 20"
+        style="Label1"
+        label="Broadband inversion pulses (BIP)"
+        vq="bipflg sbbiflg"
+        vc="$bip2='' substr(bipflg,2,1):$bip2 bipflg='y'+$bip2"
+        vc2="$bip2='' substr(bipflg,2,1):$bip2 bipflg='n'+$bip2"
+        set="$bip='' substr(bipflg,1,1):$bip $VALUE=($bip='y')"
+        show="$ENABLE=(sbbiflg='y')*2-1"
+        />
+      <check loc="10 20" size="185 20"
+        style="Label1"
+        label="Shaped pulse BB inversion"
+        vq="sbbiflg"
+        vc="sbbiflg='y'"
+        vc2="sbbiflg='n'"
+        set="$VALUE=(sbbiflg='y')"
+        />
+      <group loc="0 60" size="205 60"
+        vq="bipflg sbbiflg"
+        show="$bip='' substr(bipflg,1,1):$bip $SHOW=(($bip='n') and (sbbiflg='y'))"
+        bg=""
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="145 40" size="25 20"
+          style="Heading1"
+          label="dB"
+          justify="Left"
+          />
+        <entry loc="60 0" size="145 20"
+          style="PlainText"
+          vq="pw180ad"
+          vc="pw180ad='$VALUE'"
+          set="$VALUE=pw180ad"
+          disable="Grayed out"
+          />
+        <label loc="10 0" size="50 20"
+          style="Label1"
+          label="Shape"
+          justify="Left"
+          />
+        <label loc="10 20" size="50 20"
+          style="Label1"
+          label="Width"
+          justify="Left"
+          />
+        <label loc="10 40" size="50 20"
+          style="Label1"
+          label="power"
+          justify="Left"
+          />
+        <entry loc="60 40" size="80 20"
+          style="PlainText"
+          vq="tpwr180"
+          vc="tpwr180=$VALUE"
+          set="$VALUE=tpwr180"
+          disable="Grayed out"
+          />
+        <entry loc="60 20" size="80 20"
+          style="PlainText"
+          vq="pw180"
+          vc="pw180=$VALUE"
+          set="$VALUE=pw180"
+          disable="Grayed out"
+          />
+        <label loc="145 20" size="25 20"
+          style="Label1"
+          label="µs"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 60" size="205 60"
+        vq="bipflg sbbiflg"
+        show="$bip='' substr(bipflg,1,1):$bip $SHOW=(($bip='y') and (sbbiflg='y'))"
+        bg=""
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="140 40" size="25 20"
+          style="Heading1"
+          label="dB"
+          justify="Left"
+          />
+        <entry loc="55 0" size="145 20"
+          style="PlainText"
+          vq="tnbipshp"
+          vc="tnbipshp='$VALUE'"
+          set="$VALUE=tnbipshp"
+          disable="Grayed out"
+          />
+        <label loc="140 20" size="25 20"
+          style="Label1"
+          label="µs"
+          justify="Left"
+          />
+        <entry loc="55 40" size="80 20"
+          style="PlainText"
+          vq="tnbippwr"
+          vc="tnbippwr=$VALUE"
+          set="$VALUE=tnbippwr"
+          disable="Grayed out"
+          />
+        <label loc="5 40" size="50 20"
+          style="Label1"
+          label="power"
+          justify="Left"
+          />
+        <entry loc="55 20" size="80 20"
+          style="PlainText"
+          vq="tnbippw"
+          vc="tnbippw=$VALUE"
+          set="$VALUE=tnbippw"
+          disable="Grayed out"
+          />
+        <label loc="5 20" size="50 20"
+          style="Label1"
+          label="Width"
+          justify="Left"
+          />
+        <label loc="5 0" size="50 20"
+          style="Label1"
+          label="Shape"
+          justify="Left"
+          />
+      </group>
+    </group>
+    <group loc="10 0" size="390 25"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="SeqDisplay2"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <textmessage loc="0 0" size="240 25"
+        style="PlainText"
+        label="DEPT"
+        vq="pslabel"
+        set="$VALUE=pslabel"
+        />
+    </group>
+  </group>
+</template>

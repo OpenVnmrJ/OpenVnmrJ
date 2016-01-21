@@ -1,0 +1,32 @@
+"macro AT07"
+"AT07" "Spectral Purity Test "  
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Spectral Purity Test')
+   at_currenttest='glitch' 
+   ph lb=1/at
+   gain=40 pw=0 nt=1,1,1,1 sw=80p full 
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=4.5p  vsadj(3) dssa dtext'
+   wexp='AT07(`PART1`)'
+   ATcycle
+   au
+   write('line3','Spectral Purity Test: no pulse, 80ppm Spectral Width')
+
+elseif ($1='PART1') then
+   wft
+
+  if (at_plotauto='y') then
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif
+   pltext(80,wc2max-2)
+   pscale
+   pl('all') ATpage
+  endif
+   ATsvf
+   ATnext
+endif

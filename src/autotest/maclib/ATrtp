@@ -1,0 +1,57 @@
+"macro ATrtp"
+"ATrtp"
+
+shell('sleep 1')
+rtp(autotestdir+'/parameters/'+$1)
+wdone=''                    "do no want wdone ever in autotest"
+setlimit('pw',100000,0,.1)  "AT16/AT26 have 0.025usec stepsize set"
+pw=pw   "forces 0.1usec resolution"
+tcl('.dg(10) invoke')
+at_currenttest=$1
+exists('probeConnect','parameter','global'):$e
+if ($e=1) then
+ tn='H1'
+endif
+if (Console = 'vnmrs') then
+  if (numrfch > 1) then
+     dn='C13' 
+  else
+     dn=''
+  endif
+  if (numrfch > 2) then
+     dn2='N15' 
+  endif
+endif
+dp='y'
+tn=tn
+dn=dn
+lb=10
+if (at_linewidth=1) then   "this is true at installation"
+ at=.5
+ fn=np np=fn
+ d1=1
+ tof=0
+ gain=20
+ at_pw90=at_pw90_estimate
+ pw90=at_pw90
+ tpwr=at_tpwr
+else
+ "lb could optionally be set = at_linewidth "
+ at=3/at_linewidth
+ fn=np np=fn
+ if (at>10.0*at_T1) then
+    d1=0.01 
+ else
+    d1=10*at_T1 - at
+ endif
+ temp=at_temp
+ tof=at_tof
+ pw=at_pw90
+ pw90=at_pw90
+ sw=sw          "force oversamp to be calculated"
+ if ($1<>'gaintest') then
+    gain=at_gain
+ endif
+endif
+cz
+n3=''

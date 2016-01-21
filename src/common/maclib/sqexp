@@ -1,0 +1,72 @@
+"macro sqexp"
+"retrieve and set parameters for an imaging scan in a study"
+
+$save='n'
+if ($# < 0.5) then
+  write('error','sqexp requires a parameter set as an argument')
+  return
+elseif ($# > 1.5) then
+  $save=$2
+endif
+
+if ($save='save' and activestudy<>'null' and actionid<>'null') then
+  xmselect('savepar')
+endif
+sqsavestudy
+if ($1='studycard') then
+  exists($3+'.par','studycardlib/'+$2):$e,$path
+  if ($e) then
+    rtp($path,'nomenu')
+  else
+    rtppar($3,'nomenu')
+  endif
+else
+  rtppar($1,'nomenu')
+endif
+rfcoil=RFCOIL
+exists('execsetup','parameter'):$j
+if ($j < 0.5) then
+  execpars
+endif
+on('execsetup'):$j
+if ($j > 0.5) then
+  exec(execsetup)
+endif
+newdg
+gcoil=sysgcoil
+exists('studyid','parameter','global'):$e
+if ($e > 0.5) then
+  if (studyid<>'' and activestudy<>'null') then
+    exists(sqdir+'/studypar','file'):$e
+    if ($e > 0.5) then
+      fread(sqdir+'/studypar')
+    endif
+  endif
+endif
+prescan[4] = 'Not done'
+if (prescan[8] = '') then
+  prescan[3] = 'Complete'
+else
+  prescan[3] = 'Not done'
+endif
+gplan('endIplan')
+exists('seqcon','parameter'):$e
+if ($e > 0.5) then
+  _seqcon
+endif
+
+if (appmode = 'imaging') then
+  "Allow apptype specific action on sqexp"
+  exists(apptype,'maclib'):$ex
+  if ($ex) then {apptype}('rtpar') endif
+  "Allow sequence specific action on sqexp"
+  execseq('rtpar')
+  exists('prescribed','parameter'):$ex
+  if ($ex) then
+    if (prescribed = 'n') then
+      sqdefaultfov
+    endif
+  endif
+  prep
+  go('check')
+endif

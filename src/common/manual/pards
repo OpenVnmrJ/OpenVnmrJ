@@ -1,0 +1,74 @@
+*********************************************************
+*							*
+*    pards:	create additional parameters		*
+*		used by downsampling			*
+*    movedssw:  set downsampling parameters to select   *
+*               a cursor selected spectral region       *
+*							*
+*********************************************************
+
+This software allows post-acquistion digital filtering and downsampling
+to selectively detect a region of a spectrum.  The digital filtered
+and downsampled FID can then be saved to disk.  The digital filtering
+and downsampling process are integrated into the ft and ft2d commands
+and will occur when these commands are executed as specified by the
+parameters below.  The digital filtering and downsampling are done
+just prior to the Fourier transform, so all apodization, linear prediction,
+solvent suppression, etc. are done prior to digital filtering.
+
+To use this software, a data set should be acquired with
+sw = N*(final desired sw) and np = N*(final desired np + dscoef/2).
+Once a data set has been acquired, create the Vnmr parameters
+necessary for digital filtering and downsampling.  The pards macro
+creates all of the necessary parameters.  It is also called when
+addpar('downsamp') is typed.
+
+If a data set has been Fourier transformed normally, the movedssw
+macro sets dslsfrq and downsamp to appropriate values for digitally
+filtering and downsampling to select the region of the spectrum selected
+by the cursors in the ds display.
+
+The parameters created by pards include:
+
+downsamp:
+
+This parameter specifies the downsampling factor applied after
+digital filtering.  The sw of the data set after digital filtering
+and downsampling will be (acquired sw)/downsamp.  Setting downsamp
+to 1 will allow digital filtering with a filter bandwidth specified
+by "dsfb" (see below) without downsampling.  Setting downsamp to 'n'
+will allow normal data processing in Vnmr without digital filtering.
+
+dscoef:
+
+This parameter specifies the number of coefficients used in the digital
+filter.  The default is 61.  A larger number of coefficients will give
+a filter with sharper cutoffs, and a smaller number of coefficients will
+give a filter with more gradual cutoffs.  dscoef does not need to be
+changed as downsamp is changed, as it is automatically adjusted by vnmr
+to give filter cutoffs which are the same regardless of the value of
+downsamp.  This is done by actually using dscoef*downsamp/2 coefficents
+in the digital filter.  Vnmr always rounds dscoef*downsamp/2 to an odd
+number.
+
+dslsfrq:
+
+This parameter is used to select a bandpass filter that is not centered
+about the transmitter frequency.  dslsfrq is specified in Hz and works
+much like lsfrq.  A positive value of dslsfrq will select a region upfield
+from the transmitter frequency and a negative value will select a downfield
+region.
+
+dsfb:
+
+This parameter specifies the bandwidth of the digital filter that is used.
+If dsfb='n' it defaults to the final sw/2.  A smaller value will reject 
+frequencies at the edges of the spectrum, and a larger value will alias
+noise and signals at frequencies outside of +/- sw/2.
+
+filtfile:
+
+This parameter specifies the filename of a file of FIR digital filter
+coefficients.  The file must be in the user's vnmrsys/filtlib directory.
+The filter coefficient file is a text file with one real filter
+coefficient per line.  Complex filters are not currently supported.

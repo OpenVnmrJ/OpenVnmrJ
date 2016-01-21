@@ -1,0 +1,55 @@
+"macro ATgetphase"
+"ATgetphase(first spectrum, last spectrum,<lowpower><highpower>)"
+
+$str=$3
+$filename=curexp+'/attenarray_phase_'+$str
+write('reset',$filename)
+write('file',$filename,'attenuator value         intensity      phase   phase difference')
+s1
+f cr=sp+sw/2 sp=3.7p wp=2p nl
+ds(1)
+$i=1 
+repeat
+select($i)
+ph
+peak:$ht
+echo($ht)
+pa                   "phase mode"
+mark:$phase
+if $i=1 then 
+ peak:$phase1 $phase2=$phase
+endif
+$phasediff=$phase*180/$phase1-$phase2*180/$phase1
+write('file',$filename,'%10s                 %6.1f      %3.1f       %3.1f',-37+$i/2,$ht,$phase*180/$phase1,$phasediff)
+$i=$i+1
+until $i>$2
+ph
+cp($filename,userdir+'/autotest/data/attenarray_phase_'+$str)
+
+format($2,3,0):n3
+
+$filename=curexp+'/attenarray_phase_'+$str+'.inp'
+write('reset',$filename)
+write('file',$filename,'attenuator value')
+write('file',$filename,'phase')
+write('file',$filename,'1 %s',n3)
+ds(1)
+pa
+mark:$phase1
+peak:$phase2 
+$i=$1 
+repeat
+select($i)
+ph
+peak:$ht
+pa                   "phase mode"
+mark:$phase
+$phasediff=$phase*180/$phase1-$phase1*180/$phase1
+write('file',$filename,'%10s                 %3.1f',tpwr[$i],$phasediff)
+$i=$i+1
+until $i>$2
+ph
+fr1
+ds($2)
+cp($filename,userdir+'/autotest/data/attenarray_phase_'+$str+'.inp')
+

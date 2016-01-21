@@ -1,0 +1,86 @@
+Protocol: Onepul  Sequence: onepul.c  Apptype: solidseq1d
+
+Description: 
+
+Single pulse preparation with SPINAL64 or TPPM 
+decoupling on both dec and dec2. 
+
+Parameter Groups:
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used 
+              as a preparation pulse. Also used to store the obs 
+              calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.  
+Parameters:  Sequence Page - Hspinal and Htppm groups overlap. 
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+              getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence:  tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Yspinal:  Module:  yes
+Sequence:  decorcptan2d.c
+Description:  Implements SPINAL decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+        aYspinal - amplitude of the dec channel.
+        pwYspinal - approximate 180-degree flip.
+        phYspinal - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- 1.0, +/- 1.5 and +/-2.0 times phYspinal.
+        chYspinal = 'dec2' must be set (not shown).
+Implementation: SPINAL dec2 = getspinal("Y"); or DSEQ dec2 =
+               getdseq("Y");
+Underscore functions: _spinal(dec2); and dec2prgoff(); or
+       _dseqon(dec2); and _dseqoff(dec2);
+
+Ytppm:  Module:  yes
+Sequence:  decorcptan2d.c
+Description:  Implements TPPM decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aYtppm - amplitude of the dec channel.
+       pwYtppm - approximate 180-degree flip.
+       phYtppm - +/- small angle phase.   TPPM is implemented with
+              phases = +/- 1.0, times phYtppm.
+       chYspinal = 'dec2' must be set (not shown)
+Implementation: TPPM dec2 = gettppm("Y"); or DSEQ dec2 = getdseq("Y");
+Underscore functions: _tppm(dec2); and dec2prgoff(); or _dseqon(dec2);
+              and _dseqoff(dec2);

@@ -1,0 +1,75 @@
+"macro sofastCmhmqc"
+
+"sofastCmhmqc macro for BioPack, Sept 2005"
+
+BPrtppar('sofastCmhmqc')
+
+getparam('NHgstab','N15'):gstab
+sw1=20*dfrq dof=dof-(174-19)*dfrq
+dm='nny' at=at/2
+
+opx('met_excit120.RF')               " 120 degree selective pulse "
+setwave('pc9f 2.0p 0.6p 0.0 0.0 120')
+pbox_rst
+pboxpar('refofs', '4.77p')
+pboxpar('sfrq', sfrq)
+cpx(pw*compH,tpwr)
+BPpboxget('met_excit120.RF'):shname1,shpw1,shlvl1
+BPmoveshape('met_excit120.RF')
+
+opx('caliph_ref.RF')                               "C13 refocussing pulse "
+setwave('sp22 100p 35p')
+pbox_rst
+pboxpar('refofs', '19.0p')
+pboxpar('sfrq', dfrq)
+cpx(pwC*compC,pwClvl)
+BPpboxget('caliph_ref.RF'):shname3,shpw3,shlvl3
+BPmoveshape('caliph_ref.RF')
+
+opx('met_refoc.RF')                               " refocussing pulse "
+setwave('rsnob 2.0p 0.6p')
+pbox_rst
+pboxpar('refofs', '4.77p')
+pboxpar('sfrq', sfrq)
+cpx(pw*compH,tpwr)
+BPpboxget('met_refoc.RF'):shname2,shpw2,shlvl2
+BPmoveshape('met_refoc.RF')
+
+opx('met_refoc.DEC')                             " 1H decoupling"
+setwave('rsnob 2.0p 0.6p')
+pbox_rst
+pboxpar('refofs', '4.77p')
+pboxpar('sfrq', sfrq)
+cpx(pw*compH,tpwr)
+BPpboxget('met_refoc.DEC'):$dmmy1,$dmmy2,shlvl2,$dmmy3,$dmmy4,shdmf2
+BPmoveshape('met_refoc.DEC')
+
+opx('WURST20.DEC')                             " 13C decoupling in t2"
+setwave('WURST2 20p/2m 19p')
+pbox_rst
+pboxpar('refofs', '19p')
+pboxpar('sfrq', dfrq)
+cpx(pwC*compC,pwClvl)
+BPpboxget('WURST20.DEC'):dseq,$dmmy2,$dpwr,$dmmy3,dres,dmf
+dpwr=$dpwr
+BPmoveshape('WURST20.DEC')
+
+opx('met_dec.DEC')                             " 13C decoupling in t1"
+setwave('WURST2 12p/5m 37p')
+setwave('WURST2 -12p/5m 1p')        "to minimize Bloch-Siegert shifts"
+setwave('WURST2 12p/5m 53p')
+setwave('WURST2 -12p/5m -15p')        "to minimize Bloch-Siegert shifts"
+setwave('WURST2 12p/5m 70p')
+setwave('WURST2 -12p/5m -32p')        "to minimize Bloch-Siegert shifts"
+pbox_rst
+pboxpar('refofs', '19p')
+pboxpar('sfrq', dfrq)
+cpx(pwC*compC,pwClvl)
+BPpboxget('met_dec.DEC'):Cdecseq,$dmmy2,Cdecpwr,$dmmy3,Cdecres,Cdecdmf
+BPmoveshape('met_dec.DEC')
+
+wnt='' wexp='' spin='n'
+ni=1 phase=1
+man('sofastCmhmqc')
+
+

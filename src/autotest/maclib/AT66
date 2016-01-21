@@ -1,0 +1,87 @@
+"macro AT66"
+"AT66" "Shaped Excitation Predictability at Constant Bandwidth (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Shaped Excitation Predictability at Constant Bandwidth:  Channel 2')
+   at_currenttest='pboxshapes_ch2'
+   ref_pwr=at_tpwrLowpower
+   ref_pw90=at_pw90_ch2*(at_pw90Lowpower/at_pw90)
+   seqfil='ATdsh2pul' 
+   vchannelmap='1'
+   f pw=0 pwpat='hard' dpwr=0 tpwr=0 dof=tof
+   pxshape('square 4000','square','n')
+   pbox_pw('square.RF'):$pw pbox_pwr('square.RF'):$pwr 
+   pw=$pw tpwr=$pwr  pwpat='square'
+
+   pxshape('hs 4000','hs','n')
+   pbox_pw('hs.RF'):$pw pbox_pwr('hs.RF'):$pwr 
+   pw[2]=$pw
+   tpwr[2]=$pwr
+   pwpat[2]='hs'
+
+   pxshape('av90 4000','av90','n')
+   pbox_pw('av90.RF'):$pw pbox_pwr('av90.RF'):$pwr 
+   pw[3]=$pw
+   tpwr[3]=$pwr
+   pwpat[3]='av90'
+
+   pxshape('Q5 4000','Q5','n')
+   pbox_pw('Q5.RF'):$pw pbox_pwr('Q5.RF'):$pwr 
+   pw[4]=$pw
+   tpwr[4]=$pwr
+   pwpat[4]='Q5'
+
+   pxshape('eburp2 4000','eburp2','n')
+   pbox_pw('eburp2.RF'):$pw pbox_pwr('eburp2.RF'):$pwr 
+   pw[5]=$pw
+   tpwr[5]=$pwr
+   pwpat[5]='eburp2'
+
+   pxshape('hgaus 4000','hgaus','n')
+   pbox_pw('hgaus.RF'):$pw pbox_pwr('hgaus.RF'):$pwr 
+   pw[6]=$pw
+   tpwr[6]=$pwr
+   pwpat[6]='hgaus'
+ 
+   pxshape('gaus90 4000','gaus90','n')
+   pbox_pw('gaus90.RF'):$pw pbox_pwr('gaus90.RF'):$pwr 
+   pw[7]=$pw
+   tpwr[7]=$pwr
+   pwpat[7]='gaus90'
+
+   pxshape('sinc 4000','sinc','n')
+   pbox_pw('sinc.RF'):$pw pbox_pwr('sinc.RF'):$pwr 
+   pw[8]=$pw
+   tpwr[8]=$pwr
+   pwpat[8]='sinc'
+
+   pxshape('sneeze 4000','sneeze','n')
+   pbox_pw('sneeze.RF'):$pw pbox_pwr('sneeze.RF'):$pwr 
+   pw[9]=$pw
+   tpwr[9]=$pwr
+   pwpat[9]='sneeze'
+   array='(pwpat,tpwr,pw)'
+
+   wnt='ATwft select(1) f full ph aph vsadj(100) dssh dtext'
+   text('Comparison of 90 Degree Pulse Channel 2 Excitation using a Variety\\of Shapes. All Powers and Pulse Times are Calculated from \\a Single Calibration using Pbox')
+   p1=0 p1pat='hard'
+   cdc 
+   wexp='AT66(`PART1`)'
+   ATcycle
+   au
+   write('line3','Shaped Excitation Predictability on (channel 2)')
+   dps
+
+elseif ($1='PART1') then
+  wft
+  peak:$ht,cr rl(0) sp=-500 wp=1000
+  ATsvf ATplot 
+
+ATnext
+endif

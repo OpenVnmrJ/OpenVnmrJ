@@ -1,0 +1,200 @@
+"macro BPsvf"
+
+" BPsvf - modified svf: save data set, including all WFG files, psg code"
+
+"disable autofid save if set"
+$dofidsave=dofidsave
+if dofidsave='y' then dofidsave='n' endif
+
+$name=''
+getext($1):$cmd1,$cmd2
+  if ($cmd2 ='fid') then
+    length($1):$size
+    substr($1,1,$size-4):$name
+    $1 = $name
+  endif
+
+$filename = ''
+if ($# > 0.5) then
+  $args = 'SVF(\''+$1
+  $i = 1
+  while ($i<$#) do
+    $i = $i + 1
+    $args = $args+'\',\''+${$i}
+  endwhile
+  $args = $args+'\')'
+  exec($args)
+  $filename=$1
+else
+  SVF:$filename   "saves data(binary), exp log, text file and parameter set"
+endif
+
+exists('/vnmr/maclib/appdirs','file'):$appdir
+if $appdir=0 then
+ exists(userdir+'/seqlib/'+seqfil+'.psg','file'):$SPcodeinlocalseqlib  "saves spinCAD code, if present"
+ if ($SPcodeinlocalseqlib=1) then
+   copy(userdir+'/spincad/psglib/'+seqfil,$1+'.fid')
+ endif
+ exists(userdir+'/seqlib/'+seqfil+'.c','file'):$ccodeinlocalseqlib  "saves sequence code"
+ if ($ccodeinlocalseqlib=1) then
+   copy(userdir+'/seqlib/'+seqfil+'.c',$1+'.fid')
+ endif
+ if (($SPcodeinlocalseqlib=0) and ($ccodeinlocalseqlib=0)) then
+   exists('/vnmr/seqlib/'+seqfil+'.psg','file'):$SPcodeinvnmrseqlib  "saves spinCAD code, if present"
+   if ($SPcodeinvnmrseqlib=1) then
+     copy('/vnmr/spincad/psglib/'+seqfil,$1+'.fid')
+   endif
+   exists('/vnmr/psglib/'+seqfil+'.c','file'):$ccodeinvnmrseqlib  "saves sequence code"
+   if ($ccodeinvnmrseqlib=1) then
+     copy('/vnmr/psglib/'+seqfil+'.c',$1+'.fid')
+   endif
+ endif
+else
+ exists(seqfil+'.psg','seqlib'):$ret,$spincadseqlibpath
+ if $ret>0 then
+  exists(seqfil+'.psg','spincad/psglib'):$ret,$spincadpsglibpath
+  copy($spincadpsglibpath,$1+'.fid')
+ endif
+
+ exists(seqfil+'.c','seqlib'):$ret,$psglibpath 
+ if $ret=0 then
+  exists(seqfil+'.c','psglib'):$retpsg,$psglibpath
+ endif
+ if $ret>0 then
+  copy($psglibpath,$1+'.fid')
+ else
+  if $retpsg>0 then copy($psglibpath,$1+'.fid') endif
+ endif
+endif
+
+copy(userdir+'/global',$1+'.fid')                   "saves global"
+
+"save waveforms using older software"
+exists(curexp+'/psgFile','file'):$fileexists
+if ($fileexists=1) then
+ nrecords(curexp+'/psgFile'):$lines
+ if $lines>0 then
+  $counter=0
+  lookup('file',curexp+'/psgFile')
+  repeat
+   lookup('read'):$record
+   cp($record,$1+'.fid')             "saves all .RF and .DEC files"
+   $counter=$counter+1
+  until $counter=$lines 
+ endif
+endif
+
+"save waveforms using VJ2.2C or later"
+exists(curexp+'/PsgFile','file'):$fileexists
+if ($fileexists=1) then
+ nrecords(curexp+'/PsgFile'):$lines
+ if $lines>0 then
+  $counter=0
+  lookup('file',curexp+'/PsgFile')
+  repeat
+   lookup('read'):$record
+   cp($record,$1+'.fid')             "saves all .RF and .DEC files"
+   $counter=$counter+1
+  until $counter=$lines 
+ endif
+endif
+
+"save copy of probefile"
+
+  exists(userdir+'/probes/'+probe+'/'+probe,'file'):$e
+  if $e then
+    cp(userdir+'/probes/'+probe+'/'+probe,$1+'.fid')  "use user probefile"
+  else
+    exists(systemdir+'/probes/'+probe+'/'+probe,'file'):$e
+    if $e then
+     cp(systemdir+'/probes/'+probe+'/'+probe,$1+'.fid')
+    endif
+  endif
+
+"save NMRPipe output"
+
+ exists('BPpipe_pipeDir','parameter'):$e
+ $file=''
+ if ($e=1) then
+    exists(curexp+'/'+ BPpipe_pipeDir,'file'):$pipedir_present
+    if $pipedir_present=1 then
+     $file=BPpipe_pipeDir
+     $filename=$1+'.fid/NMRpipe' 
+     mkdir($filename)
+     $cmd1='cp -r '+curexp+'/'+$file+'/*tab ' + $filename
+     $cmd2='cp -r '+curexp+'/'+$file+'/*com ' + $filename
+     echo($cmd1) echo($cmd2)
+     shell($cmd1) shell($cmd2)
+    endif
+ endif
+
+
+
+"save copy of /vnmr/vnmrrev and /vnmr/conpar"
+
+ cp(systemdir+'/vnmrrev',$1+'.fid')
+ cp(systemdir+'/conpar',$1+'.fid')
+
+" Non-Linearly Sampled Data Section                              "
+
+$filename=$1+'.fid'
+BPchkseq:$orekhov
+exists('SPARSE', 'parameter'):$SPARSE 
+if (($SPARSE=1) and ($orekhov=1)) then
+ if (SPARSE='y') then
+  exists(sparse_dir+'/'+sparse_file+'.in', 'file'):$spin
+  exists(sparse_dir+'/'+sparse_file+'.hdr_3', 'file'):$sphdr1
+  if ($spin) then  
+     $cmd1='cp '+sparse_dir+'/'+sparse_file+'.in '+$filename
+     if ($sphdr1) then
+        $cmd2='cp '+sparse_dir+'/'+sparse_file+'.hdr_* '+$filename
+         shell($cmd2):$dum
+     else $cmd2=''
+     endif
+  else $cmd1=''
+      $cmd2=''
+  endif 
+  $cmd3='mkdir '+$filename+'/proc'
+  $args=$filename+'/proc/'
+  shell($cmd1):$dum
+  shell($cmd3)
+  BP_varian2pipeNLS($args,'sfrq')
+ endif
+endif
+
+" Non-Linearly Sampled Data Section -CLEAN (Kupce Method)               "
+
+$filename=$1+'.fid'
+exists('SPARSE', 'parameter'):$SPARSE
+BPchkseq:$orekhov                       "1 if Orekhov, 0 if Kupce"
+if (($SPARSE=1) and ($orekhov=0)) then  "Kupce method"
+ if (SPARSE='y') then
+  exists(curexp+'/sampling.sch', 'file'):$e1
+  if ($e1) then  
+    $cmd1='cp '+curexp+'/sampling.sch '+$filename
+    shell($cmd1)
+  endif 
+  exists(curexp+'/info', 'file'):$e1
+  if ($e1) then  
+    $cmd1='cp -r '+curexp+'/info '+$filename
+    shell($cmd1)
+  endif 
+  exists(curexp+'/procdir', 'file'):$e1
+  if ($e1) then                        "data in acqfil is CLEAN, not orig"
+                                       "so copy orig.fid/* files"
+    $cmd1='cp -r '+curexp+'/procdir/orig.fid/* '+$filename
+    shell($cmd1)
+  endif 
+ endif
+endif
+
+
+" Non-Linearly Sampled Data Section -Kozminski Method               "
+
+exists('EXP_SAM', 'parameter'):$exs
+if ($exs) then
+     exists(timetab_name, 'file'):$ttn 
+     if ($ttn) then
+     copy(timetab_name,$1+'.fid')
+     endif
+endif

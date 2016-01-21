@@ -1,0 +1,36 @@
+"macro CSfid2pro"
+"Create sampling profile from pbox.fid. EK, July 2012, Oxford"
+
+$fin = userdir+'/shapelib/pbox.fid'
+$fout = '' $w='' $x=''
+
+exists($fin, 'file'):$e
+if not ($e) then
+  write('error','pbox.fid file does not exist')
+  return
+endif
+
+if(CSdomain=1) then
+  $fout=curexp+'/sampling_ni.pro'
+elseif (CSdomain=2) then
+  $fout=curexp+'/sampling_ni2.pro'
+elseif (CSdomain=3) then
+  $fout=curexp+'/sampling_ni3.pro'
+endif
+
+nrecords($fin):$n     
+lookup('file', $fin)
+write('reset', $fout)
+
+$j=0
+repeat
+  lookup('read', 2):$w,$x  
+  format($w,10,8):$re
+  if($re<0.0) then
+    $re = -$re
+  endif
+  write('file',$fout,' %12.8f', $re/1024.0)
+  $j=$j+1
+until ($j >= $n)
+
+

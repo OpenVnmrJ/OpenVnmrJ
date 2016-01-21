@@ -1,0 +1,62 @@
+"macro testParfile"
+" Agilent "
+vvCopyAppdir('appdir_vnmr1.seqgen')
+getdirs('parlib'):$dirs
+$dirs=$dirs,systemdir+'/par200/stdpar/',systemdir+'/par200/tests/'
+$dirs=$dirs,systemdir+'/par300/stdpar/',systemdir+'/par300/tests/'
+$dirs=$dirs,systemdir+'/par400/stdpar/',systemdir+'/par400/tests/'
+$dirs=$dirs,systemdir+'/par500/stdpar/',systemdir+'/par500/tests/'
+$dirs=$dirs,systemdir+'/par600/stdpar/',systemdir+'/par600/tests/'
+$dirs=$dirs,systemdir+'/par700/stdpar/',systemdir+'/par700/tests/'
+$dirs=$dirs,systemdir+'/par750/stdpar/',systemdir+'/par750/tests/'
+$dirs=$dirs,systemdir+'/par800/stdpar/',systemdir+'/par800/tests/'
+$dirs=$dirs,systemdir+'/par900/stdpar/',systemdir+'/par900/tests/'
+
+$num=size('$dirs')
+$j=0
+$faillog=curexp+'/faillog'
+write('reset',$faillog)
+while ($j < $num) do
+  $j = $j+1
+  $dir = $dirs[$j]
+  getfile($dir):$nfiles
+  if ($nfiles > 0) then
+    write('line3','Parameter file syntax in %s',$dir):$msg
+    vvLog('Test',$msg)
+  endif
+  $pass=0
+  $fail=0
+  $i=0
+  while ($i<$nfiles) do
+     $i=$i+1
+     getfile($dir,$i):$parfile
+//     fread($dir+$parfile+'.par/procpar','current','reset')
+//     write('line3','check par file %s',$parfile)
+     if ($parfile <> 'parliblist') then
+       $line3=''
+       rtp($dir+$parfile)
+       errlog:$line3
+       strstr($line3,'fixpar failed'):$e
+       strstr($line3,'Error'):$e1
+       $e = $e + $e1
+       if ($e = 0) then
+         $pass=$pass+1
+       else
+         $fail=$fail+1
+         write('file',$faillog,'failed parameter set: %s',$dir+$parfile)
+       endif
+     endif
+  endwhile
+  if ($pass) then
+    write('line3','%d parameter sets',$pass):$msg
+    vvLog('Pass',$msg)
+  endif
+  if ($fail) then
+    write('line3','%d parameter sets',$fail):$msg
+    vvLog('Fail',$msg)
+    vvLog:$path
+    shell('cat '+$faillog+' >> '+$path+';cat'):$e
+    write('reset',$faillog)
+  endif
+endwhile
+vvCopyAppdir('appdir_vnmr1')

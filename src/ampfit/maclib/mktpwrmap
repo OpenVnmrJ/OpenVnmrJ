@@ -1,0 +1,555 @@
+"macro mktpwrmap"
+mkampargs
+
+if ($#=0) then
+  $mode='calibrate'
+else
+  $mode=$1
+endif
+
+$tmin=-37
+$maxlines=200
+
+$type=''
+$label=''
+if ampargs[10]=1 then
+    $type='.amp'
+    $label='Amp'
+else
+    $type='.xmtr'
+    $label='Xmtr'
+endif
+
+if tpwr3<-16 then
+   $nscale=10
+elseif tpwr3<0 then
+   $nscale=4
+else
+   $nscale=2
+endif
+
+if $mode='count' then
+    ampdir:$dirname,$rfchnl,$canwrite,$olddir,$chnldir 
+    $mapname=$dirname+'/tpwr.map'
+    $orgmap=$mapname+'.org'
+    $k=1
+    $i=0
+    $istr=''
+    format($k,0,0):$istr
+
+    exists($orgmap,'file'):$filex
+    if $filex > 0 then
+        $i=$i+1
+        $file=$dirname+'/tpwr'+$type+'.map.'+$istr
+        exists($file,'file'):$filex
+        while $filex>0 do
+            $k=$k+1
+            $i=$i+1
+            format($k,0,0):$istr
+            $file=$dirname+'/tpwr'+$type+'.map.'+$istr
+            exists($file,'file'):$filex
+        endwhile
+    endif
+    $j=0
+    $mapname=$dirname+'/test'+$type+'.map'
+    exists($mapname,'file'):$filex
+    if $filex > 0 then
+       $j=1
+    endif
+    ampargs[11]=$i
+    return($i,$j)
+endif
+
+if $mode='restore' then 
+
+    ampdir:$dirname,$rfchnl,$canwrite,$olddir,$chnldir
+    $mapname=$dirname+'/tpwr.map'
+    $orgmap=$mapname+'.org'
+    exists($orgmap,'file'):$filex1
+    if $filex1>0 then
+       $msg='Restore original map and clear '+$label+' validate and test files'
+        confirm($msg):$aa
+        if($aa=0) then
+            write('line3','quiting')
+    	   return(0)
+        endif       
+        shell('mv '+$orgmap+' '+$mapname):$dum
+        $file='validate'+$type+'.map'
+        $filename=$dirname+'/'+$file
+        $orgname=$filename+'.org'
+        exists($orgname,'file'):$filex1
+        if $filex1>0 then
+           shell('mv '+$orgname+' '+$filename):$dum
+        endif
+    endif
+    $tmpname=$dirname+'/tpwr'+$type+'.*'
+    shell('rm -f '+$tmpname):$dum
+    $tmpname=$dirname+'/validate'+$type+'.*'pwd
+
+    shell('rm -f '+$tmpname):$dum
+    $tmpname=$dirname+'/test'+$type+'*'
+    shell('rm -f '+$tmpname):$dum
+    ampargs[11]=0
+	return(1)
+endif
+    
+if $mode='calibrate' or $mode = 'test' or $mode = 'validate' then 
+
+    usrgain=gain
+   
+    if ($mode='calibrate' and ampargs[10]=0) then
+       amptables=0
+    elseif ampargs[10]=1 then
+       amptables=1
+    endif
+
+    if vs < 10 then
+       vs=10
+    endif
+    on('tpwrhgts'):$e
+    if $e <0 then
+       create('tpwrhgts')
+       setprotect('tpwrhgts','set',256)
+    endif
+    tpwrhgts=0
+
+	ampdir:$dirname,$rfchnl,$canwrite,$olddir,$chnldir
+	$ws=0.75
+
+    // if sufficiently zoomed, use all points in window
+    if wp/sw < 0.75 then
+        $ws=1.0
+    endif
+	$start=$ws*wp+sp+rfl
+	$end=sp+rfl+(1-$ws)*wp
+	
+	$wp=($start-$end)
+	$nlines=np*$wp/sw/2
+	if $nlines>$maxlines then
+	    $nlines=$maxlines
+	endif
+	$step=$wp/$nlines
+    $freq=$start
+    $i=1
+    llfrq=$freq
+    repeat
+        llfrq[$i]=$freq
+        $freq=$freq-$step
+        $i=$i+1
+    until ($freq < $end)
+	   
+    $nlines = size('llfrq')
+    $nlines?
+
+    if $canwrite=0 then
+       write('error','User does not have write access to %s',$chnldir)
+       return
+    endif
+
+   // make new path for tpwr.map
+
+    exists($dirname,'directory'):$e
+    if $e=0 then
+        shell('mkdir -p '+$dirname):$dum
+    endif
+    exists($dirname,'directory'):$direx
+    if ($direx=0) then
+       write('error','Could not create %s',$dirname)
+       return(0)
+    endif
+
+	// if tpwr.map exists confirm replace
+
+    $mapname=$dirname+'/tpwr.map'
+    $orgmap=$mapname+'.org'
+
+    if $mode='calibrate' then  // icat only
+        ampargs[9]=0
+        pwrtables=0
+        exists($mapname,'file'):$filex
+        if ($filex>0) then
+           $msg='Replace '+$mapname
+           confirm($msg):$aa
+           if($aa=0) then
+              write('line3','quiting')
+		      return
+           endif
+        endif
+        shell('cp '+$mapname+' '+$mapname+'.bak'):$dum
+    elseif $mode='validate' then
+        pwrtables=1
+        exists($mapname,'file'):$filex1
+        if $filex1=0 then
+            $name=$chnldir+'/tpwr.map'
+            exists($name,'file'):$filex1
+            if $filex1>0 then
+                shell('cp '+$name+' '+$mapname):$dum
+            endif
+        endif
+        if $filex1=0 then
+            write('error','Could not find tpwr.map')
+            return
+        endif
+        $file='validate'+$type+'.map'
+        $name=$dirname+'/'+$file
+        exists($name,'file'):$filex2
+        if (ampargs[7]=1 and $filex2>0) then
+           $msg='Iterate and replace tpwr.map'
+           confirm($msg):$aa
+           if($aa=0) then
+             write('line3','quiting')
+		     return
+           else
+             exists($orgmap,'file'):$filex1
+             if $filex1=0 then
+                shell('cp '+$mapname+' '+$orgmap):$dum
+             endif
+             $org=$name+'.org'
+             exists($org,'file'):$filex1
+             if $filex1=0 then
+                shell('cp '+$name+' '+$org):$dum
+             endif
+              format(ampargs[11],0,0):$istr
+             $tmpname=$mapname+'.tmp'
+             shell('cp '+$mapname+' '+$tmpname):$dum
+             addmaps($tmpname,$name,$mapname)
+             shell('rm '+$tmpname):$dum
+            endif
+        else
+           mktpwrmap('restore'):$ans
+           if($ans=0) then
+               return(0)
+           endif
+           ampargs[11]=0
+        endif
+        ampargs[9]=1
+    else // test mode
+        ampargs[9]=2
+        pwrtables=1
+    endif
+    $nvals=2*(tpwr2-tpwr1)+1
+    $nvals?        
+    array('tpwr',$nvals,tpwr2,-0.5)
+    display('llfrq')
+    gain=usrgain
+	wexp ='mktpwrmap(\'high\')'
+	wnt = ''
+	au
+	write('line3','acquiring tpwr array (high range)')      
+    return(1)
+endif
+  
+if ($mode = 'high') then
+
+	write('line3','processing tpwr array (high range)')
+
+    ft('noft')
+
+    $j=1
+
+    fp  // creates fp.out
+
+    $file = curexp+'/fp.out'
+    exists($file,'file'):$filex
+    if not $filex then
+        write('error','fp.out file not found in ',curexp)
+    return(0)
+    endif
+    lookup('file',$file,'seek','of','read',1):$npairs
+    lookup('seek','(mm)')
+    
+    $nlines = size('llfrq')
+    $nlines?
+    repeat  "for each line"
+        $i = 1
+        repeat  "in each spectrum"
+            $val=0
+            lookup('skip',2,'read'):$val
+            if $j =1 then
+                tpwrhgts[$i]=$val
+            else
+                tpwrhgts[$i]=tpwrhgts[$i]+$val
+            endif
+            $i = $i+1
+        until($i > celem)
+        $j = $j+1  "continue with next line"
+    until ($j > $nlines)
+    $i = 1
+
+    repeat  // calculate average
+       tpwrhgts[$i]=tpwrhgts[$i]/$nlines
+       $i=$i+1
+    until($i > celem)
+
+    // set up and run low range array exp
+
+    $nvals=2*(tpwr1-tpwr3)+1
+    $nvals?
+    array('tpwr',$nvals,tpwr1,-0.5)
+    $sig=trunc((63-tpwr[1]))
+    gain=usrgain+$sig
+    gain?
+    nt=nt*$nscale
+ 	wexp = 'mktpwrmap(\'low\')'
+	wnt = ''
+	au
+	write('line3','acquiring tpwr array (low range)')	
+endif
+
+if ($mode = 'low') then
+	ampdir:$dirname,$rfchnl,$canwrite,$olddir,$chnldir
+
+	write('line3','processing tpwr array (low range)')
+
+    on('tpwrhgts'):$e
+    if $e <0 then
+       write('error','partial tpwr ht array not found in 2nd pass')
+       return
+    endif
+    ft('noft')
+
+    fp  // create fp.out
+
+    $file = curexp+'/fp.out'
+    exists($file,'file'):$filex
+    if not $filex then
+        write('error','fp.out file not found in ',curexp)
+        return(0)
+    endif
+    lookup('file',$file,'seek','of','read',1):$npairs
+    lookup('seek','(mm)')
+
+    $num = size('tpwrhgts')
+
+    $i=$num
+    $scale=1
+    $nlines = size('llfrq')
+    $j=1
+    $scale1=tpwrhgts[$num]
+    tpwrhgts[$num]=0
+    repeat  "for each line"
+        $i = $num
+        repeat  "in each spectrum"
+            $val=0
+            lookup('skip',2,'read'):$val
+            if $j =1 then
+                tpwrhgts[$i]=$val
+            else
+                tpwrhgts[$i]=tpwrhgts[$i]+$val
+            endif
+            $i = $i+1
+        until($i >= celem+$num)
+        $j = $j+1  "continue with next line"
+    until ($j > $nlines)
+    $i = $num
+    $scale2=tpwrhgts[$i]/$nlines
+    $scale=$scale1/$scale2
+    repeat  // calculate average
+        tpwrhgts[$i]=tpwrhgts[$i]*$scale/$nlines
+        $i=$i+1
+    until($i >= celem+$num)
+   // write out tpwr.map
+    $j=1
+    $num = size('tpwrhgts')
+
+    $tpwr=63
+    $tstr=''
+    $vstr=''
+ 
+    if ampargs[10]=0 and ampargs[9]=0 then // icat only loopback mode
+        $mapname=$dirname+'/tpwr.map'
+        pwrtables=1
+    elseif ampargs[9]=1 then
+        $mapname=$dirname+'/validate'+$type+'.map'
+    else
+        $mapname=$dirname+'/test'+$type+'.map'
+    endif	
+    write('reset',$mapname)
+    // err(db)=20*LOG(ht)-20*LOG(ht@tpwr=63)-(tpwr-63)
+    // LOG(x) = LN(x)/LN(10.0)
+    ln(10.0):$c1
+    $c1=20/$c1
+    ln(tpwrhgts[1]):$b1
+    $b1=$b1*$c1
+    while ($j <= $num) do
+       $a=$tpwr-63.0
+       ln(tpwrhgts[$j]):$b
+       $err=$b*$c1-$b1-$a
+       format($tpwr,0,3):$tstr
+       format($err,0,5):$vstr
+       write('file',$mapname,'%s %s ',$tstr,$vstr)
+       //write('line3',$tstr+'  '+$vstr)
+       $j=$j+1
+       $tpwr=$tpwr-0.5
+    endwhile	
+    // restore initial conditions
+    gain=usrgain
+    nt=nt/$nscale
+    wexp = 'ft(`noft`)'
+    tpwr=tpwr2
+
+    exists($mapname,'file'):$e
+    if($e<=0) then
+        write('error','processing failed to generate '+$mapname)
+    else
+	    write('line3','created:'+$mapname)
+        if ampargs[10]=0 and ampargs[9]=0 then  // copy tpwr.map up into rf[i] 
+            $name=$chnldir+'/tpwr.map'
+            exists($name,'file'):$filex
+            if $filex > 0 then
+                $msg='Replace '+$name
+                confirm($msg):$aa
+                if($aa=0) then
+                   write('line3','quiting')
+            	   return(0)
+                endif
+            endif
+            shell('cp '+$mapname+' '+$chnldir):$dum
+        elseif ampargs[9]=1 then // validate
+            if ampargs[11]>0 then
+                $istr=''
+                format(ampargs[11],0,0):$istr
+                shell('cp '+$mapname+' '+$mapname+'.'+$istr):$dum
+                $mapname=$dirname+'/tpwr.map'
+                shell('cp '+$mapname+' '+$dirname+'/tpwr'+$type+'.map.'+$istr):$dum
+            endif
+            ampargs[11]=ampargs[11]+1
+        endif
+     endif
+endif
+
+if ($mode = 'plot' or $mode='plot_test' or $mode='plot_validate') then  
+	ampdir:$dirname,$rfchnl,$canwrite,$olddir,$chnldir 
+    pwd:$cdir
+  
+    cd($dirname)
+    $map='tpwr.map'
+
+    exists($map,'file'):$filex
+    if not $filex then
+        cd($chnldir)
+        exists($map,'file'):$filex
+        if not $filex then
+            write('error','tpwr.map file not found'+$chnldir)
+            cd($cdir)
+            return(0)
+        endif
+    endif
+
+    $fig='1'
+    $plotargs=' -t'+$fig+' Attenuator<sp>Errors<sp>'+$rfchnl+' -x'+$fig+' TPWR -y'+$fig+' DB '
+    if((trunc(ampargs[4] /16) mod 2)=1) 
+        then $plotargs=' -j '+$plotargs 
+    endif
+
+    $files=''
+    $legend=' -L'+$fig
+    $k=1
+    $istr=''
+    $xmin=''
+    $xmax=''
+    $ymin=''
+    $ymax=''
+
+    format($k,0,0):$istr
+
+    if $mode='plot' then
+        format(tpwr3,0,1):$xmin
+        $plotargs=$plotargs+' -xlim '+$xmin+' 63'
+
+        $file='tpwr.map'
+        $tmpname=$file+'.org'
+        exists($tmpname,'file'):$filex
+        if $filex > 0 then
+            $files=$tmpname
+            $legend=$legend+' Original<sp>Error<sp>Map'
+            $file='tpwr'+$type+'.map.'+$istr
+            exists($file,'file'):$filex
+            while $filex>0 do
+                $files=$files+' '+$file
+                $legend=$legend+' Iteration<sp>'+$istr+'<sp>Map'
+                $k=$k+1
+                format($k,0,0):$istr
+                $file='tpwr'+$type+'.map.'+$istr
+                exists($file,'file'):$filex
+            endwhile
+        else
+            $legend=$legend+' Xmtr<sp>Error<sp>Map'
+            $files=$file
+        endif
+    elseif $mode='plot_validate' then
+        $file='tpwr.map'
+        $files=$file
+        $legend=$legend+' Original<sp>Error<sp>Map'
+        format(tpwr3,0,1):$xmin
+        $plotargs=$plotargs+' -xlim '+$xmin+' 63'
+
+        $file='validate'+$type+'.map.org'
+        exists($file,'file'):$filex
+        if $filex>0 then
+            $files=$files+' '+$file
+            $legend=$legend+' Original<sp>'+$label+'<sp>Errors'
+            $file='validate'+$type+'.map.'+$istr
+            exists($file,'file'):$filex
+            if $filex > 0 then
+                while $filex>0 do
+                    $files=$files+' '+$file
+                    $legend=$legend+' Iteration<sp>'+$istr+'<sp>'+$label+'<sp>Errors'
+                    $k=$k+1
+                    format($k,0,0):$istr
+                    $file='validate'+$type+'.map.'+$istr
+                    exists($file,'file'):$filex
+                endwhile
+            else
+                $file='validate'+$type+'.map'
+                exists($file,'file'):$filex
+                if $filex>0 then
+                    $files=$files+' '+$file
+                    $legend=$legend+' Validate<sp>'+$label+'<sp>Errors'
+                endif
+            endif
+        else
+           $file='validate'+$type+'.map'
+           exists($file,'file'):$filex
+           if $filex>0 then
+                $files=$files+' '+$file
+                $legend=$legend+' Validate<sp>'+$label+'<sp>Errors'
+           endif
+        endif
+    elseif $mode='plot_test' then
+        $file='tpwr.map'
+        $files=$file
+        $legend=$legend+' Original<sp>Error<sp>Map'
+        format(tpwr3,0,1):$xmin
+        format(tpwr2,0,1):$xmax
+        $plotargs=$plotargs+' -xlim '+$xmin+' '+$xmax
+        if ampargs[10]=1 then
+            $file='validate.amp.map'
+            exists($file,'file'):$filex
+            if $filex then
+                $files=$files+' '+$file
+                $legend=$legend+' Residual<sp>Amp<sp>Errors'
+            endif
+        endif
+        $file='test'+$type+'.map'
+        exists($file,'file'):$filex
+        if $filex then
+            $files=$files+' '+$file
+            $legend=$legend+' Test<sp>Errors'
+        endif
+    endif
+    
+    $plotfiles='-f'+$fig+' '+$files
+
+    $cmdstr='/vnmr/bin/matlab.sh matlabPlots'
+    $fullcmd=$cmdstr + ' "'+ $plotfiles+' '+$legend+$plotargs+'"'
+    
+    write('line3','cmd=%s',$fullcmd)
+    write('line3','CLOSE ALL FIGURES TO CONTINUE')
+  
+    shelli( $fullcmd )
+
+    //matplot($plotfiles+' '+$plotargs)
+    cd($cdir)
+endif
+

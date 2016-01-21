@@ -1,0 +1,57 @@
+"macro teset"
+
+"*****************************************************************************************
+"  teset  - macro to set te values
+
+" Details - Sets up an exponential array of te values for T1 measurement
+"           t2est is the estimated T1
+"
+"****************************************************************************************
+
+exists('t2est','parameter'):$ex
+if($ex = 0) then
+  write('error','t2est parameter does not exist')
+  abort
+endif
+
+if(t2est <= 0) then
+  write('error','Invalid target T2, %6.4f',t2est)
+  abort
+endif
+
+if(apptype = 'imcpmg') then
+  "calculate big-tau values for cpmg; "
+  $ntaus=1 bigtau=0 array='bigtau' "reset array"
+  bigtau[1]=t2est/8
+  repeat "set up array"
+    $ntaus=$ntaus+1
+    bigtau[$ntaus]=2*bigtau[$ntaus-1]
+  until (bigtau[$ntaus]>2.5*t2est) and ($ntaus>5)
+
+  te = bigtau
+  da
+  bigtau = te[$ntaus] "te[] contains the list; bigtau array used in sequence"
+  go('check')
+  bigtau = te[1]
+  go('check')
+  write('line3','TE_min %6.3fms TE_max %6.3fms', te[1],te[$ntaus])
+else
+  "calculate tau values"
+  $ntaus=1 d2=0 array='d2' "reset array"
+  d2[1]=t2est/8
+  repeat "set up array"
+    $ntaus=$ntaus+1
+    d2[$ntaus]=2*d2[$ntaus-1]
+  until (d2[$ntaus]>2.5*t2est) and ($ntaus>5)
+
+  te = d2
+  da
+  d2 = te[$ntaus]
+  go('check')
+  d2 = te[1]
+  go('check')
+  write('line3','TE_min %6.3fms TE_max %6.3fms', te[1],te[$ntaus])
+endif
+
+
+

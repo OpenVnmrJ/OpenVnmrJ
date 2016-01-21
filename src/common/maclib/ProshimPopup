@@ -1,0 +1,383 @@
+"macro ProshimPopup"
+"macro ProshimPopup"
+
+
+if ($# < 1) then $1='init' endif
+"*************************************************************************"
+IF ($1='init') or ($1='refresh') THEN
+  create('pshimAttr','string','current','')
+  setgroup('pshimAttr','display')
+  $dirPath=userdir+'/persistence'
+
+    $menu=$dirPath+'/proshimAllmethods'
+    $menu2=$dirPath+'/proshimmethods'
+
+// Value1 - Fullpathname of proshim file to edit/show/delete
+// Value2 - name for a new method to copy
+
+    if ($1='init') then
+      spPars
+      spLogFile=systemdir+'/tmp/spLog'
+      method=''
+      pshimAttr[1]=''
+      $maxmethods=10
+      $numfields=8
+      create('spPanel','string','current','')
+      setgroup('spPanel','display')
+      spPanel=''
+      $i=0
+      while ($i < $maxmethods) do
+        $j = 0
+        while ($j < $numfields) do
+          $j = $j + 1
+          spPanel[($numfields * $i) + $j] = ''
+        endwhile
+        $i = $i + 1
+      endwhile
+    endif
+    pshimAttr[2]=''
+
+// The tmpfile will have all probes directories in all valid appdirs
+    $tmpfile=$dirPath+'/tmpfile'
+    write('reset',$menu)
+    write('reset',$menu2)
+    appdir('info'):$atot
+    $allmeths=''
+
+    $i=0
+    while ($i < $atot) do
+      $i=$i+1
+      appdir('info',$i):$label,$path
+      exists($path+'/proshimmethods','directory'):$e
+      if ($e) then
+        shell('ls -1 '+$path+'/proshimmethods  > '+$tmpfile+';cat'):$dum
+        $ret=2
+        lookup('mfile',$tmpfile,'filekey'):$key
+        while ($ret=2) do
+          lookup('mfile',$key,'read','filekey'):$meth,$key,$ret
+          if ($ret=2) then
+            write('file',$menu,'"%s (%s)" "%s"', $meth, $label, $path+'/proshimmethods/'+$meth)
+            substr($allmeths,'find',$meth):$present
+            if ($present=0) then
+              $allmeths=$allmeths + ' ' + $meth
+              write('file',$menu2,'"%s" "%s"', $meth, $meth)
+            endif
+          endif
+        endwhile
+      endif
+    endwhile
+    rm($tmpfile):$e
+
+    if ($1='init') then
+    	vnmrjcmd('popup','mode:modeless','file:ProshimPopup.xml','location:controlPanel','pnewupdate:true','rebuild:yes','close:'+$0+'(`close`)','title:Proshim')
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='editshow') THEN
+
+  $method=method
+  $maxmethods=10
+  $numfields=8
+  spPanel=''
+  $i=0
+  while ($i < $maxmethods) do
+    $j = 0
+    while ($j < $numfields) do
+      $j = $j + 1
+      spPanel[($numfields * $i) + $j] = ''
+    endwhile
+    $i = $i + 1
+  endwhile
+  exists($method,'proshimmethods'):$e,$path
+  if (not $e) then return('done') endif
+  spParNames=''
+  {$0}('loadshim',$path,'spPanel')
+endif
+
+//  vnmrjcmd('popup','mode:modeless','file:ProshimEdit.xml','location:controlPanel','pnewupdate:true','rebuild:yes','title:Proshim '+$method)
+
+IF ($1='loadshim') THEN
+  $path=$2
+  $maxmethods=10
+  $numfields=8
+  lookup('mfile',$path,'filekey'):$key
+  $i=0
+  repeat
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    if ($ret = 2) then
+      $type=''
+      $val=''
+      substr($line,1,'delimiter',' \t='):$type,$dum1,$dum2,$val
+      format($type,'lower'):$type
+      if ($type='gxyz') then
+        {$3}[$numfields * $i + 6] = $type
+        {$3}[$numfields * $i + 7] = ''
+        $i = $i + 1
+      elseif ($type='pfg') then
+        {$3}[$numfields * $i + 6] = $type
+        {$3}[$numfields * $i + 7] = ''
+      elseif ($type='fid') or ($type='fid1d') or ($type='lock') or ($type='lock1d') then
+        if ({$3}[$numfields * $i + 6] = '') then
+          {$3}[$numfields * $i + 6] = $type
+        else
+          {$3}[$numfields * $i + 6] = {$3}[$numfields * $i + 6] + $type
+        endif
+        {$3}[$numfields * $i + 7] = $val
+        $i = $i + 1
+      elseif ($type='exec') then
+        if ({$3}[$numfields * $i + 6] <> '') then
+          $i = $i + 1
+        endif
+        {$3}[$numfields * $i + 6] = $type
+        {$3}[$numfields * $i + 7] = $val
+        $i = $i + 1
+      elseif ($type='tol') then
+        {$3}[$numfields * $i + 1] = $val
+      elseif ($type='range') then
+        {$3}[$numfields * $i + 2] = $val
+      elseif ($type='numsteps') then
+        {$3}[$numfields * $i + 3] = $val
+      elseif ($type='delay') then
+        {$3}[$numfields * $i + 4] = $val
+      elseif ($type='spin') then
+        {$3}[$numfields * $i + 5] = $val
+      endif
+    endif
+  until ($ret<>2) or ($i >= $maxmethods)
+  return
+ENDIF
+"************************************************************************"
+IF ($1='saveshim') THEN
+  $path=$2
+  exists($path,'file','rw'):$ok
+  if ($ok) then
+    write('reset',$path)
+    $i=0
+    $maxmethods=10
+    $numfields=8
+    while ($i < $maxmethods) do
+      if ({$3}[$numfields * $i + 1] <> '') then
+        write('file',$path,'tol %s',{$3}[$numfields * $i + 1])
+      endif
+      if ({$3}[$numfields * $i + 2] <> '') then
+        write('file',$path,'range %s',{$3}[$numfields * $i + 2])
+      endif
+      if ({$3}[$numfields * $i + 3] <> '') then
+        write('file',$path,'numsteps %s',{$3}[$numfields * $i + 3])
+      endif
+      if ({$3}[$numfields * $i + 4] <> '') then
+        write('file',$path,'delay %s',{$3}[$numfields * $i + 4])
+      endif
+      if ({$3}[$numfields * $i + 5] <> '') then
+        write('file',$path,'spin %s',{$3}[$numfields * $i + 5])
+      endif
+      if ({$3}[$numfields * $i + 6] = 'pfg') or ({$3}[$numfields * $i + 6] = 'gxyz') then
+        write('file',$path,'%s', {$3}[$numfields * $i + 6])
+      else
+        strstr({$3}[$numfields * $i + 6],'pfg'):$ret,$s1,$s2
+        if ($ret=1) then
+           write('file',$path,'pfg')
+           if ($s2 <> '') and ({$3}[$numfields * $i + 7] <> '') then
+             write('file',$path,'%s %s',$s2, {$3}[$numfields * $i + 7])
+           endif
+        elseif ({$3}[$numfields * $i + 6] <> '') and
+         ({$3}[$numfields * $i + 7] <> '') then
+           write('file',$path,'%s %s',{$3}[$numfields * $i + 6], {$3}[$numfields * $i + 7])
+        endif
+      endif
+      $i=$i+1
+    endwhile
+  endif
+ENDIF
+
+IF ($1='save') THEN
+  {$0}('saveshim',pshimAttr[1],'spPanel2')
+endif
+
+IF ($1='savetoauto') THEN
+  $file=userdir+'/persistence/Autoshimlist'
+  substr(pshimAttr[1],'basename'):$newguy
+  lookup('file',$file)
+  lookup('seek',$newguy,'read',1):$look
+  if ($look=$newguy) then
+	write('line3','Method %s already on Automation Shim methods list',$newguy)
+  else
+        write('file',$file,'%s  %s',$newguy,$newguy)
+  endif 
+ENDIF
+
+IF ($1='editautolist') THEN
+  $file=userdir+'/persistence/Autoshimlist'
+  $cmd='gedit '+$file+' &'
+  shell($cmd):$dum
+ENDIF
+
+IF ($1='setdefault') THEN
+  $probe=probe
+  getProbePath(probe,'alert'):$e,$probefile,$rw
+  if ($rw=0) then 
+	write('line3','Probefile is not writeable..!')
+	return 
+  endif
+
+"first set parameter onto probefile if needed"
+ 
+ $param='defaultproshim'   
+   
+   $parex=''
+   shell('grep Probe '+$param+' '+probe):$parex
+   if ($parex = '') then
+     write('line3','Adding par %s',$param)
+     addparams($param,'n','Probe',$probe)
+   endif
+   $newdefault=method
+  // substr(pshimAttr[1],'basename'):$newdefault
+"now set parameter"
+   if ($newdefault='popupmethod') then
+	write('line3','popupmethod not allowed to be set as default proshim method')
+   else
+   	setparams('defaultproshim',$newdefault,'Probe')
+   	write('line3','Method %s now defined as default proshimmethod on probefile.',$newdefault)
+   endif
+   
+ENDIF
+
+IF ($1='saveandrunFG') THEN
+  $path=userdir+'/proshimmethods'
+  exists($path,'directory'):$ok
+  if (not $ok) then
+    mkdir($path)
+  endif
+  $path= $path+'/popupmethod'
+  shell('touch '+$path):$dum
+  {$0}('saveshim',$path,'spPanel')
+  method='popupmethod'
+  wshim='s'
+  readhw('status'):$ok
+  if ($ok>0) then
+    psMain('psPshim')
+  else
+    write('error','Acquisition is not active')
+  endif
+//  doproshim
+ENDIF
+
+IF ($1='saveandrunBG') THEN
+  $path=userdir+'/proshimmethods'
+  exists($path,'directory'):$ok
+  if (not $ok) then
+    mkdir($path)
+  endif
+  $path= $path+'/popupmethod'
+  shell('touch '+$path):$dum
+  {$0}('saveshim',$path,'spPanel')
+  method='popupmethod'
+  wshim='s'
+//  psMain('psPshim')
+  doifidle('doproshim')
+ENDIF
+
+"************************************************************************"
+IF ($1='ok2edit') THEN 
+  exists($2,'file','rw'):$ok
+  return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='ok2delete') THEN
+  exists($2,'file','rw'):$ok
+  return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='show') or ($1='edit') THEN
+  exists(pshimAttr[1],'file'):$e
+  if (not $e) then return endif
+  substr(pshimAttr[1],'basename'):$methodname
+  $maxmethods=10
+  $numfields=8
+  create('spPanel2','string','current','')
+  setgroup('spPanel2','display')
+  spPanel2=''
+  $i=0
+  while ($i < $maxmethods) do
+    $j = 0
+    while ($j < $numfields) do
+      $j = $j + 1
+      spPanel2[($numfields * $i) + $j] = ''
+    endwhile
+    $i = $i + 1
+  endwhile
+  {$0}('loadshim',pshimAttr[1],'spPanel2')
+  if ($1='show') then
+    spPanel2[81]='n'
+  else
+    spPanel2[81]='y'
+  endif
+
+  vnmrjcmd('popup','mode:modeless','file:ProshimEdit.xml','location:controlPanel','pnewupdate:true','rebuild:yes','close:'+$0+'(`closeedit`)','title:Proshim method '+$methodname)
+
+    return
+ENDIF
+"************************************************************************"
+IF ($1='close') THEN
+  destroy('spPanel pshimAttr'):$e
+  $dirPath=userdir+'/persistence'
+  rm($dirPath+'/proshimAllmethods'):$e
+  rm($dirPath+'/proshimmethods'):$e
+endif
+IF ($1='closeedit') THEN
+  destroy('spPanel2'):$e
+endif
+IF ($1='delete') THEN
+    $path=pshimAttr[1]
+    exists($path,'file','rw'):$ok
+    if ($ok) then
+	$date=''
+	shell('date +_%Y-%m-%d-%H%M%S'):$date
+        substr($path,'dirname'):$dir,$basename
+	shell('mv '+$path+' '+$dir+'/.'+$basename+$date):$dum
+	write('line3','%s successfully removed',$path)
+        getshimmethods
+	{$0}('refresh')
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='copy') THEN
+  if (pshimAttr[2]='') then
+    write('line3','Set entry box to method name')
+    return
+  endif
+  $path=userdir+'/proshimmethods'
+  exists($path,'directory'):$ok
+  if (not $ok) then
+    mkdir($path)
+  endif
+  $path= $path+'/popupmethod'
+  shell('touch '+$path):$dum
+  {$0}('saveshim',$path,'spPanel')
+  exists($path,'file'):$ok
+  if ($ok) and (pshimAttr[2]<>'') then
+    if ($2='system') then
+      $topath=systemdir+'/proshimmethods/'+pshimAttr[2]
+    else
+      $topath=userdir+'/proshimmethods/'+pshimAttr[2]
+    endif
+    exists($topath,'file'):$ok
+    if ($ok) then
+      shell('rm -f '+$topath):$dum
+    endif
+    shell('cp '+$path+' '+$topath):$dum
+    write('line3','method copied to %s',$topath)
+    getshimmethods
+    {$0}('refresh')
+  endif
+ENDIF
+
+"************************************************************************"
+
+IF ($1='stop') THEN
+  $abortFile=systemdir+'/acqqueue/shimfitAbort'  
+  write('line3','Proshim will abort in a few seconds..')
+  shell('touch '+ $abortFile):$dum
+endif

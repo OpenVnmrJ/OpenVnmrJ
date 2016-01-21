@@ -1,0 +1,206 @@
+"macro CSdsch"
+
+CSpars
+
+$nimax='' $nimin=''  $cmd='' $log='' $sch2fid=''
+
+$niargs=' '
+$n1=0 $n2=0
+
+getbinpath('sch2fid'):$infex,$sch2fid
+
+$n1=0 $n2=0 $niactive=0
+on('ni'):$niactive
+if $niactive>0 then
+  on('nimax'):$e
+  if $e>0 then
+    $n1=ni
+    $n2=nimax
+  else
+    on('CSdensity'):$e
+    if $e>0 then
+      $n1=CSdensity*ni/100.0
+      $n2=ni
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax
+    $niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+  endif
+endif
+
+$n1=0 $n2=0 $niactive=0
+on('ni2'):$niactive
+if $niactive>0 then
+  on('ni2max'):$e
+  if $e>0 then
+    $n1=ni2
+    $n2=ni2max
+  else
+    on('CSdensity2'):$e
+    if $e>0 then
+      $n1=CSdensity2*ni2/100.0
+      $n2=ni2
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax
+    $niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+  endif
+endif
+
+$n1=0 $n2=0 $niactive=0
+on('ni3'):$niactive
+if $niactive>0 then
+  on('ni3max'):$e
+  if $e>0 then
+    $n1=ni3
+    $n2=ni3max
+  else
+    on('CSdensity3'):$e
+    if $e>0 then
+      $n1=CSdensity3*ni3/100.0
+      $n2=ni3
+    endif
+  endif
+  if $n1>1 and $n2>$n1 then
+    format($n1,3,0):$nimin
+    format($n2,3,0):$nimax  
+    $niargs = $niargs + ' ' + $nimin + ' ' + $nimax
+  endif
+endif
+
+$f2=curexp+'/sampling.sch'
+exists($f2,'file'):$e
+if $e=0 then 
+  write('error','CSdsh: sampling.sch not found')
+  return
+endif
+
+$f1=curexp+'/sampling_sch.fid'  " remove the old file "
+exists($f1,'file'):$e
+if($e) then 
+  $cmd='rm -r '+$f1
+  shell($cmd)
+endif
+
+$log = curexp + '/CSdsch.log'
+$cmd = $sch2fid +' '+curexp + $niargs
+
+$cmd = $cmd + ' >> ' + $log
+
+write('reset', $log)
+write('file',$log,'%s', $cmd)
+
+shell($cmd)
+shell('sleep 1')
+
+exists($f1,'file'):$e
+if($e) then 
+  write('line3','The sampling.sch fid file conversion done.')
+else
+  shell('sleep 1')
+  exists($f1,'file'):$e
+  if(not $e) then 
+    write('error','CSdsh: schedule fid display failed')
+    return
+  endif
+endif
+
+" - - - -- - - - - - - - - - - - - "
+" define path names "
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+$schedule=curexp+'/sampling.sch'
+
+" temporarily save experiment data and parameters "
+flush
+copy($fid,$fid+'.tmp')
+rm($fid):$dum
+copy($procpar,$procpar+'.bk')
+copy($curpar,$curpar+'.bk')
+copy($data,$data+'.bk')
+copy($phasefile,$phasefile+'.bk')
+copy($schedule,$schedule+'.bk')
+
+"read the binary sampling schedule fid data"
+$seqfil=seqfil
+$pslabel=pslabel
+// read in the schedule fid file
+rt($f1)
+pslabel=$pslabel
+seqfil=$seqfil
+proc='ft' sb='n' gf='n' lb='n' 
+proc1='ft' sb1='n' gf1='n' lb1='n' 
+fpmult=1.0 fpmult1=1.0 
+fn=np fn1=2*ni 
+phfid=0
+exists('ssfilter','parameter'):$e	"check if present"
+if ($e) then ssfilter='n' endif
+exists('lsfrq','parameter'):$e		"check if present"
+if ($e) then lsfrq='n' endif
+lsfid='n' proc='ft' 
+
+axis='nnn'
+vs2d=200
+               " change for 3D setup here "
+wft2da('noft')
+
+wp=(np/fn)*sw
+sp=sw-rfl+rfp-wp	" don't want to see the zerofilled part "
+wp1=(2*ni/fn1)*sw1
+sp1=sw1-rfl1+rfp1-wp1	" don't want to see the zerofilled part "
+
+rp=0 lp=0 rp1=0 lp1=0   " look at the real part only "
+cdc lvl=0 tlt=0		" avoid dc corrections upon display "
+$x0=3			" leave a little gap on both sides "
+
+sc2=0
+//write('line3','wp=%.1f wp1=%.1f, sw=%.1f sw1=%.1f', wp, wp1, sw, sw1)
+$ymax=wc2max-5		" desired height "
+wc2=$ymax
+
+" determine output device-specific parameters "
+if $0='CSdsch' then
+  clear(2)
+  $device='graphics'
+else   " CSppro "
+  write('line3','%s: drawing sampling schedule, please wait ... ',$0)
+  $device='plotter'
+endif
+write($device,0,0,''):$ys	" line height for text "
+
+" display the sampling schedule "
+
+full wc=wcmax-2*$x0 sc=$x0
+rp=0			" display / plot only real part "
+
+if $device='graphics' then
+  //dconi('dpcon','pos',30,1.1)  // dconi causes vnmrbg crash
+  dcon('spectrum')
+else
+  pcon('pos',8,1.4)
+endif
+
+//dg vp=0 full
+//copy($phasefile,$phasefile+'.bk')
+
+" restore experiment data "
+flush
+rm($fid):$dum	rename($fid+'.tmp',$fid)
+rm($procpar):$dum	rename($procpar+'.bk',$procpar)
+rm($curpar):$dum	rename($curpar+'.bk',$curpar)
+rm($data):$dum	rename($data+'.bk',$data)
+rm($phasefile):$dum	rename($phasefile+'.bk',$phasefile)
+rename($schedule+'.bk',$schedule)
+
+fread($procpar,'processed')
+fread($curpar,'current')
+flush
+dg
+

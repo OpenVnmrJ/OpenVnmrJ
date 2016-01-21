@@ -1,0 +1,156 @@
+"macro H1lshpstab_process"
+"H1lshpstab_process"
+"Processes lineshape stability data"
+"Extracts z0 drift rate and lineshape drift"
+
+//First analyse the B0 (z0) drift
+lb=10
+fn='n'
+wft
+f full
+$sumvar=0
+$ph[1]=0
+$sx=0 $sy=0 $sxx=0 $sxy=0 $syy=0
+$linsd=0
+$grad=0 $int=0
+$driftrate=0
+$currenttrace = celem
+$timeres=d1+at
+$timeresmin=$timeres/60
+$timereshr=$timeresmin/60
+$arg1=''
+
+if ($#<0.5) then 
+   if ($currenttrace<arraydim) then $lasttrace=$currenttrace else $lasttrace=arraydim endif 
+else
+   if typeof('$1') then $arg1='string' endif
+   if $arg1='string' then $lasttrace=arraydim else $lasttrace=$1 endif
+endif
+
+write('reset',curexp+'/regression.inp')
+write('file',curexp+'/regression.inp','Unlocked %s drift - Time / hr',tn)
+write('file',curexp+'/regression.inp','Frequency change in Hz')
+write('file',curexp+'/regression.inp','1   %3d',$lasttrace)
+
+$i=1
+repeat                                       
+   select($i)
+   aph0
+   peak:$ht,$freq
+   $ph[$i]=$freq
+   $deltafreq=($freq-$ph[1])
+   $time=$i*$timereshr
+   $sx=$sx+$time
+   $sxx=$sxx+$time*$time
+   $sy=$sy+$deltafreq
+   $sxy=$sxy+$time*$deltafreq
+   $syy=$syy+$deltafreq*$deltafreq
+   write('file',curexp+'/regression.inp','%3f   %8.5f',$i*$timereshr,$deltafreq)
+   $i=$i+1
+until $i>$lasttrace
+
+//Now do the stats
+$driftrate=$deltafreq/($i*$timereshr)
+$dph=1.0
+$d=$lasttrace*$sxx-$sx*$sx
+$grad=($lasttrace*$sxy-$sx*$sy)/$d
+$int=($sxx*$sy-$sx*$sxy)/$d
+$diff=$grad*$lasttrace*$timereshr
+
+$syy=0
+$i=1
+repeat
+   $d=($ph[$i]-$ph[1])*$dph-$int-$i*$grad*$timereshr
+   $syy=$syy+$d*$d
+   $i=$i+1
+until $i>$lasttrace
+
+if (pltopt='y') then
+   pexpl('regression','link')
+   analyze('expfit','regression','poly1','list')
+endif
+
+VPtext
+VPgettarget('H1lshpstab'):$dum1,$dum2
+atext('Unlocked B0/z0 drift  and lineshape stability test') 
+write('line3','Total drift over course of test: %.1f %s Hz',$deltafreq,tn):$str
+atext($str)
+CalibrationResults=$str
+write('line3','Average drift rate over course of test: %.1f %s Hz / h',$driftrate,tn):$str
+atext($str)
+CalibrationResults=CalibrationResults,$str
+
+//Now analyse linewidth at half-height
+write('reset',curexp+'/regression.inp')
+write('file',curexp+'/regression.inp','Half-height linewidth variation with time')
+write('file',curexp+'/regression.inp','Linewidth / Hz')
+write('file',curexp+'/regression.inp','1   %3d',$lasttrace)
+
+$sumvar=0
+$ph[1]=0
+$sx=0 $sy=0 $sxx=0 $sxy=0 $syy=0
+$linsd=0
+$grad=0 $int=0
+$maxlw=-1e6
+$minlw=1e6
+
+ft
+f full
+$i=1
+repeat                                       
+   select($i)
+
+   //aph0
+   //region
+   //bc
+
+   peak:$h,$f
+   cr=$f
+   nl:$f
+   dres:$lw
+   $ph[$i]=$lw
+
+   if $lw>$maxlw then $maxlw=$lw endif
+   if $lw<$minlw then $minlw=$lw endif
+
+   $sx=$sx+$i
+   $sxx=$sxx+$i*$i
+   $sy=$sy+$lw
+   $sxy=$sxy+$i*$lw
+   $syy=$syy+$lw*$lw
+   write('file',curexp+'/regression.inp','%3f   %8.5f',$i*$timereshr,$lw)
+
+   $i=$i+1
+until $i>$lasttrace
+
+$maxdeltalw=$maxlw-$minlw
+
+$dph=1.0
+$d=$lasttrace*$sxx-$sx*$sx
+$grad=($lasttrace*$sxy-$sx*$sy)/$d
+$int=($sxx*$sy-$sx*$sxy)/$d
+$diff=$grad*$lasttrace
+$syy=0
+$i=1
+repeat
+ $d=$ph[$i]-$int-$i*$grad
+ $syy=$syy+$d*$d
+ $i=$i+1
+until $i>$lasttrace
+
+if (pltopt='y') then
+   pexpl('regression','link')
+   analyze('expfit','regression','poly1','list')
+endif
+
+
+write('line3','Maximum 50%% linewidth variation over course of test: %.1f Hz',$maxdeltalw):$str
+atext($str)
+CalibrationResults=CalibrationResults,$str
+
+$ep=''
+write('line3','ft select(1) f full res rl(0) axis=`h` sp=-130 wp=260 ai vsadj vs=vs/5 vo=0.8 ho=0 dsww dscale'):$ep
+execprocess=$ep+' darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($driftrate,$maxdeltalw)

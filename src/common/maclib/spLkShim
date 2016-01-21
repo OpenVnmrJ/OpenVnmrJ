@@ -1,0 +1,87 @@
+"macro spLkShim"
+// Lock shim
+
+
+$action = ''
+if ($# = 0) then
+  $action = 'init'
+else
+  $action = $1
+endif
+
+$abortFile=systemdir+'/acqqueue/shimfitAbort'
+exists($abortFile,'file'):$e
+if ($e) then
+  write('line3','Aborting Proshim')
+  if (spLo > 0) then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+  endif
+  return('quit')
+endif
+
+if ($action = 'init') then
+  readlk:$lvl
+  readhw('lockgain'):lockgain
+  if ($lvl>85) then 
+    lockgain=lockgain-1
+    sethw('lockgain',lockgain):$dum
+    shell('sleep 2'):$dum
+  endif
+  spInit('lock')
+  {spSet}:$res
+  return($res)
+
+// Evaluate trial spectrum
+elseif ($action = 'exp') then
+  systemtime:$now
+  spTime[3] = $now
+  spExec
+  if (spStage = 'pass') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim complete')
+    return('done')
+  elseif (spStage = 'pass1d') then
+    return('done')
+  elseif (spStage = 'fail') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim failed')
+    return('done')
+  elseif (spStage = 'timefail') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim time limit (%4.1f minutes) exceeded', spTime[2] / 60)
+    return('done')
+  endif
+  bgmode_is:$bg
+  if ($bg) then
+    return('recall')
+  else
+    return('doatcmd')
+  endif
+
+// Error handling
+elseif ($action = 'err') then
+  $i = 0
+  if (spLo = 0) then
+    spVertex = 1
+  else
+    spVertex = spLo
+  endif
+  spShimVals
+  spStage='AcqError'
+  if (acqstatus[1] = 14) then
+    aa
+  endif
+  return('done')
+
+else
+  write('line3','%s: unknown action (%s)', $0, $action)
+  return('done')
+endif

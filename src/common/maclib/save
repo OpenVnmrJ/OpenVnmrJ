@@ -1,0 +1,395 @@
+"macro save"
+" called at the end of acquisition "
+
+exists('testacquire','parameter','global'):$e
+if ((appmode='imaging' or appmode='walkup') and $e>0.5) then
+   if (testacquire='y') then return endif
+endif
+
+exists('autosave','parameter','global'):$e
+if($e < 0.5) then return
+elseif($e > 0.5) then
+   if(autosave < 0.5) then return endif
+endif
+
+$activestudy='null'
+if (appmode='imaging' or appmode='walkup') then
+  $activestudy=activestudy[1]
+  if (auto='y') then
+    $activestudy=studyid
+  endif
+endif
+
+isvnmrj:$j
+if ($j > 0.5) then
+   gplan('endIplan')
+endif
+
+$path=''
+
+$e11=0
+$e12=0
+$e13=0
+$e21=0
+$e22=0
+$e23=0
+
+isFDAsystem:$p11
+
+if(recordSave < 1.5) then
+   dataPath('save'):$path,$pars
+   if ($pars <> '') then
+     write('error','Data not saved. Required parameters not set.')
+     return
+   endif
+   if ($path = '') then
+     write('error','Data not saved. Data directory %s not available.',archivedir+'/'+sample)
+     return
+   endif
+   exists('actionid','parameter'):$e
+   if ($activestudy<>'null' and $e>0.5) then
+     if (actionid<>'' and actionid<>'null') then
+       $sdir='' xm1('studydir'):$sdir
+       reserveDisk('delete',$sdir,actionid)
+     endif
+   endif
+
+   // save fid name (without .fid) to file parameter
+   strstr($path,'/','last'):$n,$s1,$s2
+   if($n) then 
+     strstr($s2,'.fid'):$n,$s1
+     if($n) then
+       setvalue('file',$s1,'processed')
+     else
+       setvalue('file',$s2,'processed')
+     endif
+   endif
+
+   if($#<1) then $1='' endif 
+   if($1='opt') then
+     svf($path,'opt')
+   else
+     svf($path)
+   endif
+   dataLog($path,'fid')
+   length($path):$len
+   substr($path,1,$len-4):$npath
+   $imgdir=$npath+'.img'
+   exists(curexp+'/recon','directory'):$e1
+   if $e1>0.5 then
+      cp('-r',curexp+'/recon',$imgdir)
+   endif
+
+   // save .csi
+   strstr(apptype,'csi'):$n
+   if $n > 0.5 then
+     exists('csiOrigFile','parameter'):$e1
+     if $e1<0.5 then
+        create('csiOrigFile','string')
+        setgroup('csiOrigFile','processing')
+     endif
+        csiOrigFile=$npath+'.fid'
+     exists('csiOrigFile','parameter','processed'):$e1
+     if $e1<0.5 then
+        create('csiOrigFile','string','processed')
+        setgroup('csiOrigFile','processing','processed')
+     endif
+        setvalue('csiOrigFile',$npath+'.fid','processed')
+     exists('csinode','parameter'):$e1
+     if $e1<0.5 then
+        create('csinode','string')
+        create('csinode','string','processed')
+        setgroup('csinode','display')
+        setgroup('csinode','display','processed')
+     endif
+        csinode=actionid
+        setvalue('csinode',actionid,'processed')
+   endif
+
+   "Figure if there is imaging external recon output"
+   $xrecon=0
+   if (appmode='imaging') then
+     exists('recon','parameter'):$exrecon
+     if ($exrecon) then
+       $xrecon=1
+       on('execprocess'):$proc
+       if ($proc=0) then $xrecon=0 endif
+       if (recon = 'internal') OR (recon = '') then 
+         $xrecon=0 
+       endif
+     else
+       $xrecon=0 
+     endif
+   endif
+
+   if ($xrecon) then
+     "Save analyze/nifti output"
+     exists(curexp+'/analyze/MG','directory'):$ex
+     if $ex>0.5 then
+       $dir=$npath+'.avw'
+       cp('-r',curexp+'/analyze/MG',$dir)
+     endif
+     exists(curexp+'/nifti/MG','directory'):$ex
+     if $ex>0.5 then
+       $dir=$npath+'.nii'
+       cp('-r',curexp+'/nifti/MG',$dir)
+     endif
+     "Save other Xrecon output"
+     $Xlist='PH','RE','IM','rawMG','rawPH','rawRE','rawIM'
+     $Xsize=size('$Xlist')
+     $nr=arraydim/acqcycles
+     $i=1
+     while ($i<=$Xsize) do
+       $data=curexp+'/'
+       strstr($Xlist[$i],'raw'):$pos
+       if ($pos<1) then $data=$data+'recon' endif
+       $data=$data+$Xlist[$i]
+       exists($data,'directory'):$Xex[$i]
+       if $Xex[$i]>0.5 then
+         $dir=$npath+'_'+$Xlist[$i]+'.img'
+         cp('-r',$data,$dir)
+       endif
+       if ($nr>1) then
+         $j=1
+         while ($j<=$nr) do
+           $ext='' shell('printf %03.0f ',$j):$ext
+           $mdata=$data+$ext
+           exists($mdata,'directory'):$ex
+           if $ex>0.5 then
+             $dir=$npath+'_'+$Xlist[$i]+$ext+'.img'
+             cp('-r',$mdata,$dir)
+           endif
+           $j=$j+1
+         endwhile
+       endif
+       $i=$i+1
+     endwhile
+   endif
+
+  exists(curexp+'/reconphs','directory'):$e11
+   if $e11>0.5 then
+     $imgdir1=$npath+'_iphs.img'
+     $np1=$npath+'_iphs'
+      cp('-r',curexp+'/reconphs',$imgdir1)
+      if($p11) then mkchsums($imgdir1) endif
+   endif
+   exists(curexp+'/rawphs','directory'):$e12
+   if $e12>0.5 then
+     $imgdir2=$npath+'_rphs.img'
+     $np2=$npath+'_rphs'
+      cp('-r',curexp+'/rawphs',$imgdir2)
+      if($p11) then mkchsums($imgdir2) endif
+   endif
+   exists(curexp+'/rawmag','directory'):$e13
+   if $e13>0.5 then
+     $imgdir3=$npath+'_rmag.img'
+     $np3=$npath+'_rmag'
+      cp('-r',curexp+'/rawmag',$imgdir3)
+      if($p11) then mkchsums($imgdir3) endif
+   endif
+
+   exists(curexp+'/datadir3d/data','directory'):$e2
+   if $e2>0.5 then
+      exists($imgdir,'directory'):$ei
+      if $ei<0.5 then mkdir($imgdir) endif
+      shell('cp -r '+curexp+'/datadir3d/data/*chan*.fdf '+$imgdir):$x
+      shell('cp -r '+curexp+'/datadir3d/data/*image*.fdf '+$imgdir):$x
+      shell('cp -r '+curexp+'/datadir3d/data/procpar '+$imgdir):$x
+   exists($imgdir+'/img_slab001image001echo001.fdf','file'):$ed
+     if $ed<0.5 then 
+	exists($imgdir+'/img_slab001image001echo001chan01.fdf','file'):$ech
+	if $ech>0.5 then shell('cp '+$imgdir+'/img_slab001image001echo001chan01.fdf '+$imgdir+'/img_slab001image001echo001.fdf')
+	else
+		exists(curexp+'/datadir3d/data/data.fdf','file'):$e3
+		if $e3>0.5 then shell('cp '+curexp+'/datadir3d/data/data.fdf '+$imgdir+'/img_slab001image001echo001.fdf')
+		endif
+	endif
+	endif
+
+	exists('imagedir','parameter','current'):$ee
+	if($ee>0) then
+ 	 destroy('imagedir')
+	endif
+
+	exists('imagedir','parameter','processed'):$ee
+	if($ee>0) then
+ 	 destroy('imagedir','processed')
+	endif
+
+      exists('imagedir','parameter','global'):$eii
+      if $eii<0.5 then 
+	create('imagedir','string','global')
+        setprotect('imagedir','set',256,'global')
+        setprotect('imagedir','set',32768,'global')     
+      endif
+	imagedir=$imgdir+'/img_slab001image001echo001.fdf'
+
+     exists(curexp+'/datadir3d/data/imgphs_slab001image001echo001.fdf','file'):$e21
+	if $e21>0.5 then
+	mkdir($npath+'_iphs.img')
+        shell ('cp '+curexp+'/datadir3d/data/imgphs_* '+$npath+'_iphs.img')
+        shell ('rm -f '+$imgdir+'/imgphs_*.fdf')
+        cp($npath+'_iphs.img/imgphs_slab001image001echo001.fdf', $npath+'_iphs.img/img_slab001image001echo001.fdf')
+        cp(curexp+'/datadir3d/data/procpar', $npath+'_iphs.img')
+    endif
+
+     exists(curexp+'/datadir3d/data/rawphs_slab001image001echo001.fdf','file'):$e22
+	if $e22>0.5 then
+	mkdir($npath+'_rphs.img')
+        shell ('cp '+curexp+'/datadir3d/data/rawphs_* '+$npath+'_rphs.img')
+        shell ('rm -f '+$imgdir+'/rawphs_*.fdf')
+        cp($npath+'_rphs.img/rawphs_slab001image001echo001.fdf', $npath+'_rphs.img/img_slab001image001echo001.fdf')
+        cp(curexp+'/datadir3d/data/procpar', $npath+'_rphs.img')
+    endif
+
+     exists(curexp+'/datadir3d/data/rawmag_slab001image001echo001.fdf','file'):$e23
+	if $e23>0.5 then
+	mkdir($npath+'_rmag.img')
+        shell ('cp '+curexp+'/datadir3d/data/rawmag_* '+$npath+'_rmag.img')
+        shell ('rm -f '+$imgdir+'/rawmag_*.fdf')
+        cp($npath+'_rmag.img/rawmag_slab001image001echo001.fdf', $npath+'_rmag.img/img_slab001image001echo001.fdf')
+        cp(curexp+'/datadir3d/data/procpar', $npath+'_rmag.img')
+    endif
+
+   endif
+
+   if($p11) then mkchsums($imgdir) endif
+
+   exists('actionid','parameter'):$e
+   if ($activestudy<>'null' and $e>0.5) then
+     if (actionid<>'' and actionid<>'null') then
+       $sdir='' xm1('studydir'):$sdir
+       $rpath=$npath
+       strstr($npath,$sdir):$pos
+       if $pos>0.5 then
+         length($sdir):$alen
+         length($npath):$plen
+         substr($npath,$alen+2,$plen-$alen-1):$rpath
+       endif
+       xmsetatts(actionid, 'data', $rpath)
+
+      if $e11>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'iphs '+comment)
+ 	   xmsetatts($id, 'data', $np1)
+ 	   xmsetatts($id, 'type', 'LIB')
+   	 xmsetatts($id, 'status', 'Completed')
+   	 xmsetatts($id, 'lock', 'on')
+	endif
+	endif
+
+      if $e12>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'rphs '+comment)
+ 	   xmsetatts($id, 'data', $np2)
+ 	  xmsetatts($id, 'type', 'LIB')
+   	 xmsetatts($id, 'lock', 'on')
+   	 xmsetatts($id, 'status', 'Completed')
+	endif
+	endif
+
+      if $e13>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'rmag '+comment)
+ 	   xmsetatts($id, 'data', $np3)
+ 	   xmsetatts($id, 'type', 'LIB')
+   	 xmsetatts($id, 'status', 'Completed')
+   	 xmsetatts($id, 'lock', 'on')
+	endif
+	endif
+
+      if $e21>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'iphs '+comment)
+ 	   xmsetatts($id, 'data', $npath+'_iphs')
+ 	   xmsetatts($id, 'type', 'LIB') 
+   	 xmsetatts($id, 'status', 'Completed')
+   	 xmsetatts($id, 'lock', 'on')
+	endif
+	endif
+
+      if $e22>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'rphs '+comment)
+ 	   xmsetatts($id, 'data', $npath+'_rphs')
+ 	   xmsetatts($id, 'type', 'LIB') 
+   	 xmsetatts($id, 'status', 'Completed')
+   	 xmsetatts($id, 'lock', 'on')
+	endif
+	endif
+
+      if $e23>0.5 then
+	xmmakenode('copy','action',actionid):$id
+	if ($id<>'null' and $id<>'') then
+	    xmsetatts($id, 'title', 'rmag '+comment)
+ 	   xmsetatts($id, 'data', $npath+'_rmag')
+ 	   xmsetatts($id, 'type', 'LIB') 
+   	 xmsetatts($id, 'status', 'Completed')
+   	 xmsetatts($id, 'lock', 'on')
+	endif
+	endif
+
+     if ($xrecon) then
+       "Add nodes for Xrecon output (not individual receiver coil output)"
+       $i=1
+       substr($npath,'basename'):$name
+       while ($i<=$Xsize) do       
+         if $Xex[$i]>0.5 then
+           xmmakenode('copy','action',actionid):$id
+           if ($id<>'null' and $id<>'') then
+             xmsetatts($id, 'title', $name+'_'+$Xlist[$i]+' '+comment)
+             xmsetatts($id, 'data', $npath+'_'+$Xlist[$i])
+             xmsetatts($id, 'type', 'LIB') 
+             xmsetatts($id, 'status', 'Completed')
+             xmsetatts($id, 'lock', 'on')
+           endif 
+         endif
+         $i=$i+1
+       endwhile
+     endif
+
+     endif
+   endif
+   write('line3','Data saved: %s',$path)
+   $b=0 bgmode_is:$b
+   if $b>0.5 then
+      exists(systemdir+'/bin/managedb','file'):$g
+      if $g>0.5 then
+         shell('managedb addfile "'+$path+'" '+owner):$w
+      endif
+   endif
+else
+   exists('studyid_','parameter'):$s
+   if $s<0.5 then create('studyid_','string') endif
+   setvalue('studyid_',studyid)
+   saveAs('record'):$path
+   svr_as($path)
+   exists('actionid','parameter'):$e
+   if ($activestudy<>'null' and $e>0.5) then
+     if (actionid<>'' and actionid<>'null') then
+       $sdir='' xm1('studydir'):$sdir
+       length($path):$len
+       substr($path,1,$len-4):$npath
+       $rpath=$npath
+       strstr($npath,$sdir):$pos
+       if $pos>0.5 then
+         length($sdir):$alen
+         length($npath):$plen
+         substr($npath,$alen+2,$plen-$alen-1):$rpath
+       endif
+       xmsetatts(actionid, 'data', $rpath)
+
+     endif
+   endif
+   $e1=1
+endif
+
+ 
+"aipDisplay done in procplot"
+
+return($path)

@@ -1,0 +1,148 @@
+"macro glue_vj"
+"glue_11d macro  Daina Avizonis 6/04 "
+"The purpose of this macro is to take 1d data that were collected with the exact same parameters"
+"and glue them into a 2d data set. The 2d data set may be defined by a template/glue" 
+"file or it can be a plate.  The macro getsqdata defines which data should be glued together"
+"and in what order. The macro take one argument which is the name of the plate glue file"
+
+$rack=vrack
+$zone=vzone
+$operator=''
+$pslabel=pslabel
+jexp:$current
+$gluename=''
+
+"===== check for plate_glue file and create sq_datalist ====="
+
+if $#>0 then
+    if typeof('$1') then
+      $gluename=$1
+    else
+      write('error','plate name needs to be a string')
+    endif
+endif
+$plateglue=userdir+'/templates/glue/'+$gluename
+$plateglue?
+
+exists($plateglue,'file'):$e1
+if not $e1 then
+    write('error','Plate glue file, %s, not found',$gluename)
+    return
+endif
+
+$loco=''
+$numb=0
+
+if $gluename <> '' then
+    lookup('file',$plateglue)
+    lookup('read'):$num
+    $num?
+
+    $count=1
+    repeat
+       lookup('read'):$loco
+
+       if $count=1 then
+          getsqdata($rack,$zone,'',$loco,pslabel)
+       else
+          getsqdata($rack,$zone,'',$loco,pslabel,'','append')
+       endif
+
+       $count=$count+1
+    until $count>$num
+else
+    getsqdata($rack,$zone,'','-1',pslabel)
+endif
+
+"===== sq_data list should have been created, check if it exists===="
+
+$datalist=userdir+'/sq_datalist'
+
+exists($datalist,'file'):$e1
+if not $e1 then
+   write('error','no data list found for for gluing')
+   return
+endif
+
+" ===== we will use addsub for adding so check if user is in it ===="
+if $current=addsubexp then
+  write('error', 'This macro uses addsub for addition, please move to another experiment')
+  return
+endif
+
+"read the sq_datslist file"
+lookup('file',$datalist)
+
+$count=0
+$ret=1
+$order=0
+
+clradd
+$datatext=''
+
+"== Start to glue data by reading each line of the sq_datalist, and adding the data=="
+while $ret>0
+do
+
+	lookup('readline'):$data,$ret
+
+	if($data <> '') then
+	    write('line3','adding %s',$data)
+	    strstr($data,'.','last'):$ret,$dname,$dummy
+            rt($dname)
+            tcl('stopUpdate')
+
+ 	    $count=$count+1
+	    "grab loc_ to determine the gluing order"
+	    "first determine if loc_ exists if not then order is the same as count"
+	     $locname=loc_
+	     if $locname <> 0 then
+		$order[$count]=$locname
+             else
+		$order[$count]=$count
+	     endif
+	    
+	        add('new')
+            $datatext = $data+'/text'
+
+         endif
+endwhile
+
+"now turn all of the data in addsub experiment into a 2d"
+write('line3','Final file count is %s',$count)
+
+par2D
+ni=1
+
+$n=$count*ni
+mf(addsubexp,$current)
+clradd
+if ($datatext <> '') then
+  copy($datatext,curexp+'/text')
+endif
+par2D
+ni=$n
+setlimit('fn1',524288,1,1)
+fn1=ni*2
+
+setvalue('arraydim',$n,'processed')
+setvalue('ni',$n,'processed')
+
+"check for glueorder array parameter"
+exists('glueorderarray','parameter'):$e
+if ($e) then 
+    destroy('glueorderarray') 
+endif
+
+    if (typeof('$order')) then
+       "$order is a string array"
+       create('glueorderarray','string')
+       setgroup('glueorderarray','display') 
+    else
+      create('glueorderarray') setgroup('glueorderarray','display') 
+    endif
+
+glueorderarray=$order
+
+write('line3','Data has been glued and returned to Exp%1.0f',$current)
+plateglue=$gluename

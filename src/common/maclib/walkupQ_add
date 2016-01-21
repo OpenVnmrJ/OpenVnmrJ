@@ -1,0 +1,304 @@
+"macro walkupQ_add"
+"****************************************************************"
+"   walkupQ_add - add node(s) to the queue    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+$clonemod='no'
+exists('clonemod','parameter'):$parex
+if ($parex) then $clonemod=clonemod endif
+
+   $day2night=cursqexp+'/day2nightLIST'
+
+   exists('activeQflg','parameter'):$aQex
+   if ($aQex) then
+	if (activeQflg='n') then
+	    rmpar('activeQflg')
+	    $aQex=0
+	endif
+   endif
+   if ($aQex) then
+	write('error','Cannot add while viewing Active Queue')
+	return
+   endif
+
+   if (replaceQ[1]='ActiveNight') then 
+	write('line3','This is an Active night acquisition')
+	longQ='y' 
+   endif
+   $longQ=longQ
+
+//   tn='H1' dn='C13'
+//   if (numrfch > 2) then dn2='N15' endif
+   $dialog='yes'
+   $reqcheck='yes'
+   $timecheck='yes'
+   $autonightcheck='yes'
+   $checkstudy='yes'
+// lock dictates whether a node is customizable or not
+   $lock='no'
+   $xmlpath='no'
+   $acqtime=-1
+   $type='LIB'
+
+   if ($# < 1) then return endif
+   $list='' $ret=0
+   strstr($1,'('):$ret,$list
+   if ($ret=0) then $list=$1 endif
+
+//   $list=$1
+   $long='no'
+   $oldsqnode=''
+   $cpnode=$list
+
+   $argno=2
+   while ($argno <= $#) do
+	$Arg='' format($argno,'lower'):$Arg
+	$Arg='$'+$Arg
+      if typeof ($Arg) then
+      	$val=${$argno}
+      	if ($val = 'long') then $long=$val
+      	elseif ($val='sqnode') then 
+ 	    $argno=$argno+1
+	    $oldsqnode=${$argno}
+	elseif ($val='cpnode') then
+	    $argno=$argno+1
+	    $cpnode=${$argno}
+      	elseif ($val='nodialog') then
+	    $dialog='no'
+      	elseif ($val='noreqcheck') then
+	    $reqcheck='no'
+      	elseif ($val='notimecheck') then
+	    $timecheck='no'
+      	elseif ($val='nostudycheck') then
+	    $checkstudy='no'
+      	elseif ($val='noautonightcheck') then
+	    $autonightcheck='no'
+      	elseif ($val='lock') then
+	    $lock=$val
+	elseif ($val='CMD') then
+	    $type=$val
+      	else
+	  $xfc='' substr($val,1,1):$xfc
+	  if ($xfc='/') then
+	    $xr=0 $xs1='' $xs2=''
+	    strstr($val,'.xml','last'):$xr,$xs1,$xs2
+	    if ($xr) and ($xs2='') then
+		$xmlpath=$val
+	    endif
+	  endif
+      	endif
+      else
+	$acqtime=${$argno}
+      endif
+      $argno=$argno+1
+   endwhile
+   if ($clonemod='yes') then $timecheck='no' $reqcheck='no' $lock='no' endif
+
+   if ($longQ='y') then $long='long' endif
+
+   if ($xmlpath<>'no') and ($xmlpath<>'') and ($type<>'CMD') then
+	getattr($xmlpath,'action','type'):$type
+   endif
+   if ($type='CMD') then
+	$timecheck='no' $reqcheck='no' $checkstudy='no'
+	$autonightcheck='no' 
+	if ($xmlpath='no') or $xmlpath='' then $dialog='no' endif
+   endif
+
+   "**********Check if this is a study in studylib********************"
+   if ($checkstudy='yes') then
+      	getfilepath($list,'studylib'):$cdirex
+      	if ($cdirex>0) then
+		$newsqnode=''
+		walkupQ('addstudy',$list,$oldsqnode,$long):$newsqnode
+		if ($newsqnode<>'') then $oldsqnode=$newsqnode endif
+		return($oldsqnode)
+      	endif
+   endif
+
+   "****Get experiment information from parlib****"
+     $Acqtime=0 $required='' $apptype=''
+     getEXPinfo($list):$required,$Acqtime,$apptype
+     if $acqtime<-0.5 then 
+	 $acqtime=0
+         $acqtime=$Acqtime[1]
+         if ($acqtime=0) and ($xmlpath<>'no') and ($xmlpath<>'') then
+        	$stime=''
+        	getattr($xmlpath,'action','time'):$stime
+        	invformattime($stime):$acqtime
+         endif
+     endif
+
+   "******Add any required Experiment***********"
+	$reqexp=''
+	if ($reqcheck<>'no') then
+	    getREQexp($list):$reqexp
+	endif	
+	if ($reqexp<>'') then
+           write('line3','Warning: %s was automatically added for %s.',$reqexp,$list)
+	   walkupQ('add',$reqexp,'nodialog','sqnode',$oldsqnode):$oldsqnode
+	endif
+
+   "***********Required experiment added to the queue************"
+
+   "******Following section checks for max. time option******"
+   "*******Modify as appropriate************************************"
+   if (wqinit<>'acq') and ($timecheck='yes') then
+	$olddtime=0 $oldntime=0
+	$maxdaytime=0 $maxnighttime=0
+	$when='' $night='no'
+	walkupQ('gettime'):$olddtime,$oldntime
+	if ($long='no') then
+		$newtime=$olddtime+$acqtime
+		$when='DayQ'
+	else
+		$newtime=$oldntime+$acqtime
+		$when='NightQ'
+	endif
+	$newtime=trunc(($newtime/60)+0.5)
+	if (wqinit='auto') then
+		getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+		is_night:$night
+	else
+		getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+	endif
+	$autonight='no'
+	if ($night='yes') or ($long<>'no') then 
+		$maxtime=$maxnighttime 
+	elseif ($autonightcheck='yes') then 
+		getadminfo('autonight'):$autonight
+		$maxtime=$maxdaytime 
+	endif
+	$maxtime=trunc(($maxtime/60)+0.5)
+	if prioritysample[1]='yes' and prioritysample[2]='high' then 
+		$maxtime=$newtime+1
+	endif
+	if ($maxtime=0) then $maxtime=$newtime+1 endif
+	if ($maxtime<$newtime) then
+	        $sqnode=''
+                write('error','%s time (%d min) exceeds max (%d min) allowed.',$when,$newtime,$maxtime)
+                if ($autonight='yes') then
+                    $lastnight=''
+                    shell('('+$tailX+' -n 1 '+$lngfile+')'):$lastnight
+		    $arg2=$list
+		    $arg3='long'
+		    $arg4='no' if ($lock='lock') then $arg4='lock' endif
+		    $arg5='no' if ($reqcheck='no') then $arg5='noreqcheck' endif
+		    $arg6='no' if ($timecheck='no') then $arg6='notimecheck' endif
+		    $arg7='no' if ($dialog='no') then $arg7='nodialog' endif
+		    $arg8='no' if ($checkstudy='no') then $arg8='nostudycheck' endif
+		    $arg9=$xmlpath
+		    walkupQ_add($arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9):$sqnode
+                    $newnight=''
+                    shell('('+$tailX+' -n 1 '+$lngfile+')'):$newnight
+                    if ($lastnight<>$newnight) then
+                        write('file',$day2night,'%s',$newnight)
+			write('error','%s added to the nightQ',$list)
+                    endif
+                else
+                    walkupQ('time')
+                endif
+                return($sqnode)
+	endif
+   endif
+
+   "********End of max time check**********************************"
+
+   "***Add the selected experiment to the queue***"
+	if $cpnode='' then $cpnode=$list endif
+        $node=$cpnode $sqnode='n'  $ext=''
+        getcpnode('cp',cursqexp,$cpnode):$node,$ext
+        if (sqflag='y') then
+           $stime2='' $stime='' formattime($acqtime):$stime2,$stime
+	   if (wqinit='acq') then
+		$attr='title',$node,'time',$stime
+           elseif ($long='long') then
+		$attr='title',$node+'_night','time',$stime
+	   else
+		$attr='title',$node+'_day','time',$stime
+           endif
+//	   if ($lock='lock') then
+//		$attr=$attr,'lock','on'
+//	   endif
+		$newnodes=''
+	   	xmhaha('mknode',$list,$attr,$oldsqnode):$sqnode,$newnodes
+		xmhaha2('moveSQ',$sqnode,$oldsqnode)
+        endif
+        if ($sqnode='') or ($sqnode='n') then
+	   $sqnode='xx'+$ext
+        endif
+
+        $macro=''
+	if ($list<>$1) then
+	    $macro=$1
+        elseif ($xmlpath<>'no') or ($xmlpath<>'') then
+            getattr($xmlpath,'action','macro'):$macro
+        endif
+        if ($macro='') then $macro=$list endif
+
+	write('line3','SetupMacro %s',$macro):$attr
+	if ($lock='lock') then
+	    $attr2='AllowCustomization No'
+	else
+	    $attr2='AllowCustomization Yes'
+	endif
+        if ($long='long') then
+	    cpattribute('reset',$maclibdir+'long/'+$node)
+	    cpattribute('set',$maclibdir+'long/'+$node,$attr)
+	    cpattribute('set',$maclibdir+'long/'+$node,$attr2)
+        else
+	    cpattribute('reset',$maclibdir+'/'+$node)
+	    cpattribute('set',$maclibdir+'/'+$node,$attr)
+	    cpattribute('set',$maclibdir+'/'+$node,$attr2)
+        endif
+	
+	if ($long='long') then
+        	write('file',$lngfile,'%s  %d  %s  %s  Queued',$node,$acqtime,$list,$sqnode)
+        	write('file',$maclibdir+'long/'+$node+'acq','ACQtime=%d',$acqtime)
+	else
+        	write('file',$expfile,'%s  %d  %s  %s  Queued',$node,$acqtime,$list,$sqnode)
+        	write('file',$maclibdir+'/'+$node+'acq','ACQtime=%d',$acqtime)
+	endif
+
+	if ($type='CMD') then
+        	write('file',$maclibdir+'/CMDnodes','%s',$node)
+        	write('file',$maclibdir+'long/CMDnodes','%s',$node)
+	endif
+
+  "******For some experiments customization is always recommended"
+	if (sqflag='y') then
+		vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+	endif
+   samplename=samplename
+   if ($dialog='no') then 
+      $dodialog='no' 
+   else
+     if ($xmlpath<>'no') and ($xmlpath<>'') then
+	walkupQ_dialog($xmlpath):$dodialog
+     else
+        walkupQ_dialog($list):$dodialog
+     endif
+   endif
+   if ($dodialog='yes') then
+        customizepar('start',$node,$long)
+   elseif ($dodialog='update') then
+	customizepar('updateacqpars',$node,$long)
+   else
+	walkupQ('time')
+   endif
+  "****Return the sqnode for the next experiment****"
+   return($sqnode)
+

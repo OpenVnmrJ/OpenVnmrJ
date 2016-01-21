@@ -1,0 +1,82 @@
+"macro AC11S"
+"AC11S - perform P31 Calibration"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the P31 Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then
+        abort
+     endif
+   endif
+endif
+
+setup('P31','cdcl3')
+Autosetgpar
+
+length(dm):$dmlen
+substr(dm,$dmlen,1):$dm
+if ($dm = 'y') then
+  if (dmf < 1000) or (dpwr < 20) then
+     write('error','H1 decoupling should be calibrated before P31')
+     dm = 'n'
+  endif
+endif
+
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('P31 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_P31cal_' + $date
+$datadir = userdir+'/data/'+sample
+archivedir=userdir+'/data/'
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+  " no need to worry about duplicate file names, as the modified "
+  " Autosave macro overwrites existing data "
+
+setref
+
+wp = sw
+cr = rfp - rfl + sw/2  "sets cr in the center of the spectrum "
+$ctrppm = cr/reffrq
+
+$move = (-17 - $ctrppm)*reffrq
+  " change in tof required to put transmitter about -63 ppm "
+tof = tof + $move
+sw = 2000  setref
+
+nt = 1  at = 2  ss = 0
+d1 = 12 "measured T1 of TPP is 3.5 sec "
+
+if (Console = 'mercury') or (Console = 'gemini') then
+  gain = 30
+else
+  gain = 50
+endif
+if (Console = 'vnmrs') then setrc endif "retrieve rof2 and alfa"
+
+gf = 1  lb = 'n' fn = 2*np  lp = 0  ai
+
+if tpwr < 40 then tpwr = 51 endif
+
+if (pw90 < 5) then 
+ pw = 10,20
+else 
+ pw = trunc(20*pw90/3)/10
+ pw = pw, 2*pw
+endif
+
+pltmod='fixed'
+macro = '' wnt = 'wft dssh(`dodc`)' wexp = 'AC10C(`refine`)'
+
+dg

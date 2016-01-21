@@ -1,0 +1,597 @@
+"macro walkupQ_runtime"
+"***************************************************************"
+" walkupQ_runtime - this is typically used at runtime by	"
+"	CMD protocols to modify the queue as appropriate	"
+" Usage:  walkupQ_runtime(keyword1,experiment/node,keyword2,..) "
+"    keyword1 = add / delete /customize				"
+"    arg2 = '' is interpreted as ALL experiments in the queue	"
+"	arg2='' and keyword1='add' is invalid			"
+"    keyword2 = next / last / all / night / '' / node / top 	"
+"	keyword2='node' interprets arg2 as nodename		"
+"			else arg2 is experimentname		"
+"	keyword2='node' and arg2='' is invalid combination	"
+"	keyword2='all' and keyword1='add' is invalid		"
+"	keyword2='' is same as keyword2='next'			"
+"	keyword2='night' and arg2='' include an implicit 'all'	"
+"    4th argument is required for customize option		"
+"***************************************************************"
+" Examples:							"
+"***************************************************************"
+"  Number of Arguments: 3					"
+"   walkupQ_runtime('add','gHSQCAD','next')			"
+"	Adds gHSQCAD as next experiment in the queue		"
+"   walkupQ_runtime('add','gHSQCAD','gCOSY_02')			"
+"	Add gHSQCAD after gCOSY_02 node				"
+"   walkupQ_runtime('add','gHSQCAD','last')			"
+"	Add gHSQCAD as last experiment in the queue		"
+"   walkupQ_runtime('add','gHSQCAD','night')			"
+"	Add gHSQCAD to the night queue				"
+"***************************************************************"
+"  Number of Arguments: 3					"
+"   walkupQ_runtime('delete','','next')				"
+"	Delete the next experiment in the queue			"
+"   walkupQ_runtime('delete','','last')				"
+"	Delete the last experiment in the queue			"
+"   walkupQ_runtime('delete','','all')				"
+"	Delete all pending experiments in the queue		"
+"   walkupQ_runtime('delete','HSQCAD','next or last or all')	"
+"	Delete next(last or all)  HSQCAD experiments 		"
+"   walkupQ_runtime('delete','gHSQCAD_02','node')		"
+"	Delete gHSQCAD_02 in the queue				"
+"***************************************************************"
+"  Number of Arguments: 4					"
+"   walkupQ_runtime('customize','','keyword','nt=32')           "
+"       keyword='next' or 'last' or 'all'                       "
+"       Set nt=32 for the next/last/all experiments             "
+"   walkupQ_runtime('customize','HSQCAD','keyword','nt=32')	"
+"	keyword='next' or 'last' or 'all'			"
+"	Set nt=32 for the next/last/all HSQCAD experiments 	"
+"   walkupQ_runtime('customize','gHSQCAD_02','node','nt=32')	"
+"	Set nt=32 for the gHSQCAD_02 experiment in the queue	"
+"***************************************************************"
+
+//********** General checks *************
+   $minarg=3
+   if ($1='customize') then 
+	$minarg=4 
+   endif
+   if ($# < $minarg) then
+        write('error','%s option requires %d arguments',$1,$minarg)
+        return(0,'')
+   endif
+   if ($3='') then $3='next' endif
+
+   $macdir=''
+   Automacrodir:$macdir
+   if ($macdir='') then return(0) endif
+   pwd:$curdir
+   $macdir2='x'
+   $isnight=-1
+   if (auto='y') then
+     $sg=autodir+'/enterQ.macdir/currentsampleglobal'
+     exists($sg,'file'):$fileex
+     if ($fileex) then
+	$a='' $s=''
+	rtv($sg,'noabort','archivedir'):$a
+	rtv($sg,'noabort','sample'):$s
+	$macdir2=$a+'/'+$s+'/dirinfo/macdir'
+     endif
+	$loc='' $locdir='' $when=''
+	getlocid:$loc,$locdir,$when
+	if ($when='night') then $isnight=1 else $isnight=0 endif
+   else
+     $macdir2=archivedir+'/'+sample+'/dirinfo/macdir'
+   endif
+   $cQ=0
+   if ($macdir2 = $macdir) then $cQ=1 endif
+   
+"*******************************************************"
+IF ($1='add') THEN
+
+   if ($# < 4) then $4='yes' endif
+   if ($# < 5) then $acqtime=0 else $acqtime=$5 endif
+   if ($# < 6) then $6='check' endif
+   if ($# < 7) then $7='' endif
+
+   $checkstudy=$4
+   $node='' $retval=0
+   $where=0
+   if ($checkstudy='yes') then
+	getfilepath($2,'studylib'):$cdirex
+	if ($cdirex>0) then
+	     walkupQ_runtime('addstudy',$2,$3):$retval,$node
+	     return($retval,$node)
+	endif
+   endif
+
+   if ($3='night') and ($isnight<1) then
+        walkupQ_runtime('addnight',$2,''):$retval
+        return($retval,$3)
+   endif
+
+   getcpnode('cp',$macdir,$2):$node
+   if ($node='') then return(0,$node) endif
+
+   
+   cpexplist('read',$macdir):$oldexplist
+   if ($3='next') then
+	$where=1
+   elseif ($3='top') then
+	$where=-1
+   elseif ($3='last') then
+	$where=0
+   else
+	teststr('$oldexplist',$3,'local'):$where
+   endif
+   if ($where=0) then
+	$wherelist=''
+	$oldexplist=$oldexplist,$node
+   else
+	if ($where>0.5) then
+	    $wherelist=$oldexplist[$where]
+	    $oldexplist[$where]=$oldexplist[$where]+' '+$node
+	else
+	    $wherelist='' $oldexplist[1]=$node+' '+$oldexplist[1]
+	endif
+   endif
+   $explist=explist
+   explist=$oldexplist
+   cpexplist('write',$macdir)
+   explist=$explist
+   if ($acqtime=0) then
+   	$req=''
+   	getEXPinfo($2):$req,$acqtime
+   endif
+   if ($6<>'nocheck') then
+   	getadminfo('prpltime'):$prplt
+	$ok=0
+        checktime(autodir+'/enterQ',$acqtime+$prplt,'day'):$ok
+	$ok3=1
+	checkSampleTimeLimit(autodir+'/enterQ',$acqtime+$prplt,0,'day'):$ok3
+	if ($ok=0) or ($ok3=0) then
+          write('line3','%s message - ',$0)
+          write('line3','There is not enough time left to add %s',$2)
+          return(0,'')
+	endif
+   endif
+
+   $expLIST=$macdir+'/EXPLIST'
+   if ($isnight>0) then $expLIST=$macdir+'/LONGLIST' endif
+   shell('touch '+$expLIST):$dum
+   $s1='' $s2=''
+   readfile($expLIST,'$s1','$s2','','local'):$etot
+   $where2=0
+   if ($wherelist<>'') then
+	teststr('$s1',$wherelist,'local'):$where2
+	if ($where2=0) then $wherelist='' endif
+   endif
+   if ($wherelist='') then
+      if ($3='top') then
+	write('reset',$expLIST+'1')
+        write('file',$expLIST+'1','%s  %d  %s  xx000  Queued',$node,$acqtime,$2)
+	shell('(cat '+$expLIST+' >> '+$expLIST+'1)'):$dum
+	shell('mv '+$expLIST+'1 '+$expLIST):$dum
+      else
+        write('file',$expLIST,'%s  %d  %s  xx000  Queued',$node,$acqtime,$2)
+      endif
+   else
+     write('reset',$expLIST+'1')
+     if ($where2 > 0) then
+	$head='' format($where2,0,0):$head
+	shell('(head -n '+$head+' '+$expLIST+' >> '+$expLIST+'1)'):$dum
+     endif
+     write('file',$expLIST+'1','%s  %d  %s  xx000  Queued',$node,$acqtime,$2)
+     if ($etot-$where2 > 0) then
+	$tail='' format($etot-$where2,0,0):$tail
+	shell('(tail -n '+$tail+' '+$expLIST+' >> '+$expLIST+'1)'):$dum
+     endif
+     shell('mv '+$expLIST+'1 '+$expLIST):$dum
+   endif
+
+   if ($7<>'quiet') then
+     if ($where=0) then
+	write('line3','%s message - ',$0)
+	write('line3','%s (%s) added to the end of the queue',$2,$node)
+     elseif ($where<0) then
+	write('line3','%s message - ',$0)
+	write('line3','%s (%s) added to the top of the queue',$2,$node)
+     else
+        write('line3','%s message - ',$0)
+   	write('line3','%s (%s) added to the queue after %s',$2,$node,$wherelist)
+     endif
+   endif
+   cd($macdir):$dum
+   write('file',$node+'acq','ACQtime=%d',$acqtime[1])  
+   write('file','EXPalias','%s %s',$node,$2)
+
+   $type=''
+   getattr($2,'action','type'):$type
+   if ($type='CMD') then
+	write('file','CMDnodes','%s',$node)
+   endif
+   cd($curdir):$dum
+   if ($cQ) then 
+	wrcurrentQ('current') 
+	$LIST='ACQlist','explist','EXPLIST','LONGLIST'
+	xmhaha_subSQ(archivedir+'/'+sample,$LIST)
+   endif
+   return(1,$node)
+
+"*******************************************************"
+ELSEIF ($1='delete') or ($1='customize') THEN
+
+   cpexplist('read',$macdir):$oldexplist
+   $size=size('$oldexplist')
+//   if ($size<2) then return(0) endif
+   if ($3='night') and ($isnight<0) then
+        write('line3','%s message - ',$0)
+        write('line3','night option is valid only as part of automation')
+        return(0)
+   endif
+
+//   if ($3='node') or ($3='top') then $k=1 else $k=2 endif
+   $k=1
+//   $k=2
+   $edit='day'
+   if ($3='night') and ($isnight<1) then $edit='night' $k=1 endif
+   if ($edit='night') and ($1='customize') then
+        write('line3','%s message - ',$0)
+	write('line3','Cannot customize night experiment during day run')
+	return(0)
+   endif
+
+   if ($edit='day') then
+   	cpexplist('read',$macdir):$oldexplist
+   	$size=size('$oldexplist')
+   	if ($size<$k) then return(0) endif
+	$expname2=''
+   else
+	$locdir='' $loc=''
+	getlocid:$loc,$locdir
+	$expLIST=autodir+'/enterQ.macdir/'+$locdir+'/night/LONGLIST'
+	exists($expLIST,'file'):$size
+	if ($size>0) then
+	    $expname2='' $oldexplist=''
+	    readfile($expLIST,'$oldexplist','$expname2','','local'):$size
+	endif
+	if ($size<$k) then return(0) endif
+   endif
+
+   $exp='' $selnode='' $selnodetime=''
+   if ($3='node') then
+	$selnode=$2
+   else
+	$exp=$2
+	if ($exp='') then 
+	    if ($3='next') or ($3='top') then
+		$selnode=$oldexplist[$k]
+	    elseif ($3='last') then
+		$selnode=$oldexplist[$size]
+	    else
+		$selnode=$oldexplist
+		if ($k>1) then
+		   $selnode[1]=''
+		endif
+	    endif
+	else
+	    if ($3='last') then
+		$i=$size
+		repeat
+		   if ($expname2='') then
+		      cpalias($oldexplist[$i],$macdir):$expname
+		   else
+			substr($expname2[i],2):$expname
+		   endif
+		   if ($expname=$exp) then
+			$selnode=$oldexplist[$i]
+			$i=$k
+		   endif
+		   $i=$i-1
+		until $i < $k
+	    else
+                $i=$k $j=1
+                repeat
+                   if ($expname2='') then
+                      cpalias($oldexplist[$i],$macdir):$expname
+                   else
+			substr($expname2[$i],2):$expname
+                   endif
+                   if ($expname=$exp) then
+                        $selnode[$j]=$oldexplist[$i]
+			$j=$j+1
+			if ($3='next') then $i=$size endif
+                   endif
+                   $i=$i+1
+                until $i > $size
+	    endif
+	endif
+    endif
+
+    $total=size('$selnode')
+  if ($1='delete') then
+     if ($edit='day') then
+     	$i=1
+     	repeat
+	   teststr('$oldexplist',$selnode[$i],'local'):$x
+	   if ($x>0) then $oldexplist[$x]='' endif
+           $i=$i+1
+     	until $i > $total
+     	$explist=explist
+     	explist=$oldexplist
+     	cpexplist('write',$macdir)
+     	explist=$explist
+     endif
+
+	$dirs=$macdir
+	if (auto='y') then
+	    getlocid:$loc,$locdir
+	    $dirs=$dirs,autodir+'/enterQ.macdir/'+$locdir+'/day'
+	    $dirs=$dirs,autodir+'/enterQ.macdir/'+$locdir+'/night'
+	endif
+	$dirtot=size('$dirs')
+	$di=1
+	repeat
+	   exists($dirs[$di],'directory'):$direx
+	   if ($direx) then
+	     cd($dirs[$di]):$dum
+	     $i=1
+	     repeat
+	   	$node=$selnode[$i]
+		if ($node<>'') then
+		  shell('(cat EXPLIST | grep -v \'^'+$node+'\' > EXPLIST1)'):$dum
+		  shell('mv EXPLIST1 EXPLIST'):$dum
+        	  shell('(cat LONGLIST | grep -v \'^'+$node+'\' > LONGLIST1)'):$dum
+        	  shell('mv LONGLIST1 LONGLIST'):$dum
+		  shell('rm -f '+$node+'acq*'):$dum
+        	  write('line3','%s message - ',$0)
+		  write('line3','%s deleted from the queue',$node)
+		endif
+		$i=$i+1
+	     until $i > $total
+	     cd($curdir):$dum
+	   endif
+	   $di=$di+1
+	until $di > $dirtot
+  else
+     cd($macdir):$dum
+     $i=1
+     repeat
+       $node=$selnode[$i]
+       if ($node<>'') then
+         write('file',$node+'acq','%s',$4)
+       endif
+       $i=$i+1
+     until $i > $total
+     cd($curdir):$dum
+  endif
+  if ($cQ) then
+        wrcurrentQ('current')
+        $LIST='ACQlist','explist','EXPLIST','LONGLIST'
+        xmhaha_subSQ(archivedir+'/'+sample,$LIST)
+  endif
+  return(1)
+
+"*******************************************************"
+ELSEIF ($1 = 'addstudy') THEN
+
+// internal use by the add option
+   if ($# < 4) then $4='check' endif
+   if ($# < 5) then $5='both' endif
+
+   $where=$3
+   $studyex=0 $studypath=''
+   getfilepath($2,'studylib'):$studyex,$studypath
+   $retval=0 $node=''
+   if ($studyex=0) then
+	return($retval,$node)
+   endif
+   $when='night'
+   $loc='' $locdir=''
+   if (auto='y') then
+	getlocid:$loc,$locdir,$when
+   else
+	$4='nocheck'
+   endif
+
+  $Sn='' $Ln='' $St=0 $Lt=0 $Se='' $Le='' $etot=0 $ltot=0
+  $tmpfile=userdir+'/persistence/clonetmp'
+  $tmpfile2=$tmpfile+'2'
+
+  write('reset',$tmpfile)
+  write('reset',$tmpfile2)
+  shell('(cat '+$studypath+'/EXPLIST | grep -w Queued | awk \'{print $1" "$2}\' > '+$tmpfile+')'):$dum
+  shell('(cat '+$studypath+'/LONGLIST | grep -w Queued | awk \'{print $1" "$2}\' > '+$tmpfile2+')'):$dum
+  readfile($tmpfile,'$Sn','$St','','local'):$etot
+  readfile($tmpfile2,'$Ln','$Lt','','local'):$ltot
+  if ($5='day') then $ltot=0 endif
+  if ($5='night') then $etot=0 endif
+
+  $s1=''
+  write('reset',$tmpfile)
+  write('reset',$tmpfile2)
+  shell('(cat '+$studypath+'/EXPLIST | grep -w Queued | awk \'{print $3}\' > '+$tmpfile+')'):$dum
+  shell('(cat '+$studypath+'/LONGLIST | grep -w Queued | awk \'{print $3}\' > '+$tmpfile2+')'):$dum
+  readfile($tmpfile,'$Se','$s1','','local')
+  readfile($tmpfile2,'$Le','$s1','','local')
+
+  shell('rm -f '+$tmpfile):$dum
+  shell('rm -f '+$tmpfile2):$dum
+
+// check available time
+  if (auto='y') then
+   shell('(cat '+autodir+'/enterQ.macdir/'+$locdir+'/night/LONGLIST | wc -l)'):$nighttot
+   shell('(cat '+autodir+'/enterQ.macdir/'+$locdir+'/day/EXPLIST | wc -l)'):$daytot
+   getadminfo('samplechangetime'):$sctime
+   getadminfo('prpltime'):$prplt
+
+   $etime=0 $ltime=0
+   if ($etot) then
+     $i=1
+     repeat
+	$etime=$etime+$St[$i]
+	$i=$i+1
+     until $i > $etot
+     $etime=$etime+($prplt*$etot)
+   endif
+   if ($ltot) then
+     $i=1
+     repeat
+        $ltime=$ltime+$Lt[$i]
+        $i=$i+1
+     until $i > $ltot
+     $ltime=$ltime+($prplt*$ltot)
+   endif
+   if ($when<>'night') then
+      if ($where='night') then
+	if ($nighttot=0) and ($etot>0) then $etime=$etime+$sctime endif
+      else
+	if ($nighttot=0) and ($ltot>0) then $ltime=$ltime+$sctime endif
+      endif
+   endif
+   $ok3=1
+   if ($4='nocheck') then $ok=1
+   else
+     $ok=0
+     if ($when='night') or ($where='night') then
+	checktime(autodir+'/enterQ',$etime+$ltime,'day'):$ok
+     else
+	checktime(autodir+'/enterQ',$etime,'day'):$ok
+	if ($ok<>0) then checktime(autodir+'/enterQ',$ltime,'night'):$ok endif
+     endif
+     $arg2=$etime,$ltime $arg3=0,0
+     checkSampleTimeLimit(autodir+'/enterQ',$arg2,$arg3):$ok3
+   endif
+  else
+    $ok=1 $ok3=1
+  endif
+
+   if ($ok=0) or ($ok3=0) then
+          write('line3','%s message - ',$0)
+          write('line3','There is not enough time left to add %s',$2)
+          return(0,'')
+   endif
+
+   if ($etot) then
+     $i=1
+     repeat
+	$newnode=''
+	if ($where='night') then
+		walkupQ_runtime('addnight',$Se[$i],$locdir,$studypath+'/macdir',$Sn[$i],$St[$i],'nocheck'):$ok
+	else
+	  	walkupQ_runtime('add',$Se[$i],$where,'no',$St[$i],'nocheck'):$ok,$newnode
+	endif
+	if ($ok>0) then $retval=1 endif
+	if ($ok>0) and ($where<>'night') then
+	    shell('(cp '+$studypath+'/macdir/'+$Sn[$i]+'acq '+$macdir+'/'+$newnode+'acq)'):$dum
+	    shell('(cp '+$studypath+'/macdir/'+$Sn[$i]+'acqpars '+$macdir+'/'+$newnode+'acqpars)'):$dum
+            shell('(cp '+$studypath+'/macdir/'+$Sn[$i]+'_Attr '+$macdir+'/'+$newnode+'_Attr)'):$dum
+	    $where=$newnode
+	endif
+	$i=$i+1
+     until $i > $etot
+   endif
+   if ($ltot) then
+     $i=1
+     repeat
+	$newnode=''
+	  if ($when='night') then
+             walkupQ_runtime('add',$Le[$i],$where,'no',$Lt[$i],'nocheck'):$ok,$newnode
+	  else
+	     walkupQ_runtime('addnight',$Le[$i],$locdir,$studypath+'/macdirlong',$Ln[$i],$Lt[$i],'nocheck'):$ok
+	  endif
+	  if ($ok>0) then $retval=1 endif
+	  if ($ok>0) and ($when='night') then
+            shell('(cp '+$studypath+'/macdirlong/'+$Ln[$i]+'acq '+$macdir+'/'+$newnode+'acq)'):$dum
+            shell('(cp '+$studypath+'/macdirlong/'+$Ln[$i]+'acqpars '+$macdir+'/'+$newnode+'acqpars)'):$dum
+            shell('(cp '+$studypath+'/macdirlong/'+$Ln[$i]+'_Attr '+$macdir+'/'+$newnode+'_Attr)'):$dum
+            $where=$newnode
+          endif
+	$i=$i+1
+     until $i > $ltot
+   endif
+   if ($where='night') then $where=$newnode endif
+//   if ($cQ) and ($retval) then wrcurrentQ('current') endif
+   return($retval,$where)
+"***********************************************************************"
+ELSEIF ($1 = 'addnight') THEN
+//  Internal use
+
+   if ($# < 4) then $4='' endif
+   if ($# < 5) then $5='' endif
+   if ($# < 6) then $6=0 endif
+   if ($# < 7) then $7='check' endif
+
+   if (auto<>'y') then 
+        write('line3','%s message - ',$0)
+	write('line3','addnight option is valid only as part of automation')
+	return(0)
+   endif
+   if ($3='') or ($3='next') then getlocid:$loc,$locdir else $locdir=$3 endif
+   if ($4='') then
+	getfilepath($2,'studylib'):$cdirex
+        if ($cdirex>0) then
+	     $retval=0 $node=''
+             walkupQ_runtime('addstudy',$2,'night'):$retval,$node
+             return($retval,$node)
+        endif
+   endif
+   $ndir=autodir+'/enterQ.macdir/'+$locdir+'/night'
+   exists($ndir,'directory'):$ndirex
+   if ($ndirex=0) then return(0,'') endif
+
+   $node=''
+   getcpnode('cp',$macdir,$2):$node  
+   if ($node='') then return(0,'') endif
+   $acqtime=$6 $req=''
+   if ($acqtime=0) then getEXPinfo($2):$req,$acqtime endif
+   shell('(cat '+$ndir+'/LONGLIST | wc -l)'):$nighttot
+   $sctime=0
+   if ($nighttot=0) then
+	getadminfo('samplechangetime'):$sctime
+   endif
+   getadminfo('prpltime'):$prplt
+   $newtime=$acqtime+$acqtime+$stime
+
+   if ($7<>'nocheck') then
+      checktime(autodir+'/enterQ',$newtime,'night'):$ok
+      $ok3=1 checkSampleTimeLimit(autodir+'/enterQ',$newtime,0,'night'):$ok3
+      if ($ok=0) or ($ok3=0) then
+          write('line3','%s message - ',$0)
+	  write('line3','There is not enough time left in overniteQ to add %s',$2)
+	  return(0,'')
+      endif
+   endif
+
+   write('file',$ndir+'/LONGLIST','%s  %d  %s  xx000  Queued',$node,$acqtime,$2)
+   write('file',$macdir+'/LONGLIST','%s  %d  %s  xx000  Queued',$node,$acqtime,$2)
+   if ($4<>'') and ($5<>'') then
+	shell('(cp '+$4+'/'+$5+'acq '+$ndir+'/'+$node+'acq)'):$dum
+	shell('(cp '+$4+'/'+$5+'acqpars '+$ndir+'/'+$node+'acqpars)'):$dum
+        shell('(cp '+$4+'/'+$5+'_Attr '+$ndir+'/'+$node+'_Attr)'):$dum
+   endif
+   write('file',$ndir+'/'+$node+'acq','ACQtime=%d',$acqtime)
+
+   $type=''
+   getattr($2,'action','type'):$type
+   if ($type='CMD') then
+        write('file',$ndir+'/CMDnodes','%s',$node)
+   endif
+
+   $pt=0 $dt=0 $nt=0
+   readTtimeQ($ndir):$pt,$dt,$nt
+   $nt=$nt+$newtime
+   writeTtimeQ($ndir,$pt,$dt,$nt)
+   $pt=0 $dt=0 $nt=0
+   readTtimeQ(autodir+'/enterQ.macdir'):$pt,$dt,$nt
+   $nt=$nt+$newtime
+   writeTtimeQ(autodir+'/enterQ.macdir',$pt,$dt,$nt)
+
+   if ($cQ) then
+        wrcurrentQ('current')
+        $LIST='ACQlist','explist','EXPLIST','LONGLIST'
+        xmhaha_subSQ(archivedir+'/'+sample,$LIST)
+   endif
+   return(1,$node)
+
+"***********************************************************************"
+ENDIF   

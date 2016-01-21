@@ -1,0 +1,68 @@
+"macro _dorient"
+" @(#)_dorient	8.1 4/16/93   Spectroscopy Imaging Systems"
+"**********************************************************"
+"  _dorient: Macro to set Euler angles from entry of dorient "
+"                parameter.                                "
+"**********************************************************"
+
+
+
+"-- Constants ---------------------------------------------"
+$prog = '_dorient: '
+$bit16 = 32767
+
+
+"-- Case 1:  Transverse plane -----------------------------"
+if (dorient='trans') then dpsi=0 dphi=0 dtheta=0 endif
+
+
+"-- Case 2:  Coronal plane --------------------------------"
+if (dorient = 'cor') then
+    dpsi = 0
+    dphi = 0
+    dtheta = 90
+endif
+
+
+"-- Case 3:  Sagittal plane -------------------------------"
+if (dorient = 'sag') then
+    dpsi=90
+    dphi=0
+    dtheta=90
+endif
+
+
+
+"-- Case 4:  Z - read out equivalent to 'cor'   ----------"
+if (dorient = 'z') then
+    dpsi=0
+    dphi=0
+    dtheta=90
+endif
+
+"-- Case 5:  Y - read out equivalent to 'trans'   ----------"
+if (dorient = 'y') then
+    dpsi=0
+    dphi=0
+    dtheta=0
+endif
+
+"-- Case 6:  X - read out equivalent to 'trans, x-read out'  " 
+if (dorient = 'x') then
+    dpsi=0
+    dphi=90
+    dtheta=0
+endif
+
+"-- Case 7:  orient - same as orient parameter"
+if (dorient = 'orient') then
+    dpsi=psi
+    dphi=phi
+    dtheta=theta
+endif
+
+"-- Case 8:  Oblique plane --------------------------------"
+if (gradstepsz < $bit16) and (dorient = 'oblique') then
+    write('error',$prog+'Oblique planes not supported with 12 bit DACs')
+    abort
+endif

@@ -1,0 +1,128 @@
+"macro AT79"
+"AT79" "CPMG T2 experiment with z-gradients in echo periods (10G/cm)"
+
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext return
+   endif
+ 
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+   text('CPMG T2 with 10 G/cm z-gradients in \\spinecho. From 2 to 44 echos\\4 to 88 gradient pulses used')
+   at_currenttest='gcpmgt2_z'
+   seqfil='ATcpmgt2' gt1=.0005 gzlvl1=trunc(10/at_gzcal)
+   vchannelmap='0','z' gradaxis='z' 
+   gt2=gt1 gzlvl2=gzlvl1 tpwr=at_tpwr-12 r4=gzlvl1
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   nt=4 d2=.001  p1=8.0*pw90 pw=4.0*pw90
+   loops=1,2,4,5,7,8,10,11,13,14,16,17,19,20,22,23
+   bigtau=.004,.008,.016,.020,.028,.032,.04,.044,.052,.056,.064,.068,.076,.08,.088,.092
+   array='(loops,bigtau)'
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT79(`PART1`)'
+   ATcycle
+   au
+   write('line3','CPMG T2 with 10 G/cm z-gradients in spinecho. From 2 to 44 echos4 to 88 gradient pulses used')
+   dps
+
+elseif ($1='PART1') then
+
+   wft select(1) ph aph0:$e vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r1                   "store t2 value"
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+    endif
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=1.6p pl('all') pap ATpage
+   endif
+   gzlvl2=1.01*gzlvl1
+   at_currenttest='gcpmgt2_mismatch'
+   text('CPMG T2 with 1 percent mismatched z gradients')
+   wnt='ATwft select(1) vsadj dssh dtext'
+   wexp='AT79(`PART2`)'
+   ATcycle au
+   dps
+   dtext
+
+elseif ($1='PART2') then
+
+   wft select(1) ph aph0:$e vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r2                   "store t2 value"
+   if (at_plotauto='y') then
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=1.6p pl('all') pap ATpage
+   endif
+   gzlvl2=0 gzlvl1=0
+   at_currenttest='gcpmgt2_nogradients_z'
+   text('CPMG T2 with no z-gradients')
+   wnt='ATwft select(1) vsadj dssh dtext'
+   wexp='AT79(`PART3`)'
+   ATcycle au
+   dps
+   dtext
+
+elseif ($1='PART3') then
+
+   wft select(1) ph aph0:$e vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r3                   "store t2 value"
+   if (at_plotauto='y') then
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=1.6p pl('all') pap ATpage
+   endif
+
+   r1=trunc(1e3*r1)/1e3
+   r2=trunc(1e3*r2)/1e3
+   r3=trunc(1e3*r3)/1e3
+   if shaped='s' then
+    ATrecord('ZCPMGT2s','T2 Relaxation Times (Autoshaped gradients)','T2(Gz)',r1,' T2(mismatch)',r2,' T2(0)',r3,' Temp',temp,' Gz',r4)
+    write('file',autotestdir+'/REPORT','ZCPMGT2s((Autoshaped gradients)gzlvl=%5.0f,mismatched,0):%1.3f,%1.3f,%1.3f sec',r4,r1,r2,r3)
+   else
+    ATrecord('ZCPMGT2','T2 Relaxation Times','T2(Gz)',r1,' T2(mismatch)',r2,' T2(0)',r3,' Temp',temp,' Gz',r4)
+    write('file',autotestdir+'/REPORT','ZCPMGT2 (gzlvl= %5.0f ,mismatched,0): %1.3f , %1.3f , %1.3f sec',r4,r1,r2,r3)
+   endif
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+ATnext
+endif

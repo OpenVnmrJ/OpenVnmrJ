@@ -1,0 +1,96 @@
+"macro autoarchive"
+
+showtray('close')
+if ($# > 0) then
+   if (traymax<2) and (appmode='walkup') then
+	exists($1+'/enterQ','file'):$isauto
+	if ($isauto) then
+	    autodir=$1
+	else
+	    $file='' shell('basename '+$1):$file
+	    autodir=$1+'/'+$file+'.macdir/studytray'
+	endif
+   elseif (traymax>1) then
+   	showtray($1)
+        write('line3','Please wait.....')
+	redisptray
+   endif
+   if (appmode='walkup') then
+	cqinitCP
+//	xmhaha('autoSQ',$1)
+	SQDisplay('tray')
+   endif
+   return
+endif
+
+exists(userdir+'/persistence/'+$0,'directory'):$adirex
+if ($adirex=0) then
+   shell('mkdir -p '+userdir+'/persistence/'+$0):$dum
+endif
+$autofiles=userdir+'/persistence/'+$0+'/autofileslist'
+$autoruns=userdir+'/persistence/'+$0+'/autorunslist'
+$autotemp=userdir+'/persistence/'+$0+'/autotemp'
+
+on('archivetray','global'):$opex
+if ($opex<0) then
+   create('archivetray','string','global')
+endif
+setprotect('archivetray','on',256,'global')
+archivetray='',''
+
+$curdir=''
+pwd:$curdir
+if (cpglobalauto='') then
+   $cpglobalauto=userdir+'/Automation'
+else
+   $cpglobalauto=cpglobalauto
+endif
+cd($cpglobalauto):$dum
+
+shell('(ls -1t */enterQ | head -n 20 > '+$autotemp+')'):$dum
+write('reset',$autoruns)
+$word1='' $word2=''
+readfile($autotemp,'$word1','$word2','','local')
+$total=size('$word1')
+if ($total>0) then
+   $i=1
+   repeat
+     if ($word1[$i]<>'') then
+        $basename='' $dirname=''
+	shell('dirname '+$word1[$i]):$dirname
+        shell('basename '+$dirname):$basename
+        write('file',$autoruns,'"%s"  "%s/%s"',$basename,$cpglobalauto,$dirname)
+     endif
+        $i=$i+1
+   until $i > $total
+endif
+
+shell('(ls -1td * > '+$autotemp+')'):$dum
+write('reset',$autofiles)
+$word1='' $word2=''
+readfile($autotemp,'$word1','$word2','','local')
+$total=size('$word1')
+if ($total>0) then
+   $i=1 $i2=1
+   repeat
+     if ($word1[$i]<>'') then
+	$basename=''
+	shell('basename '+$word1[$i]):$basename
+	exists($word1[$i]+'/'+$basename,'file'):$fex
+ 	if ($fex) then
+		shell('(cat '+$word1[$i]+'/'+$basename+' | wc -l)'):$fex
+	endif
+	if ($fex) then
+		write('file',$autofiles,'"%s"  "%s/%s"',$basename,$cpglobalauto,$word1[$i])
+	    	if ($i2>19) then $i=$total endif
+		$i2=$i2+1
+	endif
+     endif
+	$i=$i+1
+   until $i > $total
+endif
+
+shell('rm -f '+$autotemp):$dum
+
+vnmrjcmd('popup','mode:modeless','file:autoarchive.xml','rebuild:yes','title:AutoArchives')
+

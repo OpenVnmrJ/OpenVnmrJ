@@ -1,0 +1,183 @@
+Several example 2D and 3D Dosy fids can be
+processed with the new DOSY processing tools.
+a, 31P dosy of AMP-ADP-ATP
+b, DOSY-INEPT of a sugare mixture
+c, DOSY_DQFCOSY of the same sugare mixture
+d, DOSY_HMQC from G. Morris from his original publication.
+
+The Dosy experiment is documented in the "User Guide: Liquids NMR"
+manual.  Individual Dosy commands are documented in the
+"VNMR Command and Parameter Reference" manual.
+Here are some hints on how to process the example data sets.
+
+********************************************************************************
+
+P31:
+             commands                    	Buttons in Process window
+        cd to fidlib/P31
+	recall the fid (Dbppste_36C)
+        transform the data (wft, lb=2)		Process 
+        do baseline correction (fbc)		Baseline correct All spectra
+	adjust the treshold	
+        call "dosy" 				Calculate full DOSY spectrum
+
+To have better diffusion resolution, you may calculate a partial dosy spectrum
+with diffusion limits:
+
+recall the original data:
+	undosy					Recall original NMR data
+	dosy(6,7)				Calculate partial DOSY spectrum
+							within the limits below
+To display (and plot) the diffusion spectrum, you must join an other experiment
+(with no unsaved important data!!!) and type:sdp
+
+********************************************************************************
+
+DOSY-INEPT:
+             commands                           Buttons in Process window
+        cd to fidlib/sugars
+        recall the fid (Dbppsteinept)
+	transform the data (ft) 		Process (unset lb and gf)
+		no wft for proper resol.
+        do baseline correction (fbc)            Baseline correct All spectra
+	lb=-0.4 gf=0.7 				set lb and gf
+
+expand the spectrum and put the two cursors around the most intense line 
+(dioxane) +/- 15 Hz
+
+	fiddle					FIDDLE
+	display full spectrum
+	set treshold
+	dosy					Calculate full DOSY spectrum
+
+To have better diffusion resolution, you may calculate a partial dosy spectrum
+with diffusion limits:
+
+recall the original data:
+        undosy                                  Recall original NMR data        
+        dosy(2.0,5.5)                           Calculate partial DOSY spectrum
+                                                        within the limits below
+
+To display (and plot) the diffusion spectrum, you must join an other experiment
+(with no unsaved important data!!!) and type:sdp
+
+********************************************************************************
+
+DOSY-COSY:
+             commands                           Buttons in Process2 window
+        cd to fidlib/sugars
+        recall the fid (Dgstecosy)
+
+transform the firt FID:
+
+	wft2d(1)				Retransform the 1st 2D spectrum
+
+The signal regions for this file have already been saved.
+You need to recall the ll2d file, provided with the fid. Providing you are still
+in fidlib/sugars:
+
+        ll2d('read','Dgstecosy.ll2d')			-
+
+If you have an error message: Peak file not found, then go to the following 
+menus: Peak/Auto/Volume and repeat the ll2d('read',.........) again.
+You can check that this step was succesful by:
+
+        ll2dmode='nnyn' dconi			Labeling options ..... nnyn
+						Redisplay spectrum
+
+Each cross peak is boxed, the cross peak fine structure is disregarded.
+Perform the dosy analyses:
+
+	dosy					Calculate DOSY spectrum
+
+When ready and the cosy spectrum is displayed again, (with a lot of numbers,
+the diffusion coefficients and their error) join another experiment
+and display the diffusion spectrum (sdp). You will see a banch of signals
+	4.2-4.8  m2/sec   -  1,3,5,-O-Mrthylidyne-mio-Inosytol
+	3.6-3.9  m2/sec   -  Methyl-alfa-D-glucopyranosid
+	2.8-3.1  m2/sec   -  sucrose
+the other 3 lines between 3.2 and 3.6 are overlaping diagonal peaks.
+Rejoin the DOSY experiment. To display the inosytol spectrum:
+
+	ll2dmode='nnnn'				Labeling ........ nnnn
+ 						Redisplay spectra
+	makeslice(4.2,4.8)			Show 2D projection within ...
+							Low. lim: 4.2
+							Up. lim : 4.8	
+
+To calculate (or display the glucose projection, you need to recall the original 
+data:
+
+	showoriginal			      Show original 2D (first spectrum)
+        makeslice(3.6,3.9)                      Show 2D projection within ...  
+                                                        Low. lim: 3.6  
+                                                        Up. lim : 3.9
+
+To calculate (or display the sucrose projection):
+
+        showoriginal                          Show original 2D (first spectrum)               
+        makeslice(2.8,3.1)                      Show 2D projection within ...  
+                                                        Low. lim: 2.8  
+                                                        Up. lim : 3.1
+
+(Please note that some diagonal peaks are missing from the spectrum, due to
+signal overlap.)
+
+********************************************************************************
+
+DOSY-HMQC:
+             commands                           Buttons in Process2 window
+        cd to fidlib/GCQ   
+        recall the fid (Dgstehmqc)
+
+transform the firt FID:
+
+        wft2d('ptype',1)                        Retransform the 1st 2D spectrum
+
+The signal regions for this file have already been saved.
+You need to recall the ll2d file, provided with the fid. Providing you are still
+in fidlib/GCQ:
+
+        ll2d('read','Dgstehmqc.ll2d')                   -
+
+If you have an error message: Peak file not found, then go to the following
+menus: Peak/Auto/Volume and repeat the ll2d('read',.........) again.
+You can check that this step was succesful by:
+
+        ll2dmode='nnyn' dconi                   Labeling options ..... nnyn
+                                                Redisplay spectrum
+
+Each cross peak is boxed, The decoupling cyclic sidebands are disregarded.
+Perform the dosy analyses:
+
+        dosy                                    Calculate DOSY spectrum
+
+When ready and the hmqc spectrum is displayed again, (with a lot of numbers,
+the diffusion coefficients and their error) join another experiment
+and display the diffusion spectrum (sdp). You will see a banch of signals
+        7.0-8.5  m2/sec   -  quinine                            
+       10.2-11.6 m2/sec   -  geraniol                     
+       14.0-15.4 m2/sec   -  camphene
+the other lines at 18.4 are the methanol and TMS.
+Rejoin the DOSY experiment. To display the quinine spectrum:
+
+        ll2dmode='nnnn'                         Labeling ........ nnnn
+                                                Redisplay spectra
+        makeslice(7.0,8.5)                    Show 2D projection within ...  
+                                                        Low. lim: 7.0  
+                                                        Up. lim : 8.5
+
+To calculate (or display the geraniol projection, you need to recall the original 
+data:
+
+        showoriginal                          Show original 2D (first spectrum)
+        makeslice(10.2,11.6)                    Show 2D projection within ...
+                                                        Low. lim: 10.2
+                                                        Up. lim : 11.6
+
+To calculate (or display the camphene projection):
+
+        showoriginal                          Show original 2D (first spectrum)
+        makeslice(14.0,15.4)                    Show 2D projection within ...
+                                                        Low. lim: 14.0
+                                                        Up. lim : 15.4

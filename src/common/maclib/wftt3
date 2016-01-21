@@ -1,0 +1,73 @@
+"macro wftt3"
+"******************************************************"
+"                                                      "
+"    wftt3  -   macro for concurrent F3 processing     "
+"               during 3D data acquisition.            "
+"                                                      "
+"******************************************************"
+
+$curelem = celem
+
+"Check ni"
+exists('ni','parameter'):$e
+if ($e = 0) then
+   if ($curelem = 1) then
+      echo('\nwftt3:  `ni` does not exist')
+   endif
+   return
+else
+   if (ni < 1) then
+      if ($curelem = 1) then
+         echo('\nwftt3:  `ni` must be > 0')
+      endif
+      return
+   endif
+endif
+
+
+"Check ni2"
+exists('ni2','parameter'):$e 
+if ($e = 0) then
+   if ($curelem = 1) then
+      echo('\nwftt3:  `ni2` does not exist')
+   endif
+   return
+else
+   if (ni2 < 1) then
+      if ($curelem = 1) then
+         echo('\nwftt3:  `ni2` must be > 0')
+      endif
+      return
+   endif
+endif
+
+
+"Create 3D information file after the first FID"
+if ($curelem = 1) then
+   set3dproc
+endif
+
+
+"Set up ft3d parameters"
+$nelem = arraydim/(ni*ni2)
+$expnum = ''
+
+if (($curelem % $nelem) = 0) then
+   jexp:$expnum
+   $command = '"'+ systemdir + '/bin/ft3d" -r -e ' + $expnum + ' -p f3 -s'
+   if ($curelem > $nelem) then
+      $command = $command + ' 2'
+   else
+      $command = $command + ' -f'
+   endif
+
+   exists('path3d','parameter'):$e
+   if ($e <> 0) then
+      if (path3d <> '') then
+         $command = $command + ' -o "' + path3d +'"'
+      endif
+   endif
+
+   $command = $command + ' &'
+   shell($command):$dum
+endif

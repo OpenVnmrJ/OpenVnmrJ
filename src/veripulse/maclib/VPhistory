@@ -1,0 +1,136 @@
+"macro VPhistory"
+"VPhistory"
+
+exists('VPspecinfo','parameter'):$e
+if (not $e) then
+  write('line3','%s: target information never obtained via VPgettarget',$0)
+  return
+endif
+if (VPspecinfo[2]='0') then
+  write('line3','No specs found for %s',VPspecinfo[1])
+  return
+endif
+format(VPspecinfo[2],0,0):$numspec
+if ($# <> $numspec) then
+  $plural=''
+  if ($numspec > 1) then $plural='s' endif
+  write('line3','%s for %s requires %d result%s',$0,VPspecinfo[1],$numspec,$plural)
+  return
+endif
+$testname=VPspecinfo[1]
+$result='PASS'
+
+exists('probe_','parameter'):$ex
+if ($ex<0.5) then $probe=probe else $probe=probe_ endif
+$historydir=IPdatadir+'/'+$probe+'/History'
+   
+exists($historydir,'directory'):$ex
+if ($ex<0.5) then shell('mkdir -p '+$historydir):$dum endif
+   
+$id=''
+systemtime('%Y_%m_%d_%H_%M_%S'):$id
+exists('IPrunid','parameter'):$ex
+if ($ex>0.5) then
+  if (IPrunid<>'') then
+    $id=IPrunid
+  endif
+endif
+$historyfile=$historydir+'/'+$id+'.'+$testname
+exists(curexp+'/VPreprocess','file'):$reproc
+if ($reproc) then
+  write('file',curexp+'/VPreprocess','%s',$historyfile)
+  $historyfile=curexp+'/VPhistory'
+endif
+   
+
+   $path=''
+   write('reset',$historyfile)
+   write('file',$historyfile,'CUSTOMER %s',IPcustomer)
+   write('file',$historyfile,'SYSTEM   %s',IPsysname)
+   write('file',$historyfile,'PROBE    %s',$probe)
+   write('file',$historyfile,'TESTNAME %s',VPspecinfo[3])
+   write('file',$historyfile,'TESTS %s',VPspecinfo[2])
+   write('file',$historyfile,'ARCHIVE  %s',archivedir)
+   $fidpath=''
+   wexp:$e
+   if ( not $e) then
+     exists('filename','parameter'):$e
+     if ($e) then
+       if (filename<>'') then
+         $fidpath=archivedir+'/'+sample+'/'+filename
+       endif
+     endif
+   endif
+   if ($fidpath='') then
+     Svfname(archivedir+'/'+sample+'/'+svftmplt,'','.fid, .rec, .REC'):$fidpath
+   endif
+   strstr($fidpath,archivedir+'/'):$e,$dum,$path
+   write('file',$historyfile,'NAME %s',$path)
+
+$i=0
+$is=''
+$target=0
+$value=''
+$val=0
+while ($i < $numspec) do
+  $i=$i+1
+  format($i,0,0):$is
+  format(VPspecinfo[($i-1)*5+1+3],'upper'):$test
+  if ($test = 'MIN') or ($test = 'MAX') then
+     format(VPspecinfo[($i-1)*5+5+3],'upper'):$target
+  endif
+  write('file',$historyfile,'LABEL%s  %s',$is, VPspecinfo[($i-1)*5+4+3])
+  write('file',$historyfile,'TEST%s   %s',$is, $test)
+  $type=typeof('$'+$is)
+  if ($type) then // string arg
+    $value=${$i}
+    if ($test <> 'NONE') then
+      write('line3','Warning: Test %s mismatch: %s expects real number',VPspecinfo[1],VPspecinfo[($i-1)*5+4+3])
+      $test='NONE'
+    endif
+  else
+    format(${$i},0,VPspecinfo[($i-1)*5+3+3]):$value
+    format($value,'upper'):$val
+  endif
+  write('file',$historyfile,'VALUE%s  %s',$is, $value)
+  if ($test = 'MIN') then
+    write('file',$historyfile,'TARGET%s &lt; %s',$is, VPspecinfo[($i-1)*5+5+3])
+    if ($val <=  $target) then
+      $res='PASS'
+    else
+      $result='FAIL'
+      $res='FAIL'
+    endif
+  elseif ($test = 'MAX') then
+    write('file',$historyfile,'TARGET%s &gt; %s',$is, VPspecinfo[($i-1)*5+5+3])
+    if ($val >=  $target) then
+      $res='PASS'
+    else
+      $result='FAIL'
+      $res='FAIL'
+    endif
+  else
+    //Flag test as DONE if no pass criteria exist
+    $res='DONE'
+    if ($testname='AutoTest') then "AutoTest is a special case"
+       $result='PASS' $res='PASS'
+       format($value,'upper'):$value
+       if ($value='FAILURES REPORTED') then $res='FAIL' $result='FAIL' endif
+    endif
+    write('file',$historyfile,'TARGET%s   %s',$is, VPspecinfo[($i-1)*5+5+3])
+  endif
+  write('file',$historyfile,'RESULT%s %s',$is, $res)
+
+endwhile
+
+write('file',$historyfile,'TESTRESULT %s',$result)
+write('file',$historyfile,'')
+
+if ($reproc) then
+  write('file',curexp+'/VPreprocess','%s',$result)
+else
+  IPdoemail($result)
+  VPreport('make')
+  IParchivedata
+endif
+return($result)

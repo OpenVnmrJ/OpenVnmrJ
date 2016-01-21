@@ -1,0 +1,115 @@
+"macro H1_Lshp_nonspin_process"
+
+$phase='dophase'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+$lws='' $pass_threshold=0
+
+//First, basic data processing
+fn='n'
+lb='n'
+ft f full
+if $phase='dophase' then aph0 endif
+res
+rl(0)
+if $phase='dophase' then aph0('select',40,-40) endif
+fn=2*np
+ft
+hregions
+//region
+bc:$e
+res
+rl(0)
+axis='h'
+wp=250
+sp=-125
+full
+vsadj
+intmod='off'
+
+//Add the sample info to the text file
+VPtext
+CalibrationResults=''
+
+//Measure the linewidth at 50%,.55% and .11% points
+dres(cr,0.5):$lw50
+dres(cr,0.0055):$lw55
+dres(cr,0.0011):$lw11
+$lw50s='' $lw55s='' $lw11s=''
+format($lw50,1,2):$lw50s
+format($lw55,1,2):$lw55s
+format($lw11,1,2):$lw11s
+
+//Retrieve relevant spec's
+$usetc=0
+$targetname='H1_Lshp_nonspin'
+exists('lockacqtc','parameter'):$tcex
+exists('H1_Lshp_nonspin_lockacqtc1','studylib'):$stex
+
+if (($tcex) and ($stex)) then
+   if lockacqtc=1 then $usetc=1 endif
+endif
+//Decide which target to get
+if (nt=4) then 
+   if ($usetc) then
+	$targetname='H1_Lshp_nonspin_nt4x1_lockacqtc1'
+   else
+	$targetname='H1_Lshp_nonspin_nt4'
+   endif
+else
+   if ($usetc) then
+	$targetname='H1_Lshp_nonspin_lockacqtc1'
+   endif
+endif
+//VPgettarget('H1_Lshp_nonspin'):$target50,$target55,$target11
+VPgettarget($targetname):$target50,$target55,$target11
+
+$target50s='NONE' $target55s='NONE' $target11s='NONE'
+format($target50,1,2):$target50s
+format($target55,1,2):$target55s
+format($target11,1,2):$target11s
+$IPteststatus='PASS'
+
+//Add lineshape results to text file
+$str='1H non-spinning lineshape test'
+atext($str)
+$str='Measured linewidth: '+$lw50s+'/'+$lw55s+'/'+$lw11s+' Hz'
+atext($str)
+write('line3','1H Lineshape Test - non-spinning'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured linewidth %.2f/%.2f/%.2f Hz',$lw50,$lw55,$lw11):$line
+CalibrationResults=CalibrationResults,$line
+
+if (VPspecinfo[5]<>'N/A') then
+   $str='Target: <= '+$target50s+'/'+$target55s+'/'+$target11s+' Hz'
+   atext($str)
+   if (($lw50>$target50) or ($lw55>$target55) or ($lw11>$target11)) then  $IPteststatus='FAIL' endif
+   $str='Test status: '+$IPteststatus
+   atext($str)
+   write('line3','Target linewidth < %.2f/%.2f/%.2f Hz',$target50,$target55,$target11):$line
+   CalibrationResults=CalibrationResults,$line
+   write('line3','Test status: %s',$IPteststatus):$line
+   CalibrationResults=CalibrationResults,$line
+
+   //Save default shims and update probe file
+   //Only do if probe has non-spinning spec' and test passed
+   if ($IPteststatus='PASS') then VPdefaultshims endif
+
+endif
+
+darray('CalibrationResults')
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+execprocess='ft dscale darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($lw50,$lw55,$lw11)

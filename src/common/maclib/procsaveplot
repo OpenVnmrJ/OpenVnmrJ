@@ -1,0 +1,121 @@
+"macro procsaveplot"
+"************************************************************"
+" procsaveplot - process/save/plot 		             "
+"************************************************************"
+
+updatesampglobal
+"***Make sure adirtmplt is not an empty string***"
+if (adirtmplt='') then
+        setadirtmplt
+	setvalue('adirtmplt',adirtmplt,'processed')
+endif
+
+"*****Make sure svftmplt is not an empty string*****"
+if (svftmplt='') then
+        setsvftmplt
+	setvalue('svftmplt',svftmplt,'processed')
+endif
+
+"*****Make sure sdirtmplt is not an empty string*****"
+if (sdirtmplt='') then
+        setsdirtmplt
+        setvalue('sdirtmplt',sdirtmplt,'processed')
+endif
+
+"****Create sample directory if needed***"
+if (sample='') or (archivedir='') then 
+  Automkdir 
+  setvalue('sample',sample,'processed')
+  setvalue('samplename',samplename,'processed')
+  setvalue('nameprefix',nameprefix,'processed')
+"  setvalue('sdirtmplt',sdirtmplt,'processed') "
+  setvalue('archivedir',archivedir,'processed')
+  savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+else
+  exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$ex
+  if ($ex=0) then
+        Automkdir
+  	setvalue('sample',sample,'processed')
+  	setvalue('samplename',samplename,'processed')
+  	setvalue('nameprefix',nameprefix,'processed')
+"	setvalue('sdirtmplt',sdirtmplt,'processed') "
+	setvalue('archivedir',archivedir,'processed')
+        savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+  endif
+endif
+"**********************************************************"
+
+"*** if explist is an empty string, set it to pslabel*** "
+if (explist='') then
+  explist=pslabel
+  setvalue('explist',explist,'processed')
+endif 
+
+"***********************************************************"
+// append Errorlog to text
+
+   if (auto='y') then
+// Do not recall text_string from sampleglobal
+//  There could have been a experiment sepecific customization
+//  of text.  This is now allowed and supported
+
+//      $md=archivedir+'/'+sample+'/dirinfo/macdir'
+//      getsampglobal($md,'text_string','processed')
+      $loc='' $locdir='' $when='' $zone='' $rack=''
+      getlocid:$loc,$locdir,$when,$zone,$rack
+      $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+      exists($errlog,'file'):$fileex
+      if ($fileex) then
+         write('file',curexp+'/text','')
+         write('file',curexp+'/text','ErrorLog:')
+         $basename='' shell('basename '+autodir):$basename
+         $basename=$basename+' loc:'+$loc
+         if (traymax=96) or (traymax=768) then
+             $basename=$basename+' zone:'+$zone+' rack:'+$rack
+         endif
+         $basename=$basename+' ('+$when+')'
+         write('file',curexp+'/text','   %s',$basename)
+         shell('(cat '+$errlog+' >> '+curexp+'/text)'):$dum
+      endif
+   endif
+
+"**************Process save and plot****************************"
+"***processs***"
+$oldplotter=''
+switchpl(userplotter):$oldplotter
+$parstyle=parstyle
+getadminfo('parstyle'):parstyle
+if parstyle='' then parstyle=$parstyle endif
+
+   cpprocess
+
+"***save***"
+   cpsave
+
+"***plot***"
+$file=file
+if ($0 <> 'procsave') then
+  cpplot
+        "Just in case plot macro aborted at a bad place"
+  if (file=$file) then
+	$wexp=wexp
+	if ($wexp='chempackQ') then
+	   wexp='procsave'
+   	   setvalue('wexp',wexp,'processed')
+	endif
+	svpdp('nolog')
+        if ($wexp='chempackQ') then
+           wexp=$wexp
+           setvalue('wexp',wexp,'processed')
+        endif
+  else
+	rt($file)
+  endif
+endif
+
+switchpl($oldplotter)
+parstyle=$parstyle
+"***************Process, save and plot done********************"
+substr(file,'dirname'):$dir,$name,$ext
+accountLog('Completed',$name)
+udstudypar(archivedir+'/'+sample,'studystatus','')

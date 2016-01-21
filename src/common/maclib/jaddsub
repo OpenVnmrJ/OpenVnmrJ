@@ -1,0 +1,47 @@
+"macro jaddsub"
+" ************************************************************* "
+" This is a special version of the jexp1 macro to join the      "
+" addsub experiment. If it changes the experiment successfully;	"
+" it will then clear the graphics window, display the dg screen	"
+" for the new experiment, and set the main menu.		"
+" ************************************************************* "
+
+exists('addsubexp','parameter','global'):$e
+if ($e) then
+  $req_exp = addsubexp
+else
+  $req_exp = 5
+  create('addsubexp','integer','global',$req_exp)
+  setgroup('addsubexp','display','global')
+  setprotect('addsubexp','on',1,'global')  // do not allow arrays
+  setlimit('addsubexp',9999,1,0,'global')
+endif
+jexp($req_exp)
+
+" *** Check to see that the requested experiment was joined *** "
+jexp:$exp_num
+if ($exp_num <> $req_exp) then
+    write('error','Error in joining addsub (exp %d)',$req_exp)
+    return
+endif 
+
+" Call updtgcoil if gcoil and updtgcoil exist "
+exists('gcoil','parameter'):$ex
+exists('gcoil','parameter','global'):$ex1
+exists('updtgcoil','maclib'):$ex2
+if (($ex) or ($ex1)) and ($ex2) then
+    updtgcoil  
+endif
+exists('spinmax','parameter','global'):$e
+if $e>0.5 then
+  setlimit('spin',spinmax,0,1)
+endif
+
+if ($# >= 1) then
+  return
+endif
+" *** Clear the graphics screen and display parameters *** "
+clear(2)
+dg newdg
+menu('main')
+

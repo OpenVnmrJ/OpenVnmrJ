@@ -1,0 +1,355 @@
+"macro dpspwXnut"
+// dpspwXnut - Obtain a low-band (X) nutation array using direct
+//             polarization on X. and no decoupling. Array 0 to 
+//             1.25 cycles in 51 steps, based on pwX90. 
+
+//             Process the data in absolute value mode to 
+//             obtain 4 nodes (2 max 2 min). Set pwX180 
+//             as the 180 null and estimate aX90 to produce 
+//             the input pwX90.
+
+//             set R = pw360/(2.0*pw180)to estimate B1 homogeneity. 
+//             set F = number of nodes found 1 to 4.  
+
+//             Argument 1 is 'setup' to initiate the experiment. 
+//             Argument 2 is the region number with a default of 1. 
+//===================
+// The SETUP macro
+//===================
+
+if (($#>0) and ($1='setup')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+   
+   parammodule('setsampleglobals')
+   Settancpx
+   Onepul
+   parammodule('updatesampleglobals')
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqregion',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqregion')
+   $ret2 = 0
+   parammodule('setacqdisplay',$2,''):$ret2
+   parammodule('errorcheck',$ret2,$2,'setacqdisplay')
+   $ret3 = 0
+   parammodule('setsample1D',1):$ret3
+   parammodule('infocheck',$ret3,1,'setsample1D','sample')
+
+// Decoupler Off
+
+   Hseq = 'tppm'   
+   aHspinal = 0.0 phHspinal = 0.0
+   aHtppm = 0.0 phHtppm = 0.0
+
+// Get Standard H Parameters from Probe File
+
+   probeparamgroup('getlocal',$reg,$dnuc,'HX','srate'):srate
+   probeparamgroup('get','hp'+$reg,$dnuc,'90H','a','pw')
+
+// Get the appropriate X Specification
+
+   probeparamgroup('getlocal',$reg,$tnuc,'','aX90'):aX90
+   probeparamgroup('getlocal',$reg,$tnuc,'','pwX90'):$pwX90_sp
+
+// Adjust All Amplitudes for New Powers and Offsets
+
+   probeparamgroup('getlocal',$reg,$tnuc,'','ofX90','dbX90'):$tof,$tpwr
+   probeparamgroup('getlocal',$reg,$dnuc,'','ofX90','dbX90'):$dof,$dpwr
+   parammodule('powerampadjust','obs',$tpwr,aX90):tpwr,aX90
+   parammodule('powerampadjust','dec',$dpwr,aH90):dpwr,aH90
+
+// Calibrate setddrtc for CP
+
+   exists('ddrpm','parameter'):$e
+   if ($e < 0.5) then
+      create('ddrpm','string')
+      ddrpm='r'
+   endif   
+   rof2=rd-0.6 alfa=ad
+
+// Set Up the 1H Nutation Array
+
+   $pwX90step=$pwX90_sp/10.0
+
+// Set Automatic Linebroadening 
+
+   fn=16*np lb = 2.0*sw/(3.14159*np) sb = at/2.0 sbs=0.0 sbs='n'
+
+// Linear Prediction
+
+   parlp
+   proc = 'ft'
+
+// Set the Auto Display to Absolute Value
+
+   $macroname = $0 + '(\'maxamp\',100)'
+   wnt='vp=0 sb=\'y\' wft setref av ' + $macroname + ' noislm(1.0) dssh'
+
+// Set the 1H Nutation Array
+
+   array('pwX90',50,$pwX90step,$pwX90step)
+
+// Set Macro-Specific Processing and Plotting 
+
+   wexp = 'chempackQ'
+   $arg2 = '' format($2,1,0):$arg2
+   execprocess = $0 + '(\'process\',' + $arg2 + ')'
+   execplot = ''
+   clear(2)
+   write('line3','%s Setup is Complete\n',$0)
+   return   
+endif
+
+//===========================
+// Macro-Specific Processing
+//===========================
+
+if (($# > 0) and ($1 = 'process')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set the Region
+
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc 
+
+// Process the Nutation Curve
+ 
+   $macroname90 = $0 +  '(\'minmaxfit\',$best90,\'max\'):$best90,$rem90'
+   $macroname180 = $0 + '(\'minmaxfit\',$best180,\'min\'):$best180,$rem180'
+   $macroname270 = $0 + '(\'minmaxfit\',$best270,\'max\'):$best270,$rem270'
+   $macroname360 = $0 + '(\'minmaxfit\',$best360,\'min\'):$best360,$rem360'
+
+   $best90=0 $best180=0 $best270=0 $best360=0
+   $rem90=0.0 $rem180=0.0 $rem270=0.0 $rem360=0.0
+   $pw90=0.0 $pw180=0.0 $pw270=0.0 $pw360=0.0
+   $counter=0 $trial=0
+
+   lb = 2.0*sw/(3.14159*np) sb = at/2.0 sbs=0.0 sbs='n'
+   fn=16*np vp=0 av wft
+   if ($counter<(arraydim-1)) then 
+   repeat
+      $counter=$counter+1
+      if ($counter<=arraydim) then
+         select($counter)
+         peak:$ht
+         if ($ht>$trial) then $trial=$ht $best90=$counter endif
+      endif
+   until (($ht<0.75*$trial)or($counter>=arraydim))
+   $best901=$best90
+   $pw90=pwX90[$best90]
+   if (($best90>1)and($best90<arraydim-1)) then 
+      exec($macroname90) //SS_AutoCal_minmaxfit($best90,'max'):$best90,$rem90
+      $pw90=pwX90[$best90] + $rem90*(pwX90[$best90+1]-pwX90[$best90])
+   endif endif 
+
+   if ($counter<(arraydim-1)) then
+   repeat
+      $counter=$counter+1
+      if ($counter<=arraydim) then
+         select($counter)
+         peak:$ht
+         if ($ht<$trial) then $trial=$ht $best180=$counter endif
+      endif
+   until (($ht>1.25*$trial)or($counter>=arraydim))
+   $pw180=pwX90[$best180]
+   if (($best180>1)and($best180<arraydim-1)) then
+      exec($macroname180) //SS_AutoCal_minmaxfit($best180,'min'):$best180,$rem180
+      $pw180=pwX90[$best180] + $rem180*(pwX90[$best180+1]-pwX90[$best180])
+   endif endif
+
+   if ($counter<(arraydim)-1) then
+   repeat
+      $counter=$counter+1
+      if ($counter<=arraydim) then
+         select($counter)
+         peak:$ht
+         if ($ht>$trial) then $trial=$ht $best270=$counter endif
+      endif
+   until (($ht<0.75*$trial)or($counter>arraydim))
+   $pw270=pwX90[$best270]
+   if (($best270>1)and($best270<arraydim-1)) then 
+      exec($macroname270) //SS_AutoCal_minmaxfit($best270,'max'):$best270,$rem270
+      $pw270=pwX90[$best270] + $rem270*(pwX90[$best270+1]-pwX90[$best270])
+   endif endif
+
+   if ($counter<(arraydim)-1) then 
+   repeat
+      $counter=$counter+1
+      if ($counter<=arraydim) then
+         select($counter)
+         peak:$ht
+         if ($ht<$trial) then $trial=$ht $best360=$counter endif
+      endif
+   until (($ht>1.25*$trial)or($counter>=arraydim))
+   $pw360=pwX90[$best360]
+   if (($best360>1)and($best360<arraydim-1)) then
+      exec($macroname270) //SS_AutoCal_minmaxfit($best360,'min'):$best360,$rem360  
+      $pw360=pwX90[$best360] + $rem360*(pwX90[$best360+1]-pwX90[$best360])
+   endif endif
+
+// Analyze Data - Determine $pwX90calc from the (pw360-pw180)/2.0 if Possible,
+//                Use pw180/2.0 or pw90, depending on the Length of the Nutation
+
+   $R=1 $F=0
+   if ($best360>0) then 
+      $R=$pw360/(2.0*$pw180)
+      $pwX90calc=($R-0.5)*$pw180
+      $F=4
+   elseif ($best180>0) then 
+      $pwX90calc=$pw180/2.0
+      $F=2
+   else
+      $pwX90calc=$pw90
+      $F=1
+   endif
+   
+   if (($F=0)or($R<=0.75)) then 
+      banner('X Nutation Failed')
+      write('line3','Abort: R = %f\n F = %d\n',$R,$F)
+      abort
+   endif
+
+// Update $R and $F and set pwH180
+
+   $Rs='' format($R,6,4):$Rs
+   $Fs='' format($F,1,0):$Fs
+
+   probeparamgroup('setstring',$reg,$tnuc,'','R', $Rs, 
+                                             'F', $Fs)
+   probeparamgroup('getlocal',$reg,$tnuc,'','pwX90'):$pwX90_mp
+   $aX90=aX90*($pwX90calc/$pwX90_mp) "adjust the amplitude"  
+   $aX90=trunc($aX90 + 0.5)
+   $pwX180=$pwX90_mp/($R-0.5) "set the 180-degree pulse" 
+   $pwX180=0.0125*trunc($pwX180/0.0125 + 0.5)
+   probeparamgroup('setlocal',$reg,$tnuc,'','pwX180',$pwX180,
+                                          'aX90',$aX90)
+endif
+
+//===========================
+// Macro-Specific Plotting
+//===========================
+
+if (($# > 0) and ($1 = 'plot')) then 
+   wc = 50 sc = 50
+   plot1d
+   return  
+endif 
+
+//==================================
+// Begin AutoCalibration Utilities
+//==================================
+
+//--------------------
+// The maxamp function
+//--------------------
+
+if (($# > 0) and ($1 = 'maxamp')) then
+   select(celem) 
+   if (celem=1) then 
+      vsadj($2) 
+   endif
+   peak:$ht
+   if ($ht>$2) then 
+      vsadj($2) 
+   endif 
+   return    
+endif  
+
+//--------------------------
+// The  minmaxfit function
+//--------------------------
+
+if (($# > 0) and ($1 = 'minmaxfit')) then 
+
+   $bestone=$2
+   $lim=2
+   if ($#>3) then $lim=$4 endif
+
+// Prepare 'analyze.inp'
+
+   $file=curexp+'/analyze.inp'
+   exists($file,'file'):$a
+   if ($a>0.5) then 
+      write('reset',$file) 
+   endif
+
+   format((2*$lim+1),2,0):$sizes
+
+   write('file',$file,'AMPLITUDE')
+   write('file',$file,'INTENSITY')
+   write('file',$file,'%12s%13s%7s%7s\n','1',$sizes,'linear','linear')
+   format((2*$lim+1),2,0):$sizes
+   write('file',$file,'%8s%5s','NEXT',$sizes)
+   write('file',$file,'1')
+
+   $step=$bestone-$lim
+   repeat
+      select($step)
+      peak:$ht
+      write('file',$file,'%14.1f%12.2f',$step,$ht)
+      $step=$step+1
+   until ($step>$bestone+$lim)
+
+// 'poly2 Analysis with 'expfit'
+
+   analyze('expfit','regression','poly2')
+   $file=curexp+'/analyze.out'
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   format($a1s,8,4):$a1
+   format($a2s,8,4):$a2
+   $inf=-$a1/(2.0*$a2)
+   $infval=$a0+$a1*$inf+$a2*$inf*$inf
+
+// Mean Value from 'poly0' 
+
+   analyze('expfit','regression','poly0')
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   $mean=$a0
+//   write('line3','$inf=%f $infval=%f $mean=%f',$inf,$infval,$mean)
+//   write('line3','$2 = %f',$2)
+
+// Min ($minmax<0) or Max ($minmax>0) or none ($minmax=0)
+
+   $minmax=0 $ret=0.0
+   if (($bestone-$lim)<$inf)and($inf<($bestone+$lim)) then 
+      $ret=$inf
+      if ($infval<$mean) then 
+         $minmax=-1
+      else
+         $minmax=1
+      endif
+   endif
+
+//   write('line3','$xmin = %f $ret = %f $xmax = %f $minmax=%f',$bestone-$lim,$ret,$bestone+$lim,$minmax)
+
+// Return the new $bestone and a Fraction After $bestone,
+// else Return $bestone=$2 and $remainder=0.0 
+
+   $remainder=0 
+   if (($3='min')and($minmax<0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if (($3='max')and($minmax>0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if ($minmax=0) then
+      $bestone=$2 
+      $remainder=0.0
+   endif
+//   write('line3','$bestone=%f',$bestone)
+   return($bestone,$remainder)
+endif 

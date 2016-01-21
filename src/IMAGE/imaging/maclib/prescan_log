@@ -1,0 +1,98 @@
+"macro prescan_log"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_log
+"
+" DESCRIPTION:
+"    -- logs prescan actions
+"    -- checks if prescan_log exists and creates it if it does not
+"
+" Ex.: prescan_log(<action><macro>,<text>
+"
+"    -- <action> event
+"    -- <macro>  macro logging the action/error
+"    -- <text>   action / result etc.
+"
+"********************************************************************
+"----------------------------"
+" check arguments            "
+"----------------------------"
+if ($# < 3 ) then
+     write('error','Too few arguments in call to <prescan_log> !')
+     prescan_exit('abort')
+endif
+if ($# > 3) then
+     write('error','Too many arguments in call to <prescan_log> !')
+     prescan_exit('abort')
+endif
+
+$log_action = $1
+$log_macro = $2
+$log_text = $3
+$id=''
+$loop_counter=1
+"----------------------------"
+" Check log flag             "
+"----------------------------"
+if (Prescan_LogError <> 1) then
+     return
+endif
+"----------------------------"
+" define data path and names "
+"----------------------------"
+$log_dir  = userdir  + '/prescan'
+$log_file = $log_dir + '/prescan_log'
+$error_dir= $log_dir + '/error_'
+
+"---------------------------"
+" Create time stamp         "
+"---------------------------"
+mytime('return'):$time
+$str_date=$time[3]+' '+$time[2]+' '+$time[6]
+
+"---------------------------"
+" Check if event is an error"
+"---------------------------"
+if ($log_action = 'error')  then 			        "Save experiment if an error is recorded"
+     repeat							"check until new directory name does not exist"
+          format($loop_counter,0,0):$id
+          $error_path=$error_dir+$id				"create directory name"
+          exists($error_path+'.fid','directory'):$e
+	  if ($e = 1) then
+	       $loop_counter=$loop_counter+1 			"increment loop counter"
+          endif
+     until ($e <> 1) 
+     "---------------------------"
+     " Save expedriment and data "
+     "---------------------------"
+     svf($error_path)						"save experiment"
+     prescan_cleanup('copy',$error_path+'.fid')
+endif
+
+"---------------------------"
+" Log event                 "
+"---------------------------"
+exists($log_file,'file'):$e
+if ($e <> 1) then          
+    "---------------------"
+    " create new LOG-File " 
+    "---------------------"         
+    $str_date=$time[3]+' '+$time[2]+' '+$time[6]
+    write('file',$log_file,'\n------------------------')
+    write('file',$log_file,'PRESCAN - LOG FILE')
+    write('file',$log_file,'Started : %s',$str_date)
+    write('file',$log_file,'------------------------\n')
+    write('file',$log_file,'Date:\t\tTime:\t\tAction:\t\tMacro:\t\t\tText:\t\t\t\Error_ID')
+    write('file',$log_file,'==========================================================================================================')
+endif
+"-----------------------"
+" format text output    "    
+"-----------------------"
+if ($log_action = 'fit_180_I') or ($log_action = 'fit_180_II') then              
+     write('file',$log_file,'%s\t%s\t%s\t%s\t%s\t%s',$str_date,$time[4],$log_action,$log_macro,$log_text,$id)
+else
+     write('file',$log_file,'%s\t%s\t%s\t\t%s\t%s\t%s',$str_date,$time[4],$log_action,$log_macro,$log_text,$id)
+endif
+

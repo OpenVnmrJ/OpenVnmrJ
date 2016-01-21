@@ -1,0 +1,36 @@
+"macro attval"
+
+" attval(pw90,tpwr) - calculated pw and B1 values"
+" for various attenuator settings"
+
+" WARNING: calibrations should be done at less than tpwr of 60"
+" to insure a linear response"
+
+clear
+if $#=2 then
+  $pwref=$1
+  $attref = $2
+  getlimit('tpwr'):$attval,$attlow,$attstep
+  if ($attstep<1.0) then
+    settype('tpwr','real')
+  endif
+  if $attref >60 then
+     write('alpha','Non Linear response possible with reference above 60 dB')
+  endif
+  write('alpha','Attenuator Value     PW90(usec)   B1(Hz)')
+  repeat
+    exp(($attref-$attval)*2.303/20):$mult
+    $pwval = $pwref*$mult
+    $B1val = 250000/$pwval
+    write('alpha','%10.1f%15.1f%14.1f',$attval,$pwval,$B1val)
+    $attval = $attval - $attstep
+  until $attval < $attlow
+  isvnmrj:$isvj
+  if $isvj>0.5 then
+     vnmrjcmd('toolpanel','Parameter','open')
+     vnmrjcmd('setpage','Process')
+     vnmrjcmd('setpage','Process','Text Output')
+  endif
+else 
+  write('line3','usage: attval(pw,tpwr)')
+endif

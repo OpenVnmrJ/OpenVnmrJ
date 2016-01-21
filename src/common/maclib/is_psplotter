@@ -1,0 +1,34 @@
+"macro is_psplotter"
+$pltype=4
+if (plotter<>'none') and (plotter<>'') then
+   getplottertype(plotter):$pltype
+endif
+if ($pltype=3) or ($pltype=4) then
+   return(plotter,1)
+endif
+   $newplotter='' $ret=0
+   $plotters=''
+   vjplotmenu:$plotters
+   $total=size('$plotters')
+//   $plotters='' $s1=''
+//   readfile(userdir+'/persistence/plotters','$plotters','$s1','','local'):$total
+   if ($total) then
+     $i=1
+     repeat
+        $host='' $type=''
+	if ($plotters[$i]='Email') then
+	   lookup('mfile','/vnmr/devicenames','seekcs','Email','seekcs','Host','read',1):$host
+	   lookup('mfile','/vnmr/devicenames','seekcs','Email','seekcs','Type','read',1):$type
+	endif
+	if ($host<>'dummy') and ($type<>'PS_AR') then
+           getplottertype($plotters[$i]):$pltype
+           if ($pltype=3) or ($pltype=4) then
+                $newplotter=$plotters[$i]
+		$ret=1 $i=$total
+           endif
+	endif
+        $i=$i+1
+     until $i > $total
+   endif
+
+   return($newplotter,$ret)

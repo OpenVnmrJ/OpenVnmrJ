@@ -1,0 +1,45 @@
+"macro msDataFile"
+/*-*- MAGICAL -*-*/
+"macro msDataFile"
+
+// msDataFile: Construct the name of the MS data file on the Kodiak PC 
+// Usage: msDataFile([path1 [, path2] ...]):filename 
+
+// All the (string) arguments concatenated together represent the 
+// filepath of the LC data file on the host machine.  With no arguments, 
+// svfdir, lcid, and lcBaseName are used as the filepath. 
+
+// Result is the filepath with leading '/'s stripped, repeated '/'s
+// reduced to one , and then all '/'s replaced with '_'s.
+
+if ($# = 0) then
+    filepath(svfdir, lcid, lcBaseName):$fullpath
+else
+    $i = 1
+    $fullpath = ''
+    while ($i <= $#) do
+        $fullpath = $fullpath + '/' + ${$i}
+        $i = $i + 1
+    endwhile
+endif
+
+strstr($fullpath, '/'):$i, $pfx, $sfx
+
+// Strip off leading '/'s 
+while ($i = 1) do
+    $fullpath = $sfx
+    strstr($fullpath, '/'):$i, $pfx, $sfx
+endwhile
+
+// Replace groups of '/'s with single underscores 
+while ($i > 0) do
+    strstr($sfx, '/'):$j, $pfx2, $sfx2
+    while ($j = 1) do
+        $sfx = $sfx2
+        strstr($sfx, '/'):$j, $pfx2, $sfx2
+    endwhile
+    $fullpath = $pfx + '_' + $sfx
+    strstr($fullpath, '/'):$i, $pfx, $sfx
+endwhile
+
+return($fullpath)

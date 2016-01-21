@@ -1,0 +1,93 @@
+"macro mkdecshape"
+// Usage:
+//	mkdecshape(<pattern,<decband,<dn>>>):$dpwr,$dmf,$dseq,$dres
+
+//	mkdecshape - return decoupling parameter values for default pattern
+//			for default decoupling bandwidth and dn
+//	mkdecshape(pattern) - generate and return decoupling parameters for 
+//			default decoupling bandwidth and dn
+//	mkdecshape(pattern,decband) - generate and return decoupling parameters
+//			for dn
+//	mkdecshape(pattern,decband,dn) - generate and return decoupling parameters
+
+//  default pattern - waltz16 for H1 and garp1 for C13
+//  default decband - 200*dfrq for C13, 350*dfrq for N15, 16*dfrq for H1 and 100*dfrq for others
+//  default nucleus - dn
+
+// Four return values are:  dpwr, dmf, dseq and dres
+// Without return arguments the 4 parameters are set to the value in curpar
+
+$probe='' shell('basename '+probe):$probe
+if ($# < 1) then $1='' endif
+if ($# > 1) then $decband=$2 else $decband=0 endif
+if ($# > 2) then $dn=$3 else $dn=dn endif
+setfrq($dn):$dfrq
+
+if ($decband=0) then
+    if ($dn='C13') then $decband=200*$dfrq
+    elseif ($dn='N15') then $decband=350*$dfrq
+    elseif ($dn='H1') then $decband=16*$dfrq
+    else $decband=100*$dfrq
+    endif
+endif
+
+if ($dn='H1') then $pwx='pp' else $pwx='pwx' endif
+$pwxlvl=$pwx+'lvl' $pwxlvl_cf=$pwxlvl+'_cf'
+
+$waveform=$1
+if ($waveform='garp1') or ($waveform='waltz16') then $1='' endif
+
+if ($1<>'') then
+
+// Read probe file
+        $ampcf=1
+	getparam($pwxlvl,$dn):$ref_pwr
+	getparam($pwx,$dn):$ref_pw90
+        getparam($pwxlvl_cf,$dn):$ampcf
+        if ($ampcf = 0) then $ampcf=1 endif
+        $ref_pw90 = $ref_pw90*$ampcf
+	$shapefile=$waveform+'_'+dn+'_'+$probe+'.DEC'
+// Generate the setwave string
+// For now only Wurst is handled differently
+// Add more non-generic waveform inputs here
+	strstr($waveform,'WURST'):$isw
+	if ($isw) then $invj='0.0014/' else $invj='' endif
+	write('line3','%s %s%d',$waveform,$invj,$decband):$wave
+
+//  Make shape
+        opx($shapefile)
+        setwave($wave)
+        cpx($ref_pw90,$ref_pwr)
+
+// Read all parameters
+	pboxget($shapefile):$dseq,$pw,$dpwr,$pwrf,$dres,$dmf
+
+else
+// Use the setpower macro to generate pwr and pw90
+    if ($waveform='garp1') then
+    	$gammab2=$decband/4
+	$dseq='g' $dres=1
+    else
+	$gammab2=$decband/2
+	$dseq='w' $dres=90
+    endif
+    if ($gammab2 > 4800) then
+        $gammab2 = 4800
+    endif
+    setpower($gammab2,$dn):$dpwr,$dmf90
+// do dmfadj 
+    $dmfX=dmf
+    dmf=1e6/$dmf90 dmfadj($dres) $dmf=dmf
+    dmf=$dmfX
+
+endif
+
+// return values or set values
+if ($## > 0) then
+	return($dpwr,$dmf,$dseq,$dres)
+else
+	dpwr=$dpwr
+	dmf=$dmf
+	dseq=$dseq
+	dres=$dres
+endif

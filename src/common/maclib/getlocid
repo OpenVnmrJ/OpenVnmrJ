@@ -1,0 +1,41 @@
+"macro getlocid"
+if ($# < 1) then $1=curexp+'/sampleinfo' endif
+if ($1='current') then
+   $1=autodir+'/enterQ.macdir/currentsampleinfo'
+endif
+
+exists($1,'file'):$isthere
+if ($isthere=0) then return('0','','','','','','') endif
+$loc='0' $macro=''
+$locdir='' $when=''
+$rack=''
+$zone=''
+$user='' $priority=''
+$owner=''
+
+
+$s1=''
+readfile($1,'$s1','$loc','SAMPLE#:','local'):$total
+if ($total=0) then return('0','','','','','','') endif
+
+readfile($1,'$s1','$macro','MACRO:','local')
+readfile($1,'$s1','$rack','RACK:','local')
+readfile($1,'$s1','$zone','ZONE:','local')
+readfile($1,'$s1','$user','USER:','local')
+
+$i=1
+repeat
+   $s1='' $s2='' $s3=''
+   strstr($macro[$i],'\''):$ret,$s1,$s2
+   strstr($s2,'\''):$ret,$locdir[$i],$s1
+   strstr($s1,'\''):$ret,$s3,$s2
+   strstr($s2,'\''):$ret,$when[$i]
+
+   $owner[$i]='' $priority[$i]=''
+   substr($user[$i],1):$owner[$i]
+   substr($user[$i],2):$priority[$i]
+
+   $i=$i+1
+until $i > $total
+
+return($loc,$locdir,$when,$zone,$rack,$owner,$priority)

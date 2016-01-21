@@ -1,0 +1,49 @@
+"macro imagearray"
+"*********************************************************************"
+"                                                                     "
+" imagearray: Macro to set/strip image array for images repetitions   "
+"                                                                     "
+"      imagearray('set') sets image array for images repetitions      "
+"      imagearray('strip') strips the image array                     "
+"                                                                     "
+"*********************************************************************"
+
+"Set default action to set image array"
+$action = 'set'
+
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action = 'set') then
+  "Make sure ASL test mode is not set"
+  exists('asl','parameter'):$asl
+  if ($asl) then
+    exists('asltestmode','parameter'):$test
+    if ($test) then
+      aslset('reset')
+      aslset('cleartest')
+    endif
+  endif
+  "Make sure image and images exist"
+  create('images','real','current',1)
+  create('image','real','current',1)
+  if (images<1) then images=1 endif
+  image=1
+  if (images>1) then
+    "Take a copy of the array string"
+    $array=array
+    "Set image array"
+    array('image',images,1,0)
+    "Set array string so that image array cycles more slowly than other array elements"
+    if ($array<>'') then
+      array='image,'+$array
+      da
+    endif
+  endif
+endif
+
+if ($action = 'strip') then
+  create('image','real','current',1)
+  image=1
+endif

@@ -1,0 +1,89 @@
+"macro tabc"
+" @(#)tabc	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************************"
+"  tabc:  This macro drives the UNIX tabc program.  It determines the name  "
+"         of the table to be used in reconstruction, the array dimension,   "
+"         and the current experiment, and passes these as arguments to the  "
+"         external program.  tabc expects the table name to be found in the "
+"         parameter 'petable'.                                              "
+"                                                                           "
+"  Usage:  tabc<(dataformat)>                                               "
+"		dataformat = 1 		* compressed 2D data *		    "
+"			     2		* standard 2D data *		    "
+"			     3		* 3D *				    "
+"                                                                           "
+"  Alan R. Rath   Version 1.0   December 3, 1991                            "
+"***************************************************************************"
+
+$petable = ''
+$arraystring = ''
+$dataformat = ''
+
+if ($# = 0) then
+    $dataformat = '2'
+else if ($# = 1) then
+    format($1,0,0):$dataformat
+else 
+    write('error','Usage: tabc<(dataformat)>.')
+    abort
+endif endif 
+
+"*****"
+" Check to see if tabc has been run "
+"*****"
+exists('tab_converted','parameter','current'):$e
+exists('tab_converted','parameter','processed'):$ep
+if ($e or $ep) then
+    write('error','tabc has already been run on the data.')
+    abort
+endif
+
+
+"*****"
+" Infer the non-ni array dimension, even if 1:"
+"*****"
+if ($dataformat <> '1') then
+  if (ni = 0) then
+    write('error','Parameter ni=0; has flash convert "flashc" been run?')
+    abort
+  endif
+endif
+
+$ni=ni
+if (ni = 0) then
+   $ni=1
+endif
+$arraydim = arraydim/$ni
+format($arraydim,3,0):$arraystring 
+
+"*****"
+" Check the petable parameter.  If it does not exist, ask for a table name."
+" If the table is '', 'n', or 'N', abort.                                "
+"*****"
+exists('petable','parameter'):$exists
+if ($exists = 0) then
+    write('error','Cannot find "petable" parameter.')
+    input('Enter table name, or <return> to abort:'):$petable
+    if ($petable = '') then
+        write('line3','tabc aborted.')
+        abort
+    endif
+else
+    $petable = petable
+    if ($petable = ''  or  $petable = 'n'  or  $petable = 'N') then
+        write('error','Invalid table name.')
+	abort
+    endif
+endif
+
+"*****"
+" Call the UNIX tabc program:"
+"*****"
+shell('tabc '+$dataformat +' '+$petable+' '+$arraystring+' "'+curexp+'"'):$junk
+create('tab_converted')
+create('tab_converted','real','processed')
+
+"*****"
+" Processing is complete, notify the user:"
+"*****"
+write('line3','tabc processing complete')

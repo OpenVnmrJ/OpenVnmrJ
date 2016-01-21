@@ -1,0 +1,258 @@
+"macro editLog"
+" log editor "
+if ($# = 0) then
+  write('line3','%s must be supplied with log file name',$0)
+  return
+endif
+$xmlfile=curexp+'/tmplogedit.xml'
+if ($1 = 'set') then
+  $j = ($2-1)*6
+  logEditTmp[$j+3]= $3
+  chkname($3,'none'):logEditTmp[$j+6]
+  
+elseif ($1 = 'setE') then
+  $j = ($2-1)*6
+  logEditTmp[$j+1]= $3
+  
+elseif ($1 = 'get') then
+  $j = ($2-1)*6
+  return(logEditTmp[$j+3])
+
+elseif ($1 = 'getE') then
+  $j = ($2-1)*6
+  return(logEditTmp[$j+1])
+
+elseif ($1 = 'getEx') then
+  $j = ($2-1)*6
+  return(logEditTmp[$j+6])
+
+elseif ($1 = 'cancel') then
+  destroy('logEditTmp'):$e
+  delete($xmlfile)
+
+elseif ($1 = 'ok') then
+  $num=$3
+  $i= $num*6+1
+  if (logEditTmp[$i]='d') then     // delete private
+    $path=userdir+'/templates/vnmrj/loginfo/'+$2
+    exists($path,'file'):$e
+    if ($e) then
+      delete($path)
+    endif
+  elseif (logEditTmp[$i]='p') then // save private
+    $path=userdir+'/templates/vnmrj/loginfo/'+$2
+    mkdir('-p',userdir+'/templates/vnmrj/loginfo')
+  else                             // save system
+    $path=systemdir+'/templates/vnmrj/loginfo/'+$2
+  endif
+  if (logEditTmp[$i]<>'d') then    // save file
+    write('reset',$path)
+    $i=0
+    while ($i < $num) do
+      $i = $i +1
+      $j = ($i-1)*6
+      write('fileline',$path,'%s%s %s\n',logEditTmp[$j+1],
+            logEditTmp[$j+2],logEditTmp[$j+3])
+    endwhile
+  endif
+  destroy('logEditTmp'):$e
+  delete($xmlfile)
+
+else
+  exists($1,'templates/vnmrj/loginfo'):$e,$path
+  if (not $e) then
+    write('line3','log information file %s does not exist',$1)
+    return
+  endif
+  exists(systemdir+'/templates/vnmrj/loginfo','file','rw'):$perm
+  $attr='' $vals=''
+  readfile($path,'$attr','$vals','','local'):$num
+  create('logEditTmp','string','current',''):$e
+  setgroup('logEditTmp','display')
+
+  $i=0
+  while ($i < $num) do
+    $i= $i+1
+    logEditTmp[($i-1)*6+1]='','','','','',''
+  endwhile
+  logEditTmp[$num*6+1]='p'
+  $i=0
+  $onoff=''
+  while ($i < $num) do
+    $i= $i+1
+    $j=($i-1)*6
+    substr($attr[$i],1,1):$onoff
+    substr($attr[$i],2,1000):$label
+    logEditTmp[$j+1]=$onoff
+    logEditTmp[$j+2]=$label
+    logEditTmp[$j+3]=$vals[$i]
+    exists($1+$label,'templates/vnmrj/loginfo'):$e,$dirpath
+    if (not $e) then
+      exists($label,'templates/vnmrj/loginfo'):$e,$dirpath
+    endif
+    if ($e) then
+      logEditTmp[$j+4]=$label
+      logEditTmp[$j+5]=$dirpath
+    endif
+    chkname($vals[$i],'none'):logEditTmp[$j+6]
+  endwhile
+  
+  write('reset',$xmlfile)
+  $ys=''
+  $ysize=($num*30) + ($num*20) + 200
+  format($ysize,0,0):$ys
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="1020 `+$ys+`"  \n\
+    style="Heading2"  \n\
+    label="Log Editor"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="870 30" size="150 20" \n\
+      style="Heading2" \n\
+      label="Common choices" \n\
+      justify="Left" \n\
+      /> \n\
+    /> \n`)
+    $i=0
+    $y=30
+    $is=''
+    while ($i < $num) do
+      $i= $i + 1
+      $j= ($i-1)*6
+      $y= $y + 30
+      format($i,0,0):$is
+      format($y,0,0):$ys
+    write('file',$xmlfile,`\n
+     <menu loc="20 `+$ys+`" size="80 20"
+      style="PlainText"
+      label="menu"
+      vc="`+$0+`('setE',`+$is+`,'$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('getE',`+$is+`):$VALUE"
+      editable="No"
+      >
+      <mlabel
+        label="Enabled"
+        chval="1"
+        />
+      <mlabel
+        label="Disabled"
+        chval="0"
+        />
+    </menu> \n\
+     <label loc="110 `+$ys+`" size="90 20" \n\
+      style="PlainText" \n\
+      label="`+logEditTmp[$j+2]+`" \n\
+      justify="Left" \n\
+      /> \n\
+    <entry loc="210 `+$ys+`" size="650 20"
+      style="PlainText"
+      vq="logEditTmp"
+      vc="`+$0+`('set',`+$is+`,'$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get',`+$is+`):$VALUE"
+      disable="Grayed out"
+      />
+     \n`)
+    if (logEditTmp[$j+5]<>'') then
+      write('file',$xmlfile,`\n
+       <selfilemenu loc="870 `+$ys+`" size="125 20"
+         label="`+logEditTmp[$j+4]+`"
+         style="PlainText"
+         vq="logEditTmp"
+         vc="`+$0+`('set',`+$is+`,'$VALUE') vnmrjcmd('Modeless')"
+         file="$VALUE='`+logEditTmp[$j+5]+`'"
+         type="file"
+         bg="default"
+         />
+     \n`)
+    endif
+    endwhile
+    $y= $y + 30
+    format($y,0,0):$ys
+    write('file',$xmlfile,`\n
+    <label loc="20 `+$ys+`" size="90 20"
+      style="Heading2"
+      label="Example:"
+      fg="darkGreen"
+      />
+      \n`)
+    $i=0
+    while ($i < $num) do
+      $i= $i + 1
+      $j= ($i-1)*6
+      $y= $y + 20
+      format($i,0,0):$is
+      format($y,0,0):$ys
+
+    write('file',$xmlfile,`\n
+    <label loc="20 `+$ys+`" size="90 20" \n\
+      style="PlainText" \n\
+      label="`+logEditTmp[$j+2]+`" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+      /> \n\
+    <textmessage loc="120 `+$ys+`" size="650 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="logEditTmp"
+      set="`+$0+`('getEx',`+$is+`):$VALUE"
+      /> \n\
+      \n`)
+    endwhile
+    $i= $num*6+1
+    format($i,0,0):$is
+    if ($perm = 1) then
+      $y = $y + 30
+      format($y,0,0):$ys
+      write('file',$xmlfile,` \
+    <radio loc="20 `+$ys+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as system log " \n\
+      vc="logEditTmp[`+$is+`]='g'" \n\
+      set="$VALUE=(logEditTmp[`+$is+`]='g')" \n\
+      /> \n\
+      \n`)
+    endif
+      $y = $y + 30
+      format($y,0,0):$ys
+      write('file',$xmlfile,` \
+    <radio loc="20 `+$ys+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as private log " \n\
+      vc="logEditTmp[`+$is+`]='p'" \n\
+      set="$VALUE=(logEditTmp[`+$is+`]='p')" \n\
+      /> \n\
+      \n`)
+      $y = $y + 30
+      format($y,0,0):$ys
+      write('file',$xmlfile,` \
+    <radio loc="20 `+$ys+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Reset to system default log " \n\
+      vc="logEditTmp[`+$is+`]='d'" \n\
+      set="$VALUE=(logEditTmp[`+$is+`]='d')" \n\
+      /> \n\
+      \n`)
+
+  write('file',$xmlfile,'  </group>\n</template>')
+  
+  format($num,0,0):$is
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/'+$0+'.html', \
+   'pnewupdate:true', 'cancel:'+$0+'(`cancel`)', \
+   'ok:'+$0+'(`ok`,`'+$1+'`,'+$is+')', \
+   'title:Edit '+$1)
+
+endif

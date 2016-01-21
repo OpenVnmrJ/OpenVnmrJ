@@ -1,0 +1,144 @@
+"macro dfid"
+"  ********************************  "
+"  ****  M E N U :   D F I D   ****  "
+"  ********************************  "
+exists('buttonMode','parameter','global'):$e
+if (not $e) then
+   mfpars
+endif
+
+graphis:$vjmgd
+if ($vjmgd <> 'df') then
+  if (lastmenu<>'') then
+    menu(lastmenu) lastmenu=''
+  else
+    menu('fiddisp_1D')
+  endif
+else
+
+  mlabel=''
+  mstring=''
+  micon=''
+dssi:$arraydim
+
+  "all menu variables start with $vjm"
+
+  $vjm=1
+  if $arraydim>1.5 then
+    "don't use select - ftproc[2] is settable?"
+    mlabel[$vjm]='Increment'
+    mstring[$vjm]='dssi:$arraydim select:$vjms $vjms=$vjms+1 $vjms=trunc($vjms) if $vjms<0.9 then $vjms=1 elseif $vjms>$arraydim
+                   then $vjms=$arraydim endif ftproc[2]=$vjms df($vjms)'
+    micon[$vjm]='nextfid.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm]='Decrement'
+    mstring[$vjm]='dssi:$arraydim select:$vjms $vjms=$vjms-1 $vjms=trunc($vjms) if $vjms<0.9 then $vjms=1 elseif $vjms>$arraydim 
+                   then $vjms=$arraydim endif ftproc[2]=$vjms df($vjms)'
+    micon[$vjm]='prevfid.gif'
+    $vjm=$vjm+1
+  endif
+
+  if (crmode = 'b') then
+    mlabel[$vjm]='One Cursor'
+    micon[$vjm]='fidcursor.gif'
+  else
+    mlabel[$vjm]='Two Cursors'
+    micon[$vjm]='fid2cursor.gif'
+  endif
+  mstring[$vjm]='dfid(`toggle`)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Show Full FID'
+  micon[$vjm]='fidfull.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',0)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Reset to Full Display'
+  micon[$vjm]='FullScale.gif'
+  mstring[$vjm]='mfaction(\'fullzoom\')'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom in'
+  micon[$vjm]='1Dexpand.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',1)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom out'
+  micon[$vjm]='1Dzoomout.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',-1)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom mode'
+  if(buttonMode=2) then
+    mstring[$vjm]='setButtonMode(0) menu(`dfid`)'
+    micon[$vjm]='ZoomMode.gif:on'
+  else
+    mstring[$vjm]='setButtonMode(2) menu(`dfid`)' 
+    micon[$vjm]='ZoomMode.gif'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Pan & Stretch'
+  if(buttonMode=3) then
+     micon[$vjm]='fidpan.gif:on'
+     mstring[$vjm]='setButtonMode(0) menu(`dfid`)'
+  else
+     micon[$vjm]='fidpan.gif'
+     mstring[$vjm]='setButtonMode(3) menu(`dfid`)'
+  endif
+
+  $vjm=$vjm+1
+
+  exists('displaymode','parameter'):$vjmp
+  if $vjmp<0.5 then "also in fixpar, but too slow"
+    string('displaymode')
+    setgroup('displaymode','display')
+    settype('displaymode','flag')
+    setenumeral('displaymode', 6, 'r', 'i', 'a', 'e', 'z', 's')
+    displaymode = 'r'
+  endif
+  $dmode=displaymode
+
+  if ($dmode = 'r') then
+    mlabel[$vjm]='Real & Imaginary'
+    micon[$vjm]='fidimag.gif'
+  else
+    if ($dmode = 'ri' or $dmode = 'ir' or $dmode = 'i') then
+      mlabel[$vjm]='Zero Imaginary'
+      micon[$vjm]='fidzeroimag.gif'
+    else
+      mlabel[$vjm]='Real Only'
+      micon[$vjm]='fidnoimag.gif'
+    endif
+  endif
+  mstring[$vjm]='dfid(`imaginary`)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Show/Hide Axis'
+  mstring[$vjm]='if(mfShowAxis=1) then mfShowAxis=0 else mfShowAxis=1 endif repaint'
+  if(mfShowAxis=1) then
+    micon[$vjm]='1Dscale.gif:on'
+  else 
+    micon[$vjm]='1Dscale.gif'
+  endif 
+  $vjm=$vjm+1
+
+  mlabel[$vjm]='Phase Mode'
+  mstring[$vjm]='dfid(`phase`)'
+  micon[$vjm]='1Dphase.gif'
+  $vjm=$vjm+1
+
+  mlabel[$vjm]='Redraw'
+  mstring[$vjm]='dfid'
+  micon[$vjm]='recycle.gif'
+  $vjm=$vjm+1
+
+  mlabel[$vjm]='Return'
+  micon[$vjm]='return.gif'
+  if (lastmenu<>'') then
+    mstring[$vjm]='menu(lastmenu) lastmenu=``'
+  else
+    mstring[$vjm]='menu(`fiddisp_1D`)'
+  endif
+
+endif

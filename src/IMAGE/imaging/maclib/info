@@ -1,0 +1,33 @@
+"macro info"
+// write verbose output if debug parameter is set
+// also write to log file if debug is set and logfile parameter is set
+// without arguments it returns a string that it s appropriate to pass
+// as the last argument to any shell program that allows IO redirection
+// with the '>' symbol and interprets '-v' to mean "verbose" output.
+
+exists('debug','parameter','global'):$info
+exists('logfile','parameter','global'):$logfile
+
+$info = $info > 0.5
+if $info then $info = debug > 0.5 endif
+if $info then $dbg  = debug > 1.5 endif
+
+if $# < 0.5 then
+   if $info then
+     if $logfile then
+	return(' -v -log '+logfile)
+     else
+	return(' -v')
+     endif
+   else
+     return('')
+   endif
+endif
+
+if $info > 0.5 and $# > 0.5 then
+   write('line3',$1)
+endif
+
+if $logfile then
+   write('file',logfile,$1)
+endif

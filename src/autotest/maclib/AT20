@@ -1,0 +1,60 @@
+"macro AT20"
+"AT20"   " Find 1H pw360 on channel 2"
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   gain=10    av
+   seqfil='ATd2pul' at_currenttest='pw90_ch2_1'
+   dpwr=tpwr dof=tof 
+   array('pw',40,pw90/7,pw90/10)
+   vs=vs/2
+   wnt='ATwft select(1) vsadj(10) dssh' 
+   write('line3','finding estimate of pw90 (Channel 2)')
+   vp=0 
+   wexp='AT20(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   at_currenttest='pw90_ch2_2'
+   ATpw90cal2('pw'):$bb
+
+   write('line3','finding first estimate of Channel 2 pw360')
+   pw=3.0*$bb,3.2*$bb,3.4*$bb,3.6*$bb,3.8*$bb,4.0*$bb,4.2*$bb,4.4*$bb,4.6*$bb,4.8*$bb
+   wnt='ATwft dssh'
+   wexp='AT20(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+   wft
+   write('line3','calculating first estimate of pw360 (Channel 2)')
+   ATsvf
+   at_currenttest='pw90_ch2_3'
+ 
+   ATpw90cal('pw'):pw90
+
+   write('line3','finding second estimate of Channel 2  pw360 ')
+   wnt='ATwft dssh'
+   array('pw',10,3.6*pw90,0.08*pw90)
+   wexp='AT20(`PART3`)'
+   ATcycle
+   au
+
+elseif ($1='PART3') then
+   wft
+   write('line3','calculating final estimate of pw360 (Channel 2)')
+   ATsvf
+   
+   ATpw90cal('pw'):at_pw90_ch2
+   pw=at_pw90_ch2 at_pw90_ch2=pw  "force 0.1usec stepsize"
+   at_pw90_ch2=trunc(100*at_pw90_ch2)/100
+   ATrecord('H1PW90ch2','1H pw360/4','pw360/4',at_pw90_ch2,'at_dpwr',tpwr)
+   write('line3','pw90 (Channel 2) = %2.2f',at_pw90_ch2)
+   write('file',autotestdir+'/REPORT','H1 pw360/4 (channel 2) = %3.2f at power = %2.0f  ',at_pw90_ch2,tpwr)
+ATnext
+endif

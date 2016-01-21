@@ -1,0 +1,33 @@
+"macro SavePsgShapes"
+"***********Macro to collect shapes from psgFile or PsgFile******"
+"***********************************************************************"
+
+  $psgfile=curexp+'/psgFile'
+  exists($psgfile,'file'):$fileex
+  if ($fileex=0) then
+     $psgfile=curexp+'/PsgFile'
+     exists($psgfile,'file'):$fileex
+  endif
+  if ($fileex=0) then return endif
+
+  $maclib='' $parlib='' $shapelib='' $psglib=''
+  Automacrodir('make','new'):$maclib,$shapelib,$parlib,$psglib
+  if ($shapelib='') then return endif
+
+  $shapefile=userdir+'/persistence/shapeFile'
+  write('reset',$shapefile)
+  shell('(cat '+$psgfile+' | grep shapelib > '+$shapefile+')'):$dum
+  $s1='' $s2=''
+  readfile($shapefile,'$s1','$s2','','local'):$total
+  if ($total) then
+     $i=1
+     repeat
+	exists($s1[$i],'file'):$fileex
+	if ($fileex) then
+	   shell('cp '+$s1[$i]+' '+$shapelib):$dum
+	endif
+	$i=$i+1
+     until $i > $total
+  endif
+  shell('rm -f '+$shapefile):$dum
+

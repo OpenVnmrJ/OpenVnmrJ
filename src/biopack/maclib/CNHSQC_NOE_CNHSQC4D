@@ -1,0 +1,53 @@
+"macro CNHSQC_NOE_CNHSQC4D"
+"CNHSQC-NOE-CNHSQC macro ,Agilent"
+
+       BPrtppar('CNHSQC_NOE_CNHSQC4D')  
+	
+       dof=dof-(174-17)*dfrq   "set in methyl region"
+       swC=28*dfrq
+        
+        " Typically sw1=30*sfrq/8, e.g.3000 Hz at 800 MHz"
+
+        getparam('swN','N15'):sw1   
+        swN=sw1         
+	dm2='nnnn'
+
+	ni=0    phase=1  nt=4 ss=4 ni2=0 phase2=1 ni3=0 phase2=1 phase3=1
+        exp_mode='2D'
+        ddrtc=alfa
+
+" Make  shapes:"
+                                      //setup 2.5ppm bw on methyl protons at 0.8ppm center
+        $shape='CH3_90'
+        pbox_rst opx($shape+'.DEC') pboxpar('type', 'd')
+        pboxpar('stepsize', '0.5') pboxpar('attn','i') pboxpar('sfrq',sfrq)
+	setwave('sinc  2.5p -3.9p 0 0 90 ')   cpx(pw,tpwr)   
+	pboxget($shape+'.DEC'):ch90shape,ch90pw,ch90pwr,r2,ch90dres,ch90dmf
+
+                                                               //setup 180 on ch3 protons
+        $shape='CH3_180'
+	pbox_rst opx($shape+'.RF') pboxpar('stepsize', '0.5')
+        pboxpar('attn','i') pboxpar('sfrq',sfrq)
+	setwave('q3 10p -7p 0 0 180 ')   cpx(pw,tpwr)   
+	pboxget($shape+'.RF'):ch180shape,ch180pw,ch180pwr 
+	write('alpha','...done' )
+
+        $shape='caco180'
+	pbox_rst opx($shape+'.RF') pboxpar('stepsize', '0.5')
+        pboxpar('attn','i') pboxpar('sfrq',dfrq)
+	setwave('q3 30p 39p 0 0 180 ')  
+        setwave('q3 30p 158p 0 0 180 ')
+        cpx(pwC*compC,pwClvl) 
+	pboxget($shape+'.RF'):caco180shape,caco180pw,caco180pwr
+	write('alpha','...done' )
+
+" Determine 13C decoupling waltz16 parameters"
+        dseq='waltz16' dres=90 
+        $pw_dec=100*800/sfrq                        // 2.5 kHz B1 decoupling on 13C at 800MHz 
+        ln(pwC*compC/$pw_dec):r3  
+        format(pwClvl+r3*8.68+0.5,0,0):dpwr
+        exp((pwClvl-dpwr)*0.115):r1
+        $pw_dec=pwC*r1*compC dmf=1.0e6/$pw_dec
+ 
+        axis='hhh'
+        wnt='' wexp='' spin='n'

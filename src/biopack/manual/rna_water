@@ -1,0 +1,82 @@
+water-
+
+   This pulse sequence has options for the most popular water suppression
+methods. Each option has its own dedicated parameters which become visible
+in "dg" when the option has the value 'y'. No attempt is made in "dg" to
+prevent more than one method from being used (neither is there any attemp
+in psg code). Users could either modify the code or modify (or create) a
+usergo macro that would check on the values of options and abort acquisition
+with message if more than one option is accidentally selected.
+
+
+
+	THE SEQUENCE ALSO CONTAINS AN OPTION FOR N15 AND C13 DECOUPLING
+
+	      The aquisition time is limited to 0.175ms.
+
+Presat='y'
+   Performs classic observe xmter presat with optional pfg homospoil(sspul='y'). 
+   Homospoil is controlled by a gradient time of gt0 (sec) at level gzlvl0.
+   Satmode is used like "dm" to select periods of saturation at frequency
+   satfrq, power satpwr, for duration satdly. A composite 90 option is
+   excercised when composit='y'. Sequence is essentially s2pul for d1,p1,d2,pw.
+
+Scuba='y'
+   When presat='y', scuba may be used to restore some "bleached" proton      
+   intensity for those protons near in shift to the water. 
+
+Shaped='y'
+   Same as presat='y' but all rf controlled by waveform generator. Useful for
+   calibrating shaped pulses even in non-suppression experiments. 
+   The p1 pulse is at p1frq, of shape p1shape, at power p1pwr and for
+   duration p1. The second pulse is of length pw, at frequency tof, at power
+   pwpwr and of shape pwshape. The solvent saturation is optional during
+   relaxation and d2 delays under satmode control (like "dm") at satfrq
+   with power satpwr and shape satshape (use "hard" for normal operation).
+
+Jumpret='y'
+   Does a simple jump-and-return experiment with pulses jrp1 and jrpw
+   separated by delay jrdelay. jrpw is usually 25ns or so shorter for
+   best suppression. Vary tof over +-100 Hz to find best suppression.
+   sspul='y' does gradient homospoil prior to d1, with different lengths
+   of homospoil for each transient to avoid gradient-recalled echos.
+
+   For Literature discussion: see P.J. Hore, J.Magn.Reson.,55,283-300(1983)
+
+Wet='y'
+   Does a presat experiment in which the presat can take only 20-100msec.
+   After d1 there is a series of four selective pulses on water, each 
+   followed by a gradient. This can achieve very good suppression and
+   also be used for multiple line suppression by making the selective
+   pulse multifrequency (use convolute macro or Pbox). The gradient is
+   controlled by the time gtw at level gzlvlw. The selective pulse
+   wetshape is at a power level wetpwr for a time wetpw. wetpw should be
+   calibrated as a 90 degree pulse length for the shape wetshape and power
+   wetpwr. The wet "pulse" is broken up into 4 individual pulses each
+   followed by different gradients. In some cases use of a composite pulse
+   will produce better suppression (composit='y').
+
+   Literature: S.Smallcombe, S.L.Patt and P.A. Keifer, J.Magn.Reson.A,117,295(1995).
+
+Watergate='y'
+   This may be done in either a soft-pulse(flagsoft='y') or hard-pulse 
+   (flag3919='y' or flagW5='y') version.
+
+   The water-selective soft pulse can be of any desired shape. If autosoft='y',the
+   power is calculated by the psg code (always a "sinc") based on pw and compH.
+   The soft pulse width is user-enterable. This soft pulse may be used for
+   flipback purposes for all methods of watergate. It is also used within
+   the spin-echo if flagsoft='y'.
+
+   A soft pulse prior to the first high power pulse is done when flipback='y',
+   for purposes of keeping water along Z during d1 and at (to reduce 
+   intensity losses of other protons via chemical exchange with water.
+   Further empirical improvement in suppression can be had by arraying
+   phincr1 and phincr2 from -10 to 10. Fine adjustment of the 180 is
+   controlled by p180 (vary for best suppression). flippw should be short
+   enough so relaxation is no problem, but long enough so that nearby
+   protons are not suppressed as well (suggest 2-5msec).
+
+   Literature: soft-pulse  Piotto et.al., J.Biomol.NMR, 2,661(1992)
+               hard-pulse  Sklenar et.al., J.Magn.Res., 102, 241(1993)
+                       W5  Liu et.al, J.Magn.Res., 132, 125(1998)

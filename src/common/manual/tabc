@@ -1,0 +1,88 @@
+*************************************************************************
+tabc    Convert data obtained in table defined order to linear   (Macro)
+        monotonic order suitable for processing in vnmr.
+*************************************************************************
+
+Applicability:	Systems with Imaging Module.
+
+Format: tabc           Reorder 2D data
+	tabc(1)        Reorder 2D compressed data
+        tabc(3)        Reorder 3D data
+
+
+Description:
+
+        Imaging and other 2D experiments are normally acquired so that
+	the order of the incremented acquisition parameter, such as the
+	phase encode gradient, is linear and monotonic.  For a standard
+	imaging experiment this means that the phase encode gradient
+	will progress from a starting negative value monotonically up
+	through zero to a positive value, e.g.:
+
+	    -64, -63, -62, ... , -1, 0, 1, ... , 62, 63.
+        
+	The ft2d program in vnmr assumes this structure in its operation.
+	It is possible to acquire the equivalent data in non-monotonic
+	order, either by explicitly coding the desired progression into
+	a pulse sequence, or by using an external AP table to control the
+	order.  In either case, vnmr will not be able to properly process
+	the resulting data.  "tabc" is a function which reconstructs a
+	properly ordered raw data set from any arbitrarily ordered data
+	which has been acquired under control of an external AP table.
+	The data must have been acquired according to a table in the 
+	"tablib" directory.
+
+        Data from table driven 2D pulse sequences is utilized by executing
+	the 'tabc' Vnmr command once and only once before normal 2D
+	processing and/or parameter storage.  This command takes no arguments
+	and is executed by simply typing 'tabc' in the Vnmr command window.
+	A simple check is done by 'tabc' to prevent it from being executed
+	more than once on the same data set.  tabc expects to find 2D data
+	in the standard vnmr format, i.e., using the ni parameter.  
+
+	 'tabc' can be used on data acquired in compressed form using nf, 
+	but must specify the compressed format by entering a value of 1 in 
+	the dimension argument: tabc(1).
+
+        3D data which has been acquired with an external table may also be
+	reordered using tabc by supplying an argument to indicate this type
+	of data:  tabc(3).  3D data is expected to be in "compressed/standard"
+	format, in which there are ni standard 2D planes of data (the third 
+	dimension), each consisting of nf compressed fids (the second
+	dimension).
+
+        The 'tabc' command reads the file "fid" in the "acqfil" subdirectory
+	of the current experiment.  The data is reordered and written back
+	out to a new "fid" file.  A parameter 'tab_converted' is created in
+	the 'processed' and 'current' parameter trees so if 'tabc' is rerun
+	it will know the data has already been processed.  The original data 
+	is moved to a file called "fid.orig" in the same acqfil directory.  
+	Thus, if for any reason tabc fails, or results in an unpredicted or
+	undesired transformation, it is possible to salvage the original raw 
+	data by moving the "fid.orig" file back to "fid."  Because of this, 
+	you may want to explicitly delete this "fid.orig" file after you are 
+	satisfied that the conversion has been successful in order to reduce 
+	disk utilization.
+
+	You may use "tabc" on either saved data which has been loaded into
+	a vnmr experiment, or on data in an experiment which has just been
+	acquired but not yet saved.  In the first case, you will have to
+	re-save the data after conversion if you want the saved data set
+	to reflect the conversion.
+
+	All of the 2D data types which vnmr recognizes are supported by tabc:
+	arrayed, compressed multislice, and arrayed compressed multislice.
+
+
+Errors:
+	1. At this time, the data must have the same number of "traces" as
+	   the table does elements.  
+
+	2. tabc is primitive in what it expects to find in the table file.
+	   None of the advanced features of table expansion are supported,
+	   i.e., the entire table must be explicitly listed in the table
+	   file.  tabc expects to find only one table in a file, although
+	   it does not care whether it is t1 or t60.
+
+
+See Also:  aptable, psgelements.

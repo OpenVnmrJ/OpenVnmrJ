@@ -1,0 +1,47 @@
+import os
+
+# targets
+killTarget = 'killroboproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+
+# get options settings
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+# source files
+killFileList = ['killroboproc.c']
+
+# build environments
+killEnv = Environment(CCFLAGS = '-O -m32',
+                      CPPDEFINES = ['LINUX=1'],
+                      LINKFLAGS = '-m32')
+
+# actual builds
+kill = killEnv.Program(target = killTarget,
+                       source = [killFileList],
+                       LIBS   = ['m'])
+
+# define with absolute path where built files will be copied
+rootDir = os.path.join(cwd, os.pardir, os.pardir, os.pardir)
+pass768ASPath = os.path.join(rootDir,'options','passworded','768AS','bin')
+vnmrInstallPath = os.path.join(rootDir,'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(pass768ASPath):
+   os.makedirs(pass768ASPath)
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+killEnv.AddPostAction(kill,
+             Action(Copy(pass768ASPath, os.path.join(cwd, killTarget))))
+
+if boEnv['AS768'] == 'y' :
+   killEnv.AddPostAction(kill,
+                Action(Copy(vnmrInstallPath, os.path.join(cwd, killTarget))))
+

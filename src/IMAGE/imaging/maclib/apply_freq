@@ -1,0 +1,192 @@
+"macro apply_freq"
+"************************************************************"
+"           MACRO FOR FID FREQUENCY CORRECTION               "
+"           Written by:  Ivan TKAC                           "
+"           Last update: Feb 09, 2007,                       "
+"     modified by: LK, June, 2009 				"
+"************************************************************"
+
+"-------------------------------------------------------------"
+"   CHECK OF FILE                                             "
+"-------------------------------------------------------------"
+$action = ''
+
+if ($# > 0) then
+  $action = $1
+  
+  else
+  $action='allign'
+endif
+
+write('line3','you are performing: %s',$action)
+
+
+$sp=sp $wp=wp $vs=vs $sc=sc $wc=wc $vp=vp $lp=lp $rp=rp
+$gf=gf $gfs=gfs $lb=lb $fn=fn
+$axis=axis $rfp=rfp $rfl=rfl
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+
+$ex = 1
+
+
+if ($action = 'restore') then
+
+   exists('fid.raw','file'):$ex
+   if ($ex = 0) then  "no frequency or other corrections were performed on this dataset"
+   	write('line3','Nothing to restore, exiting...')
+   	abort
+   else
+        shell('mv fid.raw fid')
+        shell('mv phase_list phase_list.old')
+	write('line3','Restored original fid...')
+        exists('eddy_log','file'):$exist_ecc
+            if ($exist_ecc = 1) then
+             rm('eddy_log')
+            endif
+
+
+
+	rt($filename)
+
+	//wft dss 
+	ho=0 vo=0
+	sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+	lb='n' gf=$gf gfs=0 fn=$fn
+	axis=$axis rfp=$rfp rfl=$rfl
+	if (nt[1] = 1) then av endif
+	if (celem>2) then 
+	wft dss dscale 
+           else
+        wft dscale
+        endif
+  endif
+endif
+   
+
+//end of restore part
+
+  
+if ($action= 'allign')  then
+
+ if (celem<2) then "catch the case of empty array"
+  write('line3','Number of FIDs < 2, exiting...')
+  clear 
+  abort
+ endif
+
+
+ exists('fid.raw','file'):$ex
+ if ($ex = 0)  then  "no freq allign was done before or ok to allign again"
+  
+      shell('cp fid fid.raw')
+      
+  
+ else 
+  if (a_repeat='n') then
+   write('line3','Freq correction executed already, exiting... to restore inital fid - use "Restore Original Fid" or select "Allow Repeat Action"')
+   abort
+  endif
+ endif
+
+
+
+
+"-------------------------------------------------------------"
+"   FREQUENCY SHIFT CALCULATION                               "
+"-------------------------------------------------------------"
+exists('freq_list','file'):$exist_fl
+if ($exist_fl = 1) then
+   rm('freq_list')
+endif
+
+write('file','freq_list',sw)
+write('file','freq_list',lsfid)
+axis='h'
+
+"ESTABLISHING SIGNAL MODE"
+
+exists('a_dmg_default','parameter'):$ex_def
+
+if ($ex_def=0)  	then			"case of a_dmg_default parameter not being in the system"
+	
+a_dmg_default='y'
+
+endif
+
+		
+if (a_dmg_default='y') then	"case of dmg_default set to default"
+
+        
+	if (nt[1] = 1) then
+   	av
+   	write('line3','Default mode is ABSOLUTE VALUE')
+        else
+	ph
+	write('line3','Default mode is PHASE SENSITIVE')
+	endif
+	 	
+	else 
+	write('line3','The mode you selected is %s',dmg)
+                       
+endif   "end of dmg_default choices"
+
+			
+	
+
+
+
+ds(1)
+peak:$heght,$freq1
+cr=$freq1 rl(0)
+
+$i=1
+while ($i < arraydim+1)
+do ds($i) dscale  
+   peak:$heght,$freq
+   format($freq,8,3):$form_freq
+   write('file','freq_list',$form_freq)
+   $i=$i+1
+endwhile
+
+"-------------------------------------------------------------"
+"   DC OFFSET AND FREQUNCY CORRECTION OF FIDS                 "
+"-------------------------------------------------------------"
+// $homedir=''
+// shell('echo $HOME'):$homedir
+
+shell('mv fid fid.tmp')
+// $program1 = $homedir + '/bin/DCoffset'
+// shell($program1 + ' fid.tmp fid.dc')
+ 
+exists('B0_cor','bin'):$e,$program2
+// $program2 = $homedir + '/bin/B0_cor'
+shell($program2 + ' fid.tmp fid freq_list') "where fid.tmp goes in, fid goes out"
+// shell('rm fid.tmp')
+write('line3','FREQUENCY SHIFT PERFORMED !')
+
+cd('..')
+rt($filename)
+
+
+"-------------------------------------------------------------"
+"   DISPLAY OF CORRECTED SPECTRA                              "  
+"-------------------------------------------------------------"
+ho=0 vo=0
+sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+lb='n' gf=$gf gfs=0 fn=$fn
+axis=$axis rfp=$rfp rfl=$rfl
+if (nt[1] = 1) then av endif
+wft dss dscale
+
+shell('rm '+$filename+'/fid.tmp')
+
+endif "end of the allign action"
+
+

@@ -1,0 +1,57 @@
+ gNhsqc_IPAPHDA    "N15 IPAP-hsqc using 3919 watergate suppression"
+                      "and optional HH homodecoupling in t2"
+
+   step cycling is 8; Ref: JMR v131, 373-378 (1998)
+
+
+With IPAP='n','y' phase=1,2 array='IPAP,phase'
+you can acquire both antiphase and in-phase spectra at the same time. To
+obtain both components with the same phase use
+        wft2d(1,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0)     for in-phase signals
+        wft2d(0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0)      for anti-phase signals
+
+To look at individual satellites you can also build sum and difference of
+the two data sets:
+        wft2d(1,0,0,0,0,0,1.11,0,0,0,-1,0,1.11,0,0,0)       sum
+        wft2d(1,0,0,0,0,0,-1.11,0,0,0,-1,0,-1.11,0,0,0)     difference
+
+Note the factor of 1.11. You can adjust this value to get good match.
+
+To measure exact signal positions in these component spectra, you need
+line fitting software (such as "fitspec" / deconvolution).
+
+   program written by Nagarajan Murali starting from the gNfhsqc.c 
+   Feb. 26, 2001
+   
+   Modified by Eriks Kupce on 17.05.2002 :
+   Added soft watergate option and homo-decoupling, fixed phase cycling;   
+   
+   HH homo-decoupling:
+   ===================
+   Activated by setting the Hdecflg='y'. The dsp flag should be set to 'n'.
+   The decoupling waveform is created automatically at the 'go' (or 'dps') time.
+   Recommended Cdecflg='y' - use low power WURST-40 decoupling for long range 
+   C-H couplings. The decoupling waveform is created automatically at the 'go' 
+   (or 'dps') time.                
+   Note - complete de-phasing of water is the key requirement for obtaining good
+   quality spectra with HH homo-decoupling !!! This may reduce the overall 
+   in proteins with fast exchanging NH groups. Note also that the selective 
+   pulses in watergate are not affected by Radiation Damping.  
+   The residual signal from water is eliminated by phase cycling and hence the
+   spectra will improve with increasing ss and nt.                   
+   The power levels for HH and CH decoupling can be changed by setting Hdecpwr
+   and Cdecpwr to non-zero values. If Hdecpwr=0 or Cdecpwr=0, the calculated 
+   values will be used.
+   Due to the Bloch-Siegert effects the alfa delay can be relatively large and 
+   negative.
+   The effect from HH homo-decoupling is best appreciated, if the HH coupling
+   is resolved. This usually requires a fairly long acquisition time (at >= 0.1s)
+   a good digital resolution (fn >= 4k) and a sensible window function. For the
+   purpose of comparison the HH decoupling can be switched off by Hdecflg='off'.
+   The resolution is further improved by using C-13 decoupling during acquisition. 
+   This is best achieved using low-power WURST-40 decoupling designed for long 
+   range CH decoupling (set Cdecflg = 'y'). 
+   Ref.: Kupce and Wagner, JMR B109, 329 (1995).
+   
+    Modified for automatic shaped pulse creation using Pbox (EK, Aug 2002)
+

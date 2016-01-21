@@ -1,0 +1,448 @@
+"macro xmhaha_subautoSQ"
+"***************************************************************" 
+"  Builds subQ in autodir /xmldir based on the LIST		"
+"	supplied as an array in arg2				"
+"***************************************************************"
+
+$autodir=$1
+$firstchar=''
+substr($autodir,1,1):$firstchar
+if ($firstchar<>'/') then
+   if (cpglobalauto<>'') then
+        $autodir=cpglobalauto+'/'+$autodir
+   else
+        $autodir=userdir+'/Automation/'+$autodir
+   endif
+endif
+exists($autodir,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+exists($autodir+'/enterQ.macdir','directory'):$direx
+if ($direx=0) then
+   $st=0 $stx=''
+   strstr($autodir,'.macdir/studytray'):$st,$stx
+   if ($st) then
+	shell('dirname '+$stx):$autodir
+   endif
+   shell('basename '+$autodir):$Qname
+else
+   $Qname='enterQ'
+endif
+$target=$autodir+'/'+$Qname+'.macdir'
+getAutoTraymax($autodir+'/'+$Qname):$thistray
+if ($thistray=1) then $islcauto=1 else $islcauto=0 endif
+
+if ($# < 2) then $2='' endif
+if ($# < 3) then $3='' endif
+if ($# < 4) or ($islcauto) then $4=$3 endif
+
+"**************************************************************"
+$cpdoneq=$target+'/cpdoneQ'
+$cpdonedayq=$target+'/cpdonedayQ'
+$fidlog=$target+'/expfidlog'
+$enterq=$autodir+'/'+$Qname
+$nightq=$target+'/overniteQ'
+$currentq=$target+'/currentsampleinfo'
+$infodir=$target+'/xmldir/info'
+exists($infodir,'directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+$infodir):$dum
+endif
+//shell('chmod -R g+w '+$target+'/xmldir'):$dum
+
+$FidLog=0
+$List=0
+if ($2='') then
+   $FidLog=1
+   $List=1
+else
+   teststr('$2','fidlog','local'):$FidLog
+   teststr('$2','EXPLIST','local'):$List
+   if ($List=0) then
+        teststr('$2','LONGLIST','local'):$List
+   endif
+endif
+if ($FidLog) then
+   fixcpdoneQ($target)
+endif
+$tmpfile=userdir+'/persistence/autodirtmp'
+
+if ($3='') then
+    $locdir='' $s1=''
+    if($FidLog) then
+        write('reset',$tmpfile)
+        shell('(cat '+$cpdoneq+' | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
+        shell('(cat '+$cpdonedayq+' | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
+        readfile($tmpfile,'$locdir','$s1','','local')
+        shell('rm -f '+$tmpfile):$dum
+    endif
+    if ($List) then
+        $tmp_loc='' $tmp_locdir=''
+        getlocid($currentq):$tmp_loc,$tmp_locdir
+        $locdir=$locdir,$tmp_locdir
+        $tmp_loc='' $tmp_locdir=''
+        getlocid($enterq):$tmp_loc,$tmp_locdir
+        $locdir=$locdir,$tmp_locdir
+        $tmp_loc='' $tmp_locdir=''
+        getlocid($nightq):$tmp_loc,$tmp_locdir
+        $locdir=$locdir,$tmp_locdir
+    endif
+    array2string($locdir):$locdir
+    string2array($locdir):$3
+    if ($islcauto) then 
+	exists($target+'/LcGenPeak','directory'):$lcex
+	if ($lcex) then $3=$3,'LcGenPeak' endif
+    endif
+endif
+if ($3[1]='') then return endif
+if ($4='') or ($islcauto) then $4=$3 endif
+
+write('reset',$tmpfile)
+shell('(cat '+$cpdoneq+' | awk \'{print $4" "$3}\' > '+$tmpfile+')'):$dum
+shell('(cat '+$cpdonedayq+' | awk \'{print $4" "$3}\' >> '+$tmpfile+')'):$dum
+$tmpfile2=$tmpfile+'2'
+write('reset',$tmpfile2)
+//shell('(cat '+$fidlog+' | sed -e \'s|"| |g\' | awk \'{print $3}\' > '+$tmpfile2+')'):$dum
+shell('(cat '+$fidlog+' | awk \'{print $2}\' > '+$tmpfile2+')'):$dum
+
+"********************************************************************"
+// prepare each locdir for LocInfo.xml
+$3size=size('$3')
+$i=1
+repeat
+  exists($target+'/'+$3[$i]+'/day','directory'):$locdirex
+  if ($locdirex) then
+    $locdir=$3[$i]
+    $fidlocdir=$4[$i]
+    $sampglobal=$target+'/'+$locdir+'/sampleglobal'
+    $EXPLIST=$target+'/'+$locdir+'/day/EXPLIST'
+    $CMDnodes=$target+'/'+$locdir+'/day/CMDnodes'
+    $sampleinfo=$target+'/'+$locdir+'/day/sampleinfo'
+    exists($sampleinfo,'file'):$fileex
+    if ($fileex=0) then
+	$sampleinfo=$target+'/'+$locdir+'/night/sampleinfo'
+    endif
+    $LONGLIST=$target+'/'+$locdir+'/night/LONGLIST'
+    $CMDnodes2=$target+'/'+$locdir+'/night/CMDnodes'
+
+//Get local variables
+    $samplename='' $owner='' $sample=''
+    $retentiontime='' $estrettime=''
+    rtv($sampglobal,'noabort','samplename'):$samplename
+    rtv($sampglobal,'noabort','sample'):$sample
+    rtv($sampglobal,'noabort','studyowner'):$owner
+    rtv($sampglobal,'noabort','retentiontime_'):$retentiontime
+    if ($sample='') then $sample=$samplename endif
+    if ($owner='') then
+        rtv($sampglobal,'noabort','operator_'):$owner
+    endif
+    substr($owner,1):$owner 
+    if ($owner='') then $owner=owner endif
+    $loc_temp='' $when_temp='' $locdir_temp='' $rack='' $zone=''
+    getlocid($sampleinfo):$loc_temp,$locdir_temp,$when_temp,$zone,$rack
+    $loc='loc'+$loc_temp
+    if ($zone<>'') then
+         $locuser=$loc+'z'+$zone+'r'+$rack+'_'+$owner
+    else
+         $locuser=$loc+'_'+$owner
+    endif
+    if ($islcauto) then
+	$locuser='Peak'+$loc_temp
+	if ($retentiontime<>'') then
+	    $estrettime='(expected RT: '+$retentiontime+' min)'
+	    $retentiontime='(RT: '+$retentiontime+' min)'
+	endif
+    endif
+
+//Create xmldir
+    $locxml=$target+'/'+$locdir+'/xmldir'
+    exists($locxml,'directory'):$direx
+    if ($direx=0) then
+	shell('mkdir '+$locxml):$dum
+    endif
+    $cpnodes=$locxml+'/cpnodeinfo'
+//    shell('chmod -R g+w '+$locxml):$dum
+
+//Build LocInfo.xml
+    $xml1=$locxml+'/LocInfo.xml'
+    if ($2='') then 
+	shell('rm -f '+$xml1):$dum
+//	shell('touch '+$locxml+'/LocInfo_SQ'):$dum
+//	$nodes='' $nodes2=''
+//	readfile($locxml+'/LocInfo_SQ','$nodes','$nodes2','','local'):$ntot
+//	if ($ntot) then
+//	   $ni=1
+//	   repeat
+//	      if ($nodes[$ni]<>'') then
+//		shell('rm -rf '+$infodir+'/'+$nodes[$ni]):$dum
+//	      endif
+//	      $ni=$ni+1
+//	   until $ni > $ntot
+//	endif
+	shell('rm -f '+$locxml+'/LocInfo_SQ'):$dum
+    endif
+    exists($xml1,'file'):$fileex
+    if ($fileex=0) then
+           $attr3='' $atx3=1
+           $attr3[$atx3]='name',$locdir $atx3=$atx3+2
+           $attr3[$atx3]='tooltext',$sample $atx3=$atx3+2
+	if ($islcauto) then
+           $attr3[$atx3]='title',$locuser+' '+$retentiontime $atx3=$atx3+2
+	else
+           $attr3[$atx3]='title',$locuser+' '+$samplename $atx3=$atx3+2
+	endif
+           $attr3[$atx3]='CPnode',$locuser $atx3=$atx3+2
+           $attr3[$atx3]='sqstatus','Location' $atx3=$atx3+2
+           xmhaha_addnode('LOCATION','',$attr3,$xml1,'','closeprotocol')
+	   shell('(cat '+$cpnodes+' | grep -w Location | awk \'{print $1" "$2" "$3}\' > '+$locxml+'/LocInfo_SQ)'):$dum
+	   write('reset',$cpnodes)
+    endif
+
+    if ($List) then
+        $xml2=$locxml+'/EXPLIST.xml'
+	$xml3=$locxml+'/LONGLIST.xml'
+        shell('rm -f '+$xml2):$dum
+	shell('rm -f '+$xml3):$dum
+//        shell('touch '+$locxml+'/EXPLIST_SQ'):$dum
+//        shell('touch '+$locxml+'/LONGLIST_SQ'):$dum
+//        $rmnodes='' $s1='' $s2='' $s3=''
+//        readfile($locxml+'/EXPLIST_SQ','$s1','$s3','','local'):$r1
+//	readfile($locxml+'/LONGLIST_SQ','$s2','$s3','','local'):$r2
+//	$rmnodes=$s1,$s2
+//	$rmsize=size('$rmnodes')
+//        $x=1
+//        repeat
+//	     if ($rmnodes[$x]<>'') then
+//               shell('rm -rf '+$infodir+'/'+$rmnodes[$x]):$dum
+//	     endif
+//             $x=$x+1
+//        until $x > $rmsize
+	shell('rm -f '+$locxml+'/EXPLIST_SQ'):$dum
+        shell('rm -f '+$locxml+'/LONGLIST_SQ'):$dum
+
+	$cnodes='' $s1='' $s2=''
+	exists($CMDnodes,'file'):$cex
+	if ($cex) then
+	    readfile($CMDnodes,'$cnodes','$s1','','local')
+	endif
+	exists($CMDnodes2,'file'):$cex
+	if ($cex) then
+	    readfile($CMDnodes2,'$s1','$s2','','local')
+	    $cnodes=$cnodes,$s1
+	endif
+
+	$dtime=0 $ptime=0 $ntime=0
+	readTtimeQ($target+'/'+$locdir+'/day'):$ptime,$dtime,$ntime
+	$DT='' $DT2='' $NT='' $NT2=''
+	formattime($dtime):$DT,$DT2
+	formattime($ntime):$NT,$NT2
+
+     if ($locdir<>'LcGenPeak') then
+//Build EXPLIST.xml
+        $attr3='' $atx3=1
+        $attr3[$atx3]='name',$locdir $atx3=$atx3+2
+        $attr3[$atx3]='tooltext',$sample+' ['+$DT+']' $atx3=$atx3+2
+        if ($islcauto) then
+           $attr3[$atx3]='title',$locuser+' '+$estrettime $atx3=$atx3+2
+        else
+           $attr3[$atx3]='title',$locuser+' '+$samplename $atx3=$atx3+2
+        endif
+        $attr3[$atx3]='CPnode',$locuser $atx3=$atx3+2
+        $attr3[$atx3]='sqnode',$locdir+'_D' $atx3=$atx3+2
+        $attr3[$atx3]='sqstatus','Day_queued' $atx3=$atx3+2
+        xmhaha_addnode('LOCATION','',$attr3,$xml2,'','protocol')
+     endif
+	exists($EXPLIST,'file'):$Etot
+	if ($Etot) then
+    	    $enodes='' $enodes2=''
+    	    readfile($EXPLIST,'$enodes','$enodes2','','local'):$Etot
+	endif
+    	if ($Etot) then
+	   $x=1
+	   repeat
+           	$n1='' $n2='' $r1=0
+           	$n1=$enodes[$x]
+           	substr($enodes2[$x],2):$n2
+           	substr($enodes2[$x],1):$r1
+		teststr('$cnodes',$n1,'local'):$ret
+		if ($ret) then $type='CMD' else $type='LIB' endif
+		$time='' $time2='' formattime($r1):$time2,$time
+
+	        $atx=1 $attr=''
+	        $attr[$atx]='type',$type $atx=$atx+2
+	        $attr[$atx]='status','Queued' $atx=$atx+2
+	        $attr[$atx]='sqstatus','Day_queued' $atx=$atx+2
+	     if ($locdir='LcGenPeak') then
+		$attr[$atx]='title',$n2 $atx=$atx+2
+	     else
+        	$attr[$atx]='title',$n1 $atx=$atx+2
+	     endif
+        	$attr[$atx]='CPnode',$n1 $atx=$atx+2
+        	$attr[$atx]='exp',$n2 $atx=$atx+2
+        	$attr[$atx]='lock','off' $atx=$atx+2
+        	$attr[$atx]='time',$time $atx=$atx+2
+        	$attr[$atx]='data','' $atx=$atx+2
+        	$attr[$atx]='tooltext',$owner+' [Queued]' $atx=$atx+2
+        	$attr[$atx]='macro','return' $atx=$atx+2
+
+		xmhaha_addnode($n2,$attr,'',$xml2)
+		$x=$x+1
+	   until $x > $Etot
+	endif
+     if ($locdir<>'LcGenPeak') then
+	write('file',$xml2,'  </protocol>')
+     endif
+        shell('(cat '+$cpnodes+' | grep -w Day_queued | awk \'{print $1" "$2" "$3}\' > '+$locxml+'/EXPLIST_SQ)'):$dum
+	write('reset',$cpnodes)
+
+//Build LONGLIST.xml
+        $attr3='' $atx3=1
+        $attr3[$atx3]='name',$locdir $atx3=$atx3+2
+        $attr3[$atx3]='tooltext',$sample+' ['+$NT+']' $atx3=$atx3+2
+     if ($islcauto) then
+        $attr3[$atx3]='title',$locuser+' '+$estrettime $atx3=$atx3+2
+     else
+        $attr3[$atx3]='title',$locuser+' '+$samplename $atx3=$atx3+2
+     endif
+        $attr3[$atx3]='CPnode',$locuser $atx3=$atx3+2
+        $attr3[$atx3]='sqnode',$locdir+'_N' $atx3=$atx3+2
+        $attr3[$atx3]='sqstatus','Night_queued' $atx3=$atx3+2
+        xmhaha_addnode('LOCATION','',$attr3,$xml3,'','protocol')
+        exists($LONGLIST,'file'):$Etot
+        if ($Etot) then
+            $enodes='' $enodes2=''
+            readfile($LONGLIST,'$enodes','$enodes2','','local'):$Etot
+        endif
+        if ($Etot) then
+           $x=1
+           repeat
+                $n1='' $n2='' $r1=0
+                $n1=$enodes[$x]
+                substr($enodes2[$x],2):$n2
+                substr($enodes2[$x],1):$r1
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type='CMD' else $type='LIB' endif
+                $time='' $time2='' formattime($r1):$time2,$time
+
+                $atx=1 $attr=''
+                $attr[$atx]='type',$type $atx=$atx+2
+                $attr[$atx]='status','Night_queued' $atx=$atx+2
+                $attr[$atx]='sqstatus','Night_queued' $atx=$atx+2
+                $attr[$atx]='title',$n1 $atx=$atx+2
+                $attr[$atx]='CPnode',$n1 $atx=$atx+2
+                $attr[$atx]='exp',$n2 $atx=$atx+2
+                $attr[$atx]='lock','off' $atx=$atx+2
+                $attr[$atx]='time',$time $atx=$atx+2
+                $attr[$atx]='data','' $atx=$atx+2
+                $attr[$atx]='tooltext',$owner+' [Queued]' $atx=$atx+2
+                $attr[$atx]='macro','return' $atx=$atx+2
+
+                xmhaha_addnode($n2,$attr,'',$xml3)
+                $x=$x+1
+           until $x > $Etot
+        endif
+        write('file',$xml3,'  </protocol>')
+        shell('(cat '+$cpnodes+' | grep -w Night_queued | awk \'{print $1" "$2" "$3}\' > '+$locxml+'/LONGLIST_SQ)'):$dum
+	write('reset',$cpnodes)
+    endif
+
+    if ($FidLog) then
+        $xml4=$locxml+'/FidLog.xml'
+        shell('rm -f '+$xml4):$dum
+//        shell('touch '+$locxml+'/FidLog_SQ'):$dum
+//        $rmnodes='' $s1='' $s2='' $s3=''
+//        readfile($locxml+'/FidLog_SQ','$rmnodes','$s3','','local'):$r1
+//        $rmsize=$r1
+//        $x=1
+//        repeat
+//             if ($rmnodes[$x]<>'') then
+//                shell('rm -rf '+$infodir+'/'+$rmnodes[$x]):$dum
+//             endif
+//             $x=$x+1
+//        until $x > $rmsize
+        shell('rm -f '+$locxml+'/FidLog_SQ'):$dum
+
+	$attr3='' $atx3=1
+	$attr3[$atx3]='name',$locdir $atx3=$atx3+2
+	$attr3[$atx3]='tooltext',$sample+' [Completed]' $atx3=$atx3+2
+     if ($islcauto) then
+        $attr3[$atx3]='title',$locuser+' '+$retentiontime $atx3=$atx3+2
+     else
+	$attr3[$atx3]='title',$locuser+' '+$samplename $atx3=$atx3+2
+     endif
+	$attr3[$atx3]='CPnode',$locuser $atx3=$atx3+2
+	$attr3[$atx3]='sqstatus','Completed' $atx3=$atx3+2
+	xmhaha_addnode('LOCATION','',$attr3,$xml4,'','protocol')
+
+	$fiddir='' $s1='' $fids='' $ftot=0
+	readfile($tmpfile,'$s1','$fiddir',$fidlocdir,'local'):$fdtot
+	if ($fdtot) then
+	    write('reset',$tmpfile+'3')
+	    shell('(cat '+$tmpfile2+' | grep \''+$fiddir+'/\' > '+$tmpfile+'3)'):$dum
+	    readfile($tmpfile+'3','$fids','$s1','','local'):$ftot
+	    shell('rm -f '+$tmpfile+'3'):$dum
+	endif
+	if ($ftot>0) then
+	   $x=1
+	   repeat
+              $firstchar=''
+              substr($fids[$x],1,1):$firstchar
+              if ($firstchar<>'/') then
+               	$fidname=userdir+'/data/'+$fids[$x]
+              else
+               	$fidname=$fids[$x]
+              endif
+              exists($fidname+'.REC','directory'):$fidex
+              if ($fidex=0) then
+                exists($fidname+'.rec','directory'):$fidex
+              endif
+              if ($fidex=0) then
+                exists($fidname+'.fid','directory'):$fidex
+              endif
+              if ($fidex) then
+                $n2=''
+                rtv($fidname,'noabort','pslabel'):$n2
+                $title=''
+                shell('basename '+$fidname):$title
+        	$atx=1 $attr=''
+        	$attr[$atx]='status','Completed' $atx=$atx+2
+        	$attr[$atx]='sqstatus','Completed' $atx=$atx+2
+        	$attr[$atx]='title',$title $atx=$atx+2
+        	$attr[$atx]='CPnode',$title $atx=$atx+2
+        	$attr[$atx]='exp',$n2 $atx=$atx+2
+        	$attr[$atx]='lock','on' $atx=$atx+2
+        	$attr[$atx]='time','' $atx=$atx+2
+        	$attr[$atx]='data',$fidname $atx=$atx+2
+        	$attr[$atx]='tooltext',$owner+' [Completed]' $atx=$atx+2
+        	$attr[$atx]='macro','return' $atx=$atx+2
+		xmhaha_addnode($n2,$attr,'',$xml4)
+	      endif
+		$x=$x+1
+	   until $x > $ftot
+	endif
+	write('file',$xml4,'  </protocol>')
+        shell('(cat '+$cpnodes+' | grep -w Completed | awk \'{print $1" "$2" "$3}\' > '+$locxml+'/FidLog_SQ)'):$dum
+	write('reset',$cpnodes)
+    endif
+    if ($locdir<>$fidlocdir) then
+	exists($target+'/'+$fidlocdir+'/xmldir/Active','directory'):$direx
+	if ($direx) then
+		shell('cp -r '+$target+'/'+$fidlocdir+'/xmldir/Active '+$locxml):$dum
+	endif
+//	exists($target+'/'+$fidlocdir+'/xmldir/fidlog_active.xml','file'):$fileex
+//	if ($fileex) then
+//		shell('cp '+$target+'/'+$fidlocdir+'/xmldir/fidlog_active.xml '+$locxml):$dum
+//		shell('cp '+$target+'/'+$fidlocdir+'/xmldir/fidlog_active_SQ '+$locxml):$dum
+//	endif
+    endif
+    shell('chmod -R g+w '+$locxml):$dum
+  endif
+  $i=$i+1
+until $i > $3size
+
+shell('chmod -R g+w '+$target+'/xmldir'):$dum
+
+shell('rm -f '+$tmpfile):$dum
+shell('rm -f '+$tmpfile2):$dum

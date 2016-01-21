@@ -1,0 +1,197 @@
+*************************************************
+*						*
+*	Linear prediction:			*
+*						*
+*		lpalg				*
+*		lpopt				*
+*		lpfilt				*
+*		lpnupts				*
+*		strtlp				*
+*		lpext				*
+*		strtext				*
+*						*
+*		lptrace				*
+*		lpprint				*
+*						*
+*************************************************
+
+The linear prediction (LP) algorithms work both on complex t2 FIDs
+and on hypercomplex or complex t1 interferograms.
+
+
+LPALG:
+
+This is a string parameter which specifies the LP algorithm to
+be used.  The currently supported algorithms are:  "lpfft" and
+"lparfft".
+
+"lpfft" performs a least-squares calculation of "lpfilt" complex
+LP coefficients using "lpnupts" complex time-domain data points.
+Eigenvalue decomposition of the least-squares matrix is done
+using Householder tridiagonalization followed by the QL method
+with implicit shifts.  
+
+"lparfft" performs a non-least-squares calculation of "lpfilt"
+complex LP coefficients using ["lpfilt"+1] complex, auto-regressive
+(AR) matrix elements.  These AR matrix elements are calculated
+from the raw, complex time-domain data using "lpnupts" points.
+
+With both of these algorithms, the resulting LP coefficients are
+used to appropriately extend the complex time-domain data prior
+to a normal FT thereof.  "lpalg" is operative for the "np" dimen-
+sion; "lpalg1", for the "ni" dimension; and "lpalg2", for the "ni2"
+dimension.
+
+The "lpfft" is by far the preferred algorithm.  While the "lparfft"
+algorithm can model broad lines and can extend data sets when mostly
+noise exists,  it cannot model narrow lines.
+
+
+LPOPT:
+
+This is a string parameter which specifies how the specific LP algo-
+rithm is to extend (or alter) the time-domain data.  The supported
+options are:  'b' and 'f'.  'b' indicates that the LP coefficients
+are to be used in the back-calculation of a specified number of time-
+domain data points; 'f', that the LP coefficients are to be used in
+the forward extension of the time-domain data by a specified number
+of points.  "lpopt" is operative for the "np" dimension; "lpopt1",
+for the "ni" dimension; and "lpopt2", for the "ni2" dimension.
+
+If "lpopt" is set to 'f', the characteristic polynomial in z space,
+derived from the complex LP coefficients, is setup and rooted.  Any
+root which is found to lie outside the unit circle is reflected back
+into the unit circle.  New complex LP coefficients are then calcu-
+lated from these adjusted complex roots.
+
+
+LPFILT:
+
+This is an integral parameter which specifies the number of complex
+LP coefficients to be calculated from a specified region of the time-
+domain data.  "lpfilt" should be > 'nsignals' where 'nsignals' is the
+number of sinusoidal signals contained in that FID (or interferogram).
+"lpfilt" is operative for the "np" dimension; "lpfilt1", for the "ni"  
+dimension; and "lpfilt2", for the "ni2" dimension.
+
+
+LPNUPTS:
+
+This is an integral parameter which specifies the number of complex
+time-domain data points to be used in constructing the AR (lpalg =
+"lparfft") or least-squares (lpalg = "lpfft") matrix from which the
+complex LP coefficients are calculated.  Note that "lpnupts" >=
+2*"lpfilt" is required for both algorithms.  "lpnupts" is operative
+for the "np" dimension; "lpnupts1", for the "ni" dimension; and
+"lpnupts2", for the "ni2" dimension.
+
+
+STRTLP:
+
+This is an integral parameter which specifies the first complex, time-
+domain data point to be used in calculating the complex LP coefficients.
+If "lpopt" = 'b', the "strtlp"-th complex time-domain data point and
+the ensuing [2*"lpnupts" - 1] data points are used in this calculation.  
+If "lpopt" = 'f', the "strtlp"-th complex time-domain data point and 
+the preceding [2*"lpnupts" - 1] data points are used in this calculation.
+"strtlp" is operative for the "np" dimension; "strtlp1", for the "ni"
+dimension; and "strtlp2", for the "ni2" dimension.
+
+
+LPEXT:
+
+This is an integral parameter which specifies the number of complex
+time-domain data points by which the original data is to be extended
+(or altered) in either the forward or backward direction.  "lpext"
+is constrained such that ["strtext" - "lpext"] >= 0 for "lpopt" = 'b'
+and ["strtext" + "lpext" - 1] <= "fn"/2 for "lpopt" = 'f'.  "lpext"
+is operative for the "np" dimension; "lpext1", for the "ni" dimension;
+and "lpext2", for the "ni2" dimension.  In the np direction
+if ["strtext" - "lpext"] = 0 and "lpopt" = 'b' (backwards linear
+prediction with calculation of the first point), fpmult will default
+to the theoretical value of 0.5 instead of 1.0.
+
+
+STRTEXT:
+
+This is an integral parameter which specifies inclusively the complex
+time-domain data point at which LP data extension (alteration) is to
+begin.  "strtext" is necessarily constrained such that 1 < "strtext"
+< "np"/2.  "strtext" is operative for the "np" dimension; "strtext1",
+for the "ni" dimension; and "strtext2", for the "ni2" dimension.
+
+
+LPTRACE:
+
+This is an integral parameter which specifies for which spectrum (or
+trace) LP output is produced in accordance with the parameter "lpprint".
+"lptrace" is operative for the "np" dimension; "lptrace1", for the "ni"  
+dimension; and "lptrace2", for the "ni2" dimension.
+
+
+LPPRINT:
+
+"lpprint" is an integral parameter which is comprised of 5 bit fields.
+Each bit field controls an independent output option.
+
+
+	Bit #	Decimal Value	Function
+	-----	-------------	--------
+
+	  0	      1		writes out the LP matrix and Y vector
+				from which the LP coefficients are
+				calculated
+
+	  1	      2		writes out the LP coefficients which
+				have been obtained using either of
+				the two supported algorithms
+
+	  2	      4		writes out the LP roots obtained
+				from the characteristic polynomial
+				derived from the LP coefficients;
+				only applies for "lpalg" = 'lpfft'
+				and "lpopt" = 'f'
+
+	  3	      8		writes out the original and re-cal-
+				culated values for each of the LP
+				extended (or altered) complex time-
+				domain data points
+
+	  4	     16		writes out the internal LP parameter
+				structure
+				
+
+For example, "lpprint" = 12 and "lptrace" = 1 yields the following
+information in the file 'curexp/lpanalyz.out.1' for spectrum 1 along F2:
+the values for all "lpfilt" complex LP coefficients; and the original
+and re-calculated values for each of the "lpext" LP extended (or
+altered) complex time-domain data points.  "lpprint" is operative
+for the "np" dimension and creates an output file in the current
+experiment directory (curexp) with the name 'lpanalyz.out.1'.  "lpprint1"
+is operative for the "ni" dimension and creates an output file in
+the current experiment directory with the name 'lpanalyz1.out.1'.
+"lpprint2" is operative for the "ni2" dimension and creates an output
+file in the current experiment directory with the name 'lpanalyz2.out.1'.
+
+
+ARRAYED LP PARAMETERS:
+
+Multiple LP operations can be performed on each FID or interferogram.
+This is accomplished by arraying the LP processing parameters.  The
+number of LP operations is determined by the LP processing parameter
+with the largest array size.  LP parameters having a smaller array size
+are padded out with their last value.  The most common use for this
+capability is to back-calculate the first 1-2 points in an FID or
+interferogram and subsequently to extend the length of the time-domain
+data by LP.  A printout can be obtained for each LP operation on an
+individually definable FID or interferogram.  For example, if lpprint =
+30,30 and lptrace = 1,2, the text file lpanalyz.out.1 contains the LP
+printout for the first LP operation on FID 1 and lpanalyz.out.2, the
+LP printout for the second LP operation on FID 2.
+
+
+Related Manual Entries:		parlp		(command)
+				dglp		(command)
+				proc		(parameter)
+				proc1		(parameter)
+				proc2		(parameter)

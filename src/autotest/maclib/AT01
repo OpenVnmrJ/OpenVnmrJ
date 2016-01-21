@@ -1,0 +1,100 @@
+"macro AT01"
+
+if (at_cycletest='yy') then ATnext return endif
+
+
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('read'):$firstone
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('count','AT41'):$fulltest
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('count','ATc100'):$overnight
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('count','ATc100_10usec'):$overnight
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('count','ATc31'):$limited
+lookup('file',autotestdir+'/atdb/at_selected_tests') 
+lookup('count','ATc31_10usec'):$limited2
+
+if ((at_plotauto='y') and ($fulltest=1))then
+ if ($limited>0 or $limited2>0) then
+   printon
+   cat(autotestdir+'/texts/preface_powerlimited') 
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+   printoff
+ else
+   printon
+   cat(autotestdir+'/texts/preface') 
+   printoff
+ endif
+ ATnext rm(autotestdir+'/prefacefile') return
+endif
+
+if ((at_plotauto='y') and ($firstone='ATc30_10usec'))then
+ if ($overnight=1) then
+   printon 
+   cat(autotestdir+'/texts/preface_Overnight_kw') 
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+   printoff
+  else
+   printon
+   cat(autotestdir+'/texts/preface_dectests') 
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+   printoff
+ endif
+ ATnext rm(autotestdir+'/prefacefile') return
+endif
+
+if ((at_plotauto='y') and ($firstone='ATc30'))then
+ if ($overnight=1) then
+   printon 
+   cat(autotestdir+'/texts/preface_Overnight') 
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+   printoff
+  else
+   printon
+   cat(autotestdir+'/texts/preface_C13tests') 
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+   printoff
+ endif
+ ATnext rm(autotestdir+'/prefacefile') return
+endif
+
+if (at_plotauto='y') then
+   ATpreface2    "creates list of selected experiments(autotestdir+'/preface')"
+   printon 
+    cat(autotestdir+'/prefacefile') rm(autotestdir+'/prefacefile')
+    echo('')
+    echo('For Those Tests with Power Limits:')
+    echo('Maximum 1H  Pulse Power Set to ',at_tpwr)
+    echo('Maximum 13C Pulse Power Set to ',at_max_pwxlvl)
+    echo('Maximum 13C Decoupling Power Set to ',at_max_dpwr)
+    echo('Maximum 15N Pulse Power Set to ',at_max_pwx2lvl)
+    echo('Maximum 15N Decoupling Power Set to ',at_max_dpwr2)
+    echo('')
+    echo('')
+    echo('****************************Selected Tests**********************************')
+    cat(autotestdir+'/preface') rm(autotestdir+'/preface') 
+   printoff
+endif
+ATnext

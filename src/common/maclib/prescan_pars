@@ -1,0 +1,47 @@
+"macro prescan_pars"
+if ($# < 1) then
+  write('error','prescan_par requires type of prescan as an argument')
+  return
+endif
+$rf=rfcoil
+$grad=gcoil
+if (activestudy<>'null') and (sqdir<>'') then
+  if (actionid<>'null') then
+    xmreadnode(actionid)
+    $j=0 teststr('sqattr','status','global'):$j
+    if (sqval[$j]='Active') then
+      xmselect('savepar')
+    endif
+  endif
+  sqsavestudy
+endif
+sqfilemenu('cleanupActive','only')
+$id = 4
+if $1 = 'freq' then
+  rtppar('prescan_freq_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+     rtppar('spuls','nomenu')
+  endif
+  $id = 1
+elseif $1 = 'power' then
+  rtppar('prescan_pwr_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+     rtppar('sems','nomenu')
+  endif
+  $id = 2
+elseif $1 = 'fastmap' then
+  rtppar('prescan_fastmap_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+     rtppar('fastestmap','nomenu')
+  endif
+  $id = 3
+endif
+rfcoil=$rf
+gcoil=$grad
+if (activestudy<>'null') and (sqdir<>'') then
+  exists(sqdir+'/studypar','file'):$e
+  if ($e = 1) then
+    fread(sqdir+'/studypar')
+  endif
+endif
+prescan[$id]='Not Done'

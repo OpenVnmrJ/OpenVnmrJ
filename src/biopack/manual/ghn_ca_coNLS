@@ -1,0 +1,165 @@
+  ghn_ca_coNLS.c
+
+    3D HN(CA)CO non-linearly sampled gradient sensitivity enhanced version.
+
+
+Non-Linear Sampling (For VNMRJ)
+------------------
+
+
+1) Setup the ghn_ca experiment in the normal manner. In VNMRJ select the 
+  "Switch to Non-Linear Sampling" button. This runs the macro "BP_NLSsetup" 
+   macro which will create the necessary parameters (sampsched, nli, nli2, 
+   t1_counter and t2_counter).
+2) Enter the sampling schedule name (this should be placed in your 
+   vnmrsys/manual as a simple text file) in the appropriate entry box 
+   (sets variable "sampsched")
+3) Select "Setup Schedule". This runs the "BP_NLSschedule" macro which uses 
+   the sampling schedule to set up t1_counter and t2_counter arrays. The total 
+   number of fids and approximate time of the experiment is shown. If a
+   different schedule is desired there is a "Clear Schedule" button. 
+4) The variables nli and nli2 contain the number of the maximum evol.time inc.
+   if the experiment is done with linear sampling. This can be used to
+   calculate the resolution in each dimension (nli/sw1 and nli2/sw2) in Hz. 
+4) Set phase = 1,2 and phase2 = 1,2 in that order. Leave the ni and ni2 at 1.
+   If you type "da" at this point the size of the array should be
+   4*(no of points in your sechdule).
+5) Choose the appropriate nt, sw1 and sw2.
+6) The total evolution time in each dimension is given by the dwell time * max
+   point in that dimension. For experiments with constant time evolution in the 
+   Nitrogen dimension, make sure that sw is large enough to accommodate 
+   the maximum no of Nitrogen dimension points (the limit is that dw*max
+   < constant time delay, where max is the largest entry in the 
+   sampling scheme for the nitrogen dimension)
+7) The non-linear sampled data can be processed and converted into XEASY or
+   NMRPipe formats,using the software suite "Rowland NMR Tool Kit" (rnmrtk), 
+   available from J. Hoch and A. Stern (http://webmac.rowland.org/rnmrtk/).
+
+    Correlates CO(i) with N(i), NH(i) via 11Hz N-Ca coupling, and with N(i-1),
+    NH(i-1) via -7Hz N-Ca coupling.  Uses constant time evolution for the
+    15N shifts.
+
+    Standard features include square pulses on Ca with first null at 13CO; one
+    lobe sinc pulses on 13CO with first null at Ca; shaka6 composite 180 pulse
+    to simultaneously refocus CO and invert Ca; one lobe sinc pulse to put H2O
+    back along z (the sinc one-lobe is significantly more selective than
+    gaussian, square, or seduce 90 pulses); optional 2H decoupling when Ca 
+    magnetization is transverse for 4 channel spectrometers.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+    pulse sequence:
+          Yamazaki, Lee, Arrowsmith, Muhandiram, Kay, JACS, 116, 11655 (1994)
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+    shaka6 composite: Chem. Phys. Lett. 120, 201 (1985)
+    TROSY:	    Weigelt, JACS, 120, 10778 (1998)
+ 
+    Written in standard format by MRB, BKJ and GG for the BioPack, December
+    1998, based on the existing ghn_co_ca sequence (Version Dec 1998).
+
+    Modified by Jim Sun for non-linear sampling (11/2003)
+
+    Non-linear sampling:D.Rovnyak, D.P.Frueh, M.Sastry, Zhen-Yu Sun, A.S. Stern,
+                          J.C.Hoch and G.Wagner, JMR, 170, 15 (2004).
+ 
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Made the waltz16 field strength enterable (waltzB1) in Hz.  (GG jan03)
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+    
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghn_ca_coNLS
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghn_ca_coNLS may be printed using:
+                                      "printon man('ghn_ca_coNLS') printoff".
+
+    2. Apply the setup macro "ghn_ca_coNLS". This loads the parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       At the middle of the t1 period, the 180 degree pulses on Ca and 15N are
+       swapped to a 180 degree pulse on CO, for the first increment of t1, to
+       refocus CO chemical-shift evolution ensuring a zero first-order phase
+       correction in F1. This is also the case for the 1D spectral check, or
+       for 2D/15N spectra, when ni=0.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 56ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency is shifted to
+       the CO region during the sequence, but phase coherence is not required 
+       after each shift.
+
+    4. The normal 13C 180 degree pulse on Ca at the middle of t1 induces a
+       phase shift, which should be field-invariant, and so this phase shift has
+       been calibrated and compensated in the pulse sequence. This phase shift
+       can be checked by setting ni=1 whereby a special 1D method is invoked
+       in which both the 13C Ca 180 degree pulse and the simultaneous 15N 180
+       degree pulse are applied just as for all t1 times other than t1=0.  First
+       eliminate the Ca pulse by setting pwC3=0 and obtain a 1D spectrum. This
+       spectrum will have reduced intensity compared to ni=0 because of 13CO
+       chemical-shift evolution during the time of the 180 pulses. If the
+       phase shift is adequately compensated, a second very similar 1D spectrum
+       will be obtained with pwC3=pwC3a.  As described in more detail for  
+       ghn_co, a more sensitive comparison of the two spectra with pwC3=0,pwC3a 
+       can be obtained with phase=2.  If not adequately compensated, the
+       first increment will be out of phase with all succeeding increments and a
+       zero-order phase-shift will be necessary in F1, which is easily done
+       after the 2D/3D transform. Alternatively, change the calibration by
+       changing the phshift3 parameter in the INITIALIZE VARIABLES section of
+       the code. The pulse pwC3 is automatically reset to its calibrated value
+       (=pwC2) within the pulse sequence code for 3D work and 2D/t1 studies.
+       DO NOT CHANGE pwC2 from its calibrated value.  dof can also be 
+       calibrated using ni=1;pwC3=pwC3a as described for ghn_co, and S/N
+       can also be maximized using a compC array when ni=1;pwC3=pwC3a.
+
+    5. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.  WALTZ
+       1H decoupling is only on during the timeTN periods.
+
+    6. Another difference from the work of Kay et al is that the phases of the
+       first and last CO 90 degree pulses are alternated to eliminate artifacts
+       from the Ca 180 degree pulse.
+
+    7. tauC (3.7 ms) and timeTN (13.5 ms) were determined for alphalytic 
+       protease and are listed in dg2 for possible readjustment by the user.
+
+    8. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghn_co_ca so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.
+       For ghn_c... type sequences, H1 decoupling during the first timeTN is
+       replaced by a pi pulse at kappa/2 to reduce S/N loss for large molecules
+       during the first TN period.  For these sequences H2O flipback is 
+       achieved with two sinc one-lobe pulses, one just before
+       the SE train, similar to gNhsqc.
+

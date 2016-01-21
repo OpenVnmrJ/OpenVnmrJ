@@ -1,0 +1,236 @@
+"macro gmapshim_au"
+"*************************************************************"
+" gmapshim_au   -  Gradient shimming prior to acquisition     "
+"			Uses the mapname in the probes file   "
+"*************************************************************"
+
+"*******Check error conditions***************************************"
+$checkpars='wds','customflag','cppauseflg'
+$okvals='','n','n'
+$cksize=size('$checkpars')
+$i=1
+$error=''
+repeat
+   $parval={$checkpars[$i]}
+   if ($parval <> $okvals[$i]) then
+        if ($error='') then $error='Error: ' endif
+	$error=$error+' '+$checkpars[$i]+'='+$parval+';'
+   endif
+   $i=$i+1
+until $i > $cksize
+
+if (wexp = 'AutoSKIP') then
+   if ($error='') then $error='Error: ' endif
+   $error=$error+' Queue Error'
+endif
+if ($error<>'') then
+   if (auto = 'y') then
+    	emessage('error')
+    	write('line3','SAMPLE#: %d  %s',loc,$error)
+   else
+    	write('error','')
+        $y=wc2max-50
+    	write('graphics','red',20,wc2max-50,'%s',$error):$ys
+        $y=$y-$ys
+        dtext(curexp+'/text',30,$y)
+   endif
+   return
+endif
+"***********************************************************************************"
+
+$preacq='no'
+$next='notnext'
+$gshim='no'
+$findz0='no'
+$protune='no'
+$glideau = 'no'
+$xi=$#
+
+if ($# = 0) then
+  $1 = 'findz0' 
+  $2='gshim' 
+  $3='glideau' 
+  $4='notnext'
+  $5='preacq'
+  $6='protune'
+  $xi=6
+
+  if (auto='y') then 
+       $active=1 
+  else 
+       jexp:$curexp
+       expactive($curexp):$active 
+		//preacq is turned OFF if auto<>'y'
+	$5='no'
+  endif
+  if ($active>0) then $4='next' endif
+
+endif
+
+"**********************************************************************"
+   "Make sure operator is set to proper value under automation"
+   "  This could be an issue because operator is global"
+   "   and operator at runtime in bg vnmr could be different from "
+   "   the operator who submitted the sample in fg vnmr"
+   "   The operator_ in sampleglobal is ALWAYS the one in fg vnmr"
+//   if (auto='y') then
+//      $operator=''
+//      $md=archivedir+'/'+sample+'/dirinfo/macdir'
+//      getsampglobal($md,'operator_'):$operator
+//      if ($operator<>'') and ($operator<>operator) then
+//        setvalue('operator',$operator,'global')
+//      endif
+//      if ($operator<>'') and ($operator<>operator_) then
+//	setvalue('operator_',$operator)
+//      endif
+//   endif
+"**********************************************************************"
+
+$x = 1 
+while ($x <= $xi) do
+ $val = ${$x}
+ if $val = 'findz0' then $findz0=$val 
+ elseif $val = 'gshim' then $gshim=$val
+ elseif $val = 'lkshim' then $gshim=$val 
+ elseif $val = 'H1shim' then $gshim=$val
+ elseif $val = 'hsshim' then $gshim=$val
+ elseif $val = 'glideau' then $glideau=$val 
+ elseif $val = 'next' then $next=$val
+ elseif $val = 'notnext' then $next=$val
+ elseif $val = 'preacq' then $preacq=$val
+ elseif $val = 'protune' then $protune=$val
+ endif
+ $x=$x+1
+endwhile
+
+"**************************************************"
+"****  do preacqdelay if preacq argument is given ******"
+IF ($preacq = 'preacq') THEN
+   on('pad'):$padon getdim:$dim
+        "don't bother if pad is off "
+	"don't bother if pad[1] is equal or less than 2 sec"
+        "don't bother if 2D"
+   if ($padon<1) or (pad[1]<2.1) or ($dim>1) then $preacq='no' endif
+ENDIF
+IF ($preacq = 'preacq') THEN
+    pauselock(explist[1])
+    preacqdelay_au('init',$findz0,$gshim,$glideau,$next,$protune)
+    return
+ENDIF
+
+"****  Find z0 if findz0 argument is given ******"
+
+IF ($findz0 = 'findz0') THEN
+   if (alock = 'n') or (alock = 'y') or (alock = 'u') then $findz0='no' endif
+ENDIF
+IF ($findz0 = 'findz0') THEN
+   pauselock(explist[1])
+   findz0_au('init',$gshim,$glideau,$next,$protune)
+   return
+ENDIF
+
+"****  do protune if protune argument is given ******"
+IF ($protune = 'protune') THEN
+   exists('atune','parameter','systemglobal'):$atuneex
+   if ($atuneex=0) then
+   	$protune='no'
+   else
+   	if (atune='n') then $protune='no' endif
+   endif
+ENDIF
+IF ($protune = 'protune') THEN
+   pauselock(explist[1])
+   protune_au('init',$gshim,$glideau,$next)
+   return
+ENDIF
+
+"*********  Gradient shim if gshim option is given *****"
+IF ($gshim <> 'no') THEN
+
+   $ok=0 $mapname='' $curmap='' $NUC=''
+   gshimok($gshim):$ok,$mapname,$curmap,$NUC
+   if ($ok) then
+   	wshim='n'
+		"Are the following 3 lines necessary?"
+		"  It has been this way for many years - doesn't hurt"
+   	groupcopy('current','processed','acquisition')
+   	groupcopy('current','processed','display')
+   	groupcopy('current','processed','processing')
+
+   	if (auto = 'y') and (alock='n') and ($NUC='lk') then
+		alock='y'
+	endif
+	if (auto = 'y') then
+		svp(autodir+'/gtmp','force','nodb')
+   	endif
+   	pauselock(explist[1])
+
+	if ($mapname<>$curmap) then
+	   gmapz($mapname,'loadmap')
+	endif
+   	$banner='Gradient Shimming\\mapname: '+$mapname
+   	banner($banner)
+   	if ($glideau = 'glideau') then
+     		savesampglobal('cp')
+     		gmapshim('glideau')
+   	else
+     		gmapshim
+   	endif
+	return
+   endif
+
+ENDIF
+"*********** start acquisition if glideau option is given ***'
+IF ($glideau = 'glideau') THEN
+  if seqfil = 'gmapz' then
+    gmapsys('quit')
+  endif
+
+  $autoname_tmp=autoname
+  if (auto='y') then
+	$loc='' $locdir=''
+	getlocid:$loc,$locdir
+        $nextexp=''
+        $md=archivedir+'/'+sample+'/dirinfo/macdir'
+        cpexplist('next',$md):$nextexp
+        $issetup=0
+        strstr($nextexp,'SetUp'):$issetup
+        if ($issetup=1) then
+           autoname='_SetUp_$pslabel$_%SAMPLE#:%'
+           $next='shimming'
+
+                "The following is for house-cleaning purpose"
+                " The active2error macro deletes all fids in"
+                " autodir/enterQ.macdir/flushQ file"
+                " The active2error is called by cpautoQ"
+           autoname:$path
+           flushQ('write',$path)
+        else
+           $newname='enterQ.macdir/'+$locdir+'/current'
+           autoname=$newname+'%R0%'
+           exists(autodir+'/'+$newname+'.fid','directory'):$direx
+           if ($direx) then
+                write('reset',autodir+'/'+$newname+'.fid/text')
+                write('reset',autodir+'/'+$newname+'.fid/fid')
+                write('reset',autodir+'/'+$newname+'.fid/log')
+			"***do not reset procpar"
+//		write('reset',autodir+'/'+$newname+'.fid/procpar')
+           endif
+        endif
+  endif
+
+  if ($next='shimming') then
+    pauselock(explist[1])
+    au('wait','shimming')
+    autoname=$autoname_tmp
+  else
+    pauselock('')
+    if ($next = 'next') then
+        au('wait','next')
+    else
+        au('wait')
+    endif
+  endif
+
+ENDIF
+

@@ -1,0 +1,205 @@
+"macro mconfig"
+" mconfig - configures a Mercury system"
+
+if ($# = 1) then
+  $op = $1
+else
+  $op = 'init'
+endif
+
+if ($op='display') then
+   showconfig
+   return
+endif
+
+$tmpfile=systemdir+'/tmp/config.bk'
+exists(systemdir+'/conpar','file','rw'):$update
+if ($op = 'init') or ($op = 'auto') then
+    exists($tmpfile,'file'):$e
+    if ($e) then
+      delete($tmpfile)
+    endif
+    fsave($tmpfile,'systemglobal')
+    shell('chmod 666 '+ $tmpfile)
+    if ($update) then
+       exists(systemdir+'/conpar.prev','file','rw'):$e
+       if ($e > 0.5) then
+         $rev=rev $revdate=revdate
+         fread(systemdir+'/conpar','systemglobal','reset')
+         fread(systemdir+'/conpar.prev','systemglobal','value')
+         delete(systemdir+'/conpar.prev')
+         rev=$rev revdate=$revdate
+         fsave(systemdir+'/conpar','systemglobal')
+       endif
+    endif
+
+    shell('vnmr_uname'):$osname
+    $file='/vnmr/tmp/smsport'
+    write('reset',$file)
+    write('file',$file,'None n')
+    if ($osname='SOLARIS') then
+       write('file',$file,'"Port A" a')
+       write('file',$file,'"Port B" b')
+    elseif ($osname='Linux') then
+       write('file',$file,'Com1 c1')
+    else
+       write('file',$file,'Port_A a')
+       write('file',$file,'Port_B b')
+       write('file',$file,'Com1 c1')
+    endif
+    write('file',$file,'Ethernet e')
+
+    if ($op <> 'auto') then
+      vnmrjcmd('popup', 'mode:modal', 'file:mconfig.xml', 'location:topMenuBar', 'help:/vnmr/jhelp/dialog/mconfig.html', 'pnewupdate:true', 'cancel:mconfig(`cancel`)', 'title:Mercury Configuration')
+    endif
+endif
+if ($op = 'ok') or ($op = 'auto') then
+  exists($tmpfile,'file'):$e
+  if ($e) then
+    delete($tmpfile)
+  endif
+  if ($update) then
+    if (traymax = 0) then
+       off('traymax','systemglobal')
+    endif
+    setvalue('parmax',100000.0, 5,'systemglobal')
+    setvalue('parstep',-1.0e-7, 5,'systemglobal')
+
+    setvalue('parmax',51200.0,  6,'systemglobal')
+    setvalue('parmin', 1000.0,  6,'systemglobal')
+    setvalue('parstep', 200.0,  6,'systemglobal')
+
+    setvalue('parmax',200000.0,  7,'systemglobal')
+    setvalue('parmin',-200000.0, 7,'systemglobal')
+    setvalue('parstep',0.00931323,  7,'systemglobal')
+
+    setvalue('parmax',200000.0,  8,'systemglobal')
+    setvalue('parmin',-200000.0, 8,'systemglobal')
+    setvalue('parstep',0.00931323,  8,'systemglobal')
+
+    setvalue('parmin', 0.0,  9,'systemglobal')
+    setvalue('parstep',1.0,  9,'systemglobal')
+
+    setvalue('parmax',63.0, 10,'systemglobal')
+    setvalue('parmin', 0.0, 10,'systemglobal')
+    setvalue('parstep',1.0, 10,'systemglobal')
+
+    setvalue('parmax',2e6,    11,'systemglobal')
+    setvalue('parmin', 100.0, 11,'systemglobal')
+    setvalue('parstep',100.0, 11,'systemglobal')
+
+    setvalue('parstep',0.1,  13,'systemglobal')
+    setvalue('parstep',1e-7, 14,'systemglobal')
+
+    setvalue('parmax',63.0, 17,'systemglobal')
+    setvalue('parmin', 0.0, 17,'systemglobal')
+    setvalue('parstep',1.0, 17,'systemglobal')
+
+    if (shimset = 10) then
+      setvalue('parmax',  2047.0, 19,'systemglobal')
+      setvalue('parmin', -2048.0, 19,'systemglobal')
+    else
+      setvalue('parmax',  32767.0, 19,'systemglobal')
+      setvalue('parmin', -32767.0, 19,'systemglobal')
+    endif
+    setvalue('parstep',1.0, 19,'systemglobal')
+
+    setvalue('numrfch',2,'systemglobal')
+    setvalue('fattn',0.0,1,'systemglobal')
+    setvalue('fattn',0.0,2,'systemglobal')
+    setvalue('maxsw_loband',100000,'systemglobal')
+    setvalue('homdec','y','systemglobal')
+    setvalue('spinopt','y','systemglobal')
+    setvalue('rfwg','nn','systemglobal')
+    shell('uname -n'):$host
+    setvalue('instrument',$host,'systemglobal')
+    setvalue('Console','mercury','systemglobal')
+    setvalue('vtflowrange',0, 1,'systemglobal')
+    setvalue('shimsetamp',1.0, 1,'systemglobal')
+
+    fsave(systemdir+'/conpar','systemglobal')
+    exists(systemdir+'/tests','file'):$e
+    if ($e > 0.5) then
+      delete(systemdir+'/tests')
+    endif
+    exists(systemdir+'/stdpar','file'):$e
+    if ($e > 0.5) then
+      delete(systemdir+'/stdpar')
+    endif
+    $h1=''
+    format(h1freq,1,0):$h1
+    shell('ln -s '+systemdir+'/par'+$h1+'/tests '+systemdir+'/tests')
+    shell('ln -s '+systemdir+'/par'+$h1+'/stdpar '+systemdir+'/stdpar')
+    isvnmrj:$j
+    if ($j > 0.5) then
+      $j = 1
+      $j2 = ''
+      write('line3',' fread(`%s/conpar`,`systemglobal`)',systemdir):$cmd
+      while ($j <= jviewports[1]) do
+        if ($j <> jviewport) then
+          format($j,1,0):$j2
+          vnmrjcmd('VP ' + $j2 + $cmd)
+        endif
+        $j = $j + 1
+      endwhile
+    endif
+    write('reset',systemdir+'/smsport')
+    if (traymax = 768) then
+      write('file',systemdir+'/smsport','%s HRM',smsport)
+    elseif (traymax = 96) then
+      write('file',systemdir+'/smsport','%s GIL',smsport)
+    elseif (traymax = 48) then
+      write('file',systemdir+'/smsport','%s NMS',smsport)
+    elseif (traymax = 12) or (traymax = 97) then
+      write('file',systemdir+'/smsport','e AS4896')
+      setvalue('smsport','e','systemglobal')
+    else
+      write('file',systemdir+'/smsport','%s SMS',smsport)
+    endif
+    if (rftype='ee') then
+      $sys=1
+    else
+      $sys=2
+    endif
+    if (amptype='aa') then
+      $amp=11
+    elseif (amptype='bb') then
+      $amp=22
+    else
+      $amp=33
+    endif
+    wsram(0,$sys,1,parmax[9],2,$amp,6,trunc(lockfreq*1e6/65536),7,trunc(lockfreq*1e6) mod 65536)
+  endif
+elseif ($op = 'cancel') then
+  fread($tmpfile,'systemglobal','reset')
+  delete($tmpfile):$e
+elseif ($op = 'readhw') then
+  $tmpfile=systemdir+'/tmp/conf'
+  shell('showconsole '+systemdir+'/acqqueue/acq.conf mercury>'+$tmpfile+';cat'):$e
+  lookup('mfile',$tmpfile,'filekey'):$key
+  $ans=''
+  lookup('mfile',$key,'skip','read'):$ans
+  if  ($ans = '1') then
+     lookup('mfile',$key,'seek','rftype','read'):$ans
+     setvalue('rftype',$ans,'systemglobal')
+     lookup('mfile',$key,'seek','h1freq','read'):$rval
+     setvalue('h1freq',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','vttype','read'):$rval
+     setvalue('vttype',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','amptype','read'):$ans
+     setvalue('amptype',$ans,'systemglobal')
+     lookup('mfile',$key,'seek','shimset','read'):$rval
+     setvalue('shimset',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','gradtype','read'):$ans
+     if ($ans = 'l') or ($ans = 'p') then
+        setvalue('gradtype','nn'+$ans,'systemglobal')
+     endif
+     lookup('mfile',$key,'seek','lockfreq','read'):$rval
+     setvalue('lockfreq',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','decmax','read'):$rval
+     setvalue('parmax',$rval,9,'systemglobal')
+  endif
+  delete($tmpfile)
+  system='spectrometer'
+  vnmrjcmd('pnew','system','rftype','h1freq','vttype','amptype','shimset','gradtype','lockfreq','parmax')
+endif

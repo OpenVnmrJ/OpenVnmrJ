@@ -1,0 +1,138 @@
+"macro lcdatast_old"
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if $e=0 then write('line3','lcdata file does not exist in current experiment') abort endif
+"lcdata file exists"
+
+$plotflag=(1=0) 
+$fullflag=(1=0)
+$sideflag=(1=0)
+$det2flag=(det2='y')
+$det2onflag=(1=0)
+$stoppedmode=((lcexp='stop') or (lcexp='enter'))
+
+$vs=1/4
+$vs2=1/4
+
+exists('vslc','parameter'):$e
+if $e then $vs=vslc/4 else $vs=1/4 endif
+exists('vslc2','parameter'):$e
+if $e then $vs2=vslc2/4 else $vs2=1/4 endif
+$i=1
+while $i<=$# do
+    if ${$i} = 'plot' then $plotflag=(1=1) 
+    elseif ${$i} = 'side' then $sideflag=(1=1) 
+    elseif ${$i} = 'full' then $fullflag=(1=1)
+    elseif ${$i} = 'det2' then $det2flag=(1=1)
+    endif
+  $i=$i+1
+endwhile
+"if (($fullflag=0) AND ($sideflag=1)) then $vs=$vs*(1-wc/wcmax) $vs2=$vs2*(1-wc/wcmax) endif"
+if $sideflag then
+  if $fullflag then $vs=$vs*wc/wcmax else $vs=$vs*(1-wc/wcmax) $vs2=$vs2*(1-wc/wcmax) endif
+endif
+
+exists('onflowdelay','parameter'):$e
+if $e then $offset=onflowdelay/60 else $offset=0 endif
+lookup('file',$filename)
+lookup('readline'):$text
+if $plotflag then write('plotter','reverse',3,wc2/2,'%s',$text) endif
+lookup('readline',5)
+lookup('read'):$det2on
+$det2onflag=$det2on>0
+if not $det2onflag then $det2flag=(1=0) endif
+lookup('readline',4)
+lookup('read'):$numtimesevents
+"write('line3',$numtimesevents)"
+lookup('readline',$numtimesevents)
+lookup('readline',1)
+if $plotflag then pen('plotter','pen1') $device='plotter' else pen('graphics','yellow') $device='graphics'endif
+if $sideflag then 
+  if $fullflag then $startmm=wcmax else $startmm=wcmax-wc-sc-15 endif
+  $mmf=wc2/wf1
+else 
+  $startmm=wcmax-wc-sc
+  $mmf=wc/wf1
+endif
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar=0.7*$htchar else $wthchar=0.5*$htchar endif
+move($startmm,0)
+$index=1
+$y1s=0 $y2s=0 $x1s=$startmm $x2s=$startmm
+if $det2onflag then $resok=6 else $resok=5 endif
+$first=0
+repeat
+  $s1='' $s2='' $s3='' $s5='' $s6='' $dum='' $stop=0
+  if $det2onflag then lookup('read','read','read','read','read','readline'):$s1,$s2,$s3,$dum,$s5,$s6,$res
+  else lookup('read','read','read','read','readline'):$s1,$s2,$s3,$s5,$s6,$res endif
+  "write('line3',$res)"
+  if $res=$resok then
+  format($s1,5,3):$t
+  if not typeof('$t') then if $t>0 then
+  format($s2,5,3):$a1
+  format($s3,5,3):$a2
+  format($s5,1,0):$stop
+  format($s6,1,0):$det
+  $a1=$a1-oclc $a2=$a2-oclc2
+  if $t > sf1-$offset  then
+    $mm=($t-sf1+$offset)*$mmf 
+    if $sideflag then 
+      $x1=$startmm-$a1*$vs $x2=$startmm-$a2*$vs2 $y1=$mm $y2=$y1 
+    else 
+      $x1=$startmm+$mm $x2=$x1 $y1=$a1*$vs $y2=$a2*$vs2 
+    endif
+    pen('$device','yellow') 
+    draw($x1,$y1) $y1s=$y1 $x1s=$x1 
+    if $det2flag then
+      move($x2s,$y2s) pen('$device','cyan') draw($x2,$y2) 
+      $y2s=$y2 $x2s=$x2
+    endif 
+    move($x1s,$y1s) 
+    if (($stop>=1) and $stoppedmode) then 
+      if $sideflag then 
+        pen('$device','green') 
+        if $det=1 then
+          move($x1-1,$y1) draw($x1+5,$y1) move($x1,$y1) $xl=$x1
+          write($device,'cyan',$xl-12*$wthchar,$y1-$htchar/2,'%5.2fmin %3.0fmV',$s1,$s2)
+        elseif $det2flag then
+         move($x2-1,$y2) draw($x2+5,$y2) move($x1,$y1) $xl=$x2
+         write($device,'cyan',$xl-12*$wthchar,$y1-$htchar/2,'%5.2fmin %3.0fmV',$s1,$s3)
+       endif
+       pen('$device','yellow')   
+        write($device,'cyan',$startmm,$y1-$htchar/2,'#%2.0f',$index)
+        vp=$mm
+        if $plotflag then
+          pl($index)
+          if $first=0 then pscale $first=1 endif
+        else 
+          dssn($index) 
+          if $first=0 then dscale $first=1 endif
+        endif
+      else
+        pen('$device','green') 
+        if $det=1 then 
+          move($x1,$y1+2) draw($x1,$y1-5) move($x1,$y1) $yl=$y1
+          write($device,'reverse','cyan',$x1-$htchar/1.5,$yl+$htchar,'%5.2fmin %3.0fmV',$s1,$s2)
+        elseif $det2flag then 
+          move($x2,$y2+2) draw($x2,$y2-5) move($x2,$y1) $yl=$y2
+          write($device,'reverse','cyan',$x1-$htchar/1.5,$yl+$htchar,'%5.2fmin %3.0fmV',$s1,$s3)
+        endif 
+        pen($device,'yellow') 
+ 
+        write($device,'cyan',$x1-$htchar/1.5,0,'#%2.0f',$index)
+      endif
+    endif
+  endif
+  endif  endif
+  if ($t<0) OR ($t > sf1+wf1-$offset) then $res=0 endif
+  "else write('line3','res not equal to 6')"
+  endif
+  if $stop>=1 then $index=$index+1 endif 
+until $res<>$resok
+
+
+
+
+  
+
+

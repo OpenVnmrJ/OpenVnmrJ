@@ -1,0 +1,155 @@
+"macro setup_dosy"
+" setup_dosy:  initialise gradient calibration, and set up"
+" gradient strengths in equal increments of gradient squared"
+
+" GAM version 2iii09 "
+" Make gzlzlv1 multiple of 5, to avoid rounding errors in oneshot "
+" Ensure array ordering correct for 3D DOSY "
+
+" Version by Peter Sandor, 25th October 99"
+" Modified to allow phase sensitive 3D DOSY GAM 31xii03 "
+" Remove setting of array variable "
+
+" HB 2x95"
+" Automatic gradient strengths selections for DOSY exponential fit"
+" HB 3ii97 modified to facilitate the setting up of ps_DDQFC "
+" HB 16v97 modified to add the DAC_to_G variable "
+" Don't set DAC-to_G in the processed tree GAM 8xii98"
+
+" First copy the value of the global parameter gcal into "
+" the experimental parameter DAC_to_G "
+" 9iv08 : use gcal_ not DAC_to_G			"
+" 29iii09 : Allow 1 or 3 arguments"
+
+if (($# = 2) or ($# > 3))   then
+	write('error','setup_dosy requires 0, 1 or 3 arguments')
+	abort
+endif
+
+makedosyparams
+
+if (probe='') then $pr=0 
+     else $pr=1 endif
+
+getProbePath:$e,$file
+
+if (($e>0)and($pr<>0)) then
+  $gcal_corrdex='' $nugcal_ex=''
+  shell('grep Probegcal_corrd '+$file):$gcal_corrdex
+  if ($gcal_corrdex <> '') then
+   getparam('gcal_corrd','Probe'):$gcal_corrd
+   if ($gcal_corrd <> 0) then
+	gcal_=$gcal_corrd
+   else
+   	getparam('gcal','Probe'):gcal_
+   endif
+  else
+    getparam('gcal','Probe'):gcal_
+  endif
+  shell('grep Probenugcal1 '+$file):$nugcal_ex
+  if ($nugcal_ex <> '') then
+     getparam('nugcal1','Probe'):nugcal_[1]
+     getparam('nugcal2','Probe'):nugcal_[2]
+     getparam('nugcal3','Probe'):nugcal_[3]
+     getparam('nugcal4','Probe'):nugcal_[4]
+     getparam('nugcal5','Probe'):nugcal_[5]
+  else
+      nugcal_[1]=gcal_
+      nugcal_[2]=1
+      nugcal_[3]=0
+      nugcal_[4]=0
+      nugcal_[5]=0
+  endif
+else
+  setvalue('gcal_',gcal,'current')
+  nugcal_[1]=gcal_
+  nugcal_[2]=1
+  nugcal_[3]=0
+  nugcal_[4]=0
+  nugcal_[5]=0
+endif
+
+" Find maximum gradient avaliable "
+$maxgrad=32767
+$ss=''
+substr(gradtype,3,1):$ss
+if $ss='l'
+then
+	$maxgrad=2047
+endif
+
+" Now calculate the gzlvl increments "
+$onegzvalue = 0
+gzlvl1 = 0
+if ($# = 1)   then
+	$isstring=typeof('$1')
+	if $isstring then
+		if $1='panelread' then
+			$incs = gzlvl1_inc
+			$min = gzlvl1_min
+			$max = gzlvl1_max
+		else
+			write('error','Option `%s` not recognised!',$1)
+			abort
+		endif
+	else
+		$incs=$1
+		$min=0
+		$max=$maxgrad/1.2
+	endif
+endif
+if ($# = 3)   then
+	$incs=$1
+	$min=$2
+	$max=$3
+endif
+
+if ($# = 0)   then
+	input('Enter the number of increments  :  '):$incs
+	IF $incs = 1 THEN
+		write('error','Minimum number of array elements for gzlvl1 in DOSY is 2')
+		abort
+	endif
+	input('Enter the lowest gradient strength (or 0 for automatic selection) :  '):$min
+	input('Enter the highest gradient strength  :  '):$max
+endif
+
+
+IF (($min>$maxgrad) or ($max>$maxgrad)) THEN
+	write('error','Exceeds maximum available gradient')
+	abort
+endif
+IF ($min>$max) THEN
+	$temp=$min
+	$min=$max
+	$max=$temp
+endif
+$min=5*trunc($min / 5)
+$max=5*trunc($max / 5)
+IF $min = 0 THEN
+	$sq_step = $max*$max/$incs
+	$i=1
+	REPEAT
+		$new_val = $i*$sq_step
+		$step = sqrt($new_val)
+		$step=5*trunc($step / 5)
+		format($step,6,0):gzlvl1[$i]
+		$i = $i+1
+	UNTIL $i>$incs
+ELSE
+	$sq_step = ($max*$max-$min*$min)/($incs-1)
+	gzlvl1[1] = $min
+	$i=2
+	REPEAT
+		$new_val = ($i-1)*$sq_step+$min*$min
+		$step = sqrt($new_val)
+		$step=5*trunc($step / 5)
+		format($step,6,0):gzlvl1[$i]
+		$i = $i+1
+	UNTIL $i>$incs
+ENDIF
+$array=array
+IF $array='' THEN array='gzlvl1' ELSE array='gzlvl1,'+array ENDIF
+calcdim
+da
+time

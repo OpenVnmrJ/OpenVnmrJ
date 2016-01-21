@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_FATpeakpick" element="groups" type="acquisition" >
+	<group size="390 455" 
+          style="Heading1"
+      	  bg="transparent"
+       	  border="None"
+	  reference="craft_FATpeakpick"
+	  vq="craftAFTpar"
+      	  subtype="Basic"
+      	  expanded="yes"
+	  useref="no"
+	  >
+          <label loc="30 20" size="140 20"
+	    style="Label1"
+	    label="Report name template"
+	    />
+	  <entry loc="195 20" size="170 20"
+	    style="Label1"
+	    vq="craftAFTPar"
+            vc="$V='' chkname('$VALUE'):$dpar,$V craftAFTpar[25]=$V"
+	    set="$VALUE=craftAFTpar[25]"
+	    />
+	  <textmessage loc="195 42" size="170 21"
+	    style="Info"
+	    vq="craftAFTpar"
+	    set="$v='' substr(craftAFTpar[16],'basename'):$v $VALUE=$v"
+	    />
+          <button loc="25 42" size="155 21"
+            style="Heading2"
+            label="Start new report"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('startnew')"
+            />
+	  <label loc="30 65" size="160 21"
+	    style="Label1"
+	    label="Continue earlier report"
+	    />
+          <filemenu loc="195 65" size="170 21"
+            style="PlainText"
+            vq="craftAFTpar"
+            vc="$v='$VALUE' if ($v&lt;&gt;'') then craft_FreqAmpReport('setreportdir',$v) endif"
+            set="$VALUE=craftAFTpar[16]"
+            file="$VALUE=userdir+'/cnmrmodels/Files4xml/AFTreportsMenu'"
+            vq2="craftAFTpar"
+	    type="file"
+            />
+
+	  <group loc="5 92" size="380 1"
+	    border="Etched"
+	    />
+
+<group loc="0 100" size="390 115" >
+          <label loc="30 0" size="110 20"
+            style="Label1"
+            label="Amplitudes from"
+            />
+	  <textmessage loc="140 0" size="225 20"
+	    style="Info"
+	    set="if craftAFTpar[23]='f' then $VALUE=craftAFTpar[13] else $VALUE='All studies/FIDs' endif"
+	    vq="craftAFTpar"
+	    />
+          <group loc="30 20" size="360 20"
+	    vq="craftAFTpar"
+	    show="$SHOW=(craftAFTpar[15]&lt;&gt;'1')"
+	    >
+	  <group loc="20 0" size="90 20" >
+	    <radio loc="0 0" size="90 20"
+	      style="Label1"
+	      label="All traces"
+	      vq="craftAFTpar"
+	      vc="craftAFTpar[23]='c' craft_FreqAmpReport('toggle2this')"
+	      vc2="craftAFTpar[23]='f' craft_FreqAmpReport('toggle2this')"
+	      set="$VALUE=(craftAFTpar[23]='c')"
+	      />
+	     </group>
+	  <group loc="110 0" size="250 20" >
+	    <radio loc="0 0" size="20 20"
+	      style="Label1"
+	      vq="craftAFTpar"
+	      vc2="craftAFTpar[23]='c' craft_FreqAmpReport('toggle2this')"
+	      vc="craftAFTpar[23]='f' craft_FreqAmpReport('toggle2this')"
+	      set="$VALUE=(craftAFTpar[23]='f')"
+	      />
+	     <textmessage loc="25 0" size="65 20"
+	       style="Label1"
+	       set="$VALUE='Trace# '+craftAFTpar[24]"
+	       vq="craftAFTpar"
+	       />
+             <button loc="90 0" size="65 20"
+               style="Heading2"
+               label="Prev"
+               vq="craftAFTpar"
+               vc="craft_FreqAmpReport('toggleprev')"
+	       show="$ENABLE=(craftAFTpar[23]='f')*2-1"
+               />
+             <button loc="160 0" size="65 20"
+               style="Heading2"
+               label="Next"
+               vq="craftAFTpar"
+               vc="craft_FreqAmpReport('togglenext')"
+	       show="$ENABLE=(craftAFTpar[23]='f')*2-1"
+               />
+	     </group>
+	   </group>
+
+          <label loc="20 45" size="160 20"
+            style="Label1"
+            label="Amplitude normalization"
+	    justify="Right"
+            />
+            <menu loc="195 45"  size="170 20"
+              style="PlainText"
+              vq="craftAFTpar"
+              vc="craftAFTpar[12]='$VALUE' craftAFTpar[8]='1'"
+              set="$VALUE=craftAFTpar[12]"
+              editable="no"
+              >
+              <mlabel
+                label="Do not normalize"
+                chval="none"
+                />
+              <mlabel
+                label="Internal reference"
+                chval="internal"
+                />
+              <mlabel
+                label="External reference"
+                chval="external"
+                />
+              </menu>
+
+          <group loc="135 68" size="230 20"
+	    vq="craftAFTpar"
+	    show="$SHOW=(craftAFTpar[12]='external')"
+	    >
+	    <label loc="0 0" size="50 20"
+	      label="Select"
+	      style="Label1"
+	      justify="Right"
+	      />
+	    <filemenu loc="60 0" size="170 20"
+              style="PlainText"
+              vq="craftAFTpar"
+              vc="craftAFTpar[4]='$VALUE' craft_FreqAmpReport('setAmpNorm',craftAFTpar[4]):craftAFTpar[8]"
+              set="$VALUE=craftAFTpar[4]"
+              file="$VALUE=userdir+'/cnmrmodels/Files4xml/ExtRefMenu'"
+	      vq2="craftAFTpar"
+              type="file"
+              />
+	    </group>
+	   <group loc="0 90" size="290 20"
+	     vq="craftAFTpar"
+	     >
+	    <label loc="0 0" size="185 20"
+	      style="Label1"
+	      label="Set reference amplitude to "
+	      justify="Right"
+	      />
+	    <entry loc="195 0" size="40 20"
+              style="PlainText"
+              vq="craftAFTpar"
+	      show="$ENABLE=(craftAFTpar[12]&lt;&gt;'none')*2-1"
+              vc="$isreal=0 format('$VALUE','isreal'):$isreal if ($isreal) then craftAFTpar[8]='$VALUE' else craftAFTpar[8]=craftAFTpar[8] endif"
+              set="$VALUE=craftAFTpar[8]"
+              />  
+	    <label loc="240 0" size="50 20"
+	      style="Label1"
+	      label="unit(s)"
+	      />
+	    </group>
+          <group loc="105 68" size="270 20"
+	    vq="craftAFTpar"
+	    show="$SHOW=(craftAFTpar[12]&lt;&gt;'external')"
+	    >
+	    <group loc="30 0" size="240 20"
+	      vq="craftAFTpar"
+	      show="$SHOW=((craftAFTpar[10]='') or (craftAFTpar[12]='none'))"
+	      >
+	      <label loc="0 0" size="50 20"
+	        label="Define"
+	        style="Label1"
+		justify="Right"
+	        />
+              <button loc="60 0" size="170 20"
+	        style="Heading2"
+	        vq="craftAFTpar"
+	        label="Between cursors"
+		show="$ENABLE=(craftAFTpar[12]='internal')*2-1"
+	        vc="craft_FreqAmpReport('setIntRefAmp')"
+	        />
+	      </group>
+	    <group loc="0 0" size="270 20"
+	      vq="craftAFTpar"
+	      show="$SHOW=((craftAFTpar[10]&lt;&gt;'') and (craftAFTpar[12]&lt;&gt;'none'))"
+	      >
+	      <textmessage loc="20 0" size="160 20"
+	        style="Info"
+	        vq="craftAFTpar"
+	        set="$VALUE=craftAFTpar[10]+' ppm +/- '+craftAFTpar[11]+' Hz'"
+	        />
+              <button loc="190 0" size="70 20"
+	        style="Heading2"
+	        vq="craftAFTpar"
+	        label="Clear"
+	        vc="craftAFTpar[10]='' craftAFTpar[11]='2'"
+	        />
+	      </group>
+	    </group>
+
+</group>
+	  <group loc="5 218" size="380 1"
+	    border="Etched"
+	    />
+          <label loc="15 225" size="140 20" 
+            style="Label1"
+            label="Segments based on"
+            justify="Right"
+            />
+          <group loc="160 225" size="170 20"
+            vq="craftAFTpar"
+            show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+            >
+            <menu loc="0 0" size="170 20"
+              style="Label1"
+              vq="craftAFTpar"
+              vc="craftAFTpar[19]='$VALUE' if craftAFTpar[19]='fptable' then craftAFTpar[35]='' endif"
+              set="$VALUE=(craftAFTpar[19])"
+              >
+              <mlabel
+                label="Between cursors"
+                chval="cursor"
+                />
+              <mlabel
+                label="Automatic threshold"
+                chval="auto"
+                />
+              <mlabel
+                label="Interactive threshold"
+                chval="thresh"
+                />
+              <mlabel
+                label="Fingerprint table"
+                chval="fptable"
+                />
+              </menu>
+            </group>
+          <group loc="160 225" size="170 20"
+            vq="craftAFTpar"
+            show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+            >
+            <menu loc="0 0" size="170 20"
+              style="Label1"
+              vq="craftAFTpar"
+              vc="aspRoi('clear') craftAFTpar[19]='$VALUE' if craftAFTpar[19]='fptable' then craftAFTpar[35]='' endif"
+              set="$VALUE=(craftAFTpar[19])"
+              >
+              <mlabel
+                label="Between cursors"
+                chval="cursor"
+                />
+              <mlabel
+                label="Automatic threshold"
+                chval="auto"
+                />
+              <mlabel
+                label="Interactive threshold"
+                chval="thresh"
+                />
+              <mlabel
+                label="Fingerprint table"
+                chval="fptable"
+                />
+              <mlabel
+                label="Interactive regions"
+                chval="userroi"
+                />
+              </menu>
+            </group>
+          <group loc="0 250" size="350 45"
+            vq="craftAFTpar"
+            show="$SHOW=((craftAFTpar[19]='auto') or (craftAFTpar[19]='thresh'))"
+            >
+            <group loc="0 20" size="350 45"
+              vq="craftAFTpar"
+              show="$SHOW=(craftAFTpar[19]='auto')"
+              >
+              <label loc="55 0" size="105 20"
+                style="Label1"
+                label="Max. # of peaks"
+                justify="Left"
+                />
+              <label loc="205 0" size="55 20"
+                style="Label1"
+                label="Min S/N"
+                justify="Left"
+                />
+              <entry loc="160 0" size="40 20"
+                style="PlainText"
+                vq="craftAFTpar"
+                vc="format('$VALUE','isreal'):$real if $real then craftAFTpar[33]='$VALUE' else craftAFTpar[33]=craftAFTpar[33] endif"
+                set="$VALUE=craftAFTpar[33]"
+                digits="0"
+                />
+              <entry loc="260 0" size="40 20"
+                style="PlainText"
+                vq="craftAFTpar"
+                vc="format('$VALUE','isreal'):$real if $real then craftAFTpar[34]='$VALUE' else craftAFTpar[34]=craftAFTpar[34] endif"
+                set="$VALUE=craftAFTpar[34]"
+                digits="1"
+                />
+              </group>
+            <entry loc="160 0" size="40 20"
+              style="PlainText"
+              vq="craftAFTpar"
+              vc="format('$VALUE','isreal'):$real if $real then craftAFTpar[20]='$VALUE' else craftAFTpar[20]=craftAFTpar[20] endif"
+              set="$VALUE=craftAFTpar[20]"
+              digits="1"
+              />
+            <label loc="205 0" size="130 20"
+              style="Label1"
+              label="Hz"
+              justify="Left"
+              />
+            <label loc="50 0" size="105 20"
+              style="Label1"
+              label="Segment width"
+              justify="Right"
+              />
+            </group>
+
+          <group loc="0 250" size="350 45"
+            vq="craftAFTpar"
+            show="$SHOW=(craftAFTpar[19]='fptable')"
+            >
+            <entry loc="160 0" size="143 20"
+              style="PlainText"
+              vq="craftAFTpar"
+              vc="craftAFTpar[35]='$VALUE'"
+              set="$b='' substr(craftAFTpar[35],'basename'):$b $VALUE=$b"
+              />
+            <textmessage loc="10 0" size="150 20"
+              style="Heading5"
+              vq="craftAFTpar"
+              set="$ok=1 craftllout('isFP',craftAFTpar[35]):$ok if $ok then $VALUE='' else $VALUE='[Table not found]' endif"
+              />
+            <group loc="305 0" size="25 25"
+              vq="craftAFTpar"
+              show="is_craft:$cv1,$craftver $SHOW=($craftver&gt;1.5)"
+              >
+              <button loc="0 0" size="25 25"
+                style="Heading2"
+                tooltip="Browse..."
+                icon="folder_open_file_24.gif"
+                vq="craftAFTpar"
+                vc="vnmrjcmd('LOC fpBrowser')"
+                />
+              </group>
+            <group loc="305 0" size="25 25"
+              vq="craftAFTpar"
+              show="is_craft:$cv1,$craftver $SHOW=($craftver&lt;1.5)"
+              >
+              <button loc="0 0" size="25 25"
+                style="Heading2"
+                tooltip="Browse..."
+                icon="folder_open_file_24.gif"
+                vq="craftAFTpar"
+                vc="vnmrjcmd('LOC browserPanel')"
+                />
+              </group>
+            <group loc="45 22" size="295 20"
+              vq="craftAFTpar"
+              show="$SHOW=(craftAFTpar[36]&lt;&gt;'')"
+              >
+              <check loc="0 0" size="295 20"
+                vq="craftAFTpar"
+                style="Heading2"
+                label="Use analyte specific alignment table"
+                vc="craftAFTpar[36]='y'"
+                vc2="craftAFTpar[36]='n'"
+                set="$VALUE=(craftAFTpar[36]='y')"
+                />
+              </group>
+            </group>
+          <group loc="0 250" size="350 45"
+            vq="craftAFTpar"
+            show="$SHOW=(craftAFTpar[19]='userroi')"
+            >
+            <group loc="160 5" size="35 35"
+              vq="aspMode craftAFTPar"
+              show="$SHOW=(aspMode=3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_down.gif"
+                vq="aspMode craftAFTpar"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="160 5" size="35 35"
+              vq="aspMode craftAFTpar"
+              show="$SHOW=(aspMode&lt;&gt;3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi.gif"
+                vq="aspMode craftAFTpar"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="195 5" size="35 35"
+              vq="aspMode craftAFTpar"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_delete_all.gif"
+                vq="aspMode"
+                vc="aspRoi('clear')"
+                bg="transparent"
+                tooltip="Delete all"
+                />
+              </group>
+            </group>
+
+<!--
+          <label loc="30 225" size="60 20"
+            style="Label1"
+            label="Segment"
+            />
+	  <group loc="90 225" size="250 20" >
+	    <radio loc="0 0" size="250 20"
+	      style="Label1"
+	      label="Between cursors"
+	      vq="craftAFTpar"
+	      vc="craftAFTpar[19]='cr'"
+	      vc2="craftAFTpar[19]='th'"
+	      set="$VALUE=(craftAFTpar[19]='cr')"
+	      />
+	     </group>
+	  <group loc="90 245" size="170 20" >
+	    <radio loc="0 0" size="170 20"
+	      style="Label1"
+	      label="Peaks over threshold"
+	      vq="craftAFTpar"
+	      vc="craftAFTpar[19]='th'"
+	      vc2="craftAFTpar[19]='cr'"
+	      set="$VALUE=(craftAFTpar[19]='th')"
+	      />
+	     </group>
+	    <entry loc="245 245" size="30 20"
+	      style="PlainText"
+	      vq="craftAFTpar"
+	      show="$ENABLE=(craftAFTpar[19]='th')*2-1"
+	      vc="format('$VALUE','isreal'):$r if ($r) then craftAFTpar[20]='$VALUE' endif"
+	      set="$VALUE=craftAFTpar[20]"
+	      />
+	    <label loc="280 245" size="110 20"
+	      label="Hz segments"
+	      style="Label1"
+	      />
+-->
+          <button loc="20 300" size="160 20"
+            style="Heading4"
+            label="Extract amplitude"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('Extract')"
+            />
+          <button loc="185 300" size="90 20"
+            style="Heading2"
+            label="Undo last"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('undoExecute')"
+            />
+          <button loc="280 300" size="90 20"
+            style="Heading2"
+            label="Clear"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('clear')"
+            />
+          <textfile loc="20 325" size="350 125"
+            style="PlainText"
+            set="$VALUE=craftAFTpar[7]"
+            editable="no"
+            wrap="no"
+            vq="craftAFTpar"
+            />
+<!--
+          <button loc="195 430" size="170 20"
+            style="Heading2"
+            label="Copy to desktop"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('copy2dt')"
+            />
+          <button loc="20 430" size="170 20"
+            style="Heading2"
+            label="Clear"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('clear')"
+            />
+-->
+	  </group>
+</template>

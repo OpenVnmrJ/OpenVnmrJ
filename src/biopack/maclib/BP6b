@@ -1,0 +1,24 @@
+"macro BP6b"
+" BP6b "
+$bestone=1 $counter=1
+
+crl f cr=sw/2 rl(4.66p) cz z(11p,5.5p)
+select(1) bc vsadj(20)
+integ(7.4p,9p):$in if $in<0 then $in=-$in endif $best=$in
+
+repeat
+  select($counter) bc
+  integ(7.4p,9p):$in if $in<0 then $in=-$in endif
+  if $in<$best then $best=$in $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+
+$b=$bestone-18 if $b>0 then $b=$b else $b=$bestone+18 endif
+av select($b) vsadj(50) ph
+sp=5.5p wp=6p vp=30
+BPsvf(userdir+'/AutoTripRes/ghn_co_dof_cal')
+dssh('dodc') pl('all','dodc') pap BPpage
+dof=dof[$bestone] dcg='cdc' lvl=0 tlt=0
+pwC3=pwC3a ni=0 ni2=0 phase=1 phase2=1 vp=0
+array('gzlvl2',15,gzlvl2-0.014*gzlvl2,0.002*gzlvl2)
+ph wexp='BP7' au

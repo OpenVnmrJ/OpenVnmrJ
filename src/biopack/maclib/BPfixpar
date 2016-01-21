@@ -1,0 +1,172 @@
+"macro BPfixpar"
+"BPfixpar- adds missing parameters and sets standard values"  
+exists('prescan','parameter'):$e
+if($e>0.5) then destroy('prescan') endif
+fixpar par_2d par3d par4d
+exists('ddrtc','parameter'):$e  "create even if not used-to avoid error in panel"
+if $e=0 then create('ddrtc','pulse') endif
+
+exists('ref_pwr','parameter'):$e 
+if $e=0 then create('ref_pwr','pulse') ref_pwr=tpwr endif
+
+exists('ref_pw90','parameter'):$e 
+if $e=0 then create('ref_pw90','real') ref_pwr=pw endif
+
+if Console='vnmrs' then
+ ddrtc=rof2+alfa
+else
+ ddrtc=0.0
+endif
+" a zero value for ddrtc in parameter set or probefile indicates non-vnmrs system"
+
+if Console='vnmrs' then
+ exists('hdof','parameter'):$e
+ if $e=0 then create('hdof','frequency') hdof=0 endif
+ exists('hdpwr','parameter'):$e
+ if $e=0 then create('hdpwr','real') hdof=0 endif
+ exists('hdmf','parameter'):$e
+ if $e=0 then create('hdmf','real') hdmf=1000 endif
+ exists('hdpwrf','parameter'):$e
+ if $e=0 then create('hdpwrf','real') hdpwrf=4095 endif
+ exists('dutyc','parameter'):$e
+ if $e=0 then create('dutyc','real') dutyc=0.1 endif
+ exists('hdres','parameter'):$e
+ if $e=0 then create('hdres','real') hdres=0.9 endif
+ exists('rof3','parameter'):$e
+ if $e=0 then create('rof3','pulse') rof3=0 endif
+ exists('homorof1','parameter'):$e
+ if $e=0 then create('homorof1','pulse') homorof1=2 endif
+ exists('homorof2','parameter'):$e
+ if $e=0 then create('homorof2','pulse') homorof2=2 endif
+ exists('homorof3','parameter'):$e
+ if $e=0 then create('homorof3','pulse') homorof3=2 endif
+ exists('homo','parameter'):$e
+ if $e=0 then create('homo','flag') homo='n' endif
+ exists('hdseq','parameter'):$e
+ if $e=0 then create('hdseq','string') hdseq='' endif
+endif
+exists('gzsize','parameter'):$e
+ if $e=0 then create('gzsize','real') endif
+exists('gzwin','parameter'):$e
+ if $e=0 then create('gzwin','real') endif
+exists('nv2','parameter'):$e
+ if $e then destroy('nv2') endif
+exists('nv','parameter'):$e
+ if $e then destroy('nv') endif
+r1=0 r2=0 r3=0 r4=0 r5=0 r6=0  "reset"
+wnt='' wexp=''
+pmode='full' 
+"The f command doesn't work if there is no spectrum. Use the following two lines." 
+sf=0 wf=np/sw/2
+sp=rfp-rfl wp=sw
+full ph
+bs='n'   "makes sure bs='n' for 2D/3D"
+dcg='cdc' cdc
+sw=sw
+fpmult=0.5
+exists('ni','parameter'):$e 
+if $e then
+ exists('f1coef','parameter'):$e
+ if $e=0 then create('f1coef','string') f1coef='' endif
+ fpmult1=0.5 
+endif
+exists('ni2','parameter'):$e 
+if $e then
+ exists('f2coef','parameter'):$e
+ if $e=0 then create('f2coef','string') f2coef='' endif
+ fpmult2=0.5 
+endif
+
+"Create referencing parameters as needed. Set to defaults for HCN"
+"  Observe dimension"
+exists('reffrq','parameter'):$e  
+if not($e) then
+  create('reffrq','real')
+endif 
+setgroup('reffrq','display')
+reffrq = sfrq - (sw/2 - rfl + rfp)/1e6
+exists('refpos','parameter'):$e
+if not($e) then
+  create('refpos','frequency')
+endif
+setgroup('refpos','display')
+refpos = 0
+
+"  F1 Dimension "
+exists('refsource1','parameter'):$e
+if not($e) then
+  create('refsource1','string')
+endif
+setgroup('refsource1','display')
+exists('reffrq1','parameter'):$e
+if not($e) then
+  create('reffrq1','real')
+endif 
+setgroup('reffrq1','display')
+exists('refpos1','parameter'):$e
+if not($e) then
+  create('refpos1','frequency')
+endif
+setgroup('refpos1','display')
+refpos1 = 0
+refpos1 = 'n'
+
+"  F2 Dimension "
+exists('refsource2','parameter'):$e
+if not($e) then
+  create('refsource2','string')
+endif
+setgroup('refsource2','display')
+exists('reffrq2','parameter'):$e
+if not($e) then
+  create('reffrq2','real')
+endif 
+setgroup('reffrq2','display')
+exists('refpos2','parameter'):$e
+if not($e) then
+  create('refpos2','frequency')
+endif
+setgroup('refpos2','display')
+refpos2 = 0
+refpos2 = 'n'
+
+"set local value of samplename to global value"
+exists('samplename_global','parameter','global'):$e
+  if $e=0 then create('samplename_global','string','global') endif
+exists('samplename','parameter','global'):$e
+  if $e=1 then destroy('samplename','global') endif
+exists('samplename','parameter'):$e
+  if $e=0 then create('samplename','string') endif
+samplename=samplename_global
+
+cz setref
+clear
+
+if Console='vnmrs' then
+ exists('rof3','parameter'):$e
+ if $e=1 then destroy('rof3') endif
+endif
+
+length(dmm):$length
+substr(dmm,$length,1):$mode1  "last character"
+length(dmm2):$length
+substr(dmm2,$length,1):$mode2  "last character"
+length(dmm3):$length
+substr(dmm3,$length,1):$mode3  "last character"
+
+if ((Console='vnmrs') and ($mode1<>'p')) then dres=90.0 endif
+if ((Console='vnmrs') and ($mode2<>'p')) then dres2=90.0 endif
+if ((Console='vnmrs') and ($mode3<>'p')) then dres3=90.0 endif
+
+exists('SCT','parameter'):$e
+if $e=1 then
+ SCT='y'
+endif
+exists('f1180','parameter'):$e
+if $e=1 then
+ if f1180='y' then lp1=-180 rp1=90 else lp1=0 rp1=0 endif
+endif
+exists('f2180','parameter'):$e
+if $e=1 then
+ if f2180='y' then lp2=-180 rp2=90 else lp2=0 rp2=0 endif
+endif

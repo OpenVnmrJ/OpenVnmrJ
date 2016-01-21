@@ -1,0 +1,48 @@
+"macro _qcomp"
+" _qcomp                              "
+
+if (qcomp = 'y') then
+
+" default oversampling for dsp=i for qcomp "
+$def_osdspi=20
+
+exists('dsp','parameter','global'):$x
+if ($x > 0.5) then
+
+  if (dsp <> 'i')  then
+
+    if (dsp = 'r') then
+      exists('fsq','parameter','global'):$x
+      if ($x > 0.5) then
+        if (fsq <> 'y') then
+          qcomp = 'n'
+          write('line3','qcomp cannot be set to \'y\' if dsp=\'r\' and fsq not \'y\' ')
+        endif
+      else
+        qcomp='n'
+        write('line3','qcomp cannot be set to \'y\' if dsp=\'r\' and fsq not \'y\' ')
+      endif
+    else
+      qcomp='n'
+      write('line3','qcomp cannot be set to \'y\' if dsp=\'n\' ')
+    endif
+
+  else
+    " set default oversample value for dsp=i "
+      oversamp=$def_osdspi
+      oversamp?
+  endif
+
+else
+  qcomp='n'
+  write('line3','qcomp cannot be set to \'y\' if dsp parameter does not exist')
+endif
+
+  exists('filtfile','parameter'):$x
+  if ($x > 0.5) then
+    if (filtfile <> '') then
+      write('line3','advisory: filtfile is set to \'%s\'. set filtfile=\'\' for normal operation',filtfile)
+    endif
+  endif
+
+endif

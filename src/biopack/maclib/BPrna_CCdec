@@ -1,0 +1,228 @@
+"macro BPrna_CCdec"
+"BPrna_CCdec. Sets up homonuclear decoupling waveforms "
+
+if (seqfil='rna_CUhnccch_CCdec') then
+                                       " URA/CYT and C5/C6 flags must be set first"
+ if (URA='y') then
+    if ((C5='y') and (C6='n')) then        "C5"
+     opx			                  " set C decoupling "
+     setwave('WURST2 12p/3m 141p ')          " C6 band "
+     setwave('WURST2  6p/3m 165p ')          " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCdec.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     pboxpar('refofs', '98p')
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     pboxpar('$2 adb', '1.2')
+     shell('Pbox')
+     BPmoveshape('rna_CCdec.DEC')
+    else                                     "C5"
+     opx			                    " set C decoupling "
+     setwave('WURST2 12p/3m 98p ')          " C5 band "
+     setwave('WURST2  6p/3m 165p ')          " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCdec.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     pboxpar('refofs', '141p')
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     pboxpar('$2 adb', '1.2')
+     shell('Pbox')
+    endif
+ endif
+ 
+ if (CYT='y') then
+    if ((C5='y') and (C6='n')) then        "C5"
+     opx			                  " set C decoupling "
+     setwave('WURST2 12p/3m 141p ')          " C6 band "
+     setwave('WURST2  6p/3m 165p ')          " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCdec.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     pboxpar('refofs', '104p')
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     pboxpar('$2 adb', '1.2')
+     shell('Pbox')
+     BPmoveshape('rna_CCdec.DEC')
+    else                                     "C5"
+     opx			                    " set C decoupling "
+     setwave('WURST2 12p/3m 104p ')          " C5 band "
+     setwave('WURST2  6p/3m 165p ')          " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCdec.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     pboxpar('refofs', '141p')
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     pboxpar('$2 adb', '1.2')
+     shell('Pbox')
+    endif
+ endif
+elseif (seqfil='rna_cchtocsy_CCdec') then
+     opx			                  " set C decoupling "
+     setwave('WURST2 8p/3m 75.5p')                " C2' band "
+     pbox_rst
+     pboxpar('name', 'rna_CCdec.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     pboxpar('refofs', '92.5p')
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     shell('Pbox')
+elseif (seqfil='rna_gChsqc_CCdec') then
+     if (ribose='y') then ribose='n' aromatic='y' endif   "force proper choice"
+     opx			                  " set C decoupling "
+     setwave('WURST2 4p/3m 75.5p')                " C2' band "
+     setwave('WURST2 8p/3m 98.5p')                " C5 band "
+     setwave('WURST2 6p/3m 159p')                 " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCfilter.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     if (allC='y') then
+      pboxpar('refofs', '110p')
+     endif
+     if (aromatic='y') then
+      pboxpar('refofs', '145p')
+     endif
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     shell('Pbox')
+     BPpboxget('rna_CCfilter.DEC'):CCfdseq,$dmmy,CCfdpwr,$dmmy,CCfdres,CCfdmf
+     BPpboxget('rna_CCfilter.DEC'):CCdseq,$dmmy,CCdpwr,$dmmy,CCdres,CCdmf
+     BPmoveshape('rna_CCfilter.DEC')
+
+     opx			                  " set C decoupling (no C5) "
+     setwave('WURST2 4p/3m 75.5p')                " C2' band "
+     setwave('WURST2 6p/3m 159p')                 " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCfilter2.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     if (allC='y') then
+      pboxpar('refofs', '110p')
+     endif
+     if (aromatic='y') then
+      pboxpar('refofs', '145p')
+     endif
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     shell('Pbox')
+     BPpboxget('rna_CCfilter2.DEC'):CCf2dseq,$dmmy,CCf2dpwr,$dmmy,CCf2dres,CCf2dmf
+     BPmoveshape('rna_CCfilter2.DEC')
+
+elseif (seqfil='rna_gnoesyChsqc_CCdec') then
+     opx			                  " set C filtering  "
+     setwave('WURST2 4p/3m 75.5p')                " C2' band "
+     setwave('WURST2 8p/3m 98.5p')                " C5 band "
+     setwave('WURST2 6p/3m 159p')                 " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCfilter.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     if (Ribose='y') then
+      pboxpar('refofs', '80p')
+     endif
+     if (Aromatic='y') then
+      pboxpar('refofs', '145p')
+     endif
+     if (Both='y') then
+      pboxpar('refofs', '116p')
+     endif
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     shell('Pbox')
+     BPpboxget('rna_CCfilter.DEC'):CCfdseq,$dmmy,CCfdpwr,$dmmy,CCfdres,CCfdmf
+     BPmoveshape('rna_CCfilter.DEC')
+
+     opx			                  " set C filtering 2  "
+     setwave('WURST2 4p/3m 75.5p')                " C2' band "
+     setwave('WURST2 6p/3m 159p')                 " C4 band "
+     pbox_rst
+     pboxpar('name', 'rna_CCfilter2.DEC')
+     pboxpar('stepsize', '4.0')
+     pboxpar('sfrq', dfrq)
+     if (Ribose='y') then
+      pboxpar('refofs', '80p')
+     endif
+     if (Aromatic='y') then
+      pboxpar('refofs', '145p')
+     endif
+     if (Both='y') then
+      pboxpar('refofs', '116p')
+     endif
+     pboxpar('sucyc', 't5')
+     pboxpar('ref_pwr', pwClvl)
+     pboxpar('ref_pw90', pwC*compC)
+     pboxpar('$1 adb', '1.2') 
+     shell('Pbox')
+
+     BPpboxget('rna_CCfilter2.DEC'):CCf2dseq,$dmmy,CCf2dpwr,$dmmy,CCf2dres,CCf2dmf
+     BPmoveshape('rna_CCfilter2.DEC')
+
+     opx('c1p_c5p_refoc.RF')                         "C1' C5' refocussing pulse "
+     setwave('reburp 2.0m')
+     pbox_rst
+     pboxpar('sfrq', dfrq)
+     cpx(pwC*compC,pwClvl)
+     BPpboxget('c1p_c5p_refoc.RF'):pwC1p_c5p_shape,pwC1p_c5p_pw,pwC1p_c5p_pwr
+     BPmoveshape('c1p_c5p_refoc.RF')
+
+endif
+
+if (seqfil='rna_cchcosy_CCdec') then
+ opx('h1_refoc.RF')                               "H1' refocussing pulse "
+ setwave('rsnob 2.0p/1.54m 3.5p')
+ pbox_rst
+ pboxpar('refofs', '4.77p')
+ pboxpar('sfrq', sfrq)
+ cpx(pw*compH,tpwr)
+ BPpboxget('h1_refoc.RF'):pwH_Sel_Shape,pwH_Sel_pw,pwH_Sel_lvl
+ BPmoveshape('h1_refoc.RF')
+
+ opx('c1_refoc.RF')                               "C1' refocussing pulse "
+ setwave('rsnob 9p/1.36m')
+ pbox_rst
+ pboxpar('sfrq', dfrq)
+ cpx(pwC*compC,pwClvl)
+ BPpboxget('c1_refoc.RF'):pwC_Sel_Shape,pwC_Sel_pw,pwC_Sel_lvl
+ BPmoveshape('c1_refoc.RF')
+ 
+ opx                                          " set C decoupling "
+ setwave('WURST2 8p/3m 75.5p')                " C2' band "
+ pbox_rst
+ pboxpar('name', 'rna_CCdec.DEC')
+ pboxpar('stepsize', '4.0')
+ pboxpar('sfrq', dfrq)
+ pboxpar('refofs', '92.5p')
+ pboxpar('sucyc', 't5')
+ pboxpar('ref_pwr', pwClvl)
+ pboxpar('ref_pw90', pwC*compC)
+ pboxpar('$1 adb', '1.2')
+ shell('Pbox')
+ BPpboxget('rna_CCdec.DEC'):CCdseq,$dmmy,CCdpwr,$dmmy,CCdres,CCdmf
+ BPmoveshape('rna_CCdec.DEC')
+endif
+

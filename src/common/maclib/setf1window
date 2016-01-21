@@ -1,0 +1,46 @@
+"macro setf1window"
+/* setf1window: set window function for t1; LP is accounted for
+   usage: setf1window(function), where function is 'lb','gf','sin','sqsin',
+	'ssb', 'cos',or 'sqcos', for exponential, gaussian, unshifted sine-
+	bell, unshifted squared sine-bell, (pi/4)-shifted sinebell, cosine-
+	bell or squared cosine-bell, respectively. */
+
+  if not $# then
+    write('error','%s called without any window function specified',$0)
+    return
+  endif
+
+  lb1 = 'n'  gf1 = 'n' sb1 = 'n' gfs1 = 'n'  sbs1 = 'n'
+
+  if ($1 = 'none') then
+    return
+  endif
+
+  if proc1 = 'lp' then
+    $at1 = (strtlp1 + lpext1 - 2)/sw1
+  else
+    $at1 = (ni/arraydim) * (celem-1)/sw1
+  endif
+
+  if ($1 = 'lb') then
+    lb1 = 1/$at1
+
+  elseif ($1 = 'gf') then
+    gf1 = $at1/2
+
+  elseif ($1 = 'sin') then
+    sb1 = $at1/2
+
+  elseif ($1 = 'sqsin') then
+    sb1 = -$at1/2
+
+  elseif ($1 = 'ssb') then
+    sb1 = 3*$at1/4  sbs1 = -$at1/2
+
+  elseif ($1 = 'cos') then
+    sb1 = $at1  sbs1 = -$at1
+
+  elseif ($1 = 'sqcos') then
+    sb1 = -$at1 sbs1 = sb1
+
+  endif

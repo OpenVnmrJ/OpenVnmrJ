@@ -1,0 +1,37 @@
+"macro Aulocref"
+"**********************************************************"
+"Aulocref - setup macro for reference sample 		"
+"**********************************************************"
+	"Just in case the enterQ is not empty, return to auto_au"
+	"  with wexp set to AutoSKIP				"
+$queue=0
+shell('(cat '+autodir+'/enterQ | grep -wc SAMPLE#:)'):$queue
+
+if ($# < 1) then $1='' endif
+if ($1 = 'stopspin') then
+	$queue=0
+endif
+
+PROTON
+explist=''
+macro=$0
+gain=0 spin=0 nt=1 ss=0 d1=5-at
+wbs='' wnt=''  werr=''
+wshim='n' alock='n' pltopt='n'
+wtune='n'
+
+if ($queue>0) then
+   wexp='AutoSKIP'
+   return
+else
+   wexp='donelocref'
+endif
+
+active2error
+write('file',autodir+'/enterQ.macdir/cpstartQ','SAMPLE#: %d loc%d',loc,loc)
+getautoglobaltemp('auto')
+$autoname=autoname
+autoname='_REFERENCE_%SAMPLE#:%'
+dg
+au('wait','shimming')
+autoname=$autoname

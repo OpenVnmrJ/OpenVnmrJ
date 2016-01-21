@@ -1,0 +1,106 @@
+"macro tempcalc"
+"tempcalc"
+
+$doplot=1
+if ($#=1) then
+  if ($1='noplot') then
+    $doplot=0
+  endif
+endif
+
+ds f full vp=20  
+nll:$count
+fp
+
+IF ($count > 1) then
+  if ($count > 2) then
+    write('error','Adjust lb and th until only the HOD and CH3CN are listed..')
+    return
+  endif
+	$file=curexp+'/fp.out'
+
+	lookup('file',$file)
+	lookup('seek','(Hz)')
+	$i='1'
+
+	lookup('seek',$i,'read',1):$freq
+	sp=$freq-20 wp=40
+	wc=100 sc=130 axis='h' vp=30 ds vsadj cr=$freq
+        if ($doplot = 1) then
+	  pl pscale
+        endif
+	dres(cr,0.50):$lw1
+	format($i,'isreal'):$cctn
+	$cctn=$cctn+1
+	format($cctn,1,0):$i
+	lookup('seek',$i,'read',1):$freq2
+	sp=$freq2-20 wp=40
+	wc=100 sc=20 cr=$freq2
+	ds vsadj
+	dres(cr,0.50):$lw2
+	$delta=$freq-$freq2
+        if ($doplot = 1) then
+	  pl pscale
+	  if (($lw1 > 0.92) and ($lw2 > 0.92)) then
+		write('plotter',100,130,'Lines too broad - RESULTS SUSPECT ! ..')
+	  endif
+	  write('plotter',25,100,'HOD resolution = %2.2f',$lw1)
+	  write('plotter',185,100,'CH3CN resolution = %2.2f',$lw2)
+	  write('plotter',110,100,'Delta = %4.1f',$delta)
+	  write('plotter',10,140,'Probe = %s',probe)
+	  write('plotter',10,130,date)
+        endif
+	$center=($freq+$freq2)/2
+	$wp=$delta+600
+	sp=$center-($wp/2) wp=$wp
+	wc=80 sc=85 ds vsadj vs=vs/3 vp=65
+	delta=$delta*0.572
+	tempcal('m'):$temp
+	abs($lw1-$lw2):$diff
+	$tempgrad=$diff/(5.5*(sfrq/500))
+        if ($doplot = 1) then
+	  write('plotter',100,140,'Approximate Temperature = %2.1f',$temp)
+	  write('plotter',100,135,'Approximate Temperature gradient =%2.2f degrees C',$tempgrad)
+	  pl pscale
+	"Write shims"
+	  write('plotter',20,65,'Z1=%5.0f',z1)
+	  write('plotter',20,60,'Z2=%5.0f',z2)
+	  write('plotter',20,55,'X=%5.0f',x1)
+	  write('plotter',20,50,'Y=%5.0f',y1)
+	  write('plotter',20,45,'XZ=%5.0f',xz)
+	  write('plotter',20,40,'YZ=%5.0f',yz)
+        endif
+
+	"Setup summary info on display"
+	f full vp=15 ds vsadj dscale
+        if ($doplot=1) then
+	  write('graphics',10,140,'Probe = %s',probe)
+	  write('graphics',10,120,date)
+	  write('graphics',10,100,'Approximate temperature = %2.1f',$temp)
+	  write('graphics',10,80,'HOD Resolution = %2.2f',$lw1)
+	  write('graphics',10,60,'CH3CN Resolution = %2.2f',$lw2)
+	  if (($lw1 > 0.92) and ($lw2 > 0.92)) then
+	     write('graphics','red',100,140,'Lines too broad - RESULTS SUSPECT!')
+	  endif
+	  write('graphics',10,90,'Approximate Temperature gradient =%2.2f degrees C',$tempgrad)
+	  write('graphics',100,85,'Z1=%5.0f',z1)
+	  write('graphics',100,75,'Z2=%5.0f',z2)
+	  write('graphics',100,65,'X=%5.0f',x1)
+	  write('graphics',100,55,'Y=%5.0f',y1)
+	  write('graphics',100,45,'XZ=%5.0f',xz)
+	  write('graphics',100,35,'YZ=%5.0f',yz)
+	  $ans=''
+	  input('Do you wish to plot the results ? y/n '):$ans
+          if ($ans='y') then 
+            page
+	  else
+            page('clear')
+          endif
+        endif
+        return($temp,$tempgrad,$lw1,$lw2)
+ELSE
+  write('error','Adjust threshold until the two desired peaks are listed.')
+  vp=20 ds f full vsadj ds
+  return(0,0,0,0)
+ENDIF
+

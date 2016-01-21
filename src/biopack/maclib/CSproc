@@ -1,0 +1,106 @@
+"macro CSproc"
+"CSproc macro for pre-processing randomly sampled data sets "
+"macro CSproc"
+
+$ift=0 $inf=1 $cln=1 $cmd='' $s1='' $s2='' 
+$procdir = curexp+'/procdir'
+
+if(CS_cln='n') then
+  $ift=1
+endif
+
+exists($procdir,'directory'):$e
+if ($e) then
+  // determine whether to retrieve the orginal data
+  $n1='' $n2='' $n3=''
+  strstr(file,'/','last'):$r1,$n1,$n2
+  strstr($n1,'/','last'):$r1,$n1,$n3
+  if($n3='procdir') then
+    if not ($n2='orig') then
+      rt(curexp+'/procdir/orig')
+    endif
+  endif
+  $cmd = 'rm -r '+$procdir  " remove the old procdir "
+  shell($cmd)
+endif
+$cmd = 'mkdir '+$procdir
+shell($cmd)
+BPsvf($procdir+'/orig.fid')
+
+$file=file    "make sure we have the correct schedule"
+if not (file='exp') then
+  strstr($file,'.fid'):$r,$s1,$s2
+  if $s1='' then 
+    $file=$file+'.fid'
+  endif
+  $file=$file+'/sampling.sch'
+  exists($file,'file'):$e
+  if($e) then
+    copy($file,curexp+'/sampling.sch')
+  endif
+endif
+
+if(CS_inf = 'y') then
+  exists(curexp+'/sampling.sch','file'):$e
+  if not($e) then
+    write('line3','sampling schedule not found - inflateND aborted.')
+    return 
+  endif
+endif
+
+if(CS_dpars='y') then
+  CSdpars
+endif
+
+CSrsw($ift):$ok
+if not ($ok) then
+  return 
+endif
+if($ift) and (CS_inf='n') and (CS_se='n') then
+  rt(curexp+'/procdir/rsw.fid')
+  wft(1) ds
+endif
+ 
+if(CS_se='y') then
+  CSproc_se:$ok
+  if not ($ok) then
+    return 
+  endif
+  if($ift) and (CS_inf='n')  then
+    rt(curexp+'/procdir/rsw.fid')
+    wft(1) ds
+  endif
+endif
+                    
+if(CS_inf='y') then
+  CSinflate:$ok
+  if not ($ok) then
+    return 
+  endif
+  if($ift) then
+    rt(curexp+'/procdir/inf.fid')
+    parCS wft(1) ds CSppp 
+  endif
+endif
+
+$dim=2
+if(CS_cln='y') then          
+  exists('ni2','parameter'):$e
+  if ($e) then
+    if(ni>1) and (ni2>1) then
+      $dim = 3
+    endif
+    exists('ni3','parameter'):$e
+    if($e) then
+      if(ni3>1) and ($dim=3) then
+        $dim=4
+      endif
+    endif
+  endif
+  if($dim=2) then
+    cln2d
+  else
+    cln3d
+  endif
+endif
+                 

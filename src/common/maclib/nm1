@@ -1,0 +1,99 @@
+"macro nm1"
+"map channel"
+" ...................... "
+exists('probeConnect','parameter','global'):$ex1
+$ex10=0
+if ($ex1) then
+  if (probeConnect<>'') then $ex10=1 endif
+endif
+exists('preAmpConfig','parameter','systemglobal'):$ex2
+exists($1,'parameter','current'):$ex3
+if ($ex10 and $ex2 and $ex3) then
+  $smatch=''
+  $smatch = {$1}  
+  substr(probeConnect,1):$s1
+  if ($s1 = $smatch) then
+    return(1)
+  endif
+  substr(probeConnect,2):$s1
+  if ($s1 = $smatch) then
+    return(2)
+  endif
+  substr(probeConnect,3):$s1
+  if ($s1 = $smatch) then
+    return(3)
+  endif
+  substr(probeConnect,4):$s1
+  if ($s1 = $smatch) then
+    return(4)
+  endif
+  substr(probeConnect,5):$s1
+  if ($s1 = $smatch) then
+    return(5)
+  endif
+  "if it did not return maybe there's a X"
+  $smatch = 'X'  
+  substr(probeConnect,1):$s1
+  if ($s1 = $smatch) then
+    return(1)
+  endif
+  substr(probeConnect,2):$s1
+  if ($s1 = $smatch) then
+    return(2)
+  endif
+  substr(probeConnect,3):$s1
+  if ($s1 = $smatch) then
+    return(3)
+  endif
+  substr(probeConnect,4):$s1
+  if ($s1 = $smatch) then
+    return(4)
+  endif
+  substr(probeConnect,5):$s1
+  if ($s1 = $smatch) then
+    return(5)
+  endif
+endif
+
+"rfchannel if no probeConnect"
+exists('rfchannel','parameter'):$ex
+if ($ex) then
+  if ($1 = 'tn') then
+    substr(rfchannel,1,1):$s1 
+  elseif ($1 = 'dn') then
+    substr(rfchannel,2,1):$s1 
+  elseif ($1 = 'dn2') then
+    substr(rfchannel,3,1):$s1 
+  elseif ($1 = 'dn3') then
+    substr(rfchannel,4,1):$s1 
+  elseif ($1 = 'dn4') then
+    substr(rfchannel,5,1):$s1 
+  elseif ($1 = 'dn5') then
+    substr(rfchannel,6,1):$s1 
+  endif
+  return($s1)
+endif
+
+"default logic" 
+if ($1 = 'dn5') then
+  return(6)
+elseif ($1 = 'dn4') then
+  return(5)
+elseif ($1 = 'dn3') then
+  return(4)
+elseif ($1 = 'dn2') then 
+  return(3)
+endif
+"a macro copy of amphiband " 
+if ($1 = 'tn') then
+  if (sfrq < 0.85*h1freq) then
+    return(2)
+  else
+    return(1)
+  endif
+endif
+if (sfrq < 0.85*h1freq) then
+  return(1)
+else
+  return(2)
+endif

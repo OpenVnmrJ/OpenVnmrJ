@@ -1,0 +1,90 @@
+#
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['data.h']
+
+gshimNrObj = ['fourn.o',
+                   'nrutil.o',
+                   'svdcmp.o',
+                   'svdvar.o',
+                   'svbksb.o']
+
+gshimUFileList = ['util.c']
+
+gshimAllFileList = ['gsadd.c',
+                    'gsbin.c',
+                    'gsbinmulti.c',
+                    'gscale.c',
+                    'gsdiff.c',
+                    'gsfield.c',
+                    'gsign.c',
+                    'gsmapmask.c',
+                    'gsmean.c',
+                    'gsphcheck.c',
+                    'gsphdiff.c',
+                    'gsphtofield.c',
+                    'gsreformat.c',
+                    'gsregrid.c',
+                    'gsremap.c',
+                    'gsvtobin.c']
+
+gshimNrUFileList = ['gsft.c',
+                    'gsft2d.c',
+                    'gshimcalc.c']
+
+# build environments
+gsEnv = Environment(CCFLAGS    = '-g -O2 -m64',
+                    CPPDEFINES = ['LINUX'],
+                    LINKFLAGS  = '-m64',
+                    CPPPATH    = [cwd])
+
+# define with absolute path where built files will be copied
+optionsImageBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,
+				'options','standard','IMAGE','bin')
+# vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+#                                'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(optionsImageBinPath):
+   os.makedirs(optionsImageBinPath)
+# if not os.path.exists(vnmrInstallPath):
+#    os.makedirs(vnmrInstallPath)
+
+# actual builds
+gshimUObj = gsEnv.StaticObject(source = [gshimUFileList])
+# gshimNrObj = gsEnv.StaticObject(source = [gshimNrFileList])
+
+buildMethods.makeSymLinks(gsEnv, gshimUObj, cwd, vnmrPath, vnmrHdrList)
+
+for i in gshimAllFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = gsEnv.Program(target = filename,
+                                source = [i,
+                                          gshimUObj],
+                                LIBS   = ['m'])
+
+   gsEnv.AddPostAction(tempBuildObj,
+               Action(Copy(optionsImageBinPath, os.path.join(cwd, filename))))
+
+
+for i in gshimNrUFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = gsEnv.Program(target = filename,
+                                source = [i,
+                                          gshimUObj,
+                                          gshimNrObj],
+                                LIBS   = ['m'])
+
+   gsEnv.AddPostAction(tempBuildObj,
+               Action(Copy(optionsImageBinPath, os.path.join(cwd, filename))))
+

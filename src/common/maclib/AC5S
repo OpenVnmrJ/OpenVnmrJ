@@ -1,0 +1,76 @@
+"macro AC5S"
+"AC5S - perform C13 Calibration"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the C13 Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then
+        abort
+     endif
+   endif
+endif
+
+setup('C13','c6d6')
+Autosetgpar
+setsw(69,65)
+
+exists('pw90max','parameter'):$e
+if ($e < 0.5) then
+   create('pw90max','pulse')
+   pw90max=15
+endif
+
+exists('d1_temp','parameter'):$e
+if ($e < 0.5) then
+   create('d1_temp','delay')
+   d1_temp=40
+endif
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('C13 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_C13cal_' + $date
+archivedir=userdir+'/data'
+$datadir = userdir+'/data/'+sample
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+  " no need to worry about duplicate file names, as the modified "
+  " Autosave macro overwrites existing data "
+
+nt = 1  at = 4  
+
+setoffset(dn,3.34):dof
+dm = 'y'  dmm = 'c'
+if dpwr < 20 then dpwr = 40 endif
+
+if (Console = 'mercury') or (Console = 'gemini') then
+  gain = 20
+else
+  gain = 40
+endif
+
+lb = 1/at fn = 2*np  lp = 0  ai
+
+if tpwr < 40 then tpwr = 51 endif
+
+if (pw90 < 5) then pw = 10 else pw(90) endif
+
+
+if (Console = 'vnmrs') then setrc endif "retrieve rof2 and alfa"
+
+wnt = '' wexp = 'AC10C'
+
+exists('macro','parameter'):$macex
+if not $macex then create('macro','string') endif
+macro = 'AuCAL'
+  "this for the sake of glideau"

@@ -1,0 +1,27 @@
+"macro fullarchive"
+$archive_path =  userdir + '/ARCHIVE'
+exists($archive_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $archive_path)
+endif
+
+$output_path = $archive_path + '/' + $1 
+exists($output_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $output_path)
+endif
+
+$inputzip_name = userdir + '/ARCHIVE/EXP_OUTPUT/' + $2 + '.tar.Z'
+exists($inputzip_name,'file'):$e
+if ($e < 0.5) then 
+   write('line3','Zip File %s.tar.Z Does Not Exist\n',$2)
+   abort
+endif 
+
+$outputzip_name =  $output_path + '/' + $2 + 'tar.Z'
+cp($inputzip_name,$outputzip_name)
+$cmd = 'cd ' + $output_path +  '; tar xvfz ' + $outputzip_name
+shell($cmd):$dum 
+rm($outputzip_name):$dum 
+write('line3','File %s.tar.Z Unzipped into %s\n',$2,$output_path)
+

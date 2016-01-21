@@ -1,0 +1,286 @@
+"macro pboxvnmrj"
+exists('pboxstr','parameter','global'):$e
+if $e<0.5 then
+  create('pboxstr','string','global')
+  setprotect('pboxstr','on',256,'global')
+  pboxstr='excitation','eburp1','Pbox','','z','y','pwpat','tpwr','tpwrf','pw','dmf','dres','a','','n','.RF'
+endif
+exists('pboxreal','parameter','global'):$e
+if $e<0.5 then
+  create('pboxreal','real','global')
+  setprotect('pboxreal','on',256,'global')
+  pboxreal=0,0,0,0,0  "use for r1,r2,r3,r4,r7 ?"
+endif
+
+if $#<0.5 then
+  pboxvnmrj('init') vnmrjcmd('popup', 'mode:modeless', 'file:Pbox.xml', 'location:controlPanel', 'title:Pbox')
+else
+  if $1='init' then
+    pboxvnmrj('typelist')
+    pboxvnmrj('namelist')
+    pboxstr[13]='a'
+    pboxstr[14]=''
+    "shell('Pbox -v'):pboxstr[14]"
+    pboxstr[15]='n'
+    pboxstr[16]='.RF'
+    exists('ref_pwr','parameter'):$e
+    if $e<0.5 then create('ref_pwr','real') ref_pwr=50 endif
+    getparam('tpwr',tn):ref_pwr
+    exists('ref_pw90','parameter'):$e
+    if $e<0.5 then create('ref_pw90','pulse') ref_pw90=10 endif
+    getparam('pw90',tn):ref_pw90
+"   opx"
+  elseif $1='newwave' then
+    pboxvnmrj('typelist')
+    pboxstr[1]='excitation'
+    pboxvnmrj('namelist')
+    pboxstr[2]='eburp1'
+    pboxstr[3]='Pbox'
+    pboxstr[4]=''
+    pboxstr[5]='z'
+    pboxstr[6]='y'
+    pboxstr[15]='y'
+    pboxstr[16]='.RF'
+    opx
+    r1=0 r2=0 r3=0 r7=0
+    pboxstr[14]='Select shape(s), click Add Waveform for each shape, then click Make It.'
+  elseif $1='resetpar' then
+    pboxstr[7]='pwpat'
+    pboxstr[8]='tpwr'
+    pboxstr[9]='tpwrf'
+    pboxstr[10]='pw'
+    pboxstr[11]='dmf'
+    pboxstr[12]='dres'
+  elseif $1='calibrate' then
+    get90px  "macro is missing - sets ref_pwr and ref_pw90"
+  elseif $1='bw' then
+    if crmode='c' then
+      write('error','Place cursors around region of interest.')
+      pboxstr[14]='Place cursors around region of interest.'
+    else
+      if pboxstr[3]<>'' then
+        pbox_bw(pboxstr[2])  "sets r1 and r2"
+      else
+        pbox_bw              "sets r1 and r2"
+      endif
+    endif
+  elseif $1='add' then
+    putwave(pboxstr[2],r1,r3,r2)
+"    putwave(pboxstr[2],r1,r3,r2,r4,n2,'n',n3)"
+    r1=0 r2=0 r3=0 r7=r7+1
+    if pboxstr[1]='excitation' then
+      pboxstr[5]='xy'
+    else
+      pboxstr[5]='z'
+    endif
+  elseif $1='reset' then
+    pboxstr[14]='Reset'
+    "shell('Pbox -v'):pboxstr[14]"
+    opx
+    r7=0
+  elseif $1='wavestring' then
+"   how to get wavestring?"
+    return('wave')
+  elseif $1='makeit' then
+    if pboxstr[3]='' then
+      write('error','Please make an entry for Shape file name.')
+      pboxstr[14]='Please make an entry for Shape file name.'
+    else
+      pbox_rst
+"      r7=0"
+      pboxpar('name',pboxstr[3])
+      pboxpar('sw',sw)
+"      if n3<>'' then pboxpar('sucyc',n3) endif"
+      cpxJ
+      $cmd='Pbox'
+      if (pboxstr[4]<>'') then
+        strstr(pboxstr[4],'-'):$chk
+        if ($chk > 0.5) then
+          $cmd=$cmd+' '+pboxstr[4]
+        else
+          write('error','Pbox option ignored, format should be -option value')
+        endif
+      endif
+      shell($cmd):$x
+      dshapef
+    endif
+  elseif $1='simulate' then
+    pboxpar('bsim',pboxstr[6])
+    $cmd='Pbox'
+    if (pboxstr[4]<>'') then
+      strstr(pboxstr[4],'-'):$chk
+      if ($chk > 0.5) then
+        $cmd=$cmd+' '+pboxstr[4]
+      else
+        write('error','Pbox option ignored, format should be -option value')
+      endif
+    endif
+    $cmd=$cmd+' -bc'
+    shell($cmd):$x
+    $type=pboxstr[1]
+    if $type='excitation' or $type='inversion' or $type='refocusing' or $type='flipback' then
+      dprofile(pboxstr[5],pboxstr[6])
+    else
+      write('error','Cannot simulate shape type \'%s\'.',pboxstr[1])
+      pboxstr[14]='Cannot simulate shape type \''+pboxstr[1]+'\'.'
+    endif
+  elseif $1='showsim' then
+    $type=pboxstr[1]
+    if $type='excitation' or $type='inversion' or $type='refocusing' or $type='flipback' then
+      dprofile(pboxstr[5],pboxstr[6])
+    else
+      write('error','Cannot simulate shape type \'%s\'.',pboxstr[1])
+      pboxstr[14]='Cannot simulate shape type \''+pboxstr[1]+'\'.'
+    endif
+  elseif $1='readpar' then
+    if (pboxstr[16]<>'.RF' and pboxstr[16]<>'.DEC' and pboxstr[16]<>'.GRD') then
+      pboxstr[16]='.RF'
+    endif
+    $file=userdir+'/shapelib/'+pboxstr[3]+pboxstr[16]
+    if $#<1.5 then
+      if pboxstr[13]='a' then pboxstr[13]='b' else pboxstr[13]='a' endif
+      exists($file,'file'):$e
+      if $e>0.5 then
+        write('line3','Read parameters from %s',pboxstr[3]+pboxstr[16])
+        pboxstr[14]='Read parameters from '+pboxstr[3]+pboxstr[16]
+      else
+        if pboxstr[3]='' then
+          write('line3','Shape file name not found')
+          pboxstr[14]='Shape file name not found'
+        else
+          write('line3','Shape file name %s not found',pboxstr[3]+pboxstr[16])
+          pboxstr[14]='Shape file name '+pboxstr[3]+pboxstr[16]+' not found'
+        endif
+      endif
+    else
+      $nret=0
+      $s1=pboxstr[3]
+      $s2=0 $s3=0 $s4=0 $s5=0 $s6=0
+      exists($file,'file'):$e
+      if $e>0.5 then
+        lookup('file',$file,'skip',2)
+        lookup('read',5):$s2,$s3,$s4,$s5,$s6,$nret
+        if $nret=5 then
+          if $2='pw' then
+            return($s2)
+          elseif $2='pwr' then
+            return($s3)
+          elseif $2='pwrf' then
+            return($s4)
+          elseif $2='dres' then
+            return($s5)
+          elseif $2='dmf' then
+            return($s6)
+          elseif $2='all' then
+            return($s2,$s3,$s4,$s5,$s6)
+          else
+            return($s1) "name already in pboxstr[3]"
+          endif
+        endif
+      endif
+    endif
+    return('') "return is sometimes string, sometimes real, $VALUE handles it"
+  elseif $1='setpar' then
+    $s1=pboxstr[3]
+    $s2=0 $s3=0 $s4=0 $s5=0 $s6=0
+    pboxvnmrj('readpar','all'):$s2,$s3,$s4,$s5,$s6
+    $str=''
+    exists(pboxstr[7],'parameter'):$e
+    if $e>0.5 then {pboxstr[7]}=$s1 $str=$str+pboxstr[7]+' ' endif
+    exists(pboxstr[8],'parameter'):$e
+    if $e>0.5 then {pboxstr[8]}=$s3 $str=$str+pboxstr[8]+' ' endif
+    exists(pboxstr[9],'parameter'):$e
+    if $e>0.5 then {pboxstr[9]}=$s4 $str=$str+pboxstr[9]+' ' endif
+    exists(pboxstr[10],'parameter'):$e
+    if $e>0.5 then {pboxstr[10]}=$s2 $str=$str+pboxstr[10]+' ' endif
+    exists(pboxstr[11],'parameter'):$e
+    if $e>0.5 then {pboxstr[11]}=$s6 $str=$str+pboxstr[11]+' ' endif
+    exists(pboxstr[12],'parameter'):$e
+    if $e>0.5 then {pboxstr[12]}=$s5 $str=$str+pboxstr[12]+' ' endif
+    if pboxstr[13]='a' then pboxstr[13]='b' else pboxstr[13]='a' endif
+    if $str<>'' then
+      write('line3','Set parameter values: %s',$str)
+      pboxstr[14]='Set parameter values: '+$str
+    endif
+
+  elseif $1='typelist' then
+
+"    write('line3','making pbox shape type list')"
+    $file=userdir+'/persistence'
+    exists($file,'file'):$e
+    if $e<0.5 then mkdir($file) endif
+    $file=$file+'/pbox_typelist'
+    exists($file,'file'):$e
+    if $e>0.5 then rm($file):$x endif
+
+    $rfile=systemdir+'/wavelib'
+    shell('ls "'+$rfile+'" > "'+$file+'"'):$x
+    shell('wc -l "'+$file+'"'):$x
+    $s='' substr($x,1):$s format($s,0,0):$count
+
+    mv($file,$file+'_init')
+    lookup('file',$file+'_init')
+    pboxstr[1]=''
+    $word=''
+    write('file',$file,'excitation excitation')
+    write('file',$file,'inversion inversion')
+    write('file',$file,'refocusing refocusing')
+    $i=0
+    repeat
+      $i=$i+1
+      lookup('read'):$word
+      if ($word<>'filters' and $word<>'excitation' and $word<>'inversion' and $word<>'refocusing') then
+        if $word='usr' then
+          $z='' shell('ls "'+$rfile+'/usr"'):$z
+          if $z<>'' then
+            if pboxstr[1]='' then pboxstr[1]=$word endif
+            write('file',$file,'%s %s',$word,$word)
+          endif
+        else
+          if pboxstr[1]='' then pboxstr[1]=$word endif
+          write('file',$file,'%s %s',$word,$word)
+        endif
+      endif
+    until ($i>=$count)
+    rm($file+'_init'):$x
+
+  elseif $1='namelist' then
+
+    $file=userdir+'/persistence'
+    exists($file,'file'):$e
+    if $e<0.5 then mkdir($file) endif
+    $file=$file+'/pbox_namelist'
+    exists($file,'file'):$e
+    if $e>0.5 then rm($file):$x endif
+
+    if pboxstr[1]='' then pboxstr[1]='excitation' endif
+    $rfile=systemdir+'/wavelib/'+pboxstr[1]
+    exists($rfile,'file'):$e
+    if $e<0.5 then pboxstr[1]='excitation' endif
+    $rfile=systemdir+'/wavelib/'+pboxstr[1] "should also check existence?"
+    shell('ls "'+$rfile+'" > "'+$file+'"'):$x
+    shell('wc -l "'+$file+'"'):$x
+    $s='' substr($x,1):$s format($s,0,0):$count
+
+    mv($file,$file+'_init')
+    lookup('file',$file+'_init')
+    pboxstr[2]=''
+    $word=''
+    $i=0
+    repeat
+      $i=$i+1
+      lookup('read'):$word
+      if pboxstr[2]='' then pboxstr[2]=$word endif
+      write('file',$file,'%s %s',$word,$word)
+    until ($i>=$count)
+    rm($file+'_init'):$x
+    $type=pboxstr[1]
+    if $type='excitation' then
+      pboxstr[5]='xy'
+    elseif $type='inversion' or $type='refocusing' or $type='flipback' then
+      pboxstr[5]='z'
+    endif
+"    write('line3','making pbox shape name list (%s), choice %s',$rfile,pboxstr[2])"
+
+  endif
+endif

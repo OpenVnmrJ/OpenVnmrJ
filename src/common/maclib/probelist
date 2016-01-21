@@ -1,0 +1,491 @@
+"macro probelist"
+"macro probelist"
+probeid('enabled'):$probeid
+
+exists('probeattr','parameter','global'):$e
+if $e<0.5 then
+  create('probeattr','string','global')
+  setprotect('probeattr','on',256,'global')
+  probeattr='user','zero','n','a','Probe','user'
+endif
+
+$size=size('probeattr')
+if($size<6) then probeattr[6]='user' endif
+// probeattr[1]='user' or 'system' indicates write permission
+// probeattr[6]='user' or 'system' indicates selection of user or system probe file.
+if $#>0.5 then
+  if $1='init' then
+    exists('ProbePopup','maclib'):$macex
+    if ($macex) then ProbePopup abort endif
+    if $probeid then probeid('check'):$probeOK endif // start probe server if necessary
+    if (operator<>owner) then
+      write('line3','Operator \'%s\' cannot change probe files.',operator)
+      abort
+    endif
+    probeattr[1]='user' probeattr[3]='n' probeattr[5]='Probe'
+    if probe<>'' then 
+      // produce a meaningful starting value for the system/user pulldown
+      exists(systemdir+'/conpar','file','rw'):$settype // for semantic consistency
+      if $probeid then 
+        $owner='user' probeid('fexists',probe):$e,$owner
+        if ($owner='system' and $settype) then probeattr[1]='system' endif
+      else
+        $e=0 $d=userdir exists(probe,'probes'):$e,$d
+        strstr($d,systemdir):$sys
+        if ($sys=1 and $settype) then probeattr[1]='system' endif
+      endif
+    endif
+    probelist('makenucmenu')
+  elseif($1='getProbePath') then
+    if probe='' or probe=' ' then return(':none:') endif
+    if $probeid then
+      exists('probeidattr','parameter','global'):$e
+      if $e then
+        return(probe+':'+probeidattr[3])
+      else
+        return(probe)
+      endif
+    endif
+    $s=''
+    substr(probe,1,1):$s
+    strstr(probe,'/probes/'):$n
+    if($s='/' and $n>0) then return(probe) endif
+    exists(probe,'probes'):$e,$path
+    return($path)
+  elseif $1='copy' then
+    if $probeid > 0.5 then
+      probeid('copy',probe):$d
+    else
+      exists(systemdir+'/probes','file','rw'):$d
+      if $d<0.5 then
+        write('error','Cannot copy files to %s/probes.',systemdir)
+        return
+      endif
+      shell('cp -r '+userdir+'/probes/'+probe+' '+systemdir+'/probes/'):$x
+    endif
+    // copy shape file for C13
+    $shapePath=''
+    getparam('decwave','C13'):$shapePath
+    if($shapePath<>'') then
+      if $probeid then
+        $shapeFile=$shapePath+'.DEC'
+        probeid('fexists',$shapeFile,'probes/'+probe,'user'):$e
+        if ($e) then
+          probeid('blob:r',$shapeFile,'probes/'+probe,'user'):$shapePath
+        endif
+      else
+      	$shapePath=userdir+'/probes/'+probe+'/'+$shapePath+'.DEC'
+      	exists($shapePath,'file'):$e
+      endif
+      if($e) then
+        shell('cp '+ $shapePath+' '+systemdir+'/shapelib/'):$xx
+      endif
+    endif
+    // or copy all .DEC to shapelib
+    // shell('cp -f '+userdir+'/probes/'+probe+'/*.DEC '+systemdir+'/shapelib/'):$xx
+    if $probeid then
+      probeid('fexists',probe,'/probes/'+probe,'system'):$d
+    else
+      exists(systemdir+'/probes/'+probe,'file'):$d
+    endif
+    if $d>0.5 then
+      write('line3','Probe file %s copied to system directory.',probe)
+    else
+      write('error','Could not copy probe file %s to system directory.',probe)
+    endif
+
+  elseif $1='makenucmenu' then
+    $e=0
+    if not(probe='' or probe=' ') then
+      if ($probeid > 0.5) then
+        probeid('fexists',probe):$e
+      else
+        $file=userdir+'/probes/'+probe+'/'+probe
+        exists($file,'file'):$e
+        if $e<0.5 then
+          $file=systemdir+'/probes/'+probe+'/'+probe
+          exists($file,'file'):$e
+        endif
+      endif
+    
+      if $e>0.5 then
+        $nucfile=userdir+'/persistence/probe_nuc'
+        write('reset',$nucfile)
+        $word='' $title=0 $nuc='' $nuc1=''
+        $attr='' $val='' $size=0
+        if ($probeid > 0.5) then
+      	probeid('readfile',probe):$tmp
+        	readfile($tmp,'$attr','$val','','local'):$size
+      	probeid('cleanup',$tmp)
+        else
+        	readfile($file,'$attr','$val','','local'):$size
+        endif
+        if $size>1e4 then $size=1e4 endif
+        $i=0
+        repeat
+          $i=$i+1
+          $word=$attr[$i]
+          strstr($word,':'):$title
+          if ($title>0.5) then
+            if $word<>'NAME:' and $word<>'ID:' then
+              length($word):$len
+              substr($word,1,$len-1):$nuc
+              write('file',$nucfile,'%s %s',$nuc,$nuc)
+              if $nuc1='' then $nuc1=$nuc endif
+            endif
+          endif
+        until ($i>=$size)
+        probeattr[5]=$nuc1
+      endif
+    endif
+
+    // NB: Is this needed? mtune doesn't understand 'makenuclist'.
+    if $e or not $probeid then
+      mtune('makenuclist')
+    endif
+
+  elseif $1='selectprobe' then
+    if $2=':none:' then
+      probe=' '
+      if probeattr[4]='a' then probeattr[4]='b' else probeattr[4]='a' endif
+      return
+    endif
+    if $#>1.5 then
+      probeattr[1]='user'
+      probeattr[6]='user'
+      exists(systemdir+'/conpar','file','rw'):$settype
+      substr($2,1,1):$s
+      $file=''
+      if $probeid then
+        strstr($2,':'):$pos,$probe,$sys // look for probe:'system' or probe:'user'
+        if $pos <> 0 then
+          $file=$probe // to ensure to bypass $file='' test below
+       	  probeattr[6]=$sys
+       	  if $settype=1 then probeattr[1]=probeattr[6] endif
+          probeid('set',$probe)
+       	  probe=$probe
+        endif
+      else // not $probeid
+      	if($s='/') then
+      	  // if (a) $2 is an absolute path name and (b) specifies an existing
+      	  // file in the '/probes/' directory then if (c) it is a system file,
+      	  // set probeattr[6] and to 'system' and, if (d) a writeable 
+      	  // system /conpar file exists, also set probeattr[1] to 'system'.
+      	  //
+	  strstr($2,'/probes/'):$n,$s1,$s2
+          exists($2,'file'):$e
+	  if($n>0 and $e>0) then
+	    $file=$2
+	    probe=$s2
+	    $2=$s2
+	    if($s1=systemdir) then
+	      probeattr[6]='system'
+	      if($settype=1) then
+	        probeattr[1]='system'
+	      endif
+	    endif // a system probefile
+          endif // an existing probe file
+        endif // absolute pathname
+      endif // not $probeid
+
+      if($file='') then // it's not an absolute pathname
+        if $probeid then
+	  probeid('fexists',$2,'/probes/'+$2):$e,probeattr[6]
+        else
+       	  $file=userdir+'/probes/'+$2
+       	  exists($file,'file'):$e
+        endif
+       	if $e>0.5 then
+       	  probe=$2
+       	else // doesn't exist
+       	  $file=systemdir+'/probes/'+$2
+       	  exists($file,'file'):$d
+       	  if $d>0.5 then
+       	    probeattr[6]='system'
+       	    if $settype=1 then probeattr[1]='system' endif
+       	    probe=$2
+       	  else
+       	    write('line3','warning: probe file %s not found',$2)
+       	  endif
+       	endif // doesn't exist
+      endif // not an absolute pathname
+      if probeattr[4]='a' then probeattr[4]='b' else probeattr[4]='a' endif
+      probelist('makenucmenu')
+      vnmrjcmd('pnew','probe')
+    endif
+
+  elseif $1='add' then
+    // usage: $0('add',<'lk',<'system'|'local'> >)
+    if probe=' ' or probe='' then
+      write('error','No probe file name specified')
+      return
+    endif
+    if $probeid < 0.5 then // legacy probe
+      // probeid gets template in addlkpars
+      probeidez('native'):$probeidez 
+      if $probeidez then
+	probeidez('template'):$e,$template
+        if not $e then return endif
+      else
+      	exists(systemdir+'/probes/probe.tmplt','file'):$e
+      	if $e<0.5 then
+      	  write('error', 'Could not create probe, file missing: %s.'
+      			     , systemdir+'/probes/probe.tmplt')
+      	  return
+      	endif
+      endif
+    endif
+    if $#>1.5 then
+      if $2='lk' then
+        if probeattr[1]='system' then
+          addlkpars(probe,'system')
+        else
+	  if $probeid < 0.5 then
+            addlkpars(probe,'local')
+          else                   // TODO: reconcile these 2
+            addlkpars(probe,'user')
+          endif
+        endif
+      endif
+      return
+    endif
+    probelist('check',probe)
+    write('line3','Adding %s probe file %s ... ',probeattr[1],probe)
+    $ok=0
+    if probeattr[1]='system' then
+      if probeattr[2]='stdpar' then
+        addprobe(probe,'system','stdpar'):$ok
+      else
+        addprobe(probe,'system'):$ok
+      endif
+    else
+      if probeattr[2]='stdpar' then
+        addprobe(probe,'stdpar'):$ok
+      else
+        addprobe(probe):$ok
+      endif
+    endif
+    if not $ok then 
+      write('line3','Probe file %s was not added', probe)
+      return 
+    endif
+    probelist('makenucmenu')
+    probe=probe
+    vnmrjcmd('pnew','probe')
+    write('line3','Probe file %s added.',probe)
+
+  elseif $1='rm' then
+    // delete a probe configuration
+    $e=0
+    if probe='' or probe=' ' then 
+      write('error','No probe file selected')
+      return 
+    endif
+    if $probeid > 0.5 then
+      probeid('rm',probe,probeattr[1]):$ok
+      probeid('fexists',probe,probeattr[1]):$e
+    else // legacy probe files
+      if probeattr[1]='system' then
+        $file=systemdir+'/probes/'+probe
+      else
+        $file=userdir+'/probes/'+probe
+      endif
+      exists($file,'file'):$d
+      if $d>0.5 then
+        rm('-r',$file):$x
+        exists($file,'file'):$e
+      endif
+    endif // no probeid
+
+    if $e>0.5 then
+      write('error','Could not delete probe file %s.',probe)
+      return
+    else
+      write('line3','Probe file %s deleted.',probe)
+      $list=userdir+'/persistence/probe_list'
+      exists($list,'file'):$e
+      $val=':none:'
+      //if $e>0.5 then
+      //  lookup('mfile',$list,'delimiter',' "\n\r\t','skip',2,'read','filekey'):$val,$key
+      //  if $val=$file then
+      //    lookup('mfile',$key,'delimiter',' "\n\r\t','skip',2,'read'):$val
+      //  endif
+      //endif
+      if $val<>'' then
+        probelist('selectprobe',$val) // probe=$val
+      else
+        probe=''
+        probelist('makenucmenu')
+        vnmrjcmd('pnew','probe')
+      endif
+    endif
+
+  elseif $1='probeex' then
+    if (probe='' or probe=' ') then return(-1) endif
+    if ($probeid > 0.5) then
+      probeid('fexists',probe,'probes/'+probe,probeattr[1]):$e
+      if $e>0 then $d=1 else $d=0 endif
+    else
+      if probeattr[1]='system' then
+        $file=systemdir+'/probes/'+probe
+      else
+        $file=userdir+'/probes/'+probe
+      endif
+      exists($file,'file'):$d
+    endif
+    return($d*2-1)  // return -1 or 1 to signal GUI to "show" corresponding list entry
+
+  elseif $1='check' then
+    if $#>1.5 then
+      $name=$2
+      $s='' $r=0 $ok=0
+      $file=userdir+'/persistence/probe_list_user'
+      exists($file,'file'):$e
+      if $e>0.5 then
+	$key=$file
+        repeat
+          lookup('mfile',$key,'read','filekey'):$s,$key,$r
+          if $s=$name then $ok=1 endif
+        until ($r<1.5 or $ok>0.5)
+        if $ok=1 then
+          write('error','warning: probe name \'%s\' already exists in user directory.',$name)
+        endif
+      endif
+      $ok=0
+      $file=userdir+'/persistence/probe_list_system'
+      exists($file,'file'):$e
+      if $e>0.5 then
+	$key=$file
+        repeat
+          lookup('mfile',$key,'read','filekey'):$s,$key,$r
+          if $s=$name then $ok=1 endif
+        until ($r<1.5 or $ok>0.5)
+        if $ok=1 then
+          write('error','warning: probe name \'%s\' already exists in system directory.',$name)
+        endif
+      endif
+      probe=$name
+    endif
+    return
+
+  elseif $1='list' then
+    // list probe files without probe ID
+    $chdir = 'cd '+$2+'; '
+    $list  = '/bin/ls -1 | grep -v probe.tmplt '
+    $exist = '| awk \'{if (system("[ -f " $1 "/" $1 " ] ")==0) {print $1 "/" $1}}\' '
+    $filter= '| xargs -r grep -L -E \'^ID[:][[:space:]]+\' '
+    $fix   = '| sed \'s/^.*\\///\''
+    $cmd   = '(('+ $chdir + $list + $exist + $filter + $fix + ') > '+$3+' && echo 1)'
+    $ok=0 shell($cmd):$ok
+    return($ok)
+  endif
+
+endif
+
+$file=userdir+'/persistence'
+exists($file,'file'):$e
+if $e<0.5 then mkdir($file) endif
+$file=$file+'/probe_list'
+exists($file,'file'):$e
+if $e>0.5 then rm($file):$x endif
+
+exists($file+'_user','file'):$e
+if $e>0.5 then rm($file+'_user'):$x endif
+
+if $probeid > 0.5 then
+  $ef=1                       // assume probeid has a user probe directory
+else
+  $rfile=userdir+'/probes'
+  exists($rfile,'file'):$ef
+endif
+
+probeidez('native'):$probeidez
+
+//---> here's where we create the user probe list
+$probelist='' $j=1
+if $ef>0.5 then
+  $x=''
+  if $probeid > 0.5 then
+    probeid('list',$file+'_user','user')
+  else // legacy mode
+    $native=0 probeidez('native'):$native
+    if $native then 
+      probeidez('ls','probefiles',$rfile,$file+'_user'):$x
+    else
+      probelist('list',$rfile,$file+'_user')
+      //shell('ls '+$rfile+' > '+$file+'_user'):$x
+    endif
+  endif
+  $x='' shell('wc -l '+$file+'_user'):$x             
+  $s='' substr($x,1):$s format($s,0,0):$ucount
+  if $ucount>0.5 then
+    $key=$file+'_user'
+    $word=''
+    $i=0
+    repeat
+      $i=$i+1
+      lookup('mfile',$key,'read','filekey'):$word,$key
+      if probe='' and not probeiden then probe=$word endif
+      if $probeid then
+        write('file',$file,'"%-27s (User)" "%s"',$word,$word+':user')
+      else
+        write('file',$file,'"%-27s (User)" "%s"',$word,userdir+'/probes/'+$word)
+      endif
+      $probelist[$j]=$word $j=$j+1
+      //write('file',$file,'"%-27s (User)" "%s"',$word,$word)
+    until ($i>=$ucount)
+  endif
+endif
+
+//---> here's where we create the system probe file
+exists($file+'_system','file'):$e
+if $e>0.5 then rm($file+'_system'):$x endif
+if $probeid > 0.5 then
+  $es=1                       // assume probeid has a system probe directory
+else
+  $rfile=systemdir+'/probes'
+  exists($rfile,'file'):$es
+endif
+
+if $es>0.5 then
+  $x=''
+  if $probeid > 0.5 then
+    probeid('list',$file+'_system','system')
+  else // legacy mode
+    $native=0 probeidez('native'):$native
+    if $native then 
+      probeidez('ls','probefiles',$rfile,$file+'_system')
+    else // don't list probeid files by default
+      probelist('list',$rfile,$file+'_system')
+    endif
+  endif
+  $x='' shell('wc -l '+$file+'_system'):$x
+  $s='' substr($x,1):$s format($s,0,0):$scount
+  if $scount>0.5 then
+    $key=$file+'_system'
+    $word=''
+    $i=0
+    repeat
+      $i=$i+1
+      lookup('mfile',$key,'read','filekey'):$word,$key
+      if $word<>'probe.tmplt' then  "remove /vnmr/probes/probe.tmplt dummy file"
+	teststr('$probelist',$word,'local'):$isin
+	if ($isin=0) then
+           if probe='' and not probeiden then probe=$word endif
+           if $probeid then
+              write('file',$file,'"%-25s (System)" "%s"',$word,$word+':system')
+           else
+	      write('file',$file,'"%-25s (System)" "%s"',$word,systemdir+'/probes/'+$word)
+           endif
+	   $probelist[$j]=$word $j=$j+1
+	endif
+      endif
+    until ($i>=$scount)
+  endif
+  " could compare with userdir probe list variable to see if systemdir probe"
+  " matches, then remove it"
+endif
+
+write('file',$file,'"None" ":none:"')
+// make sure that GUI elements monitoring probeattr are updated
+if probeattr[4]='a' then probeattr[4]='b' else probeattr[4]='a' endif

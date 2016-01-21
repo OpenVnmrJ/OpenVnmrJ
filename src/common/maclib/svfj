@@ -1,0 +1,999 @@
+"macro svfj"
+" svfj / svsj /svlsj / svxyj / svllj - save data in JCAMP-DX format "
+" Usage:								    "
+"   svfj<(name<,opt>)>             Saves FID                                "
+"   svsj<(name<,opt>)>             Saves spectrum, 16-bit integer precision "
+"   svlsj<(name<,opt>)>            Saves spectrum, 24-bit integer precision "
+"   svxyj<(name)>                  Saves spectrum in X,Y format             "
+"   svllj<(name<,'all'><,'noll'>)> Saves line listing in X,Y<,M> format     "
+
+" 2006-11-19 - r.kyburz "
+" 2007-03-15 - r.kyburz, adjusted for VnmrJ 2.2C "
+
+
+$version=$0+' version 9.4, 2007-03-15'
+
+$tail='tail'
+exists('/usr/xpg4/bin/tail','file','x'):$e
+if $e then
+  $tail='/usr/xpg4/bin/tail'
+endif
+$isok=0
+$abort=0
+$jdxfid=''
+$jdxspec=''
+$jdxlspec=''
+$listparam=''
+getbinpath('jdxfid'):$isok,$jdxfid
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'jdxfid\' not found', $0)
+  $abort=1
+endif
+getbinpath('jdxspec'):$isok,$jdxspec
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'jdxspec\' not found', $0)
+  $abort=1
+endif
+getbinpath('jdxlspec'):$isok,$jdxlspec
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'jdxlspec\' not found', $0)
+  $abort=1
+endif
+getbinpath('listparam'):$isok,$listparam
+if ($isok=0) then
+  write('error','%s:  UNIX executable \'listparam\' not found', $0)
+  $abort=1
+endif
+if ($abort<>0) then
+  write('error','%s:  Aborting due to missing UNIX executable(s).', $0)
+  return
+endif
+
+" Default file name extension used for ALL exported JCAMP-DX files "
+" unless an alternative extension is specified with the file name. "
+$extension='.dx'
+
+
+" +--------------------------------+ "
+" | check arguments, set file name | "
+" +--------------------------------+ "
+$name=''
+$opt=''
+$opt2=''
+if $#=0 then
+  $dir=''
+  if file<>'exp' then
+    exists(file,'directory'):$e
+    if $e then
+      $dir=file
+    else
+      exists(file+'.fid','directory'):$e
+      if $e then
+        $dir=file+'.fid'
+      endif
+    endif
+    if $dir<>'' then
+      exists($dir,'file','rwx'):$e
+      if not($e) then
+        $dir=''
+      endif
+    endif
+    if $dir<>'' then
+      $base=''
+      shell('basename',$dir,'.fid'):$base
+      $name=$dir+'/'+$base
+    endif
+  endif
+  while $name='' do
+    input('Enter filename for JCAMP-DX file: '):$name
+  endwhile
+else
+  if not(typeof('$1')) then
+    write('error','%s: file argument cannot be numeric!',$0)
+    return
+  endif
+  $name=$1
+  if $#>1 then
+    " svxyj: optional filename argument "
+    if $0='svxyj' then
+      write('error','Usage:  %s<(filename)>',$0)
+      return
+
+    " svllj: optional filename, 'all' and 'noll' arguments "
+    elseif $0='svllj' then
+      if $#=2 then
+        if $2='all' then
+	  $opt='all'
+        elseif $2='noll' then
+	  $opt2='noll'
+        else
+	  write('error','Usage:  %s<(filename<,\'all\'><,\'noll\'>)>',$0)
+          return
+        endif
+      elseif $#=3 then
+	if (($2='all')and($3='noll'))or(($2='noll')and($3='all')) then
+	  $opt='all'
+	  $opt2='noll'
+	else
+	  write('error','Usage:  %s<(filename<,\'all\'><,\'noll\'>)>',$0)
+          return
+        endif
+      else
+	write('error','Usage:  %s<(filename<,\'all\'><,\'noll\'>)>',$0)
+        return
+      endif
+
+    " for other commands >2 arguments is an error "
+    elseif $#>2 then
+      write('error','Usage:  %s<(filename<,opt>)>',$0)
+      return
+
+    " check 2nd argument for other commands "
+    else
+      if not(typeof('$2')) then
+        write('error','%s: option argument cannot be numeric!',$0)
+        return
+      endif
+      $ch1=''
+      substr($2,1,1):$ch1
+      if $ch1='-' then
+        $opt=$2
+      else
+        $opt='-'+$2
+      endif
+      $ok=0
+      if ($opt='-difdup')or($opt='-dif')or($opt='-dup')or($opt='-sqz') then
+        $ok=1
+      elseif ($opt='-pac')or($opt='-fix')or($opt='-tbl') then
+        $ok=1
+      endif
+      if $ok=0 then
+        write('error','%s: option = difdup|dif|dup|sqz|pac|fix|tbl',$0)
+        return
+      endif
+    endif
+  endif
+endif
+
+
+" +-----------------------------------------------+ "
+" | remove extension, if specified with file name | "
+" +-----------------------------------------------+ "
+" first remove extension specified in header above "
+shell('basename',$name):$basename
+getext($basename):$basename,$ex
+if $ex<>'' then
+  format($ex,'lower'):$ex
+  $extension='.'+$ex
+endif
+length($name):$len
+length($extension):$exlen
+if $len>$exlen then
+  $ext=''
+  substr($name,$len-($exlen-1),$exlen):$ext
+  format($ext,'lower'):$ext
+  if $ext=$extension then
+    substr($name,1,$len-$exlen):$name
+  endif
+endif
+
+" now add JCAMP-DX extension and check whether file already exists "
+$name=$name+$extension
+exists($name,'file'):$e
+if $e then
+  $reply=''
+  input('file '+$name+' already exists, overwrite (y/n)? [y] '):$reply
+  substr($reply,1,1):$reply
+  if ($reply='n')or($reply='N') then
+    write('error','%s: aborting - select a new name!',$0)
+    return
+  endif
+endif
+
+$trn=''
+select:$trc
+if $trc>arraydim then
+  format(arraydim,1,0):$trn
+else
+  format($trc,1,0):$trn
+endif
+
+
+" +--------------------------------+ "
+" | construct standard date format | "
+" +--------------------------------+ "
+$date=''
+shell('date "+%Y/%m/%d %H:%M:%S"'):$date
+shell('date "+%j%n%H%n%M"'):$ld,$lh,$lm
+shell('date -u "+%j%n%H%n%M"'):$ud,$uh,$um
+$lmin=24*60*$ld+60*$lh+$lm
+$umin=24*60*$ud+60*$uh+$um
+$mdiff=$lmin-$umin
+if $mdiff>=24*60 then
+  $mdiff=$mdiff%(24*60) - 24*60
+endif
+if $mdiff<=-24*60 then
+  $mdiff=$mdiff%(24*60) + 24*60
+endif
+if $mdiff<0 then
+  $date=$date+' -'
+  $mdiff=0-$mdiff
+else
+  $date=$date+' +'
+endif
+$mdiff=5*trunc($mdiff/5+0.4999)
+$hdiff=trunc($mdiff/60)
+$mdiff=$mdiff-60*$hdiff
+$tdiff=100*$hdiff+$mdiff
+if $hdiff<10 then
+  $date=$date+'0'
+endif
+$str=''
+format($tdiff,1,0):$str
+$date=$date+$str
+
+
+" +-------------------------------+ "
+" | core fixed header information | "
+" +-------------------------------+ "
+write('reset',$name)
+$line='' $text='' $nlines=0 $ix=0
+nrecords(curexp+'/text'):$nlines
+lookup('file',curexp+'/text')
+while $ix<$nlines do
+  lookup('readline'):$line
+  if $line<>'' then
+    if $text='' then
+      $text=$line
+    else
+      $text=$text+' '+$line
+    endif
+  endif
+  $ix=$ix+1
+endwhile
+$token1='' $rev='' $subrev=''
+if (rev='') then
+  lookup('file',systemdir+'/vnmrrev','readline',1):rev
+endif
+substr(rev,1):$token1
+if $token1='VNMRJ' then
+  $sw='VnmrJ'
+  substr(rev,3):$rev
+  substr(rev,5):$subrev
+else
+  $sw='VNMR'
+  substr(rev,2):$rev
+  substr(rev,4):$subrev
+endif
+length($subrev):$len
+substr($subrev,$len,1):$lch
+if $lch=',' then
+  substr($subrev,1,$len-1):$subrev
+endif
+write('file',$name,'##TITLE=      %s',$text)
+write('file',$name,'##JCAMP-DX=   5.01   $$ OpenVnmrJ, %s Software',$sw)
+write('file',$name,'$$ %s Version %s Revision %s, %s',$sw,$rev,$subrev,revdate)
+write('file',$name,'$$ %s',$date)
+write('file',$name,'$$ %s',$version)
+$pversion=''
+$cversion=''
+if $0='svfj' then
+  shell($listparam+' -v'):$pversion
+  write('file',$name,'$$   %s',$pversion)
+  shell($jdxfid+' -v'):$cversion
+  write('file',$name,'$$   %s',$cversion)
+  write('file',$name,'##DATA TYPE=  NMR FID')
+  write('file',$name,'##DATA CLASS= NTUPLES')
+elseif $0='svllj' then
+  write('file',$name,'##DATA TYPE=  NMR PEAK TABLE')
+  write('file',$name,'##DATA CLASS= PEAK TABLE')
+else
+  shell($listparam+' -v'):$pversion
+  write('file',$name,'$$   %s',$pversion)
+  if $0='svsj' then
+    shell($jdxspec+' -v'):$cversion
+    write('file',$name,'$$   %s',$cversion)
+  elseif $0='svlsj' then
+    shell($jdxlspec+' -v'):$cversion
+    write('file',$name,'$$   %s',$cversion)
+  endif
+  write('file',$name,'##DATA TYPE=  NMR SPECTRUM')
+  write('file',$name,'##DATA CLASS= XYDATA')
+endif
+
+
+" +----------------------------------------------+ "
+" | origin - user 'origin' parameter, if present | "
+" +----------------------------------------------+ "
+exists('origin','parameter'):$e
+if $e then
+  if origin<>'' then
+    write('file',$name,'##ORIGIN=     %s',origin)
+  else
+    $e=0
+  endif
+endif
+if not($e) then
+  $host='' $domain=''
+  shell('uname -n'):$host
+  shell('domainname'):$domain
+  if $domain='' then
+    write('file',$name,'##ORIGIN=     %s',$host)
+  else
+    write('file',$name,'##ORIGIN=     %s.%s',$host, $domain)
+  endif
+endif
+
+
+" +--------------------------------------------+ "
+" | owner - user 'owner' parameter, if present | "
+" +--------------------------------------------+ "
+$user=''
+exists('owner','parameter'):$e 
+if $e then
+  if owner<>'' then 
+    $user=owner
+  endif
+endif
+if $user='' then
+  exists('operator_','parameter'):$e 
+  if $e then
+    if operator_<>'' then 
+      $user=operator_
+    endif
+  endif
+endif
+if $user='' then
+  shell(`finger | head -n 1; cat`):$hd
+  $ix=19 $ch='' $finger=''
+  repeat
+    $ix=1+$ix
+    substr($hd,$ix,1):$ch
+  until ($ix>32)or($ch<>' ')
+  $ixs=''
+  format($ix-1,1,0):$ixs
+  shell(`finger |`,$tail,`-n 1 | expand | cut -c1-`+$ixs+` | sed 's/ [ ]*/ /g'; cat`):$finger
+  length($finger):$len
+  $ix=2 $pos=0
+  repeat
+    $str=''
+    substr($finger,$ix):$str,$pos
+    if $str<>'' then
+      if $user='' then
+        $user=$str
+      else
+        $user=$user+' '+$str
+      endif
+    endif
+    $ix=1+$ix
+  until ($pos=$len)or($str='')
+  $str=''
+  substr($finger,1):$str
+  if $str<>'' then
+    if $user='' then
+      $user=$str
+    else
+      $user=$user+' ('+$str+')'
+    endif
+  endif
+endif
+if $user='' then
+  shell(`id | tr '()' '  ' | cut -d' ' -f2,2; cat`):$user
+  substr($user,1):$user
+endif
+if $user<>'' then
+  write('file',$name,'##OWNER=      %s',$user)
+endif
+
+
+" +---------------------+ "
+" | Reference frequency | "
+" +---------------------+ "
+exists('reffrq','parameter'):$e
+if $e then
+  exists('refpos','parameter'):$e2
+  if $e2 then
+    on('refpos'):$refposon
+    if ($refposon) and (refpos>0) then
+      $reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+    else
+      $reffrq=reffrq
+    endif
+  else
+    $reffrq=reffrq
+  endif
+else
+  $reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+endif
+$str=''
+
+
+" +---------------------------------------------+ "
+" | determine proton frequency for system label | "
+" +---------------------------------------------+ "
+$h1freq=0 $h1freq5=0 $frq=''
+if tn='H1' then
+  $h1freq=$reffrq
+else
+  if dn='H1' then
+    $h1freq=dfrq
+  else
+    $h1freq=h1freq
+  endif
+endif
+format($h1freq/5,1,0):$h1freq5
+format($h1freq5*5,1,0):$frq
+
+
+" +-----------------------+ "
+" | determine system type | "
+" +-----------------------+ "
+$rftype='' $sys=''
+$console='' $sysconsole=''
+exists('Console','parameter','systemglobal'):$e
+if $e then
+  if Console<>'' then
+    $sysconsole=Console
+  endif
+endif
+exists('console','parameter'):$e
+if $e then
+  if console<>'' then
+    $console=console
+  else
+    $console=$sysconsole
+  endif
+endif
+shell('echo',$console,'| awk -F: \'{print $NF}\'; cat'):$console
+if $console<>'' then
+  format($console,'upper'):$console
+  if $console='VXRS' then
+    $sys='VXR-'+$frq+'S'
+  else
+    if $console='UNITY' then
+      $sys='UNITY-'+$frq
+    else
+      if $console='UPLUS' then
+        $sys='UNITYplus-'+$frq
+      else
+        if $console='INOVA' then
+          $sys='UNITY INOVA-'+$frq
+        else
+          if $console='G2000' then
+            if $rftype='f' then
+              $sys='GEMINI 2000 '+$frq+' BB'
+            else
+              $sys='GEMINI 2000 '+$frq+' H/C'
+            endif
+          else
+            if $console='MERCURY' then
+              if $rftype='f' then
+                $sys='MERCURY-'+$frq+' BB'
+              else
+                $sys='MERCURY-'+$frq+' HFCP'
+              endif
+            else
+	      if ($console='MERCVX')OR($console='MVX') then
+ 	        if $rftype='f' then
+                  $sys='MERCURY-Vx '+$frq+' BB'
+                else
+                  $sys='MERCURY-Vx '+$frq+' HFCP'
+                endif
+	      else
+	  	if ($console='MERCPLUS')OR($console='MPLUS') then
+                  if $rftype='f' then
+                    $sys='MERCURYplus-'+$frq+' BB'
+                  else
+                    $sys='MERCURYplus-'+$frq+' HFCP'
+                  endif
+                else
+                  if $console='SISCO' then
+                    $sys='/ SISCO VIS-'+$frq
+                  else
+                    $sys=$console+'-'+$frq
+                  endif
+                endif
+	      endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+
+
+" +-----------------------------------------------------------------+ "
+" | older software - use other information to determine system type | "
+" +-----------------------------------------------------------------+ "
+if (system='VXR')and($sys='') then
+  substr(rftype,1,1):$rftype
+  if ($rftype='b')or($rftype='a') then
+    $sys='VXR-'+$frq+'S'
+  else
+    if $rftype='c' then
+      $sys='UNITY-'+$frq
+    else
+      if $rftype='d' then
+        if maxsw_loband=500000 then
+          $sys='UNITY INOVA-'+$frq
+        else
+          $sys='UNITYplus-'+$frq
+        endif
+      else
+        if $rftype='e' then
+          if fifolpsize=2048 then
+            $sys='MERCURY-'+$frq+' HFCP'
+          else
+            $sys='GEMINI-'+$frq
+          endif
+        else
+          if $rftype='f' then
+            if fifolpsize=2048 then
+              $sys='MERCURY-'+$frq+' BB'
+            else
+              $sys='GEMINI-'+$frq+' BB'
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+if $sys<>'' then
+  write('file',$name,'##SPECTROMETER/DATA SYSTEM=   Varian %s',$sys)
+endif
+
+
+" +----------------------------------+ "
+" | core variable header information | "
+" +----------------------------------+ "
+format(sfrq,9,7):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##.OBSERVE FREQUENCY= %s $$ MHz',$str)
+length(tn):$tnlen
+$ch='' $num='' $char=''
+$ix=1
+repeat
+  substr(tn,$ix,1):$ch
+  if ($ch='0') or ($ch='1') or ($ch='2') or ($ch='3') or ($ch='4') or
+     ($ch='5') or ($ch='6') or ($ch='7') or ($ch='8') or ($ch='9') then
+    $num=$num+$ch
+  else
+    $char=$char+$ch
+  endif
+  $ix=$ix+1
+until $ix>$len
+$tn=$num+$char
+write('file',$name,'##.OBSERVE NUCLEUS=   ^%s',$tn)
+if rfp>0 then
+  format(rfp/$reffrq,6,4):$str
+  length($str):$len
+  repeat $str=$str+' ' $len=$len+1 until $len>=12
+  write('file',$name,'##.SOLVENT REFERENCE= %s $$ solvent=%s',$str,solvent)
+else
+  write('file',$name,'$$solvent=%s',solvent)
+endif
+if $0='svfj' then
+  write('file',$name,'##.DELAY=             (%3.1f, %3.1f)',
+               rof2+alfa, rof2+alfa)
+  write('file',$name,'##.ACQUISITION MODE=  SIMULTANEOUS')
+endif
+$field=2.348686/100*$h1freq
+format($field,4,2):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##.FIELD=             %s $$ Tesla',$str)
+format(at,9,7):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##.ACQUISITION TIME=  %s $$ seconds',$str)
+if (ct>0) then $ct=ct else $ct=nt endif
+format($ct,1,0):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##.AVERAGES=          %s $$ number of transients',$str)
+on('fn'):$fnon
+if $fnon then
+  $fn=fn
+else
+  $fn=64
+  repeat
+    $fn=2*$fn
+  until $fn>=np
+endif
+if $0<>'svfj' then
+  format(sw/($fn/2),5,3):$str
+  length($str):$len
+  repeat $str=$str+' ' $len=$len+1 until $len>=12
+  write('file',$name,'##RESOLUTION=         %s $$ digital resolution in Hz',
+        $str)
+endif
+on('spin'):$spinon
+if $spinon then
+  format(spin,3,1):$str
+  length($str):$len
+  repeat $str=$str+' ' $len=$len+1 until $len>=12
+  write('file',$name,'##.SPINNING RATE=     %s $$ Hz',$str)
+else
+  exists('srate','parameter'):$e
+  if $e then
+    on('srate'):$srateon
+    if $srateon then
+      format(srate,1,0):$str
+      length($str):$len
+      repeat $str=$str+' ' $len=$len+1 until $len>=12
+      write('file',$name,'##.MAS FREQUENCY=     %s $$ Hz',$str)
+    endif
+  endif
+endif
+format(rp+lp,3,1):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,
+        '##.PHASE 0=           %s $$ zero order phase correction (left edge)',
+        $str)
+format(-lp/sw,8,6):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,
+        '##.PHASE 1=           %s $$ first order phase correction, deg/Hz',$str)
+if $0='svfj' then
+  write('file',$name,
+	'$$ phase parameters are for reference only and may be incorrect')
+endif
+if ($0='svsj')or($0='svlsj') then
+  write('file',$name,
+	'##.SHIFT REFERENCE= INTERNAL, Varian_reference, %d, %6.4f',
+	fn/2, -(rfl-rfp)*(fn/2-1)/(fn/2)/$reffrq)
+  write('file',$name,
+	'$$      The above referencing information is PROVISIONAL ONLY; the')
+  write('file',$name,
+	'$$      contents of this line may change with future versions of "%s"',
+	$0)
+elseif ($0='svfj') then
+  write('file',$name,
+	'##$SHIFT REFERENCE= INTERNAL, Varian_reference, %d, %6.4f',
+	1, (sw/2 + (sfrq - $reffrq)*1e6)/$reffrq)
+  write('file',$name,
+	'$$      The above label is marked "private", as it refers to the')
+  write('file',$name,
+	'$$      representation of the FID AFTER Fourier transformation.')
+  write('file',$name,
+	'$$      The above referencing information is PROVISIONAL ONLY; the')
+  write('file',$name,
+	'$$      contents of this line may change with future versions of "%s"',
+	$0)
+endif
+format((rfl-rfp)*(fn/2-1)/(fn/2),5,3):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+if ($0<>'svxyj')and($0<>'svllj') then
+  write('file',$name,'##$REFERENCE_POINT=   %s $$ Referencing label',$str)
+  write('file',$name,
+	'$$      Distance of the zero axis position (in Hz) from the last data')
+  $str='$$      point (right edge); '
+  if ((rfl-rfp)*(fn/2-1)/(fn/2) < 0) then
+    $str=$str+'negative values -> right edge is above 0 Hz'
+  else
+    $str=$str+'positive values -> right edge is below 0 Hz'
+  endif
+  write('file',$name,$str)
+endif
+
+
+" +---------------------+ "
+" | add VNMR parameters | "
+" +---------------------+ "
+write('file',$name,'$$')
+write('file',$name,'$$ Varian specific parameters')
+write('file',$name,'$$ --------------------------')
+if $0='svfj' then
+  flush
+  shell($listparam,curexp+'/procpar JCAMP | sort -k 1,1 >>',$name,'; cat'):$res
+  write('file',$name,'##$rp=           %3.1f', rp)
+  write('file',$name,'##$lp=           %3.1f', lp)
+elseif $0<>'svllj' then
+  peak:$max ai peak:$aimax
+  vs=vs*$max/$aimax peak:$newmax
+  flush
+  shell($listparam,curexp+'/procpar JS | sort -k 1,1 >>',$name,'; cat'):$res
+  write('file',$name,'##$rp=           %3.1f', rp)
+  write('file',$name,'##$lp=           %3.1f', lp)
+else
+  "omit the bulk of the VNMR parameters for 'svllj'"
+  write('file',$name,'##$rp=           %3.1f', rp)
+  write('file',$name,'##$lp=           %3.1f', lp)
+endif
+if arraydim>1 then
+  write('file',$name,'##$tracenumber=  %s', $trn)
+endif
+format(rfl,3,1):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##$rfl=          %s $$ Hz',$str)
+format(rfp,3,1):$str
+length($str):$len
+repeat $str=$str+' ' $len=$len+1 until $len>=12
+write('file',$name,'##$rfp=          %s $$ Hz',$str)
+exists('reffrq','parameter'):$e
+if $e then
+  format($reffrq,9,7):$str
+  length($str):$len
+  repeat $str=$str+' ' $len=$len+1 until $len>=12
+  write('file',$name,'##$reffrq=       %s $$ MHz',$str)
+endif
+if $0<>'svfj' then
+  write('file',$name,'##$axis=         <%s>', axis)
+  if $opt2<>'noll' then
+    format(th,3,1):$str
+    length($str):$len
+    repeat $str=$str+' ' $len=$len+1 until $len>=12
+    write('file',$name,'##$th=           %s $$ mm',$str)
+    format(sp,3,1):$str
+    length($str):$len
+    repeat $str=$str+' ' $len=$len+1 until $len>=12
+    write('file',$name,'##$sp=           %s $$ Hz',$str)
+    format(wp,3,1):$str
+    length($str):$len
+    repeat $str=$str+' ' $len=$len+1 until $len>=12
+    write('file',$name,'##$wp=           %s $$ Hz',$str)
+  endif
+  if $0<>'svllj' then
+    format(cr,3,1):$str
+    length($str):$len
+    repeat $str=$str+' ' $len=$len+1 until $len>=12
+    write('file',$name,'##$cr=           %s $$ Hz',$str)
+    format(delta,3,1):$str
+    length($str):$len
+    repeat $str=$str+' ' $len=$len+1 until $len>=12
+    write('file',$name,'##$delta=        %s $$ Hz',$str)
+  endif
+  if $opt2<>'noll' then
+    write('file',$name,'##$dmg=          <%s>', dmg)
+    write('file',$name,'##$aig=          <%s>', aig)
+    write('file',$name,'##$vs=           %3.1f', vs)
+  endif
+endif
+write('file',$name,'$$')
+write('file',$name,'$$ End of Varian specific parameters')
+write('file',$name,'$$ ---------------------------------')
+
+
+" +--------------------------------+ "
+" | comment on data storage format | "
+" +--------------------------------+ "
+if $0='svxyj' then
+  write('file',$name,'$$ data saved in X,Y format')
+elseif ($0='svllj') then
+  " perform line listing "  
+  $llfile='' $numpeaks=0 $max=0 $dept=0
+  if $opt='all' then
+    if $opt2='noll' then
+      lljdx('all','noll'):$llfile,$numpeaks,$max,$dept,$firstx,$lastx
+    else
+      lljdx('all'):$llfile,$numpeaks,$max,$dept,$firstx,$lastx
+    endif
+  elseif $opt2='noll' then
+    lljdx('noll'):$llfile,$numpeaks,$max,$dept,$firstx,$lastx
+  else
+    lljdx:$llfile,$numpeaks,$max,$dept,$firstx,$lastx
+  endif
+  if $dept=0 then
+    write('file',$name,'$$ line listing saved in X,Y format')
+  else
+    write('file',$name,'$$ line listing saved in X,Y,M format')
+  endif
+  if $opt2='' then
+    write('file',$name,'$$ range for line listing: %5.3f up to %5.3f ppm',
+	sp/$reffrq, (sp+wp)/$reffrq)
+  else
+    write('file',$name,'$$ peaks based on previous line listing')
+  endif
+  if $opt='' then
+    write('file',$name,'$$ solvent lines not included')
+  else
+    write('file',$name,'$$ solvent lines are marked "U" (unassigned)')
+  endif
+elseif ($opt='-difdup')or($opt='') then
+  write('file',$name,'$$ data saved in "DIFDUP" format')
+elseif $opt='-dif' then
+  write('file',$name,'$$ data saved in "DIF" format')
+elseif $opt='-dup' then
+  write('file',$name,'$$ data saved in "SQZ/DUP" format')
+elseif $opt='-sqz' then
+  write('file',$name,'$$ data saved in "SQZ" format')
+elseif $opt='-pac' then
+  write('file',$name,'$$ data saved in "PAC" format')
+elseif $opt='-fix' then
+  write('file',$name,'$$ data saved in "FIX" format')
+elseif $opt='-tbl' then
+  write('file',$name,
+        '$$ data saved in tabular form ("FIX" with 1 Y-value per line)')
+endif
+
+
+" +--------------------+ "
+" | ================== | "
+" |  NOW ADD THE DATA  | "
+" | ================== | "
+" +--------------------+ "
+
+" +----------+ "
+" | FID DATA | "
+" +----------+ "
+if $0='svfj' then
+  " data header "
+  write('file',$name,'$$')
+  write('file',$name,'##NTUPLES=       NMR FID')
+  write('file',$name,
+    '##VAR_NAME=      TIME,            FID/REAL,        FID/IMAG,        PAGE NUMBER')
+  write('file',$name,
+    '##SYMBOL=        X,               R,               I,               N')
+  write('file',$name,
+    '##VAR_TYPE=      INDEPENDENT,     DEPENDENT,       DEPENDENT,       PAGE')
+  write('file',$name,
+    '##VAR_FORM=      AFFN,            ASDF,            ASDF,            AFFN')
+  $numstr=''
+  format(np/2,1,0):$numstr
+  $numstr=$numstr+','
+  length($numstr):$len
+  repeat
+    $numstr=$numstr+' ' $len=$len+1
+  until $len>11
+  write('file',$name,'##VAR_DIM=       %s     %s     %s     2',
+      $numstr,$numstr, $numstr)
+  write('file',$name,
+    '##UNITS=         SECONDS,         ARBITRARY UNITS, ARBITRARY UNITS,')
+  $rf=0 $if=0 $rl=0 $il=0
+  $rmin=0 $rmax=0 $imin=0 $imax=0 $f=0
+  shell($jdxfid,$opt,curexp+'/acqfil/fid',
+        $trn):$rf,$if,$rl,$il,$rmin,$imin,$rmax,$imax,$f
+  write('file',$name, '##FIRST=         0.0, %1.0f, %1.0f, 1',
+          $rf*$f, $if*$f)
+  write('file',$name, '##LAST=          %9.7f, %1.0f, %1.0f, 2',
+          at, $rl*$f, $il*$f)
+  write('file',$name, '##MIN=           0.0, %1.0f, %1.0f, 1',
+          $rmin*$f, $imin*$f)
+  write('file',$name, '##MAX=           %9.7f, %1.0f, %1.0f, 2',
+          at, $rmax*$f, $imax*$f)
+  write('file',$name, '##FACTOR=        %11.9f, %11.9f, %11.9f, 1',
+        1/sw, $f, $f)
+  write('file',$name, '##PAGE=          N=1')
+  write('file',$name,
+    '##DATA TABLE=    (X++(R..R)), XYDATA    $$ real data points')
+  shell('cat /vnmr/tmp/jdxfid.real >>',$name,'; cat'):$res
+  shell('rm -f /vnmr/tmp/jdxfid.real'):$res
+  write('file',$name, '##PAGE=          N=2')
+  write('file',$name,
+    '##DATA TABLE=    (X++(I..I)), XYDATA    $$ imaginary data points')
+  shell('cat /vnmr/tmp/jdxfid.imag >>',$name,'; cat'):$res
+  shell('rm -f /vnmr/tmp/jdxfid.imag'):$res
+  write('file',$name,'##END NTUPLES=   NMR FID')
+  write('file',$name,'##END=')
+  if arraydim>1 then
+    write('line3','FID #%s saved in JCAMP-DX file "%s"',$trn,$name)
+  else
+    write('line3','FID saved in JCAMP-DX file "%s"',$name)
+  endif
+
+" +------------+ "
+" | LINE LISTS | "
+" +------------+ "
+elseif $0='svllj' then
+  write('file',$name,'$$')
+  " data header "  
+  write('file',$name,'##XUNITS=        PPM')
+  write('file',$name,'##FIRSTX=        %8.6f',$firstx)
+  write('file',$name,'##LASTX=         %8.6f',$lastx)
+  write('file',$name,
+	'##YUNITS=        ARBITRARY UNITS      $$ (normalized to 100)')
+  write('file',$name,'##NPOINTS=       %d', $numpeaks)
+  if $dept=0 then
+    write('file',$name,'##PEAK TABLE=    (XY..XY)')
+  else
+    write('file',$name,'##PEAK TABLE=    (XYM..XYM)')
+  endif
+  shell('cat',$llfile,' >>',$name,'; cat'):$res
+  write('file',$name,'##END=')
+  shell('rm -f',$llfile):$dum
+  if $dept=0 then
+    if arraydim>1 then
+      write('line3','Peak list (X,Y; trace #%s) saved in JCAMP-DX file "%s"',
+	    $trn,$name)
+    else
+      write('line3','Peak list (X,Y) saved in JCAMP-DX file "%s"',$name)
+    endif
+  else
+    if arraydim>1 then
+      write('line3','Peak list (X,Y,M; trace #%s) saved in JCAMP-DX file "%s"',
+	    $trn,$name)
+    else
+      write('line3','Peak list (X,Y,M) saved in JCAMP-DX file "%s"',$name)
+    endif
+  endif
+
+" +---------------+ "
+" + SPECTRAL DATA | "
+" +---------------+ "
+else
+  if $0<>'svxyj' then
+    if $0='svsj' then
+      write('file',$name,
+          '$$ Y-values stored with standard (16-bit) integer precision')
+    else
+      write('file',$name,
+          '$$ Y-values stored with extended (24-bit) integer precision')
+    endif
+  endif
+  write('file',$name,'$$')
+  " data header "  
+  if $0<>'svxyj' then
+    write('file',$name,'##DELTAX=        %10.9f',-sw/($fn/2))
+  endif
+  write('file',$name,'##XUNITS=        HZ')
+  write('file',$name,'##YUNITS=        ARBITRARY UNITS      $$ (mm on paper)')
+  $rf=0 $if=0 $rl=0 $il=0
+  $min=0 $max=0 $f=0
+  if $0<>'svxyj' then
+    if $0='svsj' then
+      $cmd=$jdxspec
+    else
+      $cmd=$jdxlspec
+    endif
+    $phf=curexp+'/datdir/phasefile'
+    shell($cmd,$opt,$phf,$trn):$first,$last,$min,$max,$f
+    write('file',$name, '##XFACTOR=       %14.12f', (sw-sw/($fn/2))/($fn/2-1))
+    write('file',$name, '##YFACTOR=       %11.9f', $f*vs)
+    write('file',$name, '##FIRSTX=        %11.9f', sw-sw/($fn/2))
+    write('file',$name, '##LASTX=         0.000000000')
+    write('file',$name, '##MAXY=          %8.6f', $max*$f*vs)
+    write('file',$name, '##MINY=          %8.6f', $min*$f*vs)
+    write('file',$name, '##NPOINTS=       %d', $fn/2)
+    write('file',$name, '##FIRSTY=        %8.6f', $first*$f*vs)
+    write('file',$name, '##XYDATA=        (X++(Y..Y))')
+    shell('cat /vnmr/tmp/jdxspec >>',$name,'; cat'):$res
+    shell('rm -f /vnmr/tmp/jdxspec'):$res
+  else
+    $xyfile=''
+    writejxy:$min,$max,$xyfile
+    $first = sw - rfl + rfp
+    $last = sw/($fn/2) - rfl + rfp
+    write('file',$name, '##XFACTOR=       %14.12f', 1.0)
+    write('file',$name, '##YFACTOR=       %14.12f', 1.0)
+    write('file',$name, '##FIRSTX=        %8.6f', $first)
+    write('file',$name, '##LASTX=         %8.6f', $last)
+    write('file',$name, '##NPOINTS=       %d', $fn/2)
+    write('file',$name, '##MAXY=          %8.6f', $max)
+    write('file',$name, '##MINY=          %8.6f', $min)
+    lookup('file',$xyfile,'skip','read'):$firsty
+    write('file',$name, '##FIRSTY=        %8.6f', $firsty)
+    write('file',$name, '##XYDATA=        (XY..XY))')
+    shell('cat',$xyfile,' >>',$name,'; cat'):$res
+    shell('rm -f',$xyfile):$dum
+  endif
+  write('file',$name,'##END=')
+  if $0='svsj' then
+    if arraydim>1 then
+      write('line3','Spectrum #%s saved in JCAMP-DX file "%s"',$trn,$name)
+    else
+      write('line3','Spectrum saved in JCAMP-DX file "%s"',$name)
+    endif
+  elseif $0='svlsj' then
+    if arraydim>1 then
+      write('line3',
+        'Large dynamic range spectrum #%s saved in JCAMP-DX file "%s"',
+        $trn,$name)
+    else
+      write('line3',
+        'Large dynamic range spectrum saved in JCAMP-DX file "%s"',$name)
+    endif
+  else
+    if arraydim>1 then
+      write('line3','Spectrum #%s saved in X,Y JCAMP-DX file "%s"',$trn,$name)
+    else
+      write('line3','Spectrum saved in X,Y JCAMP-DX file "%s"',$name)
+    endif
+  endif
+endif

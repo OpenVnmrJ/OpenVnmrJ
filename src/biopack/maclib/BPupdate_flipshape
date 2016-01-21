@@ -1,0 +1,44 @@
+"macro BPupdate_flipshape"
+"update_flipshape - macro to update the water flip back shape         "
+"                      for dpfgse water suppression sequences         "
+"   the macro takes the current shapename (flipshape) and             "
+"   pulsewidth (flippw) and receates the shape and updates the        "
+"   corresponding power level (flippwr)                               "
+"   for the shape type a sinc90 shape is set by the macro             "
+
+exists('flippw','parameter'):$ex1 exists('flippwr','parameter'):$ex2
+exists('flipshape','parameter'):$ex3 exists('flippwrf','parameter'):$ex4
+exists('compH','parameter'):$ex5
+if (($ex1=0)or($ex2=0)or($ex3=0)or($ex4=0)or($ex5=0)) then
+  $banner='Please be sure that the following parameters'
+  $banner=$banner+'\\do exist in the current experiment:'
+  $banner=$banner+'\\                 flipshape'
+  $banner=$banner+'\\         flippwr,         flippwrf'
+  $banner=$banner+'\\         flippw,          compH'
+  banner($banner)
+  return
+endif
+if ((flipshape='')or(flippw<950)or(flippw>8000)) then
+  $banner='Please be sure that the following parameters' 
+  $banner=$banner+'\\are set properly in the current experiment:'
+  $banner=$banner+'\\       flipshape <> \'\' '
+  $banner=$banner+'\\       950<flippw<8000 usec'
+  banner($banner)
+  return
+endif
+$flippw='' $flippwr='' $flippwban=''
+ format(flippw*1e-6,6,6):$flippw 
+ format(flippw,1,1):$flippwban
+$wave='sinc90 '+$flippw+' 0 '
+opx(flipshape)
+setwave($wave)
+cpx(pw*compH, tpwr)
+ pbox_pw(flipshape+'.RF'):$flippw1 flippw=$flippw1
+ pbox_pwr(flipshape+'.RF'):$flippwr1 flippwr=$flippwr1
+ format(flippwr,0,0):$flippwr
+ $banner='The following parameters have been updated:'
+ $banner=$banner+'\\       flipshape is set to : '+flipshape
+ $banner=$banner+'\\       flippw    is set to : '+$flippwban+' usec'
+ $banner=$banner+'\\       flippwr   is set to : '+$flippwr+' dB'
+ $banner=$banner+'\\You may fine tune the pulse via flippwrf!'
+ banner($banner)

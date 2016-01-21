@@ -1,0 +1,151 @@
+"macro edit_sysgcoil"
+
+/***********************************************************************************
+* With no argument: performs 'read' then starts interactive popup
+*
+* With one of the following arguments:
+*
+* 'read': read in the gradtables file designated by sysgcoil, store values in the
+* temporary arrayed parameter gcoil_params.
+*
+* 'save': save values stored in gcoil_params to gradtables
+*************************************************************************************/
+
+//if (operator <> 'vnmr1') then
+//  write('line3','edit_sysgcoil: must be logged in as vnmr1 to run this utility')
+//  return
+//endif
+
+$file = systemdir+'/imaging/gradtables/'+sysgcoil
+$action = ''
+
+$keywords = 'coilID','boresize','trise','gmax','gxmax','gymax','gzmax','RMScurrentlimit','currentlimit','flowrate','tunechoice','gpropdelay','gxdelay','gydelay','gzdelay','b0delay'
+$keywordsize = size('$keywords')
+
+if ($# = 0) then
+  $action = 'interactive'
+elseif ($1 = 'read') then
+  $action = 'read'
+elseif ($1 = 'save') then
+  $action = 'save'
+endif
+
+if (($action = 'read') OR ($action = 'interactive')) then
+  exists($file,'file'):$ex
+  if ($ex < 0.5) then
+    write('error','edit_sysgcoil: Cannot find %s',$file)
+  endif
+
+  exists('gcoil_params','parameter'):$ex
+  if ($ex > 0.5) then destroy('gcoil_params') endif
+  exists('edit_sysgcoil_params','parameter'):$ex
+  if ($ex > 0.5) then destroy('edit_sysgcoil_params') endif
+  
+  create('gcoil_params')
+  setprotect('gcoil_params','set',256)
+  create('edit_sysgcoil_params')
+  setprotect('edit_sysgcoil_params','set',256)
+  edit_sysgcoil_params = 0,0,0                   // flags for display in popup, and writing to gradtables
+ 
+  "*** Initialize temporary array of gcoil_params ***"
+  $i = 0
+  repeat
+    $i = $i + 1
+    gcoil_params[$i] = 0.0
+  until ($i = $keywordsize)
+
+  "*** Read values from gradtables ***"
+  $i = 0
+  repeat
+    $i = $i + 1
+    lookup('file',$file,'count',$keywords[$i]):$count
+    if ($count) then
+      lookup('file',$file,'seek',$keywords[$i],'read'):gcoil_params[$i]
+    else
+      gcoil_params[$i] = 0
+    endif
+  until ($i = $keywordsize)
+
+  "*** if g[xyz]max are non-zero, set flag to display in popup ***"
+  if ((gcoil_params[5] > 0) and (gcoil_params[6] > 0) and (gcoil_params[7] > 0)) then
+    edit_sysgcoil_params[1] = 1
+  endif
+  
+  "*** read xyz current limits if different, or the single global current limit ***"
+  edit_sysgcoil_params[2] = 0                    // independent current limits on each axis are not currently supported
+  
+  "*** if any of g[xyz]delay are non-zero, set flag to display in popup ***"
+  if ((gcoil_params[13] + gcoil_params[14] + gcoil_params[15]) > 0) then
+    edit_sysgcoil_params[3] = 1
+  endif
+
+  if ($action = 'interactive') then
+    shell('uname -n'):$host
+    vnmrjcmd('popup','mode:modal','file:EditSysGCoil.xml','rebuild:yes','location:topMenuBar','pnewupdate:true','ok:edit_sysgcoil(`save`)','title:'+sysgcoil)
+  endif
+
+elseif ($action = 'save') then
+  "*** save all values to new file ***"
+  write('line3','edit_gcoil:save')
+  mv($file,$file+'.bkup'):$dummy
+  write('file',$file,'##################################################')
+  write('file',$file,'#  Gradient Coil Name: %s', sysgcoil)
+  write('file',$file,'##################################################')
+  write('file',$file,'VARIABLE NAME\tVALUE')
+  write('file',$file,'coilID\t\t%d',gcoil_params[1])
+  write('file',$file,'boresize\t%.2f cm',gcoil_params[2])
+  write('file',$file,'trise\t\t%.6f sec',gcoil_params[3])
+  if (edit_sysgcoil_params[1] = 1) then
+    write('file',$file,'gxmax\t\t%.2f gauss/cm',gcoil_params[5])
+    write('file',$file,'gymax\t\t%.2f gauss/cm',gcoil_params[6])
+    write('file',$file,'gzmax\t\t%.2f gauss/cm',gcoil_params[7])
+  else
+    write('file',$file,'gmax\t\t%.2f gauss/cm',gcoil_params[4])
+  endif
+
+  write('file',$file,'RMScurrentlimit\t%d A',gcoil_params[8])
+  write('file',$file,'currentlimit\t%d A',gcoil_params[9])
+  write('file',$file,'flowrate\t%.1f l/min',gcoil_params[10])
+  write('file',$file,'tunechoice\t%d',gcoil_params[11])
+  write('file',$file,'gpropdelay\t%.3f us',gcoil_params[12])
+  write('file',$file,'gxdelay\t%.3f us',gcoil_params[13])
+  write('file',$file,'gydelay\t%.3f us',gcoil_params[14])
+  write('file',$file,'gzdelay\t%.3f us',gcoil_params[15])
+  write('file',$file,'b0delay\t%.3f us',gcoil_params[16])
+
+  rm($file+'.bkup'):$dummy
+
+  "*** add or replace in coilIds ***"
+  
+  $coilId_fln = systemdir+'/imaging/coilIDs'
+  exists('$coilID_fln','file'):$exID  // vJ 4 doesn't have coil ID file
+if ($exID) then
+  $coilId_bkp = $coilId_fln+'.bkup'
+  mv($coilId_fln,$coilId_bkp):$e
+  $n = 2 $found = 0
+  lookup('mfile',$coilId_bkp,'filekey'):$key
+  while ($n > 1.5) do
+     lookup('mfile',$key,'readline','filekey'):$line,$key,$n
+     if ($n > 1.5) then
+        strstr($line,sysgcoil):$pos
+        if ($pos > 0) then 
+           $found = 1
+           write('file',$coilId_fln,'%5d\t%s',gcoil_params[1],sysgcoil)
+        else
+           write('file',$coilId_fln,'%s',$line)
+        endif
+     endif
+  endwhile
+
+  if ($found = 0) then
+     write('file',$coilId_fln,'%5d\t%s',gcoil_params[1],sysgcoil)
+  endif
+
+  rm($coilId_bkp)
+  setgcoil(sysgcoil)
+  destroy('gcoil_params')
+  destroy('edit_sysgcoil_params')
+ endif 
+endif    
+
+

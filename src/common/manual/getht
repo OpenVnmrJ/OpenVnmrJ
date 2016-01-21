@@ -1,0 +1,89 @@
+************************************************************************
+*  getht    -    Retrieve/Save a Hadamard frequency list from a file.  *
+************************************************************************
+
+The getht macro is used to retrieve a Hadamard frequency line list
+from a file, and sets the Hadamard parameters in an experiment.
+It may also be used to save a Hadamard frequency line list from
+the current experiment into a file.  
+
+Usage for retrieving: getht(<'htfrq1' <,'htbw1'>>)
+
+  If there is no first argument, htfrq1 is used as the Hadamard
+    frequency parameter.
+  If there is no second argument, htbw1 is used as the Hadamard
+    bandwidth, if the bandwidth is specified in the file.
+
+  In this usage, the macro retrieves the Hadamard frequency line
+    list from a file in the current workspace directory, and sets
+    the parameter values.  It also shows the parameters in the
+    Line List display in the Edit HT Freq dialog (editht macro),
+    if open.  The file to be copied is in curexp, e.g.
+
+        /export/home/vnmr1/vnmrsys/exp1/htfrq1.ll
+
+Usage for saving: getht(<'save' <,'htfrq1'>>)
+
+  If the first argument is 'save', the Hadamard frequency list is 
+    copied from the Edit HT Freq line list display to the current
+    workspace directory.
+  If there is no second argument, htfrq1 is used as the Hadamard
+    frequency parameter name.  If a second argument is specified,
+    it is used as the Hadamard frequency parameter name for
+    the save file, e.g. getht('save','htfrq2') saves the file
+    curexp + '/htfrq2.ll'.
+
+
+File format: 
+
+  The format of the file is the same as the Line List display
+  in the Edit HT Freq dialog.  
+
+  The first line is an optional title, specifying:
+    frequency [units]  bandwidth [units]
+
+    frequency units are Hz or ppm.  
+      Units of Hz are measured from center of spectrum for Hadamard
+        frequencies.  The units label is set to [Hz from center].
+      Units of ppm are referenced to the current spectrum in the
+        experiment.  In a 1D, it is referenced to the direct
+        acquisition dimension.  In a 2D, it is referenced to F1.
+    bandwidth units are assumed to be in Hz.  
+
+  The second and subsequent lines are a list of frequencies and
+  bandwidths.  The bandwidth column is optional, and assumed to be
+  20 Hz (or the current value of htbw1) if not specified.
+
+  Example #1: 
+               freq [Hz from center]
+                1172.37
+                 327.69
+                -346.37
+               -1292.10
+
+  In Example #1, the Hadamard frequencies are in Hz from the
+  center of the spectrum.  
+
+  Example #2:
+               freq [ppm]     bw [Hz]
+                7.930         20
+                5.819         16
+                4.134         20
+                1.770         20
+
+  In Example #2, the Hadamard frequencies are in ppm,
+  referenced to the current spectrum.  The frequency bandwidth
+  is set to 20 Hz for most of the frequencies, except for the
+  second frequency, which is set to 16 Hz. 
+
+
+Parameters used:
+htfrq1  - Hadamard frequency list in indirect dimension, in ppm
+            or Hz from center of spectrum.
+htbw1   - Hadamard bandwidth in indirect dimension, in Hz.  It
+            may be a single value or a list of values for each
+            element in the htfrq1 list.  
+tn      - nucleus used for frequency list.
+
+See also:
+ht HsqcHT TocsyHT editht sethtfrq1 htfrqdisp dll

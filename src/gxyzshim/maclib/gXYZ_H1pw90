@@ -1,0 +1,264 @@
+"macro gXYZ_H1pw90"
+"gXYZ_H1pw90"
+// Factorized from gxyzautocalib.  only the H1pw90 section
+
+werr='return'
+gxyzsetlocalpars
+create('execprocess','string','current',''):$dum
+create('execplot','string','current',''):$dum
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+if $# < 1 then $1='init' endif
+if ($1 = 'init') then
+
+// NOTE: Is this needed here?
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif
+
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$nuc=''
+	$solv=''
+	$solv=solvent
+	$samplename=gxyzsamplename
+	$macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+	PROTON
+	sw=40k
+	fn='n'
+	getsampglobal($macdir)
+	getmodule('calibpars')
+	getmodule('g3Dcalib')
+    	create('execprocess','string','current',''):$dum
+    	create('execplot','string','current',''):$dum
+    	setgroup('execprocess','display')
+    	setgroup('execplot','display')
+	gain='n'
+	pw=1 d1=0.5
+	exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then
+                        if maxattench1<55 then tpwr=maxattench1 endif 
+                endif
+	else
+		tpwr=55
+        endif
+	if $tempon >0.5 then temp=$temp endif
+	nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai lsfrq=0
+	pslabel='H1pw90cal'
+	werr='return'
+	"Read shims before acquiring"
+// development convenience
+	expactive:$active
+	if $active > -0.5 then readallshims endif
+	clear(2)
+	setlimit('pad',172800,0,1.25e-8)
+
+	if (($samplename='doped_h2o_20') or 
+		($samplename='doped_astm') or 
+		($samplename='astm') or  
+		($samplename='2mM_sucrose')) then 
+			gain=0 else gain=20 lb=5 
+	endif
+	$sampleisdoped=''
+	substr($samplename,1,5):$sampleisdoped
+	if $sampleisdoped='doped' then d1=2 else d1=25 endif
+// Added by Krish
+	exists('gxyzwaitflg','parameter'):$parex
+	if $parex then
+            if gxyzwaitflg='y' then
+           	pad=gxyzwait
+           	gxyzwaitflg='n'
+	    endif
+        else
+           pad=0.5
+        endif
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tofAdjust'
+        xmhaha_calib('addNode',$0+'(\'H1pw90cal1\')','next',120)
+	auargs('gradtype_aa')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'H1pw90cal1') then
+
+        cplog('H1pw90cal','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	ft('nods') f full lp=0 lsfrq=0
+	abortoff aph0 aborton
+	res
+	dres(cr,0.5):$lw
+	movetof
+	f
+	pw=24 "Try and get a 12 us pw90"
+	$arraysize=14
+	exists('maxattench1','parameter','global'):$maxattenex
+	if ($maxattenex) then
+		on('maxattench1','global'):$maxattenon
+		if ($maxattenon) then
+			$arraysize=$arraysize-(63-maxattench1)
+		endif
+	endif
+	array('tpwr',$arraysize,50,1)
+	ai
+	vp=60
+	pad=0.5
+	lb=$lw
+	wnt=$0+'(\'H1pw180check\')'
+
+	// Added by Krish
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tpwrOptimization'
+        xmhaha_calib('addNode',$0+'(\'H1pw90cal2\')','next',120)
+	auargs('gradtype_aa')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'H1pw180check') then
+	wft('acq',1,celem)
+	select(1)
+	abortoff aph0 aborton
+	select(celem)
+	peak:$ht,$freq
+	if ($ht < 0) then
+		write('line3','Null found, aborting acquisition')
+		halt('')
+		return
+	else
+		 wft(`acq`,1,celem) select(1) abortoff aph0 aborton vsadj(wc2max/3) dssh dssl('value') 
+	endif
+endif
+if ($1 = 'H1pw90cal2') then
+
+// Added by Krish
+        cplog('H1pw90cal','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=0
+	$minht=1e6 $tpwr=0 $index=0
+	repeat
+		$i=$i+1
+		select($i)
+		peak:$ht,$freq
+	until ($ht < 0) or ($i>=celem)
+	tpwr=tpwr[$i]
+	write('line3','pw90 being calibrated at %.1f dB',tpwr)
+	//Now look for the pw360
+	if d1=25 then d1=8 else d1=2 endif
+	array('pw',48,34,0.4)
+	//array('pw',46,28,0.5)
+	calcdim
+	werr='return'
+	wnt=$0+'(\'H1pw360check\')'
+
+// Added by Krish
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_pwOptimization'
+	auargs('gradtype_aa')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+
+        execprocess=$0+'(\'H1pw90cal3\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'H1pw360check') then
+	wft('acq',1,celem)
+	select(celem)
+	peak:$ht,$freq
+	if ($ht > 0) then
+		write('line3','Null found, aborting acquisition')
+		halt('')
+		return
+	else
+		 wft(`acq`,1,celem) select(1) dc vsadj(wc2max/3) dssh dssl(`value`) 
+	endif
+endif
+
+if ($1 = 'H1pw90cal3') then
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	f full wft
+	select(1)
+	vsadj
+	$i=0
+	$maxht=0 $pw360est=0 $index=0
+	repeat
+		$i=$i+1
+		select($i)
+		peak:$ht,$freq
+	until ($ht > 0) or ($i>=celem)
+	if $i>arraydim then "Maximum not found"
+		write('line3','1H pw90 calibration failed\\Check probe tuning on channel 1 and/or amplifier output')
+		abort
+	endif
+	$pw360est=pw[$i]
+	write('line3','pw360 estimated to be %.1f us at %d dB',$pw360est,tpwr)
+
+	//pw90 set to average of -ve and +ve signals over 4
+	//Easily good enough for 3D shimming
+	$pw90=(pw[$i]+pw[$i-1])/8
+	$tpwr=tpwr
+	format($pw90,0,1):$pw90
+	write('line3','pw90 set to %.1f us at %d dB',$pw90,tpwr)
+
+	$H1pw90calibfile=userdir+'/3Dshimlib/calibs/H1pw90_'+probe
+	write('reset',$H1pw90calibfile)
+	write('file',$H1pw90calibfile,'%.1f\t%d',$pw90,$tpwr)
+	pw90=$pw90
+	tpwr=$tpwr
+	
+	//Now set temporary params to pw90 and tpwr
+	exists('gxyzpw90','parameter'):$ex
+	if ($ex<0.5) then
+		create('gxyzpw90','real')
+		gxyzpw90=$pw90
+	endif
+	exists('gxyztpwr','parameter'):$ex
+	if ($ex<0.5) then
+		create('gxyztpwr')
+		gxyztpwr=$tpwr
+	endif
+		
+// NOTE: is the right?
+        fread('','usertree')
+        fread(archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par/procpar','usertree')
+        getvalue('tn','usertree'):$tn
+        if $tn='H1' then
+            setvalue('pw',$pw90,'usertree')
+            setvalue('pw90',$pw90,'usertree')
+            setvalue('tpwr',$tpwr,'usertree')
+	    create('gxyzpw90','pulse','usertree',$pw90)
+	    create('gxyztpwr','integer','usertree',$tpwr)
+	    setvalue('gxyzpw90',$pw90,'usertree')
+	    setvalue('gxyztpwr',$tpwr,'usertree')
+            fsave(archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par/procpar','usertree')
+        endif
+        fread('','usertree')
+
+endif
+

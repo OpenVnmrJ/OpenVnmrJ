@@ -1,0 +1,56 @@
+"macro ATc71"
+"ATc71" "Field Recovery Stability (z-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext
+     return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Field Recovery Stability following\\ a 10G/cm 1msec Z-axis Gradient')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       gcoil='' sysgcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   at_currenttest='grecstab_z_c'
+   array('nt',20,1,0)
+   seqfil='ATg2pul' gt1=.001 gzlvl1=10/at_gzcal
+   d2=.0001 
+   gradaxis='z'
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   sw=sw
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc71(`PART1`)'
+   ATcycle
+   au
+   write('line3','Field Recovery Stability following a Z-axis Gradient')
+   dps
+elseif ($1='PART1') then
+
+   ATsvf
+   sp=3.5p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   if shaped='s' then
+    ATrecord('ZRECOVSTABcs','Field Recovery Stability 100usec after a 10G/cm Z Gradient Pulse','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+    write('file',autotestdir+'/REPORT','Z-axis Autoshaped Gradient Recovery Stability =  %3.3f ',100-$stddev)
+   else
+    ATrecord('ZRECOVSTABc','Field Recovery Stability 100usec after a 10G/cm Z Gradient Pulse','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   endif
+   write('file',autotestdir+'/REPORT','Z-axis Recovery Stability =  %3.3f ',100-$stddev)
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+ATnext
+endif

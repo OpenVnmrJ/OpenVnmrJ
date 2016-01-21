@@ -1,0 +1,368 @@
+"macro autopause"
+"*********************************************************************"
+" autopause - a gateway macro to interrupt automation as needed       "
+"*********************************************************************"
+// The following arguments are supported
+//   service - initate process to setup a scheduled interruption
+//   save - setup scheduled interruption 
+//   resume - restart automation after scehduled interruption
+//   clear - cancel scheduled interruption
+//   exp - stop automation at the end of current experiment (default)
+//   sample - stop automation at the end of all experiment on the current sample
+//   now - stop automation NOW - but allow for interrupted acquition to rerun
+//   stop - stop automation NOW - ignore the interrupted acquisition
+"*********************************************************************"
+
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 1) then $1='exp' endif
+is_submitmode:$is
+if ($is) then 
+    write('error','curexp is in submit mode.  Cannot execute %s',$0)
+    return
+endif
+
+"****Scheduled pause options***********"
+if ($1='service') then
+	schedulepause
+	return
+elseif ($1='save') then
+	schedulepause('save')
+	return
+elseif ($1='resume') then
+	resumeautomation('admin')
+	return
+elseif ($1='clear') then
+        schedulepause('clear')
+        return
+endif
+
+pwd:$curdir
+"**********Cannot pause under certain circumstances"
+$actexp=0 $who=''
+expactive('current'):$actexp,$who
+if ($who='nobody') then
+    write('error','No acquisition is running')
+    return
+endif
+
+if ($who<>'auto') then
+  if ($1='stop') then
+    if ($# < 2) then $2='' endif
+// If arg2 is cppause, then this macro was called by
+//      cppause.  Don't send it back to avoid infinite
+//      loop.
+    if ($2<>'cppause') then
+	cppause('stop',$0)
+    else
+	write('error','Error in aborting current acquisition')
+    endif
+  else
+    	write('error','Current acquisition is not by automation.  Use cppause macro.')
+  endif
+    	return
+endif
+
+$isbusy=0
+shell('(showstat | grep -w state: | grep -c Retrieving)'):$isbusy
+if ($isbusy) then
+   write('error','Cannot pause in the middle of sample change')
+   return
+endif
+shell('(showstat | grep -w state: | grep -c Loading)'):$isbusy
+if ($isbusy) then
+   write('error','Cannot pause in the middle of sample change')
+   return
+endif
+
+cd(autodir+'/enterQ.macdir'):$dum
+$operator='' $highpriority=0
+rtv('currentsampleglobal','noabort','studyowner'):$operator
+shell('(cat currentsampleinfo | grep -w USER: | grep -w priority | grep -wc high)'):$highpriority
+cd($curdir):$dum
+
+if ($#<2) then $2='autosa' endif
+
+if ($1='sample') then
+   if (operator<>owner) then
+	write('error','Automation cannot be paused by %s',operator)
+	return
+   endif
+elseif ($2='autosa') then
+   if ($operator<>operator) and (operator<>owner) then
+      $ok=0
+      operights('editallopstudies'):$ok
+      if ($ok<0.5) then
+      	write('error','%s owns current sample. Cannot be paused by %s',$operator,operator)
+      	return
+      endif
+   endif
+   if ($highpriority) then
+      write('error','Cannot pause automation. Current sample is high priority')
+      return
+   endif
+endif
+
+"******Find out when will the automation pause"
+cd(autodir+'/enterQ.macdir'):$dum
+	$firsttime=0
+	$sampchtime=0
+        $firstexp=''
+	$stopexp=''
+        shell('(cat currentQ | head -n 1)'):$firstexp
+	substr($firstexp,2):$firsttime
+        substr($firstexp,1):$firstexp
+
+        if ($firstexp='SAMPLE_CHANGE_TIME') then
+	   $sampchtime=$firsttime
+           shell('(cat currentQ | head -n 2 | '+$tailX+' -n 1)'):$firstexp
+	   substr($firstexp,2):$firsttime
+	   $firsttime=$firsttime+$sampchtime
+           substr($firstexp,1):$firstexp
+        endif
+	$stopexp=$firstexp
+
+        $remtime=0
+        checkautoexp:$remtime
+        $sremtime=''
+        formattime($remtime):$sremtime
+
+	$tottime='' $daytime=0
+	shell('(cat currentQ | grep TOTAL)'):$tottime
+	substr($tottime,2):$daytime
+	$appdtime=''
+	formattime($daytime+$remtime-$firsttime+$sampchtime):$appdtime
+	$loc='' $locdir='' $when='' $rack='' $zone=''
+	getlocid('currentsampleinfo'):$loc,$locdir,$when,$zone,$rack
+
+	$locked=''
+	$pauselock=$locdir+'/'+$when+'/pauselock'
+	shell('(cat '+$pauselock+')'):$locked
+	if ($locked=$firstexp) and ($1='exp') then
+		$approxtime=''
+		formattime($firsttime):$approxtime
+		write('error','loc%s: %s is in SetUp. Automation will pause in approx. %s',$loc,$firstexp,$approxtime)
+	elseif ($1 = 'sample') then
+		write('error','loc%s is in progress.  Automation will pause in approx. %s',$loc,$appdtime)
+	elseif ($1 = 'now') or ($1='stop') then
+                write('error','Automation will pause NOW!!')
+	else
+		write('error','loc%s: %s is in Acquisition. Automation will pause in approx. %s',$loc,$firstexp,$sremtime)
+	endif
+
+"***************now proceed*********************"
+$arch='' $sample=''
+rtv('currentsampleglobal','noabort','archivedir'):$arch
+rtv('currentsampleglobal','noabort','sample'):$sample
+$archsamp=$arch+'/'+$sample
+$md=$archsamp+'/dirinfo/macdir'
+
+$tottime='' $daytime=0
+shell('(cat currentQ | grep TOTAL)'):$tottime
+substr($tottime,2):$daytime
+
+if ($1='stop') then $daytime=$daytime-$firsttime+$sampchtime endif
+
+$origexplist=''
+cpexplist('read',$md):$origexplist
+	" If the automation is already paused at the end of "
+	" current expeirment, act only if arg1 is now or stop"
+if ($origexplist[1]='PAUSE') then 
+	if ($1='now') or ($1='stop') then
+		$origexplist[1]=''
+		array2array($origexplist):$origexplist
+	    if ($1='stop') then
+		$origexplist[1]=''
+		array2array($origexplist):$origexplist
+	    endif
+		$oldexplist=explist
+		explist=$origexplist
+		cpexplist('write',$md)
+		explist=$oldexplist
+	else
+        	cd($curdir):$dum
+        	return($locdir)
+	endif
+endif
+
+
+"Suspend automation so, enterQ can be edited"
+autosa
+
+"If arg1 is now or stop, abort current acquisition"
+if ($1='now') or ($1='stop') then
+        killpshim:$dum
+	halt2
+	$firstexp=''
+    if ($1='now') then
+		"firstexperiment will be the currnetly running exp"
+		" put an alias entry to do rtp from dirinfo/parlib"
+	shell('(cat currentQ | head -n 1)'):$firstexp
+	substr($firstexp,1):$firstexp
+	if ($firstexp='SAMPLE_CHANGE_TIME') then
+	   shell('(cat currentQ | head -n 2 | '+$tailX+' -n 1)'):$firstexp
+	   substr($firstexp,1):$firstexp
+	endif
+	$pausepar=''
+	$parlib=$archsamp+'/dirinfo/parlib'
+	$parlist=$parlib+'/parliblist'
+	shell('(cat '+$parlist+' | grep -w \''+$firstexp+':\' | awk \'{print $2}\' | '+$tailX+' -n 1)'):$pausepar
+	if ($pausepar<>'') then
+	   $firstchar=''
+	   substr($pausepar,1,1):$firstchar
+	   if ($firstchar<>'/') then 
+		$pausepar=$archsamp+'/'+$pausepar
+	   endif
+	endif
+	$alias=$archsamp+'/dirinfo/macdir/alias'
+	write('file',$alias,'%s:   rtp(\'%s\')',$firstexp,$pausepar)
+	cpqadjexpfile($firstexp,$archsamp+'/dirinfo/macdir','')
+    endif
+
+		"Adjust cpstartQ entry"
+	shell('(cat cpstartQ | grep -vw "'+$locdir+'" > cpstartQ1)'):$dum
+	shell('mv cpstartQ1 cpstartQ'):$dum
+else
+	$firstexp='PAUSE'
+endif
+
+	"Put a autosaflag.  This will make sure the automation cannot"
+	" be resumed unless after a resumeautomation is done"
+	"  A safety such that autora is suppressed in all macros"
+setautosaflag(autodir+'/enterQ','admin')
+write('reset',autodir+'/enterQ.macdir/cppauseQ')
+write('file',autodir+'/enterQ.macdir/cppauseQ','SAMPLE#: %s',$loc)
+
+	"**********ADJUST queue information***************"
+	"Put firstexp at the head of the queue"
+	" write the explist back in dirinfo/macdir"
+$oldexplist=explist
+cpexplist('read',$md):explist
+$done=0
+while $done<1 do
+   teststr('explist','PAUSE'):$ret
+   if ($ret) then
+	explist[$ret]=''
+   else
+	$done=1
+   endif
+endwhile
+if ($1='sample') then
+	explist=explist,$firstexp
+elseif ($firstexp='PAUSE') then
+   "What if the sample is in SetUp mode?"
+      $expsize=size('explist')
+      $i=1 $setup=0
+      repeat
+	strstr(explist[$i],'SetUp'):$ret
+	if ($ret=1) then 	"This experiment is in setup mode"
+	   $setup=1
+	else
+	   if ($setup) then
+		explist[$i+1]=explist[$i+1]+' PAUSE'
+	   else
+		explist[$i]='PAUSE '+explist[$i]
+	   endif
+	   $i=$expsize
+	endif
+	$i=$i+1
+      until $i > $expsize
+      array2array(explist):explist
+      teststr('explist','PAUSE','local'):$isthere
+      if ($isthere=0) then
+	explist='PAUSE',explist
+      endif
+else
+      explist=$firstexp,explist
+endif
+cpexplist('write',$md)
+explist=$oldexplist
+
+	"*** write the required action for PAUSE in the alias file"
+	"   The action is typically autosa or PAUSE"
+if ($firstexp='PAUSE') then
+	write('file',$md+'/alias','PAUSE: %s',$2)
+endif
+
+if ($1='sample') then
+	" It is done.  quit here"
+        "The autosa is done by cpnext via the alias file"
+        autora
+	cd($curdir):$dum
+	return($locdir)
+endif
+
+if ($firstexp='PAUSE') then
+   cpexplist('read',$md):$explist
+   $expsize=size('$explist')
+   teststr('$explist','PAUSE','local'):$pausewhere
+   if ($pausewhere=$expsize) then
+	"This same as pausing at the end of the sample"
+	"  quit here"
+        "The autosa is done by cpnext via the alias file"
+	autora
+	cd($curdir):$dum
+	return($locdir)
+   endif
+endif
+
+	"*******Put the sampleinfo back on top of enterQ*********"
+	"  use currentsampleinfo to put an entry "
+write('reset','enterQ1')
+
+$s1='' $s2=''
+readfile('currentsampleinfo','$s1','$s2','','local'):$total
+teststr('$s1','MACRO:','local'):$ret
+$s2[$ret]='cpautoQresume(\''+$locdir+'\',\''+$when+'\')'
+$priority=''
+teststr('$s1','USER:','local'):$ret2
+substr($s2[$ret2],2):$priority
+if ($priority<>'priority') then
+   $s2[$ret2]=$s2[$ret2]+' priority'
+endif
+$loc=''
+teststr('$s1','SAMPLE#:','local'):$ret3
+$loc=$s2[$ret3]
+
+$i=1
+repeat
+  write('file','enterQ1','%s %s',$s1[$i],$s2[$i])
+  $i=$i+1
+until $i > $total-1
+write('file','enterQ1','---------------------------------------------')
+shell('(cat '+autodir+'/enterQ >> enterQ1)'):$dum
+shell('mv enterQ1 '+autodir+'/enterQ'):$dum
+
+"**************************************************************"
+if ($firstexp='PAUSE') then
+	"The autosa is done by cpnext via the alias file"
+   autora
+endif
+
+"************Adjust time************************************"
+
+        $curtotal=0 $curnite=0 $curprt=0
+	readTtimeQ(autodir+'/enterQ.macdir'):$curprt,$curtotal,$curnite
+	$curtotal=$curtotal+$daytime
+	$curprt=$curprt+$daytime
+	writeTtimeQ(autodir+'/enterQ.macdir',$curprt,$curtotal,$curnite)
+
+	$s1='' $r2=0
+	readfile('currentQ','$s1','$r2','','local')
+	write('reset','currentQ')
+	if ($firstexp='PAUSE') then
+		write('file','currentQ','%s %d',$s1[1],$r2[1])
+		$totaltime=$r2[1]
+		if ($s1[1]='SAMPLE_CHANGE_TIME') then
+			write('file','currentQ','%s %d',$s1[2],$r2[2])
+			$totaltime=$totaltime+$r2[2]
+		endif
+		write('file','currentQ','TOTAL %d',$totaltime)
+	endif
+	write('file',$locdir+'/'+$when+'/resumeQtime','%d',$daytime)
+
+"****************************************************************"
+cd($curdir):$dum
+updatestatus(autodir,$loc,'',$zone,$rack)
+return($locdir,$when,$stopexp)

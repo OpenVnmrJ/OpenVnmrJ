@@ -1,0 +1,75 @@
+"macro rinput"
+" ******************************************************"
+" *** rinput - create a an input file for regression ***"
+" ******************************************************"
+$filepath = curexp + '/regression.inp'
+exists($filepath,'file'):$e
+if ($e<>0) then
+   input('input file exists, overwrite? y/n? '):$answer
+   if (($answer<>'y') and ($answer<>'yes')) then
+       write('error','regression.inp not overwritten')
+       return
+   endif
+endif
+write('reset',$filepath)
+$xaxis=' '
+$done=0
+repeat
+   input('X-Axis Label? '):$xaxis
+   $done = not (($xaxis>='0') and ($xaxis<='9')) 
+   if not $done then
+      write('line3','X-axis label must not begin with a digit')
+   endif
+until $done
+write('file',$filepath,$xaxis)
+$yaxis=' '
+$done=0
+repeat
+   input('Y-Axis Label? '):$yaxis
+   $done = not (($yaxis>='0') and ($yaxis<='9')) 
+   if not $done then
+      write('line3','Y-axis label must not begin with a digit')
+   endif
+until $done
+write('file',$filepath,$yaxis)
+$maxsize=0
+$set = 0
+write('file',$filepath,'    %4.0f    %4.0f',$set,$maxsize)
+repeat 
+   write('file',$filepath,'    NEXT    ')
+   $set = $set +1
+   $i=0 
+   $ok = 1
+   repeat
+      $instring = ''
+      input('Input: X-value  Y-value: '):$instring
+      $x_string = ''
+      $y_string = ''
+      substr($instring,1):$x_string
+      substr($instring,2):$y_string
+      if ($x_string <> '') and ($y_string <> '') then
+         $i=$i+1
+         $xval = $x_string
+         $yval = $y_string
+         write('file',$filepath,'    %f    %f',$xval,$yval)
+      else
+         if ($x_string = '') and ($y_string = '') then
+            if $i>0 then
+	       $ok = 0
+	    else
+	       write('alpha','THE DATA SET MUST NOT BE EMPTY')
+            endif
+	 else
+	   write('alpha','TWO VALUES MUST BE ENTERED')
+         endif
+      endif
+   until (($i>=1024) or ($ok = 0))
+   $i=$i+1
+   
+   input('do you wish to enter another data set? y/n? '):$answer
+
+until ($set>=128) or ($answer<>'y') 
+
+autoscale
+expl('regression')
+

@@ -1,0 +1,514 @@
+"macro xmhaha_fastSQ"
+"***************************************************************"
+"  Builds studyQ in sqdir/tmpstudy based on the LIST		"
+"	supplied as an array in arg2				"
+"	arg1 is the studydir (default is study in curexp)	"
+"	arg2 is optional					"
+"	if arg2 is not supplied or is an empty string		"
+"		the default value is an array of		"
+"		fidlog,ACQlist,explist,EXPLIST,LONGLIST		"
+"	arg2='rbld' is a special keyword arguemnt to rebuild	"
+"		all subxml files in this sample directory	"
+"	Supported LISTs are SampInfo,fidlog,ACQlist,explist,	"
+"		EXPLIST and LONGLIST 				"
+"	IF an optional arg3 is supplied and is set to 'lock'	"
+"	  then all nodes are locked - i.e., queue is for	"
+"		display/convenience ONLY			"
+"***************************************************************"
+$tailX='tail'
+whichtail:$tailX
+if ($# < 1) then $1='' endif
+if ($1='') then
+   is_cpfid:$new
+   if ($new=0) then
+        iscurrentfid('',archivedir+'/'+sample):$isnew
+        if ($isnew=0) then
+                return
+        else
+                $1=archivedir+'/'+sample
+        endif
+   else
+        substr(file,'dirname'):$1
+   endif
+   if ($1='') then return endif
+endif
+
+if ($# < 2) then $2='' endif
+if ($# < 3) then $3='nolock' endif
+if ($3='lock') then
+        $forcelock='yes'
+else
+        $forcelock='no'
+endif
+if ($# < 4) then $4='' endif
+$gtitle=$4 
+if ($# < 5) then $5='' endif
+$5size=size('$5')
+
+$archsamp=$1
+$direx=0
+exists($1,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+$rbld=''
+if ($2='rbld') then
+	$rbld=$2
+	$2=''
+endif
+$fullopt=0
+if ($2='') then
+	$2='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+	$fullopt=1
+endif
+
+$xmlreturn='','','','','','','',''
+$cpnodes='' $cpnodes2=''
+$fidlog='' 
+$fidlist=''
+$explistpar=''
+$expqueuepar=''
+$acqlog=''
+$cmdnodes=''
+$EXPLIST=''
+$LONGLIST=''
+$sample='' $archive='' $samplename='' $studyowner=''
+"**************************************************************"
+substr($archsamp,'dirname'):$archive
+substr($archsamp,'basename'):$sample
+$archivedirsample=$archsamp
+exists($archsamp+'/dirinfo/macdir/sampleglobal','file'):$sgex
+if ($sgex) then
+    rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','samplename'):$samplename
+    rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','studyowner'):$studyowner
+    if ($studyowner='') then
+	rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','operator_'):$studyowner
+    endif
+else
+	$samplename=samplename
+	$studyowner=operator
+endif
+
+$fidlog='dirinfo/fidlog'
+$spectrumlog='dirinfo/spectrumlog'
+$craftlog='dirinfo/craftlog'
+$fidlist='dirinfo/fidlist'
+$explistpar='dirinfo/macdir/explist'
+$expqueuepar='dirinfo/macdir/expqueue'
+$cmdnodes='dirinfo/macdir/CMDnodes'
+$acqlog='dirinfo/macdir/ACQlist'
+$EXPLIST='dirinfo/macdir/EXPLIST'
+$LONGLIST='dirinfo/macdir/LONGLIST'
+$xmldir=$archsamp+'/dirinfo/xmldir'
+exists($xmldir,'directory'):$xmldirex
+if ($rbld='rbld') then $xmldirex=0 endif
+//Sanity check
+is_submitmode:$submit
+if ($xmldirex) and ($submit=0) then
+   $Ncount1=0 $Ncount2=0
+   shell('(cat "'+$xmldir+'/cpnodeinfo" | wc -l)'):$Ncount1
+   getfile($xmldir+'/info'):$Ncount2
+   if ($Ncount1<>$Ncount2) then 
+//  Sanity check failed !
+//  Remove the legacy xmldir and rebuild 
+	shell('rm -rf "'+$xmldir+'"'):$dum
+	$xmldirex=0 
+   endif
+endif
+
+if ($xmldirex=0) then
+   xmhaha_subSQ($archsamp)
+else
+// Check to see if study have been moved from one location
+//    to another.  If so, rebuild fidlog subxml file
+    $studypath=''
+    rtv($archsamp+'/studypar','noabort','studypath'):$studypath
+    if ($studypath<>$archsamp) then
+//  The studydirectory is moved from its previous
+//   location.  Rebuild fidlog to reflect the new
+//   studypath.  The xmhaha_subSQ will update the
+//   studypath parameter in studypar
+
+	xmhaha_subSQ($archsamp,'fidlog')
+    endif
+endif
+
+$check=0
+exists($xmldir+'/sqdir','directory'):$sqdirex
+xmhaha_fullSQ('check',$xmldir):$check
+if ($sqdirex=0) or ($check=0) then
+//  Could find the study.xml OR the study.xml is stale
+//  wrt current subxml lists.  Build it from the
+//   sub xml files.  Next time around this study.xml
+//   will be used for speedy update
+    xmhaha_fullSQ('set',$xmldir)
+endif
+
+// Rebuild Active experiment
+// But don't bother if there is no Active 
+//   experiment in ACQlist file
+$activenew=0 $active=0
+shell('(cat "'+$archsamp+'/'+$acqlog+'" | grep -wc Active)'):$active
+if ($active) then
+    xmhaha_subSQ($archsamp,'Active'):$activenew
+else
+    write('reset',$xmldir+'/active')
+endif
+if ($activenew=0) and ($fullopt) and ($5size<2) then
+//  The Active node is not relevant.  Go ahead and use
+//  the full xml from the study directory
+    $getok=0 $retnode=''
+    xmhaha_fullSQ('get',$xmldir):$getok,$retnode
+    if ($getok) then return($retnode) endif
+endif
+
+// Active node was found and built.  We have to
+//  build the study.xml from the subxml files to
+//  place the Active node in its appropriate place
+//  But this is valid ONLY for an active study (i.e., currently
+//    being acquired in the spectrometer).  For prematurely 
+//    aborted studies, the last Active node would have been
+//    converted to an error node and the macro would reconcile
+//    for a display of the study, next time around.
+"**************************************************************"
+"  Find out what info should be used to build SQ        "
+
+$sampinfo='noSampInfo'
+teststr('$2','SampInfo','local'):$ret
+if ($ret) then $sampinfo='SampInfo' endif
+
+$usefidlog='no'
+$usespectrumlog='no'
+$usecraftlog='no'
+teststr('$2','fidlog','local'):$ret
+if ($ret) then $usefidlog='yes' $usespectrumlog='yes' $usecraftlog='yes' endif
+
+$useexplist='no'
+teststr('$2','explist','local'):$ret
+if ($ret) then $useexplist='yes' endif
+
+$useEXPLIST='no'
+teststr('$2','EXPLIST','local'):$ret
+if ($ret) then $useEXPLIST='yes' endif
+
+$useACQlist='no'
+teststr('$2','ACQlist','local'):$ret
+if ($ret) then $useACQlist='yes' endif
+
+$useLONGLIST='no'
+teststr('$2','LONGLIST','local'):$ret
+if ($ret) then $useLONGLIST='yes' endif
+"**************************************************************"
+exists($archsamp+'/'+$fidlog,'file'):$fex
+exists($archsamp+'/'+$fidlist,'file'):$f2ex
+
+if ($fex=0) and ($f2ex>0) then
+   mkfidlog($archsamp)
+endif
+
+"*****All local variable defined, proceed***"
+"**********************************************************************"
+pwd:$curdir
+cd($archsamp):$dum
+$cpdir=$xmldir+'/cpnodeinfo'
+
+$tmpfile=userdir+'/persistence/'+$sample+'_tmp'
+$tmpfile2=$tmpfile+'2'
+write('reset',$tmpfile)
+
+"*************************************************************************"
+	"***Get fidlog subxml***"
+exists($fidlog,'file'):$fex
+if ($usefidlog='no') then $fex=0 endif
+if ($fex) then
+   exists($xmldir+'/fidlog','file'):$xmlfileex
+   if ($xmlfileex) then
+        $xmlreturn[1]=$xmldir+'/fidlog'
+	shell('(cat "'+$cpdir+'" | grep -w Completed | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   endif
+endif
+
+"*************************************************************************"
+        "***Get spectrumlog subxml***"
+exists($spectrumlog,'file'):$fex
+if ($usespectrumlog='no') then $fex=0 endif
+if ($fex) then
+   exists($xmldir+'/spectrumlog','file'):$xmlfileex
+   if ($xmlfileex) then
+        $xmlreturn[2]=$xmldir+'/spectrumlog'
+        shell('(cat "'+$cpdir+'" | grep -w Spectrum | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   endif
+endif
+
+"*************************************************************************"
+        "***Get craftlog subxml***"
+exists($craftlog,'file'):$fex
+if ($usecraftlog='no') then $fex=0 endif
+if ($fex) then
+   exists($xmldir+'/craftlog','file'):$xmlfileex
+   if ($xmlfileex) then
+        $xmlreturn[3]=$xmldir+'/craftlog'
+        shell('(cat "'+$cpdir+'" | grep -w Craft | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   endif
+endif
+
+"*************************************************************************"
+	"***Get errorlog subxml***"
+$Acpnames='' $Anode=''
+exists($acqlog,'file'):$aex
+if ($useACQlist='no') then $aex=0 endif
+$activenode=0
+if ($aex) then
+   exists($xmldir+'/errorlog','file'):$xmlfileex
+   if ($xmlfileex) then
+	if ($submit<0.5) then
+	    SampleViewPref('get','error'):$xmlfileex
+	endif
+   endif
+   if ($xmlfileex) then
+	$xmlreturn[4]=$xmldir+'/errorlog'
+        shell('(cat "'+$cpdir+'" | grep -w Error | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   endif
+endif
+"*************************************************************************"
+        "***Get a active subxml***"
+if ($aex) then
+   exists($xmldir+'/active','file'):$xmlfileex
+   if ($xmlfileex) then
+	$xmlreturn[5]=$xmldir+'/active'
+        shell('(cat "'+$cpdir+'" | grep -w Active | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   endif
+endif
+
+"*************************************************************************"
+        "***Get a explist subxml***"
+
+exists($expqueuepar,'file'):$eex
+if ($eex=0) then
+   exists($explistpar,'file'):$eex
+endif
+if ($useexplist='no') then $eex=0 endif
+
+if ($eex) then
+    exists($xmldir+'/expqueue','file'):$xmlfileex
+    if ($xmlfileex) then
+        $xmlreturn[6]=$xmldir+'/expqueue'
+    else
+    	exists($xmldir+'/explist','file'):$xmlfileex
+    	if ($xmlfileex) then
+		$xmlreturn[6]=$xmldir+'/explist'
+	endif
+    endif
+    if ($xmlfileex) then
+        shell('(cat "'+$cpdir+'" | grep -w Queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+endif
+
+"****************************************************************************"
+        "***Get a EXPLIST subxml***"
+
+exists($EXPLIST,'file'):$Eex
+if ($useEXPLIST='no') then $Eex=0 endif
+if ($Eex) then
+    exists($xmldir+'/EXPLIST','file'):$xmlfileex
+    if ($xmlfileex) then
+	$xmlreturn[7]=$xmldir+'/EXPLIST'
+        shell('(cat "'+$cpdir+'" | grep -w Day_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+endif
+
+"****************************************************************************"
+        "***Get a LONGLIST subxml***"
+
+exists($LONGLIST,'file'):$Lex
+if ($useLONGLIST='no') then $Lex=0 endif
+$Ltot=0
+if ($Lex) then
+    exists($xmldir+'/LONGLIST','file'):$xmlfileex
+    if ($xmlfileex) then
+	$xmlreturn[8]=$xmldir+'/LONGLIST'
+        shell('(cat "'+$cpdir+'" | grep -w Night_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+endif
+
+"****************************************************************************"
+cd($curdir):$dum
+"****************************************************************************"
+"  Now proceed to build the studyQ for this list"
+
+  $xmlsize=size('$xmlreturn')
+  $i=1
+  repeat
+     if ($xmlreturn[$i]<>'') then
+        $ok=0
+        shell('(cat "'+$xmlreturn[$i]+'" | wc -l)'):$ok
+        if ($ok=0) then $xmlreturn[$i]='' endif
+     endif
+     $i=$i+1
+  until $i>$xmlsize
+
+  $xmlex='' $xmlex2=''
+  array2string($xmlreturn):$xmlex2
+  substr($xmlex2,1):$xmlex
+  if ($xmlex='') then
+    if ($sampinfo='noSampInfo') then
+       write('line3','StudyQueue is empty in %s',$1)
+    endif
+    shell('rm -f '+$tmpfile):$dum
+    return
+  endif
+
+  $snode=''
+  cqinitCP
+  $snode=studyid
+  if ($gtitle='') then $gtitle=$sample endif
+  if ($sampinfo='noSampInfo') then
+     exists('img2cp','maclib'):$imgex
+     if ($imgex) then
+	$studyid='' $isimg=0
+	img2cp('isimgsample',$archive+'/'+$gtitle):$isimg,$studyid
+	if ($isimg) and ($studyid<>'') then
+	    $gtitle=$studyid
+	endif
+     endif
+     if ($sample='NMR') then  //This is LC NMR
+        shell('basename '+$archive):$lcid
+        $gtitle=$lcid
+     endif
+  endif
+
+  $ttxt=$samplename
+  $tt=$gtitle
+  if ($studyowner<>operator) and (operator<>owner) then
+	$tt=$tt+' (study owned by: '+$studyowner+')'
+  endif
+  is_submitmode:$submit
+  if ($sample<>'') and ($submit) then
+     if (resumeQ<>'') then
+	$ttxt=$sample+' [more on this]'
+     else
+	$ttxt=$sample+' [new sample]'
+     endif
+     $tt=$sample
+     if (replaceQ[4]<>'') then
+	$tt=$sample+' (loc'+replaceQ[4]+')'
+     endif
+  else
+        $5ret=0
+        if ($5size>1) then
+           teststr('$5','grandma','local'):$5ret
+        endif
+        if ($5ret>0) then
+	   $ttxt=$ttxt+$5[$5ret+1]
+        endif
+  endif
+
+  sqdir=cursqexp+'/tmpstudy'
+
+   $xml=sqdir+'/study.xml'
+   write('reset',$xml)
+   write('file',$xml,'<?xml version="1.0" encoding="UTF-8"?>')
+   write('file',$xml,'<!DOCTYPE template>')
+   write('file',$xml,'')
+   write('file',$xml,'<template>')
+   write('fileline',$xml,'  <protocol title="%s" ',$tt)
+   write('fileline',$xml,'type="protocol" exp="grandparent" lock="off" ')
+   write('fileline',$xml,'id="tmpstudy" tooltext="%s" expanded="true">\n',$ttxt)
+   $esq=sqdir+'/enterSQ'
+   write('reset',$esq)
+   write('reset',sqdir+'/cpnodeinfo')
+
+  if ($sampinfo='SampInfo') then
+    $attr='' $atx=1
+    $attr[$atx]='tooltext','Change Sample Info' $atx=$atx+2
+    $attr[$atx]='title','SampleInfo'  $atx=$atx+2
+    $attr[$atx]='time',''  $atx=$atx+2
+
+    $attr3='' $atx3=1
+    $attr3[$atx3]='title','SampleInfo'  $atx3=$atx3+2
+
+    xmhaha_addnode('SampInfo',$attr,$attr3,$xml)
+    shell('(cat "'+sqdir+'/cpnodeinfo" | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+  endif
+   write('reset',sqdir+'/cpnodeinfo')
+
+  $filter='Completed','Spectrum','Craft','Error','Active','Queued','Day_queued','Night_queued'
+  pwd:$curdir
+  write('reset',$tmpfile2)
+  $i=1
+  repeat
+    if ($xmlreturn[$i]<>'') then
+            shell('(cat "'+$xmlreturn[$i]+'" >> '+$xml+')'):$dum
+	    if $i=3 then
+                        // craft nodes. close protocols
+                write('file',$xml,'  </protocol>')
+            endif
+	    cd($xmldir):$dum
+	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1}\' >> '+$tmpfile2+')'):$dum
+    endif
+    $i=$i+1
+  until $i > $xmlsize
+  cd($curdir):$dum
+
+  $retnode='' $oldnode=''
+  shell('(cat '+$esq+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$retnode
+
+  shell('rm -f '+sqdir+'/cpnodeinfo'):$dum
+
+  SampleViewPref('get','scout'):$parex
+  if ($parex) and ($submit<0.5) then
+        exists($xmldir+'/scoutlog','file'):$xmlfileex
+        if ($xmlfileex) then
+            shell('(cat "'+$xmldir+'/scoutlog" | grep -c protocol)'):$xmlfileex
+        endif
+        if ($xmlfileex) then
+            shell('(cat "'+$xmldir+'/scoutlog" >> '+$xml+')'):$dum
+            cd($xmldir):$dum
+            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1}\' >> '+$tmpfile2+')'):$dum
+            shell('(cat '+$cpdir+' | grep -w Scout | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+            write('file',$xml,'  </protocol>')
+        endif
+        cd($curdir):$dum
+  endif
+
+  write('file',$xml,'  </protocol>')
+  write('file',$xml,'</template>')
+
+  $ts1='' $ts2='' $tstot=0
+  readfile($tmpfile2,'$ts1','$ts2','','local'):$tstot
+  if ($tstot) then
+    $ti=1
+    repeat
+        shell('(cp -r "'+$xmldir+'/info/'+$ts1[$ti]+'" "'+sqdir+'/info")'):$dum
+        $ti=$ti+1
+    until $ti>$tstot
+  endif
+  shell('rm -f '+$tmpfile2):$dum
+
+  vnmrjcmd('SQ delete tmpstudy')
+  vnmrjcmd('SQ read '+$xml)
+  shell('chmod -R g+w '+$xmldir):$dum
+
+// All nodes are a priori locked.  So, the forcelock option
+//   is now obsolete
+  if ($5size>1) then
+     $cpnodes='' $cpnodes2=''
+     readfile($tmpfile,'$cpnodes2','$cpnodes','','local'):$total
+     $i=1
+     repeat
+        if ($cpnodes[$i]<>'') then
+           $5ret=0
+           teststr('$5',$cpnodes[$i],'local'):$5ret
+           if ($5ret>0) then
+                xmhaha_setprop($cpnodes2[$i],'title',$cpnodes[$i]+$5[$5ret+1])
+           endif
+        endif
+        $i=$i+1
+     until $i>$total
+  endif
+
+  shell('rm -f "'+$tmpfile+'"'):$dum
+  return($retnode)

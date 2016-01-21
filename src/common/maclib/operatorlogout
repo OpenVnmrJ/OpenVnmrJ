@@ -1,0 +1,33 @@
+"macro operatorlogout"
+
+exists(systemdir+'/adm/users/profiles/user/'+owner,'file'):$fileex
+if ($fileex) then
+    $s1='' $s2=''
+    readfile(systemdir+'/adm/users/profiles/user/'+owner,'$s1','$s2','operators','local')
+    substr($s2,'wc'):$count
+    if ($count<1) then
+	vnmrjcmd('popup','mode:modal','file:confirmExit.xml','ok:exit','cancel:return','title:Confirm Exit')
+	return
+    endif
+endif
+
+pageview('clear')
+if (jviewports[1]>1.5 and jviewport>1.5) then
+  vnmrjcmd('VP 1 '+$0)
+  return
+endif
+is_submitmode:$issubmit
+operights('canexitsubmitmode'):$ok
+
+if ($issubmit) and ($ok) then 
+    walkupQ('logout')
+    UserPrefs('updateprefs')
+endif
+fastuserlogin('logout')
+is_postvj22b:$vj22c
+if ($vj22c) then
+   acct('done')
+endif
+dousermacro($0)
+//vnmrjcmd('util', 'logout')
+showloginbox

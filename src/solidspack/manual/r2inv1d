@@ -1,0 +1,98 @@
+Protocol: R2inv1d  Sequence: r2inv1d.c  Apptype: solidseq1d
+
+Description: 
+
+    A selective inversion on "X" using a hard 90 and a soft 180 after 
+    a ramped CP preparation, a rotor-synchronized mixing period
+    and an "X" detection pulse, with TPPM or SPINAL decoupling,  
+    separate TPPM or SPINAL decoupling levels during mixing and 
+    acquisition. 
+
+Parameter  Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).  
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must 
+              be set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phXhx); 
+ 
+r2invX:  Module:  no
+Sequence:  r2inv1d.c
+Description:  Implements a selective inversion pulse on obs between two
+              90-degree pulses with a mixing period after the second
+              pulse to provide a 1D rotational resonance measurement.
+Parameters:  Sequence Page
+       aXr2inv - amplitude of the hard obs pulses.
+       asXr2inv - amplitude of the selective pulse.
+       dbXr2inv - attenautor setting for the selective pulse.
+       pwXr2inv - 90-degree flip of the obs hard pulse.
+       pwsXr2inv - 180-degree flip of the obs selective pulse.
+       tXr2inv - delay period for spin diffusion.
+       ofsXr2inv - offset of the selective pulse.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

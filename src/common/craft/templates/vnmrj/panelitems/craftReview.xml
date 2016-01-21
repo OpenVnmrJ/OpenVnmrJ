@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craftReview" element="groups" type="processing" >
+    <group size="410 750" 
+      vq="craftnmrparRef"
+      border="None"
+      reference="craftReview"
+      subtype="Basic"
+      expanded="yes"
+      useref="yes"
+      >
+      <group loc="5 10" size="400 180"
+        style="Heading1"
+        reference="craftWorkspace"
+	label="CRAFT workspace"
+      	bg="transparent"
+       	border="Etched"
+      	subtype="Titled"
+      	expanded="no"
+	useref="yes"
+      	>
+        <group loc="0 97" size="390 20"
+          vq="craftnmrparRef"
+          show="$SHOW=(((craftnmrpar[14]='none') or (craftnmrpar[14]='')))"
+          >
+	  <label loc="10 0" size="60 20"
+	    style="Label1"
+	    label="Title"
+	    />
+	  <entry loc="70 0" size="240 20"
+	    style="PlainText"
+	    vq="craftnmrparRef"
+	    vc="ckstring('$VALUE'):craftnmrpar[33] craft('pnew')"
+	    set="$VALUE=craftnmrpar[33]"
+	    />
+	  <button loc="320 0" size="70 20"
+	    style="Heading2"
+	    label="Change"
+	    vq="craftnmrparRef"
+	    vc="$v='' substr(craftnmrpar[23],2):$v if $v&lt;&gt;craftnmrpar[33] then craft('assignTitle',craftnmrpar[17],craftnmrpar[33]) endif"
+	    />
+          </group>
+          <button loc="15 145" size="180 22"
+            style="Heading2"
+            label="Analysis log"
+            vq="craftnmrparRef"
+            vc="craft('showAnalLog',craftnmrpar[17])"
+            bg="transparent"
+            />
+          <button loc="205 145" size="180 22"
+            style="Heading2"
+            label="Analysis parameters"
+            vq="craftnmrparRef"
+            vc="craft('showcurrentparams')"
+            bg="transparent"
+            />
+	  <textmessage loc="10 120" size="380 20"
+	    style="Info"
+	    set="$VALUE='' $f=userdir+'/cnmrmodels/Files4xml/currentCraftParam' exists($f,'file'):$fex if $fex then $v='' lookup('mfile',$f,'readline'):$v string2array($v):$v array2string($v):$VALUE endif"
+	    vq="craftnmrparRef"
+	    />
+      </group>
+
+	  <group loc="75 195" size="250 20"
+	    vq="craftnmrparRef"
+	    show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+	    >
+            <check loc="0 0" size="250 20"
+	      style="Label1"
+	      vq="craftDispPar craftnmrparRef"
+	      label="Display CRAFT analysis ROIs"
+	      vc="craftDispPar[16]='y' ds craft('box')"
+	      vc2="graphis:$ds craftDispPar[16]='n' if $ds='ds' then ds endif"
+	      set="$VALUE=(craftDispPar[16]='y')"
+	      show="$s2='' substr(craftDispPar[15],2):$s2 $ENABLE=(($s2&lt;&gt;'ExpandModel') and ($s2&lt;&gt;''))*2-1"
+	      />
+	    </group>
+	  <group loc="75 195" size="250 20"
+	    vq="craftnmrparRef"
+	    show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+	    >
+            <check loc="0 0" size="250 20"
+	      style="Label1"
+	      vq="craftDispPar craftnmrparRef"
+	      label="Display CRAFT analysis ROIs"
+	      vc="craftDispPar[16]='y' craft_showBandInfo(craftnmrpar[17],'ds')"
+	      vc2="craftDispPar[16]='n' aspRoi('clear')"
+	      set="$VALUE=(craftDispPar[16]='y')"
+	      show="$s2='' substr(craftDispPar[15],2):$s2 $ENABLE=(($s2&lt;&gt;'ExpandModel') and ($s2&lt;&gt;''))*2-1"
+	      />
+	    </group>
+      <group loc="5 220" size="400 280"
+        vq="craftnmrparRef"
+        style="Heading1"
+        label="Display options"
+        bg="transparent"
+	reference="craftReviewDispOpt"
+        border="Etched"
+	show="$SHOW=(craftnmrpar[24]='n')"
+        subtype="Titled"
+        expanded="no"
+	useref="yes"
+        >
+	</group>
+      <group loc="5 220" size="400 280"
+        vq="craftnmrparRef"
+        style="Heading1"
+        label="Display options"
+        bg="transparent"
+        border="Etched"
+	show="$SHOW=(craftnmrpar[24]&lt;&gt;'n')"
+        subtype="Titled"
+        expanded="yes"
+	useref="no"
+        >
+	   <group loc="20 60" size="360 160"
+            style="Heading1"
+            bg="transparent"
+	    vq="craftnmrparRef craftDispPar"
+            border="Raised"
+            subtype="Basic"
+            expanded="yes"
+            >
+	      <label loc="20 70" size="320 20"
+	        label="Display options cannot be changed"
+	        style="Heading2"
+		justify="Center"
+	        />
+	      <label loc="20 90" size="320 20"
+	        label="until reprocess is closed/canceled/executed"
+	        style="Heading2"
+		justify="Center"
+	        />
+	      </group>
+	</group>
+      <group loc="5 520" size="400 140"
+        style="Heading1"
+        label="Reprocess ROI"
+        bg="transparent"
+        border="Etched"
+	vq="craftnmrparRef"
+	show="$SHOW=(craftnmrpar[24]='n')"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <button loc="90 25" size="220 25"
+          style="Heading2"
+          label="Reprocess nearest ROI"
+          vq="craftnmrparRef craftDispPar"
+          vc="craft('Reanalyzeatcr')"
+          show="$s1='' $s2='' substr(craftDispPar[15],1):$s1 $ENABLE=($s1='Review')*2-1"
+          bg="transparent"
+          />
+
+	<button loc="90 55" size="220 25"
+          style="Heading2"
+          label="Reprocess all ROIs"
+          vq="craftnmrparRef craftDispPar"
+          show="$s1='' $s2='' substr(craftDispPar[15],1):$s1 $ENABLE=($s1='Review')*2-1"
+          vc="craft('ReanalyzeAllMdl')"
+          bg="transparent"
+          />
+	</group>
+      <group loc="5 520" size="400 140"
+        style="Heading1"
+        label="Reprocess ROI"
+        bg="transparent"
+        border="Etched"
+	reference="craftReviewRepeat"
+	vq="craftnmrparRef"
+	show="$SHOW=(craftnmrpar[24]&lt;&gt;'n')"
+        subtype="Titled"
+        expanded="no"
+	useref="yes"
+        >
+        </group>
+    </group>
+</template>

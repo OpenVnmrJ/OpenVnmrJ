@@ -1,0 +1,205 @@
+"macro BPexpress_update_parameters"
+// Macro for creating/checking/updating parameters
+// relevant to BioPack Express interface
+
+// Workflow:
+//  1. If parameter exists, don't touch it   
+//  2. If parameter does not exist, create and set to default
+//  3. If 'reset' option provided, set parameter to default (even parameters from step 1) 
+
+if ( ($# <> 5)  )  then
+  $msg= 'usage: ' +$0 + '(codeword_observe_dim,codeword_ni_dim,codeword_ni2_dim,codeword_ni3_dim,[no]reset)'    
+  write('line3',$msg)  write('alpha',$msg)	
+  return
+endif 
+
+ 
+//
+// name of the macro that takes care of LP in BPexpress environment
+
+$BPexpress_LP_cmd='BP_set_2x_lp'
+$BPexpress_setup_proc_cmd='BPexpress_setup_proc'
+$BPexpress_setup_nus_cmd='BPexpress_setup_nus'
+
+$codeword_obs=$1
+$codeword_ni=$2
+$codeword_ni2=$3
+$codeword_ni3=$4
+$reset=$5
+
+
+// codeword_ni, codeword_ni2 etc also defines max evolution time in that dimension
+// codeword_ni, codeword_ni2 etc also determines labels in ni.. dimension
+
+
+// i.e. codeword_ni='CA' means that default max evolution in ni dimension, at_ni, will be $at_CA 
+// abd label in ni dimension will be $nuc_ni
+   
+
+        $at_dummy=0.001   $nuc_dummy='N/A!'
+ 	$at_HN=0.100      $nuc_HN='HN'
+	$at_HC=0.100      $nuc_HC='HC'
+	$at_CA=0.006      $nuc_CA='CA'
+        $at_CB=0.006      $nuc_CB='CB'
+
+        $at_CAct=0.020    $nuc_CAct='CA'  // constant=time CA
+
+	$at_CACB=0.004    $nuc_CACB='CACB'
+
+        $at_CBCA=0.004    $nuc_CBCA='CBCA'
+	$at_CO=0.010      $nuc_CO='CO'
+	$at_CCT=0.018     $nuc_CCT='C'
+
+	$at_N=0.020        $nuc_N='N'
+        $at_Nct=0.020      $nuc_Nct='N'  // N15 in triple-res, constant N-C0/CA time 
+        $at_Ntrosy=0.035   $nuc_Ntrosy='N'
+        $at_Nhsqc=0.030    $nuc_Nhsqc='N'
+        $at_Nhmqc=0.030     $nuc_Nhmqc='N'
+        $at_NhsqcID=0.020   $nuc_NhsqcID='Ny'
+        $at_NtrosyID=0.035  $nuc_NtrosyID='Ny'
+
+	$at_Hid=0.015  
+
+        $at_Hnoe=0.015
+        $at_Htocsy=0.015
+
+        $at_HCC=0.010 
+        $at_HBHA=0.010 
+        $at_CC=0.005 
+        $at_Cid=0.005 
+        $at_COobs=0.1 $nuc_COobs='CO'
+        $at_Cobs=0.1  $nuc_Cobs='C13'
+
+// List of LOCAL parameters required for BPexpress interface
+// parameter1name, parameter1default, parameter1type,
+// parameter2name, parameter2default, parameter2type, ... 
+ 
+
+// 'at_ni' etc parameters specify  max acquisition time in respective dimension
+// for now it is just a dummy 1ms 
+// 'at_ni' will be set according to 'codeword_ni' later by this macro
+
+// 'proc_ni' etc specifies command that sets processing parameters in that dimension
+    
+   $Lpars='BPexpress_gui','1','integer',\
+          'layout','xxx','string',\
+          'nuc_obs','HN','string',\
+          'nuc_ni','CA','string',\
+          'nuc_ni2','N','string',\
+          'nuc_ni3','CO','string',\
+          'at_obs','0.05','real',\
+          'at_ni','0.001','real',\
+          'at_ni2','0.001','real',\
+          'at_ni3','0.001','real',\
+          'fn_obs','4096','integer',\
+          'fn_ni','1024','integer',\
+          'fn_ni2','512','integer',\
+          'fn_ni3','256','integer',\
+          'proc_obs',     $BPexpress_setup_proc_cmd + '(\'obs\')' ,'string',\
+          'proc_ni',      $BPexpress_setup_proc_cmd + '(\'ni\')' ,'string',\
+          'proc_ni2',     $BPexpress_setup_proc_cmd + '(\'ni2\')','string',\
+          'proc_3d',      $BPexpress_setup_proc_cmd + '(\'3d\')','string',\
+          'proc_nus_cmd', $BPexpress_setup_proc_cmd + '(\'nus\')','string',\
+          'setup_nus_cmd',$BPexpress_setup_nus_cmd,'string'
+
+// adding/checking those GLOBAL parameters
+$arg='local'  
+$pars=$Lpars $option=''
+if ($arg = 'global') then
+  $pars = $Gpars
+  $option=',\'global\''
+endif
+
+$npars=size('$pars')
+  $i=1
+  while ($i<$npars) do
+   $cmde='exists(\''+$pars[$i]+'\',\'parameter\'' +$option+'):$e'         
+   {$cmde}
+   if ($e=0) then
+    write('alpha','creating parameter ' + $pars[$i] + '=' + $pars[$i+1] + $option)
+    $cmd='create(\''+$pars[$i]+'\',\''+$pars[$i+2]+'\''+$option+')'
+   {$cmd}
+   endif
+      
+   if ( ($e=0) or ($reset='reset')) then 
+     // set default values if parameter did not exist or if reset flag was specified
+     if ($pars[$i+2] <> 'string') then
+	$cmd=$pars[$i]+'='+$pars[$i+1] {$cmd}
+     else
+    	{$pars[$i]}=$pars[$i+1]
+     endif
+   endif
+	 
+    $i=$i+3
+  endwhile
+
+
+// setting nuclei parameters from the arguments supplied
+
+// setting labels for nuc_obs, nuc_ni, nuc_ni2, nuc_ni3 according to their codewords
+// if $nuc_{codeword} dos not exists, set nuc_ni=codewodrd_ni etc
+
+// setting acquisition times for obs, ni, ni2, and ni3 dimensions according to their codewords
+// if $at_codeword does not exists, set acquisition times at_obs, at_ni, at_ni2, at_ni3 are set to defaults from the list above
+
+
+ 
+$idxs='obs','ni','ni2','ni3'
+
+$nidxs=size('$idxs')
+  
+     $i=1
+  while ($i<$nidxs) do
+
+           $idx=$idxs[$i]
+          
+           $cw=  '$codeword_'+$idx  //echo($cw)          
+
+           $cmd='nuc_'+$idx+'=$nuc_'+ {$cw} 
+         
+           exec($cmd):$e	             
+           if ($e<>1) then 
+		{'nuc_'+$idx} = {$cw}
+		 write('line3','setting dimension label nuc_' +  $idx  + ' to default value '+{$cw})
+	   endif
+
+           if (  ($reset='reset')) then
+           	$cmd='at_'+$idx+'=$at_'+ {$cw} //echo($cmd)
+          	 exec($cmd):$e 
+           	if ($e<>1) then 
+			 write('line3','setting acquisition time  at_ %s to default value %f',$idx,   {'at_'+$idx})
+	   	endif
+	  endif
+ $i=$i+1
+ endwhile
+
+ 
+ 
+ // NUS  
+exists('ni','parameter'):$e 
+if ( ($e>0)  ) then
+   
+  module('add','par2D')  // NUS parameters  
+  CSdensity=50
+  // make sure we are in system standard NUS 
+  CStype='a'
+endif
+
+ 
+exists('ni2','parameter'):$e 
+if ( ($e>0)  ) then
+   module('add','par3D')  //NUS parameters  
+  CSdensity2=50
+endif
+  
+
+ 
+
+if ( (layout='xxx') or ($reset='reset')) then
+     layout=seqfil
+endif
+setgroup('layout','display')
+
+flush
+fread(curexp+'/curpar','processed') flush
+write('alpha','Done with updating parameters')

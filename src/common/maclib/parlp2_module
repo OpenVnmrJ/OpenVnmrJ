@@ -1,0 +1,49 @@
+"macro parlp2_module"
+"parlp2_module - This is a setup macro for parlp2 module"
+
+$module='parlp2'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  exists('proc2','parameter'):$parex
+  if ($parex>0) then
+     module('genericadd',$module,$2,$3)
+  endif
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

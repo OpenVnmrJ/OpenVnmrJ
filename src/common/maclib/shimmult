@@ -1,0 +1,47 @@
+"macro shimmult"
+// shimmult
+$dacname=''
+shimnames:$names,$ns
+$mult= 1.0/1.5
+if ($# = 1) then
+  if (typeof('$1')) then
+    substr($names,'find',$1):$ok
+    if ($ok) then
+      $names=$1
+      $ns=1
+    else
+      return
+    endif
+  else
+    $mult=$1
+  endif
+endif
+if ($# = 2) then
+  if (typeof('$1')) then
+    $name=$1
+    $mult=$2
+  else
+    $name=$2
+    $mult=$1
+  endif
+  substr($names,'find',$name):$ok
+  if ($ok) then
+    $names=$name
+    $ns=1
+  else
+    return
+  endif
+endif
+$v = 1
+while ($v <= $ns) do
+  substr($names,$v):$dacname
+  strstr($dacname,'x'):$ok
+  if (not $ok) then
+    strstr($dacname,'y'):$ok
+  endif
+  if ($ok) then
+    {$dacname} = {$dacname} * $mult 
+  endif
+  $v = $v + 1
+endwhile
+load='y'

@@ -1,0 +1,169 @@
+"macro im3Dshim"
+"Setup and Processing for 3D shimming sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+g3dpars
+$action = 'prep'
+$do = ''
+$macro=$0
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+isvnmrj:$vj
+exists('profile','parameter'):$profile
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  Prescan_ShimMethod='ge3dshim'
+  ldrf
+  setgro
+  setloop
+
+  "3D must ..."
+  orient='sag' "... be sagittal, psi=90 phi=0 theta=90"
+  ppe=0 ppe2=0 "... have zero offsets in PE and PE2"
+
+  exists('slabctr','parameter'):$ex
+  if ($ex > 0) then if (slabctr = 'y') then
+    pss0 = ppe2   "Center slab selection on FOV in 2nd PE direction"
+    gplan('setValue','pss0',ppe2)
+  endif endif
+
+  if (array <> '') then
+    write('error','Can not array 3D experiment, array = %s',array)
+    abort
+  endif
+  
+  execseq('prep')  "Execute any sequence specific preparation"
+  if ($do = 'profile') then
+    if ($profile > 0) then
+      profile = 'yy'
+    else
+      writeparam(curexp+'/im3D_params.par','nv nv2')
+      nv  = 0
+      nv2 = 0
+    endif
+    
+    wexp  = 'im3D(`proc`,`profile`)'
+    wdone = ''
+    werr  = ''
+  else
+    if ($profile > 0) then 
+       profile = 'nn' 
+    endif
+  endif
+  setloop
+
+//  ***not used in prescan
+//  if (prescan_control[1] > 0) then  "Part of prescan "
+//    "parameters initialized so correct parameters are written in .param"
+//    shsel    = Prescan_ShimSelection
+//    shregion = Prescan_ShimRegion
+//    shcycle  = Prescan_ShimIteration
+//    shdel    = Prescan_ShimDelay
+//    shimcalc = 1  "flag to calculate new shim values"
+//    shimload = 1  "flag to load shims"
+//  endif  "part of prescan"
+
+  cnt=1  "initialize iteration counter"
+  gs_acqb0map(0)   "initialize only"
+
+  if($do = 'shim') then
+    im3Dshim('proc','shim')
+  endif
+
+  if ( (shregion[cnt] = 'orthvoxel') or (shimregion[cnt] = 'voxel') ) then
+      "Set up voxel for shimming"
+      "In the future, we should not rely on a shim voxel being defined,"
+      " but rather define it based on the current plan"
+      $shim_params = userdir + '/prescan/voxel.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Voxel for shimming has not been selected',$macro)
+        return
+      endif
+      rtv($shim_params,  'vtheta', 'vphi', 'vpsi', 'vox1',  'vox2','vox3', 'pos1', 'pos2', 'pos3')   
+  elseif (shregion[cnt] = 'orthslab') then
+      $shim_params = userdir + '/prescan/slab.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Slices (slab) for shimming has not been selected',$macro)
+        return
+      endif
+      rtv($shim_params, 'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')
+  elseif (shregion[cnt] = 'slab') then
+      $shim_params = userdir + '/prescan/slab.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Slices (slab) for shimming has not been selected',$macro)
+        return
+      endif
+      rtv($shim_params, 'orient2', 'theta2', 'phi2', 'psi2', 'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')      
+  endif
+
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($do = 'profile') then
+    cf = 1
+    vp = 0
+    av ft f full vsadj dscale    
+    if ($profile = 0) then
+      rtv(curexp+'/im3D_params.par','nv')
+      rtv(curexp+'/im3D_params.par','nv2') setloop
+    endif
+    return
+  endif
+
+  if ((nv > 0) and (nv2 > 0) and (profile = 'nn')) then
+    recon_all
+
+    on('fn2'):$onfn
+    if ($onfn = 0) then $nv2 = nv2 else $nv2 = fn2 endif
+    if ($vj > 0) then
+      aipDeleteData
+      aipLoadFile(curexp+'/datadir3d/data/img_slab001image001echo001.fdf')  "This enables the Extract page"
+      if ($do = 'mip') then
+        aipExtractMip('xy',0,$nv2-1,1) "Display ROxPE images"
+      else
+        aipExtract('xy',0,$nv2-1,1) "Display ROxPE images"
+      endif
+    endif
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+elseif ($action = 'prescan') then              // Enter through execprescan
+  im3D('gain','init')
+elseif ($action = 'gain') then
+  im3D('gain',$action2)
+endif
+
+
+"*********************************************************************************"
+"			Modification History
+
+"24nov04(ss) - slab related bugs fixed;
+"		bug: illegal acquisitions prevented
+"27jan05(ss) - iplanDefaultType not rtv'd
+"04aug05     - prescan_control[1] > 0
+"21dec05     - added mods for profile flag from im3D
+"              autogain bug fixed
+
+"*********************************************************************************"

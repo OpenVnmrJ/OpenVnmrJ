@@ -1,0 +1,47 @@
+"macro BP1"
+" BP1 "
+$bestone=1 $counter=1
+ssfilter=300
+fn=2*np wft
+av select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone)
+vsadj(50) $best=20
+ph lp=0
+BPaph0
+
+s1 f
+if (r7=6) then      "gNfhsqc"
+  cr=0 delta=2p $snmin=25
+else               
+ f cr=11p delta=2p $snmin=50
+endif
+
+dsn:$sn
+
+if $sn<$snmin then    "adjusts nt to obtain enough s/n"
+ nt=nt*($snmin/$sn)*($snmin/$sn)
+ if ((nt<4) or (nt=4)) then nt=4 endif
+ if ((nt>4) and (nt<9)) then nt=8 endif
+ if ((nt>8) and (nt<17)) then nt=16 endif
+ if ((nt>16) and (nt<33)) then nt=32 endif
+ if ((nt>32) and (nt<65)) then nt=64 endif
+ if (nt>64) then
+   banner('Sensitivity is low for this sample\\AutoCalibrate will take too much time')
+   return
+ endif
+else
+ r1
+ pl('all') pap dssh
+ BPpage
+endif
+BPsvf(userdir+'/AutoTripRes/H1pw90cal_coarse')
+pw=pw[$bestone]
+array('pw',11,pw-1.0,0.2)
+wnt='wft dssh'
+wexp='BP2'  au

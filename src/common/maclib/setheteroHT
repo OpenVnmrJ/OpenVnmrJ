@@ -1,0 +1,22 @@
+"macro setheteroHT"
+exists('is_cpsample','maclib'):$cp
+if (not $cp) then return endif
+
+$pex=0 $ppath=''
+AutoCheck($1):$pex,$ppath
+getext($ppath):$ppath
+if ($pex) then
+   readparam($ppath+'.fid/procpar','htfrq1 htbw1')
+   setHTni
+   if (refsource1='dfrq') then
+      rtv($ppath,'noabort','httof'):dof
+      rtv($ppath,'noabort','htsw'):sw1
+      dof=dof sw1=sw1
+   elseif (refsource1='sfrq') then
+      rtv($ppath,'noabort','httof'):tof
+      rtv($ppath,'noabort','htsw'):sw1
+      tof=tof sw1=sw1 sw=sw1
+   endif
+endif
+checkhtfreq  "Determine proper fn1 based on separations"
+

@@ -1,0 +1,27 @@
+"macro defaultqueue"
+$defaultQ=''
+getadminfo('defaultqueue'):$defaultQ
+$valid='autodir','fgexp','bgauto'
+if ($defaultQ<>'') then
+    teststr('$valid',$defaultQ,'local'):$ok
+    if ($ok=0) then $defaultQ='' endif
+endif
+if ($defaultQ='autodir') and (traymax<1) then
+   $defaultQ=''
+endif
+if ($defaultQ='') then
+   $submitopt='fgbgauto'
+   getadminfo('submitoption'):$submitopt
+   strstr($submitopt,'auto'):$auto
+   if (traymax>1) and ($auto) then
+	$defaultQ='autodir'
+   else
+     strstr($submitopt,'bg'):$bg
+     if ($bg) and (traymax<1) then
+	$defaultQ='bgauto'
+     else
+	$defaultQ='fgexp'
+     endif
+   endif
+endif
+return($defaultQ)

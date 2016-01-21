@@ -1,0 +1,1595 @@
+"macro paramgroup"
+// paramgroup -  Create a set of new parameters in a workspace and optionally 
+//               add a display string to the dg and ap parameters and creates
+//               .xml file with panel items. Parameters
+//               are created and given a default value, if they do not 
+//               already exist. Parameters are replaced if they exist and are 
+//               unprotected by bit 14. Parameters protected by bit 14 remain 
+//               unchanged.  Bit 14 is set to 1 so parameters can be loaded with
+//               the rtx command of modules and protocols. Parameters of the 
+//               'channels' type are named in the string clearparams for 
+//               subsequent deprotection, bit 14 = 0, in the workspace after 
+//               execution of rtx or this macro. 
+//
+//               Parameters are displayed in dg and ap with a title and an optional, 
+//               conditional string. Parameters can be created directly or as 
+//               a prefix only (SolidsPack Convention). In the later case 
+//               argument 4 must contain a parameter-group name. 
+//
+//               XML panel items are stored in .xml in 
+//               ~/vnmrsys/templates/vnmj/panelitems.
+//               To use open panel editor: Edit->Parameter Pages, then
+//               open Tools->Browser, browse to the panelitems directory and drag the
+//               XML file to the panel
+
+//  Syntax1: paramgroup('all','Mytitle','',''<<<,'pt1','amplitude',2000>
+//                                               <<,'pt2','pulse',4.0>,(..etc)>)
+//           Create a group of parameters pt1, pt2 .. etc with types 'amplitude'
+//           'pulse' ... etc and display them in dg and ap with title Mytitle.
+//           XML file with panel items will be created too
+//           If no parameters are present only the title is displayed. 
+//
+//  Syntax2: paramgroup('all','Mytitle','','suffixH'<<<,'pt1','amplitude',2000>
+//                                               <<,'pt2','pulse',4.0>,(..etc)>)
+//
+//           Create a group of parameters pt1Hsuffix, pt2Hsuffix .. etc as 
+//           above and and display them in dg and ap with title Mytitle
+//           XML file with panel items will be created too
+//           (SolidsPack Convention). 
+//  
+//  Syntax3: paramgroup('all','Mytitle','(mycon=1)',''<<<,'pt1','amplitude',
+//                                          2000><<,'pt2','pulse',4.0>,(..etc)>)
+//
+//           Create a group of parameters pt1, pt2 .. etc as above and 
+//           display them in dg and ap with title Mytitle with the conditional
+//           string '(mycon=1)'.
+//           XML file with panel items will be created too
+// 
+//  For syntax1 to syntax3, if $1 = 'dgapstring' only the display strings in 
+//  dg and ap are created. Creation of the parameters is suppressed.  The 
+//  values 'dgstring' and 'apstring' can be used to create dg or ap strings
+//  individually. 
+//
+//  Syntax4: paramgroup('params','','pt1','amplitude',2000
+//                                          <<,'pt2','pulse',4.0>,(..etc)>)
+//           Create parameters pt1, pt2...etc only. Do not create a display 
+//           string in dg or ap. Parameters that require only a dg or an ap 
+//           string, but not both, should be created with Syntax 4. Then use 
+//           syntax1 to syntax3 with 'dgstring' or 'apstring' to create the 
+//           template separately.   
+//
+//  Argument 1 is the function 'all','params','dgapstring','dgstring', 
+//             'apstring', 'xmlfile', 'dgapinit', 'xmlfile', 'apinit' or 'dginit'. 
+//  Argument 2 is a title for the dg/ap display (syntax1 to syntax3 only).
+//  Argument 3 is a conditional for the dg/ap display (syntax1 to syntax3 only).
+//  Argument 4(2) is a a string used to label all parameters in the group. The 
+//             string must be one or more upper-case "channel identifiers" 
+//             following a lower case "suffix". the order of the suffix and 
+//             channel identifiers are reversed an appended to the parameter
+//             names (prefixes) in the following arguments (Solidpack Convention).
+//  Argument 5(3) is a string containing a parameter name or prefix (see 4)
+//  Argument 6(4) is the "solids type" of a parameter. The solids type controls
+//             the VnmrJ type, the limits and the significant figures in the 
+//             dg/ap display. See the table below. 
+               
+// Solids Type:  VJ Type:   Max       Min      Step       Figures   Clear
+
+// 'amplitude'   real       4095.0    0.0   0.0(0.06248)* 3          n
+// 'delay'       delay      8190(s)   0.0      0.0125e-6  6          n
+// 'frequency'   frequency  1e9       1e9      0.0        1          n
+// 'pulse'       pulse      8192      0.0      0.0125     1          n
+// 'string'      string     na        na       na         na         n
+// 'flag'        flag       na        na       na         na         n
+// 'integer'     real       1e7       1e-7     1          0          n
+// 'idphase'     real       9(12=1,2) 0        1          0          n
+// 'scaler'      real       63.0      -37****  0.5****    1          n
+// 'phase'       real       360.0  -360.0  0.0(0.00549)*  3          n
+// 'real'        real       none      none      none      6          n
+// 'channel'***  string     na        na       na         na         y**
+
+//    *The paramgroup macro does not set a step size for 'amplitude' and
+//    'phase' but the step is set by hardware (16 bit for DD2), (12 bit 
+//     amplitude and 13 bit phase for VnmrS). 
+ 
+//  ** All parameters are created with bit 14 set (for modules and 
+//     protocols). All 'channel' parameter names are added to the string
+//     parameter "clearparams", which can be used to clear bit 14 after
+//     loading. Subsequent protocols need to change the values of 
+//     'channel' parameters, for example to change from direct to 
+//     indirect detection.  
+
+// *** The paramgroup macro always sets the default values of 'channel' 
+//     parameters, whether or not the parameter previously exists. 
+//     Existing values of all other parameters are preserved. 
+
+//**** For VnmrS the lower limit and step of 'scaler' parameters are
+//     set by hardware to -16 and 1.0.      
+
+//  Argument 7(5) is a default value, which is set only if the parameter is
+//              newly created. 
+//  Blocks of 3 subsequent arguments (i.e. 8(6),9(7) and 10(8) etc) are 
+//              additional parameters. One can create any number of parameters.
+//              within a single paramgroup call. 
+//
+//  Syntax 5 paramgroup('dgapinit')
+//           
+//           Initialize dg='' and ap = '' to remove exisiting dg and ap 
+//           displays. Also initialize ap = '' in the 'processed' tree. 
+//           Use 'apinit' and 'dginit'to initialize the displays 
+//           individually.
+
+//  Syntax 6 paramgroup('clearparamsinit')
+//           
+//           Initialize clearparams='' to remove an exisiting clearparams
+//           string. Create clearparams, protected by bit 4, if it does
+//           not exist. Bit 4 disallows a commandline change of clearparams.
+
+//  Syntax 7 paramgroup('clearparams','inputstring')
+//           
+//           Add a parameter name or a string of parameter names to the 
+//           string parameter clearparams. Parameter names should be 
+//           separated by spaces. A concluding space is not needed. This 
+//           function does not validate the existence of parameters in 
+//           the input string. Use this syntax to cause deprotection in 
+//           the workspace for an arbitrary parameter, similar to the 
+//           'channel' type. Deprotection of parameters in clearparams 
+//           takes place automatically in an uppercase protocol macro. 
+//           Use: 
+//              setprotect(clearparams,'off',16384)
+//           to duplicate this result in user macros. 
+               
+//  Programming Funtions: 
+//
+//   (These functions are used internally. See the argument descriptions under 
+//   the individual headings. They are available, but not recommended for use
+//   in other macros.)
+//
+//  1. paramgroup('dgaptitle'... arguments) creates a title and conditional 
+//     string in dg and ap (also 'aptitle' and 'dgtitle').
+//  2. paramgroup('dgap' ..... arguments) appends a string for a single 
+//     parameter to dg and ap (also 'ap' and 'dg'). 
+//  3. paramgroup('dgapend') replaces the last character (usually a comma) 
+//     with a semicolon to conclude the dg and ap parameter group string 
+//     (also 'apend' and 'dgend').
+//  4. paramgroup('dgapnull') appends a semicolon to a a string constructed 
+//     from 'dgaptitle' only to conclude dg and ap strings without parameters
+//     (also 'apnull' and 'dgnull').
+//  5. paramgroup('xmltitle' ... arguments) opens XML file and write the
+//     header
+//  6. paramgroup('xmladd' ... arguments) adds an item for the parameter
+//     in XML file
+//  7. paramgroup('xmlend') finish XML file
+
+
+//
+//  Functions 1 to 3 must be used together to create a valid dg and ap entry.
+//  These functions create and use the temporary parameters dgcharindex, 
+//  dgarrayindex, apcharindex and aparrayindex to keep track of the length
+//  of the dg and ap strings. The dg and ap strings can hold an arbitrary 
+//  list of parameters as an array of strings of up to 1024 characters. 
+//  Function 1 above determines the length of the exisiting dg or ap string
+//  and creates a new array if the exisiting number of characters is greater
+//  than 768. If an exisiting group string approaches 768 characters, the 
+//  string length of a new group could not cause the total to be greater 
+//  than 1024 characters. If it does, the macros will abort with an error. 
+//
+
+//  Functions 5 to 6 must be used together to create a valid XML file.
+//  They create temporary parameters xmlfname and xmlposition which
+//  stores XML file name and the current x-position of the item in the group
+
+//  4. paramgroup('setparam' ... arguments) creates a single parameter with type 
+//     and a default value. Function 4 can be used individually in a macro 
+//     or on the command line. 
+ 
+
+//********************************************************
+// Function List - Check for a valid function Argument $1
+//********************************************************
+
+if (($1 <> 'all') and
+    ($1 <> 'params') and
+    ($1 <> 'setparam') and
+    ($1 <> 'xmltitle') and
+    ($1 <> 'xmladd') and
+    ($1 <> 'xmlend') and
+    ($1 <> 'xmlfile') and
+    ($1 <> 'dgaptitle') and
+    ($1 <> 'aptitle') and
+    ($1 <> 'dgtitle') and
+    ($1 <> 'dgap') and
+    ($1 <> 'ap') and
+    ($1 <> 'dg') and
+    ($1 <> 'dgapend') and
+    ($1 <> 'apend') and
+    ($1 <> 'dgend') and
+    ($1 <> 'dgapstring') and   
+    ($1 <> 'apstring') and
+    ($1 <> 'dgstring') and
+    ($1 <> 'dgapnull') and
+    ($1 <> 'apnull') and
+    ($1 <> 'dgnull') and      
+    ($1 <> 'dgapinit') and
+    ($1 <> 'apinit') and
+    ($1 <> 'dginit') and
+    ($1 <> 'clearparams') and
+    ($1 <> 'clearparamsinit')) then
+   write('line3','paramgroup error: Function "%s" is not found\n',$1)
+   abort
+endif
+                
+//****************************************************
+// Create A Parameter Group (Values and dg/ap Labels)
+//****************************************************
+
+if ($1 = 'all') then 
+
+//  $1 is the Function 'all' to create a dg/ap String for the Group with 
+//     Parameters. 
+//  $2 is the Label of the Group Title.
+//  $3 is a Condition for Display of the Group.
+//  $4 is Name of the Parameter Group (optional '').
+//  $5 is the Parameter Name.
+//  $6 is the Parameter Type.
+//  $7 is the Default Value.
+//  $8. $9 and $10 (etc) repeat in groups of three for additional parameters.
+
+// Obtain and Parse the Parameter-Group Name
+
+   $groupname = $4
+   length($groupname):$groupnamelength
+   $char =''
+   $char1 = ''
+   $chnl = ''
+   $suffix = ''
+   $index = 1
+   while ($index <= $groupnamelength) do
+      substr($groupname,$index,1):$char
+      format($char,'lower'):$char1
+      if ($char <> $char1) then
+         $chnl = $chnl + $char
+         $index = $index + 1
+      else
+         if ($chnl = '') then
+            $suffix = $suffix + $char
+            $index = $index + 1
+         else
+            $index = $groupnamelength + 1
+         endif
+      endif
+   endwhile
+
+   $lchnl =''
+   format($chnl,'lower'):$lchnl
+  
+// Add the Title String
+   
+   paramgroup('dgaptitle',$2,$3)
+   
+// Create XML file for panel items
+   
+   paramgroup('xmltitle',$2)
+   
+// Sort Parameter Names, Types and Values into 3 Arrays 
+
+   $index = 5
+   $index2 = 1
+   $indexstring = ''
+   $value1 = '' 
+   $value2 = ''
+   $value3 = ''
+   $flag = 0
+   $nullflag =0
+   while ($index <= $#) do
+      $nullflag = 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value1 = {$indexstring}
+      length($value1):$value1length
+      $index2 = 1
+      while ($index2 <= $value1length) do
+         substr($value1,$index2,1):$char
+         format($char,'lower'):$char1
+         if ($char <> $char1) then
+            $flag = 1
+         endif 
+         $index2 = $index2 + 1
+      endwhile
+      if ($flag > 0.5) then
+         $value1 = $value1 + $lchnl + $suffix
+         $flag = 0
+      else 
+         $value1 = $value1 + $chnl + $suffix
+      endif
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value2 = {$indexstring}
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      if (typeof($indexstring)) then 
+         $value3 = {$indexstring}
+         paramgroup('setparam',$value1,$value2,$value3)
+      else 
+         $value4 = {$indexstring}
+         paramgroup('setparam',$value1,$value2,$value4)
+      endif
+      paramgroup('dgap',$value1,$value2)
+      paramgroup('xmladd',$value1,$value2)
+      $index = $index + 1
+   endwhile
+
+// Append a Comma if there are no Parameters
+
+   if ($nullflag = 0) then 
+      paramgroup('dgapnull')
+   endif      
+
+// Terminate the Format String for The parameter Group
+
+   paramgroup('dgapend')
+   
+// Finish up the XML file for panel items
+
+   paramgroup('xmlend')
+
+// Destroy Temporary Index Parameters
+
+   destroy('aparrayindex')
+   destroy('apcharindex')
+   destroy('dgarrayindex')
+   destroy('dgcharindex')
+endif
+
+//*********************************************
+// Create A Parameter Group (Parameters Only)
+//*********************************************
+
+if ($1 = 'params') then 
+
+//  $1 is the Function 'params' to Create Parameters Only with no dg/ap Display.
+//  $2 is Name of the Parameter Group (Optional '').
+//  $3 is the Parameter Name.
+//  $4 is the Parameter Type.
+//  $5 is the Default Value.
+//  $6. $7 and $8 (etc) repeat in groups of three for additional parameters.
+
+// Obtain and Parse the Parameter-Group Name
+
+   $groupname = $2
+   length($groupname):$groupnamelength
+   $char =''
+   $char1 = ''
+   $chnl = ''
+   $suffix = ''
+   $index = 1
+   while ($index <= $groupnamelength) do
+      substr($groupname,$index,1):$char
+      format($char,'lower'):$char1
+      if ($char <> $char1) then
+         $chnl = $chnl + $char
+         $index = $index + 1
+      else
+         if ($chnl = '') then
+            $suffix = $suffix + $char
+            $index = $index + 1
+         else
+            $index = $groupnamelength + 1
+         endif
+      endif
+   endwhile
+
+   $lchnl =''
+   format($chnl,'lower'):$lchnl
+  
+// Sort Parameter Names, Types and Values into 3 Arrays 
+
+   $index = 3
+   $index2 = 1
+   $indexstring = ''
+   $value1 = '' 
+   $value2 = ''
+   $value3 = ''
+   $flag = 0
+   while ($index <= $#) do
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value1 = {$indexstring}
+      length($value1):$value1length
+      $index2 = 1
+      while ($index2 <= $value1length) do
+         substr($value1,$index2,1):$char
+         format($char,'lower'):$char1
+         if ($char <> $char1) then
+            $flag = 1
+         endif 
+         $index2 = $index2 + 1
+      endwhile
+      if ($flag > 0.5) then
+         $value1 = $value1 + $lchnl + $suffix
+         $flag = 0
+      else 
+         $value1 = $value1 + $chnl + $suffix
+      endif
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value2 = {$indexstring}
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      if (typeof($indexstring)) then 
+         $value3 = {$indexstring}
+         paramgroup('setparam',$value1,$value2,$value3)
+      else  
+         $value4 = {$indexstring}
+         paramgroup('setparam',$value1,$value2,$value4)
+      endif
+      $index = $index + 1
+   endwhile
+endif
+
+//********************************************************
+//Create A Parameter of Designated Type with Default Value 
+//********************************************************
+
+if ($1 = 'setparam') then 
+
+// $1 is the Function 'setparam' to Create a Parameter.
+// $2 is the Parameter Name.
+// $3 is the Parameter Type.
+// $4 is the Default Value.
+
+// Initialize clearparams if Needed
+
+   exists('clearparams','parameter'):$e
+   if ($e < 0.5) then
+      paramgroup('clearparamsinit')
+   endif
+ 
+// Create the Parameter of Designated Type
+
+   $par = $2
+   $type = $3
+   $cstring = ''
+   $temp = 0.0
+   exists($par,'parameter'):$e
+   setprotect($par,'ison',16384):$p
+   if (($e > 0.5) and ($p < 0.5)) then 
+      destroy($par)
+      $e = 0.0
+   endif
+   if ($type = 'amplitude') then
+      if ($e < 0.5) then 
+         create($par,'real') 
+         setlimit($par,4095.0,0.0,0.0)
+         setvalue($par,$4,'current')
+      endif 
+   elseif ($type = 'delay') then
+      if ($e < 0.5) then 
+         create($par,'delay')
+         parunits('set',$par,'us')
+         setvalue($par,$4,'current')
+      endif     
+   elseif  ($type = 'frequency') then
+      if ($e < 0.5) then 
+         create($par,'frequency')
+         setvalue($par,$4,'current')
+      endif      
+   elseif  ($type = 'pulse') then
+      if ($e < 0.5) then 
+         create($par,'pulse')
+         setlimit($par,8192,0.0,0.0125)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'time') then
+      if ($e < 0.5) then 
+         create($par,'pulse')
+         setlimit($par,1.0e5,0.0,0.0125)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'string') then
+      if ($e < 0.5) then
+         create($par,'string')
+         setvalue($par,$4,'current')
+      endif 
+   elseif  ($type = 'flag') then
+      if ($e < 0.5) then
+         create($par,'flag')
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'integer') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,1e7,-1e7,1)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'idphase') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,9,0,1)
+         if ($4  <  10) then setvalue($par,$4,'current') endif
+         if ($4 = 12) then 
+            array($par,2,1,1)
+         endif           
+      endif  
+   elseif  ($type = 'scaler') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,63,-37,1)
+         setvalue($par,$4,'current')
+      endif     
+   elseif  ($type = 'phase') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,360.0,-360.0,0.0)
+         $mult = trunc($4/360.0)
+         $temp=$4
+         if ($4 > 360.0) then
+            $temp = $4 - $mult*360.0
+         endif 
+         if ($4 < -360.0) then 
+            $temp = $4 + $mult*360.0
+         endif          
+         setvalue($par,$temp,'current')
+      endif
+   elseif  ($type = 'real') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setvalue($par,$4,'current')
+      endif
+   elseif ($type = 'channel') then
+      if ($e < 0.5) then
+         create($par,'string')
+      endif
+         setvalue($par,$4,'current')
+      $cstring = $cstring + $par + ' ' 
+   else
+      write('line3','paramgroup \'setparam\' error: Type "%s" not Found\n',$type)
+   endif
+   
+// Add a 'channel' Parameter to clearparams
+
+   setprotect('clearparams','clear', 4)
+   clearparams = clearparams + $cstring
+   setprotect('clearparams','on', 4)
+      
+// Set Bit 14 for Modules
+
+   setprotect($par,'on',16384)
+endif
+
+//*********************************************************************
+//Create A Parameter of Designated Type with Default Value - no bit 14
+//*********************************************************************
+
+if ($1 = 'setstdparam') then 
+
+// $1 is the Function 'setparam' to Create a Parameter.
+// $2 is the Parameter Name.
+// $3 is the Parameter Type.
+// $4 is the Default Value.
+
+// Initialize clearparams if Needed
+
+   exists('clearparams','parameter'):$e
+   if ($e < 0.5) then
+      paramgroup('clearparamsinit')
+   endif
+
+// Create the Parameter of Designated Type
+
+   $par = $2
+   $type = $3
+   $cstring = ''
+   $temp = 0.0
+   exists($par,'parameter'):$e
+   setprotect($par, 'ison',16384):$p
+   if (($e > 0.5) and ($p < 0.5)) then 
+      destroy($par)
+      $e = 0.0
+   endif
+   if ($type = 'amplitude') then
+      if ($e < 0.5) then 
+         create($par,'real') 
+         setlimit($par,4095.0,0.0,0.0)
+         setvalue($par,$4,'current')
+      endif     
+   elseif ($type = 'delay') then
+      if ($e < 0.5) then 
+         create($par,'delay')
+         parunits('set',$par,'us')
+         setvalue($par,$4,'current')
+      endif     
+   elseif  ($type = 'frequency') then
+      if ($e < 0.5) then 
+         create($par,'frequency')
+         setvalue($par,$4,'current')
+      endif      
+   elseif  ($type = 'pulse') then
+      if ($e < 0.5) then 
+         create($par,'pulse')
+         setlimit($par,8192,0.0,0.0125)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'time') then
+      if ($e < 0.5) then 
+         create($par,'pulse')
+         setlimit($par,1.0e5,0.0,0.0125)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'string') then
+      if ($e < 0.5) then
+         create($par,'string')
+         setvalue($par,$4,'current')
+      endif 
+   elseif  ($type = 'flag') then
+      if ($e < 0.5) then
+         create($par,'flag')
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'integer') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,1e7,-1e7,1)
+         setvalue($par,$4,'current')
+      endif  
+   elseif  ($type = 'idphase') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,9,1,1)
+         if ($4  <  10) then setvalue($par,$4,'current') endif
+         if ($4 = 12) then 
+            array($par,2,1,1)
+         endif           
+      endif  
+   elseif  ($type = 'scaler') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,63,-37,1)
+         setvalue($par,$4,'current')
+      endif     
+   elseif  ($type = 'phase') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setlimit($par,360.0,-360.0,0.0)
+         $mult = trunc($4/360.0)
+         $temp=$4
+         if ($4 > 360.0) then
+            $temp = $4 - $mult*360.0
+         endif 
+         if ($4 < -360.0) then 
+            $temp = $4 + $mult*360.0
+         endif          
+         setvalue($par,$temp,'current')
+      endif
+   elseif  ($type = 'real') then
+      if ($e < 0.5) then
+         create($par,'real')
+         setvalue($par,$4,'current')
+      endif
+   elseif ($type = 'channel') then
+      if ($e < 0.5) then
+         create($par,'string')
+      endif
+         setvalue($par,$4,'current')
+   else
+      write('line3','paramgroup \'setparam\' error: Type "%s" not Found\n',$type)
+   endif
+endif
+
+//************************************
+// Add a Title Row into dg and/or ap
+//************************************
+
+if (($1 = 'dgaptitle') or ($1 = 'aptitle') or ($1 = 'dgtitle')) then 
+
+// $1 is the Function 'dgaptitle', 'aptitle' or 'dgtitle' to Create a Title.
+// $2 is the Label of the Group Title.
+// $3 is a Condition for Display of the Group.
+
+// Obtain a Text Label for the Parameter Group
+
+   $grouplabel = $2
+   if $grouplabel = '' then 
+      $grouplabel = '' 
+   endif
+   length($grouplabel):$grouplabellength
+
+   if (($1 = 'dgaptitle') or ($1 = 'aptitle')) then
+   
+// Initialize the ap Character and Array Indexes if Needed
+
+      exists('apcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('apcharindex','real')
+         setlimit('apcharindex',1024,0,1)
+         apcharindex = 0
+      endif
+
+      exists('aparrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('aparrayindex','real')
+         setlimit('aparrayindex',1024,0,1)
+         aparrayindex = 1
+      endif
+     
+// Initialize ap in the Processed Tree
+
+      exists('ap','parameter','processed'):$e
+      if ($e > 0) then
+         destroy('ap','processed')
+      endif
+      create('ap','string','processed')
+      
+// Set the ap Index Value from Exisiting the ap Parameter
+
+      aparrayindex = size('ap')
+      length(ap[aparrayindex]):apcharindex
+      
+      if (apcharindex > 768) then
+         aparrayindex = aparrayindex + 1
+         setprotect('ap','clear',4)
+         ap[aparrayindex] = ''
+         $index = 1
+         while ($index <= aparrayindex) do  
+            setvalue('ap',ap,$index,'processed')
+            $index = $index + 1
+         endwhile     
+         setprotect('ap','on',4)
+         apcharindex = 0
+      endif
+      
+// Create and Add the ap Title Row   
+
+      $ap = '1' + $3 + ':' + $grouplabel + ':'       
+      setprotect('ap','clear',4)
+      ap[aparrayindex] = ap[aparrayindex] + $ap
+      $index = 1
+      while ($index <= aparrayindex) do  
+        setvalue('ap',ap,$index,'processed')
+        $index = $index + 1
+      endwhile 
+      setprotect('ap','on',4)
+      apcharindex = apcharindex + $grouplabellength + 3     
+   endif
+   
+   if (($1 = 'dgaptitle') or ($1 = 'dgtitle')) then
+      
+// Initialize the dg Character and Array Indexes if Needed
+     
+      exists('dgcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgcharindex','real')
+         setlimit('dgcharindex',1024,0,1)
+         dgcharindex = 0
+      endif
+
+      exists('dgarrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgarrayindex','real')
+         setlimit('dgarrayindex',1024,0,1)
+         dgarrayindex = 1
+      endif
+   
+// Set the dg Index Value from the Exisiting dg Parameter
+
+      dgarrayindex = size('dg')
+      length(dg[dgarrayindex]):dgcharindex
+      
+      if (dgcharindex > 768) then 
+         dgarrayindex = dgarrayindex + 1
+         setprotect('dg','clear',4)
+         dg[dgarrayindex] = ''
+         setprotect('dg','on',4)
+         dgcharindex = 0
+      endif
+      
+ // Create and Add the dg Title Row  
+ 
+      $dg = '1' + $3 + ':' + $grouplabel + ':'       
+      setprotect('dg','clear',4)
+      dg[dgarrayindex] = dg[dgarrayindex] + $dg
+      setprotect('dg','on',4)        
+      dgcharindex = dgcharindex + $grouplabellength + 3     
+   endif
+endif
+
+//************************************
+// Open xml file and create group label
+//************************************
+
+if ($1 = 'xmltitle') then 
+
+// $1 is the Function 'xmltitle'
+// $2 is the Label of the Group Title.
+
+// Obtain a Text Label for the Parameter Group
+
+   $grouplabel = $2
+   //prevent an empty name
+   if $grouplabel = '' then 
+      $grouplabel = 'newgroup' 
+   endif
+
+//create filename parameter
+
+  exists('xmlfname','parameter'):$e
+  if $e<0.5 then
+    create('xmlfname','string')
+  endif
+  xmlfname=''
+
+//create parameter which will store positions with xml
+
+  exists('xmlposition','parameter'):$e
+  if $e<0.5 then
+    create('xmlposition')
+  endif
+  xmlposition=0.0
+  
+//create file
+   $paneldir=userdir+'/templates/vnmrj/panelitems'
+   mkdir('-p',$paneldir)
+//   cd($paneldir)
+   xmlfname=$paneldir+'/'+$grouplabel+'.xml'
+   write('reset',xmlfname)
+   write('file',xmlfname,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+   write('file',xmlfname,'<template name="%s" element="groups" type="acquisition" >',$grouplabel)
+   write('file',xmlfname,'  <group size="210 220"')
+   write('file',xmlfname,'   border="None"')
+   write('file',xmlfname,'   tab="no"')
+   write('file',xmlfname,'   enable="no"')
+   write('file',xmlfname,'   reference="%s"',$grouplabel)
+   write('file',xmlfname,'   useref="no"')
+   write('file',xmlfname,'   subtype="Untitled"')
+   write('file',xmlfname,'   expanded="yes"')
+   write('file',xmlfname,'   rows="1"')
+   write('file',xmlfname,'   columns="1"')
+   write('file',xmlfname,'  >')
+   write('file',xmlfname,'    <label loc="10 0" size="80 20"')
+   write('file',xmlfname,'     style="Label1"')
+   write('file',xmlfname,'     label="%s:"',$grouplabel)
+   write('file',xmlfname,'    />')
+endif
+
+
+//************************************
+// Finish xml file and create title
+//************************************
+
+
+if ($1 = 'xmlend') then 
+
+// $1 is the Function 'xmlend'
+
+//finish up file
+
+   write('file',xmlfname,'  </group>')
+   write('file',xmlfname,'</template>')
+   //change group size at the beginning of the group description
+   xmlposition=xmlposition+20
+   $bottompos=''
+   format(xmlposition,3,0):$bottompos
+   $xmlcmd='sed -i \'s/<group size="210 220"/<group size="210 '+$bottompos+'"/g\' '+xmlfname
+   shell($xmlcmd)
+   xmlfname=''
+   xmlposition=0.0
+endif
+
+//************************************
+// Add entry to the panel
+//************************************
+
+if ($1 = 'xmladd') then 
+
+// $1 is the Function 'xmladd'
+// $2 is the Parameter Name.
+// $3 is the Parameter Type.
+
+  //shift by 20 points
+  xmlposition=xmlposition+20
+  
+  if ((xmlposition>219) and (xmlposition<239)) then //supressing multiple outputs
+    $errormsg='XML panel '+xmlfname+' exceeds suggested vertical size.'
+    write('error',$errormsg)
+  endif
+  
+  write('file',xmlfname,'    <label loc="10 %d" size="80 20"',xmlposition)
+  write('file',xmlfname,'     style="PlainText"')
+  write('file',xmlfname,'     label="%s:"',$2)
+  write('file',xmlfname,'    />')
+  
+  if (($3='amplitude') or ($3='integer')or ($3='real') or ($3='phase') or ($3='scaler')) then
+      write('file',xmlfname,'    <entry loc="90 %d" size="60 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="%s = $VALUE"',$2)
+      write('file',xmlfname,'      set="$VALUE = %s"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      />')
+  endif
+ 
+ 
+  if (($3='string') or ($3='flag') or ($3='channel')) then  
+      write('file',xmlfname,'    <entry loc="90 %d" size="110 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="%s=\'$VALUE\'"',$2)
+      write('file',xmlfname,'      set="$VALUE=%s"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      disable="Grayed out"')
+      write('file',xmlfname,'      />')
+  endif
+      
+  if (($3='pulse') or ($3='delay') or ($3='time')) then
+      write('file',xmlfname,'    <entry loc="90 %d" size="60 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="vnmrunits(\'set\',\'%s\',$VALUE)"',$2)
+      write('file',xmlfname,'      set="vnmrunits(\'get\',\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'     />')
+      write('file',xmlfname,'     <menu loc="150 %d" size="60 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="parunits(\'set\',\'%s\',\'$VALUE\')"',$2)
+      write('file',xmlfname,'      set="parunits(\'get\',\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE if ($VALUE=0) then $VALUE=1 endif"',$2)
+      write('file',xmlfname,'      editable="No"')
+      write('file',xmlfname,'       >')
+      write('file',xmlfname,'       <mlabel')
+      write('file',xmlfname,'         label="sec"')
+      write('file',xmlfname,'         chval="sec"')
+      write('file',xmlfname,'           />')
+      write('file',xmlfname,'       <mlabel ')
+      write('file',xmlfname,'         label="ms"')
+      write('file',xmlfname,'         chval="ms"')
+      write('file',xmlfname,'        />')
+      write('file',xmlfname,'       <mlabel') 
+      write('file',xmlfname,'         label="us"')
+      write('file',xmlfname,'         chval="us"')
+      write('file',xmlfname,'        />')
+      write('file',xmlfname,'      </menu>')
+   endif
+
+  if ($3='frequency') then
+      write('file',xmlfname,'    <entry loc="90 %d" size="60 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="vnmrunits(\'set\',\'%s\',$VALUE)"',$2)
+      write('file',xmlfname,'      set="vnmrunits(\'get\',\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'     />')
+      write('file',xmlfname,'     <menu loc="150 %d" size="60 20"',xmlposition)
+      write('file',xmlfname,'      style="PlainText"')
+      write('file',xmlfname,'      vq="%s"',$2)
+      write('file',xmlfname,'      vc="parunits(\'set\',\'%s\',\'$VALUE\')"',$2)
+      write('file',xmlfname,'      set="parunits(\'get\',\'%s\'):$VALUE"',$2)
+      write('file',xmlfname,'      show="on(\'%s\'):$VALUE if ($VALUE=0) then $VALUE=1 endif"',$2)
+      write('file',xmlfname,'      editable="No"')
+      write('file',xmlfname,'       >')
+      write('file',xmlfname,'       <mlabel')
+      write('file',xmlfname,'         label="Hz"')
+      write('file',xmlfname,'         chval="Hz"')
+      write('file',xmlfname,'           />')
+      write('file',xmlfname,'       <mlabel ')
+      write('file',xmlfname,'         label="kHz"')
+      write('file',xmlfname,'         chval="kHz"')
+      write('file',xmlfname,'        />')
+      write('file',xmlfname,'      </menu>')
+   endif
+ 
+endif
+
+//*******************************
+// Write XMl file Only
+//*******************************
+
+if ($1 = 'xmlfile') then 
+
+//  $1 is the Function 'xmlfile' to Create an 
+//     XML file for the Group with no Parameters. 
+//  $2 is the Label of the Group Title
+//  $3 is a Condition for Display of the Group - ignored in this macro, kept to be the same as dgapstring
+//  $4 is Name of the Parameter Group (optional '')
+//  $5 is the Parameter Name
+//  $6 is the Parameter Type
+//  $7 is the Default Value
+//  $8. $9 and $10 (etc) repeat in groups of three for additional parameters.
+
+// Obtain and Parse the Parameter-Group Name
+
+   $groupname = $4
+   length($groupname):$groupnamelength
+   $char =''
+   $char1 = ''
+   $chnl = ''
+   $suffix = ''
+   $index = 1
+   while ($index <= $groupnamelength) do
+      substr($groupname,$index,1):$char
+      format($char,'lower'):$char1
+      if ($char <> $char1) then
+         $chnl = $chnl + $char
+         $index = $index + 1
+      else
+         if ($chnl = '') then
+            $suffix = $suffix + $char
+            $index = $index + 1
+         else
+            $index = $groupnamelength + 1
+         endif
+      endif
+   endwhile
+
+   $lchnl =''
+   format($chnl,'lower'):$lchnl
+  
+// Create XML file and add title
+  
+  paramgroup('xmltitle',$2)
+
+// Sort Parameter Names, Types and Values into 3 Arrays 
+
+   $index = 5
+   $index2 = 1
+   $indexstring = ''
+   $value1 = '' 
+   $value2 = ''
+   $value3 = ''
+   $flag = 0
+   $nullflag = 0
+   while ($index <= $#) do
+      $nullflag = 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value1 = {$indexstring}
+      length($value1):$value1length
+      $index2 = 1
+      while ($index2 <= $value1length) do
+         substr($value1,$index2,1):$char
+         format($char,'lower'):$char1
+         if ($char <> $char1) then
+            $flag = 1
+         endif 
+         $index2 = $index2 + 1
+      endwhile
+      if ($flag > 0.5) then
+         $value1 = $value1 + $lchnl + $suffix
+         $flag = 0
+      else 
+         $value1 = $value1 + $chnl + $suffix
+      endif
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value2 = {$indexstring}
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      paramgroup('xmladd',$value1,$value2)   
+      $index = $index + 1
+   endwhile
+
+
+// Terminate the XML file for The parameter Group
+
+   paramgroup('xmlend')
+
+// Destroy Temporary Parameters
+
+   destroy('xmlposition')
+   destroy('xmlfname')
+
+endif
+
+//***************************************************
+// Insert the Parameter String into dg and/or ap
+//***************************************************
+
+if (($1 = 'dgap') or ($1 = 'dg') or ($1 = 'ap'))  then 
+
+// $1 is the Function 'dgap', 'dg' or 'ap' to Add to a Parameter String.
+// $2 is the Parameter Name.
+// $3 is the Parameter Type.
+
+   if (($1 = 'dgap') or ($1 = 'ap')) then
+   
+// Initialize the ap Character and Array Indexes if Needed
+
+      exists('apcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('apcharindex','real')
+         setlimit('apcharindex',1024,0,1)
+         apcharindex = 0
+      endif
+
+      exists('aparrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('aparrayindex','real')
+         setlimit('aparrayindex',1024,0,1)
+         aparrayindex = 1
+      endif
+
+// Set the ap Index Value from the Exisiting ap Parameter
+
+      aparrayindex = size('ap')
+      length(ap[aparrayindex]):apcharindex
+   endif
+
+   if (($1 = 'dgap') or ($1 = 'dg')) then
+   
+// Initialize the dg Character and Array Indexes if Needed
+     
+      exists('dgcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgcharindex','real')
+         setlimit('dgcharindex',1024,0,1)
+         dgcharindex = 0
+      endif
+
+      exists('dgarrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgarrayindex','real')
+         setlimit('dgarrayindex',1024,0,1)
+         dgarrayindex = 1
+      endif
+   
+// Set the dg Index Value from the Exisiting dg Parameter
+
+      dgarrayindex = size('dg')
+      length(dg[dgarrayindex]):dgcharindex
+   endif
+   
+// Create dg/ap Entries for the Designated Parameter Type
+
+   $par = $2
+   $type = $3
+   $fstring = ''
+   if ($type = 'amplitude') then
+      $fstring = $par + ':3,'
+   elseif ($type = 'delay') then
+      $fstring = $par + ':6,'
+   elseif  ($type = 'frequency') then
+      $fstring = $par + ':1,'
+   elseif  ($type = 'pulse') then
+      $fstring = $par + ':1,'
+   elseif  ($type = 'time') then
+      $fstring = $par + ':1,'
+   elseif  ($type = 'string') then
+      $fstring = $par + ','
+   elseif  ($type = 'flag') then
+      $fstring = $par + ','
+   elseif  ($type = 'integer') then
+      $fstring = $par + ':0,'
+   elseif  ($type = 'idphase') then
+      $fstring = $par + ':0,'
+   elseif  ($type = 'scaler') then
+      $fstring = $par + ':1,'
+   elseif  ($type = 'phase') then
+      $fstring = $par + ':3,'
+   elseif  ($type = 'real') then
+      $fstring = $par + ':6,'
+   elseif ($type = 'channel') then 
+      $fstring = $par + ','
+   else
+      write('line3','paramgroup \'dgap\' error: Type "%s" not Found\n',$type)
+   endif
+
+//Add dg/ap Entries to dg and ap
+ 
+   length($fstring):$charnumber
+   
+   if (($1 = 'dgap') or ($1 = 'ap')) then
+      if (apcharindex < 1023) then   
+         setprotect('ap','clear',4)
+         ap[aparrayindex] = ap[aparrayindex] + $fstring
+         $index = 1
+         while ($index <= aparrayindex) do  
+           setvalue('ap',ap,$index,'processed')
+           $index = $index + 1
+         endwhile 
+         setprotect('ap','on',4)
+      else
+         write('line3','ap: Abort Template - Character Index Exceeds 1023')
+         abort
+      endif 
+      apcharindex = apcharindex + $charnumber
+   endif
+   
+   if (($1 = 'dgap') or ($1 = 'dg')) then
+      if (apcharindex < 1023) then  
+         setprotect('dg','clear',4)
+         dg[dgarrayindex] = dg[dgarrayindex] + $fstring
+         setprotect('dg','on',4)  
+      else
+         write('line3','dg: Abort Template - Character Index Exceeds 1023')
+         abort        
+      endif 
+      dgcharindex = dgcharindex + $charnumber
+   endif
+endif
+
+//******************************************************
+// Terminate the Format String for a dg and/or ap Group
+// with a Semicolon (replacing the last comma). 
+//******************************************************
+
+if (($1 = 'dgapend') or ($1 = 'dgend') or ($1 = 'apend')) then 
+
+// $1 is the Function 'dgapend', 'dgend' or 'apend' to Terminate a 
+// Parameter-Group String.
+
+   if (($1 = 'dgapend') or ($1 = 'apend')) then
+   
+// Initialize the ap Character and Array Indexes if Needed 
+  
+      exists('apcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('apcharindex','real')
+         setlimit('apcharindex',1024,0,1)
+         apcharindex = 0
+      endif
+
+      exists('aparrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('aparrayindex','real')
+         setlimit('aparrayindex',1024,0,1)
+         aparrayindex = 1
+      endif
+      
+// Set the ap Index Value from the Exisiting ap Parameter  
+
+      aparrayindex = size('ap') 
+      length(ap[aparrayindex]):apcharindex
+      
+// Terminate the ap Group with a Semicolon  
+
+      $ap=''
+      length(ap[aparrayindex]):$aplength
+      substr(ap[aparrayindex],1,$aplength-1):$ap        
+      setprotect('ap','clear',4)
+      ap[aparrayindex] = $ap + ';'
+      $index = 1
+      while ($index <= aparrayindex) do  
+         setvalue('ap',ap,$index,'processed')
+         $index = $index + 1
+      endwhile 
+      setprotect('ap','on',4)    
+   endif
+
+   if (($1 = 'dgapend') or ($1 = 'dgend')) then 
+   
+// Initialize the dg Character and Array Indexes if Needed 
+   
+      exists('dgcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgcharindex','real')
+         setlimit('dgcharindex',1024,0,1)
+         dgcharindex = 0
+      endif
+
+      exists('dgarrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgarrayindex','real')
+         setlimit('dgarrayindex',1024,0,1)
+         dgarrayindex = 1
+      endif
+   
+// Set the dg Index Value from the Exisiting dg Parameter
+
+      dgarrayindex = size('dg')
+      length(dg[dgarrayindex]):dgcharindex
+
+// Terminate the Group with a Semicolon
+
+      $dg=''
+      length(dg[dgarrayindex]):$dglength 
+      substr(dg[dgarrayindex],1,$dglength-1):$dg     
+      setprotect('dg','clear',4)
+      dg[dgarrayindex] = $dg + ';'
+      setprotect('dg','on',4)
+   endif
+endif
+
+//*******************************
+// Write ap and dg Strings Only
+//*******************************
+
+if (($1 = 'dgapstring') or ($1 = 'apstring') or ($1 = 'dgstring')) then 
+
+//  $1 is the Function 'dgapstring', 'dgstring' or 'apstring' to Create a 
+//     dg/ap String for the Group with no Parameters. 
+//  $2 is the Label of the Group Title
+//  $3 is a Condition for Display of the Group
+//  $4 is Name of the Parameter Group (optional '')
+//  $5 is the Parameter Name
+//  $6 is the Parameter Type
+//  $7 is the Default Value
+//  $8. $9 and $10 (etc) repeat in groups of three for additional parameters.
+
+// Obtain and Parse the Parameter-Group Name
+
+   $groupname = $4
+   length($groupname):$groupnamelength
+   $char =''
+   $char1 = ''
+   $chnl = ''
+   $suffix = ''
+   $index = 1
+   while ($index <= $groupnamelength) do
+      substr($groupname,$index,1):$char
+      format($char,'lower'):$char1
+      if ($char <> $char1) then
+         $chnl = $chnl + $char
+         $index = $index + 1
+      else
+         if ($chnl = '') then
+            $suffix = $suffix + $char
+            $index = $index + 1
+         else
+            $index = $groupnamelength + 1
+         endif
+      endif
+   endwhile
+
+   $lchnl =''
+   format($chnl,'lower'):$lchnl
+  
+// Add the Title String
+  
+   if ($1 = 'dgapstring') then 
+      paramgroup('dgaptitle',$2,$3)
+   endif
+   if ($1 = 'apstring') then 
+      paramgroup('aptitle',$2,$3)
+   endif
+   if ($1 = 'dgstring') then 
+      paramgroup('dgtitle',$2,$3)
+   endif
+
+// Sort Parameter Names, Types and Values into 3 Arrays 
+
+   $index = 5
+   $index2 = 1
+   $indexstring = ''
+   $value1 = '' 
+   $value2 = ''
+   $value3 = ''
+   $flag = 0
+   $nullflag = 0
+   while ($index <= $#) do
+      $nullflag = 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value1 = {$indexstring}
+      length($value1):$value1length
+      $index2 = 1
+      while ($index2 <= $value1length) do
+         substr($value1,$index2,1):$char
+         format($char,'lower'):$char1
+         if ($char <> $char1) then
+            $flag = 1
+         endif 
+         $index2 = $index2 + 1
+      endwhile
+      if ($flag > 0.5) then
+         $value1 = $value1 + $lchnl + $suffix
+         $flag = 0
+      else 
+         $value1 = $value1 + $chnl + $suffix
+      endif
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      $value2 = {$indexstring}
+      $index = $index + 1
+      format($index,1,0):$indexstring 
+      $indexstring = '$' + $indexstring
+      if ($1 = 'dgapstring') then 
+         paramgroup('dgap',$value1,$value2)
+      endif
+      if ($1 = 'apstring') then 
+         paramgroup('ap',$value1,$value2)
+      endif
+      if ($1 = 'dgstring') then 
+         paramgroup('dg',$value1,$value2)
+      endif       
+      $index = $index + 1
+   endwhile
+
+// Append a Comma if there are no Parameters
+
+   if ($nullflag = 0) then 
+      if ($1 = 'dgapstring') then 
+         paramgroup('dgapnull')
+      endif
+      if ($1 = 'apstring') then 
+         paramgroup('apnull')
+      endif
+      if ($1 = 'dgstring') then 
+         paramgroup('dgnull')
+      endif 
+   endif
+
+// Terminate the Format String for The parameter Group
+
+   if ($1 = 'dgapstring') then 
+      paramgroup('dgapend')
+   endif
+   if ($1 = 'apstring') then 
+      paramgroup('apend')
+   endif
+   if ($1 = 'dgstring') then 
+      paramgroup('dgend')
+   endif   
+
+// Destroy Temporary Index Parameters
+
+   if (($1 = 'dgapstring') or ($1 = 'apstring')) then
+      destroy('aparrayindex')
+      destroy('apcharindex')
+   endif
+
+   if (($1 = 'dgapstring') or ($1 = 'dgstring')) then
+      destroy('dgarrayindex')
+      destroy('dgcharindex')
+   endif
+endif
+
+//******************************************************
+// Add a Semicolon to the dg or ap String
+//******************************************************
+
+if (($1 = 'dgapnull') or ($1 = 'dgnull') or ($1 = 'apnull')) then 
+
+// $1 is the Function 'dgapnull' (or 'dgnull' or 'apnull') to 
+// add a Comma to ap or dg. Use when no parameters arguments are 
+// present. 
+
+   if (($1 = 'dgapnull') or ($1 = 'apnull')) then
+   
+// Initialize the ap Character and Array Indexes if Needed 
+  
+      exists('apcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('apcharindex','real')
+         setlimit('apcharindex',1024,0,1)
+         apcharindex = 0
+      endif
+
+      exists('aparrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('aparrayindex','real')
+         setlimit('aparrayindex',1024,0,1)
+         aparrayindex = 1
+      endif
+      
+// Set the ap Index Value from the Exisiting ap Parameter  
+
+      aparrayindex = size('ap') 
+      length(ap[aparrayindex]):apcharindex
+      
+// Terminate the ap Group with a Semicolon  
+     
+      setprotect('ap','clear',4)
+      ap[aparrayindex] = ap[aparrayindex] + ';'
+      $index = 1
+      while ($index <= aparrayindex) do  
+         setvalue('ap',ap,$index,'processed')
+         $index = $index + 1
+      endwhile 
+      setprotect('ap','on',4) 
+      apcharindex = apcharindex + 1   
+   endif
+
+   if (($1 = 'dgapnull') or ($1 = 'dgnull')) then 
+   
+// Initialize the dg Character and Array Indexes if Needed 
+   
+      exists('dgcharindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgcharindex','real')
+         setlimit('dgcharindex',1024,0,1)
+         dgcharindex = 0
+      endif
+
+      exists('dgarrayindex','parameter'):$e
+      if $e < 0.5 then
+         create('dgarrayindex','real')
+         setlimit('dgarrayindex',1024,0,1)
+         dgarrayindex = 1
+      endif
+   
+// Set the dg Index Value from the Exisiting dg Parameter
+
+      dgarrayindex = size('dg')
+      length(dg[dgarrayindex]):dgcharindex
+
+// Terminate the dg Group with a Semicolon
+   
+      setprotect('dg','clear',4)
+      dg[dgarrayindex] = dg[dgarrayindex] + ';'
+      setprotect('dg','on',4)
+      dgcharindex = dgcharindex + 1  
+   endif
+endif
+
+//******************************************************
+// Initialize the dg ap and clearparams strings with ''
+//******************************************************
+
+if ($1 = 'dgapinit') or ($1 = 'apinit') or ($1 = 'dginit') or ($1 = 'clearparamsinit') then 
+
+// $1 = 'dgapinit' (or 'dginit' or 'apinit') to set dg = '' and/or 
+// ap = ''. If $1 = 'clearparams' set clearparams=''. 
+
+   if (($1 = 'dgapinit') or ($1 = 'apinit')) then
+      setprotect('ap','clear',4) 
+      ap = ''
+      setprotect('ap','on',4) 
+
+// Initialize ap in the Processed Tree as Well
+
+      exists('ap','parameter','processed'):$e
+      if ($e > 0) then
+         destroy('ap','processed')
+      endif
+      create('ap','string','processed')
+   endif
+
+   if (($1 = 'dgapinit') or ($1 = 'dginit')) then
+      setprotect('dg','clear',4)
+      dg = ''
+      setprotect('dg','on',4)
+   endif
+
+   if ($1 = 'clearparamsinit') then
+      exists('clearparams','parameter'):$e
+      if ($e > 0.5) then 
+         setprotect('clearparams','off',4)
+         clearparams = ''
+      else 
+         create('clearparams','string')
+         clearparams=''
+      endif
+      setprotect('clearparams','on',4)
+      setprotect('clearparams','on',16384)
+   endif
+endif
+
+//**************************************
+// Add a Parameter Name to clearparams
+//**************************************
+
+if ($1 = 'clearparams') then 
+
+   $2string = $2
+   $2end=''
+   length('$2string'):$2length
+   substr('$2string',$2length,1):$2end
+   if ($2end <> ' ') then
+      $2string = $2string + ' '
+   endif
+   exists('clearparams','parameter'):$e
+   if ($e < 0.5) then 
+      paramgroup('clearparamsinit')
+   endif
+   setprotect('clearparams','clear',4)
+   clearparams = clearparams + $2string
+   setprotect('clearparams','on',4)
+endif  
+
+
+
+
+
+
+
+
+
+
+
+

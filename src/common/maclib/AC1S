@@ -1,0 +1,56 @@
+"macro AC1S"
+"Gemini2000 - Unity - Unity+ Automatic Calibration"
+"Performs the following basic instrument calibrations"
+"1H PW90, 1H Decoupler Gamma H2, C13 PW90 and Decoupler 90"
+"Can also perform 19F and 31P PW90 if a 4nucleus probe is present"
+"Performs indirect calibrations if ID is present"
+"Basic system bringup macros -- determine power for proper 90's"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the Proton Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then 
+        abort
+     endif
+   endif
+endif
+
+setup('H1','CDCl3')
+if tpwr = 0 then tpwr = 51 else ACbackup endif
+if pw90 = 0 then pw90 = 10 endif
+  " in case this is a brand new probe file "
+pw = pw90
+
+Autosetgpar
+setsw(3.2,-0.5)
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('H1 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_H1cal_' + $date
+archivedir=userdir+'/data'
+$datadir = userdir+'/data/'+sample
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+
+macro=$0
+exists('pw90max','parameter'):$e
+if ($e < 0.5) then
+   create('pw90max','pulse')
+   pw90max=15
+endif
+
+d1=15 nt=1 gain='n' ss=2 at=3 fn=2*np lb = 1/at
+
+intmod='off'
+wexp='AC10C'

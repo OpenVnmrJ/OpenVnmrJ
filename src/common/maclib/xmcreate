@@ -1,0 +1,77 @@
+"macro xmcreate"
+// make imaging study directory
+
+"globalauto, autodir, sqdir - study queue directories"
+"sqname - basename for data storage"
+"studyid=basename of study queue directory"
+"activestudy=basename of active study directory"
+"actionid=node id of the current set of parameters and or data"
+"activeid=node id of the next set of parameters to be used for acquisition"
+
+$arg='init'
+if $#>0.5 then
+  $arg=$1
+endif
+
+
+/*
+$dir=globalauto
+
+if ($dir = '') then
+  "pick a default directory"
+  $dir = userdir + '/data/studies'
+endif
+substr($dir,1,1):$char
+if ($char <> '/') then
+  pwd:$pwd
+  $dir=$pwd+'/'+$dir
+endif
+$sqname=$dir+'/'+$sqname
+Svfname($sqname,''):$sqdir
+exists($dir,'file'):$e
+if $e<0.5 then
+  mkdir('-p',$dir)
+  exists($dir,'file'):$e
+  if $e < 0.5 then
+     write('error','Cannot study container directory %s',$dir)
+     return
+  endif
+endif
+ */
+
+exists('actionid','parameter'):$e
+if ($e < 0.5) then
+  sqpars
+endif
+
+dataPath('mkdir')
+$sqdir=sqdir
+studyid = sample
+activestudy = studyid
+
+
+exists('testacquire','parameter','global'):$x
+if $x>0.5 then
+  testacquire='n'
+endif
+
+copyid = 'null','null'
+exists($sqdir + '/info','directory'):$e
+if ($e < 0.5) then
+  mkdir($sqdir + '/info')
+endif
+// mkdir($sqdir + '/data')
+
+$plans=userdir+'/templates/vnmrj/choicefiles/plans'
+exists($plans,'file'):$e
+if $e<0.5 then
+  $plans=systemdir+'/imaging/templates/vnmrj/choicefiles/plans'
+endif
+copy($plans,$sqdir+'/plans')
+
+write('line3','New study %s.',$sqdir)
+
+vnmrjcmd('LOC show protocol')
+xm1('pause')
+sqmode='pause'
+sqsavestudy

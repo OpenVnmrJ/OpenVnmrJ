@@ -1,0 +1,252 @@
+import os
+
+# define target file names
+libf2cStaticTarget = 'libf2c.a'
+libf2cSharedTarget = 'libf2c.so'
+libF77StaticTarget = 'libF77.a'
+libI77StaticTarget = 'libI77.a'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+versionFileList = ['Version.c']
+
+miscFileList = ['F77_aloc.c',
+                'main.c',
+                's_rnge.c',
+                'abort_.c',
+                'getarg_.c',
+                'iargc_.c',
+                'getenv_.c',
+                'signal_.c',
+                's_stop.c',
+                's_paus.c',
+                'system_.c',
+                'cabs.c',
+                'derf_.c',
+                'derfc_.c',
+                'erf_.c',
+                'erfc_.c',
+                'sig_die.c',
+                'exit.c',
+                'stubmain.c']
+
+powFileList = ['pow_ci.c',
+               'pow_dd.c',
+               'pow_di.c',
+               'pow_hh.c',
+               'pow_ii.c',
+               'pow_ri.c',
+               'pow_zi.c',
+               'pow_zz.c']
+
+cxFileList = ['c_abs.c',
+              'c_cos.c',
+              'c_div.c',
+              'c_exp.c',
+              'c_log.c',
+              'c_sin.c',
+              'c_sqrt.c']
+
+dcxFileList = ['z_abs.c',
+               'z_cos.c',
+               'z_div.c',
+               'z_exp.c',
+               'z_log.c',
+               'z_sin.c',
+               'z_sqrt.c']
+
+realFileList = ['r_abs.c',
+                'r_acos.c',
+                'r_asin.c',
+                'r_atan.c',
+                'r_atn2.c',
+                'r_cnjg.c',
+                'r_cos.c',
+                'r_cosh.c',
+                'r_dim.c',
+                'r_exp.c',
+                'r_imag.c',
+                'r_int.c',
+                'r_lg10.c',
+                'r_log.c',
+                'r_mod.c',
+                'r_nint.c',
+                'r_sign.c',
+                'r_sin.c',
+                'r_sinh.c',
+                'r_sqrt.c',
+                'r_tan.c',
+                'r_tanh.c']
+
+dblFileList = ['d_abs.c',
+               'd_acos.c',
+               'd_asin.c',
+               'd_atan.c',
+               'd_atn2.c',
+               'd_cnjg.c',
+               'd_cos.c',
+               'd_cosh.c',
+               'd_dim.c',
+               'd_exp.c',
+               'd_imag.c',
+               'd_int.c',
+               'd_lg10.c',
+               'd_log.c',
+               'd_mod.c',
+               'd_nint.c',
+               'd_prod.c',
+               'd_sign.c',
+               'd_sin.c',
+               'd_sinh.c',
+               'd_sqrt.c',
+               'd_tan.c',
+               'd_tanh.c']
+
+intFileList = ['i_abs.c',
+               'i_dim.c',
+               'i_dnnt.c',
+               'i_indx.c',
+               'i_len.c',
+               'i_mod.c',
+               'i_nint.c',
+               'i_sign.c']
+
+halfFileList = ['h_abs.c',
+                'h_dim.c',
+                'h_dnnt.c',
+                'h_indx.c',
+                'h_len.c',
+                'h_mod.c',
+                'h_nint.c',
+                'h_sign.c']
+
+cmpFileList = ['l_ge.c',
+               'l_gt.c',
+               'l_le.c',
+               'l_lt.c',
+               'hl_ge.c',
+               'hl_gt.c',
+               'hl_le.c',
+               'hl_lt.c']
+
+eflFileList = ['ef1asc_.c',
+               'ef1cmc_.c']
+
+charFileList = ['s_cat.c',
+                's_cmp.c',
+                's_copy.c']
+
+f90BitFileList = ['lbitbits.c',
+                  'lbitshft.c']
+
+objFileList = ['backspace.c',
+               'close.c',
+               'dfe.c',
+               'dolio.c',
+               'due.c',
+               'endfile.c',
+               'err.c',
+               'fmt.c',
+               'fmtlib.c',
+               'ftell_.c',
+               'iio.c',
+               'ilnw.c',
+               'inquire.c',
+               'lread.c',
+               'lwrite.c',
+               'open.c',
+               'rdfmt.c',
+               'rewind.c',
+               'rsfe.c',
+               'rsli.c',
+               'rsne.c',
+               'sfe.c',
+               'sue.c',
+               'typesize.c',
+               'uio.c',
+               'util.c',
+               'wref.c',
+               'wrtfmt.c',
+               'wsfe.c',
+               'wsle.c',
+               'wsne.c',
+               'xwsne.c']
+
+# aggregated file list
+bigFileList = miscFileList + \
+              powFileList + \
+              cxFileList + \
+              dcxFileList + \
+              realFileList + \
+              dblFileList + \
+              intFileList + \
+              halfFileList + \
+              cmpFileList + \
+              eflFileList + \
+              charFileList + \
+              f90BitFileList
+
+# build environments
+f2cEnv = Environment(CCFLAGS    = '-m32 -O',
+                     CPPDEFINES = ['LINUX', 'NON_UNIX_STDIO', 'NO_ONEXIT'],
+                     LINKFLAGS  = '-m32', 
+                     CPPPATH    = [cwd])
+
+versionEnv = Environment(CCFLAGS    = '-m32',
+                         LINKFLAGS  = '-m32', 
+                         CPPPATH    = [cwd])
+
+# actual builds
+versionStaticObj = versionEnv.StaticObject(source = versionFileList)
+versionSharedObj = versionEnv.SharedObject(source = versionFileList)
+bigStaticObjs = f2cEnv.StaticObject(source = bigFileList)
+bigSharedObjs = f2cEnv.SharedObject(source = bigFileList)
+objStaticObjs = f2cEnv.StaticObject(source = objFileList)
+objSharedObjs = f2cEnv.SharedObject(source = objFileList)
+
+libf2cStatic = f2cEnv.StaticLibrary(target  = libf2cStaticTarget,
+                                    source  = [versionStaticObj,
+                                               bigStaticObjs,
+                                               objStaticObjs],
+                                    LIBPATH = [cwd])
+
+libf2cShared = f2cEnv.SharedLibrary(target  = libf2cSharedTarget,
+                                    source  = [versionSharedObj,
+                                               bigSharedObjs,
+                                               objSharedObjs],
+                                    LIBPATH = [cwd])
+
+libF77Static = f2cEnv.StaticLibrary(target  = libF77StaticTarget,
+                                    source  = [versionStaticObj,
+                                               bigStaticObjs],
+                                    LIBPATH = [cwd])
+
+libI77Static = f2cEnv.StaticLibrary(target  = libI77StaticTarget,
+                                    source  = [objStaticObjs],
+                                    LIBPATH = [cwd])
+
+# FIXME: The current install of /usr/lib probably isn't a good idea
+#        if we're trying to keep everything encapsulated in /vnmr
+#        and away from the system environment.  For now an installtion
+#        path of /vnmr/lib is assumed.
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+f2cEnv.AddPostAction(libf2cStatic,
+                     Action(Copy(installPath, os.path.join(cwd, libf2cStaticTarget))))
+f2cEnv.AddPostAction(libf2cShared,
+                     Action(Copy(installPath, os.path.join(cwd, libf2cSharedTarget))))
+f2cEnv.AddPostAction(libF77Static,
+                     Action(Copy(installPath, os.path.join(cwd, libF77StaticTarget))))
+f2cEnv.AddPostAction(libI77Static,
+                     Action(Copy(installPath, os.path.join(cwd, libI77StaticTarget))))
+

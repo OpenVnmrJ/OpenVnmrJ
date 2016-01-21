@@ -1,0 +1,86 @@
+  gCNfilnoesyChsqcSE
+
+    3D 13C,15N F1-filtered C13 edited noesy 
+    recorded on a water sample 
+
+    Cfil=2  C13 filtering only in F1
+    Cfil=3  C13,N15 filtering in F1
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 43 ppm
+         3) 15N             - carrier @ 118 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (90, -180) in F1 and (90, -180) in  F2.    
+
+    If you set the C13 carrier to a value other than 43 ppm (such as 35 ppm),
+    change the line
+        dofa=dof+(125-43)*dfrq;
+    below to
+        dofa=dof+(125-35)*dfrq;
+
+    Coded to use sensitivity enhancement in the 13C dimension for better water
+    suppression in coldprobes. Marco Tonelli, NMRFAM 2003.
+
+    For F1F3, use f1coef='1 0 0 0 0 0 1 0'
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+     N15/C13 decoupling in t1:
+       For simultaneous N15/C13 decoupling (N15refoc='y') the N15 and C13 power
+       levels should be reduced by 3dB (parameters pwNlw and pwClw). 
+       - pwNlvl and pwClvl are calculated by the macro that calls the sequence 
+	 using parameters read from the probefile
+       OR
+       - pwNlvl and pwClvl can also be set manually by the user
+       OR
+       - if pwNlvl and pwClvl are set to 0, the pulse sequence will estimate their 
+	 value from the corresponding hard pulses
+
+     LP in t2:
+       The finite delays necessary during 13C evolution make the first few data
+       points in t2 distorted in intensity. The timing is correct so that lp2
+       may be set to zero, but the intensity distortion, particularly of the
+       second complex point, lead to a "dish" aspect of the baseline. This is not
+       due to the presence of a first-order phase correction (lp2), so adjustment
+       of the timing of the pulse sequence events is not needed.
+   
+       One solution is to use a smaller sw2 with intentional folding. This can make
+       the second d2 value large enough so there is enough time for the C=O
+       refocusing pulse to be executed. For larger sw2's there is not enough time.
+ 
+       A solution to this is to use linear prediction in t2, the 13C dimension.
+       In VNMR you can both "fix up" the first few points using the rest of the
+       data table as the basis set, as well as extend the data set for better F2
+       resolution and less distortion from truncation. The macro "setlp2" can be
+       used in the format "setlp2(desired ni2, acquired ni2, #fixed)". Set
+       "desired ni2" to be the final extended data size, "acquired ni2" to be the
+       total # of increments to be used as a basis (it may be less than ni2, for
+       example if the experiment is running), and "#fixed" to the number of
+       initial points in t2 to be predicted (typically 2-4). Try this with a 2D
+       data set for varying numbers of fixed points until the baseline is sufficiently
+       flat in F2.

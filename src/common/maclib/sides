@@ -1,0 +1,385 @@
+"macro sides"
+
+$tlss=size('TrayLocStatus')
+create('sideslvl','integer','global',1):$dum
+
+if ($# < 1) then $1='init' endif
+
+$infodir=userdir+'/persistence/'+$0
+exists($infodir,'directory'):$iex
+if ($iex=0) then
+        shell('mkdir '+$infodir):$dum
+endif
+$info=$infodir+'/eventLog_info'
+$info2=$infodir+'/Messages'
+$params=$infodir+'/InitParams'
+$infofile=$infodir+'/QueueInfo'
+
+//**************************************************************************************
+IF ($1='init') or ($1='admin') or ($1='reopen') THEN
+
+    $xml='' $xmlex=0
+    if ($1='init') or ($tlss<103) then
+
+//        $strnext=''
+//        vnmrjcmd('util', 'logout', '"'+autodir+'"', h1freq, traymax, 'help:/vnmr/jhelp/dialog/login.html', 'nextloc:'+$strnext, 'frameBounds:'+loginBox)
+
+        $defaultexp='' getadminfo('defaultexp'):$defaultexp
+	substr($defaultexp,'wc'):$wc
+	if not ($wc) and (sideslvl<1.5) then
+	    write('error','No Default experiment assigned')
+	    return
+	endif
+
+    	$traymax=traymax
+    	if ($traymax=97) then $traymax=96 endif
+    	if ($traymax<>96) and ($traymax<>12) then
+            write('error','%s is not supported for traymax=%d',$0,traymax)
+            return
+    	endif
+    	$xml1='' $xml2=''
+
+    	$stray='' format($traymax,0,0):$stray
+    	exists('sidestray'+$stray+'.xml','templates/vnmrj/panelitems'):$fileex,$xml1
+    	if ($fileex=0) then
+	    buildSIDESxml('tray',$traymax):$xml1
+    	endif
+    	if ($xml1='') then
+    	    write('error','Could not create popup files')
+    	    return
+    	endif
+
+    	sides('setparams'):$xml2,$xdim2,$ydim2
+        if ($xml2='') then
+            write('error','Could not create popup files')
+            return
+    	endif
+
+	sides('queueinfo')
+	// values corresponds to loc status
+	// For the time being colors are precoded, but should be
+	//   preference based
+	//      Complete
+	//      Empty
+	//      Queued
+	//      NightQueue
+	//      Active
+	//      Error
+	//      preScan
+	//      Reference
+
+    	$i=1
+    	repeat
+            $stat='Empty'
+            checklocstatus(autodir+'/enterQ',$i,'',''):$stat
+            TrayLocStatus[$i]=$stat
+            $i=$i+1
+    	until $i > 100
+    	TrayLocStatus[101]=QSpar[5]   // Next location
+    	TrayLocStatus[102]='message'  // error or message
+    	TrayLocStatus[103]=$defaultexp 	  // Default exp list
+
+    	buildSIDESxml('XML',$xml1,$xml2):$xml
+	if ($xml<>'') then
+	    exists($xml,'file'):$xmlex
+	endif
+    else
+    	exists('SidesPopup.xml','templates/vnmrj/interface'):$xmlex,$xml
+    endif
+    if ($xmlex=0) or ($xml='') then sides('close') return endif
+
+    if ($1='admin') then $close='close' else $close='reopen' endif
+    if ($1='admin') then
+	operights('canexitsides'):$ok,$ok2
+//  If this right is not explicitly given, assume that this rights is disallowed
+	if not $ok2 then $ok=0 endif
+//	operights('canexitvnmrj'):$ok
+	if not ($ok) and (operator<>owner) then
+// owner can always do admin option - something to revisit
+	    write('error','%s does not have permission to exit SIDES popup')
+	    return
+	endif
+    endif
+
+//    vnmrjcmd('pnew','TrayLocStatus','SidesPopupPar')
+    if ($xml<>'') then
+	$vjcmd='vnmrjcmd(\'popup\',\'mode:modeless\','
+	$vjcmd=$vjcmd+'\'file:'+$xml+'\','
+	$vjcmd=$vjcmd+'\'pnewupdate:true\','
+	$vjcmd=$vjcmd+'\'type:window\','
+	$vjcmd=$vjcmd+'\'rebuild:yes\','
+	$vjcmd=$vjcmd+'\'close:sides(`'+$close+'`)\','
+	$vjcmd=$vjcmd+'\'title:Submission Form\')'
+	exec($vjcmd)
+    else
+        write('error','Could not create popup files')
+    endif
+    vnmrjcmd('pnew','TrayLocStatus','SidesPopupPar')
+
+//**************************************************************************************
+ELSEIF ($1='done') or ($1='quit') THEN
+    if ($tlss > 100) then
+	TrayLocStatus[102]='message'
+    	write('reset',$info2)
+	if ($2<>'') then
+    	    exists($2,'file'):$fileex
+    	    if ($fileex) then 
+    		shell('(cat '+$2+' > '+$info2+')'):$dum
+	    endif
+	endif
+	if $1='quit' then 
+	    TrayLocStatus[102]='error' 
+	else
+	    sides('showlocinfo')
+	    sides('initparams')
+	endif
+	sides('queueinfo')
+    endif
+//**************************************************************************************
+ELSEIF ($1='close') THEN
+
+    TrayLocStatus=''
+    SidesPopupPar=''
+
+//**************************************************************************************
+ELSEIF ($1='setlocstatus') THEN
+    if ($tlss>$2-1) and ($2>0.5) then
+	TrayLocStatus[$2]=$3
+	sides('queueinfo')
+    endif
+
+//**************************************************************************************
+ELSEIF ($1='queueinfo') THEN
+
+    $efile=autodir+'/enterQ'
+    $dir=autodir
+    write('reset',$infofile)
+
+    $ST=0 $DT=0 $NT=0 $CT=0
+    $DST='' $SST='' $NST=''
+    findstarttime($efile):$ST,$DT,$NT,$CT
+    sec2ampm($ST+$CT):$SST
+    sec2ampm($DT+$CT):$DST
+    sec2ampm($NT+$CT):$NST
+    $prioritytotal=0 $daytotal=0 $nighttotal=0 $active=''
+    shell('(cat '+$efile+' | grep -w USER: | grep -cw priority)'):$prioritytotal
+    shell('(cat '+$efile+' | grep -cw SAMPLE#:)'):$daytotal
+    $daytotal=$daytotal-$prioritytotal
+    shell('(cat '+$efile+'.macdir/overniteQ | grep -cw SAMPLE#:)'):$nighttotal
+    shell('(cat '+$efile+'.macdir/currentsampleinfo | grep -w SAMPLE#:)'):$active
+    $activeloc=''
+    substr($active,2):$activeloc
+    write('file',$infofile,'Next Submission will start at -')
+    write('file',$infofile,'  PriorityQ(est) : %s',$SST)
+    write('file',$infofile,'       DayQ(est) : %s',$DST)
+    write('file',$infofile,'     NightQ(est) : %s',$NST)
+    write('file',$infofile,'-----------------------------')
+
+    $doneQ=$efile+'.macdir/cpdoneQ'
+    $daydoneQ=$efile+'.macdir/cpdonedayQ'
+    $nightQ=$efile+'.macdir/overniteQ'
+    $activeQ=$efile+'.macdir/currentsampleinfo'
+    $dayQ=$efile
+
+    $fileex=0 shell('(cat '+$activeQ+' | wc -l)'):$fileex
+    if ($fileex) then
+        shell('(cat '+$activeQ+' | grep -w SAMPLE#: >> '+$infofile+')'):$dum
+        shell('(cat '+$activeQ+' | grep -w USER: >> '+$infofile+')'):$dum
+        write('file',$infofile,'STATUS: Active')
+        write('file',$infofile,'-----------------------------')
+   endif
+           $ret1='' $ret2=0 $ret3='' $ret4=0 $tottime=0,0
+           estimatestart('init'):$ret1,$ret2,$ret3,$ret4,$tottime
+
+   $fileex=0 shell('(cat '+$dayQ+' | wc -l)'):$fileex
+   if ($fileex) then
+        $s1='' $s2=''
+        readfile($dayQ,'$s1','$s2','SAMPLE#','local'):$total
+        if ($total>0) then
+           $s3='' $s4='' $s5='' $s6=''
+           readfile($dayQ,'$s1','$s3','USER:','local')
+           readfile($dayQ,'$s1','$s6','MACRO:','local')
+           $i=1
+           repeat
+                $when='' $ST=-1 $CT=-1
+                substr($s6[$i],1):$macro
+                estimatestart('get',$macro,'enterQ',$ret1,$ret2,$tottime):$ST,$CT
+                sec2ampm($ST+$CT):$when
+                write('file',$infofile,'SAMPLE#:  %s',$s2[$i])
+                write('file',$infofile,'USER:  %s',$s3[$i])
+                write('file',$infofile,'STATUS:  Queued')
+                write('file',$infofile,'START_TIME(est):  %s',$when)
+                write('file',$infofile,'-----------------------------')
+                $i=$i+1
+           until $i > $total
+        endif
+    endif
+
+    $fileex=0 shell('(cat '+$nightQ+' | wc -l)'):$fileex
+    if ($fileex) then
+        $s1='' $s2=''
+        readfile($nightQ,'$s1','$s2','SAMPLE#','local'):$total
+        if ($total>0) then
+           $s3='' $s4='' $s5='' $s6=''
+           readfile($nightQ,'$s1','$s3','USER:','local')
+           readfile($nightQ,'$s1','$s6','MACRO:','local')
+           $i=1
+           repeat
+                $when='' $ST=-1 $CT=-1
+                substr($s6[$i],1):$macro
+                estimatestart('get',$macro,'overniteQ',$ret3,$ret4,$tottime):$ST,$CT
+                sec2ampm($ST+$CT):$when
+                write('file',$infofile,'SAMPLE#:  %s',$s2[$i])
+                write('file',$infofile,'USER:  %s',$s3[$i])
+                write('file',$infofile,'STATUS:  NightQueue')
+                write('file',$infofile,'START_TIME(est):  %s',$when)
+                write('file',$infofile,'-----------------------------')
+                $i=$i+1
+           until $i > $total
+        endif
+    endif
+
+//**************************************************************************************
+ELSEIF ($1='showlocinfo') THEN
+    if ($tlss>1) then
+    	$dir=autodir
+    	$q='enterQ'
+    	$qdir=autodir+'/enterQ.macdir'
+    	if ($# < 2) then $2=TrayLocStatus[101] endif
+    	if typeof('$2') then
+	    $loc=$2
+    	else
+            $loc='' format($2,0,0):$loc
+    	endif
+
+    	write('reset',$info)
+    	$samplename='' $locdir='' $status='' $who=operator
+    	checklocstatus($dir+'/'+$q,$loc,'',''):$status,$who,$samplename,$locdir
+    	if ($status='') or ($locdir='') then
+	    $samplename='' $who=''
+    	endif
+
+    	$e='' $s1='' $n=''
+    	$tmp=$infodir+'/'+operator+'_tmp'
+    	write('reset',$tmp)
+    	shell('(cat '+$dir+'/'+$q+'.macdir/'+$locdir+'/day/EXPLIST | awk \'{print $3}\' > '+$tmp+')'):$dum
+    	readfile($tmp,'$e','$s1','','local')
+    	array2string($e):$e
+    	write('reset',$tmp)
+    	shell('(cat '+$dir+'/'+$q+'.macdir/'+$locdir+'/night/LONGLIST | awk \'{print $3}\' > '+$tmp+')'):$dum
+    	readfile($tmp,'$n','$s1','','local')
+    	array2string($n):$n
+    	shell('rm -f '+$tmp):$dum
+
+    	$file=$qdir+'/'+$locdir+'/eventLog'
+    	exists($file,'file'):$fileex
+    	write('file',$info,'Samplename \t: %s',$samplename)
+    	write('file',$info,'Studyowner \t: %s',$who)
+	write('file',$info,'DayQ       \t: %s',$e)
+	write('file',$info,'NightQ     \t: %s',$n)
+    	write('file',$info,'--------------------------------------')
+    	if ($fileex) and ($samplename<>'ReFeReNCe') then
+            shell('cat '+$file+' >> '+$info):$dum
+    	endif
+    	vnmrjcmd('pnew','TrayLocStatus')
+    endif
+//**************************************************************************************
+ELSEIF ($1='submit') THEN
+    if ($tlss>100) then
+    	write('reset',$info2)
+    	write('reset',$info)
+    	write('file',$info2,'Submitting to location %s\n  Please wait..',TrayLocStatus[101])
+    	vnmrjcmd('pnew','TrayLocStatus')
+
+    	QSpar[5]=TrayLocStatus[101]
+    	create('QSparpopup','string','global',''):$dum
+    	setprotect('QSparpopup','on',256,'global')
+    	teststr('SidesPopupPar','text_string','global'):$ok
+    	if ($ok) then
+	    QSpar[14]=SidesPopupPar[$ok+1]
+    	endif
+    	QSparpopup=SidesPopupPar
+    
+    	QuickSubmit('expresspopup','save')
+    endif
+//**************************************************************************************
+ELSEIF ($1='setparams') THEN
+
+    write('reset',$info)
+    QuickSubmit('start')
+    QSpar[5]=QSpar[4]
+    QuickSubmit('expresspopup'):SidesPopupPar
+
+	// make sure samplename, studyowner, solvent and text_string are in the list
+    $total=size('SidesPopupPar')
+    if (SidesPopupPar[1]='') then $total=0 endif
+    teststr('SidesPopupPar','samplename','global'):$ok
+    if not ($ok) then
+        $val='' QuickSubmit('get','samplename'):$val
+	SidesPopupPar[$total+1]='samplename',$val
+	$total=$total+2
+    endif
+    teststr('SidesPopupPar','studyowner','global'):$ok
+    if not ($ok) then
+        $val='' QuickSubmit('get','studyowner'):$val
+	if ($val='') then $val=operator endif
+        SidesPopupPar[$total+1]='studyowner',$val
+	$total=$total+2
+    endif
+    teststr('SidesPopupPar','solvent','global'):$ok
+    if not ($ok) then
+        $val='' QuickSubmit('get','solvent'):$val
+        SidesPopupPar[$total+1]='solvent',$val
+	$total=$total+2
+    endif
+    teststr('SidesPopupPar','text_string','global'):$ok
+    if not ($ok) then
+	SidesPopupPar[$total+1]='text_string',''
+	$total=$total+2
+    else
+	SidesPopupPar[$ok+1]=''
+    endif
+
+	//  Write the default values
+    shell('touch '+$params):$dum
+    writeparam($params+'tmp','SidesPopupPar','global')
+    $wc=0 shell('(cat '+$params+' | wc -l)'):$wc
+    if ($wc=0) then
+	$list='SidesPopupPar'
+    else
+        shell('(diffparams -list '+$params+' '+$params+'tmp)'):$list
+    endif
+    $xml=''
+    if ($list<>'') then
+	shell('mv '+$params+'tmp '+$params):$dum
+	buildSIDESxml('params'):$xml
+    else
+	shell('rm '+$params+'tmp'):$dum
+	exists('SidesParams.xml','templates/vnmrj/panelitems'):$xmlex,$xml
+	if ($xmlex=0) then buildSIDESxml('params'):$xml endif
+    endif
+    return($xml)
+
+//**************************************************************************************
+ELSEIF ($1='initparams') THEN
+
+//    write('reset',$info)
+    if ($tlss>100) then
+	if (sideslvl>1.5) then
+	    QuickSubmit('NewStudy')
+	endif
+    	shell('touch '+$params):$dum
+    	fread($params,'global')
+    	$nloc=0
+    	nextlocQ:$nloc
+    	format($nloc,0,0):TrayLocStatus[101]
+    	QSpar[5]=TrayLocStatus[101]
+    	vnmrjcmd('pnew','TrayLocStatus','SidesPopupPar')
+    endif
+
+//**************************************************************************************
+ELSEIF ($1='refresh') THEN
+    write('reset',$info)
+    write('reset',$info2)
+    sides('initparams')
+ENDIF

@@ -1,0 +1,105 @@
+  gNcpmgex.c (TROSY version)
+
+This pulse sequence will allow one to perform the following experiments:
+"Constant Relaxation Time CPMG experiment for NH" to identify Rex due to
+(millisecond) motions. The resultant spectral intensity is attenuated by
+the relaxation rate of the trosy component with a contribution Rex
+that is dependent on the pulse spacing (2*tauCPMG) employed.
+
+           F1      15N
+           F2(acq)  1H (NH)
+ 
+This sequence uses the standard three channel configuration
+   1)  1H    - carrier (tof) @ 4.7 ppm [H2O]
+   2) 13C    - carrier (dof) @  57 ppm [CA]
+   3) 15N    - carrier (dof2)@ 119 ppm [centre of backbone amide NH]
+ 
+
+ Constant Relaxation Time adaptation of:
+      J.P. Loria, M. Rance & A.G. Palmer, III
+      JACS 121, 2331-2332 (1999)
+      (note there is a small mistake in their sequence (Fig.1);
+       the second 1H 90 degree pulse should have phase y)
+
+ Trosy adaptation of:
+      Tollinger et al., JACS 123, 11341-11352, 2001
+
+ If necessary one can do standard presaturation.  Note: presaturation
+ is done using the transmitter with the power level set by 'tsatpwr'
+ Irradiation is done with the carrier sitting at tofps. One can assign
+ a different value to tof (e.g. center of amides) if required.
+
+ No decoupling during acquisition
+ Processing: use f1coef='1 0 -1 0 0 1 0 1' and wft2da
+
+ Written by L.E.Kay on Nov. 19, 2001
+ modified from  N15_CPMG_Rex_NH_trosy_lek_500.c for BioPack (GG jul03)
+
+ f1180 setting of tau1 corrected and 13C decoupling option added 
+   (Steve Van Doren, U.Missouri jan08)
+
+
+Modified the amplitude of the flipback pulse(s) (pwHs) to permit user 
+adjustment around theoretical value (tpwrsl). If tpwrsf < 4095.0 the 
+value of tpwrsl is increased 6db and values of tpwrsf of 2048 or so 
+should give equivalent amplitude. In cases of severe radiation damping
+( which happens during pwHs) the needed flip angle may be much less than
+90 degrees, so tpwrsf should be lowered to a value to minimize the 
+observed H2O signal in single-scan experiments (with ssfilter='n').
+(GG jul03)
+
+Auto-calibrated version, E.Kupce, jul03.
+
+
+ Radiation Damping:
+   At fields 600MHz and higher with high-Q probes, radiation damping is a
+   factor to be considered. Its primary effect is in the flipback pulse
+   calibration. Radiation damping causes a rotation back to the +Z axis
+   even without a flipback pulse. Hence, the pwHs pulse often needs to 
+   be reduced in its flip-angle. This can be accomplished by using the
+   parameter tpwrsf. If this value is less than 4095.0 the value of tpwrsl
+   (calculated in the psg code) is increased by 6dB, thereby permitting
+   the value of tpwrsf to be optimized to obtain minimum H2O in the 
+   spectrum. The value of tpwrsf is typically lower than 2048 (half-maximum
+   to compensate for the extra 6dB in tpwrsl). 
+
+   The autocal and checkofs flags are generated automatically in Pbox_bio.h
+   If these flags do not exist in the parameter set, they are automatically 
+   set to 'y' - yes. In order to change their default values, create the  
+   flag(s) in your parameter set and change them as required. 
+   The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+   The offset (tof, dof, dof2 and dof3) checks can be switched off  
+   individually by setting the corresponding argument to zero (0.0).
+   For the autocal flag the available options are: 'y' (yes - by default), 
+   'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+   shapes are created), 's' (semi-automatic mode - allows access to user  
+   defined parameters) and 'n' (no - use full manual setup, equivalent to 
+   the original code).
+
+   if BioPack power limits are in effect (BPpwrlimits=1) the cpmg 15N 
+   amplitude is decreased by 3dB and pulse width increased 40%
+
+
+ If comp_flg='y' there is a N15 pulse applied after d1 to compensate for RF/coil
+ heating from the cpmg pulse train. This pulse be longest for the ncyc small and
+ increases with ncyc to maintain a constant heating as a function of ncyc. Cryogenic
+ probe tuning and shimming can be sensitive to power dissapation, so this compensates
+ for the heating. Room temperature probes are not as sensitive to coil heating or
+ deshimming, but may experience sample heating.
+
+ The pulse is applied at dpwr2_comp power and the duration is calculated within the
+ pulse sequence. The power should be determined by setting up a cpmg pulse train
+ for the maximum ncyc to be used, starting the sequence, and then determining the
+ heating power remaining (for a cold probe) after attaining steady-state. This should
+ be done with comp_flg='n'. Then, set the N15 power levels other that dpwr2_comp to
+ zero,ncyc=0 and set comp_flg='y'. Set ncyc_max to the largest ncyc value to be used
+ in the queue of experiments. Try various compensation power levels until the heating
+ power value achieves the same level as above. This represents a power level that
+ produces the same heating as the cpmg pulse train.
+
+ Now re-set ncyc and the cpmg pulse train power level to their proper values and leave
+ comp_flg='y'. Use sufficient steady-state pulses to get to a stable heater value and
+ then run the series of 2D experiments as a function of ncyc, one after the other.
+
+ Once this is done the heating characteristics should be very similar from sample to
+ sample so that the same settings could be used.

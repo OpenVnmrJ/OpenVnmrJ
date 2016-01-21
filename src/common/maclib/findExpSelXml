@@ -1,0 +1,24 @@
+"macro findExpSelXml"
+
+    $fex=0 $file=''
+    exists('ExperimentSelector.xml','templates/vnmrj/interface'):$fex,$file
+    if not ($fex) then return(0,'') endif
+    strstr($file,'/personalib/'):$ret
+    if not ($ret) then return($fex,$file) endif
+    $atot=0 $adirs=''
+    getappdirs:$atot,$adirs
+    $i=1
+    repeat
+        $file=''
+        strstr($adirs[$i],'/personalib/'):$persona
+        if not ($persona) then
+            $file=$adirs[$i]+'/templates/vnmrj/interface/ExperimentSelector.xml'
+            exists($file,'file'):$fex
+            if ($fex) then
+                return($fex,$file)
+            endif
+        endif
+        $i=$i+1
+    until $i > $atot
+    return(0,'')
+

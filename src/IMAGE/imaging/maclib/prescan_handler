@@ -1,0 +1,174 @@
+"macro prescan_handler"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_handler
+"
+" DESCRIPTION:
+"    Main script to execute prescan routines.
+"
+" Ex: prescan_handler
+"
+"    prescan_control[1] -> Flag 0 - no prescan in progress
+"                               1 - user define prescan
+"                               2 - full prescan
+"                               3 - single module
+"    prescan_control[2] -> current module to be executed
+"    prescan_exec       -> variable containing the execution order 
+"    prescan_order      -> variable containing the user prescan order
+"
+"
+"********************************************************************
+"---------------------------------"
+" define and initialize variables "
+"---------------------------------"
+$action             = ''                         "initialize as string"
+$macro_name         = $0
+$temp_str           = ''                         "initialize as string"
+$action             = ''
+$max_action         = size('prescan_exec')	 "maximum number of executable modules"
+
+$cur_index          = 2                          "index into prescan_control, holding current module to be executed"
+
+if ($# > 0) then
+     $action = 'exec'
+endif
+"-----------------------------------------------------------------"
+"  S E T U P   H A N D L E R   V A R I A B L E S                  "
+"-----------------------------------------------------------------"
+if ($action <> 'exec') then
+     prescan_control[$cur_index] = 1  "Meaning: Start over from beginning of list"
+     "---------------------------------"
+     " define number of modules        "
+     "---------------------------------"
+     $counter=0
+     repeat
+	   $counter = $counter + 1
+     until ( (prescan_order[$counter] = 'none') or ($counter = $max_action))
+     "---------------------------------"
+     " reset the other modules to none "
+     "---------------------------------"
+     while ($counter < $max_action) do
+	  $counter = $counter +1
+	  prescan_order[$counter] = 'none'
+     endwhile
+endif
+"-----------------------------------------------------------------"
+"  H A N D L E     M O D U L E   E X E C U T I O N                "
+"-----------------------------------------------------------------"
+if ($action = 'exec') then
+     menu('main')
+     prescan_params('save')       "save current scan parameters"
+     sqsavestudy                  "save study params in study directory"
+
+     if (prescan_control[$cur_index] > $max_action) then
+          $prescantype = 'stop'   "Force stop"
+     else
+          $prescantype = prescan_exec[prescan_control[$cur_index]]
+     endif
+
+     "-----------------------"
+     " None  or Stop         "
+     "-----------------------"
+     if ($prescantype = 'none') or ($prescantype = 'stop') then   
+	  Prescan_AcqStatus = 0
+	  beepon
+          prescan_control[$cur_index] = 1  "Start over from beginning of list"
+	  prescan_control[1] =  0          "No prescan in progress"
+	  
+	  "Load original parameters but remember some display settings"
+//	  $dmg = dmg $vs = vs $vp = vp $sp = sp $wp = wp
+	  prescan_params('load')           "Retrieve original parameters"
+//	  dmg = $dmg vs = $vs vp = $vp sp = $sp wp = $wp
+
+          prescan_log('end',$macro_name,'Finished prescan / partial prescan')
+          write('line3','- - - - - END OF PRESCAN - - - - -')
+     else
+	  "-----------------------"
+	  " Frequency             "
+	  "-----------------------"
+	  if ($prescantype = 'freq') then            
+	       gain = coil_param[6]
+	       $rfcoil = rfcoil
+               prescanfreq
+	       rfcoil = $rfcoil
+	       "retrieve study parameters"
+	       exists('studyid','parameter','global'):$e
+	       if ($e > 0.5) then
+		 if (studyid<>'' and activestudy<>'null') then
+		   exists(sqdir+'/studypar','file'):$e
+		   if ($e > 0.5) then
+		     fread(sqdir+'/studypar')
+		   endif
+		 endif
+	       endif
+               prescan_frequency('exp')
+	  endif
+     
+	  "-----------------------"
+	  " Shim                  "
+	  "-----------------------"
+	  if ($prescantype = 'shim') then                                             
+            $file = 'prescan'+Prescan_ShimMethod+'_'+gcoil+'_'+rfcoil
+            "1st implementation: method file must be saved; voxel saved for voxel shimming"
+            rtppar($file):$ex
+            if ($ex = 0) then 
+              rtppar('prescan'+Prescan_ShimMethod):$ex
+              if ($ex = 0) then 
+                write('error','%s: Can not find parameters for method %s',$macro_name, Prescan_ShimMethod)
+                abort
+              endif
+            endif
+
+            wexp = ''
+            prep            "execute shim method specific execprep parameter"
+            wexp = 'process' 
+            au
+	  endif
+
+	  "-----------------------"
+	  " Power                 "
+	  "-----------------------"
+	  if ($prescantype = 'power') then                                            
+	       $rfcoil = rfcoil
+               prescanpower
+	       rfcoil = $rfcoil
+	       "retrieve study parameters"
+	       exists('studyid','parameter','global'):$e
+	       if ($e > 0.5) then
+		 if (studyid<>'' and activestudy<>'null') then
+		   exists(sqdir+'/studypar','file'):$e
+		   if ($e > 0.5) then
+		     fread(sqdir+'/studypar')
+		   endif
+		 endif
+	       endif
+	       prescan_power('exp')
+	  endif
+
+	  "-----------------------"
+	  " Gain                  "
+	  "-----------------------"
+	  if ($prescantype = 'gain') then   
+               prescan_params('load')           "Retrieve original parameters"
+	       prescan_gain('exp')         
+	  endif
+
+	  "-----------------------"
+	  " Sequence Specific     "
+	  "-----------------------"
+	  if ($prescantype = 'specific') then    
+               prescan_params('load')           "Retrieve original parameters"
+	       prescan_specific('exp')  
+	  endif
+	  
+	  "-----------------------"
+	  "Skip                   "
+	  "-----------------------"
+	  if ($prescantype = 'skip') then    
+               prescan_control[$cur_index] = prescan_control[$cur_index] + 1
+               prescan_handler('exec')
+	  endif
+     endif
+endif     

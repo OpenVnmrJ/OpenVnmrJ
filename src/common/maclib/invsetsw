@@ -1,0 +1,60 @@
+"macro invsetsw"
+"invsetsw - invert setsw (see setsw macro)"
+"setsw($1,$2) -> gives sw and tof"
+"invsetsw: given $sw and $tof -> find $frq1 and $frq2"
+"optional arguments are rounding factor, tof, and sw"
+
+$tof=tof $sw=sw
+// $round is a rounding factor in ppm for output
+$round=0.1
+if $#>0.5 then
+  if ($1>0.001 and $1<1000) then
+    $round=$1
+  endif
+  if ($# > 2.5) then
+    $tof=$2
+    $sw=$3
+  endif
+endif
+
+$solv='' format(solvent,'lower'):$solv
+if $solv='none' then $tsolv=solvent solvent='cdcl3' endif
+if (tn='none') then
+  $rfl=0 $rfp=0 $reffrq=sfrq $refpos=0
+else
+  setref(tn):$rfl,$rfp,$reffrq,$refpos
+endif
+if $solv='none' then solvent=$tsolv endif
+if ($rfl < -2e7 or $rfl > 2e7) then
+  return(0,0)
+endif
+$frq1 = (($tof+$rfp-$rfl) + 0.5*$sw) / $reffrq
+$frq2 = (($tof+$rfp-$rfl) - 0.5*$sw) / $reffrq
+
+$rinv=1/$round
+if ($frq1 > 0) then
+  $frq1 =  $round * trunc( $rinv * $frq1 + 0.5)
+else
+  $frq1 = -$round * trunc(-$rinv * $frq1 + 0.5)
+endif
+if ($frq2 > 0) then
+  $frq2 =  $round * trunc( $rinv * $frq2 + 0.5)
+else
+  $frq2 = -$round * trunc(-$rinv * $frq2 + 0.5)
+endif
+
+return($frq1,$frq2)
+
+"How to use this macro in entry boxes:"
+" Box one shows $1, box two shows $2"
+" Box one: "
+"  Value of element = $frq1"
+"  Command: Enter $1, calculate setsw($1, $frq2)"
+" Box two: "
+"  Value of element = $frq2"
+"  Command: Enter $2, calculate setsw($frq1, $2)"
+"How to use this macro in a menu:"
+" Construct a string to match menu choice:"
+" i.e. $s1='' $s2='' "
+" format($frq1,1,1):$s1 format($frq2,1,1):$s2"
+" Value of element = $s1+','+$s2"

@@ -1,0 +1,92 @@
+"macro xmhaha_TrayAction"
+// Generic macro for tray based actions
+// At this time the following macros are softlinked to this
+//	ExpressSubmit
+//	copy2ClipBoard
+//	pasteClipBoard
+//	showLocLog
+
+if ($# = 0) then
+    vnmrjcmd('submitstudy '+$0)
+    vnmrjcmd('tray update')
+    return
+endif
+
+$loc='' $rack='' $zone=''
+if ($#<4) then
+    if not typeof('$1') then
+	format($1,0,0):$loc
+    else
+	$loc=$1
+    endif
+else
+    if not typeof('$4') then
+     	format($4,0,0):$loc
+    else
+     	$loc=$4
+    endif
+    if (traymax=96) or (traymax=768) then
+      	format($2,'lower'):$rack
+      	format($3,'lower'):$zone
+    endif
+endif
+
+"***Where to get status info****"
+//  It is a good idea to reset the status of the location
+
+    strstr(autodir,'studytray'):$enter
+    if ($enter) then
+        shell('dirname '+autodir):$dir
+        shell('dirname '+$dir):$dir
+        shell('basename '+$dir):$file
+    else
+        $dir=autodir
+        $file='enterQ'
+    endif
+    $autofile=$dir+'/'+$file
+
+// First reset the status of all the selected locations
+$totloc=0 wc($loc):$totloc
+if (opentray[1]<>'close') and (opentray[1]<>'') then
+  $i=1
+  repeat
+    $nloc=''
+    substr($loc[$i],1):$nloc
+    if ($nloc<>'') and ($nloc<>'0') then
+    	$status='' $who='' $samplename='' $locdir=''
+    	checklocstatus($autofile,$nloc,$zone,$rack):$status,$who,$samplename,$locdir
+    	if ($status='') then
+            updatestatus($dir,$nloc,'Empty',$zone,$rack)
+    	else
+            updatestatus($dir,$nloc,$status,$zone,$rack)
+    	endif
+    endif
+    $i=$i+1
+  until $i > $totloc
+endif
+// Capture a potential possiblity that multiple locations
+//   are selected.  Such selection is disallowed for this
+//   tool.
+
+if ($totloc>1) then
+	write('error','multiple location selection is disallowed for this tool')
+	return
+endif
+
+substr($loc,1):$loc
+if ($loc='') or ($loc='0') then
+    	write('error','Select a location')
+        return
+endif
+
+if ($0='ExpressSubmit') then
+    QuickSubmit('Express',$rack,$zone,$loc)
+elseif ($0='showLocLog') then
+    eLogAction('infolocdir',$rack,$zone,$loc)
+elseif ($0='copy2ClipBoard') then
+    vjclipboardQ('copy',$rack,$zone,$loc)
+elseif ($0='pasteClipBoard') then
+    vjclipboardQ('paste',$rack,$zone,$loc)
+elseif ($0='editSampleInfo') then
+    vjeditST('init',$rack,$zone,$loc)
+endif

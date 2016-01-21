@@ -1,0 +1,55 @@
+"macro operights"
+// Includes a 2nd return value.  The return value represents
+//  whether the first return value is based on an explicit
+//  defintion of a given right (=1) or based on a default
+//  value because a given right was not defined (=0)
+// This is a useful feature to decide whether a widget/macro
+//  should act based on a default return value of 1 or based on
+//  an explicit return value of 1
+
+if ($# < 2) then $2=0 endif
+
+// First make sure that admin has given rights
+// This supercedes any owner given rights
+
+rights($1,$2):$ok
+if ($ok<0.5) then
+   return($2,1)
+endif
+
+$rights=userdir+'/persistence/OperatorRights/opeRights_'+operator+'.txt'
+exists($rights,'file'):$fileex
+$rights2=userdir+'/persistence/OperatorRights/opeRights_'+owner+'.txt'
+exists($rights2,'file'):$file2ex
+exists('personaType','parameter','global'):$perex
+if ($perex) then if (personaType='') then $perex=0 endif endif
+if ($perex) then
+    exists('opeRights_'+personaType+'.txt','personalib/'+personaType+'/adm'):$file3ex,$rights3
+else
+    $file3ex=0
+endif
+
+if ($fileex=0) and ($file2ex=0) and ($file3ex=0) then
+   return(1,0)
+endif
+
+$found=0
+format($1,'lower'):$1
+$s1='' $s2=''
+
+if ($file3ex) then
+   readfile($rights3,'$s1','$s2',$1,'local'):$found
+elseif ($fileex) then
+   readfile($rights,'$s1','$s2',$1,'local'):$found
+elseif ($file2ex) then
+   readfile($rights2,'$s1','$s2',$1,'local'):$found
+endif
+
+if ($found=0) then
+   return(1,0)
+endif
+if ($s2='false') or ($s2='deny') then
+   return($2,1)
+endif
+return(1,1)
+

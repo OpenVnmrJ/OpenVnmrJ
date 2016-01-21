@@ -1,0 +1,293 @@
+"macro plot2D"
+"*******************************************************************************"
+" plot2D - plotting of 2d spectrum with 1d plots along edges	   		"
+"*******************************************************************************"
+"     plot2D(<'resize'>,<both,pos or neg>,<levels>,<spacing>,<top1d>,<side1d>)  "
+"	resize option will automatically resize the current display		"
+"		to fit the options chosen and make full use of the		"
+"		paper.   This is called by the autoplot routines in glide.	"
+"		default is not to resize.					"
+"	2nd argument can be both, pos or neg.  Default is both.			"
+"	3rd argument is # of levels.  Default is 7.				"
+"	4th argument is spacing between levels.  Default is 1.5.		"
+"	5th argument is top1d spectrum.  					"
+"	   Keyword options are notop, top, proj, exp#				"
+"		notop - turns off top 1d plot					"
+"		top - checks for high res 1D spectrum in the 'sample'		"
+"			directory. If not found plots projection.		"
+"		proj - plots skyline projection					"
+"		exp# - plots the 1D [or first spectrum in an arrayed expt]	"
+"			spectrum in a given exp on top of the current 2D	"
+"		default is proj.						"
+"          	If not keyword, 5th argument is pathname for top plot           "
+"                [The pathname may be absolute or relative to sample directory] "
+"	6th argument is side1d spectrum.  similar to 5th argument.		"
+"	Optional 7th and 8th arguments - vsadj					"
+"	   Applicable ONLY if arg5 or arg6 is exp#, respectively		"
+"	   Will pass automatic vsadj option to plottop/plotside			"
+"    Typing plot2D will do:							"
+"	plot2D('both',7,1.5,'proj','proj')					"
+"    Other examples:								"
+"	plot2D('pos',20,1.2,'exp6','exp4')					"
+"	  - exp6 has the 1D spectrum for the top plot				"
+"	  - exp4 has the 1D spectrum for the side plot				"
+"	plot2D('resize','pos',20,1.4,'exp11','proj')				"
+"	  - resize the 2D automatically to fit into the page			"
+"	  - exp11 has the 1D spectrum for the top plot				"
+"	  - plot vertical projection on the side.				"
+"  ***Arguments can be supplied as an array***					"
+"*******************************************************************************"
+
+// One can supply the arguments via plt2Darg parameter
+// If the arg1 is the keyword plt2Darg, then all options
+// are derived from this parameter
+
+if ($# = 1) then
+    $num=size('$1')
+    if $1[1]='plt2Darg' and $num=1 then
+	// call the macro again with deciphered argument array
+	$a1='pos' $a2='20' $a3='1.3'
+	if (trace='f2') then $a4='f2' $a5='f1'
+	else $a4='f1' $a5='f2' endif
+	$a6='' $a7='' $a8=''
+	exists('plt2Darg','parameter'):$parex
+	if ($parex) then
+	    $parsize=size('plt2Darg')
+	    if (plt2Darg[1] <> '') then $a1=plt2Darg[1] endif
+	    if ($parsize > 1) then $a2=plt2Darg[2] endif
+	    if ($parsize > 2) then $a3=plt2Darg[3] endif
+	    if ($parsize > 3) then $a4=plt2Darg[4] endif
+	    if ($parsize > 4) then $a5=plt2Darg[5] endif
+	    if ($parsize > 5) then $a6=plt2Darg[6] endif
+	    if ($parsize > 6) then $a7=plt2Darg[7] endif
+	    if ($parsize > 7) then $a8=plt2Darg[8] endif
+	endif
+	if ($a6='') then $a6='resize' endif
+	$args=$a6,$a1,$a2,$a3,$a4,$a5,$a7,$a8
+	{$0}($args)
+	return
+    endif
+endif
+
+// The following the original plot2D
+$resize='nosize'
+$levels=7
+$spacing=1.5
+$contour='both'
+$top1d='notop'
+$side1d='noside'
+$topvsadj='novsadj'
+$sidevsadj='novsadj'
+$ix=1
+$ixs=''
+$wcbak=wc $wc2bak=wc2 $scbak=sc $sc2bak=sc2
+$argorder='contour','levels','spacing','top1d','side1d','topvsadj','sidevsadj'
+if ($#=1) then
+   $args=size('$1')
+   if $1[1]='resize' or $1[1]='nosize' then $resize=$1[1] $ix=2 endif
+   $i=1
+   while $ix <= $args do
+	if ($i<>2) and ($i<>3) then
+		${$argorder[$i]}=$1[$ix]
+	else
+		format($1[$ix],'lower'):${$argorder[$i]}
+	endif
+	$i=$i+1
+	$ix=$ix+1
+   endwhile
+elseif ($# > 1) then
+    if $1 = 'resize' or $1='nosize'then $resize=$1 $ix=2 else $ix=1 endif
+    $i=1
+    repeat
+        if ($i<>2) and ($i<>3) then
+                ${$argorder[$i]}=${$ix}
+        else
+                format(${$ix},'lower'):${$argorder[$i]}
+        endif
+        $i=$i+1
+        $ix=$ix+1
+   until $ix>$#
+endif
+
+if trace='f1' then
+ $oldtop=$top1d
+ $oldside=$side1d
+ if $oldtop='f1' then $top1d='top' 
+ elseif $oldtop='f2' then $side1d='side'
+ elseif $oldtop='projection' then $top1d='proj' 
+ elseif $oldtop='proj' then $top1d='proj'
+ elseif $oldtop='none' then $top1d='notop' endif
+ if $oldside='f2' then $side1d='side' 
+ elseif $oldside='f1' then $top1d='top'
+ elseif $oldside='projection' then $side1d='proj'
+ elseif $oldside='proj' then $side1d='proj'
+ elseif $oldside='none' then $side1d='noside' endif
+
+else  "trace='f2'"
+ $oldtop=$top1d
+ $oldside=$side1d
+ if $oldtop='f1' then $side1d='side' 
+ elseif $oldtop='f2' then $top1d='top' 
+ elseif $oldtop='projection' then $top1d='proj' 
+ elseif $oldtop='proj' then $top1d='proj'
+ elseif $oldtop='none' then $top1d='notop' endif
+ if $oldside='f2' then $top1d='top' 
+ elseif $oldside='f1' then $side1d='side' 
+ elseif $oldside='projection' then $side1d='proj' 
+ elseif $oldside='proj' then $side1d='proj'
+ elseif $oldside='none' then $side1d='noside' endif
+
+endif
+
+if ($contour <> 'pos') and ($contour <> 'neg') then
+     $contour='both'
+endif
+
+$toppath=''
+$sub4='' $ret4=0 $expnum=''
+strstr($top1d,'exp'):$ret4,$sub4,$expnum
+format($expnum,'isreal'):$isexp
+if ($ret4=1) and ($isexp) then
+   $sub4='exp'
+endif
+if ($sub4 = 'exp') then
+    exists(userdir+'/'+$top1d,'directory'):$expex
+    if ($expex=0) then
+     $top1d='proj'
+    endif
+endif
+
+if (($top1d <> 'top') and ($top1d <> 'notop') and
+    ($top1d <> 'proj') and ($sub4 <> 'exp')) then
+	$toppath=$top1d
+endif
+
+$sidepath=''
+$sub5='' $ret5=0 $expnum=''
+strstr($side1d,'exp'):$ret5,$sub5,$expnum
+format($expnum,'isreal'):$isexp
+if ($ret5=1) and ($isexp) then
+   $sub5='exp'
+endif
+if ($sub5 = 'exp') then
+    exists(userdir+'/'+$side1d,'directory'):$expex
+    if ($expex=0) then
+     $side1d='proj'
+    endif
+endif
+
+if (($side1d <> 'side') and ($side1d <> 'noside') and
+    ($side1d <> 'proj') and ($sub5 <> 'exp')) then
+	$sidepath=$side1d
+endif
+
+$tfile=$top1d $sfile=$side1d
+
+$tfile2=$tfile $sfile2=$sfile
+if ($top1d = 'top') or ($side1d='side') then
+   getpl1dinfo:$tfile2,$sfile2
+endif
+if ($side1d = 'side') then $sfile=$sfile2 endif
+if ($top1d='top') then $tfile=$tfile2 endif
+
+if ($toppath<>'') then
+   getpl1dinfo('abspath',$tfile):$tfile,$ret
+   if ($ret=0) then
+	write('error','file %s not found',$tfile)
+	$tfile='notop'
+   endif
+endif
+if ($sidepath<>'') then
+   getpl1dinfo('abspath',$sfile):$sfile,$ret
+   if ($ret=0) then
+	write('error','file %s not found',$sfile)
+	$sfile='noside'
+   endif
+endif
+
+if ($resize = 'resize') then
+  full wc2=wc2max*0.98
+//  if ((parstyle = 'pap') or (parstyle='ppa')) then
+//     wc=wc-50
+//  elseif (parstyle='bpav') then
+//	wc=wc-60 sc2=2
+//  elseif ((parstyle = 'pap(wc-50)') or (parstyle='ppa(wc-50)')) then
+//        wc=wc-50 sc=sc+50
+//  elseif (parstyle='bpa') then  // Horizontal box
+//           wc2=wc2-26 sc2=26 wc=wcmax*0.9
+//  endif
+
+  if ($tfile <> 'notop') or (auto='y') then 
+     wc2=wc2*0.75
+  endif
+  if ($sfile <> 'noside') then wc=wc*0.75 endif
+//  exists('selfrqc','parameter'):$bs
+
+// make wc and wc2 equal, but only if refsource1 is sfrq
+//   and sw is equal to sw1.  This is the same condition
+//   used for setting fn and fn1 by the setLP1 macro
+//  if (refsource1 = 'sfrq') and (trunc(sw)=trunc(sw1)) and (trunc(wp)=trunc(wp1)) then
+//  if (refsource1 = 'sfrq' and apptype<>'dosy2D' and $bs<1) then 
+//     if (wc2 > wc) then wc2=wc else wc=wc2 endif
+//     if (parstyle='bpa') then sc=wcmax/2-wc/2 endif  // Move to centre
+//  endif
+else
+  if ($tfile <> 'notop') then
+     if wc2 > (0.75*wc2max-sc2) then wc2=(0.75*wc2max-sc2) endif
+  endif
+  if ($sfile <> 'noside') then
+     if wc > (0.75*wcmax-sc) then wc=(0.75*wcmax-sc) endif
+  endif
+  if ($tfile = 'proj') and ($contour = 'both') then
+     wc2=wc2-10
+  endif
+  if ($sfile = 'proj') and ($contour = 'both') then
+     wc=wc-10
+  endif
+endif
+
+if (dmg = 'av') then $contour ='' endif
+
+if ($contour = 'both') then
+  if (maxpen = 1) then
+    pcon('pos',$levels,$spacing)
+    $axis=axis axis='nn'
+    pcon('neg',1)
+    axis=$axis
+  else
+    pcon($levels,$spacing)
+  endif
+else
+  if ($contour <> '') then
+    pcon($contour,$levels,$spacing)
+  else
+    pcon($levels,$spacing)
+  endif
+endif
+
+abortoff
+if ($tfile <> 'notop') then plottop($tfile,$topvsadj) endif
+if (($tfile = 'proj') and ($contour='both') and (refsource1<>'sfrq')) then
+   write('plotter',wcmax-sc-40,wc2+sc2+8,'pos proj')
+   $sc2=sc2 sc2=sc2+10 rp1=rp1+180
+   plottop($tfile)
+   write('plotter',wcmax-sc-40,wc2+sc2+8,'neg proj')
+   sc2=$sc2 rp1=rp1-180
+endif
+
+if ($sfile <> 'noside') then $sc=sc sc=sc+5 plotside($sfile,$sidevsadj) sc=$sc endif
+if (($sfile = 'proj') and ($contour='both') and (refsource1<>'sfrq')) then
+   write('plotter',wcmax-wc-sc-17,sc2,'pos proj')
+   rp1=rp1+180 $sc=sc sc=sc+10
+   plotside($sfile)
+   write('plotter',wcmax-wc-sc-32,sc2,'neg proj')
+   sc=$sc rp1=rp1-180
+endif
+aborton
+wc=$wcbak wc2=$wc2bak sc=$scbak sc2=$sc2bak
+
+//if parstyle='bpa' or parstyle='bpav' or parstyle='pap' then pllogo endif
+
+if auto<>'y' then
+ newdg dconi
+endif

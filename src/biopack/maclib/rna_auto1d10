@@ -1,0 +1,38 @@
+"macro rna_auto1d10"
+
+ssfilter=100 wft f full select(1)
+setref ph BPaph0
+setref wc=.7*wc  lp=0 vp=0 vo=90 ho=0 
+vsadj(60)
+ds pl pscale pap dscale
+select(2) BPaph0
+vp=vp+vo dssn(2,2) pl(2) 
+vp=0
+write('graphics',200,vp+30,'Ribose Only')
+write('graphics',200,vp+30+vo,'AH2H8 Only')
+write('plotter',220,vp+30,'Ribose Only')
+write('plotter',220,vp+30+vo,'AH2H8 Only')
+BPpage
+BPsvf(userdir+'/AutoRNA_1D/rna_hcch_tocsy_1Ds')
+
+$nt=nt $d1=d1 $gain=gain $temp=temp
+
+rna_hcch_cosy
+d1=$d1 temp=$temp gain=$gain nt=$nt
+dm='nny' dmm='ccp' dres=9.0
+wexp='rna_auto1d11'  
+
+
+dm='nny' ribose='y' aromatic='n' BPsetwurstparams
+$dmfribose=dmf $dseqribose=dseq $dpwrribose=dpwr
+dm='nny' ribose='n' aromatic='y' BPsetwurstparams
+$dmfaromatic=dmf $dseqaromatic=dseq $dpwraromatic=dpwr
+wnt='wft setref select(1) vsadj(80) f full dssa' 
+  ribose='y','n'
+  aromatic ='n','y'
+dmf=$dmfribose,$dmfaromatic
+dpwr=$dpwrribose,$dpwraromatic
+dseq='wurst80','wurst40'
+
+array='(ribose,aromatic,dmf,dpwr,dseq)'
+au

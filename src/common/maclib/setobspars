@@ -1,0 +1,87 @@
+"macro setobspars"
+"setobspars"
+
+$obspars='tpwr','pw90','tpwr_cf'
+$pw90=pw90
+$tpwr=tpwr
+$obsparsize=size('$obspars')
+
+mkpar('real','tpwr_cf',1)
+
+$ok=0 $str='' $val=''
+readprobe(tn):$str,$val,$ok
+if ($ok) then
+  $i=1
+  repeat
+     exists($obspars[$i],'parameter'):$parex
+     if ($parex) then
+        $r=0
+        teststr('$str',tn+$obspars[$i],'local'):$r
+        if ($r) then
+           if typeof($obspars[$i]) then
+                {$obspars[$i]}=$val[$r]
+           else
+                format($val[$r],'lower'):{$obspars[$i]}
+           endif
+        endif
+     endif
+     $i=$i+1
+  until $i > $obsparsize
+endif
+
+$ok=0 $str='' $val=''
+readprobe(tn,probe,'Study'):$str,$val,$ok
+if ($ok) then
+  $i=1
+  repeat
+     exists($obspars[$i],'parameter'):$parex
+     if ($parex) then
+        $r=0
+        teststr('$str',tn+$obspars[$i],'local'):$r
+        if ($r) then
+           if typeof($obspars[$i]) then
+                {$obspars[$i]}=$val[$r]
+           else
+                format($val[$r],'lower'):{$obspars[$i]}
+           endif
+        endif
+     endif
+     $i=$i+1
+  until $i > $obsparsize
+endif
+
+if pw90=0 then pw90=$pw90 endif
+if tpwr=0 then tpwr=$tpwr endif
+if tpwr_cf=0 then tpwr_cf=1 endif
+
+exists('SFSPcorrect','maclib'):$macex
+if ($macex) then SFSPcorrect('tn') endif
+setrefcmpd(tn)
+
+//This section is called when tn is changed from the panels
+
+IF ($# > 0) THEN
+    if ($1<>'update') then return endif
+
+    module('acquisition','Och_adiabatic bip zqfilter')
+
+    $fixit=0
+    if (apptype='hetero2D') then
+        if (refsource1='dfrq') then $fixit=1 endif
+    elseif (apptype='hetero1D') then
+        $fixit=1
+    elseif (apptype='homhet3D') then
+        if (refsource2='dfrq') then $fixit=1 endif
+    endif
+    if ($fixit>0) then
+        EDratio=sfrq/dfrq
+        if (tn = 'H1') then
+            getparam('gHratio',dn):EDratio
+        elseif (dn = 'H1') then
+            $EDratio=1/EDratio
+            getparam('gHratio',dn):$EDratio
+            EDratio=1/$EDratio
+        endif
+    endif
+ENDIF
+

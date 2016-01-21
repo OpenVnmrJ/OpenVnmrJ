@@ -1,0 +1,118 @@
+  gnoesyChsqcA.c
+
+    3D C13 edited noesy with separation via the carbon of the destination site
+         recorded on a water sample 
+
+    NOTE: cnoesy_3c_sed_pfg(1).c 3D C13 edited NOESYs with separation via the
+          carbon of the origination site. (D2O experiments)
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 43 ppm
+         3) 15N             - carrier @ 118 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+    Set dm2 = 'nyny', [15N dec during t1 and acq] 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (90, -180) in F1 and (90, -180) in  F2.    
+    c180_flg='y' for HH 2D (ni) experiment (fixed d3 (t2) in this case) 
+    c180_flg='n' for carbonyl decoupling using wfg during t2 (3D only)
+    Note: Zero order phase correct may not be exactly +90 in F2 due to seduce.
+
+    If you set the C13 carrier to a value other than 43 ppm (such as 35 ppm),
+    change the line
+        dofa=dof+(125-43)*dfrq;
+    below to
+        dofa=dof+(125-35)*dfrq;
+
+    Modified by L. E. Kay to allow for simult N, C acq   July 19, 1993
+    original code: noesyc_pfg_h2o_NC_dps.c
+    Modified for dps and magic angle gradients D.Mattiello, Varian, 6/8/94
+    Modified for vnmr5.2 (new power statements, use status control in t1)
+      GG. Palo Alto  16jan96
+    Modified to use only z-gradients and only C13 editing (use gnoeysCNhsqc for
+     simultaneous editing of N15 and C13
+    Modified to permit magic-angle gradients
+    Modified to use BioPack-style of C=O decoupling
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+    Added SEAD,gstab  E.K. and G.G. 24,10.2003
+
+    Modified H1 indirect evolution: 
+    	- N15 decoupling done using hard 180 used instead of dm2; 
+	- use CNrefoc flag to decouple both C13 and N15 (3db lower power 
+	  used for both)
+    Marco@NMRFAM 2006
+
+    Modified C13 indirect evolution: 
+	- flag for optional CO refocusing added (COrefoc)
+    Marco@NMRFAM 2006
+
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+     LP in t2:
+       The finite delays necessary during 13C evolution make the first few data
+       points in t2 distorted in intensity. The timing is correct so that lp2
+       may be set to zero, but the intensity distortion, particularly of the
+       second complex point, lead to a "dish" aspect of the baseline. This is not
+       due to the presence of a first-order phase correction (lp2), so adjustment
+       of the timing of the pulse sequence events is not needed.
+   
+       One solution is to use a smaller sw2 with intentional folding. This can make
+       the second d2 value large enough so there is enough time for the C=O
+       refocusing pulse to be executed. For larger sw2's there is not enough time.
+ 
+       A solution to this is to use linear prediction in t2, the 13C dimension.
+       In VNMR you can both "fix up" the first few points using the rest of the
+       data table as the basis set, as well as extend the data set for better F2
+       resolution and less distortion from truncation. The macro "BPsetlp2" can be
+       used in the format "BPsetlp2(desired ni2, acquired ni2, #fixed)". Set
+       "desired ni2" to be the final extended data size, "acquired ni2" to be the
+       total # of increments to be used as a basis (it may be less than ni2, for
+       example if the experiment is running), and "#fixed" to the number of
+       initial points in t2 to be predicted (typically 2-4). Try this with a 2D
+       data set for varying numbers of fixed points until the baseline is sufficiently
+       flat in F2.
+
+     AUTOCAL and CHECKOFS.
+       The autocal and checkofs flags are generated automatically in Pbox_bio.h
+       If these flags do not exist in the parameter set, they are automatically 
+       set to 'y' - yes. In order to change their default values, create the  
+       flag(s) in your parameter set and change them as required. 
+       The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+       The offset (tof, dof, dof2 and dof3) checks can be switched off  
+       individually by setting the corresponding argument to zero (0.0).
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+       shapes are created), 's' (semi-automatic mode - allows access to user  
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code).
+       
+       Sideband elimination by adiabatic defocussing (SEAD) option and J-compensated
+       adiabatic pulses added by E.K.
+       The decoupling power level can be adjusted by changing seadpw. The later should 
+       not exceed 2 ms. The efficiency of sideband suppression can be verified by
+       setting sead = 'n' and dseq='wusead' (use macro pxset('wusead.DEC') for
+       convenience.
+       Ref. E.Kupce, J.Magn.Reson., vol. 129, pp. 219-221 (1997).

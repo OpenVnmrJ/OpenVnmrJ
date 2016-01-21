@@ -1,0 +1,18 @@
+"macro checktemp"
+" checktemp"
+$tempstat=0
+if (auto <> 'y' and system <> 'datastation') then
+if vttype=0 then $tempon=0 $tempstat=0
+else 
+  vnmrinfo('get','tempExpControl'):$tempon
+endif
+if ($tempon) then
+  shell('showstat > "'+curexp+'/stat"'):$x
+  lookup('file',curexp+'/stat','VT','set:','read'):$vtison
+  if typeof('$vtison') then $tempstat=0 else $tempstat=1 endif
+  delete(curexp+'/stat') 
+else
+  $tempstat=0
+endif
+endif
+return($tempstat)

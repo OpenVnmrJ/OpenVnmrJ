@@ -1,0 +1,69 @@
+import os
+import sys
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# targets
+cglSharedTarget = 'libcgl.so'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+cglPath    = os.path.join(cwd, os.pardir, 'cgl')
+cglHdrList = [  'CGLDef.h',
+                'CGLProgram.h',
+                'CGLRenderer.h',
+                'CGLShader.h',
+                'CGLShaderProgram.h',
+                'CGLTexMgr.h',
+                'CGLView.h',
+                'GLUtil.h',
+                'Point3D.h',
+                'vnmr_jgl_CGLJNI.h',
+                'Volume.h']
+             
+cglFileList = [ 'ARBProgram.cpp',
+                'CGLJNI.cpp',
+                'CGLProgram.cpp',
+                'CGLDataMgr.cpp',
+                'CGLRenderer.cpp',
+                'CGLShader.cpp',
+                'CGLTex1DMgr.cpp',
+                'CGLTex2DMgr.cpp',
+                'CGLTex3DMgr.cpp',
+                'CGLTexMgr.cpp',
+                'CGLView.cpp',
+                'GLSLProgram.cpp',
+                'GLUtil.cpp',
+                'Volume.cpp']
+
+# build environment
+env = Environment(CPPFLAGS   = '-Wno-deprecated -O4 -DGL_GLEXT_PROTOTYPES',
+                  CPPDEFINES = ['LINUX'],
+#                  LIBPATH = [ os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu')],
+                  LINKFLAGS  = '-shared -lGL -lGLU',
+                  CPPPATH    = [cwd, os.path.join(ovjtools,'java','include'),
+                                os.path.join(ovjtools,'java','include','linux')] )
+                  
+# actual builds
+
+cglShared = env.SharedLibrary(cglSharedTarget, source=[cglFileList])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+env.AddPostAction(cglShared,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, cglSharedTarget))))
+

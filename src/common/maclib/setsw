@@ -1,0 +1,112 @@
+"macro setsw"
+
+"**********Define local variables**************"
+if ($0='setsw') then
+   $swpar='sw' 
+   $SW='obsSW' 
+   $rfsrc='sfrq' 
+   $rfmacro=''
+   if ($# < 3) then $3=tn endif
+   $minargs=2
+elseif ($0='setsw1') then
+   $swpar='sw1' 
+   $SW='f1SW' 
+   $rfsrc=refsource1 
+   $rfmacro='reff1'
+   $minargs=3
+elseif ($0='setsw2') then
+   $swpar='sw2' 
+   $SW='f2SW' 
+   $rfsrc=refsource2 
+   $rfmacro='reff2'
+   $minargs=3
+else
+   return
+endif
+
+if ($# < $minargs) then
+   write('error','Minimum %d arguments for %s',$minargs,$0)
+   return
+endif
+
+"************************************************"
+"  If $SW is protected, do not reset $swpar        "
+"************************************************"
+if ($## < 2) then
+   setprotect($SW,'ison',16384):$ret
+   if ($ret=1) then
+       write('line3','%s (%s) is locked',$swpar,$SW)
+       RETURN
+   endif
+endif
+"************************************************"
+
+$nuc=''
+if typeof('$1') then 
+    $nuc=$1 $arg1=$2 $arg2=$3
+elseif typeof('$2') then 
+    $nuc=$2 $arg1=$1 $arg2=$3
+else 
+    $nuc=$3 $arg1=$1 $arg2=$2 
+endif
+
+if ($arg1 > $arg2) then
+  $Df=$arg1 $Uf=$arg2
+else
+  $Df=$arg2 $Uf=$arg1
+endif
+if ((($Df-$Uf)*{$rfsrc}) < 10.1) and ($## < 1) then
+   write('error','%s macro should not be used for less than 10 Hz %s',$0,$swpar)
+   return
+endif
+"***************************************************"
+"***********Proceed*********************************"
+
+setref($nuc):$rfl,$rfp,$reffrq,$refpos
+$offset = (($Df+$Uf)*$reffrq)/2 - $rfp + $rfl
+$sw=($Df-$Uf)*$reffrq
+
+if ($## < 2) then
+   {$swpar}=$sw
+endif
+if ($## < 1) then
+   if ($0='setsw') then
+      rfp=$rfp reffrq=$reffrq refpos=$refpos
+      tof=$offset
+      on('fn'):$fnon
+      if ($fnon<1) then
+		//  Readjust np ONLY if fn is OFF
+		//  When fn is OFF, it is a good idea
+		//     to collect data with np set to nearest
+		//     (higher) Fourier number to avoid
+		//     truncation artificats after FT
+      	  $np=np fn=np np=fn fn='n' 
+      	  if (np > 1.5*$np) then
+            	np=$np/2 fn=np np=fn fn='n'
+      	  endif 
+      endif
+      rfl=$rfl+sw/2-tof
+      if (Console='vnmrs') or (Console='mr400') then
+	  exists('ddrtc','parameter'):$ddrex
+	  if ($ddrex) then
+	     $dwell=1/sw
+	     if ($dwell < ddrtc) then
+		setrc:$dum
+	     endif
+	  endif
+      endif
+   else
+      if ($rfsrc='dfrq') then dof=$offset
+      elseif ($rfsrc='dfrq2') then dof2=$offset
+      elseif ($rfsrc='dfrq3') then dof3=$offset
+      elseif ($rfsrc='dfrq4') then dof4=$offset
+      endif
+      {$rfmacro}:$dum
+   endif
+
+   $sarg1='' format($arg1,'lower'):$sarg1
+   $sarg2='' format($arg2,'lower'):$sarg2
+   $macro='set'+$SW+'('+$sarg1+','+$sarg2+')'
+   exec($macro)
+endif
+return($offset,$sw)

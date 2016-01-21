@@ -1,0 +1,39 @@
+"macro flushQ"
+//Maintains SetUp fid filenames for housecleaning purpose
+//	in autodir/enterQ.macdir/flushQ
+//	gmapshim_au macro maintains this file
+//	active2error macro does the housecleaning
+"**************************************************************************"
+
+   if ($# < 1) then return endif
+   if (auto <> 'y') then return endif
+//   flush
+   $flushQ=autodir+'/enterQ.macdir/flushQ'
+   shell('touch '+$flushQ):$dum
+"**************************************************************************"
+  if ($1 = 'flush') then
+    $file='' $s2=''
+    readfile($flushQ,'$file','$s2','','local'):$total
+    if ($total > 0) then
+	$i=1
+	repeat
+	   $ext='' $filename=''
+	   getext($file[$i]):$filename,$ext
+	   if ($ext='') then $filename=$file[$i] endif
+	   exists($filename+'.fid','directory'):$fileex
+	   if ($fileex) then
+		shell('rm -rf '+$filename+'.fid'):$dum
+	   endif
+	   $i=$i+1
+	until $i > $total
+    endif
+    write('reset',$flushQ)
+"**************************************************************************"
+  elseif ($1 = 'write') then
+      if ($# < 2) then return endif
+      if ($2 = '') then return endif
+      write('file',$flushQ,'%s',$2)
+  endif
+
+"**************************************************************************"
+

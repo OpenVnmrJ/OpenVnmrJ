@@ -1,0 +1,242 @@
+Protocol: Super2d  Sequence: super2d.c  Apptype: solidseq1d
+
+Description: 
+
+X homonuclear 2D with scaled shift anisotropy in F1.
+
+Reference:
+
+S.-F. Liu, J-D. and K. Schmidt-Rohr, J. Magn. Reson, 155, 15-28 (2002).  
+Also find additional information on the Web site of K.Schmidt-Rohr at 
+Iowa State University. 
+
+Additional Software:
+
+reset_super2d.  This macro sets the pulse lengths and delays of superX
+according to the equations below. tossX is set from aX90 and pwX90. 
+sw1 is set equal to the spin rate. Parameters are set for homonuclear
+2D with axis='pp'and daslp and scalesw1 for shearing. This macro 
+is run with the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Super2d. 
+For a new nucleus calibrate CP with Onepul and Tancpx and then 
+run the protocol Super2d. It is best to set tof in the center 
+of the spectral region (100 ppm). Run a spectrum with spin rate = 
+3000 to 7000 Hz,  5000 is a good default. 
+
+The reset macro makes the following calculations when run from 
+the protocol. 
+
+1.  Set t1Xsuper = 1/srate and round to 100 ns resolution. 
+2.  Calculate t2Xsuper (taua) from the equation - 
+  
+ t2Xsuper = $tauafac*$tauR 
+
+where $tauafac = 0.2464. Alternate factors can be chosen as an 
+argument to the reset_super2d macro, based on Figure 2 of page 17
+of the reference. Round t2Xsuper to 100 ns resolution. 
+
+3.  Calculate pwXsuper (the 360 pulse) from the equation - 
+
+ pwXsuper = ($tauR*0.5195 - 0.0958*$taua - 1.3917*$taua*$taua/$tauR - $taua)/2.0
+
+as described on page 17 of the reference. Round pwXsuper to 200 ns resolution.
+
+4.  Calculate aXsuper from aX90 and pwX90 based on the equation - 
+
+ aXsuper = aX90*4.0*pwX90/pwXsuper
+
+5. Calculate the scale factor chi as - 
+
+ chi = -0.0006 + 2.0526*$x - 0.7196*$x*$x - 33.6982*$x*$x*$x +52.2845*$x*$x*$x*$x
+
+based on page 17 of the reference. Set scalesw1 = 1/chi. chi = 0.15 
+for tauafac = 0.2464. 
+
+6. Calculate the shearing factor epsilon ("eps") as - 
+
+ eps = 1.0 - 4.0*pwXsuper/t1Xsuper
+
+and set daslp = 360.0*sw*(eps-chi)/sw1.  eps = 0.667 for tauafac = 0.2464
+and daslp = 2879. 
+
+Set qXsuper = 1 if ofXsuper = 0.0 (the usual condition). If ofXsuper <> 0.0
+set qXsuper = ni. 
+
+Be sure that aXsuper and pwXsuper (the 360) provide reasonable values within 
+the spec of the probe and amplifier. Lower the spin rate if aXsuper is 
+too high. For a constant scale factor aXsuper is roughly proportional to 
+the spin rate. See figure 2 of the reference. 
+
+Set the decoupling during superX, aHmixspinal to 25*wR - which will be a 
+value around 100 kHz.  The decoupling must be at least twice the X field 
+strength. Decoupling may be another limitation of SUPER for large spin 
+rates. Economize on decoupling in F2 to protect the probe if narrow 
+lines are not needed in F2. 
+
+Obtain the data and process with pmode = 'partial' and with daslp set 
+correctly. Transform the data with wft2da. If the carrier is
+upfield or downfield use lsfrq1 to bring all resonances into the
+F1 window.  Reference F2 with rl or setref and then apply the 
+"shift"in ppm of one line to F1 with the equation r1(shift*sfrq/scales1).
+Note that if all the shifts do not fit inthe F1 window - use 
+individual values of lsfrq1 to move each line to the center of the window. 
+
+Parameter  Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).  
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must 
+              be set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phXhx); 
+
+superX: Module:  yes
+Sequence:  super2d.c
+Description:  Implements SUPER for Shift Anisotropy Recoupling
+Parameters:  Sequence Page
+       aXsuper - amplitude of obs pulses.
+       pwXsuper - 360-degree flip on obs.
+       t1Xsuper - one rotor period.
+       t2Xsuper - "tau a" delay of the cycle.
+       qXsuper - SUPER cycles represented in the .DEC file.
+       ofXsuper - overall frequency offset.
+       chXsuper = 'obs' must be set (not shown).
+Implementation: MPSEQ super = getsuper("superX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+inczfX: Module: no 
+Sequence: super2d.c 
+Description: Implements an incremental ZF delay between two 90-degree
+             pulses. Used to remove artifacts and improve TOSS.
+Parameters:  tXinczf is internal to the sequence.  
+       tXinczf - a delay that cycles between n*tauR/4.0 where n = 0,1,2,3
+       on successive scans. The two 90 degree pulses use the 90X module. 
+
+tossX:  Module:  yes
+Sequence:  tancpxtoss.c
+Description:  Implements four-pulse TOSS sideband suppression on obs.
+Parameters:  Sequence Page
+       aXtoss - amplitude of the obs pulses.
+       pwXtoss - 180-degree flip on obs.
+       chXtoss = 'obs' must be set (not shown).
+Implementation:  WMPA toss = gettoss4("tossX");
+Implementation:  WMPA toss = gettoss5("tossX");
+Underscore function: _toss4(toss,phXtoss);  phXtoss is the 
+              overall phase table.
+Underscore function: _toss5(toss,phXtoss);  phXtoss is the 
+              overall phase table.
+
+Hmixseq:  Module: yes 
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during F1 and mixing periods when Hseq is used for
+              acquisition.
+Parameters:  Sequence Page - the Hmixspinal and Hmixtppm groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              or SPINAL.
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal() or gettppm(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); or _spinal();
+             _dseqoff(mix); runs decprgoff(mix);
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal.
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix =
+             getdseq("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

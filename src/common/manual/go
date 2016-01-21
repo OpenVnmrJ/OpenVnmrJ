@@ -1,0 +1,194 @@
+*******************************************************************************
+go	-  submit an experiment to acquisition 
+ga	-  submit an experiment to acquisition and Fourier Transform the result
+au	-  submit an experiment to acquisition and process with
+             "wbs", "wnt", and "wexp" selected procedures.
+auargs  -  define au arguments for when au is used in automation
+su	-  submit an setup experiment to acquisition 
+lock	-  submit an autolock experiment to acquisition
+shim	-  submit an autoshim experiment to acquisition 
+spin	-  submit an spin setup experiment to acquisition 
+change	-  submit an change sample experiment to acquisition 
+sample	-  submit an change sample & autoshim experiment to acquisition 
+calcdim	-  calculate the dimension of experiment (arraydim)
+ra	-  resume an experiment acquisition that was stopped with the command sa
+go('acqi') - submit an experiment for display by acqi
+*******************************************************************************
+
+  Go and its aliases perform validity checks on acquisition parameters
+  and then, if required, the Pulse Sequence Generator (PSG) is executed.
+  ga is equivalent to go except that the FID data is automatically Fourier
+  transformed.
+
+  go('acqi') performs the same operations as go except that the acquisition
+  of data is not initiated.
+
+  When go is executed, user customization macros may be called. If the execprep
+  parameter does not exist, the go macro will execute a usergo macro if it exists.
+  Following that, it will construct a macro name based on 'go_'+seqfil and execute
+  that macro, if it exists. These go_<seqfil> macros often set referencing or
+  check the suitability of various parameters.
+
+  In automation mode,  au may be supplied with the arguments 'wait' and/or
+  'next'.  'wait' causes the submission of experiments to the acquisition
+  system to stop until the "wexp" processing of the experiment started with
+  au('wait') is finished.  'next' puts the experiment started with au('next')
+  at the head of the queue of experiments to be submitted to the acquisition
+  system.
+
+  In automation mode, the arguments for the au command may be preset. That is,
+  an initialization section of an experiment or set of experiments may specify
+  a set of arguments for au. These arguments will be in force for the initial
+  au command and as long as subsequent au commands are called as part of wexp
+  or werr processing. The auargs command will preset the au arguments. These
+  will be combined with any arguments that are explicitly specified in the
+  au command. Calling auargs with no arguments will remove any preset arguments.
+  For example, auargs('wait') will add the 'wait' argument to all subsequent
+  au calls in that initial macro, and any au calls made as part of the wexp
+  or werr processing.
+
+  In automation mode as part of werr processing, au may be supplied with
+  a 'restart' option. In this case, au('restart') uses the directory that
+  the failed experiment used to hold the data. That is, it does not try
+  to re-evaluate autoname. It uses the au options (eg. wait, shimming, etc)
+  from the original au, and adds the next option if it was not used
+  originally.
+
+  In automation mode, the au command can take an argument to specify the "autoname"
+  parameter (see manual entry for autoname). The argument is 'autoname_<template>'
+  where 'autoname_' is the key that causes the remainder of the argument to be used
+  as the autoname template. For example, au('autoname_AUTOGAIN_%R0%') will cause the
+  template AUTOGAIN_%R0% to be used as the template for naming the file where the
+  data will be stored. The 'autoname_<template>' argument can also be used with the
+  auargs command.
+
+  In non-automation mode, the 'next' argument for go, au, or ga argument also
+  puts the experiment at the head of the queue of experiments to be submitted
+  to the acquisition system.  If the 'next' flag is used, the go command will
+  remain active until the experiment has been submitted to the acquisition
+  system.  No other Vnmr commands will be processed until the go command
+  finishes.  The keyword 'sync' accomplishes this same effect of synchronizing
+  the Vnmr command execution with the submission of experiments to the
+  acquisition system.  The difference is that 'sync' does not put the experiment
+  at the head of the queue.
+
+  go can take the 'check' keyword.  This performs all the normal
+  calculations but does not initiate an acquisition.  It is used for parameter
+  checking. The PSG function putCmd() is the way for a pulse sequence to
+  return information back to the experiment from which is was started. It does
+  this by writing a macro in the current experiment directory (curexp) named
+  psgCmd. After running the pulse sequence code, the go command looks for this
+  file (curexp+'/psgCmd') and if it finds it, it runs it as a macro. It then
+  deletes the file. go can take the 'debugputcmd' keyword to suppress the
+  deletion of the curexp+'/psgCmd' file, allowing one to view this file.
+  go('check') only executes the first array element of an arrayed pulse sequence.
+  go('checkarray') is the same as go('check') except that it will execute all
+  elements of an arrayed pulse sequence.
+
+  go can take the 'nomessage' argument to suppress all text and warning messages.
+  It is often useful in conjunction with the 'check' option.
+
+  go, ga, and au can take the 'prep' keyword.  This performs all the normal
+  calculations and prepares the spectrometer for acquisition.  However, the
+  acquisition does not start until a sethw('start',1) command is issued.
+  While the system is waiting for the sethw command, the status will be "Ready".
+  This feature is typically used on imaging systems, where one wants to know
+  very precisely when the actual data acquisition will begin.
+
+  go, ga, and au can take the 'silent' keyword.  This suppresses acquisition
+  process messages such as PSG and AU in the title messages and console
+  window.  
+
+  go, ga, and au can take the 'bsclear' keyword.  This clears the data
+  buffer every block size instead of accumulating all transients.  It is
+  typically used with fid shimming and probe tuning.  
+
+  go, ga, and au can take the 'fidscan' keyword.  This turns off automatic
+  locking, shimming, steady states, and robot control.  It is
+  typically used with fid shimming.  
+
+  go, ga, and au can take the 'tune' keyword.  This starts a tune sweep
+  acquisition.  It is typically used for probe tuning.  
+
+  go, ga, and au can take the 'shimming' keyword.  In automation, this
+  removes the current entry from the doneQ when done.  
+
+  go, ga, and au can take the 'overridespin' keyword.  This ignores the setting
+  in the "Spin/Temp" panel where users may select "Control spinner from this panel only".
+  If the 'overridespin' keyword is given, then the experiment will use the current
+  of the spin parameter for that experiment, even if the "Control spinner from
+  this panel only" selection is picked.
+
+  go, ga, and au can take the 'gradtype' keyword. It allows that specific
+  data acquisition to use a modified value of the gradtype systemglobal parameter.
+  This is currently used by 3D gradient shimming, where gradtype='nnp' is often
+  found but the 3D shimming experiment needs to use the x1 and y1 shim dacs
+  to create gradients in those directions. This is done by using the character 'a'
+  instead of 'n' in the gradtype parameter. Rather than modifying the gradtype parameter,
+  the gradtype argument can be given to au to use a modified gradtype parameter
+  for that data acquisition, without actually changing the systemglobal parameter.
+  au('gradtype') defaults to setting the first two characters of the gradtype value
+  to 'aa'. au('gradtype_x'), where "x" is any character, sets the first character
+  of the gradtype value to "x". au('gradtype_xy'), where "x" and "y" are any characters,
+  sets the first two characters of the gradtype value to "xy". au('gradtype_xyz'), 
+  where "x", "y", and "z" are any characters, sets the first three characters of
+  the gradtype value to "xyz".
+
+  The go, ga, and au commands use certain parameters to control "prescan"
+  functions. These include the alock and wshim parameters.
+
+  alock Automatic lock control (P)
+    Governs Autolock control following the insertion of a sample with
+    change or sample, and following initiation of an acquisition with
+    the go, ga, or au. Manual adjustment of lock power, gain, and phase
+    is possible using the Sample lock panel
+    Possible values are 'a', 'auto', 'n', 's', 'samp', 'u', or 'y', where:
+     'a' or 'auto' selects the optimizing Autolock function, which
+        performs a lock capture and an automatic lock power and gain
+        adjustment before data acquisition begins (lock phase is not optimized).
+     'n' leaves the lock in its current state.
+     's' or 'samp' selects the optimizing Autolock function, which performs
+        a lock capture and an automatic lock power and gain adjustment before
+        data acquisition begins (lock phase is not optimized) but only if the
+        sample has just been changed.
+     'u' turns lock off so that the experiment runs unlocked. 
+     'y' turns on the software Autolock function, which searches for the
+        correct Z0 value only.
+
+  wshim Conditions when shimming is performed (P)
+    Specifies when automatic shimming is to be used, according to the
+    method specified by the parameter method. 
+     'n' sets that no automatic shimming is performed. Even with wshim set
+       to this value, the shimming procedure specified by the parameter
+       method can be activated by using the shim command.
+     'e' or 'exp' sets that automatic shimming is done before data acquisition.
+     's' or 'samp' sets that automatic shimming is done only at the beginning
+       of the first experiment, following the change of a sample using the
+       automatic sample changer.
+     'g' sets that automatic shimming using gradient shimming is done only at
+       the beginning of the first experiment, following the change of a sample
+       using the automatic sample changer. The parameter method is ignored.
+       This option is only available in automation and is not used with the
+       go, ga, or au commands.
+    The next 'f' and 'fn' options are not available on 400MR and VNMRS systems.
+    If wshim='f' or wshim='fn' on one of these systems, it gives the same
+    behavior as if wshim='e'. For systems that are neither VNMRS nor 400MR
+    systems, the 'f' and 'fn' options are interpreted as follows.
+     'f' or 'fid' set automatic shimming is done prior to the data collection
+       of each new array member in a multi-FID experiment.
+     'fn', where n is an integer, sets shimming is done prior to data
+       collection of every nth FID (e.g., wshim='f16' shims prior to acquiring
+       FIDs 1, 17, 33, etc.). This method is only relevant to arrayed or
+       2D experiments.
+
+  Ra is not permitted after a rt of any parameters into the stopped experiment.
+  The parameters dp and np may not be altered.
+
+  The lock command submits an experiment to optimize the lock parameters z0,
+  lockpower, lockgain, and lockphase. If the argument z0 is given, as in
+  lock('z0'), then the lock command only finds the value of z0.
+
+  The su command does not acquire data, but it "sets up" the console hardware.
+  The su('pause') command causes the console to wait for a "pad" delay. If pad
+  if less than 1 second, su('pause') will wait for 1 second.
+

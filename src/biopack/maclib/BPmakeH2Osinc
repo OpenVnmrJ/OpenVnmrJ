@@ -1,0 +1,41 @@
+"macro BPmakeH2Osinc"
+
+"For version 5.1 software and subsequent"
+
+"Calculates the following shaped sinc one-lobe pulse and stores it in your"
+"shapelib:  Carrier on H2O, 90 degree pulse on H2O."
+
+"The carrier should be set to 4.7ppm."
+
+"The coarse attenuator setting must be set in the pulse sequence during the"
+"pulse."
+
+$pwHs = 1700*500.0/sfrq				      "1.7 ms pulse at 500 MHz"
+$stepsH = $pwHs   $stepsH = 2.0*trunc($stepsH/2.0) + 1.0
+$pwHs = ($stepsH + 1.0)
+$rfH = 1023.0
+BPmakesinc($stepsH, $rfH)
+$stpsH = '' 	format($stepsH,0,0):$stpsH
+$file1=userdir+'/shapelib/sincs'+$stpsH+'.RF'
+$file2=userdir+'/shapelib/H2Osinc'+'.RF'
+cp($file1,$file2)  rm($file1)
+
+exists(userdir+'/shapelib/H2Osinc_d.RF','file'):$e
+if ($e=0) then
+ exists('/vnmr/shapelib/H2Osinc_d.RF','file'):$ee
+ if ($ee=0) then   "copy base shape. These shapes are created in AutoCalibrate Process"
+  cp($file2,userdir+'/shapelib/H2Osinc_d.RF')
+  cp($file2,userdir+'/shapelib/H2Osinc_u.RF')
+  cp($file2,userdir+'/shapelib/H2Osinc_n.RF')
+  cp($file2,userdir+'/shapelib/H2Osinc_i.RF')
+  cp($file2,userdir+'/shapelib/H2Osinc_t.RF')
+  BPmoveshape('H2Osinc_d.RF')
+  BPmoveshape('H2Osinc_u.RF')
+  BPmoveshape('H2Osinc_n.RF')
+  BPmoveshape('H2Osinc_i.RF')
+  BPmoveshape('H2Osinc_t.RF')
+ endif
+endif
+
+BPmoveshape('H2Osinc.RF')
+write('line3','The SLP pulse "shapelib/H2Osinc.RF" has been created')

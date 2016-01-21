@@ -1,0 +1,40 @@
+"macro wetgcosy"
+"wetgcosy - modified for LCNMR "
+"PAKeifer 950718 "
+
+"cosy"
+av
+if ct>0 then $nt=ct else $nt=nt endif
+lcset2d('relayh',6)      "6 Hz/pt is the desired F2 digital resolution"
+lcpsgset('relayh','dg','dgs','ap','ss','d1','axis','array','tau','relay')
+sw1=sw rfl1=rfl rfp1=rfp
+refpos1=refpos reffrq1=reffrq
+if ($nt < 32) then
+   nt=1
+else
+   nt=$nt/32
+endif
+nt=4*nt
+p1=pw90  pw=pw90
+tau=0  relay=0         "both zero for normal cosy"
+noisemult(20)
+fn1=fn
+
+
+lcpsgset('wetgcosy','gzlvl1','gt1','grise','gstab','qlvl')
+lcpsgset('wetgcosy','phase','dg','ap','dg2','dglc')
+seqfil='wetgcosy' 
+"adjust for performa I"
+$ss=''
+substr(gradtype,3,1):$ss
+if $ss='l' 
+then
+  gzlvl1 = gzlvl1 * 0.2
+  setlimit('gzlvl1',2047.0,-2047.0,1.0)
+endif
+av av1
+dg
+time
+man('wetgcosy')
+write('line3','Parameters created for a WET PFG COSY')
+

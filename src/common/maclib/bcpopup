@@ -1,0 +1,69 @@
+"macro bcpopup"
+// bcmode[1] = 0,1,2 for CWT/Whittaker, spline or polynomial method
+// bcmode[2] is CWT scaling factor
+// bcmode[3] is Whittaker smooth factor
+// bcmode[4] order of polynomial
+
+exists('bcmode','parameter'):$e
+if(not $e) then
+   create('bcmode','real')
+   setgroup('bcmode','processing')
+endif
+exists('bcfrq','parameter'):$e
+if(not $e) then
+   create('bcfrq','real')
+   setgroup('bcfrq','processing')
+endif
+exists('bcamp','parameter'):$e
+if(not $e) then
+   create('bcamp','real')
+   setgroup('bcamp','processing')
+endif
+if(size('bcmode')<8) then
+   bcmode=1,100,10000,8,50,10,1,0
+endif
+
+if($#=1) then
+  if($1='init') then 
+    graphis('ds'):$e
+    if (not $e) then
+      write('line3','Warning: No 1D spectrum displayed')
+      return
+    endif
+    if(bcmode[1]=0) then aspRegion('CWT')
+    else aspRegion(bcmode[5]) endif
+    vnmrjcmd('popup','mode:modeless','file:BCdialog.xml','rebuild:yes','close:aspRegion(`clear`)','title:Baseline Correction')
+    return 
+  endif
+endif
+
+on('bcmode'):$on
+if($on and bcmode[1]<0) then $on=0 endif
+
+if(bcmode[1]<>0 and size('lifrq')<2) then
+  graphis:$s
+  if(procdim=1 or $s='ds') then
+    region
+  endif
+endif 
+if ($# = 0) then
+  $1='show'
+endif
+if ($1='dis') then
+  graphis:$s
+  if($s='ds' and $on) then
+    bc('dis')
+  elseif($s='ds') then
+    bc('cancel')
+    ds('again')
+  endif
+elseif ($1='apply') then
+  bc('all')
+  graphis:$s
+  if($s='ds') then
+    ds('again') 
+  endif
+elseif ($1='show') then
+  bcpopup('dis')
+  vnmrjcmd('popup','mode:modeless','file:BCmethod.xml','rebuild:yes','close:bc(`off`)','title:Baseline correction')
+endif

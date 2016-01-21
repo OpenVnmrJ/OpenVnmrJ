@@ -1,0 +1,89 @@
+  gNcpmgex_NH
+
+       This pulse sequence will allow one to perform the following experiments:
+        "Constant Relaxation Time CPMG experiment for NH" to identify Rex due to
+        (millisecond) motions. The resultant spectral intensity is attenuated by
+        an average of Nx and NyHz relaxation rates, with a contribution Rex
+        that is dependent on the pulse spacing (2*tauCPMG) employed.
+
+    2D HSQC  Heteronuclear Single Quantum Coherence with enhanced sensitivity
+             PFG and minimal perturbation of water.
+           F1      15N
+           F2(acq)  1H (NH)
+ 
+    This sequence uses the standard three channel configuration
+         1)  1H             - carrier (tof) @ 4.7 ppm [H2O]
+         2) 13C             - carrier (dof) @  57 ppm [CA]
+         3) 15N             - carrier (dof2)@ 119 ppm [centre of backbone amide NH]
+ 
+
+       Constant Relaxation Time adaptation of:
+            J.P. Loria, M. Rance & A.G. Palmer, III
+            JACS 121, 2331-2332 (1999)
+            (note there is a small mistake in their sequence (Fig.1);
+             the second 1H 90 degree pulse should have phase y)
+
+       If necessary one can do standard presaturation.  Note: presaturation
+       is done using the transmitter with the power level set by 'tsatpwr'
+       Irradiation is done with the carrier sitting at tofps. One can assign
+       a different value to tof (e.g. center of amides) if required.
+
+                 dm = 'nnny'
+                 dmm= 'cccp'
+                 dseq='waltz16'
+       This sequence will then use the a waveform to give a waltz
+       sequence at the appropriate times. (Of course, any other decoupling
+       sequence could also be used instead of waltz.)
+          
+       Written by Frans Mulder,  5 Aug 2000 from N15_CPMG_Rex_NH2_fm_500.c
+       Written by Frans Mulder & Martin Tollinger,15 Oct  2000
+
+       Original sequence has poor water suppression at high field
+                for long time_T2 due to radiation damping
+       A watergate strategy is employed in conjunction with weak
+                bipolar gradients during t1.
+
+       Adaptation 15 Nov 2000 by fm: added small angle phase shift
+                possibility for watergate pulses
+
+       Modified by L.E.Kay on Dec. 3, 2002 for application to carbon samples.
+            Use an adiabatic pulse (400 us), centered at 117 ppm.
+
+       Modified by L.E.Kay on Dec. 6, 2004 to include comp_flg which attempts to compensate
+            for changes in duty cycle that affect cryogenic probe performance and cause R2,eff to 
+            increase with B1; set comp_flg to y and ncyc_max to the max ncyc that you are using.
+
+       Modified by L.E.Kay on June 22, 2005 to move compensation immediately prior to d1 period.
+            Simulations establish that this will not affect initial proton magnetization 
+
+            The compensating pulse duration is automatically calculated, but the amplitude should
+            be empirically determined to generate the same effective field. A single pulse is used
+            at lower power to avoid coil heating in cryogenic probes.(N.Murali, Varian 12/05)
+
+       Modified from  N15_CPMG_Rex_NH_fm_800_v5.c for BioPack (GG, Varian  Jan 06):
+
+        Shaped pulses can be automatically calculated and power levels/pulse widths set
+
+ If comp_flg='y' there is a N15 pulse applied after d1 to compensate for RF/coil
+ heating from the cpmg pulse train. This pulse be longest for the ncyc small and
+ increases with ncyc to maintain a constant heating as a function of ncyc. Cryogenic
+ probe tuning and shimming can be sensitive to power dissapation, so this compensates
+ for the heating. Room temperature probes are not as sensitive to coil heating or
+ deshimming, but may experience sample heating.
+
+ The pulse is applied at dpwr2_comp power and the duration is calculated within the
+ pulse sequence. The power should be determined by setting up a cpmg pulse train
+ for the maximum ncyc to be used, starting the sequence, and then determining the
+ heating power remaining (for a cold probe) after attaining steady-state. This should
+ be done with comp_flg='n'. Then, set the N15 power levels other that dpwr2_comp to
+ zero,ncyc=0 and set comp_flg='y'. Set ncyc_max to the largest ncyc value to be used
+ in the queue of experiments. Try various compensation power levels until the heating
+ power value achieves the same level as above. This represents a power level that
+ produces the same heating as the cpmg pulse train.
+
+ Now re-set ncyc and the cpmg pulse train power level to their proper values and leave
+ comp_flg='y'. Use sufficient steady-state pulses to get to a stable heater value and
+ then run the series of 2D experiments as a function of ncyc, one after the other.
+
+ Once this is done the heating characteristics should be very similar from sample to
+ sample so that the same settings could be used.

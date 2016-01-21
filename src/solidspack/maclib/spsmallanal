@@ -1,0 +1,79 @@
+"macro spsmallanal"
+"spmallanal -   outputs a plot of amplitude versus small-angle phase. "
+"               D. Rice 3/5/02                                        "
+"               Amplitude is scaled to 1.0 and the rms deviation is output"
+"               spsmallanal takes an optional step size as an input" 
+if ($#>0) then 
+   $step = $1
+else
+   $step=0.25
+endif
+$aa=''
+if ($#>1) then 
+   $aa=$2
+endif
+wftx
+wc=180 sc=0
+
+$file=curexp+'/analyze.out'
+exists($file,'file'):$a
+if ($a>0.5) then 
+   delete($file)
+endif
+$expl= curexp+'/expl.out'
+exists($expl,'file'):$a
+if ($a>0.5) then 
+   delete($expl)
+endif
+
+write('reset',$file)
+write('file',$file,'exp 4')
+write('file',$file,' 1 %4.0f',arraydim)
+write('file',$file,'SMALL ANGLE')
+write('file',$file,' 1 1 1 1')
+
+rfl=sw/2 rfp=0
+sp=-5p wp=10p
+$index=0
+$total=0
+llfrq='y'
+clear
+while ($index<arraydim) do 
+  $index=$index+1
+  ds($index)
+  vsadj th=75 dpf
+  $cursor=llamp[1]
+  $total=$total+$cursor
+  $savecursor[$index]=$cursor
+endwhile
+$index=0
+$error=0
+$total=$total/arraydim
+while ($index<arraydim) do 
+   $index=$index+1
+   $error= $error +  ($savecursor[$index]-$total)*($savecursor[$index]-$total)/($total*$total)
+  write('file',$file,'%f  %f',($index-1)*$step,$savecursor[$index]/$total)
+endwhile
+$error=$error/arraydim
+$error=sqrt($error)
+text
+cat(curexp+'/analyze.out')
+write('line3','Normalized Amplitude = 1.0')
+write('line3','Amplitude Error rms +/- = %f\n',$error)
+expl('nocurve')
+scalelimits(0,90,0.99,1.01)
+expl
+if ($aa='') then 
+   input('Hard copy ?'):$aa
+endif
+if $aa = 'y' then
+   pexpl
+   write('plotter',0,50,'Normalized Amplitude = 1.0')
+   write('plotter',0,60,'Error (rms) +/- = %f',$error)
+   pltext
+   page
+endif
+
+
+
+

@@ -1,0 +1,20 @@
+"macro checktemplimit"
+$ret=0 $line=''
+lookup('mfile','/vnmr/solvents','seek',solvent,'readline',1):$line,$ret
+if ($ret) and ($line<>'') then
+   $smp='' $sbp=''
+   substr($line,2):$smp
+   substr($line,3):$sbp
+   if ($smp<>'') and ($sbp<>'') then
+	format($smp,'lower'):$mp
+	format($sbp,'lower'):$bp
+        if (temp < $mp+5) then
+           temp=$mp+5
+	   write('error','temp reset to 5 deg above melting point')
+        endif
+	if (temp > $bp-10) then
+	   temp=$bp-10
+	   write('error','temp reset to 10 deg below boiling point')
+	endif
+   endif
+endif

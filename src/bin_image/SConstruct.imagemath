@@ -1,0 +1,85 @@
+#
+
+import os
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+# order is important for the next two lists
+targets = ['asl',
+           'addechoes',
+           't1fit',
+           'fdffit'] 
+myList = ['main_asl.c',
+          'main_addechoes.c',
+          'main_T1fit.c',
+          'main_fdffit.c']
+
+diffcalcTarget = 'diffcalc'
+diffcalcSource = 'main_diffusion.c'
+
+# build environments
+env = Environment(CCFLAGS = '-O2 -Wall',
+                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib ',
+                  LIBS    = ['gsl',
+                             'gslcblas',
+                             'm'])
+
+# define with absolute path where built files will be copied
+dest = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+                  'options','standard','IMAGE', 'bin')
+# copy the sources to this path
+srcDest = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+                  'options', 'standard','IMAGE', 'imaging','src', 'imagemath')
+
+# make sure the path(s) exist
+if not os.path.exists(dest):
+   os.makedirs(dest)
+if not os.path.exists(srcDest):
+   os.makedirs(srcDest)
+
+# actual builds
+for i in range(len(targets)):
+   tempObj = env.Program(target = targets[i],
+                         source = myList[i])
+   env.AddPostAction(tempObj,
+                     Action(Copy(dest, os.path.join(cwd, targets[i]))))
+   
+# build diffcalc
+tempObj = env.Program(target = diffcalcTarget, source = diffcalcSource)
+
+# copy diffcalc to passworded area
+env.AddPostAction(tempObj,
+               Action(Copy(dest, os.path.join(cwd, diffcalcTarget))))
+env.AddPostAction(tempObj,
+               Action(Copy(srcDest, os.path.join(cwd, diffcalcSource))))
+
+
+# this is the list
+srcList = ['fdf.c',
+           'getpars.c',
+           'gsl_functions.c',
+           'image_functions.c',
+           'main_addechoes.c',
+           'main_asl.c',
+           'AVW.c',
+           'Makefile',
+           'main_fdffit.c',
+           'main_T1fit.c',
+           'utils.c',
+           'dbh.h',
+           'utils.h']
+
+
+# copy the sources
+for i in srcList:
+   sourceFile = os.path.join(cwd, i)
+   targetFile = os.path.join(srcDest, i) 
+   env.Command(target = targetFile,
+               source = sourceFile,
+               action = Copy(targetFile, sourceFile))
+   env.Depends(target     = targets[0],
+               dependency = targetFile)
+

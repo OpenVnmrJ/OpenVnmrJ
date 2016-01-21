@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ ! 
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="aipExtr" element="pages" type="imaging" >
+  <group size="820 230" style="PlainText" label="Extract"
+    vq="enableExtractPanel"
+    vc="aipSetState(1) aipMode=1"
+    show="$VALUE=enableExtractPanel"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    reference="aipExtr"
+    useref="no"
+    expanded="yes"
+    >
+    <group loc="560 130" size="110 80" label="Unload Data"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      reference="UnloadData"
+      useref="no"
+      expanded="yes"
+      >
+      <button loc="8 48" size="80 24" style="PlainText"
+        label="All"
+        vc="if(jviewport&gt;2.5) then aipRQcommand('unselectDisplay') aipClearFrames else aipRQcommand('remove','all') endif"
+        />
+      <button loc="8 20" size="80 24" style="PlainText"
+        label="Selected"
+        vc="aipRQcommand('remove','sel')"
+        />
+    </group>
+    <group loc="560 0" size="260 120" label="Data Display"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      reference="DataDisplay"
+      useref="no"
+      expanded="yes"
+      >
+      <label loc="10 70" size="40 20" style="Label1"
+        label="Rows"
+        justify="Left"
+        />
+      <button loc="10 40" size="50 20" style="PlainText"
+        label="Prev"
+        vc="aipDisplay('batch','previous','show')"
+        />
+      <button loc="70 40" size="50 20" style="PlainText"
+        label="Next"
+        vc="aipDisplay('batch','next','show')"
+        />
+      <selmenu loc="10 20" size="110 20" style="PlainText"
+        label="Select view"
+        vc="aipSplitWindow($VALUE) aipDisplay('batch','first','show')"
+        >
+        <mlabel label="1" chval="1"/>
+        <mlabel label="2" chval="2"/>
+        <mlabel label="3" chval="3"/>
+        <mlabel label="4" chval="4"/>
+        <mlabel label="2x2" chval="2,2"/>
+        <mlabel label="3x3" chval="3,3"/>
+        <mlabel label="4x4" chval="4,4"/>
+        <mlabel label="all" chval="`all`"/>
+      </selmenu>
+      <button loc="150 20" size="50 20" style="PlainText"
+        label="Refresh"
+        vc="aipDisplay('redisplay')"
+        />
+      <label loc="150 70" size="50 20" style="Label1"
+        label="Number"
+        justify="Left"
+        />
+      <label loc="150 50" size="50 20" style="Label1"
+        label="First"
+        justify="Left"
+        />
+      <textmessage loc="200 50" size="40 20" style="PlainText"
+        label="1"
+        vq="aipDisplay"
+        set="$VALUE=aipDisplay[1]"
+        digits="0"
+        />
+      <entry loc="200 70" size="40 20" style="PlainText"
+        vq="aipDisplay"
+        vc="aipDisplay[2]=$VALUE aipDisplay('batch','show')"
+        set="$VALUE=aipDisplay[2]"
+        digits="0"
+        disable="Grayed out"
+        />
+      <entry loc="200 90" size="40 20" style="PlainText"
+        vq="aipDisplay"
+        vc="aipDisplay[3]=$VALUE aipDisplay('batch','show')"
+        set="$VALUE=aipDisplay[3]"
+        digits="0"
+        disable="Grayed out"
+        />
+      <label loc="150 90" size="50 20" style="Label1"
+        label="Step"
+        justify="Left"
+        />
+      <label loc="10 90" size="40 20" style="Label1"
+        label="Cols"
+        justify="Left"
+        />
+      <entry loc="50 90" size="40 20" style="PlainText"
+        vq="aipWindowSplit"
+        vc="aipWindowSplit[2]=$VALUE aipSplitWindow(aipWindowSplit[1],aipWindowSplit[2]) aipDisplay"
+        set="$VALUE=aipWindowSplit[2]"
+        disable="Grayed out"
+        />
+      <entry loc="50 70" size="40 20" style="PlainText"
+        vq="aipWindowSplit"
+        vc="aipWindowSplit[1]=$VALUE aipSplitWindow(aipWindowSplit[1],aipWindowSplit[2]) aipDisplay"
+        set="$VALUE=aipWindowSplit[1]"
+        disable="Grayed out"
+        />
+    </group>
+    <group loc="140 0" size="420 210" style="PlainText"
+      vq="aipMode"
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      reference="ImageMath"
+      useref="no"
+      expanded="yes"
+      >
+      <button loc="230 160" size="100 20"
+        style="PlainText"
+        label="3-Plane Extract"
+        vc="aipStartExtract"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="120 160" size="100 20"
+        style="PlainText"
+        label="Extract MIP"
+        vc="if(aipOrient='xy') then aipExtractMip(aipOrient, aipXYfirst, aipXYlast, aipXYincr) elseif(aipOrient='xz') then aipExtractMip(aipOrient, aipXZfirst, aipXZlast, aipXZincr)  elseif(aipOrient='yz') then aipExtractMip(aipOrient, aipYZfirst, aipYZlast, aipYZincr) endif"
+        bg="transparent"
+        decor1="yes"
+        />
+      <radio loc="10 80" size="100 20" style="PlainText"
+        label="RO x PE"
+        vq="aipOrient"
+        vc="aipOrient='xy'"
+        set="$VALUE=(aipOrient = 'xy')"
+        />
+      <radio loc="10 100" size="100 20" style="PlainText"
+        label="RO x PE2"
+        vq="aipOrient"
+        vc="aipOrient='xz'"
+        set="$VALUE=(aipOrient = 'xz')"
+        />
+      <radio loc="10 120" size="100 20" style="PlainText"
+        label="PE x PE2"
+        vq="aipOrient"
+        vc="aipOrient='yz'"
+        set="$VALUE=(aipOrient = 'yz')"
+        />
+      <button loc="120 160" size="100 20" style="PlainText"
+        label="Extract MIP"
+        vc="if(aipOrient='xy') then aipExtractMip(aipOrient, aipXYfirst, aipXYlast, aipXYincr) elseif(aipOrient='xz') then aipExtractMip(aipOrient, aipXZfirst, aipXZlast, aipXZincr)  elseif(aipOrient='yz') then aipExtractMip(aipOrient, aipYZfirst, aipYZlast, aipYZincr) endif"
+        />
+      <button loc="10 160" size="100 20" style="PlainText"
+        label="Extract Slices"
+        vc="if(aipOrient='xy') then aipExtract(aipOrient, aipXYfirst, aipXYlast, aipXYincr) elseif(aipOrient='xz') then aipExtract(aipOrient, aipXZfirst, aipXZlast, aipXZincr)  elseif(aipOrient='yz') then aipExtract(aipOrient, aipYZfirst, aipYZlast, aipYZincr) endif"
+        />
+      <entry loc="340 120" size="70 20" style="PlainText"
+        vq="aipYZincr"
+        vc="aipYZincr=$VALUE"
+        set="$VALUE=aipYZincr"
+        disable="Grayed out"
+        />
+      <entry loc="340 100" size="70 20" style="PlainText"
+        vq="aipXZincr"
+        vc="aipXZincr=$VALUE"
+        set="$VALUE=aipXZincr"
+        disable="Grayed out"
+        />
+      <entry loc="340 80" size="70 20" style="PlainText"
+        vq="aipXYincr"
+        vc="aipXYincr=$VALUE"
+        set="$VALUE=aipXYincr"
+        disable="Grayed out"
+        />
+      <entry loc="200 120" size="70 20" style="PlainText"
+        vq="aipYZlast"
+        vc="aipYZlast=$VALUE-1"
+        set="$VALUE=aipYZlast+1"
+        disable="Grayed out"
+        />
+      <entry loc="200 100" size="70 20" style="PlainText"
+        vq="aipXZlast"
+        vc="aipXZlast=$VALUE-1"
+        set="$VALUE=aipXZlast+1"
+        disable="Grayed out"
+        />
+      <entry loc="200 80" size="70 20" style="PlainText"
+        vq="aipXYlast"
+        vc="aipXYlast=$VALUE-1"
+        set="$VALUE=aipXYlast+1"
+        disable="Grayed out"
+        />
+      <entry loc="110 120" size="70 20" style="PlainText"
+        vq="aipYZfirst"
+        vc="aipYZfirst=$VALUE-1"
+        set="$VALUE=aipYZfirst+1"
+        disable="Grayed out"
+        />
+      <entry loc="110 100" size="70 20" style="PlainText"
+        vq="aipXZfirst"
+        vc="aipXZfirst=$VALUE-1"
+        set="$VALUE=aipXZfirst+1"
+        disable="Grayed out"
+        />
+      <entry loc="110 80" size="70 20" style="PlainText"
+        vq="aipXYfirst"
+        vc="aipXYfirst=$VALUE-1"
+        set="$VALUE=aipXYfirst+1"
+        disable="Grayed out"
+        />
+      <label loc="270 80" size="10 20" style="Label1"
+        label="("
+        justify="Left"
+        />
+      <label loc="270 100" size="10 20" style="Label1"
+        label="("
+        justify="Left"
+        />
+      <label loc="270 120" size="10 20" style="Label1"
+        label="("
+        justify="Left"
+        />
+      <textmessage loc="280 80" size="30 20" style="PlainText"
+        vq="fn2 nv2"
+        set="on('fn2'):$fn2on if $fn2on then $VALUE=fn2/2 else $VALUE=nv2 endif"
+        show="on('fn2'):$VALUE"
+        digits="0"
+        />
+      <textmessage loc="280 100" size="30 20" style="PlainText"
+        label="512"
+        vq="fn1 nv"
+        set="on('fn1'):$fn1on if $fn1on then $VALUE=fn1/2 else $VALUE=nv endif"
+        digits="0"
+        />
+      <textmessage loc="280 120" size="30 20" style="PlainText"
+        label="512"
+        vq="fn np"
+        set="on('fn'):$fnon if $fnon then $VALUE=fn/2 else $VALUE=np/2 endif"
+        digits="0"
+        />
+      <label loc="310 80" size="10 20" style="Label1"
+        label=")"
+        justify="Left"
+        />
+      <label loc="310 100" size="10 20" style="Label1"
+        label=")"
+        justify="Left"
+        />
+      <label loc="310 120" size="10 20" style="Label1"
+        label=")"
+        justify="Left"
+        />
+      <label loc="340 50" size="60 20" style="Label1"
+        label="Increment"
+        justify="Left"
+        />
+      <label loc="200 50" size="60 20" style="Label1"
+        label="Last"
+        justify="Left"
+        />
+      <label loc="110 50" size="60 20" style="Label1"
+        label="First"
+        justify="Left"
+        />
+      <label loc="10 50" size="70 20" style="Label1"
+        label="Orientation"
+        justify="Left"
+        />
+      <label loc="150 10" size="130 20" style="Heading1"
+        label="Slice Extraction"
+        justify="Left"
+        />
+    </group>
+    <group loc="0 0" size="130 200" style="Heading1"
+      label="Mode"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      reference="AIPControl3"
+      useref="no"
+      expanded="yes"
+      >
+      <radio loc="8 136" size="112 16" style="PlainText"
+        label="Draw Oval"
+        vq="aipMode"
+        vc="aipSetState(10)"
+        set="$VALUE=(aipMode=10)"
+        />
+      <radio loc="8 120" size="112 16" style="PlainText"
+        label="Draw Box"
+        vq="aipMode"
+        vc="aipSetState(5)"
+        set="$VALUE=(aipMode=5)"
+        />
+      <radio loc="8 152" size="112 16" style="PlainText"
+        label="Draw Region"
+        vq="aipMode"
+        vc="aipSetState(7)"
+        set="$VALUE=(aipMode=7)"
+        />
+      <radio loc="8 168" size="112 16" style="PlainText"
+        label="Image Math"
+        vq="aipMode"
+        vc="aipSetState(100)"
+        set="$VALUE=(aipMode=100)"
+        />
+      <radio loc="8 72" size="112 16" style="PlainText"
+        label="Draw Point"
+        vq="aipMode"
+        vc="aipSetState(3)"
+        set="$VALUE=(aipMode = 3)"
+        />
+      <radio loc="8 104" size="112 16" style="PlainText"
+        label="Draw Curve"
+        vq="aipMode"
+        vc="aipSetState(6)"
+        set="$VALUE=(aipMode=6)"
+        />
+      <radio loc="8 88" size="112 16" style="PlainText"
+        label="Draw Line"
+        vq="aipMode"
+        vc="aipSetState(4)"
+        set="$VALUE=(aipMode=4)"
+        />
+      <radio loc="8 56" size="112 16" style="PlainText"
+        label="Zoom/Pan"
+        vq="aipMode"
+        vc="aipSetState(8)"
+        set="$VALUE=(aipMode=8)"
+        />
+      <radio loc="8 40" size="112 16" style="PlainText"
+        label="Vertical Scale"
+        vq="aipMode"
+        vc="aipSetState(2)"
+        set="$VALUE=(aipMode = 2)"
+        />
+      <radio loc="8 24" size="112 16" style="PlainText"
+        label="Select"
+        vq="aipMode"
+        vc="aipSetState(1)"
+        set="$VALUE=(aipMode = 1)"
+        />
+    </group>
+  </group>
+</template>

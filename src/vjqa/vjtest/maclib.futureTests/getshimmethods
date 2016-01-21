@@ -1,0 +1,34 @@
+// Agilent (getshimmethods)
+
+$dirPath=userdir+'/persistence'
+$menu=$dirPath+'/shimmethods'
+$tmpfile=$dirPath+'/tmpfile'
+$tmpfile2=$dirPath+'/tmpfile2'
+write('reset',$menu)
+appdir('info'):$atot
+$i=0
+while ($i < $atot) do
+  $i=$i+1
+  appdir('info',$i):$label,$path
+  exists($path+'/proshimmethods','directory'):$e
+  if ($e) then
+    shell('ls -1 '+$path+'/proshimmethods  >> '+$tmpfile+';cat'):$dum
+  endif
+  exists($path+'/shimmethods','directory'):$e
+  if ($e) then
+    shell('ls -1 '+$path+'/shimmethods  >> '+$tmpfile+';cat'):$dum
+  endif
+endwhile
+shell('cat '+$tmpfile+' | sort | uniq >  '+$tmpfile2+';cat'):$dum
+rm($tmpfile):$e
+lookup('mfile',$tmpfile2,'filekey'):$key1,$ret
+while ($ret=1) do
+  lookup('mfile',$key1,'readline','filekey'):$line,$key1,$ret
+  if ($ret=2) then
+    write('file',$menu,'%s %s',$line,$line)
+    $ret=1
+  else
+    $ret=0
+  endif
+endwhile
+rm($tmpfile2):$e

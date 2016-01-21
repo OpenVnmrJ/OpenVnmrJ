@@ -1,0 +1,43 @@
+"macro gap"
+"******************************************************************"
+" gap(widthmm,level,default):startmm(sc),mm_to_leftedge(of screen) "
+"     looks for a gap between lines for insets, labels etc.        "
+"******************************************************************"
+
+if $#<1 then     "default input"
+  $width=wcmax/5
+else
+  $width=$1
+endif
+if $#<2 then
+  $level=th
+else
+  $level=$2
+endif
+$spacing=3       "spacing (mm) between gap limits and closest lines"
+$buf=th th=$level                                  "set th to level"
+nll:$lines th=$buf                 "do line listing, restore old th"
+$line=1 $pos=sc+wc+($spacing-1)                  "running variables"
+$buf=$pos $gapmm=0 $rflrfp=rfl-rfp
+while ($line<=$lines)and($gapmm<($width+2*$spacing)) do
+  $freq=llfrq[$line]-$rflrfp                               "get line"
+  $gapmm=$pos-sc-wc*($freq-sp)/wp                     "calculate gap"
+  $buf=$pos
+  $pos=($freq-sp)/wp*wc+sc
+  $line=1+$line
+endwhile
+if $line>$lines then     "check down to start, if not yet found gap"
+  $buf=$pos
+  $pos=sc-($spacing-1)
+  $gapmm=$buf-$pos
+endif
+if $gapmm<($width+2*$spacing) then    "no gap found, return default"
+  if $#<3 then
+    return((sc+wc/2-$width/2),(wcmax-(sc+wc/2+$width/2)))
+  else
+    return($3,$3)
+  endif
+else
+  $scgap=$buf-$spacing-$width                "gap search successful"
+  return($scgap,(wcmax-($scgap+$width)))             "return result"
+endif

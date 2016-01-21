@@ -1,0 +1,49 @@
+import os
+
+# targets
+fmTarget = 'fm_calshim'
+fmsTarget = 'fm_shuffle'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+fmFileList = ['fm_calshim.c',
+              'fm_polycoef.c',
+              'fm_byteswap.c',
+              'fm_getdata.c']
+
+
+fmsFileList =['fm_shuffle.c',
+              'fm_getdata.c',
+              'fm_byteswap.c']
+
+# build environment
+fmEnv = Environment(CCFLAGS = '-O2 ',
+                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib ',
+                  LIBS    = 'm')
+
+# actual builds
+fm_calshim = fmEnv.Program(target = fmTarget,
+                       source = [fmFileList],
+                       LIBS   = ['m'])
+
+# actual builds
+fm_shuffle = fmEnv.Program(target = 'fm_shuffle',
+                       source = [fmsFileList],
+                       LIBS   = ['m'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+fmEnv.AddPostAction(fm_calshim,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, fmTarget))))
+
+fmEnv.AddPostAction(fm_shuffle,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, fmsTarget))))
+

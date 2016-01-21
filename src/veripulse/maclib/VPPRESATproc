@@ -1,0 +1,639 @@
+"macro VPPRESATproc"
+"*********************************************************************"
+"VPPRESATproc macro - This macro navigate all prep actions for PRESAT"
+"       There are a few obsolete sections - noted appropriately"
+//  Following arg1 are supported
+//   init (default) - Reset parameters to do scout experiment
+//   setup - find satfrq(s) based on scout spectrum
+//   pickpeaks - find peaks based on threshold cursor
+//   adjpeaks - Adjusts satfrq positions for overlaps
+//   offsetarray - array satfrq and tof
+//   findsatfrq - find best satfrq from offsetarray
+//   wstart - decision tree argument for different options
+//   wds - display specturm to let user pick peak(s)
+//   final - presat at tofh2o (panel entry or probe file)
+//   doscout - Obsolete
+//   acquire - Obsolete
+
+"*********************************************************************"
+if ($# < 1) then $arg='init' else $arg=$1 endif
+if (auto='y') then
+        $tmpfile=autodir+'/'+$0+'_tmp'
+else
+        $tmpfile=curexp+'/'+$0+'_tmp'
+endif
+
+"*********************************************************************"
+IF ($arg = 'init') THEN
+        "Reset parameters to do scout experiment"
+//  on('gain'):$gainon
+//  if (Console='mercury') then gain=6 else gain=26 endif
+//  if ($gainon<1) then gain='n' endif
+  writeparam($tmpfile,'nt pw d1 MinSW pltopt prgflg gain satdly')
+  writeparam($tmpfile,'execprocess execplot execprescan execsetup execprep','current','add')
+  CPwtmenu('acq','save')
+  execpars('delete')
+  satmode='n'
+  prgflg='n'
+  MinSW='off'
+  is_param('spintype'):$isst
+  if ($isst>0) then
+      if (spintype<>'tach') then spin=0 endif
+  else
+      spin=0
+  endif
+  d1=1 nt=2 
+  ss=8 pltopt='n'
+//  getsolvinfo(psatsolv):$ppm,$width,$gh2,$cppm,$gmap,$shape,$ok
+//  if ($ok) then presatgh2=$gh2 endif
+  pw(90) gain=0 
+  $style=''
+  getparam('style','Probe'):$style
+  if ($style='cold') then satdly=5 else satdly=2 endif
+  
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$isweton
+  if ($isweton=0) then $wetpeaks=0 endif
+  if (doscout=0) or ($wetpeaks>0) then
+     wexp='VPPRESATproc(\'setup\')'
+  else
+     wexp='VPPRESATproc(\'wds\')'
+  endif
+  explist=pslabel+'scout'
+  off('doscout')
+  wstart='' wds=''
+  create('werrADC','flag'):$ret
+  wdone=''
+
+"*********************************************************************"
+ELSEIF ($arg = 'setup') THEN
+        "Find all frequencies, as dictated either by"
+        " wetpeaks or presatsolv                   "
+        " For threshold based pickpeaksing see pickpeaks argument"
+
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif
+  CPwtmenu('acq','set','none')
+  setref wft ph f full aph0 av vsadj
+
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$isweton
+  if ($isweton=0) then $wetpeaks=0 endif
+  if ($wetpeaks > 0) then
+     slpsat='y'
+     on('lb') if (lb<10) then lb=10 endif
+     wft('nods')
+     f dc aph0 vsadj(110) th = 100
+     if (Console = 'mercury') then $maxpeaks=3 else $maxpeaks=7 endif
+     if wetpeaks > $maxpeaks then wetpeaks=$maxpeaks endif
+     $i=1
+     repeat
+        nll:$count
+        if $count < wetpeaks then th=th/2 endif
+     until $count>= wetpeaks or $i> 7
+     CPwtmenu('acq','read')
+     wft('nods')
+
+     if ($count < wetpeaks) then $wetpeaks=$count wetpeaks=$count endif
+     if ($wetpeaks<2) then slpsat='n' else slpsat='y' endif
+     sort('llamp','r'):$index
+     $i=1
+     $cr=0
+     repeat
+        crmode='c'
+        cr=llfrq[$index[$i]]-rfl+rfp
+        setselfrqc
+// Adjust pstof so overlaps are taken out
+	VPPRESATproc('adjpeaks')
+        $i=$i+1
+     until $i> wetpeaks
+     $gh2=presatgh2
+  else
+     slpsat='n'
+     format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+     getsolvinfo(psatsolv):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+     if ($sok) then
+	peak(($ppm-0.5)*reffrq,($ppm+0.5)*reffrq):$int,cr
+     endif
+     $gh2=presatgh2
+     if ($sok=0) then	
+  	if ($solv='dmso') then 
+    	   peak(2.8p,3.8p):$int,cr
+  	elseif ($solv='d2o') then
+    	   peak(4.2p,5.2p):$int,cr
+  	else
+    	   peak(sp,sp+wp):$int,$freq
+    	   peak($freq-500,$freq+500):$int1,cr
+  	endif
+     endif
+
+     satfrq=0
+     ph
+     slpsat='n'
+     if ($solv='d2o') then 
+//   	if (h1freq = 500) and (presatgh2 > 20) then
+//   	  cr=cr+10
+//   	endif
+
+        movetof
+
+	//This macro is exclusively for 90/10 H2O/D2O
+	//if (h1freq=600) then tof=-218 endif 
+	tof=h1freq/600*-218
+     	satfrq=tof
+     else
+  	 setsatfrq
+     endif
+     satfrq=tof
+     setpower(presatgh2,tn):satpwr
+     if (Console = 'mercury') and (satpwr < 0) then
+	satpwr=0
+     endif
+
+  endif
+
+  off('wetpeaks')
+  getpower(satpwr,tn):presatgh2
+  satmode='y'
+  pw=pw90 nt=8
+//  gain=26
+//  if (Console='mercury') then gain=6 endif
+  ph
+
+  if ($gh2 > 20) and ($wetpeaks<1) then
+     VPPRESATproc('offsetarrayc')
+     wexp='VPPRESATproc(`findsatfrqc`)'
+     wdone=''
+     wnt='wft select(1) vsadj ai f dssh'
+     explist=pslabel+'scout_findsatfrq'
+  else
+     shell('touch '+$tmpfile):$dum
+     fread($tmpfile)
+     rm($tmpfile):$dum
+     CPwtmenu('acq','read')
+     CPwtmenu('acq','purge')
+//     satdly=d1
+     dg
+     wexp='wft'
+     wdone=''
+     explist=pslabel
+     pw90proc('setup')
+  endif
+    if (alock<>'u') then alock='n' endif
+    wshim='n'
+    if ($GO = 'go') then
+	cpgo
+    endif
+
+"***********************************************************************"
+ELSEIF ($arg = 'pickpeaks') THEN
+
+     nll:$count
+     if (Console = 'mercury') then $maxpeaks=3 else $maxpeaks=7 endif
+     if ($count>0) then selfrqc=0 off('selfrqc') else
+	write('error','No Peaks found')
+	return
+     endif
+     if ($count=1) then
+	slpsat='n'
+	crmode='c'
+	cr=llfrq[1]-rfl+rfp
+	setselfrqc
+	return
+     endif
+
+     slpsat='y'
+
+     $i=1
+     repeat
+        crmode='c'
+        cr=llfrq[$i]-rfl+rfp
+        setselfrqc
+// Adjust pstof so overlaps are taken out
+        VPPRESATproc('adjpeaks')
+        $i=$i+1
+     until $i> $count
+
+     VPPRESATproc('adjpeaks')
+"***********************************************************************"
+ELSEIF ($arg = 'adjpeaks') THEN
+    $off2cr=tof-sw/2+rfl-rfp
+    $gh2=presatgh2
+    $numpeaks=size('pstof')
+    if ($numpeaks<2) then return endif
+    $i=1 $i2=1
+    repeat
+	dres(pstof[$i]-$off2cr):$width
+	$width=3*$width
+	if ($width < presatgh2) then $width=presatgh2 endif
+	$firstwidth=$width
+	$lastwidth=$width
+	$bigwidth=$width
+	$firstfrq=pstof[$i]-$off2cr
+	$lastfrq=pstof[$i]-$off2cr
+	$curfrq=pstof[$i]-$off2cr
+	if ($i < $numpeaks) then "Check peaks for overlap"
+	    $x=$i+1
+	    repeat
+		$nextfrq=pstof[$i]-$off2cr
+		if ($curfrq-$nextfrq) < $width then
+		    dres($nextfrq):$lastwidth
+		    $lastwidth=3*$lastwidth
+		    if ($lastwidth < 10) then $lastwidth=10 endif
+		    $lastfrq=$nextfrq
+		    if ($bigwidth < $lastwidth) then $bigwidth=$lastwidth endif
+		    $width=$lastwidth
+		    $x=$x+1
+		    $i=$i+1
+		else
+		    $x=$numpeaks+1
+		endif
+	    until $x > $numpeaks
+	endif
+	$offset=($firstfrq+$lastfrq)/2
+	$newwidth=($firstfrq-$lastfrq)
+	if ($newwidth<0) then $newwidth=-1*$newwidth endif
+	$newwidth=$newwidth+$firstwidth/2+$lastwidth/2
+	if ($newwidth < $bigwidth) then
+	    $newwidth=$bigwidth
+	endif
+	selfrqc[$i2]=$offset+$off2cr
+	if ($newwidth > presatgh2) then presatgh2=$newwidth endif
+	selfrqw[$i2]=presatgh2
+	$i2=$i2+1
+	$i=$i+1
+    until ($i > $numpeaks)
+    $selfrqsize=size('pstof')
+    if (presatgh2<>$gh2) or ($numpeaks<>$selfrqsize) then
+                "Adjust satpwr to accomodate change in pstof/presatgh2"
+    	setpower(presatgh2,tn):satpwr,$pw
+    	ln($selfrqsize):$lnsize
+    	$attnval=trunc(20*0.43429*$lnsize)
+    	satpwr=satpwr+$attnval+1
+    	if (Console = 'mercury') and (satpwr<0) then
+            satpwr=0
+    	endif
+    	if (satpwr > 30) then satpwr=30 endif
+        getpower(satpwr,tn):presatgh2
+                "satpwr adjusted"
+    endif
+    return
+"***********************************************************************"
+ELSEIF ($arg = 'offsetarrayc') THEN
+	"array satfrq/tof"
+  $tofh2o=satfrq
+  getparam('tofh2o',tn):$tofh2o
+  if ($tofh2o<>satfrq) then
+	satfrq=$tofh2o
+	write('line3','Saturation frequency array centered at %0.1f',satfrq)
+  endif
+
+  //setpower(presatgh2*0.7,tn):satpwr
+  setpower(presatgh2*0.5,tn):satpwr
+  nt=8 ai av gain=0 d1=1
+  getparam('style','Probe'):$style
+  if ($style='cold') then satdly=5 else satdly=2 endif
+  pw(90)
+  werr='return'
+  array('satfrq',21,satfrq+30,-3)
+  format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+  if ($solv = 'd2o') then
+    tof=satfrq
+    array='(tof,satfrq)'
+    da
+  endif
+  CPwtmenu('acq','set','none')
+  lb=1
+  r1=1
+  scoutinfo='satfrqarray_01'
+"***********************************************************************"
+
+ELSEIF ($arg = 'offsetarrayf') THEN
+	"array satfrq/tof"
+  $tofh2o=satfrq
+  getparam('tofh2o',tn):$tofh2o
+  if ($tofh2o<>satfrq) then
+	satfrq=$tofh2o
+	write('line3','Saturation frequency array centered at %0.1f',satfrq)
+  endif
+
+  setpower(presatgh2*0.5,tn):satpwr
+  //setpower(presatgh2,tn):satpwr
+  nt=8 ai av gain=0 d1=1
+  getparam('style','Probe'):$style
+  if ($style='cold') then satdly=5 else satdly=2 endif
+  pw(90)
+  werr='return'
+  array('satfrq',31,satfrq+3,-0.2)
+  format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+  if ($solv = 'd2o') then
+    tof=satfrq
+    array='(tof,satfrq)'
+    da
+  endif
+  CPwtmenu('acq','set','none')
+  lb=1
+  r1=1
+  scoutinfo='satfrqarray_01'
+
+"***********************************************************************"
+ELSEIF ($arg = 'findsatfrqc') THEN
+	"Find optimal satfrq/tof"
+ 
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif
+
+  setref
+  wft av wp=1p sp=4.2p select(1) vp=40 vsadj dssh dssl
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,wp+sp):$ht
+    if $counter=1 then $best=1 $minht=$ht else
+     if $ht < $minht then $minht=$ht $best=$counter endif
+    endif
+    $counter=$counter+1
+  until $counter > arraydim
+  $best?
+
+  if (($best < 4) or ($best > 17)) then
+    satfrq=satfrq[$best]
+    array('satfrq',21,satfrq+30,-3)
+    format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+    if ($solv = 'd2o') then
+     tof=satfrq
+     array='(tof,satfrq)'
+     da
+    endif
+    f full
+    r1=r1+1
+    format(r1,0,0):scoutinfo
+    if (r1<10) then scoutinfo='satfrqarray_0'+scoutinfo
+    else scoutinfo='satfrqarray_'+scoutinfo endif
+     wexp='VPPRESATproc(`findsatfrqc`)'
+     wdone=''
+     wnt='wft select(1) vsadj ai f dssh'
+  else
+    satfrq=satfrq[$best]
+    VPPRESATproc(`offsetarrayf`)
+    wexp='VPPRESATproc(`findsatfrqf`)'
+  endif
+
+    if (alock<>'u') then alock='n' endif
+    wshim='n'
+    if ($GO = 'go') then
+	cpgo
+    endif
+
+"***********************************************************************"
+ELSEIF ($arg = 'findsatfrqf') THEN
+	"Find optimal satfrq/tof"
+
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif
+
+  setref
+  wft av wp=1p sp=4.2p select(1) vp=40 vsadj dssh dssl
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,wp+sp):$ht
+    if $counter=1 then $best=1 $minht=$ht else
+     if $ht < $minht then $minht=$ht $best=$counter endif
+    endif
+    $counter=$counter+1
+  until $counter > arraydim
+
+  if (($best < 4) or ($best > 27)) then
+    satfrq=satfrq[$best]
+    
+    array('satfrq',31,satfrq+3,-0.2)
+    format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+    if ($solv = 'd2o') then
+     tof=satfrq
+     array='(tof,satfrq)'
+     da
+    endif
+    f full
+    r1=r1+1
+    format(r1,0,0):scoutinfo
+    if (r1<10) then scoutinfo='satfrqarray_0'+scoutinfo
+    else scoutinfo='satfrqarray_'+scoutinfo endif
+     wexp='VPPRESATproc(`findsatfrqf`)'
+     wdone=''
+     wnt='wft select(1) vsadj ai f dssh'
+  else
+    satfrq=satfrq[$best]
+    format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+    if ($solv = 'd2o') then
+      tof=satfrq
+    endif
+    nt=8 
+    sw=sw ss=4
+    pw=pw90
+    create('execprocess','string'):$dum
+    execprocess='sucrose_sens_process'
+    lb='n'
+    shell('touch '+$tmpfile):$dum
+    fread($tmpfile)
+    rm($tmpfile):$dum
+//    satdly=d1
+//    pw=pw90
+//    gain=26
+//    if (Console='mercury') then gain=6 endif
+    f full ph
+    wnt='' wexp='' wdone=''
+    setpower(presatgh2,tn):satpwr
+    if (Console='mercury') and (satpwr < 0) then 
+       satpwr=0 
+       getpower(satpwr,tn):presatgh2
+    endif
+    dg
+    wexp='wft'
+    wdone=''
+    explist=pslabel
+    pw90proc('setup')
+  endif
+
+    if (alock<>'u') then alock='n' endif
+    wshim='n'
+    if ($GO = 'go') then
+	cpgo
+    endif
+
+"***********************************************************************"
+ELSEIF ($arg = 'wstart') THEN
+        "This is where it begins - make decision on how to proceed"
+
+   if (procdim=1) and (wds='suselfrq') then
+	exec(wds)
+	return
+   endif
+
+  $wexp=wexp
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$wetison
+  if ($wetison=0) then $wetpeaks=0 endif
+
+  on('doscout'):$scoutON
+  if ($scoutON) then
+     if (doscout>-1) then $scoutON=0 endif
+  endif
+  if ($scoutON) then
+	format(solvent,'lower'):$solv
+	strstr($solv,'d2o'):$scoutON
+  endif
+  if ($scoutON) and (tn='H1') then
+    VPPRESATproc('final')
+    if ($wexp='chempackQ') then
+	wexp='chempackQ'
+    endif
+    return
+  endif
+
+
+   if (auto='y') then
+	doscout=0
+	if (psatsolv='') then 
+		format(solvent,'lower'):psatsolv
+		if (psatsolv='d2o_10') then psatsolv='h2o' endif
+		if (psatsolv='dmso') then psatsolv='wetdmso' endif
+	endif
+   endif
+
+   if (doscout=0) and ($wetpeaks=0) then
+   	getsolvinfo(psatsolv):$ppm,$width,$gh2,$cppm,$gmap,$shape,$ok
+        $gh2=h1freq*0.150
+   	if ($ok) then
+      		presatgh2=$gh2
+		is_gmap($gmap):$gok
+		if ($gok) then Gmap=$gmap endif
+	endif
+   else
+	psatsolv=''
+   endif
+   VPPRESATproc('init')
+   scoutinfo=''
+   if ($wexp='chempackQ') then
+   	$explist=explist
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+   	cpexplist('read',$md):explist
+   	if wds='suselfrq' then
+                write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'wds\')',$0)
+		explist=pslabel+'scout','SetUp',explist
+   	else
+                write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'setup\')',$0)
+		explist=pslabel+'scout','SetUp',explist
+   	endif
+   	cpexplist('write',$md)
+   	explist=$explist
+   	wds='' wstart=''
+	scoutinfo='Scout1D'
+	wexp='chempackQ'
+   endif
+
+"***********************************************************************"
+ELSEIF ($arg = 'continue') THEN
+
+  iscppresat('processed'):$ret
+  if ($ret=0) then
+        write('error','Spectrum in curexp is not a presat spectrum with apptype=\'lstd1D\'')
+	return
+  endif
+  if (procdim=0) then
+        wft
+  endif
+  if (procdim<>1) then
+        write('error','a processed 1D spectrum is not in curexp')
+        return
+  endif
+        wds='suselfrq'
+	if (slpsat='n') then selfrqc=tof else selfrqc=pstof endif
+	slpsat='y'
+	$size=size('selfrqc')
+	selfrqw=presatgh2/$size
+        showfreq('satfrq')
+
+"***********************************************************************"
+ELSEIF ($arg = 'wds') THEN
+
+  CPwtmenu('acq','read')
+  setref wft ph f full aph0 vsadj
+  satfrq=0
+  ph
+  satmode='y'
+  pw=pw90 nt=8
+//  gain=26
+//  if (Console='mercury') then gain=6 endif
+     shell('touch '+$tmpfile):$dum
+     fread($tmpfile)
+     rm($tmpfile):$dum
+     CPwtmenu('acq','read')
+     CPwtmenu('acq','purge')
+//     satdly=d1
+     wds='suselfrq'
+     dg
+     wexp='wft'
+     wdone=''
+     explist=pslabel
+    alock='n' wshim='n'
+    ds 
+    ds('restart')
+
+"***********************************************************************"
+ELSEIF ($arg = 'final') THEN
+
+  satmode='y'
+  satfrq=tofh2o
+  tof=satfrq
+  psatsolv='h2o'
+  write('line3','Presat frequency at %0.1f',tofh2o)
+
+//  getsolvinfo(psatsolv):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+//  if ($sok=0) then
+//	presatgh2=50
+//  else
+//	presatgh2=$gh2
+//  endif
+
+  pw=pw90
+  setpower(presatgh2,tn):satpwr
+  if (Console='mercury') and (satpwr < 0) then
+   satpwr=0
+   getpower(satpwr,tn):presatgh2
+  endif
+
+  off('wetpeaks')
+  doscout=0
+  off('doscout')
+  wstart='' wds=''
+  dg
+  wnt='' wexp='wft'
+  wdone=''
+  pw90proc('setup')
+
+"***********************************************************************"
+ELSEIF ($arg = 'doscout') THEN
+	"This section is OBSOLETE"
+
+  wds='suselfrq'
+  VPPRESATproc('wstart')
+
+"***********************************************************************"
+ELSEIF ($arg = 'acquire') THEN
+	"This section is OBSOLETE"
+  exec(wstart)
+  off('doscout')
+  cpgo
+
+"***********************************************************************"
+ENDIF

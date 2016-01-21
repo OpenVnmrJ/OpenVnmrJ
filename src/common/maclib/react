@@ -1,0 +1,159 @@
+"macro react"
+"react - recover from error conditions during werr processing"
+
+"no action if high noise"
+
+if (acqstatus[ 2 ] = 102) then
+    return
+endif
+
+"In automation mode,  certain errors must cause the automation"
+"run to be terminated.  Errors larger than 900 are unrecoverable"
+"The 500 series of errors are sample changer errors.  All sample"
+"changer errors except one will abort an automation run.  The"
+"exception (error 521) occurs if the sample changer attempts to"
+"take a sample from the tray but fails to find one there.  In that"
+"case,  the automation run just continues"
+if (auto = 'y') then
+    if ((acqstatus[ 2 ] >= 900) or
+        ((acqstatus[ 2 ] >= 500) and (acqstatus[ 2 ] < 600) and
+         (acqstatus[ 2 ] <> 521))) then
+       autosa
+       return
+    endif
+endif
+
+"if abort acquisition, check for special error messages	     "
+"in non-automation mode (auto=n), r1 is used by previous     "
+"use of react macro to generate a proper error message on    "
+"abort (otherwise the abort message itself would immediately "
+"erase the message of interest). in automation mode (auto=y),"
+"messages are written directly into the log file"
+
+"since the error codes on the VXR-5000 series now go up to   "
+"1104, r1 receives 10000 + error code value.                 "
+
+if (acqstatus[ 1 ] = 16) then
+    if (r1=10103)or(r1=10104) then           "high gain abort"
+        write('line3','signal too large - reduce gain or pulse width')
+    endif
+    if r1=10801 then                          "autogain abort"
+        write('line3','signal too large - reduce pulse width or concentration')
+    endif
+    if r1=10001 then                            "gain reduced"
+        write('line3','gain reduced and experiment resubmitted')
+    endif
+    if r1=10002 then                              "pw reduced"
+        write('line3','pw reduced and experiment resubmitted')
+    endif
+    r1=0
+    return
+endif
+
+"try to optimize lock conditions if lock lost"
+
+if (acqstatus[ 2 ] = 201) and (acqstatus[ 1 ] = 15) then
+    if alock<>'a' then
+        alock='a' wshim='e'
+        if ($# = 1) then
+           au('next','wait')
+        else
+           au('next')
+        endif
+    endif
+    return
+endif
+
+if (acqstatus[ 2 ] = 301) then spin=0 alock='y' wshim='n'
+  au('next') return
+endif
+if (acqstatus[ 2 ] = 302) then spin=0 alock='y' wshim='n'
+  au('next') return
+endif
+
+"find out if it's a normal 's2pul' experiment, 2d, or what"
+"$d2exp=1 if 2d, 0 if not"
+
+exists('ni','parameter'):$d2exp
+if $d2exp=1 then
+    if (ni<2) then
+        $d2exp=0
+    endif
+endif
+
+if ( (seqfil <> 's2pul') or ($d2exp = 1) or (arraydim>1) ) and
+   ( (acqstatus[ 2 ] = 103) or (acqstatus[ 2 ] = 104) or (acqstatus[ 2 ] = 801) ) then
+    r1 = acqstatus[ 2 ]+10000
+    aa                            "abort acquisition"
+    return                        "which causes this macro to be reexecuted"
+endif
+
+if (acqstatus[ 2 ] = 103) or      "receiver or adc overload,"
+   (acqstatus[ 2 ] = 104) then    "should only get this condition"
+                                  "if not in autogain mode"
+    if gain<>0 then
+        if gain>5 then
+            gain=gain-6
+        else
+            gain=0
+        endif
+        r1=10001
+	getvalue('ct'):ct
+        if ct=0 then
+	aa			"Abort current acquisition"
+        if ($# = 1) then
+           au('next','wait')
+        else
+           au('next')
+        endif
+        endif
+        return
+    else                          "gain at minimum, reduce pw"
+        if pw<2 then
+            r1=10801
+            aa                    "abort acquisition"
+            return
+        else
+            pw=0.5*pw
+	    getvalue('ct'):ct
+	    if ct=0 then
+	    aa			"Abort current acquisition"
+            if ($# = 1) then
+               au('next','wait')
+            else
+                au('next')
+            endif
+	    endif
+            return
+        endif
+    endif
+endif
+
+if (acqstatus[ 2 ] = 801) then    "autogain fail: gain=0 and still overloaded"
+    if pw<2 then
+        write('line3','signal too large - reduce concentration')
+        resume
+        return
+    endif
+    pw=0.5*pw                     "reduce pulse width and try again"
+    r1=10002
+    write('line3','pulse width lowered and experiment resubmitted')
+    if ($# = 1) then
+       au('next','wait')
+    else
+       au('next')
+    endif
+    return
+endif
+
+if (acqstatus[ 2 ] = 200) then                      "max transients accumulated"
+    dp='y' 
+    write('line3','double precision acquisition selected; experiment resubmitted')
+    if ($# = 1) then
+       au('next','wait')
+    else
+       au('next')
+    endif
+    return
+endif
+

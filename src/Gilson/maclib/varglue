@@ -1,0 +1,51 @@
+"macro varglue"
+" ******************************************************"
+"varglue(dir) - glue together all fids in the directory dir"
+" ******************************************************"
+
+$dir=$1
+
+clradd
+
+getfile($dir):$fids
+write('line3','There are %d files in %s',$fids,$dir)
+$i=0
+$curscan=0
+$file=''
+$ext=''
+
+ repeat
+  $i = $i +1
+  getfile($dir,$i):$file,$ext
+  if ($ext = 'fid') then
+    rt($dir+'/'+$file)
+    if $curscan = 0 then
+      add
+    else
+      add('new')
+    endif
+    
+    $curscan=$curscan+1 "Keeps track of which one we're on"
+    write('line3','fid No. %d is %s ',$curscan,$file)
+  endif
+ until $i >= $fids
+ 
+ jaddsub
+
+ exists('ni','parameter'):$a
+ if  $a then 
+  if ni=0 then ni=1 endif
+ else
+  par_2d
+  create('ni','integer','processed')
+  ni=1
+ endif
+  $n = $curscan*ni
+    ni=$n
+    fn1=2*ni
+    setvalue('arraydim',$n,'processed')
+    setvalue('ni',$n,'processed')
+    $time=$curscan
+    sw1=1000/$time
+"    setvalue('sw1',sw1,'processed')"
+ 

@@ -1,0 +1,56 @@
+"macro cpspwXfixprobe"
+// cppwXfixprobe - A macro to propagate X pulsewidth calibrations from the 
+//                 named region to all regions with the same nucleus.
+
+//                 Argument 1 is the action:
+//                 'fix' reads X pulsewidth information and propagates it 
+//                 to all other regions with the same nucleus. 
+
+//                 Argument 2 is the region number with a default of 1.  
+
+
+// Fix X Parameters in the Probe File
+
+if (($#>0) and ($1='fix')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0  $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Set Array Containing Region Codes
+
+   if ($tnuc='C13') then 
+      $regout[1]='HCa'
+      $regout[2]='HCO'
+      $regout[3]='HC'
+      $indexmax=3
+   endif
+
+// Get X Pulsewidth Parameters from the Named Region 
+
+   probeparamgroup('getlocal',$reg,$tnuc,'','dbX90'):$tpwr
+   probeparamgroup('getlocal',$reg,$tnuc,'','aX90','pwX90','pwX180','R','F'):
+                                        $aX90,$pwX90,$pwX180,$R,$F
+
+// Save X Pulsewidth Parameters to All Regions with the Same Nucleus
+
+   $index=1.0
+   repeat
+      probeparamgroup('setlocal',$regout[$index],$tnuc,'','dbX90',$tpwr)
+      probeparamgroup('setlocal',$regout[$index],$tnuc,'','aX90',$aX90,
+                                                'pwX90',$pwX90,
+                                                'pwX180',$pwX180,
+                                                'R',$R,
+                                                'F',$F)
+      $index=$index+1.0
+   until ($index>$indexmax)
+endif
+
+

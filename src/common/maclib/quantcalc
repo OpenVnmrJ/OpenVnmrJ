@@ -1,0 +1,117 @@
+"macro quantcalc"
+"quantcalc - macro in interact with quant apptype"
+"Called either by the action of a user picking an integral region  in the"
+"Quantitation panel or the apptype macro quant in process"
+
+
+$intAxstr='int'+$1
+$intAx={$intAxstr}
+$stoichAxstr='stoich'+$1
+$stoichAx={$stoichAxstr}
+$ignoreAxstr='ignore'+$1
+$ignoreAx={$ignoreAxstr}
+$concAxstr='conc'+$1
+$relintAxstr='relint'+$1
+$percentAxstr='percent'+$1
+
+//write('line3','$stoichAxstr : %s',$stoichAxstr)
+//write('line3','$ignoreAx : %s',$ignoreAx)
+
+IF quantflag='c' THEN
+
+"Calculate Concentrations"
+
+	if intC<>0 then
+		if stoichflag='y' then
+			if $stoichAx<>0 then
+				$concAx=$intAx*stoichC*concC/(intC*$stoichAx)
+			else
+				$concAx=0
+			endif
+		else
+			$concAx=$intAx*concC/intC
+		endif
+	else
+		$concAx=0
+	endif
+
+	{ $concAxstr } = $concAx
+        //write('line3','Concentration is : %2.1f',$concAx)
+
+	return($concAx)
+
+ELSEIF quantflag='r' THEN
+"Calculate Relative Integrals"
+
+	if stoichflag='y' then
+		if $stoichAx<>0 then
+			$relintAx=$intAx/$stoichAx
+		else
+			$relintAx=0
+		endif
+	else
+		$relintAx=$intAx
+	endif
+
+	{ $relintAxstr } = $relintAx
+
+        //write('line3','Relative amount : %2.1f',$relintAx)
+	return($relintAx)
+
+ELSEIF quantflag='p' THEN
+
+"Calculate Percentage Integrals"
+
+$stoichsumA=0 $sumA=0 $i=1
+repeat
+	$i_str='' format($i,0,0):$i_str
+	$stoichsumAstr='stoichA'+$i_str
+"write('line3','$stoichsumAstr : %s',$stoichsumAstr)"
+	$intsumAstr='intA'+$i_str
+"write('line3','$intsumAstr : %s',$intsumAstr)"
+	$ignoresumAstr='ignoreA'+$i_str
+"write('line3','$ignoresumAstr : %s',$ignoresumAstr)"
+	if { $stoichsumAstr }<>0 and { $ignoresumAstr }<>'y' then
+		$stoichsumA=$stoichsumA+( {$intsumAstr}/{$stoichsumAstr} )
+"write('line3','$i : %d',$i)"
+"write('line3','$stoichsumA : %2.1f',$stoichsumA)"
+	endif
+	if { $ignoresumAstr }<>'y' then
+		$sumA=$sumA+{$intsumAstr}
+"write('line3','$i : %d',$i)"
+"write('line3','$sumA       : %2.1f',$sumA)"
+	endif
+	$i=$i+1
+until $i>5
+
+//write('line3','$i end      : %d',$i)
+//write('line3','$stoichsumA : %2.1f',$stoichsumA)
+//write('line3','$sumA       : %2.1f',$sumA)
+
+	if stoichflag='y' then
+		if $stoichsumA<>0 and $stoichAx<>0 and $ignoreAx<>'y' then
+			$percentAx=(($intAx/$stoichAx)/$stoichsumA)*100
+		else
+			$percentAx=0
+		endif
+	else
+		if $sumA<>0 and $ignoreAx<>'y' then
+			$percentAx=($intAx/$sumA)*100
+		else
+			$percentAx=0
+		endif
+
+	{ $percentAxstr } = $percentAx
+
+	endif
+
+//write('line3','$percentAx  : %2.1f',$percentAx)
+
+	return($percentAx)
+
+ELSE
+
+	write('error','The quantflag parameter must be set to c, r, or p.')
+
+ENDIF
+

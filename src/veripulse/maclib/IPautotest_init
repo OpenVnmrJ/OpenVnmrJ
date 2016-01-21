@@ -1,0 +1,160 @@
+"macro IPautotest_init"
+
+IPmodule('get')
+exists('atglobal','modules'):$ex,$modpath
+if ($ex>0.5) then
+   shell('dirname '+$modpath):$modpath
+   getmodule('atglobal',$modpath,'global')
+endif
+$ATdir=userdir+'/autotest'
+exists($ATdir,'directory'):$ex
+if ($ex<0.5) then mkdir($ATdir) endif
+$ATdbdir=$ATdir+'/atdb'
+exists($ATdbdir,'directory'):$ex
+if ($ex<0.5) then mkdir($ATdbdir) endif
+$ATinitfile=userdir+'/maclib/ATinit'
+$AT_prev_setting=userdir+'/autotest/atdb/at_prev_setting'
+write('reset',$ATinitfile)
+write('reset',$AT_prev_setting)
+write('file',$ATinitfile,'cd\(autotestdir\)')
+at_user=IPoperator
+write('file',$ATinitfile,'at_user=\'%s\'',at_user)
+write('file',$ATinitfile,'at_consoletype=\'%s\'',Console)
+at_consolesn=IPsyssn
+write('file',$ATinitfile,'at_consolesn=\'%s\'',at_consolesn)
+write('file',$ATinitfile,'at_datadir=\'%s\'',userdir+'/autotest/data')
+getparam('style','Probe'):$probestyle
+at_probetype=$probestyle
+write('file',$ATinitfile,'at_probetype=\'%s\'',$probestyle)
+getparam('rfsize','Probe'):$rfsize
+at_coilsize=$rfsize
+write('file',$ATinitfile,'at_coilsize=%f',$rfsize)
+getparam('pwxlvl','C13'):$pwxlvl
+write('file',$ATinitfile,'at_max_pwxlvl=%d',$pwxlvl)
+getparam('dpwr','C13'):$dpwr
+write('file',$ATinitfile,'at_max_dpwr=%d',$dpwr)
+write('file',$ATinitfile,'at_max_pwx2lvl=0')
+write('file',$ATinitfile,'at_max_dpwr2=0')
+getparam('tpwr','H1'):$tpwr
+getparam('pw90','H1'):$pw90
+
+//Aim for a 10 us pw90
+$target=10
+$factor = $pw90/$target 
+ln($factor):$lnfactor
+ln(10):$ln10
+$tpwrdiff = 20*$lnfactor/$ln10
+if $tpwrdiff > 0 then
+	$tpwrdiff = trunc($tpwrdiff + 0.5)
+else
+	$tpwrdiff = trunc($tpwrdiff - 0.5)
+endif
+$pw90=$target
+$tpwr=$tpwr+$tpwrdiff
+at_pw90=$pw90
+at_tpwr=$tpwr
+at_gradtests='y'
+at_locktests='y'
+at_c13tests='y'
+at_vttest='y'
+
+getparam('gcal','Probe'):$gcal
+if ($gcal=0) then "Set approximate values
+   $gradtype3=''
+   substr(gradtype,3,1):$gradtype3
+   if ($gradtype3 = 'l') then
+     $gcal=0.01
+   else
+     $gcal=0.0018
+   endif
+endif
+
+at_gzcal=$gcal
+write('file',$ATinitfile,'at_tpwr=%d',$tpwr)
+write('file',$ATinitfile,'at_pw90_estimate=%.1f',$pw90)
+write('file',$ATinitfile,'at_pw90=%.1f',$pw90)
+write('file',$ATinitfile,'at_gzcal=%.5f',$gcal)
+write('file',$ATinitfile,'at_vttest=\'y\'')
+write('file',$ATinitfile,'at_c13tests=\'y\'')
+write('file',$ATinitfile,'at_locktests=\'y\'')
+write('file',$ATinitfile,'at_gradtests=\'y\'')
+write('file',$ATinitfile,'at_plotauto=\'n\'')
+write('file',$ATinitfile,'at_printparams=\'n\'')
+write('file',$ATinitfile,'at_graphhist=\'n\'')
+write('file',$ATinitfile,'at_wntproc=\'n\'')
+write('file',$ATinitfile,'at_plot_to_file=\'y\'')
+write('file',$ATinitfile,'at_cycletest=\'n\'')
+
+ckstring(IPoperator):$operator
+write('file',$AT_prev_setting,'set confpan\(tclvar,1\) %s',$operator)
+write('file',$AT_prev_setting,'set confpan\(tclvar,2\) %s',Console)
+write('file',$AT_prev_setting,'set confpan\(tclvar,3\) %s', IPsyssn)
+write('file',$AT_prev_setting,'set confpan\(tclvar,4\) %s',userdir+'/autotest/data')
+write('file',$AT_prev_setting,'set confpan\(tclvar,5\) %s',probe)
+write('file',$AT_prev_setting,'set confpan\(tclvar,6\) %d',$rfsize)
+write('file',$AT_prev_setting,'set confpan\(tclvar,7\) %d',$pwxlvl)
+write('file',$AT_prev_setting,'set confpan\(tclvar,8\) %d',$dpwr)
+getparam('pwxlvl','N15'):$N15pwxlvl
+getparam('dpwr','N15'):$N15dpwr
+write('file',$AT_prev_setting,'set confpan\(tclvar,9\) %d',$N15pwxlvl)
+write('file',$AT_prev_setting,'set confpan\(tclvar,10\) %d',$N15dpwr)
+write('file',$AT_prev_setting,'set confpan\(tclvar,11\) %d',$tpwr)
+write('file',$AT_prev_setting,'set confpan\(tclvar,12\) %.1f',$pw90)
+write('file',$AT_prev_setting,'set copan\(tclval,1\) 0')
+write('file',$AT_prev_setting,'set copan\(tclval,2\) 0')
+write('file',$AT_prev_setting,'set copan\(tclval,3\) 0')
+write('file',$AT_prev_setting,'set copan\(tclval,4\) 0')
+write('file',$AT_prev_setting,'set copan\(nmrval,1\) n')
+write('file',$AT_prev_setting,'set copan\(nmrval,2\) n')
+write('file',$AT_prev_setting,'set copan\(nmrval,3\) n')
+write('file',$AT_prev_setting,'set copan\(nmrval,4\) n')
+write('file',$AT_prev_setting,'set copn\(tclval,1\) 0')
+write('file',$AT_prev_setting,'set copn\(tclval,2\) 0')
+write('file',$AT_prev_setting,'set copn\(tclval,3\) 0')
+write('file',$AT_prev_setting,'set copn\(tclval,4\) 0')
+write('file',$AT_prev_setting,'set copn\(tclval,5\) 1')
+write('file',$AT_prev_setting,'set copn\(tclval,6\) 0')
+write('file',$AT_prev_setting,'set copn\(nmrval,1\) n')
+write('file',$AT_prev_setting,'set copn\(nmrval,2\) n')
+write('file',$AT_prev_setting,'set copn\(nmrval,3\) n')
+write('file',$AT_prev_setting,'set copn\(nmrval,4\) n')
+write('file',$AT_prev_setting,'set copn\(nmrval,5\) y')
+write('file',$AT_prev_setting,'set copn\(nmrval,6\) n')
+write('file',$AT_prev_setting,'wm geometry . 750x920+400+40')
+
+$adirtmplt=adirtmplt
+$IPrunid=IPrunid
+ATgetVT:at_temp  "tests will be done at current temperature"
+cplog('PROTON','last'):$file,$asdir
+
+//AutoTest parameters must not contain IPpars
+//Always retrieve from system appdir
+rtp('/vnmr/autotest/parameters/standard')
+
+//Add IPpars
+create('IPrunid','string'):$e
+IPrunid=$IPrunid
+IPmodule('get')
+create('at_currenttest','string'):$e "create local version of parameter"
+create('gradientshaping','flag'):$e "create local version of parameter"
+samplename='AutoTest'
+adirtmplt=$adirtmplt
+adir2tmplt=$asdir
+autotestdir=userdir+'/autotest'
+exists(autotestdir,'directory'):$ex
+if ($ex<0.5) then mkdir(autotestdir) endif
+exists(autotestdir+'/parameters','directory'):$ex
+if ($ex<0.5) then mkdir(autotestdir+'/parameters') endif
+svp(autotestdir+'/parameters/standard','force')
+
+savemodule('atglobal',userdir+'/modules','global')
+writeparam(userdir+'/global','at_temp','global','add')
+writeparam(userdir+'/global','at_pw90','global','add')
+writeparam(userdir+'/global','at_gradtests','global','add')
+writeparam(userdir+'/global','at_locktests','global','add')
+writeparam(userdir+'/global','at_c13tests','global','add')
+writeparam(userdir+'/global','at_vttest','global','add')
+writeparam(userdir+'/global','at_tpwr','global','add')
+writeparam(userdir+'/global','at_gzcal','global','add')
+xmhaha('sendcmd','IPupdateATglobalfg')
+flush

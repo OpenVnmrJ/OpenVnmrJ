@@ -1,0 +1,25 @@
+"macro _bigtau"
+"_bigtau - Round the values of bigtau appropriately"
+"      for the carr-purcell meiboom-gill t2 sequence "
+$adjusted=(1=0)
+$i=1
+$lastn=-1
+repeat
+  $n=bigtau[$i]/(2*d2)
+  $n=trunc(($n/2)+0.5)*2
+  if $n=$lastn then $n=$n+2 endif "Don't repeat a value"
+  $lastn=$n
+  $oldbigtau=bigtau[$i]
+  bigtau[$i]=2*d2*$n
+  if (bigtau[$i]<>$oldbigtau) then $adjusted=(1=1) endif
+  $i=$i+1
+until $i>size('bigtau')
+if $adjusted then
+  if size('bigtau')>1 then
+    da "Show updated array"
+    echo
+    echo('bigtau values adjusted to detect only even-numbered echoes (bigtau=2*n*d2)')
+  else
+    write('line3','bigtau adjusted to %5.3f to detect even-numbered echo (bigtau=2*n*d2)',bigtau)
+  endif
+endif

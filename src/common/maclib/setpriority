@@ -1,0 +1,26 @@
+"macro setpriority"
+"***setpriority*********************************"
+
+on('prioritysample'):$pon
+if ($pon<1) then 
+   write('error','prioritysample parameter does not exist')
+   return 
+endif
+
+$isok=0
+operights('prioritysample'):$isok
+
+if ($isok) then
+        $maxsamples=0 $ret=1
+        checkpriority(operator):$ret,$maxsamples
+        if ($ret=0) then
+                write('error','Priority Samples exceed max allowed: %d',$maxsamples)
+		prioritysample='no','low','sample'
+	else
+   		prioritysample='yes','low','sample'
+	endif
+else
+   write('error','%s is not authorized for priority sample. See Administrator',operator)
+   prioritysample='no','low','sample'
+endif
+

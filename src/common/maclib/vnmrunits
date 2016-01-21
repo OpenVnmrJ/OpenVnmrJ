@@ -1,0 +1,148 @@
+"macro vnmrunits"
+"vnmrunits('set',param,$VALUE)   param = $VALUE * vnmrUnits(param)"
+"vnmrunits('get',param)         $VALUE =  param / vnmrUnits(param)"
+
+if $#<1.5 then
+  write('error','Usage: vnmrunits(\'get\'|\'set\',param<,value>)')
+  return(0)
+endif
+
+$getset = $1  "'get','set'"
+$param  = $2
+$tree = 'current' "could set by $3 or $4"
+
+exists($param,'parameter',$tree):$e
+if $e<0.5 then return(0) endif
+
+if (typeof($param)=1) then
+  write('error','vnmrunits not valid for string arguments')
+  return(0)
+endif
+if ($#<2.5 and $getset='set') then
+  return
+"  if $#>3.5 then $tree=$4 endif"
+endif
+"if ($#>2.5 and $getset='get') then"
+"  $tree=$3"
+"endif"
+
+"could loop through all trees"
+getdgroup($param,$tree):$dgroup
+gettype($param,$tree):$type
+
+// if $dgroup>3, then $dgroup-3 is channel id, 
+// $refname is reffrq name for that channel. 
+$refname=''
+if($dgroup>3) then
+    $ch=$dgroup-3
+    if($ch=1) then $refname='sreffrq'
+    elseif($ch=2) then $refname='dreffrq'
+    elseif($ch=3) then $refname='dreffrq2'
+    elseif($ch=4) then $refname='dreffrq3'
+    elseif($ch=5) then $refname='dreffrq4' endif
+    exists($refname,'parameter','processed'):$e
+    if(not $e) then 
+      $refname=''
+    else
+      if({$refname}<=0) then $refname='' endif
+    endif
+    // if refname does not exist for given channel, then use transmitter frq.
+    if($refname='') then
+      if($ch=1) then $refname='sfrq'
+      elseif($ch=2) then $refname='dfrq'
+      elseif($ch=3) then $refname='dfrq2'
+      elseif($ch=4) then $refname='dfrq3'
+      elseif($ch=5) then $refname='dfrq4' endif
+      exists($refname,'parameter'):$e
+      if(not $e) then 
+        $refname=''
+      else
+        if({$refname}<=0) then $refname='' endif
+      endif
+    endif
+endif
+
+$js='' substr($param,1,2):$js
+if $js='sw' then "sw,sw1,sw2"
+  if $type=1 then
+"    settype($param,'frequency')" "don't need settype"
+    $type=5
+  endif
+endif
+
+if $getset='get' then
+  $num = size($param)
+  if ($num > 1) then
+    return('array')
+  endif
+  $pval = {$param}[1]
+  if $dgroup=1 then
+    $pval = $pval
+  elseif $dgroup=2 then
+    if ($param='temp') then
+      $pval = $pval + 273
+    elseif $type=5 or $type=6 then
+      $pval = $pval * 1e-3
+    else
+      $pval = $pval * 1e3
+    endif
+  elseif $dgroup=3 then
+    if $type=5 or $type=6 then
+      $pval = $pval * 1e-6
+    else
+      $pval = $pval * 1e6
+    endif
+  elseif($refname<>'') then
+    $pval = $pval / {$refname}
+  else
+    $pval = $pval  // no change in value
+  endif
+"  $VALUE = $pval"
+"  write('line3','vnmrunits: %s $VALUE = %g',$param,$pval)"
+  return($pval)
+
+else
+
+  if $getset='set' then
+"    $pval = $value"
+
+    {$param} = {$param}[1]
+    $j=''
+    $loop = $# - 2
+    $i=0
+    repeat
+      $i=$i+1
+      format($i+2,1,0):$j
+      $j='$'+$j
+      $pval = {$j}
+      if $dgroup=1 then
+        $pval = $pval
+      elseif $dgroup=2 then
+        if ($param='temp') then
+          $pval = $pval - 273
+        elseif $type=5 or $type=6 then
+          $pval = $pval * 1e3
+        else
+          $pval = $pval * 1e-3
+        endif
+      elseif $dgroup=3 then
+        if $type=5 or $type=6 then
+          $pval = $pval * 1e6
+        else
+          $pval = $pval * 1e-6
+        endif
+      elseif($refname<>'') then
+    	$pval = $pval * {$refname}
+      else
+        $pval = $pval  // no change in value
+      endif
+"      write('line3','vnmrunits: %s $VALUE = %g',$param,$pval)"
+"      on($param):$on on($param)"
+      {$param}[$i] = $pval
+"      if $on=0 then off($param) endif"
+    until ($i >= $loop)
+
+  else
+    write('error','vnmrunits: invalid first argument \'%s\'',$1)
+  endif
+endif

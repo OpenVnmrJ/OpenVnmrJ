@@ -1,0 +1,60 @@
+"macro vnmremail"
+"---------------------------------------------------------------"
+"Usage:  vnmremail(<'-m'>,<'-s subject'>,filename,address)	"
+"  Without -m option the file specified by filename		"
+"  	is sent after uuencode.  				"
+"  A directory will be tar'ed and zipped			"
+"  With -m option the file will be cat'ed to the body		"
+"  	of the email						"
+"  An -s argument the next word is placed in the subject field 	"
+"		for the email message				"
+"   The order of the arguments is irrelevant			"
+"---------------------------------------------------------------"
+
+$error=1
+if ($# < 2) then
+  $error=0
+endif
+
+$filename=''
+$eaddress=''
+$subject=''
+$messagebody='n'
+
+$i=1
+while $i<=$# do
+    $arg='' write('line3','$%d',$i):$arg
+    $s1='' substr({$arg},1):$s1
+    if $s1 = '-m' then
+	$messagebody='y'
+    elseif $s1='-s' then
+	substr({$arg},2):$subject
+    else
+	strstr({$arg},'@'):$k
+	if $k then $eaddress={$arg} else $filename={$arg} endif
+    endif
+    $i=$i+1
+endwhile
+
+if $filename='' or $eaddress='' then $error=0 endif
+
+if ($error) then
+	$vnmremail=''
+        getbinpath('vnmremail'):$error,$vnmremail
+endif
+
+if ($error=0) then
+  write('error','Usage:  vnmremail(<\'-m\'>,<\'-s subject\'>,filename,address)')
+  return
+endif
+
+$arg=''
+if $messagebody='y' then
+   $arg=$arg+' -m'
+endif
+if $subject<>'' then
+   $arg=$arg+' "-s '+$subject+'"'
+endif
+write('line3','('+$vnmremail+' '+$arg+' "'+$filename+'" "'+$eaddress+'")&')
+shell('('+$vnmremail+' '+$arg+' "'+$filename+'" "'+$eaddress+'")&'):$dum
+

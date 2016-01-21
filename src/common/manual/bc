@@ -1,0 +1,93 @@
+
+         *************************************************
+         * bc      -       1D and 2D Baseline Correction *
+         *************************************************
+
+  BC performs baseline correction using a first to twentieth order
+  polynomial fitting of pre-defined baseline regions.  BC uses every
+  odd-numbered integral region (i.e., those integrals which disappear
+  when intmod='partial') as baseline and attempts to set those points
+  to zero.
+
+  <> indicates that an argument is optional; the absence therefor
+  indicates that an argument is mandatory.
+
+  The optional argument 'ifnotddr' will skip the baseline correction if the
+  data were acquired with a system with a direct-digital receiver. On these systems,
+  the baseline is usually flat enough not to warrant additional corrections.
+  If the data were not acquired with a system with a direct-digital receiver,
+  the argument is ignored. The 'ifnotddr' argument must follow the 'f1' or 'f2'
+  arguments if they are used. It must precede all other arguments.
+
+  The bc command will return to the calling macro its status. It returns a 0
+  if it failed. It returns a 1 if it succeeds. If the 'ifnotddr' argument is given
+  and the bc operation is skipped, because the data were acquired with a direct-digital
+  receiver system, it returns a 2. If the bc command fails and a return value is not
+  requested, it will abort the calling macro.
+
+
+1D
+--
+
+  bc(<arg1>):
+
+	arg1  -   (A) order of the polynomial used in the fitting
+	          procedure; the default value is 1, which
+		  obtains a spline fit; ranges from 1 to 20.
+
+	          (B) 'unbc'; does not require that the order is
+		  specified; BC reads in the order and the
+		  coefficients used in the previous BC operation
+		  and reverses the BC operation; only functional
+		  for 1D baseline correction operations on either
+		  1D spectra or individual 2D traces.
+
+  bc('alt'<scale<,smooth>>) - An alternative automatic baseline correction
+		  method developed by Carlos Cobas, etc... This method automatically 
+		  finds signal-free regions using CWT (Continuous Wavelet Transform derivatives),
+		  and models the baseline using uses Whittaker smoother algorithm.
+		  This method should be used with proper selection of "scale"
+		  and "smooth" parameters, in order to avoid "over correction"
+		  (resulting in an unrealistically flat baseline).
+		  
+	scale  -  A scaling factor for calculating derivatives for CWT.
+		  Increasing "scale" reduces noise, but broadens the signals.
+		  "scale" may be calculated as a proportional function of 
+		  the broadest signal. If scale is too small, the broad peaks
+		  will be treated as baseline instead of peaks.
+		  The value of "scale" may range from 1 to a few hundreds.
+		  The default is 200 (a relatively large value to avoid losing broad peaks).
+
+	smooth -  A smooth factor for baseline modeling. It increases smoothness 
+		  at the expense of spectral fidelity (worse fitting of the data).
+                  The value of "smooth" may range from 100 to tens of thousands.
+		  The default value is 10000.
+  bc('dis') -	calculate baseline of displayed 1D trace according to parameter bcmode,
+		and display the baseline with spectrum (without correction).
+  bc('all') - 	calculate and apply baseline correction for each trace of arrayed 1D spectra, 
+		and save baseline(s) in curexp+'/datdir/bc.fdf'.
+  bc('apply',name) - apply baseline correction according to baseline file *.fdf.
+		The baseline file needs to be loaded prior to calling this command.
+                The command to load baseline file is aipLoadSpec(fdfFile,name).
+  bc('cancel') - undo baseline correction.
+
+
+2D
+--
+
+  bc(arg1,<arg2>,<arg3>,<arg4>):
+
+	arg1  -   'f1' or 'f2'; specifies the direction along
+		  which the 2D BC is to take place.
+
+	arg2  -   order of the polynomial used in the fitting
+		  procedure; the default value is 1, which
+		  obtains a spline fit; ranges from 1 to 20.
+
+	arg3  -   trace number for the spectrum on which the
+		  2D BC is to commence; must lie within the
+		  appropriate range or an error will result.
+
+	arg4  -   trace number for the spectrum on which the
+		  2D BC is to terminate; must lie within the
+		  appropriate range or an error will result.

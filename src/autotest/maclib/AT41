@@ -1,0 +1,43 @@
+"macro AT41"
+"AT41" "Lock Attenuator Test " 
+
+if (at_locktests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   beepoff
+   ATrtp('standard')
+   text('Lock Attenuator Test')  
+   nt=1 p1=0 pw=0 ss=0
+   at_currenttest='lockpower'
+   wnt='' array='' alock='n'
+   wexp='AT41(`PART1`)' 
+   ATcycle
+   write('line3','Testing Lock Power Attenuator')
+   au
+elseif ($1='PART1') then
+  ATreadlk
+  ATreglkpower:r1,r2
+  sc=0 wc=80
+  if (at_plotauto='y') then
+   pexpl
+  endif
+
+  write('line3','Testing Lock Gain')
+  ATreadlk2
+  ATreglkgain:r3,r4 
+  r1=trunc(1000*r1)/1000
+  r2=trunc(1000*r2)/1000
+  r3=trunc(1000*r3)/1000
+  r4=trunc(1000*r4)/1000
+  if r1>1.00 then r1=1.00 endif
+  if r3>1.00 then r3=1.00 endif
+
+  text('  Lock Power Automatically Adjusted for Optimal Value\\  Then Lock Power Varied over 30 dB\\  Lock Gain Varied over 30 dB')
+  if (at_plotauto='y') then sc=120 wc=80 pltext pexpl ATpage endif
+
+ATrecord('LOCKPOWER','Lock Power Test','Corr.Coef.',r1,'Std.Dev.',r2)
+ATrecord('LOCKGAIN','Lock Gain Test','Corr.Coef',r3,'Std.Dev',r4)
+write('file',autotestdir+'/REPORT','Lock Power/Gain  Test: Corr. Coefs.: %1.2f/%1.2f; Std. Devs.:  %1.3f/%1.3f',r1,r3,r2,r4)
+ slw=trunc(slw+1)
+ATnext
+endif

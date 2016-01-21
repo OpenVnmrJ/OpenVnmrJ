@@ -1,0 +1,66 @@
+"macro dorefspec"
+"This sets up a mix=0 experiment at the beginning of a sel1D"
+"	mix=0 is added as an array"
+"  example Usage:  dorefspec('mixT')"
+
+
+if ($# < 1) then return endif
+//	**if arg1 doesn't exist, CUT-n-RUN
+exists($1,'parameter'):$parex
+if ($parex=0) then return endif
+
+//	**if refscan flag doesn't exist CUT-n-RUN
+exists('refscan','parameter'):$parex
+if ($parex=0) then return endif
+
+//	**if refnt parameter doesn't exist CUT-n-RUN
+exists('refnt','parameter'):$parex
+if ($parex=0) then refscan='n' return endif
+
+if (refscan='y') then
+
+//	**if anything other than $1 is in the array, CUT-n-RUN
+   $mixsize=size($1)
+//   if (arraydim<>$mixsize) then
+//	refscan='n'
+//	return
+//   endif
+
+//	**refnt cannot be greater than nt
+   if (refnt>nt) then refnt=nt endif
+   $i=1 $mixzero=0
+   repeat
+//	**make sure mix=0 is not already in the array
+      if {$1}[$i]=0 then $mixzero=$i $i=$mixsize endif
+      $i=$i+1
+   until $i > $mixsize
+
+//	**All conditions satisfied, STAY-the-COURSE
+   $origarray=array
+   if ($mixzero=0) then
+       	{$1}=0,{$1} $nt=nt
+	if (refnt=nt) then refscan='n' return endif
+	$i=1 nt=refnt
+	repeat
+	   nt=nt,$nt
+	   $i=$i+1
+	until $i > $mixsize
+	$array='('+$1+',nt)'
+	$s1='' $s2=''
+	strstr($origarray,$1):$ret,$s1,$s2
+	if ($ret=0) then
+	   if ($origarray='') then
+		array=$array
+	   else
+		array=$origarray+','+$array
+	   endif
+	elseif ($ret=1) then
+	   array=$array+','+$s2
+	else
+	   array=$s1+','+$array+','+$s2
+	endif
+   endif
+   il='n'
+   refscan='n'
+endif
+

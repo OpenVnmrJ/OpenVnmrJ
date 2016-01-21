@@ -1,0 +1,131 @@
+"macro getplane"
+"**********************************************************"
+"  getplane  -  macro interface to extract any one or all  "
+"               3 orthogonal sets of 2D planes from the    "
+"               3D data set                                "
+"                                                          "
+"               getplane(<'pltype1'>,<'pltype2'>,<...>)    "
+"               where 'pltype#' can be 'f1f3','f2f3', or   "
+"               'f1f2'.                                    "
+"                                                          "
+"               If a path other than curexp+'/datadir3d'   "
+"               is to be used, it must be in the argument  "
+"		list to getplane.			   "
+"***********************************************************"
+
+"Initialize variables"
+$datadir = ''
+$planedir = ''
+$strval = ''
+$plextr = ''
+$f1f2 = 0
+$f1f3 = 0
+$f2f3 = 0
+$argno = ''
+$i = 1
+
+
+"Parse argument list to getplane"
+while ($i <= $#) do
+   if ($i > 9) then
+      format({'$i'},2,0):$argno
+   else
+      format({'$i'},1,0):$argno
+   endif
+
+   if (typeof('$'+$argno)) then
+      $strval = ${$i}
+      if ($strval = 'xall') then
+         $f1f2 = 1
+         $f1f3 = 1
+         $f2f3 = 1
+         $plextr = 'f1f2:f1f3:f2f3'
+      else
+         if (($strval = 'f1f2') or ($strval = 'f2f1')) then
+            $f1f2 = 1
+            if ($plextr = '') then
+               $plextr = 'f1f2'
+            else
+               $plextr = $plextr + ':f1f2'
+            endif
+         else
+            if (($strval = 'f1f3') or ($strval = 'f3f1')) then
+               $f1f3 = 1
+               if ($plextr = '') then
+                  $plextr = 'f1f3'
+               else
+                  $plextr = $plextr + ':f1f3'
+               endif
+            else
+               if (($strval = 'f2f3') or ($strval = 'f3f2')) then
+                  $f2f3 = 1
+                  if ($plextr = '') then
+                     $plextr = 'f2f3' 
+                  else 
+                     $plextr = $plextr + ':f2f3' 
+                  endif
+               else
+                  if ($datadir = '') then
+                     $datadir = $strval
+                  else
+                     if ($planedir = '') then
+                        $planedir = $strval
+                     endif
+                  endif
+               endif
+            endif
+         endif
+      endif
+   else
+      write('error','getplane  -  usage:  no real arguments supported')
+      return
+   endif
+
+   $i = $i + 1
+endwhile
+
+
+"Select the default plane type"
+if ($f1f3) then
+   plane = 'f1f3'
+else
+   if ($f2f3) then
+      plane = 'f2f3'
+   else
+      if ($f1f2) then
+         plane = 'f1f2'
+      else
+         write('error','getplane  -  usage:  no plane type for extraction')
+         return
+      endif
+   endif
+endif
+
+
+"Set up input and output directories"
+$setpath = 0
+if ($planedir <> '') then
+   $setpath = 1
+   path3d = $planedir
+else
+   if ($datadir <> '') then
+      $planedir = $datadir
+      $setpath = 1
+      path3d = $planedir
+   endif
+endif
+
+
+"Set up the getplane command line"
+$expno = ''
+jexp:$expno
+$command = 'getplane -p ' + $plextr + ' -e ' + $expno
+
+if ($setpath) then
+   $command = $command + ' -i "' + $datadir + '" -o "' + $planedir +'"'
+else
+   path3d = curexp + '/datadir3d'
+endif
+
+$command = $command + ' &'
+shell($command):$x

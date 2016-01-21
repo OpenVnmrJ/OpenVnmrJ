@@ -1,0 +1,1016 @@
+"macro xmhaha_subSQ"
+"***************************************************************"
+"  Builds subQ in dirinfo/xmldir based on the LIST		"
+"	supplied as an array in arg2				"
+"	Supported LISTs are fidlog,ACQlist,explist,		"
+"		EXPLIST and LONGLIST 				"
+"	arg2='Active' is a unique argument, cannot be combined	"
+"		with any other values above			"
+"***************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 1) then
+   is_cpfid:$new
+   if ($new=0) then 
+	iscurrentfid('',archivedir+'/'+sample):$isnew
+	if ($isnew=0) then 
+		return 
+	else
+		$1=archivedir+'/'+sample
+	endif
+   else
+//	shell('dirname '+file):$1
+	substr(file,'dirname'):$1
+   endif
+   xmhaha_subSQ($1)
+   return
+endif
+
+if ($# < 2) then
+    exists($1+'/dirinfo/clusterfids','file'):$cluster
+    if ($cluster) then
+        $2='clusterlog','fidlog'
+    else
+        $2='fidlog','scoutlog','ACQlist','explist','EXPLIST','LONGLIST'
+    endif
+endif
+teststr('$2','clusterlog','local'):$cluster
+if ($cluster) then $2='clusterlog','fidlog' endif
+
+teststr('$2','fidlog','local'):$fx
+teststr('$2','spectrumlog','local'):$sx
+if $fx and not $sx then
+    $2=$2,'spectrumlog'
+endif
+teststr('$2','craftlog','local'):$sx2
+if $fx and not $sx2 then
+    $2=$2,'craftlog'
+endif
+
+$archsamp=$1
+exists($1,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+//exists($1+'/dirinfo','file','w'):$writable
+//if ($writable=0) then
+//       write('line3','Warning: %s does not have write permission to %s',owner,$1)
+//       return(0)
+//endif
+
+$useActive='no'
+teststr('$2','Active','local'):$ret
+if ($ret) then $useActive='yes' $2='Active' endif
+
+"**************************************************************"
+"  Find out what info should be used to build subQ	"
+
+$usefidlog='no'
+$usecmdnodes='no'
+teststr('$2','fidlog','local'):$ret
+if ($ret) then $usefidlog='yes' $usecmdnodes='yes' endif
+
+$usespectrumlog='no'
+teststr('$2','spectrumlog','local'):$ret
+if ($ret) then $usespectrumlog='yes' endif
+
+$usecraftlog='no'
+teststr('$2','craftlog','local'):$ret
+if ($ret) then $usecraftlog='yes' endif
+
+$usescoutlog='no'
+teststr('$2','scoutlog','local'):$ret
+if ($ret) then $usescoutlog='yes' endif
+
+$useclusterlog='no'
+teststr('$2','clusterlog','local'):$ret
+if ($ret) then $useclusterlog='yes' endif
+
+$useexplist='no'
+teststr('$2','explist','local'):$ret
+if ($ret) then $useexplist='yes' endif
+
+$useEXPLIST='no'
+teststr('$2','EXPLIST','local'):$ret
+if ($ret) then $useEXPLIST='yes' endif
+
+$useACQlist='no'
+teststr('$2','ACQlist','local'):$ret
+if ($ret) then $useACQlist='yes' endif
+
+$useLONGLIST='no'
+teststr('$2','LONGLIST','local'):$ret
+if ($ret) then $useLONGLIST='yes' endif
+
+$fidlog='' 
+$spectrumlog=''
+$craftlog=''
+$scoutlog=''
+$clusterfids=''
+$fidlist=''
+$explistpar=''
+$expqueuepar=''
+$acqlog=''
+$cmdnodes=''
+$EXPLIST=''
+$LONGLIST=''
+$sample='' $archive='' $samplename=''
+"**************************************************************"
+$tmpfile='/vnmr/tmp/tmpfile'
+//shell('dirname '+$archsamp):$archive
+//shell('basename '+$archsamp):$sample
+substr($archsamp,'dirname'):$archive
+substr($archsamp, 'basename'):$sample
+$archivedirsample=$archsamp
+$samplename=samplename
+
+$fidlog='dirinfo/fidlog'
+$spectrumlog='dirinfo/spectrumlog'
+$craftlog='dirinfo/craftlog'
+$scoutlog='dirinfo/scoutlog'
+$clusterfids='dirinfo/clusterfids'
+$fidlist='dirinfo/fidlist'
+$explistpar='dirinfo/macdir/explist'
+$expqueuepar='dirinfo/macdir/expqueue'
+$cmdnodes='dirinfo/macdir/CMDnodes'
+$acqlog='dirinfo/macdir/ACQlist'
+$EXPLIST='dirinfo/macdir/EXPLIST'
+$LONGLIST='dirinfo/macdir/LONGLIST'
+$xmldir=$archsamp+'/dirinfo/xmldir'
+$ppath=$archivedirsample+'/'
+
+if ($useActive='yes') then
+    $line=''
+    shell('(cat "'+$archsamp+'/'+$acqlog+'" | grep -w Active | '+$tailX+' -n 1)'):$line
+    substr($line,1):$line
+//    if ($line='') then return(0) endif
+    if ($line='') then
+	exists($xmldir+'/active','file'):$fileex
+	if ($fileex) then write('reset',$xmldir+'/active') endif
+	return(0)
+    endif
+endif
+
+exists($1+'/dirinfo','file','w'):$writable
+if ($writable=0) then
+       write('line3','Warning: %s does not have write permission to %s',owner,$1)
+       return(0)
+endif
+
+$cpnodes=$xmldir+'/cpnodeinfo'
+exists($xmldir,'directory'):$direx
+if ($direx=0) then
+       shell('mkdir -p "'+$xmldir+'"'):$dum
+       shell('chmod -R g+w "'+$xmldir+'"'):$dum
+endif
+exists($xmldir,'directory'):$direx
+if ($direx=0) then return(0) endif
+shell('touch "'+$cpnodes+'"'):$dum
+$xmlinfo=$xmldir+'/info'
+exists($xmlinfo,'directory'):$infodirex
+if ($infodirex=0) then mkdir($xmlinfo):$e endif
+
+exists($archsamp+'/'+$fidlog,'file'):$fex
+exists($archsamp+'/'+$fidlist,'file'):$f2ex
+if ($fex=0) and ($f2ex>0) then
+   mkfidlog($archsamp)
+endif
+
+// Reconcile scoutlog.  Earlier studies may not
+//   have scoutlog but may have scoutfids
+$sfex=0 $sf2ex=0
+exists($archsamp+'/'+$scoutlog,'file'):$sfex
+if ($sfex) then
+  lookup('mfile',$archsamp+'/'+$scoutlog,'countline'):$sfex
+endif
+getfile($archsamp+'/scoutfids'):$sf2ex
+if ($sfex<>$sf2ex) then
+    mkscoutlog($archsamp)
+endif
+
+// Reconcile potential issues with old datasets with explist/EXPLIST
+//   files and potential corruption of EXPLIST
+if ($useexplist='yes') or ($useEXPLIST='yes') then
+    exists($archsamp+'/'+$EXPLIST,'file'):$Eex
+    if ($Eex) then
+	$expword=''
+	lookup('mfile',$archsamp+'/'+$EXPLIST,'read',1):$expword
+	if ($expword='explist') then
+//  We have a corrupted EXPLIST
+	    write('reset',$archsamp+'/'+$EXPLIST)
+	endif
+    endif
+endif
+
+"*****All local variable defined, proceed***"
+"**********************************************************************"
+pwd:$curdir
+cd($archsamp):$dum
+
+$cpnames='' $pslabel='' $acqtime='' $acqtime2='' $acqtimeR=0 
+$CPNODES=''
+$sqstatus=''
+$xml=''
+$type='' $cnodes=''
+$status='' $lock='' $when='' $j=1
+$path='' $title=''
+
+exists($cmdnodes,'file'):$cmdex
+$s1='' $cnodetot=0
+if ($cmdex) then
+   readfile($cmdnodes,'$cnodes','$s1','','local'):$cnodetot
+endif
+shell('touch '+$acqlog):$dum
+shell('(cat '+$acqlog+' | grep -w Active | '+$tailX+' -n 1 | awk \'{print $1}\')'):$CPNODES
+
+"*************************************************************************"
+" ***   Cleanup info directory of all old node files			  "
+write('reset',$tmpfile)
+if ($usefidlog='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Completed | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($usescoutlog='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Scout | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($useACQlist='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Error | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($useActive='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Active | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($useexplist='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Queued | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($useEXPLIST='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Day_queued | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+if ($useLONGLIST='yes') then
+   shell('(cat "'+$cpnodes+'" | grep -w Night_queued | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
+endif
+$enodes='' $enodes2='' $etot=0
+readfile($tmpfile,'$enodes','$enodes2','','local'):$etot
+shell('rm -f '+$tmpfile):$dum
+if ($etot>0) then
+   $k=1
+   $j=1
+   $dirlist=''
+   cd($xmlinfo):$dum
+   repeat
+     $dirlist=$dirlist+' '+$enodes[$k]
+     $k=$k+1
+     $j=$j+1
+     if $j=32 or $k>$etot then
+        shell('rm -rf '+$dirlist):$dum
+        $dirlist=''
+        $j=1
+     endif
+   until $k>$etot
+   cd($archsamp):$dum
+
+   //cd($xmlinfo)
+  // shell('rm -rf '+$dirlist):$dum
+  // cd($archsamp)
+   
+ //$k=1
+ //repeat
+//	shell('rm -rf '+$xmlinfo+'/'+$enodes[$k]):$dum
+//	$k=$k+1
+ //until $k>$etot
+endif
+
+"************************************************************************"
+	"***Get a list all completed experiments from fidlog***"
+exists($fidlog,'file'):$fex
+if ($usefidlog='yes') then
+   write('reset',$xmldir+'/fidlog')
+   shell('touch '+$fidlog):$dum
+   $s1='' $fids=''
+   write('reset',$xmldir+'/fidlog')
+   readfile($fidlog,'$s1','$fids','','local'):$total
+   if ($total) then
+	exists($ppath+'/dirinfo/parlib/parliblist','file'):$parlistex
+	$parnode='' $parname=''
+	if ($parlistex) then
+	    readfile($ppath+'/dirinfo/parlib/parliblist','$parnode','$parname','','local')
+	endif
+	$i=1
+	repeat
+	   exists($ppath+$fids[$i]+'.REC','directory'):$fidex
+	   if ($fidex=0) then
+		exists($ppath+$fids[$i]+'.rec','directory'):$fidex
+	   endif
+	   if ($fidex=0) then
+	   	exists($ppath+$fids[$i]+'.fid','directory'):$fidex
+	   endif
+	   exists($ppath+'/dirinfo/parlib/'+$fids[$i]+'.par','directory'):$parex
+	   if ($parex) then
+		teststr('$parname','dirinfo/parlib/'+$fids[$i],'local'):$parex
+	   endif
+	   if ($fidex) or ($parex) then
+		$n1='' $n2='' $r1=0
+	     if ($fidex) then
+		rtv($ppath+$fids[$i],'noabort','explist'):$n1
+		rtv($ppath+$fids[$i],'pslabel'):$n2
+		rtv($ppath+$fids[$i],'noabort','ACQtime'):$r1
+	     else
+                rtv($ppath+'/dirinfo/parlib/'+$fids[$i],'noabort','explist'):$n1
+		if ($n1='') then
+		    strstr($parnode[$parex],':'):$pok,$n1
+		endif
+                rtv($ppath+'/dirinfo/parlib/'+$fids[$i],'pslabel'):$n2
+                rtv($ppath+'/dirinfo/parlib/'+$fids[$i],'noabort','ACQtime'):$r1
+	     endif
+		if ($n1<>'') then
+			teststr('$cpnames',$n1,'local'):$isret
+			if ($isret) then $n1='' endif
+		endif
+		if ($n1='') then $n1=$n2 endif
+		$cpnames[$j]=$n1 
+		$CPNODES=$CPNODES,$n1
+		$pslabel[$j]=$n2 
+		$acqtimeR[$j]=$r1		
+		//formattime($r1):$acqtime2[$j],$acqtime[$j]
+		//if ($acqtimeR[$j]=0) then $acqtime[$j]='' $acqtime2[$j]='' endif
+		$acqtime[$j]='' $acqtime2[$j]=''
+		$status[$j]='Completed'
+		$path[$j]=$ppath+$fids[$i]
+		$title[$j]=$fids[$i]
+		$type[$j]='LIB'
+		$when[$j]=''
+		$lock[$j]='on'
+		$sqstatus[$j]='Completed'
+		$xml[$j]='fidlog'
+		$j=$j+1
+	   endif
+	   $i=$i+1
+	until $i>$total
+	exists('studypath','parameter'):$spex
+	if ($spex=0) then
+	    create('studypath','string')
+	else
+	    $studypath=studypath
+	endif
+	studypath=$archivedirsample
+	writeparam($archivedirsample+'/studypar','studypath','current','add')
+        if ($spex=0) then
+            destroy('studypath'):$dum
+        else
+            studypath=$studypath
+        endif
+
+   endif
+elseif ($useclusterlog<>'yes') then
+    $enodes='' $enodes2='' $eot=0
+    write('reset',$tmpfile)
+    shell('(cat '+$cpnodes+' | grep -w Completed | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
+    readfile($tmpfile,'$enodes2','$enodes','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+    if ($etot>0) then $CPNODES=$CPNODES,$enodes2 endif
+endif
+
+"************************************************************************"
+        "***Get a list all completed experiments from clusterfids***"
+if ($useclusterlog='yes') then
+   write('reset',$xmldir+'/clusterlog')
+   write('reset',$xmldir+'/clusterfids')
+   shell('touch '+$clusterfids):$dum
+   $s1='' $fids=''
+   readfile($clusterfids,'$fids','$s1','','local'):$total
+   if ($total) then
+        $i=1
+        repeat
+           $bname='' $ext=''
+	   $fidname=$fids[$i]
+	   $firstchar='' substr($fidname,1,1):$firstchar
+	   if ($firstchar<>'/') then
+		$fidname=userdir+'/data/'+$fidname
+	   endif
+	   $fidpath=$fidname
+           substr($fidpath,'basename'):$bname,$ext
+           if ($ext='') then
+                $fidpath=$fidname+'.REC'
+                exists($fidpath,'directory'):$fidex
+                if ($fidex=0) then
+                    $fidpath=$fidname+'.rec'
+                    exists($fidpath,'directory'):$fidex
+                endif
+                if ($fidex=0) then
+                    $fidpath=$fidname+'.fid'
+                endif
+           endif
+           exists($fidpath,'directory'):$fidex
+           if ($fidex) then
+                $n1='' $n2='' $r1=0
+                rtv($fidpath,'pslabel'):$n2
+                rtv($fidpath,'noabort','ACQtime'):$r1
+                $n1=$n2
+                $cpnames[$j]=$n1
+                $CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                $acqtime[$j]='' $acqtime2[$j]=''
+                $status[$j]='Completed'
+                $path[$j]=$fids[$i]
+                substr($fidpath,'basename'):$title[$j],$ext
+                $type[$j]='LIB'
+                $when[$j]=''
+                $lock[$j]='on'
+                $sqstatus[$j]='Completed'
+                $xml[$j]='clusterlog'
+                $j=$j+1
+            endif
+            $i=$i+1
+        until $i>$total
+   endif
+/*
+   shell('touch dirinfo/spectrumlog'):$dum
+   $s1='' $fids=''
+   readfile('dirinfo/spectrumlog','$s1','$fids','','local'):$total
+   if ($total) then
+        $i=1
+        repeat
+           $fidname=$ppath+$fids[$i]
+           $fidpath=$fidname
+           substr($fidpath,'basename'):$bname,$ext
+           if ($ext='') then
+                $fidpath=$fidname+'.vfs'
+                exists($fidpath,'directory'):$fidex
+           endif
+           exists($fidpath,'directory'):$fidex
+           if ($fidex) then
+                $n1='' $n2='' $r1=0
+                rtv($fidpath+'/procpar','pslabel'):$n2
+                rtv($fidpath+'/procpar','noabort','ACQtime'):$r1
+                $n1=$n2
+                $cpnames[$j]=$n1
+                $CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                $acqtime[$j]='' $acqtime2[$j]=''
+                $status[$j]='Completed'
+//                $path[$j]=$ppath+$fids[$i]
+		$path[$j]=$fidpath
+                $title[$j]=$fids[$i]+'.vfs'
+                $type[$j]='LIB'
+                $when[$j]=''
+                $lock[$j]='on'
+                $sqstatus[$j]='Completed'
+                $xml[$j]='clusterlog'
+                $j=$j+1
+            endif
+            $i=$i+1
+        until $i>$total
+   endif
+*/
+endif
+"************************************************************************"
+if ($usespectrumlog='yes') then
+   write('reset',$xmldir+'/spectrumlog')
+// Include spectra
+   shell('touch dirinfo/spectrumlog'):$dum
+   $s1='' $fids=''
+   readfile('dirinfo/spectrumlog','$s1','$fids','','local'):$total
+   if ($total) then
+        $i=1
+        repeat
+           $fidname=$ppath+$fids[$i]
+           $fidpath=$fidname
+           substr($fidpath,'basename'):$bname,$ext
+           if ($ext='') then
+                $fidpath=$fidname+'.vfs'
+                exists($fidpath,'directory'):$fidex
+           endif
+           exists($fidpath,'directory'):$fidex
+           if ($fidex) then
+                $n1='' $n2='' $r1=0
+                rtv($fidpath+'/procpar','pslabel'):$n2
+                rtv($fidpath+'/procpar','noabort','ACQtime'):$r1
+                $n1=$n2
+                $cpnames[$j]=$n1
+                $CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                $acqtime[$j]='' $acqtime2[$j]=''
+                $status[$j]='Completed'
+//                $path[$j]=$ppath+$fids[$i]
+                $path[$j]=$fidpath
+                $title[$j]=$fids[$i]+'.vfs'
+                $type[$j]='LIB'
+                $when[$j]=''
+                $lock[$j]='on'
+                $sqstatus[$j]='Spectrum'
+                $xml[$j]='spectrumlog'
+                $j=$j+1
+            endif
+            $i=$i+1
+        until $i>$total
+   endif
+endif
+"************************************************************************"
+if ($usecraftlog='yes') then
+   write('reset',$xmldir+'/craftlog')
+// Include spectra
+   shell('touch dirinfo/craftlog'):$dum
+   $s1='' $fids=''
+   readfile('dirinfo/craftlog','$s1','$fids','','local'):$total
+   if ($total) then
+        $attr3='' $atx3=1
+        $attr3[$atx3]='name','CRAFT' $atx3=$atx3+2
+        $attr3[$atx3]='tooltext','CRAFT' $atx3=$atx3+2
+        $attr3[$atx3]='title','CRAFT' $atx3=$atx3+2
+        $attr3[$atx3]='CPnode','CRAFT' $atx3=$atx3+2
+        $attr3[$atx3]='expanded','true' $atx3=$atx3+2
+        $attr3[$atx3]='sqstatus','Craft' $atx3=$atx3+2
+        $attr3[$atx3]='lock','off' $atx3=$atx3+2
+        xmhaha_addnode('Craft','',$attr3,$xmldir+'/craftlog','','protocol')
+        $i=1
+        repeat
+           $fidname=$ppath+$fids[$i]
+           $fidpath=$fidname
+           substr($fidpath,'basename'):$bname,$ext
+           if ($ext='') then
+                $fidpath=$fidname+'.vfs' 
+                exists($fidpath,'directory'):$fidex
+		if $fidex then $ext='vfs' else
+		    $fidpath=$fidname+'.fid'
+		    exists($fidpath,'directory'):$fidex
+		    if $fidex then $ext='fid' endif
+		endif
+           endif
+           exists($fidpath,'directory'):$fidex
+           if ($fidex) then
+                $n1='' $n2='' $r1=0
+                rtv($fidpath+'/procpar','pslabel'):$n2
+                rtv($fidpath+'/procpar','noabort','ACQtime'):$r1
+                $n1=$n2
+                $cpnames[$j]=$n1
+                $CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                $acqtime[$j]='' $acqtime2[$j]=''
+                $status[$j]='Completed'
+//                $path[$j]=$ppath+$fids[$i]
+                $path[$j]=$fidpath
+		if $ext<>'' then
+                    $title[$j]=$fids[$i]+'.'+$ext
+		else
+		    $title[$j]=$fids[$i]
+		endif
+                $type[$j]='LIB'
+                $when[$j]=''
+                $lock[$j]='on'
+                $sqstatus[$j]='Craft'
+                $xml[$j]='craftlog'
+                $j=$j+1
+            endif
+            $i=$i+1
+        until $i>$total
+   endif
+endif
+"************************************************************************"
+
+        "***Get a list all completed experiments from scoutlog***"
+exists($scoutlog,'file'):$fex
+if ($usescoutlog='yes') then
+   write('reset',$xmldir+'/scoutlog')
+   shell('touch '+$scoutlog):$dum
+   $s1='' $fids=''
+   write('reset',$xmldir+'/scoutlog')
+   readfile($scoutlog,'$s1','$fids','','local'):$total
+   if ($total) then
+        $attr3='' $atx3=1
+        $attr3[$atx3]='name','ScoutFids' $atx3=$atx3+2
+        $attr3[$atx3]='tooltext','ScoutFids' $atx3=$atx3+2
+        $attr3[$atx3]='title','ScoutFids' $atx3=$atx3+2
+        $attr3[$atx3]='CPnode','ScoutFids' $atx3=$atx3+2
+        $attr3[$atx3]='expanded','true' $atx3=$atx3+2
+        $attr3[$atx3]='sqstatus','Scout' $atx3=$atx3+2
+        $attr3[$atx3]='lock','off' $atx3=$atx3+2
+        xmhaha_addnode('Scout','',$attr3,$xmldir+'/scoutlog','','protocol')
+        $i=1
+        repeat
+           exists($ppath+'scoutfids/'+$fids[$i]+'.REC','directory'):$fidex
+           if ($fidex=0) then
+                exists($ppath+'scoutfids/'+$fids[$i]+'.rec','directory'):$fidex
+           endif
+           if ($fidex=0) then
+                exists($ppath+'scoutfids/'+$fids[$i]+'.fid','directory'):$fidex
+           endif
+           if ($fidex) then
+                $n1='' $n2='' $r1=0
+                rtv($ppath+'scoutfids/'+$fids[$i],'pslabel'):$n2
+                rtv($ppath+'scoutfids/'+$fids[$i],'noabort','ACQtime'):$r1
+                rtv($ppath+'scoutfids/'+$fids[$i],'noabort','scoutinfo'):$n1
+                if ($n1='') then $n1=$n2 else $n1=$n2+'_'+$n1 endif
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=0
+                $acqtime[$j]='' $acqtime2[$j]=''
+                $status[$j]='Completed'
+                $path[$j]=$ppath+'scoutfids/'+$fids[$i]
+                $title[$j]=$fids[$i]
+                $type[$j]='LIB'
+                $when[$j]=''
+                $lock[$j]='on'
+                $sqstatus[$j]='Scout'
+                $xml[$j]='scoutlog'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i>$total
+   endif
+//else
+//    $enodes='' $enodes2='' $eot=0
+//    write('reset',$tmpfile)
+//    shell('(cat '+$cpnodes+' | grep -w Scout | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
+//    readfile($tmpfile,'$enodes2','$enodes','','local'):$etot
+//    shell('rm -f '+$tmpfile):$dum
+//    if ($etot>0) then $CPNODES=$CPNODES,$enodes2 endif
+endif
+
+"*************************************************************************"
+	"***Get a list of all Errored experiments from ACQlist***"
+	"   The ACQlist is maintained at run time by cpgo"
+	"   All other experiments will be in explist/EXPLIST/LONGLIST"
+	"   Active experiments are dynamic and so a subxml file is unnecessary"
+	"   NOTE: The last active node is already recoreded in $CPNODES	"
+
+if ($useACQlist='yes') then
+    write('reset',$xmldir+'/errorlog')
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlog+' | grep -wv Completed  > '+$tmpfile+')'):$dum
+//    shell('(cat '+$acqlog+' | grep -w Error  > '+$tmpfile+')'):$dum
+//    shell('(cat '+$acqlog+' | grep -w Active  >> '+$tmpfile+')'):$dum
+    $enodes='' $enodes2='' $etot=0
+    readfile($tmpfile,'$enodes','$enodes2','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+
+    if ($etot) then
+	$i=1
+	repeat
+           $n1='' $n2='' $r1=0
+	   $n1=$enodes[$i]
+	   substr($enodes2[$i],2):$n2
+	   substr($enodes2[$i],1):$r1
+	   teststr('$CPNODES',$n1,'local'):$isin
+	   if ($isin) then $n1='' endif
+	   if ($n1<>'') then
+                $cpnames[$j]=$n1
+		$CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$fidpath='null'
+		$xml[$j]='errorlog'
+                $status[$j]='Error'
+		$sqstatus[$j]='Error'
+		$when[$j]=''
+		$type[$j]='LIB'
+		$path[$j]=$fidpath
+		$title[$j]=$n1
+		$lock[$j]='on'
+                $j=$j+1
+	   endif
+	   $i=$i+1
+	until $i > $etot
+    endif
+else
+    $enodes='' $enodes2='' $etot=0
+    write('reset',$tmpfile)
+    shell('(cat "'+$cpnodes+'" | grep -w Error | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
+    readfile($tmpfile,'$enodes2','$enodes','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+    if ($etot>0) then $CPNODES=$CPNODES,$enodes2 endif
+endif
+"*************************************************************************"
+        "***Get a list of Active experiment from ACQlist***"
+if ($useActive='yes') then
+    write('reset',$xmldir+'/active')
+    $line=''
+    shell('(cat '+$acqlog+' | grep -w Active | '+$tailX+' -n 1)'):$line
+    if ($line<>'') then
+	$cactive=0 $cuser=owner $fidpath=''
+	is_activeQ($archsamp):$cactive,$cuser,$fidpath
+	if $cactive then
+           $n1='' $n2='' $r1=0
+           substr($line,1):$n1
+           substr($line,2):$r1
+           substr($line,3):$n2
+           if ($n2<>'') then
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$xml='active'
+		$status[$j]='Executing'
+                expactive('auto'):$isauto
+                expactive:$isactive
+		operights('viewallopstudies'):$opok
+		if ($cuser<>operator) and (operator<>owner) and ($opok<0.5) then
+		  $fidpath=''
+		endif
+                $sqstatus[$j]='Active'
+                $when[$j]=''
+                $type[$j]='LIB'
+                $path[$j]=$fidpath
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+	    endif
+	endif
+    endif
+endif
+
+"*************************************************************************"
+	"*** Insert completed CMD nodes at appropriate places"
+if ($usecmdnodes='yes') and ($cnodetot>0) then
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlog+' | grep -w Completed | grep CMD_  > '+$tmpfile+')'):$dum
+    $enodes='' $enodes2='' $etot=0
+    readfile($tmpfile,'$enodes','$enodes2','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+
+    if ($etot>0) then
+      $i=$cnodetot
+      repeat
+	$cptotal=size('$cpnames')
+	teststr('$enodes',$cnodes[$i],'local'):$isdone
+	if ($isdone) then
+	   $nextwhere=0
+	   substr($enodes2[$isdone],2):$cmdnextnode
+	   strstr($cmdnextnode,'CMD_'):$ret,$s1,$nextnode
+	   if ($ret) then 
+		teststr('$cpnames',$nextnode,'local'):$nextwhere
+	   endif
+	   if ($nextwhere) then
+		$oldcpnames=$cpnames
+		$oldpslabel=$pslabel
+		$oldacqtimeR=$acqtimeR
+		$oldacqtime=$acqtime
+		$oldacqtime2=$acqtime2
+		$oldstatus=$status
+		$oldsqstatus=$sqstatus
+		$oldxml=$xml
+		$oldpath=$path
+		$oldtype=$type
+		$oldtitle=$title
+		$oldwhen=$when
+		$oldlock=$lock
+		$m=$nextwhere
+		$n=$nextwhere
+		$cpnames[$m]=$cnodes[$i]
+		$CPNODES=$CPNODES,$cnodes[$i]
+		strstr($cnodes[$i],'_','last'):$ret,$s1,$s2
+		if ($ret) then $pslabel[$m]=$s1 else $pslabel[$m]=$cnodes[$i] endif
+		$acqtimeR[$m]=0
+//		formattime($acqtimeR[$m]):$acqtime2[$m],$acqtime[$m]
+//		$acqtime[$m]='unknown'
+		$acqtime[$m]=''
+		$status[$m]='Completed'
+		$sqstatus[$m]='Completed'
+		$xml[$m]='fidlog'
+		$path[$m]=''
+		$type[$m]='CMD'
+		$when[$m]=$when[$n]
+		$title[$m]=$cpnames[$m]
+		$lock[$m]='on'
+		$m=$m+1
+		repeat
+		   $cpnames[$m]=$oldcpnames[$n]
+		   $pslabel[$m]=$oldpslabel[$n]
+		   $acqtimeR[$m]=$oldacqtimeR[$n]
+		   $acqtime2[$m]=$oldacqtime2[$n]
+		   $acqtime[$m]=$oldacqtime[$n]
+		   $status[$m]=$oldstatus[$n]
+		   $sqstatus[$m]=$oldsqstatus[$n]
+		   $xml[$m]=$oldxml[$n]
+		   $path[$m]=$oldpath[$n]
+		   $title[$m]=$oldtitle[$n]
+		   $type[$m]=$oldtype[$n]
+		   $when[$m]=$oldwhen[$n]
+		   $lock[$m]=$oldlock[$n]
+		   $m=$m+1 $n=$n+1
+		until $n > $cptotal
+		$j=$j+1
+	   endif
+	endif
+	$i=$i-1
+      until $i < 1
+    endif
+endif
+
+"*************************************************************************"
+	"*** Get a list of all experiments in explist - These are***"
+	"    Queued experiments.  				"
+	"    Also note that an experiment cannot be Active and also"
+	"    in explist.  If so, it is in the SetUp mode and should"
+	"    be considered Executing or Error			"
+
+		"Get all the Queued experiments from explist"
+if ($useexplist='yes') then
+  write('reset',$xmldir+'/expqueue')
+  exists($expqueuepar,'file'):$eex
+  if ($eex=0) then
+     exists($explistpar,'file'):$eex
+  endif
+  exists($EXPLIST,'file'):$Eex
+  if ($eex) then
+    $explist=''
+    cpexplist('read','dirinfo/macdir'):$explist
+    $enodes='' $enodes2=''
+    if ($Eex) then
+    	readfile($EXPLIST,'$enodes','$enodes2','','local')
+    endif
+    $etot=size('$explist')
+    if ($etot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+           $n1=$explist[$i]
+	   strstr($n1,'SetUp'):$isscout
+	   strstr($n1,'PAUSE'):$ispause
+	   if ($isscout) or ($ispause) then $n1='' endif
+	   if ($n1 <>'') then
+		teststr('$CPNODES',$n1,'local'):$isin
+		if ($isin) then $n1='' endif
+	   endif
+	   if ($n1<>'') then
+		teststr('$enodes',$n1,'local'):$ret
+		if ($ret) then
+		   substr($enodes2[$ret],2):$n2
+		   substr($enodes2[$ret],1):$r1
+		endif
+	   endif	
+           if ($n1<>'') then
+                $cpnames[$j]=$n1
+		$CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+                $status[$j]='Queued'
+		$sqstatus[$j]='Queued'
+		$xml[$j]='expqueue'
+		teststr('$cnodes',$n1,'local'):$ret
+		if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		$when[$j]=''
+                $path[$j]=''
+                $title[$j]=$n1
+		$lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $etot
+    endif
+  endif
+endif
+
+"****************************************************************************"
+        "*** Get a list of all experiments in EXPLIST - These are***"
+        "    Queued experiments during DAY/Short run.                       "
+
+if ($useEXPLIST='yes') then
+  write('reset',$xmldir+'/EXPLIST')
+  exists($EXPLIST,'file'):$Eex
+  $nqueue=0 shell('(cat '+$LONGLIST+' | wc -l)'):$nqueue
+
+  if ($Eex) then
+    $enodes='' $enodes2=''
+    readfile($EXPLIST,'$enodes','$enodes2','','local'):$Etot
+    if ($Etot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+	   $n1=$enodes[$i]
+           substr($enodes2[$i],2):$n2
+           substr($enodes2[$i],1):$r1
+           if ($n1<>'') then
+                teststr('$CPNODES',$n1,'local'):$isthere
+                if ($isthere) then $n1='' endif
+           endif
+           if ($n1<>'') then
+                $cpnames[$j]=$n1
+		$CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$status[$j]='Queued'
+		$sqstatus[$j]='Day_queued'
+		$xml[$j]='EXPLIST'
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		if ($nqueue>0) then
+		    $when[$j]='_day'
+		else
+		    $when[$j]='_queued'
+		endif
+                $path[$j]=''
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $Etot
+    endif
+  endif
+endif
+
+"****************************************************************************"
+        "*** Get a list of all experiments in LONGLIST - These are***"
+        "    Queued experiments during NIGHT/Long run.                       "
+
+if ($useLONGLIST='yes') then
+  write('reset',$xmldir+'/LONGLIST')
+  exists($LONGLIST,'file'):$Lex
+  if ($Lex) then
+    $enodes='' $enodes2=''
+    readfile($LONGLIST,'$enodes','$enodes2','','local'):$Ltot
+    if ($Ltot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+           $n1=$enodes[$i]
+           substr($enodes2[$i],2):$n2
+           substr($enodes2[$i],1):$r1
+           if ($n1<>'') then
+		teststr('$CPNODES',$n1,'local'):$isthere
+		if ($isthere) then $n1='' endif
+	   endif
+	   if ($n1 <> '') then
+                $cpnames[$j]=$n1
+		$CPNODES=$CPNODES,$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$status[$j]='Night_queued'
+		$sqstatus[$j]='Night_queued'
+		$xml[$j]='LONGLIST'
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		$when[$j]='_night'
+                $path[$j]=''
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $Ltot
+    endif
+  endif
+endif
+
+"****************************************************************************"
+cd($curdir):$dum
+"****************************************************************************"
+"  Now proceed to build the subQ for this list"
+
+$total=size('$cpnames')
+if ($total=1) and ($cpnames[1]='') then
+  return(0)
+endif
+
+$snode='' $oldnode=''
+$i=1
+repeat
+   if ($cpnames[$i]<>'') then
+	$snode=''
+		"Set all the attributes"
+	$atx=1 $attr=''
+	$attr[$atx]='status',$status[$i]  $atx=$atx+2
+	$attr[$atx]='sqstatus',$sqstatus[$i] $atx=$atx+2
+	$attr[$atx]='CPnode',$cpnames[$i] $atx=$atx+2
+	$attr[$atx]='time',$acqtime[$i]  $atx=$atx+2
+	$attr[$atx]='lock',$lock[$i]  $atx=$atx+2
+	if ($status[$i]='Completed') then
+	  $attr[$atx]='tooltext',$pslabel[$i]  $atx=$atx+2
+	  $attr[$atx]='title',$title[$i]   $atx=$atx+2
+	else
+	  $attr[$atx]='tooltext',$pslabel[$i]+$when[$i] $atx=$atx+2
+          $attr[$atx]='title',$cpnames[$i]+$when[$i]  $atx=$atx+2
+	endif
+	$attr[$atx]='data',$path[$i]  $atx=$atx+2
+	$attr[$atx]='type',$type[$i] $atx=$atx+2
+
+	$attr3='' $atx3=1
+        $attr3[$atx3]='title',$pslabel[$i]+$when[$i]  $atx3=$atx3+2
+
+        if ($cpnames[$i]<>$pslabel[$i]) then
+             shell('(cat "'+$cpnodes+'" | grep -vw '+$cpnames[$i]+' > "'+$cpnodes+'1")'):$dum
+             shell('mv "'+$cpnodes+'1" "'+$cpnodes+'"'):$dum
+        endif
+        xmhaha_addnode($pslabel[$i],$attr,$attr3,$xmldir+'/'+$xml[$i]):$snode
+
+   endif
+   $i=$i+1
+until $i > $total
+shell('sort -u "'+$cpnodes+'" -o "'+$cpnodes+'_sort"'):$dum
+shell('rm -f "'+$cpnodes+'"; mv "'+$cpnodes+'_sort" "'+$cpnodes+'"'):$dum
+shell('chmod -R g+w "'+$xmldir+'"'):$dum
+
+if ($useActive='no') and ($useclusterlog='no') then
+    xmhaha_fullSQ('set',$xmldir)
+elseif ($useclusterlog='yes') then
+    shell('cp '+$archsamp+'/'+$clusterfids+' '+$xmldir):$dum
+endif
+return(1)

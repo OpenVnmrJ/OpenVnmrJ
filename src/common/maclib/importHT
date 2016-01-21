@@ -1,0 +1,111 @@
+"macro importHT"
+"importHT - import HT frequency list from exp# "
+" Eriks Kupce, Varian R&D "
+
+$file1='' $file2='' $com='' $str=''
+$fname='/htll.htfrq1'
+$tn='' $solvent='' $ssw='' $stof='' $frq='' $s=''
+
+if($# < 1) then
+  $file2 = curexp+$fname  
+else
+  if typeof('$1') then
+    $file2 = curexp+'/'+$1
+    exists($file2,'file'):$e
+    if not ($e) then
+      write('error','frequency list %s not found', $file2)
+      return
+    endif
+  else
+    format($1,1,0):$file2
+    $file1 = userdir+'/exp'+$file2+$fname
+    $file2 = curexp+$fname  
+    exists($file1,'file'):$e
+    if($e) then
+      copy($file1,$file2)
+    else
+      write('error','frequency list not found in exp%d', $1)
+      return
+    endif
+  endif
+endif
+
+exists('htfrq1','parameter'):$e
+if not ($e) then
+  create('htfrq1','frequency')
+  setprotect('htfrq1','on',256)
+endif
+htfrq1=0              "erase all frequencies"
+par_2d ni=0 phase=0 sw1=sw
+  
+lookup('file',$file2)
+nrecords($file2):$n
+lookup('read',5):$s,$tn,$solvent,$stof,$ssw  $n=$n-1
+lookup('read',5):$s,$s,$s,$s,$s  $n=$n-1
+lookup('read',4):$s,$s,$s,$s  $n=$n-1
+format($stof,1,2):$tof
+format($ssw,1,2):$sw
+
+if(tn=$tn) then "homo-nuclear experiment"
+  write('alpha','tn=%s solvent=%s tof=%.2f sw1=%.2f',$tn,$solvent,$tof,$sw)
+else
+  if(dn=$tn) then  "hetero-nuclear experiment" 
+    write('alpha','dn=%s solvent=%s dof=%.2f sw1=%.2f',$tn,$solvent,$tof,$sw)
+  else
+    write('error','Mismatch of dn nuclei, dn set to %s', $tn)
+    dn=$tn
+  endif
+endif
+
+$i=1
+repeat
+  lookup('read',2):$s,$frq
+  format($frq,1,2):htfrq1[$i]
+  write('alpha','%3d %12.2f',$i, htfrq1[$i])
+  $i = $i+1
+until ($i>$n)
+
+$j=1
+repeat
+  $j=$j*2
+until ($j>$i)
+ni = $j
+write('alpha','ni set to %d', ni)
+
+if(solvent<>$solvent) then
+  solvent=$solvent
+  write('line3','Warning: solvent mismatch; solvent set to %s',$solvent)
+endif
+
+if(tn=$tn) then  "homo-nuclear experiment"
+  abs(tof-$tof):$diff
+  $err = 0.05*htbw1
+  if($diff>$err) then
+    tof = $tof
+    write('line3','Note - tof set to %f',$tof)
+   "Next line added by Ron ..  good idea or not ?? "
+    sw=$sw
+  endif
+  sw1 = sw
+else             "hetero-nuclear experiment"
+  dof=$tof
+  sw1=$sw
+endif
+
+exists('htbw1','parameter'):$e
+if($e) then
+  $r = 2*sw1/htbw1 fn1=$r 
+  if(fn1<$r) then fn1=2*fn1 endif
+endif
+
+exists('is_submitmode','maclib'):$macex
+if ($macex) then
+   is_submitmode:$submit
+else
+   $submit=0
+endif
+if ($submit) then
+   htlist2cpq('export')
+endif
+return
+

@@ -1,0 +1,339 @@
+"macro dssl"
+"***************************************************************"
+" dssl/pssl (link to dssl):                                     "
+" Display a label for each element in a set of stacked spectra. "
+"***************************************************************"
+
+showarrays('setup')
+"** Replace pssl (print) with this bit - pssl is then only a link to dssl ***"
+substr($0,1,1):$disp
+if $disp='d' then
+  $device='graphics'
+  graphis:$g substr($g,1,2):$s
+  if $s='ds' then $vp=vp else $vp=vpf endif
+else
+  $device='plotter'
+  if showcontent='f' then $vp=vpf else $vp=vp endif
+endif
+
+write($device,0,0,''):$htchar
+exists('acqdim','parameter'):$exa
+exists('ni','parameter'):$exni
+exists('nf','parameter'):$exnf
+if $exnf then $ni=nf
+else if $exni then $ni=ni else $ni=0 endif
+endif
+if celem=0 then $novals=arraydim else $novals=celem endif
+
+if $exa then
+  $acqdim=acqdim       "** liquids/solids data **"
+else                   "** imaging data **"
+  if $exnf then if nf>1 then $acqdim=2 else $acqdim=1 endif 
+  else $acqdim=1
+  endif
+endif
+
+"** Check for multiple receivers                       ***"
+"** Multireceiver FIDs increase arraydim but not array ***"
+$nrcvrs=1
+exists('rcvrs','parameter'):$e
+if ($e) then
+  length(rcvrs):$nr
+  $nrcvrs=0 $rcvrs='' $ifon='' $i=1 $str=''
+  while ($i <= $nr) do
+    substr(rcvrs,$i,1):$ifon
+    if ($ifon = 'y') or ($ifon = 'Y') then
+        $nrcvrs = $nrcvrs + 1
+        format($i,'lower'):$str $rcvrs[$i]=$str
+    endif
+    $i = $i + 1
+  endwhile
+endif
+
+$nstart = 1
+$string = ''
+$list = ''
+$list2 = ''
+$format = '%g'
+$multiarray = 0
+$numlist = 1
+$numlist2 = 1
+$count = 1 $count1 = 1 $count2 = 1 $countdelta=1
+
+"** $count     : counter if only one array present                                 **"
+"** $count1    : counter for first array elements in parallel array (multiarray=1) **"
+"** $count2    : counter for secondary array elements                              **"
+"** $countdelta: stepsize to allow for e.g. dssl(1,50,5)                           **" 
+
+$xstart = wcmax - sc - wc
+$ystart = $vp - 1.4*$htchar
+$ydelta = vo
+$rev = ''
+$color2='orange'
+$diagonal=0
+
+"** Check for command line arguments **********************"
+if ($# > 0) then
+  $i = 0
+  $argno = ''
+  repeat
+    $i = $i + 1
+    if ($i > 9) then
+      format({'$i'},2,0):$argno
+    else
+      format({'$i'},1,0):$argno
+    endif
+			  
+    if (typeof('$'+$argno) = 1) then
+      if (${$i} = 'center') then
+	$xstart = wcmax - sc - wc/2
+      endif
+      if (${$i} = 'left') then
+	$xstart = wcmax - sc - wc
+      endif
+      if (${$i} = 'right') then
+	$xstart = wcmax - sc
+      endif
+      if (${$i} = 'top') then
+	$ystart = wc2max-6
+	$ydelta = 0
+      endif
+      if (${$i} = 'bottom') then
+	$ystart = -8
+	$ydelta = 0
+      endif
+      if (${$i} = 'above') then
+	$ystart = $vp + 0.8*$htchar
+	$ydelta = vo
+      endif
+      if (${$i} = 'below') then
+	$ystart = $vp - 1.4*$htchar
+	$ydelta = vo
+      endif
+      if (${$i} = 'custom') then
+	$xstart = shownumx
+	$ystart = shownumy
+	$ydelta = vo
+      endif
+      if (${$i} = 'reverse') then
+	$rev = 'reverse' $xstart2=$xstart+$htchar
+      endif
+
+      if (${$i} = 'value') then
+        strstr(array,','):$mult,$first,$second
+        strstr($second,','):$more
+        if $more or ($acqdim>2) or ($second <>'' and $nrcvrs > 1) then
+          write('error','Cannot display values for more than two arrays')
+          return
+        endif
+
+      "********* Make value list for parallel/diagonal arrays ************"
+        strstr($first,'('):$diagonal,$ignore,$diagfirst
+        strstr($second,')'):$diagonal,$diagsecond,$ignore
+        if $mult=0 then
+          if arraydim>1 then
+            $list=array
+            "********* Receivers are always the last element        ************"
+            if $nrcvrs > 1 then
+               if arraydim > $nrcvrs then $list2='$rcvrs' $multiarray=1
+               else $list='$rcvrs' endif
+            endif
+          endif
+          if $acqdim=2 then
+            $list2=array
+            if $exnf then $list='nf' else $list='ni' endif
+          endif
+        elseif $diagonal then
+          $list=$diagfirst $list2=$diagsecond $multiarray=1
+        else
+          $list=$first $list2=$second $multiarray=1
+        endif
+      endif
+      if $acqdim>1 then
+        $numlist2=arraydim/$ni $numlist=arraydim/$numlist2
+      else
+        $numlist=size($list) $numlist2=1
+      endif
+
+      "** Look for 'list=x' syntax ******************************"
+      substr(${$i},1,4):$string
+      if ($string = 'list') then
+        substr(${$i},6,10):$list
+      endif
+      "** Look for 'format=x' syntax ****************************"
+      substr(${$i},1,6):$string
+      if ($string = 'format') then
+        substr(${$i},8,10):$format
+      endif
+      if $multiarray then $numlist2=size($list2) endif
+    else
+      $num='' $num2=''
+      format($#-1,'lower'):$num format($#-2,'lower'):$num2
+      "**** last three arguments = start,stop,delta increment -> dssl(4,20,2) ****"
+      if $i=$#-2 then
+        $count=${$#-2} $nstart=$count $countdelta=${$#} $novals=(${$#-1}-$nstart)/$countdelta
+      "**** second last argument = stop increment -> dssl(4,20) ****"
+      elseif $i=$#-1 then
+        if $#>1 then
+          if typeof('$'+$num2)=1 then
+            $count=${$#-1} $nstart=$count $novals=${$#}-${$#-1}
+          endif
+        endif
+      "**** last argument = stop increment only -> dssl(20) ****"
+      elseif ($i=$# and typeof('$'+$num)=1) or $#=1 then
+        $nstart=0 $novals=${$#}
+      endif
+      if ($acqdim=2 and $numlist2=1) or $diagonal then        // Abs value 2Ds or diagonal arrays
+          $count1=$count $count2=$count
+      elseif ($acqdim=2 and $numlist2>1) or $multiarray then  // Phase-sens 2Ds or parallel arrays
+          $count1=trunc($count/($numlist2+1e-6))+1
+          $count2=trunc(0.5+($count/$numlist2-trunc($count/$numlist2))*$numlist2)
+          if $count2=0 then $count2=$numlist2 endif
+      endif
+    endif
+  until ($i = $#)
+endif
+
+"********* find out x / y positions for labels (normal orientation) *************"
+$x = $xstart $x2 = $x
+$y = $ystart $y2 = $y
+if $rev='' then
+  $y2 = $y-$htchar
+else
+"*** for rotated values find out length of longest string - go through entire list... ***"
+  $maxlen=1 $maxlen1=1 $maxlen2=1
+  $c=$count $c1=$count1 $c2=$count2
+  if ($list <>'') then
+  repeat
+
+    if ($acqdim = 2) then
+      $cstr1='' format($count1,'lower'):$cstr1
+      length($cstr1):$len1
+      if $len1 > $maxlen1 then $maxlen1=$len1 endif
+      if $list2 <> '' then
+        length({$list2}[$count2]):$len2
+        if $len2 > $maxlen2 then $maxlen2=$len2 endif
+      endif
+    else
+      if $multiarray then
+        length({$list}[$count1]):$len1
+        if $len1 > $maxlen1 then $maxlen1=$len1 endif
+        length({$list2}[$count2]):$len2
+        if $len2 > $maxlen2 then $maxlen2=$len2 endif
+      else
+        length({$list}[$count]):$len
+        if $len > $maxlen then $maxlen=$len endif
+      endif
+    endif
+
+  $count = $count + $countdelta
+  if ($acqdim=2 or $diagonal) then
+    $count1=trunc(0.5+($count/$numlist-trunc($count/$numlist))*$numlist)
+    if $count1=0 then $count1=$numlist endif
+  endif
+  if ($multiarray or ($acqdim=2 and $numlist2>1)) then
+    $count2=trunc(0.5+($count/$numlist2-trunc($count/$numlist2))*$numlist2)
+    if $count2=0 then $count2=$numlist2 endif
+    if not $diagonal then $count1=trunc($count/($numlist2+1e-6))+1 endif
+  endif
+
+  until (($x < 0) or ($x > wcmax) or ($y > wc2max) or (($count-$nstart) > $novals*$countdelta) or
+      ($count > arraymax))
+"********* for rotated numbers just take the length of the last number ***"
+  else
+    $str=''
+    format($novals*$countdelta,'lower'):$str
+    length($str):$maxlen
+  endif
+"********* now determine y positions ***"
+  if $list<>'' and ($acqdim > 1 or $multiarray) then
+    $y = $ystart - ($maxlen1-1)*$htchar/3
+  else
+    $y = $ystart - ($maxlen)*$htchar/3
+  endif
+  $y2 = $y - $maxlen2*$htchar/3 - $htchar/2
+  $count=$c $count1=$c1 $count2=$c2
+endif
+
+"********* display names of arrayed values *************"
+$ylabel=$y-$htchar*1.5
+if $acqdim=2 or $multiarray then
+  if arraydim > $ni or $multiarray then
+    $ylabel=$y2-$htchar
+    if $nrcvrs > 1 then
+      write($device,'orange',$xstart,$ylabel-$htchar,'Receiver')
+    else
+      write($device,'orange',$xstart,$ylabel-$htchar,$list2)
+    endif
+  endif
+    write($device,$xstart,$ylabel,$list)
+else
+  if $nrcvrs > 1 then
+    write($device,$xstart,$ylabel,'Receiver')
+  else
+    write($device,$xstart,$ylabel,array[1])
+  endif
+endif
+
+$format2 = $format
+if ($list <> '') then
+  if (typeof($list) = 1) then $format = '%s' endif
+endif
+if ($list2 <> '') then
+  if (typeof($list2) = 1) then $format2 = '%s' endif
+endif
+repeat
+  if ($list <> '') then
+    if ($acqdim = 2) then
+      "*********** display arrayed values for 2D sequencs ***********"
+      if ($rev = 'reverse') then
+        write($device,$rev,$x,$y,$format,$count1)
+        if $list2 <> '' then write($device,$rev,$color2,$x2,$y2,$format2,{$list2}[$count2]) endif
+      else
+        write($device,$x,$y,$format,$count1)
+        if $list2 <> '' then write($device,$color2,$x2,$y2,$format2,{$list2}[$count2]) endif
+      endif
+    else
+      "********** display values for single or dual array of 1Ds *******"
+      if $multiarray then
+        if ($rev = 'reverse') then
+          write($device,$rev,$x,$y,$format,{$list}[$count1])
+          write($device,$color2,$rev,$x2,$y2,$format2,{$list2}[$count2])
+        else
+          write($device,$x,$y,$format,{$list}[$count1])
+          write($device,$color2,$x2,$y2,$format2,{$list2}[$count2])
+        endif
+      else
+        if ($rev = 'reverse') then
+          write($device,$rev,$x,$y,$format,{$list}[$count])
+        else
+          write($device,$x,$y,$format,{$list}[$count])
+        endif
+      endif
+    endif
+  else
+    if ($rev = 'reverse') then
+      write($device,$rev,$x,$y,'%d',$count)
+    else
+      write($device,$x,$y,'%d',$count)
+    endif
+  endif
+  $x = $x - ho
+  $x2 = $x2 - ho
+  $y = $y + $ydelta
+  $y2 = $y2 + $ydelta
+"********** Counters 1 & 2 for arrays/increments *******"
+  $count = $count + $countdelta
+  if ($acqdim=2 or $diagonal) then
+    $count1=trunc(0.5+($count/$numlist-trunc($count/$numlist))*$numlist)
+    if $count1=0 then $count1=$numlist endif
+  endif
+  if ($multiarray or ($acqdim=2 and $numlist2>1)) then
+    $count2=trunc(0.5+($count/$numlist2-trunc($count/$numlist2))*$numlist2)
+    if $count2=0 then $count2=$numlist2 endif
+    if not $diagonal then $count1=trunc($count/($numlist2+1e-6))+1 endif
+  endif
+
+until (($x < 0) or ($x > wcmax) or ($y > wc2max) or (($count-$nstart) > $novals*$countdelta) or
+      ($count > arraymax))
+

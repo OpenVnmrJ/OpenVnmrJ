@@ -1,0 +1,22 @@
+"macro _seqfil"
+
+format(seqfil,'lower'):$seqfil
+strstr($seqfil,'s2pul'):$ret
+if ($ret) then
+//if (seqfil='s2pul') or (seqfil = 'S2PUL') then
+  if (tn='H1') then
+    pslabel='PROTON'
+    on('satmode'):$son on('wet'):$won
+    if ($son > -0.5) then if (satmode='y') then pslabel='PRESAT' endif endif
+    if ($won > -0.5) then if (wet='y') then pslabel='wet1D' endif endif
+  elseif (tn ='C13') then pslabel='CARBON'
+  elseif (tn = 'F19') then pslabel='FLUORINE'
+  elseif (tn = 'P31') then pslabel ='PHOSPHORUS'
+  endif
+elseif (seqfil='lc1d') then
+   format(pslabel,'lower'):$pslabel
+   if ($pslabel<>seqfil) then pslabel=seqfil endif
+else
+  pslabel=seqfil
+endif
+acqdisp

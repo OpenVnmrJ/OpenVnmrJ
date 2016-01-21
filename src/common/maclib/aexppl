@@ -1,0 +1,78 @@
+"macro aexppl"
+"***********************************************"
+" aexppl(hz/mm) - automatic expansions plotting "
+"***********************************************"
+
+if $#<1 then $expand=2 else $expand=$1 endif         "default exp rate 2 hz/mm"
+$endpage=wcmax $startpage=wcmax/50		          "end / start of page"
+s1 axis='p' intmod='off' vp=-10	    		    "display mode, no integral"
+$freeup=$endpage- $startpage                        "free space in upper trace"
+$freelow=$freeup                                    "free space in lower trace"
+wc2=wc2max/2-45        "45=10(scale)+10(-vp)+25(ppf); wc2-vp: height of traces"
+$voffset=wc2max/2                              "vertical offset between traces"
+peak:$nmmax ai peak:$aimax                                  "switch to ai mode"
+vs=vs*$nmmax/$aimax $nmmax=vs           "keep and store original vertical size"
+$count=1                            "counter to keep track of expanded regions"
+$split=0                                       "indicator for region splitting"
+$vcompr=0                          "indicator for vertically compressed region"
+numreg:$regions                                   "number of regions to expand"
+peak(0.95*sw-rfl+rfp,sw-rfl+rfp):$a
+peak(0.90*sw-rfl+rfp,0.95*sw-rfl+rfp):$b
+if $b<$a then $a=$b endif
+if $a<0 then $a=-$a endif                      "$a: threshold for standard vs:"
+if tn='H1' then $a=3*$a                                    "protons: 3 * noise"
+        else $a=1.5*$a endif                                 "else 1.5 * noise"
+$xtitle=wcmax/100 $ytitle=0.97*wc2max                        "label first page"
+if wcmax>350 then apa endif                     "paramaters for big plots only"
+write('plotter',$xtitle,$ytitle,'Expansions at %1.2f Hz/mm',$expand)
+while $count<=$regions+0.5 do    "repeat the following for all expansion plots"
+ if $split<0.5 then                "get a new region, if not within a long one"
+  getreg($count+0.1):$b,$c
+  if $vcompr>0.5 then                   "region has been vertically compressed"
+   vs=16*vs $vcompr=0                    "so increase now vs by a factor of 16"
+  else sp=$b wp=$c-$b
+   vs=$nmmax vsadj2(wc2-vp-5)                      "adjust vs for a new region"
+   if vs<$nmmax then $vcompr=1 endif endif endif
+ if (($c-$b)/$expand)<($endpage-$startpage-0.5) then            "normal region"
+  $split=0 sp=$b wp=$c-$b
+ else $split=1
+  if $freeup>wcmax/3 then wp=$expand*($freeup-0.5)     "wp to fill upper trace"
+  else
+   if $freelow>wcmax/3 then wp=$expand*($freelow-0.5)    "wp to fill low trace"
+     else wp=$expand*($endpage-$startpage-0.5) endif endif         "full trace"
+  sp=$c-wp                                             "readjust start of plot"
+  $c=sp+40*$expand endif                   "new end of plot with 40 mm overlap"
+ th=$a*vs/$nmmax
+ if th<4 then th=4 endif                       "adjust threshold for expansion"
+ nll:$d
+ if $d>1.5 then                                   "more than one peak, do plot"
+  wc=wp/$expand
+  if wc<=$freeup then                             "enough space in upper trace"
+   sc=$freeup+$startpage-wc $freeup=$freeup-wc-15 sc2=$voffset+10
+  else                                          "(upper trace is filled first)"
+   if wc<=$freelow then                           "enough space in lower trace"
+    sc=$freelow+$startpage-wc $freelow=$freelow-wc-15 sc2=10
+   else $freeup=$endpage-$startpage $freelow=$freeup   "new page, reset params"
+    page sc2=$voffset+10
+    write('plotter',$xtitle,$ytitle,'Expansions at %1.2f Hz/mm',$expand)
+    sc=$freeup+$startpage-wc $freeup=$freeup-wc-15 endif endif
+  pl pscale                                    "expansion plot with scale"
+  if ($d/wc)>0.15 then                         "increase th, if too many lines"
+   while ($d/wc>0.15) do
+    th=1.5*th nll:$d
+    endwhile endif
+  if th<((wc2-vp)/2) then                  "if th less than 50% of plot height"
+   if tn='H1' then axis='h' endif               "for protons label peaks in Hz"
+   ppf axis='p' endif                                   "plot peak frequencies"
+  if $split>0.5 then                "if within a long region, label with arrow"
+   write('plotter',$endpage-sc+1,sc2+5,'--->') endif
+  if vs<(0.8*$nmmax) then                    "label vertical compression ratio"
+   write('plotter',$endpage-sc-6,sc2-6,'x 1/%1.0f',($nmmax/vs))
+  else                                         "label vertical expansion ratio"
+   write('plotter',$endpage-sc-6,sc2-6,'x %1.0f',(vs/$nmmax)) endif
+  write('plotter',$endpage-sc-5,sc2,'(%1.0f)',$count)          " region number"
+ else                   "no plotting if less than two lines found in expansion"
+  write('line3','less than two lines found in expansion!') endif
+ if ($vcompr<0.5)and($split<0.5) then $count=$count+1 endif
+endwhile
+page fr1 vs=$nmmax

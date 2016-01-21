@@ -1,0 +1,32 @@
+"macro vjtool"
+if ($# <> 3) then
+  return
+endif
+
+if ($1 = 'layout') then
+  if ($2 = 'use') then
+    exists(userdir+'/templates/vnmrj/geom/exp/'+$3,'file'):$e
+    if ($e > 0.5) then
+      vnmrjcmd('layout','use','"'+userdir+'/templates/vnmrj/geom/exp/'+$3+'"')
+    else
+      write('line3','Hold tool in for 3 seconds to memorize the current display layout')
+    endif
+  else
+    vnmrjcmd('layout','save','"'+userdir+'/templates/vnmrj/geom/exp/'+$3+'"')
+    write('error','') write('line3','layout saved')
+  endif
+else
+  if ($2 = 'use') then
+    exists(userdir+'/templates/vnmrj/geom/exp/'+$3,'file'):$e
+    if ($e > 0.5) then
+      vnmrjcmd('LOC loadstatement "'+$3+'"')
+      vnmrjcmd('layout','use','"'+userdir+'/templates/vnmrj/geom/exp/'+$3+'"')
+    else
+      write('line3','Hold tool in for 3 seconds to memorize the current Locator sort')
+    endif
+  else
+    vnmrjcmd('LOC addstatement "'+$3+'"')
+    vnmrjcmd('layout','save','"'+userdir+'/templates/vnmrj/geom/exp/'+$3+'"')
+    write('error','') write('line3','sort saved')
+  endif
+endif

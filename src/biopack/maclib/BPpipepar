@@ -1,0 +1,401 @@
+"macro BPpipepar"
+/* Checks for existence of NMRpipe-related parameters:
+ ni3
+ BPpipeproc,BPpipeautoproc,BPpipedraw
+ BPpipevjdisp,BPpipevjproc
+ BPpipeprocinfo,BPpipedrawinfo
+ BPpipeexport,BPpipeexportexp
+ BPpipeexp,BPpipenexp, BPpipeexp*   *= 1-12
+ BPpipepage,BPpipetype,dimension
+
+ run BPdimension to set dimension parameter based on seqfil
+*/
+
+/*************************************************************/
+/*
+ET 22JUL2011
+
+added a bunch of parameters related to "expert mode" panel
+
+
+ET mar 2013
+           option for resetting everything to defaults
+ (default) option for resetting script names
+           script names change depending whether it is 2D or 3D case 
+  
+
+
+*/
+ 
+
+$arg1='reset_scripts'
+
+if ($# > 0)  then
+            $arg1= $1 
+	  endif   
+
+
+// List of LOCAL parameters required for BPpipe interface
+// 'parameter1name', 'parameter1default', 'parameter1type','parameter1bitprotect' ..
+   $entries_per_par=4 // number of entries per parameter in the list below
+
+//exception rules: (those get reset to default if option is reset_scripts
+ 
+$script_names='BPpipe_fidscript',  'BPpipe_XYscript',   'BPpipe_XZscript',\
+              'BPpipe_3Dscript', 'BPpipe_strips_script','BPpipe_4Dscript' 
+
+  $Lpars= 'BPpipe_controls','n','string','256',\
+          'BPpipe_editor','gedit','string','256',\
+          'pipexCAR','default','string','256',\
+	  'pipeyCAR','default','string','256',\
+          'pipezCAR','default','string','256',\
+          'pipeaCAR','default','string','256',\
+          'BPpipe_fidscript','vj_fid.com','string','256',\
+          'BPpipe_XYscript', 'vj_xy_expert.com','string','256',\
+          'BPpipe_XZscript','vj_xz_expert.com','string','256',\
+          'BPpipe_3Dscript','vj_xyz_expert.com','string','256',\
+          'BPpipe_strips_script','vj_scroll_expert.com','string','256',\
+          'BPpipe_4Dscript','vj_xyza_user.com','string','256',\
+          'BPpipe_pipeDir','pipe','string','256',\
+          'BPpipe_solids','n','string','256',\
+          'BPpipe_fidDir','acqfil/fid','string','256',\
+          'BPpipe_par','curpar','string','256',\
+          'BPpipeSOL','y','string','256'
+
+
+//          'BPpipe_create_scripts_cmd','','string','256',\
+//          'BPpipe_convert_cmd','','string','256',\
+//          'BPpipe_procXY_cmd','','string','256',\
+//          'BPpipe_procXZ_cmd','','string','256',\
+//          'BPpipe_proc3D_cmd','','string','256',\
+//          'BPpipe_proc4D_cmd','','string','256',\
+//          'BPpipe_strips_cmd','','string','256' 
+//
+  
+
+$arg='local'  $pars=$Lpars $option=''
+
+//if ($arg = 'global') then
+//  $pars = $Gpars
+//  $option=',\'global\''
+//endif
+
+
+// creating parameters etc:
+$npars=size('$pars')
+  $i=1
+  while ($i<$npars) do
+	   $cmde='exists(\''+$pars[$i]+'\',\'parameter\'' +$option+'):$e'         
+	   {$cmde}
+	   if ($e=0) then
+		    write('alpha','creating parameter ' + $pars[$i] + '=' + $pars[$i+1] + $option)
+		    $cmd='create(\''+$pars[$i]+'\',\''+$pars[$i+2]+'\''+$option+')'
+		    {$cmd}
+	   endif
+      
+	   if ( ($e=0) or ($arg1='reset')) then 
+	     // set default values if parameter did not exist or if reset flag was specified
+		     if ($pars[$i+2] <> 'string') then
+				$cmd=$pars[$i]+'='+$pars[$i+1] {$cmd}
+ 		     else
+ 		   	{$pars[$i]}=$pars[$i+1]
+		     endif
+	   endif
+
+          if ( ($arg1='reset_scripts')) then 
+	     // set default script names if reset_scripts flag was specified
+              $nscripts=size('$script_names')
+              $j=1
+              while ($j<$nscripts) do
+
+                     if($pars[$i]=$script_names[$j]) then
+			     if ($pars[$i+2] <> 'string') then
+					$cmd=$pars[$i]+'='+$pars[$i+1] {$cmd}
+	 		     else
+	 		   	{$pars[$i]}=$pars[$i+1]
+              	            endif
+                     endif
+ 		    $j=$j+1
+	      endwhile
+	  endif
+
+ 
+    setgroup($pars[$i],'processing')
+    $i=$i+$entries_per_par
+  endwhile
+
+
+
+
+/* figure out if we have 2D or 3D parameter set */
+
+
+
+
+$ni=1   exists('ni','parameter'):$e  if $e then $ni=ni endif
+$ni2=1  exists('ni2','parameter'):$e  if $e then $ni2=ni2 endif
+
+
+if ( ( ($ni2<2) or ($ni<2) ) ) then	
+     BPpipe_XYscript='vj_ft2_expert.com' 
+     BPpipe_XZscript='vj_ft2_expert.com'   
+endif 
+
+
+
+// creating commands behind the buttons:
+
+//create all scripts
+  
+
+//  getbinpath('vnmrpipe'):$e,$cmd0 
+
+//  $cmd= ' cd  \'  + curexp +  \'; /bin/rm -rf '  + BPpipe_pipeDir + '; '\
+//        +  $cmd0\
+//        + '   vj2pipe.com -noexec -clean -cd  \'   + curexp +\' ' \
+//        + '  -vjfid '  + BPpipe_fidDir\
+//        + '  -pipeDir ' + BPpipe_pipeDir\
+//        + '  -procpar ' + BPpipe_par 
+
+//BPpipe_create_scripts_cmd=$cmd
+
+//conversion command:
+//getbinpath('vnmrpipe'):$e,$cmd0 
+//$cmd=  'cd  \'+ curexp + \'/'+ BPpipe_pipeDir+ \
+//       ' ;  xterm -bg fireBrick -fg white -cr white   -T NMRPipe -e '\
+//        + $cmd0 + ' ' + BPpipe_fidscript + '&' 
+//BPpipe_convert_cmd=$cmd
+
+
+
+
+   /* copy them to procpar */
+    groupcopy('current','processed','processing') 
+    flush 
+ 
+
+ 
+
+
+
+
+ /*************END of expert parameters***********************/  
+
+ 
+ 
+exists('dimension','parameter'):$e     "Nuclei for evolution times"
+if not $e then
+  create('dimension','string')
+  setprotect('dimension','on',256)  "prevents setting as an array"
+  dimension=''
+endif
+ 
+
+exists('BPpipeprocinfo','parameter'):$e   
+if not $e then
+  create('BPpipeprocinfo','string')
+  setprotect('BPpipeprocinfo','on',256)
+  BPpipeprocinfo=''
+endif
+
+exists('BPpipedrawinfo','parameter'):$e     
+if not $e then
+  create('BPpipedrawinfo','string')
+  setprotect('BPpipedrawinfo','on',256)
+  BPpipedrawinfo=''
+endif
+
+exists('BPpipetype','parameter'):$e     "Experiment type, e.g. HNCO"
+if not $e then
+  create('BPpipetype','string')
+  setprotect('BPpipetype','on',256)
+  BPpipetype=''
+endif
+
+exists('BPpipeautoproc','parameter'):$e   " Use NMRpipe default processing "
+if not $e then
+  create('BPpipeautoproc','flag')
+  setprotect('BPpipeautoproc','on',256)
+  BPpipeautoproc = 'n'
+endif
+
+exists('BPpipeproc','parameter'):$e   " NMRpipe multiple data set processing "
+if not $e then
+  create('BPpipeproc','real')
+  setprotect('BPpipeproc','on',256)
+  BPpipeproc =1
+endif
+
+exists('BPpipedraw','parameter'):$e   " Use NMRdraw to show processed data "
+if not $e then
+  create('BPpipedraw','flag')
+  BPpipedraw = 'n'
+endif
+
+exists('BPpipevjdisp','parameter'):$e   " Use VnmrJ Display parameters (e.g.,phasing) "
+if not $e then
+  create('BPpipevjdisp','flag')
+  setprotect('BPpipevjdisp','on',256)
+  BPpipevjdisp = 'n'
+endif
+
+exists('BPpipevjproc','parameter'):$e "Use VJ processing  pars(e.g. LP,weighting,zerofill) "
+if not $e then
+  create('BPpipevjproc','flag')
+  BPpipevjproc = 'n'
+endif
+
+exists('BPpipeexport','parameter'):$e
+if not $e then
+  create('BPpipeexport','flag')
+  setprotect('BPpipeexport','on',256)
+endif
+BPpipeexport='n'
+
+exists('BPpipeexportexp','parameter'):$e
+if not $e then
+  create('BPpipeexportexp','string')
+  setprotect('BPpipeexportexp','on',256)
+endif
+BPpipeexportexp='5'
+
+exists('BPpipenexp','parameter'):$e   " maximum # of nD experiments "
+if not $e then
+  create('BPpipenexp','integer')
+  BPpipenexp = 1
+endif
+
+exists('BPpipeexp','parameter'):$e   " path name of data set "
+if not $e then
+  create('BPpipeexp','string')
+  setprotect('BPpipeexp','on',256)
+  BPpipeexp = '','','','','','','','','','','',''
+endif
+
+exists('BPpipeexp1','parameter'):$e
+if not $e then
+  create('BPpipeexp1','real')
+  setprotect('BPpipeexp1','on',256)
+endif
+BPpipeexp1=1
+  
+exists('BPpipeexp2','parameter'):$e
+if not $e then
+  create('BPpipeexp2','real')
+  setprotect('BPpipeexp2','on',256)
+endif
+BPpipeexp2=2
+  
+exists('BPpipeexp3','parameter'):$e
+if not $e then
+  create('BPpipeexp3','real')
+  setprotect('BPpipeexp3','on',256)
+endif
+BPpipeexp3=3
+  
+exists('BPpipeexp4','parameter'):$e
+if not $e then
+  create('BPpipeexp4','real')
+  setprotect('BPpipeexp4','on',256)
+endif
+BPpipeexp4=4
+  
+exists('BPpipeexp5','parameter'):$e
+if not $e then
+  create('BPpipeexp5','real')
+  setprotect('BPpipeexp5','on',256)
+endif
+BPpipeexp5=5
+  
+exists('BPpipeexp6','parameter'):$e
+if not $e then
+  create('BPpipeexp6','real')
+  setprotect('BPpipeexp6','on',256)
+endif
+BPpipeexp6=6
+  
+exists('BPpipeexp7','parameter'):$e
+if not $e then
+  create('BPpipeexp7','real')
+  setprotect('BPpipeexp7','on',256)
+endif
+BPpipeexp7=7
+  
+exists('BPpipeexp8','parameter'):$e
+if not $e then
+  create('BPpipeexp8','real')
+  setprotect('BPpipeexp8','on',256)
+endif
+BPpipeexp8=8
+  
+exists('BPpipeexp9','parameter'):$e
+if not $e then
+  create('BPpipeexp9','real')
+  setprotect('BPpipeexp9','on',256)
+endif
+BPpipeexp9=9
+  
+exists('BPpipeexp10','parameter'):$e
+if not $e then
+  create('BPpipeexp10','real')
+  setprotect('BPpipeexp10','on',256)
+endif
+BPpipeexp10=10
+  
+exists('BPpipeexp11','parameter'):$e
+if not $e then
+  create('BPpipeexp11','real')
+  setprotect('BPpipeexp11','on',256)
+endif
+BPpipeexp11=11
+  
+exists('BPpipeexp12','parameter'):$e
+if not $e then
+  create('BPpipeexp12','real')
+  setprotect('BPpipeexp12','on',256)
+endif
+BPpipeexp12=12
+
+exists('BPpiperegion','parameter'):$e
+if not $e then
+  create('BPpiperegion','flag')
+  BPpiperegion='n'
+endif
+
+exists('BPpipepage','parameter'):$e
+if not $e then
+  create('BPpipepage','integer')
+  setprotect('BPpipepage','on',256)
+  BPpipepage=1
+else
+  setprotect('BPpipepage','on',256)
+endif
+
+exists('ni3','parameter'):$e
+if $e then BPpar4d endif
+
+exists('h1reff1','parameter'):$e
+if $e=0 then create('h1reff1','real') endif
+exists('h1reff2','parameter'):$e
+if $e=0 then create('h1reff2','real') endif
+exists('h1reff3','parameter'):$e
+if $e=0 then create('h1reff3','real') endif
+exists('c13reff1','parameter'):$e
+if $e=0 then create('c13reff1','real')  endif
+exists('c13reff2','parameter'):$e
+if $e=0 then create('c13reff2','real')  endif
+exists('c13reff3','parameter'):$e
+if $e=0 then create('c13reff3','real')  endif
+exists('n15reff1','parameter'):$e
+if $e=0 then create('n15reff1','real') endif
+exists('n15reff2','parameter'):$e
+if $e=0 then create('n15reff2','real')  endif
+exists('n15reff3','parameter'):$e
+if $e=0 then create('n15reff3','real') 
+endif
+exists('obscenterppm','parameter'):$e
+if $e=0 then create('obscenterppm','real')
+endif
+ 
+BPdimension
+  

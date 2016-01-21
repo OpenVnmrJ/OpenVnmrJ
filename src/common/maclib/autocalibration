@@ -1,0 +1,243 @@
+"macro autocalibration"
+"***************************************************************"
+"autocalibration - Generic macro for all CP derived calibration routines"
+"***************************************************************"
+
+if ($# < 1) then $arg='init' else $arg=$1 endif
+
+IF ($arg = 'init') THEN
+
+    if (gcflg='y') then
+	walkupQ('readlist'):$exp1,$exp2
+	$t1=size('$exp1') if ($exp1[1]='') then $t1=0 endif
+	$t2=size('$exp2') if ($exp2[1]='') then $t2=0 endif
+	if ($t1+$t2 > 1) then
+	    write('error','Autocalibration cannot be queued with another experiment in the same study')
+		// Don't abort it.  This will put the SQ in a limbo
+//	    abort
+	endif
+    endif
+
+    getProbePath(probe,'alert'):$e,$ppath,$rw
+    if ($rw=0) then abort endif
+    operights('candocalibrations'):$right
+    if ($right<0.5) and (auto='n') then
+     	write('error','%s cannot do calibrations',operator)
+     	abort
+    endif
+    shell('basename '+probe):$probe
+
+    if (gcflg='n') then
+	cleanexp
+        if (auto='n') then 
+	    shell('rm -f '+curexp+'/sampleglobal'):$dum
+        else
+	    shell('rm -f '+autodir+'/sampleglobal'):$dum
+      	endif
+    endif
+    if ($0='CH3I_calibration') then
+    	PROTON('cdcl3')
+    elseif ($0='Benzamide_calibration') then
+	PROTON('dmso') dn='N15' setdecpars
+    elseif ($0='AutoTestN15_calibration') then
+	PROTON('d2o') dn='N15' setdecpars
+    elseif ($0='F19_calibration') then
+	FLUORINE('c6d6')
+    elseif ($0='P31_calibration') or ($0='ch3iP_calibration') then
+        PROTON('cdcl3') dn='P31' setdecpars
+    elseif ($0='TFT_calibration') then
+        PROTON('dmso') dn='F19' setdecpars
+    else
+	PROTON('d2o')
+    endif
+
+    explist=$0
+    module('add','calibpars','basic','refresh')
+    xmhaha_calib('setParams')
+    pw=pw90
+    ai
+    macro=$0 seqfil='s2pul' at=1 lb=1 
+    caliblist=$0
+
+    $spin=spin spin=0
+    if (spintype='tach') or (spintype='nano') or (spintype='mas') then
+        spin=$spin spin='n'
+    endif
+    if (dsp <> 'n') then oversamp=1 endif
+    nt=1 clear(2) d1=2 wbs='' gain=10 ss=1
+    intmod='off' pltmod='off'
+
+    setref
+    if ($0 = 'CH3I_calibration') then
+	setsw(6,0)
+    elseif ($0='AutoTest_calibration') then
+	setsw(7.6,1.6)
+    elseif ($0='IFC_calibration') then
+	setsw(6,0) gain=0 d1=3
+    elseif ($0='LKgmapz0_calibration') then
+	d1=1 gain=0
+    elseif ($0='Benzamide_calibration') then
+	setsw(9,1.5)
+    elseif ($0='AutoTestN15_calibration') then
+	setsw(6,-1)
+    elseif ($0='F19_calibration') then
+//  Check the tof 
+	rof2=100
+	setoffset(tn,-62.5):tof
+	sw=2000
+	setref
+    elseif ($0='ch3iP_calibration') then
+	setoffset(dn,27.5):dof
+	setsw(6,0)
+    elseif ($0='P31_calibration') then
+	setoffset(dn,-20):dof
+        setsw(10,5)
+    elseif ($0='TFT_calibration') then
+        setsw(10,5)
+    endif
+    f full ph
+
+    wstart='xmhaha_calib'
+    $date=''
+    shell('date +%d%b%Y'):$date
+    $text='Calibration for '+probe+' on '+$date
+    text($text)
+    if ($0='CH3I_calibration') then
+    	$atext='Sample : C13 enriched CH3I in CDCl3'
+	$page='CH3I'
+    elseif ($0='AutoTest_calibration') then
+	$atext='Sample : C13 enriched CH3OH in doped D2O (autotest)'
+	$page='AutoTest'
+    elseif ($0='IFC_calibration') then
+	$atext='Sample : 50/50% Acetonitrile/D2O'
+	$page='Flow'
+    elseif ($0='LKgmapz0_calibration') then
+    	$atext='Sample : Doped D2O'
+	$page='D2O'
+    elseif ($0='Benzamide_calibration') then
+	$atext='Sample : N15 enriched Benzamide in dmso -d6'
+	$page='Benzamide'
+    elseif ($0='AutoTestN15_calibration') then
+	$atext='Sample : Autotest with N15 enriched Acetonitrile in D2O'
+	$page='AutoTest_N15'
+    elseif ($0='P31_calibration') then
+        $atext='Sample : Triphenylphosphate (P31 S/N) in CDCl3'
+        $page='P31SN'
+    elseif ($0='ch3iP_calibration') then
+	$atext='Sample : Trimethylphosphite (plus CH3I) in CDCl3'
+	$page='TMP'
+    elseif ($0='TFT_calibration') then
+        $atext='Sample : Trifluortoluene in DMSO'
+        $page='TFT'
+    elseif ($0='F19_calibration') then
+	$atext='Sample : F19 S/N test sample'
+	$page='F19SN'
+    endif
+    atext($atext)
+//    samplename=$probe+'_calib'
+// avoid calling _samplename macro here
+    setvalue('samplename',$probe+'_calib')
+    sdirtmplt='$samplename$_%DATE%_'
+    svftmplt='$caliblist$$calibnode$_'
+    CalibrationResults=''
+    setadirtmplt
+    dg
+
+    wnt=''
+    wexp='chempackQ'
+    create('execprocess','string','current','')
+    create('execplot','string','current','')
+    setgroup('execprocess','display')
+    setgroup('execplot','display')
+
+    execprocess=$0+'(\'process\')'
+    execplot='execplot=\'\''
+
+    seqfil='calibrate'
+    layout='calibrate'
+    clear(2)
+    if ($0='LKgmapz0_calibration') then
+	xmhaha_calib('add','lkGmap')
+	xmhaha_calib('add','lkZ0')
+    	banner('Use Doped D2O sample\\ \\Set z0 exactly on-resonance\\ before starting acquisition')
+    endif
+    if (gcflg='n') then
+    	if (auto='n') then
+	    savesampglobal('cp')
+            SQDisplay('refresh')
+	    vnmrjcmd('setpage','Acquire')
+	    vnmrjcmd('setpage','Acquire',$page)
+    	endif
+    else
+	calibmod='yes'
+	savesampglobal('cp','solvent samplename sdirtmplt adirtmplt svftmplt')
+    	writeparam(cursqexp+'/startqpar1/curpar','solvent samplename calibmod sdirtmplt adirtmplt svftmplt','current','add')
+    	writeparam(cursqexp+'/startqpar1/procpar','solvent samplename calibmod sdirtmplt adirtmplt svftmplt','current','add')
+	writeparam(cursqexp+'/wQtemppar','calibmod','current','add')
+    endif
+    return
+
+ENDIF
+
+"***************************************************************"
+IF ($arg='process') THEN
+
+    layout=pslabel
+    setvalue('layout',layout,'processed')
+    wft f full lp=0 aph setref
+    vsadj dss
+    execprocess='wft'
+    if ($0='CH3I_calibration') or ($1='IFC_calibration') then
+    	peak(1p,3p):$ht,cr
+    	wp=2p sp=1p
+    	$thresh=0.9 $peaks=0
+    	repeat
+	    th=$thresh*$ht nll:$peaks
+     	    $thresh=$thresh-0.1
+    	until ( ($peaks > 2) or (th < 0.1) )
+    	if ($peaks < 3) then
+            write('error','Unable to find 3 peaks for CH3I.  Calibration aborted')
+	    cpwerr
+            abort
+    	endif
+    elseif ($0='ch3iP_calibration') or ($0='P31_calibration') or ($0='TFT_calibration') then
+	if ($0='ch3iP_calibration') then
+	    peak(3.5p,4.5p):$ht,cr
+	    wp=2p sp=3p
+	else
+	    peak(6.5p,8p):$ht,cr
+	    wp=5.5p sp=4.5p
+	endif
+        $thresh=0.7 $peaks=0
+        repeat
+            th=$thresh*$ht nll:$peaks
+            $thresh=$thresh-0.1
+        until ( ($peaks > 1) or (th < 0.1) )
+        if ($peaks < 2) then
+	    if ($0='ch3iP_calibration') then
+            	write('error','Unable to find trimethylphosphite peaks. Calibration aborted')
+	    elseif ($0='P31_calibration') then
+		write('error','Unable to find triphenylphosphate peaks. Calibration aborted')
+	    else
+		write('error','Unable to find TFT peaks. Calibration aborted')
+	    endif
+	    cpwerr
+            abort
+        endif
+    endif
+    f full
+
+ENDIF
+"***************************************************************"
+IF ($arg='repeat') THEN
+
+    $file='' $asdir=''
+    cplog('PROTON','first'):$file,$asdir
+    rt($asdir+'/'+$file)
+    wft
+    execprocess='wft dssh'
+    execplot='execplot=\'\''
+
+ENDIF
+"***************************************************************"
+

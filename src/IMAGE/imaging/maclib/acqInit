@@ -1,0 +1,105 @@
+"macro acqInit"
+"*****************************************************************************"
+"
+" acqInit - macro for parameter initializations"
+"
+"*****************************************************************************"
+
+$ret=''
+"****************"
+"SENSE scan inits"
+"****************"
+exists('sense','parameter'):$e
+if ($e > 0) then
+  if (coil_param[19] < 2) then sense='n' return endif
+  exists('acq2Dsense','maclib'):$e
+  if (sense = 'y' AND $# = 1 AND $e > 0) then acq2Dsense('init',$1):$ret endif
+endif
+
+"*************************"
+"Water Reference scan init"
+"*************************"
+exists('wref','parameter'):$e
+if ($e > 0) then
+  exists ('wrefstatus','parameter'):$ex
+  if ($ex=0) then create('wrefstatus','string') wrefstatus='wref' endif
+  exists ('wrefname','parameter'):$ex 
+  if ($ex=0) then create('wrefname','string') endif
+
+  //check to see if wref='y' and wsrf='n' when wrefstatus='wref'-avoid this situation
+  if (wref = 'y') AND (wsrf='n') AND (wrefstatus='wref') AND ($#=0) then
+    wref='n'
+  endif
+
+  if (wref = 'y') AND (ws='y') then
+
+    if ($# = 1) then
+      if ($1 = 'reset') then
+        if (gainSave<>0) then gain=gainSave endif
+        if (ntSave<>0) then nt=ntSave endif
+        if (arraySave<>'NotSet') then array=arraySave endif
+        if (wsrfSave<>'NotSet') then wsrf=wsrfSave endif
+        destroy('gainSave arraySave wsrfSave'):$e
+        return
+      elseif ($1 = 'init') then
+        create('gainSave','real','current',0)
+        gainSave=-100
+        create('ntSave','real','current',0)
+        ntSave=-100
+        create('arraySave','string','current','')
+        arraySave='NotSet'
+        create('wsrfSave','string','current','')
+        wsrfSave='NotSet'
+      endif
+    endif
+
+    "If we are running in a queue then pause it for the reference scan"
+    if (sqmode='go') then
+      "We will use temp global Qmode to flag we have paused a running queue"
+      exists('Qmode','parameter','global'):$e
+      if ($e=0) then create('Qmode','string','global') endif
+      sqmode='pause'
+      Qmode='paused'
+    endif
+
+    if (wrefstatus = 'wref') then "water reference is required"
+
+      //fill wrefname string with directory name of the reference file
+      saveAs('fid'):wrefname
+      "Save required parameters"
+      write('line3','Acquiring water reference') 
+      gainSave=gain
+      arraySave=array
+      wsrfSave=wsrf
+      ntSave=nt
+      "Set up the parameters for wref acquisition"
+      wsrf='n'
+      if (wrefarray='n') then array='' endif
+      gain=wrefgain
+      nt=wrefnt
+      go('check')
+      wdone=''
+      return('wait')
+    
+
+    elseif (wrefstatus = 'ws') then "water suppression"
+
+      //check to make sure that reference file is already created
+      exists(wrefname,'file'):$e
+      if($e=0) then
+        wrefstatus = 'wref'
+        return
+      endif
+      write('line3','Acquiring metabolites')
+      wsrf='y' 
+      gain=gainSave
+      nt=ntSave
+      array=arraySave
+      destroy('ntSave gainSave arraySave wsrfSave'):$e
+      $wnt=wnt
+      wnt=`wdone='xmwexp' wnt='`+$wnt+`' `+$wnt
+        
+    endif  //end of "ws" status
+  endif  //end of wref='y' condition
+endif
+return($ret)

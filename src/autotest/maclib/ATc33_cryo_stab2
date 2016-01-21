@@ -1,0 +1,120 @@
+"macro ATc33_cryo_stab2"
+"ATc33_cryo_stab2" "C13 Adiabatic Decoupling using Waveform Generators"
+"        Using user-defined power limits. Efficiency may be"
+"        compromised"
+"        Tests intensity stability of H2O peak under decoupling conditions"
+"        Decoupling set for 140ppm 13C bandwidth "
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+   substr(rfwg,1,1):$wfg1exists
+   substr(rfwg,2,1):$wfg2exists
+
+   if (rfchtype[2]='U+ Direct Synthesis') then    "Dual broadband system"
+    if ($wfg2exists='n') then
+     write('line3','No Waveform Generator Present. WFG Required for Adiabatic Decoupling')
+     ATnext return 
+    endif
+   else
+    if ($wfg1exists='n') then    "C13 on channel 1 uses wfg on channel 1"
+     write('line3','No Waveform Generator Present. WFG Required for Adiabatic Decoupling')
+     ATnext return 
+    endif
+   endif
+
+if ($#=0) then
+   ATrtp('standard')  
+   seqfil='s2pul'
+   dn='C13' at=.1 d1=1 ss=2 fn=2*np 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   at_currenttest='water_stability_with_140ppm_13Cdecoupling'
+   lb='n' gf='n' sb='n' s1 av
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='ATc33_cryo_stab2(`PART1`)'
+   au
+ 
+elseif ($1='PART1') then
+
+   wft f vsadj sp=3.8p wp=2p vsadj
+   format(140*dfrq,9,1):n1
+   $wave='WURST2' + n1
+   opx('ATwurst2.DEC')
+   setwave($wave)
+   pbox_rst
+   pboxpar('$1 adb','2.0') "add 2dB "
+   cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+   pbox_pwr('ATwurst.DEC'):dpwr
+
+   $n3=n3
+   format(at_max_dpwr,2,0):n3
+   n3=n3+'d'
+   $attn=n3
+
+   if dpwr>at_max_dpwr then
+       pboxpar('attn',$attn)
+       echo($attn)
+       shell('Pbox')
+       pbox_pwr('ATwurst2.DEC'):dpwr
+       write('line3','Decoupling Power reduced to Maximum (at_max_dpwr)')
+       n3='Decoupling Power reduced to Maximum (at_max_dpwr)'
+       atext(n3)
+   endif
+   ph f
+   pbox_dmf('ATwurst2.DEC'):dmf
+   wexp='ATc33_cryo_stab2(`PART2`)'
+   wnt='ATwft select(1) if (celem<4) then aph0 vsadj endif dssh'
+   ph dm='nny' dmm='ccp'
+   dseq='ATwurst2'
+   dres=9.0 
+   array('d3',400,0,0) nt=1
+   au 
+elseif ($1='PART2') then
+
+   wft
+   ATsvf select(1)
+   f aph0 vsadj(80) 
+   peak:$int,cr dres:$h2ores_first
+   $h2ores_first=trunc($h2ores_first*10)/10
+   select(arraydim) peak:$h2olast,cr dres:$h2ores_last
+   $h2olast=trunc($h2olast)
+   $h2ores_last=trunc($h2ores_last*10)/10
+   $h2o=trunc(100 -($h2olast/80)*100)
+   $h2odiff=$h2ores_last-$h2ores_first
+   full vp=0 dssh('dodc') s1
+   if (at_plotauto='y') then
+      text('H2O peak: 140ppm 13C Adiabatic Decoupling \\10% duty cycle. Repeat every 1.1 sec')
+      pl('all','dodc') pap 
+      ATpage('water_stability_with_140ppm_13Cdecoupling_H2O')
+   endif
+   select(1) full  sp=2p wp=0.17p vsadj(80) s2
+   peak:$int,cr dres:$ch3cnres_first
+   $ch3cnres_first=trunc($ch3cnres_first*10)/10
+   select(arraydim) peak:$ch3cnlast,cr dres:$ch3cnres_last
+   $ch3cnlast=trunc($ch3cnlast)
+   $ch3cnres_last=trunc($ch3cnres_last*10)/10
+   $ch3cn=trunc(100 -($ch3cnlast/80)*100)
+   $ch3cndiff=$ch3cnres_last-$ch3cnres_first
+   dssh
+   if (at_plotauto='y') then
+      text('CH3CN peak: 140ppm 13C Adiabatic Decoupling\\ 10% duty cycle. Repeat every 1.1 sec')
+      pl('all','dodc') pap 
+      ATpage('water_stability_with_140ppm_13Cdecoupling_CH3CN')
+   endif
+
+   ATrecord('WURST_stab2c','Percent Change in Intensity and Linewidth Change under 140ppm 13C Decoupling','%(H2O)',$h2o,' %(CH3CN)',$ch3cn,'H2O_lw(1)',$h2ores_first,' H2O_lw(400)',$h2ores_last,' CH3CN_lw(1)',$ch3cnres_first,' CH3CN_lw(400)',$ch3cnres_last)
+
+   write('file',autotestdir+'/REPORT','H2O Int./Lw Change under 140ppm 13C Decoupling : %3.1f percent, %2.1f Hz, at power= %2.0f ',$h2o,$h2odiff,dpwr)
+
+   write('file',autotestdir+'/REPORT','CH3CN Int./Lw Change under 140ppm 13C Decoupling : %3.1f percent, %2.1f Hz, at power= %2.0f ',$ch3cn,$ch3cndiff,dpwr)
+
+ATnext
+endif

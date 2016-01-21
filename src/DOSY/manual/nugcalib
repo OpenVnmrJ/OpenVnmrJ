@@ -1,0 +1,88 @@
+*******************************************************************************
+nugcalib (M)	The nugcalib macro calculates the probe/pulse sequence specific
+		coefficients from an experiment designed to map the non-
+		uniformity (NUG) of the pulsed field gradients.
+*******************************************************************************
+NAME
+	nugcalib (M)
+
+SYNOPSIS
+	nugcalib
+	nugcalib(calibrant,(T|D),saveglobal,saveprobe)
+
+DESCRIPTION 
+	nugcalib calculates a set of four coefficients that relate the nominal 
+gradient strength per DAC point, gcal, to the calculated diffusional signal 
+attenuation as a function of gradient for a given probe and pulse sequence.
+	As input, nugcalib requires 
+(i) 	the calibrant used ('w' for pure water, 'd' for dilute HDO, 'o' for
+other;
+(ii)	the temperature (T) in Celsius if 'w' or 'd', or the diffusion 
+coefficient (D) in units of 10**-10 m2/s if 'o';
+(iii)	decisions on whether or not to save the results in the global
+parameter file and/or in the current probe file.
+This information is supplied either as four arguments (see below) or by 
+dialogue.
+	The macro 
+(i)	takes a set of signal profiles measured under a read gradient, 
+performs monoexponential DOSY fitting on each point across the profile, and
+uses the resultant data and the known diffusion coefficient for the calibrant
+to obtain a map of relative gradient strength as a function of position;
+(ii)	fits this map with gradfit (C) to obtain a set of coefficients;
+(iii)	uses these coefficients to extrapolate into regions of small signal;
+(iv)	normalises the signal profile with profile_int (C);
+(v) 	takes the gradient coefficients and signal profile and uses
+deacy_gen to calculate the diffusional attenuation as a function of
+nominal gradient strength;
+(vi)	and uses powerfit (C) to fit this decay to the exponential of a
+power series in the Stejskal-Tanner exponent, storing the results in the 
+array nugcal_ (and optionally in the global parameter nugcal and/or the
+current probe file)
+
+OPTIONS
+	nugcalib('w',temperature,('n'|'y'),('n'|'y'))
+	nugcalib('d',temperature,('n'|'y'),('n'|'y'))
+	nugcalib('o',diffusion coefficient,('n'|'y'),('n'|'y'))
+
+FILES
+	curexp+'/dosy/dosy_in'
+	curexp+'/dosy/NUG/fit_coefficients'
+	curexp+'/dosy/NUG/fit_coeff_stats'
+	curexp+'/dosy/NUG/fit_coeff_stats_expl'
+	curexp+'/dosy/NUG/Gradient_coefficients'
+	curexp+'/dosy/NUG/Gradient_fit_stats'
+	curexp+'/dosy/NUG/Gradient_fit_stats_expl'
+	curexp+'/dosy/NUG/Normalised_profile'
+	curexp+'/dosy/NUG/Signal_atten_file'
+	curexp+'/dosy/NUG/Signal_profile'
+
+SEE ALSO
+	decay_gen
+	dosy
+	gcal
+	gcal_
+	gradfit
+	nugcal
+	nugcal_
+	nugflag
+	powerfit
+	profile_int
+	
+COPYRIGHT
+	Copyright (c) 2009 
+
+REFERENCES
+
+P. Damberg, J. Jarvet, A. Gräslund, Accurate measurement of translational
+diffusion coefficients: A practical method to account for nonlinear gradients,
+J. Magn. Reson. 148 (2001) 343-348.
+ G.A. Morris, Diffusion-Ordered Spectroscopy (DOSY)., in: D.M. Grant, R.K.
+Harris (Eds.), Encyclopedia of Nuclear Magnetic Resonance, Chichester, John
+Wiley & Sons Ltd, 2002: pp. 35-44.
+M.A. Connell, P.J. Bowyer, P. Adam Bone, A.L. Davis, A.G. Swanson, M.
+Nilsson, et al., Improving the accuracy of pulsed field gradient NMR diffusion
+experiments: Correction for gradient non-uniformity, Journal of Magnetic
+Resonance. In Press, Corrected Proof (n.d.).
+
+
+

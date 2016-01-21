@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craftProcess" element="groups" type="processing" >
+    <group size="410 750" 
+       vq="craftnmrparRef"
+       border="None"
+       reference="craftProcess"
+       subtype="Basic"
+       expanded="yes"
+       useref="yes"
+       >
+      <group loc="5 5" size="400 120"
+        style="Heading1"
+        bg="transparent"
+	label="Current CRAFT workspace"
+        border="Etched"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <textmessage loc="35 20" size="90 20"
+          style="Info"
+	  vq="craftnmrparRef craftspace"
+	  set="$v2='' substr(craftspace,'basename'):$v2 $VALUE=$v2"
+          />
+	<group loc="120 20" size="270 20"
+	  vq="craftnmrparRef craftspace"
+	  show="$v='' $r=0 craft('islock',craftspace):$r,$v $SHOW=(($r&gt;0) and ($v&lt;&gt;''))"
+	  >
+          <textmessage loc="10 0" size="160 20"
+            style="Info"
+	    vq="craftnmrparRef craftspace"
+	    set="$v='' $r=0 craft('islock',craftspace):$r,$v $VALUE='(Locked)'"
+            />
+	  </group>
+	<group loc="120 20" size="270 20"
+	  vq="craftnmrparRef craftspace"
+	  show="$v='' $r=0 craft('islock',craftspace):$r,$v $SHOW=(($r=0) or ($v=''))"
+	  >
+	  <group loc="0 0" size="270 20"
+	    vq="craftnmrparRef craftspace"
+	    show="$stat=0 craft_abort('status'):$stat $SHOW=($stat=0)"
+	    >
+            <textmessage loc="10 0" size="260 20"
+              style="Info"
+              vq="craftnmrparRef craftspace"
+              set="$v='' craft_getInfo(craftspace,'Saved2Study'):$v if ($v='yes') then $VALUE='(Analysis is already saved)' elseif ($v='partial') then $VALUE='' elseif ($v='no') then $VALUE='' else $VALUE='(empty)' endif"
+              />
+            <textmessage loc="10 0" size="260 20"
+              style="Info"
+              vq="craftnmrparRef craftspace"
+              set="$v='' craft_getInfo(craftspace,'Saved2Study'):$v if ($v='yes') then $VALUE='' elseif ($v='partial') then $VALUE='(Analysis is partially saved)' elseif ($v='no') then $VALUE='(Analysis not yet saved)' else $VALUE='' endif"
+              />
+            </group>
+          <group loc="0 0" size="270 20"
+            vq="craftnmrparRef craftspace"
+            show="$stat=0 craft_abort('status'):$stat $SHOW=($stat&gt;0)"
+            >
+            <label loc="10 0" size="260 20"
+              style="Info"
+	      label="(Analysis Aborted)"
+	      />
+	    </group>
+	  </group>
+        <button loc="35 65" size="160 23"
+          style="Heading2"
+          label="New space"
+          vq="craftnmrparRef craftspace"
+	  show="$lock=0 craft('islock',craftspace):$lock $v='' craft_getInfo(craftspace,'Saved2Study'):$v $ENABLE=(($lock=0) and ($v&lt;&gt;'') and ($v&lt;&gt;'none'))*2-1"
+          vc="craft('create')"
+          bg="transparent"
+          />
+        <button loc="205 65" size="160 23"
+          style="Heading2"
+          label="Clear space"
+	  show="$lock=0 craft('islock',craftspace):$lock $v='' craft_getInfo(craftspace,'Saved2Study'):$v $ENABLE=(($lock=0) and ($v&lt;&gt;'') and ($v&lt;&gt;'none'))*2-1"
+          vq="craftnmrparRef craftspace"
+          vc="craft('clearspace')"
+          bg="transparent"
+          />
+          <button loc="35 90" size="160 23"
+            style="Heading2"
+            label="Analysis log"
+            vq="craftnmrparRef craftspace"
+            vc="craft('showAnalLog',craftspace)"
+	    show="$k=0 exists(craftspace+'/craftlog','file'):$k if $k then lookup('mfile',craftspace+'/craftlog','countline'):$k endif $ENABLE=($k&gt;0.5)*2-1"
+	    bg="transparent"
+            />
+          <button loc="205 90" size="160 23"
+            style="Heading2"
+            label="Show progress"
+            vq="craftnmrparRef craftspace"
+            vc="craft_progress"
+	    show="$k=0 exists(craftspace+'/ProgressInfo','file'):$k $ENABLE=($k&gt;0.5)*2-1"
+            bg="transparent"
+            />
+	  <label loc="35 42" size="60 20"
+	    style="Label1"
+	    label="Title"
+	    />
+	  <entry loc="80 42" size="285 20"
+	    style="PlainText"
+	    vq="craftnmrparRef"
+	    vc="ckstring('$VALUE'):craftnmrpar[12] craft('pnew')"
+	    set="$VALUE=craftnmrpar[12]"
+	    />
+
+	</group>
+        <group loc="5 135" size="400 155"
+          style="Heading1"
+      	  bg="transparent"
+       	  border="Etched"
+	  reference="craftProcessSetupOpt"
+       	  label="Regions of interest (ROI)"
+      	  subtype="Titled"
+      	  expanded="no"
+	  useref="yes"
+      	  >
+      	</group>
+        <group loc="5 300" size="400 195"
+          style="Heading1"
+          label="Analysis options"
+          bg="transparent"
+          border="Etched"
+	  reference="craftProcessProcOpt"
+          subtype="Titled"
+          expanded="no"
+	  useref="yes"
+          >
+	</group>
+        <group loc="5 505" size="400 170"
+          vq="craftnmrparRef"
+          style="Heading1"
+          label="Display options"
+          bg="transparent"
+	  reference="craftProcessDispOpt"
+          border="Etched"
+          subtype="Titled"
+          expanded="no"
+	  useref="yes"
+          >
+        </group>
+    </group>
+</template>

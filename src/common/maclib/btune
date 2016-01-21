@@ -1,0 +1,32 @@
+"macro btune"
+"*****************************************************"
+"* btune -- used to put the BB xmtr into tuning mode *"
+"*****************************************************"
+
+substr(rftype,1,1):$rftype
+$dum=0
+
+if (Console = 'mercury') then
+   if ( (2.0*sfrq) < h1freq ) then
+      sethw('tune',2,'nowait'):$dum
+   else
+      sethw('tune',1,'nowait'):$dum
+   endif
+   if ($dum = 1) then
+      $string='Tuning for '+tn+'.\\Type \'tuneoff\' when done.'
+      banner($string)
+   endif
+else
+if (($rftype = 'f') and (Console = 'g2000')) then
+   if ( (2.0*sfrq) < h1freq ) then
+      sethw('tune',4,'nowait'):$dum
+   else
+      sethw('tune',5,'nowait'):$dum
+   endif
+   if ($dum = 1) then
+      banner('Tuning BB channel.\\Type \'tuneoff\' when done.')
+   endif
+else
+   write('line3','Only run this command on a GEMINI 2000 BB or Mercury system!')
+endif
+endif

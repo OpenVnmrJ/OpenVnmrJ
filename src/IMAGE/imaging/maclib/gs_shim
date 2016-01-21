@@ -1,0 +1,65 @@
+"macro gs_shim"
+"***********************************************************************"
+" gs_shim - Custom macro to setup and shim 
+"
+" Details: The macro sets up parameters and does prescan shimming.
+"	   It is assumed that a standard shim parameter set is stored in
+"	   $shimpar (e.g. /vnmr/gshimdir/calib/prescange3dshim_gcoil_....par).
+"	   The global shim parameters are specified in this macro.
+"	   The frequency prescan macro is called to set the H1offset.
+"	   Multiple iterations can also be implemented within this
+"	   macro if necessary.
+"	   The slab or voxel parameters are taken from the current scan.
+"	   Typical procedure:
+"	   Load the scout image and plan the slices for the current scan
+"	   (e.g. mems). The gs_shim macro when executed, will save the
+"	   slice (slab) information for shimming and perform the shimming.
+"
+"***********************************************************************"
+
+$macro=$0
+"Specify the default parameter file to be used for ge3dshim"
+"$shimpar='/vnmr/gshimdir/calib/prescange3dshim_insert_12cm_80.40.40.par'
+"create the local shim parameter file for prescan"
+"normally this will already reside in user's parlib"
+"$file = userdir+'/parlib/prescan'+Prescan_ShimMethod+'_'+gcoil+'_'+rfcoil+'.par'
+"shell('rm -rf '+$file)
+"shell('cp -r '+$shimpar+' '+$file)
+
+"Bug - parameters get corrupted!"
+"prescan_main('freq')"
+
+"initialize the (global) shim parameters for prescan"
+"initialized for 1 iterations"
+Prescan_ShimSelection = '1','1&2','1&z2','1&z2'    "1 or 1&2 or 1&z2" 
+Prescan_ShimRegion =    'slab','slab','slab','slab'  "global or voxel"
+Prescan_ShimIteration =  1,1,0,0          "iteration #; on/off"
+Prescan_ShimDelay =      0.001,0.001,0.001,0.001	"phase delay, del sec"
+
+
+"initialize the voxel parameters manually"
+if(Prescan_ShimRegion[1] = 'voxel') then
+  "save voxel parameters for shimming"
+  writeparam(userdir+'/prescan/voxel.par','iplanDefaultType iplanType vtheta  vphi vpsi vox1 vox2 vox3 pos1 pos2 pos3')
+elseif(Prescan_ShimRegion[1] = 'slab') then
+  gs_slice    "save the current slice parameters"
+endif
+
+"do prescan shim routine"
+prescan_main('shim')
+
+"This part needs more work"
+"report frequency spread"
+"$GSDIR = userdir+'/gshimdir/data'
+"$out = $GSDIR+'/gshim.out'
+"$log = $GSDIR+'/gshim.log'
+"$s1 = '' $s2 = '' $s3 = '' 
+"lookup('mfile',$out,'filekey'):$key
+"lookup('mfile',$key,'seek','RMS','read','read','read'):$s1,$s2,$s3
+"write('line3','Frequency spread %s Hz',$s3)
+"save information in log file, gshim.log"
+"write('reset',$log)  "create log file"
+"write('file',$log,'Frequency spread (rms deviation) %s Hz',$s3)
+
+
+

@@ -1,0 +1,244 @@
+"macro autoHT"
+"autoHT macro for initializing the autoHT experiment series"
+"Eriks Kupce, Varian R&D"
+
+$fname='' $file='' $s1='' $s2=''
+exists('is_cpsample','maclib'):$cp
+
+if ($1='init') then
+
+  if not ($cp) then setHTdir($1) endif
+  exists('HTexp','parameter','global'):$e
+  if not ($e) then
+    shell('seqgen *HT.c')
+    shell('seqgen ineptr.c')
+    create('HTexp','string','global')
+    setprotect('HTexp','on',256,'global')
+    HTexp=''
+  endif
+
+  exists('HTnt','parameter','global'):$e
+  if not ($e) then
+    create('HTnt','integer','global')
+    setprotect('HTnt','on',256,'global')
+    HTnt=1
+  endif
+
+  exists('HTn','parameter','global'):$e
+  if not ($e) then
+    create('HTn','integer','global')
+  endif
+  HTn=0
+
+  exists('HTpw','parameter','global'):$e
+  if not ($e) then
+    create('HTpw','pulse','global')
+  endif
+  getparam('pw90','H1'):HTpw
+
+  exists('HTch','parameter','global'):$e
+  if not ($e) then
+    create('HTch','flag','global')
+  endif
+  HTch='n'
+
+  exists('HTzz','parameter','global'):$e
+  if not ($e) then
+    create('HTzz','flag','global')
+  endif
+  HTzz='y'
+
+  exists('HTplot','parameter','global'):$e
+  if not ($e) then
+    create('HTplot','flag','global')
+  endif
+  HTplot='n'
+
+  $i=1
+  repeat
+    HTexp[$i]='n'
+    HTnt[$i]=1
+    $i = $i + 1
+  until($i>12)
+
+  HTnt[4] = 4 "NOESY"
+  HTnt[5] = 4 "ROESY"
+  HTnt[9] = 4 "HMBC"
+  HTnt[10] = 4 "HSQC TOCSY"
+  HTnt[11] = 2 "HETCOR"
+
+  HTexp[1] = 'tocsyHT'
+  HTexp[3] = 'dqcosyHT'
+  HTexp[6] = 'hsqcHT'
+  HTexp[8] = 'hsqcHT'
+  HTexp[10] = 'hmbcHT'
+
+  tocsyHT 
+  lb1 = 20.0
+  return
+
+elseif ($1 = 'start') then
+
+// If $cp, save the data via savefid else
+//     use svf and save the data in HTdir
+  if ($cp) then
+	isnewexp:$new
+	if ($new) then savefid endif
+  else
+	setHTdir($1):$svfdir
+	$listfile=$svfdir+'/H1.ll'
+	$fidfile=$svfdir+'/H1.fid'
+	exists($listfile,'file'):$eh
+	if ($eh) then
+	    exists($fidfile,'directory'):$eff
+	    if (not $eff) then
+		svf($fidfile)
+	    endif
+	endif
+  endif
+
+  HTn=0  
+  $1 = 'next'
+    
+endif
+
+if($1 = 'next') then
+
+//localHTfreqs macro returns appropriate filenames
+//  The 2nd return value will be absolute path and
+//  hence independent of inside or outside VJ3/CP4
+
+  localHTfreqs(''):$e,$svfdir
+  $fidex=0
+  if ($cp) then
+    AutoCheck('PROTON'):$fidex,$file
+  else
+    $file=$svfdir+'/H1.fid'
+    exists($file,'directory'):$fidex
+  endif
+  if ($fidex=0) then 
+      write('error','PROTON fid not found')
+      return
+  endif
+  $Hfile=$file
+
+  repeat
+      HTn = HTn + 1
+  until (HTexp[HTn] <> 'n') or (HTn > 11)
+
+  if(HTn = 12) then
+    banner('autoHT Experiments Finished')
+    return
+  else
+                            
+    if (HTn < 6) or (HTn > 10) then 
+
+      localHTfreqs('H1'):$e,$fname
+      if not ($e) then
+        HTlist('H1')
+	localHTfreqs('H1'):$e,$fname
+      endif
+
+      if(HTn = 11) then
+	$fid2ex=0
+	if ($cp) then
+	   AutoCheck('CARBON'):$fid2ex,$file
+	else
+	   $file=$svfdir+'/C13.fid'
+	   exists($file,'directory'):$fid2ex
+	endif
+	if ($fid2ex=0) then
+      		write('error','CARBON fid not found')
+      		return
+  	endif
+      elseif (HTn > 3) then
+	localHTfreqs('H1noe'):$e,$fname
+        if not ($e) then
+	  localHTfreqs('H1'):$e,$fname
+        endif
+      endif
+
+    else
+                  
+      if (HTn < 10) then
+	localHTfreqs('CH'):$e,$fname
+        if not ($e) then
+	  localHTfreqs('C13'):$e,$fname
+          if not ($e) then
+            HTlist('C13')
+            return
+          endif
+        endif
+      else
+	localHTfreqs('C13'):$e,$fname
+        if not ($e) then
+          HTlist('C13')
+          return
+        endif
+      endif
+
+    endif
+
+      rtp($file)
+      
+    {HTexp[HTn]}
+    vnmrjcmd('setpage','Acquire','AutoHT')
+
+    nt = HTnt[HTn]
+    n1=''
+    if (not $cp) then
+        n1 = $svfdir+`/`+HTexp[HTn]
+    endif
+    if(HTn = 11) then 
+	rtv($Hfile,'d1'):d1
+    else
+      pw=HTpw 
+    endif
+
+    if(HTn>5) and (HTn<9) then    "HSQC experiments "
+      zz=HTzz mult=0
+      if (HTn=7) then mult=1 n1=n1+'_CH'
+      elseif (HTn=8) then mult=2 n1=n1+'_CH2'
+      endif
+    endif
+
+    if(np>17000) then
+      np=16*1024
+    endif
+
+    if(fn>33000) then
+      np=32*1024
+    endif
+
+    axis='pd'
+    refsource1='dfrq' 
+    if(HTn < 6) then
+      axis='pp'
+      refsource1='sfrq'
+    endif
+    copy($fname, curexp+'/htll.htfrq1')
+    importHT      
+    write('reset',curexp+'/text')
+    write('file',curexp+'/text', 'New Experiment: %s', HTexp[HTn])
+    dps dtext
+    bs=nt
+    if(bs>4) then bs=4 endif
+    wnt='if(celem<2) then plotHT(`inset`) endif'
+
+// If $cp, save the data via savefid else
+//     use svf and save the data in HTdir
+    if (not $cp) then
+	wexp='plotHT(`2D`) svf(n1) autoHT(`next`)'
+	au
+    else
+        wexp='plotHT(`2D`) savefid autoHT(`next`)'
+	cpgo
+    endif
+  endif
+
+endif
+
+
+
+
+

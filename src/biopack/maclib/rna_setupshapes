@@ -1,0 +1,153 @@
+"macro rna_setupshapes"
+" rna_setupshapes"
+" creates waveforms WURSTxx.DEC, where xx is the number of 13C ppm bandwidth"
+" if BPpwrlimits=1, power levels may reduced, but bandwidths remain, at"
+"   the expense of increased sidebands"
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+
+format(80.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 80 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+pboxpar('name', 'wurst80.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst80.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst80.DEC')
+
+format(110.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 110 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'wurst110.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst110.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst110.DEC')
+
+format(50.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 50 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+pboxpar('name', 'wurst50.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst50.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst50.DEC')
+
+format(40.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 40 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+pboxpar('name', 'wurst40.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst40.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst40.DEC')
+
+format(140.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 140 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+pboxpar('name', 'wurst140.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst140.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst140.DEC')
+
+if (sfrq>810) then
+   opx('S_at_12p')
+   setwave('s 0.000064')
+   cpx(ref_pw90,ref_pwr)
+ endif
+ if ((sfrq>760) and (sfrq<810)) then
+   opx('S_at_12p')
+   setwave('s 0.000072')
+   cpx(ref_pw90,ref_pwr)
+ endif
+ if ((sfrq>590) and (sfrq<610)) then
+   opx('S_at_12p')
+   setwave('s 0.000096')
+   cpx(ref_pw90,ref_pwr)
+ endif
+ if ((sfrq>490) and (sfrq<510)) then
+   opx('S_at_12p')
+   setwave('s 0.000115')
+   cpx(ref_pw90,ref_pwr)
+ endif
+ if ((sfrq>390) and (sfrq<410)) then
+   opx('S_at_12p')
+   setwave('s 0.000144')
+   cpx(ref_pw90,ref_pwr)
+ endif
+ if ((sfrq>290) and (sfrq<310)) then
+   opx('S_at_12p')
+   setwave('s 0.000192')
+   cpx(ref_pw90,ref_pwr)
+ endif
+
+rna_makeSTUDpp
+
+n3=$n3

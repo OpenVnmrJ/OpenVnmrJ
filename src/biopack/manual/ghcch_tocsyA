@@ -1,0 +1,122 @@
+  ghcch_tocsyA               
+
+    3D HCCH tocsy utilising gradients and double sensitivity enhancement.
+    Also known as DE-H(C)CH-TOCSY.
+
+    Uses optional magic-angle gradients.
+
+    Correlates the sidechain aliphatic 13C resonances of a given amino acid.
+    Uses isotropic 13C mixing.
+
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP one-lobe sinc pulses on 13CO with first null
+    at Ca.  Maximum sensitivity is obtained using full power square pulses on 
+    the CaCb region throughout.  DIPSI-3 rather than DIPSI-2 (suggested in the
+    JMR article) is used as standard as in the other BioPack sequences;
+    optional 2H decoupling when CaCb magnetization is transverse and during 1H
+    shift evolution for 4 channel spectrometers.  
+ 
+    pulse sequence: Sattler, Schwendinger, Schleucher and Griesinger, JBNMR,
+			Vol 6  No.1, 11-22 (1995).
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+
+    Derived from gc_co_nh.c written by Robin Bendall, Varian, March 94 and 95.
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1997.
+
+
+    Efficient STUD+ decoupling is invoked with STUD='y' without need to 
+    set any parameters.
+    (STUD+ decoupling- Bendall & Skinner, JMR, A124, 474 (1997) and in press)
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'w' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [1H]  and t2 [13C].
+
+    2D experiment in t1: wft2d(1,0,-1,0,0,1,0,1) (sensitivity-enhanced)
+    2D experiment in t2: wft2d('ni2',1,0,-1,0,0,1,0,1) (sensitivity-enhanced)
+    ( or with 5.2F or above just use wft2da or wft2da('ni2') after setting
+      f1coef='1 0 -1 0 0 1 0 1'
+      f2coef='1 0 -1 0 0 1 0 1'
+     for 3D just use ft3d )
+    
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghcch_tocsy
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghcch_tocsy may be printed using:
+                                      "printon man('ghcch_tocsy') printoff".
+             
+    2. Apply the setup macro "ghcch_tocsy".  This loads the relevant parameter
+       set and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral
+       check.
+
+    3. The parameter ncyc corresponds to the number of cycles of DIPSI-3 mixing.
+       Use ncyc = 2 or 3 usually.  This corresponds to a total mixing time of
+       (2 or 3)*6.07*600/sfrq ms for a DIPSI rf field of 9 kHz for a 600Mhz 
+       spectrometer, is sufficient to cover 14.4 kHz of bandwidth (96ppm at 600
+       MHz, more than adequate for the CC J's. Change the value of spinlock to
+       increase or reduce the bandwidth. 
+      
+    4. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 35ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       35ppm, ie at CaCb throughout the sequence.
+
+    5. del (3.4 ms), del1 (1.9 ms), and del2 (1.6 ms), were determined for 
+       alphalytic protease and are listed in dg2 for possible readjustment by
+       the user. The above reference (Fig.1) gives theoretical values of 0.5/J,
+       0.31/J and 0.23/J for del, del1 and del2 and elsewhere in the reference,
+       3.6, 2.2 and 1.9 ms can be inferred. 
+
+    6. If 2H decoupling is used, the 2H lock signal may become unstable because
+       of 2H saturation.  Check that a 1D spectrum is stable/reproducible as 
+       when 2H decoupling is not used.  You might also check this for d2 and d3
+       equal to values achieved at say 75% of their maximum.  Remember to return
+       d2=d3=0 before starting a 2D/3D experiment.
+
+    7. A 2D CH spectrum will be an ordinary 13C hsqc since evolution in t2 occurs
+       after the c13 spinlock. Therefore, CH 2D spectra using hcch_tocsy.c cannot
+       be compared with CH 2D spectra using ghcch_tocsy.c . However, 3D spectra
+       will show all crosspeaks in both experiments. The magic-angle option does
+       permit somewhat better water suppression using ghcch_tocsy.
+
+
+    Modified for automatic shaped pulse creation using Pbox (EK, Aug 2002)
+		 

@@ -1,0 +1,142 @@
+"macro BPupdatelocal"
+"BPupdatelocal - update local account for a global BioPack install / update"
+
+" first check conditions "
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+exists('/vnmr/BioPack.dir','directory'):$vbp
+if ($me <> $vjadmin)or(not($vbp)) then
+  write('error',
+        '%s: only for users other than vnmr1 & BioPack installed in /vnmr',$0)
+  return
+endif
+
+" remove local BioPack files "
+BPrmlocalfiles
+BPglobalpar
+
+" transfer vnmr1's BioPack global parameters to local account "
+$vnmrmaster='' $vnmr1dir=''
+shell('ls -ld /vnmr/bin | awk \'{print $3}\'; cat'):$vnmrmaster
+shell('csh -c \'echo ~'+$vnmrmaster+'\''):$vnmr1dir
+$vnmr1global=$vnmr1dir+'/vnmrsys/global'
+$vnmr1probes=$vnmr1dir+'/vnmrsys/probes'
+$vnmr1pars=$vnmr1dir+'/vnmrsys/parlib'
+$vnmrprobes=systemdir+'/probes'
+exists($vnmr1global,'file'):$e
+if not($e) then
+  write('error','%s failed - could not locate vnmr1\'s global parameters',$0)
+else
+
+  " remember local BP globals "
+  fsave(userdir+'/global','global')
+  $BP2Dplot=BP2Dplot
+  $BPBioNMR=BPBioNMR
+  $BPdeuterated=BPdeuterated
+  $BPpwrlimits=BPpwrlimits
+  $BPdpwr4max=BPdpwr4max
+  $BPdpwr3max=BPdpwr3max
+  $BPdpwr2max=BPdpwr2max
+  $BPtpwrmax=BPtpwrmax
+  $BPminpwC=BPminpwC
+  $BPdpwrmax=BPdpwrmax
+  $BPtpwrspinlock=BPtpwrspinlock
+  $BPdpwrspinlock=BPdpwrspinlock
+  $BP1Hspinlock=BP1Hspinlock
+  $BPspinlock=BPspinlock
+  $BPinstall=BPinstall
+  $bioref=bioref
+  $probe=probe
+
+  " vnmr1's BP globals override any local settings "
+  fread($vnmr1global,'global')
+  exists('BP2Dplot','parameter','global'):$e
+  if $e then $BP2Dplot=BP2Dplot endif
+  exists('BPBioNMR','parameter','global'):$e
+  if $e then $BPBioNMR=BPBioNMR endif
+  exists('BPdeuterated','parameter','global'):$e
+  if $e then $BPdeuterated=BPdeuterated endif
+  exists('BPpwrlimits','parameter','global'):$e
+  if $e then $BPpwrlimits=BPpwrlimits endif
+  exists('BPdpwr4max','parameter','global'):$e
+  if $e then $BPdpwr4max=BPdpwr4max endif
+  exists('BPdpwr3max','parameter','global'):$e
+  if $e then $BPdpwr3max=BPdpwr3max endif
+  exists('BPdpwr2max','parameter','global'):$e
+  if $e then $BPdpwr2max=BPdpwr2max endif
+  exists('BPtpwrmax','parameter','global'):$e
+  if $e then $BPtpwrmax=BPtpwrmax endif
+  exists('BPminpwC','parameter','global'):$e
+  if $e then $BPminpwC=BPminpwC endif
+  exists('BPdpwrmax','parameter','global'):$e
+  if $e then $BPdpwrmax=BPdpwrmax endif
+  exists('BPtpwrspinlock','parameter','global'):$e
+  if $e then $BPtpwrspinlock=BPtpwrspinlock endif
+  exists('BP1Hspinlock','parameter','global'):$e
+  if $e then $BP1Hspinlock=BP1Hspinlock endif
+  exists('BPdpwrspinlock','parameter','global'):$e
+  if $e then $BPdpwrspinlock=BPdpwrspinlock endif
+  exists('BPspinlock','parameter','global'):$e
+  if $e then $BPspinlock=BPspinlock endif
+  exists('BPinstall','parameter','global'):$e
+  if $e then $BPinstall=BPinstall endif
+  exists('bioref','parameter','global'):$e
+  if $e then $bioref=bioref endif
+  exists('probe','parameter','global'):$e
+  if $e then $probe=probe endif
+
+  " update the local global parameters "
+  fread(userdir+'/global','global')
+  BP2Dplot=$BP2Dplot
+  BPBioNMR=$BPBioNMR
+  BPdeuterated=$BPdeuterated
+  BPpwrlimits=$BPpwrlimits
+  BPdpwr3max=$BPdpwr3max
+  BPdpwr2max=$BPdpwr2max
+  BPtpwrmax=$BPtpwrmax
+  BPminpwC=$BPminpwC
+  BPdpwrmax=$BPdpwrmax
+  BPtpwrspinlock=$BPtpwrspinlock
+  BP1Hspinlock=$BP1Hspinlock
+  BPdpwrspinlock=$BPdpwrspinlock
+  BPspinlock=$BPspinlock
+  BPinstall=$BPinstall
+  bioref=$bioref
+  probe=$probe
+  fsave(userdir+'/global','global')
+
+  " copy in vnmr1's probe calibrations for the current 'probe' setting "
+  exists(userdir+'/probes','directory'):$e
+  if not($e) then
+    shell('mkdir',userdir+'/probes'):$dum
+  endif
+  $newcal=''
+  exists($vnmr1probes+'/'+probe,'file'):$epv1
+  if $epv1 then
+    $newcal=$vnmr1probes+'/'+probe
+  else
+    exists($vnmrprobes+'/'+probe,'file'):$epv
+    if $epv then
+      $newcal=$vnmrprobes+'/'+probe
+    endif
+  endif
+  if $newcal<>'' then
+    exists(userdir+'/probes/'+probe,'file'):$e
+    if $e then
+      $date=''
+      shell('date \'+.bkup_%Y-%m-%d_%H:%M\''):$date
+      shell('mv',userdir+'/probes/'+probe,userdir+'/probes/'+probe+$date):$dum
+    endif
+    shell('cp -r',$newcal,userdir+'/probes/'+probe):$dum
+  endif
+
+  " now run BPbiopack2 to reconfigure account for running BP "
+  exists($vnmr1pars+'/ghn_co.par','file'):$ep
+  if $ep then
+    rtp($vnmr1pars+'/ghn_co.par')
+  else
+    rtp(systemdir+'/parlib/ghn_co.par')
+  endif
+  BPbiopack2
+endif

@@ -1,0 +1,122 @@
+"macro setgdelays"
+/******************************************************************
+*  setgdelays: Set up standard gems sequence to calibrate the
+*  gpropdelay parameter for gradient propagation delay
+*
+*  The optimum value of gpropdelay will be written to the gradtable
+*  file for the gradient coil currently selected by gcoil
+*
+*  This procedure requires that the system be externally triggered.
+*  The easiest way to do this is to connect the 60Hz line sync on
+*  the back of the system power supply to the External Trigger
+*  input
+*  
+*  To use this setup procedure, first load the standard GEMS
+*  protocol, then run setgdelays.  The initial protocol will be
+*  modified.  When the calibration is complete, discard this protocol.
+*
+*  ARR   Version 1.0   10/11/06 
+*
+*******************************************************************/
+
+"-- Check for proper gcoil value --------------------------"
+if (gcoil = '') or (gcoil = 'None') or (gcoil = 'none') then
+  write('error','Configure gcoil before proceeding')
+  return
+endif
+
+"-- Check existence of file in gradtables -----------------"
+$table = systemdir+'/imaging/gradtables/'+gcoil
+exists($table,'file'):$ex1
+if $ex1 < 0.5 then
+  write('error','%s',$prog+'Cannot locate requested gradtable file')
+  return
+endif
+
+if ($# = 0) then
+  "-- Read gradtables file ----------------------------------"
+  edit_sysgcoil('read')
+
+  "-- Measurement uses standard GEMS sequence ---------------"
+  if (seqfil <> 'gems') then
+    write('error','Load gems protocol before running setgdelays')
+    return  
+  endif
+
+  if ((array <> '') OR (arraydim > 1)) then
+    write('error','setgdelays: one or more parameters are arrayed')
+    return
+  endif
+
+  if (ns > 1) then
+    write('error','setgdelays: set number of slices to 1')
+    return
+  endif
+
+  exists('gpropdelay','parameter'):$ex1
+  if ($ex1 < 0.5) then
+    create('gpropdelay','pulse')
+  endif
+
+  exists('gxdelay','parameter'):$ex1
+  if ($ex1 < 0.5) then
+    create('gxdelay','pulse')
+  endif
+
+  exists('gydelay','parameter'):$ex1
+  if ($ex1 < 0.5) then
+    create('gydelay','pulse')
+  endif
+
+  exists('gzdelay','parameter'):$ex1
+  if ($ex1 < 0.5) then
+    create('gzdelay','pulse')
+  endif
+
+  exists('b0delay','parameter'):$ex1
+  if ($ex1 < 0.5) then
+    create('b0delay','pulse')
+  endif
+  write('line3','setgdelays calibration started; make sure external trigger is connected')
+  getgdelay('trans')
+  
+endif  "Initialize and start scan"
+
+/*---------------------------------------------------------
+* Process and analyze data, update gpropdelay value in gradtables file
+*---------------------------------------------------------*/
+
+if ($# = 2) then
+  if ($1 <> 'proc') then
+    write('error','Use setgdelays(\'proc\') to process')
+    abort
+  endif
+
+  wft
+  f full
+  write('line3','argument 2 %s',$2)
+  "Find tallest profile in the array"
+  findmaxpeak:$index
+  select($index)  vsadj  dssh
+
+  "gradient propagation delay is the array value at the returned index"
+  $gpropdelay = gpropdelay[$index]
+  gpropdelay = $gpropdelay
+
+  "-- Update current gradtable file -------------------------"
+  gcoil_params[17] = $gpropdelay
+  write('line3','%s delay set to %d usec',$2, gpropdelay)
+  if ($2 = 'trans') then
+      gcoil_params[21]=$gpropdelay
+	  getgdelay('cor')
+  elseif ($2 = 'cor') then
+      gcoil_params[20]=$gpropdelay
+	  getgdelay('sag')
+  elseif ($2 = 'sag') then
+      gcoil_params[19]=$gpropdelay
+      gcoil_params[18]=1
+      edit_sysgcoil('save')
+  endif
+
+endif  "process and analyze"
+

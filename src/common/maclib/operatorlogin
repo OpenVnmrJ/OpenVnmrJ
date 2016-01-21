@@ -1,0 +1,96 @@
+"macro operatorlogin"
+
+if (jviewports[1]>1.5 and jviewport>1.5) then
+  $cmd=$0+'('
+  $i=0
+  while ($i < $#) do
+    $i=$i+1
+    format(${$i},'isreal'):$s
+    if ($s=1) then
+	$arg=''
+	format(${$i},'lower'):$arg
+	$cmd=$cmd+$arg
+    else
+    	$cmd=$cmd+'\''+${$i}+'\''
+    endif
+    if $i<$# then $cmd=$cmd+',' endif
+  endwhile
+  $cmd=$cmd+')'
+  vnmrjcmd('VP 1 '+$cmd)
+  return
+endif
+
+is_postvj22b:$vj22c
+IF ($vj22c) THEN
+	isFDAsystem:$e
+	if($e > 0.5) then
+	   p11_switchOpt(operator)
+	endif
+
+	if ($# > 0.5) then
+	  email=$1
+	endif
+	if ($# > 1.5) then
+	  $val=0 format($2,0,0):$val
+	  panellevel=$val
+	endif
+	acct('start')
+ELSE
+	isFDAsystem:$e
+	if($e > 0.5) then
+	   p11_switchOperator($1)
+	endif
+
+	if ($# > 0.5) then
+	  setvalue('operator', $1, 'global')
+	  vnmrjcmd('pnew','operator')
+	endif
+	if ($# > 1.5) then
+	  email=$2
+	endif
+	if ($# > 2.5) then
+	  panellevel=$3
+	endif
+ENDIF
+if (FASTenv='y') then FASTuser=operator endif
+
+bgmode_is:$bgmod
+if ($bgmod=0) then 
+// Perhaps previous logout left the UI in 
+//   Archive tray display mode
+   if (cpautodir<>autodir) then
+	showtray('closesq')
+   endif
+   exists('personalogin','maclib'):$macex
+   if ($macex) then personalogin endif
+   loaduserprefs('global')
+   TrayClipBoard=''
+endif
+updateExpSelector
+setprotect('SpecViewPref','on',256,'global')
+getadminfo('autosqdisplay'):SpecViewPref[1]
+getadminfo('autosqdispchron'):SpecViewPref[2]
+//$svp=ScoutViewPref
+//getadminfo('showscoutfid'):ScoutViewPref
+//if ($svp<>ScoutViewPref) and (sqdisplay[1]='sample') then SQDisplay('refresh') endif
+
+        $scout='no' $errnode='yes'
+        getadminfo('showscoutfid'):$scout
+        if ($scout='yes') then
+            SampleViewPref('set','scout')
+        else
+            SampleViewPref('remove','scout')
+        endif
+        getadminfo('showerrnodes'):$errnode
+        if ($errnode='yes') then
+            SampleViewPref('set','error')
+        else
+            SampleViewPref('remove','error')
+        endif
+
+SQDisplay('refresh')
+pageview('setup')
+dousermacro($0)
+loginCPprefs
+QuickSubmit('start')
+

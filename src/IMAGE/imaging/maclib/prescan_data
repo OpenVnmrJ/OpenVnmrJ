@@ -1,0 +1,69 @@
+"macro prescan_data"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_data
+"
+" DESCRIPTION:
+"    Save or retrieve prescan data; defaults to frequency
+"
+" USAGE: prescan_data(<arg 1>,<arg2>)
+"
+"    <arg 1> = 'load' or 'save' to either retrieve or save prescan data.
+"              If a study is active, the data is stored in the study data
+"              directory, otherwise in the current experiment.
+"    <arg 2> = type of prescan to load or save, e.g., 'freq', or 'power'
+"
+" EXAMPLE:
+"    prescan_data('save','freq')
+"    will save the frequency prescan data into studyid/data/prescan_freq.fid.
+"********************************************************************
+$action = 'save'
+$name   = '_freq'
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $name = '_' + $2
+endif
+
+$return = 1
+
+$fidfile=''
+
+if (activestudy[1]<>'null') then
+  $fidfile = sqdir + '/prescan' + $name
+else
+  $fidfile = curexp + '/prescan' + $name
+endif
+
+exists($fidfile + '.fid','file'):$ex
+
+if ($action = 'save') then
+  if ($ex > 0) then 
+    delete($fidfile):$junk
+  endif
+
+  $execprocess = execprocess
+  execprocess = 'wft'
+  svf($fidfile)
+  execprocess = $execprocess
+elseif ($action = 'load') then
+  if ($ex > 0) then
+    rt($fidfile)
+    $return = 1
+  
+    exists('execplot','parameter'):$ex
+    if ($ex > 0) then
+      exec(execplot)
+    endif
+  else
+    write('line3','No data found')
+    $return = 0
+  endif
+endif
+
+return($return)
+

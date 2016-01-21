@@ -1,0 +1,196 @@
+"macro gmapshim"
+"macro for running gradient shimming"
+
+if ($# < 0.5) then
+  $str=''
+  $file=userdir+'/gshimlib/data/gshim.list'
+  exists($file,'file'):$e
+  if $e<0.5 then
+    exists('Gmap','parameter'):$e
+    if ($e>0.5) then
+      getparam(Gmap+'map','Probe'):$str
+      if ($str<>'' and $str<>'n') then
+        if auto='n' then tmpsave('gtmp') endif
+        gmapz($str)
+        gmapauto_ez('startshim')
+        return('ok')
+      endif
+    endif
+    $ok='n'
+    if auto='n' then tmpsave('gtmp') endif
+    cqgmap('mapname'):$ok
+    if ($ok='y') then
+      gmapauto_ez('startshim')
+      return('ok')
+    endif
+    if auto='n' then tmpreturn('gtmp') endif
+    return('nomap')
+  else
+    lookup('mfile',$file,'skip','read'):$str
+    exists($str+'.fid','gshimlib/shimmaps'):$d
+    if $d<0.5 then
+      return('nomap')
+    else
+      gmapauto_ez('startshim')
+      return('ok')
+    endif
+  endif
+endif
+
+if ($1 = 'help') then
+  man('gmapshim')
+  return
+endif
+
+if ($1 = 'shim') then
+  gmapauto_ez('startshim')
+  return
+endif
+
+if ($1 = 'glideau') then
+  gmapauto_ez('startshim','glideau')
+  return
+endif
+
+if ($1 = 'exit' or $1 = 'return' or $1 = 'quit') then
+  aa
+  gmapset('return')
+  return
+endif
+
+if ($1 = 'files') then
+  files('gmap_disp_ez')
+  return
+endif
+
+if ($1 = 'rtp') then
+  gmapauto_ez('startshim','rtp')
+  return
+endif
+
+if ($1 = 'tmpsave') then
+  if (seqfil<>'gmapz' and auto<>'y') then
+    $jstr = curexp+'/gtmp'
+    exists($jstr,'file'):$e
+    if $e>0.5 then rm('-r',$jstr):$x endif
+    tmpsave('gtmp')
+    exists(curexp+'/text','file'):$t
+    if $t>0.5 then cp(curexp+'/text',curexp+'/gtmp') endif
+  endif
+  return
+endif
+
+if ($1 = 'findtof') then
+  if seqfil<>'gmapz' then
+    gmapauto_ez('startshim','rtp')
+  endif
+  if $#>1.5 then
+    if $2='shim' then
+      gmapauto_ez('starttof','shim')
+    else
+      gmapauto_ez('starttof')
+    endif
+  else
+    gmapauto_ez('starttof')
+  endif
+  return
+endif
+
+if ($1 = 'mapname') then
+  $js=userdir+'/gshimlib/data/gshim.list'
+  $mapname=''
+  exists($js,'file'):$e
+  if $e>0.5 then
+    lookup('file',$js,'seek','mapname','read'):$mapname
+    exists($mapname+'.fid','file'):$d
+    if $d<0.5 then
+      exists($mapname+'.par','file'):$d
+    if $d<0.5 then
+      $tfile='/gshimlib/shimmaps/'+$mapname
+    exists(userdir+$tfile+'.fid','file'):$d
+    if $d<0.5 then
+      exists(userdir+$tfile+'.par','file'):$d
+    if $d<0.5 then
+      exists(systemdir+$tfile+'.fid','file'):$d
+    if $d<0.5 then
+      exists(systemdir+$tfile+'.par','file'):$d
+    endif endif endif endif endif
+  else
+    $mapname=''
+    $d=1
+  endif
+  if $#<1.5 then
+    if $d>0.5 then
+      write('line3','current mapname is %s',$mapname)
+    else
+      write('error','current mapname is %s, shimmap does not exist',$mapname)
+    endif
+  endif
+  return($mapname,$d)
+endif
+
+if ($1 = 'findmap') then
+  $found=0
+  $mapname=''
+  $js=userdir+'/gshimlib/data/gshim.list'
+  if $#>1.5 then
+    $mapname=$2
+  else
+    exists($js,'file'):$e
+    if $e>0.5 then
+      lookup('file',$js,'seek','mapname','read'):$mapname
+    endif
+  endif
+  if $mapname<>'' then
+    $file='/gshimlib/shimmaps/'+$mapname+'.fid'
+    $dir=userdir+$file
+    exists($dir,'file'):$d
+    if $d<0.5 then
+      $dir=systemdir+$file
+      exists($dir,'file'):$d
+    endif
+    if $d>0.5 then
+      exists($dir+'/gshim.list','file'):$e
+      if $e>0.5 then
+        exists($dir+'/gshim.bas','file'):$e
+      endif
+      if $e>0.5 then
+        $found=1
+      endif
+    endif
+  endif
+  if $##<0.5 then
+    if $found>0.5 then
+      write('line3','map found: %s',$dir)
+    else
+      write('line3','map \'%s\' not found',$mapname)
+    endif
+  endif
+  return($found)
+endif
+
+if ($1 = 'findprobemap') then
+  $found=0
+  if $#>1.5 then
+    $map=''
+    getparam($2+'map','Probe'):$map
+    if ($map<>'' and $map<>'n') then
+      gmapshim('findmap',$map):$found
+    endif
+  endif
+  return($found)
+endif
+
+if ($1 = 'list') then
+  gmaprep('shimd')
+  return
+endif
+
+if ($1 = 'rec') then
+  clear
+  cat(userdir+'/gshimlib/data/gshim.rec')
+  return
+endif
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+return

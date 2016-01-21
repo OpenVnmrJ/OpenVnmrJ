@@ -1,0 +1,135 @@
+#!
+
+import os
+import shutil
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+XreconTarget = 'Xrecon'
+# IreconTarget = 'libIrecon.so'
+
+# source files
+senseFilesList = ['COPYING',
+                  'INSTALL',
+                  'Makefile',
+                  'README',
+                  'data.h',
+                  'Xrecon.h']
+
+senseSrcDirsList = ['common',
+                    'common1D',
+                    'common2D',
+                    'common3D',
+                    'nifti',
+                    'recon1D',
+                    'recon2D',
+                    'recon3D',
+                    'reconEPI',
+                    'reconCSI']
+
+senseSrcFilesList = ['common/dhead.c',
+                     'common/dutils.c',
+                     'common/dproc.c',
+                     'common/dread.c',
+                     'common/options.c',
+                     'common/pars.c',
+                     'common/utils.c',
+                     'common1D/dproc1D.c',
+                     'common1D/dread1D.c',
+                     'common1D/dutils1D.c',
+                     'common1D/write1D.c',
+                     'common2D/dmask2D.c',
+                     'common2D/dread2D.c',
+                     'common2D/fdfwrite2D.c',
+                     'common2D/rawwrite2D.c',
+                     'common2D/dproc2D.c',
+                     'common2D/dutils2D.c',
+                     'common2D/noise2D.c',
+                     'common2D/tifwrite2D.c',
+                     'common3D/dproc3D.c',
+                     'common3D/fdfwrite3D.c',
+                     'common3D/rawIO3D.c',
+                     'nifti/niftiwrite.c',
+                     'recon1D/default1D.c',
+                     'recon1D/profile1D.c',
+                     'recon1D/recon1D.c',
+                     'recon2D/default2D.c',
+                     'recon2D/asltest2D.c',
+                     'recon2D/mask2D.c',
+                     'recon2D/proj2D.c',
+                     'recon2D/recon2D.c',
+                     'recon2D/sense2D.c',
+                     'recon2D/sensi2D.c',
+                     'recon2D/smap2D.c',
+                     'recon3D/default3D.c',
+                     'recon3D/multiblock3D.c',
+                     'recon3D/recon3D.c',
+                     'reconCSI/reconCSI.c',
+                     'reconCSI/reconCSI2D.c',
+                     'reconCSI/reconCSI3D.c',
+                     'reconCSI/dprocCSI.c',
+                     'reconEPI/defaultEPI.c',
+                     'reconEPI/dprocEPI.c',
+                     'reconEPI/prescanEPI.c',
+                     'reconEPI/reconEPI.c']
+
+# IreconSrcFilesList = ['Irecon.c']                     
+
+XreconSrcFilesList = ['Xrecon.c']                       
+
+dataPath = os.path.join(cwd, os.pardir, 'vnmr')
+dataFile = 'data.h'
+
+# build environments
+if (platform=="darwin"):
+     librPath = os.path.join(ovjtools, 'fftw_mac', 'fftw-3.1.2')
+else:
+     librPath = os.path.join(ovjtools, 'fftw', 'fftw-3.1.2')
+
+inclPath = os.path.join(ovjtools, 'fftw', 'fftw-3.1.2', 'api')
+
+env = Environment(CCFLAGS   = '-O2 -Wall -I' + inclPath,
+                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib -L' + librPath)
+
+fftstatic=os.path.join(librPath,'libfftw3.a')
+libffts=File(fftstatic)
+
+# define with absolute path where built files will be copied
+optionsSensePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                'vnmr', 'bin')
+# library path for shared lib
+
+# make sure the path exist
+if not os.path.exists(optionsSensePath):
+   os.makedirs(optionsSensePath)
+
+
+# actual builds
+xreconBuildObj = env.Program(target = XreconTarget,
+                             source = senseSrcFilesList + XreconSrcFilesList,
+                             LIBS   = [libffts, 'gsl', 'gslcblas', 'tiff', 'm'])
+                             
+# ireconBuildObj = env.SharedLibrary(target = IreconTarget,
+#                              source = senseSrcFilesList + IreconSrcFilesList,
+#                              LIBS   = ['gsl', 'gslcblas', 'fftw3', 'tiff', 'm'])
+
+#buildMethods.makeSymLinks(env, XreconTarget, cwd, dataPath, [dataFile])
+
+
+env.AddPostAction(xreconBuildObj,
+                  Action(Copy(optionsSensePath, os.path.join(cwd, XreconTarget))))

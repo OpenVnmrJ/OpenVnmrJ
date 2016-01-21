@@ -1,0 +1,54 @@
+"macro mht"
+// move Hadamard transform frequency list
+//   from one experiment to another
+
+if $#<0.5 then
+  write('error','usage: mht(<from_exp,> to_exp)')
+  return
+endif
+format($1,'isreal'):$isr
+if not ($isr) then return endif
+
+$cur = 0
+$to = 0
+$from = 0
+format($1,1,0):$to
+if $#>1.5 then
+  format($1,1,0):$from
+  format($2,1,0):$to
+endif
+if $to<0.5 then
+  write('error','usage: mht(<from_exp,> to_exp)')
+  return
+endif
+
+jexp:$cur
+
+if $from<0.5 then
+  $from=$cur
+endif
+
+if ($to = $from) then
+  return
+endif
+
+// save htfrq1
+if ($from<>$cur) then jexp($from) endif
+exists('htfrq1','parameter'):$ep
+if ($ep) then
+  editht('saveni')
+else
+  write('error','Could not save htfrq1 in exp%g.',$from)
+  if ($from<>$cur) then jexp($cur) endif
+  return
+endif
+
+// read htfrq1
+jexp($to)       // join "to" experiment
+$tn=tn
+exists('sw1','parameter'):$e
+if ($e) then if (trunc(sw1/10) <> trunc(sw/10)) then
+  $tn=dn
+endif endif
+editht('getni',$tn)  // set htfrq1, sw, tof
+jexp($cur)      // rejoin "current" exp

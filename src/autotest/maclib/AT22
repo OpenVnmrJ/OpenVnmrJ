@@ -1,0 +1,52 @@
+"macro AT22"
+"AT22" "30 Degree Stability (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATd2pul'
+   at_currenttest='30stability_ch2'
+   text('30-Degree Pulse Stability (channel 2)')
+   dof=tof dpwr=tpwr
+   array('nt',20,1,0) pw90=at_pw90_ch2 pw(30)
+   pw=pw   "forces 0.1usec resolution"
+   crl rfl=sw/2 rfp=0 f
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT22(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 30-Degree Pulse Stability (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB30ch2','30 Degree Pulse Stability (channel 2)','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','30 Degree Pulse Stability (channel 2): %3.3f percent',100-$stddev)
+   pw=1 at_currenttest='1stability_ch2'
+   text('1 usec pulse stability using channel 2')
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT22(`PART2`)'
+   ATcycle
+   au
+   write('line3','Determining 1usec Pulse Stability (channel 2)')
+   dps
+
+elseif ($1='PART2') then
+   wft
+
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB1usecch2','1usec Pulse Stability (channel 2)','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','1usec Pulse Stability (channel 2): %3.3f percent',100-$stddev)
+
+ATnext
+endif

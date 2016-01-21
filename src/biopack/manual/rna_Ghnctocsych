@@ -1,0 +1,94 @@
+/*  rna_Ghnctocsych.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    Base-correlation from Guanine-imino to H8 with options for the initial
+    H->N transfer.
+
+    H   -->   N   -->   C6/2   -->   C8   -->   H8 - det
+    t1 INEPT      CP         FLOPSY     re-INEPT
+         CP
+       CPMG
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    pulse sequence:     Simorre, J.P. et al, J. Biom. NMR, 7 (1996), 153-56.
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [H1].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1.  f1180='y' is ignored if ni=0.
+
+
+
+                  DETAILED INSTRUCTIONS FOR USE OF rna_Ghnctocsych
+
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gChsqc may be printed using:
+                                      "printon man('rna_Ghnctocsych') printoff".
+
+    2. Apply the setup macro "rna_Ghnctocsych". This loads the relevant
+       parameter set and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. CHOICE of transfer:
+
+       CP='y' uses CP for imino H1 -> N15 transfer.
+       ncyc_hn should be set to 1 or 2 according to J(H-N) = 95Hz.
+
+       CPMG='y' uses CPMG for imino H1 -> N15 transfer.
+       ncyc should be set to 16 or 24.
+
+       INEPT='y' uses INEPT for imino H1 -> N15 transfer.
+
+       ncyc_nc should be set to 3 according to J(N1-C2/C6) = 20Hz.
+       ncyc_cc should be set to 11 according to J(C-C) = 12Hz.
+
+
+       INEPT is generally the best for imino.           Set sw1 to 4ppm.
+       A S/N of 3 is generally sufficient for this 2D experiment. Check
+       by typing: ft dc getsn.
+
+    5. C13 COUPLING:
+       Splitting of resonances in the t1 dimension by C13 coupling
+       is removed by setting C13refoc='y' (only for CP transfer; not needed).
+
+    6. GRADIENTS:
+       G3 and G4 should be optimized for sufficient water suppression.
+       Typical values are G3=12G/cm and G4:-28G/cm.
+
+       G5 and G0 should be 2-3G/cm.
+
+       Gr suppresses radiation damping during t1 and should be 0.5 G/cm.
+
+       In general, gradient-levels should be as low as possible.
+
+    7. pw11-flag:
+
+       Setting of pw11='y' replaces the first off-resonance proton pulse by
+       an off resonance 1-1 type proton excitation pulse. This minimizes the
+       excitation of H2O and allows to use lower gradient levels.
+       Overall, setting pw11='y' leads to a slight loss in S/N.
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+        @                                                      @
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

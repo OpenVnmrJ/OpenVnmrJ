@@ -1,0 +1,60 @@
+"macro AT70"
+"AT70" "Z-Axis Gradient Strength Calibration "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   substr(pfgon,3,1):$zon
+   substr(gradtype,3,1):$pfgamp   "performa I has maximum of 2048($pfgamp='l')"
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext
+     return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+   if (at_new='n') then dsp='n' endif                "disable dsp"
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then
+      at_sysgcoil=sysgcoil
+      gcoil='' sysgcoil=''
+   endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   su shell('sleep 2')
+   text('Z-Axis Gradient Strength Calibration')
+   at_currenttest='profile_z'
+   seqfil='ATprofile'
+   pw=2.0*pw90 p1=pw90
+   sw=99000 np=512 ss=2 tpwr=at_tpwr
+   d1=.5 d2=.00135 sb=-.001444
+   fn=2048  
+   vchannelmap='0','z'
+
+   exists(autotestdir+'/history/SENSITIVITY','file'):$e
+   if $e=1 then   "set up nt for adequate s/n"
+    lookup('file',autotestdir+'/history/SENSITIVITY')
+    lookup('#Average:','read',1):r1
+    nt=nt*(40000/r1)*(40000/r1) "scales for same s/n by increasing nt"
+    nt=nt/4 nt=nt*4
+    if nt>4 then nt=4 endif
+   endif
+
+   gt1=.001  "only to have dg/ap active"
+   if ($pfgamp='l') then
+    gzlvl1=1024,-1024
+   else
+    gzlvl1=2048,-2048 
+   endif
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='AT70(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining Z-Gradient Strength')
+   dps
+
+elseif ($1='PART1') then
+   wft
+   ATgzcal  "this also restores dsp value"
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+endif

@@ -1,0 +1,62 @@
+"macro BPcheckfortriax"
+" BPcheckfortriax "
+"**********************************************************************"
+" This macro checks to see if x and y gradients exist.                 "
+" If they do not the macro will exit silently.                         "
+" If pfgon='nny' macro exits.  If the gcoil	                       "
+" parameter exists then the macro checks to see if the sysgcoil        "
+" gradtable exists.  The gcoil parameter is then set to the 	       "
+" system gcoil(sysgcoil) parameter.				       "
+"**********************************************************************"
+
+"-- Check existence of gradients  -----------------"
+if ((gradtype <> 'nnn') and (pfgon <> 'nny')) then
+
+  "-- Check existence of file in gradtables -----------------"
+  if (sysgcoil <> '') and (sysgcoil <> 'None') and (sysgcoil <> 'none') then
+
+    "-- Check existence of gcoil  -----------------"
+    exists('gcoil','parameter'):$ex1
+    if $ex1 < 0.5 then
+	create('gcoil','string')
+	setprotect('gcoil','set',9)
+    endif
+
+    $table = systemdir+'/imaging/gradtables/'+sysgcoil
+    exists($table,'file'):$ex1
+    if $ex1 < 0.5 then
+       write('error','%s','Cannot find sysgcoil in gradtables dir.')
+       abort
+    endif
+
+    " Check gcoil against sysgcoil "
+    if (gcoil <> sysgcoil) then
+	write('line3','The gcoil parameter has been updated to `'+sysgcoil+'`.')
+    endif
+    gcoil = sysgcoil
+
+    " Create B0 parameter if nonexistent "
+    exists('B0','parameter','current'):$ex1
+    if ($ex1<1) then
+       create('B0','real','current')
+    endif
+    $protongamma = 234.94   "Gauss/MHz"
+    B0 = $protongamma*h1freq
+
+  else
+    "-- Make sure if sysgcoil is not set gmax,gxmax,gymax,gzmax are zero --"
+    exists('gcoil','parameter'):$ex1
+    if $ex1 > 0.5 then
+	gcoil = sysgcoil
+    endif
+  endif
+else
+
+  mag_flg='n'
+
+endif
+exists('gstab','parameter'):$ex1
+    if $ex1 < 0.5 then
+     create('gstab','real')	
+    endif
+dn=dn   "make sure recalled parameter set has proper dfrq"

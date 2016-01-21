@@ -1,0 +1,175 @@
+"macro phase_corr"
+"************************************************************"
+"           MACRO FOR ARRAYED FID PHASE CORRECTION           "
+"           Written by:  Ivan TKAC                           "
+"           Last update: Feb 09, 2007                        "
+"************************************************************"
+
+"-------------------------------------------------------------"
+"   BACKUP OF RAW FID                                         "
+"-------------------------------------------------------------"
+$sp=sp $wp=wp $vs=vs $sc=sc $wc=wc $vp=vp $lp=lp $rp=rp
+$gf=gf $gfs=gfs $lb=lb $fn=fn
+$axis=axis $rfp=rfp $rfl=rfl
+
+if (celem < 2) then
+   clear
+   write('line3','Number of FIDs < 2, program was aborted!')
+   write('alpha','Number of FIDs < 2, program was aborted!')
+endif
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+
+$ex = 1
+exists('fid.raw','file'):$ex
+if ($ex = 0) then
+   exists('fid.orig','file'):$ex
+   if ($ex = 1) then
+      input('Save FID backup from fid.orig? (y/n) '):$orig
+      if ($orig = 'y') then
+         shell('mv fid.orig fid.raw')
+      endif
+   else
+      shell('cp fid fid.raw')
+   endif
+endif
+
+exists('phase_list','file'):$ex
+if ($ex = 1) then
+   write('line3','Phase correction already performed!')
+   $reprocess = 'n'
+   input('Do you want to start the phase correction once again? (y/n) '):$reprocess
+   if ($reprocess = 'n') then
+      write('line3','Program Aborted!')
+      abort
+   else
+      shell('mv phase_list phase_list.old')
+   endif
+endif
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION PARAMETERS                               "
+"-------------------------------------------------------------"
+$no_points_str = ''
+$no_points = 100
+write('line3','Default number of data points for phase correction = %d',$no_points)
+input('Set the number of data points for phase correction (<ret> default): '):$no_points_str
+if not ($no_points_str = '') then
+   exec('$no_points = ' + $no_points_str)
+endif
+
+$no_skip_str = ''
+$no_skip = 6
+write('line3','Default number of skipped data points in the beginning of FID = %d',$no_skip)
+input('Set the number of skipped data points (<ret> default): '):$no_skip_str
+if not ($no_skip_str = '') then
+   exec('$no_skip = ' + $no_skip_str)
+endif
+
+$rmsd_str = ''
+$rmsd = 200
+write('line3','Default number of data points for noise level calculation = %d',$rmsd)
+input('Set the number of data points for noise level calculation (<ret> default): '):$rmsd_str
+if not ($rmsd_str = '') then
+   exec('$rmsd = ' + $rmsd_str)
+endif
+
+$s2n_str = ''
+$s2n = 5
+write('line3','Default multiplication factor for S/N = %d',$s2n)
+input('Set multiplication factor for S/N (<ret> default): '):$s2n_str
+if not ($s2n_str = '') then
+   exec('$s2n = ' + $s2n_str)
+endif
+
+$fid_no_str = ''
+$fid_no = 2
+write('line3','Default FID# for phase list = %d',$fid_no)
+input('Set FID# for phase list (<ret> default): '):$fid_no_str
+if not ($fid_no_str = '') then
+   exec('$fid_no = ' + $fid_no_str)
+endif
+
+$fid_noF = ''
+if ($fid_no < 10) then
+   format($fid_no,1,0):$fid_noF
+endif
+if (($fid_no > 9) and ($fid_no < 100)) then
+   format($fid_no,2,0):$fid_noF
+endif
+if (($fid_no > 99) and ($fid_no < 1000)) then
+   format($fid_no,3,0):$fid_noF
+endif
+if (($fid_no > 999) and ($fid_no < 10000)) then
+   format($fid_no,4,0):$fid_noF
+endif
+
+$ph_file = 'ph_list' + $fid_noF
+
+$ph_list = 'phase_list'
+
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION CALCULATION                              "
+"-------------------------------------------------------------"
+shell('mv fid fid.tmp')
+
+// $homedir=''
+// shell('echo $HOME'):$homedir
+// $program = $homedir + '/bin/phcor5'
+exists('phcor5','bin'):$e,$program
+
+$pointsF = ''
+$skip = ''
+$rmsdF = ''
+$s2nF = ''
+$fidnoF = ''
+
+format($no_points,3,0):$pointsF
+format($no_skip,3,0):$skipF
+format($rmsd,3,0):$rmsdF
+format($s2n,6,2):$s2nF
+format($fid_no,3,0):$fidnoF
+
+shell($program,'fid.tmp','fid',$pointsF,$skipF,$rmsdF,$s2nF,$ph_file,$fidnoF,$ph_list)
+write('line3','PHASE CORRECTION PERFORMED !')
+cd('..')
+rt($filename)
+
+
+"-------------------------------------------------------------"
+"   DISPLAY PHASE CORRECTED SPECTRA                           "  
+"-------------------------------------------------------------"
+ho=0 vo=0
+sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+lb=0 lb='n' gf=$gf gfs=$gfs fn=$fn
+axis=$axis rfp=$rfp rfl=$rfl
+wft dss dscale
+
+$ok = ''
+input('Is the result of phase correction OK? (y/n): (<ret> yes) '):$ok
+if (($ok = 'y') or ($ok = '')) then
+   shell('rm '+$filename+'/fid.tmp')
+   clear
+   write('alpha','Phase correction was performed')
+else
+   shell('rm '+$filename+'/fid')
+   shell('mv '+$filename+'/fid.tmp '+$filename+'/fid')
+   rt($filename)
+   write('line3','Original data retrieved!')
+   ho=0 vo=0
+   sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+   lb=$lb gf=$gf gfs=$gfs fn=$fn
+   axis=$axis rfp=$rfp rfl=$rfl ph
+   wft dss dscale
+endif
+
+

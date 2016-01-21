@@ -1,0 +1,53 @@
+
+*******************************************************************************
+appdir('info'):$num -  Applications directories information
+appdir('info',n):$label,$path -  Application directory information
+appdir('index',directory):$index -  Test if directory is an application directory
+*******************************************************************************
+
+An application directory is a directory where VnmrJ can look for templates,
+maclib, manual, menujlib, parlib, probes, psg, psglib, seqlib, shims, tablib,
+shapelib, gshimlib, and mollib directories.  It will not look for expN
+directories, global, or other files or directories.  The exists
+command has been enhanced to search for other files and directories in
+the applications directories, allowing users flexibility to customize
+their applications. The appdirs macro starts an editor to set applications
+directories.
+
+The appdir('info') command will tell you the number of application directories
+that are currently enabled. This value can be returned to a parameter as in
+
+appdir('info'):$num
+
+The label and path of a specific application directory can be returned
+by supplying a number after the 'info' keyword. The number must be between
+1 and the total number of applications directories ($num from above).
+As an example, the following macro lists the current applications directories.
+
+clear
+write('alpha','Applications Directories')
+appdir('info'):$num
+$i = 0
+while ($i < $num) do
+  $i=$i+1
+  appdir('info',$i):$label,$path
+  if ($label = '') then
+    write('alpha','%d: "appdir %d" has path "%s"',$i,$i,$path)
+  else
+    write('alpha','%d: "%s" has path "%s"',$i,$label,$path)
+  endif
+endwhile
+
+See the "which" macro for another example of the use of the appdir command.
+
+The appdir('index',directory) command will tell you if a specified directory
+is an "application directory".  If the supplied directory name is in the list
+of "appdirs", its index will be returned. Index 1 is the first appdir. If a 0
+is returned, then the supplied directory is not a current appdir.
+
+Example
+
+appdir('index','/vnmr'):$index            // By default, /vnmr is the second appdir,
+                                          // so $index would be set to 2
+appdir('index','/vnmr/autotest'):$index   // $index could be set to 0 if the autotest 
+                                          // appdir is currently Disabled

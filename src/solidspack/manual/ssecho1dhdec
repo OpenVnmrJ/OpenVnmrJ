@@ -1,0 +1,116 @@
+Protocol: Ssecho1dhdec  Sequence: ssecho1dhdec.c  Apptype: solidseq1d
+
+Description:
+
+   A sequence to provide a highband H solid echo with optional 
+   homonuclear decoupling during the echo delay and X TPPM or SPINAL 
+   decoupling during acquisition. 
+   SAM - K. Mao, J.W. Wiench, M. Pruski 05/28/08
+
+Parameter Groups
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:  Provides a 90-degree pulse on H-channel that can be used
+              as a preparation pulse. Also used to store the H-channel
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+echoH: Module: no
+Sequence:  ssecho1dhdec.c
+Description: Implements a refocusing pulse with delays before and after 
+the pulse.
+Parameters:  Sequence Page
+       aHecho - amplitude of the H pulses. 
+       t1Hecho - delay before the refocusing pulse. 
+       pwHecho - 180-degree flip on H-channel. 
+       t2Hecho - delay after the refocusing pulse. 
+
+
+hdec1H:  Module:  yes
+Sequence: hh2dhdec.c
+Description: Chooses various decoupling methods: PMLG, FSLG, SAM, TPPM.
+	     For each decoupling methods uses "get" functions from
+             SolidsPack. 
+Parameters:  Sequence Page
+       dmHhdec1 - flag to switch on/off the optional decoupling. 
+                  Possible values: 'y' and 'n'. 
+       seqHhdec1 - decoupling method. Possible values - 'pmlg',
+                   'fslg', 'sam', 'tppm'.
+       aHhdec1 - amplitude of the decoupling.
+       pwHhdec1 - pulse width for the decoupling.For FSLG and PMLG: 
+                  360-degree flip, off resonance (the length of
+                  each of the two FSLG/PMLG pulses).
+                  For SAM: the time of one rotor period
+                  For TPPM: approximate 180-degree flip angle on
+                  resonance.
+       qHhdec1 - integer multiplier. Relevant for PMLG and SAM. 
+              For PMLG: the number of phase steps in that make 
+              up pwHhdec1. A negative value implements descending
+              phases in the first pulse.
+	      For SAM: the number of RF cycles per rotor cycle.
+       nHhdec1 - waveform cycles represented in the .DEC file.
+       mHhdec1 - integer parameter. Not currently in use and 
+                 should be set to 1.
+       ofdHhdec1 - for FSLG: +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofHhdec1 - overall frequency offset for the chosen decoupling 
+              technique.
+       pwHshort1 - duration of the correction pulse for tilted axis 
+              (FLSG/PMLG).
+       chHhdec1 - 'obs' must be set (not shown).
+Implementation: MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
+Underscore functions: _mpseqon(hdec1.mps,phHdec) and other MPSEQ functions
+
+Xseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL or TPPM decoupling on the dec channel
+             during acquisition
+Parameters:  Sequence Page - the Xspinal and Xtppm groups overlap
+       Xseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("X");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Xspinal:  Module:  yes
+Sequence: tancpx.c
+Description:  Implements SPINAL decouping on the X channel during
+              acquisition.
+Parameters:  Sequence Page
+       aXspinal - amplitude of the X channel.
+       pwXspinal - approximate 180-degree flip angle on resonance.
+       phXspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phXspinal.
+       chXspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("X"); or DSEQ dec =
+              getdseq("X");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Xtppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the X channel during
+              acquisition.
+Parameters:  More Page
+       aXtppm - amplitude of the dec channel.
+       pwXtppm - approximate 180-degree flip angle on resonance.
+       phXtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chXtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("X"); or DSEQ dec = getdseq("X");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+180X: Module: No
+Sequence:  tancpxhdec.c    
+Description:  Provides a 180-degree pulse on X that.
+Parameters:  More Page
+      aX180  - the amplitude of the pulse.
+      pwX180 - the pulse length.
+

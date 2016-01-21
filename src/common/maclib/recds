@@ -1,0 +1,51 @@
+"macro recds"
+"$1 is path "
+"$2 is processed or raw "
+
+if ($# < 1.5) then return endif
+
+$doprocess='y'
+$path=''
+
+if ($2 = 'processed' and appmode = 'imaging') then
+  $path = curexp+'/recon'
+  exists($path,'directory'):$e
+  if ($e < 0.5) then
+    $path = $1+'/recon'
+    exists($path,'directory'):$e
+  endif
+  if ($e > 0.5) then
+    $doprocess='n'
+    aipShow($path, 'all')
+  endif
+elseif ($2 = 'processed') then
+    exists($1+'/data','file'):$e
+    if $e>0.5 then
+       exists('disCmd','parameter','current'):$e
+       if $e>0.5 then
+	 substr(disCmd,1,1):$s
+         if($s = 'd') then
+           $doprocess='n'
+           exec(disCmd)
+         else
+	   getdim:$dim
+	   if($dim=2) then
+	       dconi
+           elseif($dim=1) then
+               ds
+	   endif
+         endif
+       endif
+    endif
+elseif ($doprocess = 'y') then
+  exists('doprocess','parameter','global'):$e
+  if $e>0.5 then
+    if doprocess[1]='n' then
+      $doprocess='n'
+    endif
+  endif
+  if $doprocess='y' then
+    write('line3','processing file %s',$1)
+    CPdndfid_process 
+  endif
+endif

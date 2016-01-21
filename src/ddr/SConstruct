@@ -1,0 +1,28 @@
+#
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil # for better copytree()
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+
+dirList = ['protocols',
+          ]
+
+dest = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','ddr','templates','vnmrj')
+if not os.path.exists(dest) :
+    os.makedirs(dest)
+
+for i in dirList:
+   myShutil.copytree(i,os.path.join(dest,i),symlinks = False)
+
+ddrconsolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'ddr','user_templates')
+if not os.path.exists(ddrconsolePath):
+   os.makedirs(ddrconsolePath)
+Execute(Copy(os.path.join(ddrconsolePath,'global'),os.path.join(cwd,'global')))
+

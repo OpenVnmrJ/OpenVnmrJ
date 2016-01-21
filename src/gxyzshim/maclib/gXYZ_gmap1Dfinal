@@ -1,0 +1,235 @@
+"macro gXYZ_gmap1Dfinal"
+
+werr='return'
+eOptions=''
+//gxyzsetlocalpars
+create('execprocess','string','current',''):$dum
+create('execplot','string','current',''):$dum
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+if $# < 1 then $1='init' endif
+if ($1 = 'init') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    $do1Dmap='n'
+// Krish not sure if the 2nd argument is ever needed
+    if ($# < 1.5) then
+	exists($initpar,'directory'):$direx
+	if not $direx then
+	    write('error','gxyzInit.par not found')
+	    abort
+	endif
+	rtp($initpar)
+	seqfil=seqfil
+	//gxyzsetlocalpars
+    else
+	$do1Dmap='y'
+    endif
+	"First work out what sort of 1D gradient mapping to do"
+	$solvent=solvent
+	$do1Dmap='n'
+	$tof=tof
+	exists('shaped','parameter'):$ex
+	if ($ex>0.5) then $shaped=shaped else $shaped='n' endif
+	$tn=tn
+	if tn='H1' then $pw90=pw90 else $pw90=lkpw90 endif
+	$tpwr=tpwr
+	$zgradtype=''
+	substr(gradtype,3,1):$zgradtype
+	gxyzcalibset('remove','pw90')
+	//Assume 2nd arg is final if 3 or more args
+//	if ($#>2.5) then $do1Dmap='y' endif
+	$samplename=gxyzsamplename
+	gmapsys
+	if $tn='H1' then
+		if $zgradtype='h' then
+			gmapsys('setHSforH1')
+		else
+			gmapsys('setH1')
+		endif
+	else
+		if $zgradtype='h' then
+			gmapsys('setHSforH2')
+		else
+			gmapsys('setH2')
+		endif
+	endif
+//KRISH:  Should we do this?
+	fread($initpar+'/procpar','current','newonly')
+	destroy('ni ni2'):$dum
+
+	exists('gxyzdo1Dmap','parameter'):$ex
+	if ($ex < 0.5) then create('gxyzdo1Dmap','flag')  endif
+	if ($do1Dmap='y') then gxyzdo1Dmap='y' else gxyzdo1Dmap='n' endif
+	wdone=''
+	tof=$tof
+
+	//Set up default pw parameters
+	pw90=$pw90 tpwr=$tpwr
+	pw(90) p1=0
+	nt=1
+	solvent=$solvent
+
+	//Use a small flip angle for sucrose - can extend for other samples
+	if ($samplename='2mM_sucrose' or $samplename='doped_astm' or $samplename='astm') then gain=0 pw(15) endif
+	strstr($samplename,'doped'):$ret
+	if ($ret>0.5) then d1=1 else d1=5 endif
+	$cryo=systemdir+'/acqqueue/Cryosafty'
+	$iscryo='no'
+	exists($cryo,'file'):$cpex
+	if $cpex > 0.5 then shell('grep yes '+$cryo):$iscryo endif
+        $probestyle=''
+	getparam('style','Probe'):$probestyle
+	if ($iscryo='yes' or $probestyle='cold') then pw=pw/3 endif
+
+	//Set up shaped pulses if required
+	if ($shaped='y') then setgmapshapes shaped='y' endif
+
+	if ($do1Dmap='y') then p1=0 endif
+	proc1='ft' sinebell full f
+	{$0}('gmap1Dgodssh')
+endif
+if ($1='gmap1Dgodssh') then
+	banner('Acquiring trial profiles')
+	wnt='wft select(1) f full vsadj dssh'
+	werr='return'
+	seqfil=seqfil
+	pslabel='gmap1Dfinal'
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_trialProfile'
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'gmap1D_d3adj\',\'processonly\')'
+        execplot='execplot=\'\''
+endif
+
+if ($1='gmap1D_d3adj') then
+
+    if ($# < 1.5) then $2='' endif
+    if ($2='') then
+	cplog('gmap1Dfinal','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+    endif
+	wft
+	select(1)
+	f full
+	peak:$ht,$frq
+	dres($frq,0.8):$lw,$hzpp,$left,$right
+	cr=$left delta=$left-$right
+	sp=cr-delta wp=delta
+	dres(cr):$lw,$hzpp,$left,$right
+	select(1)
+	vsadj
+	$htmin1=1e8
+	$htmin2=1e8
+	cr=sp
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin1 then $htmin1=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of first profile is %f',$htmin1)
+	cr=sp
+	select(2)
+	repeat
+		peak(cr,cr+$hzpp):$ht,$frq
+		if $ht < $htmin2 then $htmin2=$ht endif
+		cr=cr+$hzpp
+	until cr >= (wp+sp)
+	write('line3','Min amp of second profile is %f',$htmin2)
+	
+	if ($htmin2 < $htmin1/2) then 
+		if ($2='') then
+		    d3[2]=d3[2]/2
+		    write('line3','Reducing d3[2] to %.3f s and remeasuring profiles',d3[2])
+		    f full
+		    {$0}('gmap1Dgodssh')
+		else
+		    xmhaha_calib('addNode',$0+'(\'gmap1D_d3adj\')','top',120)
+		endif
+		return
+	endif
+	if $2='processonly' then 
+                xmhaha_calib('addNode',$0+'(\'gmap1D_d3adj\')','top',120)
+		return 
+	endif
+	f full
+	exists('gmapname','parameter'):$ex
+	if $ex<0.5 then create('gmapname','string') endif
+	//write('line3','$ex=%f',$ex)
+	$mapname=''
+        $probestyle=''
+	getparam('style','Probe'):$probestyle
+	gzsize=5
+	$cryo=systemdir+'/acqqueue/Cryosafty'
+	$iscryo='no'
+	exists($cryo,'file'):$cpex
+	if $cpex > 0.5 then shell('grep yes '+$cryo):$iscryo endif
+	if ($iscryo='yes' or $probestyle='cold') then gzsize=7  endif
+        
+	gmap_findtof='y'
+	gmap_z1z4='y'
+	$date=''
+	shell('date +%d_%m_%y'):$date
+	$zgradtype='' $nuc='lk'
+       	substr(gradtype,3,1):$zgradtype
+     	if $zgradtype='h' then $nuc='hs' else $nuc=tn endif
+	gmapname=probe+'_'+$nuc+'_'+$date
+	gmapset('mkdir',2)
+	gmaplistfunc('wrshimcal',gmapname)
+	gmapset('setsw')
+	wdone=''
+	werr=''
+	{$0}('1Dmakemap')
+endif
+
+if ($1='1Dmakemap') then
+	banner('Making 1D gradient shimmap')
+	gmapauto('startmap','nogo','ow')
+	if in='y' then r5=1 else r5=0 endif
+	in='n'
+	gmapset('setb')
+	gmapset('disable')
+	gmap_findtof='y'
+
+	wdone=''
+	werr='return'
+	calibnode='_shimmap'
+	execprocess='gmapauto(\'makemap\',\'overwrite\')'
+        $md=archivedir+'/'+sample+'/dirinfo/macdir'
+	xmhaha_calib('addNode',$0+'(\'1Dautoshim\')','next',120):$newnode
+    	write('file',$md+'/'+$newnode+'acq','wshim=\'e\'')
+endif
+
+if ($1='1Dautoshim') then
+
+// KRISH - Do the gradient shimming as a prescan??
+	gmapshim('mapname'):$mapname,$e
+        setparams('H1map',$mapname,'Probe')
+	$pw90=0 $tpwr=0
+	getparam('pw90','H1'):$pw90
+	getparam('tpwr','H1'):$tpwr
+	if (($pw90=0) or ($tpwr=0)) then "no pw90 in probe file -> write parameters"
+            $tpwrs='' $pw90s=''
+            format(tpwr,0,0):$tpwrs
+            format(pw90,0,1):$pw90s
+    	    setparams('pw90',$pw90s,'H1')
+    	    setparams('tpwr',$tpwrs,'H1')
+	endif
+	cplog('gmap1Dfinal','first'):$file,$asdir
+	rtv($asdir+'/'+$file,'svftmplt'):$svftmplt
+	seqfil='s2pul' pslabel='PROTON'
+	setvalue('array','')
+	execprocess=''
+	execplot=''
+	calcdim
+	nt=1 d1=1 at=1 pw=pw[1] wshim='e' Gmapname=$mapname method='pfg'
+
+endif

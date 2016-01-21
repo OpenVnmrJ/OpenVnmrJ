@@ -1,0 +1,109 @@
+"macro nrks"
+"nrks - create compensation parameters"
+" 4/7/2009 pah"
+"a 2nd time constant for z1"
+"initialization macro"
+readhw('status'):$status
+"
+"if ($status < 1) then
+"  write('line3','system must be running to start')
+"  return
+"endif
+"if ($status > 90) then
+"  write('line3','system must not be in tune mode')
+"  return
+"endif
+"
+$date=''
+shell('date "+%x,%T"'):$date
+readhw('z1','z2','z3','z4','z5','z6'):$u1,$u2,$u3,$u4,$u5,$u6
+exists('z4l','parameter','current'):$e
+if ($e < 0.5) then
+create('z4l','real','current')
+endif
+z4l = $u4
+exists('z5l','parameter','current'):$e
+if ($e < 0.5) then
+create('z5l','real','current')
+endif
+z5l = $u5
+exists('z6l','parameter','current'):$e
+if ($e < 0.5) then
+create('z6l','real','current')
+endif
+z6l = $u6
+exists('updtt','parameter','current'):$e
+if ($e < 0.5) then
+create('updtt','real','current')
+endif
+exists('z1delt','parameter','current'):$e
+if ($e < 0.5) then
+create('z1delt','real','current')
+z1delt = 0
+endif
+exists('z1epsi','parameter','current'):$e
+if ($e < 0.5) then
+create('z1epsi','real','current')
+z1epsi = 0
+endif
+exists('z2delt','parameter','current'):$e
+if ($e < 0.5) then
+create('z2delt','real','current')
+z2delt = 0
+endif
+exists('c15','parameter','current'):$e
+if ($e < 0.5) then
+create('c15','real','current')
+c15 = 0
+endif
+"new d15 "
+exists('d15','parameter','current'):$e
+if ($e < 0.5) then
+create('d15','real','current')
+d15 = 0
+endif
+exists('c24','parameter','current'):$e
+if ($e < 0.5) then
+create('c24','real','current')
+c24 = 0
+endif
+exists('c26','parameter','current'):$e
+if ($e < 0.5) then
+create('c26','real','current')
+c26 = 0.0
+endif
+exists('z1prec','parameter','current'):$e
+if ($e < 0.5) then
+create('z1prec','real','current')
+endif
+systemtime:updtt
+z1prec = $u1
+exists('z2prec','parameter','current'):$e
+if ($e < 0.5) then
+create('z2prec','real','current')
+endif
+z2prec = $u2
+exists('tau1','parameter','current'):$e
+if ($e < 0.5) then
+create('tau1','real','current')
+tau1 = 20.00
+endif
+exists('mu1','parameter','current'):$e
+if ($e < 0.5) then
+create('mu1','real','current')
+mu1 = 20.00
+endif
+exists('tau2','parameter','current'):$e
+if ($e < 0.5) then
+create('tau2','real','current')
+tau2 = 21.00
+endif
+exists('logt','parameter','current'):$e
+if ($e < 0.5) then
+create('logt','real','current')
+endif
+logt = 0
+readlk:$lockval
+write('file',curexp+'/fclog.csv',' date,time,      run time (hrs),   lock,       z1,        z2,         z3,       z4,      z5,    z6,    z1 e,    z2 e,     c15,    tau1,     c24,   tau2,  c26, epochtime, z1epsi,  mu1, d15,  x1,  y1')
+write('fileline',curexp+'/fclog.csv','%20s, %9.3f,  %5.1f,  %5.1f,   %5.1f,   %5.1f,   %5.1f, %5.1f, %5.1f,',$date,logt, $lockval,  z1prec, z2prec, $u3,  z4l, z5l, z6l)
+write('file',curexp+'/fclog.csv',' %5.1f, %5.1f,   %5.2f,   %5.3f,   %5.3f, %5.2f,  %5.3f, %12.0f',z1delt,z2delt,c15,tau1,c24,tau2,c26,updtt)

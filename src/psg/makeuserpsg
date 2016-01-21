@@ -1,0 +1,928 @@
+# 
+###########################################################
+#							  #
+#    makeuserpsg   -   UNIX makefile for creating a new   #
+#		       user PSG library			  #
+#							  #
+###########################################################
+# Main MAIN main
+
+
+MAKEFILE= makeuserpsg
+
+#-----  do not let these libraries get deleted
+.PRECIOUS= libpsglib.a
+
+#-----  The system and user PSG directories
+PSG_DIR= $(vnmrsystem)/psg/
+LIB_DIR= $(vnmrsystem)/lib/
+USR_PSG_DIR= $(vnmruser)/psg/
+
+#-----  Normal operational compile flags
+CFLAGS= -O
+CPPFLAGS= -I$(GCC_EXEC_PREFIX)include -DSUN -DPSG_LC
+LDFLAGS=
+TARGET_ARCH=
+RF_ARCH=
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(RF_ARCH) -c
+LINK.c= $(CC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH) $(RF_ARCH)
+
+#-----  Link commands for needed sources and makefile
+PSG_LN= ln -s $(PSG_DIR)$(@)
+REV_ID=1.0
+
+#------------------------------------------------------------------------
+#-----  PSG sources files 
+#------------------------------------------------------------------------
+
+PSG_SRC=			\
+                abort.c         \
+                active.c        \
+		apshape_pulse.c \
+		aptable.c	\
+		apuserdev.c	\
+                ap_device.c     \
+		apbit_device.c	\
+                attn_device.c   \
+		attr_funcs.c    \
+		attr_valtype.c  \
+		convert.c	\
+                convertapbout.c	\
+                convertipa.c	\
+                crb_setup.c     \
+                delay.c         \
+		device.c	\
+		ecc_setup.c	\
+		ecc_worstCase.c	\
+		event_device.c  \
+		eventoverhead.c	\
+                formXLwords.c   \
+		freq_device.c	\
+		freq_list.c	\
+		freqfuncs.c	\
+                gate.c          \
+                gatedecoupler.c \
+                getparm.c       \
+		gradient.c	\
+		hash.c		\
+                hsdelay.c       \
+                initHSlines.c   \
+                initacqparms.c  \
+                initauto.c      \
+		initfreqobj.c	\
+                initfunc.c      \
+		initobjects.c	\
+		init_u_glbl.c	\
+                initval.c       \
+                interlktests.c  \
+		lc_hdl.c	\
+		lc_index.c	\
+		lk_sh.c		\
+		lockfreqfunc.c	\
+                looping.c       \
+                math.c          \
+                miscfuncs.c     \
+                objerror.c      \
+                offset.c        \
+                phaseing.c      \
+		power.c		\
+                preacqdelay.c   \
+		presequence.c   \
+		pre_exp_seq.c	\
+		pre_fid_seq.c	\
+                P_receive.c     \
+                Pbox_HT.c       \
+		Pbox_psg.c	\
+                pulses.c        \
+                rcvrfuncs.c     \
+		rfchanconst.c	\
+		rfchan_device.c	\
+                sendasync.c     \
+                setparm.c       \
+		signalhandler.c	\
+		sis_misc.c	\
+		sis_initpar.c	\
+		sis_loop.c	\
+		sis_oblique.c	\
+		sis_position.c	\
+		sisrfpatterns.c	\
+		sli_device.c	\
+		ssha.c		\
+                status.c        \
+                stubs.c         \
+                timerwords.c    \
+		treefuncs.c	\
+                vtfuncs.c	\
+                wetfuncs.c	\
+		wg.c		\
+		xmath.c
+
+DPS_DUMMY_SRC=			\
+                x_ps.c
+
+DPS_DUMMY_OBJ= $(DPS_DUMMY_SRC:.c=.o)
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+#-----  Acqproc header files that are needed
+PSG_HDR=			\
+		ACQ_SUN.h	\
+		REV_NUMS.h	\
+		abort.h		\
+		acodes.h	\
+		acqparms.h	\
+		apbit_device.p	\
+		apdelay.h	\
+		aptable.h	\
+		ap_device.p	\
+		asm.h		\
+		attn_device.p	\
+		chanstruct.h	\
+		common.p	\
+		data.h		\
+		device.p	\
+		dpsdef.h	\
+		dsp.h		\
+		ecc.h		\
+		errorcodes.h	\
+		event_device.p	\
+		expDoneCodes.h	\
+		freq_device.p	\
+		gradient.h	\
+		group.h		\
+		lc.h		\
+		lc_index.h	\
+		macros.h	\
+		mfileObj.h	\
+		objerror.h	\
+		oopc.h		\
+		params.h	\
+		power.h		\
+		Pbox_HT.h	\
+		Pbox_psg.h	\
+		pvars.h		\
+		rfchan_device.p	\
+		rfconst.h	\
+		shims.h		\
+		shrexpinfo.h	\
+		standard.h	\
+		symtab.h	\
+		variables.h	\
+		vfilesys.h	\
+		vnmrsys.h	\
+		wjunk.h		\
+		wetfuncs.h
+
+#----- PSG sources that require conditional compilation
+CND_PSG_SRC=			\
+		arrayfuncs.c	\
+		autofuncs.c     \
+                cps.c           \
+                decfuncs.c      \
+                hwlooping.c     \
+                initrf.c        \
+                psg.c           \
+                setHSlines.c
+
+CND_PSG_OBJ= $(CND_PSG_SRC:.c=.o)
+
+
+#-----  All sources and headers are required for compilation
+ALLSRC=	$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) $(DPS_DUMMY_SRC)
+LIBS=	-lm
+
+
+#------------------------------------------------------------------------
+#-----  Targets
+#------------------------------------------------------------------------
+
+lib : Source
+	@echo Compiling PSG Library...
+	@echo
+	$(MAKE) -fes $(MAKEFILE) "PSGLIB=libpsglib.a" \
+	"TARGET_ARCH=-Dsun4 -D`mach`" \
+	libpsglib.a libpsglib.so
+	@echo
+	@echo PSG Library Complete.
+
+fixlib :
+	@echo Compiling PSG Library...
+	@echo
+	$(MAKE) -fes $(MAKEFILE)        \
+	"PSGLIB=libpsglib.a"            \
+	"TARGET_ARCH=-Dsun4 -D`mach`"   \
+	"REV_ID=6.0"                    \
+	libpsglib.a libpsglib.so
+	@echo
+	@echo PSG Library Complete.
+
+#  the -w in CFLAGS will inhibit warning messages produced by GNU C
+
+libsol : Source
+	@echo Compiling PSG Library...
+	@echo
+	( SOLARIS="y"; export SOLARIS;				\
+	  rm -f libpsglib.so;					\
+	  $(MAKE) -fes $(MAKEFILE)				\
+	 "PSGLIB=libpsglib.a"					\
+	 "CFLAGS= -O -w -fPIC -DULONG -I$(GCC_EXEC_PREFIX)include "	\
+	 "TARGET_ARCH=-DSOLARIS"				\
+	  libpsglib.a libpsglib.so )
+	@echo
+	@echo PSG Library Complete.
+
+fixlibsol :
+	@echo Compiling PSG Library...
+	@echo
+	( SOLARIS="y"; export SOLARIS;				\
+	  rm -f libpsglib.so;					\
+	  $(MAKE) -fes $(MAKEFILE)				\
+	 "PSGLIB=libpsglib.a"					\
+	 "CFLAGS= -O -w -fPIC -DULONG -I$(GCC_EXEC_PREFIX)include "	\
+	 "TARGET_ARCH=-DSOLARIS"				\
+	 "REV_ID=6.0"						\
+	  libpsglib.a libpsglib.so )
+	@echo
+	@echo PSG Library Complete.
+
+
+#------------------------------------------------------------------------
+#-----  Recursive Targets
+#------------------------------------------------------------------------
+Source :
+	@echo Creating additional source links...
+	( cd $(USR_PSG_DIR); $(MAKE) -f $(MAKEFILE) src )
+
+src :	$$(MAKEFILE) $(ALLSRC)
+
+libpsglib.a : getobj $(PSG_OBJ) $(CND_PSG_OBJ)
+	- (umask 2; rm -f $@)
+	(umask 2; ar r $@ `lorder $(PSG_OBJ) $(CND_PSG_OBJ) \
+			          | tsort 2> /dev/null` 2> /dev/null )
+	@(umask 2; if [ x$$SOLARIS != "xy" ]; then	\
+		 echo Creating PSG Library; 			\
+		 ranlib $@; 				\
+	 fi)
+	-@ (umask 2; if [ x$$SOLARIS != "xy" ]; then	\
+		echo Removing unused files;		\
+		rm -f $(PSG_OBJ) $(CND_PSG_OBJ);	\
+                find . ! -name "*.so" -type l -exec rm {} \; ;        \
+	 fi)
+
+libpsglib.so :
+	(umask 2; if [ x$$SOLARIS != "xy" ]; then			\
+		ar x  $(@:.so=.a) $(PSG_OBJ) $(CND_PSG_OBJ);		\
+		ld -o $@.$(REV_ID) $(PSG_OBJ) $(CND_PSG_OBJ);			\
+		rm -f $(PSG_OBJ) $(CND_PSG_OBJ);			\
+	else								\
+		ld -G -o $@.$(REV_ID) $(PSG_OBJ) $(CND_PSG_OBJ);		\
+		rm -f $@;						\
+		ln -s $@.$(REV_ID) $@;					\
+	fi)
+
+getobj :
+	-@(umask 2; if [ x$$SOLARIS != "xy" ]; then		\
+	    if [ -f $(PSGLIB) ]; then				\
+	        ar xo $(PSGLIB) $(PSG_OBJ) $(CND_PSG_OBJ) ;	\
+	    fi;							\
+	 fi)
+
+#------------------------------------------------------------------------
+#-----  Object dependencies
+#------------------------------------------------------------------------
+
+abort.o : $(@:.o=.c)		\
+		group.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+active.o : $(@:.o=.c)		\
+		group.h		\
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+ap_device.o : $(@:.o=.c)	\
+		oopc.h		\
+		common.p	\
+		device.p	\
+		abort.h		\
+		ap_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+apbit_device.o : $(@:.o=.c)	\
+		acodes.h	\
+		oopc.h		\
+		common.p	\
+		device.p	\
+		ap_device.p	\
+		apbit_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+apshape_pulse.o : $(@:.o=.c)   \
+		oopc.h          \
+		acqparms.h      \
+		rfconst.h       \
+		aptable.h       \
+		apdelay.h	\
+		macros.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+aptable.o : $(@:.o=.c)		\
+		acqparms.h	\
+		acodes.h	\
+		aptable.h	\
+		group.h		\
+		symtab.h	\
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+apuserdev.o : $(@:.o=.c)		\
+		acqparms.h	\
+		acodes.h	\
+		oopc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+arrayfuncs.o : $(@:.o=.c)       \
+		oopc.h		\
+		acqparms.h	\
+		group.h		\
+		rfconst.h	\
+		shims.h		\
+		variables.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+attn_device.o : $(@:.o=.c)	\
+		acodes.h	\
+		acqparms.h	\
+		oopc.h		\
+		common.p	\
+		device.p	\
+		ap_device.p	\
+		attn_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+attr_funcs.o : $(@:.o=.c)       \
+		acodes.h        \
+		oopc.h          \
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+attr_valtype.o : $(@:.o=.c)	\
+		oopc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+autofuncs.o : $(@:.o=.c)	\
+		ACQ_SUN.h       \
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		macros.h	\
+		rfconst.h	\
+		shims.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+convert.o : $(@:.o=.c)		\
+		REV_NUMS.h	\
+		acodes.h	\
+		acqparms.h	\
+		dsp.h		\
+		expDoneCodes.h	\
+		aptable.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+convertapbout.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+convertipa.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+cps.o : $(@:.o=.c)		\
+		acodes.h	\
+		apdelay.h	\
+		acqparms.h	\
+		aptable.h	\
+		dsp.h		\
+		group.h		\
+		macros.h	\
+		oopc.h		\
+		rfconst.h	\
+		symtab.h	\
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+crb_setup.o : $(@:.o=.c)	\
+		vnmrsys.h	\
+		acodes.h	\
+		group.h		\
+		macros.h	\
+		acqparms.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+decfuncs.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+delay.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		macros.h	\
+		oopc.h          \
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+device.o : $(@:.o=.c)		\
+		oopc.h		\
+		common.p	\
+		device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+event_device.o : $(@:.o=.c)     \
+		acodes.h        \
+		oopc.h          \
+		rfconst.h       \
+		common.p        \
+		device.p        \
+		event_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+eventoverhead.o : $(@:.o=.c)     \
+		apdelay.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+formXLwords.o : $(@:.o=.c)	\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+freq_device.o : $(@:.o=.c)	\
+		acodes.h	\
+		oopc.h		\
+		rfconst.h	\
+		freq_device.p
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+freq_list.o : $(@:.o=.c) 	\
+		vnmrsys.h	\
+		acodes.h	\
+		oopc.h		\
+		ACQ_SUN.h	\
+		acqparms.h	\
+		group.h		\
+		rfconst.h	\
+		aptable.h	\
+		macros.h	\
+		freq_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+freqfuncs.o : $(@:.o=.c)	\
+		group.h		\
+		params.h	\
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c))
+
+gradient.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		apdelay.h	\
+		gradient.h	\
+		group.h		\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+gate.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+gatedecoupler.o : $(@:.o=.c)	\
+		oopc.h		\
+		acodes.h	\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+getparm.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+hash.o : $(@:.o=.c)             \
+		acqparms.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+hsdelay.o : $(@:.o=.c)		\
+		apdelay.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+hwlooping.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		apdelay.h	\
+		dsp.h		\
+		group.h		\
+		macros.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+initHSlines.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+initacqparms.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		data.h		\
+		dsp.h		\
+		group.h		\
+		lc.h		\
+		mfileObj.h	\
+		shrexpinfo.h	\
+		variables.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+initauto.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		rfconst.h	\
+		shims.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+initobjects.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		chanstruct.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+initfunc.o : $(@:.o=.c)		\
+		acqparms.h	\
+		group.h		\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+initrf.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		apdelay.h	\
+		chanstruct.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+initfreqobj.o : $(@:.o=.c)	\
+		group.h		\
+		variables.h	\
+		params.h	\
+		acodes.h	\
+		rfconst.h	\
+		oopc.h		\
+		acqparms.h	\
+		chanstruct.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c))
+
+init_u_glbl.o : $(@:.o=.c)		\
+		acqparms.h      \
+		oopc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+initval.o : $(@:.o=.c)		\
+		acqparms.h	\
+		group.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+interlktests.o : $(@:.o=.c)		\
+		ACQ_SUN.h       \
+		acodes.h	\
+		acqparms.h	\
+		errorcodes.h    \
+		group.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+lc_hdl.o : $(@:.o=.c)		\
+		acodes.h	\
+		lc.h		\
+		lc_index.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+lc_index.o : $(@:.o=.c)		\
+		lc_index.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+lk_sh.o : $(@:.o=.c)		\
+		acodes.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+lockfreqfunc.o : $(@:.o=.c)		\
+		group.h	\
+		vnmrsys.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+looping.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+math.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+miscfuncs.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+objerror.o : $(@:.o=.c)		\
+		oopc.h		\
+		objerror.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+offset.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+P_receive.o : $(@:.o=.c)		\
+		group.h		\
+		symtab.h	\
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+Pbox_HT.o : $(@:.o=.c)		\
+		group.h		\
+		variables.h	\
+		rfconst.h	\
+		acqparms.h	\
+		aptable.h	\
+		Pbox_psg.h	\
+		Pbox_HT.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+Pbox_psg.o : $(@:.o=.c)		\
+		oopc.h		\
+		group.h		\
+		rfconst.h	\
+		acqparms.h	\
+		aptable.h	\
+		apdelay.h	\
+		macros.h	\
+		Pbox_psg.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+phaseing.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		macros.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+power.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		macros.h	\
+		power.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+preacqdelay.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+presequence.o : $(@:.o=.c)              \
+		oopc.h  \
+		acqparms.h \
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+pre_exp_seq.o : $(@:.o=.c)		\
+		acqparms.h \
+		oopc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+pre_fid_seq.o : $(@:.o=.c)		\
+		acqparms.h \
+		oopc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+psg.o : $(@:.o=.c)		\
+		abort.h		\
+		apdelay.h	\
+		asm.h		\
+		ACQ_SUN.h	\
+		REV_NUMS.h	\
+		group.h		\
+		params.h	\
+		pvars.h		\
+		oopc.h		\
+		symtab.h	\
+		variables.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+pulses.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		aptable.h	\
+		group.h		\
+		lc.h		\
+		macros.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+rfchanconst.o	: $(@:.o=.c)	\
+		acqparms.h	\
+		chanstruct.h	\
+		oopc.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+rfchan_device.o : $(@:.o=.c)	\
+		acodes.h	\
+		acqparms.h	\
+		aptable.h	\
+		macros.h	\
+		oopc.h		\
+		rfconst.h	\
+		rfchan_device.p
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+rcvrfuncs.o : $(@:.o=.c)		\
+		oopc.h			\
+		rfconst.h		\
+		acqparms.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sendasync.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+setHSlines.o : $(@:.o=.c)		\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+setparm.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+setrfpwr.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+signalhandler.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sis_initpar.o : $(@:.o=.c)	\
+		vnmrsys.h	\
+		oopc.h		\
+		group.h		\
+		variables.h	\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sis_loop.o : $(@:.o=.c)		\
+		lc.h		\
+		oopc.h		\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sis_misc.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sis_oblique.o : $(@:.o=.c)	\
+		oopc.h		\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h	\
+		vnmrsys.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sis_position.o : $(@:.o=.c)	\
+		oopc.h		\
+		acqparms.h	\
+		macros.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sisrfpatterns.o : $(@:.o=.c)	\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		macros.h	\
+		oopc.h		\
+		rfconst.h	\
+		vnmrsys.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+sli_device.o : $(@:.o=.c)	\
+		ACQ_SUN.h	\
+		acodes.h	\
+		acqparms.h	\
+		macros.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+ssha.o : $(@:.o=.c)		\
+		acodes.h	\
+		group.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+status.o : $(@:.o=.c)		\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+stubs.o : $(@:.o=.c)		\
+		variables.h
+	(umask 2; $(COMPILE.c) -DPSG_LC $(@:.o=.c) )
+
+timerwords.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+treefuncs.o : $(@:.o=.c)        \
+		group.h         \
+		symtab.h        \
+		variables.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+vtfuncs.o : $(@:.o=.c)		\
+		acodes.h	\
+		acqparms.h	\
+		group.h		\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+wetfuncs.o : $(@:.o=.c)		\
+		oopc.h		\
+		acqparms.h	\
+		rfconst.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+wg.o: $(@:.o=.c)		\
+		group.h		\
+		oopc.h		\
+		acodes.h	\
+		rfconst.h	\
+		apdelay.h	\
+		acqparms.h	\
+		vnmrsys.h	\
+		macros.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+xmath.o: $(@:.o=.c)		\
+		acodes.h	\
+		dpsdef.h	\
+		rfconst.h	\
+		acqparms.h	\
+		lc.h
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+x_ps.o : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+
+#------------------------------------------------------------------------
+#-----  Source extraction via soft links
+#------------------------------------------------------------------------
+
+$(PSG_SRC) $(PSG_HDR) $(CND_PSG_SRC) : $$(PSG_DIR)$$(@)
+	$(PSG_LN) $@
+
+$(DPS_DUMMY_SRC) : $$(PSG_DIR)$$(@)
+	$(PSG_LN) $@

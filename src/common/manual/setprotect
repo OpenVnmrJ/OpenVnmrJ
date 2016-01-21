@@ -1,0 +1,103 @@
+
+*******************************************************************************
+setprotect	- 	set the protection bits of a variable in a tree.
+*******************************************************************************
+
+  Every parameter has a set of "protection bits" associated with it.
+  The command "setprotect" allows one to change, list, or test these
+  protection bits.  The meaning of each "bit" is shown in the list below.
+
+  Usage -- setprotect('names',set|on|off|list|alist|clear|getval|ison, bit_vals[,tree])
+
+  The variable trees are 'current', 'global', 'processed', 'systemglobal', and
+  'usertree'. The default tree is 'current'.
+  'names' is either a list of the names of the parameters to be read or it is the
+  name of an arrayed temporary $ variable.  If it is a list, it is a
+  string parameter and the names can be separated either by a space or a comma.
+  If it is an arrayed temporary $ varaible, each array element is a single parameter
+  name. 
+  Either 'set', 'on', 'off', 'list', 'clear', 'getval', or 'ison' must be
+  the second argument.  'Set' causes the current protection bits
+  to be completely replaced with the set specified by the third
+  parameter 'bit_vals'.  'On' causes the specified bits to be turned
+  on.  It does not affect other protection bits.  'Off' causes the
+  specified bits to be turned off.  It does not affect other protection
+  bits.
+
+  'list' and 'alist' cause all parameter with the specified bit_vals turned
+  on to be returned.  This list may be returned to the calling macro.
+  The typical invocations will be setprotect('','list',8):$parlist or
+  setprotect('','alist $parlist',8):$num
+  In the 'list' case, the $parlist return variable will be set to a space separated
+  list of parameter names.  In the 'alist $parlist' case, the $num return variable
+  will be set to the number of returned values. The actual values will be returned
+  as an array in the $parlist variable.
+
+  The 'clear' option clears the specified bit_vals from all parameters.  For 
+  the list, alist, and clear options, the names argument must be ''.  The return
+  value when setprotect is called with the list or alist options can be used
+  as the 'names' argument for other forms of setprotect.  It can also
+  be names for other commands which use lists of parameter names,
+  such as writeparam and readparam.
+
+  'getval' returns the value of the protection bits for the single specified
+  parameter. The bit_vals argument is optional when using the getval case.
+
+  'ison' tests the parameter specified by the 'names' argument to see
+  if the bit_vals are on. In this case, the 'names' argument must be
+  a single parameter name. The return value is 1 if the specified bits
+  are all on. The return value is 0 if the specified bits are not all
+  on. The return value is -1 if the specified parameter does not exist
+  in the specified tree.
+
+  'Bit_vals' is the sum of the values of the selected bits.
+
+  Examples:
+
+    setprotect('syn','on',2)      cannot set 'syn' to 'y' or 'n'.
+    setprotect('pslabel','on',8)  causes a macro to be executed when this
+                                  parameter is changed.  The name of the
+                                  macro must,  in general,  be called _name.
+                                  In this case, it must be called _pslabel.
+    setprotect('','list',8):$mac  Puts into the $mac parameter the list of 
+                                  parameter which have bit 8 on.
+    setprotect('','alist $mac',8):$num
+                                  Puts into $num the number of parameters
+                                  that have bit 8 on.
+                                  The names of the parameters that have bit 8
+                                  on will be returned as an array in the $mac
+                                  variable.
+    setprotect('sw','ison',8):$swmac Set $swmac to 1 if sw has bit 8 on.
+
+    $list='a b c d'
+    setprotect($list,'on',2)
+
+    $arraylist='a','b','c','d'
+    setprotect('$arraylist','on',2)
+    This is the same as the above example, however the variable names are passed
+    as an arrayed temporary $ variable $arraylist. Note the single quotes
+    around the first argument to setprotect. The name of the local temporary
+    $variable is passed to the command, not its value.  This format is useful
+    if the list of parameters is large.
+
+  parameter protection definitions using a bit field
+  if the bit is set, the comment is true
+  BIT           VALUE     COMMENT
+  ---           -----     -------
+  bit 0		1	- cannot array the parameter
+  bit 1		2	- cannot change active/not active status
+  bit 2		4	- cannot change the parameter value
+  bit 3		8	- causes macro to be executed
+  bit 4		16	- avoids automatic re-display
+  bit 5		32	- cannot delete parameter
+  bit 6		64	- system ID for spectrometer - datastation
+  bit 7		128	- cannot copy parameter from tree to tree
+  bit 8		256	- will not set array parameter
+  bit 9		512	- cannot set parameter enumeral values
+  bit 10	1024	- cannot change the parameter's group
+  bit 11	2048	- cannot change protection bits
+  bit 12	4096	- may cause _ipa macro to be executed
+  bit 13  	8192    - lookup min, max, step values in table
+  bit 14       16384    - parameter marked for locking (P_LOCK; see rtx)
+  bit 15       32768    - global parameter not shared in multiple VJ viewports
+  bit 16       65536    - force automatic redisplay in VJ templates

@@ -1,0 +1,52 @@
+"macro arrayExp"
+"*****************************************"
+" array - macro for easy setup of arrays  "
+"*****************************************"
+" usage:  array                      interactive mode                     "
+"         array(parameter_name)      interactive, for specified parameter "
+"         array(parameter_name,steps,start,stepsize)                      "
+"         optional fifth argument avoids da "
+
+if ($# > 1) and ($# < 4) then
+   write('error','usage:  array<(parameter_name<,steps,start,stepsize>)>')
+   return(1)
+endif
+$par = ''
+if ($# > 0) then
+   $par=$1
+else
+   $par_in = ''
+   input('parameter to be arrayed: '):$par_in
+   substr($par_in,1):$par
+   if ($par = '') then
+      write('error','array cancelled')
+      return
+   endif
+endif
+{$par}={$par}[1]                      "If the parameter does not exist,  exit"
+if ($# >= 4) then
+   $steps=$2
+   $start=$3
+   $delta=$4
+else
+   input('enter number of steps in array: '):$steps
+   input('enter starting value: '):$start
+   input('enter array increment: '):$delta
+endif
+$size=size($par)
+"reset size. "
+if $size>1.5 and $steps>1.5 and $size>$steps then
+  {$par}={$par}[1],{$par}[2]
+elseif $steps<1.5 then
+  {$par}={$par}[1]
+endif
+gain='y'
+$count=0
+repeat
+   exp($count*$delta):$value
+   {$par}[$count+1] = $start * $value 
+   $count = $count+1
+until $count>=$steps
+if ($# <> 5) then
+   da
+endif

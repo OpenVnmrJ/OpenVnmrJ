@@ -1,0 +1,220 @@
+"macro cpautoQ"
+"cpautoQ - Generic macro to run samples under automation"
+"   arg1 = location directory for sample information	"
+"   arg2 = day or night					"
+
+
+fixacqlog
+fixpar
+	"Remember solvent"
+$solvent=solvent
+PROTON
+solvent=$solvent
+"*******************************************************"
+                "All Active locations will be set to Error"
+                " This is because hardware related errors are not"
+                " captured by the software.  At any given time only"
+                " one location is Active.  Hence all other Active"
+                " locations are assumed to be hardware errors"
+                " active2error macro does this"
+    active2error
+"*******************************************************"
+
+MinSW='off'
+module('add','studypar','basic')
+setvalue('operator_',operator)
+setvalue('loc_',loc)
+setvalue('vrack_',vrack)
+setvalue('vzone_',vzone)
+setvalue('vloc_',vloc)
+
+$md=autodir+'/enterQ.macdir'
+$locdir=$md+'/'+$1
+$automaclibdir=$locdir+'/'+$2
+$expfile=$automaclibdir+'/EXPLIST'
+$lngfile=$automaclibdir+'/LONGLIST'
+shell('touch '+$expfile):$dum
+shell('touch '+$lngfile):$dum
+shell('(cat '+curexp+'/sampleinfo >> '+$md+'/submittedQ)'):$dum
+
+if (traymax<>1) and (traymax<>96) and (traymax<>768) then
+        putrefsamp
+endif
+
+"*****Read EXPLIST *************"
+$EXPLIST='' $s1='' $exptot=0
+if ($2='day') then
+    readfile($expfile,'$EXPLIST','$s1','','local'):$exptot
+else
+    readfile($lngfile,'$EXPLIST','$s1','','local'):$exptot
+endif
+
+if ($exptot=0) then
+  explist=''
+  wexp='AutoSKIP'
+  shell('(cat '+$lngfile+' | wc -l)'):$niteex
+  if ($niteex=0) then
+	checklocstatus(autodir+'/enterQ',loc):$status,$who,$samplename,$locdir2
+	if ($1=$locdir2) then
+		updatestatus(autodir,loc,'Complete')
+	endif
+  endif
+  RETURN
+endif
+
+"*****************************************************"
+  autoname='enterQ.macdir/'+$1+'/current%R0%'
+  getsampglobal($locdir)
+  $sample=sample	"Remembers the sample before doing any Automkdir"
+  exists(archivedir+'/'+sample+'/dirinfo','directory'):$direx
+
+  if ($direx=0) then 
+        setsamplename('auto')
+        Automkdir
+	eventLog('StudyMessage','Created',$1)
+	$loc=''
+	getlocid:$loc
+        write('file',archivedir+'/'+sample+'/dirinfo/loc'+$loc,'%s %s',autodir,$1)
+	$rbld=0
+	fixcpQnodes($1):$rbld
+	if ($rbld) then
+	    xmhaha_subautoSQ(autodir,'',$1)
+	    if ($rbld>1) then
+		xmhaha_asx(autodir,'NightQ')
+	    endif
+	    if ($2='day') then
+    		readfile($expfile,'$EXPLIST','$s1','','local'):$exptot
+	    else
+    		readfile($lngfile,'$EXPLIST','$s1','','local'):$exptot
+	    endif
+	endif
+  else
+        Autockdir
+  endif
+
+  $maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+  pwd:$curdir
+
+  cd($maclibdir):$dum
+  shell('touch EXPLIST'):$dum
+  shell('touch LONGLIST'):$dum
+  shell('touch EXPalias'):$dum
+  reconcileQ($expfile,$lngfile,$1)
+  if ($2='day') then
+      shell('(cat '+$expfile+' | awk \'{print $1" "$3}\' >> EXPalias)'):$dum
+  else
+      shell('(cat '+$lngfile+' | awk \'{print $1" "$3}\' >> EXPalias)'):$dum
+  endif
+  cd($curdir):$dum
+
+	shell('mv '+$expfile+' '+$md):$dum
+	shell('mv '+$lngfile+' '+$md):$dum
+	shell('cp '+$automaclibdir+'/* '+$maclibdir):$dum
+	shell('mv '+$md+'/EXPLIST '+$expfile):$dum
+	shell('mv '+$md+'/LONGLIST '+$lngfile):$dum
+
+"************************************************************"
+  explist=$EXPLIST
+  cpexplist('write',$maclibdir)
+  cpexplist('next',$maclibdir):explist
+  wexp='chempackQ'
+  wdone=''
+
+"********Execute any sample customization***************"
+"********This is done ONLY to make sure ****************"
+"********AutoSKIP in walkupQacq is not missed***********"
+
+  Autoexmac('walkupQ')
+  if (wexp='AutoSKIP') then
+	RETURN
+  endif
+
+"*******************************************************"
+  MinSW='off'   "This is  critical and should be"
+                " done here to make sure this overrides"
+                " any earlier step"
+
+"*******************************************************"
+// Find any first experiment WQ customization that includes
+//   parameters from cpQdefaults
+// This customization will follow walkupQ customization
+
+    mkfirstexpWQacq
+
+"*******************************************************"
+		"save sample global parameters"
+    if (appmode='lc') then retentiontime_=retentiontime endif
+    savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+    shell('cp '+archivedir+'/'+sample+'/dirinfo/macdir/sampleglobal '+$locdir):$dum
+    shell('cp '+$locdir+'/sampleglobal '+$md+'/currentsampleglobal'):$dum
+
+"*******************************************************"
+		"save studypar and studytray for display purposes"
+    updatestatus(autodir,loc,'Active')
+    savestudypar(archivedir+'/'+sample)
+    shell('cp '+archivedir+'/'+sample+'/studypar '+$locdir+'/Studypar'):$dum
+
+"*******************************************************"
+		"Update sampleinfo with current sample directory"
+    $sedcmd1 = `'s/SampleDir:.*/SampleDir: `+sample+`/'`
+    shell(`sed -e `+$sedcmd1+` `+curexp+`/sampleinfo > `+curexp+`/sampleinfotmp`):$dum
+    shell('mv '+curexp+'/sampleinfotmp '+curexp+'/sampleinfo'):$dum
+    shell('cat '+curexp+'/sampleinfo > '+$md+'/currentsampleinfo'):$dum
+
+    $newname=$locdir+'/current'
+    exists($newname+'.fid','directory'):$direx
+    if ($direx) then
+	shell('rm -rf '+$newname+'.fid'):$dum
+    endif
+    shell('mkdir '+$newname+'.fid'):$dum
+
+"*******************************************************"
+   $locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+   write('reset',$locpath)
+   write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$1)
+   $activedir=$locdir+'/xmldir/Active'
+   exists($activedir,'directory'):$direx
+   if ($direx) then
+	xmhaha_baQ('delete',$1)
+	shell('rm -rf '+$activedir):$dum
+   endif
+   shell('mkdir -p '+$activedir):$dum
+   exists($activedir,'directory'):$direx
+   if ($direx) then
+	write('reset',$activedir+'/fidlog')
+     if (appmode<>'lc') then
+	$as=archivedir+'/'+sample+'/'
+	shell('(cat '+$md+'/expfidlog | grep "'+$as+'" >> '+$activedir+'/fidlog)'):$fidex
+     endif
+   endif
+   xmhaha_beQ(autodir,$1,'delete')
+"*******************************************************"
+		"Update TtimeQ file"
+      $priority=''
+      shell('grep USER: '+curexp+'/sampleinfo'):$USER
+      substr($USER,3):$priority
+
+        $samptime=0 $samptimel=0 $samptimeP=0
+	$curtotal=0 $curnite=0 $curprt=0
+	readTtimeQ($automaclibdir):$samptimeP,$samptime,$samptimel
+	readTtimeQ($md):$curprt,$curtotal,$curnite
+
+	if ($2='night') then
+	   $curtotal=$curtotal-$samptimel
+	else
+	   $curtotal=$curtotal-$samptime
+	endif
+	if ($priority='priority') then
+		$curprt=$curprt-$samptime
+	endif
+	writeTtimeQ($md,$curprt,$curtotal,$curnite)
+
+    write('reset',$md+'/cpstartQ')
+    write('file',$md+'/cpstartQ','SAMPLE#: %d %s',loc,$1)
+    autotimelog('start',$1+'/'+$2,$sample)
+    eventLog('StudyStart',$2+'Q')
+    sqLog('SampleStart')
+
+"*******************************************************"
+"  Update sub xml file"
+   xmhaha_asx(autodir,'enterQ')

@@ -1,0 +1,662 @@
+"macro gmapshims"
+"  gradient shimming"
+
+if $#<0.5 then
+return
+endif
+
+
+if ($1 = 'exit') then
+gmapset('return')
+return
+endif
+
+
+"*****  macro reset  *****" 
+" set old values from shimoldv into shims "
+IF ($1 = 'reset') THEN
+
+$dirn=userdir+'/gshimlib/'
+$jfile=$dirn+'data/gshim.list'
+exists($jfile,'file'):$e
+if ($e<0.5) then
+  write('error','file gshim.list does not exist')
+  return
+endif
+
+lookup('file',$jfile)
+exists('gzsize','parameter'):$e
+if $e<0.5 then
+  lookup('gzsize','read'):$bsize
+else
+  $bsize = gzsize
+endif
+
+$gzmaxsize=8
+
+$shimoldv=0
+$shimname=''
+"get $shimoldv from gshim.list"
+lookup('Error','skip')
+$vc=0
+repeat
+  $vc=$vc+1
+  lookup('read','skip','read','skip',3):$shimname[$vc],$shimoldv[$vc]
+until (($vc+0.5)>=$gzmaxsize)
+
+$vc=0
+repeat
+  $vc=$vc+1
+  {$shimname[$vc]} = $shimoldv[$vc]
+until (($vc+0.5)>=$bsize)
+
+RETURN
+ENDIF
+
+
+"*****  macro setbest  *****" 
+" set best values from shimval into shims "
+IF ($1 = 'setbest') THEN  "could pass another argument for _ez, rtp"
+
+$js='' $jstr=''
+$dirn=userdir+'/gshimlib/'
+$jfile=$dirn+'data/gshim.rec'
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.rec does not exist')
+  return
+endif
+
+lookup('file',$jfile)
+
+$gzmaxsize=8
+
+"get $shimval from gshim.rec"
+$shimval=0  
+$shimname=''
+$differr=0
+$mindifferr=1e8
+$v=0
+$bsize=8  $bsizetmp=8
+repeat
+  $v=$v+1
+  $js=''
+  lookup('mapname','read'):$js
+  if $js<>'' then
+    lookup('gzsize','read','seek','err','read'):$bsizetmp,$differr
+    if $differr < $mindifferr then
+      $mindifferr = $differr
+      $bsize=$bsizetmp
+      lookup('seek','Error','skip')
+      $vc=0
+      repeat
+        $vc=$vc+1
+        lookup('read','skip',2,'read','skip',2):$shimname[$vc],$shimval[$vc]
+      until ($vc=$bsize)
+    endif
+  endif
+until ($js='')
+
+$vc=0
+repeat
+  $vc=$vc+1
+  {$shimname[$vc]} = $shimval[$vc]
+until ($vc=$bsize)
+
+gmaplistfunc('setzshims'):$ok,$js
+if $ok<0 then
+  write('error','setbest failed')
+  return
+endif
+exec($js)
+write('line3','Updating shims %s-%s.',$shimname[1],$shimname[$bsize])
+
+return(0)
+endif
+
+
+IF ($1 = 'setoldv') THEN
+
+if ($# > 1.5) then
+  $bsize_tmp = $2
+else
+  $bsize_tmp = 0
+endif
+
+$mapname=''
+$gzmaxsize=8
+$bsizemax=8
+$dirn=userdir+'/gshimlib/'
+$jfile=$dirn+'data/gshim.list'
+$kfile=$dirn+'data/gshim.bas'
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.list does not exist, reload shimmap')
+  return
+endif
+exists($kfile,'file'):$k
+if $k<0.5 then
+  write('error','file gshim.bas does not exist, reload shimmap')
+  return
+endif
+
+lookup('file',$kfile,'skip','skip','read'):$bsizemax
+lookup('file',$jfile,'mapname','read'):$mapname
+if ($bsize_tmp > 0.5) then
+  $bsize = $bsize_tmp
+else
+  lookup('gzsize','read'):$bsize
+endif
+if $bsize>$bsizemax  then $bsize=$bsizemax  endif
+if $bsize>$gzmaxsize then $bsize=$gzmaxsize endif
+
+$shimcal=''  "note its a string"
+lookup('seek','Error','skip')
+$vc=0
+repeat
+  $vc=$vc+1
+  $shimname[$vc]=''
+  lookup('read','read','skip',4):$shimname[$vc],$shimcal[$vc]
+until ($vc=$gzmaxsize)
+
+$vc=0
+repeat
+  $vc=$vc+1
+  $shimoldv[$vc]=0
+until ($vc=$gzmaxsize)
+$tmp=0
+$vc=0
+repeat
+  $vc=$vc+1
+  $shimoldv[$vc]={$shimname[$vc]}
+  length($shimname[$vc]):$x
+  if $x<2.5 then $shimname[$vc]=$shimname[$vc]+' ' endif
+"until ($vc=$bsize)"
+until ($vc=$gzmaxsize)  "if true, $bsize not necessary, could readln"
+
+rm($jfile):$x
+
+"write values to output"
+write('file',$jfile,'mapname %s',$mapname)
+write('file',$jfile,'shimset %2-d   gzsize %d                         rms err %11d\n',shimset,$bsize,0)
+write('file',$jfile,'Shim       Offset         Old         New        Diff       Error')
+write('file',$jfile,'-----------------------------------------------------------------')
+$vc=0
+repeat
+  $vc=$vc+1
+"  write('file',$jfile,'%-7s   %7s     %7.0f     %7.0f     %7d     %7d',$shimname[$vc],$shimcal[$vc],$shimoldv[$vc],$shimoldv[$vc],0,0) "
+  write('file',$jfile,'%3s       %7s     %7.0f     %7.0f     %7d     %7d',$shimname[$vc],$shimcal[$vc],$shimoldv[$vc],$shimoldv[$vc],0,0)
+  until ($vc=$gzmaxsize)
+write('file',$jfile,'-----------------------------------------------------------------')
+
+RETURN
+ENDIF
+
+
+" set fit values from shimval into shims "
+IF ($1 = 'setnew') THEN  "could pass another argument for _ez, rtp"
+
+if ($#>1.5 or auto<>'n') then
+  $nonstop = 'y'  "no input questions, go nonstop"
+else
+  $nonstop = 'n'  "ask input questions"
+endif
+
+$js='' $jstr=''
+$dirn=userdir+'/gshimlib/'
+$jfile=$dirn+'data/gshim.list'
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.list does not exist')
+  return(1)
+endif
+
+lookup('file',$jfile)
+lookup('gzsize','read'):$bsize  "must read when decrementing gzsize"
+$gzmaxsize=8
+
+$shimlimit = 32768
+if (shimset = 1 or shimset = 2 or shimset = 10 or shimset = 11) then
+  $shimlimit = 2048
+endif
+
+$toobig=0
+$rangeflag=0
+$decgzsizeflag=0
+$shimval=0  
+$shimname=''
+"note its a string"  "$shimcal=0 and write 7.0f fails, write to alpha ok though"
+lookup('Error','skip')
+$vc=0
+repeat
+  $vc=$vc+1
+  lookup('read','skip',2,'read','skip',2):$shimname[$vc],$shimval[$vc]
+  if ($shimval[$vc] > ($shimlimit-1)) then
+    $shimval[$vc] = $shimlimit-1
+"    if $toobig=0 then $toobig=$vc endif"
+    $toobig = $vc
+  endif
+  if ($shimval[$vc] < -$shimlimit) then
+    $shimval[$vc] = -$shimlimit
+"    if $toobig=0 then $toobig=$vc endif"
+    $toobig = $vc
+  endif
+until ($vc=$bsize)
+
+if ($toobig > 0.5) then
+  $jstr=$shimname[$toobig]
+  write('file',$dirn+'data/gshim.rec','shim %s out-of-range\n',$jstr)
+  if ($toobig = 1) then
+    write('error','shim %s out-of-range, shimming aborted',$jstr)
+    RETURN(2)
+  else
+    if ($nonstop = 'y') then
+      write('error','shim %s out-of-range',$jstr)
+      $rangeflag=1
+      $decgzsizeflag=1
+    else
+      $js = 'shim '+$shimname[$toobig]+' out-of-range, set to max and continue? [yes] '
+      input($js):$js
+      substr($js,1,1):$js
+      if ($js<>'n' and $js<>'N') then
+        $rangeflag=1
+        format($toobig-1,1,0):$jstr
+        $js='decrement number of shims to '+$jstr+'? [yes] '
+        input($js):$js
+        substr($js,1,1):$js
+        if ($js='n' or $js='N') then
+          $decgzsizeflag=0
+        else
+          $decgzsizeflag=1
+        endif
+      else
+        write('alpha','Gradient shimming halted, new shims not installed.')
+        write('file',$dirn+'data/gshim.rec','Gradient shimming halted, new shims not installed.')
+        RETURN(1)  "stop"
+      endif
+    endif
+  endif
+endif
+
+$vc=0
+repeat
+  $vc=$vc+1
+  {$shimname[$vc]} = $shimval[$vc]
+until ($vc=$bsize)
+
+gmapshims('setzshims')
+if $rangeflag=1 then
+  if $decgzsizeflag=1 then
+    gmapshims('setoldv',$toobig-1)  "decrease gzsize"
+  endif
+endif
+"replace with gmaplistfunc()"
+
+$js=$shimname[1]
+$jstr=$shimname[$bsize]
+write('line3','Updating shims %s-%s.',$js,$jstr)
+write('file',$dirn+'data/gshim.rec','Updating shims %s-%s.\n',$js,$jstr)
+
+RETURN(0)
+ENDIF
+
+
+IF ($1 = 'unarray') THEN
+
+$exec=''
+gmaplistfunc('unarray'):$ok,$exec
+exec($exec)
+return
+$jfile=userdir+'/gshimlib/data/gshim.list'
+$shimname='' 
+$bsize=8
+exists($jfile,'file'):$e
+"if $ok = -1 then"
+if $e>0.5 then
+  lookup('file',$jfile,'gzsize','read'):$bsize
+  if $bsize < ((arraydim/2)-2) then
+    $bsize = (arraydim/2)-2
+    if $bsize>8 then $bsize=8 endif
+  endif
+  lookup('seek','Error','skip')
+  $vc=0
+  repeat
+    $vc=$vc+1
+    lookup('read','skip',5):$shimname[$vc]
+"    {$shimname[$vc]} = {$shimname[$vc]}[1]"
+  until ($vc=$bsize)
+  $vc=0
+  repeat
+    $vc=$vc+1
+    {$shimname[$vc]} = {$shimname[$vc]}[1]
+  until $vc=$bsize
+else
+  $js=''
+  $vc=0
+  repeat
+    $vc=$vc+1
+    format($vc,1,0):$js
+    $shimname='z'+$js
+    {$shimname} = {$shimname}[1]
+  until $vc>=$bsize
+  $vc=0
+  repeat
+    $vc=$vc+1
+    format($vc,1,0):$js
+    $shimname='z'+$js+'c'
+    {$shimname} = {$shimname}[1]
+  until $vc>=4
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'wrshimcal') THEN
+
+$mapname=''
+if ($# > 1.5) then
+  $mapname = $2
+else
+  $mapname = 'standard'
+endif
+
+$gzmaxsize=8
+$dirn=userdir+'/gshimlib/'
+$jfile=$dirn+'data/gshim.list'
+exists($jfile,'file'):$e
+if $e>0.5 then rm($jfile):$x endif
+
+$coarseflag = 0
+$shimname='' 
+$shimname='z1','z2','z3','z4','z5','z6','z7','z8'
+if (shimset = 1 or shimset = 2 or shimset = 10) then
+  $coarseflag = 1
+  $shimname[1]='z1c' $shimname[2]='z2c'
+endif
+if (shimset = 5) then
+  $coarseflag = 2
+  $shimname[1]='z1c' $shimname[2]='z2c'
+  $shimname[3]='z3c' $shimname[4]='z4c'
+endif
+
+$shimcal=0
+if (shimset = 1) then     "Varian 13, range 2K"
+  $shimcal=50,50,200,200, 200,200,200,200
+  $bsize=4
+endif
+if (shimset = 2) then     "Oxford 18, range 2K"
+  $shimcal=50,50,200,200, 800,800,800,800
+  $bsize=5
+endif
+if (shimset = 3) then     "Varian 23, range 32K"
+  $shimcal=400,800,3200,3200, 16000,16000,16000,16000
+  $bsize=6
+endif
+if (shimset = 4) then     "Varian 28, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=7
+endif
+if (shimset = 5) then     "Ultra Shims, range 32K"
+  $shimcal=200,800,800,800, 3200,3200,3200,3200
+  $bsize=8
+endif
+if (shimset = 6) then     "Varian 18, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=5
+endif
+if (shimset = 7) then     "Varian 21, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200 
+  $bsize=6
+endif
+if (shimset = 8) then 
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=4
+endif
+if (shimset = 9) then      "Varian 40, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=7
+endif
+if (shimset = 10) then     "Varian 14, range 2K"
+  $shimcal=50,50,200,200, 800,800,800,800
+  $bsize=5
+endif
+if (shimset = 11) then     "Varian 14, range 2K"
+  $shimcal=50,50,200,200, 800,800,800,800
+  $bsize=2
+endif
+if (shimset = 12) then      "Varian 26, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=5
+endif
+if (shimset = 13) then      "range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=6
+endif
+if (shimset = 14) then      "range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=6
+endif
+if (shimset = 15) or (shimset = 16) then
+  $shimcal=200,200,800,800, 800,800,800,800
+  $bsize=4
+endif
+if (shimset = 17) then     "Varian 27, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200 
+  $bsize=6
+endif
+if (shimset = 18) then     "probably wrong"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=7
+endif
+if (shimset = 19) then     "Varian 28, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=7
+endif
+if (shimset = 20) then     "Agilent 32, range 32K"
+  $shimcal=800,800,3200,3200, 3200,3200,3200,3200
+  $bsize=7
+endif
+
+exists('gzsize','parameter'):$e
+if $e>0.5 then 
+  if gzsize>$bsize then
+    gzsize=$bsize
+    write('error','gzsize reset to max of %d',$bsize)
+    shell('sleep 1'):$x
+  endif
+  $bsize=gzsize
+endif
+"this works for setting gzsize for makeshimmap, but not otherwise"
+
+$js=''  $jv=''  $jr=0
+write('file',$jfile,'mapname %s',$mapname)
+write('file',$jfile,'shimset %2-d   gzsize %d                         rms err %11d\n',shimset,$bsize,0)
+write('file',$jfile,'Shim       Offset         Old         New        Diff       Error')
+write('file',$jfile,'-----------------------------------------------------------------')
+
+$vc=0
+repeat
+  $vc=$vc+1
+  $js=$shimname[$vc]
+  $jr={$js}[1]
+  if ($jr > 0) then $shimcal[$vc] = -$shimcal[$vc] endif        "change sign if negative"
+  length($js):$x
+  if $x<2.5 then $js=$js+' ' endif
+  write('file',$jfile,'%3s       %7d     %7d     %7d     %7d     %7d',$js,$shimcal[$vc],$jr,$jr,0,0)
+until $vc>=$gzmaxsize
+write('file',$jfile,'-----------------------------------------------------------------')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'chkshimcal') THEN
+"check gshim.list to see if shimnames exist"
+"also check if values out of range"
+
+$dirn=userdir+'/gshimlib/data/'
+$jfile=$dirn+'gshim.list'
+$jmap=''
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('error','file gshim.list does not exist')
+  return
+endif
+lookup('file',$jfile,'seek','gzsize','read'):$bsize
+exists('gzsize','parameter'):$e
+if $e>0.5 then
+  $bsize = gzsize
+endif
+
+$shimlimit=32768
+if (shimset=1 or shimset=2 or shimset=10 or shimset=11) then
+  $shimlimit=2048
+endif
+
+"read file"
+$errflag = 0
+$shimcal=0  $shimoldv=0
+$shimname=''
+lookup('seek','Error','skip')
+$nret=0
+$vc=0
+repeat
+  $vc=$vc+1
+  lookup('read','read','skip',4):$shimname[$vc],$shimcal[$vc],$nret
+  exists($shimname[$vc],'parameter'):$e
+  if $e<0.5 then
+    $errflag = 1
+    write('error','gshim.list error: shim %s does not exist',$shimname[$vc])
+  else
+    $shimoldv[$vc] = {$shimname[$vc]}
+    $tmp = $shimcal[$vc] + $shimoldv[$vc]
+    if ($tmp > $shimlimit) then
+      $errflag = 1
+      write('error','gshim.list error: Offset out-of-range for %s',$shimname[$vc])
+    else
+      if ($tmp < -$shimlimit) then
+        $errflag = 1
+        write('error','gshim.list error: Offset out-of-range for %s',$shimname[$vc])
+      endif
+    endif
+  endif
+until ($vc>=$bsize or $errflag>0.5 or $nret<0.5)
+
+if $errflag>0.5 then
+  abort
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'setzshims') THEN
+" set shim values to hardware "   "use sethw to replace su"
+
+"abortoff"
+"load='y' return"
+
+if (system <> 'spectrometer') then
+  write('error','Cannot call sethw from a datastation.')
+  return
+endif
+
+$ok=0 $jstr=''
+gmaplistfunc('setzshims'):$ok,$jstr
+if $ok<0 then
+  write('error','macro setzshims failed')
+  return
+endif
+exec($jstr)
+return
+
+$dirn=userdir+'/gshimlib/data/'
+$jfile=$dirn+'gshim.list'
+exists($jfile,'file'):$ef
+if $ef<0.5 then
+  write('error','file gshim.list does not exist')
+  return
+endif
+lookup('file',$jfile,'gzsize','read'):$bsize
+lookup('Error','skip')
+
+$shimname='' $shimval=0
+$vc=1
+$js='' $jstr='sethw('
+if shimset=5 then
+  $jstr=$jstr+'\'nowait\','
+endif
+lookup('read','skip',5):$shimname
+$jstr=$jstr+'\''+$shimname+'\','
+format({$shimname},1,0):$js
+$jstr=$jstr+$js
+if $bsize>1.5 then
+  repeat
+    $vc=$vc+1
+    lookup('read','skip',5):$shimname
+    $jstr=$jstr+',\''+$shimname+'\','
+    format({$shimname},1,0):$js
+    $jstr=$jstr+$js
+  until ($vc=$bsize)
+endif
+$jstr=$jstr+')'
+exec($jstr)
+ 
+RETURN
+ENDIF
+
+
+IF ($1 = 'readzshims') THEN
+" read shim values from hardware "
+
+if (system <> 'spectrometer') then
+  write('error','Cannot call readhw from a datastation.')
+  return
+endif
+
+$dirn=userdir+'/gshimlib/data/'
+$jfile=$dirn+'gshim.list'
+exists($jfile,'file'):$ef
+if $ef<0.5 then
+  return
+endif
+lookup('file',$jfile,'gzsize','read'):$bsize
+lookup('Error','skip')
+
+$shimname='' $shimval=0
+$vc=1
+$js='' $jstr='readhw('
+lookup('read','skip',5):$shimname
+$jstr=$jstr+'\''+$shimname+'\''
+$js=$shimname
+if $bsize>1.5 then
+  repeat
+    $vc=$vc+1
+    lookup('read','skip',5):$shimname
+    $jstr=$jstr+',\''+$shimname+'\''
+    $js=$js+','+$shimname
+  until ($vc=$bsize)
+endif
+$jstr=$jstr+'):'+$js
+exec($jstr)
+
+RETURN
+ENDIF
+
+
+IF ($# > 0.5) THEN
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+
+RETURN
+ENDIF
+
+
+"group into smaller macros, put most-used options first"
+"  readallshims - readhw"
+"  setzshims (setallshims) - sethw"
+"  gmapdisp - setwindow retrbasis setbname shimp explmenu maplist"
+"  gmaprep - proca fita setoldv shimd"
+"  gmapset - setb procb reprocb setsw svppar par reproca"
+"  gmapshims - seta wrshimcal chkshimcal unarray setnew reset setzshims"

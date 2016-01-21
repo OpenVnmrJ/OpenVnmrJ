@@ -1,0 +1,148 @@
+"macro xmendq"
+"check study queue, stop study queue chain"
+
+if ($# = 0) then
+  $action='done'
+else
+  $action = $1
+endif
+
+if ($action = 'findreq') then
+"find next sq scans, check if current node is required"
+// or if traymax=1 and last node
+// called from acquire
+
+  $found='n'
+  xm1('studydir'):$sdir
+  $sqfile=$sdir+'/enterSQ'
+  exists($sqfile,'file'):$e
+  if ($e<0.5 or actionid='null' or actionid='') then
+    return($found)
+  endif
+  xmgetatts(actionid,'exp'):$exp
+
+  $ids='' $val='' $type='' $qsize=0
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  if (traymax=1) then
+    if ($ids[$qsize] = actionid) then
+      $found='y'
+      return($found)
+    endif
+  endif
+
+  teststr('$ids',actionid,'local'):$i  // start from current id
+  if ($i>0.5 and $i<$qsize) then
+    repeat
+      $i=$i+1
+      substr($val[$i],1):$type
+      if ($type<>'parent' and $ids[$i]<>actionid) then
+        $st='' $req='' $ntype=''
+        xmgetatts($ids[$i],'status','required','type','macro'):$st,$req,$ntype
+        if ($st='Ready' or $st='Customized') then
+          if ($ntype='CMD' or $ntype='RTCMD') then
+            $found='y'
+          endif
+          if ($found='n') then
+            $end='q1W2e3R4'
+            $req=$req+' '+$end
+            $j=0 $rr=''
+            repeat
+              $j=$j+1
+              substr($req,$j):$rr
+              if ($rr = $exp) then
+                $found='y'
+              endif
+            until ($found='y' or $req=$end or $rr='' or $j>100)
+          endif
+        endif
+      endif
+    until ($i>=$qsize or $ids[$i]=actionid or $found='y')
+  endif
+  return($found)
+
+elseif ($action = 'check') then
+"if all sq scans done, then stop the chain"
+// called from xmwexp
+
+  xm1('studydir'):$sdir
+  $sqfile=$sdir+'/enterSQ'
+  exists($sqfile,'file'):$e
+  if $e<0.5 then
+    return
+  endif
+
+" fid status is: Ready, Customized, Active, Executing, Completed, Error, Skipped"
+  $ids='' $val='' $type='' $qsize=0 $qst='Completed'
+  readfile($sqfile,'$ids','$val','','local'):$qsize
+  teststr('$ids',actionid,'local'):$i  // start from current id
+  while ($i<$qsize and $qst='Completed') do
+    $i=$i+1
+    substr($val[$i],1):$type
+    if ($type <> 'parent') then
+      $st='' $ntype=''
+      xmgetatts($ids[$i],'status','type'):$st,$ntype
+      if ($st<>'protocol' and $st<>'Completed' and $st<>'Error' and $st<>'Skipped' and $st<>'') then
+        $qst=$st
+        if ($ntype='CMD' or $ntype='RTCMD') then
+          xmnext
+          return
+        endif
+      endif
+    endif
+  endwhile
+
+  if ($qst='Completed') then
+    xmendq('done')
+  endif
+
+elseif ($action = 'done') then
+"stop sq chain, cleanup"
+// called from xmnext and xmwexp
+
+  if (auto<>'y') then
+    write('line3','No more experiments in study.')
+  else
+    write('line3','No more experiments in study %s.',studyid)
+  endif
+  xmtune('writepars','end')
+
+  if (size('doprocess') < 2.5) then
+    doprocess[3]='y' doprocess[4]='y' doprocess[5]='n'
+  elseif (size('doprocess') < 4.5) then
+    doprocess[5]='n'
+  endif
+  if doprocess[5]='y' then
+    $cmd='xm1(\\\'showlast\\\',\\\''+studyid+'_'+actionid+'\\\',\\\''+operator+'\\\',\\\''+autodir+'\\\')'
+    xm1('sendsqcmd',$cmd)
+  endif
+  actionid='null'
+  sqmode='pause'
+  sqfilemenu('init')
+  if appmode='imaging' then
+    sqsavestudy
+  else
+    cqsavestudy
+    xmemail('study')
+    if (appmode='walkup' or appmode='lc') then
+      xmtime('update')
+    endif
+  endif
+  if auto<>'y' then
+    xm1('pause')
+  else
+    $sendfile=userdir+'/persistence/.talk2j'
+    exists($sendfile,'file'):$e2
+    if ($e2<0.5) then
+      xmconvert('updatestudy',autodir,studyid)
+    else
+      $cmd='xmconvert(\'updatestudy\',\''+autodir+'\',\''+studyid+'\')'
+      xm1('sendcmd',$cmd)
+    endif
+  endif
+  exists('user_xmendq','maclib'):$e
+  if ($e) then exec('user_xmendq') endif
+  if traymax=1 then
+    lcsq('startlc')
+  endif
+
+endif

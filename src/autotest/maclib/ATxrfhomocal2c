@@ -1,0 +1,28 @@
+"macro ATxrfhomocal2c"
+"ATxrfhomocal2c"
+
+
+$counter=1
+select(1) peak:$firstmaxheight $bestindex=$counter
+
+$counter=2     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht                  "finds 360 (next maximum)"
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter>22)
+
+$pwx360=pwx[$bestindex]
+$360maxindex=$bestindex
+$360maxheight=$bestheight
+
+$ratio1=$360maxheight/$firstmaxheight
+$ratio1=trunc(100*$ratio1)/100
+$pwx90=trunc(10*$pwx360/4)/10
+return($pwx90,$pwx360,$ratio1)
+

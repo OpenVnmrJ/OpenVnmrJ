@@ -1,0 +1,235 @@
+"macro gs_arraymap"
+"***************************************************************************"
+"
+" gs_arraymap - macro to generate a single field map"
+" 		
+" Details: Converts Varian fid files (float, vnmrs data) to binary FP data"
+"          N files are created for each phase array coil, B0#.bin"
+"          gs_mkmap('B0#') is called to generate N field maps"
+"          Finally the N field maps and images are combined => B0.r.{f,mag}" 
+"
+"***************************************************************************"
+$GSDIR = userdir+'/gshimdir/data'
+$logfile = $GSDIR+'/ge3dshim.log' 
+$rootname = $GSDIR+'/B0'
+$rootnameR = $rootname+'.r'
+$rootname1 = $rootname+'.1'
+$rootname2 = $rootname+'.2'
+$rootnameB = $rootname+'.B'
+$rootnameA = $rootname+'.A'
+$macro = 'gs_arraymap'
+
+"do some checks"
+    if(seqcon <> 'ncccn') then
+      error('gs_acqb0map: seqcon must be set to ncccn')
+      abort
+    endif
+    if(phasearray > numrcvrs) or (phasearray < 2) then  
+      error('gs_acqb0map: Illegal no of array coils, phasearray = %d',phasearray)
+      abort
+    endif 
+    if(rcvrs = 'y') then
+      error('gs_acqb0map: Mismatch - numrcvrs=%d rcvrs=%s phasearray=%d',numrcvrs,rcvrs,phasearray)
+      abort
+    endif
+
+  $cmd = 'rm -f',$rootname+'*.bin*' shell($cmd):$x
+  "generate separate bin files for each array-coil"
+  $pa = ''
+  format(phasearray,0,0):$pa
+  "gsbinmulti fid_file output_file arrays"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: gsbinmulti => ',$macro)
+  $cmd = 'gsbinmulti '+$rootname1+' '+$rootname1+'.bin '+$pa
+  shell($cmd):$x  "=>B0.1.bin{.0-N}"
+  write('file',$logfile,'%s',$x)
+  $cmd = 'gsbinmulti '+$rootnameA+' '+$rootnameA+'.bin '+$pa  
+  shell($cmd):$x  "B0.A._"
+  $cmd = 'gsbinmulti '+$rootnameB+' '+$rootnameB+'.bin '+$pa
+  shell($cmd):$x  "B0.B._"
+
+
+  write('file',$logfile,'%s: %s.param ',$macro,$rootname)
+  shell('cat "'+$rootname+'.param" >> "'+$logfile+'"'):$x 
+  $c = 0
+  $cs = ''
+  while($c < phasearray) do 
+    format($c,0,0):$cs       
+    cp($rootname1+'.bin.'+$cs, $rootname+$cs+'.1.bin')  "=> B0#.1.bin"
+    cp($rootnameB+'.bin.'+$cs, $rootname+$cs+'.B.bin')
+    cp($rootnameA+'.bin.'+$cs, $rootname+$cs+'.A.bin')
+    write('file',$logfile,'*******************************************************')
+    write('file',$logfile,'%s: Processing array coil# %d',$macro,$c)
+
+    shell('ls -l "'+$rootname+$cs+'".?.bin >> "'+$logfile+'"'):$x
+
+    write('line3','Array# = %d',$c)
+    shell('ln -s '+$rootname+'.param '+$rootname+$cs+'.param')
+    gs_mkmap('B0'+$cs)  "B0#.r.f, B0#.r.mag created"
+    $c = $c + 1
+  endwhile
+    
+ "combine acquired fieldmaps by averaging B0#.f => B0.f for gsshimcalc"
+  $B0HDR = $GSDIR+'/B0.hdr'   "fdf header created by gs_acqb0map"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining %d phase-array files B0#.f',$macro,phasearray) 
+  $c = 1
+  $cs = ''
+  $rootname = $rootname
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x   
+  cp($rootname+'0.f', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs 
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x  
+    cp($rootname+$cs+'.f', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x    
+    "gsmean file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsmean '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.f' shell($cmd):$x 
+
+  mv($rootname+'.out', $rootname+'.f')
+  shell('rm -f '+$rootname+'.f.fdf'):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.f '+$rootname+'.f.fdf'):$x
+  shell('ls -l "'+$rootname+'".f >> "'+$logfile+'"'):$x
+
+  "combine remapped fieldmaps by averaging B0#.r1.f => B0.r1.f"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining phase-array files B0#.r1.f',$macro) 
+  $c = 1
+  $cs = ''
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+  cp($rootname+'0.r1.f', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs   
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x 
+    cp($rootname+$cs+'.r1.f', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x    
+    "gsmean file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsmean '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.f' shell($cmd):$x 
+  mv($rootname+'.out', $rootname+'.r1.f')
+  $cmd = 'rm -f '+$rootname+'.r1.f.fdf'  shell($cmd):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.r1.f '+$rootname+'.r1.f.fdf'):$x
+
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; gsremap => ',$macro,shimregion) 
+  shell('ls -l "'+$rootname+'".r1.* >> "'+$logfile+'"'):$x
+
+  "combine remapped images by adding B0#.r1.mag => B0.r1.mag"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining image files B0#.r1.mag',$macro) 
+  $c = 1
+  $cs = ''
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+  cp($rootname+'0.r1.mag', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs   
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x
+    cp($rootname+$cs+'.r1.mag', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x  
+    "gsadd file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsadd '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.r1.mag' shell($cmd):$x
+  mv($rootname+'.out', $rootname+'.r1.mag')
+  cp($rootname+'.r1.mag',$rootnameR+'.mag')  " B0.r.f, _.mag used by gshimcalc"
+  $cmd = 'rm -f '+$rootname+'.r1.mag.fdf' shell($cmd):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.r1.mag '+$rootname+'.r1.mag.fdf'):$x
+  shell('ls -l "'+$rootname+'".r1.mag >> "'+$logfile+'"'):$x
+
+  "combine remapped images by adding B0#.r2.mag => B0.r2.mag"
+if( (shimregion = 'voxel') or (shimregion = 'slab') ) then
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining image files B0#.r2.mag',$macro) 
+  $c = 1
+  $cs = ''
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+  cp($rootname+'0.r2.mag', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs   
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x
+    cp($rootname+$cs+'.r2.mag', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x   
+    "gsadd file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsadd '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.r2.mag' shell($cmd):$x
+  mv($rootname+'.out', $rootname+'.r2.mag')
+  $cmd = 'rm -f '+$rootname+'.r2.mag.fdf' shell($cmd):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.r2.mag '+$rootname+'.r2.mag.fdf'):$x
+  shell('ls -l "'+$rootname+'".r2.mag >> "'+$logfile+'"'):$x
+endif
+
+  "combine remapped fieldmaps by averaging B0#.r.f => B0.r.f for gsshimcalc"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining phase-array files B0#.r.f',$macro) 
+  $c = 1
+  $cs = ''
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+  cp($rootname+'0.r.f', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs   
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x
+    cp($rootname+$cs+'.r.f', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+    "gsmean file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsmean '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.r.f' shell($cmd):$x
+  mv($rootname+'.out', $rootname+'.r.f')
+  $cmd = 'rm -f '+$rootname+'.r.f.fdf' shell($cmd):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.r.f '+$rootname+'.r.f.fdf'):$x
+  shell('ls -l "'+$rootname+'".r.f >> "'+$logfile+'"'):$x
+
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; gsremap => ',$macro,shimregion) 
+  shell('ls -l "'+$rootname+'".r.* >> "'+$logfile+'"'):$x
+
+  "combine remapped images by adding B0#.r.mag => B0.r.mag; used by gshimcalc"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: Combining image files B0#.r.mag',$macro) 
+  $c = 1
+  $cs = ''
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+  cp($rootname+'0.r.mag', $rootname+'.out')
+  while($c < phasearray) do 
+    $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+    cp($rootname+'.out', $rootname1)
+    format($c,0,0):$cs   
+    $cmd = 'rm -f '+$rootname2 shell($cmd):$x
+    cp($rootname+$cs+'.r.mag', $rootname2)
+    $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x   
+    "gsadd file.1 file.2 file.param => file.out; Note, B0.param used"
+    shell('gsadd '+$rootname)   "B0.out contains mean phase"          
+    $c = $c + 1
+  endwhile
+  $cmd = 'rm -f '+$rootname+'.r.mag' shell($cmd):$x
+  mv($rootname+'.out', $rootname+'.r.mag')
+  $cmd = 'rm -f '+$rootname+'.r.mag.fdf' shell($cmd):$x
+  shell('fdfgluer '+$B0HDR+' '+$rootname+'.r.mag '+$rootname+'.r.mag.fdf'):$x
+  shell('ls -l "'+$rootname+'".r.mag >> "'+$logfile+'"'):$x
+
+  cp($rootname+'.param',$rootnameR+'.param') "=>B0.r.param for gscalc"
+
+  "cleanup"
+  $cmd = 'rm -f '+$rootname1 shell($cmd):$x
+  $cmd = 'rm -f '+$rootname2 shell($cmd):$x
+  $cmd = 'rm -f '+$rootname+'.out' shell($cmd):$x
+

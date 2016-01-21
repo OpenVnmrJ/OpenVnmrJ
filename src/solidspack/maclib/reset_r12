@@ -1,0 +1,50 @@
+"macro reset_r12"
+//Set the R12 pulses from the Spin Rate
+
+if (srate > 500) then
+   $pwHr12 = 2.0e6/(4.0*srate)
+   pwHr12 = 0.1*trunc($pwHr12/0.1 + 0.5)
+   srate = 2.0e6/(4.0*pwHr12)
+   aHr12 = aH90*(4.0*pwH90)/pwHr12
+   if (aHr12 = 4095) then
+      write('error','reset_r12 Error: aHr12 is >= to 4095')
+   endif
+endif
+
+if (qHr12 < 72.0) then qHr12 = 72.0 endif
+
+// Synchronize the dwell with the r12 Cycle
+
+if (pwHr12 > 0.0) then 
+   sw1 = srate
+endif   
+
+//Rotor Synchronize t1Xecho and t2Xecho
+
+if (srate > 500) then 
+   $t1Xecho = t1Xecho
+   $t2Xecho = t2Xecho
+   $acqplus = 1.0e6*(ni/sw1 + 1.0/srate)
+   if ($t1Xecho < $acqplus) then 
+      $t1Xecho = $acqplus
+   endif
+   if ($t2Xecho < $acqplus) then
+      $t2Xecho = $acqplus
+   endif 
+   t1Xecho = trunc($t1Xecho*1.0e-6*srate + 0.5)/(1.0e-6*srate)
+   t2Xecho = trunc($t2Xecho*1.0e-6*srate + 0.5)/(1.0e-6*srate)
+endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,202 @@
+Protocol: Hetcordumbolgcp2d_1  Sequence: hetcordumbolgcp2d_1.c  Apptype: solidseq1d
+
+Description:
+
+    H to X HETCOR using DUMBO during F1 followed by a Lee-Goldburg CP and
+    acquisition on X with TPPM or SPINAL decoupling.
+
+    Apply a frequency offset to pwH90(1), samnH and pwH90(2) to offset F1
+    DUMBO without disturbing CP or decoupling on resonance. tHmix is optional
+    spin-diffusion mixing period.
+
+    Z-rotation DUMBO provides F1 precession about Zed.  pwH90(3) and a tiltH
+    pulse with amplitude aH90 allow an offset, Lee-Goldburg CP.
+
+Additional Software:
+
+reset_hetcordumbolgcp2d_1 - This macro uses the calibrated values of pwH90 
+and aH90 to calculate the intial parameters for the dumboH waveform.  This 
+macro is run from the protocol.
+
+Setup:
+
+Load a calibrated data set and select the protocol Hetcordumbolgcp2d_1. For a
+new nucleus calibrate CP with Onepul and Tancpx and then set up Lee
+Goldburg CP with Lgcp. Then select the protocol Hetcordumbolgcp2d_1.
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file
+onepul describes calibration of decoupling.
+
+Lee-Goldburg CP and decoupling should use an optimum dof value, calibrated
+for CP. 
+
+The macro reset_hetcordumbolgcp2d_1 is run from the Hetcordumbolgcp2d_1 
+protocol.  This macro performs the next 4 steps.
+
+1. Set aHdumbo = aH90.  Set pwHtilt = pwH90*35.3/90.0.  aH90 automatically
+determines the tilt-pulse amplitude.
+2. Set pwHdumbo = 12.0*.0*pwH90.  pwHdumbo is rounded to a 100 ns grid.
+4. Set sw1 = 1.0/(pwHdumbo*1e-6). Set ni = 64 and phase = 1,2.
+5. Set nHdumbo = 1 if nHdumbo < 1. nHdumbo is the number of DUMBO cycles in
+the F1 period and it will be reset by the sequence for each F1 increment. 
+Set pwX180 = 0.0 to *not* place an X refocusing pulse in the middle of the
+F1 delay.  Most HETCOR's are run without a refocussing pulse.  A
+refocusing pulse is only desirable if the X-H J-coupling is limiting
+proton resolution.  MAS is adequate to remove the X-H dipolar
+interaction.   If a refocusing pulse is desired then the spin rate must
+be synchronized with the F1 dwell so that the refocusing pulse falls at
+a multiple of the rotor period
+
+For pwH90 (More page) and dumboH, set the parameter with  the "of"
+prefix to 0.0. Z-rotation sequences should place the F1 offset in the 
+middle of the spectrum (presumably at tof). The offset can be shifted
+from tof as needed by setting this value. Note that the value of "of" 
+is applied to the first two 90 degree pulses and the DUMBO.
+
+Collect a 2D dataset and process with wft2da.  Adjust ni to accommodate
+greater or lesser proton resolution of the sample in F1.
+
+HETCOR is very sensitive to phase transient on the proton channel
+(though Z-rotation DUMBO may be less sensitive than FSLG. Side effects
+of a large transient are a short T2 and an offset of the spectrum in F1. 
+It is recommended in general that one spend significant effort to remove
+phase transient for HETCOR, but this sequence may be more tolerable. 
+The procedure for phase-transient removal is in the manual file tunerp.
+
+A good sample for a HETCOR setup is natural abundance glycine. A quick
+HETCOR can be ni = 64, nt = 4, d1 = 1 and ss = 4.  Hetcordumbolgcp2d_1 works
+with spin rate above 10 kHz. Note that one must avoid the condition where 
+1.0/srate = N*pwHdumbo where N = 1,2 and 4. When DUMBO is calibrated with 
+pwH90 = 2.5 us then srate = 1.0/4.0*pwHdumbo = 8333 Hz. Choose srate > 
+10 kHz.  Also avoid synchronization at 16.7 kHz and 33.3 kZ as well. 
+
+It is reasonable calibrate the pwH90 = 2.5 us to do "100 kHz" DUMBO 
+during F1 if the probe has the appropriate specification. The best
+field strength is a function of both decoupling linewidth and scale.
+With a good result one will see a substantial splitting in the two
+upfield methylene lines - from 20% to the baseline depending upon the
+probe and calibration. In a Solenoid probe HETCOR can be improved by
+constricting sample to 50% ofthe coil width.
+
+The indirect axis of HETCOR is scaled by the value scalesw1. It will be 
+necessary to adjust scalesw1 to obtain the correct ppm scale.
+A rough calibration with glycine is obtained by putting two cursors on 
+the two methylene lines of glycine. On the command line type scalesw1 =
+dfrq/delta.  In general, set two lines with a known ppm difference Dppm
+and set scalesw1 = Dppm*dfrq/delta where Dppm is the shift difference.
+
+To reference F1 of a scaled HETCOR spectrum put a cursor on the peak
+with a known ppm value and type rl1(ppm*dfrq/scalesw1). Note that
+HETCOR spectra are displayed with axis ='pd' and refsource = 'dfrq'.
+
+Parameter  Groups:
+
+90H:  Module:  yes - the offset is used for the first two pwH90 pulses.
+Sequence:  hetcordumbolgcp2d_1.c
+Description:  Provides a 90-degree pulse on dec that can be used
+              as a preparation pulse.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+       ofH90 - offset of pwH90 pulses (1) and (2). 
+       chH90 = 'dec' must be set (not shown).
+
+Implementation:  SHAPE p1 = getpulse("90H", 0.0,0.0,1,0);
+                 SHAPE p2 = getpulse("90H", sh.phAccum,sh.phInt,2,0);
+Underscore function: _shape(p1,ph1H90);  _shape(p2,ph2H90);
+      ph1H90 and ph2H90 are the overall phase tables of the pulses. 
+
+Note: the starting phase of SHAPE p2 is updated for each F1 increment
+      using update_shape().  
+
+Note: pwH90 (3) is used directly in a decrgpulse() statement with 
+      phase ph3H90 and offset determined by dof. 
+
+pwHtilt: an individaul parameter set to 35.3*pwH90/90.0. The tiltH 
+      pulse uses the amplitude aH90. 
+
+dumboH:  Module:  yes
+Sequence:  tancpxdumbo.c
+Description:  Implements DUMBO homonuclear decoupling on the dec
+              channel.
+Parameters:  Sequence Page
+       aHdumbo - amplitude of the DUMBO on dec.
+       pwHdumbo - 1080-degree flip on dec (the length of full a DUMBO
+              cycle).
+       nHdumbo - DUMBO cycles represented in the .DEC file.*
+       ofHdumbo - overall frequency offset.
+       phHdumbo - additional starting phase of DUMBO**
+       chHdumbo = 'dec' must be set (not shown).
+Implementation:  MPSEQ dumbo = getdumbo("dumboH",0,0.0,0.0,0,1);
+Implementation:  MPSEQ dumbo = getdumboxmx("dumboH",0,0.0,0.0,0,1); <-- used here. 
+Underscore functions: _MPSEQ functions.
+
+Note: The starting phase of MPSEQ dumbo is updated for each F1 increment
+      using update_mpseq().  
+
+Note:* nHdumbo is updated by the pulse sequence and is the number of 
+       cycles of pwHdumbo in the F1 period. 
+
+Note:**phHdumbo should be 0.0 in this z-rotation sequence. 
+
+cpHX:  Module:  yes
+Sequence:  tancpxyr.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec2 to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec2 channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec2' -  channel with the initial polarization (must
+              be set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore functions: _cp_(hx, phHhx, phXhx);
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec2 channel
+              during acquisition.
+Parameters:  Sequence Page - Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+              getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec2 channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+

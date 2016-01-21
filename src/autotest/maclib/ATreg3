@@ -1,0 +1,30 @@
+"macro ATreg3"
+"ATreg3 - modulatorregression analysis"
+"Correlates the nmr response with the modulator power level "
+$filename=curexp+'/regression.inp'
+write('reset',$filename)
+write('file',$filename,'modulator value')
+write('file',$filename,'nmr response')
+write('file',$filename,'1 %4.0f',arraydim)
+$i=1
+repeat
+select($i)
+peak:$hgt
+if (array='tpwrf') then
+ write('file',$filename,'%10s  %5.1f',tpwrf[$i],$hgt)
+endif
+if (array='dpwrf') then
+ write('file',$filename,'%10s  %5.1f',dpwrf[$i],$hgt)
+endif
+$i=$i+1
+until $i>arraydim
+full
+expl('regression') analyze('expfit','regression','poly1','list')
+sc=100 wc=100
+
+lookup('file',curexp+'/analyze.list')
+lookup('skip',23,'read',1):$corrcoef
+lookup('skip',3,'read',1):$corrcoefdev
+$normdev=100*$corrcoefdev/$corrcoef
+$normdev=trunc(1000*$normdev)/1000
+return($normdev)

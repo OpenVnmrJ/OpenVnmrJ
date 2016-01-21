@@ -1,0 +1,67 @@
+"macro aslcalc"
+
+"Set up default values, but then check arguments"
+$sub_type = aslsub[1]
+$sub_all  = aslsub[2]
+$aslvar   = 'asltag'
+if ($# > 0) then $sub_type = $1 endif
+if ($# > 1) then $sub_all  = $2 endif
+if ($# > 2) then $aslvar   = $3 endif
+
+
+"Where do we read & write data?"
+exists('aipSaved','parameter'):$ex
+if ($ex = 0) then
+  $aipData = 'saved'
+else
+  $aipData = aipData
+endif
+if ($# > 2) then $aipData = $3 endif
+
+if (file = 'exp') then $aipData = 'processed' endif
+
+if ($aipData = 'saved') then
+  $file = ''
+  strstr(file,'.fid'):$inx,$file
+  if ($inx = 0) then
+    $file = file
+  endif
+  $indir  = $file + '.img'
+  $outdir = $file + '_' + $sub_type + '.img'
+else
+  $indir  = curexp + '/recon'
+  $outdir = curexp + '/ASL_' + $sub_type
+endif
+
+
+"Check that we have input"
+exists($indir,'directory'):$ex
+if ($ex = 0) then
+  write('line3','Can not find directory %s',$indir)
+  abort
+endif
+
+
+"Check if the output directory exists, ask for remove if yes"
+exists($outdir,'directory'):$ex
+if ($ex > 0) then
+  confirm('Output directory ' + $outdir + ' exists already - overwrite?'):$yesno
+  if ($yesno = 0) then
+    abort
+  else
+    shell('rm -r ' + $outdir)
+  endif
+endif
+
+
+$inout = '-indir ' + $indir + ' -outdir ' + $outdir 
+$cmd = 'asl ' + $inout + ' -sub ' + $sub_type
+if ($sub_all = 'y') then
+  $cmd = $cmd + ' -all'
+endif
+write('line3','execute %s',$cmd)
+
+shell($cmd)
+aipLoadDir($outdir)
+aipDisplay('all')
+

@@ -1,0 +1,570 @@
+"macro fidelityFit"
+
+//====================== Calibrate =================================
+
+if ($1 = 'calibrate') then 
+    ampdir:$dirname,$ampname,$canwrite,$olddir
+    tpwr1=20
+    tpwr2=63
+    tpwrf=4095
+    
+    if gain > 20 then
+        gain=1
+    endif
+    
+    usrgain=gain
+    pwrtables=0
+   
+	if ($canwrite=0) then
+	   vnmrjcmd('popup','mode:error','title:User does not have write permission in this directory')
+	   return
+	endif
+	
+	// if calibration directory exists confirm replace data
+	
+    if ($olddir>0) then
+       $msg='Replace '+$ampname+' calibration data'
+       confirm($msg):$aa
+       if($aa=0) then
+         write('line3','quiting')
+		 return
+       endif
+    endif
+    
+   // get rid of any calibration data in pre-existing directory
+   
+    shell('rm -fr '+$dirname):$dum
+    
+   // make new path for calibration data
+   
+    shell('mkdir -p '+$dirname):$dum
+    exists($dirname,'directory'):$direx
+    if ($direx=0) then
+       write('error','Could not create %s',$dirname)
+       return
+    endif
+
+    tpwr=tpwr1
+    amptables=0
+
+    // adjust relative gain for ref scan
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+
+	wexp ='fidelityFit(\'dut_calibrate\')'
+	wnt = ''
+	au
+endif
+  
+if ($1 = 'dut_calibrate') then
+	ampdir:$dirname,$ampname,$canwrite,$olddir
+	write('line3','in dut loop')
+	
+	cd($dirname)
+	shell('rm -fr REFdata.fid'):$dum
+	svf('REFdata')
+	cd(userdir)
+	
+    amptables=0
+
+    tpwr=tpwr2
+
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+	
+	wexp = 'fidelityFit(\'proc_calibrate\')'
+	wnt = ''
+	au	
+endif
+
+if ($1 = 'proc_calibrate') then
+	
+	 write('line3','in processing loop')
+	 ampdir:$dirname,$ampname,$canwrite,$olddir
+	
+	 cd($dirname)
+	
+	 shell('rm -fr DUTdata.fid'):$dum
+	 svf('DUTdata')
+	
+	 // find appdir path to selected pulse shape
+	
+	 $shapein=p1pat+'.RF'
+	 $shapeout=p1pat+'Test.RF'
+	 getappdirs:$atot,$adirs
+	 $i=1
+     repeat
+        $tpt1=$adirs[$i]+'/shapelib/'+$shapein
+        exists($tpt1,'file'):$tpex
+        if ($tpex) then
+	       shell('cp '+$tpt1+' '+$dirname):$dum // copy shape file into ampdir
+	       $i=$atot
+	    endif
+        $i=$i+1
+     until $i > $atot
+     exists($shapein,'file'):$tex
+	 if ($tex=0) then
+	   vnmrjcmd('popup','mode:error','title:Could not Find requested pulse shape file')
+	   write('line3','quitting')
+	   return
+	endif
+    if (ampargs[3] mod 2) =1 then
+       $fitstr=' -P -porders 10 '
+    else
+       $fitstr=' -Q -qspans 8 '
+    endif
+
+    $t1=''
+    $t2=''   
+    format(tpwr1,3,1):$t1
+    format(tpwr2,3,1):$t2
+    $target_mode=''
+    if ampargs[6] =1 then 
+        $target_mode=' -m '
+    endif
+    $tblargs= $target_mode+' -d -tmin '+$t1+' -tmax '+$t2
+    $shapein=' -si '+$shapein
+    $shapeout=' -so '+$shapeout
+    $cmdargs=$fitstr+' '+$tblargs+' '+$shapein+' '+$shapeout
+    
+    $cmd='fidelityFit'+ ' "'+ $cmdargs+'"'
+    $fullcmd='/vnmr/bin/matlab.sh '+$cmd
+	amptables=1
+	
+	write('line3','Starting Matlab processing: %s',$fullcmd)
+
+	shelli( $fullcmd )
+	cd(userdir)
+    gain=usrgain
+    wexp = 'ft(`noft`)'
+    tpwr=tpwr2
+
+    exists($dirname+'/tables.map','file'):$e
+    if($e<=0) then
+        write('error','Invalid or duplicate points in data: processing failed to generate tables')
+    else
+	    write('line3','DONE')	  
+    endif
+
+endif
+
+if ($1 = 'plot_calibrate') then
+
+	ampdir:$dirname,$ampname
+	cd($dirname)
+    exists('ampdata','file'):$tex
+	if ($tex=0) then
+	    vnmrjcmd('popup','mode:error','title:No valid data for plotting')
+	    return
+	endif
+
+    $plotstr=''
+    $jpgstr=''
+    if (ampargs[4] mod 2) =1 then
+       $plotstr='-f'
+    endif
+    if (trunc(ampargs[4]/2) mod 2) =1 then
+       $plotstr=$plotstr+' -r'
+    endif
+    if (trunc(ampargs[4]/4) mod 2) =1 then
+       $plotstr= $plotstr+' -s '
+    endif
+    if (trunc(ampargs[4]/8) mod 2) =1 then
+       $plotstr= $plotstr+' -t -pstep 4'
+    endif
+
+    if (trunc(ampargs[4]/16) mod 2) =1 then
+       $jpgstr='-j'
+    endif
+    
+    $plotname='-p '+ $ampname
+    $cmdargs= $plotname+' '+$plotstr+' '+$jpgstr
+    $cmdstr='/vnmr/bin/matlab.sh fidelityPlots'
+    $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'
+    
+    write('line3','fidelity cmd=%s',$fullcmd)
+  
+    shelli( $fullcmd )
+	cd(userdir)
+    write('line3','CLOSE ALL FIGURES TO CONTINUE')
+    
+endif
+
+//====================== Validate =================================
+
+if ($1 = 'validate') then 
+	//write('line3','running hardware linearization validation test - proc')
+
+	ampdir:$dirname,$ampname,$canwrite,$olddir
+    tpwr1=20
+    tpwr2=63
+    tpwrf=4095
+	    
+    exists($dirname,'directory'):$direx
+    if ($direx=0) then
+       write('error','Correction data missing <run calibrate first !>')
+	   write('line3','quitting')
+       return
+    endif
+    amptables=1
+    tpwr=tpwr1
+    on('usrgain'):$e
+    if $e <0 then
+        create('usrgain')
+    endif
+    if gain > 10 then
+       gain=1
+    endif
+
+    usrgain=gain
+
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+
+    if ampargs[7]>0 then 
+        cd($dirname)
+        exists('VALIDATE','directory'):$olddir
+        if ($olddir>0) then
+            $cmdargs=' -tout tables.map '
+            $cmdstr='/vnmr/bin/matlab.sh addTables'
+            $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'  
+            write('line3','fidelity cmd=%s',$fullcmd)    
+            shelli( $fullcmd )
+        endif
+    endif
+    
+	wexp = 'fidelityFit(\'dut_validate\')'
+	wnt = ''
+	au
+endif
+
+if ($1 = 'dut_validate') then
+	ampdir:$dirname,$ampname,$canwrite,$olddir
+	write('line3','in dut loop')
+	
+	cd($dirname)
+    shell('rm -fr VALIDATE'):$dum
+    shell('mkdir -p VALIDATE'):$dum
+    cd('VALIDATE')
+
+    shell('rm -fr REFdata.fid'):$dum
+	svf('REFdata')
+	
+	cd(userdir)
+	
+    amptables=1
+
+    tpwr=tpwr2
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+	wexp = 'fidelityFit(\'proc_validate\')'
+	wnt = ''
+	au	
+endif
+
+if ($1 = 'proc_validate') then
+	write('line3','processing validation data')
+	ampdir:$dirname
+	$dirname=$dirname+'/VALIDATE'    
+    cd($dirname)
+
+	$shapein=p1pat+'.RF'
+	$shapeout=p1pat+'Test.RF'
+	getappdirs:$atot,$adirs
+	$i=1
+    repeat
+        $tpt1=$adirs[$i]+'/shapelib/'+$shapein
+        exists($tpt1,'file'):$tpex
+        if ($tpex) then
+	       shell('cp '+$tpt1+' '+$dirname):$dum // copy shape file into ampdir
+	       $i=$atot
+	    endif
+        $i=$i+1
+     until $i > $atot
+     exists($shapein,'file'):$tex
+	 if ($tex=0) then
+	   vnmrjcmd('popup','mode:error','title:Could not Find requested pulse shape file')
+	   write('line3','quitting')
+	   return
+	endif
+    $shapein=' -si '+$shapein
+    $shapeout=' -so '+$shapeout
+    $shapestr = $shapein  +' '+ $shapeout
+    on('amptest','global'):$e
+	shell('rm -fr DUTdata.fid'):$dum
+	svf('DUTdata')
+    if (ampargs[3] mod 2) =1 then
+       $fitstr=' -P -porders 10 '
+    else
+       $fitstr=' -Q -qspans 8 '
+    endif
+       
+    $t1=''
+    $t2=''   
+    format(tpwr1,3,1):$t1
+    format(tpwr,3,1):$t2
+    $target_mode=''
+    if ampargs[6] =1 then 
+        $target_mode=' -m '
+    endif
+
+    $tblargs=$target_mode+' -d -tmin '+$t1+' -tmax '+$t2
+    $cmdargs=' '+$shapestr+$fitstr+$tblargs
+    $cmdstr='/vnmr/bin/matlab.sh fidelityFit'
+    $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'
+    
+    write('line3','fidelity cmd=%s',$fullcmd)
+     
+    shelli( $fullcmd )
+    
+    cd(userdir)
+    gain=usrgain
+    tpwr=tpwr2
+    wexp = 'ft(`noft`)'
+    write('line3','DONE')
+
+endif
+if ($1 = 'plot_validate') then
+
+	ampdir:$dirname,$ampname
+	cd($dirname)
+	cd('VALIDATE')
+
+    exists('ampdata','file'):$tex
+	if ($tex=0) then
+	  vnmrjcmd('popup','mode:error','title:No valid data for plotting')
+	  return
+	endif
+
+    $testargs=' '
+
+    $plotstr=''
+    $jpgstr=''
+    if (ampargs[4] mod 2) =1 then
+       $plotstr='-f'
+    endif
+    if (trunc(ampargs[4]/2) mod 2) =1 then
+       $plotstr=$plotstr+' -r'
+    endif
+    if (trunc(ampargs[4]/4) mod 2) =1 then
+         $plotstr= $plotstr+' -s '
+    endif
+    if (trunc(ampargs[4]/8) mod 2) =1 then
+         $plotstr= $plotstr+' -t  -pstep 4'
+    endif
+
+    if (trunc(ampargs[4]/16) mod 2) =1 then
+       $jpgstr='-j'
+    endif
+    
+    $plotname='-p '+ $ampname+'[VALIDATE]'
+    $cmdargs= $testargs + ' '+ $plotname+' '+$plotstr+' '+$jpgstr
+    $cmdstr='/vnmr/bin/matlab.sh fidelityPlots'
+    $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'
+    
+    write('line3','fidelity cmd=%s',$fullcmd)
+    write('line3','CLOSE ALL FIGURES TO CONTINUE')
+  
+    shelli( $fullcmd )
+    
+	cd(userdir)
+	
+endif
+
+//====================== Test =========================================
+
+if ($1 = 'test') then 
+	//write('line3','running hardware linearization test - proc')
+
+	ampdir:$dirname,$ampname,$canwrite,$olddir
+ 	    
+    exists($dirname,'directory'):$direx
+    if ($direx=0) then
+       write('error','Correction data missing <run calibrate first !>')
+	   write('line3','quitting')
+       return
+    endif
+    amptables=1
+    tpwr=tpwr1
+    on('usrgain'):$e
+    if $e <0 then
+        create('usrgain')
+    endif
+    usrgain=gain
+
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+
+	wexp = 'fidelityFit(\'dut_test\')'
+	wnt = ''
+	au
+endif
+
+if ($1 = 'dut_test') then
+	ampdir:$dirname,$ampname,$canwrite,$olddir
+	write('line3','in dut loop')
+	
+	cd($dirname)
+    shell('rm -fr TEST'):$dum
+    shell('mkdir -p TEST'):$dum
+    cd('TEST')
+
+    shell('rm -fr REFdata.fid'):$dum
+	svf('REFdata')
+	
+	cd(userdir)
+	
+    amptables=1
+
+    tpwr=tpwr2
+    $sig=trunc((63-tpwr))
+    gain=usrgain+$sig
+	wexp = 'fidelityFit(\'proc_test\')'
+	wnt = ''
+	au	
+endif
+
+if ($1 = 'proc_test') then
+	write('line3','processing validation data')
+	ampdir:$dirname
+	$dirname=$dirname+'/TEST'    
+    cd($dirname)
+
+	$shapein=p1pat+'.RF'
+	$shapeout=p1pat+'Test.RF'
+	getappdirs:$atot,$adirs
+	$i=1
+    repeat
+        $tpt1=$adirs[$i]+'/shapelib/'+$shapein
+        exists($tpt1,'file'):$tpex
+        if ($tpex) then
+	       shell('cp '+$tpt1+' '+$dirname):$dum // copy shape file into ampdir
+	       $i=$atot
+	    endif
+        $i=$i+1
+     until $i > $atot
+     exists($shapein,'file'):$tex
+	 if ($tex=0) then
+	   vnmrjcmd('popup','mode:error','title:Could not Find requested pulse shape file')
+	   write('line3','quitting')
+	   return
+	endif
+    $shapein=' -si '+$shapein
+    $shapeout=' -so '+$shapeout
+    $shapestr = $shapein  +' '+ $shapeout
+    on('amptest','global'):$e
+	shell('rm -fr DUTdata.fid'):$dum
+	svf('DUTdata')
+    if (ampargs[3] mod 2) =1 then
+       $fitstr=' -P -porders 10 '
+    else
+       $fitstr=' -Q -qspans 8 '
+    endif
+       
+    $t1=''
+    $t2=''   
+    format(tpwr1,3,1):$t1
+    format(tpwr,3,1):$t2
+    $target_mode=''
+    if ampargs[7] =1 then 
+        $target_mode=' -m '
+    endif
+
+    $tblargs=$target_mode+' -d -tmin '+$t1+' -tmax '+$t2
+    $cmdargs=' '+$shapestr+$fitstr+$tblargs
+    $cmdstr='/vnmr/bin/matlab.sh fidelityFit'
+    $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'
+    
+    write('line3','fidelity cmd=%s',$fullcmd)
+     
+    shelli( $fullcmd )
+    
+    cd(userdir)
+    gain=usrgain
+    tpwr=tpwr2
+
+    wexp = 'ft(`noft`)'
+    write('line3','DONE')
+
+endif
+
+
+if ($1 = 'plot_test') then
+
+	ampdir:$dirname,$ampname
+	cd($dirname)
+	cd('TEST')
+
+    exists('ampdata','file'):$tex
+	if ($tex=0) then
+	  vnmrjcmd('popup','mode:error','title:No valid data for plotting')
+	  return
+	endif
+
+    $testargs=' '
+
+    $plotstr=''
+    $jpgstr=''
+    if (ampargs[4] mod 2) =1 then
+       $plotstr='-f'
+    endif
+    if (trunc(ampargs[4]/2) mod 2) =1 then
+       $plotstr=$plotstr+' -r'
+    endif
+    if (trunc(ampargs[4]/4) mod 2) =1 then
+         $plotstr= $plotstr+' -s '
+    endif
+    if (trunc(ampargs[4]/8) mod 2) =1 then
+         $plotstr= $plotstr+' -t  -pstep 4'
+    endif
+
+    if (trunc(ampargs[4]/16) mod 2) =1 then
+       $jpgstr='-j'
+    endif
+    
+    $plotname='-p '+ $ampname+'[TEST]'
+    $cmdargs= $testargs + ' '+ $plotname+' '+$plotstr+' '+$jpgstr
+    $cmdstr='/vnmr/bin/matlab.sh fidelityPlots'
+    $fullcmd=$cmdstr + ' "'+ $cmdargs+'"'
+    
+    write('line3','fidelity cmd=%s',$fullcmd)
+    write('line3','CLOSE ALL FIGURES TO CONTINUE')
+  
+    shelli( $fullcmd )
+    
+	cd(userdir)
+	
+endif
+
+//====================== Installation =================================
+
+if ($1 = 'install') then
+    cd(userdir)
+    exists(systemdir,'file','rw'):$canwrite
+    if ($canwrite=0) then
+       vnmrjcmd('popup','mode:error','title:User does not have write permission in /vnmr/amptables directory')
+       return
+    endif
+    $msg='Copy all calibration data to /vnmr/amptables'
+    confirm($msg):$aa
+    if($aa=0) then
+	  return
+    endif
+    shell('(tar -cf - amptables | (cd '+systemdir+'; tar xfBp -))'):$dum
+endif
+
+if ($1 = 'uninstall') then
+    cd(userdir)
+    exists(systemdir,'file','rw'):$canwrite
+    if ($canwrite=0) then
+      vnmrjcmd('popup','mode:error','title:User does not have write permission in /vnmr/amptables directory')
+      return
+    endif
+    $msg='Remove all calibration data from /vnmr/amptables'
+    confirm($msg):$aa
+    if($aa=0) then
+	  return
+    endif
+    shell('rm -fr '+systemdir+'/amptables'):$dum
+ endif
+

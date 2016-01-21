@@ -1,0 +1,629 @@
+"macro Hobs"
+"********************************************************"
+"Hobs - Proton observe Autocalibration               "
+"********************************************************"
+
+is_IP:$isIP
+mkpar('string','execprocess','','execplot','')
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+execplot='execplot=\'\''
+
+getlimit('tpwr'):$max,$min,$dbstep
+if (console='inova') or (console='mercury') then $dbstep=1 endif
+// For now force dbstep to integer or 0.5
+if $dbstep>0.5 then $dbstep=trunc($dbstep+0.5) else $dbstep=0.5 endif
+
+$arg=''
+if ($# < 1) then
+    if $isIP then
+        $arg='1'
+    else
+	$tpwr=0
+	getparam('tpwr','H1'):$tpwr
+	if ($tpwr=0) then $arg='1' else $arg='init' endif
+    endif
+else
+    if not typeof('$1') then
+    	format($1,0,0):$arg
+    else
+	$arg=$1 
+    endif
+endif
+
+// *********** Old method ***************
+IF ($arg = '1') THEN
+
+  	$fileex=0 $file=''
+  	cplog('PROTON','first'):$file,$asdir
+  	if ($file<>'') then rt($asdir+'/'+$file) else return endif
+  	wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+  	$solv='' format(solvent,'lower'):$solv
+  	if ($solv = 'd2o') then
+   	    sp=4.3p wp=1p
+	elseif ($solv='cdcl3') then
+	    cr=llfrq[1]-rfl+rfp wp=100 sp=cr-50
+  	endif
+
+  	ds av vsadj(20) vp=wc2max/2
+  	array('pw',40,2,2)
+  	ai at=0.5 fn=4*np lb=1/at
+  	wnt='wft(`acq`) select(1) vsadj(10) dssh'
+	caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+	calibnode='_iteration'
+	write('line3','_tpwr%g_pw90',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+
+// Add a new Hobs node
+	xmhaha_calib('addNode','Hobs(2)')
+
+  	alock='n' wshim='n' r1=1
+  	clear(2)
+
+"********************************************************"
+ELSEIF ($arg = '2') THEN
+
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+  	wft av 
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+  	$counter=1
+  	repeat
+    	    select($counter)
+    	    peak(sp,wp+sp):$ht
+    	    if $counter=1 then $maxht = $ht $pw90=pw[1] $minht=$ht
+	    else
+       		if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] endif
+		if $minht>$ht then $minht=$ht endif
+    	    endif
+    	    $counter=$counter+1
+  	until ($counter>arraydim)
+
+    	if $minht/$maxht > 0.5 then
+            write('error','Autocalibration failed (min/max > 0.5) - determine manually')
+	    if ($isIP) then
+               write('line3','1H pw90 calibration failed, target pulse width not achievable'):$str
+	       atext($str)
+	       VPlog('ExpError',$str)
+	       IPdoemail('FAIL')
+	    endif
+            abort
+        endif
+
+        $line=''
+        write('line3','%s - tpwr:%d  pw90:%0.1f',caliblist,tpwr,$pw90):$line
+        CalibrationResults=CalibrationResults,$line
+	writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+  	if ($pw90 > 2*H1pw90) then
+    	    if (r1 < 2) then
+	// repeat with tpwr increased by 6 db
+      		r1 = r1+1
+      		tpwr=tpwr+6
+		write('line3','_tpwr%g_pw90',tpwr):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+	// Add a new Hobs node to repeat this
+		xmhaha_calib('addNode','Hobs(2)')
+      		return
+    	    else
+      		write('error','Autocalibration failed on second try -- determine manually')
+	        if ($isIP) then
+                   write('line3','1H pw90 calibration failed, target pulse width not achievable'):$str
+	           VPlog('ExpError',$str)
+	           atext($str)
+	           IPdoemail('FAIL')
+	        endif
+      		abort
+    	    endif
+  	endif
+
+	PWRcalib($pw90,H1pw90,'tpwr'):$tpwrdiff,$adim,$pwinc
+	if $tpwrdiff=0 then
+	    Hobs(3,$pw90)
+	else
+	    tpwr=tpwr+$tpwrdiff
+	    array('pw',$adim,1,$pwinc)
+	    clear(2)
+            write('line3','_tpwr%g_pw90',tpwr):calibnode
+	    chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Hobs(4)')
+  	endif
+
+"********************************************************"
+ELSEIF ($arg = '3') THEN
+
+  	$pw90=$2
+  	ph ds(1) ph if (console='vnmrs') then aph0 else aph endif
+  	array('pw',17,3.2*$pw90,0.1*$pw90)
+  	clear(2) full
+  	da
+	// Add a new Hobs node for finer calibration
+        write('line3','_tpwr%g_pw360',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+        xmhaha_calib('addNode','Hobs(5)')
+
+"********************************************************"
+ELSEIF ($arg = '4') THEN
+
+	if $# < 2 then $2='' endif
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+  	clear(2)
+  	wft av 
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+  	$counter=1
+  	repeat
+    	    select($counter)
+    	    peak(sp,sp+wp):$ht
+    	    if $counter=1 then $maxht = $ht $pw90=pw[1] 
+	    else
+       		if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] endif 
+    	    endif
+    	    $counter=$counter+1
+  	until ($counter>arraydim)
+  	select(1)
+        $line=''
+        write('line3','%s - tpwr:%d  pw90:%0.1f',caliblist,tpwr,$pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+// if this is the last iteration, STOP !
+	PWRcalib($pw90,H1pw90,'tpwr'):$tpwrdiff,$adim,$pwinc
+	if $2='last' and $tpwrdiff>0 then $tpwrdiff=0 endif
+	if $tpwrdiff=0 then
+	    Hobs(3,$pw90)
+	else
+	    tpwr=tpwr+$tpwrdiff
+	    array('pw',$adim,1,$pwinc)
+    	    clear(2)
+            write('line3','_tpwr%g_pw90',tpwr):calibnode
+	    chkname(calibnode,'alnum-'):calibnode
+// if pwrdiff is negative 1 dbstep
+// This would be the last iteration
+	    if $tpwrdiff>=-1*$dbstep and $tpwrdiff<0 then
+		$2='last'
+	    endif
+	    $arg2='Hobs(4,`'+$2+'`)'
+	    xmhaha_calib('addNode',$arg2)
+  	endif
+
+
+"********************************************************"
+ELSEIF ($arg = '5') THEN
+
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+  	clear(2)
+   	wft av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+  	$counter=1
+  	repeat
+    	    select($counter)
+    	    peak(sp,sp+wp):$ht
+    	    if $counter=1 then $minht = $ht $pw360=pw[1] 
+	    else
+       		if $ht<$minht then $minht=$ht $pw360=pw[$counter] endif
+    	    endif
+    	    $counter=$counter+1
+  	until $counter>arraydim
+  	pw90=$pw360/4.0
+
+        $line=''
+        write('line3','%s - tpwr:%g  pw90:%0.1f',caliblist,tpwr,pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+  	if (pw90 > H1pw90) then
+   	    if (tpwr < 63) then
+		// pw90 is longer than 360. step up by 1dB
+    		tpwr=tpwr+$dbstep
+    		array('pw',17,3.2*pw90,0.1*pw90)
+		// Add a new Hobs node and repeat
+                write('line3','_tpwr%g_pw360',tpwr):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+                xmhaha_calib('addNode','Hobs(5)')
+    		return
+   	    endif
+  	endif
+
+  	$diff = pw[2] - pw[1]
+  	if ($diff > 0.5) then
+	// Setup a finer array in 0.4 us steps
+	// add a new Hobs node and repeat
+   	    array('pw',21,$pw360-4,0.4)
+            write('line3','_tpwr%g_pw360',tpwr):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Hobs(5)')
+   	    return
+  	endif
+
+  	clear(2)
+  	tpwr=tpwr-12 $pw90=pw90*4
+  	ph
+  	array('pw',41,3*$pw90,0.05*$pw90)
+  	clear(2) full
+  	da
+	// Setup a array at 12 dB below tpwr
+	// For compression factor
+	// add a new Hobs node and repeat
+        write('line3','_tpwr%g_pw360',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+        xmhaha_calib('addNode','Hobs(6)')
+
+"********************************************************"
+ELSEIF ($arg = '6') THEN
+
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+  	clear(2)
+  	wft av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+  	$counter=1
+  	repeat
+    	    select($counter)
+    	    peak(sp,sp+wp):$ht
+    	    if $counter=1 then $minht = $ht $pw360=pw[1] 
+	    else
+       		if $ht<$minht then $minht=$ht $pw360=pw[$counter] endif
+    	    endif
+    	    $counter=$counter+1
+  	until $counter>arraydim
+        $line=''
+        write('line3','%s - tpwr:%g  pw360:%0.1f',caliblist,tpwr,$pw360):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	// array pw360 in 0.8 us steps and repeat
+	// This is still at 12 dB below
+  	array('pw',21,$pw360-8,0.8)
+        write('line3','_tpwr%g_pw360',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	execprocess='Hobs(7)'
+
+"********************************************************"
+ELSEIF ($arg = '7') THEN
+
+  	clear(2)
+  	wft av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+  	$counter=1
+  	repeat
+    	    select($counter)
+    	    peak(sp,sp+wp):$ht
+    	    if $counter=1 then $minht = $ht $pw360=pw[1] 
+	    else
+       		if $ht<$minht then $minht=$ht $pw360=pw[$counter] endif
+    	    endif
+    	    $counter=$counter+1
+  	until $counter>arraydim
+
+  	$ref_pw90=$pw360/4.0
+  	$ref_pwr=tpwr
+        $tpwr_cf = $ref_pw90/4/pw90
+        tpwr=tpwr+12
+
+        $line=''
+        write('line3','%s - refpwr:%d  refpw90:%0.1f',caliblist,$ref_pwr,$ref_pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - tpwr:%g  pw90:%0.1f',caliblist,tpwr,pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - compression factor: %0.4f',caliblist,$tpwr_cf):$line
+        CalibrationResults=CalibrationResults,$line
+
+  	wnt='wft(`acq`) dssh' 
+  	$strpw90='' $strtpwr='' $strref_pwr='' $strref_pw90=''
+  	$strtpwr_cf = ''
+	write('line3','%0.1f',pw90):$strpw90
+	write('line3','%g',tpwr):$strtpwr
+//      format(pw90,0,1):$strpw90
+//  	format(tpwr,0,0):$strtpwr
+	write('line3','%g',$ref_pwr):$strref_pwr
+	write('line3','%0.1f',$ref_pw90):$strref_pw90
+//  	format($ref_pwr,0,0):$strref_pwr
+//  	format($ref_pw90,0,1):$strref_pw90
+  	format($tpwr_cf,0,4):$strtpwr_cf
+  	setparams('pw90',$strpw90)
+  	setparams('tpwr',$strtpwr)
+  	setparams('tpwr_cf',$strtpwr_cf)
+        
+
+        Hobs('finish')
+
+"********************************************************"
+
+"Hobs: macro to do H1 pw90 calibration"
+" arguments: "
+"   (none) :  initial setup "
+" 'refine' :  refinement of Haupt results "
+"  'array' :  set up 360 degree pw array for actual calibration "
+" 'save90' :  process pw360 array, update probe file, save data "
+"		and continue with compression factor determination "
+"    'cf'  :  process compression data, continue with next calibration "
+
+
+ELSEIF ($arg = 'init') then
+  	" initial setup of H1pw90 calibration "
+
+	$fileex=0 $file=''
+        cplog('PROTON','first'):$file,$asdir
+	if ($file<>'') then 
+  	    rt($asdir+'/'+$file) 
+	else 
+  	    write('error','H1 reference FID not found')
+	    abort
+	endif
+	ai f wft dc vp = 12 vsadj th = 40  nll
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	pw = 4,8  d1 = 2  nt = 1  ss = 0  fn = 4*np  gain = 'y'
+	wnt='wft(`acq`) select(1) vsadj(wc2max/3) dssh'
+	caliblist=$0
+	xmhaha_calib('synonym',$0):caliblist
+	calibnode='_iteration'
+        write('line3','_tpwr%g_pw90',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	alock='n' wshim='n' r1=1
+	clear(2)
+	da
+// Add New Hobs node
+	xmhaha_calib('addNode','Hobs(\'refine\')')
+
+	return
+"*************************************************************"
+ELSEIF ($arg = 'refine') then
+	"  refine pw90 estimate "
+
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	wft select(1) dc select(2) dc fp
+	pw_haupt:$pw90  "estimate of current pw90"
+
+        $line=''
+        write('line3','%s - tpwr:%g  pw90:%0.1f',caliblist,tpwr,$pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	if ($pw90 > 2*H1pw90) or ($pw90=0) then  
+		"way off- intercept the flow & try again"
+  	    if (tpwr < 58) then
+	// Increase tpwr by 6 db.  Add new Hobs node to move forward
+        	write('line3','_tpwr%g_pw90',tpwr):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+        	xmhaha_calib('addNode','Hobs(\'refine\')')
+    		tpwr=tpwr+6
+    		return
+  	    else
+    		write('error','Autocalibration failed - determine manually')
+	        if ($isIP) then
+                   write('line3','1H pw90 calibration failed, target pulse width not achievable'):$str
+	           VPlog('ExpError',$str)
+	           atext($str)
+		   IPdoemail('FAIL')
+	        endif
+    		abort
+  	    endif
+	endif
+
+	IF (pw[1] = 4) then "first pass- refine pw90 estimate"
+  	    pw = trunc(10*(2*$pw90/3)+0.5)/10 
+  	    if (pw = 4) then pw = 3.9 endif
+    	    "avoids endless loop in the case that pw90 = 6 "
+  	    pw = pw, 2*pw
+	    // This is the gotcha moment. Redo a slightly modified array
+	    // Add a new node
+            write('line3','_tpwr%g_pw90',tpwr):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Hobs(\'refine\')')
+  	    return
+	ELSE  "continue with standard system"
+	    PWRcalib($pw90,H1pw90,'tpwr'):$tpwrdiff
+	    if $tpwrdiff=0 then
+   		Hobs('array',$pw90)
+	    else
+  		tpwr=tpwr + $tpwrdiff
+  		pw = trunc(10*(2*H1pw90/3) + 0.5)/10
+  		if (pw = 4) then pw = 3.9 endif
+  		pw = pw, 2*pw
+  		da
+                write('line3','_tpwr%g_pw90',tpwr):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+                xmhaha_calib('addNode','Hobs(\'refine\')')
+	    endif
+	ENDIF
+
+ELSEIF ($arg = 'array') then
+    "********************************************************"
+    " set up 360 degree pw array at normal tpwr "
+    "********************************************************"
+
+	$pw90=trunc(10*$2 + 0.5)/10
+	ds(1) if (console='vnmrs') then aph0 else aph endif
+
+	array('pw',9,4*$pw90-3.2,0.8)
+	clear(2) full vp = wc2max/2 - 10  vs=vs*4
+   // Add a new node for compression factor
+        write('line3','_tpwr%g_pw360',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+        xmhaha_calib('addNode','Hobs(\'save90\')')
+	return
+
+ELSEIF ($arg = 'save90') then
+"********************************************************"
+" save 90 degree calibration, set up compression factor test "
+"********************************************************"
+
+	cplog('PROTON','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+	clear(2)
+	wft   select(1)  vsadj(0.1*wc2max)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	fp pw360cal:pw90
+	if (pw90 = 0) then
+  		write('error','H1 autocalibration failed!')
+  		abort
+	endif
+
+        $line=''
+        write('line3','%s - tpwr:%g  pw90:%0.1f',caliblist,tpwr,pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	$strpw90='' $strtpwr=''  $strh1pw90 = ''
+	write('line3','%g',tpwr):$strtpwr
+	write('line3','%0.1f',pw90):$strpw90
+//      format(pw90+0.024,0,1):$strpw90
+//	format(tpwr,0,0):$strtpwr
+//	format(H1pw90 + 0.024,0,1):$strh1pw90
+	setparams('pw90',$strpw90)
+	setparams('tpwr',$strtpwr)
+
+"set up for lower power (compression factor) calibration"
+	tpwr=tpwr-12 $pw90=pw90*4
+	$step = trunc(2.22*$pw90)/10 "20 degree steps, 0.1 usec resolution"
+	array('pw',11,3*$pw90-$step,$step) "270 to 450 in 10 easy steps"
+	clear(2) full
+        write('line3','_tpwr%g_pw360',tpwr):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	execprocess='Hobs(\'cf\')'
+	return
+
+ELSEIF ($arg = 'cf') then
+"********************************************************"
+"Hobs_7 - Proton observe Autocalibration               "
+" process and save compression factor data "
+"********************************************************"
+
+	clear(2)
+	wft 
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+	$counter=1
+	repeat
+  	    select($counter)
+  	    dc
+  	    $counter=$counter+1
+	until $counter>arraydim
+
+	fp pw360cal:$ref_pw90
+
+	$tpwr_cf = 0.25*$ref_pw90/pw90
+	$strtpwr_cf=''
+	format($tpwr_cf,0,4):$strtpwr_cf
+	setparams('tpwr_cf',$strtpwr_cf)
+
+        $line=''
+        write('line3','%s - refpwr:%d  refpw90:%0.1f',caliblist,tpwr,$ref_pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - tpwr:%g  pw90:%0.1f',caliblist,tpwr+12,pw90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - compression factor: %0.4f',caliblist,$tpwr_cf):$line
+        CalibrationResults=CalibrationResults,$line
+
+        Hobs('finish')
+	return
+
+ELSEIF ($arg='finish') THEN
+
+    // Setup array for nutation experiment
+    // Common to both old and new cal
+
+	tmpsave('Hobs')
+        $CalibrationResults=CalibrationResults
+
+	cplog('PROTON','first'):$file,$asdir
+        rt($asdir+'/'+$file)
+        wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        xmhaha_calib('synonym',$0):caliblist
+	calibnode='_PWnutation'
+
+	if (dn<>'N15') then
+            cr=llfrq[1]-rfl+rfp wp=100
+            sp=llfrq[1]-rfl+rfp-50
+	endif
+
+	getparam('tpwr'):tpwr
+	getparam('pw90'):pw90
+	ai vp=wc2max/2
+	wnt='wft(`acq`) dssh(`dodc`)' 
+	$pwinc= trunc((pw90/5)+0.5)
+	array('pw',50,$pwinc,$pwinc)
+	$ep='' write('line3','wft wp=%0.1f sp=%0.1f ph select(5) aph0 vsadj(50) dssh',wp,sp):$ep
+	execplot='cpplss'
+
+
+	is_IP:$isIP
+	if ($isIP) then	
+	   exists('VParcingtest','maclib'):$arcex
+	   if ($arcex) then $cmd='VParcingtest' else $cmd='' endif
+	   execplot='calibplot'
+ 	   profileflg='y'
+	   $pwinc=pw90/10
+	   format($pwinc,0,1):$pwinc
+	   array('pw',111,$pwinc,$pwinc)
+  	   $solv='' format(solvent,'lower'):$solv
+	   //Add the sample info to the text file
+	   VPtext
+	   VPgettarget('H1pw90'):$target,$tpwr
+	   $pw90s=''  $tpwrs=''
+	   format(pw90,1,1):$pw90s
+	   format(tpwr,1,0):$tpwrs
+	   $IPteststatus='FAIL'
+	   if (pw90<=$target) then $IPteststatus='PASS' endif
+
+	   write('line3','1H 90-degree pulse width \(direct\)'):$line
+	   atext($line) 
+	   write('line3','pw90: %.1f us at power level %.1f dB',pw90,tpwr):$line
+	   atext($line) 
+	   write('line3','Target: <= %.1f us',H1pw90):$line
+	   atext($line) 
+	   write('line3','Test status: %s',$IPteststatus):$line
+	   atext($line) 
+
+	   //Add amp power information if calibration table exists
+	   exists('VPgetpower','maclib'):$vpex
+	   if ($vpex) then
+	      VPgetpower('check'):$pwrtabex
+	      if ($pwrtabex) then
+   		   VPgetpower(VPpowertabpath,'H1','direct',tpwr,pw90,$target):$atext
+	           atext($atext)
+	      endif
+	   endif
+
+	   $ep='' write('line3','wft wp=%0.1f sp=%0.1f ph select(10) aph0 %s vsadj(50) dssh VPhistory(%.1f,%.1f) rmh',4.2p,1p,$cmd,pw90,tpwr):$ep
+  	   if ($solv = 'd2o') then "Only do RF homo determination on AutoTest"
+	          calibnode='_pw90_RFhomo'
+	          wstart='eOptions=IPeOptions'
+	   	  $ep='' write('line3','wft wp=%0.1f sp=%0.1f ph select(10) aph0 %s vsadj(50) dssh H1rfhomo_process\(\'activestudy\'\)',4.2p,1p,$cmd):$ep
+	   endif
+	endif
+	
+	execprocess=$ep+' darray(\'CalibrationResults\')'
+
+        CalibrationResults=$CalibrationResults
+   // The nutation experiment parameter is saved
+        xmhaha_calib('savePar','H1pw90')
+        tmpreturn('Hobs')
+
+ENDIF

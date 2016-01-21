@@ -1,0 +1,478 @@
+"macro gs_acq1shimmap"
+"*****************************************************************************"
+" gs_acq1shimmap - Acquire one shim field map data for 3D gradient shimming"
+"
+" Details: Assume ge3dshim sequence loaded and ready to go. "
+"          Select the shims to be mapped and step size for shimming"
+"          base.1,A,B.fid and shim_name.1,A,B.fid datasets are acquired with tau=0,$del
+
+"	   shimcntr specifies the base or shimfile to be acquired"
+"	   shimcntr=0 - base.fid files
+"	   shimcntr=n - n-th shim in shimname[]
+"          display('shimname') displays the shim names"
+"          for example, 4 refers to the xz shim, when 1&2 order shims are selected"
+"	   The current parameters must be the same as the other shimmap files"
+"
+"          step1, step2 are step size (approximate) for shim change in % for mapping"
+"	   Actual stepsize = step1 x10 or x320 depending on shim DAC range (1K/32K)"
+"	   Data files are stored in ~/vnmrsys/gshimdir/data"
+"          On first pass parameters are initialized and the "
+"          shimmap.'gcoil'.param file is created"
+"	   x,y,z and z2 use smaller step value"
+"	   orient='sag' is checked"
+"	   shimmap_2..., decc_file_2.... are saved for reference
+
+"          If del=delref, shim.A.fid data not acquired
+"          If shimstart='y' use start shimfile
+"          
+"          To omit a file in the calculations set the shimfit[i] = 0
+"          You may do this by editing the .param file and Calculating the shimmaps
+
+" IMPORTANT: 1. You must first save a good set of shims, svs('start')"
+"	   This file is retrieved before initializing shim steps"
+
+"	     2. The current workspace must contain the original parameters used for
+"	   mapping the shims. You may recall a parameterset, e.g. rtp('base.1')
+"	   to load the default parameters used for mapping the shims
+
+
+" EXAMPLE:  i. Load the shimmap parameters; must be the same as the other shimmap files"
+"	   ii. gs_acq1shimmap(0)  - collect the base file only
+"	  iii. gs_acq1shimmap(2)  - collects the shim data for the shim y1 (shimname[2])
+"          iv. gs_acq1shimmap(-1) - initialize (shimname[]) only
+
+" Author: S.Sukumar, Varian NMR, Palo Alto, CA, USA"
+"
+"*****************************************************************************"
+
+"[2] Input argument count"
+$macro=$0
+if ($#<1) or ($#>2) then
+  write('error','%s','gs_acq1shimmap: use gs_acqshimmap\(pass_no,shim_counter\)')
+  abort
+endif
+
+if($# = 1) then   "first  pass"
+  $pass = 1
+  shimcntr = $1
+  if($1 = 0) then
+    shimpass=0   "base map"
+  else
+    shimpass=3   "shim  map"
+  endif
+else
+  $pass = 2
+  shimcntr = $2  
+  shimpass=$1    "shim map"
+endif
+
+if parmax[19] < 4000 then
+  $scale = 20    " 12-bit shim-DAC system "
+else
+  $scale = 320  " 16-bit shim-DAC system "
+endif
+
+"Do some checks and initialize some variables"
+  $GD = userdir+'/prescan'        "create directory"
+  exists($GD,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GD)
+  endif  
+  $GSHIMD = userdir+'/gshimdir'        "create gshim directories"
+  exists($GSHIMD,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSHIMD)
+  endif
+  $GSHIMDIR = userdir+'/gshimdir/data' "data files here"
+  exists($GSHIMDIR,'file'):$ex1
+  if ($ex1 = 0) then
+    mkdir($GSHIMDIR)
+  endif  
+  $GSCAL = userdir+'/gshimdir/calib'  "calibration files reside here"
+  exists($GSCAL,'file'):$ex1
+  if ($ex1 = 0) then
+    mkdir($GSCAL)
+  endif
+         
+if ($pass = 1) then
+  if(mapindex > 15) then
+    if(shimmapsel <> '123&4') then
+      write('error','Illegal Shim selection, must be 123&4')
+      abort
+    endif
+  elseif(mapindex > 8) then
+    if(shimmapsel <> '123&4') and (shimmapsel <> '12&3') then
+      write('error','Illegal Shim selection, must be 12&3 or 123&4')
+      abort
+    endif
+  elseif(mapindex > 3) then
+    if(shimmapsel = '1') then
+      write('error','Illegal Shim selection, must be 1&2')
+      abort
+    endif
+  endif
+
+  if(apptype <> 'im3Dshim') then
+    write('error','Illegal sequence, use ge3dshim')
+    abort
+  endif
+
+  if(orient <> 'sag') then
+    write('error','Illegal orientation, orient must be sagittal')
+    abort
+  endif
+  if( (pro < 0.5) and (pro > -0.5) ) then
+    pro = 0
+  else
+    write('error','%s: Readout offset(pro), must be set to zero',$macro)
+    abort
+  endif
+  ldrf
+  imprep
+  initft3d  "initialize 3D processing parameters"
+  profile='nn'
+  pss=pss0  "remove arrays"
+
+  del = shimmapdel  "del echo delay for shimmap"
+
+  "check nv,nv2 for vnmrs"
+  if((nv = 0) or (nv = 0)) then
+    write('error','Illegal dimension: nv=%d, nv2=%d',nv,nv2)
+    abort
+  endif
+   
+  $f = step1*$scale   "shim step size for first order"
+  $g = step2*$scale   "shim step size for z2"
+  $h = step3*$scale   "shim step size for xz, yz "      
+  $k = step4*$scale   "shim step size for xy,x2y2"
+  $m = $k*2 
+
+  "determine frequency offset created by z2 shim, z2offset"
+  exists('z2z0','parameter'):$ex
+  if($ex = 0) then
+    create('z2z0','real')
+    z2z0 = 0.0
+  endif
+  exists('z2offset','parameter'):$ex
+  if($ex = 0) then
+    create('z2offset','real')
+  endif
+  $g = step2*$scale   "shim step size for z2"
+  z2offset = z2z0 * $g     "frequency offset caused by z2 shim setting"
+
+  if(shimmapsel='1') then
+    shimsel = '1'  "default for shimming"
+    shimname = 'x1', 'y1',  'z1',  'xz',    'yz',   'z2', 'xy', 'x2y2','n'
+    shimstep=  $f,    $f,    $f,    $h,      $h,     $g,   $k,    $k
+    shimmap =  1,     1,     1,     0,       0,      0,    0,     0
+    shimfit=   1,     1,     1,     0,       0,      0,    0,     0
+    shimnames:$cname,$ns    "check if z1c, z2c shims used"
+    strstr($cname,'z1c'):$c2
+    if($c2 > 0.5) then
+      shimname[3] = 'z1c'
+      shimname[6] = 'z2c'
+    endif
+  elseif (shimmapsel='1&2') then
+    shimsel = '1&2'  "default for shimming"
+    shimname = 'x1', 'y1',  'z1',  'xz',    'yz',   'z2', 'xy', 'x2y2','n'
+    shimstep=  $f,    $f,    $f,    $h,      $h,     $g,   $k,    $k
+    shimmap=   1,     1,     1,     1,       1,      1,    1,     1
+    shimfit=   1,     1,     1,     1,       1,      1,    1,     1
+    shimnames:$cname,$ns    "check if z1c, z2c shims used"
+    strstr($cname,'z1c'):$c2
+    if($c2 > 0.5) then
+      shimname[3] = 'z1c'
+      shimname[6] = 'z2c'
+    endif
+  elseif (shimmapsel='1&z2') then
+    shimsel = '1&z2'  "default for shimming"
+    shimname = 'x1', 'y1',  'z1',  'xz',    'yz',   'z2', 'xy', 'x2y2','n'
+    shimstep=  $f,    $f,    $f,    $h,      $h,     $g,   $k,    $k
+    shimmap=   1,     1,     1,     0,       0,      1,    0,     0
+    shimfit=   1,     1,     1,     0,       0,      1,    0,     0
+    shimnames:$cname,$ns    "check if z1c, z2c shims used"
+    strstr($cname,'z1c'):$c2
+    if($c2 > 0.5) then
+      shimname[3] = 'z1c'
+      shimname[6] = 'z2c'
+    endif
+  elseif (shimmapsel='12&3') then
+    shimsel = '12&3'  "default for shimming"
+    shimname = 'x1','y1','z1','xz','yz','z2','xy','x2y2','x3','y3','z3','xz2','yz2','zxy','zx2y2','n'
+    shimstep=   $f,  $f,  $f,  $h,  $h,  $g,  $k,   $k,   $k,  $k,  $h,  $k,   $k,    $k,   $k
+    shimmap=     1,   1,   1,   1,   1,   1,   1,    1,    1,   1,   1,   1,    1,     1,    1
+    shimfit=     1,   1,   1,   1,   1,   1,   1,    1,    1,   1,   1,   1,    1,     1,    1
+    shimnames:$cname,$ns    "check if z1c, z2c shims used"
+    strstr($cname,'z1c'):$c2
+    if($c2 > 0.5) then
+      shimname[3] = 'z1c'
+      shimname[6] = 'z2c'
+      shimname[11] = 'z3c'
+    endif
+  elseif (shimmapsel='123&4') then
+    shimname =  'x1','y1','z1','xz','yz','z2','xy','x2y2','x3','y3','z3','xz2','yz2','zxy','zx2y2',               'z3x','z3y','z2x2y2','z2xy','zx3','zy3','x4','y4','z4','n'
+    shimsel = '123&4'  "1-4th order; "
+    shimstep=   $f,  $f,  $f,  $h,  $h,  $g,  $k,   $k,   $k,  $k,  $g,  $k,   $k,    $k,    $k,
+                $k,   $k,    $k,      $k,    $k,   $k,  $k,  $k,  $k/2.0
+    shimmap=     1,   1,   1,   1,   1,   1,   1,    1,    1,   1,   1,   1,    1,     1,     1,
+                 1,    1,     1,       1,     1,    1,   1,   1,   1
+    shimfit=     1,   1,   1,   1,   1,   1,   1,    1,    1,   1,   1,   1,    1,     1,     1,
+                 1,    1,     1,       1,     1,    1,   1,   1,   1
+    shimnames:$cname,$ns    "check if z1c, z2c shims used"
+    strstr($cname,'z1c'):$c2
+    if($c2 > 0.5) then
+      shimname[3] = 'z1c'
+      shimname[6] = 'z2c'
+      shimname[11] = 'z3c'
+      shimname[24] = 'z4c'
+    endif
+  elseif ( shimmapsel='all') then
+    $shimname=''
+    $v = 1
+    while ($v <= $ns) do
+      substr($cname,$v):shimname[$v]
+      shimmap[$v]=1
+      shimfit[$v]=1
+      $v = $v + 1
+    endwhile
+    shimmap[$v]='n'  "last entry 'n' teminator"
+  else
+    write('error','Illegal selection of shims for mapping; shimmapsel=%s',shimmapsel)
+    abort
+  endif
+
+  if($1 = -1) then  "-1, initialize shimname[] only"
+    abort
+  endif
+
+  exists('startshim','parameter'):$ex
+  if($ex = 0) then
+    create('startshim','flag')
+  endif
+
+  if(startshim <> 'y') then 
+    $message = 'Have you saved the reference shim file, "start" '
+    confirm($message):$response
+    if ($response = 1)  then
+      write('line3','Starting shim calibration')
+    else
+      write('error','Aborting shim calibration')  
+      abort
+    endif
+  endif
+
+  exists(userdir+'/shims/start','file'):$ex
+  if($ex < 1) then
+    write('error','Shimfile, "start", does not exist')
+    abort
+  else
+    "retrive original shims for shimval array" 
+    rts('start')   
+    setallshims  
+  endif  
+
+   "round off fov parameters and init shimmap parameter filename"
+  format(lro,3,1):lro
+  format(lpe,3,1):lpe
+  format(lpe2,3,1):lpe2
+  $lr0 = lro*10  "mm"
+  $lr1 = lpe*10
+  $lr2 = lpe2*10
+  $l0='' $l1='' $l2=''
+  format($lr0,0,0):$l0
+  format($lr1,0,0):$l1
+  format($lr2,0,0):$l2
+
+  "initialize fn parameters"
+  fn=np fn1=nv*2 fn2=nv2*2    "default fn parameters"
+  $zf = 1    "no zerofill done"
+  exists('zflag','parameter'):$ex
+  if($ex = 1) then
+    if(zflag = 'y') then
+      fn=np*2 fn1=nv*4 fn2=nv2*4  "zerofilled size for fdf header"
+      $zf = 2    "zerofill factor"
+    endif
+  endif
+
+  "** shimmap_2.gcoil.param file created **"
+  $name = 'shimmap_2.'+gcoil+shimpar+'.param'
+  $name = $GSCAL+'/'+$name
+  rm('-f',$name):$x
+
+  write('reset',$name)  "create param file"
+  write('file',$name,'#DATASIZE')
+  write('file',$name,'%3d  %3d  %3d %3d',fn/2,fn1/2,fn2/2,$zf)
+  write('file',$name,'#FOV-MM')
+  write('file',$name,'%6.0f  %6.0f  %6.0f ',lro*10,lpe*10,lpe2*10)
+  write('file',$name, '#DELAY-MSEC')
+  $del = del*1000   "delay in msec"
+  write('file',$name, '%6.1f',$del)
+  write('file',$name, '#THRESHOLD-PERCENT')
+  write('file',$name, '%6.0f ',thresh)
+  write('file',$name, '#REFERENCE-DELAY-MSEC')
+  $delref = delref*1000   "delay in msec for ref scan; 0 otherwise"
+  write('file',$name, '%6.3f',$delref)
+
+  $i=1
+  $j=1
+
+  while (shimname[$i] <> 'n') do    
+    if (shimmap[$i] = 1) then     
+      current={shimname[$i]}   "** current shim value"
+      shimval[$j]=current+shimstep[$i]
+      shimcoil[$j]=shimname[$i]
+      $j = $j+1
+    endif
+    maxshims = $i    "** total no of shims"    
+    $i=$i+1  
+  endwhile
+     
+  "** no of shims to map"
+"    shimcnt=$j - 1   not used"
+  "** write shim info **"
+  write('file',$name, '#NO-OF-SHIMS')
+  write('file',$name,'%2d',maxshims)
+  write('file',$name, '#SHIM\tOFFSET\tUNITS\tMAP\tADJUST')  
+  $i=1
+  $unit='DAC'
+  while shimname[$i] <> 'n' do
+    write('file',$name,shimname[$i]+'\t%4d\t%s\t%4d\t%4d',
+                   shimstep[$i],$unit,shimmap[$i],shimfit[$i])
+    $i=$i+1  
+  endwhile   
+  
+  "make a (dummy) copy of the decc file for reference"
+  $name = '/vnmr/imaging/decclib/.'+gcoil
+  rm('-f',$GSHIMDIR+'/decc_file_2.'+gcoil):$x
+  cp($name,$GSHIMDIR+'/decc_file_2.'+gcoil)
+
+  ldrf    "prepare for scan"
+  imprep
+  pss=pss0  "remove arrays" 
+  profile='nn' 
+  exists('H1save','parameter'):$ex
+  if($ex = 0) then
+    create('H1save','real')
+  endif
+  H1save = H1offset   "save H1offset on first pass"
+endif
+
+if (shimpass = 0) then "first pass for base"
+  "save the current shimmap"
+  tau = 0    "1st expt. te_1"
+  "remove old shim map fid files"
+  shimmapfid = $GSHIMDIR+'/base.1'
+  rm('-rf',shimmapfid+'.fid'):$x
+
+  write('line3','base.1')
+  shimpass=1 
+elseif (shimpass = 1) then
+  shimcntr=0  "init shim pointer"
+  shimpass=2
+  tau = del  "2nd echo, te_2 => B"
+  shimmapfid = $GSHIMDIR+'/base.B'
+  rm('-rf',shimmapfid+'.fid'):$x
+  write('line3','base.B') 
+elseif (shimpass = 2) then
+  shimcntr=0  "init shim pointer"
+  shimpass=6  "last pass"
+  tau = delref  "reference echo, te_3 => A"
+  shimmapfid = $GSHIMDIR+'/base.A'
+  rm('-rf',shimmapfid+'.fid'):$x
+  write('line3','base.A') 
+  if(del = delref) then
+    "Note: data not acquired"
+    svf(shimmapfid)  "base.A and base.B are same"
+    gs_acqshimmap(shimpass,shimcntr)
+  endif
+elseif (shimpass = 3) then   "get shimmap data"
+  "** change shim value **" 
+  if (shimcntr > maxshims) then 
+    write('line3','%s: Illegal shim number ',$macro) 	
+    abort
+  endif
+ 
+  shimmapfid = $GSHIMDIR+'/'+shimcoil[shimcntr]+'.1'
+  rm('-rf',shimmapfid+'.fid'):$x
+  {shimcoil[shimcntr]}=shimval[shimcntr]  "load shim value for mapping"
+  setallshims
+  shimpass=4
+  tau = 0 
+  write('line3','%s: %s.1',shimcntr,shimcoil[shimcntr]) 
+  "if new shims are z2 change H1offset if necessary"
+  if (shimcoil[shimcntr] = 'z2') or (shimcoil[shimcntr] = 'z2c') then
+    write('line3','waiting for z2 shims to settle')
+    shell('sleep 10') "let z2 settle"
+    if(z2offset <> 0) then       
+      write('line3','H1offset(=%6.2f) changed by %6.2f',H1offset,z2offset) 
+      H1offset = H1save + z2offset   "H1save saved on first pass"
+      resto = H1offset
+    endif   
+  endif
+elseif (shimpass = 4) then
+  "second pass for te2 measurement" 
+  tau = del
+  shimmapfid = $GSHIMDIR+'/'+shimcoil[shimcntr]+'.B'
+  rm('-rf',shimmapfid+'.fid'):$x
+  write('line3','%s: %s.2',shimcntr,shimcoil[shimcntr]) 
+  shimpass = 5  
+elseif (shimpass = 5) then
+  "reference echo measurement" 
+  tau = delref
+  shimmapfid = $GSHIMDIR+'/'+shimcoil[shimcntr]+'.A'
+  rm('-rf',shimmapfid+'.fid'):$x
+  write('line3','%s: %s.3',shimcntr,shimcoil[shimcntr]) 
+  shimpass = 6   "last pass"
+  if(del = delref) then
+    "Note: data not acquired"
+    svf(shimmapfid)  "e.g. z1.A and z1.B are same"
+    gs_acqshimmap(shimpass,shimcntr)
+  endif    
+elseif (shimpass = 6 ) then
+  rts('start')    "retrive original shims" 
+  setallshims 
+  
+  "reset H1offset for z2 shim"
+  if (shimcoil[shimcntr] = 'z2') or (shimcoil[shimcntr] = 'z2c') then
+    H1offset = H1save   "reset H1offset"
+    resto = H1offset
+    if(z2offset <> 0) then
+      write('line3','H1offset reset to %6.2f',H1offset)
+    endif
+  endif    
+  write('line3','Done')    
+  abort
+endif 
+
+wexp = 'svf(shimmapfid) gs_acq1shimmap(shimpass,shimcntr)'  
+
+au  "** start acquisition "
+
+
+"******************************************************************"
+"        Modification History"
+
+" 03jan02(ss) - threshold put into parameter file"
+"           del delay set in msec"
+" 16jan02(ss) - start shim file used; gshim changed to gs_acqshimmap"
+"               del is used to set tau#1 and tau#2 delay"
+" 06feb02(ss) - data written to gshimdir/data/"
+" 13may03(ss) - parameters written to calib/"
+"               shimmap.gcoil.param file created; FOV added"
+" 021105(ss) FOV checked and included in shimmap_.f and decc_file names"
+" 030507(ss) - reference echo collected"
+" 030508(ss): del,delref replace delay,delayref"
+" 030609(ss): 12&3 or all shims option added"
+" 030827(ss): x,y,z and z2 use smaller step value; z2 delay added"
+" 030903(ss): Bug in z1c,z2c selection fixed"
+" o30905(ss): only sag orientation allowed"
+" 030912(ss): 4th order shims added"
+" 19oct05     temporary deccfile% saved in $GSCAL
+" 20070402    3,4th order shims added;
+" 20070906    H1save for z2 
+" 20071115    startshim checked; confirm box; 
+"             if del=delref, .A.fid not acquired
+" 071205      del=shimmapdel
+
+"******************************************************************"
+

@@ -1,0 +1,241 @@
+"macro homo2dht"
+// homo2dht - apptype macro to setup generic Homonuc 2D experiments
+//              using Hadamard transforms
+
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+if ($action = 'setup') then
+
+  $sp=sp $wp=wp $vs=vs
+  $rfl=rfl $rfp=rfp
+  $reffrq = reffrq
+  $procdim=procdim
+  $solvent=solvent
+
+  if ($do = '') then
+    $do = macro
+  endif
+  exists($do,'parlib'):$e,$path
+
+  xm1('studydir'):$sdir
+  if ($e) then
+    if (auto='y' or sqmode='go') then
+// retrieve parameters for automation
+      $id=actionid
+      $svfile=$sdir+'/info/'+$id+'/htpar'
+      exists($svfile,'file'):$es
+      if ($es>0.5) then
+        fread($svfile)
+      else
+        if spintype='tach' then $spin=spin endif
+        rtx($path,'current','rt','clear')
+        if spintype='tach' then spin=$spin else spin=0 endif
+      endif
+      $dfile=$sdir+'/info/'+$id+'/diffmacro'
+      exists($dfile,'file'):$ed
+      if ($ed>0.5) then
+        macrold($dfile):$x
+        exec('diffmacro')
+        purge($dfile)
+      endif
+      dg
+// check if htfrq1 set, otherwise Skip
+      on('htfrq1'):$on
+      if (not $on or (htfrq1[1]=0 and size('htfrq1')<1.5)) then
+        xmsetatts($id,'status','Skipped')
+      endif
+      return
+    else
+      if spintype='tach' then $spin=spin endif
+      rtx($path,'current','rt','clear')
+      if spintype='tach' then spin=$spin else spin=0 endif
+    endif
+  else
+    write('error','parameters for %s do not exist',macro)
+    return
+  endif
+  solvent=$solvent
+
+  setfrq
+  exists('PFGflg','parameter'):$e
+  if ($e=0) then create('PFGflg','flag') PFGflg='n' endif
+  $PFGflg=''      
+  getparam('gradient','Probe'):$PFGflg   
+  if ($PFGflg='') then $PFGflg='n' endif 
+  PFGflg=$PFGflg 
+
+  if (PFGflg='y') then
+    exists('gzlvl1','parameter'):$e
+    if ($e) then fixgrd(10):gzlvl1 endif
+    exists('hsglvl','parameter'):$e
+    if ($e) then fixgrd(10):hsglvl endif
+  endif
+  getparam('tpwr',tn):tpwr
+  getparam('pw90',tn):pw90
+  getparam('tpwr_cf','H1'):compH
+  pw=pw90
+  celem=0
+
+// get htfrq1 sw1 dof ni fn1
+  editht('getni',tn)
+  htfrqdisp('line3','htfrq1')
+
+  sw=sw
+  sw1=sw // overrides sw1 set above
+
+  proc1='ht'
+  gain='y'
+
+  axis='pp'
+  setref1(tn,'setup')
+  $size=size('phase')
+  pmode='full'
+
+// set wet parameters
+  $wet='n'
+  exists('wet','parameter'):$e
+  if $e>0.5 then $wet=wet endif
+  gain='y'
+  $gain_is_up = ((axis = 'pd') and (PFGflg = 'y') and ($wet <> 'y'))
+
+  if ($gain_is_up) then
+    gain = gain - 20
+  endif
+
+// exists(apptype,'parlib'):$e,$path
+// if ($e > 0.5) then
+//   rtx($path,'current','keep','clear')
+// endif
+
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    exec(wrtp)
+  endif
+  setref('setup')
+
+  execseq('setup')  // Execute any sequence specific setup
+
+  exists($sdir+'/study.xml','file'):$d
+  if (appmode='walkup' and studyid='tmpstudy' and $d>0.5) and not (auto='y' or sqmode='go') then
+// save parameters for automation
+    $id=actionid
+    $j=0 teststr('sqattr','id','global'):$j
+    if $j>0.5 then $id=sqval[$j] endif
+    if ($id <> 'null') then
+      $svfile=$sdir+'/info/'+$id+'/htpar'
+      exists($svfile,'file'):$es
+      if ($es>0.5) then
+        rm('-f',$svfile):$x
+      endif
+      fsave($svfile)
+    endif
+  endif
+  dg newdg
+
+  if not (auto='y' or sqmode='go') and ($procdim>0.5) then
+    reffrq=$reffrq
+    rfl=$rfl rfp=$rfp
+    sp=$sp wp=$wp vs=$vs
+    ds
+//  f full
+  else
+    dps
+  endif
+
+elseif ($action = 'process') then
+
+  xm1('studydir'):$sdir
+  if ((auto='y' or sqmode='go') and size('prescan')>2.5) then
+    if (prescan[3]='n') then
+      return
+    endif
+  endif
+
+  setref('setup')
+// setref1(tn,'setup')
+  exists('f1coef','parameter'):$f1coefex
+  $coef=0
+  if ($f1coefex > 0) and (f1coef <> '') then
+    $coef=1
+  endif
+  $seqsub=''
+  $dot2dc=0
+  substr(seqfil,1,1):$seqsub
+  if ($seqsub='g') then
+    if (nt=1) then
+      $dot2dc=1
+    endif
+  endif
+  $ptype = 0
+  exists('phase','parameter'):$phased
+  if $phased>0 then 
+    if size('phase')>1 then
+      $phased=1
+    else
+      $phased=0
+      if phase=0 then
+        $ptype=1
+      endif
+    endif
+  endif
+
+  proc1='ht'
+
+  fullt
+  if ($dot2dc) then
+    wft2da('t2dc')
+  else
+    wft2da
+  endif
+
+//  if (dmg='av' and fn=fn1) then foldt endif
+//  fullsq
+
+  if (dmg <> 'av') then
+    $intsize=size('lifrq')
+    if ((Console = 'mercury') and ($intsize > 2)) then
+      bc2d('f2'):$x
+    endif
+  endif
+
+  f ai
+  nm2d
+  if auto='n' then dconi endif	"display"
+
+  execseq('proc') // Execute any sequence specific processing
+
+elseif ($action = 'plot') then
+
+  $jex=0
+  isvnmrj:$j
+  exists('studyid','parameter','global'):$e1
+  exists('activestudy','parameter','global'):$e2
+  if (($j>0.5 or auto='y') and $e1>0.5 and $e2>0.5) then
+    if ((auto='y' or activestudy[1]<>'null') and studyid<>'null' and studyid<>'') then
+      $jex=1
+    endif
+  endif
+
+  exists(userdir+'/dialoglib/'+seqfil+'/'+seqfil+'plt','file'):$macex
+  if ($macex = 0) then
+    exists(systemdir+'/dialoglib/'+seqfil+'/'+seqfil+'plt','file'):$macex
+  endif
+
+  if ($jex) then
+    cqplot2D
+  elseif ($macex) then
+    Autoplot2D
+  elseif trunc(sw)=trunc(sw1) then  // homonuclear correlation 2D
+    plcosy
+  endif
+
+  execseq('plot')
+
+endif

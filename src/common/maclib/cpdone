@@ -1,0 +1,193 @@
+"macro cpdone"
+"************************************************************"
+" cpdone - Macro called by at the end of     "
+"			a Chain experiment		     " 
+"************************************************************"
+
+$explist=''
+$md=archivedir+'/'+sample+'/dirinfo/macdir'
+cpexplist('read',$md):$explist
+$expsize=size('$explist')
+if ($explist[1]='PAUSE') and (auto='y') then 
+      $cmd='write(\'error\',\'Automation Paused by ADMIN\')'
+      xmhaha('sendcmd',$cmd)
+endif
+
+if ($explist[1]='PAUSE') and ($expsize>1) then
+      $explist='PAUSE'
+      emessage('paused')
+      if (auto='y') then eventLog('Message','Automation Paused') endif
+else
+      $explist=''
+endif
+iscurrentfid('',archivedir+'/'+sample):$iscurrent
+
+studymimic('ismimic'):$mimic
+"***********************************************************"
+IF (auto <> 'y') or ($mimic) THEN
+    if ($explist='PAUSE') then
+   	banner('PAUSED')
+	module('add','studypar','basic')
+	studystatus='Paused' studyid_=sample
+	savestudypar(archivedir+'/'+sample)
+    else
+	emessage('done')
+	banner('DONE')
+	module('add','studypar','basic')
+	studystatus='Complete' studyid_=sample
+	savestudypar(archivedir+'/'+sample)
+    endif
+ENDIF
+"***********************************************************"
+IF (auto='y') or ($iscurrent>0) THEN
+    $amd=autodir+'/enterQ.macdir'
+    $locdir='' 
+    $when='' 
+    $loc='' 
+    $rack='' 
+    $zone='' 
+    $status=''
+    $isnight=0
+    getlocid('current'):$loc,$locdir,$when,$zone,$rack
+    if (auto='y') then
+	exists(autodir+'/gQ','file'):$gqex
+        if ($gqex) then
+            shell('rm -f '+autodir+'/gQ'):$dum
+        endif
+        updatestatus(autodir,$loc,'',$zone,$rack)
+    endif
+// Remove current.fid directory
+    exists($amd+'/'+$locdir+'/current.fid','directory'):$cfidex
+    if ($cfidex) then
+        shell('rm -rf '+$amd+'/'+$locdir+'/current.fid'):$dum
+    endif
+    if ($explist='PAUSE') then return endif
+// Record completed time
+    if (auto='y') then
+        autotimelog('end',$locdir+'/'+$when)
+        if ($when<>'night') then
+	    shell('(cat '+$amd+'/overniteQ | grep -w MACRO: | grep -c '+$locdir+')'):$isnight
+	    if ($isnight=0) then
+	        shell('(cat '+autodir+'/enterQ | grep -w MACRO: | grep '+$locdir+' | grep -c night)'):$isnight
+	    endif
+        endif
+        $subtray=''
+        if (traymax=96) or (traymax=768) then
+	    $subtray='RACK'+$rack+'ZONE'+$zone
+        endif
+        if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+        $sdir=$amd+'/studytray'+$subtray+'/loc'+$loc
+        checklocstatus(autodir+'/enterQ',$loc,$zone,$rack):$status
+    endif
+    $sampdir=archivedir+'/'+sample
+
+    $sampdoneq='SAMPLE#: '+$loc
+    $doneq=$amd+'/cpdoneQ'
+    $reuseq=$amd+'/reuselocQ'
+    $errorq=$amd+'/cperrorQ'
+    $startq=$amd+'/cpstartQ'
+    $daydoneq=$amd+'/cpdonedayQ'
+    $nightq=$amd+'/overniteQ'
+    $buildEq=0
+    $buildDdq=0
+    $buildDq=0
+
+// Remove this location from errorQ
+    shell('touch '+$errorq):$dum
+    shell('(cat '+$errorq+' | grep -w "'+$sampdoneq+'" | wc -l)'):$buildEq
+    if ($buildEq) then
+    	shell('(cat '+$errorq+' | grep -vw "'+$sampdoneq+'" > '+$errorq+'1)'):$dum
+    	shell('mv '+$errorq+'1 '+$errorq):$dum
+    endif
+// Remove this locdir from the startQ
+    shell('touch '+$startq):$dum
+    shell('(cat '+$startq+' | grep -vw "'+$locdir+'" > '+$startq+'1)'):$dum
+    shell('mv '+$startq+'1 '+$startq):$dum
+// Remove this study directory from the daydoneQ
+    shell('touch '+$daydoneq):$dum
+    shell('(cat '+$daydoneq+' | grep "'+$sampdir+'" | wc -l)'):$buildDdq
+    if ($buildDdq) then
+    	shell('(cat '+$daydoneq+' | grep -v "'+$sampdir+'" > '+$daydoneq+'1)'):$dum
+    	shell('mv '+$daydoneq+'1 '+$daydoneq):$dum
+    endif
+
+    if ($buildEq) then 
+	xmhaha_beQ(autodir,$locdir,'delete')
+	xmhaha_asx(autodir,'ErrorQ') 
+    endif
+    if ($when='night') then
+	if (auto='y') then eventLog('StudyDone','NightQ') endif
+    endif
+    if ($isnight=0) then		"Release this location" 
+        studystatus='Complete'
+        if (auto='y') then
+	    eventLog('StudyDone')
+	    emessage('done')
+	    if ($status='Complete') then
+		writeparam($sdir+'/studypar','sample','current','add')
+	    endif
+        endif
+// Remove this study directory from DoneQ and reenter at the bottom of the file
+      if (appmode<>'lc') then
+	shell('touch '+$doneq):$dum
+    	shell('(cat '+$doneq+' | grep "'+$sampdir+'" | wc -l)'):$buildDq
+	if ($buildDq) then
+	    shell('(cat '+$doneq+' | grep -v "'+$sampdir+'" > '+$doneq+'1)'):$dum
+	    shell('mv '+$doneq+'1 '+$doneq):$dum
+	endif
+      endif
+	write('file',$doneq,'%s %s %s %s',$sampdoneq,$sampdir,$locdir,studyowner)
+// Remove this location from reuseQ and reenter at the bottom of the file
+	if (auto='y') and ($loc<>'0') then
+            shell('touch '+$reuseq):$dum
+            shell('(cat '+$reuseq+' | grep -vw "'+$sampdoneq+'" > '+$reuseq+'1)'):$dum
+            shell('mv '+$reuseq+'1 '+$reuseq):$dum
+            write('file',$reuseq,'%s',$sampdoneq)
+	endif
+// Reset locationpath in the study directory
+        $locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+	write('reset',$locpath)
+// Rebuild subxml file(s)
+//	if ($buildDq) then
+		xmhaha_subautoSQ(autodir,'fidlog',$locdir)
+		xmhaha_asx(autodir,'DoneQ')
+//	else
+//		xmhahasx_add(autodir,$locdir,'FidLog','DoneQ')
+//	endif
+// Remove this locdir from the Active status
+//	xmhaha_baQ('delete',$locdir)
+    else
+	if (auto='y') then eventLog('StudyDone','DayQ') endif
+	emessage('daydone')
+	studystatus='NightQueue'
+        write('file',$daydoneq,'%s %s %s %s',$sampdoneq,$sampdir,$locdir,studyowner)
+        xmhaha_subautoSQ(autodir,'fidlog',$locdir)
+	$buildDdq=1
+    endif
+    if ($buildDdq) then xmhaha_asx(autodir,'DoneDayQ') endif
+    sqLog('SampleEnd')
+// Remove this locdir from the Active status
+        xmhaha_baQ('delete',$locdir)
+
+    savestudypar(archivedir+'/'+sample)
+    write('reset',$amd+'/currentsampleinfo')
+    write('reset',$amd+'/currentsampleglobal')
+    write('reset',$amd+'/currentQ')
+
+    xmhaha_sqwatch('init','done')
+    if (auto='y') then
+        pauseautomation
+        $autoresubmit='no'
+        getadminfo('autoresubmiterror'):$autoresubmit
+        if ($autoresubmit='yes') then error2submit endif
+    endif
+    if (appmode='lc') then 
+	exists('lcsq','maclib'):$macex
+	if ($macex) then lcsq('startlc') endif
+    endif
+
+ENDIF
+isFDAsystem:$p11
+if ($p11) then samplemirror endif
+dousermacro($0)

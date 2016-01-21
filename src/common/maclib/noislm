@@ -1,0 +1,31 @@
+"macro noislm"
+"******************************************************"
+" noislm(maximum peak noise) - limit noise in spectrum "
+"  first argument (optional) - maximum peak noise      "
+"  (peak-to-peak noise will thus be twice this level)  "
+"******************************************************"
+
+RETURN
+
+if ($# < 1) then		   " default noise limit "
+  $maxnoise = 2
+else
+  $maxnoise = $1
+endif
+$left = sw-rfl+rfp-1.0/at	   " left edge of spectrum "
+$wp=wp $sp=sp
+wp=0.2*sw sp=$left-wp delta=wp/4 cr=$left
+$noise=1e9			   " make several measurements of 'noise' "
+while (cr-delta>sp+1) do
+  dsn:$snx,$rms
+  if $noise>$rms then
+    $noise=$rms
+  endif
+  cr=cr-delta
+endwhile
+$noise=vs*$noise
+sp=$sp wp=$wp
+
+if $noise>$maxnoise then	   " set new vs "
+  vs = $maxnoise*vs/$noise
+endif

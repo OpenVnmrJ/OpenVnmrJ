@@ -1,0 +1,26 @@
+"macro ATpl3a"
+
+" *************************************************************"
+" *arrayplot($1,$2,$3,$4)--prints array on plotter or graphics* "
+" ************************************************************* "
+
+"$1,$2 are x,y coordinates in mm
+" $3='graphics' or 'plotter' "
+" $4=name of array "
+$device=$3 $name=$4
+$index=1 $incr=0
+$col2=0
+write($device,$1,$2,'%s array',$name)
+repeat
+  write($device,$1,$2-5-$incr,'%6.3f',{$name}[$index])
+  $index=$index+1
+  if $3='plotter' then
+   $incr=$incr+3
+  else
+   $incr=$incr+5
+  endif
+  if ($index>arraydim/2)and($col2=0) then
+    $1=$1+30 $incr=0 $col2=1
+  endif
+until $index>arraydim
+return

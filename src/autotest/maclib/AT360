@@ -1,0 +1,175 @@
+"macro AT360"
+"AT360" "Test N15 Amplifier Linearity"
+
+if (at_n15tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   setlimit('pwx',2000,0,.1)
+    exists(curexp+'/expl.out','file'):$e
+    if $e then
+     rm(curexp+'/expl.out') endif
+   at_currenttest='n15pw90_vs_pwxlvl_ch3'
+   dn='N15' 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   seqfil='ATgNhmqc' 
+
+    n1=curexp+'/regression.inp.pwx90'
+    write('reset',n1)
+    write('file',n1,'pwxlvl')
+    write('file',n1,'pwx90 (usec)')
+    write('file',n1,'1 %4.0f',12)
+
+    autodir=curexp+'/regression.inp.B1'   "borrow global parameter"
+    write('reset',autodir)
+    write('file',autodir,'pwxlvl')
+    write('file',autodir,'B1 (Hz)')
+    write('file',autodir,'1 %4.0f',12)
+
+    spinsys=curexp+'/regression.inp.logB1'  "borrow global parameter"
+    write('reset',spinsys)
+    write('file',spinsys,'pwxlvl')
+    write('file',spinsys,'logB1')
+    write('file',spinsys,'1 %4.0f',12)
+
+   create('rfchannel','string') rfchannel='132'
+
+  if (numrfch>4) then rfchannel='13245' endif
+  if (numrfch=4) then rfchannel='1324' endif
+  if (numrfch=3) then rfchannel='132' endif
+
+   seqfil='ATgNhmqc' 
+   dn='N15' j=4  
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   if at_n15LBampl_compr<0.9 then
+    pwxlvl=at_n15pwx90lvl-6 j=4    "start in linear range of amplifier"
+    pwx=at_n15pwx90*at_n15LBampl_compr
+   else
+    pwxlvl=at_n15pwx90lvl j=4   
+    pwx=at_n15pwx90
+   endif
+   nt=2 at=.3 av ss=4
+   lb='n' sinebell
+   fn=64k
+   pwx=40   
+   wnt='ATwft select(1) crl rfl=sw/2 rfp=0 sp=-3.3p wp=1p vsadj(80) dssh dtext'
+   text('Finding 90 Degree 15N Pulse Width')
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   r1=12
+   wexp='AT360(`MORE`)'
+   ATcycle au
+
+elseif ($1='MORE') then
+
+   wft
+   ATn1590cal('pwx'):$pwx90
+   $pwx90=trunc($pwx90*10)/10
+   $B1=1e6/(4*$pwx90)
+   ln($B1):$lnB1 $lnB1=20*$lnB1/2.303
+
+   write('file',n1,'%2.0f %4.1f',pwxlvl,$pwx90)
+   write('file',spinsys,'%2.0f %6.2f',pwxlvl,$lnB1)
+   write('file',autodir,'%2.0f %4.0f',pwxlvl,$B1)
+
+   write('line3','N15 pw90 = %2.1f (B1= %6.0f Hz) at power level =%2.0f ',$pwx90,$B1,pwxlvl)
+   av
+
+   $pwx90=$pwx90*1.25 pwxlvl=pwxlvl-2
+   array('pwx',31,0.5*$pwx90,0.08*pwx)
+   write('graphics',0,175,'N15 RF : pwx array at power level %2.0f',pwxlvl)
+
+   wnt='ATwft select(1) vsadj(80) dssh '
+
+   r1=r1-1
+   if r1=1 then
+    wexp='AT360(`LAST`)'
+   else
+    wexp='AT360(`MORE`)'
+   endif
+   ATcycle au
+
+elseif ($1='LAST') then
+
+   wft
+   ATn1590cal('pwx'):$pwx90
+   $pwx90=trunc($pwx90*10)/10
+   $B1=1e6/($pwx90*4)
+   ln($B1):$lnB1 $lnB1=20*$lnB1/2.303
+
+   write('file',n1,'%2.0f %4.1f',pwxlvl,$pwx90)
+   write('file',spinsys,'%2.0f %6.2f',pwxlvl,$lnB1)
+   write('file',autodir,'%2.0f %4.0f',pwxlvl,$B1)
+
+   write('line3','N15 pw90 = %2.1f (B1= %6.0f Hz) at power level =%2.0f ',$pwx90,$B1,pwxlvl)
+
+   if (at_plotauto='y') then
+    pap
+    ATpltext(0,50)
+    cp(curexp+'/regression.inp.pwx90',curexp+'/regression.inp')
+    right
+    exists(curexp+'/expl.out','file'):$e
+    if $e then
+     rm(curexp+'/expl.out') endif
+    sc=0 wc=50
+    expl('regression') 
+    right
+    pexpl('regression')
+    ATpage
+    pap
+    ATpltext(0,50)
+    cp(curexp+'/regression.inp.B1',curexp+'/regression.inp')
+    rm(curexp+'/expl.out')
+    pexpl('regression')
+    sc=80 wc=50
+    expl('regression','noclear') 
+    ATpage
+    pap
+    ATpltext(0,50)
+    cp(curexp+'/regression.inp.logB1',curexp+'/regression.inp')
+    sc=160 wc=50
+    rm(curexp+'/expl.out') 
+    expl('regression','noclear') 
+    analyze('expfit','regression','poly1','list') expl('noclear')
+    right
+    pexpl
+    ATpage
+   else
+    cp(curexp+'/regression.inp.pwx90',curexp+'/regression.inp')
+    right sc=0 wc=50
+    rm(curexp+'/expl.out')
+    expl('regression') 
+    cp(curexp+'/regression.inp.B1',curexp+'/regression.inp')
+    sc=80 wc=50
+    rm(curexp+'/expl.out') 
+    expl('regression','noclear') 
+    cp(curexp+'/regression.inp.logB1',curexp+'/regression.inp')
+    sc=160 wc=50
+    rm(curexp+'/expl.out') 
+    expl('regression','noclear')
+    analyze('expfit','regression','poly1','list') expl('noclear')
+   endif
+  
+   lookup('file',curexp+'/analyze.list')
+   lookup('skip',22,'read',1):$corrcoef
+   lookup('skip',3,'read',1):$corrcoefdev
+   $corrcoef=trunc(1000*$corrcoef)/1000
+   $corrcoefdev=trunc(1000*$corrcoefdev)/1000
+   if $corrcoef>1.00 then $corrcoef=1.00 endif
+
+   write('line3','N15 B1 Regression: Correlation Coefficient = %2.3f ; Standard Deviation = %2.3f',$corrcoef,$corrcoefdev)
+   ATrecord('N15AMP','B1 and pwx90 as function of power','Corr.Coeff',$corrcoef,'  Std.Dev',$corrcoefdev,'  Max_Power',at_n15pwx90lvl)
+
+   write('file',autotestdir+'/REPORT','N15 Amp.Linearity: Corr.Coeff= %2.3f Std. Dev.= %2.3f ',$corrcoef,$corrcoefdev)
+
+    cp(curexp+'/regression.inp.pwx90',userdir+'/autotest/data/n15pw90_vs_power_regression.inp')
+    cp(curexp+'/regression.inp.B1',userdir+'/autotest/data/n15B1_vs_power_regression.inp')
+    cp(curexp+'/regression.inp.logB1',userdir+'/autotest/data/n15logB1_vs_power_regression.inp')
+spinsys='' autodir=''
+ATnext
+endif

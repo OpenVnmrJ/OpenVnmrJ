@@ -1,0 +1,224 @@
+"macro CSextsch"
+if ($# < 1.0) then 
+   $1 = 'get'
+endif
+if ($# < 2.0) then 
+   $2 = ''
+endif
+
+if ($2 = '') then
+   $2= CSextschname
+endif
+
+$ret = -1
+if ($2 <> '') then 
+   $filename = userdir + '/sampling/' + $2 + '.sch'
+   $parmodname = $2 + '.spar'
+else 
+   write('line3','Error (CSextsch): No Schedule Name\n')
+   return($ret)
+endif
+
+if ($1 = 'set') then 
+
+   exists(userdir + '/sampling','directory'):$e
+   if ($e < 0.5) then 
+      mkdir(userdir + '/sampling')
+   endif 
+
+   $ret=0
+   exists(curexp + '/sampling.sch','file'):$ret
+   if ($ret < 0.5) then 
+      write('line3','Error (CSextsch \'set\'): %s not Found\n', curexp + '/sampling.sch')
+      return($ret)
+   endif
+   
+   exists($filename,'file'):$e
+   if ($e > 0.5) then 
+      rm($filename):$dum
+   endif
+   cp(curexp + '/sampling.sch',$filename):$dum
+   exists($filename,'file'):$ret
+   if ($ret > 0.5) then 
+      if ($e > 0.5) then 
+         write('line3','Replace Schedule \'%s.sch\' in sampling Directory\n',$2)
+      else 
+         write('line3','Set Schedule \'%s.sch\' in sampling Directory\n',$2)
+      endif 
+   else 
+      write('line3','Set Schedule Failed \'%s.sch\'\n',$2)
+   endif
+
+   $ret1=0
+   exists(userdir + '/sampling/' + $parmodname,'file'):$e1
+   if ($e > 0.5) then 
+      rm(userdir + '/sampling/' + $parmodname):$dum
+   endif
+         
+   savemodule($parmodname,userdir + '/sampling/','','CSwt CSseed CSprofile CSprosize')
+   exists('ni','parameter'):$e1
+   if ($e1 > 0.5) then 
+      on('ni'):$o1
+      if (($o1 > 0.5) and (ni > 1)) then 
+         savemodule($parmodname,userdir + '/sampling/','','ni CSdensity')
+      endif
+   endif
+
+   exists('ni2','parameter'):$e2
+   if ($e2 > 0.5) then 
+      on('ni2'):$o2
+      if (($o2 > 0.5) and (ni2 > 1)) then 
+         savemodule($parmodname,userdir + '/sampling/','','ni2 CSdensity2')
+      endif
+   endif
+
+   exists('ni3','parameter'):$e3
+   if ($e3 > 0.5) then 
+      on('ni3'):$o3
+      if (($o3 > 0.5) and (ni3 > 1)) then 
+         savemodule($parmodname,userdir + '/sampling/','','ni3 CSdensity3')
+      endif
+   endif
+
+   exists('ni4','parameter'):$e4
+   if ($e4 > 0.5) then 
+      on('ni4'):$o1
+      if (($o4 > 0.5) and (ni4 > 1)) then 
+         savemodule($parmodname,userdir + '/sampling/','','ni4 CSdensity4')
+      endif
+   endif
+
+   exists(userdir + '/sampling/' + $parmodname,'file'):$ret1
+   if ($ret1 > 0.5) then 
+      if ($e1 > 0.5) then 
+         write('line3','Replace Parameters \'%s.spar\' in sampling Directory\n',$2)
+      else 
+         write('line3','Set Parameters \'%s.spar\' in sampling Directory\n',$2)
+      endif 
+   else 
+      write('line3','Set Parameters Failed \'%s.spar\'\n',$2)
+   endif
+
+   return($ret,$ret1)
+endif 
+ 
+
+if ($1 = 'get') then 
+
+   $ret = 0
+   exists($filename,'file'):$ret
+   if ($ret < 0.5) then 
+       write('line3','Error (CSextsch \'get\'): Schedule %s not Found\n',$2)
+       return($ret)
+   endif 
+    write('line3','$filename=%s\n',$filename)
+   lookup('file',$filename)
+   lookup('countline'):$numrows
+   lookup('file',$filename)
+   lookup('readline'):$line
+   substr($line,'wc'):$numcols
+   lookup('file',$filename)
+
+   $colmaxval[1]=0
+   $colmaxval[2]=0
+   $colmaxval[3]=0
+   $colmaxval[4]=0
+
+   $word=''
+   $rval = 0
+   $rindex = 0
+   repeat 
+      $rindex = $rindex + 1
+      lookup('readline'):$line 
+      $cindex = 0
+      repeat 
+         $cindex=$cindex+1
+         substr($line,$cindex):$word         
+         format($word,'isreal'):$ans
+         if ($ans = 1) then 
+            format($word,1,0):$rval
+         else
+            write('line3','Abort: Bad Index\n')
+            abort
+         endif  
+         if ($rval > $colmaxval[$cindex]) then 
+            $colmaxval[$cindex] = $rval
+         endif
+      until ($cindex = $numcols)
+   until ($rindex = $numrows)
+
+   exists('ni','parameter'):$e1
+   if ($e1 > 0.5) then 
+      if ($colmaxval[1] > ni-1) then 
+         ni = $colmaxval[1] + 1
+      endif
+   endif
+
+   exists('ni2','parameter'):$e2
+   if ($e2 > 0.5) then 
+      if ($colmaxval[2] > ni2-1) then 
+         ni2 = $colmaxval[2] + 1
+      endif
+   endif
+
+   exists('ni3','parameter'):$e3
+   if ($e3 > 0.5) then 
+      if ($colmaxval[3] > ni3-1) then 
+         ni3 = $colmaxval[3] + 1
+      endif
+   endif
+
+   exists('ni4','parameter'):$e4
+   if ($e4 > 0.5) then 
+      if ($colmaxval[4] > ni4-1) then 
+         ni4 = $colmaxval[4] + 1
+      endif
+   endif
+
+   jexp:$exp
+   exists(curexp + '/sampling.sch','file'):$e
+   if ($e > 0.5) then 
+      rm(curexp + '/sampling.sch'):$dum
+   endif
+   cp($filename, curexp + '/sampling.sch'):$dum
+   exists(curexp + '/sampling.sch','file'):$ret
+   if ($ret > 0.5) then 
+      write('line3','Get New Schedule \'%s.sch\' For Experiment %d\n',$2,$exp)
+   else 
+      write('line3','Get Schedule Failed')
+   endif 
+
+   $ret1=0
+   exists(userdir + '/sampling/' + $parmodname, 'file'):$ret1
+   if ($ret1 > 0.5) then 
+
+      getmodule($parmodname,userdir + '/sampling/','','CSwt CSseed CSprosize CSprofile')
+      exists('ni','parameter'):$e1
+      if ($e1 > 0.5) then 
+         getmodule($parmodname,userdir + '/sampling/','','ni CSdensity')
+      endif
+
+      exists('ni2','parameter'):$e2
+      if ($e2 > 0.5) then 
+         getmodule($parmodname,userdir + '/sampling/','','ni2 CSdensity2')
+      endif
+
+      exists('ni3','parameter'):$e3
+      if ($e3 > 0.5) then 
+         getmodule($parmodname,userdir + '/sampling/','','ni3 CSdensity3')
+      endif
+
+      exists('ni4','parameter'):$e4
+      if ($e4 > 0.5) then 
+         getmodule($parmodname,userdir + '/sampling/','','ni4 CSdensity4')
+      endif
+   endif
+
+   if ($ret1 > 0.5) then 
+      write('line3','Get New Parameters \'%s.spar\' For Experiment %d\n',$2,$exp)
+   else 
+      write('line3','Get Parameters Failed')
+   endif 
+   return($ret)   
+endif
+   

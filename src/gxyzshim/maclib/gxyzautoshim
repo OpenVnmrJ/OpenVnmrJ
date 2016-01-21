@@ -1,0 +1,701 @@
+"macro gxyzautoshim"
+" Agilent gxyzautoshim							"
+" GAM 28v03							"
+" from VVKautoshim						"
+
+" ** Needs 1H parameters testing and choice of tau debugging ***"
+" ** Currently using setup('H1') and tau=0.2/FWHH ***		"
+"No, this version uses rt('/vnmr/tests/H1lshp')"
+
+" gxyzautoshim(N) :  do N cycles of 3D shimming, plotting out	"
+"                    the fitted fieldmap and lineshape test	"
+"		     each time, using the following :		"
+" gxyzautoshim('shim') :  run one cycle of map and test		"
+" gxyzautoshim('processmap') :  process and fit fieldmap and set	shims"
+" gxyzautoshim('acquireref1D') :  measure 1D spectrum 	"
+" gxyzautoshim('processref1D') :  process 1D data, load fieldmap and set tau[2] 	"
+" gxyzautoshim('nextfieldmap') :  run next fieldmap if cycle<N	"
+" gxyzautoshim(N,'string') :  do N cycles of 3D shimming as	"
+"                             above, then run the command or	"
+"                             macro 'string'			" 
+
+" The lineshape test assumes that the line to be measured is	"
+" the second largest in the spectrum				"
+
+$function=''
+psCmd('active'):$psActive
+if $#=0 then
+	write('line3','Using mapname %s',mapname)
+	gxyzautoshim(ncycles)
+else
+        if (not typeof('$1')) then
+		$function='start' $ncycles=$1 
+	  else
+        	if $1='shim' then $function='shim' else 
+        	if $1='processmap' then $function='processmap' else 
+          	if $1='acquireref1D' then $function='acquireref1D' else 
+          	if $1='processref1D' then $function='processref1D' else 
+          	if $1='nextfieldmap' then $function='nextfieldmap' else 
+		$function='error'
+		endif endif endif endif endif
+        endif
+endif
+
+if $function='error' then
+        write('line3','invalid argument supplied to gxyzautoshim')
+        abort
+endif
+ 
+"***********************************************************************"
+if ($function='start') then
+
+if ($psActive=1) then
+  psCmd('set','errors','all')
+else
+  werr=''
+endif
+$auto=0
+if ($#>1.5) then
+	if ($2='auto') then $auto=1 endif
+endif
+exists('wxyzshim','parameter'):$e
+if ($e<0.5) then
+	create('wxyzshim','string')
+endif
+"if ($#>1) then wxyzshim=$2 endif"
+
+exists('varytau','parameter'):$e
+if ($e<0.5) then
+	create('varytau','flag')
+	varytau='y'
+endif
+exists('ncycles','parameter'):$e
+if ($e<0.5) then
+	create('ncycles','real')
+endif
+ncycles=$ncycles
+exists('cycle','parameter'):$e
+if ($e<0.5) then
+	create('cycle','real')
+endif
+cycle=1
+ni=4 ni2=4
+length(gxyzcode):$codelength
+if $codelength=36 then
+	ni=6 ni2=6
+elseif $codelength=64 then
+	ni=8 ni2=8
+elseif $codelength=144 then
+	ni=12 ni2=12
+endif
+$gxyzcalibdir=userdir+'/3Dshimlib/calibs'
+exists($gxyzcalibdir,'file'):$e
+if $e < 0.5 then shell('mkdir '+$gxyzcalibdir):$dum endif
+$date=''
+shell('date +%d%h%Y'):$date
+$gxyzautoshimdir=$gxyzcalibdir+'/'+mapname
+exists($gxyzautoshimdir,'file'):$e
+if $e < 0.5 then shell('mkdir '+$gxyzautoshimdir):$dum endif
+if ($auto) then
+	gxyzautoshim('shim','auto')
+else
+	gxyzautoshim('shim')
+endif
+return
+endif
+
+"end of initial call of gxyzautoshim(N) or gxyzautoshim(N,'macro')"
+"***********************************************************************"
+ 
+
+"***********************************************************************"
+if ($function='shim') then
+
+"gxyzautoshim('shim'):  do one cycle of gradient shimming"
+
+$auto=0
+if ($#>1.5) then
+	if ($2='auto') then $auto=1 endif
+endif
+if ($psActive=1) then
+  psCmd('set','stage','processmap')
+else
+  if ($auto) then
+	wexp='gxyzautoshim(\'processmap\',\'auto\')' 
+  else
+	wexp='gxyzautoshim(\'processmap\')'
+  endif
+endif
+exists(userdir+'/shims/tmpgxyzautoshim','file'):$e
+if $e > 0.5 then shell('rm '+userdir+'/shims/tmpgxyzautoshim'):$dum endif
+readallshims
+svs('tmpgxyzautoshim'):$dum
+pad=20
+if (auto<>'y') then
+  wnt='wft(`acq`,1,celem) f full dsshall gxyztext(`shimming`)'
+else
+  wnt='gxyztext(`shimming`)'
+endif
+if ($psActive=0) then
+  gxyz_au
+  clear(2)
+  gxyztext('shimming')
+endif
+return
+endif "from call of gxyzautoshim('shim') "
+"***********************************************************************"
+
+
+"***********************************************************************"
+if ($function='processmap') then
+
+"gxyzautoshim('processmap'):  after processing fieldmap, 			"
+"	save fid with date and time as filename			"
+"	keep copy of fid in subexpt				"
+"	plot field map						"
+"	update shims						"
+"	save new shims						"
+"	recall proton parameters and run;			"
+"	wexp processes and saves 				"
+"	and recalls field map parameters and data		"
+"	then checks whether number of cycles done = ncycles	"
+"	if so, stops and executes macro if provided		"
+
+$auto=0
+if ($#>1.5) then
+	if ($2='auto') then $auto=1 endif
+endif
+"Read the shims from before processing"
+rts('tmpgxyzautoshim'):$dum
+$x1=x1 $y1=y1
+shell('sleep 1'):$dum
+readhw('x1'):$x1
+readhw('y1'):$y1
+
+setvalue('x1',$x1,'processed')
+setvalue('y1',$y1,'processed')
+shell('sleep 1'):$dum
+wft
+gxyzmapfield('all')
+$date='' $rmserrs=''
+shell('date +%d%h%Y'):$date
+text('Probe name: '+probe)
+atext('Field map '+$date)
+lookup('file',userdir+'/3Dshimlib/data/xyshim.list')
+lookup('seek','rmsdiff/rmserr','read'):$rmserrs
+atext('rms diff/rms err = '+$rmserrs)
+$cy=''
+$ncy=''
+on('temp'):$tempon
+if $tempon > 0.5 then $temp=temp endif
+format(cycle,2,0):$cy
+format(ncycles,2,0):$ncy
+atext('Cycle number '+$cy+' out of '+$ncy)
+atext('')
+
+$shimpower='NA'
+if (shimset<10 or shimset>12) then
+        format(r2,1,1):$shimpower
+	atext('Estimated shim power dissipation = '+$shimpower+' W')
+endif
+if plotter='none' then pltopt='n' endif
+if pltopt='y' or pltopt='p' then
+	pltext
+	plot3Dmap(userdir+'/3Dshimlib/data/xyshim.fit',1,2) 
+        if pltopt='p' then
+		$n='' format(gxyzshimPSn,'lower'):$n
+                page(gxyzshimPS+$n+'.ps')
+                gxyzshimPSn=gxyzshimPSn+1
+                format(gxyzshimPSn,'lower'):$n
+                printon:$dum text dgs printoff(gxyzshimPS+$n+'.txt'):$dum
+                getplottertype(printer,'papersize'):$papersize
+                strstr($papersize,'-'):$ret,$dum,$papertype
+                if ($papertype='letter') then $papertype='Letter' else format($papertype,'upper'):$papertype endif
+                shell('enscript -M '+$papertype+' -o '+gxyzshimPS+$n+'.ps '+gxyzshimPS+$n+'.txt &'):$dum
+                gxyzshimPSn=gxyzshimPSn+1
+        else
+                page
+		printon:$dum text dgs printoff:$dum
+        endif
+endif
+
+$i=1 $is=''
+$fieldmapex=1
+$gxyzcalibdir=userdir+'/3Dshimlib/calibs'
+$gxyzautoshimdir=$gxyzcalibdir+'/'+mapname
+exists($gxyzautoshimdir,'file'):$e
+if $e < 0.5 then shell('mkdir '+$gxyzautoshimdir) endif
+
+repeat
+        format($i,1,0):$is
+        $fieldmapname=$gxyzautoshimdir+'/fieldmap_'+$date+'_'+$is+'.fid'
+        exists($fieldmapname,'file'):$fieldmapex
+        if $fieldmapex>0.5 then $i=$i+1 endif
+until $fieldmapex<0.5
+
+"Now save the fieldmap"
+svf($fieldmapname)
+
+"Now save the shims"
+//svs('gxyzshim_'+probe+'_'+$date+'_'+$is)
+
+shell('sleep 1'):$dum
+
+if ref1Dflg='y' then "Measure a reference 1D spectrum between each iteration of shimming"
+	if ($auto) then
+		gxyzautoshim('acquireref1D','auto') 
+	else
+		gxyzautoshim('acquireref1D')
+	endif
+else "Instead use the peak-to-peak frequency variations to optimise tau[2]"
+	$inputfile='' $max=-1e10 $min=1e10 $trash='' $num='' $values='' $value=0 $numlines=0 $amax=0 $amin=0
+	$inputfile=userdir+'/3Dshimlib/data/fieldmap'
+	shell('wc -l < '+$inputfile+'; cat'):$numlines
+	exists($inputfile,'file'):$ex
+	if $ex<0.5 then write('error','No fieldmap!') abort endif
+	lookup('file',$inputfile)
+	lookup('readline',5):$trash
+	$i=1
+	repeat
+		lookup('read','read'):$num,$values
+		format($values,3,6):$value
+		if $value>$max then $max=$value endif
+		if $value<$min then $min=$value endif
+		$i=$i+1
+	until $i > $numlines-5
+	$range=$max-$min
+	//write('line3','Max value was %f',$max)
+	//write('line3','Min value was %f',$min)
+	write('line3','Field variation %.1f %s Hz',$range,tn)
+	$tauopt=1/$range
+	$taumax=0.025*h1freq/sfrq
+	if (tn='lk' or tn='H2') then $taumax=0.12 endif
+	//write('line3','$taumax=%f',$taumax)
+	if $tauopt>$taumax then $tauopt=$taumax endif
+	format($tauopt,1,4):$tauopt
+	//write('line3','$tauopt=%f',$tauopt)
+	r3=$tauopt
+
+	"Write range and rms diff/err info to log file"
+        shell('date +%d%h%Y'):$date
+        $mapname=''
+        $xyshimlist=userdir+'/3Dshimlib/data/xyshim.list'
+        lookup('file',$xyshimlist)
+        lookup('seek','mapname','read'):$mapname
+        lookup('seek','nshims','read'):$nfitshims
+        $gxyzautoshimdir=userdir+'/3Dshimlib/calibs/'+$mapname
+        $shimlogfile=$gxyzautoshimdir+'/shimlog.txt'
+        $date=''
+        exists($shimlogfile,'file'):$logex
+        if $logex < 0.5 then
+                write('reset',$shimlogfile)
+                write('file',$shimlogfile,'Mapname: %s',$mapname)
+		write('file',$shimlogfile,'Ref.\t\tField\t\trms diff/rms err\tNo. shims\tShim power\tData')
+		write('file',$shimlogfile,'Linewidth\(Hz\)\tVariation\(Hz\)\t\t\t\tFitted\t\tDissipation\(W\)\tFilename')
+                "Now create a symbolic link to this file"
+                $slink=userdir+'/3Dshimlib/calibs/shimlog.txt'
+                exists($slink,'file'):$slinkex
+                if $slinkex > 0.5 then shell('rm '+$slink):$dum endif
+                shell('ln -s '+$shimlogfile+' '+$slink):$dum
+        endif
+	length($gxyzautoshimdir):$strstrt
+	length($fieldmapname):$strstrt2
+	substr($fieldmapname,$strstrt+2,$strstrt2-$strstrt-1):$fieldmapname
+
+	//Now write out a shimset if the shimming appears to have improved
+	$lastrange=1e6
+	if ($logex > 0.5) then
+		shell('wc -l  <'+$shimlogfile+'; cat'):$numlinesinlog
+		lookup('file',$shimlogfile)
+		$i=1
+		repeat
+        		lookup('seekcs','NA','read'):$tmp
+			if ($tmp < $lastrange) then $lastrange=$tmp endif
+        		$i=$i+1
+		until $i=$numlinesinlog-2
+	endif
+	if (($range < $lastrange) or ($logex<0.5)) then
+		$shimfilename=mapname+'_best'
+		write('line3','Shims saved as %s',$shimfilename)
+		svs($shimfilename,'overwrite')
+	endif
+	
+	//Write the log file		
+        write('file',$shimlogfile,'NA\t\t%.2f\t\t%s\t\t\t%d\t\t%s\t\t%s',$range,$rmserrs,$nfitshims,$shimpower,$fieldmapname)
+
+	"Now acquire the next field map"
+	if ($auto) then
+		gxyzautoshim('nextfieldmap','auto'):$ret
+	else
+		gxyzautoshim('nextfieldmap'):$ret
+	endif
+        return($ret)
+
+endif "ref1Dflg='n'"
+
+endif "gxyzautoshim('processmap')"
+"***********************************************************************"
+
+
+"***********************************************************************"
+if ($function='acquireref1D') then "Set up and start 1D measurement"
+	$auto=0
+	if ($#>1.5) then
+		if ($2='auto') then $auto=1 endif
+	endif
+	on('temp'):$tempon
+	cleanexp('field')
+	tmpsave('field')
+	$mapname=''
+	$mapname=mapname
+	$solv=''
+	$solv=solvent
+	$pw90=refpw $tpwr=reftpwr $gain=refgain
+	$refnuc=refnuc $refppm=refppm 
+	$shimpower=''
+      	format(r2,1,1):$shimpower
+	$pltopt=pltopt $gxyzshimPDF=gxyzshimPDF $gxyzshimPSn=gxyzshimPSn
+	$gxyzshimPS=gxyzshimPS
+	on('temp'):$tempon
+	if $tempon > 0.5 then $temp=temp endif
+	savesampglobal('cp')
+	rtp('/vnmr/tests/H1lshp')
+	getsampglobal('cp')
+	if $isvnmrj then seqfil=seqfil endif
+	setsw($refppm+1,$refppm-1) solvent=$solv fn=2*np
+	tn=$refnuc
+	gain=$gain d1=1
+	pw=$pw90 tpwr=$tpwr in='n'
+	if console='vnmrs' or console='mr400' then
+		exists('ddrtc','parameter'):$ddrtcex
+		if $ddrtcex < 0.5 then setlp0 endif
+	 	ddrtc=2*pw/3.14159+rof2+alfa 
+	endif
+	n1=$pltopt r1=$refppm  n2=$mapname n3=$shimpower r4=$gxyzshimPSn
+	exists('n4','parameter'):$n4ex
+	if ($n4ex<0.5) then create('n4','string') endif
+	n4=$gxyzshimPS
+	if $tempon > 0.5 then temp=$temp endif
+	if ($auto) then
+		wexp='gxyzautoshim(\'processref1D\',\'auto\')'
+	else
+		wexp='gxyzautoshim(\'processref1D\')'
+	endif
+	wbs='' wnt=''
+	exists('setrc','maclib'):$e
+	if Console='vnmrs' and $e then setrc endif
+	gxyz_au
+	//au('wait','next')
+
+endif "gxyzautoshim('acquireref1D')"
+"***********************************************************************"
+
+
+
+"***********************************************************************"
+if ($function='processref1D') then
+	"gxyzautoshim('processref1D'):  after acquiring proton fid				"
+	"	save with automatically generated filename and fplot 	"
+	"	execute argument macro if present 			"
+	
+	$auto=0
+	if ($#>1.5) then
+		if ($2='auto') then $auto=1 endif
+	endif
+	$date='' $rmserrs=''
+	shell('date +%d%h%Y'):$date
+	lb=0 ft f
+	if Console='vnmrs' then aph0 else aph endif
+	crl vsadj f setref
+	"Find the reference peak"
+	axis='h'
+	wp=500
+	sp=r1*sfrq-250
+	dc res rl vsadj
+	wp=500 sp=-250
+	dc
+	dres(cr,.5):$lw1
+	dres(cr,.0055):$lw2
+	dres(cr,.0011):$lw3
+	$tauopt=0.5/$lw3
+	$lw1s='' $lw2s='' $lw3s=''
+	$mapname=''
+	format($lw1,2,2):$lw1s
+	format($lw2,2,2):$lw2s
+	format($lw3,2,2):$lw3s
+	write('line3','Reference linewidth = %.2f/%.2f/%.2f Hz',$lw1,$lw2,$lw3)
+	text(tn+' spectrum of reference line  '+$date)
+	atext('Acquired during automated 3D shimming using mapname '+n2)
+	atext('Reference linewidth = '+$lw1s+'/'+$lw2s+'/'+$lw3s+' Hz')
+	lookup('file',userdir+'/3Dshimlib/data/xyshim.list')
+	lookup('seek','mapname','read'):$mapname
+	lookup('seek','rmsdiff/rmserr','read'):$rmserrs
+	atext('rms diff/rms err = '+$rmserrs)
+	if (shimset<10 or shimset>12) then atext('Estimated shim power dissipation = '+n3+' W') endif
+	"Not really needed, but if autophasing is bad you can get -ve linewidths reported by dres"
+	if ($tauopt <0) then $tauopt=0.005 endif
+	if n1='y' or n1='p' then
+		write('plotter','red',98,wc2max-10,'50%% linewidth %6.2f  Hz',$lw1)
+		write('plotter','red',98,wc2max-20,'0.55%% linewidth %6.2f  Hz',$lw2)
+		write('plotter','red',98,wc2max-25,'0.11%% linewidth %6.2f  Hz',$lw3)
+		pltext(0,wc2max/2) pl pscale 
+
+                if n1='p' then
+			$gxyzshimPS=''
+			$gxyzshimPSn=r4
+			$gxyzshimPS=n4
+                        $n='' format($gxyzshimPSn,'lower'):$n
+                        page($gxyzshimPS+$n+'.ps')
+                        $gxyzshimPSn=$gxyzshimPSn+1
+                else
+                        page
+                endif
+
+	endif
+
+	$i=1 $is=''
+	$ref1Dex=1
+	$gxyzautoshimdir=userdir+'/3Dshimlib/calibs/'+$mapname
+	exists($gxyzautoshimdir,'file'):$e
+	if $e < 0.5 then shell('mkdir '+$gxyzautoshimdir):$dum endif
+	//Is this cd really needed?
+	cd($gxyzautoshimdir):$dum
+
+	"Work out the new file name and save the 1D data"
+	repeat
+        	format($i,1,0):$is
+        	$ref1Dname=$gxyzautoshimdir+'/'+tn+'_'+$date+'_'+$is+'.fid'
+        	exists($ref1Dname,'file'):$ref1Dex
+        	if $ref1Dex>0.5 then $i=$i+1 endif
+	until $ref1Dex<0.5
+	svf($ref1Dname)
+	length($gxyzautoshimdir):$strstrt
+	length($ref1Dname):$strstrt2
+	substr($ref1Dname,$strstrt+2,$strstrt2-$strstrt-1):$ref1Dname
+
+	"Write Linewidth and rms diff/err info to log file"
+	shell('date +%d%h%Y'):$date
+	$shimlogfile=$gxyzautoshimdir+'/shimlog.txt'
+	$date=''
+	exists($shimlogfile,'file'):$logex
+	$xyshimlist=userdir+'/3Dshimlib/data/xyshim.list'
+	$mapname=''
+	lookup('file',$xyshimlist)
+	lookup('seek','mapname','read'):$mapname
+	lookup('seek','nshims','read'):$nfitshims
+	if $logex < 0.5 then
+		write('reset',$shimlogfile)
+                write('file',$shimlogfile,'Mapname: %s',$mapname)
+		write('file',$shimlogfile,'Ref.\t\tField\t\trms diff/rms err\tNo. shims\tShim power\tData')
+		write('file',$shimlogfile,'Linewidth\(Hz\)\tVariation\(Hz\)\t\t\t\tFitted\t\tDissipation\(W\)\tFilename')
+		"Now create a symbolic link to this file"
+		$slink=userdir+'/3Dshimlib/calibs/shimlog.txt'
+		exists($slink,'file'):$slinkex
+		if $slinkex > 0.5 then shell('rm '+$slink):$dum endif
+		shell('ln -s '+$shimlogfile+' '+$slink):$dum
+	endif
+        write('file',$shimlogfile,'%.2f/%.2f/%.2f\t\tNA\t%s\t\t\t%d\t\t%s\t\t%s',$lw1,$lw2,$lw3,$rmserrs,$nfitshims,n3,$ref1Dname)
+
+	"Now retrieve the last fieldmap and params"
+	tmpreturn('field')
+	newdg
+
+	"This is an estimate of the limit for tau[2] when shimming"
+	"Max tau[2] will depend on T2"
+	$taumax=0.025*h1freq/sfrq
+	if tn='lk' or tn='H2' then
+		$tauopt=$tauopt*h1freq/sfrq
+		$taumax=0.12
+	endif
+	write('line3','$taumax=%f',$taumax)
+	if $tauopt>$taumax then $tauopt=$taumax endif
+	r3=$tauopt
+	write('line3','$tauopt=%f',$tauopt)
+
+	"Now acquire the next field map"
+	if ($auto) then
+		gxyzautoshim('nextfieldmap','auto')  
+	else
+		gxyzautoshim('nextfieldmap')
+	endif
+
+endif "gxyzautoshim('processref1D')"
+"***********************************************************************"
+
+
+
+"***********************************************************************"
+if ($function='nextfieldmap') then
+	$auto=0
+	if ($#>1.5) then
+		if ($2='auto') then $auto=1 endif
+	endif
+	$tauopt=r3
+	cycle=cycle+1
+	$listfile=userdir+'/3Dshimlib/data/xyshim.list'
+	lookup('file',$listfile)
+	lookup('seek','rmsdiff/rmserr')
+	lookup('read'):$rmserr
+	$shimlogfile=userdir+'/3Dshimlib/calibs/shimlog.txt'
+	exists($shimlogfile,'file'):$ex
+	$fileline=0 $filelines=''
+	shell('(cat '+$shimlogfile+' | wc -l)'):$fileline
+	lookup('file',$shimlogfile)
+	$dum='' $line=''
+	$i=1
+	repeat
+        	lookup('readline'):$dum
+        	$i=$i+1
+	until $i>=$fileline
+	lookup('skip','read'):$last_field_var
+	//write('line3','Last field variation=%f',$last_field_var)
+
+	//Write the observe nucleus and last field variation to a temp file
+	//Why? To help with decision making about 1D gradient shim parameters
+	//for next iteration of 1D shimming
+	//See gxyzautocalib('gmap1Dinit') for references to this file
+	$tmpvarfile=userdir+'/3Dshimlib/calibs/lastvar'
+	write('reset',$tmpvarfile)
+	write('file',$tmpvarfile,'%s %f',tn,$last_field_var)
+
+
+	gxyzrmserr_coarse=2
+	gxyzrmserr_fine=1
+	gxyzcalibset('check','pw90'):$dopw90
+	gxyzcalibset('check','1Dautoshim'):$do1Dautoshim
+	gxyzcalibset('check','xycalib'):$doxycalib
+
+	if ((gxyzfitgroup='all') or ($auto<0.5)) then $errval=gxyzrmserr_fine else $errval=gxyzrmserr_coarse endif "Relax convergence criterion when not using all shims under full autocalibration"
+	
+	if ((cycle<=ncycles) and ($rmserr > $errval) and ($last_field_var >  gxyzfieldvar)) then "Designated number of shim cycles not reached and rms error > errval - continue autoshimming"
+
+		n1='p'     "Continue plotting into PS files if pltopt='p'"
+		if (varytau='y') then
+
+			write('line3','tau[2] set to %.3f s, continuing...',$tauopt)
+			tau=0,$tauopt
+		else
+			write('line3','tau[2] held at %.3f s, continuing...',tau[2])
+		endif
+		if ($auto) then gxyzautoshim('shim','auto') else gxyzautoshim('shim') endif
+                return('doau')
+	else "Designated number of cycles reached or rms error < errval"
+		if (($rmserr <= $errval) or ($last_field_var <= gxyzfieldvar)) then "Shimming converged, but are we using all the shim maps?"
+			if (gxyzfitgroup <> 'all') then "Not all shims being used yet"
+				n1='p'     "Continue plotting into PS files if pltopt='p'"
+				if ((gxyzfitgroup <> gxyzshimgroup) and ($auto)) then "If in full auto mode then if not all currently available shim maps used -> increase number of shims to fit and continue autoshimming"
+					if (shimset=9 or shimset=14 or shimset=26) then
+					   if gxyzfitgroup='3rd' then gxyzfitgroup='4th'
+					   else gxyzfitgroup='all'
+					   endif
+					else
+					   gxyzfitgroup = 'all'
+					endif
+					gxyzfitshims
+					cycle=1 "Reset cycle to allow more iterations"
+					if ($auto) then gxyzautoshim('shim','auto') else gxyzautoshim('shim') endif
+                                        return('doau')
+				else 	"All of the shims that have been mapped have been used for fitting"
+					 "and the shimming has converged, but not all shims are being utilised yet -> repeat everything "
+					if (($auto) and (gxyzautorepeat='y') ) then
+						if ($rmserr<$errval) then
+							write('line3','rms diff/rms err < %.1f, shimming converged!',$errval)
+						else
+							write('line3','rms diff/rms err = %.1f, field variation = %.1f',$rmserr,$last_field_var)
+						endif
+						write('line3','Automated shimming completed, repeating procedure...')
+						if ($dopw90) then $arg=tn+'pw90cal' gxyzautocalib($arg,'auto')
+						elseif ($do1Dautoshim) then gxyzautocalib('gmap1Dinit','auto')
+						elseif ($doxycalib) then gxyzautocalib('xycalib','auto')
+						else
+							gxyzautocalib('godssh','auto')
+						endif
+					else "Just stop when convergence criterion reached"
+						if ($rmserr<$errval) then
+							write('line3','rms diff/rms err < %.1f, shimming converged!',$errval)
+						else
+							write('line3','rms diff/rms err = %.1f, field variation = %.1f',$rmserr,$last_field_var)
+						endif
+						banner('Shimming completed!')
+						if ($#<1.5) then return('done') endif
+							if ((gxyzmake1Dmap='y') and ($auto)) then
+								banner('Now making final 1D gradient shim map and setting name into probe file')
+								gxyzautocalib('gmap1Dinit','auto','final')
+							else
+								return('done')
+							endif
+							endif
+                                        		return('done')
+						endif
+			else "rms error less than errval with all shims - stop now"
+				if ($rmserr <= $errval) then
+					write('line3','rms diff/rms err < %.1f, shimming converged!',$errval)
+				else
+					write('line3','rms diff/rms err = %.1f, field variation = %.1f',$rmserr,$last_field_var)
+				endif
+				$finalshims='gxyzshim_'+probe+'_last'
+				svs($finalshims,'overwrite')
+				write('line3','Shimming converged - shims stored as %s',$finalshims)
+				if pltopt='p' then gxyzshimPDF endif
+				banner('Shimming converged!')
+				
+				//Just stop if not in full autocalibration mode
+				if ($#<1.5) then return('done') endif
+
+                                if ((gxyzmake1Dmap<>'y') and (gxyzautorepeat='y')) then
+					if (gxyzremap='y') then
+						write('line3','Automated shimming completed, repeating procedure...')
+						if ($dopw90) then $arg=tn+'pw90cal' gxyzautocalib($arg,'auto')
+						elseif ($do1Dautoshim) then gxyzautocalib('gmap1Dinit','auto')
+						elseif ($doxycalib) then gxyzautocalib('xycalib','auto')
+						else
+							gxyzautocalib('godssh','auto')
+						endif
+					else
+						return('done')
+					endif
+                                else
+                                 	if ((gxyzmake1Dmap='y') and ($auto) and (gxyzremap<>'y')) then
+                                        	banner('Now making final 1D gradient shim map and setting name into probe file')
+                                                gxyzautocalib('gmap1Dinit','auto','final')
+                                        elseif (($auto) and (gxyzremap='y')) then
+						write('line3','Automated shimming completed, repeating procedure...')
+						if ($dopw90) then $arg=tn+'pw90cal' gxyzautocalib($arg,'auto')
+						elseif ($do1Dautoshim) then gxyzautocalib('gmap1Dinit','auto')
+						elseif ($doxycalib) then gxyzautocalib('xycalib','auto')
+						else
+							gxyzautocalib('godssh','auto')
+						endif
+					else
+                                                return('done')
+                                        endif
+                                endif
+				return('done')
+			endif
+		else "Shimming not converged and maximum number of iterations reached"
+			if (($auto) and (gxyzautorepeat='y')) then
+				write('line3','Automated shimming completed, repeating procedure...')
+				n1='p'     "Continue plotting into PS files if pltopt='p'"
+				if ($dopw90) then $arg=tn+'pw90cal' gxyzautocalib($arg,'auto')
+				elseif ($do1Dautoshim) then gxyzautocalib('gmap1Dinit','auto')
+				elseif ($doxycalib) then gxyzautocalib('xycalib','auto')
+				else
+					gxyzautocalib('godssh','auto')
+				endif
+				//gxyzautocalib('full')
+			else
+				write('line3','Automated shimming completed, final rms diff/rms err = %.2f',$rmserr)
+				if ($#<1.5) then return('done') endif
+                                 	if ((gxyzmake1Dmap='y') and ($auto)) then
+                                        	banner('Now making final 1D gradient shim map and setting name into probe file')
+                                                gxyzautocalib('gmap1Dinit','auto','final')
+                                         else
+                                                return('done')
+                                         endif
+			endif
+			return('done')
+		endif
+	endif
+	 
+endif  "gxyzautoshim('nextfieldmap') "
+"***********************************************************************"

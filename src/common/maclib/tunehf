@@ -1,0 +1,109 @@
+"macro tunehf"
+/*-*- MAGICAL -*-*/
+"macro tunehf"
+
+// Usage: tunehf               ; tune H and F
+//        tunehf('pct')        ; tune H and F to given criterion
+//        tunehf('x')          ; tune loband, H and F
+//        tunehf('x', 'pct')   ; tune loband, H and F to given criterion
+//  where 'pct' is the tune criterion in % of optimum as a STRING
+
+$sfrq = sfrq
+$tn = tn
+$tof = tof
+
+$fluorineFreq = ''
+tn = 'F19'
+format(sfrq, 0, 4):$fluorineFreq
+
+$protonFreq = ''
+tn = 'H1'
+format(sfrq, 0, 4):$protonFreq
+
+sfrq = $sfrq
+tn = $tn
+tof = $tof
+
+$msg = 'Tuning H1 and F19'
+
+$match = 'Fine'
+exists('protuneMatchDefault','parameter', 'global'):$exMatchDefault
+if ($exMatchDefault) then
+  format(protuneMatchDefault, 0, 1):$match
+endif
+
+$xtunecmd = ''  // A no-op
+$xnuc = ''
+$xchan = ''
+$xfreq = ''
+if ($# >= 1) then
+  if (not ($1 = 'x')) then
+    $match = $1
+  else
+    if ($# >= 2) then
+      $match = $2
+    endif
+    $dn2 = ''
+    exists('dn2','parameter'):$exdn2
+    if ($exdn2) then
+      $dn2 = dn2
+    endif
+    $dn3 = ''
+    exists('dn3','parameter'):$exdn3
+    if ($exdn3) then
+      $dn3 = dn3
+    endif
+    $dn4 = ''
+    exists('dn4','parameter'):$exdn4
+    if ($exdn4) then
+      $dn4 = dn4
+    endif
+    if ($1 = 'x') then
+      if ((tn <> '') and (tn <> 'H1') and (tn <> 'F19')) then
+        $xnuc = tn
+        format($sfrq, 0, 4):$xfreq
+      elseif ((dn <> '') and (dn <> 'H1') and (dn <> 'F19')) then
+        $xnuc = dn
+        format(dfrq, 0, 4):$xfreq
+      elseif ($exdn2 and $dn2 <> '' and $dn2 <> 'H1' and $dn2 <> 'F19') then
+        $xnuc = dn2
+        format(dfrq2, 0, 4):$xfreq
+      elseif ($exdn3 and $dn3 <> '' and $dn3 <> 'H1' and $dn3 <> 'F19') then
+        $xnuc = dn3
+        format(dfrq3, 0, 4):$xfreq
+      elseif ($exdn4 and $dn4 <> '' and $dn4 <> 'H1' and $dn4 <> 'F19') then
+        $xnuc = dn4
+        format(dfrq4, 0, 4):$xfreq
+      endif
+      if ($xnuc <> '') then
+        protune('getrfchan',$xnuc):$xchan
+        $xtunecmd = 'tuneTo ' + $xfreq + ' ' + $xnuc + ' ' + $xchan
+        $msg = 'Tuning ' + $xnuc + ', H1, and F19'
+      endif
+
+    endif
+  endif
+endif
+
+$hchan = '1'
+protune('getrfchan','H1'):$hchan
+$fchan = '3'
+protune('getrfchan','F19'):$fchan
+
+if (auto='y') then
+  write('alpha','\n'+$msg+'\n')
+else
+  write('line3', $msg+'\n')
+endif
+
+protune('exec',
+        'setMatch ' + $match,
+        $xtunecmd,
+        'goToRef ' + $fluorineFreq,
+        'tuneTo ' + $protonFreq + ' H1 ' + $hchan,
+        'tuneTo ' + $fluorineFreq+' noref F19 ' + $fchan,
+        'tuneTo ' + $protonFreq+' noref H1 ' + $hchan,
+        //'tuneTo ' + $fluorineFreq+' noref F19 ' + $fchan',
+        //'tuneTo ' + $protonFreq+' noref H1 ' + $hchan',
+        'setMatchMargin 6',
+        'tuneTo ' + $fluorineFreq+' noref F19 ' + $fchan + ' ' + $match)

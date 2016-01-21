@@ -1,0 +1,58 @@
+Protocol: Wdumbo1d  Sequence: wdumbo1d.c  Apptype: solidseq1d
+
+Description: 
+
+   A 1D acquisition on "X" with windowed DUMBO.
+
+Additional Software 
+
+   reset_wdumbo1d - Sets aXwdumbo1d and pwXwdumbo1d to create a 6-pi 
+   DUMBO pulse. Set the window tauXwdumbo1d to be at least 4 us with 
+   a 1 us of receiver on. Reset scalesw to 1/sqrt(3) the nominal scale 
+   factor.  Set the prep1 pulses form aX90 and pwX90. Set r1=.5, r2=.5
+   and r3 = .5 for wdumboX. 
+
+Parameter Groups
+
+prep1X:  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Implements a composite pulse consisting of a 90-degree
+              flip followed by a smaller flip-angle to implement
+              quadrature detection about a tilted precession axis.
+              Typically followed by a windowed multiple-pulse
+              acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses.
+       pw1Xprep1 - 90-degree flip on the obs channel.
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+
+wdumboX:  Module:  yes
+Sequence:  wdumbo1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling with
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwdumbo - amplitude of DUMBO on obs.
+       pwXwdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       r1Xwdumbo - prepulse delay (similar to rof1).
+       r2Xwdumbo - postpulse delay (similar to rd or rof2).
+       r3Xwdumbo - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXwdumbo - time for one DUMBO cycle including the window.
+       npaXwdumbo - number of 100 ns ticks in the detection window.
+       phXwdumbo - overall small-angle phase for DUMBO to align  the
+              tilted precession axis in the XY plane.
+       chXwdumbo = 'obs' must be set (not shown).bo
+Implementation:  WMPA wdumbo = getwdumbo("wdumboX");
+Underscore function: _wdumbo(wdumbo,phXwdumbo); phXwdumbo is the
+              overall phase table.

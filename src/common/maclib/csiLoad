@@ -1,0 +1,121 @@
+"macro csiLoad"
+// $1 is path
+// $2 is action 
+
+csiInit
+module('add','csi2Dproc')
+
+if($#<1) then $1=file endif
+
+if($1='update') then
+
+  // rt procmodule and process 
+  csiCmd('rtProc')
+  csiCmd('ft') ds(dsSelect[1])
+
+  // auto phasing and baseline correction
+  on('blockph'):$ph
+  on('bcmode'):$bc
+
+  csiCmd('getCSIPath',file):$csidir
+
+  if($ph and blockph=1) then 
+    $path=$csidir+'/bph.txt'
+    exists($path,'file'):$e
+    if($e) then
+      bph('read',$path)
+      write('line3','CSI phase correction data %s is loaded.',$path)
+    endif
+  endif
+  if($bc and bcmode[1]>=0) then
+    $path=$csidir+'/base.fdf'
+    exists($path,'file'):$e
+    if($e) then
+     aipLoadSpec($path,'base')
+     bc('apply','base')
+    endif 
+/*
+    $n=size('lifrq')
+    if($n=1) then
+      region 
+    endif
+    bc('all')
+    csiSave('base')
+*/
+  endif
+
+  // load spec.fdf if exists
+  $path=$csidir+'/spec.fdf'
+  exists($path,'file'):$e
+  if($e) then
+     aipLoadSpec($path,'spec')
+     write('line3','CSI spectra %s is loaded.',$path)
+  endif 
+
+  // load base.fdf if exists
+  $path=$csidir+'/base.fdf'
+  exists($path,'file'):$e
+  if($e) then
+      aipLoadSpec($path,'base')
+      write('line3','CSI baseline data %s is loaded.',$path)
+  endif
+  
+  specDisMode=1
+  if($#=1) then
+    csiShow('gridData', csiDisMode)
+  endif
+
+  return
+
+endif
+
+csiCmd('getSpatialFidPath',$1):$spatialdir
+
+if($#<2) then $2='doubleclick' endif
+if($2='dnd' or $2='DragNDrop' or $2='RQdnd') then
+  $2='dnd'
+else
+  $2='doubleclick'
+endif
+
+if($spatialdir='') then
+  write('line3','CSI data %s is not processed.',$1)
+  if(jviewport > 2.5 and $2='doubleclick') then
+    jFunc(88,1) aipSetState(11) menu('aip')
+    csiCmd('getCSIPath',$1,'create'):$csidir
+    strstr($csidir,'.csi'):$n,$base 
+    $fid=$base+'.fid'
+    write('line3','rt and process %s',$fid)
+    if($fid<>file) then
+      rt($fid)
+      vnmrjcmd('RQ rt',$base+'.csi/maps')
+    endif
+    reRecon=1
+    process
+    csiCmd('makeMapList',$csidir+'/maps'):$mext csiMapSel=''
+    csiCmd('loadMap', $csidir, $2) // show mmap
+    aipShowCSIData(`hide`,`frame:all`)
+  endif
+  return
+endif
+
+csiCmd('getCSIPath',$1):$csidir
+if(jviewport > 2.5 and $2='doubleclick') then
+  jFunc(88,1) aipSetState(11) menu('aip')
+  write('line3','rt %s',$spatialdir)
+  if($spatialdir<>file) then
+    rt($spatialdir)
+    strstr($csidir,'.csi'):$n,$base 
+    vnmrjcmd('RQ rt',$base+'.csi/maps')
+  endif
+
+  csiLoad('update',0)
+
+elseif(jviewport<3) then
+  csiCmd('loadMap', $csidir, $2) // show mmap
+  return 
+endif
+
+csiCmd('makeMapList',$csidir+'/maps'):$mext csiMapSel=''
+csiCmd('loadMap', $csidir, $2) // show mmap
+aipShowCSIData(`hide`,`frame:all`)

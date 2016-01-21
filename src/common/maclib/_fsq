@@ -1,0 +1,52 @@
+"macro _fsq"
+"_fsq  - set frequency-shifted quadrature detection parameters"
+
+exists('fsq','parameter','global'):$e
+if $e>0.5 then
+if (dsp = 'i') then
+   paros
+   if (fsq = 'y') then
+      oslsfrq = 1.25*sw
+      if (oversamp < 3.5) then
+         if (oversamp < 2.5) then
+            write('error','fsq set to \'n\', oversamp < 3')
+            fsq = 'n'
+            off('oslsfrq')
+         else
+            "oversamp = 3"
+            oslsfrq = sw
+         endif
+      endif
+   else
+      off('oslsfrq')
+   endif
+else if (dsp = 'r') then
+   paros
+   if (fsq = 'y') then
+      oscoef = 31
+      oslsfrq = 1.25*sw
+   else
+      off('oscoef')
+      off('oslsfrq')
+   endif
+else
+   exists('oscoef','parameter'):$e
+   if $e>0.5 then off('oscoef') endif
+   exists('oslsfrq','parameter'):$e
+   if $e>0.5 then off('oslsfrq') endif
+   if (fsq = 'y') then
+     fsq='n'
+     write('line3','fsq disabled since dsp is off')
+   endif
+endif endif endif
+
+exists('qcomp','parameter','global'):$e
+if ($e > 0.5) then
+  if ((dsp = 'n') or (fsq = 'n' and dsp = 'r')) then 
+    if (qcomp = 'y') then
+      qcomp='n'
+      write('line3','qcomp disabled since  dsp is off  OR  dsp is \'r\' and fsq is \'n\' ')
+    endif
+  endif
+endif
+

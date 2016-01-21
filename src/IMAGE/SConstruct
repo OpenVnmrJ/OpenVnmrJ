@@ -1,0 +1,55 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil # for better copytree()
+
+# get current working directory
+cwd = os.getcwd()
+
+platform = sys.platform
+
+# get en environment 
+env = Environment()
+
+#create options/standard/IMAGE
+imagePath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','IMAGE')
+# Alternate path for non-option installation
+# imagePath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','IMAGE')
+if not os.path.exists(imagePath) :
+    os.makedirs(imagePath)
+
+if ('darwin' not in platform):
+   # build image math functions addms, subms, etc.. 
+   mathfuncPath = os.path.join(cwd, 'user_templates', 'ib_initdir', 'math', 'functions', 'src')
+   SConscript(os.path.join(mathfuncPath, 'SConstruct'))
+
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+IMAGEDirList = [
+                  'imaging',
+                  'lib',
+                  'nuctables' ]
+
+IMAGEFileList = [ 'CoilTable',
+                  'pulsecal',
+                  'dicom.cfg'  ]
+
+user_templatesList  = [ os.path.join('user_templates','ib_initdir','math') ]
+
+user_templatesMathPath = os.path.join(imagePath,'user_templates','ib_initdir')
+if not os.path.exists(user_templatesMathPath) :
+    os.makedirs(user_templatesMathPath)
+
+#for sure copy it to options/standard/IMAGE 
+for i in IMAGEDirList:
+   myShutil.copytree(i,imagePath,symlinks = False)
+
+for i in IMAGEFileList:
+   dest = os.path.join(imagePath,i)
+   Execute(Copy(dest,i))
+
+myShutil.copytree(user_templatesList[0],user_templatesMathPath,symlinks = False)
+

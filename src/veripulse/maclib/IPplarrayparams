@@ -1,0 +1,31 @@
+"macro IPplarrayparams"
+"$1,$2 are x,y coordinates in mm
+" $3='graphics' or 'plotter' "
+" $4=name of array "
+$device=$3 
+$name=$4
+
+$index=1 
+$incr=0
+$col2=0
+$xpos=$1
+$ypos=$2
+$ydist=4
+write($device,$1,$2,'%s array',$name)
+$size=size($name)
+repeat
+  $ypos = $2-$ydist-$incr
+  if (({$name}[2])*1e3<1) then
+  	write($device,$xpos,$ypos,'%6.6f',{$name}[$index])
+  else
+  	write($device,$xpos,$ypos,'%6.1f',{$name}[$index])
+  endif
+  $index=$index+1
+  $incr=$incr+$ydist
+" if at bottom, move over in X "
+  if ($ypos < 4) then
+    $incr = 0 
+    $xpos = $xpos + 30
+  endif
+until $index>$size
+return($xpos)

@@ -1,0 +1,57 @@
+"macro xmhaha_bCQ"
+"Re-builds EXPLIST/LONGLIST files based on sqattr value"
+"  This allows for rearrangement of the queue order"
+"  This macro is typically called from within vnmrjcmd"
+"	Alternately the enterSQ file can be read"
+"	if the macro is called with a single (any) argument"
+"	The value of arg1 has no meaning		"
+
+walkupQ_init
+$sqnode=''
+if ($# < 1) then
+   exists(sqdir+'/enterSQ','file'):$sqex
+   if ($sqex) then
+	$s2='' $sqnode=''
+	readfile(sqdir+'/enterSQ','$sqnode','$s2','','local')
+   endif
+else
+   $sqnode=sqattr
+endif
+
+shell('(cat '+cursqexp+'/EXPLIST | grep -wc Queued)'):$isqueue
+if ($isqueue=0) then
+   shell('(cat '+cursqexp+'/LONGLIST | grep -wc Queued)'):$isqueue
+endif
+if ($isqueue=0) then return endif
+
+   $total=size('$sqnode')
+   if ($sqnode[1]='') then return endif
+   write('reset',cursqexp+'/EXPLIST1')
+   write('reset',cursqexp+'/LONGLIST1')
+   shell('(cat '+cursqexp+'/EXPLIST | grep -wv Queued > '+cursqexp+'/EXPLIST1)'):$dum
+   shell('(cat '+cursqexp+'/LONGLIST | grep -wv Queued > '+cursqexp+'/LONGLIST1)'):$dum
+   shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+cursqexp+'/EXPLIST2)'):$dum
+   shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+cursqexp+'/LONGLIST2)'):$dum
+"********************************************************************************"
+"***Reconcile EXPLIST**"
+
+     $i=1
+     repeat
+        shell('(cat '+cursqexp+'/EXPLIST2 | grep -w "'+$sqnode[$i]+'" | grep -w Queued >> '+cursqexp+'/EXPLIST1)'):$dum
+        $i=$i+1
+     until $i > $total
+     shell('mv '+cursqexp+'/EXPLIST1 '+cursqexp+'/EXPLIST'):$dum
+     shell('rm -f '+cursqexp+'/EXPLIST2'):$dum
+"********************************************************************************"
+"***Reconcile LONGLIST****"
+
+     $i=1
+     repeat
+        shell('(cat '+cursqexp+'/LONGLIST2 | grep -w "'+$sqnode[$i]+'" | grep -w Queued >> '+cursqexp+'/LONGLIST1)'):$dum
+        $i=$i+1
+     until $i > $total
+     shell('mv '+cursqexp+'/LONGLIST1 '+cursqexp+'/LONGLIST'):$dum
+     shell('rm -f '+cursqexp+'/LONGLIST2'):$dum
+"********************************************************************************"
+
+     walkupQ('time')

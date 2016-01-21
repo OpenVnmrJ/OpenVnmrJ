@@ -1,0 +1,932 @@
+"macro vjsubmitQ"
+
+$tailX='tail'
+whichtail:$tailX
+
+walkupQ_init
+is_submitmode:$issubmit
+if ($issubmit) then
+   if (clonemod='yes') then
+       write('error','curexp is in clone mode.  Cannot submit')
+       return
+   endif
+endif
+
+IF ($# = 0) THEN
+
+  "*******Typically called by the button in VJ ***********"
+	walkupQ('submit')
+
+ELSEIF ($# < 4) THEN
+
+ "***If the first arg is string, it is called by a *******"
+"**** button in VJ panel *********************************"
+"     vjsubmitQ('next') - submit to next available location"
+"     This option will ignore any selection from the tray display"
+
+  if (typeof('$1')) then
+	walkupQ('submit',$1)
+	return
+  endif
+
+  "*****called by walkupQ with arg1=1************************"
+   $status=''
+   substr(longlist,1):$status
+   if ($status='') then
+        $status='Queued'
+        $when='day'
+   else
+        $status='NightQueue'
+        $when='daynight'
+   endif
+
+   mkpar('string','multiloc','','multirack','','multizone','')
+   if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+       $sinfo=cursqexp+'/macdir/sampleinfo'
+       shell('(cat '+$sinfo+' | grep -w RACK: | awk \'{print $2}\')'):multirack
+       shell('(cat '+$sinfo+' | grep -w ZONE: | awk \'{print $2}\')'):multizone
+       multiloc=replaceQ[4]
+   endif
+   if (multiloc='') then
+   	vnmrjcmd('submitstudy '+$0+' '+$when+' '+$status)
+   else
+        if (multizone='') then format(vzone,'lower'):multizone endif
+        if (multirack='') then format(vrack,'lower'):multirack endif
+	vjsubmitQ($when,multirack,multizone,multiloc)
+   endif
+   rmpar('multiloc multirack multizone')
+
+ELSEIF ($# > 3) THEN
+
+ "*********Called by vjsubmitQ via vnmrjcmd**************"
+  if ($4[1]='') then
+     write('error','select a location')
+     return
+  endif
+
+  $check='yes'
+  if ($# > 4) then
+      $check=$5
+  endif
+
+  $priority='no'
+  if (prioritysample[1]='yes') then $priority='priority' endif
+
+"******************************************************************"
+"******Get location information and check them******"
+	$multiloc='' $multirack='' $multizone=''
+        array2string(explist):$explist
+        $longlist=longlist
+	$4size=size('$4')
+	if ($4size=1) then
+            string2array($4):$multiloc
+            string2array($2):$multirack
+            string2array($3):$multizone
+	else
+	    $multiloc=$4
+	    $multirack=''
+	    $multizone=''
+	endif
+        if (traymax = 96) or (traymax=768) then
+		$check='no'
+	else
+		$multirack=''
+		$multizone=''
+        endif
+        $totalloc=size('$multiloc')
+	$totalrack=size('$multirack')
+	$totalzone=size('$multizone')
+
+	$i=1 $x=1
+	repeat
+	   $j=1
+           repeat
+	      $k=1
+	      repeat
+		$newloc[$x]=$multiloc[$k]
+		$newrack[$x]=$multirack[$i]
+		$newzone[$x]=$multizone[$j]
+		$k=$k+1
+		$x=$x+1
+	      until $k > $totalloc
+	      $j=$j+1
+	   until $j > $totalzone
+	   $i=$i+1
+	until $i > $totalrack
+	$multiloc=$newloc
+	$multirack=$newrack
+	$multizone=$newzone
+        $totalloc=size('$multiloc')
+
+        if ($multiloc[1]='') then $totalloc=0 endif
+	if ($totalloc=0) then
+		write('error','select a location')
+		return
+	endif
+
+"************Make sure the automation file is present *************"
+  if (wqinit<>'enter') then
+        $autodir=autodir $autofile='enterQ'
+  else
+        $autodir=globalenter shell('basename '+globalenter):$autofile
+  endif
+  $AUTOGLOBAL=$autodir+'/'+$autofile+'.macdir/AUTOGLOBAL'
+  exists($AUTOGLOBAL,'file'):$agex
+  if ($agex=0) then
+                refreshlocs($multirack,$multizone,$multiloc)
+                write('error','Error: %s aborted',$0)
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                return
+  endif
+
+"*******Check priority total***************"
+   if ($priority='priority') then
+	$ret=1 $maxsamples=0
+	checkpriority(operator,$autodir+'/'+$autofile,$totalloc+1):$ret,$maxsamples
+	if ($ret=0) then
+                refreshlocs($multirack,$multizone,$multiloc)
+                write('error','Priority Samples exceed max allowed: %d',$maxsamples)
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+		return
+	endif
+   endif
+	
+"********If resumeQ=resumeq, no more than one location be selected******"
+   if (resumeQ<>'') and ($totalloc>1) then
+        refreshlocs($multirack,$multizone,$multiloc)
+	write('error','More than one location not allowed for resumeQ')
+        vnmrjcmd('tray update')
+        vnmrjcmd('tray show')
+	return
+   endif
+
+"********Are these part of any reserved locations?***********************"
+"*****Reserved locations feature is not active for 96/768 sample changer"
+"***** Should operator=owner be allowed all locations ?***************"
+//   if (traymax<>96) and (traymax<>768) and (owner<>operator) then
+   if (traymax<>96) and (traymax<>768) then
+	exists('ckresloc','maclib'):$macex
+	if ($macex) then
+		$ok=1		"By default allow submission"
+		ckresloc('operator',$multiloc):$ok
+	    if ($ok=0) then
+                refreshlocs($multirack,$multizone,$multiloc):$dum
+		write('error','one or more selected locations are reserved')
+		vnmrjcmd('tray update')
+		vnmrjcmd('tray show')
+		return
+	    endif
+	endif
+   endif
+
+"********If high priority sample no more than one location be selected******"
+   if (prioritysample[2]='high') and ($totalloc>1) then
+        refreshlocs($multirack,$multizone,$multiloc)
+        write('error','More than one location not allowed for high priority submission')
+        vnmrjcmd('tray update')
+        vnmrjcmd('tray show')
+        return
+   endif
+
+"********If high priority sample do autopause ***************"
+   if (prioritysample[2]='high') and (wqinit='auto') then
+        $locdir=''
+        tmpsave('walkupQ')
+        seqfil='s2pul'
+        if (prioritysample[3]='exp') then
+           autopause('exp','PAUSE'):$locdir
+        elseif (prioritysample[3]='now') then
+           autopause('now'):$locdir
+        endif
+        tmpreturn('walkupQ')
+        seqfil=seqfil
+        if ($locdir='') and (prioritysample[3]<>'sample') then
+                refreshlocs($multirack,$multizone,$multiloc)
+                write('error','automation could not be paused for high priority sample')
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                return
+        endif
+   endif
+
+"*********Remember to do resubmit first*************"
+if (traymax=96) or (traymax=768) then
+   $sinfo=cursqexp+'/macdir/sampleinfo'
+   $replacerack='' $replacezone=''
+   shell('(cat '+cursqexp+'/macdir/sampleinfo | grep -w RACK: | awk \'{print $2}\')'):$replacerack
+   shell('(cat '+cursqexp+'/macdir/sampleinfo | grep -w ZONE: | awk \'{print $2}\')'):$replacezone
+else
+   $replacerack=$multirack[1]
+   $replacezone=$multizone[1]
+endif
+
+$active=0
+if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+    	if (($totalloc>1) or 
+	    ($multiloc[1]<>replaceQ[4]) or 
+	    ($multirack[1]<>$replacerack) or 
+	    ($multizone[1]<>$replacezone)) then
+                refreshlocs($multirack,$multizone,$multiloc)
+		write('error','Queue is from an Active location.  Cannot submit to multiple location')
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                return
+        endif
+	$active=1
+endif
+if (replaceQ[1]<>'') then
+	teststr('$multiloc',replaceQ[4],'local'):$isreplace
+    if (traymax=96) or (traymax=768) then
+	teststr('$multirack',$replacerack,'local'):$isreplace2
+	teststr('$multizone',$replacezone,'local'):$isreplace3
+    else
+	$isreplace2=1 $isreplace3=1
+    endif
+	if ($isreplace) and ($isreplace2) and ($isreplace3) then
+		$multiloc[$isreplace]=''
+		array2array($multiloc):$multiloc
+		$multirack[$isreplace]=''
+		array2array($multirack):$multirack
+		$multizone[$isreplace]=''
+		array2array($multizone):$multizone
+		vjreplaceQ($1,'','',replaceQ[4])
+	endif
+        $totalloc=size('$multiloc')
+        if ($multiloc[1]='') then $totalloc=0 endif
+        if ($totalloc=0) then
+	   $aftersubmit='none'
+	   getadminfo('aftersubmit'):$aftersubmit
+           if (sqflag='n') then $aftersubmit='none' endif
+           operights('canexitsubmitmode'):$canexit
+           if ($aftersubmit='quitsubmit') and ($canexit) then
+		dousermacro($0)
+		walkupQ('logout')
+	   elseif ($aftersubmit='operatorlogout') then
+		dousermacro($0)
+//	     if (FASTenv='y') then
+//		fastuserlogin('logout')
+//	     else
+		operatorlogout
+//	     endif
+	   elseif ($aftersubmit='clearqueue') then
+		walkupQ('refresh')
+		dousermacro($0)
+	   else
+	     if ($active>0) then
+		resumeQ=''
+		walkupQ('refresh')
+	     else
+		walkupQ('renew')
+	     endif
+	     dousermacro($0)
+	   endif
+                return
+        endif
+endif
+
+"**************************************************************"
+array2string(explist):$explist
+if ($explist='') and (longlist='') then
+    refreshlocs($multirack,$multizone,$multiloc)
+    write('error','No experiment selected')
+    vnmrjcmd('tray update')
+    vnmrjcmd('tray show')
+    return
+endif
+
+"********Are these part of any Day/Night reserved locations?***********************"
+"*****Reserved locations feature is not active for 96/768 sample changer"
+"***** Should operator=owner be allowed all locations ?***************"
+//   if (traymax<>96) and (traymax<>768) and (owner<>operator) then
+   if (traymax<>96) and (traymax<>768) then
+        exists('ckresloc','maclib'):$macex
+        if ($macex) then
+                $ok=1           "By default allow submission"
+	    if (longlist='') then
+		ckresloc('dayq',$multiloc):$ok
+	    elseif ($explist='') then
+		ckresloc('nightq',$multiloc):$ok
+	    else
+		ckresloc('dayNnightq',$multiloc):$ok
+	    endif
+            if ($ok=0) then
+                refreshlocs($multirack,$multizone,$multiloc):$dum
+                write('error','one or more selected locations are reserved')
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                return
+            endif
+        endif
+   endif
+
+"*********Now proceed to submit other locations*************"
+
+//	getautoinfo('reuse'):$check
+	$msub='no' 
+	getadminfo('multisubmit'):$msub
+	if ($msub='yes') then $check='no' endif
+        $reuseerror='no'
+        getadminfo('reuseerrorloc'):$reuseerror
+        $reusecompleted='yes'
+	getadminfo('reusecompletedloc'):$reusecompleted
+	$accept='Complete'
+	if ($reusecompleted='no') then $accept='' endif
+	if ($reuseerror='yes') then $accept=$accept,'Error' endif
+	$errorloc=''
+	if ($check='yes') then
+	    $errorq=$autodir+'/'+$autofile+'.macdir/cperrorQ'
+	    $i=1
+	    repeat
+	      if ($multiloc[$i]<>'0') then
+		$status='' $who='' $samplename='' $locdir2=''
+                checklocstatus($autodir+'/'+$autofile,$multiloc[$i],$multizone[$i],$multirack[$i]):$status,$who,$samplename,$locdir2
+		$locok=1
+		if ($status<>'') then teststr('$accept',$status,'local'):$locok endif
+		if ($locok=0) then
+		    if (traymax=96) or (traymax=768) then
+                        write('error','Location %s zone %s rack %s status is %s - another submission not allowed',$multiloc[$i],$multizone[$i],$multirack[$i],$status)
+		    else
+                        write('error','Location %s status is %s - another submission not allowed',$multiloc[$i],$status)
+		    endif
+			updatestatus($autodir,$multiloc[$i],$status,$multizone[$i],$multirack[$i])
+                        $errorloc=$errorloc+' '+$multiloc[$i]
+		endif
+		if ($status='Error') and ($reuseerror='no') then
+		    shell('(cat '+$errorq+' | grep SAMPLE# | grep -wc '+$multiloc[$i]+')'):$isineq
+		    if ($isineq=0) then
+			write('file',$errorq,'SAMPLE#: %s %s %s %s',$multiloc[$i],$samplename,$locdir2,$who)
+		    endif
+		endif
+	      endif
+	      $i=$i+1
+	    until $i > $totalloc
+	endif
+	string2array($errorloc):$errorloc
+	if ($errorloc[1]<>'') then
+//		write('error','Locations %s are occupied',$errorloc)
+		vnmrjcmd('tray update')
+		vnmrjcmd('tray show')
+		return
+	endif
+
+"****************Make sure there is time****************************"
+   "Decide if it is worth proceeding based on selected location"
+   " and available time in day and/or night queue"
+
+        $ok=0 $ok2=0 $ok3=1 $whenday='now' $whennight='later'
+        $ltime=0 $dtime=0
+        $maclibdir=cursqexp+'/macdir'
+        if ($totalloc) then
+	   walkupQ('gettime'):$dtime,$ltime
+
+	   $arg2=$totalloc*$dtime,$totalloc*$ltime
+	   if ($explist='') then $arg3[1]=0 else $arg3[1]=$totalloc endif
+	   if ($longlist='') then $arg3[2]=0 else $arg3[2]=$totalloc endif
+	   checkSampleTimeLimit($autodir+'/'+$autofile,$arg2,$arg3):$ok3
+	   
+	   getPreAcqTime:$changetime
+	   if ($explist<>'') then $dtime=$dtime+$changetime endif
+	   if ($longlist<>'') then $ltime=$ltime+$changetime endif
+           $shorttime=$dtime*$totalloc
+           $longtime=$ltime*$totalloc
+           if ($explist='') then $ok=1 endif
+           if ($longlist='') then $ok2=1 endif
+	   if ($explist<>'') then
+               if ($priority='priority') then 
+		    checktime($autodir+'/'+$autofile,$shorttime,$priority):$ok,$whenday
+	       else
+           	    checktime($autodir+'/'+$autofile,$shorttime,'day'):$ok,$whenday
+	       endif
+	   endif
+	   if ($longlist<>'') then
+           	checktime($autodir+'/'+$autofile,$longtime,'night'):$ok2,$whennight
+	   endif
+        endif
+
+        if ($ok=0) or ($ok2=0) or ($ok3=0) then
+                refreshlocs($multirack,$multizone,$multiloc)
+                write('error','Not enough time for %d samples',$totalloc)
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+          	return
+        endif
+
+   "There is enough time to submit.  Proceed"
+
+"************Now proceed************************"
+   $filename=$autodir+'/'+$autofile
+
+	$info=cursqexp+'/sampleinfo'
+	$infomaster=cursqexp+'/sampleinfo.master'
+	write('reset',$info)
+	write('reset',$infomaster)
+
+  "***** Get any additional template information *****"
+	if (traymax=96) or (traymax=768) then $vast='vast'
+	else  $vast='' endif
+	$template=userdir+'/asm/vjenterQ'+$vast+'.template'
+	exists($template,'file'):$templex
+	if ($templex=0) then
+        	$template=systemdir+'/asm/vjenterQ'+$vast+'.template'
+        	exists($template,'file'):$templex
+	endif
+
+     $entrytotal=0
+     if ($templex) then
+	$entry='' $par='' $value=''
+	readfile($template,'$entry','$par','','local'):$entrytotal
+	if ($entrytotal) then
+	   $x=1
+	   repeat
+		is_param($par[$x],'parameter'):$parex,$where,$type
+		if ($parex=0) then
+		    $value[$x]=''
+		else
+		    if ($type='string') then
+			$value[$x]={$par[$x]}
+		    else
+			format({$par[$x]},'lower'):$value[$x]
+		    endif
+		endif
+		$x=$x+1
+	   until $x>$entrytotal
+	endif
+     endif
+  "*******************************************************"
+
+   "  Set TEXT information"
+        $text=''
+        shell('(head -n 1 '+curexp+'/text)'):$text
+        ckstring($text,4):$text
+//	$text=text_string[1]
+// Limit the TEXT field to a maximum of 60 characters
+	length($text):$len
+	if ($len>60) then
+	   substr($text,1,55):$text
+	   $text=$text+' ....'
+	endif
+
+   "***Create a Master copy of customization macros in curloc and curloclong ***"
+	shell('cp -r '+$maclibdir+'/* '+$autodir+'/'+$autofile+'.macdir/curloc'):$dum
+        write('reset',$autodir+'/'+$autofile+'.macdir/curloc/EXPLIST')
+        write('reset',$autodir+'/'+$autofile+'.macdir/curloc/LONGLIST')
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloc/LONGLIST)'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloc/EXPLIST)'):$dum
+        write('reset',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ')
+        write('file',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ','enterQ_TOTALTIME %d',$dtime)
+        write('file',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ','overniteQ_TOTALTIME %d',$ltime)
+
+	shell('cp -r '+$maclibdir+'long/* '+$autodir+'/'+$autofile+'.macdir/curloclong'):$dum
+	write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/EXPLIST')
+	write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/LONGLIST')
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloclong/LONGLIST)'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloclong/EXPLIST)'):$dum
+        write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ')
+        write('file',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ','enterQ_TOTALTIME %d',$dtime)
+        write('file',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ','overniteQ_TOTALTIME %d',$ltime)
+
+   if (resumeQ<>'') then
+  	$maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+	exists($maclibdir,'directory'):$macdirex
+     if ($macdirex) then
+  	pwd:$curdir
+  	cd($maclibdir):$dum
+  	shell('touch EXPLIST'):$dum
+  	shell('touch LONGLIST'):$dum
+	shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+cursqexp+'/EXPLISTqueued)'):$dum
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+cursqexp+'/LONGLISTqueued)'):$dum
+	reconcileQ(cursqexp+'/EXPLISTqueued',cursqexp+'/LONGLISTqueued')
+	shell('rm -f '+cursqexp+'/EXPLISTqueued'):$dum
+	shell('rm -f '+cursqexp+'/LONGLISTqueued'):$dum
+  	cd($curdir):$dum
+     endif
+   endif
+
+   "***Create a Master copy of sampleinfo with loc=0 rack=0 and zone=0 in cursqexp ***"
+
+	if (samplename='') then samplename=operator endif
+
+	$sample=sample
+	if ($sample='') then $sample=samplename endif
+
+        $info=cursqexp+'/sampleinfo'
+        $infomaster=cursqexp+'/sampleinfo.master'
+        write('reset',$info)
+        write('reset',$infomaster)
+	write('reset',$info+'day')
+	write('reset',$info+'night')
+
+	if (traymax = 96) or (traymax=768) then
+		write('file',$infomaster,'SAMPLE#: A00')
+		write('file',$infomaster,'RACK: 0')
+		write('file',$infomaster,'ZONE: 0')
+	else
+		write('file',$infomaster,'SAMPLE#: 0')
+	endif
+		write('file',$infomaster,'USER: %s',operator)
+		write('file',$infomaster,'MACRO: cpautoQ')
+	if (traymax = 96) then
+		write('file',$infomaster,'PROTOCOL: %s',vproto)
+	elseif (traymax = 768) then
+		write('file',$infomaster,'PROTOCOL: None')
+		write('file',$infomaster,'CONDITION: 10')
+		write('file',$infomaster,'EXPTIME: 0')
+	endif
+		write('file',$infomaster,'SOLVENT: %s',solvent)
+		write('fileline',$infomaster,'TEXT: %s\n',$text)
+		write('file',$infomaster,'SampleDir: %s',$sample)
+		write('file',$infomaster,'USERDIR: %s',userdir)
+
+	if ($templex) and ($entrytotal>0) then
+          	$x=1
+          	repeat
+            	  write('fileline',$infomaster,'%s %s\n',$entry[$x],$value[$x])
+            	  $x=$x+1
+                until ($x > $entrytotal)
+	endif
+
+		write('file',$infomaster,'DATA: ')
+		write('file',$infomaster,'STATUS: Queued')
+          	write('file',$infomaster,'---------------------------------------------')
+
+   "***Create a Master copy of studypar parameters  ***"
+
+	module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+                "  Would tray color work without it?"
+	setvalue('operator_',operator)
+	if (studyowner='') then studyowner=operator endif
+	setvalue('loc_',0)
+	setvalue('vloc_','0')
+	studystatus=''
+	vzone_=1 vrack_=1 studyid_=''
+	locdir=''
+	substr($longlist,1):studystatus
+	if (studystatus='') then studystatus='Queued' else studystatus='NightQueue' endif
+
+   "*****Pause automation and cut enterQ into pQ and nonpQ****************"
+//	expactive:$isactive
+//        if ($autofile = 'enterQ') and ($isactive > -1) then
+//            autosa
+//        endif
+
+	$cureQ=cursqexp+'/enterQ'
+	$curHIpQ=cursqexp+'/HIpriorityQ'
+	$curpQ=cursqexp+'/priorityQ'
+	$curnQ=cursqexp+'/overniteQ'
+	$curtQ=cursqexp+'/AutoTimeLog'
+	shell('touch '+$cureQ):$dum
+	shell('touch '+$curpQ):$dum
+	shell('touch '+$curHIpQ):$dum
+	shell('touch '+$curnQ):$dum
+	write('reset',$curtQ)
+
+   "****Edit the master copy for each location****"
+    $date='' shell('date +%Y%m%d%H%M%S'):$date
+    $loci=1 $vrack='0' $vzone='0' $vloc='A00' $loc='0'
+    $LOCdir='' $LOClist='' $L=1 $LOCqueue=''
+    repeat
+	  shell('cp '+$infomaster+' '+$info):$dum
+	  $loc=$multiloc[$loci]
+          if (traymax = 96) or (traymax=768) then
+                $vrack=$multirack[$loci]
+                $vzone=$multizone[$loci]
+		$vloc=$multiloc[$loci]
+	  endif	
+
+                $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$loc+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+	    if (traymax = 96) or (traymax = 768) then
+                $sedcmd=`sed -e 's|RACK:.*|RACK: `+$vrack+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+
+                $sedcmd=`sed -e 's|ZONE:.*|ZONE: `+$vzone+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+	    endif
+
+          $locname=$loc
+
+	  Svfname(autodir+'/enterQ.macdir/loc'+$locname+'_%R3%',''):$locdir
+	  shell('basename '+$locdir):$locdir
+
+	    $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'day\')|\"'
+            shell('('+$sedcmd0+' '+$info+' > '+$info+'day)'):$dum
+            $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
+            shell('('+$sedcmd0+' '+$info+' > '+$info+'night)'):$dum
+	    if ($whenday = 'priority') then
+		if (prioritysample[2]='high') then
+                	$sedcmd=`sed -e 's|USER:.*|USER: `+operator+` priority high|'`
+		else
+                        $sedcmd=`sed -e 's|USER:.*|USER: `+operator+` priority|'`
+		endif
+                shell($sedcmd+` `+$info+`day > `+$info+`day1`):$dum
+		shell('mv '+$info+'day1 '+$info+'day'):$dum
+	    endif
+	    if (traymax=768) then
+		$sdtime='' format($dtime+$changetime,0,0):$sdtime
+		$sltime='' format($ltime+$changetime,0,0):$sltime
+		$sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sdtime+`|'`
+                shell($sedcmd+` `+$info+`day > `+$info+`day1`):$dum
+                shell('mv '+$info+'day1 '+$info+'day'):$dum
+
+                $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sltime+`|'`
+                shell($sedcmd+` `+$info+`night > `+$info+`night1`):$dum
+                shell('mv '+$info+'night1 '+$info+'night'):$dum
+	    endif
+
+    "*** Adjust studypar parameters ****"
+		$currentvloc=vloc $currentloc=loc
+		on('loc','global'):$locon
+		format($loc,'isreal'):$real
+		if ($real) then
+			format($loc,'lower'):loc_
+			loc=loc_	"this assures _loc is executed and vloc is properly set"
+			setvalue('vloc_',vloc)
+		else
+			setvalue('vloc_',$loc)
+			vloc=vloc_
+			setvalue('loc_',loc)
+		endif
+		setvalue('vloc',$currentvloc,'global')
+		setvalue('loc',$currentloc,'global')
+		if ($locon=0) then off('loc','global') endif
+
+		format($vrack,'lower'):vrack_
+		format($vzone,'lower'):vzone_
+		if (vrack_=0) then vrack_=1 endif
+		if (vzone_=0) then vzone_=1 endif
+		locdir=$locdir
+
+    "*** Write sample global to the directory ***"
+	  $curloc=$autodir+'/'+$autofile+'.macdir/curloc'
+          savesampglobal($curloc)
+	  shell('cp '+$curloc+'/sampleglobal '+$curloc+'long'):$dum
+
+    "*** Submit this to the temporary automation files ***"
+	  if ($explist <>'') then
+	     $dexl=0 wc($explist):$dexl
+	     if ($whenday = 'priority') then
+		if (prioritysample[2]='high') then
+		   shell('cat '+$info+'day >> '+$curHIpQ):$dum
+		else
+                   shell('cat '+$info+'day >> '+$curpQ):$dum
+		endif
+                write('file',$curtQ,'%s %s %dexperiments priorityQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
+	     else
+		shell('cat '+$info+'day >> '+$cureQ):$dum
+                write('file',$curtQ,'%s %s %dexperiments dayQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
+	     endif
+	  endif
+	  if ($longlist<>'') then
+		shell('cat '+$info+'night >> '+$curnQ):$dum
+		$dexl=0 wc($longlist):$dexl
+                write('file',$curtQ,'%s %s %dexperiments overniteQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
+		shell('rm '+$info+'1'):$dum
+	  endif
+          shell('cat '+$info+'day > '+$autodir+'/'+$autofile+'.macdir/curloc/sampleinfo'):$dum
+          shell('cat '+$info+'night > '+$autodir+'/'+$autofile+'.macdir/curloclong/sampleinfo'):$dum
+
+    "*******Copy customization macro directory************"
+          locmacdir4($autodir+'/'+$autofile,$locdir+'/day','short')
+          locmacdir4($autodir+'/'+$autofile,$locdir+'/night','long')
+	  shell('cp '+$curloc+'/sampleglobal '+$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
+	  shell('chmod -R g+rw '+$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
+	  write('alpha','Sample %s submitted',$loc)
+
+        $logmsg='' write('line3','%s Submitted',samplename):$logmsg
+	eventLog('StudySubmit',$logmsg,$locdir)
+
+    "*****Record the autodir and locdir in locationpath*****"
+        if (resumeQ<>'') and (wqinit<>'enter') then
+	  if ($macdirex) then
+             $locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+             write('reset',$locpath)
+             write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$locdir)
+	  endif
+        endif
+
+    "*****Write studypar entry ****"
+	$rack='' $zone='' $subtray=''
+	if (traymax=96) or (traymax=768) then
+   		format(vrack_,'lower'):$rack
+   		format(vzone_,'lower'):$zone
+		$subtray='/RACK'+$rack+'ZONE'+$zone
+	endif
+   	if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+                $sdir=$autodir+'/'+$autofile+'.macdir/studytray'+$subtray
+		exists($sdir+'/loc'+$locname,'directory'):$ex
+		if ($ex=0) then
+		   shell('mkdir -p '+$sdir+'/loc'+$locname):$dum
+		else
+		   shell('touch '+$sdir+'/loc'+$locname):$dum
+		endif
+		studyid_='loc'+$locname
+		$studypar=$sdir+'/'+studyid_+'/studypar'
+                savestudypar($sdir+'/'+studyid_)
+		shell('chmod -R g+rw '+$sdir+'/loc'+$locname):$dum
+		updatestatus($autodir,$locname,studystatus,$zone,$rack)
+   "*****Write autostudies file *****"
+                $autostudies=$autodir+'/autostudies'
+                $studypath=$autofile+'.macdir/studytray'+$subtray+'/'+studyid_
+                shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+                if ($isthere=0) then
+                   write('file',$autostudies,'%s',$studypath)
+                endif
+		if ($explist<>'') then
+		    $LOCdir[$L]=$locdir
+		    $LOClist[$L]='EXPLIST'
+		    if ($whenday='priority') then
+		    	$LOCqueue[$L]='PriorityQ'
+		    else
+                        $LOCqueue[$L]='DayQ'
+		    endif
+		    $L=$L+1
+		endif
+		if ($longlist<>'') then
+                    $LOCdir[$L]=$locdir
+                    $LOClist[$L]='LONGLIST'
+		    if ($whennight='now') then
+			$LOCqueue[$L]='DayQ'
+		    else
+			$LOCqueue[$L]='NightQ'
+		    endif
+		    $L=$L+1
+		endif
+      $loci=$loci+1
+    until $loci > $totalloc
+
+   " *** Update the automation queue ****"
+        expactive:$isactive
+        if ($autofile = 'enterQ') and ($isactive > -1) then
+	    autoq('lock')
+        endif
+
+        shell('touch '+$cureQ+'1'):$dum
+        shell('touch '+$curpQ+'1'):$dum
+        shell('touch '+$curHIpQ+'1'):$dum
+
+        $totlines=0 $totsamp=0 $sampperline=0 $totpr=0 $totHIpr=0
+        shell('(cat '+$autodir+'/'+$autofile+' | wc -l)'):$totlines
+        shell('(cat '+$autodir+'/'+$autofile+' | grep -wc SAMPLE#:)'):$totsamp
+        shell('(cat '+$autodir+'/'+$autofile+' | grep -w USER: | grep -wc priority)'):$totpr
+        shell('(cat '+$autodir+'/'+$autofile+' | grep -w USER: | grep -w priority | grep -wc high)'):$totHIpr
+        if ($totsamp) then
+                $sampperline=$totlines/$totsamp
+                if ($totHIpr) then
+                   $hiprlines='' format($totHIpr*$sampperline,0,0):$hiprlines
+                   shell('head -n '+$hiprlines+' '+$autodir+'/'+$autofile+' > '+$curHIpQ+'1'):$dum
+                endif
+                if ($totpr-$totHIpr > 0) then
+                   $prlines2='' format($totpr*$sampperline,0,0):$prlines2
+                   $prlines='' format(($totpr-$totHIpr)*$sampperline,0,0):$prlines
+                   shell('(head -n '+$prlines2+' '+$autodir+'/'+$autofile+' | '+$tailX+' -n '+$prlines+' > '+$curpQ+'1)'):$dum
+                endif
+                if ($totsamp-$totpr > 0) then
+                   $eqlines='' format(($totsamp-$totpr)*$sampperline,0,0):$eqlines
+                   shell(''+$tailX+' -n '+$eqlines+' '+$autodir+'/'+$autofile+' > '+$cureQ+'1'):$dum
+                endif
+        endif
+	write('reset',$autodir+'/'+$autofile):$dum
+	if ($autofile='enterQ') and ($isactive > -1) then
+	    autoq('unlock')
+	    autoq('add',$curHIpQ+'1')
+            autoq('add',$curHIpQ)
+	    autoq('add',$curpQ+'1')
+	    autoq('add',$curpQ)
+	    autoq('add',$cureQ+'1')
+	    autoq('add',$cureQ)
+	    if ($whennight='now') then
+		autoq('add',$curnQ)
+	    else
+                shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
+	    endif
+	else
+            shell('cat '+$curHIpQ+'1 >> '+$autodir+'/'+$autofile):$dum
+	    shell('cat '+$curHIpQ+' >> '+$autodir+'/'+$autofile):$dum
+            shell('cat '+$curpQ+'1 >> '+$autodir+'/'+$autofile):$dum
+	    shell('cat '+$curpQ+' >> '+$autodir+'/'+$autofile):$dum
+            shell('cat '+$cureQ+'1 >> '+$autodir+'/'+$autofile):$dum
+	    shell('cat '+$cureQ+' >> '+$autodir+'/'+$autofile):$dum
+	    if ($whennight = 'now') then
+		shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile):$dum
+	    else
+		shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
+	    endif
+	endif
+        shell('cat '+$curtQ+' >> '+$autodir+'/'+$autofile+'.macdir/AutoTimeLog'):$dum
+
+   "  *** Remove these locations from reuselocQ ***"
+
+    if (traymax<>96) and (traymax<>768) and (traymax<>1) then
+	$reuseq=$autodir+'/'+$autofile+'.macdir/reuselocQ'
+	$loci=1
+	repeat
+	    $sampdoneq='SAMPLE#: '+$multiloc[$loci]
+            shell('touch '+$reuseq):$dum
+            shell('(cat '+$reuseq+' | grep -vw "'+$sampdoneq+'" > '+$reuseq+'1)'):$dum
+            shell('mv '+$reuseq+'1 '+$reuseq):$dum
+	    $loci=$loci+1
+	until $loci > $totalloc
+	shell('chmod g+rw '+$reuseq):$dum
+    endif
+
+   "  *** Remove these locations from errorQ ***"
+        $errorq=$autodir+'/'+$autofile+'.macdir/cperrorQ'
+        $loci=1 $rebuildeq=0
+        repeat
+            $sampdoneq='SAMPLE#: '+$multiloc[$loci]
+            shell('touch '+$errorq):$dum
+            shell('(cat '+$errorq+' | grep -vw "'+$sampdoneq+'" > '+$errorq+'1)'):$dum
+	    shell('(diff '+$errorq+' '+$errorq+'1 | wc -l)'):$eqdiff
+	    if ($eqdiff>0) then $rebuildeq=1 endif
+            shell('mv '+$errorq+'1 '+$errorq):$dum
+            $loci=$loci+1
+        until $loci > $totalloc
+        shell('chmod g+rw '+$errorq):$dum
+	if ($rebuildeq) then
+		xmhaha_asx($autodir,'ErrorQ')
+	endif
+
+
+   "  *** Update automation TtimeQ ***"
+
+        $daytime=0 $nitetime=0 $prioritytime=0
+        readTtimeQ($autodir+'/'+$autofile+'.macdir'):$prioritytime,$daytime,$nitetime
+        $daytime=$daytime+$shorttime
+        if ($whenday='priority') then
+                $prioritytime=$prioritytime+$shorttime
+        endif
+        if ($whennight='now') then
+                $daytime=$daytime+$longtime
+        else
+                $nitetime=$nitetime+$longtime
+        endif
+        writeTtimeQ($autodir+'/'+$autofile+'.macdir',$prioritytime,$daytime,$nitetime)
+
+   "**********Write subxml files*****"
+	xmhahasx_add($autodir,$LOCdir,$LOClist,$LOCqueue)
+
+   "****Cleanup *****"
+	  locmacdir4($autodir+'/'+$autofile,'remove')
+	  rm('-f',$curpQ,$curpQ+'1',$curHIpQ,$curHIpQ+'1',$cureQ,$cureQ+'1'):$dum
+	  rm('-f',$curnQ,$curtQ,$info,$info+'day',$info+'night',$infomaster):$dum
+
+   "**** Report the results ****"
+     if (wqinit='acq') then
+	write('line3','Sample "%s" submitted to autodir',samplename)
+     else
+	write('line3','Locations accepted')
+     endif
+
+   "**** Restart Automation ****"
+	expactive:$isactive
+	if ($autofile = 'enterQ') and ($isactive > -1) then
+		pauseautomation
+		$autosaflag='none'
+		getautosaflag($autodir+'/'+$autofile):$autosaflag
+		if ($autosaflag='none') then
+		  autora
+		elseif ($autosaflag='service') then
+		   write('error','Automation is paused by Administrator for Service')
+		elseif ($autosaflag='admin') then
+		   if (prioritysample[2]='high') then
+			if (prioritysample[3]='now') then
+				resumeautomation
+			endif
+		   else
+                   	write('error','Automation is paused by Administrator')
+		   endif
+		endif
+	endif
+	prioritysample[2]='low'
+
+        $aftersubmit='none'
+        getadminfo('aftersubmit'):$aftersubmit
+        if (sqflag='n') then $aftersubmit='none' endif
+        operights('canexitsubmitmode'):$canexit
+        if ($aftersubmit='quitsubmit') and ($canexit) then
+		dousermacro($0)
+                walkupQ('logout')
+        elseif ($aftersubmit='operatorlogout') then
+		dousermacro($0)
+//	   if (FASTenv='y') then
+//		fastuserlogin('logout')
+//	   else
+                operatorlogout
+//	   endif
+        elseif ($aftersubmit='clearqueue') then
+                walkupQ('refresh')
+		dousermacro($0)
+	else
+		walkupQ('renew')
+		dousermacro($0)
+        endif
+
+ENDIF

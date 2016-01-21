@@ -1,0 +1,27 @@
+"macro cpprocess"
+
+if (prcopt='y') then
+
+abortoff
+   cpbanner('process')
+//   execpslabel('process')
+   on('execprocess'):$e
+   if ($e > 0.5) then
+  	$s=''
+  	substr(execprocess,1):$s  // check that execprocess is not an empty string
+  	if ($s='') then $e=0 endif
+   endif
+// Do not execute pslabel specific processing if
+//   the processing is uniquely via execprocess
+//   Respect whatever the execprocess is intended to do
+   if ($e<0.5) then
+	execpslabel('process')
+   endif
+   process 
+// Do not execute 'f full' if the processing
+//   is uniquely via execprocess.  Respect
+//   whatever the execprocess is intended to do
+   if ($e<0.5) then f full endif
+aborton
+
+endif

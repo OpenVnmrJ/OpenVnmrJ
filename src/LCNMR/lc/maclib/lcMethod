@@ -1,0 +1,126 @@
+"macro lcMethod"
+" /*-*- Mode: MAGICAL -*-*/ "
+"macro lcMethod"
+
+$read=0
+$write=0
+$save=0
+$file=''
+
+if ($# = 1) then
+    $read=1
+    $file=$1
+endif
+
+if ($# = 2) then
+    if ($1 = 'read') then
+	$read=1
+        $file=$2
+    endif
+    if ($1 = 'save') then
+	$save=1
+    endif
+    if ($1 = 'write' or $1 = 'save') then
+	$write=1
+        $file=$2
+    endif
+endif
+
+$methoddir = userdir + '/lc/lcmethods/'
+$str=''
+substr($file,1,1):$str
+if ($str = '/') then
+    $path = ''
+else
+    $path = $methoddir
+endif
+
+$filepath=''
+filepath($path, $file):$filepath
+
+// NB: $pars is a space-separated list of parameters to save
+$pars=lcMethodParameters
+$npars=''
+shell('(echo '+$pars+' | wc -w)'):$npars
+
+//
+// TODO:
+// May want to clear all the parameters in the list ($pars)
+// before reading in the new values.  That way, if new parameters
+// have been added to the list since the values were written,
+// they will be cleared instead of being left at the old values.
+//
+//
+if ($read) then
+    exists($filepath, 'file'):$ex
+    if (not $ex) then
+        $path = systemdir + '/lc/lcmethods/'
+	$filepath = $path + $file
+        exists($filepath, 'file'):$ex
+        if (not $ex) then
+            write('error','lcMethod: cannot read method "%s"', $file)
+        endif
+    endif
+    fread($filepath, 'global')
+    lcMethodFile=$file
+    exists('lcexp','parameter'):$e
+    if (not $e) then
+        create('lcexp','string')
+    endif
+    lcexp = lcexpGlobal
+    // Run underscore macros for these:
+    //setprotect('lcPeakDetectA','set',32768+16+65536+8,'global')
+    //setprotect('lcPeakDetectB','set',32768+16+65536+8,'global')
+    //setprotect('lcPeakDetectC','set',32768+16+65536+8,'global')
+    setprotect('lcFlowRate', 'off', 8, 'global') // No _lcFlowRate exec
+    setprotect('lcColumnDeadVolume','set',32768+16+65536+8,'global')
+    //_lcPeakDetectA
+    //_lcPeakDetectB
+    //_lcPeakDetectC
+    _lcColumnDeadVolume
+    solvA = lcConfigSolvA
+    solvB = lcConfigSolvB
+    solvC = lcConfigSolvC
+    writeToVnmrJcmd('pnew',$npars+' '+$pars)
+endif
+
+if ($write) then
+    exists($path, 'directory'):$e
+    if (not $e) then
+	shell('mkdir -p "'+$path+'"'):$x
+    endif
+    lcexpGlobal = lcexp
+    writeparam($filepath, $pars, 'global')
+    if (not $save) then
+        write('line3', 'Method saved in ' + $filepath)
+    endif
+endif
+
+if ($save) then
+// NB: "save" FUNCTION IS OBSOLETE. See EndRun macro
+    write('line3', 'Warning: lcMethod(save, ...) called')
+    " Add a .lcm extension to indicate an LC method "
+    " Make unique file name if file different from version in lcmethods dir"
+
+    " Is this method in lcmethods? "
+    exists($methoddir + $file, 'file'):$ex
+    if (not $ex) then
+        $methoddir = systemdir + '/lc/lcmethods/'
+        exists($methoddir + $file, 'file'):$ex
+    endif
+    if ($ex) then
+        " Method exists, but is it the same? "
+        $diff = ''
+        shell('cmp "' + $filepath + '" "' + $methoddir + $file + '"; echo x'):$diff
+        if ($diff <> 'x') then
+            $ex = 0
+        endif
+    endif
+    $date = ''
+    if (not $ex) then
+	shell('date +_%\Y%\m%\d%\H%\M%\S'):$date
+    endif
+    mv($filepath, $filepath + $date + '.lcm')
+    $filepath = $filepath + $date + '.lcm'
+    write('line3', 'Method saved in ' + $filepath)
+endif

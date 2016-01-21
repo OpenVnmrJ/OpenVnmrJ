@@ -1,0 +1,104 @@
+"macro imark"
+"**********************************************************************"
+"      imark: Macro to display region of interest postions on an image "
+"             display from cursor input                                "
+"**********************************************************************"
+
+"david foxall: 12th January 1988: interface version 1"
+"modified 24th February to correct rfl rfp problem"
+"modfied 9th January 1989 to fix dy value for large screen"
+"macro imark"
+
+"[0] Constants"
+$char=''
+$color=''
+$dx=0-0.15
+$dy=0-0.15
+
+"Set dx and dy to character offsets dx=1.25 and dy=1.5 to center"
+"character printing to cross hairs of cursor if desired. This   "
+"however leaves a nasty white line through the characters"
+
+"[1] Input argument count"
+if $# < 0.5
+then
+$char='+'
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+$char=$1
+endif
+
+if ($# > 1.5) and ($# < 2.5)
+then
+$char=$1
+$color=$2
+endif
+
+if ($# > 2.5)
+then
+write('error','%s','imark: Use imark("string",<"color">)')
+abort
+endif
+
+
+
+"[2] Algorithm for adjustment of image display"
+if (trace='f1') 
+then
+$ratio=(wp/wp1)*(sw1/sw)*(lro/lpe)*(wc/wc2)
+    if ($ratio < 0.99) or ($ratio > 1.01)
+    then
+    fitplot
+    dconi('dcon','gray','linear')
+    endif
+endif
+
+if (trace='f2')
+then
+$ratio=(wp/wp1)*(sw1/sw)*(lro/lpe)*(wc2/wc)
+    if ($ratio < 0.99) or ($ratio > 1.01)
+    then
+    fitplot
+    dconi('dcon','gray','linear')
+    endif
+endif
+
+"[3] Plotting requested point(s)"
+     
+     if trace='f1'
+     then
+     $alpha=((cr1-sp1)/wp1)*wc
+     $beta=((cr-sp)/wp)*wc2
+     $x=wcmax-sc-$alpha-$dx
+     $y=wc2+sc2-$beta-$dy
+
+          if $# > 1.5
+          then
+	  write('graphics',$color,$x,$y,'%s',$char)
+          else
+          write('graphics',$x,$y,'%s',$char)
+          endif
+
+     endif
+
+     if trace='f2'
+     then
+     $alpha=((cr-sp)/wp)*wc
+     $beta=((cr1-sp1)/wp1)*wc2
+     $x=wcmax-sc-$alpha-$dx
+     $y=wc2+sc2-$beta-$dy
+     
+          if $# > 1.5
+          then
+	  write('graphics',$color,$x,$y,'%s',$char)
+          else
+          write('graphics',$x,$y,'%s',$char)
+          endif
+     
+     endif
+
+"************************************THE END**********************************"
+
+

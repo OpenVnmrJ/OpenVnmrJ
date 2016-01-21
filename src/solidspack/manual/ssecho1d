@@ -1,0 +1,83 @@
+Protocol: Ssecho1d  Sequence: ssecho1d.c  Apptype: solidseq1d
+
+Description: 
+
+A two-pulse "solid" or "quadrupole" echo with a choice of SPINAL64 or 
+TPPM decoupling. Used primarily for wide-line deuterium NMR. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Ssecho1d. For a new 
+nucleus calibrate with Onepul and then select Ssecho1d.  
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file 
+onepul describes calibration of decoupling. 
+
+Set aXecho = aX90 and pwXecho = pwX90.
+
+Set t1Xecho and t2Xecho to create an echo delay.  It is helpful to set 
+t2Xecho < t1Xecho and use lsfid to set the top of the echo as the first 
+point of the fid. If using MAS be sure t1Xecho + pwXecho/2.0 = n/srate 
+where n is an interger. 
+
+Parameter Groups: 
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used as a 
+              preparation pulse.  Also used to store the obs calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+echoX: Module: no
+Sequence:  ssecho1d.c
+Description: Implements a refocusing pulse with delays before and after 
+the pulse.
+Parameters:  Sequence Page
+       aXecho - amplitude of the obs pulses. 
+       t1Xecho - delay before the refocusing pulse. 
+       pwXecho - 180-degree flip on obs. 
+       t2Xecho - delay after the refocusing pulse. 
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

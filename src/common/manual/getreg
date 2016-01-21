@@ -1,0 +1,61 @@
+
+*******************************************************************************
+region<(taillength,relnum,threshold,npoints,tailsize)>:r1
+				- Divide Spectrum into Regions.
+numreg:r1	 		- Return the Number of Regions in
+                                  a Spectrum.
+getreg(regionnumber):r1,r2	- Return the Frequency Limits of a
+                                  Specified Region.
+*******************************************************************************
+
+  "region" divides a spectrum into alternating regions of baseline
+  and regions of peaks.  The regions are delineated with integral
+  reset points.  The optional arguments have the following functions :
+      taillength - The length in Hz which will be added to the start and
+		   end of each calculated peak region.  If the addition of
+		   these wings would cause overlap between adjacent regions,
+		   the wings will be reduced until the regions no longer
+		   overlap.  The range for this argument is 0.0 to SW.
+		   The default is SW/100.
+      relnum - In combination with the other arguments, relnum governs the
+		   relative number of regions that will be found.  relnum
+		   is used as part of a test to determine whether two
+		   spectral areas containing peaks are close enough together
+		   to be represented as a single region.  The default value
+		   for relnum is 12.  Increasing this number will decrease
+		   the number of regions which are found, and decreasing this
+		   number will decrease the number of regions which are found.
+      threshold - A sensitivity factor used to decide if a data point is
+		   large enough, relative to the noise level, to qualify
+		   as part of a peak.  The default value is 0.6.  A larger
+		   value will make peak selection more sensitive, and a
+		   smaller number will make peak selection less sensitive.
+      npoints - Governs the number of successive data points which must
+		   qualify as part of a peak (see the description of
+		   threshold above) for that spectral area to be considered
+		   a real peak area.  The default value of this parameter is
+		   function of fn, sw, weighting functions, and other things.
+		   Its normal range is from 7 to 40, but may need to be
+		   adjusted to a lower value for Carbon spectra with large
+		   spectral windows.
+      tailsize - In combination with relnum and other factors, tailsize
+		   governs whether two spectral areas which contain peaks
+		   are close enough together to be represented as a single
+		   region.
+
+  The number of peak regions will be returned to the caller if the
+  command is suffixed with a colon and a parameter name.
+
+  "numreg" returns the number of regions in a previously divided spectrum
+  (either with "region" or by "hand" using the Z command or with the mouse
+  button).  Each "region" is the area between two integral reset points,
+  with every other reset point designating the start of a "baseline"
+  section and not included in the count of the number of regions.
+  The number of peak regions will be returned to the caller if the
+  command is suffixed with a colon and a parameter name.
+
+  "getreg" returns the highfield and lowfield frequencies in Hz of the
+  specified region.  The spectrum should have been previously divided
+  into regions with either the "region" command or by "hand".
+  These frequencies will be returned to the caller if the command is
+  suffixed with a colon one or two parameter names.

@@ -1,0 +1,23 @@
+"macro settime"
+
+on('execprep'):$e
+if ($e>0.5 and appmode='imaging') then
+  exec(execprep)
+endif
+exptime:$t
+formattime($t):time_exp
+if time_exp='unknown' then return endif
+write('line3','Scan time: %s',time_exp)
+if (activestudy <> 'null') then
+  if (actionid <> 'null') then
+    xmgetatts(actionid,'status'):$st
+    if ($st='Active') then
+      if (appmode = 'imaging') then
+        $t2 = scantime
+      else
+        $t2=time_exp
+      endif
+      xmsetatts(actionid, 'time',$t2)
+    endif
+  endif
+endif

@@ -1,0 +1,116 @@
+"macro IPpause"
+
+IF $1='init' THEN
+// Check some logical conditions.  If they are not satisfied
+//   return a value of zero, so autoqstart can proceed as usual
+
+    $ok=1
+    $loc='' $locdir=''
+    getlocid(curexp+'/sampleinfo'):$loc,$locdir
+    //if $loc<>'0' or $locdir='' then $ok=0 endif
+    if $locdir='' then $ok=0 endif
+    if $ok then
+    	$sg=autodir+'/enterQ.macdir/'+$locdir+'/sampleglobal'
+    	exists($sg,'file'):$ok
+    endif
+
+    $pval=''
+    if $ok then
+    	fread('','usertree')
+    	fread($sg,'usertree')
+    	exists('IPrunid','parameter','usertree'):$ok2
+    	$pval=''
+    	if $ok2 then
+	    getvalue('IPrunid','usertree'):$pval
+    	endif
+    	fread('','usertree')
+	if $pval='' then $ok=0 endif
+    endif
+
+    if ($pval<>'') then
+      auargs('overridespin')
+    endif
+
+    if (traymax>0 and atune='y') then return(0) endif
+    exists('IPPause','parameter','global'):$parex
+    if $parex then
+	if IPPause='run' then
+	    IPPause=''
+	    writeparam(userdir+'/global','IPPause','global','add')
+	    return(0)
+	endif
+    else
+	create('IPPause','string','global',''):$dum
+    endif
+    if not $ok then 
+	IPPause=''
+        writeparam(userdir+'/global','IPPause','global','add')
+	return(0)
+    endif
+
+   $changesamp=0
+   //Need to change sample here if possible
+   if (traymax>0) then
+      readhw('loc'):$curloc
+      $loci=0
+      format($loc,1,0):$loci
+      if ($loci<>$curloc) then
+	write('line3','Change samples now!')
+	$changesamp=1
+      endif
+  endif
+
+// All conditions are satisfied.  Go ahead and pause the queue
+    autoq('lock')
+    copy(curexp+'/sampleinfo',autodir+'/enterQ.tmp'):$dum
+    shell('(cat '+autodir+'/enterQ >> '+autodir+'/enterQ.tmp)'):$devnull
+    rename(autodir+'/enterQ.tmp',autodir+'/enterQ'):$dum
+    setautosaflag(autodir+'/enterQ','admin')
+    autosa
+    autoq('unlock')
+    IPPause='pause'
+    writeparam(userdir+'/global','IPPause','global','add')
+
+// sent message to foreground VJ
+    if ($pval<>'') then  "VeriPulse run"
+        if ($changesamp) then
+	    write('line3','loc=%s change',$loc):$cmd2
+            xmhaha('sendcmd',$cmd2)
+	endif
+ 
+ 	$cmd=$0+'(\'fgalert\','+'\''+$pval+'\')'
+    else
+       $cmd=$0+'(\'fgalert\')'
+    endif
+    xmhaha('sendcmd',$cmd)
+
+// Let autoqstart know not to proceed
+    return(1)
+
+ENDIF
+
+IF ($1='fgalert') THEN
+
+
+    if ($#>1.5) then "assume VeriPulse for now"
+       $runid=$2
+
+       IPpopup('nextstudy',$runid)
+    endif
+    return
+
+ENDIF
+
+IF ($1='proceed') THEN
+
+    clear(2)
+    create('IPPause','string','global',''):$dum
+    IPPause='run'
+    writeparam(userdir+'/global','IPPause','global','add')
+    resumeautomation('admin')
+    IPPause=''
+    return
+ENDIF
+
+
+

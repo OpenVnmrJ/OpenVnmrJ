@@ -1,0 +1,73 @@
+********************************************************************
+cosyps	-  Set up parameters for phase-sensitive COSY pulse sequence
+********************************************************************
+
+                    pw          p1
+                   (v1)        (v2)     (oph)
+
+                   ****        ****
+                   *  *        *  *
+              D1   *  *   D2   *  *       AT
+                   *  *        *  *
+          ****************************************
+                    |            |
+              <A>   |     <B>    |      <C>
+                    |            |
+
+
+PW = 90 degree pulse.
+P1 = 90 degree pulse if PHASE <> 0; if PHASE = 0, pulses greater than 90
+     degrees will de-emphasize diagonal peaks for P-type peak selection
+D1 = set to 1-3*T1
+D2 = evolution time (t1 period)
+AT = acquisition time (t2 period)
+SW = spectral width (usually SW1 = SW, except for PHASE = 3)
+NI = number of t1 increments (set so that SW1/NI = 12);  may be
+     be decreased if speed is essential
+SS = number of steady-state transients;  if ss < 0, then -ss
+     transients (with phasecycling of pulses and receiver) are
+     performed before EACH experiment in either an arrayed or 2D
+     experiment; if ss > 0, then ss transients are performed before
+     only the first experiment in such cases.
+
+PRESAT = decoupler presaturation period using a decoupler power
+         specified by DHP or DPWR; does not depend on DM but does
+	 depend on DMM; activated as a part of D1 if PRESAT > 0.
+         (PRESAT option is not available on Mercury and GEMINI 2000.)
+
+PHASE = 1,2  (suggested value) for phase-sensitive data
+
+NOTE:  For PHASE = 3, remember that sw1 = 2*sw (for homonuclear
+       experiments) or that sw1 must be set to TWICE the desired
+       value (for heteronuclear experiments).
+
+NT = multiple of 8 (PHASE = 0)  (minimum)
+     multiple of 4 (PHASE = 1,2 or 3)  (minimum)
+
+
+When data processing, phase the first increment in t1 to be pure
+absorptive and then add 90 degrees to RP.  Set RP1 = 90 and LP1 = 0
+initially.  If the F1 phasing is not satisfactory, adjust RP1 and
+LP1 so that the diagonal peaks are pure absorptive and then add
+90 degrees to RP1.
+
+
+v1  = phasecycle for first pulse
+v2  = phasecycle for second pulse
+oph = phasecycle for receiver
+
+v1  =  x -x  y -y  y -y  x -x
+
+v2  =  x  x  y  y  y  y  x  x
+
+oph =  x -x  y -y  y -y  x -x
+
+
+These phases are for PHASE = 1.  For PHASE = 2, add 90 degrees
+to v1.  For PHASE = 3, add 90*(ix - 1) degrees to v1 where ix
+is the increment counter.  For PHASE = 0, the subcycle for P-type
+peak selection is mixed into v2.
+
+PHASE =   0:  2D data for AV display (P-type peaks)
+PHASE = 1,2:  2D hypercomplex data (States-Haberkorn method)
+PHASE =   3:  2D TPPI data

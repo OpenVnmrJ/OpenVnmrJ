@@ -1,0 +1,46 @@
+"macro lcStartRun"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcStartRun"
+
+// Set up the correct transfer delays
+// Pass the lcXferDelayType value as an argument to skip this
+// (For now, any argument causes skip)
+if ($# = 0) then
+    lcXferDelay(lcexp)
+endif
+
+// Send transfer times to VJ
+// Build a list of delays for each trace
+$n = size('lcTrace')    // Number of traces
+$stimes = ''
+$strace = ''
+$stime = ''
+$i = 1
+while ($i <= $n) do
+    format($i, 0, 0):$strace
+    $strace = 'trace' + $strace // e.g., $strace = 'trace1'
+    lcXferDelay('get', 'time', $strace, lcXferDelayType):$ftime
+    format($ftime, 0, 2):$stime
+    $stimes = $stimes + ' ' + $stime
+    $i = $i + 1
+endwhile
+lcXferDelay('get', 'time', 'pump', 1):lcXferDelayPumpToLoop
+lccmd('setTransferTimes', $stimes)      // Send list of xfer times to VJ
+lcXferDelay('get', 'time', 'ref', lcXferDelayType):$t4
+lccmd('setReferenceTime', $t4)          // Send ref time to VJ
+
+
+// Make sure we have a clean directory for the data.
+setNewLcid
+lcBaseName = 'LcRun'    // This is used for aux files, eg. LcRun.html
+filepath(svfdir, lcid):$dirpath
+filepath($dirpath, lcBaseName):$filepath
+
+lccmd('startRun', '"'+rev+'"', '"'+revdate+'"', $filepath, lcexp)
+
+if msSelection ='1200' then
+    msDataFile($dirpath):$msFile
+    pmlcmd('filename:"' + $msFile + '":cr:collect_start')
+endif
+
+//write('line3','Starting LC run: type=' + lcexp + ' Data dir='+ $dirpath)

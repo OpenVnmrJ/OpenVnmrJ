@@ -1,0 +1,60 @@
+"macro nextprinter"
+
+"find the current printer entry "
+$test = ''
+$usage = ''
+$print = ''
+lookup('file',systemdir + '/devicenames','commentend')
+repeat
+  lookup(printer,'read',2):$test,$usage
+  if ($test = 'Use') and (($usage = 'Printer') or ($usage = 'Both')) then
+    $found = 1
+  else
+    $found = 0
+    endif
+  if ($test = '') or ($usage = '') then
+    $endoffile = 1
+  else
+    $endoffile = 0
+    endif
+  until ($found = 1) or ($endoffile = 1)
+
+if ($found = 1) then
+  $found = 0
+  $endoffile = 0
+  repeat
+    lookup('Name','read',3):$print,$test,$usage
+    if ($test = 'Use') and (($usage = 'Printer') or ($usage = 'Both')) then
+      $found = 1
+      endif
+    if ($test = '') or ($usage = '') or ($print = '') then
+      $endoffile = 1
+      endif
+    until ($found = 1) or ($endoffile = 1)
+  endif
+
+if ($endoffile = 1) then
+  $found = 0
+  $endoffile = 0
+  lookup('file',systemdir + '/devicenames',
+         'commentend','Name','read',3):$print,$test,$usage
+  if ($test = 'Use') and (($usage = 'Printer') or ($usage = 'Both')) then
+    $found = 1
+    endif
+  if ($test = '') or ($usage = '') or ($print = '') then
+    $endoffile = 1
+    endif
+  while ($found = 0) and ($endoffile <> 1) do
+    lookup('Name','read',3):$print,$test,$usage
+    if ($test = 'Use') and (($usage = 'Printer') or ($usage = 'Both')) then
+      $found = 1
+      endif
+    if ($test = '') or ($usage = '') or ($print = '') then
+      $endoffile = 1
+      endif
+    endwhile
+  endif
+
+"  set the printer "
+if ($found = 1) then printer = $print
+else printer = 'none' endif

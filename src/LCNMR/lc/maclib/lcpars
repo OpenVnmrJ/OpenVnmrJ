@@ -1,0 +1,2197 @@
+"macro lcpars"
+/*-*- MAGICAL -*-*/
+"macro lcpars"
+$version = '21.1'        // SCCS version number
+
+// Note: These LC parameters are global because they are experiment
+// independent; the user can join an experiment or retrieve parameters
+// while keeping the LC method the same.
+// However, the parameters are not shared between VnmrBGs; different
+// workspaces can have different LC methods showing.
+// However, only one workspace at a time can communicate with the LC
+// instruments.
+
+
+$force = 1
+if ($# > 0) then
+    if ($1 = 'update') then
+        // Only do full parameter check if "lcpars" version has changed
+        $force = 0
+    else
+        write('line3', 'Usage: lcpars[(\'update\')]')
+    endif
+endif
+
+// Force full check if this "lcpars" version is not checked in
+if ($version = '%\I%') then     // NB: Backslash keeps SCCS from changing this
+    $force = 1
+endif
+
+exists('lcParamVersion','parameter','global'):$e
+if (not $e) then
+    create('lcParamVersion','string','global')
+    lcParamVersion='n/a'
+endif
+setgroup('lcParamVersion','processing','global')
+setprotect('lcParamVersion','set',32768+16+65536,'global')
+if (lcParamVersion = $version and not $force) then
+    return
+endif
+lcParamVersion=$version
+
+
+
+
+// NB: lcMaxNumChans is used to initialize some arrayed parameters
+exists('lcMaxNumChans','parameter','global'):$e
+if (not $e) then
+    create('lcMaxNumChans','real','global')
+endif
+setgroup('lcMaxNumChans','processing','global')
+setprotect('lcMaxNumChans','set',32768+16+65536,'global')
+lcMaxNumChans=5
+setlimit('lcMaxNumChans',5,5,1,'global')         // This is a constant
+
+
+exists('lcNumChans','parameter','global'):$e
+if (not $e) then
+    create('lcNumChans','real','global')
+    setlimit('lcNumChans',5,0,1,'global')        // lcNumChans <= maxNumChans
+    lcNumChans=5
+endif
+setgroup('lcNumChans','processing','global')
+setprotect('lcNumChans','set',32768+16+65536,'global')
+
+
+exists('vjDebugString','parameter','global'):$e
+if (not $e) then
+    create('vjDebugString','string','global')
+    vjDebugString=''
+endif
+setgroup('vjDebugString','processing','global')
+setprotect('vjDebugString','set',32768+16+65536,'global')
+
+
+exists('lcValveToNmr','parameter','global'):$e
+if ($e) then
+    destroy('lcValveToNmr','global')
+endif
+
+exists('lcValveToColumn','parameter','global'):$e
+if ($e) then
+    destroy('lcValveToColumn','global')
+endif
+
+exists('lcPrinter','parameter','global'):$e
+if (not $e) then
+    create('lcPrinter','string','global')
+    setgroup('lcPrinter','processing','global')
+    lcPrinter='default','postscript'
+endif
+setgroup('lcPrinter','processing','global')
+setprotect('lcPrinter','set',32768+16+65536,'global')
+
+exists('lcPrintCommand','parameter','global'):$e
+if (not $e) then
+    create('lcPrintCommand','string','global')
+    lcPrintCommand='lp'
+endif
+setgroup('lcPrintCommand','processing','global')
+setprotect('lcPrintCommand','set',32768+16+65536,'global')
+
+exists('lcAdcStartTime','parameter','global'):$e
+if (not $e) then
+    create('lcAdcStartTime','real','global')
+    lcAdcStartTime=0
+endif
+setgroup('lcAdcStartTime','processing','global')
+setprotect('lcAdcStartTime','set',32768+16+65536,'global')
+
+exists('lcAdcStartDate','parameter','global'):$e
+if (not $e) then
+    create('lcAdcStartDate','string','global')
+    lcAdcStartDate=''
+endif
+setgroup('lcAdcStartDate','processing','global')
+setprotect('lcAdcStartDate','set',32768+16+65536,'global')
+
+exists('lcRunActive','parameter','global'):$e
+if (not $e) then
+    create('lcRunActive','real','global')
+    lcRunActive=0
+endif
+setgroup('lcRunActive','processing','global')
+setprotect('lcRunActive','set',32768+16+65536,'global')
+
+exists('lcLoopIndex','parameter','global'):$e
+if (not $e) then
+    create('lcLoopIndex','real','global')
+    lcLoopIndex=0
+endif
+setgroup('lcLoopIndex','processing','global')
+setprotect('lcLoopIndex','set',32768+16+65536,'global')
+
+exists('lcEluteIndex','parameter','global'):$e
+if (not $e) then
+    create('lcEluteIndex','real','global')
+    lcEluteIndex=0
+endif
+setgroup('lcEluteIndex','processing','global')
+setprotect('lcEluteIndex','set',32768+16+65536,'global')
+
+exists('lcCr1','parameter','global'):$e
+if (not $e) then
+    create('lcCr1','real','global')
+    lcCr1=0
+endif
+setgroup('lcCr1','processing','global')
+setprotect('lcCr1','set',32768+16+65536,'global')
+
+exists('lcCr2','parameter','global'):$e
+if (not $e) then
+    create('lcCr2','real','global')
+    lcCr2=0
+endif
+setgroup('lcCr2','processing','global')
+setprotect('lcCr2','set',32768+16+65536,'global')
+
+exists('lcColumnValve','parameter','global'):$e
+if (not $e) then
+    create('lcColumnValve','real','global')
+    lcColumnValve=0
+endif
+setgroup('lcColumnValve','processing','global')
+setprotect('lcColumnValve','set',32768+16+65536,'global')
+
+exists('lcNmrValve','parameter','global'):$e
+if (not $e) then
+    create('lcNmrValve','real','global')
+    lcNmrValve=0
+endif
+setgroup('lcNmrValve','processing','global')
+setprotect('lcNmrValve','set',32768+16+65536,'global')
+
+exists('lcLoopPercentA','parameter','global'):$e
+if (not $e) then
+    create('lcLoopPercentA','real','global')
+    setgroup('lcLoopPercentA','processing','global')
+    lcLoopPercentA=0,0,0,0,0,0,0,0,0,0
+endif
+setgroup('lcLoopPercentA','processing','global')
+setprotect('lcLoopPercentA','set',32768+16+65536,'global')
+
+exists('lcLoopPercentB','parameter','global'):$e
+if (not $e) then
+    create('lcLoopPercentB','real','global')
+    setgroup('lcLoopPercentB','processing','global')
+    lcLoopPercentB=0,0,0,0,0,0,0,0,0,0
+endif
+setgroup('lcLoopPercentB','processing','global')
+setprotect('lcLoopPercentB','set',32768+16+65536,'global')
+
+exists('lcLoopPercentC','parameter','global'):$e
+if (not $e) then
+    create('lcLoopPercentC','real','global')
+    setgroup('lcLoopPercentC','processing','global')
+    lcLoopPercentC=0,0,0,0,0,0,0,0,0,0
+endif
+setgroup('lcLoopPercentC','processing','global')
+setprotect('lcLoopPercentC','set',32768+16+65536,'global')
+
+
+exists('lcIsPdaData','parameter','global'):$e
+if (not $e) then
+    create('lcIsPdaData','real','global')
+    lcIsPdaData=0
+endif
+setgroup('lcIsPdaData','processing','global')
+setprotect('lcIsPdaData','set',32768+16+65536,'global')
+
+
+exists('lcRunLogFile','parameter','global'):$e
+if (not $e) then
+    create('lcRunLogFile','string','global')
+    lcRunLogFile=''
+endif
+setgroup('lcRunLogFile','processing','global')
+setprotect('lcRunLogFile','set',32768+16+65536,'global')
+
+
+exists('lcRunTitle','parameter','global'):$e
+if (not $e) then
+    create('lcRunTitle','string','global')
+    lcRunTitle=''
+endif
+setgroup('lcRunTitle','processing','global')
+setprotect('lcRunTitle','set',32768+16+65536,'global')
+
+
+exists('lcNumberOfIncidents','parameter','global'):$e
+if (not $e) then
+    create('lcNumberOfIncidents','real','global')
+    lcNumberOfIncidents=0
+endif
+setgroup('lcNumberOfIncidents','processing','global')
+setprotect('lcNumberOfIncidents','set',32768+16+65536,'global')
+
+
+exists('lcElutionMethods','parameter','global'):$e
+if (not $e) then
+    create('lcElutionMethods','string','global')
+    setgroup('lcElutionMethods','processing','global')
+    lcElutionMethods='','','','','','','','','',''
+endif
+setgroup('lcElutionMethods','processing','global')
+setprotect('lcElutionMethods','set',32768+16+65536,'global')
+
+
+exists('lcHoldCount','parameter','global'):$e
+if (not $e) then
+    create('lcHoldCount','real','global')
+    lcHoldCount=0
+endif
+setgroup('lcHoldCount','processing','global')
+setprotect('lcHoldCount','set',32768+16+65536,'global')
+
+
+exists('lcHoldType','parameter','global'):$e
+if (not $e) then
+    create('lcHoldType','string','global')
+    lcHoldType='fixed'
+endif
+setgroup('lcHoldType','processing','global')
+setprotect('lcHoldType','set',32768+16+65536,'global')
+setenumeral('lcHoldType', 3, 'nmr', 'indefinite', 'fixed', 'global')
+
+
+
+
+//
+// A space-separated list of parameters making up an LC method
+//
+exists('lcMethodParameters','parameter','global'):$e
+if (not $e) then
+    create('lcMethodParameters','string','global')
+endif
+setgroup('lcMethodParameters','processing','global')
+setprotect('lcMethodParameters','set',32768+16+65536,'global')
+$pars='lcMethodRows lcTime lcPercentC lcPercentB lcPercentA'
+$pars=$pars+' lcFlowRate lcAdcPeriod lcPdaPeriod_ms'
+$pars=$pars+' lcTrace lcTraceLambda'    // NB: Arrayed
+$pars=$pars+' lcLambda lcLambda2'       // UV monitor lambdas
+$pars=$pars+' lcLambdaMin lcLambdaMax lcBandwidth'
+$pars=$pars+' lcPeakDetectA lcPeakDetectB lcPeakDetectC lcPeakDetectD lcPeakDetectE'
+$pars=$pars+' lcThresholdA lcThresholdB lcThresholdC lcThresholdD lcThresholdE'
+$pars=$pars+' lcTimeSlice lcTimeSlicePeriod lcRelay1 lcRelay2 lcNmrBypass'
+$pars=$pars+' lcRelay3 lcRelay4 lcRelay5 lcRelay6'
+$pars=$pars+' lcCommand lcPostRunCommand lcPeakCommand lcHoldTime lcHoldType'
+$pars=$pars+' lcColumnType lcColumnId lcColumnLength'
+$pars=$pars+' lcColumnWidth lcColumnDeadVolume lcColumnParticleSize'
+$pars=$pars+' lcMinPressure lcMaxPressure lcEquilTime'
+$pars=$pars+' lcMethodComment solvA solvB solvC'
+$pars=$pars+' msPump msValve msScans'
+lcMethodParameters=$pars + ' lcexpGlobal'
+
+
+//
+// Method Variables
+//
+exists('lcColumnType','parameter','global'):$e
+if (not $e) then
+    create('lcColumnType','string','global')
+    lcColumnType=''
+endif
+setgroup('lcColumnType','processing','global')
+setprotect('lcColumnType','set',32768+16+65536,'global')
+
+
+exists('lcColumnId','parameter','global'):$e
+if (not $e) then
+    create('lcColumnId','string','global')
+    lcColumnId=''
+endif
+setgroup('lcColumnId','processing','global')
+setprotect('lcColumnId','set',32768+16+65536,'global')
+
+
+exists('lcColumnLength','parameter','global'):$e
+if (not $e) then
+    create('lcColumnLength','real','global')
+    lcColumnLength=0
+endif
+setgroup('lcColumnLength','processing','global')
+setprotect('lcColumnLength','set',32768+16+65536,'global')
+
+
+exists('lcColumnWidth','parameter','global'):$e
+if (not $e) then
+    create('lcColumnWidth','real','global')
+    lcColumnWidth=0
+endif
+setgroup('lcColumnWidth','processing','global')
+setprotect('lcColumnWidth','set',32768+16+65536,'global')
+
+
+exists('lcColumnDeadVolume','parameter','global'):$e
+if (not $e) then
+    create('lcColumnDeadVolume','real','global')
+    lcColumnDeadVolume=0
+endif
+setgroup('lcColumnDeadVolume','processing','global')
+setprotect('lcColumnDeadVolume','set',32768+16+65536+8,'global') // Run _ macro
+
+
+exists('lcColumnParticleSize','parameter','global'):$e
+if (not $e) then
+    create('lcColumnParticleSize','real','global')
+    lcColumnParticleSize=0
+endif
+setgroup('lcColumnParticleSize','processing','global')
+setprotect('lcColumnParticleSize','set',32768+16+65536,'global')
+
+
+exists('lcMethodComment','parameter','global'):$e
+if (not $e) then
+    create('lcMethodComment','string','global')
+    lcMethodComment=''
+endif
+setgroup('lcMethodComment','processing','global')
+setprotect('lcMethodComment','set',32768+16+65536,'global')
+
+
+exists('lcMinPressure','parameter','global'):$e
+if (not $e) then
+    create('lcMinPressure','string','global')
+    lcMinPressure='10'
+endif
+setgroup('lcMinPressure','processing','global')
+setprotect('lcMinPressure','set',32768+16+65536,'global')
+
+
+exists('lcMaxPressure','parameter','global'):$e
+if (not $e) then
+    create('lcMaxPressure','string','global')
+    lcMaxPressure='100'
+endif
+setgroup('lcMaxPressure','processing','global')
+setprotect('lcMaxPressure','set',32768+16+65536,'global')
+
+
+exists('lcEquilTime','parameter','global'):$e
+if (not $e) then
+    create('lcEquilTime','string','global')
+    lcEquilTime='5'
+endif
+setgroup('lcEquilTime','processing','global')
+setprotect('lcEquilTime','set',32768+16+65536,'global')
+
+
+exists('lcEndAction','parameter','global'):$e
+if (not $e) then
+    create('lcEndAction','string','global')
+    lcEndAction='y'
+endif
+setgroup('lcEndAction','processing','global')
+setprotect('lcEndAction','set',32768+16+65536,'global')
+
+
+exists('lcMethodFile','parameter','global'):$e
+if (not $e) then
+    create('lcMethodFile','string','global')
+    lcMethodFile=''
+endif
+setgroup('lcMethodFile','processing','global')
+setprotect('lcMethodFile','set',32768+16+65536,'global')
+
+
+exists('lcRunType','parameter','global'):$e
+if (not $e) then
+    create('lcRunType','string','global')
+    lcRunType='stopFlowNmr'
+endif
+setgroup('lcRunType','processing','global')
+setprotect('lcRunType','set',32768+16+65536,'global')
+
+
+exists('lcMethodRows','parameter','global'):$e
+if (not $e) then
+    create('lcMethodRows','string','global')
+    lcMethodRows='1'
+endif
+setgroup('lcMethodRows','processing','global')
+setprotect('lcMethodRows','set',32768+16+65536,'global')
+
+//----------------------------------------
+//exists('lcIndex','parameter','global'):$e
+//if (not $e) then
+//    create('lcIndex','string','global')
+//    lcIndex='1'
+//endif
+//setgroup('lcIndex','processing','global')
+//setprotect('lcIndex','set',32768+16+65536,'global')
+//----------------------------------------
+
+exists('lcTime','parameter','global'):$e
+if (not $e) then
+    create('lcTime','string','global')
+    lcTime='0'
+endif
+setgroup('lcTime','processing','global')
+setprotect('lcTime','set',32768+16+65536,'global')
+
+
+exists('lcCommand','parameter','global'):$e
+if (not $e) then
+    create('lcCommand','string','global')
+    lcCommand=''
+endif
+setgroup('lcCommand','processing','global')
+setprotect('lcCommand','set',32768+16+65536,'global')
+
+
+exists('lcPostRunCommand','parameter','global'):$e
+if (not $e) then
+    create('lcPostRunCommand','string','global')
+    lcPostRunCommand=''
+endif
+setgroup('lcPostRunCommand','processing','global')
+setprotect('lcPostRunCommand','set',32768+16+65536,'global')
+
+
+exists('lcPeakCommand','parameter','global'):$e
+if (not $e) then
+    create('lcPeakCommand','string','global')
+    lcPeakCommand=''
+endif
+setgroup('lcPeakCommand','processing','global')
+setprotect('lcPeakCommand','set',32768+16+65536,'global')
+
+
+exists('lcPercentA','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcPercentA')) then
+        destroy('lcPercentA','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcPercentA','string','global')
+    lcPercentA='100'
+endif
+setgroup('lcPercentA','processing','global')
+setprotect('lcPercentA','set',32768+16+65536,'global')
+
+
+exists('lcPercentB','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcPercentB')) then
+        destroy('lcPercentB','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcPercentB','string','global')
+    lcPercentB='0'
+endif
+setgroup('lcPercentB','processing','global')
+setprotect('lcPercentB','set',32768+16+65536,'global')
+
+
+exists('lcPercentC','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcPercentC')) then
+        destroy('lcPercentC','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcPercentC','string','global')
+    lcPercentC='0'
+endif
+setgroup('lcPercentC','processing','global')
+setprotect('lcPercentC','set',32768+16+65536,'global')
+
+
+exists('lcFlowRate','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcFlowRate')) then
+        destroy('lcFlowRate','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcFlowRate','string','global')
+    lcFlowRate='1'
+endif
+setgroup('lcFlowRate','processing','global')
+setprotect('lcFlowRate','set',32768+16+65536,'global')
+
+
+exists('lcRunDuration','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcRunDuration')) then
+        destroy('lcRunDuration','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcRunDuration','string','global')
+    lcRunDuration='5'					"5 minutes"
+endif
+setgroup('lcRunDuration','processing','global')
+setprotect('lcRunDuration','set',32768+16+65536,'global')
+
+
+exists('lcAdcPeriod','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcAdcPeriod')) then
+        destroy('lcAdcPeriod','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcAdcPeriod','string','global')
+    lcAdcPeriod='0.25'					"1/4 second"
+endif
+setgroup('lcAdcPeriod','processing','global')
+setprotect('lcAdcPeriod','set',32768+16+65536,'global')
+
+
+exists('lcSamplePeriod','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcSamplePeriod')) then
+        destroy('lcSamplePeriod','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcSamplePeriod','string','global')
+    lcSamplePeriod='0.25'
+endif
+setgroup('lcSamplePeriod','processing','global')
+setprotect('lcSamplePeriod','set',32768+16+65536,'global')
+
+
+// Holds the peak detect enable info for all traces for the current time
+exists('lcPeakDetect','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetect','string','global')
+    setgroup('lcPeakDetect','processing','global')
+    lcPeakDetect='n','n','n','n','n'
+endif
+setenumeral('lcPeakDetect',2,'y','n','global')
+setgroup('lcPeakDetect','processing','global')
+setprotect('lcPeakDetect','set',32768+16+65536,'global')
+$size = size('lcPeakDetect')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcPeakDetect[$size] = 'n'
+endwhile
+
+
+// Holds the peak detect enable info for a single trace for the whole method
+exists('lcPeakDetectA','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectA','string','global')
+    lcPeakDetectA='n'
+endif
+setenumeral('lcPeakDetectA',3,'null','y','n','global')
+setgroup('lcPeakDetectA','processing','global')
+setprotect('lcPeakDetectA','set',32768+16+65536,'global')
+
+
+exists('lcPeakDetectB','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectB','string','global')
+    lcPeakDetectB='n'
+endif
+setenumeral('lcPeakDetectB',3,'null','y','n','global')
+setgroup('lcPeakDetectB','processing','global')
+setprotect('lcPeakDetectB','set',32768+16+65536,'global')
+
+
+exists('lcPeakDetectC','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectC','string','global')
+    lcPeakDetectC='n'
+endif
+setenumeral('lcPeakDetectC',3,'null','y','n','global')
+setgroup('lcPeakDetectC','processing','global')
+setprotect('lcPeakDetectC','set',32768+16+65536,'global')
+
+
+exists('lcPeakDetectD','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectD','string','global')
+    lcPeakDetectD='n'
+endif
+setenumeral('lcPeakDetectD',3,'null','y','n','global')
+setgroup('lcPeakDetectD','processing','global')
+setprotect('lcPeakDetectD','set',32768+16+65536,'global')
+
+
+exists('lcPeakDetectE','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectE','string','global')
+    lcPeakDetectE='n'
+endif
+setenumeral('lcPeakDetectE',3,'null','y','n','global')
+setgroup('lcPeakDetectE','processing','global')
+setprotect('lcPeakDetectE','set',32768+16+65536,'global')
+
+
+exists('lcTimedStop','parameter','global'):$e
+if (not $e) then
+    create('lcTimedStop','string','global')
+    lcTimedStop='n'
+endif
+setenumeral('lcTimedStop',2,'y','n','global')
+setgroup('lcTimedStop','processing','global')
+setprotect('lcTimedStop','set',32768+16+65536,'global')
+
+exists('lcLambda','parameter','global'):$e
+if (not $e) then
+    create('lcLambda','real','global')
+    lcLambda=254
+endif
+setgroup('lcLambda', 'processing','global')
+setprotect('lcLambda','set',32768+16+65536,'global')
+setlimit('lcLambda', 9999, 0, 1, 'global')
+
+
+exists('lcLambda2','parameter','global'):$e
+if (not $e) then
+    create('lcLambda2','real','global')
+    lcLambda2=254
+endif
+setgroup('lcLambda2', 'processing','global')
+setprotect('lcLambda2','set',32768+16+65536,'global')
+setlimit('lcLambda2', 9999, 0, 1, 'global')
+
+
+// TODO: Obsolete these "lcTrace<n>Lambda"
+exists('lcTrace1Lambda','parameter','global'):$e
+if (not $e) then
+    create('lcTrace1Lambda','real','global')
+    lcTrace1Lambda=254
+endif
+setgroup('lcTrace1Lambda', 'processing','global')
+setprotect('lcTrace1Lambda','set',32768+16+65536,'global')
+setlimit('lcTrace1Lambda', 800, 190, 1, 'global')
+
+exists('lcTrace2Lambda','parameter','global'):$e
+if (not $e) then
+    create('lcTrace2Lambda','real','global')
+    lcTrace2Lambda=254
+endif
+setgroup('lcTrace2Lambda', 'processing','global')
+setprotect('lcTrace2Lambda','set',32768+16+65536,'global')
+setlimit('lcTrace2Lambda', 800, 190, 1, 'global')
+
+exists('lcTrace3Lambda','parameter','global'):$e
+if (not $e) then
+    create('lcTrace3Lambda','real','global')
+    lcTrace3Lambda=254
+endif
+setgroup('lcTrace3Lambda', 'processing','global')
+setprotect('lcTrace3Lambda','set',32768+16+65536,'global')
+setlimit('lcTrace3Lambda', 800, 190, 1, 'global')
+
+
+exists('lcTraceLambda','parameter','global'):$e
+if (not $e) then
+    create('lcTraceLambda','real','global')
+    setgroup('lcTraceLambda', 'processing','global')
+    lcTraceLambda=254,254,254,254,254
+endif
+setgroup('lcTraceLambda', 'processing','global')
+setprotect('lcTraceLambda','set',32768+16+65536,'global')
+setlimit('lcTraceLambda', 9999, 0, 1, 'global')
+
+
+exists('lcTrace','parameter','global'):$e
+if (not $e) then
+    create('lcTrace','string','global')
+    setgroup('lcTrace', 'processing','global')
+    lcTrace='none','none','none','none','none'
+endif
+setgroup('lcTrace', 'processing','global')
+setprotect('lcTrace','set',32768+16+65536,'global')
+
+
+exists('lcLambdaMin','parameter','global'):$e
+if (not $e) then
+    create('lcLambdaMin','real','global')
+    lcLambdaMin=190
+endif
+setgroup('lcLambdaMin', 'processing','global')
+setprotect('lcLambdaMin','set',32768+16+65536,'global')
+setlimit('lcLambdaMin', 9999, 0, 1, 'global')
+
+exists('lcLambdaMax','parameter','global'):$e
+if (not $e) then
+    create('lcLambdaMax','real','global')
+    lcLambdaMax=800
+endif
+setgroup('lcLambdaMax', 'processing','global')
+setprotect('lcLambdaMax','set',32768+16+65536,'global')
+setlimit('lcLambdaMax', 9999, 0, 1, 'global')
+
+
+exists('lcTrace1','parameter','global'):$e
+if (not $e) then
+    create('lcTrace1','string','global')
+    lcTrace1=''
+endif
+setgroup('lcTrace1', 'processing','global')
+setprotect('lcTrace1','set',32768+16+65536,'global')
+setlimit('lcTrace1', 4, 0, 1, 'global')
+
+
+exists('lcTrace2','parameter','global'):$e
+if (not $e) then
+    create('lcTrace2','string','global')
+    lcTrace2=''
+endif
+setgroup('lcTrace2', 'processing','global')
+setprotect('lcTrace2','set',32768+16+65536,'global')
+setlimit('lcTrace2', 4, 0, 1, 'global')
+
+
+exists('lcTrace3','parameter','global'):$e
+if (not $e) then
+    create('lcTrace3','string','global')
+    lcTrace3=''
+endif
+setgroup('lcTrace3', 'processing','global')
+setprotect('lcTrace3','set',32768+16+65536,'global')
+setlimit('lcTrace3', 4, 0, 1, 'global')
+
+
+exists('lcBandwidth','parameter','global'):$e
+if (not $e) then
+    create('lcBandwidth','real','global')
+    lcBandwidth=1
+endif
+setgroup('lcBandwidth', 'processing','global')
+setprotect('lcBandwidth','set',32768+16+65536,'global')
+setlimit('lcBandwidth', 4, 0, 1, 'global')
+
+
+exists('lcThreshold','parameter','global'):$e
+if ($e) then
+    if (typeof('lcThreshold')) then
+        destroy('lcThreshold','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcThreshold','real','global')
+    setgroup('lcThreshold','processing','global')
+    lcThreshold=0,0,0,0,0
+endif
+setgroup('lcThreshold','processing','global')
+setprotect('lcThreshold','set',32768+16+65536,'global')
+$size = size('lcThreshold')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcThreshold[$size] = 0
+endwhile
+
+exists('lcThresholdA','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcThresholdA')) then
+        destroy('lcThresholdA','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcThresholdA','string','global')
+    lcThresholdA='200'
+endif
+setgroup('lcThresholdA','processing','global')
+setprotect('lcThresholdA','set',32768+16+65536,'global')
+
+exists('lcThresholdB','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcThresholdB')) then
+        destroy('lcThresholdB','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcThresholdB','string','global')
+    lcThresholdB='200'
+endif
+setgroup('lcThresholdB','processing','global')
+setprotect('lcThresholdB','set',32768+16+65536,'global')
+
+exists('lcThresholdC','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcThresholdC')) then
+        destroy('lcThresholdC','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcThresholdC','string','global')
+    lcThresholdC='200'
+endif
+setgroup('lcThresholdC','processing','global')
+setprotect('lcThresholdC','set',32768+16+65536,'global')
+
+exists('lcThresholdD','parameter','global'):$e
+if (not $e) then
+    create('lcThresholdD','string','global')
+    lcThresholdD='200'
+endif
+setgroup('lcThresholdD','processing','global')
+setprotect('lcThresholdD','set',32768+16+65536,'global')
+
+exists('lcThresholdE','parameter','global'):$e
+if (not $e) then
+    create('lcThresholdE','string','global')
+    lcThresholdE='200'
+endif
+setgroup('lcThresholdE','processing','global')
+setprotect('lcThresholdE','set',32768+16+65536,'global')
+
+exists('lcTimeSlice','parameter','global'):$e
+if (not $e) then
+    create('lcTimeSlice','string','global')
+    lcTimeSlice='n'
+endif
+setenumeral('lcTimeSlice',3,'null','y','n','global')
+setgroup('lcTimeSlice','processing','global')
+setprotect('lcTimeSlice','set',32768+16+65536,'global')
+
+exists('lcTimeSlicePeriod','parameter','global'):$e
+if ($e) then
+    if (not typeof('lcTimeSlicePeriod')) then
+        destroy('lcTimeSlicePeriod','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcTimeSlicePeriod','string','global')
+    lcTimeSlicePeriod='10'
+endif
+setgroup('lcTimeSlicePeriod','processing','global')
+setprotect('lcTimeSlicePeriod','set',32768+16+65536,'global')
+
+exists('lcRelay1','parameter','global'):$e
+if (not $e) then
+    create('lcRelay1','string','global')
+    lcRelay1='n'
+endif
+setenumeral('lcRelay1',3,'null','y','n','global')
+setgroup('lcRelay1','processing','global')
+setprotect('lcRelay1','set',32768+16+65536,'global')
+
+exists('lcRelay2','parameter','global'):$e
+if (not $e) then
+    create('lcRelay2','string','global')
+    lcRelay2='n'
+endif
+setenumeral('lcRelay2',3,'null','y','n','global')
+setgroup('lcRelay2','processing','global')
+setprotect('lcRelay2','set',32768+16+65536,'global')
+
+exists('lcRelay3','parameter','global'):$e
+if (not $e) then
+    create('lcRelay3','string','global')
+    lcRelay3='n'
+endif
+setenumeral('lcRelay3',3,'null','y','n','global')
+setgroup('lcRelay3','processing','global')
+setprotect('lcRelay3','set',32768+16+65536,'global')
+
+exists('lcRelay4','parameter','global'):$e
+if (not $e) then
+    create('lcRelay4','string','global')
+    lcRelay4='n'
+endif
+setenumeral('lcRelay4',3,'null','y','n','global')
+setgroup('lcRelay4','processing','global')
+setprotect('lcRelay4','set',32768+16+65536,'global')
+
+exists('lcRelay5','parameter','global'):$e
+if (not $e) then
+    create('lcRelay5','string','global')
+    lcRelay5='n'
+endif
+setenumeral('lcRelay5',3,'null','y','n','global')
+setgroup('lcRelay5','processing','global')
+setprotect('lcRelay5','set',32768+16+65536,'global')
+
+exists('lcRelay6','parameter','global'):$e
+if (not $e) then
+    create('lcRelay6','string','global')
+    lcRelay6='n'
+endif
+setenumeral('lcRelay6',3,'null','y','n','global')
+setgroup('lcRelay6','processing','global')
+setprotect('lcRelay6','set',32768+16+65536,'global')
+
+
+exists('lcHoldTime','parameter','global'):$e
+if (not $e) then
+    create('lcHoldTime','string','global')
+    lcHoldTime='0'
+endif
+setgroup('lcHoldTime','processing','global')
+setprotect('lcHoldTime','set',32768+16+65536,'global')
+
+
+exists('lcLastHoldTime','parameter','global'):$e
+if (not $e) then
+    create('lcLastHoldTime','string','global')
+    lcLastHoldTime='1'
+endif
+setgroup('lcLastHoldTime','processing','global')
+setprotect('lcLastHoldTime','set',32768+16+65536,'global')
+
+
+exists('lcNmrBypass','parameter','global'):$e
+if (not $e) then
+    create('lcNmrBypass','string','global')
+    lcNmrBypass='n'
+endif
+setgroup('lcNmrBypass','processing','global')
+setprotect('lcNmrBypass','set',32768+16+65536,'global')
+
+
+exists('msScans','parameter','global'):$e
+if (not $e) then
+    create('msScans','string','global')
+    msScans=''
+endif
+setgroup('msScans','processing','global')
+setprotect('msScans','set',32768+16+65536,'global')
+
+
+exists('msValve','parameter','global'):$e
+if (not $e) then
+    create('msValve','string','global')
+    msValve=''
+endif
+setgroup('msValve','processing','global')
+setprotect('msValve','set',32768+16+65536,'global')
+
+
+exists('msPump','parameter','global'):$e
+if (not $e) then
+    create('msPump','string','global')
+    msPump=''
+endif
+setgroup('msPump','processing','global')
+setprotect('msPump','set',32768+16+65536,'global')
+
+
+
+//
+// Calibration Variables
+//
+
+// lcXferDelay: Xfer delays in mL for everything
+// delay(sec) = lcXferDelay[] * 60 / flow(mL/min)
+//  type is the plumbing setup:
+//   0: Stop Flow (Detector to NMR)
+//   1: Analyte Collection (Detector to loop)
+//   2: Analyte Elution (Detector to NMR)
+//
+exists('lcXferDelay','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelay','real','global')
+    setgroup('lcXferDelay','processing','global')
+    lcXferDelay=0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0
+endif
+setgroup('lcXferDelay','processing','global')
+setprotect('lcXferDelay','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayType','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayType','real','global')
+    lcXferDelayType=1
+endif
+setlimit('lcXferDelayType',2,0,1,'global')     " 3 known types "
+setgroup('lcXferDelayType','processing','global')
+setprotect('lcXferDelayType','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayA','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayA','real','global')
+    lcXferDelayA=10
+endif
+setgroup('lcXferDelayA','processing','global')
+setprotect('lcXferDelayA','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayB','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayB','real','global')
+    lcXferDelayB=11
+endif
+setgroup('lcXferDelayB','processing','global')
+setprotect('lcXferDelayB','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayC','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayC','real','global')
+    lcXferDelayC=12
+endif
+setgroup('lcXferDelayC','processing','global')
+setprotect('lcXferDelayC','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayD','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayD','real','global')
+    lcXferDelayD=12
+endif
+setgroup('lcXferDelayD','processing','global')
+setprotect('lcXferDelayD','set',32768+16+65536,'global')
+
+
+exists('lcXferDelayE','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayE','real','global')
+    lcXferDelayE=12
+endif
+setgroup('lcXferDelayE','processing','global')
+setprotect('lcXferDelayE','set',32768+16+65536,'global')
+
+
+// Is this obsolete?
+exists('lcXferDelayPumpToLoop','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayPumpToLoop','real','global')
+    lcXferDelayPumpToLoop=30
+endif
+setgroup('lcXferDelayPumpToLoop','processing','global')
+setprotect('lcXferDelayPumpToLoop','set',32768+16+65536,'global')
+
+
+// TODO: Is this obsolete?
+exists('lcXferDelayLoopToNmr','parameter','global'):$e
+if (not $e) then
+    create('lcXferDelayLoopToNmr','real','global')
+    lcXferDelayLoopToNmr=30
+endif
+setgroup('lcXferDelayLoopToNmr','processing','global')
+setprotect('lcXferDelayLoopToNmr','set',32768+16+65536,'global')
+
+
+exists('lcXferRefTime','parameter','global'):$e
+if (not $e) then
+    create('lcXferRefTime','real','global')
+    lcXferRefTime = 0
+endif
+setgroup('lcXferRefTime','processing','global')
+setprotect('lcXferRefTime','set',32768+16+65536,'global')
+
+
+exists('lcXferRefChannel','parameter','global'):$e
+if (not $e) then
+    create('lcXferRefChannel','real','global')
+    lcXferRefChannel = 0
+endif
+setgroup('lcXferRefChannel','processing','global')
+setprotect('lcXferRefChannel','set',32768+16+65536,'global')
+
+
+exists('lcEnableA','parameter','global'):$e
+if (not $e) then
+    create('lcEnableA','string','global')
+    lcEnableA='y'
+endif
+setenumeral('lcEnableA',3,'','n','y','global')
+setgroup('lcEnableA','processing','global')
+setprotect('lcEnableA','set',32768+16+65536,'global')
+
+
+exists('lcEnableB','parameter','global'):$e
+if (not $e) then
+    create('lcEnableB','string','global')
+    lcEnableB='n'
+endif
+setenumeral('lcEnableB',3,'','n','y','global')
+setgroup('lcEnableB','processing','global')
+setprotect('lcEnableB','set',32768+16+65536,'global')
+
+
+exists('lcEnableC','parameter','global'):$e
+if (not $e) then
+    create('lcEnableC','string','global')
+    lcEnableC='n'
+endif
+setenumeral('lcEnableC',3,'','n','y','global')
+setgroup('lcEnableC','processing','global')
+setprotect('lcEnableC','set',32768+16+65536,'global')
+
+
+exists('lcEnableD','parameter','global'):$e
+if (not $e) then
+    create('lcEnableD','string','global')
+    lcEnableD='n'
+endif
+setenumeral('lcEnableD',3,'','n','y','global')
+setgroup('lcEnableD','processing','global')
+setprotect('lcEnableD','set',32768+16+65536,'global')
+
+
+exists('lcEnableE','parameter','global'):$e
+if (not $e) then
+    create('lcEnableE','string','global')
+    lcEnableE='n'
+endif
+setenumeral('lcEnableE',3,'','n','y','global')
+setgroup('lcEnableE','processing','global')
+setprotect('lcEnableE','set',32768+16+65536,'global')
+
+
+exists('lcNmrProbeVolume','parameter','global'):$e
+if (not $e) then
+    create('lcNmrProbeVolume','real','global')
+    lcNmrProbeVolume=60				"uL"
+endif
+setgroup('lcNmrProbeVolume','processing','global')
+setprotect('lcNmrProbeVolume','set',32768+16+65536,'global')
+
+
+exists('lcLoopVolume','parameter','global'):$e
+if (not $e) then
+    create('lcLoopVolume','real','global')
+    lcLoopVolume=150				"uL"
+endif
+setgroup('lcLoopVolume','processing','global')
+setprotect('lcLoopVolume','set',32768+16+65536,'global')
+
+
+exists('lcHighlightVolume','parameter','global'):$e
+if (not $e) then
+    create('lcHighlightVolume','real','global')
+    lcHighlightVolume=60			"uL"
+endif
+setgroup('lcHighlightVolume','processing','global')
+setprotect('lcHighlightVolume','set',32768+16+65536,'global')
+
+
+exists('lcDataFile','parameter','global'):$e
+if (not $e) then
+    create('lcDataFile','string','global')
+    lcDataFile=''
+endif
+setgroup('lcDataFile','processing','global')
+setprotect('lcDataFile','set',32768+16+65536,'global')
+
+
+exists('lcPdaPeriod_ms','parameter','global'):$e
+if (not $e) then
+    create('lcPdaPeriod_ms','real','global')
+    lcPdaPeriod_ms=800
+endif
+setgroup('lcPdaPeriod_ms','processing','global')
+setprotect('lcPdaPeriod_ms','set',32768+16+65536,'global')
+
+
+exists('lcAnalysisFile','parameter','global'):$e
+if (not $e) then
+    create('lcAnalysisFile','string','global')
+    lcAnalysisFile=''
+endif
+setgroup('lcAnalysisFile','processing','global')
+setprotect('lcAnalysisFile','set',32768+16+65536,'global')
+
+
+exists('lcAnalysisThreshold','parameter','global'):$e
+if (not $e) then
+    create('lcAnalysisThreshold','real','global')
+    lcAnalysisThreshold=1000
+endif
+setgroup('lcAnalysisThreshold','processing','global')
+setprotect('lcAnalysisThreshold','set',32768+16+65536,'global')
+// Make sure array size is big enough
+$size = size('lcAnalysisThreshold')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcAnalysisThreshold[$size] = 0
+endwhile
+
+
+exists('lcAnalysisWidth','parameter','global'):$e
+if (not $e) then
+    create('lcAnalysisWidth','real','global')
+    lcAnalysisWidth=0.5
+endif
+setgroup('lcAnalysisWidth','processing','global')
+setprotect('lcAnalysisWidth','set',32768+16+65536,'global')
+// Make sure array size is big enough
+$size = size('lcAnalysisWidth')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcAnalysisWidth[$size] = 0
+endwhile
+
+
+exists('lcBaseName','parameter','global'):$e
+if (not $e) then
+    create('lcBaseName','string','global')
+    lcBaseName=''
+endif
+setgroup('lcBaseName','processing','global')
+setprotect('lcBaseName','set',32768+16+65536,'global')
+
+
+exists('lcInterLoopDelay','parameter','global'):$e
+if (not $e) then
+    create('lcInterLoopDelay','real','global')
+    lcInterLoopDelay=2.5
+endif
+setgroup('lcInterLoopDelay','processing','global')
+setprotect('lcInterLoopDelay','set',32768+16+65536,'global')
+
+
+exists('lcEquilibrationCount','parameter','global'):$e
+if (not $e) then
+    create('lcEquilibrationCount','real','global')
+    lcEquilibrationCount=0
+endif
+setgroup('lcEquilibrationCount','processing','global')
+setprotect('lcEquilibrationCount','set',32768+16+65536,'global')
+
+
+
+
+
+//
+// Configuration Variables
+//
+
+exists('lcPeakDetectType','parameter','global'):$e
+if ($e) then
+        destroy('lcPeakDetectType','global')
+        $e=0
+endif
+
+
+exists('lcPeakDetectWidth','parameter','global'):$e
+if ($e) then
+    if ( typeof('lcPeakDetectWidth')) then
+        destroy('lcPeakDetectWidth','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcPeakDetectWidth','real','global')
+    setgroup('lcPeakDetectWidth','processing','global')
+    lcPeakDetectWidth = 2   "seconds"
+endif
+setlimit('lcPeakDetectWidth',100,0,0,'global')
+setgroup('lcPeakDetectWidth','processing','global')
+setprotect('lcPeakDetectWidth','set',32768+16+65536,'global')
+// Make sure array size is big enough
+$size = size('lcPeakDetectWidth')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcPeakDetectWidth[$size] = 1
+endwhile
+
+
+exists('lcPeakDetectS2N','parameter','global'):$e
+if ($e) then
+    if ( typeof('lcPeakDetectS2N')) then
+        destroy('lcPeakDetectS2N','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcPeakDetectS2N','real','global')
+    setgroup('lcPeakDetectS2N','processing','global')
+    lcPeakDetectS2N = 5
+endif
+setlimit('lcPeakDetectS2N',100,0,0,'global')
+setgroup('lcPeakDetectS2N','processing','global')
+setprotect('lcPeakDetectS2N','set',32768+16+65536,'global')
+// Make sure array size is big enough
+$size = size('lcPeakDetectS2N')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcPeakDetectS2N[$size] = 5
+endwhile
+
+
+exists('lcPeakDetectTestThresh','parameter','global'):$e
+if (not $e) then
+    create('lcPeakDetectTestThresh','real','global')
+    setgroup('lcPeakDetectTestThresh','processing','global')
+    lcPeakDetectTestThresh = 0, 0, 0
+endif
+setgroup('lcPeakDetectTestThresh','processing','global')
+setprotect('lcPeakDetectTestThresh','set',32768+16+65536,'global')
+// Make sure array size is big enough
+$size = size('lcPeakDetectTestThresh')
+while ($size < lcMaxNumChans) do
+    $size = $size + 1
+    lcPeakDetectTestThresh[$size] = 0
+endwhile
+
+
+exists('lcAbsorptionCalSlope','parameter','global'):$e
+if (not $e) then
+    create('lcAbsorptionCalSlope','real','global')
+    lcAbsorptionCalSlope=0.00020142
+endif
+setgroup('lcAbsorptionCalSlope','processing','global')
+setprotect('lcAbsorptionCalSlope','set',32768+16+65536,'global')
+
+
+exists('lcAbsorptionCalOrigin','parameter','global'):$e
+if (not $e) then
+    create('lcAbsorptionCalOrigin','real','global')
+    lcAbsorptionCalOrigin=-0.001443
+endif
+setgroup('lcAbsorptionCalOrigin','processing','global')
+setprotect('lcAbsorptionCalOrigin','set',32768+16+65536,'global')
+
+
+exists('lcAnalyteCollector','parameter','global'):$e
+if ($e) then
+    if (typeof('lcAnalyteCollector')) then
+        destroy('lcAnalyteCollector','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcAnalyteCollector','real','global')
+    lcAnalyteCollector=10
+endif
+setlimit('lcAnalyteCollector', 99, 0, 1, 'global')
+setgroup('lcAnalyteCollector','processing','global')
+setprotect('lcAnalyteCollector','set',32768+16+65536,'global')
+
+
+exists('lcBypassLoop','parameter','global'):$e
+if ($e) then
+    if (typeof('lcBypassLoop')) then
+        destroy('lcBypassLoop','global')
+        $e=0
+    endif
+endif
+if (not $e) then
+    create('lcBypassLoop','real','global')
+    lcBypassLoop=1
+endif
+setgroup('lcBypassLoop','processing','global')
+setprotect('lcBypassLoop','set',32768+16+65536,'global')
+
+
+exists('lcSerialPort','parameter','global'):$e
+if (not $e) then
+    create('lcSerialPort','string','global')
+    lcSerialPort='a'
+endif
+setenumeral('lcSerialPort',3,'','a','b','global')
+setgroup('lcSerialPort','processing','global')
+setprotect('lcSerialPort','set',32768+16+65536,'global')
+
+
+exists('lcAutoSampler','parameter','global'):$e
+if (not $e) then
+    create('lcAutoSampler','string','global')
+    lcAutoSampler='0'
+endif
+setgroup('lcAutoSampler','processing','global')
+setprotect('lcAutoSampler','set',32768+16+65536,'global')
+
+exists('lcAutoSamplerAddress','parameter','global'):$e
+if (not $e) then
+    create('lcAutoSamplerAddress','string','global')
+    lcAutoSamplerAddress='V-Autosampler'
+endif
+setgroup('lcAutoSamplerAddress','processing','global')
+setprotect('lcAutoSamplerAddress','set',32768+16+65536,'global')
+
+exists('lcSampleNumber','parameter','global'):$e
+if (not $e) then
+    create('lcSampleNumber','real','global')
+    setgroup('lcSampleNumber','processing','global')
+    lcSampleNumber=1,1
+endif
+setgroup('lcSampleNumber','processing','global')
+setprotect('lcSampleNumber','set',32768+16+65536,'global')
+$size = size('lcSampleNumber')
+while ($size < 2) do
+    $size = $size + 1
+    lcSampleNumber[$size] = 1
+endwhile
+
+exists('lcSampleFile','parameter','global'):$e
+if (not $e) then
+    create('lcSampleFile','string','global')
+    lcSampleFile = userdir+'/lc/autosampler'
+endif
+setgroup('lcSampleFile','processing','global')
+setprotect('lcSampleFile','set',32768+16+65536,'global')
+
+
+exists('lcSampleVolume','parameter','global'):$e
+if (not $e) then
+    create('lcSampleVolume','real','global')
+    lcSampleVolume=1 // micro-liters
+endif
+setgroup('lcSampleVolume','processing','global')
+setprotect('lcSampleVolume','set',32768+16+65536,'global')
+
+
+
+exists('lcFlushVolume','parameter','global'):$e
+if (not $e) then
+    create('lcFlushVolume','real','global')
+    lcFlushVolume=1 // micro-liters
+endif
+setgroup('lcFlushVolume','processing','global')
+setprotect('lcFlushVolume','set',32768+16+65536,'global')
+
+
+
+exists('lcInjectionType','parameter','global'):$e
+if (not $e) then
+    create('lcInjectionType','real','global')
+    lcInjectionType=1
+endif
+setgroup('lcInjectionType','processing','global')
+setprotect('lcInjectionType','set',32768+16+65536,'global')
+
+
+
+exists('lcDetector','parameter','global'):$e
+if (not $e) then
+    create('lcDetector','string','global')
+    lcDetector='9050'
+endif
+setgroup('lcDetector','processing','global')
+setprotect('lcDetector','set',32768+16+65536,'global')
+
+
+exists('lcDetectorAddress','parameter','global'):$e
+if (not $e) then
+    create('lcDetectorAddress','string','global')
+    lcDetectorAddress='V-Pda'
+endif
+setgroup('lcDetectorAddress','processing','global')
+setprotect('lcDetectorAddress','set',32768+16+65536,'global')
+
+
+exists('lcFlowCell','parameter','global'):$e
+if (not $e) then
+    create('lcFlowCell','real','global')
+    lcFlowCell=3
+endif
+setgroup('lcFlowCell','processing','global')
+setprotect('lcFlowCell','set',32768+16+65536,'global')
+
+
+exists('lcFlowCellRatio','parameter','global'):$e
+if (not $e) then
+    create('lcFlowCellRatio','real','global')
+    lcFlowCellRatio=0
+endif
+setgroup('lcFlowCellRatio','processing','global')
+setprotect('lcFlowCellRatio','set',32768+16+65536,'global')
+setlimit('lcFlowCellRatio', 30, 0, 1, 'global')
+
+
+exists('lcLampSelection','parameter','global'):$e
+if (not $e) then
+    create('lcLampSelection','real','global')
+    lcLampSelection=2
+endif
+setgroup('lcLampSelection','processing','global')
+setprotect('lcLampSelection','set',32768+16+65536,'global')
+
+
+exists('lcPump','parameter','global'):$e
+if (not $e) then
+    create('lcPump','string','global')
+    lcPump='9012'
+endif
+setgroup('lcPump','processing','global')
+setprotect('lcPump','set',32768+16+65536,'global')
+
+
+exists('lcMyIpAddress','parameter','global'):$e
+if (not $e) then
+    create('lcMyIpAddress','string','global')
+    lcMyIpAddress='localhost'
+endif
+setgroup('lcMyIpAddress','processing','global')
+setprotect('lcMyIpAddress','set',32768+16+65536,'global')
+
+
+exists('lcGraphSplit','parameter','global'):$e
+if (not $e) then
+    create('lcGraphSplit','string','global')
+    lcGraphSplit='h'
+endif
+setgroup('lcGraphSplit','processing','global')
+setprotect('lcGraphSplit','set',32768+16+65536,'global')
+
+
+exists('lcGraphSplit2','parameter','global'):$e
+if (not $e) then
+    create('lcGraphSplit2','string','global')
+    lcGraphSplit2='h'
+endif
+setgroup('lcGraphSplit2','processing','global')
+setprotect('lcGraphSplit2','set',32768+16+65536,'global')
+
+
+exists('lcConfigSolvA','parameter','global'):$e
+if (not $e) then
+    create('lcConfigSolvA','string','global')
+    lcConfigSolvA=''
+endif
+setgroup('lcConfigSolvA','processing','global')
+setprotect('lcConfigSolvA','set',32768+16+65536,'global')
+
+
+exists('lcConfigSolvB','parameter','global'):$e
+if (not $e) then
+    create('lcConfigSolvB','string','global')
+    lcConfigSolvB=''
+endif
+setgroup('lcConfigSolvB','processing','global')
+setprotect('lcConfigSolvB','set',32768+16+65536,'global')
+
+
+exists('lcConfigSolvC','parameter','global'):$e
+if (not $e) then
+    create('lcConfigSolvC','string','global')
+    lcConfigSolvC=''
+endif
+setgroup('lcConfigSolvC','processing','global')
+setprotect('lcConfigSolvC','set',32768+16+65536,'global')
+
+
+
+//
+// Daina Variables
+//
+
+//
+// NB: lcexp must be 'current' or PSG won't find it
+//
+exists('lcexp','parameter','global'):$e
+if ($e) then
+    destroy('lcexp','global')
+endif
+exists('lcexp','parameter','current'):$e
+if (not $e) then
+    create('lcexp','string','current')
+    lcexp=''
+endif
+//setgroup('lcexp','processing','current')//
+
+exists('lcexpGlobal','parameter','global'):$e
+if (not $e) then
+    create('lcexpGlobal','string','global')
+    lcexpGlobal=''
+endif
+setgroup('lcexpGlobal','processing','global')
+setprotect('lcexpGlobal','set',32768+16+65536,'global')
+
+exists('lcid','parameter','global'):$e
+if (not $e) then
+    create('lcid','string','global')
+    lcid='.'
+endif
+setgroup('lcid','processing','global')
+setprotect('lcid','set',32768+16+65536,'global')
+
+exists('retentiontime','parameter','global'):$e
+if (not $e) then
+    create('retentiontime','string','global')
+    retentiontime=''
+endif
+setgroup('retentiontime','processing','global')
+setprotect('retentiontime','set',32768+16+65536,'global')
+
+
+exists('solvA','parameter','current'):$e
+if ($e) then
+    destroy('solvA','current')
+endif
+exists('solvA','parameter','global'):$e
+if (not $e) then
+    create('solvA','string','global')
+    solvA=''
+endif
+setgroup('solvA','processing','global')
+
+
+exists('solvB','parameter','current'):$e
+if ($e) then
+    destroy('solvB','current')
+endif
+exists('solvB','parameter','global'):$e
+if (not $e) then
+    create('solvB','string','global')
+    solvB=''
+endif
+setgroup('solvB','processing','global')
+
+
+exists('solvC','parameter','current'):$e
+if ($e) then
+    destroy('solvC','current')
+endif
+exists('solvC','parameter','global'):$e
+if (not $e) then
+    create('solvC','string','global')
+    solvC=''
+endif
+setgroup('solvC','processing','global')
+
+
+exists('solnumber','parameter','current'):$e
+if ($e) then
+    destroy('solnumber','current')
+endif
+exists('solnumber','parameter','global'):$e
+if (not $e) then
+    create('solnumber','integer','global')
+    solnumber=1
+endif
+setlimit('solnumber', 7, 1, 1, 'global')
+setgroup('solnumber','processing','global')
+
+
+exists('endloop','parameter','current'):$e
+if ($e) then
+    destroy('endloop','current')
+endif
+exists('endloop','parameter','global'):$e
+if (not $e) then
+    create('endloop','integer','global')
+    endloop=1
+endif
+setlimit('endloop', 16, 1, 1, 'global')
+setgroup('endloop','processing','global')
+
+
+exists('startloop','parameter','current'):$e
+if ($e) then
+    destroy('startloop','current')
+endif
+exists('startloop','parameter','global'):$e
+if (not $e) then
+    create('startloop','integer','global')
+    startloop=1
+endif
+setlimit('startloop', 16, 1, 1, 'global')
+setgroup('startloop','processing','global')
+
+
+exists('nextloop','parameter','global'):$e
+if (not $e) then
+    create('nextloop','integer','global')
+    nextloop=1
+endif
+setlimit('nextloop', 16, 1, 1, 'global')
+setgroup('nextloop','processing','global')
+
+
+exists('endshift','parameter','current'):$e
+if ($e) then
+    destroy('endshift','current')
+endif
+exists('endshift','parameter','global'):$e
+if (not $e) then
+    create('endshift','real','global')
+    endshift=0
+endif
+setgroup('endshift','processing','global')
+
+
+exists('startshift','parameter','current'):$e
+if ($e) then
+    destroy('startshift','current')
+endif
+exists('startshift','parameter','global'):$e
+if (not $e) then
+    create('startshift','real','global')
+    startshift=0
+endif
+setgroup('startshift','processing','global')
+
+
+exists('endlctime','parameter','current'):$e
+if ($e) then
+    destroy('endlctime','current')
+endif
+exists('endlctime','parameter','global'):$e
+if (not $e) then
+    create('endlctime','real','global')
+    endlctime=0
+endif
+setgroup('endlctime','processing','global')
+
+
+exists('startlctime','parameter','current'):$e
+if ($e) then
+    destroy('startlctime','current')
+endif
+exists('startlctime','parameter','global'):$e
+if (not $e) then
+    create('startlctime','real','global')
+    startlctime=0
+endif
+setgroup('startlctime','processing','global')
+
+
+exists('lcChannel1','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel1','current')
+endif
+exists('lcChannel1','parameter','global'):$e
+if (not $e) then
+    create('lcChannel1','string','global')
+    lcChannel1='none'
+endif
+setgroup('lcChannel1','processing','global')
+setprotect('lcChannel1','set',32768+16+65536,'global')
+
+
+exists('lcChannel2','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel2','current')
+endif
+exists('lcChannel2','parameter','global'):$e
+if (not $e) then
+    create('lcChannel2','string','global')
+    lcChannel2='none'
+endif
+setgroup('lcChannel2','processing','global')
+setprotect('lcChannel2','set',32768+16+65536,'global')
+
+
+exists('lcChannel3','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel3','current')
+endif
+exists('lcChannel3','parameter','global'):$e
+if (not $e) then
+    create('lcChannel3','string','global')
+    lcChannel3='none'
+endif
+setgroup('lcChannel3','processing','global')
+setprotect('lcChannel3','set',32768+16+65536,'global')
+
+
+exists('lcChannel1Label','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel1Label','current')
+endif
+exists('lcChannel1Label','parameter','global'):$e
+if (not $e) then
+    create('lcChannel1Label','string','global')
+    lcChannel1Label=''
+endif
+setgroup('lcChannel1Label','processing','global')
+setprotect('lcChannel1Label','set',32768+16+65536,'global')
+
+
+exists('lcChannel2Label','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel2Label','current')
+endif
+exists('lcChannel2Label','parameter','global'):$e
+if (not $e) then
+    create('lcChannel2Label','string','global')
+    lcChannel2Label=''
+endif
+setgroup('lcChannel2Label','processing','global')
+setprotect('lcChannel2Label','set',32768+16+65536,'global')
+
+
+exists('lcChannel3Label','parameter','current'):$e
+if ($e) then
+    destroy('lcChannel3Label','current')
+endif
+exists('lcChannel3Label','parameter','global'):$e
+if (not $e) then
+    create('lcChannel3Label','string','global')
+    lcChannel3Label=''
+endif
+setgroup('lcChannel3Label','processing','global')
+setprotect('lcChannel3Label','set',32768+16+65536,'global')
+
+
+
+
+
+
+//
+// Mass Spec Variables
+//
+
+//destroy('msAnalogOutInUse','current')
+//destroy('msAnalogOutType','current')
+//destroy('msAnalogOutMass','current')
+//destroy('msAnalogOutExpr','current')
+//destroy('msAnalogOutGain','current')
+
+exists('msIsMsData','parameter','global'):$e
+if (not $e) then
+    create('msIsMsData','real','global')
+    msIsMsData=0
+endif
+setgroup('msIsMsData','processing','global')
+setprotect('msIsMsData','set',32768+16+65536,'global')
+
+
+exists('msSelection','parameter','global'):$e
+if (not $e) then
+    create('msSelection','string','global')
+    msSelection='none'
+endif
+setgroup('msSelection','processing','global')
+setprotect('msSelection','set',32768+16+65536,'global')
+
+
+exists('msPumpFlow','parameter','global'):$e
+if (not $e) then
+    create('msPumpFlow','real','global')
+    msPumpFlow=0.3
+endif
+setgroup('msPumpFlow','processing','global')
+setprotect('msPumpFlow','set',32768+16+65536,'global')
+
+
+exists('msShowOldData','parameter','global'):$e
+if (not $e) then
+    create('msShowOldData','string','global')
+    msShowOldData='n'
+endif
+setgroup('msShowOldData','processing','global')
+setprotect('msShowOldData','set',32768+16+65536,'global')
+
+
+exists('msCommPath','parameter','global'):$e
+if (not $e) then
+    create('msCommPath','string','global')
+    setgroup('msCommPath','processing','global')
+    msCommPath='/vnmr/acqqueue','v:/vnmr/acqqueue'
+endif
+setgroup('msCommPath','processing','global')
+setprotect('msCommPath','set',32768+16+65536,'global')
+
+
+exists('msAnalogOutInUse','parameter','global'):$e
+if (not $e) then
+    create('msAnalogOutInUse','string','global')
+    setgroup('msAnalogOutInUse','processing','global')
+    msAnalogOutInUse='',''
+endif
+setgroup('msAnalogOutInUse','processing','global')
+setprotect('msAnalogOutInUse','set',32768+16+65536,'global')
+
+
+exists('msAnalogOutType','parameter','global'):$e
+if (not $e) then
+    create('msAnalogOutType','string','global')
+    setgroup('msAnalogOutType','processing','global')
+    msAnalogOutType='',''
+endif
+setgroup('msAnalogOutType','processing','global')
+setprotect('msAnalogOutType','set',32768+16+65536,'global')
+
+
+exists('msAnalogOutMass','parameter','global'):$e
+if (not $e) then
+    create('msAnalogOutMass','real','global')
+    setgroup('msAnalogOutMass','processing','global')
+    msAnalogOutMass=0,0
+endif
+setgroup('msAnalogOutMass','processing','global')
+setprotect('msAnalogOutMass','set',32768+16+65536,'global')
+
+
+exists('msAnalogOutExpr','parameter','global'):$e
+if (not $e) then
+    create('msAnalogOutExpr','string','global')
+    setgroup('msAnalogOutExpr','processing','global')
+    msAnalogOutExpr='',''
+endif
+setgroup('msAnalogOutExpr','processing','global')
+setprotect('msAnalogOutExpr','set',32768+16+65536,'global')
+
+
+exists('msAnalogOutGain','parameter','global'):$e
+if (not $e) then
+    create('msAnalogOutGain','real','global')
+    setgroup('msAnalogOutGain','processing','global')
+    msAnalogOutGain=1,1
+endif
+setgroup('msAnalogOutGain','processing','global')
+setprotect('msAnalogOutGain','set',32768+16+65536,'global')
+
+
+exists('msQ1MassStart','parameter','global'):$e
+if (not $e) then
+    create('msQ1MassStart','string','global')
+    setgroup('msQ1MassStart','processing','global')
+    msQ1MassStart='','','','','','','','','',''
+endif
+setgroup('msQ1MassStart','processing','global')
+setprotect('msQ1MassStart','set',32768+16+65536,'global')
+
+
+exists('msQ1MassEnd','parameter','global'):$e
+if (not $e) then
+    create('msQ1MassEnd','string','global')
+    setgroup('msQ1MassEnd','processing','global')
+    msQ1MassEnd='','','','','','','','','',''
+endif
+setgroup('msQ1MassEnd','processing','global')
+setprotect('msQ1MassEnd','set',32768+16+65536,'global')
+
+
+exists('msQ3MassStart','parameter','global'):$e
+if (not $e) then
+    create('msQ3MassStart','string','global')
+    setgroup('msQ3MassStart','processing','global')
+    msQ3MassStart='','','','','','','','','',''
+endif
+setgroup('msQ3MassStart','processing','global')
+setprotect('msQ3MassStart','set',32768+16+65536,'global')
+
+
+exists('msQ3MassEnd','parameter','global'):$e
+if (not $e) then
+    create('msQ3MassEnd','string','global')
+    setgroup('msQ3MassEnd','processing','global')
+    msQ3MassEnd='','','','','','','','','',''
+endif
+setgroup('msQ3MassEnd','processing','global')
+setprotect('msQ3MassEnd','set',32768+16+65536,'global')
+
+
+exists('msCollisionEnergy','parameter','global'):$e
+if (not $e) then
+    create('msCollisionEnergy','string','global')
+    setgroup('msCollisionEnergy','processing','global')
+    msCollisionEnergy='','','','','','','','','',''
+endif
+setgroup('msCollisionEnergy','processing','global')
+setprotect('msCollisionEnergy','set',32768+16+65536,'global')
+
+
+exists('msIonizationMode','parameter','global'):$e
+if (not $e) then
+    create('msIonizationMode','string','global')
+    msIonizationMode='ESI'
+endif
+setgroup('msIonizationMode','processing','global')
+setprotect('msIonizationMode','set',32768+16+65536,'global')
+setenumeral('msIonizationMode',4,'ESI','esi','APCI','apci','global')
+
+
+exists('msPolarity','parameter','global'):$e
+if (not $e) then
+    create('msPolarity','string','global')
+    msPolarity='+'
+endif
+setgroup('msPolarity','processing','global')
+setprotect('msPolarity','set',32768+16+65536,'global')
+
+
+exists('msCentroidMode','parameter','global'):$e
+if (not $e) then
+    create('msCentroidMode','string','global')
+    msCentroidMode='y'
+endif
+setgroup('msCentroidMode','processing','global')
+setprotect('msCentroidMode','set',32768+16+65536,'global')
+
+
+exists('msScanTime','parameter','global'):$e
+if (not $e) then
+    create('msScanTime','real','global')
+    msScanTime=0.25
+endif
+setgroup('msScanTime','processing','global')
+setprotect('msScanTime','set',32768+16+65536,'global')
+setlimit('msScanTime', 60, 0, 0, 'global')
+
+
+exists('msSimWidth','parameter','global'):$e
+if (not $e) then
+    create('msSimWidth','real','global')
+    msSimWidth=0.7
+endif
+setgroup('msSimWidth','processing','global')
+setprotect('msSimWidth','set',32768+16+65536,'global')
+setlimit('msSimWidth', 5, 0.3, 0, 'global')
+
+
+exists('msDetectorVoltage','parameter','global'):$e
+if (not $e) then
+    create('msDetectorVoltage','real','global')
+    msDetectorVoltage=1200
+endif
+setgroup('msDetectorVoltage','processing','global')
+setprotect('msDetectorVoltage','set',32768+16+65536,'global')
+setlimit('msDetectorVoltage', 2000, 0, 0, 'global')
+
+
+exists('msCapillaryVoltage','parameter','global'):$e
+if (not $e) then
+    create('msCapillaryVoltage','real','global')
+    msCapillaryVoltage=100
+endif
+setgroup('msCapillaryVoltage','processing','global')
+setprotect('msCapillaryVoltage','set',32768+16+65536,'global')
+setlimit('msCapillaryVoltage', 300, -300, 0, 'global')
+
+
+exists('msCidGasOn','parameter','global'):$e
+if (not $e) then
+    create('msCidGasOn','string','global')
+    msCidGasOn='n'
+endif
+setgroup('msCidGasOn','processing','global')
+setprotect('msCidGasOn','set',32768+16+65536,'global')
+
+
+exists('msCurrentMethod','parameter','global'):$e
+if (not $e) then
+    create('msCurrentMethod','string','global')
+    msCurrentMethod=''
+endif
+setgroup('msCurrentMethod','processing','global')
+setprotect('msCurrentMethod','set',32768+16+65536,'global')
+
+
+//
+// A space-separated list of parameters making up an MS method
+//
+exists('msMethodParameters','parameter','global'):$e
+if (not $e) then
+    create('msMethodParameters','string','global')
+endif
+setgroup('msMethodParameters','processing','global')
+setprotect('msMethodParameters','set',32768+16+65536,'global')
+$pars='msCidGasOn msCapillaryVoltage msDetectorVoltage'
+$pars=$pars+' msScanTime msPolarity'
+$pars=$pars+' msQ1MassStart msQ1MassEnd msQ3MassStart msQ3MassEnd'
+$pars=$pars+' msCollisionEnergy msQ1PeakWidth msQ3PeakWidth'
+msMethodParameters=$pars
+
+
+//
+// A space-separated list of parameters making up an MS mode
+//
+exists('msModeParameters','parameter','global'):$e
+if (not $e) then
+    create('msModeParameters','string','global')
+endif
+setgroup('msModeParameters','processing','global')
+setprotect('msModeParameters','set',32768+16+65536,'global')
+msModeParameters='msCentroidMode msSimWidth msIonizationMode'
+
+
+exists('msTuneMass','parameter','global'):$e
+if (not $e) then
+    create('msTuneMass','real','global')
+    msTuneMass=100
+endif
+setgroup('msTuneMass','processing','global')
+setprotect('msTuneMass','set',32768+16+65536,'global')
+
+
+exists('msTuneFile','parameter','global'):$e
+if (not $e) then
+    create('msTuneFile','string','global')
+    msTuneFile=''
+endif
+setgroup('msTuneFile','processing','global')
+setprotect('msTuneFile','set',32768+16+65536,'global')
+
+
+exists('msQ1PeakWidth','parameter','global'):$e
+if (not $e) then
+    create('msQ1PeakWidth','string','global')
+endif
+setgroup('msQ1PeakWidth','processing','global')
+setprotect('msQ1PeakWidth','set',32768+16+65536,'global')
+
+
+exists('msQ3PeakWidth','parameter','global'):$e
+if (not $e) then
+    create('msQ3PeakWidth','string','global')
+endif
+setgroup('msQ3PeakWidth','processing','global')
+setprotect('msQ3PeakWidth','set',32768+16+65536,'global')
+
+
+exists('msStatusCidGas','parameter','global'):$e
+if (not $e) then
+    create('msStatusCidGas','string','global')
+endif
+setgroup('msStatusCidGas','processing','global')
+setprotect('msStatusCidGas','set',32768+16+65536,'global')
+
+
+exists('MSflag','parameter','global'):$e
+if ($e) then
+    destroy('MSflag','global')
+endif
+//if (not $e) then
+//    create('MSflag','string','global')
+//    MSflag='y'
+//endif
+//setgroup('MSflag','processing','global')
+//setprotect('MSflag','set',32768+16+65536,'global')
+
+
+exists('msStatusUpdates','parameter','global'):$e
+if (not $e) then
+    create('msStatusUpdates','string','global')
+    msStatusUpdates='y'
+endif
+setgroup('msStatusUpdates','processing','global')
+setprotect('msStatusUpdates','set',32768+16+65536,'global')
+
+
+exists('msLogin','parameter','global'):$e
+if (not $e) then
+    create('msLogin','string','global')
+    msLogin='peon'
+endif
+setgroup('msLogin','processing','global')
+setprotect('msLogin','set',32768+16+65536,'global')
+
+
+exists('msPasswd','parameter','global'):$e
+if (not $e) then
+    create('msPasswd','string','global')
+    msPasswd=''
+endif
+setgroup('msPasswd','processing','global')
+setprotect('msPasswd','set',32768+16+65536,'global')
+
+
+exists('msSyncDelay','parameter','global'):$e
+if (not $e) then
+    create('msSyncDelay','real','global')
+    msSyncDelay=3
+endif
+setgroup('msSyncDelay','processing','global')
+setprotect('msSyncDelay','set',32768+16+65536,'global')
+
+write('line3','LC Parameters Updated')

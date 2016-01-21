@@ -1,0 +1,860 @@
+"macro vjclipboardQ"
+
+$dum='' $devnull=''
+$infodir=userdir+'/persistence/'+$0
+exists($infodir,'directory'):$infodirex
+if ($infodirex=0) then mkdir('-p',$infodir):$dum endif
+$cfile=$infodir+'/'+operator+'_info'
+$text=$infodir+'/text'
+$loctmpdir=$infodir+'/loctmpdir'
+
+$xmldir=userdir+'/templates/vnmrj/interface'
+exists($xmldir,'directory'):$tvidirex
+if ($tvidirex=0) then mkdir('-p',$xmldir):$dum endif
+$xmlname=operator+'_'+$0
+$xml=$xmldir+'/'+$xmlname
+
+
+IF ($1 = 'copy') THEN
+
+    if (autodir='') then return endif
+    TrayClipBoard=''
+
+    $opok=0
+    operights('editsubmittedstudy'):$opok
+    if ($opok<0.5) then
+        write('error','%s does not have permission to copy and paste studies',operator)
+	vnmrjcmd('edit tray')
+        return
+    endif
+
+    $loc=''
+    substr($4,1):$loc
+    if ($loc = '0') or ($loc='') then vnmrjcmd('edit tray') return endif
+
+    $rack='' $zone=''
+    substr($2,1):$rack
+    substr($3,1):$zone
+
+    if (traymax <> 96) and (traymax<>768) then
+   	$rack='' $zone=''
+    endif
+
+"***Where to get info****"
+    strstr(autodir,'studytray'):$enter
+    if ($enter) then
+	substr(autodir,'dirname'):$dir
+	substr($dir,'dirname'):$dir,$file
+    else
+  	$dir=autodir
+  	$file='enterQ'
+    endif
+
+    $status='' $who='' $samplename='' $locdir=''
+    $autofile=$dir+'/'+$file
+    checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+    if ($status='') or ($samplename='ReFeReNCe') then vnmrjcmd('edit tray') return endif
+
+    TrayClipBoard=$autofile,$loc,$zone,$rack
+    TrayClipBoard[5]='','','',''
+    rm('-rf',$loctmpdir):$dum
+
+    vnmrjcmd('edit tray')
+    return
+
+ENDIF
+
+IF ($1='show') or ($1='confirm') THEN
+
+    $cz=size('TrayClipBoard')
+    if ($cz<8) then return endif
+    if (TrayClipBoard[1]='') or (TrayClipBoard[2]='') then return endif
+
+"***Where to get info****"
+    $autofile=TrayClipBoard[1]
+    $loc=TrayClipBoard[2] $zone=TrayClipBoard[3] $rack=TrayClipBoard[4]
+
+    substr($autofile,'dirname'):$dir,$file
+
+    $status='' $who='' $samplename='' $locdir=''
+    $autofile=$dir+'/'+$file
+    checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+
+// create a new clipboard locdir that will be used by the paste section
+    rm('-rf',$loctmpdir):$dum
+    copy('-r',$autofile+'.macdir/'+$locdir,$loctmpdir):$dum
+
+// Now look for any completed nodes for the same study in that autodir
+    $sampleglobal=$loctmpdir+'/day/sampleglobal'
+    fread('','usertree')
+    fread($sampleglobal,'usertree')
+    $a='' getvalue('archivedir','usertree'):$a
+    $s='' getvalue('sample','usertree'):$s
+    fread('','usertree')
+    $Fnode='' $Fpath='' $Ftot=0
+    if ($a<>'') and ($s<>'') then
+	$as=$a+'/'+$s+'/'
+	$tmp=$infodir+'/'+operator+'_tmp'
+	write('reset',$tmp)
+	shell('(cat '+$autofile+'.macdir/expfidlog | grep "'+$as+'" > '+$tmp+')'):$devnull
+	readfile($tmp,'$Fnode','$Fpath','','local'):$Ftot
+	rm('-f',$tmp):$dum
+    endif
+    if ($Ftot>0.5) then
+        $ttd=0 $ttn=0
+        $tmp=$infodir+'/'+operator+'_tmp'
+// Get the list of day and night nodes in this location
+    	$Dnode='' $Nnode='' $s1=''
+    	readfile($loctmpdir+'/day/EXPLIST','$Dnode','$s1','','local')
+    	readfile($loctmpdir+'/night/LONGLIST','$Nnode','$s1','','local')
+	$i=$Ftot 
+	repeat
+	    write('reset',$tmp)
+	    teststr('Dnodes',$Fnode[$i],'local'):$isin
+	    if not ($isin) then
+		teststr('Nnodes',$Fnode[$i],'local'):$isin
+	    endif
+	    if not ($isin) then
+		$line=''
+		shell('(cat '+$as+'dirinfo/macdir/EXPLIST | grep \'^'+$Fnode[$i]+'\')'):$line
+		if ($line<>'') then
+		    $t=0 $st='' substr($line,2):$st
+		    format($st,'isreal'):$real 
+		    if ($real) then 
+			format($st,'lower'):$t $ttd=$ttd+$t 
+		    	write('file',$tmp,'%s',$line)
+		    	shell('(cat '+$loctmpdir+'/day/EXPLIST >> '+$tmp+')'):$devnull
+		    	copy($tmp,$loctmpdir+'/day/EXPLIST'):$dum
+                    	copy($tmp,$loctmpdir+'/night/EXPLIST'):$dum
+		    	shell('cp '+$as+'dirinfo/macdir/maclib_attic/'+$Fnode[$i]+'* '+$loctmpdir+'/day'):$devnull
+		    	readfile($loctmpdir+'/day/EXPLIST','$Dnode','$s1','','local')
+		    endif
+		else
+                    shell('(cat '+$as+'dirinfo/macdir/EXPLIST | grep \'^'+$Fnode[$i]+'\')'):$line
+                    if ($line<>'') then
+                    	$t=0 $st='' substr($line,2):$st
+                    	format($st,'isreal'):$real 
+                    	if ($real) then 
+                            format($st,'lower'):$t $ttn=$ttn+$t 
+                    	    write('file',$tmp,'%s',$line)
+                    	    shell('(cat '+$loctmpdir+'/night/LONGLIST >> '+$tmp+')'):$devnull
+                    	    copy($tmp,$loctmpdir+'/day/LONGLIST'):$dum
+                    	    copy($tmp,$loctmpdir+'/night/EXPLIST'):$dum
+                    	    shell('cp '+$as+'dirinfo/macdir/maclib_attic/'+$Fnode[$i]+'* '+$loctmpdir+'/night'):$devnull
+                    	    readfile($loctmpdir+'/night/LONGIST','$Nnode','$s1','','local')
+			endif
+		    endif
+		endif
+	    endif
+	    $i=$i-1
+	until $i < 1
+	rm('-f',$tmp):$dum
+	$P=0 $D=0 $N=0
+	readTtimeQ($loctmpdir+'/day'):$P,$D,$N
+	$D=$D+$ttd $N=$N+$ttn
+	writeTtimeQ($loctmpdir+'/day',$P,$D,$N)
+	writeTtimeQ($loctmpdir+'/night',$P,$D,$N)
+    endif
+
+   
+// Clear all other parameters from the clipboard
+    $tmppar=TrayClipBoard
+    $tmpsize=size('$tmppar')
+    if ($tmpsize<8) then
+        $i=$tmpsize+1
+        repeat
+           $tmppar[$i]=''
+           $i=$i+1
+        until $i > 8
+    endif
+    TrayClipBoard=''
+    $i=1
+    repeat
+        TrayClipBoard[$i]=$tmppar[$i]
+	$i=$i+1
+    until $i > 8
+// Samplename is always added
+    TrayClipBoard[9]='samplename',$samplename
+
+// Get the list of day and night queues in this location
+    $e='' $s1='' $n=''
+    $tmp=$infodir+'/'+operator+'_tmp'
+    write('reset',$tmp)
+    shell('(cat '+$loctmpdir+'/day/EXPLIST | awk \'{print $3}\' > '+$tmp+')'):$devnull
+    readfile($tmp,'$e','$s1','','local')
+    array2string($e):$e
+    write('reset',$tmp)
+    shell('(cat '+$loctmpdir+'/night/LONGLIST | awk \'{print $3}\' > '+$tmp+')'):$devnull
+    readfile($tmp,'$n','$s1','','local')
+    array2string($n):$n
+    rm('-f',$tmp):$dum
+
+//  Get the total day and night time for this location
+    $P=0 $D=0 $N=0
+    $dt='' $nt=''
+    readTtimeQ($loctmpdir+'/day'):$P,$D,$N
+
+//  Add changetime to the total time
+    getadminfo('samplechangetime'):$changetime
+//    getPreAcqTime:$changetime
+    if ($D-$changetime>0) then
+	formattime($D-$changetime):$dt
+    endif
+    if ($N-$changetime>0) then
+	formattime($N-$changetime):$nt
+    endif
+
+//  Get solvent from the sampleinfo file
+    $solvent=''
+    $sampinfo=$loctmpdir+'/day/sampleinfo'
+    exists($sampinfo,'file'):$sfex
+    if ($sfex) then
+	$s1='' $s2=''
+	readfile($sampinfo,'$s1','$s2','SOLVENT','local')
+	teststr('$s1','SOLVENT:','local'):$sok
+	if ($sok) then $solvent=$s2[$sok] endif
+    endif
+
+// Get the template and reqparval parameters from the sampleTags
+    $sampleglobal=$loctmpdir+'/sampleglobal'
+
+//  First get the list of template and reqparval parameter list
+    $par1='' $par2='' $par3=''
+    listtmpltpars($sampleglobal):$par2
+    $par3=$par2
+//    module('list','reqparval'):$par1
+//    string2array($par1):$par1
+//    $par3=$par1,$par2
+//    $par3size=size('$par3')
+//    if ($par3[1]<>'') and ($par3size>1) then
+//        sort($par3,'u'):$index,$par3
+//    endif
+
+// Exclude certain parameters from the list
+    $exclude='samplename','pslabel','explabel','seqfil','tn','dn','solvent','userdir','loc','vrack','vzone','vloc','studyowner'
+    $es=size('$exclude')
+    $i=1
+    repeat
+        $is=0
+        teststr('$par3',$exclude[$i],'local'):$is
+        if ($is) then $par3[$is]='' endif
+        $i=$i+1
+    until $i > $es
+
+// Exclude non-string parameters
+// Exclude parameters not in the sampletags of the clipboard
+    fread('','usertree')
+    fread($sampleglobal,'usertree')  // read the sampletags into usetree
+    $par3size=size('$par3')
+    $i=1
+    repeat
+	if ($par3[$i]<>'') then
+	    exists($par3[$i],'parameter','usertree'):$pex
+	    if ($pex=0) then $par3[$i]=''
+	    else
+		if not typeof($par3[$i]) then $par3[$i]='' endif
+	    endif
+	endif
+	$i=$i+1
+    until $i > $par3size
+    array2array($par3):$par3
+
+//  Get the values from the sampletags (now in usertree)
+    $par3size=size('$par3')
+    if ($par3[1]='') then $par3size=0 endif
+    $par4=''
+    if ($par3size) then
+	$i=1 $j=1
+	repeat
+	    $par4[$j]=$par3[$i],''
+	    getvalue($par3[$i],'usertree'):$par4[$j+1]
+	    $i=$i+1
+	    $j=$j+2
+	until $i > $par3size
+    endif
+// Get text information from usertree
+    write('reset',$text)
+    getvalue('text_string','size','usertree'):$tssize
+    if ($tssize>0) then
+        $i=1
+        repeat
+            $line=''
+            getvalue('text_string',$i,'usertree'):$line
+            write('file',$text,'%s',$line)
+            $i=$i+1
+        until $i > $tssize
+    endif
+
+    fread('','usertree')  // clear usertree
+
+// Now add solvent
+    TrayClipBoard[11]='solvent',$solvent
+//  studyowner can be changed (as option) to
+//  current operator value.  The following scenarios apply:
+//  (i) a study originally owned by A can be copy/paste by operator A 
+//      No change of studyowner is allowed nor an option provided
+//  (ii) a study originally owned by A can be copy/paste by operator B
+//      The studyowner can either be left as A or changed to B,
+//      but cannot be changed to C. In otherwords operator B can
+//      copy/paste on behalf of A (the original owner of the study, 
+//	if allowed by operights) or on behalf of him/herself 
+//	(current operator), but not on behalf of C (third operator)
+
+    $studyowner=$who
+    TrayClipBoard[13]='studyowner',$studyowner
+
+// Now add all other parameters to clipboard
+    TrayClipBoard[15]=$par4
+// Now build the xml file
+
+    write('reset',$cfile)
+    $autoname='' substr($dir,'basename'):$autoname
+    write('file',$cfile,'-------------------------------------------')
+    write('file',$cfile,'Study in clipboard originated from :')
+    write('file',$cfile,'-------------------------------------------')
+    if ($file='enterQ') then 
+    	write('file',$cfile,'  AutomationRun\t:  %s',$autoname)
+    else
+	write('file',$cfile,'  AutomationFile\t:  %s',$autoname)
+    endif
+    write('file',$cfile,'  Location\t\t:  %s',$loc)
+    if (traymax=96) or (traymax=768) then
+	write('file',$cfile,'  Zone\t\t:  %s',$zone)
+	wrtie('file',$cfile,'  Rack\t\t:  %s',$rack)
+    endif
+    write('file',$cfile,'  StudyOwner\t\t:  %s',$who)
+    write('file',$cfile,'  SampleName\t\t:  %s',$samplename)
+    write('file',$cfile,'  Solvent\t\t:  %s',$solvent)
+    write('file',$cfile,'  StudyStatus\t\t:  %s',$status)
+    write('file',$cfile,'  DayQ\t\t:  %s',$e)
+    write('file',$cfile,'  NightQ\t\t:  %s',$n)
+    write('file',$cfile,'  DayQ time\t\t:  %s',$dt)
+    write('file',$cfile,'  NightQ time\t\t:  %s',$nt)
+    write('file',$cfile,'-------------------------------------------')
+
+    $xml=$xml+$1+'.xml'
+    write('reset',$xml)
+    $x=620 $y=270
+    $parsize=size('TrayClipBoard')
+    if ($1='confirm') then
+	$y=$y+50
+	if ($parsize>13) then
+	    $y=$y+(25*($parsize-12)/2)
+	endif
+//	$y=$y+25	// Solvent change turned OFF
+	if operator<>$studyowner then
+	    $y=$y+25
+	endif
+	$y=$y+100
+    endif
+
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="%s" element="groups" type="acquisition" >',$0)
+
+    write('file',$xml,'  <group size="%d %d"',$x+20,$y+25)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="None"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="%s"',$0)
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+    write('file',$xml,'    <textfile loc="10 10" size="%d 265"',$x)
+    write('file',$xml,'      style="PlainText"')
+    write('file',$xml,'      vq="userdir operator autodir"')
+    write('file',$xml,'      set="$VALUE=\'%s\'"',$cfile)
+    write('file',$xml,'      editable="no"')
+    write('file',$xml,'      wrap="no"')
+    write('file',$xml,'      />')
+
+    $y1=285
+    if ($1='confirm') then
+	write('file',$xml,'    <label loc="15 %d" size="%d 20"',$y1,$x)
+	write('file',$xml,'      style="Label1"')
+	write('file',$xml,'	 justify="Left"')
+	write('file',$xml,'	 label="Update parameter values (optional):"')
+	write('file',$xml,'      />')
+
+	$y1=$y1+25
+        write('file',$xml,'    <label loc="50 %d" size="190 20"',$y1)
+        write('file',$xml,'      style="Label1"')
+        write('file',$xml,'      justify="Right"')
+        write('file',$xml,'      label="Samplename"')
+        write('file',$xml,'      />')
+        write('file',$xml,'    <entry loc="250 %d" size="300 20"',$y1)
+        write('file',$xml,'      style="PlainText"')
+	write('file',$xml,'      vq="TrayClipBoard"')
+        write('file',$xml,'      vc="TrayClipBoard[10]=\'$VALUE\'"')
+	write('file',$xml,'      set="$VALUE=TrayClipBoard[10]"')
+        write('file',$xml,'      />')
+
+// Solvent change turned OFF
+
+//	$y1=$y1+25
+//        write('file',$xml,'    <label loc="50 %d" size="190 20"',$y1)
+//        write('file',$xml,'      style="Label1"')
+//        write('file',$xml,'      justify="Right"')
+//        write('file',$xml,'      label="Solvent"')
+//        write('file',$xml,'      />')
+//        write('file',$xml,'    <filemenu loc="250 %d" size="300 20"',$y1)
+//        write('file',$xml,'      style="PlainText"')
+//        write('file',$xml,'      vq="TrayClipBoard"')
+//	write('file',$xml,'	 vq2="TrayClipBoard"')
+//        write('file',$xml,'      vc="TrayClipBoard[12]=\'$VALUE\'"')
+//        write('file',$xml,'      set="$VALUE=TrayClipBoard[12]"')
+//        write('file',$xml,'        file="$VALUE=systemdir+\'/solventlist\'"')
+//        write('file',$xml,'        type="file"')
+//        write('file',$xml,'        display="yes"')
+//        write('file',$xml,'      />')
+
+    if operator<>$studyowner then
+	$y1=$y1+25
+        write('file',$xml,'    <label loc="50 %d" size="190 20"',$y1)
+        write('file',$xml,'      style="Label1"')
+        write('file',$xml,'      justify="Right"')
+        write('file',$xml,'      label="Study Owner"')
+        write('file',$xml,'      />')
+        write('file',$xml,'    <radio loc="250 %d" size="140 20"',$y1)
+        write('file',$xml,'      style="PlainText"')
+        write('file',$xml,'      vq="TrayClipBoard"')
+        write('file',$xml,'      label="%s"',$studyowner)
+        write('file',$xml,'      vc="TrayClipBoard[14]=\'%s\'"',$studyowner)
+        write('file',$xml,'      vc2="TrayClipBoard[14]=\'%s\'"',operator)
+        write('file',$xml,'      set="$VALUE=(TrayClipBoard[14]=\'%s\')"',$studyowner)
+        write('file',$xml,'      />')
+        write('file',$xml,'    <radio loc="400 %d" size="140 20"',$y1)
+        write('file',$xml,'      style="PlainText"')
+        write('file',$xml,'      vq="TrayClipBoard"')
+        write('file',$xml,'      label="%s"',operator)
+        write('file',$xml,'      vc2="TrayClipBoard[14]=\'%s\'"',$studyowner)
+        write('file',$xml,'      vc="TrayClipBoard[14]=\'%s\'"',operator)
+        write('file',$xml,'      set="$VALUE=(TrayClipBoard[14]=\'%s\')"',operator)
+        write('file',$xml,'      />')
+    endif
+
+        $y1=$y1+25
+        write('file',$xml,'    <label loc="50 %d" size="190 20"',$y1)
+        write('file',$xml,'      style="Label1"')
+        write('file',$xml,'      justify="Right"')
+        write('file',$xml,'      label="Comments"')
+        write('file',$xml,'      />')
+        write('file',$xml,'     <textfile loc="250 %d" size="300 70"',$y1)
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="TrayClipBoard"')
+        write('file',$xml,'        set="$VALUE=\'%s\'"',$text)
+        write('file',$xml,'        editable="yes"')
+        write('file',$xml,'        wrap="no"')
+        write('file',$xml,'        />')
+
+	$y1=$y1+75
+	if ($parsize>15) then
+	    $i=15
+	    while $i < $parsize do
+        	write('file',$xml,'    <label loc="50 %d" size="190 20"',$y1)
+        	write('file',$xml,'      style="Label1"')
+        	write('file',$xml,'      justify="Right"')
+        	write('file',$xml,'      label="%s"',TrayClipBoard[$i])
+        	write('file',$xml,'      />')
+        	write('file',$xml,'    <entry loc="250 %d" size="300 20"',$y1)
+        	write('file',$xml,'      style="PlainText"')
+        	write('file',$xml,'      vq="TrayClipBoard"')
+       	 	write('file',$xml,'      vc="TrayClipBoard[%d]=\'$VALUE\'"',$i+1)
+        	write('file',$xml,'      set="$VALUE=TrayClipBoard[%d]"',$i+1)
+        	write('file',$xml,'      />')
+		$y1=$y1+25
+		$i=$i+2
+	    endwhile
+	endif
+    endif
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+
+	
+// Launch the modal popup
+    if ($1='confirm') then
+	$ok=$0+'(`pasteOK`)'
+    else
+    	$ok=$0+'(`cleanup`)'
+    endif
+    $cancel=$0+'(`cleanup`)'
+    $title='Study in clipboard'
+    if ($1='confirm') then
+	$autoname2='' substr(TrayClipBoard[5],'dirname'):$autoname2
+	substr($autoname2,'basename'):$autoname2
+	$title='Submit to Location # '+TrayClipBoard[6]+' in '+$autoname2+' [OK?]'
+    endif
+        $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+                \'file:'+$xml+'\',
+                \'rebuild:yes\',
+                \'pnewupdate:true\',
+                \'ok:'+$ok+'\',
+                \'cancel:'+$cancel+'\',
+                \'title: "'+$title+'"\')'
+        exec($vjcmd)
+
+    return
+
+ENDIF
+
+
+IF ($1='paste') THEN
+
+    $opok=0
+    operights('editsubmittedstudy'):$opok
+    if ($opok<0.5) then
+	write('error','%s does not have permission to copy and paste studies',operator)
+	return
+    endif
+
+    $loc='' 
+    substr($4,1):$loc
+    if ($loc = '0') or ($loc='') then return endif
+
+    $rack='' $zone=''
+    substr($2,1):$rack
+    substr($3,1):$zone
+
+    if (traymax <> 96) and (traymax<>768) then
+        $rack='' $zone=''
+    endif
+   
+    $cz=size('TrayClipBoard')
+    if ($cz<4) then return endif
+    if (TrayClipBoard[1]='') or (TrayClipBoard[2]='') then return endif
+    
+"***Where to get info****"
+    strstr(autodir,'studytray'):$enter
+    if ($enter) then
+	substr(autodir,'dirname'):$dir
+	substr($dir,'dirname'):$dir,$file
+    else
+        if (autodir<>cpautodir) then
+            write('error','Current tray display is not current automation directory')
+            return
+        endif
+        $dir=autodir
+        $file='enterQ'
+    endif
+    $msopt='no'
+    getadminfo('multisubmit'):$msopt
+
+    $status='' $who='' $samplename='' $locdir=''
+    $autofile=$dir+'/'+$file
+    checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+    if ($samplename='ReFeReNCe') then
+	write('error','location is a reference location')
+	return
+    endif
+    if (($status='Active') or ($status='preScan')) and ($msopt<>'yes') then
+	write('error','location %s is Active',$loc)
+	return
+    endif
+
+        $reuseerror='no'
+        getadminfo('reuseerrorloc'):$reuseerror
+        $reusecompleted='yes'
+        getadminfo('reusecompletedloc'):$reusecompleted
+        $accept='Complete'
+        if ($reusecompleted='no') then $accept='' endif
+        if ($reuseerror='yes') then $accept=$accept,'Error' endif
+
+	$locok=1
+	if ($status<>'') and ($status<>'Empty') then
+	    teststr('$accept',$status,'local'):$locok
+	endif
+	if ($msopt='yes') then $locok=1 endif
+	if ($locok=0) then
+	    write('error','Location %s status is %s - another submission not allowed',$loc,$status)
+	    return
+	endif
+
+    $s='' $w=''
+    checklocstatus(TrayClipBoard[1],TrayClipBoard[2],TrayClipBoard[3],TrayClipBoard[4]):$s,$w
+    if ($w<>operator) and (operator<>owner) then
+	$opok=0
+	operights('editallopstudies'):$opok
+	if ($opok=0) then
+	    write('error','study in clipboard is owned by %s.  %s does not have permission to copy',$w,operator)
+	endif
+    endif
+
+    TrayClipBoard[5]=$autofile
+    TrayClipBoard[6]=$loc
+    TrayClipBoard[7]=$zone
+    TrayClipBoard[8]=$rack
+    vjclipboardQ('confirm')
+    
+ENDIF
+
+IF ($1='pasteOK') THEN
+
+    $autofile=TrayClipBoard[1],TrayClipBoard[5]
+    $loc=TrayClipBoard[2],TrayClipBoard[6]
+    $zone=TrayClipBoard[3],TrayClipBoard[7]
+    $rack=TrayClipBoard[4],TrayClipBoard[8]
+    if (traymax <> 96) and (traymax<>768) then
+        $rack='','' $zone='',''
+    endif
+
+    $subtray='',''
+    if (traymax=96) or (traymax=768) then
+	$subtray[1]='/RACK'+$rack[1]+'ZONE'+$zone[1]
+        $subtray[2]='/RACK'+$rack[2]+'ZONE'+$zone[2]
+    endif
+
+    substr($autofile[2],'dirname'):$dir,$file
+
+    checklocstatus($autofile[1],$loc[1],$zone[1],$rack[1]):$status,$who,$samplename,$locdir
+    if ($locdir='') then return endif
+
+//    $origdir=$autofile[1]+'.macdir/'+$locdir
+    $origdir=$loctmpdir
+    $p=0 $d=0 $n=0
+    readTtimeQ($origdir+'/day'):$p,$d,$n
+//    getPreAcqTime:$changetime
+//    $stime=0 $ltime=0
+//    if ($d>0) then $stime=$d+$changetime endif
+//    if ($n>0) then $ltime=$n+$changetime endif
+    checktime($autofile[2],$d,'day'):$ok1,$whenday
+    checktime($autofile[2],$n,'night'):$ok2,$whennight
+
+    $ok3=1
+    $arg2=$d,$n
+    if ($d=0) then $arg3[1]=0 else $arg3[1]=1 endif
+    if ($n=0) then $arg3[2]=0 else $arg3[2]=1 endif
+    checkSampleTimeLimit($autofile[2],$arg2,$arg3):$ok3
+
+    if ($ok1=0) or ($ok2=0) or ($ok3=0) then
+        write('error','Not enough time for this study')
+	return
+    endif
+
+    $newdir=''
+    Svfname($autofile[2]+'.macdir/loc'+$loc[2]+'_%R3%',''):$newdir
+    $newlocdir='' substr($newdir,'basename'):$newlocdir
+    copy('-r',$origdir,$newdir):$dum
+    shell('chmod g+rw -R '+$newdir):$devnull
+    rm('-rf',$newdir+'/xmldir'):$dum
+    $sdir1=$autofile[1]+'.macdir/studytray'+$subtray[1]
+    $sdir2=$autofile[2]+'.macdir/studytray'+$subtray[2]
+    copy('-r',$sdir1+'/loc'+$loc[1],$sdir2+'/loc'+$loc[2]):$dum
+    shell('chmod g+rw -R '+$sdir2+'/loc'+$loc[2]):$devnull
+    $autostudies=$dir+'/autostudies'
+    $studypath=$file+'.macdir/studytray'+$subtray[2]+'/loc'+$loc[2]
+    shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+    if ($isthere=0) then
+	write('file',$autostudies,'%s',$studypath)
+    endif
+
+    $night=0 shell('(cat '+$newdir+'/night/LONGLIST | grep -wc Queued)'):$night
+    $day=0 shell('(cat '+$newdir+'/day/EXPLIST | grep -wc Queued)'):$day
+
+    fsave(curexp+'/'+$0,'current')
+    fread($sdir2+'/loc'+$loc[2]+'/studypar')
+    fread($newdir+'/sampleglobal')
+    text_string='' $x=1
+    $done=0 $key=$text
+    while $done<0.5 do
+	$line=''
+	lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+	if ($ret<1.5) then $done=1 else
+	    text_string[$x]=$line
+	    $x=$x+1
+	endif
+    endwhile
+    sample='' archivedir=''
+    samplename=TrayClipBoard[10]
+    studyowner=TrayClipBoard[14]
+    $samplename=samplename
+    $solvent=TrayClipBoard[12]
+    $studyowner=TrayClipBoard[14]
+    $par='sample','archivedir','samplename','studyowner'
+    $parsize=size('TrayClipBoard')
+//    if ($parsize>14) then
+	$i=15
+	while $i < $parsize do
+	    {TrayClipBoard[$i]} = TrayClipBoard[$i+1]
+	    $par=$par,TrayClipBoard[$i]
+	    $i=$i+2
+	endwhile
+//    endif
+    $par=$par,'text_string'
+    writeparam($newdir+'/sampleglobal','$par','current','add')
+    writeparam($newdir+'/day/sampleglobal','$par','current','add')
+    writeparam($newdir+'/night/sampleglobal','$par','current','add')
+    if ($night) then $newstatus='NightQueue' else $newstatus='Queued' endif
+    studystatus=$newstatus
+    writeparam($newdir+'/Studypar','studystatus')
+//    fread($sdir2+'/loc'+$loc[2]+'/studypar')
+    studyid_='loc'+$loc[2]
+    format($loc[2],'lower'):loc_
+    if (traymax=96) or (traymax=768) then
+	format($zone[2],'lower'):vzone_
+	format($rack[2],'lower'):vrack_
+    endif
+    locdir=$newlocdir
+    setvalue('operator_',studyowner,'current')
+    savestudypar($sdir2+'/loc'+$loc[2])
+    shell('chmod g+rw -R '+$sdir2+'/loc'+$loc[2]):$devnull
+    fread(curexp+'/'+$0)
+    rm('-f',curexp+'/'+$0):$dum
+
+    $dayinfo=$newdir+'/day/sampleinfo'
+    $nightinfo=$newdir+'/night/sampleinfo'
+
+// Edit day sampleinfo
+    $sedcmd='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$newlocdir+'\',\'day\')|\"'
+    shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    $sedcmd='sed -e \"s|priority||g\"'
+    shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    $sedcmd='sed -e \"s|SampleDir:.*|SampleDir: '+$samplename+'|\"'
+    shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    $sedcmd='sed -e \"s|USER:.*|USER: '+$studyowner+'|\"'
+    shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    $sedcmd='sed -e \"s|Solvent:.*|Solvent: '+$solvent+'|\"'
+    shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$loc[2]+`|'`
+    shell($sedcmd+` `+$dayinfo+` > `+$dayinfo+`1`):$devnull
+    rename($dayinfo+'1',$dayinfo):$dum
+
+    if (traymax = 96) or (traymax = 768) then
+         $sedcmd=`sed -e 's|RACK:.*|RACK: `+$rack[2]+`|'`
+         shell($sedcmd+` `+$dayinfo+` > `+$dayinfo+`1`):$devnull
+         rename($dayinfo+'1',$dayinfo):$dum
+
+         $sedcmd=`sed -e 's|ZONE:.*|ZONE: `+$zone[2]+`|'`
+         shell($sedcmd+` `+$dayinfo+` > `+$dayinfo+`1`):$devnull
+         rename($dayinfo+'1',$dayinfo):$dum
+    endif
+
+// Edit night sampleinfo
+    $sedcmd='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$newlocdir+'\',\'night\')|\"'
+    shell('('+$sedcmd+' '+$nightinfo+' > '+$nightinfo+'1)'):$devnull
+    rename($nightinfo+'1',$nightinfo):$dum
+
+    $sedcmd='sed -e \"s|SampleDir:.*|SampleDir: '+$samplename+'|\"'
+    shell('('+$sedcmd+' '+$nightinfo+' > '+$nightinfo+'1)'):$devnull
+    rename($nightinfo+'1',$nightinfo):$dum
+
+    $sedcmd='sed -e \"s|USER:.*|USER: '+$studyowner+'|\"'
+    shell('('+$sedcmd+' '+$nightinfo+' > '+$nightinfo+'1)'):$devnull
+    rename($nightinfo+'1',$nightinfo):$dum
+
+    $sedcmd='sed -e \"s|Solvent:.*|Solvent: '+$solvent+'|\"'
+    shell('('+$sedcmd+' '+$nightinfo+' > '+$nightinfo+'1)'):$devnull
+    rename($nightinfo+'1',$nightinfo):$dum
+
+    $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$loc[2]+`|'`
+    shell($sedcmd+` `+$nightinfo+` > `+$nightinfo+`1`):$devnull
+    rename($nightinfo+'1',$nightinfo):$dum
+
+    $longrun='n'
+    $AUTOGLOBAL=$autofile[2]+'.macdir/AUTOGLOBAL'
+    lookup('mfile',$AUTOGLOBAL,'seekcs','LONGRUN:','read',1):$longrun
+    $PT=0 $DT=0 $NT=0
+    readTtimeQ($autofile[2]+'.macdir'):$PT,$DT,$NT
+
+    if ($day) then
+    	shell('cat '+$dayinfo+' >> '+$autofile[2]):$devnull
+    endif
+    $DT=$DT+$d
+    if ($night) then
+	if ($longrun='y') then
+	    shell('cat '+$nightinfo+' >> '+$autofile[2]):$devnull
+	    $DT=$DT+$n
+	else
+	    shell('cat '+$nightinfo+' >> '+$autofile[2]+'.macdir/overniteQ'):$devnull
+	    $NT=$NT+$n
+	endif
+    endif
+    writeTtimeQ($autofile[2]+'.macdir',$PT,$DT,$NT)
+
+    updatestatus($dir,$loc[2],$newstatus,$zone[2],$rack[2])
+	$errorQ=$autofile[2]+'.macdir/cperrorQ'
+	$reuseQ=$autofile[2]+'.macdir/reuselocQ'
+        $samplocq='SAMPLE#: '+$loc[2]
+	exists($errorQ,'file'):$fex
+	if not $fex then write('reset',$errorQ) endif
+        shell('(cat '+$errorQ+' | grep -vw '+$samplocq+' > '+$errorQ+'1)'):$devnull
+        rename($errorQ+'1',$errorQ):$dum
+        shell('chmod g+rw '+$errorQ):$devnull
+	exists($reuseQ,'file'):$fex
+	if not $fex then write('reset',$reuseQ) endif
+        shell('(cat '+$reuseQ+' | grep -vw "'+$samplocq+'" > '+$reuseQ+'1)'):$devnull
+        rename($reuseQ+'1',$reuseQ):$dum
+        shell('chmod g+rw '+$reuseQ):$devnull
+	xmhaha_subautoSQ($dir,'',$newlocdir)
+	if ($day) or (($night) and ($longrun='y')) then
+		xmhaha_asx($dir,'enterQ')
+	endif
+	if (($night) and ($longrun='n')) then
+		xmhaha_asx($dir,'overniteQ')
+	endif
+
+    $file1='' substr($dir,'basename'):$file1
+    write('line3','Copy-n-paste from %s/%s',$file1,$locdir):$log
+    eventLog('Message',$log,$newlocdir)
+
+   "**** Restart Automation ****"
+        expactive:$isactive
+        if ($autofile[2] = autodir+'/enterQ') and ($isactive=0) then
+                pauseautomation
+                $autosaflag='none'
+                getautosaflag($autofile[2]):$autosaflag
+                if ($autosaflag='none') then
+                   autora
+                elseif ($autosaflag='service') then
+                   write('error','Automation is paused by Administrator for Service')
+                elseif ($autosaflag='admin') then
+                   write('error','Automation is paused by Administrator')
+                endif
+        endif
+
+	if sqdisplay='tray' then
+	    SQDisplay('refresh')
+	endif
+
+    vjclipboardQ('cleanup')
+    return
+
+ENDIF
+
+IF ($1='clearclipboard') THEN
+    TrayClipBoard=''
+    vnmrjcmd('edit tray')
+ENDIF
+IF ($1='cleanup') THEN
+// Clear all parameters from the clipboard
+    $tmppar=TrayClipBoard
+    $tmpsize=size('$tmppar')
+    if ($tmpsize<8) then
+	$i=$tmpsize+1
+	repeat
+	   $tmppar[$i]=''
+	   $i=$i+1
+	until $i > 8
+    endif
+    TrayClipBoard=''
+    $i=1
+    repeat
+        TrayClipBoard[$i]=$tmppar[$i]
+        $i=$i+1
+    until $i > 8
+    rm('-f',$cfile):$dum
+    rm('-f',$text):$dum
+    rm('-f',$xml+'.xml'):$dum
+    vnmrjcmd('edit tray')
+ENDIF

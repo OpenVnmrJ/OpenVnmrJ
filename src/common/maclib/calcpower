@@ -1,0 +1,120 @@
+"macro calcpower"
+"**********************************************************"
+"							   "
+"  calcpower  -  calculates power dissipation within the   "
+"		 matrix shim tube based on a complete set  "
+"		 of either channel DAC values or sense     "
+"		 resistor voltage measurements.            "
+"							   "
+"	usage:	calcpower(filename, <type>)		   "
+"							   "
+"		filename specifies the name of the file    "
+"		which contains either the channel DAC	   "
+"		values or the SRV measurements.  type is   "
+"		an optional argument which can take the    "
+"		values 'srv' or 'dac' with 'srv' being     "
+"		the default value.                         "
+"**********************************************************"
+
+$srv_data = 1	"SRV measurement is the default value"
+
+if ($# < 1) then
+   write('error','Name of SRV or DAC file must be the first argument')
+else
+   exists($1,'file'):$e
+   if ($e = 0) then
+      write('error','SRV or DAC file %s does not exist',$1)
+   endif
+
+   if ($# > 1) then
+      if ($2 = 'srv') then
+         $srv_data = 1
+      else
+         if ($2 = 'dac') then
+            $srv_data = 0
+         else
+            write('error','Only "srv" or "dac" are allowed second arguments')
+         endif
+      endif
+   endif
+endif
+
+$infofilename = '/vnmr/map/shimcfg/shim.rri.info'
+exists($infofilename,'file'):$e
+if ($e) then
+   $i = 0
+   $skip = 0
+   $notdone = 1
+   $ncommentlines = 0
+   $power = 0.0
+   $inline = ''
+   $firstchar = ''
+   lookup('file',$infofilename)
+   echo(' ')
+
+   while ($notdone) do
+      lookup('readline'):$inline
+      substr($inline,1,1):$firstchar
+      if ($firstchar = '#') then
+         $ncommentlines = $ncommentlines + 1
+      else
+         $notdone = 0
+      endif
+   endwhile
+   
+   while ($i < 4) do
+      $j = 0
+      $powerprt = 0.0
+
+      while ($j < 12) do
+         lookup('file',$infofilename)
+         $count = 0
+         while ($count < $ncommentlines) do
+            lookup('readline')
+            $count = $count + 1
+         endwhile
+
+         lookup('skip',3*$skip)
+         lookup('read',3):$srres,$coilres,$maxcur
+         lookup('file',$1)
+         lookup('skip',$skip)
+         lookup('read',1):$data
+
+         if ($srv_data) then				"SRV measurements"
+            $tmp = ($data/$srres)/1000.0
+         else						"channel DAC values"
+            $tmp = (($data - 32768)/32767) * ($maxcur/1000.0)
+         endif
+
+         $tmp = $tmp*$tmp*$coilres
+         $power = $power + $tmp
+         $powerprt = $powerprt + $tmp
+         $j = $j + 1
+         $skip = $skip + 1
+      endwhile
+
+      if ($i = 0) then
+         echo('Power = ',$powerprt,' Watts (axial)')
+      else
+         if ($i = 1) then
+            echo('Power = ',$powerprt,' Watts (x and y)')
+         else
+            if ($i = 2) then
+               echo('Power = ',$powerprt,' Watts (c2 and s2)')
+            else
+               if ($i = 3) then
+                  echo('Power = ',$powerprt,' Watts (c3 and s3)')
+               endif
+            endif
+         endif
+      endif
+
+      $i = $i + 1
+   endwhile
+
+   echo(' ')
+   echo('Total Power = ',$power,' Watts')
+   echo(' ')
+else
+   write('error','Matrix shim information file does not exist!')
+endif

@@ -1,0 +1,56 @@
+"macro trfunc"
+" convert to cm units....
+"  picture  --- horizontal trace = f1
+"               |<-------------------wcmax---V----------------->|"
+"               |--------|<------wc----------^------>|<--sc---->|"
+"               |       wp1+sp1			     sp1          "
+"               |       wp +sp 			     sp   trace=f2"
+""
+"               so x_screen-sc is how 
+"gin('B1_press'):$xm,$ym,$b1"
+$xm = wcmax - $1 
+$ym = $2
+$x0 = $xm  - sc      "valid.... $x0 is mm from right edge of image
+$y0 = wc2 - $ym  + sc2     "valid.
+$yoffset = 0
+" aspect_ratio = dy/dx "
+" aspect_ratio = delta_lro/delta_lpe - trace = f1"
+" aspect_ratio = delta_lpe/delta_lro - trace = f2"
+" delta_lpe = lpe*wp1/sw1 "
+" delta_lro = lro*wp/sw "
+" desired aspect ratio "
+$ar = lro*wp1*sw/(lpe*wp*sw1) "for trace = f1 invert "
+if (trace = 'f1') then
+  $wcx = wc
+  $wc2x = $wcx/$ar
+  if ($wc2x > wc2max) then
+    $wc2x = wc2
+    $wcx = $wc2x*$ar 
+  else
+  $yoffset = wc2-$wc2x
+  endif
+$x1 = sp1 + wp1*$x0/$wcx
+$y1 = sp + wp*($y0-$yoffset)/$wc2x
+$a1 = lpe/sw1
+$a2 = lro/sw
+else "trace = f2"
+  $ar = 1.0/$ar
+  $wcx = wc
+  $wc2x = $wcx/$ar
+  if ($wc2x > wc2max) then
+    $wc2x = wc2
+    $wcx = $wc2x*$ar 
+  else
+  $yoffset = wc2-$wc2x
+  endif
+$x1 = sp + wp*$x0/$wcx
+$y1 = sp1 + wp1*($y0-$yoffset)/$wc2x
+$a2 = lpe/sw1
+$a1 = lro/sw
+endif
+$x2 = $a1*$x1
+$y2 = $a2*$y1
+$n='OK'
+$u='OK'
+return($x2,$y2,$n,$u)
+

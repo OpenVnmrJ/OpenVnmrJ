@@ -1,0 +1,168 @@
+"macro hetero2D"
+"***************************************************************"
+"hetero2D -                                                     "
+"       This is an apptype macro for hetero2D experiments       "
+"       Changes here will be reflected in all experiments	"
+"		with this apptype				"
+"       All apptype macros have 4 sections                      "
+"         (setup, acquistion, process, display)                 "
+"       Changes over these default values should be done using  "
+"       pslabel_setup or wrtp feature                           "
+"       This macro is typically called by cpsetup               "
+"***************************************************************"
+
+"**********************************************"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for hetero2D"
+  module('combine','presat wet gradient par2D hetero2D',newmodules):newmodules
+  module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+if ($# < 2) then $2='' endif
+if ($2 <> $0) then $update=0 else $update=1 endif
+
+seqfil=seqfil
+if tn=dn then dn='C13' endif
+if (tn <> 'H1') and (tn <> 'F19') then dn='H1' endif
+if (numrfch > 2) then
+   if (dn2=dn) then
+	if (dn='N15') then dn2='C13' else dn2='N15' endif
+   endif
+endif
+refsource1='dfrq'
+
+setProbepars
+dm='nnn' dmm='ccg' d2=0
+if (dn='H1') then dmm='ccw' endif
+		"Decoupler is safely turned OFF"
+		"Individual experiments should turn them ON via"
+		"rtx or wrtp"
+
+setdecpars
+
+  " If any character in the wet or satmode parameter is set to y "
+  " wet/satmode parameter is reset to y (single character).  "
+  " They should be corrected to appropriate multicharacter value"
+  " by wrtp or pslabel_setup macro "
+
+strstr(wet,'y'):$iswet
+if ($iswet) then wet='y' else wet='n' endif
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='y' else satmode='n' endif
+  "purge cycle is set to 2.  If prgcycle of 4 is needed, it"
+  "  should be set by rtx feature for individual experiment"
+prgpw=pw90 prgcycle=2
+
+sspul=PFGflg
+ss=32 ni=128 pw=pw90
+if (at > 0.15) then at=0.15 endif
+if (np > 4096) then np=4096 endif
+sw=sw
+        "If needed, phase will be reset by rtx or pslabel_setup macro"
+phase=1,2
+
+if (tn='H1') and (dn='C13') then
+   mult=2 jfilter='y'
+else
+   mult=0 jfilter='n'
+endif
+
+        "setup default F1 spectral width"
+        "sw1 will be, if needed, reset by rtx of F1SW parameter"
+        "        or pslabel_setup macro"
+	" Note that sw1 is protected if oldapptype=apptype"
+    if (dn='C13') then
+        setsw1(dn,160,-10)
+        module('isthere','Dch_adiabatic'):$isadiabatic
+        isrfwg('dn'):$rfwg
+        if ($rfwg) and ($isadiabatic) then
+                setsw1(dn,190,-10)
+        endif
+    elseif (dn='N15') then
+	setN15sw('sw1')
+    elseif (dn='H1') then
+        setsw1(dn,10,0)
+    else
+        setsw1(dn,100,-100)
+    endif
+
+"****************************************************************************"
+"*******The following section is done only if oldapptype <> apptype **********"
+
+if ($update=0) then
+  if (wet='y') then satmode='n' endif
+  satdly=1 d1=1
+
+   fixgrd(10):gzlvlE
+   gtE=0.002
+   EDratio=sfrq/dfrq
+   if (tn = 'H1') then
+  	getparam('gHratio',dn):EDratio
+   elseif (dn = 'H1') then
+  	$EDratio=1/EDratio
+  	getparam('gHratio',dn):$EDratio
+  	EDratio=1/$EDratio
+   endif
+
+   nullflg=PFGflg
+   if PFGflg='y' then null=0 else null=0.35 endif
+   j1xh=146
+   if (dn='N15') then j1xh=90 endif
+   jnxh=8
+   j1min=130 j1max=165 jnmin=5 jnmax=8
+endif
+
+"****************************************************************************"
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+refsource1='dfrq'
+proc='ft' fpmult='n'
+pmode='full'
+f1coef='1 0 0 0 0 0 -1 0'
+        "f1coef will be, if needed, reset by rtx or pslabel_setup macro"
+fn=np fn1=2k 
+ph ph1 
+setLP1
+gaussian
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+if ($# < 2) then $2='' endif
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+plt2Darg
+format(plt2Darg[2],'lower'):$level
+format(plt2Darg[3],'lower'):$space
+if ($level<20) then plt2Darg[2]='20' endif
+if ($space>1.3) then plt2Darg[3]='1.3' endif
+
+axis='pd' trace='f2'
+wp1=sw1 full
+rp1=0 lp1=0
+ai
+if ($0<>$2) or (wds='') or (procdim<2) then
+   th=2 vs2d=200
+endif
+intmod='off'
+if (mult < 1.5) then plt2Darg[1]='pos' endif
+
+ENDIF
+"**********************************************"

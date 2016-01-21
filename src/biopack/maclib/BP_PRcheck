@@ -1,0 +1,97 @@
+"macro BP_PRcheck"
+"BP_PRcheck:$lowestnimaxNH,$lowestnimaxtilt"
+" A macro to determine smallest nimax permissible"
+
+ substr(seqfil,1,4):$type if $type='PR42' then $1=PRvar1 $2=PRvar2 endif
+                         if $type='PR43' then $1=PRvar1 endif
+$dummy=''
+phase=1,2,3,4 phase2=1,2
+if (PR_nTilts=0) then
+ banner('Number of Planes not Specified. Set to 20. Use Menu to Specify')
+ PR_nTilts=20
+ if ($type='PR42') then
+  return($dummy,$dummy,$dummy,$dummy)
+ else
+  return($dummy)
+ endif
+
+else
+ format(PR_nTilts,1,0):s1
+ if ($type='PR42') then
+  PR_arrayname1='PR_angles1_'+s1
+  PR_arrayname2='PR_angles2_'+s1
+  "get nimax for NH and other two orthogonal planes"
+  BP_PRcalcnimax:$nimax1,$dummy,$ni2max,$dummy,$ni3max,$dummy,$tilt 
+  $lowestnimax1=$nimax1
+  $lowestni2max=$ni2max
+  $lowestni3max=$ni3max
+  $lowestnimaxtilt=1000
+" echo('') echo($nimax1) echo($ni2max) echo($ni3max) echo($dummy) "
+  if (PR_skipPlanes='y') then
+   PR_nN=4   
+   repeat
+    {$1}={PR_arrayname1}[PR_nN]   
+    {$2}={PR_arrayname2}[PR_nN]
+    BP_PRcalcnimax:$nimax1,$dummy,$ni2max,$dummy,$ni3max,$dummy,$nimaxtilt  
+    if (($nimax1<$lowestnimax1) or ($nimax1=$lowestnimax1)) then
+     $lowestnimax1=$nimax1
+    endif
+    if (($ni2max<$lowestni2max) or ($ni2max=$lowestni2max)) then
+     $lowestni2max=$ni2max
+    endif
+    if (($ni3max<$lowestni3max) or ($ni3max=$lowestni3max)) then
+     $lowestni3max=$ni3max
+    endif
+    if (($nimaxtilt<$lowestnimaxtilt) or ($nimaxtilt=$lowestnimaxtilt)) then 
+     $lowestnimaxtilt=$nimaxtilt 
+    endif
+    echo('')
+    echo($lowestnimax1)
+    echo($lowestni2max)
+    echo($lowestni3max)
+    echo($lowestnimaxtilt) 
+    PR_nN=PR_nN+1
+   until PR_nN>PR_nTilts
+   return($lowestnimax1,$lowestni2max,$lowestni3max,$lowestnimaxtilt)
+  else
+   PR_nN=1   
+   repeat
+    {$1}={PR_arrayname1}[PR_nN]   
+    {$2}={PR_arrayname2}[PR_nN]
+    BP_PRcalcnimax:$nimax1,$dummy,$ni2max,$dummy,$ni3max,$dummy,$nimaxtilt  
+  echo($nimaxtilt) 
+    if (($nimax1<$lowestnimax1) or ($nimax1=$lowestnimax1)) then
+     $lowestnimax1=$nimax1
+    endif
+    if (($ni2max<$lowestni2max) or ($ni2max=$lowestni2max)) then
+     $lowestni2max=$ni2max
+    endif
+    if (($ni3max<$lowestni3max) or ($ni3max=$lowestni3max)) then
+     $lowestni3max=$ni3max
+    endif
+    if (($nimaxtilt<$lowestnimaxtilt) or ($nimaxtilt=$lowestnimaxtilt)) then 
+     $lowestnimaxtilt=$nimaxtilt 
+    endif
+    PR_nN=PR_nN+1
+    until PR_nN>PR_nTilts
+   echo('')
+    echo($lowestnimax1)
+    echo($lowestni2max)
+    echo($lowestni3max)
+    echo($lowestnimaxtilt)
+    return($lowestnimax1,$lowestni2max,$lowestni3max,$lowestnimaxtilt)
+  endif
+ endif
+ if ($type='PR43') then
+  PR_arrayname1='PR_angles1_'+s1
+  PR_nN=3   
+  $lowestni2max=1000
+  repeat
+   {$1}={PR_arrayname1}[PR_nN]   
+   BP_PRcalcnimax:$ni2max
+   if $ni2max<$lowestni2max then $lowestni2max=$ni2max endif
+   PR_nN=PR_nN+1
+  until PR_nN>PR_nTilts
+  return($lowestni2max)
+ endif
+endif

@@ -1,0 +1,77 @@
+"macro C13observe_BB"
+
+BPrtppar('C13observe_BB')
+setfrq reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+at=0.1
+fn=np np=fn fn=4*np 
+tn='C13' dn='H1'
+getparam('dofCO','C13'):tof
+getparam('tofH2O','H1'):dof
+dof=dof-.4*dfrq
+tof=tof-(174-100)*sfrq
+
+/*tpwr, pw are for 1H*/
+dm='yyy' dm2='nnn' 
+dpwr=tpwr-20 dmf=1e6/(10*pw) dmm='ccw' dres=1
+/*assign 13C values to tpwr/pw */
+pw=pwC tpwr=pwClvl
+
+/* spinecho needs no ddrtc */
+exists('ddrtc','parameter'):$e
+if $e then ddrtc=alfa endif
+
+phase_roll_comp='y'
+sw=330p p1=0 
+ref_pw90=pwC*compC ref_pwr=pwClvl
+wexp='' wnt='' spin='n'
+setref gain=30
+shp_pwr=tpwr
+$compN=1.0
+dpwr2=dpwr2+1
+phase_roll_comp='y'
+gpurge='nn'
+shape='CBIP'
+BPmakeBIP(shape,tpwr,pw):shp_pw  shp_pwr=tpwr
+
+//1H decoupling
+dseq='garp1' dres=1 
+getparam('compH','H1'):$comp
+getparam('tpwr','H1'):$tpwrH
+getparam('pw90','H1'):$pwH
+
+$pw_dec=5.0/(8.0*dfrq*4)*1e6  // garp1 dec covering 8ppm  
+
+ln($pwH*$comp/$pw_dec):r3 
+format($tpwrH+r3*8.68+0.5,0,0):dpwr    
+exp(($tpwrH-dpwr)*0.115):r1
+
+$pw_dec=$pwH*r1*$comp dmf=1.0e6/$pw_dec
+dmm='ccg'
+
+
+
+//generate 15N decoupling:
+
+  
+  
+	dm2='nny'
+        dn2='N15'
+	 
+
+	dseq2='N15_wurst_low'
+
+
+ 	pbox_rst opx(dseq2+'.DEC')	pboxpar('stepsize', '2.0')    pboxpar('adb', '2.0') 
+
+        $bw='' format(40*dfrq2,9,1):$bw
+
+	setwave('WURST40 ' +$bw +'/0.003' )   
+	cpx(pwN,pwNlvl)   
+	pboxget(dseq2+'.DEC'):dseq2,r1,dpwr2,r2,dres2,dmf2
+	dpwr2=dpwr2+1
+  d1=2
+
+  // for WURST
+
+man('C13observe_BB')
+

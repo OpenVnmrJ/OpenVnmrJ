@@ -1,0 +1,100 @@
+"macro CSinflate"
+"CSinflate - inflate under-sampled data. Eriks Kupce, Oxford, March 2011"
+
+$inflateND='' $fn1='' $fn2='' $log='' $cmd='' $str='' $inf = 1
+
+BPfindfile('inflateND'):$inflateND
+$fn1=curexp+'/procdir/rsw.fid'
+$fn2=curexp+'/procdir/inf.fid'
+$log=curexp+'/procdir/inflateND.log'
+
+exists(curexp+'/sampling.sch','file'):$e
+if not ($e) then   "try to fetch from .fid file "
+  if not (file='exp') then
+    $file=file
+    strstr($file,'.fid'):$r,$s1,$s2
+    if $s1='' then 
+      $file=$file+'.fid'
+    endif
+    $file=$file+'/sampling.sch'
+    exists($file,'file'):$e
+    if($e) then
+      copy($file,curexp+'/sampling.sch')
+    endif
+  endif
+endif
+
+if not ($e) then
+  write('error','CSinflate aborted :-o sampling schedule not found. ')
+  return (0)
+else
+  exists($fn1+'/sampling.sch','file'):$e
+  if not ($e) then
+    copy(curexp+'/sampling.sch',$fn1+'/sampling.sch')
+  endif
+endif
+
+exists('nimax','parameter'):$e
+if($e) then
+  if(ni > 1) and (nimax > ni) then   
+    $inf = 0                        "data already processed "
+  endif
+endif
+
+exists('ni2','parameter'):$e
+if($e) then
+  exists('ni2max','parameter'):$e
+  if($e) then
+    if(ni2>1) and (ni2max > ni2) then
+      $inf = 0
+    endif
+  endif
+endif
+
+exists('ni3','parameter'):$e
+if($e) then
+  exists('ni3max','parameter'):$e
+  if($e) then
+    if(ni3>1) and (ni3max > ni3) then
+      $inf = 0
+    endif
+  endif
+endif
+
+exists($fn2,'directory'):$e 
+if($e) or ($inf) then
+  write('error','data already inflated')
+  exists($fn2,'directory'):$e
+  if not ($e) then
+    exists($fn1,'directory'):$e
+    if($e) then
+      $cmd = 'cp -r '+$fn1+' '+$fn2
+      write('reset',$log)
+      write('file',$log,$cmd)
+      shell($cmd):$str
+      write('file',$log,$str)
+    else
+      return (0)
+    endif
+  endif
+  return (1)
+endif
+
+exists($fn2,'directory'):$e
+if($e) then
+  shell('rm -r ' + $fn2)
+endif
+
+$cmd = $inflateND +' ' + $fn1 + ' ' + $fn2 + ' >> ' + $log 
+write('reset',$log)
+write('file',$log,$cmd) 
+shell($cmd) 
+
+exists($fn2+'/fid','file'):$e
+if($e) then
+  write('line3','inflateND finished.')
+else
+  write('error','inflateND failed.')
+  dtext($log)
+endif
+

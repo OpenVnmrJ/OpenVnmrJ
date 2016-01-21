@@ -1,0 +1,66 @@
+"macro Mworkspace"
+"***************************************************************"
+" Mworkspace                                                    "
+"                                                               "
+" Write list of current experiments to text window.  Unlike     "
+" explib, which is not a Magical macro, explib2 does not list   "
+" the size of each experiment directory.                        "
+"                                                               "
+" Modified explib2 macro for new dg; initializes  global        "
+" parameters, exp_name exp_num.                                 "
+" New dg cannot handle arrays.                                  "
+"***************************************************************"
+
+"** Initialize variables **********************************"
+$curexp = ''
+$expstring = ''
+$expstring2 = ''
+$expname = ''
+$expfile = ''
+$text = ''
+$name = ''
+$expcounter=1
+$cmd = ''
+
+"** Clear text window and write descriptive header ********"
+flush
+clear
+
+"** Check the existence of each experiment ****************"
+repeat
+
+  format($expcounter,1,0):$expstring
+  format($expcounter,1,0):$expstring2
+  $expstring = 'exp'+$expstring
+  $expfile = userdir+'/'+$expstring
+  exists($expfile,'file'):$exists
+
+  "** initialize exp_name# variable **"
+  "** global variable created to work around new_dg limitations **"
+  $expname = 'exp_name'+$expstring2
+  exists($expname,'parameter','global'):$e
+  if ($e = 0) then
+    create($expname,'string','global')
+  endif
+    $name = ''
+    $cmd = $expname+' = \''+$name+'\''
+    exec($cmd)
+
+  "** If experiment directory exists, get sequence name *****"
+  "** and text entry. ***************************************"
+  if ($exists) then
+    lookup('file',$expfile+'/curpar','delimiter',' \t\n\r','seek','seqfil','readline')
+    lookup('read',2):$junk,$name
+    lookup('file',$expfile+'/text','readline'):$text
+
+    "** Write experiment and sequence name, and text **********"
+    length($name):$length
+    substr($name,2,$length-2):$name
+    format($expstring,'upper'):$expstring
+    $cmd = $expname+' = \''+$name+'\''
+    exec($cmd)
+  endif
+  $expcounter = $expcounter + 1
+
+until ($expcounter>9)
+

@@ -1,0 +1,46 @@
+"macro EVAL_lshp_3"
+"EVAL_lshp_3 -  macro to evaluate and report lineshape Plan B"
+
+$date=''
+shell('date'):$date
+
+exists($0,'maclib'):$e,$path
+substr($path,'dirname'):$maclibpath
+
+lb=.1 fn=128000 wft aph0 lb='n' wft f full intmod='off'
+peak:$dum,cr
+rl(0) nm vsadj(20000)
+sp=-125 wp=250 dc
+dres(cr,0.0011):$pt11
+
+$i=1
+rp=rp-1.2
+dres(cr,0.0011):$pt11
+$best1=1 $best=$pt11 $bestrp=rp
+
+$i=$i+1
+repeat
+	dres(cr,0.0011):$pt11
+	if ($pt11<$best) then $bestone=$i $bestrp=rp $best=$pt11  endif
+	rp=rp+.1
+	$i=$i+1
+	ds
+until ($i>30)
+
+rp=$bestrp
+dres(cr,0.5):$half
+dres(cr,0.0055):$pt55
+dres(cr,0.0011):$pt11
+$halfout=''
+$pt55out=''
+$pt11out=''
+format($half,0,2):$halfout
+format($pt55,0,2):$pt55out
+format($pt11,0,2):$pt11out
+
+write('line3','Lineshape is %2.2f over %2.2f over %3.3f',$half,$pt55,$pt11)
+
+axis='h' pl pscale 
+write('plotter',20,160,'Date = %s . Lineshape as follows:',$date)
+write('plotter',20,140,'Lineshape is %2.2f over %2.2f over %3.2f',$half,$pt55,$pt11)
+page('clear')  "do not plot for now"

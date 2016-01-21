@@ -1,0 +1,277 @@
+  gNhsqc2    gNhsqc.c for a two-channel machine
+    
+    WARNING: Be sure no C13 or other bandpass filters are in line between
+    the power amplifier and the N15 bandpass filter going to the N15 port
+    on the probe. This is particularly important when using a cold probe
+    that has a 13C preamp. C13 bandpass filters may be used inside the
+    magnet "leg". dn should be set to 'N15' and dof should be set to the
+    normal offset used for N15 (typically the dof2 value).
+
+    Connect the output of the broadband preamp or driver box to the
+    N15 bandpass filter and connect this to the N15 port on the probe.
+    Do not use "rfchannel" when using this sequence (it could be used
+    with gNhsqc.c and rfchannel='132', for example. You will need to
+    create rfchannel if this is desired (create('rfchannel','string')
+    rfchannel='132'))
+
+   
+    HSQC gradient sensitivity enhanced version for N15, with options for
+    TROSY on N15/H1 and for T1, T1rho, and T2 relaxation measurements of the
+    N15 nuclei. Coherence transfer gradients may be z or magic-angle (using 
+    triax probe).
+
+
+    Standard features include optional 13C sech/tanh pulse on CO and Ca to 
+    refocus 13C coupling during t1; 1D checks of N15 and H1 pulse times using 
+    calN and calH; one lobe sinc pulse to put H2O back along z (the sinc 
+    one-lobe is significantly more selective than gaussian, square, or seduce
+    90 pulses); preservation of H20 along z during t1 and the relaxation
+    delays; option of obtaining spectrum of only NH2 groups; 2H decoupling 
+    option for partially-deuterated (ie NHD) groups.
+  
+
+    pulse sequence: 	Kay, Keifer and Saarinen, JACS, 114, 10663 (1992)
+    sech/tanh pulse: 	Silver, Joseph and Hoult, JMR, 59, 347 (1984)
+			Bendall, JMR, A116, 46 (1995)
+    relaxation times:   Kay et al, JMR, 97, 359 (1992)
+			Farrow et al, Biochemistry, 33, 5984 (1994)
+    TROSY:		Weigelt, JACS, 120, 10778 (1998)
+     
+    Written by MRB, December 1997, starting with ghn_co from BioPack.
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1998, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+    Minor additions during 98, TROSY added Dec 98.   (Version Dec 1998).
+
+    Reversed roles of coherence transfer gradient behavior to flip
+    last gradient(gt1/10) instead of first(gt1) as function of phase.
+i   Results in better water suppression(N.Murali,July 2004).
+
+    Improved water suppression in 2D can be obtained by setting gzlvl0, gzlvl3 
+    and gzlvl5 to zero, particularly in cryogenic probes.
+
+    ************************************************************************************
+                         Dealing with Radiation Damping
+
+    Use at very high magnetic fields (>600 MHz) and/or with cryogenically-cooled probes
+    can present unique problems arising from fast radiation damping. Theoretically-
+    calculated power levels may be incorrect. For this reason, fine power control is
+    present prior to H2O-selective shaped pulses.
+
+    The amplitude of the flipback pulse(s) (pwHs) is adjustable around
+    theoretical value (tpwrs). If tpwrsf_t < 4095.0 the value of tpwrs is increased 6db and
+    values of tpwrsf_t(_d,_n) of 2048 or so should give equivalent amplitude. Severe 
+    radiation damping( which happens during pwHs) can cause the optimal flip angle to differ
+    from 90 degrees, so fine power should be adjusted to a value to minimize the observed 
+    single-scan experiments (with ssfilter='n').
+
+       Added control of phase of flipback pulses via H2Osinc_t.RF 
+       (TROSY='n') and H2Osinc_n.RF/H2Osinc_d.RF (TROSY='y').
+
+       The flipdown pulse H2Osinc_n.RF has fine power adjustment tpwrsf_n.
+       The flipdown pulse H2Osinc_t.RF has fine power adjustment tpwrsf_t.
+       The flipdown pulse H2Osinc_d.RF has fine power adjustment tpwrsf_d.
+
+       The shaped pulses are automatically generated via the AutoCalibration process
+       in BioPack. They have internal phase corrections for optimal water suppression.
+       The tpwrsf_* values are determined in the AutoCalibration process and are
+       stored in the active probefile. The experiment setup macro "gNhsqc" retrieves
+       these values into the gNhsqc parameter set as part of the experiment setup.
+       (GG sept03)
+       NH-only option added. Eriks Kupce, May 2006
+    ************************************************************************************
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+    Set dm3='nyn', dmm2='cwc' for 2H decoupling using 4th channel
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give 90, -180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gNhsqc
+
+         
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for gNhsqc may be printed using:
+                                      "printon man('gNhsqc') printoff".
+             
+    2. Apply the setup macro "gNhsqc".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 100ppm, and N15 
+       frequency on the amide region (120 ppm).
+
+    4. CALIBRATION OF pw AND pwN:
+       calN and calH are multipliers of the first N15 and H1 90 degree pulses
+       in the sequence.  They can be used to calibrate the pulses using a 1D
+       spectrum.  Setting either calN or calH = 2.0 should give a S/N null (or 
+       small dispersion signals) corresponding to the pulses being set at 180
+       degrees.  Adjust pwN or pw, respectively, until this occurs.  An array
+       of calH or calN = 1.8, 2.0, 2.2 is also convenient to judge the null at
+       2.0.  calN and calH are automatically reset to 1 for 2D spectra if you   
+       forget to do so.  (Note that compH and compN can be calibrated using
+       calH and calN in an analogous way to compC as in point 6, gChsqc
+       manual).
+
+    5. CALIBRATION OF dof2:  
+       Set ni=ni2=0 and phase=phase2=1 and obtain a well=phased absorption mod
+       1D spectrum. Set d2=0.0001 and phase=1,2, sum the two resulting spectra
+       and display in exp5 with a 90 degree phase shift:
+       clradd select(1) spadd select(2) spadd jexp5 full rp=rp+90 ds   
+       dof2 will be in the middle of the NH region when the signals between
+       7.4 and 9ppm in the 1H spectrum are roughly balanced between +ve and
+       -ve signals.  Note that the same method with d2=0 should give a zero 
+       spectrum.  Don't forget to reset d2=0 when you have finished.
+
+    6. Splitting of resonances in the N15 dimension by C13 coupling in C13
+       enriched samples can be removed by setting C13refoc='y'.
+
+    7. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.  H2O is cycled
+       back to z as much as possible during t1, and during the relaxation
+       delays for the following relaxation time measurements.
+
+    8. T1 MEASUREMENTS OF NH GROUPS:
+       Implemented automatically by setting the flag T1='y'.  An array of 1D
+       spectra is obtained by arraying the relaxation time parameter,
+       relaxT, to a multiple of 10 milliseconds.  relaxT corresponds
+       exactly to the relaxation time of the N15 spins.  The method uses 180
+       degree H1 pulses every 5ms during relaxT as according to Kay et al.
+       An alternative method using waltz decoupling was tested and discarded.
+       It gave exactly the same results using alphalytic protease, but has 
+       the comparative disadvantage of delivering more H1 RF, so more heating.
+
+       2D spectra should be acquired in a separate run for each of the desired 
+       values of relaxT. (maxrelaxT as in point 10 is not used when T1='y'.)
+
+   10. T1rho MEASUREMENTS OF NH GROUPS:
+       Implemented by setting the flag T1rho='y' and arraying relaxT as above.
+       relaxT corresponds exactly to the relaxation time of the N15 spins.
+       Spin lock power is limited to 1.5 kHz for a 600 Mhz spectrometer as
+       this delivers about the same sample heating as the T2 method below.
+       Increasing this RF (by changing the number 1500 in the DECLARE AND LOAD  
+       VARIABLES section of gNhsqc.c) causes substantial sample or coil heating 
+       as indicated by deterioration of the lock signal).  Care should be taken
+       for relaxT times greater than 0.25 seconds, and times greater than
+       0.5 seconds are automatically psg_aborted.  Gives very similar results
+       to the T2 method as determined using alphalytic protease.  A dummy
+       period of spinlock RF is delivered at the beginning of each pulse
+       sequence to ensure constant average sample heating - the code
+       determines this from the maximum relaxT you have set in your array of 
+       relaxT. The spectrum at relaxT=0 may be erroneous because of insufficient
+       dephasing of unlocked spins.
+
+       2D spectra should be acquired in a separate run for each of the desired 
+       values of relaxT.  If T1rho measurements are to be made in different
+       experiments with different relaxTs as for 2D, including arrays of 
+       relaxT's, set the parameter maxrelaxT to the maximum relaxT you have
+       set in all experiments - this will ensure constant average sample
+       heating in all experiments.  maxrelaxT does not need to be set for a
+       single array in a single exp.
+
+   11. T2 MEASUREMENTS OF NH GROUPS:
+       Implemented by setting the flag T2='y' and arraying relaxT as above.
+       relaxT corresponds exactly to the relaxation time of the N15 spins.
+       As for T1rho, care should be taken for relaxT times greater than 0.25
+       seconds, and times greater than 0.5 seconds are automatically psg_aborted.
+       The method is according to Kay et al, with N15 180's every 625 us, and
+       H1 180's every 10 ms.  625us was used instead of approx 500us used by
+       Kay et al to reduce sample heating.  An alternative method using the
+       same no. of N15 and H1 pulses for all relaxT times (by decreasing the
+       625us delays to obtain short relaxT) to test whether large nos. of
+       pulses decreases S/N because of pulse imperfection, gave exactly
+       equivalent results for alphalytic protease, and was discarded.  Another
+       alternative, with waltz H1 decoupling and a single N15 180 at the middle
+       of relaxT (credited to Wagner et al by Kay et al), gave substantially
+       shorter apparent T2 times, and was discarded.    A dummy period of N15
+       180's is delivered at the beginning of each pulse sequence to ensure 
+       constant average sample heating.
+
+       2D spectra should be acquired in separate runs with maxrelaxT
+       set as for T1rho='y' in point 10.       
+
+   12. NH/NH2 GROUPS:
+       A spectrum of NH2 groups, with NH groups cancelled, can be obtained
+       with flag NH2only='y'.  This utilises a 1/2J (J=94Hz) period of NH 
+       J-coupling evolution added to t1 which cancels NH resonances and 
+       inverts NH2 resonances (normal INEPT behaviour).  A 180 degree phase
+       shift is added to a N15 90 pulse to provide positive NH2 signals.
+       The NH2 resonances will be smaller (say 80%) than when NH2only='n'.
+       The flag NHonly='y' gives only NH.
+
+   13. RELAXATION MEASUREMENTS OF NH2 GROUPS:
+       NH2 resonances are supressed for the methods described in points 9-11.
+       To obtain relaxation times of NH2 groups, set the flag NH2only='y' and
+       proceed as for points 9-11.  In these cases the 1/2J delays described
+       in points 8 and 12 are changed to 1/4J delays by the pulse sequence
+       code.  Although NH groups are completely cancelled in point 12, when 
+       measuring relaxation times NH groups appear at 50% intensity. 
+
+   14. The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+   15. 1/4J DELAY TIMES:
+       These are are determined from the NH coupling constant, JNH, listed in 
+       dg for possible change by the user. lambda is the 1/4J time for H1 NH 
+       coupling evolution, tNH is the 1/4J time for N15 NH coupling evolution.  
+       lambda is usually set a little lower than the theoretical time to 
+       minimise relaxation, but tNH should be as close to the theoretical time 
+       as possible.
+
+   16. TROSY and COUPLED 2D SPECTRA:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled quartet (high-field H1, low-field N15).  For
+       comparison, TROSY='n' and dm2='nnn' gives a 2D spectrum coupled in
+       both dimensions.  The TROSY spectrum retains the N15 magnetization as
+       well as the H1 magnetization and so gives a little more than 50% S/N
+       than decoupled HSQC for a small peptide.  For TROSY, H2O flipback is
+       maintained throughout t1 and t2 using two sinc one-lobe pulses (H2O is 
+       inverted for half of t1 for normal HSQC, ie TROSY='n' as described in 
+       point 7).  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the Varian phases are of
+       opposite sense to those in the Weigelt paper, ie swap y and -y.  The
+       same phases as written by Weigelt also work provided the +/- gzlvl1
+       signs for phase=1,2 are swapped to -/+, and the phase of one of the
+       first two H1 90 degree pulses is swapped to ensure that the N15
+       magnetization adds rather than subtracts.  The phase list used for
+       this sequence code is yet another equivalent which permits the least
+       change from the normal SE train in the BioPack sequences.
+       Relaxation time measurements have not yet been implemented for TROSY
+       spectra (requires customer demand !).
+
+   17. Radiation Damping:
+       At fields 600MHz and higher with high-Q probes, radiation damping is a
+       factor to be considered. Its primary effect is in the flipback pulse
+       calibration. Radiation damping causes a rotation back to the +Z axis
+       even without a flipback pulse. Hence, the pwHs pulse often needs to 
+       be reduced in its flip-angle. This can be accomplished by using the
+       parameter tpwrsf_t. If this value is less than 4095.0 the value of tpwrs
+       (calculated in the psg code) is increased by 6dB, thereby permitting
+       the value of tpwrsf_t to be optimized to obtain minimum H2O in the 
+       spectrum. The value of tpwrsf_t is typically lower than 2048 (half-maximum
+       to compensate for the extra 6dB in tpwrs). 
+
+
+       Added control of phase of flipback pulses via H2Osinc_t.RF after INEPT and
+       H2Osinc_d.RF in TROSY. These pulses are generated by Pbox in the
+       autocalibrate process and have internal small-angle phase corrections
+       for best solvent suppression.
+

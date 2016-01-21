@@ -1,0 +1,32 @@
+"macro xmenablepanel"
+"xmenablepanel - enable/disable parameter panel, used for acquire"
+
+if $#<1.5 then
+  $panel='Acquire'
+  $state='true' "true,false"
+else
+  $panel=$1
+  $state=$2
+endif
+
+$vp='' xm1('vp'):$vp
+
+$enable='true'
+if ($vp='current' or $vp='review') then
+  if ($state='false') then
+    exists('time_submitted','parameter'):$e
+    if ($e < 0.5) then
+      $enable='false'
+    else
+      if (time_submitted<>'') then
+        $enable='false'
+      endif
+    endif
+  endif
+endif
+
+if $enable='true' then
+  vnmrjcmd('enablepanel','true',$panel)
+else
+  vnmrjcmd('enablepanel','false',$panel)
+endif

@@ -1,0 +1,55 @@
+"macro setnseg"
+"*********************************************************************"
+"                                                                     "
+" setnseg: Macro to set number of segments and echo train length      "
+"                                                                     "
+"          setnseg('nseg') sets number of segments                    "
+"          setnseg('etl') sets echo train length                      "
+"                                                                     "
+"*********************************************************************"
+
+"Set default action to set number of segments"
+$action = 'nseg'
+
+if ($# > 0) then
+  $action = $1
+endif
+
+exists('nseg','parameter'):$e
+if ($e<0.5) then return endif
+
+create('nsegBak','real','current',1)
+
+if ($action = 'nseg') then
+  "Check nseg limits"
+  if (nseg < 1) then nseg=1 nsegBak=1 etl=nv "prep" setloop return endif
+  if (nseg > nv) then nseg=nv nsegBak=nv etl=1 "prep" setloop return endif
+  if (nseg = nsegBak) then return endif
+  $etl=etl
+  $seg=0
+  while (etl = $etl) do
+    nseg=nseg+$seg
+    etl=trunc(nv/nseg)
+    if (nv % nseg <> 0) then etl=etl+1 endif
+    if (nseg > nsegBak) then $seg=1 endif
+    if (nseg < nsegBak) then $seg=-1 endif
+  endwhile
+  if (nseg < nsegBak) then
+    nseg=trunc(nv/etl) 
+    if (nv % etl <> 0) then nseg=nseg+1 endif 
+  endif
+  nsegBak=nseg
+  setloop
+endif
+
+if ($action = 'etl') then
+  "Check etl limits"
+  if (etl < 1) then etl=1 endif
+  if (etl > nv) then etl=nv endif
+  nseg=trunc(nv/etl) 
+  if (nv % etl <> 0) then nseg=nseg+1 endif 
+  etl=trunc(nv/nseg)
+  if (nv % nseg <> 0) then etl=etl+1 endif
+  nsegBak=nseg
+  setloop
+endif

@@ -1,0 +1,236 @@
+"macro wetit"
+"wetit: a macro to make shaped pulses for wet"
+" Usage: wetit <( bandwidth | 'findfrq' | 'recalc' <, 'findfrq' | 'recalc' > )>"
+"   bandwidth is the excitation bandwidth of the WET pulses "
+"  'findfrq' - calculate frequencies and shapes "
+"  'recalc' - calculate shapes relative to the current tof and wetfrq "
+" Defaults are 120 Hz bandwidth and to do findfrq. "
+
+$action = 'findfrq'
+if (Console='mercury') then
+  $bw = 120
+else
+  $bw = 60
+endif
+exists('wetbw','parameter'):$e
+if $e then $bw=wetbw endif
+
+if ($# > 0.5) then
+  if (typeof('$1')) then
+    $action = $1
+    if ($# > 1.5) then
+      $bw = $2
+    endif
+  else
+    $bw = $1  $action = 'findfrq'
+  endif
+endif
+"$shape='seduce90'"
+$shape='seduce90_'
+
+IF ($action = 'findfrq') THEN
+
+  $center = sw/2
+  on('lb'):$lbon
+  if $lbon then 
+    $lb = lb 
+    if lb < 10 then lb = 10 endif
+  else
+    lb = 10
+  endif
+  wft('nods')
+
+  f dc
+  aph0:$res,$rp
+  // if aph0 fails, assume previous rp is okay
+  if ($res > 0.5) then
+    rp = $rp
+  endif
+  vsadj(100) th = 90
+  dsn(sp+wp-1,sp+wp-101):$sn
+  if $sn < 10 then
+    write('error','no peaks found to suppress!')
+    return
+  endif
+
+  $maxwetpeaks = 7
+  if (Console = 'mercury') then $maxwetpeaks = 3 endif
+  if (wetpeaks < 1) or (wetpeaks > $maxwetpeaks) then wetpeaks = 1 endif
+" wetpeaks: user-entered value for # of peaks to suppress "
+
+  $i=0
+  repeat 
+    $i=$i+1
+    nll:$count
+    if $count < wetpeaks then th = th/2 endif
+  until ($count>=wetpeaks or $i>20)
+  if ($i>20) then
+    write('error','not enough peaks found to suppress!')
+    return
+  endif
+
+  if ($count > wetpeaks) then
+" find the tallest 'wetpeaks' lines in the list "
+
+    sort('llamp','r'):$index
+
+  else
+" found just the requested number of lines; set indices "
+
+    $i = 1
+    repeat
+      $index[$i] = $i
+      $i = $i+1
+    until ($i > wetpeaks)
+  endif
+
+  setwetpar
+  wetfrq = 0
+
+  $i=1
+  repeat
+    $freq = llfrq[$index[$i]] - $center
+    wetfrq[$i] = $freq + tof
+    $i=$i+1
+  until ($i > wetpeaks)
+
+  wetit('recalc',$bw)
+
+  exists('wet','parameter'):$e
+  if ($e>0.5) then
+    wet='y'
+    if ($## = 0) then
+      dps
+    endif
+  endif
+
+  if $lbon then lb = $lb else lb = 1/at lb = 'n' endif
+
+ELSEIF ($action = 'recalc') THEN
+" calculate a new shape based on current tof & wetfrq "
+
+" Get info from probefile "
+  getparam('pw90',tn):pw90
+  getparam('tpwr',tn):tpwr
+  $cf = 1
+  getparam('tpwr_cf',tn):$cf
+  exists('ref_pwr','parameter'):$e
+  if ($e=0) then
+    create('ref_pwr','real')
+    setlimit('ref_pwr',63,0,1)
+  endif
+  exists('ref_pw90','parameter'):$e
+  if ($e=0) then
+    create('ref_pw90','real')
+  endif
+  ref_pwr=tpwr
+  ref_pw90=pw90*$cf
+
+//  write('line3','Making wetshape with bw=%g, ref_pwr=%g, and ref_pw90=%g.',$bw,ref_pwr,ref_pw90)
+
+  if (Console <> 'mercury') then
+
+    $nfreqs = size('wetfrq')
+    $nbw = size('$bw')
+    opx(wetshape)
+    $i = 1
+    repeat
+      if $i<=$nbw then $bwi=$bw[$i] endif
+      putwave($shape,$bwi,0,wetfrq[$i]-tof,0,0,90)
+      $i = $i+1
+    until ($i > $nfreqs)
+    cpx(ref_pw90,ref_pwr)
+    $name=wetshape+'.RF'
+    pbox_pwr($name):wetpwr
+    pbox_pw($name):pwwet
+"   wetfrq='n'"
+
+  else  " Console = 'mercury' "
+
+    $nfreqs = size('wetfrq')
+    $nbw = size('$bw')
+
+    wetshape1=wetshape+'_1'
+    opx(wetshape1)
+    $i = 1
+    repeat
+      if $i<=$nbw then $bwi=$bw[$i] endif
+      putwave($shape,$bwi,0,wetfrq[$i]-tof,0,0,81.4)
+      $i = $i+1
+    until ($i > $nfreqs)
+    cpx(ref_pw90,ref_pwr)
+    $name=wetshape1+'.RF'
+    pbox_pwr($name):wetpwr1
+    pbox_pw($name):pwwet1
+
+    wetshape2=wetshape+'_2'
+    opx(wetshape2)
+    $i = 1
+    repeat
+      if $i<=$nbw then $bwi=$bw[$i] endif
+      putwave($shape,$bwi,0,wetfrq[$i]-tof,0,0,101.4)
+      $i = $i+1
+    until ($i > $nfreqs)
+    cpx(ref_pw90,ref_pwr)
+    $name=wetshape2+'.RF'
+    pbox_pwr($name):wetpwr2
+    pbox_pw($name):pwwet2
+
+    wetshape3=wetshape+'_3'
+    opx(wetshape3)
+    $i = 1
+    repeat
+      if $i<=$nbw then $bwi=$bw[$i] endif
+      putwave($shape,$bwi,0,wetfrq[$i]-tof,0,0,69.3)
+      $i = $i+1
+    until ($i > $nfreqs)
+    cpx(ref_pw90,ref_pwr)
+    $name=wetshape3+'.RF'
+    pbox_pwr($name):wetpwr3
+    pbox_pw($name):pwwet3
+
+    wetshape4=wetshape+'_4'
+    opx(wetshape4)
+    $i = 1
+    repeat
+      if $i<=$nbw then $bwi=$bw[$i] endif
+      putwave($shape,$bwi,0,wetfrq[$i]-tof,0,0,161.0)
+      $i = $i+1
+    until ($i > $nfreqs)
+    cpx(ref_pw90,ref_pwr)
+    $name=wetshape4+'.RF'
+    pbox_pwr($name):wetpwr4
+    pbox_pw($name):pwwet4
+
+    wetpwr=wetpwr1
+    pwwet=pwwet1
+"   wetfrq='n'"
+
+  endif
+
+ELSEIF ($1 = 'minsw') THEN
+
+" assume cqminsw has already been run"
+" make sure wetfrq's are within the new sw"
+
+  sw = sw / 1.2
+  $swa = tof + sw/2
+  $swb = tof - sw/2
+  $nfreqs = size('wetfrq')
+
+  $i = 1
+  repeat
+    $frq = wetfrq[$i]
+    if ($frq > $swa) then
+      $swa = $frq + 0.1 * sw
+    elseif ($frq < $swb) then
+      $swb = $frq - 0.1 * sw
+    endif
+    $i = $i+1
+  until ($i > $nfreqs)
+
+  tof = ($swa + $swb) * 0.5
+  $sw = ($swa - $swb)
+  sw = $sw * 1.2
+
+ENDIF

@@ -1,0 +1,866 @@
+"macro AuNdec"
+
+$probe='' shell('basename '+probe):$probe
+
+exists('CALmethod','parameter'):$calex
+if ($calex) then $CALmethod=CALmethod else $CALmethod='oldcal' endif
+
+$bio=0    // Check for Bio-NMR referencing (liquid NH3)
+getrefcmpd('N15'):$ref
+if $ref='NH3 (liquid), ext.' then $bio=1 endif
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+IF ($CALmethod = 'oldcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+if ($# < 1) then $1 = 1 endif
+
+"********************************************************"
+
+IF ($1 = 1) THEN
+write('line3','AuNdec1')
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+explist=$explist
+
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw90
+pw=pw90
+
+seqfil='pwxcalib'
+exists('setvch','maclib'):$macex
+if ($macex) then
+  setvch('tn','dn')
+  numvch=2,2,0,0
+endif
+ds dm='nnn' dmm='ccc' pwxlvl=N15pwxlvl vp=wc2max/2
+dn='N15'
+f vsadj
+
+if solvent='dmso' then        // ID2 sample
+  setsw(0,9)
+  peak(7.95p,8.15p):$ht,cr
+  if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  wp=0.2p sp=7.95p
+  j1xh=90
+elseif solvent='d2o' then     // Autotest sample
+  peak(1.80p,2.2p):$ht,cr
+  setsw(0,3.8)
+  if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  wp=1p sp=1.4p
+  j1xh=2.8
+  lb=2 vs=vs*10
+else
+  write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+  return
+endif
+
+array('pwx',50,2,2)
+ai fn=8k at=.2 av sinebell vp=0
+wnt='wft(`acq`) select(1) vsadj(30) dssh dssl(`value`)'
+wexp='AuNdec(2)'
+alock='n' wshim='n' r1=1 r3=1
+exists('ddrtc','parameter'):$ddrtcex
+if ($ddrtcex) then ddrtc=alfa endif
+clear(2)
+au('wait','next') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+write('line3','AuNdec2')
+
+wft select(1)
+$counter=1
+$stop=0
+repeat
+  select($counter)
+ if ($stop < 4) then
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $minht = $ht $pwx=pwx[1] else
+     if $ht<$minht then $minht=$ht $pwx=pwx[$counter] else $stop=$stop+1 
+     endif
+  endif
+ endif
+  $counter=$counter+1
+until ($counter>arraydim)
+select(1) 
+if ($pwx > 2*N15pwx) then
+  if (r1 < 2) and (pwxlvl < 57) then
+    r1 = r1+1
+    pwxlvl=pwxlvl+6
+    au('next','wait') 
+    return
+  else
+    write('error','Autocalibration failed on second try - determine manually')
+    abort
+  endif
+endif
+
+ $factor = N15pwx/$pwx
+ ln($factor):$lnfactor
+ $pwxlvldiff = trunc(20*0.43429*$lnfactor)
+
+ if ((pwxlvl- $pwxlvldiff) > 63) then
+    $pwxlvldiff=pwxlvl-63
+ endif
+
+if ($pwx = N15pwx) then AuNdec(3,$pwx) return endif
+if ($pwx < N15pwx) then 
+  if (($pwxlvldiff <> 0) and (r3 < 2)) then
+   pwxlvl=pwxlvl-$pwxlvldiff
+   r3 = r3+1
+   au('next','wait')
+   return
+  else 
+   AuNdec(3,$pwx) return 
+  endif
+endif
+
+pwxlvl = pwxlvl - $pwxlvldiff
+if (N15pwx < 15) then
+ array('pwx',30,1,1)
+endif
+
+clear(2) 
+wexp='AuNdec(4)' au('next','wait') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+write('line3','AuNdec3')
+
+$pwx=$2
+sinebell av ds(1)
+array('pwx',31,0.7*$pwx,0.02*$pwx)
+clear(2) full
+da
+wexp='AuNdec(5)' 
+au('next','wait') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 4) THEN
+write('line3','AuNdec4')
+
+clear(2)
+sinebell wft select(1) av
+$counter=1
+$stop=0
+repeat
+  select($counter)
+ if ($stop < 4) then
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $minht = $ht $pwx=pwx[1] else
+     if $ht<$minht then $minht=$ht $pwx=pwx[$counter] else $stop=$stop+1
+     endif
+  endif
+ endif
+  $counter=$counter+1
+until ($counter>arraydim)
+select(1) 
+
+if (($pwx < N15pwx) or ($pwx = N15pwx)) then AuNdec(3,$pwx) return endif
+
+if (pwxlvl < 63) then
+ $factor = N15pwx/$pwx
+ ln($factor):$lnfactor
+ $pwxlvldiff = trunc(20*0.43429*$lnfactor)
+
+ $newpwxlvl = pwxlvl - $pwxlvldiff
+ if ($newpwxlvl <> pwxlvl) then 
+  wexp='AuNdec(4)' 
+  pwxlvl = $newpwxlvl
+  if (N15pwx < 15) then
+   array('pwx',30,1,1)
+  endif
+  clear(2)
+  au('next','wait')
+ else
+  pwxlvl=pwxlvl+1
+  AuNdec(3,$pwx) return 
+ endif
+
+else
+ AuNdec(3,$pwx)
+endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 5) THEN
+write('line3','AuNdec5')
+
+clear(2)
+sinebell wft select(1) av
+$counter=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $minht = $ht $pwx=pwx[1] else
+     if $ht<$minht then $minht=$ht $pwx=pwx[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+if ($pwx > N15pwx) then
+ if (pwxlvl < 63) then
+write('line3','pwx found to be %s, continue...',$pwx)
+  pwxlvl = pwxlvl+1
+  array('pwx',31,0.7*$pwx,0.02*$pwx)
+  au('wait','next')
+  return
+ endif
+endif
+
+$diff = pwx[2] - pwx[1]
+if ($diff > 0.25) then
+ array('pwx',31,$pwx-3,0.2)
+ au('wait','next')
+ return
+endif
+
+N15pwx=$pwx
+select(1)
+
+clear(2)
+pwxlvl=pwxlvl-12 $pwx=N15pwx*4
+array('pwx',41,0.5*$pwx,0.025*$pwx)
+clear(2) full
+da
+wexp='AuNdec(6)' 
+au('next','wait')  
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 6) THEN
+write('line3','AuNdec6')
+
+clear(2)
+sinebell wft select(1) av
+$counter=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $minht = $ht $pwx=pwx[1] else
+     if $ht<$minht then $minht=$ht $pwx=pwx[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+
+array('pwx',31,$pwx-6,0.4)
+wexp='AuNdec(7)'
+au('next','wait')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 7) THEN
+write('line3','AuNdec7')
+
+clear(2)
+sinebell wft select(1) av
+$counter=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $minht = $ht $pwx=pwx[1] else
+     if $ht<$minht then $minht=$ht $pwx=pwx[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+
+select(1) 
+$ref_pwx90=$pwx
+$ref_pwxlvl=pwxlvl
+$pwxlvl_cf = $pwx/4/N15pwx
+
+pwxlvl=pwxlvl+12
+pwx=N15pwx
+
+wnt='wft(`acq`) select(1) ph aph0 dssh dssl(`value`)' wexp='Autocalsave(`N15pwx`) pl(`all`) pltext pssl(`value`) page AuNdec(8)'
+$strpwx='' $strpwxlvl='' $strref_pwxlvl='' $strref_pwx90=''
+$strdmf='' $strdpwr='' $sdres='' $strpwxlvl_cf=''
+format(N15pwx,0,1):$strpwx
+format(pwxlvl,0,0):$strpwxlvl
+format($ref_pwxlvl,0,0):$strref_pwxlvl
+format($ref_pwx90,0,1):$strref_pwx90
+format($pwxlvl_cf,0,4):$strpwxlvl_cf
+setparams('pwx',$strpwx,'N15')
+setparams('pwxlvl',$strpwxlvl,'N15')
+setparams('pwxlvl_cf',$strpwxlvl_cf,'N15')
+
+
+$dmm=''
+AuNdec(9):$dmm
+
+format(dpwr,0,0):$strdpwr
+format(dmf,0,0):$strdmf
+format(dres,0,0):$sdres
+setparams('dmf',$strdmf,'N15')
+setparams('dpwr',$strdpwr,'N15')
+setparams('dseq',dseq,'N15')
+exists('decwave','parameter'):$decwaveex
+if ($decwaveex) then
+ addparams('decwave',decwave,'N15')
+endif
+setparams('dres',$sdres,'N15')
+setparams('dmm',$dmm,'N15')
+$text='N15 dec. 90 degree pw: '+$strpwx
+$atext='  at power level: '+$strpwxlvl
+$atext1 = '  compression factor: '+$strpwxlvl_cf
+atext($text)
+atext($atext)
+atext($atext1)
+$pwinc= trunc((pwx/6)+0.5)
+array('pwx',51,0,$pwinc)
+gaussian ph vp=wc2max/2-30
+wnt='wft(`acq`) select(1) vsadj(wc2max/3) aph dssh dssl(`value`,`reverse`)'
+if (pltopt = 'y') then
+  au('next','wait')
+else
+  wexp='Autocalsave(`N15pwx`) pl(`all`) pltext pssl(`value`,`reverse`) page'
+  Autocalsave('N15pwx','par')
+  AuNdec(8)
+endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 8) THEN
+write('line3','AuNdec8')
+
+select(1) ph
+seqfil='s2pul'
+pwx=N15pwx
+vp=0
+dm='nny' dmm='ccw' wp=600 sp=sp-250
+setdecpars
+wnt='wft(`acq`) select(1) ph aph0 vsadj(30) dssh dssl(`value`,`reverse`)'
+wexp='select(21) vsadj dssh dssl(`value`,`reverse`) Autocalsave(`N15dec_profile`) '
+$dof=dof+(125*dfrq)
+array('dof',51,$dof,-5*dfrq)
+at=.2 d1=2 gaussian
+$strdmf='' $strdpwr=''
+format(dpwr,0,0):$strdpwr
+
+getparam('pwxlvl_cf','N15'):$attcf
+getparam('pwx','N15'):$pwx
+getparam('pwxlvl','N15'):$pwxlvl
+exp(($pwxlvl-dpwr)*2.303/20):$mult
+$pwx=$pwx*$mult*$attcf
+format(250000/$pwx,0,0):$strdmf
+
+$file=archivedir+'/'+sample+'/H1ref'
+gettxt($file)
+$text=dseq+' N15 decoupling profile:'
+$atext='  +/- 125ppm from on-resonance'
+$atext0='    in 5ppm steps'
+$atext1='N15 dec. gammah2: '+$strdmf
+$atext2 ='   at power level: '+$strdpwr
+atext($text)
+atext($atext) atext($atext0) atext($atext1) atext($atext2)
+Autocalsave('N15dec_profile','par')
+Autocalnext
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 9) THEN
+write('line3','AuNdec9')
+
+$ampcf=1
+$shapefile=''
+$ref_pw90=pwx $ref_pwr=pwxlvl
+$ampcf=0
+getparam('pwxlvl_cf',dn):$ampcf
+if ($ampcf = 0) then $ampcf=1 endif
+$ref_pw90 = $ref_pw90*$ampcf
+$shapefile='W40_N15_'+$probe+'.DEC'
+
+$rfwg2=0
+isrfwg('dn'):$rfwg2
+
+if ($rfwg2) then
+ $decband=350*dfrq
+ $sdecband=''
+ format($decband,0,0):$sdecband
+ $wave='WURST40 0.0014/'+$sdecband
+ opx($shapefile)
+ setwave($wave)
+ cpx($ref_pw90,$ref_pwr)
+ pbox_pwr($shapefile):dpwr
+ pbox_dmf($shapefile):dmf
+ dpwr=dpwr+2
+ dseq='W40_N15_'+$probe
+ exists('decwave','parameter'):$decwaveex
+ if ($decwaveex) then
+   decwave='W40_N15_'+$probe
+ endif
+ dres=9
+ $dmm='p'
+ $dum=''
+ getProbePath(probe):$e,$ppath
+ strstr($ppath,'/probes/'):$ret,$appdir
+ shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/probes/'+$probe):$dum
+ if ($appdir<>userdir) then
+     exists($appdir+'/shapelib','directory'):$direx
+     if ($direx=0) then shell('mkdir '+$appdir+'/shapelib'):$dum endif
+     shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/shapelib'):$dum
+ endif
+
+else 
+
+  if ((Console='unity') or (Console='vxrs') or (Console='g2000')) then
+    $gammab2=80*dfrq 
+    $dmm='w'
+    dseq='waltz16'
+    exists('decwave','parameter'):$decwaveex
+    if ($decwaveex) then
+      decwave='w'
+    endif
+    dres=90
+  else
+    $gammab2=40*dfrq 
+    $dmm='g'
+    dseq='garp1'
+    exists('decwave','parameter'):$decwaveex
+    if ($decwaveex) then
+      decwave='g'
+    endif
+    dres=1
+  endif
+  if ($gammab2 > 4800) then
+   $gammab2 = 4800
+  endif
+  setpower($gammab2,dn):dpwr,$dmf90
+  dmf=1e6/$dmf90 dmfadj(dres)
+endif
+
+"if (Console = 'inova') or (Console = 'mercury') then "
+"	setpwx180ad('N15','create') "
+"endif "
+
+return($dmm)
+
+ENDIF
+
+"********************************************************"
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ELSEIF ($CALmethod = 'newcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+"macro AuNdec"
+
+"AuNdec: N15 decoupler Autocalibration macro "
+" options/arguments: "
+" (none) : initial setup "
+" 'pwxcal' : calculate/refine pwx;  save data when complete "
+" 'decset' : initial set up of decoupling calibration "
+" 'deccal' : process/save decoupling calibration result, continue "
+"	with remaining calibration(s) "
+
+"********************************************************"
+"  AuNdec_1 - Nitrogen decoupler Autocalibration setup   "
+"********************************************************"
+
+IF ($# < 1) then
+  "initial setup of N15 decoupler calibration "
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+dn='N15'
+setref
+f
+if solvent='dmso' then        // ID2 sample
+  setsw(0,9)
+  peak(7.95p,8.15p):$ht,cr wp=0.2p sp=7.95p
+  if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  j1xh=90
+elseif solvent='d2o' then     // Autotest sample
+  setsw(0,3.8)
+  peak(1.80p,2.2p):$ht,cr wp=1p sp=1.4p
+  if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  j1xh=2.8
+  lb=2 vs=vs*10
+else
+  write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+  return
+endif
+$thresh=0.9 $peaks=0
+explist=$explist
+
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw90
+getparam('pwxlvl','N15'):N15pwxlvl
+if N15pwxlvl<45 then N15pwxlvl=51 endif
+
+pw=pw90
+if pw=0 then
+  write('error','1H pw = 0 - Please run 1H autocalibration first!')
+  return
+endif
+
+seqfil='pwxcalib'
+exists('setvch','maclib'):$macex
+if ($macex) then
+  setvch('tn','dn')
+  numvch=2,2,0,0
+endif
+ph dm='nnn' dmm='ccc' pwxlvl=N15pwxlvl vp=wc2max/2
+
+$step = trunc(2*N15pwx + 0.5)/10
+array('pwx',15,0,$step)
+
+ai fn = 4*np 
+exists('ddrtc','parameter'):$ddrtcex
+if ($ddrtcex) then ddrtc=alfa endif
+wnt='wft(`acq`) select(1) aph0 phase(180) vsadj dssh dssl(`value`)'
+wexp='AuNdec(`pwxcal`)'
+alock='n' wshim='n' r1=1 r3=1
+clear(2)
+au('wait','next')
+return
+
+ELSEIF ($1 = 'pwxcal') then
+"********************************************************"
+"  AuNdec_2 - Nitrogen decoupler Autocalibration         "
+"  calculate/refine actual pwx value                     "
+"********************************************************"
+
+wft select(1) aph0 phase(180) vsadj thadj nll
+fp pw360cal:$pwx
+write('line3','pwx found to be %f',$pwx)
+if ($pwx < 1) then  " unreliable result! "
+    write('error','Autocalibration failed - determine manually')
+    abort
+endif
+
+if ($pwx > 2*N15pwx) then
+  if (pwxlvl < 56) then
+    pwxlvl=pwxlvl+6
+    write('line3','calibrating decoupler pulses at power %d',pwxlvl)
+    au('next','wait') 
+    return
+  else
+    write('error','Autocalibration failed - determine manually')
+    abort
+  endif
+endif
+
+ $pwxlvldiff=0
+ $factor = N15pwx/$pwx
+ ln($factor):$lnfactor
+ if ($lnfactor > 0.08) then 
+ "actual pwx < 92% of target, need (at least) 1 dB increase in pwxlvl"
+   $pwxlvldiff = trunc(20*0.43429*$lnfactor + 0.5)
+		"If $pwxlvldiff=1 then adjust it only once"
+		" The value of r1 is the flag: If r1=0 then it was"
+		" already adjusted by +/- 1dB, else set r1 to 0, so "
+		" this is the last time it will adjust the power by 1dB"
+	if ($pwxlvldiff=1) then
+	   if (r1=0) then $pwxlvldiff=0 else r1=0 endif
+	endif
+ elseif ($lnfactor < -0.08) then  
+ "actual pwx > 108% of target, need (at least) 1 dB decrease in pwxlvl"
+   $pwxlvldiff = trunc(20*0.43429*$lnfactor - 0.5)
+                "If $pwxlvldiff=-1 then adjust it only once"
+                " The value of r1 is the flag: If r1=0 then it was"
+                " already adjusted by +/- 1dB, else set r1 to 0, so "
+                " this is the last time it will adjust the power by 1dB"
+        if ($pwxlvldiff=-1) then
+           if (r1=0) then $pwxlvldiff=0 else r1=0 endif
+        endif
+ endif
+
+ if (1.02*N15pwx < $pwx) then   " The target is still NOT met"
+   if (pwxlvl < 63) then
+     if $pwxlvldiff = 0 then
+        $pwxlvldiff=-1
+     endif
+   endif
+ endif
+
+if (pwxlvl-$pwxlvldiff > 63) then $pwxlvldiff=pwxlvl-63 endif
+
+ if (r1=0) then $pwxlvldiff=0 endif
+ if ($pwxlvldiff) then
+   pwxlvl=pwxlvl-$pwxlvldiff
+   write('line3','calibrating decoupler pulses at power %d',pwxlvl)
+   au('next','wait')
+   return
+
+ else
+   $strpwx='' $strpwxlvl=''
+   
+   format($pwx,0,1):$strpwx
+   format(pwxlvl,0,0):$strpwxlvl
+   setparams('pwx',$strpwx,'N15')
+   setparams('pwxlvl',$strpwxlvl,'N15')
+
+   AuNdec('decset',$pwx)  "continue with dpwr/dmf/pwxlvl_cf calibrations"
+   return
+ endif
+
+ELSEIF ($1 = 'decset') then
+"*************************************************************"
+"  AuNdec_3 - Nitrogen decoupler Autocalibration              "
+"  set up N15 decoupling calibration (after pwx calibration)  "
+"*************************************************************"
+
+ $pwx=$2
+ pwxlvl=pwxlvl-12 $pwx=$pwx*4
+ $step = trunc(2*$pwx + 0.5)/10
+ array('pwx',21,0,$step)
+
+ wexp = 'AuNdec(`deccal`)'
+
+ au('next','wait')
+ return
+
+ELSEIF ($1 = 'deccal') then
+"*********************************************************"
+"  AuNdec_4 - Nitrogen decoupler Autocalibration          "
+"  process dpwr/dmf calibration spectra, act accordingly  "
+"*********************************************************"
+
+wft select(1) aph0 phase(180) vsadj thadj nll
+fp pw360cal:$pwx
+write('line3','pwx found to be %f',$pwx)
+if ($pwx < 1) then  " unreliable result! "
+    write('error','Autocalibration failed - determine manually')
+    abort
+endif
+
+getparam('pwx','N15'):$N15pwx
+$ref_pwx90=$pwx
+$ref_pwxlvl=pwxlvl
+$cf = $pwx/4/$N15pwx
+
+pwxlvl=pwxlvl+12
+pwx=$N15pwx
+
+$strcf = ''
+format($cf,0,3):$strcf
+setparams('pwxlvl_cf',$strcf,dn)
+
+AuNdec('dmfcalc')
+
+$explist=explist
+rt(archivedir+'/'+sample+'/H1ref')
+wft
+getparam('tpwr'):tpwr
+getparam('pw90'):pw90
+pw=pw90
+dn='N15'
+setdecpars
+setref
+f
+
+if solvent='dmso' then        // ID2 sample
+  setsw(0,9)
+  peak(7.95p,8.15p):$ht,cr
+  if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  wp=0.2p sp=7.95p
+  j1xh=90
+elseif solvent='d2o' then     // Autotest sample
+  peak(1.80p,2.2p):$ht,cr
+  setsw(0,3.8)
+  if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  wp=1p sp=1.4p
+  j1xh=2.8
+  lb=2 vs=vs*10
+endif
+//$maxpeak=1
+//$thresh=0.9 $peaks=0
+
+//repeat
+//  th=$thresh*$ht nll:$peaks
+//  $thresh=$thresh-0.1
+//until ($peaks > $maxpeak-1 or th=0)
+
+explist=$explist
+seqfil='pwxcalib'
+vp=wc2max/2
+wnt='wft(`acq`) select(1) vsadj ph aph0 dssh dssl(`value`)'
+
+$strpwxlvl='' $strpwx=''
+format(pwxlvl,0,0):$strpwxlvl
+format(pwx,0,1):$strpwx
+
+$text='N15 dec. 90 degree pw: '+$strpwx
+$atext='  at power level: '+$strpwxlvl
+$atext1 = '  compression factor: '+$strcf
+atext($text)
+atext($atext)
+atext($atext1)
+$pwinc= trunc((pwx/6)+0.5)
+array('pwx',50,$pwinc,$pwinc)
+gaussian ph
+exists('ddrtc','parameter'):$ddrtcex
+if ($ddrtcex) then ddrtc=alfa endif
+
+if (pltopt = 'y') then
+  if (solvent='dmso') then
+    wexp='Autocalsave(`N15pwx`):$dum pl(`all`) pltext pssl(`value`) page AuNdec(`profile`)'
+  else
+    wexp='Autocalsave(`N15pwx`):$dum pl(`all`) pltext pssl(`value`) page Autocalnext'
+    banner('Not running decoupling profile on Autotest sample:\\ 15N-Acetonitrile has long-range coupling only!')
+    write('line3','Not running dec. profile on Autotest sample: 15N-Acetonitrile has long-range coupling only!')
+    shell('sleep 2')
+  endif
+  au('next','wait')
+else
+  wexp='Autocalsave(`N15pwx`)'
+  Autocalsave('N15pwx','par')
+  Autocalnext
+endif
+"*******************************************************************"
+"  AuNdec_profile - Run decoupling bandwidth profile if pltopt='y'  "
+"*******************************************************************"
+
+ELSEIF ($1 = 'profile') THEN
+write('line3','doing profile')
+$explist=explist
+gHMQC
+explist=$explist
+ni=1 phase=1 nullflg='n' ss=2 array=''
+vp=0 dm='nny' dmm='ccp' //wp=600 sp=sp-250
+if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+wp=0.6p sp=7.65p nt=2  vp=16
+
+setdecpars
+wnt='wft(`acq`) select(1) ph aph0 vsadj(20) dssh dssl(`value`,`reverse`)'
+wexp='select(21) vsadj dssh dssl(`value`,`reverse`) Autocalsave(`N15dec_profile`) pl(`all`) pltext pssl(`value`,`reverse`) page Autocalnext'
+$dof=dof+(300*dfrq)
+array('dof',41,$dof,-15*dfrq)
+at=.2 d1=2 gaussian
+$strdmf='' $strdpwr=''
+format(dpwr,0,0):$strdpwr
+
+getparam('dpwr','N15'):dpwr
+getparam('dmf','N15'):dmf
+getparam('dseq','N15'):dseq
+getparam('dres','N15'):dres
+
+$file=archivedir+'/'+sample+'/H1ref'
+gettxt($file)
+$text=dseq+' N15 decoupling profile:'
+$atext='  +/- 200 ppm from on-resonance'
+$atext0='    in 10 ppm steps'
+$atext1='N15 dec. gammaH2: '+$strdmf
+$atext2 ='   at power level: '+$strdpwr
+atext($text)
+atext($atext) atext($atext0) atext($atext1) atext($atext2)
+Autocalsave('N15dec_profile','par')
+au('next','wait')
+
+"****************************************************************"
+ELSEIF ($1 = 'dmfcalc') THEN
+$ampcf=1
+$shapefile=''
+getparam('pwxlvl','N15'):$ref_pwr
+getparam('pwx','N15'):$ref_pw90
+getparam('pwxlvl_cf','N15'):$ampcf
+$ref_pw90 = $ref_pw90*$ampcf
+$shapefile='W40_N15_'+$probe+'.DEC'
+
+$rfwg2=0
+if Console='vnmrs' then $rfwg2=1 else isrfwg('dn'):$rfwg2 endif
+
+if ($rfwg2) then
+ $decband=350*dfrq
+ $sdecband=''
+ format($decband,0,0):$sdecband
+ $wave='WURST40 0.0014/'+$sdecband
+ opx($shapefile)
+ setwave($wave)
+ cpx($ref_pw90,$ref_pwr)
+ pbox_pwr($shapefile):dpwr
+ pbox_dmf($shapefile):dmf
+ dpwr=dpwr+2
+ dseq='W40_N15_'+$probe
+ exists('decwave','parameter'):$decwaveex
+ if ($decwaveex) then
+   decwave='W40_N15_'+$probe
+ endif
+ dres=9
+ $dmm='p'
+ $dum=''
+ getProbePath(probe):$e,$ppath
+ strstr($ppath,'/probes/'):$ret,$appdir
+ shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/probes/'+$probe):$dum
+ if ($appdir<>userdir) then
+     exists($appdir+'/shapelib','directory'):$direx
+     if ($direx=0) then shell('mkdir '+$appdir+'/shapelib'):$dum endif
+     shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/shapelib'):$dum
+ endif
+
+else 
+
+  if ((Console='unity') or (Console='vxrs') or (Console='g2000')) then
+    $gammab2=80*dfrq 
+    $dmm='w'
+    dseq='waltz16'
+    exists('decwave','parameter'):$decwaveex
+    if ($decwaveex) then
+      decwave='w'
+    endif
+    dres=90
+  else
+    $gammab2=40*dfrq 
+    $dmm='g'
+    dseq='garp1'
+    exists('decwave','parameter'):$decwaveex
+    if ($decwaveex) then
+      decwave='g'
+    endif
+    dres=1
+  endif
+  if ($gammab2 > 4800) then
+   $gammab2 = 4800
+  endif
+  setpower($gammab2,dn):dpwr,$dmf90
+  dmf=1e6/$dmf90 dmfadj(dres)
+endif
+
+$strdpwr='' $strdmf='' $sdres=''
+format(dpwr,0,0):$strdpwr
+format(dmf,0,0):$strdmf
+format(dres,0,0):$sdres
+setparams('dmf',$strdmf,'N15')
+setparams('dpwr',$strdpwr,'N15')
+setparams('dseq',dseq,'N15')
+exists('decwave','parameter'):$decwaveex
+if ($decwaveex) then
+  addparams('decwave',decwave,'N15')
+endif
+setparams('dres',$sdres,'N15')
+setparams('dmm',$dmm,'N15')
+
+ENDIF
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ENDIF
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"

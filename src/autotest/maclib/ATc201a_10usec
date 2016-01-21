@@ -1,0 +1,506 @@
+"macro ATc201a_10usec"
+"ATc201a_10usec C13 HSQC Arc Test-with decoupling"
+"       32 single scans from one-pulse sequence are done and average peak height and s/n measured"
+"       single scan HSQC's are done at variable 13C power, gradually increasing pwxlvl from 6dB"
+"       below maximum permitted level to maximum permitted level(at_max_pwxlvl, user entered) in "
+"       1dB steps. For last few power levels the number of trials is increased also, ending in 1024"
+"       If peak intensity changes by +-5% from previous spectrum, run is aborted and fid is saved with"
+"       error reported. AutoTest then continues to next test in queue. Spectrum is run in decoupled"
+"       mode with PRESAT used to saturate the water in the s2pul version"
+
+ if (at_c13tests='n') then ATnext return endif
+
+  if ($#=0) then
+   ATrtp('standard')
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\Reference S2pul data')
+    dn='C13' at=.1 d1=1 
+
+    exp((at_pwx90lvl_10usec_c-at_max_pwxlvl)*2.303/20):$mult  "uses calibration to calculate pwx at"
+    pwx=at_pwx90_10usec_c*at_LBampl_compr_10usec_c*$mult pwxlvl=at_max_pwxlvl          "at_max_pwxlvl power level"
+    pwx=pwx*2 pwxlvl=pwxlvl-6                        "start at lower power level for 13C pulses"
+
+    tpwr=at_tpwr pw=at_pw90
+    create('hsglvl','real') hsglvl=2000
+    create('hsgt','delay') hsgt=.002
+    create('mult','real') mult=0
+    exists('PFGflg','parameter'):$e if $e=0 then
+    create('PFGflg','flag') endif PFGflg='y'
+    create('nullflg','flag') nullflg='n'
+    create('null','delay') null=0
+    create('j1xh','real') j1xh=140
+    par_2d
+    ni=0 av phase=1 sw1=10000 sw=20000 np=4096 fn='n'
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   gain=at_gain
+
+   at_currenttest='C13hsqc_s2pul_1D_decoupled' 
+
+   dpwr=at_pwx90Lowpowerlvl_10usec_c-12
+   dmf=1e6/(at_pwx90Lowpower_10usec_c*4)
+
+   vp=0 dmm='ccw'
+   dm='nns' "use synchronous(s) rather than asynchronous(y)" 
+   d1=1.5
+   dm2='nnn' 
+   array('nt',32,1,0) phase=1
+   ss=64 av
+
+   seqfil='PRESAT' satfrq=tof satpwr=6 satmode='ynn' satdly=1.5 d1=0 
+   parfidss ssfilter=100 ssntaps=200
+   ssorder='n'
+   sb=-at sbs=-at lb='n' fn=np np=fn fn=2*fn
+   gf='n' lb='n'
+   wnt='ATwft select(1)  crl rfl=sw/2 rfp=0 sp=-3p wp=2p vsadj(100) dssh'
+   wexp='ATc201a_10usec(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ wft f 
+ z(3p,-4p)
+ select(1) vsadj(100) 
+ select(arraydim)  
+ $avht=0 $stddev=0
+ s1
+ sp=-2p wp=1p
+ vsadj(100)
+ ATplot3:$avht,$stddev 
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r1=trunc($sumsn/arraydim)   "average s/n for one-pulse experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'Average Decoupled Methanol S/N for 32 Trials = %5.0f for One-pulse Arc Test',r1)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ r7=vs  "memorize vs for s2pul exp"
+ th=trunc(10*$avht)/10 "save av ht"
+ r4=trunc(1000*$stddev)/1000
+ ATsvf('C13hsqc_s2pul_arctest_decoupled') satmode='nnn' d1=satdly
+ r5=6 r6=0 seqfil='HSQC' ss=4 satdly=0 
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled_pwxcalib' 
+ wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART3`)'
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,.5*pwx,.06*pwx)
+ au
+
+elseif ($1='PART3') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',32,1,0) 
+ wexp='ATc201a_10usec(`PART4`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ au
+
+elseif ($1='PART4') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ sp=-2p wp=10p cr=8p delta=1000
+ $vsscaling=vs/r7
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART5`)'
+ au
+
+
+
+elseif ($1='PART5') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',32,1,0) 
+ wexp='ATc201a_10usec(`PART6`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ au
+
+elseif ($1='PART6') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART7`)'
+ au
+
+
+
+elseif ($1='PART7') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',64,1,0) 
+ wexp='ATc201a_10usec(`PART8`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ au
+
+elseif ($1='PART8') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART9`)'
+ au
+
+
+
+elseif ($1='PART9') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',128,1,0) 
+ wexp='ATc201a_10usec(`PART10`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ au
+
+elseif ($1='PART10') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART11`)'
+ au
+
+
+
+
+elseif ($1='PART11') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',256,1,0) 
+ wexp='ATc201a_10usec(`PART12`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ au
+
+elseif ($1='PART12') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART13`)'
+ au
+
+elseif ($1='PART13') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',512,1,0) 
+ wexp='ATc201a_10usec(`PART14`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+
+ au
+
+elseif ($1='PART14') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ exp(-2.303/20):$mult   "increment 13C pulse power and decrement pulse width" 
+ pwx=pwx*$mult pwxlvl=pwxlvl+1   
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling\\pwx Calibration')
+ nt=1 array('pwx',16,0.5*pwx,0.06*pwx) wnt='sp=-2p wp=1p ATwft dssh'
+ wexp='ATc201a_10usec(`PART15`)'
+ au
+
+
+
+
+elseif ($1='PART15') then
+ wft
+ $count=1 $ht=0 $bestone=1 $htbest=0
+ repeat
+  select($count)
+  peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+  $count=$count+1
+ until $count>arraydim
+ pwx=pwx[$bestone]
+
+if (at_plotauto='y') then
+ pl('all') pap ATpage
+endif
+   text('13C Arc Test: HSQC Stability\\Variable 13C Pulse Power\\Fixed 3kHz 13C Decoupling')
+ array('nt',1024,1,0) 
+ wexp='ATc201a_10usec(`PART16`)'
+ wnt='sp=-2p wp=1p ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) peak:th select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`C13arctest`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+ au
+
+elseif ($1='PART16') then
+ at_currenttest='C13hsqc_s2pul_arctest_decoupled' 
+ n1='C13hsqc_arctest_decoupled_pwxlvl=' 
+ wft
+ $avht=0 $stddev=0
+ sp=-2p wp=1p
+ ATplot3:$avht,$stddev 
+ $vsscaling=vs/r7
+ sp=-2p wp=10p cr=8p delta=1000
+ $count=1 $sumsn=0
+ repeat
+  select($count)
+  bc dsn:$sn $sumsn=$sumsn+$sn
+  $count=$count+1
+ until $count>arraydim
+ r2=trunc($sumsn/arraydim)   "average s/n for HSQC experiment"
+ if (at_plotauto='y') then 
+   write('plotter',0,130,'HSQC Arc Test: Av. Decoupled Methanol S/N for %4.0f Trials = %5.0f:    13C Pulse Power/Width %2.0f/%2.1f      Ampl.Increased x%3.1f Rel.to S2pul',arraydim,r2,pwxlvl,pwx,$vsscaling)
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ format(pwxlvl,2,0):n2   
+ $name=n1+n2
+ ATsvf($name) 
+ $vsscaling=vs/r7
+ $stddev=trunc(1000*$stddev)/1000
+ $ratio=trunc($avht*1000/($vsscaling*th))/1000
+ $avht=trunc($avht*10)/10
+ $ratio1=trunc(r2*100/r1)/100
+ write('file',autotestdir+'/REPORT','C13 Arc Test(Max. 13C Power=%2.0f,decoupled): HSQC/s2pul Int. ratio= %2.3f; SN ratio=%1.3f; S2PUL SN=%5.0f; HSQC SN=%5.0f ',pwxlvl,$ratio,$ratio1,r1,r2)
+ ATrecord('C13ARCTEST_DEC_10usec','C13 Arc Test: Dec. One-Pulse vs HSQC',' S/N_ratio',$ratio1,' Int_ratio',$ratio,' dpwr',dpwr,' S2pul_SN',r1,' HSQC_SN',r2,' Oversampling',oversamp)
+
+ATnext
+endif

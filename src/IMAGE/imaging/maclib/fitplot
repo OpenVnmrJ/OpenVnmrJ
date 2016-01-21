@@ -1,0 +1,121 @@
+"macro fitplot"
+"*****************************************************************************"
+"   fitplot: Macro to adjust chart parameters so that a plot fits on the      "
+"            plot area defined by wcmax & wc2max. Space of 50 mm is allowed   "
+"            as a column to left hand side for parameter plots by pap, pa     "
+"            and the plpar macro.                                             "
+"*****************************************************************************"
+
+"david foxall: 25th june and completed 23 december 1987: interface version #1 "
+" @(#)fitplot	7.1 7/1/91 "
+
+
+"[0] Constants"
+$parwidth=50.0
+$sidespace=5.0
+$verticalspace=15.0
+$scalespace=12.0
+
+"[1] Input parameter count"
+if $# > 1.5
+then
+write('error','%s','fitplot: Use fitplot - no arguments required')
+abort
+endif
+
+"[2] Plot Size Calculations"
+if axis = 'cc'
+then
+"***************************************************************************"
+"  images                                                                   "
+"***************************************************************************"
+$df2=(wp/sw)*lro
+$df1=(wp1/sw1)*lpe
+
+    if $df1 > $df2
+    then $longedge='f1'
+    else $longedge='f2'
+    endif
+
+    if (trace='f1') and ($longedge='f1') 
+    then
+    wc=wcmax-$parwidth-$scalespace-2.0*$sidespace
+    sc=$sidespace
+    wc2=($df2/$df1)*wc
+    sc2=$scalespace+$sidespace
+        if (wc2+sc2) > wc2max
+        then
+           repeat
+           wc=0.95*wc
+           wc2=0.95*wc2
+           until (wc2+sc2 < wc2max)
+        endif
+    endif
+
+    if (trace='f2') and ($longedge='f1')
+    then
+    wc2=wc2max-$scalespace-2.0*$sidespace
+    sc2=$scalespace+$sidespace
+    wc=($df2/$df1)*wc2
+    sc=$sidespace
+        if (wc+sc) > wcmax
+        then
+           repeat
+           wc=0.95*wc
+           wc2=0.95*wc2
+           until (wc+sc) < wcmax
+        endif
+    endif
+
+    if (trace='f1') and ($longedge='f2')
+    then
+    wc2=wc2max-$scalespace-2.0*$sidespace
+    sc2=$scalespace+$sidespace
+    wc=($df1/$df2)*wc2
+    sc=$sidespace
+        if (wc+sc) > wcmax
+        then
+           repeat
+           wc=0.95*wc
+           wc2=0.95*wc2
+           until (wc+sc) < wcmax
+        endif
+    endif
+
+    if (trace='f2') and ($longedge='f2') 
+    then
+    wc=wcmax-$parwidth-$scalespace-2.0*$sidespace
+    sc=$sidespace
+    wc2=($df1/$df2)*wc
+    sc2=$scalespace+$sidespace
+        if (wc2+sc2) > wc2max
+        then
+           repeat
+           wc=0.95*wc
+           wc2=0.95*wc2
+           until (wc2+sc2 < wc2max)
+        endif
+    endif
+else
+    if (axis='hh') or (axis='hp') or (axis='ph') or (axis='pp')
+    then
+"****************************************************************************"
+" 2D SPECTRA                                                                 "
+"****************************************************************************"
+    wc=wcmax-$parwidth-$scalespace-2.0*$sidespace
+    sc=$sidespace
+    wc2=wc2max-$scalespace-2.0*$sidespace
+    sc2=$sidespace+$scalespace
+    else
+"****************************************************************************"
+" spectra                                                                    "
+"****************************************************************************"
+    wc=wcmax-2.0*$sidespace-$parwidth
+    sc=$sidespace
+    vp=$verticalspace
+    endif
+endif
+
+"************************************THE END**********************************"
+
+

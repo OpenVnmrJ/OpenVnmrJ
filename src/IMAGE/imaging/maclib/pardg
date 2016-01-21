@@ -1,0 +1,276 @@
+"macro pardg"
+"***************************************************************"
+" pardg                                                         "
+"                                                               "
+" Update dg and ap parameters in current parameter set based on "
+" the sequence supplied by the first argument.                  "
+"                                                               "
+" Usage:  pardg('sequence name')                                "
+"***************************************************************"
+
+$prog = 'pardg: '                      "program ID"
+
+if ($# <> 1) then
+  write('error',$prog+'Usage: pardg(sequence name)')
+  abort
+endif
+
+setprotect('dg','set',0)
+setprotect('ap','set',0)
+
+if ($1 = 'steam') then
+  seqfil = 'steam'
+  text('STEAM Localized Spectroscopy sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nt:0,tof:1,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tm:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0,,p3:1,p3pat,tpwr3:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,,gvox1:3,gvox2:3,gvox3:3,;'
+"  $k=$k+1 dg[$k] = '3:SUPPRESSION:ws,wsfrq:3,psat:1,satpat,satpwr:0,tspoil:4,gspoil:1,ti:4;'  "
+  $k=$k+1 dg[$k] = '4:ORIENTATION:orient,;'
+  $k=$k+1 dg[$k] = '4:VOXEL SIZE:vox1:2,vox2:2,vox3:2,;'
+  $k=$k+1 dg[$k] = '4:VOXEL POSITION:pos1:2,pos2:2,pos3:2,;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tm:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0,p3:1,p3pat,tpwr3:0;'
+"  $k=$k+1 ap[$k] = '2:SUPPRESSION:ws,wsfrq:3,psat:1,satpat,satpwr:0,tspoil:4,gspoil:1,ti:4;'  "
+  $k=$k+1 ap[$k] = '2:GRADIENTS:gcoil,gvox1:3,gvox2:3,gvox3:3;'
+  $k=$k+1 ap[$k] = '2:ORIENTATION:orient;'
+  $k=$k+1 ap[$k] = '2:VOXEL SIZE:vox1:2,vox2:2,vox3:2;'
+  $k=$k+1 ap[$k] = '2:VOXEL POSITION:pos1:2,pos2:2,pos3:2;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+
+
+else if ($1 = 'isis') then
+  seqfil = 'isis'
+  text('ISIS Localized Spectroscopy sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nt:0,tof:1,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,tm:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0,,p3:1,p3pat,tpwr3:0,,p4:1,p4pat,tpwr4:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,,gvox1:3,gvox2:3,gvox3:3;'
+  $k=$k+1 dg[$k] = '4:ORIENTATION:orient,;'
+  $k=$k+1 dg[$k] = '4:VOXEL SIZE:vox1:2,vox2:2,vox3:2,;'
+  $k=$k+1 dg[$k] = '4:VOXEL POSITION:pos1:2,pos2:2,pos3:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,tm:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0,p3:1,p3pat,tpwr3:0,p4:1,p4pat,tpwr4:0;'
+  $k=$k+1 ap[$k] = '2:GRADIENTS:gcoil,gvox1:3,gvox2:3,gvox3:3;'
+  $k=$k+1 ap[$k] = '2:ORIENTATION:orient;'
+  $k=$k+1 ap[$k] = '2:VOXEL SIZE:vox1:2,vox2:2,vox3:2;'
+  $k=$k+1 ap[$k] = '2:VOXEL POSITION:pos1:2,pos2:2,pos3:2;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+
+
+else if ($1 = 'mems') then
+  seqfil = 'mems'
+  text('Multi-echo Multi-slice Imaging sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tcrush:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0,tspoil:4;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gss:3,gcrush:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SLICE SELECTION:ne:0,ns:0,thk:2,pss:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tcrush:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gss:3,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2;'
+  $k=$k+1 ap[$k] = '2:SLICE SELECTION:ne:0,ns:0,thk:2,pss:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2(ni):2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+
+else if ($1 = 'flash3d') then
+  seqfil = 'flash3d'
+  text('3D FLASH Imaging sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nv2:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,tof:1,;'
+  $k=$k+1 dg[$k] = '2:RF SPOILING:rfspoil,rfphase:0,;'
+  $k=$k+1 dg[$k] = '2:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gpe2:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,lpe:2,lpe2:2,pro:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nv2:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gpe2:3,gss:3,gror(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,lpe2:2,pro:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2:2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+
+else if ($1 = 'flash') then
+  seqfil = 'flash'
+  text('FLASH Imaging sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,;'
+  $k=$k+1 dg[$k] = '2:RF SPOILING:rfspoil,rfphase:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gss:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SLICE SELECTION:ns:0,thk:2,pss:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gss:3,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2;'
+  $k=$k+1 ap[$k] = '2:SLICE SELECTION:ns:0,thk:2,pss:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2:2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+
+else if ($1 = 'sems') then
+  seqfil = 'sems'
+  text('Spin-echo Multi-slice Imaging sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gss:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SLICE SELECTION:ns:0,thk:2,pss:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gss:3,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2;'
+  $k=$k+1 ap[$k] = '2:SLICE SELECTION:ns:0,thk:2,pss:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2(ni):2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+
+else if ($1 = 'sediff') then
+  seqfil = 'sediff'
+  text('Spin-echo Diffusion Imaging sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gss:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3,;'
+  $k=$k+1 dg[$k] = '3:DIFFUSION:dorient,gdiff:3,tDELTA:3,tdelta:3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SLICE SELECTION:ns:0,thk:2,pss:2;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gss:3,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:DIFFUSION:dorient,gdiff:3,tDELTA:3,tdelta:3;'
+  $k=$k+1 ap[$k] = '2:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2;'
+  $k=$k+1 ap[$k] = '2:SLICE SELECTION:ns:0,thk:2,pss:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2(ni):2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+else if ($1 = 'bp2d') then
+  seqfil = 'bp2d'
+  text('Slice select Backprojection sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gss:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SLICE SELECTION:ns:0,thk:2,pss:2,;'
+  $k=$k+1 dg[$k] = '4:SPECIAL:phi2:0,theta2:0;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gss:3,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,pro:2;'
+  $k=$k+1 ap[$k] = '1:SPECIAL:phi2:0,theta2:0;'
+  $k=$k+1 ap[$k] = '2:SLICE SELECTION:ns:0,thk:2,pss:2;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2(ni):2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+else if ($1 = 'bp3d') then
+  seqfil = 'bp3d'
+  text('3D Backprojection sequence'):$junk
+  $k=0  dg = ''
+  $k=$k+1 dg[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1,;'
+  $k=$k+1 dg[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nv2:0,nt:0,dp,;'
+  $k=$k+1 dg[$k] = '2:RF PULSES:rfcoil,,p1:1,p1pat,tpwr1:0,,p2:1,p2pat,tpwr2:0,tof:1,;'
+  $k=$k+1 dg[$k] = '2:RF SPOILING:rfspoil,rfphase:0,;'
+  $k=$k+1 dg[$k] = '2:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 dg[$k] = '3:GRADIENTS:gcoil,pilot,,gro:3,gpe:3,gpe2:3,,gror(pilot=\'n\'):3,gssr(pilot=\'n\'):3;'
+  $k=$k+1 dg[$k] = '4:FIELD OF VIEW:orient,lro:2,pro:2,;'
+  $k=$k+1 dg[$k] = '4:SPECIAL:phi2:0,theta2:0;'
+
+  $k=0  ap = ''
+  $k=$k+1 ap[$k] = '1:SAMPLE:date,file;'
+  $k=$k+1 ap[$k] = '1:NUCLEUS:tn,sfrq:3,resto:1;'
+  $k=$k+1 ap[$k] = '1:ACQUISITION:sw:1,at:3,np:0,nv:0,nv2:0,nt:0,gain:0,dp;'
+  $k=$k+1 ap[$k] = '1:DELAYS:tr:4,te:4,tspoil:4;'
+  $k=$k+1 ap[$k] = '1:RF PULSES:rfcoil,p1:1,p1pat,tpwr1:0,p2:1,p2pat,tpwr2:0;'
+  $k=$k+1 ap[$k] = '1:GRADIENTS:gcoil,pilot,gro:3,gpe:3,gpe2:3,gss:3,gror(pilot=\'n\'):3;'
+  $k=$k+1 ap[$k] = '1:FIELD OF VIEW:orient,lro:2,lpe:2,lpe2:2,pro:2;'
+  $k=$k+1 ap[$k] = '1:SPECIAL:phi2:0,theta2:0;'
+  $k=$k+1 ap[$k] = '2:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+  $k=$k+1 ap[$k] = '2:2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+  $k=$k+1 ap[$k] = '2:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,werr,wexp,wbs,wnt;'
+  $k=$k+1 ap[$k] = '2:2D PROCESSING:lb1(lb1):2,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,fn1:0;'
+
+
+else
+  write('error',$prog+'Unrecognized sequence name')
+
+endif endif endif endif endif endif endif endif endif
+setprotect('dg','set',6)
+setprotect('ap','set',6)
+flush
+dg

@@ -1,0 +1,47 @@
+"macro moveHT"
+"moveHT - import HT frequency list from exp# "
+
+$seqfil=''
+
+exists('is_submitmode','maclib'):$macex
+if ($macex) then
+   is_submitmode:$submit
+else
+   $submit=0
+endif
+
+if $#>0 then   "move HT list to exp $1 "
+  jexp:$curexp  
+  jexp($1)  
+  par_2d ni=0 phase=0 
+  importHT($curexp) 
+  jexp($curexp) 
+else           "make HT list locally"
+
+  $seqfil=seqfil
+  if ($submit) then
+    tmpsqcopy($seqfil)
+  endif
+
+  lb=lb1
+  sb='n' gf='n'
+  wft('nods',1)
+  peak:$a
+  th=$a/6.0
+  htll
+
+  if ($submit) then
+     htlist2cpq('export')
+     tmpsqreturn($seqfil)
+     htlist2cpq('import')
+  else
+    if not ($seqfil='s2pul') then
+      $fn1=fn1
+      {$seqfil}
+      fn1=$fn1
+    endif
+  endif
+  seqfil=seqfil
+  layout=seqfil
+endif
+

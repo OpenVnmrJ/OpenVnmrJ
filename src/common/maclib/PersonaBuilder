@@ -1,0 +1,648 @@
+"macro PersonaBuilder"
+"****************************************************************************"
+
+create('personaPopupPar','string','global','')
+setprotect('personaPopupPar','on',256,'global')
+
+create('personaTpPar','string','global','')
+setprotect('personaTpPar','on',256,'global')
+
+create('personaMvPar','string','global','')
+setprotect('personaMvPar','on',256,'global')
+
+create('personaPpPar','string','global','')
+setprotect('personaPpPar','on',256,'global')
+
+create('personaPpnPar','string','global','')
+setprotect('personaPpnPar','on',256,'global')
+
+if ($0='PersonaBuilderAdm') then
+    $personadir=systemdir+'/adm/users/PersonaManager'
+    $pmgr='PersonaManagerAdm'
+else
+    $personadir=userdir+'/persistence/PersonaManager'
+    $pmgr='PersonaManager'
+endif
+exists($personadir,'directory'):$direx
+if ($direx=0) then shell('mkdir '+$personadir):$dum endif
+
+if ($# < 1) then $1='Init' endif
+$opsize=10
+"************************************************************************"
+IF ($1='Init') or ($1='refresh') THEN
+    if ($1='Init') then
+    	personaPopupPar='','Owner','','','','1','1','10'
+    	personaTpPar=''
+    	personaMvPar=''
+    	personaPpPar=''
+    	personaPpnPar=''
+
+    	BuildPersonaXml:personaTpPar,personaMvPar,personaPpPar
+    	cpADMIN('Start'):$ret
+	if not $ret then return endif
+	personaPopupPar[9]=cpprefs[53]
+
+	if $0='PersonaBuilderAdm' then
+	    operightsManagerAdm('Start'):$opsize
+	else
+    	    operightsManager('Start'):$opsize
+	endif
+
+    	format($opsize,0,0):personaPopupPar[8]
+        $opfile=$personadir+'/OperatorList'
+        write('reset',$opfile)
+	write('file',$opfile,'"" ""')
+	if ($0='PersonaBuilderAdm') then
+            $userfile='/vnmr/adm/users/userlist'
+	    $key=$userfile
+	    lookup('mfile',$key,'read','filekey'):$userlist,$key,$ret
+	    while $ret>1.5 do
+                write('file',$opfile,'"%s" "%s"',$userlist,$userlist)
+                lookup('mfile',$key,'read','filekey'):$userlist,$key,$ret
+	    endwhile
+	else
+	    shell('(cat '+userdir+'/persistence/oplist_menu >> '+$opfile+')'):$dum
+	endif
+
+	{$pmgr}('list')
+	if $0='PersonaBuilderAdm' then 
+	    ProtocolManagerAdm 
+	else 
+	    ProtocolManager 
+	endif
+    endif
+    {$pmgr}('readOwnerPersona')
+    {$pmgr}('ReconcileExpSel')
+    if (personaPopupPar[2]<>'Owner') then 
+	personaPopupPar[1]=personaPopupPar[2] 
+    else
+	personaPopupPar[1]=''
+    endif
+    $xml=$0+'.xml'
+    vnmrjcmd('pnew','ProtMgr','personaPopupPar','personaMvPar','personaTpPar','personaPpPar','cpprefs','oprtmgr','traymax')
+    vnmrjcmd('popup','mode:modeless','file:'+$xml,'rebuild:yes','pnewupdate:true','close:'+$0+'(`close`)','title:Persona Manager')
+
+"************************************************************************"
+ELSEIF ($1 ='close') THEN
+    ProtMgr=''
+    personaPopupPar=''
+    personaMvPar=''
+    personaTpPar=''
+    personaPpPar=''
+//    cpprefs=''
+    oprtmgr=''
+"************************************************************************"
+ELSEIF ($1 ='SQshow') THEN
+    if ($2='Completed') then
+        strstr(personaPopupPar[9],'C'):$ret
+        if ($ret=0) then return(-1) endif
+        strstr(personaPopupPar[9],'F'):$ret
+        if ($ret) then return (-1) endif
+    elseif ($2='Progress') then
+        strstr(personaPopupPar[9],'P'):$ret
+        if ($ret=0) then return(-1) endif
+        strstr(personaPopupPar[9],'F'):$ret
+        strstr(personaPopupPar[9],'S'):$ret1
+        if ($ret) or ($ret1) then
+            return(-1)
+        endif
+    elseif ($2='Fid') then
+        strstr(personaPopupPar[9],'F'):$ret
+        if ($ret=0) then return(-1) endif
+        strstr(personaPopupPar[9],'S'):$ret
+        if ($ret=0) then return(-1) endif
+    elseif ($2='Error') then
+        strstr(personaPopupPar[9],'E'):$ret
+        if ($ret=0) then return(-1) endif
+    elseif ($2='Pending') then
+        strstr(personaPopupPar[9],'S'):$ret
+        if ($ret=0) then return(-1) endif
+    elseif ($2='Queue') then
+        strstr(personaPopupPar[9],'Q'):$ret
+        if ($ret=0) then return(-1) endif
+        strstr(personaPopupPar[9],'S'):$ret
+        if ($ret) then return(-1) endif
+    endif
+    return(1)
+"************************************************************************"
+ELSEIF ($1='readattr') THEN
+
+    if ($2='Owner') then
+	setvalue('personaType','','global')
+	{$0}('Init')
+	return
+    endif
+
+    exists($2,'personalib'):$pex,$pdir
+    if ($pex=0) then return endif
+
+    $personaType=personaType
+    setvalue('personaType',$2,'global')
+
+// Get cp preferences using getadminfo and populate
+//   appropriate cpprefs parameter value
+    $priority=0 getadminfo('prioritytotal'):$priority
+    if ($priority>0) then format($priority,0,0):cpprefs[3]
+    else cpprefs[3]='nolimit' endif
+
+    $autonight='no' getadminfo('autonight'):$autonight
+    cpprefs[58]=$autonight
+    $smslocation='random' getadminfo('smslocation'):$smslocation
+    cpprefs[4]=$smslocation
+    $reuseerror='no' getadminfo('reuseerrorloc'):$reuseerror
+    cpprefs[36]=$reuseerror
+    $reusecompleted='yes' getadminfo('reusecompletedloc'):$reusecompleted
+    cpprefs[43]=$reusecompleted
+    $wqwhere='curexp' defaultqueue:$wqwhere
+    cpprefs[52]=$wqwhere
+    $defaultexp='' getadminfo('defaultexp'):$defaultexp
+    cpprefs[5]=$defaultexp
+    $submitopt='fgbgauto' getadminfo('submitoption'):$submitopt
+    cpprefs[62]=$submitopt
+    $walkuplogin='none' getadminfo('walkuplogin'):$walkuplogin
+    cpprefs[6]=$walkuplogin
+    $aftersubmit='none' getadminfo('aftersubmit'):$aftersubmit
+    cpprefs[45]=$aftersubmit
+    $uprot='true' getadminfo('unassignedprotocols'):$uprot
+    cpprefs[75]=$uprot
+    $maxdaysamples=-1 getadminfo('maxdaysamples'):$maxdaysamples
+    format($maxdaysamples,0,0):cpprefs[76]
+    $maxnightsamples=-1 getadminfo('maxnightsamples'):$maxnightsamples
+    format($maxnightsamples,0,0):cpprefs[77]
+    $maxdaytime=-1 getadminfo('maxdaytime'):$maxdaytime
+    if ($maxdaytime>-0.5) then 
+	format($maxdaytime/60,0,0):cpprefs[78] 
+    else 
+	cpprefs[78]='-1' 
+    endif
+    $maxnighttime=-1 getadminfo('maxnighttime'):$maxnighttime
+    if ($maxnighttime>-0.5) then 
+	format($maxnighttime/60,0,0):cpprefs[79] 
+    else 
+	cpprefs[79]='-1' 
+    endif
+    $nusdefault='no'
+    getadminfo('nusdefault'):$nusdefault
+    cpprefs[82]=$nusdefault
+
+// Read ToolPanelConfig table
+    $admin=$pdir+'/adm/toolPanelConfig_'+$2+'.txt'
+    $s1='' $s2=''
+    shell('touch '+$admin):$dum
+    readfile($admin,'$s1','$s2','','local'):$tot
+    if ($tot) then
+	$i=1
+	repeat
+	    teststr('personaTpPar',$s1[$i],'global'):$ok
+	    if ($ok) then personaTpPar[$ok+1]=$s2[$i] endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+    {$pmgr}('ReconcileExpSel')
+
+// Read operightsConfig table
+    $admin=$pdir+'/adm/opeRights_'+$2+'.txt'
+    $s1='' $s2=''
+    shell('touch '+$admin):$dum
+    readfile($admin,'$s1','$s2','','local'):$tot
+    if ($tot) then
+        $i=1
+        repeat
+	    teststr('oprtmgr',$s1[$i],'global'):$ok
+	    if ($ok) then oprtmgr[$ok+2]=$s2[$i] endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+
+// Read menuconfig table
+    $admin=$pdir+'/adm/MenuConfig_'+$2+'.txt'
+    $s1='' $s2=''
+    shell('touch '+$admin):$dum
+    readfile($admin,'$s1','$s2','','local'):$tot
+    if ($tot) then
+        $i=1
+        repeat
+	    $ok=0
+	    teststr('personaMvPar',$s1[$i],'global'):$ok
+	    if ($ok) then personaMvPar[$ok+1]=$s2[$i] endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+
+// Read parameter panel config table
+    $admin=$pdir+'/adm/ParamPanelConfig_'+$2+'.txt'
+    $s1='' $s2=''
+    shell('touch '+$admin):$dum
+    readfile($admin,'$s1','$s2','','local'):$tot
+    if ($tot) then
+	$i=1
+	repeat
+	    $ok=0
+	    teststr('personaPpPar',$s1[$i],'global'):$ok
+            if ($ok) then
+                if ($s1[$i]='start_standard') or ($s1[$i]='acquire_default') or ($s1[$i]='process_textoutput') then
+//                if ($s1[$i]='setup_standard') or ($s1[$i]='acquire_default') or ($s1[$i]='process_textoutput') then
+                    personaPpPar[$ok+1]='open'
+                else
+                    personaPpPar[$ok+1]=$s2[$i]
+                endif
+            endif
+	    $i=$i+1
+	until $i > $tot
+    endif
+
+// Read protocol config table
+    $admin=$pdir+'/adm/ProtocolConfig_'+$2+'.txt'
+    exists($admin,'file'):$ok
+    if ($ok) then
+        ProtocolManager('Read',$admin)
+        ProtMgr=ProtMgr
+    endif
+
+    setvalue('personaType',$personaType,'global')
+    personaPopupPar=personaPopupPar
+
+    {$0}('refresh')
+
+"************************************************************************"
+ELSEIF ($1='getpersona') THEN
+
+    $ADMpersona=''
+    {$pmgr}('OwnerPersona'):$ADMpersona
+    exists($personadir+'/PERSONAassignment','file'):$exist
+    $s1='' $s2=''
+    if ($exist) then
+    	readfile($personadir+'/PERSONAassignment','$s1','$s2','','local'):$tot
+    endif
+    teststr('$s1',$2,'local'):$ok
+    if ($ok) then
+	personaPopupPar[4]=$s2[$ok]
+    elseif ($ADMpersona<>'') then
+	personaPopupPar[4]=$ADMpersona
+    elseif ($2='owner') then
+	personaPopupPar[4]='Owner'
+    else
+	personaPopupPar[4]=''
+    endif
+"************************************************************************"
+ELSEIF ($1='setpersona') THEN
+
+    $plist=$personadir+'/PERSONAassignment'
+    exists($plist,'file'):$exist
+    $s1='' $s2='' $size=0
+    if ($exist) then
+        readfile($plist,'$s1','$s2','','local'):$size
+    endif
+    teststr('$s1',$2,'local'):$r1
+    if ($r1) then
+        if ($s2[$r1]=$3) then return endif
+        $s2[$r1]=$3
+    else
+        $s1[$size+1]=$2 $s2[$size+1]=$3
+    endif
+
+    $size=size('$s1')
+    if ($s1[1]='') then $size=0 endif
+    if ($size=0) then return endif
+
+//    if ($2=owner) and ($3='Owner') then
+//	teststr('$s1',$2,'local'):$r1
+//	if ($r1) then $s2[$r1]='' endif
+//    endif
+    $tmp=$plist+'_tmp'
+    write('reset',$tmp)
+    $i=1
+    repeat
+        if ($s1[$i]<>'') and ($s2[$i]<>'') then
+            write('file',$tmp,'%s  %s',$s1[$i],$s2[$i])
+        endif
+        $i=$i+1
+    until $i > $size
+    shell('cp '+$tmp+' '+$plist):$dum
+    shell('rm -f '+$tmp):$dum
+    $lx=0
+    shell('(cat '+$plist+' | wc -l)'):$lx
+    if ($lx<1) then shell('rm -f '+$plist):$dum endif
+    personaPopupPar[4]=$3
+    " If this operator has a ExpSelOrder_operator.xml file, move it to .bk"
+    " It may contain items that this operator no longer has access to"
+    $orderfile=userdir+'/persistence/ExpSelOrder_'+$2+'.xml'
+    exists($orderfile,'file'):$exist
+    if ($exist) then
+        shell('mv '+$orderfile+' '+$orderfile+'.bk')
+    endif
+    return
+"************************************************************************"
+ELSEIF ($1='saveOwnerattr') THEN
+
+    if ($0='PersonaBuilderAdm') then
+        $path=systemdir+'/personalib'
+    else
+        $path=userdir+'/personalib'
+    endif
+    exists($path+'/Owner/adm','directory'):$direx
+    if ($direx=0) then shell('mkdir -p '+$path+'/Owner/adm'):$dum endif
+
+    $admin=$path+'/Owner/adm/PrefConfig_Owner.txt'
+    write('reset',$admin)
+//  toolPanel - all open
+    $admin=$path+'/Owner/adm/toolPanelConfig_Owner.txt'
+    write('reset',$admin)
+    $parsize=size('personaTpPar')
+    if ($parsize>1) then
+        $i=1
+        while ($i < $parsize) do
+            if personaTpPar[$i]='cmdLine' then
+                write('file',$admin,'%s yes',personaTpPar[$i])
+            else
+                write('file',$admin,'%s open',personaTpPar[$i])
+            endif
+            $i=$i+3
+        endwhile
+    endif
+    teststr('personaPpPar','Parameter','global'):$ok
+    if ($ok) then
+        write('file',$admin,'%s  open',personaPpPar[$ok])
+    endif
+    write('file',$admin,'Toolbars open')
+//  Menus - all show
+    $admin=$path+'/Owner/adm/MenuConfig_Owner.txt'
+    write('reset',$admin)
+    $parsize=size('personaMvPar')
+    if ($parsize>2) then
+        $i=1
+        while ($i < $parsize) do
+            write('file',$admin,'%s show',personaMvPar[$i+2])
+            $i=$i+3
+        endwhile
+    endif
+    write('file',$admin,'MainMenuView show')
+
+// Write opeRights section - all true
+    format(personaPopupPar[8],'lower'):$opsize
+    $admin=$path+'/Owner/adm/opeRights_Owner.txt'
+    write('reset',$admin)
+    $parsize=size('oprtmgr')
+    if ($parsize>$opsize+2) then
+        $i=$opsize+1
+        while ($i < $parsize) do
+            write('file',$admin,'%s true',oprtmgr[$i])
+            $i=$i+3
+        endwhile
+    endif
+// Parameter panels - all show
+    $admin=$path+'/Owner/adm/ParamPanelConfig_Owner.txt'
+    write('reset',$admin)
+    $parsize=size('personaPpPar')
+    if ($parsize>1) then
+        $i=1
+        while ($i < $parsize) do
+            write('file',$admin,'%s open',personaPpPar[$i])
+            $i=$i+3
+        endwhile
+    endif
+// Protocols
+    $esxml=$path+'/Owner/templates/vnmrj/interface/ExperimentSelector.xml'
+    shell('rm -f '+$esxml):$dum
+    $pfile=''
+    ProtocolManager('Save','true'):$pfile
+    if ($pfile<>'') then
+        shell('mv '+$pfile+' '+$path+'/Owner/adm/ProtocolConfig_Owner.txt'):$dum
+    endif
+"************************************************************************"
+ELSEIF ($1 ='saveattr') THEN
+
+    if ($2='') then return endif
+    if ($0='PersonaBuilderAdm') then
+	$path=systemdir+'/personalib'
+    else
+    	$path=userdir+'/personalib'
+    endif
+    exists($path,'directory'):$ok
+    if ($ok=0) then
+	shell('mkdir -p '+$path):$dum
+    endif
+
+//  First check to make sure that systemdir/personalib/Owner exist
+    exists(systemdir+'/personalib/Owner','directory'):$sysdirex
+
+//  first make sure that Owner persona is updated
+//   Remove Owner persona from userdir. The personalib from
+//	systemdir should be used.  
+    if ($0='PersonaBuilder') then
+    	exists($path+'/Owner','directory'):$direx
+    	if ($direx) then rm('-rf',$path+'/Owner'):$dum endif
+    endif
+    if not $sysdirex then
+// Owner persona does not exists in systemdir, create one
+	{$0}('saveOwnerattr')
+    endif
+
+// if the persona name is Owner or owner, bail out
+    if ($2='Owner') or ($2='owner') then
+        return
+    endif
+
+// Now write the persona
+// First check mutually dependent persona attributes
+//      This section can be expanded as one sees fit
+
+    teststr('personaTpPar','Sq','global'):$is2
+    if ($is2) then
+        if (personaTpPar[$is2+1]='close') then
+            cpprefs[6]='none'
+            cpprefs[45]='none'
+        endif
+    endif
+
+    teststr('oprtmgr','mayusesqtosubmit','global'):$is
+    if ($is) then
+        if (oprtmgr[$is+2]='false') then
+            cpprefs[6]='none'
+            cpprefs[45]='none'
+        endif
+    endif
+
+    teststr('oprtmgr','mayusequicksubmit','global'):$op1
+    if ($op1) then
+        if (oprtmgr[$op1+2] = 'false') then
+            teststr('personaTpPar','QuickSubmit','global'):$op2
+            if ($op2) then personaTpPar[$op2+1]='close' endif
+        endif
+    endif
+    {$pmgr}('ReconcileExpSel')
+
+// End of reconciliation
+
+    $rebuildlist=0
+    exists($path+'/'+$2+'/adm','directory'):$direx
+    if ($direx=0) then $rebuildlist=1 shell('mkdir -p '+$path+'/'+$2+'/adm'):$dum endif
+
+//  Write cppref section
+// cppref section cannot be set by administrator
+    $admin=$path+'/'+$2+'/adm/PrefConfig_'+$2+'.txt'
+    write('reset',$admin)
+  if ($0<>'PersonaBuilderAdm') then
+    format(cpprefs[3],'isreal'):$real
+    if ($real) then
+	write('file',$admin,'cppref_PRIORITY_TOTAL: %s',cpprefs[3])
+    else
+        write('file',$admin,'cppref_PRIORITY_TOTAL: 0')
+    endif
+    write('file',$admin,'cppref_AUTONIGHTQ: %s',cpprefs[58])
+    write('file',$admin,'cppref_SMS_LOCATION: %s',cpprefs[4])
+    write('file',$admin,'cppref_REUSE_ERROR_LOC: %s',cpprefs[36])
+    write('file',$admin,'cppref_REUSE_COMPLETED_LOC: %s',cpprefs[43])
+    write('file',$admin,'cppref_DEFAULT_QUEUE: %s',cpprefs[52])
+    write('file',$admin,'cppref_DEFAULTEXP: %s',cpprefs[5])
+    write('file',$admin,'cppref_SUBMIT_OPTION: %s',cpprefs[62])
+    write('file',$admin,'cppref_WALKUP_LOGIN: %s',cpprefs[6])
+    write('file',$admin,'cppref_AFTER_SUBMIT: %s',cpprefs[45])
+    write('file',$admin,'cppref_UNASSIGNEDPROTOCOLS: %s',cpprefs[75])
+    write('file',$admin,'cppref_NUS_DEFAULT: %s',cpprefs[82])
+    $d=0 format(cpprefs[76],'lower'):$d
+    if ($d<0) then $d=-1 endif
+    write('file',$admin,'cppref_MAX_DAYQ_SAMPLES: %d',$d)
+    $d=0 format(cpprefs[77],'lower'):$d
+    if ($d<0) then $d=-1 endif
+    write('file',$admin,'cppref_MAX_NIGHTQ_SAMPLES: %d',$d)
+    $d=0 format(cpprefs[78],'lower'):$d
+    format($d*60,0,0):$d
+    if ($d<0) then $d=-1 endif
+    write('file',$admin,'cppref_MAX_DAYQ_TIME: %d',$d)
+    $d=0 format(cpprefs[79],'lower'):$d
+    format($d*60,0,0):$d
+    if ($d<0) then $d=-1 endif
+    write('file',$admin,'cppref_MAX_NIGHTQ_TIME: %d',$d)
+  else
+    rm('-f',$admin):$dum
+  endif
+
+//    write('file',$admin,'cppref_AUTOSQ_DISPLAY: %s',cpprefs[53])
+
+// Write toolPanel section
+
+    $admin=$path+'/'+$2+'/adm/toolPanelConfig_'+$2+'.txt'
+    write('reset',$admin)
+    $parsize=size('personaTpPar')
+    if ($parsize>1) then
+        $i=1
+        while ($i < $parsize) do
+            write('file',$admin,'%s %s',personaTpPar[$i],personaTpPar[$i+1])
+            $i=$i+3
+        endwhile
+    endif
+    $paramopen=1
+    teststr('personaPpPar','Parameter','global'):$ok
+    if ($ok) then
+        write('file',$admin,'%s  %s',personaPpPar[$ok],personaPpPar[$ok+1])
+	if (personaPpPar[$ok+1]='close') or (personaPpPar[$ok+1]='notused') then $paramopen=0 endif
+    endif
+    $toolbar=0
+    if ($toolbar=0) then
+	teststr('personaTpPar','HardwareTool','global'):$ok
+	if (personaTpPar[$ok+1]='open') then $toolbar=1 endif
+    endif
+    if ($toolbar=0) then
+        teststr('personaTpPar','SystemTool','global'):$ok
+        if (personaTpPar[$ok+1]='open') then $toolbar=1 endif
+    endif
+    if ($toolbar=0) then
+        teststr('personaTpPar','GraphicsTool','global'):$ok
+        if (personaTpPar[$ok+1]='open') then $toolbar=1 endif
+    endif
+    if ($toolbar=0) then
+        teststr('personaTpPar','UserTool','global'):$ok
+        if (personaTpPar[$ok+1]='open') then $toolbar=1 endif
+    endif
+    if ($toolbar) then
+	write('file',$admin,'Toolbars open')
+    else
+	write('file',$admin,'Toolbars close')
+    endif
+    $view=0
+    shell('(cat '+$admin+' | grep -wc open)'):$view
+
+// Write Menu section
+    $admin=$path+'/'+$2+'/adm/MenuConfig_'+$2+'.txt'
+    write('reset',$admin)
+    $parsize=size('personaMvPar')
+    if ($parsize>2) then
+        $i=1
+        while ($i < $parsize) do
+	    write('file',$admin,'%s %s',personaMvPar[$i],personaMvPar[$i+1])
+            $i=$i+3
+        endwhile
+    endif
+    if ($view<0.5) then
+	write('file',$admin,'MainMenuView hide')
+    else
+	write('file',$admin,'MainMenuView show')
+    endif
+
+// Write Parameter panel section
+    $admin=$path+'/'+$2+'/adm/ParamPanelConfig_'+$2+'.txt'
+    write('reset',$admin)
+    $parsize=size('personaPpPar')
+    if ($parsize>1) then
+	if ($paramopen=1) then
+            $i=1
+            while ($i < $parsize) do
+            	write('file',$admin,'%s %s',personaPpPar[$i],personaPpPar[$i+1])
+            	$i=$i+3
+            endwhile
+	else
+            $i=1
+            while ($i < $parsize) do
+		if personaPpPar[$i+1]='notused' then
+		    write('file',$admin,'%s notused',personaPpPar[$i])
+		else
+            	    write('file',$admin,'%s close',personaPpPar[$i])
+		endif
+            	$i=$i+3
+            endwhile
+	endif
+    endif
+
+// Write opeRights section
+    format(personaPopupPar[8],'lower'):$opsize
+    $admin=$path+'/'+$2+'/adm/opeRights_'+$2+'.txt'
+    write('reset',$admin)
+    $parsize=size('oprtmgr')
+    if ($parsize>$opsize+2) then
+        $i=$opsize+1
+	while ($i < $parsize) do
+	    $val=oprtmgr[$i+2]
+	    if ($0='PersonaBuilderAdm') then
+		if (oprtmgr[$i]='canexitvnmrj') or (oprtmgr[$i]='cansetpreferences') then
+			$val='true'
+		endif
+	    endif
+            write('file',$admin,'%s %s',oprtmgr[$i],$val)
+            $i=$i+3
+	endwhile
+    endif
+
+
+// Write Protocol section
+    $pfile='' $esxml='' $rights=''
+    ProtocolManager('Save'):$pfile,$esxml,$rights
+    if ($pfile<>'') then
+        shell('mv '+$pfile+' '+$path+'/'+$2+'/adm/ProtocolConfig_'+$2+'.txt'):$dum
+    endif
+    if ($rights<>'') then
+        shell('mv '+$rights+' '+$path+'/'+$2+'/adm/RightsConfig_'+$2+'.txt'):$dum
+    endif
+    exists($path+'/'+$2+'/templates/vnmrj/interface','directory'):$idirex
+    if ($idirex=0) then
+	shell('mkdir -p '+$path+'/'+$2+'/templates/vnmrj/interface'):$dum
+    endif
+    if ($esxml<>'') then
+        shell('mv '+$esxml+' '+$path+'/'+$2+'/templates/vnmrj/interface/ExperimentSelector.xml'):$dum
+    endif
+
+// Done
+    write('line3','Persona %s saved',$2)
+    if ($rebuildlist) then {$pmgr}('list') endif
+
+ENDIF

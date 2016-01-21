@@ -1,0 +1,76 @@
+"macro calcdecshape"
+
+$probe='' shell('basename '+probe):$probe
+if ($# < 1) then $1='' endif
+
+        $ampcf=1
+        $shapefile=''
+	getparam('pwxlvl',dn):$ref_pwr
+	getparam('pwx',dn):$ref_pw90
+        getparam('pwxlvl_cf',dn):$ampcf
+        if ($ampcf = 0) then $ampcf=1 endif
+        $ref_pw90 = $ref_pw90*$ampcf
+        $shapefile='W40_'+$probe+'.DEC'
+	if (dn<>'C13') then
+	    $shapefile='W40_'+dn+'_'+$probe+'.DEC'
+	endif
+        $rfwg2=0
+        isrfwg('dn'):$rfwg2
+	if ($1='garp1') then $rfwg2=0 endif
+        if ($rfwg2) then
+	    if (dn='C13') then
+            	$decband=200*dfrq
+	    elseif (dn='N15') then
+		$decband=350*dfrq
+	    else
+		$decband=100*dfrq
+	    endif
+            $sdecband=''
+            format($decband,0,0):$sdecband
+            $wave='WURST40 0.0014/'+$sdecband
+            opx($shapefile)
+            setwave($wave)
+            cpx($ref_pw90,$ref_pwr)
+            pbox_pwr($shapefile):$dpwr
+            pbox_dmf($shapefile):$dmf
+            $dpwr=$dpwr+2
+            $dseq='W40_'+$probe
+	    if (dn<>'C13') then
+		$dseq='W40_'+dn+'_'+$probe
+	    endif
+	    $dres=9
+	    $dmm='p'
+
+            getProbePath(probe):$e,$ppath
+            strstr($ppath,'/probes/'):$ret,$appdir
+            shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/probes/'+$probe):$dum
+            if ($appdir<>userdir) then
+                exists($appdir+'/shapelib','directory'):$direx
+                if ($direx=0) then shell('mkdir '+$appdir+'/shapelib'):$dum endif
+                shell('cp '+userdir+'/shapelib/'+$shapefile+' '+$appdir+'/shapelib'):$dum
+            endif
+
+	else
+            $gammab2=40*dfrq
+            $dmm='g'
+            $dseq='garp1'
+            $dres=1
+            if ($gammab2 > 4800) then
+                $gammab2 = 4800
+            endif
+            setpower($gammab2,dn):$dpwr,$dmf90
+	    $dmfX=dmf
+            dmf=1e6/$dmf90 dmfadj($dres) $dmf=dmf
+	    dmf=$dmfX
+        endif
+
+	$strdpwr='' $strdmf='' $sdres=''
+	format($dpwr,0,0):$strdpwr
+	format($dmf,0,0):$strdmf
+	format($dres,0,0):$sdres
+	setparams('dmf',$strdmf,dn)
+	setparams('dpwr',$strdpwr,dn)
+	setparams('dseq',$dseq,dn)
+	setparams('dres',$sdres,dn)
+	setparams('dmm',$dmm,dn)
+

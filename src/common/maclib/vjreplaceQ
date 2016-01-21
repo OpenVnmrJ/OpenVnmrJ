@@ -1,0 +1,621 @@
+"macro vjreplaceQ"
+$tailX='tail'
+whichtail:$tailX
+
+"*****************************************************************"
+$loc=replaceQ[4]
+walkupQ_init
+//if ($loc='') or (($loc='0') and (seqfil<>'Startq')) then
+if ($loc='') or (($loc='0') and (wqinit<>'acq')) then
+    write('error','Source location for sampleinfo not defined')
+	vnmrjcmd('tray update')
+	vnmrjcmd('tray show')
+	return
+endif
+"*****************************************************************"
+IF ($# = 0) THEN
+ 
+  "*******Typically called by the button in VJ ***********"
+        walkupQ('submit','location',$loc)
+
+ELSEIF ($# > 3) THEN
+
+  if ($4='') then
+     write('error','select a location')
+     return
+  endif
+  $nloc=$4
+  substr($nloc,1):$nloc
+
+  $priority='no'
+  if (prioritysample[1]='yes') then $priority='priority' endif
+
+"******************************************************************"
+  $sampleinfo=cursqexp+'/macdir/sampleinfo'
+  $rack='' $zone='' $subtray=''
+  shell('(cat '+$sampleinfo+' | grep -w RACK: | awk \'{print $2}\')'):$rack
+  shell('(cat '+$sampleinfo+' | grep -w ZONE: | awk \'{print $2}\')'):$zone
+  if ($rack<>'') and ($zone<>'') then
+     substr($rack,1):$rack
+     substr($zone,1):$zone
+     $subtray='/RACK'+$rack+'ZONE'+$zone
+  endif
+  if (traymax<>96) and (traymax<>768) then
+	$rack='' $zone=''
+  endif
+  if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+"************Make sure the automation file is present *************"
+  if (wqinit<>'enter') then 
+	$autodir=autodir $autofile='enterQ'
+  else 
+	$autodir=globalenter shell('basename '+globalenter):$autofile
+  endif
+  $AUTOGLOBAL=$autodir+'/'+$autofile+'.macdir/AUTOGLOBAL'
+  exists($AUTOGLOBAL,'file'):$agex
+  if ($agex=0) then
+                write('error','Error: %s aborted',$0)
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                return
+  endif
+
+"*******************************************************************"
+  $status='' $who='' $samplename='' $locdir=''
+  if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+	$nloc=$loc
+  endif
+  checklocstatus($autodir+'/'+$autofile,$nloc,$zone,$rack):$status,$who,$samplename,$locdir
+  if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+     updatestatus($autodir,$nloc,$status,$zone,$rack)
+     if ($status<>'Active') and ($status<>'preScan') then
+	write('error','Error: Location %s is NOT the active location',$nloc)
+	return
+     endif
+  else
+     if ($status = 'Active') then
+        write('error','Error: Location %s status changed to Active while the study was being edited.  Cannot commit these changes.',$nloc)
+        vnmrjcmd('tray update')
+        vnmrjcmd('tray show')
+        return
+     endif
+  endif
+
+
+"*******************************************************************"
+  array2string(explist):$explist
+  if (($explist='') and 
+      (longlist='') and 
+      (replaceQ[4]<>'') and 
+      (replaceQ[1]<>'ActiveDay') and 
+      (replaceQ[1]<>'ActiveNight')) then
+	vjdeleteQ('forcedelete',$loc,$zone,$rack)
+	replaceQ='','','',''
+	resumeQ=''
+	walkupQ('refresh')
+	return
+  endif
+"*******************************************************************"
+
+  $longrun='n'
+  $AUTOGLOBAL=$autodir+'/'+$autofile+'.macdir/AUTOGLOBAL'
+  $eQ=$autodir+'/'+$autofile
+  $nQ=$autodir+'/'+$autofile+'.macdir/overniteQ'
+  lookup('mfile',$AUTOGLOBAL,'seekcs','LONGRUN:','read',1):$longrun
+
+"********************************************************************"
+  $sampleinfo=cursqexp+'/macdir/sampleinfo'
+  shell('(cat '+$sampleinfo+' | wc -l)'):$sampperline
+  shell('(cat '+$sampleinfo+' | grep -w USER:)'):$userline
+  substr($userline,2):$operator
+
+"*******************************************************************"
+"Decide where to insert this resubmission "
+"$whereday/$wherenight represents how many sample entries should be skipped"
+"  before appending the replace sampleinfo"
+
+        $whereday=0 $wherenight=0
+        $sampno='' $sampno2='' $dummy=''
+	$macro='' $macro2=''
+        readfile($eQ,'$dummy','$sampno','SAMPLE#','local')
+	readfile($nQ,'$dummy','$sampno2','SAMPLE#','local')
+	readfile($eQ,'$dummy','$macro','MACRO:','local')
+	readfile($nQ,'$dummy','$macro2','MACRO:','local')
+
+    $wasinEQ=1 $wasinNQ=1
+    if (replaceQ[1] <> 'resubmit') then
+	if ($longrun='n') then
+		teststr('$sampno',$loc,'local'):$index
+		$whereday=$index-1
+		teststr('$sampno2',$loc,'local'):$index2
+		$wherenight=$index2-1
+	else
+		teststr('$sampno',$loc,'local'):$index
+		if ($index=0) then
+			$whereday=-1
+			$wherenight=-1
+		else
+			strstr($macro[$index],'night'):$oldnight
+			if ($oldnight=0) then
+				$whereday=$index-1
+				$dummyno=$sampno[$index]
+				$sampno[$index]=''
+				teststr('$sampno',$loc,'local'):$index2
+				$sampno[$index]=$dummyno
+				$wherenight=$index2-1
+			else
+				$wherenight=$index-1
+				$whereday=-1
+			endif
+		endif
+	endif
+    else
+	$whereday=-1 $wherenight=-1
+    endif
+    if ($whereday=-1) then $wasinEQ=0 endif
+    if ($wherenight=-1) then $wasinNQ=0 endif
+
+  if ($whereday<0) and ((replaceQ[1]='both') or (replaceQ[1]='resubmit')) then
+     if ($priority='priority') then
+	if (prioritysample[2]='high') then
+		shell('(cat '+$eQ+' | grep -w USER: | grep -w priority | grep -wc high)'):$whereday
+	else
+		shell('(cat '+$eQ+' | grep -w USER: | grep -wc priority)'):$whereday
+	endif
+     else
+	$whereday=size('$sampno')
+	if ($sampno[1]='') then $whereday=0 endif
+     endif
+  endif
+  if (replaceQ[1]='ActiveDay') then  $whereday=-1 endif
+
+  if ($wherenight<0) then
+     if ($longrun='n') then
+	$wherenight=size('$sampno2')
+	if ($sampno2[1]='') then $wherenight=0 endif
+     else
+	$wherenight=size('$sampno')
+	if ($sampno[1]='') then $wherenight=0 endif
+	if ($whereday=$wherenight) then $wherenight=$whereday+1 endif
+     endif
+  endif
+  if (replaceQ[1]='ActiveNight') then $wherenight=-1 endif
+
+"****************Make sure there is time****************************"
+   "Decide if it is worth proceeding based on selected location"
+   " and available time in day and/or night queue"
+
+        array2string(explist):$explist
+        $longlist=longlist
+
+        $ok=0 $ok2=0 $whenday='now' $whennight='later'
+        $ltime=0 $dtime=0 $shorttime=0 $longtime=0
+	$rstime=0 $rltime=0
+        $maclibdir=cursqexp+'/macdir'
+	walkupQ('gettime'):$dtime,$ltime
+
+	getPreAcqTime:$changetime
+	format(replaceQ[2],'lower'):$rstime
+        $shorttime=$dtime-$rstime
+	format(replaceQ[3],'lower'):$rltime
+        $longtime=$ltime-$rltime
+
+	if $rstime=0 and ($dtime>0) then
+	    $shorttime=$shorttime+$changetime
+	elseif $rstime>0 and $dtime=0 then
+	    $shorttime=$shorttime-$changetime
+	endif
+	if $rltime=0 and ($ltime>0) then
+	    $longtime=$longtime+$changetime
+	elseif $rltime>0 and $ltime=0 then
+	    $longtime=$longtime-$changetime
+	endif
+	$arg3=0,0
+	if ($explist='') or ($shorttime < 1) or ($whereday < 0) then
+	    $arg2[1]=0 else $arg2[1]=$shorttime
+	endif
+	if ($longlist='') or ($longtime < 1) or ($whereday < 0) then
+	    $arg2[2]=0 else $arg2[2]=$longtime
+	endif
+	$ok3=1
+        checkSampleTimeLimit($autodir+'/'+$autofile,$arg2,$arg3):$ok3
+
+        if ($explist='') or ($shorttime < 1) or ($whereday < 0) then $ok=1 endif
+        if ($longlist='') or ($longtime < 1) or ($wherenight < 0) then $ok2=1 endif
+
+	if ($ok=0) then
+               if ($priority='priority') then 
+		    checktime($autodir+'/'+$autofile,$shorttime,$priority):$ok,$whenday
+	       else
+           	    checktime($autodir+'/'+$autofile,$shorttime,'day'):$ok,$whenday
+	       endif
+	endif
+	if ($ok2=0) then
+           	checktime($autodir+'/'+$autofile,$longtime,'night'):$ok2,$whennight
+	endif
+
+        if ($ok=0) or ($ok2=0) or ($ok3=0) then
+		updatestatus($autodir,$nloc,$status,$zone,$rack)
+                vnmrjcmd('tray update')
+                vnmrjcmd('tray show')
+                write('error','Not enough time for the changes')
+          	return
+        endif
+"************************************************************************************************"
+   "There is enough time to submit.  Proceed"
+
+	$replaceQ=replaceQ
+	replaceQ='','','',''
+	$info=cursqexp+'/sampleinfo'
+	$info2=$info+'2'
+	shell('cp '+$sampleinfo+' '+$info):$dum
+
+$origlocdir=$locdir
+
+IF ($replaceQ[1]<>'ActiveDay') and ($replaceQ[1]<>'ActiveNight') THEN
+
+   "  Set TEXT information"
+	$text=text_string[1]
+
+   "*** USER, MACRO, USERDIR fields cannot be changed***"
+
+	if samplename='' then samplename=operator endif
+	$sample=sample
+	if ($sample='') then $sample=samplename endif
+
+        Svfname(autodir+'/enterQ.macdir/loc'+$nloc+'_%R3%',''):$locdir
+	shell('basename '+$locdir):$locdir
+
+	if ($loc <> $nloc) then
+                $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$nloc+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+	endif
+
+                $sedcmd=`sed -e 's|SOLVENT:.*|SOLVENT: `+solvent+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+
+                $sedcmd=`sed -e 's|TEXT:.*|TEXT: `+$text+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+
+                $sedcmd=`sed -e 's|SampleDir:.*|SampleDir: `+$sample+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+
+            	$sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'day\')|\"'
+            	shell('('+$sedcmd0+' '+$info+' > '+$info+'1)'):$dum
+		shell('mv '+$info+'1 '+$info):$dum
+
+                $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
+                shell('('+$sedcmd0+' '+$info+' > '+$info2+')'):$dum
+
+            if (traymax=768) then
+                $sdtime='' format($dtime+$changetime,0,0):$sdtime
+                $sltime='' format($ltime+$changetime,0,0):$sltime
+
+                $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sdtime+`|'`
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+
+                $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sltime+`|'`
+                shell($sedcmd+` `+$info2+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info2):$dum
+	    endif
+
+	if ($priority='priority') then
+	   if (prioritysample[2]='high') then
+                $sedcmd=`sed -e 's|USER:.*|USER: `+$operator+` priority high|'`
+	   else
+                $sedcmd=`sed -e 's|USER:.*|USER: `+$operator+` priority|'`
+	   endif
+                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info):$dum
+	endif
+
+ELSEIF ($replaceQ[1]='ActiveDay') THEN
+        $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
+        shell('('+$sedcmd0+' '+$info+' > '+$info2+')'):$dum
+
+            if (traymax=768) then
+                $sdtime='' format($dtime+$changetime,0,0):$sdtime
+                $sltime='' format($ltime+$changetime,0,0):$sltime
+
+                $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sltime+`|'`
+                shell($sedcmd+` `+$info2+` > `+$info+`1`):$dum
+                shell('mv '+$info+'1 '+$info2):$dum
+            endif
+
+ENDIF
+
+	if ($explist='') then
+		write('reset',$info+'day')
+	else
+		shell('cp '+$info+' '+$info+'day'):$dum
+	endif
+	if ($longlist='') then
+		write('reset',$info+'night')
+	else
+		shell('cp '+$info2+' '+$info+'night'):$dum
+	endif
+
+IF ($replaceQ[1]='ActiveDay') THEN
+	write('reset',$info+'day')
+ELSEIF ($replaceQ[1]='ActiveNight') THEN
+	write('reset',$info+'day')
+	write('reset',$info+'night')
+ENDIF
+
+   "***Create a Master copy of studypar parameters  ***"
+
+IF ($replaceQ[1]<>'ActiveDay') and ($replaceQ[1]<>'ActiveNight') THEN
+        module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+		"  Would tray color work without it?"
+        setvalue('operator_',operator)
+	if (studyowner='') then studyowner=operator endif
+	setvalue('loc_',0)
+	setvalue('vloc_','0')
+        studystatus=''
+        vzone_=1 vrack_=1 studyid_=''
+        format($nloc,'lower'):loc_
+        substr($longlist,1):studystatus
+        if (studystatus='') then 
+	     if ($explist<>'') then 
+		studystatus='Queued' 
+	     endif
+	else 
+	     studystatus='NightQueue' 
+	endif
+	locdir=$locdir
+ENDIF
+
+   "*****Pause automation and write the current sampleinfo****************"
+	expactive:$isactive
+        if ($autofile = 'enterQ') and ($isactive > -1) then
+	    autoq('lock')
+        endif
+
+IF ($replaceQ[1]='ActiveDay') THEN
+	vjcurrentQ('day',$locdir,$dtime+$changetime)
+ELSEIF ($replaceQ[1]='ActiveNight') THEN
+	vjcurrentQ('night',$locdir,$ltime+$changetime)
+ENDIF
+	
+	$curQ1=cursqexp+'/Q1'
+	$curQ2=cursqexp+'/Q2'
+	write('reset',$curQ1)
+	write('reset',$curQ2)
+
+	shell('(cat '+$eQ+' | grep -wc SAMPLE#:)'):$totsamp
+	if ($whereday > 0) then
+		$head=''
+		format($whereday*$sampperline,'lower'):$head
+		shell('(head -n '+$head+' '+$eQ+' > '+$curQ1+')'):$dum
+	endif
+	if ($replaceQ[1]='both') or ($replaceQ[1]='resubmit') then
+		shell('(cat '+$info+'day >> '+$curQ1+')'):$dum
+	endif
+	if ($totsamp-$whereday-$wasinEQ > 0) then
+		$tail=''
+		format(($totsamp-$whereday-$wasinEQ)*$sampperline,'lower'):$tail
+		shell('('+$tailX+' -n '+$tail+' '+$eQ+' >> '+$curQ1+')'):$dum
+	endif
+	if ($longrun='y') then
+		if ($wherenight > 0) then
+			$head=''
+			format($wherenight*$sampperline,'lower'):$head
+			shell('(head -n '+$head+' '+$curQ1+' > '+$curQ2+')'):$dum
+		endif
+		shell('(cat '+$info+'night >> '+$curQ2+')'):$dum
+		if ($totsamp-$wherenight-$wasinNQ > 0) then
+			$tail=''
+			format(($totsamp-$wherenight-$wasinNQ)*$sampperline,'lower'):$tail
+			shell('('+$tailX+' -n '+$tail+' '+$curQ1+' >> '+$curQ2+')'):$dum
+		endif
+		shell('mv '+$curQ2+' '+$curQ1):$dum
+		write('reset',$curQ2)
+	else
+		shell('(cat '+$nQ+' | grep -wc SAMPLE#:)'):$totnsamp
+                if ($wherenight > 0) then
+                        $head=''
+                        format($wherenight*$sampperline,'lower'):$head
+                        shell('(head -n '+$head+' '+$nQ+' > '+$curQ2+')'):$dum
+                endif
+                shell('(cat '+$info+'night >> '+$curQ2+')'):$dum
+                if ($totnsamp-$wherenight-$wasinNQ > 0) then
+                        $tail=''
+                        format(($totnsamp-$wherenight-$wasinNQ)*$sampperline,'lower'):$tail
+                        shell('('+$tailX+' -n '+$tail+' '+$nQ+' >> '+$curQ2+')'):$dum
+                endif
+	endif
+
+IF ($replaceQ[1]<>'ActiveDay') and ($replaceQ[1]<>'ActiveNight') THEN
+   "********sort priority high, priority and dayQ"
+        shell('(cat '+$curQ1+' | grep -wc SAMPLE#:)'):$toteqsamp
+	if ($toteqsamp>0) then
+	   $phQ=$curQ1+'_ph'
+	   $pQ=$curQ1+'_p'
+	   $plQ=$curQ1+'_pl'
+	   write('reset',$phQ)
+	   write('reset',$pQ)
+	   write('reset',$plQ)
+	   $i=1
+	   repeat
+		$head='' format($i*$sampperline,0,0):$head
+		$tail='' format($sampperline,0,0):$tail
+		shell('(cat '+$curQ1+' | head -n '+$head+' | '+$tailX+' -n '+$tail+' | grep -w USER: | grep -w priority | grep -wc high)'):$is
+		if ($is) then
+			shell('(cat '+$curQ1+' | head -n '+$head+' | '+$tailX+' -n '+$tail+' >> '+$phQ+')'):$dum
+		else
+		   shell('(cat '+$curQ1+' | head -n '+$head+' | '+$tailX+' -n '+$tail+' | grep -w USER: | grep -wc priority)'):$is
+		   if ($is) then
+                        shell('(cat '+$curQ1+' | head -n '+$head+' | '+$tailX+' -n '+$tail+' >> '+$pQ+')'):$dum
+		   else
+                        shell('(cat '+$curQ1+' | head -n '+$head+' | '+$tailX+' -n '+$tail+' >> '+$plQ+')'):$dum
+		   endif
+		endif
+		$i=$i+1
+	   until $i > $toteqsamp
+	   shell('(cat '+$phQ+' > '+$curQ1+')'):$dum
+           shell('(cat '+$pQ+' >> '+$curQ1+')'):$dum
+           shell('(cat '+$plQ+' >> '+$curQ1+')'):$dum
+ 	   shell('rm -f '+$phQ):$dum
+	   shell('rm -f '+$pQ):$dum
+	   shell('rm -f '+$plQ):$dum
+	endif
+ENDIF
+
+	shell('cp '+$curQ1+' '+$eQ):$dum
+	shell('cp '+$curQ2+' '+$nQ):$dum
+
+IF ($replaceQ[1]<>'ActiveDay') and ($replaceQ[1]<>'ActiveNight') THEN
+   "**********write macdir to appropriate location**********************************"
+
+        shell('mkdir -p '+$eQ+'.macdir/'+$locdir+'/day'):$dum
+        shell('cp -r '+$maclibdir+'/* '+$eQ+'.macdir/'+$locdir+'/day'):$dum
+        savesampglobal($eQ+'.macdir/'+$locdir+'/day')
+        shell('cat '+$info+' > '+$eQ+'.macdir/'+$locdir+'/day/sampleinfo'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/day/EXPLIST)'):$dum
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/day/LONGLIST)'):$dum
+
+        shell('mkdir -p '+$eQ+'.macdir/'+$locdir+'/night'):$dum
+        shell('cp -r '+$maclibdir+'long/* '+$eQ+'.macdir/'+$locdir+'/night'):$dum
+	savesampglobal($eQ+'.macdir/'+$locdir+'/night')
+	shell('cat '+$info2+' > '+$eQ+'.macdir/'+$locdir+'/night/sampleinfo'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/night/EXPLIST)'):$dum
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/night/LONGLIST)'):$dum
+
+        savesampglobal($eQ+'.macdir/'+$locdir)
+
+	shell('chmod -R g+rw '+$eQ+'.macdir/'+$locdir):$dum
+
+    "*****Write studypar entry ****"
+                $sdir=$eQ+'.macdir/studytray'+$subtray
+                exists($sdir+'/loc'+$nloc,'directory'):$ex
+                if ($ex=0) then
+                   shell('mkdir -p '+$sdir+'/loc'+$nloc):$dum
+                else
+                   shell('touch '+$sdir+'/loc'+$nloc):$dum
+                endif
+                studyid_='loc'+$nloc
+                $studypar=$sdir+'/'+studyid_+'/studypar'
+		savestudypar($sdir+'/'+studyid_)
+		shell('chmod -R g+rw '+$sdir+'/'+studyid_):$dum
+		updatestatus($autodir,$nloc,studystatus,$zone,$rack)
+
+   "*****Write autostudies file *****"
+                $autostudies=$autodir+'/autostudies'
+		$studypath=$autofile+'.macdir/studytray'+$subtray+'/'+studyid_
+		shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+		if ($isthere=0) then
+                   write('file',$autostudies,'%s',$studypath)
+		endif
+ELSEIF ($replaceQ[1]='ActiveDay') THEN
+        shell('cp -r '+$maclibdir+'long/*acq* '+$eQ+'.macdir/'+$locdir+'/night'):$dum
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/day/LONGLIST)'):$dum
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$eQ+'.macdir/'+$locdir+'/night/LONGLIST)'):$dum
+        $shorttime=0
+ELSEIF ($replaceQ[1]='ActiveNight') THEN
+	$shorttime=0
+	$longtime=0
+ENDIF
+
+	if ($origlocdir<>$locdir) then
+	     shell('cp '+$eQ+'.macdir/'+$origlocdir+'/eventLog '+$eQ+'.macdir/'+$locdir):$dum
+	endif
+        $logmsg='' write('line3','%s Resubmitted after edit',$samplename):$logmsg
+	eventLog('StudySubmit',$logmsg,$locdir)
+
+        write('reset',$eQ+'.macdir/'+$locdir+'/day/TtimeQ')
+	if $explist<>'' then $ndtime=$dtime+$changetime else $ndtime=0 endif
+	if $longlist<>'' then $nltime=$ltime+$changetime else $nltime=0 endif
+
+        write('file',$eQ+'.macdir/'+$locdir+'/day/TtimeQ','enterQ_TOTALTIME %d',$ndtime)
+        write('file',$eQ+'.macdir/'+$locdir+'/day/TtimeQ','overniteQ_TOTALTIME %d',$nltime)
+        write('reset',$eQ+'.macdir/'+$locdir+'/night/TtimeQ')
+        write('file',$eQ+'.macdir/'+$locdir+'/night/TtimeQ','enterQ_TOTALTIME %d',$ndtime)
+        write('file',$eQ+'.macdir/'+$locdir+'/night/TtimeQ','overniteQ_TOTALTIME %d',$nltime)
+
+  "** Update automation TtimeQ ***"
+
+        $daytime=0 $nitetime=0 $prioritytime=0
+	readTtimeQ($autodir+'/'+$autofile+'.macdir'):$prioritytime,$daytime,$nitetime
+        $daytime=$daytime+$shorttime
+        if ($whenday='priority') then
+                $prioritytime=$prioritytime+$shorttime
+        endif
+        if ($whennight='now') then
+                $daytime=$daytime+$longtime
+        else
+                $nitetime=$nitetime+$longtime
+        endif
+	writeTtimeQ($autodir+'/'+$autofile+'.macdir',$prioritytime,$daytime,$nitetime)
+
+   "****Cleanup *****"
+          shell('rm -f '+$curQ1):$dum
+          shell('rm -f '+$curQ2):$dum
+          shell('rm -f '+$info):$dum
+          shell('rm -f '+$info2):$dum
+
+   "******Remove this location from errorQ and reuselocQ*********"
+
+	    $sampq='SAMPLE#: '+$nloc
+            $errorq=$autodir+'/'+$autofile+'.macdir/cperrorQ'
+            shell('touch '+$errorq):$dum
+            shell('(cat '+$errorq+' | grep -vw "'+$sampq+'" > '+$errorq+'1)'):$dum
+            shell('mv '+$errorq+'1 '+$errorq):$dum
+	    shell('chmod g+rw '+$errorq):$dum
+
+            $reuseq=$autodir+'/'+$autofile+'.macdir/reuselocQ'
+            shell('touch '+$reuseq):$dum
+            shell('(cat '+$reuseq+' | grep -vw "'+$sampq+'" > '+$reuseq+'1)'):$dum
+            shell('mv '+$reuseq+'1 '+$reuseq):$dum
+	    shell('chmod g+rw '+$reuseq):$dum
+// write location path in the sample directory
+        exists(archivedir+'/'+sample+'/dirinfo','directory'):$macdirex
+        if ($macdirex) then
+             $locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+             write('reset',$locpath)
+             write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$locdir)
+        endif
+// write sub xml file
+	    xmhaha_subautoSQ($autodir,'',$locdir,$origlocdir)
+	if ($replaceQ[1]<>'ActiveNight') then
+	    xmhaha_asx($autodir,'enterQ')
+	    xmhaha_asx($autodir,'overniteQ')
+	endif
+
+   "**** Report the results ****"
+     if (seqfil='Startq') then
+        write('line3','Sample "%s" resubmitted to autodir',samplename)
+     else
+        write('line3','Location resubmitted')
+     endif
+
+   "**** Restart Automation ****"
+	expactive:$isactive
+	if ($autofile = 'enterQ') and ($isactive > -1) then
+		autoq('unlock')
+		pauseautomation
+                $autosaflag='none'
+                getautosaflag($autodir+'/'+$autofile):$autosaflag
+                if ($autosaflag='none') then
+                  autora
+                elseif ($autosaflag='service') then
+                   write('error','Automation is paused by Administrator for Service')
+                elseif ($autosaflag='admin') then
+		   if (prioritysample[2]='high') then
+			if (prioritysample[3]='now') then
+				resumeautomation
+			endif
+		   else
+                   	write('error','Automation is paused by Administrator')
+		   endif
+                endif
+	endif
+	prioritysample[2]='low'
+
+ENDIF

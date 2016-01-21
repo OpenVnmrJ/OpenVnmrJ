@@ -1,0 +1,25 @@
+"macro ATgrec"
+s1 f
+select(arraydim) vsadj(100)
+$r1=1
+repeat
+ select(arraydim-$r1)
+ peak:$int
+ $r1=$r1+1
+until (($int<95.0) or ($r1=arraydim))
+if ($r1<arraydim) then
+ $95percentd2=d2[arraydim-$r1+2]
+else
+ $95percentd2=d2[1]        
+endif
+r1
+write('reset',curexp+'/analyze.inp')
+write('file',curexp+'/analyze.inp','    1     26')
+write('file',curexp+'/analyze.inp','1')
+$count=1
+repeat
+  select($count) peak:$int
+  write('file',curexp+'/analyze.inp','     %1.6f          %2.2f',d2[$count],$int)
+  $count=$count+1
+until $count>arraydim
+return($95percentd2)

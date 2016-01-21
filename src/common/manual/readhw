@@ -1,0 +1,153 @@
+
+*******************************************************************
+sethw -   Set values for hardware in the acquisition system
+readhw -  Read current values of acquisition hardware
+*******************************************************************
+
+The SETHW command (SET HardWare) allows the VNMR program to set values
+for selected parameters in the acquisition hardware.
+
+The READHW (READ HardWare) allows the VNMR program to read the current
+values of these parameters in the acquisition hardware.
+
+Parameters which can be accessed include the parameters of the lock
+system and the shim DACs and sample location.  They are:
+
+	lockpower, lockgain, lockphase, z0	"lock system parameters"
+        z1, z2, z3, z4, z1c, z2c		"axial shim DACs"
+        x1, y1, xz, yz, xy, x2y2, x3, y3	"non-axial shims"
+        z5, xz2, yz2, zx2y2, zxy	"special shims for Oxford magnets"
+        loc                             "sample changer location"
+
+readhw accepts the keyword 'status' to read the system status
+(e.g., Idle, Active, etc). The status is returned as an integer.
+The values of the integers are:
+
+IDLE        10
+PARSE       15
+PREP        16
+SYNCED      17
+ACQUIRE     20
+PAD         25
+VTWAIT      30
+SPINWAIT    40
+AGAIN       50
+ALOCK       60
+AFINDRES    61
+APOWER      62
+APHASE      63
+SHIMMING    70
+SMPCHANGE   80
+RETRIEVSMP  81
+LOADSMP     82
+ACCESSSMP   83   AS7600 access open condition
+ESTOPSMP    84   AS7600 Estop condition
+MMSMP       85   AS7600 Magnet motion condition
+
+INTERACTIVE 90
+TUNING      100
+INACTIVE    0
+
+The readhw command with status as the argument may display or return
+error values. These are
+
+-1    available on spectrometer only (ie system = 'datastation')
+-2    acquisition not active  (Acquisition communication programs
+                               are not running. Probably needs
+                               su acqproc)
+-7    console powered down or not connected
+
+readhw accepts the keyword 'temp' to return the temperature.
+For example, readhw('temp'):$t sets $t to the temperature.
+If additional return values are given, then the temperature controller
+status and the requested temperature set point can be obtained.
+The second return value is the status and the third return value
+is the set point.  For example
+  readhw('temp'):$t,$stat,$set
+will set $t to the current temperature, $stat to the controller
+status and $set to the requested temperature set point.
+The controller status is returned as an integer. The values of the
+integers are:
+
+Regulation off  0
+Regulated       1
+Not regulated   2
+No controller   3
+
+If there is no VT controller, or the regulation is off, the temperature
+set point will be returned as 3000.
+
+readhw accepts the keyword 'spin' to return the spinning speed.
+For example, readhw('spin'):$s sets $s to the spinning speed.
+If additional return values are given, then the spin controller
+status and the requested spin set point can be obtained.
+The second return value is the status and the third return value
+is the set point.  For example
+  readhw('spin'):$s,$stat,$set
+will set $s to the current spinning speed, $stat to the controller
+status and $set to the requested spin set point.
+The controller statuses are the same as those above for the 'temp'
+case.
+
+readhw with the keyword 'loc' returns the sample changer location for the
+sample in the magnet. After a console reboot or an eject/insert operation,
+the console does not know the current sample changer location. readhw('loc')
+returns a 0 in this case. A 0 means that if a sample is in the magnet,
+the console does not know its sample changer location. The command
+readhw('loc'):$loc,$detected will return a second value ($detected in the
+preceding example) which will be set to 0 if the console hardware does
+not detect a sample in the magnet. The second return value will be set
+to 1 if the console hardware detects a sample in the magnet.  Immediately
+after putting a sample in the magnet with an insert command,
+  readhw('loc'):$loc,$detected will set $loc=0, since it does not know the
+sample changer location, and it will set $detected=1, since it detects the
+sample in the magnet.
+
+readhw with the keyword 'remainingtime' returns the time, in seconds, of the
+current acquisition. If no acquisition is running, it returns a zero.
+
+readhw with the keyword 'inqueue' returns the number of experiments in the
+queue to be run. If no acquisition is running or if an acquisition is running
+but there are no acquisitions queued to run when it finishes, it will return
+zero. This does not count the number of experiments queued to an automation
+run. It counts queued acquisitions submitted by running go / ga / au in
+different workspaces.
+
+The SETHW command accepts parameter name - value in pairs as arguments.
+You must specify at least one parameter name - value.  An example:
+
+	sethw('z1c',30,'z2c',-50)
+
+A maximum of ten parameters can be set using this command.
+
+Normally the SETHW command sends the new values to the acquisition console
+and then verify these new values.  It then updates the corresponding VNMR
+parameters.  Use the `nowait' keyword to cause SETHW to just send the new
+values to the console, without verifying them or changing VNMR parameters.
+The `wait' keyword is accepted to confirm the default mode of operation.
+
+The `wait' or `nowait' keyword must either be the first or the last
+argument.
+
+The READHW command obtains the current settings for each parameter
+passed to it as arguments.  An example:
+
+	readhw('z1c','z2c','z1','z2')
+
+This command obtains the values for the coarse and fine Z1 and Z2 shim
+coils.
+
+The settings can be stored in VNMR variables if the variables are part
+of the return value list.  An example:
+
+	readhw('z1c','z2c','z1','z2'):r1,r2,r3,r4
+
+This command will store the current setting for the coarse Z1 shim in
+`r1', the coarse Z2 shim in `r2', the fine Z1 shim in `r3' and the fine
+Z2 shim in `r4'.
+
+If no return variable is supplied, the setting will be displayed in the
+status window of VNMR.
+
+The commands READHW and SETHW cannot be used when an acquisition is in
+progress or when ACQI is connected to the acquisition system.

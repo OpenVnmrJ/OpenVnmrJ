@@ -1,0 +1,130 @@
+"macro AT74"
+"AT74" "Field Recovery Time 10G/cm (z-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       gcoil='' sysgcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+
+   r1=0 r2=0 
+   text('Field Recovery Time following\\ a +10G/cm 1msec Z-axis Gradient')
+   at_currenttest='grec_+z_10'
+   seqfil='ATg2pul' gt1=.001 gzlvl1=10/at_gzcal
+   vchannelmap='0','z'
+   d2=0.00000075,0.000001,0.000003,0.000006,0.000012,.000025,.00005,.0001,.00025,.0005,.001
+   rof1=0.5
+   gradaxis='z'
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   f
+   wnt='ATwft select(1) av vsadj(10) dssh dtext'
+   wexp='AT74(`PART1`)'
+   ATcycle
+   au
+   write('line3','Field Recovery Time following a +10G/cm 1 msec Z-axis Gradient')
+   dps
+
+elseif ($1='PART1') then
+
+   wft select(arraydim) ph aph0:$ok
+   f
+   if $ok then aph0 else av endif
+   vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_z') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')"
+    pltext(100,wc2max-20)
+   endif
+   f th=40
+   select(arraydim) nll fp t1 center expl 
+   ATgrec:r1       
+   if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r1*1e6)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   gzlvl1=-gzlvl1
+   at_currenttest='grec_-z_10'
+   wnt='ATwft f dssh dtext'
+   wexp='AT74(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+   wft
+   f
+   text('Field recovery time\\following a 1 msec -10 G/cm \\Rectangular Z gradient pulse')
+   select(arraydim) ph aph0:$ok
+   if $ok then aph0 else av endif
+   vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_z') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')" 
+    pltext(100,wc2max-20)
+   endif
+   f
+   th=40
+   select(arraydim) nll fp t1 center expl 
+   ATgrec:r2       
+   gzlvl1=trunc(gzlvl1) 
+   r1=trunc(1e6*r1)
+   r2=trunc(1e6*r2)
+   if shaped='s' then
+     ATrecord('ZRECOVRECTs','Z-Recovery: Time for signal to recover to >95 percent (10G/cm autoshaped rect. gradient):','Time ',r1,'at_Gz_level',-gzlvl1,'Time  ',r2,'at_Gz_level',gzlvl1)
+     write('file',autotestdir+'/REPORT','Z Gradient Rec.(10G/cm autoshaped rect):%3.1fusec(Gz= %5.0f);%3.1fusec (Gz= %5.0f)',r1,-gzlvl1,r2,gzlvl1)
+   else
+     ATrecord('ZRECOVRECT','Z-Recovery: Time for signal to recover to >95 percent (10G/cm rectangular gradient):','Time ',r1,'at_Gz_level',-gzlvl1,'Time  ',r2,'at_Gz_level',gzlvl1)
+     write('file',autotestdir+'/REPORT','Z Gradient Rec.(10G/cm rect): %3.1f usec (Gz= %5.0f); %3.1f usec (Gz= %5.0f) ',r1,-gzlvl1,r2,gzlvl1)
+   endif
+    if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r2)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  gcoil=at_sysgcoil sysgcoil=at_sysgcoil endif "restore sysgcoil value"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+ATnext
+endif

@@ -1,0 +1,52 @@
+"macro gnoesyCNhsqc"
+
+BPrtppar('gnoesyCNhsqc')
+
+ getparam('dmf80','C13'):dmf80 
+ getparam('rf80','C13'):rf80
+
+setfrq BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+ getparam('gt5','N15'):gt5
+ getparam('gzlvl5','N15'):gzlvl5
+
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2 
+ "recall pwC for 3db down in power, along with compC for this power"
+ "no reduced power used in pulse sequence calculations"
+ getparam('compC3db','C13'):compC
+ getparam('pwC3db','C13'):pwC
+ pwClvl=pwClvl-3
+ pwNlvl=pwNlvl-3 pwN=1.4*compN*pwN "reduce power because of simultaneous pulses"
+ sw1=sw 
+ dof=dof-(174-35)*dfrq
+ getparam('dmm2NH','N15'):$mode
+ substr($mode,3,1):$mode
+ dmm2='c'+$mode+'c'+$mode
+ if ($mode<>'p') then
+  dpwr2=dpwr2-3 dmf2=dmf2/1.4  "lower decoupling by 3dB"
+ endif
+ wet='ynn' 
+ BPsetwurstparams
+ dm='nnny' dm2='nyny'
+ if dmm<>'cccp' then
+  dpwr=pwClvl-15 dmf=1e6/(2*2*1.4*pwC*compC)
+  BPcheckdpwr
+ endif
+
+
+BPmake180COa
+pwC10 = 80.5*600.0/sfrq
+$pw = pwC10*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC10 = ($pw + 1.0)/5.0
+spin='n' ni=0  ni2=0 phase=1 phase2=1

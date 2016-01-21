@@ -1,0 +1,102 @@
+"macro showdosyresidual"
+" GAM 9i04 allow 2nd argument:  expansion factor for residual	" 
+" PS version May 2009						"
+ 
+if (($#<1) or ($#>2)) then 
+	write('error','Usage:  showdosyresidual(n);  requires 1 or 2 arguments') 
+	abort 
+endif 
+
+clear(2)
+ 
+if ($#=2) then $diffmult=$2 else $diffmult=1 endif 
+ 
+$text='' 
+lookup('file',curexp+'/dosy/general_dosy_stats') 
+lookup('read',1):$text 
+if ($text='2D') then $3Dflag=0 else $3Dflag=1 endif 
+ 
+lookup('seek','Diff') 
+	$i=0 
+	repeat 
+		lookup('read'):$text 
+		$i=$i+1 
+	until (($text='Frequency') or ($text='Peak') or ($text='')) 
+$np=($i-1)/4 
+ 
+lookup('file',curexp+'/dosy/general_dosy_stats') 
+lookup('count','Diff'):$npks 
+ 
+if ($3Dflag=0) then 
+ 
+	if ($1>$npks) then 
+                $npkschar=''
+                format($npks,0,0):$npkschar
+                $banner='   Showdosyfit stopped\\         There are only '+$npkschar
+                $banner=$banner+'\\peaks or integral regions'
+                banner($banner)
+		abort 
+	endif 
+ 
+	lookup('file',curexp+'/dosy/general_dosy_stats') 
+	lookup('seek','Diff') 
+	if ($1>1) then 
+		$i=1 
+		repeat 
+			$i=$i+1 
+			lookup('seek','Diff') 
+		until $i>=$1 
+	endif 
+	$i=1 
+	repeat 
+		lookup('read',4):$g[$i],$exp[$i],$fit[$i],$diff[$i] 
+		$i=$i+1 
+	until $i>$np 
+ 
+else 
+ 
+	lookup('file',curexp+'/dosy/general_dosy_stats') 
+	$j=0 
+	repeat 
+		$j=$j+1 
+		if ($j>$npks) then 
+                  $1char=''
+                  format($1,0,0):$1char
+                  $banner=' Showdosyfit stopped\\ Peak # '+$1char+' not found'
+                  banner($banner)
+                  return
+		endif 
+		lookup('seek','Peak') 
+		lookup('seek','number') 
+		lookup('read',1):$i 
+	until ($i=$1) 
+	 
+	lookup('seek','Diff') 
+	$i=1 
+	repeat 
+		lookup('read',4):$g[$i],$exp[$i],$fit[$i],$diff[$i] 
+		$i=$i+1 
+	until $i>$np 
+endif 
+ 
+ 
+write('reset',curexp+'/dosy/dosyplot') 
+write('file',curexp+'/dosy/dosyplot','exp 4') 
+write('file',curexp+'/dosy/dosyplot','  1 %d',$np) 
+write('file',curexp+'/dosy/dosyplot','Relative gradient area squared ') 
+write('file',curexp+'/dosy/dosyplot','') 
+write('file',curexp+'/dosy/dosyplot','1 0 0 0') 
+$i=1 
+repeat 
+	write('file',curexp+'/dosy/dosyplot','%f\t%f',$g[$i],$diffmult*$diff[$i]) 
+	$i=$i+1 
+until $i>$np 
+ 
+full 
+autoscale 
+expl('file',curexp+'/dosy/dosyplot') 
+if int_flg='y' then
+    write('graphics',80,wc2max-15,'Fit for integral region # %d',$1)
+else
+    write('graphics',80,wc2max-15,'Fit for peak # %d',$1)
+endif

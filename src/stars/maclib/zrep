@@ -1,0 +1,35 @@
+"macro zrep"
+"H. Bildsoe, Aarhus University, Denmark, march 1995"
+"zrep(srate,min_frq,max_frq)- zero integral at cr,cr-delta and repeat with spacings"
+"of srate and between min_frq and max_frq"
+
+if ($#>3 or $#<1) then
+  write('error','Usage: zrep(spacing<,min_frq><,maxfrq>)')
+  abort endif
+
+if ($1<delta) then write('error','Error: First argument must be > delta')
+   abort endif
+if ($#=1) then "replicate through total spectrum"
+  $min=rfp-rfl $max=sw+$min
+ 
+  else if ($#=2) then "from current cr to lim1"
+  if ($2>cr) then
+    $max=$2 $min=cr-delta
+    else $max=cr $min=$2
+    endif
+
+  else   "between lim1 and lim2"
+    if ($2>$3) then
+      $max=$2 $min=$3
+      else $max=$3 $min=$2
+      endif
+  endif endif
+
+$i=trunc(($max-cr)/$1)
+$f1=$i*$1+cr $f2=$f1-delta
+while ($f2>=$min) do
+  z($f2,$f1)
+  $i=$i-1
+  $f1=$i*$1+cr $f2=$f1-delta
+  endwhile
+

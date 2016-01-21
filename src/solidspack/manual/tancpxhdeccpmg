@@ -1,0 +1,206 @@
+Protocol: Tancpxhdeccpmg  Sequence: tancpxhdeccpmg.c  Apptype: solidseq2d
+
+Description:
+       A 2D HX HETCOR with an HX CP transfer. A d2 period with either X 
+       decoupling only or homonuclear decoupling with an X pi pulse. 
+       An X acquisition using optional H TPPM or SPINAL decoupling.
+       X-d2 decoupling is balanced with X decoupling after acquisition.
+
+       Choose an optional flipback with aXflip > 0.0
+       Choose an optional Hahn echo with aXecho > 0.0
+       Choose optional CPMG acquire with onXcpmg='y'
+
+
+Parameter Groups
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be set
+              - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore function: _cp_(hx,phHhx,phXhx); phHhx is the overall phase
+              table for the H channel and phXhx is that for the X channel.
+
+hdec1H:  Module:  yes
+Sequence: hh2dhdec.c
+Description: Chooses various decoupling methods: PMLG, FSLG, SAM, TPPM.
+	     For each decoupling methods uses "get" functions from
+             SolidsPack. 
+Parameters:  Sequence Page
+       dmHhdec1 - flag to switch on/off the optional decoupling. 
+                  Possible values: 'y' and 'n'. 
+       seqHhdec1 - decoupling method. Possible values - 'pmlg',
+                   'fslg', 'sam', 'tppm'.
+       aHhdec1 - amplitude of the decoupling.
+       pwHhdec1 - pulse width for the decoupling.For FSLG and PMLG: 
+                  360-degree flip, off resonance (the length of
+                  each of the two FSLG/PMLG pulses).
+                  For SAM: the time of one rotor period
+                  For TPPM: approximate 180-degree flip angle on
+                  resonance.
+       qHhdec1 - integer multiplier. Relevant for PMLG and SAM. 
+              For PMLG: the number of phase steps in that make 
+              up pwHhdec1. A negative value implements descending
+              phases in the first pulse.
+	      For SAM: the number of RF cycles per rotor cycle.
+       nHhdec1 - waveform cycles represented in the .DEC file.
+       mHhdec1 - integer parameter. Not currently in use and 
+                 should be set to 1.
+       ofdHhdec1 - for FSLG: +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofHhdec1 - overall frequency offset for the chosen decoupling 
+              technique.
+       pwHshort1 - duration of the correction pulse for tilted axis 
+              (FLSG/PMLG).
+       chHhdec1 - 'obs' must be set (not shown).
+Implementation: MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
+Underscore functions: _mpseqon(hdec1.mps,phHdec) and other MPSEQ functions
+
+Xseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL, TPPM decoupling or pi-pulse on the X channel
+Parameters:  Sequence Page - the Xspinal and Xtppm groups overlap
+       Xseq - chooses the decoupling sequence, TPPM, SPINAL or Pi-pulse.
+Implementation:  DSEQ dec = getdseq("X");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Xspinal:  Module:  yes
+Sequence: tancpx.c
+Description:  Implements SPINAL decouping on the X channel during
+              acquisition.
+Parameters:  Sequence Page
+       aXspinal - amplitude of the X channel.
+       pwXspinal - approximate 180-degree flip angle on resonance.
+       phXspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phXspinal.
+       chXspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("X"); or DSEQ dec =
+              getdseq("X");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Xtppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the X channel during
+              acquisition.
+Parameters:  Sequence Page
+       aXtppm - amplitude of the dec channel.
+       pwXtppm - approximate 180-degree flip angle on resonance.
+       phXtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chXtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("X"); or DSEQ dec = getdseq("X");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+180X: Module: No
+Sequence:  tancpxhdec.c    
+Description:  Provides a 180-degree pulse on X that.
+Parameters:  Channels Page
+      aX180  - the amplitude of the pulse.
+      pwX180 - the pulse length.
+
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL or TPPM decoupling on the dec channel
+             during acquisition
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence: tancpx.c
+Description:  Implements SPINAL decouping on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+echoX: Module: no
+Sequence:  ssecho1d.c
+Description: Implements a refocusing pulse with delays before and after
+the pulse.
+Parameters:  More Page
+       aXecho - amplitude of the obs pulses.
+       t1Xecho - delay before the refocusing pulse.
+       pwXecho - 180-degree flip on obs.
+       t2Xecho - delay after the refocusing pulse.
+
+flip X: Module: no
+Sequence:  tancpxhdeccpmg.c
+Description: Implements a flipback pulse
+Parameters:  More Page
+      aXflip  - the amplitude of the pulse.
+      pwXflip - the pulse length.
+
+X acquisition: Module: no
+Sequence:  tancpxhdeccpmg.c
+Description: Switch between standard and CPMG acquisition
+Parameters:  More Page
+      onXcpmg  - activates CPMG acquisition when equal to 'y'. Uses 
+                 normal acquisition when set to 'n'
+
+cpmgX: Module:  yes
+Sequence:  qcpmg1d.c
+Description:  Implements CPMG on X with acquisition the windows and
+              during a first echo before the CPMG.
+Parameters:  More Page
+       aXcpmg - amplitude of obs pulses.
+       pwXcpmg - nominal 180-degree flip on obs.
+       r1Xcpmg - prepulse delay (similar to rof1).
+       r2Xcpmg - postpulse delay (similar to rd or rof2).
+       r3Xcpmg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined.
+       tauXcpmg - time for one "one-tau" window and pulse.
+       edXcpmg - number of 100 ns ticks in the detection window.
+       chXcpmg = 'obs' must be set (not shown).
+Implementation:  WMPA cpmg = getcpmg("cpmgX");
+Underscore function: _cpmg(cpmg,phXcpmg);  phXcpmg is the overall phase
+              table.

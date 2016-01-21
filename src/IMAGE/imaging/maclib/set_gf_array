@@ -1,0 +1,87 @@
+"macro set_gf_array"
+"************************************************************************"
+" set_gf_array - Macro to set array variable according to dro, dpe, dsl. "
+"              Called whenever dro, dpe or dsl are changed, as well as   "
+"              from any macro that sets up these parameters.             "
+"              Calls max, get_max_gf and bvalue                          "
+"                                                                        "
+"                                                                        "
+"************************************************************************"
+
+$array_xyz = 0
+$array_no_g = ''
+$array = ''
+
+"array_xyz = "
+"	1 = x only"
+"	2 = y only"
+"	4 = z only"
+
+
+"Only bother if any of dro, dpe or dsl is arrayed"
+max(size('dro'),size('dpe')):$size
+max($size,size('dsl')):$size
+"write('line3','size of array is %d',$size)"
+
+$error_str = 'ERROR (set_gf_array): Number of values for arrayed dro, dpe and dsl must be identical'
+
+if ($size > 1) then
+
+  if (size('dro') > 1) then
+    if (size('dro') = $size) then
+      $array_xyz = 1
+    else
+      write('error',$error_str)
+      return
+    endif
+  endif
+
+
+  if (size('dpe') > 1) then
+    if (size('dpe') = $size) then
+      $array_xyz = $array_xyz + 2
+    else
+      write('error',$error_str)
+      return
+    endif
+  endif
+
+
+  if (size('dsl') > 1) then
+    if (size('dsl') = $size) then
+      $array_xyz = $array_xyz + 4
+    else
+      write('error',$error_str)
+      return
+    endif
+  endif
+
+
+  if ($array_xyz = 1) then $array = 'dro'           endif
+  if ($array_xyz = 2) then $array = 'dpe'           endif
+  if ($array_xyz = 3) then $array = '(dro,dpe)'     endif
+  if ($array_xyz = 4) then $array = 'dsl'           endif
+  if ($array_xyz = 5) then $array = '(dro,dsl)'     endif
+  if ($array_xyz = 6) then $array = '(dpe,dsl)'     endif
+  if ($array_xyz = 7) then $array = '(dro,dpe,dsl)' endif
+
+  $dro = dro
+  $dpe = dpe
+  $dsl = dsl
+  zero_gf
+
+  $array_no_g = array
+  dro = $dro
+  dpe = $dpe
+  dsl = $dsl
+
+  if ($array_no_g <> '') then
+    array = $array_no_g + ',' + $array
+  else
+    array = $array
+  endif 
+
+endif
+
+//get_max_gf($array_xyz)
+//bvalue

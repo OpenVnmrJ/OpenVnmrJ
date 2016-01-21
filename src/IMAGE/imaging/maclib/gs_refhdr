@@ -1,0 +1,142 @@
+"macro gs_refhdr"
+
+"***************************************************************"
+" gs_refhdr                                                     "	
+"                                                               "
+" Make an FDF header file for shimmap file                      "
+" FOV and matrix size are read from default shimmap.param file  "
+" The shimmap orientation is assumed to be sagital and the      "
+" volume offsets, pro=ppe=ppe2=0                                "
+
+"***************************************************************"
+
+"** Initialize constants and defaults *********************"
+$prog = 'gs_refhdr: '			"Program ID"
+$headername = 'shimmap.hdr'             "generic header name"
+$arraysize = 1
+$deg_to_rad = 3.141592654/180.0		"degree to radian conversion"
+$GSDIR = userdir+'/gshimdir/data'
+
+$filename = $GSDIR+'/'+$headername
+$cmd = 'rm -f '+$filename
+shell($cmd):$x
+
+$shimpar = $GSDIR+'/shimmap.param'   "param file created by gs_calc"
+"** read in shimmap parameters; check size and FOV with header parameters **"
+lookup('mfile',$shimpar,'filekey'):$key
+lookup('mfile',$key,'seek','#DATASIZE','read','read','read'):$sz1,$sz2,$sz3
+lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+$f1=$f1/10  $f2=$f2/10  $f3=$f3/10   "cm"
+  
+$psi=90 $phi=0 $theta=90   "shimmap orientation is sagittal and origin 0"
+
+"** Convert Euler angle orientation to nine direction *****"
+" cosines which define the imaging plane orientation       "
+" relative to the magnet frame.                            "
+"**********************************************************"
+cos($deg_to_rad*$psi):$cospsi
+sin($deg_to_rad*$psi):$sinpsi
+cos($deg_to_rad*$phi):$cosphi
+sin($deg_to_rad*$phi):$sinphi
+cos($deg_to_rad*$theta):$costheta
+sin($deg_to_rad*$theta):$sintheta
+
+"** The direction cosine matrix dc is reordered to follow *"
+" the axis definitions in the Vnmr phasefile: traces or   *"
+" F1 axis first. (1<->2, 4<->5, 7<->8)                    *"
+"**********************************************************"
+$dc[1] = -$sinphi*$sinpsi - $cosphi*$costheta*$cospsi
+$dc[2] = $sinphi*$cospsi - $cosphi*$costheta*$sinpsi
+$dc[3] = $sintheta*$cosphi
+
+$dc[4] = $cosphi*$sinpsi - $sinphi*$costheta*$cospsi
+$dc[5] = -$cosphi*$cospsi - $sinphi*$costheta*$sinpsi
+$dc[6] = $sintheta*$sinphi
+
+$dc[7] = $cospsi*$sintheta
+$dc[8] = $sinpsi*$sintheta
+$dc[9] = $costheta
+
+
+"** Define header entries and formats *********************"
+$format[1] =  'float  rank = %d;'
+$format[2] =  'char  *spatial_rank = "%s";'
+$format[3] =  'char  *storage = "%s";'
+$format[4] =  'float  bits = %d;'
+$format[5] =  'char  *type = "%s";'
+$format[6] =  'float  matrix[] = {%d, %d, %d};'
+$format[7] =  'char  *abscissa[] = {"%s","%s","%s"};'
+$format[8] =  'char  *ordinate[] = {"%s"};'
+$format[9] =  'float  span[] = {%f, %f, %f};'
+$format[10] = 'float  origin[] = {%f, %f, %f};'
+$format[11] = 'char  *nucleus[] = {"%s","%s"};'
+$format[12] = 'float  nucfreq[] = {%f, %f};'
+$format[13] = 'float  location[] = {%f, %f, %f};'
+$format[14] = 'float  roi[] = {%f, %f, %f};'
+$format[15] = 'float  orientation[] = {%.4f,%.4f,%.4f, %.4f,%.4f,%.4f, %.4f,%.4f,%.4f};'
+$format[16] = 'char  *array_name = "%s";'
+$format[17] = 'float  array_vals[] = {%s};'
+$format[18] = 'float  %s = %f;'
+$format[19] = 'char  *%s = "%s";'
+$format[20] = 'int    array_index = %d;'
+$format[21] = 'char  *file = "%s";'
+$format[22] = 'int  bigendian = %d;'
+
+"** This stuff is fixed for now ***************************"
+$rank = 3
+$spatial_rank = '3dfov'
+$storage = 'float'
+$bits = 32
+$type = 'absval'
+$abs[1] = 'cm'
+$abs[2] = 'cm'
+$abs[3] = 'cm'
+$ord = 'intensity'
+$pro=0 $ppe=0 $ppe2=0
+$loc[1] = $pro   
+$loc[2] = $ppe   
+$loc[3] = $ppe2   
+$roi[1] = $f1
+$roi[2] = $f2
+$roi[3] = $f3
+
+
+"** Create and write the temporary fdf header file ********"
+write('reset',$filename)
+write('file',$filename,'%s','#!/usr/local/fdf/startup')
+write('file',$filename,$format[1],$rank)
+write('file',$filename,$format[2],$spatial_rank)
+write('file',$filename,$format[3],$storage)
+write('file',$filename,$format[4],$bits)
+write('file',$filename,$format[5],$type)
+write('file',$filename,$format[6],$sz1,$sz2,$sz3)
+write('file',$filename,$format[7],$abs[1],$abs[2],$abs[3])
+write('file',$filename,$format[8],$ord)
+write('file',$filename,$format[9],$f1,$f2,$f3)
+write('file',$filename,$format[10], $pro-($f1/2), $ppe-($f2/2), $ppe2-($f3/2))
+write('file',$filename,$format[11],tn,dn)
+write('file',$filename,$format[12],sfrq,dfrq)
+write('file',$filename,$format[13],$loc[1],$loc[2],$loc[3])	
+write('file',$filename,$format[14],$roi[1],$roi[2],$roi[3])	
+write('file',$filename,$format[15],$dc[1],$dc[2],$dc[3],$dc[4],\
+    $dc[5],$dc[6],$dc[7],$dc[8],$dc[9])
+write('file',$filename,$format[16], 'none')  
+
+"write('file',$filename,$format[21],file)
+
+"set bigendian parameter
+$sys = ''
+shell('uname'):$sys
+
+if($sys = 'Linux') then
+  $bigendian = 0
+  write('file',$filename,$format[22],$bigendian)
+endif
+
+"**************************************************************************
+"		Modification History
+
+" 20060915 Bug; fov mm=>cm
+" 20061025 Bigendian parameter initialized for Linux
+
+"**************************************************************************

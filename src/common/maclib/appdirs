@@ -1,0 +1,417 @@
+"macro appdirs"
+" appdirs - handle appdir editing "
+//rights('canEditAppdir'):$e
+//if ($e <> 1) then
+//  return
+//endif
+$xmlfile=curexp+'/tmpapp.xml'
+if ($# = 0) then
+  destroy('appdirflag'):$e
+  destroy('appdirpath'):$e
+  destroy('appdirlabel'):$e
+  destroy('appdirsave'):$e
+  create('appdirflag','string')
+  create('appdirpath','string')
+  create('appdirlabel','string')
+  create('appdirsave','string')
+  setgroup('appdirflag','display')
+  setgroup('appdirpath','display')
+  setgroup('appdirlabel','display')
+  setgroup('appdirsave','display')
+  appdirsave='0','','1',''
+
+   appdirsave[4]=operator
+   $opfile=userdir+'/persistence/appdirs_oplist'
+   write('reset',$opfile)
+   write('file',$opfile,'"All" "All"')
+   $totop=1
+   shell('(cat '+userdir+'/persistence/oplist_menu | wc -l)'):$totop
+   if ($totop>1.5) then
+	format($totop,0,0):appdirsave[3]
+   endif
+   shell('(cat '+userdir+'/persistence/oplist_menu >> '+$opfile+')'):$dum
+
+  appdir('file'):$file
+  lookup('mfile',$file,'readline','filekey'):$line,$key,$ret
+  $i = 1
+  $ch = ''
+  $flag = ''
+  $label = ''
+  $path = ''
+  while ($ret = 2) do
+    substr($line,1,1):$ch
+    if ($ch <> '#') then
+      strstr($line,';'):$ret
+      if ($ret > 1) then
+        appdirflag[$i]='-1'
+        appdirpath[$i]=''
+        appdirlabel[$i]=''
+        $i = $i + 1
+        substr($line,1,'delimiter',';\n'):$flag
+        appdirflag[$i]=$flag
+        substr($line,2,'delimiter',';\n'):$path
+        appdirpath[$i]=$path
+        substr($line,3,'delimiter',';\n'):$label
+	$s1='' $s2='' $sr=0
+// Adjust the label
+	strstr($label,'Varian'):$sr,$s1,$s2
+	if ($sr) then $label=$s1+'OpenVnmrJ'+$s2 endif
+	strstr($label,'Agilent'):$sr,$s1,$s2
+	if ($sr) then $label=$s1+'OpenVnmrJ'+$s2 endif
+        appdirlabel[$i]=$label
+        $i = $i + 1
+      endif
+    endif
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+  endwhile
+  appdirflag[$i]='-1'
+  appdirpath[$i]=''
+  appdirlabel[$i]=''
+
+  exists(systemdir+'/adm/users/userProfiles/appdirExperimental.txt',\
+         'file','rw'):$perm
+// 50 for label on top. 20 for each appdir row; 30 for each radio or check box
+  $ysize = 50 + $i*20 + 4*30 + $perm*30
+  $ys = ''
+  format($ysize,0,0):$ys
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="850 `+$ys+`"  \n\
+    style="Heading2"  \n\
+    label="Appdir"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="160 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Application Directory" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="520 30" size="180 20" \n\
+      style="PlainText" \n\
+      label="Application Label" \n\
+      justify="Left" \n\
+      /> \n`)
+  $num = 0
+  $yp=''
+  $numch=''
+  while ($num < $i) do
+    $num=$num + 1
+    $ypos = 30 + $num * 20
+    format($ypos,0,0):$yp
+    format($num,0,0):$numch
+// persona should never be disabled. Do not display as entry widget
+    strstr(appdirpath[$num],'/personalib/'):$persona
+   if ($persona<0.5) then
+    write('file',$xmlfile,`\n
+    <group loc="0 `+$yp+`" size="850 20"
+	vq="appdirpath"
+	show="appdirs('exists',`+$numch+`):$SHOW"
+	>
+    <entry loc="520 0" size="300 20"
+      style="PlainText"
+      vc="appdirs('set',`+$numch+`,'label','$VALUE')"
+      set="appdirs('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <entry loc="160 0" size="350 20"
+      style="PlainText"
+      vc="appdirs('set',`+$numch+`,'path','$VALUE')"
+      set="appdirs('get',`+$numch+`,'path'):$VALUE"
+      disable="Grayed out"
+      />
+    <menu loc="20 0" size="120 20"
+      style="PlainText"
+      label="menu"
+      vc="appdirs('set',`+$numch+`,'flag','$VALUE')"
+      set="appdirs('get',`+$numch+`,'flag'):$VALUE"
+      editable="No"
+      >
+      <mlabel
+        label="Enabled"
+        chval="1"
+        />
+      <mlabel
+        label="Disabled"
+        chval="0"
+        />
+      <mlabel
+        label="Remove(d)"
+        chval="-1"
+        />
+    </menu>
+    </group> \n`)
+    write('file',$xmlfile,`\n
+    <group loc="0 `+$yp+`" size="850 20"
+	vq="appdirpath"
+        show="appdirs('exists',`+$numch+`):$S if ($S=0) then $SHOW=1 else $SHOW=0 endif"
+        >
+    <entry loc="520 0" size="300 20"
+      style="PlainText"
+      fg="#FF0000"
+      vc="appdirs('set',`+$numch+`,'label','$VALUE')"
+      set="appdirs('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <entry loc="160 0" size="350 20"
+      style="PlainText"
+      fg="#FF0000"
+      vc="appdirs('set',`+$numch+`,'path','$VALUE')"
+      set="appdirs('get',`+$numch+`,'path'):$VALUE"
+      disable="Grayed out"
+      />
+    <menu loc="20 0" size="120 20"
+      style="PlainText"
+      fg="#FF0000"
+      label="menu"
+      vc="appdirs('set',`+$numch+`,'flag','$VALUE')"
+      set="appdirs('get',`+$numch+`,'flag'):$VALUE"
+      editable="No"
+      >
+      <mlabel
+        label="Enabled"
+        chval="1"
+        />
+      <mlabel
+        label="Disabled"
+        chval="0"
+        />
+      <mlabel
+        label="Remove(d)"
+        chval="-1"
+        />
+    </menu>
+    </group> \n`)
+
+   else
+// persona should never be disabled. Display as textmessage widget
+    write('file',$xmlfile,`\n
+    <group loc="0 `+$yp+`" size="850 20"
+	vq="appdirpath"
+        show="appdirs('exists',`+$numch+`):$SHOW"
+        >
+    <textmessage loc="520 0" size="300 20"
+      style="PlainText"
+      set="appdirs('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <textmessage loc="160 0" size="350 20"
+      style="PlainText"
+      set="appdirs('get',`+$numch+`,'path'):$VALUE"
+      disable="Grayed out"
+      />
+    <textmessage loc="20 0" size="120 20"
+      style="PlainText"
+      set="$VALUE='Enabled'"
+      editable="No"
+      />
+    </group> \n`)
+    write('file',$xmlfile,`\n
+    <group loc="0 `+$yp+`" size="850 20"
+	vq="appdirpath"
+        show="appdirs('exists',`+$numch+`):$SHOW"
+        >
+    <textmessage loc="520 0" size="300 20"
+      style="PlainText"
+      fg="#FF0000"
+      set="appdirs('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <textmessage loc="160 0" size="350 20"
+      style="PlainText"
+      fg="#FF0000"
+      set="appdirs('get',`+$numch+`,'path'):$VALUE"
+      disable="Grayed out"
+      />
+    <textmessage loc="20 0" size="120 20"
+      style="PlainText"
+      fg="#FF0000"
+      set="$VALUE='Enabled'"
+      editable="No"
+      />
+    </group> \n`)
+   endif
+
+  endwhile
+  if ($perm = 1) then
+    $ypos = $ypos + 30
+    format($ypos,0,0):$yp
+    write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as global applications directories" \n\
+      vc="appdirsave[1]='2'" \n\
+      set="$VALUE=(appdirsave[1]='2')" \n\
+      /> \n\
+    <entry loc="340 `+$yp+`" size="140 20" \n\
+      style="PlainText" \n\
+      vq="appdirsave" \n\
+      vc="appdirs('set',1,'save','$VALUE')" \n\
+      set="appdirs('get',1,'save'):$VALUE" \n\
+      disable="Grayed out" \n\
+      />`)
+  endif
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as private applications directories" \n\
+      vq="appdirsave[1]" \n\
+      vc="appdirsave[1]='0'" \n\
+      set="$VALUE=(appdirsave[1]='0')" \n\
+      />`)
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Reset to system default applications directories" \n\
+      vq="appdirsave[1]" \n\
+      vc="appdirsave[1]='1'" \n\
+      set="$VALUE=(appdirsave[1]='1')" \n\
+      />`)  
+
+   if (appdirsave[3]<>'1') and (owner=operator) then
+	$ypos=$ypos+30
+	format($ypos,0,0):$yp
+	write('file',$xmlfile,` \
+	  <label loc="50 `+$yp+`" size="150 20" \n\
+	    style="Heading2" \n\
+	    label="Apply to operators: " \n\
+	    />`)
+	write('file',$xmlfile,` \
+	  <filemenu loc="205 `+$yp+`" size="140 20" \n\
+	    style="Heading2" \n\
+	    vq="appdirsave[4]" \n\
+	    vq2="appdirsave[4]" \n\
+	    vc="appdirsave[4]='$VALUE'" \n\
+	    file="$VALUE=userdir+'/persistence/appdirs_oplist'" \n\
+	    set="$VALUE=appdirsave[4]" \n\
+	    />`)
+    endif
+  
+// The following does not belong in appdir popup
+if (appmode='imaging')
+then
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <check loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Show Non User Protocols In Appdir Tab" \n\
+      vq="expselnu" \n\
+      vc="expselnu=1"
+      vc2="expselnu=0"
+      set="$VALUE=expselnu"
+      />`)
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <check loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Show User Protocols In User Tab" \n\
+      vq="expselu" \n\
+      vc="expselu=1"
+      vc2="expselu=0"
+      set="$VALUE=expselu"
+      />`)
+endif
+
+
+  write('file',$xmlfile,'\n</group>\n</template>\n')
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/appdir.html', \
+   'pnewupdate:true', 'cancel:appdirs(`cancel`)', 'ok:appdirs(`ok`)', \
+   'title:Application Directories')
+
+elseif ($1 = 'set') then
+  if ($3 = 'flag') then
+    appdirflag[$2] = $4
+  elseif ($3 = 'path') then
+    appdirpath[$2] = $4
+  elseif ($3 = 'label') then
+    appdirlabel[$2] = $4
+  elseif ($3 = 'save') then
+    appdirsave[2]= $4
+  endif
+
+elseif ($1 = 'get') then
+  if ($3 = 'flag') then
+    return(appdirflag[$2])
+  elseif ($3 = 'path') then
+    return(appdirpath[$2])
+  elseif ($3 = 'label') then
+    return(appdirlabel[$2])
+  elseif ($3 = 'save') then
+    return(appdirsave[2])
+  endif
+elseif ($1='exists') then
+    if ((appdirpath[$2]='') or (appdirpath[$2]='USERDIR') or
+	(appdirpath[$2]='userdir') or (appdirpath[$2]='/vnmr')) then return(1) endif
+    exists(appdirpath[$2],'directory'):$direx
+    return($direx)
+
+elseif ($1 = 'ok') then
+  delete($xmlfile)
+  delete(userdir+'/persistence/appdirs_oplist')
+  if (appdirsave[1] = '1') then      // return to default
+    if (appdirsave[4]='All') then
+	shell('(rm -f '+userdir+'/persistence/appdir_*)'):$dum
+    else
+        rm('-f',userdir+'/persistence/appdir_'+appdirsave[4]):$e
+    endif
+  elseif (appdirsave[1] = '2') and (appdirsave[2] = '') then
+    write('error','Saving a global template requires a name')
+  else
+    $file = curexp+'/tmpapp'
+    $num = size('appdirflag')
+    $i = 0
+    write('reset',$file)
+    shell('date'):$date
+    write('file',$file,'# Updated by %s on %s',operator,$date)
+    while ($i < $num) do
+      $i = $i + 1
+      if (appdirflag[$i] <> '-1') and (appdirpath[$i] <> '') then
+        write('file',$file,'%s;%s;%s', \
+               appdirflag[$i],appdirpath[$i],appdirlabel[$i])
+      endif
+    endwhile
+    if (appdirsave[1] = '0') then  // save locally
+      if (appdirsave[4]='All') then
+        shell('(rm -f '+userdir+'/persistence/appdir_*)'):$dum
+	copy($file,userdir+'/persistence/appdir_'+owner)
+      else
+      	copy($file,userdir+'/persistence/appdir_'+appdirsave[4])
+      endif
+    else                           // save globally
+      copy($file,systemdir+'/adm/users/userProfiles/appdir'+\
+                 appdirsave[2]+'.txt')
+    endif
+    delete($file)
+  endif
+  destroy('appdirflag'):$e
+  destroy('appdirpath'):$e
+  destroy('appdirlabel'):$e
+  destroy('appdirsave'):$e
+  appdir('reset')
+elseif ($1 = 'cancel') then
+  delete($xmlfile)
+  destroy('appdirflag'):$e
+  destroy('appdirpath'):$e
+  destroy('appdirlabel'):$e
+  destroy('appdirsave'):$e
+else
+  return(-1)
+endif

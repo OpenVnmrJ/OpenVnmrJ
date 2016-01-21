@@ -1,0 +1,174 @@
+"macro spPars"
+// spInit
+
+if ($# > 0) then
+  if ($1 = 'save') then
+    $parlist = 'spParNames spFileKey spLogFile spFileIndex spShimmer spRange spDelay spStep spNumSteps'
+    writeparam(curexp+'/spPars',$parlist)
+  elseif ($1 = 'rtp') then 
+    fread(curexp+'/spPars')
+    rm(curexp+'/spPars'):$dum
+  endif
+  return
+endif
+
+// Create paramters fo spExec
+
+// Parameters for storing calibration valu
+$maxDim = 8
+"Had to move this to global tree for pfg shim return in gmapset"
+exists('spParNames','parameter'):$e
+if ($e < 0.5) then
+  create('spParNames','string')
+  setgroup('spParNames','display')
+  spParNames= 'x1 y1 xy xz yz x2y2'
+endif
+exists('spFileKey','parameter'):$e
+if ($e < 0.5) then
+  create('spFileKey','string')
+  setgroup('spFileKey','display')
+endif
+exists('spLogFile','parameter'):$e
+if ($e < 0.5) then
+  create('spLogFile','string')
+  setgroup('spLogFile','display')
+endif
+exists('spShimmer','parameter'):$e
+if ($e < 0.5) then
+  create('spShimmer','string')
+  setgroup('spShimmer','display')
+endif
+exists('spStage','parameter'):$e
+if ($e < 0.5) then
+  create('spStage','string')
+  setgroup('spStage','display')
+endif
+exists('spEval','parameter'):$e
+if ($e < 0.5) then
+  create('spEval','string')
+  setgroup('spEval','display')
+endif
+exists('spDim','parameter'):$e
+if ($e < 0.5) then
+  create('spDim','integer')
+  setgroup('spDim','display')
+  setlimit('spDim',$maxDim,1,0)
+  spDim=2
+endif
+$i = -1
+$index = ''
+while ($i < $maxDim + 1) do
+  $i = $i + 1
+  format($i,0,0):$index
+  $vec = 'spVec' + $index
+  exists($vec,'parameter'):$e
+  if ($e < 0.5) then
+    create($vec,'real')
+    setgroup($vec,'display')
+  endif
+endwhile
+exists('spRange','parameter'):$e
+if ($e < 0.5) then
+  create('spRange','integer')
+  setgroup('spRange','display')
+endif
+exists('spSum','parameter'):$e
+if ($e < 0.5) then
+  create('spSum','real')
+  setgroup('spSum','display')
+endif
+
+exists('spNextHi','parameter'):$e
+if ($e < 0.5) then
+  create('spNextHi','integer')
+  setgroup('spNextHi','display')
+endif
+exists('spHi','parameter'):$e
+if ($e < 0.5) then
+  create('spHi','integer')
+  setgroup('spHi','display')
+endif
+exists('spLo','parameter'):$e
+if ($e < 0.5) then
+  create('spLo','integer')
+  setgroup('spLo','display')
+endif
+exists('spTime','parameter'):$e
+if ($e < 0.5) then
+  create('spTime','real')
+  setgroup('spTime','display')
+endif
+exists('spYval','parameter'):$e
+if ($e < 0.5) then
+  create('spYval','real')
+  setgroup('spYval','display')
+endif
+exists('spYsave','parameter'):$e
+if ($e < 0.5) then
+  create('spYsave','real')
+  setgroup('spYsave','display')
+endif
+exists('spNewYval','parameter'):$e
+if ($e < 0.5) then
+  create('spNewYval','real')
+  setgroup('spNewYval','display')
+endif
+exists('spTolExp','parameter'):$e
+if ($e < 0.5) then
+  create('spTolExp','real')
+  setgroup('spTolExp','display')
+endif
+exists('spTolExpIndex','parameter'):$e
+if ($e < 0.5) then
+  create('spTolExpIndex','integer')
+  setgroup('spTolExpIndex','display')
+endif
+
+exists('spTol','parameter'):$e
+if ($e < 0.5) then
+  create('spTol','real')
+  setgroup('spTol','display')
+endif
+
+
+exists('spIter','parameter'):$e
+if ($e < 0.5) then
+  create('spIter','integer')
+  setgroup('spIter','display')
+endif
+exists('spMaxIter','parameter'):$e
+if ($e < 0.5) then
+  create('spMaxIter','integer')
+  setgroup('spMaxIter','display')
+endif
+exists('spVertex','parameter'):$e
+if ($e < 0.5) then
+  create('spVertex','integer')
+  setgroup('spVertex','display')
+endif
+exists('spStep','parameter'):$e
+if ($e < 0.5) then
+  create('spStep','integer')
+  setgroup('spStep','display')
+  setlimit('spStep',32768,-32768,0)
+endif
+exists('spNumSteps','parameter'):$e
+if ($e < 0.5) then
+  create('spNumSteps','integer')
+  setgroup('spNumSteps','display')
+endif
+exists('spDelay','parameter'):$e
+if ($e < 0.5) then
+  create('spDelay','string')
+  setgroup('spDelay','display')
+endif
+exists('spSet','parameter'):$e
+if ($e < 0.5) then
+  create('spSet','string')
+  setgroup('spSet','display')
+endif
+exists('spFileIndex','parameter'):$e
+if ($e < 0.5) then
+  create('spFileIndex','integer')
+  setgroup('spFileIndex','display')
+endif

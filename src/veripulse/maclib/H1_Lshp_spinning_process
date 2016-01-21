@@ -1,0 +1,180 @@
+"macro H1_Lshp_spinning_process"
+
+$phase='dophase'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+$lws='' $pass_threshold=0
+
+//First, basic data processing
+fn='n'
+ft f full
+if $phase='dophase' then aph0 endif
+res
+rl(0)
+if $phase='dophase' then aph0('select',40,-40) endif
+fn=2*np
+ft
+hregions
+//region
+bc:$e
+res
+rl(0)
+axis='h'
+wp=250
+sp=-125
+full
+vsadj
+intmod='off'
+
+VPtext
+CalibrationResults=''
+
+//Measure the linewidth at 50%,.55% and .11% points
+dres(cr,0.5):$lw50
+dres(cr,0.0055):$lw55
+dres(cr,0.0011):$lw11
+$lw50s='' $lw55s='' $lw11s=''
+format($lw50,1,2):$lw50s
+format($lw55,1,2):$lw55s
+format($lw11,1,2):$lw11s
+
+//Retrieve relevant spec's
+$usetc=0
+$targetname='H1_Lshp_spinning'
+exists('lockacqtc','parameter'):$tcex
+exists('H1_Lshp_spinning_lockacqtc1','studylib'):$stex
+
+if (($tcex) and ($stex)) then
+   if lockacqtc=1 then $usetc=1 endif
+endif
+//Decide which target to get
+if ($usetc) then
+   if (arraydim=3) then
+       $targetname='H1_Lshp_spinningx3_lockacqtc1'
+   else
+       $targetname='H1_Lshp_spinning_lockacqtc1'
+   endif
+endif
+
+//Retrieve relevant spec's
+VPgettarget($targetname):$target50,$target55,$target11,$targetsidebands
+
+$target50s='' $target55s='' $target11s=''
+format($target50,1,2):$target50s
+format($target55,1,2):$target55s
+format($target11,1,2):$target11s
+
+//Does the test pass?
+if (($lw50<=$target50) and ($lw55<=$target55) and ($lw11<=$target11)) then $IPteststatus='PASS' else $IPteststatus='FAIL' endif
+
+//Add lineshape results to text file
+$str='1H spinning lineshape test'
+$str='Measured linewidth: '+$lw50s+'/'+$lw55s+'/'+$lw11s+' Hz'
+atext($str)
+$str='Target: <= '+$target50s+'/'+$target55s+'/'+$target11s+' Hz'
+atext($str)
+$str='Test status: '+$IPteststatus
+atext($str)
+
+//Now do the spinning sidebands measurement
+$htparent=0 $frq=0
+$htsideband1=0 $htsideband2=0
+$htsideband3=0 $htsideband4=0
+//Determine spinning sideband amplitude
+peak(-20,40):$htparent,$frq
+write('line3','Amplitude of parent signal=%f, freq=%f',$htparent,$frq)
+$spin=20	
+
+//First do first-order sideband measurement
+peak($spin-5,$spin+5):$htsideband1,$frq
+abs($htsideband1):$htsideband1
+write('line3','Amplitude of downfield first-order spinning sideband=%f, freq=%f',$htsideband1,$frq)
+peak(-1.0*$spin-5,-1.0*$spin+5):$htsideband2,$frq
+abs($htsideband2):$htsideband2
+write('line3','Amplitude of upfield first-order spinning sideband=%f, freq=%f',$htsideband2,$frq)
+$percent1=$htsideband1/$htparent*100
+$percent2=$htsideband2/$htparent*100
+
+//Now do second-order sideband measurement
+peak(2.0*$spin-5,2.0*$spin+5):$htsideband3,$frq
+abs($htsideband3):$htsideband3
+write('line3','Amplitude of downfield second-order spinning sideband=%f, freq=%f',$htsideband3,$frq)
+peak(-2.0*$spin-5,-2.0*$spin+5):$htsideband4,$frq
+abs($htsideband4):$htsideband4
+write('line3','Amplitude of upfield second-order spinning sideband=%f, freq=%f',$htsideband4,$frq)
+$percent3=$htsideband3/$htparent*100
+$percent4=$htsideband4/$htparent*100
+write('line3','Downfield sideband is %f %% of parent signal',$percent3)
+write('line3','Upfield sideband is %f %% of parent signal',$percent4)
+if (($percent1<=$targetsidebands) and ($percent2<=$targetsidebands) and ($percent3<=$targetsidebands) and ($percent4<=$targetsidebands)) then $IPteststatus1='PASS' else $IPteststatus1='FAIL' endif
+if ($percent1>=$percent2) then $percent1st=$percent1 else $percent1st=$percent2 endif
+if ($percent3>=$percent4) then $percent2nd=$percent3 else $percent2nd=$percent4 endif
+if ($percent1st>=$percent2nd) then $percent=$percent1st else $percent=$percent2nd endif
+
+$targets=''
+format($targetsidebands,1,2):$targets
+
+//Adjust display to show sidebands
+nm vp=20 vs=10k
+
+//Add results to text file
+$percents=''
+format($percent,2,2):$percents
+$str='Spinning sideband amplitude: '+$percents+' % of parent signal amplitude'
+atext($str)
+$str='Target <= '+$targets+' % (nt=4)'
+atext($str)
+$str='Test status: '+$IPteststatus1
+atext($str)
+
+write('line3','1H Lineshape Test - spinning'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured linewidth %.2f/%.2f/%.2f Hz',$lw50,$lw55,$lw11):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target linewidth < %.2f/%.2f/%.2f Hz',$target50,$target55,$target11):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Spinning sideband amplitude %.2f%% of parent peak',$percent):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus1):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target spinning sideband amplitude < %.2f%%',$targetsidebands):$line
+CalibrationResults=CalibrationResults,$line
+darray('CalibrationResults')
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+execprocess='wft dscale darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+if (($IPteststatus='PASS') and ($IPteststatus1='PASS')) then $IPteststatus='PASS' else $IPteststatus='FAIL' endif
+
+VPhistory($lw50,$lw55,$lw11,$percent)
+
+wexp:$e
+if ($e<>1) then return endif
+
+if ($IPteststatus='PASS') then
+
+ 	//Save default shims if test passed
+        VPdefaultshims
+
+	"we passed so clear any retestfile counter info"
+	$retestfile=userdir+'/persistence/ReTest'
+	exists($retestfile,'file'):$et
+	if ($et>0.5) then
+		rm($retestfile)
+	endif
+
+elseif ($IPteststatus='FAIL') then
+	DoPlanB($0)
+endif

@@ -1,0 +1,87 @@
+"macro updatecpdir"
+// The macro converts a non-cp directory to a cp study
+//  Note: archivedir and sample parameter values will be
+//	changed for all fids to reflect current directory
+//	as archivedir/sample
+//	Also, sampleglobals are added, but no values are set
+
+if $# < 1 then
+   substr(file,'dirname'):$1
+endif
+
+is_cpsample($1):$iscp
+if not $iscp then
+    if $## < 1 then
+    	convert2cpdir($1)
+    else
+	convert2cpdir($1):$dum
+    endif
+    return
+endif
+
+$tmpfile=userdir+'/persistence/'+$0
+write('reset',$tmpfile)
+shell('(ls -1d '+$1+'/*.fid '+$1+'/*.vfs > '+$tmpfile+' 2> /dev/null)'):$devnull
+//shell('(ls -1d '+$1+'/*.vfs >> '+$tmpfile+')'):$devnull
+$s1='' $s2=''
+readfile($tmpfile,'$s1','$s2','','local'):$total
+rm('-f',$tmpfile):$dum
+if not $total then return endif
+
+$archivedir='' $sample=''
+substr($1,'dirname'):$archivedir,$sample
+getsampglobal($1+'/dirinfo/macdir','','current')
+getsampglobal($1+'/dirinfo/macdir','','processed')
+
+$fidlog=$1+'/dirinfo/fidlog'
+$speclog=$1+'/dirinfo/spectrumlog'
+$fs1='' $fs2=''
+readfile($fidlog,'$fs1','$fs2','','local')
+exists($speclog,'file'):$splex
+if $splex then
+    $fs3='' $fs4=''
+    readfile($speclog,'$fs3','$fs4','','local'):$lx
+    if $lx then $fs1=$fs1,$fs3 $fs2=$fs2,$fs4 endif
+endif
+
+$i=1
+repeat
+    $d='' $b='' $e=''
+    substr($s1[$i],'dirname'):$d,$b,$e
+    teststr('$fs2',$b,'local'):$ok
+    if not $ok then
+    	fread('','usertree')
+    	fread($s1[$i]+'/procpar','usertree')
+	getsampglobal($1+'/dirinfo/macdir','','usertree')
+        setvalue('adirtmplt',$archivedir,'usertree')
+        setvalue('sdirtmplt',$sample+'%R0%','usertree')
+        setvalue('svftmplt',$b+'%R0%','usertree')
+        setvalue('archivedir',$archivedir,'usertree')
+        setvalue('sample',$sample,'usertree')
+        getvalue('pslabel','usertree'):$pslabel
+        fsave($s1[$i]+'/procpar','usertree')
+        fread('','usertree')
+      if ($e='vfs') then
+        fread('','usertree')
+        fread($s1[$i]+'/curpar','usertree')
+        getsampglobal($1+'/dirinfo/macdir','','usertree')
+        setvalue('adirtmplt',$archivedir,'usertree')
+        setvalue('sdirtmplt',$sample+'%R0%','usertree')
+        setvalue('svftmplt',$b+'%R0%','usertree')
+        setvalue('archivedir',$archivedir,'usertree')
+        setvalue('sample',$sample,'usertree')
+        getvalue('pslabel','usertree'):$pslabel
+        fsave($s1[$i]+'/curpar','usertree')
+        fread('','usertree')
+        write('file',$1+'/dirinfo/spectrumlog','%s: %s',$pslabel,$b)
+      else
+        write('file',$1+'/dirinfo/fidlog','%s: %s',$pslabel,$b)
+      endif
+    endif
+    $i=$i+1
+until $i > $total
+xmhaha_fastSQ($1,'rbld')
+
+if $## < 1 then
+    write('line3','Warning: Done !')
+endif

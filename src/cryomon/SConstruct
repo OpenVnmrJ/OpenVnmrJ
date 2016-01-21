@@ -1,0 +1,120 @@
+#!
+
+import os
+import shutil
+import datetime
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# target
+cryoTarget = 'cryomon.jar'
+cryoDashOTarget = "cryomon.jar.dasho"
+cryoProGuardTarget = "cryomon.jar.pro"
+
+# current working directory
+cwd = os.getcwd()
+
+# get options environment
+boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
+execfile(boFile)
+
+
+# paths
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+vnmrBoPath = os.path.join(cwd, os.pardir, 'vnmrj', 'src', 'vnmr', 'bo')
+vnmrBoDstPath = os.path.join(cwd, 'src', 'vnmr', 'bo')
+VnmrBoFileList = ['EPSGraphics.java',
+	          'PlotPoint.java',
+		  'Plot.java',
+		  'PlotBox.java']
+
+vnmrUtilPath = os.path.join(cwd, os.pardir, 'vnmrj', 'src', 'vnmr', 'util')
+vnmrUtilDstPath = os.path.join(cwd, 'src', 'vnmr', 'util')
+VnmrUtilFileList = ['Complex.java',
+                    'Fmt.java',
+                    'QuotedStringTokenizer.java',
+                    'LinFit.java',
+                    'NLFit.java',
+                    'VButtonBorder.java']
+
+
+CryoGifPath = os.path.join(cwd, 'src', 'vnmr', 'cryomon')
+CryoGifDstPath = os.path.join(cwd, 'classes', 'vnmr', 'cryomon')
+#CryoGifFileList = ['cross.gif',
+#		  'target.png']
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+jarBin = os.path.join(javaPath, 'jar')
+
+# define build environment
+jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'CLASSPATH' : classesPath,
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# create source hardlinks at scons interpretation time
+# in java SDK 1.3+ javac doesn't follow symlinks
+#SDM REMOVE buildMethods.hardLinkNow(jEnv, CryoGifDstPath, CryoGifPath, CryoGifFileList);
+buildMethods.hardLinkNow(jEnv, vnmrBoDstPath, vnmrBoPath, VnmrBoFileList);
+buildMethods.hardLinkNow(jEnv, vnmrUtilDstPath, vnmrUtilPath, VnmrUtilFileList);
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+javaBuildObj = jEnv.Java(JAVACFLAGS = '-J-mx128m',
+                         target     = classesPath,
+                         source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd,'Manifest')
+f = open(manifestFile,'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: Main\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = cryoTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, cryoTarget))))
+
+# actions to be performed after targets are built
+if boEnv['dasho']=='y' or boEnv['cryomon_O']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(os.path.join(cwd,'CryomonProGuard.sh')))
+#                   Action(os.path.join(cwd,'CryomonDasho.sh')))
+if boEnv['cryomon_O']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(os.path.join(installPath,cryoTarget),
+                               os.path.join(cwd, cryoProGuardTarget))))
+else:
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, cryoTarget))))
+
+

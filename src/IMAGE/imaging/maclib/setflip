@@ -1,0 +1,143 @@
+"macro setflip"
+"***************************************************************"
+" setflip                                                       "
+"                                                               "
+" Macro to setup the RF power levels for a given pulse to       "
+" obtain a desired flip angle.  Power levels are calculated     "
+" from the calibration data for a square pulse. The calibration "
+" data should be located in the file 'pulsecal', which should   "
+" reside in the vnmrsys directory.  Setflip will also look for  "
+" the pulsecal file in the system directory.                    "
+"                                                               "
+" Usage:   setflip(<'name'>,<'patname'>,<'pwrname'>,<flip>)     "
+"                                                               "
+"          arg1: name of the pulse parameter (string)           "
+"          arg2: name of the pattern parameter (string)         "
+"          arg3: name of the power parameter (string)           "
+"          arg4: flip angle in degrees (real)                   "
+"                                                               "
+" Example: setflip('pw','pwpat','tpwr',90)                      "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog = 'SETFLIP: '
+$usr = userdir+'/pulsecal'
+$sys = systemdir+'/pulsecal'
+ln(10.0):$ln10
+
+
+"-- Argument check ----------------------------------------"
+if ($# > 3.5) and ($# < 4.5) then
+    $pulse = $1
+    $rfpat = $2
+    $tpwr = $3
+    $flip = $4
+else
+    write('error',$prog+'Usage: setflip(pulsename,patname,pwrname,flip angle)')
+    abort
+endif
+
+
+"-- Check input arguments ---------------------------------"
+$size = size($pulse)
+if ($size > 1.5) then
+    write('error',$prog+'Arrayed pulse lengths are not supported.')
+    abort
+endif
+
+if ({$pulse} < 0.5) then
+    write('error',$prog+'"'+$pulse+'" too short for automatic setup.')
+    abort
+endif
+
+
+
+"-- Get RF calibration data -------------------------------"
+exists('rfcoil','parameter'):$ex1
+if ($ex1 > 0  and  rfcoil = '') then
+    write('error',$prog+'Set "rfcoil" to a valid entry for power calibration.')
+    abort
+endif
+
+exists($usr,'file'):$ex2
+exists($sys,'file'):$ex3
+if ($ex2 > 0.5) then
+    $file = $usr
+else if ($ex3 > 0.5) then
+    $file = $sys
+else
+    write('error',$prog+'Cannot find pulsecal data base file.')
+    abort
+endif endif
+
+
+"-- Read the calibration values in from pulsecal ----------"
+$count = 0.0
+lookup('file',$file,'count',rfcoil):$count
+if ($count > 0.5) then
+    lookup('file',$file,'seek',rfcoil,'read',3):$pwcal,$flipcal,$tpwrcal
+else
+    write('error',$prog+'Cannot find rfcoil entry in pulsecal data base file.')
+    abort
+endif
+
+
+"-- Check calibration data for problems -------------------"
+if ($pwcal <= 0.0) or ($flipcal <= 0.0) or ($tpwrcal <= 0) then
+    write('error',$prog+'Calibration data is unusable')
+    abort
+endif
+
+
+"-- Check existence of RF pattern -------------------------"
+$usrpat = userdir+'/shapelib/'+{$rfpat}+'.RF'
+$syspat = systemdir+'/shapelib/'+{$rfpat}+'.RF'
+exists($usrpat,'file'):$ex1
+exists($syspat,'file'):$ex2
+
+if ($ex1 > 0.5) then
+    $file = $usrpat
+else if ($ex2 > 0.5) then
+    $file = $syspat
+else
+    write('error',$prog+'Cannot find RF pulse file "'+{$rfpat}+'" .')
+    abort
+endif endif
+
+
+"-- Read RF pattern keyword data --------------------------"
+lookup('file',$file,'count','MODULATION'):$count
+if ($count = 0) then
+    write('error',$prog+'No MODULATION keyword in RF pulse file {$rfpat}')
+    abort
+else
+    lookup('file',$file,'seek','MODULATION','read',1):$mod
+endif
+
+lookup('file',$file,'count','INTEGRAL'):$count
+if ($count = 0) then
+    write('error',$prog+'No INTEGRAL keyword in RF pulse file {$rfpat}')
+    abort
+else
+    lookup('file',$file,'seek','INTEGRAL','read',1):$ff
+endif
+
+if ($ff < 0) then
+    write('error',$prog+'INTEGRAL less than zero in RF pulse file {$rfpat}')
+    abort
+endif
+
+
+
+"-- Determine the power level -----------------------------"
+if  ($mod <> 'amplitude') then
+    $flipcal = $flip
+endif
+
+$x1 = $flip/$flipcal*$pwcal/{$pulse}/$ff 
+ln($x1):$x2
+$pwr = $tpwrcal + 20.0*$x2/$ln10
+
+
+"-- Set power level ---------------------------------------"
+{$tpwr} = $pwr

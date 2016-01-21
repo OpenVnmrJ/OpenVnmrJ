@@ -1,0 +1,102 @@
+"macro Macquire"
+"  Macquire - set imaging parameters prior to acquisition "
+
+wnt=''
+wexp=''
+wbs=''
+ldrf
+$macro = 'go_'+seqfil
+exists($macro,'maclib'):$ex
+substr(seqfil,1,3):$ch
+if ($ch = 'epi') then
+  _nv
+  ssprep
+  if ($ex)  then
+    {$macro}
+  else
+    prep
+  endif
+  if ($# > 0.5) then
+    epirun($1)
+  else
+    epirun
+  endif
+  return
+endif
+
+$offname=tn+'offset'
+exists($offname,'parameter','global'):$off
+if ($off > 0.5) then
+  tof={$offname}
+endif
+
+if (seqfil = 's2pul') OR (seqfil = 'spuls') OR (seqfil = 'gecc') then
+  wexp = 'f full ft'
+  if (seqfil = 'gecc') then ssprep endif
+elseif (seqfil = 'fastestmap') then
+  if (numproj <> 1) and (numproj <> 2) then
+    numproj = 1
+  endif
+  fm_setmap(numproj)
+  wexp='fm_calcshim(shimorder) fm_showmap fm_setshims'
+elseif (seqfil = 'press') OR (seqfil='steam') OR (seqfil='isis') then
+  _nv
+  imprep
+  wexp = 'f full ft'
+else
+  exists('nv','parameter'):$e
+  if ($e = 0) then
+    write('error','phase encode steps (nv) undefined, scan aborted')
+    abort
+  else 
+    if (nv = 0) then
+      write('error','phase encode steps (nv) undefined, scan aborted')
+      abort
+    endif
+  endif
+  _nv
+  exists('nv2','parameter'):$e
+  if ($e > 0.5) then
+    if (nv > 1) and (nv2 > 1) then
+      initft3d
+    endif
+  endif
+  if (seqfil='ge3d') or (seqfil='fse3d') then
+    imprep
+    if (nv > 0) and (nv2 = 0) then
+      wexp = 'Mimage_format Mimage_process'
+    else
+      wexp = ''
+    endif
+  else
+    imprep
+    wexp = 'Mimage_format Mimage_process'
+  endif
+"** define default petable **"
+  if (seqfil = 'fsems') or (seqfil = 'fsemsdw') then
+    $nv='' $etl='' $sk0=''
+    r1 = etl/2
+    format(nv,1,0):$nv
+    format(etl,1,0):$etl
+    format(r1,1,0):$sk0
+    petable='fsems'+$nv+'_'+$etl+'_'+$sk0
+  endif
+endif
+gain='y'
+if ($ex)  then
+  {$macro}
+else
+  prep
+endif
+if ($# > 0.5) then
+  au($1)
+else
+  au
+endif
+
+"*************************************************************************"
+"       Modification History"
+
+" 031107(ss) fm_calcshim uses (shimorder) as argument"
+
+"*************************************************************************"

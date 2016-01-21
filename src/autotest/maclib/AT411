@@ -1,0 +1,62 @@
+"macro AT411"
+"AT411" "90 Degree Stability (channel 1) "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Finding 2H pulse stability ')
+   gain=10 sw=4000 at=2 fn=65k
+   at_currenttest='H2pw90stab'
+   pw=at_H2pw90 tpwr=at_H2tpwr tn='lk' sethw('lock','off'):$xxx
+   r4=z0 lockpower=0
+   sethw('nowait','lockpower',lockpower):$x
+   rof2=300
+   gain='n'
+   wnt=''
+   wexp='AT411(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   ft f aph0 vsadj(100) peak:$ht,cr dres:r2 lb=r2 movetof
+   at_H2tof=tof at=2/r2 fn=np np=fn
+   array('nt',20,1,0)
+   gain='y'
+   d1=6*at_T1-at   "account for 2H relaxation ~6x longer than 1H"
+   if d1<0.05 then d1=.05 endif
+   wnt='wft sp=3p wp=3p select(1) vsadj(100) aph0 dssh' 
+   text('H2 90 degree pulse stability using channel 1 (tn=lk) ')
+   vp=0 
+   wexp='AT411(`PART2`)'
+   au
+
+elseif ($1='PART2') then
+   sethw('z0',r4):$x
+
+   wft f
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('H2STAB90','H2 90 Degree Pulse Stability (tn=lk)','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','H2 90 Degree Pulse Stability (tn=lk): %3.2f percent',100-$stddev)
+
+   sethw('lockpower',at_lockpower):$xx
+
+   cz ph select(1) aph0
+   f peak:$int,cr rl(0) z(500) z(-500)
+   cr=1750 delta=1000
+   $snav=0 $spectrum=1
+   repeat
+      select($spectrum)
+      bc dsn:$sn
+      $snav=$snav+$sn
+      $spectrum=$spectrum+1
+   until $spectrum>arraydim
+   $snav=trunc($snav/(arraydim))
+   r2=trunc(r2*10)/10
+   write('graphics',100,175,' Average S/N : %6.0f ',$snav)
+   ATrecord('H2SENSITIVITY','Average H2 S/N for 20 Trials:','sensitivity',$snav,' Linewidth(Hz)',r2,'  Oversampling_factor',oversamp)
+   write('file',autotestdir+'/REPORT','Average H2 S/N for 20 Trials = %5.0f with dsp=%s and linewidth=%1.1f Hz',$snav,dsp,r2)
+   tn='H1' sethw('lock','on'):$xxx
+ ATnext
+endif

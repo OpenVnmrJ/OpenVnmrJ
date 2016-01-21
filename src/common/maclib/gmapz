@@ -1,0 +1,206 @@
+"macro gmapz"
+"*****  macro gmapz  *****"
+
+"save solvent, spin speed, temperature"
+$Solvent=solvent
+$spin=spin
+on('spin'):$onspin
+$temp=temp
+$tin=tin
+on('temp'):$ontemp
+vnmrinfo('get','tempExpControl'):$tempctrlon
+vnmrinfo('get','tempOnOff'):$vtison
+
+if $#<0.5 then
+
+" traditional rtp from parlib"
+  rtppar('gmapz')
+  gzsize=4
+  alock='n'
+  wshim='n'
+
+  $rf='' substr(rftype,2,1):$rf
+  if ($rf='a') then dn='H1' endif
+
+else  "retrieve parameters from existing mapname"
+
+  $load='rtp'
+  if $#>1.5 then
+    if $2='exists' then
+      $load='exists'
+    elseif $2='loadmap' then
+      $load='loadmap'
+    endif
+  endif
+
+  gmapset('mkdir',2)
+  $js='' $jmap='' $jmap=$1
+  exists($jmap+'.fid','gshimlib/shimmaps'):$e2,$jfile
+  if $e2<0.5 then
+    if ($load='rtp') then
+      if auto<>'y' then
+        gmapz
+      else
+        write('error','Gradient shimming not set up')
+      endif
+      write('error','mapname not found: %s',$jmap)
+    endif
+    return(1)
+  endif
+  if $load='exists' then fixpar return(0) endif
+
+" copy gshim.list file"
+  $jstr=$jfile+'/gshim.list'
+  exists($jstr,'file'):$e
+  if $e<0.5 then
+    if $load='rtp' then
+      if auto='y' then
+        write('error','Gradient shimming not set up')
+      endif
+      write('error','file not found: %s/gshim.list',$jfile)
+    endif
+    return(1)
+  endif
+  $js=userdir+'/gshimlib/data/gshim.list'
+  exists($js,'file'):$e
+  if $e>0.5 then rm($js):$x endif
+  cp($jstr,$js)
+  $jss=''
+  lookup('mfile',$js,'mapname','read'):$jss
+  if ($jss<>$jmap) then
+    if $load='rtp' then
+      if auto='y' then
+        write('error','Gradient shimming not set up')
+      endif
+      write('error','invalid mapname in %s/gshim.list',$jfile)
+    endif
+    return(1)
+  endif
+
+" copy gshim.bas file"
+  $jstr=$jfile+'/gshim.bas'
+  exists($jstr,'file'):$e
+  if $e<0.5 then
+    if $load='rtp' then
+      if auto='y' then
+        write('error','Gradient shimming not set up')
+      endif
+      write('error','file not found: %s/gshim.bas',$jfile)
+      return(1)
+    endif
+  endif
+  $js=userdir+'/gshimlib/data/gshim.bas'  "set up gshim.bas, gshim.list"
+  exists($js,'file'):$e
+  if $e>0.5 then rm($js):$x endif
+  cp($jstr,$js)
+  if $load='loadmap' then fixpar return(0) endif
+
+  exists(curexp+'/text','file'):$e
+  if ($e and auto='y') then
+    cp(curexp+'/text',autodir+'/text2')
+  endif
+  rtp($jfile)
+  readparam($jfile+'/procpar','probe_')
+  if ($e and auto='y') then
+    mv(autodir+'/text2',curexp+'/text')
+  endif
+
+  proc='ft' wexp=''
+  alock='n' dp='y' hs='nn'
+  lb='n' gf='n' gfs='n' awc='n'
+  aig='ai' lvl=0 tlt=0
+  wshim='n'
+
+  $exec=''
+  gmaplistfunc('unarray'):$ok,$exec
+  exec($exec)
+  array='d3'
+
+  if (tn='lk') then
+    dn='H1' dm='n'
+    reffrq=sfrq rfl=sw/2 rfp=0
+  endif
+  if (alfa < 0) then alfa=0 endif
+
+" Set parameters for automation based on solvent."
+" Edit the gmapsolv macro to make solvent-dependent changes."
+
+  gmapsolv($Solvent)
+
+endif
+
+"parameters for LC system"
+if (traymax=1 and auto='y') then
+  exists('lcexp','parameter'):$e
+  if $e<0.5 then create('lcexp','string') endif
+  rtv(systemdir+'/tmp/Autoscout','lcexp'):$lcexp
+  lcexp=$lcexp
+// rtv(systemdir+'/tmp/Autoscout','lcshim','lclock'):$lcshim,$lclock
+// if ($lclock='n' and $lcshim='y') then
+//   exists('inject','parameter'):$e
+//   if $e<0.5 then create('inject','flag') endif
+//   exists('ntrig','parameter'):$e
+//   if $e<0.5 then create('ntrig','integer') endif
+//   inject='y'
+//   ntrig=1
+// endif
+endif
+
+"find tof before shimming - do not use (obsolete)"
+"see gmapsolv for details"
+exists('gmap_findtof','parameter'):$ex
+if $ex<0.5 then create('gmap_findtof','string') endif
+gmap_findtof='n'
+
+"first shim z1-z4, then remaining shims"
+exists('gmap_z1z4','parameter'):$ex
+if $ex<0.5 then create('gmap_z1z4','string') gmap_z1z4='n' endif
+
+"create button in VNMR menulib"
+exists('gmapsys_makebutton','parameter'):$ex
+if $ex<0.5 then create('gmapsys_makebutton','string') gmapsys_makebutton='n' endif
+
+"allow spinning during shimming"
+exists('gmapspin','parameter'):$ex
+if $ex<0.5 then
+  create('gmapspin','string')
+  setenumeral('gmapspin',2,'n','y')
+  gmapspin='n'
+endif
+
+"convection compensation"
+exists('vtcomplvl','parameter'):$ex
+if $ex<0.5 then
+  create('vtcomplvl','integer')
+  setlimit('vtcomplvl',2,0,1)
+  vtcomplvl=0
+endif
+
+"allow use of temporary homospoil gradient"
+exists('tmpgradtype','parameter'):$ex
+if $ex<0.5 then
+  create('tmpgradtype','string')
+  tmpgradtype=gradtype
+endif
+
+if auto<>'y' then dg endif
+
+fixpar
+exists('oversamp','parameter'):$e
+if $e>0.5 then setvalue('oversamp',1) endif
+
+"reset spin, temp"
+
+if gmapspin='y' then
+  spin=$spin
+  if $onspin=0 then off('spin') endif
+  in='ny'
+else
+  in='n'
+endif
+
+temp=$temp
+tin=$tin
+if $ontemp=0 then off('temp') endif
+
+return(0)

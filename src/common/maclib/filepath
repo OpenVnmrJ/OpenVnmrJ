@@ -1,0 +1,33 @@
+"macro filepath"
+
+" Combines a bunch of path components with /'s, and no extra /'s "
+" Usage: filepath(component1 [, component2] ... ):path "
+
+$path=''
+
+$i = 1
+while ($i <= $#) do
+    $comp = ${$i}
+    length($path):$len1
+    length($comp):$len2
+    if ($len2 > 0) then
+	substr($comp, 1, 1):$ch
+	if ($ch = '/' and $len1 > 0) then
+	    substr($comp, 2, $len2 - 1):$comp
+	endif
+
+	if ($len1 > 0) then
+	    substr($path, $len1, 1):$ch
+	    if ($ch <> '/') then
+		$path = $path + '/'
+	    endif
+	endif
+
+	$path = $path + $comp
+    endif
+    $i = $i + 1
+endwhile
+
+// Expand any template arguments
+chkname($path):$path
+return($path)

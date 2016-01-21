@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoLineList" element="groups" type="acquisition" >
+
+        <group size="400 380"
+          style="Heading1"
+          bg="transparent"
+	  reference="craft_autoLineList"
+          expanded="yes"
+	  useref="no"
+          >
+
+	  <button loc="378 10" size="20 20"
+	    style="Heading1"
+	    label="X"
+	    tooltip="Close"
+	    vc="craft_LineList('close')"
+	    />
+
+	  <group loc="5 20" size="390 205" 
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Basic"
+	    vq="craftLLpar"
+      	    subtype="Titled"
+      	    expanded="yes"
+	    useref="no"
+	    >
+	    <button loc="30 5" size="330 22"
+	      vc="craft_LineList('displayorigdata')"
+	      label="Display selected experimental trace(s)"
+	      style="Heading2"
+	      />
+	    <textmessage loc="55 31" size="100 20"
+	      style="Info"
+	      set="if craftLLpar[22]='' then $VALUE='New report' else $VALUE='Active report' endif"
+	      vq="craftLLpar"
+	      />
+	    <button loc="175 31" size="160 20"
+	      vc="craft_LineList('setnewreport')"
+	      vq="craftLLpar"
+	      label="Start new report"
+	      style="Heading2"
+	      show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=((craftLLpar[22]&lt;&gt;'') and ($r&lt;0.5))*2-1"
+	      />
+
+            <label loc="30 53" size="110 20"
+              style="Label1"
+              label="Amplitudes from"
+              />
+	    <textmessage loc="140 53" size="225 20"
+	      style="Label1"
+	      set="if craftLLpar[3]='f' then $VALUE=craftLLpar[9] else $VALUE='All studies/FIDs' endif"
+	      vq="craftLLpar"
+	      />
+            <group loc="30 75" size="360 20"
+	      vq="craftLLpar"
+	      show="$SHOW=(craftLLpar[6]&lt;&gt;'1')"
+	      >
+	      <group loc="20 0" size="90 20" >
+	        <radio loc="0 0" size="90 20"
+	          style="Label1"
+	          label="All traces"
+	          vq="craftLLpar"
+	          vc="craftLLpar[3]='c' craft_LineList('toggle2this')"
+	          vc2="craftLLpar[3]='f' craft_LineList('toggle2this')"
+	          set="$VALUE=(craftLLpar[3]='c')"
+		  show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r&lt;0.5)*2-1"
+	          />
+	        </group>
+	      <group loc="110 0" size="250 20" >
+	        <radio loc="0 0" size="20 20"
+	          style="Label1"
+	          vq="craftLLpar"
+	          vc2="craftLLpar[3]='c' craft_LineList('toggle2this')"
+	          vc="craftLLpar[3]='f' craft_LineList('toggle2this')"
+	          set="$VALUE=(craftLLpar[3]='f')"
+		  show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r&lt;0.5)*2-1"
+	          />
+	        <textmessage loc="25 0" size="65 20"
+	          style="Label1"
+	          set="$VALUE='Trace# '+craftLLpar[4]"
+	          vq="craftLLpar"
+	          />
+                <button loc="90 0" size="65 20"
+                  style="Heading2"
+                  label="Prev"
+                  vq="craftLLpar file"
+                  vc="craft_LineList('toggleprev')"
+	  	  show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=(($r&lt;0.5) and (craftLLpar[3]='f'))*2-1"
+                  />
+                <button loc="160 0" size="65 20"
+                  style="Heading2"
+                  label="Next"
+                  vq="craftLLpar"
+                  vc="craft_LineList('togglenext')"
+	  	  show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=(($r&lt;0.5) and (craftLLpar[3]='f'))*2-1"
+                  />
+	        </group>
+	      </group>
+	  <label loc="15 105" size="140 20" 
+	    style="Heading2"
+	    label="Segments based on:"
+	    />
+	  <group loc="160 105" size="170 20"
+	    vq="craftLLpar"
+	    show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+	    >
+            <menu loc="0 0" size="170 20"
+              style="Label1"
+              vq="craftLLpar"
+	      vc="craftLLpar[8]='$VALUE'"
+	      set="$VALUE=(craftLLpar[8])"
+              >
+	      <mlabel
+	        label="Automatic threshold"
+	        chval="auto"
+	        />
+	      <mlabel
+	        label="Interactive threshold"
+	        chval="thresh"
+	        />
+	      <mlabel
+	        label="Fingerprint table"
+	        chval="fptable"
+	        />
+	      </menu>
+	    </group>
+	  <group loc="160 105" size="170 20"
+	    vq="craftLLpar"
+	    show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+	    >
+            <menu loc="0 0" size="170 20"
+              style="Label1"
+              vq="craftLLpar"
+	      vc="aspRoi('clear') craftLLpar[8]='$VALUE' if craftLLpar[8]='userint' then craft_LineList('intZtoROI') endif"
+	      set="$VALUE=(craftLLpar[8])"
+              >
+	      <mlabel
+	        label="Automatic threshold"
+	        chval="auto"
+	        />
+	      <mlabel
+	        label="Interactive threshold"
+	        chval="thresh"
+	        />
+	      <mlabel
+	        label="Fingerprint table"
+	        chval="fptable"
+	        />
+	      <mlabel
+	        label="Interactive regions"
+	        chval="userroi"
+	        />
+	      </menu>
+	    </group>
+	  <group loc="0 130" size="350 45"
+	    vq="craftLLpar"
+	    show="$SHOW=((craftLLpar[8]='auto') or (craftLLpar[8]='thresh'))"
+	    >
+	    <group loc="0 20" size="350 45"
+	      vq="craftLLpar"
+	      show="$SHOW=(craftLLpar[8]='auto')"
+	      >
+              <label loc="55 0" size="105 20"
+                style="Label1"
+                label="Max. # of peaks"
+                justify="Left"
+                />
+              <label loc="205 0" size="55 20"
+                style="Label1"
+                label="Min S/N"
+                justify="Left"
+                />
+              <entry loc="160 0" size="40 20"
+                style="PlainText"
+                vq="craftLLpar"
+                vc="format('$VALUE','isreal'):$real if $real then craftLLpar[19]='$VALUE' else craftLLpar[19]=craftLLpar[19] endif"
+                set="$VALUE=craftLLpar[19]"
+                digits="0"
+                />
+              <entry loc="260 0" size="40 20"
+                style="PlainText"
+                vq="craftLLpar"
+                vc="format('$VALUE','isreal'):$real if $real then craftLLpar[20]='$VALUE' else craftLLpar[20]=craftLLpar[20] endif"
+                set="$VALUE=craftLLpar[20]"
+                digits="1"
+                />
+	      </group>
+            <entry loc="160 0" size="40 20"
+              style="PlainText"
+              vq="craftLLpar"
+              vc="format('$VALUE','isreal'):$real if $real then craftLLpar[5]='$VALUE' else craftLLpar[5]=craftLLpar[5] endif"
+              set="$VALUE=craftLLpar[5]"
+              digits="1"
+              />
+            <label loc="205 0" size="130 20"
+              style="Label1"
+              label="Hz"
+              justify="Left"
+              />
+            <label loc="55 0" size="105 20"
+              style="Label1"
+              label="Segment width"
+              justify="Left"
+              />
+	    </group>
+
+	  <group loc="0 130" size="350 45"
+	    vq="craftLLpar"
+	    show="$SHOW=(craftLLpar[8]='fptable')"
+	    >
+            <entry loc="160 0" size="143 20"
+              style="PlainText"
+              vq="craftLLpar"
+              vc="craftLLpar[29]='$VALUE'"
+              set="$b='' substr(craftLLpar[29],'basename'):$b $VALUE=$b"
+              />
+	    <textmessage loc="10 0" size="150 20"
+	      style="Heading5"
+	      vq="craftLLpar"
+	      set="$ok=1 if (craftLLpar[8]='fptable') then craftllout('isFP',craftLLpar[29]):$ok endif if $ok then $VALUE='' else $VALUE='[Table not found]' endif"
+	      />
+	    <group loc="305 0" size="25 25"
+	      vq="craftLLpar"
+	      show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+	      >
+    	      <button loc="0 0" size="25 25"
+      	        style="Heading2"
+      	        tooltip="Browse..."
+	        icon="folder_open_file_24.gif"
+                vq="craftLLpar"
+      	        vc="vnmrjcmd('LOC fpBrowser')"
+      	        />
+	      </group>
+	    <group loc="305 0" size="25 25"
+	      vq="craftLLpar"
+	      show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+	      >
+    	      <button loc="0 0" size="25 25"
+      	        style="Heading2"
+      	        tooltip="Browse..."
+	        icon="folder_open_file_24.gif"
+                vq="craftLLpar"
+      	        vc="vnmrjcmd('LOC browserPanel')"
+      	        />
+	      </group>
+	    <group loc="45 22" size="295 20"
+	      vq="craftLLpar"
+	      show="$SHOW=(craftLLpar[30]&lt;&gt;'')"
+	      >
+	      <check loc="0 0" size="295 20"
+	        vq="craftLLpar"
+	        style="Heading2"
+	        label="Use analyte specific alignment table"
+	        vc="craftLLpar[30]='y'"
+	        vc2="craftLLpar[30]='n'"
+	        set="$VALUE=(craftLLpar[30]='y')"
+	        />
+	      </group>
+	    </group>
+
+	  <group loc="0 130" size="350 45"
+	    vq="craftLLpar"
+	    show="$SHOW=(craftLLpar[8]='userroi')"
+	    >
+            <group loc="160 5" size="35 35"
+              vq="aspMode craftLLPar"
+              show="$SHOW=(aspMode=3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_down.gif"
+                vq="aspMode craftLLpar"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="160 5" size="35 35"
+              vq="aspMode craftLLpar"
+              show="$SHOW=(aspMode&lt;&gt;3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi.gif"
+                vq="aspMode craftLLpar"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="195 5" size="35 35"
+              vq="aspMode craftLLpar"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_delete_all.gif"
+                vq="aspMode"
+                vc="aspRoi('clear')"
+                bg="transparent"
+                tooltip="Delete all"
+                />
+              </group>
+            </group>
+	      <button loc="30 185" size="160 22"
+		vq="craftLLpar file"
+	  	show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r&lt;0.5)*2-1"
+	        vc="craft_LineList('getList')"
+	        label="Extract CRAFT models"
+	        style="Heading1"
+	        />
+	      <button loc="200 185" size="160 22"
+	        vc="craft_LineList('table')"
+	        label="Show LineList"
+		vq="craftLLpar file"
+	  	show="$r=0 $ENABLE=(craftLLpar[22]&lt;&gt;'')*2-1"
+	        style="Heading2"
+	        />
+	    </group>
+
+	  <group loc="5 230" size="390 1"
+	    border="Etched"
+	    />
+
+	  <group loc="5 235" size="390 145" 
+            style="Heading1"
+      	    bg="transparent"
+	    vq="craftLLpar file"
+      	    subtype="Basic"
+      	    expanded="yes"
+	    useref="no"
+	    >
+	      <button loc="65 6" size="270 22"
+		vq="craftLLpar file"
+	  	show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=(($r&lt;0.5) and (craftLLpar[22]&lt;&gt;''))*2-1"
+	        vc="craft_LineList('getModel')"
+	        label="Display CRAFT models"
+	        style="Heading1"
+	        />
+	      <label loc="30 35" size="95 20"
+		style="Label1"
+		label="Display options"
+		/>
+	      <group loc="30 60" size="80 25"
+		vq="craftLLpar file"
+	        show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $SHOW=($r)"
+		>
+		<button loc="0 0" size="80 25"
+		  style="Heading1"
+		  vc="craft_LineList('saveModelLL',file):$ok if $ok then craft_LineList('displayorigdata') craft_LineList('setnewreport') endif"
+		  label="Save"
+		  vq="craftLLpar file"
+		  />
+		</group>
+	      <check loc="130 35" size="250 20"
+		style="Label1"
+		label="Models not used"
+		vq="craftLLpar"
+		vc="craftLLpar[13]='y' craft_LineList('display')"
+		vc2="craftLLpar[13]='n' craft_LineList('display')"
+		set="$VALUE=(craftLLpar[13]='y')"
+		show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=(($r) and (craftLLpar[3]='f'))*2-1"
+		/>
+	      <check loc="130 95" size="250 20"
+		style="Label1"
+		label="Individual models"
+		vq="craftLLpar"
+		vc="if craftLLpar[3]='f' then craftLLpar[12]='y' else craftLLpar[11]='y' endif craft_LineList('display')"
+		vc2="if craftLLpar[3]='f' then craftLLpar[12]='n' else craftLLpar[11]='n' endif craft_LineList('display')"
+		set="if craftLLpar[3]='f' then $VALUE=(craftLLpar[12]='y') else $VALUE=(craftLLpar[11]='y') endif"
+		show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r)*2-1"
+		/>
+	      <check loc="130 75" size="250 20"
+		style="Label1"
+		label="Sum of all models"
+		vq="craftLLpar"
+		vc="craftLLpar[11]='y' craft_LineList('display')"
+		vc2="craftLLpar[11]='n' craft_LineList('display')"
+		set="if (craftLLpar[3]='f') then $VALUE=(craftLLpar[11]='y') else $VALUE=0 endif"
+		show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=(($r) and (craftLLpar[3]='f'))*2-1"
+	        />
+	      <check loc="130 55" size="250 20"
+		style="Label1"
+		label="Experimental spectrum"
+		vq="craftLLpar"
+		vc="craftLLpar[10]='y' craft_LineList('display')"
+		vc2="craftLLpar[10]='n' craft_LineList('display')"
+		set="$VALUE=(craftLLpar[10]='y')"
+		show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r)*2-1"
+	        />
+	      <button loc="40 120" size="310 20"
+	        vc="craft_LineList('save2fingerprintlib')"
+	        label="Save as reference analyte/fingerprint..."
+		vq="craftLLpar file"
+	  	show="$r=0 strstr(file,'/LineListReports/Fids/'):$r $ENABLE=($r)*2-1"
+	        style="Heading1"
+	        />
+	    </group>
+          </group>
+
+</template>

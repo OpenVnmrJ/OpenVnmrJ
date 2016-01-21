@@ -1,0 +1,75 @@
+"macro xmaddpartosq"
+" Add a .fid or .par directory to the Study Queue"
+
+if($# < 0.5) then
+    write('error', 'Usage: xmaddpartosq(\'fullpath(of .fid or .par)\')')
+    return('')
+endif
+
+if($#>1.5) then
+  if($2='new') then
+    if(appmode<>'imaging') then
+      //write('line3','Cannot add protocol.')
+      return
+    endif
+    if(jviewport<>1) then
+      write('line3','join Plan viewport to add new protocol.')
+    else
+      // do this only in active SQ mode
+      $active=1
+      exists('activestudy','parameter','global'):$e
+      if($e=0) then 
+	$active=0 
+      elseif(activestudy[1]='null' or activestudy[1]='') then 
+	$active=0 
+      endif
+      if(not $active) then
+        write('line3','Use New Study or Continue Study.')
+        return
+      endif
+
+      $path=$1
+      strstr($path,'/procpar'):$n
+      if($n=0) then $path=$path+'/procpar' endif
+      exists($path,'file'):$e
+      if($e>0) then
+        readpar($path,'seqfil',1):$seq
+        getfilepath($seq+'.xml','templates/vnmrj/protocols'):$ok,$file
+        if($ok) then
+          xmmakenode('xml',$file,'null'):$id
+        else
+          xmmakenode('xml','','null',$seq):$id
+        endif
+          $sdir='' xm1('studydir'):$sdir
+          $savepath = $sdir+'/info/'+$id+'/savepar'
+          shell('cp '+$path+' '+$savepath)
+          xmsetatts($id, 'status', 'Customized')
+          xmsetatts($id, 'macro', 'xmrtpar')
+      else
+       write('line3','Cannot add new protocol: %s missing.',$path)
+      endif
+    endif
+    return
+  endif
+endif
+
+$dir=$1
+$base=''
+substr($1, 'basename'):$base,$ext
+
+
+"Make a parent node and manually set its title"
+xmmakenode('new','protocol'):$id
+xmsetatts($id, 'title', $base)
+"Make a child node and manually set its information"
+xmmakenode('new','action'):$id
+if ($id<>'null' and $id<>'') then
+    xmsetatts($id, 'title', $base)
+    xmsetatts($id, 'data', '')
+    xmsetatts($id, 'macro', 'xmrtsqpar')
+endif
+
+" Copy the procpar file to savepar in this new node"
+$procfile=$dir + '/procpar'
+$savepar=sqdir + '/info/' + $id + '/savepar'
+cp($procfile, $savepar)

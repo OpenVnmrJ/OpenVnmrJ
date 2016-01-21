@@ -1,0 +1,136 @@
+"macro qtune"
+"***********************************************************************"
+"         Macro to start swept tune program				"
+"***********************************************************************"
+if ((Console <> 'vnmrs') and (Console <> 'inova') and
+    (Console <> 'uplus') and (Console <> 'mercury')) then
+   write('error','qtune is not available on this system')
+   return
+endif
+
+exists('/vnmr/bin/qtune_ui','file'):$e
+if ($e < 0.5) then
+  mtune
+  return
+endif
+
+exists('/vnmr/acqbin/Expproc','file'):$e
+if ((Console = 'mercury') and ($e < 0.5)) then
+   write('error','qtune is not available on this system')
+   return
+endif
+
+if (system = 'datastation') then
+   write('error','qtune is not available on a data station')
+   return
+endif
+
+$istugain=0
+$istugainl=0
+$istupwr=1   "default to 1 so if we do not check for the tupwr parameter"
+
+rm('-f',curexp+'/qtune',curexp+'/qtuneP'):$dum
+fsave(curexp+'/qtune')
+fsave(curexp+'/qtuneP','processed')
+
+"if 2 args present, the 2nd represents the tune power"
+if ($# > 1) then
+   exists('tupwr','parameter'):$istupwr
+   if ($istupwr=0) then
+      create('tupwr')
+   endif
+   tupwr=$2
+endif
+
+$tn_sav=tn
+$sfrq_sav=sfrq
+$tof_sav=tof
+
+seqfil='qtune'
+np=512
+cp='n'			"Tune off phase cycling"
+in='n'
+exists('nf','parameter'):$nf_exists
+if ($nf_exists > 0.5) then
+  $nf_save=nf
+  nf=1
+endif
+
+"if at least 1 arg present, the 1st represents the tune gain"
+if ($# > 0) then
+   gain = $1
+else
+   exists('tugain','parameter','global'):$istugain
+   exists('tugain','parameter'):$istugainl
+   if ($istugain+$istugainl) then
+      gain = tugain
+   else
+      gain = 20
+   endif
+endif
+
+spin = 'n'		"Turn off spin control"
+$vt_sav = vttype
+vttype = 0		"Turn off temperature control"
+on('loc','global'):$loc_on
+loc = 'n'		"Turn off robot control"
+ss = 0
+nt = 1e6
+$dsp_sav = dsp
+setvalue('dsp','n','global')
+
+"read the spectrometer frequency, the transmitter nucleus"
+"and the tune sweep width from the qtunerc file."
+$sfrq=0
+$tunesw=0
+$file=userdir+'/tune/qtunerc'
+$tn=''
+exists('tunesw','parameter'):$istunesw
+if ($istunesw = 0) then
+    create('tunesw')
+endif
+
+exists($file,'file'):$e
+if ($e <> 0) then
+    lookup('file',$file)
+    lookup('seek','marker1','skip',1,'read',1,'read',1):$tn,$sfrq
+    lookup('file',$file)
+    lookup('seek','span','read',1):$tunesw
+    if ($tunesw > 0) then
+       tunesw=$tunesw*1.0e6
+    endif
+else
+    tunesw=1.0e7
+endif
+
+acqi('disconnect')
+
+go('acqi','qtune','tag_qtune')
+
+" Restore user's 'tn', 'sfrq' 'nf'"
+" Order of these operations is important "
+sfrq=$sfrq_sav
+tn=$tn_sav
+tof=$tof_sav
+if ($nf_exists > 0.5) then
+   nf=$nf_save
+endif
+
+
+" Start up swept tune "
+interact('qtune_ui')
+
+" Restore the global parameters'
+vttype = $vt_sav
+if ($loc_on > 0.5) then
+   loc = 'y'
+endif
+if ($dsp_sav <> 'n') then
+   setvalue('dsp',$dsp_sav,'global')
+endif
+
+" Restore the user's parameters "
+fread(curexp+'/qtune','current','reset')
+fread(curexp+'/qtuneP','processed','reset')
+rm('-f',curexp+'/qtune',curexp+'/qtuneP'):$dum
+acqdisp

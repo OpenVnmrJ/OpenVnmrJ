@@ -1,0 +1,124 @@
+"macro testShellCmds"
+
+exists($0,'maclib'):$e,$reports
+substr($reports,'dirname'):$reports
+substr($reports,'dirname'):$reports
+
+shell('mv '+userdir+'/persistence/appdir_vnmr1 '+userdir+'/persistence/appdir_vnmr1.orig')
+shell('cp '+$reports+'/testinfo/appdir_vnmr1.seqgen '+userdir+'/persistence/appdir_vnmr1')
+appdir('reset')
+
+$reports=$reports+'/reports/shellcmds'
+
+getdirs('maclib'):$dirs
+$dirs=$dirs,systemdir+'/menujlib/'
+$num=size('$dirs')
+
+// Words following shell in comments or may otherwise be ignored
+$ignore='in','may','mchelp','bphelp','sorthelp','textedit','command','program'
+$ignore=$ignore,'db_manager','window.','call','from','due','cd','systemdir'
+// There are from the following macros
+// probeid,probeid,bp_reco,Mbpreco,bp_reco,Mbpreco,several,info
+// save_shims,protune,getsampglobal,probeidez,dicomhdr
+$j=0
+$faillog=curexp+'/faillog'
+write('reset',$faillog)
+write('reset',$reports)
+$search=''
+$isearch=1
+while ($j < $num) do
+  $j = $j+1
+  $dir = $dirs[$j]
+  getfile($dir):$nfiles
+  write('line3','Access shell commands from %s',$dir):$msg
+  vvLog('Test',$msg)
+  $pass=0
+  $fail=0
+  $i=0
+  $cmd=''
+  $line=''
+  $ch=''
+  while ($i<$nfiles) do
+    $i=$i+1
+    getfile($dir,$i):$macro_name
+    lookup('mfile',$dir+'/'+$macro_name,'delimiter',' \n\'(\t','filekey','count','shell'):$key,$count
+    if ($count) then
+      $ret=3
+      while ($ret=3) do
+        lookup('mfile',$key,'delimiter',' +`>\n\'\\()\t&;|,"','seek','shell','read','readline','filekey'):$cmd,$line,$key,$ret
+        if ($ret=3) then
+          substr($cmd,1,1):$ch
+          if ($ch <> '$') and ($ch <> '\n') then
+            teststr('$search',$cmd,'local'):$index
+            if (not $index) then
+              teststr('$ignore',$cmd,'local'):$index
+              if (not $index) then
+                $search[$isearch] = $cmd
+                $isearch=$isearch+1
+              endif
+            endif
+          endif
+          write('file',$reports,'%s: %s',$macro_name, $cmd)
+          $s1='' $s2=''
+          if ($cmd <> 'sed') then
+            strstr($line,'|'):$ret2,$s1,$s2
+            while ($ret2) do
+              substr($s2,1,'delimiter',' +`>\n\'\\()\t&;|,"'):$cmd
+              write('file',$reports,'%s: %s',$macro_name, $cmd)
+              substr($cmd,1,1):$ch
+              if ($ch <> '$') and ($ch <> '\n') then
+                teststr('$search',$cmd,'local'):$index
+                if (not $index) then
+                  teststr('$ignore',$cmd,'local'):$index
+                  if (not $index) then
+                    $search[$isearch] = $cmd
+                    $isearch=$isearch+1
+                  endif
+                endif
+              endif
+              if ($cmd = 'sed') then
+                $ret2=0
+              else
+                strstr($s2,'|'):$ret2,$s1,$s2
+              endif
+            endwhile
+          endif
+        endif
+      endwhile
+    endif
+  endwhile
+endwhile
+$isearch= $isearch-1
+write('file',$reports,'%d unique commands', $isearch)
+$i=0
+while ($i < $isearch) do
+  $i=$i+1
+  substr($search[$i],1,1):$ch
+  if ($ch = '/') then
+    exists($search[$i],'file'):$e
+  else
+    getbinpath($search[$i]):$e
+  endif
+  if ($e) then
+    $pass=$pass+1
+    write('file',$reports,'%d PASS %s', $i, $search[$i])
+  else
+    $fail=$fail+1
+    write('file',$faillog,'command not found: %s',$search[$i])
+    write('file',$reports,'%d FAIL %s', $i, $search[$i])
+  endif
+endwhile
+if ($pass) then
+  write('line3','%d shell commands',$pass):$msg
+  vvLog('Pass',$msg)
+endif
+if ($fail) then
+  write('line3','%d shell commands',$fail):$msg
+  vvLog('Fail',$msg)
+  vvLog:$path
+  shell('cat '+$faillog+' >> '+$path+';cat'):$e
+  write('reset',$faillog)
+endif
+shell('rm '+userdir+'/persistence/appdir_vnmr1')
+shell('mv '+userdir+'/persistence/appdir_vnmr1.orig '+userdir+'/persistence/appdir_vnmr1')
+appdir('reset')

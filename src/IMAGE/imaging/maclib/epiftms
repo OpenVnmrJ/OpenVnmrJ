@@ -1,0 +1,109 @@
+"macro epiftms"
+"************************************************************************"
+"									 "
+" epiftms - generate phase correction maps for multislice epidata	 "
+"									 "
+" Details: The macro is written for dataset collected in this form	 "
+"          ref.fid - multi-slice epi data with phase blips off		 "
+"          epi.fid - multi-slice epi data. seqcon='nccnn'		 "
+"									 "
+" Usage:   First generate phase correction maps				 "
+"          i) epiphms       generate phase maps in curexp/datdir/	 "
+"                           load reference file into current EXP#	 "
+"          ii) epiftms      load epi data and process			 "
+"									 "
+" Limitations: No checks for datatype or parameters are done		 "
+"									 "
+"************************************************************************"
+
+"** Check first argument for directory name ***************"
+if ($# > 1) then
+  write('error','epiftms: too many arguments')
+elseif ($# = 1) then
+  $directory = $1
+  rt($1)
+endif
+
+"** Don't know how to handle data with navigator echoes **"
+exists('navigator','parameter'):$e
+if ($e > 0) then
+  if (navigator = 'y') then 
+    write('error','%s: Sorry, don\'t know how to handle navigator data, use recon_all', $0)
+    abort
+  endif
+endif
+
+"** check if segmented epi **"
+$nseg = nseg
+
+"** check and initialize some parameters **"
+exists('images','parameter'):$ex
+if($ex = 0) then
+  create('images')
+  images=1
+  image=1
+endif
+
+exists('imgno','parameter'):$ex
+if($ex = 0) then
+  create('imgno')   "processing parameter"
+endif
+if(imgno = 0) then imgno=1 endif
+if(imgno > images) then imgno = images endif
+
+if(ns = 1) then slice=1 endif
+
+$nv = nv
+exists('fract_ky','parameter'):$e
+if ($e > 0) then
+  $nv = nv/2 + fract_ky
+endif
+
+$etl = $nv/$nseg                      "echo train length"
+
+"** check if segmented epi **"
+if(nseg > 1) then
+  $segmented =1
+else
+  $segmented = 0
+endif
+exists('flash_converted','parameter'):$ex
+if($ex = 0) then
+  if ($segmented=1) then
+    if (ns > 1) then
+      flashc('nf','rare',ns,$etl)
+    endif
+  else
+    if (ns > 1) then
+      flashc('nf','mi',ns)   "uncompress the data, note arraydim modified"
+    endif
+  endif
+endif
+
+$arraysize = arraydim
+$a = 1
+$s = 1
+$ns = ns
+
+repeat
+  repeat
+    epift($a,$s)     "updated epift used here"
+    write('line3',$a)
+    $s = $s + 1
+    $a = $a + 1
+    f full
+    dconi      
+  until($s > ns)
+  $s = 1
+until($a > $arraysize)
+
+"*************************************************************************"
+"                            Modification History			  "
+"									  "
+" 981119(ss): Bug in arraydim size fixed				  "
+" 981202(ss): epifta reorders interleaved data using tcapply macro	  "
+" 981204(ss): phase encode table generated				  "
+" 981210(ss): interleaved segments = nseg (not num_ints)		  "
+" 000921(ss): flashc checked						  "
+"									  "
+"*************************************************************************"

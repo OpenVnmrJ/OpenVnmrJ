@@ -1,0 +1,93 @@
+*******************************************************************************
+analyze('expfit','xarray'<,'option','option,...>)	- curve fitting
+analyze('expfit','regression'<,'option','option',...>)  - regression mode
+*******************************************************************************
+
+   Description: Provides an interface to the curve fitting program, 'expfit',
+		supplying it with input data in the form of a text file
+		'analyze.inp' in the current experiment.  'xarray' is the
+		name of the parameter array holding x-values in T1, T2,
+		kinetics, and contact_time, and used only with these options.
+
+		The UNIX program 'expfit' is called with the following syntax:
+			expfit option(s) <analyze.inp  >analyze.list
+
+		The program expfit does a least-squares curve fitting to
+		the data supplied in 'analyze.inp'. Macros are available
+		for the specialized uses of analyze such as 't1' and 'kinetics'.
+		These macros avoid the need for the user to select options
+                and get the correct file format.
+		In the regression mode, (if 'regression' is an argument)
+		the type of curve fitting, 
+		('poly1',...) must be selected.  For regression 
+		(generalized curve fitting), the regression section in 
+		the Operation Manual gives the input file format and 
+		describes the menus that permit options choices 
+		indirectly through menu buttons.  
+
+	Files:	The text file analyze.inp which for T1, T2, kinetics,
+			contact_time, and regression, contains:
+	  	<optional descriptive text line>				
+	  	<optional y-axis title - regression only>			
+	  	number of peaks(data sets)   number of (x,y) pairs per peak		
+			and, regression only, x scale type   y scale type
+  		<NEXT  	number of (x,y) pairs for this peak > 
+		index#(1)
+	  	x y   (first peak,first pair)					
+	  	x y   (first peak,second pair)				
+	  	......	
+  		<NEXT  	number of (x,y) pairs for this peak > 
+		index#(2)
+	  	x y   (second peak, first pair)	
+	  	......
+	
+		In the regression mode the line beginning with
+		'NEXT' is inserted at the start of the data for each 
+		peak when the number of pairs per peak is variable.
+  		In this case, the header contains the maximum number 
+  		of pairs for any peak.
+
+	        For T1, T2, kinetics, and contact_time, information from 
+		the file 'fp.out' and values of the arrayed parameter
+ 		'xarray' are used to construct this file. It is necessary 
+		to run 'fp' prior to 'analyze'.  For regression, this file
+	        'analyze.inp' is made by running "expl('regression')".
+   	        If the regression mode is not selected, 'analyze.inp'
+		may be slightly different.	
+
+		'expfit' also makes a file 'analyze.out', which is used
+		by 'expl' to display the results of the analysis, in 
+		addition to output to the standard output, which is
+		usually directed to 'analyze.list'.
+
+       Options:	The following options are implemented in 'analyze':
+
+		    T1		Perform T1 analysis (default)
+		    T2		Perform T2 analysis
+		    kinetics    Perform kinetics analysis
+					decreasing peak height
+                                The last four arguments are used to add
+                                a time offset between the array elements. 
+                                In the example below, the time increment is
+                                (d1 + d2 + at) * nt
+		    increment   Perform kinetics analysis with
+					increasing peak height
+                                The last four arguments are the same as
+                                in the kinetics case.
+		    list	Extended listing for each peak
+		    diffusion   A special analysis for diffusion experiments
+		    contact_time A special analysis for solids cross-
+					polarization spin-lock experiments
+		    regression  Sets regression mode, signifies generalized
+					curve fitting with choices
+					poly1, poly2, poly3, and exp
+		    poly1	With regression, a linear fitting
+		    poly2	With regression, a quadratic fitting
+		    poly3	With regression, a cubic curve fitting
+		    exp		With regression, an exponential curve fitting
+
+      Examples: analyze('expfit','d2','T1','list)
+                analyze('expfit','pad',kinetics','list',d1,d2,at,nt)
+		analyze('expfit','p2','contact_time','list')
+		analyze('expfit','regression','poly1','list')
+

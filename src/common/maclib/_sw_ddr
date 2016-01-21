@@ -1,0 +1,181 @@
+"macro _sw_ddr"
+
+$stages=0
+
+on('ddrstages'):$usepars
+
+
+$m1=1
+$m2=1
+$o1=7
+$o2=75
+
+$sw=sw
+$sr=5e6
+on('ddrsr'):$e
+if ($e > 0) then
+  $sr = ddrsr
+  if($sw > 5e6) then
+    $sr=10e6
+  elseif($sw>2.5e6) then
+    $sr=5e6
+  elseif ($sw>1.25e6) then
+    $sr=2.5e6
+  endif
+else
+  if($sw > 5e6) then
+    $sr=10e6
+  elseif($sw>2.5e6) then
+    $sr=5e6
+  elseif ($sw>50000) then
+    $sr=2.5e6
+  endif
+endif
+
+$cor=7
+
+on('ddrcr'):$e
+if ($e > 0 ) then
+  $cor=ddrcr
+endif
+
+if($sw>1.25e6) then
+   $sw=$sr
+else  
+  if ($usepars > 0) then
+    $stages = ddrstages
+    if ($stages>0) then
+      $m2=ddrm2
+      $m1=ddrm1
+    endif
+    $o1=ddro1
+    $o2=ddro2
+  else
+    if($sw>=100000) then
+      $stages=1
+      $m2=1
+    elseif($sw>50000) then
+      $m2=2
+      $stages=2
+      $o1=7
+    elseif($sw>5000) then
+      $m2=4
+      $stages=2
+      $o1=7
+    else 
+      $o1=7
+      $m2=8
+      $stages=2
+    endif
+    $m1=trunc($sr/$m2/$sw+0.5)
+  endif
+  if($e > 0) then
+    if($stages=1) then
+      $o1=$cor
+    else
+      $o2=$cor
+    endif
+  endif
+  $sw=$sr/$m1/$m2
+  if ($usepars=0) then
+    setvalue('ddrm1',$m1)
+    setvalue('ddrm2',$m2)
+  endif
+
+  on('ddrx1'):$e
+  if ($e >= 0) then
+    on('ddrtc'):$e
+    if ($e = 0) then
+      setvalue('ddrx1',0.5)
+    elseif($e = 1) then
+      $x1=trunc(ddrtc*$sr/1e6)
+      setvalue('ddrx1',-$x1)
+    endif
+  endif
+endif
+
+" estimate the maximum cor for this sw "
+
+$maxcr=0
+if($sr>3e6) then   "5 MHz sampling"
+  if($stages=1) then
+    if($m1=5) then 
+        $maxcr=6
+    elseif($m1<=15) then
+        $maxcr=0.7*$m1+1     
+    else
+        $maxcr=14
+    endif
+
+  elseif($stages=2) then 
+    if($m1>130) then
+      $maxcr=1.17*$m1+400
+    elseif($m1>50) then
+      $maxcr=3.6*$m1+100
+    else
+      $maxcr=6.8*$m1-80
+    endif
+  endif
+else               "2.5 MHz sampling"
+  if($stages=1) then
+    if($m1=2) then
+	  $maxcr=7
+    elseif($m1=3) then 
+      $maxcr=20
+    elseif($m1=4) then
+      $maxcr=30
+    elseif($m1<=10) then
+      $maxcr=35
+    else  
+      $maxcr=40
+    endif
+  elseif($stages=2) then
+    if($m1>14) then
+      $maxcr=11*$m1+60     
+    else
+      $maxcr=23*$m1-90
+    endif
+  endif
+endif
+
+if($maxcr>1000) then
+  $maxcr=1000
+elseif($maxcr<0) then
+  $maxcr=0
+endif
+if ($stages>=0) then
+  on('ddrmaxcr'):$e
+  if($e>=0) then
+    setvalue('ddrmaxcr',$maxcr)
+  endif
+  if($e>0) then
+    if($stages=1 and $o1> $maxcr) then
+       $o1=$maxcr
+    elseif($stages=2 and $o2> $maxcr) then
+       $o2=$maxcr
+    endif
+  endif
+  if($usepars=0) then
+    setvalue('ddro2',$o2)
+    setvalue('ddro1',$o1)
+  elseif($usepars=1 and $e>0) then
+    setvalue('ddro2',$o2)
+    setvalue('ddro1',$o1)
+  endif
+endif
+on('ddrsr'):$e
+if($e = 0) then 
+   setvalue('ddrsr',$sr)
+endif
+on('ddrstages'):$e
+if($e >= 0) then 
+   setvalue('ddrstages',$stages)
+endif
+
+setvalue('sw',$sw)
+
+_at
+on('aqtm'):$e
+if($e > 0) then 
+  setvalue('aqtm',at)
+endif

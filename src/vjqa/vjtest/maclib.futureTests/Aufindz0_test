@@ -1,0 +1,172 @@
+"@(#)Aufindz0_test 19.2 03/02/06 Copyright (c) 1991-2006 Varian, Inc. All Rights Reserved."
+"findz0: macro to find z0 from the position of the lock resonance "
+" in a deuterium spectrum.  Arguments: 'init': record the initial "
+" spectrum; 'move': process spectrum, set z0 and restore initial "
+" parameters. "
+
+if $#<1 then $1=1 r3=0 r7=0 endif
+
+  IF ($1 = 1) THEN
+
+   groupcopy('current','processed','acquisition')
+   groupcopy('current','processed','display')
+   groupcopy('current','processed','processing')
+
+"     gmapsys "
+     tmpsave('findz0tmp')
+     addlknuc
+     tn='lk' seqfil='s2pul' sw=100*sfrq np=8k
+     dn='H1' tof=0
+     nt=1 ss=0 at=1
+     tpwr=45 pw=200
+gain=10 
+     getparam('tpwr','lk'):tpwr
+     getparam('pw90','lk'):pw
+     if (Console = 'g2000') then alock ='n' 
+     elseif (Console = 'mercury') then
+       exists('/vnmr/acqbin/Expproc','file'):$expprocex
+       if ($expprocex) then alock = 'u' else alock = 'n' endif
+     else
+       alock='u' 
+     endif
+     wnt='' wexp='Aufindz0_test(2)'
+     array=''
+     p1=0 sb='n' dmg='ph' fn=2*np lp=0 
+"     au('wait','next')   "
+     gmapshim_au('gshim','glideau')
+
+  ENDIF
+
+  IF ($1 = 2) THEN
+    
+     f lb=1/at wft lp=0 aph0 ds
+     rfl=sw/2 rfp=0
+     peak:$hgt,cr
+     movetof:$dum
+     wexp='Aufindz0_test(3)'
+     au('wait','next') 
+
+  ENDIF
+
+  IF ($1 = 3) THEN
+
+     f lb=1/at wft lp=0 aph0 ds
+     rfl=sw/2 rfp=0
+     peak:$hgt,cr
+     if (cr > 1) or (cr < -1) then
+
+       movetof
+       wexp='Aufindz0_test(3)'
+       au('wait','next') 
+      
+     else
+       $ref_z0s='' $ref_tofs=''
+       $ref_tpwrs='' $ref_pw90s=''
+       readhw('z0'):$ref_z0
+       format($ref_z0,0,0):$ref_z0s
+       format(tof,0,1):$ref_tofs
+       format(tpwr,0,0):$ref_tpwrs
+       format(pw,0,1):$ref_pw90s
+
+       setparams('solv',solvent,'lk')
+       setparams('tof',$ref_tofs,'lk')
+       setparams('z0',$ref_z0s,'lk')
+       setparams('tpwr',$ref_tpwrs,'lk')
+       setparams('pw90',$ref_pw90s,'lk')
+ 
+       $range='hi'
+       if ((shimset < 3) or (shimset = 8) or (shimset = 10)) then
+         $range='lo'
+       endif
+       if $range='hi' then $diff=5000 else $diff=150 endif
+$s='' format(r7,'lower'):$s
+       $set=$ref_z0+$diff
+       sethw('z0',$set) 
+shell('sleep '+$s)
+//       readhw('z0'):$what1
+       sethw('z0',$set) 
+//shell('sleep '+$s)
+//       readhw('z0'):$what2
+       r5=$diff
+//write('file','/vnmr/tmp/AUtest','#%sA wait %s s:z0a=%s',r3,r7)
+
+write('line3','waiting %s s',r7)
+write('line3','1st z0:%s',$ref_z0+$diff)
+       wexp='Aufindz0_test(4,r5)'
+       au('wait','next') 
+
+     endif
+
+   ENDIF
+
+
+   IF ($1 = 4) THEN
+
+	f lb=1/at wft ds lp=0 aph0
+	rfl=sw/2 rfp=0
+	peak:$hgt,cr
+write('line3','AU(4):cr=%s',cr)
+
+$ref_z0=0 getparam('z0','lk'):$ref_z0
+write('line3','waiting %s s',r7)
+$s='' format(r7,'lower'):$s
+       sethw('z0',$ref_z0) 
+shell('sleep '+$s)
+//       readhw('z0'):$what1
+       sethw('z0',$ref_z0) 
+//shell('sleep '+$s)
+//       readhw('z0'):$what2
+write('file','/vnmr/tmp/AUtest','#%s wait %s s:cr=%s',r3,r7,cr)
+r3=r3+1
+if r3=101 then r7=r7+2 r3=0 write('file','/vnmr/tmp/AUtest','delay set to %s s',r7) endif
+if r7=22 then return endif
+Aufindz0_test(1)
+return
+	r6=cr
+        $ref_z0=0
+	getparam('z0','lk'):$ref_z0
+	sethw('z0',$ref_z0-$2)
+        wexp='Aufindz0_test(5,-2*r5,r6)'
+write('line3','AU(4):r6=%s',r6)
+write('line3','2nd z0:%s',$ref_z0-$2)
+shell('sleep 1')
+        au('wait','next') 
+
+   ENDIF
+
+   IF ($1 = 5) THEN
+write('line3','r5=%s,$2=%s,r6=%s,$3=%s',r5,$2,r6,$3)
+	f lb=1/at wft ds lp=0 aph0
+	rfl=sw/2 rfp=0
+	peak:$hgt,cr
+	r4=cr
+	$hzperdac=(r4 - $3)/$2
+        $hpds=''
+        format($hzperdac,0,5):$hpds
+	setparams('hzdac',$hpds,'lk')
+write('line3','hpds=%s,hzdac=%s',$hpds,$hzperdac)
+        $ref_z0=0
+	getparam('z0','lk'):$ref_z0
+	sethw('z0',$ref_z0)
+"	seqfil='gmapz' "
+"	gmapsys('quit') "
+
+return
+        if (gradtype='nnh') then
+          $tn='hs'
+        else
+          $tn=tn
+        endif
+        exists(userdir+'/shims/'+probe+'_'+$tn+'_d2o','file'):$shimex
+        if ($shimex) then
+          rm(userdir+'/shims/'+probe+'_'+$tn+'_d2o'):$x
+        endif
+        svs(probe+'_'+$tn+'_d2o') 
+
+        setlkpars(lockpower,lockgain) 
+
+        tmpreturn('findz0tmp')
+        dsp=dsp
+        banner('DONE')
+   
+    ENDIF

@@ -1,0 +1,211 @@
+"macro updateExpSelector"
+"******************************************************************"
+// Look through all protocols not in the systemdir tree.  Write info
+// to a line in the ExperimentSelector_operator.xml file using updateexpsel.  
+// One of the points is to allow users to copy protocols from one location 
+// to another and still have them show up in the ExperimentSelector in a 
+// desirable tab, menu1 and menu2.
+//
+// The full logic to be used is here.  PLEASE update this if the macro
+// code changes.
+//  - What are the possible variables and what do they do:
+//    (expselu and expselnu are set via check boxes in the appdir editor panel)
+//    - expselu (0 or 1) - Only relates to userdir protocols
+//      - if expselu=1, force all userdir protocols into a tab
+//        whose name is the appdir label (eg., "Home account")
+//        Ignore the tabname in the protocol xml file.
+//      - if expselu=0, if no tabname, show userdir protocols in a tab
+//        whos name is apptype, else use the tabname
+//    - expselnu (0 or 1) - Only relates to 'otherdir' appdirs (non system and non user)
+//      - if expselnu=0, if tabname is specified, use it.  if tabname not specified,
+//        use apptype for tabname.
+//      - if expselnu=1, ignore tabname and force all otherdir protocols into a
+//        tab with appdir label as the tab name
+//    - appdir (sysdir, userdir or otherdir)
+//      - Skip all sysdir protocols
+//      - userdir and otherdir will depend on expselnu, expselu and tabname
+//    - tabname (specified or not specified in the protocol)
+
+//  2 changes were made by Krish (May 2012)
+//      - The ExperimentSelector.xml comes from outside of a persona appdir
+//      - Uses personalib/persona/adm/ProtocolConfig_persona.txt file to 
+//              decide if protocols not defined (i.e., neither allowed or disallowed)
+//              in the persona be displayed or not.
+
+
+// Make the parameters if needed
+exists('expselnu','parameter','global'):$e
+if ($e < 0.5) then
+  create('expselnu','real','global')
+  setgroup('expselnu','display','global')
+  expselnu=0
+endif
+exists('expselu','parameter','global'):$e
+if ($e < 0.5) then
+  create('expselu','real','global')
+  setgroup('expselu','display','global')
+  expselu=0
+endif
+
+// Make sure interface directory exists in userdir
+$dum=''
+exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+if not $direx then
+    mkdir('-p',userdir+'/templates/vnmrj/interface'):$dum
+endif
+
+// Remove any previous ExperimentSelector_operator.xml file so it can
+// be recreated as necessary in here.  
+if (appmode<>'imaging') then
+  $ES=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+operator+'.xml'
+  $ESsystem=''
+else
+  // If Imaging, remove the _user.xml file.  For some reason, the operator
+  // parameter is not set to owner for imaging.
+  $ES=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+owner+'.xml'
+  $ESsystem=''
+endif
+$expfile=userdir+'/persistence/expsel'
+write('reset',$expfile)
+
+// Flag to add unassigned protocols */
+$aopOK='true'
+getadminfo('unassignedprotocols'):$aopOK
+if ($aopOK='false') then
+  $tmpfile=userdir+'/persistence/RightsConfig_'+operator+'.txt'
+  exists($tmpfile,'file'):$e
+  if ($e) then
+    $r1='' $r2=''
+    readfile($tmpfile,'$r1','$r2','','local'):$e
+  else
+    $aopOK='true'
+  endif
+endif
+
+findExpSelXml:$esex,$ESsystem
+//exists('ExperimentSelector.xml','templates/vnmrj/interface'):$esex,$ESsystem
+
+getappdirs:$atot,$adirs,$alabels
+if ($# > 0) then
+  teststr('$adirs',$1,'local'):$ok
+  if ($ok=0) then
+      write('error','%s is not a valid appdir',$1)
+      return
+  else
+      $adirs=$1 $alabels=$alabels[$ok]
+      $atot=1
+  endif
+endif
+
+$tmpfile=userdir+'/persistence/'+$0+'list'
+write('reset',$tmpfile)
+if ($atot>0) then
+  $i=1
+  repeat
+      $ret=0
+      strstr($adirs[$i],systemdir):$ret
+      // Accpet protocols from /vnmr/chempack appdir
+	if $adirs[$i]=systemdir+'/chempack' then $ret=0 endif
+      // Ignore all protocols in systemdir and in appdirs
+      //  inside systemdir.  These are supplied with CD and
+      //  are maintained by the profiles
+      if ($ret<>1) then
+          // Add protocols in this dir to the list to be looked at
+	  exists($adirs[$i]+'/templates/vnmrj/protocols','directory'):$pdirex
+	  if $pdirex then
+          shell('(ls -1 '+$adirs[$i]+'/templates/vnmrj/protocols/*.xml >> '+$tmpfile+')'):$dum
+	  endif
+      endif
+      $i=$i+1
+  until $i > $atot
+endif
+$s1='' $s2=''
+readfile($tmpfile,'$s1','$s2','','local'):$total
+shell('rm -f '+$tmpfile):$dum
+
+if ($total>0) then
+  $i=1
+  repeat
+      $tab='' $title='' $label='' $menu1='' $menu2='' $appdirlabel=''
+      $ExpSelNoShow=''
+      $filepath=$s1[$i]
+      // Get the appdir path excluding the subdirectory
+      $appdir='' strstr($filepath,'/templates/vnmrj/protocols/'):$ret,$appdir
+      if ($ret) then
+          // Get the label for this appdir
+          teststr('$adirs',$appdir,'local'):$ret2
+          if ($ret2) then $appdirlabel=$alabels[$ret2] endif
+      endif
+      // Get the tab designation if specified, it may or maynot be used
+      getattr($filepath,'template','tabname'):$tab
+
+      strstr($appdir, userdir):$ret
+      if($ret > 0) then
+          // This file is in userdir
+          if(expselu=1) then
+              // It is userdir and they want to use the label for userdir
+              if($appdirlabel <> '') then
+                  $tab=$appdirlabel
+              endif
+          else
+              if($tab='') then 
+                  // No tab spedified, use apptype
+                  getattr($filepath,'template','apptype'):$tab
+              endif
+          endif  
+      else 
+          // sysdir directories are not in the list, so this must be
+          // something other than sysdir or userdir
+          if(expselnu=1) then
+              // It is an other dir and they want to use the label for this appdir
+              if($appdirlabel <> '') then
+                  $tab=$appdirlabel
+              endif
+          else
+              if($tab='') then 
+                  // No tab spedified, use apptype
+                  getattr($filepath,'template','apptype'):$tab
+              endif
+          endif  
+      endif
+
+      getattr($filepath,'template','ExpSelNoShow'):$ExpSelNoShow
+      if($ExpSelNoShow='') then
+          $ExpSelNoShow='false'
+      endif
+
+      getattr($filepath,'template','name'):$name
+      if ($tab<>'') and ($name<>'') then
+        $is=0
+        if ($aopOK='false') then
+          teststr('$r1',$name,'local'):$e
+          if ($e=0) then
+            $is=1
+          endif
+        endif
+        if ($is=0) then
+          shell('(cat '+$expfile+' | grep \'name="'+$name+'"\' | grep -c \'tab="'+$tab+'"\')'):$is
+        endif
+          if ($is=0) then
+              shell('(cat '+$ESsystem+' | grep \'name="'+$name+'"\' | grep -c \'tab="'+$tab+'"\')'):$is
+	  endif
+	  if ($is=0) then
+              shell('(cat '+$expfile+' | grep -c \'name="'+$name+'"\')'):$is2
+              if ($is2) then
+                shell('cat '+$expfile+' | grep -v \'name="'+$name+'"\' > '+$expfile+'.tmp; mv '+$expfile+'.tmp '+$expfile+';cat'):$x
+              endif
+              // Get the label, menu1 and menu2 designations if specified
+              if ($ExpSelNoShow = 'false') then
+                getattr($filepath,'template','label'):$label
+                getattr($filepath,'template','menu1'):$menu1
+                getattr($filepath,'template','menu2'):$menu2
+                write('fileline',$expfile,'name="%s",label="%s",tab="%s",menu1="%s",menu2="%s",noshow="%s",opOnly="%s"\n',$name,$label,$tab,$menu1,$menu2,$ExpSelNoShow,'opOnly')
+              endif
+          endif
+      endif
+      $i=$i+1
+  until $i > $total
+endif
+$ES=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+operator+'.xml'
+vnmrjcmd('util','setexpsel',$ES,$expfile)
+

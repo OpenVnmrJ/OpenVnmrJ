@@ -1,0 +1,51 @@
+"macro execpslabel"
+"execpslabel "
+"Execute pslabel specific macro if it exists"
+"similar to execseq"
+" supports multiple arguments to be passed"
+" supports one return argument"
+"Also executes explabel specific macro if pslabel<>explabel"
+
+if ($# < 1 ) then
+  $exec = 'prep'
+else
+  $exec = $1
+endif
+$return=0
+$macro = pslabel + '_' + $exec
+exists($macro,'maclib'):$e
+if ($e=0) and (pslabel<>seqfil) then
+   $macro=seqfil+'_'+$exec
+   exists($macro,'maclib'):$e
+endif
+
+if ($e > 0) then
+  if $# > 1 then
+	$macro=$macro+'('
+	$i=2
+	repeat
+	  format(${$i},'isreal'):$s
+	  if ($s=1) then 
+		$arg=''
+		format(${$i},'lower'):$arg
+		$macro=$macro+$arg
+	  else
+		$arg=${$i}
+		$macro=$macro+'\''+$arg+'\''
+	  endif
+	  if ($i < $#) then $macro=$macro+',' endif
+	  $i=$i+1
+	until $i > $#
+	$macro=$macro+')'
+   endif
+   {$macro}:$return
+//  exec($macro)
+endif
+exists('explabel','parameter'):$parex
+if ($parex) then
+    if (explabel<>pslabel) then
+	execexplabel($1):$return
+    endif
+endif
+
+return($return)

@@ -1,0 +1,55 @@
+"macro bootimaging"
+/* bootimaging
+*  start up macro to set or update imaging specific globals
+*/
+
+if (system='datastation') then
+        sysgcoil='205_120_HD'
+        gcoil=sysgcoil
+
+       gradtype='rrr'
+       //create pulsecal if it doesn't exist
+
+        exists(userdir+'/'+'pulsecal','file'):$ex
+
+    if $ex=0 then
+    pulsecal('main','gauss',4000,90,25,'quiet')
+    endif
+
+write('line3','Finished setting datastation')
+endif
+
+write('alpha','Calling bootimaging macro')
+
+if (size('coil_param') < 26) then
+  prescan_init
+endif
+
+if (size('prescan_order') = 6) then               // check for 2.3A setting, and update if found
+  if (prescan_order[2] = 'shim') then
+    prescan_order = 'skip','freq','power'
+  endif
+endif
+
+create('VCOILREF','string','global','')          // Volume Coil Reference Data
+create('SENSEREF','string','global','')          // SENSE Reference Data
+
+create('PDDacquire','string','global','y')       // flag to switch PDD about acquisition or about RF pulses
+
+create('prepScan','integer','global',0)          // flag to show Prep to Scan button on action bar
+create('rf1pop','integer','global',0)            // create and turn off rf energy flag for channel 1
+create('rf2pop','integer','global',0)            // create and turn off rf energy flag for channel 2
+
+"create aip global parameters"
+create('aipImageScale','real','global',1)
+imagemath('genglobal')
+aip3Dextract('genglobal')
+aipSaveOutput('genglobal')
+
+dataPathPopup('init')                            // initialize datapref global for saving data
+
+exists('showPlotBox','parameter','global'):$ex
+if ($ex) then showPlotBox[1]=0 endif             // turn off box around ds and dss displays
+
+create('showToolMenu','real','global',-1)        // global parameter to show ToolMenu.xml in user toolbar
+

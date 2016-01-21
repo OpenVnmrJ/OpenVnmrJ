@@ -1,0 +1,66 @@
+#
+
+import os
+import sys
+import glob
+import shutil
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil # for better copytree()
+
+# The console software must be compiled on a Sun. Use the makemi script
+# in the inova git category to accomplish this.
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+#dirList = [ 'vxBoot.small',
+#            'vxBoot.big']
+
+dirList2 = [ 'parlib',
+            ]
+
+# define with absolute path where built files will be copied
+# define with absolute path where built files will be copied
+#consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+#                        'console', 'mercury','acq')
+
+#if not os.path.exists(consolePath):
+#   os.makedirs(consolePath)
+
+#copy the directory
+#for i in dirList:
+#       myShutil.copytree(i,consolePath,symlinks = False)
+#       Execute('chmod 644 ' + consolePath + '/' + i + '/*')
+
+#Execute('cd '+consolePath+'; ln -s vxBoot.small vxBoot')
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+for i in dirList2:
+       myShutil.copytree(i,consolePath,symlinks = False)
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury','templates','vnmrj')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+srcPath=os.path.join(cwd, os.pardir, 'inova','templates','vnmrj')
+cmd='cd '+srcPath+';ln -s protocols_nn protocols'
+print "cmd: ",cmd
+os.system(cmd)
+
+myShutil.copytree(os.path.join(srcPath,'protocols'), consolePath,symlinks = False)
+
+cmd='cd '+srcPath+';rm -f protocols'
+print "cmd: ",cmd
+os.system(cmd)
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury','user_templates')
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+os.system('cp  global '+os.path.join(consolePath,'global'))

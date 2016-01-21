@@ -1,0 +1,69 @@
+/*  rna_CPMGnoesy.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    A 2D N15-correlated NOESY employing a CPMG pulse train instead of regular
+    INEPT transfer for improved magnetization transfer of exchange broadened
+    resonances. Optional C13 refocusing.
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    pulse sequence: Mulder, F.A.A. et al, J. Biom. NMR, 8 (1996) 223-28.
+
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for C13 decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+
+
+                  DETAILED INSTRUCTIONS FOR USE OF rna_CPMGnoesy
+
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_CPMGnoesy may be printed using:
+                                      "printon man('rna_CPMGnoesy') printoff".
+
+    2. Apply the setup macro "rna_CPMGnoesy".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 110ppm, and N15
+       frequency on the aromatic N region (200 ppm).
+
+    4. CPMG pulse train:
+       ncyc should be set to multiple of 8 (8, 16 or 24).
+
+    5. SETTING OF SW1:
+       dof2 is set to 85ppm during the N15 labeling (tof set to 7.5ppm) and
+       shifted to 120ppm for efficient decoupling during t2.
+       dof is set to 110ppm for efficient C13 decoupling.
+
+       Check the folding of the imino resonances in a N15 HSQC. Since the
+       NOEs are N15-correlated it is important not to fold imino N15
+       resonances on amino N15 resonances.
+       Since dof2 is fixed in all N15 HSQC sequences (85ppm) change sw1 for
+       proper folding. sw1=60ppm is usually a good starting value.
+
+    6. Splitting of resonances in the N15 dimension by C13 coupling in C13
+       enriched samples can be removed by setting C13refoc='y'.
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Written for RnaPack by Peter Lukavsky (10/98).     @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+*/

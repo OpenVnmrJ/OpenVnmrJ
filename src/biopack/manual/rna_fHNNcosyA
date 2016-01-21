@@ -1,0 +1,112 @@
+  rna_fHNNcosyA
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    non-TROSY correlation of imino H-N frequencies to the adjacent
+    J-correlated 15N nuclei (i.e. across the hydrogen-bond)
+    with H2O flipback pulses and a final watergate sequence 
+    for water suppression/preservation.
+
+    This version may be more appropriate for small RNA's and for use in probes
+    where fewer gradients and pulses are desirable. It is not TROSY or sensitivity-
+    enhanced.
+
+    pulse sequence: 	Dingley and Grzesiek, JACS, 120, 8293 (1998)
+
+	- the actual C13 and N15 offsets, dof and dof2, respectively, are 
+	  used in the pulse sequence (no hidden offset changes are done).
+	  The rna_fHNNcosy macro will set the C13 offset to 110ppm and the
+	  N15 offset to 185ppm assuming that the values saved in the probe
+	  file are 174 and 120ppm for C13 (carbonyl region of proteins) 
+	  and N15 (amide region of proteins), respectively.
+
+	- if H2O flipbacks are not calibrated, set 
+		tpwrsf_i=4095.0
+		phincr_i=0.0
+		tpwrsf_d=4095.0
+		phincr_d=0.0
+		tpwrsf_u=4095.0
+		phincr_u=0.0
+
+          *_d and *_u parameters for down and up flipbacks are calibrated by
+	  the latest versions of BioPack and can be retrieved from the probefile.
+ 	  However, the *_i flipback parameters require a different calibration;
+	  if *_d parameters are available, I would set 
+		phincr_i=phincr_d 
+		tpwrsf_i=tpwrsf_d
+
+	- try using different values of gzlvl3 and gzlvl4 to improve water 
+	  suppression (also try using gradients of opposite sign for gzlvl3 and
+	  gzlvl4)
+     
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nnn', dmm2 = 'ccc'
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+    f1coef='1 0 0 0 0 0 -1 0'
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF rna_fHNNcosy
+
+         
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro: 
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_fHNNcosy may be printed using:
+                                      "printon man('rna_fHNNcosy') printoff".
+             
+    2. Apply the setup macro "rna_fHNNcosy".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm) 
+       set sw1 to 100ppm.
+
+    4. CALIBRATION OF pw AND pwN:
+       Should be done in rna_gNhsqc.
+
+    5. CALIBRATION OF dof2:  
+       Should be done in rna_gNhsqc.
+
+    6. Splitting of resonances in the N15 dimension by C13 coupling in C13
+       enriched samples can be removed by setting C13refoc='y'.
+
+    7. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.  H2O is cycled
+       back to z as much as possible.
+
+    8. The coherence-transfer gradients using power levels
+       gzlvl4 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl4 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+       If water suppression is not efficient or exchanging iminos are lost,
+       optimize gzlvl4 and gzlvl2 by arraying them together. Take the best
+       compromise between S/N for iminos and water suppression. Then optimize
+       gzlvl2 in small steps for optimum signal (on a 500MHz INOVA, best results
+       could be achieved with gzlvl4=10000 and gzlvl2=10090).
+
+    9. 1/4J DELAY and timeT DELAY:
+       These are determined from the NH coupling constant, JNH, listed in 
+       dg for possible change by the user. lambda is the 1/4J time for H1 NH 
+       coupling evolution. lambda is usually set a little lower than the
+       theoretical time to minimize relaxation.
+       timeT is the transfer time from N15 to N15 across hydrogen-bond.
+       Usually set to 15-20ms.
+
+        rna_HNNcosyA.c Auto-calibrated version, E.Kupce, 27.08.2002.
+        Fast HSQC version coded by Marco Tonelli @NMRFAM (2004)

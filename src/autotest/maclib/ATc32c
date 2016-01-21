@@ -1,0 +1,55 @@
+"macro ATc32c"
+"ATc32c" "Stability in presence of 13C and 15N decoupling  "
+
+if at_max_pwx2lvl=0.0 then ATnext return endif  "skips 15N tests for 2channel probe"
+if ($#=0) then
+   ATrtp('standard')
+   text('Stability in absence of 13C and 15N decoupling')
+   at_currenttest='stability_wo_13C15Ndec'
+   array('nt',20,1,0) full
+   sw=10000                " large enough to measure s/n accurately"
+   np=2048 fn=8192
+   dn='C13' dn2='N15'
+   tof=at_tof tpwr=at_tpwr pw=at_pw90 pw90=pw
+   dpwr=at_max_dpwr-3
+   dpwr2=at_max_dpwr-3
+
+   vp=0 dmm='ccc'
+   dm='nnn'
+   d1=1.5
+   dm2='nnn' 
+
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc32c(`PART1`)'
+   ATcycle
+   au
+   dps
+elseif ($1='PART1') then
+
+   wft 
+   ATsvf
+   sp=3.8p wp=2p
+   ATplot:$avht,$stddev
+   r4=trunc(10*$avht)/10
+   r5=trunc(1000*$stddev)/1000
+   text('Stability in presence of 13C and 15N decoupling')
+   at_currenttest='stability_w_13C15Ndec'
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc32c(`PART2`)'
+   ATcycle
+   dm='nny' dm2='nny'
+   au
+   dps
+elseif ($1='PART2') then
+
+   wft 
+   ATsvf
+   sp=3.8p wp=2p
+   ATplot:$avht,$stddev
+   r2=trunc(10*$avht)/10
+   r3=trunc(1000*$stddev)/1000
+   ATrecord('STAB90_CN_c','Stability with 13C and 15N Decoupling','No_Dec',100-r5,'std_dev.',r5,'With_Dec',100-r3,'std_dev',r3)
+   write('file',autotestdir+'/REPORT','Stability w & wo 13C and 15N Decoupling: %3.2f percent & %3.2f',100-r5,100-r3)
+
+ ATnext
+endif

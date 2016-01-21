@@ -1,0 +1,48 @@
+"macro stats"
+"***************************************************************"
+" stats                                                         "
+"                                                               "
+" Calculate mean, range, and standard deviation of points from  "
+" the cursor marked position in a set of arrayed spectra.       "
+" An optional argument may be used to discard the first skipval "
+" spectra (useful when full relaxation equilibrium has not been "
+" reached in the first spectrum).                               "
+"                                                               "
+" Usage:  stats(<skipval>)                                      "
+"***************************************************************"
+
+$sum = 0
+$sumsquared = 0
+$min = 1e6
+$max = -1e6
+
+if ($# = 1) then
+  $skip = $1
+else
+  $skip = 0
+endif
+$nvals = arraydim - $skip
+
+$i = $skip
+repeat
+
+  $i = $i + 1
+  select($i)
+  peak:$height
+  $sum = $sum + $height
+  $sumsquared = $sumsquared + $height*$height
+
+  if ($height < $min)  then  $min = $height  endif
+  if ($height > $max)  then  $max = $height  endif
+
+until ($i = arraydim)
+
+$mean = $sum/$nvals
+$range = $max - $min
+$std_dev = sqrt($sumsquared/$nvals - $sum*$sum/($nvals*$nvals))
+
+write('line3','Mean: %10.2f    Range: %10.2f%c   Std Deviation: %10.2f%c',
+  $mean, $range/$mean*100, '%', $std_dev/$mean*100, '%')
+
+
+

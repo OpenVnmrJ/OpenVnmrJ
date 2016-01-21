@@ -1,0 +1,602 @@
+"macro gmapauto_xyz"
+"auto macros for running gradient shimming"
+"Modified slightly from gmapauto to work with 3D shimming under automation"
+"PJB 16viii10"
+
+if $#<0.5 then
+return
+endif
+
+isvnmrj:$isvnmrj
+iscmdopen:$iscmdopen
+
+
+IF ($1 = 'startshim') THEN
+
+gmapset('mkdir')
+$jmap=''
+$jstr = userdir+'/gshimlib/data/gshim.list'
+exists($jstr,'file'):$e
+if $e>0.5 then
+  lookup('file',$jstr)
+else
+  write('error','file vnmrsys/gshimlib/data/gshim.list not found')
+  return
+endif
+
+$jstr=userdir+'/gshimlib/data/gshim.bas'
+exists($jstr,'file'):$e
+if $e<0.5 then
+  write('error','file vnmrsys/gshimlib/data/gshim.bas not found')
+  return
+endif
+
+lookup('mapname','read'):$jmap
+if seqfil<>'gmapz' then
+  if $jmap<>'' then
+    gmapz($jmap)
+  else
+    gmapz
+  endif
+endif
+
+gmaplistfunc('unarray'):$ok,$jstr
+exec($jstr)
+array = 'd3'
+
+gmaplistfunc('readzshims'):$ok,$jstr
+if $ok<0 then
+  write('error','gradient shimming failed')
+  return
+endif
+exec($jstr)
+$jstr = userdir+'/gshimlib/data/gshim.startshims'
+exists($jstr,'file'):$e
+if $e>0.5 then
+  rm($jstr):$x
+endif
+svs($jstr):$e
+
+exists('gmapct','parameter'):$e
+if $e<0.5 then create('gmapct','integer') setgroup('gmapct','display') endif
+exists('gmap_again','parameter'):$e
+if $e<0.5 then create('gmap_again','integer') setgroup('gmap_again','display') endif
+gmapct = 0     "count iterations"
+gmap_again = 0 "continue after shim out-of-range"
+
+$jstr = userdir+'/gshimlib/data/gshim.rec'
+exists($jstr,'file'):$e
+if $e>0.5 then rm($jstr):$x endif
+exists('date','parameter'):$e
+if $e>0.5 then
+  write('file',$jstr,'Gradient Shimming Record             date: %s\n',date)
+else
+  write('file',$jstr,'Gradient Shimming Record\n')
+endif
+
+$jsh=userdir+'/gshimlib/data/gshim.list'
+$sh1='' $sh2='' $sh3=''
+exists('gzsize','parameter'):$ez
+if $ez>0.5 then
+  $bsize=gzsize
+"create parameter gmap_z1z4 to first shim z1-z4, then add other shims"
+  exists('gmap_z1z4','parameter'):$e4
+  if $e4>0.5 then
+    if gmap_z1z4='y' then
+      if $bsize>4.5 then $bsize=4 endif
+    endif
+  endif
+  gmaplistfunc('setoldv',$bsize):$ok,$sh1,$sh2,$sh3
+  if $ok<0 then
+    write('error','gradient shimming failed')
+    return
+  endif
+  if ($bsize<gzsize) then
+    write('alpha','Starting gradient shimming of %s-%s, first using %s-%s.',$sh1,$sh3,$sh1,$sh2)
+    write('file',$jstr,'Starting gradient shimming of %s-%s, first using %s-%s.',$sh1,$sh3,$sh1,$sh2)
+  else
+    write('alpha','Starting gradient shimming of %s-%s.',$sh1,$sh3)
+    write('file',$jstr,'Starting gradient shimming of %s-%s.',$sh1,$sh3)
+  endif
+endif
+gmapset('disable')
+if $#>1.5 then
+  if $2='auto' then
+    wexp='gmapauto_xyz(\'shim\',\'auto\')'
+  else
+    wexp='gmapauto_xyz(\'shim\')'
+  endif
+else
+    wexp='gmapauto_xyz(\'shim\') gxyzautocalib(\'1Dautoshimdone\')'
+endif
+write('line3','current mapname %s',$jmap)
+
+exists('gmap_findtof','parameter'):$e5
+if $e5>0.5 then
+  if gmap_findtof='y' then
+    gmapauto_xyz('starttof',0)
+    return
+  endif
+endif
+
+au('wait','next')
+wdone('')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'shim') THEN
+
+$autotest='n'
+if $#>1.5 then
+  if $2='auto' then
+    $autotest='y'
+  endif
+endif
+$ret=0
+$js='' $exec=''
+$sh1='' $sh2='' $sh3=''
+$dirn = userdir+'/gshimlib/data/'
+gmapct = gmapct + 1
+write('alpha','\nIteration %s%d','#',gmapct)
+write('file',$dirn+'gshim.rec','\nIteration %s%d','#',gmapct)
+gmaprep('proca'):$ret
+if $ret>0.5 then
+  write('error','Gradient autoshimming processing failed.')
+  write('file',$dirn+'gshim.rec','Gradient autoshimming processing failed.')
+  return
+endif
+gmaplistfunc('setoldv'):$ok
+if $ok<0 then
+  write('error','Gradient shimming failed')
+  return
+endif
+gmaprep('fita','f'):$ret
+if $ret>0.5 then
+  write('error','Gradient autoshimming fit failed.')
+  write('file',$dirn+'gshim.rec','Gradient autoshimming fit failed.')
+  return
+endif
+gmaprep('shimd')
+
+$dirx = '"'+$dirn+'"'
+$jstr='cat '+$dirx+'gshim.rec '+$dirx+'gshim.list > '+$dirx+'gshim.rec2; rm '+$dirx+'gshim.rec; mv '+$dirx+'gshim.rec2 '+$dirx+'gshim.rec'
+shell($jstr):$x
+
+if $autotest='n' then gmaprep('explmenu','efit') endif
+lookup('file',$dirn+'gshim.list','gzsize','read','seek','err','read'):$bsize,$r2
+
+$haltshim=0
+$max_iter=5
+$rms_min=1.0
+"if $bsize>4.5 then $rms_min=1.0/sqrt($bsize) endif"
+exists('gmap_maxiter','parameter'):$e
+if $e>0.5 then $max_iter = gmap_maxiter endif
+exists('gmap_rmsmin','parameter'):$e
+if $e>0.5 then $rms_min = gmap_rmsmin endif
+
+if ($r2 > $rms_min and gmapct < $max_iter) then
+  write('line3','Iteration %s%d, rms err = %2.2f, continuing...','#',gmapct,$r2)
+  write('alpha','rms err > %2.2f, continuing...',$rms_min)
+  write('file',$dirn+'gshim.rec','rms err > %2.2f, continuing...',$rms_min)
+"  if $#>1.5 then"
+"    gmaplistfunc('setnew'):$haltshim,$exec,$js1"
+"    exec($exec)"
+"  else"
+    gmaplistfunc('setnew'):$haltshim,$exec,$js1
+    exec($exec)
+"  endif"
+  if $haltshim>1.5 then
+    write('error','shim %s out-of-range, shimming aborted',$js1)
+    write('alpha','shim %s out-of-range, shimming aborted',$js1)
+    RETURN
+  endif
+  if $haltshim>0.5 then
+    write('error','shim %s out-of-range',$js1)
+    write('alpha','shim %s out-of-range',$js1)
+  endif
+  if spin=0 then spin='n' endif
+  au('next','wait')  "repeat"
+  wdone('')
+else
+  if ($r2 < $rms_min) then
+    if not ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+      write('line3','Iteration %s%d, rms err = %2.2f, shims converged...','#',gmapct,$r2)
+      write('alpha','rms err < %2.2f, shims converged...',$rms_min)
+      write('file',$dirn+'gshim.rec','rms err < %2.2f, shims converged...',$rms_min)
+      endif
+  else
+    write('line3','Iteration %s%d, rms err = %2.2f','#',gmapct,$r2)
+    write('alpha','rms err = %2.2f',$r2)
+    write('file',$dirn+'gshim.rec','rms err > %2.2f',$rms_min)
+  endif
+  if $#>1.5 then
+    gmaplistfunc('setnew'):$haltshim,$exec,$js1
+    exec($exec)
+  else
+    gmaplistfunc('setnew'):$haltshim,$exec,$js1
+    exec($exec)
+  endif
+  if $haltshim>1.5 then
+    write('error','shim %s out-of-range, shimming aborted',$js1)
+    write('alpha','shim %s out-of-range, shimming aborted',$js1)
+    RETURN
+  endif 
+  if $haltshim>0.5 then
+    write('error','shim %s out-of-range',$js1)
+    write('alpha','shim %s out-of-range',$js1)
+  endif
+  if ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+    gmaplistfunc('setoldv',gzsize):$ok,$sh1,$sh2,$sh3
+    if $ok<0 then
+      write('error','gradient shimming failed')
+      return
+    endif
+    gmap_again=2
+    write('line3','Iteration %s%d, rms err = %2.2f, using %s-%s, continuing...','#',gmapct,$r2,$sh1,$sh3)
+    write('alpha','rms err < %2.2f, using %s-%s, continuing...',$rms_min,$sh1,$sh3)
+    write('file',$dirn+'gshim.rec','rms err < %2.2f, using %s-%s, continuing...',$rms_min,$sh1,$sh3)
+    if spin=0 then spin='n' endif
+    au('next','wait')
+    wdone('')
+  else
+    format(gmapct,1,0):$js
+    if ($r2 > $rms_min) then
+      $js='Gradient autoshimming on Z done!  Maximum '+$js+' iterations reached'
+    else
+      $js='Gradient autoshimming on Z done!  '+$js+' iteration'
+      if gmapct>1.5 then $js=$js+'s' endif
+    endif
+    write('line3','%s',$js)
+    write('alpha','%s',$js)
+    write('file',$dirn+'gshim.rec','%s',$js)
+"    exists('gmap_tmpspin','parameter'):$e"
+"    if $e>0.5 and Console<>'g2000' then sethw('spin',gmap_tmpspin) endif"
+    if ($autotest='y') then
+        if ((Console='vnmrs') or (Console='inova')) then ATgmap('end')
+        elseif (Console='mercury') then ATMgmap('end')
+        endif
+    endif
+  endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'startmap') THEN
+
+gmapset('mkdir')
+$dirn=userdir+'/gshimlib/'
+$jstr=''  $js=''
+$mapname='' 
+$bsize=1
+$jfile=$dirn+'data/gshim.list'
+
+$nogoflag = 'n'
+$shimcalflag = 'n'
+$autoflag='n'
+$jmapname='' $len=0
+if $#>1.5 then 
+  if $2='manual' then
+    exists($jfile,'file'):$ej
+    if $ej>0.5 then
+      $shimcalflag='man'
+    endif
+  else
+    if $2='overwrite' then
+      $autoflag='y'
+    else
+      if $2='nogo' then
+        $nogoflag='y'
+        if $#>2.5 then
+          if $3='ow' then
+            $autoflag='y'
+          endif
+        endif
+      else
+        $jmapname=$2
+        length($jmapname):$len
+        if $len>4.5 then
+          substr($jmapname,$len-3,4):$js
+          if $js='.fid' then
+            substr($jmapname,1,$len-4):$js
+            $jmapname=$js
+          endif
+        endif
+        if $#>2.5 then
+          if $3='ow' then
+            $autoflag='y'
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+if gxyzdo1Dmap='y' then
+       	wexp='gmapauto_xyz(\'makemap\',\'overwrite\')'
+else
+       	wexp='gmapauto_xyz(\'makemap\',\'overwrite\') gxyzautocalib(\'1Dautoshim\',\'auto\')'
+endif
+exists($jfile,'file'):$ej
+gmaplistfunc('unarray'):$ok,$js
+exec($js)
+
+exists('gmapct','parameter'):$e
+if $e<0.5 then create('gmapct','integer') setgroup('gmapct','display') endif
+exists('gmap_again','parameter'):$e
+if $e<0.5 then create('gmap_again','integer') setgroup('gmap_again','display') endif
+
+if $shimcalflag='man' then
+  gmaplistfunc('chkshimcal'):$ok
+  if $ok<0 then
+    write('error','gradient shimming failed')
+    return
+  endif
+  gmaplistfunc('readzshims'):$ok,$js
+  if $ok<0 then return endif
+  exec($js)
+  if gzsize<1 then gzsize=1 endif
+  if gzsize>40 then gzsize=40 endif
+  lookup('file',$jfile,'seek','mapname','read'):$jmapname
+else
+  if $autoflag='y' then
+    "get mapname from date??"
+    if $ej<0.5 then
+      $jmapname='standard'
+    else
+      lookup('file',$jfile,'seek','mapname','read'):$jmapname
+    endif
+  endif
+  if $jmapname='' then
+    $js='enter mapname: '
+    if $ej>0.5 then
+      lookup('file',$jfile,'mapname','read'):$jmapname
+      $js=$js+'['+$jmapname+'] '
+    endif
+    if ($isvnmrj>0.5 and $iscmdopen<0.5) then
+      write('error','open the command line to input a filename')
+      abort
+    endif
+    input($js):$js
+    if $js<>'' then
+      $jmapname=$js  "check for .fid??"
+    else
+      if $jmapname='' then return endif
+    endif
+  endif
+  gmaplistfunc('wrshimcal',$jmapname):$ok
+  if $ok<0 then
+    write('error','gradient shimming failed')
+    return
+  endif
+  gmaplistfunc('readzshims'):$ok,$js
+  if $ok<0 then return endif
+  exec($js)
+endif
+
+$mapname=$jmapname
+$jfile='shimmaps/'+$mapname+'.fid'
+exists($dirn+$jfile,'file'):$e
+exists($dirn+'shimmaps/'+$mapname+'.par','file'):$e2
+if ($e>0.5 or $e2>0.5) then
+  if $autoflag='y' then
+	//Don't do shimming if gxyzdo1Dmap='y'
+	//This is the flag that is set to make the final 1D shim map at the end of 3D shimming
+	//This is optionally set into the probe file
+    	write('line3','mapname %s overwritten when done',$mapname)
+	if gxyzdo1Dmap='y' then
+        	wexp='gmapauto_xyz(\'makemap\',\'overwrite\')'
+        else
+        	wexp='gmapauto_xyz(\'makemap\',\'overwrite\') gxyzautocalib(\'1Dautoshim\',\'auto\')'
+	endif
+  else
+    $js='mapname '+$mapname+' already exists, overwrite? [n] '
+    if ($isvnmrj>0.5 and $iscmdopen<0.5) then
+      write('error','open the command line to input response')
+      abort
+    endif
+    input($js):$js
+    substr($js,1,1):$js
+    if ($js='y' or $js='Y') then
+	if gxyzdo1Dmap='y' then
+		if (auto='y') then
+			return
+			//nextgo
+		endif
+        else
+    		write('line3','mapname %s overwritten when done',$mapname)
+        	wexp='gmapauto_xyz(\'makemap\',\'overwrite\') gxyzautocalib(\'1Dautoshim\',\'auto\')'
+	endif
+      shell('sleep 1'):$x
+    else
+      if $nogoflag='y' then
+        abort
+      else
+        return
+      endif
+    endif
+  endif
+endif
+
+if $nogoflag='y' then return endif
+
+if in='y' then r5=1 else r5=0 endif
+in='n'
+gmapset('setb')
+gmapset('disable')
+gmap_findtof='y'
+if $#<2.5 then
+  au('next','wait')
+  wdone('')
+else "$2 must be 'overwrite'"
+  if $3='all' then
+    wexp='gmapauto_xyz(\'makemap\',\'overwrite\',0)'
+    au('next','wait')
+    wdone('')
+  else
+    if $3='part' then
+"      wexp='gmapauto_xyz(\'makemap\')'"
+      wexp='gmapauto_xyz(\'makemap\',\'overwrite\')'
+      au('next','wait')
+      wdone('')
+    endif
+  endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'makemap') THEN
+
+$dirn=userdir+'/gshimlib/'
+$mapname=''
+$jfile=$dirn+'data/gshim.list'
+$jfile3=$dirn+'data/gshim.rec'
+
+$overwrite='n'
+if $#>1.5 then
+  if $2='overwrite' then
+    $overwrite='y'
+  endif
+endif
+if auto='y' then
+  $overwrite='y'
+endif
+
+exists($jfile,'file'):$e
+if $e>0.5 then
+  lookup('file',$jfile)   "should exist"
+else
+  write('error','file gshim.list does not exist')
+  return
+endif
+lookup('mapname','read'):$mapname
+if ((gxyzdo1Dmap='y') and ($mapname<>'gxyztmp')) then
+	$zgradtype='' $nuc='lk'
+	substr(gradtype,3,1):$zgradtype
+	if ($zgradtype='h') then $nuc='hs' else $nuc=tn endif
+	write('line3','Setting mapname %s into probe file',$mapname)
+	setparams($nuc+'map',$mapname,'Probe')
+	//$tpwrs='' $pw90s=''
+	//format(tpwr,1,0):$tpwrs
+	//format(pw,1,1):$pw90s
+        //addlknuc
+	//Need to think about setting lock powers and gains for different solvents
+        //setlkpars(24,24,lockphase)
+        //setparams('tpwr',$tpwrs,'lk')
+        //setparams('pw90',$pw90s,'lk')
+endif
+
+$jfile='shimmaps/'+$mapname+'.fid'
+$jfile2=$dirn+'shimmaps/'+$mapname+'.par'
+if $overwrite='n' then
+  exists($dirn+$jfile,'file'):$e
+  if $e>0.5 then
+    $js='Overwrite shimmap '+$mapname+'? [no] '
+    if ($isvnmrj>0.5 and $iscmdopen<0.5) then
+      write('error','open the command line to input response')
+      abort
+    endif
+    input($js):$js
+    substr($js,1,1):$js
+    if ($js='y' or $js='Y') then
+      rm('-r',$dirn+$jfile):$x
+    else
+      return
+    endif
+  endif
+  exists($jfile2,'file'):$e
+  if $e>0.5 then
+    $js='Overwrite shimmap '+$mapname+'? [no] '
+    if ($isvnmrj>0.5 and $iscmdopen<0.5) then
+      write('error','open the command line to input response')
+      abort
+    endif
+    input($js):$js
+    substr($js,1,1):$js
+    if ($js='y' or $js='Y') then
+      rm('-r',$jfile2):$x
+    else
+      return
+    endif
+  endif
+else   "overwrite"
+  exists($dirn+$jfile,'file'):$ef
+  if $ef>0.5 then
+    rm('-r',$dirn+$jfile):$x
+  endif
+  exists($jfile2,'file'):$ef
+  if $ef>0.5 then
+    rm('-r',$jfile2):$x
+  endif
+endif
+
+if r5>0.5 then in='y' endif
+svf($dirn+$jfile)
+gmapset('procb')
+gmapsys('filemenu')
+
+if spin=0 then spin='n' endif
+isvnmrj:$isvnmrj
+if ($isvnmrj<0.5) then menu('gmap_basisopt') endif
+"gmaprep('explmenu','ebase')"    "display shimmap, commented out"
+
+if $#>2.5 then
+  gmaprep('explmenu','ebase')
+  gmapauto_xyz('startshim','auto')
+endif
+
+if ((gxyzdo1Dmap='y') and ($mapname<>'gxyztmp')) then "This should be the situation for the final 1D map after 3D shimming has brought the field close enough for lineshape"
+	RETURN
+else
+	RETURN
+endif
+ENDIF
+
+IF ($1 = 'starttof') THEN  "find window"
+
+write('alpha','Finding tof...')
+wexp='gmapauto_xyz(\'findtof\')'
+if $#>1.5 then
+  wexp='gmapauto_xyz(\'findtof\',0)'
+endif
+gmapset('disable')
+au('next','wait')
+wdone('')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'findtof') THEN
+
+$x=0
+$gzwin_tmp = gzwin   "set tof only, keep same gzwin"
+gmapset('setsw',50):$x
+gzwin = $gzwin_tmp
+if $x>0.5 and auto='n' then abort endif
+ 
+if $#>1.5 then
+  write('line3','tof set to %1.1f, done!',tof)
+  write('alpha','tof set to %1.1f, starting shimming...',tof)
+  wexp='gmapauto_xyz(\'shim\') gxyzautocalib(\'1Dautoshimdone\')'
+  au('wait','next')
+  wdone('')
+else
+  wexp=''
+  write('line3','tof set to %1.1f, done!',tof)
+endif
+ 
+RETURN
+ENDIF
+
+
+IF ($# > 0.5) THEN
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+
+RETURN
+ENDIF

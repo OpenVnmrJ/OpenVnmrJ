@@ -1,0 +1,47 @@
+"macro best_trosy_hnca"
+BPrtppar('best_trosy_hnca')
+
+setfrq BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+ getparam('NHgrad1_time','N15'):gt1 
+ getparam('NHgrad1_lvl','N15'):gzlvl1 
+ getparam('NHgrad2_lvl','N15'):gzlvl2 
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2 
+ r1=1e6/sw2
+ sw2=1e6/trunc(r1)
+ dm2='nnn' 
+
+
+ if shname1='BIP_720_50_20_360' then
+  shpw1=8*pw shlvl1=tpwr
+ endif
+
+ if Console<>'vnmrs' then   "fit waveform"
+  "BIP waveform is 361 lines, 200nsec per line"
+  "361*0.2=72.2"
+  "calculate new power for shpw1=72.2"
+  ln(72.2/(compH*8*pw)):$ln
+  shlvl1=tpwr-20.0*0.43429*$ln
+  shpw1=72.2
+ endif 
+ getparam('gt0','N15'):gt0
+ getparam('gzlvl0','N15'):gzlvl0
+
+ sw1=30*dfrq 
+ r1=1e6/sw1
+ sw1=1e6/trunc(r1)
+  
+spin='n' ni=0  ni2=0 phase=1 phase2=1

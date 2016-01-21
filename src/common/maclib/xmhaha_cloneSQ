@@ -1,0 +1,155 @@
+"macro xmhaha_cloneSQ"
+   isnewexp:$new
+   $archsamp=''
+   if ($new>0) then
+	$archsamp=archivedir+'/'+sample
+   else
+        shell('dirname '+file):$archsamp
+   endif
+   $md=$archsamp+'/dirinfo/macdir'
+   exists($md,'directory'):$macdirex
+   if ($macdirex=0) then
+	write('error','curexp does not have a study to clone')
+	return
+   endif
+   $samplename=''
+   getsampglobal($md,'samplename'):$samplename
+   $LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+   $file=file
+   file='exp'
+   xmhaha_buildSQ($archsamp,$LIST,'lock',$samplename)
+   file=$file
+
+   $pslabel=''
+   $cpnames=''
+   $status=''
+   $acqtimeR=0
+   $path=''
+
+   $esq=cursqexp+'/tmpstudy/enterSQ'
+   $info=cursqexp+'/tmpstudy/info'
+   $s1='' $s2=''
+   readfile($esq,'$s1','$s2','','local'):$total
+   if ($total=0) then return endif
+
+        walkupQ_init
+        $expfile=cursqexp+'/EXPLIST'
+	write('reset',$expfile)
+        $lngfile=cursqexp+'/LONGLIST'
+	write('reset',$lngfile)
+        $maclibdir=cursqexp+'/macdir'
+        exists($maclibdir,'directory'):$direx
+        if ($direx=0) then shell('mkdir '+$maclibdir):$dum endif
+	shell('rm -f '+$maclibdir+'/*'):$dum
+        exists($maclibdir+'long','directory'):$direx
+        if ($direx=0) then shell('mkdir '+$maclibdir+'long'):$dum endif
+        shell('rm -f '+$maclibdir+'long/*'):$dum
+
+   $i=1
+   pwd:$curdir
+   cd(userdir+'/data'):$dum
+   repeat
+	$prop=$info+'/'+$s1[$i]+'/prop'
+	$s3='' $s4=''
+	readfile($prop,'$s3','$s4','status','local')
+	$status[$i]=$s4
+        $s3='' $s4=''
+	readfile($prop,'$s3','$s4','CPnode','local')
+	$cpnames[$i]=$s4
+        $s3='' $s4=''
+        readfile($prop,'$s3','$s4','exp','local')
+	$pslabel[$i]=$s4
+        $s3='' $s4=''
+        readfile($prop,'$s3','$s4','data','local')
+        $path[$i]=$s4
+	$acqtimeR[$i]=0
+	if ($status[$i]='Completed') and ($path[$i]<>'') then
+	   rtv($path[$i],'noabort','ACQtime'):$acqtimeR[$i]
+	else
+           $s3='' $s4=''
+           readfile($prop,'$s3','$s4','title','local')
+           $acqtime=''
+           substr($s4,2):$acqtime
+           $s3=''
+           strstr($acqtime,'['):$ret,$s3,$acqtime
+           if ($ret) then strstr($acqtime,']'):$ret,$acqtime endif
+           if ($ret) then
+               invformattime($acqtime):$acqtimeR[$i]
+           endif
+	endif
+	$i=$i+1
+   until $i > $total
+
+   $i=1
+   repeat
+     if ($cpnames[$i]<>'') then
+   	if ($status[$i]='Completed') then
+	   exists($path[$i]+'.fid/procpar','file'):$pathex
+	   if(not $pathex) then 
+		exists($path[$i]+'.REC/acqfil/procpar','file'):$pathex
+	   endif
+	   if(not $pathex) then 
+		exists($path[$i]+'.rec/acqfil/procpar','file'):$pathex
+	   endif
+	   $explist='' $parlabel=''
+	   if ($pathex) then
+		rtv($path[$i],'noabort','explist',1):$explist
+		rtv($path[$i],'noabort','parlabel'):$parlabel
+		$basename='' shell('basename '+$path[$i]):$basename
+		if ($explist<>'') then
+		     $acq=$md+'/maclib_attic/'+$explist+'acq'
+		     $attr=$md+'/maclib_attic/'+$explist+'_Attr'
+		     if ($parlabel='') then $parlabel=$pslabel[$i] endif
+		else
+		     $acq=''
+		     $attr=''
+		endif
+	   endif
+	else
+	   $explist=$cpnames[$i]
+	   $parlabel=$pslabel[$i]
+	   $acq=$md+'/'+$explist+'acq'
+	   $attr=$md+'/'+$explist+'_Attr'
+	   $basename=$cpnames[$i]
+	endif
+	if ($parlabel ='') then $parlabel=$pslabel[$i]
+	else
+	    exists($parlabel,'maclib'):$parmacex
+	    if ($parmacex=0) then $parlabel=$pslabel[$i] endif
+	endif
+	if ($acq='') then $fileex=0
+	else
+           exists($acq,'file'):$fileex
+	endif
+	if ($fileex=0) then
+		write('error','%s was not collected via Study Queue',$basename)
+	else
+		$s1='' $ext=''
+		strstr($cpnames[$i],'_','last'):$ret,$s1,$ext
+		if ($ret=0) then $ext='000' else
+		   if ($s1<>$parlabel) then $parlabel=$pslabel[$i] endif
+		endif
+		write('file',$expfile,'%s  %d  %s  xx%s  Queued',$cpnames[$i],$acqtimeR[$i],$parlabel,$ext)
+		shell('cp '+$acq+' '+$maclibdir+'/'+$cpnames[$i]+'acq'):$dum
+		exists($attr,'file'):$file2ex
+		if ($file2ex) then
+		    shell('cp '+$attr+' '+$maclibdir+'/'+$cpnames[$i]+'_Attr'):$dum
+		else
+		    cpattribute('clear',$maclibdir+'/'+$cpnames[$i])
+		endif
+		exists($acq+'pars','file'):$file2ex
+		if ($file2ex) then
+		    shell('cp '+$acq+'pars '+$maclibdir+'/'+$cpnames[$i]+'acqpars'):$dum
+		else
+		    write('reset',$maclibdir+'/'+$cpnames[$i]+'acqpars')
+		endif
+	endif
+     endif
+	$i=$i+1
+   until $i > $total
+   cd($curdir):$dum
+
+   makeStudy('init','Clone StudyQueue')
+   cpstudyname='NeWSTuDYCLoNe','ok2save','0','','no','q'
+   makeStudy('shownew')
+

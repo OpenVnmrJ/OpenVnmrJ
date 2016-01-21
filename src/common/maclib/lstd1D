@@ -1,0 +1,110 @@
+"macro lstd1D"
+"***************************************************************"
+"lstd1D -                                                       "
+"       This is an apptype macro for lstd1D experiments         "
+"       Changes here will be reflected in all experiments       "
+"               with this apptype                               "
+"       All apptype macros have 4 sections                      "
+"         (setup, acquistion, process, display)                 "
+"       Changes over these default values should be done using  "
+"       pslabel_setup or wrtp feature                           "
+"       This macro is typically called by cpsetup               "
+"***************************************************************"
+
+"**********************************************"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for lstd1D"
+   module('combine','presat wet gradient lstd1D',newmodules):newmodules
+   module($1)
+
+"***********************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+if ($# < 2) then $2='' endif
+if ($2 <> $0) then $update=0 else $update=1 endif
+
+seqfil=seqfil
+//if (tn = 'H1') or ((tn = 'F19') and (rfchtype[2]='U+ Direct Synthesis')) then
+//        dn='C13' else dn='H1'
+//endif
+setProbepars
+dm='nnn' dmm='ccc'
+	"Do we need setdecpars here?"
+"  setdecpars  "
+
+  "If any character in the wet or satmode parameter is set to y "
+  " wet/satmode parameter is reset to y (single character).  "
+  " They should be corrected to appropriate multicharacter value"
+  " by wrtp or pslabel_setup macro "
+
+strstr(wet,'y'):$iswet
+if ($iswet) then wet='y' else wet='n' endif
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='y' else satmode='n' endif
+  "purge cycle is set to 2.  If prgcycle of 4 is needed, it"
+  "  should be set by rtx feature for individual experiment"
+prgpw=pw90 prgcycle=2
+
+pw=pw90
+ss=2
+wstart=''
+sspul='n'
+
+exists('ni','parameter'):$niex
+if ($niex) then ni=1 endif
+exists('phase','parameter'):$phex
+if ($phex) then phase=1 endif
+exists('phase2','parameter'):$ph2ex
+if ($ph2ex) then phase2=1 endif
+
+  selfrqc=0 off('selfrqc')
+  selfrqppm=0 off('selfrqppm')
+  selppm2frq('init',0)
+
+   if (wet='y') then satmode='n' endif
+
+"****************************************************************************"
+"*******The following section is done only if oldapptype <> apptype **********"
+
+if ($update=0) then
+   satdly=1 d1=1
+endif
+"****************************************************************************"
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+if (tn <> 'H1') then
+	on('wetpeaks') wetpeaks=1
+else
+	off('wetpeaks')
+endif
+
+   if (procdim=1) and (auto<>'y') then
+  	wstart=''
+  	wds='suselfrq'
+  	doscout=0
+	off('doscout')
+	off('wetpeaks')
+   endif
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+ENDIF
+

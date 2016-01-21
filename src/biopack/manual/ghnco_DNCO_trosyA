@@ -1,0 +1,78 @@
+ghnco_DNCO_trosyA
+
+    Pulse scheme uses TROSY principle in 15N and NH with transfer of
+    magnetization achieved using the enhanced sensitivity pfg approach,
+
+    Yang and Kay, J. Biomol. NMR, January 1999.
+
+    E. COSY principle is used to get Co-N coupling on 15N dimension and 
+    Co-NH coupling on proton dimension.
+ 
+    The following expt is:
+
+    3D hnco with trosy(enhanced sensitivity PFG)
+    with selective pulses to minimize
+    excitation of water
+                F1      CO 
+                F2      15N + JNH/2 + (Jf+1)*JNCO  (assume JNH is positive)
+                F3(acq) 1H (NH) - JNH/2 + JHN-CO
+
+    This sequence uses the standard three channel configuration
+         1)  1H             - carrier (tof) @ 4.7 ppm [H2O]
+         2) 13C             - carrier (dof) @ 174 ppm [CO]
+         3) 15N             - carrier (dof2)@ 120 ppm [centre of amide 15N]  
+    
+    Set dm = 'nnn', dmm = 'ccc' 
+    Set dm2 = 'nnn', dmm2 = 'ccc'
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in t1
+    [CO] and t2 [N]. [The fids must be manipulated (add/subtract) with 
+    'grad_sort_nd' program (or equivalent) prior to regular processing.]
+    
+    Flags
+        fsat            'y' for presaturation of H2O
+        fscuba          'y' for apply scuba pulse after presaturation of H2O
+        f1180           'y' for 180 deg linear phase correction in F1
+                            otherwise 0 deg linear phase correction
+        f2180           'y' for 180 deg linear phase coreection in F2
+                            otherwise 0 deg
+        fc180           'y' for C180 at t2/2 when checking 15N/NH 2D
+
+        sel_flg         'y' in general 
+                        'n' for high fields and/or larger proteins 
+
+	Standard Settings
+        fsat='n',fscuba='n',f1180='y',f2180='n',fc180='n'
+
+    
+    Set f1180 to y for (-90,180) in C' and f2180 to n for (0,0) in N
+    Set the carbon carrier on the C' and use the waveform to pulse the
+        c-alpha
+
+    Written by Daiwen Yang on Jan. 6, 1999
+
+    This scheme uses an accordion-based method to 'increase the N-CO 
+    couplings at the expense of the effective 15N linewidth.
+
+    The coupling measured in F2 (15N) is the N-Co coupling * (Jf + 1),
+    while the linewidth of the 15N line is 1 / [T2/(Jf + 1)]. 
+
+    Must optimize the value of Jf to choose. Use of a value of Jf such
+    that the net t2 acq. time, (Jf + 1) * (ni2 - 1)/sw2 is on the order
+    of T2 or a bit longer. Example, for a 90 ms T2 (long relaxing trosy
+    component) and for a chem. shift acq. time of about 25 ms, use a Jf
+    value of 3, for an effective JN-CO of (Jf + 1)*JN-CO.
+
+    Carbon Pulse Widths.
+    Carrier at 174 ppm
+
+    pwco90: delta/sq(15), Co 90 selective (null at 56 ppm)
+            at dpwr
+    pwco180: delta/sq(3), Co 180 selective (null at 56 ppm)
+            at dvhpwr
+    pwca180h: delta/sq(3), Ca 180 selective (null at 174 ppm)
+            at dvhpwr and applied as an off-res pulse
+
+    Nagarajan Murali: Modified with auto shapeed pulse generation compatible with 
+    BioPack (11-21-2006).
+     (based on hnco_NCo_ecosy_trosy_ydw.c)

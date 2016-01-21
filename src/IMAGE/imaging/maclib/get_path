@@ -1,0 +1,43 @@
+"macro get_path"
+"get_path: find the path in which a certain file is located"
+
+
+"Usage: get_path(<filename>):<path>"
+
+if ($# < 1) then
+  write('error','Usage: %s(<filename>):<path>',$0)
+  abort
+endif
+
+$file = $1
+$path = ''
+
+exists($file,'maclib'):$e,$path
+if ($e > 0) then
+  substr($path,'dirname'):$path
+else
+  exists($file,'parlib'):$e,$path
+  if ($e > 0) then
+     substr($path,'dirname'):$path
+  else
+    appdir('info'):$num
+    $i=0
+    $e=0
+    while (($i < $num) and ($e = 0) ) do
+      $i=$i+1
+      appdir('info',$i):$label,$path
+      exists($path + '/' + $file,'file'):$e
+    endwhile
+    if ($e = 0) then
+      write('error','%s: Can not find %s',$0,$file)
+    endif
+  endif
+endif
+
+if ($## > 0) then
+  return($path)
+elseif ($e) then
+  write('line3','%s: File %s is found in %s',$0,$file,$path)
+endif
+
+

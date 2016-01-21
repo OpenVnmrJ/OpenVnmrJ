@@ -1,0 +1,26 @@
+"macro setvast"
+" setvast - set tcl parameters for vast, called by go"
+if (traymax=96) then
+  on('loc','global'):$e
+  if ($e < 0.5 or loc < 0.5) then
+     return
+  endif
+  $file=''
+  $vr=''
+  $vz=''
+  $vl=''
+  format(vrack,0,0):$vr
+  format(vzone,0,0):$vz
+  format(loc,0,0):$vl
+  $file = systemdir + '/asm/info/' + $vr + '_' + $vz + '_' + $vl
+  rm('-f',$file):$x
+  write('file',$file,'set RackLoc ' + $vr)
+  write('file',$file,'set SampleZone ' + $vz)
+  write('file',$file,'set SampleNumber ' + $vl)
+  if (vproto <> '') then
+     write('file',$file,'set getProtocol ' + vproto + 'Get.tcl')
+     write('file',$file,'set putProtocol ' + vproto + 'Put.tcl')
+  endif
+  write('file',$file,'set userdir ' + userdir)
+  shell('chmod 666 '+$file):$dum
+endif

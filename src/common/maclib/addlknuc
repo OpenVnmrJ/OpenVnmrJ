@@ -1,0 +1,38 @@
+"macro addlknuc"
+"addlknuc - macro to update an already existing probe file and	"
+"            add lk related parameters				"
+" usage: addlknuc(<probefile>) 			             "
+
+if ($# < 1) then $1 = probe endif
+
+$e=0 $probefile='' $rw=0
+getProbePath($1,'alert'):$e,$probefile,$rw
+if ($rw=0) then return endif
+
+$lkex=''
+lookup('mfile',$probefile,'lk:','read'):$lkex
+if ($lkex = '') then
+ write('file',$probefile,'lk:      Parameters')
+ write('file',$probefile,'lkdate      00-00-0000')
+ write('file',$probefile,' ')
+
+endif
+
+$param='' $value='' $nuc='' $i=1
+$param[$i]='solv'   	$value[$i]='D2O'   	$nuc[$i]='lk'	$i=$i+1
+//$param[$i]='z0' 	$value[$i]='0' 		$nuc[$i]='lk'	$i=$i+1
+//$param[$i]='tof'	$value[$i]='0'		$nuc[$i]='lk'	$i=$i+1
+$param[$i]='tpwr'	$value[$i]='46'		$nuc[$i]='lk'	$i=$i+1
+$param[$i]='pw90'       $value[$i]='200'        $nuc[$i]='lk'   $i=$i+1
+$param[$i]='hzdac'	$value[$i]='00'		$nuc[$i]='lk'	$i=$i+1
+
+$x=1
+repeat
+ $parex=''
+ lookup('mfile',$probefile,$nuc[$x]+$param[$x],'read'):$parex
+ if ($parex = '') then
+     addparams($param[$x],$value[$x],$nuc[$x],$1)
+ endif
+ $x=$x+1
+until $x = $i
+

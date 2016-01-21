@@ -1,0 +1,122 @@
+
+*****************************************************************************
+ svfj - Save FID in JCAMP-DX format  (M)
+ svsj - Save spectrum in JCAMP-DX format  (M)
+ svlsj - Save large dynamic range spectrum in JCAMP-DX format  (M)
+ svxyj - Save spectrum in JCAMP-DX X,Y format  (M)
+ svllj - Save peak listing in JCAMP-DX X,Y or X,Y,M format  (M)
+*****************************************************************************
+
+      Syntax: svfj<(filename<,opt>)>
+	      svsj<(filename<,opt>)>
+	      svlsj<(filename<,opt>)>
+	      svxyj<(filename)>
+	      svllj<(filename<,'all'><,'noll'>)>
+
+ Description: "svfj" saves the current 1D FID in JCAMP-DX format. 
+	        "svfj" creates temporary files "/vnmr/tmp/jdxfid.real" and
+		"/vnmr/tmp/jdxfid.imag"; it calls two external C programs
+		"listparam" and "jdxfid". Only a single FID (the current
+		trace in the case of an arrayed experiment) is saved.
+		"svfj" does not work with nf>1.
+
+	      "svsj" saves the current 1D spectrum in JCAMP-DX format.
+		"svsj" creates a temporary file "/vnmr/tmp/jdxspec"; it calls
+		two external C programs "listparam" and "jdxspec". Only a
+		single 1D trace (the current trace in the case of an arrayed
+		experiment) is saved; "svsj" does not work on 2D data after
+		"wft1d" or "wft2d", but 2D data can be treated as arrayed 1D
+		data sets using "wft" / "ft", which again permits saving traces.
+
+	      "svlsj" is the same as "svsj", except that the spectrum is
+		saved with 8 extra bits of digital precision ("svsj" saves
+		spectra with 16-bit precision), for spectra with very large
+		dynamic range.
+
+	      "svxyj" is similar to "svsj", except that the spectrum is
+		written out in X,Y (2-column) format, with referenced X
+		values and Y values directly in mm (the other JCAMP-DX
+		formats use a simple integer X and Y values, the scaling
+		and referencing information is stored in header fields.
+		NOTE: most JCAMP-DX import software expects "svsj" / "svlsj"
+		output. "svxyj" output uses no compression - the resulting
+		files are much bigger than with any of the output options of
+		the other JCAMP-DX conversion macros for full spectra.
+
+	      "svllj" saves a peak listing in X,Y format. If a file "dept.out"
+		exists in the current experiment, peak multiplicities are
+		added to the output as well (X,Y,M format).
+
+   Arguments: "filename" is the name of the target file. If no filename is
+		supplied, the software checks if "file" differs from "exp"
+		(i.e., you have used "rt" to load the dataset from disk).
+		If "file<>'exp'" and if the FID file is writable, then the
+		JCAMP-DX data are saved as "{file}/dx_name.dx", where "{file}"
+		has ".fid" added, if necessary, and "dx_name.dx" is the
+		"basename" part of "file" (minus the ".fid" extension).
+		If "file='exp'" or if the FID directory is not writable, the
+		user is prompted for the filename.
+		The resulting ASCII file by default has a ".dx" extension,
+		unless the specified filename has an alternative extension.
+		(the default can be altered in the header of the macro).
+		NOTE: ALL files created - whether they are FIDs, spectra or
+		      line lists - have the same (default) extension (the
+		      distinction between FIDs and spectra is made within
+		      the JCAMP-DX format); it is up to the user to avoid
+		      overwriting files!
+		Where multiple arguments are specified / allowed, "filename"
+		MUST be the first argument.
+
+	      "all" ("svllj" only) causes solvent signals to be included in
+		the peak listing (multiplicity marked as "U" = unassigned)
+
+	      "noll" ("svllj" only) causes "svllj" NOT to re-evaluate the
+		line listing - the contents of the parameters "llfrq" and
+		"llamp" are used instead.
+
+	      "opt" is an optional argument that permits controlling the
+ 	 	compression in the data part of the JCAMP-DX file. Possible
+		options and their effects are:
+
+		     -------------- option --------------
+                     tbl  fix  pac  sqz  dup  dif  difdup  Effect, description
+                     ---- ---- ---- ---- ---- ---- ------
+                X,Y   X    -    -    -    -    -     -    X,Y list
+                FIX   -    X    -    -    -    -     -    X(Y..Y), readable
+                PAC   -    -    X    -    -    -     -    X(Y..Y), packed
+                SQZ   -    -    -    X    X    X     X    X(Y..Y), squeezed
+                DIF   -    -    -    -    -    X     X    SQZ, differences
+                DUP   -    -    -    -    X    -     X    SQZ, DUP mode
+
+		The default mode / option is "'difdup'" which usually gives
+		the best compression. For human-readable data use the "'fix'"
+		option, for programs expecting output in X Y format (one
+		ordinate value per line) use the "'tbl'" option. All format
+		options comply with the JCAMP-DX format and should be usable.
+		"opt" cannot be specified with "svxyj".
+
+    Examples: svfj
+	      svfj('myfid')
+	      svfj('myfid.jdx','dup')
+	      select(3) svfj('myfid_3')
+	      svsj
+              svsj('myspectrum')
+              svsj('myspectrum','fix')
+              select(3) svsj('myspectrum_3')
+	      svlsj
+              svlsj('myspectrum')
+              svlsj('myspectrum','tbl')
+              select(3) svlsj('myspectrum_3')
+	      svxyj
+              svxyj('myspectrum')
+              select(3) svxyj('myspectrum_3')
+	      svllj
+              svllj('myspectrum')
+              svllj('myspectrum','all')
+              svllj('myspectrum','noll')
+              svllj('myspectrum','noll','all')
+              select(3) svllj('myspectrum_3')
+
+     Related: listparam - list parameters in simple format (UNIX)
+	      writetrace - write ascii file from phasefile (f1 or f2) trace (M)
+

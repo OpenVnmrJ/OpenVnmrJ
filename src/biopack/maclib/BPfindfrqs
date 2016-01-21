@@ -1,0 +1,49 @@
+"macro BPfindfrqs"
+"BPfindfrqs  a macro to find C13 dof for 174ppm and N15 dof2 for 120ppm"
+"based on DSS line in 1H spectrum"
+
+if ($#=0) then                 "automatic version"
+ setref
+ sp=-.5p wp=1p peak:$int,cr movetof rl(0) 
+else                           "cursor is placed on DSS by user"
+ nl movetof rl(0) 
+endif
+
+dn='C13' dn2='N15'               "make sure dn/dn2 are set"
+
+$file=curexp+'/findfrq'
+write('file',$file,'sfrq %14.7f',sfrq)
+lookup('file',$file)
+$sfrq='' lookup('sfrq','read',1):$sfrq 
+shell('rm '+curexp+'/findfrq')
+
+format($sfrq,14,7):$abs_1H_sfrq
+
+$abs_13C_dfrq=$abs_1H_sfrq*0.251449530
+$abs_15N_dfrq2=$abs_1H_sfrq*0.101329118
+
+dof=0 dof2=0
+
+write('file',$file,'dfrq_0 %14.7f',dfrq)
+write('file',$file,'dfrq2_0 %14.7f',dfrq2)
+
+lookup('file',$file)
+$dfrq_0='' lookup('dfrq_0','read',1):$dfrq_0 
+$dfrq2_0='' lookup('dfrq2_0','read',1):$dfrq2_0 
+shell('rm '+curexp+'/findfrq')
+
+format($dfrq_0,14,7):$dfrq_dof_0
+format($dfrq2_0,14,7):$dfrq2_dof2_0
+
+$dfrq_174ppm = (174e-6*$abs_13C_dfrq)+$abs_13C_dfrq
+$dfrq2_120ppm = (120e-6*$abs_15N_dfrq2)+$abs_15N_dfrq2
+
+wft setref(0)
+sp=-.5p wp=1p peak:$int,cr rl(0) f ds 
+
+"set dof and dof2 to new values for 174ppm and 120ppm"
+dn='C13' dn2='N15'
+dof=($dfrq_174ppm - $dfrq_dof_0)*1e6
+dof2=($dfrq2_120ppm - $dfrq2_dof2_0)*1e6
+shell('rm '+curexp+'/findfrq')
+

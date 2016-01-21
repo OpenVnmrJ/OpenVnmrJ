@@ -1,0 +1,600 @@
+"macro parfix43"
+"********************************************************"
+"* parfix43 -- macro to correct parameter values, such	*"
+"*	 	as upper limit, lower limit, stepsize   *"
+"*		and default values			*"
+"*  Includes many changes from 'fixpar' 10/7/92		*"
+"********************************************************"
+
+abortoff
+" alock "
+$stemp=''
+exists('alock','parameter'):$e
+if ($e > 0.5) then
+   $stemp=alock
+   destroy('alock')
+endif
+create('alock','string')
+setenumeral('alock',5,'a','n','s','u','y')
+if ($e > 0.5) then
+   alock=$stemp
+else
+   alock='a'
+endif
+
+" axis "
+exists('axis','parameter'):$e
+if ($e > 0.5) then
+   $stemp=axis
+   destroy('axis')
+endif
+create('axis','flag')
+setgroup('axis','display')
+setenumeral('axis',11,'c','d','1','2','3','h','k','m','n','p','u')
+if ($e > 0.5) then
+   length($stemp):$slength
+   $i = 1
+   $stemp2 = ''
+   repeat
+     substr($stemp,$i,1):$char
+     if ($char = 'e') then
+        $char = '2'
+     else
+        if ($char = ' ') then
+           $char = 'h'
+        endif
+     endif
+     $stemp2 = $stemp2 + $char
+     $i = $i+1
+   until ($i>$slength)
+   axis=$stemp2
+else
+   axis='p'
+endif
+
+" axisf "
+exists('axisf','parameter'):$e
+if ($e > 0.5) then
+   $stemp=axisf
+   destroy('axisf')
+endif
+create('axisf','flag')
+setgroup('axisf','display')
+setenumeral('axisf',4,'m','n','s','u')
+if ($e > 0.5) then
+   axisf=$stemp
+else
+   axisf='s'
+endif
+
+" bs "
+setlimit('bs',32767,0,1)
+
+" cutoff "
+exists('cutoff','parameter'):$e
+if ($e < 0.5) then
+   create('cutoff','real')
+   setgroup('cutoff','display')
+   cutoff=200
+   cutoff='n'
+endif
+
+" dbo "
+exists('dbo','parameter'):$e
+if ($e > 0.5) then
+   destroy('dbo')
+endif
+
+" delta "
+setlimit('delta',2e6,0,0)
+
+" delta1 "
+setlimit('delta1',2e6,0,0)
+
+" deltaf "
+exists('deltaf','parameter'):$e
+if ($e < 0.5) then
+   create('deltaf')
+   setgroup('deltaf','display')
+endif
+setlimit('deltaf',100,0,0)
+
+" dfrq "
+exists('dfrq','parameter'):$e
+if ($e > 0.5) then
+   $dfrq_temp=dfrq
+   destroy('dfrq')			"dfrq not created as 'frequency'"
+endif
+create('dfrq','frequency')
+on('dfrq')
+if ($e > 0.5) then
+   setvalue('dfrq',$dfrq_temp)          "avoid running _dfrq"
+else
+   setvalue('dfrq',498.845)             "avoid running _dfrq"
+endif
+setprotect('dfrq','on',8)		"execute _dfrq"
+
+" dfrq2 "
+exists('dfrq2','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dfrq2','on',8)	"execute _dfrq2"
+endif
+
+" dfrq3 "
+exists('dfrq3','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dfrq3','on',8)	"execute _dfrq3"
+endif
+
+" dhp "
+setlimit('dhp',9)
+
+" dm "
+exists('dm','parameter'):$e
+if ($e > 0.5) then
+   $stemp=dm
+   destroy('dm')
+endif
+create('dm','flag')
+setenumeral('dm',4,'a','n','s','y')
+if ($e > 0.5) then
+   dm=$stemp
+else
+   dm='n'
+endif
+
+" dmf "
+setlimit('dmf',11)		"dmf is now entry 11 in parmax, parmin, parstep"
+
+" dmg1 "
+exists('dmg1','parameter'):$e
+if ($e < 0.5) then
+   create('dmg1','string')
+   setgroup('dmg1','display')
+   dmg1 = ''			"different from fixpar"
+endif
+setenumeral('dmg1',4,'','av1','ph1','pwr1')
+
+" dmm "
+exists('dmm','parameter'):$e
+substr(rftype,1,1):$rfchar
+$flag=0
+if ($e > 0.5) then
+   $stemp=dmm
+   length($stemp):$slength
+   $i = 1
+   $stemp2 = ''
+   repeat
+     substr($stemp,$i,1):$char
+     if ($char='s') then $char='w' endif
+     if ($char='e') then $char='f' endif
+     if ($char='n') then 
+        if ($rfchar='d') then
+           $char='f'
+           $flag=1
+           write('alpha','\'noise\' is not a option for \'dmm\' when rftype=\'d\'. Reset to \'fm-fm\'')
+        endif
+     endif
+     $stemp2 = $stemp2 + $char
+     $i = $i+1
+   until ($i>$slength)
+   destroy('dmm')		"recreate dmm, default to hydra "
+endif
+create('dmm','flag')
+if ($flag=1) then
+   write('line3','dmm was \'%s\', dmm is \'%s\'',$stemp,$stemp2)
+endif
+if ($rfchar='d') then
+   setenumeral('dmm',9,'c','f','g','m','p','r','u','w','x')
+else
+   setenumeral('dmm',5,'c','f','n','p','w')
+endif
+if ($e > 0.5) then
+   dmm=$stemp2
+else
+   dmm='c'
+endif
+
+" dn "
+setprotect('dn','on',8)		"execute _dn"
+
+" dn2 "
+exists('dn2','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dn2','on',8)	"execute _dn2"
+endif
+
+" dn3 "
+exists('dn3','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dn3','on',8)	"execute _dn3"
+endif
+
+" dof "
+setprotect('dof','on',8)	"execute _dof"
+
+" dof2 "
+exists('dof2','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dof2','on',8)	"execute _dof2"
+endif
+
+" dof3 "
+exists('dof3','parameter'):$e
+if ($e > 0.5) then
+   setprotect('dof3','on',8)	"execute _dof3"
+endif
+
+" dotflag "
+exists('dotflag','parameter'):$e
+if ($e > 0.5) then
+   $stemp=dotflag
+   destroy('dotflag')
+endif
+create('dotflag','string')
+setgroup('dotflag','display')
+setenumeral('dotflag',2,'n','y')
+if ( ($e > 0.5)and(($stemp='n')or($stemp='y')) ) then 
+   dotflag=$stemp
+else
+   dotflag='n'
+endif
+
+" dpwr "
+exists('dpwr','parameter'):$e
+if ($e > 0.5) then		"don't create it, fixpar makes decisions"
+   setlimit('dpwr',9)
+endif
+
+" fb "
+setprotect('fb','on',8)
+
+" fpmult1 "
+exists('fpmult1','parameter'):$e
+if ($e < 0.5) then
+   create('fpmult1','real')
+   setgroup('fpmult1','processing')
+   setlimit('fpmult1',1e+9,0,0)
+   fpmult1 = 'n'
+endif
+
+" gain "
+setlimit('gain',60,0,2)		"change upper limit of gain"
+
+" ho "
+exists('ho','parameter'):$e
+if ($e > 0.5) then
+   destroy('ho')
+   create('ho')
+   setgroup('ho','display')
+   setprotect('ho','on',1)
+   setlimit('ho',500,-500,0)
+endif
+
+" homo "
+exists('homo','parameter'):$e
+if ($e > 0.5) then
+   $stemp=homo
+   destroy('homo')
+endif
+create('homo','string')
+setenumeral('homo',2,'n','y')
+if ($e > 0.5) then
+   length($stemp):$slength
+   if ($slength < 0.5) then
+      $stemp = 'n'
+   endif
+   homo=$stemp
+else
+   homo='n'
+endif
+
+" hs "
+exists('hs','parameter'):$e
+if ($e > 0.5) then
+   $stemp=hs
+   destroy('hs')
+endif
+create('hs','flag')
+setenumeral('hs',2,'n','y')
+if ($e > 0.5) then
+   length($stemp):$slength
+   if ($slength < 0.5) then
+      $stemp = 'n'
+   endif
+   hs=$stemp
+else
+   hs='n'
+endif
+
+" hst "
+setlimit('hst',20e-3,0,25e-9)	"set limits for hst"
+
+" hzcm "
+setprotect('hzmm','on',8)
+
+" lsfrq "
+exists('lsfrq','parameter'):$e
+if ($e < 0.5) then
+   create('lsfrq','real')
+   setgroup('lsfrq','processing')
+   lsfrq = 'n'
+endif
+
+" lsfid "
+exists('lsfid','parameter'):$e
+if ($e < 0.5) then
+   create('lsfid','integer')
+endif
+setlimit('lsfid',64000,-64000,1)
+
+" lsfrq1 "
+exists('lsfrq1','parameter'):$e
+if ($e < 0.5) then 
+   create('lsfrq1','real')
+   setgroup('lsfrq1','processing')
+   lsfrq1 = 'n'
+endif
+
+" phfid1 "
+exists('phfid1','parameter'):$e
+if ($e < 0.5) then 
+   create('phfid1','real')
+   setgroup('phfid1','processing')
+   setlimit('phfid1',3600,-3600,0.1)
+   phfid1 = 'n'
+endif
+
+" pmode "
+exists('pmode','parameter'):$e
+if ($e < 0.5) then
+   create('pmode','string')
+   setgroup('pmode','processing')
+   pmode = 'partial'
+endif
+
+"Processing parameters"
+exists('proc','parameter'):$e
+if ($e < 0.5) then
+   create('proc','string')
+   setgroup('proc','processing')
+   proc='ft'
+endif
+
+exists('proc1','parameter'):$e
+if ($e < 0.5) then
+   create('proc1','string')
+   setgroup('proc1','processing')
+   proc1='ft'
+endif
+
+exists('wtfile','parameter'):$e
+if ($e < 0.5) then
+   create('wtfile','string')
+   setgroup('wtfile','processing')
+   wtfile=''
+endif
+
+exists('wtfile1','parameter'):$e
+if ($e < 0.5) then
+   create('wtfile1','string')
+   setgroup('wtfile1','processing')
+   wtfile1=''
+endif
+
+" rfband "
+exists('rfband','parameter'):$e
+if ($e > 0.5) then
+   $stemp=rfband
+   destroy('rfband')
+endif
+create('rfband','flag')
+setenumeral('rfband',3,'c','h','l')
+if ($e > 0.5) then
+   length($stemp):$slength
+   $i = 1
+   $stemp2 = ''
+   repeat
+     substr($stemp,$i,1):$char
+     if (($char <> 'h') and ($char <> 'l')) then
+        $char = 'c'
+     endif
+     $stemp2 = $stemp2 + $char
+     $i = $i+1
+   until ($i>$slength)
+   rfband=$stemp2
+else
+   rfband='cc'
+endif
+
+" rplot "
+exists('rplot','parameter'):$e
+if ($e > 0.5) then
+   destroy('rplot')
+endif
+
+" sfrq "
+setprotect('sfrq','on',8)		"execute _sfrq"
+
+" solvfactor "
+exists('solvfactor','parameter'):$e
+if ($e > 0.5) then
+   destroy('solvfactor')
+endif
+
+" ss "
+exists('ss','parameter'):$e
+if ($e > 0.5) then
+   $ss_temp=ss
+   destroy('ss')
+endif
+create('ss','integer')
+setlimit('ss',32767,-32768,0)
+if ($e > 0.5) then
+   ss=$ss_temp
+else
+   ss=0
+endif
+
+" tbo "
+exists('tbo','parameter'):$e
+if ($e > 0.5) then
+   destroy('tbo')
+endif
+
+" temp "
+setlimit('temp',200.0,-150.0,0.1,'current')
+setprotect('temp','on',8)	"execute _temp"
+
+" tn "
+setprotect('tn','on',8)		"execute _tn"
+
+" tof "
+setprotect('tof','on',8)	"execute _tof"
+
+" tpwr "
+setlimit('tpwr',17)		"different from fixpar was 17,17,17"
+
+" vpf "
+exists('vpf','parameter'):$e
+if ($e < 0.5) then
+   create('vpf')
+   setgroup('vpf','display')
+endif
+setlimit('vpf',500,-500,0)
+
+" vpfi "
+exists('vpfi','parameter'):$e
+if ($e < 0.5) then
+   create('vpfi')
+   setgroup('vpfi','display')
+endif
+setlimit('vpfi',500,-500,0)
+
+" vo "
+exists('vo','parameter'):$e
+if ($e > 0.5) then
+   destroy('vo')
+   create('vo')
+   setgroup('vo','display')
+   setprotect('vo','on',1)
+   setlimit('vo',500,-500,0)
+endif
+
+" wc "
+setprotect('wc','on',8)
+
+" wp "
+setprotect('wp','on',8)
+
+" wshim "
+exists('wshim','parameter'):$e
+if ($e > 0.5) then
+   $stemp=wshim
+   destroy('wshim')
+endif
+create('wshim','flag')
+setenumeral('wshim',14,'e','f','n','s','0','1','2','3','4','5','6','7','8','9') 
+setprotect('wshim','on',1)
+if ($e > 0.5) then
+   wshim=$stemp
+else
+   wshim='s'
+endif
+
+" destroy goid, com$string "
+exists('goid','parameter'):$e
+if ($e > 0.5) then
+   destroy('goid')
+endif
+exists('com$string','parameter'):$e
+if ($e > 0.5) then
+   destroy('com$string')
+endif
+
+" Create new ap "
+exists('ap','parameter'):$e
+if ($e < 0.5) then
+   create('ap','string')
+   setgroup('ap','display')
+   setprotect('ap','off',1)
+   setprotect('ap','off',4)
+   ap[1] = '1:SAMPLE:date,solvent,file;'
+   ap[2] = '1:ACQUISITION:sfrq:3,tn:2,at:3,np:0,sw:1,fb:0,bs(bs):0,ss(ss):0,tpwr(tpwr):0,pw:1,p1(p1):1,d1:3,d2(d2):3,tof:1,nt:0,ct:0,alock,gain:0;'
+   ap[3] = '1:FLAGS:il,in,dp,hs;'
+   ap[4] = '1(ni):2D ACQUISITION:sw1:1,ni:0,phase:0;'
+   ap[5] = '1(ni2):3D ACQUISITION:d3:0,sw2:1,ni2:0,phase2:0;'
+   ap[6] = '1:DISPLAY:sp:1,wp:1,vs:0,sc:0,wc:0,hzmm:2,is:2,rfl:1,rfp:1,th:0,ins:3,aig*,dcg*,dmg*;'
+   ap[7] = '1(ni):2D DISPLAY:sp1:1,wp1:1,sc2:0,wc2:0,rfl1:1,rfp1:1;'
+   ap[8] = '2:DEC. & VT:dfrq:3,dn,dpwr:0,dof:1,dm,dmm,dmf,dseq,dres:1,homo,temp(temp):1;'
+   ap[9] = '2(numrfch > 2):DEC2:dfrq2:3,dn2,dpwr2:0,dof2:1,dm2,dmm2,dmf2:0,dseq2,dres2:1,homo2;'
+   ap[10] = '2(numrfch > 3):DEC3:dfrq3:3,dn3,dpwr3:0,dof3:1,dm3,dmm3,dmf3:0,dseq3,dres3:1,homo3;'
+   ap[11] = '2:PROCESSING:cf(nf):0,lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,wtfile,proc,fn:0,math,,werr,wexp,wbs,wnt;'
+   ap[12] = '2(ni):2D PROCESSING:lb1(lb1):3,sb1(sb1):3,sbs1(sb1):3,gf1(gf1):3,gfs1(gf1):3,awc1(awc1):3,wtfile1,proc1,fn1:0;'
+   ap[13] = '2(ni2):3D PROCESSING:lb2(lb2):2,sb2(sb2):3,sbs2(sb2):3,gf2(gf2):3,gfs2(gf2):3,awc2(awc2):3,wtfile2,proc2,fn2:0;'
+endif
+setgroup('ap','display')
+setprotect('ap','off',1)
+setprotect('ap','on',4)
+
+" dg "
+setprotect('dg','off',1)  "allow arrays"
+
+" dg1 "
+setprotect('dg1','off',1)  "allow arrays"
+
+" Create new dg2 "
+exists('dg2','parameter'):$e
+if ($e < 0.5) then
+   create('dg2','string')
+   setgroup('dg2','display')
+   setprotect('dg2','off',1)
+   setprotect('dg2','off',4)
+   dg2[1] = '1:1st DECOUPLING:dfrq:3,dn,dpwr:0,dof:1,dm,dmm,dmf:0,dseq,dres:1,homo;'
+   dg2[2] = '2(numrfch>2):2nd DECOUPLING:dfrq2:3,dn2,dpwr2:0,dof2:1,dm2,dmm2,dmf2:0,dseq2,dres2:1,homo2;'
+   dg2[3] = '2(numrfch>3):3rd DECOUPLING:dfrq3:3,dn3,dpwr3:0,dof3:1,dseq3,dres3:1,homo3;'
+   dg2[4] = '3(ni2):3D ACQUISITION:d3:3,sw2:1,ni2:0,phase2:0;'
+   dg2[5] = '3(ni2):3D DISPLAY:rp2:1,lp2:1;'
+   dg2[6] = '4(ni2):3D PROCESSING:lb2:3,sb2:3,sbs2(sb2):3,gf2:3,gfs2(gf2):3,awc2:3,wtfile2,proc2,fn2:0;'
+   setprotect('dg2','on',4)
+endif
+
+"  Create the shim parameters "
+$shims='z1','z1c','z2','z2c','z3','z3c','z4','z4c','z5','z6','z7','z8','zx3','zy3','z4x','z4y','x1','y1','xz','xy','x2y2','yz','x3','y3','yz2','yz2','zx2y2','xz2','zxy','z3x','z3y','z2x2y2','z2xy','z3x2y2','z3xy','z2x3','z2y3','z3x3','z3y3','z4x2y2','z4xy','z5x','z5y'
+$num=size('$shims')
+$i=1
+while ($i <= $num) do
+   exists($shims[$i],'parameter'):$e
+   if ($e < 0.5) then
+      create($shims[$i],'integer')
+   endif
+   setprotect($shims[$i],'set',0)
+   setlimit($shims[$i],19)
+   $i = $i + 1
+endwhile
+setprotect('dgs','off',1)
+setprotect('dgs','off',4)
+dgs[1] = '1(shimset=1):AXIAL SHIMS:z1:0,z1c:0,z2:0,z2c:0,z3:0,z4:0;'
+dgs[2] = '1(shimset=2):AXIAL SHIMS:z1:0,z1c:0,z2:0,z2c:0,z3:0,z4:0,z5:0;'
+dgs[3] = '1(shimset=3):AXIAL SHIMS:z1:0,z2:0,z3:0,z4:0,z5:0,z6:0;'
+dgs[4] = '1(shimset=4):AXIAL SHIMS:z1:0,z2:0,z3:0,z4:0,z5:0,z6:0,z7:0;'
+dgs[5] = '1(shimset=5):AXIAL SHIMS:z1:0,z1c:0,z2:0,z2c:0,z3:0,z3c:0,z4:0,z4c:0,z5:0,z6:0,z7:0,z8:0;'
+dgs[6] = '1((shimset=6)or(shimset=7)):AXIAL SHIMS:z1:0,z2:0,z3:0,z4:0,z5:0;'
+dgs[7] = '2(shimset=1):NON AXIAL SHIMS:x1:0,y1:0,xz:0,yz:0,xy:0,x2y2:0,x3:0,y3:0;'
+dgs[8] = '2((shimset=2)or(shimset=6)):NON AXIAL SHIMS:x1:0,y1:0,xz:0,yz:0,xy:0,x2y2:0,x3:0,y3:0,xz2:0,yz2:0,zxy:0,zx2y2:0;'
+dgs[9] = '2((shimset>2)and(shimset<6)):NON AXIAL SHIMS:x1:0,y1:0,xz:0,yz:0,xy:0,x2y2:0,x3:0,y3:0,xz2:0,yz2:0,zxy:0,zx2y2:0,z3x:0,z3y:0,z2x2y2:0,z2xy:0;'
+dgs[10] = '2(shimset=7):NON AXIAL SHIMS:x1:0,y1:0,xz:0,yz:0,xy:0,x2y2:0,x3:0,y3:0,xz2:0,yz2:0,zxy:0,zx2y2:0,z3x:0,z3y:0;'
+dgs[11] = '3(shimset=4):NON AXIAL SHIMS:zx3:0,zy3:0,z4x:0,z4y:0;'
+dgs[12] = '3(shimset=5):NON AXIAL SHIMS:zx3:0,zy3:0,z4x:0,z4y:0,z3x2y2:0,z3xy:0,z2x3:0,z2y3:0,z3x3:0,z3y3:0,z4x2y2:0,z4xy:0,z5x:0,z5y:0;'
+dgs[13] = '4:AUTOMATION:method,wshim,load,,spin:0,gain:0,alock,loc:0;'
+dgs[14] = '4:SPECIAL:temp;'
+setprotect('dgs','on',4)
+
+exists('parversion','parameter'):$parver
+if ($parver < 0.5) then
+   create('parversion','real')
+   parversion=0
+   setprotect('parversion','on',4)
+endif
+setvalue('parversion',4.3)
+aborton

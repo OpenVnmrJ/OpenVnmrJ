@@ -1,0 +1,22 @@
+"macro _cpmgbt"
+// John Ryan
+// Jan 2015
+
+// Calculate number of CPMG loops
+$loops=trunc(cpmgbt/(2*cpmglt))
+
+// Ensure there are minimum of 4 loops
+if ($loops<4) then $loops=4 endif
+
+// Ensure there is an even number of loops
+$loops=$loops+($loops%2)
+
+if (cpmgbt/(2*$loops)<0.00005) then
+  // If little tau works out to be less than 50 us
+  // recalculate big tau based on that minimum
+  cpmglt=0.00005
+  cpmgbt=$loops*(2*cpmglt)
+else
+  // Set little tau
+  cpmglt=cpmgbt/(2*$loops)
+endif

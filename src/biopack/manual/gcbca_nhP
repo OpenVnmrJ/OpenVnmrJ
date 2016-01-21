@@ -1,0 +1,110 @@
+  gcbca_nhP.c
+
+    3D CBCANH gradient sensitivity enhanced version.
+
+
+    Correlates Cb(i),Ca(i) with N(i), NH(i) and N(i+1), NH(i+1).  Uses constant
+    time evolution for the CaCb shifts and for the 15N shifts.
+    
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP pulses; full power square pulses on 13C 
+    initially when 13CO excitation is irrelevant; square pulses on the Ca and
+    CaCb with first null at 13CO; one lobe sinc pulses on 13CO with first null
+    at Ca; optional 2H decoupling when CaCb magnetization is transverse for 4 
+    channel spectrometers.
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+
+    pulse sequence: 	J Magn. Reson. 99, 201 (1992).
+    SLP pulses:     	J Magn. Reson. 96, 94-102 (1992)
+    shaka6 composite: 	Chem. Phys. Lett. 120, 201 (1985)
+    TROSY:		 JACS, 120, 10778 (1998)
+ 
+    (comments such as "point a" refer to pulse sequence diagram in refernce)
+
+    This sequence is modified from the sequence gcbca_co_nh.c (MRB) by BKJ
+    12/6/96, corrected BKJ 12/11/96.   Revised and improved to a standard
+    format by MRB, BKJ and GG for the BioPack, January 1997. 
+    TROSY added Dec 98, based on similar addition to gNhsqc. Shaped pulses 
+    calculated within pulse sequence code, Jan 99 (Version March 99).
+
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gcbca_nhP
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for gcbca_nhP may be printed using:
+                                      "printon man('gcbca_nhP') printoff".
+             
+    2. Apply the setup macro "gcbca_nhP".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+
+    3. The delay zeta, between points c and d in the pulse sequence, is set
+       to 6 ms by the pulse sequence code for the 1D check, or for 2D/15N 
+       spectra, to provide a spectrum of large positive signals.
+       The normal value for 2D/13C nmr, or 3D nmr, is 0.011 (11 ms), but at this
+       value positive and negative signals approximately cancel in the 1D
+       spectrum (see JMR 99, 201 for an explanation).  zeta is automatically 
+       reset to the value in the dg2 parameter set (normally 11 ms) in the pulse
+       sequence code for 2D/13C and 3D work (ie when ni>1).  
+
+    4. Center H1 frequency on H2O (4.7ppm), C13 on 174ppm, and N15 frequency
+       on the amide region (120ppm). The C13 frequency is calculated in the
+       sequence to be at 46ppm, ie at Cab throughout the sequence.
+
+    5. The H1 frequency is NOT shifted to the amide region during the sequence.
+       The H1 DIPSI2 decoupling is controlled by the waltzB1 parameter.
+       The value is specified in the new shapelib file after go or dps. 
+
+    6. tauCH (1.7 ms) and timeTN (14 ms) were determined for alphalytic protease
+       and are listed in dg2 for possible readjustment by the user.
+
+    7. The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+    8. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       gcbca_nhP so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.       
+   9.  The N15 t2 evolution and the sensitivity enhancement train is common
+       to all g...._nh sequences and the pulse sequence code for these final
+       sections is in the include file, bionmr.h.

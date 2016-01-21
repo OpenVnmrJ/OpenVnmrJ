@@ -1,0 +1,105 @@
+"macro BPexpress_guess_dimensions"
+// Macro for finding whether current exp is 1D,2D or 3D
+// relevant to BioPack Express interface
+
+$ret_string='not defined'
+
+exists('BPexpress_gui','parameter'):$e
+if($e=0) then return($ret_string) endif
+
+calcdim
+getvalue('arraydim','current'):$arraysize
+
+exists('ni','parameter'):$e_ni     $ni=1 if  (($e_ni > 0.5))   then $ni=ni endif 
+
+exists('ni2','parameter'):$e_ni2   $ni2=1 if (($e_ni2 > 0.5))  then $ni2=ni2 endif 
+
+// Check if a 1D experiment
+if ($arraysize=1) then 
+ $ret_string=nuc_obs + ' 1D'
+ return($ret_string)
+endif
+
+// Check if a 2D(ni) experiment
+if (($e_ni > 0.5))  then
+       if (ni>1) then
+
+	       if ( (phase[1]=1) and (phase[2]=2) and ($arraysize=ni*2) and (ni>1) ) then
+	        $ret_string=nuc_ni + ' x ' + nuc_obs + ' 2D'
+	       //return($ret_string)
+       endif
+ endif
+endif  
+
+// Check if 2D(ni2) experiment
+
+if (($e_ni2 > 0.5))  then
+ if  ( (ni2>1) and (size('phase2')=2) and ($arraysize=ni2*2) ) then
+     $ret_string=nuc_ni2 + ' x ' + nuc_obs + ' 2D'
+    //return($ret_string)
+ endif
+endif  
+
+// Check if a 3D experiment
+if (($e_ni2 > 0.5) and ($e_ni > 0.5)  )  then
+	if ((ni2>1) and (ni>1)) then
+		  if  ( (phase2[1]=1) and (phase2[2]=2) and (phase[1]=1) and (phase[2]=2) ) then
+
+                                $ret_string=nuc_ni + ' x ' + nuc_ni2 + ' x ' + nuc_obs + ' arrayed 3D'
+                                if ($arraysize=ni*ni2*4) then 
+   		                    $ret_string=nuc_ni + ' x ' + nuc_ni2 + ' x ' + nuc_obs + ' 3D'                            
+                                endif          
+               
+	  	     //return($ret_string)
+ 		   endif
+         endif
+endif  
+
+
+
+// Check if a pseudo 3D experiment in ni
+if (  ($e_ni > 0.5) )  then
+
+if ((ni>1) and ($ni2<=1)) then
+
+	 if  (  (phase[1]=1) and (phase[2]=2) and ($arraysize>ni*2) ) then
+ 	   $ret_string= nuc_ni + ' x ' + nuc_obs + ' arrayed 2D'
+  	   //return($ret_string)
+         endif
+ endif
+endif  
+
+
+// Check if arrayed 1D
+if ( ($ni<=1) and ($ni2<=1) and ($arraysize>1) ) then
+ 
+          $ret_string=   nuc_obs + ' arrayed 1D'
+  	  // return($ret_string)
+endif
+
+
+// check if NUS
+
+$smsg=''
+if ($arraysize>2) then
+        $smsg='uniform sampling'
+
+	if( (sampling='sparse')  ) then
+             $smsg='non-uniform sampling'
+
+             if(CStype='a') then
+                $smsg='non-uniform sampling with random schedule'
+             endif
+
+             if(CStype='i') then
+                $smsg='non-uniform sampling with user-provided schedule'
+             endif
+             if(CStype='p2') then
+                $smsg='non-uniform sampling with Poisson-Gap schedule'
+             endif
+        endif
+endif
+
+$ret_string=$ret_string+', '+$smsg
+
+ return($ret_string)

@@ -1,0 +1,27 @@
+"macro confirm"
+//***********************************************
+//* confirm waits for vnmrJ to write file and   *
+//*         returns result			*
+//***********************************************
+$file='/tmp/vnmrj_confirm'
+rm('-f',$file):$dummy
+vnmrjcmd('popup','mode:option','title:'+$1)
+$e=0
+while ($e < 0.5) do
+   shell('sleep 1'):$dummy
+   exists($file,'file'):$e
+endwhile
+$answer=0
+exists($file,'file'):$e
+if $e then
+   lookup('file',$file,'read'):$ans
+   format($ans,'isreal'):$is
+   if ($is) then
+      $answer=$ans
+   else
+      $answer=1
+   endif
+   rm($file):$dummy
+endif
+// return: 1=yes 0=No 
+return(1 - $answer)

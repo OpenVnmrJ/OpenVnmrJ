@@ -1,0 +1,16 @@
+"macro showVPlog"
+
+if ($#<0.5) then $probe=probe else $probe=$1 endif
+$VPlog=userdir+'/IPinfo/VPlog_'+$probe
+$geom='--geometry=120x25'
+exists($VPlog,'file'):$aex
+if ($aex=0) then
+  write('error','VeriPulse log does not exist (yet)')
+  return
+endif
+shell('uname'):$os
+if ($os='Linux') then
+  shell('gnome-terminal '+$geom+' -e "/usr/bin/tail -f '+$VPlog+'" &'):$dum
+else
+  shell('xterm -e "/usr/bin/tail -f '+$VPlog+'" &'):$dum
+endif

@@ -1,0 +1,220 @@
+"macro explibPopup"
+"explibPopup - display experiment library in popup window"
+if ($# < 1) then $1='init' endif
+
+exists('explibpars','parameter','global'):$parex
+if ($parex=0) then
+	create('explibpars','string','global')
+endif
+setprotect('explibpars','on',256,'global')
+$explibfile=userdir+'/persistence/explib'
+$explibtmp=userdir+'/persistence/explibtmp'
+$explogfile=userdir+'/persistence/explog'
+
+IF ($1='init') or ($1='refresh') THEN
+"****************************************************************************"
+$exppath=''
+$explist=''
+$seqfil=''
+$textline=''
+$textline2 = ''
+$expn=1
+$s1=''
+$e=0
+
+explibpars[1]=''
+jexp:explibpars[2]
+explibpars[3]=''
+explibpars[4]=explibpars[2]
+write('reset',$explibfile)
+write('reset',$explibtmp)
+{$0}('explog',explibpars[4]):$dum
+
+shell('(cd '+userdir+'; ls -1d exp? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp?? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp??? >> '+$explibtmp+')'):$dum
+shell('(cd '+userdir+'; ls -1d exp???? >> '+$explibtmp+')'):$dum
+
+readfile($explibtmp,'$explist','$s1','','local'):$total
+shell('rm -f '+$explibtmp):$dum
+write('file',$explibfile,' Workspace\tStatus\t\tSize\tSequence\tStudy\t\t\tFidname\t\t\tText')
+write('file',$explibfile,' -------------------------------------------------------------------------------------------------------------------------------')
+expactive('auto'):$acq
+if ($acq > 0.5) then
+   write('file',$explibfile,'System is in automation mode')
+endif
+
+if ($total>0) then
+  flush		"Insure current experiment written to disk"
+  $expNum = ''
+  $expsize=''
+  $i=1
+  repeat               "For each experiment..."
+    $expNum='' $s1=''
+    strstr($explist[$i],'exp'):$ret,$s1,$expNum
+    format($expNum,'isreal'):$e
+    if ($e = 1) and ($ret=1) then
+		"Get the size of the exp directory"
+        $exppath=userdir+'/'+$explist[$i]
+	format($expNum,'lower'):$expn
+        shell('du -sh ',$exppath+'/.'):$expsize
+        substr($expsize,1):$expsize
+
+		"Get the pslabel from curpar (12 char max)"
+        $seqfil=''
+	rtv($exppath+'/curpar','noabort','pslabel'):$seqfil
+	substr($seqfil,1,12):$seqfil
+	length($seqfil):$ch
+	$x=$ch+1
+	while $x <= 12 do
+	    $seqfil=$seqfil+' '
+	    $x=$x+1
+	endwhile
+
+		"Get Text as a string (50 char max)"
+	$key=$exppath+'/text'
+	exists($key,'file'):$textex
+	$textline=''
+	if $textex then
+            lookup('mfile',$key,'readline','filekey'):$textline,$key
+            length($textline):$ans
+            lookup('mfile',$key,'readline','filekey'):$textline2,$key,$ret
+	    $textlen = 50
+            while (($ans < 50) and ($ret = 2)) do
+               substr($textline + ' ' + $textline2,1,$textlen+1):$textline
+               length($textline):$ans
+               lookup('mfile',$key,'readline','filekey'):$textline2,$key,$ret
+            endwhile
+	endif
+        expactive($expn):$acq
+        if ($acq > 1.5) then
+               $num=''
+               format($acq-0.9,1,0):$num
+               $expstatus = '(Queued ' + $num+')'
+        elseif ($acq > 0.5) then
+               $expstatus = '(Active)'
+	else
+            $file=''
+            rtv($exppath+'/curpar','file'):$file
+	    substr($file,'dirname'):$d,$file,$ext
+	    substr($d,'basename'):$study
+	    $cluster=0 $cfid=''
+	    rtv($exppath+'/curpar','noabort','CFIDlist','$cfid'):$cluster
+	
+//            $ext='' $name=''
+//            getext($file):$name,$ext
+//            shell('basename '+$file+' .fid'):$file
+	    exists($exppath+'/acqfil/fid','file'):$fidex
+	    $pfex=0 
+	    if not $fidex then
+		exists($exppath+'/datdir/phasefile','file'):$pfex
+	    endif
+            if ($ext='par') then
+                $expstatus='(PARAMETER)'
+	    elseif $cluster then
+		$expstatus='(CLUSTER)'
+	    elseif $pfex then
+		$expstatus='(SPECTRUM)'
+	    elseif not $fidex then
+		$expstatus='(PARAMETER)'
+            elseif (($file='') or ($file='exp') or ($file='acqfil')) then
+                $expstatus='(NOT_SAVED)'
+            else
+                $expstatus='(FID_SAVED)'
+            endif
+        endif
+	substr($study,1,20):$study
+	length($study):$ch
+	$x=$ch+1
+	while $x<=20 do
+	    $study=$study+' '
+	    $x=$x+1
+	endwhile
+	substr($file,1,20):$file
+	length($file):$ch
+	$x=$ch+1
+	while $x<=20 do
+	    $file=$file+' '
+	    $x=$x+1
+	endwhile
+
+		"Write the information"
+	    write('fileline',$explibfile,' Exp:%-4d\t',$expn)
+	    write('fileline',$explibfile,'%s\t',$expstatus)
+	    write('fileline',$explibfile,'%s\t',$expsize)
+	    write('fileline',$explibfile,'%s\t',$seqfil)
+	    write('fileline',$explibfile,'%s\t',$study)
+	    write('fileline',$explibfile,'%s\t',$file)
+	    write('fileline',$explibfile,'%s\n',$textline )
+	if $expstatus='(Active)' then
+	    shell('(cat '+$exppath+'/acqfil/log | awk \'{print " \t \t"$NF}\' >> '+$explibfile+')'):$devnull
+	endif
+    endif
+    $i=$i+1
+  until $i > $total
+endif
+vnmrjcmd('pnew','curexp','explibpars')
+if ($1='init') then
+    vnmrjcmd('popup','mode:modeless','file:explib.xml','rebuild:yes','pnewupdate:true','title:Workspace Information')
+endif
+
+
+ELSEIF ($1 = 'join') THEN
+
+    if ($2 = '') then
+	return
+    endif
+    format($2,'isreal'):$real
+    if ($real<1) then 
+	return
+    endif
+    explibpars[1]='' explibpars[3]=''
+    $exp='jexp'+$2
+    {$exp}
+    jexp:explibpars[2]
+    explibpars[4]=explibpars[2]
+    {$0}('explog',explibpars[4]):$dum
+    vnmrjcmd('pnew','curexp','explibpars')
+ELSEIF ($1 = 'new') THEN
+    jnewexp
+    jexp:explibpars[2]
+    explibpars[4]=explibpars[2]
+    {$0}('explog',explibpars[4]):$dum
+    explibPopup('refresh')
+//    vnmrjcmd('pnew','curexp','explibpars')
+
+ELSEIF ($1 = 'delete') THEN
+    if ($2='') then return endif
+    format($2,'isreal'):$real
+    if ($real<1) then
+	return
+    endif
+    jexp:$curexp
+    format($2,'lower'):$expnum
+    if ($expnum<>$curexp) then
+       delexp($expnum)
+    endif
+    explibPopup('refresh')
+
+ELSEIF ($1 = 'explog') THEN
+    if ($2='') then return endif
+    format($2,'isreal'):$real
+    if ($real<1) then
+        return
+    endif
+    $log='' write('line3','%s/exp%s/acqfil/log',userdir,$2):$log
+    exists($log,'file'):$logex
+    if not $logex then
+	write('reset',$explogfile)
+	explibpars[5]=''
+	if $## < 1 then
+	    write('line3','no acquisition log is present')
+	endif
+    else
+        write('reset',$explogfile)
+	explibpars[5]=explibpars[4]
+	copy($log,$explogfile):$dum
+	vnmrjcmd('pnew','curexp','explibpars')
+    endif
+
+ENDIF

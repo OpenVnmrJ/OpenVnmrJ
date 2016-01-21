@@ -1,0 +1,105 @@
+
+******************************************************************************
+write(device,template,arg,arg,..)	write formatted text to a device
+******************************************************************************
+
+  device:	'graphics'<'xor',><,color><,'reverse'>,x,y  graphics screen
+                'plotter'<,color><,'reverse'>,x,y	plotter
+		'alpha'				alphanumeric screen
+		'line3'				message on line 3
+		'error'				error on line 3
+		'reset','filename'		clears file
+		'file', 'filename'		writes to file
+		'fileline', 'filename'		writes to file with no
+                                                automatic linefeed
+                'net',host, port                write to network
+  color:	'red','green','blue','cyan','magenta','yellow','orange','black','white'
+                'cursor','integral','threshold','scale','fid','spectrum','imaginary','parameter'
+  template:	as template string in printf command
+                (use "man printf" command under Unix for details)
+		'abc = %12.5f',abc	field width 12, decimal places 5
+                implemented are %c (character), %s (string), %f (fixed point)
+				%e (exponential), %g (fixed point/exponential)
+				%d (integer), %o (octal), %x (hexadecimal)
+				%% write a % character
+
+   When writing to device 'graphics' in the 'xor' mode, if one or more
+   characters are positioned over the same previously drawn characters,
+   the characters will be erased.
+
+   When writing to device 'graphics' or device 'plotter',  the write
+   command will return the height of the characters if a return argument
+   is provided.  This is useful for positioning multi-line displays.
+   For example
+
+     write('graphics',100,100,''):$ys
+
+   sets $ys to the height of a character.  See the macro dtext for an
+   example of usage.
+
+   When writing to device 'graphics' or device 'plotter',  the write command
+   will accept a color argument.  The nine standard color names (red, green, etc)
+   listed above may be used. In addition, the eight symbolic color names (cursor,
+   integral, etc) may also be used. The actual colors associated with the symbolic
+   names may be set with the "Display options..." tool in the Edit menu. The advantage
+   of using the symbolic names is that they are probably adjusted to look good with
+   the chosen background color. For example, using the color white for writing on the
+   graphics screen may look fine with a dark background, but will be invisible if
+   the background is white.  Using the color 'parameter' will probably look good
+   for both light and dark backgrounds. The default color is 'parameter'.
+
+   When writing to device line3, write will display the output on the 
+   information output line. Optionally, if a return value is requested,
+   the output will be returned to the calling macro and will not be displayed
+   on line3.  For example,
+     write('line3','The value of pw is %g us',pw):n1
+   will not display on the line3 device but will set the parameter n1 to
+     'The value of pw is 8.2 us'
+   Writing to 'line3' will also display the message in the message box in the hardware
+   toolbar at the bottom of the VnmrJ interface. Writing to the 'error' device is the
+   same as writing to 'line3', except the message in the hardware toolbar message box
+   will be displayed in red, and, if enabled, a beep will sound.
+   If the output starts with "Warning: ", then writing to 'line3' with this output will
+   strip the "Warning: " from the output and display the rest of the output in yellow
+   in the toolbar message box. Note that a space is required after the colon.
+
+   When writing to a file using the keyword 'file',  each write command
+   automatically appends a carriage return (linefeed) to the end of the
+   string defined by the template argument.  If the keyword 'fileline'
+   is used instead of 'file',  then the carriage return is not automatically
+   appended.  When using 'fileline',  any carriage returns should be explicitly
+   defined by the template argument.  Also, with the 'file' keyword, two
+   backslashes (\\) are interpreted as a carriage return.  With the
+   'fileline' keyword, two backslashes will output a single backslash
+   into the file.
+
+   When using the 'reset' option, the write command will create an empty file
+   by the name of filename, the second argument. If the 'filename' file already
+   exists, write('reset',<filename>) will clear the file.
+
+   For the character conversion (%c), you can supply either a single character
+   or a decimal number representing the character in the ascii character set.
+   Note that this is different from the printf convention where the number
+   is supplied as octal.  If a decimal number is supplied, it must be entered
+   as a string with a leading backslash (\).  An example to write out all
+   ascii characters is
+
+   $i=1
+   $s=''
+   while ($i < 128) do
+     format($i,0,0):$s
+     write('file',userdir+'/chars','%3d <%c>', $i, '\\'+$s)
+     $i = $i + 1
+   endwhile
+
+   When writing to a network program using the keyword 'net', the host name and
+   port number must be supplied.  The host name may also be an IP address, such
+   as 10.190.x.y.  The hostname of your local computer is stored in the "instrument"
+   parameter.  The command serverport may be used to get the port number for the
+   currently executing VnmrJ program.  One could then use the write('net',... command
+   to send a message to yourself, over the network.  An example for doing this is
+
+   serverport:$port
+   write('net',instrument,$port,'banner(`hello`)\n')
+
+   Note that a carriage return (\n) is required after the command.

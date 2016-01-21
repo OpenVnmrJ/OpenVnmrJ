@@ -1,0 +1,29 @@
+"macro vsadj"
+" *****************************************"
+" vsadj(arg1) - adjust vs for largest peak. arg1 is an integer "
+" vsadj('all') - adjust vs for largest peak of all traces "
+" *****************************************"
+
+$all=''
+$newht=(wc2-vp-sc2)*0.9
+if $#>0 then
+  if(typeof('$1')) then
+    $all=$1
+  else
+    $newht=$1
+  endif
+endif
+
+if($all='all') then
+  maxpeak:$ht
+  $ht=$ht/2  // use half height of maxpeak
+else
+  peak:$ht
+endif
+
+if $ht<0 then
+  $ht=-$ht
+endif
+if ($ht <> 0) then
+  vs=vs*$newht/$ht
+endif

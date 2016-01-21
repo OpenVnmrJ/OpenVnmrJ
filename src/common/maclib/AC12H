@@ -1,0 +1,86 @@
+"macro AC12H"
+"AC12H"
+"Automatic Calibration"
+"Performs the following basic instrument calibrations "
+"1H PW90 calibration on the 2nd channel for HF probes "
+"                         including compression factor"
+"Based on AC1S macro"
+"Start with au or gmapshim_au"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the Proton Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then 
+        abort
+     endif
+   endif
+endif
+
+setup('H1','CDCl3')
+dn='H1'                               " Force decoupler back to H1 "
+$banner='Calibrating '
+$banner=$banner + dn
+  $banner=$banner+ ' decoupling\\      for F19 observe'
+  $banner=$banner+'\\It will take about 5-8 minutes'
+banner($banner)
+
+" Put default values into probe file "
+addparams('pwxlvl','00',dn)
+addparams('pwx','00',dn)
+addparams('pwxlvl_cf','1',dn)
+
+if tpwr = 0 then tpwr = 51 else ACbackup endif
+if pw90 = 0 then pw90 = 14 endif     "1H pw90 spec.for 400 MHz ASW ATB"
+  " in case this is a brand new probe file "
+pw = pw90
+
+Autosetgpar
+dn='H1'                            " Force decoupler back to H1 "
+setsw(3.2,-0.5)
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('H1 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_H1cal_' + $date
+archivedir=userdir+'/data'
+$datadir = userdir+'/data/'+sample
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+
+macro=$0
+exists('pw90max','parameter'):$e
+if ($e < 0.5) then
+   create('pw90max','pulse')
+endif
+
+getparam('pwx',dn):$pw90         "Take the 2nd channel value if available"
+if $pw90>0 then
+   pw90max=$pw90
+   getparam('pwxlvl',dn):$tpwr    "Set also the 2nd channel power if available"
+   if $tpwr>0 then
+      tpwr=$tpwr
+   endif
+else
+   getparam('pw90',dn):$pw90     "Otherwise use data from the observe channel"
+   if $pw90>0 then pw90max=$pw90
+   else pw90max=14               "If nothing is available use probe specs"
+   endif 
+endif
+
+d1=15 nt=1 gain=30 at=3 fn=2*np lb = 1/at
+intmod='off'
+
+dn='H1' dof=tof sfrq=dfrq tn='none' seqfil='d2pul'
+
+wexp='AC12p'
+write('line3','Enter \'au\' to start.')

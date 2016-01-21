@@ -1,0 +1,206 @@
+"macro drawslice"
+" Ancestry: drawstack	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+" drawslice                                                     "
+"                                                               "
+" Program to show graphic position and orientation of a target  "
+" slice stack on a scout image.                                 "
+
+" Program reads a mark2d.out file prepared by the user in the   "
+" current experiment. The file should contain two points that   "
+" define the target plane, marked in the cursor mode of the     "
+" dconi program.                                                "
+"***************************************************************"
+
+
+
+"-- Constants ---------------------------------------------"
+$prog = 'drawslice: '                 "*Program ID*"
+
+$color1 = 'green'                      "*color of line*"
+$color2 = 'red'                       "*color of the points*"
+
+$large = 1e9                          "*Infinity*"
+$cm_mm = 10                           "centimeters to millimeters"
+
+atan($large):$piby2                   "*pi over 2*"
+$d_r = $piby2/90.0                    "*degrees to radian conversion*"
+$tol = 0.97*$d_r                      "*tolerance for zero*"
+
+
+$f21 = t_mark[1]
+$f11 = t_mark[2]
+$f22 = t_mark[3]
+$f12 = t_mark[4]
+
+
+"-- Convert points to screen coordinates ------------------"
+if (trace='f1') then 
+    hztomm($f11,$f21):$x1,$y1
+    hztomm($f12,$f22):$x2,$y2
+else
+    hztomm($f21,$f11):$x1,$y1
+    hztomm($f22,$f12):$x2,$y2
+endif
+
+
+"-- Axis box boundaries -----------------------------------"
+if (trace='f1') then 
+    hztomm(wp1+sp1,wp+sp):$left,$bottom
+    hztomm(sp1,sp):$right,$top
+else
+    hztomm(wp+sp,wp1+sp1):$left,$bottom
+    hztomm(sp,sp1):$right,$top
+endif
+
+
+
+"-- Calculate the direction cosines of the ray ------------"
+" The line between the marked points forms a ray which is  "
+" the base slice new target.  We need to obtain the        "
+" direction cosines (l & m) with respect to the screen axes"
+" for this ray                                             "
+"----------------------------------------------------------"
+$dist = sqrt(($x2 - $x1)*($x2 - $x1) + ($y2 - $y1)*($y2 - $y1))
+
+if ($dist = 0) then
+    write('error',$prog+'Identical Points have been marked')
+    abort
+endif
+
+$l = ($x2 - $x1)/$dist
+$m = ($y2 - $y1)/$dist
+
+if ($m > $tol) or ($m < -$tol) then
+    if ($m > 0  or  $l > 0)  then
+	$sign = 1
+    else
+        $sign = -1
+    endif
+else
+    $sign = 1
+endif
+
+
+"-- Distance of the ray to the screen origin --------------"
+" The marked points satisfy the equation x*a+y*b=c.  The   "
+" a & b values are related to the direction cosines for the"
+" ray, specifically a=m & b=-l. c is the distance of the   "
+" line from the origin.                                    "
+"----------------------------------------------------------"
+$a = $m*$sign
+$b = -1*$l*$sign
+$c = $a*$x1 + $b*$y1
+
+
+"-- Compute the slice shift -------------------------------"
+" The slice shift in image millimeters is t_gap+thk.       "
+" This is converted to screen millimeters using a scaling  "
+" factor based on the FOV size                             "
+"----------------------------------------------------------"
+if (trace='f1') then
+  $scale=(sw*wc2)/($cm_mm*wp*lro)
+else
+  $scale=(sw*wc)/($cm_mm*wp*lro)
+endif
+
+$shift=$scale*(thk+t_gap)
+
+
+"-- Compute array of slice shifts for the stack -----------"
+" Slice positions are displaced symetrically about the     "
+" selected ray                                             "
+"----------------------------------------------------------"
+if ((t_ns % 2) > 0) then
+    $half = trunc(t_ns/2)
+    $start = $c - $half*$shift
+else
+    $half = t_ns/2
+    $start = $c-($half - 0.5)*$shift
+endif
+
+$k = 1
+repeat
+    $d[$k] = $start + ($k - 1)*$shift
+    $k = $k + 1
+until ($k > t_ns)
+
+
+"-- Draw the slice positions ------------------------------"
+" The rays defined by a*x+b*y=d[k] need to be plotted one  "
+" the image. This is accomplished by finding the           "
+" intersections of each ray with the axis box              "
+"----------------------------------------------------------"
+$k = 1
+repeat
+  "--------------------------------"
+  "Check for zero or infinite slope"
+  "--------------------------------"
+  if ($b = 0) then
+      $x[1] = $d[$k]/$a
+      $x[2] = $d[$k]/$a
+      $y[1] = $top - 0.1
+      $y[2] = $bottom + 0.1
+  else if ($a = 0) then
+      $x[1] = $left + 0.1
+      $x[2] = $right - 0.5
+      $y[1] = $d[$k]/$b
+      $y[2] = $d[$k]/$b
+  else
+
+      "--------------------------------"
+      "Find intersection with left edge"
+      "--------------------------------"
+      $y[1] = ($d[$k] - $a*$left)/$b
+      $x[1] = ($d[$k] - $b*$y[1])/$a
+      if ($y[1] > $top) then
+          $y[1] = $top
+          $x[1] = ($d[$k] - $b*$y[1])/$a
+      else if ($y[1] < $bottom) then
+          $y[1] = $bottom
+          $x[1] = ($d[$k] - $b*$y[1])/$a
+      endif endif
+
+      "---------------------------------"
+      "Find intersection with right edge"
+      "---------------------------------"
+      $y[2] = ($d[$k] - $a*$right)/$b
+      $x[2] = ($d[$k] - $b*$y[2])/$a - 0.5
+      if ($y[2] > $top) then
+          $y[2] = $top
+          $x[2] = ($d[$k] - $b*$y[2])/$a
+      else if ($y[2] < $bottom) then
+          $y[2] = $bottom
+          $x[2] = ($d[$k] - $b*$y[2])/$a
+      endif endif
+
+  endif endif
+
+  if ($x[1]>=$left-0.1) and ($x[1]<=$right+0.1) and
+     ($y[1]>=$bottom-0.1) and ($y[1]<=$top+0.1) and
+     ($x[2]>=$left-0.1) and ($x[2]<=$right+0.1) and
+     ($y[2]>=$bottom-0.1) and ($y[2]<=$top+0.1) then
+
+      pen('graphics',$color1)
+      move('graphics',$x[1],$y[1])
+      draw('graphics',$x[2],$y[2])
+
+  endif
+  $k = $k + 1
+
+until ($k > t_ns)
+
+
+"-- Plot user selected points -----------------------------"
+" If the user selected points lie in the expansion then    "
+" plot them on the image                                   "
+"----------------------------------------------------------"
+if ($x1 > $left) and ($x1 < $right) and ($y1 > $bottom) and ($y1 < $top) then
+    write('graphics',$color2,$x1,$y1,'%s','1')
+endif
+
+if ($x2 > $left) and ($x2 < $right) and ($y2 > $bottom) and ($y2 < $top) then
+    write('graphics',$color2,$x2,$y2,'%s','2')
+endif
+
+sliceplan

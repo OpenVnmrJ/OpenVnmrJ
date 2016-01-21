@@ -1,0 +1,695 @@
+"macro csv2cpQ"
+"====================================================================="
+"   --  csv2cpQ --                                                    "
+"macro that will import CSV (Comma Separated Values)                  "
+"       file to chempackQ                                             "
+"First line is vnmr parameters or key words                           "
+"**********There are no Required fields***********		      "
+"====================================================================="
+"**Header synonyms are handled by csv2cpQ_synonym file in	      "
+"	adm/walkupadm directory					      "
+"====================================================================="
+"       No CR or LF in any field                                      "
+"  Any field that is NOT a vnmr parameter or keyword will be ignored  "
+"====================================================================="
+"The order of parameters or keywords does not matter                  "
+"====================================================================="
+"********Each entry must be separated by a comma**********            "
+"====================================================================="
+"Usage:                                                               "
+"   Supports 3 or 4 arguments (one argument is required - input filename   "
+"	Other arguments are keyword arguments and are optional.       "
+"       The order of the arguments is arbitrary			      "
+"   Required argument (filename):                                     "
+"       Can be absolute path or relative path w.r.t. userdir/data     "
+"   Keyword arguments (all optional):				      "
+"      enter or auto or acq (submit to AutoFile or AutoRun or Acq)    "
+"	   [Default is auto if seqfil<>'Submitq' or 'Startq', else    "
+"		set equal to wqinit parameter value]		      "
+"      print or noprint (print the submission information or not)     "
+"	   [Default is noprint]					      "
+"      rpv (required parameter values) - the next argument will be    "
+"	   interpreted as the value(s) for all non-populated 	      "
+"	   required parameters. 				      "
+"   Examples: csv2cpQ('test.csv','auto')			      "
+"		Submit userdir/data/test.csv to AutoRun, no printout  "
+"	      csv2cpQ('/home/csvdir/test.csv','enter','print')	      "
+"		Submit /home/csvdir/test.csv to AutoFile, printout    "
+"====================================================================="
+
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 1) then
+   write('error','Usage: csv2cpQ(csvfilename,<auto or enter or acq>,<print or noprint>)')
+   return
+endif
+if (customflag='y') then customizepar('save') customizepar('quit') endif
+
+$input=''
+$wqinit='auto'
+defaultqueue:$wqacq
+$rpv=''
+if $wqacq='bgauto' then $wqacq='autodir' $wqinit='acq' endif
+if (seqfil='Submitq') or (seqfil='Startq') then $wqinit=wqinit $wqacq=wqacq[1] endif
+
+$print='no'
+
+$xi=1
+while $xi <= $# do
+  $val=${$xi}
+  if $val = 'auto' then $wqinit='auto'
+  elseif $val = 'enter' then $wqinit='enter'
+  elseif $val = 'acq' then $wqinit='acq'
+  elseif $val = 'noprint' then $print='no'
+  elseif $val = 'print' then $print='print'
+  elseif $val = 'rpv' then
+	$xi=$xi+1
+	$rpv=${$xi}
+  else
+	$input=$val
+  endif
+  $xi=$xi+1
+endwhile
+
+if ($input='') then
+   write('error','Usage: csv2cpQ(csvfilename,<auto or enter or acq>,<print or noprint>)')
+   return
+endif
+
+"***********Check abort conditions********"
+wqinit=$wqinit
+
+expactive:$active
+if ($active > 0) then
+   write('error','Current experiment is ACTIVE.  Please join another experiment')
+   return
+endif
+
+$firstchar=''
+$origfilename=$input
+substr($origfilename,1,1):$firstchar
+if ($firstchar<>'/') then
+   $origfilename=userdir+'/data/'+$input
+endif
+
+exists($origfilename,'file'):$fileex
+if ($fileex=0) then
+   write('error','File %s not found',$input)
+   return
+endif
+
+$origdirname=''
+shell('dirname '+$origfilename):$origdirname
+
+        "The following makes sure dos to unix conversion is done"
+$filename=userdir+'/persistence/csvfile'
+$origfiledir='' shell('dirname '+$origfilename):$origfiledir
+$filename2='' shell('basename '+$origfilename):$filename2
+pwd:$curdir
+cd($origfiledir):$dum
+fixcsvfile($filename2,$filename)
+cd($curdir):$dum
+
+shell('(cat '+$filename+' | wc -l)'):$total
+if ($total < 2) then
+   write('error','There are no entries in %s',$input)
+   shell('rm -f '+$filename):$dum
+   return
+endif
+
+$issubmitmode=0
+if (seqfil='Submitq') or (seqfil='Startq') then
+        $issubmitmode=1
+        if (wqinit<>$wqinit) then
+                write('error','current submission mode is to %s',wqinit)
+                shell('rm -f '+$filename):$dum
+		return
+        endif
+endif
+
+$emptyloc='' $emptytot=1
+if (traymax<>768) and (traymax<>96) then
+   if ($wqinit='auto' or $wqinit='enter') then
+      $emptytot=traymax
+      if ($emptytot=97) then $emptytot=96 endif
+      emptylocQ($wqinit):$emptyloc,$emptytot
+      $msub='no'
+      getadminfo('multisubmit'):$msub
+      if ($total-1 > $emptytot) and ($msub='no') then
+         write('error','There are %d samples, but only %s empty locations',$total-1,$emptytot)
+         shell('rm -f '+$filename):$dum
+	 return
+      endif
+   elseif $wqacq<>'autodir' then
+      if ($total>2) then
+	  write('error','There are %d samples in this file',$total-1)
+ 	  shell('rm -f '+$filename):$dum
+	  return
+      endif
+   endif
+endif
+
+"***************************************************"
+"***********Prepare curexp for submission**********"
+$curoperator=operator
+if (seqfil<>'Submitq') and (seqfil<>'Startq') then
+        walkupQ('new',$wqinit)
+endif
+
+"***********Read the header line*******************"
+"	and translate keywords to parameter names  "
+
+$params='' $loctype='real'
+shell('(head -n 1 '+$filename+')'):$firstline
+strsv2array($firstline,','):$params
+
+$totpars=size('$params')
+$ti=1
+repeat
+//   $newval=''
+//   string2array($params[$ti]):$newval
+//   array2strsv($newval,'_'):$params[$ti]
+   ckstring($params[$ti]):$params[$ti]
+   cksynonym($params[$ti],'parameter'):$params[$ti]
+//   ckstring($params[$ti]):$params[$ti]
+   $ti=$ti+1
+until $ti > $totpars
+
+teststr('$params','location','local'):$sampex
+teststr('$params','vrack','local'):$rackex
+teststr('$params','vzone','local'):$zoneex
+teststr('$params','explist','local'):$dayex
+teststr('$params','longlist','local'):$nightex
+teststr('$params','solvent','local'):$solvex
+teststr('$params','prioritysample','local'):$prsampex
+
+        "location - findout if it is string or real"
+if ($sampex) then
+        $params[$sampex]='loc' $2ndline=''
+        shell('(head -n 2 '+$filename+' | '+$tailX+' -n 1)'):$2ndline
+        strsv2array($2ndline,','):$2ndline
+        format($2ndline[$sampex],'upper'):$tmploc
+        if typeof('$tmploc') then
+                $loctype='string'
+        else
+                $loctype='real'
+        endif
+endif
+
+"**************************************************************"
+"*********Check for template / required parameter values*******"
+
+$tmpltpars='' $tmpltinfile=''
+$par1='' $par2='' $par3='' $par4=''
+listtmpltpars:$tmpltpars,$par1,$par2,$par3,$par4
+array2array($tmpltpars):$tmpltpars
+$tmptot=size('$tmpltpars')
+if ($tmpltpars[1]='') then $tmptot=0 endif
+if ($tmptot) then
+   $si=1 $si2=1
+   repeat
+	teststr('$params',$tmpltpars[$si],'local'):$isinfile
+	if ($isinfile) or ($rpv<>'') then
+		$tmpltinfile[$si2]=$tmpltpars[$si]
+		$tmpltpars[$si]=''
+		$si2=$si2+1
+	endif
+	$si=$si+1
+   until $si>$tmptot
+   array2array($tmpltpars):$tmpltpars
+   $tmptot=size('$tmpltpars')
+   if ($tmpltpars[1]='') then $tmptot=0 endif
+endif
+
+//array2array($tmpltpars):$tmpltpars
+//$tmptot=size('$tmpltpars')
+$tmpfiletot=size('$tmpltinfile')
+if ($tmpltinfile[1]='') then $tmpfiletot=0 endif
+
+"**************************************************************"
+//"***********Prepare curexp for submission**********"
+//$curoperator=operator
+//if (seqfil<>'Submitq') and (seqfil<>'Startq') then
+//        walkupQ('new',$wqinit)
+//endif
+
+$si=1 $error=0 $popuppar=''
+if ($tmptot) then
+  repeat
+    if ({$tmpltpars[$si]} = '') then
+	$popuppar=$popuppar+' '+$tmpltpars[$si]
+	$error=1
+    endif
+    $si=$si+1
+  until $si>$tmptot
+endif
+
+if ($error) then 
+    parampopup($popuppar)
+    write('error','Populate these REQUIRED parameters and reexecute csv2cpQ')
+    shell('rm -f '+$filename):$dum
+    return
+endif
+
+$parflg='' $parlng='' $dayexp='' $niteexp=''
+walkupQ('readcpnodeexp'):$parflg,$parlng,$dayexp,$niteexp
+$parflgsize=size('$parflg')
+$parlngsize=size('$parlng')
+if ($parflg[1]='') then $parflgsize=0 endif
+if ($parlng[1]='') then $parlngsize=0 endif
+if ($parflgsize=0) and ($parlngsize=0) and ($dayex=0) and ($nightex=0) then
+	write('error','No experiment information')
+	shell('rm -f '+$filename):$dum
+	return
+endif
+"**************************************************************"
+
+write('line3','Submitting %s',$input)
+
+$totpars=size('$params')
+if ($sampex) then $params[$sampex]='' endif
+if ($rackex) then $params[$rackex]='' endif
+if ($zoneex) then $params[$zoneex]='' endif
+if ($dayex) then $params[$dayex]='' endif
+if ($nightex) then $params[$nightex]='' endif
+
+//if ($wqinit='auto') then
+//   $autosaflag='none'
+//   getautosaflag(autodir+'/enterQ'):$autosaflag
+//   if ($prsampex) or (prioritysample[1]='yes') then
+//      setautosaflag(autodir+'/enterQ','pause')
+//   endif
+//endif
+if (wqinit='enter') then
+   shell('basename '+globalenter):$autofile
+   $autofile=globalenter+'/'+$autofile
+   vnmrjcmd('tray close')
+   traydisplay='n'
+   opentray[1]='close'
+   writeparam(userdir+'/global','opentray','global','add')
+elseif (wqinit='auto') then
+   $autofile=autodir+'/enterQ'
+   vnmrjcmd('tray close')
+   traydisplay='n'
+   opentray[1]='close'
+   writeparam(userdir+'/global','opentray','global','add')
+else
+   $autofile=curexp
+endif
+
+   $sqflag=sqflag
+   sqflag='n'
+   fsave(cursqexp+'/csv2cpQpars','current')
+
+        $tkfile=curexp+'/tkfile'
+        write('reset',$tkfile)
+	$tkfile2=$tkfile+'2'
+	write('reset',$tkfile2)
+        write('file',$tkfile,'Submission from worklist:')
+	write('file',$tkfile,'    %s',$input)
+	write('file',$tkfile,'Submitted to :')
+	write('file',$tkfile,'    %s',$autofile)
+        write('file',$tkfile,'------------------------------------------------------')
+        write('file',$tkfile,'')
+	write('file',$tkfile2,'%s',$firstline)
+
+   ABORTOFF
+   $nextloc=0
+   $strloc='0'
+   $i=2
+   repeat
+        $parval='' $sampline='' $ok2submit=0
+        $head='' format($i,'lower'):$head
+        shell('(head -n '+$head+' '+$filename+' | '+$tailX+' -n 1)'):$sampline
+        strsv2array($sampline,','):$parval
+
+	$parvalsize=size('$parval')
+	if ($parvalsize < $totpars) then
+	    $txi=$parvalsize+1
+	    repeat
+		$parval[$txi]=''
+		$txi=$txi+1
+	    until $txi > $totpars
+	endif
+
+		"Location information"
+	$location=''
+	if ($wqinit='enter') or ($wqinit='auto') then
+	  if ($rackex) then
+	      	format($parval[$rackex],'isreal'):$rreal
+	      	if ($rreal) then
+		    format($parval[$rackex],'lower'):vrack
+		endif
+	  endif
+	  if ($zoneex) then
+		format($parval[$zoneex],'isreal'):$zreal
+		if ($zreal) then
+		    format($parval[$zoneex],'lower'):vzone
+	 	endif
+	  endif
+	  if ($sampex) then
+	    if ($loctype='string') then 
+		$multistring=''
+		substr($parval[$sampex],2):$multistring
+		if ($multistring='') then
+		    vloc=$parval[$sampex] 
+		    format(loc,0,0):$location
+		else
+		    $location=$parval[$sampex]
+		endif
+	    else
+		$location=$parval[$sampex]
+	    endif
+//	    if ($location<>'') then format($location,'lower'):$nextloc[$i] endif
+	    $strloc[$i]=$location
+	  else
+	    if (wqinit='enter') then nextlocQ(globalenter):$nextloc
+	    else nextlocQ:$nextloc endif
+	    format($nextloc,0,0):$location
+	    $strloc[$i]=$location
+	  endif
+	endif
+
+		"priority sample information"
+
+	if ($prsampex) then
+	    format($parval[$prsampex],'lower'):$parval[$prsampex]
+	    substr($parval[$prsampex],1):$parval[$prsampex]
+	    if ($parval[$prsampex]='y') then $parval[$prsampex]='yes' endif
+            if ($parval[$prsampex]='n') then $parval[$prsampex]='no' endif
+            if ($parval[$prsampex]='') then $parval[$prsampex]='no' endif
+	    if ($parval[$prsampex]<>'yes') and ($parval[$prsampex]<>'no') then
+		$parval[$prsampex]='no'
+	    endif
+	endif
+
+		"EXPLIST information"
+	$explist='' $expcsv='' $expsub=''
+	if ($dayex) then
+	    $explist=$parval[$dayex]
+	    shell('(echo "'+$explist+'" | sed -e \'s|-| |g\')'):$explist
+	    $expcsv=$explist
+	    string2array($explist):$explist
+	    $explisttot=size('$explist')
+	    if ($explist[1]<>'') then
+		$ei=1
+		repeat
+		   cksynonym($explist[$ei],'experiment'):$explist[$ei]
+		   $ei=$ei+1
+		until $ei>$explisttot
+	    endif
+	else
+	    $explist=$dayexp
+	    array2string($explist):$expcsv
+	endif
+	if ($explist[1]<>'') then $ok2submit=1 endif
+
+		"LONGLIST information"
+	$longlist='' $lngcsv='' $lngsub=''
+	if ($nightex) then
+	    $longlist=$parval[$nightex]
+	    shell('(echo "'+$longlist+'" | sed -e \'s|-| |g\')'):$longlist
+	    $lngcsv=$longlist
+	    string2array($longlist):$longlist
+            $longlisttot=size('$longlist')
+            if ($longlist[1]<>'') then
+                $ei=1
+                repeat
+                   cksynonym($longlist[$ei],'experiment'):$longlist[$ei]
+                   $ei=$ei+1
+                until $ei>$longlisttot
+            endif
+	else
+	    $longlist=$niteexp
+	    array2string($longlist):$lngcsv
+	endif
+	if ($longlist[1]<>'') then $ok2submit=1 endif
+
+		"Solvent information"
+	$solvent=solvent
+	if ($solvex) then
+		if $parval[$solvex]='' then $parval[$solvex]='other' endif
+		cksynonym($parval[$solvex],'solvent'):$parval[$solvex]
+		shell('(cat '+systemdir+'/solvents | grep -ci \'^'+$parval[$solvex]+'\')'):$solvok
+		$solvent=$parval[$solvex]
+		if ($solvok=0) then $ok2submit=0 endif
+	endif
+
+	if ($location='') and ($wqinit<>'acq') then $ok2submit=0 endif
+		"Proceed ONLY if location / explist / longlist conditions are"
+		"  satisfied"
+	$submiterror=0
+	if ($ok2submit) then
+	   $prioritysample=prioritysample
+//	   walkupQ('refresh')
+	   if ($dayex) or ($nightex) then
+			"Clear queue ONLY if experiments are supplied in the csv file"
+		walkupQ('clear','all')
+	   endif
+	   fread(cursqexp+'/csv2cpQpars','current','reset')
+			"Make sure operator parameter is NEVER empty"
+	   teststr('$params','operator','local'):$opex
+	   if ($opex) then
+		if $parval[$opex]='' then $parval[$opex]=owner endif
+	   endif
+	   prioritysample=$prioritysample
+	   if ($wqinit='auto') or ($wqinit='enter') then
+	     if (traymax=96) or (traymax=768) then
+               write('line3','Submitting sample# %d location %s rack %d zone %d - Please wait',$i-1,$strloc[$i],vrack,vzone)
+	     else
+	       write('line3','Submitting sample# %d location %s - Please wait',$i-1,$strloc[$i])
+	     endif
+	   else
+	       write('line3','Submitting sample information - Please wait')
+	   endif
+		"Read all supplied parameters"
+	    $txt=0
+            $x=1
+            repeat
+                if ($params[$x]<>'') then
+		  $tsok=0 $ts1='' $ts2=''
+		  strstr($params[$x],'text_string'):$tsok,$ts1,$ts2
+		  if ($tsok) and ($ts2<>'') then
+			format($ts2,'isreal'):$tsok
+		  endif
+		  if ($tsok) then
+		    ckstring($parval[$x],4):$parval[$x]
+		    if not $txt then
+                    	text($parval[$x])
+			$txt=$txt+1
+		    else
+			atext($parval[$x])
+		    endif
+		  else
+                    $is=0 $where='' $type='' $ismac=0
+                    is_param($params[$x]):$is,$where,$type
+		    if ($where<>'current') and ($where<>'global') then $is=0 endif
+		    if ($is) then 
+                       if ($type='string') then
+			   teststr('$par1',$params[$x],'local'):$tpar
+			   if ($tpar) then
+			       ckstring($parval[$x],2):$parval[$x]
+			   endif
+                           teststr('$par4',$params[$x],'local'):$tpar
+                           if ($tpar) then
+                               ckstring($parval[$x],2):$parval[$x]
+                           endif
+                           teststr('$par2',$params[$x],'local'):$tpar
+                           if ($tpar) then
+                               ckstring($parval[$x],1):$parval[$x]
+                           endif
+                           teststr('$par3',$params[$x],'local'):$tpar
+                           if ($tpar) then
+                               ckstring($parval[$x],1):$parval[$x]
+                           endif
+                           setvalue($params[$x],$parval[$x],1,$where)
+                       elseif ($type='real') then
+                           format($parval[$x],'lower'):{$params[$x]}[1]
+                       endif
+                       $usmacro='_'+$params[$x]
+                       getmacropath($usmacro):$ismac
+		       if ($ismac) then exec($usmacro) endif
+		// Get operator email address
+			if $params[$x]='operator' then
+			    teststr('$params','emailaddr','local'):$emailok
+			    if not $emailok then
+				getemailaddr($parval[$x]):emailaddr
+			    endif
+			endif
+
+		    endif
+                  endif
+                endif
+                $x=$x+1
+            until $x > $totpars
+            $filepar='csv2cpQfilename'
+            cksynonym('csv2cpQfilename','parameter'):$filepar
+            is_param($filepar):$is,$where,$type
+            if ($where<>'current') and ($where<>'global') then $is=0 endif
+            if ($type<>'string') then $is=0 endif
+            if ($is) then
+                strstr($filename2,'.','last'):$ret,$fileparval
+                if ($ret=0) then $fileparval=$filename2 endif
+                setvalue($filepar,$fileparval,1,$where)
+            endif
+
+		"Make sure all reqparval parameters have some value"
+		"  Some parameters were set by parampopup"
+		"  This is in case they are supposed to be in the file"
+		"  but has empty value"
+	    if ($tmpfiletot) then
+		$x=1
+		repeat
+		   if typeof($tmpltinfile[$x]) then
+			if {$tmpltinfile[$x]}='' then
+				{$tmpltinfile[$x]}=$rpv
+			endif
+                        if {$tmpltinfile[$x]}='' then
+                                {$tmpltinfile[$x]}='x'
+                        endif
+		   endif
+		   $x=$x+1
+		until $x> $tmpfiletot
+	    endif
+
+		"Add dayQ ONLY if supplied in the csv file"
+	    if wqinit='acq' then longQ='no' endif
+	    $longQ=longQ
+	    if ($explist[1]<>'') and ($dayex) then
+		longQ='n'
+                $exptot=size('$explist')
+                $x=1
+                repeat
+                    ckstring($explist[$x],1):$explist[$x]
+                    if ($explist[$x]<>'') then
+                        walkupQ('add',$explist[$x])
+                    endif
+                    $x=$x+1
+                until $x > $exptot
+	    endif
+	    longQ=$longQ
+
+		"Add nightQ ONLY if supplied in the csv file"
+            if ($longlist[1]<>'') and ($nightex) then
+                $lngtot=size('$longlist')
+                $x=1
+                repeat
+                   ckstring($longlist[$x],1):$longlist[$x]
+                   if ($longlist[$x]<>'') then
+			if wqinit='acq' then
+			    walkupQ('add',$longlist[$x])
+			else
+                            walkupQ('add',$longlist[$x],'long')
+			endif
+                   endif
+                   $x=$x+1
+                until $x > $lngtot
+            endif
+            walkupQ('readcpnodeexp'):$sub1,$sub2,$expsub,$lngsub
+            array2string($expsub):$expsub
+            array2string($lngsub):$lngsub
+// remember templates in the global parameters in the event they are
+// supplied as part of the csv file
+	    teststr('$params','adirtmplt','local'):$t1ok
+            teststr('$params','sdirtmplt','local'):$t2ok
+            teststr('$params','svftmplt','local'):$t3ok
+	    $svfdir=svfdir $sampdirtmplt=sampdirtmplt $svfname=svfname
+	    if $t1ok then svfdir=adirtmplt endif
+	    if $t2ok then sampdirtmplt=sdirtmplt endif
+	    if $t3ok then svfname=svftmplt endif
+
+	    if ($wqinit='auto') or ($wqinit='enter') then
+	      walkupQ('submit','location',$strloc[$i])
+	      substr($strloc[$i],1):$nextloc
+	      checklocstatus($autofile,$nextloc):$status
+	      if ($status<>'Queued') and ($status<>'NightQueue') then
+		  $submiterror=1
+		  $expsub='' $lngsub=''
+	      endif
+	    elseif ($wqacq='autodir') then
+		walkupQ('setup')
+		$strloc[$i]='0'
+		if (seqfil<>'submitQ') and (seqfil<>'StartQ') then
+		    walkupQ('new','acq')
+		endif
+	    endif
+// reset global parameters
+            svfdir=$svfdir sampdirtmplt=$sampdirtmplt svfname=$svfname
+
+	endif
+	   if ($submiterror) then
+		write('file',$tkfile,'Location (SAMPLE#): ***NOT SUBMITTED***')
+		write('file',$tkfile2,'%s',$sampline)
+	   else
+                write('file',$tkfile,'Location (SAMPLE#):  %s',$strloc[$i])
+	   endif
+	   if (traymax=96) or (traymax=768) then
+		write('file',$tkfile,'Rack : %d',vrack)
+		write('file',$tkfile,'Zone : %d',vzone)
+	   endif
+                write('file',$tkfile,'Sample (samplename):  %s',samplename)
+                write('file',$tkfile,'Solvent:  %s',$solvent)
+                write('file',$tkfile,'Requested Experiments:  %s %s',$expcsv,$lngcsv)
+		write('file',$tkfile,'Experiments during Day: %s',$expsub)
+                write('file',$tkfile,'Experiments during Night: %s',$lngsub)
+		write('file',$tkfile,'---------------------------------------')
+                write('file',$tkfile,'')
+
+	$i=$i+1
+   until $i > $total
+   ABORTON
+   sqflag=$sqflag
+   traydisplay='y'
+   walkupQ('clear','all')
+   fread(cursqexp+'/csv2cpQpars','current','reset')
+   shell('rm -f '+cursqexp+'/csv2cpQpars'):$dum
+//   walkupQ('refresh')
+   if (operator<>$curoperator) then
+	setvalue('operator',$curoperator,'global')
+   endif
+
+//   if ($wqinit='auto') then
+//        setautosaflag(autodir+'/enterQ',$autosaflag)
+//        getautosaflag(autodir+'/enterQ'):$autosaflag
+//        if ($active>-1) and ($autosaflag='none') then
+//                autora
+//        endif
+//   endif
+   if ($wqinit<>'acq') or ($wqacq='autodir') then
+        walkupQ('logout')
+        if ($wqinit<>'acq') then
+            showtray($wqinit)
+            write('line3','Submission still in progress.  Please wait for tray display...')
+	endif
+   else
+	xmhaha('refreshSQ')
+   endif
+
+   shell('(cat '+$tkfile2+' | wc -l)'):$errors
+   if ($errors>1) then
+	shell('(cat '+$tkfile2+' > '+$origfilename+'_error)'):$dum
+	printon 
+	   write('alpha','*************************************************')
+	   write('alpha','Following entries were not submitted due to error')
+	   write('alpha','  These entries are in %s_error',$origfilename)
+           write('alpha','*************************************************')
+	   cat($tkfile2)
+	printoff
+   endif
+
+   shell('(cat '+$tkfile+' > '+$origfilename+'_submitted)'):$dum
+   if ($print='print') then
+   	printon cat($tkfile) printoff
+   endif
+   shell('rm -f '+$tkfile):$dum
+   shell('rm -f '+$tkfile2):$dum
+   shell('rm -f '+$filename):$dum
+//   if ($wqinit='auto') then
+//        setautosaflag(autodir+'/enterQ',$autosaflag)
+//        getautosaflag(autodir+'/enterQ'):$autosaflag
+//        if ($active>-1) and ($autosaflag='none') then
+//                autora
+//        endif
+//   endif
+

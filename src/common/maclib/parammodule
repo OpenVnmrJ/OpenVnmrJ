@@ -1,0 +1,1699 @@
+"macro parammodule"
+// parammodule - A multifunctional macro to manage the creation and
+//               use of  the 'region' and 'sample' modules in SolidsPack
+//               automated setup macros and protocols. 
+
+
+//     OVERVIEW
+
+//     The parammodule macro contains a set of functions, set 
+//     by the first argument, which are used to set the nucleus
+//     and spectral limits for automated setup macros in SolidsPack. 
+//     Information about the nucleus, acquisition and spectral
+//     limits are supplied by the "region module", located in 
+//     the modules directory of the user or applications directory. 
+//     A call to parammodules will transfer information from the 
+//     region module to the current tree in the workspace. A copy
+//     of the region module is also stored in the "dirinfo" 
+//     directory of the current study sample directory. Subsequent 
+//     calls to the region modules in a study are to the copy in 
+//     the study. 
+
+//     The paramodule macro also manages the "sample module", which 
+//     is an alternate source of acquisition parameters for multi-
+//     dimensional spectra. use of the sample module provides the 
+//     opportunity to impose common acquisition parameters on all 
+//     experiments in a study.           
+ 
+//     FUNCTION ARGUMENTS
+
+//     This section describes the primary functions of parammodule 
+//     that areusually used in experiments. Other functions, also 
+//     described below are called by the primary functions or used 
+//     panels. 
+
+//     Argument #1 selects one of several different calls. For 1D 
+//     experiments these are 'setacqlabel', 'setacqregion' 
+//     and 'setacqdisplay'.  
+
+//     1. 'setacqlabel' returns the nucleus and a region label,
+//        which label calibration parameters in the probe file. 
+//        The nucleus and label are used with the probeparamgroup
+//        macro to load calibrations from the probe file. 
+
+//        The first argument is an error code for the filename, the 
+//        second is the nucleus and the third is the label. 
+
+//     2. 'setacqregion' sets the transmitter offset (tof, dof etc)
+//        and power (tpwr, dpwr, etc.) and loads the set of 
+//        acquisition parameters, sw, d1, at, rd, ad, etc. Note that 
+//        offset and power are set from this module (not the probe 
+//        file and so the values may be different from those used 
+//        to obtain calibrations. The functions 'setoffsetadjust' and
+//       'setpoweradjust' are used to adjust calibration vlaues in 
+//        the dataset to account for a difference in the offset or power.
+
+//        A region module sets two channels, the first with regnuc1 and
+//        the  second (usually the decoupler) with regnuc2. By default 
+//        regnuc1 sets obs (tn) and regnuc2 sets dec (dn). By default 
+//        acqusition parameters are those of regnuc1. A third argument,
+//        if it exists, sets an alternate channel (dec, dec2 etc) with
+//        regnuc1. A fourth argument, if it exists sets a channel other 
+//        than dec to regnuc2. If either of the 3rd or 4th arguments 
+//        are other than obs, dec, dec2 or dec3 then the default is set
+//        for that argument. If the 3rd and fourth arguments are the 
+//        same then only the nucleus for regnuc1 is set. 
+
+//        The first argument is an error code for the filename, the 
+//        second is the nucleus and the third is the label. The fourth
+//        return is the channel obs, dec, etc of regnuc1 and the fifth
+//        argument is the channel of regnuc2. 
+
+//        The additional functions 'setd2region' and 'setd3region'
+//        are used to set the acquisition of the indirect dimensions
+//        The syntax is identical to 'setacqregion' except that 
+//        acquisition parameters set sw1, sp1 and wp1 for d2 and sw2,
+//        sp2 and wp2 for d3. The values of ni(d2) and ni2 (d3)are 
+//        set explicitly fromfrom regat1 and regsw1. 
+
+//        It is often the case that each transfer pathway to each indirect 
+//        dimension can be set with access to an individual region module. 
+//        For example for the sequence AhYXX, 'setd3region' calls a
+//        H1-N15 module (15N evolution) 'setd2region' calls a N15-C13 module 
+//        (13C evolution) and 'setacqregion' calls a 1H-C13 region for 
+//        observe and decouple. 
+   
+//        The functions 'setacqregion2','setd2region2' and 'setd3region2'
+//        are identical to 'setacqregion','setd2region' and 'setd3region'
+//        except that acquisition parameters derive from regnuc2. These 
+//        functions can be used to derive both observe and d2 (or d3) from 
+//        the same module.  For example the 1H-13C HETCOR experiment can 
+//        be set from a single H1 C13 module using 'setacqregion' (C13 
+//        observe) and 'setd2region2' for H1 d2 evolution. The indirect
+//        1H-13C-1H HETCOR can be set with and single H1 C13 module with 
+//       'setacqregion2' (H1 observe) and 'setd2region' (C13 d2). In this
+//        case both the forward and reverse CP use calibrations from 
+//        the same (H1-C13), avoiding the need for a separate C13-H1
+//        module. 
+
+//     3. 'setacqdisplay' sets spectral limits, sp and wp, and adjusts
+//        the spectral width (sw - originally set with 'setacqregion'),
+//        to be just larger than the desired limits.  The 'setacqdisplay'
+//        function uses argument #3 to set the mode to 'full' or 'reduced'.
+//        For the mode 'full' the sw is retained or it increased to
+//        accomodate sp and wp. An increase might be necessary if 
+//        the the transmitter frequency is not within the display limits. 
+//        For the mode 'reduced' the spectral width, sw, is set 
+//        to be just greater than the diplay limits. If the transmitter 
+//        offset is outside the spectral limits, the receiver offset, 
+//        roff, is set to adjust the receiver to the center of the 
+//        display. 
+
+//        The additional functions 'setd2display' and 'setd3dsiplay'
+//        are used to set the limits of the indirect dimensions. For 
+//        reduced modes these functions may set lsfrq1 or lsfrq2 to 
+//        a value greater than 0.0.      
+
+//     Argument #2 designates the region module.  If argument #2 is
+//     numeric, N = 1,2,3 etc, it designates a global parameter 
+//     SPregionname# # = 1,N that contains the filename of the 
+//     region module. The sytems first looks for for the module file 
+//     in the the dirinfo directory of the current study and then 
+//     in the user modules directory. If a module file is found only 
+//     in an appdir it is copied to the user modules directory. 
+
+//     Module file names are specific to the experiment and the 
+//     nucleus of interest. They are either set by a specific macro
+//     that is implemented before the experiment, for example as 
+//     CARBON and PROTON are used for liquids, or they can be entered
+//     into fields in the Defaults page of the Acquisition tab, after
+//     experiment is set. 
+
+//     If Argument #2 is a string it is interpreted directly as the 
+//     module file name. This syntax is used only for special cases. 
+
+//     Observe the contents of a region module by entering its name 
+//     in the field of the Defaults page of the Aqcusition tab. Push
+//     the Edit button to view or change the values in a popup. The 
+//     Ok button resaves the module.  The Cancel button simply exits
+//     the popup. Edit first looks for the copy of the module in the 
+//     current study and then in the modules directory. If a module 
+//     is found only in an applications directory it is copied to
+//     the user directory before editing. Values in a module exist
+//     in the current data set of the workspace and are deleted when 
+//     editing is complete. The Clear button removes the name of 
+//     module and deletes the copy in the current study. 
+//     
+//     4. 'setsample1d' as Argument #1 loads acquisition parameter 
+//        values from a sample module. A numeric value for Argument
+//        #2 finds the file name of the sample module in the global
+//        parameter SPsamplename#, #=1,N. The filename can also 
+//        be found on the Defaults page of the Acquisition tab and 
+//        The file can be editted in a manner similar to the region 
+//        module.  
+
+//        The functions 'setsample2D' and 'setsample3D' are used 
+//        to also set values for multidimensional experiments. 
+
+//     Values from the sample module are usally set after those
+//     set with 'setacqregion' or 'setacqdisplay' and overide 
+//     them. The sample module is intended to be used to give 
+//     multiple experiments the same set of acquisition parameters
+//     for example the same aquisition time or number of scans. 
+
+//     One can disable loading of a numeric value from the sample 
+//     module by setting the value to -1 and one can disable a 
+//     string by setting it to 'none'. 
+//         
+//     The first return argument "$ret" of parammodule is an integer 
+//     designating errors. The return $ret > 0.5 designates correct 
+//     operation. $ret = -1 designates that the module file was not 
+//     found. $ret = -2 desginates that the global parameter SPregionname
+//     was not found. Use $ret to add error messages to setup macros. 
+
+//     MACRO SYNTAX
+
+//     For the syntax below: 
+
+//           region - is a number or string to represent the modulename.
+//        directory - is 'modules' or 'study' to designate the location. 
+//                    in the modules directory or /dirinfo in the current 
+//                    study.
+//             type - is 'region' or 'sample' to designate the type of 
+//                    module.
+//             $ret - is a number containing the error output (> 0.5 for 
+//                    success, -1 for file not found, -2 for SPregionname#
+//                    not found, # = 1,N.
+//             $geq - is a number, 1, if parameter list 1 is less than parameter
+//                    list 2 - else it is 0 - used in 'comparelists'.
+//         $retname - is the module name . 
+//         $retpath - is the full module path.
+//       $paramlist - is the list of parameters in the module.
+//     $SPparamname - contains a global parameter name, SPparamname#, # = 1,N.
+//       $paramname - contains a current parameter name, SPparamname#, # = 1,N.
+//          $retnuc - contains a calibration nucleus.
+//        $nuclabel - contains a calibration label, used to label parameters 
+//                    in the probe file. 
+   
+// parammodule('definelist',<,type>)<:$ret><,$paramlist>>
+
+//      Return a parameter list for a module in the string $paramlist. A "region"
+//      macro is the default. If "type" exists and type = 'sample', return a 
+//      "sample" parameter list.  
+
+// parammodule('definemod',<type>)<:$ret><,$paramlist>>
+
+//      Define a "region" module in the current parameter tree. By default 
+//      return a "region" parameter list as $paramlist. If type exists and 
+//      type = 'sample', define a sample module in the current parameter 
+//      tree and return a "sample" parameter list.  
+
+// parammodule('paramname',<region><,type>>)<:$SPparamname><,$paramname>>
+
+//      By default define the global SPregionname# and the current regionname#. 
+//      A numeric value of region, 1,N, provides # in the name, 1,N. If type = 
+//     'sample', define SPsamplename# and samplename#, where # is region = 1,N. 
+//      If the region argument does not exist # = 1.  
+
+// parammodule('removename',<region><,type>>)
+
+//      By default remove the global SPregionname# and the current regionname#, 
+//      A numeric value of region, 1,N, provides # in the name, 1,N. If type = 
+//     'sample', remove SPsamplename# and samplename#, where # is region = 1,N. 
+//      If the region argument does not exist # = 1.  
+
+// parammodule('modulename',<region><,type>>)<:$retname>
+
+//      Return the module name from SPregionname# as $retname. A numeric value
+//      of region, 1,N, provides # in the name, 1,N. If type = 'sample', remove 
+//      SPsamplename# and samplename#, where # is region = 1,N. If the region 
+//      argument does not exist # = 1.  
+      
+// parammodule('comparelists',<list1><,list2>>)<:$geq>
+
+//      Compare two strings that represent parameter lists. Find all the elements
+//      of list1 in list2 and return $geq = 1 if found, else return $geq = 0.    
+
+// parammodule('existsmod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//      Find a region module file with filename determined by region. If region is 
+//      numeric check SPregionname, else read name directly. If directory = 'module'
+//      or is not present look in the the user or appdir modules diretory. If 
+//      directory = 'study' look in dirinfo of the current study. If directory = 'cp'
+//      look in the autodir if auto = 'y', else the current experiment if auto = 'n'. 
+//      If directory = 'file' interpret region as a string containing the full path. 
+//      If type exists and type = 'sample' check for a sample module from SPsamplename
+//      in the input directory. Return $ret > 0.5 if success, $ret = 0 if the module file
+//      is not found, $ret = -1 if a module name is not set. Return 
+//      $retname, the name, $retpath, the full path and $paramlist the list of 
+//      parameters. 
+
+// parammodule('getmod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Get the values of a module file and represent them as parameters in the 
+//       current tree in the dataset, if the module exists. This function uses 
+//       'existsmod' to determine the existence of the module and the return values. 
+
+// parammodule('initmod',<region><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Get the values of module file in the modules directory of a user or an 
+//       appdir and represent them as parameters in the current tree in the 
+//       dataset, if the module exists. Uses 'existsmod' to determine the existence 
+//       of the module and the return values. If the module does not exist define 
+//       the current values with 'definemod' instead and write them to a file in 
+//       modules directory.  
+
+// parammodule('savemod',<region><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Save the new values of a module file from the parameters in the current 
+//       tree, for a module determined by region, directory and type. The module 
+//       need not previously exist. Uses the syntax of 'existsmod' to determine 
+//       the location of the file and the return values. 
+
+// parammodule('updatemod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Save new values to a module from the parameters in the current tree if 
+//       the module exists. Uses 'existsmod' to determine the existence of the 
+//       module and the return values. 
+
+// parammodule('clearmod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Clear the current parameters of a module from the dataset if the module
+//       exists. Use 'existsmod' to determine the existence of the module and the 
+//       return values.
+
+// parammodule('deletemod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Delete a module file if the module exists. Use 'existsmod' to determine 
+//       the existence of the module and the return values.
+
+// parammodule('editmod',<region><,directory>><,type>>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Display the values of an existing module in a popup, if it exists. Use 
+//      'existsmod' to determine the existence of the module and the return values.
+//       The "ok" button sets 'updatemod' and the cancel button sets 'clearmod'. 
+
+// parammodule('offsetampadjust',<channel><,offset>><,amp1>>> ...<amp10>>>>>>>>>>>>)
+//                         <:$retamp1><,$retamp2>>...,$retamp10>>>>>>>>>>
+
+//       Select 'obs', 'dec', etc based on channel to select the offset tof, 
+//       dof etc. Determine the difference between offset and tof, dof etc
+//       and adjust amplitudes amp1 up to amp10 based on the equation for 
+//       specific CP. Use only for CP amplitudes, pulse amplitudes are not 
+//       compensated.
+
+// parammodule('powerampadjust',<channel><,power>><,amp1>>> ...<amp10>>>>>>>>>>>>)
+//                         <:$retpwr><,$retamp1>>...,$retamp10>>>>>>>>>>>
+
+//       Select 'obs', 'dec', etc based on channel to select the power tpwr, 
+//       dpwr etc. Determine the difference between power and tpwr, dpwr etc
+//       and adjust amplitudes amp1 up to amp10 based upon the definition of 
+//       the power in decibles and the amplitude in voltage. Use to adjust 
+//       all amplitudes if tpwr, dpwr, etc set by the region are different from 
+//       those used to obtain calibrations. 
+
+// parammodule('totalamp',<power><,amplitude>>)<:$retamp>
+
+//        Return an amplitude of 100000.0 for power = 63 and amplitude = 4095.  Use 
+//        this macro to check the results of an amplitude change using poweradjust. 
+
+// parammodule('editregionmod',<region><,type>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Display the values of the module defined for a study in a popup. Use 
+//       the syntax of 'existsmod' to determine the name of the region. First 
+//       look in the dirinfo directory of the current study and second in the 
+//       modules directory of the user or the appdir. If a file is found only 
+//       in an appdir, copy it to the user modules directory and the study 
+//       directory, if in the user modules directory copy it to the study
+//       dirinfo directory. The ok button resaves the module with changes in the 
+//       dirinfo directory of the study. The cancel button clears the parameters
+//       of the module from the dataset. If type = 'sample' then edit a sample 
+//       module.  
+
+// parammodule('setacqlabel',<region>)
+//                         <:$ret><,$retnuc>>><,$retlabel,>>>
+
+//       Return the nucleus and label for parameters for the region associated 
+//       with a study. The syntax for selecting the module is the same as that of 
+//       'editregionmod'.  
+
+// parammodule('setacqregion',<region>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Set the region, including offset, power and acquisition parameters for a 
+//       study. The syntax for selecting the module is the same as that of 
+//      'editregionmod'.  
+
+// parammodule('setacqdisplay',<region><,swtype>>)
+//                         <:$ret><,$retname>><,$retpath,>>><,$paramlist>>>>
+
+//       Reset the spectral width based on sp and wp of a region. Accoomodate 
+//       and offset outside of sp and sp + wp by changing roff and sw. If swtype
+//       is 'full', expand the spectral width to include the offset and display
+//       region.  If swtype is 'reduced', compress sw around sp and sp + wp and set 
+//       the receiver offset, roff, in the center of the display, leaving the 
+//       transmitter offset unchanged. If swtype = '' obtain the mode from the 
+//       parameter $regdf1. If the value is still '' or any other string set 'full'. 
+//       The syntax for selecting the module is the same as that of 'editregionmod'. 
+
+// parammodule('setsampleglobals')
+
+//       Copy the sampleglobals from the current dataset to the 'cp' directory, 
+//       which is autodir if auto = 'y and curexp if auto = 'n'. 
+
+// parammodule('updatesampleglobals')
+
+//       Return the sampleglobals to the current dataset from the 'cp' directory, 
+//       which is autodir if auto = 'y and curexp if auto = 'n'. 
+
+// parammodule('setsample1D',<region>)
+
+//       Obtain 1D aqcusition parameters from the 'sample' directory of a study. 
+//       The syntax for selecting the module is the same as that of 'editregionmod'.    
+
+// parammodule('studydir')
+
+//       Define a study directory if it does not already exist, using the value of 
+//       'sample'. This macro allows one to setup a study with the procedure used 
+//       in procpolotsave found in chempackQ, at the beginning of a setup macro. This 
+//       macro ensures that a study is alays defined. 
+
+// parammodule('errorcheck',<$ret><,region>><,message>>><,type>>>>>)
+
+//       Print error information based on the value of $ret (argument 2) for a 
+//       region (argument 3).  An optional Argument 4 is a message, usually set
+//       to the name of the function that is to be checked, for example, 'setacqlabel' 
+//       and Argument 5 is the module type, default 'region' or sample. Errors are:
+
+//       ($2 < -1.5):'ABORT: "message" - Module Path Does not Exist' 
+//       ($2 < -0.5):'ABORT: "message" - A Module File Name is not Set'
+//       ($2 < 0.5): 'ABORT: "message" - Module File "modulename" Not Found'
+//       (else):     'MODINFO: "message" - Module "modulename" was Set'
+//       ABORT conditions abort the setup macro. MODINFO conditions allow the 
+//       macro to continue.
+
+// parammodule('infocheck',<$ret><,region>><,message>>><,type>>>>>)
+
+//       Print error information based on the value of $ret (argument 2) for a 
+//       region (argument 3).  An optional Argument 4 is a message usually set
+//       to the name of the function that is to be checked, for example, 'setacqlabel' 
+//       and Argument 5 is the module type, default 'region' or sample. Errors are:
+
+//       ($2 < -1.5):'ABORT: "message" - Module Path Does not Exist' 
+//       ($2 < -0.5):'MODINFO: "message" - A Module File Name is not Set'
+//       ($2 < 0.5): 'MODINFO: "message" - Module File "modulename" Not Found'
+//       (else):     'MODINFO: "message" - Module "modulename" was Set'
+//       ABORT conditions abort the setup macro. MODINFO conditions allow the 
+//       macro to continue.
+
+//********************************************************
+// Function List - Check for a valid function Argument $1
+//********************************************************
+
+if (($1 <> 'definelist') and      
+    ($1 <> 'definemod') and    
+    ($1 <> 'paramname') and
+    ($1 <> 'removename') and
+    ($1 <> 'modulename') and
+    ($1 <> 'comparelists') and
+    ($1 <> 'existsmod') and
+    ($1 <> 'getmod') and
+    ($1 <> 'initmod') and
+    ($1 <> 'savemod') and
+    ($1 <> 'updatemod') and
+    ($1 <> 'clearmod') and
+    ($1 <> 'deletemod') and   
+    ($1 <> 'editmod') and
+    ($1 <> 'offsetampadjust') and
+    ($1 <> 'powerampadjust') and
+    ($1 <> 'totalamp') and
+    ($1 <> 'editregionmod') and      
+    ($1 <> 'setacqlabel') and
+    ($1 <> 'setacqregion') and
+    ($1 <> 'setd2region') and
+    ($1 <> 'setd3region') and
+    ($1 <> 'setacqregion2') and
+    ($1 <> 'setd2region2') and
+    ($1 <> 'setd3region2') and
+    ($1 <> 'setacqdisplay') and
+    ($1 <> 'setacqdisplay2') and
+    ($1 <> 'setsampleglobals') and
+    ($1 <> 'updatesampleglobals') and
+    ($1 <> 'setsample1D') and
+    ($1 <> 'studydir') and 
+    ($1 <> 'errorcheck') and 
+    ($1 <> 'infocheck')) then
+   write('line3','parammodule error: Function "%s" is not found\n',$1)
+   abort
+endif
+
+   if ($1 = 'definelist') then 
+      
+      if ($# < 2) then $2 = 'region' endif
+
+      $ret = 1  
+      if ($2 = 'region') then 
+
+         $paramlist = 'regname reglabel reg1nuc reg2nuc reg1cen reg2cen '
+         $paramlist = $paramlist + 'reg1pwr reg2pwr reg1sp reg1wp reg2sp reg2wp '
+         $paramlist = $paramlist + 'reg1df reg2df reg1sw reg2sw reg1ad reg1rd '
+         $paramlist = $paramlist + 'reg2ad reg2rd reg1ddrtc reg2ddrtc reg1d1 reg2d1 '
+         $paramlist = $paramlist + 'reg1at reg2at reg1nt reg2nt reg1ss reg2ss '
+         $paramlist = $paramlist + 'reg1gain reg2gain'
+      elseif ($2 = 'sample') then 
+
+         $paramlist='nuc1d1 nuc2d1 nuc1nt nuc2nt nuc1np nuc2np nuc1ni nuc2ni '
+         $paramlist=$paramlist + 'nuc1ni2 nuc2ni2 nuc1nimax nuc2nimax nuc1ni2max '
+         $paramlist=$paramlist + 'nuc2ni2max XXSPARSE XXstype XXnusfilename '
+         $paramlist=$paramlist + 'nuc1sw nuc2sw nuc1sw1 nuc2sw1 nuc1sw2 nuc2sw2 '
+         $paramlist=$paramlist + 'nuc1at nuc2at'
+      else
+         $ret = 0
+      endif         
+      return($ret,$paramlist)
+   endif
+   
+   if ($1 = 'definemod') then
+
+      if ($# < 2) then $2 = 'region' endif
+
+      $ret = 0 $paramlist = ''
+      if ($2 = 'region') then 
+
+         paramgroup('params','',             'regname','string','xx',
+                                             'reglabel','string','xx',   
+                                             'reg1nuc','string','C13',
+                                             'reg2nuc','string','H1',
+                                             'reg1cen','real',100.0,
+                                             'reg2cen','real',5.0,
+                                             'reg1pwr','real',54.0,
+                                             'reg2pwr','real',54.0,
+                                             'reg1sp','real',0.0,
+                                             'reg1wp','real',200.0)
+
+         paramgroup('params','',             'reg2sp','real',0.0,
+                                             'reg2wp','real',10.0,
+                                             'reg1df','string','f', 
+                                             'reg2df','string','f',
+                                             'reg1sw','frequency',100000.0,
+                                             'reg2sw','frequency',100000.0,
+                                             'reg1ad','pulse',4.0,
+                                             'reg1rd','pulse',4.0,
+                                             'reg2ad','pulse',4.0,
+                                             'reg2rd','pulse',4.0)
+
+         paramgroup('params','',             'reg1ddrtc','pulse',8.0, 
+                                             'reg2ddrtc','pulse',8.0, 
+                                             'reg1d1','delay',1.0,
+                                             'reg2d1','delay',1.0,
+                                             'reg1at','delay',10.0e-3,
+                                             'reg2at','delay',10.0e-3,
+                                             'reg1nt','integer',4,
+                                             'reg2nt','integer',4,
+                                             'reg1ss','integer',0,
+                                             'reg2ss','integer',0)
+
+         paramgroup('params','',             'reg1gain','integer',30,
+                                             'reg2gain','integer',30)
+
+         parammodule('definelist'):$ret,$paramlist
+      elseif ($2 = 'sample') then 
+
+         paramgroup('params','',             'nuc1d1','real',-1,
+                                             'nuc2d1','real',-1,
+                                             'nuc1nt','integer',-1,
+                                             'nuc2nt','integer',-1,
+                                             'nuc1np','integer',-1,
+                                             'nuc2np','integer',-1,
+                                             'nuc1at','real',-1,
+                                             'nuc2at','real',-1,
+                                             'nuc1ni','integer',-1,
+                                             'nuc2ni','integer',-1)
+
+         paramgroup('params','',             'nuc1ni2','integer',-1,
+                                             'nuc2ni2','integer',-1,
+                                             'nuc1nimax','integer',-1,
+                                             'nuc2nimax','integer',-1,
+                                             'nuc1ni2max','integer',-1,
+                                             'nuc2ni2max','integer',-1,
+                                             'nuc1sw','frequency',-1,
+                                             'nuc2sw','frequency',-1,
+                                             'nuc1sw1','frequency',-1,
+                                             'nuc2sw1','frequency',-1)
+
+         paramgroup('params','',             'nuc1sw2','frequency',-1,
+                                             'nuc2sw2','frequency',-1,
+                                             'XXSPARSE','string','n',
+                                             'XXstype','string','a',
+                                             'XXnusfilename','string','')
+
+         parammodule('definelist','sample'):$ret,$paramlist
+      else 
+         $ret = 0
+      endif
+      return($ret,$paramlist)
+   endif
+
+   if ($1 = 'paramname') then
+
+      if ($# < 3) then $3 = 'region' endif
+
+      $numberstring='1'
+      if ($# > 1) then 
+         format($2,1,0):$numberstring
+      endif 
+//      write('line3','$numberstring = %s\n',$numberstring)
+      $paramname = $3 + 'name' + $numberstring
+//      write('line3','$paramname = %s\n',$paramname)
+      exists($paramname,'parameter'):$e
+      if ($e < 0.5) then
+         create($paramname,'string')
+         {$paramname} = ''
+      endif 
+
+      $SPparamname = 'SP' + $3 + 'name' + $numberstring
+//      write('line3','$SPparamname = %s\n',$SPparamname)
+      exists($SPparamname,'parameter','global'):$e
+//      write('line3','$e = %d\n',$e)
+      if ($e < 0.5) then
+         create($SPparamname,'string','global')
+         {$SPparamname} = ''
+      endif
+      return($SPparamname,$paramname)
+   endif
+
+   if ($1 = 'removename') then
+
+      if ($# < 3) then $3 = 'region' endif
+
+      $numberstring='1'
+      if ($# > 1) then 
+         format($2,1,0):$numberstring
+      endif 
+//      write('line3','$numberstring = %s\n',$numberstring)
+      $paramname = $3 + 'name' + $numberstring
+      exists($paramname,'parameter'):$e
+      if ($e > 0.5) then
+         destroy($paramname)
+      endif 
+
+      $SPparamname =  'SP' + $3 + 'name' + $numberstring
+      exists($SPparamname,'parameter','global'):$e
+      if ($e > 0.5) then
+         destroy($SPparamname,'global')
+      endif
+   endif
+
+   if ($1 = 'modulename') then
+
+      if ($# < 3) then $3 = 'region' endif
+      $modulename = ''
+      $SPparamname = '' 
+      if (typeof('$2') < 0.5) then         
+         parammodule('paramname',$2,$3):$SPparamname
+         $modulename = {$SPparamname}
+      else 
+         $modulename = $2
+      endif
+//      write('line3','$NAMEmodulename = %s\n',$modulename)
+      return($modulename)
+   endif 
+
+   if ($1 = 'comparelists') then 
+
+      $eq = 1
+      substr($2,'wc'):$defwc
+      substr($3,'wc'):$testwc     
+      if ($testwc < $defwc) then 
+         $eq = 0
+      endif
+      if ($eq > 0) then 
+         $index = 0
+         $paramex = 1 $paramname =''
+         while (($index <= $defwc) and ($paramex > 0)) do 
+            $index = $index + 1
+            substr($2,$index):$paramname
+            substr($3,'find',$paramname):$paramex
+         endwhile
+         $index = $index - 1
+         if ($index < $defwc) then
+            $eq = 0
+         endif  
+      endif
+      return($eq)     
+   endif
+        
+   if ($1 = 'existsmod') then
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif
+      parammodule('modulename',$2,$4):$modulename
+      if ($modulename = '') then 
+         return(-1,'','','')
+      endif
+      if ($# < 3) then $3 = 'modules' endif
+      $ex = 0 $retpath = ''
+      if ($3 = 'modules') then 
+         exists($modulename,$3):$ex,$retpath 
+      elseif ($3 = 'cp') then 
+         if (auto='y') then 
+            $retpath = autodir
+         else $retpath = curexp endif
+         $retpath = $retpath + '/' + $modulename
+         exists($retpath,'file'):$ex,$retpath  
+      elseif ($3 = 'study') then
+         if (sample <> '') then 
+            $retpath = archivedir+'/'+sample+'/dirinfo/'+ $modulename
+            exists($retpath,'file'):$ex,$retpath 
+         endif
+      elseif ($3 = 'file') then 
+         $retpath = $2
+         exists($retpath,'file'):$ex,$retpath
+         substr($retpath,'dirname'):$basename,$modulename
+      else
+         return(-2,'','','')          
+      endif 
+//      write('line3','$EXISTSmodulename = %s\n',$modulename)
+//      write('line3','$EXISTSex = %d\n',$ex)
+      $paramlist=''
+      if ($ex > 0.5) then
+         $defparamlist = ''
+         parammodule('definelist',$4):$ret,$defparamlist
+         write('reset','/vnmr/tmp/modulelist')
+         shell('diffparams -list /vnmr/tmp/modulelist '+ $retpath):$paramlist
+	 shell('rm -f /vnmr/tmp/modulelist'):$dum
+         $cex = 0
+         parammodule('comparelists',$defparamlist,$paramlist):$cex
+         if ($cex = 0) then
+            $ex = 0
+         endif
+      endif
+//      write('line3','$EXISTS2modulename = %s\n',$modulename)
+//      write('line3','$EXISTS2ex = %d\n',$ex)
+      return($ex,$modulename,$retpath,$paramlist)
+   endif 
+
+   if ($1 = 'getmod') then 
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif
+      if ($# < 3) then $3 = 'modules' endif 
+      $ex = 0 $modulename = '' $retpath = '' $paramlist = ''
+      parammodule('existsmod',$2,$3,$4):$ex,$modulename,$retpath,$paramlist
+//      write('line3','$GETmodulename = %s\n',$modulename)
+//      write('line3','$GETex = %d\n',$ex)
+      if ($ex > -0.5) then    
+         if ($ex > 0.5) then 
+            fread($retpath,'current')
+         endif
+         if ($ex > 1.5) then 
+            $retpath = userdir + '/modules/' + $modulename
+            parammodule('savemod',$modulename,'modules',$4):$ex,$modulename,$retpath,$paramlist 
+            $ex = 1
+         endif 
+      endif
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'initmod') then 
+      
+      if ($# < 3) then $3 = 'region' endif
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $modulename = '' $retpath = ''$paramlist = ''
+      parammodule('existsmod',$2,'modules',$3):$ex,$modulename,$retpath,$paramlist
+//      write('line3','$INITmodulename = %s\n',$modulename)
+//      write('line3','$INITex = %d\n',$ex)
+      if ($ex > -0.5) then 
+         if ($ex > 0.5) then 
+            fread($retpath,'current')
+         else   
+            parammodule('definemod',$3):$ret,$paramlist
+         endif   
+         parammodule('modulename',$2,$3):$modulename
+         $retpath = userdir + '/modules/' + $modulename  
+         writeparam($retpath,$paramlist,'current')
+         $ex = 1
+      endif
+//      write('line3','$INIT2modulename = %s\n',$modulename)
+//      write('line3','$INIT2ex = %d\n',$ex)
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'savemod') then 
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif
+      parammodule('modulename',$2,$4):$modulename
+      if ($modulename = '') then 
+         return(-1,'','','')
+      endif
+
+      if ($# < 3) then $3 = 'modules' endif
+      $ex = 0 $retpath = '' $paramlist = ''
+      parammodule('definelist',$4):$ret,$paramlist
+      if ($3 = 'modules') then 
+         $retpath = userdir + '/modules/' + $modulename  
+      elseif ($3 = 'cp') then 
+         if (auto='y') then 
+            $retpath = autodir
+         else $retpath = curexp endif
+         $retpath = $retpath + '/' + $modulename 
+      elseif ($3 = 'study') then 
+         if (sample <> '') then 
+            $retpath = archivedir+'/'+sample+'/dirinfo/'+ $modulename
+         endif
+      elseif ($3 = 'file') then 
+         $retpath = $2
+         substr($retpath,'dirname'):$basename,$modulename
+      else
+         return(-2,'','','')          
+      endif 
+      $ex = 0
+      if ($retpath <> '') then
+         writeparam($retpath,$paramlist,'current')
+         $ex = 1
+      endif
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'updatemod') then 
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif 
+      if ($# < 3) then $3 = 'modules' endif 
+      $ex = 0 $modulename = '' $retpath = '' $paramlist = ''
+      parammodule('existsmod',$2,$3,$4):$ex,$modulename,$retpath,$paramlist 
+      if ($ex > 0.5) then 
+         writeparam($retpath,$paramlist,'current')
+         destroy($paramlist)
+      endif
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'clearmod') then 
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif 
+      if ($# < 3) then $3 = 'modules' endif 
+      $ex = 0 $modulename = '' $retpath = '' $paramlist = ''
+      parammodule('existsmod',$2,$3,$4):$ex,$modulename,$retpath,$paramlist 
+      if ($ex > 0.5) then 
+         destroy($paramlist)
+      endif
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'deletemod') then 
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif 
+      if ($# < 3) then $3 = 'modules' endif 
+      $ex = 0 $modulename = '' $retpath = '' $paramlist = ''
+      parammodule('existsmod',$2,$3,$4):$ex,$modulename,$retpath,$paramlist
+      if ($ex > 0.5) then 
+         rm($retpath):$dum
+      endif
+      return($ex,$modulename,$retpath,$paramlist)
+   endif
+
+   if ($1 = 'editmod') then
+
+      if ($# < 4) then $4 = 'region' endif
+      if ($# < 2) then $2 = 1 endif
+      if ($# < 3) then $3 = 'modules' endif
+      $ex = 0 $modulename = '' $retpath = '' $paramlist = ''
+      parammodule('getmod',$2,$3,$4):$ex,$modulename,$retpath,$paramlist
+
+//      write('line3','$EDITmodulename = %s\n',$modulename)
+//      write('line3','$EDITex = %d\n',$ex)
+      if ($ex > 0.5) then
+         $3 = 'file'
+         $ok = 'parammodule(\'updatemod\',\'' + $retpath + '\',\'' + $3 + '\',\'' + $4 +'\')' 
+         $cancel = 'parammodule(\'clearmod\',\'' + $retpath + '\',\'' + $3 + '\',\'' + $4 +'\')'
+         parampopup($paramlist,'enter','modal',$ok,$cancel)
+      endif
+      return($ex)
+   endif
+ 
+   if ($1 = 'offsetampadjust') then
+
+      $amp = 2000.0 $pw = 4.0 $offset = 0.0
+      if ($2 = 'obs') then $amp = aX90 $pw = pwX90  $offset = tof endif
+      if ($2 = 'dec') then $amp = aH90 $pw = pwH90 $offset = dof endif
+      if ($2 = 'dec2') then $amp = aY90 $pw = pwY90 $offset = dof2 endif
+      if ($2 = 'dec3') then $amp = aZ90 $pw = pwZ90 $offset = dof3 endif
+      if ($2 = 'dec4') then $amp = aW90 $pw = pwW90 $offset = dof4 endif
+
+      $argnumber = $# - 3
+      $index = 0
+      $indexstring = ''
+      $argstring = ''
+      while ($index < $argnumber) do 
+         format($index + 4,1,0):$indexstring 
+         format($index + 1,1,0):$argstring         
+         $indexstring = '$' + $indexstring
+         $argstring = '$arg'+ $argstring
+         $index = $index + 1
+         $parval = {$indexstring} 
+
+         $deltof = $offset - $3
+         $field = (0.25/($pw*1e-6))*($parval/$amp)
+         $fac = sqrt(1.0 + $deltof*$deltof/($field*$field))
+         {$argstring} = $parval*$fac
+//         write('line3','$deltof = %f $retamp = %f\n',$deltof,{$argstring})
+//         write('line3','######################')
+      endwhile
+
+      if ($argnumber = 0) then 
+         return
+      elseif ($argnumber = 1) then
+         return($arg1)
+      elseif ($argnumber = 2) then
+         return($arg1,$arg2)
+      elseif ($argnumber = 3) then
+         return($arg1,$arg2,$arg3)
+      elseif ($argnumber = 4) then
+         return($arg1,$arg2,$arg3,$arg4)
+      elseif ($argnumber = 5) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5)
+      elseif ($argnumber = 6) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6)
+      elseif ($argnumber = 7) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7)
+      elseif ($argnumber = 8) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8)
+      elseif ($argnumber = 9) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9)
+      elseif ($argnumber = 10) then
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+      else
+         write('error','Warning: Nunber of requested values %d exceeds 10',$argnumber)
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+      endif 
+   endif
+
+   if ($1 = 'powerampadjust') then 
+  
+      $power = 63  
+      if ($2 = 'obs') then $power = tpwr endif
+      if ($2 = 'dec') then $power = dpwr endif
+      if ($2 = 'dec2') then $power = dpwr2 endif
+      if ($2 = 'dec3') then $power = dpwr3 endif
+      if ($2 = 'dec4') then $power = dpwr4 endif
+
+      $argnumber = $# - 3
+      $index = 0
+      $indexstring = ''
+      $argstring = ''
+      $ret0 = 0 $ret1 = 0
+      while ($index < $argnumber) do 
+         format($index + 4,1,0):$indexstring 
+         format($index + 1,1,0):$argstring 
+         $argstring = '$arg'+ $argstring
+         $indexstring = '$' + $indexstring
+         $index = $index + 1
+         $parval = {$indexstring} 
+         $delpwr = $power - $3
+         exp(-2.303*$delpwr/20.0):$ratio
+         $retpwr = $power
+         $retamp = $ratio*$parval
+         if ($retamp > 3000.0) then 
+            ln($retamp/3000.0):$db $db = 20.0*$db/2.303     
+            $db0 = trunc($db) $db1 = $db - $db0
+            exp(2.303*$db1/20.0):$ratio1
+            $retpwr = $retpwr + $db0
+            $retamp = 3000.0*$ratio1
+         endif
+         if ($retpwr > 63.0) then
+            $deldb = $retpwr - 63.0
+            exp(2.303*$deldb/20.0):$ratio2
+            $retpwr= 63.0
+            $retamp = $retamp*$ratio2
+         endif
+         {$argstring} = $retamp
+         
+//         write('line3','$retpwr = %f $retamp = %f\n',$retpwr,$retamp)
+//         test('totalamp',$retpwr,$retamp):$ret1
+//         write('line3','$ret0 = %f $ret1 = %f\n',$ret0,$ret1)
+//         write('line3','######################')
+      endwhile
+
+      if ($argnumber = 0) then 
+         return
+      elseif ($argnumber = 1) then
+         return($retpwr,$arg1)
+      elseif ($argnumber = 2) then
+         return($retpwr,$arg1,$arg2)
+      elseif ($argnumber = 3) then
+         return($retpwr,$arg1,$arg2,$arg3)
+      elseif ($argnumber = 4) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4)
+      elseif ($argnumber = 5) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5)
+      elseif ($argnumber = 6) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6)
+      elseif ($argnumber = 7) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7)
+      elseif ($argnumber = 8) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8)
+      elseif ($argnumber = 9) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9)
+      elseif ($argnumber = 10) then
+         return($retpwr,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+      else
+         write('error','Warning: Nunber of requested values %d exceeds 10',$argnumber)
+         return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+      endif
+   endif 
+
+   if ($1 = 'totalamp') then
+      exp(2.303*$2/20.0):$ratio
+      exp(2.303*63/20.0):$ratio63
+      $retamp = $3*$ratio*100000.0/(4095.0*$ratio63)
+      return($retamp)
+   endif 
+
+   if ($1 ='editregionmod') then 
+
+      if ($# < 2) then $2 = 1 endif
+      if ($# < 3) then $3 = 'region' endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = '' $type = ''
+      parammodule('getmod',$2,'study',$3):$ex,$regionname,$retpath,$paramlist
+      $type = 'study'
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules', $3):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules',$3):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+         $type = 'modules'
+      endif
+      if ($ex > 0.5) then
+         destroy($paramlist)
+         parammodule('editmod',$2,$type,$3):$ex,$regionname,$retpath,$paramlist
+      endif
+      return($ex,$regionname,$retpath,$paramlist)
+   endif
+
+   if ($1 ='setacqlabel') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc 
+         $ret2nuc = reg2nuc 
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif
+      return($ex,$retlabel,$ret1nuc,$ret2nuc)
+   endif
+
+   if ($1 ='setacqregion') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc
+         $ret2nuc = reg2nuc
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = reg1nuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then 
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg2pwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw = reg1sw d1 = reg1d1 nt = reg1nt ss = reg1ss gain = reg1gain 
+         at = reg1at rd = reg1rd ad = reg1ad ddrtc = reg1ddrtc
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$ret1nuc,$ret2nuc,$3,$4)
+   endif
+
+   if ($1 ='setd2region') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc 
+         $ret2nuc = reg2nuc 
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = reg1nuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then 
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg2pwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw1 = reg1sw ni1 = trunc(reg1at*reg1sw)
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$ret1nuc,$ret2nuc,$3,$4)
+   endif
+
+   if ($1 ='setd3region') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc 
+         $ret2nuc = reg2nuc
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = reg1nuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then 
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg2pwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw2 = reg2sw ni2 = trunc(reg1at*reg1sw)
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$ret1nuc,$ret2nuc,$3,$4)
+   endif
+
+   if ($1 ='setacqregion2') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc
+         $ret2nuc = reg2nuc
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = reg1nuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then               
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg2pwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw = reg2sw sp = reg2sp wp = reg2wp
+         d1 = reg2d1 nt = reg2nt ss = reg2ss  gain = reg2gain 
+         at = reg2at rd = reg2rd ad = reg2ad ddrtc = reg2ddrtc
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$ret1nuc,$ret2nuc,3,$4)
+   endif
+
+   if ($1 ='setd2region2') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc
+         $ret2nuc = reg2nuc
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = reg1nuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then 
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = re2gpwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw1 = reg2sw ni1 = trunc(reg2at*reg2sw)
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$retnuc,$retnuc,$3,$4)
+   endif
+
+   if ($1 ='setd3region2') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $ret1nuc = '' $ret2nuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc
+         $ret2nuc = reg2nuc
+         if ($# < 3) then $3 = 'obs' endif
+         if ($# < 4) then $4 = 'dec' endif
+         if (($3 <>'obs') and ($3 <>'dec') and ($3 <>'dec2') and ($3 <>'dec3')) then 
+            $3 = 'obs'
+         endif
+         if (($4 <>'obs') and ($4 <>'dec') and ($4 <>'dec2') and ($4 <>'dec3')) then 
+            $4 = 'dec'
+         endif
+         if ($3 = 'obs') then 
+            tn = regnuc
+            setref setoffset(tn,reg1cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg1pwr
+         elseif ($3 = 'dec') then 
+            dn = reg1nuc
+            setref setoffset(dn,reg1cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg1pwr
+         elseif ($3 = 'dec2') then 
+            dn2 = reg1nuc
+            setref setoffset(dn2,reg1cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg1pwr
+         elseif ($3 = 'dec3') then 
+            dn3 = reg1nuc
+            setref setoffset(dn3,reg1cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg1pwr
+         endif 
+         if ($4 <> $3) then 
+            if ($4 = 'obs') then 
+               tn = reg2nuc
+               setref setoffset(tn,reg2cen):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = reg2pwr
+            elseif ($4 = 'dec') then 
+               dn = reg2nuc
+               setref setoffset(dn,reg2cen):$dof dof=0.1*trunc($dof/0.1 + 0.5) dpwr = reg2pwr
+            elseif ($4 = 'dec2') then 
+               dn2 = reg2nuc
+               setref setoffset(dn2,reg2cen):dof2 dof2=0.1*trunc($dof2/0.1 + 0.5) dpwr2 = reg2pwr
+            elseif ($4 = 'dec3') then 
+               dn3 = reg2nuc
+               setref setoffset(dn3,reg2cen):dof3 dof3=0.1*trunc($dof3/0.1 + 0.5) dpwr3 = reg2pwr
+            endif
+         endif
+         sw2 = reg2sw ni2 = trunc(reg2at*reg2sw)
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$ret1nuc,$ret2nuc,$3,$4)
+   endif
+
+   if ($1 ='setacqdisplay') then 
+      if ($# < 2) then $2 = 1 endif
+      if ($# < 3) then $3 = 'full' endif 
+
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = '' 
+      parammodule('getmod', $2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist  
+         if ($ex > 1.5) then 
+            parammodule('savemod','modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+
+      $retlabel='' $ret1nuc='' $retmode = ''
+      if ($ex > 0.5) then 
+
+         $retlabel = reglabel
+         $ret1nuc = reg1nuc
+
+         tof=tof
+         setfrqCmd('calcReffrq',tn):$sreffrq
+         sreffrq = $sreffrq
+         $tofppm = (sfrq - $sreffrq)*1.0e6/$sreffrq
+
+         $tofacq = 0.0 $centerppm = $tofppm
+         if (($tofppm < reg1sp) or ($tofppm > reg1sp + reg1wp)) then
+            $tofacq = reg1cen - $tofppm
+            $centerppm = reg1cen
+         endif
+
+         if ($3 <> 'full') and ($3 <> 'reduced') then 
+            $3 = reg1df
+         endif  
+         if ($3 <> 'full') and ($3 <> 'reduced') then 
+            $3 = 'full'
+         endif
+         $retmode = $3  
+
+         if ($3 = 'full') then 
+
+            $swppm2 = reg1sw/(2.0*$sreffrq)
+            $roffppm = 0.0
+            if (($tofppm - $swppm2) > reg1sp) then 
+               $swppm2 = $tofppm - reg1sp
+            endif
+            if (($tofppm + $swppm2) < (reg1sp + reg1wp)) then 
+               $swppm2 = reg1sp + reg1wp - $tofppm 
+            endif 
+         elseif ($3 = 'reduced') then 
+
+            $swppm2l =  $centerppm - reg1sp
+            $swppm2u = reg1sp + reg1wp - $centerppm 
+            if ($swppm2u > $swppm2l) then 
+               $swppm2 = $swppm2u
+            else 
+               $swppm2 = $swppm2l
+            endif
+            $roffppm = $tofacq
+         endif
+               
+         $sw=5000.0*trunc(2.0*$swppm2*sreffrq/5000.0 + 1.0)
+         sw = $sw     
+         sp = reg1sp*sreffrq
+         wp = reg1wp*sreffrq
+         roff = $roffppm*$sreffrq
+         refpos = roff
+         exists('obscenterppm','parameter'):$e
+         if ($e < 0.5) then 
+            create('obscenterppm')
+         endif
+         obscenterppm = $centerppm
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif
+      return($ex,$retlabel,$ret1nuc,$paramlist)
+   endif
+
+if ($1 ='setacqdisplay2') then 
+      if ($# < 2) then $2 = 1 endif
+      if ($# < 3) then $3 = 'full' endif 
+
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = '' 
+      parammodule('getmod', $2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist  
+         if ($ex > 1.5) then 
+            parammodule('savemod','modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+
+      $retlabel='' $ret1nuc='' $retmode = ''
+      if ($ex > 0.5) then 
+
+         $retlabel = reglabel
+         $ret1nuc = reg2nuc
+
+         tof=tof
+         setfrqCmd('calcReffrq',tn):$sreffrq
+         sreffrq = $sreffrq
+         $tofppm = (sfrq - $sreffrq)*1.0e6/$sreffrq
+
+         $tofacq = 0.0 $centerppm = $tofppm
+         if (($tofppm < reg2sp) or ($tofppm > reg2sp + reg2wp)) then
+            $tofacq = reg2cen - $tofppm
+            $centerppm = reg2cen
+         endif
+
+         if ($3 <> 'full') and ($3 <> 'reduced') then 
+            $3 = reg2df
+         endif  
+         if ($3 <> 'full') and ($3 <> 'reduced') then 
+            $3 = 'full'
+         endif
+         $retmode = $3  
+
+         if ($3 = 'full') then 
+
+            $swppm2 = reg2sw/(2.0*$sreffrq)
+            $roffppm = 0.0
+            if (($tofppm - $swppm2) > reg2sp) then 
+               $swppm2 = $tofppm - reg2sp
+            endif
+            if (($tofppm + $swppm2) < (reg2sp + reg2wp)) then 
+               $swppm2 = reg2sp + reg2wp - $tofppm 
+            endif 
+         elseif ($3 = 'reduced') then 
+
+            $swppm2l =  $centerppm - reg2sp
+            $swppm2u = reg2sp + reg2wp - $centerppm 
+            if ($swppm2u > $swppm2l) then 
+               $swppm2 = $swppm2u
+            else 
+               $swppm2 = $swppm2l
+            endif
+            $roffppm = $tofacq
+         endif
+               
+         $sw=5000.0*trunc(2.0*$swppm2*sreffrq/5000.0 + 1.0)
+         sw = $sw     
+         sp = reg2sp*sreffrq
+         wp = reg2wp*sreffrq
+         roff = $roffppm*$sreffrq
+         refpos = roff
+         exists('obscenterppm','parameter'):$e
+         if ($e < 0.5) then 
+            create('obscenterppm')
+         endif
+         obscenterppm = $centerppm
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif
+      return($ex,$retlabel,$ret1nuc,$paramlist)
+   endif
+
+   if ($1 = 'setsampleglobals') then 
+
+      //resetsampglobal
+      $autosaveplot='plot'
+      getadminfo('autosaveplot'):$autosaveplot
+      strstr($autosaveplot,'plot'):$isplot
+      if ($isplot) then pltopt='y' else pltopt='n' endif
+      userplotter=plotter
+      $exsampglobal=0
+      if ($exsampglobal < 0.5) then 
+         savesampglobal('cp')
+      endif 
+   endif
+
+   if ($1 = 'updatesampleglobals') then 
+
+      updatesampglobal
+      getsampglobal('cp')
+   endif
+
+  if ($1 ='setsample1D') then 
+  
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $samplename = '' $retpath = '' $paramlist = ''     
+      parammodule('getmod',$2,'study','sample'):$ex,$samplename,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules','sample'):$ex,$samplename,$retpath,$paramlist
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules','sample'):$ex,$samplename,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      if ($ex > 0.5) then
+         if (nuc1d1>0.0) then d1=nuc1d1 endif
+         if (nuc1nt>0.0) then nt=nuc1nt endif
+         if (nuc1sw>0.0) then sw=nuc1sw endif
+         if (nuc1at>0.0) then at=nuc1at endif
+         if (nuc1np>0.0) then np=nuc1np endif 
+         parammodule('savemod',$2,'study','sample'):$ex,$samplename,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex)
+   endif
+
+   if ($1 = 'studydir') then 
+
+      updatesampglobal
+     
+      if (adirtmplt='') then
+         setadirtmplt
+	 setvalue('adirtmplt',adirtmplt,'processed')
+      endif
+      setadirtmplt
+
+      if (svftmplt='') then
+         setsvftmplt
+	 setvalue('svftmplt',svftmplt,'processed')
+      endif
+
+      if (sdirtmplt='') then
+         setsdirtmplt
+         setvalue('sdirtmplt',sdirtmplt,'processed')
+      endif
+      if (sample='') or (archivedir='') then 
+         Automkdir
+         setvalue('sample',sample,'processed')
+         setvalue('samplename',samplename,'processed')
+         setvalue('nameprefix',nameprefix,'processed')
+         setvalue('archivedir',archivedir,'processed')
+         savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+      else
+         exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$ex
+         if ($ex=0) then
+            Automkdir
+  	    setvalue('sample',sample,'processed')
+  	    setvalue('samplename',samplename,'processed')
+  	    setvalue('nameprefix',nameprefix,'processed')
+	    setvalue('archivedir',archivedir,'processed')
+            savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+         endif
+      endif
+   endif
+
+   if ($1 ='setd2region') then 
+
+      if ($# < 2) then $2 = 1 endif
+      $ex = 0 $regionname = '' $retpath = '' $paramlist = ''  
+      parammodule('getmod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+      if ($ex < 0.5) then 
+         parammodule('getmod',$2,'modules'):$ex,$regionname,$retpath,$paramlist   
+         if ($ex > 1.5) then 
+            parammodule('savemod',$2,'modules'):$ex,$regionname,$retpath,$paramlist
+            $ex = 1
+         endif
+      endif
+      $retlabel = '' $retnuc = ''
+      if ($ex > 0.5) then 
+         $retlabel = reglabel
+         $retnuc = regnuc1 
+         tn = regnuc1 dn = regnuc2 dn2 = regnuc3 
+         setref setoffset(tn,regcen1):$tof tof=0.1*trunc($tof/0.1 + 0.5) tpwr = regpwr1
+         setref setoffset(dn,regcen2):$dof dof=0.1*trunc($tof/0.1 + 0.5) dpwr = regpwr2
+         sw = regsw1 sp = regsp1 wp = regwp1
+         d1 = regd1 nt = regnt ss = regss bs = regbs gain = reggain 
+         at = regat1 rd = regrd ad = regad ddrtc = regddrtc
+         parammodule('savemod',$2,'study'):$ex,$regionname,$retpath,$paramlist
+         destroy($paramlist)
+      endif 
+      return($ex,$retlabel,$retnuc,$paramlist)
+   endif
+
+   if ($1 = 'errorcheck') then
+      if ($# < 3) then $3 = 1 endif
+      if ($# < 4) then $4 = '' endif
+      if ($# < 5) then $5 = 'region' endif
+      if ($2  < - 1.5) then 
+         write('error','ABORT: %s - Module Path Does not Exist',$4)
+         abort
+      elseif ($2  < - 0.5) then 
+         write('line3','ABORT: %s - A Module File Name is not Set',$4)
+         abort
+      elseif ($2 <  0.5) then 
+         parammodule('modulename',$3,$5):$modname
+         write('line3','ABORT: %s - Module File %s Not Found',$4,$modname)
+         abort
+      else 
+         parammodule('modulename',$3,$5):$modname
+         write('line3','MODINFO: %s - Module %s was Set',$4,$modname)
+      endif 
+   endif
+      
+   if ($1 = 'infocheck') then
+      if ($# < 3) then $3 = 1 endif
+      if ($# < 4) then $4 = '' endif
+      if ($# < 5) then $5 = 'region' endif
+      if ($2  < - 1.5) then 
+         write('error','ABORT: %s - Module Path Does not Exist',$4)
+      elseif ($2  < - 0.5) then 
+         write('line3','MODINFO: %s - A Module File Name is not Set',$4)
+      elseif ($2 <  0.5) then 
+         parammodule('modulename',$3,$5):$modname
+         write('line3','MODINFO: %s - Module File %s Not Found',$4,$modname)
+      else 
+         parammodule('modulename',$3,$5):$modname
+         write('line3','MODINFO: %s - Module %s was Set',$4,$modname)
+      endif 
+   endif
+
+         

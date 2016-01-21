@@ -1,0 +1,35 @@
+"macro Mupdatepulsecal"
+"  Mupdatepulsecal"
+
+ft('noft')
+$i = 0
+$max = 0
+wp = sw
+sp = 0
+repeat
+
+  $i = $i + 1
+  select($i)
+  peak:$height
+
+  if ($height > $max) then
+    $max = $height
+    $index = $i
+  endif
+
+until ($i = arraydim)
+
+ft
+select($index)
+vp=0
+$scale = 0.8*wc2max
+vsadj($scale)
+dssh dssl
+
+$tpwr2max = tpwr1[$index] + 6
+
+write('line3','highest profile: #%d tpwr2=%5.0f',$index, $tpwr2max)
+input('Do you want to update the pulsecal database? [y/n]: '):$input
+if ($input = 'y') then
+  pulsecal(rfcoil,p2pat,p2,180,$tpwr2max)
+endif

@@ -1,0 +1,131 @@
+"macro solids1d"
+/* the solids1d Apptype Macro*/
+
+/* Obtain Action and Parameter Set from Arguments */
+
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+/* Setup Action*/ 
+
+if ($action = 'setup') then
+
+/* Save Nuclei */
+
+  $tn = ''
+  exists('tn','parameter'):$e
+  if ($e > 0.5) then 
+     $tn = tn
+  endif
+  $dn = ''
+  exists('dn','parameter'):$e
+  if ($e > 0.5) then 
+     $dn = dn
+  endif
+  $dn2 = ''
+  exists('dn2','parameter'):$e
+  if ($e > 0.5) then 
+     $dn2 = dn2
+  endif
+  $dn3 = ''
+  exists('dn3','parameter'):$e
+  if ($e > 0.5) then 
+     $dn3 = dn3
+  endif
+
+ /* Obtain and Load the Desired Parameters */
+
+  if ($do = '') then
+    $do = macro   
+  endif
+
+  exists($do,'parlib'):$e,$path
+  if ($e) then
+    rtp($path) 
+  else
+    write('error','Parameters For %s do not Exist',macro)
+    return
+  endif
+
+/* Retrieve Nuclei*/
+
+  exists('tn','parameter'):$e
+  if ($e > 0.5) then 
+     tn = $tn
+  endif  
+
+  exists('dn','parameter'):$e
+  if ($e > 0.5) then 
+     dn = $dn
+  endif
+
+  exists('dn2','parameter'):$e
+  if ($e > 0.5) then 
+     dn2 = $dn2
+  endif
+
+  exists('dn3','parameter'):$e
+  if ($e > 0.5) then 
+     dn3 = $dn3
+  endif
+  
+/*Get Parameters from Probe File and Setup */
+ 
+  if (tn  <> '') then getsolidsprobedata('tn') endif
+  if (dn  <> '') then getsolidsprobedata('dn') endif
+  if (dn2 <> '') then getsolidsprobedata('dn2') endif
+  if (dn3 <> '') then getsolidsprobedata('dn3') endif
+
+/* Set the Layout Parameter */
+
+   exists('layout','parameter'):$e
+   if ($e < 0.5) then 
+      create('layout','string')
+   endif
+   layout = seqfil
+
+/* Clear all bit-14 Protection and Destroy clearparams */
+
+   setprotect('','clear',16384)
+   exists('clearparams','parameter'):$e
+   if ($e > 0.5) then 
+      destroy('clearparams','current')
+   endif
+   
+/* Run a User Customization Macro if it Exists */
+  
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    exec(wrtp)
+  endif
+
+/* Standardize Display */ 
+
+  setref('setup')
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+
+/* Execute any Sequence-specific Setup*/ 
+
+  execseq('setup')
+  newdg dg
+
+/* No Process Action */
+
+elseif ($action = 'process') then
+  write('line3','Warning: No Sequence-specfic processing')
+
+/* No Plot Action */
+
+elseif ($action = 'plot') then
+  write('line3','Warning: No Sequence-specfic plotting')
+endif
+
+
+

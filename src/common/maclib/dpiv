@@ -1,0 +1,296 @@
+"macro dpiv"
+" ************************ "
+" *** macro piv / dpiv *** "
+" ************************ "
+
+" Usage:  dpiv<(vertical_offset)>					"
+"	  dpivn<(vertical_offset)>					"
+"	  piv<(vertical_offset)>					"
+"	  pivn<(vertical_offset)>					"
+
+" Description:								"
+"    Equivalent to pir / dpir, but with improved layout:		"
+"	- different (less space-consuming) integral bracket style	"
+"	- vertical labels, allowing for narrower regions		"
+"	- avoids label overlap						"
+"	- intelligent, more flexible vertical positioning		"
+"    The vertical position defaults to a location just underneath the	"
+"    scale labels, assuming there is enough room below the scale.	"
+"    If the vertical position is too low, the vertical position	is	"
+"    allowed to approach the position of the spectrum up to 1 mm.	"
+"    If the spectral position is so low that the integral labels over-	"
+"    lap with the spectrum, an error message is produced (indicacating	"
+"    the minimum vp), and the command aborts. No error message is	"
+"    produced in case of overlap with the scale. The minimum for vp	"
+"    depends on the plotter and the character size, and in the case of	"
+"    'dpiv' also on the size of the grapohics window.			"
+"    With an optional argument the vertical position can be forced to	"
+"    any value, no checking is done, and no error message will be pro-	"
+"    duced in case of overlap. piv(vp-2) will produce integral labels	"
+"    with the brackets ending 2 mm below the position of the spectrum.	"
+
+" 1992-07-07  r.kyburz (first version)					"
+" 1992-07-08  r.kyburz (heavily expanded, added piv part)		"
+" 1992-07-10  r.kyburz (fine tuning)					"
+" 1992-07-13  r.kyburz (speeded/cleaned up, added dpivn/pivn)		"
+" 1992-08-11  r.kyburz (fixed last region bug, less pen moves)		"
+
+
+"=================="
+" check conditions "
+"=================="
+
+" make sure integral regions have been defined "
+numreg:$numreg
+if $numreg<1 then
+  write('error','%s:  no integral regions defined',$0)
+  return
+endif
+
+" make sure intmod is not set to 'full' "
+if intmod='full' then
+  write('error','%s:  intmod must not be set to \'full\'',$0)
+  return
+endif
+
+"==================================="
+" determine positioning and offsets "
+"==================================="
+
+" depending on calling name, select drawing device and color "
+substr($0,1,1):$disp
+if $disp='d' then
+  $device='graphics'
+  $color='pen5'
+  $active=1
+else
+  $device='plotter'
+  $color='blue'  " plotter: same color as pir / integrals "
+  $active=0
+endif
+
+" set device-specific constants "
+if $device='plotter' then
+  $ymarkoffset=2.3	" line heights below the scale line		"
+  $charxyratio=0.55	" char width vs. line height			"
+  plotinfo(plotter):$stdname,$plttype
+  if $plttype=0 then	" (for HP/GL plotters) 				"
+    $xlabelcorr=0.35	" relative x label offset in line heights	"
+  else			" (for LaserJet and other matrix plotters)	"
+    if ($plttype=1)or($plttype=2) then
+      $xlabelcorr=-0.6	" relative x label offset in line heights       "
+    else		" (for Postscript plotters)			"
+      $xlabelcorr=0.3
+    endif
+  endif
+else
+  $ymarkoffset=1.7	" line heights below the scale line		"
+  $charxyratio=0.6	" char width vs. line height			"
+  $xlabelcorr=-1.0	" relative x label offset in line heights	"
+endif
+
+" find out about character height for labels "
+$wysiwyg=wysiwyg wysiwyg='y'
+write($device,$color,0,0,''):$lineheight
+wysiwyg=$wysiwyg
+
+" determine tic length "
+$ticlength=0.3*$lineheight
+
+" scale is -5 (5 mm below spectrum); integral brackets are placed	"
+"	slightly below scale labels (by default)			"
+$markvpos= - 5 - $ymarkoffset*$lineheight
+
+" squeeze labels, just to get no overlap with numbers "
+$xlabelwidth=0.7*$lineheight
+
+" adjustment to get the center of the label into the right position "
+$xlabelcorr=$xlabelcorr*$xlabelwidth
+
+" estimate character width "
+$charwidth=$charxyratio*$lineheight
+
+" common integrals are up to 3 digits (< wc2max); we want to have	"
+"	two digits after the decimal point, resulting in a total 	"
+"	label width of 6 characters. In addition to that we want to	"
+"	have some spacing to the integral brackets.			"
+$labelvpos=$markvpos-7*$charwidth
+
+" calculate vertical positioning in absolute coordinates (not relative	"
+"	to the spectrum, but rather to 0,0 in lower left corner)	"
+" the label position can be repositioned with an optional argument	"
+$specvpos=sc2+vp
+if $#>0 then
+  $labelvpos=$1+sc2-($markvpos-$labelvpos)
+  $markvpos=$1+sc2
+else
+  $markvpos=$specvpos+$markvpos
+  $labelvpos=$specvpos+$labelvpos
+endif
+
+" make sure labels are not squeezed into the integral brackets at	"
+"	the bottom of the page						"
+if $labelvpos<-20 then
+  $diff=-20-$labelvpos
+  $labelvpos=-20
+  $markvpos=$markvpos+$diff
+  if $#=0 then
+    " for automatic vertical positioning avoid overlap with spectrum	"
+    "	overlap with scale is NOT dealt with in this macro		"
+    "   no overlap check is done for explicit positioning		"
+    $vpmin=trunc($markvpos-sc2+2)
+    if $markvpos>-1+$specvpos then
+      write('error',
+	 '%s: integral labels overlap with spectrum - increase vp to %1.0f',
+	 $0,$vpmin)
+      return
+    endif
+  endif
+endif
+
+
+"===================="
+" evaluate integrals "
+"===================="
+nli
+$amp=0
+$liampsize=size('liamp')
+if ($0='dpivn')or($0='pivn') then
+  $norm=0
+  $ix=2
+  repeat
+    $norm=$norm+liamp[$ix]
+    $ix=$ix+2
+  until $ix>$liampsize
+  $norm=ins/$norm
+else
+  substr(rev,1):$rev1
+  format($rev1,'lower'):$rev1
+  if $rev1='vnmrj' then
+    $rev=6.1
+  else
+    $rev=0
+    substr(rev,2):$rev
+  endif
+  if $rev<5.3 then	" old integration mode, based on is / ins "
+    $oldint=1
+  else
+    $oldint=0
+  endif
+  exists('oldint','parameter'):$e
+  exists('oldint','parameter','global'):$eg
+  if ($e)or($eg) then
+    if oldint='y' then
+      $oldint=1
+    endif
+  endif
+  if $oldint then	" old integration mode, based on is / ins "
+    $norm=is/(ins*fn/128)
+  else			" new integration mode, based on ins / insref "
+    $norm=ins/fn
+    exists('insref','parameter'):$e
+    if $e then
+      on('insref'):$on
+      if $on then
+        if insref>0 then
+	  $norm=$norm/insref
+	endif
+      else
+        $norm=0
+        $ix=2
+        repeat
+          $norm=$norm+liamp[$ix]
+          $ix=$ix+2
+        until $ix>$liampsize
+        $norm=ins/$norm
+      endif
+    endif
+  endif
+endif
+$ix=1
+repeat
+  $amp[$ix]=liamp[$ix]*$norm
+  $ix=$ix+1
+until $ix>$liampsize
+
+
+"==========================="
+" label integrals by region "
+"==========================="
+
+" find first integral region in display range "
+$rflrfp=rfl-rfp
+$lo=lifrq[1]-$rflrfp
+$hi=lifrq[2]-$rflrfp
+$ix=1
+while ($hi>=sp+wp)and($ix<$numreg) do
+  $ix=1+$ix
+  $lo=lifrq[2*$ix-1]-$rflrfp
+  $hi=lifrq[2*$ix]-$rflrfp
+endwhile
+
+" select device for drawing and pen / color "
+pen($device,$color)
+
+" label each integral region within the display range "
+$lastxpos=wcmax-sc-wc-$xlabelwidth
+while ($lo>sp)and($ix<=$numreg) do
+  " only integrate displayed part of a region "
+  if $lo>sp+wp then $lo=sp+wp endif
+  $lopos=wcmax-(($lo-sp)/wp*wc+sc)
+  if $hi<sp    then $hi=sp    endif
+  $hipos=wcmax-(($hi-sp)/wp*wc+sc)
+  " evaluate integral "
+  $int=$amp[2*$ix]
+
+  " label non-zero regions "
+  if $lo-$hi>0.1 then
+    if $active>0 then
+      " deactivate display by erasing spectrum and redisplaying it 	"
+      " in non-interactive mode (using dss)				"
+      select:$specno
+      dssn($specno) dssn($specno)
+      $active=0
+    endif
+    " mark integral length "
+    move($lopos,$markvpos)
+    draw($lopos,$markvpos-$ticlength)
+    draw($hipos,$markvpos-$ticlength)
+    draw($hipos,$markvpos)
+    $midmark=($lopos+$hipos)/2
+    $endticx=$midmark
+    " calculate horizontal label position "
+    $xpos=$midmark+$xlabelcorr
+    " avoid label overlap: if necessary, right-shift labels "
+    if $xpos-$lastxpos<$xlabelwidth then
+      $xpos=$lastxpos+$xlabelwidth
+      " if the label is offset, tilt the bottom tic mark "
+      if $xpos-$midmark-$xlabelcorr>=0 then
+        $endticx=$endticx+$xpos-$midmark-$xlabelcorr
+      endif
+    endif
+    " do not plot bottom tic and integral value if at end of spectrum "
+    if $endticx<wcmax-sc then
+      " draw bottom tic mark "
+      move($midmark,$markvpos-$ticlength)
+      draw($endticx,$markvpos-2*$ticlength)
+      draw($endticx,$markvpos-2.5*$ticlength)
+      " write the integral value "
+      write($device,$color,'reverse',$xpos,$labelvpos,'%6.2f',$int)
+    endif
+    " remember position of last label "
+    $lastxpos=$xpos
+  endif
+  
+  "get next region"
+  $ix=1+$ix
+  if $ix<=$numreg then
+    $lo=lifrq[2*$ix-1]-$rflrfp
+    $hi=lifrq[2*$ix]-$rflrfp
+  endif
+endwhile
+
+" in case of 'dpiv' swich to 'display_1D' menu "
+if $device='graphics' then
+  menu('display_1D')
+endif

@@ -1,0 +1,88 @@
+"macro pltext"
+" pltext<(x<,y<,width>>)>	   - plot exp. text file at position x,y "
+" pltext(filename<,x<,y<,width>>>) - plot filename at position x,y "
+
+$x=3
+$y=0.98*wc2max
+$width=0
+$file=curexp+'/text'
+$farg=0
+
+if $#>0 then
+  if typeof('$1') then
+    $file=$1
+    $farg=1
+    $arg1num=0
+  else
+    $x=$1
+    $arg1num=1
+  endif
+  if $#>1 then
+    if $arg1num=0 then $x=$2 else $y=$2 endif
+    if $#>2 then
+      if $arg1num=0 then
+	$y=$3
+	if $#>3 then $width=$4 endif
+      else
+	$width=$3
+      endif
+    endif
+  endif
+endif
+
+write('plotter',$x,$y,''):$ys	   "get the height of characters in $ys"
+$y = $y - $ys			   "position $y at bottom of the character"
+
+if ($farg=0) then       "This is the case when curexp/text is plotted"
+    exists('userpltext','maclib'):$plmacex
+    if ($plmacex) then
+        userpltext($x,$y):$x,$y
+    endif
+endif
+
+"  plot text  "
+$ok = 2
+$line=''
+$key=$file
+repeat
+  lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ok
+  if ($ok = 2) then
+    if $width=0 then
+      write('plotter',$x,$y,'%s',$line)
+      $y = $y - $ys
+    else
+      length($line):$len
+      if $len<$width then
+	write('plotter',$x,$y,'%s',$line)
+	$y = $y - $ys
+      else
+        $char=''
+        $part=''
+	repeat
+	  $ix=1 $linelen=$width
+          if $len>$width then 
+	  repeat
+	    substr($line,$ix,1):$char
+	    if $char=' ' then $linelen=$ix-1 endif
+	    $ix=1+$ix
+	  until $ix>$width
+          else $linelen=$len
+          endif
+	  substr($line,1,$linelen):$part
+	  write('plotter',$x,$y,'%s',$part)
+	  $y = $y - $ys
+	  if $linelen<$width then $linelen=$linelen+1 endif
+	  substr($line,$linelen+1,$len-$linelen):$line
+	  $len=$len-$linelen
+	until $len<1
+      endif
+    endif
+  endif
+until ($ok < 2)
+$y=$y-$ys
+
+if ($farg=0) then	"This is the case when curexp/text is plotted"
+   plexpinfo($x,$y,$ys):$x,$y,$ys
+endif
+
+return($x,$y,$ys)

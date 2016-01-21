@@ -1,0 +1,103 @@
+  ghnca_trosy_3DA - auto-calibrated version of the original sequence
+ 
+    This pulse sequence will allow one to perform the following
+    experiment:
+
+    TROSY-based 3D hnca with deuterium decoupling
+	F1 	C-alpha
+	F2 	N + JNH/2
+	F-acq	HN - JNH/2
+
+    This sequence uses the four channel configuration
+         1)  1H             - carrier @ 4.7 ppm [H2O]
+         2) 13C             - carrier @ 56 ppm (CA)
+         3) 15N             - carrier @ 120 ppm  
+         4) 2H		    - carrier @ 4.5 ppm 
+
+    Set dm = 'nnn', dmm = 'ccc' 
+    Set dm2 = 'nnn', dmm2 = 'ccc' [NO 15N decoupling during acquisition]
+    Set dm3 = 'nnn', dmm2 = 'ccn' 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [Ca]  and t2 [N]. [The fids must be manipulated
+    (add/subtract) with 'grad_sort_nd' program (or equivalent) before regular
+    processing.]
+    
+    Flags
+	fsat		'y' for presaturation of H2O
+	fscuba		'y' for apply scuba pulse after presaturation of H2O
+	f1180		'y' for 180 deg linear phase correction in F1 
+		        	otherwise 0 deg linear phase correction
+	f2180		'y' for 180 deg linear phase correction in F2
+			    otherwise 0 deg linear phase correction
+	CT_flg		'y' for constant time of t1 (C-alpha)
+	c180_flg	'y' for C-alpha refocusing in t1 (only for CT_flg='n')
+        sel_flg         'y' for active suppression of the fast relaxing
+                            component
+                        'n' for relaxation suppression of the fast relaxing
+                            component
+                         NO longer needed as of Nov 30, 2004 
+        nietl_flg       'y' suppresses the anti-trosy component with no losses in s/n
+                         (D.Nietlispach, J.Biomol.NMR, 31,161(2005))
+        shared_flg      'y' allows acquisition in F2 for longer than 2bigTN
+                            using the shared constant time principle
+
+	Standard Settings
+	fsat='n',fscuba='n',f1180='n',f2180='n',CT_flg='y'
+	c180_flg='n'
+
+      Use ampmode statement = 'dddp'
+
+    This scheme uses TROSY principle in 15N and NH with transfer of
+    magnetization achieved using the enhanced sensitivity pfg approach,
+ 
+    Yang and Kay, J. Biomol. NMR, 1999, 13, 3-9.
+    Yang and Kay, J. Am. Chem. Soc, 1999, In Press.
+ 
+    If sel_flg =='n' then the component of interest is not actively
+    selected for; relaxation will attenuate the undesired component.
+    Selection is achieved during the first N---> 13C' transfer.
+ 
+    In general it is very difficult to present rules indicating when
+    sel_flg should be set to y or n. In the case of applications at
+    750 or 800 MHz and for correlation times in excess of 20 ns the
+    sel_flg can be set to no and selection via relaxation should suffice.
+ 
+    At lower field or for smaller molecules set sel_flg == 'y', for
+    example at 500 or 600 MHz and for correlation times between 15 and 25ns
+    set sel_flg=='y'. We have used sel_flg=='n' for a molecule with a
+    correlation time of 43 ns and not observed any residual signal from
+    the undesired component.
+ 
+    See Figure 3 in Yang and Kay, J. Biomol NMR, 1999, 13, 3-9.
+
+REF: Yamazaki et. al.   J. Am. Chem. Soc. 116, 11655 (1994)
+     Yamazaki et. al.   J. Am. Chem. Soc. 116,  6464 (1994)
+     Pervushin et al. PNAS, 94, 12366-12371 (1997)
+     Pervushin et al. J. Biomol. NMR Aug 1998
+     Yang and Kay, J. Biomol. NMR, 13, 3-9.
+     Yang and Kay, J. Am. Chem. Soc., 1999, In Press.
+
+     Written by L.E.Kay, Oct 30, 1998  based on hnca_tydw.c
+
+     Setup: Delta = difference in Hz between 176 and 58 ppm
+
+     pwca90:  Use a field of delta/sq(15), on res.
+     pwca180: Use a field of delta/sq(3), on res.
+     pwcareb: Use a 375 us pulse centered at 45 ppm
+     pwcosed: Use a ~ 220 us (at 600) seduce pulse for C' inversion
+     pwco180: Used only if fCTCa == 'n'. Set to delta/sq(3), phase modulated
+              by +delta Hz.
+
+     Modified by L.E.Kay on March 3, 1999 to insert a Ca purge after the
+     15N evolution time
+
+     Modified by L.E.Kay to include the Nietlispach method
+        so that the anti-trosy component is eliminated without setting
+        sel_flg to y
+
+    USAGE: set nietl_flg to y
+    Modified by E.Kupce for autocalibration using hnca_D_trosy_lek_500a.c
+     January 2005
+    Modified by G. Gray for BioPack, Feb 2005.
+

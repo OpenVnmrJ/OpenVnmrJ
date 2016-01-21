@@ -1,0 +1,46 @@
+"macro getdirs"
+"macro testMacl"
+
+// write('line3','%s called with %d arguments',$0,$#)
+if ($#<1) then
+  write('error','getdirs must be called with a directory name and optional starting directory')
+  return('')
+endif
+$sname=$1
+if ($#=2) then
+  $dir=$2
+else
+  $dir=systemdir
+endif
+$dirs=''
+
+getfile($dir):$nfiles
+
+  $i=0
+  $name=''
+  while ($i<$nfiles) do
+     $i=$i+1
+     getfile($dir,$i):$name
+     if ($name = $sname) then
+       if ($dirs[1] = '') then
+         $dirs=$dir+'/'+$name+'/'
+       else
+         $dirs=$dirs,$dir+'/'+$name+'/'
+       endif
+     elseif ($name <> 'help') and ($name <> 'jre') and ($name <> 'nmrpipe') and ($name <> 'templates') and ($name <> 'maclib') then
+       exists($dir+'/'+$name,'directory'):$e
+       if ($e) then
+         $ndir=''
+         {$0}($1,$dir+'/'+$name):$ndir
+         if ($ndir <> '') then
+         if ($dirs[1] = '') then
+           $dirs=$ndir
+         else
+           $dirs=$dirs,$ndir
+         endif
+         endif
+
+       endif
+     endif
+  endwhile
+return($dirs)

@@ -1,0 +1,57 @@
+"macro BPauto2dBEST"
+"BPauto2dBEST(<d1 value>,<anything>) Automatic 2D "
+
+if ((BP2Dplot=1) and (BPplot<>'file')) then
+printon man('proteinpreface3PBEST') printoff
+endif
+
+
+if (BPplot='file') then
+ BPplotdir=userdir+'/Auto2DBEST'
+endif
+ 
+$date=''
+BPgetdate:$date
+
+$temp=temp
+
+  $dir=userdir+'/Auto2DBEST'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+        shell('mkdir -p ' + $dir2):$dum
+    endif
+    mv($dir,$dir2+'/Auto2DBEST_'+$date)
+  endif
+  mkdir(userdir+'/Auto2DBEST')
+
+
+best_NhsqcP
+
+if $#>0 then
+ d1=$1
+else
+ d1=.1
+endif
+
+if $#=2 then at=at/2 endif
+fn=np np=fn fn=4*np
+
+nt=2 
+if d1<0.05 then ss=64 
+ elseif d1<.1 then ss=32
+ elseif d1<.5 then ss=16
+endif
+ni=16 sw1=32*dfrq2 phase=1,2 
+calcdim
+
+wexp='BPauto2dftBEST BPauto2d2BEST'
+exptime:$acqtime $acqtime=trunc($acqtime)
+format($acqtime,2,0):n3
+n3=n3+' seconds'
+atext('automatic NH 2D experiment taking')
+atext(n3)
+temp=$temp
+au

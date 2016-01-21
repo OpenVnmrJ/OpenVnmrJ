@@ -1,0 +1,157 @@
+"macro fm_setshims"
+"Incorporated check for error file to provide user with SNR feedback from calculation"
+
+"[2] Input argument count"
+if ($# > 2.5) 
+then
+  write('error','Usage: %s(<infile>,<outfile>)',$0)
+  abort
+endif 
+
+$name_old=''
+$name_new=''
+
+if ($# > 1.5) and ($# < 2.5)
+then
+  $name_old=$1
+  $name_new=$2
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+  $name_old=$1
+  $name_new='new'
+endif
+
+if ($# < 0.5)
+then
+  fm_shimhist(3)
+  $name_old='old'
+  $name_new='new'
+endif
+
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil1='z1c' $coil2='z2c'
+else
+  $coil1='z1' $coil2='z2'
+endif
+
+$cont='n'
+
+$errfile = userdir + '/fastmap/fastmap.err'
+exists($errfile,'file'):$f
+if $f > 0.5 then
+  write('error','WARNING: FASTMAP shim calculation is unreliable ')
+  write('error','see below for error messages, if you wish to proceed, do so with caution and manually')
+  cat($errfile)
+" input('Do you wish to proceed with calculation of new shim values (y/n) ?'):$cont"
+" if $cont='n' then"
+    ABORT
+" endif"
+endif
+
+clear
+
+$f_old=userdir+'/shims/'+$name_old
+exists($f_old,'file'):$e
+if $e>0.5 then rm($f_old) endif
+svs($name_old)
+
+$dacfile = userdir+'/fastmap/dacmap.'+gcoil
+exists($dacfile,'file'):$f
+if ($f < 0.5) then
+  $dacfile = systemdir+'/fastmap/dacmap.'+gcoil
+  exists($dacfile,'file'):$f
+  if ($f < 0.5) then
+    write('error','Fastmap must be calibrated')
+    abort
+  endif
+endif
+lookup('file',$dacfile,'read',4):$nam_xz,$nam_yz,$nam_xy,$nam_x2y2,$f
+if ($f <> 4) then
+  write('error','Fastmap dac mapping file is wrong. Rerun calibration')
+  abort
+endif
+
+DAC_xz={$nam_xz} DAC_yz={$nam_yz} DAC_xy={$nam_xy} DAC_x2y2={$nam_x2y2}
+
+echo('saving old shim set in ',userdir+'/shims/'+$name_old)
+
+echo('                 x1      y1      z1      xz      yz     z2       xy     x2y2  ')
+$x1='' $y1='' $z1c='' $xz='' $yz='' $z2c='' $xy='' $x2y2=''
+format(x1,7,0):$x1   format(y1,7,0):$y1   format({$coil1},7,0):$z1c
+format(DAC_xz,7,0):$xz   format(DAC_yz,7,0):$yz   format({$coil2},7,0):$z2c
+format(DAC_xy,7,0):$xy   format(DAC_x2y2,7,0):$x2y2
+echo('started at ',$x1,$y1,$z1c,$xz,$yz,$z2c,$xy,$x2y2)
+
+$ntof=0 $nx1=0 $ny1=0 $nz1c=0 $nxz=0 $nyz=0 $nz2c=0 $nxy=0 $nx2y2=0
+lookup('file', userdir + '/fastmap/change', 'read', 9):$ntof, $nx1, $ny1, $nz1c, $nxz, $nyz, $nz2c, $nxy, $nx2y2, $nret
+if ($nret<8.5) then
+  write('error','shims not set, out of range')
+  write('file',userdir+'/fastmap/fastmap.log','shims not set, out of range (%s: couldn\'t read file)',$0)
+  ABORT
+endif
+$ux1=x1+$nx1 $uy1=y1+$ny1 $uz1c={$coil1}+$nz1c $uxz=DAC_xz+$nxz $uyz=DAC_yz+$nyz $uz2c={$coil2}+$nz2c $uxy=DAC_xy+$nxy $ux2y2=DAC_x2y2+$nx2y2
+x1=x1+$nx1 y1=y1+$ny1 {$coil1}={$coil1}+$nz1c DAC_yz=DAC_yz+$nyz DAC_xz=DAC_xz+$nxz {$coil2}={$coil2}+$nz2c DAC_xy=DAC_xy+$nxy DAC_x2y2=DAC_x2y2+$nx2y2
+
+$cx1='' $cy1='' $cz1c='' $cxz='' $cyz='' $cz2c='' $cxy='' $cx2y2=''
+format($nx1,7,0):$cx1   format($ny1,7,0):$cy1   format($nz1c,7,0):$cz1c
+format($nxz,7,0):$cxz   format($nyz,7,0):$cyz   format($nz2c,7,0):$cz2c
+format($nxy,7,0):$cxy   format($nx2y2,7,0):$cx2y2
+echo('changed by ',$cx1,$cy1,$cz1c,$cxz,$cyz,$cz2c,$cxy,$cx2y2)
+
+$sx1='' $sy1='' $sz1c='' $sxz='' $syz='' $sz2c='' $sxy='' $sx2y2=''
+format($ux1,7,0):$sx1   format($uy1,7,0):$sy1   format($uz1c,7,0):$sz1c
+format($uxz,7,0):$sxz   format($uyz,7,0):$syz   format($uz2c,7,0):$sz2c
+format($uxy,7,0):$sxy   format($ux2y2,7,0):$sx2y2
+echo('changed to ',$sx1,$sy1,$sz1c,$sxz,$syz,$sz2c,$sxy,$sx2y2)
+
+write('file',userdir+'/fastmap/fastmap.log','Proposed shim changes ')
+write('file',userdir+'/fastmap/fastmap.log','     x1      y1      z1      xz      yz      z2      xy    x2y2')
+write('file',userdir+'/fastmap/fastmap.log','%+7d %+7d %+7d %+7d %+7d %+7d %+7d %+7d',$nx1,$ny1,$nz1c,$nxz,$nyz,$nz2c,$nxy,$nx2y2)
+write('file',userdir+'/fastmap/fastmap.log','%+7d %+7d %+7d %+7d %+7d %+7d %+7d %+7d',$ux1,$uy1,$uz1c,$uxz,$uyz,$uz2c,$uxy,$ux2y2)
+
+$dxz=$uxz-DAC_xz $dyz=$uyz-DAC_yz $dz2c=$uz2c-{$coil2} $dxy=$uxy-DAC_xy $dx2y2=$ux2y2-DAC_x2y2
+
+if ($dxz<>0) or ($dyz<>0) or ($dz2c<>0) or ($dxy<>0) or ($dx2y2<>0) then
+  write('error','shims not set, 2nd order shims outside of range')
+  write('file',userdir+'/fastmap/fastmap.log','%s: shims not set, one or more 2nd order shims are outside of range',$0)
+  fm_corrshim($dxz,$dyz,$dz2c,$dxy,$dx2y2)
+endif
+
+echo('saving new shim set in ',userdir+'/shims/'+$name_new)
+exists(userdir+'/shims/'+$name_new,'file'):$f
+if $f>0.5 then
+  rm(userdir+'/shims/'+$name_new)
+endif
+svs($name_new)
+
+$psum=0
+$nsum=0
+if DAC_xz>0 then $psum=$psum+DAC_xz endif
+if DAC_yz>0 then $psum=$psum+DAC_yz endif
+if DAC_xy>0 then $psum=$psum+DAC_xy endif
+if z2>0 then $psum=$psum+z2 endif
+if DAC_x2y2>0 then $psum=$psum+DAC_x2y2 endif
+if $psum>3*parmax[19] then write('error','total pos. current exceeds 15 Amps !') endif
+
+if DAC_xz<0 then $nsum=$nsum-DAC_xz endif
+if DAC_yz<0 then $nsum=$nsum-DAC_yz endif
+if DAC_xy<0 then $nsum=$nsum-DAC_xy endif
+if z2<0 then $nsum=$nsum-z2 endif
+if DAC_x2y2<0 then $nsum=$nsum-DAC_x2y2 endif
+if $nsum>3*parmax[19] then write('error','total neg. current exceeds 15 Amps !') endif
+
+if (resto=tof)
+then
+  tof=tof
+  "+$ntof"
+endif
+write('file',userdir+'/fastmap/fastmap.log','Actual shim changes ')
+write('file',userdir+'/fastmap/fastmap.log','%+7d %+7d %+7d %+7d %+7d %+7d %+7d %+7d \n',x1,y1,{$coil1},DAC_xz,DAC_yz,{$coil2},DAC_xy,DAC_x2y2)
+
+"dacload"
+{$nam_xz}=DAC_xz {$nam_yz}=DAC_yz {$nam_xy}=DAC_xy {$nam_x2y2}=DAC_x2y2
+setallshims

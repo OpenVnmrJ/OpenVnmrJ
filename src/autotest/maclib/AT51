@@ -1,0 +1,45 @@
+"macro AT51"
+"AT51" "Gaussian 90 Degree Stability  "
+
+ 
+if ($#=0) then
+   ATrtp('standard')
+   text('90-Degree Pulse Stability on Channel 1')
+   at_currenttest='gauss_90stability_ch1'
+   seqfil='sh2pul' p1pat='gauss32' pwpat='hard' pw=0
+   vchannelmap='0'
+   p1(90) p1=2.4*pw90 cdc
+   substr(rfwg,1,1):$waveform
+   if ($waveform='n') then
+    tpwr=tpwr-12 p1=4*p1   "makes sure pw is long enough to do by psg"
+   endif
+   pwsadj('gauss32','p1')
+   array('nt',20,1,0)
+   wnt='AT51(`WNT`)'
+   wexp='AT51(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 90-Degree Gaussian Pulse Stability ')
+   dps
+elseif ($1='WNT') then
+   ATwft
+   select(1)
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   vsadj dssh dtext
+elseif ($1='PART1') then
+   wft
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB90GAUSSch1','90 Degree Gaussian Pulse Stability ','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','90 Degree Gaussian Pulse Stability : %3.3f percent',100-$stddev)
+ 
+
+ATnext
+endif

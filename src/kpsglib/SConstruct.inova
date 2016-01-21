@@ -1,0 +1,42 @@
+import os
+import glob
+import shutil
+
+#import variables  and environment from SConstruct
+Import("*")
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# get options settings
+# boFile=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'buildoptions.py')
+# if not os.path.exists(boFile):
+#    boFile=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'scripts','buildoptions.py')
+# execfile(boFile)
+
+# define target file names
+PsTargetList = glob.glob("*.c")
+PsTargetList.sort()
+
+seqlibPath = os.path.join(seqPath,'seqlib')
+Execute('rm -rf ' + seqlibPath)
+os.makedirs(seqlibPath)
+psglibPath = os.path.join(seqPath,'psglib')
+Execute('rm -rf ' + psglibPath)
+os.makedirs(psglibPath)
+
+# actual builds
+
+for file in PsTargetList:
+        i,ext = os.path.splitext(file)
+        seqLibEnv.DpsPsGen(target  =   i+'dps.c',
+                             source  =   i+'.c')
+
+        bObj = seqLibEnv.Program(target     =  i,
+                            source     =  i+'dps.c', 
+                            LIBPATH    =  [psgPath,
+                                           ncommPath],
+                            LIBS       =  ['psglib','param', 'acqcomm', 'm'])
+        seqLibEnv.AddPostAction(bObj,Action(Copy(os.path.join(seqlibPath,i), os.path.join(cwd,i) )))
+        seqLibEnv.AddPostAction(bObj,Action(Copy(os.path.join(psglibPath,file), os.path.join(cwd,file) )))

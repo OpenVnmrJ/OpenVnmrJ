@@ -1,0 +1,351 @@
+"macro dconi"
+"  *********************************  "
+"  ****  M E N U :   D C O N I  ****  "
+"  *********************************  "
+exists('buttonMode','parameter','global'):$e
+if (not $e) then
+   mfpars
+endif
+
+graphis:$vjmgd
+if (($vjmgd <> 'dconi') and ($vjmgd <> 'dpcon') 
+	and ($vjmgd <> 'dcon') and ($vjmgd <> 'ds2d')) then
+  if (lastmenu<>'') then
+    menu(lastmenu) lastmenu=''
+  else
+    menu('display_2D')
+  endif
+else
+
+  mlabel=''
+  mstring=''
+  micon=''
+
+  $vjm=1
+
+
+  getdim:$vjmdim
+  $e=-1 exists(curexp+'/datadir3d/extr','file'):$e 
+  $ei2=-1 exists('index2','parameter'):$ei2
+
+  if (($e>0.5) and ($vjmdim >2) ) then
+
+        " if we have a full-blown 3D"
+	if (procdim>2) then 
+                  "index2 does not exists on a freshly-produced3D"
+                  if($ei2>0.5) then 
+		 	mlabel[$vjm]='Plane UP'
+		  	micon[$vjm]='3D_planeUP.gif'
+		  	mstring[$vjm]='$trace=trace \
+				   $last_idx=fn2/2 if ( (plane=\'f2f3\')  or (plane=\'f3f2\') ) then $last_idx=fn1/2 endif \
+		        	                   if ( (plane=\'f1f2\')  or (plane=\'f2f1\') ) then $last_idx=fn/2  endif\
+         	        	  if((index2=0) or (index2=$last_idx))  then select(plane,1) else select(\'next\') endif\
+           	        	trace=$trace dconi'
+	 	 	$vjm=$vjm+1
+     
+		 	mlabel[$vjm]='Plane DOWN'
+	 	 	micon[$vjm]='3D_planeDOWN.gif'
+
+               		" now that one is just plain awkard"
+
+	  		mstring[$vjm]='$trace=trace\
+           	             $last_idx=fn2/2 if ( (plane=\'f2f3\')  or (plane=\'f3f2\') ) then $last_idx=fn1/2 endif \
+	    	                            if ( (plane=\'f1f2\')  or (plane=\'f2f1\') ) then $last_idx=fn/2 endif\
+            		            if( (index2<2) )  then   select(plane,$last_idx) else select(\'prev\') endif\
+            	            trace=$trace dconi'
+	  		$vjm=$vjm+1
+                   endif
+
+	  	mlabel[$vjm]='2D Projection of 3D spectrum'
+	  	micon[$vjm]='3D_proj.gif'
+	  	mstring[$vjm]='$trace=trace  select(\'plane_type\',\'proj\') trace=$trace dconi'
+	  	$vjm=$vjm+1
+
+
+          	$e_f1f3=-1 exists(curexp+'/datadir3d/extr/dataf1f3.1','file'):$e_f1f3 
+          	$e_f2f3=-1 exists(curexp+'/datadir3d/extr/dataf2f3.1','file'):$e_f2f3 
+          	$e_f1f2=-1 exists(curexp+'/datadir3d/extr/dataf1f2.1','file'):$e_f1f2 
+
+          	if (($e_f1f3 >0.5) and (plane<>'f1f3')) then
+			 mlabel[$vjm]='Transpose 3D: change 2D plane to f1f3'
+		 	 micon[$vjm]='3D_f1f3.gif'
+		 	 mstring[$vjm]='plane= \'f1f3\'  select(plane,\'proj\') trace=\'f3\' dconi'
+		 	 $vjm=$vjm+1
+	  	endif
+          
+	  	if (($e_f2f3 >0.5) and (plane<>'f2f3')) then
+          		mlabel[$vjm]='Transpose 3D: change 2D plane to f2f3'
+	  		micon[$vjm]='3D_f2f3.gif'
+	  		mstring[$vjm]='plane= \'f2f3\'   select(plane,\'proj\') trace=\'f3\' dconi'
+	  		$vjm=$vjm+1
+	  	endif
+
+	  	if (($e_f1f2 >0.5) and (plane<>'f1f2')) then
+          		mlabel[$vjm]='Transpose 3D: change 2D plane to f1f2'
+	  		micon[$vjm]='3D_f1f2.gif'
+	  		mstring[$vjm]='plane= \'f1f2\'   select(plane,\'proj\') trace=\'f2\' dconi'
+	  		$vjm=$vjm+1
+	  	endif
+         " if we have 3D data in datadir3D, but current mode is a 2D plane created by wft2d(a) command and alike"
+         else
+
+          	mlabel[$vjm]='Show 3D plane'
+	  	micon[$vjm]='3D.gif'
+
+	  	mstring[$vjm]='$trace=trace\
+                        $last_idx=fn2/2 if ( (plane=\'f2f3\')  or (plane=\'f3f2\') ) then $last_idx=fn1/2 endif \
+	                                if ( (plane=\'f1f2\')  or (plane=\'f2f1\') ) then $last_idx=fn/2 endif\
+                          select(plane,$last_idx/2)  write(`line3`,`Displaying center ` + plane + ` plane from 3D`)   \
+                          trace=$trace dconi'
+        	$vjm=$vjm+1
+ 	endif      
+
+
+  endif
+
+
+  if (crmode = 'b') then
+    mlabel[$vjm]='Cursor'
+    micon[$vjm]='2D1cur.gif'
+  else
+    mlabel[$vjm]='Box'
+    micon[$vjm]='2D2cur.gif'
+  endif
+  mstring[$vjm]='dconi(`toggle`)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Show Full Spectrum'
+  micon[$vjm]='2Dfull.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',0)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Reset to Full Display'
+  micon[$vjm]='FullScale.gif'
+  mstring[$vjm]='mfaction(\'fullzoom\')'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom in'
+  micon[$vjm]='1Dexpand.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',1)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom out'
+  micon[$vjm]='1Dzoomout.gif'
+  mstring[$vjm]='mfaction(\'mfzoom\',-1)'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Zoom mode'
+  if(buttonMode=2) then
+    mstring[$vjm]='setButtonMode(0) menu(`dconi`)'
+    micon[$vjm]='ZoomMode.gif:on'
+  else
+    mstring[$vjm]='setButtonMode(2) menu(`dconi`)' 
+    micon[$vjm]='ZoomMode.gif'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Pan & Stretch Mode'
+  if(buttonMode=3) then
+     micon[$vjm]='1Dspwp.gif:on'
+     mstring[$vjm]='setButtonMode(0) menu(`dconi`)'
+  else
+     micon[$vjm]='1Dspwp.gif'
+     mstring[$vjm]='setButtonMode(3) menu(`dconi`)'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Trace'
+  mstring[$vjm]='init_dis(`trace`) dconi(`trace`)'
+  micon[$vjm]='2Dtrace.gif'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Show/Hide Axis'
+  mstring[$vjm]='if(mfShowAxis=1) then mfShowAxis=0 else mfShowAxis=1 endif repaint'
+  if(mfShowAxis=1) then
+    micon[$vjm]='1Dscale.gif:on'
+  else 
+    micon[$vjm]='1Dscale.gif'
+  endif 
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Projections'
+  mstring[$vjm]='if(aspMode<>0) then aspSetState(0) endif newmenu(`dconi_proj`) dconi(`restart`)'
+  micon[$vjm]='2Dvhproj.gif'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Redraw'
+  mstring[$vjm]='dconi(`again`)'
+  micon[$vjm]='recycle.gif'
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Rotate'
+  mstring[$vjm]='if trace=`f2` then trace=`f1` else trace=`f2` endif dconi(`again`) if(overlayMode=3) then vpLayout(`overlayMode`,`align`) endif'
+  micon[$vjm]='2Drotate.gif'
+
+  if appmode='imaging' then
+
+    $vjm=$vjm+1
+    mlabel[$vjm] = 'Scale +7%'
+    mstring[$vjm] = 'vs2d=vs2d*1.07 dconi(`redisplay`)'
+    micon[$vjm]='2Dvs+20.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm] = 'Scale -7%'
+    mstring[$vjm] = 'vs2d=vs2d/1.07 dconi(`redisplay`)'
+    micon[$vjm]='2Dvs-20.gif'
+
+  else
+
+    $vjm=$vjm+1
+    mlabel[$vjm] = 'Scale +20%'
+    mstring[$vjm] = 'vs2d=vs2d*1.2 dconi(`again`)'
+    micon[$vjm]='2Dvs+20.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm] = 'Scale -20%'
+    mstring[$vjm] = 'vs2d=vs2d/1.2 dconi(`again`)'
+    micon[$vjm]='2Dvs-20.gif'
+
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Phase2D'
+  mstring[$vjm]='newmenu(`dconi_phase`) dconi(`trace`)'
+  micon[$vjm]='1Dphase.gif'
+
+  if appmode<>'imaging' then
+    $vjm=$vjm+1
+    mlabel[$vjm]='Peak Picking'
+    mstring[$vjm]='newmenu(`ll2d`) dconi(`restart`)'
+    micon[$vjm]='2Dpeakmainmenu.gif'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Return'
+  micon[$vjm]='return.gif'
+  if (lastmenu<>'') then
+    mstring[$vjm]='menu(lastmenu) lastmenu=``'
+  else
+    if appmode='imaging' then
+      mstring[$vjm]='menu(`main`)'
+    else
+      mstring[$vjm]='menu(`display_2D`)'
+    endif
+  endif
+
+  // separator
+  $vjm=$vjm+1
+  mlabel[$vjm]=''
+  mstring[$vjm]=''
+  micon[$vjm]='blackHorBumps.gif'
+
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='show/hide annotations'
+  aspAnno:$e,$n
+  if($e>0 and $n>0) then
+     mstring[$vjm]='aspAnno(`save`) aspAnno(`clear`)'
+     micon[$vjm]='Annotations_down.png'
+  else
+     mstring[$vjm]='aspAnno(`load`)'
+     micon[$vjm]='Annotations_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='select'
+  mstring[$vjm]='aspSetState(1)'
+  if(aspMode=1) then
+    micon[$vjm]='Select_down.png'
+  else
+    micon[$vjm]='Select_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Peak Annotation'
+  mstring[$vjm]='aspSetState(18)'
+  if(aspMode=18) then
+    micon[$vjm]='Peaks_down.png'
+  else
+    micon[$vjm]='Peaks_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Text'
+  mstring[$vjm]='aspSetState(28)'
+  if(aspMode=28) then
+    micon[$vjm]='Text_down.png'
+  else
+    micon[$vjm]='Text_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Line'
+  mstring[$vjm]='aspSetState(20)'
+  if(aspMode=20) then
+    micon[$vjm]='Line_down.png'
+  else
+    micon[$vjm]='Line_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Arrow'
+  mstring[$vjm]='aspSetState(22)'
+  if(aspMode=22) then
+    micon[$vjm]='Arrow_down.png'
+  else
+    micon[$vjm]='Arrow_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Box'
+  mstring[$vjm]='aspSetState(5)'
+  if(aspMode=5) then
+    micon[$vjm]='Rectangle_down.png'
+  else
+    micon[$vjm]='Rectangle_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Oval'
+  mstring[$vjm]='aspSetState(24)'
+  if(aspMode=24) then
+    micon[$vjm]='Circle_down.png'
+  else
+    micon[$vjm]='Circle_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Polygon'
+  mstring[$vjm]='aspSetState(26)'
+  if(aspMode=26) then
+    micon[$vjm]='Polygon_down.png'
+  else
+    micon[$vjm]='Polygon_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Polyline'
+  mstring[$vjm]='aspSetState(36)'
+  if(aspMode=36) then
+    micon[$vjm]='Open_Poly_down.png'
+  else
+    micon[$vjm]='Open_Poly_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='X Bar'
+  mstring[$vjm]='aspSetState(30)'
+  if(aspMode=30) then
+    micon[$vjm]='X_bar_down.png'
+  else
+    micon[$vjm]='X_bar_up.png'
+  endif
+
+  $vjm=$vjm+1
+  mlabel[$vjm]='Y Bar'
+  mstring[$vjm]='aspSetState(32)'
+  if(aspMode=32) then
+    micon[$vjm]='Y_bar_down.png'
+  else
+    micon[$vjm]='Y_bar_up.png'
+  endif
+
+endif

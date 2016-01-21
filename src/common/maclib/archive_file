@@ -1,0 +1,88 @@
+"macro archive_file"
+$pathkey = 'PKS' 
+if ($#>3) then $pathkey = $4 endif 
+$getpath = $1
+$putpath = $2
+
+if ($pathkey = 'PKM') then 
+   $getpath = $getpath + '/maclib'
+   $putpath = $putpath + '/maclib'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKPI') then 
+   $getpath = $getpath + '/templates/vnmrj/panelitems'
+   $putpath = $putpath + '/templates'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+   $putpath = $putpath + '/vnmrj'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+   $putpath = $putpath + '/panelitems'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKPSG') then 
+   $getpath = $getpath + '/psg'
+   $putpath = $putpath + '/psg'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKP') then 
+   $getpath = $getpath + '/templates/vnmrj/protocols'   
+   $putpath = $putpath + '/templates'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+   $putpath = $putpath + '/vnmrj'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then
+      shell('mkdir ' + $putpath)
+   endif
+   $putpath = $putpath + '/protocols'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKS') then 
+   $getpath = $getpath
+   $putpath = $putpath
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKSTDY') then 
+   $getpath = $getpath + '/studylib'
+   $putpath = $putpath + '/studylib'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+else if ($pathkey = 'PKMOD') then 
+   $getpath = $getpath + '/modules'
+   $putpath = $putpath + '/modules'
+   exists($putpath,'directory'):$e
+   if ($e < 0.5) then 
+      shell('mkdir ' + $putpath)
+   endif
+else 
+   write('line3','PATHKEY "%s" FOR NAME "%s" NOT FOUND',$pathkey,$3)
+   return 
+endif endif endif endif endif endif endif
+
+$file = $getpath + '/' + $3
+exists($file, 'file'):$e1
+exists($file, 'directory'):$e2
+if (($e1 < 0.5) and ($e2 < 0.5))then 
+   write('line3','FILE NOT FOUND: %s',$file)
+else 
+   copy('-r',$file,$putpath)
+endif 

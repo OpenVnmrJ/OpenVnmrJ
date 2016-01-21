@@ -1,0 +1,92 @@
+"macro gs_params"
+"********************************************************************
+"
+"
+" NAME:
+"    gs_params
+"
+" DESCRIPTION:
+"    Save/Load experiment parameters
+"
+"  Ex. gs_params(<argument>)
+"
+"    <argument> = 'load'  -- experiment and associated parameters are
+"                            restored.
+"    <argument> = 'save'  -- experiment and associated parameters are
+"                            saved.
+"
+"********************************************************************
+"---------------------------------"
+" Define and initialize variables "
+"---------------------------------"
+$macro_name = $0
+
+if ($# <> 1) then
+  write('error',`Use: %s(<mode>) -- <mode> is 'save'|'load'`,$0)
+  abort 
+endif
+
+exists('gshim_activeid','parameter','global'):$ex2
+if ($ex2=0) then
+    create('gshim_activeid','string','global')
+endif
+
+"----------------------------"
+" Save experiment parameters "
+"----------------------------"
+if ($1 = 'save') then
+  
+  if ((activestudy <> 'null') AND (actionid <> 'null')) then
+    $status = ''
+    xmgetatts(actionid,'status'):$status
+    if ($status <> 'Completed') then
+      gshim_activeid = actionid  "save actionid; restored after loading parameters"
+      xmselect('savepar')  "Save parameters in <nodeid>/save.par and set status='Customized'"
+    else "just save it in curexp"
+      gshim_activeid = 'null'
+      $file = curexp+'/save'
+      exists($file+'.par','file'):$e
+      if $e > 0.5 then
+        delete($file)
+      endif
+      svp($file,'nodb')
+    endif
+  else
+    $file = curexp+'/save'
+    exists($file+'.par','file'):$e
+    if $e > 0.5 then
+      delete($file)
+    endif
+    svp($file,'nodb')
+  endif
+  write('line3','Saving shimming parameters')
+
+  actionid = 'null'
+     
+     
+"----------------------------"
+" Load experiment parameters "
+"----------------------------"
+elseif ($1 = 'load') then
+
+  write('line3','Restoring shimming parameters')
+  if (activestudy <> 'null') then
+    if (gshim_activeid <> 'null') then
+      actionid = gshim_activeid
+      xmselect('macro',gshim_activeid)
+      xmsetattr('status','Active')
+    else "gshim_activeid is null, try file in curexp"
+      $file = curexp +'/save'
+      exists($file+'.par','file'):$e
+      if $e > 0.5 then
+        rtp($file,'nomenu')
+      endif
+    endif
+  else "no active study"
+    $file = curexp +'/save'
+    exists($file+'.par','file'):$e
+    if $e > 0.5 then
+      rtp($file,'nomenu')
+    endif
+  endif
+endif "save or load"

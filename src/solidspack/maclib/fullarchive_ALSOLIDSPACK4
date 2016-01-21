@@ -1,0 +1,560 @@
+"macro fullarchive_ALSOLIDSPACK4"
+// - fullarchive_ALSOLIDSPACK4: a macro to back up Solids sequences and 
+//                       their supporting files into a compressed file 
+//                       for "extract". The path of '/psglib/tancpx.c' 
+//                       determines the path of all files.  
+
+
+// Find tancpx.c in psglib to Determine Input Path
+
+$sequence_name = 'tancpx'
+format($sequence_name,'lower'):$name_lower
+substr($name_lower,1,1):$lower_character
+format($sequence_name,'upper'):$name_upper
+substr($name_upper,1,1):$upper_character
+length($sequence_name):$length
+substr($sequence_name,2,$length - 1):$last_characters
+$name_protocol = $upper_character + $last_characters
+$name_lower = $lower_character + $last_characters
+
+$isok = 0
+$basename=''
+$path=''
+exists($name_lower,'psglib'):$isok,$path
+if ($isok>0.5) then 
+  shell('dirname '+$path):$dirname
+  shell('dirname '+$dirname):$dirname
+  $input_path = $dirname
+  write('line3','Input Path for %s Files: %s\n',$name_protocol, $input_path)
+else 
+  write('line3','Sequence %s.c Not Found',$name_lower)
+  return
+endif
+
+// Set the Output filename as SOLIDSPACKVJ4
+
+$name_upper = 'SOLIDSPACKVJ4'
+$name_lower = 'solidspackvj4'
+$archive_path =  userdir + '/ARCHIVE'
+$output_path = $archive_path + '/' + $name_upper
+$backup_path = 'none'
+
+exists($archive_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $archive_path)
+endif
+   
+exists($output_path,'directory'):$e1
+if ($e1 > 0.5) then 
+   $i = 0
+   $j = 0
+   while (($i< 20) and ($j<20)) do 
+      $j = $j + 1
+      $i = $i + 1
+      $istring=''
+      format($i,1,0):$istring
+      $backup_path = $output_path + '_' + $istring
+      exists( $backup_path,'directory'):$e2
+      if ($e2 > 0.5) then 
+         if ($i = 20) then
+            write('error','Too Many Backups: Abort')
+            abort 
+         endif
+      else 
+         shell('mv ' + $output_path + ' ' + $backup_path)
+         write('error','Backup %s created',$istring)
+         $i = 20
+      endif
+   endwhile
+endif
+
+shell('mkdir ' + $output_path)
+
+"******** Create MACLIB ********"
+
+$get_path = $input_path + '/maclib'
+$put_path = $output_path +'/maclib'
+shell('mkdir ' + $put_path)
+
+// Macros for This Archive Macro
+
+archive_file($get_path,$put_path,'archive_file')
+archive_file($get_path,$put_path,'narchive_SEQUENCE4')
+archive_file($get_path,$put_path,'fullarchive')
+archive_file($get_path,$put_path,'fullarchive_ALSOLIDSPACK4')
+archive_file($get_path,$put_path,'vnmrarchive_ALSOLIDSPACK4')
+
+// System Files with Updates and New Files
+
+archive_file($get_path,$put_path,'setfrqCmd')       // Fixes Setref Bug 3.2 patch1
+archive_file($get_path,$put_path,'probeparamgroup') // Removes write statements
+archive_file($get_path,$put_path,'solids1d')        // Remove dps from solidseq1d
+archive_file($get_path,$put_path,'solidsseq1d')     // Remove dps from solidseq1d
+archive_file($get_path,$put_path,'solidsseq2d')     // Add par2D
+archive_file($get_path,$put_path,'solidsseq3d')     // Add par3d
+archive_file($get_path,$put_path,'newregion')       // New suggested System Macro
+archive_file($get_path,$put_path,'paramgroup')      // Bugfix in paramgroup - in 'phase', New rtx logic. 
+archive_file($get_path,$put_path,'fixtancpxpars')   // Modify Initial Parameter Fix
+archive_file($get_path,$put_path,'setsolidsprobedata') // Placeholder for update
+archive_file($get_path,$put_path,'getsolidsprobedata') // Placeholder for update
+archive_file($get_path,$put_path,'copypseq')           // Placeholder for update
+archive_file($get_path,$put_path,'capitalizestring')   // Placeholder for update
+archive_file($get_path,$put_path,'makenewparams')      // Macro to make Parameter sets. 
+archive_file($get_path,$put_path,'makeallnewparams')   // Macro to make all parameter sets. 
+
+// Settancpx Macro
+
+archive_file($get_path,$put_path,'Settancpx')
+
+// Reset Macros not Saved with Sequences
+
+archive_file($get_path,$put_path,'reset_hetcor')
+archive_file($get_path,$put_path,'reset_pisema')
+archive_file($get_path,$put_path,'reset_c7')
+archive_file($get_path,$put_path,'reset_fslg')
+archive_file($get_path,$put_path,'reset_xx')
+archive_file($get_path,$put_path,'reset_xmx')
+archive_file($get_path,$put_path,'reset_redor1')
+archive_file($get_path,$put_path,'reset_redor2')
+archive_file($get_path,$put_path,'reset_wpmlg1d')
+archive_file($get_path,$put_path,'reset_wpmlg2d')
+archive_file($get_path,$put_path,'reset_br24q')
+archive_file($get_path,$put_path,'reset_mrev8q')
+archive_file($get_path,$put_path,'reset_swwhh4')
+archive_file($get_path,$put_path,'reset_blew')
+archive_file($get_path,$put_path,'reset_br24')
+archive_file($get_path,$put_path,'reset_c7inadwdumbot2d')
+archive_file($get_path,$put_path,'reset_c7inadwdumbogen2d')
+archive_file($get_path,$put_path,'reset_c7inadwpmlg2d')
+archive_file($get_path,$put_path,'reset_cp')
+archive_file($get_path,$put_path,'reset_dumbo')
+archive_file($get_path,$put_path,'reset_ineptyx')
+archive_file($get_path,$put_path,'reset_masapt')
+archive_file($get_path,$put_path,'reset_mashmqc')
+archive_file($get_path,$put_path,'reset_mashsqc')
+archive_file($get_path,$put_path,'reset_mrev8')
+archive_file($get_path,$put_path,'reset_pmlg')
+archive_file($get_path,$put_path,'reset_pto1HX')
+archive_file($get_path,$put_path,'reset_pto2HX')
+archive_file($get_path,$put_path,'reset_pto3HX')
+archive_file($get_path,$put_path,'reset_r18')
+archive_file($get_path,$put_path,'reset_r2inv1d')
+archive_file($get_path,$put_path,'reset_spc5')
+archive_file($get_path,$put_path,'reset_wdumbo1d')
+archive_file($get_path,$put_path,'reset_wdumbot1d')
+archive_file($get_path,$put_path,'reset_r12')
+archive_file($get_path,$put_path,'reset_wisetancp2d')
+archive_file($get_path,$put_path,'reset_sr4')
+archive_file($get_path,$put_path,'reset_sr4dipshft')
+archive_file($get_path,$put_path,'reset_r12dipshft')
+archive_file($get_path,$put_path,'reset_mqmas')
+archive_file($get_path,$put_path,'reset_sammy')
+archive_file($get_path,$put_path,'reset_rocsa2d')
+archive_file($get_path,$put_path,'reset_sc14')
+archive_file($get_path,$put_path,'reset_fprfdr')
+archive_file($get_path,$put_path,'reset_ptrfdr')
+archive_file($get_path,$put_path,'reset_r1817')
+archive_file($get_path,$put_path,'reset_tm5')
+archive_file($get_path,$put_path,'reset_hssmall')
+archive_file($get_path,$put_path,'reset_hetcorlgcp2d_1')
+archive_file($get_path,$put_path,'reset_hetcorsamlgcp2d_1')
+archive_file($get_path,$put_path,'reset_wsam1d')
+archive_file($get_path,$put_path,'reset_wpmlgxmx1d')
+archive_file($get_path,$put_path,'reset_wdumboxmx1d')
+archive_file($get_path,$put_path,'reset_wdumbogen1d')
+archive_file($get_path,$put_path,'reset_edcfX')
+archive_file($get_path,$put_path,'reset_dcfX')
+archive_file($get_path,$put_path,'reset_edcf1X')
+archive_file($get_path,$put_path,'reset_dcf1X')
+archive_file($get_path,$put_path,'reset_super2d')
+archive_file($get_path,$put_path,'reset_hetcorpmlgcp2d_1')
+archive_file($get_path,$put_path,'reset_hetcordumbolgcp2d_1')
+archive_file($get_path,$put_path,'reset_lgcp')
+archive_file($get_path,$put_path,'reset_wiselgcp2d')
+archive_file($get_path,$put_path,'reset_wpmlgxmx1d1')
+archive_file($get_path,$put_path,'reset_dcptan3drad')
+archive_file($get_path,$put_path,'reset_dcp2tan3drad')
+archive_file($get_path,$put_path,'reset_dcptan3dspc5')
+
+//Macros for MQMAS Processing - Not Saved with Sequences
+
+archive_file($get_path,$put_path,'mqf1ref3q')
+archive_file($get_path,$put_path,'mqf1ref3qs')
+archive_file($get_path,$put_path,'mqf1ref3qsp')
+archive_file($get_path,$put_path,'mqf1ref5q')
+archive_file($get_path,$put_path,'mqf1ref5qs')
+archive_file($get_path,$put_path,'mqf1ref5qsp')
+archive_file($get_path,$put_path,'mqf1ref7q')
+archive_file($get_path,$put_path,'mqf1ref7qs')
+archive_file($get_path,$put_path,'mqf1ref7qsp')
+archive_file($get_path,$put_path,'mqf1ref9q')
+archive_file($get_path,$put_path,'mqf1ref9qs')
+archive_file($get_path,$put_path,'mqf1ref9qsp')
+archive_file($get_path,$put_path,'mqf1shear')
+archive_file($get_path,$put_path,'mqf1shear5')
+archive_file($get_path,$put_path,'mqf1shear7')
+archive_file($get_path,$put_path,'mqf1shear9')
+
+//Macros for STMAS Processing - Not Saved with Sequences
+
+archive_file($get_path,$put_path,'stf1ref')
+//Macros for REDOR Processing - Not Saved with Sequences
+
+archive_file($get_path,$put_path,'redoranal1')
+archive_file($get_path,$put_path,'redoranal2')
+
+//Macros for HS90 Processing - Not Saved with Sequences
+
+archive_file($get_path,$put_path,'hssmallanal2')
+archive_file($get_path,$put_path,'hssmallanal')
+archive_file($get_path,$put_path,'hs90anal')
+archive_file($get_path,$put_path,'spsmallanal')
+
+//Macros for Multifid Experiments - Not Saved with Sequences
+
+archive_file($get_path,$put_path,'mfsum')
+archive_file($get_path,$put_path,'mfshow')
+archive_file($get_path,$put_path,'mfarray')
+archive_file($get_path,$put_path,'rtdata')
+
+"******** Create README ********"
+
+$get_path = $input_path + '/README'
+$put_path = $output_path +'/README'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,$name_lower + '.README') // Add Full .README
+
+"******** Create PARLIB ********"
+
+$get_path = $input_path + '/parlib'
+$put_path = $output_path +'/parlib'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'Settancpx.par')
+
+"******** Create MANUAL *********************"
+
+$get_path = $input_path + '/manual'
+$put_path = $output_path +'/manual'
+shell('mkdir ' + $put_path)
+
+// Manuals for This Archive Macro
+
+archive_file($get_path,$put_path,'archive_file')
+archive_file($get_path,$put_path,'narchive_SEQUENCE4')
+archive_file($get_path,$put_path,'fullarchive')
+archive_file($get_path,$put_path,'fullarchive_ALSOLIDSPACK4')
+
+// Manuals for Useful System Commands
+
+archive_file($get_path,$put_path,'ampmode')
+archive_file($get_path,$put_path,'hipwrampenable')
+archive_file($get_path,$put_path,'nm1')
+archive_file($get_path,$put_path,'preAmpConfig')
+archive_file($get_path,$put_path,'probeConnect')
+archive_file($get_path,$put_path,'archive_file')
+
+// Overall SolidsPack Manuals
+
+archive_file($get_path,$put_path,'SolidsPackChanges')       // Add the New Log File
+archive_file($get_path,$put_path,'AllParGroups')            // Add the New Sequence Manual 
+archive_file($get_path,$put_path,'AllSeqTitles')            // Add the New Sequence List
+
+// Manuals for Individual Commands of SolidsPack
+
+archive_file($get_path,$put_path,'setfrqCmd')       // Fixes Setref Bug 3.2 patch1
+archive_file($get_path,$put_path,'probeparamgroup') // Removes write statements
+archive_file($get_path,$put_path,'solids1d')        // Remove dps from solidseq1d
+archive_file($get_path,$put_path,'solidsseq1d')     // Remove dps from solidseq1d
+archive_file($get_path,$put_path,'solidsseq2d')     // Add par2D
+archive_file($get_path,$put_path,'solidsseq3d')     // Add par3d
+archive_file($get_path,$put_path,'newregion')       // New suggested System Macro
+archive_file($get_path,$put_path,'paramgroup')      // Bugfix in paramgroup - in 'phase', New rtx logic. 
+archive_file($get_path,$put_path,'fixtancpxpars')   // Modify Initial Parameter Fix
+archive_file($get_path,$put_path,'setsolidsprobedata') // Placeholder for update
+archive_file($get_path,$put_path,'getsolidsprobedata') // Placeholder for update
+archive_file($get_path,$put_path,'copypseq')           // Placeholder for update
+archive_file($get_path,$put_path,'capitalizestring')   // Placeholder for update
+archive_file($get_path,$put_path,'copyexp')            // Placeholder for update
+archive_file($get_path,$put_path,'makenewparams')         
+archive_file($get_path,$put_path,'makeallnewparams') 
+
+"******** Create PSG ********"
+
+$get_path = $input_path + '/psg'
+$put_path = $output_path +'/psg'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'solidstandard.h')   //Required for Update
+archive_file($get_path,$put_path,'soliddefs.h')       // Placeholder for update
+archive_file($get_path,$put_path,'solidelements.h')   // Placeholder for update
+archive_file($get_path,$put_path,'solidshapegen.h')   // Placeholder for update
+archive_file($get_path,$put_path,'soliddecshapes.h')  // Placeholder for update
+archive_file($get_path,$put_path,'solidmpseqs.h')     // Placeholder for update
+archive_file($get_path,$put_path,'solidstates.h')     // Placeholder for update
+archive_file($get_path,$put_path,'solidpulses.h')     // Fix DFS Bug 
+archive_file($get_path,$put_path,'solidobjects.h')    // Placeholder for update
+archive_file($get_path,$put_path,'pboxpulse.h')       // Placeholder for update
+archive_file($get_path,$put_path,'solidchoppers.h')   // Placeholder for update
+archive_file($get_path,$put_path,'solidwshapes.h')    // New Addition to PSG
+archive_file($get_path,$put_path,'soliddutycycle.h')  // New Addition to PSG
+
+"******** Create EXECPARS ********"
+
+$get_path = $input_path + '/execpars'
+$put_path = $output_path +'/execpars'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'solids1d')          // Placeholder for update
+archive_file($get_path,$put_path,'solidsseq1d')       // Placeholder for update
+archive_file($get_path,$put_path,'solidsseq2d')       // New for par2D 
+archive_file($get_path,$put_path,'solidsseq3d')       // New for par3d
+
+"******** Create TEMPLATES/LAYOUT ***********"
+
+$get_path = $input_path + '/templates/layout'
+$put_path = $output_path +'/templates'
+shell('mkdir ' + $put_path)
+$put_path = $put_path +'/layout'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'solidsdefault1d')
+archive_file($get_path,$put_path,'solidsdefault2d')
+archive_file($get_path,$put_path,'solidsdefault3d')
+
+"******** Create TEMPLATES/VNMRJ/PROTOCOLS ***********"
+
+$get_path = $input_path + '/templates/vnmrj/protocols'
+$put_path = $output_path +'/templates/vnmrj'
+shell('mkdir ' + $put_path)
+$put_path = $put_path +'/protocols'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'Settancpx.xml')
+
+"******** Create TEMPLATES/VNMRJ/INTERFACE **********"
+
+$get_path = $input_path + '/templates/vnmrj/interface'
+$put_path = $output_path +'/templates/vnmrj'
+$put_path2 = $put_path +'/interface'
+shell('mkdir ' + $put_path2)
+
+archive_file($get_path,$put_path2,'SolidStateExpts.xml')
+archive_file($get_path,$put_path2,'Solids1DExpts.xml')
+archive_file($get_path,$put_path2,'HX2DExpts.xml')
+archive_file($get_path,$put_path2,'HXYExpts.xml')
+archive_file($get_path,$put_path2,'RECXYExpts.xml')
+archive_file($get_path,$put_path2,'MultipulseExpts.xml')
+archive_file($get_path,$put_path2,'QuadrupoleExpts.xml')
+
+"******** Zip in the Sequences********"
+
+narchive_SEQUENCE4('babainad2d') fullarchive($name_upper,'babainad2d')
+narchive_SEQUENCE4('br24','reset_br24') fullarchive($name_upper,'br24')
+narchive_SEQUENCE4('br24q','reset_br24q') fullarchive($name_upper,'br24q')
+narchive_SEQUENCE4('c7inad2d','reset_c7') fullarchive($name_upper,'c7inad2d')
+narchive_SEQUENCE4('c7inadwdumbogen2d','reset_c7inadwdumbogen2d') fullarchive($name_upper,'c7inadwdumbogen2d')
+narchive_SEQUENCE4('c7inadwdumbot2d','reset_c7inadwdumbot2d') fullarchive($name_upper,'c7inadwdumbot2d')
+narchive_SEQUENCE4('c7inadwpmlg2d','reset_c7inadwpmlg2d') fullarchive($name_upper,'c7inadwpmlg2d')
+narchive_SEQUENCE4('codex1d') fullarchive($name_upper,'codex1d')
+narchive_SEQUENCE4('cpcpmg1d') fullarchive($name_upper,'cpcpmg1d')
+narchive_SEQUENCE4('cpinad2d') fullarchive($name_upper,'cpinad2d')
+narchive_SEQUENCE4('dcp2tan3drad') fullarchive($name_upper,'dcp2tan3drad','reset_dcp2tan3drad')
+narchive_SEQUENCE4('dcptan') fullarchive($name_upper,'dcptan')
+narchive_SEQUENCE4('dcptan3drad') fullarchive($name_upper,'dcptan3drad','reset_dcptan3drad')
+narchive_SEQUENCE4('dcptan3dspc5') fullarchive($name_upper,'dcptan3dspc5','reset_dcpdtan3dspc5')
+narchive_SEQUENCE4('decorcptan2d') fullarchive($name_upper,'decorcptan2d')
+narchive_SEQUENCE4('dipshftr12dfs','reset_r12') fullarchive($name_upper,'dipshftr12dfs')
+narchive_SEQUENCE4('dipshftsr4dfs') fullarchive($name_upper,'dipshftsr4dfs')
+narchive_SEQUENCE4('exsy2d') fullarchive($name_upper,'exsy2d')
+narchive_SEQUENCE4('fsredor') fullarchive($name_upper,'fsredor')
+narchive_SEQUENCE4('grad_profile') fullarchive($name_upper,'grad_profile')
+narchive_SEQUENCE4('grad_rec') fullarchive($name_upper,'grad_rec')
+narchive_SEQUENCE4('hahnecho1d') fullarchive($name_upper,'hahnecho1d')
+narchive_SEQUENCE4('hahnechodfs1d') fullarchive($name_upper,'hahnechodfs1d')
+narchive_SEQUENCE4('hetcordumbolgcp2d_1','reset_hetcordumbolgcp2d_1') fullarchive($name_upper,'hetcordumbolgcp2d_1')
+narchive_SEQUENCE4('hetcorlgcp2d','reset_hetcor') fullarchive($name_upper,'hetcorlgcp2d')
+narchive_SEQUENCE4('hetcorlgcp2d_1','reset_hetcorlgcp2d_1') fullarchive($name_upper,'hetcorlgcp2d_1')
+narchive_SEQUENCE4('hetcorlgcp2dxyr','reset_hetcor') fullarchive($name_upper,'hetcorlgcp2dxyr')
+narchive_SEQUENCE4('hetcorpmlgcp2d_1','reset_hetcorpmlgcp2d_1') fullarchive($name_upper,'hetcorpmlgcp2d_1')
+narchive_SEQUENCE4('hetcorsamlgcp2d_1','reset_hetcorsamlgcp2d_1') fullarchive($name_upper,'hetcorsamlgcp2d_1')
+narchive_SEQUENCE4('hetcortancp2d','reset_hetcor') fullarchive($name_upper,'hetcortancp2d')
+narchive_SEQUENCE4('hssmall','reset_hssmall','hssmallanal', 'hssmallanal2') fullarchive($name_upper,'hssmall')
+narchive_SEQUENCE4('ineptxyonepul','reset_ineptyx') fullarchive($name_upper,'ineptxyonepul')
+narchive_SEQUENCE4('ineptxyrefonepul','reset_ineptyx') fullarchive($name_upper,'ineptxyrefonepul')
+narchive_SEQUENCE4('ineptxyreftancp','reset_ineptyx') fullarchive($name_upper,'ineptxyreftancp')
+narchive_SEQUENCE4('ineptxytancp','reset_ineptyx') fullarchive($name_upper,'ineptxytancp')
+narchive_SEQUENCE4('jmascaco2d') fullarchive($name_upper,'jmascaco2d')
+narchive_SEQUENCE4('jmascacoipap2d') fullarchive($name_upper,'jmascacoipap2d')
+narchive_SEQUENCE4('jmascacosh2d') fullarchive($name_upper,'jmascacosh2d')
+narchive_SEQUENCE4('jmasnca2d') fullarchive($name_upper,'jmasnca2d')
+narchive_SEQUENCE4('jmasnco2d') fullarchive($name_upper,'jmasnco2d')
+narchive_SEQUENCE4('lgcp','reset_lgcp') fullarchive($name_upper,'lgcp')
+narchive_SEQUENCE4('lgcp2d') fullarchive($name_upper,'lgcp2d')
+narchive_SEQUENCE4('lgfmcp1d') fullarchive($name_upper,'lgfmcp1d')
+narchive_SEQUENCE4('masapt1d','reset_masapt') fullarchive($name_upper,'masapt1d')
+narchive_SEQUENCE4('mashmqc2d','reset_mashmqc') fullarchive($name_upper,'mashmqc2d')
+narchive_SEQUENCE4('mashsqc2d','reset_mashsqc') fullarchive($name_upper,'mashsqc2d')
+narchive_SEQUENCE4('moistlkcp') fullarchive($name_upper,'moistlkcp')
+narchive_SEQUENCE4('mqmas3q2d') fullarchive($name_upper,'mqmas3q2d')
+narchive_SEQUENCE4('mqmas3qdfs2d') fullarchive($name_upper,'mqmas3qdfs2d')
+narchive_SEQUENCE4('mqmas3qdfs2spltse2d') fullarchive($name_upper,'mqmas3qdfs2spltse2d')
+narchive_SEQUENCE4('mqmas3qdfsspltse2d') fullarchive($name_upper,'mqmas3qdfsspltse2d')
+narchive_SEQUENCE4('mqmas3qdfszf2d') fullarchive($name_upper,'mqmas3qdfszf2d')
+narchive_SEQUENCE4('mqmas3qfam2spltse2d') fullarchive($name_upper,'mqmas3qfam2spltse2d')
+narchive_SEQUENCE4('mqmas3qfamspltse2d') fullarchive($name_upper,'mqmas3qfamspltse2d')
+narchive_SEQUENCE4('mqmas3qse2d') fullarchive($name_upper,'mqmas3qse2d')
+narchive_SEQUENCE4('mqmas3qspltse2d') fullarchive($name_upper,'mqmas3qspltse2d')
+narchive_SEQUENCE4('mqmas3qzf2d') fullarchive($name_upper,'mqmas3qzf2d')
+narchive_SEQUENCE4('mqmas5qzf2d') fullarchive($name_upper,'mqmas5qzf2d')
+narchive_SEQUENCE4('mqmas7qzf2d') fullarchive($name_upper,'mqmas7qzf2d')
+narchive_SEQUENCE4('mqmas9qzf2d') fullarchive($name_upper,'mqmas9qzf2d')
+narchive_SEQUENCE4('mrev8','reset_mrev8') fullarchive($name_upper,'mrev8')
+narchive_SEQUENCE4('mrev8q','reset_mrev8q') fullarchive($name_upper,'mrev8q')
+narchive_SEQUENCE4('onepul') fullarchive($name_upper,'onepul')
+narchive_SEQUENCE4('onepulcpm') fullarchive($name_upper,'onepulcpm')
+narchive_SEQUENCE4('onepuldec2') fullarchive($name_upper,'onepuldec2')
+narchive_SEQUENCE4('onepuldfs') fullarchive($name_upper,'onepuldfs')
+narchive_SEQUENCE4('onepuldpth') fullarchive($name_upper,'onepuldpth')
+narchive_SEQUENCE4('onepulhs') fullarchive($name_upper,'onepulhs')
+narchive_SEQUENCE4('onepulhspl') fullarchive($name_upper,'onepulhspl')
+narchive_SEQUENCE4('onepulref') fullarchive($name_upper,'onepulref')
+narchive_SEQUENCE4('onepulsfs') fullarchive($name_upper,'onepulsfs')
+narchive_SEQUENCE4('onepult1rho') fullarchive($name_upper,'onepult1rho')
+narchive_SEQUENCE4('onepultoss') fullarchive($name_upper,'onepultoss')
+narchive_SEQUENCE4('onepulxyr') fullarchive($name_upper,'onepulxyr')
+narchive_SEQUENCE4('pboxonepul') fullarchive($name_upper,'pboxonepul')
+narchive_SEQUENCE4('phasetest') fullarchive($name_upper,'phasetest')
+narchive_SEQUENCE4('phtran') fullarchive($name_upper,'phtran')
+narchive_SEQUENCE4('pisema2d','reset_pisema') fullarchive($name_upper,'pisema2d')
+narchive_SEQUENCE4('pisematest1','reset_pisema') fullarchive($name_upper,'pisematest1')
+narchive_SEQUENCE4('pisematest2','reset_pisema') fullarchive($name_upper,'pisematest2')
+narchive_SEQUENCE4('presto1cp','reset_pto1HX') fullarchive($name_upper,'presto1cp')
+narchive_SEQUENCE4('presto2cp','reset_pto2HX') fullarchive($name_upper,'presto2cp')
+narchive_SEQUENCE4('presto3cp','reset_pto3HX') fullarchive($name_upper,'presto3cp')
+narchive_SEQUENCE4('qcpmg1d') fullarchive($name_upper,'qcpmg1d')
+narchive_SEQUENCE4('qcpmgsh1d') fullarchive($name_upper,'qcpmgsh1d')
+narchive_SEQUENCE4('r14inad2d') fullarchive($name_upper,'r14inad2d')
+narchive_SEQUENCE4('r2inv1d','reset_r2inv1d') fullarchive($name_upper,'r2inv1d')
+narchive_SEQUENCE4('redor1onepul','reset_redor1') fullarchive($name_upper,'redor1onepul')
+narchive_SEQUENCE4('redor1tancp','reset_redor1') fullarchive($name_upper,'redor1tancp')
+narchive_SEQUENCE4('redor2onepul','reset_redor2') fullarchive($name_upper,'redor2onepul')
+narchive_SEQUENCE4('redor2tancp','reset_redor2') fullarchive($name_upper,'redor2tancp')
+narchive_SEQUENCE4('repdfs','mfsum','mfshow','mfarray','rtdata') fullarchive($name_upper,'repdfs')
+narchive_SEQUENCE4('rotorsynctest') fullarchive($name_upper,'rotorsynctest')
+narchive_SEQUENCE4('sammy2d','reset_sammy') fullarchive($name_upper,'sammy2d')
+narchive_SEQUENCE4('sammymstlk2d','reset_sammy') fullarchive($name_upper,'sammymstlk2d')
+narchive_SEQUENCE4('satrec1d') fullarchive($name_upper,'satrec1d')
+narchive_SEQUENCE4('sc14inad2d','reset_sc14') fullarchive($name_upper,'sc14inad2d')
+narchive_SEQUENCE4('seac71d') fullarchive($name_upper,'seac71d')
+narchive_SEQUENCE4('shapedtwopul1d') fullarchive($name_upper,'shapedtwopul1d')
+narchive_SEQUENCE4('spc5inad2d','reset_spc5') fullarchive($name_upper,'spc5inad2d')
+narchive_SEQUENCE4('spsmall','spsmallanal') fullarchive($name_upper,'spsmall')
+narchive_SEQUENCE4('ssecho1d') fullarchive($name_upper,'ssecho1d')
+narchive_SEQUENCE4('stmas2d') fullarchive($name_upper,'stmas2d')
+narchive_SEQUENCE4('stmasdqfse2d') fullarchive($name_upper,'stmasdqfse2d')
+narchive_SEQUENCE4('stmasdqfspltse2d') fullarchive($name_upper,'stmasdqfspltse2d')
+narchive_SEQUENCE4('stmasse2d1') fullarchive($name_upper,'stmasse2d1')
+narchive_SEQUENCE4('stmasse2d2') fullarchive($name_upper,'stmasse2d2')
+narchive_SEQUENCE4('stmasspltse2d1') fullarchive($name_upper,'stmasspltse2d1')
+narchive_SEQUENCE4('stmasspltse2d2') fullarchive($name_upper,'stmasspltse2d2')
+narchive_SEQUENCE4('stmaszf2d') fullarchive($name_upper,'stmaszf2d')
+narchive_SEQUENCE4('super2d','reset_super2d') fullarchive($name_upper,'super2d')
+narchive_SEQUENCE4('swwhh4','reset_swwhh4') fullarchive($name_upper,'swwhh4')
+narchive_SEQUENCE4('tancp1dfprfdr','reset_fprfdr') fullarchive($name_upper,'tancp1dfprfdr')
+narchive_SEQUENCE4('tancp1dptrfdr','reset_ptrfdr') fullarchive($name_upper,'tancp1dptrfdr')
+narchive_SEQUENCE4('tancp2drad') fullarchive($name_upper,'tancp2drad')
+narchive_SEQUENCE4('tancp2dspc5','reset_spc5') fullarchive($name_upper,'tancp2dspc5')
+narchive_SEQUENCE4('tancpechocpmg1d') fullarchive($name_upper,'tancpechocpmg1d')
+narchive_SEQUENCE4('tancpht1') fullarchive($name_upper,'tancpht1')
+narchive_SEQUENCE4('tancpht1rho') fullarchive($name_upper,'tancpht1rho')
+narchive_SEQUENCE4('tancpx') fullarchive($name_upper,'tancpx')
+narchive_SEQUENCE4('tancpxblew','reset_blew') fullarchive($name_upper,'tancpxblew')
+narchive_SEQUENCE4('tancpxcpm') fullarchive($name_upper,'tancpxcpm')
+narchive_SEQUENCE4('tancpxdec2') fullarchive($name_upper,'tancpxdec2')
+narchive_SEQUENCE4('tancpxdumbo','reset_dumbo') fullarchive($name_upper,'tancpxdumbo')
+narchive_SEQUENCE4('tancpxecho') fullarchive($name_upper,'tancpxecho')
+narchive_SEQUENCE4('tancpxedit') fullarchive($name_upper,'tancpxedit')
+narchive_SEQUENCE4('tancpxflip') fullarchive($name_upper,'tancpxflip')
+narchive_SEQUENCE4('tancpxfslg','reset_fslg') fullarchive($name_upper,'tancpxfslg')
+narchive_SEQUENCE4('tancpxhahnecho') fullarchive($name_upper,'tancpxhahnecho')
+narchive_SEQUENCE4('tancpxidref') fullarchive($name_upper,'tancpxidref')
+narchive_SEQUENCE4('tancpxpips') fullarchive($name_upper,'tancpxpips')
+narchive_SEQUENCE4('tancpxpmlg','reset_fslg') fullarchive($name_upper,'tancpxpmlg')
+narchive_SEQUENCE4('tancpxref') fullarchive($name_upper,'tancpxref')
+narchive_SEQUENCE4('tancpxt1') fullarchive($name_upper,'tancpxt1')
+narchive_SEQUENCE4('tancpxt1rho') fullarchive($name_upper,'tancpxt1rho')
+narchive_SEQUENCE4('tancpxtoss') fullarchive($name_upper,'tancpxtoss')
+narchive_SEQUENCE4('tancpxtoss5') fullarchive($name_upper,'tancpxtoss5')
+narchive_SEQUENCE4('tancpxyr') fullarchive($name_upper,'tancpxyr')
+narchive_SEQUENCE4('trapdor1d') fullarchive($name_upper,'trapdor1d')
+narchive_SEQUENCE4('trapdorycpx') fullarchive($name_upper,'trapdorycpx')
+narchive_SEQUENCE4('tunerp') fullarchive($name_upper,'tunerp')
+narchive_SEQUENCE4('twopul') fullarchive($name_upper,'twopul')
+narchive_SEQUENCE4('wdumbo1d','reset_wdumbo1d') fullarchive($name_upper,'wdumbo1d')
+narchive_SEQUENCE4('wdumbogen1d','reset_wdumbogen1d') fullarchive($name_upper,'wdumbogen1d')
+narchive_SEQUENCE4('wdumbot1d','reset_wdumbot1d') fullarchive($name_upper,'wdumbot1d')
+narchive_SEQUENCE4('wdumboxmx1d','reset_wdumboxmx1d') fullarchive($name_upper,'wdumboxmx1d')
+narchive_SEQUENCE4('wiselgcp2d','reset_wiselgcp2d') fullarchive($name_upper,'wiselgcp2d')
+narchive_SEQUENCE4('wisetancp2d','reset_wisetancp2d') fullarchive($name_upper,'wisetancp2d')
+narchive_SEQUENCE4('wpmlg1d','reset_wpmlg1d') fullarchive($name_upper,'wpmlg1d')
+narchive_SEQUENCE4('wpmlg2d','reset_wpmlg2d') fullarchive($name_upper,'wpmlg2d')
+narchive_SEQUENCE4('wpmlgxmx1d','reset_wpmlgxmx1d') fullarchive($name_upper,'wpmlgxmx1d')
+narchive_SEQUENCE4('wpmlgxmx1d1','reset_wpmlgxmx1d1') fullarchive($name_upper,'wpmlgxmx1d1')
+narchive_SEQUENCE4('wsam1d','reset_wsam1d') fullarchive($name_upper,'wsam1d')
+narchive_SEQUENCE4('xmx','reset_xmx') fullarchive($name_upper,'xmx')
+narchive_SEQUENCE4('xx','reset_xx') fullarchive($name_upper,'xx')
+
+"******** Add Current .DATE file ********"
+
+$get_path = $backup_path
+$put_path = $output_path 
+$date_name = $name_lower + '.DATE'
+$date_file = $backup_path + '/' + $date_name
+
+exists($date_file,'file'):$e4
+if ($e4 > 0.5) then
+   archive_file($backup_path, $output_path, $date_name)
+else
+   $date_file = $output_path + '/' + $date_name
+   write('file',$date_file,'%s:',$name_upper)
+   endif
+$date_file = $output_path + '/' + $date_name
+$date='' shell('date +%Y%m%d%H%M%S'):$date
+write('file',$date_file,'LAST ARCHIVE DATE: %s  %s',$date, userdir)
+
+"******** Add a TAR file of the directories ********"
+$tar_file = $output_path + '/' + $name_lower + '.tar'
+$directories = ''
+$directories = $directories + ' -C ' + $output_path + ' maclib'
+$directories = $directories + ' -C ' + $output_path + ' psglib'
+$directories = $directories + ' -C ' + $output_path + ' parlib'
+$directories = $directories + ' -C ' + $output_path + ' execpars'
+$directories = $directories + ' -C ' + $output_path + ' templates'
+$directories = $directories + ' -C ' + $output_path + ' psg' 
+$directories = $directories + ' -C ' + $output_path + ' shapelib' 
+$directories = $directories + ' -C ' + $output_path + ' manual'
+$directories = $directories + ' -C ' + $output_path + ' adm'
+$directories = $directories + ' -C ' + $output_path + ' wtlib'
+$directories = $directories + ' -C ' + $output_path + ' Simplexer'
+$directories = $directories + ' -C ' + $output_path + ' bin'
+$directories = $directories + ' -C ' + $output_path + ' SolidsPack.dir'
+$directories = $directories + ' -C ' + $output_path + ' README'
+$directories = $directories + ' -C ' + $output_path + ' shims'
+$directories = $directories + ' -C ' + $output_path + ' studylib'
+
+shell('tar cfz ' + $tar_file + '.Z ' + $directories)
+
+$expoutput_path = $archive_path + '/EXP_OUTPUT'
+exists($expoutput_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $expoutput_path)
+endif
+$readme_file = $output_path + '/README/' + $name_lower + '.README'
+shell('cp ' + $tar_file + '.Z  ' + $expoutput_path + '/' + $name_lower + '.tar.Z') 
+shell('cp ' + $readme_file + ' ' + $expoutput_path + '/' + $name_lower + '.README')
+ 
+write('alpha','ARCHIVE of %s COMPLETE\n',$name_upper)
+write('line3','ARCHIVE of %s COMPLETE\n',$name_upper)
+

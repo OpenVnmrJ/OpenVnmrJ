@@ -1,0 +1,188 @@
+"macro DoPlanB"
+"DoPlanB - a module to call for on-demand repeat of a test"
+"requires name calling execprocess macro"
+"If called with 2 arguments and first is repeat then sceond arg is name of protocol to be repeated"
+"If called with one argument it is the name of calling execprocess and this macro sorts out details"
+"Version 1.0 r crouch"
+
+wexp:$e
+if ($e<>1) then
+  return
+endif
+$line=''
+$shimhow='z1z2'
+
+if ($#=2) then  "This section allows a test to be repeated as is - H1_Lshp_nonspin uses this"
+	if ($1='repeat') then $repeattest=$2 endif
+	//$ok=0
+	//$macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+        //exists($macdir,'directory'):$direx
+        //if ($direx=0) then return endif
+	$retestfile=userdir+'/persistence/ReTest'
+	exists($retestfile,'file'):$et
+	if ($et>0.5) then
+		lookup('file',$retestfile)
+		lookup('read'):$retestcount
+		if ($retestcount < 2) then  "This 2 will become an IPpar"
+			walkupQ_runtime('add',$repeattest,'top'):$ok,$newnode
+			$retestcount=$retestcount+1
+			write('reset',$retestfile)
+			write('file',$retestfile,'%d',$retestcount)
+			return
+		else
+			rm($retestfile)
+			return
+		endif
+	elseif ($et<0.5) then
+		write('reset',$retestfile)
+		write('file',$retestfile,'%d',1)
+		walkupQ_runtime('add',$repeattest,'top'):$ok,$newnode
+		return
+	endif
+	
+endif
+
+	if ($1='H1sens_process') then
+
+		$reshimmethod='fid'
+		$reshimnuc='PROTON'
+		$line='ss=0 gain=34 nt=1 at=2 d2=2 tpwr=tpwr-9'
+		$shimhow='Hetb'
+		$repeattest='H1sens'
+
+	elseif ($1='P31sens_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzs'
+		$repeattest='P31sens'
+
+	elseif ($1='F19sens_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='F19sens'
+
+	elseif ($1='C13sens_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='C13sensASTM'
+
+	elseif ($1='N15sens_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='N15sens'
+
+	elseif ($1='C13ETBsens_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='C13sensETB'
+
+	elseif ($1='C13res_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='C13res_decopt'
+
+	elseif ($1='H1_Lshp_spinning_process') then
+
+		$reshimmethod='lock'
+		$reshimnuc=''
+		$line=''
+		$shimhow='shimzspin'
+		$repeattest='H1_Lshp_spinning'
+
+	endif  "extend as retests are added.."
+
+	write('line3','method= \'%s\'',$shimhow):$newshimline
+	write('line3','%s',$newshimline)
+
+	$retestfile=userdir+'/persistence/ReTest'
+	exists($retestfile,'file'):$et
+
+	if ($et<0.5) then
+		//$ok=0
+		//$macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+        	//exists($macdir,'directory'):$direx
+        	//if ($direx=0) then return endif
+		
+		if ($reshimmethod='fid') then
+
+		walkupQ_runtime('add',$reshimnuc,'top'):$ok,$newnode
+			if ($ok) then  "customize fid shim pars"
+				if ($line<>'') then
+				   walkupQ_runtime('customize',$newnode,'node',$line)
+				endif
+				walkupQ_runtime('customize',$newnode,'node','wshim=\'e\'')
+				walkupQ_runtime('customize',$newnode,'node',$newshimline)
+			endif
+			walkupQ_runtime('add',$repeattest,'next'):$ok,$newnode
+
+                elseif ($reshimmethod='lock') then "For lock shim test is shimming node"
+
+			walkupQ_runtime('add',$repeattest,'top'):$ok,$newnode
+			if ($ok) then
+				walkupQ_runtime('customize',$newnode,'node','wshim=\'e\'')
+				walkupQ_runtime('customize',$newnode,'node',$newshimline)
+			endif
+
+		endif
+		
+		write('reset',$retestfile)
+		write('file',$retestfile,'%d',1)
+	
+	elseif ($et>0.5) then
+
+  		lookup('file',$retestfile)
+	        lookup('read'):$retestcount
+		IF ($retestcount<2) THEN  "This 2 will become an IPpar"
+		//$ok=0
+		//$macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+        	//exists($macdir,'directory'):$direx
+        	//if ($direx=0) then return endif
+
+		if ($reshimmethod='fid') then
+
+			walkupQ_runtime('add',$reshimnuc,'top'):$ok,$newnode
+			if ($ok) then  "customize fid shim pars"
+				if ($line<>'') then
+				   walkupQ_runtime('customize',$newnode,'node',$line)
+				endif
+				walkupQ_runtime('customize',$newnode,'node','wshim=\'e\'')
+				walkupQ_runtime('customize',$newnode,'node',$newshimline)
+			endif
+			walkupQ_runtime('add',$repeattest,'next'):$ok,$newnode
+
+                elseif ($reshimmethod='lock') then  "For lock shim test is shimming node"
+
+			walkupQ_runtime('add',$repeattest,'top'):$ok,$newnode
+			if ($ok) then
+				walkupQ_runtime('customize',$newnode,'node','wshim=\'e\'')
+				walkupQ_runtime('customize',$newnode,'node',$newshimline)
+			endif
+
+		endif
+	
+			$retestcount=$retestcount+1
+			write('reset',$retestfile)
+			write('file',$retestfile,'%d',$retestcount)
+		ELSE
+		    rm($retestfile)
+		ENDIF
+
+	endif
+  

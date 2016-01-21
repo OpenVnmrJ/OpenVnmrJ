@@ -1,0 +1,53 @@
+"macro tstlog"
+exists('tst_log','parameter','current'):$le
+if $le then // tst_log not enabled or defined
+  getvalue('tst_log','current'):$tst_log
+else
+  $tst_log = '/dev/null'
+endif
+
+exists($tst_log,'file'):$le
+if not $le then // doesn't exist, so create it
+  substr($tst_log,'dirname'):$dir
+  exists($dir,'directory'):$de
+  if not($de) then
+    shell('mkdir -p '+$dir):$derr
+  endif
+  exists($dir,'directory'):$de
+  if not($de) then
+    write('error',$0+': could not create log file directory \''+$dir+'\', '+$derr)
+    return
+  endif
+  exists($tst_log,'file'):$fe
+  if $fe then
+    rename($tst_log, $tst_log+'.backup'):$de
+  endif
+  shell('echo "["`date`"]" starting log from '+$0+' '+$1):$startmsg
+  write('file',$tst_log,$startmsg)
+endif
+
+if $# = 1 then
+  write('line3',$1)
+  write('file',$tst_log,$1)
+
+elseif $1='done' then
+  write('line3','[done]   %s: %d passed, %d failed, %d todo, %d aborted',
+	$2,$3,$4,$5,$6)
+  write('file',$tst_log,
+	'[done]   %s: %d passed, %d failed, %d todo, %d aborted',
+	$2,$3,$4,$5,$6)
+  write('line3','log file \''+$tst_log+'\'')
+
+elseif $#=2 then
+  write('line3','[%s]   %s',$1,$2)
+  write('file',$tst_log,'[%s]   %s',$1,$2)
+
+elseif $#=3 then
+  write('line3','[%s]   %s: %s',$1,$2,$3)
+  write('file',$tst_log,'[%s]   %s: %s',$1,$2,$3)
+  
+elseif $#=4 then
+  write('line3','[%s]   %s: %s %s',$1,$2,$3,$4)
+  write('file',$tst_log,'[%s]   %s: %s %s',$1,$2,$3,$4)
+  
+endif

@@ -1,0 +1,61 @@
+"macro cryo_init"
+if ($#=1) then
+  $outdir=systemdir+'/cryo/probecal'
+  exists($outdir+'/testcal.crv','file','rw'):$perm
+  if ($perm) then
+    $indir=''
+    probeidez('tcalib_dir'):$indir
+    if ($indir='') then
+      $num=0
+    else
+      getfile($indir):$num
+    endif
+    if ($num=1) then
+      getfile($indir,1):$name,$ext
+      if $ext<>'' then
+        $name=$name+'.'+$ext
+      endif
+      $infile=$indir+'/'+$name
+      exists($outdir+'/'+$name,'file'):$e
+      if (not $e) then
+        cp($infile,$outdir+'/'+$name)
+      endif
+      shell('cd '+$outdir+';rm -f probeid.crv; ln -s '+$infile+' probeid.crv'):$e
+    else
+      rm('-f',$outdir+'/probeid.crv'):$e
+    endif
+  endif
+  return
+endif
+
+exists('cryoPanel', 'parameter'):$e
+if($e<0.5) then
+    create('cryoPanel', 'string')
+endif
+exists('vjDebugString', 'parameter'):$e
+if($e<0.5) then
+    create('vjDebugString', 'string')
+endif
+if (owner <> operator) then
+    cryoPanel='basic'
+else
+    cryoPanel='advanced'
+endif
+exists(userdir+'/cryo/data', 'directory'):$e
+if($e<0.5) then
+    exists(userdir+'/cryo', 'directory'):$e
+    if($e<0.5) then
+        mkdir(userdir+'/cryo')
+    endif
+    mkdir(userdir+'/cryo/data')
+endif
+exists('cryoConnect', 'parameter'):$e
+if($e<0.5) then
+    create('cryoConnect', 'string')
+    cryoConnect='true'
+endif
+if (cryoConnect='true') then
+    vnmrjcmd('CRYO init')
+    vnmrjcmd('CRYO connectCryobay')
+    vnmrjcmd('CRYO connectTempController')
+endif

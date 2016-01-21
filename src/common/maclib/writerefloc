@@ -1,0 +1,42 @@
+"macro writerefloc"
+  savestudypar(curexp)
+	$traymax=traymax
+	if (traymax=97) then $traymax=96 endif
+	if ($# > 1) then $traymax=$2 endif
+	if ($traymax=97) and (traymax=97) then $traymax=96 endif
+        module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+                "  Would tray color work without it?"
+        setvalue('operator_','RefStd')
+	studyowner='RefStd'
+        setvalue('loc_',$traymax)
+        setvalue('vloc_','0')
+        studystatus='Active'
+	studystatus='Reference'
+        vzone_=1 vrack_=1
+	format(loc_,0,0):studyid_
+	studyid_='loc'+studyid_
+	sample='' samplename='ReFeReNCe'
+        $sdir=$1+'.macdir/studytray'
+	shell('dirname '+$1):$autodir
+        exists($sdir+'/'+studyid_,'directory'):$ex
+        if ($ex=0) then
+                   shell('mkdir -p '+$sdir+'/'+studyid_):$dum
+        else
+                   shell('touch '+$sdir+'/'+studyid_):$dum
+        endif
+        $studypar=$sdir+'/'+studyid_+'/studypar'
+        savestudypar($sdir+'/'+studyid_)
+	updatestatus($autodir,$traymax,studystatus,'','')
+
+   "*****Write autostudies file *****"
+                $autostudies=$autodir+'/autostudies'
+                $studypath=$sdir+'/'+studyid_
+                shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+                if ($isthere=0) then
+                   write('file',$autostudies,'%s',$studypath)
+                endif
+
+  getstudypar(curexp):$ret
+  if ($ret) then shell('rm -f '+curexp+'/studypar'):$dum endif

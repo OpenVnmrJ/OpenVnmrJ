@@ -1,0 +1,33 @@
+"macro imu"
+
+"************************************************************************"
+"
+" imu - determine the PIU (Image Uniformity) 
+"
+" Details: - Used to determine the PIU value as described in the ATP
+"            document. Measure the image intensity in the center using
+"            ims. Put the ROI on the lowest image intensity within 80% of the
+"            sample, and type piu. The signal is saved as imu.
+"            piu = (1 - (ims-imu)/(ims+imu))*100
+
+"************************************************************************"
+
+exists('imu', 'parameter'):$ex
+if($ex = 0) then
+  create('imu')
+endif
+$p=''
+substr(aipStatMeanMsg,2):$p
+
+format($p,0,6):imu
+exists('ims', 'parameter'):$ex
+if($ex > 0) then
+  if(imu <= 0)  then
+    write('line3','Invalid signal value, imu = %f',imu)
+  else
+   $piu = (1 - (ims-imu)/(ims+imu))*100
+   write('line3',' Smax=%f, Smin=%f',ims,imu)
+   write('line3','Image Uniformity (PIU): %5.2f percent ',$piu)
+  endif
+endif
+

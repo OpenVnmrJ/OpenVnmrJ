@@ -1,0 +1,107 @@
+"macro seprep"
+"*********************************************************************"
+"                                                                     "
+" seprep: Macro to set suitable te and te1 for Spin Echo Preparations "
+"                                                                     "
+"         te1 is the echo time of the spin echo preparation           "
+"                                                                     "
+"         A te1 array does not cause an acquisition array but         "
+"         results in a te acquisition array such that the te,TE       "
+"         reported in FDF headers is correct                          "
+"                                                                     "
+"*********************************************************************"
+
+"Return if te1 parameter does not exist"
+exists('te1','parameter'):$te1
+if ($te1=0) then 
+  return
+endif
+
+"Set default action to set te values"
+$action = 'sette'
+
+"Set default echo time in the absense of spin echo preparation"
+"Spin echo preparation is most likely in FSE experiments"
+exists('kzero','parameter'):$kzero
+exists('esp','parameter'):$esp
+if ($kzero and $esp) then 
+  $te = kzero*esp
+else
+  $te = te
+endif
+
+"If arguments are provided then use those instead"
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $te = $2
+endif
+
+"Set te so it is correct for the FDF header"
+if ($action = 'sette') then
+  exists('te1','parameter'):$ex
+  if ($ex>0) then
+    "spin echo preparation can be for diffusion as well"
+    if (spinecho='y') OR (diff='y') then 
+      te=te[1]
+      $i=1 
+      while($i<=size('te1')) do 
+        te[$i]=te1[$i]+$te 
+        $i=$i+1 
+      endwhile
+    endif
+  endif
+endif
+
+if ($action = 'sette1') then
+  exists('te1','parameter'):$ex
+  if ($ex>0) then
+    if (spinecho='y') OR (diff='y') then
+      te1=te[1]-$te
+      $i=1 
+      while($i<=size('te')) do 
+        te1[$i]=te[$i]-$te 
+        $i=$i+1 
+      endwhile
+    endif
+  endif
+endif
+
+"Set te and te1 arrays"
+if ($action = 'arrayte') then
+  if (spinecho='y') then 
+    if (nte<2) then nte=2 endif
+    if (startte+$te>approxt2) then
+      write('error','Initial echo time > approximate T2. Set TE = start TE and check effective TE and kzero')
+      return
+    endif
+    exparray('te',startte+$te,2.5*approxt2,nte)
+    te=te[nte] go('check') 
+    exparray('te',startte+$te,2.5*approxt2,nte)
+    $i=1 
+    te1=0
+    while($i<=size('te')) do 
+      te1[$i]=te[$i]-$te 
+      $i=$i+1 
+    endwhile
+    exptime:$time
+    displayscantime($time)
+  endif
+endif
+
+"Save te values in te1 values"
+if ($action = 'savete') then
+  if (diff='y') then 
+    diff='n' 
+    diffarray('save') 
+    zero_gf
+  endif
+  $i=1
+  te1=0
+  while($i<=size('te')) do 
+    te1[$i]=te[$i]-$te 
+    $i=$i+1 
+  endwhile
+  te=$te
+endif

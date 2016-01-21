@@ -1,0 +1,256 @@
+"macro VPviewer"
+"VJviewer - macro to view VeriPulse results"
+
+if ($#=0) then $arg='show' else $arg=$1 endif
+
+if ($arg<>'show') then
+  exists('VPdata','parameter'):$e
+  if not $e then  // A new data set has been loaded
+    fread(curexp+'/VPview')
+  endif
+  $datadir=VPdata
+
+elseif ($arg='show') and ($#=2) then
+  $datadir=$2
+else
+  exists('IPdatadir','parameter'):$e
+  if ($e) then
+    $datadir=IPdatadir
+  else
+    $datadir=''
+  endif
+endif
+if ($datadir='') then $datadir=userdir+'/data' endif
+IF ($arg='show') THEN
+  $pfile=userdir+'/persistence/VPpars'
+  exists($pfile,'file'):$e
+  if (not $e) then
+    write('line3','No VeriPulse results found')
+    return
+  endif
+  fread($pfile,'current')
+  create('VPchoice','string','current','')
+  create('VPtest','string','current','')
+  create('VPfile','string','current','')
+  create('VPstudy','string','current','')
+  create('VPmode','string','current','')
+  create('VPdata','string','current','')
+  VPdata=$datadir
+  VPmode='test'
+  getfile($datadir):$num
+  $i=0
+  $file=''
+  $cfile=userdir+'/persistence/VPchoices'
+  write('reset',$cfile)
+  while ($i < $num) do
+    $i=$i+1
+    $ext=''
+    getfile($datadir,$i):$file,$ext
+    if ($ext<>'') then
+      $file=$file+'.'+$ext
+    endif
+    exists($datadir+'/'+$file+'/History','file'):$e
+    if ($e) then
+      write('file',$cfile,'%s %s',$file,$file)
+    endif
+  endwhile
+  if (VPchoice<>'') then
+    {$0}('gettests')
+  endif
+
+  exists('VPversion','veripulse'):$ex,$vpath
+  if ($ex>0.5) then
+    $version=''
+    lookup('mfile',$vpath,'readline'):$version
+    $title='VeriPulse Viewer '+$version
+  else
+    $title='VeriPulse Viewer'
+  endif
+  vnmrjcmd('popup','mode:modeless','file:VPviewer.xml','pnewupdate:true','rebuild:yes','location:shuffler','title:'+$title,'close:'+$0+'(`close`)')
+  writeparam(curexp+'/VPview','VPchoice VPtest VPfile VPstudy VPmode VPdata')
+   
+ELSEIF ($arg='gettests') THEN
+  $tfile=$datadir+'/'+VPchoice+'/History'
+  getfile($tfile):$num
+  $i=0
+  $file=''
+  $cfile=userdir+'/persistence/VPtest'
+  $sfile=userdir+'/persistence/VPstudy'
+  write('reset',$cfile)
+  write('reset',$sfile)
+  $test=''
+  $samp=''
+  $desc=''
+  while ($i < $num) do
+    $i=$i+1
+    $ext=''
+    getfile($tfile,$i):$st,$ext
+    if ($ext<>'testlist') and ($ext<>'') then
+      $file=$tfile+'/'+$st+'.'+$ext
+      lookup('mfile',$file,'filekey'):$key,$ret
+      lookup('mfile',$key,'seekcs','TESTNAME','readline','filekey'):$desc,$key,$ret
+      if ($ret=2) then
+        write('file',$cfile,'"%s" "%s"',$desc,$ext)
+      endif
+      write('file',$sfile,'"%s" "%s"',$st,$st)
+    endif
+  endwhile
+  shell('sort -ur '+$cfile+' > '+$cfile+'s;rm -f '+$cfile+';cat'):$e
+  shell('sort -ur '+$sfile+' > '+$sfile+'s;rm -f '+$sfile+';cat'):$e
+ELSEIF ($arg='getfiles') THEN
+  $file=''
+  if (VPmode='test') then
+    $cfile=userdir+'/persistence/VPtfile'
+  else
+    $cfile=userdir+'/persistence/VPsfile'
+  endif
+  write('reset',$cfile)
+  vnmrjcmd('pnew','VPview')
+  $parent=$datadir+'/'+VPchoice+'/History'
+  getfile($parent):$total
+  $j=0
+  $runid=''
+  $ext=''
+  if (VPmode='test') then
+    $testval=VPtest
+  else
+    $testval=VPstudy
+  endif
+  while ($j < $total) do
+    $j=$j+1
+    getfile($parent,$j):$runid,$ext
+    if (VPmode='test') then
+      $testcase=$ext
+      $testdisp=$runid
+    else
+      $testcase=$runid
+      $testdisp=$ext
+    endif
+    $tresult=''
+    if ($testcase=$testval) and ($ext<>'testlist') then
+      lookup('mfile',$parent+'/'+$runid+'.'+$ext,'seekcs','NAME','read'):$file,$ret
+      if ($ret=0) then
+        lookup('mfile',$parent+'/'+$runid+'.'+$ext,'seekcs','FILENAME','read'):$file
+        strstr($file,'/'+VPchoice+'/'):$ret,$dum,$file
+      endif
+      if (VPmode='study') then
+        lookup('mfile',$parent+'/'+$runid+'.'+$ext,'seekcs','TESTNAME','readline'):$testdisp
+      endif
+      lookup('mfile',$parent+'/'+$runid+'.'+$ext,'seekcs','TESTRESULT','read'):$tresult
+      if ($ret) then
+        if ($tresult='FAIL') then
+          write('file',$cfile,'"%s      (FAIL)" "%s"',$testdisp,$file)
+        else
+          write('file',$cfile,'"%s" "%s"',$testdisp,$file)
+        endif
+      endif
+    endif
+  endwhile
+//  shell('cp '+$cfile+' '+$cfile+'.orig'):$e
+  shell('sort -u '+$cfile+' > '+$cfile+'s;rm -f '+$cfile+';cat'):$e
+  vnmrjcmd('pnew','VPview')
+ELSEIF ($arg='rt') THEN
+  writeparam(curexp+'/VPview','VPchoice VPtest VPfile VPstudy VPmode VPdata')
+  $path=$datadir+'/'+VPchoice+'/'+VPfile+'.fid'
+  locaction('DragNDrop','vnmr_data',instrument,$path,'Canvas','','BROWSER')
+  fsave(curexp+'/curpar.orig')
+  $pfile=userdir+'/persistence/VPpars'
+  fread($pfile,'current')
+  fread(curexp+'/VPview')
+  rm('-f',curexp+'/VPhistory'):$e
+  rm('-f',curexp+'/VPreprocess'):$e
+//  fsave(curexp+'/curpar.orig')
+
+ELSEIF ($arg='resave') THEN
+  exists(curexp+'/VPreprocess','file'):$e
+  if ($e) then
+    exists(curexp+'/VPhistory','file'):$e
+    if ($e) then
+      lookup('mfile',curexp+'/VPreprocess','read','filekey'):$path,$key
+      lookup('mfile',$key,'read'):$result
+      cp(curexp+'/VPhistory',$path)
+      flushpars:$e
+      $tmpfile=curexp+'/pardiff'
+      shell('diffparams '+curexp+'/curpar '+curexp+'/curpar.orig > '+$tmpfile):$e
+      $parlist='' $parlist2=''
+      readfile($tmpfile,'$parlist','$parlist2','','local')
+      rm('-f',$tmpfile):$dum
+      $partot=size('$parlist')
+      if ($partot>1) then
+        sort($parlist,'u'):$index,$parlist
+      endif
+      writeparam(file+'/procpar','$parlist','add')
+      IPdoemail($result)
+      VPreport('make')
+      IParchivedata
+      VPplot('','resave')
+      rm('-f',curexp+'/VPhistory'):$e
+    endif
+    rm('-f',curexp+'/VPreprocess'):$e
+  endif
+
+ELSEIF ($arg='showplots') THEN
+  $showdir=$datadir+'/'+VPchoice+'/Plots'
+  exists($showdir,'directory'):$e
+  if ($e > 0.5) then
+    shell('nautilus '+$showdir+' &'):$dum
+  else
+    write('error','Plots directory does not exist \(yet\)')
+  endif
+
+ELSEIF ($arg='history') THEN
+  if (VPmode<>'test') then
+    write('line3','Must Select Tests (not Studies) for history display')
+    return
+  endif
+  $parent=$datadir+'/'+VPchoice+'/History'
+  getfile($parent):$total
+  $hfile=userdir+'/persistence/VPhfile'
+  write('reset',$hfile)
+  $j=0
+  $runid=''
+  $ext=''
+  while ($j < $total) do
+    $j=$j+1
+    getfile($parent,$j):$runid,$ext
+    if ($ext=VPtest) then
+       write('file',$hfile,'%s.%s',$runid,$ext)
+    endif
+  endwhile
+  shell('sort -ur '+$hfile+' > '+$hfile+'s;rm -f '+$hfile+';cat'):$e
+
+ELSEIF ($arg='setmode') THEN
+  VPmode=$2
+  writeparam(curexp+'/VPview','VPmode')
+
+ELSEIF ($arg='setchoice') THEN
+  VPchoice=$2
+  writeparam(curexp+'/VPview','VPchoice')
+
+ELSEIF ($arg='setfile') THEN
+  VPfile=$2
+  writeparam(curexp+'/VPview','VPfile')
+
+ELSEIF ($arg='settest') THEN
+  VPtest=$2
+  writeparam(curexp+'/VPview','VPtest')
+
+ELSEIF ($arg='setstudy') THEN
+  VPstudy=$2
+  writeparam(curexp+'/VPview','VPstudy')
+
+ELSEIF ($arg='close') THEN
+//  destroy('VPchoice VPtest VPfile VPmode VPstudy VPdata'):$e
+  rm(userdir+'/persistence/VPchoices'):$e
+  rm(userdir+'/persistence/VPtests'):$e
+  rm(userdir+'/persistence/VPstudys'):$e
+  rm(userdir+'/persistence/VPsfiles'):$e
+  rm(userdir+'/persistence/VPtfiles'):$e
+  rm('-f',curexp+'/VPhistory'):$e
+  rm('-f',curexp+'/VPreprocess'):$e
+  rm('-f',curexp+'/VPview'):$e
+  rm('-f',curexp+'/curpar.orig'):$e
+  return
+  
+ENDIF
+

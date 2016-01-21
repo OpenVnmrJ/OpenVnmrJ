@@ -1,0 +1,98 @@
+"macro IPpopup"
+
+if ($#<0.5) then return endif
+
+$function=$1
+
+if ($function='message') then
+
+   $message=$2
+   $numlines=size('$message')
+   $messagefile=userdir+'/persistence/IPinfo'
+   write('reset',$messagefile)
+   $i=0
+   while ($i<$numlines) do
+	$i=$i+1
+   	write('file',$messagefile,'%s',$message[$i])
+   endwhile
+   vnmrjcmd('popup','mode:modeless','file:IPinfo.xml','rebuild:yes','pnewupdate:true','title:VeriPulse Information')
+
+endif
+
+
+if ($function='nextstudy') then
+
+   //Rules: if last sample is the same and autotuning is enabled -> skip popup and resume automation
+   //if no autotuning but last sample is the same and last nuc tuned to are the same -> skip popup
+   //Else show popup
+   $skip=0
+   $sampdesclast=''$nuc1last='' $nuc2last='' $lsline='' $lsarray=''
+   $ls=systemdir+'/tmp/VPlastsamp'
+   exists($ls,'file'):$lsex
+   if ($lsex) then
+	lookup('file',$ls,'readline'):$lsline
+   	string2array($lsline):$lsarray
+        $arraysize=size('$lsarray')
+   	$nuc1last=$lsarray[$arraysize-1]
+   	$nuc2last=$lsarray[$arraysize]
+ 	strstr($lsline,$nuc1last):$ret,$desc,$nucs
+   	string2array($desc):$desc
+   	array2string($desc):$sampdesclast
+   endif
+   
+   //Read tuneinfo
+   $runid=$2
+   IPmodule('gettuneinfo',$runid):$sampdesc,$nuc1,$nuc2
+   if ($sampdesc='none') then $skip=1 endif
+
+   //Rewrite last sample info
+   write('reset',$ls)
+   write('file',$ls,'%s %s %s',$sampdesc,$nuc1,$nuc2)
+   shell('chmod 775 '+$ls)
+
+   if (atune='y') then
+      if ($sampdesc=$sampdesclast) then $skip=1 endif
+   else
+      if ($sampdesc=$sampdesclast and $nuc1=$nuc1last and $nuc2=$nuc2last) then $skip=1 endif
+   endif
+   if ($skip) then
+	IPpause('proceed')
+	return
+   endif
+	
+   $messagefile=userdir+'/persistence/IPinfo'
+   write('reset',$messagefile)
+   $message=''
+
+   if (traymax>0) then
+
+      if (atune<>'y') then
+       	   if (($nuc1<>'NA') and ($nuc2<>'NA')) then
+             write('line3','Please do the following:\n\n1. Wait for the %s sample to be inserted into the magnet\n2. Tune the probe for %s and %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc1,$nuc2):$message
+	   elseif ($nuc1<>'NA') then
+             write('line3','Please do the following:\n\n1. Wait for the %s sample to be inserted into the magnet\n2. Tune the probe for %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc1):$message
+	   elseif ($nuc2<>'NA') then
+             write('line3','Please do the following:\n\n1. Wait for the %s sample to be inserted into the magnet\n2. Tune the probe for %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc2):$message
+	   endif
+      endif
+
+   else
+
+      if (atune<>'y') then
+       	   if (($nuc1<>'NA') and ($nuc2<>'NA')) then
+             write('line3','Please do the following:\n\n1. Insert the %s sample into the magnet\n2. Tune the probe for %s and %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc1,$nuc2):$message
+	   elseif ($nuc1<>'NA') then
+             write('line3','Please do the following:\n\n1. Insert the %s sample into the magnet\n2. Tune the probe for %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc1):$message
+	   elseif ($nuc2<>'NA') then
+             write('line3','Please do the following:\n\n1. Insert the %s sample into the magnet\n2. Tune the probe for %s\n3. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc,$nuc2):$message
+	   endif
+      else
+          write('line3','Please do the following:\n\n1. Insert the %s sample into the magnet\n2. Click \'Close\' when done\n\n\n    DO NOT CLOSE THIS WINDOW UNTIL YOU ARE READY',$sampdesc):$message
+      endif
+
+   endif
+
+   write('file',$messagefile,'%s',$message)
+   vnmrjcmd('popup','mode:modeless','file:IPinfo.xml','rebuild:yes','pnewupdate:true','title:VeriPulse Information','close:IPpause\(\'proceed\'\)')
+
+endif

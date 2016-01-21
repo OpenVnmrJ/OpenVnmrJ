@@ -1,0 +1,65 @@
+*************************************************************
+wetghmqcps - macro for creating wetghmqcps parameters from a WET parameter set
+        (see the dglc parameter screen)
+*************************************************************
+
+  wet - a y/n flag determining whether the WET element is used
+        (which uses pwwet, wetpwr, wetshape, gtw, gzlvlw, and gswet).
+  wetpwr - the power level for the WET element.
+  pwwet - the pw90 pulse width at wetpwr.
+  wetshape - the pulse shape used during the wet element.
+  gtw - the duration of the spoiling gradient (in sec).
+  gzlvlw - the amplitude of the gtw gradient. 
+  gswet - the recovery time following each gradient (try 0.002).
+
+  c13wet - a y/n flag controlling the selective 13C decoupling used during WET
+        (which uses dorwet, dpwrwet, and dmfwet; hardcoded to be WALTZ).
+  dofwet - the 13C decoupler offset used during WET.
+  dpwrwet - the decoupler power level for c13wet.
+  dmfwet - the dmf value used for c13wet.
+
+  dz - the delay following the wet element to allow longitudinal recovery
+        (like a T1IR or WEFT inversion recovering through zero).
+  composit - a y/n flag determining whether a composite read pulse is used.
+
+********************************************************************
+*
+*  ghmqcps.c - Pulsed Field Gradient HMQC (phase-sensitive version)
+*
+********************************************************************
+
+   three gradients - all set separately
+
+	j = 1JXH in Hz (140 typical for 1H-13C)
+	pwxlvl = decoupler pulse power level
+	pwx = decoupler pulsed pw90 
+        gzlvl1 = gradient amplitude (-32768 to +32768)
+        gt1 = gradient time (duration) in seconds (0.001)
+        gzlvl2 = gradient amplitude (-32768 to +32768)
+        gt2 = gradient time (duration) in seconds (0.001)
+        gzlvl3 = gradient amplitude (-32768 to +32768)
+        gt3 = gradient time (duration) in seconds (0.001)
+        grise = gradient rise and fall time (in seconds; 0.00001)
+        gstab = optional delay for stability (in seconds)
+	phase=1,2
+
+   gzlvl1, gzlvl2, and gzlvl3 and their times (gt1,gt2,gt3) may eventually be fixed
+   in their relationship (i.e.2:2:-1, 0:4:-3, etc)
+
+   if gzlvl3 is the same sign as gzlvl1 and gzlvl2 (N-type data)
+		 process with wft2d('t2dc')
+   if gzlvl3 is opposite in sign to gzlvl1 and gzlvl2 (P-type data)
+                 process with wft2d('t2dc','ptype')
+
+Notes on processing are located in the pulse sequence.
+Try wft2d(1,0,1,0,0,-1,0,1) depending on the signs of the gradients.
+
+To Run HMBC:
+	mbond='y'
+	taumb=0.055
+	dm='nnn'
+	sw1 and dof are changed to cover 0-200 13C ppm.
+	at may be lengthened
+	phase=1,2
+
+Note: the wetghmqcps pulse sequence is not supplied with Mercury or GEMINI 2000.

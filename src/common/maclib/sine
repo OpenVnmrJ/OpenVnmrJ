@@ -1,0 +1,59 @@
+"macro sine"
+
+"************************************************"
+"*                                              *"
+"*  sine   -   sine(<shift, npoints, domain>)   *"
+"*                                              *"
+"************************************************"
+
+if ($# > 0) then $shift=$1 else $shift=0 endif
+if ($shift < 0) then $shift=0 endif
+
+
+if ($# > 2) then $domain=$3 else $domain=trace endif
+if (($domain <> 'f1') and ($domain <> 'f2')) then
+   write('line3','domain must be either f1 or f2')
+   return
+endif
+
+if ($domain = 'f1') then
+   $at = (ni - 1)/sw1
+   $np = ni*2
+else
+   $at = at
+   $np = np
+endif
+
+
+if ($# > 1) then $npoints=$2 else $npoints=$np endif
+if ($npoints < 0) then
+   $npoints = $np
+endif
+
+if ($npoints > $np) then
+   $npoints = $np
+   write('line3','npoints greater than actual number of points')
+endif
+
+
+if $#>3 then
+   write('line3','usage - sine(<shift,npoints,domain>)')
+   return
+endif
+
+
+if ($shift <= 1) then
+   $sb = ($at/2)*($npoints/$np)
+   $sbs = 'n'
+else
+   $sb = ($shift*$at/2)*($npoints/$np)/($shift-1)
+   $sbs = (-2)*$sb/$shift
+endif
+
+if ($domain = 'f1') then
+   sb1 = $sb
+   sbs1 = $sbs
+else
+   sb = $sb
+   sbs = $sbs
+endif

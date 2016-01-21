@@ -1,0 +1,30 @@
+"macro is_postvj22b"
+return(1)
+$token1='' $rev='' $subrev='' $vrev=''
+lookup('mfile',systemdir+'/vnmrrev','readline',1):$vrev
+
+substr($vrev,1):$token1
+format($token1,'upper'):$token1
+if $token1='VNMRJ' then
+  $sw='VnmrJ'
+  substr($vrev,3):$rev
+  substr($vrev,5):$subrev
+else
+  $sw='VNMR'
+  substr($vrev,2):$rev
+  substr($vrev,4):$subrev
+endif
+substr($subrev,1,1):$subrev
+
+format($rev,'lower'):$rev2
+$newexists=0
+if ($sw='VnmrJ') then
+   if (($rev2>2.2) or
+      (($rev2 > 2.15) and
+       ($subrev<>'A') and
+       ($subrev<>'B'))) then
+           $newexists=1
+   endif
+endif
+
+return($newexists)

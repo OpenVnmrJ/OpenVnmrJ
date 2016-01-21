@@ -1,0 +1,115 @@
+"macro plottopside"
+"***************************************************************"
+" plottopandside - macro used by plot2D to do top & side plots  "
+"                    of 1D spectra in automation                "
+"***************************************************************"
+
+         $savewc=wc $savesc=sc $savewc2=wc2 $savesc2=sc2
+         $trace=trace $savevp=vp
+         $wp1=wp1 $sp1=sp1  $wp=wp  $sp=sp
+
+if ($1 <> 'notop') then
+	$ext=''
+        getext($1):$fidname,$ext
+	if ($ext='') then $fidname=$1 endif
+        exists($fidname+'.fid','directory'):$fidex
+        if ($fidex=0) then $1='notop' endif
+endif
+
+if ($1 <> 'notop') then
+ rt($1)
+ wft('nods')
+ cdc f full
+ if ($trace='f1') then
+  $savewp=$wp1 $savesp=$sp1
+ else
+  $savewp=$wp $savesp=$sp
+ endif
+ 
+        $newwc=$savewc $newsc=$savesc $newwc2=$savewc2 $newsc2=$savesc2
+        $edge=sp 
+        if $savesp > $edge then 
+          sp=$savesp
+          $width=sw-sp+$edge
+          if ($width > $savewp) then
+           wp=$savewp
+          else
+           wp=$width 
+           $newwc= wp*$newwc/$savewp 
+          endif
+        else
+          sp=$edge
+          $wp=$savewp - sp+$savesp
+          $newwc=$newwc*$wp/$savewp
+          $newsc = $newsc + ($savewc - $newwc)
+          $width = sw
+          if ($width > $wp) then
+           wp=$wp
+          else
+           wp=$width 
+           $wc=$newwc
+           $newwc=wp*$newwc/$wp
+           $newsc= $newsc + ($wc - $newwc)
+          endif
+        endif
+
+        wc=$newwc wc2=$newwc2
+        sc=$newsc sc2=$newsc2
+
+ vp=sc2 sc2=0
+ if (tn = 'H1') then vsadjh(0.2*wc2) else vsadj(0.2*wc2) endif
+ intmod='off' pl('top') vp=$savevp sc2=$savesc2
+endif
+
+if ($2 <> 'noside') then
+	$ext=''
+        getext($2):$fidname,$ext
+	if ($ext='') then $fidname=$1 endif
+        exists($fidname+'.fid','directory'):$fidex
+        if ($fidex=0) then $2='noside' endif
+endif
+
+if ($2 <> 'noside') then
+ rt($2)
+ wft('nods')
+ cdc f full
+ if ($trace='f2') then
+  $savewp=$wp1 $savesp=$sp1
+ else
+  $savewp=$wp $savesp=$sp
+ endif
+
+        $newwc=$savewc $newsc=$savesc $newwc2=$savewc2 $newsc2=$savesc2
+        $edge=sp 
+        if $savesp > $edge then 
+          sp=$savesp
+          $width=sw-sp+$edge
+          if ($width > $savewp) then
+           wp=$savewp
+          else
+           wp=$width 
+           $newwc2= wp*$newwc2/$savewp 
+           $newsc2= $newsc2 + ($savewc2 - $newwc2)
+          endif
+        else
+          sp=$edge
+          $wp=$savewp - (sp-$savesp)
+          $newwc2=$newwc2*$wp/$savewp
+          $width = sw
+          if ($width > $wp) then
+           wp=$wp
+          else
+           wp=$width 
+           $wc2=$newwc2
+           $newwc2=wp*$newwc2/$wp
+           $newsc2= $newsc2 + ($wc2 - $newwc2)
+          endif
+        endif
+
+        wc=trunc($newwc+0.5) wc2=trunc($newwc2+0.5)
+        sc=trunc($newsc+0.5) sc2=trunc($newsc2+0.5)
+
+ if (tn = 'H1') then vsadjh(0.2*wc2) else vsadj(0.2*wc2) endif
+ intmod='off' pl('side') 
+endif
+

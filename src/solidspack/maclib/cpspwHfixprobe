@@ -1,0 +1,60 @@
+"macro cpspwHfixprobe"
+// cppwHfixprobe - A macro to propagate H pulsewidth calibrations from the 
+//                 named region to all regions with the same nucleus.
+
+//                 Argument 1 is the action:
+//                 'fix' reads H pulsewidth information and propagates it 
+//                 to all other regions with the same nucleus.  
+
+//                 Argument 2 is the region number with a default of 1.  
+
+// Fix H Pulsewidth Parameters in the Probe File
+
+if (($#>0) and ($1='fix')) then
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0  $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Set Array Containing Region Codes
+
+   $regout[1]='HCa'
+   $regout[2]='HCO'
+   $regout[3]='HC'
+   $indexmax=3
+
+// Get H Pulsewidth Parameters from the Named Region 
+
+   probeparamgroup('getlocal',$reg,$dnuc,'','dbX90'):$dpwr
+   probeparamgroup('getlocal','hp'+$reg,$dnuc,'','aH90','pwH90','pwH180','R','F'):
+                                        $aH90_hp,$pwH90_hp,$pwH180_hp,$R_hp,$F_hp
+
+   probeparamgroup('getlocal','mp'+$reg,$dnuc,'','aH90','pwH90','pwH180','R','F'):
+                                        $aH90_mp,$pwH90_mp,$pwH180_mp,$R_mp,$F_mp
+
+// Save H Pulsewidth Parameters to All Regions with the Same Nucleus
+
+   $index=1.0
+   repeat
+      probeparamgroup('setlocal',$regout[$index],$dnuc,'','dbX90',$dpwr)
+      probeparamgroup('setlocal','hp'+$regout[$index],$dnuc,'','aH90',$aH90_hp,
+                                                'pwH90',$pwH90_hp,
+                                                'pwH180',$pwH180_hp,
+                                                'R',$R_hp,
+                                                'F',$F_hp)
+      probeparamgroup('setlocal','mp'+$regout[$index],'H1','','aH90',$aH90_mp,
+                                                'pwH90',$pwH90_mp,
+                                                'pwH180',$pwH180_mp,
+                                                'R',$R_mp,
+                                                'F',$F_mp)
+      $index=$index+1.0
+   until ($index>$indexmax)
+endif
+

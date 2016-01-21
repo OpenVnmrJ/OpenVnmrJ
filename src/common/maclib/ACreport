@@ -1,0 +1,23 @@
+"macro ACreport"
+"ACreport - print probe file"
+probeid('enabled'):$probeid
+
+exists('prtmod','parameter'):$e
+if ($e > 0.5) then
+   if (prtmod <> 'y') then return
+endif endif
+
+if $probeid then
+  probeid('get'):$e,$file
+else
+  exists(probe+'/'+probe,'probes'):$e,$file
+endif
+if $e<0.5 then
+  write('line3','ACreport: No probe calibration file, please create with "addprobe"')
+  return
+endif
+
+getplottertype(printer,'osname'):$osprinter
+shell('vnmrprint '+$file+' '+ $osprinter)
+
+if $probeid then probeid('cleanup',$file) endif

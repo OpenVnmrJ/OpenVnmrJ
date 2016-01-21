@@ -1,0 +1,76 @@
+************************************************************************
+*  ht        -        Setting up and processing Hadamard experiments.  *
+************************************************************************
+
+To set up a Hadamard experiment, do the following.
+     1) First run a Proton, Carbon, or other 1D experiment.
+     2) When the acquisition is finished, process and phase the
+          spectrum.  
+     3) Run the editht macro to open the Edit HT Freq popup.
+          Create a Hadamard frequency list for the nucleus
+          of interest.  Save the frequency list.  
+     4) For a heteronuclear Hadamard experiment, run a Proton
+          experiment, and adjust spectral width and decoupling
+          as desired.  
+     5) Load the desired Hadamard experiment.  Check the
+          Hadamard frequency list and other parameters.
+     6) Start the acquisition of the Hadamard experiment.
+     7) When acquisition is complete, process with
+          proc1='ht' wft2da.
+
+
+Parameters used:
+htfrq1  - Hadamard frequency list in indirect dimension.
+ni      - Number of increments in indirect dimension.  
+             Typically set to the size of htfrq1 plus htofs1.
+htofs1  - Offset in Hadamard processing (number of increments
+             to skip).
+proc1   - Type of processing in indirect dimension.  Set to 'ht'.
+fn1     - Fourier number in indirect dimension.  It must be larger
+             than the number of Hadamard frequencies, and larger
+             than the minimum difference between Hadamard frequencies.
+
+See also:
+editht getht HsqcHT TocsyHT sethtfrq1 ft2d ft2da
+
+
+Hadamard Spectroscopy
+
+Hadamard spectroscopy is a technique for acquiring multidimensional
+data sets using a small number of transients, and reconstructing
+the nD spectrum using a Hadamard transform.  It is based on selective
+excitation of a predetermined set of frequencies.
+
+
+Acquisition.
+
+A list of frequencies to selectively excite is determined from a 1D
+spectrum, or other means.  A series of shaped pulses is created from
+the frequency list, using a Hadamard matrix to selectively excite or
+invert the signals of interest.  The matrix size must be greater than
+the number of frequencies in the list.  A typical 8x8 Hadamard matrix is
+shown below.
+
+++++++++
+++++----
+++--++--
+++----++
++-+-+-+-
++-+--+-+
++--++--+
++--+-++-
+
+
+Processing.
+
+Hadamard processing in the indirect dimension is done by summing,
+adding or subtracting the acquired data increments in combinations
+according to the Hadamard matrix elements.  Each sum gives a trace
+corresponding to one of the frequencies in the list, and is placed
+at the appropriate frequency in the indirect dimension.  The areas
+between the frequencies in the list are zero filled.  The direct
+dimension is Fourier transformed, giving the 2D spectrum.
+
+
+Reference: E. Kupce and R. Freeman, "Two-dimensional Hadamard
+spectroscopy," J. Magn. Reson. 162 (2003), pp. 300-310.

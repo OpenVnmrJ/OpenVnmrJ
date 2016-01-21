@@ -1,0 +1,677 @@
+"macro gmapsys"
+"enter gradient shimming administrator menu"
+$jstr=''  $jmap=''  $jfile=''
+isvnmrj:$isvnmrj
+
+exists('gmapspin','parameter','global'):$e
+if $e>0.5 then
+  destroy('gmapspin','global')
+endif
+exists('gmapspin','parameter'):$e
+if $e<0.5 then
+  create('gmapspin','string')
+  setenumeral('gmapspin',2,'n','y')
+  gmapspin='n'
+endif
+exists('gmapname','parameter','global'):$e
+if $e<0.5 then
+  create('gmapname','string','global')
+endif
+
+
+IF ($# > 0.5) THEN
+
+if ($1 = 'exit' or $1 = 'return' or $1='quit') then
+  gmapset('return')
+  newdg
+  return
+endif
+
+if ($1 = 'help') then
+clear
+write('alpha','\n                       *** How to Set Up Gradient Shimming ***')
+write('alpha','\n(A) Enter "gmapsys".')
+write('alpha','(B) Click on "Set Params", then "Gradient,Nucleus" to select parameters.  Set pw to\n       90 degree pulse.  Click on "Go, dssh" to test the parameters.')
+write('alpha','(C) Click on "Shim Maps", then "Automake Shimmap".  Enter mapname when prompted.')
+write('alpha','(D) Click on "Autoshim on Z" or type "gmapshim".')
+write('alpha','\n>>> Use the "Enable Spinning" button in step (B) if you want to spin the sample. <<<')
+write('alpha','\nFor ordinary walkup use:\n  Enter "gmapshim" to run gradient shimming.')
+write('alpha','\nFor automation and GLIDE:\n  Use wshim=\'g\' in parameter sets.\n  Modify "gmapz" macro for different solvents.')
+write('alpha','\n\nSee man(\'gmapsys\') for further details.')
+return
+endif
+
+
+if ($1 = 'rec') then
+clear
+cat(userdir+'/gshimlib/data/gshim.rec')
+return
+endif
+
+
+if ($1 = 'vi') then
+$dum=0
+$jfile = userdir+'/gshimlib/data/gshim.list'
+"write('line3','Edit Shim Offset, type \':wq\' when done')"
+"how to stop au from happening before this is done?"
+shelli('vnmr_vi', '"'+$jfile+'"'):$dum
+return
+endif
+
+
+if ($1 = 'calc' or $1 = 'calcgzwin') then
+"check if two cursors displayed"
+if (crmode<>'b') then
+  write('line3','set cursors at edge of profile')
+else
+  gzwin=100*delta/sw
+  exists('shaped','parameter'):$shapedex
+  if ($shapedex>0.5) then
+      if (shaped='y') then "correct with lsfrq instead"
+	//do something
+        split
+	lsfrq=lsfrq+sw/2-rfl-cr
+      	write('line3','cursors used to set gzwin to %3.1f, lsfrq to %3.1f',gzwin,lsfrq)
+      else
+      	split movetof
+      	write('line3','cursors used to set gzwin to %3.1f, tof to %3.1f',gzwin,tof)
+      endif
+  else
+      split movetof
+      write('line3','cursors used to set gzwin to %3.1f, tof to %3.1f',gzwin,tof)
+  endif
+endif
+"problem is you can't display ds and gmapsys menu at same time"
+if spin=0 then spin='n' endif
+return
+endif
+
+
+if ($1 = 'checkvtcomplvl') then
+  if (vtcomplvl>1.5) then
+    $gtype='' substr(gradtype,3,1):$gtype
+    exists('tmpgradtype','parameter'):$e
+    if ($e) then substr(tmpgradtype,3,1):$gtype endif
+    if ($gtype='h') then
+      vtcomplvl=1
+      write('line3','homospoil gradient is active, vtcomplvl reset to 1')
+    elseif (spin>0.5) then
+      vtcomplvl=1
+      write('line3','spin is active, vtcomplvl reset to 1 (spin=%g)',spin)
+    endif
+  endif
+return
+endif
+
+
+if ($1 = 'setH1') then
+tn='H1' sw=1e5 np=512 tpwr=58 pw=3 gain=2
+if probe<>'' then
+  getparam('tpwr','H1'):tpwr
+  getparam('pw90','H1'):pw90
+  pw(15)
+endif
+if (Console='mercury') then gain=2 endif
+d1=3 d2=0.001 d3=0,0.005 p1=0
+fn='n' lb='n' sb='n' sbs='n' gf='n' gfs='n' awc='n'
+exists('tmpgradtype','parameter'):$e
+if not ($e) then
+  create('tmpgradtype','string')
+endif
+tmpgradtype=gradtype
+substr(tmpgradtype,3,1):$js
+if ($js='l' or $js='s') then gzlvl=500 else gzlvl=2000 endif
+gzsize=4
+$rf='' substr(rftype,2,1):$rf 
+if ($rf<>'a') then dn='C13' endif
+if shimset=4 or shimset=7 or shimset=17 or shimset=20 then gzsize=5 endif
+if shimset=18 or shimset=19 then gzsize=5 endif
+if shimset=5 or shimset=9 then gzsize=6 endif
+if gmapspin='y' then
+  gmapsys('spin')
+  write('line3','Parameters set for pfg on H1 and spin %g, check tpwr, pw.',spin)
+  if spin<25 then
+    write('error','WARNING:  Spin rate=%g (<25) may be too slow for H1, d3[2]=%3.3g too long.',spin,d3[2])
+  endif
+else
+  write('line3','Parameters set for pfg on H1, check tpwr, pw.')
+endif
+dps
+return
+endif
+
+
+if ($1 = 'setH2') then
+if (Console='vnmrs' or Console='inova' or Console='uplus' or Console='mercury') then
+  tn='lk'
+else
+  tn='H2'
+endif
+dn='H1' sw=15351 np=512 tpwr=42 pw=200 gain=26
+if probe<>'' then
+  getparam('tpwr','lk'):tpwr
+  getparam('pw90','lk'):pw
+endif
+if (Console='mercury') then gain=10 endif
+d1=3 d2=0.001 d3=0,0.25 p1=0
+fn='n' lb='n' sb='n' sbs='n' gf='n' gfs='n' awc='n'
+exists('tmpgradtype','parameter'):$e
+if not ($e) then
+  create('tmpgradtype','string')
+endif
+tmpgradtype=gradtype
+substr(tmpgradtype,3,1):$js
+if ($js='l' or $js='s') then gzlvl=500 else gzlvl=2000 endif
+if (h1freq<450) then
+  gzlvl=0.5*gzlvl sw=8e3 np=256 d3=0,0.18
+endif
+gzsize=4
+if shimset=4 or shimset=7 or shimset=17 or shimset=20 then gzsize=5 endif
+if shimset=18 or shimset=19 then gzsize=5 endif
+if shimset=5 or shimset=9 then gzsize=6 endif
+if gmapspin='y' then
+  gmapsys('spin')
+  write('line3','Parameters set for pfg on H2 and spin %g, check tpwr, pw.',spin)
+else
+  write('line3','Parameters set for pfg on H2, check tpwr, pw.')
+endif
+dps
+return
+endif
+
+
+if ($1 = 'setHSforH1') then
+tn='H1' tpwr=58 pw=3 sw=1e4 np=256
+if probe<>'' then
+  getparam('tpwr','H1'):tpwr
+  getparam('pw90','H1'):pw
+endif
+d1=3 d2=0.003 d3=0,0.01 gain=26
+fn='n' lb='n' sb='n' sbs='n' gf='n' gfs='n' awc='n'
+if (Console='mercury') then gain=10 endif
+p1=2*pw
+exists('tmpgradtype','parameter'):$e
+if not ($e) then
+  create('tmpgradtype','string')
+endif
+tmpgradtype='nnh'
+gzlvl=2000
+gzsize=4
+$rf='' substr(rftype,2,1):$rf 
+if ($rf<>'a') then dn='C13' endif
+if shimset=4 or shimset=7 or shimset=17 or shimset=20 then gzsize=5 endif
+if shimset=18 or shimset=19 then gzsize=5 endif
+if shimset=5 or shimset=9 then gzsize=6 endif
+if gmapspin='y' then
+  gmapsys('spin')
+  write('line3','Parameters set for homospoil on H1 and spin %g, check tpwr, pw, p1.',spin)
+  if spin<25 then
+    write('error','WARNING:  Spin rate=%g (<25) may be too slow for H1, d3[2]=%3.3g too long.',spin,d3[2])
+  endif
+else
+  write('line3','Parameters set for homospoil on H1, check tpwr, pw, p1.')
+endif
+dps
+return
+endif
+
+
+if ($1 = 'setHSforH2') then
+if (Console='vnmrs' or Console='inova' or Console='uplus' or Console='mercury') then
+  tn='lk'
+else
+  tn='H2'
+endif
+dn='H1' tpwr=42 pw=200 sw=2000 np=512
+if probe<>'' then
+  getparam('tpwr','lk'):tpwr
+  getparam('pw90','lk'):pw
+endif
+d1=3 d2=0.015 d3=0,0.25 gain=26
+fn='n' lb='n' sb='n' sbs='n' gf='n' gfs='n' awc='n'
+if (Console='mercury') then gain=10 endif
+p1=2*pw
+exists('tmpgradtype','parameter'):$e
+if not ($e) then
+  create('tmpgradtype','string')
+endif
+tmpgradtype='nnh'
+gzlvl=2000
+gzsize=4
+if shimset=4 or shimset=7 or shimset=17 or shimset=20 then gzsize=5 endif
+if shimset=18 or shimset=19 then gzsize=5 endif
+if shimset=5 or shimset=9 then gzsize=6 endif
+if gmapspin='y' then
+  gmapsys('spin')
+  write('line3','Parameters set for homospoil on H2 and spin %g, check tpwr, pw, p1.',spin)
+else
+  write('line3','Parameters set for homospoil on H2, check tpwr, pw, p1.')
+endif
+dps
+return
+endif
+
+
+if ($1 = 'filemenu') then
+
+  $file=userdir+'/persistence'
+  exists($file,'file'):$e
+  if $e<0.5 then mkdir($file) endif
+  $file=$file+'/gmapshim'
+  exists($file,'file'):$e
+  if $e>0.5 then rm($file):$x endif
+
+  $rfile=userdir+'/gshimlib/shimmaps'
+  shell('ls "'+$rfile+'" > "'+$file+'_init"'):$x
+  lookup('file',$file+'_init')
+  $word=''
+  $base=''
+  $ext=''
+  $i=0
+  repeat
+    $i=$i+1
+    lookup('read'):$word,$nret
+    if $nret>0.5 then
+      length($word):$len
+      if $len>4 then
+        substr($word,$len-3,4):$ext
+        if ($ext='.fid' or $ext='.par') then
+          substr($word,1,$len-4):$base
+          $word=$base
+          write('file',$file,'"%s" "%s"',$word,$word)
+        endif
+      endif
+    endif
+  until ($nret<0.5 or $i>=1000)
+
+  $rfile=systemdir+'/gshimlib/shimmaps'
+  exists($rfile,'file'):$e
+  if $e>0.5 then
+    shell('ls "'+$rfile+'" > "'+$file+'_init"'):$x
+    lookup('file',$file+'_init')
+    $word=''
+    $i=0
+    repeat
+      $i=$i+1
+      lookup('read'):$word,$nret
+      if $nret>0.5 then
+        length($word):$len
+        if $len>4 then
+          substr($word,$len-3,4):$ext
+          if ($ext='.fid' or $ext='.par') then
+            substr($word,1,$len-4):$base
+            $word=$base
+            write('file',$file,'"%s" "%s"',$word,$word)
+          endif
+        endif
+      endif
+    until ($nret<0.5 or $i>=1000)
+  endif
+
+  write('file',$file,'"none" "none"')
+
+  rm($file+'_init'):$x
+  gmapname=gmapname
+
+return
+endif
+
+
+if ($1 = 'saveas') then
+$js2='' $js3='' $ext=''
+$js='Save current parameters and shimmap as: '
+input($js):$js
+if $js='' then return endif
+length($js):$jlen
+$mapname=$js
+if $jlen>4.5 then
+  substr($js,$jlen-3,4):$js2
+  if ($js2='.fid' or $js2='.par') then
+    substr($js,1,$jlen-4):$js
+    $mapname=$js
+  endif
+endif
+$tfile=userdir+'/gshimlib/shimmaps/'+$mapname
+exists($tfile+'.fid','file'):$e
+if $e>0.5 then
+  write('error','invalid mapname: %s.fid already exists',$mapname)
+  return
+endif
+if $js2='.fid' then
+  write('error','cannot use .fid with  Save Params  button')
+"  write('error','invalid mapname: %s.fid',$mapname)"
+  return
+endif
+$tfile=$tfile+'.par'
+exists($tfile,'file'):$e
+if $e>0.5 then
+  $js='Overwrite '+$mapname+'.par? [n] '
+  input($js):$js substr($js,1,1):$js
+  if ($js='Y' or $js='y') then
+    rm('-r',$tfile):$x
+  else
+    return
+  endif
+endif
+svp($tfile)
+mv(userdir+'/gshimlib/data/gshim.list',$tfile+'/gshim.list')
+cp(userdir+'/gshimlib/data/gshim.bas',$tfile+'/gshim.bas')
+$js=$tfile+'/gshim.list'
+lookup('file',$js,'readline'):$js3
+write('file',$js+'2','mapname %s',$mapname)
+repeat
+  lookup('readline'):$js3,$nret
+  if $nret>0.5 then write('file',$js+'2','%s',$js3) endif
+until ($nret<0.5)
+rm($js):$x mv($js+'2',$js)
+cp($tfile+'/gshim.list',userdir+'/gshimlib/data/gshim.list')
+
+return
+endif
+
+
+if ($1 = 'addpar') then
+gmapset('addpar')
+return
+endif
+
+
+if ($1 = 'svppar') then
+$jfile = userdir+'/parlib/gmapz.par'
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('line3','Parameter file gmapz.par written.')
+  svp($jfile)
+else
+  $jstr = ''
+  input('Overwrite parameter file gmapz.par? [y] '):$jstr
+  substr($jstr,1,1):$jstr
+  if ($jstr <> 'n' and $jstr <> 'N') then
+    rm('-r',$jfile):$x
+    svp($jfile)
+  endif
+endif
+return
+endif
+
+
+if ($1 = 'reprocmap') then  "no menu button"
+gmapset('reprocb')
+return
+endif
+
+
+if ($1 = 'au') then
+wexp=''
+wnt='wft f vsadj dssh'
+$exec=''
+gmaplistfunc('unarray'):$ok,$exec
+exec($exec)
+au('wait')
+wdone('')
+return
+endif
+
+
+if ($1 = 'findgzlvl') then
+if seqfil<>'gmapz' then gmapsys endif
+gmapset('setup_gzlvl') "au('wait') wdone('')"
+return
+endif
+
+
+if ($1 = 'findgzwin') then
+if seqfil<>'gmapz' then
+  gmapsys
+endif
+if $#<1.5 then
+  gmapset('setgzwin') "au('wait') wdone('')"
+else
+  if $2>0.5 then
+    gmapauto('startmap','nogo')
+    gmapset('setgzwin')
+    wexp='gmapset(\'setsw\',0,2)'
+    "au('next','wait') wdone('')"
+  else
+    gmapauto('startmap','nogo')
+    gmapset('setgzwin')
+    wexp='gmapset(\'setsw\',0,1)'
+    "au('next','wait') wdone('')"
+  endif
+endif
+
+return
+endif
+
+
+if ($1 = 'findtof') then
+gmapauto_ez('starttof')
+return
+endif
+
+
+if ($1 = 'do_everything') then
+gmapsys('findgzwin',1)
+return
+endif
+
+
+if ($1 = 'writeb0') then
+if size('d3') < 1.5 then
+  write('error','d3 must be arrayed')
+  return
+endif
+wft('nods')
+wexp='gmapsys(\'writeb0\')'
+$fname = userdir + '/gshimlib/data/gshim.phase'
+exists($fname,'file'):$e
+if $e>0.5 then rm($fname):$x endif
+wrspec($fname,1,2)
+exists(curexp+'/expl.out','file'):$e
+if $e>0.5 then rm(curexp+'/expl.out'):$x endif
+wrspec('expl_avg_scale',$fname)
+expl('file',$fname)
+return
+endif
+
+
+if ($1='shimmap' or $1='makemap') then
+"if automation should also worry about spinner etc. here"
+$jstr=''
+if seqfil<>'gmapz' then  "load parameters"
+  write('line3','retrieving gradient shimming parameters')
+  gmapsys
+endif
+if ($isvnmrj < 0.5) then menu('gmap_basisopt') endif
+if ($# < 1.5) then
+  gmapauto('startmap')  "make shimmap"
+elseif $2='manual' then
+  gmapauto('startmap','manual')   "make shimmap with manual offset values"
+elseif $2='overwrite' then
+  gmapauto('startmap','overwrite')  "ask no questions, automatically overwrite"
+elseif $2='auto' then
+  gmapsys('findgzwin',0)
+elseif $2='ask' then
+  gmapshim('mapname',''):$name,$ex
+  if ($name='' or $ex>0.5) then
+    gmapsys('findgzwin',0)
+  else
+    gmapauto('startmap','nogo','ow')
+    gmapset('setgzwin')
+    wexp='gmapset(\'setsw\',0,1)'
+  endif
+elseif $2='askmap' then
+  gmapshim('mapname',''):$name,$ex
+  if ($name='' or $ex>0.5) then
+    gmapauto('startmap')
+  else
+    gmapauto('startmap','overwrite')
+  endif
+elseif $2='vi' then
+  gmapsys('vi')
+else
+  $jstr=$2
+  if $#<2.5 then
+    gmapauto('startmap',$jstr)   "$jstr is mapname, ask if overwrite"
+  else
+    if $3='overwrite' then
+      gmapauto('startmap',$jstr,'ow')
+"$jstr mapname, overwrite if exists??"
+    endif
+  endif
+endif
+
+return
+endif
+
+
+if ($1='shim') then
+if $#>1.5 then
+  if $2='checkrange' then
+    gmapauto('startshim')
+  else
+    gmapauto('startshim','auto')
+  endif
+else
+  gmapauto('startshim','auto')
+endif
+return
+endif
+
+
+if ($1='spinon') then
+gmapspin='y'
+if spin<0.5 then spin=10 endif
+write('line3','Spinner enabled, spin rate of %g.',spin)
+gmapsys('checkvtcomplvl')
+gmapsys('spin')
+if (tn='H1' and spin<25) then
+  write('error','WARNING:  Spin rate=%g (<25) may be too slow for H1, d3[2]=%3.3g too long.',spin,d3[2])
+endif
+dps
+return
+endif
+
+
+if ($1='spinoff') then
+gmapspin='n'
+spin=0
+write('line3','Spinner disabled, spin rate set to zero.')
+gmapsys('checkvtcomplvl')
+substr(gradtype,3,1):$gtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then substr(tmpgradtype,3,1):$gtype endif
+if tn='H1' then
+  if ($gtype='h') then
+    d2=0.003 d3=0,0.01
+  else
+    d2=0.001 d3=0,0.005
+  endif
+elseif (tn='lk' or tn='H2') then
+  if ($gtype='h') then
+    d2=0.015 d3=0,0.25
+  else
+    d2=0.001 d3=0,0.25
+  endif
+endif
+dps
+return
+endif
+
+
+if ($1='spin') then
+"Set parameters"
+if spin <= 0 then
+  spin = 10
+  write('error','gmapspin is enabled, spin set to %d',spin)
+endif
+$rotor = 1/spin
+$p1 = p1
+substr(gradtype,3,1):$gtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then substr(tmpgradtype,3,1):$gtype endif
+if $gtype='h' then
+  if p1 <= 0 then
+    $p1 = 2 * pw
+  endif
+endif
+
+"Set d2 delay:  N/spin = (at/2 + 2*d2 + p1)"
+$dtime = at/2 + $p1*1e-6
+$N2 = trunc(spin * $dtime + 0.999)
+if $N2<=0 then $N2=1 endif
+$d2 = (($N2 * $rotor) - $dtime) * 0.5
+if ($d2 < at/6) then
+  $N22 = trunc(((at/6 - $d2) * 2.0 * spin) + 0.999)
+  $d2 = $d2 + $N22 * $rotor * 0.5
+  $N2 = $N2 + $N22
+endif
+d2 = $d2
+
+"Set d3 delay:  M/spin = d3[2]"
+if (tn='H1') then
+  $d3opt = 0.01
+else
+  if (tn='H2' or tn='lk') then
+    $d3opt = 0.2
+  else
+    $d3opt = 0.2
+  endif
+endif
+$N3 = trunc(spin * $d3opt + 0.999)
+$d32 = $N3 * $rotor
+d3 = 0, $d32
+"write('line3','Ncycles=%g,%g d2=%g d3[2]=%g rotor=%g',$N2,$N3,d2,d3[2],$rotor)"
+"write('line3','Parameters set for spin=%g.  Use \'Calculate gzwin\' on second spectrum.',spin)"
+return
+endif
+
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+return
+
+ENDIF  "IF $# > 0 THEN"
+
+
+gmapset('mkdir',2)
+gmapsys('filemenu')
+if (seqfil <> 'gmapz') then
+  $jstr = curexp+'/gtmp'
+  exists($jstr,'file'):$e
+  if $e>0.5 then
+    rm('-r',$jstr):$x
+  endif
+  tmpsave('gtmp')  "allows use of 'quit'"
+  $jstr = curexp+'/gtmp/startshims'
+  if Console<>'g2000' and system='spectrometer' then readallshims endif
+  exists($jstr,'file'):$exj
+  if $exj>0.5 then rm($jstr):$x endif
+  svs($jstr):$e
+  exists(curexp+'/text','file'):$t
+  if $t>0.5 then cp(curexp+'/text',curexp+'/gtmp') endif
+  $jstr=userdir+'/gshimlib/data/gshim.list'
+  exists($jstr,'file'):$e
+  if $e<0.5 then
+    gmapz
+  else
+    lookup('file',$jstr,'mapname','read'):$jmap
+    gmapz($jmap)
+    gmapname=$jmap
+    if seqfil<>'gmapz' then gmapz endif
+  endif
+  gmapset('disable')
+  $gspin='n'
+  exists('gmapspin','parameter'):$spe
+  if $spe>0.5 then
+    if gmapspin='y' then
+      $gspin='y'
+    endif
+  endif
+  if Console<>'g2000' and system='spectrometer' and $gspin='n' then sethw('spin',0) endif
+endif
+if ($isvnmrj < 0.5) then
+  menu('gmapz')
+else
+  vnmrjcmd('setpage','Acquire')
+  vnmrjcmd('setpage','Acquire','Gradient Shim')
+endif

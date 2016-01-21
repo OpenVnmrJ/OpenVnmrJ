@@ -1,0 +1,97 @@
+"macro seqgenupdate"
+"-------------------------------------------------------------------------"
+" seqgenupdate(filename): compiles the pulse sequence if arguments are given"
+"   	      and places the compiled sequence in their appdir seqlib "
+"-------------------------------------------------------------------------"
+
+if ($# = 1) then
+  seqgen($1)
+endif
+
+$updateFile=userdir+'/seqlib/.seqgenupdate'
+exists($updateFile,'file'):$e
+if ($e < 0.5) then
+  write('line3','No psglib and seqlib files to update')
+  return
+endif
+$psglib=''
+$val=''
+$path=''
+$label=''
+$dir=''
+$name=''
+readfile($updateFile,'$psglib','$val','','local')
+$num = size('$psglib')
+delete($updateFile)
+if ($num = 0) then
+  write('line3','No psglib and seqlib files to update')
+  return
+endif
+if ($psglib[1] = 'PSGGEN') then
+  write('line3','psglib and seqlib update disabled due to local psggen')
+  return
+endif
+$i=0
+write('line3','Update psglib and seqlib files')
+while ($i < $num) do
+  $i = $i + 1
+  substr($val[$i],1,'delimiter',' ;'):$path
+  if ($path='LOCAL') then
+    write('line3','Pulse sequence %s compiled locally.',$psglib[$i])
+  else
+    if ($path='ABSOLUTE') then
+      substr($val[$i],2):$path
+      substr($path,'dirname'):$dir,$name,$ext
+      exists($dir,'file','rw'):$rwok1
+      substr($dir,'dirname'):$dir
+      write('line3','Pulse sequence %s compiled from absolute path %s.',$psglib[$i],$path)
+      $str='absolute path'
+    else
+      substr($val[$i],2,'delimiter',';'):$label
+      substr($path,'dirname'):$dir,$name,$ext
+      exists($dir,'file','rw'):$rwok1
+      substr($dir,'dirname'):$dir
+      write('line3','Pulse sequence %s compiled from %s appdir at %s.',$psglib[$i],$label,$dir)
+      $str='its appdir'
+    endif
+    exists($dir+'/seqlib','directory'):$e
+    if ($e = 0 ) then
+      mkdir($dir+'/seqlib'):$e
+    endif
+    exists($dir+'/seqlib','file','rw'):$rwok2
+    if ($rwok1 and $rwok2) then  // check rw for psglib file
+       exists($path,'file'):$e
+       if ($e) then
+          exists($path,'file','rw'):$e
+          if ($e = 0) then $rwok1=0 endif
+       endif
+    endif
+    if ($rwok1 and $rwok2) then  // check rw for seqlib file
+       exists($dir+'/seqlib/'+$name,'file'):$e
+       if ($e) then
+          exists($dir+'/seqlib/'+$name,'file','rw'):$e
+          if ($e = 0) then $rwok2=0 endif
+       endif
+    endif
+    exists(userdir+'/seqlib/'+$name,'file'):$e
+    if ($e = 0) then
+      $rwok2=0
+      write('line3','Pulse sequence %s failed to compile.',$psglib[$i])
+      rm(userdir+'/psglib/'+$name+'.c'):$e
+    endif
+    if ($rwok1 and $rwok2) then
+       write('line3','Moving pulse sequence %s back to %s.',$psglib[$i],$str)
+//       rm('-f',$path):$e
+       rm('-f',$dir+'/seqlib/'+$name):$e
+       copy(userdir+'/seqlib/'+$name,$dir+'/seqlib/'+$name)
+       copy(userdir+'/seqlib/'+$name+'.c',$dir+'/seqlib/'+$name+'.c')
+//       copy(userdir+'/seqlib/'+$name+'.c',$dir+'/psglib/'+$name+'.c')
+       rm(userdir+'/seqlib/'+$name):$e
+       rm(userdir+'/seqlib/'+$name+'.c'):$e
+       rm(userdir+'/psglib/'+$name+'.c'):$e
+    elseif ($rwok2=1) then
+       write('line3','No permission to move pulse sequence %s back to %s.',$psglib[$i],$str)
+    endif
+  endif
+endwhile
+

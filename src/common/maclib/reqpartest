@@ -1,0 +1,153 @@
+"macro reqpartest"
+
+/*
+ * If the parameter reqparcheck='y', then this macro examines the list of
+ * parameter names in reqparlist and if all of them exist *and* are properly
+ * set, returns 0.  'Properly set' is defined as a non-empty string for string
+ * parameters, or the active bit set (parameter is 'on') for real parameters.
+ *
+ * This macro also checks the string which is the concatenation of autoname +
+ * globalauto + sqname for any parameters in that string.  Parameters in this
+ * string are delimited by $.
+ * 
+ * For convenience, this macro will return different values depending on the
+ * specific non-true condition, as defined in the following table:
+ * 
+ *      All parameters exist   T   X   F   T   F
+ *      All parameters set     T   X   T   F   F
+ *      reqparcheck='y'        T   F   T   T   T
+ *      return value           0  -1   1   2   3
+ * 
+ * Also note that the non-existence of either reqparcheck or reqparlist is
+ * equivalent to reqparcheck not set tp 'y'.
+ * 
+ * Parameters are checked in the current tree first for existence, and if that
+ * parameter exists there, then that tree is checked for whether it is set.  If
+ * it does not exist in the current tree, then the global tree is checked.  If
+ * and only if it exists in neither tree is it considered to not exist.
+ * 
+ * If the argument to this macro is 'showtext' then if one or more parameters 
+ * do not exist or are not properly set, then they are listed on the
+ * alphanumeric (text) screen.
+ * 
+ * If the argument to this macro is 'showgui', then an entry popup is displayed
+ * for both creation (of non-existing parameters) and value entry.  The return
+ * value is not affected by the fact that the values are now being entered -- in
+ * other words, the return value is to be intepreted as 'did not exist' or 'was
+ * not set' prior to running the macro.
+ *
+ * The comprehensive list to check is reqparlist+autoname+globalauto+sqname.
+ * Some duplicates may occur, and this macro checks and eliminates duplicates.
+ *
+ * The argument callback_string is an optional argument that gets passed on the
+ * VnmrJ, and gets passed *back* to vnmrbg when the required parameters entry
+ * popup closes.  VnmrJ and vnmrbg are not otherwise syncronized, so this allows
+ * for re-entrancy.
+ * 
+ */
+
+$false = 0
+$true = 1
+
+// first section (here) checks for existence of reqparcheck, etc. -- basically
+// whether to return -1 per truth table in comments above
+exists('reqparcheck','parameter','global'):$paramExists
+if not $paramExists then
+    return(-1)
+endif
+exists('reqparlist','parameter','global'):$paramExists
+if not $paramExists then
+    return(-1)
+endif
+if not (reqparcheck='y') then
+    return(-1)
+endif
+
+// now we will be creating lists of those parameters which are not set (of those
+// in reqparlist) and those parameters which don't exist -- so there are two
+// more "temporary" lists created
+$reqparListLength = size('reqparlist')
+$nonExistListLength = 0
+$nonSetListLength = 0
+$nonSetList=''
+// no bitwise-OR in magical, so $bit0 and $bit1 are workarounds
+$bit0 = 0
+$bit1 = 0
+
+// need to surround entire loop with a check for reqparlis='' -- otherwise it
+// thinks the empty string is itself a required parameter -- and by the way, if
+// someone puts a blank string as one of the elements in the array, it still
+// will think the blank string is "required"
+if not (reqparlist='') then
+    $i = 1
+    while ($i <= $reqparListLength) do
+        exists(reqparlist[$i],'parameter','global'):$paramExistsGlobal
+        $paramExistsCurrent = 0     // need to clear -- may not get through 'if'
+        if not $paramExistsGlobal then
+            exists(reqparlist[$i],'parameter','current'):$paramExistsCurrent
+            if not $paramExistsCurrent then
+                $bit0 = 1
+                $nonExistListLength = $nonExistListLength + 1
+                $nonExistList[$nonExistListLength] = reqparlist[$i]
+            endif
+        endif
+        if $paramExistsCurrent then
+            isreal(reqparlist[$i],'current'):$paramIsReal
+            if $paramIsReal then
+                on(reqparlist[$i],'current'):$paramOn
+                if not $paramOn then
+                    $bit1 = 2
+                    $nonSetListLength = $nonSetListLength + 1
+                    $nonSetList[$nonSetListLength] = reqparlist[$i]
+                endif
+            else
+                getvalue(reqparlist[$i],'current'):$s
+                if ($s='') then
+                    $bit1 = 2
+                    $nonSetListLength = $nonSetListLength + 1
+                    $nonSetList[$nonSetListLength] = reqparlist[$i]
+                endif
+            endif
+        elseif $paramExistsGlobal then
+            isreal(reqparlist[$i],'global'):$paramIsReal
+            if $paramIsReal then
+                on(reqparlist[$i],'global'):$paramOn
+                if not $paramOn then
+                    $bit1 = 2
+                    $nonSetListLength = $nonSetListLength + 1
+                    $nonSetList[$nonSetListLength] = reqparlist[$i]
+                endif
+            else
+                getvalue(reqparlist[$i],'global'):$s
+                if ($s='') then
+                    $bit1 = 2
+                    $nonSetListLength = $nonSetListLength + 1
+                    $nonSetList[$nonSetListLength] = reqparlist[$i]
+                endif
+            endif
+        endif
+        $i = $i + 1
+    endwhile
+endif
+
+
+dataPath('mkdir'):$file,$pars
+if ($file='') then
+  substr($pars,'wc'):$num
+  $i=0
+  while ($i < $num) do
+    $i = $i + 1
+    $par=''
+    $bit1 = 2
+    substr($pars,$i):$par
+    $nonSetListLength = $nonSetListLength + 1
+    $nonSetList[$nonSetListLength] = $par
+  endwhile
+endif
+
+if ($bit0+$bit1 = 0) or ($nonSetList='') then
+  return(0)
+endif
+
+parampopup($nonSetList,'current','modal',$1)
+return(1)

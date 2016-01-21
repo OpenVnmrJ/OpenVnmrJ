@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="craftManage" element="groups" type="processing" >
+    <group size="410 750" 
+      vq="craftnmrparRef"
+      border="None"
+      reference="craftManage"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <group loc="5 10" size="400 120"
+        syle="Heading1"
+        reference="craftWorkspace"
+        bg="transparent"
+        border="Etched"
+	label="CRAFT workspace"
+        subtype="Titled"
+        expanded="no"
+        useref="yes"
+        >
+	<textmessage loc="10 95" size="380 20"
+	  style="Info"
+	  set="$VALUE='' $f=userdir+'/cnmrmodels/Files4xml/currentCraftParam' exists($f,'file'):$fex if $fex then $v='' lookup('mfile',$f,'readline'):$v string2array($v):$v array2string($v):$VALUE endif"
+	  vq="craftnmrparRef"
+	  />
+        </group>
+      <group loc="5 135" size="400 190"
+        style="Heading1"
+        label="Save results"
+        bg="transparent"
+        border="Etched"
+        vq="craftnmrparRef"
+        subtype="Titled"
+        expanded="yes"
+        >
+	<label loc="20 20" size="60 20"
+	  style="Label1"
+	  label="Save in"
+	  />
+	<group loc="90 20" size="310 20" 
+	  vq="craftnmrparRef"
+	  show="$SHOW=(craftnmrpar[22]='y')"
+	  >
+	  <radio loc="0 0" size="310 20"
+	    style="Label1"
+	    label="Cluster directory"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','studydir')"
+	    set="$VALUE=(craftnmrpar[42]='studydir')"
+	    />
+	  </group>
+	<group loc="90 20" size="310 20" 
+	  vq="craftnmrparRef"
+	  show="$SHOW=(craftnmrpar[22]&lt;&gt;'y')"
+	  >
+	  <radio loc="0 0" size="310 20"
+	    style="Label1"
+	    label="Study directory"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','studydir')"
+	    set="$VALUE=(craftnmrpar[42]='studydir')"
+	    />
+	  </group>
+	  <textmessage loc="110 40" size="280 20"
+	    vq="craftnmrparRef"
+	    style="Info"
+	    set="craft_StudyPath(craftnmrpar[17]):$c,$path substr($path,'basename'):$v $VALUE='('+$v+')'"
+	    />
+	<group loc="90 60" size="310 20" >
+	  <radio loc="0 0" size="310 20"
+	    style="Label1"
+	    label="vnmrsys/data"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','userdir')"
+	    set="$VALUE=(craftnmrpar[42]='userdir')"
+	    />
+	  </group>
+<!--
+	<group loc="90 60" size="310 20" >
+	  <radio loc="0 0" size="310 20"
+	    style="Label1"
+	    label="Recently selected directory"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','recent')"
+	    set="$VALUE=(craftnmrpar[42]='recent')"
+	    />
+	  </group>
+-->
+
+	<group loc="90 80" size="310 40" >
+	  <radio loc="0 0" size="70 20"
+	    style="Label1"
+	    label="Other"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','other')"
+	    set="$VALUE=(craftnmrpar[42]='other')"
+	    />
+	  <entry loc="20 20" size="275 20"
+	    style="Label1"
+	    vq="craftnmrparRef"
+	    vc="craft('SaveSpace','setdir','other','$VALUE')"
+	    set="$VALUE=craftnmrpar[43]"
+	    show="$ENABLE=(craftnmrpar[42]='other')*2-1"
+	    />
+	  </group>
+
+
+	<label loc="20 125" size="60 20"
+	  style="Label1"
+	  label="Save as"
+	  />
+	<entry loc="90 125" size="295 20"
+	  style="Label1"
+	  vq="craftnmrparRef"
+	  vc="craft('SaveSpace','setname','$VALUE')"
+	  set="$VALUE=craftnmrpar[41]"
+	  />
+	<button loc="40 155" size="330 25"
+          style="Heading2"
+          label="Save all ROIs from this workspace"
+          vq="craftnmrparRef"
+          vc="craft('SaveSpace','save')"
+          bg="transparent"
+          />
+
+	</group>
+      <group loc="5 335" size="400 135"
+        style="Heading1"
+        label="Delete results"
+        bg="transparent"
+        border="Etched"
+        vq="craftnmrparRef"
+        subtype="Titled"
+        expanded="yes"
+        >
+	<button loc="40 22" size="330 25"
+          style="Heading2"
+          label="Delete all ROIs from this workspace"
+          vq="craftnmrparRef"
+          vc="craft('Delete',craftnmrpar[17])"
+          bg="transparent"
+          />
+        <group loc="5 55" size="390 70"
+          style="Label1"
+          label="Manage trash"
+          bg="transparent"
+          border="Etched"
+          vq="craftnmrparRef"
+          subtype="Titled"
+          expanded="yes"
+          >
+          <filemenu loc="15 20" size="370 20"
+	    style="PlainText"
+	    vq="craftnmrparRef"
+	    vc="craftnmrpar[30]='$VALUE'"
+	    set="$VALUE=craftnmrpar[30]"
+	    file="$VALUE=userdir+'/cnmrmodels/.Trash/trashmenu'"
+	    type="file"
+	    vq2="craftnmrparRef"
+	    />
+	  <button loc="140 43" size="120 20"
+            style="Heading2"
+            label="Delete"
+            vq="craftnmrpar"
+            vc="craft_trash('Delete',craftnmrpar[30])"
+            bg="transparent"
+	    show="$SHOW=(craftnmrpar[30]&lt;&gt;'')"
+            />
+	  <button loc="15 43" size="120 20"
+            style="Heading2"
+            label="Put back"
+            vq="craftnmrpar"
+            vc="craft('unDelete',craftnmrpar[30])"
+            bg="transparent"
+	    show="$SHOW=(craftnmrpar[30]&lt;&gt;'')"
+            />
+	  <button loc="265 43" size="120 20"
+            style="Heading2"
+            label="Empty trash"
+            vq="craftnmrpar"
+            vc="craft_trash('Delete','all')"
+            bg="transparent"
+            />
+          </group>
+        </group>
+    </group>
+</template>

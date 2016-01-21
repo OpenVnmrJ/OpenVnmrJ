@@ -1,0 +1,124 @@
+"macro vastautoget"
+"autovastget"
+write('line3','Click to select, left button for last selection, middle to select more than one')
+$gluename=''
+$numcols=0
+substr(lcdisplay,1,6):$lcdn
+if $lcdn <> 'dsvast' then dsvast 
+  write('line3','Click to select, left button for last selection, middle to select more than one')
+else
+  length(lcdisplay):$length
+  if $length> 6 then
+    substr(lcdisplay,9,$length-10):$gluename
+  endif
+endif
+
+if $gluename='' then $order=glueorderarray $numscans=size('glueorderarray') 
+else
+  $gluefile=userdir + '/templates/glue/' + $gluename
+  exists($gluefile,'file'):$e
+  if $e then
+   lookup('file',$gluefile)
+   lookup('read'):$numscans
+   if $numscans > 96 then
+     write('line3','glue file has error, > 96')
+     abort
+   endif
+   $order=0
+   $i=1
+   repeat
+   lookup('read'):$num
+   $order[$i]=$num
+   $i=$i+1
+   until $i > $numscans
+  else write('line3','Order file does not exist') endif
+endif
+
+"determine modulo number, if possible"
+"if $numscans <= 12 then $numcols=$numscans endif"
+if $numscans <= 12 then $numcols=1 endif
+if $numcols=0 then
+  $i=1
+  $incr=glueorderarray[2]-glueorderarray[1]
+  repeat
+  $diff=glueorderarray[$i+1]-glueorderarray[$i]
+  if $diff=$incr then $done=(1=0) else $done=(1=1) endif
+  $i=$i+1
+  until $done or $i>=$numscans
+
+  if $i < $numscans then $numcols=$i-1 else $numcols=8 endif
+endif
+  
+
+   
+$glueorderarraysize=size('glueorderarray')
+$inverseorder=0
+$i=1
+repeat
+  $j=1
+  repeat
+    $match=glueorderarray[$j]=$order[$i]
+    if $match then $inverseorder[$i]=$j   endif
+    $j=$j+1
+  until (($match) or ($j>$glueorderarraysize))
+  $i=$i+1
+until $i > $numscans 
+
+$vp=vp
+$numrows=trunc($numscans/$numcols+.99)
+$vpinc=(10+wc2max)/($numrows)
+$scinc=wcmax/$numcols
+vp=wc2max-$vpinc
+wc=0.95*wcmax/$numcols
+sc=wcmax-wc sc=wcmax-wc
+$i=1
+$scol='H','G','F','E','D','C','B','A'
+$srow=''
+$labelstring=''
+
+$done=0
+repeat
+"gin('B1_press'):$xs,$ys,$b1,$b2"
+$b1=0 $b2=0 $b3=0
+while (($b1+$b2+$b3) < 0.5) do           "until mouse button clicked"
+  gin:$xs,$ys,$b1,$b2,$b3
+endwhile
+$done=$b1
+while (($b1+$b2+$b3) > 0.5) do           "until mouse button released"
+  gin:$xs,$ys,$b1,$b2,$b3
+endwhile
+
+
+"write('line3','%2.0f  %2.0f',$b1,$b2)"
+
+if $xs>0 and $xs<wcmax and $ys>-20 and $ys<wc2max then  
+
+$clickcol=$numcols-trunc(0.9+$xs/$scinc)+1
+$clickrow=$numrows-trunc(0.2+(10+$ys)/$vpinc)
+
+$clickloc=(($clickrow-1)*$numcols) + $clickcol
+
+$loc=$order[$clickloc]
+$row=trunc(($loc+7)/8)
+format($row,1,0):$srow
+$col= $loc - ($row-1)*8
+$lab=$scol[$col]+$srow
+$labelstring=$labelstring +$lab
+if not $done then  $labelstring=$labelstring +' ' endif
+
+else
+  write('line3','Please click in side of display next time')
+endif
+until $done=1
+
+vp=0
+
+
+vastget($labelstring)
+lcdisplay='vastget(`' +$labelstring + '`)'
+
+  
+
+
+
+

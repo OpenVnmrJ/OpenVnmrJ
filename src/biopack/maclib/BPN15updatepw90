@@ -1,0 +1,157 @@
+"macro BPN15updatepw90"
+"BPN15updatepw90- updates probefile values dependent on pwN/pwNlvl/compN"
+"                 updates decoupling parameters in probefile to local values"
+"                 makes wurst40N.DEC and wurst80N.DEC for 40 and 80ppm N15"
+"                 updates probefile and current parameter set for waveform"
+"                 decoupling (if dmm2='ccp') or garp(if dmm2='ccg') when the"
+"                 macro runs."
+
+"Biopack power limits are active if BPpwrlimits=1 "
+exists('BPpwrlimits','parameter','global'):$e
+if ($e>0) then
+ $BPpwrlimits='' format(BPpwrlimits,1,0):$BPpwrlimits
+ BPsetparams('BPpwrlimits',$BPpwrlimits,'H1')
+endif
+
+"decoupling power upper limits if BPpwrlimits=1 "
+exists('BPdpwr2max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr2max='' format(BPdpwr2max,2,0):$BPdpwr2max
+ BPsetparams('BPdpwr2max',$BPdpwr2max,'N15')
+endif
+
+"System power limits"
+exists('maxattench3','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench3='' format(maxattench3,2,0):$maxattench3
+ BPsetparams('maxattench3',$maxattench3,'N15')
+endif
+
+pwN=trunc(10*pwN + 0.5)/10
+
+$dmm2=dmm2
+length(dmm2):$length
+substr(dmm2,$length,1):$mode  "last character"
+
+if Console<>'vnmrs' then          "check for presence of waveform generator"
+ substr(rfwg,3,1):$wg             "is waveform generator present in channel 3?"
+ if $wg='n' then $mode='g' endif  "force non-waveform operation"
+endif
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwr2max,2,0):n3
+n3=n3+'d'
+$attn=n3
+format(40.0*dfrq2,9,1):$bw    " set N15 decoupling bandwidth to 40 ppm "
+if BPpwrlimits=1 then
+  $wave = 'WURST40' + $bw + '/2.1ms'
+else
+  $wave = 'WURST2' + $bw + '/2.1ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'wurst40N.DEC')
+pboxpar('ref_pwr', pwNlvl)
+pboxpar('ref_pw90', pwN*compN)
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst40N.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if ($dpwr)>BPdpwr2max then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+if $mode='p' then   
+ BPpboxget('wurst40N.DEC'):dseq2,$par,$dpwr2,$par,dres2,dmf2
+ dpwr2=$dpwr2
+endif
+BPmoveshape('wurst40N.DEC')
+n3=$n3
+ 
+$pwNdec=1/(4*18*dfrq2)  "pw90 for 18ppm 15N decoupling field "
+ln((1e6*$pwNdec)/(compN*pwN)):$ln
+$dpwr2=pwNlvl - 20.0*$ln/2.303
+$dpwr2=trunc($dpwr2+0.5)
+$Dmf2=trunc(1/$pwNdec)  
+
+"  if BPpwrlimits=1, limit dpwr2 tp BPdpwr2max and adjust dmf2 "
+if BPpwrlimits=1 then
+ if BPdpwr2max<$dpwr2 then
+   ln(10):$ln10
+   $exp=$ln10/20*($dpwr2-BPdpwr2max)
+   exp($exp):$factor
+   $Dmf2=trunc($Dmf2/$factor)
+   $dpwr2=BPdpwr2max
+ endif
+endif
+
+dmm2='cc'+$mode  dm2='nny'
+
+if (($mode<>'p') and (Console<>'vnmrs')) then   
+ dpwr2=$dpwr2 dmf2=$Dmf2 dres2=1.0
+endif
+
+$compN='' format(compN,4,3):$compN
+$pwN='' format(pwN,3,1):$pwN
+$dmf2a='' format(dmf2,5,0):$dmf2a
+$dpwr2a='' format(dpwr2,5,0):$dpwr2a
+$pwNlvl='' format(pwNlvl,2,0):$pwNlvl
+$dres2='' format(dres2,5,1):$dres2
+
+BPsetparams('compN',$compN,'N15')
+BPsetparams('pw90',$pwN,'N15')
+BPsetparams('pwN',$pwN,'N15')
+BPsetparams('pwNlvl',$pwNlvl,'N15')
+BPsetparams('tpwr',$pwNlvl,'N15')
+BPsetparams('dpwr2NH',$dpwr2a,'N15')
+BPsetparams('dpwr',$dpwr2a,'N15')
+BPsetparams('dmm',dmm2,'N15')
+BPsetparams('dmm2NH',dmm2,'N15')
+BPsetparams('dseq2NH',dseq2,'N15')
+BPsetparams('dres2NH',$dres2,'N15')
+BPsetparams('dres',$dres2,'N15')
+BPsetparams('dmf2NH',$dmf2a,'N15')
+BPsetparams('dmf',$dmf2a,'N15')
+
+ $bw = ''
+ $wave = ''
+ $name = ''
+ $n3=n3
+ format(BPdpwr2max,2,0):n3
+ n3=n3+'d'
+ $attn=n3
+ format(80.0*dfrq2,9,1):$bw    " set N15 decoupling bandwidth to 80 ppm "
+ if BPpwrlimits=1 then
+  $wave = 'WURST40' + $bw + '/2.1ms'
+ else
+  $wave = 'WURST2' + $bw + '/2.1ms'
+ endif
+ opx
+ setwave($wave)
+ pbox_rst
+ pboxpar('name', 'wurst80N.DEC')
+ pboxpar('ref_pwr', pwNlvl)
+ pboxpar('ref_pw90', pwN*compN)
+ shell('Pbox')
+ if BPpwrlimits=1 then
+  BPpboxget('wurst80N.DEC'):$name,$par,$dpwr,$par,$par,$par
+  if ($dpwr)>BPdpwr2max then
+     pboxpar('attn',$attn)
+     echo($attn)
+     shell('Pbox')
+  endif
+ endif
+ BPmoveshape('wurst80N.DEC')
+ n3=$n3
+
+dmm2=$dmm2
+
+if BPplot='off' then BPplot='' endif "reset plotter"
+BPcal
+
+banner('N15 Pulse and Decoupling Probefile Parameters Updated ')

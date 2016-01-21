@@ -1,0 +1,65 @@
+"macro BPstop_mdd"
+
+$fname='' $dir='' $dm1='' $dm2='' $id='' $proc='' 
+$cmd=''   $id1='' $id2='' $id3='' $id4=''
+
+BPfindfile('BPmdd_id'):$BPmdd_id
+BPfindfile('BPstop_mdd'):$BPstop_mdd
+
+if($# < 1) then
+  write('error','Usage: BPstop_mdd(fname)')
+endif
+
+$dir = $1
+getext($dir):$dm1,$dm2
+if not ($dm2 = 'fid') then 
+  $dir = $dir+'.fid'
+endif
+
+$fname = $dir+'/stop.txt' 
+
+$cmd = $BPmdd_id +' '+ $fname
+shell($cmd)
+
+exists($fname,'file'):$e
+if not($e) then
+  write('line3','%s not found',$fname)
+  return
+endif
+
+nrecords($fname):$nr
+if($nr>4) then 
+  $nr = 4
+endif
+
+lookup('file',$fname)
+
+$i=0
+repeat
+  lookup('read',4):$id,$dm1,$dm2,$proc
+  if($proc = 'BPmdd_scr') then 
+    $id1=$id
+  else
+    if($proc = 'regions.runs') then 
+      $id2=$id
+    else
+      if($proc = 'mddnmr') then 
+        $id3=$id
+      else 
+        if($proc = 'BPmdd_wait') then 
+          $id4=$id 
+        endif
+      endif
+    endif
+  endif
+  $i = $i+1
+until($i=$nr)
+
+$cmd = $BPstop_mdd+ ' ' + $dir + ' ' + $id1 + ' ' + $id2 + ' ' + $id3 + ' ' + $id4
+write('alpha','cmd = %s', $cmd)
+shell($cmd)
+
+write('error','MDD calculations stopped')
+
+
+

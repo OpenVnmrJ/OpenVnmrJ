@@ -1,0 +1,52 @@
+"macro lcset2d"
+"*************************************************************************"
+" set2d(name, F2 dig res, F1 dig res) :  general setup for 2D experiments "
+"*************************************************************************"
+
+"first argument - name of 2D experiment"
+if ($# > 0) then seqfil=$1
+else
+   write('error','Minimum input - set2d( pulse sequence name )')
+   return
+endif
+
+"second argument - F2 digital resolution"
+if ($# > 1) then $f2dr=$2 else $f2dr=6 endif
+
+"third argument - F1 digital resolution"
+if ($# > 2) then $f1dr=$3 else $f1dr=12 endif
+
+lcpar2d($1)  gain='y'
+if (h1freq > 350) then dp='y' else dp='n' endif
+
+"set up fn/fn1/ni"
+fn=(2*sw)/$f2dr
+fn1=(2*sw1)/$f1dr
+if (fn1 < 2*ni) then fn1=2*fn1 endif
+if (tn = dn) and (sw1 = sw) and (fn < 2000) then fn1=fn endif
+np=fn
+if (fn1 > 4*ni) then ni=fn1/4 endif
+
+"set up weighting functions"
+if (dmg = 'ph') then
+   lb='n'  sb='n'  gfs='n'
+   lb1='n'  sb1='n'  gfs1='n'
+   gf=(0.693*at)/(2.5*0.6)
+   gf1=(0.693*(ni-1)/sw1)/(2.5*0.6)
+else sinebell endif
+
+"set up display parameters"
+ai th=2  vs=500
+full
+if ((tn = dn) and (sw1 = sw)) then
+   if (wc > wc2) then
+      wc=wc2
+   else
+      wc2=wc
+   endif
+endif
+wp1=sw1 sp1=0-rfl1+rfp1		" select full display in f1 by default "
+intmod='off'
+
+"disable automation parameters"
+spin='n'  wbs=''  werr=''  wnt=''  wexp=''

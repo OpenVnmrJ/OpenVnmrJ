@@ -1,0 +1,256 @@
+"macro cqsavestudy"
+"save liquids/walkup study parameters"
+$sdir='' xm1('studydir'):$sdir
+if (activestudy[1]='null') or (activestudy[1]='') or ($sdir='') then
+  return
+endif
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+
+$paronly='n'
+$qst='Empty'
+$studyid=studyid
+$queue=''
+if $#=1 then
+  if $1='paronly' then $paronly='y' endif
+" just save parameters, do not add to database"
+elseif $#>1.5 then
+" used just for initial save from xmsubmit in foreground"
+  $sdir=$1
+  $studyid=$2
+  if $#>2.5 then $qst=$3 endif
+  if $#>3.5 then $queue=$4 $paronly='y' endif
+endif
+$operator='' $studystat=$qst $email=email
+$loc=loc $vloc=vloc $vrack=vrack $vzone=vzone
+exists($sdir+'/studypar','file'):$e
+exists('studytime','parameter'):$f
+if ($e>0.5) then
+  if ($f<0.5) then
+    $studytime=0
+    create('studytime','real')
+    rtv($sdir+'/studypar','studytime'):$studytime
+"   setgroup('studytime','display')"
+    setvalue('studytime',$studytime)
+  endif
+  if $#<3.5 then
+    rtv($sdir+'/studypar','operator_','studystatus','queue','email_','loc_','vloc_','vrack_','vzone_'):$operator,$studystat,$queue,$email,$loc,$vloc,$vrack,$vzone
+  endif
+  if $paronly='y' then $qst=$studystat endif
+endif
+
+exists('operator_','parameter'):$e
+if $e<0.5 then create('operator_','string') endif
+if $operator<>'' then
+  setvalue('operator_',$operator)
+else
+  setvalue('operator_',operator)
+endif
+exists('studyid_','parameter'):$e
+if $e<0.5 then create('studyid_','string') endif
+setvalue('studyid_',$studyid)
+exists('email_','parameter'):$e
+if $e<0.5 then
+  create('email_','string')
+endif
+setvalue('email_',$email)
+
+"find study status and scans based on nodes it contains"
+"fid status is: Ready, Customized, Active, Executing, Completed, Error, Skipped"
+"study status is: Queued, NightQueue, Active, Completed, Error, ''"
+$st='' $title='' $scans=''
+$ids='' $val='' $qsize=0
+$file=$sdir+'/enterSQ'
+exists($file,'file'):$e
+if ($e>0.5 and $paronly='n') then
+  readfile($file,'$ids','$val','','local'):$qsize
+  $i=0
+  repeat
+    $i=$i+1
+    xmgetatts($ids[$i],'status','title'):$st,$title
+    if ($st<>'protocol') then
+      if $scans='' then
+        $scans=$title
+      elseif $i<10.5 then
+        length($scans):$lens
+        length($title):$len
+        if ($lens+$len) < 999 then
+          $scans=$scans+' '+$title
+        endif
+      endif
+      if $#<2.5 then
+        if ($st='Error') then
+          $qst='Error'
+        endif
+        if ($qst<>'Error') then
+          if ($st='Active' or $st='Executing') then
+            $qst='Active'
+          endif
+          if ($qst<>'Active') then
+            if ($st='Ready' or $st='Customized') then
+              $qst='Queued'
+              if $studystat='NightQueue' then
+                $qst=$studystat
+              endif
+            endif
+            if ($qst<>'Queued' and ($st='Completed' or $st='Skipped')) then
+              $qst='Completed'
+            endif
+          endif
+        endif
+      endif
+    endif
+  until ($i>=$qsize)
+endif
+if ($#<2.5 and $paronly='n') then
+  xmprescan('alldone'):$predone
+  if (($qst='Queued' or $qst='NightQueue') and $predone='no') then
+    $qst='Active'
+  endif
+endif
+
+exists('studystatus','parameter'):$e
+if $e<0.5 then
+  create('studystatus','string')
+" setgroup('studystatus','display')"
+endif
+studystatus=$qst
+scans=$scans
+
+exists('Gmap','parameter'):$e
+if $e<0.5 then
+  create('Gmap','string')
+  Gmap='lk'
+endif
+exists('loc_','parameter'):$e
+if $e<0.5 then
+  create('loc_','integer')
+endif
+exists('vloc_','parameter'):$e
+if $e<0.5 then
+  create('vloc_','string')
+endif
+setvalue('loc_',$loc)
+setvalue('vloc_',$vloc)
+
+exists('vzone_','parameter'):$e
+if $e<0.5 then
+  create('vzone_','integer')
+endif
+setvalue('vzone_',$vzone)
+exists('vrack_','parameter'):$e
+if $e<0.5 then
+  create('vrack_','integer')
+endif
+setvalue('vrack_',$vrack)
+exists('queue','parameter'):$e
+if $e<0.5 then
+  create('queue','string')
+endif
+if $queue<>'' then
+  setvalue('queue',$queue)
+endif
+if (traymax=1 and appmode='lc') then
+  exists('lcexp','parameter'):$e
+  if $e<0.5 then create('lcexp','string') endif
+  exists('retentiontime_','parameter'):$e
+  if $e<0.5 then create('retentiontime_','string') endif
+  retentiontime_ = retentiontime
+  if (lcexp='enter' or lcexp='enterA') and ($qst='Queued') then
+    retentiontime_ = ''
+  endif
+endif
+
+exists('studypar','parameter','global'):$e
+if $e<0.5 then
+  create('studypar','string','global')
+  setprotect('studypar','on',256,'global')
+  studypar='name','ident','temp','tin','vtwait','pad','notebook','page','Gmap','protocols','studyid_','operator_','investigator','email_','scans','samplename','solvent','loc_','vloc_','vrack_','vzone_','wtune','queue','studystatus','studytime','prescan'
+// also include dofidsave, autodir, times, sqmode?
+endif
+
+$psize=size('studypar')
+$j=0 $et='n' $el='n' $er='n'
+while ($j < $psize) do
+  $j=$j+1
+  if studypar[$j]='tin' then $et='y' endif
+  if studypar[$j]='lcexp' then $el='y' endif
+  if studypar[$j]='retentiontime_' then $er='y' endif
+endwhile
+if $et='n' then studypar=studypar,'tin','vtwait','pad' endif
+if (traymax=1 and appmode='lc') then
+  if ($el='n') then studypar=studypar,'lcexp' endif
+  if ($er='n') then studypar=studypar,'retentiontime_' endif
+  setvalue('loc_',lcpeak)
+endif
+
+xmtune('addpar')
+xmtune('addstudypar')
+
+$psize=size('studypar')
+$parlist=studypar[1]
+$j=1
+while ($j < $psize) do
+  $j=$j+1
+  strstr($parlist,studypar[$j]):$pos
+  if $pos<0.5 then
+    $parlist=$parlist+' '+studypar[$j]
+  endif
+endwhile
+
+"parlist parameters must be all in one tree (i.e. curpar)"
+writeparam($sdir+'/studypar',$parlist)
+"if $#=2 then setvalue('studyid_',studyid) endif"  "never called?"
+
+" make checksums for study. "
+isFDAsystem:$e
+if($e > 0.5) then
+   p11_action('study',$sdir)
+endif
+
+if $paronly='y' then
+  return
+endif
+
+"update study queue and database"
+bgmode_is:$b
+"if (auto='y') then"
+if ($b>0.5) then
+  xmwritesq('write','')  "need this?"
+  $sendfile=userdir+'/persistence/.talk2j'
+  exists($sendfile,'file'):$e
+  if $e<0.5 then
+    $cmd='managedb addfile "'+$sdir+'" '+owner
+    if $appmode='walkup' then
+      $cmd=$cmd+';managedb setattr study "'+$sdir+'" automation "'+autodir+'"'
+    endif
+    $cmd=$cmd+'&'
+    shell($cmd):$x
+  endif
+  if ($e and $appmode='walkup' and $#<6.5) then
+    if $qst='Active' then
+      $cmd='sqfilemenu(\'cleanupAutoActive\',\''+$studyid+'\',\''+autodir+'\')'
+      xm1('sendcmd',$cmd)
+    endif
+    $cmd='xm1(\'sendbgstudy\',\''+$sdir+'\',\''+autodir+'\')'
+    xm1('sendcmd',$cmd)
+  endif
+else
+" xm1('write',$sdir+'/study.xml')"
+" xmwritesq"
+  if traymax>0.5 then
+    $cmd='tray delta '+$sdir+''
+    vnmrjcmd($cmd)
+  endif
+  $cmd='LOC add study "'+$sdir+'"'
+  if ($appmode='walkup' and autodir<>'' and studyid<>'tmpstudy') then
+    $cmd=$cmd+' automation "'+autodir+'"'
+  endif
+  if ($appmode='walkup' and $#<6.5) then
+    if $qst='Active' then
+      sqfilemenu('cleanupAutoActive',$studyid,autodir)
+    endif
+    vnmrjcmd('util updateLocator')
+  endif
+endif

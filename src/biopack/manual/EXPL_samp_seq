@@ -1,0 +1,147 @@
+Tips for the pulse sequence modifications
+
+The appropriate changes in the pulse sequence code are made by macro BP_ESset,
+which we find useful for most of BioPack sequences. However, in the case 
+of troubles we provide the following recipe. The example given below allow 
+for easy converting of any multidimensional pulse sequence.
+
+The adaptation of pulse sequences for explicit sampling using stored time
+domain point coordinates is straightforward. 
+
+1. Definitions:
+
+the following definition of max_ni should be added to avoid attempting 
+sampling more points than are stored in the timetab file
+
+   #define MAX_NI 32000
+
+2. Variables declaration: the following variables should be declared
+
+   FILE *pliktime;
+   char timetab_name[MAXSTR];
+   int j, 
+   double t1max = getval("t1max"),
+   t2max = getval("t2max"),
+   time_tab[MAX_NI][2],
+   for 4D experiments :
+   t2max = getval("t2max"), and
+   time_tab[MAX_NI][3],
+
+
+3. Initialize variables:
+
+   getstr("timetab_name",timetab_name);
+   if( ni>max_ni )
+   {
+    printf("ni should be below max_ni ");
+    psg_abort(1);
+   }
+   pliktime=fopen(timetab_name,"rb");
+   for (j=0;j<ni;j++)
+   {
+    fscanf(pliktime,"%lf %lf\n",&time_tab[j][0],&time_tab[j][1]); //in 3D
+   }
+   fclose(pliktime);
+   if ( ni2 > 1)
+   {
+    printf(" ni2 should be set to 1 ");
+    psg_abort(1);
+   }
+
+4. For constant time evolution the maximum evolution time should
+   be verified as, for example:
+
+if ( 0.5*t2max > timeTN - WFG3_START_DELAY)
+   {
+	printf(" t2max is too big. " );
+	psg_abort(1);
+   }
+
+5. The variables d2, d3 and d4 should be substituted by:
+   time_tab[d2_index][0],time_tab[d2_index][1] and time_tab[d2_index][2].
+
+   In tBioPack sequences it might look like:
+   tau1=t1max*time_tab[d2_index][0];
+   tau1 = tau1/2.0;
+   tau2=t2max*time_tab[d2_index][1];
+   tau2 = tau2/2.0;
+
+
+6. The States-TPPI calculations could be left as they are, 
+   however we do not recommend it for random sampling, 
+   it might be commented out.
+
+7. In the case of semi constant time evolution, a few additional
+   modifications should be performed. For example in the case of
+   BioPack ghn_co:
+
+   original code:
+   /* Set up CONSTANT/SEMI-CONSTANT time evolution in N15 */
+
+   halfT2 = 0.0; 
+   CTdelay = timeTN + pwC8 + WFG_START_DELAY - SAPS_DELAY;
+
+   if(ni>1)
+   {
+	if(f1180[A] == 'y') /* Set up f1180 */
+	tau1 += 0.5*csa/sw1; /* if not PRexp then csa = 1.0 */
+	if(PRexp)
+	{
+	  halfT2 = 0.5*(ni-1)/sw1; /* ni2 is not defined */
+		if(f1180[A] == 'y') 
+		{
+		  tau2 += 0.5*sna/sw1; halfT2 += 0.25*sna/sw1;
+		}
+		t2b = t1_counter*((halfT2 - CTdelay)/(ni-1));
+	}
+   }
+   if (ni2>1)
+   {
+	halfT2 = 0.5*(ni2-1)/sw2;
+	if(f2180[A] == 'y') /* Set up f2180 */
+	{
+		tau2 += 0.5/sw2; halfT2 += 0.25/sw2;
+	}
+	t2b = t2_counter*((halfT2 - CTdelay)/(ni2-1));
+   }
+   tau1 = tau1/2.0;
+   tau2 = tau2/2.0;
+   if(tau1 < 0.2e-6) tau1 = 0.0;
+   if(tau2 < 0.2e-6) tau2 = 0.0; 
+
+   if(t2b < 0.0) t2b = 0.0;
+   t2a = CTdelay - tau2 + t2b;
+   if(t2a < 0.2e-6) t2a = 0.0;
+
+ should be changed to:
+
+   /* Set up CONSTANT/SEMI-CONSTANT time evolution in N15 */
+
+   halfT2 = 0.0;
+   CTdelay = timeTN + pwC8 + WFG_START_DELAY - SAPS_DELAY;
+
+   if(ni>1)
+   {
+	if(f1180[A] == 'y') /* Set up f1180 */
+	tau1 += 0.5*csa/sw1; /* if not PRexp then csa = 1.0 */
+   }
+   halfT2 = 0.5*t2max; 
+   if(f2180[A] == 'y') /* Set up f2180 */
+   {
+	tau2 += 0.5/sw2; halfT2 += 0.25/sw2;
+   }
+   t2b = tau2*((halfT2 - CTdelay)/t2max);
+
+   tau1 = tau1/2.0;
+   tau2 = tau2/2.0;
+   if(tau1 < 0.2e-6) tau1 = 0.0; 
+   if(tau2 < 0.2e-6) tau2 = 0.0; 
+
+   if(t2b < 0.0) t2b = 0.0;
+   t2a = CTdelay - tau2 + t2b;
+   if(t2a < 0.2e-6) t2a = 0.0;
+
+
+   In the case of troubles see nmr700.chem.uw.edu.pl or email
+   to kozmin (at) chem.uw.edu.pl
+

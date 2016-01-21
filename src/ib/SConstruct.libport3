@@ -1,0 +1,87 @@
+import os
+
+# define target file names
+libPort3StaticTarget = 'libport3.a'
+libPort3SharedTarget = 'libport3.so'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+
+port3FileList = [
+		 'd1mach.c',
+		 'da7sst.c',
+		 'dc7vfn.c',
+		 'dd7tpr.c',
+		 'dd7upd.c',
+		 'df7hes.c',
+		 'dg7lit.c',
+		 'dg7qts.c',
+		 'ditsum.c',
+		 'divset.c',
+		 'dl7itv.c',
+		 'dl7ivm.c',
+		 'dl7mst.c',
+		 'dl7nvr.c',
+		 'dl7sqr.c',
+		 'dl7srt.c',
+		 'dl7svn.c',
+		 'dl7svx.c',
+		 'dl7tsq.c',
+		 'dl7tvm.c',
+		 'dl7vml.c',
+		 'dn2cvp.c',
+		 'dn2f.c',
+		 'dn2g.c',
+		 'dn2lrd.c',
+		 'dn2rdp.c',
+		 'do7prd.c',
+		 'dparck.c',
+		 'dq7apl.c',
+		 'dq7rad.c',
+		 'dr7mdc.c',
+		 'drldst.c',
+		 'drn2g.c',
+		 'ds7lup.c',
+		 'ds7lvm.c',
+		 'dv2axy.c',
+		 'dv2nrm.c',
+		 'dv7cpy.c',
+		 'dv7dfl.c',
+		 'dv7scl.c',
+		 'dv7scp.c',
+		 'i1mach.c',
+		 'i7mdcn.c',
+		 'stopx.c'
+                ]
+
+# build environments
+port3Env = Environment(CCFLAGS    = '-m32 -O',
+                     CPPDEFINES = ['LINUX'],
+                     LINKFLAGS  = '-m32', 
+                     CPPPATH    = [cwd])
+
+# actual builds
+libport3Static = port3Env.StaticLibrary(target  = libPort3StaticTarget,
+                                        source  = [port3FileList],
+                                        LIBPATH = [cwd])
+
+libport3Shared = port3Env.SharedLibrary(target  = libPort3SharedTarget,
+                                        source  = [port3FileList],
+                                        LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+port3Env.AddPostAction(libport3Static,
+                       Action(Copy(installPath, os.path.join(cwd, libPort3StaticTarget))))
+port3Env.AddPostAction(libport3Shared,
+                       Action(Copy(installPath, os.path.join(cwd, libPort3SharedTarget))))
+

@@ -1,0 +1,87 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+infostatTarget = 'Infostat'
+showstatTarget = 'showstat'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrFileList = ['shims.c']
+ 
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['STAT_DEFS.h']
+
+acqStatFileList = ['acqstat_win.c',
+                   'statusscrn.c',
+                   'statdispfuncs.c',
+                   'statIPCfuncs.c',
+                   'statsocket.c']
+
+showStatFileList = ['showstat.c']
+
+acqProcPath     = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList  = ['ACQPROC_strucs.h']
+acqProcFileList = ['test4acq.c']
+
+infoServerFileList = ['acqinfo_xdr.c',
+                      'acqinfo_proc.c']
+
+# doesn't appear to be required for present targets, GMB
+                      # 'acqinfo_svc.c']
+
+acqMeterFileList = ['acqmeter_win.c']
+
+# build environment
+statEnv = Environment(CCFLAGS    = '-O -m32',
+                      CPPDEFINES = ['ACQSTAT', 'LINUX', 'SUN', 'BSDACQ', 'X11'],
+                      LINKFLAGS  = '-O2 -m32 -Wl,-rpath,/vnmr/lib ',
+                      CPPPATH    = [cwd,
+                                    os.path.join(os.sep, 'usr', 'include', 'X11')])
+
+buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, vnmrPath, vnmrFileList)
+
+# actual builds
+infostat = statEnv.Program(target  = infostatTarget,
+                           source  = [acqStatFileList,
+                                      'acqinfo_xdr.c',
+                                      vnmrFileList],
+                           LIBPATH = [cwd,
+                                      ncommPath,
+                                      os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu'),
+                                      os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
+                           LIBS    = ['Xt', 'X11', 'm', 'acqcomm'])
+
+showstat = statEnv.Program(target  = showstatTarget,
+                           source  = [showStatFileList,
+                                      infoServerFileList],
+                           LIBPATH = [cwd,
+                                      ncommPath,
+                                      os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu'),
+                                      os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
+                           LIBS    = [])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+statEnv.AddPostAction(infostat,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, infostatTarget))))
+statEnv.AddPostAction(showstat,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, showstatTarget))))
+

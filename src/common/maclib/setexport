@@ -1,0 +1,323 @@
+"macro setexport"
+"setexport - a macro to set parameter bits for use with rtx"
+
+exists('prescan','parameter'):$e
+if not $e then create('prescan','string') endif
+
+$protected = 'sw tof rof2 alfa rp lp tpwr pw90 gain rfl rfp'
+$protected = $protected+' samplename pltmod solvent temp prescan'
+
+if not $# then $1 = 'std1d' endif
+
+if ($1 = 'std1d') then
+  setprotect($protected,'on',16384)
+
+  exists('tpwr_cf','parameter'):$e 
+  if not ($e) then create('tpwr_cf') tpwr_cf = 1 endif 
+  getparam('tpwr_cf',tn):tpwr_cf
+  setprotect('tpwr_cf','on',16384) 
+
+  exists('PFGflg','parameter'):$e
+  if ($e=0) then create('PFGflg','flag') PFGflg='n' endif
+  $PFGflg=''
+  getparam('gradient','Probe'):$PFGflg
+  if ($PFGflg='') then $PFGflg='n' endif
+  PFGflg=$PFGflg
+  setprotect('PFGflg','on',16384)
+
+  if (tn = 'H1') then 
+   
+" add all parameters for presat & WET water suppression "
+" try to set reasonable initial values & set protection (for export) "
+
+    exists('sspul','parameter'):$e
+    if not $e then
+      create('sspul','flag')
+      setenumeral('sspul',2,'y','n')
+      sspul = 'n'
+    endif
+
+    exists('satmode','parameter'):$e
+    if not $e then
+      create('satmode','flag')
+      setenumeral('satmode',2,'y','n')
+      satmode = 'nnn' 
+    endif
+    setprotect('satmode','on',16384)
+
+    exists('satfrq','parameter'):$e
+    if not $e then
+      create('satfrq','frequency')
+      satfrq = tof 
+    endif
+    setprotect('satfrq','on',16384)
+    setprotect('satfrq','on',256)
+
+    exists('satpwr','parameter'):$e
+    if not $e then
+      create('satpwr','integer')
+      if (Console='mercury') then
+        setlimit('satpwr',40,0,1)
+      else
+        setlimit('satpwr',40,-16,1)
+      endif
+      setpower(10,tn):satpwr 
+      satpwr=satpwr
+    endif 
+    setprotect('satpwr','on',16384)
+
+    exists('satdly','parameter'):$e
+    if not $e then create('satdly','delay') endif 
+    setprotect('satdly','on',16384)
+
+"   add wetstuff..."
+
+    exists('wet','parameter'):$e
+    if not $e then
+      create('wet','flag')
+      setenumeral('wet',2,'y','n')
+      wet = 'n'
+    endif
+    setprotect('wet','on',16384)
+
+    exists('wetpwr','parameter'):$e
+    if not $e then
+      create('wetpwr','real')
+      if (Console='mercury') then
+        setlimit('wetpwr',48,0,1) 
+      else
+        setlimit('wetpwr',48,-16,0) 
+      endif
+    endif
+    setprotect('wetpwr','on',16384)
+
+    exists('pwwet','parameter'):$e
+    if not $e then
+      create('pwwet','pulse')
+      setlimit('pwwet',1e6,0,0.1) 
+    endif
+    setprotect('pwwet','on',16384)
+
+    exists('wetshape','parameter'):$e
+    if not $e then
+      create('wetshape','string')
+      wetshape = 'wetshape'
+    endif
+    setprotect('wetshape','on',16384)
+
+    if (Console='mercury') then
+      exists('wetpwr1','parameter'):$e
+      if not $e then
+        create('wetpwr1','integer')
+        setlimit('wetpwr1',48,0,1) 
+      endif
+      setprotect('wetpwr1','on',16384)
+      exists('wetpwr2','parameter'):$e
+      if not $e then
+        create('wetpwr2','integer')
+        setlimit('wetpwr2',48,0,1) 
+      endif
+      setprotect('wetpwr2','on',16384)
+      exists('wetpwr3','parameter'):$e
+      if not $e then
+        create('wetpwr3','integer')
+        setlimit('wetpwr3',48,0,1) 
+      endif
+      setprotect('wetpwr3','on',16384)
+      exists('wetpwr4','parameter'):$e
+      if not $e then
+        create('wetpwr4','integer')
+        setlimit('wetpwr4',48,0,1) 
+      endif
+      setprotect('wetpwr4','on',16384)
+
+      exists('pwwet1','parameter'):$e
+      if not $e then
+        create('pwwet1','pulse')
+        setlimit('pwwet1',1e6,0,0.1) 
+      endif
+      setprotect('pwwet1','on',16384)
+      exists('pwwet2','parameter'):$e
+      if not $e then
+        create('pwwet2','pulse')
+        setlimit('pwwet2',1e6,0,0.1) 
+      endif
+      setprotect('pwwet2','on',16384)
+      exists('pwwet3','parameter'):$e
+      if not $e then
+        create('pwwet3','pulse')
+        setlimit('pwwet3',1e6,0,0.1) 
+      endif
+      setprotect('pwwet3','on',16384)
+      exists('pwwet4','parameter'):$e
+      if not $e then
+        create('pwwet4','pulse')
+        setlimit('pwwet4',1e6,0,0.1) 
+      endif
+      setprotect('pwwet4','on',16384)
+
+      exists('wetshape1','parameter'):$e
+      if not $e then
+        create('wetshape1','string')
+        wetshape1 = 'wetshape'
+      endif
+      setprotect('wetshape1','on',16384)
+      exists('wetshape2','parameter'):$e
+      if not $e then
+        create('wetshape2','string')
+        wetshape2 = 'wetshape'
+      endif
+      setprotect('wetshape2','on',16384)
+      exists('wetshape3','parameter'):$e
+      if not $e then
+        create('wetshape3','string')
+        wetshape3 = 'wetshape'
+      endif
+      setprotect('wetshape3','on',16384)
+      exists('wetshape4','parameter'):$e
+      if not $e then
+        create('wetshape4','string')
+        wetshape4 = 'wetshape'
+      endif
+      setprotect('wetshape4','on',16384)
+    endif
+
+    exists('wetfrq','parameter'):$e
+    if not $e then
+      create('wetfrq','frequency')
+      wetfrq = tof 
+    endif
+    setprotect('wetfrq','on',16384)
+    setprotect('wetfrq','on',256)
+
+    exists('gzlvlw','parameter'):$e
+    if not $e then
+      create('gzlvlw','integer') 
+      if (gradtype <> 'nnl') then
+        setlimit('gzlvlw',32767,-32768,1) 
+        gzlvlw = 32000
+      else
+        setlimit('gzlvlw',2047,-2048,1)
+        gzlvlw = 2000
+      endif
+    endif
+    setprotect('gzlvlw','on',16384)
+
+    exists('gtw','parameter'):$e
+    if not $e then
+      create('gtw','delay')
+      setlimit('gtw',0.01,0,1e-6)
+      gtw = 0.002
+    endif
+	setprotect('gtw','on',16384)
+
+    exists('gswet','parameter'):$e
+    if not $e then
+      create('gswet','delay')
+      setlimit('gswet',0.01,0,1e-6)
+      gswet = 0.002
+    endif
+	setprotect('gswet','on',16384)
+
+    exists('c13wet','parameter'):$e
+    if not $e then
+      create('c13wet','flag')
+      setenumeral('c13wet',2,'y','n')
+      c13wet = 'n'
+    endif
+	setprotect('c13wet','on',16384)
+
+    exists('dofwet','parameter'):$e
+    if not $e then
+      create('dofwet','frequency')
+      solppm('C13'):dofwet
+      setoffset('C13',dofwet):dofwet
+    endif
+      setprotect('dofwet','on',16384)
+
+    exists('dpwrwet','parameter'):$e
+    if not $e then create('dpwrwet','integer')
+      if (Console = 'mercury') then
+        setlimit('dpwrwet',48,0,1) 
+      else
+        setlimit('dpwrwet',48,-16,1) 
+      endif
+      dpwrwet = 35
+    " assuming that there is one solvent line & we are on-resonance "
+    endif
+      setprotect('dpwrwet','on',16384)
+
+    exists('dmmwet','parameter'):$e
+    if not $e then
+      create('dmmwet','flag')
+      setenumeral('dmmwet',4,'c','w','g','p') 
+      dmmwet = 'c'
+    " assuming that there is one solvent line & we are on-resonance "
+    endif
+       setprotect('dmmwet','on',16384)
+
+    exists('dmfwet','parameter'):$e
+    if not $e then
+      create('dmfwet','integer')
+      dmfwet = 200
+    endif
+       setprotect('dmfwet','on',16384)
+
+    exists('dz','parameter'):$e
+    if not $e then
+      create('dz','delay')
+      dz = 0
+    endif
+      setprotect('dz','on',16384)
+
+    exists('composit','parameter'):$e
+    if not $e then
+      create('composit','flag')
+      setenumeral('composit',2,'y','n')
+      composit = 'n'
+    endif
+
+    exists('compshape','parameter'):$e
+    if not $e then create('compshape','string') endif
+
+    exists('wetfly','parameter'):$e
+    if not $e then
+      create('wetfly','flag')
+      setenumeral('wetfly',2,'y','n')
+      wetfly = 'n'
+    endif
+
+    exists('dseqwet','parameter'):$e
+    if not $e then
+      create('dseqwet','string')
+      dseqwet = 'waltz16'
+    endif
+	setprotect('dseqwet','on',16384)
+
+    exists('dreswet','parameter'):$e
+    if not $e then
+      create('dreswet')
+      dreswet = 9.0
+    endif
+      setprotect('dreswet','on',16384)
+
+    exists('dgwet','parameter'):$e
+    if not $e then
+      create('dgwet','string')
+      setgroup('dgwet','display')
+      if (Console='mercury') then
+        setvalue('dgwet','1:WET:wet,wetshape,wetpwr,pwwet:1,composit,compshape,gzlvlw,gtw:6,gswet:6,dz:6;2:C13 WET:c13wet,dofwet:1,dpwrwet,dmmwet,dmfwet,decwavewet;3:WET SHAPES:wetshape1,wetshape2,wetshape3,wetshape4;4:WET PULSES:wetpwr1,wetpwr2,wetpwr3,wetpwr4,pwwet1:1,pwwet2:1,pwwet3:1,pwwet4:1;')
+      else
+        setvalue('dgwet','1:WET:wet,wetshape,wetpwr,pwwet:1,composit,compshape,gzlvlw,gtw:6,gswet:6,dz:6;2:C13 WET:c13wet,dofwet:1,dpwrwet,dmmwet,dmfwet,decwavewet;')
+      endif
+    endif
+
+  endif  " end (tn='H1') "
+ " add all parameters for presat & WET, and set protection bit "
+
+elseif ($1 = 'Display2D') then
+
+  $protected = 'sc wc sc2 wc2'
+  setprotect($protected,'on',16384)
+
+endif

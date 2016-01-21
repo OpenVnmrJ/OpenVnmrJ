@@ -1,0 +1,143 @@
+"macro vastglue"
+"vastglue - Process VAST data"
+jexp:$exp
+if $exp = addsubexp then write('line3','Please join your original experiment') abort endif 
+if file='exp' then $savefile = savefile
+else
+  length(file):$length
+  $i=$length
+  write('line3',$length)
+  $ch=''
+  repeat
+  substr(file,$i,1):$ch
+  $done=$ch='/'
+  $i=$i-1
+  until ($done or ($i<=0))
+  substr(file,1,$i):$savefile
+endif 
+$gluename=''
+$track=1
+$tzone=1
+$plate=1
+write('line3',$savefile)
+if $# > 0 then 
+  if typeof('$1') then 
+    $gluename=$1
+    if $#>1 then $plate=$2 endif
+  else "use doneQ for glueorder"
+    if $# =2 then $track=$1 $tzone=$2
+    else write('line3','Enter both rack and zone numbers')
+    endif
+  endif
+endif
+ 
+if $gluename='' then 
+$doneQ = $savefile + '/doneQ'
+lookup('file',$doneQ)
+$i=1
+$lastloc=0
+$order=0
+$locnames=''
+write('line3','Extracting glue order from doneQ for rack%2.0f, zone%2.0f',$track,$tzone)
+$res = 1
+$loc = 0
+$vrack=0 $vzone=0 $dataname=''
+$cval=''
+$first=1
+$firstword=''
+lookup('read'):$opt,$res
+$firstword=$opt
+repeat
+  if $first =0 then lookup('read'):$opt,$res  else $first=0 endif
+  if (($opt=$firstword) or $res=0) then
+    if (($vrack=$track) and ($vzone=$tzone) and ($loc=$lastloc)) then
+      $order[$i]=$loc
+      $locnames[$i]=$dataname
+      $loc=0 $vrack=0 $vzone=0 $dataname=''
+      $i=$i+1
+    endif
+  endif
+  if ($opt = 'SAMPLE#:') then
+    $lastloc=$loc
+    lookup('read'):$loc
+  elseif ($opt = 'RACK:') then
+    lookup('read'):$rval
+    $vrack=$rval
+  elseif ($opt = 'ZONE:') then
+    lookup('read'):$rval
+    $vzone=$rval
+  elseif ($opt = 'DATA:') then
+    lookup('read'):$cval
+    $dataname=$cval
+  endif
+until $res <> 1 
+$numscans=size('$order')
+else "use glue file"
+  $gluefile=userdir + '/templates/glue/' + $gluename
+  exists($gluefile,'file'):$e
+  if ($e < 0.5) then
+     $gluefile=systemdir + '/user_templates/glue/' + $gluename
+     exists($gluefile,'file'):$e
+  endif
+  if $e then
+   lookup('file',$gluefile)
+   lookup('read'):$numscans
+   if $numscans > 96 then
+     write('line3','glue file has error, > 96')
+     abort
+   endif
+   $plate=$plate*2
+   $platelabel=''
+   format($plate,0,0):$platelabel
+   if $plate < 10 then $platelabel='0'+$platelabel endif  
+   $order=0
+   $locnames=''
+   $file=''  
+   $i=1
+   repeat
+   lookup('read'):$num
+   $order[$i]=$num
+   format($num,0,0):$file
+   if $num < 10 then $file='0'+$file endif
+   $locnames[$i]=$file+$platelabel
+   $i=$i+1
+   until $i > $numscans
+  else
+  write('line3','glue file does not exist') abort
+  endif
+endif
+write('line3','starting glue operation') 
+
+if $numscans >1 then
+  $file=''   
+  clradd 
+  $curscan=1
+  while ($curscan <= $numscans) do
+  $file=$savefile+'/'+$locnames[$curscan]
+  write('line3','Reading data from file %s',$file)
+  rt($file,'nodg')
+    $i = 1
+       repeat
+       select($i)
+       add('new') 
+       $i = $i +1
+       until $i > ni
+  $curscan=$curscan+1
+  endwhile
+  if ni=0 then ni=1 endif
+  $n = $numscans*ni
+  mf(addsubexp,$exp)
+  copy($file+'.fid/text',curexp+'/text')
+  clradd
+  ni=$n
+  fn1=2*ni
+  setvalue('arraydim',$n,'processed')
+  setvalue('ni',$n,'processed')
+  exists('glueorderarray','parameter'):$e
+  if (not $e) then create('glueorderarray') setgroup('glueorderarray','display') endif
+  glueorderarray=$order
+  write('line3','Data has been glued and returned to Exp%1.0f',$exp)
+else write('line3','No data has been found')
+endif
+
+  

@@ -1,0 +1,45 @@
+"macro pw_haupt"
+"pw_haupt: calculate an estimate of pw90 based on the Haupt method"
+
+" Haupt method:  if 2 spectra are acquired with the pw(2) / pw(1) = 2 "
+" then (neglecting RF inhomogeneity) the ratio of the intensities of "
+" the spectra is sin(2*theta) / sin(theta) , from which the flip angle "
+" in the first spectrum can be calculated as acos (I2 / (2*I1)) "
+
+  if (pw[2] > pw[1]) then
+    $smaller = 1  $larger = 2
+  else
+    $smaller = 2  $larger = 1
+  endif
+
+  $file = curexp+'/fp.out'
+  lookup('file',$file,'seek','of','read',1):$npairs
+  lookup('seek','(mm)')
+  write('alpha','pw90 estimate(s):')
+
+  clear
+  $i = 1  $sum = 0.0  $k = 0
+  repeat
+    if ($smaller > 1.5 ) then
+      lookup('skip',2,'read',1,'skip',2,'read',1):$ampl2,$ampl1
+    else
+      lookup('skip',2,'read',1,'skip',2,'read',1):$ampl1,$ampl2
+    endif
+    $ok = (($ampl2/$ampl1 >= -2) and ($ampl2/$ampl1 <= 2))
+    if $ok then
+      acos(0.5*$ampl2/$ampl1):$flip
+      $pwest = pw[$smaller]*1.5708/$flip
+      $sum = $sum + $pwest
+      write('alpha','%5.2f',$pwest)
+      $k = $k+1
+    endif
+    $i = $i+1
+  until ($i > $npairs)
+
+  if ($k > 0) then
+      write('alpha','Average of estimates is %5.2f', $sum/$k)
+      return($sum/$k)
+  else
+      return(0)
+  endif
+

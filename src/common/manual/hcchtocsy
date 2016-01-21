@@ -1,0 +1,60 @@
+
+ hcchtocsy- Used for sidechain assignments in fully C13-enriched molecules
+
+    Optional C13 decoupling of carbonyl carbons during t2 uses a 180
+    degree pulse done through a shaped SLP(phase-ramped) pulse. C13
+    xmtr is normally in aliphatic region(do not try for both aliphatic
+    and aromatic hcchtocsy-bandwidth too large for good spinlock). This
+    pulse is of length pwco at power pwcolvl and of name coshape.
+
+    Determine the length, nature and power for this 180 in an on-resonance
+    calibration experiment. Then prepare this pulse by preparing a "template"
+    pulse of having 5 times as many steps as width in usec. Convolute this
+    to prepare the SLP pulse.
+
+    For example, if at a pwcolvl of 38 a sinc pulse does a 180 in 250usec when
+    on resonance, for the most accuracy you would need a shapelib sinc.RF file
+    of 250*5 steps. [For rectangular pulses you can use "makehard(# of steps)"
+    to do this. For complex shapes you can generate out of pulsetool or by
+    a separate program.] If this sinc pulse has the name sinc1250.RF, and the
+    distance from the C13 xmtr is say 15,000 Hz, prepare the new shape by
+        convolute('sinc1250','co180_1250us_+15000',250,15000).
+
+    This gives you a shape that is used by decshaped_pulse to do a 180 on
+    the carbonyl region when your dof is positioned in the aliphatic region.
+    Use "pulsetool" to verify that your shape is correct.
+
+    It is not necessary to do carbonyl decoupling. The only visible effect
+    will be a CC splitting in F2 for alpha carbons. If not desired set pwco=0.
+
+
+    Set dm = 'nny', [13C decoupling during acquisition]
+    One dipsi-3 cycle is 217.33*p1
+      e.g. if p1= 36us a single dipsi cycle is 7.8ms
+
+    Must set phase = 1,2 and phase2 = 1,2 for hypercomplex in t1 and t2.
+
+    Typical acquisition times are 28 ms [t1], 10 ms [t2], and 47 ms [t3]
+       with 128 complex [t1], 32 complex [t2], and 512 real [t3]. 
+
+
+             coshape,   /* dec pattern for CO decoupling  */
+             fhfdwt1,   /* Flag to indicate half dwell start in t1 */
+             fhfdwt2;   /* Flag to indicate half dwell start in t2 */
+             tof,       /* set in center of proton spectrum or on
+                           H2O frequency if in H2O */
+             dof,       /* set in center of C13 aliphatic region */
+	     satfrq,	/* presaturation frequency */
+             pwca,      /* PW90 for 13C nucleus                 */
+             pwco,      /* PW90 for 13C carbonyl decoupling      */
+             satpwr,    /* low level 1H trans.power for presat    */
+             pwcalvl,   /* power level for 13C pulses   */
+             pwcolvl,   /* power level for C=O decoupling pulse   */
+             jch,       /* coupling for C-C  (set to 40 Hz   )  */
+             ncyc,      /* # cycles through dipsi loop          */
+             trim,      /* trim pulse length(sec)               */
+             dipsipwr,  /* power level for 13C spin lock        */
+             p1,        /* 90 degree pulse width for dipsi      */
+             cycletime, /* informational parameter-do not enter */
+
+NOTE: the hcchtocsy pulse sequence is not supplied with Mercury and GEMINI 2000.

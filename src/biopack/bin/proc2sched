@@ -1,0 +1,23 @@
+#!/bin/sh
+# usage: proc2sched infile
+# infile is procpar containing t1_counter,t2_counter list
+# outfile is sampling schedule 2d.sched;
+# point (n-1,m-1) in procpar is (m,n) in sampling schedule;
+# t1_counter, t2_counter order swapped
+#
+# this is used when you have a parameter set containing values
+# of t1_counter and t2_counter, but no sampling schedule
+awk 'BEGIN{linenum=0;linenum2=0;} 
+(linenum==1) {gsub(" ","\n");print "ok", $0;linenum=0;}
+(linenum2==1) {gsub(" ","\n");print "ok", $0;linenum2=0;}
+($0 ~/t1_counter /) {linenum=1;}
+($0 ~/t2_counter /) {linenum2=1;}' $1 |
+awk 'BEGIN{linenum=1;t1=0;}
+(($1!="ok") && ($1!="")){print linenum++, t1, $1+1;}
+(($1=="ok") && (t1==1)){linenum=1;t1=2;}
+(($1=="ok") && (t1==0)){linenum=1;t1=1;}' |
+sort -n -k1 | 
+awk 'BEGIN{linenum=1;}
+(linenum%2 == 1){t1 = $3;}
+(linenum%2 == 0){print $3, t1;}
+{linenum++;}' > 2d.sched

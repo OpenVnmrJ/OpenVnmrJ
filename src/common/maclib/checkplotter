@@ -1,0 +1,52 @@
+"macro checkplotter"
+
+exists('plotfileformat','parameter','global'):$exff
+if not $exff then create('plotfileformat','string','global') plotfileformat='pdf' endif
+
+if $#>0 or ($#=0 and (plotfileformat='pdf' or plotfileformat='ps' or
+                      plotfileformat='jpg' or plotfileformat='png')) then
+  $type1=3 $type2=4
+elseif plotfileformat='pcl' then
+  $type1=1 $type2=2
+elseif plotfileformat='hpgl' then
+  $type1=0 $type2=0
+else
+  write('error','Please choose a format first!')
+endif
+
+$newplotter='' $ret=0
+vjplotmenu
+$plotters='' $s1='' $pdf=''
+shell('grep pdf '+userdir+'/persistence/plotters'):$pdf
+if $#>0 and $pdf<>'' then
+  substr($pdf,1):$pdf
+  if $pdf='pdf' then
+    getplottertype('pdf'):$pltype
+    if ($pltype=$type1) or ($pltype=$type2) then
+      $newplotter='pdf' $ret=1
+    endif
+  endif
+else
+  readfile(userdir+'/persistence/plotters','$plotters','$s1','','local'):$total
+  if ($total) then
+    $i=1
+    repeat
+       getplottertype($plotters[$i]):$pltype
+       if (($pltype=$type1) or ($pltype=$type2)) and $plotters[$i]<>'Email' then
+          $newplotter=$plotters[$i]
+          $ret=1 $i=$total
+       endif
+       $i=$i+1
+    until $i > $total
+  endif
+endif
+
+if $ret=0 then
+  if printout='file' then
+    write('error','No corresponding plotter defined, please create one ("ps"/"pcl"/"hpgl...")!')
+  else
+    write('error','Must have (at least a dummy) Postscript plotter for preview!')
+  endif
+endif
+return($newplotter,$ret)
+

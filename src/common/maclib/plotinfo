@@ -1,0 +1,35 @@
+"macro plotinfo"
+"************************************************************"
+" plotinfo(plotter):plottername,plottertype,wcmax,wc2max     "
+"************************************************************"
+" macro that returns plotter name (as used in devicetable),  "
+"     plotter type: 0 = pen plotter, 1 = matrix plotter,     "
+"     2 = reverse (landscape) matrix plotter, 3 = Postscript "
+"     plotter, 4 = reverse (landscape) Postscript plotter;   "
+"     wcmax (= wcmaxmax) and wc2max (= wc2maxmax)            "
+"     input: plotter name as defined in /vnmr/devicenames.   "
+"************************************************************"
+
+$plotter='' $pltname='' $pltdef=''
+if ($#<1) then
+  $plotter=plotter
+else
+  $plotter=$1
+endif
+if ($plotter='') then
+  write('error','plotinfo: select a plotter first!')
+  return('none',0)
+endif
+lookup('file',systemdir + '/devicenames','commentend')
+repeat
+  lookup('Name','read'):$pltname
+until (($plotter=$pltname)or($pltname=''))
+if ($pltname='') then
+   write('error','plotinfo: plot device not defined in /vnmr/devicenames!')
+   return('none',0)
+endif
+lookup('Type','read'):$pltdef
+lookup('file',systemdir+'/devicetable','example')
+lookup($pltdef,'raster','read'):$plttype
+lookup('wcmaxmax','read','seek','wc2maxmax','read'):$wcmax,$wc2max
+return($pltdef,$plttype,$wcmax,$wc2max)

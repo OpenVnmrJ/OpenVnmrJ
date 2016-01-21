@@ -1,0 +1,938 @@
+"macro gmapset"
+"  gradient shimming"
+
+if ($# < 0.5) then
+return
+endif
+
+isvnmrj:$isvnmrj
+
+IF ($1 = 'autosave') THEN
+
+if auto<>'y' then return endif
+$sfile=curexp+'/gtmp'
+exists($sfile,'file'):$e
+if $e>0.5 then rm('-r',$sfile):$x endif
+mkdir($sfile)
+fsave($sfile+'/curpar','current')
+cp(curexp+'/text',$sfile+'/text')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'autoreturn') THEN
+
+return
+
+ENDIF
+
+IF ($1 = 'autoreturn2') THEN
+
+if auto<>'y' then return endif
+
+$tmpspin=0
+exists('gmap_tmpspin','parameter'):$esp
+if $esp>0.5 then
+  $tmpspin=gmap_tmpspin
+  destroy('gmap_tmpspin')
+endif
+$gmap_pad=0.5
+exists('gmap_padon','parameter'):$epa
+if $epa>0.5 then
+  $gmap_pad=gmap_padon
+  destroy('gmap_padon')
+endif
+
+exists('gmap_tmppar','parameter'):$e
+if $e>0.5 then
+  if (gmap_tmppar[1] <> 'n') then fsq=gmap_tmppar[1] endif
+  if (gmap_tmppar[2] <> 'n') then hdwshim=gmap_tmppar[2] endif
+  destroy('gmap_tmppar')
+endif
+
+$sfile=curexp+'/gtmp'
+$tfile=curexp
+if ($# > 1.5) then
+  $sfile=$2+'/gtmp'
+  $tfile=$2
+endif
+exists($sfile,'file'):$e
+if $e<0.5 then
+  return
+else
+  fread($sfile+'/curpar','current','reset')
+  mv($sfile+'/text',$tfile+'/text')
+  rm('-r',$sfile):$x
+endif
+if $epa>0.5 then
+  pad[1]=0.5
+  if (size('pad')>1.5) then
+    write('file',curexp+'/text','pad[1]=%g run with gradshim before acquisition',$gmap_pad)
+  else
+    write('file',curexp+'/text','pad=%g run with gradshim before acquisition',$gmap_pad)
+  endif
+endif
+
+"do not use sethw('spin',0) in automation"
+RETURN
+ENDIF
+
+
+IF ($1 = 'autorm') THEN
+
+if auto<>'y' then return endif
+
+$tmpspin=0
+exists('gmap_tmpspin','parameter'):$esp
+if $esp>0.5 then
+  $tmpspin=gmap_tmpspin
+  destroy('gmap_tmpspin')
+endif
+
+$flush='y'
+if $# > 2.5 then
+  if $3='noflush' then $flush='n' endif
+endif
+if $# > 1.5 then
+  $file=$2+'.fid'
+  exists($file,'file'):$e
+  if $e<0.5 then
+    $file=autodir+'/'+$2+'.fid'
+    exists($file,'file'):$e2
+    if $e2<0.5 then
+      $file=curexp+'/'+$2+'.fid'
+      exists($file,'file'):$e3
+      if $e3<0.5 then
+        write('error','file not found, cannot remove: %s',$file)
+      endif
+    endif
+  endif
+  if $flush='y' then flush endif
+  rm('-r',$file):$x
+endif
+"do not use sethw('spin',0) in automation"
+
+if ($flush='y') then
+  gmapset('autoreturn2')
+  exists('cqgmap','maclib'):$e
+  if ($e>0.5 and $flush='y') then cqgmap('exit') endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'return') THEN
+
+$reset_vttype=1
+if ($# > 1.5) then   "not currently used"
+  if $2=0 then
+    $js='re-enable temp, autogain, spin, sample changer? [yes] '
+    input($js):$js
+    substr($js,1,1):$js
+    if ($js='n' or $js='N') then $reset_vttype=0 endif
+  endif
+endif
+
+exists('gmap_tmpspin','parameter'):$esp
+if $esp>0.5 then
+  destroy('gmap_tmpspin')
+endif
+
+exists('gmap_tmppar','parameter'):$e
+if $e>0.5 then
+  if (gmap_tmppar[1] <> 'n') then fsq=gmap_tmppar[1] endif
+  if (gmap_tmppar[2] <> 'n') then hdwshim=gmap_tmppar[2] endif
+  destroy('gmap_tmppar')
+endif
+
+"do destroy before prune"
+"if exists in tmpsave'd params it will reappear"
+exists('gzwin','parameter'):$e
+if $e>0.5 then destroy('gzwin') endif
+exists('gzsize','parameter'):$e
+if $e>0.5 then destroy('gzsize') endif
+exists('gzlvl','parameter'):$e
+if $e>0.5 then destroy('gzlvl') endif
+exists('d3','parameter'):$e
+if $e>0.5 then d3=d3[1] endif
+
+"if auto<>'y' then"
+  exists(curexp+'/gtmp/text','file'):$t
+  if $t>0.5 then
+    exists(curexp+'/text','file'):$t2
+    if $t2>0.5 then rm(curexp+'/text'):$x endif
+    mv(curexp+'/gtmp/text',curexp)
+  endif
+  exists(curexp+'/gtmp/startshims','file'):$t
+  if $t>0.5 then rm(curexp+'/gtmp/startshims'):$x endif
+  shimnames:$slist
+  $tmpfile=curexp+'/curshims'
+  writeparam($tmpfile,$slist)
+  tmpreturn('gtmp')
+  fread($tmpfile,'current')
+  delete($tmpfile)
+"  prune(curexp+'/procpar')"
+"  prune works to remove params only if they don't type ft next"
+"endif"
+if auto<>'y' then
+  clear(2)
+  dg newdg
+  menu('main')
+endif
+
+"gmapset('autoreturn2')"
+exists('cqgmap','maclib'):$e
+if ($e>0.5) then cqgmap('exit') endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'disable') THEN
+
+$gsp=0 $gspin='n'
+exists('gmapspin','parameter'):$gsp
+if $gsp>0.5 then
+  if gmapspin='y' then
+    $gspin='y'
+  endif
+endif
+
+exists('gmap_tmpspin','parameter'):$e
+if $e>0.5 then destroy('gmap_tmpspin') endif
+
+exists('gmap_tmppar','parameter'):$e
+if $e<0.5 then
+  create('gmap_tmppar','string')
+  setgroup('gmap_tmppar','processing')
+  setprotect('gmap_tmppar','on',256)
+endif
+gmap_tmppar[1] = fsq
+gmap_tmppar[2] = hdwshim
+if (fsq='y') then fsq='n' endif
+if (hdwshim<>'n') then hdwshim='n' endif
+
+on('gain')		"Turn off autogain"
+if $gspin='n' then
+  spin=0		"Turn off spinner"
+" if Console<>'g2000' then sethw('spin',0) endif"
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'setH2') THEN
+gmapsys('setH2')
+RETURN
+ENDIF
+
+
+IF ($1 = 'setH1') THEN
+gmapsys('setH1')
+RETURN
+ENDIF
+
+
+" process gmapz results, write basis files"
+IF ($1 = 'procb') THEN
+
+$dirn = userdir+'/gshimlib/'
+$mapname = ''
+$bsize = 0
+
+$obase = $dirn + 'data/gshim.list'
+exists($obase,'file'):$e
+if $e=0 then
+  write('error','file gshim.list not found')
+  return
+endif
+lookup('file',$obase,'seek','mapname','read','seek','gzsize','read'):$mapname,$bsize
+
+$gzdim = ($bsize+2)*2 
+"check array size"
+
+wft('nods')    "use ft instead??"
+
+$fullbase = $dirn + 'data/gshim.bas' "dont need basename parameter"
+$fullbasesave = $dirn+'shimmaps/'+$mapname+'.fid/'
+$ofile = $fullbasesave+'gshim.list'
+$fullbasesave = $fullbasesave+'gshim.bas'
+
+exists($fullbase,'file'):$e  "change basename to $fullbase"
+if $e>0.5 then
+  rm('-f',$fullbase):$x  "remove all previous gshim.bas files"
+  rm($fullbase+'*'):$x  "remove all previous gshim.bas files"
+endif
+
+wrspec($fullbase,1,2,-3)
+
+$jstr = '' $js = ''
+exists($fullbasesave,'file'):$e
+if $e>0.5 then
+  $jstr = 'shimmap '+$mapname+' exists, overwrite? [no] '
+  input($jstr):$js
+  substr($js,1,1):$js
+  if ($js = 'y' or $js='Y') then
+    rm($fullbasesave):$x
+    cp($fullbase,$fullbasesave)
+    exists($ofile,'file'):$e
+    if $e>0.5 then rm($ofile):$x endif
+    cp($obase,$ofile)
+  endif
+else 
+  cp($fullbase,$fullbasesave)  "store into shimmaps"
+  exists($ofile,'file'):$e
+  if $e>0.5 then rm($ofile):$x endif
+  cp($obase,$ofile)
+endif
+
+write('line3','shimmap done!')
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'reprocb') THEN  "reprocess basis"
+"saves current fid into mapname+.fid"
+
+if (arraydim <> 2*(gzsize+2)) then
+  write('error','invalid data for making a shimmap')
+  return
+endif
+
+$jstr='' $js='' $mapname=''
+$dirn=userdir+'/gshimlib/shimmaps/'
+
+write('line3','displaying mapnames below')
+gmapdisp('maplist')
+$jfile=userdir+'/gshimlib/data/gshim.list'
+exists($jfile,'file'):$e
+if $e>0.5 then
+  lookup('file',$jfile)
+  lookup('mapname','read'):$mapname
+  $jstr = 'enter mapname: ['+$mapname+'] '
+  input($jstr):$js
+  if ($js <> '') then
+    $mapname = $js
+    $jfile2=userdir+'/gshimlib/data/gshim.list2'
+    exists($jfile2,'file'):$e2
+    if $e2>0.5 then rm($jfile2):$x endif
+    lookup('file',$jfile,'skip','skip')
+    write('file',$jfile2,'mapname %s',$mapname)  "writes new mapname"
+    lookup('readline'):$jstr,$nret
+    repeat
+      write('file',$jfile2,'%s',$jstr)  "copy rest of file"
+      lookup('readline'):$jstr,$nret
+      until ($nret=0)
+    rm($jfile):$x
+    mv($jfile2,$jfile)
+  endif
+else
+  $jstr = 'enter mapname: '
+  input($jstr):$js
+  if ($js <> '') then
+    $mapname = $js
+    gmaplistfunc('wrshimcal',$js):$ok
+    if $ok<0 then
+      write('error','gradient shimming processing failed')
+      return
+    endif
+  else
+"    menu('gmap_basisopt')"
+    return
+  endif
+endif
+
+gmaplistfunc('setoldv',gzsize):$ok
+if $ok<0 then
+  write('error','gradient shimming processing failed')
+  return
+endif
+
+$bfile=$mapname+'.fid'
+exists($dirn+$bfile,'file'):$eb
+if $eb>0.5 then
+  $js='Overwrite shimmap '+$mapname+'? [no] '
+  input($js):$js
+  substr($js,1,1):$js
+  if ($js='y' or $js='Y') then
+    rm('-r',$dirn+$bfile):$x
+    svf($dirn+$bfile)
+  else
+"    menu('gmap_basisopt')"
+    return
+  endif
+else
+  write('alpha','Processing and saving shimmap %s',$mapname)
+  svf($dirn+$bfile)
+endif
+
+gmapset('procb')
+
+exists(curexp+'/expl.out','file'):$e
+if $e>0.5 then autoscale endif
+expl('file',userdir+'/gshimlib/data/gshim.bas')
+
+RETURN
+ENDIF
+
+
+"*****  macro setb  *****" 
+" set up gradient shimming on z using PFG "
+" includes basis function for each shim "
+
+IF ($1 = 'setb') THEN
+
+$dirn = userdir+'/gshimlib/'
+$jfile = $dirn+'data/gshim.list'
+"$jfile3 = $dirn+'data/gshim.rec'"
+"$jmap='000'"
+
+"now set up array"  "obtain real values from text file??"
+"run gmapshims('unarray')??  is it run before this?? "
+
+$shimname='' 
+$shimcal=0  
+$shimoldv=0 
+lookup('file',$jfile,'gzsize','read'):$bsize
+lookup('seek','Error','skip')
+$vc=0
+repeat
+  $vc=$vc+1
+  lookup('read','read','read','skip',3):$shimname[$vc],$shimcal[$vc],$shimoldv[$vc]
+  array($shimname[$vc],$bsize+2,$shimoldv[$vc],0,0)
+  {$shimname[$vc]}[$vc+1] = {$shimname[$vc]}[$vc+1] + $shimcal[$vc]
+until ($vc=$bsize)
+
+$tmp_array='(' + $shimname[1]
+$vc=1
+repeat
+  $vc=$vc+1
+  $tmp_array = $tmp_array + ',' + $shimname[$vc]
+until ($vc=$bsize)
+$tmp_array = $tmp_array + '),d3'
+array = $tmp_array
+da
+
+write('line3','Starting map of shims %s-%s.',$shimname[1],$shimname[$bsize])
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'setup_gzlvl') THEN
+
+$exec=''
+gmaplistfunc('unarray'):$ok,$exec
+exec($exec)
+
+$js=''
+exists('tmpgradtype','parameter'):$e
+if ($e) then
+  substr(tmpgradtype,3,1):$js
+else
+  substr(gradtype,3,1):$js
+endif
+if ($js='h' or $js='n') then
+  write('error','cannot find gzlvl with gradtype=\'%s\'',$js)
+  return
+endif
+if ($js='l' or $js='s') then
+  $maxdac=2048
+else
+  $maxdac=32768
+endif
+if ($js='a') then
+  if (shimset=1 or shimset=2 or shimset=10 or shimset=11) then
+    $maxdac=2048
+  endif
+endif
+if $maxdac=32768 then
+  gzlvl=2048
+else
+  gzlvl=512
+endif
+
+wexp='gmapset(\'setgzlvl\')'
+au
+"wdone('')"
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'setgzwin') THEN
+
+$exec=''
+gmaplistfunc('unarray'):$ok,$exec
+exec($exec)
+wexp='gmapset(\'setsw\')'
+if ($# > 1.5) then
+  $val=0 $val=$2
+  $jstr=''
+  format($val,1,0):$jstr
+  wexp='gmapset(\'setsw\','+$jstr+')'
+endif
+gmapset('disable')
+au
+"wdone('')"
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'setsw') THEN
+"set gzwin from profile"
+
+if ($# > 1.5) then
+  $thper = $2
+else
+  $thper = 0
+endif
+exists('gzwintarget','parameter'):$e
+if $e>0.5 then $thper = gzwintarget endif
+
+if $thper>=100 then $thper=2.0 endif
+if $thper<2.0  then $thper=2.0 endif
+$thper = $thper/100  "input as percent"
+
+$select = 2
+exists('gzwinspec','parameter'):$e
+if $e>0.5 then
+  if (gzwinspec>=1 and gzwinspec<=arraydim) then
+    $select = gzwinspec
+  endif
+endif
+
+gzwin = 100
+wft('nods')
+select($select)
+av f 
+"cdc"
+lvl=0 tlt=0
+if spin=0 then spin='n' endif
+
+$sn=1.0  $sn2=1.0
+$hpt = 0.5 * sw / (fn/2)  "half of a point"
+$npt = 0.0625 * sw + $hpt
+dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+"write('alpha','hpt %g, npt %g, s/n %g',$hpt,$npt,$sn)"
+$npt = sw - 0.5 * sw / (fn/2)
+$hpt = sw - 0.0625 * sw + $hpt
+dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+"write('alpha','hpt %g, npt %g, s/n %g',$hpt,$npt,$sn2)"
+"if $sn2>$sn then $sn=$sn2 endif"
+$sn=0.5*($sn+$sn2)
+if $sn<3 then
+  write('error','insufficient signal to find gzwin, s/n %g',$sn)
+  return(1)
+endif
+
+$lw=1 $hzpp=0 $f1=0 $f2=0 $maxht=0 $maxfreq=0
+"set cr in center"
+"write('alpha','midpoint %g',sw/2-rfl+rfp)"
+peak:$maxht,$maxfreq
+$snmin=8
+"write('alpha','s/n %g, 8/th %g, 8/sn %g',$sn,8/$thper,8/$sn)"
+if $sn<$snmin/$thper then "worry about s/n"
+  if $sn>2*$snmin then
+    dres($maxfreq,$snmin/$sn):$lw,$hzpp,$f1,$f2
+  else
+    write('line3','low signal-to-noise in profile')
+    dres($maxfreq,0.5):$lw,$hzpp,$f1,$f2
+  endif
+else
+  dres($maxfreq,$thper):$lw,$hzpp,$f1,$f2
+endif
+"write('alpha','maxfreq=%g thper=%g',$maxfreq,$thper)"
+"write('alpha','lw=%g hzpp=%g f1=%g f2=%g',$lw,$hzpp,$f1,$f2)"
+
+"$gzwintmp = 100*$lw/sw"
+$gzwintmp = 100*($f1-$f2)/sw
+if $gzwintmp<0 then $gzwintmp = -$gzwintmp endif  "not necessary, sign is correct"
+
+//If shaped pulse is used then correct using lsfrq, not by changing tof
+exists('shaped','parameter'):$shapedex
+if ($shapedex>0.5) then
+   if (shaped='y') then
+	$toftmp=tof //leave unchanged
+	lsfrq = lsfrq+rfp-rfl+sw/2-0.5*($f1+$f2)      
+	write('line3','lsfrq set to %.1f Hz',lsfrq)
+   else
+       $toftmp = tof + 0.5*($f1+$f2)-rfp+rfl-sw/2      "2.2 used to be 4, max is 2"
+       if (($toftmp-tof > sw/2.2) or ($toftmp-tof < -sw/2.2) or ($gzwintmp > 100)) then
+         write('error','find gzwin failed, cannot find window')
+         return(1)
+       endif
+       "write('alpha','ADJUSTMENTS: f1 %g, f2 %g, gzwin %g, delta tof %g',$f1,$f2,$gzwintmp,$toftmp-tof)"
+    
+       if $lw<0.1 then
+         write('error','find gzwin: gzwin %3.1f, tof %3.1f, linewidth error',$gzwintmp,$toftmp)
+         return(1)
+       endif
+   endif
+else
+
+   $toftmp = tof + 0.5*($f1+$f2)-rfp+rfl-sw/2      "2.2 used to be 4, max is 2"
+   if (($toftmp-tof > sw/2.2) or ($toftmp-tof < -sw/2.2) or ($gzwintmp > 100)) then
+     write('error','find gzwin failed, cannot find window')
+     return(1)
+   endif
+   "write('alpha','ADJUSTMENTS: f1 %g, f2 %g, gzwin %g, delta tof %g',$f1,$f2,$gzwintmp,$toftmp-tof)"
+
+   if $lw<0.1 then
+     write('error','find gzwin: gzwin %3.1f, tof %3.1f, linewidth error',$gzwintmp,$toftmp)
+     return(1)
+   endif
+
+endif
+
+if ($# < 2.5) then
+  if auto<>'y' then
+    write('line3','gzwin set to %3.1f, tof set to %3.1f, done!',$gzwintmp,$toftmp)
+  endif
+  cr=$f1
+  delta=$f1-$f2
+  select($select)
+  ds
+  ds('toggle')
+  gzwin = $gzwintmp
+  tof = $toftmp
+  wexp='gmapset(\'setsw\')'
+else
+  if auto<>'y' then
+    write('line3','gzwin set to %3.1f, tof set to %3.1f',$gzwintmp,$toftmp)
+  endif
+  cr=$f1
+  delta=$f1-$f2
+  full
+  select($select)
+  ds
+  ds('toggle')
+  shell('sleep 1'):$r
+  gzwin = $gzwintmp
+  tof = $toftmp
+  if $3>1.5 then
+    gmapauto('startmap','overwrite','all')
+  else
+    if $3>0.5 then
+      gmapauto('startmap','overwrite','part')
+    else
+      wexp='gmapset(\'setsw\')'
+    endif
+  endif
+endif
+
+RETURN(0)
+ENDIF
+
+
+IF ($1 = 'setgzlvl') THEN
+"process spectrum and find gzlvl"
+
+if ($# > 1.5) then
+  $cut = $2
+  if $cut <= 5 then
+    write('error','2nd argument must be greater than 5')
+    RETURN
+  endif
+else
+  $cut=50  "50 percent"
+endif
+if spin=0 then spin='n' endif
+
+$js=''
+exists('tmpgradtype','parameter'):$e
+if ($e) then
+  substr(tmpgradtype,3,1):$js
+else
+  substr(gradtype,3,1):$js
+endif
+if ($js='h' or $js='n') then
+  write('error','cannot find gzlvl with gradtype=\'%s\'',$js)
+  return
+endif
+if ($js='l' or $js='s') then
+  $maxdac=2048
+else
+  $maxdac=32768
+endif
+if ($js='a') then
+  if (shimset=1 or shimset=2 or shimset=10 or shimset=11) then
+    $maxdac=2048
+  endif
+endif
+gmapset('setsw',50,0)
+$gzwin = gzwin
+wexp='gmapset(\'setgzlvl\')'
+
+if ($gzwin <= 5) then
+  $gzlvl_tmp = ($cut/$gzwin) * gzlvl
+  write('line3','gzwin < 5, gzlvl value not reliable')
+else
+  if (($gzwin > $cut-5) and ($gzwin < $cut+5)) then
+    write('line3','gzlvl %1.0f within range',gzlvl)
+    gmapset('setsw',0)
+    return
+  else
+    $gzlvl_tmp = ($cut/$gzwin) * gzlvl
+    if ($gzlvl_tmp > $maxdac) then
+      write('line3','gzlvl max of %1.0f reached, gzlvl and gzwin not found',$maxdac)
+      gzlvl = $maxdac
+      return
+    else
+    if ($gzlvl_tmp < -$maxdac) then
+      write('line3','gzlvl max of %1.0f reached, gzlvl and gzwin not found',$maxdac)
+      gzlvl = -$maxdac
+      return
+    endif
+  endif
+  gzlvl = $gzlvl_tmp
+  write('line3','gzlvl set to %1.0f, repeating...',gzlvl)
+  au('wait')
+" wdone('')"
+  endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'addpar') THEN
+
+fn = 'n'
+gain = 'y'
+lb = 'n'
+sb = 'n'
+dmg = 'av'
+wp = sw
+seqfil = 'gmapz'
+pslabel = 'gmapz'
+
+exists('at','parameter'):$e
+if ($e = 1) then
+  setlimit('at',100,0.00001,0.00001)  "10 us"
+endif
+
+exists('gzlvl','parameter'):$e
+if ($e = 0) then
+  create('gzlvl','real')
+  setlimit('gzlvl',65536,-65536,0)
+  gzlvl=2000
+endif
+
+exists('d1','parameter'):$e
+if ($e = 0) then
+  create('d1','delay')
+endif
+if (d1<3) then d1=3.0 endif
+
+exists('d2','parameter'):$e
+if ($e = 0) then
+  create('d2','delay')
+endif
+if (d2<0.001) then d2=0.001 endif
+
+exists('pw','parameter'):$e
+if ($e = 0) then
+  create('pw','pulse')
+endif
+if (pw=0) then pw=1 endif
+
+exists('p1','parameter'):$e
+if ($e = 0) then
+  create('p1','pulse')
+endif
+
+exists('d3','parameter'):$e
+if ($e = 0) then
+  create('d3','delay')
+  d3 = 0, 0.005
+endif
+if (size('d3')<1.5) then
+  d3 = 0, 0.005
+endif
+
+exists('ni','parameter'):$e
+if ($e = 1) then ni=1 endif
+exists('ni2','parameter'):$e
+if ($e = 1) then ni2=1 endif
+
+exists('gzsize','parameter'):$e
+if ($e = 0) then
+  create('gzsize','integer')
+  setgroup('gzsize','processing')
+  setlimit('gzsize',8,1,1)
+  gzsize = 6
+endif
+
+$bsize = 8  "need to loop parameters, or set to max of 8"
+
+exists('gzwin','parameter'):$e
+if ($e = 0) then
+  create('gzwin','real')
+  setgroup('gzwin','processing')
+  gzwin=100
+endif
+
+exists('gmapct','parameter'):$e
+if $e<0.5 then create('gmapct','integer') setgroup('gmapct','display') endif
+exists('gmap_again','parameter'):$e
+if $e<0.5 then create('gmap_again','integer') setgroup('gmap_again','display') endif
+
+exists('gmap_findtof','parameter'):$e
+if $e<0.5 then
+  create('gmap_findtof','string')
+  gmap_findtof='n'
+endif 
+exists('gmapsys_makebutton','parameter'):$e
+if $e<0.5 then
+  create('gmapsys_makebutton','string')
+  gmapsys_makebutton='n'
+endif 
+exists('gmap_z1z4','parameter'):$e
+if $e<0.5 then
+  create('gmap_z1z4','string')
+  gmap_z1z4='n'
+endif 
+exists('gmapspin','parameter'):$e
+if $e<0.5 then
+  create('gmapspin','string')
+  setenumeral('gmapspin',2,'n','y')
+  gmapspin='n'
+endif
+exists('vtcomplvl','parameter'):$ex
+if $ex<0.5 then
+  create('vtcomplvl','integer')
+  setlimit('vtcomplvl',2,0,1)
+  vtcomplvl=0
+endif
+
+$dgtext = '4:GRADIENT SHIM:gzsize;'
+$dg2text = '3:GRADIENT SHIM:gzlvl:0,gzwin:1,gzsize:0,tof:1,d2:4;3: :[d3:4];'
+$aptext = '2:GRADIENT SHIM:gzlvl:0,gzwin:1,gzsize:0,d2:4;2: :[d3:4];'
+
+$pdg=''  $putflag=0
+length(dg):$dglen
+$vc=0
+repeat
+  $vc=$vc+1
+  substr(dg,$vc,13):$pdg
+  if ($pdg = 'GRADIENT SHIM') then
+    $putflag=1
+  endif
+until ($vc = $dglen-13)
+if $putflag=0 then
+  setprotect('dg','off',4)  "search for GRADIENT SHIM first"
+  dg = dg + $dgtext
+  setprotect('dg','on',4)
+endif
+
+exists('dg2','parameter'):$e
+if $e=0 then
+  create('dg2','string')
+  setgroup('dg2','display')
+  dg2 = dg2 + $dg2text
+  setprotect('dg2','on',4)
+else
+  $pdg=''  $putflag=0
+  length(dg2):$dglen
+  $vc=0
+  repeat
+    $vc=$vc+1
+    substr(dg2,$vc,13):$pdg
+    if ($pdg = 'GRADIENT SHIM') then
+      $putflag=1
+    endif
+  until ($vc = $dglen-13)
+  if $putflag=0 then
+    setprotect('dg2','off',4)
+    dg2 = dg2 + $dg2text
+    setprotect('dg2','on',4)
+  endif
+endif
+
+$pdg=''  $putflag=0  "add dg to ap list"
+$ape = size('ap')
+length(ap[$ape]):$dglen
+$vc=0
+repeat
+  $vc=$vc+1
+  substr(ap[$ape],$vc,13):$pdg
+  if ($pdg = 'GRADIENT SHIM') then
+    $putflag=1
+  endif
+until ($vc = $dglen-13)
+if $putflag=0 then
+  setprotect('ap','off',4)
+  ap[$ape] = ap[$ape] + $aptext
+  setprotect('ap','on',4)
+endif
+
+gmapset('mkdir')
+$exec=''
+gmaplistfunc('unarray'):$ok,$exec
+exec($exec)
+dg
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'mkdir') THEN
+
+$jstr = ''
+$numdir = 0
+exists(userdir+'/gshimlib','file'):$e
+if $e<0.5 then
+  mkdir(userdir+'/gshimlib')
+  $jstr=$jstr+' gshimlib'
+  $numdir=$numdir+1
+endif
+if $#<1.5 then
+  exists(userdir+'/gshimlib/shimmaps','file'):$e
+  if $e<0.5 then
+    mkdir(userdir+'/gshimlib/shimmaps')
+    if $numdir>0 then $jstr=$jstr+',' endif
+    $jstr=$jstr+' gshimlib/shimmaps'
+    $numdir=$numdir+1
+  endif
+endif
+exists(userdir+'/gshimlib/data','file'):$e
+if $e<0.5 then
+  mkdir(userdir+'/gshimlib/data')
+  if $numdir>0 then $jstr=$jstr+',' endif
+  $jstr=$jstr+' gshimlib/data'
+  $numdir=$numdir+1
+endif
+if $numdir>1.5 then
+  $jstr='new directories'+$jstr+' written'
+else
+  $jstr='new directory'+$jstr+' written'
+endif
+if $numdir>0.5 then
+  write('line3','%s',$jstr)
+endif
+
+RETURN
+ENDIF
+
+
+IF ($# > 0.5) THEN
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+
+RETURN
+ENDIF
+
+
+"group into smaller macros, put most-used options first"
+"  readallshims - readhw"
+"  setzshims (setallshims) - sethw"
+"  gmapdisp - setwindow retrbasis setbname shimp explmenu maplist svppar"
+"  gmaprep - proca fita setoldv shimd"
+"  gmapset - setb procb reprocb setsw setgz par reproca mkdir"
+"  gmapshims - seta wrshimcal chkshimcal unarray setnew reset"

@@ -1,0 +1,81 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# targets
+diffshimsTarget = 'diffshims'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrDiffShimsPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrDiffShimsHdrList = ['allocate.h',
+                        'init.h',
+                        'graphics.h',
+                        'group.h',
+                        'params.h',
+                        'pvars.h',
+                        'symtab.h',
+                        'shims.h',
+                        'tools.h',
+                        'variables.h',
+                        'vnmrsys.h',
+                        'wjunk.h']
+vnmrDiffShimsFileList = ['assign.c',
+                         'allocate.c',
+                         'pvars.c',
+                         'shims.c',
+                         'symtab.c',
+                         'tools.c',
+                         'variables1.c']
+
+diffShimsFileList = ['diffshims.c']
+
+# build environments
+diffEnv = Environment(CCFLAGS    = '-O -Wall -m32',
+                      CPPDEFINES = ['LINUX'],
+                      LINKFLAGS  = '-m32',
+                      CPPPATH    = [cwd])
+
+
+if ('interix' in platform):    # Interix
+   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+   diffEnv.Replace( CC=interixgcc )
+   diffEnv.Replace(  LINKFLAGS='-O -m32' )
+   diffEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
+   diffEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib')
+ ]  )
+   #print "CC is:", diffEnv['CC']
+   #print "C++ is:", diffEnv['CXX']
+
+
+buildMethods.makeSymLinks(diffEnv, diffshimsTarget, cwd, vnmrDiffShimsPath, vnmrDiffShimsFileList)
+buildMethods.makeSymLinks(diffEnv, diffshimsTarget, cwd, vnmrDiffShimsPath, vnmrDiffShimsHdrList)
+
+# actual builds
+# give these a different object name to avoid collision with diffparams build
+vnmrDiffShimsObjs = []
+for i in vnmrDiffShimsFileList:
+   vnmrDiffShimsObjs.append(diffEnv.StaticObject(target = i + '-shims.o',
+                                                 source = [i]))
+
+diffshims = diffEnv.Program(target = diffshimsTarget,
+                            source = [diffShimsFileList,
+                                      vnmrDiffShimsObjs],
+                            LIBS   = ['m'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+diffEnv.AddPostAction(diffshims,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, diffshimsTarget))))
+

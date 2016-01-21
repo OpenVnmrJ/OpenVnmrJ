@@ -1,0 +1,33 @@
+"macro rtvfs"
+
+$d='' $b='' $e=''
+substr($1,'dirname'):$d,$b,$e
+$1=$d+'/'+$b+'.vfs'
+exists($1,'directory'):$direx
+if not $direx then 
+    write('error','%s not found',$1)
+    return
+endif
+    flush
+    $oldseq=seqfil
+    exists(curexp+'/datdir','directory'):$direx
+    if not $direx then mkdir(curexp+'/datdir'):$dum endif
+    rm('-rf',curexp+'/acqfil'):$dum
+    rm('-f',curexp+'/datdir/data'):$dum
+    rm('-f',curexp+'/datdir/phasefile'):$dum
+    mkdir(curexp+'/acqfil'):$dum
+    copy($1+'/datdir/data',curexp+'/datdir'):$dum
+    copy($1+'/datdir/phasefile',curexp+'/datdir'):$dum
+    copy($1+'/procpar',curexp):$dum
+    copy($1+'/curpar',curexp):$dum
+    copy($1+'/text',curexp):$dum
+    exists($1+'/acqfil/fid','file'):$fidex
+    if $fidex then
+	copy($1+'/acqfil/fid',curexp+'/acqfil'):$dum
+    endif
+    fread(curexp+'/curpar','current','reset')
+    fread(curexp+'/procpar','processed','reset')
+    fixpar
+    file=$d+'/'+$b
+    setvalue('file',file,'processed')
+    if $oldseq<>seqfil then dg newdg endif

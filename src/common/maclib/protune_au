@@ -1,0 +1,154 @@
+"macro protune_au"
+
+"*******The following is to make sure this macro is modular********"
+
+$gshim='no'
+$glideau = 'no'
+$next='notnext'
+
+if ($# = 0) then $1 = 'init' endif
+
+$x = 2
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'gshim' then $gshim=$val 
+ elseif $val = 'lkshim' then $gshim=$val
+ elseif $val = 'H1shim' then $gshim=$val
+ elseif $val = 'hsshim' then $gshim=$val
+ elseif $val = 'glideau' then $glideau=$val 
+ elseif $val = 'next' then $next=$val
+ endif
+ $x=$x+1
+endwhile
+
+"*******************************************************************"
+
+$arg = $1
+
+  IF ($arg = 'init') then
+
+    "Check global conditions "
+	$dotune='no'
+	checkprotune('global'):$dotune
+	if ($dotune='no') then
+		gmapshim_au($gshim,$glideau,'next')
+		return
+	endif
+
+        write('line3','protune_au start')
+     "Check specific conditions"
+	$dotune='no'
+	checkprotune('local'):$dotune
+        if ($dotune='no') then
+		checkprotune('write','lasttunepar')
+	        write('line3','protune_au skipped')
+                gmapshim_au($gshim,$glideau,'next')
+                return
+        endif
+
+	wstart='gmapshim_au(\''+$gshim+'\',\''+$glideau+'\',\'next\')'
+
+        groupcopy('current','processed','acquisition')  
+        groupcopy('current','processed','display')	 
+        groupcopy('current','processed','processing')	 
+
+    wdone=''
+    if (auto = 'y') then
+       svp(autodir+'/protunetmp','force')
+    else
+	tmpsave('protunetmp')
+    endif
+
+
+	$return='y'
+	xmhaha_tune:$return
+	if ($return='n') then
+		protune_au('quit')
+	endif
+
+  ELSEIF ($arg = 'done') or ($arg='quit') or ($arg='abort') THEN
+
+    write('line3','protune_au %s',$arg)
+    if (auto = 'y') then
+	strstr(file,'.','last'):$ret,$file,$ext
+	if ($ret=0) then $file=file endif
+        $file=$file+'.fid'
+	shell('rm -rf '+$file):$dum
+        exists(autodir+'/protunetmp.par','directory'):$protunetmpex
+        if ($protunetmpex) then
+            rtp(autodir+'/protunetmp')
+            shell('rm -r '+autodir+'/protunetmp.par'):$dum
+        endif
+    else
+        tmpreturn('protunetmp')   
+    endif
+
+    $wstart=wstart
+    wstart=''
+    if ($arg='done') then
+
+"**********************************************************************************"
+		"Check to see if gradient shimming should follow"
+		" protune.  This is done ONLY if protune was done"
+		" because of temp change"
+	$dotune='no' $parchanges=''
+	checkprotune('local'):$dotune,$parchanges
+        $doshim=0
+		"  One can construct such teststr, on other parameters, do decide"
+		"  if wshim should be done after protune"
+        if ($doshim=0) then
+                teststr('$parchanges','temp','local'):$doshim1
+                teststr('$parchanges','tn','local'):$doshim2
+                teststr('$parchanges','dn','local'):$doshim3
+                if (($doshim1>0) or ($doshim2>0) or ($doshim3>0)) then
+                   $doshim=1
+                   write('line3','Need to reshim after probe tune')
+                endif
+        endif
+
+	"**********************************************************************************"
+		"For the time being this is turned OFF until testing is done"
+		"  To test this feature, remove then next line"
+//	$doshim=0
+	"**********************************************************************************"
+
+	$shimarg=0
+	if ($shimarg=0) and ($doshim) then
+		strstr($wstart,'gshim'):$shimarg
+	endif
+	if ($shimarg=0) and ($doshim) then
+		strstr($wstart,'lkshim'):$shimarg
+	endif
+	if ($shimarg=0) and ($doshim) then
+		strstr($wstart,'H1shim'):$shimarg
+	endif
+	if ($shimarg=0) and ($doshim) then
+		strstr($wstart,'hsshim'):$shimarg
+	endif
+        if ($doshim) and ($shimarg) then
+		wshim='e'
+        endif
+
+		"wshim parameter is now set appropriately for shimming"
+"**********************************************************************************"
+	checkprotune('write','lasttunepar')
+    endif
+    $abortpterror='no'
+    getadminfo('abortpterror'):$abortpterror
+    if ($arg = 'abort') then 
+        if ($abortpterror='yes') then
+		write('error','Protune reported a Failure')
+	     	if (auto='y') then wexp='AutoSKIP' else $wstart='' endif
+	else
+		write('line3','Protune reported a Failure')
+		$loc='' $locdir='' $when=''
+		getlocid:$loc,$locdir,$when
+		$errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+		write('file',$errlog,'Protune reported a Failure')
+	endif
+    endif
+    if ($wstart<>'') then
+		exec($wstart)
+    endif
+
+  ENDIF

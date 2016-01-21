@@ -1,0 +1,70 @@
+"macro setof2"
+"*****************************************************************************"
+"                                                                             "
+" setof2 - macro to set the transmitter offset frequency (tof) on resonance   "
+"          Called by macro, setof.                                            "
+"                                                                             "
+" Usage: setof2         - set frequency offset to highest peak"
+"        setof2(value)  - set frequency to value"
+" Details: The routine checks the frequency of the largest peak and calculates"
+"          and sets tof.  It is assumed that the current experiment is a      "
+"          s2pul experiment and a 1D spectrum is displayed on the screen.     "
+"          The routine collects and displays a 1D spectrum for verification.  "
+"          The offset frequency is saved in the file, for example, H1offset   "
+"          in the directory, $user/vnmrsys.                                   "
+"          If an argument is given tof and H1offset are set to argument value "
+"                                                                             "
+"*****************************************************************************"
+
+f full
+if ($# = 1) then
+  tof = $1                  "set frequency from input"
+  write('line3', 'Frequency offset: %6.2f', tof)
+else
+  av                          "absolute spectrum"
+  ft
+  vsadj
+
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+  write('line3','%10.2f ',$t) "print it"
+  wexp=''                   "reset auto go link"
+  dmg='ph'                  "phase sensitive mode"
+
+  $toflim = 0.9*sw/2        "offset limit set to 80% of sw"
+
+  $tt = tof + $t
+  if ($tt < 0 ) then
+    $tt = -$tt
+  endif
+  if ($tt > $toflim) then
+    write('line3', 'Offset too large, check spectrum or increase sw')
+    abort
+  endif
+
+  tof=tof + $t                "determine new tof value"
+endif
+
+$tnoffset = tn+'offset'
+exists($tnoffset,'parameter','global'):$e
+if ($e = 0) then
+  create($tnoffset,'real','global')
+endif
+$cmd = $tnoffset+'=tof'
+exec($cmd)
+
+"acquire and show spectrum for verification"
+wexp='ft aph0 vsadj f full'
+au
+"*****************************************************************************"
+"                                                                             "
+" Modification History:                                                       "
+"                                                                             "
+"  08Aug96(ss)   Initial version                                              "
+"  30Jul97(ss)   global parameter, e.g. H1offset created                      "
+"  03Sep97(ss)   display scaled using vsadj                                   "
+"  07Dec98(ss)   setof2(value) sets tof=value, H1offset=value                 "
+"                                                                             "
+"*****************************************************************************"
+
+

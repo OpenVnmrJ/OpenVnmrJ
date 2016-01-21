@@ -1,0 +1,38 @@
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+
+proc resetDeck {win} {
+   global deckInfo
+
+   set id $deckInfo($win)
+   if {[info exists deckInfo(active,$id)] == 1} {
+      if {$deckInfo(active,$id) != -1} then {
+         $deckInfo(active,$id) configure -relief sunken \
+          -disabledforeground $deckInfo(dfg,$id) -state normal
+      }
+   }
+   $win configure -relief flat -disabledforeground $deckInfo(fg,$id) \
+                  -state disabled
+   set deckInfo(active,$id) $win
+}
+
+proc deck {win id args} {
+   global deckInfo
+   eval "button $win $args -relief sunken -borderwidth 3 -highlightthickness 0"
+   set deckInfo(dfg,$id) [$win cget -disabledforeground]
+   set deckInfo(fg,$id) [$win cget -foreground]
+   set deckInfo($win) $id
+}
+
+proc selectdeck {win cmd} {
+   resetDeck $win 
+   eval $cmd
+}

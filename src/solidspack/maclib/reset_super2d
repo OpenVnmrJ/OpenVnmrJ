@@ -1,0 +1,72 @@
+"macro reset_super2d"
+// Set superX - Liu etal JMR 155, 15-28, 2002 - page 17. 
+
+$tauafac = 0.2464
+if ($# > 0) then 
+   $tauafac = $1
+endif 
+   
+if (srate > 500) then 
+   $t1Xsuper = 1.0e6/srate
+   t1Xsuper = 0.1*trunc($t1Xsuper/0.1 + 0.5)
+   srate = trunc(1.0e6/t1Xsuper + 0.5)
+endif
+
+$tauR = t1Xsuper
+$t2Xsuper = $tauafac*$tauR
+t2Xsuper = 0.1*trunc($t2Xsuper/0.1 + 0.5)
+
+$taua = t2Xsuper
+$pwXsuper = ($tauR*0.5195 - 0.0958*$taua - 1.3917*$taua*$taua/$tauR - $taua)/2.0
+pwXsuper = 0.2*trunc($pwXsuper/0.2 + 0.5)
+
+$aXsuper = aX90*4.0*pwX90/pwXsuper
+aXsuper = trunc($aXsuper + 0.5)
+
+if (qXsuper < 1.0) then qXsuper = 1 endif
+
+// Set the Scale factor
+ 
+$x = $taua/$tauR 
+$chi = -0.0006 + 2.0526*$x - 0.7196*$x*$x - 33.6982*$x*$x*$x +52.2845*$x*$x*$x*$x
+scalesw1 = 1.0/$chi
+
+$eps = 1.0 - 4.0*t2Xsuper/t1Xsuper
+daslp = (360.0*sw/sw1)*($eps - $chi)
+pmode='partial'
+
+// Synchronize the F1 Dwell with tauR
+
+sw1 = 1.0e6/$tauR
+   
+// Set tossX
+
+pwXtoss = 2.0*pwX90
+aXtoss = aX90
+chXtoss = 'obs'
+
+Hmixseq = Hseq
+if (Hmixseq = 'spinal') then
+   aHmixspinal = aHspinal
+   aHmixtppm = aHmixspinal
+   pwHmixspinal = pwHspinal
+   pwHmixtppm = pwHmixspinal
+   phHmixspinal = phHspinal
+   phHmixtppm = phHmixspinal
+endif 
+
+if (Hmixseq = 'tppm') then
+   aHmixtppm = aHtppm
+   aHmixspinal = aHmixtppm
+   pwHmixtppm = pwHtppm
+   pwHmixspinal= pwHmixtppm
+   phHmixtppm = phHtppm
+   phHmixspinal = phHmixtppm
+endif 
+
+
+
+
+
+
+

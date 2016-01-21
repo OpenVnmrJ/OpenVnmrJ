@@ -1,0 +1,47 @@
+"macro plfit"
+"********************************"
+" plfit - plot a fitted spectrum "
+"********************************"
+
+select:$trace
+if $#>1 then
+  $first=$1 $last=$2
+elseif $#>0 then
+  $first=1 $last=$1
+else
+  $first=1
+  nrecords(curexp+'/fitspec.outpar'):$last
+endif
+write('plotter',10,10,''):$yoffset	" vertical offset for text "
+$y=0.98*wc2max-$yoffset
+write('plotter',5,$y,'MULTICOMPONENT FIT, AUTOMATIC PLOT')
+write('plotter',5,$y-10,'TOP: ACTUAL SPECTRUM')
+write('plotter',5,$y-10-$yoffset,'CENTER: FULL FIT')
+write('plotter',5,$y-10-2*$yoffset,'BOTTOM: INDIVIDUAL COMPONENT PLOTS')
+lookup('file',curexp+'/fitspec.outpar','delimiter',' \t\n\r,*') "set to read fitted parameters"
+$index=$first $x=70 $y=0.98*wc2max-$yoffset
+write('plotter',$x,$y,'LINE  FREQ (Hz)  HEIGHT  WIDTH (Hz)  GAUSS FR.  INTEGRAL')
+repeat "for each line"
+ $y=$y-$yoffset
+ lookup('read','read','read','read'):$freq,$ht,$lw,$gauss
+ $int=$ht*$lw*(1.064467*$gauss+1.570796*(1-$gauss))
+ write('plotter',$x,$y,'%3d %10.2f %8.2f %10.2f %9.3f %12.2f',$index,$freq,$ht,$lw,$gauss,$int)
+ $index=$index+1
+until $index>$last
+select(1)
+vp=10 dsp(curexp+'/fitspec.outpar') dc pl "plot the whole thing"
+$lvl=lvl $tlt=tlt cdc lvl=$lvl tlt=$tlt
+vp=0 pscale
+"plot the components"
+$index=$first
+$res=''
+repeat
+ shell('vnmr_singleline','"'+curexp+'"',$index):$res
+ dsp(curexp+'/fitspec.singleline')
+ pl
+ $index=$index+1
+until $index>$last
+vp=25 wft($trace) dc pl($trace) 
+ "plot the spectrum"
+plotchoice('manual')
+vp=0

@@ -1,0 +1,48 @@
+"macro ATatten"
+"ATatten(pulsewidth,pulsepower) - calculated pw and B1 values"
+" for various attenuator settings"
+"Warning - calibrations should be done at less than tpwr of 60"
+"to insure a linear response"
+$file=''
+if $#=2 then
+   if (seqfil='s2pul') then
+    $file=autotestdir+'/data/Channel_1_1H_RF_Calibrations'
+     write('reset',$file)
+     write('file',$file,'90 degree pulses at various powers')
+     write('file',$file,'For the probe %s ',at_probetype)
+     write('file',$file,'Determined for 1H at the Power Level  %2.1f ',tpwr)
+   endif
+   if (seqfil='ATrfhomo') then
+    $file=autotestdir+'/data/Channel_2_13C_RF_Calibrations'
+     write('reset',$file)
+     write('file',$file,'90 degree pulses at various powers')
+     write('file',$file,'For the probe %s',at_probetype)
+     write('file',$file,'Determined for 13C at the Power Level  %2.1f ',pwxlvl)
+   endif
+   if (seqfil='ATgNhmqc') then
+    $file=autotestdir+'/data/Channel_3_15N_RF_Calibrations'
+     write('reset',$file)
+     write('file',$file,'90 degree pulses at various powers')
+     write('file',$file,'For the probe %s',at_probetype)
+     write('file',$file,'Determined for 15N at the Power Level  %2.1f ',pwxlvl)
+   endif
+   $pwref=$1
+   $attref = $2
+   $attval= 63
+   if $attref >60 then
+    write('alpha','Non Linear response possible with reference above 60 dB')
+    write('file',$file,'Non Linear response possible with reference above 60 dB')
+   endif
+   write('alpha','Attenuator Value     PW90(usec)   B1(Hz)')
+   write('file',$file,'Attenuator Value     PW90(usec)   B1(Hz)')
+   repeat
+    exp(($attref-$attval)*2.303/20):$mult
+    $pwval = $pwref*$mult
+    $B1val = 250000/$pwval
+    write('alpha','%10.0f%15.1f%14.1f',$attval,$pwval,$B1val)
+    write('file',$file,'%10.0f%15.1f%14.1f',$attval,$pwval,$B1val)
+    $attval = $attval - 1
+    until $attval < -16
+else
+write('line3','usage: ATatten(pw,tpwr)')
+endif

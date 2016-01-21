@@ -1,0 +1,84 @@
+"macro BPexpress_setup_proc"
+// default macro for setting up BPexpress processing in direct, ni, ni2 dimensions and in 3d and nus
+//
+// input argument either 'obs', 'ni' or 'ni2', or '3d'
+// 
+
+$BPexpress_LP_cmd='BP_set_2x_lp'
+
+$ret='noop'
+
+if ($# <> 1 )  then
+  $msg='usage: BP_express_setup_proc(\'obs\' | \'ni\' | \'ni2\' | \'3d\'   | \'nus\') ' 	
+  write('line3',$msg)   write('alpha',$msg)	
+  return($ret)
+else 
+  if ( ($1 <> 'ni') and ($1<>'ni2') and ($1<>'obs') and  ($1<>'3d') and  ($1<>'nus') )  then 
+   $msg='usage: BP_express_setup_proc(\'obs\' | \'ni\' | \'ni2\' | \'3d\'   | \'nus\') ' 
+   write('line3',$msg)   write('alpha',$msg)
+   return($ret)
+  endif
+endif 
+
+$dim=$1
+
+
+// setup direct dimension
+
+if ($dim='obs') then
+   fn=np*2 lb='n'  gf='n' sb=-at sbs=-0.9*at  proc='ft'
+endif 
+
+
+// setup indirect dim ni
+
+if ($dim='ni') then
+
+     fn1=fn_ni 
+     
+     if ( fn1 < ni*4) then  fn1=ni*4 endif
+
+     lb1='n'   gf1='n' sb1=-ni/sw1  sbs1=-0.9*ni/sw1
+     if(proc1='lp')  then 
+          {$BPexpress_LP_cmd}('ni'):proc1 
+
+          if(proc1='lp')  then
+            sb1=-(strtext1+lpext1)/sw1  sbs1=-0.9*(strtext1+lpext1)/sw1 
+          endif  
+     endif
+
+endif 
+
+
+// setup indirect dim ni2
+
+if ($dim='ni2') then
+
+     fn2=fn_ni2    if ( fn2 <ni2*4) then fn2=ni2*4 endif
+
+     lb2='n'   gf2='n' sb2=-ni2/sw2  sbs2=-0.9*ni2/sw2
+     if(proc2='lp')  then 
+        {$BPexpress_LP_cmd}('ni2'):proc2
+        if(proc2='lp')  then
+            sb2=-(strtext2+lpext2)/sw2  sbs2=-0.9*(strtext2+lpext2)/sw2   
+        endif
+     endif
+
+endif 
+
+
+// setup 3d
+
+if ($dim='3d') then
+
+     fn=np fn1=ni*4 fn2=ni2*4 
+
+endif 
+
+// setup  and run nus processing
+
+if ($dim='nus') then
+
+     NUSprocIST
+
+endif 

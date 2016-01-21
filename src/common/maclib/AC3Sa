@@ -1,0 +1,29 @@
+"macro AC3Sa"
+"Auto calibrate"
+clear(2)
+write('error','finding estimate of pw90')
+wft av 
+$counter=1
+repeat
+  select($counter)
+  if tn='H1' then peak(.5p,2p):$ht else peak:$ht endif
+  if $counter=1 then $maxht = $ht $pw90=pw[1] else
+     if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+ph ds($counter) aph
+write('error',' Approximate pw90 = %2.1d ',$pw90)
+pw=3.4*$pw90,3.6*$pw90,3.8*$pw90,4.0*$pw90,4.2*$pw90,4.4*$pw90,4.6*$pw90,4.8*$pw90,5.0*$pw90,5.2*$pw90
+clear(2) full
+da
+text('finding 360')
+dtext
+if tn <> 'C13' then
+   wexp='AC4S' 
+else
+   wexp='AC7S'
+endif
+wnt='wft dssh' au  
+

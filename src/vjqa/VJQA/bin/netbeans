@@ -1,0 +1,330 @@
+#!/bin/sh
+
+set +xv
+
+if [ $# -lt 1 ]
+then 
+    echo "Usage: netbeans [installvj, runvj, runvjadmin]"
+    exit
+fi
+ 
+get_dest_dir()
+{
+    case  x$os_type in
+        "xrht" ) GREP="/bin/grep" ;;
+        "xsol" ) GREP="/usr/xpg4/bin/grep" ;;
+             * ) GREP="grep" ;;
+    esac
+    case  x$os_type in
+        "xrht" ) GREP="/bin/grep" ;;
+        "xsol" ) GREP="/usr/xpg4/bin/grep" ;;
+             * ) GREP="grep" ;;
+    esac
+
+    versionLine=`grep VERSION ${base_dir}/vnmrrev`
+    major=`echo $versionLine | awk 'BEGIN { FS = " " } { print $3 }'`
+    minor=`echo $versionLine | awk 'BEGIN { FS = " " } { print $5 }'`
+
+    $GREP -i -E 'alpha|beta|devel'  ${base_dir}/vnmrj 2> /dev/null
+    #if [ $? -eq 0 ]
+    #then
+       date=`grep 201 ${base_dir}/vnmrrev`
+       month=`echo $date |  awk 'BEGIN { FS = " " } { print $1 }'`
+       day=`echo $date |  awk 'BEGIN { FS = " " } { print $2 }'`
+       year=`echo $date |  awk 'BEGIN { FS = " " } { print $3 }'`
+
+       if [ x$month = "xJanuary" ]
+       then
+          dmonth="01"
+       else if [ x$month = "xFebruary" ]
+       then
+          dmonth="02"
+       else if [ x$month = "xMarch" ]
+       then
+          dmonth="03"
+       else if [ x$month = "xApril" ]
+       then
+          dmonth="04"
+       else if [ x$month = "xMay" ]
+       then
+          dmonth="05"
+       else if [ x$month = "xJune" ]
+       then
+          dmonth="06"
+       else if [ x$month = "xJuly" ]
+       then
+          dmonth="07"
+       else if [ x$month = "xAugust" ]
+       then
+          dmonth="08"
+       else if [ x$month = "xSeptember" ]
+       then
+          dmonth="09"
+       else if [ x$month = "xOctober" ]
+       then
+          dmonth="10"
+       else if [ x$month = "xNovember" ]
+       then
+          dmonth="11"
+       else
+          dmonth="12"
+       fi fi fi fi fi fi fi fi fi fi fi
+
+       dday=`basename $day ,`
+
+       dest_dir="${dest_dir}/vnmrj_${major}${minor}_${year}-${dmonth}-${dday}
+"
+
+    #else
+   #    dest_dir="${dest_dir}/vnmrj_${major}_${minor}"
+   # fi
+}
+
+runvjadmin()
+{
+     # Run VnmrJ Admin
+    vjdir=`pwd`
+   if [ $asRoot = "no" ]
+    then
+	vnmruser_dir=$vnmruser
+	nmr_user="$USER"
+	cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTest
+    else
+        touch $user_dir/$nmr_user/.vnmrsilent
+        chmod 666 $user_dir/$nmr_user/.vnmrsilent
+	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
+	su - $nmr_user -c "cd $vjdir; setenv DISPLAY $DISPLAY; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTest" << +++
+
++++
+    fi
+
+}
+
+runvj()
+{
+    vjdir=`pwd`
+    if [ $asRoot = "no" ]
+    then
+	vnmruser_dir=$vnmruser
+	nmr_user="$USER"
+        rm -f $vnmruser/lock_1.primary
+	cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=motif -Dvjunit="$vjunitdir/vjunit.xml" -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm1 -Dsavepanels=10 -DSQAllowNesting=false VnmrJTest
+    else
+        touch $user_dir/$nmr_user/.vnmrsilent
+        chmod 666 $user_dir/$nmr_user/.vnmrsilent
+	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
+	su - $nmr_user -c "cd $vjdir; setenv DISPLAY $DISPLAY; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=motif -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjunit="$vjunitdir/vjunit.xml" -Dbatchupdates=no -Dpersona=adm1 -Dsavepanels=10 -DSQAllowNesting=false VnmrJTest" << +++
+
++++
+
+    fi
+}
+
+runtrustedvjadmin()
+{
+    # Run VnmrJ Admin
+       echo "runtrustedvjadmin asRoot is $asRoot\n"
+    vjdir=`pwd`
+    if [ $asRoot = "no" ]
+    then
+       echo "runtrustedvjadmin no branch\n"
+	vnmruser_dir=$vnmruser
+	nmr_user="$USER"
+       echo "asRoot is 1\n"
+	cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTrustedTest
+       echo "asRoot is 2\n"
+    else
+       echo "runtrustedvjadmin yes branch user_dir: $user_dir nmr_user: $nmr_user\n"
+        touch $user_dir/$nmr_user/.vnmrsilent
+        chmod 666 $user_dir/$nmr_user/.vnmrsilent
+	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
+       echo "vnmruser_dir is $vnmruser_dir\n"
+       echo "call su to $nmr_user vjdir is $vjdir"
+	su - $nmr_user -c "cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTrustedTest" << +++
+       echo "asRoot is 4\n"
+
++++
+    fi 
+       echo "runtrustedvjadmin done\n"
+}
+
+cmd=$1
+base_dir=$2
+nmr_user="vnmr1"
+user_dir="/export/home"
+dest_dir="/export/home"
+nmr_group="nmr"
+password=""
+os_type=`uname -s`
+classpath=".:lib/junit.jar:lib/jemmy.jar:lib/vjunit.jar"
+install_type=$3
+vjunitdir=`pwd`
+sysdir=$vnmrsystem
+userdir=$vnmruser
+dbhost="localhost"
+export dbhost
+shtoolcmd="/bin/sh"
+shtooloption="-c"
+if [ $os_type = "Linux" ]
+then 
+    os_type="rht"
+    dest_dir="/home"
+    user_dir="/home"
+elif [ x$ostype = "xInterix" ] 
+then
+   classpath=`/bin/unixpath2win "$classpath"`
+   sysdir=`/bin/unixpath2win "$sysdir"`
+   userdir=`/bin/unixpath2win "$userdir"`
+   shtoolcmd="$SFUDIR\\common\\ksh.bat"
+   shtooloption="-lc"
+else
+    os_type="sol"
+fi
+asRoot="yes"
+userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
+if [ $userId != "uid=0(root)" ]
+then
+    asRoot="no"
+fi
+    
+if [ x$cmd = "xinstallvj" ] 
+then
+    if [ $# -lt 2 ]
+    then
+	echo "Usage: netbeans installvj basedir [password:arg1, arg2]"
+	exit
+    fi
+
+    if [ -z $DISPLAY ]
+    then
+      DISPLAY=:0.0
+      export DISPLAY
+    fi
+
+    
+    get_dest_dir
+    echo $os_type
+    echo $dest_dir
+    
+    if [ $# -gt 2 ]
+    then
+	password=$3
+    fi
+    doP11="no"
+    echo $password | grep P11 2> /dev/null
+    if [ $? -eq 0 ]
+    then
+      doP11="yes"
+    fi
+    
+    # exit all vnmrbg
+    vnmrs=`ps -ef | grep Vnmrch | grep -v grep | awk '{ print $2 }'`
+    for vnmr in $vnmrs
+    do
+	kill $vnmr
+    done
+
+    # get current /vnmr
+    current_dir=`pwd`
+    cd /vnmr
+    vnmr_dir=`pwd`
+    inst=`tail -n 1 vnmrrev`
+    install_type=0
+    if [ x$inst = "xvnmrsdd2" ]
+    then
+       install_type=0
+    else if [ x$inst = "xmr400dd2" ]
+    then
+       install_type=1
+    else if [ x$inst = "xvnmrs" ]
+    then
+       install_type=2
+    else if [ x$inst = "xmr400" ]
+    then
+       install_type=3
+    fi fi fi fi
+    cd $current_dir
+    # allow default behavior
+    install_type=""
+
+    # install VnmrJ
+    /vnmr/jre/bin/java -Dinstalltype=$install_type -cp $classpath:$base_dir/code/VnmrAdmin.jar LoadNmrTest $base_dir $dest_dir $nmr_user $user_dir $nmr_group $os_type $password
+#    if [ -d /common/sysvnmrj ]
+#    then
+#     	cp /common/sysvnmrj/vnmrj.jar lib/vnmrj.jar
+#    else
+#	cp /vnmr/java/vnmrj.jar lib/vnmrj.jar
+#	echo "/common/sysvnmrj not found"
+#    fi
+    cp /vnmr/java/vnmrj.jar lib/vnmrj.jar
+
+    # Run setacq
+    echo "Running setacq\n"
+    ./runsetacq   
+    echo "setacq Done\n"
+ 
+    # Run VnmrJ Admin
+    echo "Running vnmrj adm\n"
+    runvjadmin
+    echo "vnmrj adm Done\n"
+
+    # currently, versions of vnmrj.jar do not find "Varian software"
+    # because they are no longer Jlabels.
+    # Run VnmrJ
+    echo "Running vnmrj\n"
+    runvj
+    echo "vnmrj Done\n"
+
+    # Kill the procs or this script does not exit
+    su acqproc
+
+    if [ x$doP11 = "xyes" ] 
+    then
+       echo "Running P11 admin\n"
+       runtrustedvjadmin
+       echo "P11 admin Done\n"
+    fi
+    # Remove previous vnmr
+#    if [ -d $dest_dir -a x$vnmr_dir != x$dest_dir ]
+#    then
+	#rm -r $vnmr_dir
+ 	
+#	installvjlog="installvjlog"`date '+_%m-%d-%y'`
+#	cat $installvjlog | awk '$1!~/Start/ && $1!~/Trace/ && $1!~/DEBUG/ && !/\[/ && !/milliseconds/' > tmplog
+#	logfiles=`ls /vnmr/adm/log`
+#	for logfile in $logfiles
+#	do
+#	    cat  /vnmr/adm/log/$logfile >> tmplog
+#	done
+#	mailx -s "Installation Completed" "dan.iverson@varianinc.com" < tmplog
+#       sleep 5
+#	rm tmplog
+#    fi
+
+elif [ x$cmd = "xrunvjadmin" ] 
+then
+    if [ -f lib/vnmrj.jar ]
+    then
+	runvjadmin
+    else
+	echo "lib/vnmrj.jar not found"
+    fi
+elif [ x$cmd = "xrunvj" ] 
+then
+    if [  -f lib/vnmrj.jar ]
+    then
+	runvj
+    else
+	echo "lib/vnmrj.jar not found"
+    fi
+elif [ x$cmd = "xruntrustedvjadmin" ] 
+then
+    if [ -f lib/vnmrj.jar ]
+    then
+	runtrustedvjadmin
+    else
+	echo "lib/vnmrj.jar not found"
+    fi
+else
+    /vnmr/jre/bin/java -cp .:/disk2/java/junit/junit3.8.1/junit.jar:/disk2/java/netbeans/jemmy.jar:/disk2/java/netbeans/jelly2-nb.jar:/disk2/java/jfcunit/jfcunit.jar:/vnmr/java/vnmrj.jar $1
+fi

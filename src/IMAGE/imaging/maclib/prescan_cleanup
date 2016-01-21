@@ -1,0 +1,127 @@
+"macro prescan_cleanup"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_cleanup
+"
+" DESCRIPTION:
+"    Removes and copies files created by prescan
+"
+" Ex.: prescan_cleanup(<argument1><argumnt2>)
+"
+"    <argument1> -> default is remove
+"                -> valid arguments are <remove> and <copy>
+"                -> <remove> removes all files created by prescan
+"                -> <copy> copies all files to the prescan directory
+"                   and removes them from the current directory
+"    <argumnet2> -> is optinal and contains the target directory
+"                -> if argument1 is remove the target directory is
+"                   ignored
+"
+"********************************************************************
+"----------------------------"
+" check arguments            "
+"----------------------------"
+if ($# > 2) then
+     write('error','Too many arguments in call to prescan_cleanup !')
+     prescan_exit('abort')
+endif
+if ($# < 1) then 
+     $action = 'remove'						"if arg. 1 is empty default to <remove>"
+else
+     $action = $1
+endif
+if ($action <> 'remove') and ($action <> 'copy') then
+     write('error','Accepted arguments to prescan_cleanup are <remove> or <copy> !')
+     prescan_exit('abort')
+endif     
+
+"---------------------------------"
+" define and initialize variables "
+"---------------------------------"
+$macro_name='prescan_cleanup   '					"name of macro"
+$NUMBER_FILES = 5						"number of files to clean up"
+$filename[1]='analyze.inp'					"fitting file"
+$filename[2]='analyze.list'					"result file"
+$filename[3]='analyze.out'					"plot file"
+$filename[4]='prescan_data.txt'
+$filename[5]='acqfil/maxdata'                                   "file containing gain data'
+$current_dir = curexp + '/'					"directory of current experiment"
+$loop_counter = 1						"counter variable"
+$str_number=''							"define as string variable"
+$str_date=''							"string containing data"
+$name1=''							"string for compound name"
+$name2=''							"string for compound name"
+$file_dir = userdir + '/prescan'  		                "prescan save directory"
+$e=0                                                            "flag for existence of directory"
+
+"----------------------------------"
+" assign directory if 2nd arguemnt "
+"----------------------------------"
+if ($# = 2) then
+     exists($2,'directory'):$e
+     if ($e <> 0) then
+          $directory_name = $2
+     else
+          $message='Directory passed in does not exist - '
+	  prescan_log('warning',$macro_name,$message+$2)	"log event"
+	  write('line3',$message+$2)				"display message"	  
+     endif
+endif
+
+"------------------------------------------------------------------"
+"                      C O P Y     F I L E S                       "
+"------------------------------------------------------------------"
+if ($action = 'copy') then					"if copy is required"
+"----------------------------"
+"  check if directory exists "
+"----------------------------"
+     if ($e <> 1) then
+          repeat
+               format($loop_counter,0,0):$str_number 		"convert real to string"
+               $directory_name=$file_dir+'/prescan_'+$str_number "complete directoy name"
+	       write('line3','DIRECTORY : %s',$directory_name)
+               exists($directory_name,'directory'):$d		"check if directory exists"
+               if ($d <> 0) then
+	            $loop_counter = $loop_counter + 1	       	"increment loop counter"
+               endif
+          until ($d = 0)   
+          mkdir($directory_name)				"create directory"
+	  $message= 'Created directory : '+$directory_name
+          prescan_log('mkdir',$macro_name,$message)		"log action"
+     endif
+     "---------------------------"
+     " copy files              "
+     "---------------------------"  
+     $loop_counter = 1						"reset loop_counter"
+     repeat 
+     	$name1 = $current_dir+$filename[$loop_counter]		"source file to copy"
+	$name2 = $directory_name+'/'+$filename[$loop_counter]	"destination file for copy"
+       	exists($name1,'file'):$e
+	if ($e <> 0) then
+	     cp($name1,$name2)					"copy file"
+             prescan_log('copy',$macro_name,$name1+'->'+$name2)	"log action"
+        else
+	     $message='Copy failed - File not found : '+$name1
+	     prescan_log('no_copy',$macro_name,$message)        "log action"
+	endif
+	$loop_counter = $loop_counter + 1			"increment counter"
+     until ($loop_counter > $NUMBER_FILES)
+endif
+
+"------------------------------------------------------------------"
+"                     R E M O V E     F I L E S                    "
+"------------------------------------------------------------------"
+if ($action = 'remove') and (Prescan_CleanUp = 1) then
+     $loop_counter = 1						"reset loop_counter"
+     repeat 
+	  $name1=$current_dir+$filename[$loop_counter]		"create filename to delete"
+	  exists($name1,'file'):$e				"check if file exists"
+	  if ($e <> 0) then                                     "if exists - delete"
+               delete($name1)					"delte file"
+               prescan_log('remove',$macro_name,$name1)		"log action"
+	  endif	  
+	  $loop_counter = $loop_counter + 1                     "increment counter"
+     until ($loop_counter > $NUMBER_FILES)
+endif

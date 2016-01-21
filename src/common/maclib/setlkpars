@@ -1,0 +1,82 @@
+"macro setlkpars"
+"setlkpars - macro to set lk related parameters in the probe file"
+
+$commit=0
+
+if ($# < 2) then
+ write('error','Usage: setlkpars(lockpower,lockgain,lockphase,<probename>')
+ return
+endif
+
+if ($# < 3) then $3 = lockphase endif
+if ($# < 4) then $4 = probe endif
+getProbePath($4,'alert'):$e,$probefile,$rw
+if ($rw=0) then return endif
+
+addlkpars($4)
+
+write('line3','probe file "%s" being updated. Please wait...',probe)
+
+$param='' $value=0 $nuc='' $i=1
+
+ $param[$i]='pwr_acetic_acid'   $value[$i]=$1+1          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_acetone'       $value[$i]=$1-15          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_c6d6'          $value[$i]=$1-2          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cd2cl2'        $value[$i]=$1-10          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cd3cn'         $value[$i]=$1-4          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cd3no2'        $value[$i]=$1-2          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cd3od'         $value[$i]=$1-10          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cdcl3'         $value[$i]=$1-5          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_cyclohexane'   $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_d2o'           $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_d2o_10'        $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_dichloroethane' $value[$i]=$1           $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_dioxane'       $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_dmf'           $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_dmso'          $value[$i]=$1-2          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_nitrobenzene'  $value[$i]=$1-2         $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_odcb'          $value[$i]=$1-2         $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_pyridine'      $value[$i]=$1-2         $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_tfa'           $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_thf'           $value[$i]=$1-2         $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='pwr_toluene'       $value[$i]=$1            $nuc[$i]='lk'   $i=$i+1
+
+ getlimit('lockgain','global'):$max
+ if ($2+17) > $max then
+   $2=$max-17
+ endif
+
+ $param[$i]='gn_acetic_acid'    $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_acetone'        $value[$i]=$2+2           $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_c6d6'           $value[$i]=$2-2          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cd2cl2'         $value[$i]=$2+11           $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cd3cn'          $value[$i]=$2-2          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cd3no2'         $value[$i]=$2-3          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cd3od'          $value[$i]=$2+8            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cdcl3'          $value[$i]=$2+17          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_cyclohexane'    $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_d2o'            $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_d2o_10'         $value[$i]=$2+10         $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_dichloroethane' $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_dioxane'        $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_dmf'            $value[$i]=$2+3          $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_dmso'           $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_nitrobenzene'   $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_dmso'           $value[$i]=$2+2           $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_odcb'           $value[$i]=$2+5            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_pyridine'       $value[$i]=$2+5            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_tfa'            $value[$i]=$2+5           $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_thf'            $value[$i]=$2            $nuc[$i]='lk'   $i=$i+1
+ $param[$i]='gn_toluene'        $value[$i]=$2+5            $nuc[$i]='lk'   $i=$i+1
+
+ $param[$i]='phase'		$value[$i]=$3		 $nuc[$i]='lk'	 $i=$i+1
+
+$x=1
+repeat
+  $valuex=''
+  format($value[$x],0,0):$valuex
+  addparams($param[$x],$valuex,$nuc[$x],$4)
+  $x=$x+1
+until $x = $i
+
+write('line3','%s DONE',$0)

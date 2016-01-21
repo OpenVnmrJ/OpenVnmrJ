@@ -1,0 +1,124 @@
+"macro prescan_pwr"
+"************************************************************************"
+"                                                                        "
+" prescan_pwr - macro to determine the 90/180 degree pulse pwr for imaging   "
+"                                                                        "
+" Usage:   this macro is not intended for direct usage.  Use prescan     "
+"                                                                        "
+" Details: The routine sets up a tpwr1/tpwr2 array liset between start   "
+"          and end_values.  Determines the maximum and minimum peak.     " 
+"          and displays the results. If necessary the pulsecal database  " 
+"          can be updated. The highest intensity is assumed to be the    " 
+"          the correct 90/180 degree pulse powers.                       "
+"          To display the profiles, create('showps','flag') and set      "
+"	   showps=y and save with the power prescan parameters           "
+"************************************************************************"
+
+if ($# = 0) then
+  ldrf "sets rfcoil = RFCOIL"
+  $prescan=prescan
+  rtppar('prescan_pwr_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  exists('studyid','parameter','global'):$e
+  if ($e > 0.5) then
+    if (studyid <> '') then
+      exists(sqdir+'/studypar','file'):$e
+      if ($e = 1) then
+        fread(sqdir+'/studypar')
+      endif
+    endif
+  endif
+  prescan=$prescan
+  if ($res > 0.5) then
+    resto=H1offset
+    getlimit('tpwr2'):$tmax
+    $tmax=$tmax-5
+    tpwr2=tpwr2[1]
+    if (tpwr2 < 5) then tpwr2=5 endif
+    if (tpwr2 > $tmax) then tpwr2=$tmax endif
+    tpwrcal(tpwr2-5, tpwr2+5)
+    tpwr1f=4095 tpwr2f=4095  "fine power not used"
+    wexp=`prescan_pwr('proc')`
+    prescan[2]='Active'
+    acqmode='prescan'
+    wdone=''
+    au  
+  else
+    write('error','Power prescan has not been calibrated')
+  endif
+elseif ($1 = 'proc') then
+  filter(12)  "gaussian filter"
+  av
+  exists('showps','parameter'):$e  "flag to display results"
+  if($e = 0) then
+    create('showps','flag')
+    setgroup('showps','display')
+  endif
+  if (showps = 'y') then
+    wft
+  else
+    wft('nods')
+  endif
+
+  $counter=1
+  select(1) vsadj(10) $high=10 $low=10
+  $lowest=1 $highest=1
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$low then $low=$ht $lowest=$counter endif
+    if $ht>$high then $high=$ht $highest=$counter endif
+    $counter=$counter+1
+  until $counter > arraydim
+  if ($# = 2) or (showps = 'y') then
+    select($highest) vp=0 vsadj dssh dssl('list=tpwr1')
+  endif
+  $tpwrold=tpwr2[1]
+  tpwr2=tpwr2[$highest]
+  tpwr1=tpwr2 - 6
+  if (($highest = 1) or ($highest = arraydim)) then
+    $tpwrsav=tpwr2
+    getlimit('tpwr2'):$tmax
+    $tmax=$tmax-5
+    if (tpwr2 < 5) then tpwr2=5 endif
+    if (tpwr2 > $tmax) then tpwr2=$tmax endif
+    tpwrcal(tpwr2-5, tpwr2+5)
+    if ($tpwrold = tpwr2[1]) then
+      tpwr2=$tpwrsav
+      tpwr1=tpwr2 - 6
+      write('error','Power adjustment limit encountered. Adjust pulse width')
+    else
+      au
+    endif
+    return
+  endif
+  rfcoil=RFCOIL 
+  exists('rfupdate','parameter'):$e
+  if($e < 0.5) then
+    create('rfupdate','flag')
+  endif
+  rfupdate='y'
+  pulsecal(RFCOIL,p2pat,p2,180,tpwr2)
+  exists('rfupdate','parameter'):$e
+  if($e > 0) then
+    rfupdate='n'
+  endif
+  prescan[2]='Complete'
+  write('line3','Power prescan: tpwr1= %d tpwr2= %d',tpwr1, tpwr2)
+  acqmode=''
+  if ($# = 1) then
+    prescan('next')
+  endif
+elseif ($1 = 'manual') then
+  getlimit('tpwr2'):$tmax
+  $tmax=$tmax-5
+  tpwr2=tpwr2[1]
+  if (tpwr2 < 5) then tpwr2=5 endif
+  if (tpwr2 > $tmax) then tpwr2=$tmax endif
+  ldrf
+  tpwrcal(tpwr2-5, tpwr2+5)
+  wexp=`prescan_pwr('proc','manual')`
+  wnt  = 'wft dssh dssl(\'list=tpwr1\')'
+  prescan[2]='Active'
+  acqmode='prescan'
+  au
+endif

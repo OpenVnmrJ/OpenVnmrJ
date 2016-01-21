@@ -1,0 +1,97 @@
+"macro plvast"
+$gluename=''
+$numcols=0
+if $# > 0 then if typeof('$1') then $gluename=$1 else $numcols=$1 endif
+  if $#>1 then $numcols=$2 endif 
+endif
+
+if $gluename='' then $order=glueorderarray $numscans=size('glueorderarray') 
+else
+  $gluefile=userdir + '/templates/glue/' + $gluename
+  exists($gluefile,'file'):$e
+  if $e then
+   lookup('file',$gluefile)
+   lookup('read'):$numscans
+   if $numscans > 96 then
+     write('line3','glue file has error, > 96')
+     abort
+   endif
+   $order=0
+   $i=1
+   repeat
+   lookup('read'):$num
+   $order[$i]=$num
+   $i=$i+1
+   until $i > $numscans
+  else write('line3','Order file does not exist') endif
+endif
+
+"determine modulo number, if possible"
+
+if $numcols=0 then
+  $i=1
+  $incr=glueorderarray[2]-glueorderarray[1]
+  repeat
+  $diff=glueorderarray[$i+1]-glueorderarray[$i]
+  if $diff=$incr then $done=(1=0) else $done=(1=1) endif
+  $i=$i+1
+  until $done or $i>=$numscans
+  if $i < $numscans then $numcols=$i-1 else $numcols=8 endif
+endif
+  
+
+   
+$glueorderarraysize=size('glueorderarray')
+$inverseorder=0
+$i=1
+repeat
+  $j=1
+  repeat
+    $match=glueorderarray[$j]=$order[$i]
+    if $match then $inverseorder[$i]=$j   endif
+    $j=$j+1
+  until (($match) or ($j>$glueorderarraysize))
+  $i=$i+1
+until $i > $numscans 
+write('plotter',0,0,''):$htchar
+"clear(2)"
+$vp=vp
+$numrows=trunc($numscans/$numcols+.99)
+$vpinc=wc2max/$numrows
+$scinc=wcmax/$numcols
+vp=wc2max-$vpinc
+wc=0.95*wcmax/$numcols
+sc=wcmax-wc
+$i=1
+$scol='H','G','F','E','D','C','B','A'
+$srow=''
+repeat
+  pl($inverseorder[$i])
+  $loc=$order[$i]
+  $row=trunc(($loc+7)/8)
+  format($row,1,0):$srow
+  $col= $loc - ($row-1)*8
+  $lab=$scol[$col]+$srow
+  write('plotter',wcmax-sc-wc,vp-$htchar,$lab)
+  if $i mod $numcols = 0 then sc=wcmax-wc vp=vp-$vpinc else sc=sc-$scinc endif
+  $i=$i+1
+until $i >$numscans
+vp=vp+$vpinc
+pscale
+length(file):$length
+$i=$length
+write('line3',$length)
+$ch=''
+repeat
+substr(file,$i,1):$ch
+$done=$ch='/'
+$i=$i-1
+until ($done or ($i<=0))
+substr(file,1,$i):$file
+write('plotter',wcmax/1.5,vp-5*$htchar,'%s',$file)
+if intmod='off' then
+  write('plotter',wcmax/1.5,vp-7*$htchar,'vs= %3.0f,  sp= %3.1fppm,  wp= %3.1fppm',vs,sp/sfrq,wp/sfrq)
+else
+  write('plotter',wcmax/1.5,vp-7*$htchar,'vs= %3.0f,  is= %3.0f,  sp= %3.1fppm,  wp= %3.1fppm',vs,is,sp/sfrq,wp/sfrq)
+endif
+vp=$vp

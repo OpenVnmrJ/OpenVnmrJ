@@ -1,0 +1,105 @@
+/*  rna_CTgChmqc.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    2D CT-HMQC or CT-HTQC experiment with optional N15 refocusing, options 
+    for C13 decoupling and editing of spectral regions.
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    pulse sequence: 	Marino et al, JACS, 114, 10663 (1992)
+     
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for C13 decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF rna_CTgChmqc
+
+         
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro: 
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_CTgChmqc.c may be printed using:
+                                      "printon man('rna_CTgChmqc') printoff".
+             
+    2. Apply the setup macro "rna_CTgChmqc".  This loads the relevant parameter set
+       and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 110ppm, and N15 
+       frequency on the aromatic N region (200 ppm).
+
+    4. CHOICE OF C13 REGION and CTdelay:
+       ribose='y' gives a spectrum of ribose/C5 resonances centered on dof=85ppm.
+       Set CTdelay to 1/35Hz to 1/40Hz.			Set sw1 to 60ppm.
+
+       aromatic='y' gives a spectrum of aromatic C2/C6/C8 groups.  dof is shifted
+       automatically by the pulse sequence code to 145ppm.
+       Set CTdelay to 1/70Hz to 1/80Hz.			Set sw1 to 30ppm.
+
+       allC='y' gives a spectrum of ribose and aromatic resonances. dof is
+       set by the code to 110ppm.                           
+       Set CTdelay to 1/35Hz to 1/40Hz.			Set sw1 to 110ppm.
+
+    5. N15 COUPLING:
+       Splitting of resonances in the C13 dimension by N15 coupling in N15
+       enriched samples is removed by setting N15refoc='y'.  No N15 RF is
+       delivered in the pulse sequence if N15refoc='n'.  N15 parameters are
+       listed in dg2.
+
+    6. 1/4J DELAY TIMES:
+       These are listed in dg/dg2 for possible change by the user. JCH is used
+       to calculate the 1/4J time (lambda=0.94*1/4J) for H1 CH coupling evolution.
+       Lambda is calculated a little lower (0.94) than the theoretical time to
+       minimize relaxation. So for:
+         ribose CH/CH2:           JCH=145Hz
+         aromatic CH:             JCH=180Hz
+         allC:                    JCH=160Hz
+
+    7. SPECTRAL EDITING FOR DIFFERENT CHn GROUPS.
+       CH2only='y' provides spectra of just CH2 groups by setting lambda to 1/2J
+       to generate triple and single quantum coherence.
+
+    8. STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence it is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of RnaPack installation and RF power is
+       calculated within the pulse sequence.  The calculations are for the most
+       efficient conditions to cover 140ppm when allC='y' with all decoupled
+       peaks being greater than 85% of ideal; 80ppm/90% for ribose='y' and
+       aromatic='y'.  If you wish to compare different
+       decoupling schemes, the power level used for STUD+ can be obtained from
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The values of 85, 90, and 95% have
+       been set to limit sample heating as much as possible.  If you wish to
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) for 30ppm decoupling say, change the 95% level for the
+       centerband, by changing the relevant number in the macro makeSTUDpp and
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Written for RnaPack by Peter Lukavsky (07/99).     @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+*/

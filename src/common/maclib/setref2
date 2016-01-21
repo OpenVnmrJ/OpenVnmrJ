@@ -1,0 +1,64 @@
+"macro setref2"
+
+if($# < 1) then refpos2=0 endif
+
+if($#>0) then
+  if(not typeof('$1')) then
+    refpos2=$1 // shift in Hz from standard
+  else 
+    if($##>0) then
+      setfrqCmd('setref',2,$1):$e,$rfl,$rfp,$reffrq,$refpos
+      if($e>0) then return($rfl,$rfp,$reffrq,$refpos) endif
+    else
+      setfrqCmd('setref',2,$1):$e
+      if($e>0) then return endif
+    endif
+  endif
+endif
+
+if($##>0) then
+  setfrqCmd('setref',2):$e,$rfl,$rfp,$reffrq,$refpos
+  if($e>0) then return($rfl,$rfp,$reffrq,$refpos) endif
+else
+  setfrqCmd('setref',2):$e
+  if($e>0) then return endif
+endif
+
+if $#<0.5 then
+  if (refsource2='dfrq') then
+    $1=dn
+  elseif (refsource2='dfrq2') then
+    $1=dn2
+  elseif (refsource2='dfrq3') then
+    $1=dn3
+  else
+    $1=tn
+  endif
+endif
+if ($# < 1.5) then
+  setref($1):$rfl2,rfp2,reffrq2,refpos2
+else
+  setref($1,$2):$rfl2,rfp2,reffrq2,refpos2
+endif
+
+$offset=0
+if ($1 = tn) then
+  $offset=tof
+elseif ($1 = dn) then
+  $offset=dof
+elseif (numrfch > 2) then
+  if ($1 = dn2) then
+    $offset=dof2
+  elseif (numrfch > 3) then
+    if ($1 = dn3) then $offset=dof3 endif
+  endif
+endif
+
+rfl2 = $rfl2 + sw2/2 - $offset
+
+exists('lsfrq2','parameter'):$e
+if ($e > 0.5) then
+   on('lsfrq2'):$shifted
+   if $shifted then rfl2 = rfl2 + lsfrq2 endif
+endif
+p11_action('process',$0)

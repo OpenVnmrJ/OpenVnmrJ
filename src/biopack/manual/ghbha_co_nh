@@ -1,0 +1,121 @@
+  ghbha_co_nh
+
+    3D HBHA(CO)NH gradient sensitivity enhanced version.
+
+    Correlates Hb(i),Ha(i) with N(i+1), NH(i+1).  Uses constant time evolution
+    for the HaHb shifts and for the 15N shifts.
+
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP pulses; full power square pulses on 13C 
+    initially when 13CO excitation is irrelevant; square pulses on the Ca and
+    CaCb with first null at 13CO; one lobe sinc pulses on 13CO with first null
+    at Ca;  shaka6 composite 180 pulse to simultaneously refocus Ca and invert
+    CO; optional 2H decoupling when CaCb magnetization is transverse for 4 
+    channel spectrometers.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+    pulse sequence: 	Grzesiek and Bax, J Biomol NMR 3 (1993) 185-204.
+    SLP pulses:     	J Magn. Reson. 96, 94-102 (1992)
+    shaka6 composite: 	Chem. Phys. Lett. 120, 201 (1985)
+    TROSY:		 JACS, 120, 10778 (1998)
+ 
+    Written by M.T. @NMRFAM on May 2003 by combining the ghc_co_nh and gcbca_co_nh 
+    pulsesequences from BioPack.
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghbha_co_nh
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghbha_co_nh may be printed using:
+                                      "printon man('ghbha_co_nh') printoff".
+             
+    2. Apply the setup macro "ghbha_co_nh".  This loads the relevant parameter
+       set and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral
+       check.
+
+    3. The two C13 180 degree pulses between points c and d have been
+       replaced by a single 6-pulse composite dubbed "shaka6" which povides
+       near perfect refocusing with no phase roll over the Cab region and
+       near perfect inversion over the CO region 18kHz off-resonance provided
+       pwC < 20 us in a 600 MHz system.
+      
+    4. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 46ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       46ppm, ie at CaCb throughout the sequence.
+
+    5. The H1 frequency is NOT shifted to the amide region during the sequence.
+       The H1 DIPSI2 decoupling is controlled by the waltzB1 parameter.
+
+    6. The parameter phi7cal (listed in dg and dg2) is provided to adjust 
+       the phase of the last 90 degree C13 pulse, which is phase-shifted by
+       the prior 180 degree pulse on the Ca region and by the use of SLP
+       pulses on the CO region. The experimentally determined value of this
+       phase is also very sensitive to small timing differences (microseconds)
+       between the two theta delays. Check this phase via 1D spectra - maximise
+       signal, or for greater accuracy obtain the value for a null and then add 
+       or subtract 90 degrees.  The value must be a positive number. It needs to
+       be calibrated once only for each spectrometer and the gc_co_nh, the gcbca_co_nh 
+       and the ghbha_co_nh pulse sequences.
+
+    7. tauCH (1.7 ms) and timeTN (14 ms) were determined for alphalytic protease
+       and are listed in dg2 for possible readjustment by the user.
+
+       Cb to Ca magnetization trasfer is determined by timeAB. These are some of 
+       the values found for ubiquitin at 800MHz:
+
+	-Halpha gives maximum intensity at timeAB=1.7ms and a null at 3.5ms.
+	-Hbeta has a null at 1.9ms and a maximum at 2.8ms
+
+       Thus, to observe only Halphas set timeAB=1.9ms. 
+       To maximize Hbetas set timeAB=2.8ms.
+       For observing both Halpha and Hbeta a good compromise is timeAB=2.8ms.
+
+       For ni<2, timeAB=1.5ms to avoid cancellation of Halpha and Hbeta signals of 
+       opposite sign for calibration purposes. (Marco Tonelli @NMRFAM April 2004)
+
+
+   8.  The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+   9. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       gcbca_co_nh so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.    

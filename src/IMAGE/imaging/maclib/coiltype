@@ -1,0 +1,80 @@
+"macro coiltype"
+"*************************************************************************************
+" coiltype
+
+" Details: The RF Transmit and receive logic is controlled by the local parameters,
+"	volumexmt and volumercv. They are in turn controlled globally by
+"	VOLUMEXMT and VOLUMERCV. This allows one to conveniently switch from
+"	one coiltype to another without the need for modifying the parameters
+"	in the protocols. During a scan, the prep macro (ldrf) sets the local parameters
+"	volumexmt and volumercv according to VOLUMEXMT and VOLUMERCV respectively.
+"       The receiver is also similarly controlled via the global parameter RCVRS. Once
+"	set all protocols will be acquired with rcvrs=RCVRS
+"	If VOLUMEXMT, VOLUMERCV and RCVRS are set to 'l', the local parameters are used.
+
+"	The protocols are generally set to a default condition of volumexmt=y volumercv=y
+"	This is typically used to transmit and receive using a volume coil (High power
+"	mode)
+"
+
+"*************************************************************************************************
+
+create('VOLUMERCV','string','global','y')
+create('VOLUMEXMT','string','global','y')
+create('RCVRS',    'string','global','y')
+
+$rfcontrol = 'volume XMT/RCV'
+if ($# > 0) then
+  $coiltype = $1
+  if ($coiltype = 0) then $rfcontrol = 'Local'            endif
+  if ($coiltype = 1) then $rfcontrol = 'Volume XMT/RCV'   endif
+  if ($coiltype = 2) then $rfcontrol = 'Surface XMT/RCV'  endif
+  if ($coiltype = 3) then $rfcontrol = 'Vol XMT/Surf RCV' endif
+  if ($coiltype = 4) then $rfcontrol = 'Multi XMT/RCV'    endif
+  if ($coiltype = 5) then $rfcontrol = 'uMRI'             endif
+
+endif
+ 
+if($rfcontrol = 'Volume XMT/RCV') OR ($rfcontrol = 'Surface XMT/RCV') then
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'y'
+  RCVRS     = 'y'
+  setvalue('coil_param',0,19,'global') 
+  //same as coil_param[19] = 0, but don't update Prescan panel;
+  //it goes into an infinite loop
+  
+elseif ($rfcontrol = 'Vol XMT/Surf RCV') then
+  VOLUMEXMT = 'y'
+  VOLUMERCV = 'n'
+
+  RCVRS     = ''
+  $inx = 1
+  repeat
+    RCVRS = RCVRS + 'y'
+    $inx = $inx + 1
+  until ($inx > coil_param[19])
+
+elseif ($rfcontrol = 'Multi XMT/RCV') then
+  VOLUMEXMT = 'n'
+  VOLUMERCV = 'n'
+
+  RCVRS     = ''
+  $inx = 1
+  repeat
+    RCVRS = RCVRS + 'y'
+    $inx = $inx + 1
+  until ($inx > coil_param[19])
+
+elseif ($rfcontrol = 'uMRI') then
+  VOLUMEXMT = 'n'
+  VOLUMERCV = 'n'
+  RCVRS     = 'y'
+  coil_param[19] = 0
+
+elseif ($rfcontrol = 'Local') then  "local control of RF"
+  VOLUMEXMT = 'l'
+  VOLUMERCV = 'l'
+  RCVRS     = 'l'
+endif
+
+return($rfcontrol)

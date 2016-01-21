@@ -1,0 +1,53 @@
+"macro locadd"
+if($# < 1.5) then return endif
+
+bgmode_is:$b
+
+$path=$1
+
+if($2 = 'vnmr_rec_data') then
+    exists($path,'directory'):$e
+    if $e>0.5 then
+      strstr($path,'/','last'):$n,$s1,$s2
+      if($s2 = '') then
+         strstr($s1,'/','last'):$n,$s,$s2
+      endif
+      if $b>0.5 then
+        $sendfile=userdir+'/persistence/.talk2j'
+        exists($sendfile,'file'):$e
+        if $e>0.5 then
+           $cmd='LOC add "'+$2+'" "'+$path+'" filename "'+$s2+'"'
+           $cmd='vnmrjcmd(\''+$cmd+'\')'
+           xm1('sendcmd',$cmd)
+        else
+          $cmd='managedb addfile "'+$path+'" '+owner
+          $cmd=$cmd+';managedb setattr '+$2+' "'+$path+'" filename "'+$s2+'"&'
+          shell($cmd):$x
+        endif
+      else
+        $cmd='LOC add "'+$2+'" "'+$path+'" file_name "'+$s2+'"'
+        vnmrjcmd($cmd)
+      endif
+    endif
+else
+    exists($path,'directory'):$e
+    if $e>0.5 then
+      xm1('studydir'):$sdir
+      if $b>0.5 then
+        $sendfile=userdir+'/persistence/.talk2j'
+        exists($sendfile,'file'):$e
+        if $e>0.5 then
+           $cmd='LOC add "'+$2+'" "'+$path+'" study "'+$sdir+'"'
+           $cmd='vnmrjcmd(\''+$cmd+'\')'
+           xm1('sendcmd',$cmd)
+        else
+          $cmd='managedb addfile "'+$path+'" '+owner
+          $cmd=$cmd+';managedb setattr '+$2+' "'+$path+'" study "'+$sdir+'"&'
+          shell($cmd):$x
+        endif
+      else
+        $cmd='LOC add "'+$2+'" "'+$path+'" study "'+$sdir+'"'
+        vnmrjcmd($cmd)
+      endif
+    endif
+endif

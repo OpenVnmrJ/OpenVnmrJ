@@ -1,0 +1,29 @@
+"macro sns"
+" sns - define signal region for snr measurement in an image"
+
+" Details: display the image, e.g. dconi"
+"          specify a box and place it in the signal region"
+"          sns will display the snr = sns/snr"
+"          previously determined snn value is used for noise value"
+"          if the noise region is not specified, move the box to"
+"          the noise region and type snn"
+
+" Author: S. Sukumar, Varian, Palo Alto, CA, USA"
+
+exists('sns', 'parameter'):$ex
+if($ex = 0) then
+   create('sns')
+endif
+mark:$a,$b      "ht, integral, f1, f2)
+sns = $b
+exists('snn', 'parameter'):$ex
+if($ex > 0) then
+  if(snn = 0) then
+    write('line3','signal value: %5.2f',sns)
+  else
+   write('line3','SNR value: \(%5.2f/%5.2f\) = %5.2f',sns,snn,sns/snn)
+  endif
+else
+   write('line3','signal value: %5.2f',sns)
+endif
+dconi('again') dconi('toggle')

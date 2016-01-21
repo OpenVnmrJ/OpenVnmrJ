@@ -1,0 +1,41 @@
+
+#!/bin/sh
+
+# Installs the latest VnmrJ cd
+# Usage: vjinstall [password:all] or vjinstall [password:Diffusion,STARS...]
+
+userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
+if [ $userId != "uid=0(root)" ]
+then
+    echo "User must be root to install VnmrJ"
+    exit 0
+fi
+
+password=''
+if [ $# -gt 0 ]
+then
+    if [ $1 = "password:all" ]
+    then
+	password="password:Diffusion,LC-NMR,STARS,Backprojection,CSI,BIR_Shapes,DOSY,768_AS,VAST,FDM,Imaging_Sequences"
+    else
+	password=$1
+    fi
+fi
+
+# cp cdimage from /rdvnmr to local disk first, otherwise the install takes too long.
+# rm -rf /home/.cdromVJ_latest
+# mkdir /home/.cdromVJ_latest
+# cd /rdvnmr/.cdromVJ_latest
+# tar cf - .| (cd /home/.cdromVJ_latest; tar xfBp -)
+
+log="../logs/logVJinstall"`date '+_%m-%d-%y'`
+dir=`dirname $0`
+cd $dir
+
+xhost +
+vnmrNoPostAction="TRUE"
+export vnmrNoPostAction
+
+
+# LoadNmrDir calls 'netbeans installvj' to install the latest cd
+/vnmr/jre/bin/java -Dvnmrcd=/home/.cdromVJ_latest -Dinstalltype=" inova" -cp lib/vjunit.jar LoadNmrDir $password &> $log

@@ -1,0 +1,44 @@
+"macro showmanual"
+
+if $1='1d' then
+
+  if $2='int'     then
+    dpir('off') 
+    if vp<12 then vp=12 endif
+    exec('d'+intstyle)
+    if (pkpick<>'' and $#<2.5) then showmanual('1d','peak','refresh') endif
+  elseif $2='peak'     then
+    dpf('off') 
+    if (intstyle<>'' and intmod<>'off' and vp<12) then vp=12 endif
+    if pkpick='ppf' then axis='p' dpf
+    elseif pkpick=`axis='h' ppf axis='p'` then axis='h' dpf
+    elseif pkpick=`ppf('top')` then axis='p' dpf('top') 
+    elseif pkpick=`axis='h' ppf('top') axis='p'` then axis='h' dpf('top')
+    elseif pkpick=`pll` then axis='p' dpf
+    elseif pkpick=`ppf pll` then axis='p' dpf 
+    elseif pkpick=`ppf('top') pll` then axis='p' dpf
+    endif
+    if (intstyle<>'' and intmod<>'off' and $#<2.5) then showmanual('1d','int','refresh') endif
+  endif
+
+elseif $1='2d' then
+
+  format(plt2Darg[2],'lower'):$level
+  format(plt2Darg[3],'lower'):$space
+  if     $2='pos'    then dpconi('pos',$level,$space)
+  elseif $2='neg'    then dpconi('neg',$level,$space)
+  elseif $2='posneg' then dpconi($level,$space)
+  elseif $2='ds2d'   then dconi('ds2d')
+  elseif $2='hproj'  then dconi('hproj_max')
+  elseif $2='vproj'  then dconi('vproj_max')
+  elseif $2='trace'  then dconi('trace')
+  elseif $2='invert' then 
+	rp1=rp1+180
+	while rp1 > 359 do
+	    rp1=rp1-360
+	endwhile
+	$st='' graphis:$st
+	if ($st='ds') then ds else dconi('again') endif
+  endif
+
+endif

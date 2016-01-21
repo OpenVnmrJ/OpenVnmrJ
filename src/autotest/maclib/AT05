@@ -1,0 +1,252 @@
+"macro AT05"
+"AT05"  "Receiver gain test"
+
+if ($#=0) then
+
+   ATrtp('standard') 
+   text('Receiver Gain Test: Vary gain from 0 to 48 in Steps of 2')
+   if (at_new='n') then dsp='n' endif  "disable dsp to measure effect of oversampling"
+     tpwr=tpwr-12 
+     if sfrq>499 then pw(10) else pw(20) endif
+     if at_gain<18 then tpwr=tpwr-9 endif  "using cryogenic probe"
+     if pw<0.6 then pw=0.6 endif
+   sw=10000 fn=16k np=fn lb='n' 
+   array('gain',25,0,2)
+   at_currenttest='gaintest'
+   fn=65k
+   d1=.01 nt=16 ss=4
+   wnt='ATwft f select(celem) ph aph0:$ok if not $ok then av endif vsadj dssh dtext'
+   wexp='AT05(`PART1`)'
+   ATcycle
+   au
+   text dps
+
+elseif ($1='PART1') then
+   vp=10 r1=sc r2=wc r3=ho r4=wc 
+   wft select(arraydim) ph aph0:$ok if not $ok then av endif peak:$ht,cr rl(4.66p)
+   cz z(6p,2p) bc sp=3.6p wp=6.4p 
+   ATplot
+   ATreg:A,B           "borrow Spin-Simulation Parameters" 
+   if A>1 then A=1 endif
+   select(arraydim) vsadj full
+   if (at_plotauto='y') then
+     write('plotter',12,wc2max-10,'Correlation Coefficient = %1.3f  Standard Deviation = %1.3f',A,B)
+     pexpl pltext(0,wc2max-10) ATpage('gaintest_reg') 
+   endif
+
+    select(arraydim) 
+    nm sp=9p wp=1p vsadj(1)
+    sp=3.6p wp=6.4p r5=vs
+    atext('truncated signals') cutoff=50    
+
+
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'gain value')
+    write('file',$filename,'normalized nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+   clear(2)
+   $spectrum=1
+   $snav=0 crl rfl=sw/2 rfp=0 f
+   sp=-1p wp=5000+1p
+   cr=4000 delta=2000 
+   sc=r1 wc=r4
+   $bestone=1 $bestsn=1
+   repeat
+    select($spectrum)
+    f
+    aph:$ok
+    if not $ok then
+      aph0:$ok
+    endif
+    dc
+    sp=-1p wp=5000+1p
+    cr=4000 delta=2000 
+    dsn:$sn
+    if $sn>$bestsn then $bestone=$spectrum $bestsn=$sn endif
+    if ($spectrum>15) then
+      $snav=$snav+$sn
+    endif
+    sp=2000 wp=2000 dc
+    dssn($spectrum,$spectrum)
+    if (at_plotauto='y') then
+     pl($spectrum)
+    endif
+      $yg=160-6*$spectrum
+      $yp=wc2max-18-4*$spectrum
+      write('graphics',50,$yg,'for gain=%d  s:n=%6.1f',gain[$spectrum],$sn)
+      if (at_plotauto='y') then
+       write('plotter',50,$yp,'for gain=%d  s:n=%6.1f',gain[$spectrum],$sn)
+      endif
+    sc=sc+ho
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+   $spectrum=1
+   repeat
+    select($spectrum)
+    f
+    aph:$ok
+    if not $ok then
+      aph0:$ok
+    endif
+    dc
+    sp=-1p wp=5000+1p
+    cr=4000 delta=2000 
+    dsn:$sn
+    if at_new='y' then $sn=$sn*100/$bestsn  "scale to 100% s/n scale" endif
+    write('file',$filename,'%10s  %5.1f',gain[$spectrum],$sn)
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+   if at_new='y' then
+    $spectrum=arraydim $dropoff=arraydim
+    repeat
+     select($spectrum)
+     f
+     aph:$ok
+     if not $ok then
+       aph0:$ok
+     endif
+     dc
+     sp=-1p wp=5000+1p
+     cr=4000 delta=2000 
+     dsn:$sn
+       if $sn<0.9*$bestsn then $dropoff=$spectrum endif
+     $spectrum=$spectrum - 1
+    until $dropoff<>arraydim or ($spectrum <= 0)
+    $dropoff=gain[$dropoff]
+   endif
+   expl('regression')
+
+
+   if (at_plotauto='y') then
+    write('plotter',80,wc2max-5,'Effect of Gain on Sensitivity')
+   endif
+    $snav=$snav/10
+    write('graphics',0,175,' Average S/N : %6.0f ',$snav)
+    write('graphics',20,165,'   For Gain 30 through 48')
+   if (at_plotauto='y') then
+    write('plotter',100,$yp,' Average S/N : %6.0f ',$snav)
+    write('plotter',110,$yp-5,'   For Gain 30 through 48')
+    pltext(0,wc2max-5) ATpltext ATpage('gaintest_sens')
+   endif
+    r7=$snav
+   ATsvf 
+   full expl('regression')
+   cp(curexp+'/regression.inp',curexp+'/regression.sw')
+   text('Effect of Oversampling on Gain Test\\All Conditions Identical Except for Spectral Width (Ten Times Larger)')
+   ai
+   at_currenttest='gaintest2'
+   sw=100000 cutoff='n'
+   fn=4*np
+   alfa=0.1                              "proper for new fb"
+   wnt='' 
+   wexp='AT05(`PART2`)'
+   if (at_new='y') then
+    if (at_plotauto='y') then
+      full pexpl('regression') ATpage('gaintest_oversamp')
+    endif
+    ATrecord('GAIN','Gain Test','Corr.Coef.  ',A,'Std.Dev.  ',B,'90_percent_value  ',$dropoff)
+    write('file',autotestdir+'/REPORT','Gain Test: Corr.Coef = %1.3f Std.Dev. = %1.3f 90percent level = %2.0f',A,B,$dropoff)
+    A=0 B=0   "reset borrowed parameters"
+    ATnext return
+   else
+    au
+   endif
+
+elseif ($1='PART2') then
+
+   wft select(arraydim) f aph0:$ok if not $ok then av endif ai vsadj peak:$ht,cr rl(0) 
+   sp=-5000 wp=20000 cz z(2p,-3p)
+   $corr1=0 $std1=0
+   ATreg:$corr1,$std1
+   if $corr1>1 then $corr1=1 endif
+   if (at_plotauto='y') then
+     full write('plotter',12,wc2max-10,'Correlation Coefficient = %1.3f  Standard Deviation = %1.3f',$corr1,$std1)
+     pexpl pltext(0,wc2max-10) ATpage('gaintest2_expl')
+   endif
+
+    nm select(arraydim)
+    vs=r5 dc cutoff=50 
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'gain value')
+    write('file',$filename,'nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+    sc=r1 wc=r2 ho=r3 vo=0
+    clear(2)
+    vp=10
+    $spectrum=1
+    $snav=0 
+    sp=-1p wp=10000
+    cr=4000 delta=2000
+    repeat
+     select($spectrum)
+     f
+     aph:$ok
+     if not $ok then
+       aph0:$ok
+     endif
+     dc
+    sp=-1p wp=10000
+    dsn:$sn
+    if ($spectrum>15) then
+     $snav=$snav+$sn
+    endif
+    sp=2000 wp=2000 dc
+    dssn($spectrum,$spectrum)
+    if (at_plotauto='y') then
+     pl($spectrum)
+    endif
+      $yg=160-6*$spectrum
+      $yp=wc2max-18-4*$spectrum
+      write('graphics',50,$yg,'for gain=%d  s:n=%6.1f',gain[$spectrum],$sn)
+      write('file',$filename,'%10s  %5.1f',gain[$spectrum],$sn)
+      if (at_plotauto='y') then
+       write('plotter',50,$yp,'for gain=%d  s:n=%6.1f',gain[$spectrum],$sn)
+      endif
+     sc=sc+ho
+     $spectrum=$spectrum + 1
+    until $spectrum>arraydim
+   expl('regression') 
+   cp(curexp+'/regression.inp',curexp+'/regression.swx10')
+
+
+   if (at_plotauto='y') then
+    write('plotter',80,wc2max-5,'Effect of Gain on Sensitivity')
+    write('plotter',80,wc2max-8,'For Oversampling (SW=100000)')
+   endif
+    $snav=$snav/10
+    write('graphics',0,175,'     Average S/N (oversampled): %6.0f ',$snav)
+    write('graphics',20,165,'     For Gain 30 through 48')
+    if (at_plotauto='y') then
+     write('plotter',100,$yp,'    Average S/N (oversampled): %6.0f ',$snav)
+     write('plotter',110,$yp-5,'     For Gain 30 through 48')
+     pltext(0,wc2max-5) ATpltext ATpage('gaintest2_sens')
+      right wc=100 pexpl('regression') expl('regression')
+      left wc=100 sc=sc+25 
+      cp(curexp+'/regression.sw',curexp+'/regression.inp')
+      expl('regression','noclear')
+      pexpl('regression')
+      write('plotter', 10,wc2max-5, 'Normal Sampling')
+      write('plotter', 120,wc2max-5, 'Oversampled x10')
+      ATpage('gaintest2_reg')
+    endif
+    cp(curexp+'/regression.swx10',curexp+'/regression.inp')
+    right wc=100 expl('regression','nocurve')
+    cp(curexp+'/regression.sw',curexp+'/regression.inp')
+    left wc=100 sc=sc+25 expl('regression','noclear')
+    r6=$snav
+    r7=trunc(r7) r6=trunc(r6)
+    $improv=trunc(100*r6/r7)-100
+    write('line3','Gain Test Complete. Benefit of Oversampling = %2.0f percent ',$improv)
+    ATrecord('SN','Gain Test','Benefit(Pct.)  ',$improv,'Corr.Coef.  ',A,'Std.Dev.  ',B,'Corr.Coef.',$corr1,'Std.Dev.',$std1)
+    write('file',autotestdir+'/REPORT','Gain Test: Normal Sampling- Corr.Coef = %1.3f Std.Dev. = %1.3f',A,B)
+    write('file',autotestdir+'/REPORT','Gain Test: Oversampled    - Corr.Coef = %1.3f Std.Dev. = %1.3f',$corr1,$std1)
+    write('file',autotestdir+'/REPORT','Gain Test: Oversampling Benefit = %2.0f percent',$improv)
+    A=0 B=0   "reset borrowed parameters"
+    ATsvf('gaintest_oversampled') 
+    dsp=at_dsp
+  ATnext 
+endif

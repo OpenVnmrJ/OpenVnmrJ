@@ -1,0 +1,23 @@
+"macro ckreqparvals"
+"***********************************************************"
+module('add','reqparvals','basic')
+$list='' $errorlist=''
+module('list','reqparvals'):$list
+string2array($list):$list
+if $list[1]='' then return(0,$errorlist) endif
+
+$total=size('$list')
+$i=1 
+repeat
+      $parname=$list[$i]
+      if ($parname<>'') then
+	 if typeof($parname) then
+	    if {$parname}='' then $errorlist=$errorlist+' '+$parname endif
+	 endif
+      endif
+      $i=$i+1
+until $i > $total
+string2array($errorlist):$errorlist
+if ($errorlist[1]='') then return(0,'') endif
+array2string($errorlist):$errorlist
+return(1,$errorlist)

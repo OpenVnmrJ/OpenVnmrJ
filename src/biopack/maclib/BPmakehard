@@ -1,0 +1,26 @@
+"macro BPmakehard"
+"BPmakehard - makes a hard pulse shape with any number of steps"
+"                                      S.L.Patt, 30 June 1993"
+"usage: BPmakehard(#steps<,amplitude>)"
+" The output is a file in your personal shapelib named"
+"  hard#steps.RF, e.g., hard256.RF"
+" If amplitude is omitted, it is assumed to be 1023"
+" If amplitude is less than zero, the phase is changed to 180"
+" If amplitude is between 0 and 1, this is taken as a fractional"
+"  amplitude and multiplied by 1023"
+
+$num=''
+format($1,0,0):$num
+$file=userdir+'/shapelib/hard'+$num+'.RF'
+if $#>1 then $amp=$2 else $amp=1023.0 endif
+if $amp>1023 then $amp=1023 endif
+if $amp<0 then $phase=180 $amp=-$amp else $phase=0 endif
+if $amp<1 then $amp=1023*$amp+.5 endif
+$i=1
+write('line3','Writing data to %s...',$file)
+write('reset',$file)
+repeat
+  write('file',$file,'%5.1f\t%6.1f\t1.0',$phase,$amp)
+  $i=$i+1
+until $i>$1
+write('line3','Done!')

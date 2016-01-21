@@ -1,0 +1,58 @@
+"macro fastmap"
+$init='n'
+if $# > 0.5 then
+  if $1='init' then
+    $init='y'
+  endif
+endif
+
+$fastdir=userdir+'/fastmap'
+$file=$fastdir
+exists($file,'file'):$e
+if $e<0.5 then mkdir($file) endif
+$file=$file+'/calib'
+exists($file,'file'):$e
+if $e<0.5 then mkdir($file) endif
+
+$file=$file+'/.calib'
+exists($file,'file'):$e
+if $e<0.5 then
+  write('file',$file,'1.00E-03   1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09')
+  write('file',$file,'1.0E-09    1.00E-03   1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.00E-03   1.0E-09    1.0E-09    1.0E-09    1.00E-06   1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.0E-09    1.00E-03   1.0E-09    1.0E-09    1.0E-09    1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.00E-03   1.0E-09    1.0E-09    1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.00E-03   1.0E-09    1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.00E-06   1.0E-09    1.0E-09    1.0E-09    1.00E-03   1.0E-09')
+  write('file',$file,'1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.00E-03')
+  write('file',$file,'1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09    1.0E-09')
+endif
+
+if $init='y' then
+  $file=userdir+'/shims/current'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=$fastdir+'/fastmap.calib'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=$fastdir+'/fastmap.log'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=$fastdir+'/fastmap.err'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=$fastdir+'/change'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=userdir+'/shims/'+gcoil
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  $file=userdir+'/shims/new'
+  exists($file,'file'):$e if $e>0.5 then rm($file):$x endif
+  rm('-f',userdir+'/shims/old*'):$x
+"  $file=userdir+'/shims/start'"
+"  exists($file,'file'):$e if $e>0.5 then rts('start') endif"
+endif
+
+if ((seqfil <> 'fastestmap') and (seqfil <> 'fastestmapT1')) then
+  rtppar('fastestmap')
+endif
+if $init='y' then
+  epi = 'n'
+endif
+isvnmrj:$j
+if $j<0.5 then menu('fastmap') endif

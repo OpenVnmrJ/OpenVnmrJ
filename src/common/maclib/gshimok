@@ -1,0 +1,107 @@
+"macro gshimok"
+$ok=0 
+$mapname='' 
+$curmap=''
+$NUC=''
+
+is_postvj22b:$vj22c
+
+"**********************************************************************************"
+if ($1='no') or (wshim='n') then 
+   if ($##<1) then
+	write('line3','wshim is set to \'n\'')
+   endif
+   return($ok,$mapname,$curmap,$NUC) 
+endif
+
+"**********************************************************************************"
+
+$tn='' $ret=0 
+strstr($1,'shim'):$ret
+if ($ret=0) then 
+   if ($## < 1) then
+	write('error','Illegal %s argument for %s',$1,$0)
+   endif
+   return($ok,$mapname,$curmap,$NUC)
+endif
+"**********************************************************************************"
+      
+gmapshim('mapname',''):$curmap
+$wshim=wshim
+
+"**********************************************************************************"
+
+if ($1<>'gshim') then
+   strstr($1,'shim'):$ret,$tn
+   is_gmap($tn):$ok,$mapname,$NUC
+   if ($ok=0) then
+	write('error','Shimmap for %s not found',$tn)
+   elseif ($## < 1) then
+	write('line3','Shimmap found: %s  Current shimmap: %s',$mapname,$curmap)
+   endif
+   return($ok,$mapname,$curmap,$NUC)
+endif
+
+"**********************************************************************************"
+
+if (Gmapname<>'') then
+   is_gmap('',Gmapname):$ok,$mapname,$NUC
+   if ($ok=0) then
+	write('error','Shimmap %s not found',Gmapname)
+   endif
+endif
+
+if ($ok=0) then
+   if (Gmap<>'no') then
+	$foundgmap=Gmap
+	$startgmap=Gmap
+	$tn=Gmap
+        if (gradtype='nnh') then
+            if ($tn='lk') then 
+		write('line3','gradtype is nnh.  Using homospoil map for H2')
+		$tn='hs' $startgmap=$tn
+	    endif
+	    if ($tn='H1') then
+                write('line3','gradtype is nnh.  Using homospoil map for H1')
+		$tn='H1hs' $startgmap=$tn
+	    endif
+            $nucs=$tn,'hs','H1hs'
+        else
+            $nucs=$tn,'lk','H1','hs','H1hs'
+        endif
+        $totnuc=size('$nucs')
+        $i=1
+        repeat
+            is_gmap($nucs[$i]):$ok,$mapname,$NUC
+            if ($ok) then $foundgmap=$nucs[$i] $i=$totnuc endif
+            $i=$i+1
+        until $i > $totnuc
+        if ($ok=0) and (Gmapname='') then
+		write('error','None of the probe shimmap could be found')
+	endif
+	if ($ok) and ($foundgmap<>$startgmap) then
+		write('error','Shimmap for %s not found.  Using shimmap for %s instead',$startgmap,$foundgmap)
+	endif
+   endif
+   if ($ok=0) and ($wshim='g') and ($curmap<>'') then
+	$mapname=$curmap
+	$ok=1
+   endif
+endif
+
+   if ($mapname='') then $ok=0 endif
+"**********************************************************************************"
+   if ($## < 1) then
+      if ($ok) then
+        write('line3','Shimmap found: %s  Current shimmap: %s',$mapname,$curmap)
+      elseif ($wshim<>'g') and (Gmap='no') then
+	if (Gmapname<>'') then
+		write('line3','Shimmap %s NOT found',Gmapname)
+	else
+		write('line3','Shimmap NOT found')
+	endif
+      endif
+   endif
+"**********************************************************************************"
+
+   return($ok,$mapname,$curmap,$NUC)

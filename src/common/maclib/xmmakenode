@@ -1,0 +1,742 @@
+"macro xmmakenode"
+"xmmakenode - read a protocol file, add to study queue"
+"    OR     - create or copy a study queue node"
+
+"Usage: xmmakenode( 'xml', 'filename' )"
+"         xml filename in protocols directory or fullpath"
+"  OR   xmmakenode( 'copy' | 'new', 'protocol' | 'action' )"
+
+"find file"
+
+if ($# < 0.5) then return('') endif
+
+$maxnodes=100  // max number of nodes per sample in SQ
+
+$appmode=appmode
+if appmode='lc' then $appmode='walkup' endif
+$activestudy=activestudy[1]
+if ($appmode='walkup' and auto<>'y') then
+  if (appmode='lc' and traymax=1) then
+    lcsq('checkstop'):$stop
+    if $stop='stop' then return('') endif
+  endif
+  if (jviewport>1.5 and (sqmode<>'go' or auto='n')) then
+    write('error','join first viewport to add protocols')
+    return('')
+  endif
+  exists(autodir+'/autopar','file'):$e
+  if (globalauto='' or autodir='' or $e<0.5) then
+    if (owner=operator and appmode='walkup') then
+      walkup  "assume successful, or return?"
+    elseif (appmode='lc') then
+      setNewLcid
+    else
+      write('error','Please login as %s account owner \'%s\' to set autodir.',appmode,owner)
+      return('')
+    endif
+  endif
+  $activestudy=activestudy[1]
+  if ($activestudy <> autodir) then
+    length(globalauto):$l1
+    length($activestudy):$l2
+    substr($activestudy,$l1+2,$l2-$l1-1):$t
+    write('line3','Cannot add protocols, active run \'%s\' not in study queue.',$t)
+    return('')
+  endif
+endif
+
+xm1('studydir'):$sdir
+$source='file'
+if ($# > 1.5) then
+  $source=$1
+// check if over max number of nodes in study queue
+  if $maxnodes>0 then
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+      lookup('mfile',$sqfile,'delimiter',' 0\n\r\t','count','n'):$nsize
+      if ($nsize + 2) > ($maxnodes) then
+        write('error','Protocol exceeds maximum number of nodes allowed in study queue.')
+        return('')
+      endif
+    endif
+  endif
+
+  if $source='copy' then
+    if ($2<>'action' and $2<>'protocol') then
+"     write('line3','%s: %s not supported',$0,$2)"
+      return('')
+    endif
+    $oid=actionid  "old id"
+    if ($# > 2.5) then $oid=$3 endif
+    $mid=$oid
+    if ($# > 3.5) then $mid=$4 endif
+    if ($oid='null' or $oid='') then
+      $i=0 teststr('sqattr','id','global'):$i
+      $oid=sqval[$i]
+      if ($oid='null' or $oid='') then
+        $oid=copyid[1]  "may not exist"
+        if ($oid='null' or $oid='') then
+"lookup enterSQ readline until end, get substr 1?"
+"         write('line3','%s: cannot copy id %s',$0,actionid)"
+          return('')
+        endif
+      endif
+    endif
+    $odir=$sdir+'/info/'+$oid
+    exists($odir+'/prop','file'):$e
+    if $e<0.5 then
+"     write('line3','%s: cannot copy node %s',$0,$oid)"
+      return('')
+    endif
+    $node='' $ldir=''
+    xm1('mkdir'):$node,$ldir
+    $b=0 bgmode_is:$b
+    if $b>0.5 then
+      xm1('insertnode',$mid,$node):$ret
+      if $ret=0 then return endif
+    endif
+    if auto='y' then
+      if ($2='action') then
+        xm1('sendsq','add new action')
+      else
+        xm1('sendsq','add new protocol')
+      endif
+      $nnode=studyid+'_'+$node
+      $mmid=studyid+'_'+$mid
+      xm1('sendsq','set new id '+$nnode)
+      xm1('sendsq','pmove '+$nnode+' '+$mmid) "lmove?"
+    else
+      if ($2='action') then
+        xm1('add new action')
+      else
+        xm1('add new protocol')
+      endif
+      xm1('set','new','id',$node)
+      xm1('move '+$node+' '+$mid)
+    endif
+    shell('cp -r "'+$odir+'"/* "'+$ldir+'"'):$x
+    xmgetatts($oid,'data'):$pdata
+    if (auto<>'y' and $pdata<>'') then
+      $pfile=$sdir+'/'+$pdata+'.fid'
+      exists($pfile,'directory'):$ep
+      if $ep>0.5 then
+        $spar='/save.par'
+        exists($ldir+$spar,'directory'):$d
+        if $d<0.5 then mkdir($ldir+$spar) endif
+        cp($pfile+'/procpar',$ldir+$spar+'/procpar')
+        cp($pfile+'/text',$ldir+$spar+'/text')
+      endif
+    endif
+    exists($ldir+'/rx','file'):$e
+    if $e>0.5 then rm('-f',$ldir+'/rx'):$x endif
+    exists($ldir+'/acqlog','file'):$e
+    if $e>0.5 then rm('-f',$ldir+'/acqlog'):$x endif
+"acq copy diffp does not have same params as .fid, copy here?"
+    $s1='' $s2=''
+    exists($ldir+'/prop','file'):$e
+    if $e<0.5 then
+      return($node)
+    else
+      readfile($ldir+'/prop','$s1','$s2','','local'):$size
+      if $size>0.5 then
+        $i=$size+1
+        repeat
+          $i=$i-1
+          $s1[$i+1]=$s1[$i]
+          $s2[$i+1]=$s2[$i]
+        until ($i <= 1)
+      endif
+      $s1[1]='id'
+      $s2[1]=$node
+    endif
+    $sc=''
+    $i=0 $size=trunc(size('$s1')+0.5)
+    repeat "skip the whole loop if $b>0.5?"
+      $i=$i+1
+      $t1=$s1[$i]
+      if ($t1<>'id' and $t1<>'status' and $t1<>'data' and $t1<>'macro') then
+        if auto='y' then
+          $sc=$sc+'set '+$nnode+' '+$t1+' \\\"'+$s2[$i]+'\\\"; '
+        elseif $t1<>'lock' then
+          $sc=$sc+'set '+$node+' '+$t1+' "'+$s2[$i]+'"; '
+        endif
+      endif
+    until ($i>=$size)
+    if ($sc <> '') then
+      if auto='y' then
+        xm1('sendsq',$sc)
+      else
+        xm1($sc)
+      endif
+    endif
+    if ($2='action') then
+      xmgetatts($oid,'status'):$ost
+      $nst='Customized'
+      if $ost='Ready' then $nst='Ready' endif
+      if auto='y' then
+        xm1('sendsq','set '+$nnode+' data null')
+      else
+        xmsetatts($node,'lock','off','status',$nst,'data','null')
+      endif
+    else
+      teststr('$s1','title','local'):$i
+      $tt=$s2[$i]+' '+$node
+      teststr('$s1','status','local'):$i
+      if ($s2[$i]<>'protocol') then $tt=$tt+' ['+$s2[$i]+']' endif
+"     xm1('set',$node,'tooltext',$tt)"
+      if auto='y' then
+        xm1('sendsq','set '+$nnode+' tooltext \\\"'+$tt+'\\\"')
+      else
+        xm1('set '+$node+' tooltext "'+$tt+'"')
+      endif
+    endif
+
+    copyid[1]=$node
+
+"background mode, insert new node"
+"what if auto='n' $b=1 and no VJ running?"
+    if $b>0.5 then
+"     if auto='y' then"
+        xmwritesq('write','')
+"     else"
+"       xmwritesq('write','show')"
+"     endif"
+    endif
+
+    return($node)
+  elseif ($source = 'new') then
+    if $2='action' then
+      $s1='Action','type','status','lock','title','exp','time','macro','data','element'
+      $s2='1','LIB','Ready','off',pslabel,pslabel,'null','xmrtpar','','action'
+    elseif $2='protocol' then
+      $s1='Protocol','type','status','title','exp','element'
+      $s2='1','protocol','protocol',pslabel,'parent','protocol'
+    else
+"     write('line3','%s: %s not supported',$0,$2)"
+      return('')
+    endif
+  endif
+endif
+
+if $source='file' then
+  if $#>1.5 then
+    $name=$2
+  elseif $#>0.5 then
+    $name=$1
+  endif
+  $pdir=userdir+'/templates/vnmrj/prototypes/'
+  exists($pdir+$name,'file'):$e
+  if $e<0.5 then
+    $pdir=systemdir+'/templates/vnmrj/prototypes/'
+    exists($pdir+$name,'file'):$e
+    if $e<0.5 then
+      write('error','%s: could not find %s',$0,$name)
+      return('')
+    endif
+  endif
+  lookup('mfile',$pdir+$name,'filekey'):$key  "readfile"
+  $n=0 $s1='' $s2=''
+  $i=0 $j1='' $j2=''
+"read all from file, put into arrayed $variables"
+  repeat
+    lookup('mfile',$key,'read','readline','filekey'):$j1,$j2,$key,$n
+    if ($n>2.5) then
+      $i=$i+1
+      $s1[$i]=$j1 $s2[$i]=$j2
+    endif
+  until ($n<1.5)
+" $size=$i"
+elseif ($source='xml' and $#>1.5) then
+  $s1='' $s2=''
+  $s1[1]='Protocol' $s2[1]='1'
+  $s1[2]='status' $s2[2]='protocol'
+  $s1[3]='exp' $s2[3]='parent'
+  $s1[4]='element' $s2[4]='protocol'
+  $s1[5]='lock' $s2[5]='off'
+ if ($2='') then  // default protocol
+  $s1[6]='title' $s2[6]=$4
+  $s1[7]='type' $s2[7]='protocol'
+  $s1[8]='Action' $s2[8]='1'
+  $s1[9]='type' $s2[9]='LIB'
+  $s1[10]='status' $s2[10]='Ready'
+  $s1[11]='title' $s2[11]=$4
+  $s1[12]='exp' $s2[12]=$4
+  $s1[13]='time' $s2[13]=''
+  $s1[14]='macro' $s2[14]='xmrtpar'
+  $s1[15]='data' $s2[15]=''
+  $s1[16]='lock' $s2[16]='off'
+  $ct=2
+  $i=16
+ else
+  $file=$2  "full path name"
+  substr($file,1,1):$s
+  if $s<>'/' then  "read appdir"
+    $pdir=userdir+'/templates/vnmrj/protocols/'
+    exists($pdir+$file,'file'):$e
+    if $e<0.5 then
+      $pdir='/templates/vnmrj/protocols/'
+      if appmode='imaging' then $pdir='/imaging'+$pdir endif
+      $pdir=systemdir+$pdir
+      exists($pdir+$file,'file'):$e
+      if $e<0.5 then
+        write('error','%s: could not find %s',$0,$file)
+        return('')
+      endif
+    endif
+    $file=$pdir+$file
+  endif
+  lookup('mfile',$file,'filekey'):$key
+  // Note: I put the double quotes in twice for the benefit of my crude
+  // font highlighter for MAGICAL code: 
+  lookup('mfile',$key,'delimiter','="" \n\r\t','seek','<template','seek','<protocol','filekey'):$key
+  $ct=0 $i=5 $j=0 $n=0 $j1='' $j2='' $action='n' $flock='n'
+  repeat
+    $j=$j+1 $j1=''
+    lookup('mfile',$key,'delimiter','=""</>! \n\r\t','read','filekey'):$j1,$key,$n
+    if ($n>0.5) then
+      if ($j1='protocol') then
+        $n=0 $ct=$ct+1
+      elseif ($j1='action') then
+        $i=$i+1 $ct=$ct+1 $action='y'
+        $s1[$i]='Action' $s2[$i]='1'
+      elseif ($j1='data') then
+        $i=$i+1
+        $s1[$i]=$j1 $s2[$i]=''
+      elseif ($j1='title' or $j1='time' or $j1='macro' or $j1='required' or $j1='exp') then
+        lookup('mfile',$key,'delimiter','""\n\r','read','filekey'):$j2,$key,$n
+        $j=$j+1
+        if ($n>1.5) then
+          $i=$i+1
+          $s1[$i]=$j1 $s2[$i]=$j2
+        endif
+      else
+        $j=$j+1
+        lookup('mfile',$key,'delimiter','=""</>! \n\r\t','read','filekey'):$j2,$key,$n
+        if ($n>1.5) then
+          $i=$i+1
+          $s1[$i]=$j1 $s2[$i]=$j2
+        endif
+        if $j1='lock' then $flock='y' endif
+      endif
+    endif
+  until ($n<0.5 or $j>1000) "avoid infinite loop"
+  if $flock='n' then
+    $i=$i+1
+    $s1[$i]='lock' $s2[$i]='off'
+  endif
+ endif
+" if ($action='n') then return('') endif"
+
+// check if over max number of nodes in study queue
+  if $maxnodes>0 then
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+      lookup('mfile',$sqfile,'delimiter',' 0\n\r\t','count','n'):$nsize
+      if ($nsize + $ct) > ($maxnodes) then
+        write('error','Protocol exceeds maximum number of nodes allowed in study queue.')
+        return('')
+      endif
+    endif
+  endif
+endif
+
+"build protocol directory"
+$ndir=$sdir+'/info'
+exists($ndir,'file'):$e
+if ($e<0.5 and $sdir<>'' and $activestudy<>'null') then
+  mkdir($ndir)
+endif  "do if nofile"
+$size=trunc(size('$s1')+0.5)
+
+$sqdir=sqdir
+$studyid=studyid
+$removetmp='n'
+
+xmsubsave  // clean up Active nodes in Walkup
+// actionid='null'
+
+// move node to $snode
+$snode='' $aqstat='' $aqstudy='' $aqdir='' $aq=''
+$epos=0 $skipstat='' $skiptitle=''
+if $#>2.5 then if ($3<>'' and $3<>'tmpstudy') then
+  $snode=$3
+  if $appmode='walkup' then
+    xmactionw('getaq',$3):$aqstudy,$aqdir,$aqid
+    if $aqstudy<>'' then
+// add to submitted sample, find attributes
+      $aqstat='' $aq='' $sttime=0 $title=''
+      $aqloc='' $aqrack='' $aqzone='' $aqsolv='' $aqop=''
+      $aqfile=$aqdir+'/studypar'
+      exists($aqfile,'file'):$ex
+      if ($ex) then
+        rtv($aqfile,'studystatus','queue','studytime','loc_','vrack_','vzone_','solvent','operator_'):$aqstat,$aq,$sttime,$aqloc,$aqrack,$aqzone,$aqsolv,$aqop
+      endif
+
+      if ($aq<>'') and not ($aqstat='Queued' or $aqstat='NightQueue') then
+        $aqstudy='' $aq='' $aqdir='' $aqid=''
+      endif
+      if ($aqstudy<>'') then
+        if ($appmode='walkup' and auto<>'y' and studyid='tmpstudy') then
+          rights('editallopstudies'):$editop
+          rights('showallopstudies'):$showop
+          rights('caneditprotocols'):$editpro
+          if not (($editop and $showop) or $aqop=operator or $aqop='') then
+            return('')
+          elseif not ($editpro) then
+            return('')
+          endif
+          $removetmp='y'
+        endif
+        sqdir=$aqdir
+        studyid=$aqstudy
+        xm1('studydir'):$sdir
+
+// check if studytime is over limit, else set status to Skipped
+// check time in multiple child nodes
+        $sec=0 $timestr='' $i=0
+        repeat
+          $i=$i+1
+          if $s1[$i]='time' then
+            $tsec=0 $timestr=$s2[$i]
+            xmtime('getsec',$timestr):$tsec
+            $sec=$sec+$tsec
+          endif
+        until ($i>=$size)
+        if ($sec>0 and $sttime>0) then
+          $studytime=studytime
+          studytime=$sttime+$sec
+          $remain=0
+          if $aq='nightQ' then
+            xmtime('nightmax'):$ret,$remain
+          else
+            $ret=1
+            xmtime('daystep'):$daystep
+            $daystep=$daystep*60
+            if (studytime > $daystep) then
+              $ret = -1
+              studytime=$sttime
+            endif
+            $remain = trunc(($daystep - studytime)/60)
+          endif
+          $tpos=0 teststr('$s1','title','local'):$tpos
+          if $tpos>0.5 then
+            $title=$s2[$tpos]
+          endif
+          if ($ret = -1) then
+            if (panellevel < 1) then
+              write('error','Cannot add %s protocol, requires %s, %g min remaining on sample %s.',$title,$timestr,$remain,$aqstudy)
+              sqdir=$sqdir
+              studyid=$studyid
+              return
+            endif
+            $skipstat='Skipped'
+            $skiptitle=$title
+          endif
+          if ($ex) and ($ret=1) then
+// set study tooltip
+            $tt=$aqstudy+' '+$aqop+' '+$aq
+            if ($aqstat<>'Error' and $aqstat<>'Completed') then
+              formattime(studytime,'minutes'):$time
+              $tt=$tt+' ['+$time+']'
+            endif
+            $tt=$tt+' ['+$aqstat+']'
+            xm1('set',$aqstudy,'tooltext',$tt)
+// set time in queue file
+            if $aq='nightQ' then
+              xmtime('addnight',$sec)
+            else
+              xmtime('addday',$sec)
+            endif
+// save studytime into studypar file
+            xmtime('savepar',studytime)
+          endif
+          studytime=$studytime
+        endif
+
+        if ($aqid<>'') then
+          if ($aqstat='Queued' or $aqstat='NightQueue') then
+            $dstat=''
+            xmgetatts($aqid,'status'):$dstat
+            $sqfile=$aqdir+'/enterSQ'
+            exists($sqfile,'file'):$e
+            if ($e) then
+              $ids='' $val='' $qsize=0 $dpos=0
+              readfile($sqfile,'$ids','$val','','local'):$qsize
+              teststr('$ids',$aqid,'local'):$dpos
+              if ($dstat='protocol' and $dpos>0.5 and $dpos<$qsize) then
+                $dpos=$dpos+1
+                $aqid=$ids[$dpos]
+              endif
+              $i=0 $str='' $epos=0
+              repeat
+                $i=$i+1
+                substr($val[$i],1):$str
+                if $str<>'parent' then
+                  $epos=$epos+1
+                endif
+              until ($i>=$dpos)
+            endif
+
+//        elseif ($aqstat='Active') then
+//        elseif ($aqstat='Completed' or $aqstat='Error') then
+          endif
+        endif
+
+      endif
+    endif
+  endif
+endif endif
+
+$firstnode='n'
+// add required protocol if needed
+$end='q1W2e3R4t5Y6'
+$kmax=10000
+$i=0
+repeat
+  $i=$i+1
+  if ($s1[$i]='required') then
+    if ($s2[$i]<>'' and $s2[$i]<>'null') then
+      xmaddreq($s2[$i],$snode):$stmp
+      if ($aqstudy<>'' and $stmp<>'') then $epos=$epos+1 endif
+      if $stmp<>'' then $snode=$stmp endif
+"     $firstnode='req'"
+    endif
+  endif
+until ($i>=$size)
+
+// find protocol or action
+$i=0 $found=0
+repeat
+  $i=$i+1
+  if ($s1[$i]='Protocol' or $s1[$i]='Action') then $found=1 endif
+until ($found>0.5 or $i>=$size)
+
+if ($found=0) then
+  return('')
+endif
+
+// create tmpstudy grandparent node if needed in walkup
+if ($appmode='walkup' and $firstnode='n') then
+  if (studyid='tmpstudy') then
+    getfile($sdir+'/info'):$e
+    if $e<0.5 then
+      exists($sdir+'/study.xml','file'):$f
+      if $f<0.5 then
+        xmconvert('mkgrandma')
+      endif
+      $firstnode='y'
+      $snode=studyid
+    endif
+//  actionid='null'
+  elseif ($aqstudy<>'' and $epos=0) then
+    $firstnode='y'
+  endif
+endif
+
+// write protocols and actions, create nodes
+// if $b=1 insert \\ before all double quotes below, or skip xm1?
+$title='' $status=''
+$k=0 $sc=''
+repeat
+  $k=$k+1  "trap for infinite loop"
+  if ($i<=$size) then
+    $node='' $ldir=''
+    if ($s1[$i]='Action') then
+      if ($sc <> '') then
+        strstr($sc,'status "protocol"'):$r1
+        if (not $r1) then
+          xm1($sc)
+        endif
+        $sc=''
+        $tt=$title+' '+$node
+        if $status<>'' then $tt=$tt+' ['+$status+']' endif
+        $sc=$sc+'set '+$node+' tooltext "'+$tt+'";'
+        xm1($sc) $sc=''
+"use this just to set tooltext, not other attr's?"
+"if $appmode='walkup' and tmpstudy then build $ic and write xml file? "
+      endif
+
+"scan through attr's for required, add req here?"
+"scan through previous exp in attr's, not just in enterSQ?"
+
+      $node='' $ldir=''
+      xm1('mkdir'):$node,$ldir
+      xm1('add new action')
+"replace with add enterSQ entry"
+      if $node<>'' then
+        if ($aqstudy<>'') then
+          $node=$aqstudy+'_'+$node
+        endif
+        xm1('set','new','id',$node)
+        if $snode<>'' then
+          if $snode<>'null' then
+"if $1='new' and auto='y' then $node->studyid+'_'+$node etc, pmove"
+            if $firstnode='y' then
+              $firstnode='n'
+              xm1('pmove '+$node+' '+$snode) 
+            else
+              xmaction('testmovemake',$node,$snode) 
+            endif
+          endif
+"replace with move enterSQ node"
+          $snode=$node
+        endif
+      endif
+    elseif ($s1[$i]='Protocol xxx') then///////
+      if ($sc <> '') then
+        xm1($sc) $sc=''
+        $tt=$title+' '+$node
+        if $status<>'' then $tt=$tt+' ['+$status+']' endif
+        $sc=$sc+'set '+$node+' tooltext "'+$tt+'";'
+        xm1($sc) $sc=''
+"use this just to set tooltext, not other attr's?"
+      endif
+      $node='' $ldir=''
+      xm1('mkdir'):$node,$ldir
+      xm1('add new protocol')
+"replace with add enterSQ entry"
+      if $node<>'' then
+        if ($aqstudy<>'') then
+          $node=$aqstudy+'_'+$node
+        endif
+        
+        ///////xm1('set','new','id',$node)
+        if $snode<>'' then  "always true"
+"vnmrjcmd('SQ set tmpstudy lock on')" "it works"
+          if $snode<>'null' then
+"if $1='new' and auto='y' then $node->studyid+'_'+$node etc, pmove"
+            if $firstnode='y' then
+              $firstnode='n'
+              xm1('pmove '+$node+' '+$snode) 
+            else
+              xmaction('testmovemake',$node,$snode) 
+            endif
+          endif
+"vnmrjcmd('SQ set tmpstudy lock off')"
+"replace with move enterSQ node"
+          $snode=$node
+        endif
+      endif
+    endif
+    repeat
+      $i=$i+1
+      $si=$s1[$i]
+      if ($si<>'Action' and $si<>'Protocol') then
+        if $si='title' then
+          $title=$s2[$i]
+        elseif ($si='status' and $s2[$i]<>'protocol') then
+          if $skipstat<>'' then $s2[$i]=$skipstat endif
+          $status=$s2[$i]
+        endif
+        if ($node<>'') then
+          if ($si<>'time_created' and $si<>'application') then
+"           write('file',$ldir+'/prop','%s %s',$si,$s2[$i])"
+            xm1('writeprop',$ldir+'/prop',$si,$s2[$i])
+          endif
+          $sc=$sc+'set '+$node+' '+$si+' "'+$s2[$i]+'"; '
+        else
+          $sc=$sc+'set new '+$si+' "'+$s2[$i]+'"; '
+        endif
+      endif
+    until ($i>=$size or $k>$kmax or $si='' or $si='Action' or $si='Protocol')
+  endif
+until ($i>=$size or $k>$kmax or $si='')  "or $si='Protocol'"
+
+if ($sc <> '') then
+  xm1($sc)
+  $tt=$title+' '+$node
+  if $status<>'' then $tt=$tt+' ['+$status+']' endif
+  $sc='set '+$node+' tooltext "'+$tt+'";'
+  xm1($sc)
+endif
+
+if $node<>'' then
+" $cmd='get '+$node+' sqattr sqval xmaction(`click`,`'+$node+'`)'"
+" xm1($cmd)" "fix copyid[1]"
+" just set copyid[1]? don't need click"
+  copyid[1]=$node
+endif
+
+$writesq='y'
+if $#>3.5 then if $4='nowritesq' then
+  $writesq='n'  // if adding several nodes, only write sq at end
+endif endif
+if ($writesq='y' and $sdir<>'' and $activestudy<>'null') then
+  xmdelete('emptytrash')
+  sqfilemenu('init')
+  if ($studyid<>studyid) then
+    xmwritesq('studyid=\\\''+studyid+'\\\' sqdir=\\\''+sqdir+'\\\'')
+  else
+    xmwritesq
+  endif
+"if enterSQ/all prop files correct, just need xmwritesq('write','show')"
+endif
+
+// add to enterQ/nightQ of submitted sample
+if ($aqstudy<>'') then
+  $eqfile=autodir+'/enterQ'
+  if ($aq='nightQ') then
+    xmtime('getq'):$curQ
+    $nqfile=autodir+'/nightQ'
+    exists($nqfile,'file'):$e
+    if ($curQ='day' and $e=1) then
+      $str='' lookup('mfile',$nqfile,'read'):$str
+      if $str<>'' then
+        $eqfile=$nqfile
+      endif
+    endif
+  endif
+  $aqtext=''
+  exists($aqdir+'/text','file'):$e
+  if ($aqdir<>'' and $e>0.5) then
+    lookup('mfile',$aqdir+'/text','readline'):$aqtext
+  endif
+  expactive('auto'):$acq
+  if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+    autosa
+  endif
+  $origfile=$eqfile
+  $eqfile=$eqfile+'.add'
+  $i=0 $add='n'
+  repeat
+    $i=$i+1
+    if $s1[$i]='Protocol' then
+      $add='n'
+    elseif $s1[$i]='Action' then
+      $add='y'
+    endif
+    if ($add='y' and $s1[$i]='title') then
+      $title=$s2[$i]
+      xmenter($aqloc,$aqrack,$aqzone,studyid,$aqtext,$title,$eqfile,$aqsolv,$aqop,$sttime)
+      xmentermv($origfile,$eqfile,'insert',studyid,$epos)
+      $epos=$epos+1
+      $add='n'
+    endif
+  until ($i>=$size)
+  if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+    autora
+  endif
+endif
+
+if $skipstat<>'' then
+  write('error','Skipped %s, %g min remaining on sample %s.',$skiptitle,$remain,studyid)
+endif
+
+sqdir=$sqdir
+studyid=$studyid
+
+if ($removetmp='y') then
+  xm1('studydir'):$sdir
+  $ff=$sdir+'/enterSQ'
+  exists($ff,'file'):$e
+  if ($e) then
+    rm('-rf',$sdir):$x
+    xm1('delete tmpstudy')
+    xmdelete('emptytrash')
+    cqinit('n')
+  endif
+endif
+
+return($node)

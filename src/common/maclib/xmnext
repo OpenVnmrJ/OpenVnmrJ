@@ -1,0 +1,153 @@
+"macro xmnext"
+"xmnext - execute the next step in a study"
+"Used with all studies, e.g. imaging, liquids, walkup, etc."
+
+"sqattr sqval - parameters used in study queue node"
+"sqval[1-9 or 10] - all variable position, assigned by xmreadnode"
+"actionid=node id of study element to use for acq "
+
+if (sqmode='stop' and auto<>'y') then
+" banner('Queue stopped')"
+  sqmode='pause'
+  xm1('pause')
+  abort
+endif
+
+$activestudy=activestudy[1]
+if (auto='y') then
+  $activestudy=studyid
+endif
+"activestudy set in startq, xmwexp, don't need it here?"
+
+xm1('studydir'):$sdir
+if ($sdir='') then
+  write('line3','Cannot find study directory.')
+  return
+endif
+
+if ($activestudy='null' or $activestudy<>studyid) then
+  write('line3','No study active.')
+  return
+endif
+
+$sqfile=$sdir+'/enterSQ'
+exists($sqfile,'file'):$e
+if $e<0.5 then
+  write('line3','No experiments in study.')
+  sqmode='pause'
+  sqfilemenu('init')
+  if auto<>'y' then xm1('pause') endif
+  return
+endif
+
+$attr='' $val='' $qexp=''
+readfile($sqfile,'$attr','$val','','local'):$qsize
+"write a command to speed up reading prop files?"
+$i=0 $actid=''
+$qexp='' $status='' $lock=''
+repeat
+  $i=$i+1
+  xmgetatts($attr[$i],'exp','status','lock'):$qexp,$status,$lock
+  if $actid='' then
+    if ($qexp<>'null') then
+      if (sqmode='go') then
+        if ($status='Queued') then
+          $actid=$attr[$i]
+        endif
+      elseif ($lock='off' and ($status='Ready' or $status='Customized' or $status='Active')) then
+        $actid=$attr[$i]
+      endif
+    endif
+  endif
+until ($actid<>'' or $i>=$qsize)
+if ($actid='') then
+  xmendq
+  return
+endif
+actionid=$actid
+if (actionid='null') then
+  write('line3','No study node active.')
+  return
+endif
+xmreadnode(actionid) "sets sqval,sqattr"
+
+$type='' $id='' $status=''
+$id=actionid
+teststr('sqattr','type','global'):$i
+if $i>0 then $type=sqval[$i] endif
+teststr('sqattr','status','global'):$i
+if $i>0 then $status=sqval[$i] endif
+
+if ($type = '') then
+  xmendq
+  return
+endif
+
+"run that macro"
+if ($type='CMD' or $type='RTCMD') then
+  xmsetatts(actionid,'status','Active','lock','on')
+endif
+$actionid=actionid
+if appmode='imaging' then
+  xmselect('macro',$id)
+else
+  xmselect('execmacro','n',$id)
+endif
+
+"use prescan[10] for scout"
+$psize=size('prescan')
+if ($psize>9.5) then if (prescan[10] <> '') then
+  exec(prescan[10])
+endif endif
+
+if wshim='g' then wshim='n' endif
+
+actionid=$actionid
+xmgetatts($actionid,'status'):$status
+if ($status='Skipped') then
+  xmnext
+  return
+endif
+
+if ($type='CMD' or $type='RTCMD') then
+  if ($status <> 'Executing') then
+    xmwexp
+  endif
+else
+
+" do global prescan before any expts"
+  $acquire=''
+  xmprescan('chain'):$acquire
+  if ($acquire='no') then
+    return
+  endif
+
+"don't do paramvi('sqval')?"
+  $dir=$sdir+'/info/'+actionid
+  exists($dir,'directory'):$e
+  if ($e < 0.5) then
+    mkdir($dir)
+  endif
+  xmsetatts(actionid,'status','Active')
+  $status='Active'
+" xm1('updtexplist')"
+  xm1('checklock')
+
+  if ($status='Active' and (sqmode='go' or auto='y')) then
+    rm('-f',curexp+'/psgdone'):$dum
+    acquire
+    if (auto='y') then
+      exists(curexp+'/psgdone','file'):$e
+      if ($e < 0.5) then  // psg failed
+         xmsetatts(actionid,'status','Error','time','null','data','null')
+         cqsavestudy
+         exists(userdir+'/psg.error','file'):$e
+         if ($e > 0.5) then
+           copy(userdir+'/psg.error',$dir+'/acqlog')
+         endif
+      endif
+    endif
+  else  "not used"
+    if auto<>'y' then xm1('pause') endif
+  endif
+endif

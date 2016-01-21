@@ -1,0 +1,48 @@
+"macro AT16"
+"AT16" " Turnon Test "    
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Pulse Turnon Test') 
+   at_currenttest='turnon_ch1'
+   tpwr=tpwr-6 ph
+   getlimit('tpwr'):$max,$min,$step
+   if ($step=1) then         
+    setlimit('pw',100,0,.025)
+    array('pw',37,0.1,.025)
+   else                    "latest RF"
+    setlimit('pw',100,0,.0125)
+    array('pw',37,0.025,.0125)
+   endif
+
+   ss=2
+   wnt='ATwft select(celem) aph0 vsadj dssh dtext'
+   wexp='AT16(`PART1`)'  
+   ATcycle
+   au
+   write('line3','Pulse Turnon Test ')
+   dps
+elseif ($1='PART1') then
+   wft
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+     pap ATpltext 
+     pps(120,0,wcmax-120,90)
+     ATpage
+    endif
+   endif
+   select(arraydim) aph0 
+   f peak:$ht,cr rl(0) sp=-1p wp=2p vsadj dssh dtext  
+   ATreg6
+   ATpl3:$turnon,$corrcoef
+   $turnon=trunc($turnon) $corrcoef=trunc(1000*$corrcoef)/1000
+   ATrecord('TURNONch1','Pulse Turnon Time (nsec) ','time  ',$turnon,'  corr_coef.',$corrcoef)
+   write('file',autotestdir+'/REPORT','Pulse Turnon Time : %2.0f nsec.-Corr. Coef. = %1.3f ',$turnon,$corrcoef)
+   if (at_plotauto='y') then
+    ATpltext(100,wc2max-5)
+    full wc=50 pexpl ATpage 
+   endif
+   ATsvf
+
+ATnext
+endif

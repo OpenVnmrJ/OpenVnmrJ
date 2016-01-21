@@ -1,0 +1,56 @@
+"macro aipVs"
+
+" Extract the dmin or dmax value from the aipVsFunction string "
+" Example: aipVs('dmin'):r1 "
+" Set the dmin or dmax in the aipVsFunction string "
+" Example: aipVs('dmin', 0.001)"
+
+$bad = 0
+if ($# < 1) then
+    $bad = 1
+elseif ($1 <> 'dmax' and $1 <> 'dmin') then
+    $bad = 1
+endif
+if ($bad) then
+    write('error','Usage: '+$0+'(\'dmin\'|\'dmax\'):retvalue  or  '+$0+'(\'dmin\'|\'dmax\', setvalue)')
+    abort
+endif
+
+$r1=0
+$n1=''
+if ($# = 1) then
+    $tail=''
+    strstr(aipVsFunction+' ', $1+' ', 'last'):$r1,$n1,$tail
+   "$tail?"
+    $val=0
+    if($tail <> '') then
+      strstr($tail, ' '):$r1,$val,$n1
+      "$val?"
+    endif
+    return($val)
+elseif ($# = 2) then
+    if ($1 = 'dmax') then
+        $dmax=''
+        write('line3','%g',$2):$dmax
+        $pre=''
+        $post=''
+        strstr(aipVsFunction, 'dmax'):$idx,$pre,$post
+        aipVsFunction=$pre+' dmax ' + $dmax
+    elseif ($1 = 'dmin') then
+        $dmin=''
+        write('line3','%g',$2):$dmin
+        $pre='' $pre2='' $pre3=''
+        $post='' $post2='' $post3=''
+        strstr(aipVsFunction, 'dmin'):$idx,$pre,$post
+        strstr($post, 'dmax'):$idx,$pre2,$post2
+        strstr($post2, 'dmin'):$idx,$pre3,$post3
+        if ($idx > 0) then
+            $post2 = $pre3  " Strip off trailing junk "
+        endif
+        aipVsFunction=$pre+' dmin ' + $dmin + ' dmax' + $post2
+    else
+        return
+    endif
+    aipSetVsFunction('cmd', aipVsFunction)
+    aipSetVsFunction('hist')
+endif

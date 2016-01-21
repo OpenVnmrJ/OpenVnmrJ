@@ -1,0 +1,196 @@
+"macro QuickSubmit_admin"
+" Varian"
+
+"*********************************************************************"
+if ($# < 1) then return endif
+$arg=$1
+
+$QSdir=userdir+'/persistence/QuickSubmit/'+operator
+exists($QSdir,'directory'):$direx
+if ($direx=0) then shell('mkdir -p '+$QSdir):$dum endif
+
+$file1=$QSdir+'/QSfile'
+$expfile=$QSdir+'/QSfile_EXPLIST'
+$longfile=$QSdir+'/QSfile_LONGLIST'
+$customfile=$QSdir+'/QSfile_Customization'
+$customparfile=$QSdir+'/QSfile_custompar'
+$customdefpar=$QSdir+'/QSfile_defaultpar'
+$fidlog=$QSdir+'/QSfile_FidLog'
+$vbgacqlog=$QSdir+'/QSfile_vbgacqlog'
+$msglog=$QSdir+'/QSfile_MsgLog'
+$file2=$QSdir+'/QSfile_param'
+$xmlname=$QSdir+'/QSfile_param'
+$file3=$QSdir+'/QSfile_param_fresh'
+$file4=$QSdir+'/QSfile_queue2'
+$file5=$QSdir+'/QSfile_queue3'
+$error=$QSdir+'/QSfile_error'
+$message=$QSdir+'/QSfile_message'
+$tmpcsv=$QSdir+'/QuickSubmit.csv'
+$newstudy=$QSdir+'/QSfile_newstudy'
+
+"*********************************************************************"
+IF ($arg='admin') THEN
+
+   operights('cansetpreferences'):$ok
+   if ($ok=0) then
+	write('line3','%s does not have permission to set Exp List'):$msg
+	QuickSubmit('Write','',$msg,$arg)
+	return
+   endif
+   if ($#< 2) then $2='init' endif
+   $arg2=$2
+   write('file',$msglog,'%s(\'%s\',\'%s\')',$0,$arg,$arg2)
+   $QSadmdir=userdir+'/persistence/QuickSubmit/Admin'
+   exists($QSadmdir,'directory'):$dir2ex
+   if ($dir2ex=0) then shell('mkdir -p '+$QSadmdir):$dum endif
+
+   $opmenu1=$QSadmdir+'/opMenu1'
+   $opmenu2=$QSadmdir+'/opMenu2'
+   $elfile2=$QSadmdir+'/opExpList'
+
+   if ($arg2='init') then
+	$operators=''
+	$oplist=systemdir+'/adm/users/profiles/user/'+owner
+	exists($oplist,'file'):$opex
+	if ($opex) then
+	   $s1='' $s2='' $s3=''
+	   readfile($oplist,'$s1','$s2','operators','local'):$tot
+	   string2array($s2[1]):$operators
+	endif
+	write('reset',$opmenu1)
+	write('reset',$opmenu2)
+	write('file',$opmenu1,'"%s" "%s"',owner,owner)
+	$tot=size('$operators')
+	$i=1
+	repeat
+	   if ($operators[$i]<>owner) and ($operators[$i]<>'') then
+		write('file',$opmenu1,'"%s" "%s"',$operators[$i],$operators[$i])
+	   endif
+	   $i=$i+1
+	until $i > $tot
+	write('file',$opmenu1,'"Default" "default"')
+	shell('cp '+$opmenu1+' '+$opmenu2)
+	write('file',$opmenu2,'"All" "all"')
+	write('file',$opmenu1,'"" ""')
+	write('file',$opmenu2,'"" ""')
+
+	QSpar[19]='admin'
+	QSpar[20]=operator
+	QSpar[21]=operator
+	QuickSubmit('Write','','')
+	QuickSubmit('admin','ExpList',QSpar[20])
+	return
+   elseif ($arg2='ExpList') then
+
+        write('reset',$elfile2)
+	if ($3<>'') then
+	    $elfile=userdir+'/persistence/ExperimentList_'+$3
+	    exists($elfile,'file'):$fex
+	    if ($3='default') then $fex=0 endif
+	    if ($fex=0) then
+	   	$elfile=userdir+'/persistence/ExperimentList_'+owner
+	   	exists($elfile,'file'):$fex
+	    endif
+	    if ($fex=0) then
+	   	exists('ExperimentList','adm/walkupadm'):$fex,$elfile
+	    endif
+	    if ($fex) then
+	   	shell('cp '+$elfile+' '+$elfile2):$dum
+	    endif
+	endif
+	QuickSubmit('Write','','')
+	return
+
+   elseif ($arg2='Validate') then
+
+        if ($3<>'all') and ($3<>'default') then
+            $oper=$3
+        else
+            $oper=owner
+        endif
+        $ProfileList=''
+        getExpList($oper):$ProfileList
+
+	$s1='' $s2=''
+	shell('touch '+$elfile2):$dum
+	readfile($elfile2,'$s1','$s2','','local'):$total
+	$err=0 $msg=''
+	if ($total) then
+	  $i=1
+	  repeat
+	    $list='' substr($s1[$i],1):$list
+	    ckstring($list):$list
+	    if ($list<>$s1[$i]) then
+		$err=1
+		$msg=$msg+' '+$s1[$i]+' is an invalid string;'
+	    else
+                if ($ProfileList[1]='') then $protex=1
+                else
+                    teststr('$ProfileList',$list,'local'):$protex
+                endif
+                if ($protex=0) then
+                    $err=1
+                    $msg=$msg+' '+$list+' is not in the profile for '+$oper+';'
+                else
+	            exists($list+'.xml','templates/vnmrj/protocols'):$protex
+		endif
+	        if ($protex=0) then
+		    $err=1
+		    $msg=$msg+' macro/protocol not found for '+$list
+		else
+        	    $dialog='no'
+        	    walkupQ_dialog($2):$dialog
+        	    if ($dialog='yes') then
+                   	$msg=''
+//                   	write('line3','%s requires user input. Cannot be added from this submission tool',$list):$msg
+		write('line3','%s',$list)
+			$err=1
+		    endif
+	        endif
+	    endif
+	    $i=$i+1
+	  until $i > $total
+	else
+	  $err=1 $msg='No Experiment in the List'
+	endif
+	if ($err) then
+                QuickSubmit('admin','ExpList',$3)
+		QuickSubmit('Write','',$msg,$1+' '+$2)
+		return(0,'')
+	else
+		return(1,$s1)
+	endif
+
+   elseif ($arg2='Save') then
+        if ($3='') then return endif
+	$ok=0 $list=''
+	QuickSubmit('admin','Validate',$3):$ok,$list
+	if ($ok=0) then return endif
+	if ($3='default') then
+	    $elfile=userdir+'/persistence/ExperimentList_'+owner
+	elseif ($3='all') then
+            $elfile=userdir+'/persistence/ExperimentList_'+owner
+	    shell('rm -f '+userdir+'/persistence/ExperimentList_*'):$dum
+	else
+	    $elfile=userdir+'/persistence/ExperimentList_'+$3
+	endif
+	write('reset',$elfile)
+	$size=size('$list')
+	$i=1
+        repeat
+	    write('file',$elfile,'%s',$list[$i])
+	    $i=$i+1
+	until $i > $size
+	QuickSubmit('admin','ExpList',$3)
+	$msg='Experiment List Saved for '+$3
+	QuickSubmit('Write',$msg,'',$1+' '+$2)
+	return
+   elseif ($arg2='Done') then
+	QSpar[19]='no'
+	QuickSubmit('Write','','')
+	QuickSubmit('setupexpmenu')
+	return
+   endif
+
+"*********************************************************************"
+ENDIF

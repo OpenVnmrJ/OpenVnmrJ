@@ -1,0 +1,23 @@
+"macro reset_hetcorpmlgcp2d_1"
+// Set PMLG and Tilt Pulse
+
+if ((qHpmlg > -3.0) and (qHpmlg < 3.0)) then qHpmlg = -3 endif
+$qHpmlg = qHpmlg
+if ($qHpmlg < 0.0) then $qHpmlg = -$qHpmlg endif
+
+aHpmlg = aH90
+$pwHpmlg = sqrt(2.0/3.0)*4.0*pwH90
+pwHpmlg = (0.1*$qHpmlg)*trunc(($pwHpmlg/($qHpmlg*0.1)) + 0.5)
+pwHtilt = 0.1*trunc(pwH90*35.3/(90.0*0.1) + 0.5)
+
+$aHpmlg = ($pwHpmlg/pwHpmlg)*aHpmlg
+aHpmlg = trunc($aHpmlg + 0.5)
+
+if (nHpmlg < 1) then nHpmlg = 1 endif // cycles per waveform
+
+// Synchronize the F1 Dwell with 4.0 PMLG Cycles
+
+if (pwHpmlg > 0.0) then
+   sw1 = 1.0/(8.0*pwHpmlg*1e-6)
+endif
+

@@ -1,0 +1,710 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template element="panels" type="acquisition" >
+  <group loc="0 0" size="360 730"
+    label="Craft"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="no"
+    enable="no"
+    reference="Craft"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    rows="1"
+    columns="1"
+    >
+<!-- CRAFT panel is not valid group -->
+    <group loc="0 0" size="360 730"
+      vq="craftnmrparRef seqfil file layout craftpath arraydim"
+      show="$r=0 craft('validate4VP'):$r $SHOW=(($r&lt;0.5) or (craftnmrpar[1]='y'))"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Untitled"
+      rows="1"
+      columns="1"
+      >
+      <label loc="25 75" size="300 25"
+        style="Heading2"
+        label="Current workspace - CRAFT compatibility:"
+        />
+      <textmessage loc="75 105" size="250 20"
+        style="Heading5"
+        label="Workspace data is invalid for CRAFT"
+        vq="arraydim seqfil layout craftpath"
+        set="if craftnmrpar[1]='y' then $VALUE='CRAFT popup is open' else getdim:$dim is_submitmode:$s if arraydim=1 then getvalue('arraydim','processed'):$adim else $adim=arraydim endif $c=0 is_cpfid:$c if $s then $VALUE='Workspace in submit mode' elseif not $c then $VALUE='Workspace data is not in a valid study' elseif $dim&gt;1 then $VALUE='Workspace data is not a 1D' elseif ($adim&gt;1) then $VALUE='Workspace has arrayed data' else $VALUE='Workspace data is invalid for CRAFT' endif endif"
+        />
+    </group>
+
+<!-- CRAFT panel is valid group -->
+    <group loc="0 0" size="360 730"
+      vq="seqfil file layout craftpath craftnmrparRef arraydim"
+      show="$r=0 craft('validate4VP'):$r $SHOW=(($r&gt;0) and (craftnmrpar[1]&lt;&gt;'y'))"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Untitled"
+      rows="1"
+      columns="1"
+      >
+
+<!-- Analysis group -->
+      <group loc="5 5" size="350 70"
+        style="Heading1"
+        label="CRAFT analysis"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="craftanalysis"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <button loc="180 20" size="155 20"
+          style="Heading2"
+          label="Between cursors"
+          vq="file arraydim procdim craftpath"
+          vc="craftllout('autocraft','cursors')"
+          show="$S=0 craftllout('autocraft','isOK'):$S $ENABLE=($S&gt;0.5)*2-1"
+          bg="transparent"
+          decor1="yes"
+          tooltip="CRAFT between cursors"
+          halignment="Center"
+          valignment="Center"
+          />
+        <button loc="15 20" size="155 20"
+          style="Heading2"
+          label="Displayed region"
+          vq="file arraydim procdim craftpath"
+          vc="craftllout('autocraft','display')"
+          show="$S=0 craftllout('autocraft','isOK'):$S $ENABLE=($S&gt;0.5)*2-1"
+          bg="transparent"
+          decor1="yes"
+          tooltip="CRAFT current display"
+          halignment="Center"
+          valignment="Center"
+          />
+        <check loc="75 45" size="250 20"
+          style="Heading2"
+          label="CRAFT LineList options"
+          vq="craftpath file cllin cllinstr"
+          vc="craftllout('cllindefault')"
+	  vc2="cllin[1]=0"
+	  set="$VALUE=(cllin[1]&gt;0.5)"
+	  show="$S=0 exists('craftpath','parameter'):$S $ENABLE=($S&lt;0.5)*2-1"
+          bg="transparent"
+          halignment="Center"
+          valignment="Center"
+          />
+      </group>
+
+<!-- Display group -->
+      <group loc="5 80" size="350 200"
+        style="Heading1"
+        label="CRAFT display"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="craftdisplay"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <group loc="0 5" size="330 190"
+          vq="craftpath"
+          show="exists('craftpath','parameter'):$P $SHOW=($P&gt;0.5)"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          rows="1"
+          columns="1"
+          >
+          <group loc="175 10" size="155 130"
+            style="Heading2"
+            label="Individual Models"
+            vq="cllin file arraydim seqfil layout"
+            border="LoweredBevel"
+            tab="no"
+            enable="no"
+            reference="IndividualModels"
+            useref="no"
+            subtype="Titled"
+            expanded="yes"
+            rows="1"
+            columns="1"
+            >
+	    <group loc="0 20" size="155 105"
+	      vq="cllin file arraydim seqfil layout"
+              show="craftllout('get',9):$r $SHOW=($r&lt;-0.5)"
+	      >
+              <label loc="5 40" size="145 20"
+                style="Heading1"
+                label="Not applicable"
+                vq="arraydim cllin craftllTable"
+	        justify="Center"
+                />
+	      </group>
+	    <group loc="0 20" size="155 105"
+	      vq="cllin file arraydim seqfil layout"
+              show="craftllout('get',9):$r $SHOW=($r&gt;-0.5)"
+	      >
+              <radio loc="15 60" size="130 20"
+                style="Label1"
+                label="Between (ppm)"
+                vq="arraydim craftpath cllin seqfil layout"
+                vc="cllin[13]=2 craftllout('display')"
+                vc2="cllin[13]=cllin[13]"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                set="$VALUE=(cllin[13]&gt;1.5)"
+                />
+              <radio loc="15 40" size="125 20"
+                style="Label1"
+                label="Displayed region"
+                vq="arraydim craftpath cllin seqfil"
+                vc="cllin[13]=1 craftllout('display')"
+                vc2="cllin[13]=cllin[13]"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                set="$VALUE=((cllin[13]&gt;0.5) and (cllin[13]&lt;1.5))"
+                />
+              <radio loc="15 20" size="130 20"
+                style="Label1"
+                label="All"
+                vq="arraydim craftpath cllin seqfil"
+                vc="cllin[13]=0 craftllout('display')"
+                vc2="cllin[13]=cllin[13]"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                set="$VALUE=(cllin[13]&lt;0.5)"
+                />
+              <textmessage loc="5 0" size="145 20"
+                style="Info"
+                label=" "
+                vq="arraydim cllin craftllTable"
+                set="$v='' exists('craftllTable','parameter'):$pex  if cllin[9]&gt;0.5 and $pex then getvalue('arraydim','processed'):$dim $v2='' format(cllin[12],'lower'):$v2 format($dim-5,'lower'):$v $v='['+$v2+' / '+$v+' displayed]' endif $VALUE=$v"
+                />
+              <entry loc="100 82" size="40 20"
+                style="PlainText"
+                vq="cllin"
+                vc="format('$VALUE','isreal'):$real if $real then cllin[15]=$VALUE craftllout('display') endif"
+                set="$VALUE=cllin[15]"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                digits="2"
+                />
+              <label loc="70 82" size="30 20"
+                style="Label1"
+		label="and"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                justify="Center"
+                />
+              <entry loc="30 82" size="40 20"
+                style="PlainText"
+                vq="cllin"
+                vc="format('$VALUE','isreal'):$real if $real then cllin[14]=$VALUE craftllout('display') endif"
+                set="$VALUE=cllin[14]"
+                show="$ENABLE=(cllin[9]&gt;0.5)*2-1"
+                digits="2"
+                />
+	      </group>
+            </group>
+          <check loc="15 145" size="300 20"
+            style="Heading2"
+            label="Overlay CRAFTed regions of interest"
+            vq="cllin file craftpath layout seqfil arraydim procdim"
+            vc="cllin[16]=1 craftllout('showcraftroi')"
+	    vc2="cllin[16]=0 craftllout('showcraftroi')"
+	    set="$VALUE=cllin[16]"
+            bg="transparent"
+            />
+          <check loc="15 165" size="300 20"
+            style="Heading2"
+            label="Alert any overlapping segments"
+            vq="cllin file craftpath layout seqfil arraydim procdim"
+            vc="cllin[17]=1 craftllout('showoverlap')"
+	    vc2="cllin[17]=0 craftllout('showoverlap')"
+	    set="$VALUE=cllin[17]"
+	    show="$ENABLE=(cllin[17]&gt;-0.5)*2-1"
+            bg="transparent"
+            />
+        <group loc="5 15" size="155 130"
+          vq="craftpath"
+          show="exists('craftpath','parameter'):$P $SHOW=($P&gt;0.5)"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          rows="1"
+          columns="1"
+          >
+          <check loc="10 5" size="140 20"
+            style="PlainText"
+            label="Individual models"
+            vq="cllin craftpath"
+            vc="craftllout('set',9,1) craftllout('display')"
+            vc2="craftllout('set',9,0) craftllout('display')"
+            set="craftllout('get',9):$v $VALUE=($v&gt;0.5)"
+            show="craftllout('get',9):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+            />
+          <check loc="10 25" size="140 20"
+            style="PlainText"
+            label="Models not used"
+            vq="cllin craftpath"
+            vc="craftllout('set',10,1) craftllout('display')"
+            vc2="craftllout('set',10,0) craftllout('display')"
+            set="craftllout('get',10):$v $VALUE=($v&gt;0.5)"
+            show="craftllout('get',10):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+            />
+	  <group loc="0 45" size="140 80"
+	    vq="cllin craftpath arraydim file"
+	    show="getvalue('arraydim','processed'):$dim craft_StudyPath(craftpath):$c $SHOW=(($dim&lt;128) or ($c&lt;1.5))"
+	    >
+            <check loc="10 0" size="140 20"
+              style="PlainText"
+              label="LineList model"
+              vq="cllin craftpath"
+              vc="craftllout('set',8,1) craftllout('display')"
+              vc2="craftllout('set',8,0) craftllout('display')"
+              set="craftllout('get',8):$v $VALUE=($v&gt;0.5)"
+              show="craftllout('get',8):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+              />
+            <check loc="10 20" size="140 20"
+              style="PlainText"
+              label="CRAFT residual"
+              vq="cllin craftpath"
+              vc="craftllout('set',7,1) craftllout('display')"
+              vc2="craftllout('set',7,0) craftllout('display')"
+              set="craftllout('get',7):$v $VALUE=($v&gt;0.5)"
+              show="craftllout('get',7):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+              />
+            <check loc="10 40" size="135 20"
+              style="PlainText"
+              label="CRAFT spectrum"
+              vq="cllin craftpath"
+              vc="craftllout('set',6,1) craftllout('display')"
+              vc2="craftllout('set',6,0) craftllout('display')"
+              set="craftllout('get',6):$v $VALUE=($v&gt;0.5)"
+              show="craftllout('get',6):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+              />
+            <check loc="10 60" size="125 20"
+              style="PlainText"
+              label="Exp spectrum"
+              vq="cllin craftpath"
+              vc="craftllout('set',5,1) craftllout('display')"
+              vc2="craftllout('set',5,0) craftllout('display')"
+              set="craftllout('get',5):$v $VALUE=($v&gt;0.5)"
+              show="craftllout('get',5):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+              />
+	    </group>
+	  <group loc="0 45" size="140 80"
+	    vq="cllin craftpath arraydim file"
+	    show="getvalue('arraydim','processed'):$dim craft_StudyPath(craftpath):$c $SHOW=(($dim&gt;128) and ($c&gt;1.5))"
+	    >
+	    <group loc="0 0" size="140 20" >
+              <radio loc="10 0" size="140 20"
+                style="PlainText"
+                label="LineList model"
+                vq="cllin craftpath"
+                vc="cllin[5]=0 cllin[6]=0 cllin[7]=0 cllin[8]=1 craftllout('display')"
+                vc2="cllin[8]=cllin[8]"
+                set="craftllout('get',8):$v $VALUE=($v&gt;0.5)"
+                show="craftllout('get',8):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+                />
+	      </group>
+	    <group loc="0 20" size="140 20" >
+              <radio loc="10 0" size="140 20"
+                style="PlainText"
+                label="CRAFT residual"
+                vq="cllin craftpath"
+                vc="cllin[5]=0 cllin[6]=0 cllin[7]=1 cllin[8]=0 craftllout('display')"
+                vc2="cllin[7]=cllin[7]"
+                set="craftllout('get',7):$v $VALUE=($v&gt;0.5)"
+                show="craftllout('get',7):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+                />
+	      </group>
+	    <group loc="0 40" size="140 20" >
+              <radio loc="10 0" size="140 20"
+                style="PlainText"
+                label="CRAFT spectrum"
+                vq="cllin craftpath"
+                vc="cllin[5]=0 cllin[6]=1 cllin[7]=0 cllin[8]=0 craftllout('display')"
+                vc2="cllin[6]=cllin[6]"
+                set="craftllout('get',6):$v $VALUE=($v&gt;0.5)"
+                show="craftllout('get',6):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+                />
+	      </group>
+	    <group loc="0 60" size="140 20" >
+              <radio loc="10 0" size="140 20"
+                style="PlainText"
+                label="Exp spectrum"
+                vq="cllin craftpath"
+                vc="cllin[5]=1 cllin[6]=0 cllin[7]=0 cllin[8]=0 craftllout('display')"
+                vc2="cllin[5]=cllin[5]"
+                set="craftllout('get',5):$v $VALUE=($v&gt;0.5)"
+                show="craftllout('get',5):$v2 $ENABLE=($v2&gt;-0.5)*2-1"
+                />
+	      </group>
+	    </group>
+        </group>
+	</group>
+      </group>
+
+<!-- LineList group -->
+      <group loc="5 285" size="350 230"
+        style="Heading1"
+        label="CRAFT LineList"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="craftlinelist"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+	<group loc="0 0" size="350 230"
+	  vq="cllin"
+	  show="$S=0 exists('craftpath','parameter'):$S if $S then $SHOW=1 else $SHOW=(cllin[1]&gt;0.5) endif"
+	  >
+	<group loc="0 160" size="350 70"
+	  vq="craftllTable craftpath file seqfil layout"
+	  show="$P=0 exists('craftllTable','parameter'):$P exists('craftMllTable','parameter'):$P2 $SHOW=(($P&gt;0.5) or ($P2&gt;0.5))"
+	  >
+	  <label loc="15 0" size="300 20"
+	    style="Heading2"
+	    label="Current segment definition"
+	    />
+	  <textmessage loc="25 20" size="300 20"
+	    style="Info"
+	    vq="craftllTable craftpath file seqfil layout"
+	    set="$VALUE='' craftllout('currentsegment'):$VALUE"
+	    />
+          <button loc="75 45" size="200 20"
+            style="Heading2"
+            label="Display current LineList"
+            vq="craftpath file cllin cllinstr"
+            vc="craftllout('showLineList')"
+            bg="transparent"
+            decor1="yes"
+            halignment="Center"
+            valignment="Center"
+            />
+	  </group>
+
+	<group loc="5 150" size="340 1" border="Etched" />
+	<group loc="0 20" size="350 130" >
+	  <label loc="15 0" size="140 20" 
+	    style="Heading2"
+	    label="Define new segments"
+	    />
+          <menu loc="160 0" size="170 20"
+            style="Label1"
+            vq="cllin"
+	    vc="aspRoi('clear') cllin[1]=$VALUE if cllin[1]=5 then craftllout('intZtoROI') elseif cllin[1]=3 then cllinstr[1]='' endif"
+	    set="$VALUE=(cllin[1])"
+            >
+	    <mlabel
+	      label="Automatic threshold"
+	      chval="1"
+	      />
+	    <mlabel
+	      label="Interactive threshold"
+	      chval="2"
+	      />
+	    <mlabel
+	      label="Fingerprint table"
+	      chval="3"
+	      />
+	    <mlabel
+	      label="Interactive regions"
+	      chval="4"
+	      />
+	    <mlabel
+	      label="Integral definitions"
+	      chval="5"
+	      />
+	    </menu>
+	  <group loc="0 25" size="350 45"
+	    vq="cllin cllinstr craftpath"
+	    show="$SHOW=((cllin[1]=1) or (cllin[1]=2))"
+	    >
+	    <group loc="0 20" size="350 45"
+	      vq="cllin cllinstr craftpath"
+	      show="$SHOW=(cllin[1]=1)"
+	      >
+              <label loc="55 0" size="105 20"
+                style="Label1"
+                label="Max. # of peaks"
+                justify="Left"
+                />
+              <label loc="205 0" size="55 20"
+                style="Label1"
+                label="Min S/N"
+                justify="Left"
+                />
+              <entry loc="160 0" size="40 20"
+                style="PlainText"
+                vq="cllin"
+                vc="cllin[2]=$VALUE"
+                set="$VALUE=cllin[2]"
+                digits="0"
+                />
+              <entry loc="260 0" size="40 20"
+                style="PlainText"
+                vq="cllin"
+                vc="cllin[3]=$VALUE"
+                set="$VALUE=cllin[3]"
+                digits="1"
+                />
+	      </group>
+            <entry loc="160 0" size="40 20"
+              style="PlainText"
+              vq="cllin"
+              vc="cllin[4]=$VALUE"
+              set="$VALUE=cllin[4]"
+              digits="1"
+              />
+            <label loc="205 0" size="130 20"
+              style="Label1"
+              label="Hz"
+              justify="Left"
+              />
+            <label loc="55 0" size="105 20"
+              style="Label1"
+              label="Segment width"
+              justify="Left"
+              />
+	    </group>
+
+	  <group loc="0 25" size="350 45"
+	    vq="cllin cllinstr craftpath"
+	    show="$SHOW=((cllin[1]=3))"
+	    >
+            <entry loc="160 0" size="143 20"
+              style="PlainText"
+              vq="cllinstr cllin"
+              vc="cllinstr[1]='$VALUE'"
+              set="$b='' substr(cllinstr[1],'basename'):$b $VALUE=$b"
+              show="$ENABLE=(cllin[1]=3)*2-1"
+              digits="1"
+              />
+	    <textmessage loc="10 0" size="150 20"
+	      style="Heading5"
+	      vq="cllinstr cllin"
+	      set="$ok=1 if (cllin[1]=3) then craftllout('isFP',cllinstr[1]):$ok endif if $ok then $VALUE='' else $VALUE='[Table not found]' endif"
+	      />
+    	    <button loc="305 0" size="25 25"
+      	      style="Heading2"
+	      icon="folder_open_file_24.gif"
+      	      tooltip="Browse..."
+              vq="cllin cllinstr"
+      	      vc="vnmrjcmd('LOC fpBrowser')"
+      	      />
+	    </group>
+
+	  <group loc="0 25" size="350 45"
+	    vq="cllin cllinstr craftpath"
+	    show="$SHOW=((cllin[1]=4))"
+	    >
+            <group loc="160 5" size="35 35"
+              vq="aspMode cllin"
+              show="$SHOW=(aspMode=3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_down.gif"
+                vq="aspMode cllin"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="160 5" size="35 35"
+              vq="aspMode cllin"
+              show="$SHOW=(aspMode&lt;&gt;3)"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi.gif"
+                vq="aspMode cllin"
+                vc="aspSetState(3)"
+                bg="transparent"
+                tooltip="add/define segments"
+                />
+              </group>
+            <group loc="195 5" size="35 35"
+              vq="aspMode cllin"
+              >
+              <button loc="0 0" size="35 35"
+                style="Heading2"
+                icon="roi_delete_all.gif"
+                vq="aspMode"
+                vc="aspRoi('clear')"
+                bg="transparent"
+                tooltip="Delete all"
+                />
+              </group>
+            </group>
+	  <group loc="15 75" size="295 20"
+	    vq="cllin file craftpath"
+	    show="$r=-1 craftllout('get',11):$r $ENABLE=($r&gt;-0.5)*2-1"
+	    >
+	    <check loc="15 75" size="295 20"
+	      vq="cllin file craftpath"
+	      style="Heading2"
+	      label="Use existing cluster spectrum alignment"
+	      vc="cllin[11]=1"
+	      vc2="cllin[11]=0"
+	      set="$VALUE=(cllin[11]&gt;0.5)"
+	      />
+	    </group>
+	  <group loc="75 100" size="200 20"
+	    vq="craftpath file cllin cllinstr"
+	    show="exists('craftpath','parameter'):$P $SHOW=($P&gt;0.5)"
+	    >
+            <button loc="0 0" size="200 20"
+              style="Heading2"
+              label="Generate new LineList"
+              vq="craftpath file cllin cllinstr"
+              vc="craftllout('doLineList')"
+              show="$P=1 if (cllin[1]=0) or ((cllin[1]=3 and cllinstr[1]='')) then $P=0 endif $ENABLE=($P&gt;0.5)*2-1"
+              bg="transparent"
+              decor1="yes"
+              halignment="Center"
+              valignment="Center"
+              />
+	    </group>
+	   </group>
+
+
+	</group>
+      </group>
+
+<!-- Results group -->
+      <group loc="5 520" size="350 95"
+        style="Heading1"
+        label="CRAFT results"
+        border="Etched"
+        side="Top"
+	vq="craftpath file seqfil layout"
+        show="exists('craftpath','parameter'):$P $SHOW=($P)"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="craftresult"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+          <textmessage loc="35 18" size="250 20"
+            style="Info"
+            label=" "
+            vq="craftpath"
+            set="craftllout('size'):$VALUE"
+            />
+          <button loc="20 40" size="150 20"
+            style="Heading5"
+            label="Delete this result"
+            vq="file arraydim procdim craftpath"
+            vc="craftllout('delete') vnmrjcmd('pnew','craftpath')"
+            show="exists('craftpath','parameter'):$P $ENABLE=($P&gt;0.5)*2-1"
+            bg="transparent"
+            decor1="yes"
+            halignment="Center"
+            valignment="Center"
+            />
+          <button loc="180 40" size="150 20"
+            style="Heading2"
+            label="Show parameters"
+            vq="file arraydim procdim craftpath"
+            vc="craftllout('showcraftparams')"
+            bg="transparent"
+            decor1="yes"
+            halignment="Center"
+            valignment="Center"
+            />
+	  <group loc="20 63" size="150 20"
+	    vq="file craftpath seqfil layout"
+	    show="craft_StudyPath(craftpath):$c $SHOW=(($c&gt;0.5) and ($c&lt;1.5))"
+	    >
+            <button loc="0 0" size="150 20"
+              style="Heading2"
+              label="Original FID"
+              vq="file craftpath seqfil layout"
+              vc="craftllout('dndorigdata')"
+              decor1="yes"
+              halignment="Center"
+              valignment="Center"
+              />
+	    </group>
+	  <group loc="20 63" size="150 20"
+	    vq="file craftpath seqfil layout"
+	    show="craft_StudyPath(craftpath):$c $SHOW=($c&gt;1.5)"
+	    >
+            <button loc="0 0" size="150 20"
+              style="Heading2"
+              label="Original cluster"
+              vq="file craftpath seqfil layout"
+              vc="craftllout('dndorigdata')"
+              decor1="yes"
+              halignment="Center"
+              valignment="Center"
+              />
+	    </group>
+          <button loc="180 63" size="150 20"
+            style="Heading2"
+            label="Save as fingerprint"
+            vq="file craftpath seqfil layout craftllTable"
+            vc="craftllout('save2fingerprintlib')"
+	    show="exists('craftllTable','parameter'):$P $ENABLE=($P&gt;0.5)*2-1"
+            decor1="yes"
+            halignment="Center"
+            valignment="Center"
+            />
+      </group>
+      <group loc="5 520" size="350 50"
+        style="Heading1"
+        label="CRAFT results"
+        border="Etched"
+	vq="craftpath file seqfil layout"
+        show="exists('craftpath','parameter'):$P craftllout('dndlastcrft','isok'):$ok $SHOW=(($P&lt;0.5) and ($ok&gt;0.5))"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="craftresult"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <button loc="60 22" size="230 20"
+          style="Heading2"
+          label="Recall recent CRAFT result"
+          vq="file craftpath seqfil layout"
+          vc="craftllout('dndlastcrft')"
+          decor1="yes"
+          halignment="Center"
+          valignment="Center"
+          />
+        </group>
+
+    </group>
+  </group>
+</template>

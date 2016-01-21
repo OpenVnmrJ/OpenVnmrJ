@@ -1,0 +1,156 @@
+"macro exp2panel"
+if ($#<5) then $5=userdir endif
+$tailX='tail'
+whichtail:$tailX
+
+$tmplt=$5+'/adm/walkupadm/exppanels'
+
+is_postvj22b:$newexists
+if ($newexists>0) then
+    exists('exp2protocol','maclib'):$newexists
+endif
+if ($newexists>0) then
+   if ($# < 4) then $4=0 endif
+     exp2protocol($1,$2,$3,$4,$5)
+//     return
+endif
+  
+IF ($1='add') THEN
+
+     exists(userdir+'/adm/walkupadm','directory'):$direx
+     if ($direx=0) then
+	shell('mkdir -p '+userdir+'/adm/walkupadm'):$dum
+     endif
+
+     $isthere=0
+     getappdirs:$atot,$adirs
+     $i=1
+     repeat
+	$tpt1=$adirs[$i]+'/adm/walkupadm/exppanels'
+	exists($tpt1,'file'):$tpex
+	if ($tpex) then
+	   shell('(cat '+$tpt1+' | grep -w '+$2+' | grep -wc '+$3+')'):$isthere
+	   if ($isthere) then return endif
+	endif
+	$i=$i+1
+     until $i > $atot
+
+     $i=1
+     repeat
+        $tpt1=$adirs[$i]+'/adm/walkupadm/exppanels'
+        exists($tpt1,'file'):$tpex
+        if ($tpex) then
+	   shell('cp '+$tpt1+' '+$tmplt):$dum
+	   $i=$atot
+	endif
+        $i=$i+1
+     until $i > $atot
+     exists($tmplt,'file'):$tex
+     if ($tex=0) then return endif
+
+     $s1='' $s2=''
+     readfile($tmplt,'$s1','$s2','userEXP','local'):$total
+     if ($total=0) then
+	write('file',$tmplt,'userEXP1 %s %s',$2,$3)
+     else
+
+     "See if the last line with $2 type has a space to add $3"
+	$lastline=''
+        shell('(cat '+$tmplt+' | grep -n \'^userEXP\' | grep -w '+$2+' | '+$tailX+' -n 1)'):$lastline
+	shell('(echo "'+$lastline+'" | wc -w)'):$ok
+	if ($ok>5) or ($ok < 2) then $lastline='' endif
+		"There is space in the last line for $2 type"
+	if ($lastline<>'') then
+	    $linenum=0 $line=''
+	    strstr($lastline,':'):$ret,$linenum,$line
+	    $line=$line+' '+$3
+	    $totlines=0
+	    shell('(cat '+$tmplt+' | wc -l)'):$totlines
+	    $head=''
+	    format($linenum-1,'lower'):$head
+	    shell('(head -n '+$head+' '+$tmplt+' > '+$tmplt+'1)'):$dum
+	    write('file',$tmplt+'1','%s',$line)
+
+	    if ($totlines-$linenum > 0) then
+		$tail=''
+		format($totlines-$linenum,'lower'):$tail
+		shell('('+$tailX+' -n '+$tail+' '+$tmplt+' >> '+$tmplt+'1)'):$dum
+	    endif
+	    shell('mv '+$tmplt+'1 '+$tmplt):$dum
+
+	else
+		"Add it as last line to the last page"
+	    $lastpage=$s1[$total]
+	    $lastpagenum=0
+	    shell('(cat '+$tmplt+' | grep -cw '+$lastpage+')'):$lastpagenum
+	    if ($lastpagenum<6) then
+		write('file',$tmplt,'%s %s %s',$lastpage,$2,$3)
+	    else
+		"Add it as the first line of a new page"
+		$s4=''
+		sort($s1,'r'):$order,$s4
+		$s5='' $s6=0 $newpage=''
+		strstr($s4[1],'userEXP'):$ret,$s5,$s6	    
+		format($s6+1,'lower'):$newpage
+		$newpage='userEXP'+$newpage
+                write('file',$tmplt,'%s %s %s',$newpage,$2,$3)
+	    endif
+	endif
+     endif
+     if ($newexists<1) then
+	makeCPQpanels
+     endif
+
+ENDIF
+
+IF ($1 = 'delete') THEN
+
+   exists($tmplt,'file'):$tex
+   if ($tex=0) then return endif
+
+        shell('(cat '+$tmplt+' | grep -w '+$2+' | grep -wc '+$3+')'):$ok
+	if ($ok=0) then 
+//		write('error','%s is not a %s in %s',$3,$2,$tmplt)
+		return 
+	endif
+        shell('(cat '+$tmplt+' | grep -v \'^userEXP\' | grep -w '+$2+' | grep -wc '+$3+')'):$ok2
+	if ($ok2>1) then
+		write('error','%s is not a user %s.  Cannot be removed by %s',$3,$2,$0)
+		return
+	endif
+
+	write('reset',$tmplt+'1')
+	write('reset',$tmplt+'2')
+	shell('(cat '+$tmplt+' | grep -v \'^userEXP\' > '+$tmplt+'1)'):$dum
+	shell('(cat '+$tmplt+' | grep \'^userEXP\' | grep -vw '+$2+' >> '+$tmplt+'1)'):$dum
+        shell('(cat '+$tmplt+' | grep \'^userEXP\' | grep -w '+$2+' > '+$tmplt+'2)'):$dum
+
+	$s1='' $s2=''
+	readfile($tmplt+'2','$s1','$s2','userEXP','local'):$total
+	if ($total>0) then
+	  $i=1
+	  repeat
+	     $line=''
+	     $line=$s1[$i]+' '+$s2[$i]
+	     string2array($line):$line
+	     teststr('$line',$3,'local'):$ret
+	     if ($ret) then
+		$line[$ret]='NULL'
+	     endif
+	     array2string($line):$line
+	     shell('(echo "'+$line+'" | wc -w)'):$words
+	     if ($words>3) then
+	     	write('file',$tmplt+'1','%s',$line)
+	     endif
+	     $i=$i+1
+	  until $i > $total
+	endif
+	shell('mv '+$tmplt+'1 '+$tmplt):$dum
+	shell('rm -f '+$tmplt+'1'):$dum
+	shell('rm -f '+$tmplt+'2'):$dum
+        if ($newexists<1) then
+        	makeCPQpanels
+ 	endif
+
+ENDIF
+

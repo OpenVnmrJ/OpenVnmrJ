@@ -1,0 +1,113 @@
+"macro xmhaha_cq2sq"
+  walkupQ_init
+  vnmrjcmd('SQ delete tmpstudy')
+  xmhaha('pause')
+  xmhaha('emptytrash')
+
+  $expfile=cursqexp+'/EXPLIST'
+  $lngfile=cursqexp+'/LONGLIST'
+  $maclibdir=cursqexp+'/macdir'
+  $maclibdirlong=cursqexp+'/macdirlong'
+
+   $oldnode=''
+   if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+	$LIST='SampInfo','fidlog','ACQlist'
+   elseif (resumeQ='resumeq') then
+	$LIST='SampInfo','fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+   elseif (resumeQ='addq') then
+        $LIST='SampInfo','fidlog','ACQlist'
+   else
+	$LIST='SampInfo','fidlog'
+   endif
+   xmhaha('buildsq',archivedir+'/'+sample,$LIST):$oldnode
+
+   $explist='' $longlist=''
+   walkupQ('readlist'):$explist,$longlist
+   $expsize=size('$explist')
+   $lngsize=size('$longlist')
+   if ($explist[1]='') then $expsize=0 endif
+   if ($longlist[1]='') then $lngsize=0 endif
+   if ($oldnode='') then
+      if ($expsize>0) or ($lngsize>0) then
+	xmhaha('grandma'):$oldnode
+      endif
+   endif
+      shell('touch '+$expfile+'1'):$dum
+      shell('(cat '+$expfile+' | grep -wv Queued > '+$expfile+'1)'):$dum
+      shell('mv '+$expfile+'1 '+$expfile):$dum
+      if ($expsize) then
+         $i=1
+         repeat
+            $list=$explist[$i]
+	    $expname='' $ext=''
+	    strstr($list,'_','last'):$isin,$expname,$ext
+	    if ($isin) then
+               shell('(cat '+$expfile+' | grep -w Queued | grep -c \'^'+$list+'\')'):$isin
+	    endif
+            if ($isin=0) then
+                $rtime=0
+                cpexptime($explist[$i],$maclibdir):$rtime
+		$node=$list $sqnode=''
+                $stime='' $stime2='' formattime($rtime):$stime2,$stime
+		$when=''
+		if (wqinit<>'acq') then
+			$when='_day'
+		endif
+		$attr='title',$node+$when,'time',$stime
+		$newnodes=''
+		xmhaha('mknode',$expname,$attr):$sqnode,$newnodes
+                if ($sqnode='') then
+                        $sqnode='xx'+$ext
+                else
+                        $oldnode=$sqnode
+			$tooltip=''
+			cpattribute('get',$maclibdir+'/'+$explist[$i],'ToolText'):$tooltip
+			if ($tooltip<>'') then
+			    xmhaha_setprop($sqnode,'tooltext',$tooltip)
+			endif
+                endif
+                write('file',$expfile,'%s  %d  %s  %s  Queued',$node,$rtime,$expname,$sqnode)
+            endif
+            $i=$i+1
+         until $i> $expsize
+      endif
+
+      write('reset',$lngfile)
+      if ($lngsize) then
+         $i=1
+         repeat
+            $list=$longlist[$i]
+            $expname='' $ext=''
+            strstr($list,'_','last'):$isin,$expname,$ext
+	    if ($isin) then
+               shell('(cat '+$lngfile+' | grep -w Queued | grep -c \'^'+$list+'\')'):$isin
+	    endif
+            if ($isin=0) then
+                $rtime=0
+                cpexptime($longlist[$i],$maclibdirlong):$rtime
+		$node=$list $sqnode=''
+                $stime='' $stime2='' formattime($rtime):$stime2,$stime
+		$attr='title',$node+'_night','time',$stime
+		$newnodes=''
+		xmhaha('mknode',$expname,$attr):$sqnode,$newnodes
+                if ($sqnode='') then
+                        $sqnode='xx'+$ext
+                else
+                        $oldnode=$sqnode
+                        $tooltip=''
+                        cpattribute('get',$maclibdirlong+'/'+$longlist[$i],'ToolText'):$tooltip
+                        if ($tooltip<>'') then
+                            xmhaha_setprop($sqnode,'tooltext',$tooltip)
+                        endif
+                endif
+                write('file',$lngfile,'%s  %d  %s  %s  Queued',$node,$rtime,$expname,$sqnode)
+            endif
+            $i=$i+1
+         until $i> $lngsize
+      endif
+      vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+  if (seqfil='Submitq') and (wqinit<>'acq') then
+	walkupQ('renew')
+  endif
+ walkupQ('time')
+ return($oldnode)

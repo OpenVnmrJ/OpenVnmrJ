@@ -1,0 +1,4 @@
+# 
+#
+: sh
+$vnmrsystem/acqbin/Acqstat &

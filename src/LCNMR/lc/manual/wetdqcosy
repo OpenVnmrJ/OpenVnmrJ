@@ -1,0 +1,103 @@
+*************************************************************
+wetdqcosy - macro for creating wetdqcosy parameters from a WET parameter set
+        (see the dglc parameter screen)
+*************************************************************
+
+  wet - a y/n flag determining whether the WET element is used
+        (which uses pwwet, wetpwr, wetshape, gtw, gzlvlw, and gswet).
+  wetpwr - the power level for the WET element.
+  pwwet - the pw90 pulse width at wetpwr.
+  wetshape - the pulse shape used during the wet element.
+  gtw - the duration of the spoiling gradient (in sec).
+  gzlvlw - the amplitude of the gtw gradient. 
+  gswet - the recovery time following each gradient (try 0.002).
+
+  c13wet - a y/n flag controlling the selective 13C decoupling used during WET
+        (which uses dorwet, dpwrwet, and dmfwet; hardcoded to be WALTZ).
+  dofwet - the 13C decoupler offset used during WET.
+  dpwrwet - the decoupler power level for c13wet.
+  dmfwet - the dmf value used for c13wet.
+
+  dz - the delay following the wet element to allow longitudinal recovery
+        (like a T1IR or WEFT inversion recovering through zero).
+  composit - a y/n flag determining whether a composite read pulse is used.
+
+
+*************************************************************************
+dqcosy :	help file for the double quantum filtered COSY experiment
+*************************************************************************
+
+              PW              PW    PW
+             (v1)            (v2)  (v3)   (oph)
+
+             ****            ****  ****
+             *  *            *  *  *  *
+      D1     *  *     D2     *  *  *  *     AT
+             *  *            *  *  *  *
+***************************************************
+              |                   |
+      <A>     |        <B>        |      <C>
+              |                   |
+
+PW = 90 degree pulse on the observed nucleus
+D1 = relaxation delay  (1-3*T1)
+D2 = evolution time (t1 period)
+AT = acquisition time (t2 period)
+SW = spectral width (usually SW1 = SW, except for PHASE = 3)
+NI = number of t1 increments (set so that SW1/NI = 12)
+PHASE = 1,2  (suggested value)
+
+NOTE:  For PHASE = 3, remember that sw1 = 2*sw (for homonuclear
+       experiments) or that sw1 must be set to TWICE the desired
+       value (for heteronuclear experiments).
+
+SSPUL = 'y':  activates a homospoil-90-homospoil sequence which
+              precedes D1; used to achieve a less oscillatory
+              steady-state for 2D experiments where the recycle
+              time is shorter than T1.
+              Note: homospoil is not available on GEMINI 2000,
+                    therefore SSPUL is ignored.
+
+SS = number of steady-state transients;  if ss < 0, then -ss
+     transients (with phasecycling of pulses and receiver) are
+     performed before EACH experiment in either an arrayed or 2D
+     experiment; if ss > 0, then ss transients are performed before
+     only the first experiment in such cases.
+
+PRESAT = decoupler presaturation period using a decoupler power
+         specified by DHP or DPWR; does not depend on DM but does
+	 depend on DMM; activated as a part of D1 if PRESAT > 0.
+	 Note: PRESAT is ignored on GEMINI 2000. No presaturation
+               is done.
+
+NT = multiple of 16 (PHASE = 0)  (minimum)
+     multiple of  8 (PHASE = 1,2 or 3)  (minimum)
+
+
+
+v1  = phasecycle for first PW pulse
+v2  = phasecycle for second PW pulse
+v3  = phasecycle for third PW pulse
+oph = phasecycle for receiver
+
+v1  =  x  x  x  x  y  y  y  y  x  x  x  x  y  y  y  y
+      -x -x -x -x -y -y -y -y -x -x -x -x -y -y -y -y
+
+v2  =  x  x  x  x  y  y  y  y -x -x -x -x -y -y -y -y
+
+v3  =  x  y -x -y  y -x -y  x
+
+oph =  x -y -x  y  y  x -y -x -x  y  x -y -y -x  y  x
+      -x  y  x -y -y -x  y  x  x -y -x  y  y  x -y -x
+
+
+These phases are for PHASE = 1.  For PHASE = 2, add 90 degrees
+to v1.  For PHASE = 3, add 90*(ix - 1) degrees to v1 where ix
+is the increment counter.  For PHASE = 0, the subcycle for P-type
+peak selection is added in after the basic 4-step cycle of v3.
+
+PHASE =   0:  2D data for AV display (P-type peaks)
+PHASE = 1,2:  2D hypercomplex data (States-Haberkorn method)
+PHASE =   3:  2D TPPI data
+
+NOTE: This pulsequence is not supplied with Mercury or GEMINI 2000

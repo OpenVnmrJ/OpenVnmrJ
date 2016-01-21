@@ -1,0 +1,39 @@
+"macro sna"
+" sna - define artifact region to measure artifact level in an image"
+
+" Details: display the image, e.g. dconi"
+"          specify a box and place it in the noise region and type snn"
+"	   similarly place it in the signal region and type sns"
+"          sns will display the SNR = sns/snr"
+"          previously determined snn value is used for noise value"
+"          now move the box to the phase-encode noice region"
+"          and type sng"
+"	   ghost level(%) is calculated as: 100*(sng-snn)/sns  "
+
+exists('sna', 'parameter'):$ex
+if($ex = 0) then
+   create('sna')
+endif
+mark:$a,$b      "ht, integral, f1, f2)
+sna = $b
+
+exists('sns', 'parameter'):$ex
+if($ex > 0) then
+  if(sns = 0) then
+    write('error','You must first measure signal and noise levels using sns and snn')
+    abort
+  endif
+else
+  write('error','You must first measure signal and noise levels using sns and snn')
+  abort
+endif
+
+exists('snn', 'parameter'):$ex
+if($ex > 0) then
+   $sna = (sna-snn)*100/sns
+   write('line3','Artifact level: \(%5.3f - %5.3f/%5.3f\) = %5.2f percent ',sna,snn,sns,$sna)
+else
+  write('error','You must first measure signal and noise levels using sns and snn')
+  abort
+endif
+dconi('again') dconi('toggle')

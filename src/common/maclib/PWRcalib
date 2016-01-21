@@ -1,0 +1,49 @@
+"macro PWRcalib"
+
+// arg1 - actual pw
+// arg2 - target pw
+// arg3 - power parameter name (not the value)
+// 2nd and 3rd return values are arraystep and arrayinc
+//  This is taken out of Hobs and incorporated here
+
+//  a 10%*$dbstep in pw array would be less than 1 stepsize
+//   We can probably do more rigorous calculation, for the
+//   best array steps, but that will be unnecessary
+
+getlimit($3):$max,$min,$dbstep
+if (console='inova') or (console='mercury') then $dbstep=1 endif
+if $dbstep>0.5 then $dbstep=trunc($dbstep+0.5) else $dbstep=0.5 endif
+
+        $pwinc=0.1*$2*$dbstep
+//  Make it to nearest 50 ns
+        $pwinc=trunc($pwinc*20)/20
+        if $pwinc>1 then $pwinc=1 endif
+        $adim=trunc((4*$2)/$pwinc)
+	if ($adim mod 2) then $adim=$adim+1 endif
+
+if ($1=$2) then return(0,$adim,$pwinc) endif
+
+    $factor=$1/$2
+    ln($factor):$lnfactor
+    $pwrdiff=20*0.43429*$lnfactor
+//    $pwrdiff?
+// pwrdiff will be negative if $1<$2
+
+    if $pwrdiff > 0 then
+// target is not met
+	$pwrdiff=trunc($pwrdiff/$dbstep + 0.5) * $dbstep
+	if $pwrdiff=0 then $pwrdiff=$dbstep endif
+    elseif $pwrdiff < -1*$dbstep then
+// target is met but is more than 1 stepsize away
+        
+	$pwrdiff=trunc(-1.0*$pwrdiff/$dbstep + 0.5) * $dbstep
+        $pwrdiff=-1.0*$pwrdiff
+    else
+// target is met and is less than 1 stepsize away
+	$pwrdiff=0
+    endif
+    if {$3} + $pwrdiff > $max then
+	$pwrdiff=$max-{$3}
+    endif
+
+    return($pwrdiff,$adim,$pwinc)

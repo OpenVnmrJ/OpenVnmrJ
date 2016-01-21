@@ -1,0 +1,51 @@
+"macro Automacrodir"
+"**********************************************************"
+"Automacrodir - Creates subdirectories in sample/dirinfo   "
+"**********************************************************"
+if ($# < 1) then $1='check' endif
+if ($# < 2) then $2='' endif
+
+if ($2<>'new') then
+  isnewexp:$new
+  if (auto='y') then $new=1 endif
+else
+  $new=1
+endif
+
+if ($new) then
+    $archsamp=archivedir+'/'+sample
+else
+    strstr(file,'/scoutfids/'):$ret,$archsamp
+    if ($ret) then
+	exists($archsamp+'/dirinfo','directory'):$ret
+    endif
+    if ($ret=0) then
+    	shell('dirname '+file):$archsamp
+    endif
+endif
+
+"***************************************************"
+IF ($1 = 'make') then
+    Autockdir
+ENDIF
+"***************************************************"
+
+$maclib=$archsamp+'/dirinfo/macdir'
+exists($maclib,'directory'):$direx
+if ($direx=0) then $maclib='' endif
+
+$shapelib=$archsamp+'/dirinfo/shapelib'
+exists($shapelib,'directory'):$direx2
+if ($direx2=0) then $shapelib='' endif
+
+$parlib=$archsamp+'/dirinfo/parlib'
+exists($parlib,'directory'):$direx3
+if ($direx3=0) then $parlib='' endif
+
+$psglib=$archsamp+'/dirinfo/psglib'
+exists($psglib,'directory'):$direx4
+if ($direx4=0) then $psglib='' endif
+
+return($maclib,$shapelib,$parlib,$psglib)
+
+"***************************************************"

@@ -1,0 +1,102 @@
+"macro updatestatus"
+
+if ($# < 2) then return(0) endif
+if ($# < 3) then $3='' endif
+
+$rack='' $zone='' $subtray=''
+$srack='' $szone=''
+format(vrack,'lower'):$srack
+format(vzone,'lower'):$szone
+
+if (traymax=96) or (traymax=768) then
+   $rack=$srack
+   $zone=$szone
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+else
+   $srack='' $szone='' $rack='' $zone=''
+endif
+if ($# > 4) then
+   format($4,'lower'):$zone
+   format($5,'lower'):$rack
+   $subtray='/RACK'+$rack+'ZONE'+$zone
+endif
+if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+$autodir=$1
+$location=''
+if typeof('$2') then
+   format($2,'lower'):$location
+else
+   format($2,0,0):$location
+endif
+$message=$3
+
+$basename=''
+exists($autodir+'/enterQ','file'):$eq
+if ($eq) then
+   $basename='enterQ'
+else
+   shell('basename '+$autodir):$basename
+endif
+$sdir=$autodir+'/'+$basename+'.macdir/studytray'+$subtray+'/loc'+$location
+
+exists($sdir+'/studypar','file'):$sdparex
+if ($message='Empty') then
+   if ($sdparex) then shell('rm -f '+$sdir+'/studypar'):$dum endif
+   clearloccolor($2,$2,$zone,$rack):$dum
+   return(1)
+endif
+
+if ($sdparex=0) then 
+	savestudypar($sdir)
+	exists($sdir+'/studypar','file'):$sdparex
+endif
+if ($sdparex=0) then return(0) endif 
+$locdir=''
+rtv($sdir+'/studypar','noabort','locdir'):$locdir
+
+if ($locdir='') then return(0) endif
+"**************************************************************"
+if ($message='') then
+    $isnight=0 $isday=0
+    shell('(cat '+$autodir+'/'+$basename+' | grep -w MACRO: | grep '+$locdir+' | grep -c day)'):$isday
+    shell('(cat '+$autodir+'/'+$basename+'.macdir/overniteQ | grep -w MACRO: | grep -c '+$locdir+')'):$isnight
+    if ($isnight=0) then
+        shell('(cat '+$autodir+'/'+$basename+' | grep -w MACRO: | grep '+$locdir+' | grep -c night)'):$isnight
+    endif
+    if ($isnight) then
+	$message='NightQueue'
+    elseif ($isday) then
+	$message='Queued'
+    else
+	$message='Complete'
+    endif
+endif
+
+" ****Now proceed ****"
+
+	studystatus=$message
+	writeparam($sdir+'/studypar','studystatus','current','add')
+	exists($autodir+'/'+$basename+'.macdir/'+$locdir+'/Studypar','file'):$spex
+	if $spex then
+		writeparam($autodir+'/'+$basename+'.macdir/'+$locdir+'/Studypar','studystatus','current','add')
+	endif
+ 	bgmode_is:$b
+	shell('touch '+$sdir):$dum
+
+    	$cmd1=''
+    	$cmd='vnmrjcmd(\'tray delta '+$sdir+'\')'
+    	if (opentray[1]<>'close') and (opentray[1]<>'') and (opentray[2]=$autodir) then
+		$cmd1='showtray(\'update\',\''+$autodir+'\')'
+    	endif
+
+	$cmd2=''
+	$cmd2='sides(\'setlocstatus\','+$location+',\''+$message+'\')'
+
+	if ($b < 0.5) then
+		exec($cmd+' '+$cmd1+' '+$cmd2)
+	else
+                xmhaha('sendcmd',$cmd+' '+$cmd1+' '+$cmd2)
+	endif
+
+return(1)

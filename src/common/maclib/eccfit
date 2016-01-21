@@ -1,0 +1,53 @@
+"macro eccfit"
+"eccfit - macro to fit grecovery to an exponential"
+
+
+tcl('stopUpdate')
+
+if $#> 0 then $skip=$1 else $skip=0 endif
+if $#> 1 then $endskip=$2 else $endskip=1 endif
+select(arraydim)
+th=10
+dll fp
+$input=curexp+'/fp.out'
+$output=curexp+'/analyze.inp'
+lookup	('file',$input)
+$i=0
+$ht=0
+lookup('readline',4)
+repeat
+$i=$i+1
+lookup('read',3):$w1,$w2,$w3
+  $ht[$i]=$w3
+until $i>= arraydim
+$i=0
+$inf=0
+repeat
+$i=$i+1
+if $ht[$i] > $inf then $inf = $ht[$i] endif
+until $i>= arraydim
+$i=0
+$out=0
+repeat
+  $i=$i+1
+  $d=1-$ht[$i]/$inf
+if ($i>$skip and $i <= arraydim-$endskip and $d >= -0.001) then
+  $out=$out+1
+  $d2[$out]=d2[$i]
+  if $d>0 then $grad[$out]= 2.45*sqrt($d) +0.16*$d+ 0.48*$d*$d*$d +.08*$d*$d*$d*$d*$d else $grad[$out]=0 endif
+endif
+until $i>= arraydim
+write('reset',$output)
+write('file',$output,'Time\n Amp')
+write('file',$output,'%4.0f%12.0f linear  linear',1,$out)
+write('file',$output,'%4.0f',1)
+$i=0
+repeat
+  $i=$i+1
+  write('file',$output,'%9.8f%12.4f',$d2[$i],$grad[$i])
+until $i>= $out
+analyze('expfit','regression','exp','list')
+scalelimits(0,d2[arraydim-1],0,3.5)
+wc=500
+tcl('startUpdate')
+expl

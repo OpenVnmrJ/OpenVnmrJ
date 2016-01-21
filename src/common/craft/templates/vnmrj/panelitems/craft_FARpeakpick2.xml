@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_FATpeakpick2" element="groups" type="acquisition" >
+	<group size="390 430" 
+          style="Heading1"
+      	  bg="transparent"
+       	  border="None"
+	  reference="craft_FATpeakpick2"
+	  vq="craftAFTpar"
+      	  subtype="Basic"
+      	  expanded="yes"
+	  useref="no"
+	  >
+	  <textmessage loc="130 22" size="60 21"
+	    style="Info"
+	    vq="craftAFTpar"
+	    set="if craftAFTpar[16]=craftAFTpar[18] then $VALUE='(Active)' else $VALUE='' endif"
+	    />
+	  <label loc="30 22" size="100 21"
+	    style="Label1"
+	    label="Review report"
+	    />
+          <filemenu loc="195 22" size="170 21"
+            style="PlainText"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('setreviewdir','$VALUE')"
+            set="$VALUE=craftAFTpar[18]"
+            file="$VALUE=userdir+'/cnmrmodels/Files4xml/AFTreportsMenu'"
+            vq2="craftAFTpar"
+	    type="file"
+            />
+          <button loc="20 45" size="170 20"
+            style="Heading2"
+            label="Copy to desktop"
+            vq="craftAFTpar"
+	    show="exists(craftAFTpar[26],'file'):$fex if $fex then lookup('mfile',craftAFTpar[26],'countline'):$fex endif $ENABLE=($fex)*2-1"
+            vc="if craftAFTpar[28]='mpp' then $arg1='copy2mpp2dt' else $arg1='copy2dt' endif craft_FreqAmpReport($arg1,craftAFTpar[18]+'/'+craftAFTpar[6]+'_CRAFTamplitude_table.txt')"
+            />
+	  <group loc="190 45" size="180 20"
+	    vq="craftAFTpar"
+	    show="$SHOW=(craftAFTpar[27]='y')"
+	    >
+	    <label loc="10 0" size="50 20"
+	      style="Label1"
+	      label="Format"
+	      />
+	    <group loc="60 0" size="60 20" >
+	      <radio loc="0 0" size="60 20"
+		style="Label1"
+		label="Text"
+		vq="craftAFTpar"
+		vc="craftAFTpar[28]='txt'"
+		vc2="craftAFTpar[28]='mpp'"
+		set="$VALUE=(craftAFTpar[28]='txt')"
+		/>
+	      </group>
+	    <group loc="120 0" size="60 20" >
+	      <radio loc="0 0" size="60 20"
+		style="Label1"
+		label="MPP"
+		vq="craftAFTpar"
+		vc="craftAFTpar[28]='mpp'"
+		vc2="craftAFTpar[28]='txt'"
+		set="$VALUE=(craftAFTpar[28]='mpp')"
+		/>
+	      </group>
+	    </group>
+          <textfile loc="10 70" size="370 110"
+            style="PlainText"
+            set="$VALUE=craftAFTpar[26]"
+            editable="no"
+            wrap="no"
+            vq="craftAFTpar"
+            />
+          <button loc="240 185" size="130 20"
+            style="Heading2"
+            label="Display ppm"
+            vq="craftAFTpar"
+	    show="exists(craftAFTpar[26],'file'):$fex if $fex then lookup('mfile',craftAFTpar[26],'countline'):$fex endif $ENABLE=($fex)*2-1"
+            vc="$retpar=0 craft_FreqAmpReport('getSegmentInfo',craftAFTpar[18]):$retpar craft_showmark($retpar)"
+            />
+
+          <button loc="20 185" size="210 20"
+            style="Heading2"
+            label="Display CRAFT models"
+            vq="craftAFTpar"
+	    show="exists(craftAFTpar[26],'file'):$fex if $fex then lookup('mfile',craftAFTpar[26],'countline'):$fex endif $ENABLE=($fex)*2-1"
+            vc="craft_FreqAmpReport('displayfid',craftAFTpar[18])"
+            />
+
+	      <button loc="40 207" size="310 20"
+	        vc="craft_FreqAmpReport('save2fingerprintlib')"
+	        label="Save as reference analyte/fingerprint..."
+		vq="craftAFTpar file"
+	  	show="$r=0 strstr(file,craftAFTpar[18]+'/Fids/'):$r $r2=0 strstr(file,craftAFTpar[18]+'/Fids/'):$r2 $ENABLE=(($r) or ($r2))*2-1"
+	        style="Heading1"
+	        />
+
+	  <group loc="40 229" size="330 42"
+	    vq="craftAFTpar"
+	    show="exists(craftAFTpar[26],'file'):$fex if $fex then lookup('mfile',craftAFTpar[26],'countline'):$fex endif $SHOW=((craftAFTpar[15]&lt;&gt;'1') and ($fex))"
+	    >
+	    <group loc="20 0" size="120 20" >
+	      <radio loc="0 0" size="120 20"
+		style="Label1"
+		label="All studies/FIDs"
+		vq="craftAFTpar"
+		vc="craftAFTpar[29]='a'"
+		vc2="craftAFTpar[29]='s' if craftAFTpar[30]='0' then craftAFTpar[30]='1' endif"
+		set="$VALUE=(craftAFTpar[29]='a')"
+		/>
+	      </group>
+	    <group loc="20 20" size="90 20" >
+	      <radio loc="0 0" size="90 20"
+		style="Label1"
+		label="Study/FID#"
+		vq="craftAFTpar"
+		vc2="craftAFTpar[29]='a'"
+		vc="craftAFTpar[29]='s' if craftAFTpar[30]='0' then craftAFTpar[30]='1' endif"
+		set="$VALUE=(craftAFTpar[29]='s')"
+		/>
+	      </group>
+	      <entry loc="110 20" size="40 20"
+		style="Label1"
+		vq="craftAFTpar"
+		vc="$v='$VALUE' format($v,'isreal'):$vreal if $vreal then craftAFTpar[30]='$VALUE' else craftAFTpar[30]='1' endif"
+		show="$ENABLE=(craftAFTpar[29]='s')*2-1"
+		set="$VALUE=craftAFTpar[30]"
+	        />
+              <button loc="160 20" size="80 20"
+                style="Heading2"
+                label="Previous"
+                vq="craftAFTpar"
+		show="$ENABLE=(craftAFTpar[29]='s')*2-1"
+                vc="craft_FreqAmpReport('displayprevfid')"
+                />
+              <button loc="250 20" size="80 20"
+                style="Heading2"
+                label="Next"
+                vq="craftAFTpar"
+		show="$ENABLE=(craftAFTpar[29]='s')*2-1"
+                vc="craft_FreqAmpReport('displaynextfid')"
+                />
+	    </group>
+	  <group loc="15 272" size="360 155" 
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Etched"
+	    vq="craftAFTpar"
+	    label="PCA options"
+	    show="$ENABLE=(craftAFTpar[27]='y')*2-1"
+	    reference="craft_PCAoptions"
+      	    subtype="Titled"
+      	    expanded="no"
+	    useref="yes"
+	    >
+	    </group>
+	  </group>
+</template>

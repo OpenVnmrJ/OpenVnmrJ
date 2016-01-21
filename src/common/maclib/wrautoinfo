@@ -1,0 +1,94 @@
+"macro wrautoinfo"
+if ($# < 1) then $1='auto' endif
+
+exists('NextLoc','parameter'):$NLex
+$infofile=userdir+'/persistence/autotimeinfo'
+$infofile1=$infofile+'1'
+write('reset',$infofile)
+write('reset',$infofile1)
+
+if ($1='auto') then
+   $eq=autodir+'/enterQ'
+   $Auto='y'
+elseif ($1='enter') then
+   $eq='' shell('basename '+globalenter):$eq
+   $eq=globalenter+'/'+$eq
+   $Auto='n'
+else
+   return(0)
+endif
+
+exists($eq,'file'):$fileex
+if ($fileex=0) then return(0) endif
+
+$ok=0
+if (traymax<2) then
+    $ok=1
+elseif ($Auto='y') then
+	nextlocQ:$ok
+else
+	nextlocQ(globalenter):$ok
+endif
+
+if ($ok=0) then
+        write('file',$infofile,'All Locations are occupied')
+        write('error','All locations are occupied')
+        shell('cp '+$infofile+' '+$infofile1):$dum
+        if ($NLex>0) then NextLoc='0' endif
+	$editq='no' $msub='no'
+	getadminfo('editq'):$editq
+	getadminfo('multisubmit'):$msub
+	if ($editq='no') then
+            return(0)
+	elseif ($msub='yes') then
+	    return(1)
+        else
+	    return(-1)
+	endif
+endif
+
+        $DT=0 $ST=0 $NT=0 $CT=0
+        $DST='' $SST='' $NST=''
+if ($Auto='y') then
+        findstarttime($eq):$ST,$DT,$NT,$CT
+	sec2ampm($ST+$CT):$SST
+	sec2ampm($DT+$CT):$DST
+	sec2ampm($NT+$CT):$NST
+else
+        readTtimeQ($eq+'.macdir'):$ST,$DT,$NT
+        if ($ST<1) then $SST='0 min' else
+          formattime($ST):$SST
+        endif
+        if ($DT-$ST<1) then $DST='0 min' else
+          formattime($DT-$ST):$DST
+        endif
+        if ($NT<1) then $NST='0 min' else
+          formattime($NT):$NST
+        endif
+endif
+
+        $loc='' 
+	if traymax>1 then format($ok,0,0):$loc
+	else format(traymax,0,0):$loc endif
+        if ($NLex>0) then NextLoc=$loc endif
+	$isnext='random'
+	getadminfo('smslocation'):$isnext
+	if ($isnext='next') and (traymax>1) then
+     	    write('line3','Preference is set for submission to next available location')
+	    write('line3','Next Available Location: %s',$loc)
+	endif
+        write('file',$infofile,'Available Location: %s',$loc)
+
+if ($Auto='y') then
+        write('file',$infofile,'Next Submission starts...')
+else
+        write('file',$infofile,'Total time for samples in...')
+endif
+	shell('cp '+$infofile+' '+$infofile1):$dum
+
+        write('file',$infofile,'  PriorityQ : %s',$SST)
+        write('file',$infofile,'       DayQ : %s',$DST)
+        write('file',$infofile,'     NightQ : %s',$NST)
+        write('file',$infofile1,'   Priority:%s  Day:%s  Night:%s',$SST,$DST,$NST)
+
+return($ok)

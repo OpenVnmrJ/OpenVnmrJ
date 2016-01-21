@@ -1,0 +1,180 @@
+Protocol: Tunerp  Sequence: tunerp.c  Apptype: solidseq1d
+
+Description: 
+
+A pulse sequence for pulse tuning through the directional couplers in 
+the VNMRJ display. Tunerp is used for high-power pulsed tuning and for 
+characterization of phase transient. It provides a phase-detected 
+output of the pulse that can be displayed in phased or absolute value 
+mode. Launch Tunerp with the Fidscan button on the Shims page in Setup 
+tab. 
+
+To use Tunerp it is preferable to be able to measure the ratio of 
+forward to reflected power.  The standard directional couplers are 
+wired to measure reflected power only.  The arrow on the side of the 
+coupler should point back toward the Front End to measure reflected 
+power. To measure forward power reverse the coupler so that the arrow 
+points toward the probe.
+
+A second optional bidirectional coupler is available on some systems.  
+With this coupler reverse the direction of the arrow by turning the 
+knob on the top. 
+
+Setup: 
+
+Load a calibrated data set or load Settancpx into a workspace that will 
+not be used to acquire data.  Convert the data set with Tunerp. Set 
+Tunerp to obs the desired channel with the procedure below. It is 
+helpful to set up Tunerp for each of 1-4 channels in the first 1-4 
+workspaces and join each of them when tuning is needed.  
+
+To tune a particular channel, enter its number (1-4) in Channel entry 
+box on the Sequence page. Also set the particular channel as observe on 
+the channels page and choose the nucleus.  
+
+For two-channel experiments, where channels 1 and 2 are used as obs and 
+dec, it is simply necessary to enter the desired nucleus in the observe 
+nucleus entry box. The correct channel will be selected automatically 
+and the channel number will be displayed. 
+
+For three-channel experiments or any time channels 3 and 4 are 
+involved, it is necessary to configure probeConnect and preAmpConfig 
+before tuning. See the instructions below for configuration of these 
+parameters. Enter one of the nuclei designated in probeConnect in the 
+observe transmitter-nucleus entry box.  The correct channel will be 
+selected automatically and the channel number will be displayed
+
+Set aTune and tpwr to appropriate values.  The amplitude of the tuning 
+pulse is determined by aTune (not aX90) and tpwr. One should tune 
+routinely with about 25 to 50 Watts of power or less.  Sometimes it is 
+necessary to retune with the precise amplitude to be used in the 
+experiment. 
+
+Pulse Tuning:
+
+Before pulse-tuning always rough-tune the probe with the mtune 
+function. 
+
+Press the Tune button to set pwTune at 300 us and select a full FID 
+display.  Note that Tune sets a 5.0 MHz spectral width and the 
+appropriate acquisition time. Enter Fidscan on the Shims page of the 
+Setup tab and select magnitude mode only. Adjust the repetition rate 
+with d1 as desired. Alternatively type av and collect one-scan displays 
+with acquire. 
+
+Switch to forward power and measure the pulse shape. It may be 
+necessary to reduce reciever gain to avoid receiver overload.  For 
+high-power tuning it may be necessary to put attenuation between the 
+coupler and the Front End. 
+
+Switch to reflected power and tune the probe to minimize the central 
+component of the pulse. Characterize the forward/reflected ratio by 
+recording two traces with the same value of vertical fid scale vf.  
+Good tuning is a ratio of > 30/1. 
+
+Phase Transient: 
+
+Minimization of phase transient on the proton channel is needed for 
+multiple-pulse proton experiments such as Hetcorlgcp2d. Minimization of 
+phase transient on the X channel is needed for Pisema2d and is desired 
+for multiple-pulse X experiments such as C7inad2d.
+
+Be sure the probe is tuned before measuring phase transient. 
+
+To characterize phase transient press the button labeled Transient to 
+set a 10 us pulse whose rise and fall are clearly visible. Note that 
+the Transient button sets a 5.0 MHz spectral width and the appropriate 
+acquisition time. Enter Fidscan on the Shims page of the Setup tab and 
+select real and imaginary modes. Adjust the repetition rate with d1 as 
+desired. Alternatively type av and collect one-scan displays with 
+acquire. 
+
+Set the coupler for forward power. Collect a trace and phase it so that 
+the real channel is 90 degrees out of phase and the imaginary channel 
+is in phase. In this mode one will see zero amplitude with two 
+transients of opposite phase at the beginning and ends of the pulse. 
+These transients are the phase transient and represent pulse amplitudes 
+during the rise and fall times that are 90 degrees out of phase from 
+the pulse. 
+
+Adjust probe tuning or cable lengths so as to minimize the amplitude of 
+the two transients. Note that removal of phase transient with the probe 
+tuning alone will detune the probe and increase reflected power. 
+Generally one cannot achieve both good tuning and no transient by 
+changing only the probe. 
+
+To remove phase transient by probe tuning adjust the Tune knob on the 
+probe to move the tuning dip either up or down in frequency. Rephase 
+the display and note whether the transients have gained or lost 
+amplitude.  Choose a value that minimizes the transient. 
+
+Phase transient can be removed permanently by adjusting the cable 
+length between the probe and the directional coupler. Phase transient 
+is a minimum for cable lengths that are multiples of 1/2 wavelength 
+plus a constant. To find the correct length it is helpful to have a set 
+of short cables and connectors and experiment with different lengths. 
+The high-band channel can be adjusted with a set of elbow connectors.  
+Once the correct length is found it is desirable to have a single 
+permanent length made. Be sure that the probe remains tuned during this 
+process.  Note that one must have a different cable length for each 
+different nucleus. 
+
+Three and Four Channel Experiments: 
+
+To tune on channels 3 and 4 one must set probeConnect and preAmpConfig. 
+These two parameters are "Global" strings than must be created manually 
+by the system manager or user. As global parameters these strings apply 
+to all workspaces in a user and do not affect other users. Note that 
+these parameters are NOT created in the "Update User" function of the 
+VNMRJ administrator interface or by the "makeuser" function. 
+
+probeConnect is a global string whose entries are the nuclei to be 
+assigned to each channel. Create it with the command create 
+('probeConnect','string','global'). Type 
+display('probeConnect','global') to verify its exisitence. Type 
+display('probeConnect') alone to verify that a "current" version of 
+probeConnect does not exist. The result should be negative. 
+
+Set [rpbeConnect equal to the nuclei for channels 1 to the number of 
+channels, numrfch, in order, separated by spaces.  For example: 
+
+probeConnect = 'H1 C13 F19 N15' 
+
+sets up a four channel spectrometer with an HFXY probe tuned to the 
+indicated nuclei. Note that the first entry is always highband and the 
+second always low band. On three-channel spectrometers the third entry 
+must match the band of channel-three amp. On four channel spectrometers 
+a second highband amp is always placed on channel 3 if it is present. 
+
+preAmpConfig is a global string whose entries indicate the receiver 
+function attached to each channel. Create it with the command 
+create('preAmpConfig','string','global'). Type 
+display('preAmpConfig','global') to verify its exisitence. Type 
+display('preAmpConfig') alone to verify that a "current" version of 
+preAmpConfig does not exist. The result should be negative. 
+
+The characters of preAmpConfig can be "H" for highband, "L" for lowband 
+and "X" for no preamp.  The band of the preamp on a channel must match 
+the band of the amplifier. A channel must have a preamp to be selected 
+as the observe function. 
+
+An example for preAmpConfig is: 
+
+preAmpConfig = 'HLHL' 
+         
+for the four-channel machine above.
+
+probeConnect and preAmpConfig are present on the Channels page of all 
+sequences. An output of "---" means that parameter does not exist. An 
+Output of "  " means that the parameter exists but has null value. 
+ 
+Parameter Groups: 
+
+tune:  Module:  no
+Sequence:  tunerp.c
+Description:  Implements a directional-coupler pulse on a selected 
+              hardware channel for pulse tuning.  
+Parameters:  Sequence Page
+       atune -  the amplitude of the tune pulse.
+       chtune -  the hardware channel to be tuned. 
+       pwtune -  the length of the tune pulse. 

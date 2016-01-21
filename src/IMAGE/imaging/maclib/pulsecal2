@@ -1,0 +1,101 @@
+"macro pulsecal2"
+" pulsecal2 - used by interface.  Should not be used from command line"
+
+$pulsecal = userdir+'/pulsecal'
+exists(curexp+'/pcsys','file'):$e
+if ($e > 0.5) then
+  lookup('mfile',curexp+'/pcsys','read'):$ans
+  if ($ans = 'yes') then
+    $pulsecal = systemdir+'/pulsecal'
+  endif
+  delete(curexp+'/pcsys')
+endif
+exists(curexp+'/pclen','file'):$e
+if ($e > 0.5) then
+  lookup('mfile',curexp+'/pclen','read'):$length
+  delete(curexp+'/pclen')
+else
+  $length = -1
+endif
+exists(curexp+'/pcpwr','file'):$e
+if ($e > 0.5) then
+  lookup('mfile',curexp+'/pcpwr','read'):$power
+  delete(curexp+'/pcpwr')
+else
+  $power = -100
+endif
+
+if ($1 = '') then
+  write('line3','RF coil set to %s',RFCOIL)
+  return
+endif
+if ($length < 0) or ($power < -50) then
+  write('line3','RF coil %s missing pulse length or pulse power',$1)
+  return
+endif
+$tmp = userdir+'/pulsecal.old'
+$fmt2 = '%10s  %10d  %10d  %10d  %10d' 
+$name = $1
+$flipangle = 90
+
+"-- Check existence of the pulsecal file ------------------"
+exists($pulsecal,'file'):$ex_cal
+if ($ex_cal > 0) then
+  nrecords($pulsecal):$lines
+  $lines = $lines - 4
+endif
+
+    
+  "-- Calculate the new calibration values ----------------"
+  ln(10.0):$ln10
+  ln(1.0):$ln_integral
+  $pwr = $power + 20*$ln_integral/$ln10
+  $ipwr = trunc($pwr + 0.5)
+  $exp = $ln10*($pwr - $ipwr)/20
+  exp($exp):$length_ratio
+  $length = $length*$length_ratio
+
+  "-- Get the date from UNIX ------------------------------"
+  $date = ''
+  shell('date +%m%d%y'):$date_val
+  format($date_val,0,0):$date
+
+  "-- Check pulsecal for the requested name ---------------"
+  $count = 0
+  if ($ex_cal > 0.5) then
+    lookup('mfile',$pulsecal,'count',$name):$count
+  endif
+
+  if ($count > 0) then "-- Replace an old calibration entry --------------------"
+    cp($pulsecal,$tmp)
+    write('reset',$pulsecal)
+        
+    write('file',$pulsecal,'     PULSE CALIBRATION VALUES')
+    write('file',$pulsecal,'')
+    $title2 = '     rfcoil      length        flip       power      date'
+    write('file',$pulsecal,$title2)
+    write('file',$pulsecal,'')
+
+    $k=1 $l=0 $f=0 $p=0 $d=0 $n=''
+    lookup('file',$tmp)
+    lookup('skip',8)
+    repeat
+
+      lookup('read',5):$n,$l,$f,$p,$d
+      if ($n <> $name) then
+        write('file',$pulsecal,$fmt2,$n,$l,$f,$p,$d)
+      endif
+      $k = $k + 1
+    until ($k > $lines)
+    rm ($tmp)
+  elseif ($ex_cal = 0) then "-- Write the new calibration entry ---------------------"
+    write('file',$pulsecal,'     PULSE CALIBRATION VALUES')
+    write('file',$pulsecal,'')
+    $title2 = '     rfcoil      length        flip       power      date'
+    write('file',$pulsecal,$title2)
+    write('file',$pulsecal,'')
+  endif
+  write('file',$pulsecal,$fmt2,$name,$length,$flipangle,$ipwr,$date)
+  write('line3','RF coil set to newly created %s',$name)
+  RFCOIL=$name
+  rfcoil=$name

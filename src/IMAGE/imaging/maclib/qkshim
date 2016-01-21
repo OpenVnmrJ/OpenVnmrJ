@@ -1,0 +1,173 @@
+"macro qkshim"
+"*****************************************************************************"
+" qkshim - Acquire fid's for quick-shim
+"
+" Details: Assume qkshim sequence loaded and ready to go. "
+"          B0.{1,2,3}.fid datasets are acquired for x,y and z shims" 
+
+" Usage: qkshim - first pass, initialize and continue" 
+"        qkshim(n) - n=shim-pass no., repeat X or continue  "
+"
+" Version: 2004-01-09"
+
+"*****************************************************************************"
+
+$macro = $0
+$GSDIR = userdir+'/qshimdir'
+
+if ($# = 0) then    "** first pass, do initialization **"
+  Prescan_ShimMethod = 'quickshim'
+
+  "check if qshim.cal exists in userdir or systemdir"
+  $QSCAL = userdir+'/qshimdir'
+  $VCAL = systemdir+'/qshimdir'
+  $name = $QSCAL+'/qshim.'+gcoil+'.cal'
+  $name2 = $VCAL+'/qshim.'+gcoil+'.cal'
+  exists($name,'file'):$ex  
+  exists($name2,'file'):$ex2  
+  if( ($ex = 0 ) and ($ex2 = 0)) then
+    if(console = 'inova') then
+      write('error','%s: Shim calibration files %s or %s do not exist',$macro,$name,$name2)
+      abort
+    else
+      qkshimcalib    "vnmrs; set polarity based on decctool file"
+    endif
+  endif
+  "check shim-cycle counter and init for next cycle"  
+  if (cnt<1) or (cnt>4) then
+    write('error','Error: shim cycle counter=%d',cnt)
+    abort
+  endif
+  exists($GSDIR,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSDIR)
+  endif
+  "make a copy of the decc file for reference"
+  $name1 = '/vnmr/imaging/decclib/.'+gcoil
+  $name2 = $GSDIR+'/decc_file.'+gcoil
+  exists($name1,'file'):$ex  "check if decc-file exists "
+  if ($ex = 0) then
+      write('line3','%s: %s does not exist',$macro,$name)
+      abort
+  endif
+  shell('cp '+$name1+' '+$name2)
+  exists($name2,'file'):$ex2  
+  if (($ex = 0) and ($ex2 = 0)) then
+      write('line3','%s: %s does not exist',$macro,$name2)
+      abort
+  endif
+
+  "read shim scaling factor "
+  lookup('mfile',$name2,'filekey'):$key
+  lookup('mfile',$key,'seek','shimscale','read','read','read'):$s1,$s2,$s3
+  shimscale=$s1
+
+  $done=0
+  while($done = 0) do
+   if (shcycle[cnt]=0) then
+     cnt=cnt+1
+     if(cnt>4) then  "upto 4 iterations"
+       write('line3','Shimcycles Complete')
+       return
+     endif
+   else
+     del=shdel[cnt]*shimscale   
+     $done=1
+   endif 
+  endwhile
+   
+  "** first pass; init parameters **"
+  shimnames:$cname,$ns    "check if z1c, z2c shims used"
+  strstr($cname,'z1c'):$c2
+  if($c2 > 0.5) then
+    z1name = 'z1c'
+  else
+    z1name = 'z1'
+  endif
+  shimpass=1
+  shimno = 1    "1st expt. x shim"
+  $shimno = 'X'
+  "remove old shim fid files"
+  shimmapfid = $GSDIR+'/qshim.1'
+  $cmd = '/bin/rm -rf '+shimmapfid+'.fid'
+  shell($cmd)
+  ldrf tof=H1offset 
+  repeats=0    "no of times a shim is repeated, maximum is 5"
+  gbasex=0 gbasey=0 gbasez=0   "base shim values"
+  $cmd = '/bin/rm -rf '+userdir+'/shims/start0'
+  shell($cmd)
+  svs('start0')   "shim file saved as reference"
+elseif ($1 = 0) then
+  "check if iteration# checked"
+  $done=0
+  while($done = 0) do
+   if (shcycle[cnt]=0) then
+     cnt=cnt+1
+     if(cnt>4) then  "upto 4 iterations"
+       write('line3','Shimcycles Complete')
+       return
+     endif
+   else
+     del=shdel[cnt]*shimscale
+     $done=1
+   endif
+  endwhile
+  shimno = 1 "x shim"
+  $shimno = 'X'
+  shimpass = 1
+  shimmapfid = $GSDIR+'/qshim.1'
+  $cmd = '/bin/rm -rf '+shimmapfid+'.fid'
+  shell($cmd)
+elseif ($1 = 1) then
+  shimno = 2 "y shim"
+  $shimno = 'Y'
+  shimpass=2
+  shimmapfid = $GSDIR+'/qshim.2'
+  $cmd = '/bin/rm -rf '+shimmapfid+'.fid'
+  shell($cmd)  
+elseif ($1 = 2) then
+  shimno = 3 "z shim"
+  $shimno = 'Z'
+  shimpass=3
+  shimmapfid = $GSDIR+'/qshim.3'
+  $cmd = '/bin/rm -rf '+shimmapfid+'.fid'
+  shell($cmd)   
+elseif ($1 = 3) then
+  write('line3','Cycle#: %d Data acquisition complete',cnt)
+  shimpass = 0 "reset shimpass"
+  $actionid=actionid  "bug: during the calculations parameters lost!!"
+" qkshimcalc     "
+  actionid=$actionid
+  if(shimload = 1) then
+    qkshimset
+  endif
+  cnt = cnt+1  "bump shim-cycle counter"   
+  if(cnt > 4) then  "upto 4 iterations allowed"
+    write('line3','Quick-shim Done')
+    dgs
+    del=0   "unarray"
+    return
+  else
+    qkshim "next cycle; note: first pass initialization done"
+    return
+  endif    
+endif
+
+write('line3','Prepared for for shim: %s, cycle# %d',$shimno,cnt)
+
+$start= -(steps/2.0)*shdel[cnt]*shimscale   "setup step size array"
+setarray('del',$start,shdel[cnt]*shimscale,steps) 
+    
+if(prescan_control[1] = 0 ) then   
+  wexp = 'svf(shimmapfid) qkshimcalc qkshim(shimpass)'  "interactive quickshim"
+  wdone = ''
+  au
+endif
+
+"******************************************************************************
+"               Modification History
+"
+" 19oct06(ss)  - prescan, multi iteration bug fixed
+
+"******************************************************************************
+

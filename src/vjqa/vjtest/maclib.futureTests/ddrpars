@@ -1,0 +1,260 @@
+"@(#)ddrpars 1.16 10/28/05 Copyright (c) 2003-2004 Varian, Inc. All Rights Reserved."
+" ddrpars - make ddr parameters"
+setlimit('sw',10e6,100,0)
+setlimit('np',10e6,32,2)
+
+"ddrstages: number of filter stages"
+"set automatically from sw if ddrstages=n"
+
+exists('ddrstages','parameter'):$e
+if ($e < 0.5) then
+  create('ddrstages','integer')
+  setlimit('ddrstages',2,0,1)
+  ddrstages='n'
+endif
+
+"ddrsr: base sampling rate (2.5e6,5.0e6,10.0e6 samples/s)"
+"set automatically from sw if ddrsr=n"
+
+exists('ddrsr','parameter'):$e
+if ($e < 0.5) then
+  create('ddrsr','real')
+  setlimit('ddrsr',10e6,2.5e6,2.5e6)
+  ddrsr=2.5e6
+  ddrsr='n'
+endif
+
+"ddrm1: stage 1 decimation rate"
+"stage 1 bandwith sw1 = ddrsw/ddrm1"
+"set automatically from sw if ddrstages=n"
+
+exists('ddrm1','parameter'):$e
+if ($e < 0.5) then
+  create('ddrm1','integer')
+  ddrm1=250
+  setlimit('ddrm1',1000,1,1)
+endif
+
+"ddrm2: stage 2 decimation rate"
+"stage 2 bandwith sw2 = ddrsw/ddrm1/ddrm2"
+"set automatically from sw if ddrstages=n"
+
+exists('ddrm2','parameter'):$e
+if ($e < 0.5) then
+  create('ddrm2','integer')
+  setlimit('ddrm2',1000,1,1)
+  ddrm2=1
+endif
+
+"ddro1: stage 1 filter coefficients factor"
+"- max. number of filter coefficients=ddro1*ddrm1"
+"- set automatically from sw if ddrstages=n as follows:"
+"- if ddrstages=2 ddro1 is set to 7"
+"- if ddrstages=1 ddro1 is set to min(ddro1,ddrcr)"
+
+exists('ddro1','parameter'):$e
+if ($e < 0.5) then
+  create('ddro1','real')
+  ddro1=7
+endif
+
+"ddro2: stage 2 filter coefficients factor"
+"- max. number of filter coefficients=ddro2*ddrm2"
+"- set automatically from sw if ddrstages=n as follows:"
+"- if ddrstages=2 ddro2 is set to min(ddro2,ddrcr)"
+
+exists('ddro2','parameter'):$e
+if ($e < 0.5) then
+  create('ddro2','real')
+  ddro2=7
+endif
+
+"ddrfw1: stage 1 filter transition band factor"
+"- filter transition point set to ddrfw1*sw1"
+
+exists('ddrfw1','parameter'):$e
+if ($e < 0.5) then
+  create('ddrfw1','real')
+  ddrfw1=1
+endif
+
+"ddrfw2: stage 1 filter transition band factor"
+"- filter transition point is set to ddrfw2*sw2"
+"- default=1.0"
+
+exists('ddrfw2','parameter'):$e
+if ($e < 0.5) then
+  create('ddrfw2','real')
+  ddrfw2=1
+endif
+
+"ddrx1: stage 1 precharge correction factor"
+" 0:   precharge points=1/2 filter stage 1 coefficients (default)"
+" 0.5: precharge points=0. disables precharge baseline correction"
+"      set to 0.5 if if ddrx1=n"
+" -n:  corrects for n*ddrsr lp phase delay (skip points)"
+"      set automatically if ddrcr=y"
+
+exists('ddrx1','parameter'):$e
+if ($e < 0.5) then
+  create('ddrx1','real')
+  ddrx1=0
+endif
+
+"ddrx2: stage 1 precharge correction factor"
+" 0:   precharge points=1/2 filter stage 2 coefficients (default)"
+" 0.5: precharge points=0. disables precharge baseline correction"
+"      set to 0.5 if if ddrx2=n"
+
+exists('ddrx2','parameter'):$e
+if ($e < 0.5) then
+  create('ddrx2','real')
+  ddrx2=0
+endif
+
+"ddrcr: max value of filter coefficients factor"
+" - set automatically for to highest value possible for a given"
+"   sw if ddrcr=n"
+
+exists('ddrcr','parameter'):$e
+if ($e < 0.5) then
+  create('ddrcr','real')
+  setlimit('ddrcr',1000,2,0)
+  ddrcr=75  
+endif
+
+"ddrmaxcr: max value of filter coefficients factor"
+" - ddro1,ddro2 will be clipped to the value of ddrmaxcr if ddrmaxcr=y"
+" - for analog+ set ddrmaxcr=7 for brickwall set ddrmaxcr>=70"
+
+exists('ddrmaxcr','parameter'):$e
+if ($e < 0.5) then
+  create('ddrmaxcr','real')
+  ddrmaxcr=75  
+endif
+
+"ddrtc: linear phase delay compensation factor"
+" - enter value in us. sets ddrx1 automatically to -value/ddrsr"
+
+exists('ddrtc','parameter'):$e
+if ($e < 0.5) then
+  create('ddrtc','pulse')
+  setlimit('ddrtc',100,0,0)
+  ddrtc=0  
+endif
+
+"rof3: receiver gate to first sampling point delay"
+" - enter value in us. minimum value = 2.0us "
+
+exists('rof3','parameter'):$e
+if ($e < 0.5) then
+  create('rof3','pulse')
+  rof3=2
+endif
+
+"aqtm: true acquisition time that includes 0.5np/sw + filter overhead"
+" - aqtm=n sets acquisition time to 0.5np/sw. Some points at the end"
+"   of the data set will use reflected data to finish the missing adc points"
+"   needed to complete filter calculation for those points. (this feature"
+"   can be disabled by setting expargs='-x')"
+
+exists('aqtm','parameter'):$e
+if ($e < 0.5) then
+  create('aqtm')
+endif
+
+"roff: receiver frequency offset"
+" - arrayable"
+" - applied to all DDR channels"
+" - can be modified dynamically within a pulse sequence to set"
+"   the receiver frequency for the acquire block that follows"
+
+exists('roff','parameter'):$e
+if ($e < 0.5) then
+  create('roff','real')
+  roff=0
+endif
+
+"expargs: string that can be used to set special DDR properties"
+" -d    use double precision (64 bit) math in signal averaging"
+" -q    use quadratic interpolation to determine precharge phase"
+" -i{n} n=none,1..5 enable debug output in vnmrj text window -active rcvrs"
+" -I{n} same as for i except also display information for inactive rcvrs"
+" -p    create artificial sawtooth pattern data set"
+" -s    create artificial 6 line spectrum data set"
+" -x    disable end points reflection in aqtm=n mode"
+" -fb   use Blackman filter (default) "
+" -fh   use Hamming filter"
+" -fn   use center point only filter"
+" -ff   use floating point filter coefficients (default=16 bit short)"
+
+exists('expargs','parameter'):$e
+if ($e < 0.5) then
+   create('expargs','string')
+endif
+
+"rcvra[n]: receiver amplitude scler array n=0...nrcvrs-1"
+" data for ith channel is scaled by rcvra[i] after signal averaging"
+" units = 0.. "
+
+exists('rcvra','parameter','global'):$e
+if ($e < 0.5) then
+   create('rcvra','real','global')
+   setprotect('rcvra','on',256,'global')
+   setlimit('rcvra',10000,0,0,'global')
+   setvalue('rcvra',1,1,'global')
+endif
+
+"rcvrf[n]: receiver frequency offset array n=0...nrcvrs-1"
+" observed frequency for ith channel is offset by rcvrf[i] "
+" units = +- Hz"
+
+exists('rcvrf','parameter','global'):$e
+if ($e < 0.5) then
+   create('rcvrf','real','global')
+   setprotect('rcvrf','on',256,'global')
+endif
+
+"rcvrp[n]: receiver zero order phase offset array n=0...nrcvrs-1"
+" constant phase rcvrp[i] added to data for ith rcvr channel"
+" units = +- degrees"
+
+exists('rcvrp','parameter','global'):$e
+if ($e < 0.5) then
+   create('rcvrp','real','global')
+   setprotect('rcvrp','on',256,'global')
+endif
+
+"rcvrp1[n]: receiver first phase offset array n=0...nrcvrs-1"
+" phase rcvrp1[i] added to rcvrstepsize with rcvrphase(pe var)"
+" units = +- degrees"
+
+exists('rcvrp1','parameter','global'):$e
+if ($e < 0.5) then
+   create('rcvrp1','real','global')
+   setprotect('rcvrp1','on',256,'global')
+endif
+
+"nfmod: In nf mode, nfmod sets the number of 'np' data sets to retain on the DDR before each"
+"       data transfer to the host computer. "
+"       if nfmod = 1,not defined or disabled data is transfered after np points are acquired"
+"       if nfmod = 0,data is transfered after nf*np points are acquired"
+"       if nfmod>1 && <nf data is transferred after nv*np/nfmaod points are acquired" 
+exists('nfmod','parameter'):$e
+if ($e < 0.5) then
+  create('nfmod','integer')
+  setlimit('nfmod',1e6,0,1)
+  nfmod=0
+endif
+
+"ddrscale: in dp='n' mode sets a data scaling factor"
+"       - data ampl *= 1/2^ddrscale"
+"       - scaling occurs after signal averaging (which is done in floating point) and before"
+"         conversion to short format "
+exists('ddrscale','parameter'):$e
+if ($e < 0.5) then
+  create('ddrscale','integer')
+  setlimit('ddrscale',20,0,1)
+  ddrscale=0
+endif
+_sw

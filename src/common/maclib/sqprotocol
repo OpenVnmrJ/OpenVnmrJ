@@ -1,0 +1,431 @@
+"macro sqprotocol"
+"sqprotocol - creates new protocol, using first argument as the title"
+
+isvnmrj:$j
+if ($j < 0.5) then
+  return
+endif
+
+create('anatomy','string','current','')
+create('protocol','string','current','')
+create('species','string','current','')
+
+if ($# = 1) then
+"make a composite protocol from study queue, $1 is name"
+  exists('protoAttr','parameter'):$x
+  if $x<0.5 then
+    create('protoAttr','string')
+    setgroup('protoAttr','display')
+    setprotect('protoAttr','on',16+256+32768)
+  endif
+  exists('protoVal','parameter'):$x
+  if $x<0.5 then
+    create('protoVal','string')
+    setgroup('protoVal','display')
+    setprotect('protoVal','on',16+256+32768)
+  endif
+  exists('protoFile','parameter'):$x
+  if $x<0.5 then
+    create('protoFile','string')
+    setgroup('protoFile','display')
+    setprotect('protoFile','on',16+256+32768)
+  endif
+  strstr($1,'/'):$es
+  if $es>0.5 then
+    write('error','Illegal character \'/\' in protocol name.')
+    return
+  endif
+  $name=$1
+  exists('anatomy','parameter'):$x
+  if $x<0.5 then $anatomy='none' else $anatomy=anatomy endif
+  $datestr='' shell('date +%\Y%\m%\dT%\H%\M%\S'):$datestr
+  exists(userdir+'/templates/vnmrj/protocols','directory'):$x
+  if ($x<0.5) then
+    mkdir('-p',userdir+'/templates/vnmrj/protocols')
+  endif
+  $f=userdir+'/templates/vnmrj/protocols/'+$name+'.xml'
+  exists($f,'file'):$exml
+  if ($exml > 0.5) then
+    confirm('Overwrite protocol '+$name+'?'):$ans
+    if $ans=0 then
+      return
+    endif
+  endif
+  if ($exml < 0.5) then
+    protoFile[2]='n'
+  else
+    protoFile[2]='y'
+  endif
+  protoFile[1]=$f
+  off('protoFile')
+  write('reset',protoFile[1])
+  write('file',protoFile[1],'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+  write('file',protoFile[1],'<template type="composite" name="%s" author="%s" investigator="%s"',$1,operator,investigator)
+  write('file',protoFile[1],'    application="%s" apptype="%s" label="%s" tabname="%s" menu1="%s" menu2="%s" rfcoil="%s" anatomy="%s" time_created="%s"',appmode,apptype,protoFile[8],protoFile[9],protoFile[10],protoFile[11],RFCOIL,$anatomy,$datestr)
+  $cmd=`get all actions title protoAttr sqprotocol('`+$1+`',1)`  "$1 or $name"
+  xm1($cmd)
+elseif ($# = 2) then
+  if ($2 = 0) then
+"make a new protocol from current parameters, $1 is name"
+    exists('protoFile','parameter'):$xpf
+    if ($xpf = 0) then
+      sqprotocol(0,0,0,0)
+    endif
+    $name = $1
+    exists(userdir+'/templates/vnmrj/protocols','directory'):$x
+    if ($x<0.5) then
+      mkdir('-p',userdir+'/templates/vnmrj/protocols')
+    endif
+    strstr($1,'/'):$es
+    if $es>0.5 then
+      write('error','Illegal character \'/\' in protocol name.')
+      return
+    endif
+    $datestr='' shell('date +%\Y%\m%\dT%\H%\M%\S'):$datestr
+    $pfile=userdir+'/parlib/'+$name+'.par'
+    $pf=$name
+    $f=userdir+'/templates/vnmrj/protocols/'+$name+'.xml'
+    exists($f,'file'):$exml
+    if ($exml > 0.5) then
+      confirm('Overwrite protocol '+$name+'?'):$ans
+      if $ans=0 then
+	return
+      endif
+    endif
+    exists('nv','parameter'):$x
+    if ($x > 0.5) then
+      _nv
+    endif
+    if (size('prescan')>6.5) then
+      prescan[7]=''
+    endif
+    exists('protoFile','parameter'):$xpf
+    if $xpf>0.5 then
+      $protoFile=protoFile
+      destroy('protoFile')
+    endif
+    exists($pfile,'directory'):$epar
+    if ($epar) then rm('-rf',$pfile):$x endif
+    $pre = prescribed
+    on('prescribed'):$saverx
+
+    protocol = $protoFile[3]
+    svp($pfile)
+
+    if $xpf>0.5 then
+      create('protoFile','string')
+      setgroup('protoFile','display')
+      setprotect('protoFile','on',16+256+32768)
+      protoFile=$protoFile
+    endif
+    exptime:$t
+    formattime($t):$ts
+    write('reset',$f)
+    write('file',$f,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
+    write('file',$f,`<template type="basic" name="%s" author="%s" investigator="%s"`,$1,operator,investigator)
+    write('file',$f,`  ExpSelNoShow="%s" application="%s" rfcoil="%s" anatomy="%s" species="%s" gcoil="%s" field="%s" time_created="%s"`,n3,appmode,RFCOIL,anatomy,species,protoFile[7],protoFile[6],$datestr)
+    write('file',$f,`  parfile="%s" apptype="%s" label="%s" tabname="%s" menu1="%s" menu2="%s" scans="%s" seqfil="%s">`,$pf,apptype,protoFile[8],protoFile[9],protoFile[10],protoFile[11],$name,seqfil)
+    write('file',$f,`  <protocol title="%s" type="protocol">`,$1)
+    write('file',$f,`    <action  type="LIB" status="Ready" title="%s" exp="%s" lock="off" time="%s" macro="sqexp('%s')" data="" />`,$1,$name,$ts,$pf)
+    write('file',$f,`  </protocol>`)
+    write('file',$f,`</template>`)
+    if ($exml < 0.5) then
+      write('line3','protocol "%s" added',$1)
+    else
+      write('line3','protocol "%s" updated',$1)
+    endif
+    vnmrjcmd('LOC add protocol "'+$f+'"')
+    vnmrjcmd('pnew','pslabel')
+    updateExpSelector
+  elseif ($2 = -1) then
+"make a CMD protocol"
+    $name = $1
+    exists(userdir+'/templates/vnmrj/protocols','directory'):$x
+    if ($x<0.5) then
+      mkdir('-p',userdir+'/templates/vnmrj/protocols')
+    endif
+    strstr($1,'/'):$es
+    if $es>0.5 then
+      write('error','Illegal character \'/\' in protocol name.')
+      return
+    endif
+    $name=$1
+    $pat='name="'+$name+'"'
+    $datestr='' shell('date +%\Y%\m%\dT%\H%\M%\S'):$datestr
+    $f=''
+    $f=userdir+'/templates/vnmrj/protocols/'+$name+'.xml'
+    exists($f,'file'):$exml
+    if ($exml > 0.5) then
+      confirm('Overwrite protocol '+$name+'?'):$ans
+      if $ans=0 then
+	return
+      endif
+    endif
+    exists('anatomy','parameter'):$x
+    if $x<0.5 then $anatomy='none' else $anatomy=anatomy endif
+    $macro=protoFile[4]
+    $t=0 $ts=''
+    format(protoFile[5],0,0):$t
+    formattime($t):$ts
+    write('reset',$f)
+    write('file',$f,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
+    write('file',$f,`<template type="cmd" name="%s" author="%s" investigator="%s"`,$1,operator,investigator)
+    write('file',$f,`    application="%s" rfcoil="%s" anatomy="%s" time_created="%s"`,appmode,RFCOIL,$anatomy,$datestr)
+    write('file',$f,`    apptype="%s" label="%s" tabname="%s" menu1="%s" menu2="%s" scans="%s">`,apptype,protoFile[8],protoFile[9],protoFile[10],protoFile[11],$name)
+    write('file',$f,`  <protocol title="%s" type="protocol">`,$1)
+    write('file',$f,`    <action  type="CMD" status="Ready" title="%s" exp="%s" lock="off" time="%s" macro="%s" data="" />`,$1,$name,$ts,$macro)
+    write('file',$f,`  </protocol>`)
+    write('file',$f,`</template>`)
+    if ($exml < 0.5) then
+      write('line3','protocol "%s" added',$1)
+    else
+      write('line3','protocol "%s" updated',$1)
+    endif
+    vnmrjcmd('LOC add protocol "'+$f+'"')
+    vnmrjcmd('pnew','pslabel')
+  elseif ($2 = 1) then
+     $cmd=`get all actions type protoVal sqprotocol('`+$1+`',2)`
+     xm1($cmd)
+  elseif ($2 = 2) then
+     $num = size('protoVal')
+     $i = 1
+     $scans=''
+     while ($i <= $num) do
+       if (protoVal[$i] = 'REQ') or (protoVal[$i] = 'LIB') then
+         $label = protoAttr[$i]
+         if ($scans = '') then
+           $scans = $label
+         else
+           $scans = $scans + ',' + $label
+         endif
+       endif
+       $i = $i + 1
+     endwhile
+     write('file',protoFile[1],'    scans="%s">',$scans)
+     write('file',protoFile[1],'  <protocol title="%s" type="protocol">',$1)
+     xm1('get action > null protoAttr protoVal sqprotocol(0,0,0)')
+  elseif ($2 = 3) then
+    $f=''
+    Svfname(userdir+'/parlib/'+pslabel+'%R0%',''):$ff,$label
+    $pat='type="basic" name="'+$label+'"'
+    shell(`grep -l '`+$pat+`' "` +userdir+`"/templates/vnmrj/protocols/*.xml`):$f
+    if ($f = '') then
+      return(0)
+    else
+      return(1)
+    endif
+  endif
+elseif ($# = 3) then
+  if (protoAttr[1] = '') then
+"last protocol node empty, done writing composite protocol"
+    destroy('protoAttr')
+    destroy('protoVal')
+    on('protoFile'):$ok
+    if ($ok = 1) then
+      write('file',protoFile[1],'  </protocol>')
+      write('file',protoFile[1],'</template>')
+      lookup('mfile',protoFile[1],'delimiter',' ="\n\t','seek','name','delimiter','="','read'):$bs
+      if (protoFile[2]='n') then
+        write('line3','protocol "%s" added',$bs)
+      else
+        write('line3','protocol "%s" updated',$bs)
+      endif
+      vnmrjcmd('LOC add protocol "'+protoFile[1]+'"')
+    else
+      write('line3','No actions were found in the study queue')
+      delete(protoFile[1])
+    endif
+"   destroy('protoFile')"
+  else
+"protocol node found, add to composite protocol"
+    $id='' $j=0 teststr('protoAttr','id'):$j
+    if $j>0.5 then $id=protoVal[$j] endif
+    $num = size('protoVal')
+    $attr = ''
+    $i = 1
+    while ($i <= $num) do
+      if (protoAttr[$i] <> 'id') and (protoAttr[$i] <> 'element') then
+         if (protoAttr[$i] = 'data') then
+           $attr = $attr + ' ' + protoAttr[$i] + '=""'
+         elseif (protoAttr[$i] = 'lock') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="off"'
+         elseif (protoAttr[$i] = 'status') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="Ready"'
+         elseif (protoAttr[$i] = 'macro') then
+           if (protoVal[$i] = 'xmrtpar') then
+             $j=0 teststr('protoAttr','exp'):$j
+             $exp='' if $j>0.5 then $exp=protoVal[$j] endif
+             if ($exp = '') then
+               $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+             else
+// copy customized parameter set into parlib, and set into macro
+//   --disabled for now
+//             xm1('studydir'):$sdir
+//             Svfname(userdir+'/parlib/'+$exp+'_%R2%','.par'):$pfile,$pf
+//             $par=$sdir+'/info/'+$id+'/savepar'
+//             exists($par,'file'):$e
+//             if $e>0.5 then
+//               mkdir($pfile)
+//               cp($par,$pfile+'/procpar')
+//               cp(curexp+'/text',$pfile)
+//               $attr = $attr + ' ' + protoAttr[$i] + '="sqexp(\'' + $pf + '\')"'
+//             else
+                 $attr = $attr + ' ' + protoAttr[$i] + '="sqexp(\'' + $exp + '\')"'
+//             endif
+             endif
+           else
+             $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+           endif
+         elseif (protoAttr[$i] <> 'tooltext') then
+           $attr = $attr + ' ' + protoAttr[$i] + '="' + protoVal[$i] + '"'
+         endif
+      endif
+      $i = $i + 1
+    endwhile
+    write('file',protoFile[1],'    <action %s />',$attr)
+    on('protoFile')
+"repeat macro to get next node attributes"
+    $cmd='get action > ' + $id + ' protoAttr protoVal sqprotocol(0,0,0)'
+    xm1($cmd)
+  endif
+elseif ($# = 4) then
+  exists('protoFile','parameter'):$x
+  if $x<0.5 then
+    create('protoFile','string')
+    setgroup('protoFile','display')
+    setprotect('protoFile','on',16+256+32768)
+  endif
+  if ($4=3) then
+    if ($1=1) then
+      $p2=apptype
+      $p3=protoFile[3]
+      $p4=protoFile[4]
+      $p5=protoFile[5]
+// check if $p3 is a CMD protocol, for xmcmdedit
+      exists($p3+'.xml','templates/vnmrj/protocols'):$e,$file
+      if $e>0.5 then
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','apptype=','delimiter','="','read'):$app,$nret
+        if $nret>0.5 then $p2=$app endif
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','macro=','delimiter','="','read'):$cmd,$nret
+        if $nret>0.5 then $p4=$cmd endif
+        $nret=0
+        lookup('mfile',$file,'delimiter',' "<!>','time=','delimiter','="','read'):$time,$nret
+        if $nret>0.5 then
+//        xmtime('getsec',$time):$t1
+//        $t1=trunc($t1/60+0.5)
+//        format($t1,0,0):$p5
+          sqprotocol(3,$time,0,3):$p5
+        endif
+//      protoFile[2]=$p2
+        apptype=$p2
+        protoFile[4]=$p4
+        protoFile[5]=$p5
+      endif
+    elseif ($1=2) then  // convert time to string
+      $st='' substr($2,1):$st
+      format($st,'isreal'):$is
+      if not ($is) then
+        $st='10'
+//    else
+//      format($st,0,0):$sn
+//      if $sn<1 then $st='1' endif
+      endif
+      format($st,0,0):$st
+//    $st=$st+' sec'
+      return($st)
+    elseif ($1=3) then  // convert string to time
+      $st='' substr($2,1):$st
+      format($st,'isreal'):$is
+      if not ($is) then
+        $t1=10
+      else
+        xmtime('getsec',$2):$t1
+      endif
+      $t1=trunc($t1+0.01)
+      $p5='' format($t1,0,0):$p5
+      return($p5)
+    else
+      protoFile[1]=''
+      protoFile[2]=''
+      protoFile[3]=''
+      protoFile[4]=''
+      protoFile[5]=''
+      protoFile[6]=''
+      protoFile[7]=''
+      // Use 8-11 for label, tab, menu1 and menu2
+      protoFile[8]=''
+      protoFile[9]=''
+      protoFile[10]=''
+      protoFile[11]=''
+    endif
+    return
+  elseif ($1=1) then
+    exists('actionid','parameter'):$e
+    if ($e) then
+      if (actionid<>'null' and activestudy[1]<>'null') then
+        xmgetatts(actionid,'type'):$type
+        if $type='CMD' then
+          xmselect('savepar')
+          sqfilemenu('cleanupActive','only')
+        endif
+      endif
+    endif
+  endif
+  Svfname(userdir+'/parlib/'+pslabel+'%R0%',''):$ff,$label
+  $f='' $pat='name="'+$label+'"'
+  shell(`grep -l '`+$pat+`' "` +userdir+`"/templates/vnmrj/protocols/*.xml`):$f
+  protoFile[1]=$f
+  protoFile[2]='n'
+  protoFile[3]=pslabel
+  protoFile[4]=''
+  protoFile[5]=''
+  protoFile[6]=''
+  protoFile[7]=gcoil
+  // Use 8 as Label to be displayed
+  protoFile[8]=pslabel 
+  
+  // Force Tab to Enter Tab Name to force the user to set a value
+  // else, the panel does not always stay in sync with the variable.
+  // Perhaps this could just do this if the variable is empty.
+  protoFile[9]='Enter Tab Name'
+  // Empty the menu entries
+  protoFile[10]=''
+  protoFile[11]=''
+
+" make menufile for rfcoil from vnmrsys/pulsecal "
+  $menufile=userdir+'/persistence'
+  exists($menufile,'file'):$e
+  if $e<0.5 then mkdir($menufile) endif
+  $menufile=$menufile+'/rfcoil_list'
+  exists($menufile,'file'):$e
+  if $e>0.5 then rm($menufile):$x endif
+  $rffile=userdir+'/pulsecal'
+  exists($rffile,'file'):$e
+  if $e<0.5 then
+    $rffile=systemdir+'/pulsecal'
+    exists($rffile,'file'):$e
+  endif
+  if $e<0.5 then
+    write('file',$menufile,'"none" "none"')
+  else
+    nrecords($rffile):$lines
+    $lines = $lines - 4
+    lookup('mfile',$rffile,'seek','rfcoil','filekey'):$key
+    $i=0
+    $word=''
+    repeat
+      $i=$i+1
+      lookup('mfile',$key,'skip',4,'read','filekey'):$word,$key
+      write('file',$menufile,'"%s" "%s"',$word,$word)
+    until ($i>=$lines)
+  endif
+elseif ($# = 0) then
+  exists('protoAttr','parameter'):$e
+  if ($e > 0.5) then
+    destroy('protoAttr')
+    destroy('protoVal')
+"   destroy('protoFile')"
+  endif
+endif

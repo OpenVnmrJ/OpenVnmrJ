@@ -1,0 +1,38 @@
+"macro docpplot"
+"page is not a command since VJ11D, so why not search only maclib?"
+
+	  exists('page','maclib'):$pagecmd
+          if ($pagecmd=1) then
+                shell('grep -wc CPpage '+userdir+'/maclib/page'):$fpagecount
+                if ($fpagecount) then
+                        shell('rm '+userdir+'/maclib/page'):$dum
+                endif
+          endif
+          $date='' shell('date "+%Y%m%d%H%M%S"'):$date
+          shell('rm -f '+userdir+'/maclib/CPpage'):$dum
+
+	  $pagepath=''
+	  getmacropath('page'):$pagecmd,$pagepath
+	  shell('cp '+$pagepath+' '+userdir+'/maclib/CPpage'):$dum
+          if ($pagecmd=1) then
+                shell('mv '+userdir+'/maclib/page '+userdir+'/maclib/page.'+$date):$dum
+	  endif
+          write('file',userdir+'/maclib/page','%s',$1)
+	  write('file',userdir+'/maclib/page','"  CPpage  "')
+
+          abortoff 
+           	purge('page')
+          	macrold(userdir+'/maclib/page'):$dum
+		if ($# > 1) then
+		   exec($2)
+		else
+             	   plot
+		endif
+		purge('page')
+          aborton 
+          shell('rm -f '+userdir+'/maclib/page'):$dum
+          if ($pagecmd=1) then
+                shell('mv '+userdir+'/maclib/page.'+$date+' '+userdir+'/maclib/page'):$dum
+          endif
+          shell('rm -f '+userdir+'/maclib/CPpage'):$dum
+

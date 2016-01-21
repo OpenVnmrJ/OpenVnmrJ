@@ -1,0 +1,351 @@
+"macro psGshim"
+"prescan macro for gradient shimming"
+
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+  $ok=0 $mapname='' $curmap='' $NUC=''
+  if (tn='lk') then wshim='n' return('done') endif
+  gshimok('gshim'):$ok,$mapname,$curmap,$NUC
+  if ($ok = 0) then
+    return('done')
+  endif
+  wshim='n'
+  if (auto='y') then
+    if (alock='n') and ($NUC='lk') then alock='y' endif
+  endif
+  if ($mapname<>$curmap) then
+    gmapz($mapname,'loadmap'):$e
+    if ($e) then return('quit') endif
+    write('line3','Using gradient map %s instead of default %s',$mapname,$curmap)
+  else
+    write('line3','Using gradient map %s',$curmap)
+  endif
+
+  $jmap = '' $exec=''
+  exists('gshim.list','gshimlib/data'):$e,$jfile
+  if $e<0.5 then
+    write('error','gradient shimming not set up: gshim.list not found')
+    return('quit')
+  endif
+  lookup('mfile',$jfile,'mapname','read'):$jmap
+
+  $readallshims_flag='n'
+  $shims='startGshims'
+  if (seqfil <> 'gmapz') then
+    readallshims
+    $readallshims_flag='y'
+    svs($shims,'force'):$e
+    gmapz($jmap):$x
+    if $x>0.5 then
+      exists($shims,'shims'):$t,$spath
+      if $t>0.5 then rm($spath):$x endif
+      return('quit')
+    endif
+    exists('activestudy','parameter','global'):$act
+    if $act>0.5 then
+      if activestudy[1]<>'null' then
+        if auto='y' then
+          psCmd('set','werr','xmreact')
+        else
+          psCmd('set','werr','xmwerr')
+        endif
+      endif
+    endif
+    psCmd('set','stage','shim')
+    if $readallshims_flag='n' then
+      readallshims
+      $readallshims_flag='y'
+    endif
+  endif
+
+  $jstr = userdir+'/gshimlib/data/gshim.startshims'
+  exists($jstr,'file'):$e
+  if $e>0.5 then rm($jstr):$x endif
+  if $readallshims_flag='n' then
+    readallshims
+    $readallshims_flag='y'
+    svs($jstr):$e
+  else
+    exists($shims,'shims'):$t,$spath
+    if ($t>0.5) then cp($spath,$jstr) endif
+  endif
+  $jstr = userdir+'/gshimlib/data/gshim.rec'
+  exists($jstr,'file'):$e
+  if $e>0.5 then rm($jstr):$x endif
+  exists('date','parameter'):$e
+  if $e>0.5 then
+    write('file',$jstr,'Gradient Shimming Record             date: %s\n',date)
+  else
+    write('file',$jstr,'Gradient Shimming Record\n')
+  endif
+  exists('gmapct','parameter'):$e
+  if $e<0.5 then create('gmapct','integer') setgroup('gmapct','display') endif
+  exists('gmap_again','parameter'):$e
+  if $e<0.5 then
+    create('gmap_again','integer')
+    setgroup('gmap_again','display')
+  endif
+  gmapct = 0     "count iterations"
+  gmap_again = 0 "continue after shim out-of-range"
+  gmaplistfunc('unarray'):$ok,$exec
+  exec($exec)
+  array = 'd3'
+  exists('gzsize','parameter'):$ez
+  if $ez>0.5 then
+    $bsize=gzsize
+    exists('gmap_z1z4','parameter'):$e4
+    if $e4>0.5 then
+      if gmap_z1z4='y' then
+        if $bsize>4.5 then $bsize=4 endif
+      endif
+    endif
+    $sh1='' $sh2='' $sh3=''
+    gmaplistfunc('setoldv',$bsize):$ok,$sh1,$sh2,$sh3
+    if $ok < -0.5 then
+      write('error','Gradient shimming failed')
+      if auto='y' then
+        gmapset('autoreturn')
+      else
+        gmapset('return')
+      endif
+      return('quit')
+    endif
+    if ($bsize<gzsize) then
+      write('file',$jstr,'Starting gradient shimming of %s-%s, first using %s-%s.',$sh1,$sh3,$sh1,$sh2)
+    else
+      write('file',$jstr,'Starting gradient shimming of %s-%s.',$sh1,$sh3)
+    endif
+  endif
+  gmapset('disable','ez')
+  if $act>0.5 then if activestudy[1]<>'null' then
+    if auto='y' then
+      psCmd('set','werr','xmreact')
+    else
+      psCmd('set','werr','xmwerr')
+    endif
+  endif endif
+  psCmd('set','errors','all')
+  psCmd('set','stage','shim')
+  if auto='y' then
+    on('pad'):$pad_on
+    if ($pad_on>0.5 and pad[1]>0.5) then
+      exists('gmap_padon','parameter'):$pe
+      if $pe<0.5 then
+        create('gmap_padon','real')
+      endif
+      gmap_padon = pad[1]
+      pad = pad[1]
+    endif
+    autoname = '_GMAP_FILE_%SAMPLE#:%'
+  endif
+  exists('gmap_findtof','parameter'):$e5
+  if $e5>0.5 then
+      if gmap_findtof='y' then
+        write('line3','finding tof...')
+        psCmd('set','stage','findtof')
+        psCmd('set','auArgs','wait shimming shim')
+        return('doau')
+      endif
+  endif
+  psCmd('set','auArgs','wait shimming shim')
+  return('doau')
+
+elseif ($action = 'shim') then
+
+  $ret=0
+  gmapct = gmapct + 1
+  $dirn = userdir+'/gshimlib/data/'
+  $jstr = ''
+  $sh1='' $sh2='' $sh3=''
+  write('file',$dirn+'gshim.rec','\nIteration %s%d','#',gmapct)
+  on('pad'):$pad_on
+  gmaprep('proca'):$ret
+  if (auto='y' and $pad_on>0.5 and pad>0.5) then pad=0.5 endif
+  if $ret>0.5 then
+    $jstr='Gradient autoshimming processing failed.'
+    write('error','%s',$jstr)
+    if auto<>'y' then
+      gmapset('return')
+    else
+      gmapset('autorm',file)
+    endif
+    write('file',$dirn+'gshim.rec','%s',$jstr)
+    return('quit')
+  endif
+  gmaplistfunc('setoldv'):$ok
+  if $ok < -0.5 then
+    write('error','Gradient shimming failed')
+    write('file',$dirn+'gshim.rec','Gradient shimming failed')
+    if auto='y' then
+      gmapset('autorm',file)
+    else
+      gmapset('return')
+    endif
+    return('quit')
+  endif
+  gmaprep('fita','ff'):$ret    "no write to message screen"
+  if $ret>0.5 then
+    $jstr='Gradient autoshimming fit failed.'
+    write('error','%s',$jstr)
+    if auto<>'y' then
+      gmapset('return')
+    else
+      gmapset('autorm',file)
+    endif
+    write('file',$dirn+'gshim.rec','%s',$jstr)
+    return('quit')
+  endif
+
+  $dirx = '"'+$dirn+'"'
+  $jstr='cat '+$dirx+'gshim.rec '+$dirx+'gshim.list > '+$dirx+'gshim.rec2; rm '+$dirx+'gshim.rec; mv '+$dirx+'gshim.rec2 '+$dirx+'gshim.rec'
+  shell($jstr):$x
+
+  lookup('mfile',$dirn+'gshim.list','gzsize','read','seek','err','read'):$bsize,$r2
+
+  $exec=''
+  $haltshim=0
+  $max_iter=5
+  $rms_min=2.0
+  exists('gmap_maxiter','parameter'):$e
+  if $e>0.5 then $max_iter = gmap_maxiter endif
+  exists('gmap_rmsmin','parameter'):$e
+  if $e>0.5 then $rms_min = gmap_rmsmin endif
+
+  if ($r2 > $rms_min and gmapct < $max_iter) then
+    write('line3','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+    write('file',$dirn+'gshim.rec','rms err > %2.2f, continuing...',$rms_min)
+    gmaplistfunc('setnew'):$haltshim,$exec,$sh1
+    exec($exec)
+    if $haltshim>1.5 then  "only if z1"
+      write('error','Gradient shimming failed, %s out-of-bounds',$sh1)
+      if auto<>'y' then
+        gmapset('return')
+      else
+        gmapset('autorm',file)
+      endif
+      write('file',$dirn+'gshim.rec','Gradient shimming failed, %s out-of-bounds',$sh1)
+      RETURN('quit')
+    endif
+    if spin=0 then spin='n' endif
+    if auto='y' then
+      gmapset('autorm',file,'noflush')
+    endif
+    psCmd('set','auArgs','wait shimming shim')
+    return('doau')
+  else
+    if ($r2 < $rms_min) then
+      if not ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+        write('line3','Iteration %s%d, rms err %2.2f, shims converged...','#',gmapct,$r2)
+        write('file',$dirn+'gshim.rec','rms err < %2.2f, shims converged...',$rms_min)
+      endif
+    else
+      write('line3','Iteration %s%d, rms err %2.2f','#',gmapct,$r2)
+      write('file',$dirn+'gshim.rec','rms err > %2.2f',$rms_min)
+    endif
+    gmaplistfunc('setnew'):$haltshim,$exec,$sh1
+    exec($exec)
+    if $haltshim>1.5 then     "only if z1"
+      write('error','Gradient autoshimming failed, %s out-of-bounds',$sh1)
+      if auto<>'y' then
+        gmapset('return')
+      else
+        gmapset('autorm',file)
+      endif
+      write('file',$dirn+'gshim.rec','Gradient autoshimming failed, %s out-of-bounds',$sh1)
+      RETURN('quit')
+    endif
+    if ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+      gmaplistfunc('setoldv',gzsize):$ok,$sh1,$sh2,$sh3
+      if $ok < -0.5 then
+        write('error','Gradient shimming failed')
+        write('file',$dirn+'gshim.rec','Gradient shimming failed')
+        if auto='y' then
+          gmapset('autorm',file)
+        else
+          gmapset('return')
+        endif
+        return('quit')
+      endif
+      gmap_again=2
+      write('line3','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+      write('file',$dirn+'gshim.rec','rms err %2.2f, using %s-%s, continuing...',$r2,$sh1,$sh3)
+      if spin=0 then spin='n' endif
+      if auto='y' then
+        gmapset('autorm',file,'noflush')
+      endif
+      psCmd('set','auArgs','wait shimming shim')
+      return('doau')
+    else
+      format(gmapct,1,0):$jstr
+      if ($r2 > $rms_min) then
+        $jstr='Maximum '+$jstr+' iterations reached'
+      else
+        $jstr=$jstr+' iteration'
+        if gmapct>1.5 then $jstr=$jstr+'s' endif
+      endif
+      write('file',$dirn+'gshim.rec','Gradient autoshimming on Z done!  %s',$jstr)
+      if auto<>'y' then
+        gmapset('return')
+      else
+        gmapset('autorm',file)
+      endif
+      write('line3','Gradient autoshimming on Z done!  %s',$jstr)
+      psCmd('record','wshim=n')
+      return('done')
+    endif
+  endif
+
+elseif ($action = 'findtof') then
+  if (auto='y' and pad>0.5) then pad=0.5 endif
+  $dirn = userdir+'/gshimlib/data/'
+  $x=0
+  $gzwin_tmp = gzwin   "set tof only, keep same gzwin"
+  gmapset('setsw',50):$x
+  gzwin = $gzwin_tmp
+  if $x>0.5 then
+    write('error','Gradient shimming failed, tof not found')
+    if auto<>'y' then
+      gmapset('return')
+    else
+      gmapset('autorm',file)
+    endif
+    write('file',$dirn+'gshim.rec','Gradient shimming failed, tof not found')
+    RETURN('quit')
+  endif
+
+  psCmd('set','stage','shim')
+  if auto='y' then
+    gmapset('autorm',file,'noflush')
+  endif
+  write('line3','tof set to %1.1f, starting gradient shimming...',tof)
+  psCmd('set','auArgs','wait shimming shim')
+  return('doau')
+
+elseif ($action = 'exp') then
+  write(`line3`,`'%s' method is not implemented for psGshim.`,$action)
+  return('done')
+elseif ($action = 'err') then
+  psCmd('get','werr'):$werr
+  if ($werr = 'xmreact') then
+    xmreact:$res
+    return($res)
+  else
+    xmwerr
+    return('done')
+  endif
+else
+  write(`line3`,`'%s' method is not implemented for psGshim.`,$action)
+  return('done')
+endif
+

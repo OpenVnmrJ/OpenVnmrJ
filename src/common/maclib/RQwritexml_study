@@ -1,0 +1,41 @@
+"macro RQwritexml_study"
+
+if($# < 1.5) then return ('') endif
+
+$path = $1
+
+strstr($path, '/','last'):$e,$dir,$name
+
+$ext = '.fid'
+strstr($path,$ext):$n,$s
+length($path):$len
+$len = $len-3
+if ($n <> 0 and $n = $len) then
+   strstr($name,$ext):$n,$s
+   $name = $s
+elseif $n <> 0 then 
+   $ext = ''
+elseif $# < 3.5 or $4 <> 'parent' then
+   return ('')
+endif
+
+$count=''
+format($2,0,0):$count
+$expnd = 'yes'
+if $# > 2.5 then $expnd = $3 endif
+
+$owner=''
+$size=''
+$time=''
+
+getfilestat($path, 'owner'):$owner
+getfilestat($path, 'size'):$size
+getfilestat($path, 'mtime'):$time
+
+exists($path,'directory'):$e
+if $e > 0.5 then
+     return('<filenode path="'+$path+'" dir="'+$dir+'" name="'+$name+'" type="dir" group="'+$count+'" last_modified="'+$time+'" owner="'+$owner+'" size="'+$size+'" expand="'+$expnd+'" ext="'+$ext+'" >')
+else
+     return('<filenode path="'+$path+'" dir="'+$dir+'" name="'+$name+'" type="file" last_modified="'+$time+'" owner="'+$owner+'" size="'+$size+'" />')
+endif
+

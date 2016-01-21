@@ -1,0 +1,69 @@
+"macro tmpreturn"
+"  tmpreturn  -  return files saved with tmpsave to the correct  "
+"                locations within an experiment                  "
+"                The argument passed is used to determine the    "
+"                name of the temporary files                     "
+"                The combination of tmpsave and tmpreturn allow  "
+"                an experiment to be used without having to redo "
+"                an FT on the original data                      "
+"                second argument will suppress the flush command "
+$type = 'none'
+if ($# < 1) then
+   write('error','one argument needs to be passed to %s',$0)
+else
+   exists(curexp + '/' + $1 + '/fid', 'file'):$isthere
+   if ($isthere > 0.5) then
+      if ($# < 2) then
+         flush
+      endif
+      $type = 'fid'
+      mv('-f',curexp+'/' + $1 + '/fid',curexp+'/acqfil/fid')
+      exists(curexp + '/' + $1 + '/data', 'file'):$isthere
+      if ($isthere > 0.5) then
+         $type = 'data'
+         mv(curexp+'/' + $1 + '/data',      curexp+'/datdir/data')
+         exists(curexp + '/' + $1 + '/phasefile', 'file'):$isthere
+         if ($isthere > 0.5) then
+            mv(curexp+'/' + $1 + '/phasefile', curexp+'/datdir/phasefile')
+         endif
+      endif
+   endif
+   $pf=curexp+'/' + $1 + '/procpar'
+   exists($pf,'file'):$e
+   if $e>0.5 then
+      mv($pf,curexp+'/procpar')
+   endif
+   $cf=curexp+'/' + $1 + '/curpar'
+   exists($cf,'file'):$e
+   if $e>0.5 then
+      mv($cf,curexp+'/curpar')
+   endif
+   $tf=curexp+'/'+$1+'/text'
+   exists($tf,'file'):$e
+   if ($e>0.5) then
+      mv($tf,curexp+'/text')
+   endif
+   exists(curexp+'/sampling.sch','file'):$schex
+   if $schex then
+	rm('-f',curexp+'/sampling.sch')
+   endif
+   $sf=curexp+'/'+$1+'/cur_sampling.sch'
+   exists($sf,'file'):$e
+   if ($e>0.5) then
+	mv($sf,curexp+'/sampling.sch')
+   endif
+   exists(curexp+'/acqfil/sampling.sch','file'):$schex
+   if $schex then
+	rm('-f',curexp+'/acqfil/sampling.sch')
+   endif
+   $sf=curexp+'/'+$1+'/sampling.sch'
+   exists($sf,'file'):$e
+   if $e>0.5 then
+	mv($sf,curexp+'/acqfil/sampling.sch')
+   endif
+   rm('-r',curexp+'/'+$1):$x
+   fread(curexp+'/curpar','current','reset')  "for 5.2"
+   fread(curexp+'/procpar','processed','reset')
+endif
+dg newdg
+return($type)

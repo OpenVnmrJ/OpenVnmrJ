@@ -1,0 +1,69 @@
+"macro setHTdec"
+"setHTdec - setup decoupling for dn "
+" Eriks Kupce, Varian R&D "
+
+  $d = '' $p = '' $l='' $bw='' $sh=''
+  $name = '' $cmd1 = '' $cmd2 = ''
+
+  if(dn='H1') then
+    getparam('pw90','H1'):$pwx
+    getparam('tpwr','H1'):$dpwr
+    getparam('tpwr_cf','H1'):$compX
+  else
+    getparam('pwx','C13'):$pwx
+    getparam('pwxlvl','C13'):$dpwr
+    getparam('pwxlvl_cf','C13'):$compX
+  endif
+
+  $pwx = $pwx*$compX
+  format(dpwr,1,0):$d 
+  format($dpwr,1,0):$p 
+  format($pwx,1,2):$l 
+
+  if(dmm = 'ccc') then
+    dm = 'nnn'
+  endif
+  if(dmm = 'ccw') then
+    $cmd1 = 'Pbox cal -w ' + 'WALTZ16 -attn ' 
+    $cmd2 =  $d + 'd -p ' + $p + ' -l ' + $l
+    write('alpha','cmd = %s',$cmd1+$cmd2)
+    shell($cmd1+$cmd2)
+    pbox_dmf:dmf
+    pbox_dres:dres
+    dm='nny'
+  endif
+  if(dmm = 'ccg') then
+    $cmd1 = 'Pbox cal -w ' + 'GARP -attn ' 
+    $cmd2 =  $d + 'd -p ' + $p + ' -l ' + $l
+    write('alpha','cmd = %s',$cmd1+$cmd2)
+    shell($cmd1+$cmd2)
+    pbox_dmf:dmf
+    pbox_dres:dres
+    dm='nny'
+  endif
+  if(dmm = 'ccp') then
+    if(dn='H1') then
+      $name = 'wu40H.DEC'
+      format(40*dfrq,1,1):$bw
+      dseq = 'wu40H'
+    else
+      dn='C13'
+      $name = 'wu200.DEC'
+      format(200*dfrq,1,1):$bw
+      dseq = 'wu200'
+    endif
+    $sh = ' "WURST2 ' + $bw + '/1.2m" '
+    $cmd1 = 'Pbox ' + $name + ' -w' + $sh + '-p ' 
+    $cmd2 =  $p + ' -l ' + $l + ' -s 2.0 -sucyc t5,m4'
+    write('alpha','cmd = %s',$cmd1+$cmd2)
+    shell($cmd1+$cmd2)
+    pbox_pwr($name):dpwr  
+    pbox_dmf($name):dmf
+    pbox_dres($name):dres
+    dm ='nny'
+    dpwr = dpwr + 3
+    if(dpwr > 50) then
+      dpwr = 50
+    endif
+  endif
+return

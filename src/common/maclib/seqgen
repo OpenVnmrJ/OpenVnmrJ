@@ -1,0 +1,82 @@
+"macro seqgen"
+"-------------------------------------------------------------------------"
+" seqgen(filename):   compiles the pulse sequence from the user psglib    "
+"		      and places the compiled sequence in the user seqlib "
+"-------------------------------------------------------------------------"
+
+// get include directories
+$incl=''
+appdir('info'):$num
+$i = 0
+while ($i < $num) do
+  $i = $i + 1
+  appdir('info',$i):$lab,$path
+  exists($path+'/psg','directory'):$e
+  if ($e) then
+    $incl = $incl + ' -I ' + $path+'/psg'
+  endif
+endwhile
+
+$key=''
+$file=''
+if ($# = 0) then
+  $file = seqfil
+  $num = 1
+elseif ($# = 1) then
+  $file = $1
+  substr($1,'wc'):$num
+elseif ($# = 2) then
+  lookup('mfile',$1,'filekey'):$key
+  $num=$2
+endif
+$path=''
+$dir=''
+$name=''
+$ext=''
+$i = 0
+$updateFile=userdir+'/seqlib/.seqgenupdate'
+rm('-f',$updateFile):$e
+exists(userdir+'/psg/libpsglib.so.6.0','file'):$e  // has local psggen been done
+if ($e) then
+  write('file',$updateFile,'PSGGEN')               // disable seqgenupdate
+endif
+$ch=''
+while ($i < $num) do
+  $i=$i+1
+  if ($key='') then
+    substr($file,$i):$path
+  else
+    lookup('mfile',$key,'read','filekey'):$path,$key
+  endif
+  substr($path,1,1):$ch
+  substr($path,'dirname'):$dir,$name,$ext
+  if ($ch = '/') then // copy to psglib
+      rm('-f',userdir+'/psglib/'+$name+'.c'):$e
+      write('line3','Compiling a local copy of %s',$path)
+      write('line3','in %s/psglib',userdir)
+      cp($path,userdir+'/psglib/'+$name+'.c')
+      write('file',$updateFile,'%s ABSOLUTE %s',$name, $path)
+      $e = 1
+  else
+    $path=userdir+'/psglib/'+$name+'.c'
+    exists($path,'file'):$e
+    if ($e = 0) then
+        $path2=''
+        exists($name+'.c','psglib'):$e,$path2
+        if ($e) then
+          appdir('info',$e):$label
+          write('line3','File %s.c found in the %s psglib.',$name,$label)
+          write('line3','Compiling a local copy in %s/psglib',userdir)
+          cp($path2,$path)
+          write('file',$updateFile,'%s %s;%s',$name, $path2, $label)
+        endif
+    else
+      write('file',$updateFile,'%s LOCAL',$name)
+    endif
+  endif
+  if ($e) then
+    shell('vnmrseqgen',$incl,$name)
+  else
+    write('line3','Pulse sequence %s not found',$name)
+  endif
+endwhile

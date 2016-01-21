@@ -1,0 +1,181 @@
+"macro updateprobe"
+"updateprobe - macro to update an already existing probe file"
+
+if (activeviewport<>jviewport) then return endif
+
+if ($# < 1) then $1 = probe endif
+
+if ($1 = '') then
+  if ($## < 1) then
+  	write('line3','Usage: updateprobe(<probename>')
+  	write('error','Macro aborted')
+  endif
+  return
+endif
+
+if ($## < 1) then
+    getProbePath($1,'alert'):$e,$probefile,$rw
+else
+    getProbePath($1):$e,$probefile,$rw
+endif
+if ($rw=0) then return endif
+$probe=''
+substr($probefile,'basename'):$probe
+
+if ($## < 1) then
+    write('line3','Checking probe file "%s" for updates.',$1)
+endif
+
+$Probeex=''
+shell('grep Probe: '+$probefile):$Probeex
+if ($Probeex = '') then
+ write('file',$probefile,'Probe:      Parameters')
+ write('file',$probefile,'Probedate      00-00-0000')
+ write('file',$probefile,' ')
+endif
+
+$s1='' $s2=''
+readfile($probefile,'$s1','$s2','','local')
+
+$param='' $value='' $nuc='' $i=1
+$param[$i]='gradient'   $value[$i]='n'   	$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='gcal' 	$value[$i]='0' 		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='lkmap'	$value[$i]='n'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='H1map'	$value[$i]='n'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='hsmap'      $value[$i]='n'          $nuc[$i]='Probe'        $i=$i+1
+$param[$i]='defaultshims' $value[$i]=$probe+'_lk_d2o'  $nuc[$i]='Probe'  $i=$i+1
+$param[$i]='tuneflg'	$value[$i]='n'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='rfsize'     $value[$i]='16'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='bearing'    $value[$i]='41000'      $nuc[$i]='Probe'        $i=$i+1
+$param[$i]='spintype'   $value[$i]='liquids'    $nuc[$i]='Probe'        $i=$i+1
+$param[$i]='probetype'   $value[$i]='liquids'    $nuc[$i]='Probe'        $i=$i+1
+$param[$i]='style'   $value[$i]='db'    $nuc[$i]='Probe'        $i=$i+1   // can be 'onenmr', 'cold', 'id' or 'db'
+$param[$i]='spinmax'    $value[$i]='39'         $nuc[$i]='Probe'        $i=$i+1
+$param[$i]='wtune'	$value[$i]='n'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='tunemethod'	$value[$i]='n'		$nuc[$i]='Probe'	$i=$i+1
+$param[$i]='vtc'	$value[$i]='25'		$nuc[$i]='Probe'	$i=$i+1
+
+$param[$i]='tpwr_cf'   		$value[$i]='1'   	$nuc[$i]='H1'	$i=$i+1
+$param[$i]='tpwr_cf' 		$value[$i]='1' 		$nuc[$i]='F19'	$i=$i+1
+$param[$i]='pwxlvl_cf'		$value[$i]='1'		$nuc[$i]='C13'	$i=$i+1
+$param[$i]='gHratio'		$value[$i]='3.98'	$nuc[$i]='C13'	$i=$i+1
+$param[$i]='pwxlvl_cf'		$value[$i]='1'		$nuc[$i]='N15'	$i=$i+1
+$param[$i]='gHratio'		$value[$i]='9.85'	$nuc[$i]='N15'	$i=$i+1
+$param[$i]='pwxlvl_cf'		$value[$i]='1'		$nuc[$i]='P31'	$i=$i+1
+$param[$i]='gHratio'		$value[$i]='2.47'	$nuc[$i]='P31'	$i=$i+1
+
+$param[$i]='dmm'   		$value[$i]='w'   	$nuc[$i]='H1'	$i=$i+1
+$param[$i]='dseq' 		$value[$i]='waltz16' 	$nuc[$i]='H1'	$i=$i+1
+$param[$i]='dres'		$value[$i]='90'		$nuc[$i]='H1'	$i=$i+1
+$param[$i]='dmm'   		$value[$i]='w'   	$nuc[$i]='F19'	$i=$i+1
+$param[$i]='dseq' 		$value[$i]='waltz16' 	$nuc[$i]='F19'	$i=$i+1
+$param[$i]='dres'		$value[$i]='90'		$nuc[$i]='F19'	$i=$i+1
+$param[$i]='dmm'   		$value[$i]='g'   	$nuc[$i]='C13'	$i=$i+1
+$param[$i]='dseq' 		$value[$i]='garp1' 	$nuc[$i]='C13'	$i=$i+1
+$param[$i]='dres'		$value[$i]='1'		$nuc[$i]='C13'	$i=$i+1
+$param[$i]='dmm'   		$value[$i]='g'   	$nuc[$i]='N15'	$i=$i+1
+$param[$i]='dseq' 		$value[$i]='garp1' 	$nuc[$i]='N15'	$i=$i+1
+$param[$i]='dres'		$value[$i]='1'		$nuc[$i]='N15'	$i=$i+1
+$param[$i]='dmm'   		$value[$i]='g'   	$nuc[$i]='P31'	$i=$i+1
+$param[$i]='dseq' 		$value[$i]='garp1' 	$nuc[$i]='P31'	$i=$i+1
+$param[$i]='dres'		$value[$i]='1'		$nuc[$i]='P31'	$i=$i+1
+
+if (Console='vnmrs') or (Console='mr400') then
+
+  teststr('$s1','Probestyle','local'):$parex
+  if ($parex) then
+    $style=$s2[$parex]
+  else
+    $style='one'
+  endif
+  $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='H1'	$i=$i+1
+  $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='F19'   $i=$i+1
+  if ($style='cold') then
+     $param[$i]='minrof2'           $value[$i]='350'         $nuc[$i]='C13'   $i=$i+1
+  else
+     $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='C13'   $i=$i+1
+  endif
+  $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='N15'   $i=$i+1
+  $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='P31'   $i=$i+1
+//  $param[$i]='minrof2'           $value[$i]='25'         $nuc[$i]='Probe' $i=$i+1
+  if ($style='cold') then
+     $param[$i]='minalfa'           $value[$i]='20'         $nuc[$i]='H1'    $i=$i+1
+  else
+     $param[$i]='minalfa'           $value[$i]='10'         $nuc[$i]='H1'    $i=$i+1
+  endif
+  $param[$i]='minalfa'           $value[$i]='10'         $nuc[$i]='F19'   $i=$i+1
+  if ($style='cold') then
+     $param[$i]='minalfa'           $value[$i]='20'         $nuc[$i]='C13'   $i=$i+1
+  else
+     $param[$i]='minalfa'           $value[$i]='10'         $nuc[$i]='C13'   $i=$i+1
+  endif
+  $param[$i]='minalfa'           $value[$i]='10'         $nuc[$i]='N15'   $i=$i+1
+  $param[$i]='minalfa'           $value[$i]='10'         $nuc[$i]='P31'   $i=$i+1
+
+endif
+"*****************************************************************************"
+
+if numrfch > 2 then
+
+ $param[$i]='dpwr2'   		$value[$i]='0'   	$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='dmf2' 		$value[$i]='200' 	$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='pwx2'		$value[$i]='0'		$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='pwx2lvl'		$value[$i]='0'		$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='pwx2lvl_cf'	$value[$i]='1'		$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='dmm2'   		$value[$i]='g'   	$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='dseq2' 		$value[$i]='garp1' 	$nuc[$i]='C13'	$i=$i+1
+ $param[$i]='dres2'		$value[$i]='1'		$nuc[$i]='C13'	$i=$i+1
+
+ $param[$i]='dpwr2'   		$value[$i]='0'   	$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='dmf2' 		$value[$i]='200' 	$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='pwx2'		$value[$i]='0'		$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='pwx2lvl'		$value[$i]='0'		$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='pwx2lvl_cf'	$value[$i]='1'		$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='dmm2'   		$value[$i]='g'   	$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='dseq2' 		$value[$i]='garp1' 	$nuc[$i]='N15'	$i=$i+1
+ $param[$i]='dres2'		$value[$i]='1'		$nuc[$i]='N15'	$i=$i+1
+
+ $param[$i]='dpwr2'   		$value[$i]='0'   	$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='dmf2' 		$value[$i]='200' 	$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='pwx2'		$value[$i]='0'		$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='pwx2lvl'		$value[$i]='0'		$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='pwx2lvl_cf'	$value[$i]='1'		$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='dmm2'   		$value[$i]='g'   	$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='dseq2' 		$value[$i]='garp1' 	$nuc[$i]='P31'	$i=$i+1
+ $param[$i]='dres2'		$value[$i]='1'		$nuc[$i]='P31'	$i=$i+1
+
+endif
+
+$x=1
+$report=0
+repeat
+    teststr('$s1',$nuc[$x]+$param[$x],'local'):$parex
+    if ($parex=0) then
+	$report=1
+	addparams($param[$x],$value[$x],$nuc[$x],$1)
+    endif
+    $x=$x+1
+until $x = $i
+
+"Warn if probe style is not recognised"
+$style=''
+getparam('style','Probe'):$style
+if ($style <> '') then
+  exists('ProbeStyleList','adm/walkupadm'):$ex,$path
+  if $ex then
+    $s1='' $s2='' $tot=0
+    readfile($path,'$s1','$s2',$style,'local'):$tot
+    if $s1 <> $style then
+      write('line3','Warning: Entry for parameter probestyle not recognised.  Please edit the probe file and set it to a valid entry from '+$path)
+    endif
+  endif
+endif
+
+dousermacro($0)
+if ($## < 1) then
+  if ($report) then
+    write('line3','Updated "%s"',$probefile)
+  else
+    write('line3','No updates for "%s"',$1)
+  endif
+endif

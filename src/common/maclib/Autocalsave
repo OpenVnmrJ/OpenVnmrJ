@@ -1,0 +1,40 @@
+"macro Autocalsave"
+"************************************************************"
+" Autocalsave - Macro to save a fid during autocalibration   "
+"************************************************************"
+
+ $filename=''
+ pwd:$filename
+ if (archivedir='') then
+   archivedir=userdir+'/data/'
+ endif
+ cd(archivedir+'/'+sample):$dum
+
+ if ($# > 1) then
+   if ($2 = 'par') then
+     svp($1)
+     cd($filename)
+     return
+   endif
+ endif
+
+ EXPtime:ACQtime
+ setvalue('ACQtime',ACQtime,'processed')
+ file=archivedir+'/'+sample+'/'+$1+'.fid'
+ setvalue('file',file,'processed')
+ flush
+ svf($1)
+ exists('cplog','maclib'):$cpex
+ if ($cpex) then
+   cplog($1,'write',$1)
+ endif
+ $audittrail='no'
+ getadminfo('audittrail'):$audittrail
+ if ($audittrail='yes') then
+	exists(Archive1,'directory'):$ex
+	if ($ex=0) then shell('mkdir -p '+Archive1):$dum endif
+	exists(Archive2,'directory'):$ex
+	if ($ex=0) then shell('mkdir -p '+Archive2):$dum endif
+        secure(file)
+ endif
+ cd($filename):$dum

@@ -1,0 +1,64 @@
+"macro BPconvolute"
+"BPconvolute - BPconvolute a waveform shape with n frequencies"
+"usage: BPconvolute('rawshape','newshape',width,freq1,freq2,...freqn)"
+" e.g.: BPconvolute('gauss','offsetgauss',pw,100,300)"
+"        width is in usec"
+" 94/6/4 - p.sandor (made more phase coherent for pulses) "
+
+write('line3','Calculating BPconvoluted waveform...')
+"calculate phase step size for frequency shifting"
+$numfreq=$#-3
+$input=userdir+'/shapelib/'+$1+'.RF'
+nrecords($input):$numsteps
+lookup('file',$input)
+$i=1 $comments=0 $inline='' $firstchar=''
+repeat
+  lookup('readline'):$inline
+  substr($inline,1,1):$firstchar
+  if $firstchar='#' then $comments=$comments+1 endif
+  $i=$i+1
+until $i>$numsteps
+$numsteps=$numsteps-$comments
+$output=userdir+'/shapelib/'+$2+'.RF'
+$i=4
+repeat "for each frequency"
+  $step[$i-3]=360*${$i}*$3/(1e6*$numsteps)
+  echo('frequency #',$i-3,':',${$i},'; phase step size: ',$step[$i-3])
+  $i=$i+1
+until $i>$#
+$degtorad=2*3.14159/360
+lookup('file',$input)
+$i=1 while $i<=$comments do lookup('readline') $i=$i+1 endwhile
+write('reset',$output)
+$i=1
+repeat "for each step in the shape"
+  $x=0 $y=0 $ifreq=1
+  repeat "for each frequency"
+    $lastphase=$step[$ifreq]*($numsteps-1) "Make sure phases end up with zero"
+    $deg=($i-1)*$step[$ifreq]-$lastphase
+    if $deg>360 then $deg=$deg-360 endif
+    if $deg<0 then $deg=$deg+360 endif
+    $deg=$deg*$degtorad
+    sin($deg):$x1 cos($deg):$y1
+    $x=$x+$x1 $y=$y+$y1
+    $ifreq=$ifreq+1
+  until $ifreq>$numfreq
+  $x=$x/$numfreq $y=$y/$numfreq
+  $r=sqrt($x*$x+$y*$y)
+  if $y=0 then "either 90 or 270"
+    $addphase=90
+  else
+    atan($x/$y):$addphase $addphase=$addphase/$degtorad
+    if $addphase<0 then $addphase=-$addphase endif
+    if $y<0 then $addphase=180-$addphase endif
+  endif
+  if $x<0 then $addphase=360-$addphase endif
+  lookup('read',3):$phase,$amp,$gate
+  $newphase=$addphase+$phase
+  if $newphase>360 then $newphase=$newphase-360 endif
+  if $newphase<0 then $newphase=$newphase+360 endif
+  if ($newphase>359.75) and ($newphase<360.25) then $newphase=0 endif
+  write('file',$output,'%5.2f\t%6.1f\t%2.1f',$newphase,$amp*$r,$gate)
+  $i=$i+1
+until $i>$numsteps
+write('line3','Done!')

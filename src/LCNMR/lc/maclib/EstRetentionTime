@@ -1,0 +1,222 @@
+"macro EstRetentionTime"
+if ($# < 1) then $1='init' endif
+is_submitmode:$submit
+
+IF ($1='init') THEN
+
+  if ($submit) then
+    $p=0 $e='' $t=0 $n=''
+    sortPeakNodes:$p,$e,$t,$n
+    $total=size('$p')
+
+    if ($p[1]=0) then return endif
+    exists('ERTpar','parameter','global'):$parex
+    if ($parex=0) then
+	create('ERTpar','string','global')
+    endif
+    setprotect('ERTpar','on',256,'global')
+
+    $i=1 ERTpar='' $j=1
+    repeat
+    	$s1='' $s2=''
+	$prop=cursqexp+'/tmpstudy/info/'+$n[$i]+'/prop'
+    	readfile($prop,'$s1','$s2','EstRetTime','local')
+	ERTpar[$j]=$n[$i]
+    	ERTpar[$j+1]=$s2
+	$j=$j+2
+    	$i=$i+1
+    until $i > $total
+  else
+    $loc='' $locdir=''
+    $eq=autodir+'/enterQ'
+    $md=$eq+'.macdir'
+    getlocid($eq):$loc,$locdir
+    if ($loc[1]='') or $loc[1]='0' then return endif
+
+    exists('ERTpar','parameter','global'):$parex
+    if ($parex=0) then
+        create('ERTpar','string','global')
+    endif
+    setprotect('ERTpar','on',256,'global')
+
+    $total=size('$loc')
+    $i=1 ERTpar='' $j=1
+    repeat
+	format($loc[$i],'lower'):$p[$i]
+	$s2=''
+	rtv($md+'/'+$locdir[$i]+'/sampleglobal','noabort','retentiontime_'):$s2
+	ERTpar[$j]=$locdir[$i]
+	ERTpar[$j+1]=$s2
+	$j=$j+2
+        $i=$i+1
+    until $i > $total
+  endif
+    EstRetentionTime('popup',$p)
+
+ELSEIF ($1='popup') THEN
+
+    $p=$2
+    $total=size('$p')
+    exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+    if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum endif
+    $file=userdir+'/templates/vnmrj/interface/'+$0+'.xml'
+    write('reset',$file)
+
+    write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$file,'<template name="%s" element="groups" type="acquisition" >',$0)
+    $y=trunc(($total/2)+0.5)*30+40
+
+    write('file',$file,'  <group size="325 %d"',$y)
+    write('file',$file,'    bg="transparent"')
+    write('file',$file,'    border="None"')
+    write('file',$file,'    tab="no"')
+    write('file',$file,'    reference="%s"',$0)
+    write('file',$file,'    useref="no"')
+    write('file',$file,'    subtype="Basic"')
+    write('file',$file,'    expanded="yes"')
+    write('file',$file,'    >')
+
+    write('file',$file,'     <label loc="5 5" size="260 25"')
+    write('file',$file,'        style="Heading2"')
+    write('file',$file,'        label="Expected Retention Time (min) for:"')
+    write('file',$file,'        justify="Center"')
+    write('file',$file,'        />')
+
+    $y=35
+    $i=1 $j=2
+    repeat
+	$x=5
+        write('file',$file,'     <label loc="%d %d" size="90 25"',$x,$y)
+        write('file',$file,'        style="Heading2"')
+        write('file',$file,'        label="Peak%d"',$p[$i])
+        write('file',$file,'        justify="Right"')
+        write('file',$file,'        />')
+        $x=$x+95
+        write('file',$file,'     <entry loc="%d %d" size="60 25"',$x,$y)
+        write('file',$file,'        style="Heading2"')
+        write('file',$file,'        vq="ERTpar"')
+        write('file',$file,'        vc="ERTpar[%d]=\'$VALUE\'"',$j)
+        write('file',$file,'        set="$VALUE=ERTpar[%d]"',$j)
+        write('file',$file,'        />')
+	$i=$i+1
+	$j=$j+2
+      if ($i < $total+1) then
+	$x=$x+65
+        write('file',$file,'     <label loc="%d %d" size="90 25"',$x,$y)
+        write('file',$file,'        style="Heading2"')
+        write('file',$file,'        label="Peak%d"',$p[$i])
+        write('file',$file,'        justify="Right"')
+        write('file',$file,'        />')
+        $x=$x+95
+        write('file',$file,'     <entry loc="%d %d" size="60 25"',$x,$y)
+        write('file',$file,'        style="Heading2"')
+        write('file',$file,'        vq="ERTpar"')
+        write('file',$file,'        vc="ERTpar[%d]=\'$VALUE\'"',$j)
+        write('file',$file,'        set="$VALUE=ERTpar[%d]"',$j)
+        write('file',$file,'        />')
+      endif
+	$i=$i+1
+	$j=$j+2
+	$y=$y+30
+    until $i > $total
+
+    write('file',$file,'    </group>')
+    write('file',$file,'</template>')
+
+    $title='Expected Retention Time'
+
+    $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        \'file:'+$0+'.xml\',
+        \'rebuild:yes\',
+        \'pnewupdate:true\',
+        \'title:'+$title+'\''
+        $vjcmd=$vjcmd+',\'ok:'+$0+'(`update`)\''
+        $vjcmd=$vjcmd+',\'cancel:'+$0+'(`cancel`)\''
+    $vjcmd=$vjcmd+')'
+    exec($vjcmd)
+
+
+ELSEIF ($1='update') THEN
+  $total=size('ERTpar')
+  if ($total<2) then 
+	destroy('ERTpar','global'):$dum
+	return 
+  endif
+    $i=1
+    repeat
+	if (ERTpar[$i+1] <>'') then
+          format(ERTpar[$i+1],'isreal'):$real
+	  if not $real then
+	    write('error','Expected real number for Retention Time')
+	    destroy('ERTpar','global'):$dum
+	    return
+	  endif
+	endif
+	$i=$i+2
+    until $i > $total
+
+  $p=0 $e='' $t=0 $n=''
+  sortPeakNodes:$p,$e,$t,$n
+
+  if ($submit) then
+    $i=1
+    repeat
+	xmhaha_setprop(ERTpar[$i],'EstRetTime',ERTpar[$i+1])
+	teststr('$n',ERTpar[$i],'local'):$is
+	$pname='' format($p[$is],0,0):$pname
+	if ($p[$is]<10) then $pname='0'+$pname endif
+	if (ERTpar[$i+1]<>'') then
+            $pname=$pname+' (expected RT: '+ERTpar[$i+1]+' min)'
+	endif
+        $d2='' $d1=''
+        formattime($t[$is]):$d2,$d1
+        if ($d1<>'') then
+                $pname=$pname+' ['+$d1+']'
+        endif
+        xmhaha_setprop(ERTpar[$i],'title',$pname)
+	$i=$i+2
+    until $i > $total
+  else
+    $nlocdirs='' $j=1
+    savesampglobal('cp')
+    $md=autodir+'/enterQ.macdir'
+    $i=1
+    repeat
+      if ($p[1]<>0) then
+        $prop=autodir+'/enterQ.macdir/cursqexp/tmpstudy/info/'+$n[$j]+'/prop'
+	exists($prop,'file'):$prex
+        if ($prex) then
+	  $s1='' $s2=''
+	  readfile($prop,'$s1','$s2','','local'):$prtot
+	  if ($prtot) then
+	    teststr('$s1','EstRetTime','local'):$is
+	    if ($is) then $s2[$is]=ERTpar[$i+1] endif
+	    $xi=1
+	    write('reset',$prop)
+	    repeat
+		write('file',$prop,'%s  %s',$s1[$xi],$s2[$xi])
+		$xi=$xi+1
+	    until $xi>$prtot
+	  endif
+	endif
+      endif
+
+	$nlocdirs[$j]=ERTpar[$i] $j=$j+1
+	getsampglobal($md+'/'+ERTpar[$i])
+	retentiontime_=ERTpar[$i+1]
+	savesampglobal($md+'/'+ERTpar[$i])
+	savesampglobal($md+'/'+ERTpar[$i]+'/day')
+        savesampglobal($md+'/'+ERTpar[$i]+'/night')
+	$i=$i+2
+    until $i > $total
+    getsampglobal('cp')
+    xmhaha_subautoSQ(autodir,'',$nlocdirs)
+    xmhaha_asx(autodir,'DayQ')
+    SQDisplay('refresh')
+  endif
+    destroy('ERTpar','global'):$dum
+
+ELSEIF ($1='cancel') THEN
+    destroy('ERTpar','global'):$dum
+
+ENDIF

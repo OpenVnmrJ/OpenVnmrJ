@@ -1,0 +1,78 @@
+"macro process"
+" process - generic automatic processing macro "
+
+"  Usage: process is usually called through 'wexp' "
+"	  but can also be called 'by hand'	   "
+"  process is designed as a 'universal processing macro'; customization	"
+"  (if required) should NOT hapen here, but rather through parameters	"
+"  or macros that are called within 'process', directly or indirectly.	"
+
+" Rules:								    "
+"      - for 1D spectra:						    "
+"	   - non-arrayed:						    "
+"	       - use {tn}p macro, if found				    "
+"	       - otherwise use minimal 1D processing (proc1d)		    "
+"	   - arrayed:							    "
+"	       - for seqfil='dept*' use deptproc			    "
+"	       - otherwise use minimal array processing (arrayproc)	    "
+"      - for 2D use proc2d macro					    "
+"      - for 3D use wft3d						    "
+"      - no processing for nD with n>3					    "
+"      - userprocess macro at the beginning"
+"      - if execprocess='' then continue"
+
+dousermacro($0)
+
+on('execprocess'):$e
+if ($e > 0.5) then
+  $s=''
+  substr(execprocess,1):$s  // check that execprocess is not an empty string
+  if ($s='') or $s='skIpExEcprOcEss' then $e=0 endif
+endif
+if ($e > 0.5) then
+  $execprocess=execprocess
+// put a keyword
+  execprocess='skIpExEcprOcEss'
+  exec($execprocess):$e
+// if execprocess is still the keyword, the $execprocess
+//  routine didn't change its value.  If so, put the original
+//  value back, else leave it alone.
+  if execprocess='skIpExEcprOcEss' then execprocess=$execprocess endif
+
+  if ($e) then
+    return
+  endif
+endif
+if (appmode='imaging') then
+  return
+endif
+
+format(seqfil,'lower'):$seqfil
+wbs=''
+getdim:$dim
+full
+
+if $dim=1 then
+  substr($seqfil,1,4):$seq4           " capture dept "
+  if arraydim=1 then
+    if (($seq4='lc1d') OR ($seq4='vast')) then
+       lc1dproc
+    else
+	proc1d
+    endif
+  else
+    if ($seq4='dept') and (arraydim=4) then
+      deptproc
+    else
+      procarray
+    endif
+  endif
+else
+  if $dim=2 then
+    proc2d
+  else
+    write('alpha','process: no automatic processing of 3D data is provided!')
+  endif
+endif
+
+execpslabel('display')

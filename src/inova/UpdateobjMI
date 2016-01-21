@@ -1,0 +1,386 @@
+: '%Z%%M% %I% %G% Copyright (c) 1991-2008 Varian Assoc.'
+# 
+# Varian Assoc.,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential 
+# information of Varian Assoc., Inc. and its contributors. 
+# Use, disclosure and reproduction is prohibited without 
+# prior consent. 
+#
+:  update category objects
+:  Supdate [category, make targets]
+:  if no category is given then user is prompted for category and make targets
+:  /bin/sh
+
+set -x
+
+# function to make the directory tree needed to compile a program
+make_sysdir() {
+#  set -x
+  if test ! -d $sourcedir/sys$file 
+  then 
+    echo "Creating $sourcedir/sys$file directory."
+    mkdir $sourcedir/sys$file;
+    mkdir $sourcedir/sys$file/ow;
+    mkdir $sourcedir/sys$file/sv;
+    mkdir $sourcedir/sys$file/motif;
+  fi
+#  set +x
+}
+make_sysdir2() {
+#  set -x
+  if test ! -d $sourcedir/sys$file 
+  then 
+    echo "Creating $sourcedir/sys$file directory."
+    mkdir $sourcedir/sys$file;
+  fi
+#  set +x
+}
+make_objdir() {
+#  set -x
+  if test ! -d $objdir/$file 
+  then 
+    echo "Creating $objdir/$file directory."
+    mkdir $objdir/$file;
+  fi
+#  set +x
+}
+
+make_sysdirarch() {
+#  set -x
+  if test ! -d $sourcedir/sys$file/ppc 
+  then 
+    echo "Creating $sourcedir/sys$file/ppc directory."
+    mkdir $sourcedir/sys$file;
+    mkdir $sourcedir/sys$file/ppc;
+    mkdir $sourcedir/sys$file/ppc_inst;
+  fi
+  if test ! -d $sourcedir/sys$file/68k 
+  then 
+    echo "Creating $sourcedir/sys$file/68k directory."
+    mkdir $sourcedir/sys$file/68k;
+    mkdir $sourcedir/sys$file/68k_inst;
+  fi
+}
+#--------------------  main --------------------------------
+ echo " "
+ echo `date`
+ echo " "
+ echo "Writing ISO Quality Record to: "
+ echo "Directory: $logdir "
+ echo " "
+ echo " "
+ echo "File Name: $lognam "
+
+logpath=${logdir}$lognam
+
+echo " " | tee $logpath 
+echo `date` | tee $logpath 
+echo " " | tee $logpath 
+echo "================ $0 ==================== "  | tee -a $logpath 
+echo " " | tee -a $logpath 
+echo Date: `date` | tee -a $logpath 
+echo " "  | tee -a $logpath
+echo "Host: `uname -n`   Type: `uname -m`   OS Release: `uname -r`" | tee -a $logpath
+echo " "  | tee -a $logpath
+
+#  If OS type is reported as SunOS, distinguish between SunOS 4.x
+#  and SunOS 5.x (Solaris)
+
+        OStype="SOLARIS"
+	arch="solaris"
+	makepath="/usr/ccs/bin"
+
+# WIND_BASE="/sw2/tor" ; export WIND_BASE;
+WIND_BASE="$vxwksdir/wind" ; export WIND_BASE;
+WIND_BASE_68K="$vxwksdir/wind" ; export WIND_BASE;
+WIND_BASE_PPC="$vxwksdir/windppc2" ; export WIND_BASE_PPC;
+WIND_BASE_PPC54="$vxwksdir/windt202ppc" ; export WIND_BASE_PPC54;
+WIND_BASE_PPC55="$vxwksdir/windT2_2_PPC" ; export WIND_BASE_PPC55;
+WIND_HOST_TYPE="sun4-solaris2" ; export WIND_HOST_TYPE;
+# VW_HOME="/sw2/tor/target" ; export VW_HOME;
+VW_HOME="$vxwksdir/wind/target" ; export VW_HOME;
+#GCC_EXEC_PREFIX="$WIND_BASE/host/$WIND_HOST_TYPE/lib/gcc-lib/" ; export GCC_EXEC_PREFIX;
+INCLUDE_PATH="$vxwksdir/wind/target"
+INCLUDE_PATH_PPC="$vxwksdir/windppc2/target"
+INCLUDE_PATH_PPC54="$vxwksdir/windt202ppc/target"
+INCLUDE_PATH_PPC55="$vxwksdir/windT2_2_PPC/target"
+GCC_PREFIX="$WIND_BASE/host/$WIND_HOST_TYPE/lib/gcc-lib/" 
+GCC_PREFIX332="$WIND_BASE/host/$WIND_HOST_TYPE/lib/gcc-lib/"
+GCC_PREFIX_PPC="$WIND_BASE_PPC/host/$WIND_HOST_TYPE/lib/gcc-lib/" 
+GCC_PREFIX_PPC54="$WIND_BASE_PPC54/host/$WIND_HOST_TYPE/lib/gcc-lib/" 
+GCC_PREFIX_PPC55="$WIND_BASE_PPC55/host/$WIND_HOST_TYPE/lib/gcc-lib/" 
+VX_PATHS="/usr/ccs/bin:$WIND_BASE/host/$WIND_HOST_TYPE/bin"
+VX_PATH_PPC="/usr/ccs/bin:$WIND_BASE_PPC/host/$WIND_HOST_TYPE/bin"
+OLDPATH=$PATH
+
+# we need to the the make provided with VxWorks, the SUNs make doesn't work
+VX_PATH_PPC54="$WIND_BASE_PPC54/host/$WIND_HOST_TYPE/bin:/usr/ccs/bin"
+VX_PATH_PPC55="$WIND_BASE_PPC55/host/$WIND_HOST_TYPE/bin:/usr/ccs/bin"
+
+CPU="MC68040" ; export CPU;
+VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;
+
+sun3=0
+
+# Shared library versions
+ddl_ver=0.0
+magical_ver=0.0
+
+   		echo Solaris recompilation: | tee -a $logpath
+		stdtargets="SOLARIS"
+		targets="SOLARIS"
+
+# create source directory if not present
+if test ! -d $sourcedir
+then 
+  echo "Creating $sourcedir."
+  mkdir $sourcedir
+  mkdir $sourcedir/ow $sourcedir/sv $sourcedir/motif
+fi
+
+answer="vwcom vwacq vwacqkernel kvwacqkernel vwauto vwautokernel"
+
+vnmrdone=0
+filenames=$answer
+
+if test $stdtargets = "SOLARIS"
+then
+    targets="SOLARIS"
+fi
+
+echo "Object dir: $objdir, Stdtarget: $stdtargets"
+
+stdate=`date '+%H:%M:%S'`
+echo FILNAMES = $filenames
+echo OSTYPE = $OStype
+
+for file in $filenames
+do
+      echo Build $file
+      case x$file in
+#Below we make the integrated vxWorks and vxWorks.auto
+# They also update vwacq.o, vwcom.o, and vwauto.o
+# so the case-s for these *.o files could eventually be deleted
+         xkvwacqkernel  )
+echo "$0 starting kvwacqkernel"
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+		if [ ! -d $sourcedir/sys$file ]  
+		then
+		      mkdir -p $sourcedir/sys$file
+		fi 
+		PATH=$OLDPATH;
+		(  PATH=$PATH:$VX_PATHS; export PATH;  			\
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="MC68040" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		    cd  $VW_HOME/config/mercury_mv162;			\
+		    pwd  ;			\
+		  rm -f Makefile;			\
+		  cp $gitrepo/$file/Makefile .;			\
+		  rm -f config.h;			\
+		  cp $gitrepo/vwacqkernel/config.h .;			\
+		  which cc68k;						\
+		  echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		  pwd  ;			\
+		  make vxWorks.dev vxWorks.rel ; 			\
+		  cp -p NMRdev.vxWorks NMRrel.vxWorks NMRdev.vxWorks.sym $sourcedir/sys$file ; \
+		  cp -p NMRdev.vxWorks.sym $sourcedir/sys$file/vxWorks.sym; )
+		PATH=$OLDPATH;
+             ;;
+
+
+#Below we make the integrated vxWorks and vxWorks.auto
+# They also update vwacq.o, vwcom.o, and vwauto.o
+# so the case-s for these *.o files could eventually be deleted
+         xvwacqkernel  )
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+		if [ ! -d $sourcedir/sys$file/68k ]  
+		then
+		      mkdir -p $sourcedir/sys$file/68k
+		fi 
+		if [ ! -d $sourcedir/sys$file/ppc ]  
+		then
+		      mkdir -p $sourcedir/sys$file/ppc
+		fi 
+ 		echo ""
+		echo " ----------------  68K Kernel --------------------------- "
+ 		echo ""
+		PATH=$OLDPATH;
+		(  PATH=$PATH:$VX_PATHS; export PATH;  			\
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="MC68040" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		    cd  $VW_HOME/config/inova_mv162;			\
+		  rm -f Makefile;			\
+		  cp $gitrepo/$file/Makefile .;			\
+		  rm -f config.h;			\
+		  cp $gitrepo/$file/config.h .;			\
+		  which cc68k;						\
+		  echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		  make vxWorks.dev vxWorks.rel ; 			\
+		  cp -p NMRdev.vxWorks NMRrel.vxWorks NMRdev.vxWorks.sym $sourcedir/sys$file/68k ; \
+		  cp -p NMRdev.vxWorks.sym $sourcedir/sys$file/68k/vxWorks.sym; )
+ 		echo ""
+		echo " ----------------  PPC Kernel --------------------------- "
+ 		echo ""
+		PATH=$OLDPATH;
+        	 ( PATH=$VX_PATH_PPC54:$PATH; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH_PPC54;     	export VW_HOME;	\
+		    WIND_BASE=$WIND_BASE_PPC54 ; export WIND_BASE;
+	    	    GCC_EXEC_PREFIX=$GCC_PREFIX_PPC54; export GCC_EXEC_PREFIX; \
+		    CPU="PPC603" ; export CPU;				\
+		    VX_CPU_FAMILY="ppc" ; export VX_CPU_FAMILY;		\
+		    LD_LIBRARY_PATH="$WIND_BASE/host/$WIND_HOST_TYPE/lib" ; export LD_LIBRARY_PATH; \
+		    which ccppc;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		    echo "LD_LIBRARY_PATH=" $LD_LIBRARY_PATH;		\
+		    cd  $VW_HOME/config/inova_mv2303;                    \
+		    PWD=`pwd`; echo $PWD ;	\
+		    echo $WIND_BASE ; echo $LD_LIBRARY_PATH ;	\
+		   rm -f Makefile;			\
+		   cp $gitrepo/${file}ppc/Makefile .;			\
+		   rm -f config.h;			\
+		   cp $gitrepo/${file}ppc/config.h .;			\
+		    which ccppc;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		   which make ; \
+		   make dev rel ; 			\
+		  cp -p NMRdev.vxWorks NMRrel.vxWorks NMRdev.vxWorks.sym $sourcedir/sys$file/ppc ; \
+		  cp -p NMRdev.vxWorks.sym $sourcedir/sys$file/ppc/vxWorks.sym; )
+		PATH=$OLDPATH;
+             ;;
+
+         xvwautokernel )
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+		if [ ! -d $sourcedir/sys$file ]  
+		then
+		      mkdir -p $sourcedir/sys$file
+		fi 
+		PATH=$OLDPATH;
+		(  PATH=$PATH:$VX_PATHS; export PATH;  			\
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="CPU32" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		    cd  $VW_HOME/config/inova_msr332;			\
+		  rm -f Makefile;			\
+		  cp $gitrepo/$file/Makefile .;			\
+		  rm -f config.h;			\
+		  cp $gitrepo/$file/config.h .;			\
+		  which cc68k;						\
+		  echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;		\
+		  make vxWorks.rel ; 			\
+		 )
+		PATH=$OLDPATH;
+
+             ;;
+
+	 xvwcom  | xvwacq )
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+#		set -x
+		make_sysdirarch
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file; cp $gitrepo/$file/make${file} .; )
+        	( cd $sourcedir/sys$file/68k; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATHS; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="MC68040" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file}; )
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file/68k_inst; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATHS; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="MC68040" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file} inst; )
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file/ppc; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATH_PPC; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH_PPC; 	export VW_HOME;		\
+		    INCLUDE_PATH=$INCLUDE_PATH_PPC; 	export INCLUDE_PATH;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX_PPC; export GCC_EXEC_PREFIX; \
+		    CPU="PPC603" ; export CPU;				\
+		    VX_CPU_FAMILY="ppc" ; export VX_CPU_FAMILY;		\
+		    which ccppc;					\
+		    which cpp;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file}; )
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file/ppc_inst; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATH_PPC; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH_PPC; 	export VW_HOME;		\
+		    INCLUDE_PATH=$INCLUDE_PATH_PPC; 	export INCLUDE_PATH;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX_PPC; export GCC_EXEC_PREFIX; \
+		    CPU="PPC603" ; export CPU;				\
+		    VX_CPU_FAMILY="ppc" ; export VX_CPU_FAMILY;		\
+		    which ccppc;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file} inst54; )
+		PATH=$OLDPATH;
+	     ;;
+
+
+	 xkvwacq )
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+#		set -x
+		make_sysdir
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATHS; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; \
+		    CPU="MC68040" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file}; )
+		PATH=$OLDPATH;
+	     ;;
+
+	 xvwauto )
+      		echo " " | tee -a $logpath;
+        	echo "CATEGORY: \`$file' IN \`$sourcedir/sys$file'" | tee -a $logpath;
+#		set -x
+		make_sysdir
+		PATH=$OLDPATH;
+        	( cd $sourcedir/sys$file; cp $gitrepo/$file/make${file} .; \
+        	    PATH=$PATH:$VX_PATHS; export PATH;  \
+		    VW_HOME=$INCLUDE_PATH;     	export VW_HOME;		\
+		    GCC_EXEC_PREFIX=$GCC_PREFIX; export GCC_EXEC_PREFIX; 
+		    CPU="CPU32" ; export CPU;				\
+		    VX_CPU_FAMILY="68k" ; export VX_CPU_FAMILY;		\
+		    which cc68k;					\
+		    echo "GCC_EXEC_PREFIX=" $GCC_EXEC_PREFIX;	\
+		    make -f make${file}; )
+		PATH=$OLDPATH;
+             ;;
+
+
+        *)      
+		echo Updating not supported for \'"$file"\' ;
+		;;
+      esac
+		
+done
+
+echo "Start Time: $stdate, End Time: `date '+%H:%M:%S'`"

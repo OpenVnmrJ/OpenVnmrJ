@@ -1,0 +1,27 @@
+"macro BPcopyshape"
+" BPmoveshape - move shape file to /vnmr/shapelib, if necessary "
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then
+  exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+  if $e then
+    $global=0
+  else
+    $global=1
+  endif
+else
+  $global=0
+endif
+if $global=1 then
+  $name=''
+  shell('basename',$1):$name
+  $source=userdir+'/shapelib/'+$name
+  exists($source,'file','rw'):$e
+  if $e then
+    $targetdir=systemdir+'/shapelib'
+    shell('mv',$source,$targetdir):$dummy
+  else
+    write('error','File shapelib/%s not found',$name)
+  endif
+endif

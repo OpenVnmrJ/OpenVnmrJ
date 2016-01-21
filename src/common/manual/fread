@@ -1,0 +1,53 @@
+
+*******************************************************************************
+fread	- 	read in variables from a file and load them in a tree
+*******************************************************************************
+
+  This command reads in vnmr variables from a file and loads them into
+  a tree.  The variable trees are 'current', 'global', 'processed',
+  'systemglobal', and 'usertree'.  It can read from any file that has
+  variables stored in the correct vnmr format.  The default tree is 'current'.
+  A "reset" option causes the variable tree to first be cleared before
+  the new variable file is read. Without this option, variables read from
+  a file are added to the existing preloaded variables.  In order to
+  use the 'reset' option, the tree must also be specified.
+  A "value" option causes only the values of the variables in the file to
+  be loaded.  If a preloaded variable does not already exist, a new one
+  is not created.  Parameter attributes are not changed. Enumerated
+  values are not changed. In order to use the 'value' option, the tree
+  must also be specified.
+  A "newonly" option causes only those variables in the file which do not
+  already exist in the tree to be loaded. In order to use the 'newonly'
+  option, the tree must also be specified.
+  The 'reset', 'newonly', and 'value' options are mutually exclusive.
+  NOTE: if variables are read into the 'global' tree, certain parameters
+  will not be loaded.  These are important system parameters that should
+  not be changed.  These parameters are: userdir, systemdir, curexp, autodir,
+  auto, operator, vnmraddr, and acqaddr.
+
+  The 'usertree' is available for use. By default, it has no parameters
+  stored in it. It would typically be used by a macro for temporary
+  parameter storage.  All of the parameter utility commands, such as
+  setlimit, setprotect, setvalue, getvalue, fsave, etc. will work with
+  'usertree' as the optional tree argument.  A special incantation of
+  fread with a empty string as the filename will clear parameters from
+  'usertree'. That is, fread('','usertree') clears 'usertree'.
+  Note that passing an empty string as the filename with other parameter
+  trees generates an error. For example, fread('','current') is an error.
+  As with all the parameter utility commands, the other arguments also
+  work with 'usertree'.  In the case of fread, this means that the
+  'reset', 'value', and 'newonly' options are valid for 'usertree'.
+ 
+  Usage -- fread(filename[,tree[,'reset', 'value', 'newonly']])
+              filename is a valid file with proper variable format.
+              tree can be  current,global,processed, systemglobal,
+              or usertree.
+              'reset' keyword can only be used if tree is specified.
+               
+
+  Examples:
+
+    fread('var1')                read in variables from file var1 into
+				 current tree.
+    fread('sampvar','global')    read in variables from file sampvar into
+			         global tree.

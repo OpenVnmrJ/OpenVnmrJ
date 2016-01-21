@@ -1,0 +1,61 @@
+"macro lcGetDetectorInfo"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcGetDetectorInfo"
+
+// Reads info from user's lcDetectorInfo file
+// Each detector has 2 lines
+// 1> key pdaFlag minLambda maxLambda, nLambdas, nAnalogOuts
+// 2> The Detector Name
+//
+// Takes 1 argument: the desired key (string).
+// Returns all values (including key) in above order.
+// All values except key and label are numeric.
+
+$file = userdir+'/lc/lcDetectorInfo'
+exists($file, 'file'):$e
+if (not $e) then
+  $file = systemdir+'/lc/lcDetectorInfo'
+  exists($file, 'file'):$e
+endif
+if (not $e) then
+  write('error','lcGetDetectorInfo: cannot find file: "lc/lcDetectorInfo"')
+  return
+endif
+
+if ($# = 1) then
+  lookup('file', $file)
+  $done = 0
+  $key = ''
+  $label = ''
+  $pdaFlag = 0
+  $min = 0
+  $max = 9999
+  $nLambda = 0
+  $nAdc = 0
+  while (not $done) do
+    lookup('readline'):$line,$n
+    if ($n < 1) then
+      $done = 1
+    else
+      substr($line, 1):$key
+      if ($key = $1) then
+	substr($line, 2):$pdaFlag
+	substr($line, 3):$min
+	substr($line, 4):$max
+	substr($line, 5):$nLambda
+	substr($line, 6):$nAdc
+	lookup('read', 'readline'):$dummy,$label  // Discards "Label:" tag
+	$done = 1
+      endif
+    endif
+  endwhile
+endif
+//$key?
+//$pdaFlag?
+//$min?
+//$max?
+//$nLambda?
+//$nAdc?
+//$label?
+
+return($key, $pdaFlag, $min, $max, $nLambda, $nAdc, $label)

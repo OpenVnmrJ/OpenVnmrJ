@@ -1,0 +1,86 @@
+"macro probeid_init"
+//-- factory initialization of a probe database
+probeid('disable')
+
+    // create the factory probe file - assumes the probe is physically mounted
+    $usage = 'usage: '+$0+'(\'<template>\'[,\'<ID>\'[,\'<SN>\'[,<inventory>]]])'
+
+    // identify the template file
+    if $# < 0.5 then
+      $1     = 'generic'
+      $dir   = systemdir+'/probeid/'+$1
+      $tmplt = $dir+'/ProbeId'
+      write('error',$0+': no probe type specified, using generic probe template '+$tmplt)
+      //write('error',$usage)
+    else
+      $dir  = userdir+'/probeid/'+$1
+      $tmplt= $dir+'/ProbeId'
+      exists($tmplt,'file'):$e
+      if not $e then
+        $dir = systemdir+'/probeid/'+$1
+        $tmplt= $dir+'/ProbeId'
+      endif
+    endif
+
+    exists($tmplt,'file'):$e
+    if not $e then
+      write('error','ProbeID template \''+$tmplt+'\': file not found, falling back to default')
+      probeid('tmpfile'):$tmplt      // create temp file
+      write('file',$tmplt,'ID:               Parameters')
+      write('file',$tmplt,'ProbeID           $PROBEID$')
+      write('file',$tmplt,'SN                $SN$')
+      write('file',$tmplt,'PN                $PN$')
+      write('file',$tmplt,'Description       ')
+    endif
+
+    input('connect the probe and hit enter -> '):$connected
+    $id='00' $sn='00'  // the traditional probe file signal to enter some data
+    if $# > 1.5 then $id=$2 else
+      input('enter the unique probe identifier -> '):$id
+    endif
+    if $# > 2.5 then $sn=$3 else
+      input('enter the unique probe S/N -> '):$sn
+    endif
+
+    // fill out the template with the ID and serial numbers
+    probeid('tmpfile'):$tmp      // create temp file
+    $mod_id  = 's/\\$PROBEID\\$/'+$id+'/'
+    $mod_sn  = 's/\\$SN\\$/'+$sn+'/'
+    $mod_cmd = 'sed \'{'+$mod_id+' ; '+$mod_sn+' }\' '+$tmplt
+    shell($mod_cmd+' > '+$tmp):$out
+    $date='' shell('date +%d-%b-%Y'):$date
+
+    write('file',$tmp,'%-17s %s','Manufacturedate',$date)
+
+    // TODO: derive path from probedir_opts (or a common ancestor)
+    $init_cmd = 'probeid -init '+$tmp+' -opt ProbeId'
+    shell($init_cmd):$init_out
+
+    $factory_files = userdir+'/probeid/'+$1+'/Varian'
+    exists($factory_files,'file'):$e
+    if not $e then
+      write('error','factory template directory %s not found, falling back to probe.tmplt')
+      $tmpdir=userdir+'/tmp'
+      shell('mkdir -p '+$tmpdir):$o
+      cp(systemdir+'/probes/probe.tmplt',$tmpdir)
+    endif
+    $init_cmd = 'probeid -init '+$factory_files+' -opt Varian'
+    shell($init_cmd):$fact_out
+    probelist('makenucmenu')
+
+    // create an initial probe whose file name won't tempt users to use it
+    setvalue('probe','uncalibrated','global') // _probe won't be called
+    vnmrjcmd('pnew','probe')                  // alert the media
+
+    // import the list of files specified in the inventory file
+    if $# > 3.5 then
+      readfile($5,'$inventory','$comments'):$num
+      $i=1
+      while ($i < $num) do
+        $i = $i + 1
+        probeid('import','file',$inventory[$i])
+      endwhile
+    endif
+    probeid('cleanup',$tmp)               // clean up the tmp file
+    {$0}('update')                  // update VnmrJ probe elements
+    return

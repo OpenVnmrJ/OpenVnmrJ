@@ -1,0 +1,27 @@
+"macro rna_autowet"
+
+"rna_autowet(<anything (for vnmrj)>)"
+BPgettemp:$temp 
+if ($#=0) then
+ BPrtppar('water') 
+endif
+if (seqfil='rna_water') then
+ wet='y' presat='n' watergate='n' jumpret='n' shaped='n'
+endif
+if autosoft='n' then
+ setlimit('wetpw',50000,0,.1)
+ wetpw=1000*pw90
+ array('wetpwr',21,tpwr-64,1) nt=1 gain=12 
+ if (wetshape='hard') then
+  wetpwr=0
+  array('wetpwr',11,tpwr-64,1) nt=1 gain=12 endif
+ if ((wetshape='gauss') or (wetshape='H2Osinc')) then
+  wetpwr=0
+  array('wetpwr',11,tpwr-58,1) nt=1 gain=12 endif
+ temp=$temp
+ ssfilter='n' 
+ wexp='rna_autowetproc1' wnt='f wft select(1) av vsadj dssh'
+ dg dps dtext au
+else
+ ph nt=4 getparam('BPgain','H1'):gain ga
+endif

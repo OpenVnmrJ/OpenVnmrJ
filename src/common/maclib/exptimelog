@@ -1,0 +1,28 @@
+"macro exptimelog"
+
+        if (auto='y') then return endif
+        $yearmonth=''
+        shell('date +%Y-%m'):$yearmonth
+        exists(userdir+'/explogs','directory'):$logex
+        if ($logex=0) then
+          shell('mkdir '+userdir+'/explogs'):$dum
+        endif
+        $tfile=userdir+'/explogs/'+systemname+'-'+$yearmonth
+	shell('(cat '+$tfile+' | wc -l)'):$lines
+	if ($lines=0) then
+	   write('file',$tfile,'operator,samplename,sampledir,experiment,datetime,status')
+	endif
+
+   	$date=''
+   	shell('date +%Y%m%d%H%M%S'):$date
+//	jexp:$curexp,$exp
+	if (explist[1]='') then $pslabel=pslabel else $pslabel=explist[1] endif
+	$status='' format($1,'upper'):$status
+        write('fileline',$tfile,'%s,',operator)
+        write('fileline',$tfile,'%s,',samplename)
+        write('fileline',$tfile,'%s,',sample)
+        write('fileline',$tfile,'%s,',$pslabel)
+//        write('fileline',$tfile,'%s,',$exp)
+        write('fileline',$tfile,'%s,',$date)
+        write('fileline',$tfile,'%s\n',$status)
+

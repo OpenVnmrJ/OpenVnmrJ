@@ -1,0 +1,105 @@
+"macro execpars"
+// execpars -  utilities for handling execpar parameters
+$type='read'
+if ($# > 0.5) then
+  $type=$1
+endif
+if ($type='read') or ($type='newonly') then
+  $dir = ''
+  $app = 0
+  $seq = 0
+  exists('apptype','parameter'):$e
+  if ($e > 0.5) then
+    if (apptype<>'') then
+      exists(apptype,'execpars'):$app,$afile
+    endif
+  endif
+  exists(seqfil,'execpars'):$seq,$sfile
+  if ($app and $seq) then
+    if ($app <= $seq) then
+      $dir = $afile
+    else
+      $dir = $sfile
+    endif
+  elseif ($app) then
+    $dir = $afile
+  elseif ($seq) then
+    $dir = $sfile
+  endif
+  if ($dir = '') then
+    if ($type='read') and (apptype<>'') then
+      write('line3','No parameters found for app type "%s" or sequence "%s"',apptype,seqfil)
+    endif
+  else
+    if ($type='read') then
+      readparam($dir,'execsetup execprep execprescan execprocess execplot')
+    else
+      fread($dir,'current','newonly')
+    endif
+  endif
+elseif ($type='save') then
+  if ($# <> 2) then
+    write('error','execpars needs path name to save parameters')
+    return
+  endif
+  substr($2,'dirname'):$s1,$s2
+  exists($s1,'directory'):$ret
+  if ($ret = 0) then
+    mkdir($s1)
+    exists($s1,'directory'):$ret
+    if ($ret = 0) then
+      write('error','execpars directory %s could not be created',$s1)
+      return
+    endif
+  endif
+  writeparam($2,'execsetup execprep execprescan execprocess execplot')
+elseif ($type='select') then
+  if ($# <> 2) then
+    write('error','execpars needs path name to select parameters')
+    return
+  endif
+  readparam($2,'execsetup execprep execprescan execprocess execplot')
+elseif ($type='create') then
+  exists('execsetup','parameter'):$e
+  if ($e < 0.5) then
+    create('execsetup','string')
+    setgroup('execsetup','display')
+    execsetup=''
+  endif
+  exists('execprep','parameter'):$e
+  if ($e < 0.5) then
+    create('execprep','string')
+    setgroup('execprep','display')
+    execprep=''
+  endif
+  exists('execprescan','parameter'):$e
+  if ($e < 0.5) then
+    create('execprescan','string')
+    setgroup('execprescan','display')
+    execprescan=''
+  endif
+  exists('execprocess','parameter'):$e
+  if ($e < 0.5) then
+    create('execprocess','string')
+    setgroup('execprocess','display')
+    execprocess=''
+  endif
+  exists('execplot','parameter'):$e
+  if ($e < 0.5) then
+    create('execplot','string')
+    setgroup('execplot','display')
+    execplot=''
+  endif
+  exists('apptype','parameter'):$e
+  if ($e < 0.5) then
+    create('apptype','string')
+    setgroup('apptype','display')
+    apptype=seqfil
+  endif
+elseif ($type='delete') then
+  destroy('execsetup'):$e
+  destroy('execprep'):$e
+  destroy('execprescan'):$e
+  destroy('execprocess'):$e
+  destroy('execplot'):$e
+endif

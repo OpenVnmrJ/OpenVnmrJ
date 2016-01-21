@@ -1,0 +1,23 @@
+"macro BPmake90Ca_CO"
+
+"For version 5.1 software and subsequent."
+
+"Calculates the following SLP pulse and stores it in your shapelib:"
+"Carrier on CO, 90 degree pulse on Ca 118ppm away, null at CO on resonance."
+
+"The carrier should be set to 174ppm."
+
+"The fine attenuator setting must be set in the pulse sequence during the"
+"pulse."
+
+
+$pwCa90 = 1.0e6*sqrt(15.0)/(4.0*118.0*dfrq)
+$steps3 = $pwCa90*5.0      $steps3 = trunc($steps3)
+$pwCa90 = $steps3/5.0   $pwCa90a = $pwCa90
+$rf3 = 1023.0
+BPmakehard($steps3, $rf3)
+$stps3 = ''    format($steps3,0,0):$stps3      $shape3 = 'hard' + $stps3
+$freq3 = - dfrq*118.0      BPconvolute($shape3,'offC13',$pwCa90,$freq3)
+BPmoveshape('offC13.RF')
+shell('rm -f',userdir+'/shapelib/'+$shape3+'.RF'):$dum
+write('line3','The SLP pulse "shapelib/offC13.RF" has been created')

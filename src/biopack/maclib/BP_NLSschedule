@@ -1,0 +1,40 @@
+"macro BP_NLSschedule"
+"Read in a sampling schedule file"
+" Usage: BP_NLSschedule(filename)"
+
+if ($# <> 1) then
+       write('error', 'Usage: BP_NLSschedule(filename)')
+       return(1)
+endif
+BPfindfile(sampsched,'manual'):$path $path?
+if $path='' then
+  write('error', '2D Sampling Schedule file does not exist')
+  return(1)
+endif
+lookup('file',$path)
+sampsched=$1
+ni=1
+ni2=1
+
+t1_counter = 0
+t2_counter = 0
+$i = 0
+$a = ' '
+$b = ' '
+$x = 0
+$y = 0
+lookup('read',2): $a, $b, $l
+while ($l=2) do
+	exec('$n = ' + $a)
+        exec('$m = ' + $b)
+	$i = $i + 1
+        t1_counter[$i] = $m-1
+        t2_counter[$i] = $n-1
+	if ($m > $x) then $x = $m endif
+	if ($n > $y) then $y = $n endif
+        lookup('read',2): $a, $b, $l
+endwhile
+"nli, nli2 are maximum increments"
+nli=$x
+nli2=$y
+array='(t1_counter,t2_counter),phase,phase2'

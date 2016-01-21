@@ -1,0 +1,44 @@
+"macro walkupQ_delete"
+"****************************************************************"
+"   walkupQ_delete - delete experiment from the queue    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+   $list=$1
+   $long='no'
+   if ($# < 2) then
+      $long='no'
+      if ($longQ='y') then $long='long' endif
+   else
+      $long=$2
+   endif
+
+   xmhaha('deleteSQnode',$list)
+   if ($long='no') then
+      shell('(cat '+$expfile+' | grep -vw Queued > '+$expfile+'1)'):$dum
+      shell('(cat '+$expfile+' | grep -w Queued | grep -v \'^'+$list+' \' >> '+$expfile+'1)'):$dum
+      shell('mv '+$expfile+'1 '+$expfile):$dum
+      shell('rm -f '+$maclibdir+'/'+$list+'acq'):$dum
+      shell('rm -f '+$maclibdir+'/'+$list+'acqpars'):$dum
+      shell('rm -f '+$maclibdir+'/'+$list+'_Attr'):$dum
+   elseif ($long='long') then
+      shell('(cat '+$lngfile+' | grep -v \'^'+$list+' \' > '+$lngfile+'1)'):$dum
+      shell('mv '+$lngfile+'1 '+$lngfile):$dum
+      shell('rm -f '+$maclibdir+'long/'+$list+'acq'):$dum
+      shell('rm -f '+$maclibdir+'long/'+$list+'acqpars'):$dum
+      shell('rm -f '+$maclibdir+'long/'+$list+'_Attr'):$dum
+   endif
+   walkupQ('time')
+
+"****************************************************************"
+

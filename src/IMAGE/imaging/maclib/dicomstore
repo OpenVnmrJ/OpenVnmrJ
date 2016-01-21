@@ -1,0 +1,230 @@
+"macro dicomstore"
+"dicomstore - Convert an image file in current workspace to DICOM and send it to storage. "
+
+"  Usage:   dicomstore    - default single image output"
+"	    dicomstore(<'selected'><,'single'><,'multi'>)
+"	           single - generate a single slice output (default) "
+"	           multi  - multiple images output e.g. multi-slice, multi-echo
+"		   selected - selected images -NOT IMPLEMENTED
+
+" Details: Retrieve an image dataset from locator into the Review VP. 
+"          This loads the image and the associated parameters to the Review VP.
+"	   You must first clear the Review Q. 
+"	   You may reprocess the data, using 'process'.
+"	   The current parameters in the header are used to generate the DICOM header
+"	   The number of frames or planes are determined as
+"	      frames = ns * ne * array_size
+"	   Note compressed, gems, arraydim =1; for standard, sems, arraydim=nv
+"	   If the data is a 3D dataset, a single volume image is output
+"	   ..vnmrsys/dicom/tmp will contain all intermediate files"
+"	   The dicom images image.dcm, *.dcm are put in vnmrsys/dicom/ directory.
+"          If the dicomstore command is added to the EXEC_process, and dicomflag = y,
+"          dcm files are generated in the study directory
+"          printfile=xx - xx directory is created if necessary and DICOMDIR/*.dcm files
+"          copied into it
+"	   
+
+
+exists('dicomflag','parameter'):$ex
+if($ex > 0) then
+  if(dicomflag = 'n') then
+    write('line3','dicomflag = %s',dicomflag)
+    abort
+  endif
+endif
+
+$DICOMDIR = userdir+'/dicom/tmp'
+$TMP_DIR = userdir+'/dicom/tmp'
+shell('rm -rf '+userdir+'/dicom')
+mkdir(userdir+'/dicom')
+mkdir($DICOMDIR)
+
+write('line3','Generating DICOM files')
+
+$key='selected'
+$imagesout = 'single'  "default - single image output"
+if ($# > 0) then
+  if($1 = 'multi') then
+    $imagesout = $1
+  endif
+endif
+
+     aipGetImgKey(aipIOMode):$num
+     if($num = 0) then return endif
+     aipGetImgKey(aipIOMode,1):$path
+     substr($path,1):$dir
+     substr($path,2):$file
+     $path=$dir+'/'+$file
+     $ext = 'fdf'
+
+$i=1
+dicomhdr($DICOMDIR+'/dicom.tag',$imagesout)    "create dicom header using template"
+
+"copy fdf files into vnmrsys/dicom/"
+$dim = 2   "2D default"
+exists('nv2','parameter'):$ex
+if($ex > 0) then
+  if(nv2 > 0 ) then
+    $dim = 3
+    $num = 1	"3D data, single file" 
+  endif
+endif
+
+if($dim = 3) then
+  shell('cp '+$dir+'/img_slab001image001echo001.fdf '+$DICOMDIR)
+  $imagesout = 'volume'    "single 3D image output"
+else
+  while ($i <= $num) do
+    if ($ext = 'fdf') then      
+      copy($path,$DICOMDIR)
+    endif
+    $i=$i+1
+    if ($i <= $num and $key = 'selected') then
+       aipGetImgKey(aipIOMode,$i):$path
+       substr($path,1):$dir
+       substr($path,2):$file
+       $path=$dir+'/'+$file
+    endif
+  endwhile
+endif
+
+$name = $DICOMDIR+'/par.out'
+shell('rm -rf '+$name)
+write('reset',$name)  "create param file"
+
+"Rows np/2 "
+on('fn'):$on
+if($on) then
+  $ro = fn/2.0
+else
+  $ro = np/2.0
+endif   
+     
+" Columns, nv  "
+on('fn1'):$on
+if($on) then
+  $pe = fn1/2.0
+else
+  $pe = nv
+endif	
+	
+format($pe,0,0):$pes	
+if($dim = 3) then
+  write('file',$name,'Row = %d',$pe)
+  write('file',$name,'Col = %d',$ro)
+else
+  write('file',$name,'Row = %d',$ro)
+  write('file',$name,'Col = %d',$pe)
+endif
+if($dim = 3) then
+  " Slices, nv2  "
+  on('fn2'):$on
+  if($on) then
+    $pe2 = fn2/2.0
+  else
+    $pe2 = nv2
+  endif	
+  write('file',$name,'FileCount = %d',$pe2)  "used by dicom/bin/ routines"  
+  write('file',$name,'Slices = %d',1)      "slices=1 for 3D; frames=$pe2"
+else
+  if($imagesout = 'multi') then
+    write('file',$name,'FileCount = %d',1)
+    write('file',$name,'Slices = %d',1)
+  else
+    substr(seqcon,3,1):$spe1    
+    if($spe1 = 's') then
+      $fc = (ns * (arraydim/nv) * ne)   "sems type"
+    else
+      $fc = (ns * arraydim * ne)	"compressed gems type"
+    endif
+    write('file',$name,'FileCount = %d',$fc)  "used by dicom/bin/ routines"
+    write('file',$name,'Slices = %d',1)	      "not used, set to 1"
+  endif
+endif
+
+" We need to pass into dicom_store a second arg which is the appropriate "
+" appdir   dicom directory where conf/dicom_store.cfg can be found. "
+" Be sure the file exists"
+exists('dicom_store.cfg', 'dicom/conf'):$ex,$conf_file
+if($ex > 0.5) then
+   "Get the path to the conf dir, not the file"
+   substr($conf_file,'dirname'):$conf_dir
+   shell('dicom_store '+$DICOMDIR+' '+$conf_dir)
+else
+   "default to having no 2nd arg"
+   shell('dicom_store '+$DICOMDIR)
+endif
+
+$DICOM = userdir+'/dicom'
+shell('mv '+$TMP_DIR+'/*.dcm '+$DICOM)	"dicom files are put in ..dicom/ "
+
+shell('rm -f '+$DICOM+'/image.dcm')
+shell('mv -f '+$DICOM+'/temp.dcm '+$DICOM+'/image.dcm') 
+if(($imagesout = 'single') or ($imagesout = 'volume')) then
+  exists($DICOM+'/image.dcm','file'):$ex
+  if($ex = 0) then
+    write('line3','Error: DICOM files not generated')
+  else
+    "copy dcm file(s) into recon directory; add dicomstore to exec_process to auto generate dcm file"
+    exists(curexp+'/recon','directory'):$e1
+    if $e1>0.5 then
+      shell('cp -r '+$DICOM+'/image.dcm '+curexp+'/recon'):$x
+    endif  
+//    write('line3', '  => '+$DICOMDIR+'/image.dcm')
+  endif
+else
+  exists($DICOM+'/*.dcm','file'):$ex
+  if($ex = 0) then
+    write('line3','Error: DICOM files not generated')
+  else
+    "copy dcm file(s) into recon directory"
+    exists(curexp+'/recon','directory'):$e1
+    if $e1>0.5 then
+      shell('cp -r '+$DICOM+'/slice*.dcm '+curexp+'/recon'):$x
+    endif   
+//    write('line3', '  => '+$DICOMDIR+'/slice*.dcm')
+  endif
+endif
+
+exists('dicomflag','parameter'):$ex
+if($ex > 0) then
+  if(dicomflag = 'y') then  "don't write to directory if auto-generate flag on"
+    printfile = ''
+  endif
+endif
+"copy files into printfile directory
+"If printfile is a directory, all *.dcm files are copied into it
+"If it is a plain file - error
+"If directory does not exist, printfile created and /*.dcm copied
+if(printfile <> '') then
+  pwd
+  exists(printfile,'directory'):$ex
+  if($ex > 0) then
+    write('line3','Copying dicom files into: %s/',printfile)
+    shell('rm -f '+printfile+'/*.dcm')
+    shell('cp '+$DICOM+'/*.dcm '+printfile)
+  else
+    exists(printfile,'file'):$ex
+    if($ex > 0) then
+      write('error','dicomstore: %s is a plain file',printfile)
+      abort
+    else 
+      "file does not exist, create directory and copy .dcm files"
+      mkdir(printfile)
+      write('line3','Creating directory %s',printfile)
+      write('line3','Copying dicom files into: %s/',printfile)
+      shell('rm -f '+printfile+'/*.dcm')
+      shell('cp '+$DICOM+'/*.dcm '+printfile)
+    endif
+  endif
+else
+  write('line3','Dicom files in %s/',$DICOM)
+endif
+
+"**********************************************************************
+" 		Modification History
+
+" 20060719 -Copies .dcm files into recon directory
+" 20061213 -saves to printfile directory
+
+"**********************************************************************

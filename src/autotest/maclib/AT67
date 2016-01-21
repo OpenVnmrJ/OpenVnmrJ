@@ -1,0 +1,41 @@
+"macro AT67"
+"AT67" "Shaped Pulse Amplitude Scaling (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if (fifolpsize<1024) then   "only unity+ or inova has modulator"
+  write('line3','No Linear Modulator Present. Test Skipped')
+  ATnext return
+endif
+
+ 
+if ($#=0) then
+   ATrtp('standard')
+   text('Shaped Pulse Amplitude Scaling over 60 dB on Channel 2')
+   at_currenttest='gauss_vary_finepwr_ch2'
+   seqfil='ATdsh2pul' pwpat='gauss32' p1pat='hard' dof=tof
+   vchannelmap='1'
+   pw90=9.6*at_pw90Lowpower*(at_pw90_ch2/at_pw90) cdc tpwr=at_tpwrLowpower-12
+   substr(rfwg,2,1):$waveform
+   if ($waveform='n') then
+    tpwr=tpwr-12 pw90=4*pw90   "makes sure pw is long enough to do by psg"
+   endif
+   pw(5)
+   pwsadj('gauss32','pw')
+   array('dpwrf',100,4095,-40)
+   wnt='ATwft select(1) ph aph0 vsadj dssh dtext'
+   wexp='AT67(`PART1`)'
+   ATcycle
+   au
+   write('line3','Shaped Pulse Amplitude Scaling (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft 
+   f peak:$ht,cr rl(0) sp=-500 wp=1000
+   ATsvf
+   ATplot
+
+ATnext
+endif

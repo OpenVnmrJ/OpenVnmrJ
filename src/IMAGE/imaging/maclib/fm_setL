@@ -1,0 +1,63 @@
+"macro fm_setL"
+
+" Usage: fm_setL(20) sets L array to 20mm; Note: mm input"
+"        fm_setL or fm_setL asks for lx, ly, lz in mm"
+"        fm_setL(lx,ly,lz)
+
+exists('L','parameter'):$e
+if ($e < 0.5) then
+  create('L','real')
+  setgroup('L','processing')
+  L=1,1,1,1,1,1,1,1,1
+endif
+exists('lx','parameter'):$e
+if ($e < 0.5) then
+  create('lx','real')
+" setgroup('lx','processing')"
+  lx=1
+endif
+exists('ly','parameter'):$e
+if ($e < 0.5) then
+  create('ly','real')
+" setgroup('ly','processing')"
+  ly=1
+endif
+exists('lz','parameter'):$e
+if ($e < 0.5) then
+  create('lz','real')
+" setgroup('lz','processing')"
+  lz=1
+endif
+
+if ($# = 1) then
+  $lx=$1 $ly=$1 $lz=$1   "input in mm"
+elseif ($# > 2.5) then "set asymmetric ROI"
+  $lx=$1 $ly=$2 $lz=$3   "input in mm"
+endif
+
+lx=$lx ly=$ly lz=$lz   "init header parameters in mm"
+$lx=$lx/10 $ly=$ly/10 $lz=$lz/10  "convert to cm for L array"
+L[1]=$lx L[2]=$ly L[3]=$lz
+
+if $lx<=$ly then L[4]=$lx*1.41 endif
+if $ly<$lx then L[4]=$ly*1.41 endif
+"if $lx=$ly then L[4]=$lx endif"
+L[5]=L[4]
+if $lz<=$ly then L[6]=$lz*1.41 endif
+if $ly<$lz then L[6]=$ly*1.41 endif
+"if $ly=$lz then L[6]=$ly endif"
+L[7]=L[6]
+if $lx<=$lz then L[8]=$lx*1.41 endif
+if $lz<$lx then L[8]=$lz*1.41 endif
+"if $lx=$lz then L[8]=$lz endif"
+L[9]=L[8]
+
+$b=''
+$count=1
+$diamtext='L (mm) ='
+repeat
+  format(L[$count]*10,3,1):$b
+  $diamtext=$diamtext+$b+' '
+  $count=$count + 1
+until $count>9
+write('line3', $diamtext)

@@ -1,0 +1,59 @@
+"macro probeid_save"
+// save probe id parameters to probe file
+
+$file = $1
+$attr = $2
+$val  = $3
+$tree = $4
+
+exists($attr,'parameter',$tree):$e1
+exists($val,'parameter',$tree):$e2
+if not ($e1 and $e2) then
+  write('error','probe editor cannot save changes to '+$attr+','+$val)
+  return
+endif
+
+$size1 = size($attr)
+$size2 = size($val)
+$size  = $size1
+if ($size > $size2) then
+  $size = $size2
+endif
+
+$probe=probe
+$pfile=userdir+'/persistence/probe_edit_probe'
+exists($pfile,'file'):$ed
+if ($ed) then
+  $pval=''
+  lookup('mfile',$pfile,'read'):$pval
+  if $pval<>'' then $probe=$pval endif
+  rm('-f',$pfile):$x
+endif
+
+$tfile=userdir+'/persistence/probe_edit'
+write('reset',$tfile)
+
+$hdr=0 $skip=0
+$i=0 while ($i < $size) do $i=$i+1 // poor person's "for" loop
+  strstr({$attr}[$i],':'):$hdr
+  if ($hdr) then
+    $skip=0
+    if {$attr}[$i]='ID:' then
+      write('file',$tfile,'%-17s %s','ID:',{$val}[$i])
+      $skip=1
+    elseif {$attr}[$i]='_ID:' then  // skip the probe ID section
+      $skip=1
+    else
+      write('file',$tfile,'\n%-17s %s',{$attr}[$i],{$val}[$i])
+    endif
+  elseif $skip < 0.5 then
+    write('file',$tfile,'%-17s %s',{$attr}[$i],{$val}[$i])
+  endif
+endwhile
+
+write('file',$tfile,'')
+mv($tfile,$file)
+probeidez('native'):$probeidez
+if not $probeidez then
+  probeid('commit',$file)
+endif

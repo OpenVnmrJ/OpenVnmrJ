@@ -1,0 +1,22 @@
+"macro epicenter"
+"*****************************************************************************"
+
+" epicenter - Macro to set tep to center echoes"
+"  Note: the error in the tep calculation will be +/- 0.5*dwell"
+
+"*****************************************************************************"
+
+cf=1   "select first echo"
+av
+ft('noft') 
+peak:$ht,cr
+$dw = 1/sw
+$del = (sw/2)-cr  "center to echo center in Hz"
+$delptep = (np/2.0/sw)*$del    "echo shift in points "
+$deltep = $dw*$delptep*1e6 "time in usec "
+if($deltep > at/2*1e6)  then
+  write('error','tep exceeds limit = %8.3f',$deltep)
+  abort
+endif
+tep = tep+$deltep
+write('line3','tep set to %6.2f usec.',tep)

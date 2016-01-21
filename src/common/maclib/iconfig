@@ -1,0 +1,401 @@
+"macro iconfig"
+" iconfig - configures a VnmrS/Inova/Mercury system"
+
+if ($# >= 1) then
+  $op = $1
+else
+  $op = 'init'
+endif
+
+if ($op='display') then
+   showconfig
+   return
+endif
+                                                                               
+$tmpfile=systemdir+'/tmp/config.bk'
+exists(systemdir+'/conpar','file','rw'):$update
+if ($op = 'init') or ($op = 'auto') then
+    exists($tmpfile,'file'):$e
+    if ($e) then
+      delete($tmpfile)
+    endif
+    fsave($tmpfile,'systemglobal')
+    shell('chmod 666 '+ $tmpfile)
+    if ($update) then
+       exists(systemdir+'/conpar.prev','file','rw'):$e
+       if ($e > 0.5) then
+         $rev=rev $revdate=revdate
+         fread(systemdir+'/conpar','systemglobal','reset')
+         fread(systemdir+'/conpar.prev','systemglobal','value')
+         delete(systemdir+'/conpar.prev')
+         rev=$rev revdate=$revdate
+         fsave(systemdir+'/conpar','systemglobal')
+         $num = size('parmax')
+         if ($num < 22) then
+           setvalue('parstep',0.1,22,'systemglobal')
+           setvalue('parmin',-1e9,22,'systemglobal')
+           setvalue('parmax',1e9,22,'systemglobal')
+           setvalue('parmax',63,23,'systemglobal')
+         endif
+         
+       endif
+    endif
+
+    $gfile='/vnmr/imaging/gradtables'
+    exists($gfile,'directory'):$e
+    if ($e) then
+      shell('ls '+$gfile+' > /vnmr/tmp/gtmp;cat'):$dum
+    else
+      write('reset','/vnmr/tmp/gtmp')
+    endif
+    lookup('mfile','/vnmr/tmp/gtmp','filekey'):$key
+    $more = 2
+    $file='/vnmr/tmp/sysgcoil'
+    write('reset',$file)
+    write('file',$file,'None None')
+    while ($more = 2) do
+      lookup('mfile',$key,'read','filekey'):$val,$key,$more
+      if ($more = 2) then
+        write('file',$file,'%s %s',$val,$val)
+      endif
+    endwhile
+    delete('/vnmr/tmp/gtmp')
+    shell('chmod 666 '+ $file)
+
+    shell('vnmr_uname'):$osname
+    $file='/vnmr/tmp/smsport'
+    write('reset',$file)
+    write('file',$file,'None n')
+    if ($osname='SOLARIS') then
+       write('file',$file,'"Port A" a')
+       write('file',$file,'"Port B" b')
+    elseif ($osname='Linux') then
+       write('file',$file,'Com1 c1')
+    else
+       write('file',$file,'Port_A a')
+       write('file',$file,'Port_B b')
+       write('file',$file,'Com1 c1')
+    endif
+    write('file',$file,'Ethernet e')
+
+    if ($op <> 'auto') then
+      shell('uname -n'):$host
+      vnmrjcmd('popup', 'mode:modal', 'file:iconfig.xml', 'rebuild:yes', 'location:topMenuBar', 'help:/vnmr/jhelp/dialog/iconfig.html', 'pnewupdate:true', 'cancel:iconfig(`cancel`)', 'title:'+$host+ ' Configuration')
+    endif
+endif
+if ($op = 'numrf') then
+  $num = size('rfchtype')
+  if (numrfch > 2) then
+    fixpar3rf
+  endif
+  if (numrfch > 3) then
+    fixpar4rf
+  endif
+  if (numrfch > 4) then
+    fixpar5rf
+  endif
+  while ($num < numrfch) do
+    $num=$num+1
+    rfchtype[$num]='U+ Direct Synthesis'
+  endwhile
+  $num = size('ptsval')
+  while ($num < numrfch) do
+    $num=$num+1
+    ptsval[$num]=0
+  endwhile
+  $num = size('overrange')
+  while ($num < numrfch) do
+    $num=$num+1
+    overrange[$num]=0
+  endwhile
+  length(rftype):$num
+  while ($num < numrfch) do
+    $num=$num+1
+    substr(rftype,$num,1,'d'):rftype
+  endwhile
+  length(rfwg):$num
+  while ($num < numrfch) do
+    $num=$num+1
+    rfwg=rfwg+'n'
+  endwhile
+  length(amptype):$num
+  while ($num < numrfch) do
+    $num=$num+1
+    amptype=amptype+'a'
+  endwhile
+  return
+endif
+if ($op = 'rftype') then
+  substr(rfchtype[1],1,1):$ch
+  if ($ch = 'U') then
+    setvalue('rftype','d','systemglobal')
+  else
+    setvalue('rftype','l','systemglobal')
+  endif
+  $num = 1
+  while ($num < numrfch) do
+    $num=$num+1
+    substr(rfchtype[$num],1,1):$ch
+    if ($ch = 'U') then
+       substr(rftype,$num,1,'d'):rftype
+    else
+       substr(rftype,$num,1,'l'):rftype
+    endif
+  endwhile
+  return
+endif
+if ($op = 'ok') or ($op = 'auto') then
+  exists($tmpfile,'file'):$e
+  if ($e) then
+    delete($tmpfile)
+  endif
+  if ($update) then
+    if (traymax = 0) then
+       off('traymax','systemglobal')
+    endif
+    
+    exists(systemdir+'/psg/psgmain.cpp','file'):$e
+    if ($e > 0.5) then
+      $systype='vnmrs'
+      dsp='n'
+    else
+      $systype='inova'
+    endif
+    setvalue('Console',$systype, 1,'systemglobal')
+    setvalue('apinterface',3.0, 1,'systemglobal')
+    setvalue('fifolpsize',2048.0, 1,'systemglobal')
+    setvalue('audiofilter','5', 1,'systemglobal')
+    setvalue('maxsw_loband',500000, 1,'systemglobal')
+    setvalue('vtflowrange',0, 1,'systemglobal')
+    setvalue('shimsetamp',1.0, 1,'systemglobal')
+    setprotect('parstep','off',4,'systemglobal')
+//  tof, dof, etc
+    parstep[7] = 0.1
+    parstep[8] = 0.1
+    parstep[16] = 0.1
+    parstep[20] = 0.1
+    parstep[22] = 0.1
+    setprotect('parstep','on',4,'systemglobal')
+    setprotect('parmin','off',4,'systemglobal')
+//  min for power levels
+    parmin[17] = -16
+    parmin[9] = -16
+    parmin[18] = -16
+    parmin[21] = -16
+    parmin[23] = -16
+//  min for tof, dof, etc
+    parmin[7] = -1e9
+    parmin[8] = -1e9
+    parmin[16] = -1e9
+    parmin[20] = -1e9
+    parmin[22] = -1e9
+    setprotect('parmin','on',4,'systemglobal')
+    setprotect('parmax','off',4,'systemglobal')
+//  max for tof, dof, etc
+    parmax[7] = 1e9
+    parmax[8] = 1e9
+    parmax[16] = 1e9
+    parmax[20] = 1e9
+    parmax[22] = 1e9
+    setprotect('parmax','on',4,'systemglobal')
+    $num = 0
+    setvalue('latch','','systemglobal')
+    while ($num < numrfch) do
+      $num=$num+1
+      cattn[$num]=79
+      fattn[$num]=4095
+      latch=latch+'y'
+    endwhile
+
+//  sw
+    if ($systype = 'vnmrs') then
+      setvalue('parmax',5e6, 5,'systemglobal')
+    endif
+    setvalue('parstep',-1.25e-8, 5,'systemglobal')
+//  fb
+    setvalue('parmax',256000,6,'systemglobal')
+    setvalue('parmin',  1000,6,'systemglobal')
+    setvalue('parstep', 1000,6,'systemglobal')
+//  delays
+    setvalue('parstep',1.25e-8, 14,'systemglobal')
+//  pulses
+    setvalue('parstep',0.0125, 13,'systemglobal')
+    setvalue('parstep',0.0125, 15,'systemglobal')
+
+//  dmf
+    setvalue('parmax',2e6,    11,'systemglobal')
+    setvalue('parmin', 100.0, 11,'systemglobal')
+    setvalue('parstep',100.0, 11,'systemglobal')
+
+    substr(gradtype,1,1):$ch
+    if ($ch = 'l') then
+      setvalue('gradstepsz',2047.0, 1,'systemglobal')
+    else
+      setvalue('gradstepsz',32767.0, 1,'systemglobal')
+    endif
+    if (shimset = 10) then
+      setvalue('parmax',  2047.0, 19,'systemglobal')
+      setvalue('parmin', -2048.0, 19,'systemglobal')
+    else
+      setvalue('parmax',  32767.0, 19,'systemglobal')
+      setvalue('parmin', -32767.0, 19,'systemglobal')
+    endif
+    setvalue('parstep',1.0, 19,'systemglobal')
+
+    shell('uname -n'):$host
+    setvalue('instrument',$host,'systemglobal')
+
+    fsave(systemdir+'/conpar','systemglobal')
+    exists(systemdir+'/tests','file'):$e
+    if ($e > 0.5) then
+      delete(systemdir+'/tests')
+    endif
+    exists(systemdir+'/stdpar','file'):$e
+    if ($e > 0.5) then
+      delete(systemdir+'/stdpar')
+    endif
+    $h1=''
+    format(h1freq,1,0):$h1
+    shell('ln -s '+systemdir+'/par'+$h1+'/tests '+systemdir+'/tests')
+    shell('ln -s '+systemdir+'/par'+$h1+'/stdpar '+systemdir+'/stdpar')
+    rm('/vnmr/tmp/sysgcoil'):$e
+    rm('/vnmr/tmp/smsport'):$e
+    _rftype
+    isvnmrj:$j
+    if ($j > 0.5) then
+      $j = 1
+      $j2 = ''
+      write('line3',' fread(`%s/conpar`,`systemglobal`)',systemdir):$cmd
+      while ($j <= jviewports[1]) do
+        if ($j <> jviewport) then
+          format($j,1,0):$j2
+          vnmrjcmd('VP ' + $j2 + $cmd)
+        endif
+        $j = $j + 1
+      endwhile
+    endif
+    write('reset',systemdir+'/smsport')
+    if (traymax = 768) then
+      write('file',systemdir+'/smsport','%s HRM',smsport)
+    elseif (traymax = 96) then
+      write('file',systemdir+'/smsport','%s GIL',smsport)
+    elseif (traymax = 48) then
+      write('file',systemdir+'/smsport','%s NMS',smsport)
+    elseif (traymax = 12) or (traymax = 97) then
+      write('file',systemdir+'/smsport','e AS4896')
+      setvalue('smsport','e','systemglobal')
+    else
+      write('file',systemdir+'/smsport','%s SMS',smsport)
+    endif
+    if (rftype='ee') then
+      $sys=1
+    else
+      $sys=2
+    endif
+    if (amptype='aa') then
+      $amp=11
+    elseif (amptype='bb') then
+      $amp=22
+    else
+      $amp=33
+    endif
+    $pts=511,511,511,511,511,511
+    $e = size('ptsval')
+    $i = 1
+    while ($i <= $e) do
+      $pts[$i] = ptsval[$i]
+      $i=$i+1
+    endwhile
+    wsram(0,$pts[1], 1,$pts[2], 2,$pts[3], 3,$pts[4], 4,$pts[5], 5,$pts[6])
+    wsram(6,trunc(lockfreq*1e6/65536),7,trunc(lockfreq*1e6) mod 65536, 8, trunc((h1freq+0.1)/100)*16, 10, trunc(iffreq*10+0.1))
+    updtprconf
+  endif
+elseif ($op = 'cancel') then
+  fread($tmpfile,'systemglobal','reset')
+  delete($tmpfile):$e
+  rm('/vnmr/tmp/sysgcoil'):$e
+  rm('/vnmr/tmp/smsport'):$e
+elseif ($op = 'readhw') then
+  $tmpfile=systemdir+'/tmp/conf'
+  exists(systemdir+'/psg/psgmain.cpp','file'):$e
+  if ($e > 0.5) then
+    $systype='vnmrs'
+  else
+    $systype='inova'
+  endif
+  shell('showconsole '+systemdir+'/acqqueue/acq.conf '+$systype+'>'+$tmpfile+';cat'):$e
+  lookup('mfile',$tmpfile,'filekey'):$key
+  $ans=''
+  lookup('mfile',$key,'skip','read'):$ans
+  if  ($ans = '1') then
+     setvalue('system','spectrometer','systemglobal')
+     lookup('mfile',$key,'seek','h1freq','read'):$rval
+     setvalue('h1freq',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','vttype','read'):$rval
+     setvalue('vttype',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','x_gradtype','read'):$ans
+     substr(gradtype,1,1,$ans):gradtype
+     lookup('mfile',$key,'seek','y_gradtype','read'):$ans
+     substr(gradtype,2,1,$ans):gradtype
+     lookup('mfile',$key,'seek','z_gradtype','read'):$ans
+     substr(gradtype,3,1,$ans):gradtype
+     lookup('mfile',$key,'seek','numrfch','read'):$numrf
+     setvalue('numrfch',$numrf,'systemglobal')
+     lookup('mfile',$key,'seek','shimset','read'):$rval
+     vnmrjcmd('pnew','system','h1freq','vttype','gradtype','numrfch')
+     if ($rval > 0) then
+       setvalue('shimset',$rval,'systemglobal')
+       vnmrjcmd('pnew','shimset')
+     endif
+     lookup('mfile',$key,'seek','numrcvrs','read'):$rval
+     setvalue('numrcvrs',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','swmax','read'):$rval
+     setvalue('parmax',$rval,5,'systemglobal')
+     lookup('mfile',$key,'seek','stmmemsize','read'):$rval
+     exists('stmmemsize','parameter','systemglobal'):$e
+     if ($rval <> 16) and ($e < 0.5) then
+       create('stmmemsize','real','systemglobal')
+       $e = 1
+     endif
+     if ($e > 0.5) then
+       setvalue('stmmemsize',$rval,'systemglobal')
+     endif
+     lookup('mfile',$key,'seek','iffreq','read'):$rval
+     setvalue('iffreq',$rval,'systemglobal')
+     lookup('mfile',$key,'seek','lockfreq','read'):$rval
+     setvalue('lockfreq',$rval,'systemglobal')
+     vnmrjcmd('pnew','numrcvrs','parmax[5]','iffreq','lockfreq')
+
+     $i = 1
+     $ai = ''
+     while ($i <= $numrf) do
+       write('line3','rfchtype_%d',$i):$sval
+       lookup('mfile',$key,'seek',$sval,'read'):$ans
+       if ($ans = 'direct') then
+          setvalue('rfchtype','U+ Direct Synthesis',$i,'systemglobal')
+          substr(rftype,$i,1,'d'):rftype
+       elseif ($ans = 'H1') then
+          setvalue('rfchtype','U+ H1 Only',$i,'systemglobal')
+          substr(rftype,$i,1,'d'):rftype
+       else
+          setvalue('rfchtype','Deuterium Decoupler',$i,'systemglobal')
+          substr(rftype,$i,1,'l'):rftype
+       endif
+       write('line3','ptsval_%d',$i):$sval
+       lookup('mfile',$key,'seek',$sval,'read'):$rval
+       setvalue('ptsval',$rval,$i,'systemglobal')
+       write('line3','rfwg_%d',$i):$sval
+       lookup('mfile',$key,'seek',$sval,'read'):$ans
+       substr(rfwg,$i,1,$ans):rfwg
+       write('line3','amptype_%d',$i):$sval
+       lookup('mfile',$key,'seek',$sval,'read'):$ans
+       substr(amptype,$i,1,$ans):amptype
+       format($i,1,0):$ai
+       vnmrjcmd('pnew','rfchtype['+$ai+']','ptsval['+$ai+']')
+       $i=$i+1
+     endwhile
+  endif
+  delete($tmpfile)
+  system='spectrometer'
+  vnmrjcmd('pnew','system','rftype','amptype','gradtype')
+endif

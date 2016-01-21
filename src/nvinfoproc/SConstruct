@@ -1,0 +1,194 @@
+#!
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+#import variables  and environment from SConstruct
+Import("*")
+
+# define target file names
+infoProcTarget = 'Infoproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+## NDDS include/lib paths
+# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+print 'nvInfoproc NDDS_VERSION ' + boEnv['NDDS_VERSION']
+
+#NDDS include/lib paths
+#if 'Infoproc4x' in COMMAND_LINE_TARGETS:
+#  generate NDDS home path from NDDS_VERSION
+nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
+print 'Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this'
+infoProcTarget = 'Infoproc'
+nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
+nddsGen = 'cd ' + cwd + ' && ' + os.path.join(nddsHome, 'scripts', 'nddsgen')
+nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
+
+#  ndds header paths
+nddsHdrPathUnix = os.path.join(nddsHome, 'include')
+nddsHdrPathShare = os.path.join(nddsHome, 'include', 'ndds')
+
+#  NDDSGEN options
+nddsOpts = ' -language C -notypecode -replace '
+
+# libraries and paths
+#  nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
+nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
+LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl' ]
+
+
+# source files
+infoProcPath     = os.path.join(cwd, os.pardir, 'infoproc')
+infoProcFileList = ['infoqueu.c',
+                    'infosockets.c']
+
+acqProcPath    = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = ['ACQPROC_strucs.h']
+
+vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = ['hostAcqStructs.h']
+
+expProcPath    = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = ['shrstatinfo.h',
+                  'hostMsgChannels.h']
+
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['SUN_HAL.h',
+                'ACQ_HALstruc.h']
+
+nvInfoProcFileList = ['infoproc.c',
+                      'nddsinfofuncs.c',
+                      'info_svc.c',
+                      'info_svc_funcs.c']
+
+ncommPath    = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = ['errLogLib.h',
+                'mfileObj.h',
+                'ipcMsgQLib.h',
+                'msgQLib.h',
+                'sockets.h',
+                'shrMLib.h',
+                'semLib.h']
+ncommFileList = ['errLogLib.c',
+                 'semLib.c',
+                 'sockets.c',
+                 'mfileObj.c',
+                 'ipcMsgQLib.c',
+                 'msgQLib.c',
+                 'shrMLib.c']
+
+expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
+expProcFileList = ['statfuncs.c']
+
+nvacqPath     = os.path.join(cwd, os.pardir, 'nvacq')
+nvacqHdrList  = ['NDDS_Obj.h',
+                 'NDDS_SubFuncs.h',
+                 'NDDS_PubFuncs.h',
+                 'crc32.h']
+nvacqFileList = ['crc32.c',
+                 'sysUtils.c',
+                 'NDDS_Obj.c',
+                 'NDDS_PubFuncs.c',
+                 'NDDS_SubFuncs.c']
+
+nddsPath = os.path.join(cwd, os.pardir, 'nvacq')
+
+# NDDS bulid files
+nddsFileList = [ 'Console_Stat',
+                ]
+#                    'App_HB']
+
+nddsIdlFileList = [ 'Console_Stat.idl',
+                ]
+#                    'App_HB.idl']
+
+# the order of the elements within the next two
+# lists must be the match
+
+nddsCFileList = [ 'Console_Stat.c',
+                     'Console_StatPlugin.c',
+                     'Console_StatSupport.c',
+                ]
+#                     'App_HB.c',
+#                     'App_HBPlugin.c',
+#                     'App_HBSupport.c']
+
+# build environment
+infoProcEnv = Environment(CCFLAGS    = '-m32 -g -O',
+                          CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX',
+                                        'NOASYNC', 'NIRVANA', 'USE_HTONS', 'DEBUG'],
+                          LINKFLAGS  = '-m32 ',
+                          CPPPATH    = [cwd,
+                                        nddsHdrPathUnix,
+                                        nddsHdrPathShare])
+
+# link in x or idl files
+#buildMethods.symLinkNow(infoProcEnv, cwd, nddsPath, nddsIdlFileList)
+#buildMethods.symLinkNow(infoProcEnv, cwd, nddsPath, nddsXFileList)
+
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, infoProcPath, infoProcFileList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, nvacqPath, nvacqFileList)
+buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, nvacqPath, nvacqHdrList)
+
+infoProcObjEnv = infoProcEnv.Clone()
+infoProcObjEnv.Append(CPPDEFINES = ['SUN', 'DATASEG'])
+
+# if 'Infoproc4x' in COMMAND_LINE_TARGETS:
+infoProcEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+# define Builders
+#nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
+#                           nddsGen + ' ' + \
+#                           '-replace ' + '$SOURCES.file')
+
+#infoProcEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
+
+infoproc = infoProcEnv.Program(target  = infoProcTarget,
+                               source  = [infoProcObjEnv.SharedObject(infoProcFileList),
+                                          expProcFileList,
+                                          nvInfoProcFileList,
+                                          ncommFileList,
+                                          nddsCFileList,
+                                          nvacqFileList],
+                               LIBPATH = [cwd,
+                                          nddsLibPath],
+                               LIBS    = [LibList])
+
+# define with absolute path where built files will be copied
+vnmrPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'ddr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrPath):
+   os.makedirs(vnmrPath)
+
+# actions to be performed after targets are built
+infoProcEnv.AddPostAction(infoproc,
+                          Action(Copy(os.path.join(vnmrPath,'Infoproc'), os.path.join(cwd, infoProcTarget))))
+

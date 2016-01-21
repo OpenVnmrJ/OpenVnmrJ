@@ -1,0 +1,329 @@
+## These commits are for nvpsg, though they may also apply to psg  GMB  12/17/09
+#
+# now that the build creates symlinks to headers and source files outside the build directory
+# This solves the problem below, but I leave for future reference.  GMB    11/13/07
+#
+# Special Notes:
+# the psg headers must be prior to vnmr headers since in ecc_worstCase.c
+# is included vnmrsys.h which in vnmr this file has #define VNMR which
+# result in double defined vnmremsg(), etc.
+# The proper one is in psg of the same name vnmrsys.h which does not have
+# the VNMR defined. this could be problematic in the future!  GMB
+#
+# In addition the standard.h header include from psg causes the macros.h 
+# from psg to be included rather than the one from nvpsg; the solution,
+# or at least one, is to copy the psg standard.h file locally and
+# this results in the nvpsg macros.h to be include.
+# one can find out which headers are being inclued via the
+#       scons --debug=includes filename.o call
+#  GMB  9/11/07
+#
+# Note: The files getparm.c xmath.c in nvpsg are overridden by the same
+# files copied over from psg I hope this is correct... gmb  9/11/07
+#
+# Interesting: non of the makefiles build psg4dps so I'll removed it and
+# did not worry too much about the following problem.....  GMB:
+# For psg4dsp.c accesses the member acqelemid in the lc struct, this 
+# member is defined in the header file lc.h in xracq but not in other
+# lc.h which is included the nvpsg version.
+# it's not clear which it really should be using.  GMB  9/11/07
+# But to succeed in the  compile, the xracq header must be prior to nvpsg
+#
+# IF YOU ADD OR DELETE FILES FROM A LIST HERE YOU PROBABLY ALSO NEED TO
+# UPDATE 'makeuserpsg.lnx'
+#
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+import shutil
+
+platform = sys.platform
+
+# define target file names
+paramStaticTarget  = 'libparam.a'
+paramSharedTarget  = 'libparam.so'
+psglibStaticTarget = 'libpsglib.a'
+psglibSharedTarget = 'libpsglib.so'
+s2pulTarget        = 's2pul'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+
+#--- VNMR header files that are needed for PSG
+vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'allocate.h',
+                'asm.h',
+                'data.h',
+                'dpsdef.h',
+                'graphics.h',
+                'group.h',
+                'init.h',
+                'params.h',
+                'pvars.h',
+                'shims.h',
+                'symtab.h',
+                'tools.h',
+                'vfilesys.h',
+                'variables.h',
+                'wjunk.h' ]
+
+
+vnmrFileList = ['asmfuncs.c',
+                'assign.c',
+                'allocate.c',
+                'pvars.c',
+                'shims.c',
+                'symtab.c',
+                'tools.c',
+                'vfilesys.c',
+                'variables1.c']
+
+#----- PSG header files that are needed
+#------------------------------------------
+psgPath     = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = [
+		'abort.h',
+		'cps.h',
+		'dsp.h',
+		'Pbox_psg.h',
+		'seqgenmake',
+		'vnmrsys.h' ]
+
+
+#------------------------------------------------------------------------
+#-- common PSG sources files 
+#------------------------------------------------------------------------
+psgFileList = [
+                'abort.c',
+                'active.c',
+                'getparm.c',
+                'hash.c',
+                'lc_index.c',
+                'P_receive.c',
+                'sendasync.c',
+                'setparm.c',
+                'signalhandler.c',
+                'stubs.c',
+                'treefuncs.c',
+                'xmath.c',
+                'x_ps.c' ]
+
+
+# files and headers unique to Mercury
+
+kpsgFileList = [
+                 'aptable.c',
+                 'apshape_pulse.c',
+                 'array.c',
+                 'autofuncs.c',
+                 'convert.c',
+                 'eventoverhead.c',
+                 'freq_list.c',
+                 'gradient.c',
+                 'looping.c',
+                 'hwlooping.c',
+                 'initHSlines.c',
+                 'initauto.c',
+                 'lc_hdl.c',
+                 'meat.c',
+                 'pre_fid_seq.c',
+                 'psg.c',
+                 'raparms.c',
+                 'wetfuncs.c',
+                 'wg.c',
+                 'xmtr.c' ]
+
+kpsgHdrList = [
+                'acodes.h',
+                'acqparms2.h',
+                'apdelay.h',
+                'aptable.h',
+                'chempack.h',
+                'lc_index.h',
+                'lc_gem.h',
+                'PboxM_psg.h',
+                'REV_NUMS.h',
+                'rfconst.h',
+                'standard.h',
+                'wetfuncs.h' ]
+
+
+#---------------------------------------------------------------------
+#   psg source code that can be included in Users Pulse Sequences
+#   i.e. C header files 
+#---------------------------------------------------------------------
+#psgPath     = os.path.join(cwd, os.pardir, 'psg')
+#psgCHdrList = [ 'revmode.c' ]
+
+#----- expproc header files that are needed
+expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = [ 'expDoneCodes.h',
+		              'shrexpinfo.h' ]
+
+#------------------------------------------------------------------------
+#--- NCOMM cources that are needed 
+#------------------------------------------------------------------------
+# Communications libraries
+ncommPath     = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'mfileObj.h' ]
+#
+#----- PSG source files that are needed
+seqFileList = [ 's2pul.c' ]
+
+
+
+#---- Vnmr Headers Needed for User Programming
+usrVnmrHdrList = [
+                   'asm.h',
+                   'data.h',
+                   'group.h',
+                   'params.h',
+                   'pvars.h',
+                   'shims.h',
+                   'symtab.h',
+                   'variables.h' ]
+
+#---- Vnmr cources Needed for User Programming
+# usrVnmrSrcList = [ ' lockfreqfunc.c' ]
+
+#---- PSG sources Needed for User Programming but not used in psglib.
+#usrPsgSrcList = [ 
+#                  'shape_pulse.c',
+#                  'spcl3rdattn.c' ]
+
+makePsgFileList = [ 'makeuserpsg.lnx' ]
+
+psgSeqPath     = os.path.join(cwd, os.pardir, 'psglib')
+psgSeqFileList = ['s2pul.c']
+
+# CFLAGS    =  -fPIC -g -c -Wall -O -m32
+# CDEFINE   =  -DLINUX -DNESSIE -DPSG_LC -DULONG -DG2000 -DMERCURY
+# build environments
+cppEnv = Environment(CPPFLAGS   = '-O -m32 -fPIC -Wall -Wno-return-type',
+                     LINKFLAGS  = '-m32 ',
+                     CPPDEFINES = ['PSG_LC', 'ULONG', 'NESSIE', 'SUN', 'LINUX', 'G2000', 'MERCURY' ],
+                     CPPPATH    = [ cwd ])
+cEnv = cppEnv.Clone()
+# cEnv.Append(CPPDEFINES = ['codeint=int', 'codelong=int'])
+psgEnv = Environment(CCFLAGS    = '-O -m32 -fPIC',
+                     CPPDEFINES = ['PSG_LC', 'ULONG', 'NESSIE', 'SUN', 'LINUX', 'G2000', 'MERCURY' ],
+                     LINKFLAGS  = '-m32 -Wl',
+                    )
+
+# psgEnv.Append(CPPDEFINES = ['codeint=int', 'codelong=int'])
+
+paramStatic = cEnv.StaticLibrary(target  = paramStaticTarget,
+                                 source  = vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, ncommPath, ncommHdrList)
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    paramShared = cEnv.SharedLibrary(target  = paramSharedTarget,
+                                 source  = vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrFileList)
+
+psglibStatic = cEnv.StaticLibrary(target  = psglibStaticTarget,
+                                  source  = [psgFileList, 
+                                             kpsgFileList, ])
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(cEnv,  psglibStaticTarget, cwd, expProcPath, expProcHdrList)
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    psglibShared = cEnv.SharedLibrary(target  = psglibSharedTarget,
+                                  source  = [psgFileList,
+                                             kpsgFileList
+                                             ])
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(cEnv,  psglibSharedTarget, cwd, expProcPath, expProcHdrList)
+
+s2pul = cEnv.Program(target  = s2pulTarget,
+                     source  = psgSeqFileList,
+                     LIBPATH = [cwd,
+                                ncommPath],
+                     LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib ',
+                     LIBS    = ['psglib', 'param', 'acqcomm', 'm'])
+
+buildMethods.makeSymLinks(cEnv, s2pulTarget, cwd, psgSeqPath, psgSeqFileList)
+
+# define with absolute path where built files will be copied
+vnmrlibPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console','mercury','lib')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrlibPath):
+   os.makedirs(vnmrlibPath)
+
+# actions to be performed after targets are built
+cEnv.AddPostAction(paramStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    cEnv.AddPostAction(paramShared,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
+
+cEnv.AddPostAction(psglibStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    cEnv.AddPostAction(psglibShared,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
+
+cEnv.AddPostAction(psglibStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, 'x_ps.o'))))
+
+#finally, copy the psg source code to vnmr/psg together with makeuserpsg.lnx
+vnmrPsgPath     = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                    'console', 'mercury', 'psg')
+
+
+# method to copy files to remote directory
+def copyFilesThere(srcPath, dstPath, fileList):
+   for i in fileList:
+       shutil.copy( os.path.join(srcPath,i) , os.path.join(dstPath, i))
+
+#       Execute('ln -sf ' + os.path.join(path, i) + ' ' + os.path.join(cwd,i))
+#      shutil.copy(i, vnmrPsgPath)
+#      shutil.copy(os.path.join(path, i), i)
+
+#cEnv.AddPostAction(psglibShared,
+#                   Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
+
+#files = os.popen('ls *.h').read()
+#doth = Split(files)
+#vnmrPsgSources = psgFileList + nvpsgFileList + nvpsgCppFileList + doth
+#if not os.path.exists(vnmrPsgPath):
+#   os.makedirs(vnmrPsgPath)
+#for i in vnmrPsgSources:
+#      shutil.copy(i, vnmrPsgPath)
+
+#
+# hopefully copies everthing the above did.
+#
+if not os.path.exists(vnmrPsgPath):
+   os.makedirs(vnmrPsgPath)
+
+# postBuildCopy(env, buildTarget, destPath, sourcePath, fileList)
+
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, psgFileList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, kpsgFileList, '644')
+
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, kpsgHdrList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, psgHdrList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, makePsgFileList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, vnmrHdrList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, expProcHdrList, '644')
+buildMethods.postBuildCopyPerm(cEnv, psglibStatic, vnmrPsgPath, cwd, ncommHdrList, '644')

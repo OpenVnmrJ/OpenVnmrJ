@@ -1,0 +1,57 @@
+"macro AutoStrtpar"
+"*********************************************************"
+"  AutoStrtpar - Recalls a stored par in Glide . Used only "
+"			in Glide			  "
+"*********************************************************"
+
+$wexp=wexp $fileex=0 $file='' $filename=''
+$fileline=''
+
+strtpar='' wds=''
+
+Automacrodir:$maclib
+  exists($maclib+'/'+$1+'acqpars','file'):$acqex
+  if ($acqex) then
+        $reqexp=REQexp
+        REQexp=''
+        readparam($maclib+'/'+$1+'acqpars','REQexp')
+	$fileline=REQexp[1]
+	if ($fileline='') then
+            $acqex=0
+        endif
+        REQexp=$reqexp
+  endif
+if ($acqex=0) then
+  getEXPinfo($1):$fileline
+endif
+
+string2array($fileline[1]):$fileline
+$total=size('$fileline')
+$defaultmacro=$fileline[$total]
+if ($fileline[1]='') then $total=0 endif
+
+if ($total) then
+    $i=1
+    repeat
+        AutoCheck($fileline[$i]):$fileex,$file,$fidname
+        if ($fileex) then $i=$total endif
+        $i=$i+1
+    until $i > $total
+endif
+
+if ($fileex) then
+   $ext=''
+   getext($fidname):$dum,$ext
+   savesampglobal('cp')
+   rtp($file)
+   if ($ext='fid') then
+	strtpar=$fidname
+   endif
+   getsampglobal('cp')
+elseif ($defaultmacro <> '') then
+   savesampglobal('cp')
+   exec($defaultmacro)
+   getsampglobal('cp')
+endif
+wexp=$wexp
+

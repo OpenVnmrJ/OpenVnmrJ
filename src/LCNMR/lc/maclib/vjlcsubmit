@@ -1,0 +1,257 @@
+"macro vjlcsubmit"
+$tailX='tail'
+whichtail:$tailX
+walkupQ_init
+is_submitmode:$issubmit
+if ($issubmit) and (clonemod='yes') then
+   write('error','curexp is in clone mode.  Cannot submit')
+   return
+endif
+
+"************Make sure the automation file is present *************"
+  $autodir=autodir $autofile='enterQ'
+  $filename=$autodir+'/'+$autofile
+  $AUTOGLOBAL=$filename+'.macdir/AUTOGLOBAL'
+  exists($AUTOGLOBAL,'file'):$agex
+  if ($agex=0) then
+                write('error','Error: %s aborted',$0)
+                return
+  endif
+
+"************Now proceed************************"
+write('reset',$filename)
+writeTtimeQ($filename+'.macdir',0,0,0)
+
+    $p=0 $e='' $t=0 $n=''
+    sortPeakNodes:$p,$e,$t,$n
+    $totalloc=size('$p')
+    if ($totalloc=1) and ($p[1]=0) and (lcHoldType<>'indefinite') then
+	shell('rm -rf '+$filename+'.macdir/LcGenPeak'):$dum
+	mkNewPeakEntry('genpeak','submit')
+	return
+    endif
+
+"******************************************************************"
+$multiloc=0
+$explist='' $longlist=''
+getPreAcqTime:$changetime
+$ltime=0
+
+  "*******************************************************"
+   "  Set TEXT information"
+   $text=text_string[1]
+   $maclibdir=cursqexp+'/macdir'
+
+   "***Create a Master copy of customization macros in curloc and curloclong ***"
+	shell('cp -r '+$maclibdir+'/* '+$filename+'.macdir/curloc'):$dum
+        write('reset',$filename+'.macdir/curloc/EXPLIST')
+        write('reset',$filename+'.macdir/curloc/LONGLIST')
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$filename+'.macdir/curloc/LONGLIST)'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$filename+'.macdir/curloc/EXPLIST)'):$dum
+        write('reset',$filename+'.macdir/curloc/TtimeQ')
+
+	shell('cp -r '+$maclibdir+'long/* '+$filename+'.macdir/curloclong'):$dum
+	write('reset',$filename+'.macdir/curloclong/EXPLIST')
+	write('reset',$filename+'.macdir/curloclong/LONGLIST')
+        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$filename+'.macdir/curloclong/LONGLIST)'):$dum
+        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$filename+'.macdir/curloclong/EXPLIST)'):$dum
+        write('reset',$filename+'.macdir/curloclong/TtimeQ')
+
+   "***Create a Master copy of sampleinfo with loc=0 rack=0 and zone=0 in cursqexp ***"
+
+	if (samplename='') then samplename=operator endif
+	$sample=sample
+	if ($sample='') then $sample=samplename endif
+	retentiontime_=''
+
+        $info=cursqexp+'/sampleinfo'
+        $infomaster=cursqexp+'/sampleinfo.master'
+        write('reset',$info)
+        write('reset',$infomaster)
+	write('reset',$info+'day')
+	write('reset',$info+'night')
+
+	write('file',$infomaster,'PEAK#: 0')
+	write('file',$infomaster,'SAMPLE#: 0')
+	write('file',$infomaster,'USER: %s',operator)
+	write('file',$infomaster,'MACRO: cpautoQ')
+	write('file',$infomaster,'SOLVENT: %s',solvent)
+	write('fileline',$infomaster,'TEXT: %s\n',$text)
+	write('file',$infomaster,'SampleDir: %s',$sample)
+	write('file',$infomaster,'USERDIR: %s',userdir)
+	write('file',$infomaster,'DATA: ')
+	write('file',$infomaster,'STATUS: Queued')
+        write('file',$infomaster,'---------------------------------------------')
+
+   "***Create a Master copy of studypar parameters  ***"
+
+	module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+                "  Would tray color work without it?"
+	setvalue('operator_',operator)
+	if (studyowner='') then studyowner=operator endif
+	setvalue('loc_',0)
+	setvalue('vloc_','0')
+	studystatus=''
+	vzone_=1 vrack_=1 studyid_=''
+	locdir=''
+	studystatus='Queued'
+
+   "*****Pause automation and cut enterQ into pQ and nonpQ****************"
+
+	$cureQ=cursqexp+'/enterQ'
+	$curnQ=cursqexp+'/overniteQ'
+	$curtQ=cursqexp+'/AutoTimeLog'
+	shell('touch '+$cureQ):$dum
+	shell('touch '+$curnQ):$dum
+	write('reset',$curtQ)
+
+   "****Edit the master copy for each location****"
+    $date='' shell('date +%Y%m%d%H%M%S'):$date
+    $loci=1 $vrack='0' $vzone='0' $vloc='A00' $loc='0'
+    $LOCdir='' $LOClist='' $L=1 $LOCqueue=''
+
+    $lastlocdir=''
+    $multiloc=$p
+    $dtime=0
+    repeat
+	$explist=$e[$loci]
+	$dtime=$dtime+$t[$loci]+$changetime
+            $r1='' $r2=''
+	    $prop=cursqexp+'/tmpstudy/info/'+$n[$loci]+'/prop'
+            readfile($prop,'$r1','$r2','EstRetTime','local')
+	    $rettime=$r2
+	$ltime=0
+	$peakdir=''
+	shell('cp '+$infomaster+' '+$info):$dum
+	if ($multiloc[$loci]=0) then 
+		nextlocQ:$multiloc[$loci]
+	endif
+	format($multiloc[$loci],0,0):$loc
+        $sedcmd=`sed -e 's|PEAK#:.*|PEAK#: `+$loc+`|'`
+        shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+        shell('mv '+$info+'1 '+$info):$dum
+        $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$loc+`|'`
+        shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+        shell('mv '+$info+'1 '+$info):$dum
+
+        $locname=$loc
+	Svfname($filename+'.macdir/loc'+$locname+'_%R3%',''):$peakdir
+	shell('basename '+$peakdir):$locdir
+	$lastlocdir=$locdir
+
+	$sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'day\')|\"'
+        shell('('+$sedcmd0+' '+$info+' > '+$info+'day)'):$dum
+        $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
+        shell('('+$sedcmd0+' '+$info+' > '+$info+'night)'):$dum
+
+    "*** Adjust studypar parameters ****"
+	format($loc,'lower'):loc_
+	setvalue('vloc_','A00')
+	vrack_=1
+	vzone_=1
+	locdir=$locdir
+
+    "*** Write sample global to the directory ***"
+	$curloc=$filename+'.macdir/curloc'
+	retentiontime_=$rettime
+        savesampglobal($curloc)
+	shell('cp '+$curloc+'/sampleglobal '+$curloc+'long'):$dum
+
+    "*** Submit this to the temporary automation files ***"
+	$dexl=0 wc($explist):$dexl
+	shell('cat '+$info+'day >> '+$cureQ):$dum
+        write('file',$curtQ,'%s %s %dexperiments dayQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
+        shell('cat '+$info+'day > '+$filename+'.macdir/curloc/sampleinfo'):$dum
+        shell('cat '+$info+'night > '+$filename+'.macdir/curloclong/sampleinfo'):$dum
+
+    "*******Copy customization macro directory************"
+        locmacdir4($filename,$locdir+'/day','short')
+        locmacdir4($filename,$locdir+'/night','long')
+	shell('cp '+$curloc+'/sampleglobal '+$filename+'.macdir/'+$locdir):$dum
+	shell('chmod -R g+rw '+$filename+'.macdir/'+$locdir):$dum
+
+    "****Reset EXPLIST, and write ONLY expeirments for this peak***"
+	$exp='' string2array($explist):$exp
+	$s1='' $s2=''
+	readfile($peakdir+'/day/EXPLIST','$s1','$s2','','local'):$etot
+	write('reset',$peakdir+'/day/EXPLIST')
+	$ei=1
+	repeat
+		teststr('$exp',$s1[$ei],'local'):$ok
+		if ($ok) then
+		    write('file',$peakdir+'/day/EXPLIST','%s  %s',$s1[$ei],$s2[$ei])
+		else
+		    shell('rm '+$peakdir+'/day/'+$s1[$ei]+'acq'):$dum
+                    shell('rm '+$peakdir+'/day/'+$s1[$ei]+'acqpars'):$dum
+                    shell('rm '+$peakdir+'/night/'+$s1[$ei]+'acq'):$dum
+                    shell('rm '+$peakdir+'/night/'+$s1[$ei]+'acqpars'):$dum
+		endif
+		$ei=$ei+1
+	until $ei>$etot
+        shell('cp '+$peakdir+'/day/EXPLIST '+$peakdir+'/night'):$dum
+	writeTtimeQ($peakdir+'/day',0,$t[$loci],0)
+        writeTtimeQ($peakdir+'/night',0,$t[$loci],0)
+
+
+    "*****Write studypar entry ****"
+        $sdir=$filename+'.macdir/studytray'
+	exists($sdir+'/loc'+$locname,'directory'):$ex
+	if ($ex=0) then
+	   shell('mkdir -p '+$sdir+'/loc'+$locname):$dum
+	else
+	   shell('touch '+$sdir+'/loc'+$locname):$dum
+	endif
+	studyid_='loc'+$locname
+	$studypar=$sdir+'/'+studyid_+'/studypar'
+        savestudypar($sdir+'/'+studyid_)
+	shell('chmod -R g+rw '+$sdir+'/loc'+$locname):$dum
+	updatestatus($autodir,$locname,studystatus)
+   "*****Write autostudies file *****"
+        $autostudies=$autodir+'/autostudies'
+        $studypath=$autofile+'.macdir/studytray/'+studyid_
+        shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+        if ($isthere=0) then
+             write('file',$autostudies,'%s',$studypath)
+        endif
+	$LOCdir[$L]=$locdir
+	$LOClist[$L]='EXPLIST'
+        $LOCqueue[$L]='DayQ'
+	$L=$L+1
+      $loci=$loci+1
+    until $loci > $totalloc
+
+   " *** Update the automation queue ****"
+
+	  shell('cat '+$cureQ+' >> '+$filename):$dum
+          shell('cat '+$curtQ+' >> '+$filename+'.macdir/AutoTimeLog'):$dum
+
+   "  *** Update automation TtimeQ ***"
+
+        $daytime=0 $nitetime=0 $prioritytime=0
+        readTtimeQ($filename+'.macdir'):$prioritytime,$daytime,$nitetime
+        $daytime=$daytime+$dtime
+        writeTtimeQ($filename+'.macdir',$prioritytime,$daytime,$nitetime)
+
+   "**********Write subxml files*****"
+	xmhaha_subautoSQ($autodir)
+//	xmhahasx_add($autodir,$LOCdir,$LOClist,$LOCqueue)
+
+   "****Cleanup *****"
+	  locmacdir4($filename,'remove')
+          shell('rm -f '+$curnQ):$dum
+          shell('rm -f '+$cureQ):$dum
+	  shell('rm -f '+$curtQ):$dum
+          shell('rm -f '+$info):$dum
+	  shell('rm -f '+$info+'day'):$dum
+	  shell('rm -f '+$info+'night'):$dum
+          shell('rm -f '+$infomaster):$dum
+
+   "**** Restart Automation ****"
+	dousermacro($0)
+
+    mkNewPeakEntry('genpeak','copy',$lastlocdir)
+    if ($totalloc=1) and ($p[1]=0) and (lcHoldType<>'indefinite') then
+	autora
+    endif

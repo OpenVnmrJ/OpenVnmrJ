@@ -1,0 +1,28 @@
+"macro BPautoWetnoesy"
+"BPautoWetnoesy(anything for vnmrj)"
+BPgettemp:$temp
+if ($#=0) then
+  BPrtppar('wnoesy') wet='ny'
+  d1=1.5
+  shell('pwd'):$dummy
+  input('Enter Desired Mix Time    '):mix
+endif
+setlimit('wetpw',50000,0,.1)
+ni=1 phase=1
+$wetpw=1000*pw90 wet='ny'
+$factor = wetpw/$wetpw
+ln($factor):$lnfactor
+$tpwrdiff = trunc(20*0.43429*$lnfactor)
+if (wetshape='hard') then
+  array('wetpwr',11,tpwr-64-$tpwrdiff,1) nt=1 gain=12
+endif
+if (wetshape='gauss') then
+  array('wetpwr',11,tpwr-58-$tpwrdiff,1) nt=1 gain=12
+endif
+d4=.054 gt2=.001
+temp=$temp
+ssfilter='n'
+wexp='BPautoWetproc1' wnt='f wft select(1) av vsadj dssh'
+dg
+av
+text('Automatic WET Noesy Calibration ') dps dtext au

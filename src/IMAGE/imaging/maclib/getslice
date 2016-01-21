@@ -1,0 +1,292 @@
+"macro getslice"
+"********************************************************************"
+"	getslice: Program to extract slices as phasefiles from       "
+"                 a transformed 3D data set.                         "
+
+"  Version 2: This program uses the modifed version of conv2phf      "
+"             that can sum data on extraction and differs from       "
+"             the version provided  with the earlier SUN 3           "
+"             3D WIP distributed in January 1989                     "
+"             This version is compatible with the SPARC 3D WIP       "
+"             @(#)getslice.mac	3.1       4/16/93   "
+
+"	Use: getslice('filename','direction',start,stop,<'sum'>)     "
+
+"	arg1: Name of transformed data set assumed to exist in       "
+"             curexp as filename.transform                           "
+
+"	arg2: Direction of slice extraction (string) and should      "
+"             be taken from the set: 'fs' 'sf' 'fm' 'mf' 'ms' 'sm'   "
+
+"	arg3: Index for first extracted slice                        "
+
+"	arg4: Index for last extracted slice. If arg4=arg3 then a    "
+"             single slice is extracted.                             "
+
+"       arg5: Optional keyword 'sum' that flags the program to       "
+"             sum the phasefiles into one file as they are           "
+"             extracted. The extracted slices are placed into        "
+"             separate files. All output files are placed into       "
+"             the directory curexp+'/planes' under the names         "
+
+"             filename.direction_#                                   "
+"        OR                                                          "
+"             filename.direction.sum_start_stop                      "
+
+"	      where # is the corresponding slice number for an       "
+"	      individual slice and start/stop are the values of      "
+"             arg3 and arg4 for a slice produced by summation.       "
+
+"	NOTES: The program creates curexp+'/planes' if it does       "
+"              not exist                                             "
+
+"	       The program silently removes any existing files       "
+"              from curexp+'/planes' that have the same name         "
+"              as those it is going to generate. The user should     "
+"              rename any files he wishes to keep BEFORE using       "
+"              getslice!                                             "
+"********************************************************************"
+
+
+"*Constants**********************************************************"
+$prog='getslice: '
+$ext='.transform'
+$targetdir=curexp+'/planes'
+$null=' > /dev/null '
+
+
+
+"*Input Check********************************************************"
+
+"*Invalid Cases*"
+if ($# < 3.5) or ($# > 5.5)
+then
+   $message='Use getslice("FFT file name","direction",start,stop,<"sum">)' 
+   write('error','%s',$prog+$message)
+   abort
+endif
+
+"*Valid Cases*"
+if ($# > 3.5) and ($# < 4.5) then $sum='' endif
+
+if ($# > 4.5) and ($# < 5.5) then $sum='sum' endif
+
+
+
+"*Locate Requested Transform File***********************************"
+$infile=curexp+'/'+$1+$ext
+exists($infile,'file'):$ex1
+
+if ($ex1 < 0.5)
+then
+    write('error','%s',$prog+'Cannot find your transform file: '+$infile)
+    abort
+endif
+
+
+
+
+"*Decode Direction String*******************************************"
+length($2):$len
+
+if ($len <> 2)
+then
+    write('error','%s',$prog+'Direction string '+$2+' is invalid')
+    abort
+endif
+
+substr($2,1,1):$ax1
+substr($2,2,1):$ax2
+
+if ($ax1 <> 'f') and ($ax1 <> 'm') and ($ax1 <> 's')
+then
+    write('error','%s',$prog+'Direction string '+$2+' is invalid')
+    abort
+endif
+
+if ($ax2 <> 'f') and ($ax2 <> 'm') and ($ax2 <> 's')
+then
+    write('error','%s',$prog+'Direction string '+$2+' is invalid')
+    abort
+endif
+
+if ($ax1=$ax2)
+then
+    write('error','%s',$prog+'Direction string '+$2+' is invalid')
+    abort
+endif
+
+direct=$2
+
+
+"*Check start and stop values**************************************"
+if $3 > $4
+then $start=$4 $stop=$3
+else $start=$3 $stop=$4
+endif
+
+
+
+
+"*Create planes directory if it does not exist********************"
+exists($targetdir,'file'):$ex2
+if ($ex2 < 0.5) then mkdir($targetdir) endif
+
+
+
+
+"*Check sum value and assemble filename*************************"
+$out=$targetdir+'/'+$1+'.'+$2
+$starts=''
+$stops=''
+
+$starts1=''
+$stops1=''
+
+format($start,4,0):$starts1
+format($stop,4,0):$stops1
+
+if ($start < 10) 
+then 
+    format($start,1,0):$starts 
+    $starts='000'+$starts 
+endif
+
+if ($start > 9) and ($start < 100)
+then 
+    format($start,2,0):$starts 
+    $starts='00'+$starts 
+endif
+
+if ($start > 99) and ($start < 1000)
+then 
+    format($start,3,0):$starts 
+    $starts='0'+$starts 
+endif
+
+if ($start > 999) 
+then 
+    format($start,4,0):$starts 
+endif
+
+
+if ($stop < 10) 
+then 
+    format($stop,1,0):$stops 
+    $stops='000'+$stops 
+endif
+
+if ($stop > 9) and ($stop < 100) 
+then 
+    format($stop,2,0):$stops 
+    $stops='00'+$stops 
+endif
+
+if ($stop > 99) and ($stop < 1000) 
+then 
+    format($stop,3,0):$stops 
+    $stops='0'+$stops 
+endif
+
+if ($stop > 999) 
+then 
+    format($stop,4,0):$stops 
+endif
+
+
+if $sum='sum'
+then $outfile=$out+'.sum'+'_'+$starts+'_'+$stops
+else $out=$out+'_'
+endif
+
+
+
+"*Assemble and execute UNIX command conv2phf*******************"
+
+"*Summation Case*****************************"
+if $sum='sum'
+then
+   "*Remove any existing file*"
+   exists($outfile,'file'):$ex2
+   if ($ex2 > 0.5) then rm($outfile) endif
+
+   $arglist='"'+$infile+'" "'+$outfile+'" '+$starts1+' '+$stops1+' '+$2
+   $unixcmd='conv2phf '+$arglist+$null
+   clear(4)
+   write('line3','%s',$prog+'Summing slices please wait')
+   echo($unixcmd)
+   shell($unixcmd):$x
+   write('line3','%s',$prog+'Slices have been extracted and summed')
+   write('line3','%s',$prog+'File stored as: '+$outfile)
+   return
+	      "***********THE END****************"
+endif
+
+
+"*Single Extraction Case*********************"
+if ($sum <> 'sum') and ($starts=$stops)
+then
+   "*Remove any existing file*"
+   $outfile=$out+$starts
+   exists($outfile,'file'):$ex2
+   if ($ex2 > 0.5) then rm($outfile) endif
+   
+   $arglist='"'+$infile+'" "'+$outfile+'" '+$starts1+' '+$starts1+' '+$2
+   $unixcmd='conv2phf '+$arglist+$null
+   clear(4)
+   echo($unixcmd)
+   shell($unixcmd):$x
+   write('line3','%s',$prog+'A single slice has been extracted')
+   write('line3','%s',$prog+'File stored as: '+$outfile)
+   return
+	      "***********THE END****************"
+endif
+
+
+"*Multiple Extraction Case*********************"
+if ($sum <> 'sum') and ($starts <> $stops)
+then
+   $index1=''
+   $index=''
+   $i=$start
+   clear(4)
+
+   repeat "*****************************************************"
+        format($i,4,0):$index1
+
+        if ($i < 10) 
+        then format($i,1,0):$index $index='000'+$index endif
+
+        if ($i > 9 ) and ($i < 100)
+        then format($i,2,0):$index $index='00'+$index endif
+
+        if ($i > 99 ) and ($i < 1000)
+        then format($i,3,0):$index $index='0'+$index endif
+        
+        if ($i > 999 ) 
+        then format($i,4,0):$index endif
+        
+        "*Remove any existing file*"
+	$outfile=$out+$index
+        exists($outfile,'file'):$ex2
+        if ($ex2 > 0.5) then rm($outfile) endif
+
+        $arglist='"'+$infile+'" "'+$outfile+'" '+$index1+' '+$index1+' '+$2
+        $unixcmd='conv2phf '+$arglist+$null
+	write('line3','%s',$prog+'Extracting slice: '+$index)
+	shell($unixcmd):$x
+	$i=$i+1
+   until ($i > $stop) "*****************************************"
+
+   write('line3','%s',$prog+'Multiple slices have been extracted')
+   write('line3','%s',$prog+'Files stored as:'+$out+$starts+' to '+$stops)
+   return
+	      "************THE END**************"
+endif
+
+
+"*Default Error Case**********************" 
+"*NOTE this should NEVER execute*"
+write('error','%s',$prog+'Could not complete requested extraction')
+
+"*****************************THE END**********************************"

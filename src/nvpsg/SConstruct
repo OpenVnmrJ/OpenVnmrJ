@@ -1,0 +1,533 @@
+#
+# now that the build creates symlinks to headers and source files outside the build directory
+# This solves the problem below, but I leave for future reference.  GMB    11/13/07
+#
+# Special Notes:
+# the psg headers must be prior to vnmr headers since in ecc_worstCase.c
+# is included vnmrsys.h which in vnmr this file has #define VNMR which
+# result in double defined vnmremsg(), etc.
+# The proper one is in psg of the same name vnmrsys.h which does not have
+# the VNMR defined. this could be problematic in the future!  GMB
+#
+# In addition the standard.h header include from psg causes the macros.h 
+# from psg to be included rather than the one from nvpsg; the solution,
+# or at least one, is to copy the psg standard.h file locally and
+# this results in the nvpsg macros.h to be include.
+# one can find out which headers are being inclued via the
+#       scons --debug=includes filename.o call
+#  GMB  9/11/07
+#
+# Note: The files getparm.c xmath.c in nvpsg are overridden by the same
+# files copied over from psg I hope this is correct... gmb  9/11/07
+#
+# Interesting: non of the makefiles build psg4dps so I'll removed it and
+# did not worry too much about the following problem.....  GMB:
+# For psg4dsp.c accesses the member acqelemid in the lc struct, this 
+# member is defined in the header file lc.h in xracq but not in other
+# lc.h which is included the nvpsg version.
+# it's not clear which it really should be using.  GMB  9/11/07
+# But to succeed in the  compile, the xracq header must be prior to nvpsg
+#
+# IF YOU ADD OR DELETE FILES FROM A LIST HERE YOU PROBABLY ALSO NEED TO
+# UPDATE 'makeuserpsg.lnx'
+#
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+import shutil
+
+platform = sys.platform
+
+# define target file names
+paramStaticTarget  = 'libparam.a'
+paramSharedTarget  = 'libparam.so'
+psglibStaticTarget = 'libpsglib.a'
+psglibSharedTarget = 'libpsglib.so'
+s2pulTarget        = 's2pul'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+srcNcommHeaderList = [ 'mfileObj.h' ]
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'allocate.h',
+                'asm.h',
+                'CSfuncs.h',
+                'data.h',
+                'dpsdef.h',
+                'errorcodes.h',
+                'graphics.h',
+                'group.h',
+                'init.h',
+                'params.h',
+                'pvars.h',
+                'shims.h',
+                'symtab.h',
+                'tools.h',
+                'vfilesys.h',
+                'variables.h',
+                'wjunk.h' ]
+
+vnmrFileList = ['asmfuncs.c',
+                'assign.c',
+                'allocate.c',
+                'CSfuncs.c',
+                'lockfreqfunc.c',
+                'pvars.c',
+                'shims.c',
+                'symtab.c',
+                'tools.c',
+                'vfilesys.c',
+                'variables1.c']
+
+psgPath     = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = [ 'Pbox_HT.h',
+               'Pbox_psg.h',
+               'REV_NUMS.h',
+               'abort.h',
+               'apdelay.h',
+               'cmed.h',
+               'cps.h',
+               'dsp.h',
+               'ecc.h',
+               'objerror.h',
+               'oopc.h',
+               'power.h',
+               'prescan.h',
+               'psg_utils.h',
+               'rfconst.h',
+               'standard.h',
+               'vnmrsys.h',
+               'wetfuncs.h' ]
+
+psgFileList = ['abort.c',
+               'active.c',
+               'autofuncs.c',
+               'ecc_setup.c',
+               'ecc_worstCase.c',
+               'eventoverhead.c',
+               'freqfuncs.c',
+               'getparm.c',
+               'hash.c',
+               'init_u_glbl.c',
+               'initauto.c',
+               #'miscfuncs.c',
+               'pre_exp_seq.c',
+               'pre_fid_seq.c',
+               'presequence.c',
+               'P_receive.c',
+               'Pbox_HT.c',
+               'Pbox_psg.c',
+               'sendasync.c',
+               'setparm.c',
+               'signalhandler.c',
+               'sis_initpar.c',
+               'sis_position.c',
+               'treefuncs.c',
+               'wetfuncs.c',
+               'xmath.c',
+               'x_ps.c']
+
+# specPsgPath     = os.path.join(cwd, os.pardir, 'psg')
+# this code is not built
+#specPsgFileList = ['psg4dps.c',
+#                   'dummyfunc4dps.c']
+
+# see comment at beginning of file
+# specPsgHeaderList = [ 'standard.h' ]
+# list of headers in /vnmr/psg in VJ 2.2C, but not referenced
+#                     'ACQ_SUN.h',
+#                     'allocate.h',
+#                     'chanstruct.h',
+#                     'cmed.h',
+#                     'design_flowcomp.h',
+#                     'dsp.h'
+#                     'errorcodes.h',
+#                     'fcprint.h',
+#                     'ge3dshim.h',
+#                     'gradient_library.h',
+#                     'graphics.h',
+#                     'objerror.h',
+#                     'prescan.h',
+#                     'psg_utils.h',
+
+srcPsgHeaderList = [ 'abort.h',
+                     'apdelay.h',
+                     'ecc.h',
+                     'oopc.h',
+                     'Pbox_HT.h',
+                     'Pbox_psg.h',
+                     'power.h',
+                     'REV_NUMS.h',
+                     'vnmrsys.h',
+                     'wetfuncs.h']
+
+srcVnmrHeaderList = [ 'asm.h',
+                      'CSfuncs.h',
+                      'data.h',
+                      'dpsdef.h',
+                      'group.h',
+                      'init.h',
+                      'params.h',
+                      'shims.h',
+                      'symtab.h',
+                      'tools.h',
+                      'variables.h',
+                      'wjunk.h' ]
+
+expprocPath = os.path.join(cwd, os.pardir, 'expproc')
+srcExpprocHeaderList = [ 'expDoneCodes.h',
+                         'shrexpinfo.h' ]
+
+nvacqPath    = os.path.join(cwd, os.pardir, 'nvacq')
+srcNvacqHeaderList = [ 'ddr_fifo.h',
+                       'ddr_symbols.h',
+                       'spinner.h' ]
+
+nvpsgFileList = ['aptable.c',
+                 'arrayfuncs.c',
+                 'chempack.c',
+                 'cps.c',
+                 'initacqparms.c',
+                 'lc_hdl.c',
+                 'lockfuncs.c',
+                 'math.c',
+                 'nvstubs.c',
+                 'spinfuncs.c',
+                 'vtfuncs.c',
+                 'rtcontrol.c'
+                ]
+
+
+nvpsgSglFileList = [ 'sgl_ws.c',
+                     'sglDutyCycle.c',
+                     'sglHelper.c',
+                     'sglAdditions.c',
+                     'sglPrepulses.c',
+                     'sgl.c',
+                     'sglEPI.c',
+                     'sglRF.c',
+                     'sglCommon.c',
+                     'sglGradientLists.c',
+                     'sglWrappers.c' ]
+
+makePsgFileList = [ 'makeuserpsg','makeuserpsg.lnx' ]
+
+# 'sglepi.c',
+# 'gradient.c',
+# 'phaseutility.c',
+# 'asl_functions.c',
+# 'hwlooping.c',
+# 'psgcomm.c',
+# 'status.c',
+# 'robofuncs.c',
+
+
+nvpsgHeaderList = [
+                     'ACode32.h',
+                     'arrayfuncs.h',
+                     'chempack.h',
+                     'GradientBridge.h',
+                     'macros.h',
+                     'Pbox_bld.h',
+                     'pboxpulse.h',
+                     'sglAdditions.h',
+                     'sglPrepulses.h',
+                     'AcodeBuffer.h',
+                     'Console.h',
+                     'GradientController.h',
+                     'MasterController.h',
+                     'sglCommon.h',
+                     'sglRF.h',
+                     'tangentcp1.h',
+                     'AcodeManager.h',
+                     'Controller.h',
+                     'InitAcqObject.h',
+                     'mpobjects.h',
+                     'sglDutyCycle.h',
+                     'sglWrappers.h',
+                     'acodes.h',
+                     'cpsg.h',
+                     'PFGController.h',
+                     'sglEPI.h',
+                     'acqparms.h',
+                     'DDRController.h',
+                     'lc.h',
+                     'PSGFileHeader.h',
+                     'sglGradientLists.h',
+                     'aptable.h',
+                     'FFKEYS.h',
+                     'lc_index.h',
+                     'sgl.h',
+                     'Bridge.h',
+                     'GradientBase.h',
+                     'LockController.h',
+                     'RFController.h',
+                     'sglHelper.h',
+                     'solidchoppers.h',
+                     'soliddecshapes.h',
+                     'soliddefs.h',
+                     'soliddutycycle.h',
+                     'solidelements.h',
+                     'solidhhdec.h',
+                     'solidmpseqs.h',
+                     'solidobjects.h',
+                     'solidpulses.h',
+                     'solidshapegen.h',
+                     'solidstandard.h',
+                     'solidstates.h',
+                     'solidwshapes.h',
+                     'Synthesizer.h',
+                     'WaveformUtility.h',
+                     ]
+
+# 'Shim.h',
+
+nvpsgCppFileList = ['AcodeBuffer.cpp',
+                    'AcodeManager.cpp',
+                    'Bridge.cpp',
+                    'Console.cpp',
+                    'Controller.cpp',
+                    'DDRController.cpp',
+                    'InitAcqObject.cpp',
+                    'GradientController.cpp',
+                    'GradientBridge.cpp',
+                    'GradientBase.cpp',
+                    'LockController.cpp',
+                    'MasterController.cpp',
+                    'PFGController.cpp',
+                    'RFController.cpp',
+                    'psgmain.cpp',
+                    'Synthesizer.cpp',
+                    'WaveformUtility.cpp']
+
+psgSeqPath     = os.path.join(cwd, os.pardir, 'psglib')
+psgSeqFileList = ['s2pul.c']
+makeFileList   = ['seqgenmake']
+
+# Interesting non of the makefiles build psg4dps 
+# method to copy files to local directory
+#def copyFilesHere(path, fileList):
+#   for i in fileList:
+#      shutil.copy(os.path.join(path, i), i)
+
+# copy the files local
+#copyFilesHere(vnmrPath, vnmrFileList)
+# copyFilesHere(psgPath, psgFileList)
+# copyFilesHere(specPsgPath, specPsgFileList)   not used
+# copyFilesHere(specPsgPath, specPsgHeaderList)
+# copyFilesHere(psgSeqPath, psgSeqFileList)
+
+# build environments
+cppEnv = Environment(CPPFLAGS   = '-O -m32 -Wall -fPIC -Wno-format-security',
+                     LINKFLAGS  = '-m32 ',
+                     CPPDEFINES = ['PSG_LC', 'ULONG', 'NVPSG', 'SUN', 'LINUX'],
+                     CPPPATH    = [cwd,
+                                   # psgPath,
+                                   # vnmrPath,
+                                   # ncommPath,
+                                   # expprocPath,
+                                   # nvacqPath
+                                   ])
+if (platform=="darwin"):
+    cppEnv.Append(CPPDEFINES = 'MACOS')
+
+
+if ('interix' in platform):    # Win7 SUA  or SFU XP Interix
+   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+   interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
+   interixar= os.path.join(os.sep,'opt','gcc.3.3','bin','ar')
+   cppEnv.Replace(  CC=interixgcc  )
+   cppEnv.Replace(  CXX=interixgpp  )
+   cppEnv.Replace(  AR=interixar  )
+   cppEnv.Replace( CPPFLAGS = '-O -m32 -w -Wall' )
+   cppEnv.Replace( LINKFLAGS='-O -m32' )
+   cppEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','_REENTRANT','NOASYNC','__INTERIX','USE_HTONS','NO_WIN_MMAP', 'NOACQ', 'CPP' ]  )
+   cppEnv.Append(  CPPPATH=[ '/usr/include','/usr/X11R6/include/']  )
+   cppEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
+
+   # cppEnv = vnmrBgCEnv.Clone()
+   #print "CC is:", cppEnv['CC']
+   #print "C++ is:", cppEnv['CXX']
+   #print "CPPFLAGS is:", cppEnv['CPPFLAGS']
+   # print vnmrBgCppEnv
+
+
+cEnv = cppEnv.Clone()
+cEnv.Append(CPPDEFINES = ['codeint=int', 'codelong=int'])
+
+# avoid dependenc cycles use a separate env to build sequence
+s2pulcEnv = cEnv.Clone()
+
+# actual builds
+if ('interix' not in platform):
+   nvpsgCppObjs = cppEnv.SharedObject(nvpsgCppFileList)
+else:    # build static for interix
+   nvpsgCppObjs = cppEnv.Object(nvpsgCppFileList)
+
+# don't bother to build this, unused
+# specPsgObj   = psgEnv.SharedObject(specPsgFileList)
+
+paramStatic = cEnv.StaticLibrary(target  = paramStaticTarget,
+                                 source  = vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, ncommPath, srcNcommHeaderList)
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    paramShared = cEnv.SharedLibrary(target  = paramSharedTarget,
+                                 source  = vnmrFileList)
+buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrFileList)
+
+psglibStatic = cEnv.StaticLibrary(target  = psglibStaticTarget,
+                                  source  = [psgFileList,
+                                             nvpsgFileList,
+                                             nvpsgCppObjs])
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, expprocPath, srcExpprocHeaderList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, nvacqPath, srcNvacqHeaderList)
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    psglibShared = cEnv.SharedLibrary(target  = psglibSharedTarget,
+                                  source  = [psgFileList,
+                                             nvpsgFileList,
+                                             nvpsgCppObjs])
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, expprocPath, srcExpprocHeaderList)
+buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, nvacqPath, srcNvacqHeaderList)
+
+s2pulcEnv.AppendUnique( LIBS    = ['psglib', 'param', 'acqcomm', 'stdc++', 'm'])
+s2pulcEnv.AppendUnique( LIBPATH = [cwd, psgPath, ncommPath] )
+s2pulcEnv.Append(LINKFLAGS  = ' -Wl,-rpath,/vnmr/lib ')
+
+if ('interix' in platform):    # Win7 SUA Interix
+    LibAcqCom=File(os.path.join(os.pardir,'ncomm','libacqcomm.a'))
+    LibPsgLib=File(os.path.join(cwd,'libpsglib.a'))
+    LibParam=File(os.path.join(cwd,'libparam.a'))
+    # s2pulcEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
+    s2pulcEnv.Replace( LIBS    = [ LibPsgLib, LibParam, LibAcqCom, 'stdc++', 'm'])
+    # print "LIBPATH: " , cEnv['LIBPATH']
+     
+
+s2pul = s2pulcEnv.Program(target  = s2pulTarget,
+                     source  = psgSeqFileList,
+                     )
+
+#                     LIBPATH = [cwd,
+#                                psgPath,
+#                                ncommPath],
+#                     LIBS    = ['psglib', 'param', 'acqcomm', 'stdc++', 'm'])
+
+buildMethods.makeSymLinks(s2pulcEnv, s2pulTarget, cwd, psgSeqPath, psgSeqFileList)
+
+# define with absolute path where built files will be copied
+vnmrlibPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'ddr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrlibPath):
+   os.makedirs(vnmrlibPath)
+
+# actions to be performed after targets are built
+cEnv.AddPostAction(paramStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    cEnv.AddPostAction(paramShared,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
+
+cEnv.AddPostAction(psglibStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    cEnv.AddPostAction(psglibShared,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
+
+cEnv.AddPostAction(psglibStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, 'x_ps.o'))))
+
+#finally, copy the psg source code to vnmr/psg together with makeuserpsg.lnx
+moreSourceList = [ 'makeuserpsg.lnx' ]
+vnmrPsgPath     = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                    'console', 'ddr', 'psg')
+
+
+# method to copy files to remote directory
+def copyFilesThere(srcPath, dstPath, fileList):
+   for i in fileList:
+       shutil.copy( os.path.join(srcPath,i) , os.path.join(dstPath, i))
+
+#       Execute('ln -sf ' + os.path.join(path, i) + ' ' + os.path.join(cwd,i))
+#      shutil.copy(i, vnmrPsgPath)
+#      shutil.copy(os.path.join(path, i), i)
+
+#cEnv.AddPostAction(psglibShared,
+#                   Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
+
+#files = os.popen('ls *.h').read()
+#doth = Split(files)
+#vnmrPsgSources = psgFileList + nvpsgFileList + nvpsgCppFileList + doth
+#if not os.path.exists(vnmrPsgPath):
+#   os.makedirs(vnmrPsgPath)
+#for i in vnmrPsgSources:
+#      shutil.copy(i, vnmrPsgPath)
+
+#for i in srcExpprocHeaderList:
+#      shutil.copy(os.path.join(expprocPath,i),vnmrPsgPath)
+#for i in srcNcommHeaderList:
+#      shutil.copy(os.path.join(ncommPath,i),vnmrPsgPath)
+#for i in srcNvacqHeaderList:
+#      shutil.copy(os.path.join(nvacqPath,i),vnmrPsgPath)
+#for i in srcPsgHeaderList:
+#      shutil.copy(os.path.join(specPsgPath,i),vnmrPsgPath)
+#for i in srcVnmrHeaderList:
+#      shutil.copy(os.path.join(vnmrPath,i),vnmrPsgPath)
+
+#
+# hopefully copies everthing the above did.
+#
+if not os.path.exists(vnmrPsgPath):
+   os.makedirs(vnmrPsgPath)
+
+# postBuildCopy(env, buildTarget, destPath, sourcePath, fileList)
+
+#copyFilesThere(psgPath, vnmrPsgPath, psgFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, psgPath, psgFileList)
+
+#copyFilesThere(cwd, vnmrPsgPath, nvpsgFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, nvpsgFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, nvpsgSglFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, nvpsgHeaderList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, makePsgFileList)
+
+#copyFilesThere(cwd, vnmrPsgPath, nvpsgCppFileList)
+buildMethods.postBuildCopy(cEnv, paramStatic, vnmrPsgPath, cwd, nvpsgCppFileList)
+
+#copyFilesThere(expprocPath, vnmrPsgPath, srcExpprocHeaderList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, expprocPath, srcExpprocHeaderList)
+
+#copyFilesThere(ncommPath, vnmrPsgPath, srcNcommHeaderList)
+buildMethods.postBuildCopy(cEnv, paramStatic, vnmrPsgPath, ncommPath, srcNcommHeaderList)
+
+#copyFilesThere(nvacqPath, vnmrPsgPath, srcNvacqHeaderList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, nvacqPath, srcNvacqHeaderList)
+
+#copyFilesThere(psgPath, vnmrPsgPath, psgHdrList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, psgPath, psgHdrList)
+
+#copyFilesThere(vnmrPath, vnmrPsgPath, vnmrHdrList)
+buildMethods.postBuildCopy(cEnv, paramStatic, vnmrPsgPath, vnmrPath, vnmrHdrList)
+
+#copyFilesThere(psgPath, vnmrPsgPath, makeFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, makeFileList)
+

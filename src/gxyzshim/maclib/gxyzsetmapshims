@@ -1,0 +1,96 @@
+"macro gxyzsetmapshims"
+if $# <> 2 then write('error','Usage!') abort endif
+
+if $1='add' then
+	$shim2add=$2 $return=1 $shim2addws=''
+	"First search mapshims to see if shim is already there"
+	$i=0 $return=0 $ret=0
+	repeat
+               	$i=$i+1 $mapshim=''
+               	substr(mapshims,$i):$mapshim
+		if $mapshim=$shim2add then $ret=1 endif
+	until $mapshim=''
+		
+	if $ret then
+		write('line3','Shim %s already set to be mapped',$shim2add) 
+		$return=0
+	else
+		"Now look up mapstep to be used for shim in shimtab"
+		$shimsets='' $shim2adduc='' $mapstep=0 $ret=0 $mapsteps=''
+		format($shim2add,'upper'):$shim2adduc
+                gxyzshimtab:$ex,$path
+		if ($ex>0.5) then $shimtab=$path endif
+
+                //if $exuser then $shimtab=$usershimtab
+                //elseif $exsys then $shimtab=$sysshimtab
+                //endif
+
+		//write('line3','shimtab=%s',$shimtab)
+		lookup('file',$shimtab)
+		lookup('seek',$shim2adduc)
+		//write('line3','shim2adduc=%s',$shim2adduc)
+		lookup('skip','skip','skip','read'):$mapstep
+		//write('line3','mapstep for shim %s is %d',$shim2adduc,$mapstep)
+		"Now add the shim name to mapshims and the step size to mapsteps"
+		format($mapstep,1,0):$mapsteps
+		mapshims=mapshims+' '+$shim2add
+		mapsteps=mapsteps+' '+$mapsteps
+	endif
+	return($return)
+endif
+
+if $1='remove' then
+	$shim2remove=$2 $return=1
+	"First search mapshims to see if shim is there"
+        strstr(mapshims,$shim2remove):$ret
+	//echo($ret)
+        if not $ret then
+                write('line3','Shim %s already not set to be mapped',$shim2remove)
+		$return=0
+	else
+		"Now find in mapshims where the shim to be removed is"	
+		$mapsteps='' $mapshims='' 
+		$i=0
+		repeat
+                	$i=$i+1
+                	substr(mapshims,$i):$mapshims[$i]
+                	substr(mapsteps,$i):$mapsteps[$i]
+			if $mapshims[$i]=$shim2remove then $shim2bincluded[$i]=0 else $shim2bincluded[$i]=1 endif
+			//write('line3','$mapshims[%d]=%s, $mapsteps[%d]=%s, $shim2beincluded[%d]=%d',$i,$mapshims[$i],$i,$mapsteps[$i],$i,$shim2bincluded[$i])
+                	$mapshims[$i+1]=''
+                	$mapsteps[$i+1]=''
+        	until ($mapshims[$i]='')
+        	$j=$i-1
+
+		"Now reconstruct mapshims and mapsteps"
+		mapshims='' mapsteps=''
+		$i=1
+		repeat
+			if ($shim2bincluded[$i]) then
+				//write('line3','$shim2beincluded[%d] = %d',$i,$shim2bincluded[$i])
+				if $i=1 then
+					mapshims=$mapshims[$i] 
+					mapsteps=$mapsteps[$i]
+				else
+					mapshims=mapshims+' '+$mapshims[$i]
+					mapsteps=mapsteps+' '+$mapsteps[$i]
+				endif
+			endif
+		$i=$i+1
+		until $i > $j
+	endif
+return($return)
+endif
+
+if $1='check' then
+	$shim2check=$2 $return=0
+	$i=0
+	repeat
+               	$i=$i+1
+               	substr(mapshims,$i):$mapshim[$i]
+		$mapshim[$i+1]=''
+		if $mapshim[$i]=$shim2check then $return=1 endif
+	until $mapshim[$i]=''
+return($return)
+endif
+

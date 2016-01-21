@@ -1,0 +1,45 @@
+"macro cbcaco_IPAP_A"
+
+BPrtppar('cbcaco_IPAP_A')
+
+setfrq BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+gzlvl1=5000 gt1=500e-6
+gzlvl2=6000 gt2=500e-6
+
+tn='C13'
+sw=40p sw1=100p sw2=100p
+getparam('dofCO','C13'):tof 
+getparam('pwC','C13'):pwC
+getparam('pwClvl','C13'):pwClvl
+getparam('compC','C13'):compC
+dn='H1' getparam('tofH2O','H1'):dof dm='nyy' dmm='cww'
+dn2='N15' getparam('tofN15','N15'):dof2 dm2='nyy' dmm2='cgg'
+dn3='H2' getparam('tof','lk'):dof3 getparam('pw90','lk'):dmf3 dmf3=1e6/dmf3 dm3='n' dmm3='c'
+spin='n' ni=0  phase=1
+dps
+pbox_pw('CO_90.RF'):pwCO_90 pbox_pwrf('CO_90.RF'):$pwrCO_90 ln($pwrCO_90/4095):$ln
+pwrCO_90 = pwClvl+ (20*0.4329*$ln)
+pbox_pw('CO_180.RF'):pwCO_180 pbox_pwrf('CO_180.RF'):$pwrCO_180 ln($pwrCO_180/4095):$ln
+pwrCO_180 = pwClvl+(20*0.4329*$ln)
+pbox_pw('CA_90.RF'):pwCA pbox_pwrf('CA_90.RF'):$pwrCA ln($pwrCA/4095):$ln
+pwrCA = pwClvl+(20*0.4329*$ln)
+pbox_pw('CA_180.RF'):pwCA2 pbox_pwrf('CA_180.RF'):$pwrCA2 ln($pwrCA2/4095):$ln
+pwrCA2 = pwClvl+(20*0.4329*$ln)
+pbox_pw('CAB_90.RF'):pwCAB pbox_pwrf('CAB_90.RF'):$pwrCAB ln($pwrCAB/4095):$ln
+pwrCAB = pwClvl+(20*0.4329*$ln)
+pbox_pw('CAB_180.RF'):pwCAB2 pbox_pwrf('CAB_180.RF'):$pwrCAB2 ln($pwrCAB2/4095):$ln
+pwrCAB2 = pwClvl+(20*0.4329*$ln)
+dps

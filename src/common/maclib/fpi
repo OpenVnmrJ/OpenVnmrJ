@@ -1,0 +1,143 @@
+"macro fpi"
+" fpi - fp equivalent for integrals "
+
+"usage: fpi<('bc'|'dc')>"
+
+"evaluate arguments"
+getvalue('arraydim','processed'):$arraydim
+$basecorr=''
+$t1=''
+$ix=1
+while $ix<=$# do
+  if ${$ix} = 'dc' then
+    if $basecorr='bc' then
+      write('error',
+            '%s error: arguments \'bc\' and \'dc\' cannot be used together!',$0)
+      return
+    endif
+    $basecorr=${$ix}
+  elseif ${$ix} = 'bc' then
+    if $basecorr='dc' then
+      write('error',
+            '%s error: arguments \'bc\' and \'dc\' cannot be used together!',$0)
+      return
+    endif
+    $basecorr=${$ix}
+  elseif ${$ix} = 't1' then
+    $t1='t1'
+  else
+    write('error','Usage:  %s<(<\'bc\'|\'dc\'><,\'t1\'>)>',$0)
+    return
+  endif
+  $ix=1+$ix
+endwhile
+
+"reset output file"
+$outfile=curexp+'/fpi.out'
+$outfile2=curexp+'/fp.out'
+$tmpfile=$outfile+'.tmp'
+$tmpfile2=$outfile2+'.tmp'
+write('reset',$outfile)
+write('reset',$tmpfile)
+if $t1='t1' then
+  write('reset',$outfile2)
+  write('reset',$tmpfile2)
+endif
+
+"set display parameters - only works on full display!"
+s1 f
+
+"find integrals on displayed area"
+numreg:$regs
+if $regs<1 then
+  write('error','%s: must have integral regions defined!',$0)
+  return
+endif
+exists('reffrq','parameter'):$e
+if $e then
+  $reffrq=reffrq
+else
+  $reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+endif
+
+"write header info with integral definitions"
+write('file',$outfile,'List of %d integrals in spectrum 1 to spectrum %d',
+	$regs, $arraydim)
+$axis=''
+substr(axis,1,1):$axis
+if $axis='p' then
+  write('file',$outfile,'integral   left limit (ppm)  right limit (ppm)')
+else
+  write('file',$outfile,'integral    left limit (Hz)   right limit (Hz)')
+endif
+
+if $t1='t1' then
+  write('file',$outfile2,'List of %d lines in spectrum 1 to spectrum %d',
+        $regs, $arraydim)
+  $axis=''
+  substr(axis,1,1):$axis
+  if $axis='p' then
+    write('file',$outfile2,'line         frequency (ppm)')
+  else
+    write('file',$outfile2,'line         frequency (Hz)')
+  endif
+endif
+
+$ix=1
+while $ix<=$regs do
+  getreg($ix):$hi,$low
+  if $axis='p' then
+    write('file',$outfile,'%5d     %12.3f       %12.3f',$ix,
+	  $low/$reffrq,$hi/$reffrq)
+  else
+    write('file',$outfile,'%5d     %12.1f       %12.1f',$ix,$low,$hi)
+  endif
+  if $t1='t1' then
+    if $axis='p' then
+      write('file',$outfile2,'%4d      %12.3f',$ix,($low+$hi)/(2*$reffrq))
+    else
+      write('file',$outfile2,'%4d      %12.1f',$ix,($low+$hi)/2)
+    endif
+  endif
+  $ix=$ix+1
+endwhile
+
+"calculate / write integral values into temporary file"
+write('file',$outfile,'integral   spectrum        value')
+if $t1='t1' then
+  write('file',$outfile2,'line    spectrum    amplitude (integral)')
+endif
+$spec=1
+repeat
+  select($spec)
+  if $basecorr<>'' then {$basecorr} endif
+  $ix=1
+  while $ix<=$regs do
+    getreg($ix):$hi,$low
+    integ($hi,$low):$int
+    write('file',$tmpfile,'%5d  %12d %12.3f',$ix,$spec,$int)
+    if $t1='t1' then
+      write('file',$tmpfile2,'%4d %11d %12.3f',$ix,$spec,$int)
+    endif
+    $ix=$ix+1
+  endwhile
+  $spec=$spec+1
+until $spec>$arraydim
+
+"sort output by integral number (same as with fp) and append to output file"
+//shell('sort +0 -1',$tmpfile,'>>',$outfile):$dum
+shell('(sort -n -k 1,1 -k 2,2 '+$tmpfile+' >> '+$outfile+')'):$dum
+shell('rm -f',$tmpfile):$dum
+if $t1='t1' then
+//  shell('sort +0 -1',$tmpfile2,'>>',$outfile2):$dum
+  shell('(sort -n -k 1,1 -k 2,2 '+$tmpfile2+' >> '+$outfile2+')'):$dum
+  shell('rm -f',$tmpfile2):$dum
+endif
+
+"display result and reset display parameters"
+cat($outfile)
+if $t1='t1' then
+  write('alpha','')
+  write('alpha','You may now use "t1" to perform a T1 analysis')
+endif
+r1 select(1)

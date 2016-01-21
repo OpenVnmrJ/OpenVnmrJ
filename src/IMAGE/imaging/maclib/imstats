@@ -1,0 +1,87 @@
+"macro imstats"
+"***************************************************************"
+" imstats                                                       "
+"                                                               "
+" Calculate mean, range, and standard deviation of points from  "
+" the cursor marked position in a set of arrayed spectra/image  "
+" An optional argument may be used to discard the first skipval "
+" spectra (useful when full relaxation equilibrium has not been "
+" reached in the first spectrum).                               "
+"                                                               "
+" Usage:  stats(<start,end>)                                      "
+"***************************************************************"
+
+$sum = 0
+$sumsquared = 0
+$min = 1e6
+$max = -1e6
+
+$cr = cr
+$cr1 = cr1
+$delta = delta
+$delta1 = delta1
+
+mark('reset')
+$file = curexp+'/regression.inp'
+write('reset',$file)
+write('file',$file,'Image')
+write('file',$file,'Amp')
+write('file',$file,'    0      0')
+write('file',$file,'NEXT')
+
+$number = arraydim
+
+exists('flash_converted','parameter','processed'):$fc
+if ( ($fc = 1) and (seqcon='nccnn') ) then
+  $number = arraydim/nv
+elseif (seqcon='ncsnn') then
+  $number = arraydim/nv
+endif
+
+if ($# = 1) then
+  $skip = $1
+elseif ($# = 2) then
+  $skip = $1 
+  $end = $2
+  $number = $end
+else
+  $skip = 0
+endif
+
+$nvals = $number - $skip
+
+$i = $skip
+repeat
+
+  $i = $i + 1
+  if ( ($fc = 1) and (seqcon='nccnn') ) then    "gems data"
+    ft2d($i)
+  elseif(seqcon='nccnn') then
+    ft2d('nf',$i)	"gems, not flashc'ed "
+  else
+    ft2d($i)      "sems"
+  endif
+  mark($cr1,$delta1,$cr,$delta):$junk,$integral
+  $sum = $sum + $integral
+  $sumsquared = $sumsquared + $integral*$integral
+
+  if ($integral < $min)  then  $min = $integral  endif
+  if ($integral > $max)  then  $max = $integral  endif
+
+  write('file',$file,'%d   %f',$i,$integral)
+
+until ($i = $number)
+
+$mean = $sum/$nvals
+$range = $max - $min
+$std_dev = sqrt($sumsquared/$nvals - $sum*$sum/($nvals*$nvals))
+
+write('line3','Mean: %10.2f    Range: %10.2f%c   Std Deviation: %10.2f%c',
+  $mean, $range/$mean*100, '%', $std_dev/$mean*100, '%')
+
+cr = $cr
+cr1 = $cr1
+delta = $delta
+delta1 = $delta1
+
+expl('regression','link')

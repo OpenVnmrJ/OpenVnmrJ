@@ -1,0 +1,46 @@
+"macro BP8a"
+" BP8a "
+setref f $bestone=1 $counter=1 av
+select(1) vsadj(40) $best=40
+repeat
+  sp=-1p wp=8p
+  select($counter)
+  dc 
+  sp=-1p wp=5p
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) ph lp=0
+BPaph0
+vsadj(50)
+
+BPsvf(userdir+'/AutoTripRes/gChsqc_gzlvl2_cal')
+dssh('dodc')
+f pl('all','dodc') pap
+write('plotter',100,wc2max-10,' C13-HSQC(SE) Optimize Coherence Transfer Gradient')
+BPpage
+gzlvl2=gzlvl2[$bestone]
+gzlvl2=trunc(gzlvl2)
+$CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl 
+BPsetparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+if (r7=9) then
+ $r7=r7
+ ghcch_tocsy nt=2 
+ ssfilter=500
+ r7=$r7
+ array('gzlvl2',21,gzlvl2-200,20)
+ wnt='wft av select(1) BPaph0 vsadj(10) dssh'
+ wexp='BP17d' au
+else
+ if (BPBioNMR) then seqfil='gChsqcP' dof=r5 endif
+ nt=nt*4
+ wnt='wft setref select(1) vsadj(40) f full dssa' wexp='BP8b'
+    allC='y','n','n','n','n','n'
+   aliph='n','y','y','n','n','n'
+  alphaC='n','n','n','y','y','n'
+    arom='n','n','n','n','n','y'
+ CH2only='n','n','y','n','y','n'
+ array='(allC,aliph,alphaC,arom,CH2only)'
+ au
+endif

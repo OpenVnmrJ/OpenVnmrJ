@@ -1,0 +1,61 @@
+"macro mqf1ref5q"
+"mqf1ref5q -  references F1 of 5Q MQMAS spectra for spin"
+"values I = 5/2 to 9/2 using the method of Massiot etal." 
+
+"The value of 'ratio' is the shearing constant 'k'. B/A = ratio"
+"where A/(A+B) is the 5Q dwell and B/(A+B) is the time during" 
+"the acquisition to refocus the 1Q coherence." 
+
+"scalesw = A/(A+B)"
+"$mqscale = ABS(mQ - ratio) where mQ = 5. mQ = -5 if ival = |mQ|/2." 
+
+exists('ival','parameter'):$ival
+if ($ival=0) then 
+   create('ival')
+   setgroup('ival','processing')
+   ival=0.5
+endif
+
+exists('scalesw1','parameter'):$scalesw1
+if ($scalesw1=0) then
+   create('scalesw1')
+   setgroup('scalesw1','processing')
+endif
+
+if (ival = 2.5) then     "ratio = 25/12"
+   scalesw1 = 12/37
+   $mqscale = 85/12
+   write('line3','Scaling and Referencing MQMAS f1 axis for Spin 5/2')
+else
+   if (ival = 3.5) then     "ratio = 11/9"
+      scalesw1 = 9/20
+      $mqscale = 34/9
+      write('line3','Scaling and Referencing MQMAS f1 axis for Spin 7/2')
+   else
+      if (ival = 4.5) then 
+         scalesw1 = 36/121     "ratio = 95/36"
+         $mqscale = 85/36
+         write('line3','Scaling and Referencing MQMAS f1 axis for Spin 9/2')
+      else
+         write('error','Set ival to the correct spin number (2.5 to 4.5).')
+      endif
+   endif
+endif
+
+rfl=rfl-rfp
+$delta_rfl = rfl - sw/2
+rfp=0.0
+
+exists('refpos','parameter'):$refpos
+if ($refpos>0.0) then 
+   reffrq = sfrq + $delta_rfl/1e6
+   refpos = 0.0
+endif
+
+$delta_rfl1=$delta_rfl*$mqscale
+rfl1 = $delta_rfl1 + sw1/2
+exists('lsfrq1','parameter'):$lsfrq1
+if ($lsfrq1 > 0) then 
+   rfl1 = rfl1 + lsfrq1
+endif
+rfp1 = 0.0

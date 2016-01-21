@@ -1,0 +1,25 @@
+"macro sigfigs"
+"sigfigs: how many are there in a number? "
+
+  if ($# < 1) then
+    $val = 0
+    input('Enter a number: '):$val
+  elseif (typeof('$1')) then
+    write('error','%s called with a string argument',$0)
+    return(-1)
+  else
+    $val = $1
+  endif
+
+  if ($val = 0) then return(0) endif
+
+  $string = ''
+  shell('(echo "',$1,'"|sed \'s/0*$//\')'):$string
+  length($string):$strlen
+  strstr($string,'.'):$dpt
+  if $dpt then
+    return($strlen - $dpt - 1)
+  else
+    return(0)                     // arg was an integer
+  endif
+

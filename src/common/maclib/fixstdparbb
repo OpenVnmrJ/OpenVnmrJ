@@ -1,0 +1,50 @@
+"macro fixstdparbb"
+" parameter updating for Broad-Band system"
+
+lookup('file',userdir+'/stdpar/report')
+lookup('proton','skip',4,'read',1,'seek','tpwr','skip',1,'read',1):$h1pw90,$tpwrh
+lookup('pw90','skip',1,'read',1,'skip',3,'read',1):$C13pw90,$tpwrc
+lookup('90','skip',1,'read',1,'skip',3,'read',1):$pp,$pplvl
+lookup('gamah2','skip',1,'read',1,'seek','dpwr','skip','read',1):$gamah2,$dpwr
+fread(userdir+'/stdpar/H1.par/procpar','current','reset')
+pw90=$h1pw90
+tpwr=$tpwrh
+fsave(userdir+'/stdpar/H1.par/procpar')
+
+fread(userdir+'/stdpar/C13.par/procpar','current','reset')
+pw90=$C13pw90
+tpwr=$tpwrc
+dpwr=$dpwr
+dmf=4*$gamah2
+fsave(userdir+'/stdpar/C13.par/procpar')
+
+exists(userdir + '/parlib','directory'):$e
+if not($e) then
+    mkdir(userdir + '/parlib')
+endif
+
+exists(userdir+'/parlib/dept.par','directory'):$e
+if not($e) then
+ cp('-r',systemdir+'/parlib/dept.par',userdir+'/parlib/dept.par')
+endif
+fread(userdir+'/parlib/dept.par/procpar','current','reset')
+pw90=$C13pw90
+tpwr=$tpwrc 
+dpwr=$dpwr 
+dmf=4*$gamah2 
+pplvl=$pplvl
+pp=$pp
+fsave(userdir+'/parlib/dept.par/procpar')
+
+exists(userdir+'/parlib/hetcor.par','directory'):$e
+if not($e) then
+ cp('-r',systemdir+'/parlib/hetcor.par',userdir+'/parlib/hetcor.par')
+endif
+fread(userdir+'/parlib/hetcor.par/procpar','current','reset')
+pw90=$C13pw90 
+tpwr=$tpwrc  
+dpwr=$dpwr  
+dmf=4*$gamah2 
+pplvl=$pplvl
+pp=$pp
+fsave(userdir+'/parlib/hetcor.par/procpar')

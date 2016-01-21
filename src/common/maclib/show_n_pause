@@ -1,0 +1,117 @@
+"macro show_n_pause"
+"***************************************************************"
+
+$wqtemppars=''
+module('list','walkupQpars'):$wqtemppars
+$wqtemppars=$wqtemppars+' multiloc wqinit cppauseflg customflag'
+shell('touch '+cursqexp+'/wQtemppar'):$dum
+
+IF ($1='open') or ($1='openspec') THEN
+   if ($2='') then return endif
+   if (customflag='y') or (cppauseflg='y') then return endif
+   if (seqfil<>'Submitq') and (seqfil<>'Startq') then return endif
+
+   if ($# < 3) then $3=0 endif
+   $seqfil=seqfil
+   tmpsqcopy('startqpar1')
+   writeparam(cursqexp+'/wQtemppar',$wqtemppars)
+   $wqinit=wqinit
+   savesampglobal('cp')
+   $ret=0
+   if ($3>0.5) then
+		"This is current acquisition"
+      rtNprocess($2):$ret
+   else
+      $ret=1
+      if ($1='open') then
+      	rt($2)
+      	CPdndfid_process
+      else
+	  dndvfs($2)
+      endif
+   endif
+   getsampglobal('cp')
+   readparam(cursqexp+'/wQtemppar',$wqtemppars)
+   customflag='n'
+   cppauseflg='y'
+   wqinit=$wqinit
+
+   if not $ret then
+	{$0}('close')
+   else
+   	seqfil=seqfil
+   	showtray('close')
+   	$page='Quick'
+   	if (seqfil='s2pul') and (seqfil<>pslabel) then
+	    $page='Quick'+tn
+   	endif
+   	vnmrjcmd('setpage','Acquire',$page)
+   endif
+ELSEIF ($1 = 'close') THEN
+
+   if (customflag='y') then customizepar('quit') endif
+   if (cppauseflg='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+
+   flush
+   shell('rm -f '+curexp+'/acqfil/* 2> /dev/null'):$dum
+
+   tmpsqreturn('startqpar1')
+//   fread(cursqexp+'/wQtemppar')
+   shell('rm -f '+cursqexp+'/wQtemppar'):$dum
+   customflag='n'
+   cppauseflg='n'
+   seqfil=seqfil
+   if (wqinit='enter') then showtray(globalenter) 
+   elseif (wqinit='auto') then showtray(autodir) endif
+   vnmrjcmd('setpage','Start','Standard')
+   vnmrjcmd('setpage','Setup','Standard')
+   
+ELSEIF ($1 = 'acquire') THEN
+    if (wqinit <> 'acq') then
+        write('error','Cannot acquire when submitting to Automation')
+        return
+    endif
+    if (clustermod='yes') then 
+	write('error','Cannot acquire when building/editing a study cluster')
+	return
+    endif
+    if (cppauseflg<>'y') then return endif
+
+   $pslabel=pslabel
+   exptime:$time
+   ACQtime=$time
+   $stime='' $stime2=''
+   formattime($time):$stime2,$stime
+   $archsamp=''
+   shell('dirname '+file):$archsamp
+   $md=$archsamp+'/dirinfo/macdir'
+   $tmppar=$archsamp+'/dirinfo/parlib/tmppar'
+   exists($tmppar+'.par','directory'):$direx
+   if ($direx) then
+	shell('rm -rf '+$tmppar+'.par'):$dum
+   endif
+   file='exp' explist=''
+   $customflag=customflag
+   $cppauseflg=cppauseflg
+   rmpar($wqtemppars)
+   svp($tmppar)
+   fread(cursqexp+'/wQtemppar')
+   customflag=$customflag
+   cppauseflg=$cppauseflg
+   show_n_pause('close')
+   $cpnode='' $ext=''
+   getcpnode('cp',cursqexp,$pslabel):$cpnode,$ext
+   $node='' $newnodes=''
+   $attr='title',$cpnode,'time',$stime
+   xmhaha('mknode',$pslabel,$attr):$node,$newnodes
+   vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+   if ($node='') then $node='xx'+$ext endif
+   write('file',cursqexp+'/EXPLIST','%s  %d  %s  %s  Queued',$cpnode,$time,$pslabel,$node)
+   write('file',cursqexp+'/macdir/'+$cpnode+'acq','shell(\'rm -rf %s.par\'):$dum',$tmppar)
+   write('file',cursqexp+'/macdir/'+$cpnode+'acq','ACQtime=%d',$time)
+   write('file',cursqexp+'/macdir/alias','%s: rtp(\'%s\')',$cpnode,$tmppar)
+   walkupQ('testacquire',$cpnode)
+   xmhaha('refreshSQ')
+
+ENDIF
+

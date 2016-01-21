@@ -1,0 +1,23 @@
+"macro pfgmapset"
+"pfgmapset - macro to load  shimmap from probefile"
+"usage pfgmapset('type') where type is lk, H1, H1hs, or hs"
+"if called with no argument type='lk' is assumed"
+"R Crouch Dec 7 2007"
+
+if (auto='y') then return endif
+
+if ($#=0) then $nuc='lk' else $nuc=$1 endif
+	"Get shimmap name from probefile"
+$map='' $found=0
+gmapshim('findprobemap',$nuc):$found
+	"Load map if found"
+if ($found) then
+   getparam($nuc+'map','Probe'):$map
+   gmapz($map,'loadmap')
+   if ($## < 0.5) then
+      write('line3','Shimmap set as %s',$map)
+   endif
+elseif ($## < 0.5) then
+   write('line3','Requested shimmap %smap not found.',$nuc)
+endif
+Gmaplist

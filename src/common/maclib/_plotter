@@ -1,0 +1,60 @@
+"macro _plotter"
+"Determine plotter device"
+setplotdev:$plot
+if ($plot = 'none') then
+  return
+endif
+
+"Set defaults"
+x0=0 y0=0
+
+lookup('file',systemdir+'/devicetable','seek','Example') "Skip header"
+lookup('seek',$plot) "Find the plotter type of interest"
+lookup('seek','ppmm','read'):$ppmm
+$dpi=trunc(25.4*$ppmm+0.5)
+lookup('seek','raster','read'):$raster
+if $raster=0 then maxpen=8 endif
+lookup('seek','wcmaxmax','read'):$wcmax
+lookup('seek','wc2maxmax','read'):$wc2max
+lookup('file',systemdir+'/devicenames','seek','COMMENTEND')
+$host=''
+$found=(1=0) "Used to weed out comments in the devicenames file"
+repeat
+  lookup('seek',plotter,'read'):$host,$return
+  if $host='Use' then $found=(1=1) endif
+until $found or ($return=0)
+if $found then
+  lookup('seek','Host','read'):$host
+endif
+
+"Special statements for specific plotters; customization can go here"
+if $plot='HP7475A' then maxpen=6 endif
+
+"Output information for feedback"
+clear(4)
+if (plotter <> '') then
+$output= 'Plotter has been set to '+plotter echo($output)
+else
+$output= 'Plotter has been set to \'\'' echo($output)
+endif
+$output= 'This is a '+$plot+'-type plotter' echo($output)
+if ($host <> '') then
+$output= 'Attached to the computer named '+$host echo($output)
+endif
+$sppmm='' $sdpi='' format($dpi,0,0):$sdpi format($ppmm,0,0):$sppmm
+$output= 'Resolution is '+$sppmm+' points per mm ('+$sdpi+'dpi)' echo($output)
+$smaxpen='' format(maxpen,0,0):$smaxpen
+$output= 'Maximum number of colors (maxpen) is '+$smaxpen echo($output)
+$swcmax='' format($wcmax,0,0):$swcmax
+$output= 'Maximum horizontal size (wcmaxmax) is '+$swcmax+' mm' echo($output)
+$swc2max='' format($wc2max,0,0):$swc2max
+$output= 'Maximum vertical size (wc2maxmax) is '+$swc2max+' mm' echo($output)
+if $plot='DraftMaster_D' then
+  echo('If E-size roll media, rotate should be on, otherwise it should be off')
+endif
+if $plot='DraftMaster_E' then
+  setlimit('wc2',780,100,1) setlimit('wc2',780,100,1,'processed')
+  echo('If E size roll media, rotate should be off')
+  echo('Full plots may require sc2 > 5 for axis to plot')
+endif
+loadcolors

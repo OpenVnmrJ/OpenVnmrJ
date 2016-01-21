@@ -1,0 +1,101 @@
+*************************************************************************
+patchinstall	Install a VnmrJ patch
+patchuninstall	Uninstall a VnmrJ patch
+patchmake       Build a custom VnmrJ patch.
+*************************************************************************
+
+  patchinstall pathname_of_patch
+  where pathname_of_patch can be either a relative or absolute path name.
+
+  The patchinstall script will install a VnmrJ patch.
+  VnmrJ patches are made for a variety of reasons. They provide a
+  mechanism to distribute bug fixes or provide support for new computers
+  or computer operating systems (OS). The patch name is used to encode the
+  applicability of a patch to a given VnmrJ installation.
+  The patch name is encoded with the VnmrJ version, OS, Console and
+  patch number.  These attributes are separated by underscores in the
+  patch name. For example 3.2_LNX_mmi_101.ptc and 3.2A_LNX_ddr_102.ptc
+  are potential patch names.  The names are case-insensitive.
+  Patches have a .ptc suffix. They are actually zip files, but files
+  with a .zip suffix are often blocked by email systems.
+
+  The VnmrJ software versions are of the form VERSION x.y REVISION z
+  and are in the first line of the /vnmr/vnmrrev file.
+  The first field of the patch name can match the VERSION or the VERSION
+  and REVISION. The special key ANY will match any VnmrJ version.
+  In the examples above, the patches can be installed on VnmrJ 3.2 or
+  VnmrJ 3.2A systems.
+
+  The second field of the patch name signifies the computer operating system.
+  Supported OS values are LNX, MAC, and WIN. The special key ANY will match
+  any OS. In the examples above, the patches can be installed only on Linux
+  systems.
+
+  The third field of the patch name signifies the spectrometer console.
+  Supported values are VNMRS, MR400, Inova, and Mercury.
+  This third field can also be set to keywords that represent
+  groups of spectrometer consoles.
+  The keyword Mercury applies to both MERCURY-Vx and MERCURYplus.
+  The keyowrd MMI applies to MERCURY-Vx, MERCURYplus, and UNITY INOVA.
+  The keyword DDR applies to VNMRS, VNMRSDD2, MR400, and MR400DD2.
+  The special key ANY will match any console. The console value is taken from
+  the third line of the /vnmr/vnmrrev file.
+
+  The fourth and final field is a patch version. Generally, three ranges of
+  patch versions are made.
+  The 100 series patches are the main patch. These patches are cumulative.
+  Each subsequent patch in the series contains all the contents of the
+  previous patches. So one can install a 103 patch, for example, without
+  first installing the 101 and 102 patches.
+  The 300 series patches are "hot-fixes" to solve an urgent problem. The 300
+  patches are generally single purpose patches. They are not cumulative.
+  The 300 series patches will generally be included in a subsequent 100 series patch.
+  The 500 series patches are also single purpose patches, often to support
+  new PC or OS versions. They are not cumulative. These patches are made when
+  only a subset of users might be interested. For example, if there is a problem
+  with Japanese fonts, we might make a 500 series patch.  The 500 series patches
+  will generally be included in the next VnmrJ release. They may or may not make
+  it into a 100 series patch.
+
+  The patchinstall script installs patches such that they can be removed
+  with the patchuninstall script. The patchuninstall script can be provided
+  with a single argument that is the name of the last patch installed.
+  In this case, patchuninstall will remove that patch in a non-interactive
+  way. Without an argument, patchuninstall will interactively remove
+  patches, starting with the last patch that was installed.
+
+  A patch .ptc file contains the following files:
+  patch.zip contains the files that will be installed into the $vnmrsystem
+  directory
+  checksum  contains the checksum of the patch.zip file. Used for validation.
+  The patch.zip file has an optional Readme file describing the content of
+  the patch.
+  The patch.zip file has an optional p_install script to do additional
+  tasks by the patch. See the file /vnmr/bin/p_install for a description
+  of the use of this file.
+
+  Older patches were suffixed with a tar.Z extension. If patchinstall
+  is used to try to install one of these older patches, it will call
+  patchinstall_ver1 to do the installation. The patchuninstall utility
+  will not be able to remove these older patches.
+
+  patchmake pathname_appdir <name>
+  where pathname_appdir can be either a relative or absolute path name.
+
+  Most patches are made and delivered by Agilent.  It may be useful for
+  a patch to be constructed from changes made by users of VnmrJ or when
+  Agilent field service engineers make user requested changes.  For
+  example, if someone makes a local modification or customization,
+  these can bundled into a patch with the patchmake script. The typical
+  scenario would be for someone to make an appdir with the modifications.
+  One would then run patchmake, giving the path name of the appdir as an 
+  argument. The patchmake utility will build a patch and give it the
+  name custom_<date>. This patch can then be installed using patchinstall
+  and removed with patchuninstall. The patchmake utility can be given a
+  second optional argument. It will be used as the find patch name instead
+  of custom_<date>.
+  Examples: 
+  patchmake myappdir
+  patchmake myappdir 3.2_lnx_ddr
+
+  

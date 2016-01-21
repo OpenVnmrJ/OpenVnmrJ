@@ -1,0 +1,26 @@
+"macro setupCmd"
+//  This is a generic tool to execute a SetUp protocol
+//  This replaces SetUpwet1D/SetUpPRESAT/SetUppw90/SetUpPS1D
+
+   flush
+   $curexplist=explist
+   scoutinfo=''
+   exec($1+`('`+$2+`','nogo')`)
+   $explist=''
+
+   $head='' $next=''
+   strstr(wexp,$1+'('):$is,$head,$next
+   seqfil=seqfil
+   if ($is=1) then
+     $md=archivedir+'/'+sample+'/dirinfo/macdir'
+     cpexplist('read',$md):$explist
+//     explist=$explist[1]+'scout','SetUp',$explist
+     explist=pslabel+'scout','SetUp',$explist
+     write('file',$md+'/alias','SetUp: %s(\'%s\',%s',$0,$1,$next)
+     cpexplist('write',$md)
+     explist=$curexplist
+   else
+     scoutinfo=''
+   endif
+   wexp='chempackQ'
+   wdone=''

@@ -1,0 +1,52 @@
+"macro SampleViewPref"
+
+if ($# < 1) then
+        $scout='no' $errnode='yes'
+        getadminfo('showscoutfid'):$scout
+        if ($scout='yes') then
+            SampleViewPref('set','scout')
+        else
+            SampleViewPref('remove','scout')
+        endif
+        getadminfo('showerrnodes'):$errnode
+        if ($errnode='yes') then
+            SampleViewPref('set','error')
+        else
+            SampleViewPref('remove','error')
+        endif
+	return
+endif
+
+teststr('SampleViewPref',$2,'global'):$ok
+if ($1='set') then
+    if ($ok=0) then
+	SampleViewPref=SampleViewPref,$2
+	array2array(SampleViewPref):SampleViewPref
+    endif
+endif
+if ($1='get') then
+    return($ok)
+endif
+if ($1='remove') then
+    if ($ok) then
+	SampleViewPref[$ok]=''
+	array2array(SampleViewPref):SampleViewPref
+    endif
+endif
+if ($1='hide') then
+    SampleViewPref('remove',$2)
+    SQDisplay('refresh')
+endif
+if ($1='unhide') then
+    SampleViewPref('set',$2)
+    SQDisplay('refresh')
+endif
+if ($1='toggle') then
+    SampleViewPref('get',$2):$stat
+    if ($stat) then
+	SampleViewPref('set',$2)
+    else
+	SampleViewPref('remove',$2)
+    endif
+    SQDisplay('refresh')
+endif

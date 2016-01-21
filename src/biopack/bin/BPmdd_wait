@@ -1,0 +1,19 @@
+#! /bin/csh
+# do mdd2v conversion once the MDD calculations are finished
+# $1 is source file path name
+# $2 is destination file path name
+# $3 is full path of mdd2v program
+# $4 is VJ port ID
+
+while ((-f $1/fid.m2v)== 0)
+  sleep 2
+end
+
+rm $1/stop.txt
+sleep 2
+
+$3 $1 $2 > mdd2v.log
+mv mdd2v.log $2/mdd2v.log
+
+Vnmrbg -mback -n0 "write('net','$HOST',$4,'banner(\'MDD done.\')\n')"
+

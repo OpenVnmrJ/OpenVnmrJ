@@ -1,0 +1,85 @@
+"macro pll"
+" pll - plot line list"
+" usage: pll(x,y,min y)"
+          "where x=x position of upper left of line list"
+                "y=y position of upper left of line list"
+                "min y=minimum y at which to reset back to top"
+
+" modified 12/2003 to make the default location be towards the upper "
+" right corner, to avoid over-writing the text/parameters.  Also, allow "
+" 'd' as first or second argument to specify 'default', to facilitate "
+" entry of just ymin, and entry of ymin as a decimal 0 <= ymin <= 1 "
+" representing percentage of wc2max NOT to use, e.g. pll('d','d',0.4) "
+" to plot the line list in default locations using the top 60% of the "
+" page. Or, allow entry of all values as percentages, e.g. pll(0,1,.5) "
+" to plot line list in upper left corner, using the top half of the page. "
+
+nll:$numpeaks,$scale
+
+$yoffset=3	"offset between two lines vertically in mm"
+$xoffset=60     "x-offset between columns"
+
+$ystart=0.98*wc2max-$yoffset  "default for y"
+$miny=0.3*wc2max
+  if $miny < vp then $miny = vp+10 endif
+ "default for min y"
+
+if $#>1 then 
+  if not (typeof('$2')) then
+    if $2 > 1 then
+	$ystart=$2 
+    else  
+	$ystart = $2 * wc2max
+    endif 
+  endif
+endif
+
+if $#>2 then 
+  if not typeof('$3') then
+    if $3 > 1 then
+	$miny=$3 
+    else  
+	$miny = wc2max * $3
+    endif
+  endif
+endif
+
+  " calculate default x postiton "
+
+  $linespercol = trunc(($ystart - $miny)/$yoffset)
+
+  $nlines = size('llfrq')
+  $ncols = 1 + trunc($nlines/$linespercol)
+  $xstart = wcmax - $xoffset*$ncols
+
+if $#>0 then 
+  if not typeof('$1') then
+    if $1 > 1 then
+	$xstart=$1 
+    else
+	$xstart = wcmax * $1
+    endif
+  endif
+endif 
+
+if (($xstart + ($ncols-1) * $xoffset) > wcmax) then
+  write('error','Not enough room for requested line listing!')
+  return
+endif
+
+$i=1 "initialize counter"
+$x=$xstart $y=$ystart
+write('plotter',$x,$y,'INDEX    FREQUENCY  PPM      HEIGHT')
+$y=$y-$yoffset
+repeat
+ $ht=llamp[$i] * $scale
+ $frq=llfrq[$i]-rfl+rfp
+ write('plotter',$x,$y,'%3d %13.1f  %7.3f %8.1f',$i,$frq,$frq/reffrq,$ht)
+ $y=$y-$yoffset
+ if $y<$miny then
+  $y=$ystart $x=$x+$xoffset
+  write('plotter',$x,$y,'INDEX    FREQUENCY  PPM      HEIGHT')
+  $y=$y-$yoffset
+ endif
+ $i=$i+1 "increment counter"
+until $i>$numpeaks

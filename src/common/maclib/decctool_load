@@ -1,0 +1,228 @@
+"macro decctool_load"
+$e=0
+exists('enabled','parameter','global'):$e
+if ($e<0.5) then
+   create('enabled','flag','global')
+   setgroup('enabled','processing','global')
+   setenumeral('enabled',2,'n','y','global')
+endif
+if (size('enabled')<>52) then
+   $i=1
+   while ($i<53) do
+      enabled[$i]='n'
+      $i=$i+1
+   endwhile
+endif
+exists('o_enabled','parameter','global'):$e
+if ($e<0.5) then
+   create('o_enabled','flag','global')
+   setgroup('o_enabled','processing','global')
+   setenumeral('o_enabled',2,'n','y','global')
+endif
+if (size('o_enabled')<>52) then
+   $i=1
+   while ($i<53) do
+      o_enabled[$i]='n'
+      $i=$i+1
+   endwhile
+endif
+exists('taus','parameter','global'):$e
+if ($e<0.5) then
+   create('taus','real','global')
+   setgroup('taus','processing','global')
+endif
+if (size('taus')<>52) then
+   array('taus',52,0.001,0.0)
+endif
+exists('o_taus','parameter','global'):$e
+if ($e<0.5) then
+   create('o_taus','real','global')
+   setgroup('o_taus','processing','global')
+endif
+if (size('o_taus')<>52) then
+   array('o_taus',52,0.001,0.0)
+endif
+exists('ampls','parameter','global'):$e
+if ($e<0.5) then
+   create('ampls','real','global')
+   setgroup('ampls','processing','global')
+endif
+if (size('ampls')<>52) then
+   array('ampls',52,0.001,0.0)
+endif
+exists('o_ampls','parameter','global'):$e
+if ($e<0.5) then
+   create('o_ampls','real','global')
+   setgroup('o_ampls','processing','global')
+endif
+if (size('o_ampls')<>52) then
+   array('o_ampls',52,0.001,0.0)
+endif
+exists('limits','parameter','global'):$e
+if ($e<0.5) then
+   create('limits','real','global')
+   setgroup('limits','processing','global')
+endif
+if (size('limits')<>8) then
+   array('limits',8,0.001,0.0)
+endif
+exists('o_limits','parameter','global'):$e
+if ($e<0.5) then
+   create('o_limits','real','global')
+   setgroup('o_limits','processing','global')
+endif
+if (size('o_limits')<>8) then
+   array('o_limits',8,0.001,0.0)
+endif
+exists('scales','parameter','global'):$e
+if ($e<0.5) then
+   create('scales','real','global')
+   setgroup('scales','processing','global')
+endif
+if (size('scales')<>10) then
+   array('scales',10,0.001,0.0)
+endif
+exists('o_scales','parameter','global'):$e
+if ($e<0.5) then
+   create('o_scales','real','global')
+   setgroup('o_scales','processing','global')
+endif
+if (size('o_scales')<>10) then
+   array('o_scales',10,0.001,0.0)
+endif
+exists('deccflag','parameter','global'):$e
+if ($e<0.5) then
+   create('deccflag','real','global')
+   setgroup('deccflag','processing','global')
+endif
+if (size('deccflag')<>10) then
+   array('deccflag',10,0.001,0.0)
+endif
+deccflag[1]=1
+deccflag[3]=1
+deccflag[5]=1
+deccflag[7]=1
+exists('decctool_fln','parameter','global'):$e
+if ($e<0.5) then
+   create('decctool_fln','string','global')
+   setgroup('decctool_fln','processing','global')
+endif
+decctool_fln=$1
+
+$fln=systemdir+'/imaging/decclib/'+$1
+exists($fln,'file'):$e
+if ($e<0.0) then
+   write('error','Cannot find %s\n',$fln)
+   return
+endif
+write('line3','Loading %s',$fln)
+
+$linetype=''
+$fielname=''
+$tmp=''
+$tmp2=''
+$index=-1
+$count=-1
+lookup('file',$fln,'filekey'):$key
+$n=0
+while ($n<20) do
+   $n=$n+1
+   $param='skip'
+   lookup('mfile',$key,'read','filekey'):$linetype,$key
+   if ($linetype='filename') then 
+      lookup('mfile',$key,'read','filekey'):$filename,$key
+   elseif ($linetype='xx') then
+      $param='taus' $index=1 $count=6
+   elseif ($linetype='yx') then
+      $param='taus' $index=7 $count=3
+   elseif ($linetype='zx') then
+      $param='taus' $index=10 $count=3
+   elseif ($linetype='xy') then
+      $param='taus' $index=13 $count=3
+   elseif ($linetype='yy') then
+      $param='taus' $index=16 $count=6
+   elseif ($linetype='zy') then
+      $param='taus' $index=22 $count=3
+   elseif ($linetype='xz') then
+      $param='taus' $index=25 $count=3
+   elseif ($linetype='yz') then
+      $param='taus' $index=28 $count=3
+   elseif ($linetype='zz') then
+      $param='taus' $index=31 $count=6
+   elseif ($linetype='xb0') then
+      $param='taus' $index=37 $count=4
+   elseif ($linetype='yb0') then
+      $param='taus' $index=41 $count=4
+   elseif ($linetype='zb0') then
+      $param='taus' $index=45 $count=4
+   elseif ($linetype='b0b0') then
+      $param='taus' $index=49 $count=4
+   elseif ($linetype='eccscale') then
+      $param='scales' $index=1 $count=4
+   elseif ($linetype='shimscale') then
+      $param='scales' $index=5 $count=3
+   elseif ($linetype='totalscale') then
+      $param='scales' $index=8 $count=3
+   elseif ($linetype='slewlimit') then
+      $param='limits' $index=1 $count=4
+   elseif ($linetype='dutylimit') then
+      $param='limits' $index=5 $count=4
+   endif
+
+   if ($param='taus') then
+      $endindex=$index+$count
+      while($index<$endindex) do
+         lookup('mfile',$key,'read'):$tmp
+         substr($tmp,1,1):$tmp2
+         if ($tmp2='*')then
+            enabled[$index]='n'
+            o_enabled[$index]='n'
+            substr($tmp,2,100):$tmp2
+            lookup('mfile',$key,'skip',1,'filekey'):$key
+         else
+            enabled[$index]='y'
+            o_enabled[$index]='y'
+            lookup('mfile',$key,'read','filekey'):$tmp2,$key
+         endif
+         format($tmp2,1,6):taus[$index]
+         taus[$index]=taus[$index]*1000.0
+         o_taus[$index]=taus[$index]
+         lookup('mfile',$key,'read','filekey'):ampls[$index],$key
+         ampls[$index]=ampls[$index]*100.0
+         o_ampls[$index]=ampls[$index]
+         $index=$index+1
+      endwhile
+   elseif ($param<>'skip') then
+      $endindex=$index+$count
+      $oparam='o_'+$param
+      while($index<$endindex) do
+          $float=0.0
+          lookup('mfile',$key,'read','filekey'):$float,$key
+          {$param}[$index]=$float
+          {$oparam}[$index]=$float
+          $index=$index+1
+      endwhile
+   endif
+   lookup('readline','filekey'):$dummy,$key
+endwhile
+
+
+length($filename):$l
+$n=$l
+$c='a'
+while($l>1)and($c<>'.') do
+  substr($filename,$l,1):$c
+  $l=$l-1
+endwhile
+if ($l>0) then
+  $ver=''
+  substr($filename,$l+2,$n-$l-1):$ver
+  substr($filename,1,$l):decctool_fln
+  if ($ver<>'') then
+     format($ver,3,0):deccflag[8]
+  else
+     deccflag[8]=0
+  endif
+else
+  deccflag[8]=0
+endif

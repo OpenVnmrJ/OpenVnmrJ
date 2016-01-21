@@ -1,0 +1,67 @@
+"macro tmsref"
+"********************************************"
+" tmsref - find TMS reference for 1H and 13C "
+"********************************************"
+
+s7
+if (tn <> 'H1') then
+ if (tn <> 'C13') then
+  write('line3','tmsref can only be used with H1 and C13 spectra')
+  return
+endif
+endif
+$quit=0
+f full                  " Use full spectrum "
+if tn='H1' and sp > -0.2*sfrq then $quit=1 endif
+if tn='C13' and sp >  -2*sfrq then $quit=1 endif
+
+IF $quit = 0 THEN
+
+if tn='H1' then
+   wp=sfrq
+else if tn='C13' then
+   wp=10*sfrq
+else
+  write('line3','tmsadj can only be used with H1 and C13 spectra')
+  return
+endif
+endif
+if (rfp-rfl)<(-0.6*wp) then        "search from 0.4 ppm (H1) or"
+   sp=-0.6*wp                      "4 ppm (C13) downwards"
+else
+   sp=rfp-rfl
+   wp=0.4*wp
+   if (rfp-rfl<0.0) then 
+      wp=wp-rfp+rfl
+   endif
+endif
+thadj                              "adjust th"
+nll:$peaks                         "find peaks in window"
+if $peaks>0 then                   "at least one peak found"
+   peak(sp,sp+wp):$maxpeak         "height of tallest peak in window"
+   repeat
+      getll($peaks):$height,cr     "get each line in turn"
+      $peaks=$peaks-1
+   until ($height>$maxpeak/10) or ($peaks<=0)
+                                   "set cursor to rightmost peak, if it is"
+                                   "at least 10% of the highest peak in the"
+                                   "search range"
+   if ($height>$maxpeak/10) then
+      rl(0)                        "set referencing"
+      write('line3','TMS has been identified and the spectrum referenced to it')
+      r7
+   else
+      write('line3','default referencing used for TMS (negative peaks)')
+      fr7
+   endif
+else
+   write('line3','default referencing used for TMS')
+   fr7
+endif
+
+ELSE
+
+   write('line3','default referencing used for TMS')
+   fr7
+
+ENDIF

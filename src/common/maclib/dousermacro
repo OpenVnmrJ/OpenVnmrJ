@@ -1,0 +1,30 @@
+"macro dousermacro"
+
+if ($# < 1) then
+  write('line3','%s requires an argument',$0)
+  return
+endif
+$usermacro='user'+$1
+exists($usermacro,'maclib'):$macex
+// Allow for multiple arguments to be passed
+if ($macex > 0) then
+  if $# > 1 then
+    $arg=''
+    $usermacro=$usermacro+'('
+    $i=2
+    repeat
+      format(${$i},'isreal'):$s
+      if ($s=1) then
+        format(${$i},'lower'):$arg
+        $usermacro=$usermacro+$arg
+      else
+        $arg=${$i}
+        $usermacro=$usermacro+'\''+$arg+'\''
+      endif
+      if ($i < $#) then $usermacro=$usermacro+',' endif
+      $i=$i+1
+    until $i > $#
+    $usermacro=$usermacro+')'
+  endif
+  exec($usermacro):$e
+endif

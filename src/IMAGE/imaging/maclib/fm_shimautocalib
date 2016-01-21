@@ -1,0 +1,44 @@
+"macro fm_shimautocalib"
+exists('cnt','parameter'):$e
+if $e<0.5 then
+  create('cnt','real')
+  setgroup('cnt','processing')
+endif
+
+fm_shimcalib(`fastmap.calib`,shimcoil[cnt]) 
+cnt=cnt+1 
+rts('current')
+if (cnt>56) then
+  $fastmap=systemdir+'/fastmap'
+  fm_calib('fastmap.calib',gcoil)
+  write('line3','fastmap shim map done')
+else
+  $a=0.0
+  $b=0.0
+  $e=0
+  if (shimcoil[cnt] = 'z2') or (shimcoil[cnt] = 'z2c') then
+    $z2file=userdir+'/fastmap/'+gcoil+'_z2z0'
+    exists($z2file,'file'):$e
+    if ($e <> 0) then 
+      $a=shimval[cnt]-{shimcoil[cnt]}
+      lookup('file',$z2file,'skip',1,'read',1):$b
+      tof=resto+$b*$a
+    else
+      tof=resto
+    endif
+  else
+    tof=resto
+  endif
+  {shimcoil[cnt]}=shimval[cnt] 
+//  sethw(shimcoil[cnt],{shimcoil[cnt]})   "BUG: acquisition fails"
+  setallshims
+  write('line3','%s  %d',shimcoil[cnt],{shimcoil[cnt]}) 
+  au
+endif
+
+"*******************************************************************************
+"		Modification History
+"
+" 20081002 - BUG: sethw removed; hangs up acquisition
+"
+"*******************************************************************************

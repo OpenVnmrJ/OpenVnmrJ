@@ -1,0 +1,555 @@
+"macro buildSIDESxml"
+
+$infodir=userdir+'/persistence/sides'
+exists($infodir,'directory'):$iex
+if ($iex=0) then
+        shell('mkdir '+$infodir):$dum
+endif
+$info=$infodir+'/eventLog_info'
+$info2=$infodir+'/Messages'
+$solventmenu=$infodir+'/SolventList'
+$xmldim=$infodir+'/XmlDim'
+$infofile=$infodir+'/QueueInfo'
+
+IF ($1='XML') THEN
+
+    $xml1=$2
+    $xml2=$3
+
+    lookup('mfile',$xml1,'delimiter','<"= \n','seek','group','skip',1,'read',2):$xdim1,$ydim1
+    lookup('mfile',$xml2,'delimiter','<"= \n','seek','group','skip',1,'read',2):$xdim2,$ydim2
+
+    substr($xml1,'basename'):$xml1,$ext
+    substr($xml2,'basename'):$xml2,$ext
+
+//    $expydim=50
+//    if (sideslvl>1.5) then
+//	$expydim=180
+//    endif
+    $expydim=90  
+    $ydim3=100
+    if ($ydim1 < $ydim2+$expydim) then
+        $ydim3=$ydim3+($ydim2-$ydim1)+$expydim
+    else
+        $ydim2=$ydim1-$expydim
+    endif
+    $ydim=$ydim1+$ydim3+90
+    $xdim=$xdim1+$xdim2+15
+    $line=''
+    write('line3','%d %d %d %d %d %d',$xdim1,$xdim2,$xdim,$ydim1,$ydim2,$ydim):$line
+
+    $build=0
+    shell('touch '+$xmldim):$dum
+    $xx=''
+    lookup('mfile',$xmldim,'readline',1):$xx
+    if ($xx<>$line) then $build=1 endif
+
+    $xml=userdir+'/templates/vnmrj/interface/SidesPopup.xml'
+    exists($xml,'file'):$fileex
+    if ($fileex=0) then $build=1 endif
+    if not $build then return($xml) endif
+
+    write('reset',$xmldim)
+    write('file',$xmldim,'%s',$line)
+
+    exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum
+    endif
+    write('reset',$xml)
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="SidesPopup" element="groups" type="acquisition" >')
+    write('file',$xml,'  <group size="%d %d"',$xdim,$ydim)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="None"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="SidesPopup"')
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+        write('file',$xml,'     <label loc="25 5" size="200 20"')
+        write('file',$xml,'        style="Heading1"')
+        write('file',$xml,'        fg="black"')
+        write('file',$xml,'        label="Automation Directory :"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <textmessage loc="230 5" size="%d 20"',$xdim1-250)
+        write('file',$xml,'        style="Heading1"')
+        write('file',$xml,'        fg="black"')
+	write('file',$xml,'	   vq="TrayLocStatus autodir"')
+        write('file',$xml,'        set="$v=\'\' substr(autodir,\'basename\'):$v $VALUE=$v"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <label loc="25 30" size="200 20"')
+        write('file',$xml,'        style="Heading1"')
+        write('file',$xml,'        fg="black"')
+        write('file',$xml,'        label="Sample in the Magnet :"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <textmessage loc="230 30" size="%d 20"',$xdim1-250)
+        write('file',$xml,'        style="Heading1"')
+        write('file',$xml,'        fg="black"')
+        write('file',$xml,'        vq="TrayLocStatus"')
+        write('file',$xml,'        set="$v=\'\' sides(\'sampleinmagnet\'):$v $VALUE=$v"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <textmessage loc="50 55" size="%d 25"',$xdim1-70)
+        write('file',$xml,'        style="Heading5"')
+        write('file',$xml,'        fg="darkRed"')
+        write('file',$xml,'        vq="TrayLocStatus"')
+        write('file',$xml,'        set="$VALUE=\'Place next sample in Location :   \'+TrayLocStatus[101]"')
+        write('file',$xml,'        />')
+
+    write('file',$xml,'  <textfile size="%d 80" loc="%d 5"',$xdim2,$xdim1+10)
+    write('file',$xml,'    style="Label1" fg="black" vq="TrayLocStatus"')
+    write('file',$xml,'    set="$VALUE=\'%s\'"',$infofile)
+    write('file',$xml,'    editable="no" wrap="no"')
+    write('file',$xml,'    />')
+
+    write('file',$xml,'  <group size="%d %d" loc="%d 90"',$xdim2,$expydim,$xdim1)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="None"')
+    write('file',$xml,'    tab="no"')
+/*
+    if (sideslvl>1.5) then
+        write('file',$xml,'    reference="SidesExpLvl2"')
+    else
+	write('file',$xml,'    reference="SidesExpLvl1"')
+    endif
+*/
+    write('file',$xml,'    reference="SidesExp"')
+    write('file',$xml,'    useref="yes"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="no"')
+    write('file',$xml,'    >')
+    write('file',$xml,'    </group>')
+
+    write('file',$xml,'  <group size="%d %d" loc="5 85"',$xdim1,$ydim1)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="Etched"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="%s"',$xml1)
+    write('file',$xml,'    useref="yes"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="no"')
+    write('file',$xml,'    >')
+    write('file',$xml,'    </group>')
+
+    write('file',$xml,'  <group size="%d %d" loc="%d %d"',$xdim2,$ydim2,$xdim1+10,$expydim+85)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="Etched"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="%s"',$xml2)
+    write('file',$xml,'    useref="yes"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="no"')
+    write('file',$xml,'    >')
+    write('file',$xml,'    </group>')
+
+    write('file',$xml,'  <textfile size="%d %d" loc="5 %d"',$xdim1,$ydim3,$ydim1+90)
+    write('file',$xml,'    style="Label1" vq="TrayLocStatus"')
+    write('file',$xml,'    set="$VALUE=\'%s\'"',$info)
+    write('file',$xml,'    editable="no" wrap="no"')
+    write('file',$xml,'    />')
+
+    write('file',$xml,'  <button size="150 25" loc="%d %d"',($xdim2-150)/2+$xdim1,$ydim2+90+$expydim)
+    write('file',$xml,'    style="Heading1" fg="navy" vq="TrayLocStatus"')
+    write('file',$xml,'    label="Submit" vc="sides(\'submit\')" decor1="yes"')
+    write('file',$xml,'    />')
+
+    write('file',$xml,'  <button size="150 25" loc="%d %d"',($xdim2-150)/2+$xdim1,$ydim2+120+$expydim)
+    write('file',$xml,'    style="Heading1" fg="navy" vq="TrayLocStatus"')
+    write('file',$xml,'    label="Refresh" vc="sides(\'refresh\')" decor1="yes"')
+    write('file',$xml,'    />')
+
+    write('file',$xml,'  <group size="%d 40" loc="%d %d"',$xdim2,$xdim1+10,$ydim2+150+$expydim)
+    write('file',$xml,'      show="$SHOW=(TrayLocStatus[102]=\'error\')"')
+    write('file',$xml,'      bg="transparent"')
+    write('file',$xml,'    >')
+    write('file',$xml,'  <textfile size="%d 40" loc="0 0"',$xdim2)
+    write('file',$xml,'    style="Label1" vq="TrayLocStatus" fg="darkRed"')
+    write('file',$xml,'    set="$VALUE=\'%s\'"',$info2)
+    write('file',$xml,'    editable="no" wrap="no"')
+    write('file',$xml,'    />')
+    write('file',$xml,'    </group>')
+
+    write('file',$xml,'  <group size="%d 40" loc="%d %d"',$xdim2,$xdim1+10,$ydim2+150+$expydim)
+    write('file',$xml,'      show="$SHOW=(TrayLocStatus[102]&lt;&gt;\'error\')"')
+    write('file',$xml,'      bg="transparent"')
+    write('file',$xml,'    >')
+    write('file',$xml,'  <textfile size="%d 40" loc="0 0"',$xdim2)
+    write('file',$xml,'    style="Label1" vq="TrayLocStatus"')
+    write('file',$xml,'    set="$VALUE=\'%s\'"',$info2)
+    write('file',$xml,'    editable="no" wrap="no"')
+    write('file',$xml,'    />')
+    write('file',$xml,'    </group>')
+
+    write('file',$xml,'    </group>')
+    write('file',$xml,'</template>')
+
+    return($xml)
+
+ELSEIF ($1='tray') THEN
+
+    if ($# > 1) then
+    	$traymax=$2
+    else
+    	$traymax=traymax
+    endif
+    if ($traymax=97) then $traymax=96 endif
+    exists(userdir+'/templates/vnmrj/panelitems','directory'):$direx
+    if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/panelitems'):$dum endif
+
+    $stray='' format($traymax,0,0):$stray
+    $xml=userdir+'/templates/vnmrj/panelitems/sidestray'+$stray+'.xml'
+    write('reset',$xml)
+
+    $ydim=300 $xdim=480
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="sidestray%s" element="groups" type="acquisition" >',$stray)
+    write('file',$xml,'  <group size="%d %d"',$xdim,$ydim)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="Etched"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="sidestray%s"',$stray)
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+
+  if ($traymax=96) then
+    $x0=25 $y0=25
+    $xs1=230
+    $xs2=30
+    $ys=30
+
+    $i=1  // location index
+    $a=1 // tray loop 2x48 
+    repeat // tray loop
+
+    	$locx=($a-1)*($xs1+10) + 5
+    	write('file',$xml,'   <group size="%d 290" loc="%d 5"',$xs1,$locx)
+    	write('file',$xml,'     border="LoweredBevel" expanded="yes" subtype="Basic"')
+    	write('file',$xml,'     >')
+
+    	$b=1 // vloop (8 per column)
+    	repeat
+
+	    $c=1 // hloop (6 per row)
+	    repeat
+	    	$y=$y0+($b-1)*$ys
+	    	$x=$x0+($a-1)*$xs1+($c-1)*$xs2
+	    	$x=$x0+($c-1)*$xs2
+
+    	    	write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y) 
+    	    	write('file',$xml,'      show="$SHOW=((TrayLocStatus[%d]=\'Empty\') or (TrayLocStatus[%d]=\'\'))"',$i,$i)
+    	    	write('file',$xml,'      >')
+    	    	write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+    	    	write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+    	    	write('file',$xml,'        label="%d" fg="black" bg="transparent" decor="yes" />',$i)
+    	    	write('file',$xml,'      </group>')
+
+    	    	write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+    	        write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Complete\')"',$i)
+    	    	write('file',$xml,'      >')
+    	    	write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"') 
+                write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+    	    	write('file',$xml,'        label="%d" fg="black" bg="green" decor="yes" />',$i)
+    	    	write('file',$xml,'      </group>')
+
+            	write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            	write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Queued\')"',$i)
+           	write('file',$xml,'      >')
+            	write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+                write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            	write('file',$xml,'        label="%d" fg="black" bg="yellow" decor="yes" />',$i)
+            	write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'NightQueue\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="purple" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Active\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="cyan" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'preScan\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="slateBlue" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Error\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="red" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Reference\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="orange" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+
+	    	$i=$i+1
+	    	$c=$c+1
+	    until $c > 6
+
+            $b=$b+1
+    	until $b > 8
+    	write('file',$xml,'    </group>')
+    	$a = $a+1
+    until $a > 2
+
+  elseif ($traymax = 12) then
+    $x0=25 $y0=25
+    $xs1=290
+    $xs2=30
+    $ys=30
+
+    $z1=19,51,83,115,147,179,211,179,147,115,83,51
+    $z2=115,83,51,19,51,83,115,147,179,211,179,147
+
+    $z1=19,41,73,115,157,189,211,189,157,115,73,41
+    $z2=115,73,41,19,41,73,115,157,189,211,189,147
+
+    $i=1  // location index
+    $a=1 // tray loop 2x48 
+//    repeat // tray loop
+
+        $locx=($a-1)*$xs1 + 90
+        write('file',$xml,'   <group size="%d 290" loc="%d 5"',$xs1,$locx)
+        write('file',$xml,'     border="LoweredBevel" expanded="yes" subtype="Basic"')
+        write('file',$xml,'     >')
+
+        $b=1 // vloop (8 per column)
+//        repeat
+
+            $c=1 // hloop (6 per row)
+            repeat
+//                $y=$y0+($b-1)*$ys
+//                $x=$x0+($a-1)*$xs1+($c-1)*$xs2
+//                $x=$x0+($c-1)*$xs2
+		$x=$z1[$i]+15
+		$y=$z2[$i]+15
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=((TrayLocStatus[%d]=\'Empty\') or (TrayLocStatus[%d]=\'\'))"',$i,$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="transparent" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Complete\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="green" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Queued\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="yellow" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'NightQueue\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="purple" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Active\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="cyan" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'preScan\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="slateBlue" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Error\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="red" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+            write('file',$xml,'    <group size="30 30" loc="%d %d" vq="TrayLocStatus"',$x,$y)
+            write('file',$xml,'      show="$SHOW=(TrayLocStatus[%d]=\'Reference\')"',$i)
+            write('file',$xml,'      >')
+            write('file',$xml,'      <button size="26 26" loc="2 2" vq="TrayLocStatus"')
+            write('file',$xml,'        vc="sides(\'showlocinfo\',%d)" style="Heading1"',$i)
+            write('file',$xml,'        label="%d" fg="black" bg="orange" decor="yes" />',$i)
+            write('file',$xml,'      </group>')
+
+
+                $i=$i+1
+                $c=$c+1
+            until $c > 12
+
+            $b=$b+1
+//        until $b > 8
+        write('file',$xml,'    </group>')
+        $a = $a+1
+//   until $a > 2
+
+  endif
+
+    write('file',$xml,'    </group>')
+    write('file',$xml,'</template>')
+    return($xml)
+//    vnmrjcmd('popup','mode:modeless','file:'+$xml,'rebuild:yes')
+
+ELSEIF ($1='params') THEN
+
+    write('reset',$info2)
+    $oplist=$infodir+'/operatorlist'
+    write('reset',$oplist)
+    shell('(cat '+userdir+'/persistence/oplist_menu > '+$oplist+')'):$dum
+    shell('(cat '+$oplist+' | wc -l)'):$optot
+    write('reset',$solventmenu)
+    shell('cp '+userdir+'/persistence/QuickSubmit/'+operator+'/QSmenu2 '+$solventmenu):$dum
+
+    $total=size('SidesPopupPar')
+    exists(userdir+'/templates/vnmrj/panelitems','directory'):$direx
+    if ($direx=0) then shell('mkdir -p '+userdir+'/templates/vnmrj/panelitems'):$dum endif
+    $xml=userdir+'/templates/vnmrj/panelitems/SidesParams.xml'
+    write('reset',$xml)
+
+    $ydim=trunc($total/2 + 0.5)*20+10 + 20
+    $xdim=300
+    $yoff=85
+
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="SidesParams" element="groups" type="acquisition" >')
+    write('file',$xml,'  <group size="%d %d"',$xdim,$ydim)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="None"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    reference="SidesParams"')
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+    teststr('SidesPopupPar','samplename','global'):$ok
+        write('file',$xml,'     <label loc="5 5" size="100 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Samplename"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <entry loc="110 5" size="180 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        vq="SidesPopupPar"')
+        write('file',$xml,'        vc="$val=\'\' ckstring(\'$VALUE\'):$val SidesPopupPar[%d]=$val"',$ok+1)
+        write('file',$xml,'        set="$VALUE=SidesPopupPar[%d]"',$ok+1)
+        write('file',$xml,'        />')
+
+    teststr('SidesPopupPar','solvent','global'):$ok
+        write('file',$xml,'     <label loc="5 25" size="100 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Solvent"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <filemenu loc="110 25" size="180 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        vq="SidesPopupPar"')
+        write('file',$xml,'        vq2="SidesPopupPar"')
+        write('file',$xml,'        vc="SidesPopupPar[%d]=\'$VALUE\'"',$ok+1)
+        write('file',$xml,'        set="$VALUE=SidesPopupPar[%d]"',$ok+1)
+        write('file',$xml,'        file="$VALUE=\'%s\'"',$solventmenu)
+        write('file',$xml,'        type="file"')
+        write('file',$xml,'        display="yes"')
+        write('file',$xml,'        />')
+
+    teststr('SidesPopupPar','studyowner','global'):$ok
+        write('file',$xml,'     <label loc="5 45" size="100 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Studyowner"')
+        write('file',$xml,'        />')
+        if ($optot>1) then
+            write('file',$xml,'     <filemenu loc="110 45" size="180 20"')
+            write('file',$xml,'        style="Label1"')
+            write('file',$xml,'        vq="SidesPopupPar"')
+            write('file',$xml,'        vq2="SidesPopupPar"')
+            write('file',$xml,'        vc="SidesPopupPar[%d]=\'$VALUE\'"',$ok+1)
+            write('file',$xml,'        set="$VALUE=SidesPopupPar[%d]"',$ok+1)
+            write('file',$xml,'        file="$VALUE=\'%s\'"',$oplist)
+            write('file',$xml,'        type="file"')
+            write('file',$xml,'        display="yes"')
+            write('file',$xml,'        />')
+        else
+            write('file',$xml,'     <label loc="110 45" size="180 20"')
+            write('file',$xml,'        style="Label1"')
+            write('file',$xml,'        label="%s"',operator)
+            write('file',$xml,'        />')
+        endif
+
+    teststr('SidesPopupPar','text_string','global'):$ok
+        write('file',$xml,'     <label loc="5 65" size="100 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Comments"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <entry loc="110 65" size="180 20"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        vq="SidesPopupPar"')
+        write('file',$xml,'        vc="SidesPopupPar[%d]=\'$VALUE\'"',$ok+1)
+        write('file',$xml,'        set="$VALUE=SidesPopupPar[%d]"',$ok+1)
+        write('file',$xml,'        />')
+
+        $i=1 $k=0
+        repeat
+	    if ((SidesPopupPar[$i]<>'samplename') and
+		(SidesPopupPar[$i]<>'studyowner') and
+		(SidesPopupPar[$i]<>'solvent') and
+		(SidesPopupPar[$i]<>'text_string') and
+		(SidesPopupPar[$i]<>'')) then
+
+        	$y=$k*20+$yoff $x=5
+        	write('file',$xml,'     <label loc="%d %d" size="100 20"',$x,$y)
+        	write('file',$xml,'        style="Label1"')
+        	write('file',$xml,'        label="%s"',SidesPopupPar[$i])
+        	write('file',$xml,'        />')
+        	$x=$x+105
+        	write('file',$xml,'     <entry loc="%d %d" size="180 20"',$x,$y)
+        	write('file',$xml,'        style="Label1"')
+        	write('file',$xml,'        vq="SidesPopupPar"')
+        	write('file',$xml,'        vc="SidesPopupPar[%d]=\'$VALUE\'"',$i+1)
+        	write('file',$xml,'        set="$VALUE=SidesPopupPar[%d]"',$i+1)
+        	write('file',$xml,'        />')
+		$k=$k+1
+	    endif
+            $i=$i+2
+        until $i > $total
+        write('file',$xml,'    </group>')
+    	write('file',$xml,'</template>')
+
+	return($xml)
+ENDIF

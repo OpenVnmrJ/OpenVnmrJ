@@ -1,0 +1,28 @@
+"macro sqcopyparams"
+/* sqcopyparams
+*  copy specified list of parameters from study queue node to active scan
+*  rtv is another option, if we need to read in parameters to local variable
+*  ARR 7/09
+*/
+
+$group = $1
+$node = $2
+$parfile = sqdir+'/info/'+$node+'/savepar'
+
+$fovslice = 'pss,pss0,lro,lpe,pro,ppe,thk,ns,gap,orient,psi,phi,theta,sliceorder'
+$fovvoxel = 'vox1,vox2,vox3,pos1,pos2,pos3,vorient,vpsi,vphi,vtheta'
+$fovvolume = 'pss,pss0,lro,lpe,lpe2,pro,ppe,ppe2,thk,ns,gap,orient,psi,phi,theta'
+
+if ($group = 'fovslice') then
+  readparam($parfile,$fovslice)
+  pss = pss
+  gplan('addType','slices') gplan('setUseppe',1) ppe=ppe gplan('alternateSlices',sliceorder)
+elseif ($group = 'fovvoxel') then
+  readparam($parfile,$fovvoxel)
+  gplan('setDefaultType',3) gplan('getCurrentStacks')
+elseif ($group = 'fovvolume') then
+  readparam($parfile,$fovvolume)
+  gplan('setDefaultType',2) gplan('use','ppe') gplan('use','ppe2') gplan('getCurrentStacks')
+endif
+
+go('check')

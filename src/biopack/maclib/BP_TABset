@@ -1,0 +1,79 @@
+"macro BP_TABset"
+exists(timetab_name, 'file'):$ttn
+if ($ttn) then
+ shell('rm '+timetab_name)
+endif
+$r=''
+$s=samp_type
+
+if ($s='r') then
+   tab_opt='n'
+   $sphi_0='' format(phi_0,6,2):$sphi_0
+   $sd_phi='' format(d_phi,6,2):$sd_phi
+   $sn_phi='' format(n_phi,5,0):$sn_phi
+   $r=$sphi_0+' '+$sd_phi+' '+$sn_phi
+
+    else if ($s='s') then
+        tab_opt='n'
+        $sn_rounds='' format(n_rounds,5,0):$sn_rounds
+        $r=$sn_rounds
+        
+          else if ($s='u') then
+             $r=' '
+               else if ($s='g' or $s='e' or $s='n' or $s='m') then
+                  $ssigma='' format(sigma,6,3):$ssigma
+                  $r=$ssigma
+                  if ($s='n' or $s='m') then
+                     tab_opt='n'
+                  endif 
+               endif
+          endif
+     endif
+endif
+if(tab_opt='y') then
+	if($s='u') then $s='U' endif
+	if($s='g') then $s='G' endif
+	if($s='e') then $s='E' endif
+endif
+
+if(tab_opt='y') then
+$ni1=trunc(sqrt(ni))
+$nia=$ni1*$ni1
+$nib=$ni1*($ni1+1)
+if($nib>ni) then
+ if($nia <> ni) then
+  banner('ni has been changed')
+ endif
+ ni=$nia 
+ $sni='' format($ni1,5,0):$sni
+ $sni2='' format($ni1,5,0):$sni2
+else
+ if($nib <> ni) then
+  banner('ni has been changed')
+ endif
+ ni=$nib
+ $sni='' format($ni1,5,0):$sni
+ $sni2='' format($ni1+1,5,0):$sni2
+endif
+
+else
+$sni='' format(ni,5,0):$sni
+endif
+
+exists('/vnmr/maclib/appdirs','file'):$appdir
+if $appdir then
+ BPfindfile('timetab_gen'):$path
+ if $path<>'' then
+  $set=$path+' '+ timetab_name+' '+$s+' '+$sni
+  if(tab_opt='y') then $set=$set+' '+$sni2 endif
+  $set=$set+' '+$r
+ else
+  banner('timetab_gen program missing from  "bin"')
+ endif
+else
+ $set='timetab_gen '+timetab_name+' '+$s+' '+$sni
+ if(tab_opt='y') then $set=$set+' '+$sni2 endif
+ $set=$set+' '+$r
+endif
+write('line3',$set)
+shell($set)

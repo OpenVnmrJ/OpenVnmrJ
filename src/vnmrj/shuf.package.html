@@ -1,0 +1,247 @@
+<body>
+The Shuffler shows files/objects based on the attributes of the files as
+specified by the user in the shuffler statement.
+
+
+Objects matching the search criteria are shuffled to the top of the list.
+The objects that do not meet the criteria are shuffled to the bottom.
+There are only two catagories, matched, and failed to match.
+Within those two catagories, they are sorted as per request.
+
+<pre>
+Main Components
+  The shuffler is composed of three distinct parts. These are listed here
+  and will be discussed separately.
+    - The java code in vnmrj
+	This code takes care of the user interface.  When it needs to
+	do something with the Database, it makes a request of db_manager
+	and gets results back from db_manager.
+    - db_manager
+	This program is written in C.  It takes information from 
+	vnmrj, and creates SQL commands which it then sends to Postgres.
+    - a relational database named Postgres (postmaster).
+	This is a free open-source relational database which uses the SQL
+	language.
+
+
+Communications between vnmrj and db_manager
+  When vnmrj is started, it initiates a socket, then starts db_manager
+  with that socket address as an argument.  Communications is entirely
+  done through that socket.  db_manager is the slave in that it is
+  always waiting for something to come over the socket, or is processing
+  something that it has received over the socket.  It cannot initate
+  communications with vnmrj.  It only speaks when spoken to.
+
+  When vnmrj expects a response from db_manager, it waits on the socket
+  thus hanging the gui until the result is complete.  This is currently
+  less than one second for any calls, so it is not a problem yet.
+  Later, it would probably be better to put the socket listener
+  in a separate thread.
+
+
+Communications between db_manager and Postgres (postmaster)
+  All communications with Postgres are via library routines supplied as 
+  part of the Postgres package.   When db_manager is started, it 
+  initialized communications with the Postgres deamon by calling
+  PQsetdb() which is one of the library routines.  SQL commands are
+  sent to the deamon with the routine, PQexec(), from the library.
+
+
+db_manager
+  db_manager is used for two purposes.  It is started by vnmrj to
+  handle DB requests, and it can be run as a standalone utility
+  to destroy, create and fill a database.
+
+  Searching
+    When running as a connection to vnmrj, its primary task is to
+    translate the incoming information into SQL commands.  For a
+    search, this is not a simple task.  Here is an example of SQL
+    commands created for a simple search.
+
+      Return Matching entries:
+	SELECT "filename", "owner", "time_run", "filename", "fullpath", 
+	       "hostname", arch_lock, UPPER ("filename") AS sortkey 
+	FROM vnmr_data 
+	WHERE exptype = 'dept' AND 
+	      classification = 'fid data' AND  
+	      time_run >= '1/1/1997'  AND  
+	      (tag0 = 'My Tag' OR tag1 = 'My Tag' OR tag2 = 'My Tag' ) AND
+	      owner in ('glenns' ,'sylvia' )  
+	ORDER BY sortkey ASC;
+
+      Return NonMatching entries:
+	SELECT "filename", "owner", "time_run", "filename", "fullpath", 
+	       "hostname", arch_lock, UPPER ("filename") AS sortkey 
+	FROM vnmr_data 
+	WHERE ((exptype != 'dept' OR 
+		classification != 'fid data' OR  
+		time_run < '1/1/1997' ) OR  
+	        (tag0 != 'My Tag' AND tag1 != 'My Tag' AND tag2 != 'My Tag ') OR
+	       owner in ('glenns' ,'sylvia' ) )  OR  
+	      owner in ('vnmr1' ,'rudy' ,'george')  
+	ORDER BY sortkey ASC;
+
+    See the function header comments for the function search_db() for more
+    details on how the search commands is created.
+
+  other commands accepted by db_manager from vnmrj
+    is_unique_request
+    remove_file 
+    add_file
+    list_request
+    list_attributes
+    get_attr_value
+    clear_out_table
+    fill_a_table
+
+  filldb
+    At the inner level, filldb goes to the directory given, and
+    executes a unix "find" command to recurvisly find all of the files
+    of a given type.  It then takes that list and attempts to add
+    each file to the DB.  If the file already exists, it skips it.
+
+    It needs to be expanded to look for entries in the DB whos
+    files are gone and eliminate them from the DB.
+
+  Tags
+    implementing tags is different than other attritutes.  A given
+    row in the DB table, can contain more than one "tag" value.  And of
+    course, each tag can be assigned to more that one row.
+    The way this is to be implemented is to have columns in the DB
+    of tag0, tag1, tag2 ... as needed.  Then each row can have several
+    tags.  When a new tag is added, the code will determine if a new
+    column is required and if so one will be created in the DB with the
+    name tag# where # is the next numeric value.
+
+    This complicates the search a little since searching for a tag
+    of "My Tag" requires comparing all tag columns.  See the example
+    under "Searching" above.
+    
+    
+
+Postgres (postmaster)
+  Web information
+    http://www.postgresql.org/index.html
+    http://metalab.unc.edu/LDP/HOWTO/PostgreSQL-HOWTO-32.html  (Tutorial)
+
+  General
+    PostgreSQL is a sophisticated Object-Relational DBMS, supporting almost
+    all SQL constructs, including subselects, transactions, and user-defined
+    types and functions. It is the most advanced open-source database available
+    anywhere. (Quote from the web site)
+
+vnmrj - Shuffler parts
+  Spotter Button (Upper Left)
+    Clicking this button will bring up a menu with choices for the
+    shuffler statement.  See Cooper Shuffler p. 6.  All general forms of
+    the shuffler statement will be in this menu.  As noted below, some
+    items in the shuffler statement will allow further choices.  Once the
+    user selects one of these general forms, an appropriate sentence
+    (shuffler statement) will be displayed in the top of the panel.
+
+    The top of the menu will contain "shuffler statement" files saved by
+    this investigator that can be read back in.  These are saved with the
+    Floppy Disk icon.
+
+  Shuffler Statement
+    The plan in progress for the shuffler statement is to make it a
+    configurable statement composed of a number of fixed items.
+    There will then be a number of these statements defined in a
+    configuration file.  The value for each item in the statement
+    translates directly into information sent to db_manager to do a search.
+
+    The configuration file will be in an XML format and parsed with
+    the XML parser already used for the panel templates.
+
+  Import
+    As stated on Cooper Shuffler p. 11, the import button opens a dialog
+    for importing new items into the shuffler. Also see Cooper Vnmr p. 21.
+
+  Tag
+    See Cooper Shuffler p. 10, 11 & 14.  Clicking this item brings up a
+    menu with all of the current tags listed. Tag is
+    pretty well described by Cooper.  See also Cooper Vnmr p 9 & 10.
+
+  Floppy Disk icon (Save)
+    See Cooper Shuffler p. 16.
+
+  Choice of 3 attributes for display
+    See Cooper Shuffler p. 5 & 9.  On p. 9, where should we get the list
+    of attributes for the columns.  Should it contain all attributes?
+    Since that included all acq params, it would be too many.  Should it
+    be configurable?  Or, can we come up with a good list to hard code in?
+
+  Shuffle Results Panel
+    The results of a shuffle are displayed as a table in a scrollable window.
+    When rows are put into the table, objects are created for each row
+    (ShufflerItem).  Items matching the shuffler statement are highlighted,
+    and non-matching items are not.
+
+  Drag and Drop
+    When a row is dragged and dropped, the ShufflerItem
+    for that row is accessable to give all of the needed information about
+    that row.  I don't know how this would work for dragging and dropping
+    multiple rows at once.???
+
+  History (<>)
+    The < and > buttons allow going backwards and forwards on previous
+    shuffles.  Each shuffle's information is saved in a Hashtable, and
+    the list of Hashtable's is saved in a Vector (StatementHistory).
+
+User Directory Files (/vnmr/adm/users)
+  userList
+    syntax:
+      username:passwd:Long Name:dir, dir, dir, ...:user level
+
+    This file needs to contain an entry for each user of vnmrj.
+    username => the unix login name
+    passwd   => not used yet, but a place for the password to be kept
+    Long Name => Text comment or name
+    dir, dir  => A list of directories where data is stored.
+		 The first one is the default location to store data.
+		 All of these will be used by filldb to fill the DB
+		 with this users data files.
+		 These directories can be separated by "," or by "\return"
+		 (that is "\" followed by a return or newline).
+    user level => Currently <= 3 are Sylvia level
+			     > 3 are Rudy level
+		  Wanda is not used yet but is presumably level 0.
+    
+
+  access
+    syntax:
+      user: list of comma separated users and groups
+
+    Example:
+      glenns: sylvia, vnmr1, ChemDept, nmrlab
+
+    This file needs to contain an entry for every vnmrj user.  The users
+    and groups listed will be the ones whose files this user can see.
+    The DB contains files for all users, but a given user can only
+    see the files of certain people and groups. "all" is a legimate
+    entry, expecially for wanda.
+	wanda: all
+
+  group
+    syntax:
+      groupname:Long Name: user1, user2, user3
+
+    The group names create here are used in the "access" file and are
+    used in the pulldown menu of choices in the shuffler statement.
+    So, in a statement like  "Show vnmr data by xxxx", the xxxx will
+    give a menu of choices including the groups from the access file
+    for this user.
+
+Archiving:
+  An Idea on Archiving:  Create a single "Archive" database.  When data is 
+  archived to some media, add it to the "Archive" database, and fill in an
+  attribute with the media id of some kind. Then remove each item which as
+  been archived. Then to retrieve this archived stuff, the user would need
+  to look at the archive database and find out what specific tape it was
+  on.  Then the sysadmin or someone would have to read the tape in.  Then
+  the local database would have to import the new item/items desired. Then
+  the user could open an archived dataset.
+  
+</pre>
+</body>
+

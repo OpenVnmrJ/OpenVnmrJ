@@ -1,0 +1,31 @@
+"macro reserveDisk"
+"macro reserveDisk"
+" save disk space for future svf "
+if ($1='save') then
+//  To disable this feature, uncomment the following line
+//  return(0)
+  exists($2+'/reserveDisk','directory'):$e
+  if (not $e) then
+    shell('mkdir '+$2+'/reserveDisk'):$e
+  endif
+  exists($2+'/reserveDisk','directory'):$e
+  if ($e) then
+    $size = arraydim*np
+    on('nf'):$e
+    if $e=1 then
+       if (nf > 1) then
+         $size = $size * nf
+       endif
+    endif
+    $size = $size * 8           // bytes
+    $size = $size + $size*0.1   // increase by 10 percent
+    $sz=''
+    format($size,0,0):$sz
+    shell('vnmr_fallocate '+$2+'/reserveDisk/'+$3+' '+$sz):$e
+    return($e)
+  endif
+elseif ($1='delete') then
+  shell('rm -f '+$2+'/reserveDisk/'+$3):$e
+elseif ($1='deleteall') then
+  shell('rm -rf '+$2+'/reserveDisk'):$e
+endif

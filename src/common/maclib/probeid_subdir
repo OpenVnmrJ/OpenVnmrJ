@@ -1,0 +1,45 @@
+"macro probeid_subdir"
+// parse a path for user or system probe path
+// returns 0 if it's not a probe path, 
+//         1 if it's a user probe path, 
+//         2 if its a system file
+// the partial subdirectory (i.e. probes/$probename) is the 2nd return value
+// and the base name is the 3rd return value
+//
+// aborts for a path that doesn't translate to a probeid file if 2nd parameter is 'abort'
+//
+if $# < 1 then 
+  exists(probe,'probes'):$e,$1
+  //write('error','usage: '+$0+'(<absolute path>[,\'abort\']):$sys,$subdir')
+  //abort
+endif
+
+substr($1,1,1):$firstchar
+if $firstchar <> '/' then
+  write('error',$0+': \''+$1+'\' is not an absolute path name')
+  abort
+endif
+
+strstr($1,userdir+'/probes'):$ret,$path,$sub
+if $ret=1 then
+  strstr($1,userdir):$ret,$dum,$partial
+  shell('dirname '+$partial):$sub
+  shell('basename '+$partial):$file
+  // Probe ID is enabled, translate absolute path $1 to probe database key
+  return(1,$sub,$file,'user')
+endif
+
+strstr($1,systemdir+'/probes'):$ret,$path,$sub
+if $ret=1 then
+  strstr($1,systemdir):$ret,$dum,$partial
+  shell('dirname '+$partial):$sub
+  // Probe ID is enabled, translate absolute path $1 to probe database key
+  shell('basename '+$partial):$file
+  return(2,$sub,$file,'system')
+endif
+
+write('error','Probe ID does not support absolute paths')
+if $#>1.5 then 
+  if $2='abort' then abort endif 
+endif
+return(0)

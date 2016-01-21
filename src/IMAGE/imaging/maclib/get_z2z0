@@ -1,0 +1,117 @@
+"macro get_z2z0"
+
+"**************************************************************************************
+"
+" get_z2z0 - determine B0 shift caused by z2 shim
+"
+" Details: Modified from original get_z2z0 which caused shim/acquisition errors
+"          Spectra collected with 5 z2 shim offsets, 0,+/-1k, +/-2k
+"          fm_slope is called to determine fit and z2z0 (Hz/DAC) 
+"          z2z0 value is printed  
+" Usage:   Load spuls
+"          Shim and verify spectrum
+"          > get_z2z0 
+"                       -Output saved in vnmrsys/fastmap/gcoil_z2z0      
+"
+"**************************************************************************************
+
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil='z2c'
+else
+  $coil='z2'
+endif
+$FMDIR = userdir+'/fastmap/tmp'
+
+if($# = 0) then
+  exists(userdir+'/fastmap','directory'):$e
+  if($e = 0) then
+    mkdir(userdir+'/fastmap')
+  endif
+  exists($FMDIR,'directory'):$ex
+  if($e = 0) then
+    mkdir($FMDIR)
+  endif
+  "1st pass; initialize"
+
+  exists('d1','parameter'):$e
+  if $e>0.5 then d1=d1[1] endif
+  exists('tr','parameter'):$e
+  if $e>0.5 then tr=tr[1] endif
+  exists('yval','parameter'):$e
+  if $e<0.5 then
+    create('yval','real')
+    setgroup('yval','processing')
+  endif
+  exists('sval','parameter'):$e
+  if $e<0.5 then
+    create('sval','real')
+    setgroup('sval','processing')
+  endif
+  $z2i={$coil}  "z2c shim value"
+  $inc=trunc((parmax[19]+1)/32 + 0.5)  "step size set to 1k"
+  sval = 0,0,0,0,0  "setup array"
+  sval[1] = $z2i   
+  sval[2] = $z2i+$inc
+  sval[3] = $z2i-$inc
+  sval[4] = $z2i+$inc*2
+  sval[5] = $z2i-$inc*2   "5 shim settings"
+  if (array <> '') then
+    write('error','%s:remove arrayed parameter array=%s',$0,array)
+    return
+  endif
+  exists('yval','parameter'):$e
+  if $e<0.5 then
+    create('yval','real')
+    setgroup('yval','processing')
+  endif
+  yval=0,0,0,0,0
+  exists('cnt','parameter'):$e
+  if $e<0.5 then
+    create('cnt','real')
+    setgroup('cnt','processing')
+  endif
+  cnt = 1  "used as counter"
+  {$coil} = sval[1]   "first z2 value"
+  setallshims
+else        "second pass; process"
+  f full
+  wft
+  peak:$height,cr
+  offset:yval[cnt]
+  //  write('line3','z2=%d,  ',sval[cnt])
+  cnt = cnt+1
+  if(cnt = 6) then   "all done; analyze"
+    {$coil} = sval[1]  "reset shims"
+    setallshims
+    $infile=userdir+'/fastmap/'+gcoil+'_'+'z2z0'
+    fm_slope(sval,yval):$r1,$r2,$r3
+    if (($r3>0.9) or ($r3<-0.9)) then
+      write('reset',$infile)
+      write('file',$infile,'z2z0= %11.4e Hz/DAC(%s) r=%8.5f',$r1,$coil,$r3)
+      cat($infile)
+      write('line3','B0 shift of %s coil found (z2z0=%g Hz/DAC  r=%g).',$coil,$r1,$r3)
+    else
+      write('error','Fit for B0 shift of %s coil unreliable (z2z0=%g Hz/DAC  r=%g).',$coil,$r1,$r3)
+      write('reset',$infile)
+      write('file',$infile,'z2z0= %11.4e Hz/DAC(%s) r=%8.5f',$r1,$coil,$r3)
+      cat($infile)
+    endif
+    abort  "exit"
+  else  
+    {$coil} = sval[cnt]   "new z2 value"
+    setallshims
+  endif
+endif
+
+wexp='get_z2z0(cnt)'
+
+au
+
+"****************************************************************************************
+"		Modification History
+"
+" 20081201 - modifications to work around 'load=y go' bug
+"
+"****************************************************************************************

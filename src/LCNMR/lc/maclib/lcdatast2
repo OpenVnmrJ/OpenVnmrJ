@@ -1,0 +1,299 @@
+"macro lcdatast2"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcdatast2"
+
+// lcdatast2 - This version displays VJ-LC version 2.x format data
+
+// Check to see if lcdata exists
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if (not $e) then
+  write('line3','lcdata file does not exist in current experiment')
+  abort
+endif
+
+// Check arguments for flags
+$plotflag = 0 
+$fullflag = 0
+$sideflag = 0
+$i = 1
+while ($i <= $#) do
+    $arg = ${$i}
+    if ($arg = 'plot') then $plotflag = 1 
+    elseif ($arg = 'side') then $sideflag = 1 
+    elseif ($arg = 'full') then $fullflag = 1
+    endif
+    $i = $i + 1
+endwhile
+
+// Read the lcdata file
+lookup('file', $filename)
+
+// Get version number
+lookup('readline'):$versionline
+$s1=''
+$ver=''
+strstr($versionline, 'LCD 2.'):$newversion,$s1,$ver
+if ($ver <> '') then
+  $ver = '2.' + $ver
+endif
+if (not $newversion) then
+  write('line3','lcdata file is in an unknown format: ' + $versionline)
+  abort
+endif
+
+// Read the run title
+$filetext = ''
+lookup('delimiter', ',\n\r', 'seek', '; run title:', 'read'):$filetext
+
+$nchans = 0
+lookup('seek', '; number of channels:', 'read'):$nchans
+
+lookup('seek', '; active channels:')
+$detflag = 0
+$str = ''
+$i = 1
+while ($i <= $nchans) do
+    lookup('read'):$str
+    $detflag[$i] = ($str = '#TRUE#')
+    $i = $i + 1
+endwhile
+
+lookup('seek', '; transfer times:')
+$delay = 0
+$i = 1
+while ($i <= $nchans) do
+    lookup('read'):$delay[$i]
+    $i = $i + 1
+endwhile
+
+lookup('seek', '; Reference time:')
+$reftime = 0
+lookup('read'):$reftime
+$i = 1
+while ($i <= $nchans) do
+    $delay[$i] = $delay[$i] - $reftime
+    //$delay[$i]?/*CMP*/
+    $i = $i + 1
+endwhile
+
+lookup('seek', '; channel maximum values:')
+$ymax = 0
+$i = 1
+while ($i <= $nchans) do
+    lookup('read'):$ymax[$i]
+    $i = $i + 1
+endwhile
+
+lookup('seek', '; channel minimum values:')
+$ymin = 0
+$i = 1
+while ($i <= $nchans) do
+    lookup('read'):$ymin[$i]
+    $i = $i + 1
+endwhile
+
+// Get the peak times and trace numbers
+lookup('seek', '; incident table:', 'read'):$npeaks
+$trace = 0 
+$eventtime = 0
+$r1 = 0
+$r2 = 0
+$r3 = 0 
+$r4 = 0
+$str = ''
+$i = 1
+$j = 0
+while ($i <= $npeaks) do
+    lookup('read','read','read','read'):$r1, $r2, $r3, $r4
+    lookup('readline'):$str
+    strstr($str, 'stopFlowNmr'):$idx // Only want NMR events
+    if ($idx) then
+        $j = $j + 1
+        $trace[$j] = $r1
+        $eventtime[$j] = $r4
+        write('line3','evt=%d, trace=%d, time=%.4f', $i, $trace[$j], $eventtime[$j])
+    endif
+    $i = $i+1
+endwhile
+$npeaks = $j
+
+// Set up the vertical scales of the LC plots (kept in "vslc[1:n]")
+exists('vslc','parameter'):$e
+if (not $e) then
+    create('vslc')
+    setgroup('vslc','processing')
+    vslc = 0 // Flag as autoscaled
+endif
+$vssize = size('vslc')
+exists('oclc','parameter'):$e
+if (not $e) then
+    create('oclc')
+    setgroup('oclc','processing')
+    oclc = 0 // Flag as autoscaled
+endif
+$ocsize = size('oclc')
+$i = 1
+while ($i <= $nchans) do
+    if ($i > $vssize) then
+        vslc[$i] = 0 // Create element and flag as autoscaled
+    endif
+    if ($i > $ocsize) then
+        oclc[$i] = 0 // Create element and flag as autoscaled
+    endif
+    if (vslc[$i] <= 0) then
+        // Autoscale this channel
+        vslc[$i] = wc2 / ($ymax[$i] - $ymin[$i])
+        oclc[$i] = $ymin[$i] // - 10 * $i / vslc[$i]
+    endif
+    if ($sideflag) then
+        if ($fullflag) then
+            $vs[$i] = vslc[$i] / 2
+        else
+            $vs[$i] = vslc[$i] //* (1 - wc / wcmax) / 2
+        endif
+    else
+        if ($fullflag) then
+            $vs[$i] = vslc[$i] / 2
+        else
+            $vs[$i] = vslc[$i] * (wc2 / wc2max) / 2
+        endif
+    endif
+    //$vs[$i]?/*CMP*/
+    //oclc[$i]?/*CMP*/
+    //$ymin[$i]?/*CMP*/
+    //$ymax[$i]?/*CMP*/
+    $i = $i + 1
+endwhile
+//sc?
+//wc?
+//wcmax?
+    
+
+// NB: Offsets for each trace found in header, above
+//exists('onflowdelay','parameter'):$e
+//if $e then $offset=onflowdelay/60 else $offset=0 endif
+
+
+$plbs=1
+exists('lcpeaklabels','parameter'):$e
+if $e then $plbs=(lcpeaklabels='y') endif
+
+if $plotflag then write('plotter','reverse',3,wc2/2,'%s',$filetext) endif
+
+exists('plotxypar','parameter'):$e
+if ($e < 0.5) then
+  create('plotxypar','real')
+  setgroup('plotxypar','display')
+endif
+if $sideflag then
+  if $fullflag then
+    plotxypar = 0,wcmax,0,wc2max,sf1,sf1+wf1,1,$delay[1],$vs[1],-oclc*$vs[1],90,2
+  else
+    //$vs = $vs*(1-wc/wcmax)
+    plotxypar = sc+wc+15,wcmax-wc-sc-15,sc2,wc2,sf1,sf1+wf1,1,$delay[1],$vs[1],-oclc[1]*$vs[1],90,2
+  endif
+else
+  if $fullflag then
+    plotxypar = 0,wcmax,0,wc2max,sf1,sf1+wf1,1,$delay[1],$vs[1],0,0,2
+  else
+    //$vs = $vs*wc2/wc2max
+    plotxypar = sc+wc+20,wcmax-wc-sc-20,sc2,wc2,sf1,sf1+wf1,1,$delay[1],$vs[1],0,0,2
+  endif
+endif
+
+// Use the plotxy or drawxy command to actually plot the data
+// NB: First value in these arrays is for chan 0, the rest for chans 1 to n
+$pens = 'pen1', 'pen1', 'pen2', 'pen3', 'pen4', 'pen5'
+$colors = 'white', 'red', 'green', 'cyan', 'orange', 'yellow'
+$datafile = curexp + '/lcdata'
+$i = 1
+while ($i <= $nchans) do
+    plotxypar[8] = $delay[$i]
+    plotxypar[9] = $vs[$i]
+    plotxypar[10] = -oclc[$i] * $vs[$i]
+    plotxypar[12] = $i + 1 // Skip first column (the time column)
+    if ($plotflag) then
+        $device = 'plotter'
+        plotxy($datafile, 'plotxypar', $pens[$i + 1]) // Skip first element
+    else
+        $device = 'graphics'
+        drawxy($datafile, 'plotxypar', 'noclear', $colors[$i + 1])
+    endif
+    $i = $i + 1
+endwhile
+
+write($device,0,0,''):$htchar
+if $plotflag then $wthchar = 0.7*$htchar else $wthchar = 0.5*$htchar endif
+$event = 1
+$first = 0
+pen('$device','green') 
+if $sideflag then 
+  $mmf = wc2/wf1
+else 
+  $mmf = plotxypar[2]/wf1
+endif
+$s2 = 0
+
+if lcexp = 'enter' then
+  $begin = 1 $end = 1
+  $event = 0
+  repeat
+    $event = $event+1
+    if $eventtime[$event]<=sf1 then
+      $begin = $event+1
+    endif
+    if ($eventtime[$event])<=(sf1+wf1) then
+      $end = $event
+    endif
+  until $event = $npeaks
+$event = $begin $npeaks = $end
+endif
+
+while ($event <= $npeaks) do
+
+  $s2 = $eventtime[$event]
+          
+  if $sideflag then 
+    $x = plotxypar[2]
+    $y = plotxypar[3] + ($eventtime[$event] - sf1) * $mmf
+    // Mark all "peaks" that are on legal traces or 0 (not trace related)
+    $chan = $trace[$event]
+    if ($chan >= 0 and $chan <= $nchans) then
+        pen('$device', $colors[$chan + 1])
+        move($x - 1, $y)
+        draw($x + 5, $y)
+    endif
+    if $plbs then
+        write($device,$colors[$chan],$x-12*$wthchar,$y-$htchar/2,'%5.2fmin',$s2)
+    endif
+    write($device,'cyan',$x,$y-$htchar/2,'#%2.0f',$event)
+    vp = $y
+    if ($fullflag = 0) then
+      if $plotflag then
+        pl($event)
+        if $first = 0 then pscale $first = 1 endif
+      else 
+        dssn($event) 
+        if $first = 0 then dscale $first = 1 endif
+      endif
+    endif
+  else
+    $y = plotxypar[3]
+    $x = ($eventtime[$event] - sf1) * $mmf
+    if $trace[$event] = 1 then 
+      move($x,$y+2) draw($x,$y-5)
+    elseif $trace[$event] = 2 then 
+      move($x,$y+2) draw($x,$y-5)
+    endif 
+    if $plbs then
+      write($device,'reverse','cyan',$x-$htchar/1.5,$y+$htchar,'%5.2fmin',$s2)
+    endif
+    write($device,'cyan',$x-$htchar/1.5,0,'#%2.0f',$event)
+  endif
+  $event = $event+1 
+ 
+endwhile
+
+sp=sp   // Send pnew to interested panel items
+sf1=sf1

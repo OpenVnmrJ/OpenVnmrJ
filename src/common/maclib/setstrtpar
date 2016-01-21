@@ -1,0 +1,101 @@
+"macro setstrtpar"
+if ($# < 1) then $1='set' endif
+
+IF ($1='set') THEN
+   isnewexp:$isnew
+   if ($isnew) or (procdim<1) then return endif
+   expactive:$isactive
+   if ($isactive>0) then return endif
+   if (auto='y') then return endif
+
+   is_cpfid:$iscpfid
+   $basename='' $archsamp=''
+   substr(file,'basename'):$basename,$ext
+   substr(file,'dirname'):$archsamp
+   exists($archsamp+'/'+$basename+'.fid','directory'):$ex
+   if ($ex=0) then
+	exists($archsamp+'/'+$basename+'.rec','directory'):$ex
+	if ($ex=0) then
+	    exists($archsamp+'/'+$basename+'.REC','directory'):$ex
+	endif
+   endif
+   if ($ex) then
+     if ($iscpfid) then
+  	strtpar=$basename
+     else
+	strtpar=$archsamp+'/'+$basename
+     endif
+   endif
+   RETURN
+ENDIF
+"*************************************************************************"
+
+IF ($1='check') THEN
+	"This option searches the fidlog to see if minsw"
+	" is already done for the current strtpar"
+    shell('basename '+$2):$name
+    shell('dirname '+$2):$archsamp
+
+	" Does the fid exist?"
+    exists($2+'.REC','directory'):$fidex
+    if ($fidex=0) then
+	exists($2+'.rec','directory'):$fidex
+    endif
+    if ($fidex=0) then
+	exists($2+'.fid','directory'):$fidex
+    endif
+    if ($fidex=0) then return($name) endif
+
+	" Is MinSW parameter set to auto or manual?"
+    $minsw='off'
+    rtv($2,'noabort','MinSW'):$minsw
+    if ($minsw<>'auto') and ($minsw<>'manual') then 
+	return($name)
+    endif
+
+	"Is there a fidlog?"
+    $fidlog=$archsamp+'/dirinfo/fidlog'
+    exists($fidlog,'file'):$fidex
+    if ($fidex=0) then return($name) endif
+
+	"Is this fid in the fidlog?"
+    $s1='' $s2=''
+    readfile($fidlog,'$s1','$s2','','local')
+    teststr('$s2',$name,'local'):$ret
+    if ($ret=0) then return($name) endif
+
+	"Are there any other fid for this pslabel?"
+    $s3='' $s4=''
+    readfile($fidlog,'$s3','$s4',$s1[$ret],'local'):$total
+    if ($total<2) then return($name) endif
+
+	"Check from bottom-up: Is there another fid"
+	"  collected with this strtpar with MinSW='off'?"
+    $i=$total
+    repeat
+      if ($s4[$i]<>$name) then
+	$strtpar='' $minsw=''
+	exists($archsamp+'/'+$s4[$i]+'.REC','directory'):$direx
+	if ($direx=0) then
+	    exists($archsamp+'/'+$s4[$i]+'.rec','directory'):$direx
+	endif
+	if ($direx=0) then
+	    exists($archsamp+'/'+$s4[$i]+'.fid','directory'):$direx
+	endif
+	if ($direx) then
+	   rtv($archsamp+'/'+$s4[$i],'noabort','strtpar'):$strtpar
+	   rtv($archsamp+'/'+$s4[$i],'noabort','MinSW'):$minsw
+	   if ($strtpar=$name) and (($minsw='off') or ($minsw='skip')) then
+		$name=$s4[$i]
+		$i=1
+	   endif
+	endif
+      endif
+      $i=$i-1
+    until $i < 1
+
+	"Return the new strtpar"
+    return($name)
+
+ENDIF
+"***************************************************************************"

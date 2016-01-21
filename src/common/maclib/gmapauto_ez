@@ -1,0 +1,523 @@
+"macro gmapauto_ez"
+"automation macros for running gradient shimming"
+
+if ($# < 0.5) then
+return
+endif
+
+isvnmrj:$isvnmrj
+exists('activestudy','parameter','global'):$act
+
+IF ($1 = 'startshim') THEN
+
+"gmapset('mkdir',2)"
+$rtp = 'n'
+$start = 'y'
+$auflag = 'n'
+if (seqfil <> 'gmapz') then 
+  $rtp='y'         "rtp if not seqfil"
+endif
+if ($# > 1.5) then
+  if $2='rtp' then
+    $rtp='y'       "always rtp when calling Set Params"
+    $start='n'     "don't start shimming"
+  endif
+  if ($2='glideau') then
+    $auflag=$2
+  endif
+endif
+
+$jmap = '' $exec=''
+exists('gshim.list','gshimlib/data'):$e,$jfile
+if $e<0.5 then
+  write('error','gradient shimming not set up: gshim.list not found')
+  if $auflag='glideau' then
+        cpbanner('acquire')
+        getsampglobal('cp')
+        gmapshim_au('glideau','next')
+  endif
+  return
+endif
+lookup('mfile',$jfile,'mapname','read'):$jmap
+
+//"Do the following section if not an LC system."
+//if not (traymax=1 and auto='y') then
+
+//  $locon=0 $loc=0   "keep before tmpsave"
+//  on('loc','global'):$locon
+//  if (auto='y' and $locon>0.5) then
+//    $jloc = loc                       "for real use"
+//"    $jloc=0"
+//"    $jj=autodir+'/locQ'"               "get loc from locQ, for testing"
+//"    exists($jj,'file'):$ejj"
+//"    if ($ejj < 0.5) then"
+//"      $jloc=1"
+//"    else"
+//"      lookup('file',$jj)"
+//"      $nret=1 $jloct=$jloc"
+//"      repeat"
+//"        if $nret>0.5 then"
+//"          lookup('read'):$exec,$nret"
+//"        endif"
+//"        if $nret>0.5 then"
+//"          lookup('read'):$jloct,$nret"
+//"        endif"
+//"        if $nret>0.5 then $jloc=$jloct endif"
+//"      until ($nret<0.5)"
+//"    endif"                             "end get locQ"
+//    $jf=autodir+'/gQ'                 "could use end of locQ instead of gQ?"
+//    exists($jf,'file'):$e
+//    if $e<0.5 then
+//      write('file',$jf,'GRADIENT SHIMMING SAMPLE#: %d',$jloc)
+//    else
+//      lookup('mfile',$jf,'skip',3,'read'):$loc
+//      if ($jloc<>$loc or $jloc=0) then
+//        delete($jf)
+//        write('file',$jf,'GRADIENT SHIMMING SAMPLE#: %d',$jloc)
+//      else
+//
+//        if ($auflag = 'glideau') then
+//          exists(autodir+'/gtmp.par','directory'):$gtmpex
+//          if ($gtmpex) then
+//            rtp(autodir+'/gtmp')
+//            rm('-r',autodir+'/gtmp.par'):$dum
+//            au('wait')
+//          endif
+//        endif
+
+//        return  "skip gradient shimming"
+//      endif
+//    endif
+//  endif
+
+//endif  "end not LC system section"
+
+$readallshims_flag='n'
+$jstr = curexp+'/gtmp'
+if (seqfil <> 'gmapz') then
+  exists($jstr,'file'):$e
+  if $e>0.5 then
+    rm('-r',$jstr):$x
+  endif
+  if auto<>'y' then
+    tmpsave('gtmp')
+  else
+    gmapset('autosave')
+  endif
+  exists(curexp+'/text','file'):$t
+  if $t>0.5 then cp(curexp+'/text',curexp+'/gtmp') endif
+  $jstr = curexp+'/gtmp/startshims'
+  readallshims
+  $readallshims_flag='y'
+  exists($jstr,'file'):$exj
+  if $exj>0.5 then rm($jstr):$x endif
+  svs($jstr):$e
+endif
+
+if ($rtp = 'y') then 
+  gmapz($jmap):$x
+  if $x>0.5 then
+    exists(curexp+'/gtmp/startshims','file'):$t
+    if $t>0.5 then rm(curexp+'/gtmp/startshims'):$x endif
+    if auto<>'y' then
+      tmpreturn('gtmp')
+    else
+      gmapset('autoreturn')
+    endif
+    return
+  endif
+  if $act>0.5 then if activestudy[1]<>'null' then
+    if auto='y' then
+      werr='xmreact(\'wait\')'
+    else
+      werr='xmwerr'
+    endif
+  endif endif
+  if ($auflag='glideau') then
+        getsampglobal('cp')
+        savesampglobal('cp')
+  endif
+  wexp='gmapauto_ez(\'shim\')'
+  if $readallshims_flag='n' then
+    readallshims
+    $readallshims_flag='y'
+  endif
+endif
+
+if ($start = 'n') then
+  gmaplistfunc('unarray'):$ok,$exec
+  exec($exec)
+  if auto<>'y' then
+    write('line3','current mapname %s',$jmap)
+    if ($isvnmrj<0.5) then menu('shim') endif
+  endif
+else
+  $jstr = userdir+'/gshimlib/data/gshim.startshims'
+  exists($jstr,'file'):$e
+  if $e>0.5 then rm($jstr):$x endif
+  if $readallshims_flag='n' then
+    readallshims
+    $readallshims_flag='y'
+    svs($jstr):$e
+  else
+    cp(curexp+'/gtmp/startshims',$jstr)
+  endif
+  $jstr = userdir+'/gshimlib/data/gshim.rec'
+  exists($jstr,'file'):$e
+  if $e>0.5 then rm($jstr):$x endif
+  exists('date','parameter'):$e
+  if $e>0.5 then
+    write('file',$jstr,'Gradient Shimming Record             date: %s\n',date)
+  else
+    write('file',$jstr,'Gradient Shimming Record\n')
+  endif
+  exists('gmapct','parameter'):$e
+  if $e<0.5 then create('gmapct','integer') setgroup('gmapct','display') endif
+  exists('gmap_again','parameter'):$e
+  if $e<0.5 then create('gmap_again','integer') setgroup('gmap_again','display') endif
+  gmapct = 0     "count iterations"
+  gmap_again = 0 "continue after shim out-of-range"
+  gmaplistfunc('unarray'):$ok,$exec
+  exec($exec)
+  array = 'd3'
+  exists('gzsize','parameter'):$ez
+  if $ez>0.5 then
+    $bsize=gzsize
+    exists('gmap_z1z4','parameter'):$e4
+    if $e4>0.5 then
+      if gmap_z1z4='y' then
+        if $bsize>4.5 then $bsize=4 endif
+      endif
+    endif
+    $sh1='' $sh2='' $sh3=''
+    gmaplistfunc('setoldv',$bsize):$ok,$sh1,$sh2,$sh3
+    if $ok < -0.5 then
+      write('error','Gradient shimming failed')
+      if auto='y' then
+        gmapset('autoreturn')
+      else
+        gmapset('return')
+      endif
+      return
+    endif
+    if ($bsize<gzsize) then
+      write('file',$jstr,'Starting gradient shimming of %s-%s, first using %s-%s.',$sh1,$sh3,$sh1,$sh2)
+    else
+      write('file',$jstr,'Starting gradient shimming of %s-%s.',$sh1,$sh3)
+    endif
+  endif
+  gmapset('disable','ez')
+  if $act>0.5 then if activestudy[1]<>'null' then
+    if auto='y' then
+      werr='xmreact(\'wait\')'
+    else
+      werr='xmwerr'
+    endif
+  endif endif
+  wexp='gmapauto_ez(\'shim\')'      " ** runs non-stop ** "
+  if auto='y' then
+    on('pad'):$pad_on
+    if ($pad_on>0.5 and pad[1]>0.5) then
+      exists('gmap_padon','parameter'):$pe
+      if $pe<0.5 then
+        create('gmap_padon','real')
+      endif
+      gmap_padon = pad[1]
+      pad = pad[1]
+    endif
+    $autoname_tmp = autoname
+    autoname = '_GMAP_FILE_%SAMPLE#:%'
+    write('line3','using mapname %s',$jmap)
+    exists('gmap_doau','parameter'):$e
+    if $e<0.5 then
+      create('gmap_doau','string')
+    endif
+    gmap_doau = $auflag
+    exists('gmap_findtof','parameter'):$e5
+    if $e5>0.5 then
+      if gmap_findtof='y' then
+        gmapauto_ez('starttof',0)
+        autoname = $autoname_tmp
+        gmapset('autoreturn')
+        return
+      endif
+    endif
+    au('next','wait','shimming')
+"   wdone('')"
+    autoname = $autoname_tmp
+    gmapset('autoreturn')
+  else
+    if ($auflag='n') then
+      write('line3','using mapname %s',$jmap)
+      write('alpha','Starting gradient shimming...')
+    else
+      exists('gmap_doau','parameter'):$e
+      if $e<0.5 then
+        create('gmap_doau','string')
+      endif
+      gmap_doau = $auflag
+      write('alpha','Starting gradient shimming...')
+    endif
+    exists('gmap_findtof','parameter'):$e5
+    if $e5>0.5 then
+      if gmap_findtof='y' then
+        gmapauto_ez('starttof',0)
+        return
+      endif
+    endif
+    au('next','wait')
+"   wdone('')"
+  endif
+endif
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'shim') THEN
+
+$auflag='n'
+$ret=0
+gmapct = gmapct + 1
+$dirn = userdir+'/gshimlib/data/'
+$jstr = ''
+$sh1='' $sh2='' $sh3=''
+write('file',$dirn+'gshim.rec','\nIteration %s%d','#',gmapct)
+on('pad'):$pad_on
+gmaprep('proca'):$ret
+if (auto='y' and $pad_on>0.5 and pad>0.5) then pad=0.5 endif
+if $ret>0.5 then
+  $jstr='Gradient autoshimming processing failed.'
+  write('error','%s',$jstr)
+  if auto<>'y' then
+    gmapset('return')
+  else
+    gmapset('autorm',file)
+  endif
+  write('file',$dirn+'gshim.rec','%s',$jstr)
+  return(1)
+endif
+gmaplistfunc('setoldv'):$ok
+if $ok < -0.5 then
+  write('error','Gradient shimming failed')
+  write('file',$dirn+'gshim.rec','Gradient shimming failed')
+  if auto='y' then gmapset('autorm',file) else gmapset('return') endif
+  return(1)
+endif
+gmaprep('fita','ff'):$ret    "no write to message screen"
+if $ret>0.5 then
+  $jstr='Gradient autoshimming fit failed.'
+  write('error','%s',$jstr)
+  if auto<>'y' then
+    gmapset('return')
+  else
+    gmapset('autorm',file)
+  endif
+  write('file',$dirn+'gshim.rec','%s',$jstr)
+  return(1)
+endif
+
+$dirx = '"'+$dirn+'"'
+$jstr='cat '+$dirx+'gshim.rec '+$dirx+'gshim.list > '+$dirx+'gshim.rec2; rm '+$dirx+'gshim.rec; mv '+$dirx+'gshim.rec2 '+$dirx+'gshim.rec'
+shell($jstr):$x
+
+lookup('mfile',$dirn+'gshim.list','gzsize','read','seek','err','read'):$bsize,$r2
+
+$exec=''
+$haltshim=0
+$max_iter=5
+$rms_min=2.0
+"$rms_min=1.0"
+"if $bsize>4.5 then $rms_min=1.0/sqrt($bsize) endif"
+exists('gmap_maxiter','parameter'):$e
+if $e>0.5 then $max_iter = gmap_maxiter endif
+exists('gmap_rmsmin','parameter'):$e
+if $e>0.5 then $rms_min = gmap_rmsmin endif
+
+if ($r2 > $rms_min and gmapct < $max_iter) then
+  write('line3','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+  write('alpha','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+  write('file',$dirn+'gshim.rec','rms err > %2.2f, continuing...',$rms_min)
+  gmaplistfunc('setnew'):$haltshim,$exec,$sh1
+  exec($exec)
+  if $haltshim>1.5 then  "only if z1"
+    write('error','Gradient shimming failed, %s out-of-bounds',$sh1)
+    if auto<>'y' then
+      gmapset('return')
+    else
+      gmapset('autorm',file)
+    endif
+    write('file',$dirn+'gshim.rec','Gradient shimming failed, %s out-of-bounds',$sh1)
+    RETURN(2)
+  endif
+  if spin=0 then spin='n' endif
+  if auto='y' then
+    $autoname_tmp = autoname
+    autoname = '_GMAP_FILE_%SAMPLE#:%'
+    gmapset('autorm',file,'noflush')
+    au('next','wait','shimming')      "repeat"
+"   wdone('')"
+    autoname = $autoname_tmp
+  else
+    au('next','wait')                 "repeat"
+"   wdone('')"
+  endif
+else
+  if ($r2 < $rms_min) then
+    if not ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+      write('line3','Iteration %s%d, rms err %2.2f, shims converged...','#',gmapct,$r2)
+      write('alpha','Iteration %s%d, rms err %2.2f, shims converged...','#',gmapct,$r2)
+      write('file',$dirn+'gshim.rec','rms err < %2.2f, shims converged...',$rms_min)
+      endif
+  else
+    write('line3','Iteration %s%d, rms err %2.2f','#',gmapct,$r2)
+    write('alpha','Iteration %s%d, rms err %2.2f','#',gmapct,$r2)
+    write('file',$dirn+'gshim.rec','rms err > %2.2f',$rms_min)
+  endif
+  gmaplistfunc('setnew'):$haltshim,$exec,$sh1
+  exec($exec)
+  if $haltshim>1.5 then     "only if z1"
+    write('error','Gradient autoshimming failed, %s out-of-bounds',$sh1)
+    if auto<>'y' then
+      gmapset('return')
+    else
+      gmapset('autorm',file)
+    endif
+    write('file',$dirn+'gshim.rec','Gradient autoshimming failed, %s out-of-bounds',$sh1)
+    RETURN(2)
+  endif
+  if ($bsize<gzsize and gmapct<$max_iter and gmap_again<1) then
+    gmaplistfunc('setoldv',gzsize):$ok,$sh1,$sh2,$sh3
+    if $ok < -0.5 then
+      write('error','Gradient shimming failed')
+      write('file',$dirn+'gshim.rec','Gradient shimming failed')
+      if auto='y' then gmapset('autorm',file) else gmapset('return') endif
+      return(1)
+      endif
+    gmap_again=2
+    write('line3','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+    write('alpha','Iteration %s%d, rms err %2.2f, continuing...','#',gmapct,$r2)
+    write('file',$dirn+'gshim.rec','rms err %2.2f, using %s-%s, continuing...',$r2,$sh1,$sh3)
+    if spin=0 then spin='n' endif
+    if auto='y' then
+      $autoname_tmp = autoname
+      autoname = '_GMAP_FILE_%SAMPLE#:%'
+      gmapset('autorm',file,'noflush')
+      au('next','wait','shimming')      "repeat"
+"     wdone('')"
+      autoname = $autoname_tmp
+    else
+      au('next','wait')                 "repeat"
+"     wdone('')"
+    endif
+  else
+    format(gmapct,1,0):$jstr
+    if ($r2 > $rms_min) then
+      $jstr='Maximum '+$jstr+' iterations reached'
+    else
+      $jstr=$jstr+' iteration'
+      if gmapct>1.5 then $jstr=$jstr+'s' endif
+    endif
+    write('file',$dirn+'gshim.rec','Gradient autoshimming on Z done!  %s',$jstr)
+      exists('gmap_doau','parameter'):$e
+      if $e>0.5 then
+        $auflag=gmap_doau
+        destroy('gmap_doau')
+      endif
+    if auto<>'y' then
+      write('line3','Gradient autoshimming on Z done!  %s',$jstr)
+      write('alpha','Gradient autoshimming on Z done!  %s',$jstr)
+      gmapset('return')
+    else
+      write('line3','Gradient autoshimming done!  %s',$jstr)
+      gmapset('autorm',file)
+    endif
+  endif
+endif
+
+if $auflag='glideau' then
+  if (auto = 'y') then
+    exists(autodir+'/gtmp.par','directory'):$gtmpex
+    if ($gtmpex) then
+      rtp(autodir+'/gtmp')
+      rm('-r',autodir+'/gtmp.par'):$dum
+    endif
+  endif
+  cpbanner('acquire')
+  getlkpars  "This will be taken out once the bug is fixed"
+  getsampglobal('cp')
+  gmapshim_au('glideau','next')
+endif
+
+RETURN(0)
+ENDIF
+
+
+IF ($1 = 'starttof') THEN  "find window"
+
+write('alpha','finding tof...')
+wexp='gmapauto_ez(\'findtof\')'
+if $#>1.5 then 
+  wexp='gmapauto_ez(\'findtof\',0)'
+endif
+"gmapset('disable','ez')"
+if auto='y' then
+  au('next','wait','shimming')
+else
+  au('next','wait')
+endif
+"wdone('')"
+
+RETURN
+ENDIF
+
+
+IF ($1 = 'findtof') THEN
+
+if (auto='y' and pad>0.5) then pad=0.5 endif
+$dirn = userdir+'/gshimlib/data/'
+$x=0
+$gzwin_tmp = gzwin   "set tof only, keep same gzwin"
+gmapset('setsw',50):$x
+gzwin = $gzwin_tmp
+if $x>0.5 then
+  write('error','Gradient shimming failed, tof not found')
+  if auto<>'y' then
+    gmapset('return')
+  else
+    gmapset('autorm',file)
+  endif
+  write('file',$dirn+'gshim.rec','Gradient shimming failed, tof not found')
+  RETURN(2)
+endif
+
+if $#>1.5 then
+  wexp='gmapauto_ez(\'shim\')'
+  if auto='y' then
+    write('alpha','tof set to %1.1f, starting gradient shimming...',tof)
+    $autoname_tmp = autoname
+    autoname = '_GMAP_FILE_%SAMPLE#:%'
+    gmapset('autorm',file,'noflush')
+    au('next','wait','shimming')
+"   wdone('')"
+    autoname = $autoname_tmp
+  else
+    write('alpha','tof set to %1.1f, starting shimming...',tof)
+    au('wait')
+"   wdone('')"
+  endif
+else
+  wexp=''
+  write('alpha','tof set to %1.1f, done!',tof)
+endif
+
+RETURN
+ENDIF
+
+
+IF ($# > 0.5) THEN
+
+write('error','invalid argument: %s(\'%s\')',$0,$1)
+
+RETURN
+ENDIF

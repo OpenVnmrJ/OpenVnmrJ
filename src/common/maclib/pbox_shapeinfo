@@ -1,0 +1,78 @@
+"macro pbox_shapeinfo"
+$shape='' $offset=0 $bandwidth=0 $pulsewidth=0
+
+if ($# < 1) then 
+   if ($## < 1) then
+	write('error','Supply shapename as arg1')
+   endif
+   return($shape,$bandwidth,$offset,$pulsewidth) 
+endif
+if ($# > 1) then
+   $shpath=$2+'/'+$1
+   exists($shpath,'file'):$shex
+else
+   getfilepath($1,'shapelib'):$shex,$shpath
+endif
+if ($shex=0) then 
+   if ($## < 1) then
+	write('error','Shape %s not found',$1)
+   endif
+   return($shape,$bandwidth,$offset,$pulsewidth) 
+endif
+
+$key=$shpath
+$s1='' $s2='' $s3='' $s4='' $s5=''
+lookup('mfile',$key,'seek','Pbox.inp','readline',4,'filekey'):$s1,$s2,$s3,$s4,$key,$ret
+if ($ret<5) then 
+   if ($## < 1) then
+	write('error','%s is not created via Pbox')
+   endif
+   return($shape,$bandwidth,$offset,$pulsewidth) 
+endif
+
+$shape='' $bandwidth=0 $offset=0 $pulsewidth=0 $i=1
+$ret=2
+while $ret > 1 do
+   $s5=''
+   lookup('mfile',$key,'readline','filekey'):$s5,$key,$ret
+   if ($s5='') then $ret=1 endif
+   if ($ret=2) then
+	substr($s5,2):$s2
+	if ($s2<>'{') then $ret=1 endif
+   endif
+   if ($ret=2) then
+	$bwpw=''
+	substr($s5,3):$shape[$i]
+	substr($s5,4):$bwpw
+	$s1='' $s2=''
+	strstr($bwpw,'/'):$ret,$s1,$s2
+	if ($ret) then
+	    format($s2,'lower'):$pulsewidth[$i]
+	    format($s1,'lower'):$bandwidth[$i]
+	else
+	    $r1=0 format($bwpw,'lower'):$r1
+	    if ($r1<1) then $pulsewidth[$i]=$r1 $bandwidth[$i]=0 
+	    else $bandwidth[$i]=$r1 $pulsewidth[$i]=0 endif
+	endif
+	substr($s5,5):$s2
+	if ($s2='}') then $offset[$i]=0
+	else
+	   format($s2,'lower'):$offset[$i]
+	endif
+	$i=$i+1
+   endif
+endwhile
+if ($## < 1) then
+   $size=size('$shape')
+   $i=1
+   repeat
+	if ($size>1) then
+	   write('line3','%d. Shape:  %s; width:  %0.1f;  offset:  %0.1f',$i,$shape[$i],$bandwidth[$i],$offset[$i])
+	else
+           write('line3','Shape:  %s; width:  %0.1f;  offset:  %0.1f',$shape[$i],$bandwidth[$i],$offset[$i])
+	endif
+	$i=$i+1
+   until $i > $size
+endif
+return($shape,$bandwidth,$offset,$pulsewidth)
+

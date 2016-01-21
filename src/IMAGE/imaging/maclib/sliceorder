@@ -1,0 +1,68 @@
+"macro sliceorder"
+"***************************************************************"
+" sliceorder(type): reorder the pss array according to <type>   "
+"                                                               "
+" type = 'a' - odds then evens 'alternate'                      "
+"        'i' - increasing order                                 "
+"        'd' - decreasing order                                 "
+"        'r' - odds then evens 'alternate' in decreasing order  "
+"        Default (no argument) - 'a'                            "
+"                                                               "
+" Usage: sliceorder(<'i'|'a'|'d'|'r'>)                              "
+"***************************************************************"
+
+"** Determine sort type from optional argument if present *"
+$ordered = 0
+if ($# = 0) then
+  $ord = 'a'
+else
+  $ord = $1
+endif
+$ns = size('pss')
+
+"** type = 'i', sort in increasing order ******************"
+if ($ord = 'i') then
+  sort('pss'):$unused,$result
+  pss = $result
+  return
+endif
+
+"** type = 'd', sort in decreasing order ******************"
+if ($ord = 'd') then
+  sort('pss','r'):$unused,$result
+  pss = $result
+endif
+
+"** type = 'a', sort in odd/even order ********************"
+if ($ord = 'a') then
+  $i = 0
+  $ns2 = trunc(($ns + 1)/2)
+  sort('pss'):$unused,$ordered
+  repeat
+    $i = $i + 1
+    if ($i <= $ns2) then
+      $index = 2*$i - 1
+    else
+      $index = 2*($i - $ns2)
+    endif
+    $result[$i] = $ordered[$index]
+  until ($i = $ns)
+  pss = $result
+endif
+
+"** type = 'r', sort in odd/even order ********************"
+if ($ord = 'r') then
+  $i = 0
+  $ns2 = trunc(($ns + 1)/2)
+  sort('pss','r'):$unused,$ordered
+  repeat
+    $i = $i + 1
+    if ($i <= $ns2) then
+      $index = 2*$i - 1
+    else
+      $index = 2*($i - $ns2)
+    endif
+    $result[$i] = $ordered[$index]
+  until ($i = $ns)
+  pss = $result
+endif

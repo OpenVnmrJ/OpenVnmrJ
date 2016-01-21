@@ -1,0 +1,92 @@
+"macro walkupQ_addcmd"
+"****************************************************************"
+"   walkupQ_addcmd - add a cmd node to queue   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+   $newsqnode='' $oldsqnode='' $long='no' $lock='no'
+   $xmlpath='no' $acqtime=-1
+
+//   shell('cp '+$expfile+' '+$expfile+'1'):$dum
+//   shell('cp '+$lngfile+' '+$lngfile+'1'):$dum
+   $list='' $ret=0
+   strstr($1,'('):$ret,$list
+   if ($ret=0) then $list=$1 endif
+   
+   $argno=2
+   while ($argno <= $#) do
+        $Arg='' format($argno,'lower'):$Arg
+        $Arg='$'+$Arg
+      if typeof ($Arg) then
+        $val=${$argno}
+        if ($val='long') then $long=$val
+        elseif ($val='lock') then $lock=$val
+        elseif ($val='sqnode') then
+	  $argno=$argno+1
+	  $oldsqnode=${$argno}
+        else
+          $xfc='' substr($val,1,1):$xfc
+          if ($xfc='/') then
+            $xr=0 $xs1='' $xs2=''
+            strstr($val,'.xml','last'):$xr,$xs1,$xs2
+            if ($xr) and ($xs2='') then
+                $xmlpath=$val
+            endif
+          endif
+        endif
+      else
+	$acqtime=${$argno}
+      endif
+      $argno=$argno+1
+   endwhile
+   if ($acqtime<-0.5) then $acqtime=0 endif
+   if ($longQ='y') then $long='long' endif
+   walkupQ('add',$list,$long,$lock,$acqtime,'notimecheck',$xmlpath,'noreqcheck','nostudycheck','nodialog','sqnode',$oldsqnode):$newsqnode
+   if ($newsqnode<>'') then
+	getcpnode('rev',cursqexp,$newsqnode):$newcpnode,$when
+	write('file',$maclibdir+'/CMDnodes','%s',$newcpnode)
+	write('file',$maclibdir+'long/CMDnodes','%s',$newcpnode)
+//        $macro=''
+//        if ($xmlpath<>'no') or ($xmlpath<>'') then
+//            getattr($xmlpath,'action','macro'):$macro
+//        endif
+//        if ($macro='') then $macro=$list endif
+	if ($1<>$list) then
+	    write('line3','SetupMacro %s',$1):$macro
+            if ($lock='lock') then
+            	$attr2='AllowCustomization No'
+            else
+            	$attr2='AllowCustomization Yes'
+            endif
+            if ($when='long') then
+	    	cpattribute('clear',$maclibdir+'long/'+$newcpnode)
+	    	cpattribute('set',$maclibdir+'long/'+$newcpnode,$macro)
+		cpattribute('set',$maclibdir+'long/'+$newcpnode,$attr2)
+            else
+            	cpattribute('clear',$maclibdir+'/'+$newcpnode)
+            	cpattribute('set',$maclibdir+'/'+$newcpnode,$macro)
+                cpattribute('set',$maclibdir+'/'+$newcpnode,$attr2)
+            endif
+	endif
+//	if ($when='long') then
+//	   shell('cp '+$lngfile+'1 '+$lngfile):$dum
+//	   write('file',$lngfile,'%s  0  %s  %s  Queued',$newcpnode,$1,$newsqnode)
+//	else
+//	   shell('cp '+$expfile+'1 '+$expfile):$dum
+//	   write('file',$expfile,'%s  0  %s  %s  Queued',$newcpnode,$1,$newsqnode)
+//	endif
+   endif
+//   shell('rm -f '+$expfile+'1'):$dum
+//   shell('rm -f '+$lngfile+'1'):$dum
+
+   return($newsqnode)
+"****************************************************************"

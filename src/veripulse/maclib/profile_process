@@ -1,0 +1,102 @@
+"macro profile_process"
+
+$phase='dophase'
+
+$x = 1
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+wft
+f full
+$size=16
+getparam('rfsize','Probe'):$size
+$size=$size/10
+$gammabar=(sfrq*1e6)/(234.94*h1freq)
+VPtext
+$text='Gradient calibration for the probe: '+probe_
+atext($text)
+$i=1
+repeat
+   select($i)
+   peak:$ht,cr
+   $freq[$i]=cr
+   dres(cr,.2):$width[$i]
+   $gcal=$width[$i]/($gammabar*gzlvl1*$size)
+    if $gcal < 0 then $gcal = -1.0*$gcal endif
+   if ($i=1) then $gcalpos=$gcal else $gcalneg=$gcal endif
+   $i=$i+1
+until $i > 2
+   
+abs($gcalpos-$gcalneg):$gcaldiff
+$gcalave=($gcalpos+$gcalneg)/2
+$gcaldiff=$gcaldiff/$gcalave*100
+   
+//The probe engineering spec's say the profile center frequencies should differ by less than 10% of the profile width
+$avewidth=($width[1]+$width[2])/2
+abs($freq[1]-$freq[2]):$freqdiff
+$errval=10
+//Cold probes have a spec of 5% the profile width
+$probestyle=''
+getparam('style','Probe'):$probestyle
+if ($probestyle='cold') then $errval=5 endif
+
+$freq_center_diff=($freqdiff/$avewidth)*10
+if ($freq_center_diff > $errval) then write('error','Warning: Warning! Profiles center frequencie difference relative to profile width = %.f%%, spec value = %.1f %%',$freq_center_diff,$errval) endif
+   
+//The probe engineering spec's say the difference in gcal for positive and negative gradients should be less than 2% 
+$errval=2
+if ($gcaldiff > $errval) then write('error','Warning: positive and negative gradient strength differ by more than %.1f %%, check gradient system',$errval) endif
+   
+$strgcalpos='' $strgcalneg='' $strgcalave=''
+format($gcalpos,0,5):$strgcalpos
+format($gcalneg,0,5):$strgcalneg
+format($gcalave,0,5):$strgcalave
+$atext = ''+$strgcalpos+' G/cm/dac unit (+ve polarity gradient)'
+atext($atext)
+$atext = ''+$strgcalneg+' G/cm/dac unit (-ve polarity gradient)'
+atext($atext)
+setparams('gcal',$strgcalave,'Probe')
+setparams('gradient','y','Probe')
+   
+$gradtype3=''
+substr(gradtype,3,1):$gradtype3
+if ($gradtype3 = 'l') then
+  $gzlvlmax=2047
+else
+  $gzlvlmax=32767
+endif
+   
+//Write out results
+$maxgrad=$gcalave*$gzlvlmax
+$targetvalue=0 $targetvalues='' $maxgrads=''
+$IPteststatus='FAIL'
+
+probeidez('lookup'):$has_probeid,$probeid
+VPgettarget('profile',$gradtype3):$targetvalue
+	
+if ($maxgrad >= $targetvalue) then $IPteststatus='PASS' endif
+format($targetvalue,1,1):$targetvalues
+format($maxgrad,1,1):$maxgrads
+$atext='Maximum gradient strength = '+$maxgrads+' G/cm'
+atext($atext)
+$atext='Target: >= '+$targetvalues+' G/cm'
+atext($atext)
+$atext='Test status: '+$IPteststatus
+atext($atext)
+$IPteststatus=$IPteststatus
+dss
+dscale
+
+write('line3','Max. gradient strength: %.1f G/cm  Target > %g G/cm - %s',$maxgrad,$targetvalue,$IPteststatus):CalibrationResults
+darray('CalibrationResults')
+
+execprocess='wft f full vsadj dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($maxgrad):$res
+
+return($maxgrad,$targetvalue)

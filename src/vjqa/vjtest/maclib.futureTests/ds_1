@@ -1,0 +1,163 @@
+" Copyright (c) Agilent Technologies  All Rights Reserved. "
+"  ********************************  "
+"  ****  M E N U :   D S _ 1   ****  "
+"  ********************************  "
+
+graphis:$vjmgd
+if ($vjmgd <> 'ds') then
+  if (lastmenu<>'') then
+    menu(lastmenu) lastmenu=''
+  else
+    menu('display_1D')
+  endif
+else
+
+mlabel=''
+mstring=''
+micon=''
+
+$vjm=1
+if arraydim>1.5 then
+  mlabel[$vjm]='Increment'
+  mstring[$vjm]='select:$vjms $vjms=$vjms+1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1
+elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
+  micon[$vjm]='nextfid.gif'
+  $vjm=$vjm+1
+  mlabel[$vjm]='Decrement'
+  mstring[$vjm]='select:$vjms $vjms=$vjms-1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1
+elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
+  micon[$vjm]='prevfid.gif'
+  $vjm=$vjm+1
+endif
+
+if (crmode = 'b') then
+  mlabel[$vjm]='One Cursor'
+  micon[$vjm]='1D1cur.gif'
+else
+  mlabel[$vjm]='Two Cursors'
+  micon[$vjm]='1D2cur.gif'
+endif
+mstring[$vjm]='ds(`toggle`)'
+
+$vjm=$vjm+1
+mlabel[$vjm]='Show Full Spectrum'
+micon[$vjm]='1Dfull.gif'
+mstring[$vjm]='mfaction(\'mfzoom\',0)' 
+
+$vjm=$vjm+1
+mlabel[$vjm]='Reset to Full Display'
+micon[$vjm]='FullScale.gif'
+mstring[$vjm]='mfaction(\'fullzoom\')'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Zoom in'
+micon[$vjm]='1Dexpand.gif'
+mstring[$vjm]='mfaction(\'mfzoom\',1)' 
+
+$vjm=$vjm+1
+mlabel[$vjm]='Zoom out'
+micon[$vjm]='1Dzoomout.gif'
+mstring[$vjm]='mfaction(\'mfzoom\',-1)' 
+
+$vjm=$vjm+1
+mlabel[$vjm]='Zoom mode'
+mstring[$vjm]='setButtonMode(2)' 
+micon[$vjm]='ZoomMode.gif'
+
+$vjm=$vjm+1
+if(appmode = 'imaging') then
+  mlabel[$vjm]='Pan & Stretch Mode'
+  mstring[$vjm]='ds(`spwp`)'
+  micon[$vjm]='1Dspwp.gif'
+else
+  mlabel[$vjm]='Pan & Stretch Mode'
+  mstring[$vjm]='setButtonMode(3)'
+  micon[$vjm]='1Dspwp.gif'
+endif
+
+$vjm=$vjm+1
+if (intmod = 'full') then
+  mlabel[$vjm]='Hide Integral'
+  mstring[$vjm]='intmod=`off`'
+  micon[$vjm]='1Dnoint.gif'
+  $vjm=$vjm+1
+  mlabel[$vjm]='Delete All Integral Regions'
+  mstring[$vjm]='cz'
+  micon[$vjm]='1Dintclear.gif'
+  $vjm=$vjm+1
+  mlabel[$vjm]='Integral Lvl/Tlt'
+  mstring[$vjm]='ds(`lvltlt`)'
+  micon[$vjm]='1Dintlvltlt.gif'
+else
+  if (intmod = 'partial') then
+    mlabel[$vjm]='Show Full Integral'
+    mstring[$vjm]='intmod=`full`'
+    micon[$vjm]='1Dfullint.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm]='Define Integral Regions'
+    mstring[$vjm]='ds(`z`)'
+    micon[$vjm]='1Dintresets.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm]='Integral Lvl/Tlt'
+    mstring[$vjm]='ds(`lvltlt`)'
+    micon[$vjm]='1Dintlvltlt.gif'
+  else
+    mlabel[$vjm]='Show Integral Regions'
+    mstring[$vjm]='intmod=`partial`'
+    micon[$vjm]='1Dpartint.gif'
+  endif
+endif
+
+$vjm=$vjm+1
+mlabel[$vjm]='Show/Hide Axis'
+mstring[$vjm]='ds(`dscale`)'
+micon[$vjm]='1Dscale.gif'
+
+if(appmode = 'imaging') then
+
+$vjm=$vjm+1
+mlabel[$vjm]='Measure Linewidth'
+mstring[$vjm]='nl dres'
+micon[$vjm]='i_nldres.gif'
+
+$vjm=$vjm+1
+mlabel[$vjm]='Frequency at Cursor'
+mstring[$vjm]='nl offset'
+micon[$vjm]='i_offset.gif'
+
+
+$vjm=$vjm+1
+mlabel[$vjm]='Magnitude/Phase Mode'
+mstring[$vjm]='if(dmg=`ph`) then av else ph endif repaint'
+micon[$vjm]='i_avph.gif'
+
+endif
+
+$vjm=$vjm+1
+mlabel[$vjm]='Show/Hide Threshhold'
+mstring[$vjm]='ds(`thresh`)'
+micon[$vjm]='1Dth.gif'
+
+
+if (dmg='ph') or (dmg1='ph1') then
+  $vjm=$vjm+1
+  mlabel[$vjm]='Phase Mode'
+  mstring[$vjm]='ds(`phase`)'
+  micon[$vjm]='1Dphase.gif'
+endif
+
+$vjm=$vjm+1
+mlabel[$vjm]='Redraw'
+mstring[$vjm]='ds'
+micon[$vjm]='recycle.gif'
+
+$vjm=$vjm+1
+mlabel[$vjm]='Return'
+micon[$vjm]='return.gif'
+if (lastmenu<>'') then
+     mstring[$vjm]='menu(lastmenu) lastmenu=``'
+else
+     mstring[$vjm]='menu(`display_1D`)'
+endif
+
+endif

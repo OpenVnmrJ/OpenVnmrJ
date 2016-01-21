@@ -1,0 +1,88 @@
+
+*********************************************************
+*							*
+*    paros:	create additional parameters		*
+*		used by oversampling			*
+*    moveossw:  set oversampling parameters to select   *
+*               a cursor selected spectral region       *
+*							*
+*********************************************************
+
+Two types of Digital Signal Processing (DSP) are provided for the acquisition
+of data.  One is "real-time" DSP, which uses a special purpose
+computer in the acquisition system.  The second is the "inline" DSP,
+in which the digital filtering and downsampling are done on the Sun
+immediately after each oversampled FID is transferred from the console.
+Only the digital filtered and downsampled data is written to disk.
+This inline DSP also allows selective detection a region of a
+spectrum. A third type of DSP is provided which allows post-processing
+of data.  See manual for pards for details.
+
+The selection of "real-time" or "inline" DSP is selected with the global
+parameter dsp.  The dsp parameter can be set to 'r' for real-time or 'i'
+for inline.  If the parameter is not present or is set to 'n', then DSP
+is disabled.  Note that dsp should not be set to 'r' unless the DSP hardware
+is actually present in the system.  If either real-time or inline DSP
+is active, then the filter bandwidth parameter (fb) is set to Not Active.
+
+To use this software, "sw" and "at" should be set to the values desired
+for the final spectrum.  The paros macro creates all of the necessary
+parameters.  It is also called when addpar('oversamp') is typed.
+It is also called automatically if dsp='i' or dsp='r'.
+
+If dsp='i', setting the "oversamp" parameter to a value greater than 1
+will cause the next experiment run to be oversampled, digital filtered and
+downsampled back to the selected sw prior to saving it to disk.
+
+After acquiring a data set without digital filtering, the moveossw macro can be
+used to set oslsfrq and sw to appropriate values for oversampling and
+digitally filtering to select the region of the spectrum selected by
+the cursors in the ds display.  oversamp must be manually set to an
+appropriate value (set "oversamp" above).
+
+The parameters created by paros are the following:
+
+oversamp:
+
+This parameter specifies the oversampling factor for the acquisition.
+np*oversamp data points are acquired at a rate of sw*oversamp.  Once
+the data has been transferred to the Sun computer, it is digitally filtered
+and downsampled to give np points and a spectral width of sw.  sw*oversamp
+must be less than or equal to 100 kHz and np*oversamp must be less than
+512k.  Oversampling is also limited to be less than or equal to 20.
+Setting oversamp to 'n' will cause normal acquisition to be
+done without digital filtering.
+
+oscoef:
+
+This parameter specifies the number of coefficients used in the digital
+filter.  For the inline DSP, the default is 32 times the oversampling
+factor plus 1.  For the real-time DSP, the number of coefficients is
+not adjustable but is determined by the hardware.  A larger number of
+coefficients will give a filter with sharper cutoffs, and a smaller
+number of coefficients will give a filter with more gradual cutoffs.
+oscoef does not need to be changed as oversamp is changed, as it is
+automatically adjusted by Vnmr to give filter cutoffs which are the
+same regardless of the value of oversamp.
+
+oslsfrq:
+
+This parameter is used to select a bandpass filter that is not centered
+about the transmitter frequency.  oslsfrq is specified in Hz and works
+much like lsfrq.  A positive value of oslsfrq will select a region upfield
+from the transmitter frequency and a negative value will select a downfield
+region.
+
+osfb:
+
+This parameter specifies the bandwidth of the digital filter that is used.
+If osfb='n' it defaults to sw/2.  A smaller value will reject frequencies
+at the edges of the spectrum, and a larger value will alias noise and
+signals at frequencies outside of +/- sw/2.
+
+filtfile:
+
+This parameter specifies the filename of a file of FIR digital filter
+coefficients.  The file must be in the user's vnmrsys/filtlib directory.
+The filter coefficient file is a text file with one real filter
+coefficient per line.  Complex filters are not currently supported.

@@ -1,0 +1,59 @@
+"macro BPmakestC50_3r"
+"BPmakestC50_3r - makes sech-amplitude/tanh-frequency swept pulse with 3 u sec   "
+"		 steps, 50 ppm bandwidth, and 3.0 millisec pulselength         "
+" 	           to invert all C13 nuclei to the right of 45 ppm	       "
+"           In macro, units are kHz for bandwidth and ms for pulselength       "
+
+"         		R. Bendall, JCU, Jan 1998		               "
+
+"  The pulse is designed to flip all C13 nuclei from the CO region to 0 ppm    "
+"  The output is a file in your personal shapelib named stC50_3r.RF	       "
+
+"From Bendall, JMR A116, 46 (1995) and STUD papers:			       "
+"   Using Pulsetool RFmax was determined for average -0.995 inversion across   "
+"   the effecive bandwidth for Tp = 3.0 ms.				       "
+
+"   Using these values, bwdth/(RFmax)^2 = 0.99   at bwdth = 15 kHz             "
+"                                       = 1.07   at bwdth = 7.5  kHz.          "
+"   		So use 0.99 where bwdth and RFmax are in kHz	  	       "
+
+"   For a 3.0ms pulse length, inversion changes from -0.8 to 0.8 in 810 Hz     "
+"   for bwdth=7.5kHz.  Slightly better selectivity at lower bwdth, slightly    "
+"   worse at higher in absolute frequency units (Hz not ppm), so							       "
+"			 Tp = $t = 3.0 ms  below. 			       "
+"      effective bandwidth(for -0.8 inversion) = bwdth - 0.75 kHz              "
+"                           effective bandwidth = 7.5*sfrq/600                 "
+"      so,                bwdth = (7.5*sfrq/600) + 0.75 = $b below             "
+
+"   At 600 MHz place 0.8 retention (ie 10% inversion) at 50ppm.  Thus bwdth/2  "
+"   will be 430 Hz to the right and the middle of the inverted spectrum will be"
+"   relative to dof at 56ppm and will be at           	                       "
+"                    (-56 + 50)*dfrq - 430 - bwdth*1000/2                      "
+"   This is used to BPconvolute the pulse off resonance by $freq in Hz below     "
+
+"   In pulse sequences, bwdth/(RFmax)^2 = 0.99 so 			       "
+"			   RFmax = sqrt[(7.5*sfrq/600+0.75)/0.99] in kHz       "
+
+$a = 5.2982937*2.0    "gives an amplitude threshold of 0.01, ie sech($a/2)=0.01"
+
+$file=userdir+'/shapelib/temp.RF'
+shell('rm -f',$file):$dummy
+write('line3','Writing data to %s...',$file)
+write('reset',$file)
+
+$i=1   repeat
+$x=$a*(-0.5 + ($i-1)/(1000-1))   exp($x):$y   $z=($y + (1/$y))/2.0  ln($z):$w
+$amp = 1023.0/$z     $amp = trunc($amp + 0.5)
+
+$b = ((7.5*sfrq/600.0)+0.75)   $t = 3.0   "bandwidth and pulselength as above"
+
+$p = 360.0*$b*$t*$w/(2.0*$a)    $phase = (trunc(2.0*$p + 0.5))/2.0
+write('file',$file,'%5.1f\t%6.1f\t1.0',$phase,$amp)
+$i=$i+1   until $i>1000
+
+$freq = (-56.0 + 50.0)*dfrq - 430 - $b*1000.0/2.0
+BPconvolute('temp','stC50_3r',3000,$freq)
+
+BPmoveshape('stC50_3r.RF')
+shell('rm -f',$file):$dummy
+write('line3','The SLP sech/tanh pulse "shapelib/stC50_3r.RF" has been created')

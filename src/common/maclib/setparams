@@ -1,0 +1,78 @@
+"macro setparams"
+"***************************************************************************"
+"*									   *"
+"*	setparams    -	Retrieves key parameter values from the file	   *"
+"*			userdir + '/probes' or systemdir + '/probes',	   *"
+"*                      and sets those values in the current experiment.   *"
+"*			This macro is called by pulse sequence setup       *"
+"*			macros, and uses Key Word search to find values.   *"
+"*									   *"
+"***************************************************************************"
+
+
+if probe = '' then
+  write('error','%s: probe parameter is not set',$0)
+  return
+endif
+$param = ''
+
+getProbePath(probe,'alert'):$e,$file,$rw
+if ($rw=0) then return endif
+$pad=''
+$date=''
+$value=''
+$ret=''
+$olddate=''
+shell('date +%d-%b-%Y-%T'):$date
+
+if ($# < 2) then
+  write('error','usage: %s(parameter, value <, nucleus> )',$0)
+  return
+else
+  $param = $1 $value = $2
+endif
+
+if ($# > 2)
+  then $nuc = $3
+  else $nuc = tn
+endif
+
+$param = $nuc + $param
+$tndate = $nuc + 'date'
+
+  $attr='' $val=''
+  readfile($file,'$attr','$val','','local'):$size
+  teststr('$attr',$param,'local'):$findpar
+  teststr('$attr',$tndate,'local'):$finddate
+
+  if not ($findpar) then
+    write('error','Could not find parameter %s in file %s',$1,$file)
+    return
+  else
+    $ret = $val[$findpar]
+    $val[$findpar] = $value
+  endif
+
+  if not ($finddate) then
+    write('error','Could not find datestamp %s in file %s',$tndate,$file)
+    return
+  else
+    $olddate = $val[$finddate]
+    $val[$finddate] = $date
+  endif
+
+  $tfile=userdir+'/persistence/probe_tmpset'
+  write('reset',$tfile)
+  $i=1 $isdate=0
+  repeat
+    strstr($attr[$i],'date'):$isdate
+    if ($isdate) then
+      write('file',$tfile,'%-17s %s\n',$attr[$i],$val[$i])
+    else
+      write('file',$tfile,'%-17s %s',$attr[$i],$val[$i])
+    endif
+    $i=$i+1
+  until ($i > $size)
+  mv($tfile,$file)
+
+return($ret,$olddate)

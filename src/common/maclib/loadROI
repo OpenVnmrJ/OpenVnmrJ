@@ -1,0 +1,21 @@
+"macro loadROI"
+
+if($# < 0.5) then return endif
+
+substr($1,1,1):$s1
+substr(aipROIpath,1,1):$s2
+if($s1 <> '/' and $s2 = '/') then
+   $path = aipROIpath +'/'+ $1
+elseif($s1 <> '/') then
+   $path = curexp +'/ROIs/'+ $1
+else
+   $path = $1
+endif
+
+exists($path,'file'):$e
+if $e > 0.5 then
+  aipLoadRois($path)
+else
+  write('line3','cannot find ROI file: %s', $path)
+endif
+

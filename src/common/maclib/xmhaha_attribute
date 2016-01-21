@@ -1,0 +1,117 @@
+"macro xmhaha_attribute"
+"*******************************************************************"
+
+create('TextFileXml','string','global',''):$dum
+substr($1,1):$1
+$afile=cursqexp+'/CurrentAttribute'
+if ($1='reset') then
+    rm('-f',$afile):$dum
+    TextFileXml=''
+    return
+endif
+
+$status='' $title='' $data=''
+xmgetatts($1,'status','title','data'):$status,$title,$data
+
+$stat='' format($status,'lower'):$stat
+write('reset',$afile)
+
+strstr($stat,'queue'):$q
+if ($q) then $stat='queued' endif
+$dir='' $fid='' $adir='' $study=''
+
+is_submitmode:$submit
+if ($submit) then
+    $adir=archivedir
+    $study=sample
+    $macdir=cursqexp+'/macdir'
+    $path=cursqexp
+else
+    substr(file,'dirname'):$macdir
+    substr($macdir,'dirname'):$adir,$study
+    $macdir=$macdir+'/dirinfo/macdir'
+    $path=$macdir
+endif
+
+$substat=''
+
+if (($stat='queued') or 
+    ($stat='ready') or
+    ($stat='active') or
+    ($stat='executing') or
+    ($stat='customized')) then
+
+    $cpnode='' $when=''
+    getcpnode('rev',$path,$1):$cpnode,$when
+    if ($submit) and ($when='long') then
+	$macdir=$macdir+'long'
+    endif
+    if ($when='long') then $substat=' (night)' endif
+    if ($stat='queued') or ($stat='ready') or ($stat='customized') then
+	write('file',$afile,'Status \t: Queued%s',$substat)
+    else
+	write('file',$afile,'Status \t: Active')
+    endif
+    if ($adir<>'') then
+    	write('file',$afile,'ArchiveDir \t: %s',$adir)
+    endif
+    if ($study='') then
+	write('file',$afile,'SampleName \t: %s',samplename)
+    else
+        write('file',$afile,'StudyDir \t: %s',$study)
+    endif
+    $macro=''
+    cpattribute('get',$macdir+'/'+$cpnode,'SetupMacro'):$macro
+    if ($macro='') then
+    	strstr($cpnode,'_','last'):$ret,$macro
+    	if ($ret=0) then $macro=$cpnode endif
+    endif
+    write('file',$afile,'Setup Macro \t: %s',$macro)
+
+    exists($macdir+'/CMDnodes','file'):$cmdfileex
+    if ($cmdfileex) then
+	$cs1='' $cs2=''
+	readfile($macdir+'/CMDnodes','$cs1','$cs2','','local')
+	teststr('$cs1',$cpnode,'local'):$ok
+	if ($ok) then
+	    write('file',$afile,'\t  (No acquisition - CMD protocol)')
+	endif
+    endif
+    write('file',$afile,'')
+
+    strstr($macro,'setupComposit'):$isstudy
+    if ($isstudy) then
+	substr($macro,2,'delimiter','(\','):$study
+	substr($macro,3,'delimiter','(\','):$swhen
+	xmhaha_wrattr('study',$afile,$cpnode,$study,$swhen,$macdir)
+    else
+	xmhaha_wrattr('exp',$afile,$cpnode,'',$macdir)
+    endif
+
+else
+
+    if ($data<>'') then
+    	substr($data,'dirname'):$dir,$fid
+    	$scout=0 $n1='' $n2=''
+    	strstr($data,'/scoutfids/'):$scout,$n1,$n2
+    	if ($scout) then $substat=' (scout fid)' $dir=$n1 endif
+    	substr($dir,'dirname'):$adir,$study
+    endif
+    write('file',$afile,'Status \t: %s%s',$status,$substat)
+    write('file',$afile,'ArchiveDir \t: %s',$adir)
+    write('file',$afile,'StudyDir \t: %s',$study)
+    write('file',$afile,'FidName \t: %s',$fid)
+
+endif
+
+TextFileXml=cursqexp+'/CurrentAttribute'
+$xml='TextFileXml.xml'
+    $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        \'file:'+$xml+'\',
+        \'rebuild:yes\',
+        \'pnewupdate:true\',
+        \'ok:xmhaha_attribute(`reset`)\',
+        \'cancel:xmhaha_attribute(`reset`)\',
+        \'title:'+$title+'\')'
+    exec($vjcmd)
+

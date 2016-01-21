@@ -1,0 +1,34 @@
+"macro decctool_purge"
+clear
+$filename=''
+$filename=$1
+length($filename):$l
+$i=1 $j=$l+10
+$chr=''
+while ($i<=$l) do
+   substr($filename,$i,1):$chr
+   if ($chr='.') then $j=$i endif
+   $i=$i+1
+endwhile
+if ($j<=$l) then
+   substr($filename,1,$j-1):$filename
+endif
+$version='1'
+if ($j<$l) then
+   substr($1,$j+1,$l):$version
+endif
+write('line3','file=`%s`, version=`%s`',$filename,$version)
+
+$i=1
+$cnt=''
+$tstfile=systemdir+'/imaging/decclib/'+$filename+'.'
+repeat
+  format($i,1,0):$cnt
+  exists($tstfile+$cnt,'file'):$e
+  if ($e > 0.5) then
+     rm($tstfile+$cnt)
+  endif
+  $i=$i+1
+until ($cnt=$version)
+$filename=$filename+'.'+$cnt
+

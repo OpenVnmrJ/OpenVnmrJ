@@ -1,0 +1,105 @@
+"macro xmaddreq"
+"Add required nodes, if needed"
+
+if $#<0.5 then
+  return
+endif
+
+$arg='' $arg=$1
+$snode=''
+if $#>1.5 then $snode=$2 endif
+
+xm1('studydir'):$sdir
+$end='q1W2e3R4t5Y6'
+$arg=$arg+' '+$end
+$attr='' $val='' $val2='' $qsize=0
+$file=$sdir+'/enterSQ'
+exists($file,'file'):$e
+if $e>0.5 then
+  readfile($file,'$attr','$val','','local'):$qsize
+  $i=0 $vtmp=''
+  repeat
+    $i=$i+1
+"   substr($val[$i],1):$val2[$i]"
+    xmgetatts($attr[$i],'exp'):$vtmp
+    $val2[$i]=$vtmp
+  until ($i>=$qsize)
+endif
+
+"Do not use enterSQ values, except for node order.  Read prop files."
+
+$word='' $req=''
+$j=0 $rsize=0
+repeat
+  $j=$j+1
+  substr($arg,$j):$word
+  if $word<>$end then
+    $req[$j]=$word
+    $rsize=$j
+  endif
+until ($j>1000 or $word=$end)
+
+"if multiple required, only add node if neither exists, and add last node"
+"i.e. PRESAT PROTON, if neither found add PROTON"
+"if PRESAT preference set, add PRESAT??"
+"PRESAT exp stored as PROTON, but does it help?"
+"search from bottom up"
+
+"how does it handle multiple nodes in a composite, each with a required?"
+
+$found=0 $i=$qsize+1
+if ($qsize>0.5 and $rsize>0.5) then
+  if ($snode<>'null' and $snode<>'') then
+    repeat
+      $i=$i-1
+      if ($snode=$attr[$i]) then
+        $found=1
+        if ($val2[$i]='parent') then
+          $i=$i+1
+        endif
+      endif
+    until ($i<=1 or $found>0.5)
+    if $found<0.5 then $i=$qsize endif
+    $i=$i+1
+  endif
+  $found=0
+  repeat
+    $i=$i-1
+    $j=0
+    repeat
+      $j=$j+1
+      if ($req[$j]=$val2[$i]) then
+        $found=2
+      endif
+    until ($j>=$rsize or $found>0.5)
+  until ($i<=1 or $found>0.5)
+endif
+
+$node=''
+if ($rsize>0.5) then
+  if ($found<1.5) then
+"   if $snode<>'' then ... "
+    xmmakenode('xml',$req[$rsize]+'.xml',$snode,'nowritesq'):$node
+    $vtmp=$node
+  else
+    xmgetatts($attr[$i],'id'):$vtmp
+  endif
+  strstr($vtmp,studyid+'_','last'):$pos,$s1,$s2
+  if ($pos>0.5) then $vtmp=$s2 endif
+  rights('addminsw'):$addminsw
+  if (($addminsw) and $req[$rsize]='Proton' and traymax<>1) then "add minsw"
+    if ($vtmp=actionid) then
+      Hprescan[1]='auto' xmHprescan('setupminsw')
+    endif
+    $dff=$sdir+'/info/'+$vtmp+'/diffmacro'
+    exists($dff,'file'):$e
+    $nret=0
+    if $e>0.5 then
+      lookup('mfile',$dff,'delimiter',' \n\r\t','setvalue(\'Hprescan\',\'auto\',1)','read'):$js,$nret
+    endif
+    if ($e<0.5 or $nret<0.5) then
+      write('file',$dff,'setvalue(\'Hprescan\',\'auto\',1) xmHprescan(\'setupminsw\')')
+    endif
+  endif
+endif
+return($node)

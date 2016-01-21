@@ -1,0 +1,68 @@
+"macro sethtnifn1"
+// set ni, fn1 from htfrq1 to set up Hadamard expt
+// usually called from other macros, not from the command line
+
+exists('sw1','parameter'):$e
+if $e<0.5 then
+  write('error','%s: 2D parameters do not exist',$0)
+  return
+endif
+
+exists('htfrq1','parameter'):$e
+if $e<0.5 then
+  write('error','%s: htfrq1 does not exist',$0)
+  return
+endif
+
+$size=size('htfrq1')
+on('htfrq1'):$on
+if ($size<1.5 and $on<0.5) then
+  write('error','%s: htfrq1 not set',$0)
+  return
+endif
+
+// find min difference between frequencies
+sort('htfrq1','ru'):$order,$val
+$min = sw1
+htfrq1[1] = $val[1]
+if ($size > 1.5) then
+  $i=1
+  repeat
+    $i=$i+1
+    htfrq1[$i] = $val[$i]
+    abs(htfrq1[$i] - htfrq1[$i-1]):$dif
+    if ($dif < $min) then $min = $dif endif
+  until ($i>=$size)
+endif
+
+exists('htofs1','parameter'):$e
+if $e<0.5 then
+  create('htofs1','integer')
+  setlimit('htofs1',32767,-32767,1)
+  htofs1 = 1
+endif
+
+// set $ni to nearest Hadamard matrix size
+
+$n=$size + htofs1
+$i=1
+repeat
+  $i = $i*2
+until ($i > $n)
+ni=$i
+
+$bsize=size('htbw1')
+$htbw1=htbw1[1]
+if $htbw1<1 then $htbw1=1 endif
+$i=0
+repeat
+  $i=$i+1
+  if (htbw1[$i] < $htbw1) and (htbw1[$i] > 1) then
+    $htbw1=htbw1[$i]
+  endif
+until ($i>=$bsize)
+
+$fn1 = 2 * sw1 / $htbw1
+fn1 = $fn1
+if fn1<$fn1 then fn1=fn1*2 endif
+

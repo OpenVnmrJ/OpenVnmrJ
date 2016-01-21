@@ -1,0 +1,236 @@
+"macro checktime"
+" check if there is enough time left in dayrun or longrun "
+"           for the requested experiment                  "
+"   ARGUMENTS:                                            "
+"        $1=directory, $2=exptime, $3='day',or,'night'    "
+" Revamped 08/22/2011 - Krish				"
+" Revamped again 03/21/2015 - Krish			"
+
+
+$nightduration=0
+$dayduration=0
+$timeleft=0
+
+// Do Usage check
+    if ($# < 3) then 
+   	write('error','3 arguments expected for %s',$0)
+   	return(0,'')
+    endif
+
+// Read AUTOGLOBAL
+    $AUTOGLOBAL=$1+'.macdir/AUTOGLOBAL'
+    exists($AUTOGLOBAL,'file'):$AUTOGLOBALex
+    $attr='' $val=''
+    if ($AUTOGLOBALex) then
+    	readfile($AUTOGLOBAL,'$attr','$val','','local')
+    endif
+    $longrun='n'
+    teststr('$attr','LONGRUN:','local'):$ok
+    if ($ok) then $longrun=$val[$ok] endif
+    $when='now'
+    if ($3='priority') then $when=$3 endif
+    if ($3='night') and ($longrun='n') then
+    	$when='later'
+    endif
+
+// Don't bother if sortflg is set to no
+    $sortflg='no'
+    teststr('$attr','SORT_FLAG:','local'):$ok
+    if ($ok) then $sortflg=$val[$ok] endif
+
+    IF ($sortflg = 'no') THEN 
+    	return(1,$when) 
+    ENDIF
+// don't bother if arg2 is zero
+    if $2=0 then return(1,$when) endif
+
+// Read Queue time from TtimeQ file
+    $basename=''
+    substr($1,'basename'):$basename
+    if ($basename='enterQ') then $auto=1 else $auto=0 endif
+    $prioritytime=0 $daytime=0 $nighttime=0
+    $timeQ = $1+'.macdir/TtimeQ'
+    exists($timeQ,'file'):$timeQex
+    if ($timeQex = 0) then
+   	writeTtimeQ($1+'.macdir',0,0,0)
+    else
+    	readTtimeQ($1+'.macdir'):$prioritytime,$daytime,$nighttime
+    endif
+
+// ************Proceed
+IF ($auto) THEN
+    $remtime=0
+    currentQtime($1):$remtime
+// $remtime is the time to finish the currentQ
+
+    $daytime=$remtime+$daytime
+
+// $daytime is total time in enterQ
+// $nighttime is total time in overniteQ
+// $nighttime will be zero if the automation is now running nightQ
+
+    $addontime=0
+    $i=0 $done=0
+    while $done<1 do
+        $r1=0
+        getautoinfo('next',$i+1):$r1
+        if ($r1>=0) and ($r1<=24*3600) then
+            $done=1
+            $addontime=$addontime+$r1
+        else
+            $addontime=$addontime+(24*3600)
+        endif
+        $i=$i+1
+        if ($i > 6) then $done=1 endif
+    endwhile
+// $addontime is the time from today's midnight to the next dayQ start time
+
+    $currenttime=0
+    shell('date +%H'):$hour
+    shell('date +%M'):$minute
+    shell('date +%S'):$second
+    $currenttime=$hour*3600+$minute*60+$second
+// $currenttime is current time expressed in seconds from beginning of today
+
+    if $longrun='y' then
+	// Currently running nightQ
+	// leftovertime depends on when this automation merged and when the next one is due.
+	// Scenario 1
+	//   this is today's autodir (nightq has already merged)
+	//	leftovertime = midnight - currenttime + $addontime
+	// Scenario 2
+	//   this is a prior day's autodir and currenttime < today's dayQstart
+	//	leftovertime = today's dayQstart - currenttime
+	//   in this scenario addontime is not included
+	// Scenario 0
+	//   this is a prior day's autodir, currenttime cannot be > today's dayQstart
+	//	This scenario is already captured at submit time in foreground by
+	//	checkautodir.  We can ignore this scenario (don't allow submission)
+	// Scenario 3
+	//   this is a prior day's autodir, and there is no new autodir today
+	//	leftovertime = midnight - currenttime + $addontime
+
+        // availabletime = leftovertime - $daytime
+        //  This is true for both night or day submission (because
+        //  there is no difference between night and day
+	//  $dayduration and $nightduration are the availabletimes
+
+	$today='' shell('date +%a'):$today
+	$startday=$today
+	exists(autodir+'/enterQ.macdir/DATE_runstart','file'):$filex
+	if $filex then
+	    $startday='' $startdate=''
+	    shell('(cat '+autodir+'/enterQ.macdir/DATE_runstart | tail -n 1)'):$startdate
+//	    lookup('mfile',autodir+'/enterQ.macdir/DATE_runstart','read'):$startdate
+	    strstr($startdate,'_'):$ret,$startdate
+	    shell('(date -d '+$startdate+' +%a)'):$startday
+	    $7days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+	    teststr('$7days',$startday,'local'):$sok
+	    if not $sok then $startday=$today endif
+	endif
+	if $today=$startday then
+	    // Scenario 1
+	    $dayduration= (24*3600) - $currenttime + $addontime - $daytime
+	else
+	    getautoinfo:$daystart
+	    if $daystart < 0 or $daystart > 24*3600 then
+                // Scenario 3
+                $dayduration= (24*3600) - $currenttime + $addontime - $daytime
+	    else
+		if $currenttime < $daystart then
+		    // Scenario 2
+		    $dayduration= $daystart - $currenttime
+		else
+		    // Scenario 0
+		    $dayduration=0
+		endif
+	    endif
+	endif
+    else
+	// currently running dayQ (automerge has not happened)
+	// there are two options for dayleftovertime
+	// dayleftovertime(option1) = midnight - currenttime + $addontime
+	//    	Here the dayQ can push the nightQ out, but the total time cannot
+	//	go past the next autodir start
+	// dayleftovertime(option2) = nightqstart - currenttime
+	//	Here the dayQ is not allowed to push nightQ out. The nightQ begins
+	//	at the configured time.
+	// note: The automerge appends nightQ to enterQ; so the nightQ begin time
+	//	 need not necessarily means nightQ begins at that time.
+	// dayavailabletime(option1) = dayleftovertime - $daytime - $nighttime
+        // dayavailabletime(option2) = dayleftovertime - $daytime
+        // option1 vs option2
+        //  option1 if dayQlimit (i.e., max dayQtime per study) is imposed
+	//  option2 if no dayQlimit
+
+	// there are two scenario for nightleftovertime
+	// Scenario 1
+	//	There is no nightq merge option today
+	//	or automerge from a previous day's autodir had not happended
+	//	Either way, no night submission should be allowed
+	//	nightaviailabletime = 0
+	// Scenario 2
+        // 	nightleftovertime = midnight - nightqstart + $addontime
+	// 	nightavailabletime = nightleftovertime - $nighttime
+	getautoinfo:$daystart,$daylimit,$nightstart
+	if $nightstart=0 or $nightstart>24*3600 then
+		// Scenario 1
+	    $nightduration=0
+	else
+		// Scenario 2
+	    $nightduration= (24*3600) - $nightstart + $addontime - $nighttime
+	endif
+	if $currenttime > $nightstart then
+                // This is past nightq merge time, something is wrong because
+                // the autodir is still in dayQ.  Perhaps automerge didn't happen
+            $dayduration = 0
+	else
+	    if $daylimit then
+		// option 1
+	    	$dayduration = (24*3600) - $currenttime + $addontime - $daytime - $nighttime
+	    else
+		// option 2
+	    	$dayduration = $nightstart - $currenttime - $daytime
+	    endif
+	endif
+    endif
+
+
+// Find any pending serivce duration
+    $servicestart=0
+    $serviceduration=0
+    servicetime($1):$servicestart,$serviceduration
+    if ($servicestart<>0) and ($serviceduration<>0) then
+     	if ($currenttime > $servicestart) then
+            $serviceduration=$serviceduration- ($currenttime-$servicestart)
+     	endif
+     	if ($serviceduration<0) then $serviceduration=0 endif
+    else
+	$serviceduration=0
+    endif
+    $dayduration=$dayduration-$serviceduration
+//  Service duration recorded
+
+ELSE
+
+    $daytotal=0 $nighttotal=0
+    teststr('$attr','SHORTEXP_TOTAL:','local'):$ok
+    if ($ok) then format($val[$ok],'lower'):$daytotal endif
+    teststr('$attr','LONGEXP_TOTAL:','local'):$ok
+    if ($ok) then format($val[$ok],'lower'):$nighttotal endif
+
+    $nightduration=$nighttotal-$nighttime
+    $dayduration=$daytotal-$daytime
+
+ENDIF
+
+    if ($longrun='y') then $nightduration=$dayduration endif
+// Find leftover time if $2 is accepted
+    if ($3='night') then
+        $timeleft=$nightduration-$2
+    else
+        $timeleft=$dayduration-$2
+    endif
+    if ($timeleft<0) then $timeleft=0 endif
+    return($timeleft,$when)
+

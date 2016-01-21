@@ -1,0 +1,36 @@
+"macro readallshims"
+
+if (system <> 'spectrometer') then
+  write('error','Cannot call readhw from a datastation.')
+  return
+endif
+
+"note no z0"
+$dacname=''
+shimnames:$names,$ns
+$v = 1
+while ($v <= $ns) do
+  substr($names,$v):$dacname[$v]
+  $v = $v + 1
+endwhile
+
+"read up to 9 shims at a time"
+$ns = size('$dacname')
+$n9 = trunc($ns/9)
+$n1  = $ns - 9 * $n9
+"assume $n9 is at least 1, but $n1 may be 0"
+$v=1
+repeat
+  $read = 'readhw(\'' + $dacname[$v] + '\''
+  $var  = $dacname[$v]
+  $c=1
+  repeat
+    $c=$c+1 $v=$v+1
+    if ($c <= 9 and $v <= $ns) then
+      $read = $read + ',\'' + $dacname[$v] + '\''
+      $var  = $var  + ','   + $dacname[$v]
+      endif
+  until ($c > 9 or $v > $ns)
+  $read = $read + '):'
+  exec($read + $var)
+until ($v >= $ns)

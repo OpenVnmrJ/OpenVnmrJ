@@ -1,0 +1,247 @@
+"macro bootup"
+" ********************** "
+" **** macro bootup **** "
+" ********************** "
+if (appmode<>'imaging') then
+  exists('activestudy','parameter','global'):$e
+  if ($e) then activestudy='null' endif
+  exists('sqmode','parameter','global'):$e
+  if ($e) then sqmode='pause' endif
+  exists('printout','parameter','global'):$e
+  if ($e) then printout='printer' endif
+  exists('reqparcheck','parameter','global'):$e
+  if ($e) then reqparcheck='n' endif
+  exists('refstd','parameter','global'):$e
+  if (not $e) then setfrqCmd('setRefstd')
+  else setprotect('refstd','set',65808,'global') endif 
+
+    $operator=owner
+    if (auto='y') then
+	$operator=owner
+    	$sampleglobal=autodir+'/enterQ.macdir/currentsampleglobal'
+    	exists($sampleglobal,'file'):$sgex
+    	if ($sgex) then
+            rtv($sampleglobal,'noabort','studyowner'):$operator
+//            if ($operator<>owner) and ($operator<>'') then
+	      if ($operator<>operator) and ($operator<>'') then
+            	setvalue('operator',$operator,'global')
+		appdir('reset')
+            endif
+    	endif
+    endif
+endif
+
+if ($# < 0.5) then
+  $bg = 0
+else
+  $bg = $1
+  if ($bg = 0) then  " Foreground Vnmr "
+    $file=systemdir+'/bootup_message'
+    exists($file,'file'):$e
+    if ($e<>0) then
+      cat($file)
+    endif 
+  endif 
+
+  unit('p','ppm','reffrq')
+  unit('k','kHz',1000)
+  unit('d','ppm','reffrq1')
+  
+  "loads display and plotter colors"
+  loadcolors
+  
+  exists('login','maclib'):$e 
+  if ($e<>0) then
+    login($bg)
+  endif
+  exists('/vnmr/acqqueue/probe','file'):$e
+  if ($e > 0.5) then
+     $curprobe=probe
+     lookup('file','/vnmr/acqqueue/probe','read'):probe
+     if ($curprobe<>probe) and (appmode<>'imaging') then
+//     Don't call _probe but only a section of it
+        probeidez('set')
+        updateprobe(probe):$dum
+        exists('liqbear','parameter','global'):$e
+        if ($e>0.5) then
+           getparam('bearing','Probe'):liqbear
+        endif
+        exists('spintype','parameter','global'):$e
+        if ($e>0.5) then
+           getparam('spintype','Probe'):spintype
+        endif
+        exists('spinmax','parameter','global'):$e
+        if ($e>0.5) then
+           getparam('spinmax', 'Probe'):spinmax
+           setlimit('spin',spinmax,0,1)
+        endif
+        exists('probetype','parameter','global'):$e
+        if ($e<0.5) then
+           create('probetype','string','global')
+        endif
+        probetype='liquids'
+        getparam('probetype','Probe'):probetype
+        if ($bg < 0.5) then
+            exists('pfgmapset','maclib'):$macex
+            if ($macex) then
+               pfgmapset:$ret
+            endif
+        endif
+     endif
+  endif
+  if ($bg > 0.5) then
+    if (appmode = 'walkup') then
+       testacquire='y'
+    endif
+    dousermacro('bootup')
+    return
+  endif
+endif
+
+isvnmrj:$j
+jexp:$ex
+if ($ex=0) then
+  if (jcurwin[jviewport] > 0) then
+    unlock(jcurwin[jviewport])
+    jexp:$ex
+  endif
+endif
+if ($ex=0) then
+  write('line3','Cannot unlock workspace in viewport %d - maybe it is used by another process.',jviewport)
+  create('seqfil','string')
+  create('file','string')
+  create('arraydim','real')
+  seqfil='exp0'
+  create('layout','string')
+  setgroup('layout','display')
+  layout='exp0'
+endif
+
+if (system <> 'datastation') and ($# > 0.5) then
+  expactive:$isactive
+  if ($isactive > -1) then
+    if ($j < 0.5) then
+      acqstat
+      acqi('standby'):$e
+    else
+      locki('standby')
+    endif
+  endif
+endif
+
+if ($j > 0.5) and ($# > 0.5) then
+  mfpars
+  if (jviewport=1) then
+    setvtairlimits
+    $dir=userdir+'/persistence'
+    exists($dir,'directory'):$e
+    if ($e < 0.5) then
+      mkdir($dir)
+    endif
+    if ($bg = 0) then
+      $file=$dir+'/.talk2j'
+      exists($file,'file'):$e
+      if ($e < 0.5) then
+        write('file',$file,'%s',vnmraddr)
+        shell('chmod 666 "'+$file+'"'):$x
+      endif
+    endif
+    sqfilemenu('init')
+    showloginbox
+  endif
+endif
+
+if ($j > 0.5) then
+  probeid('bootup')
+endif
+
+// make VP 1 set activeviewport, in case activeviewport 
+// in global2, global3,... are out of date,
+if ($j > 0.5 and jviewport>1) then 
+  $vpStr='' format(jviewport,0,0):$vpStr
+  $cmd='vnmrjcmd(\`VP 1\`,\`setActiveVp('+$vpStr+')\`)'
+  exec($cmd)
+endif
+
+if ($ex = 0) then
+  menu('off')
+  dousermacro('bootup')
+  if (jviewport=1) then
+    acct('start')
+  endif 
+  return
+endif
+
+rmg3dpars "remove any old-style current ogl parameters if they exist"
+
+if ($j > 0.5) then
+
+  exists('aspMode','parameter','global'):$e
+  if($e=0) then asppars endif
+
+  exists('appmode','parameter','global'):$e
+  if ($e > 0.5) then
+    if (appmode = 'imaging') then
+      sqpars
+      jFunc(100,0,0) // set up java-vnmrbg ogl communication
+      exists('mshowoverlap','parameter','global'):$e2
+      if ($e2 < 0.5) then
+	    mmpars
+      endif
+      
+      exists('aipOverlayThk','parameter','global'):$e
+      exists('aipMaxImages','parameter','global'):$e2
+      exists('showObliquePlanesPanel','parameter','global'):$e3
+      exists('aipMoviePath','parameter','global'):$e4
+      if($e4 < 0.5 or $e2 < 0.5 or $e3 < 0.5 or $e < 0.5 or size('aipDisplay') < 3) then
+        aippars csiInit
+      endif
+      if(jviewport>2) then
+        aipDisplayMode=3
+      else
+        aipDisplayMode=1
+      endif
+      aipVsFunctionFile = userdir+'/persistence/VjCltFunction' 
+      aipMode=1
+
+      vnmrjcmd('SQ ignoreInactiveVp 0')
+
+    else
+      exists('g3dversion','parameter','global'):$e
+      if ($e > 0.5) then
+        jFunc(100,0,0)   // set up java-vnmrbg ogl communication if global exists
+      endif  
+      cqpars
+    endif
+    if ($# > 0.5) then
+      if (appmode='imaging') then
+        exists('sqdir','parameter','global'):$e
+        if ($e>0.5 and jviewport=1) then
+          activestudy='null'
+          exists(sqdir+'/study.xml','file'):$e
+          if ($e > 0.5) then
+            xm1('read "'+sqdir+'/study.xml"')
+          endif
+        endif
+        exists('copyid','parameter','global'):$x
+        if $x>0.5 then copyid='null','null' endif
+      elseif (appmode <> 'walkup') then
+        activestudy='null'
+      endif
+    endif
+    if (appmode='') then
+      appmode='walkup'
+      writeparam(userdir+'/global','appmode','global','add')
+    endif
+    if (appmode = 'imaging') then
+      bootimaging
+    else
+      bootwalkup
+    endif
+  endif
+endif
+if (jviewport=1) then
+  acct('start')
+endif 
+menu('main')
+dousermacro('bootup')

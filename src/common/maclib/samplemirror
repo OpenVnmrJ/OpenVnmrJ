@@ -1,0 +1,61 @@
+"macro samplemirror"
+if ($# < 1) then $1='' endif
+
+isFDAsystem:$p11
+if ($p11>0) then
+  datamirror('p11setup')
+endif
+
+exists('svfdir2','parameter','global'):$sd2ex
+exists('adir2tmplt','parameter'):$ad2ex
+
+if ($1='force') and ($sd2ex=0) then
+    write('error','svfdir2 is NOT in global')
+    return
+endif
+
+$mirror='no'
+getadminfo('datamirror'):$mirror
+if ($p11=0 and $mirror='no') then
+    write('error','data mirror option is turned OFF')
+    return
+endif
+
+$saveglobal=0
+if ($1='force') and (svfdir2<>'') then
+     mkpar('string','adir2tmplt','')
+     exists('adir2tmplt','parameter'):$ad2ex
+     if (adir2tmplt='') then
+	setadir2tmplt
+	$saveglobal=1
+     endif
+endif
+
+if ($ad2ex) then
+   if (adir2tmplt='') then $ad2ex=0 endif
+endif
+if ($ad2ex=0) then
+	write('error','sample mirror template is NOT set')
+	return
+endif
+
+
+isnewexp:$isnew
+if (auto='y') then $isnew=1 endif
+
+if ($isnew) then
+   $archsamp=archivedir+'/'+sample
+else
+   shell('dirname '+file):$archsamp
+endif
+
+exists($archsamp,'directory'):$direx
+if ($direx) then
+   if ($saveglobal) then 
+	savesampglobal($archsamp+'/dirinfo/macdir','adir2tmplt') 
+   endif
+   datamirror($archsamp,'sample')
+else
+   write('error','%s not found',$archsamp)
+endif
+

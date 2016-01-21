@@ -1,0 +1,143 @@
+"macro stf1ref"
+"stf1ref - shears and references F1 of STMAS spectra for" 
+"spin I = 3/2 to 9/2 for the appropriate values of m"
+"S.E Ashbrook and S Wimperis, Progress in NMR Spectroscopy"
+"45 (2004) 53-108" 
+
+"The value of 'ratio' is the shearing constant ABS(R) (Ashbrook 
+"and Wimperis). B/A = ratio where A/(A+B) is the satellite dwell
+"and B/(A+B) is the time during the acquisition to refocus the 
+"central transition coherence."
+
+"scalesw = A/(A+B)"
+"$mqscale =|(mQ - ratio)| where mQ = 1. mQ = -1 if 'R' is negative"
+"daslp = R*360.0*(sw/sw1)"
+
+exists('sw','parameter'):$sw
+exists('sw1','parameter'):$sw1
+if (($sw = 0) or ($sw1 = 0)) then 
+   write('line3','Error Abort: Check for the existence of sw and sw1')
+   abort
+endif
+if ((sw <= 0) or (sw1 <= 0)) then 
+   write('line3','Error Abort: Set sw and sw1 greater than 0.0')
+   abort
+endif
+
+exists('ival','parameter'):$ival
+if ($ival = 0) then
+   create('ival')
+   setgroup('ival','processing')
+   ival=0.5
+endif
+
+exists('mval','parameter'):$mval
+if ($mval = 0) then
+   create('mval')
+   setgroup('mval','processing')
+   mval=0.5
+endif
+
+exists('scalesw1','parameter'):$scalesw1
+if ($scalesw1 = 0) then
+   create('scalesw1')
+   setgroup('scalesw1','processing')
+   scalesw1 = 1.0
+endif
+
+exists('daslp','parameter'):$daslp
+if ($daslp = 0) then
+   create('daslp')
+   setgroup('daslp','processing')
+   daslp = 0.0
+endif
+
+if (ival = 1.5) then
+   if (mval = 1.5) then
+      scalesw1 = 9/17     "R = -8/9"
+      $mqscale = 17/9
+      daslp = -(8/9)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I = 3/2')
+   else
+      write('error','Set mval to the correct (1.5) for I = 1.5')
+   endif
+elseif (ival = 2.5) then
+   if (mval = 1.5) then
+      scalesw1 = 24/31    "R = 7/24"
+      $mqscale = 17/24
+      daslp = (7/24)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 5/2 and m = 3/2')
+   elseif  (mval = 2.5) then
+      scalesw1 = 6/17     "R = -11/6"
+      $mqscale = 17/6
+      daslp = -(11/6)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 5/2 and m = 5/2')
+   else
+      write('error','Set mval to the correct (1.5 or 2.5) for I = 2.5')
+   endif
+elseif (ival = 3.5) then
+   if (mval = 1.5) then   
+      scalesw1 = 45/73    "R = 28/45"
+      $mqscale = 17/45
+      daslp = (28/45)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 7/2 and m = 3/2')
+   elseif  (mval = 2.5) then
+      scalesw1 = 45/68    "R = -23/45"
+      $mqscale = 68/45
+      daslp = -(23/45)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 7/2 and m = 5/2')
+   elseif  (mval = 3.5) then 
+      scalesw1 = 5/17     "R = -12/5"
+      $mqscale = 17/5
+      daslp = -(12/5)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 7/2 and m = 7/2')
+   else
+      write('error','Set mval to the correct (1.5, 2.5 or 3.5) for I = 3.5')
+   endif   
+elseif (ival = 4.5) then
+   if (mval = 1.5) then
+      scalesw1 = 72/127     "R = 55/72"
+      $mqscale = 17/72
+      daslp = (55/72)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 9/2 and m = 3/2')
+   elseif  (mval = 2.5) then
+      scalesw1 = 18/19      "R = 1/18"
+      $mqscale = 17/18
+      daslp = (1/18)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 9/2 and m = 5/2')
+   elseif  (mval = 3.5) then 
+      scalesw1 = 8/17       "R = -9/8"
+      $mqscale = 17/8
+      daslp = -(9/8)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 9/2 and m = 7/2')
+   elseif  (mval = 4.5) then 
+      scalesw1 = 9/34       "R = -25/9"
+      $mqscale = 34/9
+      daslp = -(25/9)*360.0*(sw/sw1)
+      write('line3','Scaling and Referencing STMAS f1 axis for I= 9/2 and m = 9/2')
+   else
+      write('error','Set mval to the correct (1.5, 2.5, 3.5 or 4.5) for I = 4.5')
+   endif   
+else
+   write('error','Set ival to the correct spin number (1.5 to 4.5).')
+endif
+
+rfl=rfl-rfp
+$delta_rfl = rfl - sw/2
+rfp=0.0
+
+exists('refpos','parameter'):$refpos
+if ($refpos>0.0) then 
+   reffrq = sfrq + $delta_rfl/1e6
+   refpos = 0.0
+endif
+
+$delta_rfl1=$delta_rfl*$mqscale
+rfl1 = $delta_rfl1 + sw1/2
+exists('lsfrq1','parameter'):$lsfrq1
+if ($lsfrq1 > 0) then 
+   rfl1 = rfl1 + lsfrq1
+endif
+rfp1 = 0.0
+
+

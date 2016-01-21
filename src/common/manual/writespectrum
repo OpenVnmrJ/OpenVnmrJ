@@ -1,0 +1,44 @@
+****************************************************************************
+writespectrum -  write a spectrum to a binary file 
+****************************************************************************
+
+writespectrum will write out the current spectrum as a binary file.
+The file has no header information and will be written in the native
+format (little-endian on Linux; big-endian on Solaris).
+
+writespectrum will write whatever would be displayed by ds.  That is,
+is looks whether ph, av, or pwr mode is selected.  It looks at ai versus
+nm mode.  It scales the data by vs. It writes the file in the
+current experiment as specN, where N is the element number. A
+macro like
+
+wft
+$i=0
+while ($i < arraydim) do
+  $i = $i + 1
+  select($i)
+  writespectrum
+endwhile
+
+will write files spec1, spec2, spec3 ... spec{arraydim} in
+the current experiment directory.
+
+the following macro illustrates how to write the real and imaginary
+components if phase mode is selected.
+
+wft
+ph
+$i=0
+$index=''
+while ($i < arraydim) do
+  $i = $i + 1
+  format($i,0,0):$index
+  select($i)
+  writespectrum
+  mv(curexp+'/spec'+$index, curexp+'/spec'+$index+'.re') 
+  rp = rp + 90
+  writespectrum
+  mv(curexp+'/spec'+$index, curexp+'/spec'+$index+'.im') 
+  rp = rp - 90
+endwhile
+

@@ -1,0 +1,47 @@
+"macro wraptext"
+" This is a utility macro to wrap a text in "
+"  a file (arg1) such than no line has more than"
+"  a specified number of words (arg2)	"
+"  Default arg2 is 8"
+
+if ($# < 2) then $2=8 endif
+$ret=1
+$infile=$1
+$outfile=userdir+'/persistence/wraptext_tmp'
+write('reset',$outfile)
+$key=$infile
+$textlines=0
+shell('(cat '+$key+' | wc -l)'):$textlines
+$txi=1
+repeat
+    $line='' $lineswords=0
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    if ($ret>1) then
+        shell('(echo \"'+$line+'\" | wc -w)'):$linewords
+	if ($linewords>$2) then
+	   	$words='' string2array($line):$words
+		$i=1
+		repeat
+		   $i2=1
+		   repeat
+		        write('fileline',$outfile,'%s ',$words[$i])
+		        $i2=$i2+1
+		        $i=$i+1
+		   until $i2>$2 or $i>$linewords
+		   write('fileline',$outfile,'\n')
+		   if ($i < $linewords+1) then
+			write('fileline',$outfile,'    ')
+		   endif
+		until $i > $linewords
+
+	else
+	   write('file',$outfile,'%s',$line)
+	endif
+    else
+	$txi=$textlines
+    endif
+    $txi=$txi+1
+until $txi>$textlines
+shell('cp '+$outfile+' '+$infile):$dum
+shell('rm -f '+$outfile):$dum
+

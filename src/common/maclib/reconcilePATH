@@ -1,0 +1,57 @@
+"macro reconcilePATH"
+$sqnode=$1
+$title=$2
+$data=$3
+$archsamp=$4
+substr($title,1):$title
+
+if ($title='') then return($data) endif
+$iscurfid=1
+iscurrentfid($title,$archsamp):$iscurfid
+if ($iscurfid) then return($data,1) endif
+
+$fidlog=$archsamp+'/dirinfo/fidlog'
+exists($fidlog,'file'):$fileex
+if ($fileex=0) then 
+   write('error','datapath for %s not found',$title)
+   return('') 
+endif
+$psname=''
+strstr($title,'_','last'):$ret,$psname
+if ($ret=0) then $psname=$title endif
+$s1='' $s2=''
+readfile($fidlog,'$s1','$s2',$psname+':','local'):$total
+if ($total=0) then
+   write('error','datapath for %s not found',$title)
+   return('')
+endif
+
+$newdata='' $newtitle=''
+$i=$total
+repeat
+   exists($archsamp+'/'+$s2[$i]+'.REC/acqfil/procpar','file'):$fileex
+   if ($fileex=0) then
+	exists($archsamp+'/'+$s2[$i]+'.rec/acqfil/procpar','file'):$fileex
+   endif
+   if ($fileex=0) then
+	exists($archsamp+'/'+$s2[$i]+'.fid/procpar','file'):$fileex
+   endif
+   if ($fileex) then
+	$explist=''
+       	rtv($archsamp+'/'+$s2[$i],'noabort','explist'):$explist
+	if ($explist=$title) then
+	    $newdata=$archsamp+'/'+$s2[$i]
+	    $newtitle=$s2[$i]
+	    $i=1
+	endif
+   endif
+   $i=$i-1
+until $i < 1
+
+if ($newdata='') then
+   write('error','datapath for %s not found',$title)
+   return('')
+endif
+
+return($newdata,0)
+

@@ -1,0 +1,54 @@
+"macro ATc32a"
+"ATc32a" "Stability in presence of 13C decoupling  "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Stability in absence of 13C decoupling')
+   at_currenttest='stability_wo_13Cdec'
+   array('nt',20,1,0) full
+   sw=10000                " large enough to measure s/n accurately"
+   tof=at_tof tpwr=at_tpwr pw90=at_pw90 pw(90)
+   np=2048 fn=4*2048
+   dn='C13' dn2='N15'
+
+   dpwr=at_max_dpwr
+
+   vp=0 dmm='ccc'
+   dm='nnn'
+   d1=1.5
+   dm2='nnn' 
+
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc32a(`PART1`)'
+   ATcycle
+   au
+   dps
+elseif ($1='PART1') then
+
+   wft 
+   ATsvf
+   sp=3.8p wp=2p
+   ATplot:$avht,$stddev
+   r4=trunc(10*$avht)/10
+   r5=trunc(1000*$stddev)/1000
+   text('Stability in presence of 13C decoupling')
+   at_currenttest='stability_w_13Cdec'
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc32a(`PART2`)'
+   ATcycle
+   dm='nny'
+   au
+   dps
+elseif ($1='PART2') then
+
+   wft 
+   ATsvf
+   sp=3.8p wp=2p
+   ATplot:$avht,$stddev
+   r2=trunc(10*$avht)/10
+   r3=trunc(1000*$stddev)/1000
+   ATrecord('STAB90_C_c','Stability with 13C Decoupling','No_Dec',100-r5,'std_dev.',r5,'With_Dec',100-r3,'std_dev',r3)
+   write('file',autotestdir+'/REPORT','Stability w & wo 13C Decoupling: %3.2f percent & %3.2f',100-r5,100-r3)
+
+ ATnext
+endif

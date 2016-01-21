@@ -1,0 +1,256 @@
+"macro AuHdec"
+"********************************************************"
+"AuHdec - Proton decoupler Autocalibration             "
+"********************************************************"
+
+
+if ($# < 1) then $1 = 1 endif
+
+IF ($1 = 1) THEN
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+explist=$explist
+$solv=''
+format(solvent,'lower'):$solv
+tn='C13' dn='H1' 
+if ($solv='cdcl3') then
+  setsw(0,-50)
+  dof=-2.6*dfrq-1500,-2.6*dfrq+1500 j1xh=151
+else
+  setsw(75,25)
+  dof=-1.7*dfrq-1500,-1.7dfrq+1500 j1xh=142
+endif
+setddrtc:$dum
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw90
+pw=pw90
+
+ai fn=8k at=0.5 lb=1/at
+if (Console = 'mercury') then
+  gain=20
+else
+  gain=40
+endif
+wnt=''
+alock='n' wshim='n' r1=1 r3=1
+
+getparam('tpwr','H1'):$H1tpwr
+getparam('pw90','H1'):$H1pw90
+H1dpwr=$H1tpwr-20 H1dmf=trunc(1e5/$H1pw90)
+
+dm='nny' dmm='ccc' pplvl=H1pplvl vp=wc2max/2
+pp=H1pp dpwr=H1dpwr dmf=H1dmf
+d1=5 nt=8 alfa=20 rof2=10
+alfa=20 rof2=10
+wnt='wft f full aph0 vsadj(20) dssh'
+wexp='f aph0 peak:$ht,cr wp=1000 sp=cr-450 AuHdec(2)'
+alock='n' wshim='n' r1=1
+clear(2)
+au('wait','next') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+
+wft select(1) av full vsadj
+peak(sp,wp+sp):$ht,cr
+$thresh=0.9 $peaks=0
+repeat
+ th=$thresh*$ht nll:$peaks
+ $thresh=$thresh-0.1
+until ($peaks > 1 or th<0.05)
+
+if (th < 0.05) then
+  write('error','AuHdec cannot find threshold.')
+  return
+endif
+
+$delta1=llfrq[2]-llfrq[1]
+
+select(2)
+peak(sp,wp+sp):$ht,cr
+$thresh=0.9 $peaks=0
+repeat
+ th=$thresh*$ht nll:$peaks
+ $thresh=$thresh-0.1
+until ($peaks > 1 or th<0.05)
+
+if (th < 0.05) then
+  write('error','AuHdec cannot find threshold.')
+  return
+endif
+
+$delta2=llfrq[2] - llfrq[1]
+
+h2cal($delta1,$delta2,j1xh):$gammah2
+$ref_pw90=250000/$gammah2
+$ref_pwr=dpwr
+
+$req_gamma=2*12*dfrq
+$req_width=1e6/$req_gamma
+$mult = $req_width/$ref_pw90
+ln($mult):$lnmult
+$attnval = trunc(20*0.43429*$lnmult)
+exp($attnval*2.303/20):$mult
+$req_width=$ref_pw90*$mult
+$level=$ref_pwr-$attnval
+dpwr=$level dmf=1e6/$req_width dmfadj
+
+$req_width=H1pp
+$mult = $req_width/$ref_pw90
+ln($mult):$lnmult
+$attnval = trunc(20*0.43429*$lnmult) - 1
+$level=$ref_pwr-$attnval
+if ($level > 63) then
+  $attnval=$ref_pwr-63
+  $level=63
+endif
+exp($attnval*2.303/20):$mult
+$req_width=$ref_pw90*$mult
+pp=$req_width pplvl=$level
+
+$strdmf='' $strdpwr='' 
+format(dpwr,0,0):$strdpwr
+format(dmf,0,0):$strdmf
+setparams('dpwr',$strdpwr,'H1')
+setparams('dmf',$strdmf,'H1')
+exists('decwave','parameter'):$decwaveex
+if ($decwaveex) then
+  addparams('decwave','w','H1')
+endif
+Autocalsave('H1gammah2')
+
+seqfil='ppcal'
+d2=1/2/j1xh
+p1=2*pw
+dof=(dof[1]+dof[2])/2
+$ppinc=pp/18
+$ppinc=(trunc(($ppinc*20)+0.5))/20
+array('pp',7,4*$ppinc,$ppinc)
+pp=0,pp
+dm='nny' dmm='ccw'
+da r1=1 r2=1
+d1=20 
+nt=2 ss=-1 ph
+wexp='AuHdec(3)' wnt='wft(`acq`) select(1) aph0 vsadj(20) dssh'
+au('next','wait')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+clear(2)
+wft select(1) f full ph aph0 dc peak:$ht,cr
+$i=2
+$xi=1
+$pptotal=0
+
+repeat
+
+  select($i) dc peak:$ht[$i],cr
+  $ix2[$xi]=$ht[$i]/$ht[1]
+  if ($ix2[$xi] < 1) then
+    ln($ix2[$xi]):$lni[$xi] 
+    $lni[$xi]=$lni[$xi]/3 
+    exp($lni[$xi]):$x[$xi]
+    acos($x[$xi]):$rad[$xi]
+    $angle[$xi]=$rad[$xi]*360/2/3.1416
+
+    $pp[$xi]=pp[$i]*90/$angle[$xi]
+    $pptotal=$pptotal+$pp[$xi]
+    $xi=$xi+1
+  endif
+  $i=$i+1
+
+until $i > arraydim
+
+$pp=$pptotal/(arraydim-1)
+$pp=trunc($pp*20)/20 
+
+if (r2 < 2) then
+if (pp <> H1pp) then
+ if (pplvl < 63) then
+  pp=$pp
+  $factor= H1pp/pp
+  ln($factor):$lnfactor
+  $pplvldiff= trunc(20*0.43429*$lnfactor)
+  if $pplvldiff <> 0 then
+    if (pplvl - $pplvldiff) > 63 then
+     $pplvldiff=pplvl-63
+    endif
+   pplvl = pplvl - $pplvldiff
+   pp=H1pp r1=1 r2=r2+1
+   $ppinc=pp/18
+   $ppinc=(trunc(($ppinc*20)+0.5))/20
+   array('pp',7,4*$ppinc,$ppinc)
+   pp=0,pp
+   au('next','wait')
+   return
+  endif
+ endif
+endif
+endif
+
+$strpp='' $strpplvl=''
+format($pp,0,1):$strpp
+format(pplvl,0,0):$strpplvl
+$strdmf='' $strdpwr=''
+format(dpwr,0,0):$strdpwr
+format(dmf/4,0,0):$strdmf
+
+wft ds(1) vp=20 vsadj(50) dssh
+
+$file=archivedir+'/'+sample+'/C13ref'
+gettxt($file)
+
+$text='Proton Decoupler pulse calibration'
+$atext1='H1 dec. 90 deg pw: '+$strpp 
+$atext2 ='   at power level: '+$strpplvl
+$atext3='H1 dec. gammah2: '+$strdmf
+$atext4 ='   at power level: '+$strdpwr
+
+atext($text) atext($atext1) atext($atext2)
+atext($atext3) atext($atext4)
+Autocalsave('H1ppcal')
+if (pltopt = 'y') then
+  cpplss
+endif
+
+pp=$pp
+setparams('pplvl',$strpplvl,'H1')
+setparams('pp',$strpp,'H1')
+
+seqfil='s2pul'
+dm='nny' dmm='ccw' d1=20 nt=1 ss=1
+d2=0 p1=0
+$dof=dof+(8*dfrq)
+array('dof',33,$dof,-0.5*dfrq)
+vp=0 wnt='wft(`acq`) select(1) aph0 vsadj(20) dssh'
+wexp='select(17) vsadj dssh Autocalsave(`H1dec_waltz`) cpplss'
+
+$file=archivedir+'/'+sample+'/C13ref'
+gettxt($file)
+
+$text='WALTZ-16 H1 decoupling profile:'
+$atext='  +/- 8ppm from on-resonance'
+$atext0='     in 0.5ppm steps'
+$atext1='H1 dec. gammah2: '+$strdmf
+$atext2 ='   at power level: '+$strdpwr
+atext($text)
+atext($atext) atext($atext0) atext($atext1) atext($atext2)
+
+Autocalsave('H1_waltz','par')
+Autocalnext
+
+ENDIF
+
+"********************************************************"
+

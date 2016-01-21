@@ -1,0 +1,173 @@
+"macro reset_ahX"
+// reset_ahXXX: reset functions for the sequence ahYXX.c
+
+//             Create BioPack globals
+
+destroy('scalesw scalesw1'):$e
+destroy('scalesw scalesw1','processed'):$e
+if ($#=0) then 
+
+   exists('investigator','parameter','global'):$e
+   if $e < 0.5 then
+      create('investigator','string','global')
+      investigator=''
+   endif 
+
+   exists('notebook','parameter'):$e
+   if $e < 0.5 then
+      create('notebook','string','global')
+      notebook=''
+   endif 
+
+   exists('page','parameter'):$e
+   if $e < 0.5 then
+      create('page','string','global')
+      page=''
+   endif 
+
+// Create Local Sample Filename 
+
+   exists('samplefilename','parameter'):$e
+   if $e < 0.5 then
+      create('samplefilename','string')
+      page=''
+   endif 
+
+// Create Global Sample Filename 
+
+   exists('SPsamplefilename','parameter','global'):$e
+   if $e < 0.5 then
+      create('SPsamplefilename','string','global')
+      page=''
+   endif 
+
+   write('line3','Macro %s is complete\n',$0)
+endif
+
+// Define Panel Macros
+
+if ($#>0) then 
+
+//Make and Edit the Sample Module
+
+   if ($1 = 'editmod') then 
+      if ($2 = 'make') then 
+         paramgroup('params','',                'C13d1','real',-1,
+                                                'N15d1','real',-1,
+                                                'C13nt','integer',-1,
+                                                'N15nt','integer',-1,
+                                                'C13np','integer',-1,
+                                                'N15np','integer',-1,
+                                                'C13at','real',-1,
+                                                'N15at','real',-1,
+                                                'C13ni','integer',-1,
+                                                'N15ni','integer',-1)
+
+         paramgroup('params','',                'C13ni2','integer',-1,
+                                                'N15ni2','integer',-1,
+                                                'C13sw','frequency',-1,
+                                                'N15sw','frequency',-1,
+                                                'C13sw1','frequency',-1,
+                                                'N15sw1','frequency',-1,
+                                                'C13sw2','frequency',-1,
+                                                'N15sw2','frequency',-1,
+                                                'C13ss','integer',-1,
+                                                'N15ss','integer',-1)
+
+         paramgroup('params','',                'XXsampling','string','',
+                                                'XXCSextschname','string','',
+                                                'XXCSdensity','real',-1,
+                                                'XXCSdensity2','real',-1)
+
+         $paramlist='C13d1 N15d1 C13nt N15nt C13np N15np C13at N15at C13ni N15ni '
+         $paramlist=$paramlist + 'C13ni2 N15ni2 C13sw N15sw C13sw1 N15sw1 C13sw2 N15sw2 '
+         $paramlist=$paramlist +'C13ss N15ss XXsampling XXCSextschname XXCSdensity XXCSdensity2'
+      endif
+      
+      samplefilename=''
+      $e=0
+      if (SPsamplefilename<>'') then 
+         $studysamplefilename=archivedir+'/'+sample+'/dirinfo/'+SPsamplefilename
+         exists($studysamplefilename,'file'):$e
+         if ($e>0.5) then
+            if ($2='make') then
+               shell('touch '+$studysamplefilename):$dum
+               fread($studysamplefilename)
+               write('line3','Edit Sample Module \'%s\' in Study\n',SPsamplefilename)
+               writeparam($studysamplefilename,$paramlist)
+               samplefilename=SPsamplefilename
+            elseif ($2='delete') then 
+               rm($studysamplefilename):$dum 
+               write('line3','Delete Sample Module \'%s\' in Study\n',SPsamplefilename)
+               SPsamplefilename=''
+            elseif ($2='save') then 
+               $paramlist=''
+               module('list',SPsamplefilename):$paramlist 
+               write('line3','Saving Module \'%s\' of Study\n',SPsamplefilename)
+               writeparam($studysamplefilename,$paramlist,'current')
+               destroy($paramlist)
+            elseif ($2='clear') then 
+               $paramlist=''
+               module('list',SPsamplefilename):$paramlist
+               write('line3','Exit Module \'%s\' of Study \n',SPsamplefilename)
+               destroy($paramlist)
+            endif
+         else
+            $usersamplefilename=userdir+'/modules/'+SPsamplefilename
+            exists($usersamplefilename,'file'):$e
+            if ($e>0.5) then
+               if ($2='make') then
+                  shell('touch '+$usersamplefilename):$dum
+                  fread($usersamplefilename)
+                  write('line3','Edit Sample Module \'%s\' in Modules Directory\n',SPsamplefilename)
+                  writeparam($usersamplefilename,$paramlist)
+                  samplefilename=SPsamplefilename
+               elseif ($2='delete') then 
+                  rm($usersamplefilename):$dum 
+                  write('line3','Delete Sample Module \'%s\' in Modules Directory\n',SPsamplefilename)
+                  SPsamplefilename=''
+               elseif ($2='save') then 
+                  $paramlist=''
+                  module('list',SPsamplefilename):$paramlist 
+                  write('line3','Saving Module \'%s\' of Modules Directory\n',SPsamplefilename)
+                  writeparam($usersamplefilename,$paramlist,'current')
+                  destroy($paramlist)
+               elseif ($2='clear') then 
+                  $paramlist=''
+                  module('list',SPsamplefilename):$paramlist
+                  write('line3','Exit Module \'%s\' of Modules Directory\n',SPsamplefilename)
+                  destroy($paramlist)
+               endif
+            else 
+               if ($2='make') then
+                  writeparam($usersamplefilename,$paramlist)
+                  write('line3','Create Sample Module \'%s\' in Modules Directory\n',SPsamplefilename)
+               elseif ($2='delete') then
+                  write('line3','Sample Module \'%s\' not Found\n',SPsamplefilename)
+               elseif ($2='save') then 
+                  $paramlist=''
+                  module('list',SPsamplefilename):$paramlist 
+                  write('line3','Saving Module \'%s\' of Modules Directory\n',SPsamplefilename)
+                  writeparam($usersamplefilename,$paramlist,'current')
+                  destroy($paramlist)
+               elseif ($2='clear') then 
+                  $paramlist=''
+                  module('list',SPsamplefilename):$paramlist
+                  write('line3','Exit Module \'%s\' of Modules Directory\n',SPsamplefilename)
+                  destroy($paramlist)
+               endif
+            endif
+         endif
+      else
+         write('line3','Error: Enter Module Name\n')
+         return
+      endif
+      if  ($2 = 'make') then 
+         $ok = 'reset_ahXX(\'editmod\',\'save\')'
+         $cancel='reset_ahXX(\'editmod\',\'clear\')'
+         parampopup($paramlist,'enter','modal',$ok,$cancel) 
+      endif     
+   endif 
+endif
+
+

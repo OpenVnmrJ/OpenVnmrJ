@@ -1,0 +1,79 @@
+ ghnco_Jnca_3DS3.c 
+
+This pulse sequence records 1J(NCa), 2J(NCa), 2J(HNCa) and 3J(HNCa) 
+couplings in a 1H-15N-13C' correlation spectrum. 
+The spin-state-selection (referred here as S3) is provided along 
+with the TROSY selection.
+
+Set lambda to reasonable value to scale up NCa couplings in t2.
+ 
+Set 13C carrier (dof) on CO-region. Apply Ca off-resonance.
+
+Set phase=1,2 phase2=1,2,3,4 for S3-edited 3D-experiment.
+
+Set jcoca=53 and jhn=93.
+
+
+Pulse sequence: P. Permi, P. R. Rosevear and A. Annila, 
+		J. Biomol. NMR, 17, 43-54 (2000).
+                 (submitted as 3dabhnco_jnca_trosy.c)
+
+		P. Permi, "Applications for measuring scalar and residual
+		dipolar couplings in proteins",
+		Acta Universitatis Ouluensis, A354, (2000).
+		http://herkules.oulu.fi/isbn9514258223/
+
+
+For a 1D check, set ni=1, ni2=1, phase=1, phase2=1 and use wft.
+
+For a 2D experiment:
+
+CH: set ni, phase=1,2 phase2=1 and f1coef='1 0 0 0 0 0 -1 0'.
+        Use wft2da. This gives a 13CO-1HN correlation spectrum.
+
+NH: set ni2, phase=1, phase2=1,2 and f2coef='1 0 -1 0 0 1 0 1'.
+        Use wft2da('ni2'). This gives a 15N-1HN correlation spectrum.
+        The cross peaks are split by 1J(NCa) and 2J(NCa), and 2J(HNCa) 
+        and 3J(HNCa) couplings in 15N and 1H dimensions, respectively.
+
+        The coefficient lambda defines scaling factor for 1J(NCa) and 
+        2J(NCa), if set to 1, the 1(JNCa) and 2J(NCa) are scaled with 
+        respect 15N shift by a factor of two. If lambda=0, the 1J(NCa) 
+        and 2J(NCa) couplings are not scaled.
+
+For a 2D S3 experiment
+
+NH: set ni2, phase2=1,2,3,4 and phase=1.
+        Use wft2d('ni2',1,0,-1,0,1,0,-1,0,0,-1,0,-1,0,-1,0,-1) for 
+        adding data. 
+        This shows the upfield component of 2J(NCa) doublet, which 
+        is further split by 1J(NCa). The corresponding 3J(HNCa) and 
+        2J(HNCa) couplings can be measured from 1H dimension
+         
+        Use wft2d('ni2',1,0,-1,0,-1,0,1,0,0,-1,0,-1,0,1,0,1) for 
+        subtracting data.
+        This shows the downfield component of 2J(NCa) doublet, which 
+        is further split by 1J(NCa). The corresponding 3J(HNCa) and 
+        2J(HNCa) couplings can be measured from 1H dimension
+
+For a 3D S3 experiment:
+
+        Set ni, ni2, phase=1,2 phase2=1,2,3,4 and f1coef='1 0 0 0 0 0 -1 0'. 
+        
+        f2coef='1 0 -1 0 1 0 -1 0 0 1 0 1 0 1 0 1' followed by ft3d gives 
+        a three-dimensional 13CO, 15N, 1HN correlation spectrum displaying
+        the upfield component of 2J(NCa) doublet (further split by 1J(NCa)
+        in 15N dimension. The corresponding 3J(HNCa) and 2J(HNCa) couplings
+        can be measured from 1H dimension.
+
+        f2coef='1 0 -1 0 -1 0 1 0 0 1 0 1 0 -1 0 -1' followed by ft3d gives
+        a three-dimensional 13CO, 15N, 1HN correlation spectrum displaying
+        the downfield component of 2J(NCa) doublet (further split by 1J(NCa)
+        in 15N dimension. The corresponding 3J(HNCa) and 2J(HNCa) couplings
+        can be measured from 1H dimension.
+
+
+Written by P. Permi, University of Helsinki
+Modified for BioPack by G.Gray, Varian, Sept 2004
+Signs of last 4 non-zero values of f2coef changed for proper F2 dimension
+direction (P.Permi, April 2006).

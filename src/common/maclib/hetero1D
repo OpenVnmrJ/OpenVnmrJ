@@ -1,0 +1,125 @@
+"macro hetero1D"
+"***************************************************************"
+"hetero1D -                                                     "
+"       This is an apptype macro for hetero1D experiments       "
+"       Changes here will be reflected in all experiments       "
+"               with this apptype                               "
+"       All apptype macros have 4 sections                      "
+"         (setup, acquistion, process, display)                 "
+"       Changes over these default values should be done using  "
+"       pslabel_setup or wrtp feature                           "
+"       This macro is typically called by cpsetup               "
+"***************************************************************"
+
+"**********************************************"
+IF ($1 = 'setup') THEN
+	"The following are REQUIRED modules for hetero1D"
+  module('combine','presat wet gradient hetero1D',newmodules):newmodules
+  module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+if ($# < 2) then $2='' endif
+if ($2 <> $0) then $update=0 else $update=1 endif
+
+seqfil=seqfil
+if tn=dn then dn='C13' endif
+if (tn <> 'H1') and (tn <> 'F19') then dn='H1' endif
+if (numrfch > 2) then
+   if (dn2=dn) then
+        if (dn='N15') then dn2='C13' else dn2='N15' endif
+   endif
+endif
+
+setProbepars
+dm='nnn' dmm='ccg'
+if (dn='H1') then dmm='ccw' endif
+
+                "Decoupler is safely turned OFF"
+                "Individual experiments should turn them ON via"
+                "rtx or wrtp"
+
+setdecpars
+
+  "If any character in the wet or satmode parameter is set to y "
+  " wet/satmode parameter is reset to y (single character).  "
+  " They should be corrected to appropriate multicharacter value"
+  " by wrtp or pslabel_setup macro "
+
+strstr(wet,'y'):$iswet
+if ($iswet) then wet='y' else wet='n' endif
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='y' else satmode='n' endif
+  "purge cycle is set to 2.  If prgcycle of 4 is needed, it"
+  "  should be set by rtx feature for individual experiment"
+prgpw=pw90 prgcycle=2
+
+sspul='n'
+ss=4 nt=64 pw=pw90
+mult=0
+MinSW='off'
+if (dn<>'H1') and (dn<>'F19') then
+   write('error','ALERT: Decoupler Nucleus is %s !!! Are you sure?',dn)
+   if (d1 < 1) then d1=1 endif
+   at=0.15
+endif
+exists('ni','parameter'):$niex
+if ($niex) then ni=1 endif
+exists('phase','parameter'):$phex
+if ($phex) then phase=1 endif
+exists('phase2','parameter'):$ph2ex
+if ($ph2ex) then phase2=1 endif
+
+"****************************************************************************"
+"*******The following section is done only if oldapptype <> apptype **********"
+
+if ($update=0) then
+
+   if (wet='y') then satmode='n' endif
+   satdly=1 d1=1
+
+   fixgrd(10):gzlvlE
+   gtE=0.002
+   EDratio=sfrq/dfrq
+   getparam('gHratio',dn):EDratio
+
+   j1xh=146
+   if (tn='N15') then j1xh=90 endif
+   jnxh=8
+
+endif
+"****************************************************************************"
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+  "Is the following needed and/or appropriate?"
+proc='ft' fpmult='n'
+fn=np ph 
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+axis='p'
+full
+ai
+intmod='off'
+
+ENDIF
+"**********************************************"

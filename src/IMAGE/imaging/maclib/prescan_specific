@@ -1,0 +1,46 @@
+"macro prescan_specific"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_specific
+"
+" DESCRIPTION:
+"    Sequence specific prescan
+"
+"********************************************************************
+"---------------------------------------"
+" Initialize variables                  "
+"---------------------------------------"
+$macro_name    = 'prescan_specific'
+$prescan_flag  = 1                        "Prescan flag -> 1 = user prescan"
+$cur_index     = 2                        "index holding current module to be executed"
+"---------------------------------------"
+" Reset prescan parameter               "
+"---------------------------------------"
+if (prescan_control[$prescan_flag] <> 0) then
+     write('line3','- - - - - END OF PRESCAN - - - - -')
+endif     
+Prescan_AcqStatus = 0                      "Reset prescan acquisition status"
+beepon                                     "Now you can make noise again"
+prescan_log('end',$macro_name,'Finished prescan / partial prescan')
+"----------------------------------------"
+" Iniitate Sequence Specific prescan     "
+"----------------------------------------"
+on('execprescan'):$e
+if ($e > 0) then
+     exec(execprescan)
+endif
+"------------------------------------------------------------" 
+" End if this is a full prescan                              "
+"------------------------------------------------------------" 
+prescan_cleanup('remove')
+if (prescan_control[$prescan_flag] = 1) then                     "user prescan"
+     prescan_control[$cur_index]= prescan_control[$cur_index]+1	  
+     prescan_handler('exec')
+     return
+else	  
+     prescan_control[$prescan_flag] = 0
+     prescan_log('end',$macro_name,'Finished special prescan')
+     return
+endif

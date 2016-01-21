@@ -1,0 +1,80 @@
+"macro setfrq1d"
+"*********************************************************************"
+" setfrq1d - Set frequencies for spectroscopy                         "
+"                                                                     "
+" Details: setfrq1d - sets biggest signal on resonance at 4.75 ppm    "
+"          setfrq1d('local') - sets transmit frequency to cursor      "
+"          setfrq1d('rec') - sets receive frequency to cursor         "
+"          setfrq1d('ws') - sets ws frequency to cursor               "
+"                                                                     "
+"*********************************************************************"
+
+
+ create('wsrf','flag','current','n')
+if ($# = 0) then
+  setfrq1d('all')
+
+elseif ($1 = 'all') then
+
+  wexp=''
+  checkprofile //check profile flags and sw to make sure no residual voxel profile elements are present
+  //First, save experiment parameters
+
+  create('specnt','integer','current',1) specnt=nt 
+  create('specss','integer','current',1) specss=ss 
+  create('specgain','integer','current',2) specgain=gain 
+  create('arraySave','string','current','') arraySave='' arraySave=array 
+  create('specpresig','flag','current','l') specpresig=presig 
+  create('specws','flag','current','n') specws=wsrf
+
+  
+  //empty array
+  array=''
+  create('ntopt','integer','current',0)
+  if(ntopt=0) then  nt=1  endif
+  
+  //checkprofile //check profile flags and sw to make sure no residual voxel profile elements are present
+
+  
+  //parameters are set here for the freq set
+  if ((seqfil<>'isis') and (seqfil<>`special`)) then
+ 
+  ss=0
+  endif
+
+  ldrf presig='h' restol=0 roff=0 ws_delta=0 roffadjust=0 rfladjust=0 wsrf='n'  gain=2
+  
+  
+
+  wexp='im1D(`proc`) setfrq1d(`proc`) wsrf=specws nt=specnt gain=specgain ss=specss presig=specpresig     array=arraySave' 
+
+  wdone='destroy(`specnt specgain specpresig specss specws`):$ok  wexp=``'
+
+  au
+
+elseif ($1 = 'proc') then
+  peak:$h,cr 
+  offset:$loc $loc=$loc-tof 
+  restol=-$loc 
+  rl(refval*sfrq) axis='p'
+  
+  rfloffset=-$loc  //rfloffset is the localized offset from the main rfl value (Hz)=restol
+  create('specrfl','real','current',0) specrfl=rfl //save reference value for spec. scale
+
+elseif ($1 = 'local') then
+  offset:$loc $loc=$loc-tof 
+  restol=restol+roff-$loc 
+  ws_delta=ws_delta+roff-$loc 
+  roff=$loc
+
+elseif ($1 = 'rec') then
+  offset:$loc $loc=$loc-tof 
+  roffadjust=-$loc-rfloffset
+  rfladjust=-$loc-rfloffset  //rfladjust is the offset set via the cursor
+
+elseif ($1 = 'ws') then
+  nl offset:$loc $loc=$loc-tof 
+  ws_delta=$loc-roff+rfloffset
+
+endif
+

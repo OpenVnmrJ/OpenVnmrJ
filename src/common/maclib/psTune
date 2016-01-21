@@ -1,0 +1,131 @@
+"macro psTune"
+"macro psTune"
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+  if (atune='n') then return('done') endif
+  if (tn='lk') then return('done') endif
+  $dotune='no'
+  checkprotune('global'):$dotune
+  if ($dotune='no') then
+    return('done')
+  endif
+
+  "Check specific conditions"
+  $dotune='no'
+  checkprotune('local'):$dotune
+  if ($dotune='no') then
+    checkprotune('write','lasttunepar')
+    return('done')
+  endif
+
+  wdone=''
+
+  xmhaha_tune:$return
+  if ($return='n') then
+    {$0}('quit')
+    return('quit')
+  endif
+  return('doau')
+elseif ($action = 'done') or ($action = 'quit') or ($action= 'abort') then
+"*************************************************************************"
+    if (auto = 'y') then
+        delete(file)
+    endif
+
+    psCmd('rtp','current')
+    if ($action='done') then
+
+"Check to see if gradient shimming should follow"
+" protune.  This is done ONLY if protune was done"
+" because of temp change"
+        $dotune='no' $parchanges=''
+        checkprotune('local'):$dotune,$parchanges
+        $doshim=0
+"  One can construct such teststr, on other parameters, do decide"
+"  if wshim should be done after protune"
+        if ($doshim=0) and (wexp='chempackQ') then
+                teststr('$parchanges','temp','local'):$doshim1
+                teststr('$parchanges','tn','local'):$doshim2
+                teststr('$parchanges','dn','local'):$doshim3
+                if (($doshim1>0) or ($doshim2>0) or ($doshim3>0)) then
+                   $doshim=1
+		   $wshim='e'
+		   $wqacqpar=archivedir+'/'+sample+'/dirinfo/macdir/maclib_attic/walkupQacqpars'
+		   exists($wqacqpar,'file'):$fileex
+		   if ($fileex) then
+			rtv($wqacqpar,'noabort','wshim'):$wshim
+		   endif
+                   psCmd('record','wshim=\''+$wshim+'\'')
+                   write('line3','Need to reshim after probe tune')
+                endif
+        endif
+
+"*********************************************************************"
+        checkprotune('write','lasttunepar')
+    endif
+    $abortpterror='no'
+    getadminfo('abortpterror'):$abortpterror
+    if ($action = 'abort') then
+        if ($abortpterror='yes') then
+                write('error','Protune reported a Failure')
+                if (auto='y') then
+                   wexp='AutoSKIP'
+                   psCmd('record','wexp=\'AutoSKIP\'')
+                endif
+        else
+                write('line3','Protune reported a Failure')
+		if (auto='y') then
+                   $loc='' $locdir='' $when=''
+                   getlocid:$loc,$locdir,$when
+                   $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+                   write('file',$errlog,'Protune reported a Failure')
+		endif
+        endif
+        return('abort') // Return abort to psMain
+    endif
+
+  return('done')
+elseif ($action = 'reset') then
+  psCmd('set','auArgs','')
+  $ret=''
+  protune('reset'):$ret
+  psCmd('get','auArgs'):$args
+  if ($args='') then
+    if ($ret='') then
+      return('done')
+    else
+      return($ret)
+    endif
+  else
+    return('doau')
+  endif
+elseif ($action = 'nucleus') then
+  psCmd('get','nucarg'):$str
+  psCmd('set','auArgs','')
+  exec($str)
+  psCmd('get','auArgs'):$args
+  if ($args='') then
+    return('done')
+  else
+    return('doau')
+  endif
+elseif ($action = 'err') then
+  $ret=''
+  protune('error'):$ret
+  return($ret)
+else
+  write(`line3`,`'%s' method is not implemented for psTune.`,$action)
+  return('done')
+endif
+

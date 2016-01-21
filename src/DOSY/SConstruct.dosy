@@ -1,0 +1,58 @@
+#
+
+import os
+import sys
+import shutil
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+def isUbuntuVersion():
+   if os.path.exists("/etc/debian_version"):
+      value=1
+      f=open("/etc/issue",'r')
+      for line in f:
+         if (line.find("Ubuntu") > -1):
+            print line
+            break
+      f.close()
+   else:
+      value=0
+   return(value)
+
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+dosyFileList = ['contin.for',
+                'splmod.for',
+                'splmodNUG.for']
+
+fenv = Environment(FORTRANFLAGS = '-fno-f2c -ffast-math -O',
+                   FORTRAN = 'g77')
+
+if (isUbuntuVersion()==1):
+   fenv.Replace( FORTRAN='f77' )
+
+skipBuild='false'
+if ('darwin' in platform):    # Interix
+   libFile=os.path.join(os.sep,'usr','local','lib','libg2c.a')
+   if not os.path.exists(libFile):
+       skipBuild='true'
+   else:
+       LIBG2C=File(libFile)
+       fenv.Replace(  LIBS=LIBG2C )
+
+
+dosyBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir, 'options','standard','DOSY','bin')
+if not os.path.exists(dosyBinPath):
+       os.makedirs(dosyBinPath)
+for i in dosyFileList:
+       (filename, ext) = os.path.splitext(i)
+       if (skipBuild=='true'):
+           Execute(Copy(dosyBinPath, os.path.join(cwd,'macos', filename)))
+       else:
+           tempBuildObj = fenv.Program(target = filename,
+                              source = i)
+           fenv.AddPostAction(tempBuildObj,
+                     Action(Copy(dosyBinPath, os.path.join(cwd, filename))))

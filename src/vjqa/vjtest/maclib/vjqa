@@ -1,0 +1,63 @@
+"macro vjqa"
+vvLog:$file
+write('reset',$file)
+getversion
+exists('vvLog','maclib'):$e,$path
+substr($path,'dirname'):$qapath
+substr($qapath,'dirname'):$qapath
+write('reset',curexp+'/qapath')
+write('file',curexp+'/qapath','%s',$qapath)
+
+vvLog('Title','\\\\Start QA testing')
+vvLog('Date')
+vvLog('Title','')
+shell('cat '+systemdir+'/tmp/version >> '+$file+';cat'):$e
+
+vvLog('Title','Installation tests')
+testInstall
+vvLog('Title','Macro syntax tests')
+testMacro
+vvLog('Title','Parfile rtp tests')
+testParfile
+vvLog('Title','XML syntax tests')
+testXmlfile
+vvLog('Title','Experiment Menu tests')
+testExpts
+vvLog('Title','Libraries for binaries tests')
+testLdd
+vvLog('Title','Linux commands accessed by shell')
+testShellCmds
+vvLog('Title','DSSL test')
+testDssl
+vvLog('Title','DEA test')
+testDEA
+vvLog('Title','PSG tests')
+testSeqgen
+testPsggen
+testFixpsg
+readhw('status'):$e
+if ($e = 10) then
+  vvLog('Title','Panel timing tests')
+  testPanelTiming('exptime'):$time
+  testPanelTiming
+  vvCheck(`vvLog('Title','Console tests')`,$time)
+  $dur=1
+  $time=$time+$dur
+  vvCheck(`vvLog('Title','Console setup')`,$time)
+//  $time=$time+$dur
+//  vvCheck('testTemperature',31)
+//  vvCheck('testSampleDetect',40)
+//  $dur=40
+  $time=$time+$dur
+  vvCheck('testSu',$time)
+  testSu('exptime'):$dur
+  $time=$time+$dur
+  vvCheck('testHh2d',$time)
+  testHh2d('exptime'):$dur
+  $time=$time+$dur
+// testAutotest
+// testSQ
+  vvCheck('exit',$time)
+else
+  exit
+endif

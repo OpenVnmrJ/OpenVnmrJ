@@ -1,0 +1,210 @@
+#!
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+#import variables  and environment from SConstruct
+Import("*")
+
+# targets
+nvLockiTarget = 'lkstat'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+javaPath = os.path.join(cwd, os.pardir, os.pardir,
+                        '3rdParty', 'java', 'bin')
+
+## NDDS include/lib paths
+# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+print 'lkstat  NDDS_VERSION ' + boEnv['NDDS_VERSION']
+
+#NDDS include/lib paths
+# if 'nvlocki4x' in COMMAND_LINE_TARGETS:
+if boEnv['NDDS_VERSION'].startswith('4.'):      # 4.1e, 4.2d,e, etc.
+   nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
+   print 'Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this'
+   nvLockiTarget = 'lkstat4x'
+   nddsHome = os.path.join(cwd,os.pardir, os.pardir, '3rdParty','NDDS', nddsdir)
+   nddsGen = os.path.join(nddsHome, 'scripts', 'nddsgen')
+   nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux', 'bin')
+
+   #  ndds header paths
+   nddsHdrPathUnix = os.path.join(nddsHome, 'include')
+   nddsHdrPathShare = os.path.join(nddsHome, 'include', 'ndds')
+   
+   #  NDDSGEN options
+   nddsOpts = ' -language C -notypecode -replace '
+   
+   # libraries and paths
+   # nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
+   nddsLibVer = boEnv['NDDS_LIB_VERSION']
+   nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
+   LibList = [ 'nsl', 'm', 'pthread', 
+               'nddscz', 'nddscorez', 'dl' ]
+else:
+   print "NDDS 3x Version, unsupported,"
+   Exit;
+
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+ncommHdrList = [ ]
+#ncommHdrList = ['errLogLib.h',
+#                'mfileObj.h',
+#                'sockets.h']
+
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ ]
+#vnmrHdrList = ['data.h',
+#               'graphics.h',
+#               'group.h',
+#               'vnmrsys.h']
+
+nvLockIFileList = ['lkstatlistener.c']
+
+nvLockInvAcqCPath     = os.path.join(cwd, os.pardir, 'nvacq')
+#nvLockInvAcqCFileList = ['Lock_Cmd.c',
+#                         'Lock_FID.c',
+nvLockInvAcqCFileList = ['NDDS_SubFuncs.c',
+                         'NDDS_Obj.c',
+                         'sysUtils.c']
+ 
+
+nvacqPath    = os.path.join(cwd, os.pardir, 'nvacq')
+nvacqHdrList = ['NDDS_Obj.h']
+
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['ACQ_SUN.h']
+
+expProcPath    = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = [ ]
+#expProcHdrList = ['expQfuncs.h',
+#                  'shrexpinfo.h',
+#                  'shrstatinfo.h']
+vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = [ ]
+#vwacqHdrList = ['acqcmds.h',
+#                'hostAcqStructs.h']
+
+nddsPath = os.path.join(cwd, os.pardir, 'nvacq')
+
+# NDDS Build Files
+nddsFileList = [ 'Lock_Stat' ]
+nddsIdlFileList = [ 'Lock_Stat.idl' ]
+#nddsXFileList = ['Lock_Cmd.x',
+                 #'Lock_FID.x']
+# the order of the elements within the next two
+# lists must be the match
+## if 'nvlocki4x' in COMMAND_LINE_TARGETS:
+nddsCFileList = [ 'Lock_Stat.c',
+                     'Lock_StatPlugin.c',
+                     'Lock_StatSupport.c']
+
+# create some ndds files
+# nddsgen of 3x files can not be threaded so for 3x we do the nddsgen during parse time
+
+# build environments
+nvLockiCEnv = Environment(CCFLAGS    = '-O2 -m32 -g ',
+                          CPPDEFINES = ['SUN', 'X11', 'MOTIF', 'NESSIE', 'RTI_UNIX',
+                                        'LINUX', 'VNMRJ', 'BSDACQ'],
+                          LINKFLAGS  = '-g -m32 ',
+                          CPPPATH    = [cwd,
+                                        nddsHdrPathUnix,
+                                        nddsHdrPathShare])
+
+buildMethods.symLinkNow(nvLockiCEnv, cwd, nddsPath, nddsIdlFileList)
+# buildMethods.symLinkNow(nvLockiCEnv, cwd, nddsPath, nddsXFileList)
+
+# for 4x add the define -DRTI_NDDS_4x 
+## if 'nvlocki4x' in COMMAND_LINE_TARGETS:
+nvLockiCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+nvLockiCppEnv = nvLockiCEnv.Copy(CC         = 'g++',
+                                 CCFLAGS    = '-O -g -Wno-deprecated -m32',
+                                 CPPDEFINES = ['LINUX'],
+                                 LINKFLAGS  = '-O -m32 -g -Wl,-rpath,/vnmr/lib ')
+
+# define Builders
+# nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
+#                            nddsGen + ' ' + \
+#                            '-replace ' + '$SOURCES.file',
+#                   chdir  = cwd)
+# 
+# nvLockiCEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
+
+# need to always create the NDDS generated files since there is now 3x and 4x versions
+#for i in range(len(nddsXFileList)):
+#   nvLockiCEnv.NddsGen(source = [nddsXFileList[i]],
+#                       target = nddsCFileList[i])
+#
+
+nvLockiCSharedObj = nvLockiCEnv.SharedObject(nvLockIFileList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockiCSharedObj, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockiCSharedObj, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockiCSharedObj, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockiCSharedObj, cwd, vwacqPath, vwacqHdrList)
+
+nvLockInvAcqCSharedObj = nvLockiCEnv.SharedObject(nvLockInvAcqCFileList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockInvAcqCSharedObj, cwd, nvLockInvAcqCPath, nvLockInvAcqCFileList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockInvAcqCSharedObj, cwd, nvacqPath, nvacqHdrList)
+buildMethods.makeSymLinks(nvLockiCEnv, nvLockInvAcqCSharedObj, cwd, ncommPath, ncommHdrList)
+
+nvLockInvNddsCSharedObj = nvLockiCEnv.SharedObject(nddsCFileList)
+
+nvlocki = nvLockiCppEnv.Program(target  = nvLockiTarget,
+                                source  = [nvLockiCSharedObj,
+                                           nvLockInvNddsCSharedObj,
+                                           nvLockInvAcqCSharedObj],
+                                LIBPATH = [cwd,
+                                           nddsLibPath,
+                                           ncommPath],
+                                LIBS    = ['acqcomm'] + LibList)
+
+# really only need for NDDS 3x clean
+nvLockiCppEnv.Clean( nvLockiTarget, [ nddsIdlFileList, nddsCFileList, 'Lock_Stat.h' ])
+
+# build for ndds files
+# thread build only possible with NDDS vsersion 4.1e and up
+for i in nddsFileList:
+      genTargets = [os.path.join(cwd, i + '.c'),
+                 os.path.join(cwd, i + 'Plugin.c'),
+                 os.path.join(cwd, i + 'Support.c'),
+                 os.path.join(cwd, i + '.h'),
+                 os.path.join(cwd, i + 'Plugin.h'),
+                 os.path.join(cwd, i + 'Support.h')]
+      nvLockiCppEnv.Command(target = genTargets,
+                      source = os.path.join(cwd, i + '.idl'),
+                      action = os.path.join(nddsJreBin, 'java') + ' -DNDDS_RESOURCE_DIR=' + \
+                               os.path.join(nddsHome, 'resource') + \
+                               ' -DNDDSHOME=' + nddsHome + ' -jar ' + \
+                               os.path.join(nddsHome, 'class', 'rtiddsgen.jar') + \
+                               ' -language C -notypecode -replace ' + \
+                               os.path.join(cwd, i + '.idl'))
+      nvLockiCppEnv.Depends(target     = genTargets,
+                      dependency = os.path.join(cwd, i + '.idl'))
+
+
+buildMethods.makeSymLinks(nvLockiCEnv, genTargets, cwd, nddsPath, nddsIdlFileList)
+
+# define with absolute path where built files will be copied
+#vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+#if not os.path.exists(vnmrInstallPath):
+#   os.makedirs(vnmrInstallPath)
+
+#nvLockiCppEnv.AddPostAction(nvlocki,
+#                            Action(Copy(os.path.join(vnmrInstallPath,'nvlocki'), os.path.join(cwd, nvLockiTarget))))
+

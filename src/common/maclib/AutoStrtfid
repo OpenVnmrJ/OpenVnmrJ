@@ -1,0 +1,243 @@
+"macro AutoStrtfid"
+"*********************************************************"
+"  AutoStrtfid - "
+"*********************************************************"
+
+$wexp=wexp $fileex=0 $file='' $filename='' $fidname=''
+$fileline='' $name='' $archsamp='' $ext='' $defaultmacro=''
+$starttn='' $startdn='' $defdn='' $refsrc1=''
+$strtparex=0
+$DN=''
+$exp=''
+substr($1,1):$exp
+if ($# > 1) then
+   $node=$2
+else
+   $node=$exp
+endif
+
+if ($# > 2) then $maclib=$3 else
+   Automacrodir:$maclib
+endif
+
+strtpar='' wds=''
+exists($maclib+'/'+$node+'acqpars','file'):$acqex
+
+	"Find out if an explicit fid or par is specified "
+	"   as strtpar - This overrides REQexp "
+if ($acqex) then
+   $strtpar=''
+   rtv($maclib+'/'+$node+'acqpars','noabort','strtpar'):$strtpar
+   rtv($maclib+'/'+$node+'acqpars','noabort','dn'):$startdn
+   if ($strtpar<>'') then
+	strstr($strtpar,'.','last'):$ret,$s1,$s2
+	if ($ret) then
+		$name=$s1 $ext=$s2
+	else
+		$name=$strtpar "$ext='fid'"
+	endif
+        isnewexp:$new
+        if (auto='y') then $new=1 endif
+        if ($new=0) then
+           shell('dirname '+file):$archsamp
+        else
+           $archsamp=archivedir+'/'+sample
+        endif
+	if ($ext<>'') then
+            exists($archsamp+'/'+$name+'.'+$ext,'directory'):$nameex
+	else
+	    $ext='REC'
+	    exists($archsamp+'/'+$name+'.'+$ext,'directory'):$nameex
+	    if ($nameex=0) then
+		$ext='rec'
+		exists($archsamp+'/'+$name+'.'+$ext,'directory'):$nameex
+	 	if ($nameex=0) then
+		    $ext='fid'
+		    exists($archsamp+'/'+$name+'.'+$ext,'directory'):$nameex
+		endif
+	    endif
+	endif
+//  The following is legacy.  Commented out
+//        if ($nameex=0) then
+//	   $name=samplename+'-'+$name
+//	   exists($archsamp+'/'+$name+'.'+$ext,'directory'):$nameex
+//	endif
+	if ($nameex=0) then
+           $name='' $archsamp='' $ext='' strtpar=''
+	else
+	   setstrtpar('check',$archsamp+'/'+$name):strtpar
+	   $name=strtpar
+        endif
+	writeparam($maclib+'/'+$node+'acqpars','strtpar','current','add')
+   endif
+endif
+
+if ($name<>'') then
+                "An explicit fidname or parname was supplied "
+                " During customization.  Use that"
+        $fileex=1
+        $file=$archsamp+'/'+$name
+//        $fidname=$name+'.'+$ext
+	$defdn='' $refsrc1=''
+	$strtparex=1
+else
+	exists($exp,'parlib'):$pex,$ppath
+	if ($pex) then
+	   rtv($ppath,'noabort','refsource1'):$refsrc1
+	endif
+
+	"Find out if there is any customized REQexp"
+	"  This overrides the default REQexp in parlib"
+  if ($acqex) then
+	$reqexp=REQexp
+	REQexp=''
+	readparam($maclib+'/'+$node+'acqpars','REQexp')
+        $fileline=REQexp[1]
+        if ($fileline='') then
+            $acqex=0
+        endif
+        REQexp=$reqexp
+  endif
+
+  if ($acqex=0) then
+		"customized REQexp is not found"
+		"  Use default"
+	$acqt=0 $appt=''
+	getEXPinfo($exp):$fileline,$acqt,$appt,$starttn
+  endif
+
+// Bail out if REQexp is set to none
+    if ($fileline[1]='none') then return endif
+
+		"Go look for any fid's collected for the required"
+		"  Experiment.  The last value is the defaultmacro"
+		"  if no fid is found"
+
+    string2array($fileline[1]):$fileline
+    $total=size('$fileline')
+    $defaultmacro=$fileline[$total]
+    if ($fileline[1]='') then $total=0 endif
+    if ($total) then
+      $i=1
+//  First search for a fid with default dn
+      repeat
+	$name='' $archsamp='' $defdn=''
+	if ($startdn='') and ($refsrc1='dfrq') then
+	    exists($fileline[$i],'parlib'):$pex,$ppath
+	    if ($pex) then
+		rtv($ppath,'noabort','dn'):$defdn
+	    endif
+	endif
+	cplog($fileline[$i],'last','checkdn',$defdn):$name,$archsamp
+// The cplog above already did the exists check on all possible fid/rec/REC options
+//	if ($name<>'') then
+//		exists($archsamp+'/'+$name+'.fid','directory'):$fileex
+//		if ($fileex=0) then $name='' endif
+//	endif
+	if ($name<>'') then
+		$file=$archsamp+'/'+$name
+		$fileex=1
+//		$fidname=$name+'.fid'
+		$i=$total
+	endif
+	$i=$i+1
+      until $i > $total
+//  Not found.  Search again without checking for dn
+    if ($fileex=0) and ($startdn='') and ($refsrc1='dfrq') then
+      $i=1
+      repeat
+        $name='' $archsamp='' $defdn=''
+        exists($fileline[$i],'parlib'):$pex,$ppath
+        if ($pex) then
+                rtv($ppath,'noabort','dn'):$defdn
+        endif
+	$DN=$defdn
+        cplog($fileline[$i],'last'):$name,$archsamp
+        if ($name<>'') then
+                exists($archsamp+'/'+$name+'.fid','directory'):$fileex
+                if ($fileex=0) then $name='' endif
+        endif
+        if ($name<>'') then
+                $file=$archsamp+'/'+$name
+//                $fidname=$name+'.fid'
+                $i=$total
+        endif
+        $i=$i+1
+      until $i > $total
+    endif     
+    endif
+endif
+
+savesampglobal('cp')
+$ok=0
+$wexp=wexp
+if ($fileex) then
+  if ($ext<>'par') then
+      rt($file)
+//  In mimic mode, fid could be an empty file (parameter only option)
+//  If so, do not attempt wft or wft2da
+      $mimicpar=0
+      exists($archsamp+'/dirinfo/mimicdir','file'):$mex
+      if ($mex) then
+	  $s1='' $s2=''
+	  readfile($archsamp+'/dirinfo/mimicdir','$s1','$s2','','local'):$mex
+	  if ($mex=0) then $mimicpar=1 endif
+      endif
+      if (not $mimicpar) then
+        exists('execprocess','parameter'):$exex
+        if ($exex) then
+            $s='' substr(execprocess,1):$s
+            if ($s='') then $exex=0 endif
+        endif
+        if ($exex) then
+            exec(execprocess):$exex
+        endif
+	if not $exex then
+            getdim:$dim
+            if ($dim = 2) then wft2da elseif ($dim = 1) then wft endif
+	endif
+      endif
+      intmod='off'
+      substr(file,'basename'):strtpar,$ext
+  else
+      rtp($file)
+      intmod='off'
+      strtpar=''
+  endif
+  if ($DN<>'') and ($DN<>dn) then
+        dn=$DN setdecpars
+  endif
+// If an explicit starting parameter path is supplied
+//   reset MinSW to off.  Else this might lead to 
+//   infinite loop.
+
+  if ($strtparex) then MinSW='off' endif
+  $ok=1
+elseif ($defaultmacro<>'') then
+	"Ideally the defaultmacro should NOT be executed as is"
+	"  First execute a std1D type experiment"
+
+	exists($defaultmacro,'parlib'):$parex,$parpath
+	if ($parex=0) then
+		exec($defaultmacro)
+	else
+		"Find tn in parlib and execute AuNuc(tn)"
+	   rtv($parpath,'tn','pslabel'):$tn,$pslabel
+	   AuNuc($tn)
+		"If pslabel is not the same as in parlib"
+		"  execute defaultmacro"
+	   if (pslabel<>$pslabel) then
+		exec($defaultmacro)
+	   endif
+	endif
+	$ok=1
+	wstart='' wds=''
+elseif ($defaultmacro='') and ($starttn<>'') then
+	AuNuc($starttn)
+	wstart='' wds=''
+        $ok=1
+endif
+
+getsampglobal('cp')
+wexp=$wexp
+return($ok)

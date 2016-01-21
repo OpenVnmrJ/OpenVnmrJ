@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ ! 
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="proc3Dextr" element="pages" type="processing" >
+  <group size="800 270"
+    style="PlainText"
+    label="Extract 2D"
+    vq="profile"
+    show="$VALUE =(profile = 'nn')"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="proc3Dextr"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="430 0" size="280 190"
+      style="Heading1"
+      label="Select Data"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="SelectData"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <button loc="15 150" size="120 25"
+        style="Heading3"
+        label="Load"
+        vc="im3D('display',aip3Dfile)"
+        bg="transparent"
+        decor1="yes"
+        />
+      <group loc="5 75" size="265 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <menu loc="110 0" size="145 20"
+          style="PlainText"
+          vq="aip3Dfile"
+          vc="exists('aip3Dfile','parameter'):$ex if ($ex=0) then create('aip3Dfile','string') endif aip3Dfile = '$VALUE'"
+          set="$VALUE = aip3Dfile"
+          editable="No"
+          >
+          <mlabel 
+            label="Magnitude"
+            chval="img"
+            />
+          <mlabel 
+            label="Phase"
+            chval="imgphs"
+            />
+          <mlabel 
+            label="Raw (mag)"
+            chval="rawmag"
+            />
+          <mlabel 
+            label="Raw (ph)"
+            chval="rawphs"
+            />
+        </menu>
+        <label loc="0 0" size="115 20"
+          style="Label1"
+          label="Type of data"
+          />
+      </group>
+      <group loc="5 25" size="270 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <entry loc="115 0" size="60 20"
+          style="PlainText"
+          vq="element"
+          vc="element = $VALUE"
+          set="$VALUE = element if (ni &gt; 0) then $VALUE=$VALUE/ni endif"
+          show="$dim=arraydim if (ni &gt; 0) then $dim=$dim/ni endif $VALUE = ($dim &gt; 1) "
+          disable="Label"
+          />
+        <label loc="0 0" size="115 20"
+          style="Label1"
+          label="Array Element"
+          />
+      </group>
+      <group loc="5 45" size="220 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <entry loc="115 0" size="60 20"
+          style="PlainText"
+          vq="echo"
+          vc="echo = $VALUE"
+          set="$VALUE = echo"
+          show="$VALUE = (ne &gt; 1)"
+          disable="Label"
+          />
+        <label loc="0 0" size="115 20"
+          style="Label1"
+          label="Echo"
+          />
+      </group>
+    </group>
+    <group loc="5 0" size="420 190"
+      style="Heading1"
+      label="Extract 2D Images"
+      vq="aipMode"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ImageMath"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <button loc="130 155" size="100 20"
+        style="PlainText"
+        label="Extract All MIP"
+        vc="aipExtractMip('xy', aipXYfirst, aipXYlast, aipXYincr) aipExtractMip('xz', aipXZfirst, aipXZlast, aipXZincr)  aipExtractMip('yz', aipYZfirst, aipYZlast, aipYZincr) "
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="130 130" size="100 20"
+        style="PlainText"
+        label="Extract MIP"
+        vc="if(aipOrient='xy') then aipExtractMip(aipOrient, aipXYfirst, aipXYlast, aipXYincr) elseif(aipOrient='xz') then aipExtractMip(aipOrient, aipXZfirst, aipXZlast, aipXZincr)  elseif(aipOrient='yz') then aipExtractMip(aipOrient, aipYZfirst, aipYZlast, aipYZincr) endif"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="250 155" size="100 20"
+        style="PlainText"
+        label="Unload all"
+        vc="if(jviewport&gt;2.5) then aipRQcommand('unselectDisplay') aipClearFrames else aipRQcommand('remove','all') endif"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="250 130" size="100 20"
+        style="PlainText"
+        label="Unload selected"
+        vc="aipRQcommand('remove','sel')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="10 155" size="100 20"
+        style="PlainText"
+        label="Extract All Slices"
+        vc="aipExtract('xy', aipXYfirst, aipXYlast, aipXYincr) aipExtract('xz', aipXZfirst, aipXZlast, aipXZincr)  aipExtract('yz', aipYZfirst, aipYZlast, aipYZincr)"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="10 130" size="100 20"
+        style="PlainText"
+        label="Extract Slices"
+        vc="if(aipOrient='xy') then aipExtract(aipOrient, aipXYfirst, aipXYlast, aipXYincr) elseif(aipOrient='xz') then aipExtract(aipOrient, aipXZfirst, aipXZlast, aipXZincr)  elseif(aipOrient='yz') then aipExtract(aipOrient, aipYZfirst, aipYZlast, aipYZincr) endif"
+        bg="transparent"
+        decor1="yes"
+        />
+      <entry loc="290 80" size="70 20"
+        style="PlainText"
+        vq="aipYZincr"
+        vc="aipYZincr=$VALUE"
+        set="$VALUE=aipYZincr"
+        disable="Grayed out"
+        />
+      <entry loc="290 60" size="70 20"
+        style="PlainText"
+        vq="aipXZincr"
+        vc="aipXZincr=$VALUE"
+        set="$VALUE=aipXZincr"
+        disable="Grayed out"
+        />
+      <entry loc="290 40" size="70 20"
+        style="PlainText"
+        vq="aipXYincr"
+        vc="aipXYincr=$VALUE"
+        set="$VALUE=aipXYincr"
+        disable="Grayed out"
+        />
+      <label loc="290 20" size="60 20"
+        style="Label1"
+        label="Increment"
+        justify="Left"
+        />
+      <textmessage loc="245 80" size="45 20"
+        style="PlainText"
+        label="(32)"
+        vq="fn nv"
+        set="on('fn'):$fnon if $fnon then $V=fn/2 else $V=np/2 endif write('line3','(%d)',$V):$VALUE"
+        digits="0"
+        />
+      <textmessage loc="245 60" size="45 20"
+        style="PlainText"
+        label="(32)"
+        vq="fn1 nv"
+        set="on('fn1'):$fn1on if $fn1on then $V=fn1/2 else $V=nv endif write('line3','(%d)',$V):$VALUE"
+        digits="0"
+        />
+      <textmessage loc="245 40" size="45 20"
+        style="PlainText"
+        label="(32)"
+        vq="fn2 nv2"
+        set="on('fn2'):$fn2on if $fn2on then $V=fn2/2 else $V=nv2 endif write('line3','(%d)',$V):$VALUE"
+        digits="0"
+        />
+      <entry loc="175 80" size="70 20"
+        style="PlainText"
+        vq="aipYZlast"
+        vc="aipYZlast=$VALUE-1"
+        set="$VALUE=aipYZlast+1"
+        disable="Grayed out"
+        />
+      <entry loc="175 60" size="70 20"
+        style="PlainText"
+        vq="aipXZlast"
+        vc="aipXZlast=$VALUE-1"
+        set="$VALUE=aipXZlast+1"
+        disable="Grayed out"
+        />
+      <entry loc="175 40" size="70 20"
+        style="PlainText"
+        vq="aipXYlast"
+        vc="aipXYlast=$VALUE-1"
+        set="$VALUE=aipXYlast+1"
+        disable="Grayed out"
+        />
+      <label loc="175 20" size="60 20"
+        style="Label1"
+        label="Last"
+        justify="Left"
+        />
+      <entry loc="105 80" size="70 20"
+        style="PlainText"
+        vq="aipYZfirst"
+        vc="aipYZfirst=$VALUE-1"
+        set="$VALUE=aipYZfirst+1"
+        disable="Grayed out"
+        />
+      <entry loc="105 60" size="70 20"
+        style="PlainText"
+        vq="aipXZfirst"
+        vc="aipXZfirst=$VALUE-1"
+        set="$VALUE=aipXZfirst+1"
+        disable="Grayed out"
+        />
+      <label loc="105 20" size="60 20"
+        style="Label1"
+        label="First"
+        justify="Left"
+        />
+      <entry loc="105 40" size="70 20"
+        style="PlainText"
+        vq="aipXYfirst"
+        vc="aipXYfirst=$VALUE-1"
+        set="$VALUE=aipXYfirst+1"
+        disable="Grayed out"
+        />
+      <radio loc="5 85" size="100 20"
+        style="PlainText"
+        label="PE x PE2"
+        vq="aipOrient"
+        vc="aipOrient='yz'"
+        set="$VALUE=(aipOrient = 'yz')"
+        />
+      <radio loc="5 65" size="100 20"
+        style="PlainText"
+        label="RO x PE2"
+        vq="aipOrient"
+        vc="aipOrient='xz'"
+        set="$VALUE=(aipOrient = 'xz')"
+        />
+      <radio loc="5 45" size="100 20"
+        style="PlainText"
+        label="RO x PE"
+        vq="aipOrient"
+        vc="aipOrient='xy'"
+        set="$VALUE=(aipOrient = 'xy')"
+        />
+      <label loc="5 25" size="70 20"
+        style="Label1"
+        label="Orientation"
+        justify="Left"
+        />
+    </group>
+  </group>
+</template>

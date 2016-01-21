@@ -1,0 +1,69 @@
+"macro makephf"
+"***************************************************************************"
+"  makephf:  macro to transform and save arrayed images as sequential       "
+"            phasefiles.  A base name for the saved phasefiles, and an      "
+"            optional upper limit on the number of images to be saved       "
+"            are required as arguments.                                     "
+
+"            Alan R. Rath   Version 1.0   May 7, 1992                       "
+"***************************************************************************"
+
+if (($# < 1) or ($# > 2)) then
+  write('Usage:  makephf(basename, <upper limit>)')
+  abort
+endif
+
+"*****"
+"Initialize variables"
+"*****"
+$indexstring = ''
+$count = 1
+
+"*****"
+"If there is more than one argument, the second argument is the number"
+"of elements to be processed, otherwise process them all"
+"*****"
+if ($# > 1) then
+  $number = $2
+else
+  if (nf > 1) then
+    $number = nf
+  else
+    $number = size(array)
+  endif
+endif
+
+"*****"
+"Transform and save each image in array as a phasefile"
+"*****"
+repeat
+
+  if (nf > 1) then
+    cf = $count
+    wft2d
+  else
+    wft2d($count)
+  endif
+  format($count,1,0):$indexstring
+
+  "*****"
+  "If the phasefile already exists, delete it"
+  "*****"
+  exists(curexp+'/planes/'+$1+$indexstring,'file'):$exists
+  if ($exists) then
+    rm(curexp+'/planes/'+$1+$indexstring)
+  endif
+
+  if (dmg = 'ph') then
+    dcon
+  else
+    imconi
+  endif
+
+  "*****"
+  "Save the phasefile with the basename and current extension"
+  "*****"
+  svphf($1+$indexstring)
+  $count = $count + 1
+
+until ($count > $number)

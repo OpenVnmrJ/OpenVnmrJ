@@ -1,0 +1,174 @@
+"macro vjcurrentQ"
+$archsamp=archivedir+'/'+sample
+$md=$archsamp+'/dirinfo/macdir'
+walkupQ_init
+$explist=explist
+explist=''
+$expfile=cursqexp+'/EXPLIST'
+$lngfile=cursqexp+'/LONGLIST'
+$macalias=$md+'/EXPalias'
+$acqlist=$md+'/ACQlist'
+walkupQ('readlist'):$parflg,$parlng,$exp,$lng
+
+shell('touch '+$md+'/EXPLIST'):$dum
+shell('touch '+$md+'/LONGLIST'):$dum
+
+if ($1='day') then
+     $md2=autodir+'/enterQ.macdir/'+$2+'/day'
+     $s1='' $s2=''
+     readfile($md2+'/EXPLIST','$s1','$s2','','local'):$tot2
+     write('reset',$md2+'/EXPLIST')
+     if ($tot2>0) then
+        $i=1
+        repeat
+	  shell('(cat '+$acqlist+' | grep \'^'+$s1[$i]+'\' | grep -cw Completed)'):$isin
+	  if ($isin=0) then
+	     shell('(cat '+$acqlist+' | grep \'^'+$s1[$i]+'\' | grep -cw Active)'):$isin
+	  endif
+	  if ($isin) then
+		write('file',$md2+'/EXPLIST','%s  %s',$s1[$i],$s2[$i])
+		teststr('$parflg',$s1[$i],'local'):$isin2
+		if ($isin2) then $parflg[$isin2]='' endif
+	  else
+		shell('(cat '+$md+'/EXPLIST | grep -w Queued | grep -v \'^'+$s1[$i]+'\' > '+$md+'/EXPLISTtmp)'):$dum
+		shell('mv '+$md+'/EXPLISTtmp '+$md+'/EXPLIST'):$dum
+	  endif
+	  $i=$i+1
+	until $i > $tot2
+     endif
+     shell('(cat '+$expfile+' | grep -w Queued | awk \'{print $1" "$3}\' >> '+$macalias+')'):$dum
+     $psize=size('$parflg')
+     $i=1
+     repeat
+	if ($parflg[$i]<>'') then
+	   explist=explist,$parflg[$i]
+	   shell('cp '+cursqexp+'/macdir/'+$parflg[$i]+'acq* '+$md):$dum
+           shell('cp '+cursqexp+'/macdir/'+$parflg[$i]+'acq* '+$md2):$dum
+	   write('file',$md2+'/EXPLIST','%s  %s',$parflg[$i],$exp[$i])
+           shell('(cat '+$md+'/EXPLIST | grep -w Queued | grep -v \'^'+$parflg[$i]+'\' > '+$md+'/EXPLISTtmp)'):$dum
+           shell('mv '+$md+'/EXPLISTtmp '+$md+'/EXPLIST'):$dum
+	   write('file',$md+'/EXPLIST','%s  %s',$parflg[$i],$exp[$i])
+	endif
+	$i=$i+1
+     until $i > $psize
+
+     $md2=autodir+'/enterQ.macdir/'+$2+'/night'
+     $s1='' $s2=''
+     readfile($md2+'/LONGLIST','$s1','$s2','','local'):$tot2
+     write('reset',$md2+'/LONGLIST')
+     if ($tot2>0) then
+        $i=1
+        repeat
+          shell('(cat '+$md+'/LONGLIST | grep -w Queued | grep -v \'^'+$s1[$i]+'\' > '+$md+'/LONGLISTtmp)'):$dum
+          shell('mv '+$md+'/LONGLISTtmp '+$md+'/LONGLIST'):$dum
+          $i=$i+1
+        until $i > $tot2
+     endif
+     $psize=size('$parlng')
+     $i=1
+     repeat
+        if ($parlng[$i]<>'') then
+           shell('cp '+cursqexp+'/macdirlong/'+$parlng[$i]+'acq* '+$md2):$dum
+           write('file',$md2+'/LONGLIST','%s  %s',$parlng[$i],$lng[$i])
+           shell('(cat '+$md+'/LONGLIST | grep -w Queued | grep -v \'^'+$parlng[$i]+'\' > '+$md+'/LONGLISTtmp)'):$dum
+           shell('mv '+$md+'/LONGLISTtmp '+$md+'/LONGLIST'):$dum
+           write('file',$md+'/LONGLIST','%s  %s',$parlng[$i],$lng[$i])
+        endif
+        $i=$i+1
+     until $i > $psize
+     $md2=autodir+'/enterQ.macdir/'+$2+'/day'
+
+else
+     $md2=autodir+'/enterQ.macdir/'+$2+'/night'
+     $s1='' $s2=''
+     readfile($md2+'/LONGLIST','$s1','$s2','','local'):$tot2
+     write('reset',$md2+'/LONGLIST')
+     if ($tot2>0) then
+        $i=1
+        repeat
+          shell('(cat '+$acqlist+' | grep \'^'+$s1[$i]+'\' | grep -cw Completed)'):$isin
+          if ($isin=0) then
+             shell('(cat '+$acqlist+' | grep \'^'+$s1[$i]+'\' | grep -cw Active)'):$isin
+          endif
+          if ($isin) then
+                write('file',$md2+'/LONGLIST','%s  %s',$s1[$i],$s2[$i])
+                teststr('$parlng',$s1[$i],'local'):$isin2
+                if ($isin2) then $parlng[$isin2]='' endif
+	  else
+		shell('(cat '+$md+'/LONGLIST | grep -w Queued | grep -v \'^'+$s1[$i]+'\' > '+$md+'/LONGLISTtmp)'):$dum
+		shell('mv '+$md+'/LONGLISTtmp '+$md+'/LONGLIST'):$dum
+          endif
+          $i=$i+1
+        until $i > $tot2
+     endif
+     shell('(cat '+$lngfile+' | grep -w Queued | awk \'{print $1" "$3}\' >> '+$macalias+')'):$dum
+     $psize=size('$parlng')
+     $i=1
+     repeat
+	if ($parlng[$i]<>'') then
+	   explist=explist,$parlng[$i]
+           shell('cp '+cursqexp+'/macdirlong/'+$parlng[$i]+'acq* '+$md):$dum
+           shell('cp '+cursqexp+'/macdirlong/'+$parlng[$i]+'acq* '+$md2):$dum
+           write('file',$md2+'/LONGLIST','%s  %s',$parlng[$i],$lng[$i])
+           shell('(cat '+$md+'/LONGLIST | grep -w Queued | grep -v \'^'+$parlng[$i]+'\' > '+$md+'/LONGLISTtmp)'):$dum
+           shell('mv '+$md+'/LONGLISTtmp '+$md+'/LONGLIST'):$dum
+	   write('file',$md+'/LONGLIST','%s  %s',$parlng[$i],$lng[$i])
+	endif
+        $i=$i+1
+     until $i > $psize
+endif
+
+     if (traymax=768) then
+        $sdtime='' format($3,0,0):$sdtime
+
+        $info=$md2+'/sampleinfo'
+        $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sdtime+`|'`
+        shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+        shell('mv '+$info+'1 '+$info):$dum
+
+        $info=autodir+'/enterQ.macdir/currentsampleinfo'
+        $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sdtime+`|'`
+        shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
+        shell('mv '+$info+'1 '+$info):$dum
+     endif
+
+$time=0 $totaltime=0
+cpexplist('write',$md)
+$LIST='ACQlist','explist','EXPLIST','LONGLIST'
+xmhaha_subSQ($archsamp,$LIST)
+
+$currentQ=autodir+'/enterQ.macdir/currentQ'
+$s1='' $s2=''
+readfile($currentQ,'$s1','$s2','','local'):$total
+write('reset',$currentQ)
+write('file',$currentQ,'%s %s',$s1[1],$s2[1])
+format($s2[1],'lower'):$time
+$totaltime=$totaltime+$time
+if ($s1[1]='SAMPLE_CHANGE_TIME') and ($total>1) then
+  if ($s1[2]<>'TOTAL') then
+     write('file',$currentQ,'%s %s',$s1[2],$s2[2])
+     format($s2[2],'lower'):$time
+     $totaltime=$totaltime+$time
+  endif
+endif
+
+$elsize=size('explist')
+if (explist[1]='') then $elsize=0 endif
+    $ppt=60
+    getadminfo('prpltime'):$ppt
+    $i=1
+    $time=0
+    if ($elsize) then
+      repeat
+        cpexptime(explist[$i],$md):$time
+        $time=$time+$ppt
+        $totaltime=$totaltime+$time
+        write('file',$currentQ,'%s %d',explist[$i],$time)
+        $i=$i+1
+      until $i>$elsize
+    endif
+    write('file',$currentQ,'TOTAL %d',$totaltime)
+
+    xmhaha_baQ('buildQ')
+
+explist=$explist

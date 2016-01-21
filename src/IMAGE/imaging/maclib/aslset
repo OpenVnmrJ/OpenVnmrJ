@@ -1,0 +1,842 @@
+"macro aslset"
+"*********************************************************************"
+"                                                                     "
+" aslset: Macro to set asl parameters                                 "
+"                                                                     "
+"*********************************************************************"
+
+"Default option"
+$action = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action = 'prep') then
+  exists('asl','parameter'):$e
+  if ($e>0.5) then
+    if (asl='y') then
+      "Set up control planes (when reflections of tag plane in image plane)"
+      aslset('showctrl')
+      gplan('deleteType','slices')
+      aslset('deleteASLplans')
+    endif
+  endif
+endif
+
+if ($action = 'on') then
+  aslset('tag') 
+  gplan('deleteType','ASLslab')
+endif
+
+if ($action = 'off') then
+  aslset('deleteASLplans') 
+  asltag=0
+endif
+
+if ($action = 'test') then
+  aslset('clearstacks')
+  aslset('cleartest')
+  aslset('prep')
+  if (asltestmode='y') then
+    gplan('setValue','testns',size('testpss'))
+    go('check')
+    aslset('testpars')
+    wexp = 'aslset(`proc`)'
+    werr = 'aslset(`reset`)'
+  else
+    prep
+    aslset('arraymacro'):$arraymacro
+    $cmd='VP 1 '+$arraymacro+'(`set`)'
+    vnmrjcmd($cmd)
+    wexp = 'aslset(`proc`)'
+    werr = $arraymacro+'(`strip`)'
+  endif
+  wdone = ''
+  au
+endif
+
+if ($action = 'proc') then
+  aslset('clearstacks')
+  if (wnt = '') then
+    aipDeleteData
+    aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+    im2Dxrecon('recon')
+  else
+    wnt=''
+    setvalue('wnt','','processed') "otherwise <Reprocess> won't work"
+  endif
+  if (asltestmode='y') then
+    aslset('reset')
+  else
+    aslset('arraymacro'):$arraymacro
+    {$arraymacro}('strip')
+  endif
+endif
+
+if ($action = 'reproc') then
+  if (asltestmode='y') then
+    aslset('testpars')
+    go('check')
+  else
+    aslset('arraymacro'):$arraymacro
+    {$arraymacro}('set')
+  endif
+  aslset('proc')
+endif
+
+if ($action = 'arraymacro') then
+  "For EPI image array macro is epiarray"
+  if (apptype='im2Depi') then
+    return('epiarray')
+  else
+    return('imagearray')
+  endif
+endif
+
+if ($action = 'cleartest') then
+  exists('testpss','parameter'):$e
+  if ($e=1) then unarray('testpss') endif
+  seqcon=seqcon
+endif
+
+if ($action = 'testcheck') then
+  aslset('testpars')
+  go('check')
+  aslset('reset')
+endif
+
+if ($action = 'testmodeoff') then
+  if (asltagcoil='y' AND tagcoilOptions=2) then asltestmode='y' return endif
+  tagcoilOptions=0
+  tagcoilcalib=0
+  asltestmode='n' 
+  aslset('cleartest') 
+  if (aslOptions=6) then aslOptions=0 endif
+endif
+
+if ($action = 'settagcoil180') then
+  if (aslrfcoil='') then return endif
+  tagcoilOptions=0
+  tagcoilcalib=0
+  pulsecal(aslrfcoil,'gauss',tagcoilp1,180,tagcoiltpwr,'quiet')
+  b1max(aslrfcoil,'aslb1max')
+  b1max(aslrfcoil,'asllimb1max',asltagcoilpmax)
+endif
+
+if ($action = 'tag') then
+  if (asltype='FAIR') then 
+    aslplan='n'
+  else
+    q2plan='n'
+  endif
+  if ((asltype='STAR' OR asltype='PICORE') AND (aslthk < 0.1)) then 
+    aslthk = asltagthk
+  endif
+  if (asltype='CASL') then aslset('tagcoil') endif
+  asltag=1,-1
+  aslset('showtag')
+endif
+
+if ($action = 'tagcoil') then
+  if (asltagcoil='y' AND numrfch > 2) then
+    create('rf3pop','real','global',0)
+    dn2='H1'
+    dof2=H1offset
+    b1max(aslrfcoil,'asllimb1max',asltagcoilpmax)
+  else
+    tagcoilOptions=0
+    tagcoilcalib=0
+    dn2=''
+    dof2=0
+    b1max(rfcoil,'asllimb1max',aslpmax)
+  endif
+endif
+
+if ($action = 'savetagcoil') then
+  if (aslrfcoil='') then return endif
+  $rfcoil=RFCOIL 
+  prescan_CoilTable('add',aslrfcoil) 
+  RFCOIL=$rfcoil 
+  rfcoil=$rfcoil 
+  pulsecal(aslrfcoil,'hard',25,90,63,'quiet')
+  b1max(aslrfcoil,'aslb1max')
+  b1max(aslrfcoil,'asllimb1max',asltagcoilpmax)
+endif
+
+if ($action = 'removetagcoil') then
+  if (aslrfcoil = '') then
+    write('error','ASL Tag Coil to be removed is not specified.')
+    abort
+  endif
+  prescan_CoilTable('remove',aslrfcoil) 
+  pulsecal(aslrfcoil,'remove') 
+  aslrfcoil='' 
+  aslb1max=0
+endif
+
+if ($action='mirt1') then
+  if ($# > 1) then $t1=$2 endif
+  if ($t1=0) then
+    if (mirt1=0) then
+      write('error','T1 value can not be set to 0, add appropriate T1 value')
+    else
+      write('error','T1 value can not be set to 0')
+    endif
+    mirt1=mirt1
+    abort
+  endif
+  if (mirt1=0) then
+    mirt1=$t1/1000
+  else
+    mirt1=mirt1,$t1/1000
+  endif
+endif
+
+if ($action='displaymirt1') then
+  go('check','checksilent')
+  $times=''
+  $i=1
+  while ($i<=size('mirt1')) do
+    $str=''
+    format(1000*mirt1[$i],6,0):$str
+    $times=$times+$str
+    if ($i<size('mirt1')) then $times=$times+',' endif
+    $i=$i+1
+  endwhile
+  write('line3','mirt1 = %s ms',$times)
+endif
+
+if ($action='displayirtimes') then
+  go('check','checksilent')
+  $times=''
+  $i=1
+  while ($i<=nmir) do
+    $str=''
+    format(irtime[$i],9,6):$str
+    $times=$times+$str
+    if ($i<nmir) then $times=$times+',' endif
+    $i=$i+1
+  endwhile
+  write('line3','irtime = %s',$times)
+endif
+
+if ($action = 'testpars') then
+  "Set slice order"
+  aslset('sliceorder')
+  "For standard slice loop the number of test slices must be the same as imaging slices"
+  seqcon('slice'):$slice 
+  if ($slice='s') then
+    gplan('setValue','testns',size('pss'))
+    testns=ns
+    sl=1
+  endif
+  "Set up list of parameters that need to be saved"
+  $parstr='apptype seqfil pslabel np nv recon seqcon nf nfmod array ss volumes' 
+  exists('navigator','parameter'):$nav
+  if ($nav=1) then $parstr=$parstr+' navigator' endif
+  "Figure any arrays"
+  aipXrecon('parsearray'):$narraypars,$arraypars
+  "Add arrayed parameters to the list of parameters that need to be saved"
+  $i=1
+  while ($i <= $narraypars) do
+    $parstr=$parstr+' '+$arraypars[$i]
+    $i=$i+1
+  endwhile
+  "Save parameters in the list"
+  writeparam(curexp+'/asl.par',$parstr) "Write parameters"
+  "Set only first of arrayed parameter values, except in case of pss and testpss"
+  $i=1
+  while ($i <= $narraypars) do
+    if ($arraypars[$i] <> 'pss' AND $arraypars[$i] <> 'testpss') then 
+      {$arraypars[$i]}={$arraypars[$i]}[1] 
+    endif
+    $i=$i+1
+  endwhile
+  "Now set parameters for test scans"
+  apptype='im2D'
+  seqfil='asltest'
+  recon='asltest'
+  seqcon('slice'):$slseqcon
+  if ($slseqcon = 's') then
+    seqcon='nscnn'
+  else
+    seqcon='nccnn'
+  endif
+  np=testnp
+  nv=testnv
+  "For dedicated tagging coil calibration tagcoilcalib=1"
+  if (tagcoilcalib=1) then
+    "Set up for dedicated tagging coil calibration"
+    asltest=''
+    asltag=0
+    volumes=1
+  else
+    "Set up standard test mode"
+    "Take a copy of the array string"
+    $array=array
+    "Set asltest and asltag arrays"
+    asltest=asltestpars
+    asltag=asltesttag
+    "Make sure testpss is in increasing order"
+    sort('testpss'):$unused,$result
+    testpss = $result
+    "Set the array string"
+    "If the copy of array string is not empty we have standard slice loop and size('pss')>1"
+    if ($array <> '') then
+      array='(testpss,pss),(asltest,asltag)'
+    else
+      array='(asltest,asltag)'
+    endif
+    "Set the number of volumes"
+    volumes=size('asltest')
+  endif
+  ss=0
+  if ($nav=1) then navigator='n' endif
+  "Set nf and nfmod"
+  nf=testnv
+  if ($slice='c') then
+    nf=testnv*testns
+  endif
+  nfmod=nf
+  ldrf
+  wdone=''
+endif
+
+if ($action = 'reset') then
+  $pars=curexp+'/asl.par'
+  "Return if the file does not exist"
+  exists($pars,'file'):$e
+  if ($e=0) then return endif
+  asltest=''
+  asltag=0
+  pelist=0
+  "Retrieve the array parameter"
+  rtv($pars,'array')
+  aipXrecon('parsearray'):$narraypars,$arraypars
+  "Retrieve all the arrayed parameters"
+  $i=1
+  while ($i <= $narraypars) do
+    rtv($pars,$arraypars[$i])
+    $i=$i+1
+  endwhile
+  "Retreive apptype seqfil pslabel np nv recon seqcon nf nfmod array ss volumes"
+  rtv($pars,'apptype')
+  rtv($pars,'seqfil')
+  seqfil=seqfil
+  rtv($pars,'pslabel')
+  rtv($pars,'np')
+  rtv($pars,'nv')
+  rtv($pars,'seqcon')
+  rtv($pars,'nf')
+  rtv($pars,'nfmod')
+  rtv($pars,'recon')
+  rtv($pars,'array')
+  rtv($pars,'ss')
+  rtv($pars,'volumes')
+  exists('navigator','parameter'):$nav
+  if ($nav=1) then rtv($pars,'navigator') endif
+  "Tidy up"
+  exists(curexp+'/asl.par','file'):$e
+  if ($e = 1) then delete(curexp+'/asl.par') endif
+  aslset('cleartest')
+  go('check')
+endif
+
+if ($action = 'sliceorder') then
+  gplan('deleteType','testslices')
+  iplanType=0
+  return
+  "The following lines force linear slice order"
+  if (asltagrev='y') then
+    gplan('alternateSlices',2)
+  else
+    gplan('alternateSlices',0)
+  endif
+endif
+
+if ($action = 'showslices') then
+  if (iplanType=19) then
+    aslset('sliceorder')
+    gplan('addType','slices')
+    gplan('addType','testslices')
+  else
+    aslset('sliceorder')
+    gplan('addType','slices')
+  endif
+  gplan('setDrawOrders',1)
+endif
+
+if ($action = 'showtag') then
+  aslset('sliceorder')
+  aslset('tagorient')
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  $addpos=0
+  if ($slice > 1 AND aslplan='n') then
+    $addpos = pss[$slice]-pss[1]
+  endif
+  aslpos=aslpos+$addpos
+  if (asltype='FAIR') then aslctrlpos=0 endif
+  if (asltype='PICORE') then aslctrlpos=aslpos endif
+  aslset('deleteASLplans')
+  gplan('addType','ASLslab')
+  seqcon=seqcon
+  if (aslplan = 'n') then
+    gplan('disable','aslthk')
+    gplan('disable','aslpos')
+    gplan('disable','aslphi')
+    gplan('disable','aslpsi')
+    gplan('disable','asltheta')
+  else
+    if (asltype='CASL') then
+      gplan('disable','aslthk')
+    else
+      gplan('enable','aslthk')
+    endif
+    gplan('enable','aslpos')
+    gplan('enable','aslphi')
+    gplan('enable','aslpsi')
+    gplan('enable','asltheta')
+  endif
+endif
+
+if ($action = 'showtagcontrol') then
+  if (aslplan='y') then return(0) endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'showctrl') then
+  "Reset controlpos"
+  controlpos=0
+  if (asltype='FAIR' OR asltype='PICORE') then
+    aslset('deleteASLplans')
+    return
+  endif
+  aslset('sliceorder')
+  aslset('tagorient')
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  $addpos=0
+  if ($slice > 1) then
+    $addpos = pss[$slice]-pss[1]
+  endif
+  aslctrlpsi=aslpsi aslctrlphi=aslphi aslctrltheta=asltheta
+  aslctrlthk=aslthk
+  if (ns>1) then
+    if (asltype='CASL') then caslctrl='sinemod' endif
+    if (asltype='STAR') then starctrl='doubletag' endif
+  endif
+  if ((asltype='CASL' AND caslctrl='sinemod') OR (asltype='STAR' AND starctrl='doubletag')) then
+    if (aslplan='n') then
+      aslctrlpos=aslpos+$addpos
+    else
+      aslctrlpos=aslpos
+    endif
+  else
+    if (aslplan='y') then
+      "The control plane is reflection of the tag plane in the slice plane"
+      aslset('showtag')
+      "Figure if slices are currently displayed"
+      $displayslices=0
+      if (size('iplanDefaultType')>1) then
+        $i=1
+        while ($i<=size('iplanDefaultType')) do
+          if (iplanDefaultType[$i]=0) then $displayslices=1 endif
+          $i=$i+1
+        endwhile
+      endif
+      aslset('showslices')
+      $pss0=pss0 $pss=pss
+      "Calculate all control positions"
+      $i=1
+      while ($i<=size('pss')) do
+        gplan('setValue','pss0',$pss0)
+        gplan('setValue','pss0',$pss[$i])
+        aslset('sliceorder')
+        gplan('calcControlPlane')
+        controlpos[$i]=aslctrlpos
+        $i=$i+1
+      endwhile
+      "Display control plane for the slice of interest"
+      gplan('setValue','pss0',$pss0)
+      gplan('setValue','pss0',$pss[$slice])
+      aslset('sliceorder')
+      gplan('calcControlPlane')
+      gplan('setValue','pss0',$pss0)
+      if ($displayslices=0) then gplan('deleteType','slices') endif
+      aslset('sliceorder')
+      pss=$pss
+    else
+      if (asltagrev='y') then
+        aslctrlpos=pss[1]-aslgap-thk/20-aslthk/20+$addpos
+      else
+        aslctrlpos=pss[1]+aslgap+thk/20+aslthk/20+$addpos
+      endif
+    endif
+  endif
+  aslset('deleteASLplans')
+  gplan('addType','ASLctrlslab')
+  seqcon=seqcon
+  gplan('disable','aslctrlthk')
+  gplan('disable','aslctrlpos')
+  gplan('disable','aslctrlphi')
+  gplan('disable','aslctrlpsi')
+  gplan('disable','aslctrltheta')
+endif
+
+if ($action = 'showctrlcontrol') then
+  if (asltype='FAIR' OR asltype='PICORE') then return(0) endif
+  if (aslplan='y') then
+    if ((asltype='CASL' AND caslctrl='sinemod') OR (asltype='STAR' AND starctrl='doubletag')) then 
+      return(0) 
+    endif
+  endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'showips') then
+  aslset('sliceorder')
+  $minpss=pss[1] $maxpss=pss[1]
+  $i=1
+  while ($i<ns) do
+    $i=$i+1
+    if (pss[$i]<$minpss) then $minpss=pss[$i] endif
+    if (pss[$i]>$maxpss) then $maxpss=pss[$i] endif
+  endwhile
+  if (ipsplan='n') then
+    ipsthk=10*($maxpss-$minpss)+thk+ipsaddthk
+    ipspos=$minpss+($maxpss-$minpss)/2.0
+    ipspsi=psi ipsphi=phi ipstheta=theta
+  endif
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  $addpos=0
+  if ($slice > 1 AND ipsplan='n') then
+    $addpos = pss[$slice]-pss[1]
+  endif
+  ipspos=ipspos+$addpos
+  aslset('deleteASLplans')
+  gplan('addType','IPSslab')
+  seqcon=seqcon
+  if (ipsplan = 'n') then
+    gplan('disable','ipsthk')
+    gplan('disable','ipspos')
+    gplan('disable','ipsphi')
+    gplan('disable','ipspsi')
+    gplan('disable','ipstheta')
+  else
+    gplan('enable','ipsthk')
+    gplan('enable','ipspos')
+    gplan('enable','ipsphi')
+    gplan('enable','ipspsi')
+    gplan('enable','ipstheta')
+  endif
+endif
+
+if ($action = 'showipscontrol') then
+  if (ips<>'y' OR ipsplan='y') then return(0) endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'clearips') then
+  gplan('deleteType','IPSslab')
+endif
+
+if ($action = 'showps') then
+  aslset('sliceorder')
+  $minpss=pss[1] $maxpss=pss[1]
+  $i=1
+  while ($i<ns) do
+    $i=$i+1
+    if (pss[$i]<$minpss) then $minpss=pss[$i] endif
+    if (pss[$i]>$maxpss) then $maxpss=pss[$i] endif
+  endwhile
+  if (psplan='n') then
+    psthk=10*($maxpss-$minpss)+thk+psaddthk
+    pspos=$minpss+($maxpss-$minpss)/2.0
+    pspsi=psi psphi=phi pstheta=theta
+  endif
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  $addpos=0
+  if ($slice > 1 AND psplan='n') then
+    $addpos = pss[$slice]-pss[1]
+  endif
+  pspos=pspos+$addpos
+  aslset('deleteASLplans')
+  gplan('addType','PSslab')
+  seqcon=seqcon
+  if (psplan = 'n') then
+    gplan('disable','psthk')
+    gplan('disable','pspos')
+    gplan('disable','psphi')
+    gplan('disable','pspsi')
+    gplan('disable','pstheta')
+  else
+    gplan('enable','psthk')
+    gplan('enable','pspos')
+    gplan('enable','psphi')
+    gplan('enable','pspsi')
+    gplan('enable','pstheta')
+  endif
+endif
+
+if ($action = 'showpscontrol') then
+  if (ps<>'y' OR psplan='y') then return(0) endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'clearps') then
+  gplan('deleteType','PSslab')
+endif
+
+if ($action = 'showq2') then
+  if (asltype='CASL') then
+    aslset('deleteASLplans')
+    return
+  endif
+  aslset('sliceorder')
+  aslset('tagorient')
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  if (asltype='STAR' OR asltype='PICORE') then q2plan='n' endif
+  if (q2plan='n') then
+    q2psi=aslpsi q2phi=aslphi q2theta=asltheta
+    if (asltagrev='y') then 
+      q2pos=aslpos-aslthk/20+q2thk/20
+    else
+      q2pos=aslpos+aslthk/20-q2thk/20
+    endif
+  endif
+  $addpos=0
+  if ($slice > 1 AND aslplan='n' AND q2plan='n') then
+    $addpos = pss[$slice]-pss[1]
+  endif
+  q2pos=q2pos+$addpos
+  aslset('deleteASLplans')
+  gplan('addType','q2slab')
+  seqcon=seqcon
+  if (q2plan = 'n') then
+    gplan('disable','q2thk')
+    gplan('disable','q2pos')
+    gplan('disable','q2phi')
+    gplan('disable','q2psi')
+    gplan('disable','q2theta')
+  else
+    gplan('enable','q2thk')
+    gplan('enable','q2pos')
+    gplan('enable','q2phi')
+    gplan('enable','q2psi')
+    gplan('enable','q2theta')
+  endif
+endif
+
+if ($action = 'showq2control') then
+  if (asltype='CASL' OR q2plan='y') then return(0) endif
+  if ((asltype='STAR' OR asltype='PICORE') AND aslplan='y') then return(0) endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'showctrlq2') then
+  if (asltype='CASL') then
+    aslset('deleteASLplans')
+    return
+  endif
+  if (asltype='FAIR' OR asltype='PICORE') then 
+    if ($# > 1) then aslset('showq2',$2) else aslset('showq2') endif
+    return
+  endif
+  if (asltype='STAR') then
+    if (ns>1 OR starctrl='doubletag') then
+      if ($# > 1) then aslset('showq2',$2) else aslset('showq2') endif
+      return
+    endif
+  endif
+  aslset('sliceorder')
+  aslset('tagorient')
+  $slice=1
+  if ($# > 1) then aslset('getslice',$2):$slice endif
+  q2plan='n'
+  if ($# > 1) then aslset('showctrl',$2) else aslset('showctrl') endif
+  q2psi=aslctrlpsi q2phi=aslctrlphi q2theta=aslctrltheta
+  if (asltagrev='y') then 
+    q2pos=aslctrlpos+aslthk/20-q2thk/20
+  else
+    q2pos=aslctrlpos-aslthk/20+q2thk/20
+  endif
+  aslset('deleteASLplans')
+  gplan('addType','q2slab')
+  seqcon=seqcon
+  gplan('disable','q2thk')
+  gplan('disable','q2pos')
+  gplan('disable','q2phi')
+  gplan('disable','q2psi')
+  gplan('disable','q2theta')
+endif
+
+if ($action = 'showctrlq2control') then
+  if (asltype='CASL' OR q2plan='y') then return(0) endif
+  if (asltype='PICORE' AND aslplan='y') then return(0) endif
+  if (aslplan='y') then
+    if (asltype='STAR' AND starctrl='doubletag') then 
+      return(0) 
+    endif
+  endif
+  seqcon('slice'):$slice 
+  if ((size('pss') > 1) AND ($slice='s')) then
+    return(1)
+  else 
+    return(0)
+  endif
+endif
+
+if ($action = 'clearq2') then
+  gplan('deleteType','q2slab')
+endif
+
+if ($action = 'inittest') then
+  if (orient='trans') then
+    testpsi=90
+    testphi=0
+    testtheta=90
+  else
+    testpsi=psi
+    testphi=phi
+    testtheta=theta+90
+  endif
+  testlro=lro
+  testlpe=lpe
+  testpro=0
+  testppe=0
+  seqcon('slice'):$slice 
+  if ($slice='s') then
+    testthk=thk
+    testpss=pss
+    testgap=gap
+  else
+    testthk=2*thk
+    testpss=0
+    testgap=0
+  endif
+  aslset('showtest')
+endif
+
+if ($action = 'showtest') then
+  aslset('deleteASLplans')
+  "For standard slice loop the number of test slices must be the same as imaging slices"
+  seqcon('slice'):$slice 
+  if ($slice='s') then
+    gplan('setValue','testns',size('pss'))
+    testns=ns
+    sl=1
+  endif
+  gplan('addType','testslices')
+  gplan('enable','testppe')
+  sort('testpss'):$unused,$result
+  testpss = $result
+  unarray('testpss')
+  seqcon=seqcon
+endif
+
+if ($action = 'tagorient') then
+  $minpss=pss[1] $maxpss=pss[1]
+  $i=1
+  while ($i<ns) do
+    $i=$i+1
+    if (pss[$i]<$minpss) then $minpss=pss[$i] endif
+    if (pss[$i]>$maxpss) then $maxpss=pss[$i] endif
+  endwhile
+  if (asltype='CASL') then
+    "Get tn gamma (rads-1T-1)"
+    getgamma(tn):$nucgamma
+    "Scale to Hz/G"
+    $nucgamma=$nucgamma/62831.853
+    "Set tag thickness (0.8 is inversion BW of square pulse)"
+    aslthk = 10*0.8*1e+6/(pcasl*caslgamp*$nucgamma)
+  endif
+  if (aslplan='n') then
+    if (asltype='CASL') then
+      if (asltagrev='y') then 
+        aslpos = $maxpss+aslgap+0.05*(thk+aslthk)
+      else 
+        aslpos = $minpss-aslgap-0.05*(thk+aslthk)
+      endif
+    endif
+    if (asltype='FAIR') then
+      aslthk = thk+asladdthk+10*$maxpss-10*$minpss
+      aslpos = $minpss+0.5*($maxpss-$minpss)
+    endif
+    if (asltype='STAR') then
+      aslthk = asltagthk
+      if (asltagrev='y') then 
+        aslpos = $maxpss+aslgap+0.05*(thk+aslthk)
+      else 
+        aslpos = $minpss-aslgap-0.05*(thk+aslthk)
+      endif
+    endif
+    if (asltype='PICORE') then
+      aslthk = asltagthk
+      if (asltagrev='y') then 
+        aslpos = $maxpss+aslgap+0.05*(thk+aslthk)
+      else 
+        aslpos = $minpss-aslgap-0.05*(thk+aslthk)
+      endif
+    endif
+    aslpsi=psi aslphi=phi asltheta=theta
+  endif
+endif
+
+if ($action = 'getslice') then
+  $slice=1
+  seqcon('slice'):$slseqcon
+  if ($slseqcon = 's') then
+    if ($# > 1) then
+      $slice = $2
+    endif
+    if ($slice < 1) then sl=1 $slice=1 endif
+    if ($slice > size('pss')) then sl=size('pss') $slice=sl endif
+  endif
+  return($slice)
+endif
+
+if ($action = 'deleteASLplans') then
+  gplan('deleteType','ASLslab')
+  gplan('deleteType','ASLctrlslab')
+  gplan('deleteType','IPSslab')
+  gplan('deleteType','PSslab')
+  gplan('deleteType','q2slab')
+  gplan('deleteType','testslices')
+endif
+
+if ($action = 'clearstacks') then
+  iplanDefaultType=0
+  if (iplanType=19) then iplanType=0 endif
+  gplan('setDrawOrders',0)
+  gplan('clearStacks')
+endif

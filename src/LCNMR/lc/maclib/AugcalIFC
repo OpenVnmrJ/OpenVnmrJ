@@ -1,0 +1,127 @@
+"macro AugcalIFC"
+"********************************************************"
+"AugcalIFC - Probe gcal Autocalibration                   "
+"********************************************************"
+IF ($# < 1) THEN
+$1=1
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+aph peak:$ht1,cr movetof
+explist=$explist
+
+ds av 
+seqfil='gmapz'
+setparams('rfsize','13','Probe')
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw90
+create('gzlvl','integer')
+create('d3','delay')
+d3=0,0.05
+pw=1 p1=0 gain=0
+d2=.001 av sw=100000
+sw=sw
+np=512 lb='n'
+f full av
+
+$pfgon3=''
+substr(pfgon,3,1):$pfgon3
+if ($pfgon3='n') then pfgon='nny' endif
+$gradtype3=''
+substr(gradtype,3,1):$gradtype3
+if ($gradtype3 = 'l') then
+ gzlvl=1000
+else
+ gzlvl=2000
+endif
+
+clear(2)
+wnt='wtgrad wft f full dc vsadj(100) ds dtext dssh'
+wexp='AugcalIFC(2)'
+alock='n' wshim='n' r1=1
+au('wait','next')
+
+return
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+
+wft av f full dc vsadj(100) ds
+peak:$ht,cr
+dres(cr,.2):$width
+if ($width < 40000) then
+ gzlvl=1.5*gzlvl wexp='AugcalIFC(3)'
+ au('next','wait')
+else
+  $size=13
+  getparam('rfsize','Probe'):$size
+  $size=$size/10
+  $gammabar=(sfrq*1000000)/(234.94*h1freq)
+  $gcal=$width/($gammabar*gzlvl*$size)
+  if $gcal < 0 then $gcal = -1.0*$gcal endif
+  $strgcal=''
+  format($gcal,0,5):$strgcal
+  setparams('gradient','y','Probe')
+  setparams('gcal',$strgcal,'Probe')
+  $text='Gradient Calibration for the probe: '+probe
+  $atext = '   '+$strgcal+' G/cm/dac unit'
+  atext($text)
+  atext($atext)
+  if (pltmod = 'fixed') then
+    pl pltext page
+  else
+    wexp='wft f full dc vsadj(100) ds pl pltext page'
+  endif
+  Autocalsave('Probegcal') AutoDelCAL('gcalIFC') write('alpha','done with gcal') Autocalnext
+endif
+
+return
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+wft av f full dc vsadj(100) ds
+peak:$ht,cr
+dres(cr,.2):$width
+if ($width < 15000) then
+  write('error','gradient calibration failed on second try -- check PFG amplifier')
+  setparams('gradient','n','Probe')
+  printon
+  write('alpha','Gradient calibration failed')
+  write('alpha','Check PFG amplifier and pfgon parameter')
+  write('alpha','gcal calibration aborted')
+  printoff
+   AutoDelCAL('gcalIFC') Autocalnext
+  return
+else
+  $size=13
+  getparam('rfsize','Probe'):$size
+  $size=$size/10
+  $gammabar=(sfrq*1000000)/(234.94*h1freq)
+  $gcal=$width/($gammabar*gzlvl*$size)
+  if $gcal < 0 then $gcal = -1.0*$gcal endif
+  $strgcal=''
+  format($gcal,0,5):$strgcal
+  setparams('gradient','y','Probe')
+  setparams('gcal',$strgcal,'Probe')
+  $text='Gradient Calibration for the probe: '+probe
+  $atext = '   '+$strgcal+' G/cm/dac unit'
+  atext($text)
+  atext($atext)
+  if (pltmod = 'fixefixed') then
+    pl pltext page
+  endif
+  Autocalsave('Probegcal') AutoDelCAL('gcalIFC') Autocalnext 
+endif
+
+ENDIF
+
+"********************************************************"

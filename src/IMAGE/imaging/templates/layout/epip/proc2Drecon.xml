@@ -1,0 +1,627 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="proc2Drecon" element="pages" type="processing" >
+  <group size="800 270"
+    style="PlainText"
+    label="Recon"
+    vc="if (allvolumes = 'y') then aipXrecon('allvolumes') endif"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="proc2Drecon"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="435 130" size="210 50"
+      style="Heading1"
+      label="Reference Output"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <check loc="100 20" size="110 20"
+        style="PlainText"
+        label="Standard GE"
+        vq="imSGE"
+        vc="imSGE='y'"
+        vc2="imSGE='n'"
+        set="$VALUE=(imSGE='y')"
+        />
+      <check loc="10 20" size="90 20"
+        style="PlainText"
+        label="EPI"
+        vq="imRF"
+        vc="imRF='y'"
+        vc2="imRF='n'"
+        set="$VALUE=(imRF='y')"
+        />
+    </group>
+    <group loc="435 180" size="210 50"
+      style="Heading1"
+      label="Volumes"
+      vq="recon"
+      show="$VALUE=(recon &lt;&gt; 'internal') AND (recon &lt;&gt; '')"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <check loc="10 20" size="40 20"
+        style="PlainText"
+        label="All"
+        vq="allvolumes startvol endvol"
+        vc="allvolumes='y' aipXrecon('allvolumes')"
+        vc2="allvolumes='n'"
+        set="$VALUE=(allvolumes='y')"
+        />
+      <entry loc="85 20" size="40 20"
+        style="PlainText"
+        vq="startvol allvolumes"
+        vc="startvol=$VALUE aipXrecon('checkvols')"
+        set="$VALUE=startvol"
+        digits="0"
+        />
+      <label loc="55 20" size="35 20"
+        style="Label1"
+        label="Start"
+        />
+      <label loc="135 20" size="30 20"
+        style="Label1"
+        label="End"
+        />
+      <entry loc="160 20" size="40 20"
+        style="PlainText"
+        vq="endvol allvolumes"
+        vc="endvol=$VALUE aipXrecon('checkvols')"
+        set="$VALUE=endvol"
+        digits="0"
+        />
+    </group>
+    <group loc="435 0" size="210 130"
+      style="Heading1"
+      label="k-space Output"
+      vq="recon"
+      show="$VALUE=(recon &lt;&gt; 'internal') AND (recon &lt;&gt; '')"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="recon_raw"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <check loc="10 70" size="100 20"
+        style="PlainText"
+        label="Real"
+        vq="rawRE"
+        vc="rawRE='y'"
+        vc2="rawRE='n'"
+        set="$VALUE=(rawRE='y')"
+        />
+      <check loc="10 90" size="100 20"
+        style="PlainText"
+        label="Imaginary"
+        vq="rawIM"
+        vc="rawIM='y'"
+        vc2="rawIM='n'"
+        set="$VALUE=(rawIM='y')"
+        />
+      <group loc="100 20" size="110 20"
+        vq="rcvrs"
+        show="aipXrecon('nrcvrs'):$nr $VALUE=($nr&gt;1)"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <check loc="0 0" size="90 20"
+          style="PlainText"
+          label="Individual"
+          vq="rawIR"
+          vc="rawIR='y' rawMG='y'"
+          vc2="rawIR='n'"
+          set="$VALUE=(rawIR='y')"
+          />
+      </group>
+      <check loc="10 40" size="100 20"
+        style="PlainText"
+        label="Phase"
+        vq="rawPH"
+        vc="rawPH='y'"
+        vc2="rawPH='n'"
+        set="$VALUE=(rawPH='y')"
+        />
+      <check loc="10 20" size="100 20"
+        style="PlainText"
+        label="Magnitude"
+        vq="rawMG"
+        vc="rawMG='y'"
+        vc2="rawMG='n'"
+        set="$VALUE=(rawMG='y')"
+        />
+    </group>
+    <group loc="5 120" size="210 110"
+      style="Heading1"
+      label="Transform Size"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="TransformSize"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <textmessage loc="150 40" size="45 20"
+        style="PlainText"
+        label="(64)"
+        vq="nphase"
+        set="write('line3','(%d)',nphase):$VALUE"
+        />
+      <textmessage loc="150 20" size="45 20"
+        style="PlainText"
+        label="(64)"
+        vq="nread"
+        set="write('line3','(%d)',nread/2):$VALUE"
+        />
+      <menu loc="70 40" size="75 20"
+        style="PlainText"
+        label="menu"
+        vq="fn1"
+        vc="if ($VALUE = 0) then fn1 = 'n' else fn1=$VALUE*2 endif"
+        set="on('fn1'):$on if ($on) then $VALUE = fn1/2 else $VALUE=0 endif"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="0"
+          />
+        <mlabel 
+          label="16"
+          chval="16"
+          />
+        <mlabel 
+          label="32"
+          chval="32"
+          />
+        <mlabel 
+          label="64"
+          chval="64"
+          />
+        <mlabel 
+          label="128"
+          chval="128"
+          />
+        <mlabel 
+          label="256"
+          chval="256"
+          />
+        <mlabel 
+          label="512"
+          chval="512"
+          />
+        <mlabel 
+          label="1k"
+          chval="1024"
+          />
+        <mlabel 
+          label="2k"
+          chval="2048"
+          />
+        <mlabel 
+          label="4k"
+          chval="4096"
+          />
+        <mlabel 
+          label="8k"
+          chval="8192"
+          />
+        <mlabel 
+          label="16k"
+          chval="16384"
+          />
+        <mlabel 
+          label="32k"
+          chval="32768"
+          />
+        <mlabel 
+          label="64k"
+          chval="65536"
+          />
+      </menu>
+      <menu loc="70 20" size="75 20"
+        style="PlainText"
+        label="menu"
+        vq="fn"
+        vc="if ($VALUE = 0) then fn = 'n' else fn=$VALUE*2 endif"
+        set="on('fn'):$on if ($on) then $VALUE = fn/2 else $VALUE=0 endif"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="0"
+          />
+        <mlabel 
+          label="16"
+          chval="16"
+          />
+        <mlabel 
+          label="32"
+          chval="32"
+          />
+        <mlabel 
+          label="64"
+          chval="64"
+          />
+        <mlabel 
+          label="128"
+          chval="128"
+          />
+        <mlabel 
+          label="256"
+          chval="256"
+          />
+        <mlabel 
+          label="512"
+          chval="512"
+          />
+        <mlabel 
+          label="1k"
+          chval="1024"
+          />
+        <mlabel 
+          label="2k"
+          chval="2048"
+          />
+        <mlabel 
+          label="4k"
+          chval="4096"
+          />
+        <mlabel 
+          label="8k"
+          chval="8192"
+          />
+        <mlabel 
+          label="16k"
+          chval="16384"
+          />
+        <mlabel 
+          label="32k"
+          chval="32768"
+          />
+        <mlabel 
+          label="64k"
+          chval="65536"
+          />
+      </menu>
+      <button loc="110 70" size="90 20"
+        style="Heading3"
+        label="Zerofill x 2"
+        vc="fn=2*nread fn1=4*nphase"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="10 70" size="90 20"
+        style="Heading3"
+        label="No Zerofill"
+        vc="fn=n fn1=n"
+        bg="transparent"
+        decor1="yes"
+        />
+      <label loc="5 40" size="60 20"
+        style="Label1"
+        label="Phase"
+        justify="Left"
+        />
+      <label loc="5 20" size="60 20"
+        style="Label1"
+        label="Readout"
+        justify="Left"
+        />
+    </group>
+    <group loc="220 0" size="210 230"
+      style="Heading1"
+      label="Image Output"
+      vq="recon"
+      show="$VALUE=(recon &lt;&gt; 'internal') AND (recon &lt;&gt; '')"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Output"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="10 200" size="130 20"
+        vq="cseg nseg"
+        show="if (nseg&gt;1 AND cseg='y') then $VALUE=1 else $VALUE=0 endif"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <check loc="0 0" size="120 20"
+          style="PlainText"
+          label="Scale segments"
+          vq="scaleseg"
+          vc="scaleseg=1"
+          vc2="scaleseg=0"
+          set="$VALUE=scaleseg"
+          />
+      </group>
+      <group loc="15 110" size="190 80"
+        vq="imRE imIM"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="10 0" size="115 20"
+          style="Label1"
+          label="Phase"
+          />
+        <entry loc="125 20" size="60 20"
+          style="PlainText"
+          vq="rp imRE imIM"
+          vc="rp=$VALUE"
+          set="$VALUE=rp"
+          show="$VALUE=(imRE='y' OR imIM='y')"
+          digits="1"
+          />
+        <entry loc="125 40" size="60 20"
+          style="PlainText"
+          vq="lp imRE imIM"
+          vc="lp=$VALUE"
+          set="$VALUE=lp"
+          show="$VALUE=(imRE='y' OR imIM='y')"
+          digits="1"
+          />
+        <entry loc="125 60" size="60 20"
+          style="PlainText"
+          vq="lp1 imRE imIM"
+          vc="lp1=$VALUE"
+          set="$VALUE=lp1"
+          show="$VALUE=(imRE='y' OR imIM='y')"
+          digits="1"
+          />
+        <label loc="10 60" size="115 20"
+          style="Label1"
+          label="First order (phase)"
+          />
+        <label loc="10 40" size="115 20"
+          style="Label1"
+          label="First order (read)"
+          />
+        <label loc="10 20" size="115 20"
+          style="Label1"
+          label="Zero order"
+          />
+      </group>
+      <check loc="10 70" size="60 20"
+        style="PlainText"
+        label="Real"
+        vq="imRE"
+        vc="imRE='y'"
+        vc2="imRE='n'"
+        set="$VALUE=(imRE='y')"
+        />
+      <check loc="10 90" size="90 20"
+        style="PlainText"
+        label="Imaginary"
+        vq="imIM"
+        vc="imIM='y'"
+        vc2="imIM='n'"
+        set="$VALUE=(imIM='y')"
+        />
+      <group loc="100 20" size="110 20"
+        vq="rcvrs"
+        show="aipXrecon('nrcvrs'):$nr $VALUE=($nr&gt;1)"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <check loc="0 0" size="90 20"
+          style="PlainText"
+          label="Individual"
+          vq="imIR"
+          vc="imIR='y' imMG='y'"
+          vc2="imIR='n'"
+          set="$VALUE=(imIR='y')"
+          />
+      </group>
+      <check loc="10 40" size="100 20"
+        style="PlainText"
+        label="Phase"
+        vq="imPH"
+        vc="imPH='y' "
+        vc2="imPH='n'"
+        set="$VALUE=(imPH='y')"
+        />
+      <check loc="10 20" size="100 20"
+        style="PlainText"
+        label="Magnitude"
+        vq="imMG"
+        vc="imMG='y'"
+        vc2="imMG='n' imIR='n'"
+        set="$VALUE=(imMG='y')"
+        />
+    </group>
+    <group loc="5 50" size="210 70"
+      style="Heading1"
+      label="Corrections"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="EPIprocessing"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <menu loc="70 40" size="130 20"
+        style="PlainText"
+        label="Navigator"
+        vq="nav_type"
+        vc="nav_type = '$VALUE'"
+        set="$VALUE = nav_type"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="off"
+          />
+        <mlabel 
+          label="Pointwise"
+          chval="pointwise"
+          />
+      </menu>
+      <menu loc="70 20" size="130 20"
+        style="PlainText"
+        label="menu"
+        vq="epi_pc"
+        vc="epi_pc = '$VALUE'"
+        set="$VALUE = epi_pc"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="OFF"
+          />
+        <mlabel 
+          label="Pointwise"
+          chval="POINTWISE"
+          />
+        <mlabel 
+          label="Triple Ref"
+          chval="TRIPLE"
+          />
+        <mlabel 
+          label="Scaled Triple Ref"
+          chval="SCALED_TRIPLE"
+          />
+      </menu>
+      <label loc="5 20" size="70 20"
+        style="Label1"
+        label="Reference"
+        justify="Left"
+        />
+      <label loc="5 40" size="70 20"
+        style="Label1"
+        label="Navigator"
+        justify="Left"
+        />
+    </group>
+    <group loc="5 0" size="210 50"
+      style="Heading1"
+      label="Recon"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ReconType"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <menu loc="70 20" size="90 20"
+        style="PlainText"
+        label="menu"
+        vq="recon"
+        vc="recon='$VALUE' aipXrecon('set')"
+        set="$VALUE=recon"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="External"
+          chval="external"
+          />
+      </menu>
+      <label loc="5 20" size="50 20"
+        style="Label1"
+        label="Type"
+        />
+    </group>
+    <group loc="645 10" size="90 20"
+      vq="recon"
+      show="$VALUE=(recon &lt;&gt; 'internal') AND (recon &lt;&gt; '')"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Convenience"
+      >
+      <toggle loc="10 0" size="80 20"
+        style="PlainText"
+        label="NIFTI"
+        vq="niftipage"
+        vc="niftipage= 'y'"
+        vc2="niftipage = 'n'"
+        set="$VALUE=(niftipage='y')"
+        radiobutton="no"
+        subtype="no"
+        />
+    </group>
+    <group loc="645 30" size="90 20"
+      vq="recon"
+      show="$VALUE=(recon &lt;&gt; 'internal') AND (recon &lt;&gt; '')"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Convenience"
+      >
+      <button loc="10 0" size="80 20"
+        style="PlainText"
+        label="Redisplay"
+        vc="im2Dxrecon('displayall')"
+        bg="transparent"
+        decor1="yes"
+        />
+    </group>
+  </group>
+</template>

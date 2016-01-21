@@ -1,0 +1,75 @@
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+
+proc setScrollList {win} {
+   global sInfo
+   if {$sInfo($win,index) < 0} {
+      set sInfo($win,index) 0
+   } elseif {$sInfo($win,index) > $sInfo($win,numm1)} {
+      set sInfo($win,index) $sInfo($win,numm1)
+   }
+   if {$sInfo($win,index) == 0} {
+      $sInfo($win,downbutton) configure -state disabled
+   } else {
+      $sInfo($win,downbutton) configure -state normal
+   }
+   if {$sInfo($win,index) == $sInfo($win,numm1)} {
+      $sInfo($win,upbutton) configure -state disabled
+   } else {
+      $sInfo($win,upbutton) configure -state normal
+   }
+}
+
+proc setscroll {win val} {
+   global sInfo
+   set sInfo($win,index) $val
+   setScrollList $win
+}
+
+proc scrollwin {win incr} {
+   global sInfo
+
+   incr sInfo($win,index) $incr
+   setScrollList $win
+   eval "$sInfo($win,cmd) [lindex $sInfo($win,list) $sInfo($win,index)]"
+}
+
+image create bitmap sInfo(flagup) \
+	-file [file join $tk_library vnmr arrow.bmp] \
+	-maskfile [file join $tk_library vnmr arrow.bmp]
+image create bitmap sInfo(flagdown) \
+	-file [file join $tk_library vnmr arrow2.bmp] \
+	-maskfile [file join $tk_library vnmr arrow2.bmp]
+
+proc scroll2 {win cmd par listVar} {
+   global env sInfo
+
+   set sInfo($win,list) $listVar
+   set sInfo($win,num) [llength $listVar]
+   set sInfo($win,numm1) [expr $sInfo($win,num) - 1]
+   set sInfo($win,numm2) [expr $sInfo($win,num) - 2]
+   set sInfo($win,index) [lsearch $listVar $par]
+   set sInfo($win,cmd) $cmd
+   frame $win
+   button $win.up -height 12 -width 12 \
+        -highlightthickness 0 \
+        -command "scrollwin $win 1" \
+        -image sInfo(flagup)
+   button $win.dw -height 12 -width 12 \
+        -highlightthickness 0 \
+        -command "scrollwin $win -1" \
+        -image sInfo(flagdown)
+   grid columnconfigure $win 0 -minsize 20 
+   grid $win.up -row 0 -column 0 -sticky nes -in $win
+   grid $win.dw -row 0 -column 1 -sticky nes -in $win
+   set sInfo($win,upbutton) $win.up
+   set sInfo($win,downbutton) $win.dw
+}

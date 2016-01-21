@@ -1,0 +1,125 @@
+"macro ATplot"
+"ATplot"
+
+ $test=''
+ $test=at_currenttest
+ select(arraydim) ph
+ aph0:$ok,$rp   "for phased mode plots"
+ if ($ok=0) then
+  av
+ else
+  aph0
+ endif
+
+if ($test='rfhomo') then
+ select(1) peak:$int
+ if $int<0 then rp=rp+180 endif
+endif
+
+if (($test='13deg_ch1') or ($test='13deg_ch2') or ($test='gauss_13deg_ch1') or ($test='gauss_13deg_ch2')) then
+ av
+endif
+
+if ((seqfil='AT_lkdec') or (seqfil = 'ATddec') or (seqfil='ATrfhomo') or (seqfil='AT_rfhomo') or ($test='image_test') or ($test='fsq_image_test') or ($test='spinlktest') or ($test='spinlktest_salt100mM') or ($test='spinlktest_salt250mM')) then
+ av
+endif
+
+if (seqfil='ATdante') then
+   ph select(1) aph0
+   ATpltext(100,wc2max/2) ATplfp
+endif
+
+$avht=0 $stddev=0
+ if (at_plotauto='y') then
+
+  if ((seqfil<>'ATg2pul') and (seqfil<>'ATg2puls')) then
+   if (at_printparams='y') then
+     if (dm2='nnn') then dn2='' endif
+     pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+   pltext(80,wc2max-2)
+  endif
+   if (($test='spinlktest') or ($test='spinlktest_salt100mM') or ($test='spinlktest_salt250mM')) then
+     ATpltext(0,wc2max-20) pscale
+   endif
+   if ($test='gauss_vary_finepwr_ch1') then
+     ATpltext(wcmax-110,wc2max-40) pscale
+   endif
+   if ($test='gauss_vary_finepwr_ch2') then
+     ATpltext(wcmax-110,wc2max-40) pscale
+   endif
+   if (($test='phswitch_ch1') or ($test='phswitch_ch2')) then
+    write('plotter',0,140,'Average Residual Signal')
+    write('plotter',0,138,'  for rof1=0.2 usec through rof1=20 usec:   %1.3f percent ',r5)
+   endif
+   if (arraydim=20) then
+      ATplot2:$avht,$stddev 
+      ATpltext(wcmax-90,wc2max)
+   else
+      if ((seqfil='ATg2pul') and (array='d2')) then
+       sp=4.15p wp=1p pl('all','dodc')  
+      else
+       pl('all','dodc')   "does pl(all) for all data sets except field recovery"
+       if (wc>200) then pscale endif
+      endif
+   endif
+
+   if (seqfil='ATphtest') then 
+      ATpltext(wcmax-70,wc2max-2) 
+   endif
+   if (arraydim=3) then                    "gauss vs eburp1 vs hard"
+      ATpltext(100,wc2max/2) ATplfp
+   endif
+   if ((arraydim=9) and (seqfil<>'ATdsh2pul') and (seqfil<>'sh2pul')) then                    "gaussian power/pw array"
+      ATpltext(100,wc2max/2) ATplfp
+   endif
+
+   if (($test='pboxshapes_ch1') or ($test='pboxshapes_ch2'))
+   then       "variety of shapes"
+      ATpltext(0,wc2max)
+      ATplfp 
+      $i=1 $x=0  $y=110 dssh
+      write('graphics',0,180,'Pbox-Created Values for 4000 Hz Bandwidth')
+
+      if (seqfil='sh2pul') then
+         $tpwr=tpwr
+         write('plotter',80,115,'(based on single calibration of %2.2f usec at power level %2.0f )',ref_pw90,ref_pwr)
+      else
+         write('plotter',80,115,'(based on single calibration of %2.2f usec at power level %2.0f )',ref_pw90,ref_pwr)
+      endif
+
+      if (seqfil='ATdsh2pul') then
+         $tpwr=tpwr
+         write('graphics',20,165,'(based on single channel 2 calibration of %2.2f usec at power level %2.0f )',ref_pw90,ref_pwr)
+      else
+         write('graphics',20,165,'(based on single channel 2 calibration of %2.2f usec at power level %2.0f )',ref_pw90,ref_pwr)
+      endif
+      write('graphics',0,160,'Shape')
+      write('graphics',0,150,'Power')
+      write('graphics',0,140,'Width')
+      repeat
+         write('plotter',$x,$y,pwpat[$i])
+         write('graphics',$x+5,$y+20,pwpat[$i])
+         write('plotter',$x,$y-4,'power= %2.0f',$tpwr[$i])
+         write('graphics',$x+5,$y+10,'%2.0f dB',$tpwr[$i])
+         write('plotter',$x,$y-8,'pw= %4.2f',pw[$i])
+         write('graphics',$x+5,$y,'%4.2f',pw[$i])
+         $i=$i+1 $x=$x+27 $y=110
+      until $i=10
+  endif
+  if (arraydim=31) then
+      vp=vp+30 vs=vs*10 
+      sc=sc+ho pl(2,30)
+      write('plotter',0,vp+30,'Vertical Scale x10')
+      write('plotter',5,vp+25,'( 15mm = 1 percent of single pulse amplitude)')
+      ATpltext(160,140)
+  endif
+  if (array<>'d2') then ATpage endif   "page for all but field recovery tests" 
+ else
+   if (arraydim=20) then  
+      ATplot2:$avht,$stddev 
+   endif
+ endif
+return($avht,$stddev)
+

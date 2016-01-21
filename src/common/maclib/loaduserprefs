@@ -1,0 +1,101 @@
+"macro loaduserprefs"
+"loaduserprefs - reads preferences file for current operator"
+
+exists('userremembrance','parameter','global'):$parex
+if ($parex=0) then return endif
+
+if (userremembrance<>'y') then return endif
+
+if ($# < 1) then $1='local' endif
+if ($# < 2) then $2=operator endif
+if ($2='') then return endif
+if ($# < 3) then $3='' endif
+
+exists(userdir+'/user_preferences','directory'):$direx
+if ($direx=0) then
+	shell('mkdir '+userdir+'/user_preferences'):$dum
+endif
+
+IF ($1='local') THEN
+		"load default preferences to reset any legacy from pervious operator"
+
+	$modulepars='' module('list','localprefs'):$modulepars
+	if ($modulepars='') then return endif
+
+	$list='' $list2=''
+	$deflocal=''
+	exists('defaultlocalprefs','user_preferences'):$fileex,$deflocal
+	if not ($fileex) and ($3='list') then return('') endif
+	if ($3='list') then return($modulepars) endif
+	if ($fileex) then
+	  readparam($deflocal,$modulepars)
+        endif
+
+		"load my preferences Now"
+	$mylocal=''
+	exists($2+'localprefs','user_preferences'):$fileex,$mylocal
+	if ($fileex) then
+	    readparam($mylocal,$modulepars)
+	endif
+        	"The following is needed to make sure if any _parameters"
+        	"  need to be executed.  As well as for panel updates"
+		"  But check to makes sure that protection bit 2 is not ON"
+	string2array($modulepars):$list
+	setprotect('','list',4):$list2
+	string2array($list2):$list2
+	if ($list[1]<>'') then
+            $total=size('$list')
+            $i=1
+            repeat
+		teststr('$list2',$list[$i],'local'):$ret
+		if ($ret=0) then {$list[$i]}={$list[$i]} endif
+           	$i=$i+1
+            until $i > $total
+  	endif
+
+	seqfil=seqfil
+
+ELSEIF ($1 = 'global') THEN
+
+        $modulepars='' module('list','globalprefs'):$modulepars
+        if ($modulepars='') then return endif
+
+        $list='' $list2=''
+                "load default preferences to reset any legacy from pervious operator"
+	$defglobal=''
+	exists('defaultglobalprefs','user_preferences'):$fileex,$defglobal
+	if not ($fileex) and ($3='list') then return('') endif
+	if ($3='list') then return($modulepars) endif
+
+        if ($fileex) then
+	  $operator=operator
+	  readparam($defglobal,$modulepars,'global')
+	  setvalue('operator',$operator,'global')
+        endif
+                "load my preferences Now"
+
+	$myglobal=''
+	exists($2+'globalprefs','user_preferences'):$fileex,$myglobal
+        if ($fileex) then
+		$operator=operator
+		readparam($myglobal,$modulepars,'global')
+		setvalue('operator',$operator,'global')
+        endif
+                "The following is needed to make sure if any _parameters"
+                "  need to be executed.  As well as for panel updates"
+                "  But check to makes sure that protection bit 2 is not ON"
+        string2array($modulepars):$list
+	setprotect('','list',4,'global'):$list2
+	string2array($list2):$list2
+        if ($list[1]<>'') then
+            $total=size('$list')
+            $i=1
+            repeat
+		teststr('$list2',$list[$i],'local'):$ret
+		if ($ret=0) then {$list[$i]}={$list[$i]} endif
+                $i=$i+1
+            until $i > $total
+        endif
+	seqfil=seqfil
+ENDIF
+

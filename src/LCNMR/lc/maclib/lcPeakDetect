@@ -1,0 +1,35 @@
+"macro lcPeakDetect"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcPeakDetect"
+
+// Handles logic of enabling/disabling automatic peak detection 
+// When peak detection changes, call with no args to set lcTimedStop. 
+// When lcTimedStop turned on, call lcPeakDetect('n') to turn off all pk det 
+
+// Called with no args: 
+//  Returns TRUE if any peak detection is on - otherwise FALSE 
+//  If TRUE, also turns off lcTimedStop.
+// Called with one arg: (arg should be 'n') 
+//  Turns off peak detection on all channels - no return value 
+
+if ($# = 0) then
+    $a = ((lcEnableA = 'y') and (lcPeakDetect[1] = 'y')) 
+    $b = ((lcEnableB = 'y') and (lcPeakDetect[2] = 'y')) 
+    $c = ((lcEnableC = 'y') and (lcPeakDetect[3] = 'y'))
+    $d = ((lcEnableD = 'y') and (lcPeakDetect[4] = 'y'))
+    $e = ((lcEnableE = 'y') and (lcPeakDetect[5] = 'y'))
+    $any = ($a or $b or $c or $d or $e)
+    if ($any) then
+        lcTimedStop='n'
+    endif
+    return $any
+endif
+
+if ($# = 1) then
+    $len = size('lcPeakDetect')
+    $i = 1
+    repeat
+	lcPeakDetect[$i] = $1
+	$i = $i + 1
+    until ($i > $len)
+endif

@@ -1,0 +1,47 @@
+"macro ppp1"
+"ppp1 takes channel # and nucleus "
+"gets all required parameters and "
+"sets pcal and optionally maxattenrfch"
+$e=0
+if ($# < 2) then
+return(-1)
+endif
+if (($2 = '') or ($2 = 'none')) then
+  return(-2)
+endif
+"build the parameter names to fetch "
+"get probe file ...  "
+"      1   2                   5     6"
+"get pw90/tpwr first if not pwxcal lllll"
+$pw90 = -1
+$tpwr = -1
+getparam('pw90',$2):$pw90
+getparam('tpwr',$2):$tpwr
+if $pw90 < 1 or $tpwr < 0 then
+  getparam('pp',$2):$pw90
+  getparam('pplvl',$2):$tpwr
+  if $pw90 < 1 or $tpwr < 1 then
+    write('line3','calibration data not found for %s',$2)
+    return(2)
+  endif
+endif
+getprotection($2,'elimit'):$e1,$Elimit
+getprotection($2,'palpha'):$e2,$alpha
+getprotection($2,'ptc'):$e3,$ptc
+getprotection($2,'pp1'):$e4,$pw90m
+$e = $e1*$e2*$e3*$e4
+if ($e = 0) then
+  write('line3','missing probe id information for %s',$2)
+else
+  ppp_pcal($alpha,$pw90,$tpwr):$uu
+  $ans = ''
+  $suffix = ''
+  format($1,1,0):$ans
+  $suffix = $ans
+  $ans = 'rf'+$ans
+  ppp2($ans,'pcal',$uu)
+  ppp2($ans,'ptc',$ptc)
+  ppp2($ans,'elimit',$Elimit)
+  ppp_maxatt($pw90m,$pw90,$tpwr):$uu
+  ppp2('maxattench',$suffix,$uu)
+endif

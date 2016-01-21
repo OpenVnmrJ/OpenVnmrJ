@@ -1,0 +1,37 @@
+"macro findmaxpeak"
+/******************************************************************
+"  findmaxpeak: Returns index of array element containing the 
+"  tallest spectral peak in a set of arrayed spectra
+"
+"  Usage:  findmaxpeak(<start index, end index>):arrayindex
+"  Optional arguments start and end index limit range of search for maximum  
+"
+"  ARR   Version 1.0   10/11/06 
+"******************************************************************/
+
+if (($# <> 0) and ($# <> 2)) then                // Only 0 or 2 arguments allowed
+  write('line3','Warning: findmaxpeak: Usage - findmaxpeak(<start index, end index>)')
+  return
+elseif ($# = 2) then                             // If 2 arguments, use for start and end indices
+  $start = $1
+  $end = $2
+else                                             // Otherwise search over entire array
+  $start = 1
+  $end = celem
+endif
+
+"*** Loop through arrayed spectra, find tallest peak ***"
+$i = $start - 1
+$max = 0
+$index = 0
+repeat
+  $i = $i + 1
+  select($i)
+  peak:$height
+  if ($height > $max) then
+    $max = $height
+    $index = $i                                  // array index of largest spectrum
+  endif
+until ($i = $end)
+
+return($index)                                   // Return the index of tallest spectrum in the array

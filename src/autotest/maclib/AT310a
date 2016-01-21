@@ -1,0 +1,85 @@
+"macro AT310a"
+"AT310a N15 HMQC 2D Test using channel 2 rf"
+
+if (at_n15tests='n') then ATnext return endif
+
+  if ($#=0) then
+   ATrtp('standard')  
+   text('15N gNHMQC')
+   exists('sample','parameter'):$e
+   if $e then destroy('sample') endif
+   at_currenttest='n15HMQC_stab1_ch2'
+
+   seqfil='ATgNhmqc' 
+   dn='N15' j=4  
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   pwxlvl=at_max_pwx2lvl
+   pwx=at_n15pwx90a ss=4
+   at=.3 nt=2 av sinebell
+   method='z1z2' wshim='e'  "insure that shimming on z1 is ok"
+
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   gain=at_gain
+   pw=at_pw90
+   tpwr=at_tpwr
+
+   $pwx=1e6/(4.0*20*dfrq)  "20ppm 15N RF Field is adequate for garp"
+
+   ln($pwx/at_n15pwx90Lowpowera):$ln  
+   dpwr=at_n15pwx90Lowpowerlvla-20.0*$ln*0.43429
+   dpwr=trunc(dpwr)
+   dmf=1e6/$pwx
+
+   d1=1.5 dm='nny' dmm='ccw'
+   dm2='nnn' 
+   array('nt',100,4,0) phase=1
+   ss=16 av
+   sb=-at sbs=sb fn=4*np gf='n' lb='n'
+   parfidss ssfilter=300 f full 
+   sp=0.7p delta=2p
+   wexp='AT310a(`PART1`)'
+   wnt='ATwft select(1) vsadj(100) if (celem>1) then select(celem) peak:$int if ($int>105 or $int<95) then r6=r6+1 endif if r6>2 then halt ATfail(`N15HMQC_ch2_STABILITY`) ATnext return endif endif  dssh'
+
+   "examine each spectrum as acquired for int. within 5% of first spectrum, else abort and save fid"
+   "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+   au
+
+elseif ($1='PART1') then
+
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ sb=-at sbs=sb fn=4*np gf='n' lb='n'
+ ssfilter=300 wft f full 
+ select(1) vsadj 
+ cr=7p delta=2p
+ dsn:r1
+ select(arraydim) dsn:r2
+ r1=trunc(r1*10)/10
+ r2=trunc(r2*10)/10
+ $avht=0 $stddev=0
+ ATplot2:$avht,$stddev 
+ if (at_plotauto='y') then 
+   pltext(80,wc2max-2)
+   ATpage
+ endif
+ $avht=trunc(10*$avht)/10
+ $stddev=trunc(1000*$stddev)/1000
+
+ ATrecord('N15HMQC_STABILITY_ch2','N15HSQC Stability Ch.2 RF(100 trials)','stability',100-$stddev,'  sn_first',r1,'   sn_last',r2,'   oversamp',oversamp)
+ write('file',autotestdir+'/REPORT','N15 HMQC (ch2) First Spectrum SN= %4.0f, Last Spectrum SN= %4.0f ,Stability =%2.2f',r1,r2,100-$stddev)
+ ATsvf
+
+ATnext
+endif

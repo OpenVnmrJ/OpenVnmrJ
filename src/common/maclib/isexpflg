@@ -1,0 +1,28 @@
+"macro isexpflg"
+$file=cursqexp+'/EXPLIST'
+
+if ($# < 1) then 
+  exists($file,'file'):$ret
+  if ($ret=0) then return(0) endif
+  shell('(cat '+$file+' | wc -l)'):$ret
+  if ($ret=0) then return(0) else return(1) endif
+endif
+
+if ($# > 1) then
+  if ($2 = 'long') then
+	$file=cursqexp+'/LONGLIST'
+  endif
+else
+  exists('longQ','parameter'):$lex
+  if ($lex) then
+    if (longQ= 'y') then
+	$file=cursqexp+'/LONGLIST'
+    endif
+  endif
+endif
+
+exists($file,'file'):$ex
+if ($ex) then
+   shell('(cat '+$file+' | grep -wc '+$1+')'):$ex
+endif
+return($ex)

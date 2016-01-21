@@ -1,0 +1,87 @@
+"macro prescan_freq"
+"*****************************************************************************"
+"                                                                             "
+" prescan_freq  - Macro to Set the transmitter Offset Frequency (tof) on resonance   "
+"                                                                             "
+" Details: The routine checks the frequency of the largest peak and calculates"
+"          and sets tof.                                                      "
+"          The offset frequency is saved in the file, for example, H1offset   "
+"          in the directory, $user/vnmrsys. 
+"          To display the profiles, create('showps','flag') and set      "
+"	   showps=y and save with the frequency prescan parameters           "                                 "
+"                                                                             "
+"*****************************************************************************"
+ 
+if ($# = 0) then
+  ldrf "sets rfcoil = RFCOIL"
+  $prescan=prescan
+  rtppar('prescan_freq_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  exists('studyid','parameter','global'):$e
+  if ($e > 0.5) then
+    if (studyid <> '') then
+      exists(sqdir+'/studypar','file'):$e
+      if ($e = 1) then
+        fread(sqdir+'/studypar')
+      endif
+    endif
+  endif
+  prescan=$prescan
+  if ($res > 0.5) then
+    prescan[1] = 'Active'
+    wexp=`prescan_freq('proc')`
+    acqmode='prescan'
+    wdone=''
+    au
+  else
+    write('error','Frequency prescan has not been calibrated')
+  endif
+elseif ($1 = 'proc') then
+  f
+  av                          "absolute spectrum"
+  ft('nods')
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+  $toflim = 0.9*sw/2        "offset limit set to 80% of sw"
+  $tt = tof + $t
+  if ($tt < 0 ) then
+    $tt = -$tt
+  endif
+  if ($tt > $toflim) then
+    prescan[1] = 'Error'
+    acqmode=''
+    write('error', 'Offset too large, check spectrum or increase sw')
+    vsadj f full ds
+    abort
+  endif
+  tof=tof + $t                "determine new tof value"
+  $tnoffset = tn+'offset'
+  exists($tnoffset,'parameter','global'):$e
+  if ($e = 0) then
+    create($tnoffset,'real','global')
+  endif
+  {$tnoffset}=tof
+  prescan[1] = 'Complete'
+  write('line3','Frequency prescan: %s= %g',$tnoffset,tof)
+  acqmode=''
+  if ($# = 2) then
+    cr=$freq
+    wexp='ph ft aph0 vsadj f full'
+    au
+  else
+    prescan('next')
+  endif
+  
+  "display if necessary"
+  exists('showps','parameter'):$e
+  if($e = 0) then
+    create('showps','flag')
+    setgroup('showps','display')
+  elseif(showps = 'y') then
+    ph ft aph0 vsadj f full
+  endif  
+elseif ($1 = 'manual') then
+  prescan[1] = 'Active'
+  wexp=`prescan_freq('proc','manual')`
+  acqmode='prescan'
+  au
+endif

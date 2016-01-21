@@ -1,0 +1,145 @@
+Protocol: Mrev8q  Sequence: mrev8.c  Apptype: solidseq1d
+
+Description: 
+
+Quadrature MREV8 multiple-pulse acquisition for high resolution proton 
+NMR. This sequence uses a variable-length preparation pulse and fine 
+phase array to prepare the magnetization in quadrature perpendicular to 
+the multiple-pulse axis of precession (sqrt(1/2),0,sqrt(1/2)).  The 
+four variable length pulses are calculated assuming that pwXprep has a 
+90-degree flip angle. MREV8 has a cycle time of 12*tau with 8 pulses 
+per cycle. Set phXprep = 0.0 degrees. Mrev8q is used with slow spinning 
+(< 2500 Hz). 
+
+Additional Software: 
+
+reset_mrev8q - This macro uses the calibrated values of pwX90 and aX90 
+to calculate the initial parameters for mrev8X.  This macro is run from 
+the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Mrev8q.  For a new 
+calibration set the observe nucleus to proton and calibrate pw90X with 
+a sample of Benzene doped with Chromium AcAc using Onepul, Xx and Xmx. 
+An alternate sample is "RTV" silicon rubber spinning at about 2.5 kHz. 
+
+An alternate calibration is to set the proton pulse width pwH90 using 
+Tancpx, a sample of Glycine and 13C observe. After calibration set the 
+nucleus to proton and set tpwr, aX90 and pwX90 (of protons) equal to 
+the calibrated values of dpwr, aH90 and pwH90 of Tancpx.  Set the 
+sequence to Onepul and turn off the decoupler.  Observe a proton 
+wideline spectrum with a 200 kHz spectral width and gain < 10. A good 
+spin rate for this measurement is 10 kHz.  
+
+Load the data set obtained with Onepul of either calibration and select 
+Mrev8q.    
+
+Set aXprep = aX90, set pwXprep = pwX90 and phXprep = 0.0. Set aXmrev8 = 
+aX90 and set pwXmrev8 = pwX90.
+
+Optimize the sample window.  For defaults set tauXmrev8 = 3.5 us.  Set 
+npaXmrev8 = 10. Set r1Xmrev8 = 1.0 us, r2Xmrev8 = 0.5uus and r3Xmrev8 = 
+1.0uus.  Set rof3 = r3Xmrev8 on the Receiver page (important!!).  Set 
+npaXmrev8 = 10 for a 1.0 us reciever on-time. 
+
+Set sw = 1/(12.0*tauXmrev8) to obtain one point per MREV8 cycle. Obtain 
+a spectrum of the glycine (spin rate 2200 Hz) or doped benzene with a 
+minimum of 4 scans.  The quadrature phase cycle must be used to avoid 
+artifacts.  See the discussion below to optimize the spectrum. 
+
+Optimizing the Spectrum: 
+
+All multiple-pulse spectra are strongly affected by phase transient of 
+the probe.  The effect of phase transient is to shift the frequency of 
+the entire spectrum and increase the individual linewidths. In an 
+optimized setup, a Benzene (RTV) line should be on resonance with both 
+the sequences Onepul and Mrev8q. Likewise a good spectrum of glycine 
+obtained with tof=0.0 and proper referencing with setref should be 
+centered around 5 ppm and have the minimum linewidths.  
+
+A spectrum that is strongly affected by phase transient will be shifted 
+to lower frequencies and it will be necessary to set an even lower 
+frequency offset to get the best linewidths.  A common practice in the 
+presence of phase transient is to shift the carrier to about -5 ppm and 
+obtain the entire spectrum at higher frequencies. For this MREV8 
+sequence it is necessary to do this anyway because the phase cycle is 
+nonquadrature. 
+
+Phase transient can be minimized through the adjustment of the cable 
+length between the preamp and the probe.  A small further adjustment 
+can be made by moving the center of the tuning dip off of the carrier 
+frequency. The manual file tunerp has the procedures for minimization 
+of phase transient. 
+
+Spectra obtained with MREV8 also can show a strong center glitch or 
+"pedestal". The pedestal is a real signal that results from spins that 
+have been spin-locked along the axis of precession of MREV8. Spins from 
+the sample end up in pedestal if the preparation pulse pwXprep is 
+adjusted incorrectly.  Also, proton background spins from the module 
+end up along the precession axis because they have a low flip-angle and 
+are not refocused by MREV8. Vespel modules have a strong proton signal 
+that maybe larger than the signal of the sample so pedestal removal 
+involves an exact subtraction of two large numbers. Kel-f modules have 
+fewer protons but have a 19F background.  Also, spectra that are not 
+obtained with a multiple of 4 scans will have a pedestal. 
+
+The pedestal can be removed completely, even in the presence of high 
+background, by adjustment of pwXprep if the pulses are close to 
+resonance and phase transient has been minimized. Array pwXprep over 
+several microseconds around the 90-degree pulse. If one would rather 
+not make the effort, move the carrier and pedestal to lower a frequency 
+where it is out of the spectrum. 
+
+MREV8 spectra are best obtained with a low spinning frequency, in the 
+range 1500 to 2500 Hz. At faster speeds the rotor cycle interferes with 
+the multiple pulse cycle and lowers performance. 
+
+Referencing and Scaling MREV8:   
+
+Select the optimum offset and obtain data with a multiple of 4 scans. 
+Optionally fine-adjust the scale factor with two lines of known ppm.  
+Put a cursor on each line and set scalesw = (ppm2 - ppm1)*sfrq/delta. 
+To reference a scaled spectrum put a cursor on the line of interest and 
+type rl(ppm*sfrq/scalesw).   scalesw should be about 2.12 for a good 
+MREV8 spectrum.
+ 
+Parameter Groups: 
+
+prepX:  Module:  no 
+Sequence:  br24q.c      
+Description:  Implements a variable length pulse to provide quadrature 
+              detection about a tilted precession axis. Typically followed 
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses. 
+       pwXprep - 90-degree flip on the obs channel. 
+       phXprep - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse. 
+
+scaleX:  (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.      
+   
+mrev8X: Module:  yes 
+Sequence: mrev8.c  
+Description:  Implements MREV8 on obs with acquisition in the first 
+              window.    
+Parameters:  Sequence Page
+       aXmrev8 - amplitude of obs pulses.
+       pwXmrev8 - 90-degree flip on obs.
+       r1Xmrev8 - pre-pulse delay (similar to rof1). 
+       r2Xmrev8 - post_pulse delay (similar to rd or rof2).
+       r3Xmrev8 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined). 
+       tauXmrev8 - time for one "one-tau" window and pulse. 
+       npaXmrev8 - number of 100 ns ticks in the detection window. 
+       chXmrev8 = 'obs' must be set (not shown).
+Implementation:  WMPA mrev8 = getmrev8("mrev8X");
+Underscore function: _mrev8(mrev8,phXmrev8); phXmrev8 is the overall 
+              phase table.  
+

@@ -1,0 +1,76 @@
+"macro gxyzmatrix"
+if (seqfil<>'gmapxyz') then return endif
+
+$range=32767
+if ((shimset<3.0) or ((shimset>9.5) and (shimset<11.5))) then $range=2047 endif
+$gamma=267522128
+if (tn='F19') then $gamma=251814800 endif
+if (tn='lk')  or (tn='H2') then $gamma=41066279 endif
+
+if (steflg='y') then
+	$d5=d4+at+tau[1]+2*gstab+pw/2e6+0.00001
+else
+	$d5=d4+at
+endif
+
+$ginc=200k*3.14159/($gamma*$d5*fov)
+cos(gcalang*3.14159/180):$cos
+tan(gcalang*3.14159/180):$tan
+
+$x1max=($1-1)/2*$ginc/(gcalx)-(ni2-1)/2*$ginc*$tan/gcalx
+$y1max=($1-1)/2*$ginc/(gcaly*$cos)
+//write('line3','Maximum X1 amp is %f',$x1max)
+//write('line3','Maximum Y1 amp is %f',$y1max)
+
+readhw('x1'):$x1
+readhw('y1'):$y1
+abs($x1):$x1
+abs($y1):$y1
+
+if (($x1+$x1max > $range) or ($y1+$y1max > $range)) then
+   write('line3','Shims taken out of range with %sx%s matrix, reducing no. XY increments',$1,$1)
+   if $1=12 then
+	gxyzmatrix(8) 
+	return
+   elseif $1=8 then
+	gxyzmatrix(6) 
+	return
+   else
+	gxyzmatrix(4) 
+	return
+   endif
+endif
+
+if ($# = 0 or $# > 1) then 
+	gxyzcode='0110111111110110'
+	ni=4 ni2=4
+	return
+endif
+if ($1 = 0) then
+	ni=0 ni2=0
+	write('line3','XY matrix turned off')
+	return
+endif
+
+if ($1 = 4) then
+	gxyzcode='0110111111110110'
+	ni=4 ni2=4
+	write('line3','%dx%d XY matrix set',ni,ni2)
+endif
+if ($1 = 6) then
+	gxyzcode='001100011110111111111111011110001100'
+	ni=6 ni2=6
+	write('line3','%dx%d XY matrix set',ni,ni2)
+endif
+if ($1 = 8) then
+	gxyzcode='0000000000111100011111100111111001111110011111100011110000000000'
+	ni=8 ni2=8
+	write('line3','%dx%d XY matrix set',ni,ni2)
+endif
+if ($1 = 12) then
+	gxyzcode='000011110000001111111100011111111110011111111110111111111111111111111111111111111111111111111111011111111110011111111110001111111100000011110000'
+	ni=12 ni2=12
+	write('line3','%dx%d XY matrix set',ni,ni2)
+endif
+
+

@@ -1,0 +1,68 @@
+"macro vvLog"
+// logs information about various events
+
+rights($0):$e
+if ($e) then
+  exists($0,'templates/vnmrj/loginfo'):$e,$path
+else
+  exists(vnmrsystem+'/templates/vnmrj/loginfo/'+$0,'file'):$e,$path
+endif
+if (not $e) then return('') endif
+
+$header=''
+$text=''
+$attr=''
+$vals=''
+
+readfile($path,'$attr','$vals','','local'):$num
+
+// Disable File from loginfo to suppress all logging
+teststr('$attr','1File','local'):$e
+if ( not $e) then
+  return('')
+endif
+chkname($vals[$e],'none'):$logfile
+if ($#=0 and $##=1) then
+  return($logfile)
+endif
+if ($# = 0) then return('') endif
+
+teststr('$attr','1Ifcondition','local'):$e
+if ( $e) then
+  if (($vals[$e]<>'') and ($vals[$e]<>'None')) then
+    $cmd='if (not '+$vals[$e]+ ' ) then return endif'
+    {$cmd}
+  endif
+endif
+
+teststr('$attr','1Header','local'):$e
+if ($e) then
+  chkname($vals[$e],'none'):$header
+endif
+teststr('$attr','1'+$1,'local'):$e
+if ($e) then
+  chkname($vals[$e],'none'):$text
+else
+// Disable Keywords from loginfo to suppress specific messages
+  return
+endif
+
+if ($1 = 'Test') then
+  $text = '   ' + $text
+elseif ($1 = 'Pass') then
+  $text = '        ' + $text
+elseif ($1 = 'Fail') then
+  $text = '     ***' + $text
+elseif ($1 = 'Warn') then
+  $text = '       *' + $text
+endif
+if ($## = 1) then
+  write('line3','%s',$text):$str
+  return($str)
+endif
+
+write('file',$logfile,'%s',$text)
+if (auto='y') then
+  write('line3','%s',$text)
+endif
+

@@ -1,0 +1,35 @@
+"macro ATreg"
+"ATreg - gain regression analysis"
+" takes log of nmr response (dB) and correlates with power level in pwpwr"
+ "usage gainreg(start,end)  -  default values: 1, arraydim"
+if $#>1 then $end=$2 else $end=arraydim endif
+if $#>0 then $i=$1 else $i=1 endif
+$filename=curexp+'/regression.inp'
+write('reset',$filename)
+write('file',$filename,'gain value')
+write('file',$filename,'nmr response in dB')
+write('file',$filename,'1 %4.0f',$end-$i+1)
+repeat
+select($i)
+peak:$hgt
+if $hgt>0 then ln(100*$hgt):$lnhgt else ln(-100*$hgt):$lnhgt endif
+$gainv=gain[$i]
+$resp=20*$lnhgt/2.303
+write('file',$filename,'%10s  %5.4f',$gainv,$resp)
+$i=$i+1
+until $i>$end
+expl('regression') analyze('expfit','regression','poly1','list') expl
+ 
+
+ 
+lookup('file',curexp+'/analyze.list')
+lookup('skip',23,'read',1):$corrcoef
+format($corrcoef,'isreal'):$e
+if ($e) then
+  lookup('skip',2,'read',1):$corrcoefdev
+  $corrcoef=trunc(1000*$corrcoef)/1000
+  $corrcoefdev=trunc(1000*$corrcoefdev)/1000
+  return($corrcoef,$corrcoefdev)
+else
+  return(0,0)
+endif

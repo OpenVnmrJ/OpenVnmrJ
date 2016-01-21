@@ -1,0 +1,106 @@
+"macro AT83"
+"AT83" "Field Recovery Time (x-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+
+   substr(pfgon,1,1):$xon
+   if ($xon)='n' then
+     write('line3','X-axis is disabled. Re-set "pfgon". Gradient Tests Skipped') 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   r1=0 r2=0 
+   text('Field Recovery Time following\\ a 10G/cm 1msec X-axis Gradient')
+   at_currenttest='grec_+x_10'
+   seqfil='ATg2pul' gt1=.001 gzlvl1=10/at_gxcal
+   vchannelmap='0','x'
+   rof1=0.5 shaped='n' gradaxis='x'
+   d2=0.00000075,0.000001,0.000003,0.000006,0.000012,.000025,.00005,.0001,.00025,.0005,.001
+   sp=3.8p wp=2p
+   wnt='ATwft select(1) av vsadj(110) dssh dtext'
+   wexp='AT83(`PART1`)'
+   ATcycle
+   au
+   write('line3','Field Recovery Time following a +10G/cm 1 msec X-axis Gradient')
+   dps
+
+elseif ($1='PART1') then
+
+   wft ph select(arraydim) aph0:$ok
+   if $ok then aph0 else av endif
+    vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_x') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')"
+    pltext(100,wc2max-20)
+   endif
+   select(arraydim)
+   th=40
+   nll fp t1 center expl 
+   ATgrec:r1       
+   if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r1*1e6)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   gzlvl1=-gzlvl1
+   at_currenttest='grec_-x_10'
+   wnt='ATwft dssh dtext'
+   wexp='AT83(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft text('Field recovery time\\following a 1 msec -10 G/cm \\Rectangular X gradient pulse')
+   ph select(arraydim) aph0:$ok
+   if $ok then aph0 else av endif
+   vsadj(100) dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' dn='' pap ATpltext2('grec_x') 
+      pps(120,0,wcmax-120,90)
+      ATpage 
+    endif
+    sc=65 wc=5 ho=-6
+    ATplot "pl('all','dodc')"
+    pltext(100,wc2max-20)
+   endif
+   select(arraydim)
+   th=40
+   nll fp t1 center expl 
+   ATgrec:r2       
+   gzlvl1=trunc(gzlvl1) 
+   r1=trunc(1e6*r1)
+   r2=trunc(1e6*r2)
+   ATrecord('XRECOVRECT','X-Recovery: Time for signal to recover to >95 percent (rectangular gradient):','Time ',r1,'at_Gx_level',-gzlvl1,'Time  ',r2,'at_Gx_level',gzlvl1)
+   write('file',autotestdir+'/REPORT','X Gradient Rec.(10G/cm rect): %3.1f usec (Gz= %5.0f); %3.1f usec (Gz= %5.0f) ',r1,-gzlvl1,r2,gzlvl1)
+   if (at_plotauto='y') then sc=75 wc=80 pexpl 
+    write('plotter',wcmax-90,wc2max-10,'Signal Recovers to 95 percent in %3.1f usec',r2)
+    write('plotter',wcmax-90,wc2max-15,'        Delay      Intensity')
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+    pap ATpage
+   endif
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+ATnext
+endif

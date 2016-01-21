@@ -1,0 +1,45 @@
+"macro SetUpMinSW"
+"SetUpMinSW"
+
+if ($# < 1) then $arg='init' else $arg=$1 endif
+
+IF ($arg = 'init') THEN
+
+  if MinSW='off' then return endif
+"  if (auto='y') then MinSW='auto' endif "
+
+	"explist is always pslabel and the macdir/explist is already corrected"
+	"  by CheckMinSW"
+
+    if (MinSW = 'auto') then
+	f minsw setref dg
+	strtpar='' setstrtpar
+    elseif (MinSW = 'skip') then
+      	f minsw setref dg
+    elseif (MinSW = 'manual') then
+      if (auto='y') then
+	f minsw setref dg
+        strtpar='' setstrtpar
+      else
+      	intmod='off'
+      	wds='SetUpMinSW(\'continue\')'
+      	wstart='SetUpMinSW(\'ds\')'
+      endif
+    endif
+    MinSW='off'
+
+ELSEIF ($arg = 'ds') THEN
+
+        Autoexmac('walkupQ')
+	Autobkupmac('walkupQ')
+	explist='' wstart=''
+        write('error','Define - using cursors - spectral width')
+	f
+        ds 
+	ds('restart')
+
+ELSEIF ($arg = 'continue') THEN
+
+    wds='' wstart='' movesw strtpar='' setstrtpar
+
+ENDIF

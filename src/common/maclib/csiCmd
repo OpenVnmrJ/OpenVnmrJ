@@ -1,0 +1,539 @@
+"macro csiCmd"
+// csiCmd('isCSI')
+// csiCmd('isCSIDir')
+// csiCmd('getCSIPath')
+// csiCmd('getSpatialFidPath')
+
+if($#<1) then return endif
+
+// check apptype
+if($1='isCSI') then
+  strstr(apptype,'csi'):$n
+  if($n) then
+    return(1)
+  else
+    strstr(apptype,'CSI'):$n
+    if($n) then return(1)
+    else return(0) endif
+  endif
+endif
+
+// is the path ends with .csi or .csi/
+// no check existence
+if($1='isCSIDir' and $#>1) then
+  strstr($2,'.csi','last'):$n,$s1,$s2
+  if($n) then
+    length($s2):$n
+    if($n<2) then return(1) endif
+  endif
+  return(0)
+endif
+
+// return '.csi' path (create if not exist)
+if($1='getCSIPath') then
+  if($#>1) then
+    $file=$2
+  else
+    $file=file
+  endif
+  substr($file,1,1):$s
+  if($s<>'/') then return('') endif
+  $path=''
+  strstr($file,'.csi/spatial','last'):$n,$s1
+  if($n) then $path=$s1+'.csi'
+  else 
+    strstr($file,'.fid','last'):$n,$s1
+    if($n) then $path=$s1+'.csi'
+    else 
+      strstr($file,'.csi','last'):$n,$s1
+      if($n) then $path=$s1+'.csi'
+      else 
+        csiCmd('isCSIDir',$file):$n
+	if($n) then $path=$file
+	else 
+          strstr($file,'.img','last'):$n,$s1
+          if($n) then $path=$s1+'.csi'
+	  else
+	     $path=$file+'.csi' 
+	  endif
+	endif
+      endif
+    endif
+  endif
+  exists($path,'directory'):$n
+  if($n) then return($path)
+  elseif($#>2) then
+    csiCmd('isCSI'):$csi
+    if($3='create' and $csi) then
+     shell('mkdir -p '+$path)
+    else 
+     $path=''
+    endif
+    return($path)
+  else return('') endif
+endif
+
+if($1='getFidPath') then
+  if($#>1) then
+    $file=$2
+  else
+    $file=file
+  endif
+  $path=''
+  strstr($file,'.csi/spatial','last'):$n,$s1
+  if($n) then $path=$s1+'.fid'
+  else
+    strstr($file,'.fid','last'):$n,$s1
+    if($n) then $path=$s1+'.fid'
+    else
+      strstr($file,'.csi','last'):$n,$s1
+      if($n) then $path=$s1+'.fid'
+      else $path='' endif
+    endif
+  endif
+  exists($path,'directory'):$n
+  if($n) then return($path)
+  else return('') endif
+endif
+
+// return '.csi/spatial.fid' path if exists
+if($1='getSpatialFidPath') then
+  if($#>1) then
+    $file=$2
+  else
+    $file=file
+  endif
+  $path=''
+  strstr($file,'.csi/spatial','last'):$n,$s1
+  if($n) then $path=$s1+'.csi/spatial.fid'
+  else 
+    strstr($file,'.fid','last'):$n,$s1
+    if($n) then $path=$s1+'.csi/spatial.fid' 
+    else
+      strstr($file,'.csi/','last'):$n,$s1
+      if($n) then $path=$s1+'.csi/spatial.fid'
+      else 
+        csiCmd('isCSIDir',$file):$n
+	if($n) then $path=$file+'/spatial.fid'
+	else $path=$file+'.csi/spatial.fid' endif
+      endif
+    endif
+  endif
+  exists($path,'directory'):$n
+  if($n) then return($path)
+  else return('') endif 
+endif
+
+if($1='getMapPath') then
+   if($#<2) then
+     $2=file
+   endif
+   csiCmd('getCSIPath',$2,'create'):$path
+   $path=$path+'/maps'
+   return($path)
+endif
+
+if($1='mode') then
+  if(crmode='b') then
+    $mode=2
+  else
+    $mode=1
+  endif
+  if($mode=2 and csiMapType='li') then
+    $mode=1
+    $size=size('lifrq')
+    if($size>4) then 
+      $frq1 = cr + rfl - rfp
+      $frq2 = cr - delta + rfl - rfp 
+      $i=1
+      $f1=0 
+      $f2=0 
+      while($i<$size) do
+        if($frq1<lifrq[$i] and $frq1>lifrq[$i+1]) then $f1=lifrq[$i] endif
+        if($frq2<lifrq[$i] and $frq2>lifrq[$i+1]) then $f2=lifrq[$i] endif
+        $i=$i+2
+      endwhile
+      if($f1<>0 and $f2<>0 and $f1<>$f2) then
+	$mode=2
+      endif
+    endif 
+  endif
+  return($mode)
+endif
+
+if($1='makeMap') then
+
+   // map is calculated from saved data
+//   csiLoad('update')
+   graphis:$g
+   if($g<>'ds') then
+     csiShow('specData',1)
+   endif
+
+   $ratio=''
+   if($#>2) then 
+     csiCmd('mode'):$mode
+     strstr($3,'ratio'):$n
+     if($n>0 and $mode<2) then
+	write('line3','Try again after selecting two peaks with left and right mouse buttons.')
+	return
+     endif
+     $ratio=$3 
+   endif
+
+   if($#<2) then $2='li' endif
+
+   csiCmd('getMapPath'):$path
+   canWrite($path):$e
+   if(not $e) then
+     write('line3','%s is not writable.',$path)
+     return
+   endif
+   csiMapSel=''
+   if(csiMapName<>'') then
+     aipMakeMaps($2,$path+'/'+csiMapName,'',$ratio)
+   else
+     aipMakeMaps($2,'','',$ratio)
+   endif
+   csiCmd('makeMapList',$path)
+
+   csiCmd('loadMap', csiMapSel)
+ //  aipShowCSIData('hide') aipSelectRois(`all`) aipDeleteRois
+endif
+
+if($1='makeMapList') then
+   if($#>1) then
+     $path=$2
+   else
+     csiCmd('getMapPath'):$path
+   endif
+   exists($path,'directory'):$e
+   if($e=0) then return endif
+
+   pwd:$cdir
+   cd($path)
+   shell('rm -f '+curexp+'/maplist')
+   shell('ls *.fdf > '+curexp+'/maplist')
+
+   cd($cdir)
+  
+   shell('wc -l '+curexp+'/maplist'):$out
+   vnmrjcmd('pnew','csiMapSel')
+   substr($out,1):$n 
+   return($n)
+endif
+
+// $2 is $csidir or map name, $3 is action
+if($1='loadMap') then
+  if($#<3) then $3='doubleclick' endif
+  if($#<2) then $2=file endif
+  $file=file
+  substr($2,1,1):$s
+  if($s='/') then
+    $file=$2
+  endif
+  csiCmd('getMapPath',$file):$mpath
+  if($s<>'/') then // $2 is map name (.fdf)
+     $path=$mpath+'/'+$2
+     aipAutoLayout=0
+     aipGetFrame:$f
+     aipRQcommand('delete',$path)
+     RQaction('loadImage',$path,$f+1)
+  elseif($3='doubleclick') then // load csi image
+     aipDeleteData('all')
+     aipRQcommand('load',$mpath)
+     aipAutoLayout=0
+     $col=size('pss')
+     exists($mpath+'/csi_image.fdf','file'):$e
+     if($e or $col<=1) then 
+       aipSplitWindow(1,1)
+       $path=$mpath+'/csi_image.fdf'
+       aipRQcommand('display',$path,'',1)
+     else 
+       aipSplitWindow(1,$col)
+       $i=0
+       $istr=''
+       while($i<$col) do
+         $i=$i+1
+         format($i,0,0):$istr 
+         $path=$mpath+'/csi_image_'+$istr+'.fdf'
+         aipRQcommand('display',$path,'',$i)
+       endwhile
+     endif
+  else // load maps dir
+     $path=$mpath
+     aipAutoLayout=1
+     aipGetFrameToStart:$f
+     aipRQcommand('load',$path,'',$f+1)
+  endif
+endif
+
+if($1='deleteMap') then
+  csiCmd('getMapPath'):$path
+  if($#>1) then
+     $path=$path+'/'+$2
+  else 
+     $path=$path+'/'+csiMapSel
+  endif
+  strstr($path,'csi_image'):$n
+  if($n=0) then
+    aipViewLayers('remove')
+    aipRQcommand('remove',$path)
+    shell('rm -f '+$path) csiCmd('makeMapList')
+  else
+    write('line3','Cannot delete '+$path)
+  endif
+endif
+
+if($1='ft') then
+  wft
+  return
+endif
+
+// called by im2Dcsi and csiLoad to process and show maps or grid data
+// TODO: include options for auto phasing baseline correction.
+// temporarily use 'av' mode, and no bc.
+if($1='proc1d') then
+
+  $dmg=dmg // save dmg
+  $bcmode=bcmode
+  $blockph=blockph
+  on('blockph'):$ph
+  on('bcmode'):$bc
+
+  // process all and display one trace
+  dmg='av' csiCmd('ft') ds(dsSelect[1]) f full vsadj('all') 
+
+  // calculate default csi image
+  liMMap
+
+  // find integral regions
+  $n=size('lifrq')
+  if($n=1) then
+     region nli
+  endif
+
+  // peak picking
+  $n=size('llfrq')
+  if($n=1) then
+     thadj nll
+  endif
+
+  csiCmd('getCSIPath'):$csidir
+
+  off('blockph')
+  off('bcmode')
+  bcmode[1]=-1
+
+/* uncomment to include auto phasing and BC
+  dmg=$dmg
+  bcmode=$bcmode
+  blockph=$blockph
+  if(dsSelect[1]>1) then ds(dsSelect[1])
+  else ds(0.5*fnv*fnv2) endif
+  // load phase file
+  if($ph and blockph=1) then 
+    on('blockph')
+    aph bph
+  elseif($ph) then
+    on('blockph')
+    aph
+  endif
+
+  // baseline correction
+  if($bc and bcmode[1]>=0) then 
+    on('bcmode')
+    bc('all') 
+  endif 
+*/
+
+  csiSave('all')
+
+  $show=0
+  if($#>1) then 
+     if($2='show') then $show=1 endif
+  endif
+
+  if($show=0) then return endif
+
+  // load csi image (map of spectral integral)
+  csiCmd('getMapPath'):$path
+  exists($path,'directory'):$e
+  if($e) then
+    csiCmd('makeMapList',$path):$mext csiMapSel=''
+    csiCmd('loadMap') // show maps
+    csiShow('specData',1) // show grid data
+  else 
+    shell('mkdir -p '+$path)
+    csiShow('gridData',1) // show grid data
+  endif
+
+  jFunc(88,1)
+  aipSetState(11)
+  menu('aip')
+  aipShowCSIData:$n 
+  if($n=0) then aipShowCSIData(`hide`,`frame:all`) endif
+
+  // highligh the node
+  if(jviewport>2) then
+     strstr(file,'.csi/spatial.fid'):$n,$s
+     if($n) then
+       vnmrjcmd('RQ rt',$s+'.csi/maps')
+     endif
+  endif
+
+endif
+
+// $2 is module name
+// optionally $3 is fullpath of new module file
+if($1='saveProc') then
+  if($#>1) then 
+    $procmodule=$2
+  else
+    $procmodule=procmodule
+  endif
+  module('list',$procmodule):$list,$file
+  if($list<>'') then
+    csiCmd('getCSIPath'):$csidir
+    if($#>2) then 
+      substr($3,1,1):$s
+      if($s='/') then
+        $path=$3
+      else
+        $path=$csidir+'/'+$3
+      endif
+    else
+      $path=$csidir+'/'+$procmodule
+    endif
+    writeparam($path,$list)
+  endif
+endif
+
+// $2 is module name or full path of the module
+if($1='rtProc') then
+  if($#>1) then 
+    $procmodule=$2
+  else
+    $procmodule=procmodule
+  endif
+  substr($procmodule,1,1):$s
+  if($s='/') then 
+    $path=$procmodule
+  else
+    csiCmd('getCSIPath'):$csidir
+    $path=$csidir+'/'+$procmodule
+  endif
+  exists($path,'file'):$e
+  if($e) then
+    rtx($path,'current','rt','clear') //noclear???
+  endif
+  layout=layout // update panel
+endif
+
+if($1='phase') then
+  if(bcmode[1]>=0) then bcmode[1]=-1 bc('cancel') endif
+  if($#>1) then
+    if($2='sel') then
+      ds
+      return
+    endif
+  endif
+  if(blockph=1) then
+    bph
+    ds(dsSelect[1])
+  else
+    aph
+  endif
+endif
+
+if($1='bc') then
+  if($#>1) then $action=$2
+  else $action='dis' endif
+  if($action='sel' and bcmode[1]>=0) then
+    csiCmd('ft') ds(dsSelect[1]) 
+    csiShow('specData',3)
+  elseif($action='sel') then
+    csiCmd('ft') ds(dsSelect[1])
+    csiShow('specData',1)
+  else 
+    bcpopup('dis')
+  endif
+endif
+
+if($1='updateVoxelInfo') then
+  $infoPath = curexp+'/voxelInfo.txt'
+  write('reset',$infoPath)
+
+  // write index
+  if($#>1) then
+    write('file', $infoPath, 'Index: %d', $2)
+  else
+    write('file', $infoPath, 'Index: %d', dsSelect[1])
+  endif
+
+  // write phase 
+  if(dmg='av') then
+      write('file', $infoPath, 'Magnitude spectrum')
+  elseif(dmg='pwr') then
+      write('file', $infoPath, 'Power spectrum')
+  else
+      on('blockph'):$n
+      if($n and blockph>0) then
+         write('file', $infoPath, 'Phase: %.1f, %.1f',bph0,bph1)
+      else
+         write('file', $infoPath, 'Phase: %.1f, %.1f',rp,lp)
+      endif
+  endif
+
+  if(vs>0) then $vs=vs else $vs=1 endif
+
+  // write cursor info 
+  peak(cr,cr):$h,$p
+  $h=$h*csiSpecVS/$vs
+  if(axis='p' and reffrq>0) then
+     write('file', $infoPath, 'Cursor %.2fppm:, height %.1f',$p/reffrq,$h)
+  else
+     write('file', $infoPath, 'Cursor %.2fHz:, height %.1f',$p,$h)
+  endif
+ 
+  // write peak integral 
+  dli
+  $lifrqsize=size('lifrq')
+  $liampsize=size('liamp')
+  if($lifrqsize>1 and $liampsize>1) then
+     $rflrfp=rfl - rfp
+     $frq=cr + $rflrfp
+     $i=0
+     $up=sw
+     while($i < $lifrqsize) do
+        $i=$i+1
+        if($i<$liampsize and $frq <= $up and $frq >= lifrq[$i]) then
+	   peak(lifrq[$i]-$rflrfp, $up-$rflrfp):$h,$p
+           $h=$h*csiSpecVS/$vs
+           $in = liamp[$i]*csiSpecVS
+	   if(axis='p' and reffrq>0) then
+  	     write('file', $infoPath, 'Peak %.2fppm:, height %.1f, integral %.1f',$p/reffrq,$h,$in)
+	   else
+  	     write('file', $infoPath, 'Peak %.2fHz:, height %.1f, integral %.4f',$p,$h,liamp[$i])
+  	   endif
+        endif
+        $up=lifrq[$i]   
+     endwhile
+  endif
+
+  // write map info
+  write('file', $infoPath, '\\Intensity:')
+  $size=size('aipPositionInfo')
+  $i=0
+  while($i<$size) do
+    $i=$i+1
+    $s=''
+    substr(aipPositionInfo[$i],1):$s 
+    substr(aipPositionInfo[$i],2):$x
+    substr(aipPositionInfo[$i],3):$y
+    substr(aipPositionInfo[$i],4):$intensity 
+    write('file', $infoPath, '%s(x,y): %d(%d,%d)',$s,$intensity,$x,$y)
+  endwhile
+
+  return
+endif

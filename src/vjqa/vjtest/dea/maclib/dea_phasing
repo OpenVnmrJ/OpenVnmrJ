@@ -1,0 +1,1467 @@
+" dea_phasing_version_November2010 "
+
+" uses least squares linear fit of noise regions "
+" on either side of the narrowest integrals created by pickpeaks macro "
+
+if (50/sw*np/2)<200 then fn=np*4 else fn=np*2 endif
+
+lb='n'
+gf='n' 
+ai wft cz f full vp=12 
+aph 
+$rpstart=rp $lpstart=lp
+dc
+
+$width=50
+$z_limit=2
+
+$currentdir=curexp
+cd($currentdir):$dir
+
+
+		" find noise amplitude "
+$sp=sp $wp=wp
+wp=0.5p vsadj $vs=vs
+sp=sp+0.5p vsadj if vs>$vs then $vs=vs endif
+sp=sp+0.5p vsadj if vs>$vs then $vs=vs endif
+sp=sp+0.5p vsadj if vs>$vs then $vs=vs endif
+sp=sp+0.5p vsadj if vs>$vs then $vs=vs endif
+sp=sp+0.5p vsadj if vs>$vs then $vs=vs endif
+
+" adjust baseline correction initially "
+
+vs=$vs/100 th=3 f 
+lb=0.5 wft f dc 
+
+$a=1  " check to see that we dont exceed 500 peaks "
+repeat
+  dll nll:r1
+  if r1>500 then th=th+2 endif
+  $a=$a+1
+until $a>20 or r1<=500
+pickpeaks(25,16) bc
+pickpeaks(25,16) lb='n' wft bc 
+cz
+
+
+" is an internal standard >4 ppm present in the sample to phase on ?? "
+
+$intstdpresent='n'  intmod='partial'
+
+if intstd='maleic' then 
+  $intstdpresent='y'
+  sp=5.95p wp=0.55p
+elseif intstd='dimethylfumarate' then
+  sp=6.5p wp=0.3p
+endif
+$spint=sp $wpint=wp
+
+" check for large peaks near internal standard peak "
+if $intstdpresent='y' then
+  peak:$ht,cr $cr=cr $vsint=vs $th=th 
+  sp=$cr-50 wp=100 vsadj th=5 
+  sp=$cr-50 wp=40 dll nll:r1 r1? sp=$cr+10 dll nll:r2 r2? 
+  if r1>0 or r2>0 then $intstdpresent='n' f else sp=$spint wp=$wpint endif
+  vs=$vsint th=$th
+endif
+
+
+if $intstdpresent='y' then   " III - large if then to determine integrals for phasing "
+  $b1=1 $b2=1 $c1=2 $c2=2
+  sp=$spint wp=$wpint peak:$ht,cr 
+  dres:r1 r2=r1*16 
+  if $width+r2>65 then r2=65-$width endif
+  z(cr+$width+r2,cr-$width-r2) 
+  sp=-0.5p wp=1p peak:$ht,cr dres:r1 r2=r1*16
+  if $width+r2>55 then r2=55-$width endif
+  z(cr+$width+r2,cr-$width-r2) 
+  f numreg:$numintegrals 
+  getreg(2):$right2,$right1 getreg(1):$left2,$left1
+
+
+else     " find best integrals to use "
+
+  $i=1
+  repeat
+		" establish integrals around peaks for program to work on when no internal standard in sample "
+    f full vp=12 
+    $a=1  $numlines=0
+    repeat
+      dll nll:$numlines 
+      if $numlines>500 then th=th+2 dll nll:$numlines endif
+      $a=$a+1
+    until $a>10 or $numlines<501
+
+    pickpeaks($width,16)
+    numreg:$numintegrals
+
+    if $numintegrals<3 then write('line3','Cannot run this macro.  Note enough integrals.  Using APH.') aph return endif
+
+    getreg(1):r2,r1 getreg($numintegrals):r4,r3
+    $middle=(r1-r4)/2
+
+    $minwidthleft=100000 $minwidthright=100000 $bestseparation=100000
+    $right1=1000000 $right2=1000000 $dres_right1=0  $dres_right2=0
+    $left1=1000000  $left2=1000000  $dres_left1=0   $dres_left2=0
+    $ht=0
+
+    $b1=0 $b2=1 $c1=0 $c2=1  "$b1,$b2 for left integral $c1,$c2 for right "
+    "$b1 and $c1 are first choices and $b2 and $c2 are used if cannot converge "
+    $a=1 
+    repeat
+      f getreg($a):r2,r1 sp=r2 wp=r1-r2 peak:$ht,cr $separation=0
+      $int_left[$a]=r1 $int_right[$a]=r2
+      if $ht>200 then 
+        if r2>$middle then 
+          if $a=1 then getreg(2):r4,r3 $separation=r2-r3 endif
+          if $a=$numintegrals then getreg($numintegrals-1):r4,r3 $separation=r4-r1 endif
+          if $a>1 and $a<$numintegrals then 
+            getreg($a-1):r4,r3 getreg($a+1):r6,r5 
+            $dum1=r4-r1 $dum2=r2-r5 
+            if $dum1>$dum2 then $separation=$dum2 else $separation=$dum1 endif
+            if $separation<0.1 then $separation=0.1 endif
+          endif
+          $bestseparation=wp/$separation
+          if $minwidthleft>$bestseparation then $minwidthleft=$bestseparation $b2=$b1 $b1=$a $c2=$b1+1 $c1=$c2 endif
+        endif
+        if r2<$middle then
+          if $a=1 then getreg(2):r4,r3 $separation=r2-r3 endif
+          if $a=$numintegrals then getreg($numintegrals-1):r4,r3 $separation=r4-r1 endif
+          if $a>1 and $a<$numintegrals then 
+            getreg($a-1):r4,r3 getreg($a+1):r6,r5 
+            $dum1=r4-r1 $dum2=r2-r5 
+            if $dum1>$dum2 then $separation=$dum2 else $separation=$dum1 endif
+            if $separation<0.1 then $separation=0.1 endif
+          endif
+          $bestseparation=wp/$separation
+          if $minwidthright>$bestseparation then $minwidthright=$bestseparation $minwidthright=wp $c2=$c1 $c1=$a  endif
+        endif
+      endif
+      $a=$a+1
+    until $a>$numintegrals
+
+    if $minwidthleft>10 or $minwidthright>10 then $too_high=1 th=th+2 else $too_high=0  endif
+    $i=$i+1 
+  until $too_high<1 or $i>10
+
+
+  if $b1=0 or $c1=0 then 
+    write('line3','No appropriate integrals on left or right of spectrum.  Using APH.') aph return
+  endif
+
+  f getreg($c1):$right2,$right1 getreg($b1):$left2,$left1
+
+endif  " III - large if then "
+
+
+
+" *********************************************** "
+" collect data points on either side of the peaks "
+" remove outlier data points                      "
+" determine the slopes of the left side data points "
+" then the right side and the entire peak points  "
+" then adjust lp and rp                           "
+" *********************************************** "
+
+
+$cycle=1
+repeat		" AAA   --  tests lp and rp until they converge "
+
+  pickpeaks(50,16) lb='n' wft bc 
+  f  ds
+	" check the right phase value and adjust if necessary "
+
+  $radianchange1=0 $radianchange2=0 $rpfirst=0 $rpnext=0
+
+  $counter_right=1
+  repeat		" BBB   - right peak loop "
+
+	" left side of right peak "
+
+    wp=$width
+    sp=$right1-$width
+    writespec(curexp+'/tmp')
+    cd(curexp):$dir lookup('file',curexp+'/tmp')
+    $a=1
+    repeat
+      $dumline=''  lookup('readline'):$dumline
+      $a=$a+1
+    until $dumline=''
+    $numlines=$a-2
+    lookup('file',curexp+'/tmp')
+
+    $a=1
+    repeat
+      $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+      $a=$a+1
+    until $a>$numlines
+
+    $count1=$a-1
+
+    $leftcleanpos=$pos $leftcleanht=$height $stopleft=$count1
+    $pos1=$pos
+    $ht1=$height
+
+	" right side of right peak "
+
+    wp=$width
+    sp=$right2
+    writespec(curexp+'/tmp')
+    cd(curexp):$dir lookup('file',curexp+'/tmp')
+    $a=1
+    repeat
+      $dumline='' lookup('readline'):$dumline
+      $a=$a+1
+    until $dumline=''
+    $numlines=$a-2
+    lookup('file',curexp+'/tmp')
+
+    $a=1
+    repeat
+      $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+      $a=$a+1
+    until $a>$numlines
+
+    $count2=$a-1
+    $pos2=$pos
+    $ht2=$height
+    $rightcleanpos=$pos $rightcleanht=$height $stopright=$count2
+
+    $a=1  $b=1
+    repeat
+      $entirecleanpos[$b]=$leftcleanpos[$a] $entirecleanht[$b]=$leftcleanht[$a]
+      $a=$a+1 $b=$b+1
+    until $a>$stopleft/4
+
+    $a=trunc($stopright*3/4)
+    repeat
+      $entirecleanpos[$b]=$rightcleanpos[$a] $entirecleanht[$b]=$rightcleanht[$a] $b=$b+1
+      $a=$a+1
+    until $a>$stopright
+
+    $stopentire=$b-1
+
+    " calculate which data points are outliers "
+    $dum1=0 $dum2=0
+    $dum1=trunc($count1/2)
+    $dum2=trunc($count2/2)
+    if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+    if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+    sort($ht1):$order1,$values1
+    $medianht1=$ht1[$order1[$midpt1]]
+    sort($ht2):$order2,$values2
+    $medianht2=$ht2[$order2[$midpt2]]
+
+    $a=1
+    repeat
+      $diff1[$a]=0 abs($ht1[$a]-$medianht1):$diff1[$a]
+      $a=$a+1
+    until $a>$count1
+
+    sort($diff1):$order1,$values1
+    $mediandiff1=$diff1[$order1[$midpt1]]  $MAD1=$mediandiff1*1.4826
+    $dum1=0 $dum2=0
+    $dum1=trunc($count1/2)
+    $dum2=trunc($count2/2)
+
+    if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+    if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+    sort($ht1):$order1,$values1
+    $medianht1=$ht1[$order1[$midpt1]]
+    sort($ht2):$order2,$values2
+    $medianht2=$ht2[$order2[$midpt2]]
+
+    $a=1
+    repeat
+      $diff2[$a]=0 abs($ht2[$a]-$medianht2):$diff2[$a]
+      $a=$a+1
+    until $a>$count2
+
+    sort($diff2):$order2,$values2
+    $mediandiff2=$diff2[$order2[$midpt2]]  $MAD2=$mediandiff2*1.4826
+
+    " record all positions and heights that are not outliers (z-score>2 or <-2) "
+    $a=1 $b=1 $c=1
+    repeat
+      $z=$diff1[$a]/$MAD1
+      if $z<$z_limit then 
+        $leftcleanpos[$b]=$pos1[$a] $leftcleanht[$b]=$ht1[$a]
+        if $a<$count1/2 then $entirecleanpos[$b]=$pos1[$a] $entirecleanht[$b]=$ht1[$a] $c=$c+1 endif
+        $b=$b+1
+      endif
+      $a=$a+1
+    until $a>$count1
+
+    $stopleft=$b-1
+    $stopentire=$c-1
+
+    $a=1 $b=1 $c=$stopentire+1
+    repeat
+      $z=$diff2[$a]/$MAD2
+      if $z<$z_limit then 
+        if $a>$count2/2 then $entirecleanpos[$c]=$pos2[$a] $entirecleanht[$c]=$ht2[$a] $c=$c+1 endif
+        $rightcleanpos[$b]=$pos2[$a] $rightcleanht[$b]=$ht2[$a] $b=$b+1
+      endif
+      $a=$a+1
+    until $a>$count2
+
+    $stopentire=$c-1
+    $stopright=$b-1
+
+    " ************************************************ "
+    " find the slope of the entire right peak baseline "
+    " ************************************************ "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+
+    $a=1
+    repeat
+      write('file',$file,'%5.4f   %4.6f',$entirecleanpos[$a],$entirecleanht[$a])
+      $a=$a+1
+    until $a>$stopentire
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_entire
+    lookup('a1=','read'):$slope_entire
+
+    " find the slope of the left side of the right peak baseline "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+
+    $a=1
+    repeat
+      write('file',$file,'%5.4f   %4.6f',$leftcleanpos[$a],$leftcleanht[$a])
+      $a=$a+1
+    until $a>$stopleft
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_left
+    lookup('a1=','read'):$slope_left
+
+    " find the slope of the right side of the right peak baseline "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+
+    $a=1
+    repeat
+      write('file',$file,'%5.4f   %4.6f',$rightcleanpos[$a],$rightcleanht[$a])
+      $a=$a+1
+    until $a>$stopright
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_right
+    lookup('a1=','read'):$slope_right
+
+    " adjust the Entire slope to zero using arctangent "
+
+    $radian_entire=0 atan($slope_entire):$radian_entire
+    $radian_left=0   atan($slope_left):$radian_left
+    $radian_right=0  atan($slope_right):$radian_right
+
+    r1=$radian_left-$radian_entire
+    r2=$radian_entire-$radian_right
+    r3=(r1-r2)
+
+    if $counter_right=1 then 
+      $rpfirst=rp $radianchange1=r3 
+      if r3>0 then rp=rp+1 else rp=rp-1 endif
+      $rpnext=rp
+    else $radianchange2=r3 
+    endif
+
+    $counter_right=$counter_right+1
+  until $counter_right>2			" BBB ends "
+
+  $shift=$radianchange2*($rpfirst-$rpnext)/($radianchange1-$radianchange2)
+
+  if $shift>5 then $shift=5 endif
+  if $shift<-5 then $shift=-5 endif
+  rp=rp-$shift  f  ds
+
+
+  " ********************************** "
+  " ********************************** "
+  " check the left phase               "
+  " ********************************** "
+  " ********************************** "
+
+  "dc"  ds
+  $radianchange1=0 $radianchange2=0 $lpfirst=0 $lpnext=0
+
+  $counter_left=1
+  repeat			" CCC - left peak loop "
+
+	" left side of left peak "
+
+    wp=$width
+    sp=$left1-$width
+    writespec(curexp+'/tmp')
+    cd(curexp):$dir lookup('file',curexp+'/tmp')
+    $a=1
+    repeat
+      $dumline='' lookup('readline'):$dumline
+      $a=$a+1
+    until $dumline=''
+    $numlines=$a-2
+    lookup('file',curexp+'/tmp')
+
+    $a=1
+    repeat
+      $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+      $a=$a+1
+    until $a>$numlines
+
+
+    $count1=$a-1
+    $leftcleanpos=$pos $leftcleanht=$height $stopleft=$count1
+    $pos1=$pos
+    $ht1=$height
+
+	" right side of left peak "
+
+    wp=$width
+    sp=$left2
+    writespec(curexp+'/tmp')
+    cd(curexp):$dir lookup('file',curexp+'/tmp')
+    $a=1
+    repeat
+      $dumline='' lookup('readline'):$dumline
+      $a=$a+1
+    until $dumline=''
+    $numlines=$a-2
+    lookup('file',curexp+'/tmp')
+
+    $a=1
+    repeat
+      $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+      $a=$a+1
+    until $a>$numlines
+
+
+    $count2=$a-1
+    $pos2=$pos
+    $ht2=$height
+    $rightcleanpos=$pos $rightcleanht=$height $stopright=$count2
+
+    $a=1  $b=1
+    repeat
+      $entirecleanpos[$b]=$leftcleanpos[$a] $entirecleanht[$b]=$leftcleanht[$a]
+      $a=$a+1 $b=$b+1
+    until $a>$stopleft/4
+
+    $a=trunc($stopright*3/4)
+    repeat
+      $entirecleanpos[$b]=$rightcleanpos[$a] $entirecleanht[$b]=$rightcleanht[$a] $b=$b+1
+      $a=$a+1
+    until $a>$stopright
+
+    $stopentire=$b-1
+
+    " calculate which data points are outliers "
+
+    $dum1=0 $dum2=0
+    $dum1=trunc($count1/2)
+    $dum2=trunc($count2/2)
+
+    if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+    if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+ 
+    sort($ht1):$order1,$values1
+    $medianht1=$ht1[$order1[$midpt1]]
+    sort($ht2):$order2,$values2
+    $medianht2=$ht2[$order2[$midpt2]]
+
+    $a=1
+    repeat
+      $diff1[$a]=0 abs($ht1[$a]-$medianht1):$diff1[$a]
+      $a=$a+1
+    until $a>$count1
+
+    sort($diff1):$order1,$values1
+    $mediandiff1=$diff1[$order1[$midpt1]]  $MAD1=$mediandiff1*1.4826
+    $dum1=0 $dum2=0
+    $dum1=trunc($count1/2)
+    $dum2=trunc($count2/2)
+
+    if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+    if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+    sort($ht1):$order1,$values1
+    $medianht1=$ht1[$order1[$midpt1]]
+    sort($ht2):$order2,$values2
+    $medianht2=$ht2[$order2[$midpt2]]
+
+    $a=1
+    repeat
+      $diff2[$a]=0 abs($ht2[$a]-$medianht2):$diff2[$a]
+      $a=$a+1
+    until $a>$count2
+
+    sort($diff2):$order2,$values2
+    $mediandiff2=$diff2[$order2[$midpt2]]  $MAD2=$mediandiff2*1.4826
+
+    " record all positions and heights that are not outliers (z-score>2 or <-2) "
+    $a=1 $b=1 $c=1
+    repeat
+      $z=$diff1[$a]/$MAD1
+      if $z<$z_limit then 
+        $leftcleanpos[$b]=$pos1[$a] $leftcleanht[$b]=$ht1[$a]
+        if $a<$count1/2 then $entirecleanpos[$b]=$pos1[$a] $entirecleanht[$b]=$ht1[$a] $c=$c+1 endif
+        $b=$b+1
+      endif
+      $a=$a+1
+    until $a>$count1
+
+    $stopleft=$b-1
+    $stopentire=$c-1
+
+    $a=1 $b=1 $c=$stopentire+1
+    repeat
+      $z=$diff2[$a]/$MAD2
+      if $z<$z_limit then 
+          if $a>$count2/2 then $entirecleanpos[$c]=$pos2[$a] $entirecleanht[$c]=$ht2[$a] $c=$c+1 endif
+          $rightcleanpos[$b]=$pos2[$a] $rightcleanht[$b]=$ht2[$a] $b=$b+1
+      endif
+      $a=$a+1
+    until $a>$count2
+
+    $stopentire=$c-1
+    $stopright=$b-1
+
+    " ************************************************ "
+    " find the slope of the entire left peak baseline "
+    " ************************************************ "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+
+    $a=1
+    repeat
+        write('file',$file,'%5.4f   %4.6f',$entirecleanpos[$a],$entirecleanht[$a])
+        $a=$a+1
+    until $a>$stopentire
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_entire
+    lookup('a1=','read'):$slope_entire
+
+
+    " find the slope of the left side of the left peak baseline "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+
+    $a=1
+    repeat
+        write('file',$file,'%5.4f   %4.6f',$leftcleanpos[$a],$leftcleanht[$a])
+        $a=$a+1
+    until $a>$stopleft
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_left
+    lookup('a1=','read'):$slope_left
+
+    " find the slope of the right side of the left peak baseline "
+
+    $file=curexp+'/tmp'
+    write('reset',$file)
+    $a=1
+    repeat
+        write('file',$file,'%5.4f   %4.6f',$rightcleanpos[$a],$rightcleanht[$a])
+        $a=$a+1
+    until $a>$stopright
+
+    $list=curexp+'/tmp'
+    nrecords($list):$countlist
+    $file=curexp+'/analyze.inp' 
+    write('reset',$file)
+    write('file',$file,'frequency')
+    write('file',$file,'height')
+
+    write('file',$file,'1	%d',$countlist)
+    write('file',$file,'NEXT %d',$countlist)
+    write('file',$file,'1 ')
+
+    $cmd='cat '+$list+ ' >> '+$file
+    shell($cmd):$dummy
+
+    analyze('expfit','regression','poly1','list')
+
+//    cat(curexp+'/analyze.list')
+
+    lookup('file','analyze.list')
+    lookup('a0=','read'):$intercept_right
+    lookup('a1=','read'):$slope_right
+
+    " adjust the Entire slope to zero using arctangent "
+
+    $radian_entire=0 atan($slope_entire):$radian_entire
+    $radian_left=0   atan($slope_left):$radian_left
+    $radian_right=0  atan($slope_right):$radian_right
+
+
+    r1=$radian_left-$radian_entire
+    r2=$radian_entire-$radian_right
+    r3=(r1-r2)
+
+    if $counter_left=1 then 
+      $lpfirst=lp $radianchange1=r3 
+      if r3>0 then lp=lp+1 rp=rp-0.5*0.1975 else lp=lp-1 rp=rp+1*0.1975 endif
+      $lpnext=lp
+    else $radianchange2=r3
+    endif
+
+    $counter_left=$counter_left+1
+  until $counter_left>2		" CCC  ends "
+
+
+  $shift=$radianchange2*($lpfirst-$lpnext)/($radianchange1-$radianchange2)
+
+  if $shift>5 then $shift=5 endif
+  if $shift<-5 then $shift=-5 endif
+
+  lp=lp-$shift rp=rp+$shift*0.1975
+  f  ds
+
+  $difflp=0 abs($lpstart-lp):$difflp $diffrp=0 abs($rpstart-rp):$diffrp
+  if $difflp<0.11 and $diffrp<0.11 then write('line3','converged') lp? rp? f full vp=12 isadj $cycle=1000 endif
+  $lpstart=lp $rpstart=rp
+
+  $cycle=$cycle+1
+until $cycle>10		" AAA  -- loop ends "
+
+if $cycle<1000 then write('line3','did not converge') aph $converge='n' else $converge='y' endif
+
+f full vp=12 isadj
+
+
+
+
+
+" ***************************************************************** "
+" If it did not converge then use other left integral and try again "
+" ***************************************************************** "
+
+if $converge='n' and ($b1<>$b2) then  " IF THEN EEE "
+
+  f getreg($c1):$right2,$right1 getreg($b2):$left2,$left1
+  cr=$right1-$width nl dres:$dres_right1 if $dres_right1>1.5 then mark(cr):$ht cr=cr+1 mark(cr):r1 exp(2.827*r1/$ht):r2 $dres_right1=r2*0.4813 endif
+  cr=$right2+$width nl dres:$dres_right2 if $dres_right2>1.5 then mark(cr):$ht cr=cr-1 mark(cr):r1 exp(2.827*r1/$ht):r2 $dres_right2=r2*0.4813 endif
+  cr=$left1-$width nl dres:$dres_left1   if $dres_left1>1.5  then mark(cr):$ht cr=cr+1 mark(cr):r1 exp(2.827*r1/$ht):r2 $dres_left1=r2*0.4813 endif
+  cr=$left2+$width nl dres:$dres_left2   if $dres_left2>1.5  then mark(cr):$ht cr=cr-1 mark(cr):r1 exp(2.827*r1/$ht):r2 $dres_left2=r2*0.4813 endif
+
+  if $dres_right1>10 then $dres_right1=10 endif
+  if $dres_right2>10 then $dres_right2=10 endif
+  if $dres_left1>10 then $dres_left1=10 endif
+  if $dres_left2>10 then $dres_left2=10 endif
+
+
+  $cycle=1
+  repeat		" AAA   --  tests lp and rp until they converge "
+
+    f  "dc"  ds
+	" check the right phase value and adjust if necessary "
+
+    $radianchange1=0 $radianchange2=0 $rpfirst=0 $rpnext=0
+
+    $counter_right=1
+    repeat		" BBB   - right peak loop "
+
+	" left side of right peak "
+
+      wp=$width
+      sp=$right1-$width
+      writespec(curexp+'/tmp')
+      cd(curexp):$dir lookup('file',curexp+'/tmp')
+      $a=1
+      repeat
+        $dumline=''  lookup('readline'):$dumline
+        $a=$a+1
+      until $dumline=''
+      $numlines=$a-2
+      lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+        $a=$a+1
+      until $a>$numlines
+
+      $count1=$a-1
+
+      $leftcleanpos=$pos $leftcleanht=$height $stopleft=$count1
+      $pos1=$pos
+      $ht1=$height
+
+	" right side of right peak "
+
+      wp=$width
+      sp=$right2
+      writespec(curexp+'/tmp')
+      cd(curexp):$dir lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $dumline='' lookup('readline'):$dumline
+        $a=$a+1
+      until $dumline=''
+
+      $numlines=$a-2
+      lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+        $a=$a+1
+      until $a>$numlines
+
+      $count2=$a-1
+      $pos2=$pos
+      $ht2=$height
+      $rightcleanpos=$pos $rightcleanht=$height $stopright=$count2
+
+      $a=1  $b=1
+      repeat
+        $entirecleanpos[$b]=$leftcleanpos[$a] $entirecleanht[$b]=$leftcleanht[$a]
+        $a=$a+1 $b=$b+1
+      until $a>$stopleft/4
+
+      $a=trunc($stopright*3/4)
+      repeat
+        $entirecleanpos[$b]=$rightcleanpos[$a] $entirecleanht[$b]=$rightcleanht[$a] $b=$b+1
+        $a=$a+1
+      until $a>$stopright
+
+      $stopentire=$b-1
+
+      " calculate which data points are outliers "
+      $dum1=0 $dum2=0
+      $dum1=trunc($count1/2)
+      $dum2=trunc($count2/2)
+      if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+      if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+      sort($ht1):$order1,$values1
+      $medianht1=$ht1[$order1[$midpt1]]
+      sort($ht2):$order2,$values2
+      $medianht2=$ht2[$order2[$midpt2]]
+
+      $a=1
+      repeat
+        $diff1[$a]=0 abs($ht1[$a]-$medianht1):$diff1[$a]
+        $a=$a+1
+      until $a>$count1
+
+      sort($diff1):$order1,$values1
+      $mediandiff1=$diff1[$order1[$midpt1]]  $MAD1=$mediandiff1*1.4826
+      $dum1=0 $dum2=0
+      $dum1=trunc($count1/2)
+      $dum2=trunc($count2/2)
+
+      if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+      if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+      sort($ht1):$order1,$values1
+      $medianht1=$ht1[$order1[$midpt1]]
+      sort($ht2):$order2,$values2
+      $medianht2=$ht2[$order2[$midpt2]]
+
+      $a=1
+      repeat
+        $diff2[$a]=0 abs($ht2[$a]-$medianht2):$diff2[$a]
+        $a=$a+1
+      until $a>$count2
+
+      sort($diff2):$order2,$values2
+      $mediandiff2=$diff2[$order2[$midpt2]]  $MAD2=$mediandiff2*1.4826
+
+      " record all positions and heights that are not outliers (z-score>2 or <-2) "
+      $a=1 $b=1 $c=1
+      repeat
+        $z=$diff1[$a]/$MAD1
+        if $z<$z_limit then 
+          $leftcleanpos[$b]=$pos1[$a] $leftcleanht[$b]=$ht1[$a]
+          if $a<$count1/2 then $entirecleanpos[$b]=$pos1[$a] $entirecleanht[$b]=$ht1[$a] $c=$c+1 endif
+          $b=$b+1
+        endif
+        $a=$a+1
+      until $a>$count1
+
+      $stopleft=$b-1
+      $stopentire=$c-1
+
+      $a=1 $b=1 $c=$stopentire+1
+      repeat
+        $z=$diff2[$a]/$MAD2
+        if $z<$z_limit then 
+          if $a>$count2/2 then $entirecleanpos[$c]=$pos2[$a] $entirecleanht[$c]=$ht2[$a] $c=$c+1 endif
+          $rightcleanpos[$b]=$pos2[$a] $rightcleanht[$b]=$ht2[$a] $b=$b+1
+        endif
+        $a=$a+1
+      until $a>$count2
+
+      $stopentire=$c-1
+      $stopright=$b-1
+
+      " ************************************************ "
+      " find the slope of the entire right peak baseline "
+      " ************************************************ "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+
+      $a=1
+      repeat
+        write('file',$file,'%5.4f   %4.6f',$entirecleanpos[$a],$entirecleanht[$a])
+        $a=$a+1
+      until $a>$stopentire
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_entire
+      lookup('a1=','read'):$slope_entire
+
+      " find the slope of the left side of the right peak baseline "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+
+      $a=1
+      repeat
+        write('file',$file,'%5.4f   %4.6f',$leftcleanpos[$a],$leftcleanht[$a])
+        $a=$a+1
+      until $a>$stopleft
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+ 
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_left
+      lookup('a1=','read'):$slope_left
+
+      " find the slope of the right side of the right peak baseline "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+
+      $a=1
+      repeat
+        write('file',$file,'%5.4f   %4.6f',$rightcleanpos[$a],$rightcleanht[$a])
+        $a=$a+1
+      until $a>$stopright
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_right
+      lookup('a1=','read'):$slope_right
+
+      " adjust the Entire slope to zero using arctangent "
+
+      $radian_entire=0 atan($slope_entire):$radian_entire
+      $radian_left=0   atan($slope_left):$radian_left
+      $radian_right=0  atan($slope_right):$radian_right
+
+      r1=$radian_left-$radian_entire
+      r2=$radian_entire-$radian_right
+      r3=(r1-r2)
+
+      if $counter_right=1 then 
+        $rpfirst=rp $radianchange1=r3 
+        if r3>0 then rp=rp+1 else rp=rp-1 endif
+        $rpnext=rp
+      else $radianchange2=r3 
+      endif
+
+      $counter_right=$counter_right+1
+    until $counter_right>2			" BBB ends "
+
+    $shift=$radianchange2*($rpfirst-$rpnext)/($radianchange1-$radianchange2)
+
+    if $shift>5 then $shift=5 endif
+    if $shift<-5 then $shift=-5 endif
+    rp=rp-$shift  f  ds
+
+
+    " ********************************** "
+    " ********************************** "
+    " check the left phase               "
+    " ********************************** "
+    " ********************************** "
+
+    "dc"  ds
+    $radianchange1=0 $radianchange2=0 $lpfirst=0 $lpnext=0
+
+    $counter_left=1
+    repeat			" CCC - left peak loop "
+
+	" left side of left peak "
+
+      wp=$width
+      sp=$left1-$width
+      writespec(curexp+'/tmp')
+      cd(curexp):$dir lookup('file',curexp+'/tmp')
+      $a=1
+      repeat
+        $dumline='' lookup('readline'):$dumline
+        $a=$a+1
+      until $dumline=''
+      $numlines=$a-2
+      lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+        $a=$a+1
+      until $a>$numlines
+
+
+      $count1=$a-1
+      $leftcleanpos=$pos $leftcleanht=$height $stopleft=$count1
+      $pos1=$pos
+      $ht1=$height
+
+	" right side of left peak "
+
+      wp=$width
+      sp=$left2
+      writespec(curexp+'/tmp')
+      cd(curexp):$dir lookup('file',curexp+'/tmp')
+      $a=1
+      repeat
+        $dumline='' lookup('readline'):$dumline
+        $a=$a+1
+      until $dumline=''
+      $numlines=$a-2
+      lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+        $a=$a+1
+      until $a>$numlines
+
+
+      $count2=$a-1
+      $pos2=$pos
+      $ht2=$height
+      $rightcleanpos=$pos $rightcleanht=$height $stopright=$count2
+
+      $a=1  $b=1
+      repeat
+        $entirecleanpos[$b]=$leftcleanpos[$a] $entirecleanht[$b]=$leftcleanht[$a]
+        $a=$a+1 $b=$b+1
+      until $a>$stopleft/4
+
+      $a=trunc($stopright*3/4)
+      repeat
+        $entirecleanpos[$b]=$rightcleanpos[$a] $entirecleanht[$b]=$rightcleanht[$a] $b=$b+1
+        $a=$a+1
+      until $a>$stopright
+
+      $stopentire=$b-1
+ 
+      " calculate which data points are outliers "
+
+      $dum1=0 $dum2=0
+      $dum1=trunc($count1/2)
+      $dum2=trunc($count2/2)
+
+      if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+      if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+ 
+      sort($ht1):$order1,$values1
+      $medianht1=$ht1[$order1[$midpt1]]
+      sort($ht2):$order2,$values2
+      $medianht2=$ht2[$order2[$midpt2]]
+
+      $a=1
+      repeat
+        $diff1[$a]=0 abs($ht1[$a]-$medianht1):$diff1[$a]
+        $a=$a+1
+      until $a>$count1
+
+      sort($diff1):$order1,$values1
+      $mediandiff1=$diff1[$order1[$midpt1]]  $MAD1=$mediandiff1*1.4826
+      $dum1=0 $dum2=0
+      $dum1=trunc($count1/2)
+      $dum2=trunc($count2/2)
+
+      if $dum1*2=$count1 then $midpt1=$dum1 else $midpt1=$dum1+1 endif
+      if $dum2*2=$count2 then $midpt2=$dum2 else $midpt2=$dum2+1 endif
+
+      sort($ht1):$order1,$values1
+      $medianht1=$ht1[$order1[$midpt1]]
+      sort($ht2):$order2,$values2
+      $medianht2=$ht2[$order2[$midpt2]]
+
+      $a=1
+      repeat
+        $diff2[$a]=0 abs($ht2[$a]-$medianht2):$diff2[$a]
+        $a=$a+1
+      until $a>$count2
+
+      sort($diff2):$order2,$values2
+      $mediandiff2=$diff2[$order2[$midpt2]]  $MAD2=$mediandiff2*1.4826
+
+      " record all positions and heights that are not outliers (z-score>2 or <-2) "
+      $a=1 $b=1 $c=1
+      repeat
+        $z=$diff1[$a]/$MAD1
+        if $z<$z_limit then 
+          $leftcleanpos[$b]=$pos1[$a] $leftcleanht[$b]=$ht1[$a]
+          if $a<$count1/2 then $entirecleanpos[$b]=$pos1[$a] $entirecleanht[$b]=$ht1[$a] $c=$c+1 endif
+          $b=$b+1
+        endif
+        $a=$a+1
+      until $a>$count1
+
+      $stopleft=$b-1
+      $stopentire=$c-1
+
+      $a=1 $b=1 $c=$stopentire+1
+      repeat
+        $z=$diff2[$a]/$MAD2
+        if $z<$z_limit then 
+          if $a>$count2/2 then $entirecleanpos[$c]=$pos2[$a] $entirecleanht[$c]=$ht2[$a] $c=$c+1 endif
+          $rightcleanpos[$b]=$pos2[$a] $rightcleanht[$b]=$ht2[$a] $b=$b+1
+        endif
+        $a=$a+1
+      until $a>$count2
+
+      $stopentire=$c-1
+      $stopright=$b-1
+
+      " ************************************************ "
+      " find the slope of the entire left peak baseline "
+      " ************************************************ "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+
+      $a=1
+      repeat
+          write('file',$file,'%5.4f   %4.6f',$entirecleanpos[$a],$entirecleanht[$a])
+          $a=$a+1
+      until $a>$stopentire
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_entire
+      lookup('a1=','read'):$slope_entire
+
+
+      " find the slope of the left side of the left peak baseline "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+
+      $a=1
+      repeat
+        write('file',$file,'%5.4f   %4.6f',$leftcleanpos[$a],$leftcleanht[$a])
+        $a=$a+1
+      until $a>$stopleft
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_left
+      lookup('a1=','read'):$slope_left
+
+      " find the slope of the right side of the left peak baseline "
+
+      $file=curexp+'/tmp'
+      write('reset',$file)
+      $a=1
+      repeat
+          write('file',$file,'%5.4f   %4.6f',$rightcleanpos[$a],$rightcleanht[$a])
+          $a=$a+1
+      until $a>$stopright
+
+      $list=curexp+'/tmp'
+      nrecords($list):$countlist
+      $file=curexp+'/analyze.inp' 
+      write('reset',$file)
+      write('file',$file,'frequency')
+      write('file',$file,'height')
+
+      write('file',$file,'1	%d',$countlist)
+      write('file',$file,'NEXT %d',$countlist)
+      write('file',$file,'1 ')
+
+      $cmd='cat '+$list+ ' >> '+$file
+      shell($cmd):$dummy
+
+      analyze('expfit','regression','poly1','list')
+
+//      cat(curexp+'/analyze.list')
+
+      lookup('file','analyze.list')
+      lookup('a0=','read'):$intercept_right
+      lookup('a1=','read'):$slope_right
+
+      " adjust the Entire slope to zero using arctangent "
+
+      $radian_entire=0 atan($slope_entire):$radian_entire
+      $radian_left=0   atan($slope_left):$radian_left
+      $radian_right=0  atan($slope_right):$radian_right
+
+
+      r1=$radian_left-$radian_entire
+      r2=$radian_entire-$radian_right
+      r3=(r1-r2)
+
+      if $counter_left=1 then 
+        $lpfirst=lp $radianchange1=r3 
+        if r3>0 then lp=lp+1 rp=rp-0.5*0.1975 else lp=lp-1 rp=rp+1*0.1975 endif
+        $lpnext=lp
+      else $radianchange2=r3
+      endif
+
+      $counter_left=$counter_left+1
+    until $counter_left>2		" CCC  ends "
+
+
+    $shift=$radianchange2*($lpfirst-$lpnext)/($radianchange1-$radianchange2)
+ 
+    if $shift>5 then $shift=5 endif
+    if $shift<-5 then $shift=-5 endif
+
+    lp=lp-$shift rp=rp+$shift*0.1975
+    f  ds
+
+    $difflp=0 abs($lpstart-lp):$difflp $diffrp=0 abs($rpstart-rp):$diffrp
+    if $difflp<0.11 and $diffrp<0.11 then write('line3','converged') lp? rp? f full vp=12 isadj $cycle=1000 endif
+    $lpstart=lp $rpstart=rp
+
+    $cycle=$cycle+1
+  until $cycle>10		" AAA  -- loop ends "
+
+  if $cycle<1000 then write('line3','did not converge.  Using APH.') $converge='n'  aph endif
+
+  f full vp=12 isadj
+
+endif   " end of the IF THEN EEE "
+
+
+$rightpeak=$right1/sfrq $rightpeak?
+$leftpeak=$left1/sfrq $leftpeak?
+
+" baseline correction section "
+
+lb='n' wft f dc vs=$vs/100 th=3 
+
+" adjust baseline correction "
+$a=1  " check to see that we dont exceed 500 peaks "
+repeat
+  dll nll:r1
+  if r1>500 then th=th+2 endif
+  $a=$a+1
+until $a>20 or r1<=500
+pickpeaks(25,64)  bc
+vs=$vs/100 th=3 
+
+" further adjustment of baseline "
+$a=1  " check to see that we dont exceed 500 peaks "
+repeat
+  dll nll:r1
+  if r1>500 then th=th+2 endif
+  $a=$a+1
+until $a>20 or r1<=500
+pickpeaks(25,64) fn='n' wft bc 
+
+
+
+" *********************************************************************************** "
+" check phasing by looking on either side of large peaks for any negative data points "
+" *********************************************************************************** "
+
+$step=0.2
+$u=1
+repeat
+  f full $midofrthalf=sp+wp/3  vp=12 th=20 
+  $a=1
+  repeat
+    dll nll:r1
+    if r1>6 then th=th+5 endif
+    $a=$a+1
+  until $a>200 or r1<=6
+
+  pickpeaks(50)
+  numreg:$numintegrals
+
+
+  $leftneg=0 $rightneg=0
+  $i=1
+  repeat
+    getreg($i):r2,r1  sp=r2 wp=r1-r2 
+    writespec(curexp+'/tmp')
+      cd(curexp):$dir lookup('file',curexp+'/tmp')
+      $a=1
+      repeat
+        $dumline=''  lookup('readline'):$dumline
+        $a=$a+1
+      until $dumline=''
+      $numpts=$a-2
+
+      lookup('file',curexp+'/tmp')
+
+      $a=1
+      repeat
+        $pos[$a]=0 $height[$a]=0 lookup('read',2):$pos[$a],$height[$a]
+        $a=$a+1
+      until $a>$numpts
+
+      $a=1
+      repeat
+        if $a>1 and $a<$numpts then
+          if ($height[$a-1]<-1) and ($height[$a]<-1) and ($height[$a+1]<-1) then
+            if ($pos[$a]>(r1+r2)/2) and ($pos[$a]>$midofrthalf) then $leftneg=$leftneg+1 $a=$a+2 else $rightneg=$rightneg+1 $a=$a+2 endif
+          endif
+        endif
+
+        $a=$a+1
+      until $a>$numpts-1
+
+    f full
+    $i=$i+1
+  until $i>$numintegrals
+
+  $leftneg? $rightneg?
+  $moved=0
+  if $leftneg>1 and  $leftneg-$rightneg>1 then lp=lp+$step rp=rp+$step*0.1975 $moved=1 ds endif
+  if $rightneg>1 and $rightneg-$leftneg>1 then lp=lp-$step rp=rp-$step*0.1975 $moved=1 ds endif
+  lp? rp?
+
+  wft f dc vs=$vs/100 th=3 
+
+  " adjust baseline correction "
+  $a=1  " check to see that we dont exceed 500 peaks "
+  repeat
+    dll nll:r1
+    if r1>500 then th=th+2 endif
+    $a=$a+1
+  until $a>20 or r1<=500
+  pickpeaks(50,64)  bc
+  vs=$vs/100 th=3 
+
+  " further adjustment of baseline "
+  $a=1  " check to see that we dont exceed 500 peaks "
+  repeat
+    dll nll:r1
+    if r1>500 then th=th+2 endif
+    $a=$a+1
+  until $a>20 or r1<=500
+  pickpeaks(50,64) fn='n' wft bc 
+
+  if $u>5 then $step=0.1 endif
+  $u=$u+1
+until $u>10 or $moved=0
+
+
+
+
+fn=np*2 
+lb='n' wft f dc vs=$vs/100 th=3
+ 
+$a=1  " check to see that we dont exceed 500 peaks "
+repeat
+  dll nll:r1
+  if r1>500 then th=th+2 endif
+  $a=$a+1
+until $a>20 or r1<=500
+th?
+
+pickpeaks(25,64)  bc
+vs=$vs/100 th=3 
+$a=1  " check to see that we dont exceed 500 peaks "
+repeat
+  dll nll:r1
+  if r1>500 then th=th+2 endif
+  $a=$a+1
+until $a>20 or r1<=500
+pickpeaks(25,64) wft bc 
+if $converge='n' then write('line3','using APH') endif
+$intstdpresent?
+//cz intmod='off'
+
+
+
+

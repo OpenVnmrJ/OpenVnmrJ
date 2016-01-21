@@ -1,0 +1,87 @@
+"macro BP_PRgetbpa"
+" BP_PRgetbpa - get best projection angle        "
+" returns bpa value for the next experiment "
+" Eriks K., Palo Alto, April 2006           "
+
+$filepath='' $paswd='' $dummy=''
+$bpa = 0.0
+
+" argument checking "
+
+if $#>0 then
+
+  if not typeof('$1') then 
+    write('error','BP_PRgetbpa : requires filename')
+    write('file','../PRmessages','BP_PRgetbpa : requires filename')
+    return 
+  endif
+
+  $filepath=$1
+  exists($filepath,'file'):$e 
+  if not($e) then
+    write('error','BP_PRgetbpa: file %s not found', $filepath)
+    write('file','../PRmessages','BP_PRgetbpa: file %s not found', $filepath)
+    return 
+  endif
+
+  lookup('file',$filepath)
+  lookup('read',5):$dummy,$paswd,$dummy,$bpa,$pks
+  
+  if ($paswd<>'bpa') then
+    write('error','BP_PRgetbpa: incorrect file format')
+    write('file','../PRmessages','BP_PRgetbpa: incorrect file format')
+    return 
+  else   
+    if typeof('$bpa') then 
+      write('error','BP_PRgetbpa : incorrect file format')
+      write('file','../PRmessages','BP_PRgetbpa : incorrect file format')
+      return 
+    else  
+     nrecords($filepath):$lines $lines=$lines-1
+     "number of lines in PR.bpa file" 
+
+     $pks=''
+     lookup('file',$filepath)
+     lookup('read',5):$dummy,$paswd,$dummy,$bpa,$pks  
+     $filename=curexp+'/regression.inp'
+     write('reset',$filename)
+     write('file',$filename,'Projection Angle')
+     write('file',$filename,'Predicted Peaks')
+     write('file',$filename,'1 %4.0f',$lines)
+     write('file','../PRmessages','Predicted Peaks =%4.0f',$lines)
+     write('file','../PRmessages','Most Useful Projection Angle =%2.1f',$bpa)
+     write('file','../PRmessages','Number of Peaks at that Angle %s',$pks)
+
+     lookup('file',$filepath)
+     lookup('readline',1):$t,$ok   "first line"
+     repeat
+      lookup('readline',1):$t,$ok
+      if $ok=1 then
+       write('file',$filename,$t)
+      endif
+     until $ok=0
+
+     expl('regression','link','nosymbol')
+     write('graphics',10,wc2max-10,'Most Useful Projection Angle = %2.1f',$bpa)
+     write('graphics',20,wc2max-20,'%s',$pks)
+     exists('/bin/nawk','file'):$solaris
+     if $solaris=0 then
+      $count=0
+      repeat
+        write('graphics',22+$count*(wc/10),0,'%2.1f ',$count*10)
+        $count=$count+1
+      until $count=10
+      move(25,10) pen('graphics','yellow') draw(wc+5,10)
+      move(25,10) draw(25,wc2-20) pen('graphics','red')
+     endif
+      $PRcnt=''
+      format(PRcnt,1,0):$PRcnt
+      mv($filepath,$filepath+$PRcnt)
+      return($bpa)
+    endif
+  endif
+else
+  write('error','BP_PRgetbpa: filename required')
+  write('file','../PRmessages','BP_PRgetbpa: filename required')
+  return 
+endif

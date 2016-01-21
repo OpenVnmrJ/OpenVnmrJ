@@ -1,0 +1,182 @@
+ water
+
+
+water-
+
+   This pulse sequence has options for the most popular water suppression
+methods. Each option has its own dedicated parameters which become visible
+in "dg" when the option has the value 'y'. No attempt is made in "dg" to
+prevent more than one method from being used (neither is there any attemp
+in psg code). Users could either modify the code or modify (or create) a
+usergo macro that would check on the values of options and abort acquisition
+with message if more than one option is accidentally selected.
+
+Presat='y'
+   Performs classic observe xmter presat with optional pfg homospoil(sspul='y').  
+   Homospoil is controlled by a gradient time of gt0 (sec) at level gzlvl0.
+   Satmode is used like "dm" to select periods of saturation at frequency
+   satfrq, power satpwr, for duration d1. A composite 90 option is
+   excercised when composit='y'. Sequence is essentially s2pul for d1,p1,d2,pw.
+   The delay d0 can be used for any additional time before the d1 delay.
+
+Scuba='y'
+   When presat='y', scuba may be used to restore some "bleached" proton      
+   intensity for those protons near in shift to the water. 
+
+purge='y'
+   Does a version of a presat experiment having superior suppression.
+   Literature: Andre J. Simpson and Sarah A. Brown, JMR, 175, 340-346(2005).
+
+Shaped='y'
+   Same as presat='y' but all rf controlled by waveforms. Useful for
+   calibrating shaped pulses even in non-suppression experiments. 
+   The p1 pulse is at p1frq, of shape p1shape, at power p1pwr and for
+   duration p1. The second pulse is of length pw, at frequency tof, at power
+   pwpwr and of shape pwshape. The solvent saturation is optional during
+   relaxation and d2 delays under satmode control (like "dm") at satfrq
+   with power satpwr and shape satshape (use "hard" for normal operation).
+
+   This mode can be used to examine performance of a shaped pulse by using it
+   as the first pulse, followed by the normal pw pulse. A shape may be 'hard'
+   to make the pulse a normal rectangular pulse.
+
+preSAT180='y'
+   This flag is used when shaped='y'. If preSAT180='y' the sequence is
+   ....saturation..g(+)..180inversion...g(-)..pw..acq(+)   for first transient
+   ....saturation..g(+)..delay..........g(-)..pw..acq(-)   for second transient
+   etc.
+
+   The 180inversion is an adiabatic inversion. Protons outside the coil window 
+   not feeling a proper inversion pulse are canceled, leading to better residual
+   water. The preSAT180 checkbox in the VnmrJ interface is visible when the
+   shaped presat box in the SATURATION page is checked. If preSAT180='n' the
+   normal shaped presat..p1..pw..(acq) is used. When the checkbox is clicked it runs
+   the macro preSAT180 which creates the inversion waveform (a hyperbolic secant)
+   and sets the parameters based on values present in the waveform header.
+
+   The performance relative to normal presat may depend on the probe used and its
+   RF homogeneity. The better the RF homogeneity, the more similar are the two
+   methods in performance. No significant difference was noted when using 
+   a 600 MHz HCN cold probe(GG, Varian, Palo Alto).
+   (see Hauping and Raftery, JMR, 190,1(2008))
+
+dpfgse='y'
+   This adds a double pulsed-field gradient spin echo pair after the last pulse
+   for shaped='n', presat='y'. The spin echos include a selective 180 degree pulse
+   on water (typ 1-2msec) which is controlled by pwpwr, pwshape and flippw. This
+   may be used for water suppression without presat. 
+     See Hwang and Shaka, JMR (A), 112, 275(1995).
+
+soggy='y'
+   This replaces a simple 180 in the dpfgse sequence with a composite pulse 180. See
+   Nguyen, Meng, Donovan and Shaka, JMR, 184, 263-274(2007). Must be used with 
+   dpfgse='y'.
+
+mfsat='y'
+           Multi-frequency saturation.
+           Requires the frequency list mfpresat.ll in current experiment
+           Pbox creates (saturation) shape "mfpresat.DEC"
+
+                  use mfll('new') to initialize/clear the line list
+                  use mfll to read the current cursor position into
+                  the mfpresat.ll line list that is created in the
+                  current experiment.
+
+           Note: copying pars or fids (mp or mf) from one exp to another does not copy
+                 mfpresat.ll!
+           Note: the line list is limited to 128 frequencies !
+
+            G.Gray, Varian, Palo Alto  November 1999
+            E. Hoffmann,Varian, Darmstadt- presat phase cycle
+            G.Gray, Varian, Palo Alto  September 2003 - modifications of watergate
+              to permit fine power adjustment and use of phase-corrected shapes
+            G.Gray, Varian, Palo Alto June 2005 - added dpfgse option following
+              watergate( from Alan Kenwright, U.Durham (UK)
+            E.Kupce, Varian, UK June 2005 - added multifrequency presat option
+		R. McKay - added alt_grd options Oct. 2008
+
+Jumpret='y'
+   Does a simple jump-and-return experiment with pulses jrp1 and jrpw
+   separated by delay jrdelay. jrpw is usually 25ns or so shorter for
+   best suppression. Vary tof over +-100 Hz to find best suppression.
+   sspul='y' does gradient homospoil prior to d1, with different lengths
+   of homospoil for each transient to avoid gradient-recalled echos.
+
+   For Literature discussion: see P.J. Hore, J.Magn.Reson.,55,283-300(1983)
+
+purge='y'
+   Does a version of a presat experiment having superior suppression.
+
+   Literature: Andre J. Simpson and Sarah A. Brown, JMR, 175, 340-346(2005).
+
+Wet='y'
+   Does a presat experiment in which the presat can take only 20-100msec.
+   After d1 there is a series of four selective pulses on water, each 
+   followed by a gradient. This can achieve very good suppression and
+   also be used for multiple line suppression by making the selective
+   pulse multifrequency (use convolute macro or Pbox). The gradient is
+   controlled by the time gtw at level gzlvlw. The selective pulse
+   wetshape is at a power level wetpwr for a time wetpw. wetpw should be
+   calibrated as a 90 degree pulse length for the shape wetshape and power
+   wetpwr. The wet "pulse" is broken up into 4 individual pulses each
+   followed by different gradients. In some cases use of a composite pulse
+   will produce better suppression (composit='y').
+
+   Literature: S.Smallcombe, S.L.Patt and P.A. Keifer, J.Magn.Reson.A,117,295(1995).
+
+Watergate='y'
+   This may be done in either a soft-pulse(flagsoft='y') or hard-pulse 
+   (flag3919='y' or flagW5='y') version.
+
+   The water-selective soft pulse can be of any desired shape. If autosoft='y',the
+   power is calculated by the psg code (always a "sinc") based on pw and compH.
+   The soft pulse width is user-enterable. This soft pulse may be used for
+   flipback purposes for all methods of watergate. It is also used within
+   the spin-echo if flagsoft='y'.
+
+   A soft pulse prior to the first high power pulse is done when flipback='y',
+   for purposes of keeping water along Z during d1 and at (to reduce 
+   intensity losses of other protons via chemical exchange with water.
+   Further empirical improvement in suppression can be had by arraying
+   phincr1 and phincr2 from -10 to 10. Fine adjustment of the 180 is
+   controlled by p180 (vary for best suppression). flippw should be short
+   enough so relaxation is no problem, but long enough so that nearby
+   protons are not suppressed as well (suggest 2-5msec).
+
+   If autosoft='y' no small-angle phase correction is applied. The pulse
+   sequence, in this case, uses H2Osinc_u.RF for flipup pulses and H2Osinc_d.RF
+   for flipdown sequences. These shapes have internal phase corrections determined
+   in the BioPack autocalibrate procedure (when the shapes are created). Each of
+   these pulses also have fine power adjustments prior to the pulses (tpwrsf_u and
+   tpwrsf_d) which also have been determined in the BioPack autocalibrate process
+   for best water suppression. If autosoft='n' the shape used is under user control and
+   phincr1 and phincr2 are active for small-angle phase corrections for the soft
+   pulses. Fine power control is still active with tpwrsf_u and tpwrsf_d.
+
+   The tpwrsf_u and tpwrsf_d values are stored in the probefile and are determined
+   in the BioPack AutoCalibrate procedure. Fine power adjustments in all cases are
+   only active if tpwrsf_u<4095.0.
+
+swet='y'
+	"Secure wet". Cold probe/high Q probe specific modification of the WET water
+	 suppression sequence using a train of small flip angle pulses instead of the
+	 standard shaped pulse, interleaved with bipolar gradients.  See ref below.
+	 
+	 Recommend approprimate swetpwr for swetpw*90 = 90 degree pulse and then 
+	 fine tune pulse length for water minimization.  Paper recommend 1.4us swetpw
+	 We found 1.5kHz was min on high field instruments.
+         (submitted by Ryan McKay, NANUC,U.Alberta)
+	
+
+   Literature: soft-pulse  Piotto et.al., J.Biomol.NMR, 2,661(1992)
+               hard-pulse  Sklenar et.al., J.Magn.Res., 102, 241(1993)
+                       W5  Liu et.al, J.Magn.Res., 132, 125(1998)
+		SWET	We and Otting, J. Biomol. NMR, 32, 243-250 (2005)
+            PURGE       Andre J. Simpson and Sarah A. Brown, JMR, 175, 340-346(2005).
+
+            G.Gray, Varian, Palo Alto  November 1999 
+            E. Hoffmann,Varian, Darmstadt- presat phase cycle
+            G.Gray, Varian, Palo Alto  September 2003 - modifications of watergate
+              to permit fine power adjustment and use of phase-corrected shapes 
+            G.Gray, Varian, Palo Alto  October 2005 - added PURGE
+            

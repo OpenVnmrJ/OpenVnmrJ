@@ -1,0 +1,95 @@
+/*  rna_gnoesyNhsqc.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    3D NOESY-HSQC gradient sensitivity enhanced version for 15N, with
+    H1-H1 NOESY in the first dimension, and N15 shifts in the second.
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    Standard features include refocussing C13 coupling during t1 and t2;
+    A one lobe sinc pulse to put H2O back along z; preservation of H20 along z
+    during t1 and the relaxation delays; option for editing spectral regions
+    option of obtaining spectrum of only NH2 groups;
+
+    pulse sequence: 	Kay, Keifer and Saarinen, JACS, 114, 10663 (1992)
+    			Zhang et al, J Biol NMR, 4, 845 (1994)
+         
+    Written by MRB, January 1998, starting with gNhsqc from BioPack.
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for C13 decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [H1]  and t2 [N15].
+   
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1 and f2180='n' for (0,0) in N15.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF rna_gnoesyNhsqc
+
+         
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro: 
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gnoesyNhsqc may be printed using:
+                                      "printon man('rna_gnoesyNhsqc') printoff".
+             
+    2. Apply the setup macro "rna_gnoesyNhsqc".  This loads the relevant parameter
+       set and also sets ni=0/ni2=0 and phase=1/phase2=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 110ppm, and N15 
+       frequency on the amide region (200 ppm).
+
+    4. Pulse and frequency calibrations are as for rna_gNhsqc, or as generally
+       used for RnaPack.
+
+    5. NH2 GROUPS:	SET amino='y'
+       A spectrum of NH2 groups, with NH groups cancelled, can be obtained
+       with flag NH2only='y'.  This utilises a 1/2J (J=94Hz) period of NH 
+       J-coupling evolution added to t1 which cancels NH resonances and 
+       inverts NH2 resonances (normal INEPT behaviour).  A 180 degree phase
+       shift is added to a N15 90 pulse to provide positive NH2 signals.  The 
+       NH2 resonances will be smaller (say 80%) than when NH2only='n'.
+
+    6. SETUP: dof2 is changed automatically
+        imino='y'
+        -IMINO-REGION:  sw=22ppm
+                        sw1=22ppm
+			sw2=25ppm (folds aminos)
+                        dof=110ppm
+                        dof2=155ppm
+        amino='y'
+        -AMINO-HMQC:    sw=22ppm
+                        sw1=22ppm
+			sw2=60ppm (folds iminos)
+                        dof=110ppm
+                        dof2=85ppm
+
+	dof is set to 110 ppm (middle of C13 resonances).
+	Always check the proper folding by running a quick NH plane by setting
+	ni=0,phase=1 and ni2=32,phase=1,2.
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

@@ -1,0 +1,84 @@
+"macro ws_pwrf"
+"**************************************************************************************"
+
+" ws_pwrf - Fine power optimization for water suppression pulse"
+
+" Details: 1. Calculates the H1offset frequency using setof"
+"          2. sets wsfrq=H1offset"
+"	   3. arrays satpwrf and finds minimum signal"
+
+" Note: assumes the residual water is the highest signal"
+
+"**************************************************************************************"
+
+if ($# = 0) then
+  ldrf "sets rfcoil = RFCOIL"
+  imprep
+  if (tof   = 0) then tof   = H1offset endif
+  if (wsfrq = 0) then wsfrq = H1offset endif
+
+  if (ws <> 'yy') then
+    ws = 'y'
+  endif
+  satpwrf = 4096
+  
+  wdone = ''
+  wexp = 'ws_pwrf(`procfrq`) '
+  au
+
+elseif ($1 = 'procfrq') then
+  av                          "absolute spectrum"
+  ft
+  vsadj
+
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+  write('line3','%10.2f ',$t) "print it"
+  wexp=''                     "reset auto go link"
+  dmg='ph'                    "phase sensitive mode"
+
+  $toflim = 0.9*sw/2          "offset limit set to 80% of sw"
+
+  $tt = tof + $t
+  if ($tt < 0 ) then
+    $tt = -$tt
+  endif
+
+  if ($t > $toflim) then  "setof used $tt; BUG? "
+    write('line3', 'Offset too large, check spectrum or increase sw')
+    abort
+  endif
+  wsfrq = tof+$t  "set water frequency"
+
+  ws_pwrf('pwrf')
+
+elseif ($1 = 'pwrf') then
+  setarray('satpwrf',2600,100,16)  "approx. 4dB"
+  wdone = ''
+  wexp = 'ws_pwrf(`procpwrf`)'
+  au
+
+elseif ($1 = 'procpwrf') then
+  wft('nods') vsadj
+  av dssh dssl
+  $counter=1
+  select(1) vsadj(10) $high=10 $low=10
+  $lowest=1 $highest=1
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$low then $low=$ht $lowest=$counter endif
+    if $ht>$high then $high=$ht $highest=$counter endif
+    $counter=$counter+1
+  until $counter > arraydim
+  $old=satpwrf[1]
+  
+  ph
+  wft select(1) vsadj
+  dssh dssl f full
+  satpwrf=satpwrf[$lowest]
+  write('line3','lowest is #%d',$lowest)
+
+  return
+endif
+

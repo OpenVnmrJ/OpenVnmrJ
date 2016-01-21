@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="WetSuppress" element="pages" type="acquisition" >
+  <group size="620 270"
+    style="Heading1"
+    label="WET"
+    vq="panellevel"
+    show="$SHOW=(panellevel&gt;29)"
+    bg=""
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="WetSuppress"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    >
+    <group loc="5 170" size="375 90"
+      style="Heading1"
+      label="Optimization"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="opt"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <button loc="175 20" size="115 20"
+        style="Heading2"
+        label="Make wetshape"
+        vq="wet_cf"
+        vc="wet1Dproc('cfoptimize')"
+        bg=""
+        decor1=""
+        />
+      <textmessage loc="45 60" size="280 20"
+        style="PlainText"
+        label=" "
+        vq="wet_cf"
+        set="wet1Dproc('cfdisplay'):$VALUE"
+        />
+      <group loc="30 40" size="340 20"
+        vq="wetfly"
+        show="$SHOW=(wetfly='y')"
+        bg=""
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <button loc="145 0" size="190 20"
+          style="Heading2"
+          label="Reset Compression Factor (CF)"
+          vq="wet_cf"
+          vc="wet1Dproc('setwetcf')"
+          bg=""
+          decor1=""
+          />
+        <button loc="15 0" size="125 20"
+          style="Heading2"
+          label="+/- 10% array"
+          vc="wet1Dproc('cfarray')"
+          bg=""
+          decor1=""
+          />
+      </group>
+      <check loc="10 20" size="100 20"
+        style="Label1"
+        label="Optimize CF"
+        vq="wetfly wet_cf"
+        vc="wetfly='y'"
+        vc2="wetfly='n' $size='' $size=size('wet_cf') if ($size&gt;1) then wet1Dproc('setwetcf') setwetshape endif"
+        set="$VALUE=(wetfly='y')"
+        />
+      <entry loc="110 20" size="60 20"
+        style="PlainText"
+        vq="wet_cf"
+        vc="wet_cf=$VALUE"
+        set="$VALUE=wet_cf"
+        digits="2"
+        />
+    </group>
+    <group loc="385 30" size="215 230"
+      vq="wet"
+      show="strstr(wet,'y'):$iswet $SHOW=$iswet"
+      bg=""
+      border="Etched"
+      tab="no"
+      enable="no"
+      reference="c13dec"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <group loc="0 25" size="205 200"
+        vq="c13wet"
+        show="$SHOW=(c13wet='y')"
+        bg=""
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <button loc="10 175" size="195 20"
+          style="Heading2"
+          label="Calculate power/shape/dmf"
+          vc="wet1Dproc('makedecshape')"
+          show="exists('dbwwet','parameter'):$ex1 $ENABLE=($ex1)*2-1"
+          bg=""
+          decor1=""
+          />
+        <textmessage loc="10 65" size="195 20"
+          style="PlainText"
+          vq="dpwrwet"
+          set="getpower(dpwrwet,dn):$gb2 $pulw='' format(250000/$gb2,0,1):$pulw $VALUE='Pi/2 Pulse width: '+$pulw+' us'"
+          />
+        <label loc="150 45" size="25 20"
+          style="Label1"
+          label="dB"
+          justify="Left"
+          />
+        <label loc="150 25" size="35 20"
+          style="Label1"
+          label="ppm"
+          />
+        <label loc="150 5" size="35 20"
+          style="Label1"
+          label="ppm"
+          />
+        <entry loc="85 5" size="60 20"
+          style="PlainText"
+          vq="dofwet"
+          vc="setoffset($VALUE,dn):$frq dofwet=$frq"
+          set="setppm(dofwet,dn):$ppm $VALUE=$ppm"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="85 25" size="60 20"
+          style="PlainText"
+          vq="dbwwet"
+          vc="dbwwet=$VALUE*dfrq"
+          set="$VALUE=dbwwet/dfrq"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="85 45" size="60 20"
+          style="PlainText"
+          vq="dpwrwet "
+          vc="dpwrwet=$VALUE"
+          set="$VALUE=dpwrwet"
+          digits="0"
+          disable="Grayed out"
+          />
+        <entry loc="85 85" size="60 20"
+          style="PlainText"
+          vq="dmfwet "
+          vc="dmfwet=$VALUE"
+          set="$VALUE=dmfwet"
+          digits="0"
+          disable="Grayed out"
+          />
+        <entry loc="85 105" size="60 20"
+          style="PlainText"
+          vq="dreswet"
+          vc="dreswet=$VALUE"
+          set="$VALUE=dreswet"
+          digits="0"
+          disable="Grayed out"
+          />
+        <menu loc="85 125" size="120 20"
+          style="PlainText"
+          vq="dpatwet"
+          vc="dpatwet='$VALUE'"
+          set="$VALUE=dpatwet"
+          bg=""
+          editable="No"
+          >
+          <mlabel 
+            label="waltz16"
+            chval="waltz16"
+            />
+          <mlabel 
+            label="garp1"
+            chval="garp1"
+            />
+          <mlabel 
+            label="xy32"
+            chval="xy32"
+            />
+          <mlabel 
+            label="mlev16"
+            chval="mlev16"
+            />
+          <mlabel 
+            label="WURST"
+            chval="WURST"
+            />
+          <mlabel 
+            label="WURST40"
+            chval="WURST40"
+            />
+          <mlabel 
+            label="SECH"
+            chval="SECH"
+            />
+          <mlabel 
+            label="G3"
+            chval="G3"
+            />
+        </menu>
+        <entry loc="85 145" size="120 20"
+          style="PlainText"
+          vq="dn rfwg dseqwet dmmwet"
+          vc="isrfwg('dn'):$rfwg if ($rfwg) then dseqwet='$VALUE' endif"
+          set="isrfwg('dn'):$rfwg if ($rfwg) then $VALUE=dseqwet else $VALUE='' endif"
+          show="isrfwg('dn'):$rfwg $ENABLE=$rfwg*2-1"
+          disable="Grayed out"
+          />
+        <group loc="85 125" size="120 20"
+          vq="dn rfwg"
+          show="isrfwg('dn'):$rfwg $SHOW=$rfwg"
+          bg=""
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+        </group>
+        <label loc="10 145" size="70 20"
+          style="Label1"
+          label="Dec shape"
+          show="isrfwg('dn'):$rfwg $ENABLE=$rfwg"
+          justify="Left"
+          />
+        <label loc="10 125" size="75 20"
+          style="Label1"
+          label="Dec pattern"
+          justify="Left"
+          />
+        <label loc="10 105" size="70 20"
+          style="Label1"
+          label="dreswet"
+          justify="Right"
+          />
+        <label loc="10 85" size="70 20"
+          style="Label1"
+          label="dmfwet"
+          justify="Right"
+          />
+        <label loc="10 5" size="70 20"
+          style="Label1"
+          label="Offset"
+          justify="Left"
+          />
+        <label loc="10 25" size="70 20"
+          style="Label1"
+          label="Bandwidth"
+          justify="Left"
+          />
+        <label loc="10 45" size="70 20"
+          style="Label1"
+          label="Power"
+          justify="Left"
+          />
+        <group loc="80 125" size="96 20"
+          vq="dn rfwg"
+          show="isrfwg('dn'):$rfwg $SHOW=($rfwg=0)"
+          bg=""
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <menu loc="5 0" size="90 20"
+            style="PlainText"
+            vq="dseqwet dmmset"
+            vc="dseqwet='$VALUE' substr(dseqwet,1,1):dmmwet"
+            set="$VALUE=dseqwet"
+            bg=""
+            editable="No"
+            >
+            <mlabel 
+              label="waltz16"
+              chval="waltz16"
+              />
+            <mlabel 
+              label="garp1"
+              chval="garp1"
+              />
+            <mlabel 
+              label="xy32"
+              chval="xy32"
+              />
+            <mlabel 
+              label="mlev16"
+              chval="mlev16"
+              />
+          </menu>
+        </group>
+      </group>
+      <textmessage loc="30 5" size="185 20"
+        style="PlainText"
+        label="C13 Decoupling during wet"
+        vq="dn"
+        set="$VALUE=dn+' Decoupling during wet'"
+        />
+      <check loc="10 5" size="20 20"
+        style="Label1"
+        vq="c13wet"
+        vc="c13wet='y'"
+        vc2="c13wet='n'"
+        set="if (c13wet='y') then $VALUE=1 else $VALUE=0 endif"
+        />
+    </group>
+    <group loc="5 30" size="375 140"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="wetgroup"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <check loc="10 5" size="120 20"
+        style="Label1"
+        label="WET"
+        vq="wet"
+        vc="wet='y' if (satmode='y') then seqfil='s2pulse' endif"
+        vc2="wet='n' if (satmode='y') then seqfil='PRESAT' endif"
+        set="if (wet='y') then $VALUE=1 else $VALUE=0 endif"
+        />
+      <button loc="215 5" size="145 20"
+        style="Heading2"
+        label="Switch back to s2pul"
+        vq="seqfil"
+        vc="wet='n' satmode='n' wds='' wstart='' seqfil='s2pul'"
+        bg=""
+        decor1=""
+        />
+      <group loc="5 30" size="365 105"
+        vq="wet"
+        show="if (wet='y') then $SHOW=1 else $SHOW=0 endif"
+        bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <label loc="5 60" size="100 20"
+          style="Heading1"
+          label="Delay after wet"
+          justify="Left"
+          />
+        <label loc="5 40" size="85 20"
+          style="Label1"
+          label="Pulse power"
+          justify="Left"
+          />
+        <label loc="170 20" size="25 20"
+          style="Label1"
+          label="µs"
+          justify="Left"
+          />
+        <label loc="170 60" size="25 20"
+          style="Label1"
+          label="µs"
+          justify="Left"
+          />
+        <entry loc="129 1" size="210 20"
+          style="PlainText"
+          vq="wetshape wstart"
+          vc="wetshape='$VALUE'"
+          set="$VALUE=wetshape"
+          disable="Grayed out"
+          />
+        <label loc="24 1" size="100 20"
+          style="Label1"
+          label="wet Pulse shape:"
+          justify="Left"
+          />
+        <group loc="5 80" size="355 20"
+          bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="230 0" size="125 20"
+            style="PlainText"
+            vq="compshape composit"
+            vc="compshape='$VALUE'"
+            set="$VALUE=compshape"
+            show="if (composit='y') then $ENABLE=1 else $ENABLE=0 endif"
+            disable="Grayed out"
+            />
+          <label loc="180 0" size="50 20"
+            style="Label1"
+            label="Shape:"
+            justify="Left"
+            />
+          <check loc="0 0" size="175 20"
+            style="Label1"
+            label="Composite observe Pulse?"
+            vq="composit"
+            vc="composit='y' wet1Dproc('makecompshp')"
+            vc2="composit='n'"
+            set="if (composit='y') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <entry loc="275 60" size="50 20"
+          style="PlainText"
+          vq="gtw wet"
+          vc="gtw=$VALUE/1000"
+          set="$VALUE=gtw*1000"
+          digits="0"
+          disable="Grayed out"
+          />
+        <entry loc="275 40" size="50 20"
+          style="PlainText"
+          vq="gzlvlw"
+          vc="gzlvlw=$VALUE"
+          set="$VALUE=gzlvlw"
+          digits="0"
+          disable="Grayed out"
+          />
+        <label loc="335 60" size="25 20"
+          style="Label1"
+          label="ms"
+          justify="Left"
+          />
+        <label loc="215 60" size="60 20"
+          style="Label1"
+          label="time"
+          justify="Left"
+          />
+        <label loc="215 40" size="60 20"
+          style="Label1"
+          label="strength"
+          justify="Left"
+          />
+        <label loc="205 20" size="70 20"
+          style="Label1"
+          label="Gradient -"
+          justify="Left"
+          />
+        <entry loc="105 60" size="60 20"
+          style="PlainText"
+          vq="dz "
+          vc="dz=$VALUE/1e6"
+          set="$VALUE=dz*1e6"
+          disable="Grayed out"
+          />
+        <entry loc="105 40" size="60 20"
+          style="PlainText"
+          vq="wetpwr"
+          vc="wetpwr=$VALUE"
+          set="$VALUE=wetpwr"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="105 20" size="60 20"
+          style="PlainText"
+          vq="pwwet"
+          vc="pwwet=$VALUE"
+          set="$VALUE=pwwet"
+          digits="1"
+          disable="Grayed out"
+          />
+        <label loc="5 20" size="75 20"
+          style="Label1"
+          label="Pulse width"
+          justify="Left"
+          />
+      </group>
+    </group>
+    <textmessage loc="10 0" size="170 25"
+      style="PlainText"
+      label="wet1D"
+      vq="pslabel"
+      set="$VALUE=pslabel"
+      />
+  </group>
+</template>

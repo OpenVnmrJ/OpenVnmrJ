@@ -1,0 +1,144 @@
+"macro CSdpro"
+" ************************************************************* "
+" ***      CSdpro - display sampling probability profile    *** "
+" ***          stored in curexp/sampling_ni(2).pro          *** "
+" ***            based on dshape macro. Eriks Kupce         *** "
+" ************************************************************* "
+
+
+if($#>0) then
+  $dom=$1
+else
+  $dom=CSdomain
+endif
+
+$fout = userdir+'/shapelib/pbox.fid'
+$fin = '' $w='' $x='' 
+
+if($dom=1) then
+  $fin=curexp+'/sampling_ni.pro'
+elseif($dom=2) then
+  $fin=curexp+'/sampling_ni2.pro'
+elseif($dom=3) then
+  $fin=curexp+'/sampling_ni3.pro'
+endif
+
+exists($fin, 'file'):$e
+if not ($e) then
+  write('error','requested profile does not exist')
+  return
+endif
+
+nrecords($fin):$nstp     
+lookup('file', $fin)
+write('reset', $fout)
+
+$j=0
+repeat
+  lookup('read', 1):$w  
+  format($w,10,8):$re
+  write('file',$fout,' %12.0f      0', $re*1024.0)
+  $j=$j+1
+until ($j >= $nstp)
+
+" determine output device-specific parameters "
+if $0='CSdpro' then
+  clear(2)
+  $device='graphics'
+  $axiscolor='blue'
+  $rcolor='red'
+else   " CSppro "
+  write('line3','%s: drawing shape, please wait ... ',$0)
+  $device='plotter'
+  $axiscolor='pen2'
+  $rcolor='pen1'
+endif
+write($device,0,0,''):$ys	" line height for text "
+
+" define path names "
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+
+" temporarily save experiment data and parameters "
+flush
+copy($fid,$fid+'.tmp')
+rm($fid):$dum
+copy($procpar,$procpar+'.bk')
+copy($curpar,$curpar+'.bk')
+copy($data,$data+'.bk')
+copy($phasefile,$phasefile+'.bk')
+
+" fix acquisition parameters to match the pseudo-dataset "
+setvalue('dp','n','processed')
+setvalue('np',$nstp*2,'processed')
+off('fpmult')
+setvalue('at',($nstp-1)/sw)
+setvalue('nt',1)
+setvalue('ct',1)
+setvalue('array','')
+setvalue('arraydim',1)
+
+" create an fid from the pulse shape "
+makefid($fout,'dp=n')
+
+setvalue('np',$nstp*2)
+
+" set up processing and display parameters "
+phfid=0		" we want to be looking at the real part when we mean it "
+fn=2*$nstp	" adjust fn "
+if fn<2*$nstp then fn=2*fn endif
+
+exists('ssfilter','parameter'):$e	"check if present"
+if ($e<>0) then ssfilter='n' endif
+exists('lsfrq','parameter'):$e		"check if present"
+if ($e<>0) then lsfrq='n' endif
+lsfid='n' proc='ft' 
+
+ft('noft','nodc',1)	" ft without FT, no DC correction "
+wp=((np-1)/fn)*sw
+sp=sw-rfl+rfp-wp	" don't want to see the zerofilled part "
+rp=0 lp=0		" look at the 'pure' real part first "
+cdc lvl=0 tlt=0		" avoid dc corrections upon display "
+$x0=3			" leave a little gap at both sides "
+
+" scale shape by looking at both the real and the imaginary part "
+peak:$max		" size of real part "
+
+vp=0
+$ymax=wc2max-5		" desired height "
+if($max > 0) then
+  vs=vs*$ymax/$max	" scale display size "
+endif
+
+" display the pulse shape "
+full wc=wcmax-2*$x0 sc=$x0
+rp=0			" display / plot real part first "
+if $device='graphics' then
+  dss($rcolor)
+else
+  pl($rcolor)
+endif
+
+" draw axes "
+pen($device,$axiscolor)
+move($x0,vp)
+draw($x0,vp+$ymax)
+move($x0,vp)
+draw($x0+wc,vp)
+draw($x0+wc-1,vp)
+vp=0 full
+
+" restore experiment data "
+//flush
+rm($fid):$dum	rename($fid+'.tmp',$fid)
+rm($procpar):$dum	rename($procpar+'.bk',$procpar)
+rm($curpar):$dum	rename($curpar+'.bk',$curpar)
+rm($data):$dum	rename($data+'.bk',$data)
+rm($phasefile):$dum	rename($phasefile+'.bk',$phasefile)
+fread($procpar,'processed')
+fread($curpar,'current','reset')
+//dg vp=0 full
+dg

@@ -1,0 +1,48 @@
+"macro go_gHMBCmeAD"
+if (dn = 'C13') and (tn = 'H1') then
+  setref(dn):$rfl,$rfp,$reffrq
+  $center=(dof+$rfp-$rfl)/$reffrq
+  mkpar('delay','tauC',0)
+  setlimit('tauC',8190,-8190,1.25e-8)
+  tauC = 0.0007*(90-$center)/90
+
+  if (tauC < 0) then
+     	tauC = (trunc((tauC*1e6)-0.5))/1e6
+  else
+   	tauC = (trunc((tauC*1e6)+0.5))/1e6
+  endif
+
+  if (tauC < -1.0*pwx180r/1e6) or (tauC > pwx180r/1e6) then
+  	write('error','tauC exceeds the length of pwx180r. aborted')
+  	abort
+  endif
+endif
+
+if (array='phase,mult') then array='mult,phase' endif
+$msize=size('mult')
+if ($msize>1) then
+   f1coef='1 0 1 0 0 0 0 0 0 -1 0 1 0 0 0 0'
+else
+   f1coef='1 0 1 0 0 -1 0 1'
+endif
+
+// Adjust gtE 
+   $pwx180r=pwx180r*1e-6
+   $pwx180=pwx180*1e-6
+   exists('bipflg','parameter'):$bipex
+   if ($bipex) then
+	$bip='n'
+	substr(bipflg,2,1):$bip
+	if ($bip='n') then $bipex=0 endif
+   endif
+   if ($bipex) then
+	$pwx180=dnbippw*1e-6
+   endif
+   $taug=1/(j1max + j1min) + tauC
+   $maxgtE=$taug/2 + ($pwx180r-$pwx180)/2 - gstab + 20e-6
+   if gtE > $maxgtE-0.00005 then
+	$gtE=trunc(($maxgtE*10000)-0.5)
+	gtE=$gtE/10000
+//   	write('line3','gtE adjusted to the max value of %0.2f ms',gtE*1000)
+   endif
+

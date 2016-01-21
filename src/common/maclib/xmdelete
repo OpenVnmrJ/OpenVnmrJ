@@ -1,0 +1,231 @@
+"macro xmdelete"
+"Used by all applications (Imaging, Liquids, etc.)"
+"xmdelete is used to delete nodes in study queue"
+
+if ($# < 0.5) then
+  write('error','%s: at least one argument needed',$0)
+  return
+endif
+
+"  - keep last deleted action node for undo (or just keep status if Skipped?)"
+"  - keep multiple nodes if delete composite protocol"
+"  - if another node is added or deleted, remove backup from trash"
+"  - if delete is the result of an invalid copy action etc., do NOT make backup"
+
+$trash=userdir+'/trashstudy'
+$trinfo=$trash+'/info'
+$trdata=$trash+'/data'
+xm1('studydir'):$sdir
+
+if ($# = 1) then
+
+  if ($1 = 'backupxml') then
+    exists($sdir+'/plans','file'):$e
+    if $e>0.5 then
+      cp($sdir+'/plans',$trash+'/plans'):$x
+    endif
+    xm1('write','"'+$trash+'/study.xml"')
+    sqfilemenu('undelete')
+  elseif ($1 = 'emptytrash') then
+    exists($trash,'file'):$e
+    if $e<0.5 then mkdir($trash) endif
+    exists($trinfo,'file'):$e
+    if $e>0.5 then
+      rm('-rf',$trinfo):$x
+    endif
+    mkdir($trinfo)
+    exists($trdata,'file'):$e
+    if $e>0.5 then
+      rm('-rf',$trdata):$x
+    endif
+    mkdir($trdata)
+    exists($trash+'/study.xml','file'):$e
+    if $e>0.5 then rm('-f',$trash+'/study.xml'):$x endif
+    exists($trash+'/plans','file'):$e
+    if $e>0.5 then rm('-f',$trash+'/plans'):$x endif
+  endif
+
+else  "($# = 2)"
+
+  if ($1 = 'one') then  "for single node"
+    xmdelete('emptytrash')
+    xmdelete('backupxml')
+    xmdelete('movenode',$2)
+    xmdelete('rmrx',$2)
+    vnmrjcmd('SQ set '+$2+' lock off')
+    teststr('sqattr','data','global'):$i
+    if $i>0.5 then
+      xmdelete('data',sqval[$i])
+      xmsetatts($2,'data','null')
+    endif
+    xm1('delete',$2)
+    if ($2=actionid) then actionid='null' endif
+    if ($2=copyid[1]) then copyid[1]='null' endif
+    if ($2=copyid[2]) then copyid[2]='null' endif
+  elseif ($1 = 'now') then  "for multiple nodes"
+    $s='' xmgetatts($2,'data'):$s
+    xmdelete('data',$s)
+    xmdelete('movenode',$2)
+    if ($2=actionid) then actionid='null' endif
+    if ($2=copyid[1]) then copyid[1]='null' endif
+    if ($2=copyid[2]) then copyid[2]='null' endif
+  elseif ($1 = 'data') then
+    $s=$2
+    if $s<>'' then
+      $t=''
+      substr($s,1,1):$t
+      if $t<>'/' then $s=$sdir+'/'+$s endif
+      shell('mv "'+$s+'".* '+$trdata):$x
+"test if .fid, .img exists, use mv()?"
+    endif
+  elseif ($1 = 'movenode') then "for one"
+    mv($sdir+'/info/'+$2,$trinfo)
+  elseif ($1 = 'backupnode') then "for one"
+    cp('-r',$sdir+'/info/'+$2,$trinfo)
+  elseif ($1 = 'rmrx') then
+    $pfile=$sdir+'/plans'
+    $pfile2=$sdir+'/plans2.tmp'
+    $match=$2+'"'
+    exists($pfile,'file'):$e
+    if $e>0.5 then
+      $sqattr='' $sqval='' $st=''
+      readfile($pfile,'$sqattr','$sqval','','local'):$size
+      $i=0
+      repeat
+        $i=$i+1
+        substr($sqval[$i],1):$st
+        if ($st <> $match) then
+          write('file',$pfile2,'%s %s',$sqattr[$i],$sqval[$i])
+        endif
+      until ($i>=$size or $i>1000)
+      mv($pfile2,$pfile)
+      vnmrjcmd('pnew','autodir')
+    endif
+  elseif ($1 = 'rmrxs') then
+    $pfile=$sdir+'/plans'
+    $pfile2=$sdir+'/plans2.tmp'
+    exists($pfile,'file'):$e
+    if $e>0.5 then
+      $sqattr='' $sqval='' $st=''
+      readfile($pfile,'$sqattr','$sqval','','local'):$size
+      $i=0
+      repeat
+        $i=$i+1
+        substr($sqval[$i],1):$st
+        $match='""' $j=0
+        $matchit='n'
+        repeat
+          $j=$j+1
+          substr($2,$j):$match
+          if $st=$match then $matchit='y' endif
+        until ($match = '""' or $match='' or $j>1000)
+        if ($matchit = 'n') then
+          write('file',$pfile2,'%s %s',$sqattr[$i],$sqval[$i])
+        endif
+      until ($i>=$size or $i>1000)
+      mv($pfile2,$pfile)
+      vnmrjcmd('pnew','autodir')
+    endif
+  elseif ($1 = 'req') then   "called from xmaction"
+    $i=0 teststr('sqattr','id','global'):$i
+    $id = sqval[$i]
+    $i=0 teststr('sqattr','type','global'):$i
+    $type = sqval[$i]
+    if ($type = 'protocol') then "No/Skip/Delete,No/RemoveData/Delete"
+      $tpr1=trashnodepref[1] $tpr2=trashnodepref[2]
+      if ($tpr1='No' and $tpr2='No') then
+        write('line3','Cannot delete protocol')
+        sqtval='null'
+        return
+      endif
+      if (activestudy[1]<>'null') then
+        $size=size('sqtval')
+        if ($size=1 and sqtval[1]='') then
+          xmdelete('emptytrash')
+          xmdelete('backupxml')
+"         check trashnodepref?"
+          xmdelete('now',$2)
+          xm1('delete',$2) "empty protocol"
+          xmwritesq
+          return
+        endif
+        $st='' $ok='y'
+        $i=0
+        repeat
+          $i=$i+1
+          xmgetatts(sqtval[$i],'status'):$st
+          if ($st='Executing') then  "test hw status also"
+            readhw('status'):$val
+            if ($val <> 10) then
+              write('line3','Cannot delete Executing node')
+              $ok='n'
+            endif
+          endif
+          if ($tpr1<>'Delete' or $tpr2<>'Delete') then
+            if ($st='Ready' or $st='Customized' or $st='Active' or $st='Skipped') then
+              if ($tpr1='No') then
+                write('line3','Cannot delete Ready nodes')
+                $ok='n'
+              endif
+            else "if ($st='Completed' or $st='Error') then"
+              if ($tpr2='No') then
+                write('line3','Cannot delete Completed nodes')
+                $ok='n'
+              endif
+            endif
+          endif "Delete,Delete"
+        until ($i>=$size or $ok='n')
+        if ($ok='n') then
+          sqtval='null'
+          return
+        endif
+
+        xmdelete('emptytrash')
+        xmdelete('backupxml')
+        if ($tpr1='Delete' and $tpr2='Delete') then
+          xm1('delete',$2)
+        endif
+        $match=''
+        $i=0 $deli=0
+        repeat
+          $i=$i+1
+          $idt=sqtval[$i]
+          xmgetatts($idt,'status','data'):$st,$data
+          if ($st='Ready' or $st='Customized' or $st='Active' or $st='Skipped') then
+            if ($tpr1='Skip') then
+              xmdelete('backupnode',$idt)
+              xmsetatts($idt,'status','Skipped','lock','off')
+            else  "$tpr1='Delete'"
+              $deli=$deli+1
+              xmdelete('now',$idt)
+              $match=$match+$idt+'" '
+            endif
+          else "if ($st='Completed' or $st='Error' or $st='Executing') then"
+            if ($tpr2='RemoveData') then
+              xmdelete('backupnode',$idt)
+              xmdelete('data',$data)
+              xmsetatts($idt,'data','null','status','Customized','lock','off')
+              $match=$match+$idt+'" '
+            else  "$tpr2='Delete'"
+              $deli=$deli+1
+              xmdelete('now',$idt)
+              $match=$match+$idt+'" '
+            endif
+          endif
+        until ($i>=$size)
+        xmdelete('rmrxs',$match+' ""')
+        if not ($tpr1='Delete' and $tpr2='Delete') then
+          if ($deli=$size) then
+            xm1('delete',$2)
+            xmdelete('now',$2)
+          endif
+        endif
+        if ($tpr1='Delete' and $tpr2='Delete') then
+          xmdelete('now',$2)
+        endif
+        xmwritesq
+      endif
+    endif
+    sqtval='null'
+  endif
+endif

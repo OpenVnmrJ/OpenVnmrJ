@@ -1,0 +1,27 @@
+"macro lcChannelLabel"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcChannelLabel"
+
+// Returns the 'label' and 'tag' for a given ADC channel number.
+// Parses the lcChannelX parameter.
+// The first (white-space separated) token is the tag.
+// Normally, the rest is the label, but "other" channels get the
+// label from the lcChannelXLabel parameter.
+//
+
+$ch=''
+format($1,0,0):$ch
+
+substr({'lcChannel'+$ch}, 1):$chanTag
+length($chanTag):$len1
+length({'lcChannel'+$ch}):$len2
+$len2 = $len2 - $len1 - 1
+strstr({'lcChannel'+$ch},':other'):$isOther
+if ($isOther) then
+  $chanLabel = {'lcChannel'+$ch+'Label'}
+elseif ($len2 <= 0) then
+  $chanLabel = $chanTag
+else
+  substr({'lcChannel'+$ch}, $len1+2, $len2):$chanLabel
+endif
+return($chanLabel, $chanTag)

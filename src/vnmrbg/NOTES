@@ -1,0 +1,95 @@
+Vnmrbg and Magical
+==================
+
+Magical macros call commands compiled into Vnmrbg. The file table.c lists the command names and
+the corresponding function entry points in the cmd_t structure vnmr_table[].  A command is
+called with the signature
+
+   (*func)(int argc, char *argv[], int retc, char *retv[]);
+
+The argc variable is the number of valid *argv entries and retc is the number of valid *retv
+entries. A Vnmrbg command can be called by several aliases. For example, the magical commands
+"wbs", "wdone", "werr", and "wexp" all have the same function entry point werr. The argc
+variable will always be greater than or equal to 1. The first argv parameter ( *argv[0] )
+will be set to the callname used to access the function entry point. As an example,
+   wbs('ft')
+calls the werr function with argc=2, *argv[0] set to "wbs" and *argv[1] set to "ft".
+It is a potential core-dumping error to access *argv[index] where index >= argc.
+
+The retc and retv are used to return arguments to the calling macro. For example,
+
+  wexp:$active
+
+will set retc to 1. The werr function (note wexp is an alias for the werr function)
+can then assign a value into *retv[0], which will be returned to the calling function.
+It is a potential core-dumping error to assign *retv[index] where index >= retc.
+
+For a fairly compact example of a Vnmrbg function examining input arguments and
+returning values to the calling macro, see the "writefile" procedure in the text.c module.
+ 
+
+
+Handling Numerical Recipes code
+===============================
+
+The SConstruct file is used for both opensource and non-opensource versions of Vnmrbg.
+Setting
+  opensource = "false"
+builds the non-opensource version of Vnmrbg.
+Setting
+  opensource = "true"
+builds the opensource version of Vnmrbg.
+
+For the opensource Vnmrbg, C modules that contain "Numerical Recipes" code cannot be
+distributed as source code. This code has been isolated into five modules.
+
+vnmr_nr.c
+vnmr_dosyfit_nr.c
+vnmr_gradfit_nr.c
+vnmr_gxyzcalib_nr.c
+vnmr_aipSpline_nr.C
+
+vnmr_nr.c includes f-distribution code and SVD code.
+vnmr_dosyfit_nr.c, vnmr_gradfit_nr.c, and vnmr_gxyzcalib_nr.c include Levenberg Marquardt routines.
+vnmr_aipSpline_nr.C includes a cubic-spline calculation.
+
+When opensource="false", these modules are compiled and the corresponding .o files linked
+together with the rest of Vnmrbg.
+The source code for these modules is not provided to the OpenVnmrJ community. Instead, the corresponding
+.o files are provided. When opensource="true", these .o files are linked together with the rest
+of Vnmrbg.  If we want to build a MacOS version of Vnmrbg, separate MacOS versions of these .o files
+will need to be delivered to the OpenVnmrJ community.
+
+When opensource = "true", setting 
+  gplsource="true"
+does not use the pre-compiled versions of the above .c files. It uses the files
+
+vnmr_svd.c
+vnmr_dosyfit.c
+vnmr_gradfit.c
+vnmr_gxyzcalib.c
+
+vnmr_fdist.h
+vnmr_svd.h
+vnmr_gradfit_lm.h
+vnmr_gxyzcalib_lm.h
+vnmr_lm.h
+vnmr_aipInterpolation.h
+
+The .h files are used by both the opensource and non-opensource version of Vnmrbg. 
+Setting gplsource="true" sets the compiler variable VNMR_GPL.
+
+The vnmr_fdist.h provides the signature for the f-distribution calculation in vnmr_nr.c
+or the GSL equivalent.
+
+The vnmr_svd.h checks VNMR_GPL and either points
+to functions in vnmr_svd.c or in the pre-compiled vnmr_nr.o.
+vnmr_svd.c provides the GSL equivalent of the SVD calculation in vnmr_nr.c
+
+The files vnmr_dosyfit.c, vnmr_gradfit.c, vnmr_gxyzcalib.c currently only contain the signatures of the
+function calls from the dosyfit.c, gradfit.c, and gxyzcalib.c modules. Corresponding GSL equivalents
+need to be built.
+
+A cubic-spine implementation in GSL has not been done. The vnmr_aipInterpolation.h currently
+calls a "simple_interpolation" instead of a cubic spline in vnmr_aipSpline_nr.C.
+

@@ -1,0 +1,62 @@
+"macro ecc_plottofile"
+"ecc_plotall - a macro to plot grecovery and include time constant info"
+
+
+ds(arraydim) vsadj aph0
+peak:$max,$frq
+$ninety=$max*.9
+
+$i=1
+repeat
+	ds($i) peak:$hgt,$frq
+	if ($hgt > $ninety) then
+		$delay=d2[$i] $i=arraydim-1
+	endif	
+	$i=$i+1
+until $i=arraydim
+
+vs=vs*.8  dssh
+pl('all')
+
+$device='graphics'
+
+write($device,10,160,'Probe = %s',probe)
+write($device,10,150,date)
+write($device,50,150,'Ninety percent recovery in %3.3f msec',$delay*1000)
+
+write($device,20,140,'tc1z = %3.3f msec',tc1z)
+write($device,100,140,'amp1z = %2.3f ',amp1z)
+
+write($device,20,130,'tc2z = %3.3f msec',tc2z)
+write($device,100,130,'amp2z = %2.3f ',amp2z)
+
+write($device,20,120,'tc3z = %3.3f msec',tc3z)
+write($device,100,120,'amp3z = %2.3f ',amp3z)
+
+write($device,20,110,'tc4z = %3.3f msec',tc4z)
+write($device,100,110,'amp4z = %2.3f ',amp4z)
+
+$device='plotter'
+write($device,10,160,'Probe = %s',probe)
+write($device,10,150,date)
+write($device,50,150,'Ninety percent recovery in %3.3f msec',$delay*1000)
+
+write($device,20,140,'tc1z = %3.3f msec',tc1z)
+write($device,80,140,'amp1z = %2.3f ',amp1z)
+
+write($device,20,135,'tc2z = %3.3f msec',tc2z)
+write($device,80,135,'amp2z = %2.3f ',amp2z)
+
+write($device,20,130,'tc3z = %3.3f msec',tc3z)
+write($device,80,130,'amp3z = %2.3f ',amp3z)
+
+write($device,20,125,'tc4z = %3.3f msec',tc4z)
+write($device,80,125,'amp4z = %2.3f ',amp4z)
+
+$center=d2[11]
+
+write($device,150,140,'Exponention delay array centered at %2.4f msec',1000*$center)
+ecc_label
+page($1)
+
+

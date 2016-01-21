@@ -1,0 +1,586 @@
+"macro mac_tmp"
+// supplementary macro for running pwXcal macro
+
+// sample assumed id1/id2-like 
+// looks for a signal between f1p and f2p
+// finds dof/dof2 for those signals between f1p and f2p
+// runs calibration on max 1H signal in 1H spectrum
+// calibrates either power or pulsewidth
+// either updates probefile or returns found value 
+
+
+ $calibrate='C'
+ $f1=10
+ $f2=0
+
+ $target='pulse'
+ $target_value=15.0
+ $update='noupdate'
+ $return_val=-999.00
+
+ $default_gain=20
+ $default_alfa=20
+ $default_rof2=25
+
+if ( ($# <> 6)  and ($# <> 1 ) )  then
+ 
+        	     
+   
+		 write('alpha',' usage:  et_pwxcal(\'C|N|H|dof|dof2\',\'pulse|power\',pwr|pulse,f1,f2, \'update|noupdate\' )' )
+                     
+                 write('alpha','# Calibrating pwx pulse')
+		return
+	  endif   
+
+if ($# = 6)  then
+ 
+                 $calibrate=$1
+                 $target=$2
+                 $target_value=$3
+                 $f1=$4
+                 $f2=$5
+                 $update=$6
+ 
+	  endif   
+
+if ($# = 1)  then
+ 
+                 $calibrate=$1
+
+ 
+	  endif 
+    
+write('alpha','# Calibrating %s channel %s at %.1f signal between %.3f and %3.f ppm probefile %s',$calibrate,$target,$target_value,$f1,$f2,$update)
+
+
+// calibrating for target pw90 on 1H
+
+
+if ($calibrate='fixprobepars')  then
+             
+ //setup initial parameters
+//  string parameters list: 
+// parameter1name, parameter1default, parameter1nucleus,  parameter2name, parameter2default, parameter1nucleus,... 
+
+   //approx position of the left component of the CH-doublet in the id1 sample
+
+   $ss='' format(2.13+75.5/sfrq,0,2):$ss
+
+// for crying out loud, how come ther can be a probe file without tof parameter, seriously?
+ 
+         
+   $Spars='tof','0','H1',\
+          'tof_id1','0','H1',\
+          'pw90_target','8','H1',\
+          'minrof2','25','H1',\
+          'minalfa','20','H1',\
+          'alfa','20','H1',\
+          'pw90_target','15','C13',\
+          'dof_id1','0','C13',\
+          'ppm_id1','2.13','H1',\
+          'ppm_id1_left',$ss,'H1',\
+          'ref_noise','-1','H1',\
+          'ref_fidmax','-1','H1',\
+          'noise_th', '2.0','H1',\
+          'fidmax_th','5.0','H1',\
+          'noise_th_rel2rms_noise', '2.0','H1',\
+          'spike_th_rel2rms_noise', '5.0','H1',\
+          'pcnt_bad_fid_th', '1.0','H1',\
+          'fids_to_judge', '10000','H1'
+
+    $nSpars=size('$Spars')
+    getProbePath(probe,'alert'):$e,$probefile,$rw
+    
+    $i=1
+    while ($i<$nSpars) do
+ 
+         $parex=''  shell('gawk \'{{ if ($1=="'+$Spars[$i+2]+$Spars[$i]+'") {printf("yes"); }}}\' '+$probefile):$parex 
+
+        // $parex=''  shell('grep '+$Spars[$i+2]+$Spars[$i]+' '+$probefile):$parex 
+	 if ($parex = '')  then
+	     	 addparams($Spars[$i], $Spars[$i+1], $Spars[$i+2])
+                 write('line3','added new parameter %s = %s to probe file nucleus %s', $Spars[$i], $Spars[$i+1], $Spars[$i+2])
+	 endif
+
+
+ 
+    $i=$i+3
+    endwhile
+    banner('Adding few parameters to a probefile.\\ No backups')
+
+	exists('maxattench1','parameter','global'):$e
+ 	if ($e=0) then
+	write('alpha','creating maxattench1')
+  	create('maxattench1','real','global')
+        maxattench1=63
+ 	endif
+
+	exists('maxattench2','parameter','global'):$e
+ 	if ($e=0) then
+	write('alpha','creating maxattench2')
+  	create('maxattench2','real','global') 
+        maxattench2=63
+ 	endif
+
+	exists('maxattench3','parameter','global'):$e
+ 	if ($e=0) then
+	write('alpha','creating maxattench3')
+  	create('maxattench3','real','global')
+        maxattench3=63
+ 	endif
+   
+
+     // Check for alfa and rof2
+        $xx=0
+        getparam('minrof2','H1'):$xx 
+ 
+       if ($xx < $default_rof2) then
+		banner('probefile rof2 is kinda short,  resetting to 25')
+ 		setparams('minrof2','25.0','H1')
+	endif
+        $xx=0
+	getparam('minalfa','H1'):$xx  
+        if ($xx < $default_alfa) then
+		banner('probefile alfa is kinda short, resetting to 20')
+ 		setparams('minalfa','20.0','H1')
+	endif
+
+        $xx=0
+	getparam('alfa','H1'):$xx  
+        if ($xx < $default_alfa) then
+		banner('probefile alfa is kinda short, resetting to 20')
+ 		setparams('alfa','20.0','H1')
+	endif
+
+     // Check for the freaking autotune
+
+        setparams('tuneflg','n','Probe')
+
+
+ return
+ endif // endif for fixprobepars
+
+
+
+if ($calibrate='findtof')  then
+ 
+              write('line3','looking for tof...')
+              
+              $parfile='et_s2pul'
+	 
+              write('alpha','retrieving parameters...' )
+                $ss=''
+	        exists($parfile,'parlib'):$e,$ss
+       	 	     if ($e=0) then
+       		        write('error','psgset - no parameters found')
+        	       return
+                     endif
+
+               rtp($ss)
+
+		tn='H1' dn='' dn2='' gain=18
+        
+                tpwr=40 pw=10
+		d1=3 at=1.0 nt=1 ss=0 sw=25.0*sfrq
+		fn=128k sb='n' lb='n' gf=0.25
+		ai
+               
+               
+           wnt=' if (celem=arraydim) then  $n1=\'\' wft f full av peak:r1,r2 \
+                 cr=r2 movetof format(tof,0,2):$n1 setparams(\'tof\',$n1,\'H1\') endif' 
+
+            wexp=''
+ 
+
+	 endif
+if ($calibrate='findtpwr')  then
+
+         
+               
+             banner('looking for 1H pw90 power')
+
+              $parfile='et_s2pul'
+	 
+            
+                $ss=''
+	        exists($parfile,'parlib'):$e,$ss
+       	 	     if ($e=0) then
+       		        write('error','psgset - no parameters found')
+        	       return
+                     endif
+
+               rtp($ss)
+
+		tn='H1' dn='' dn2='' gain=18
+	        d1=1 at=0.5 nt=1 ss=8 pw=4.0 sw=25.0*sfrq
+
+		fn=64k sb='n' lb='n' gf=0.25
+		getparam('tof','H1'):tof  
+		getparam('pw90_target','H1'):pw
+	         
+		array('tpwr',14,maxattench1-13,1)
+		ai
+              r2=-1.0e6
+
+             //set power level to allowable max
+            // $n1=''  format(maxattench1-14,0,0):$n1
+	    // setparams('tpwr',$n1,'H1')
+
+      wnt='av wft vsadj vs=vs/3 f full ds(celem) peak:r1 if (r1<r2) then  $n1=\'\' format(tpwr[celem-1],0,0):$n1 setparams(\'tpwr\',$n1,\'H1\') halt endif r2=r1' 	
+
+
+              wexp=''
+    
+ 
+           
+
+	 endif   
+
+
+if ($calibrate='findpw')  then
+
+         write('alpha','# Calibrating pw90 on 1H at')
+         banner('looking for 1H pulse')
+             
+              $parfile='et_s2pul'
+ 
+                $ss=''
+	        exists($parfile,'parlib'):$e,$ss
+       	 	     if ($e=0) then
+       		        write('error','psgset - no parameters found')
+        	       return
+                     endif
+
+               rtp($ss)
+             
+             
+		tn='H1' dn='' dn2='' gain=18 
+	        d1=1 at=0.5 nt=1 ss=8 pw=4.0 sw=25.0*sfrq
+                fn=64k sb='n' lb='n' gf=0.25
+                vs=80 vp=50
+		getparam('tof','H1'):tof  
+		getparam('pw90_target','H1'):$xx
+                getparam('tpwr','H1'):tpwr
+		ai ph  
+                
+                $i=trunc(6.0*$xx)
+                array('pw',$i,1.0,1.0)
+
+            wnt='wft f full cr=sp+sw/2 sp=cr-0.1p wp=0.2p ph aph0   dssh dssl(\'value\') \
+                 if(celem=arraydim) then  et_pwxcal(\'pwcalc\')  endif'
+            wexp=''
+ 
+	 endif   
+
+if ($calibrate='pwcalc')  then
+       
+         write('alpha','# calculating pulse')
+         banner('calculating 1H pulse')
+
+         wft f full cr=sp+sw/2 sp=cr-0.2p wp=0.4p   ph aph0
+
+         $r1=0 $r2=0 $r3=0 $n1='' $e=0
+
+         et_find_maxmin('zero2',sp+wp,sp):$r1,$r2,$r3,$n1,$e
+         
+         if ($e=0) then 
+           write('alpha','# approx pw90 from pw360/4 is %.2f ',$r3/4.0)
+          
+           $n1='' format($r3/4.0,0,1):$n1 setparams('pw90',$n1,'H1') 
+            $r1=trunc($r3/4.0*10+0.5)/10
+	   return($r1) 
+
+	   else
+           banner('1H pw90 calibration:\\ could not find second zero crossing.\\ WTF?') return(-999)       
+         endif  
+           
+
+	 endif   
+
+if ($calibrate='find_id1')  then
+
+         write('line3','# looking for id1 signal')
+         banner('# looking for id1 signal')
+            
+             $parfile='et_s2pul'
+	 
+                $ss=''
+	        exists($parfile,'parlib'):$e,$ss
+       	 	     if ($e=0) then
+       		        write('error','psgset - no parameters found')
+        	       return
+                     endif
+
+               rtp($ss)       
+        
+	        solvent='CDCL3'
+		tn='H1' dn='' dn2='' gain=18 
+	        d1=1 at=0.5 nt=1 ss=0 pw=4.0 sw=25.0*sfrq
+                fn=256k sb='n' lb='n' gf=0.25
+                vs=80 vp=50
+		getparam('tof_id1','H1'):tof  
+		getparam('pw90','H1'):pw
+                getparam('tpwr','H1'):tpwr
+                $ppm_id1=0.0
+	        getparam('ppm_id1','H1'):$ppm_id1
+		ai ph  
+
+                ddrtc=alfa+rof2+pw*.635 //screw it, it does not work in fn-automation anyway
+                 
+            wnt='if(celem=arraydim) then et_pwxcal(\'calc_id1_ppm\') endif'
+            wexp=''
+ 
+	 endif   
+
+
+if ($calibrate='calc_id1_ppm')  then
+
+	setref wft f full aph('select',9p,0p)
+
+	sp=2.04p wp=0.18p 
+	peak:$dum,$ppm_id1 
+	$n1='' format($ppm_id1/sfrq,0,3):$n1 setparams('ppm_id1',$n1,'H1')
+	
+	sp=$ppm_id1+75-0.05p wp=0.1p 
+	peak:$dum,$ppm_id1_left 
+	format($ppm_id1_left/sfrq,0,3):$n1 
+	setparams('ppm_id1_left',$n1,'H1')
+endif
+
+
+if ($calibrate='finddof')  then
+
+         banner('# looking for dof')
+            
+             $parfile='et_s2pul'
+	 
+                $ss=''
+	        exists($parfile,'parlib'):$e,$ss
+       	 	     if ($e=0) then
+       		        write('error','psgset - no parameters found')
+        	       return
+                     endif
+
+               rtp($ss) 
+
+		if ($# = 1)  then
+                        getparam('ppm_id1','H1'):$ppm_id1                         
+                	$f1=$ppm_id1*sfrq - 0.05*sfrq // ppm
+                	$f2=$ppm_id1*sfrq + 0.05*sfrq //  ppm
+		endif
+
+		tn='H1' dn='C13' dn2='' gain=18 
+	        d1=1 at=0.1 nt=1 ss=4   sw=25.0*sfrq
+                fn=16k sb='n' lb='n' gf=0.05
+                //vs=80 vp=50
+		getparam('tof_id1','H1'):tof  
+		getparam('pw90','H1'):pw
+                getparam('tpwr','H1'):tpwr
+		ai ph
+                dpwr=38 dm='nny' dmm='ccc'
+                 
+
+ 
+                ddrtc=alfa+rof2+pw*.63// yeah right, setrc stuff again
+
+                array('dof',60,-30000,500)
+
+
+	
+            $ss1='' $ss2='' $ss3='' format($f1,0,2):$ss1  format($f2,0,2):$ss2 format($f2-$f1,0,2):$ss3
+
+            $ss5='setref wft f full  et_find_maxmin(\'max\',' + $ss1 +',' +$ss2 +'):$dum1,$dum3,$dof $n1=\'\' format($dof,0,0):$n1 setparams(\'dof_id1\',$n1,\'C13\')' 
+     
+            wnt='setref wft f full sp=' +$ss1 + ' wp=' +$ss3 +  ' ds(1) aph(\'select\',9p,0p)  dssh   if (celem=arraydim) then ' +$ss5 +' endif' 
+  
+	 endif   
+
+/////////////////////////CALIBRATE 13C Power level
+
+if ($calibrate='findCpwr')  then
+
+         write('alpha','# looking for pwC')
+
+ /// copy-paste from pwxcal:              
+		 
+	$parfile='et_pwxcal'
+	 
+         
+        $ss=''
+	exists($parfile,'parlib'):$e,$ss
+       	 	if ($e=0) then
+       		 write('error','psgset - no parameters found')
+        	return
+        endif
+        rtp($ss)
+	ai        		 
+       jname= 'C13' dn = 'C13' dm='nnn'  pwx1 = 1  pwx2 = 0 dn2=''
+
+/////
+               // solvent='CDCL3'
+ 
+
+
+		tn='H1' dn='C13' dn2='' gain=18  dm='nnn' dpwr=-16  dpwr2=-16
+	        d1=0.5 at=0.5 nt=4 ss=16   sw=25.0*sfrq
+                fn=256k sb='n' lb='n' gf=0.25
+                ai ph
+		getparam('tof_id1','H1'):tof  
+		getparam('dof_id1','C13'):dof  
+		getparam('pw90','H1'):pw
+                getparam('tpwr','H1'):tpwr
+
+                getparam('pw90_target','C13'):pwx1
+                array('pwxlvl1',14,maxattench2-13,1)
+                
+                
+                
+           // set ch2 to allowable max,
+           // $n1=''  format(maxattench2-14,0,0):$n1
+           // setparams('tpwr',$n1,'C13')
+
+
+
+            
+            wnt='et_pwxcal(\'calcCpwr\')'
+
+
+            wexp=''
+
+
+ endif   // endif for 13C pwC
+
+ 
+if ($calibrate='calcCpwr')  then
+
+		 
+         getparam('ppm_id1_left','H1'):$ppm_id1_left
+                      
+         $lw=15.0
+         $f1= $ppm_id1_left*sfrq - $lw //+-15Hz
+         $f2= $ppm_id1_left*sfrq + $lw
+
+         setref wft f full ds(1)  aph('select',9p,0p)
+	 sp=$f1 wp=$f2-$f1 dssh dssl('value') 
+	 
+         et_find_maxmin('zero1',$f1,$f2):$dum1,$dum3,$dof,$n1,$e 
+	 if ($e < 1 ) then 
+		 format(pwxlvl1[celem-1],0,0):$n1 setparams('tpwr',$n1,'C13')
+		halt
+	 endif	 
+
+         if ( ($e > 0.5 ) and (celem=arraydim) ) then
+                getparam('pw90_target','C13'):$xx $ss='' format($xx,0,1):$ss
+                
+                write('error','could not find 13C power  that provides 13C target pw90=' + $ss + 'us')
+		banner('could not find 13C power \\ that provides 13C target pw90=' + $ss + 'us\\ SOL')
+		//walkupQ_runtime('delete','','all')
+                 wexp='cppause(\'stop\')'
+	endif
+
+endif
+
+
+  /////////////////////////CALIBRATE 13C pulse with power
+
+if ($calibrate='findCpw')  then
+
+         write('alpha','# looking for pwC')
+
+ /// copy-paste from pwxcal:              
+		 
+	$parfile='et_pwxcal'
+	 
+        
+        $ss=''
+	exists($parfile,'parlib'):$e,$ss
+       	 	if ($e=0) then
+       		 write('error','psgset - no parameters found')
+        	return
+        endif
+        rtp($ss)
+ 	ai ph      		 
+       jname= 'C13' dn = 'C13' dm='nnn'  pwx1 = 1  pwx2 = 0 dn2='' pwxlvl1=-16 pwxlvl2=-16
+
+/////
+                //solvent='CDCL3'
+		 
+
+		tn='H1' dn='C13' dn2='' gain=18 
+	        d1=0.5 at=0.5 nt=4 ss=16   sw=25.0*sfrq
+                fn=256k sb='n' lb='n' gf=0.25
+                 
+		
+		getparam('tof_id1','H1'):tof  
+		getparam('dof_id1','C13'):dof  
+		getparam('pw90','H1'):pw
+                getparam('tpwr','H1'):tpwr
+
+                getparam('pw90_target','C13'):$xx
+                getparam('tpwr','C13'):pwxlvl1
+	
+                $i=trunc(4.0*$xx)
+                array('pwx1',$i,1.0,1.0)
+
+                dpwr=-16  
+                ddrtc=alfa 
+             
+            wnt='et_pwxcal(\'calcCpw\')'
+            wexp=''
+            
+ endif   // endif for 13C pwC
+
+if ( ($calibrate='calcCpw') or ($calibrate='checkCpw'))  then
+
+	getparam('pw90','C13'):$ref_pwC
+	 echo($ref_pwC)
+        getparam('ppm_id1_left','H1'):$ppm_id1_left
+                      
+         $lw=15.0
+         $f1= $ppm_id1_left*sfrq - $lw //+-15Hz
+         $f2= $ppm_id1_left*sfrq + $lw
+
+         setref wft f full ds(1)  aph('select',9p,0p)
+	 sp=$f1 wp=$f2-$f1 dssh dssl('value') 
+	 
+         et_find_maxmin('zero1',$f1,$f2):$dum1,$dum3,$pwx1,$n1,$e 
+
+	 if ($e < 1 ) then 
+
+                // check if the current pulse is longer than previous one
+		if (  ($calibrate='checkCpw') and ($ref_pwC>0.1))   then
+                      
+                      
+
+			if ($pwx1/$ref_pwC>1.4) then
+       	       		  write('error','current 13C pw90 differs significantly from one written to probefile')
+                          write('line3','current 13C pw90 differs significantly from one written to probefile')
+	 		  banner('current 13C pw90 differs significantly from one written to probefile\\ SOL')
+	 		   //wexp='cppause(\'stop\')'
+                          halt
+			  walkupQ_runtime('delete','','all')	
+                          
+             
+			endif
+		endif
+		 $n1='' format($pwx1,0,1):$n1 setparams('pw90',$n1,'C13') 
+		halt
+	 endif	 
+
+	 
+        if ( ($e > 0.5 ) and (celem=arraydim) ) then
+        	 
+       	        write('error','could not find 13C pw90')
+	 	banner('could not find 13C pw90\\ SOL')
+	 	 //wexp='cppause(\'stop\')'
+                 walkupQ_runtime('delete','','all')
+                 halt	
+
+	endif
+ 
+         
+endif
+
+
+ return
+ 

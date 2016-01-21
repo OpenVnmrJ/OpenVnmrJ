@@ -1,0 +1,399 @@
+"macro ft3d"
+"***************************************************************"
+"   ft3d  -  executes 3D processing in background               "
+"                                                               "
+"   usage:   ft3d(<'f1f2'>)                                     "
+"            ft3d(<'f1f3'>)                                     "
+"            ft3d(<'f2f3'>)                                     "
+"            ft3d(<'xall'>)                                     "
+"            ft3d(<'fg'>)                                       "
+"            ft3d(<'noft'>)                                       "
+"                                                               "
+"            ft3d(<'nocoef'>)                                   "
+"            ft3d(<'datapath'>)                                 "
+"            ft3d(<nfiles>)                                     "
+"                                                               "
+"   'datapath' is an optional argument specifying the output    "
+"   3D data directory.  nfiles is an optional argument which    "
+"   specifies the number of 3D data files to be used to store   "
+"   the 3D transformed data.  'nocoef' is an optional argument  "
+"   specifying that ft3d should not create a 3D coefficient     "
+"   file.  By default ft3d creates coef file using f1coef       "
+"   and f2coef string parameter values.                         "
+"   'xall' is an optional argument which specifies that         "
+"   all 3 sets of 2D plane types should be extracted after the  "
+"   3D FT has been completed.                                   "
+"   't1t2' and 't2t1' are optional arguments to explicitly 	"
+"   define the order of t1 and t2 arrays (other than ni and ni2)"
+"   By default the macro looks at array parameter to make a 	"
+"   decision.  In that case if any parameter other than phase	"
+"   and phase2 are arrayed the macro aborts.			"
+"   'fg' is an optional argument to force foreground processing "
+"   'noft' is an optional argument to skip the FT step          "
+"***************************************************************"
+
+$i = 1
+$nomatch = 1
+$f1f2 = 0
+$f1f3 = 0
+$f2f3 = 0
+$nocoef = 0
+$setpath = 0
+$setfilenum = 0
+$setprocmode = 0
+$t1t2arg=0
+$dofg=0
+$noft=0
+
+$plextr = ''
+$nfiles = ''
+$expno = ''
+$argno = ''
+$strval = ''
+$procmode = ''
+$order=''
+
+jexp:$expno
+
+path3d = curexp + '/datadir3d'
+
+if (appmode = 'imaging') then
+   $fdf = 'fdf'
+else
+   $fdf = 'nofdf'
+endif
+
+"Parse the arguments to ft3d"
+while ($i <= $#) do
+   if ($i > 9) then
+      format({'$i'},2,0):$argno
+   else
+      format({'$i'},1,0):$argno
+   endif
+
+   if (typeof('$'+$argno)) then
+      $strval = ${$i}
+      if ($strval = 'xall') then
+         $f1f2 = 1
+         $f1f3 = 1
+         $f2f3 = 1
+         $plextr = 'f1f2:f1f3:f2f3'
+         $nomatch = 0
+      endif
+
+      if (($strval = 'f1f2') or ($strval = 'f2f1')) then
+         $f1f2 = 1
+         $nomatch = 0
+         if ($plextr = '') then
+            $plextr = 'f1f2'
+         else
+            $plextr = $plextr + ':f1f2'
+         endif
+      endif
+
+      if (($strval = 'f1f3') or ($strval = 'f3f1')) then
+         $f1f3 = 1
+         $nomatch = 0
+         if ($plextr = '') then
+            $plextr = 'f1f3'
+         else
+            $plextr = $plextr + ':f1f3'
+         endif
+      endif
+
+      if (($strval = 'f2f3') or ($strval = 'f3f2')) then
+         $nomatch = 0
+         $f2f3 = 1
+         if ($plextr = '') then
+            $plextr = 'f2f3' 
+         else 
+            $plextr = $plextr + ':f2f3' 
+         endif
+      endif
+
+      if ($strval = 'nocoef') then
+         $nomatch = 0
+         $nocoef = 1
+      endif
+
+      if ($strval = 'fdf' or $strval = 'nofdf') then
+         $nomatch = 0
+         $fdf = $strval
+      endif
+
+      if ($strval = 'fg') then
+         $nomatch = 0
+         $dofg = 1
+      endif
+
+      if ($strval = 'noft') then
+         $noft = 1
+      endif
+
+      if (($strval = 't1t2') or ($strval = 't2t1')) then
+       $nomatch = 0
+       $order=$strval
+       $t1t2arg=1
+      endif
+
+      if ($strval = 'procf3') then
+         $nomatch = 0
+         if ($setprocmode) then
+            write('error','ft3d  -  usage:  define processing mode only once')
+            return
+         endif
+         $setprocmode = 1
+         $procmode = 'f3'
+      endif
+
+      if ($strval = 'procf2') then
+         $nomatch = 0
+         if ($setprocmode) then
+            write('error','ft3d  -  usage:  define processing mode only once')
+            return
+         endif
+         $setprocmode = 1
+         $procmode = 'f2'
+      endif
+
+      if ($strval = 'procf1') then
+         $nomatch = 0
+         if ($setprocmode) then
+            write('error','ft3d  -  usage:  define processing mode only once')
+            return
+         endif
+         $setprocmode = 1
+         $procmode = 'f1'
+      endif
+
+      if (($strval = 'procf3f2') or ($strval = 'procf2f3')) then
+         $nomatch = 0
+         if ($setprocmode) then
+            write('error','ft3d  -  usage:  define processing mode only once')
+            return
+         endif
+         $setprocmode = 1
+         $procmode = 'f3f2'
+      endif
+
+      if (($strval = 'procf2f1') or ($strval = 'procf1f2')) then
+         $nomatch = 0
+         if ($setprocmode) then
+            write('error','ft3d  -  usage:  define processing mode only once')
+            return
+         endif
+         $setprocmode = 1
+         $procmode = 'f2f1'
+      endif
+
+      if ($nomatch) then
+         path3d = $strval
+         $setpath = 1
+      endif
+
+      $nomatch = 1
+   else
+      $setfilenum = 1
+      $realval = ${$i}
+      if ($realval > 9) then
+         if ($realval > 32) then
+            write('error','ft3d:  usage error  -  <= 32 files required')
+            return
+         endif
+
+         format($realval,2,0):$nfiles
+      else
+         format($realval,1,0):$nfiles
+      endif
+   endif
+
+   $i = $i + 1
+endwhile
+
+
+"Cannot extract planes for certain values of `procmode`"
+if ($plextr <> '') then
+   if ($procmode <> '') then
+      if (($procmode = 'f3') or ($procmode = 'f2') or
+          ($procmode = 'f3f2') or ($procmode = 'f2f3')) then
+         write('error','ft3d  -  usage:  no plane extraction for this processing mode')
+         return
+      endif
+   endif
+endif
+
+
+"Calculate the dimensions of the 3D data set"
+exists('dimension3','parameter','processed'):$exists
+if ($exists < 0.5) then
+   create('dimension3','real','processed')
+endif
+exists('dimension2','parameter','processed'):$exists
+if ($exists < 0.5) then
+   create('dimension2','real','processed')
+endif
+exists('dimension1','parameter','processed'):$exists
+if ($exists < 0.5) then
+   create('dimension1','real','processed')
+endif
+setvalue('dimension3', np/2, 'processed')
+$nv=0 $nv2=0
+exists('nv','parameter','processed'):$exists
+if ($exists > 0.5) then
+  $nv = nv
+endif
+exists('nv2','parameter','processed'):$exists
+if ($exists > 0.5) then
+  $nv2 = nv2
+endif
+if ($nv > 1.5) and ($nv2 > 1.5) then
+   setvalue('dimension2', nv2, 'processed')
+   setvalue('dimension1', nv, 'processed')
+else
+   if (ni2 > 1.5) then
+      setvalue('dimension2', ni2, 'processed')
+      if (ni > 1.5) then
+         setvalue('dimension1', ni, 'processed')
+      else
+         setvalue('dimension1', nf, 'processed')
+      endif
+   else
+      setvalue('dimension2', nf, 'processed')
+      setvalue('dimension1', ni, 'processed')
+   endif
+endif
+
+"Create and set vnmrj parameters"
+exists('procdim','parameter'):$e
+if $e<0.5 then
+  create('procdim','integer')
+  setlimit('procdim',1000000000,-1000000000,0)
+endif
+setvalue('procdim', 3)
+setvalue('proccmd','ft3d'):$e
+exists('time_processed','parameter'):$e
+if $e<0.5 then
+  create('time_processed','string')
+endif
+shell('date -u +%\\Y%\\m%\\dT%\\H%\\M%\\SGMT'):time_processed
+
+"Create the 3D information directory"
+if ($nocoef) then
+  set3dproc('nocoef')
+else
+  if ($t1t2arg = 0) then
+    if ((array = 'phase2,phase') or (array = 'phase')) then
+      $order='t2t1'
+    else
+      if ((array = 'phase,phase2') or (array = 'phase2') or (array = '')) then
+        $order='t1t2'
+      endif
+    endif
+  endif 
+
+$nphase = 1
+exists('phase','parameter'):$e
+if ($e <> 0) then
+   $nphase = size('phase')
+endif
+
+$nphase2 = 1
+exists('phase2','parameter'):$e
+if ($e <> 0) then
+   $nphase2 = size('phase2')
+endif
+
+  $f1coefex=0 $f2coefex=0
+  exists('f1coef','parameter'):$f1coefex
+  if ($f1coefex) then 
+   if (f1coef = '') then 
+    if ($nphase = 2) then f1coef='1 0 0 0 0 0 -1 0' else $f1coefex=0 endif
+   endif 
+  endif
+  exists('f2coef','parameter'):$f2coefex
+  if ($f2coefex) then 
+   if (f2coef = '') then 
+    if ($nphase2 = 2) then f2coef='1 0 0 0 0 0 -1 0' else $f2coefex=0 endif 
+   endif
+  endif
+  if (($f1coefex = 0) or ($f2coefex = 0)) then
+   $order = ''
+  endif
+
+  if ($order <> '') then
+    make3dcoef($order)
+    set3dproc('nocoef')
+  else
+    set3dproc
+  endif
+endif
+
+
+"Write out an FDF header, if requested"
+$fdfok = 0
+if ($fdf = 'fdf') then
+   fdfhdr(curexp):$fdfok
+   if ($fdfok = 0) then
+      $fdf =  'nofdf'
+   endif
+endif
+
+
+"Select the default plane type"
+if ($f1f3) then
+   $defaultpl = 'f1f3'
+else
+   if ($f2f3) then
+      $defaultpl = 'f2f3'
+   else
+      if ($f1f2) then
+         $defaultpl = 'f1f2'
+      else
+         $defaultpl = plane
+      endif
+   endif
+endif
+
+
+"Set up the ft3d command line"
+if ($noft = 0) then
+  $command = 'ft3d'
+else
+  $command = 'noft3d'
+endif
+$command = $command + ' -H "' + vnmraddr + '"'
+$command = $command + ' -r -f -l -e ' + $expno
+if ($plextr <> '') then
+   $command = $command + ' -x ' + $plextr
+   plane = $defaultpl
+endif
+
+if ($fdf = 'fdf') then
+   $command = $command + ' -F "' + curexp + '/header"'
+endif
+
+if ($setpath) then
+   $command = $command + ' -o "' + path3d + '"'
+else
+   if ($plextr <> '') then
+      path3d = curexp + '/datadir3d'
+   endif
+endif
+
+if ($setfilenum) then
+   $command = $command + ' -h -m ' + $nfiles
+endif
+
+if ($setprocmode) then
+   $command = $command + ' -p ' + $procmode
+endif
+
+if (path3d = '') then
+   path3d = curexp + '/datadir3d'
+endif
+
+if ($dofg = 0) then
+  $command = $command + ' &'
+endif
+
+shell($command):$dum

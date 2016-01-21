@@ -1,0 +1,80 @@
+"macro sel1ppm2frq"
+if ($# < 1) then $1='setup' endif
+
+IF ($1 = 'setup') THEN
+
+  on('selfrq1ppm'):$ison
+  if ($ison > 0) then 
+    		$selfrqw=selfrq1w selfrq1w=0
+    		$selfrqppm=selfrq1ppm 
+    		selfrq1ppm=0 off('selfrq1ppm')
+    		selfrq1c=0 off('selfrq1c')
+    		$spsize=size('$selfrqppm')
+    		$swsize=size('$selfrqw')
+    		if ($swsize < $spsize) then
+    		   	$x=$swsize+1
+       			repeat
+			    $selfrqw[$x]=$selfrqw[$swsize]
+			    $x=$x+1
+       			until $x > $spsize
+    		endif
+    		$x=1
+    		repeat
+			if $selfrqw[$x]=0 then $selfrqw[$x]=1*h1freq endif
+				"if the width is zero it is reset to h1freq - avoid Pbox panic"
+			setselfrq1c($selfrqppm[$x]*reffrq1,$selfrqw[$x])
+			$x=$x+1
+    		until ($x > $spsize)
+   endif
+
+ELSEIF ($1 = 'init') THEN
+
+   $sps=size('selfrq1ppm')
+   $sws=size('selfrq1w')
+   if ($2 = 0) then
+	selfrq1ppm=0 off('selfrq1ppm')
+   elseif ($2 > $sps) then
+	$i=$sps+1
+	repeat
+	  selfrq1ppm[$i]=0
+	  $i=$i+1
+	until $i > $2
+   elseif ($2 < $sps) then
+	$selfrqppm=selfrq1ppm
+	selfrq1ppm=0
+	$i=1
+	repeat
+	    selfrq1ppm[$i]=$selfrqppm[$i]
+	    $i=$i+1
+	until $i > $2
+   endif
+
+   if ($2 = 0) then
+        selfrq1w=10 
+   elseif ($2 > $sws) then
+        $i=$sws+1
+        repeat
+          selfrq1w[$i]=0
+          $i=$i+1
+        until $i > $2
+   elseif ($2 < $sws) then
+        $selfrqw=selfrq1w
+        selfrq1w=0
+        $i=1
+        repeat
+            selfrq1w[$i]=$selfrqw[$i]
+            $i=$i+1
+        until $i > $2
+   endif
+
+ "The following section is for layout display"
+   on('selfrq1ppm'):$ison
+   if ($ison>0) then
+     if (customflag='n') then
+	wstart='suselfrq1'
+     elseif (customflag='y') then
+	wstart='' wds='wstart=\'suselfrq1\'' 
+     endif
+   endif
+ENDIF
+

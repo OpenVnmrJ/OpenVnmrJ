@@ -1,0 +1,166 @@
+"macro dosy2D"
+"***************************************************************"
+"dosy2D -							" 
+"	This is an apptype macro for dosy2D experiments		"
+"	Changes here will be reflected in all experiments	"
+"		with this apptype				"
+"	All apptype macros have 4 sections 			"
+"	  (setup, acquistion, process, display)			"
+"	Changes over these default values should be done using	"
+"	pslabel_setup or wrtp feature				"
+"	This macro is typically called by cpsetup		"
+"***************************************************************"
+
+"**********************************************"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for dosy2D"
+  module('combine','presat gradient par2D dosy2D',newmodules):newmodules
+  module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+if ($# < 2) then $2='' endif
+if ($2 <> $0) then $update=0 else $update=1 endif
+
+ni=0 phase=0
+if pfgon='nnn' then pfgon='nny' endif
+seqfil=seqfil
+refsource1='sfrq'
+pw(90)
+setenumeral('axis',12,'c','d','1','2','3','h','k','m','n','p','u','D')
+axis='pD'
+dm='nnn' dmm='ccw' d2=0
+
+  " If any character in the satmode parameter is set to y "
+  " satmode parameter is reset to yy (double character).  "
+  " They should be corrected to appropriate multicharacter value"
+  " by wrtp or pslabel_setup macro "
+
+" strstr(wet,'y'):$iswet "
+" if ($iswet) then wet='y' else wet='n' endif "
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='yy' else satmode='nn' endif
+
+  exists('prgpwr','parameter'):$e
+  if $e then
+    prgpwr=tpwr-8
+  endif
+
+" --- setup array or check for gradient min or max values --- "
+  exists('gzlvl1_inc','parameter'):$e3
+  if not $e3 then create('gzlvl1_inc','real') gzlvl1_inc=15 endif
+
+  exists('gzlvl1_max','parameter'):$e5
+  if not $e5 then create('gzlvl1_max','real') endif
+  setlimit('gzlvl1_max',32767.0,-32767.0,1.0) gzlvl1_max=32500
+
+  exists('gzlvl1_min','parameter'):$e4
+  if not $e4 then create('gzlvl1_min','real') endif
+  setlimit('gzlvl1_min',32767.0,-32767.0,1.0) gzlvl1_min=0.04*gzlvl1_max
+
+  exists('gzlvl_max','parameter'):$ex
+    if $ex>0 then
+          gzlvl_max=32767
+          setlimit('gzlvl_max',32767.0,-32767.0,1.0)
+    endif
+
+  exists('gzlvlhs','parameter'):$ex
+    if $ex>0 then
+          gzlvlhs=6000
+          setlimit('gzlvlhs',32767.0,-32767.0,1.0)
+    endif
+
+" --- adjust for performa I --- "
+  $ss=''
+  substr(gradtype,3,1):$ss
+  if $ss='l'
+  then
+    setlimit('gzlvl1',2047.0,-2047.0,1.0)
+    setlimit('gzlvl1_min',2047.0,-2047.0,1.0)
+    setlimit('gzlvl1_max',2047.0,-2047.0,1.0)
+    setlimit('gzlvlhs',2047.0,-2047.0,1.0)
+    gzlvl1_max=2047  gzlvl1_min=0.04*gzlvl1_max
+    exists('gzlvl_max','parameter'):$ex
+    if $ex>0 then
+          gzlvl_max=2047
+          setlimit('gzlvl_max',2047.0,-2047.0,1.0)
+    endif
+    exists('gzlvl2','parameter'):$ex
+    if $ex>0 then
+      setlimit('gzlvl2',2047.0,-2047.0,1.0)
+    endif
+    exists('gzlvl3','parameter'):$ex
+    if $ex>0 then
+      setlimit('gzlvl3',2047.0,-2047.0,1.0)
+    endif
+  endif
+
+  exists('kappa','parameter'):$ex
+  if $ex then
+     gzlvl1_max=gzlvl1_max/(1+kappa)
+     gzlvl1_min=0.04*gzlvl1_max/(1+kappa)
+  endif
+  exists('tweek','parameter'):$ex
+  if $ex then
+     gzlvl1_max=gzlvl1_max/(1+tweek)
+     gzlvl1_min=0.04*gzlvl1_max/(1+tweek)
+  endif
+
+fixgrd(12):gzlvlhs hsgt=.002
+gt1=0.002
+setrc
+setup_dosy('panelread')
+
+"****************************************************************************"
+"*******The following section is done only if oldapptype <> apptype **********"
+if ($update=0) then
+   fixgrd(10):gzlvlE
+   gtE=.002
+   gstab=gstab
+endif
+
+"****************************************************************************"
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then 
+		module($1)
+endif
+        "--------------------------------------------------"
+
+module('add','parlp','basic')
+
+refsource1='sfrq'
+proc='ft' fpmult='n'
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+plt2Darg
+plt2Darg[5]='proj'
+full
+if (wc > wc2) then wc=wc2 else wc2=wc endif
+ai th=2 vs2d=2000
+intmod='off'
+
+ELSEIF ($1 = 'plot') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+ENDIF
+"**********************************************"
+

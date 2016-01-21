@@ -1,0 +1,92 @@
+#!
+
+import os
+import datetime
+import shutil
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# current working directory
+cwd = os.getcwd()
+
+# get options environment
+boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
+execfile(boFile)
+
+# target
+accountTarget = 'account.jar'
+accountDashOTarget = 'account.jar.dasho'
+accountProGuardTarget = 'account.jar.pro'
+
+# paths
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+# define build environment
+jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+jEnv.Java(JAVACFLAGS = '-J-mx128m',
+          target     = classesPath,
+          source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd, 'Manifest')
+f = open(manifestFile, 'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: adm.Adm\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = os.path.join(javaPath, 'jar'),
+                          target   = accountTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+vnmrJavaPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+
+vnmrAccountingPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'adm', 'accounting')
+
+vnmrIconlibPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'iconlib')
+
+if not os.path.exists(vnmrJavaPath):
+   os.makedirs(vnmrJavaPath)
+
+if not os.path.exists(vnmrAccountingPath):
+   os.makedirs(vnmrAccountingPath)
+
+if not os.path.exists(vnmrIconlibPath):
+   os.makedirs(vnmrIconlibPath)
+
+shutil.copy('vnmr_account.gif', os.path.join(vnmrIconlibPath, 'accounting.gif'))
+shutil.copy('loggingParamList', os.path.join(vnmrAccountingPath, 'loggingParamList'))
+
+# actions to be performed after targets are built
+if boEnv['dasho']=='y' or boEnv['jaccount_O']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(os.path.join(cwd,'AccountingProGuard.sh')))
+#                   Action(os.path.join(cwd,'AccountingDasho.sh')))
+if boEnv['jaccount_O']=='y':
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(os.path.join(vnmrJavaPath,accountTarget),
+                               os.path.join(cwd, accountProGuardTarget))))
+else:
+   jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(vnmrJavaPath, os.path.join(cwd, accountTarget))))
+

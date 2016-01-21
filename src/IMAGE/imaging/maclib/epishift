@@ -1,0 +1,106 @@
+"macro epishift"
+"*****************************************************************************"
+
+" epishift - Macro to set tep to center echoes"
+
+"  Note: the error in the tep calculation will be +/- 0.5*dwell"
+
+"*****************************************************************************"
+
+"temporarily save groa"
+$groa = groa
+
+av
+$spinecho = 0
+exists('spinecho','parameter'):$ex
+if ($ex > 0) then $spinecho  = (spinecho = 'y') endif
+exists('navigator','parameter'):$ex
+if ($ex > 0) then $navigator = (navigator = 'y') endif
+$nv = nv
+exists('fract_ky','parameter'):$e
+if ($e > 0) then
+  $nv = nv/2 + fract_ky
+endif
+$etl = $nv/nseg "echoes per shot"
+
+
+"Determine shift from echoes 1 and 2"
+$cf1 = 1
+$cf2 = 2
+"Except, if it's a spin echo, then use the two center echoes"
+"from the first shot"
+if ($spinecho) then 
+  $cf2 = $etl/2 "center echo"
+  $cf1 = $cf2 + 1
+endif
+
+"And there is a navigator echo, pick the next two echoes"
+if ($navigator) then
+  $cf1 = $cf1 + 1
+  $cf2 = $cf2 + 1
+  $etl = $etl + 1
+endif
+
+
+sort('pss'):$sliceindex,$slicevalue
+$ctr = $sliceindex[ns/2+0.5]
+
+$cf_offset  = ($ctr-1)*$etl
+$blk_offset = 1
+exists('flash_converted','parameter'):$flashc
+if ($flashc > 0) then 
+  $cf_offset  = 0 
+  $blk_offset = $ctr
+endif
+
+cf = $cf1 + $cf_offset write('line3','%s: using cf = %d',$0,cf)
+ft('noft',$blk_offset) 
+peak:$ht,$cr1
+
+cf = $cf2 + $cf_offset write('line3','%s: using cf = %d',$0,cf)
+ft('noft',$blk_offset) 
+peak:$ht,$cr2
+
+df2d('nf',$ctr)
+
+$dw = 1/sw
+$at = at_calc
+
+$del=($cr2 - $cr1)/2
+
+$delptep = $at*$del    "echo shift in points "
+$deltep  = $dw*$delptep*1e6 "time in usec "
+
+write('line3','delta is %f',$deltep)
+if ($deltep < 0) then
+  "gpropdelay is too large for this experiment"
+  setlimit('tep',8000,-8000,0)
+endif
+
+
+if($deltep > $at/2*1e6)  then
+  write('error','tep exceeds limit = %8.3f',$deltep)
+  abort
+endif
+
+tep = tep+$deltep
+
+"reset groa"
+groa = $groa
+
+write('line3','tep set to %6.2f usec.',tep)
+
+"*****************************************************************************"
+" MODIFICATION HISTORY  ******************************************************"
+"*****************************************************************************"
+" 040614(mh) Fix bug to select correct traces in multi-shot"
+" 040614(mh) Allow fract_ky and navigator echoes"
+"*****************************************************************************"
+
+
+
+
+
+
+
+

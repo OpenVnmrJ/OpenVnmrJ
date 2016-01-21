@@ -1,0 +1,72 @@
+*************************************************************
+wetghsqc - macro for creating wetghsqc parameters from a WET parameter set
+        (see the dglc parameter screen)
+*************************************************************
+
+  wet - a y/n flag determining whether the WET element is used
+        (which uses pwwet, wetpwr, wetshape, gtw, gzlvlw, and gswet).
+  wetpwr - the power level for the WET element.
+  pwwet - the pw90 pulse width at wetpwr.
+  wetshape - the pulse shape used during the wet element.
+  gtw - the duration of the spoiling gradient (in sec).
+  gzlvlw - the amplitude of the gtw gradient. 
+  gswet - the recovery time following each gradient (try 0.002).
+
+  c13wet - a y/n flag controlling the selective 13C decoupling used during WET
+        (which uses dorwet, dpwrwet, and dmfwet; hardcoded to be WALTZ).
+  dofwet - the 13C decoupler offset used during WET.
+  dpwrwet - the decoupler power level for c13wet.
+  dmfwet - the dmf value used for c13wet.
+
+  dz - the delay following the wet element to allow longitudinal recovery
+        (like a T1IR or WEFT inversion recovering through zero).
+  composit - a y/n flag determining whether a composite read pulse is used.
+
+*****************************************************************
+*
+*	qhsqc: macro to set of a gradient hsqc experiment
+*
+*****************************************************************
+        Syntax: wetghsqc  (13C or 15N are optional arguments; default = 13C)
+
+  Description:  This macro converts a 1D-s2pul parameter set into a parameter
+                set ready to run a WET-endowed Pulsed Field Gradient HSQC
+                experiment (phase sensitive).
+
+    Parameters:
+	gt1 - first gradient duration
+	gzlvl1 - first gradient power level
+	gt2 - second gradient duration
+	gzlvl2 - second gradient duration
+		The gradients need to maintain a 4:1 (13C) or 10:1 (15N) ratio:
+		the ratio can be controlled with either amplitude or time.
+	pwxlvl - decoupler power level for hard decoupler pulses
+	pwx - pulse width for hard decoupler pulses
+	dpwr - power level for decoupling
+	dmf - controlled by dpwr
+	j - one-bond heteronuclear coupling constant (140 for 13C; 90 for 15N)
+	bigt - a constant time for X evolution (try 3msec)
+	satmode - a y/n flag for transmitter presaturation
+		 (not needed if WET is used)	
+	satdly - the presaturation delay used if satmode = y.
+	satpwr - the presaturation power
+	satfrq - the frequency desired for presaturation
+	f1180 - a y/n flag for 1/2 dwell starting t1 evolution delay
+        nt - works with nt=1 (nt=2 improves data)
+	phase - use phase=1,2 to select N,P-type selection (to be sorted later)
+		(use phase=1 to generate an absolute value dataset)
+
+	for 13C try: 	gzlvl1=20000
+			gt1=0.002
+			gzlvl2=-19700
+			gt2=0.0005
+
+	for 15N try:	gzlvl1=30000
+			gt1=0.0025
+			gzlvl2=-14850
+			gt2=0.0005
+
+
+  PROCESSING:	use wft2d('t2dc',1,0,1,0,0,-1,0,1) for phase = 1,2
+
+Note: the wetghsqc pulse sequence is not supplied with Mercury or GEMINI 2000.

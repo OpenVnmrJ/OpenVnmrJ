@@ -1,0 +1,26 @@
+"macro ecc_tweak"
+"ecc_tweak - a macro to array the selected parameter +-  "
+"for use with eccfit eccnums"
+
+
+if $#<>3 then
+write('error','Parameters not specified; ampz, center, & delay required. ')
+return
+endif
+
+tcl('stopUpdate')
+$name=$1
+$delay=$3
+
+d2=$delay
+
+$value=$2
+$valuehigh=$value*3
+$valuelow=$value*.3
+$diff=$valuehigh-$valuelow
+$step=$diff/21
+array($name,21,$valuelow,$step)
+tcl('invokeTab Sequence; startUpdate')
+
+wexp='Au_ecc_findmax' au
+

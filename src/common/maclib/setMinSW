@@ -1,0 +1,65 @@
+"macro setMinSW"
+
+if (auto <> 'y') then return(MinSW) endif
+
+"********Initialize local variables ***************"
+$EXPlist = ''
+$minsw='off'
+$i = 1 
+$res=1
+$opt=''
+$proton='n'
+$dum=''
+rm('-rf',curexp+'/EXPLIST1'):$dum
+
+"*****Create a temp file in curexp with EXPLIST*****"
+"*****from sampleinfo file**************************"
+
+$EXPLIST=''
+lookup('mfile',curexp+'/sampleinfo','EXPLIST:','read'):$EXPLIST
+if ($EXPLIST = '') then
+ write('file',curexp+'/EXPLIST1','EXPLIST: PROTON')
+else
+ write('file',curexp+'/EXPLIST1',$EXPLIST)
+endif
+
+"******Read each exp from curexp/EXPLIST into $EXPlist ***********"
+
+lookup('file',curexp+'/EXPLIST1')
+lookup('seek','EXPLIST:')
+while ($res = 1) do
+ lookup('read'):$opt,$res
+ if $res = 1 then $EXPlist[$i] = $opt $i=$i+1 endif
+endwhile
+
+"***If no experiment is chosen minsw is off *****"
+$EXPlistsize=size('$EXPlist')
+if ($EXPlistsize = 1) then 
+ if ($EXPlist='') then
+    rm('-r',curexp+'/EXPLIST1'):$dum
+    return($minsw)
+ endif
+endif
+
+"********Look through the list  *****"
+
+$i=1
+repeat
+  $sublist1='' 
+  length($EXPlist[$i]):$listlength
+  substr($EXPlist[$i],$listlength-1,2):$sublist2
+  if ($sublist2 = '-H') then
+      $proton='y'
+  endif
+  $i = $i+1
+until $i > $EXPlistsize
+
+"***If proton detected expt is chosen minsw is auto***"
+
+if ($proton='y') then
+  $minsw='auto'
+endif
+
+rm('-r',curexp+'/EXPLIST1'):$dum
+return($minsw)
+

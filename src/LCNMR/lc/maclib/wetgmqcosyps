@@ -1,0 +1,33 @@
+"macro wetgmqcosyps"
+"gmqcosy-to convert standard parameter set to gmqcosy"
+"wetgmqcosyps - modified for LCNMR "
+"PAKeifer 950718 "
+
+lcset2d('dqcosy')
+lcpsgset('gmqcosy','dg','ap','dg2')
+lcpsgset('gmqcosy','grise','gstab','qlvl','ss','satdly','satpwr','phase')
+lcpsgset('gmqcosy','gzlvl1','gt1','tau1','taud2')
+lcpsgset('gmqcosy','pfgon')
+d1=1.5 sw1=sw rfl1=rfl rfp1=rfp 
+refpos1=refpos reffrq1=reffrq
+rp=rp+90 rp1=90
+"adjust for performa I"
+$ss=''
+substr(gradtype,3,1):$ss
+if $ss='l' 
+then
+  gzlvl1 = gzlvl1 * 0.2
+  setlimit('gzlvl1',2047.0,-2047.0,1.0)
+endif
+
+lcpsgset('wetgmqcosyps','dg','dg2','ap','dglc')
+seqfil='wetgmqcosyps'
+pmode='full' phase=1,2
+
+grise=0 gstab=0 gt1=18/sw lsfid=-18
+parlp lpfilt=32 lpnupts=128 lpopt='b' strtlp=21 lpext=20 strtext=20
+
+dg 
+man('wetgmqcosyps')
+write('line3','Ready for a WET PFG MQCOSY: now adjust gt1,lsfid, and proc')
+

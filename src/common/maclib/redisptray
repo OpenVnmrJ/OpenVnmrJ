@@ -1,0 +1,59 @@
+"macro redisptray"
+if (traymax<2) then return endif
+$start=1 $traymax=traymax $autodir=autodir
+if (traymax=97) then $traymax=96 endif
+
+if ($# > 0) then
+   if typeof('$1') then
+	$autodir=$1
+	if ($# > 1) then $start=$2 $traymax=$2 endif
+	if ($# > 2) then $tryamax=$3 endif
+   else
+	$start=$1 $traymax=$1
+	if ($# > 1) then $traymax=$2 endif
+   endif
+endif
+
+   strstr($autodir,'studytray'):$enter
+   if ($enter) then
+	shell('dirname '+$autodir):$dir
+        shell('dirname '+$dir):$autodir
+	shell('basename '+$autodir):$autofile
+   else
+	$autofile='enterQ'
+   endif
+
+   $rack='' $zone='' $subtray=''
+   if (traymax=96) or (traymax=768) then
+       format(vrack,'lower'):$rack
+       format(vzone,'lower'):$zone
+       $subtray='/RACK'+$rack+'ZONE'+$zone
+   endif
+   if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+   $studytray=$autodir+'/'+$autofile+'.macdir/studytray'+$subtray
+   is_postvj22b:$vj22c
+
+   showtray($autodir)
+   exists($studytray,'directory'):$stex
+   if ($stex) then
+      $curdir=''
+      pwd:$curdir
+
+      	cd($studytray):$dum
+	$i=$start
+	repeat
+	   $status=''
+	   $locno='' format($i,0,0):$locno
+	   checklocstatus($autodir+'/'+$autofile,$locno,$zone,$rack):$status
+           if ($status='') then $status='Empty' endif
+	     if ($vj22c=0) then
+		write('line3','Updating loc%s',$locno)
+	     endif
+		updatestatus(autodir,$locno,$status,$zone,$rack)
+	   $i=$i+1
+	until $i > $traymax
+	cd($curdir):$dum
+   endif
+   showtray($autodir)
+

@@ -1,0 +1,50 @@
+Protocol: Mrev8  Sequence: mrev8.c  Apptype: solidseq1d
+
+Description: 
+
+   "X" acquisition with interleaved MREV8. Nonquadrature phase cycle. 
+
+Additional Software:
+ 
+reset_mrev8q - This macro uses the calibrated values of pwX90 and aX90 
+to calculate the initial parameters for mrev8X.  This macro is run from 
+the protocol.
+
+Parameter Groups: 
+
+prepX:  Module:  no 
+Sequence:  br24q.c      
+Description:  Implements a variable length pulse to provide quadrature 
+              detection about a tilted precession axis. Typically followed 
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses. 
+       pwXprep - 90-degree flip on the obs channel. 
+       phXprep - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse. 
+
+scaleX:  (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.      
+   
+mrev8X: Module:  yes 
+Sequence: mrev8.c  
+Description:  Implements MREV8 on obs with acquisition in the first 
+              window.    
+Parameters:  Sequence Page
+       aXmrev8 - amplitude of obs pulses.
+       pwXmrev8 - 90-degree flip on obs.
+       r1Xmrev8 - pre-pulse delay (similar to rof1). 
+       r2Xmrev8 - post_pulse delay (similar to rd or rof2).
+       r3Xmrev8 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined). 
+       tauXmrev8 - time for one "one-tau" window and pulse. 
+       npaXmrev8 - number of 100 ns ticks in the detection window. 
+       chXmrev8 = 'obs' must be set (not shown).
+Implementation:  WMPA mrev8 = getmrev8("mrev8X");
+Underscore function: _mrev8(mrev8,phXmrev8); phXmrev8 is the overall 
+              phase table.

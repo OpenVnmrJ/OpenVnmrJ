@@ -1,0 +1,94 @@
+"macro BP_PRproc1a"
+"PRproc1a - PR processing macro "
+
+$file = ''
+$sw = ''
+$sw1 = ''
+$p1 = ''
+$p2 = ''
+$pra = ''
+$rp=0 $lp=0
+$BPaph0=0
+
+if($#>1) then
+  $BPaph0 = 1
+endif
+
+format($1,1,0):$p1
+format($1+1,1,0):$p2
+$file = 'P' + $p1 + '.ll'
+
+format(sw,4,2):$sw
+format(sw1,4,2):$sw1  
+BPsetlp1(2*ni,ni)
+fn1=1k 
+lvl=0.0 tlt=0.0
+
+fn=2k 
+wft(1)
+setref
+"setref2('N15')"
+f
+sp=PRsp wp=PRwp  
+sp1=sp1+100 wp1=wp1-200
+
+if($BPaph0>0) then
+  BPaph0
+  PRrp=rp PRlp=lp
+endif
+trace='f2'
+
+wft2dx  
+rp=PRrp lp=PRlp
+dconi
+
+if(PRnpeaks[PRn]<1) then
+  BP_PRvs2d
+else 
+  BP_PRvs2d(PRnpeaks[PRn])
+endif
+
+ll2d('volume')
+ll2d('writetext',$file)
+ll2d('reset')
+
+"find location of program"
+BPfindfile('getpr1'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/getpr1' then
+ cp($path1,userdir+'/../bin')  
+endif
+$thr = ''
+format(PRthr[PRn],4,2):$thr
+format(pra,2,2):$pra
+$cmd='getpr1 ' + $file + ' '+ $pra + ' '+ $sw + ' ' + $sw1 + ' ' + $thr 
+if(PRpos[PRn]='y') then
+  $cmd=$cmd + ' -p'
+endif
+shell($cmd)
+  
+$file = 'P' + $p2 + '.ll'
+  
+wft2dy        
+dconi
+ll2d('volume')
+ll2d('writetext',$file)
+ll2d('reset')
+
+format(-pra,2,2):$pra
+$cmd='getpr1 ' + $file + ' '+ $pra + ' '+ $sw + ' ' + $sw1 + ' ' + $thr 
+if(PRpos[PRn]='y') then
+  $cmd=$cmd + ' -p'
+endif
+shell($cmd)
+  
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/getpr1' then
+ rm(userdir+'/../bin/getpr1') 
+endif
+

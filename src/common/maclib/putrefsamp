@@ -1,0 +1,42 @@
+"macro putrefsamp"
+"**************************************************"
+if (traymax=96) or (traymax=768) then
+    return
+endif
+$traymax=traymax
+if (traymax=97) then $traymax=96 endif
+
+$lastsample='current'
+getadminfo('lastsample'):$lastsample
+format($lastsample,'isreal'):$real
+if ($lastsample<>'traymax') and not ($real) then return endif
+
+"**************************************************"
+
+$refloc=''
+if ($real) then $refloc=$lastsample
+else
+    format($traymax,0,0):$refloc
+endif
+"**************************************************"
+
+    $enterQ=autodir+'/enterQ'
+    exists($enterQ,'file'):$fileex
+    if ($fileex=0) then return endif
+
+    $lines=1
+    shell('(cat '+$enterQ+' | wc -l)'):$lines
+    if ($lines>0) then return endif
+
+    $sampleinfo=curexp+'/sampleinfo'
+    exists($sampleinfo,'file'):$sampex
+    if ($sampex=0) then return endif
+
+    $sedcmd1 = `'s/SAMPLE#:.*/SAMPLE#: `+$refloc+`/'`
+    $sedcmd2 = `'s/MACRO:.*/MACRO: Aulocref/'`
+    $sedcmd3 = `'s/USER:.*/USER: `+operator+` priority/'`
+    $tmpfile=curexp+'/refsamp'
+    shell(`sed -e `+$sedcmd1+` -e `+$sedcmd2+` -e `+$sedcmd3+` `+$sampleinfo+` > `+$tmpfile):$dum
+    autoq('add',$tmpfile)
+    rm($tmpfile):$e
+

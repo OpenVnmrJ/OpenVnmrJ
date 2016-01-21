@@ -1,0 +1,43 @@
+"macro BP5d"
+" BP5d "
+$bestone=1 $counter=1
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoTripRes/compCcal2')
+select($bestone) vsadj(50)  dssh('dodc') pl('all') pap BPpage
+$compC=''
+compC=compC[$bestone]
+format(compC,4,3):$compC
+BPsetparams('compC',$compC,'C13')
+wexp='BP10'
+
+if (r7=1) then   "Fast AutoCalibrate Only"
+ f full ph
+ BPbiopack2
+ BPprobe(0,wc2max-20)
+ banner('Quick AutoCalibrate/Probefile Update Finished') return
+endif
+
+shell('rm -rf',userdir+'/AutoTripRes/ghn_co.par'):$dum
+if BPBioNMR then seqfil='ghn_coP' endif
+svp(userdir+'/AutoTripRes/ghn_co')
+
+ $dof=dof
+
+gNhsqc
+
+fn=4*np
+dpwr=0 
+ r5=$dof
+d1=.4,1,2.1 nt=16,8,4 array='(d1,nt)'
+full
+addpar('ss') ssfilter=600 ssntaps=200
+ssorder='n'
+wexp='BP7a'
+au
+dps

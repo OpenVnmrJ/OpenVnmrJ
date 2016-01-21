@@ -1,0 +1,146 @@
+"macro lctime"
+" time - calculate the experiment time                   "
+" time           display experiment time                 "
+" time(<hours>,<minutes>)  set up nt for experiment time "
+
+if $#>2 then
+  write('error','usage - time(<hours>,<minutes>)')
+  return
+endif
+
+$pad=0 $i=1
+repeat
+  $pad=$pad+pad[$i] $i=$i+1
+until $i>size('pad')
+$pad=$pad/($i-1)
+
+$d1=0 $i=1
+repeat
+  $d1=$d1+d1[$i] $i=$i+1
+until $i>size('d1')
+$d1=$d1/($i-1)
+
+$d2=0 $i=1
+repeat
+  $d2=$d2+d2[$i] $i=$i+1
+until $i>size('d2')
+$d2=$d2/($i-1)
+
+$nt=0 $i=1
+repeat
+  $nt=$nt+nt[$i] $i=$i+1
+until $i>size('nt')
+$nt=$nt/($i-1)
+
+"handle parameter ni: 2D parameter"
+exists('ni','parameter'):$e
+if $e>0 then
+" if ni>0 then $d2=$d2+(ni-1)/(2*sw1) endif"
+ if ni>0 then $d2=$d2 endif
+endif
+
+"handle parameter d3"
+$d3=0
+exists('d3','parameter'):$e
+if $e>0 then
+  $d3=0 $i=1
+  repeat
+    $d3=$d3+d3[$i] $i=$i+1
+  until $i>size('d3')
+  $d3=$d3/($i-1)
+endif
+
+"handle parameter ni2: 3D parameter"
+exists('ni2','parameter'):$e
+if $e>0 then
+  if ni2>0 then $d3=$d3+(ni2-1)/(2*sw2) endif
+endif
+
+calcdim
+$nfids = arraydim
+
+"handle parameter mix"
+exists('mix','parameter'):$e
+if $e>0 then
+  $mix=0 $i=1
+  repeat $mix=$mix+mix[$i] $i=$i+1
+  until $i>size('mix')
+  $mix=$mix/($i-1)
+else $mix=0 endif
+
+"handle parameter null"
+exists('null','parameter'):$e
+if $e>0 then
+  $null=0 $i=1
+  repeat $null=$null+null[$i] $i=$i+1
+  until $i>size('null')
+  $null=$null/($i-1)
+else $null=0 endif
+
+$corr = 0.006     "housekeeping delay"
+if (sw > 100001) then
+   substr(rftype,1,1):$rfchar
+   if ($rfchar <> 'd') then
+      $corr = $corr + np * 0.000016   "time required to transfer data from ADC"
+   endif
+endif
+
+"estimate time or nt"
+$timeperscan=$d1+$d2+$d3+$mix+$null+at + $corr
+if $#>0 then
+  "display nt"
+  if $#=1 then $seconds=60*$1
+     else $seconds=3600*$1+60*$2 endif
+  if ss>=0 then
+    $nt=($seconds-$pad*size('pad')-ss*$timeperscan)/($nfids*$timeperscan)
+  else
+    "ss is negative"
+    $nt=($seconds-$pad*size('pad'))/($nfids*$timeperscan) + ss
+  endif
+  if $nt>=4 then
+    "make nt a multiple of 4"
+    nt=$nt/4 nt=4*nt $nt=nt
+  else
+     nt=$nt
+  endif
+  if (($nfids>1) and ($nt>=1)) then
+    write('line3',
+    'There is time for %d transients per FID or %d total transients.',
+    $nt,$nfids*$nt)
+  else
+    if $nt>=1 then
+      write('line3','There is time for %d total transients.',$nt)
+    endif
+  endif
+  if $nt<1 then
+    write('line3','There is insufficient time for NT=1.')
+  endif
+else
+  "display the time"
+  if ss>=0 then
+    $minutes=($timeperscan*($nfids*$nt+ss)+$pad*size('pad'))/60
+  else
+    "ss is negative"
+    $minutes=($timeperscan*$nfids*($nt-ss) + $pad*size('pad'))/60
+  endif
+  $hours=trunc(($minutes + 0.1)/60)
+  if $hours<1 then
+    write('line3','Total acquisition time is %3.1f minutes.',$minutes)
+  else
+    $minutes=trunc($minutes-60*$hours)
+    $plural= 's'
+    if ($hours < 1.5) then
+       $plural = ''
+    endif
+    if ($minutes < 0.5) then
+       write('line3','Total acquisition time is %d hour%s.', $hours,$plural)
+    else
+       $mplural = 's'
+       if ($minutes < 1.5) then
+          $mplural = ''
+       endif
+       write('line3','Total acquisition time is %d hour%s and %d minute%s.',
+       $hours,$plural,$minutes,$mplural)
+    endif
+  endif
+endif

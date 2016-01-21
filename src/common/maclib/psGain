@@ -1,0 +1,151 @@
+"macro psGain"
+// All psX macros implement the following "public methods":
+// psX('init') to be called by psMain('continue') to setup and start prescan
+// psX('exp') to be called by psMain('wexp') when exp complete.
+// psX('err') to be called by psMain('err') if registered error occured 
+//
+// psX macro should always return one of five keywords.
+//  return('done')
+//         This prescan is done. psMain should
+//         proceed to the next prescan or the actual protocol if all
+//         prescans are complete.
+//  return('doau')
+//        The prescan wants psMain to do an au.
+//        The psX macros should not call au directly.
+//  return('pause')
+//        Cause the SQ to pause, waiting for manual input.
+//  return('quit')
+//        Finish with this prescan and continue.  This suggests an error.
+//  return('abort')
+//        Finish with this prescan and stop the queue. It should be rare
+//        for any prescan to use this option.
+// or return '' if nothing needs to be done by psMain.
+
+// Prototype prescan auto gain macro.
+
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else 
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+  on('gain'):$on
+  if ($on) then return('done') endif
+  if (alock<>'u') then alock='n' endif
+  getlimit('gain'):$maxval,$minval,$stepval
+  psCmd('set','max',$maxval,'min',$minval,'step',$stepval,'stat',0)
+  nt=1
+  pad=0.5
+  gain=0
+  wshim='n'
+  wbs=''
+  wnt=''
+  psCmd('set','errors','103 104 801 16')   // subscribe to specific errors
+  psCmd('set','auArgs','wait shimming autogain')   // specify arguments for au
+  autoname='_AUTOGAIN_%R0%'
+  return('doau')
+
+elseif ($action = 'exp') then
+  $target = 21000
+  $fidmax=1
+  $i=0
+  on('cf'):$cfon
+  off('cf')
+  while ($i < arraydim) do
+    $i=$i+1
+    fidmax($i):$fidmaxi
+    if ($fidmaxi > $fidmax) then
+      $fidmax = $fidmaxi
+    endif
+  endwhile
+  if ($cfon) then on('cf') endif
+  $overflow = ($fidmax > 2*$target)
+  psCmd('get','max','min','step','stat'):$maxval,$minval,$stepval,$a2
+  if ($overflow) then
+    if (gain=$minval) or ($a2=801) then
+      write('line3','Minimum gain reached at gain= %g',gain)
+      $val=''
+      format(gain,'lower'):$val
+      psCmd('record','gain='+$val)  // save prescan result
+      return('quit')
+    endif
+    $maxgain = gain - $stepval
+    if ($maxgain<$minval) then $maxgain=$minval endif
+    psCmd('set','max',$maxgain)
+    gain=$minval
+    psCmd('set','stat',0)
+    write('line3','autogain continuing')
+    psCmd('set','auArgs','next wait shimming autogain')   // specify arguments for au
+    autoname='_AUTOGAIN_%R0%'
+    return('doau')
+  else   // no overflow
+    $delta = 0
+    if ($fidmax < 0.25 * $target) then
+      $level = $fidmax
+      $reqlevel = $target
+
+      if ($level <= 0) then
+        $level = 1
+      endif
+      $gain_scale = $reqlevel / $level
+
+      ln(10.0):$ln10
+      ln($gain_scale):$ln_gain
+      $delta = 20.0 * ($ln_gain / $ln10)
+
+      // round to stepval
+      if ($delta > 0) then
+        $delta1 = trunc($delta / $stepval + 0.5)
+        $delta  = trunc($delta1 * $stepval + 0.5)
+      else
+        $delta1 = trunc($delta / $stepval - 0.5)
+        $delta  = trunc($delta1 * $stepval - 0.5)
+      endif
+    endif
+    if ((gain + $delta) > $maxval) then
+      $delta = $maxval - gain
+    endif
+    if ((gain + $delta) < $minval) then
+      $delta = $minval - gain
+    endif
+    abs($delta):$absdelta
+    if ($absdelta <= 2*$stepval) then
+      write('line3','autogain done, gain set to %g',gain)
+      $val=''
+      format(gain,'lower'):$val
+      psCmd('record','gain='+$val)  // save prescan result
+      return('done')
+    else
+      gain = gain + $delta
+      write('line3','autogain continuing')
+      psCmd('set','stat',0)
+      psCmd('set','auArgs','next wait shimming autogain')   // specify arguments for au
+      autoname='_AUTOGAIN_%R0%'
+      return('doau')
+    endif
+  endif
+
+elseif ($action = 'err') then
+  if (acqstatus[2] = 16) then
+      $val=''
+      format(gain,'lower'):$val
+      psCmd('record','gain='+$val)  // save prescan result
+      return('done')
+  endif
+  // If it gets here, it must be error 103 104 or 801
+  // set stat, and it will be handled when wexp calls psGain('exp')
+  psCmd('get','max','min'):$maxval,$minval
+  $max = gain - 12
+  if ($max < $minval) then $max = $minval endif
+  if ($maxval < $max) then $max = $maxval endif
+  psCmd('set','max',$max,'stat',acqstatus[2])
+  return('')
+endif
+

@@ -1,0 +1,53 @@
+"macro reset_c7inadwdumbot2d"
+//Set the C7 pulses from the Spin Rate
+
+if (srate>500) then 
+   $pwXc7 = 1.0e6/(7.0*srate)
+   pwXc7 = 0.1*4.0*trunc($pwXc7/(4.0*0.1) + 0.5)
+   srate = 1.0e6/(7.0*pwXc7)
+   aXc7 = aX90*(4.0*pwX90)/pwXc7
+   if (aXc7 = 4095) then 
+      write('error','reset_c7 Error: aXc7 is >= to 4095')
+   endif
+endif
+
+// Set dumboX
+
+aXdumbo = aX90
+$pwXdumbo = 12.0*pwX90
+pwXdumbo = 0.1*trunc($pwXdumbo/0.1 + 0.5)
+if (nXdumbo < 1.0) then nXdumbo = 1 endif
+
+// Reset the DUMBO amplitude to match the rounded 6pi pulse.
+
+$aXdumbo = ($pwXdumbo/pwXdumbo)*aXdumbo
+aXdumbo = trunc($aXdumbo + 0.5)
+
+// Set wdumbotX
+
+aXwdumbot = aX90
+$pw1Xwdumbot = 12.0*pwX90
+pw1Xwdumbot = 0.0125*64*trunc($pw1Xwdumbot/(64*0.0125) + 0.5)
+$pw2Xwdumbot = pwX90*($pw1Xwdumbot/pw1Xwdumbot)*(54.7/90.0)
+pw2Xwdumbot = 0.0125*trunc($pw2Xwdumbot/0.0125 + 0.5)
+
+// Reset the wdumbotX amplitude to match the rounded 6pi pulse.
+
+$aXwdumbot = ($pw1Xwdumbot/pw1Xwdumbot)*aXwdumbot
+aXwdumbot = trunc($aXwdumbot + 0.5)
+
+// set tau with a 4 us window and two tilt pulses
+
+tauXwdumbot = 0.0125*trunc((pw1Xwdumbot + 4.0 + 2.0*pw2Xwdumbot)/0.0125 + 0.5)
+sw = 1/(tauXwdumbot*1e-6)
+if (npaXwdumbot < 10) then npaXwdumbot = 10 endif
+
+// Synchronize the F1 dwell with the dumboX Cycle
+
+if (pwXdumbo > 0.0) then 
+   sw1 = 1.0/(pwXdumbo*1e-6)
+endif
+
+pwXtilt = pwX90*54.7/90.0
+
+

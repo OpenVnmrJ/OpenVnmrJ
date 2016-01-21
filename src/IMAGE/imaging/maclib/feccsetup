@@ -1,0 +1,228 @@
+"macro feccsetup"
+"***********************************************************************"
+" feccsetup - Setup fecc experiment and processing parameters.		"
+" usage:								"
+" feccsetup 	no arguments			"
+"  This macro set up the parameters and display strings needed		"
+"  for running the Fast Eddy Current Compensation programs     		"
+"***********************************************************************"
+
+"--------------------"
+" rtp sh2pul.par      "
+"--------------------"
+rtp(systemdir+'/parlib/sh2pul.par')
+
+seqfil='fasteddy'
+
+"----------------------------"
+" Set acquisition parameters "
+"----------------------------"
+at=.05
+sw=10000
+d2=.02
+pw=20.0
+tpwr=100
+nt=3
+bs=1
+d1=1
+wexp='wft'
+wbs='sa'
+tn='F19'
+cf=1
+tof=17000,1500
+
+" --------------------------------------------------------------------  "
+" Create gradient parameters if they do not  exist                      "
+" --------------------------------------------------------------------  "
+$ex=0
+exists('dwait','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('dwait','delay')
+   dwait=0
+endif
+
+$ex=0
+exists('deddy','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('deddy','delay')
+   setprotect('deddy','set',256)	" Make deddy a list parameter "
+   deddy=0.02,0.04,0.06,0.08,0.1,0.2,0.4,0.6,0.8,1.0,1.2,1.6,2,3,4,5
+endif
+
+$ex=0
+exists('nf','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('nf','real')
+   nf=1
+endif
+
+$ex=0
+exists('ni','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('ni','real')
+   ni=0
+endif
+
+$ex=0
+exists('gaxis','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('gaxis','string')
+   gaxis='z'
+endif
+
+$ex=0
+exists('gval','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('gval','real')
+   gval=0
+endif
+
+$ex=0
+exists('gtime','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('gtime','real')
+   gtime=.1
+endif 
+ 
+" --------------------------------------------------------------------  "
+" Create ECC parameters if they do  not  exist                     "
+" --------------------------------------------------------------------  "
+$ex=0
+exists('delf1','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('delf1','frequency')
+   setgroup('delf1','processing')
+   delf1=0
+endif
+
+$ex=0
+exists('delf2','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('delf2','frequency')
+   setgroup('delf2','processing')
+   delf2=0
+endif
+
+$ex=0
+exists('etraces','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('etraces','real')
+   setgroup('etraces','processing')
+   etraces=1
+endif
+ 
+$ex=0
+exists('starttim','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('starttim','delay')
+   setgroup('starttim','processing')
+   starttim=0
+endif
+ 
+$ex=0
+exists('endtim','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('endtim','delay')
+   setgroup('endtim','processing')
+   endtim=5.2
+endif
+ 
+$ex=0
+exists('deltim','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('deltim','delay')
+   setgroup('deltim','processing')
+   deltim=.005
+endif
+ 
+$ex=0
+exists('yscale','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('yscale','real')
+   setgroup('yscale','processing')
+   yscale=200
+endif
+ 
+$ex=0
+exists('sampdis','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('sampdis','real')
+   setgroup('sampdis','processing')
+   sampdis=2.3
+endif
+ 
+$ex=0
+exists('noiseval','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('noiseval','real')
+   setgroup('noiseval','processing')
+   noiseval=10
+endif
+ 
+$ex=0
+exists('dispfmt','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('dispfmt','string')
+   setgroup('dispfmt','processing')
+   dispfmt='b'
+endif
+
+$ex=0
+exists('dispdata','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('dispdata','string')
+   setgroup('dispdata','processing')
+   dispdata='p'
+endif
+
+" --------------------------------------------------------------------  "
+" Build New dg string                                                   "
+" --------------------------------------------------------------------  "
+destroy('dg')
+
+create('dg','string')
+setlimit('dg',1023,0,0)
+
+dg='1:ACQUISITION:sfrq:3,tn,at:3,np:0,sw:1,pw:1,d1:3,d2:3,dwait:3,deddy:1,nf,ni,bs,tof:1,nt:0,ct:0,tpwr,gain;'
+dg=dg+'2:GRADIENTS:gval,gtime:3,gaxis,,;'
+dg=dg+'2:SAMPLE:date,file,sampdis:1;'
+dg=dg+'3:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,cf(cf):0,lsfid(lsfid):0,phfid(phfid):1,fn:0,math,,werr,wexp,wbs,wnt;'
+dg=dg+'4:FLAGS:il,dp,cp;'
+dg=dg+'4:SPECIAL:priority:0,noiseval:1,,;'
+dg=dg+'4:ECC DISPLAY:starttim:4,endtim:4,deltim:4,yscale:0,dispdata,dispfmt,etraces:0;'
+
+" --------------------------------------------------------------------  "
+" Build New ap string                                                   "
+" --------------------------------------------------------------------  "
+destroy('ap')
+
+create('ap','string')
+setlimit('ap',1023,0,0)
+
+ap='1:SAMPLE:date,file,sampdis:1;'
+ap=ap+'1:ACQUISITION:sfrq:3,tn,at:3,np:0,sw:1,pw:1,d1:3,d2:3,dwait:3,deddy(deddy):1,nf,ni,bs,tof:1,nt:0,ct:0,tpwr,gain;'
+ap=ap+'1:GRADIENTS:gval,gtime:3,gaxis;'
+ap=ap+'1:FLAGS:il,dp;'
+ap=ap+'1:PROCESSING:lb(lb):2,sb(sb):3,sbs(sb):3,gf(gf):3,gfs(gf):3,awc(awc):3,lsfid(lsfid):0,phfid(phfid):1,fn:0,math,,werr,wexp,wbs,wnt;'
+ap=ap+'1:ECC DISPLAY:starttim:4,endtim:4,deltim:4,yscale:0,dispdata,dispfmt,etraces:0;'
+ap=ap+'1:SPECIAL:noiseval:1;'
+
+write('line3','macro feccsetup completed.') 

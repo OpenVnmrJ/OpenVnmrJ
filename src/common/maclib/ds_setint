@@ -1,0 +1,70 @@
+"macro ds_setint"
+"ds_setint - set integral interactively. "
+
+$frq = cr - rfp + rfl
+if (intmod = 'partial') then
+  $num = trunc(size('lifrq'))
+  $step = 2
+else
+  $num = size('lifrq')
+  $step = 1
+endif
+if ($num = 1) then
+  $index = 1
+  $found = 1
+  integ:$ht,$val
+else
+  $index = 0
+  $found = 0
+  $num = $num - $step
+  while ($index < $num) and not $found do
+     $index = $index + $step
+     if ($frq > lifrq[$index]) then
+        $found = 1
+     endif
+  endwhile
+  if ($found and ($step = 2)) then
+     if ($frq > lifrq[$index-1]) then
+        $found = 0
+     endif
+  endif
+  if ($found) then
+     integ(lifrq[$index]+rfp-rfl,lifrq[$index-1]+rfp-rfl):$ht,$val
+  endif
+endif
+
+if ($found) then
+  if ($# = 1) then
+    $ans=$1
+  else
+    $sval = ''
+    format($val,0,2):$sval
+    isvnmrj:$isvnmrj
+    if ($isvnmrj < 0.5) then
+      glide('down')
+      input('Current integral is ' + $sval + '. New value? '):$ans
+      glide('up')
+    else
+      $ans=ins
+    endif
+  endif
+  if (not typeof('$ans')) then
+    abs($ans):ins
+    nli
+    abs(liamp[$index]/fn):insref
+    on('insref')
+    dli
+  endif
+elseif ($# = 1) then
+  on('insref'):$e
+  if ($e > 0.5) then
+    ds write('line3','position cursor in an integral region')
+  else
+    if (not typeof('$1')) then
+      abs($1):ins
+      dli
+    endif
+  endif
+else
+  write('error','cursor is outside of integral region')
+endif

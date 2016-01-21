@@ -1,0 +1,73 @@
+
+
+**************************************************************
+makeuser	Add a new Vnmr user account or update an
+                existing Vnmr user account                 (U)
+**************************************************************
+
+ The makeuser command is provided to create a new user account
+ with permission to access the VNMR files and programs.  The
+ makeuser command will also install the necessary files and
+ directories into the user's home directory.
+
+ The makeuser command can be run by the system administrator's root
+ account or by any current user with appropriate permissions.  In
+ order to add a new user to the system,  makeuser must be run by
+ root.
+
+ When root executes makeuser,  the location of the VNMR system
+ directory,  if not available from the vnmrsystem environmental
+ parameter, will be requested.  The most likely location, which is
+ provided as the default, is /vnmr.  When executed as root,  the user
+ name whose account is to be added or updated may be supplied as an
+ argument to makeuser.  If no name is supplied,  one is requested.
+ The makeuser script checks to see if the user is already defined
+ in the system.  If not,  the /etc/passwd file will be updated with
+ the new user and the user will be added to the nmr group in the
+ /etc/group file.  A home directory will also by made.  The location
+ of the home directory is encoded in the makeuser script and may be
+ altered if desired.  By convention,  on Sun systems,  the home
+ directory is made in the /home directory.  Also by convention,
+ on IBM systems,  the home directory is in the /u directory.
+ Note that the makeuser script updates the /etc/passwd and /etc/group
+ files on the local machine.  If Network Information Services (formerly
+ known as Sun Yellow Pages) is running, this may not be the correct
+ thing to do.  In this case, the script could be executed on the host
+ which is the password server.  Additional steps may be required to
+ make the new account available over the network.  Refer to Sun
+ documentation for this information.
+
+ The above operations require root privileges to execute.  After
+ finishing these tasks,  the makeuser script gives root an opportunity
+ to exit from the script.  
+
+ A user other than root can run the makeuser script.  In this case,
+ the makeuser script will only update the current user's files.
+ If one tries to update another account,  an error will be reported.
+ If a user runs the makeuser script (or the root account decided not
+ to exit when given the above opportunity),  the following question
+ will appear
+      Automatically configure the 'user' account (y or n) 
+ where user is replaced by the user's name.  If this is answered with
+ a y,  then the necessary UNIX files and Vnmr files will be added to the
+ account and various Vnmr subdirectories will be made.  The next time
+ the user logs out and then logs in, Vnmr will automatically start.
+ After logging out and then logging in, whenever vnmr is typed,  VNMR
+ will start.  If the above question is answered with an n, meaning one
+ does not want all the files automatically updated,  then two additional
+ questions are asked.
+      Automatically configure UNIX environment (.files) (y or n)
+      Automatically configure Vnmr directories and global parameters (y or n)
+ Answering n to one or both of these questions invokes an interactive mode
+ where one is asked
+      OK to update Unix_file (y or n)
+ for the various UNIX dotfiles (for example,  .login, .cshrc, .Xdefaults, etc).
+ For the Vnmr related files and subdirectories,  one is asked
+      Create subdirectory of your VNMR user directory (y or n) 
+      Update your VNMR global parameters (y or n) 
+ If one decides not to do the automatic configuration of the UNIX dotfiles,
+ then samples of what is required for proper functioning of Vnmr is defined
+ in the file .xlogin in the user_templates subdirectory of the Vnmr system
+ directory.  The actual UNIX dotfiles which are used for the automatic
+ update are also stored in this same user_templates directory.  The Vnmr
+ global file is also stored there.

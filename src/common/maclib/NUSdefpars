@@ -1,0 +1,41 @@
+"macro NUSdefpars"
+"NUSdefpars"
+"Decide automatically how to treat NUS data"
+
+"Set SE processing if applicable"
+$3coef1='' $3coef2='' 
+substr(f1coef,3):$3coef1
+exists('f2coef','parameter'):$f2coefex
+if ($f2coefex) then substr(f2coef,3):$3coef2 endif
+if (($3coef1='' or $3coef1='0') and ($3coef2='' or $3coef2='0')) then CS_se='n' else CS_se='y' endif
+
+"Set to do inflation if needed"
+//$phasesize=size('phase')
+//if (arraydim/$phasesize<ni) then CS_inf='y' else CS_inf='n' endif
+CS_inf='y'
+
+"Do CLEAN"
+CS_cln='y'
+CSreconmethod='CLEAN'
+
+"De-noise by default"
+CSdnoise='y' CSthr=2
+
+"Keep sw"
+CSwp=0 CSsp=0
+
+"Set appropriate weighting functions prior to CLEAN processing"
+"Handle BioPack and non-BioPack data differently"
+exists('pwC','parameter'):$pwCex
+if ($pwCex) then "BioPack data"
+   exists('ni2','parameter'):$ni2ex
+   if ($ni2ex) then
+      if (ni2>0) then sb2=ni2/sw2 sbs2=-sb2 endif
+   endif	
+   if (ni>0) then sb1=ni/sw1 sbs1=-sb1 endif
+else "non-BioPack data - assume 2D in ni"
+   $proc1=proc1
+   proc1='ft'
+   setLP1andWindow
+   proc1=$proc1
+endif

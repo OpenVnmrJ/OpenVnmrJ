@@ -1,0 +1,77 @@
+"macro AT40"
+"AT40"   "VT Test"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if (at_vttest='n') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   at_currenttest='vttest' 
+   vchannelmap='0'
+   nt=1 f full 
+   wnt=''
+   vnmrinfo('get','tempExpControl'):$on
+   if $on=0 then
+    vnmrinfo('set','tempExpControl',1)
+   endif
+   wexp='AT40(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+
+   wft av f crl peak:$int,cr rl(0) 
+   lb='n' sb=.205 at=.8 
+   sp=-2.3p wp=1.5p vsadj th=40 nll
+   getll(1):$int,cr rl(0) sp=-.01p wp=.13p
+   d1=1.5 ss=1 
+   vp=0 wc=80 axis='h' 
+   create('scalesw','real') scalesw=100/(1.11696*sfrq)
+   vo=1 th=10
+   sc=10
+   p1=0 nt=1 ss=0 tpwr=at_tpwr pw(90)
+   fn=2*np 
+   
+   ATgetVT:$temp vp=0 
+   $count=1 repeat temp[$count]=$temp+5 $count=$count+1 until $count=101
+   $count=101 repeat temp[$count]=$temp $count=$count+1 until $count=201
+   wnt='ATvt'
+   wexp='AT40(`PART2`)'
+   text('Temperature Jump Test: Current Temperature +5C\\for 100 transients. Then 100 transients cooling to Current\\Temperature.')
+   dps ATcycle au
+
+elseif ($1='PART2') then
+  wft
+  temp=at_temp
+  su
+  vnmrinfo('set','tempExpControl',at_tempcontrol)
+
+  select(100) peak:$ht,$pos
+  $heating=$pos*scalesw
+  if (at_plotauto='y') then
+   if (at_printparams='y') then
+     dn2='' pap(0,wc2max-40) ATpltext 
+     ATpage 
+  endif
+  pltext(0,wc2max-5)
+  r1 sc=sc+30 plww(1,100) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  0.0 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  150 sec')
+  write('plotter',wcmax-sc-wc,wc2max-55,'Heating:')
+  write('plotter',wcmax-sc-wc,wc2max-60,'First 100 Spectra')
+  write('plotter',wcmax-sc-wc/2,wc2max-63,'Temperature Increase = %2.1f Degrees',$heating)
+  r2  sc=sc+60 plww(101,200) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  151.5 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  300 sec')
+  write('plotter',wcmax-sc-wc,wc2max-55,'Cooling: ')
+  write('plotter',wcmax-sc-wc,wc2max-60,'Last 100 Spectra')
+  ATpage 
+ endif
+ $heating=trunc($heating*10)/10
+ ATrecord('VTTEST','Temperature Rise for 5 degree increase request','Rise',$heating)
+ write('file',autotestdir+'/REPORT','Temperature Rise for 5 degree increase request: %2.1f',$heating)
+ ATsvf
+
+ATnext
+endif

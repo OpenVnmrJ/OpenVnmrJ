@@ -1,0 +1,39 @@
+"macro tmpcopy"
+"tmpcopy    -  Same as tmpsave, but does not delete fid/phasefile/data"
+
+if ($# <> 1) then
+   write('error','one argument needs to be passed to %s',$0)
+else
+   if ($# < 2) then
+      flush
+   endif
+   exists(curexp+'/'+$1,'file'):$isthere
+   if ($isthere > 0.5) then
+	shell('rm -rf '+curexp+'/'+$1):$dum
+   endif
+   mkdir(curexp+'/'+$1)
+   exists(curexp+'/acqfil/fid','file'):$fidex
+   if ($fidex) then
+   	cp('-p',curexp+'/acqfil/fid',       curexp+'/' + $1 + '/fid')
+   endif
+   exists(curexp+'/datdir/data','file'):$datex
+   if ($datex) then
+   	cp('-p',curexp+'/datdir/data',      curexp+'/' + $1 + '/data')
+   endif
+   exists(curexp+'/datdir/phasefile','file'):$ppex
+   if ($ppex) then
+   	cp('-p',curexp+'/datdir/phasefile', curexp+'/' + $1 + '/phasefile')
+   endif
+   cp('-p',curexp+'/procpar',          curexp+'/' + $1 + '/procpar')
+   cp('-p',curexp+'/curpar',           curexp+'/' + $1 + '/curpar')
+   cp('-p',curexp+'/text',		  curexp+'/' + $1 + '/text')
+   exists(curexp+'/sampling.sch','file'):$schex
+   if ($schex) then
+	cp('-p',curexp+'/sampling.sch',curexp+'/'+$1+'/cur_sampling.sch')
+   endif
+   exists(curexp+'/acqfil/sampling.sch','file'):$schex
+   if ($schex) then
+	cp('-p',curexp+'/acqfil/sampling.sch',curexp+'/'+$1+'/sampling.sch')
+   endif
+   clear(2)
+endif

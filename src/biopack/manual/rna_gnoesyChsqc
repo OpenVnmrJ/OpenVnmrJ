@@ -1,0 +1,50 @@
+  rna_gnoesyChsqc
+
+    3D C13 edited noesy with separation via the carbon of the destination site
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 110 ppm
+         3) 15N             - carrier @ 200 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+    Set dm2 = 'nyny', [15N dec during t1 and acq] 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (90,-180) in F1 and (90,-180) in F2.
+
+    If you set the C13 carrier to a value other than 110 ppm (such as 35 ppm),
+    change the line
+        dofa=dof+(125-110)*dfrq;
+    below to
+        dofa=dof+(125-35)*dfrq;
+
+    N15 carrier is set to 80ppm (aminos) for wet='y' assumes H2O sample    
+
+    STUD DECOUPLING.   SET STUD='y':
+
+    LP in t2:
+       The finite delays necessary during 13C evolution make the first few data
+       points in t2 distorted in intensity. The timing is correct so that lp2
+       may be set to zero, but the intensity distortion, particularly of the
+       second complex point, lead to a "dish" aspect of the baseline. This is not
+       due to the presence of a first-order phase correction (lp2), so adjustment
+       of the timing of the pulse sequence events is not needed.
+   
+       One solution is to use a smaller sw2 with intentional folding. This can make
+       the second d2 value large enough so there is enough time for the C=O
+       refocusing pulse to be executed. For larger sw2's there is not enough time.
+ 
+       A solution to this is to use linear prediction in t2, the 13C dimension.
+       In VNMR you can both "fix up" the first few points using the rest of the
+       data table as the basis set, as well as extend the data set for better F2
+       resolution and less distortion from truncation. The macro "setlp2" can be
+       used in the format "setlp2(desired ni2, acquired ni2, #fixed)". Set
+       "desired ni2" to be the final extended data size, "acquired ni2" to be the
+       total # of increments to be used as a basis (it may be less than ni2, for
+       example if the experiment is running), and "#fixed" to the number of
+       initial points in t2 to be predicted (typically 2-4). Try this with a 2D
+       data set for varying numbers of fixed points until the baseline is sufficiently
+       flat in F2.

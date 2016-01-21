@@ -1,0 +1,184 @@
+*******************************************************************************
+fiddle (C)	perform reference deconvolution
+*******************************************************************************
+NAME
+	fiddle (C)
+SYNOPSIS
+	fiddle 	   perform reference deconvolution
+	fiddled	   " " " subtracting alternate fids
+	fiddleu	   " " " subtracting successive fids from the first
+	fiddle2d   perform 2D reference deconvolution
+	fiddle2D   perform 2D reference deconvolution
+	fiddle2dd  perform 2D reference deconvolution subtracting alternate fids
+	fiddle2Dd  perform 2D reference deconvolution subtracting alternate fids
+
+
+DESCRIPTION 
+	This program performs reference deconvolution, using a reference signal
+with known characteristics to correct instrumental errors in experimental 1D or
+2D spectra.  The commands can take multiple string and numeric arguments, in
+the format descibed under OPTIONS below.
+
+Reference deconvolution of 1D spectra
+
+Only spectra that contain a well-resolved reference signal dominated by a 
+single component (i.e. not a simple multiplet) are suitable for reference 
+deconvolution.  Fourier transform the raw fid with ft, preferably having
+zero filled (i.e. set fn >= 2*np).  (If there are sinc wiggles, use wft 
+with gf = at*0.6.)  Set the reference line to the chosen signal using the 
+rl command, and then use two cursors either side of the line to define a 
+region of spectrum which includes all of the reference signal plus a 
+little clear baseline but no other signals.  This reference region will 
+be used to define the instrumental lineshape.
+
+Next decide what lineshape you would like to convert the instrumental 
+lineshape to, and set the weighting parameters accordingly.  Thus if you 
+want a 1 Hz wide Lorentzian, set lb to 1 and all other weighting parameters
+to 'n'.  Bear in mind the signal-to-noise ratio penalty for resolution
+enhancement:  if the experimental line is 2 Hz wide and you set lb=0, you 
+get an infinitely sharp line with infinitely poor S/N.  For most purposes a
+sensible strategy is to set lb to _minus_ the expected _natural_ linewidth,
+and choose gf to give reasonable S/N;  this should convert the instrumental
+lineshape to Gaussian.  Where the signals of interest are broader than those
+of the reference, resolution enhancement can easily be obtained by making lb
+more negative.  Once you have set the weighting parameters, the command fiddle 
+will carry out the reference deconvolution and display the corrected 
+spectrum.  The integral should remain unchanged, so any resolution enhancement 
+will result in an increase in the amplitude of both signal and noise.  To 
+save the corrected data it is necessary to use the option 'writefid' when 
+doing the reference deconvolution, e.g. fiddle('writefid','correctedfid') 
+will store the file 'correctedfid.fid' in the current working directory.
+
+The options 'writecf','<filename>' and 'readcf','<filename>' will write and 
+read the correction function respectively.  Thus performing reference
+deconvolution on one fid using fiddle with the 'writecf' option and then
+using fiddle with 'readcf' to process another fid will use the first 
+correction function to correct the second fid.  This can be useful for 
+heteronuclear lineshape correction (provided that the spectral widths for the
+two nuclei are in the ratio of the respective magnetogyric ratios), or for
+correcting spectra in which a reference signal has been suppressed (e.g.
+an INADEQUATE spectrum could be corrected for lineshape errors using a
+correction function derived from the normal carbon spectrum). 
+
+To correct a series of spectra in an arrayed or 2D experiment, use numeric 
+arguments just as with ft:  fiddle(1) will correct spectrum 1, fiddle(2,3) 
+spectra 2 and 3, and so on.
+
+Many reference signals have satellites;  for example as well as the familiar 
+one-bond carbon-13 satellites, TMS has singlet satellite signals from coupling
+to silicon-29 and quartet satellites (normally unresolved) from three-bond
+coupling to carbon-13.  For most purposes carbon-13 satellites are small enough
+to be ignored, but where high accuracy is required or there are stronger (e.g.
+silicon-29) satellites, satellite signals can be included in the specified form
+of the ideal reference signal by invoking the 'satellites' option.  The 
+directory /vnmr/satellites contains a file TMS which contains details of the TMS
+satellite signals;  the command fiddle('satellites','TMS') will allow for the
+satellite signals when deconvoluting using TMS as a reference.  For information
+on how to construct satellite files for other reference signals, see the file
+/vnmr/satellites/README.
+
+To perform corrected difference spectroscopy, use fiddled to produce the 
+corrected difference between successive spectra (this will halve arraydim).  
+Since the main aim of reference deconvolution here is to optimise the purity
+of the difference spectrum, the target lineshape would normally be chosen to 
+give the best possible S/N;  this corresponds to choosing a target lineshape 
+approximately twice the width of the raw experimental signals of interest.  The
+command fiddleu produces corrected differences between successive fids and the 
+first fid.
+
+Reference deconvolution of 2D spectra
+
+The commands fiddle2d/fiddle2D and fiddle2dd/fiddle2Dd function in just the same
+way as the parent fiddle program.  Since the principal objective in 2D reference
+deconvolution is usually the reduction of t1-noise, ideal lineshape parameters
+are normally chosen for optimum S/N ratio rather than resolution enhancement.
+To perform 2D reference deconvolution, choose fn (preferably >=2*np) and fn1, 
+then ft the raw data (as mentioned earlier, if there is significant signal left
+at the end of at it may be necessary to use wft with gf set).  Display the 
+first increment with ds(1), adjust the phase of the reference signal, 
+and use rl to select the reference signal.  In earlier versions, it was 
+necessary to create a parameter phinc to anticipate the changes in the 
+reference signal phase with increasing evolution time, but the current 
+algorithm adjusts the phase automatically (unless the option 'noaph' is 
+selected).  The deconvolution will set the reference signal phase as a 
+function of t1 so as to place the reference signal at frequency rfp1 in f1, 
+so remember to set rfl1 and rfp1 before using fiddle2D or the f1 frequencies 
+may change unexpectedly.
+
+Define the reference region with the two cursors as usual, then type the 
+command fiddle2D('writefid','<filename>') (or fiddle2Dd if a 2D 
+difference spectrum is required, as with corrected HMBC).  The 'writefid' 
+option is essential, as fiddle2D on its own does not store the corrected 
+time-domain data.  If phase-sensitive gradient-enhanced 2D data are to be 
+processed, alternate fids will have opposite phase modulations (i.e.  the 
+experimental array will alternate N-type and P-type pathways), and the
+option 'alternate' should be used.
+
+Once the deconvolution is complete, the corrected 2D fid data can be read into 
+an experiment and processed as normal (though if fiddle2Dd has been used, 
+arraydim will no longer match the arrays set and it may be necessary to set 
+the arguments to wft2d explicitly rather than using wft2da, or adjust the 
+parameters manually).
+
+
+
+OPTIONS
+	fiddle('option'[,'filename',][,'option',['filename']][,startno][,finishno][,increment])
+
+The options available are as follows:
+
+                alternate       alternate reference phase +- (for
+                                phase sensitive gradient 2D data)
+                autophase       automatically adjust phase
+                displaycf       stop at display of correction function
+                fittedbaseline  use cubic spline baseline correction
+                                defined by the choice of integral regions
+                invert          invert the corrected difference spectrum/spectra
+                noaph           do not automatically adjust zero order phase
+                                of reference region
+                nodc            do not use dc correction of reference region
+                nohilbert       do not use Hilbert transform algorithm;
+                                use extrapolated dispersion mode reference
+                                signal unless option ...
+                noextrap        is also used
+                normalise       keep the corrected spectrum integrals equal to
+                                that of the first spectrum
+                readcf          read correction function from file '<filename>';
+                                the argument 'filename' must immediately
+                                follow 'readcf'
+                satellites      use satellites defined in '<filename>' in ideal
+                                reference region; '<filename>' should be in
+                                /vnmr/satellites
+                stop1           stop at display of experimental reference fid
+                stop2           stop at display of correction function
+                stop3           stop at display of corrected fid
+                stop4           stop at display of first corrected fid
+                verbose         display information about the course of the
+                                processing in the main window
+                writecf         write correction function to file '<filename>';
+                                the argument 'filename' must immediately
+                                follow 'writecf'
+                writefid        write out corrected fid to '<filename>'; if
+                                '<filename>' does not begin with / it is assumed
+                                to be in the current working directory
+
+
+
+FILES
+
+SEE ALSO
+	
+COPYRIGHT
+	Copyright (c) 2009 
+
+REFERENCES
+	J. Taquin, Rev. Physique App., 14 669 (1979).
+	G.A. Morris, JMR 80 547 (1988).
+	G.A. Morris & D. Cowburn, MRC 27 1085 (1989).
+	A. Gibbs & G.A. Morris JMR 91 77 (1991).
+	A. Gibbs, G.A. Morris, A.G. Swanson and D. Cowburn, J.Magn.Reson. 101, 
+	351-356 (1993).
+	G.A. Morris, in Chapter 16 of "Signal Treatment and Signal Analysis in NMR", 
+  	ed. D.N. Rutledge, Elsevier, 1997.
+	G.A. Morris, H. Barjat and T.J. Horne, Prog. NMR Spectrosc., 31, 197 (1997).
+

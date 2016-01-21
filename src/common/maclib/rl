@@ -1,0 +1,44 @@
+"macro rl"
+"********************************"
+" rl<(rfp)> - set reference line "
+"********************************"
+
+if ($# = 0) then
+  setfrqCmd('rl',0):$e
+else
+  setfrqCmd('rl',0,$1):$e
+endif
+if($e>0) then // new method
+  return
+endif
+
+$rflrfp = rfl - rfp
+axis('fn'):$label,$frq_scl,$scl
+if ($# = 0) then
+  $pos = 0
+else
+  $pos = $1/reffrq
+endif
+$crpos =  sfrq + $scl*($rflrfp + cr - sw/2)/1e6
+reffrq = (1/(1 + $pos/1e6))*$crpos
+refpos = 0
+rfl = sw/2 - (sfrq - reffrq)*1e6/$scl
+rfl = rfl + ($crpos - reffrq)*1e6/$scl
+rfp = ($crpos - reffrq)*1e6/$scl
+sp = sp - cr + rfp
+cr = rfp
+if ($frq_scl = $scl) then
+   write('line3','Reference frequency %g %s',cr*$scl,$label)
+else
+   write('line3','Reference frequency %g %s, (%g Hz)',cr/$frq_scl,$label,cr*$scl)
+endif
+
+// back calculate lockfreq_ if does not exist
+exists('lockfreq_','parameter'):$e
+if(not $e) then
+  create('lockfreq_','real')
+  setgroup('lockfreq_','processing') // make this 'processing' group
+  setfrqCmd('calclockfreq_'):lockfreq_
+endif
+
+p11_action('process','rl')

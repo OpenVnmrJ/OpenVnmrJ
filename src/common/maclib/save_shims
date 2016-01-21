@@ -1,0 +1,30 @@
+"macro save_shims"
+exists('svsname','parameter','global'):$e
+if $e<0.5 then
+  create('svsname','string','global')
+  svsname='$solvent$-'
+endif
+
+$js=''
+$svsdir=userdir+'/shims'
+"write('line3','svsdir = %s',$svsdir)"
+
+if (system = 'spectrometer') then
+  readallshims
+endif
+$file=''
+Svsname($svsdir+'/'+svsname):$file
+"write('line3','test1: %s',$file)"
+if $file<>'' then
+  exists($svsdir,'file'):$g
+  if $g<0.5 then
+    mkdir($svsdir)
+  endif
+  svs($file)
+  $b=0 bgmode_is:$b
+  exists(systemdir+'/bin/db_manager','file'):$g
+  if $b>0.5 and $g>0.5 then
+    write('line3', 'db_manager filldb '+$svsdir+' $USER')
+    " shell('db_manager filldb '+$svsdir+' $USER'):$w "
+  endif
+endif

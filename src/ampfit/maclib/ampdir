@@ -1,0 +1,27 @@
+"macro ampdir"
+
+mkampargs
+
+if(ampargs[1]=0) then
+  $ampdir=userdir
+else
+  $ampdir=systemdir
+endif
+exists($ampdir,'file','rw'):$canwrite
+$tmp='' format(ampargs[2],1,0):$tmp
+$rchnl='rf'+$tmp
+$ampname=$rchnl + '/' + tn
+
+exists('hipwrampenable','parameter','global'):$e
+if (($e>0) and (ampargs[5]>0)) then
+   $ampname=$ampname+'-HP'
+endif
+
+$dirname=$ampdir + '/amptables/' + $ampname
+$chnldir=$ampdir + '/amptables/' + $rchnl
+$olddir=0
+exists($dirname,'directory'):$olddir
+if ($olddir>0) then
+  exists($chnldir,'directory','rw'):$canwrite
+endif
+return ($dirname,$ampname,$canwrite,$olddir,$chnldir)

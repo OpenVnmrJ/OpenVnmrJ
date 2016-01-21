@@ -1,0 +1,23 @@
+"macro BP50a"
+" BP50a "
+$bestone=1 $counter=1
+
+crl f cr=sw/2 rl(4.66p) cz z(11p,5.5p)
+select(1) bc vsadj(20)
+integ(7.4p,9p):$in if $in<0 then $in=-$in endif $best=$in
+
+repeat
+  select($counter) bc
+  integ(7.4p,9p):$in if $in<0 then $in=-$in endif
+  if $in<$best then $best=$in $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+
+$b=$bestone-8 if $b>0 then $b=$b else $b=$bestone+8 endif
+select($b) vsadj(50) BPaph($b)
+
+BPsvf(userdir+'/AutoTripRes/ghn_co_dof')
+dssh('dodc') pl('all','dodc') pap BPpage
+dof=dof[$bestone]
+$dof='' format(dof,5,1):$dof 
+BPsetparams('dofCO',$dof,'C13')

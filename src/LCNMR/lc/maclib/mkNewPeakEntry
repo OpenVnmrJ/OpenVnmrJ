@@ -1,0 +1,159 @@
+"macro mkNewPeakEntry"
+
+$filename=autodir+'/enterQ'
+if ($# < 2) then $2='' endif
+
+$lcgendir=$filename+'.macdir/LcGenPeak'
+exists($lcgendir+'/day','directory'):$direx
+format($1,'isreal'):$real
+$genpeak=''
+if not $real then
+   $genpeak=$1
+   if ($2='check') and ($direx) then
+	$genpeak=''
+   endif
+endif
+if ($genpeak='genpeak') then
+    shell('rm -rf '+$lcgendir):$dum
+    $direx=0
+endif
+
+// Generic Peak directory does not exists
+//  Create one to do Autoscout
+if ($direx=0) then
+
+   shell('mkdir -p '+$lcgendir+'/day'):$dum
+   shell('mkdir -p '+$lcgendir+'/night'):$dum
+   $changetime=0 getPreAcqTime:$changetime
+   if ($2='submit') then
+	$dtime=0
+	walkupQ('gettime'):$dtime
+	shell('cp '+cursqexp+'/EXPLIST '+$lcgendir+'/day'):$dum
+	shell('cp '+cursqexp+'/macdir/* '+$lcgendir+'/day'):$dum
+   elseif ($2='copy') then
+	shell('cp '+$filename+'.macdir/'+$3+'/day/* '+$lcgendir+'/day'):$dum
+	$dtime=$changetime
+	readTtimeQ($filename+'.macdir/'+$3+'/day'):$ptime,$dtime,$ntime
+	$dtime=$dtime-$changetime
+   else
+	$dtime=60
+   	write('reset',$lcgendir+'/day/EXPLIST')
+   	write('file',$lcgendir+'/day/EXPLIST','Autoscout_01  %d  Autoscout  xx001  Queued',$dtime)
+   	write('reset',$lcgendir+'/day/Autoscout_01acq')
+   	write('file',$lcgendir+'/day/Autoscout_01acq','ACQtime=%d',$dtime)
+	$wQpar=''
+   	module('list','cpQdefaults'):$wQpar
+   	$macfile=$lcgendir+'/day/walkupQacq'
+   	write('reset',$macfile)
+   	write('file',$macfile,'loaddefaultshims')
+   	$parfile=$macfile+'pars'
+   	write('reset',$parfile)
+   	if ($wQpar<>'') then
+        	writeparam($parfile,$wQpar)
+   	endif
+   endif
+   write('reset',$lcgendir+'/day/sampleinfo')
+   writeTtimeQ($lcgendir+'/day',0,$dtime+$changetime,0)
+   write('reset',$lcgendir+'/day/LONGLIST')
+   $retentiontime=retentiontime_
+   retentiontime_=''
+   savesampglobal($lcgendir)
+   savesampglobal($lcgendir+'/day')
+   retentiontime_=$retentiontime
+   write('reset',$lcgendir+'/day/All_EXPLIST')
+   if ($2='copy') then
+	shell('(cat '+cursqexp+'/EXPLIST >> '+$lcgendir+'/day/All_EXPLIST)'):$dum
+   endif
+   shell('(cp '+$lcgendir+'/day/* '+$lcgendir+'/night)'):$dum
+   xmhaha_asx(autodir,'DefPeakQ')
+   if ($genpeak='genpeak') then return endif
+endif
+
+// Create a new entry in tmp file and prepare a copy
+//    from Generic Peak directory
+format($1,'isreal'):$real
+if not ($real) then return endif
+
+   $loc='' format($1,0,0):$loc
+   Svfname($filename+'.macdir/loc'+$loc+'_%R3%',''):$peakdir
+   shell('basename '+$peakdir):$locdir
+
+   shell('mkdir '+$peakdir):$dum
+   shell('cp -r '+$lcgendir+'/day '+$peakdir):$dum
+   $s1='' $s2='' 
+   readfile($peakdir+'/day/EXPLIST','$s1','$s2','','local'):$tot
+   shell('cp '+$peakdir+'/day/All_EXPLIST '+$peakdir+'/day/EXPLIST'):$dum
+   $i=1
+   repeat
+   	$expname=''
+    	substr($s2[$i],2):$expname
+    	getcpnode('cp',$peakdir+'/day',$expname):$newnode
+	shell('mv '+$peakdir+'/day/'+$s1[$i]+'acq '+$peakdir+'/day/'+$newnode+'acq'):$dum
+        shell('mv '+$peakdir+'/day/'+$s1[$i]+'acqpars '+$peakdir+'/day/'+$newnode+'acqpars'):$dum
+	$s1[$i]=$newnode
+    	$i=$i+1
+   until $i > $tot
+   write('reset',$peakdir+'/day/EXPLIST')
+   $i=1
+   repeat
+    	write('file',$peakdir+'/day/EXPLIST','%s  %s',$s1[$i],$s2[$i])
+    	$i=$i+1
+   until $i > $tot
+   shell('rm -f '+$peakdir+'/day/All_EXPLIST'):$dum
+   shell('(cat '+$peakdir+'/day/EXPLIST >> '+$lcgendir+'/day/All_EXPLIST)'):$dum
+
+   getsampglobal($lcgendir)
+   retentiontime_=retentiontime
+   savesampglobal($peakdir)
+   shell('cp '+$peakdir+'/sampleglobal '+$peakdir+'/day'):$dum
+   shell('cp '+$peakdir+'/day '+$peakdir+'/night'):$dum
+
+        module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+                "  Would tray color work without it?"
+        setvalue('operator_',operator)
+        if (studyowner='') then studyowner=operator endif
+        setvalue('loc_',$1)
+        setvalue('vloc_','0')
+        studystatus='Queued'
+        vzone_=1 vrack_=1 studyid_='loc'+$loc
+        locdir=$locdir
+	savestudypar($peakdir)
+	shell('mv '+$peakdir+'/studypar '+$peakdir+'/Studypar'):$dum
+	$sdir=$filename+'.macdir/studytray/loc'+$loc
+	shell('mkdir -p '+$sdir):$dum
+	shell('cp '+$peakdir+'/Studypar '+$sdir+'/studypar'):$dum
+	shell('chmod -R g+rw '+$sdir):$dum
+	updatestatus(autodir,$loc,studystatus)
+	$text=text_string[1]
+        if (samplename='') then samplename=operator endif
+        $sample=samplename
+
+	$sampinfo=$peakdir+'/day/sampleinfo'
+        write('file',$sampinfo,'PEAK#: %s',$loc)
+	write('file',$sampinfo,'SAMPLE#: %s',$loc)
+        write('file',$sampinfo,'USER: %s',operator)
+        write('file',$sampinfo,'MACRO: cpautoQ(\'%s\',\'day\')',$locdir)
+        write('file',$sampinfo,'SOLVENT: %s',solvent)
+        write('fileline',$sampinfo,'TEXT: %s\n',$text)
+        write('file',$sampinfo,'SampleDir: %s',$sample)
+        write('file',$sampinfo,'USERDIR: %s',userdir)
+        write('file',$sampinfo,'DATA: ')
+        write('file',$sampinfo,'STATUS: Queued')
+        write('file',$sampinfo,'---------------------------------------------')
+
+	shell('cp -r '+$peakdir+'/day '+$peakdir+'/night'):$dum
+	$sedcmd=`sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"`
+	shell('('+$sedcmd+' '+$sampinfo+' > '+$peakdir+'/night/sampleinfo)'):$dum
+	$ptime=0 $dtime=0 $ntime=0
+	readTtimeQ($peakdir+'/day'):$ptime,$dtime,$ntime
+
+   shell('cat '+$sampinfo+' >> '+$filename):$dum
+   $prioritytime=0 $daytime=0 $nighttime=0
+   readTtimeQ($filename+'.macdir'):$prioritytime,$daytime,$nighttime
+   $prioritytime=$prioritytime+$ptime
+   $daytime=$daytime+$dtime
+   $nighttime=$nighttime+$ntime
+   writeTtimeQ($filename+'.macdir',$prioritytime,$daytime,$nighttime)
+

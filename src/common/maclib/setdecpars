@@ -1,0 +1,118 @@
+"macro setdecpars"
+
+$decpars='pwxlvl','pwx','pplvl','pp','dpwr','dmf','dmm','dseq','dres','decwave'
+$decpars=$decpars,'pwxlvl_cf','pplvl_cf'
+$decparsize=size('$decpars')
+mkpar('real','pwxlvl_cf',1,'pplvl_cf',1)
+$dmm=dmm
+
+$ok=0 $str='' $val=''
+readprobe(dn):$str,$val,$ok
+
+if ($ok) then
+  $i=1
+  repeat
+     exists($decpars[$i],'parameter'):$parex
+     if ($parex) then
+	$r=0
+	teststr('$str',dn+$decpars[$i],'local'):$r
+	if ($r) then
+	   if typeof($decpars[$i]) then
+		{$decpars[$i]}=$val[$r]
+	   else
+		format($val[$r],'lower'):{$decpars[$i]}
+	   endif
+	endif
+     endif
+     $i=$i+1
+  until $i > $decparsize
+endif
+
+$ok=0 $str='' $val=''
+readprobe(dn,probe,'Study'):$str,$val,$ok
+
+if ($ok) then
+  $i=1
+  repeat
+     exists($decpars[$i],'parameter'):$parex
+     if ($parex) then
+        $r=0
+        teststr('$str',dn+$decpars[$i],'local'):$r
+        if ($r) then
+           if typeof($decpars[$i]) then
+                {$decpars[$i]}=$val[$r]
+           else
+                format($val[$r],'lower'):{$decpars[$i]}
+           endif
+        endif
+     endif
+     $i=$i+1
+  until $i > $decparsize
+endif
+
+if (dmf=0) then dmf=200 endif
+
+if $dmm <> dmm then
+  $subdmm=''
+  $newdmm=''
+  length($dmm):$dmmlength
+  $i2 = 1
+  repeat
+   substr($dmm,$i2,1):$subdmm
+   if ($subdmm = 'c') then
+    $newdmm=$newdmm+'c'
+   else
+    $newdmm=$newdmm+dmm
+   endif
+   $i2=$i2+1
+  until $i2 > $dmmlength
+  dmm=$newdmm
+endif
+
+checkdecshape
+
+exists('SFSPcorrect','maclib'):$macex
+if ($macex) then SFSPcorrect('dn') endif
+setrefcmpd(dn)
+
+//This section is called when dn is changed from the panels
+
+IF ($# > 0) THEN
+    if ($1<>'update') then return endif
+
+    IF (customflag='y') THEN
+            customizepar('updatenuc')
+    ELSE
+
+        if (numrfch > 2) then
+            if (dn2=dn) then
+                if (dn='N15') then dn2='C13' else dn2='N15' endif
+                setrefcmpd(dn2)
+            endif
+        endif
+
+        module('acquisition','Dch_adiabatic bip')
+
+        $fixit=0
+        if (apptype='hetero2D') then
+            if (refsource1='dfrq') then $fixit=1 endif
+        elseif (apptype='hetero1D') then
+            $fixit=1
+        elseif (apptype='homhet3D') then
+            if (refsource2='dfrq') then $fixit=1 endif
+        endif
+        if ($fixit>0) then
+            EDratio=sfrq/dfrq
+            if (tn = 'H1') then
+                getparam('gHratio',dn):EDratio
+            elseif (dn = 'H1') then
+                $EDratio=1/EDratio
+                getparam('gHratio',dn):$EDratio
+                EDratio=1/$EDratio
+            endif
+        endif
+
+        setshaka6
+    ENDIF
+ENDIF
+

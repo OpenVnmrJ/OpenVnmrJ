@@ -1,0 +1,120 @@
+"macro cqgmap"
+"gradient shimming options for panels and study queue"
+
+"if $#=0 then write('line3','calling %s',$0) endif"
+
+xm1('studydir'):$sdir
+$ret=''
+substr(gradtype,3,1):$ch
+exists('tmpgradtype','parameter'):$e
+if ($e) then
+  substr(tmpgradtype,3,1):$ch
+endif
+
+if $#=1 then
+  if $1='exit' then  "for gmap"
+    wdone=''
+    exists('activestudy','parameter','global'):$e
+    exists('sqmode','parameter','global'):$e2
+    if ($e>0.5 and $e2>0.5) then
+      prescan[2]='Complete'
+      if (auto='y' or (activestudy[1]<>'null' and sqmode='go')) then
+        prescan[5]='null'
+        wdone='xmprescan(`next`)'
+        $sfile=$sdir+'/studypar'
+        exists($sfile,'file'):$e
+        if $e>0.5 then
+          rtv($sfile,'solvent'):$solv
+          solvent=$solv
+        endif
+      endif
+      return($ret)
+    endif
+    return($ret)
+  elseif $1='makemapname' then  "make probe mapname"
+    $date=''
+    shell('date +%Y-%m-%d'):$date
+    $tn=tn
+    if $ch='h' then
+      $tn=$tn+'hs'
+      if tn='lk' then $tn='hs' endif
+    endif
+    $mapname=probe+'_'+$tn+'_'+$date
+    gmaplistfunc('wrshimcal',$mapname):$ok
+    gmapname=$mapname
+    seqfil=seqfil
+    return($ret)
+  elseif $1='setprobemapname' then
+    $tn=tn
+    if $ch='h' then
+      $tn=$tn+'hs'
+      if tn='lk' then $tn='hs' endif
+    endif
+    $tn=$tn+'map'
+    gmapshim('mapname',''):$mapname
+    addparams($tn,$mapname,'Probe')
+    setparams($tn,$mapname,'Probe')
+  elseif $1='removemapname' then
+    gmapshim('mapname'):$smap
+    $file=userdir+'/gshimlib/shimmaps/'+$smap+'.fid'
+    exists($file,'file'):$es
+    if $es<0.5 then
+      $file=systemdir+'/gshimlib/shimmaps/'+$smap+'.fid'
+      exists($file,'file'):$es
+    endif
+    if $es>0.5 then
+      rm('-r',$file):$ef
+    endif
+    gmapname=''
+    seqfil=seqfil
+    return($ret)
+  elseif $1='mapname' then      "find mapname"
+    $mapname=''
+    if $ch='h' then
+      $tn='hs'
+      $param=$tn+'map'
+      getparam($param,'Probe'):$mapname
+      if ($mapname='' or $mapname='n') then
+        return('n')
+      else
+        gmapz($mapname,'loadmap'):$rr
+        if $rr>0.5 then
+          return('n')
+        endif
+        return('y')
+      endif
+    else
+      $Gmap='lk','hs','H1','H1hs'
+      $i=0
+      repeat
+        $i=$i+1
+        $tn=$Gmap[$i]
+        $param=$tn+'map'
+        getparam($param,'Probe'):$mapname
+        if ($mapname<>'' and $mapname<>'n') then
+          gmapz($mapname,'loadmap'):$rr
+          if $rr<0.5 then
+            return('y')
+          endif
+        endif
+      until ($i>=size('$Gmap'))
+      return('n')
+    endif
+    return('n')
+  elseif $1='protocol' then "set up protocol"
+    exists(autodir+'/gQ','file'):$e
+    if $e>0.5 then rm(autodir+'/gQ'):$x endif
+    prescan[2]='Not done'
+    cqsavestudy('paronly')
+  endif
+endif
+
+"Automake Shimmap button should check mapname, give error if none"
+"(or assign one?)"
+"if (wshim<>'g') then return($ret) endif"
+  "normal shimming"
+"maybe I need to skip shimming for subsequent nodes for wshim='s' and others?"
+"if (sqsaveid<>'null') then return($ret) endif"
+  "customizing protocols, do not shim"
+
+return('y')

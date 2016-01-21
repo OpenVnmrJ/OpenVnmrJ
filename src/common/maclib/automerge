@@ -1,0 +1,116 @@
+"macro automerge"
+"macro to merge overniteQ with daytimeQ  "
+" Optional argument allows one to merge overniteQ with "
+" daytimeQ for an enter file - i.e., non walkup mode"
+" This option is useful for sorting the short runs from longruns"
+" and merging the longruns at the back of short runs before doing"
+" autogo on an existing enter file"
+" Alterntively this macro can be used in a cron job to merge"
+" overniteQ with daytimeQ in a current automation run at a specified time"
+" An optional 2nd argument will suppress autosa/autora "
+
+$active=0
+expactive('auto'):$active,$dir
+
+IF ($# = 1) THEN
+    $autodir=$1
+    $file=''
+    shell('basename '+$autodir):$file
+    $enterfile=$autodir+'/'+$file
+    exists($enterfile,'file'):$fex
+    if ($fex=0) then
+	$file='enterQ'
+	$enterfile=$autodir+'/'+$file
+    endif
+    $macdir=$autodir+'/'+$file+'.macdir'
+ELSE
+   $autodir=autodir
+   $enterfile=autodir+'/enterQ'
+   $macdir=autodir+'/enterQ.macdir'
+ENDIF
+if ($# < 2) then $2='' endif
+if ($2='NoSaRa') then
+	$active=0
+endif
+exists($autodir+'/nightQ','file'):$isnoncp
+if ($isnoncp) then return endif
+
+exists($enterfile,'file'):$fex
+if ($fex=0) then
+   write('error','File: %s NOT found',$enterfile)
+   return
+endif
+
+$enterQ=''
+shell('basename '+$enterfile):$enterQ
+//if ($enterQ='enterQ') and ($active > 0.5) then
+//    autosa
+//endif
+
+exists($macdir+'/overniteQ','file'):$e
+if ($e>0) then
+  shell('(cat '+$macdir+'/overniteQ | grep -wc SAMPLE#:)'):$e
+endif
+if ($e>0) then
+"*********Merge overniteQ with daytimeQ***********************"
+    if ($enterQ='enterQ') and ($active > 0.5) and ($autodir = $dir) then
+	autoq('add',$macdir+'/overniteQ')
+    else
+        shell('cat '+$macdir+'/overniteQ >> '+$enterfile):$shdum
+    endif
+    shell('rm '+$macdir+'/overniteQ'):$shdum
+    shell('touch '+$macdir+'/overniteQ'):$shdum
+"************merge the overnighttime with daytime*************"
+
+    $prtotal=0 $daytotal=0 $nighttotal=0
+    readTtimeQ($macdir):$prtotal,$daytotal,$nighttotal
+    $daytotal=$daytotal+$nighttotal
+    writeTtimeQ($macdir,$prtotal,$daytotal,0)
+
+endif
+
+"***********Turnon the longrun flag in AUTOGLOBAL****************"
+    $AUTOGLOBAL=$macdir+'/AUTOGLOBAL'
+    exists($AUTOGLOBAL,'file'):$AUTOGLOBALex
+    $longrun='y'
+    if ($AUTOGLOBALex) then
+      shell('(cat '+$AUTOGLOBAL+' | grep -vw LONGRUN: > '+$AUTOGLOBAL+'tmpx)'):$dum
+      shell('mv '+$AUTOGLOBAL+'tmpx '+$AUTOGLOBAL):$dum
+      shell('chmod a+rw '+$AUTOGLOBAL):$dum
+    endif
+    write('file',$AUTOGLOBAL,'LONGRUN: %s',$longrun)
+
+    $date=''
+    shell('date +%Y-%m-%d_%H%M%S'):$date
+    if ($enterQ='enterQ') then
+	write('file',$macdir+'/acqlog','**************************************')
+        write('file',$macdir+'/acqlog','***autodir: %s***',$autodir)
+	write('file',$macdir+'/acqlog','***NightQ merged with DayQ at %s***',$date)
+        write('file',$macdir+'/acqlog','**************************************')
+    endif
+    $automerge=$macdir+'/DATE_automerge'
+    write('file',$automerge,'%s',$date)
+
+    xmhaha_asx($autodir,'enterQ')
+    xmhaha_asx($autodir,'overniteQ')
+
+"***************Restart automation*****************************"
+if ($enterQ='enterQ') then
+ if ($autodir=$dir) then
+  $issamp=0
+  shell('(cat '+$autodir+'/enterQ | grep -wc SAMPLE#:)'):$issamp
+  $isauto=''
+  expactive('current'):$active2,$isauto
+  if ($isauto='auto') then $active2=0 endif
+  if (($issamp>0) and ($active2<0.5)) or ($active>0.5) then
+//  There is potential possibility the automation is paused
+//   by administrator for service.  Use resumeautomation
+//   instead of autora
+"     autora   "
+     resumeautomation
+  endif
+ endif
+  if ($#>0) then
+     atcmd('automerge(`'+$1+'`)','cancel')
+  endif
+endif

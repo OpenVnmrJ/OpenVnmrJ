@@ -1,0 +1,135 @@
+"macro htll"
+" ********************************************************** "
+" ***                       htll                         *** "
+" ***          generate a Hadamard line list file        *** "
+" ***                    Eriks Kupce                     *** "
+" ***                      11/12/02                      *** "
+" ********************************************************** "                 
+$usage = 'htll; htll(fname); htll(exp#); htll(exp#,fname)'
+
+$n=-1
+$fnm=''
+$expn='' 
+$filepath = curexp+'/htll.htfrq1'     "default filename "
+
+$tn = tn
+$solvent = solvent
+$dof = tof
+$sw = sw
+$old_sw = sw
+
+if $#>0 then
+  if not typeof('$1') then
+    $n=$1
+    if $#>1 then
+      $fnm=$2
+    endif
+  else
+    if $1='usage' then
+      write('line3','%s', $usage)
+      return
+    else    
+      $fnm = $1 
+      if $#>1 then
+        $n=$2
+      endif
+    endif
+  endif
+endif 
+
+llfrq=0
+nll:$nlines
+if $nlines < 1 then
+  write('error','No lines in llfrq. Check th')
+  return
+endif
+$rfl=sw/2
+
+exists('htfrq1','parameter'):$e
+if not ($e) then
+  create('htfrq1','frequency')
+  setprotect('htfrq1','on',256)
+endif
+htfrq1=0.0  " reset the HT list "
+
+//$diff = 0.0  
+//$tof = tof
+cr = sp+wp
+delta = wp
+$d = sw - wp  
+$er = 0.01*sw  
+if($d > $er) then
+//  movesw 
+//  $sw=sw 
+//  $dof=tof 
+//  $diff = $tof-tof
+  getoffset(cr-delta/2):$dof
+  $sw=delta
+endif
+//r5 = $old_sw/2 - $sw/2 - $diff
+
+write('alpha','\n tn=%s solvent=%s tof(F1)=%.1f sw1=%.1f ', $tn, $solvent, $dof, $sw)
+write('alpha','--- htfrq1 set to: --- ')
+write('reset',$filepath)
+write('file',$filepath,'# %s %s %.1f %.1f', $tn, $solvent, $dof, $sw)
+write('file',$filepath,'# total of %d lines', $nlines)
+write('file',$filepath,'# line    frequency (Hz)')
+
+$i=1
+repeat
+  getoffset(llfrq[$i]-rfl):$frq
+  htfrq1[$i]=$frq-$dof
+//  htfrq1[$i]=llfrq[$i]-$rfl+$diff
+  write('file',$filepath,' %4d      %8.2f', $i, htfrq1[$i])
+  write('alpha',' %4d  %8.2f ', $i, htfrq1[$i])
+  $i=$i+1
+until $i>$nlines
+
+exists('httof','parameter'):$e
+if (not $e) then create('httof','frequency') endif
+exists('htsw','parameter'):$ee
+if (not $ee) then create('htsw') endif
+format($dof,0,2):httof
+format($sw,0,2):htsw
+
+exists('ni','parameter'):$e
+if not ($e) then
+  par_2d
+  phase=0
+  sw1 = $sw
+endif
+
+$i=2
+repeat
+  $i = $i*2
+until $i > $nlines
+ni = $i
+
+write('alpha','ni set to: %d ', ni)
+if(ni>64) then
+  write('line3','WARNING: ni = %d', ni)
+endif
+
+if($fnm<>'') then
+  if($n>0) then
+    format($n,1,0):$expn
+    $fnm = userdir+'/'+$expn+'/'+$fnm
+  endif
+  copy($filepath,$fnm)
+endif
+
+if $n>0 then 
+  moveHT($n)
+endif
+
+exists('htbw1','parameter'):$e
+if($e) then
+  $r=2*sw1/htbw1 fn1=$r 
+  if(fn1<$r) then 
+    fn1=2*fn1 
+  endif
+endif
+
+
+
+

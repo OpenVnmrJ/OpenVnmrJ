@@ -1,0 +1,39 @@
+"macro archive"
+"**********************************************************"
+" archive -- macro used with glide to archive data	   "
+"	     works with the values supplied by archive.def "
+"            if a duplicate file name exists, a unique name"
+"            is generated                                  "
+"**********************************************************"
+if ($# <> 1 )    then return endif
+if ($1 = 'None') then return endif
+
+exists(curexp+'/eou_saveas','file'):$e
+if ($e < 0.5) then return endif
+
+$fln=''
+lookup('file',curexp+'/eou_saveas','read',1):$fln,$ret
+if ($ret < 0.5) then          "an empty file"
+   delete(curexp+'/eou_saveas')
+   return
+endif
+if (macro<>'') then
+   $fln = $fln + '_' + macro
+endif
+
+if ($1 = 'Floppy') then
+   $dir = '/pcfs/'
+endif
+
+if ($1 = 'Disk') then
+   $dir = userdir + '/data/'
+endif
+
+exists($dir + $fln +'.fid','directory'):$e 
+if ($e=1) then 
+   "if file exists, make a unique name"
+   shell('date "+_date%d%b%y_time%H:%M:%S"'):$date
+   $fln = $fln + $date
+endif
+svf($dir+$fln) 
+write('error','Your data was saved in %s',$dir+$fln) 

@@ -1,0 +1,57 @@
+"macro gNCm_trosyhsqc"
+"*****************************************************************"
+" gNCm_trosyhsqc - setup macro for timeshared 15N/13Cm HSQC       "
+"  pulse sequence by P.Wuertz and P.Permi                         "
+"     University of Helsinki                                      "                              
+"*****************************************************************"
+BPrtppar('gNCm_trosyhsqc')
+
+BPsetampmode
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+
+opx('methyl.RF')                  
+"setwave('rsnob 3.0p 0.6p')"  "alternate choice"
+setwave('reburp 3.0p 0.6p')
+pbox_rst
+pboxpar('refofs', '4.77p')
+pboxpar('sfrq', sfrq)
+cpx(pw*compH,tpwr)
+BPpboxget('methyl.RF'):shape_methyl,pw_methyl,tpwr_methyl
+BPmoveshape('methyl.RF')
+
+setfrq reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+ getparam('NHgrad1_time','N15'):gt1
+ getparam('NHgrad1_lvl','N15'):gzlvl1
+ getparam('NHgrad2_lvl','N15'):gzlvl2
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2
+
+gt1=gt1/2.0
+dof=dof-(174-21)*dfrq  "on methy region"
+ph ph1  
+sb=-0.2*np/sw
+sbs=-0.2*np/sw
+sb1=-ni/sw1
+sbs1=-ni/sw1
+scalesw1=sw2/sw1
+dm='nny' dmm='ccp'  dm2='nnn' dmm2='ccp'
+BPpboxget('wurst40.DEC'):dseq,$dmmy,$dpwr,$dmmy,dres,dmf
+dpwr=$dpwr
+
+
+
+axis='pd'
+f1coef='1 0 -1 0 0 1 0 1'
+hs='n' dps full
+man('gNCm_trosyhsqc')
+

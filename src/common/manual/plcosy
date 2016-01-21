@@ -1,0 +1,68 @@
+*******************************************************************************
+  plcosy   - plot COSY / NOESY type spectra automatically	      (macro)
+*******************************************************************************
+
+
+      Syntax: plcosy<(levels<,spacing<,exp1D>>)>
+	      plcosy('pos'<,levels<,spacing<,exp1D>>>)
+	      plcosy('neg'<,levels<,spacing<,exp1D>>>)
+
+
+ Description: "plcosy" automatically plots 2D spectra of type cosy / noesy
+	      (homonuclear correlated spectra). Features:
+	        - it keeps the orientation (f1, f2) of the spectrum on the
+	          screen
+	        - the plot area is optimized
+	        - number of contour levels and their spacing can be selected
+	        - negative or positive contours can be suppressed
+	        - 1D traces can be plotted along both axes;
+	          such 1D traces are taken from a full (or reduced) 1D
+	          spectrum in an other experiment, or from a file from
+	          within the current experiment.
+	        - it also works correctly for expansions
+	        - the 1D traces can be suppressed, which allows using
+	          a larger area for the 2D spectrum
+	        - the 1D spectrum can be in any experiment
+	        - with phase-sensitive spectra, if 'pos' or 'neg' are not
+	          selected and the plotter has only 1 pen (also for printers
+	          like the LaserJet) 7 or the specified number of positive
+	          contours are plotted, but only one negative level, to
+	          distinguish positive and negative signals.
+	      In multi-experiment mode, for the first plot the experiment
+	      with the 1D spectrum should be specified (at least if it is
+	      not in exp1). From then on, the 1D spectrum will be stored
+	      WITHIN the experiment with the 2D spectrum, which allows
+	      much faster switching between the spectra and also frees
+	      the other (1D) experiment for other tasks. Because of this
+	      "internal storage" the "exp1D" argument is not required for
+	      subsequent plots.
+
+   Arguments: 'pos' - only plot positive contours
+	      'neg' - only plot negative contours
+	      levels - the number of contour levels (default: 7 contours).
+	      spacing - the spacing between the contours; default: 2.
+	      exp1D - the experiment in which the proton 1D spectrum
+		      resides; this can be a full 1D spectrum, but the
+		      referencing must be the same as for the 2D (see below).
+		      A negative number will suppress the proton trace.
+		      Default: exp1.
+
+    Examples: plcosy
+	      plcosy(12,1.5)
+	      plcosy('pos',7,2,3)
+	      plcosy(7,2,-1)
+	      plcosy('neg')
+
+       Usage: A typical sequence of actions for acquiring and plotting a
+	      cosy (or noesy) spectrum stepwise (using the multiexperiment
+	      mode) will be as follows:
+		- acquire a proton spectrum in exp1
+		- enter the text and reference the spectrum NOW (before
+		  moving the fid to an other experiment)
+		- mf(4) jexp4 wft ... movesw
+		- call the macro for the 2D experiment (e.g. "cosy") and
+		  acquire the 2D spectrum
+		- process the 2D spectrum
+		- for plotting with traces type "plcosy" (the defaults fit).
+		- for expansions select the expansion within "dconi" and
+		  type "plcosy" again.

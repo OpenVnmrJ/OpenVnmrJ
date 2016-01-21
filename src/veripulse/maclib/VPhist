@@ -1,0 +1,115 @@
+"macro VPhist"
+
+if ($#=0) then $arg='show' else $arg=$1 endif
+
+if ($#=2) then
+  $datadir=$2
+else
+  exists('IPdatadir','parameter'):$e
+  if ($e) then
+    $datadir=IPdatadir
+  else
+    $datadir=''
+  endif
+endif
+if ($datadir='') then $datadir=userdir+'/data' endif
+
+$historydir=$datadir+'/'+VPchoice+'/History'
+
+$hfile=userdir+'/persistence/VPhfiles'
+$file='' $dum=''
+readfile($hfile,'$file','$dum','','local'):$num
+
+$cfile=$historydir+'/'+$file[1]
+lookup('mfile',$cfile,'filekey'):$key
+lookup('mfile',$key,'seekcs','TESTS','read'):$numtests
+
+$t=0
+$st=''
+ff
+$fullwc=wc
+wc=wc/($numtests+1) -5
+$target=''
+while ($t < $numtests) do
+  $cfile=$historydir+'/'+$file[1]
+  lookup('mfile',$cfile,'filekey'):$key
+  $t=$t+1
+  format($t,0,0):$st
+  lookup('mfile',$key,'LABEL'+$st,'readline'):$label
+  lookup('mfile',$key,'TEST'+$st,'readline'):$test
+  lookup('mfile',$key,'TARGET'+$st,'readline'):$target
+  substr($target,'find','&gt;'):$n,$i,$len
+  if ($n) then
+    substr($target,$i,$len,' >'):$target
+  else
+    substr($target,'find','&lt;'):$n,$i,$len
+    if ($n) then
+      substr($target,$i,$len,' <'):$target
+    endif
+  endif
+  $n=0
+  $value=0
+  $result=''
+  $sum=0
+  $sum2=0
+  $fail=0
+  while ($n < $num) do
+    $n=$n+1
+    $cfile=$historydir+'/'+$file[$n]
+    lookup('mfile',$cfile,'filekey'):$key
+    lookup('mfile',$key,'VALUE'+$st,'readline'):$value[$n]
+    lookup('mfile',$key,'RESULT'+$st,'readline'):$result[$n]
+    if ($result[$n]='FAIL') then
+      $fail=1
+    endif
+  endwhile
+  $ave=$sum/$num
+  $std=0
+  if ($num > 2) then
+    $n=0
+    while ($n < $num) do
+      $n=$n+1
+      $d = $ave-$value[$n]
+      $std=$std + ($d*$d)
+    endwhile
+    $std=$std/($num-1)
+  endif
+  write('reset',curexp+'/regression.inp')
+  write('file',curexp+'/regression.inp','%s',$label)
+  write('file',curexp+'/regression.inp','Target: %s',$target)
+  if ($fail) then
+    write('file',curexp+'/regression.inp','0 0')
+  else
+    write('file',curexp+'/regression.inp','1 %d',$num)
+  endif
+  write('file',curexp+'/regression.inp','  NEXT')
+  $n=0
+  while ($n < $num) do
+    $n=$n+1
+    if ($fail) then
+      if ($result[$n]<>'FAIL') then
+        write('file',curexp+'/regression.inp','%f %f',$n,$value[$n])
+      endif
+    else
+      write('file',curexp+'/regression.inp','%f %f',$n,$value[$n])
+    endif
+  endwhile
+  if ($fail) then
+    write('file',curexp+'/regression.inp','  NEXT')
+    $n=0
+    while ($n < $num) do
+      $n=$n+1
+      if ($result[$n]='FAIL') then
+          write('file',curexp+'/regression.inp','%f %f',$n,$value[$n])
+      endif
+    endwhile
+  endif
+
+  if ($t=1) then
+    clear(2)
+  endif
+  autoscale
+  sc= $fullwc-($fullwc/$numtests*$t)+5
+  expl('regression','noclear')
+endwhile
+

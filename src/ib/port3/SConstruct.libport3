@@ -1,0 +1,131 @@
+import os
+
+# define target file names
+libPort3StaticTarget = 'libport3.a'
+libPort3SharedTarget = 'libport3.so'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+## port3FileList = ['a7sst.c',
+##                 'c7vfn.c',
+##                 'd7tpr.c',
+##                 'd7upd.c',
+##                 'f7hes.c',
+##                 'g7lit.c',
+##                 'g7qts.c',
+##                 'i1mach.c',
+##                 'i7mdcn.c',
+##                 'itsum.c',
+##                 'ivset.c',
+##                 'l7itv.c',
+##                 'l7ivm.c',
+##                 'l7mst.c',
+##                 'l7nvr.c',
+##                 'l7sqr.c',
+##                 'l7srt.c',
+##                 'l7svn.c',
+##                 'l7svx.c',
+##                 'l7tsq.c',
+##                 'l7tvm.c',
+##                 'l7vml.c',
+##                 'n2cvp.c',
+##                 'n2f.c',
+##                 'n2g.c',
+##                 'n2lrd.c',
+##                 'n2rdp.c',
+##                 'o7prd.c',
+##                 'parck.c',
+##                 'q7apl.c',
+##                 'q7rad.c',
+##                 'r1mach.c',
+##                 'r7mdc.c',
+##                 'rldst.c',
+##                 'rn2g.c',
+##                 's7lup.c',
+##                 's7lvm.c',
+##                 'stopx.c',
+##                 'v2axy.c',
+##                 'v2nrm.c',
+##                 'v7cpy.c',
+##                 'v7dfl.c',
+##                 'v7scl.c',
+##                 'v7scp.c']
+
+port3FileList = [
+		 'd1mach.c',
+		 'da7sst.c',
+		 'dc7vfn.c',
+		 'dd7tpr.c',
+		 'dd7upd.c',
+		 'df7hes.c',
+		 'dg7lit.c',
+		 'dg7qts.c',
+		 'ditsum.c',
+		 'divset.c',
+		 'dl7itv.c',
+		 'dl7ivm.c',
+		 'dl7mst.c',
+		 'dl7nvr.c',
+		 'dl7sqr.c',
+		 'dl7srt.c',
+		 'dl7svn.c',
+		 'dl7svx.c',
+		 'dl7tsq.c',
+		 'dl7tvm.c',
+		 'dl7vml.c',
+		 'dn2cvp.c',
+		 'dn2f.c',
+		 'dn2g.c',
+		 'dn2lrd.c',
+		 'dn2rdp.c',
+		 'do7prd.c',
+		 'dparck.c',
+		 'dq7apl.c',
+		 'dq7rad.c',
+		 'dr7mdc.c',
+		 'drldst.c',
+		 'drn2g.c',
+		 'ds7lup.c',
+		 'ds7lvm.c',
+		 'dv2axy.c',
+		 'dv2nrm.c',
+		 'dv7cpy.c',
+		 'dv7dfl.c',
+		 'dv7scl.c',
+		 'dv7scp.c',
+		 'i1mach.c',
+		 'i7mdcn.c',
+		 'stopx.c'
+                ]
+
+# build environments
+port3Env = Environment(CCFLAGS    = '-m32 -O',
+                     CPPDEFINES = ['LINUX'],
+                     LINKFLAGS  = '-m32', 
+                     CPPPATH    = [cwd])
+
+# actual builds
+libport3Static = port3Env.StaticLibrary(target  = libPort3StaticTarget,
+                                        source  = [port3FileList],
+                                        LIBPATH = [cwd])
+
+libport3Shared = port3Env.SharedLibrary(target  = libPort3SharedTarget,
+                                        source  = [port3FileList],
+                                        LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+port3Env.AddPostAction(libport3Static,
+                       Action(Copy(installPath, os.path.join(cwd, libPort3StaticTarget))))
+port3Env.AddPostAction(libport3Shared,
+                       Action(Copy(installPath, os.path.join(cwd, libPort3SharedTarget))))
+

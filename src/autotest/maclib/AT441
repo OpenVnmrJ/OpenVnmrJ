@@ -1,0 +1,64 @@
+"macro AT441"
+"AT441 Stability of 2H pw90 using channel 4. The 2H rf is routed"   
+"      to 2H Automation Relay which sends it to the diplexer box and"
+"      then to lock BNC on the probe. Thus the calibration is valid for 2H "
+"      pw90 or decoupling rf field when using channel 4 for 2H"
+
+"      AT440 macro must have run to establish calibrations before this test is used"
+
+"      IMPORTANT: ampmode must be 'p' for the amplifier used for 2H"
+
+"  FOR INOVA OR UNITYPLUS ONLY : Re-route Decoupler RF
+"  Move the Decoupler cable from the top of relay K5022 at the back of the magnet "
+"  leg to the bottom position of relay K5022. This will permit the RF to proceed to
+"  the lock diplexer box when tn=lk"
+
+"  In either case remember to restore the cable to normal position after the test"
+
+if ($#=0) then
+   ATrtp('standard')
+   text('2H 90 degree pulse stability using channel 4 ')
+   gain=10 sw=4000 np=8192
+   at_currenttest='H2pw90stab90_ch4'
+   pw=at_H2pw90_ch4 tn='lk' sethw('lock','off'):$xxx
+   exists('ampmode','parameter'):$e
+   if $e=0 then create('ampmode','string') endif
+   if at_new='y' then 
+    seqfil='ATddec'
+    dn3='H2' d2=.001 dof3=at_H2tof tof=dof3
+    dpwr3=at_H2tpwr_ch4  rof2=300
+    dpwr=0 dpwr2=0 
+   else
+    seqfil='ATd2pul'
+    exists('rfchannel','parameter'):$e
+    if $e=0 then create('rfchannel','string') endif
+    if numrfch=5 then rfchannel='14325' ampmode='dddpd' endif
+    if numrfch=4 then rfchannel='1432' ampmode='dddp' endif
+    dn='H2' d2=.001 dof=at_H2tof tof=dof
+    tpwr=at_H2tpwr_ch4  rof2=300
+   endif
+    if numrfch<4 then ATnext return endif   "macro used incorrectly"
+    d1=6*d1
+    r4=z0 lockpower=0
+    sethw('nowait','lockpower',lockpower):$x
+    array('nt',20,1,0)
+   wnt=''
+   wexp='AT441(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   wft f av vp=0 vsadj(100)
+   crl rfl=sw/2 rfp=0 sp=-500 wp=1000
+   ATsvf
+   sethw('lockpower',at_lockpower):$xx
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('H2STAB90ch4','90 Degree Pulse Stability (From channel 4)','stability',100-
+$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','2H 90 Degree Pulse Stability (channel 4): %3.2f percent',100-$stddev)
+
+   tn='H1' sethw('lock','on'):$xxx
+  ATnext
+endif

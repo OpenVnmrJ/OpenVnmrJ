@@ -1,0 +1,27 @@
+"macro ATrestart"
+   delete(autotestdir+'/atdb/at_selected_tests')
+   cp(autotestdir+'/atdb/at_cycled_tests',autotestdir+'/atdb/at_selected_tests')
+   $report=autotestdir+'/REPORT'
+   $atrecord_report=autotestdir+'/atrecord_report'
+      "this file is automatically written by ATrecord using the same format"
+      "as history file (less compact than REPORT). Users adding new tests"
+      "may wish to use this to create their report since it is automatic"
+   mv($report,autotestdir+'/LASTREPORT' )
+   mv($atrecord_report,autotestdir+'/LASTATRECORDREPORT' )
+
+   at_graphhist='n' at_plotauto='n' at_printparams='n' "disable plotting"
+
+   cp(autotestdir+'/texts/reportform',autotestdir+'/REPORT')
+   cp(autotestdir+'/texts/reportform',autotestdir+'/atrecord_report')
+
+   shell('date'):$date
+   shell('hostname'):$hostname
+
+   write('file',$report,'%s %s %s',$date,rev,revdate)
+   write('file',$atrecord_report,'%s %s %s',$date,rev,revdate)
+   write('file',$report,'Run by %s on %s using %s probe at %2.1f C',at_user,$hostname,at_probetype,at_temp)
+   write('file',$atrecord_report,'Run by %s on %s using %s probe at %2.1f C',at_user,$hostname,at_probetype,at_temp)
+   write('file',$report,'WFG : rfwg = %s   PFG : gradtype = %s pfgon = %s CONSOLE : console = %s',rfwg,gradtype,pfgon,at_consolesn)
+   write('file',$atrecord_report,'WFG : rfwg = %s   PFG : gradtype = %s pfgon = %s CONSOLE : console = %s',rfwg,gradtype,pfgon,at_consolesn)
+   write('file',$report,'   ')
+   write('file',$atrecord_report,'  ')

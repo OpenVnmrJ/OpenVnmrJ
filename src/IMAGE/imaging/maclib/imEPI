@@ -1,0 +1,188 @@
+"macro imEPI"
+"Setup and Processing for 2D slice-selective EPI sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$action2 = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $action2 = $2
+endif
+
+isvnmrj:$vj
+
+"**** Check that parameters exist ****"
+create('images',   'integer'):$ex
+create('nseg',     'integer'):$ex
+create('image' ,   'integer'):$ex
+create('navigator','string'):$ex
+create('nav_type', 'string'):$ex
+create('epi_pc',   'string'):$ex
+setlimit('image',10000,-2,1)
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  create('nfmod','integer','current',nv)
+  create('nseg','integer','current',1)
+  $navechoes = size('nav_echo')*(navigator = y)
+  $ns = size('pss')
+  setvalue('ns', $ns) "only compressed slices currently supported"
+  $nv = nv
+  exists('fract_ky','parameter'):$x
+  if ($x) then
+    if fract_ky > nv/2 then
+      $fract_ky = nv/2
+    else
+      $fract_ky = fract_ky
+    endif
+    $nv = nv/2 + $fract_ky
+  endif
+  $nv = $nv + nseg*$navechoes
+  nf = $ns * $nv
+  nfmod = $nv
+
+  "Set up image parameter"
+  if ($action2 = 'ref') then
+    image = 0
+    werr  = ''
+    wdone = ''
+    writeparam(curexp+'/epi_params.par','navigator')
+    wexp  = 'imEPI(`proc`,`ref`)' 
+  elseif ($action2 = 'refauto') then
+    image = 0
+    werr  = ''
+    wdone = ''
+    writeparam(curexp+'/epi_params.par','navigator')
+    groa  = 0 grora = 1 tep = 0
+    wexp  = 'imEPI(`proc`,`refauto`)'  
+  elseif ($action2 = 'refall') then
+    array('image',images,0,0) 
+    wnt = 'df2d(`nf`,celem)'
+  else
+    epi_setarray "sets up array of image and other arrayed parameters"
+  endif // end of $action2 part
+
+  "Set up real-time recon (for VnmrJ) if compressed in PE"
+  wnt = ''  "default"
+  if ($vj > 0.5) then
+    on('execprocess'):$proc
+    if ($proc=1) then 
+      wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+    endif
+  endif
+
+  execseq('prep')  "Execute any sequence specific preparation"
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  if ($action2 = 'ref') then  "Process setup scan"
+    f full 
+    epirfall
+    df2d(`nf`,1) 
+    rtv(curexp+'/epi_params.par','navigator')
+  
+  elseif ($action2 = 'refauto') then  "Process auto setup scan"
+    epirfall
+    epitilt    "determine groa"
+    epishift   "determine tep to align echoes"
+    wexp = 'imEPI(`proc`,`ref`)'
+    au
+  
+  else
+    if ($vj < 0.5) then  "Standard Vnmr processing"
+      epirfall
+      if (images > 1) then
+        epiphms
+      endif
+
+      "check if segmented epi"
+      if(nseg > 1) then
+        $segmented = 1
+      else
+        $segmented = 0
+      endif
+      exists('flash_converted','parameter'):$ex
+      if($ex = 0) then
+        if ($segmented = 1) then
+          $etl = nv/nseg
+         if (ns > 1) then
+           flashc('nf','rare',ns,$etl)
+          endif
+        else
+          if (ns > 1) then
+            flashc('nf','mi',ns)
+          endif
+        endif
+      endif
+      epift(ns+1,1)  "Display first image"
+
+    else "VnmrJ"
+      if (wnt = '') then
+        aipDeleteData
+        aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+        recon_all
+      else
+        wnt=''
+        setvalue('wnt','','processed') "otherwise <Reprocess> won't work"
+      endif
+    endif
+
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+elseif ($action = 'prescan') then              // Enter through execprescan
+  imEPI('gain','init')
+elseif ($action = 'gain') then
+  $gainstart = 0                               // Set low gain to acquire data
+  $gainfraction = 0.5                          // fraction of ADC to fill
+  $paramfile = curexp+'/tempparams'            // store some parameters to be reset after prescan
+
+  if ($action2 = 'init') then                  // initialize params and acquire data
+    writeparam($paramfile,'nt,ssc,ss,image')   // back up parameters to be reset after processing
+
+    imEPI('prep')
+    image = 0
+    nt = 1
+    ss = 1/(2*tr) + 2                          // estimate ss based on TR
+    gain = $gainstart
+
+    wnt = ''
+    wdone = ''
+    werr = ''
+    wexp = 'imEPI(\'gain\',\'proc\')'
+    au
+
+  elseif ($action2 = 'proc') then              // process gain scan when complete
+    cf = 'n'                                   // cf=n tells fidmax to look at entire data block
+    fidmaxarray:$fidmax                        // find highest data value
+    $factor = $gainfraction*32767/$fidmax
+    ln($factor):$ln
+    $gain = 20*$ln/2.303                       // calculate gain change based on fidmax and gainfraction
+
+    gain = $gain + $gainstart                  // set computed gain, then delete gain params
+    if (gain > 60) then
+      gain = 60
+    endif
+    readparam($paramfile,'nt,ssc,ss,image')    // restore original parameter values
+    cf = 1
+  endif
+endif
+
+

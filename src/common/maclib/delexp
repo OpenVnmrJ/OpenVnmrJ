@@ -1,0 +1,37 @@
+"macro delexp"
+
+$estr=''
+$enum=0
+if ($#>0.5 and $#<2.5) then
+    $enum=$1
+    format($1,0,0):$estr
+    if ($# = 1) then
+        DELEXP($1):$stat,$msg
+    else
+        DELEXP($1,$2):$stat,$msg
+    endif
+else
+    DELEXP:$stat,$msg
+endif
+
+if (not $stat) then
+  if ($##) then
+    return($stat,$msg)
+  else
+    write('error',$msg)
+    abort
+  endif
+endif
+if ($estr <> '' and $enum > 9) then
+    $jmacro=userdir+'/maclib/jexp'+$estr
+    $e=0
+    exists($jmacro,'file'):$e
+    if ($e <> 0) then
+        rm($jmacro):$x
+    endif
+endif
+if ($##) then
+  return($stat,$msg)
+else
+  write('line3',$msg)
+endif

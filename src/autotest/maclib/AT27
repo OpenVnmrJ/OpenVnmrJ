@@ -1,0 +1,32 @@
+"macro AT27"
+"AT27" "DANTE-pulse turnon test (channel 1) " 
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('DANTE pulse turnon test (channel 2)')
+   seqfil='ATdante'
+   channel=2
+   at_currenttest='dante_ch2'
+   dof=tof 
+   d2=.000001
+   dpwr=tpwr-20 th=50
+   count=1,10,20,25,50,100
+   pw=20,2,1,0.8,0.4,0.2
+   rof1=50
+   array='(count,pw)'
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT27(`PART1`)' 
+   ATcycle
+   au
+   write('line3','DANTE Test ')  
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   ATplot
+ATnext
+endif

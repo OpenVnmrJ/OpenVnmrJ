@@ -1,0 +1,153 @@
+"macro walkupQ_edit"
+"****************************************************************"
+"   walkupQ_edit - Edit automation queue   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+    if ($# < 1) then $1='' endif
+    cqinitCP
+    $maclibdir=cursqexp+'/macdir'
+    $maclibdirlong=cursqexp+'/macdirlong'
+
+    if ($1='submitagain') then
+	archivedir='' sample=''
+    endif
+			"write FIDlist"
+    $origfidlog=archivedir+'/'+sample+'/dirinfo/fidlog'
+    $s1='' $s2='' $totfid=0
+    exists($origfidlog,'file'):$fileex
+    if ($fileex) then
+        readfile($origfidlog,'$s1','$s2','','local'):$totfid
+    endif
+    write('reset',$curfidlist)
+    if ($totfid) then
+       $i=1
+       repeat
+	  $s3='' $s4=''
+	  strstr($s2[$i],samplename+'-'):$ret,$s3,$s4
+	  if ($ret<>1) then
+	     $s4=$s2[$i]
+	  endif
+	  write('file',$curfidlist,'"%s.fid" "%s.fid"',$s4,$s4)
+	  $i=$i+1
+       until $i > $totfid
+    endif
+
+    if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+	$LIST='SampInfo','fidlog','ACQlist'
+    else
+	$LIST='SampInfo','fidlog'
+    endif
+    xmhaha('buildsq',archivedir+'/'+sample,$LIST)
+
+    write('reset',$maclibdir+'/ACQlist')
+    exists(archivedir+'/'+sample+'/dirinfo/macdir/ACQlist','file'):$aqex
+    if ($aqex) then
+	shell('(cat '+archivedir+'/'+sample+'/dirinfo/macdir/ACQlist | grep -w Completed | awk \'{print $1}\' >> '+$maclibdir+'/ACQlist)'):$dum
+	if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+           shell('(cat '+archivedir+'/'+sample+'/dirinfo/macdir/ACQlist | grep -w Active | awk \'{print $1}\' >> '+$maclibdir+'/ACQlist)'):$dum
+	endif
+    endif
+
+    write('reset',$expfile+'1')
+    write('reset',$lngfile+'1')
+    shell('(cat '+$expfile+' | fgrep -vw -f '+$maclibdir+'/ACQlist > '+$expfile+'1)'):$dum
+    shell('(cat '+$lngfile+' | fgrep -vw -f '+$maclibdir+'/ACQlist > '+$lngfile+'1)'):$dum
+    shell('mv '+$expfile+'1 '+$expfile):$dum
+    shell('mv '+$lngfile+'1 '+$lngfile):$dum
+    shell('rm -f '+$maclibdir+'/ACQlist'):$dum
+    if (replaceQ[1]='ActiveNight') then 
+	write('reset',$expfile)
+    endif
+
+    $explist=''
+    $s2=''
+    readfile($expfile,'$explist','$s2','','local')
+    write('reset',$expfile)
+    shell('(cat '+archivedir+'/'+sample+'/dirinfo/macdir/ACQlist | grep -w Completed >> '+$expfile+')'):$dum
+    if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
+         shell('(cat '+archivedir+'/'+sample+'/dirinfo/macdir/ACQlist | grep -w Active >> '+$expfile+')'):$dum
+    endif
+    if ($explist[1]<>'') then
+	  $expsize=size('$explist')
+	  $i=1
+	  repeat
+	    $list=$explist[$i]
+	    shell('(cat '+$expfile+' | grep -w Queued | grep -c \'^'+$list+'\')'):$isin
+	    if ($isin=0) then
+		$rtime=0
+		cpexptime($list,$maclibdir):$rtime
+		$expname='' $sqnode='' $ext=''
+		strstr($list,'_','last'):$ret,$expname,$ext
+		format($ext,'isreal'):$isreal
+		if ($ret=0) or ($isreal=0) then 
+		    $expname=$list 
+		    $node='' $ext=''
+		    getcpnode('cp',cursqexp,$expname):$node,$ext
+		else
+		    $node=$list
+		endif
+                $stime='' $stime2='' formattime($rtime):$stime2,$stime
+		$attr='title',$node+'_day','time',$stime
+		xmhaha('mknode',$expname,$attr):$sqnode
+                if ($sqnode='') then
+                        $sqnode='xx'+$ext
+                endif
+                write('file',$expfile,'%s  %d  %s  %s  Queued',$node,$rtime,$expname,$sqnode)
+	    endif
+	  $i=$i+1
+	  until $i> $expsize
+    endif
+
+	$longlist=''
+	$s2=''
+	readfile($lngfile,'$longlist','$s2','','local'):$lsize
+	write('reset',$lngfile)
+	if ($lsize) then
+	  $i=1
+	  repeat
+	    $list=$longlist[$i]
+            shell('(cat '+$lngfile+' | grep Queued | grep -c \'^'+$list+'\')'):$isin
+	    if ($isin=0) then
+                $rtime=0
+		cpexptime($list,$maclibdirlong):$rtime
+                $expname='' $sqnode='' $ext=''
+                strstr($list,'_','last'):$ret,$expname,$ext
+	 	format($ext,'isreal'):$isreal
+		if ($ret=0) or ($isreal=0) then
+		    $expname=$list
+		    $node='' $ext=''
+		    getcpnode('cp',cursqexp,$expname):$node,$ext
+		else
+		    $node=$list
+		endif
+                $stime='' $stime2='' formattime($rtime):$stime2,$stime
+		$attr='title',$node+'_night','time',$stime
+		xmhaha('mknode',$expname,$attr):$sqnode
+                if ($sqnode='') then
+                        $sqnode='xx'+$ext
+                endif
+                write('file',$lngfile,'%s  %d  %s  %s  Queued',$node,$rtime,$expname,$sqnode)
+	    endif
+	    $i=$i+1
+	    until $i > $lsize
+	endif
+	vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+	exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$direx
+	if ($direx) then 
+		resumeQ='edit'
+	else
+		resumeQ=''
+	endif
+    walkupQ('time')
+    newdg
+"****************************************************************"

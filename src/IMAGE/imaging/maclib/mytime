@@ -1,0 +1,77 @@
+"macro mytime"
+"********************************************************************
+"
+"
+" NAME:
+"    mytime
+"
+" DESCRIPTION:
+"    mytime(<argument>)
+"       -- returns system time
+"       -- if called with argument <display> system time
+"          will be displayed
+"       -- if called with argument <date> system time and date
+"          will be displayed
+"       -- if called with argument <return> system time and date
+"          will be returned to calling macro
+"          retuned values are
+"          time[1] -> weekday
+"          time[2] -> month
+"          time[3] -> day of the month
+"          time[4] -> time
+"          time[5] -> time zone
+"          time[6] -> year
+"       -- if called without argument default argument is <display>
+"
+"********************************************************************
+"----------------------------"
+" assign variables           "
+"----------------------------"
+$file = userdir + '/prescan/time.txt'
+"----------------------------"
+" check arguments            "
+"----------------------------"
+if ($# < 1) then
+     $action = 'display'
+else
+     $action = $1
+endif     
+if ($# > 1) then
+     write('error','Too many arguments in call to <time> !')
+     abort
+endif
+"----------------------------"
+" check validity of argumetns"
+"----------------------------"
+if ($action <> 'display')  and ($action <> 'date') and ($action <> 'return')then
+     write('error','Invalid argument <'+$action+'> in call to time !',$action)
+     abort
+endif     
+
+"----------------------------"
+" get time & date and save   "
+"----------------------------"
+$temp_str='date > "'+$file +'"'
+shell($temp_str)
+"----------------------------"
+" retrieve time & date       "
+"----------------------------"
+lookup('file',$file)
+lookup('read',6):$time[1],$time[2],$time[3],$time[4],$time[5],$time[6]
+"----------------------------"
+" remove file                "
+"----------------------------"
+delete($file)
+"----------------------------"
+" display / return result    "
+"----------------------------"
+if ($action = 'display') then
+     write('line3',$time[4])
+endif     
+if ($action = 'date') then
+     write('line3','Date: %s %s, %s\tTime:%s',$time[2],$time[3],$time[6],$time[4])
+endif
+if ($action = 'return') then
+     return($time)
+endif    
+

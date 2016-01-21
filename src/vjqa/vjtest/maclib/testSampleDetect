@@ -1,0 +1,35 @@
+"macro testSampleDetect"
+vvLog('Test','Sample eject, insert, and detect')
+readhw('loc'):$origloc,$det
+if ($det=0) then
+  vvLog('Fail','No sample detected')
+  return
+endif
+eject
+shell('sleep 10'):$e
+readhw('loc'):$loc,$det
+if ($det=1) then
+  insert
+  vvLog('Fail','Eject failed')
+  return
+endif
+insert
+shell('sleep 10'):$e
+readhw('loc'):$loc,$det
+if ($det=0) then
+  vvLog('Fail','Insert failed')
+  return
+endif
+if ($loc <> 0) then
+  vvLog('Fail','Sample location not set to 0 after insert')
+  return
+endif
+if ($origloc <> 0) then
+  sethw('loc',$origloc):$e
+  readhw('loc'):$loc
+  if ($loc <> $origloc) then
+    vvLog('Fail','Sample location not reset to %d after insert',$origloc)
+    return
+  endif
+endif
+vvLog('Pass','')

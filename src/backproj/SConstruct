@@ -1,0 +1,79 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+import myShutil
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['data.h']
+
+bpLibFileList = ['bp_2d_ti.c',
+                 'bp_2d_tp.c',
+                 'bp_fht.c',
+                 'bp_filt.c',
+                 'bp_misc.c',
+                 'bp_rdwr.c']
+
+bpFileList = ['bp_3d.c',
+              'bp_2d.c',
+              'bp_ball.c',
+              'bp_mc.c',
+              'bp_sort.c']
+
+bpSpecialList = ['bp_image']
+
+bpEnv = Environment(CCFLAGS   = '-m32 -O2 -DLINUX',
+                    LINKFLAGS = '-m32',
+                    CPPPATH   = [cwd])
+
+# actual builds
+bpcommonStaticTarget = 'libbpcommon.a'
+bpcommonStatic = bpEnv.StaticLibrary(target = bpcommonStaticTarget,
+                                     source = bpLibFileList)
+
+#
+# define with absolute path where built files will be copied
+#
+
+backProjPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','Backprojection')
+optionsBackProjPath = os.path.join(backProjPath,'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(optionsBackProjPath):
+   os.makedirs(optionsBackProjPath)
+
+for i in bpFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = bpEnv.Program(target = filename,
+                                source = i,
+                                LIBPATH = cwd,
+                                LIBS   = ['bpcommon', 'm'])
+
+   buildMethods.makeSymLinks(bpEnv, tempBuildObj, cwd, vnmrPath, vnmrHdrList)
+
+   # copy built target into options/standard/Backprojection dir
+   bpEnv.AddPostAction(tempBuildObj,
+                       Action(Copy(optionsBackProjPath, os.path.join(cwd, filename))))
+
+
+
+myShutil.copytree('maclib',backProjPath,symlinks = False)
+
+
+# take care of library file
+optionsBackProjPathL = os.path.join(backProjPath,'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(optionsBackProjPathL):
+   os.makedirs(optionsBackProjPathL)
+
+
+bpEnv.AddPostAction(tempBuildObj,
+                       Action(Copy(optionsBackProjPathL, os.path.join(cwd, bpcommonStaticTarget))))
+
+

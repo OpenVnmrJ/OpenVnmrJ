@@ -1,0 +1,97 @@
+Description of BioPack Options in "Lock" Page
+
+
+Gradient Shimming Buttons:
+**********************
+
+"Setup Gradient Shimming"
+ This button runs "gmapsys" to permit making shimmaps.
+
+"Gradient Autoshim on Z"
+ This button runs gradient shimming using the current
+ shimmap.
+
+Lock Control, Lock Display and Activate Lock Checkbox:
+*****************************************************
+
+Standard lock controls
+
+Entry Boxes:
+***********
+
+These set global parameters useful for searching the database
+with the "Locator". When a data file is saved, these parameter
+values are also saved in the *.fid file.
+
+Auto Fid save:
+**************
+
+When this checkbox is checked, the autofidsave name is displayed
+and can be altered.
+
+Time-Domain Noise Measurement:
+*****************************
+
+The "Empty Probe" button starts a process that:
+1. Saves the current parameter set as a temporary .par file
+   in the current experiment, e.g. exp5.
+2. Sets seqfil='s2pul', pw=0, p1=0, d2=0 and makes sure
+   there is no array.
+3. Runs an acquisition to produce a time-domain fid under
+   standard condtions (gain=50, sw=100000, nt=1, at=2).
+4. This fid has no signal, but lots of zero-crossings with
+   large noise amplitude. The "noise" command is run to
+   quantify the time-domain RMS noise. This result is
+   stored in a local variable "empty_noise" and (if autotest
+   has been run in the user account) an AutoTest "history"
+   file is started or added to. In addition, the value is
+   stored in the probefile. This value is then displayed as
+   a "textmessage" in the Lock page.
+5. The temporary parameter set is now retrieved, restoring
+   all the conditions.
+
+The "Sample in Probe" button starts a process that:
+1. is similar to the "Empty Probe" button, except that a
+   different AutoTest file
+   different AutoTest file is produced. The "sample_noise" value 
+   is also displayed in the Lock page. The value is not stored
+   in the probe file because this is a sample property
+   and not a probe property. The value however,
+   along with the "empty_noise" value, is stored in
+   the current parameter set and will be saved in
+   the "procpar" of the saved data. This permits the user
+   or administrator to view these values at any later time
+   as a aid in diagnosing performance.
+
+The ratio of sample-to-empty noise is displayed
+
+The AutoTest history files can then be viewed at any
+time to monitor performance. The are names "NOISE...."
+with the observe nucleus noted in the name. AutoTest
+will have to have been run earlier for these files to
+be created.
+
+Naturally, by the time you remember to use the "Empty
+Probe" button, the sample is in the probe! However, all
+you have to do is to use the "Eject Sample" button on the
+toolbar. The sample will rise to the top of the upper barrel 
+and you can still click on the "Empty Probe" button, 
+producing the above process. (Just remember to use the
+"Insert Sample" button before continuing!).
+
+This procedure can be automated so that every (non-arrayed) 
+experiment will have the sample noise
+measured. This is done by the BPgo macro which is used
+by the "Acquisition Acqtions" menu on the toolbar. The
+"Globals&Probefile" page in the "Setup" Folder now has a
+checkbox for "Do Automatic FID Noise Check at go" (this
+sets a global parameter). If this parameter is 'y', BPgo will
+first do a sample noise measurement as above and then
+the desired experiment. Since this measurement is
+something that is not experiment-specific, it is normally 
+done when the sample is first put into the probe and 1D 
+spectra are acquired.
+
+
+
+

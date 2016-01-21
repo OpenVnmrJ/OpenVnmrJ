@@ -1,0 +1,36 @@
+"macro checkenterdir"
+if ($# < 1) then $1='make' endif
+$ok=1
+$enterfile=''
+
+IF ($1 = 'clear') THEN
+   if (globalenter='') then return($ok) endif
+   shell('basename '+globalenter):$enterfile
+   $submit=globalenter+'/'+$enterfile+'.macdir/DATE_submit2acq'
+   shell('rm -f '+$submit)
+
+ELSE
+
+$seqfil=seqfil
+if ($seqfil='Submitq') or ($seqfil='Startq') then
+    seqfil='s2pul'
+endif
+
+   if (globalenter='') then 
+       newautodir('enter') 
+       shell('basename '+globalenter):$enterfile
+   else
+       shell('basename '+globalenter):$enterfile
+       updateautodir(globalenter,$enterfile)
+   endif
+
+   $submit=globalenter+'/'+$enterfile+'.macdir/DATE_submit2acq'
+   exists($submit,'file'):$fileex
+   if ($fileex) then
+       newautodir('enter')
+   endif
+   wrautoinfo('enter'):$ok
+   seqfil=$seqfil
+
+ENDIF
+return($ok)

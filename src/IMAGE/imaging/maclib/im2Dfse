@@ -1,0 +1,232 @@
+"macro im2Dfse"
+"Setup and processing for 2D Fast-Spin echo type of imaging sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$action2 = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $action2 = $2
+endif
+
+exists('recon','parameter'):$exrecon
+if ($exrecon) then $recon = recon else $recon = 'internal' endif
+
+"**********************************************************"
+" Retrieve Parameters                                      "
+"**********************************************************"
+if ($action = 'rtpar') then
+  "Strip image array if in Plan VP"
+  $vp = ''
+  xm1('vp'):$vp
+  if ($vp = 'plan') then
+    imagearray('strip')
+  endif
+  "Update old parameters"
+  exists('nseg','parameter'):$e
+  if ($e=0 AND layout='fsems') then
+    create('nseg','real','current',nv/etl)
+    create('tabscheme','real','current',0)
+    create('images','real','current',1)
+    create('autocrush','string','current','n')
+    create('pecrush','real','current',1)
+    genpars('diff')
+    genpars('ir')
+    genpars('irseq')
+    genpars('irnti')
+    create('te1','real','current',0)
+    setprotect('te1','on',256)
+    te1=te
+    seprep('sette')
+    create('thk2fact','real','current',0)
+    setprotect('thk2fact','off',8)
+    create('tpwr3','real','current',0)
+    create('tpwr3f','real','current',0)
+    create('thk3fact','real','current',0)
+    create('pelist','real','current',0)
+    setgroup('pelist','processing')
+    if (spinecho='n' AND diff='n') then te=kzero*esp endif
+    if ($vp = 'plan') then recon='external' $recon=recon endif
+  endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+elseif ($action = 'prep') then
+
+  if ($action2 = 'shim') then 
+    im2Dfse('prep','profile') 
+    return 
+  endif
+
+  ldrf     "Set resto = H1offset"
+  setgro   "Set readout gradient and bandwidth"
+  calcdim  "Set array & arraydim parameters"
+
+  "Check FID size against DDR memory"
+  "This is only required until averaging on host becomes available"
+  $seqcon = ''
+  substr(seqcon,3,1):$seqcon
+  if ($seqcon = 'c') AND (nt > 1) then
+    $size=np*nv*ns*2
+    if (dp = 'y') then
+      $size=$size*2
+    endif
+    if ($size > 32*1024*1024) then
+      write('error','fsems FID size > 32 MB, change seqcon to "ncsnn"')
+      abort
+    endif
+  endif
+
+  if ($seqcon = 'c') then ss=0 else ss=ssc endif
+
+  if (kzero<1) then kzero=1 endif 
+  if (kzero>etl) then kzero=etl endif
+
+  "Set up real-time recon (for VnmrJ) if compressed in PE"
+  wnt = ''  "default"
+  if ($action2 = '') then
+    on('execprocess'):$proc
+    if ($proc = 1 ) then
+      if ($seqcon = 'c') then
+        if (arraydim > 1) then
+          if ($recon = 'internal') OR ($recon = '') then   "use internal recon_all"        
+            wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+          endif
+        endif
+      endif
+    endif
+  endif
+    
+  "Execute any sequence specific preparation"
+  execseq('prep')  
+
+  "Set image array"
+  imagearray('set')
+
+  if ($action2 = 'profile') then
+    profile = 'y'
+    sl=1 ec=1 rc=1 slices='single'
+    wexp    = 'im2Dfse(`proc`,`profile`)'
+    wdone   = ''
+    werr    = 'imagearray(`strip`)'
+  else
+    profile = 'n'
+    "In Plan Viewport we want to strip the image array"
+    $cmd='VP 1 imagearray(`strip`)'
+    vnmrjcmd($cmd)
+  endif "profile prep"
+
+  aslset('prep')                          // for ASL make sure control planes are correct
+
+  seprep                                  // for SE prep set te so it is correct in the FDF header
+
+  setnseg('etl')                          // make sure segments and etl are correct
+
+  setloop                                 // initialize nf, nfmod and ni to std values
+
+  aipXrecon('getnvols'):volumes           // set the number of data volumes
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($action2 = 'profile') then
+    cf = 1 vp=0
+    aipXrecon('nrcvrs'):$nr
+    if ($recon = 'internal') OR ($recon = '') then   "use internal ft"
+      lp=np*90
+      if (arraydim = $nr) then
+        av ft('nf',1) f full vsadj dscale dssh(1,etl,1)
+      else
+        av ft f full vsadj dscale dssh(1,arraydim,$nr)
+      endif
+    else  "external recon"
+      lp=0
+      im2Dxrecon('reconprofile')
+    endif
+    imagearray('strip')  
+    return
+  endif "profile proc"
+
+  if (wnt = '') then  "not real-time recon"
+    aipDeleteData
+    aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+    $vp = ''
+    xm1('vp'):$vp
+    if ($vp = 'plan') then
+      imagearray('set')
+    endif
+    if ($recon = 'internal') OR ($recon = 'off') OR ($recon = '') then   "use internal recon_all"
+      recon_all
+    else  "external recon"
+      im2Dxrecon('recon')
+    endif
+    if ($vp = 'plan') then
+      imagearray('strip')  
+    endif
+  else
+    wnt = ''
+    setvalue('wnt','','processed')  "otherwise <Reprocess> won't work"
+  endif
+
+  $vp = ''
+  xm1('vp'):$vp
+  "Review VP"
+  if ($vp = 'review') then
+    aipData='reprocessed'
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+  
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+elseif ($action = 'prescan') then              // Enter through execprescan
+  im2Dfse('gain','init')
+elseif ($action = 'gain') then
+  $gainstart = 0                               // Set low gain to acquire data
+  $gainfraction = 0.5                          // fraction of ADC to fill
+  $paramfile = curexp+'/tempparams'            // store some parameters to be reset after prescan
+
+  if ($action2 = 'init') then                  // initialize params and acquire data
+    im2Dfse('prep','profile')                  // set up for profile
+    nfmod = nf
+    writeparam($paramfile,'nt,ssc,ss')         // back up parameters to be reset after processing
+    nt = 1
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    $ss = 1/(2*tr) + 2                         // estimate ss based on TR
+    if ($seqcon = 'c') then ssc = $ss else ss = $ss endif
+    gain = $gainstart
+    wnt = ''
+    wdone = ''
+    werr = ''
+    wexp = 'im2Dfse(\'gain\',\'proc\')'
+    au
+
+  elseif ($action2 = 'proc') then              // process gain scan when complete
+    cf='n'                                     // cf=n tells fidmax to look at entire data block
+    fidmaxarray:$fidmax                        // find highest data value
+    $factor = $gainfraction*32767/$fidmax
+    ln($factor):$ln
+    $gain = 20*$ln/2.303                       // calculate gain change based on fidmax and gainfraction
+    gain = $gain + $gainstart                  // set computed gain, then delete gain params
+    if (gain > 60) then
+      gain = 60
+    endif
+    readparam($paramfile,'nt,ssc,ss')          // restore original parameter values
+    cf = 1
+    write('line3','Gain set to %d',gain)
+  endif
+
+endif

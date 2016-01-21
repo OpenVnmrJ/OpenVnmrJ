@@ -1,0 +1,498 @@
+"macro xmselect"
+"select a node in a study queue"
+if $#<0.5 then $1='doubleclick' endif
+
+$vp='' xm1('vp'):$vp
+$sdir='' xm1('studydir'):$sdir
+
+"sqattr sqval defined by xmaction"
+"$id = sqval[1]"      "n002"
+"$type = sqval[2]"    "LIB"
+"$status = sqval[3]"  "Ready"
+
+$id='' $j=0 teststr('sqattr','id','global'):$j
+if $j>0.5 then $id=sqval[$j] endif
+$type='' $i=0 teststr('sqattr','type','global'):$i
+if $i>0.5 then $type=sqval[$i] endif
+$status='' $i=0 teststr('sqattr','status','global'):$i
+if $i>0.5 then $status=sqval[$i] endif
+
+$activestudy=activestudy[1]
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+if ($appmode='walkup') then
+  $activestudy=studyid
+endif
+
+if ($activestudy='null' and ($status<>'Completed' and $status<>'Error')) then
+  if ($j>0.5) then
+    write('line3','Cannot select %s node, study not active.',$status)
+  else
+    write('line3','Cannot select node, study not active.')
+  endif
+  return
+endif
+
+"if ($id=actionid) then return endif"
+
+$nodedir=$sdir+'/info/'+$id
+$diffmacname='diffmacro'
+$end='q1W2e3R4t5Y6'
+
+if ($1='macro' or $1='prescan') then
+  graphis:$display
+  substr($display,1,3):$display
+  if ($display<>'aip' and $display<>'gpl' and $1<>'prescan') then
+    clear(2)
+  endif
+ if ($activestudy<>'null') then
+  if $#>1.5 then
+    $id=$2
+    xmreadnode($2) "do I really want xmreadnode? why not xmgetatts?"
+  endif
+  $macro=''
+  teststr('sqattr','macro','global'):$i
+  if $i>0.5 then $macro=sqval[$i] endif
+  if $macro<>'' then
+    $actionid=actionid
+    if ($type='CMD') and (sqmode<>'go') then
+      xmcmdedit('open',$id)
+    else
+      exec($macro)
+    endif
+    actionid=$actionid
+  endif
+ endif
+ return
+elseif ($1='savepar') then
+ if ($activestudy<>'null') then
+  $set='y'
+  if ($#>1.5) then $set=$2 endif
+  $actid=actionid
+  if ($actid<>'null' and $actid<>'') then
+    xmgetatts(actionid,'status','type'):$stt,$stype
+    if ($stt='Active') then
+      $ndir=$sdir+'/info/'+$actid
+      exists($ndir,'file'):$e
+      if $e<0.5 then
+        write('line3','%s: could not find %s',$0,$ndir)
+        return
+      endif
+      if ($stype='CMD' and $set='y') then
+        xmcmdedit('close')
+      endif
+      if ($stype<>'CMD') then
+        $save=$ndir+'/savepar'
+        exists($save,'file'):$e
+        if $e>0.5 then rm($save):$x endif
+        if ($set = 'saveonly') then
+        fsave($save)
+        else
+        exists('protoFile','parameter'):$e
+        if ($e) then
+          $protoFile=protoFile
+          destroy('protoFile')
+        endif
+        fsave($save)
+        if ($e) then
+          sqprotocol(0,0,0,0)
+          protoFile=$protoFile
+        endif
+        endif
+        "save text also"
+        $save=$ndir+'/text'
+        exists($save,'file'):$e
+        if $e>0.5 then rm($save):$x endif
+        shell('cp -p '+curexp+'/text'+' '+$save)
+        xmsetatts($actid,'macro','xmrtpar')
+      endif
+      if (appmode = 'imaging') then
+        exptime:$t
+        formattime($t):$dummy,$timestr
+        exists('scantime','parameter'):$ex
+        if ($ex) then
+          if (scantime <> '') then $timestr = scantime endif
+        endif
+        if ($timestr <> 'unknown') then
+          xmsetatts($actid,'time',$timestr)
+        endif
+      endif
+      xmsetatts($actid,'status','Customized')
+    endif
+  endif
+ endif
+ return
+elseif ($1='execreq') then
+"wrap into cqexp somehow?"
+"find required experiments"
+  $xid=''
+  teststr('sqattr','id','global'):$xxid
+  $xid=sqval[$xxid]
+  $required='' $rsize=0
+  teststr('sqattr','required','global'):$index
+  if $index>0.5 then
+    if (sqval[$index] = '') then
+      return
+    endif
+    $found=0
+    $reqs=sqval[$index]+' '+$end
+    $req='' $s='' $j=0
+    repeat
+      $j=$j+1
+      substr($reqs,$j):$s
+      if $s<>$end then
+        $req[$j]=$s
+        $rsize=$j
+      endif
+    until ($s=$end or $j>1000)
+"first try to find SQ node of type req's"
+"if not found, execute the last one as a macro"
+    $file=$sdir+'/enterSQ'
+    exists($file,'file'):$e
+    if ($e>0.5 and $rsize>0.5) then
+      $attr='' $val='' $val2='' $val3=''
+      readfile($file,'$attr','$val','','local'):$qsize
+      $i=0 $vtmp=''
+      repeat
+        $i=$i+1
+        xmgetatts($attr[$i],'exp','data'):$qexp,$qdata
+        $val2[$i]=$qexp
+        $val3[$i]=$qdata
+      until ($i>=$qsize or $attr[$i]=$xid)
+      if $i<$qsize then $qsize=$i endif
+      $i=$qsize
+      repeat
+        $i=$i-1 $j=0
+        repeat
+          $j=$j+1
+          if ($val2[$i]=$req[$j]) then
+            $found=$i
+          endif
+        until ($j>=$rsize or $found>0.5)
+      until ($i<=1 or $found>0.5)
+      if $found>0.5 then
+        $ff=$val3[$found]+'.fid'
+        $s1='' substr($ff,1,1):$s1
+        if $s1<>'/' then
+          $ff=$sdir+'/'+$ff
+        endif
+        exists($ff,'file'):$ef
+        if $ef>0.5 then
+          fread($ff+'/procpar')
+          prune($ff+'/procpar')
+        else
+          $gg=$sdir+'/info/'+$attr[$found]
+          exists($gg,'file'):$eg
+          if $eg>0.5 then
+"           xmgetatts($attr[$found],'macro'):$rmacro"
+            $prescan=prescan
+            xmselect('execmacro','n',$attr[$found])
+"             this will recursively find other req's?"
+            prescan=$prescan
+          else
+            $found=0
+          endif
+        endif
+      endif
+    endif
+    if ($rsize>0.5 and $found=0) then
+"     exec($req[$rsize]) - no"
+"find protocol in directory, execute macro"
+      exists($req[$rsize]+'.xml','templates/vnmrj/protocols'):$ex,$file
+      if $ex>0.5 then
+        $mac=''
+        lookup('mfile',$file,'delimiter','= ','macro','delimiter','"\n\r','read'):$mac
+        exec($mac)
+      endif
+    endif
+  endif
+  return
+elseif ($1='execmacro') then
+ if ($activestudy<>'null') then
+"works with the same args as 'macro'?"
+  exists('studytime','parameter'):$xt
+  if $xt>0.5 then $studytime=studytime endif
+  $save='n'
+  if $#>1.5 then $save=$2 endif
+  if $#>2.5 then
+    $id=$3
+    xmreadnode($id)
+  endif
+  xmselect('execreq',$save)
+  if $#>2.5 then
+    xmreadnode($id)
+  endif
+  $macro=''
+  teststr('sqattr','macro','global'):$i
+  if $i>0.5 then $macro=sqval[$i] endif
+  if ($macro<>'' or $type='CMD') then
+    $actionid=actionid
+    $ndir=$sdir+'/info/'+$id
+    if ($type='CMD') and (auto='n') then
+      xmcmdedit('open',$id)
+    else
+      exec($macro)
+    endif
+    if ($save='save' and $type<>'CMD') then
+      exists($ndir,'file'):$e
+      if $e<0.5 then mkdir($ndir) endif
+      $orig=$ndir+'/origpar'
+      exists($orig,'file'):$e
+      if $e>0.5 then rm($orig):$x endif
+      fsave($orig)
+    endif
+"only execute this if $status='Customized'? or don't care?"
+    $macfile=$ndir+'/'+$diffmacname
+    exists($macfile,'file'):$e
+    if $e>0.5 then
+      macrold($macfile):$x
+      exec($diffmacname)
+      purge($macfile)
+    endif
+    actionid=$actionid
+    if ($save<>'save' and actionid<>'null') then
+      xmreadnode(actionid)
+    endif
+  endif
+  if $xt>0.5 then studytime=$studytime endif
+ endif
+ return
+elseif ($1='saveid') then
+ if ($activestudy<>'null') then
+"does not work with the same args as savepar?"
+  $set='y'
+  if ($#>1.5) then $set=$2 endif
+"if Completed node is copied, acq params are not copied in diffp"
+  $actid=actionid
+  if ($actid<>'null' and $actid<>'') then
+    xmgetatts($actid,'status','title','type'):$stt,$title,$stype
+    if ($stt='Active') then
+      $ndir=$sdir+'/info/'+$actid
+      exists($ndir,'file'):$e
+      if $e<0.5 then
+        write('line3','%s: could not find %s',$0,$ndir)
+        return
+      endif
+      if ($stype='CMD' and $set='y') then
+        xmcmdedit('close')
+      endif
+      $save=$ndir+'/savepar'
+      exists($save,'file'):$e
+      if $e>0.5 then rm($save):$x endif
+      $orig=$ndir+'/origpar'
+      exists($orig,'file'):$e
+      $prescan=prescan
+      if ($e>0.5 and $stype<>'CMD') then
+        readparam($orig,'prescan')
+        prescan[7]=$prescan[7]
+        prescan[9]=$prescan[9]
+        prescan[10]=$prescan[10]
+      endif
+      if ($stype<>'CMD') then
+        xm1('time','silent')
+        fsave($save)
+      endif
+      if ($e>0.5 and $stype<>'CMD') then
+        $macfile=$ndir+'/'+$diffmacname
+        exists($orig,'file'):$e1
+        exists($save,'file'):$e2
+        if ($e1>0.5 and $e2>0.5) then
+          shell('diffparams "'+$orig+'" "'+$save+'" "'+$macfile+'"'):$x
+          rm($orig,$save):$x
+"xmgetatts(actionid,'macro'):$macro"
+"write('file',$macfile+'m','%s',$macro')"
+"shell('cat '+$macfile+'m '+$macfile+' > $macfile+'b'):$x"
+"shell('mv '+$macfile+'b '+$macfile):$x"
+"xmsetatts(actionid,'macro','xmdiff')"
+        endif
+      endif
+      prescan=$prescan
+      if ($stt='Active') then
+        xmsetatts($actid,'status','Customized')
+        if ($appmode='walkup' and studyid<>'tmpstudy') then
+          xm1('set',studyid+'_'+$actid,'status','Customized')
+          $tt=$title+' '+studyid+'_'+$actid+' [Customized]'
+          xm1('set',studyid+'_'+$actid,'tooltext',$tt)
+        endif
+      endif
+    endif
+  endif
+ endif
+ return
+endif
+
+$acqrun='no'
+if (system='spectrometer') then
+  readhw('status'):$stat
+"do not check if automation?"
+  if ($stat>0.5 and $stat<>10) then
+    $expn='' $acquser=''
+    expactive('current'):$expn,$acquser
+    if ($acquser = owner) then
+      $acqrun='yes'
+    endif
+  endif
+endif
+
+"select action from $vp and $status"
+
+if ($status='Completed') then
+
+  $ddir=sqdir
+  if $#>1.5 then $ddir=$2 endif
+  if ($vp='review' or $vp='one') then
+    if $appmode='imaging' then
+      if ($vp='one' and $acqrun='no') then xmselect('savepar') endif  "save changes to previous node "
+      xmshowdata($1,$ddir)
+    else
+      if $vp='one' then xmselect('saveid') endif  "save changes to previous node "
+      xmshowdata('doubleclick',$ddir)
+    endif
+    if ($vp='review') then actionid=$id endif
+  elseif ($vp='plan') then
+    if ($1='dnd') then
+      xmshowdata('dnd',$ddir)  "dnd image plan"
+    else
+      xmshowdata('img',$ddir)  "only for image plan"
+    endif
+  elseif ($vp='current') then
+    write('error','join review viewport')
+  endif
+
+elseif ($status='Error') then
+
+  if ($appmode<>'walkup' and $activestudy<>'null' and ($vp='review' or ($vp='one' and $acqrun='no'))) then
+    if $appmode='imaging' then
+      if $vp='one' then xmselect('savepar') endif  "save changes to previous node "
+      xmselect('macro',$id)
+    else
+      if $vp='one' then xmselect('saveid') endif  "save changes to previous node"
+      xmselect('execmacro','save',$id)
+    endif
+  endif
+  $ddir=sqdir
+  if $#>1.5 then $ddir=$2 endif
+  $file=$ddir+'/info/'+$id+'/acqlog'
+  exists($file,'file'):$e
+  if $e>0.5 then
+    vnmrjcmd('setpage','Process')
+    vnmrjcmd('setpage','Process','Text Output')
+    clear
+    cat($file)
+  elseif ($type<>'CMD') then
+    write('line3','No error log found for node %s.',$id)
+  endif
+
+elseif ($status='Executing') then
+
+  if ($activestudy='null') then
+    if $appmode='imaging' then
+      write('line3','select Continue Study to load scans')
+    else
+      write('line3','select Continue Study to load experiments')
+    endif
+  elseif ($vp='one') then
+    if ($acqrun='yes' and $appmode='imaging') then
+      write('line3','cannot process data until Completed')
+    elseif ($appmode<>'imaging') then
+      xmselect('saveid')  "save changes to previous node"
+      $proc=doprocess[1]
+      doprocess[1]='n'
+      xmshowdata($1,$2)
+      doprocess[1]=$proc
+    endif
+  elseif ($vp='review') then
+    mf(jcurwin[2],jcurwin[3])
+    $ce='' format(jcurwin[2],1,0):$ce
+    $curdir=userdir+'/exp'+$ce+'/recon'
+    exists($curdir,'directory'):$d
+    if ($d < 0.5) then
+      process
+    else
+      exists($curdir+'/img_slab001image001echo001.fdf','file'):$e3D
+      aipShow($curdir, '', $1, $e3D)
+    endif
+"   xmshowdata($1,$ddir)"
+  elseif ($vp='current') then
+    if (wexp<>'') then
+      write('line3','processing data')
+      exec(wexp)  "save macro saves data into node"
+    endif
+  elseif ($vp='plan') then
+    if ($acqrun='no') then
+      xmsetattr('status','Customized','lock','off')
+    endif
+  endif
+
+else  // $status='Ready','Customized','Skipped','Active','Queued'
+
+  rights('caneditprotocols'):$editpro
+  if not ($editpro) then
+    return
+  endif
+  if ($activestudy='null') then
+    if $appmode='imaging' then
+      write('line3','select Continue Study to load scans')
+    else
+      write('line3','select Continue Study to load experiments')
+    endif
+  elseif ($vp='review' or $vp='current') then
+    write('error','join plan viewport')
+  elseif ($appmode='walkup' and jviewport>1.5) then
+    write('error','join first viewport to edit study')
+  elseif ($vp='one' and $acqrun='yes' and $appmode<>'walkup' and sqmode<>'go') then
+    write('error','cannot select new node while acquisition is running')
+  else  "($vp='plan' or ($vp='one' and $acqrun='no'))"
+    if (copyid[2] <> 'null') then
+      write('line3','Active node busy')
+      setvalue('copyid','null',2,'global')
+      return
+    endif
+
+    $studyid=studyid
+    $sqdir=sqdir
+    $ddir='' $dstudy=''
+    if $#>1.5 then $ddir=$2 endif
+    if $#>2.5 then $dstudy=$3 endif
+
+    $setstudy='n'
+    if ($appmode='walkup' and $dstudy<>'' and auto='n') then
+      $setstudy='y'
+    endif
+
+    if $appmode='imaging' then
+      xmselect('savepar')  "save changes to previous node"
+      sqfilemenu('cleanupActive','only')
+      xmselect('macro',$id)
+    else
+      if ($setstudy='y' and sqsaveid<>$studyid and sqsaveid<>'null') then
+        xmsubsave
+      else
+        xmselect('saveid')  "save changes to previous node"
+        sqfilemenu('cleanupActive','only')
+      endif
+      if ($setstudy='y') then
+        sqdir=$ddir
+        studyid=$dstudy
+      endif
+      if ($appmode='walkup' and auto='n' and panellevel<=0) then
+        return  // insufficient permission to Customize nodes
+      endif
+      xmselect('execmacro','save',$id)
+      if ($setstudy='y') then
+        xm1('set',$dstudy+'_'+$id,'status','Active')
+        xmgetatts($id,'title'):$title
+        $tt=$title+' '+$dstudy+'_'+$id+' [Active]'
+        xm1('set',$dstudy+'_'+$id,'tooltext',$tt)
+      endif
+    endif
+
+    xmsetattr('status','Active')
+
+    actionid=$id
+    studyid=$studyid
+    sqdir=$sqdir
+
+  endif
+
+endif

@@ -1,0 +1,346 @@
+"macro set_lockpars"
+"set_lockpars - macro to optimize lockpars"
+"adjusts lockgain, lockpower in that order- called with argument phase just phase is done"
+"Possible to call with just 'gainonly' argument to just do the first step"
+"If probe file lock parameters are proper this is pretty fast"
+"power or phase adjustment might take time"
+"called with no arguments or 'gain' macro adjusts gain and power then gain for"
+"no saturation and lock level between 60 and 75"
+"gainonly argument used by proshim.. just keeps level in range"
+"calibrate argument will record optimal power and gain with solvent"
+"into for now vnmrsys/lockparsfile.  Could write to probe file"
+"Right now argument 'phase' seems much better - must be explicitedly called"
+"does 2 passes with 'phase' argument. Goal is to set within 2 DAC steps"
+
+"R Crouch March 2 2009 - revised 18 June 2010 phase adjust reworked calibrated added 3 Oct 2012"
+
+if $# = 0 then $arg = 'gain'  elseif $# > 0 then $arg=$1 endif
+
+$record=''
+$outfile=userdir+'/lockparsfile'
+exists($outfile,'file'):$e
+if ($e<0.5) then
+	write('file',$outfile,'Solvent	pwr	gain')
+endif
+
+
+IF ($arg = 'calibrate') THEN
+
+  {$0}('initphase')
+  //readhw('lockpower'):$pwr
+  "arbitrary choice to start +8dB from current power level"
+  //sethw('lockpower',$pwr+8)
+  write('file',userdir+'/persistence/recordlock','yes')
+  shell('sleep 10'):$dum
+  {$0}('gain')
+  {$0}('phase')
+  
+  return
+
+ELSEIF (($arg = 'gain') or ($arg='gainonly')) THEN
+  
+  sethw('status',62)
+  readhw('lockgain'):$gain
+  readlk:$lvl
+  $count=0
+  $maxcount=10
+  if (Console='mercury') then
+    $maxlockgain=39
+  else
+    $maxlockgain=48
+  endif
+  repeat
+      $count=$count+1
+      if $lvl>85 and ($gain>0) then sethw('lockgain',$gain-1):$e endif
+      if $lvl<60 and ($gain<$maxlockgain) then sethw('lockgain',$gain+1):$e endif
+      shell('sleep 2'):$dum
+      readhw('lockgain'):$gain
+      readlk:$lvl
+  until ((($lvl>50) and ($lvl<85)) or ($gain=$maxlockgain) or ($gain=0) or ($count>$maxcount))
+  //write('line3','$count=%d',$count)
+  sethw('status',10)
+  if ($arg='gain') then
+  	{$0}('power')
+	return
+  elseif ($arg='gainonly') then
+        return($lvl)
+  endif
+
+ELSEIF ($arg = 'power') THEN
+
+  sethw('status',62)
+  readhw('lockpower'):$power
+  if $power<12 then sethw('lockpower',12) $power=12 shell('sleep 14'):$dum endif
+  readlk:$strtlvl
+  if (($strtlvl>85) or ($strtlvl<50)) then {$0}('gainonly'):$strtlvl endif
+  $deltapower=0.11*$strtlvl
+  if ($power > 12) then
+    $target=$strtlvl/1.96
+    write('line3','Power Adjust -> Start is %d, target is %d with tolerance of %f',$strtlvl,$target,$deltapower)
+    sethw('lockpower',$power-6)
+    shell('sleep 14'):$dum
+    readlk:$nextlvl
+    write('line3','Starting level was %f and after 6dB drop is %f',$strtlvl,$nextlvl)
+    abs($target-$nextlvl):$result
+    write('line3','Result is %f and goal was %f',$result,$deltapower)
+  else
+    $result=0
+  endif
+  if ($result<=$deltapower) or ($power <= 12) then
+     if ($power > 12) then
+       sethw('lockpower',$power)
+       shell('sleep 14'):$dum
+     endif
+     exists(userdir+'/persistence/recordlock','file'):$e
+     if ($e>0.5) then
+       lookup('file',userdir+'/persistence/recordlock')
+       lookup('readline'):$dorecord
+       if ($dorecord='yes') then
+         readhw('lockpower'):$pwr
+         readhw('lockgain'):$gn
+         write('file',$outfile,'%s \t%d \t%d',solvent,$pwr,$gn)
+         rm(userdir+'/persistence/recordlock')
+     endif
+     write('line3','Lock power adjustment done.')
+     sethw('status',10)
+     return
+    endif
+  else
+     if ($result>2*$deltapower) then 
+	$down=2 
+	write('line3','Power is way too high. Continuing...')
+     else 
+        $down=1 
+	write('line3','Power a bit too high. Continuing...')
+     endif
+     $power=$power-$down
+     sethw('lockpower',$power)
+     shell('sleep 8'):$dum 
+     readlk:$test
+     if (($test<60) or ($test>80)) then
+       {$0}('gain')
+     else
+	{$0}('power')
+     endif
+  endif
+
+ELSEIF ($arg = 'initphase') THEN
+
+    write('line3','Determining initial lock phase...')
+    sethw('status',63)
+
+    $max=359
+    $min=0
+
+    "Wait for lock to be captured, if possible"
+    readlk:$initlvl
+    readhw('lockphase'):$initphase 
+ 
+    $maxlvl=-100
+    $optphase=0
+    $i=0
+    repeat
+       $lockphase=$i*20+$initphase
+       if $lockphase > $max then $lockphase=$lockphase-360 endif
+       if $lockphase < $min then $lockphase=$lockphase+360 endif
+       sethw('lockphase',$lockphase)
+       shell('sleep 15'):$dum
+       readlk:$lvl
+       write('line3','Lock level = %f, lock phase is %d',$lvl,$lockphase)
+       if $lvl>$maxlvl then $maxlvl=$lvl $optphase=$lockphase endif
+       if ($lvl>=100) then
+	  repeat
+		if (lockpower>3) then lockpower=lockpower-3 endif
+		if (lockgain>3) then lockgain=lockgain-3 endif
+		sethw('lockpower',lockpower) 
+		sethw('lockgain',lockgain) 
+ 		shell('sleep 3'):$dum
+       		readlk:$lvl
+	  until (($lvl<=50) or (lockpower<=3) or (lockgain<=3))
+       readlk:$maxlvl
+       endif
+       $i=$i+1
+    until $i>18
+
+    write('line3','Initial lock phase is %d',$optphase)
+    sethw('lockphase',$optphase)
+    readlk:$lvl
+    if (Console='mercury') then
+      $maxlockgain=39
+    else
+      $maxlockgain=48
+    endif
+    if ($lvl<30) then
+      readhw('lockphase'):$initphase
+      readhw('lockpower'):$initpower
+      readhw('lockgain'):$initgain
+  
+      //Switch lock off, so no correction
+      sethw('lock','off')
+
+      //Temporarily increase lock power and gain
+      sethw('lockgain',$maxlockgain)
+      sethw('lockpower',48)
+      shell('sleep 5'):$dum
+
+      //Re-engage lock
+      sethw('lock','on')
+      shell('sleep 10'):$dum
+
+      //Set lock power and gain back to original values
+      sethw('lockgain',$initgain)
+      sethw('lockpower',$initpower)
+      shell('sleep 10'):$dum
+    endif
+
+    "Now read back the lock parameters"
+    readhw('lockphase'):lockphase
+    readhw('lockpower'):lockpower
+    readhw('lockgain'):lockgain
+
+    "The lock really should have been captured by this point but, just in case..."
+    readlk:$lvl
+    while (($lvl<30) and (lockgain<$maxlockgain)) do
+	lockgain=lockgain+3
+	sethw('lockgain',lockgain)
+	shell('sleep 5'):$dum
+        readlk:$lvl
+        readhw('lockgain'):lockgain
+    endwhile
+    sethw('status',10)
+      
+ELSEIF ($arg = 'phase') THEN
+
+write('line3','Determining direction of phase error...')
+
+$max=359
+$min=0
+$step=30
+
+sethw('status',63)
+readlk:$initlvl
+readhw('lockphase'):$initphase
+
+  $up=$initphase+$step
+  if $up > $max then $up=$up-360 endif
+  $down=$initphase-$step
+  if $down < $min then $down=$down+360 endif
+
+write('line3','Initial phase = %d; adjust up = %d and adjust down = %d',$initphase,$up,$down)
+
+sethw('lockphase',$up)
+shell('sleep 8'):$dd
+readlk:$uplvl
+
+sethw('lockphase',$down)
+shell('sleep 8'):$dd
+readlk:$downlvl
+
+sethw('lockphase',$initphase)
+
+write('line3','uplvl = %d and downlvl = %d',$uplvl,$downlvl)
+$redo='n'
+abs($downlvl-$uplvl):$diff
+if ($diff < 8) then
+	write('file',userdir+'/persistence/phaseclose','close')
+endif
+if ($downlvl <> $uplvl) then
+  if $downlvl>$uplvl then
+    $delta = $downlvl - $uplvl
+    if $delta > 3 then $redo='down' endif
+  elseif $uplvl>$downlvl then
+    $delta = $uplvl - $downlvl
+    if $delta > 3 then $redo='up' endif
+  endif
+endif
+
+ if ($redo='n') then
+	write('line3','Lockphase seems to be OK.')
+	exists(userdir+'/persistence/dophase','file'):$do
+	if ($do>0.5) then rm(userdir+'/persistence/dophase') endif
+	exists(userdir+'/persistence/phaseclose','file'):$doc
+	if ($doc>0.5) then rm(userdir+'/persistence/phaseclose') endif
+	return
+ endif
+
+if $redo = 'up' then
+  write('line3','lockphase optimization moving up')
+  {$0}('refinephaseup')
+elseif $redo = 'down' then
+  write('line3','lockphase optimization moving down')
+  {$0}('refinephasedown')
+endif
+
+ELSEIF (($arg='refinephaseup') or ($arg='refinephasedown'))THEN
+  $i=1
+  $k=1
+  readhw('lockphase'):$curphase[$i]
+  shell('sleep 2'):$dum
+  readlk:$curlvl[$i]
+  $bestlvl=$curlvl[$i]
+  $bestphase=$curphase[$i]
+  $done='n'
+  repeat
+	$i=$i+1 $inc=1
+	readhw('lockphase'):$now
+	if ($arg='refinephaseup') then $sign=1 endif
+	if ($arg='refinephasedown') then $sign=-1 endif
+	exists(userdir+'/persistence/dophase','file'):$ee
+	if ($ee>0.5) then "smaller step on 2nd pass"
+		$inc=1
+	else
+		exists(userdir+'/persistence/phaseclose','file'):$phc
+		if ($phc < 0.5) then
+		  $inc=8
+		endif
+	endif
+	$inc=$inc*$sign
+	$newphase=$now+$inc
+	if ($newphase>359) then $newphase=$newphase-359 endif
+	if ($newphase<0) then $newphase=$newphase+360 endif
+	sethw('lockphase',$newphase)
+	shell('sleep 2'):$dum
+	
+	$j=1 $lvls=0
+	repeat
+	  readlk:$lvl
+	  $lvls=$lvls+$lvl
+	  shell('sleep 1'):$dum
+	  $j=$j+1
+	until ($j>5)
+	$curlvl[$i]=$lvls/5
+		
+ 	readhw('lockphase'):$curphase[$i]
+	if ($curlvl[$i] > $bestlvl) then 
+		$bestlvl=$curlvl[$i]
+		$bestphase=$curphase[$i]
+	else
+		sethw('lockphase',$bestphase)
+		{$0}('gainonly')
+		exists(userdir+'/persistence/dophase','file'):$e
+		if ($e>0.5) then
+		    rm(userdir+'/persistence/dophase')
+		    return  "phase adjust complete after 2 passes"
+		elseif ($e<0.5) then
+		    exists(userdir+'/persistence/phaseclose','file'):$phc
+		    if ($phc < 0.5) then  "repeat if way off at start"
+		       write('file',userdir+'/persistence/dophase','Pass_one')
+		       write('line3','2nd pass adjusting lock phase..')
+		       {$0}('phase')
+		       return
+		   else "do not repeat if we were close at start"
+		       rm(userdir+'/persistence/phaseclose')
+		       return
+		   endif
+		endif
+	endif
+	$k=$k+1
+  until ($k>60)
+  sethw('status',10)
+
+ if ($done='n') then
+	write('line3','You must try and set lock phase by hand - %s',$0)
+        return
+ endif
+
+ENDIF

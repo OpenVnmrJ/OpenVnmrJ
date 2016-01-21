@@ -1,0 +1,23 @@
+"macro rna_autowetproc2"
+"rna_autowetproc2"
+crl rfl=sw/2 rfp=4.66p
+vp=0 $counter=1 sp=4p wp=2p
+select(1) vsadj(180) $best=180
+$bestone=1 $worstone=1 $worst=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$worst then $worst=$ht $worstone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+  wetpwr=wetpwr[$bestone]
+write('line3','best soft pulse power is %4f ',wetpwr)
+write('plotter',100,wc2max-5,'Best WET pulse power is %4.1f ',wetpwr)
+select($worstone) vsadj(100) sc=0 wc=7 vo=0 ho=8   
+pl('all') pap BPpage
+dssh
+BPsvf(userdir+'/AutoRna/rna_gChmqc_wetpwr_calib2')
+select($bestone) vsadj(100)
+array('wetpw',21,wetpw-250,50)
+da wexp='rna_autowetproc3' wnt='f wft select(1) vsadj dssh' au

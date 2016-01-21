@@ -1,0 +1,119 @@
+"macro addprobe"
+//   Arg1 is the probe file name
+//   Arg2 is an appdir path (optional)
+//   Arg3 is an existing probepath (this would mean copy)
+//   Arg4 is the probeid to create the file via probeidez
+// Usage:  addprobe(probename, <<destination appdir>,existingProbeFilePath,ProbeID>)
+//	The default value of arg2 is userdir
+
+    if ($# < 2) then $2=userdir endif
+    if ($2='') then $2=userdir endif
+    if ($#<3) then $3='' endif
+    if ($# < 4) then $4='' endif
+
+    $pname=$1
+    $whereto=$2
+    $wherefrom=$3
+    $pid=$4
+
+// While copying the ID is also copied from the orig file
+    if ($wherefrom<>'') then $pid='' endif
+
+// Initialize probeid if we've never seen this probe before
+    if $pid<>'' then probeidez('init') endif
+
+    if ($wherefrom<>'') then
+//  Make sure that the probe as defined in arg3 is present
+//  arg3 could be relative path or absolute path
+        $basename='' shell('basename '+$wherefrom):$basename
+        $dirname='' shell('dirname '+$wherefrom):$dirname
+        $b2='' shell('basename '+$dirname):$b2
+        if ($b2<>$basename) then
+// arg3 is full pathname of the probe directory
+            $dirname=$wherefrom
+        endif
+        exists($dirname,'directory'):$tex
+        if ($tex=0) then
+            write('error','%s not found',$dirname)
+            return(0,'')
+        endif
+    endif
+
+// First create the probe directory
+    $probedir=$whereto+'/probes/'+$pname
+    exists($probedir,'directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$probedir):$dum
+    endif
+    exists($probedir,'directory'):$direx
+    if ($direx=0) then
+        write('error','Unable to create directory for %s',$pname)
+        return(0,'')
+    endif
+
+// Without a 3rd argument, this macro creates a probe
+//   file from probe.tmplt
+    if ($wherefrom='') then
+      if ($pid<>'') then
+        $probeidattr=probeidattr
+        probeidattr[1]='native' probeidattr[4]=$pid
+        write('reset',$probedir+'/'+$pname)
+        probeidez('add',$pname,$probedir+'/'+$pname)
+        probeidez('set',$pname,$probedir)
+	probeidattr=$probeidattr
+      else
+        getfilepath('probe.tmplt','probes'):$tex,$tpath
+        shell('cat '+$tpath+' > '+$probedir+'/'+$pname):$dum
+      endif
+      write('line3','Probe %s successfully added to %s',$pname,$whereto)
+      updateprobe($probedir+'/'+$pname)
+// With a 3rd argument, simply make a copy
+    else
+        exists($probedir+'/'+$pname,'file'):$fileex
+        if ($fileex) then
+            $date=''
+            shell('date +%Y-%m-%d-%H%M%S'):$date
+            shell('mv '+$probedir+'/'+$pname+' '+$probedir+'/'+$pname+'.'+$date):$dum
+        endif
+        pwd:$curdir
+        cd($dirname):$dum
+//        shell('(tar cf - * | (cd '+$probedir+'; tar xfBp -))'):$dum
+	shell('(cp -r * "'+$probedir+'")'):$dum
+        cd($curdir):$dum
+// Should we do the following?
+// For the time being commented out.
+/*
+        strstr($dirname,'/probes/'):$ok,$origappdir
+        strstr($probedir,'/probes/'):$ok2,$destappdir
+        if ($ok) and ($ok2) then
+          $shim=''
+          getparam('defaultshims','Probe',$probedir+'/'+$pname):$shim
+          if ($shim<>'') then
+            exists($origappdir+'/shims/'+$shim,'file'):$shimex
+            exists($destappdir+'/shims/'+$shim,'file'):$shim2ex
+            if ($shimex) and ($shim2ex=0) then
+                shell('mkdir '+$destappdir+'/shims'):$dum
+                shell('cp '+$origappdir+'/shims/'+$shim+' '+$destappdir+'/shims'):$dum
+            endif
+          endif
+          $gmaps='lkgmap','H1gmap','hsgmap','H1hsgmap'
+          $i=1
+          repeat
+            $map=''
+            getparam($gmaps[$i],'Probe',$probedir+'/'+$pname):$map
+            if ($map<>'') then
+                exists($origappdir+'/gshimlib/shimmaps/'+$map+'.fid','directory'):$mapex
+                exists($destappdir+'/gshimlib/shimmaps/'+$map+'.fid','directory'):$map2ex
+                if ($mapex) and ($map2ex) then
+                    shell('mkdir -p '+$destappdir+'/gshimlib/shimmaps'):$dum
+                    shell('cp -r '+$origappdir+'/gshimlib/shimmaps/'+$map+'.fid '+$destappdir+'/gshimlib/shimmaps'):$dum
+                endif
+            endif
+            $i=$i+1
+          until $i > 4
+        endif
+*/
+        write('line3','Probe %s successfully copied from %s to %s',$pname,$wherefrom,$probedir)
+	updateprobe($probedir+'/'+$pname)
+    endif
+    return(1,$probedir+'/'+$pname)

@@ -1,0 +1,33 @@
+"macro rna_autowetproc3"
+"rna_autowetproc3"
+  
+av crl rfl=sw/2 rfp=4.66p
+vp=0 $counter=1 sp=4p wp=2p
+select(1) vsadj(180) $best=180
+$bestone=1 $worstone=1 $worst=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$worst then $worst=$ht $worstone=$counter endif
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($worstone) vsadj(100) sc=0 wc=7 vo=0 ho=8   
+write('plotter',100,wc2max-5,'Best WET pulse width is %4f us',wetpw)
+pl('all') pap BPpage
+write('line3','best soft pulse width is %4f us',wetpw)
+dssh
+wetpw=wetpw[$bestone]
+ph BPsvf(userdir+'/AutoRna/rna_gChmqc_wetpw_calib')
+select($bestone) f vsadj(100)
+
+$wetpw='' format(wetpw,4,1):$wetpw  "update probefile"
+BPsetparams('wetpw',$wetpw,'H1')
+$wetpwr='' format(wetpwr,2,0):$wetpwr
+BPsetparams('wetpwr',$wetpwr,'H1')
+BPsetparams('wetshape',wetshape,'H1')
+
+wnt='wft BPaph0 f full crl rfl=sw/2 rfp=4.66p ds dscale'
+nt=8 getparam('BPgain','H1'):gain 
+wexp='rna_autocal9'
+au

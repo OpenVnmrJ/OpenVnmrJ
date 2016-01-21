@@ -1,0 +1,195 @@
+"macro csiShow"
+csiInit
+
+if($# < 1) then return endif
+
+if($1='gridData') then
+// use csiDisMode if $2 is not supplied
+// csiDisMode=0, 1 or 2 to display none,spec or fid
+// csiShowOpt[1]=1/0 to show/hide grid 
+// csiShowOpt[2]=1/0 to show/hide index 
+// execute command like aipShowCSIData(`grid`,`num`,`spec`)
+
+  aipScreen:$n
+  if(not $n) then
+     aipSplitWindow(1,1)
+  endif
+
+  graphis:$s
+  if($s='') then
+    write('line3','Processing spectral data...')
+    csiCmd('proc1d')
+  endif
+ 
+  if($#<2) then $2=csiDisMode endif
+
+  $arg='``'
+  if(csiReviewMode) then
+    if($2=2) then 
+	$arg='`FID`' 
+    elseif($2>0) then
+	$arg='`spec`' 
+    endif
+  else
+    if($2=2) then 
+	$arg='`FID`'
+    elseif($2>0) then
+	$arg='`SPEC`' 
+    endif
+  endif
+
+  $str='aipShowCSIData'
+  if(csiShowOpt[1]>0 and csiShowOpt[2]>0 ) then
+     $str=$str+'(`grid`,`num`,'+$arg+',`frame:all`)'
+  elseif(csiShowOpt[1]>0) then
+     $str=$str+'(`grid`,'+$arg+',`frame:all`)'
+  elseif(csiShowOpt[2]>0) then
+     $str=$str+'(`num`,'+$arg+',`frame:all`)'
+  elseif($arg='``') then
+     $str=$str+'(`none`)'
+  else
+     $str=$str+'('+$arg+')'
+  endif
+  exec($str)  
+  
+  // comment out this if not want to split window to show spectra 
+  csiShow('specData',$2)
+
+endif
+
+if($1='specData') then
+// use specDisMode if $2 not supplied 
+// specDisMode=0,1,2,3... for none,spec,fid,spec&baseline,...display
+// e.g. mspec(`SPEC`,`BASE`,`SPEC-BASE`) ds
+
+  if($#>1) then
+    if(typeof('$2')) then
+       $str='`'
+       $i=1
+       $s='' substr($2,$i,'delimiter',','):$s
+       while($s<>'') do
+         $str=$str+$s+'`,`'
+         $i=$i+1
+         $s='' substr($2,$i,'delimiter',','):$s
+       endwhile
+       strstr($str,',','last'):$n,$s
+       $str='mspec('+$s+') ds'
+       exec($str)  
+       return	
+    endif
+  else
+    $2=specDisMode
+  endif
+
+  isCSIMode:$n
+  if(not $n) then
+     jFunc(88,1) aipSetState(11) 
+     csiShow('gridData',csiDisMode)
+  endif
+
+  mspec('clear')
+  mspec('off')
+  if(csiReviewMode) then
+    if($2=1) then 
+	mspec(1,'spec') 
+    elseif($2=4) then 
+	mspec(1,'base') 
+    elseif($2=3) then 
+	mspec(1,'spec') 	
+	mspec(2,'spec+base', 180, 'yellow') 	
+	mspec(3,'base', wc2/2,'orange') 	
+    elseif($2=2) then 
+        df return
+    endif
+  else
+    if($2=1) then 
+	ds return
+    elseif($2=4) then 
+	mspec(1,'BASE') 
+    elseif($2=3) then 
+      on('bcmode'):$on
+      if($on and bcmode[1]>=0) then
+	mspec(1,'SPEC') 	
+	mspec(2,'BASE', 0, 'yellow') 	
+	mspec(3,'SPEC-BASE',180,'orange') 	
+        mspec('processing',1)
+      else
+	ds return
+      endif
+    elseif($2=2) then 
+        df return
+    else
+	ds return
+    endif
+  endif
+
+  mspec('on') ds
+
+endif
+
+if($1='getCSIPath') then
+  strstr(file,'.csi/spatial.fid'):$n,$s1
+  if($n) then
+    return($s1+'.csi')
+  else
+    return('')
+  endif
+endif
+
+if($1='initPeakLabel') then
+   $size = size('llfrq')
+   $i=0
+   $str=''
+   while($i<$size) do
+     $i=$i+1
+     format(llfrq[$i],3,0):$str
+     lllabel[$i]='ll_'+$str
+   endwhile
+endif
+
+if($1='makePeakList') then
+   if($#>1) then $peakfile=$2
+   else $peakfile=curexp+'/peakList' endif
+   write('reset',$peakfile)
+  
+   $size = size('llfrq')
+   if(size('lllabel') < $size) then csiShow('initPeakLabel') endif
+
+   $i=0
+   while($i<$size) do
+     $i=$i+1
+     write('file',$peakfile,'%s %f',lllabel[$i], llfrq[$i])
+   endwhile
+endif
+
+if($1='getPeak') then
+   if($#>1) then $frq=$2
+   else $frq=cr + rfl - rfp endif
+
+   $size = size('llfrq')
+   if(size('lllabel') < $size) then 
+     csiShow('initPeakLabel') 
+     csiShow('makePeakList',curexp+'/peakList')
+   endif
+
+   $d=1 //Hz
+   $i=0
+   while($i<$size) do
+     $i=$i+1
+     if($frq<(llfrq[$i]+$d) and $frq>(llfrq[$i]-$d)) then return($i) endif 
+   endwhile
+   return(1)
+endif
+
+if($1='getRegion') then
+   if($#>1) then $frq=$2
+   else $frq=cr + rfl - rfp endif
+
+   $size=size('lifrq')
+   $i=1
+   while($i<$size) do
+     if($frq<(lifrq[$i]) and $frq>(lifrq[$i+1])) then return($i,$i+1) endif 
+     $i=$i+2
+   endwhile
+   return(0,0)
+endif

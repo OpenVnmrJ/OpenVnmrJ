@@ -1,0 +1,79 @@
+"macro NUSinflate"
+"NUSinflate - inflate under-sampled data. Eriks Kupce, Oxford, March 2011"
+"Updated Nov2012 to use new acquisition scheme based on ni,ni2, ni3 and CSdensity, PJB"
+
+$inflateND='' $fn1='' $fn2='' $log='' $cmd='' $str='' $inf = 1
+
+getbinpath('inflateND'):$infex,$inflateND
+
+$fn1=curexp+'/procdir/rsw.fid'
+$fn2=curexp+'/procdir/inf.fid'
+$log=curexp+'/procdir/inflateND.log'
+
+exists(curexp+'/sampling.sch','file'):$e
+if not ($e) then   "try to fetch from .fid file "
+   if not (file='exp') then
+     $file=file
+     strstr($file,'.fid'):$r,$s1,$s2
+     if $s1='' then 
+     $file=$file+'.fid'
+   endif
+   $file=$file+'/sampling.sch'
+   exists($file,'file'):$e
+   if($e) then
+      copy($file,curexp+'/sampling.sch')
+   endif
+  endif
+endif
+
+if not ($e) then
+  write('error','NUSinflate aborted - sampling schedule not found. ')
+  return (0)
+else
+  exists($fn1+'/sampling.sch','file'):$e
+  if not ($e) then
+    copy(curexp+'/sampling.sch',$fn1+'/sampling.sch')
+  endif
+endif
+
+// if arraydim < ni*ni2*ni3*phasesize then data are not yet inflated
+
+isInflated:$inf
+
+exists($fn2,'directory'):$e 
+if($e) or ($inf) then
+  write('error','data already inflated')
+  exists($fn2,'directory'):$e
+  if not ($e) then
+    exists($fn1,'directory'):$e
+    if($e) then
+      $cmd = 'cp -r '+$fn1+' '+$fn2
+      write('reset',$log)
+      write('file',$log,$cmd)
+      shell($cmd):$str
+      write('file',$log,$str)
+    else
+      return (0)
+    endif
+  endif
+  return (1)
+endif
+
+exists($fn2,'directory'):$e
+if($e) then
+  shell('rm -r ' + $fn2)
+endif
+
+$cmd = $inflateND +' ' + $fn1 + ' ' + $fn2 + ' >> ' + $log 
+write('reset',$log)
+write('file',$log,$cmd) 
+shell($cmd) 
+
+exists($fn2+'/fid','file'):$e
+if($e) then
+  write('line3','inflateND finished.')
+else
+  write('error','inflateND failed.')
+  dtext($log)
+endif
+

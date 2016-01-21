@@ -1,0 +1,116 @@
+"macro setupstep"
+if ($# < 1) then $1='init' endif
+IF ($1='init') THEN
+
+//  Define step gradients
+	fixgrd(8):stepGlvl1
+        fixgrd(7):stepGlvl2
+        fixgrd(5):stepGlvl3
+
+//  Define zero-quantum filter pulse/gradients
+        stepZpat1=seqfil+'_sZp1'
+        stepZpat2=seqfil+'_sZp2'
+	setzqfpulse(1,stepZpat1):stepZpwr1,stepZpw1,stepZglvl1
+	setzqfpulse(2,stepZpat2):stepZpwr2,stepZpw2,stepZglvl2
+
+// Translate from zTOCSY1D
+
+        $tocsypar[1]='gzlvlA'          $steppar[1]='stepGlvl1'
+        $tocsypar[2]='selpwrA'         $steppar[2]='steppwr'
+        $tocsypar[3]='selpwA'          $steppar[3]='steppw'
+        $tocsypar[4]='gtA'             $steppar[4]='stepgt1'
+        $tocsypar[5]='selshapeA'       $steppar[5]='stepshape'
+	$tocsypar[6]='mixT'	       $steppar[6]='stepmix'
+	$tocsypar[7]='slpatT'	       $steppar[7]='steppat'
+
+        $total=size('$tocsypar')
+        $i=1
+        repeat
+           $outpar=$steppar[$i]
+           on($tocsypar[$i],'processed'):$ok
+           if ($ok>0) then
+                getvalue($tocsypar[$i],1,'processed'):{$outpar}
+           endif
+           $i=$i+1
+        until $i > $total
+
+//  only dipsi2 and dipsi3 are supported as of 2008/12/22
+//  This can be modified to include other spinlock patterns
+
+	if (steppat<>'dipsi2') and (steppat<>'dipsi3') then
+		steppat='dipsi2'
+	endif
+
+// get offset/width from stepshape (convenience)
+	if (stepshape<>'') then
+	   $offset=0
+	   pbox_shapeinfo(stepshape+'.RF'):stepwave,stepwidth,$offset
+	   if (stepwave[1]<>'') then
+	     $wavetot=size('$offset')
+	     $x=1
+	     repeat
+		if (procdim<1) then
+		   setppm($offset[$x]+tof,tn):stepppm[$x]
+		else
+		   getppm($offset[$x]+tof):stepppm[$x]
+		endif
+	        $x=$x+1
+	     until $x > $wavetot
+	   endif
+	endif
+	if (stepwave='') then
+	   stepwave='q3'
+	   getfilepath('step','modules'):$modex,$modpath
+	   if ($modex) then
+		rtv($modpath,'noabort','stepshape'):stepwave
+	   endif
+	endif
+
+//  set gammah2 for spinlock
+        setslgh2('step')
+
+ELSEIF ($1 = 'makeshape') THEN
+
+	if (stepwave[1]<>'') then
+	   $ampcf=1
+	   $ref_pw90=pw90 $ref_pwr=tpwr
+	   getcf('tpwr'):$ampcf
+	   $ref_pw90 = $ref_pw90*$ampcf
+	   assignshapename(pslabel):stepshape
+	   opx(stepshape+'.RF')
+           $wavetot=size('stepwave')
+	   $x=1
+	   repeat
+		if (procdim<1) then
+		   setoffset(stepppm[$x],tn):$offset
+		else
+		   getoffset(stepppm[$x]*reffrq):$offset
+		endif
+		putwave(stepwave[$x],stepwidth[$x],0.0,$offset-tof)
+		$x=$x+1
+	   until $x > $wavetot
+	   cpx($ref_pw90,$ref_pwr):$dum
+	   pbox_pw(stepshape+'.RF'):steppw
+	   pbox_pwr(stepshape+'.RF'):steppwr
+	else
+	   write('error','offset/wave/width not defined')
+	endif
+
+ELSEIF ($1 = 'frq') THEN
+
+   if (crmode='c') then
+   	write('error','You MUST use 2 cursors - Please make selection again')
+   	crmode='b'
+   	ds('restart')
+   	return
+   endif
+    $cr=cr-(delta/2)
+    stepwidth=delta
+    stepppm=$cr/reffrq
+    stepwave='q3'
+    getfilepath('step','modules'):$modex,$modpath
+    if ($modex) then
+         rtv($modpath,'noabort','stepshape'):stepwave
+    endif
+
+ENDIF

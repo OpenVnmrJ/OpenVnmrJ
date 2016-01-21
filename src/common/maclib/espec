@@ -1,0 +1,41 @@
+"macro espec"
+if (auto='y') then 
+   write('line3','espec cannot be used under automation')
+   return
+endif
+
+if ($# < 1) then $1=emailaddr endif
+if ($1='') then
+   write('line3','Usage espec(<address>). Parameter emailaddr is empty string')
+   return
+endif
+
+getdim:$dim
+if ($dim > 1) or (arraydim > 1) then
+     write('line3','2D and arrayed experiments are not supported')
+     return
+endif
+
+if (emailflag='n') then
+	write('line3','Email option is NOT turned on')
+	return
+endif
+isnewexp:$isnew
+if ($isnew) then
+   pwd:$curdir
+   cd(curexp):$dum
+   $name=samplename+'_'+pslabel+'_espectrum'
+   $dxformat='std'
+   getadminfo('dxformat'):$dxformat
+   if ($dxformat='xy') then
+	svxyj($name)
+   else
+   	svsj($name)
+   endif
+   vnmremail($name+'.dx',$1)
+   write('line3','%s.dx sent by email to %s',$name,$1)
+   cd($curdir)
+else
+   savejcamp('','email',$1)
+endif
+

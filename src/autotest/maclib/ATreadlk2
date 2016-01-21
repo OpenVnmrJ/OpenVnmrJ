@@ -1,0 +1,34 @@
+"macro ATreadlk2"
+$filename=curexp+'/regression.inp'
+write('reset',$filename)
+write('file',$filename,'Lock Gain value')
+write('file',$filename,'Lock Response in dB')
+$lockpower=lockpower
+$lockgain=lockgain
+$gaindiff=45-lockgain
+lockgain=45 lockpower=lockpower-$gaindiff
+write('file',$filename,'1 %4.0f',30)
+sethw('lockpower',lockpower) sethw('lockgain',lockgain) 
+shell('sleep 2')
+readlk:$lock
+if ($lock>99) then lockgain=lockgain-2 endif
+sethw('lockgain',lockgain) shell('sleep 2')
+$newlockgain=lockgain
+repeat
+  readlk:$lk
+  $lk=trunc($lk*10)
+  echo('lock level =',$lk/10)
+  echo('at lock gain',lockgain)
+  if $lk>0 then ln(100*$lk):$lnlk else ln(-100*$lk):$lnlk endif
+  $resp=trunc(200*$lnlk/2.303)
+  write('file',$filename,'%10s  %5.4f',lockgain,$resp/10)
+  lockgain=lockgain-1 
+  sethw('lockgain',lockgain) shell('sleep 2')
+until lockgain<$newlockgain-30
+cp(curexp+'/regression.inp',autotestdir+'/data/lockgaintest')
+lockpower=$lockpower
+lockgain=$lockgain
+sethw('lockpower',lockpower)
+shell('sleep 4')
+sethw('lockgain',lockgain) 
+shell('sleep 4')

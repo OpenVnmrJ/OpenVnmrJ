@@ -1,0 +1,137 @@
+"macro EndRun"
+/*-*- Mode: MAGICAL -*-*/
+"macro EndRun"
+
+//
+// Stop an LC run and save all data
+//
+
+if ($# = 0) then
+
+    // With no args call VJ to do it. 
+    // VJ will stop chromatogram and call us back with an argument 
+    lccmd('stopRun')
+    lcRunActive = 0
+    // clean up study queue
+    lcsq('done')
+    return
+endif
+
+// We were called from VJ -- clean up 
+// ... unless we're testing on a data station 
+if (system = 'datastation') then
+    return
+endif
+
+lcRunActive = 0
+abortoff // don't give up if there is some error - do all we can
+
+// clean up study queue
+lcsq('done')
+
+//stop NMR 
+//Check to see if user is running LC-MS run (non-NMR), in which case
+//DO NOT AA OR AUTOAA!! spectrometer may be doing something else
+if (lcexp <> 'analyte' and lcexp <> 'lcalone') then
+   write('line3','Stopping NMR Acquisition')
+   autoaa aa
+endif
+
+// Stop any loop elution processes 
+if (lcexp = 'enterA') then
+    eluteLoop('abort')
+    lccmd('waitForTime', 'cancel')
+    lccmd('waitForPump', 'cancel')
+    lcEquilibrationCount = 0
+endif
+
+//stop MS acq
+if (msSelection <> '0') then
+    write('line3','EndRun: stopping MS data collection')
+    pmlcmd('collect_stop')
+endif
+
+getsvfdirpath:$svfdir
+filepath($svfdir, lcid, 'NMR'):$nmrDir
+if (lcexp <> 'analyte' and lcexp <> 'lcalone') then
+  //write('line3','directory %s',$nmrDir)
+  exists($nmrDir,'file'):$e
+  if not $e then
+    mkdir($nmrDir)
+  endif
+endif
+if (lcexp = 'iso') then
+  exists($nmrDir+'/IsoOnFlow.fid','file'):$e
+  if ($e) then rm('-r',$nmrDir+'/IsoOnFlow.fid'):$x endif
+//  svf($nmrDir+'/IsoOnFlow')
+  savefid('IsoOnFlow%R0%')
+endif
+
+// Save method file
+// Replace any "/" in lcMethodFile with "_"
+$lcMethodFile = lcMethodFile
+strstr($lcMethodFile, '/'):$idx
+while ($idx > 0) do
+  substr($lcMethodFile, $idx, 1, '_'):$lcMethodFile
+  strstr($lcMethodFile, '/'):$idx
+endwhile
+// Construct the date stamp
+$date = ''
+shell('date +_%\Y%\m%\d%\H%\M%\S'):$date
+
+filepath($svfdir, lcid, $lcMethodFile + $date + '.lcm'):$filepath
+write('line3','EndRun: Saving LC Method in %s', $filepath)
+lccmd('saveCurrentMethod', $filepath)
+
+//Get MS data from PC and save it. 
+if (msSelection <> '0') then
+  $msfile=''
+  msDataFile($svfdir, lcid):$msfile
+  $msfile = '"' + $msfile + '.dat"'
+  $msdst = ''
+  filepath($svfdir, lcid, 'msData.xms'):$msdst
+  $msdst = '"' + $msdst + '"'
+  msGetPcFile($msfile, $msdst)
+endif
+
+//Copy lcdata file to curexp
+filepath($svfdir, lcid, 'lcdata'):$lcdata
+filepath(curexp, 'lcdata'):$explcdata
+// Wait for lcdata file to appear, if necessary
+exists($lcdata,'file'):$e
+$i = 0
+while ((not $e) and ($i < 10)) do
+    shell('sleep 1')
+    exists($lcdata,'file'):$e
+    $i = $i + 1
+endwhile
+cp($lcdata,$explcdata)
+
+//check for NMR autoprocessing
+if (lcexp <> 'analyte' and lcexp <> 'lcalone') then
+    exists('scoutap','parameter'):$e
+    if ($e) then if scoutap='y' then
+      $lcexp=lcexp
+      wftlc
+      exists('lcexp','parameter'):$e
+      if not ($e) then
+        create('lcexp','string')
+        lcexp=$lcexp
+      endif
+      write('line3','Saving glued data to %s',$nmrDir)
+      exists($nmrDir+'/glued.fid','file'):$e
+      if ($e) then rm('-r',$nmrDir+'/glued.fid'):$x endif
+//      svf($nmrDir+'/glued')
+      savefid('glued%R0%')
+   endif endif
+endif
+
+//if there is a PDA running, reset it
+if lcChannel1='PDA'or lcChannel2='PDA'or lcChannel3='PDA' then
+    lccmd('pdareset')
+endif
+
+aborton
+
+// See if there is another sample to do
+lcInjectAndGo('next')

@@ -1,0 +1,55 @@
+"macro Mprotocol"
+"***************************************************************"
+" Mprotocol                                                     "
+"                                                               "
+" Note: New dg cannot handle arrays.                            "
+"***************************************************************"
+
+"** Initialize variables **********************************"
+$pstring2 = ''
+$pname = ''
+$cmd = ''
+$plimit = 20
+
+"** Clear text window and write descriptive header ********"
+flush
+
+"** initialize protocol names **"
+$temp = 1
+repeat
+  format($temp,1,0):$pstring2
+  $protocol = 'protocol'+$pstring2
+  exists($protocol,'parameter','global'):$e
+  if ($e = 0) then
+    create($protocol,'string','global')
+  endif
+  $pname = ''
+  $cmd = $protocol+' = \''+$pname+'\''
+  exec($cmd)
+  $temp = $temp +1
+until ($temp > $plimit)
+
+$temp=1
+$parct=0
+getfile(PARDIR):$entries
+
+if ($entries) then
+  if ($entries > $plimit) then $entries=$plimit endif
+
+  repeat 
+
+    getfile(PARDIR,$temp):$pname,$ext
+
+    "** initialize exp_name# variable **"
+    "** global variable created to work around new_dg limitations **"
+    if ($ext = 'par') then 
+      $parct = $parct + 1
+      format($parct,1,0):$pstring2
+      $protocol = 'protocol'+$pstring2
+      $cmd = $protocol+' = \''+$pname+'\''
+      exec($cmd)
+    endif
+    $temp = $temp + 1
+  until ($temp > $entries)
+endif
+

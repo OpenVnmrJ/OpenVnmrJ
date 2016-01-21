@@ -1,0 +1,96 @@
+"macro spinll"
+" ********************************************************************** "
+" **** spinll(<'keywords'>) : set up slfreq array from line listing **** "
+" ********************************************************************** "
+"    if 'mark' is a keyword, it sets up 'slfreq' from 'mark1d.out' "
+"    if 'nodla' is a keyword, 'dla' is not run."
+
+$markflag=0
+if ($#=1) then
+  if ($1='mark') then
+    $markflag=1
+  endif
+else 
+  if ($#=2) then
+    if ($1='mark') or ($2='mark') then
+        $markflag=1
+    endif
+  endif
+endif
+
+$clfreqsize=size('clfreq')
+
+if not $markflag then
+  slfreq=0
+  clindex=0
+  $i = 1
+  repeat
+    slfreq[$i]=llfrq[$i]+rfp-rfl
+    $i=$i+1
+    until ($i>SIZE('llfrq'))
+  $i = 1
+  repeat
+    clindex[$i]=0
+    $i=$i+1
+    until ($i>$clfreqsize)
+else "if $markflag then"
+
+" *** markflag - places lines from mark1d.out in slfreq parameter.       ***"
+
+  $oldsys=''
+  $filepath = curexp + '/mark1d.out'
+  lookup('file',$filepath,'read','readline','read'):$par,$value,$par2,$ret
+  "write('alpha','par=%s value=s ret=%s',$par,$ret)"
+  if $ret<3 then return
+  endif
+
+  $tmp=curexp+'/spinll'
+  $tmp2=curexp+'/spinll2'
+  shell('sed -e \"/high/d\"  "'+curexp+'/mark1d.out" > ' + $tmp)
+  shell('sort -nr ' + $tmp + ' > ' + $tmp2)
+  rm($tmp):$x
+
+  $inputline=' '
+  $ret=1
+  $count=0
+  lookup('file',$tmp2,'readline'):$inputline,$ret 
+  while ($ret) and ($count < 1000) do
+    $count = $count+1
+    lookup('readline'):$inputline,$ret 
+  endwhile
+  "write('alpha','count=%d ret=%d',$count,$ret) "
+    
+  slfreq=0
+  clindex=0
+  $i = 1
+  $ix=0
+  $parvalue=0.0
+  $inputline=' '
+  lookup('file',$tmp2,'read','readline'):$parvalue,$inputline,$ret 
+  while ($i<=$count) do
+    slfreq[$i]=$parvalue
+    $ret=0
+    if ($i<$count) then 
+       lookup('read'):$parvalue,$ix 
+       if $ix then lookup('readline'):$inputline,$ret endif
+    endif
+    $i=$i+1
+  endwhile
+  rm($tmp2):$x
+
+  $i = 1
+  repeat
+    clindex[$i]=0
+    $i=$i+1
+  until ($i>$clfreqsize)
+endif "markflag"
+
+if ($#=0) then
+  dla
+endif
+if ($#=1) then
+    if ($1<>'nodla') then dla endif
+endif
+if ($#>1) then
+   if (($1<>'nodla') and ($2<>'nodla')) then dla endif
+endif

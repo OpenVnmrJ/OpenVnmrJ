@@ -1,0 +1,49 @@
+"macro elastplot"
+$tailX='tail'
+whichtail:$tailX
+
+if (auto='y') then 
+   write('line3','elastplot is not functional under automation')
+   return
+endif
+
+if (emailflag='n') then
+        write('line3','Email option is NOT turned on')
+        return
+endif
+
+if ($# < 1) then $1=emailaddr endif
+if ($1='') then
+    write('line3','Usage elastplot(<address>). emailaddr is empty string')
+    return
+endif
+
+isnewexp:$isnew
+if ($isnew) then
+  write('line3','Data in curexp has not been saved. Cannot access last plot')
+  return
+else
+  shell('dirname '+file):$archive
+  shell('basename '+file+' .fid'):$expname
+endif
+
+  pwd:$curdir
+  cd($archive):$dum
+  $plotname=''
+  shell('(cat dirinfo/plotlist | grep '+$expname+'_plot | '+$tailX+' -n 1)'):$plotname
+  substr($plotname,5):$plotname
+  if ($plotname<>'') then
+	exists('plots/'+$plotname,'file'):$plotex
+	if ($plotex=0) then $plotname='' endif
+  endif
+  cd($curdir):$dum
+  if ($plotname='') then
+	write('line3','No plot found for %s. Use eplot option',$expanme)
+	cd($curdir):$dum
+	return
+  endif
+
+  cd($archive):$dum
+  vnmremail('plots/'+$plotname,$1)
+  cd($curdir):$dum
+  write('line3','%s sent to %s',$plotname,$1)

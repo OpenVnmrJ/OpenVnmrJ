@@ -1,0 +1,123 @@
+"macro lc1dproc"
+"lc1dproc macro"
+
+if ($# < 1) then $1='process' endif
+IF ($1='process') THEN
+// This section is the original lc1dproc macro
+   on('sslsfrq'):$sslsfrqon
+   if ($sslsfrqon>0.5) then
+      on('slp2'):$slp2on
+      if ($slp2on>0.5) then
+        on('slp'):$slpon
+        if ($slpon>0.5) then
+          sslsfrq=0,-slp,-slp2,0
+        else
+          sslsfrq=0,-slp2,0  "Could you ever get to this point? (slp=n slp2=y)"
+        endif
+      else
+        on('slp'):$slpon
+        if ($slpon>0.5) then
+          sslsfrq=0,-slp,0
+        else
+          sslsfrq=0
+        endif
+      endif
+   else
+      sslsfrq='n'
+   endif
+
+   "control some processing parameters here:  aph, dc, bc,   . . ."
+   "including all parameters used differently for real vs. scout spectra (except ssfilter='y')"
+   fn=128000
+   "lb='n'"
+   lb=0.5
+   lpfilt=32 lpnupts=200 strtlp=4 lpext=3 strtext=3
+   proc='lp'
+   rfp? rfl?
+   wft
+   "aph0"
+   dc
+   "vsadjh"
+   "noislm"
+   if auto='n' then ds dscale endif
+
+   RETURN
+ENDIF
+
+// The following are new functionality added
+   if (auto='y') then
+        $tmpfile=autodir+'/'+$0+'_tmp'
+   else
+        $tmpfile=curexp+'/'+$0+'_tmp'
+   endif
+
+IF ($1='doscout') THEN
+   if (lcexp='iso') then wstart='' wds='' return endif
+   $wexp=wexp
+   lc1dproc('init')
+   if ($wexp='chempackQ') then
+        $explist=explist
+        $md=archivedir+'/'+sample+'/dirinfo/macdir'
+        cpexplist('read',$md):explist
+        write('file',$md+'/alias','SetUp: SetUplc1d(\'findfrq\')')
+        explist=pslabel+'scout','SetUp',explist
+        cpexplist('write',$md)
+        explist=$explist
+        wexp='chempackQ'
+        wds='' wstart=''
+   endif
+
+ELSEIF ($1='init') THEN
+
+        "Reset parameters to do scout experiment"
+
+  writeparam($tmpfile,'d1 gain nt ni pltmod pslabel pw satmode ss tpwr wet pltopt composit')
+  writeparam($tmpfile,'execprocess execplot execprep execprescan execsetup','current','add')
+  CPwtmenu('acq','save')
+  execpars('delete')
+  spin=0
+  resetlcarrays
+  ni=1 nt=1 wet='n' composit='n'
+  if (tpwr>40) then tpwr=tpwr-35 endif
+  inject='n' ntrig='n'
+  setrc
+  pltopt='n'
+  MinSW='off'
+  strtpar=''
+  parfidss
+  ssfilter='n'
+  off('ss') gain=0
+  wexp='lc1dproc(\'findfrq\')'
+  explist=pslabel+'scout'
+  wstart='' wds=''
+  wdone='' wnt='wft'
+
+ELSEIF ($1='findfrq') THEN
+
+  setref('setup')
+  wft
+  setwet
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  wet='y'
+
+  nt=8 d1=1.5
+  sw=sw ss=2
+  shell('touch '+$tmpfile):$dum
+  fread($tmpfile)
+  rm($tmpfile):$dum
+  CPwtmenu('acq','read')
+  CPwtmenu('acq','purge')
+  pw=pw90
+  dg
+  wexp='wft lcsq(\'svp\')'
+  explist=pslabel
+  wdone=''
+  if (alock<>'u') then alock='n' endif
+  wshim='n'
+  setprotect('','clear',16384)
+  if ($GO = 'go') then
+        cpgo
+  endif
+
+ENDIF

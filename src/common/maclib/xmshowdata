@@ -1,0 +1,224 @@
+"macro xmshowdata"
+"show data from liquids/imaging study"
+
+if $#=0 then $1='doubleclick' endif
+xm1('studydir'):$sdir
+if $#>1.5 then $sdir=$2 endif
+teststr('sqattr','type','global'):$i
+$type = sqval[$i]
+$id='' $j=0 teststr('sqattr','id','global'):$j
+if $j>0.5 then $id=sqval[$j] endif
+teststr('sqattr','status','global'):$i
+$status = sqval[$i]
+$pfval='',''
+if ($type='CMD') then
+  $sqdir=sqdir
+  sqdir=$sdir
+  xmcmdedit('open',$id)
+  sqdir=$sqdir
+  exists('protoFile','parameter'):$epf
+  if ($epf) then $pfval=protoFile endif
+endif
+if ($status='Completed' or $status='Executing') then
+   teststr('sqattr','data','global'):$i
+   $data = sqval[$i]
+   strstr($data,'.REC'):$n,$s1,$s2
+   substr($s2,1,1):$s
+   if($n > 0.5 and ($s = '' or $s = '/')) then
+        $ch='' substr($data,1,1):$ch
+        if ($ch <> '/') then
+           $data=$sdir+'/'+$data
+        endif
+	RT($data)
+	return
+   else
+      strstr($data,'.rec'):$n,$s1,$s2
+      substr($s2,1,1):$s
+      if($n > 0.5 and ($s = '' or $s = '/')) then
+        $ch='' substr($data,1,1):$ch
+        if ($ch <> '/') then
+           $data=$sdir+'/'+$data
+        endif
+	RT($data)
+	return
+      endif
+   endif
+   $imgdir = ''
+   if ($data <> '') then
+     $ch='' substr($data,1,1):$ch
+     if ($ch <> '/') then
+       $data=$sdir+'/'+$data
+     endif
+
+     // if in imaging Review viewport, call RQaction and return 
+     if(appmode='imaging' and jviewport>2) then
+       RQaction('loadData',$data+'.fid',$1)
+       return
+     endif
+
+     exists($data+'.rec','directory'):$er
+     if $er>0.5 then
+       lastData($data+'.rec'):$imgdir
+       $imgdir=$imgdir+'/recon'
+       exists($imgdir,'directory'):$ei
+     else
+       $imgdir=$data+'.img'
+       $mapdir=$data
+       $aipList=0
+       exists($imgdir,'directory'):$ei
+       if $ei<0.5 then
+         exists($data+'.fid','directory'):$f
+         if $f<0.5 then
+           $data=$sdir+'/data/'+sqval[$i]
+           $imgdir=$data+'.img'
+           exists($imgdir,'directory'):$ei
+	   if($ei<0.5) then 
+             exists($mapdir+'/aipList','file'):$n
+             if($n) then 
+	       $aipList=1 
+	       $imgdir=$mapdir 
+	     endif
+	   endif
+         endif
+       else
+	 exists($imgdir+'/aipList','file'):$n
+         if($n) then 
+	   $aipList=1 
+	 endif
+       endif
+       if($aipList) then
+	 lookup('file',$imgdir+'/aipList','read',1):$name,$n
+	 if($n) then 
+	   $mapdir=$imgdir+'/'+$name 
+           exists($mapdir,'directory'):$ei
+	   RQaction('is3D',$mapdir):$n
+           if($ei and $n) then
+             aipRQcommand('load',$imgdir)
+	     $imgdir=$mapdir
+	   endif
+	 endif
+       endif
+     endif
+     exists($imgdir+'/img_slab001image001echo001.fdf','file'):$e3D "lookup header rank"
+     if $e3D>0.5 then $3Dfile=$imgdir+'/img_slab001image001echo001.fdf' 
+     else 
+       exists($imgdir+'/slab001image001echo001.fdf','file'):$e3D "lookup header rank"
+       if $e3D>0.5 then $3Dfile=$imgdir+'/slab001image001echo001.fdf' endif
+     endif
+     if $e3D>0.5 then
+       $str=''
+       lookup('mfile',$3Dfile,'rank','skip','read'):$str
+       if ($str = '3;') then $e3D=1 else $e3D=0 endif
+     endif
+     if ($1<>'img' and $1<>'dnd') then
+       $activestudy=activestudy[1]
+       if (appmode='walkup' or appmode='lc') then
+         $activestudy=studyid
+       endif
+       if ($er > 0.5) then
+         exists('prescan','parameter'):$ep
+         if ($ep) then $prescan=prescan endif
+         RT($data+'.rec')  "also does aip, etc"
+         if ($activestudy<>'null') then
+           fread($sdir+'/studypar')
+           if ($ep) then prescan=$prescan endif
+         endif
+         return
+       endif
+       $3Dproc='n'
+       exists($data+'.fid','directory'):$f
+       if ($f > 0.5) then
+         exists('prescan','parameter'):$ep
+         if ($ep) then $prescan=prescan endif
+         if (appmode='walkup' or appmode='lc') then
+           vnmrjcmd('tray close')
+         endif
+         csiCmd('getCSIPath',$data+'.fid'):$csidir
+	 // double click SQ in vp3
+         if($csidir<>'') then
+             csiLoad($csidir, $1)
+             return
+         endif
+	 if(appmode <> 'imaging' or jviewport > 1.5) then
+           rt($data+'.fid')
+           if(appmode = 'imaging' and jviewport > 2) then
+ 	     if($ei > 0.5) then
+	        vnmrjcmd('RQ rt',$data+'.img')
+             else
+	        vnmrjcmd('RQ rt',$data+'.fid')
+             endif
+             aipShowSpec:$n,$n2
+   	     if(apptype='im1D' and $n2>0) then
+     	       aipShowCSIData(`SPEC`,`grid`,`frame:all`)
+   	     endif
+           endif
+	   write('line3','retrieving file %s',$data+'.fid')
+           if ($pfval[2]<>'') then
+             cqprotocol(0,0,0,3)
+             protoFile=$pfval
+           endif
+	 endif
+         if ($activestudy<>'null') then
+           fread($sdir+'/studypar')
+           if ($ep) then prescan=$prescan endif
+         endif
+         exists('nv','parameter'):$v1
+         exists('nv2','parameter'):$v2
+         if ($v1>0.5 and $v2>0.5) then
+           if (nv>0.5 and nv2>0.5) then
+             $3Dproc='y'  "3D sequence"
+           endif
+         endif
+       else
+         RQaction('loadfid',$data)
+       endif
+       // data rt'ed, but may not be provessed
+       csiCmd('getCSIPath',$data+'.fid'):$csidir
+       csiCmd('isCSI'):$csi
+       if($csidir<>'') then
+          csiLoad($csidir, $1)
+          return
+       elseif(($csi and jviewport>2)) then
+          csiLoad($data+'.fid', $1)
+          return
+       elseif ($ei > 0.5) then
+         if ($imgdir = '') then
+           $imgdir=$data+'.img'
+         endif
+       elseif ($f > 0.5) then
+         if ($3Dproc = 'n') then
+           if (appmode='imaging' or doprocess[1]='y') and ($type<>'CMD') then
+             process
+           else
+             write('line3','data retrieved')
+           endif
+         else
+           write('line3','No images found, 3D data retrieved, ready to reprocess.')
+         endif
+       endif
+     elseif($1='dnd') then
+	 // dnd from SQ in vp1 and vp3
+	 csiCmd('getCSIPath',$data+'.fid'):$csidir
+         if($csidir<>'') then
+             csiLoad($csidir, $1)
+	 endif
+     endif
+     if ($ei > 0.5) then
+       if ($e3D > 0.5) then
+	   aipShow($imgdir, '', '', $e3D)
+       else
+	 aipShow($imgdir, '', $1)
+       endif
+     elseif ($1='img') then
+	 // doubleclick SQ in vp1
+	 csiCmd('getCSIPath',$data+'.fid'):$csidir
+         if($csidir<>'') then
+             csiLoad($csidir, $1)
+	 else
+           write('line3','No image to display.')
+         endif
+     elseif(jviewport>2) then // no image data, add node to RQ
+	 aipRQcommand('loadfid',$data+'.fid')
+     endif
+   endif
+endif

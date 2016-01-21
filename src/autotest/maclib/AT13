@@ -1,0 +1,33 @@
+"macro AT13"
+"AT13" "13 Degree Test  "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Phase Stability Test ')
+   at_currenttest='13deg_ch1'
+   tof=tof+37 p1=pw d2=.001
+   array('nt',20,1,0)
+   f
+   lvl=0 tlt=0
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT13(`PART1`)'
+   ATcycle
+   dn='C13'
+   au
+   write('line3','Determining Phase Stability ')
+   dps
+elseif ($1='PART1') then
+
+   wft ATsvf
+   peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   dssh
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   $phstab=trunc(1000*$stddev/7.1)/1000
+   ATrecord('PHASESTAB90ch1','Phase Stability ','  stab_(deg)',$phstab,'height  ',$avht,' std_dev.  ',$stddev)
+   write('file',autotestdir+'/REPORT','Phase Stability : %1.3f Degrees',$phstab)
+
+ATnext
+endif

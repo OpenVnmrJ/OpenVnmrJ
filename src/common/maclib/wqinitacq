@@ -1,0 +1,149 @@
+"macro wqinitacq"
+if ($1='set') then
+   is_param('wqacq'):$ok
+   if ($ok) then 
+	substr($2,2):wqacq[1] 
+	if (customflag='y') or (cppauseflg='y') then
+		writeparam(cursqexp+'/wQtemppar','wqacq','current','add')
+	endif
+   endif
+   substr($2,1):$newinit substr($2,2):$newacq
+   is_param('wqinit'):$ok
+
+//  The following is to manage the remote possibility that
+//  someone may keep toggling back-n-forth between wqinit='acq'
+//   and wqinit<>'acq'. The mechanism below will track nodes
+//   submitted as nightqueue.
+
+   if ($ok) then 
+	$wqinit=wqinit
+	if ($wqinit=$newinit) then wqinit=wqinit return endif
+	$error=0
+	if ($newinit='acq') then
+	    shell('cp '+cursqexp+'/EXPLIST '+cursqexp+'/DAYLIST'):$dum
+	    shell('cp '+cursqexp+'/LONGLIST '+cursqexp+'/NIGHTLIST'):$dum
+	    shell('cat '+cursqexp+'/LONGLIST >> '+cursqexp+'/EXPLIST'):$dum
+	    shell('mv '+cursqexp+'/macdirlong/* '+cursqexp+'/macdir'):$dum
+	    write('reset',cursqexp+'/LONGLIST')
+	else
+	    shell('touch '+cursqexp+'/DAYLIST'):$dum
+	    shell('touch '+cursqexp+'/NIGHTLIST'):$dum
+	    write('reset',cursqexp+'/QUEUELIST')
+	    write('reset',cursqexp+'/EXPLIST1')
+	    write('reset',cursqexp+'/LONGLIST1')
+	    shell('(cat '+cursqexp+'/EXPLIST | grep Queued > '+cursqexp+'/QUEUELIST)'):$dum
+	    shell('(cat '+cursqexp+'/EXPLIST | grep -v Queued > '+cursqexp+'/EXPLIST1)'):$dum
+	    $s1='' $s2='' $s3='' $s4='' $s5='' $s6=''
+	    readfile(cursqexp+'/QUEUELIST','$s1','$s2','','local'):$t1
+	    readfile(cursqexp+'/DAYLIST','$s3','$s4','','local'):$t2
+	    readfile(cursqexp+'/NIGHTLIST','$s5','$s6','','local'):$t3
+	    if ($t1>0) then
+		if ($newinit='auto') then
+		    getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+		    is_night:$night
+		else
+		    getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+		    $night='no'
+		endif
+		$i=1 
+		$newdtime=0 $newltime=0
+		repeat
+		   if ($s1[$i]<>'') then
+			substr($s2[$i],1):$time
+			teststr('$s5',$s1[$i],'local'):$ret
+			if ($ret) then
+			     $newtime=trunc((($newltime+$time)/60)+0.5)	     
+			     $maxtime=trunc((($maxnighttime)/60)+0.5)
+			     if (prioritysample[1]='yes') and (prioritysample[2]='high') then
+				$maxtime=$newtime+1
+			     endif
+			     if ($maxtime=0) then $maxtime=$newtime+1 endif
+			     if ($maxtime<$newtime) then
+				write('error','Night time exceeds max allowed per sample')
+				write('error','Cannot add %s to Night queue',$s1[$i])
+				$error=1
+			     else
+				write('file',cursqexp+'/LONGLIST1','%s  %s',$s1[$i],$s2[$i])
+				$s1[$i]=''
+				$newltime=$newltime+$time
+			     endif
+			endif
+		   endif
+		   $i=$i+1
+		until $i > $t1
+		$i=1
+		repeat
+                   if ($s1[$i]<>'') then
+                        substr($s2[$i],1):$time
+                        $newtime=trunc((($newdtime+$time)/60)+0.5)
+			if ($night='no') then
+			   $maxtime=trunc((($maxdaytime)/60)+0.5)
+			else
+                           $maxtime=trunc((($maxnighttime)/60)+0.5)
+			endif
+                        if (prioritysample[1]='yes') and (prioritysample[2]='high') then
+                                $maxtime=$newtime+1
+                        endif
+			if ($maxtime=0) then 
+				$maxtime=$newtime+1 
+			endif
+                        if ($maxtime<$newtime) then
+			   $newtime=trunc((($newltime+$time)/60)+0.5)
+			   $maxtime=trunc((($maxnighttime)/60)+0.5)
+			   if (prioritysample[1]='yes') and (prioritysample[2]='high') then
+				$maxtime=$newtime+1
+			   endif
+			   if ($maxtime=0) then $maxtime=$newtime+1 endif
+			   if ($maxtime<$newtime) then
+                               write('error','Night time and Day time exceed max allowed per sample')
+                               write('error','Cannot add %s to Day queue or Night queue',$s1[$i])
+                               $error=1
+			   else
+				write('file',cursqexp+'/LONGLIST1','%s  %s',$s1[$i],$s2[$i])
+				$s1[$i]=''
+				$newltime=$newltime+$time
+			   endif
+                        else
+                             write('file',cursqexp+'/EXPLIST1','%s  %s',$s1[$i],$s2[$i])
+                             $s1[$i]=''
+			     $newdtime=$newdtime+$time
+                        endif
+                   endif
+                   $i=$i+1
+                until $i > $t1
+	    endif
+	    if ($error=0) then
+		   shell('mv '+cursqexp+'/EXPLIST1 '+cursqexp+'/EXPLIST'):$dum
+		   shell('mv '+cursqexp+'/LONGLIST1 '+cursqexp+'/LONGLIST'):$dum
+			$s7='' $s8=''
+			readfile(cursqexp+'/LONGLIST','$s7','$s8','','local'):$tx
+			if ($tx>0) then
+			   $i=1
+			   repeat
+				shell('mv '+cursqexp+'/macdir/'+$s7[$i]+'acq* '+cursqexp+'/macdirlong'):$dum
+				$i=$i+1
+			   until $i > $tx
+			endif
+		   shell('rm -f '+cursqexp+'/NIGHTLIST'):$dum
+		   shell('rm -f '+cursqexp+'/DAYLIST'):$dum
+	    endif
+		shell('rm -f '+cursqexp+'/QUEUELIST'):$dum
+	endif
+	if ($error>0) then return endif
+	wqinit=$newinit
+	if (customflag='y') or (cppauseflg='y') then
+	   writeparam(cursqexp+'/wQtemppar','wqinit','current','add')
+	endif
+	xmhaha('refreshSQ')
+	walkupQ('time')
+   endif
+   if (wqinit='acq') then longQ='n' showtray('close') endif
+
+elseif ($1='get') then
+   $return=''
+   is_param('wqinit'):$ok
+   if ($ok) then $return=wqinit endif
+   is_param('wqacq'):$ok
+   if ($ok) then $return=$return+' '+wqacq[1] else $return=$return+' none' endif
+   return($return)
+endif

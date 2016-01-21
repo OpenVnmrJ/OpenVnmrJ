@@ -1,0 +1,37 @@
+"macro walkupQ_adjtime"
+"****************************************************************"
+"   walkupQ_adjtime - adjust time for a given cpnode    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+   $list=$1
+   $file=$expfile
+   if ($2='long') then
+	$file=$lngfile
+   endif
+   $line='' $line2='' $line3=''
+   readfile($file,'$line','$line2','','local')
+   teststr('$line',$1,'local'):$ret
+   if ($ret) then
+	string2array($line2[$ret]):$line3
+	format($3,0,0):$line3[1]
+	array2string($line3):$line2[$ret]
+   endif
+   write('reset',$file)
+   $total=size('$line')
+   $i=1
+   repeat
+	write('file',$file,'%s %s',$line[$i],$line2[$i])
+	$i=$i+1
+   until $i > $total
+"****************************************************************"

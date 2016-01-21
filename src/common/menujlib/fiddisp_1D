@@ -1,0 +1,112 @@
+"macro fiddisp_1D"
+"  ***********************************************************  "
+"  ****  M E N U :   F I D D I S P    1 D ,   P A R T 1   ****  "
+"  ***********************************************************  "
+
+lastmenu=''
+
+mlabel=''
+mstring=''
+micon=''
+
+$vjmbut=0
+
+dssi:$arraydim
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Interactive'
+micon[$vjmbut]='fidcursor.gif'
+if $arraydim > 1.5 then
+  mstring[$vjmbut]='lastmenu=`fiddisp_1D` if wc<0.3*wcmax then full endif df'
+else
+  mstring[$vjmbut]='lastmenu=`main` df'
+endif
+
+if $arraydim > 1 then
+  showarrays('setup')
+  setvalue('showcontent','f')
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='View FIDs Vertically'
+  mstring[$vjmbut]='full dssi:$arraydim vo=wc2max/($arraydim+1) graphis:$g substr($g,1,2):$s if $s=`ds` then df endif dfs showarray=`vert` showarrays(`redisplay`)'
+  micon[$vjmbut]='dfs.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='View FIDs Horizontally'
+  mstring[$vjmbut]='graphis:$g substr($g,1,2):$s if $s=`ds` then df endif dfsh showarray=`horiz` showarrays(`redisplay`)'
+  micon[$vjmbut]='dfsh.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Stack FIDs Diagonally'
+  mstring[$vjmbut]='showarrays(`setup`) showarray=`whitewash` showarray=`auto` showarrays(`redisplay`)'
+  micon[$vjmbut]='dfsa.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Show/Hide Axis'
+  mstring[$vjmbut]='showarrays(`setup`) if arraydscale=`y` then arraydscale=`n` else arraydscale=`y` endif showarrays(`redisplay`)'
+  micon[$vjmbut]='1Dscale.gif'
+  exists('arraydscale','parameter'):$e
+  if $e>0 then 
+    if arraydscale='y' then
+      micon[$vjmbut]='1Dscale.gif:on'
+    endif
+  endif
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Label'
+  mstring[$vjmbut]='showarrays(`setup`) if shownumbers<>`s` then shownumbers=`s` else shownumbers=`n` endif showarrays(`redisplay`)'
+  exists('shownumbers','parameter'):$e
+  micon[$vjmbut]='number.png'
+  if $e>0 then 
+    if shownumbers='s' then
+      micon[$vjmbut]='number.png:on'
+    endif
+  endif
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Value'
+  mstring[$vjmbut]='showarrays(`setup`) if shownumbers<>`v` then shownumbers=`v` else shownumbers=`n` endif showarrays(`redisplay`)'
+  micon[$vjmbut]='value.png'
+  if $e>0 then 
+    if shownumbers='v' then
+      micon[$vjmbut]='value.png:on'
+    endif
+  endif
+endif
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Pan & Stretch Mode'
+if(buttonMode=3) then
+   micon[$vjmbut]='1Dspwp.gif:on'
+   mstring[$vjmbut]='setButtonMode(0) menu(`fiddisp_1D`)'
+else
+   micon[$vjmbut]='1Dspwp.gif'
+   mstring[$vjmbut]='setButtonMode(3) menu(`fiddisp_1D`)'
+endif
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom mode'
+if(buttonMode=2) then
+   micon[$vjmbut]='ZoomMode.gif:on'
+   mstring[$vjmbut]='setButtonMode(0) menu(`fiddisp_1D`)'
+else
+   micon[$vjmbut]='ZoomMode.gif'
+   mstring[$vjmbut]='setButtonMode(2) menu(`fiddisp_1D`)'
+endif
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom in'
+micon[$vjmbut]='1Dexpand.gif'
+mstring[$vjmbut]='sf=sf+wf/10 wf=wf-wf/5 showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom out'
+micon[$vjmbut]='1Dzoomout.gif'
+mstring[$vjmbut]='$f=sf-wf/10 if($f<0) then sf=0 else sf=$f endif wf=wf+wf/5 showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Show full fid'
+micon[$vjmbut]='fidfull.gif'
+mstring[$vjmbut]='f full showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Redisplay'
+micon[$vjmbut]='recycle.gif'
+mstring[$vjmbut]='setButtonMode(0) showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Return'
+mstring[$vjmbut]='menu(`main`)'
+micon[$vjmbut]='return.gif'

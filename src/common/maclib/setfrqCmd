@@ -1,0 +1,1449 @@
+"macro setfrqCmd"
+// This macro provide functions and tools for referencing
+//
+// setfrqCmd('isNewRef'):$e
+// setfrqCmd('calcH1reffrq'):$H1reffrq
+// setfrqCmd('setH1reffrq'<,$H1reffrq>)
+// setfrqCmd('calcReffrq',$nucname):$reffrq
+// setfrqCmd('getRefstdXi',$nucname):$Xi
+// setfrqCmd('getXi',$nucname, $path):$Xi
+// setfrqCmd('getSolventPPM'):$solventPPM
+// setfrqCmd('setSysBaseref',$nucname, $baseref)
+// setfrqCmd('setBaseref',$nucname, $baseref)
+// setfrqCmd('getBaseref',$nucname):$baseref
+// setfrqCmd('setRefstd',$nucname,$refstd)
+// setfrqCmd('getRefstd',$nucname):$refstd
+// setfrqCmd('setref_nuc'<,$channel>)
+// setfrqCmd('setref'<,$axis>):$e,$rfl,$rfp,$reffrq,$refpos
+// setfrqCmd('setref_go'<,$axis>):$e,$rfl,$rfp,$reffrq,$refpos
+// setfrqCmd('setref_data'<,$axis>):$e,$rfl,$rfp,$reffrq,$refpos
+// setfrqCmd('getref0'<,$axis>):$reffrq0
+// setfrqCmd('setrefpos'<,$axis,value>)
+// setfrqCmd('rl'<,$axis,value>)
+// setfrqCmd('settof'<,$axis<,value>>)
+// setfrqCmd('movesw'<,$axis<,low,up>>)
+// setfrqCmd('getParamNames4channel', $channel):$found,$nucname,$frqname,$tofname,$srefname
+// setfrqCmd('getParamNames4axis', $axis):$found,$nucname,$frqname,$tofname,$srefname
+// setfrqCmd('paramName4axis', $axis, $paramName):$paramName
+// setfrqCmd('nucname2axis',$nucname):$axis
+// setfrqCmd('nucname2channel',$nucname):$channel
+// setfrqCmd('getFrqscale',$axis):$frqscale
+// setfrqCmd('getFrqshift',$axis):$frqshift
+// setfrqCmd('calcBaseFactor'):$factor
+// setfrqCmd('getnucFreq'):$freq
+// setfrqCmd('getNuctabPath'):$path
+//
+if($# < 1) then
+  write('line3','Usage: setfrqCmd($action,...):$ret,...')
+  return
+endif
+
+$action=$1
+
+if($action='isNewRef') then // return 0 if uselockref='old'
+  exists('uselockref','parameter','global'):$e
+  if($e=0) then return(1) endif
+  if(uselockref='old') then
+    return(0)
+  else
+    return(1)
+  endif
+
+elseif($action='getUselock') then 
+  exists('uselockref','parameter','global'):$e
+  if($e=0) then return('y') endif
+  if(uselockref='n') then
+    return('n')
+  else
+    return('y')
+  endif
+
+elseif($action='calcH1reffrq') then
+// may pass arguments $lockfreq, $solvent, $uselockref
+
+  setfrqCmd('getlkof'):$lkof
+  $lockfreq=lockfreq+$lkof*1e-6
+  if($#>1) then
+    if(not typeof('$2')) then
+      $lockfreq=$2
+    endif
+  endif
+
+  $solvent=solvent
+  if($#>2) then
+    if(typeof('$3')) then
+      $solvent=$3
+    endif
+  endif
+
+  setfrqCmd('getUselock'):$uselockref
+  if($#>3) then
+    if(typeof('$4')) then
+      $uselockref=$4
+    endif
+  endif
+
+  $H1reffrq=0
+  if($uselockref='n') then // use predetermined H1reffrq. 
+    setfrqCmd('getBaseref','H1reffrq'):$H1reffrq
+  endif
+
+  if($H1reffrq=0) then // calculate from lockfreq. 
+    setfrqCmd('getRefstdXi','lk'):$Xi_lk
+    setfrqCmd('getSolventPPM',$solvent):$solventPPM
+    $H2reffrq=$lockfreq/(1+$solventPPM*1e-6)
+    $H1reffrq=$H2reffrq*100/$Xi_lk
+  endif
+
+  return($H1reffrq)
+
+elseif($action='setH1reffrq') then
+
+  exists('H1reffrq','parameter'):$e
+  if($e=0) then
+    create('H1reffrq','real') // an acquisition parameter 
+  endif
+
+  if($#>1) then 
+    setvalue('H1reffrq',$2)
+  else 
+    setfrqCmd('calcH1reffrq'):$H1reffrq 
+    setvalue('H1reffrq',$H1reffrq)
+  endif
+
+elseif($action='getdim') then
+  $dim=1 $maxdim=4 $i=1
+  $ind='' 
+  while($i<$maxdim) do
+    format($i,0,0):$ind
+    $param='refsource'+$ind
+    exists($param,'parameter'):$e
+    if($e) then
+      if({$param}<>'') then
+	$dim=$dim+1
+      endif
+    endif
+    $i=$i+1
+  endwhile
+  return($dim)
+
+elseif($action='setref_nuc') then
+// this is called by setfrq to calculate H1reffeq
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return endif
+
+  if($#<2) then
+    $i=1
+    while($i<=numrfch) do
+      setfrqCmd('setref_nuc', $i):$e
+      $i=$i+1
+    endwhile
+    return
+  endif
+
+  $channel=$2
+  setfrqCmd('getParamNames4channel',$channel):$found,$chname,$frqname,$tofname,$srefname
+  if($found) then $nucname={$chname} else $nucname='' endif
+  if($nucname='' or $nucname='none' or  $nucname='UNKNOWN') then return endif
+
+  setfrqCmd('calcReffrq',$nucname):$sreffrq
+  setvalue($srefname,$sreffrq)
+
+  if($channel=1) then // set H1reffrq only if $channel is observe
+    setfrqCmd('setH1reffrq')
+  endif
+  return
+
+elseif($action='calcReffrq' and $#>1) then
+// It first calculate H1reffrq (depending on uselockref flag).
+// then reffrq=H1reffrq*Xi/100
+
+  setfrqCmd('getlkof'):$lkof
+  $lockfreq=lockfreq+$lkof*1e-6
+  if($#>2) then
+    if(not typeof('$3')) then
+      $lockfreq=$3
+    endif
+  endif
+
+  $solvent=solvent
+  if($#>3) then
+    if(typeof('$4')) then
+      $solvent=$4
+    endif
+  endif
+
+  setfrqCmd('getUselock'):$uselockref
+  if($#>4) then
+    if(typeof('$5')) then
+      $uselockref=$5
+    endif
+  endif
+
+// calculate $H1reffrq 
+  setfrqCmd('calcH1reffrq',$lockfreq,$solvent,$uselockref):$H1reffrq
+
+  $nucname=$2
+  $reffrq=0
+  setfrqCmd('getRefstdXi',$nucname):$Xi
+  if($Xi=0) then // user transmitter freq 
+      setfrqCmd('nucname2channel',$nucname):$channel
+      setfrqCmd('getParamNames4channel',$channel):$found,$chname,$frqname
+      if($found) then
+        $reffrq={$frqname}
+      endif
+  else
+      $reffrq=$H1reffrq*$Xi/100
+  endif
+  return($reffrq)
+
+elseif($action='getXi' and $# > 1) then
+// Get Xi from nuctabref or alternative file (such as nuctabrefBio) as $3.
+
+  $nucname=$2
+  $defaultPath=systemdir+'/nuctables/nuctabref'
+  if($#>2) then
+    $path=$3
+  else
+    $path=$defaultPath
+  endif
+  exists($path,'file'):$e
+  if($e=0) then return(0,'UNKNOWN','UNKNOWN') endif
+
+  lookup('mfile',$path,'COMMENTEND',$nucname,'read','filekey'):$freq,$key,$found
+  if($found=2) then
+    lookup('mfile',$key,'REF:','readline','LIT:','readline'):$refcmpd,$lit
+    if ($refcmpd='') then $refcmpd='UNKNOWN' endif
+    return($freq,$refcmpd,$lit)
+  elseif($path<>$defaultPath) then 
+    // user defined nuctabref+refstd may not contain 'COMMENTEND'.
+    // in this case nucname should not appear in comments.
+    lookup('mfile',$path,'seek',$nucname,'read','filekey'):$freq2,$key2,$found2
+    if($found2=2) then
+      lookup('mfile',$key,'REF:','readline','LIT:','readline'):$refcmpd2,$lit2
+      if ($refcmpd2='') then $refcmpd2='UNKNOWN' endif
+      return($freq2,$refcmpd2,$lit2)
+    else 
+      return(0,'UNKNOWN','UNKNOWN')
+    endif
+  else
+    return(0,'UNKNOWN','UNKNOWN')
+  endif
+
+elseif($action='getSolventPPM') then
+// Get solvent chemical shift in PPM for given nucleus form /vnmr/solvents.
+// return value is in PPM.
+  
+  if($#>1) then $solvent=$2 else $solvent=solvent endif
+  if($solvent='' or $solvent='none') then return(0) endif
+
+  $path=systemdir+'/solvents'
+  exists($path,'file'):$e
+  if($e=0) then
+    write(`line3`,`setfrqCmd('getSolventPPM',..) failed: %s does not exist.`,$path)
+    return(0)
+  endif
+  lookup('mfile',$path,'seek',$solvent,'read','filekey'):$solventPPM,$key,$found
+  if($found=2) then
+    return($solventPPM)
+  else
+    write(`line3`, `setfrqCmd('getSolventPPM',..) failed: solvent %s is not defined.`, $solvent)
+    return(0)
+  endif
+
+elseif($action='setSysBaseref' and $#>1) then
+// sysbaseref is a systemglobal parameter. 
+// It stores nucname:reffrq pairs for multiple nuclei.
+// such as sysbaseref='H1:xxx.xxx','C13:yyy.yyy',etc..
+// sysbaseref can be empty, or can define any number of nuclei.
+// Command setvalue4name(paramName,name1,value1, name2, valu2, ...) is used to
+// set name:value pair(s) in a string parameter (such as sysbaseref).
+// Only admin can set sysbaseref. The parameter will be created autimatically 
+// for admin. setfrqCmd('setSysBaseref','') set the parameter to empty string.
+
+  canWrite(systemdir):$e
+  if($e=0) then
+    write(`line3`, `setfrqCmd('setSysBaseref',...) failed: no permission to change sysbaseref.`)
+    return
+  endif
+
+  exists('sysbaseref','parameter','systemglobal'):$e
+  if($e=0) then
+    create('sysbaseref','string','systemglobal')
+  endif
+  if($#>2) then
+    $name=$2
+    $value=$3
+  else
+    $name=$2
+    $value=''
+  endif
+  if($name='') then
+    sysbaseref=''
+  else
+    setvalue4name('sysbaseref',$name,$value)
+  endif
+  // set H1reffrq
+  setfrqCmd('getRefstdXi',$name):$Xi
+  if($Xi>0) then
+    setvalue4name('sysbaseref','H1reffrq',$value*100/$Xi)
+    setfrqCmd('setH1reffrq',$value*100/$Xi)
+  endif
+  // set baseFactor
+  setfrqCmd('calcBaseFactor'):$factor
+  if($factor>0) then
+    setvalue4name('sysbaseref','baseFactor',$factor)
+  endif
+  return
+
+elseif($action='setBaseref' and $#>1) then
+// userbaseref is a user global parameter. 
+// This parameter is similar to sysbaseref
+
+  exists('userbaseref','parameter','global'):$e
+  if($e=0) then
+    create('userbaseref','string','global')
+     setprotect('userbaseref','set',65808,'global')
+  endif
+  if($#>2) then
+    $name=$2
+    $value=$3
+  else
+    $name=$2
+    $value=''
+  endif
+  if($name='') then
+    userbaseref=''
+  else
+    setvalue4name('userbaseref',$name,$value)
+  endif
+  // set H1reffrq
+  setfrqCmd('getRefstdXi',$name):$Xi
+  if($Xi>0) then
+    setvalue4name('userbaseref','H1reffrq',$value*100/$Xi)
+    setfrqCmd('setH1reffrq',$value*100/$Xi)
+  endif
+  // set baseFactor
+  setfrqCmd('calcBaseFactor'):$factor
+  if($factor>0) then
+    setvalue4name('userbaseref','baseFactor',$factor)
+  endif
+  userbaseref=userbaseref
+  return
+
+elseif($action='getBaseref' and $# > 1) then
+// getvalue4name returns '' if the parameter not exist, or if value is not
+// defined for given name.
+// It looks up userbaseref, if not found, then looks up sysbaseref.
+// return value is in MHz (provide it was set in MHz).
+
+  $nucname=$2
+  $baseref=0
+  getvalue4name('userbaseref',$nucname):$ret
+  if(not typeof('$ret')) then // found
+    $baseref=$ret
+  endif
+  if($baseref=0) then // not found
+    getvalue4name('sysbaseref',$nucname):$ret2
+    if(not typeof('$ret2')) then // found
+      $baseref=$ret2
+    endif
+  endif
+  return($baseref)
+
+elseif($action='getBaseref') then
+// $nucname is not given.  
+
+  $baseref=0
+  getvalue4name('userbaseref'):$nucname,$ret
+  if(not typeof('$ret')) then // found
+    $baseref=$ret
+  endif
+  if($baseref=0) then // not found
+    getvalue4name('sysbaseref'):$nucname,$ret2
+    if(not typeof('$ret2')) then // found
+      $baseref=$ret2
+    endif
+  endif
+  return($nucname,$baseref)
+
+elseif($action='setRefstd') then
+// refstd is a global parameter. This parameter does not need to exist.
+// It is used to store nucname:refstd pairs for multiple nucleus.
+// For example, refstd='N15:Bio','C13:default',...
+// Note, refstd='Bio' is equivalent to refstd='N15:Bio','C13:Bio','P31:Bio',... 
+// i.e., nuctabrefBio will be used for N15, C13, P31.
+// users may define their own nuctabrefXXX.
+//
+  exists('refstd','parameter','global'):$e
+  if($e=0) then
+    create('refstd','string','global')
+    setprotect('refstd','set',65808,'global')
+  endif
+  if($#>2) then
+    setvalue4name('refstd',$2,$3)
+  elseif($#>1) then
+    refstd=$2
+  else
+    setfrqCmd('getBioref'):refstd
+  endif
+  refstd=refstd
+  return
+
+elseif($action='getBioref') then
+    $refstd=''
+    exists('bioref','parameter'):$e
+    if(not $e) then
+      exists('bioref','parameter','global'):$e
+    endif
+    if($e) then
+      if(bioref='y') then $refstd='Bio' endif
+    endif
+    return($refstd)
+  
+elseif($action='getRefstd' and $# > 1) then
+// if refstd doesn't exist, is empty or 'default', '' will be returned.
+// if refstd='Bio', then 'Bio' will be returned for any given nucleus.
+
+  setfrqCmd('isNewRef'):$e
+  if(not $e) then
+    setfrqCmd('getBioref'):$refstd
+    return($refstd) 
+  endif
+
+  exists('refstd','parameter','global'):$e
+  if($e=0) then 
+    create('refstd','string','global')
+    setprotect('refstd','set',65808,'global')
+    setfrqCmd('getBioref'):refstd
+    return(refstd) 
+  endif
+
+  $size=size('refstd')
+  strstr(refstd,':'):$n
+  if($size=1 and $n=0) then
+    if(refstd='' or refstd='default') then 
+      return('') 
+    else
+      return(refstd)
+    endif
+  endif
+
+  $nucname=$2
+  getvalue4name('refstd',$nucname):$ret
+  if(typeof('$ret') and $ret<>'') then
+    if($ret='default') then $ret='' endif
+    return($ret)
+  else
+    $i=0
+    while($i<$size) do
+      $i=$i+1
+      strstr(refstd[$i],':'):$n
+      if($n=0) then
+        if(refstd<>'' and refstd<>'default') then
+          return(refstd[$i])
+        endif
+      endif
+    endwhile
+    return('')
+  endif
+
+elseif($action='getRefstdXi' and $# > 1) then
+// this function gets Xi from nuctabref+refstd.
+  $nucname=$2
+  setfrqCmd('getRefstd',$nucname):$refstd
+
+  $Xi=0
+  $cmpd='UNKNOWN'
+  $lit=''
+  if($refstd<>'') then // look for userdir only if $refstd is not empty. 
+    $path=userdir+'/nuctables/nuctabref'+$refstd
+    setfrqCmd('getXi',$nucname,$path):$Xi,$cmpd,$lit
+    if($Xi=0) then
+      $path=systemdir+'/nuctables/nuctabref'+$refstd
+      setfrqCmd('getXi',$nucname,$path):$Xi,$cmpd,$lit
+    endif 
+  endif
+  if($Xi=0) then // look in user default file
+    $path=userdir+'/nuctables/nuctabref'
+    setfrqCmd('getXi',$nucname,$path):$Xi,$cmpd,$lit
+    if($Xi=0) then // look in system default file
+      $path=systemdir+'/nuctables/nuctabref'
+      setfrqCmd('getXi',$nucname,$path):$Xi,$cmpd,$lit
+    endif
+  endif
+  return($Xi,$cmpd,$lit)
+
+endif
+
+if($action='setref') then
+// this is called by setref macro.
+// call 'setref_go' if $2 is nucname and return values are requested.
+// otherwise call 'setref_data'. 
+// in the case 'setref_data' is called with nucname (witout return values),
+// if lockfreq_ does not exist, it will call 'setref_go', otherwise lockfreq_ will be used.
+// in the case 'setref_data' is called without nucname, lockfreq_ will be used. if does not exist,
+// lockfreq_ will be back-calculated from sfrq and solvent.
+// could be setfrqCmd('setref',$axis,'setup')
+//
+// rfl and rfp are also calculated.
+// righEdgeFreq = -rfl+rfp
+// spectrum can be scaled and shifted by $frqscale and $frqshift.
+// but reffrq is defined as 0ppm of not scaled spectrum, so 
+// rfl-rfp=0.5*sw+(reffrq-sfrq)*1e6 + $frqshift
+// where reffrq=reffrq0+refpos*1e-6
+// and $frqscale is 1 and $frqshift is 0 unless scalesw, downsamp, oslsfrq, 
+// or lsfrq is set.
+//
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if($#<2) then // setref for all axises to be displayed
+    $i=0
+    setfrqCmd('getdim'):$dim
+    while($i<$dim) do
+      setfrqCmd('setref_data', $i):$e
+      $i=$i+1
+    endwhile
+    return
+  endif
+
+  $option='setref_data'
+  if(typeof('$2') and $##>1) then 
+      $option='setref_go'
+  elseif($#>2) then
+    if(typeof('$3')) then
+      if($3='setup' or $##>1) then
+        $option='setref_go'
+      endif
+    endif
+  endif
+
+  if($##>1) then
+    if($#>2) then
+      setfrqCmd($option,$2,$3):$e,$rfl,$rfp,$reffrq,$refpos
+    else
+      setfrqCmd($option,$2):$e,$rfl,$rfp,$reffrq,$refpos
+    endif
+    if($e=0) then
+      return(0)
+    else
+      return($e,$rfl,$rfp,$reffrq,$refpos)
+    endif
+  elseif($#>2) then
+    setfrqCmd($option,$2,$3):$e
+    return($e)
+  else
+    setfrqCmd($option,$2):$e
+    return($e)
+  endif
+
+elseif($action='setref_go') then
+// this option calculates reffrq for next go. 
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if($#<2) then // setref for all axises to be displayed
+    $i=0
+    setfrqCmd('getdim'):$dim
+    while($i<$dim) do
+      setfrqCmd('setref_go', $i):$e
+      $i=$i+1
+    endwhile
+    return
+  endif
+
+  if(typeof('$2')) then // $2 is nucname 
+    $nucname=$2
+    if($#>2) then
+      $axis=$3
+    else
+      setfrqCmd('nucname2axis',$nucname):$axis
+    endif
+    setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname
+  else
+    $axis=$2
+    $found=0
+    if($#>2) then
+      if($3<>'setup') then 
+         $nucname=$3
+         setfrqCmd('nucname2channel',$nucname):$channel
+         setfrqCmd('getParamNames4channel',$channel):$found,$chname,$frqname
+      endif
+    endif
+    if(not $found) then
+      setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname
+      if(not $found) then return(0) endif // cannot map $axis to a channel
+      $nucname={$chname}
+    endif
+  endif
+  if($nucname='' or $nucname='none' or $nucname='UNKNOWN') then 
+    return(0)
+  endif
+
+  setfrqCmd('calcReffrq',$nucname):$reffrq0
+  setfrqCmd('getFrqshift',$axis):$frqshift
+  setfrqCmd('getFrqscale',$axis):$frqscale
+
+  if($##>1) then // calculate $sfrq without tof
+    setfrq($nucname):$sfrq
+    $sw=0
+    $refpos=0
+  else // use current sfrq
+    // get parameter names for $axis
+    setfrq
+    setfrqCmd('paramName4axis',$axis,'sw'):$swname
+    exists($swname,'parameter'):$e 
+    if(not $e) then return(0) endif
+    setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+    setfrqCmd('paramName4axis',$axis,'refpos','real'):$posname
+    setfrqCmd('paramName4axis',$axis,'rfl','real'):$rflname
+    setfrqCmd('paramName4axis',$axis,'rfp','real'):$rfpname
+    $refpos={$posname}
+
+    $sfrq={$frqname}
+    $sw={$swname}
+  endif
+  
+  $reffrq=$reffrq0+$refpos*1e-6
+
+  // calculate upper field
+  $rfl=($reffrq-$sfrq)*1e6/$frqscale + 0.5*$sw + $frqshift
+  $rfp=0
+
+  if($##>1) then
+    return(1,$rfl,$rfp,$reffrq,$refpos)
+  else
+    setvalue($refname,$reffrq)
+    setvalue($rfpname,$rfp) 
+    setvalue($rflname,$rfl)
+    return(1)
+  endif
+
+elseif($action='setref_data' and $#>1) then
+// calculate reffrq, rfl, rfp for acquired data.
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if($#<2) then // setref for all axises to be displayed
+    $i=0
+    setfrqCmd('getdim'):$dim
+    while($i<$dim) do
+      setfrqCmd('setref_data', $i):$e
+      $i=$i+1
+    endwhile
+    return
+  endif
+
+  if(typeof('$2')) then // $2 is nucname 
+    $nucname=$2
+    if($#>2) then
+      $axis=$3
+    else
+      setfrqCmd('nucname2axis',$nucname):$axis
+    endif
+    setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname,$tofname
+  else
+    $axis=$2
+    if($#>2) then
+      $nucname=$3
+      setfrqCmd('nucname2channel',$nucname):$channel
+      setfrqCmd('getParamNames4channel',$channel):$found,$chname,$frqname
+    else
+      setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname,$tofname
+      if(not $found) then return(0) endif // cannot map $axis to a channel
+      $nucname={$chname}
+    endif
+  endif
+  if($nucname='' or $nucname='none' or $nucname='UNKNOWN') then 
+    return(0)
+  endif
+
+  // get parameter names for $axis
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e 
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+  setfrqCmd('paramName4axis',$axis,'refpos','real'):$posname
+  setfrqCmd('paramName4axis',$axis,'rfl','real'):$rflname
+  setfrqCmd('paramName4axis',$axis,'rfp','real'):$rfpname
+  $refpos={$posname}
+
+  $sfrq={$frqname} 
+  $sw={$swname} 
+  $reffrq0=0
+  setfrqCmd('getlockfreq_'):$lockfreq_
+  if($lockfreq_>0) then // data is acquired, so calculate reffrq0 based on lockfreq_ 
+    setfrqCmd('getUselock'):$uselockref
+    setfrqCmd('getRefstdXi',$nucname):$Xi
+    exists('H1reffrq','parameter','processed'):$e 
+    if($uselockref='n' and $e>0 and $Xi>0) then 
+      getvalue('H1reffrq','processed'):$H1reffrq
+      $reffrq0=$H1reffrq*$Xi/100
+    else
+      setfrqCmd('calcReffrq',$nucname, $lockfreq_, solvent,'y'):$reffrq0
+    endif
+  else // lockfreq_ does not exist, do 'setref_go'
+    if($## > 1) then
+	setfrqCmd('setref_go',$axis,$nucname):$e,$rfl,$rfp,$reffrq,$refpos
+	if($e=0) then return(0)
+	else return($e,$rfl,$rfp,$reffrq,$refpos) endif 
+    else
+    	setfrqCmd('setlockfreq_')
+    	setfrqCmd('getlockfreq_'):$lockfreq_
+    	setfrqCmd('calcReffrq',$nucname, $lockfreq_, solvent,'y'):$reffrq0
+    endif
+  endif 
+  if($reffrq0=0) then return(0) endif
+
+  setfrqCmd('getFrqshift',$axis):$frqshift
+  setfrqCmd('getFrqscale',$axis):$frqscale
+  
+  $reffrq=$reffrq0+$refpos*1e-6
+
+  // calculate upper field
+  $rfl=($reffrq-$sfrq)*1e6/$frqscale + 0.5*$sw + $frqshift
+  $rfp=0
+
+  if($##>1) then
+    return(1,$rfl,$rfp,$reffrq,$refpos)
+  else
+    {$refname}=$reffrq
+    {$rfpname}=$rfp
+    {$rflname}=$rfl
+    return(1)
+  endif
+
+elseif($action='getref0') then
+// calculate reffrq0 (i.e., refpos=0) for acquired data.
+// If H1reffrq was set before 'go', and Xi is defined in nuctabref+refstd, then
+// reffrq0=H1reffrq*Xi/100 
+// For old data, lockfreq_ will be used. If lockfreq_ does not exist for
+// really old data, reffrq will be set based on current rfp, rfl. 
+
+  if($#>1) then $axis=$2
+  else $axis=0 endif
+
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname,$tofname
+  if(not $found) then return(0) endif // cannot map $axis to a channel
+
+  $nucname={$chname}
+  if($nucname='' or $nucname='none' or $nucname='UNKNOWN') then 
+    return(0)
+  endif
+
+  $reffrq0=0
+  exists('H1reffrq','parameter','processed'):$e 
+  if($e=0) then //  H1reffrq does not exist in processed tree. 
+    // this means reference is not set before "go". 
+    setfrqCmd('getlockfreq_'):$lockfreq_
+    if($lockfreq_>0) then // calculate reffrq0 based on lockfreq_ 
+      getvalue('solvent','processed'):$solvent
+      setfrqCmd('calcReffrq',$nucname, $lockfreq_, $solvent,'y'):$reffrq0
+    else // either no data (rtp) or very old data
+      getvalue($frqname,'processed'):$sfrq
+      getvalue($tofname,'processed'):$tof
+      $basefrq=$sfrq-$tof*1e-6
+      $reffrq0=$basefrq-5*$basefrq*1e-6
+    endif
+  else // calculate reffrq0 from H1reffrq
+    getvalue('H1reffrq','processed'):$H1reffrq
+    setfrqCmd('getRefstdXi',$nucname):$Xi
+    if($Xi>0) then
+      $reffrq0=$H1reffrq*$Xi/100
+    else
+      getvalue($frqname,'processed'):$sfrq
+      $reffrq0=$sfrq
+    endif 
+  endif 
+  return($reffrq0) 
+
+elseif($action='setrefpos') then
+// set refpos to given value, and update rfl and rfp, sp, cr.
+// if $axis is not given, $axis=0.  
+// if $refpos is not given, $refpos=0. (called by crl, crl1,.. with refpos=0).
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if($#<2) then $axis=0
+  elseif(typeof('$2')) then
+    setfrqCmd('nucname2axis',$2):$axis
+  else $axis=$2 endif
+   
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname
+  if(not $found) then return(0) endif
+
+  $nucname={$chname}
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e 
+  if(not $e) then return(0) endif
+  exists($swname,'parameter','processed'):$e 
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+  setfrqCmd('paramName4axis',$axis,'refpos','real'):$posname
+  setfrqCmd('paramName4axis',$axis,'cr','real'):$crname
+  setfrqCmd('paramName4axis',$axis,'rfl','real'):$rflname
+  setfrqCmd('paramName4axis',$axis,'rfp','real'):$rfpname
+  setfrqCmd('paramName4axis',$axis,'sp','real'):$spname
+
+  if($#>2) then
+    $refpos=$3
+  else
+    $refpos={$posname}
+  endif
+  getvalue($swname,'processed'):$sw
+  getvalue($frqname,'processed'):$sfrq
+
+  setfrqCmd('getFrqshift',$axis):$frqshift
+  setfrqCmd('getFrqscale',$axis):$frqscale
+  
+  setfrqCmd('getref0',$axis):$reffrq0
+  $reffrq=$reffrq0+$refpos*1e-6
+
+  $rflrfp=($reffrq-$sfrq)*1e6/$frqscale + 0.5*$sw + $frqshift
+  if({$rfpname} < $sw) then
+    $rfp={$rfpname}
+  else
+    $rfp=0
+  endif
+  $rfl=$rfp+$rflrfp
+
+  {$refname}=$reffrq
+  {$posname}=$refpos
+  {$rflname}=$rfl
+  {$rfpname}=$rfp
+  $shift={$rflname}-{$rfpname}-$rflrfp
+  {$crname}={$crname}+$shift
+  {$spname}={$spname}+$shift
+
+  return(1)
+
+elseif($action='rl') then
+// rl, rl1, ... macros will call this function to set cursor to $freq, 
+// and set refpos, rfl, rfp, sp accordingly. 
+// if $axis is not given, $axis=0.
+// if $newcr is not given, $newcr=0.
+//
+// refpos(new)=refpos(old)-(cr(new)-cr(old))
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if($#<2) then $axis=0
+  elseif(typeof('$2')) then
+    setfrqCmd('nucname2axis',$2):$axis
+  else $axis=$2 endif
+   
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname
+  if(not $found) then return(0) endif
+
+  $nucname={$chname}
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e 
+  if(not $e) then return(0) endif
+  exists($swname,'parameter','processed'):$e 
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+  setfrqCmd('paramName4axis',$axis,'refpos','real'):$posname
+  setfrqCmd('paramName4axis',$axis,'cr','real'):$crname
+  setfrqCmd('paramName4axis',$axis,'rfl','real'):$rflname
+  setfrqCmd('paramName4axis',$axis,'rfp','real'):$rfpname
+  setfrqCmd('paramName4axis',$axis,'sp','real'):$spname
+   
+  getvalue($swname,'processed'):$sw
+  getvalue($frqname,'processed'):$sfrq
+
+  setfrqCmd('getFrqscale',$axis):$frqscale
+  setfrqCmd('getFrqshift',$axis):$frqshift
+
+  if($#>2 and {$refname} >0) then
+    $pos=$3/{$refname}
+  elseif($#>1) then
+    $pos=0
+  endif
+
+  $rflrfp={$rflname}-{$rfpname}
+  $cr={$crname}
+  $crpos =  $sfrq + $frqscale*($rflrfp + $cr - $sw/2)/1e6
+  $reffrq = (1/(1 + $pos/1e6))*$crpos
+  $rfl = $sw/2 - ($sfrq - $reffrq)*1e6/$frqscale
+  $rfl = $rfl + ($crpos - $reffrq)*1e6/$frqscale + $frqshift
+  $rfp = ($crpos - $reffrq)*1e6/$frqscale
+  {$spname} = {$spname} - $cr + $rfp
+  {$crname} = $rfp
+  {$rflname}=$rfl
+  {$rfpname}=$rfp
+  {$posname} = {$posname} + ($reffrq-{$refname})*1e6 
+  {$refname}=$reffrq
+
+  // back calculate lockfreq_ if does not exist
+  exists('lockfreq_','parameter'):$e
+  if(not $e) then
+    create('lockfreq_','real')
+    setgroup('lockfreq_','processing') // make this 'processing' group
+    setfrqCmd('calclockfreq_',$nucname, $reffrq):lockfreq_
+    {$posname} = 0
+  endif
+
+  return(1)
+
+elseif($action='movetof') then
+// move tof based on current spectrum
+// movetof macro will call this function.
+// if $axis is not given, $axis=0. if $centerFrq is not given, $centerFrq=cr.
+// if $centerFrq is given in PPM, it should not have 'p' or 'd'.
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  $axis=0
+  if($#>1) then 
+    if(typeof('$2')) then setfrqCmd('nucname2axis',$2):$axis else $axis=$2 endif
+  endif
+
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname,$tofname
+  if(not $found) then return(0) endif
+
+  $nucname={$chname}
+  if($nucname='' or $nucname='UNKNOWN') then 
+    return(0)
+  endif
+
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e
+  if(not $e) then return(0) endif
+  exists($swname,'parameter','processed'):$e 
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'cr'):$crname
+  exists($crname,'parameter'):$e
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+  setfrqCmd('paramName4axis',$axis,'refpos','real'):$posname
+  setfrqCmd('paramName4axis',$axis,'rfl','real'):$rflname
+  setfrqCmd('paramName4axis',$axis,'rfp','real'):$rfpname
+  setfrqCmd('paramName4axis',$axis,'sp','real'):$spname
+  setfrqCmd('paramName4axis',$axis,'wp','real'):$wpname
+  setfrqCmd('getFrqscale',$axis):$frqscale
+
+  $cr={$crname}
+  //$sw={$swname}
+  //$oldtof={$tofname}
+// from processed tree of curren spectrum, so this command can be repeated.
+  getvalue($swname,'processed'):$sw
+  getvalue($tofname,'processed'):$oldtof
+  $rflrfp={$rflname}-{$rfpname}
+  $center=$sw/2-$rflrfp
+
+  $reffrq={$refname}
+  if($reffrq=0) then
+    setfrqCmd('calcReffrq',$nucname):$reffrq
+  endif
+
+  if($#>2) then
+    $pos=$3*$reffrq/$frqscale
+  else
+    $pos=$cr
+  endif
+
+  $newtof = $oldtof+$pos-$center              "set new tof"
+/* should not change these display parameters
+  $shift  = -($oldtof-$newtof)
+  if ({$rflname}<>0)or({$rfpname}<>0) then {$rflname} = {$rflname}-$shift endif
+  {$crname} = $newtof-$oldtof+$sw/2
+  if ($# < 3) then
+    if ($cr<$sw/2) then {$spname}=0 {$wpname}=2*$cr
+    else {$spname}=2*$cr-$sw {$wpname}=2*($sw-$cr) endif
+  endif
+*/
+  if ($nucname = 'none') then
+    {$frqname} = {$frqname} + ($newtof * 1e-6)
+    write('line3','%s=\'none\'; %s adjusted instead of %s',$nucname,$frqname,$tofname)
+  else
+    {$tofname} = $newtof
+    write('line3','%s moved as requested',$tofname)
+  endif
+  return(1,$newtof)
+
+elseif($action='settof' and $#>2) then
+// set tof based on current lockfreq.
+// if centerFrq is given as an argument, it should be in PPM without p or d attached.
+// Note, tof is relative to basefrq, but centerFrq is relative to reffrq.
+// So the relation is
+//
+// **** tof=centerFrq+$frqshift + (reffrq-basefrq)*1e6 ****
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if(typeof('$2')) then setfrqCmd('nucname2axis',$2):$axis else $axis=$2 endif
+
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname,$frqname,$tofname
+  if(not $found) then return(0) endif
+
+  $nucname={$chname}
+  if($nucname='' or $nucname='UNKNOWN') then 
+    return(0)
+  endif
+
+  setfrqCmd('setref_go',$axis):$e,$rfl,$rfp,$reffrq
+  setfrq($nucname):$basefrq
+  setfrqCmd('getFrqscale',$axis):$frqscale
+  setfrqCmd('getFrqshift',$axis):$frqshift
+
+  $centerFrq=$3*$reffrq/$frqscale
+
+  $tof=($centerFrq+$frqshift) + ($reffrq-$basefrq)*1e6
+  if($nucname='none') then
+    {$frqname} = {$frqname} + ($tof * 1e-6)
+  else
+    {$tofname}=$tof
+  endif
+
+  return(1,$tof)
+
+elseif($action='setsw' and $#>3) then
+// similar to 'settof', but downfield and upfield are used, 
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  if(typeof('$2')) then setfrqCmd('nucname2axis',$2):$axis else $axis=$2 endif
+
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e 
+  if(not $e) then return(0) endif
+
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname
+  if(not $found) then return(0) endif 
+  setfrqCmd('setref_go',$axis):$e,$rfl,$rfp,$reffrq
+  if($reffrq=0) then return(0) endif
+
+  setfrqCmd('getFrqscale',$axis):$frqscale
+
+  $sw=($3-$4)*$reffrq/$frqscale
+  $centerPPM=($3+$4)/2
+  setfrqCmd('settof',$axis,$centerPPM):$e
+  if($e) then
+    {$swname}=$sw
+  endif
+  return($e)
+
+elseif($action='movesw') then
+// similar to 'movetof', but cr and delta are used, 
+// or lowfield and upfield (in PPM without 'p' or 'd') are specified.
+
+  setfrqCmd('isNewRef'):$e
+  if($e=0) then return(0) endif
+
+  $axis=0
+  if($#>1) then
+    if(typeof('$2')) then setfrqCmd('nucname2axis',$2):$axis else $axis=$2 endif
+  endif
+
+  setfrqCmd('getParamNames4axis',$axis):$found,$chname
+  if(not $found) then return(0) endif 
+
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e 
+  if(not $e) then return(0) endif
+  setfrqCmd('paramName4axis',$axis,'reffrq','real'):$refname
+  $reffrq={$refname}
+  if($reffrq=0) then
+    setfrqCmd('calcReffrq',{$chname}):$reffrq
+  endif
+
+  setfrqCmd('getFrqscale',$axis):$frqscale
+
+  if($#>3) then
+    $sw=($3-$4)*$reffrq/$frqscale
+    $centerPPM=($3+$4)/2
+  else // note, cr and delta work properly only if spectrum is current.
+    setfrqCmd('paramName4axis',$axis,'cr'):$crname
+    setfrqCmd('paramName4axis',$axis,'delta'):$dltname
+    exists($crname,'parameter'):$e
+    if(not $e) then return(0) endif
+    exists($dltname,'parameter'):$e
+    if(not $e) then return(0) endif
+    $sw={$dltname}
+    $centerPPM=({$crname}-$sw/2)*$frqscale/$reffrq
+  endif
+  setfrqCmd('movetof',$axis,$centerPPM):$e
+  if($e) then
+    {$swname}=$sw
+  endif
+  return($e)
+
+endif
+
+// Magical seems to have problem with too many elseif
+// so we restart "if" here 
+if($action='getParamNames4channel' and $#>1) then
+// given $channel, 'getParamNames4channel' returns channel related parameter names.
+// (e.g, tn, sfrq, sreffrq, tof)
+// (or, dn, dfrq, dreffrq, dof)
+// If channel is out the range, $found=0.
+
+  $channel=$2
+  if($channel=1) then
+    $chname='tn'
+    $frqname='sfrq'
+    $refname='sreffrq'
+    $tofname='tof'
+  elseif($channel=2) then
+    $chname='dn'
+    $frqname='dfrq'
+    $refname='dreffrq'
+    $tofname='dof'
+  elseif($channel>2) then
+    $dchann=''
+    format($channel-1,0,0):$dchann
+    $chname='dn'+$dchann
+    $frqname='dfrq'+$dchann
+    $refname='dreffrq'+$dchann
+    $tofname='dof'+$dchann
+  else
+    return(0)
+  endif
+
+  // if nucleus is not defined for the given channel, return 0
+  exists($chname,'parameter'):$e
+  if($e=0) then
+    return(0)
+  endif
+
+  // create $refname if needed
+  exists($refname,'parameter'):$e
+  if($e=0) then
+    create($refname,'real')
+  endif
+
+  return(1,$chname,$frqname,$tofname,$refname)
+
+elseif($action='getParamNames4axis' and $# > 1) then
+// given $axis, 'getParamNames4axis' returns parameters for corresponding nucleus
+// axis is specified by 0,1,2,..
+// try to use refsource,refsource1,2... if not defined by p,d,1,2 with axis parameter.
+
+  $axis=$2
+  // assume if sw1, or sw2, ... does not exist, the axis is not defined
+  setfrqCmd('paramName4axis',$axis,'sw'):$swname
+  exists($swname,'parameter'):$e
+  if(not $e) then return(0) endif
+
+  // determine nucleus of the given $axis by mapping it to $channel
+  // try to use the $i^th character in axis parameter.
+  $channel=0 // init to an invalid number 
+  $i=$2+1 
+  length(axis):$l
+  if($l>=$i) then 
+    substr(axis,$i,1):$ch
+    if(not typeof('$ch')) then
+      $channel=$ch+1
+    elseif($ch='p') then
+      $channel=1
+    elseif($ch='d') then
+      $channel=2
+    endif
+  endif
+  if($channel=0) then
+    $channel=1 // default
+    // try to use refsource
+    setfrqCmd('paramName4axis',$2,'refsource'):$refsource
+    exists($refsource,'parameter'):$e
+    if($e>0) then
+      $frqname={$refsource}
+      strstr($frqname,'dfrq'):$n,$s,$ch
+      if($n=0) then
+        if($frqname='sfrq') then $channel=1 endif
+      elseif(not typeof('$ch')) then $channel=$ch+1
+      else $channel=2 endif
+    endif
+  endif
+
+  setfrqCmd('getParamNames4channel',$channel):$e,$chname,$frqname,$tofname,$srefname
+  if($e) then
+    return($e,$chname,$frqname,$tofname,$srefname)
+  else
+    return(0)
+  endif
+
+elseif($action='paramName4axis' and $# > 2) then
+// $axis is 0, 1, 2
+// for example, given 1 and 'sw', return parameter is 'sw1'
+
+  if($2=0) then 
+    $paramName=$3
+  else
+    $dimStr=''
+    format($2,0,0):$dimStr
+    $paramName=$3+$dimStr
+  endif
+  if($#>3) then // auto create local parameter with type specified by $4
+    exists($paramName,'parameter'):$e
+    if(not $e) then
+      create($paramName,$4)	
+    endif 
+  endif
+  return($paramName)
+
+elseif($action='nucname2axis' and $#>1) then
+// find which dimension has the given nucleus $2
+// for homonuclear exp, only the first dimension will be used.
+
+  $nucname=$2
+  $axis=0
+  setfrqCmd('getdim'):$dim
+  while($axis<$dim) do
+    setfrqCmd('getParamNames4axis',$axis):$found,$chname
+    if($nucname={$chname}) then return($axis) endif 
+    $axis=$axis+1
+  endwhile
+  return(0)
+
+elseif($action='nucname2channel' and $#>1) then
+  $chnm=$2
+  $i=1
+  while($i<=numrfch) do // try $chnm as value of  tn, dn,...
+    setfrqCmd('getParamNames4channel',$i):$found,$chname
+    if($found and $chnm={$chname}) then
+      return($i)
+    endif
+    $i=$i+1
+  endwhile
+  return(0)
+
+elseif($action='getFrqscale' and $#>1) then
+  $axis=$2
+  $scl=1
+  setfrqCmd('paramName4axis',$axis,'scalesw'):$name
+  exists($name,'parameter'):$e
+  if($e) then 
+    on($name):$on
+    if($on and {$name} > 0) then $scl=$scl*{$name} endif
+  endif
+  setfrqCmd('paramName4axis',$axis,'downsamp'):$name
+  exists($name,'parameter'):$e
+  if($e) then 
+    on($name):$on
+    if($on and {$name} > 0) then $scl=$scl/{$name} endif
+  endif
+  if($scl<=0) then $scl=1 endif
+  return($scl)
+
+elseif($action='getFrqshift' and $#>1) then
+  $axis=$2
+//  if($axis>0) then return(0) endif
+  $frq=0
+  on('oslsfrq'):$on
+  if ($axis<0.5) then
+    if($on>0) then
+      $fsq='n'
+      exists('fsq_','parameter'):$e
+      if ($e) then $fsq=fsq_
+      else
+        isnewexp:$new
+        if $new then
+// using fsq parameter from global is NEVER a good idea
+//   Absence of fsq_ is a snafu with VJ2.  All chempack
+//   and/or VJ3 data will have fsq_ in current tree
+          exists('fsq','parameter','global'):$e
+          if ($e) then $fsq=fsq endif
+        else
+//  It is safe to assume that fsq was ON when the data
+//   was collected
+          $fsq='y' $e=1
+        endif
+      endif
+      if $e then
+        if $fsq='n' then
+          $frq=oslsfrq
+        endif
+      else
+        $frq=oslsfrq
+      endif
+    endif
+    on('dslsfrq'):$on
+    if($on>0) then $frq=$frq+dslsfrq endif
+  endif
+
+  $axstr=''
+  if ($axis>0) then
+	$axstr='' format($axis,'lower'):$axstr
+  endif
+  $lsf='lsfrq'+$axstr
+  on($lsf):$on
+  if($on>0) then $frq=$frq+{$lsf} endif
+  return($frq)
+
+elseif($action='calcBaseFactor') then
+// baseFreq=baseFactor*freq_x, where freq_x is nuctable freq for nucleus x
+  $H1reffrq=0
+  setfrqCmd('getBaseref','H1reffrq'):$H1reffrq
+  if($H1reffrq=0) then return(0) endif 
+
+  setfrqCmd('getRefstdXi','lk'):$Xi_lk
+  $H2reffrq=$H1reffrq*$Xi_lk/100
+  setfrqCmd('getnucFreq','h2lk'):$f_lk
+  if($f_lk=0) then return(0)
+  else return($H2reffrq*(1.0+5.0e-6)/$f_lk)
+  endif
+
+elseif($action='getNuctabPath') then
+// this is called if nuctable does not exist
+
+   if ((h1freq-127) < 10 or (127-h1freq) > 10) then
+     $suffix='3T'
+   elseif ((h1freq-170) < 10 or (170-h1freq) > 10) then
+     $suffix='4T'
+   else
+     $suffix=''
+     format(h1freq/100,0,0):$suffix
+   endif
+   $rftype='d'
+   substr(rftype,1,1):$rftype
+   $path=systemdir+'/nuctables/nuctab'+$suffix+$rftype
+   return($path)
+
+elseif($action='getnucFreq' and $#>1) then
+// get frequency from nuctable or nuctabXXX
+
+  $nucname=$2
+  $path=systemdir+'/nuctables/nuctable'
+  exists($path,'file'):$e
+  if($e=0) then
+    setfrqCmd('getNuctabPath'):$path
+  endif
+  exists($path,'file'):$e
+  if($e=0) then
+    write(`line3`,`setfrqCmd('getnucFreq',..) failed: %s does not exist.`,$path)
+    return(0)
+  endif
+  lookup('mfile',$path,$nucname,'read','filekey'):$freq,$key,$found
+  if($found=2) then
+    return($freq)
+  else
+    write(`line3`, `setfrqCmd('getnucFreq',..) failed: frequency is not defined for nucleus %s.`, $nucname)
+    return(0)
+  endif
+
+endif
+
+if($action='calclockfreq') then
+// calculate lockfreq from current reffrq.
+
+    $pos=0
+    if($#>1) then $pos=$2 endif
+
+    format(solvent,'lower'):$solvent
+    setfrqCmd('getRefstdXi','lk'):$Xi_lk
+    setfrqCmd('getRefstdXi',tn):$Xi_tn
+    if($solvent<>'' and $solvent<>'none' and $Xi_lk>0 and $Xi_tn>0) then
+      setfrqCmd('getUselock'):$uselockref
+      setBaseref($pos)
+      setfrqCmd('getSolventPPM',$solvent):$solventPPM
+      $H2reffrq=reffrq*$Xi_lk/$Xi_tn
+      $lockfreq=$H2reffrq*(1+$solventPPM*1e-6)
+      setfrqCmd('getlkof'):$lkof
+      $lockfreq = $lockfreq - $lkof*1e-6
+
+      if $##=0 then
+        lockfreq=$lockfreq
+        exists('lockfreq_','parameter'):$e
+        if $e then
+          destroy('lockfreq_')
+        endif
+        if $#>0 then
+          setfrqCmd('getFrqscale',0):$frqscale
+          write('line3','lockfreq: %9.7f MHz (cr at %5.3f ppm)',
+            lockfreq, cr*$frqscale/reffrq)
+        else
+          write('line3','lockfreq: %9.7f MHz (cr at 0.0 ppm)',lockfreq)
+        endif
+      else
+        return($lockfreq,0,0,0,'lockfreq returned')
+      endif
+    elseif($##>0) then return(0,0,0,0,'no referencing')
+    else return endif
+
+elseif($action='getlkof') then
+  exists('lkof','parameter','global'):$e
+  if($e) then return(lkof)
+  else return(0) endif
+
+elseif($action='getlockfreq_') then
+  $lkof=0
+  $lockfreq=0
+  exists('lkof_','parameter'):$e
+  if($e) then $lkof=lkof_ endif
+  exists('lockfreq_','parameter'):$e
+  if($e) then $lockfreq=lockfreq_ endif
+  return($lockfreq+$lkof*1e-6)
+
+elseif($action='calclockfreq_') then
+    $nucname= tn
+    $reffrq = reffrq
+    if($#>2) then
+      $nucname=$2
+      $reffrq=$3
+    endif
+    setfrqCmd('getRefstdXi',$nucname):$Xi_x
+    if($Xi_x=0) then $Xi_x=100 endif
+    setfrqCmd('getRefstdXi','lk'):$Xi_lk
+    setfrqCmd('getSolventPPM',solvent):$solventPPM
+    $H2reffrq=$reffrq*$Xi_lk/$Xi_x
+    $lockfreq_ = $H2reffrq*(1+$solventPPM*1e-6)
+    return($lockfreq_)
+
+elseif($action='calclockfreq_forOlddata') then
+// calculate lockfreq_ from current tn, sfrq, tof and solvent
+// should return correct value if called after ft
+
+  $baseFreq = sfrq - tof * 1e-6 
+  setfrqCmd('getnucFreq',tn):$f_x
+  setfrqCmd('getnucFreq','h2lk'):$f_lk
+  setfrqCmd('getSolventPPM'):$solventPPM
+  $solventFactor=($solventPPM-5.0)*1e-6
+  $d=1.0-$solventFactor 
+  $lockfreq_=0
+  if($d>0 and $f_x>0) then
+     $lockFactor=$baseFreq/($d*$f_x) - 1.0
+     $lockfreq_ = $f_lk + $lockFactor*$f_lk
+  endif
+  return($lockfreq_) 
+
+elseif($action='calc_frq' and $#>3) then
+// $2 is nucname, $3 is lockfreq, $4 is tof or dof name 
+  $nucname=$2
+  $lockfreq=$3
+  $tof=0
+  exists($4,'parameter'):$e
+  if($e) then $tof={$4} endif
+
+  setfrqCmd('getnucFreq',$nucname):$f_x
+  setfrqCmd('getnucFreq','h2lk'):$f_lk
+  setfrqCmd('getSolventPPM'):$solventPPM
+  $lockFactor=($lockfreq-$f_lk)/$f_lk
+  $solventFactor=($solventPPM-5.0)*1e-6
+  $baseFreq=$f_x*(1.0+$lockFactor)*(1.0-$solventFactor)
+
+  return($baseFreq+$tof*1e-6)
+
+endif
+
+// this is to fix old data or exported data where lockfreq_ does not exist
+if($action='setlockfreq_') then
+
+  // do this only if lockfreq_ does not exist.
+  exists('lockfreq_','parameter'):$e
+  if($e) then return endif
+
+  $lockfreq_=0
+  setfrqCmd('calclockfreq_forOlddata'):$lockfreq_
+
+  if($lockfreq_ > 0) then
+     create('lockfreq_','real')
+     setvalue('lockfreq_',$lockfreq_)
+  endif
+endif

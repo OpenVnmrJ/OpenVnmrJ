@@ -1,0 +1,320 @@
+"macro pulsecal"
+"********************************************************************
+"
+"
+" NAME:
+"    pulsecal
+"
+" DESCRIPTION:
+"    Writes, updates and removes RF calibration entries form pulsecal
+"
+" Ex.: pulsecal(<arg 1>,<arg 2>,<arg 3>,<arg 4>,<arg 5>,<arg 6>)
+"
+"    <arg 1>  --  string: name of entry in RF calibration file
+"    <arg 2>  --  string: RF pulse pattern name or 'remove'
+"                         if 'remove' the entry name <arg 1> will be
+"                         removed from the RF calibration file
+"    <arg 3>  --  real  : length of pulse pattern in micro seconds
+"    <arg 4>  --  real  : flip angle of pulse
+"    <arg 5>  --  real  : power setting of pulse
+"    <arg 6>  --  string: operation mode 'interactive' or 'quiet'.
+"                         This argument will default to 'interactive'
+"                         if omitted.
+"                         'interactive' will require use input
+"                         'quiet' will not ask for user input to
+"                         perform the operation
+"
+" Hint:
+"      to remove entry  -> pulsecal(<arg 1>,'remove')
+"      to add entry     -> pulsecal(<arg 1>,<arg 2>,<arg 3>,<arg 4>,
+"                                   <arg 5>)
+"
+"********************************************************************
+"--------------------------------"
+" define path and file names     "
+"--------------------------------"
+$macro_name = 'PULSECAL: '
+$pulsecal = userdir+'/pulsecal'
+$temp = userdir+'/pulsecal.old'
+$datfile = userdir+'/pulsecal.date'
+$message = 'Incorrect number of argument in call to <' + $macro_name 
+$message = $message +`> - Usage: pulsecal(name,'remove')    OR   `
+$message = $message + 'pulsecal(name,pattern,length,flip,power,mode)'
+
+"--------------------------------"
+" Check number of arguments      "
+"--------------------------------"
+if ($# > 0) then
+     if ($# < 2) then
+          write('line3',$message)
+ 	  return
+     endif
+     if (($# > 2) and ($# < 5 )) then
+	  write('line3',$message)
+	  return
+     endif
+     if ($# > 6) then
+	  write('line3',$message)
+	  return
+     endif  
+endif
+
+"--------------------------------"
+" Check and assign arguments     "
+"--------------------------------"
+if ($# > 0) then
+     if ( typeof('$1') < 1)  then                           "check if argument is a string"
+	 write('line3','Argument 1 invalid - not a STRiNG !')
+	 return
+     endif
+     $name = $1                                             "assign argument"
+     if (typeof('$2') < 1)  then                            "check if argument is a string"
+	  write('line3','Argument 2 invalid - not a STRING !')
+	  return
+     endif
+     $pattern = $2                                          "assign argument"
+     if ($# = 2) and ($pattern <> 'remove') then
+          write('line3','Argument 2 invalid <> `remove` ')
+	  return
+     endif
+     if ($pattern = 'remove') then
+          $action = 'remove'                                "assigned required action - remove"
+	  $mode   = 'interactive'                           "default mode to interactive for remove"
+     else 
+          $action = 'add'                                   "assigned required action - add"
+     endif	    
+else
+     $action = 'display'                                     "assigned required action - display"
+     $pattern= ''
+endif
+
+if ($# > 2) then
+     if ( typeof('$3') > 0)  then                           "check if argument is a real"
+	 write('line3','Argument 3 invalid - not a REAL !')
+	 return
+     endif
+     $length = $3                                           "assign argument"
+     if ( typeof('$4') > 0)  then                           "check if argument is a real"
+	 write('line3','Argument 4 invalid - not a REAL !')
+	 return
+     endif
+     $flipangle = $4                                        "assign argument"
+     if ( typeof('$5') > 0)  then                           "check if argument is a real"
+	 write('line3','Argument 5 invalid - not a REAL !')
+	 return
+     endif
+     $power = $5                                            "assign argument"
+     if ($# = 6) then
+          if ( typeof('$6') < 1)  then                      "check if argument is a string"
+               write('line3','Argument 6 invalid - not a STRING !')
+	       return
+	  endif
+	  $mode =$6                                         "assign argument"
+	  if ($mode <> 'interactive') and ($mode <> 'quiet') then
+	       $message = 'Argument 6 invalid - string must be either '
+	       $message = $message + '<interactive> or <quiet> !'
+	       write('line3',$message)
+	       return
+	  endif
+     else
+          $mode = 'interactive'                             "default to interactive mode"
+     endif
+endif
+
+"--------------------------------"
+" initialize variable            "
+"--------------------------------"
+$title1 = '               PULSE CALIBRATION VALUES'
+$title2 = ''
+$title3 = '     rfcoil      length        flip       power      date'
+$title4 = ''
+$old_name    = ''
+$old_length  = 0
+$old_angle   = 0
+$old_power   = 0
+$old_date    = 0
+$words_in_header = 8
+$header_size     = 4
+$entries         = 5
+$entry_format = '%10s  %10d  %10d  %7f  %10d' 
+$temp_str     = ''
+
+"--------------------------------"
+" check if pulsecal file exists "
+"--------------------------------"
+exists($pulsecal,'file'):$ex_cal
+if ($ex_cal < 1) then
+     "-----------------------------------------"
+     " Create file header for new file         "
+     "-----------------------------------------"	  
+     write('file',$pulsecal,$title1)
+     write('file',$pulsecal,$title2)
+     write('file',$pulsecal,$title3)
+     write('file',$pulsecal,$title4)
+     $ex_cal = 1
+endif     
+
+"-----------------------------"
+" Determine number of entries "
+"-----------------------------"
+if ($ex_cal > 0) then
+     nrecords($pulsecal):$lines
+     $lines = $lines - $header_size
+endif
+
+"--------------------------------------------------------------------"
+" D I S P L A Y   F I L E                                            "
+"--------------------------------------------------------------------"
+if ($action = 'display') then                             "display file if no argument"
+     if ($ex_cal > 0) then                                "make sure the file exists "
+	  write('line3','Usage: pulsecal(name,pattern,length,flip,power)')
+	  clear(4)
+	  cat($pulsecal)
+	  abort
+      endif
+endif
+
+
+"--------------------------------------------------------------------"
+"  C A L C U L A T E    N E W    E N T R Y                           "
+"--------------------------------------------------------------------"
+if ($action = 'add') then
+     "--------------------------------"
+     " Find RF file to use "	  
+     "--------------------------------" 
+     exists($pattern+'.RF','shapelib'):$ex1,$rf_file
+     if ($ex1 = 0) then
+	  $message = 'ERROR in ' + $macro_name 
+	  $message = $message + ' - Can not find RF pattern <'
+	  $message = $message + $pattern + '.RF> !'
+	  write('line3',$message)
+	  abort
+     endif
+     "------------------------------------------" 
+     " Read keyword values from RF pattern file "
+     "------------------------------------------"     
+     lookup('file',$rf_file,'count','MODULATION'):$mod_count
+     lookup('file',$rf_file,'count','INTEGRAL'):$integral_count
+     if ($mod_count = 0  or  $integral_count = 0) then
+	  $message = 'ERROR in ' + $macro_name 
+	  $message = $message + ' - RF template <'
+	  $message = $message + $pattern+'.RF> cannot be used for calibration !'
+	  write('line3',$message)
+	  abort
+     else
+	  lookup('file',$rf_file,'MODULATION','read'):$mod
+	  lookup('file',$rf_file,'INTEGRAL','read'):$integral
+     endif
+    "-------------------------------------" 
+    " Check for amplitude modulated pulse "
+    "-------------------------------------"     
+    if ($mod <> 'amplitude') or ($integral <= 0) then
+         $message = 'ERROR in ' + $macro_name 
+	 $message = $message + ' - RF template <'
+	 $message = $message + $pattern+'.RF> cannot be used for calibration !'
+         write('line3',$message)
+         abort
+    endif
+    "--------------------------------------" 
+    " Calculate the new calibration values "
+    "--------------------------------------"    
+    ln(10.0):$ln10
+    ln($integral):$ln_integral
+    $pwr  = $power + 20 * $ln_integral / $ln10
+    $ipwr = trunc (($pwr * 1000) + 0.5) / 1000
+    $exp  = $ln10 * ($pwr - $ipwr) / 20
+    exp($exp):$length_ratio
+    $length = $length*$length_ratio
+    "---------------------------------------" 
+    " Get the date from UNIX                "
+    "---------------------------------------"
+    $date = ''
+    shell('date +%m%d%y'):$date_val
+    format($date_val,0,0):$date
+    "---------------------------------------"
+    " Check pulsecal for the requested name "
+    "---------------------------------------"
+    $count = 0
+    if ($ex_cal > 0) then
+         lookup('file',$pulsecal,'count',$name):$count
+         "----------------------------------"
+         " Name already exists as an entry  "
+	 "----------------------------------"
+         if ($count > 0) then
+	     "------------------------------"
+             " Interactive mode             "
+	     "------------------------------"
+             if ($mode = 'interactive') then
+                   write('line3','Pulsecal entry <'+$name+'> already exists')
+                   input('Do you want to replace it? (y, n, or q to quit now): '):$replace
+                   if ($replace = 'q'  or  $replace = 'Q') then
+                        abort
+                   endif
+                   if ($replace = 'n'  or  $replace = 'N') then
+                        input('Please enter a new name: '):$name
+                        $count = 0
+                   endif
+              endif
+         endif
+     endif
+endif
+
+"--------------------------------------------------------------------"
+"  R E M O V E    E N T R Y                                          "
+"--------------------------------------------------------------------"
+if ($action = 'remove') or ($action = 'add') then
+     $count = 0
+     lookup('file',$pulsecal,'count',$name):$count   "retrieve number of occurances"
+     "-----------------------------------------"
+     " display message if entry does not exist "
+     "-----------------------------------------"	  
+     if ($count = 0) and ($mode <> 'quiet') then
+       if ($action = 'remove') then
+	  write('line3','%s - Calibration file entry <%s> not found !',$macro_name,$name)
+	  return
+       endif
+     endif
+     "-----------------------------------------"
+     " make copy of pulsecal and delete        "
+     "-----------------------------------------"	  
+     cp($pulsecal,$temp)                           "copy file to temporary file"
+     delete($pulsecal)				   "delete roiginal file"
+     "-----------------------------------------"
+     " Create file header for new file         "
+     "-----------------------------------------"	  
+     write('file',$pulsecal,$title1)
+     write('file',$pulsecal,$title2)
+     write('file',$pulsecal,$title3)
+     write('file',$pulsecal,$title4)
+     lookup('file',$temp)                           "open temporary file"
+     lookup('skip',$words_in_header)                "skip header"
+     "------------------------------"
+     " copy old entries to new file "	  
+     "------------------------------"
+     if ($lines > 0) then
+	  $counter = 1
+	  repeat
+	       lookup('read',$entries):$old_name,$old_length,$old_angle,$old_power,$old_date
+	       if ($old_name <> $name) then
+		    write('file',$pulsecal,$entry_format,$old_name,$old_length,$old_angle,$old_power,$old_date)
+               endif
+	  $counter = $counter + 1     
+	  until ($counter > $lines)
+	  delete($temp)
+     endif
+endif
+
+"--------------------------------------------------------------------"
+"  A D D    E N T R Y                                                "
+"--------------------------------------------------------------------"
+if ($action = 'add') then
+  write('file',$pulsecal,$entry_format,$name,$length,$flipangle,$ipwr,$date)  
+
+  $logfile = userdir+'/pulsecal.log'
+  exists($logfile,'file'):$ex
+  if ($ex = 0) then                              // write header for log file
+    write('file',$logfile,'     RFCOIL      LENGTH        FLIP       POWER      DATE')
+  endif
+  write('file',$logfile,$entry_format,$name,$length,$flipangle,$ipwr,$date)  
+endif
+

@@ -1,0 +1,134 @@
+"macro soadn"
+"soadn: sort out archivedir name"
+
+" an attempt to compensate for a Glide 'feature', to allow normal "
+" entry of archivedir parameter.  The purpose is to check the value "
+" of archivedir as returned by Glide, and attempt to parse it into "
+" a proper string in case it is not already one.  Parsing rules: "
+" 1.  If archivedir begins with a / it looks proper;  no action required. "
+" 2.  If archivedir begins with any of the key words userdir, autodir, "
+"     systemdir or defaultdir, attempt to construct a proper path name. "
+" 3.  If archivedir begins with any other character or (non-key) word "
+"     treate it as a relative path name & use as is. "
+
+  $word = ''  $char = ''
+  substr(archivedir,1,1):$char
+
+  if ($char = '/') or ($char = '') then return endif
+   " if first char is /, this looks like a legitimate path name"
+
+  if ($char = '\'') or ($char = '`') then
+  repeat
+    substr(archivedir,2,256):archivedir
+    substr(archivedir,1,1):$char
+  until ($char <> '\'') and ($char <> '`')
+  " strip off leading single quote(s) "
+  endif
+
+  repeat
+    length(archivedir):$dirlen
+    substr(archivedir,$dirlen,1):$char
+    if ($char = '\'') or ($char = '`') then
+      substr(archivedir,1,$dirlen-1):archivedir
+    endif
+  until ($char <> '\'') and ($char <> '`')
+  " strip off trailing quote(s) "
+
+"strip any blank spaces out of archivedir"
+  length(archivedir):$strlen
+  $i = 1  $dirname = ''
+  repeat
+    substr(archivedir,$i,1):$char
+    if $char <> ' ' then
+      $dirname = $dirname+$char
+      $i = $i+1
+    else
+      $i = $i+1
+    endif
+  until ($i > $strlen)
+
+"now try to interpret what's left "
+  $parse = 0
+  substr($dirname,1,7):$word
+
+  if $word = 'userdir'  then $newname = userdir  $parse = 8
+
+  elseif $word = 'autodir' then $newname = autodir  $parse = 8
+
+  elseif $word = 'systemd' then
+    substr($dirname,1,9):$word
+    if $word = 'systemdir' then 
+      $newname = systemdir $parse = 10 
+    else
+      return
+    endif
+
+  elseif $word = 'default' then
+    substr($dirname,1,10):$word
+    if $word = 'defaultdir' then 
+      $newname = defaultdir $parse = 11 
+    else
+      return
+    endif
+
+  else
+    " original dir name not any key word & not an absolute pathname- "
+    " just use as is "
+    return
+  endif
+
+  if ($parse) then  "try to construct a proper name "
+
+    substr($dirname,$parse,1):$char
+    if $char = '+' then
+      substr($dirname,$parse+1,1):$char 
+      if ($char = '\'') or ($char = '`') then
+	substr($dirname,$parse+2,1):$char
+	if $char = '/' then
+	" use the rest of the string as the path name "
+	  substr($dirname,$parse+2,256):$dirname
+	  archivedir = $newname+$dirname
+	  return
+	else
+	  substr($dirname,$parse+2,256):$dirname
+	  archivedir = $newname+'/'+$dirname
+	  return
+	endif
+
+      elseif $char = '/' then
+	"check for a construct like 'userdir+/pathname' "
+	substr($dirname,$parse+1,256):$dirname
+	archivedir = $newname+$dirname
+	return
+
+      else  " original string was of the form 'userdir+name' "
+	substr($dirname,$parse+1,256):$dirname
+	archivedir = $newname+'/'+$dirname
+	return
+
+      endif  "end of branch for form 'userdir+...."
+
+    elseif ($char = '\'') or ($char = '`') then
+	"first character after 'userdir' "
+
+      substr($dirname,$parse+1,1):$char
+      if $char = '/' then
+	" use the rest of the string as the path name "
+	substr($dirname,$parse+1,256):$dirname
+	archivedir = $newname+$dirname
+	return
+
+      else  " original string was of the form 'userdir'name' "
+	substr($dirname,$parse+1,256):$dirname
+	archivedir = $newname+'/'+$dirname
+	return
+
+      endif 
+      
+    else "use the rest of the string as the path name"
+
+      substr($dirname,$parse,256):$dirname
+      archivedir = $newname+'/'+$dirname
+    endif
+
+  endif  "end of parse section"

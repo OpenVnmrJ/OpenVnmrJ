@@ -1,0 +1,109 @@
+"macro ATc33"
+"ATc33" "C13 Adiabatic Decoupling using Waveform Generators"
+"        Using user-defined power limits. Efficiency may be"
+"        compromised"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+   substr(rfwg,1,1):$wfg1exists
+   substr(rfwg,2,1):$wfg2exists
+
+   if (rfchtype[2]='U+ Direct Synthesis') then    "Dual broadband system"
+    if ($wfg2exists='n') then
+     write('line3','No Waveform Generator Present. WFG Required for Adiabatic Decoupling')
+     ATnext return 
+    endif
+   else
+    if ($wfg1exists='n') then    "C13 on channel 1 uses wfg on channel 1"
+     write('line3','No Waveform Generator Present. WFG Required for Adiabatic Decoupling')
+     ATnext return 
+    endif
+   endif
+
+if ($#=0) then
+   ATrtp('standard')  
+   seqfil='s2pul'
+   dn='C13' 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   at_currenttest='adiabaticsprofile_c'
+   lb='n' sb=at/4 s1 av
+   text('C13 Adiabatic Decoupling Profiles')
+
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='ATc33(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft f vsadj sp=2.8p wp=.8p vsadj
+   lb=10 sb=-.07 gf='n' sbs='n'
+   dmf=200,200
+   opx('ATwurst.DEC')
+   setwave('WURST2 14000')
+   pboxpar('$1 adb', '2.0')   "add 2dB for better intensities"
+   cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+   pbox_pwr('ATwurst.DEC'):dpwr
+
+   $n3=n3
+   format(at_max_dpwr,2,0):n3
+   n3=n3+'d'
+   $attn=n3
+
+   if dpwr>at_max_dpwr then
+       pboxpar('attn',$attn)
+       echo($attn)
+       shell('Pbox')
+       pbox_pwr('ATwurst.DEC'):dpwr
+       write('line3','Decoupling Power reduced to Maximum (at_max_dpwr)')
+       n3='Decoupling Power reduced to Maximum (at_max_dpwr)'
+       atext(n3)
+   endif
+
+   pbox_dmf('ATwurst.DEC'):dmf
+ 
+   opx('ATstud.DEC')
+   pboxpar('$1 adb', '2.0')   "add 2dB for better intensities"
+   setwave('SECH 14000')
+   cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+   pbox_pwr('ATstud.DEC'):dpwr[2]
+
+   if dpwr[2]>at_max_dpwr then
+       pboxpar('attn',$attn)
+       echo($attn)
+       shell('Pbox')
+       pbox_pwr('ATstud.DEC'):dpwr[2]
+   endif
+
+   pbox_dmf('ATstud.DEC'):dmf[2]
+
+   array('dof',41,dof-80*dfrq,4*dfrq)
+   vp=0 dmm='ccp'
+   dm='nny' dres=9.0 dseq='ATwurst','ATstud'
+   wnt='ATadiab'
+   dtext 
+   wexp='ATc33(`PART2`)'
+   array='(dpwr,dseq,dmf),dof'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft
+   ATsvf
+   ATpldecs
+
+ATnext
+endif

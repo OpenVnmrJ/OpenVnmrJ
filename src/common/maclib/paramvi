@@ -1,0 +1,34 @@
+"macro paramvi"
+
+if ($# < 1 or $# > 2) then
+    write('error','Usage -- %s(param_name [,tree])',$0)
+    abort
+endif
+
+$param=$1
+
+$curtree=''
+if ($# = 1) then
+    $curtree='current'
+else
+    $curtree=$2
+endif
+
+$e=0
+exists($param,'parameter',$curtree):$e
+if ($e = 0) then
+    length($param):$e
+    if ($e > 36) then
+        write('error','parameter %.36s doesn\'t exist in the %s tree',
+                      $param,$curtree)
+    else
+        write('error','parameter %s doesn\'t exist in the %s tree',$param,$curtree)
+    endif
+    abort
+endif
+
+$file=curexp+'/'+$param+'.'+$curtree
+writeparam($file,$param,$curtree)
+shelli('vnmr_vi','"'+$file+'"'):$dum
+fread($file,$curtree)
+rm($file):$x

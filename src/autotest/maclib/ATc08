@@ -1,0 +1,216 @@
+"macro ATc08"
+"ATc08" "Phase-cycle cancellation (lock test) with variable d1 "
+"       cryorep is the RPM value for the Closed Circuit Cryo Cooler"
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATcancel'
+   text('Phase-cycle cancellation (test of lock)')
+   at_currenttest='cancellation_c'
+   exists('at_cryorep','parameter','global'):$e
+   if ($e<0.5) then 
+"   create('at_cryorep','real','global') "
+    $at_cryorep=120
+    banner('Using Value of "at_cryorep" of 120.\\Create as global to set a different value.')
+    write('line3','Using Value of "at_cryorep" of 120.  Enter create(\'at_cryorep\',\'global\') to set a different value.')
+"    abort "
+   else
+    if at_cryorep<100 then
+     banner('CCC rep rate too low. Set Value of "at_cryorep" from Setting on CCC, e.g. at_cryorep=120. Then restart Test')
+     write('line3','CCC rep rate too low. Set Value of "at_cryorep" from Setting on CCC, e.g. at_cryorep=120. Then restart Test')
+     abort
+    endif
+    $at_cryorep = at_cryorep
+   endif
+   $t1=trunc(1000*(2*60/$at_cryorep -at))/1000
+   $t2=trunc(1000*(2.5*60/$at_cryorep -at))/1000
+   d1=$t1,$t2
+   ss=4 p1=pw pw=0 nt=1,1,1,1,2,2,2,2,2,2,2,2,2,2
+   array='d1,nt'
+   wnt='ATc08(`WNT`)'
+   wexp='ATc08(`PART1`)'
+   ATcycle
+   au
+   write('line3','')
+   dps
+elseif ($1='WNT') then
+  ATwft
+  select(1)
+  av
+  lvl=0 tlt=0
+  f
+  peak:$ht,$frq
+  wp=3p sp=$frq-1.5p
+  vsadj(150) dssh dtext
+elseif ($1='PART1') then
+  text('Phase-cycle cancellation (test of lock)')
+  lb='n' fn=2*np
+  vp=0 wft select(1) ph aph0 vsadj(150) dssh(1,14) dtext
+  s1
+  atext('vertical scale x10 in expansions')
+  dssh(1,14) dtext axis='h'
+  vp=vp+30 sc=9*(-ho+1)+ho/2 vs=vs*10 dscale dssn(5,14)
+  if (at_plotauto='y') then
+   if (at_printparams='y') then dn2='' pap 
+      pps(120,0,wcmax-120,90)
+      ATpltext ATpage
+   endif
+   pscale
+   write('plotter',4*(-ho+1),vp-18,'250Hz expansion. Each tic mark = 50 Hz')
+   pl(5,14) r1 
+   pl(1,14) ATpltext(wcmax-100,wc2max)
+  endif
+  vp=vp+30
+  pen('graphics','yellow')
+  move(4*(-ho+1)-5,vp+15)
+  write('graphics',5*(-ho+1),vp+17,'This level corresponds to 1.00 percent residual signal')
+  write('graphics',4*(-ho+1)-5,vp+15,'1.00')
+  write('graphics',4*(-ho+1)-5,vp,'0.00')
+  draw(wcmax,vp+15)
+  r1=1 $htsum1=0 $htsum2=0 
+  s9
+  av select(1) vsadj(150)
+  sp=-1p wp=1p
+  select(1) peak:$ht1 select(2) peak:$ht2
+  select(3) peak:$ht3 select(4) peak:$ht4
+  echo('Single-scan peak heights',$ht1,$ht2,$ht3,$ht4)
+  averag($ht1,$ht2,$ht3,$ht4):$av1,$std1
+  echo('Average and Standard Dev. for single-scans:',$av1,$std1)
+  r1=5
+  repeat
+   select(r1) peak:$ht $htsum2=$htsum2+$ht
+   r1=r1+1 
+  until r1=15 
+   $av2=$htsum2/10
+   echo('average single-scan peak height',$av1)  
+   echo('average two-scan peak height',$av2)  
+
+  $resid2=trunc(1000*100*$av2/$av1)/1000  
+   echo('average two-scan peak height',$resid2)  
+  r9 ph
+  if (at_plotauto='y') then
+   pen('plotter','black')
+   move(4*(-ho+1)-5,vp+15)
+   draw(wcmax,vp+15)
+   write('plotter',4*(-ho+1)-10,vp+15,'1.00')
+   write('plotter',4*(-ho+1)-10,vp+0,'0.00')
+   write('plotter',wcmax,vp-5,'x10')
+   write('plotter',0,wc2max,'Avg Height (nt=1) = %3.2f ; Std. Dev.= %1.2f ;Percent Std. Dev. is %1.2f',$av1,$std1,$std1/1.5) 
+   write('plotter',0,wc2max-10,'Avg, Residual for 2-scan Cancellation = %2.3f percent (d1=%1.3fsec)',$resid2,d1[1]) 
+  endif
+  r1
+  f
+  peak:$ht,$frq
+  wp=1p sp=$frq-0.5p
+  vp=vp+30+80 sc=9*(-ho+1)+ho/2 vs=vs*10 dscale dssn(5,14)
+  if (at_plotauto='y') then
+   write('plotter',-4*(ho+1),vp-18,'100 Hz expansion. Each tic mark = 10 Hz')
+   pscale
+   pl(5,14)  
+  endif
+  pen('graphics','yellow')
+  move(4*(-ho+1)-5,vp+15)
+  write('graphics',5*(-ho+1),vp+17,'This level corresponds to 1.00 percent residual signal')
+  write('graphics',4*(-ho+1)-5,vp+15,'1.00')
+  write('graphics',4*(-ho+1)-5,vp+0,'0.00')
+  move(4*(-ho+1)-5,vp+15)
+  draw(wcmax,vp+15)
+  if (at_plotauto='y') then
+   pen('plotter','black')
+   move(4*(-ho+1)-5,vp+15)
+   draw(wcmax,vp+15)
+   write('plotter',4*(-ho+1)-10,vp+15,'1.00')
+   write('plotter',4*(-ho+1)-10,vp+0,'0.00')
+   write('plotter',wcmax,vp-5,'x10')
+   ATpage
+  endif
+  r3=$av1 r4=$std1 r5=$resid2
+
+  r1 
+  dssh(15,28) dtext
+  vp=vp+30 sc=9*(-ho+1)+ho/2 vs=vs*10 dscale dssn(19,28)
+  if (at_plotauto='y') then
+   pscale
+   write('plotter',4*(-ho+1),vp-18,'250Hz expansion. Each tic mark = 50 Hz ')
+   pl(19,28) r1
+   pl(15,28) ATpltext(wcmax-100,wc2max)
+  endif
+  vp=vp+30
+  pen('graphics','yellow')
+  move(4*(-ho+1)-5,vp+15)
+  write('graphics',5*(-ho+1),vp+17,'This level corresponds to 1.00 percent residual signal')
+  write('graphics',4*(-ho+1)-5,vp+15,'1.00')
+  write('graphics',4*(-ho+1)-5,vp,'0.00')
+  draw(wcmax,vp+15)
+  r1=1 $htsum1=0 $htsum2=0
+  s9
+  av select(1) vsadj(150)
+  f
+  peak:$ht,$frq
+  wp=1p sp=$frq-0.5p
+  select(15) peak:$ht1 select(16) peak:$ht2
+  select(17) peak:$ht3 select(18) peak:$ht4
+  echo('Single-scan peak heights:',$ht1,$ht2,$ht3,$ht4)
+  averag($ht1,$ht2,$ht3,$ht4):$av1a,$std1a
+  echo('Average and Standard Dev. for single-scans:',$av1a,$std1a)
+  r1=19
+  repeat
+   select(r1) peak:$ht $htsum2=$htsum2+$ht
+   r1=r1+1
+  until r1=28
+  $av2a=$htsum2/10
+   echo('average two-scan peak height',$av2a)
+
+  $resid2a=trunc(1000*100*$av2a/$av1a)/1000
+   echo('average two-scan peak height',$resid2a)
+  r9 ph
+  if (at_plotauto='y') then
+   pen('plotter','black')
+   move(4*(-ho+1)-5,vp+15)
+   draw(wcmax,vp+15)
+   write('plotter',4*(-ho+1)-10,vp+15,'1.00')
+   write('plotter',4*(-ho+1)-10,vp+0,'0.00')
+   write('plotter',wcmax,vp-5,'x10')
+   write('plotter',0,wc2max,'Avg. Height (nt=1) = %3.2f ; Std. Dev. = %1.2f ;Percent Std. Dev. is %1.2f',$av1a,$std1a,r4/1.5)
+   write('plotter',0,wc2max-10,'Avg. Residual 2-scan Cancellation = %2.3f percent (d1=%1.3fsec)',$resid2a,d1[2])
+  endif
+  r1
+  f
+  peak:$ht,$frq
+  wp=1p sp=$frq-0.5p
+  vp=vp+30+80 sc=9*(-ho+1)+ho/2 vs=vs*10 dscale dssn(19,28)
+  if (at_plotauto='y') then
+   write('plotter',-4*(ho+1),vp-18,'100 Hz Expansion. Each tic mark = 10 Hz')
+   pscale
+   pl(19,28)
+  endif
+  pen('graphics','yellow')
+  move(4*(-ho+1)-5,vp+15)
+  write('graphics',5*(-ho+1),vp+17,'This level corresponds to 1.00 percent residual signal')
+  write('graphics',4*(-ho+1)-5,vp+15,'1.00')
+  write('graphics',4*(-ho+1)-5,vp+0,'0.00')
+  move(4*(-ho+1)-5,vp+15)
+  draw(wcmax,vp+15)
+  if (at_plotauto='y') then
+   pen('plotter','black')
+   move(4*(-ho+1)-5,vp+15)
+   draw(wcmax,vp+15)
+   write('plotter',4*(-ho+1)-10,vp+15,'1.00')
+   write('plotter',4*(-ho+1)-10,vp+0,'0.00')
+   write('plotter',wcmax,vp-5,'x10')
+   ATpage
+  endif
+
+r4=trunc(r4*1000/1.5)/1000
+r5=trunc(r5*1000)/1000
+$resid2a=trunc($resid2a*1000)/1000
+$std1a=trunc($std1a*1000/1.5)/1000
+
+ ATrecord('CANCELc','Percent Residual Signal in Phase-Cycle Cancellation Test',' 2_scan_%Residual_d1fast',r5,' 1_scan_%Std.Dev._d1fast',r4,' d1(fast)',d1[1],' 2_scan_%Residual_d1slow',$resid2a,' 1_scan_%Std.Dev._d1slow',$std1a,' d1(slow)',d1[2]) 
+
+ write('file',autotestdir+'/REPORT','Cancellation: d1=%1.3f nt=1 Percent Std.Dev %1.3f; 2-scan resid (percent):%1.3f',d1[1],r4,r5)
+ write('file',autotestdir+'/REPORT','Cancellation: d1=%1.3f nt=1 Percent Std.Dev %1.3f ;2-scan resid (percent):%1.3f',d1[2],$std1a,$resid2a)
+
+ ATsvf
+ ATnext
+endif

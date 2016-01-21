@@ -1,0 +1,44 @@
+"macro walkupQ_readcpnodeexp"
+"****************************************************************"
+"   walkupQ_readcpnodeexp -  Read cpnode/pslabel from EXPLIST/LONGLIST   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+        shell('(cat '+$expfile+' | grep -w Queued | awk \'{print $1" "$3}\' > '+$expfile+'_queued)'):$dum
+        $parflg='' $exp2='' $mac2=''
+        readfile($expfile+'_queued','$parflg','$exp2','','local')
+        shell('rm -f '+$expfile+'_queued'):$dum
+
+        shell('(cat '+$lngfile+' | grep -w Queued | awk \'{print $1" "$3}\' > '+$expfile+'_queued)'):$dum
+        $parlng='' $lng2='' $lmac2=''
+        readfile($expfile+'_queued','$parlng','$lng2','','local')
+        shell('rm -f '+$expfile+'_queued'):$dum
+
+	$mac2=$exp2 $lmac2=$lng2
+	exists('cpattribute','maclib'):$macex
+	if ($macex) then
+	    $tot=size('$parflg')
+	    $i=1
+	    repeat
+		cpattribute('get',$maclibdir+'/'+$parflg[$i],'SetupMacro'):$mac2[$i]
+		$i=$i+1
+	    until $i > $tot
+	    $tot=size('$parlng')
+	    $i=1
+	    repeat
+		cpattribute('get',$maclibdir+'long/'+$parlng[$i],'SetupMacro'):$lmac2[$i]
+		$i=$i+1
+	    until $i > $tot
+	endif
+        return($parflg,$parlng,$exp2,$lng2,$mac2,$lmac2)
+"****************************************************************"

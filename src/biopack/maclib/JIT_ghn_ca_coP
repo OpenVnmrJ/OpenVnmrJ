@@ -1,0 +1,53 @@
+"macro JIT_ghn_ca_coP"
+"JIT_ghn_ca_coP"
+
+BPrtppar('JIT_ghn_ca_coP')
+
+setfrq BPsetampmode
+
+if (numrfch>3) then
+ getparam('dof3D','H2'):dof3
+ getparam('dmm3D','H2'):dmm3
+ getparam('dmf3D','H2'):dmf3
+ getparam('dpwr3D','H2'):dpwr3
+ getparam('dres3D','H2'):dres3
+ getparam('dseq3D','H2'):dseq3
+else
+  exists('ampmode','parameter'):$e
+  if ($e=1) then destroy('ampmode') endif
+endif
+
+ reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+ getparam('NHgrad1_time','N15'):gt1 
+ getparam('NHgrad1_lvl','N15'):gzlvl1 
+ getparam('NHgrad2_lvl','N15'):gzlvl2 
+
+ dm ='nnn' dm2='nnn'
+ dm2='nnn' 
+ dn3='H2' dm3='nyn' dmm3='cwc'
+
+
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2 
+ sw1=15*dfrq 
+ 
+ getparam('gt5','N15'):gt5
+ getparam('gt0','N15'):gt0
+ getparam('gzlvl5','N15'):gzlvl5
+ getparam('gzlvl0','N15'):gzlvl0
+
+opx('CaInvert.RF')                               "C13 refocussing pulse "
+setwave('reburp 70p 46p')
+pbox_rst
+pboxpar('refofs', '175.6p')
+pboxpar('sfrq', dfrq)
+cpx(pwC*compC,pwClvl)
+BPpboxget('CaInvert.RF'):CaInvert,pw_CaInvert,pwlvl_CaInvert
+BPmoveshape('CaInvert.RF')
+
+ setref
+ setref1('C13')
+ setref2('N15') 
+
+ss=16 nt=8
+spin='n' ni=1  ni2=1 phase=1 phase2=1

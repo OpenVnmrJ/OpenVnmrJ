@@ -1,0 +1,32 @@
+"macro add_investigator"
+"Add investigator to investigator list"
+if $#<0.5 then return endif
+if $1<>'' then
+  $u='' $w='' shell('echo $USER'):$u
+  shell('ls -l '+systemdir+'/conpar'):$v
+  substr($v,3):$w
+  if ($u=$w) then
+    $file=systemdir+'/imaging/templates/vnmrj/choicefiles/pis'
+    exists($file,'file'):$e
+    if $e>0.5 then
+      lookup('file',$file,'delimiter','"\t\n\r')
+      $r=1
+      repeat
+        lookup('read'):$name,$r
+        if $1=$name then $r=-1 endif
+      until ($r<0.5)
+      if $r=-1 then
+        write('error','Investigator "%s" already exists in the list.',$name)
+        return
+      else
+        $s = 'echo "\\\"' + $1 + '\\\" \\\"' + $1 + '\\\"" >> ' + $file
+        shell($s):$x
+      endif
+    else
+      $s = 'echo "\\\"' + $1 + '\\\" \\\"' + $1 + '\\\"" > ' + $file
+      shell($s):$x
+    endif
+  else
+    write('error','User %s cannot edit investigator list.',$u)
+  endif
+endif

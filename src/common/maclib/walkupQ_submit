@@ -1,0 +1,131 @@
+"macro walkupQ_submit"
+"****************************************************************"
+"   walkupQ_submit - submit queue to automation    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+   customizepar('savequit')
+   if (wqinit='acq') then walkupQ('setup') return endif
+
+   $parflgsize=0 $parlngsize=0
+   walkupQ('readlist'):$parflg,$parlng
+   if ($parflg[1]<>'') then $parflgsize=size('$parflg') endif
+   if ($parlng[1]<>'') then $parlngsize=size('$parlng') endif
+   if ($parflgsize=0) and ($parlngsize=0) and (replaceQ[1]='') then
+        write('error','no experiment selected')
+        return
+   endif
+   array2string($parlng):longlist
+   explist=$parflg
+
+   if ($resume='') and calibmod='no' then
+     setadirtmplt
+     setsvftmplt
+     setsdirtmplt
+     setsamplename
+     checktemplates:$return
+     if ($return=0) then return endif
+   endif
+
+   $loc='' $nextloc='no'
+   $xi=1
+   while $xi <= $# do
+     if ${$xi}='next' then $nextloc='yes' $loc=''
+     elseif ${$xi}='location' then 
+		"The next argument could be string or real"
+	$xi=$xi+1
+	$locarg='' format($xi,0,0):$locarg
+	$locarg='$'+$locarg
+	if typeof($locarg) then
+           $ok=0
+           walkupQ_getlocs(${$xi}):$loc,$ok
+           if ($ok=0) then return endif
+//	   $loc=${$xi}
+	else
+	   format(${$xi},0,0):$loc
+	endif
+	$nextloc='no'
+     endif
+     $xi=$xi+1
+   endwhile
+   $locsize=size('$loc')
+
+   $isnext='random'
+   if ($loc[1]='') and ($nextloc='no') then
+	getadminfo('smslocation'):$isnext
+	if ($isnext='next') then 
+	   if (replaceQ[1]<>'') and (replaceQ[4]<>'') then
+		$loc=replaceQ[4]
+	   else
+		$nextloc='yes' 
+	   endif
+	endif
+   endif
+
+   if ($nextloc='yes') then
+     if (NextLoc<>'') and (NextLoc<>'0') then
+	$loc=NextLoc
+     else
+     	if (wqinit='auto') then
+        	nextlocQ:$next
+     	else
+		nextlocQ(globalenter):$next
+     	endif
+     	if ($next=0) then 
+		write('error','There are no empty location')
+		return
+     	else
+		format($next,'lower'):$loc
+     	endif
+     endif
+     write('line3','Sample will be submitted to location %s',$loc)
+   endif
+   if ($loc[1]<>'') and ($locsize=1) then
+        mkpar('string','multiloc',$loc)
+	multiloc=$loc
+   endif
+   if (wqinit<>'auto') then prioritysample[2]='low' endif
+   wQinfo
+
+// If curexp/text is empty, put samplename in text
+   shell('(cat '+curexp+'/text | wc -w)'):$txtwords
+   if ($txtwords=0) then text(samplename):$dum endif
+
+   wraptext(curexp+'/text')
+   curexp=curexp
+   dousermacro($0)
+   savesampglobal(cursqexp)
+   if ($locsize=1) then
+        vjsubmitQ(1)
+   else
+	vjsubmitQ('','','',$loc)
+   endif
+//   dousermacro($0)
+
+// If curexp is still in submitmode and curexp/text was
+//   empty prior to last submission, clear curexp/text
+   is_submitmode:$submit
+   if ($submit) and ($txtwords=0) then
+	ctext
+   endif
+
+   bgmode_is:$bg
+   if (wqinit='auto') and (not $bg) then 
+        write('reset',userdir+'/persistence/.talk2j')
+        write('file',userdir+'/persistence/.talk2j','%s',vnmraddr)
+        shell('chmod a+rw '+userdir+'/persistence/.talk2j'):$dum
+//	checkautodir 
+   elseif (wqinit='enter') then
+	checkenterdir('clear')
+   endif
+"****************************************************************"

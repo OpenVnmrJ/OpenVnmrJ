@@ -1,0 +1,91 @@
+"macro svfname"
+" find a .fid filename using svfdir, svfname "
+
+$init='n'
+if $#>0.5 then
+  if $1='init' then
+    $init='y'
+  endif
+endif
+
+if $init<>'y' then  "find fid filename"
+
+  exists('svfdir','parameter','global'):$e
+  exists('svfname','parameter','global'):$f
+  if ($e<0.5 or $f<0.5) then
+    svfname('init')
+  endif
+  exists('svfdir','parameter','global'):$e
+  exists('svfname','parameter','global'):$f
+  if ($e>0.5 and $f>0.5) then
+    $file=''
+    Svfname(svfdir+'/'+svfname):$file
+    if ($## > 0.5) then
+      return($file)
+    else
+      write('line3','%s',$file)
+    endif
+    if ($## > 0.5) then return('') endif
+  endif
+
+else  "initialize svfdir"
+
+  exists('svfname','parameter','global'):$f
+  if $f<0.5 then
+    create('svfname','string','global')
+  endif
+  if (svfname='') then svfname='$seqfil$_' endif
+
+  exists('svfdir','parameter','global'):$e
+  if $e<0.5 then
+    create('svfdir','string','global')
+  endif
+  $js=''
+  $svfdir=userdir+'/data'
+
+"find owner"
+  exists('owner','parameter','global'):$f
+  if $f>0.5 then $owner=owner
+  else $owner='' shell('echo $USER'):$owner endif
+
+"find owner in userlist"
+  $w = 1
+  $file=systemdir+'/adm/users/userlist'
+  exists($file,'file'):$e
+  if $e>0.5 then
+    lookup('file',$file)
+    $w = 1
+    repeat
+      lookup('read'):$js,$w
+      if ($js=$owner) then
+        $w = -1
+      endif
+    until ($w < 0.5)
+  endif
+
+"read datadir"
+  if ($w = -1) then 
+    $file=systemdir+'/adm/users/profiles/data/'+$owner
+    exists($file,'file'):$f
+    if $f>0.5 then
+      $sstr='' $r=1
+      lookup('file',$file,'delimiter',' :\n\r\t')
+      lookup('seek','private','read'):$sstr,$r
+      if $r>0.5 then
+        length($sstr):$len
+        if $len>0.5 then $svfdir=$sstr endif
+      endif
+    endif
+  endif
+
+"if not absolute pathname, add it"
+  substr($svfdir,1,1):$js
+  if $js<>'/' then
+    $svfdir=userdir+'/'+$svfdir
+  endif
+
+  if (svfdir<>$svfdir) then
+    svfdir=$svfdir
+  endif
+
+endif

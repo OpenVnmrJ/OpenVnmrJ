@@ -1,0 +1,102 @@
+"macro gHMQCTOXY3D"
+"***************************************************************"
+" gHMQCTOXY3D - seup macro for gHMQCTOXY3D pulse sequence           "
+"       if tn=dn then dn defaults to 13C                        "
+"***************************************************************"
+
+if (tn = dn) then dn='C13' endif
+$wet='' substr(seqfil,1,3):$wet 
+
+par2D
+par3d
+
+setpresatpar
+PFGflg='y'
+
+Autopsgset('gHMQCTOXY3D','dg','ap','axis','array','sspul','hs','hst','dgproc')
+Autopsgset('gHMQCTOXY3D','null','j1xh','pwxlvl','pwx','dpwr','dmf')
+Autopsgset('gHMQCTOXY3D','gzlvl1','gt1','gzlvl3','gt3','gstab','hsglvl','hsgt','nullflg')
+Autopsgset('gHMQCTOXY3D','slpwr','slpw','mix','trim','mult')
+set2D
+
+dm='nnyny' 
+if (Console='unity') or (Console='vxrs') or (Console='g2000') then
+  dmm='ccwcw'
+else
+  dmm='ccgcg'
+endif
+
+setdecpars
+refsource1='dfrq'
+setsw1(dn,100,-100):dof 
+j1xh=150
+
+if (dn = 'C13') then
+   setsw1(dn,160,-10):dof 
+   j1xh=140
+elseif (dn = 'N15') then
+   setN15sw('sw1'):dof
+//   setsw1(dn,140,90):dof 
+   j1xh=90
+endif
+
+mkpar('real','spinlock',sw)
+setlimit('spinlock',20000,0,1)
+spinlock=sw/0.75
+setpower(sw/0.75,tn):slpwr,slpw               "mlev17c spinlock"
+sw2=sw setref2(tn)
+wp1=sw1 wp2=sw2 wp=sw full
+
+proc='ft' fpmult='n'
+ni=50 ni2=40
+nt=4
+pw=pw90
+at=.05 sw=sw
+phase=1,5 phase2=1,2 ph
+isspincad($0,'quiet'):$scpsg
+if (satmode = 'y') then
+ satdly=1 
+ if ($scpsg>0) then d1=satdly+.05 else d1=.05 endif
+else
+ d1=1
+endif
+
+$ratio=sfrq/dfrq
+getparam('gHratio',dn):$ratio
+fixgrd(10):gzlvl1
+gzlvl3=trunc(2*gzlvl1/$ratio)
+fixgrd(10):hsglvl
+hsgt=.005 gt1=.001 gt3=.001
+ss=32
+spin=0 wexp='' wnt='' alock='n' wshim='n'
+ai axis='pdp'
+pmode='full'
+mix=.08 
+rp=rp+180 rp1=0 rp2=0
+seqfil='gHMQCTOXY3D' explist=seqfil
+sspul='y' nullflg='y' 
+f1coef='1 0 1 0 0 1 0 -1' f2coef='1 0 0 0 0 0 1 0'
+null=0 
+setvch('tn','dn','z')
+numvch=3,2,1,0
+full 
+hs='n' gain='y' full
+if (dn='C13') and (tn='H1') then defparval('set',$0) endif
+if ($wet='wet') then 
+  seqfil='wet'+seqfil explist=seqfil
+  setwetpar(seqfil)
+  setvch('tn','dn','z','dn')
+  numvch=4,3,1,0
+  if (dn='C13') and (tn='H1') then defparval('set','wet'+$0) endif
+endif
+setLP1 lpfilt1=4
+parlp(2)
+lpopt2 = 'f' strtext2 = ni2  lpnupts2 = ni2
+strtlp2 = ni2  lpext2 = ni2
+lpfilt2 = 4 proc2='lp'
+
+fn=256 fn2=256 fn1=256 gaussian(2*ni,2*ni2)
+vs2d=50 th=3 specdc3d='ynn'
+dps
+dg
+

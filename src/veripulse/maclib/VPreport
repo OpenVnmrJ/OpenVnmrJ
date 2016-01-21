@@ -1,0 +1,595 @@
+"macro VPreport"
+"macro VPreport"
+"Options"
+"pass a specific ID to compile a report using"
+"or keyword all to compile all results"
+"or show a report"
+
+is_IP:$isIP
+if not ($isIP) then module('setup','IPpars') endif
+
+$reportcontent='last'
+$reportpath=''
+$runid=''
+$include='passfail'
+$function=''
+
+if ($#<1.5) then
+   exists('IPrunid','parameter'):$runidex
+   if ($runidex>0.5) then
+	$runid=IPrunid
+   else
+	write('error','No run ID supplied!')
+	return
+   endif
+endif
+
+$x = 1 
+while ($x <= $#) do
+   $val = ${$x}
+   if $val = 'runid' then $runid=${$x+1}
+   elseif $val = 'make' then $function='make' 
+   elseif $val = 'update' then $function='update' 
+   elseif $val = 'show' then $function='show' $reportpath=${$x+1}
+   elseif $val = 'passfail' then $include='passfail'
+   elseif $val = 'pass' then $include='pass'
+   elseif $val = 'fail' then $include='fail'
+   elseif $val = 'log' then $function='log' $reportpath=${$x+1}
+   elseif $val = 'email' then $function='email' $reportpath=${$x+1} $eaddr=${$x+2}
+   endif
+   $x=$x+1
+endwhile
+
+IF ($function='show') THEN
+
+   $open='/vnmr/bin/vnmr_open'
+   if (IPreportpath<>'' and IPreportpath<>'none') then shell($open+' '+$reportpath+' &'):$dum endif
+
+ELSEIF ($function='log') THEN
+
+   exists('probe_','parameter'):$probeex
+   if ($probeex) then $probe=probe_ else $probe=probe endif
+   $infodir=userdir+'/IPinfo'
+   exists($infodir,'directory'):$ex
+   if ($ex<0.5) then mkdir($infodir) endif
+   $reportlist=userdir+'/IPinfo/IPreportlist'
+   $reportname=''
+   exists($reportlist,'file'):$ex
+   if ($ex<0.5) then write('reset',$reportlist) endif
+   shell('basename '+$reportpath):$reportname
+   $desc=$reportname+' ['+$probe+']'
+   $r='"'+$reportname
+   lookup('file',$reportlist)
+   lookup('count',$r):$there
+   if not ($there) then
+      write('file',$reportlist,'"%s" "%s"',$desc,$reportpath)
+   endif
+   
+ELSEIF ($function='email') THEN
+
+   teststr('IPeOptions','emailreport'):$emailreport
+   if ($emailreport) then
+	write('line3','Emailing report %s to %s',$reportpath,$eaddr)
+	vnmremail($reportpath,$eaddr)
+   endif
+	
+ELSEIF ($function='update') THEN
+
+   //Functions done here
+   //Check runid
+   //Create Reports directory if necessary
+   //initialise report file
+   //create chronological list of history files
+   //get header info from first file
+   //evaluate number of results for each test
+   //evaluate pass/fail for each subtest
+   //evaluate pass/fail for overall test
+   //evaluate pass/fail for overall run/report
+   //write report
+
+   //Check runid
+   length($runid):$idlength
+   substr($runid,5,1):$dash
+   if (($idlength=19) and ($dash='_')) then
+      $yr='' $mo='' $day=''
+      $hr='' $min='' $sec=''
+      substr($runid,1,4):$yr
+      substr($runid,6,2):$mo
+      substr($runid,9,2):$day
+      substr($runid,12,2):$hr
+      substr($runid,15,2):$min
+      substr($runid,18,2):$sec
+      $starttime=$hr+':'+$min+':'+$sec+' on '+$yr+'/'+$mo+'/'+$day
+   else
+      $starttime=$runid
+      if ($runid='all') then $starttime='N/A' endif
+   endif
+   
+   //Make sure that History directory for probe exists
+   exists('probe_','parameter'):$ex
+   if ($ex<0.5) then $probe=probe else $probe=probe_ endif
+   $historydir=adirtmplt+'/History'
+   exists($historydir,'directory'):$historyex
+   if ($historyex<0.5) then
+      write('error','History not found, aborting')
+      return
+   endif
+
+   //Make reports directory if necessary
+   $reportdir=adirtmplt+'/Reports'
+   exists($reportdir,'directory'):$reportdirex
+   if ($reportdirex<0.5) then mkdir($reportdir) endif 
+   //Copy over html stuff
+   exists('html','veripulse'):$ex,$htmldir
+   shell('cp -r '+$htmldir+'/img '+$reportdir):$dum   
+   shell('cp '+$htmldir+'/veriPulse.css '+$reportdir):$dum   
+
+   if ($runid='all') then
+      $reportfile_html=$reportdir+'/'+$probe+'_VeriPulse_report.html'
+      $reportfile_pdf=$reportdir+'/'+$probe+'_VeriPulse_report.pdf'
+   else
+      $reportfile_html=$reportdir+'/'+$runid+'_VeriPulse_report.html'
+      $reportfile_pdf=$reportdir+'/'+$runid+'_VeriPulse_report.pdf'
+   endif
+   
+   //Make chronological list of history files
+   $tmplist=$historydir+'/tmplist'
+   exists($tmplist,'file'):$ex
+   if ($ex>0.5) then rm($tmplist):$e endif
+   $trunid='' $tfile=''
+   if ($runid='all') and ($include='pass') then
+     shell('ls -tr1 '+$historydir+' > '+$tmplist):$dum
+     $i=0
+     $j=0
+     $passrun='' $passtest=''
+     readfile($tmplist,'$trunid','$tfile','','local'):$num
+     while $i < $num do
+       $i=$i+1
+       substr($trunid[$i],'basename'):$run,$exp
+       if ($exp<>'testlist') and ($exp<>'') then
+         $res=''
+         lookup('mfile',$historydir+'/'+$trunid[$i],'seekcs','TESTRESULT','read'):$res
+         if ($res='PASS') then
+           teststr('$passtest',$exp,'local'):$e
+           if ($e) then
+             $passrun[$e]=$run
+           else
+             $j=$j+1
+             $passrun[$j]=$run
+             $passtest[$j]=$exp
+           endif
+         endif
+       endif
+     endwhile
+     write('reset',$tmplist)
+     if ($j) then
+       $i=0
+       while ($i<$j) do
+         $i=$i+1
+         write('file',$tmplist,'%s.%s',$passrun[$i],$passtest[$i])
+       endwhile
+     endif
+   else
+     shell('ls -tr1 '+$historydir+' > '+$tmplist):$dum
+   endif
+   readfile($tmplist,'$trunid','$tfile','','local'):$numfiles
+   if ($numfiles<0.5) then 
+      write('error','No history files for probe %s to compile report \(yet\), aborting!',$probe)
+      return
+   endif
+
+   //Write header 
+      write('reset',$reportfile_html)
+      write('file',$reportfile_html,'<!DOCTYPE html>')
+      write('file',$reportfile_html,'<html>')
+      write('file',$reportfile_html,'<head>')
+      write('file',$reportfile_html,'<title>Agilent VeriPulse Summary Report</title>')
+      write('file',$reportfile_html,'<meta charset="utf-8">')
+      write('file',$reportfile_html,'<link rel="stylesheet" type="text/css" href="veriPulse.css"/>')
+      write('file',$reportfile_html,'</head>')
+      write('file',$reportfile_html,'<body>')
+      write('file',$reportfile_html,'<img src="img/agi_logo.png"/>')
+      write('file',$reportfile_html,'<div class="container">')
+      write('file',$reportfile_html,'<div class="header-table">')
+      write('file',$reportfile_html,'<h3 style="margin: 20 px">VeriPulse Summary Report</h3>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Customer Name</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td>%s</td>','XXXCUSTOMERXXX')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>System Name</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td>%s</td>',IPsysname)
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Test Operator</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td>%s</td>',IPoperator)
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Probe Name</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td>%s</td>','XXXPROBEXXX')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Test Start Time</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td>%s</td>',$starttime)
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Data Storage Directory</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+
+      //if ($runid='all') then
+      shell('dirname '+adirtmplt):$dir
+      $dir2='' $dir3='' $maxlength=40
+      length($dir):$dirlength
+      if ($dirlength>$maxlength) then
+            $numlines=trunc($dirlength/$maxlength+0.5)
+	    $m=1
+            repeat
+	       $dir1=''
+	       substr($dir,$m,$m+$maxlength):$dir1
+               write('file',$reportfile_html,'<tr>')
+               write('file',$reportfile_html,'<td>%s</td>',$dir1)
+               write('file',$reportfile_html,'</tr>')
+	       $m=$m+$maxlength+1
+	    until ($m>$dirlength)
+      else
+            write('file',$reportfile_html,'<td>%s</td>',$dir)
+      endif
+
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="header-table">')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Result</th>')
+      write('file',$reportfile_html,'</tr>')
+
+      $class='_CLASSHERE_'
+      $result='_RESULTHERE_'
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td class="%s">%s</td>',$class,$result)
+      write('file',$reportfile_html,'</tr>')
+
+      $padding=12
+      $padcount=1
+      repeat
+          write('file',$reportfile_html,'<tr>')
+          write('file',$reportfile_html,'<td></td>')
+          write('file',$reportfile_html,'</tr>')
+	  $padcount=$padcount+1
+      until ($padcount>$padding)
+      write('file',$reportfile_html,'</table>')
+
+      //Insert comments section
+      write('file',$reportfile_html,'<div style="width: 1px; height:580 px"></div>')
+      write('file',$reportfile_html,'<table class="header-table"')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Comments</th>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+
+      //Need to break IPcomment up into sub strings of 50 chars or less
+      length(IPcomment):$clength
+      $numlines=0
+      $maxlength=45
+      if ($clength>$maxlength) then
+          $numlines=trunc($clength/$maxlength+0.5)
+          string2array(IPcomment):$commentarray
+          $arraysize=size('$commentarray')
+          $n=1
+          repeat
+            $line='' $m=0
+	    repeat
+       	       $line=$line+$commentarray[$m+$n]+' '
+               length($line):$linelength
+	       $m=$m+1
+	       $tot=$n+$m
+            until (($tot>$arraysize) or ($linelength>$maxlength))
+            write('file',$reportfile_html,'<tr>')
+            write('file',$reportfile_html,'<td>%s</td>',$line)
+            write('file',$reportfile_html,'</tr>')
+	    $n=$n+$m
+          until ($n>$arraysize)
+      else
+           write('file',$reportfile_html,'<tr>')
+           write('file',$reportfile_html,'<td>%s</td>',IPcomment)
+           write('file',$reportfile_html,'</tr>')
+      endif
+      $n=1
+      $blanklines=40-$numlines
+      repeat
+          write('file',$reportfile_html,'<tr>')
+          write('file',$reportfile_html,'<td></td>')
+          write('file',$reportfile_html,'</tr>')
+	  $n=$n+1
+      until ($n>$blanklines)
+      write('file',$reportfile_html,'<div style="width: 1px; height:100 px"></div>')
+      write('file',$reportfile_html,'<table class="signature-table"')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td class="form"><form><input type="text" name="signature-one" size="30"></form></td>')
+      write('file',$reportfile_html,'<td class="form"><form><input type="text" name="date-one" size="7"></form></td>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td width="200">%s</td>','XXXCUSTOMERXXX')
+      write('file',$reportfile_html,'<td>Date</td>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'<table class="signature-table"')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td class="form"><form><input type="text" name="signature-one" size="30"></form></td>')
+      write('file',$reportfile_html,'<td class="form"><form><input type="text" name="date-one" size="7"></form></td>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<td width="200">%s</td>',IPoperator)
+      write('file',$reportfile_html,'<td>Date</td>')
+      write('file',$reportfile_html,'</tr>')
+      write('file',$reportfile_html,'</table>')
+      write('file',$reportfile_html,'</div>')
+
+
+      write('file',$reportfile_html,'<div class="table-container">')
+      write('file',$reportfile_html,'<h3 class="table-heading">System Test Results</h3>')
+      write('file',$reportfile_html,'<table>')
+      write('file',$reportfile_html,'<tr>')
+      write('file',$reportfile_html,'<th>Test Name</th>')
+      write('file',$reportfile_html,'<th>Measured Parameter</th>')
+      write('file',$reportfile_html,'<th width="60">Target</th>')
+      write('file',$reportfile_html,'<th>Result</th>')
+      write('file',$reportfile_html,'<th>Status</th>')
+      write('file',$reportfile_html,'</tr>')
+
+
+   $i=1 $j=0 $l=1 $failcount=0 $warncount=0 $linecount=0
+   $mode='odd'
+   $descarray=''
+   $filearray=''
+
+   repeat
+      $filename=$trunid[$i]
+      $id='' $testname=''
+      strstr($filename,'.'):$ret,$id,$testname
+      
+      //Now read those files that match runid
+      if ((($id=$runid) or ($runid='all')) and ($testname<>'testlist') and ($ret<>0)) then
+        $filename=$historydir+'/'+$id+'.'+$testname
+        $key1='' $val1=''
+        readfile($filename,'$key1','$val1','','local'):$num
+        teststr('$key1','TESTS','local'):$e
+        if ($e) then
+	   $resultsperfile=1
+	   $j=$j+1
+	   //Use header info from first file to establish system info
+	   if ($j=1) then
+              teststr('$key1','CUSTOMER','local'):$e
+              $customer=$val1[$e]
+              teststr('$key1','PROBE','local'):$e
+              $probe=$val1[$e]
+              $sedcmd1 = `'s/XXXCUSTOMERXXX/`+$customer+`/'`
+              $sedcmd2 = `'s/XXXPROBEXXX/`+$probe+`/'`
+              shell(`sed -e `+$sedcmd1+` -e `+$sedcmd2+` `+$reportfile_html+` > `+$reportfile_html+'.tmp; mv '+$reportfile_html+'.tmp '+$reportfile_html):$dum
+	   endif "header"
+
+	   //Establish number of results per test
+           teststr('$key1','TESTS','local'):$e
+           format($val1[$e],0,0):$resultsperfile
+           teststr('$key1','NAME','local'):$e
+           $filepath=$val1[$e]
+           $isfail=0
+           teststr('$key1','TESTRESULT','local'):$e
+           if ($val1[$e]='FAIL') then
+             $failcount=$failcount+1
+             $isfail=1
+           endif
+	   $dirname='' $fidname=''
+           $ks=''
+
+	   $firstwrite=1
+           $writeflg=1
+	   $includepassonly=0
+	   strstr($include,'fail'):$includefail
+	   strstr($include,'pass'):$includepass
+           if (($includepass) and not ($includefail)) then $includepassonly=1 endif
+           if (($isfail) and ($includepassonly)) then $writeflg=0 endif
+	
+           if ($writeflg) then
+	         $k=1
+		 repeat
+		     $linecount=$linecount+1
+	             if ($mode='odd') then
+		         write('file',$reportfile_html,'<tr class="odd">')
+		     else
+		         write('file',$reportfile_html,'<tr>')
+		     endif
+	             if ($firstwrite=1) then
+                         $firstwrite=0
+                         teststr('$key1','TESTNAME','local'):$e
+                         $testdesc=$val1[$e]
+		         write('file',$reportfile_html,'<td rowspan="%d">%s</td>',$resultsperfile,$testdesc)
+		     endif
+                     format($k,0,0):$ks
+                     teststr('$key1','LABEL'+$ks,'local'):$e
+		     $line2='<td>'+$val1[$e]+'</td>'
+                     teststr('$key1','TARGET'+$ks,'local'):$e
+		     $line3='<td>'+$val1[$e]+'</td>'
+                     teststr('$key1','VALUE'+$ks,'local'):$e
+		     $line4='<td>'+$val1[$e]+'</td>'
+                     teststr('$key1','RESULT'+$ks,'local'):$e
+                     format($val1[$e],'lower'):$class
+		     $line5='<td class="'+$class+'">'+$class+'</td>'
+	             write('file',$reportfile_html,'%s',$line2)
+	             write('file',$reportfile_html,'%s',$line3)
+	             write('file',$reportfile_html,'%s',$line4)
+	             write('file',$reportfile_html,'%s',$line5)
+   	             write('file',$reportfile_html,'</tr>')
+                     $line2=''
+                     $line3=''
+                     $line4=''
+                     $line5=''
+	         $k=$k+1
+	         until ($k>$resultsperfile)
+	         $descarray[$l]=$testdesc
+	         $filearray[$l]=$filepath
+/*
+	         $filearray[$l]=''
+	         if ($filepath<>'') then
+	      	     shell('basename '+$filepath):$fidname
+		     strstr($fidname,'.fid'):$ret if not($ret) then $fidname=$fidname+'.fid' endif
+	             shell('dirname '+$filepath):$dirname
+	             shell('basename '+$dirname):$dirname
+	             $filearray[$l]=$dirname+'/'+$fidname
+	   	 endif
+ */
+	         $descarray[$l+1]=''
+	         $filearray[$l+1]=''
+ 	   	 $l=$l+1
+	   endif "writeflg"
+           if ($mode='odd') then $mode='even' else $mode='odd' endif
+      endif
+    endif
+    $i=$i+1 
+   until ($i>$numfiles)
+   rm($tmplist):$e
+   $numfids=$l-1
+
+   //Work out which, if any of the submitted tests didn't actually run
+   $listfile=$historydir+'/'+$runid+'.testlist'
+   $notrun=0
+   exists($listfile,'file'):$ex
+   if ($ex>0.5) then
+	$testcode='' $testdesc=''
+        readfile($listfile,'$testcode','$testdesc','','local'):$numsubmitted
+        $i=1 $j=1 $notrunarray=1
+	repeat
+	    //Is there a history file with this test code and runid?
+	    //If not then the test was submitted but never run -> add to table of tests not run
+	    $file=$historydir+'/'+$runid+'.'+$testcode[$i]
+	    exists($file,'file'):$hfileex
+	    if not ($hfileex) then
+		$notrun=1 "trigger for additional table"
+		$notrunarray[$j]=$i
+		$notrunarray[$j+1]=0
+		$j=$j+1
+	    endif
+	    $i=$i+1
+ 	until ($i>$numsubmitted)
+	$numnotrun=size('$notrunarray')
+	$numnotrun=$numnotrun-1
+	if ($notrun) then
+	    $status='warn'
+   	    $k=1
+   	    repeat
+		 $linecount=$linecount+1
+		 $warncount=$warncount+1
+		 $class='warn'
+		 if ($mode='odd') then
+		     write('file',$reportfile_html,'<tr class="odd">')
+		     $mode='even'
+		 else
+		     write('file',$reportfile_html,'<tr>')
+		     $mode='odd'
+		 endif
+		 write('file',$reportfile_html,'<td>%s</td>',$testdesc[$notrunarray[$k]])
+	         write('file',$reportfile_html,'<td></td>')
+	         write('file',$reportfile_html,'<td></td>')
+	         write('file',$reportfile_html,'<td>Not run</td>')
+	         write('file',$reportfile_html,'<td class="%s">%s</td>',$class,$status)
+	         write('file',$reportfile_html,'</tr>')
+      		$k=$k+1
+   	    until ($k>$numnotrun)
+
+	endif "$notrun"
+  endif 
+
+  write('file',$reportfile_html,'</table>')
+  write('file',$reportfile_html,'<h3 class="table-heading">Data Storage</h3>')
+  write('file',$reportfile_html,'<table>')
+  write('file',$reportfile_html,'<tr>')
+  write('file',$reportfile_html,'<th>Test Name</th>')
+  write('file',$reportfile_html,'<th>FID File</th>')
+  write('file',$reportfile_html,'</tr>')
+  $i=1
+  repeat
+      if ($mode='odd') then
+          write('file',$reportfile_html,'<tr class="odd">')
+	  $mode='even'
+      else
+          write('file',$reportfile_html,'<tr>')
+	  $mode='odd'
+      endif
+      write('file',$reportfile_html,'<td>%s</td>',$descarray[$i])
+      write('file',$reportfile_html,'<td>%s</td>',$filearray[$i])
+      write('file',$reportfile_html,'</tr>')
+      $i=$i+1
+  until ($i>$numfids)
+  write('file',$reportfile_html,'</tbody>')
+  write('file',$reportfile_html,'</table>')
+  write('file',$reportfile_html,'</div>')
+  write('file',$reportfile_html,'</div>')
+  write('file',$reportfile_html,'</body>')
+  write('file',$reportfile_html,'</html>')
+
+  //Rules for overall pass/fail
+  //If failcount>0 then always fail
+  //else pass
+  //If tests didn't run then count as pass but add warning message
+  $result='pass'
+  $class='pass'
+  if ($failcount>0.5) then
+	$result='fail'
+	$class='fail'
+  elseif ($warncount>0.5) then
+	$result='PASS (with warnings)'
+	$class='warn'
+  endif
+
+  $tmpreport=$reportdir+'/tmpreport.html'
+  $sedstr='cat '+$reportfile_html+' | sed -e \'/_CLASSHERE_">_RESULTHERE_/s/_CLASSHERE_">_RESULTHERE_/'+$class+'">'+$result+'/g\' > '+$tmpreport
+  shell('('+$sedstr+')'):$dum
+  shell(' mv '+$tmpreport+' '+$reportfile_html):$dum
+
+  //Convert to PDF
+  shell('htmltopdf '+$reportfile_html+' '+$reportfile_pdf):$dum
+
+  //Now log as part of make
+  {$0}('log',$reportfile_pdf)
+
+  return($reportfile_pdf,$warncount)
+
+
+ELSE "Do it all"
+
+   //First a runid-specific report
+   {$0}('update'):$reportfile,$warncount
+   $retestfile=userdir+'/persistence/ReTest'
+   exists($retestfile,'file'):$retestex
+   //Now a cumulative report for the probe that shows passes
+   {$0}('update','runid','all','pass'):$reportfile2
+
+   //The following should be done by a CMD protocol in the StudyQ
+   //if (($warncount<0.5) and ($retestex<0.5)) then "Nothing outstanding to run"
+       //write('line3','VeriPulse tests complete')
+       //{$0}('email',$reportfile,IPemailaddr)
+       //{$0}('email',$reportfile2,IPemailaddr)
+   //endif
+
+ENDIF

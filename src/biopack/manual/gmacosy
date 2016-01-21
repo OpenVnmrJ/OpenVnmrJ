@@ -1,0 +1,46 @@
+ gmacosy.c      
+
+   gradient based magic-angle dqcosy
+	uses PSelements:
+	vagradpulse(gzlvl(G/cm),gtime,theta,phi) as arguments
+
+   (from  gemqfcosy_magradpulse_dlm.c, D.Mattiello, Varian )   
+
+   First Use: destroy any current gcoil parameter in your parameter set.
+              then enter "updtgcoil". this assumes you have a sysgcoil
+              parameter and an entry in /vnmr/imaging/gradtables
+
+   Phase Cycling:
+	basic scheme is t1 t2 t3 t4 --> 0 0 1 0
+	then add 180 to first pulse and receiver for x,-x cycle for improved
+		water suppression and because the receiver is cycled
+		x,-x it also corrects for dc imbalance --> 2 0 1 2
+	then add 90 to every pulse in the nt=2 cycle for cyclops for 
+		correction of quadrature imbalance 
+	the States (0,90 on 1st pulse and receiver) and
+	TPPI (FAD - f1 axial displacement) done within pulse sequence  
+
+   Because the presence of the last gradient delays acquisition, use lsfid=-n
+   where n is the number of dwell times happening in the delay gt2+final delay.
+   The FT process will create n complex data points of zero amplitude at the start of the
+   fid, but the time registration of the real data points will be correct. Tranformed
+   data should have the first-order phase correction(lp) near zero. The spectrum
+   can then be phased with both rp and lp. An estimate of the number of dwell-times
+   in error can be calculated from the determined lp value (each additional dwell
+   time will produce a need to add -360 degrees of lp). Correct the value of lsfid
+   by this amount and re-transform. Set lp to zero and see if you can phase the
+   whole F2 dimension with just rp. If so, this is the correct value of lsfid.
+
+   Since there is very little signal in the first points the presence of zero
+   intensities should give little or no distortion. However, these "n" points 
+   may be linear-predicted. Enter "dg('dglp')" to see values used for n=11. Set
+   these parameters appropriately for your value of "n", set proc='lp' and wft2da.
+   The linear prediction parameters to be changed are:
+
+     (recall that lsfid is negative)
+      strtlp    should be = -lsfid +1  (data point corresponding to first "real" point)
+      strtext   should be = -lsfid
+      lpext     should be = -lsfid
+      other lp parameters should not be changed
+
+  modified for BioPack, GG Varian Palo Alto, jan 1999

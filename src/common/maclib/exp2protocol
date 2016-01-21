@@ -1,0 +1,50 @@
+"macro exp2protocol"
+if ($# < 5) then $5=userdir endif
+is_postvj22b:$isvj22c
+if ($isvj22c<1) then return endif
+$tab=''
+if ($2='Collections') then
+   $tab='UserColl'
+elseif ($2='Studies') then
+   $tab='UserStudies'
+elseif ($2='CmdProtocol') then
+   $tab='UserCMD'
+elseif ($2='CustomEXP') or ($2='') then
+   $tab='UserExp'
+else
+   $tab=$2
+endif
+if ($tab='') then $tab='UserExp' endif
+
+$pdir=$5+'/templates/vnmrj/protocols'
+exists($pdir,'directory'):$dir2ex
+if ($dir2ex=0) then
+   shell('mkdir -p '+$pdir):$dum
+   exists($pdir,'directory'):$dir2ex
+endif
+if ($dir2ex) then
+   exists($pdir,'file','w'):$dir2ex
+endif
+if ($dir2ex=0) then return endif
+
+"******Now proceed**********"
+IF ($1='add') THEN
+   getfilepath($3+'.xml','templates/vnmrj/protocols'):$is
+   if ($is=0) then
+	mkCPprotocol($3,$pdir,$tab,$4,$3)
+   endif
+
+ELSEIF ($1='delete') THEN
+
+   $dir1=$pdir
+   $dir2=$dir1+'_backup'
+   $file=$3+'.xml'
+   exists($dir1+'/'+$file,'file'):$fileex
+   if ($fileex=0) then return endif
+   exists($dir2,'directory'):$direx
+   if ($direx=0) then
+        shell('mkdir -p '+$dir2):$dum
+   endif
+   shell('mv '+$dir1+'/'+$file+' '+$dir2+'/'+$file):$dum
+
+ENDIF

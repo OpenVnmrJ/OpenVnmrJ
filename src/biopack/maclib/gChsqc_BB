@@ -1,0 +1,64 @@
+"macro gChsqc_BB"
+"gChsqc_BB macro for BioPack, ET June 2011, Agilent"
+
+        BPrtppar('gChsqc_BB')
+	sw1=160d
+
+	//dof=dof-(174-73)*dfrq
+	getparam('dofCO','C13'):$dofCO
+	dof=    $dofCO-(174-73)*dfrq
+	dof_dec=$dofCO-(174-80)*dfrq //keep decoupling in the middle of CH3-Aro region
+ 
+
+        getparam('NHgstab','N15'):gstab
+        getparam('CHgrad1_lvl','C13'):gzlvl1
+        getparam('CHgrad2_lvl','C13'):gzlvl2
+      
+
+	dm2='nnnn'
+        ssfilter='n'
+	ni=0    phase=1  nt=4 ss=4
+        CT='n' 
+        refocCO='y' refocN15='y'
+        ddrtc=alfa
+
+        setup_macro=seqfil
+
+//generate BIP pulse
+         pwC180lvlF=4095
+	 write('alpha','generating BIP pulses and setting power levels' )
+	 BPmakeBIP(C180shape,pwClvl,pwC):pwC180  pwC180lvl=pwClvl
+
+//CO decoupling pulse:
+         write('alpha','updating CO shaped pulses' )
+         getparam('dofCO','C13'):$dofCO
+
+	$freq=$dofCO+2*dfrq-dof $offset='' format($freq,9,1):$offset
+
+	$bw='' format(40*dfrq,9,1):$bw //setup 40ppm inversion on 13C CO
+	$wave1=''
+
+	COshape='CO_offAli_hsqc'
+	        pbox_rst opx(COshape+'.RF')
+		pboxpar('stepsize', '1.0') pboxpar('attn','i') 
+	        $wave1 = 'iburp2 '+ $bw + $offset+' 0 0 180 '
+	        setwave($wave1)
+		cpx(pwC*compC,pwClvl)   
+		pboxget(COshape+'.RF'):n1,pwCO,pwCOlvl 
+
+//generate decoupling:
+
+        write('alpha','generating 13C WURST decoupling apttern and setting power levels' )
+
+	dseq='Cdec_Ali_Aro_hsqc'
+ 	pbox_rst opx(dseq+'.DEC')
+	pboxpar('stepsize', '2.0') 
+        pboxpar('adb', '2.0') 
+        $bw='' format(180*dfrq,9,1):$bw
+
+	setwave('WURST40 ' +$bw +'/0.0008' )   
+	cpx(pwC*compC,pwClvl)   
+	pboxget(dseq+'.DEC'):dseq,r1,dpwr,r2,dres,dmf
+	dpwr=dpwr+1
+dps
+write('line3','MAKE SURE gzlvl9 IS ADJUSTED FOR MAX INTENSITY\n')

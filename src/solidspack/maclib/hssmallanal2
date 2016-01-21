@@ -1,0 +1,68 @@
+"macro hssmallanal2"
+"hsmallanal -   outputs a plot of deviation versus versus jump-angle.    "
+"                D. Rice 3/5/02                                          "
+"               if deviation is greater than +/- 1.0 degree it is plotted"
+"               as +/- 1.0 degree                                        " 
+
+$aa=''
+if ($#>0) then 
+   $aa=$1
+endif
+wc=200 sc=10
+$file=curexp+'/analyze.out'
+exists($file,'file'):$a
+if ($a>0.5) then 
+   delete($file)
+endif
+$expl= curexp+'/expl.out'
+exists($expl,'file'):$a
+if ($a>0.5) then 
+   delete($expl)
+endif
+
+write('file',$file,'exp 4')
+write('file',$file,' 1 %4.0f',arraydim)
+write('file',$file,'JUMP ANGLE')
+write('file',$file,' 1 1 1 1')
+$index=0
+$total=0
+llfrq='y'
+clear
+$cursormin=360.0
+$cursormax=-360.0
+while ($index<arraydim) do 
+  $index=$index+1
+  $phase = ph2Xhssmall[$index]
+  if ($phase>45.0) then 
+     $phase=90.0-$phase 
+  endif
+  $sp=$phase-1.0
+  if ($sp<0.3) then $sp=0.3 endif
+  if ($sp>44.0) then $sp=43.7 endif
+  sp=$sp/scalesw
+  $wp=2.0
+  wp=$wp/scalesw
+  ds($index)
+  vsadj th=75 dpf
+  $cursor=(llfrq[1]-rfl)*scalesw
+  if ($cursor > $cursormax) then $cursormax=$cursor endif
+  if ($cursor < $cursormin) then $cursormin=$cursor endif
+  write('file',$file,'%f  %f',ph2Xhssmall[$index],$cursor)
+endwhile
+cat(curexp+'/analyze.out')
+expl('nocurve')
+scalelimits(ph2Xhssmall[0],ph2Xhssmall[arraydim],(1.5*$cursormin-0.5*$cursormax),(1.5*$cursormax-0.5*$cursormin))
+expl
+if ($aa='') then 
+   input('Hard copy ?'):$aa
+endif
+if $aa = 'y' then
+  pexpl
+  pltext
+  page
+endif
+
+  
+
+
+

@@ -1,0 +1,199 @@
+"macro xmhaha_mknode"
+"*******************************************************"
+"xmhaha_mknode - 					"
+" arg1 - protocol                                       "
+" arg2 - attributes and values as array	for action node	"
+" arg3 - node insert point				"
+" arg4 - action / both node				"
+" arg5 - attributes and values as array for parent node "
+"		Valids only if arg4='both'		"
+"*******************************************************"
+
+if ($# < 2) then $2='' endif
+if ($# < 3) then $3='' endif
+if ($# < 4) then $4='action' endif
+if ($# < 5) then $5='' endif
+
+//  Required attributes; alternate
+//  values can be supplied in arg2
+
+  $pattr='status',  'exp',   'element', 'lock','title','type',    'name','CPnode','tooltext'
+  $pval ='protocol','parent','protocol','off',  $1,    'protocol', $1,   '',      $1
+
+  $aattr='type','status','lock','title','exp','time','macro', 'data','CPnode','tooltext'
+  $aval ='LIB', 'Ready', 'off',  $1,     $1,  '',     $1,     '',    '',      $1
+  $nodetype='n%R3%'
+  $nodeopt=$4
+  if ($nodeopt='') then $nodeopt='action' endif
+  if ($nodeopt<>'action') and ($nodeopt<>'both') then
+	write('error','illegal node option  %s',$nodeopt)
+	return
+  endif
+
+//  Get values from protocol.xml for action node
+    $time2=''  $time=''
+    getattr($1,'action','exp'):$exp
+    getattr($1,'action','macro'):$macro
+    getattr($1,'action','time'):$time
+    teststr('$aattr','exp','local'):$ret
+    $aval[$ret]=$exp
+    teststr('$aattr','macro','local'):$ret
+    $aval[$ret]=$macro
+    invformattime($time):$rtime
+    formattime($rtime):$time,$time2
+
+//  Get values from protocol.xml for parent node
+if ($nodeopt='both') then
+    getattr($1,'protocol','title'):$title
+    teststr('$pattr','title','local'):$ret
+    $pval[$ret]=$title
+endif
+
+//  Get values of action attributes from arg2
+    $attot=size('$aattr')
+    $i=1
+    repeat
+	teststr('$2',$aattr[$i],'local'):$ret
+	if ($ret) then $aval[$i]=$2[$ret+1] endif
+	$i=$i+1
+    until $i > $attot
+
+//  Get values of parent attributes from arg5
+if ($nodeopt='both') then
+    $pttot=size('$pattr')
+    $i=1
+    repeat
+        teststr('$5',$pattr[$i],'local'):$ret
+        if ($ret) then $pval[$i]=$5[$ret+1] endif
+        $i=$i+1
+    until $i > $pttot
+    teststr('$5','expanded','local'):$ret
+    if ($ret) then $pattr=$pattr,'expanded' $pval=$pval,$5[$ret+1] endif
+endif
+
+//  Check arg2 for any special values for attributes
+  teststr('$2','time','local'):$ret2
+  teststr('$aattr','title','local'):$ret
+  teststr('$aattr','time','local'):$ret3
+  if ($ret2) then
+     if ($2[$ret2+1] <>'') then
+	$aval[$ret]=$aval[$ret]+' ['+$2[$ret2+1]+']'
+     endif
+  elseif ($time2<>'') then
+	$aval[$ret]=$aval[$ret]+' ['+$time2+']'
+  endif
+  $aval[$ret3]=''
+
+  $sqstatus='Queued'
+
+// prepare parent directory
+$sdir=sqdir
+"build protocol directory"
+$ndir=$sdir+'/info'
+exists($ndir,'file'):$e
+if ($e<0.5) and ($sdir<>'') then
+  shell('mkdir -p '+$ndir):$dum
+endif
+exists($sdir+'/study.xml','file'):$fex
+if ($fex=0) then
+        shell('touch '+$sdir+'/study.xml'):$dum
+endif
+$firstnode='n'
+$snode=$3
+if (($fex=0) and (($snode='') or ($snode='null'))) then
+        xmhaha('grandma'):$snode
+endif
+if ($snode=studyid) then $firstnode='y' endif
+
+$newnodes='' $retnode=''
+
+// put the protocol node
+IF ($nodeopt='both') THEN
+/*
+   teststr('$5','sqnode','local'):$ret2
+   if ($ret2) then
+      if ($5[$ret2+1]='') then $ret2=0 endif
+   endif
+   if ($ret2) then
+      $node=$5[$ret2+1]
+      $ldir=$ndir+'/'+$node
+   else
+*/
+      Svfname($ndir+'/'+$nodetype,''):$ldir
+      shell('basename '+$ldir):$node
+//   endif
+   $newnodes=$node
+   exists($ldir,'directory'):$ldirex
+   if ($ldirex=0) then mkdir($ldir) endif
+   $size=size('$pattr')
+   $i=1
+   write('reset',$ldir+'/prop')
+   vnmrjcmd('SQ add new protocol')
+   vnmrjcmd('SQ set new id "'+$node+'"')
+   if ($firstnode='y') then
+	$firstnode='n'
+	vnmrjcmd('SQ pmode '+$node+' '+$snode)
+   else
+	vnmrjcmd('SQ move '+$node+' '+$snode)
+   endif
+   $sc=''
+   $sp=''
+   repeat
+     $sc=$sc+' set '+$node+' '+$pattr[$i]+' "'+$pval[$i]+'";'
+     $sp=$sp+$pattr[$i]+'   '+$pval[$i]+'\n'
+     $i=$i+1
+   until $i > $size
+   if ($sc<>'') then vnmrjcmd('SQ '+$sc) endif
+   if ($sp<>'') then write('fileline',$ldir+'/prop','%s',$sp) endif
+   write('file',$sdir+'/enterSQ','%s parent lockoff',$node)
+ENDIF
+
+//put the action node
+/*
+   teststr('$2','sqnode','local'):$ret2
+   if ($ret2) then
+      if ($2[$ret2+1]='') then $ret2=0 endif
+   endif
+   if ($ret2) then
+      $node=$2[$ret2+1]
+      $ldir=$ndir+'/'+$node
+   else
+*/
+      Svfname($ndir+'/'+$nodetype,''):$ldir
+      shell('basename '+$ldir):$node
+//   endif
+   $newnodes=$newnodes,$node
+   exists($ldir,'directory'):$ldirex
+   if ($ldirex=0) then mkdir($ldir) endif
+   $size=size('$aattr')
+   $i=1
+   write('reset',$ldir+'/prop')
+   vnmrjcmd('SQ add new action')
+   vnmrjcmd('SQ set new id "'+$node+'"')
+   if ($firstnode='y') then
+        $firstnode='n'
+	vnmrjcmd('SQ pmove '+$node+' '+$snode)
+   else
+	vnmrjcmd('SQ move '+$node+' '+$snode)
+   endif
+   $sc=''
+   $sp=''
+   repeat
+     	$sc=$sc+' set '+$node+' '+$aattr[$i]+' "'+$aval[$i]+'";'
+	$sp=$sp+$aattr[$i]+'   '+$aval[$i]+'\n'
+      	$i=$i+1
+   until $i > $size
+   if ($sc<>'') then vnmrjcmd('SQ '+$sc) endif
+   if ($sp<>'') then write('fileline',$ldir+'/prop','%s',$sp) endif
+   teststr('$aattr','title','local'):$ret
+   substr($aval[$ret],1):$title
+   teststr('$aattr','lock','local'):$ret
+   if ($aval[$ret]='on') then $lock='lockon' else $lock='lockoff' endif
+   write('file',$sdir+'/enterSQ','%s  %s  %s',$node,$title,$lock)
+
+   $retnode=$node
+
+array2array($newnodes):$newnodes
+copyid[1]=$node
+
+return($retnode,$newnodes)

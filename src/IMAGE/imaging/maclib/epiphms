@@ -1,0 +1,96 @@
+"macro epiphms"
+
+"************************************************************************"
+
+" epiphms - generate phase correction maps for multislice epidata"
+
+" Details: The macro is written for dataset collected in this form"
+"          ref.fid - multi-slice epi data with phase blips off"
+"          epi.fid - multi-slice epi data. seqcon='nccnn'"
+
+" Usage:   i) rt('ref.fid')  load reference file into current EXP#"
+"          ii) epiphms       generate phase maps in curexp/datdir/"
+"        or i) epiphms('ref.fid')"
+
+" Limitations: No checks for datatype or parameters are done"
+
+"************************************************************************"
+
+
+"*** Reference data must be loaded at this stage ***"
+"** Check first argument for directory name ***************"
+if ($# > 1) then
+  write('error','epiphms: too many arguments')
+elseif ($# = 1) then
+  $directory = $1
+  rt($1)
+endif
+
+"** Don't know how to handle data with navigator echoes **"
+exists('navigator','parameter'):$e
+if ($e > 0) then
+  if (navigator = 'y') then 
+    write('error','%s: Sorry, don\'t know how to handle navigator data, use recon_all', $0)
+    abort
+  endif
+endif
+
+if(ns = 1) then slice = 1 endif
+
+$nseg = nseg
+
+$nv = nv
+exists('fract_ky','parameter'):$e
+if ($e > 0) then
+  $nv = nv/2 + fract_ky
+endif
+
+$etl = $nv/$nseg                      "echo train length"
+
+if ($nseg > 1) then    "segmented data"
+  if (ns > 1) then
+    exists('flash_converted','parameter','processed'):$e
+    if($e = 0) then 
+      flashc('nf','rare',ns,$etl)
+    endif
+  endif
+else
+  if (ns > 1) then         "multi slice, one segment"
+      exists('flash_converted','parameter','processed'):$e
+      if($e = 0) then
+        flashc('nf','mi',ns)   "uncompress the data"
+      endif
+  endif
+endif
+
+exists('images','parameter'):$ex
+if($ex = 0) then
+  create('images')
+  images=1
+  image=1
+endif
+
+exists('imgno','parameter'):$ex
+if($ex = 0) then
+  create('imgno')   "processing parameter"
+endif
+if(imgno = 0) then imgno=1 endif
+if(imgno > images) then imgno = images endif
+
+if(ns = 1) then slice=1 endif
+
+$i = 1
+repeat
+  epiph($i,$i)
+  f full
+  dconi
+  $i = $i + 1
+until($i > ns)
+
+write('line3','Phase maps generated')
+
+"**************************************************************************"
+"                     Modification History"
+"
+" 981210(ss) num_ints replaced with nseg"
+"**************************************************************************"

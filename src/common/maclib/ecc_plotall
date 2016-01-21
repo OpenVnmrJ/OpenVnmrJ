@@ -1,0 +1,63 @@
+"macro ecc_plotall"
+"ecc_plotall - a macro to plot grecovery and include time constant info"
+
+ds(arraydim) vsadj aph0
+peak:$max,$frq
+$ninety=$max*.9
+
+$i=1
+repeat
+	ds($i) peak:$hgt,$frq
+	if ($hgt > $ninety) then
+		$delay=d2[$i] $i=arraydim-1
+	endif	
+	$i=$i+1
+until $i=arraydim
+
+vs=vs*.8  dssh
+pl('all')
+
+$device='graphics'
+
+write($device,10,160,'Probe = %s',probe)
+write($device,10,150,'gradshaping = %s',gradshaping)
+write($device,70,150,'Ninety percent recovery in %3.3f msec',$delay*1000)
+
+write($device,20,140,'tc1 = %3.3f msec',tc1)
+write($device,100,140,'amp1 = %2.3f ',amp1)
+
+write($device,20,130,'tc2 = %3.3f msec',tc2)
+write($device,100,130,'amp2 = %2.3f ',amp2)
+
+write($device,20,120,'tc3 = %3.3f msec',tc3)
+write($device,100,120,'amp3 = %2.3f ',amp3)
+
+write($device,20,110,'tc4 = %3.3f msec',tc4)
+write($device,100,110,'amp4 = %2.3f ',amp4)
+
+$device='plotter'
+write($device,10,160,'Probe = %s',probe)
+write($device,10,155,'PFG pulse = %1.4f ms',gt1)
+write($device,10,150,date)
+write($device,60,160,'Ninety percent recovery in %3.3f msec',$delay*1000)
+write($device,60,150,'gradshaping = %s',gradshaping)
+
+write($device,20,140,'tc1 = %3.3f msec',tc1)
+write($device,80,140,'amp1 = %2.3f ',amp1)
+
+write($device,20,135,'tc2 = %3.3f msec',tc2)
+write($device,80,135,'amp2 = %2.3f ',amp2)
+
+write($device,20,130,'tc3 = %3.3f msec',tc3)
+write($device,80,130,'amp3 = %2.3f ',amp3)
+
+write($device,20,125,'tc4 = %3.3f msec',tc4)
+write($device,80,125,'amp4 = %2.3f ',amp4)
+
+$center=d2[11]
+
+write($device,150,140,'Exponention delay array centered at %2.4f msec',1000*$center)
+dssl
+ecc_label
+page
+

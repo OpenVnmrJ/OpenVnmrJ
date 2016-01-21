@@ -1,0 +1,84 @@
+"macro cpplot"
+"  cpplot."
+
+abortoff
+
+isnewexp:$isnew
+if (auto='y') then $isnew=1 endif
+if ($isnew) then
+   $archive=archivedir+'/'+sample
+else
+   shell('dirname '+file):$archive
+endif
+
+$pkpick=pkpick
+pkpick=''
+
+//$saveplot='plot'
+//getadminfo('autosaveplot'):$saveplot
+//strstr($saveplot,'save'):$issave
+//strstr($saveplot,'email'):$isemail
+if (pltopt='y') then $plot='plot' else $plot='' endif
+teststr('eOptions','emailplot'):$isemail
+teststr('eOptions','saveplot'):$issave
+if ($issave) then $save='save' else $save='' endif
+if ($isemail) then $email='email' else $email='' endif
+if (prcopt='n') then $plot='' $save='' $email='' endif
+
+if (emailflag='n') and ($email='email') then 
+    write('line3','Email option is NOT turned on')
+    $email='' 
+endif
+
+$plotter=plotter
+is_psplotter:$newplotter,$ret
+if ($ret=0) then 
+   if ($save<>'') or ($email<>'') then
+	write('line3','A PS plotter is NOT defined')
+   endif
+   $save='' $email='' 
+endif
+
+Autockdir($archive)
+
+  if ($plot<>'') or ($save<>'') or ($email<>'') then
+	cpbanner('plot')
+	on('execplot'):$e
+	if ($e>0.5) then
+	    $s=''
+	    substr(execplot,1):$s
+	    if ($s='') then $e=0 endif
+	endif
+// Do not execute pslabel specific plotting if
+//   the plotting is uniquely via execplot
+//   Respect whatever the execplot is intended to do
+	if ($e<0.5) then
+	    execpslabel('plot')
+	endif
+	if ($save='') and ($email='') and ($plot='plot') then
+		plot
+	else
+	    if ($newplotter<>$plotter) then
+		if ($plot='plot') then plot endif
+		$plot=''
+		s9
+  		$wc2max=wc2max $wcmax=wcmax $wc2=wc2 $wc=wc
+		plotter=$newplotter
+  		wc=$wc*wcmax/$wcmax wc2=$wc2*wc2max/$wc2max
+	    endif
+
+		$arg='autopage(`'+$plot+'`,`'+$save+'`,`'+$email+'`)'
+		docpplot($arg)
+
+            if ($newplotter<>$plotter) then
+		plotter=$plotter
+		r9
+	    endif
+	endif
+  endif
+
+pkpick=$pkpick 
+
+dousermacro($0)
+
+aborton

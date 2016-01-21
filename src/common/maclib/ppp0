@@ -1,0 +1,76 @@
+"macro ppp0"
+"channel association - about probe power protection"
+"probe Connect and default mapping "
+$markc = 0
+$namel = 'tn','dn','dn2','dn3','dn4'
+$one=''
+$cntr=0
+exists('probeConnect','parameter','global'):$ab
+if $ab then
+  $cntr=1
+  repeat 
+   substr(probeConnect,$cntr):$one
+   if ($one = 'X') then 
+   $markc = $cntr
+   else
+   if $# = 0 then
+   ppp1($cntr,$one)
+   endif
+   endif
+   if $# = 1 then
+     if $cntr = $1 then
+       return($one)
+     endif
+   endif
+   $cntr = $cntr+1
+  until $cntr > numrfch
+ " handle the tricky X "
+ if ($markc > 0) then
+ " brute force "
+   $i = 1
+   repeat 
+   substr(probeConnect,'find',{$namel[$i]}):$ch0
+   if ($ch0 = 0) and ($# = 0) then
+     "write('line3','did not find %s  %s',$namel[$i],{$namel[$i]})"
+     ppp1($markc,{$namel[$i]})
+   endif
+   $i = $i + 1
+   until $i > numrfch
+ endif
+else
+"no probeConnect use default map"
+  $nam = ''
+  if ((tn = 'H1') or (tn = 'F19')) then
+    $lboflag = 0.0
+    " write('line3','highband observe')"
+  else
+    $lboflag = 1.0
+    "write('line3','lowband observe')"
+  endif   
+  $i = 1 
+  repeat
+   exists($namel[$i],'parameter','current'):$x
+   if $x > 0 then
+   $one = {$namel[$i]}
+   else
+     $one = ''
+   endif
+   "write('line3','%s',$one)"
+   $cntr = $i
+   if (($i = 1) and ($lboflag)) then
+     $cntr=2
+   endif  
+   if (($i = 2) and ($lboflag)) then
+     $cntr=1
+   endif  
+   if $# = 1 then
+     if $1 = $cntr then
+     return($one)
+     endif
+   endif
+   if $# = 0 then
+     ppp1($cntr,$one)
+   endif
+  $i = $i + 1
+  until $i > numrfch
+endif

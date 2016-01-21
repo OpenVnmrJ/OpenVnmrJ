@@ -1,0 +1,20 @@
+"macro snapshot"
+if printformat<>'png' and printformat<>'gif' and printformat<>'jpg' then
+  printformat='png'
+endif
+if printregion<>'graphics' and printregion<>'vnmrj' then
+  printregion='graphics'
+endif
+$dir=userdir+'/print'
+exists($dir,'directory'):$e
+if ($e < 0.5) then
+  mkdir($dir)
+endif
+$template = $dir+'/'+operator+'_%DATE%_%TIME%%R0%.'
+Svfname($template,printformat):$file
+vnmrjcmd('screenshot',printregion + ' ' +$file)
+if ($##) then
+  return($file)
+else
+  write('line3','file saved as %s',$file)
+endif

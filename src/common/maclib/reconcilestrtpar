@@ -1,0 +1,59 @@
+"macro reconcilestrtpar"
+$archsamp='' $strtpar=''
+shell('basename '+$1):$strtpar
+shell('dirname '+$1):$archsamp
+getdim:$dim
+$done=0 $i=1
+	"three strikes and you are out rule"
+while ($done < 1) and ($i < 4) do
+   $ni=0 $apptype=''
+   rtv($archsamp+'/'+$strtpar,'noabort','ni'):$ni
+   rtv($archsamp+'/'+$strtpar,'noabort','apptype'):$apptype
+   if (($ni<2) and ($dim>1)) or (($dim<2) and ($apptype<>apptype))  then 
+		"curpar is 2D and strtpar is 1D - the search is done"
+		"curpar is 1D and apptype is different than apptype in strtpar"
+		"	- the search is done"
+	$done=1 
+   else
+		"This is a 2D - go down one level"
+	$newspar=''
+	rtv($archsamp+'/'+$strtpar,'noabort','strtpar'):$newspar
+	if ($newspar='') then 
+		"There no strtpar - the search ends here"
+	    $done=1
+	else 
+	    $ext=''
+	    substr($newspar,'basename'):$newspar,$ext
+	    if ($ext<>'') then
+		exists($archsamp+'/'+$newspar+'.'+$ext,'directory'):$direx
+	    else
+		exists($archsamp+'/'+$newspar+'.REC','directory'):$direx
+		if ($direx=0) then
+		    exists($archsamp+'/'+$newspar+'.rec','directory'):$direx
+		    if ($direx=0) then
+			exists($archsamp+'/'+$newspar+'.fid','directory'):$direx
+		    endif
+		endif
+	    endif
+		"The strtpar is not found, the search ends here"
+	    if ($direx=0) then $newspar='' $done=1 endif
+	endif
+	$strtpar=$newspar
+   endif
+   if ($strtpar='') then $done=1 endif
+   $i=$i+1
+endwhile
+
+exists($archsamp+'/'+$strtpar,'directory'):$strtparex
+if ($strtparex=0) then
+    exists($archsamp+'/'+$strtpar+'.REC','directory'):$strtparex
+endif
+if ($strtparex=0) then
+    exists($archsamp+'/'+$strtpar+'.rec','directory'):$strtparex
+endif
+if ($strtparex=0) then
+    exists($archsamp+'/'+$strtpar+'.fid','directory'):$strtparex
+endif
+
+return($strtpar,$strtparex)
+

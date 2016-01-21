@@ -1,0 +1,111 @@
+"macro imt2puls"
+"**********************************************************"
+"Setup and Processing for 1D T2 spectroscopy sequence"
+
+" Details: Run the t2puls sequence and set parameters
+"       p1 - 90 deg pulse
+"       p2 - 180 deg pulse
+"       tpwr1,tpwr2 - power levels calculated by imprep
+"       te - inversion delay list; d2 is set to ti for sequence
+"
+" Set the te array in secs setting the te parameter
+" d2=te array is set and T2 data collected
+" The spectral peak is found and T2 calculated from the spectra
+" te is the echo time list. d2=te is used in the pulse sequence
+" The sample must be shimmed to a single peak
+" or else T1's for multiple peaks are printed
+" The threshold is set manually by the user
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  tof=resto-restol
+  rfl=rfl+rfladjust+rfloffset rfladjust=0 rfloffset=0
+  roff=roff+roffadjust roffadjust=0
+  imprep
+  wysiwyg='n'
+  d2=te
+  if(d2=0) then
+     write('line3','d2=0 180 not used')
+  endif 
+
+  execseq('prep')  "Execute any sequence specific preparation"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  clear
+  if(fidt2 = 'y') then
+    t2fit
+  else
+   f full wft(1) ph aph0 "phase reference"
+   wft select(1) vsadj(40) dssh  "display all spectra"
+
+   write('line3','calculating  T2')
+   av
+   select(1) vsadj(90)
+//   th=30  "threshold set manually"
+   clear
+   dll
+   text('T2 Determination')
+
+   ph fp 
+   analyze('expfit','te','T2','list')
+   cat(curexp+'/analyze.list')
+
+   center expl wc=80
+
+   "if (at_plotauto='y') then pexpl ATplreg pap page endif"
+
+   "extract the time-constant value from the analyze.out file"
+   exists('t2','parameter'):$ex
+   if($ex < 1) then
+     create('t2')
+   endif
+
+   lookup('file',curexp+'/analyze.out')
+   lookup('skip',10,'read',1):t2
+   write('line3','T2 estimate is %1.3f sec ',t2)
+   t2=trunc(1000*t2)/1000
+
+   fn=4*np ft(1) ph aph0 f vsadj peak:$ht,cr
+   if ($ht<0) then rp=rp+180 endif
+   dres
+   vp=0 f full
+   wexp=''
+   wnt=''
+   expl
+
+   execseq('proc')  "Execute any sequence specific processing"
+  endif
+
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  imt2puls('prep')
+  
+  "not implemented"
+  if ($do = '') then
+    $do = prescan_exec[prescan_control[2]]
+  endif
+  
+  wexp = ''
+endif

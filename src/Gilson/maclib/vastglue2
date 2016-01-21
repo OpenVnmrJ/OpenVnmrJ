@@ -1,0 +1,54 @@
+"macro vastglue2"
+"vastglue - Process VAST data"
+
+  
+  if $# > 0 then $numscans = $1 else $numscans = 96 endif
+  $y=''
+  "input('Make a \'pseudo-2D\' experiment (y) or add all FIDs together (n)? '):$y"
+  "$makearray=($y='y') or ($y='Y')"
+  $makearray=(1=1)
+  $file=''
+  $fileadd=''
+  $curscan=1
+  clradd
+  repeat
+  format($curscan,0,0):$fileadd
+  if $curscan < 10 then $fileadd='0'+$fileadd endif
+  $file='filename_R1_Z1_S'+$fileadd
+  $file=$file+'_02'
+  write('line3','Reading data from file %s',$file)
+  if $curscan=1 then
+    lookup('file',$file+'.fid/log')
+    lookup('delimiter','/t/n/r :=>','skip',3,'read','read','read'):$hr,$min,$sec
+    echo($hr) echo($min) echo($sec)
+   endif
+  if $curscan=$numscans then
+    lookup('file',$file+'.fid/log')
+    lookup('delimiter','/t/n/r :=>','skip',3,'read','read','read'):$hr2,$min2,$sec2
+    echo($hr2) echo($min2) echo($sec2)
+   endif
+  rt($file)
+    $i = 1
+       repeat
+       select($i)
+       if $makearray then add('new') else add endif
+       $i = $i +1
+       until $i > ni
+  $curscan=$curscan+1 "Keeps track of which one we're on"
+  until $curscan > $numscans
+  if ni=0 then ni=1 endif
+  $n = $numscans*ni
+  jaddsub
+  if $makearray then
+    ni=$n
+    fn1=2*ni
+    setvalue('arraydim',$n,'processed')
+    setvalue('ni',$n,'processed')
+    $time1=$hr*3600+$min*60+$sec
+    $time2=$hr2*3600+$min2*60+$sec2
+    $time=($time2-$time1)/($numscans-1)
+    sw1=60/$time
+    setvalue('sw1',sw1,'processed')
+  endif
+  write('alpha',$time)
+  write('line3','Data has been moved to exp %d, and is being processed',addsubexp)

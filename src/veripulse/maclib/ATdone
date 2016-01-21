@@ -1,0 +1,39 @@
+"macro ATdone"
+is_IP:$isIP
+if ($isIP) then
+
+   $parfile=userdir+'/autotest/parameters/standard.par'
+   exists($parfile,'directory'):$parex
+   if not ($parex) then return endif
+   //Copy userdir+'/autotest' directory to current IP data folder
+   $file='' $dir=''
+   rtv(userdir+'/autotest/parameters/standard.par/procpar','adir2tmplt'):$dir
+   write('line3','Copying AutoTest data  and reports to %s',$dir)
+   shell('cp -r '+userdir+'/autotest/data '+$dir):$dum
+   shell('cp '+userdir+'/autotest/REPORT '+$dir):$dum
+   shell('cp '+userdir+'/autotest/REPORT '+$dir):$dum
+   shell('cp '+userdir+'/autotest/LASTREPORT '+$dir):$dum
+   shell('cp '+userdir+'/autotest/LASTRECORDREPORT '+$dir):$dum
+   shell('cp '+userdir+'/autotest/atrecord_report '+$dir):$dum
+
+   //Remove standard.par
+   shell('rm -r '+$parfile):$dum
+
+   //Do reporting
+   exists(userdir+'/autotest/FAILREPORT','file'):$fail
+   if ($fail>0.5) then
+      $result='Failures reported'
+      shell('cp '+userdir+'/autotest/FAILREPORT '+$dir):$dum
+      IPdoemail('fail',userdir+'/autotest/FAILREPORT')
+   else
+      $result='All tests passed'
+   endif
+
+   VPtext
+   VPgettarget('AutoTest')
+   atext('AutoTest \(standard tests\)')
+   $str='Test status: '+$result
+   atext($str)
+   VPhistory($result)
+
+endif

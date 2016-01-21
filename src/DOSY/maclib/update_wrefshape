@@ -1,0 +1,44 @@
+"macro update_wrefshape"
+"update_wrefshape - macro to update the water refocussing shape       "
+"                      for dpfgse water suppression sequences         "
+"   the macro takes the current shapename (wrefshape) and             "
+"   pulsewidth (wrefpw) and receates the shape and updates the        "
+"   corresponding power level (wrefpwr)                               "
+"   for the shape type a rectangular shape is set by the macro        "
+
+exists('wrefpw','parameter'):$ex1 exists('wrefpwr','parameter'):$ex2
+exists('wrefshape','parameter'):$ex3 exists('wrefpwrf','parameter'):$ex4
+exists('compH','parameter'):$ex5
+if (($ex1=0)or($ex2=0)or($ex3=0)or($ex4=0)or($ex5=0)) then
+  $banner='Please be sure that the following parameters'
+  $banner=$banner+'\\do exist in the current experiment:'
+  $banner=$banner+'\\                 wrefshape'
+  $banner=$banner+'\\         wrefpwr,         wrefpwrf'
+  $banner=$banner+'\\         wrefpw,          compH'
+  if auto='n' then banner($banner) endif
+  return
+endif
+if ((wrefshape='')or(wrefpw<500)or(wrefpw>5000)) then
+  $banner='Please be sure that the following parameters' 
+  $banner=$banner+'\\are set properly in the current experiment:'
+  $banner=$banner+'\\       wrefshape <> \'\' '
+  $banner=$banner+'\\       500<wrefpw<5000 usec'
+  if auto='n' then banner($banner) endif
+  return
+endif
+$wrefpw='' $wrefpwr='' $wrefpwban=''
+ format(wrefpw*1e-6,6,6):$wrefpw 
+ format(wrefpw,1,1):$wrefpwban
+$wave='square '+$wrefpw+' 0 0.5 0 180'
+opx(wrefshape)
+setwave($wave)
+cpx(pw*compH, tpwr)
+ pbox_pw(wrefshape+'.RF'):$wrefpw1 wrefpw=$wrefpw1
+ pbox_pwr(wrefshape+'.RF'):$wrefpwr1 wrefpwr=$wrefpwr1
+ format(wrefpwr,0,0):$wrefpwr
+ $banner='The following parameters have been updated:'
+ $banner=$banner+'\\       wrefshape is set to : '+wrefshape
+ $banner=$banner+'\\       wrefpw    is set to : '+$wrefpwban+' usec'
+ $banner=$banner+'\\       wrefpwr   is set to : '+$wrefpwr+' dB'
+ $banner=$banner+'\\You may fine tune the pulse via wrefpwrf!'
+ if auto='n' then banner($banner) endif

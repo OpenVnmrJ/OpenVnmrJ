@@ -1,0 +1,81 @@
+"macro get_max_gf"
+"************************************************************************"
+" get_max_gf - Macro to calculate g_squared. Called from set_gf_array.   "
+"              Calls max and arraymax                                    "
+"                                                                        "
+"************************************************************************"
+
+
+if ($# < 1) then
+  $Garray = 0
+else
+  $Garray = $1
+endif
+
+$maxx = dro[1]
+$maxy = dpe[1]
+$maxz = dsl[1]
+
+max(size('dro'),size('dpe')):$size
+max($size,size('dsl')):$size
+$max = 0
+$inx = 1
+
+if     ($Garray = 0) then
+  $g_squared = $maxx*$maxx + $maxy*$maxy + $maxz*$maxz
+elseif ($Garray = 1) then "dro"
+  arraymax('dro'):$maxx
+  $g_squared = $maxx*$maxx + $maxy*$maxy + $maxz*$maxz
+elseif ($Garray = 2) then "dpe"
+  arraymax('dpe'):$maxy
+  $g_squared = $maxx*$maxx + $maxy*$maxy + $maxz*$maxz
+elseif ($Garray = 4) then "dsl"
+  arraymax('dsl'):$maxz
+  $g_squared = $maxx*$maxx + $maxy*$maxy + $maxz*$maxz
+elseif ($Garray = 3) then "dro, dpe"
+  repeat
+    $tmp = dro[$inx]*dro[$inx] + dpe[$inx]*dpe[$inx]
+    if ($tmp > $max) then
+      $max_inx = $inx
+      $max     = $tmp
+    endif
+    $inx = $inx + 1
+  until ($inx > $size)
+  $g_squared = $max + $maxz*$maxz
+elseif ($Garray = 5) then "dro, dsl"
+  repeat
+    $tmp = dro[$inx]*dro[$inx] + dsl[$inx]*dsl[$inx]
+    if ($tmp > $max) then
+      $max_inx = $inx
+      $max     = $tmp
+    endif
+    $inx = $inx + 1
+  until ($inx > $size)
+  $g_squared = $max + $maxy*$maxy
+elseif ($Garray = 6) then "dpe, dsl"
+  repeat
+    $tmp = dpe[$inx]*dpe[$inx] + dsl[$inx]*dsl[$inx]
+    if ($tmp > $max) then
+      $max_inx = $inx
+      $max     = $tmp
+    endif
+    $inx = $inx + 1
+  until ($inx > $size)
+  $g_squared = $max + $maxx*$maxx
+elseif ($Garray = 7) then "dro, dpe, dsl"
+  repeat
+    $tmp = dro[$inx]*dro[$inx] + dpe[$inx]*dpe[$inx] + dsl[$inx]*dsl[$inx]
+    if ($tmp > $max) then
+      $max_inx = $inx
+      $max     = $tmp
+    endif
+    $inx = $inx + 1
+  until ($inx > $size)
+  $g_squared = $max
+endif
+
+exists('g_squared','parameter'):$ex
+if ($ex = 0) then
+  create('g_squared')
+endif
+g_squared = $g_squared

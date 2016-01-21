@@ -1,0 +1,262 @@
+****************************************************************************
+autoname:$path
+autoname(name_template):$path
+autoname(name_template, sample_info_file):$path
+autoname(name_template, sample_info_file, 'excluded_suffixes'):$path
+autoname(name_template, sample_info_file, 'excluded_suffixes',
+    'keepspaces'|'replacespaces'):$path
+
+Svfname:$path
+Svfname(name_template):$path
+Svfname(name_template, suffix):$path
+Svfname(name_template, suffix, 'excluded_suffixes'):$path
+Svfname(name_template, suffix, 'excluded_suffixes',
+    'keepspaces'|'replacespaces'):$path
+
+chkname(name_template, 'characters', 'par or tmpl or str',
+        'replacechar'):$s1,$s2,$par,$req
+chkname('fileChars', 'characters')
+****************************************************************************
+
+The autoname command determines the resulting path where the data will be
+stored for an entry in the automation run.  The Svfname command determines 
+the resulting path where an arbitrary file will be stored.
+
+The autoname command uses the value of a naming template (by default, 
+the autoname parameter is set to the template) and the contents of a 
+sample info file (the name by default is "sampleinfo" in the current 
+experiment) to determine this path.  The path name is stored in the 
+expected return argument.  If no return argument is present, the result 
+is displayed on line 3.
+
+The value of the naming template represents the path to where data
+is to be stored.  Substitutions can be made, based on substitution 
+specifiers in this template and using the contents of the sample info
+file and the values of VNMR parameters.  Two types of substitution 
+specifiers are available.
+
+The first substitution specifier is used with the autoname command, and
+is introduced with a percent sign ('%').  When the command finds a 
+percent sign in the template string, it scans ahead for the next percent 
+sign.  It then searches the sample info file for the text between the 
+percent signs.  When it finds this text, it substitutes the next word 
+in the file for the two percent signs and the text between them.  For 
+example, if the autoname parameter contains "%USER:%", the command will 
+search the sample info file for the text "USER:" and substitute the next
+word in the file (the name of the user) for the text "%USER%".  Other useful
+substitution specifiers are "%MACRO:%", "%SAMPLE#:%" and "%SOLVENT:%".
+
+The following percent substitutions for time and date are also allowed.
+They are obtained from the system clock, not from the sample info file.
+  "%DATE%" "%TIME%" "%YR%" "%MO%" "%DAY%" "%HR%" "%MIN%" "%SEC%"
+  "%DAC%" "%MOC%" "%YR2%" "%HR12%" "%PM%"
+
+The command also controls the version number attached to the name of the
+file.  The version number may be specified by "%Rn%" where n is an integer
+from 0 to 9 (default 2), as follows.  
+
+    If n is 0, no revision digits are appended (all names must be 
+            uniquely constructed without these revision digits).
+
+    If n is 1 to 9, the revision number is padded with leading zeroes
+            to form an n-digit number.  If more places are needed than
+            specified, more zeroes are used.  
+
+If n is greater than 9 (more than one digit), Rnn is still used as a
+search string in the sampleinfo file.  %Rn% may be specified anywhere in
+name_template string.  There can only be one %Rn% specification in the
+name_template string.  If no %Rn% field is specified, a default of
+%R2% appended to the end of the name_template string.
+
+You can also specify the starting number to be used when constructing the
+version number by appending a colon ":" and start number after Rn.  The
+default starting value is 1.  A zero is not allowed.  
+
+An alternate substitution specifier is introduced with a dollar sign ('$').
+This works in an analogous manner to the percent substitution specifier,
+except that the text between the dollar signs is interpreted as the name
+of a VNMR parameter.  The value of this parameter will then be substituted
+for the substitution specifier. Temporary macro variables, such as $val or
+$2, for the second supplied argument, can also be used. The syntax would
+be $$val$ and $$2$, for these two examples.
+
+If the parameter is a numeric parameter, autoname will convert the truncated
+value of the parameter+0.1 to a string.  For example, if pw=12.3 and the
+template is 'pw=$pw$usec', the relative path would be pw=12usec01.fid
+
+If the name template generates a relative pathname, then the returned path
+name will be prefaced with the value of the parameter autodir.  If autodir is
+equal to '', then the name will be prefaced with userdir+'/data/'
+
+With no arguments, the command uses its defaults, "autoname" for the name
+of the parameter and "sampleinfo" in the current experiment directory for
+the path to the sample info file.  If the autoname parameter does not exist
+or is set to '', the default will be the template %SAMPLE#:%%PEAK#:%
+
+If autoname is called with a single argument, it will be the naming template.
+For example, autoname(autoname)  Note that there are no single quotes around
+the argument autoname.  The first argument is really the template, which is 
+often saved in a parameter like autoname. However, one can pass the template 
+directly as in autoname('$owner$/$sample$'):$path
+
+If a second argument is passed to autoname, it specifies the name of a text 
+file to use for the % substitutions.  Note that the file must exist.
+
+If a third argument is given and is a keyword 'replacespaces', spaces ' ' 
+will be substituted with underscores '_' in the resulting path name.  If it 
+is a keyword 'keepspaces', spaces will not be replaced with underscores.
+
+Otherwise, the third argument is a comma separated list of suffixes which,
+when appended to the path, will not match existing files.  For example, 
+if files are being saved in the data directory, and the template is 
+'$seqfil$_$tn$_', the file names will be in the form s2pul_H1_01.fid or 
+gems_H1_01.fid.  If there are files named gems_H1_01.fid and gems_H1_02.img 
+in this directory, and the call is autoname('$seqfil$_$tn$_','/vnmr/conpar') 
+then the relative path would be gems_H1_02.fid.  However, if the call was 
+autoname('$seqfil$_$tn$_','/vnmr/conpar','.img') then the relative path 
+would be gems_H1_03.fid, since the gems_H1_02.img would be considered a match.
+
+An optional fourth argument keyword 'replacespaces' or 'keepspaces' may
+be used if the third argument is a list of suffixes.  Its action is the 
+same as described for the third argument. 
+
+For Solaris and Linux systems, the default behavior is 'replacespaces'.
+
+The Svfname command is similar to the autoname command.  Its default
+naming parameter is 'svfname' instead of 'autoname', and its default
+directory is 'svfdir' instead of 'autodir' if a full path name is not
+given.  It does not read a sample info file.  A suffix may be specified 
+as the second argument.  The default suffix is '.fid'.  To access 
+ordinary files and directories, a suffix of '' may be used.  
+
+chkname
+=======
+
+The chkname command takes a argument that is a template type of the form
+used by the Svfname command.  It parses the template and returns substituted
+strings and lists of parameters defined by the template.
+The chkname command will substitute parameters enclosed in the "$"
+substitution parameters. As above, local $ variables, such as $val or $2 can
+also be substituted. If the string of characters between the "$ pair"
+does not correspond to an existing parameter, the first $ character will be
+treated as a simple character. The chkname command will also substitute
+the time and date "% pairs" described above. It does this for all
+"% pairs" except the %Rn% or %Rn:number% specifiers. Like the Svfname
+command, the chkname command does not read a sample info file.
+
+Following any substitutions, the chkname command will substitute characters
+in the resulting string, based on specified
+rules. The second argument to chkname specifies the characters that are
+allowed in the resulting string, or those that are disallowed in the resulting
+string. This is done because certain characters in filenames are either not
+allowed or they  may make tools that use filenames difficult to use.
+Characters that often cause problems are:
+   ' ', '!', '"', '$', '&', '\'', '(', ')', '*', ';', '<', '>', '?',
+        '\\', '[', ']', '^', '`', '{', '}', '|', ',', '\0'
+
+This second optional argument is either a keyword, a keyword plus modifiers,
+or a list of disallowed characters.  Below are the keywords and the subset
+of characters they allow. The default is the keyword 'dir'.
+  'file' allows all alphanumeric characters [a-z, A-Z, and 0-9] and the
+         extra _ and . and - characters. These are typically used for
+         file names.
+  'dir'  allows all characters allowed by the 'file' keyword plus the
+         directory specifier '/'.
+  'alnum' allows all alphanumeric characters [a-z, A-Z, and 0-9]
+The alnum keyword can be followed by a list of other allowable characters.
+  'alnum_.-' is identical to 'file'.
+  'alnum_.-/' is identical to 'dir'
+  'alnum_.-/:@%?=&' might be used for email or web addresses.
+  'none' disables the character substitutions.
+Supplying a list of characters is interpreted as disallowed characters.
+An example may be ' .,;:*!?()[]{}<>~#$%&/'
+
+A special incantation of the chkname command will set the non-alphanumeric
+characters selected by the 'file' and 'dir' keywords. The command
+  chkname('fileChars','_.-')  specifies the standard characters in addition to
+alphanumerics as allowed characters for the 'file' keyword.  The incantation
+always starts with the alphanumerics and adds those listed in the second argument.
+To add multiple extra characters, list them all in the second argument as below.
+  chkname('fileChars','_.-?=')
+This sets the allowed characters to the  alphanumerics and _ and . and - and ? and =.
+If this is later followed by the command chkname('fileChars','_.-'), then the
+and ? and = characters would no longer be allowed. Supplying a null string
+as the second argument, as in chkname('fileChars',''), removes all extra characters
+so that only the alphanumerics are allowed. The 'dir' keyword always adds the '/'
+character to whatever the 'file' set is set to.
+The set of non-alphanumeric allowed characters can be returned to the calling macro.
+chkname('fileChars'):$curChars
+returns the current set.
+chkname('fileChars','_.-='):$curChars
+returns the current set of non-alphanumerics before setting them to the list in
+the second argument. One can use this to temporarily reset the values and then set
+them back, as in the case below
+chkname('fileChars','_.-?='):$curChars   // save original set in $curChars
+// do stuff with new allowed characters
+chkname('fileChars,$curChars)            // reset back to original set.
+
+The third optional argument is the keyword 'par' or 'tmpl' or 'str'
+Actually, only the initial 'p', 't', or 's' is required, the
+longer name suggests the usage. The 'tmpl' (or 't', or 'template') keyword
+will do the "% pair" and "$ pair" substitutions before replacing
+disallowed characters. The 'str' (or 's', or 'string') keyword does not
+give any special meaning to the '%' or '$' characters. If they are found
+and they are in the disallowed list, they will be replaced with the replacement
+character. The 'par' (or 'p' or 'parameter') keyword is identical to the
+'tmpl' keyword with respect to the first returned string. However, for the
+optional second returned string, it does not do any "$ pair" or "% pair"
+substitutions.  It also does not replace the '$' characters with '#'
+characters (see below) as is the case with the 'tmpl' keyword. The 'par'
+keyword is the default.
+
+A fourth and final optional argument specifies the replacement character for any
+disallowed characters . The default is an underscore ('_'). A null string
+will remove any disallowed characters from the string.
+
+The chkname command returns up to four values to the calling macro.
+The first value returned is the expanded template. All places where a
+parameter is defined are substituted with the value of that parameter.
+If a used string parameter is an empty string, an empty string will be
+substituted for the template parameter. All "% pairs", except the %Rn%
+pairs will be substituted.
+The second returned value depends on the value of the fourth optional argument
+to chkname. In the case of the 'tmpl' fourth argument, the second
+returned value is the same as the first returned value, except for
+the way in which empty string parameters are handled. In this case, instead
+of replacing the $parname$ with an empty string, it is replaced with the
+parameter name enclosed in # symbols.  In the case of the 'str' fourth
+argument, the second returned value is identical to the first returned value.
+In the case of the default 'par' fourth argument, the second returned valued
+has no "$ pair" nor "% pair" substitutions.
+The third returned value is a list of parameters defined by the template.
+The fourth returned value is a subset all the defined parameters that are set
+to an empty string.  This can be used to identify parameters that must be set
+before a template can be fully expanded.
+
+In summary, the chkname command with a single argument will do the "$ pair"
+and "% pair" substitutions (except for the %Rn% pairs) and replace any
+characters other than alphanumerics [a-zA-Z0-9] and '_', '.', and '/'. The
+chkname command should always be called before the Svfname command, which will
+do the final %Rn% pair substitution. The default values for the second, third,
+and fourth arguments will often be correct.
+
+chkname example.
+
+  operator='vnmr1'
+  comment='A special compound'
+  samplename='C17H21NO4'
+  ident=''
+  $val='local'
+  chkname('$samplename$ $$val$ $ident$/$operator$_$comment$_%R2%'):$s1,$s2,$p,$r
+
+  sets $s1 = 'C17H21NO4_local_/vnmr1_A_special_compound_%R2%'
+       $s2 = 'C17H21NO4_local_#ident#/vnmr1_A_special_compound_%R2%'
+       $p  = 'samplename $val ident operator comment'
+       $r  = 'ident'
+
+  chkname('$samplename$ $ident$/$operator$_$comment$_%R2%','file','par','.'):$s1,$s2,$p,$r
+  sets $s1 = 'C17H21NO4.vnmr1_A.special.compound_%R2%'
+       $s2 = '$samplename$.$ident$.$operator$_$comment$_%R2%'
+       $p  = 'samplename ident operator comment'
+       $r  = 'ident'
+

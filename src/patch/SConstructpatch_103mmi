@@ -1,0 +1,1386 @@
+import os
+import glob
+import sys
+import string
+import datetime
+sys.path.append(os.path.join(os.getcwd(), 'patch'))
+import myShutil # for better copytree()
+
+swDir = os.path.join(os.getcwd(),os.pardir)
+
+# ---------------   copy files and create the patch build ---------------------
+
+# get envirnment
+env = Environment(ENV = os.environ)
+
+# define the patch name
+patchTarget = datetime.date.today().strftime("custom_mmi_%Y-%m-%d")
+patchTarget = '4.2_LNX_MMI_108'
+readmeFile = 'Readme.101mmi'
+
+
+# patchDir = os.path.join(swDir,os.pardir,pardir,os.pardir,
+patchDirParent = os.path.join(swDir,os.pardir,os.pardir,
+                         'patches',patchTarget)
+
+cmd = 'rm -rf ' + patchDirParent
+Execute(cmd);
+os.makedirs(patchDirParent)
+
+dest = os.path.join(patchDirParent,'patchmake')
+src  = os.path.join(swDir,'scripts','patchmake.sh')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+patchDir = os.path.join(patchDirParent,'patch')
+os.makedirs(patchDir)
+
+src = os.path.join(swDir,'patch','p_install_102');
+dest = os.path.join(patchDir,'p_install')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+dest = os.path.join(patchDir,'Readme')
+src  = os.path.join(swDir,'patch',readmeFile)
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+dest = os.path.join(patchDirParent,patchTarget+'.Readme')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+#
+# ---------------   Patch specific addition need to go here --------
+# You can add tiems here or create a separate SConstruct.105
+# eg: SConscript('SConstruct.105')
+# create any neccessary vnmr-subdirectories inside the patch directory
+# eg: binDir    = os.path.join(patchDir,'bin')
+#     if not os.path.exists(binDir):
+#         os.makedirs(binDir)
+#
+#---------------------------------------------------------------------
+#
+
+binDir    = os.path.join(patchDir,'bin')
+if not os.path.exists(binDir):
+   os.makedirs(binDir)
+
+src  = os.path.join(swDir,'vnmrbg','Vnmrbg')
+dest = os.path.join(binDir,'Vnmrbg')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+Execute('cd '+binDir+'; ln Vnmrbg Vnmr')
+
+src  = os.path.join(swDir,'bin','diffparams')
+dest = os.path.join(binDir,'diffparams')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+src  = os.path.join(swDir,'bin','jdxfid')
+dest = os.path.join(binDir,'jdxfid')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+src  = os.path.join(swDir,'stat','Infostat')
+dest = os.path.join(binDir,'Infostat')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+acqbinDir    = os.path.join(patchDir,'acqbin')
+if not os.path.exists(acqbinDir):
+   os.makedirs(acqbinDir)
+
+src  = os.path.join(swDir,'scripts','vnmrseqgen.sh')
+dest = os.path.join(binDir,'vnmrseqgen')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','loginpasswordcheck.sh')
+dest = os.path.join(binDir,'loginpasswordcheck')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+# src  = os.path.join(swDir,'scripts','airjet.sh')
+# dest = os.path.join(binDir,'airjet')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0755))
+# src  = os.path.join(swDir,'scripts','99-CP210x.rules')
+# dest = os.path.join(acqbinDir,'99-CP210x.rules')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0644))
+src  = os.path.join(swDir,'scripts','lsetacq.sh')
+dest = os.path.join(binDir,'setacq')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','S99pgsql.sh')
+dest = os.path.join(binDir,'S99pgsql')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','patchinstall.sh')
+dest = os.path.join(binDir,'patchinstall')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','patchuninstall.sh')
+dest = os.path.join(binDir,'patchuninstall')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','vnmrj.sh')
+dest = os.path.join(binDir,'vnmrj')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'scripts','vnmremail.sh')
+dest = os.path.join(binDir,'vnmremail')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+usertDir    = os.path.join(patchDir,'user_templates')
+if not os.path.exists(usertDir):
+   os.makedirs(usertDir)
+
+src  = os.path.join(swDir,'user_templates','.vnmrenvsh')
+dest = os.path.join(usertDir,'.vnmrenvsh')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+src  = os.path.join(swDir,'user_templates','global')
+dest = os.path.join(usertDir,'global')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+src  = os.path.join(swDir,'mercury','global')
+dest = os.path.join(usertDir,'global.merc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+src  = os.path.join(swDir,'bin','showconsole')
+dest = os.path.join(binDir,'showconsole')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'bin','dps_ps_gen')
+dest = os.path.join(binDir,'dps_ps_gen')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+
+javaDir = os.path.join(patchDir,'java')
+if not os.path.exists(javaDir):
+   os.makedirs(javaDir)
+
+# copy files to the patch directory
+src  = os.path.join(swDir,'vnmrj','vnmrj.jar.pro')
+dest = os.path.join(javaDir,'vnmrj.jar')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+src  = os.path.join(swDir,'jaccount','account.jar.pro')
+dest = os.path.join(javaDir,'account.jar')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+psglibDir = os.path.join(patchDir,'psglib')
+if not os.path.exists(psglibDir):
+   os.makedirs(psglibDir)
+
+seqlibDir = os.path.join(patchDir,'seqlib')
+if not os.path.exists(seqlibDir):
+   os.makedirs(seqlibDir)
+
+psglibList = [
+               'CRAPT',
+               'PSYCHE',
+               'PSYCHE_ES',
+               'PSYCHE_zTOCSY',
+               'gHSQCAD_PS',
+               'Ddeptse',
+               'Dproject_cc',
+               'HETERO2DJ',
+               'BilevelDec',
+             ]
+
+for i in psglibList:
+    dest = os.path.join(psglibDir,i+'.c')
+    src  = os.path.join(swDir,'psglib',i+'.c')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(seqlibDir,i)
+    src  = os.path.join(swDir,'psglib','seqlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
+
+cppsglibList = [
+               'HSQCADTOXY',
+               'CIGAR',
+               'wet1D',
+             ]
+
+for i in cppsglibList:
+    dest = os.path.join(psglibDir,i+'.c')
+    src  = os.path.join(swDir,'psglib','cpseqlib',i+'.c')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(seqlibDir,i)
+    src  = os.path.join(swDir,'psglib','icpseqlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
+
+solidsseqlibDir = os.path.join(patchDir,'solidspack','seqlib')
+if not os.path.exists(solidsseqlibDir):
+   os.makedirs(solidsseqlibDir)
+
+solidsseqlibList = [
+               'onepultoss',
+               'tancpxidref',
+               'tancpxtoss',
+             ]
+
+for i in solidsseqlibList:
+    dest = os.path.join(solidsseqlibDir,i)
+    src  = os.path.join(swDir,'psglib','isolidsseqlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
+
+macDir = os.path.join(patchDir,'maclib')
+if not os.path.exists(macDir):
+   os.makedirs(macDir)
+
+maclibFileList = [
+          'proshimEdit',
+          'psGshim',
+          'ExpSetupModule',
+          'Fobs',
+          'ProbePopup',
+          'psLock',
+          'vsadj',
+          'ProshimPopup',
+          'spShow',
+          'psMain',
+          'updateExpSelector',
+          'personalogin',
+          '_probe',
+          'Hdec',
+          'ProbeEdit',
+          'ProbePopup',
+          'coldprobe',
+          'setrc',
+          'cryo_init',
+          'probeidez',
+          'go',
+          'Studyprobecal',
+          'showconfig',
+          'CRAPT',
+          'CRAPT_setup',
+          'PSYCHE',
+          'PSYCHE_ES',
+          'PSYCHE_ES_setup',
+          'PSYCHE_ES_time',
+          'PSYCHE_setup',
+          'PSYCHE_time',
+          'PSYCHEproc',
+          'SetUpPSYCHE',
+          'SetUpPSYCHE_ES',
+          '_chunkwidth',
+          '_npoints',
+          'explibPopup',
+          'gHSQCAD_PS',
+          'gHSQCAD_PS_setup',
+          'go_CRAPT',
+          'go_gHSQCAD_PS',
+          'makeBIP_125_15_900',
+          'makeBIP_20_10_360',
+          'makeBIP_250_15_1382',
+          'makeBIP_75_15_540',
+          'makeBIP_75_15_720',
+          'studyCluster',
+          'updatecpdir',
+          'PersonaBuilder',
+          'cpsetNUS',
+          'vconfig',
+          'snapshot',
+          'shimset',
+          'servicetools',
+          'paramgroup',
+          'setref',
+          'setref1',
+          'setref2',
+          'psCmd',
+          'Ddeptse',
+          'Dproject_cc',
+          'shimdss_shimmacro',
+          'PersonaManager',
+          'ProtocolManager',
+          'dssicrft',
+          'rtvfs',
+          'setpwx180ad',
+          'dnddata',
+          'rmcraftpar',
+          'protune',
+          'bcpopup',
+          'Cobs',
+          'movedssw',
+          'img2cp',
+          'iconfig',
+          'sort',
+          'Cdec',
+          '_loc',
+          '_vloc',
+          'showarrays',
+          'acct',
+          'singlesession',
+          'doplotoption',
+          'updaterev',
+          'CSproc3',
+          'dprofile',
+          'pbox_bw',
+          'pbox_bws',
+          'fixpar',
+          'lkGmap',
+          'lkZ0',
+          'Pobs',
+          'autoqstart',
+          'sampleChange',
+          'plotoption',
+          'bootup',
+          'psPshim',
+          'SQDisplay',
+          'Pdec',
+          'fiddlepopup',
+          'pickpeaks',
+          'psPreacq',
+          'NUSproc',
+          'NUSprocIST',
+          'cpprocNUS',
+          'checkmaclib',
+          'fixpar_walkup',
+          'getversion',
+          'process',
+          'PSYCHE_zTOCSY',
+          'PSYCHE_zTOCSY_setup',
+          '_concentration',
+          '_cpmgbt',
+          '_cpmgflg',
+          '_cpmglt',
+          '_mass',
+          '_molecularmass',
+          '_samplevolume',
+          'add2d',
+          'cpmg_module',
+          'decimal',
+          'dodigfilt',
+          'dostudymacro',
+          'loadannos',
+          'rotateannos',
+          'saveannos',
+          'is_NUS2d',
+          'ExpSetupModule',
+          'writeqest',
+          'fid_scan',
+          'fid_display',
+          'mtune',
+          'parNUS',
+          'tmpreturn',
+          'tmpsave',
+          'Autockdir',
+          'calibplot',
+          'set_lockpars',
+          'writeDataID',
+          'cqreset',
+          'trtune',
+          'rtjeol',
+          'autocalibration',
+          'is_craft',
+          'setp11svfdr2',
+          'cpfixpar',
+          'getdim',
+          ]
+
+for i in maclibFileList:
+    dest = os.path.join(macDir,i)
+    src  = os.path.join(swDir,'maclib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+cpmaclibFileList = [
+          'std1D',
+          'updateprobe',
+          'walkupQ_resumeq',
+          'xmhaha_fastSQ',
+          'xmhaha_subSQ',
+          'cpgo',
+          'operatorlogin',
+          'gmapsolv',
+          'showacqlog',
+          '_selbwPS',
+          'getsampglobal',
+          'process_DEPT',
+          'setupPSpar',
+          'walkupQ_addstudy',
+          'walkupQ_setup',
+          'cpADMIN',
+          'cpsetup',
+          'getEXPinfo',
+          'getadminfo',
+          'cpwerr',
+          'gmapz',
+          'AutoStrtfid',
+          'active2error',
+          'cpautoQ',
+          'cpautoQresume',
+          'cplog',
+          'customizepar',
+          'operightsManager',
+          'plot_DEPT',
+          'savefid',
+          'vjdeleteQ',
+          'xmhaha',
+          'getpl1dinfo',
+          'plot',
+          'doifidle',
+          'go_bsHSQCAD',
+          'go_bsHSQCNOESY',
+          'go_bsHSQCROESY',
+          'go_bsgHMBC',
+          'go_bsgHMBCAD',
+          'go_bsgHSQCAD',
+          'checktime',
+          'clearloccolor',
+          'getautoinfo',
+          'updatestatus',
+          'nextlocQ',
+          'CPdndfid_process',
+          'fixACQtime',
+          'walkupQ_logout',
+          'nodecopy',
+          'tmpcopy',
+          'tmpsqcopy',
+          'tmpsqreturn',
+          'cpdone',
+          'process_dpfgse',
+          'xmhaha_fullSQ',
+          'autodirstatus',
+          'checkautodir',
+          'pageview',
+          'walkupQ_submit',
+          'wet1Dproc',
+          'Aulocref',
+          'putrefsamp',
+          'emessage',
+          'vnmremail',
+          ]
+
+for i in cpmaclibFileList:
+    dest = os.path.join(patchDir,'maclib',i)
+    src  = os.path.join(swDir,'chempack','maclib',i)
+    Execute(Copy(dest,src))
+
+craftmacDir = os.path.join(patchDir,'craft','maclib')
+if not os.path.exists(craftmacDir):
+   os.makedirs(craftmacDir)
+
+craftmaclibFileList = [
+            'craft',
+            'craft_DigFilt',
+            'craft_doBayesWritePars',
+            'craft_isbbfid',
+            'craft_evalCFIDlist',
+            'craft_tmpcopy',
+            'craft_tmpreturn',
+            'craft_isfingerprint',
+            'craft_readBandInfo',
+            'craft_CRAFT',
+            'craft_alignVbg',
+            'craft_clear',
+            'craft_doBayesExecute',
+            'craft_isbbfid',
+            'craft_llinfo',
+            'craft_readMarkInfo',
+            'craft_reconcilePath',
+            'craft_totamp',
+          ]
+
+craftsrc = os.path.join(swDir,os.pardir,os.pardir,'options','passworded','craft','craft','maclib')
+
+for i in craftmaclibFileList:
+    dest = os.path.join(craftmacDir,i)
+    src  = os.path.join(craftsrc,i)
+    Execute(Copy(dest,src))
+
+moduleDir = os.path.join(patchDir,'modules')
+if not os.path.exists(moduleDir):
+   os.makedirs(moduleDir)
+
+moduleFileList = [
+          'pureshift',
+          'rtPS2D',
+          'stdpar',
+          'calibpars',
+          'walkupQpars',
+          ]
+
+for i in moduleFileList:
+    dest = os.path.join(moduleDir,i)
+    src  = os.path.join(swDir,'modules',i)
+    Execute(Copy(dest,src))
+
+shapeDir = os.path.join(patchDir,'shapelib')
+if not os.path.exists(shapeDir):
+   os.makedirs(shapeDir)
+
+shapeFileList = [
+          'bip440us.RF',
+          'tycko25.DEC',
+          'waltz64.DEC',
+          'waltz65.DEC',
+          ]
+
+for i in shapeFileList:
+    dest = os.path.join(shapeDir,i)
+    src  = os.path.join(swDir,'shapelib',i)
+    Execute(Copy(dest,src))
+
+parlibDir = os.path.join(patchDir,'parlib')
+if not os.path.exists(parlibDir):
+   os.makedirs(parlibDir)
+
+parlibFileList = [
+          'CRAPT.par',
+          'PSYCHE.par',
+          'PSYCHE_ES.par',
+          'PSYCHE_zTOCSY.par',
+          'gHSQCAD_PS.par',
+          ]
+
+for i in parlibFileList:
+    myShutil.copytree(os.path.join(swDir,'upar','parlib',i),parlibDir,symlinks = False)
+
+dosyparlibFileList = [
+          'Ddeptse.par',
+          'Dproject_cc.par',
+          ]
+
+for i in dosyparlibFileList:
+    myShutil.copytree(os.path.join(swDir,'DOSY','parlib',i),parlibDir,symlinks = False)
+
+dosyPsgDir = os.path.join(patchDir,'dosypsg')
+if not os.path.exists(dosyPsgDir):
+   os.makedirs(dosyPsgDir)
+myShutil.copytree(os.path.join(swDir,os.pardir,os.pardir,'options','console','inova','passworded','DOSY','psglib'),dosyPsgDir,symlinks = False)
+myShutil.copytree(os.path.join(swDir,os.pardir,os.pardir,'options','console','inova','passworded','DOSY','seqlib'),dosyPsgDir,symlinks = False)
+myShutil.copytree(os.path.join(swDir,os.pardir,os.pardir,'options','console','inova','passworded','DOSY','templates'),patchDir,symlinks = False)
+
+gxyzDir = os.path.join(patchDir,'gxyzshim','maclib')
+if not os.path.exists(gxyzDir):
+   os.makedirs(gxyzDir)
+
+gxyzFileList = [
+          'gXYZ_H1pw90',
+          'gXYZ_mkmap',
+          'gxyzautocalib',
+          'gXYZ_autoshim',
+          'gmapxyz',
+          'gxyzautoshim',
+          'gxyzfitshims',
+          'gxyzmapsys',
+          'gxyzsetlocalpars',
+          'gxyzsetmap',
+          'gxyzsetmapshims',
+          'gxyzsetshimgroup',
+          'gxyzshimpwr',
+          'gxyzshimtab',
+          'psGshim3D',
+          'gxyzmapfield',
+          'gxyzsetge',
+          'gxyzsetste',
+          'gXYZ_xycalib',
+          ]
+
+for i in gxyzFileList:
+    dest = os.path.join(gxyzDir,i)
+    src  = os.path.join(swDir,'Gxyz_i','maclib',i)
+    Execute(Copy(dest,src))
+
+gxyzlayoutDir = os.path.join(patchDir,'gxyzshim','templates','layout','gmapxyz')
+if not os.path.exists(gxyzlayoutDir):
+   os.makedirs(gxyzlayoutDir)
+
+gxyzlayoutFileList = [
+          'shim3d_calib.xml',
+          'shim3d_mapping.xml',
+          'shim3d_shimming.xml',
+          'PulseSequence.xml',
+          'acq.xml',
+          ]
+
+for i in gxyzlayoutFileList:
+    dest = os.path.join(gxyzlayoutDir,i)
+    src  = os.path.join(swDir,'Gxyz_i','templates','layout','gmapxyz',i)
+    Execute(Copy(dest,src))
+
+Execute('cd ' + os.path.join(swDir,'Gxyz_i') +'; zip -ryq shimtab.zip shimtab')
+dest = os.path.join(patchDir,'gxyzshim','shimtab.zip')
+src = os.path.join(swDir,'Gxyz_i','shimtab.zip')
+Execute(Copy(dest,src))
+Execute('cd ' + os.path.join(swDir,'Gxyz_i') +'; rm -f shimtab.zip')
+
+vpmacDir = os.path.join(patchDir,'veripulse','maclib')
+if not os.path.exists(vpmacDir):
+   os.makedirs(vpmacDir)
+
+vpmaclibFileList = [
+          'C13sens_process',
+          'VPcsv',
+          'VPtempcal_plot',
+          'VPtempcal_process',
+          'H1_Lshp_nonspin_noshim',
+          'VP3Dmap',
+          'VP3Dshim_process',
+          'VP3Dshimonly',
+          'VPHSmap',
+          'VPPRESATproc',
+          'VPsucrose3',
+          'VPsucrosenv',
+          'VPsucrosenv2',
+          'VPtest',
+          'lkHSmap',
+          'profile_process',
+          'sucrose_sens_process',
+          'tz4_medium_shimmacro',
+          'VPhist',
+          'VPviewer',
+          'IPautotest_init',
+          'IPpause',
+          'IPpopup',
+          'VPstart',
+          'IPshowtestresults',
+          'N15rfhomo_process',
+          'DoPlanB',
+          'VPplot',
+          'VPsens_plot',
+          'VPreport',
+          ]
+
+for i in vpmaclibFileList:
+    dest = os.path.join(vpmacDir,i)
+    src  = os.path.join(swDir,'veripulse','maclib',i)
+    Execute(Copy(dest,src))
+
+vpDir    = os.path.join(patchDir,'veripulse','probe_specs')
+if not os.path.exists(vpDir):
+   os.makedirs(vpDir)
+
+vpProbeFileList = [
+          'specs_600_cold',
+          'specs_600_hcn',
+          ]
+
+vpSrc  = os.path.join(swDir,'veripulse','probe_specs')
+for i in vpProbeFileList:
+    dest = os.path.join(vpDir,i)
+    src  = os.path.join(vpSrc,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+vpDir    = os.path.join(patchDir,'veripulse','atdb')
+if not os.path.exists(vpDir):
+   os.makedirs(vpDir)
+
+dest = os.path.join(vpDir,'test_synonyms')
+src  = os.path.join(swDir,'veripulse','atdb','test_synonyms')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+vpDir = os.path.join(patchDir,'veripulse','veripulse')
+if not os.path.exists(vpDir):
+   os.makedirs(vpDir)
+
+vpFileList = [
+          'VPsamples_cold',
+          'VPsamples_db',
+          'VPsamples_hcn',
+          'VPsamples_id',
+          'VPsamples_one',
+          'VPtests_cold',
+          'VPtests_db',
+          'VPtests_hcn',
+          'VPtests_id',
+          'VPtests_one',
+          ]
+
+for i in vpFileList:
+    dest = os.path.join(vpDir,i)
+    src  = os.path.join(swDir,'veripulse','veripulse',i)
+    Execute(Copy(dest,src))
+
+vpStudyDir = os.path.join(patchDir,'veripulse','studylib')
+if not os.path.exists(vpStudyDir):
+   os.makedirs(vpStudyDir)
+
+vpStudyFileList = [
+          'VPtempcal',
+          'H1_Lshp_nonspin_noshim',
+          'VP3Dshimonly',
+          'VPHSmap',
+          'VPsucrosenv',
+          'VPsucrosenv2',
+          'C13res_decopt',
+          'C13sensETB',
+          ]
+
+for i in vpStudyFileList:
+    myShutil.copytree(os.path.join(swDir,'veripulse','studylib',i),vpStudyDir,symlinks = False)
+
+vppsDir = os.path.join(patchDir,'veripulse','proshimmethods')
+if not os.path.exists(vppsDir):
+   os.makedirs(vppsDir)
+
+vppsFileList = [
+          'shim_sucrose',
+          'tz4_medium',
+          ]
+
+for i in vppsFileList:
+    dest = os.path.join(vppsDir,i)
+    src  = os.path.join(swDir,'veripulse','proshimmethods',i)
+    Execute(Copy(dest,src))
+
+# vpLayoutDir = os.path.join(patchDir,'veripulse','templates','layout','calibrate')
+# if not os.path.exists(vpLayoutDir):
+#    os.makedirs(vpLayoutDir)
+
+# vplayoutFileList = [
+#           'QuickD2O.xml',
+#           'acq.xml',
+#           ]
+
+# for i in vplayoutFileList:
+#     dest = os.path.join(vpLayoutDir,i)
+#     src  = os.path.join(swDir,'veripulse','templates','layout','calibrate',i)
+#     Execute(Copy(dest,src))
+
+vpInterfaceDir = os.path.join(patchDir,'veripulse','templates','vnmrj','interface')
+if not os.path.exists(vpInterfaceDir):
+   os.makedirs(vpInterfaceDir)
+
+vpinterfaceFileList = [
+          'VPviewer.xml',
+          ]
+
+for i in vpinterfaceFileList:
+    dest = os.path.join(vpInterfaceDir,i)
+    src  = os.path.join(swDir,'veripulse','templates','vnmrj','interface',i)
+    Execute(Copy(dest,src))
+
+psDir = os.path.join(patchDir,'proshimmethods')
+if not os.path.exists(psDir):
+   os.makedirs(psDir)
+
+src  = os.path.join(swDir,'proshimmethods','shimdss')
+dest = os.path.join(psDir,'shimdss')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+biomacDir = os.path.join(patchDir,'biopack','maclib')
+if not os.path.exists(biomacDir):
+   os.makedirs(biomacDir)
+
+biomaclibFileList = [
+          'BPeject',
+          'BPupdate_from_probefile',
+          ]
+
+for i in biomaclibFileList:
+    dest = os.path.join(biomacDir,i)
+    src  = os.path.join(swDir,'biopack','maclib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+bioseqlibDir = os.path.join(patchDir,'biopack','seqlib')
+if not os.path.exists(bioseqlibDir):
+   os.makedirs(bioseqlibDir)
+
+biopsglibDir = os.path.join(patchDir,'biopack','psglib')
+if not os.path.exists(biopsglibDir):
+   os.makedirs(biopsglibDir)
+
+biopsglibList = [
+               'tnnoesy',
+             ]
+
+for i in biopsglibList:
+    dest = os.path.join(biopsglibDir,i+'.c')
+    src  = os.path.join(swDir,'biopack','psglib',i+'.c')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(bioseqlibDir,i)
+    src  = os.path.join(swDir,'psglib','bioseqlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
+
+src  = os.path.join(swDir,'backproj','maclib','bp_reco')
+dest = os.path.join(patchDir,'maclib','bp_reco')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+imageDir = os.path.join(patchDir,'imaging','maclib')
+if not os.path.exists(imageDir):
+   os.makedirs(imageDir)
+src  = os.path.join(swDir,'maclib','Mbpreco')
+dest = os.path.join(imageDir,'Mbpreco')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+manDir = os.path.join(patchDir,'manual')
+if not os.path.exists(manDir):
+   os.makedirs(manDir)
+
+manFileList = [
+          'dss',
+          'zerofillfid',
+          'go',
+          'writef1',
+          'dels',
+          'par2D',
+          'snapshot',
+          'shimset',
+          'readheader',
+          'paramgroup',
+          'h2cal',
+          'readlk',
+          'VPviewer',
+          'pwd',
+          'host',
+          'uname',
+          'singlesession',
+          'ft',
+          'makefid',
+          'downsizefid',
+          'autoq',
+          'substr',
+          'setprotect',
+          'setpage',
+          'writefile',
+          'checkmaclib',
+          'p11_action',
+          'rtjeol',
+          'readfile',
+          'lsfid',
+          'dres',
+          ]
+
+for i in manFileList:
+    dest = os.path.join(manDir,i)
+    src  = os.path.join(swDir,'manual',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+admDir = os.path.join(patchDir,'adm','walkupadm')
+if not os.path.exists(admDir):
+   os.makedirs(admDir)
+
+src  = os.path.join(swDir,'chempack','adm','walkupadm','ProbeStyleList')
+dest = os.path.join(admDir,'ProbeStyleList')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+annoteDir = os.path.join(patchDir,'templates','vnmrj','annotation')
+if not os.path.exists(annoteDir):
+   os.makedirs(annoteDir)
+
+src  = os.path.join(swDir,'templates','annotation','plotHeader.tmpl')
+dest = os.path.join(annoteDir,'plotHeader.tmpl')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+themeDir = os.path.join(patchDir,'templates','themes')
+if not os.path.exists(themeDir):
+   os.makedirs(themeDir)
+myShutil.copytree(os.path.join(swDir,'templates','themes','Graphics'),themeDir,symlinks = False)
+
+src  = os.path.join(swDir,'expproc','Expproc')
+dest = os.path.join(acqbinDir,'Expproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'infoproc','Infoproc')
+dest = os.path.join(acqbinDir,'Infoproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+src  = os.path.join(swDir,'roboproc','Roboproc')
+dest = os.path.join(acqbinDir,'Roboproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+acqDir = os.path.join(patchDir,'acq')
+if not os.path.exists(acqDir):
+   os.makedirs(acqDir)
+
+acqiFileList = [
+                'acqigroup20',
+                'acqigroup21',
+                'acqigroup22',
+                'acqigroup23',
+                'acqigroup24',
+                'acqigroup25',
+                'acqigroup26',
+                'acqigroup27',
+                'dgs20',
+                'dgs21',
+                'dgs22',
+                'dgs23',
+                'dgs24',
+                'dgs25',
+                'dgs26',
+                'dgs27',
+                 ]
+for i in acqiFileList:
+#   print i
+   dest = os.path.join(acqDir,i)
+   src  = os.path.join(swDir,'acq',i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+templateDir = os.path.join(patchDir,'templates','vnmrj','interface')
+if not os.path.exists(templateDir):
+   os.makedirs(templateDir)
+
+xmlFileList = [
+                'ProshimPopup.xml',
+                'ProshimEdit.xml',
+                'iconfig.xml',
+                'vconfig.xml',
+                'MainMenuProcess.xml',
+                'ExperimentSelector.xml',
+                'explib.xml',
+                'PersonaBuilder.xml',
+                'Graphics.xml',
+                'MainMenu.xml',
+                'BCdialog.xml',
+                'config.xml',
+                'MainMenuExpts.xml',
+                'ESExpts.xml',
+                'fiddle_popup.xml',
+                 ]
+xmlSrc = os.path.join(swDir,'xml')
+
+for i in xmlFileList:
+   dest = os.path.join(templateDir,i)
+   src  = os.path.join(xmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+serviceDir = os.path.join(patchDir,'service','templates','vnmrj','protocols')
+if not os.path.exists(serviceDir):
+   os.makedirs(serviceDir)
+
+sxmlFileList = [
+                'fidshim_lineshape.xml',
+                'fidshim_lineshape_fast.xml',
+                 ]
+
+for i in sxmlFileList:
+   dest = os.path.join(serviceDir,i)
+   src  = os.path.join(xmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+cpxmlFileList = [
+                'cpadmin.xml',
+                'editparlib.xml',
+                'pageview.xml',
+                 ]
+cpxmlSrc = os.path.join(swDir,'chempack','templates','vnmrj','interface')
+
+for i in cpxmlFileList:
+   dest = os.path.join(templateDir,i)
+   src  = os.path.join(cpxmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+                
+panelitemDir = os.path.join(patchDir,'templates','vnmrj','panelitems')
+if not os.path.exists(panelitemDir):
+   os.makedirs(panelitemDir)
+
+panelitemFileList = [
+                'PersonaBuilder_CPprefs.xml',
+                'SampleInfo.xml',
+                'NUSprocess.xml',
+                 ]
+for i in panelitemFileList:
+   dest = os.path.join(panelitemDir,i)
+   src  = os.path.join(xmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+pnnDir = os.path.join(patchDir,'templates','vnmrj','protocols_nn')
+if not os.path.exists(pnnDir):
+   os.makedirs(pnnDir)
+pnyDir = os.path.join(patchDir,'templates','vnmrj','protocols_ny')
+if not os.path.exists(pnyDir):
+   os.makedirs(pnyDir)
+pynDir = os.path.join(patchDir,'templates','vnmrj','protocols_yn')
+if not os.path.exists(pynDir):
+   os.makedirs(pynDir)
+pyyDir = os.path.join(patchDir,'templates','vnmrj','protocols_yy')
+if not os.path.exists(pyyDir):
+   os.makedirs(pyyDir)
+
+protocolFileList = [
+                'ATCalib.xml',
+                'ATN15Calib.xml',
+                'BenzCalib.xml',
+                'HOMO2DJ.xml',
+                'ch3iCalib.xml',
+                'ch3iPCalib.xml',
+                'f19Calib.xml',
+                'p31Calib.xml',
+                'z0gmap.xml',
+                 ]
+
+for i in protocolFileList:
+    src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy',i)
+    dest = os.path.join(pnnDir,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(pnyDir,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(pynDir,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(pyyDir,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+protocol2FileList = [
+                'PSYCHE.xml',
+                'PSYCHE_ES.xml',
+                'PSYCHE_zTOCSY.xml',
+                'gHSQCAD_PS.xml',
+                'CRAPT.xml',
+                 ]
+
+for i in protocol2FileList:
+    src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy',i)
+    dest = os.path.join(pyyDir,i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy','PSYCHE.xml')
+dest = os.path.join(pynDir,'PSYCHE.xml')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy','PSYCHE_ES.xml')
+dest = os.path.join(pynDir,'PSYCHE_ES.xml')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy','PSYCHE_zTOCSY.xml')
+dest = os.path.join(pynDir,'PSYCHE_zTOCSY.xml')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+src  = os.path.join(swDir,'inova','templates','vnmrj','protocols_yy','CRAPT.xml')
+dest = os.path.join(pynDir,'CRAPT.xml')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+toolDir = os.path.join(patchDir,'templates','layout','toolPanels')
+if not os.path.exists(toolDir):
+   os.makedirs(toolDir)
+
+xml2FileList = [
+                'VertPanCryo.xml',
+                'VertPanArray.xml',
+                'VpLayout.xml',
+                 ]
+
+for i in xml2FileList:
+   dest = os.path.join(toolDir,i)
+   src  = os.path.join(xmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+defDir = os.path.join(patchDir,'templates','layout','default')
+if not os.path.exists(defDir):
+   os.makedirs(defDir)
+
+defFileList = [
+#                 'SetupDefault.xml',
+                  'ProcPlotBasic.xml',
+                  'Integrals.xml',
+                 ]
+
+for i in defFileList:
+   dest = os.path.join(defDir,i)
+   src  = os.path.join(xmlSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+cpdefFileList = [
+                   'Plot1D.xml',
+                   'Plot2D.xml',
+                   'sample.xml',
+                   'sample_action.xml',
+                   'Lock.xml',
+                   'Proc2Ddefault.xml',
+                   'Standard.xml',
+               ]
+
+for i in cpdefFileList:
+   dest = os.path.join(defDir,i)
+   src  = os.path.join(swDir,'chempack','templates','layout','default',i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+submitqDir = os.path.join(patchDir,'templates','layout','Submitq')
+if not os.path.exists(submitqDir):
+   os.makedirs(submitqDir)
+
+submitqFileList = [
+                'sample.xml',
+                'Standardacq.xml',
+                'Standardauto.xml',
+                 ]
+
+for i in submitqFileList:
+   dest = os.path.join(submitqDir,i)
+   src  = os.path.join(swDir,'chempack','templates','layout','Submitq',i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+proc2DFileList = [
+                'gc2hmbcme',
+                'gc2h2bcme',
+                'gHMBCmeAD',
+                 ]
+
+for i in proc2DFileList:
+   layoutDir = os.path.join(patchDir,'templates','layout',i)
+   if not os.path.exists(layoutDir):
+      os.makedirs(layoutDir)
+   dest = os.path.join(layoutDir,'Proc2Ddefault.xml')
+   src  = os.path.join(swDir,'chempack','templates','layout',i,'Proc2Ddefault.xml')
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+layoutFileList = [
+                'CRAPT',
+                'PSYCHE',
+                'PSYCHE_ES',
+                'PSYCHE_zTOCSY',
+                'gHSQCAD_PS',
+                'ROESY_ES',
+                'TOCSY_ES',
+                 ]
+
+layoutDir = os.path.join(patchDir,'templates','layout')
+for i in layoutFileList:
+    myShutil.copytree(os.path.join(swDir,'xmllayout','liquids',i),layoutDir,symlinks = False)
+myShutil.copytree(os.path.join(swDir,'chempack','templates','layout','HSQCADTOXY'),layoutDir,symlinks = False)
+myShutil.copytree(os.path.join(swDir,'chempack','templates','layout','qtune'),layoutDir,symlinks = False)
+Execute('cd ' + os.path.join(swDir,'mercury','templates','layout') +'; zip -ryq hsqcadtoxy.zip HSQCADTOXY; mv hsqcadtoxy.zip '+layoutDir)
+
+dosylayoutFileList = [
+                'Ddeptse',
+                'Dproject_cc',
+                 ]
+
+dosyDir = os.path.join(swDir,'DOSY','templates','layout')
+for i in dosylayoutFileList:
+    myShutil.copytree(os.path.join(dosyDir,i),layoutDir,symlinks = False)
+
+dosy2layoutFileList = [
+                'Dbppste',
+                'Dbppste_cc',
+                'Dbppste_ghsqcse',
+                'Dbppsteinept',
+                'Dbppste_wg',
+                'Dcosyidosy',
+                'Dgcstecosy',
+                'Dgcstehmqc',
+                'Dgcstehmqc_ps',
+                'DgcsteSL',
+                'DgcsteSL_cc',
+                'DgcsteSL_dpfgse',
+                'Dghmqcidosy',
+                'DgsteSL_cc',
+                'Dhom2djidosy',
+                'Doneshot',
+                'Doneshot_nugmap',
+                'Dpfgdste',
+                 ]
+
+for i in dosy2layoutFileList:
+   dosylayoutDir = os.path.join(layoutDir,i)
+   if not os.path.exists(dosylayoutDir):
+      os.makedirs(dosylayoutDir)
+   dest = os.path.join(dosylayoutDir,'acq.xml')
+   src  = os.path.join(dosyDir,i,'acq.xml')
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+solidslayoutFileList = [
+                'dcp2tan3drad',
+                'dcptan',
+                'dcptan3drad',
+                'dcptan3dspc5',
+                 ]
+
+spDir = os.path.join(swDir,'solidspack','templates','layout')
+splayoutDir = os.path.join(patchDir,'solidspack','templates','layout')
+for i in solidslayoutFileList:
+   solidslayoutDir = os.path.join(splayoutDir,i)
+   if not os.path.exists(solidslayoutDir):
+      os.makedirs(solidslayoutDir)
+   dest = os.path.join(solidslayoutDir,'PulseSequence.xml')
+   src  = os.path.join(spDir,i,'PulseSequence.xml')
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+hmbcSrc = os.path.join(swDir,'xmllayout','liquids','gHMBCRELAY')
+hmbcDir = os.path.join(patchDir,'templates','layout','gHMBCRELAY')
+if not os.path.exists(hmbcDir):
+   os.makedirs(hmbcDir)
+
+xml3FileList = [
+                'Process2D.xml',
+                 ]
+
+for i in xml3FileList:
+   dest = os.path.join(hmbcDir,i)
+   src  = os.path.join(hmbcSrc,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+psgDir = os.path.join(patchDir,'psg')
+if not os.path.exists(psgDir):
+   os.makedirs(psgDir)
+
+nvpsgFileList = [
+                   'solidelements.h',
+                   'Pbox_bld.h',
+                   'solidchoppers.h',
+                   'solidshapegen.h',
+                 ]
+
+for i in nvpsgFileList:
+    dest = os.path.join(psgDir,i)
+    src  = os.path.join(swDir,'nvpsg',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+psgFileList = [
+                   'abort.c',
+                   'xmath.c',
+                 ]
+
+for i in psgFileList:
+    dest = os.path.join(psgDir,i)
+    src  = os.path.join(swDir,'psg',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+dest = os.path.join(psgDir,'shims.h')
+src  = os.path.join(swDir,'vnmr','shims.h')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+ipsgDir = os.path.join(patchDir,'ipsg')
+if not os.path.exists(ipsgDir):
+   os.makedirs(ipsgDir)
+
+ipsgFileList = [
+                   'psg.c',
+                   'macros.h',
+                   'looping.c',
+                   'initacqparms.c',
+                   'initauto.c',
+                   'makeuserpsg.lnx',
+                   'cps.c',
+                 ]
+
+for i in ipsgFileList:
+    dest = os.path.join(ipsgDir,i)
+    src  = os.path.join(swDir,'psg',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+kpsgDir = os.path.join(patchDir,'kpsg')
+if not os.path.exists(kpsgDir):
+   os.makedirs(kpsgDir)
+
+kpsgFileList = [
+                   'psg.c',
+                   'makeuserpsg.lnx',
+                   'meat.c',
+                   'initauto.c',
+                 ]
+
+for i in kpsgFileList:
+    dest = os.path.join(kpsgDir,i)
+    src  = os.path.join(swDir,'kpsg',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+libDir = os.path.join(patchDir,'ilib')
+if not os.path.exists(libDir):
+   os.makedirs(libDir)
+
+libFileList = [
+                   'libparam.a',
+                   'libparam.so',
+              ]
+
+for i in libFileList:
+    dest = os.path.join(libDir,i)
+    src  = os.path.join(swDir,'psg',i)
+    Execute(Copy(dest,src))
+
+iconDir = os.path.join(patchDir,'iconlib')
+if not os.path.exists(iconDir):
+   os.makedirs(iconDir)
+
+iconFileList = [
+                   'sa.gif',
+                   'sas.gif',
+                   'loginIcon.png',
+                   'plotLogo.gif',
+                 ]
+
+for i in iconFileList:
+    dest = os.path.join(iconDir,i)
+    src  = os.path.join(swDir,'vnmrbg_iconlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+satDir = os.path.join(patchDir,'satellites')
+if not os.path.exists(satDir):
+   os.makedirs(satDir)
+
+satFileList = [
+                   'README',
+                   'TMS',
+                 ]
+
+for i in satFileList:
+    dest = os.path.join(satDir,i)
+    src  = os.path.join(swDir,'satellites',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+lcDir = os.path.join(patchDir,'lc2')
+if not os.path.exists(lcDir):
+   os.makedirs(lcDir)
+
+dest = os.path.join(lcDir,'TopPanel.xml')
+src  = os.path.join(swDir,'xml','TopPanel.xml.lc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+dest = os.path.join(lcDir,'LcMs_action.xml')
+src  = os.path.join(swDir,'xmllayout','lc','default','LcMs_action.xml')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+userlibDir = os.path.join(patchDir,'userlib')
+if not os.path.exists(userlibDir):
+   os.makedirs(userlibDir)
+
+dest = os.path.join(userlibDir,'extract')
+src  = os.path.join(swDir,os.pardir,'3rdParty','userlib_extract')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+cmd = 'cd ' + patchDirParent + ';./patchmake patch ' + patchTarget + '; rm -f patchmake'
+Execute(cmd);

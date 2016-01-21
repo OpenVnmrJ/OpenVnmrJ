@@ -1,0 +1,60 @@
+"macro Automkdir"
+"*************************************************************"
+"Automkdir :  Macro to create the directory to save data      "
+"*************************************************************"
+
+"***Make sure key templates/parameters are not empty strings***"
+
+  updatesampglobal
+
+  if (sdirtmplt='') then
+        setsdirtmplt
+  else
+        chkname(sdirtmplt,'alnum-'):$sdum,sdirtmplt
+  endif
+  setvalue('sdirtmplt',sdirtmplt,'processed')
+  if (adirtmplt='') then
+        setadirtmplt
+  else
+        chkname(adirtmplt,'alnum-/'):$sdum,adirtmplt
+  endif
+  setvalue('adirtmplt',adirtmplt,'processed')
+  if (samplename='') then
+        samplename=operator
+        if (auto='y') then samplename='auto' endif
+  endif
+
+"**************************************************************"
+
+  Svfname(adirtmplt+'/'+sdirtmplt,''):$directory
+  shell('basename '+$directory):sample
+  shell('dirname '+$directory):archivedir
+  exists($directory,'directory'):$ex
+  if ($ex=0) then
+        shell('mkdir -p '+$directory):$dum
+  endif
+
+"********Other subdirectories are now created**********"
+  Autockdir($directory)
+
+"*************make studypar for browser****************"
+"*******This studypar has no other value***************"
+        module('add','studypar','basic')
+                "The Next line kept for potential issue with database"
+                "- Does studypar require operator_ to deal with database?"
+        setvalue('operator_',operator)
+        if (studyowner='') then studyowner=operator endif
+        setvalue('vloc_',vloc)
+        on('loc','global'):$locon
+        setvalue('loc_',loc)
+        if ($locon=0) then off('loc_') endif
+        studyid_=sample
+        vzone_=vzone vrack_=vrack
+        savestudypar($directory)
+
+"*********User Automkdir - for any customization*********"
+  dousermacro($0)
+
+"*********Write time stamp for GxP purposes**************************************"
+  wrsampdirchron($directory)
+

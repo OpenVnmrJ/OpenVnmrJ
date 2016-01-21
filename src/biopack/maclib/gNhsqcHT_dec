@@ -1,0 +1,81 @@
+"macro gNhsqcHT_dec"
+" *************************************************************  "
+" ***                    gNhsqcHT_dec                       ***  "
+" ***    based on htbw1 entry call seqfil+'_dec' macro      ***  "
+" ***  create decoupling waveforms for gNhsqcHT experiment  ***  "
+" ***                    Eriks Kupce                        ***  "
+" ***                Oxford, 16/11/2004                     ***  "
+" *************************************************************  "
+
+$pshape=''
+$fname=''
+$jNH = 90.0
+$jCN = 20.0
+
+  exists('pshape','parameter'):$e
+  if($e) then 
+    $pshape = pshape
+  else 
+    $pshape = 'gaus180'
+  endif
+  
+  getpwbw($pshape):$pwbw         " find pwbw                     "
+  $pw = $pwbw/htbw1         " calculate the expected pulse duration"
+  
+        " Make NH decoupling sequence "
+
+  $nsu = 5.0*$jNH*$pw  
+  $Tp = $pw/$nsu
+  $bw = 60.0*dfrq2       " set the minimum NH dec-g bw to 60 ppm "
+  $pwbwNH = $bw*$Tp
+  if ($pwbwNH < 16) then   "increase if too small for adiabatics "
+    $bw = 16.0/$Tp
+  endif
+        
+  exists('Hdseq','parameter'):$e
+  if($e) then 
+    $fname = Hdseq
+  else 
+    $fname = 'NHdec'
+  endif
+  
+  $stepsize = ssF1/2.0
+  if($stepsize > 10.0) or ($stepsize < 1.0) then
+    $stepsize = 0.0
+  endif
+
+  BP_HTdec($fname, $pw, $bw, $jNH, $stepsize, compH*pw, tpwr)    
+
+  pbox_pwr:Hdpwr
+  if (Hdpwr > 52) then 
+    write('error','Warning: Hdpwr too high')
+  endif
+  
+        " Make CN decoupling sequence "
+
+  $nsu = 5.0*$jCN*$pw
+  $Tp = $pw/$nsu
+  $bw = 200.0*dfrq              " set the CN dec-g bw to 200 ppm "
+  $pwbwCN = $bw*$Tp
+  if ($pwbwCN < 20) then   "increase if too small for adiabatics "
+    $bw = 20.0/$Tp
+  endif
+        
+  exists('Cdseq','parameter'):$e
+  if($e) then 
+    $fname = Cdseq
+  else 
+    $fname = 'CNdec'
+  endif
+  
+  $stepsize = ssF1
+  if($stepsize > 10.0) or ($stepsize < 1.0) then
+    $stepsize = 0.0
+  endif
+
+  BP_HTdec($fname, $pw, $bw, $jCN, $stepsize, compC*pwC, pwClvl)
+
+  pbox_pwr:Cdpwr
+  if (Cdpwr > 52) then 
+    write('error','Warning: Cdpwr too high')
+  endif

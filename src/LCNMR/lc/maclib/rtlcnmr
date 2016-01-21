@@ -1,0 +1,118 @@
+"macro rtlcnmr"
+/*-*- MAGICAL -*-*/
+"macro rtlcnmr"
+
+" Retrieve LC and NMR data "
+
+if ($# < 0.5) then
+  return
+endif
+
+if (system = 'spectrometer') then
+  lcsq('checkrun'):$run
+  if ($run = -1) then
+    write('error','Cannot load data while lc run is active.')
+    return
+  endif
+endif
+
+"read lcid parameter"
+exists($1+'/lcpar','file'):$e
+if $e>0.5 then
+  fread($1+'/lcpar')
+  lcid=studyid_
+  write('line3','The name of the injection retrieved is %s',lcid)
+else
+  exists($1+'/studypar','file'):$e
+  if $e>0.5 then
+    fread($1+'/studypar')
+    lcid=studyid_
+    write('line3','The name of the injection retrieved is %s',lcid)
+  else
+    write('line3','Could not read lcid from %s/lcpar.',$1)
+  endif
+endif
+
+"open lc and ms panes in vj"
+lccmd('updateMsGraph') msShowOldData='y' lccmd('showLcGraph')
+
+"retrieve and display chromatogram"
+lcDataFile=$1+'/lcdata'
+exists(lcDataFile, 'file'):$e
+if (not $e) then
+    // Look for LC data under VJ LC 1.1.0 name
+    lcDataFile=$1+'/LcRun001'
+endif
+readLcData
+
+"read in Lc method"
+$LCMETHOD=''
+shell('ls "'+$1+'"/*.lcm'):$LCMETHOD
+lcMethod('read',$LCMETHOD)
+
+"change name of lc method to name from injection"
+strstr($LCMETHOD,$1):$ret,$s1,$s2
+length($s2):$lcnamelength
+substr($s2,2,$lcnamelength-5):$lcMethod
+//lcMethodFile=$lcMethod
+//write('line3','Setting LC Method name to %s',$lcMethod)
+lcMethodFile=$LCMETHOD
+write('line3','Setting LC Method name to %s',$LCMETHOD)
+
+"read in first Ms Method"
+if (msSelection <> '0') then
+    $setms = (size('msScans') > 0)
+    if ($setms) then
+        $setms = (msScans[1] <> 'null' and msScans[1] <> '')
+    endif
+    if ($setms) then
+        write('line3','Initial MS Method in run is %s',msScans[1])
+        $msMethod=$1+'/'+msScans[1]+'.msm'
+        msMethod('read',$msMethod)
+        msCurrentMethod=msScans[1]
+    else
+       write('line3','This injection does not contain any MS methods')
+    endif
+endif
+
+"retrieve study queue"
+if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+  autodir=$1+'/NMR'
+  cpautodir=autodir
+  xmhaha_autoSQ(autodir)
+endif
+
+$lcexp=lcexp
+
+"retrieve NMR data"
+$nmrdir=$1+'/NMR'
+$processed=$nmrdir+'/glued'
+$proc2=''
+if lcexp='iso' then
+    $proc2='IsoOnFlow'
+elseif (lcexp='scout') then
+    $proc2='1'
+elseif (lcexp='stop') or (lcexp='enter') or (lcexp='enterA') then
+    cplog($nmrdir,'Lc1d','first'):$proc2
+endif
+if ($proc2<>'') then
+   exists($nmrdir+'/'+$proc2+'.fid','directory'):$pex
+else
+   $pex=0
+endif
+exists($processed+'.fid','directory'):$pex2
+
+if ($pex2) then
+    write('line3','recalling glued data set')
+    rt($processed)
+    wft(1)
+elseif ($pex) then
+    rt($nmrdir+'/'+$proc2)
+    wft(1)
+endif
+
+exists('lcexp','parameter'):$e
+if ($e < 0.5) then
+  create('lcexp','string')
+  lcexp=$lcexp
+endif

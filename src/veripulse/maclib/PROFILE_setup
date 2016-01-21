@@ -1,0 +1,47 @@
+"macro PROFILE_setup"
+   "PROFILE_setup"
+   PROTON
+   getparam('tpwr',tn):tpwr
+   getparam('pw90',tn):pw90
+   setoffset(tn,4.67):tof
+   pw=pw90
+   d2=.02 av sw=100000 d1=2  ss=0 nt=1
+   np=512 lb=10 sb=0.001 sbs=0.000237 
+   p1=pw90 pw=2*pw90 f full av
+   d2=0.003
+   seqfil='profile' pslabel='PROFILE'
+   spin=0
+   
+   $pfgon3=''
+   substr(pfgon,3,1):$pfgon3
+   if ($pfgon3='n') then pfgon='nny' endif
+   $gradtype3=''
+   substr(gradtype,3,1):$gradtype3
+   if ($gradtype3 = 'l') then
+    gzlvl1=600,-600
+   else
+    gzlvl1=2500,-2500
+   endif
+   
+   if ($gradtype3 = 'h') then
+      setparams('gradient','n','Probe')
+      return
+   endif
+
+   $gcal=0
+   getparam('gcal','Probe'):$gcal
+   if ($gcal>0) then
+     if ($gcal*gzlvl1<7) then $gzlvl1=7/$gcal gzlvl1=$gzlvl1,-1*$gzlvl1 endif
+   endif
+
+
+   exists('execprocess','parameter'):$ep
+   if ($ep<0.5) then create('execprocess','string') endif
+
+   exists('execplot','parameter'):$epl
+   if ($epl<0.5) then create('execplot','string') endif
+   execprocess ='profile_process(\'activestudy\')' execplot='profile_plot'
+
+   "add needed module"
+   module('add','IPpars')
+

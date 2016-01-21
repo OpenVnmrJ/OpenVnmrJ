@@ -1,0 +1,411 @@
+"macro prescan_CoilTable"
+"*********************************************************************"
+"macro prescan_CoilTable"
+""
+"macro prescan_CoilTable"
+""
+" prescan_CoilTable:"
+"    Manages the CoilTable file; reads/removes/adds/updates entries;"
+"    uses the values in coil_param to add or update an entry;"
+"    returns read values in coil_param."
+""
+" Usage:"
+"    prescan_CoilTable('read',rfcoil)"
+"    prescan_CoilTable('add',rfcoil)"
+"    prescan_CoilTable('remove',rfcoil)"
+"    prescan_CoilTable('update',rfcoil)"
+""
+"********************************************************************"
+"----------------------------------"
+" define filenames                 "
+"----------------------------------"
+$coil_table  = userdir + '/CoilTable'
+$choicefile  = userdir + '/templates/vnmrj/choicefiles/coil'
+
+$macro = $0
+
+"----------------------------------"
+" get arguments                    "
+"----------------------------------"
+$action = 'read'
+$coil_name = rfcoil
+
+if ($# >= 1) then
+  $action = $1
+endif
+
+if ($# > 1) then
+  $coil_name = $2
+endif
+
+chkname($coil_name):$coil_name    // Replace spaces or other disallowed characters
+     
+if ($# > 2) then
+  write('error','%s Usage: %s(action,rfcoil)',$macro,$macro)
+  abort
+endif
+
+$search_name = $coil_name + ':'
+
+
+"---------------------------------"
+"  Define CoilTable header        " 
+"---------------------------------"
+mytime('return'):$time
+$title1 = '========================================='
+$title2 = 'COIL  TABLE'
+$title3 = ''
+$title4 = 'Modified : ' + $time[2] + ' ' + $time[3] + ', ' + $time[6]  
+$title5 = '========================================='
+$header_size = 5
+
+"---------------------------------"
+"  Define CoilTable entry fields  " 
+"---------------------------------"
+$rfcomment   = 'Coil_name'
+$nstr = ''
+$entries = 1  format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']prescan_power_coarse'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']max_power_fine'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']start_power_fine'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']step_size_power_fine'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']steps_power_fine'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']gain'			$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']power_TR'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']freq_tpwr'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']freq_TR'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']pulsewidth_hard'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']pulsewidth_soft'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']calibration_flag'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']shim_power'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']shim_gain'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']shim_FOV'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']shim_thk'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']shim_tau'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']nucleus'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']receivers'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']coil_type'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']prescanFOV'		$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']max_power_coarse'	$entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']Thickness'	        $entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']coilFOV'	        $entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']coilTHK'	        $entries = $entries + 1 format($entries,0,0):$nstr
+$comment[$entries] = '['+$nstr+']coilVOX'	        $entries = $entries + 1 format($entries,0,0):$nstr
+
+$entries = $entries - 1 
+
+"---------------------------------"
+"  check if coil table and choicefile exists     " 
+"---------------------------------"
+exists($coil_table,'file'):$e
+if ($e < 1) then
+  cp(systemdir+'/CoilTable',$coil_table)  "Start with default CoilTable"
+endif    
+
+exists($choicefile,'file'):$e
+if ($e < 1) then
+  $choicefiles = userdir+'/templates/vnmrj/choicefiles'
+  exists($choicefiles,'directory'):$e2
+  if ($e2 = 0) then
+    mkdir('-p',$choicefiles)
+  endif
+  cp(systemdir+'/imaging/templates/vnmrj/choicefiles/coil',$choicefile)  "Start with default coil file"
+endif    
+
+
+"--------------------------------------------------------------------"
+" Check if the coil is in the table                                  "
+"--------------------------------------------------------------------"
+lookup('file',$coil_table)
+lookup('countcs',$search_name):$occur
+
+/* removed until the confirm command is fixed
+if ($action = 'remove') or ($action = 'update') then
+  confirm('Are you sure you want to remove/update coil ' + $coil_name + '?'):$reply
+  if ($reply = 0) then
+    abort
+  endif
+endif
+*/
+
+if ($action <> 'add') then
+  if ($occur <> 1)  then
+    $message = 'No entry for  Coil < ' + $coil_name + ' > found!'
+    write('error',$macro + ' : ' + $message)
+    if (prescan_control[1] <> 0) then
+      prescan_log('warning',$macro,$message)
+      prescan_exit('abort')
+    else
+      abort
+    endif
+  endif
+else "add"
+  if ($occur = 1) then
+    $message = 'CoilTable entry <' + $coil_name + '> already exists!\n'
+    $message = $message + ' REPLACE ENTRY ?'
+    confirm ($message):$reply
+    if ($reply = 0) then
+      abort
+    else
+      $action = 'update'
+    endif
+  endif
+endif
+
+
+if ($action <> 'remove') then
+  rfcoil = $coil_name
+  RFCOIL = rfcoil
+endif
+
+
+"--------------------------------------------------------------------"
+" Read RF coil parameters                                            "
+"--------------------------------------------------------------------"
+if ($action = 'read') then
+  "-----------------------------"
+  " Open table and find coil    "
+  "-----------------------------"
+  lookup('file',$coil_table)              "open CoilTable file" 
+  lookup('seekcs',$search_name)           "find coil name"
+  lookup('skip',1)
+  "-----------------------------"
+  " Read table entries for coil "
+  "-----------------------------"
+  $text = ''
+  $tmp = ''
+  $counter = 0
+  $coil = 0
+  repeat   
+    $counter = $counter + 1
+    lookup('read',2):$tmp,$text
+    if (($tmp <> '') and ($text <> $rfcomment)) then
+      format($tmp,0,5):$coil[$counter]
+    endif
+  until (($text = $rfcomment) or ($tmp = ''))
+  $counter = $counter - 1
+
+  if ($counter < 18) then  "older table, no nucleus entry"
+    $coil[18] = 1  "default nucleus to H1"
+  endif
+  if ($counter < 19) then
+    $coil[19] = 1  "default number of receivers to 1"
+  endif
+  if ($counter < 20) then  "older table, no nucleus entry"
+    $coil[20] = 1  "default coil_type to transmit/receive"
+  endif
+  if ($counter < 21) then  "older table, no FOV entry for power prescan"
+    $coil[21] = 12  "default to 12cm"
+  endif
+  if ($counter < 22) then  "older table, no max coarse power entry"
+    $coil[22] = parmax[17]  "default to 63"
+  endif
+  if ($counter < 23) then  "older table, no slice thicknes entry"
+    $coil[23] = 4  "default to 4"
+  endif
+  if ($counter < 24) then  "older table, no Default FOV entry"
+    $coil[24] = 10  "default to 10cm"
+  endif
+  if ($counter < 25) then  "older table, no Default THK entry"
+    $coil[25] = 2  "default to 2mm"
+  endif
+  if ($counter < 26) then  "older table, no Default VOX size entry"
+    $coil[26] = 10  "default to 10mm"
+  endif
+
+  coil_param = $coil
+
+  " Set max power limit maxattench1 "
+  create('maxattench1','integer','global',coil_param[22])
+  maxattench1 = coil_param[22]
+
+  "-----------------------------------"
+  "  test values against defaults     " 
+  "-----------------------------------"
+  $temp_str = ''
+  if (coil_param[1] > coil_param[22] ) then
+    $message = 'Coarse prescan power in CoilTable larger then allowed maximum - resetting.'
+    write('line3',$message)
+    format(coil_param[1],4,1):$temp_str
+    $message = $message + ' to : ' + $temp_str
+    prescan_log('warning',$macro,$message )
+    coil_param[1] = coil_param[22] 
+  endif
+  if (coil_param[2] > fattn[1] ) then
+    $message = 'Max fine power in CoilTable larger then allowed - resetting.'
+    write('line3',$message)
+    format(coil_param[2],5,1):$temp_str
+    $message = $message + ' to : ' + $temp_str
+    prescan_log('warning',$macro,$message )
+    coil_param[2] = fattn[1] 
+  endif
+  $max_step = coil_param[3] + (coil_param[4] * (coil_param[5] - 1))
+  if ($max_step > fattn[1]) then
+    $message = 'Problem with coil setup in CoilTable ! Coil : <' + $coil_name + '> - Fine power (steps) exceed limit!'
+    write('error',$message)
+    prescan_log('warning',$macro,$message )
+  endif
+
+  "Set default values for VOLUMEXMT and VOLUMERCV"
+  coiltype(coil_param[20])
+
+
+  prescan_tn:tn
+  Prescan_FOV = coil_param[21]
+  Prescan_Thickness = coil_param[23]
+  create('Prescan_ss','integer','global',1)
+  
+  write('line3','CoilTable has been read for coil %s',$coil_name)
+
+"--------------------------------------------------------------------"
+" For 'update' and 'remove', we'll first create a new file without   "
+" the specified coil. Then for 'update' or 'add', we'll add the      "
+" updated or new entry at the end.                                   "
+"--------------------------------------------------------------------"
+else "update, remove, or add"
+  $value = ''
+  $text  = ''
+
+  if ($action <> 'add') then "remove or update"
+    "--------------------------------------------------------------------"
+    "  Create new CoilTable                                              "
+    "--------------------------------------------------------------------"
+    $temp = $coil_table + '.old'
+    cp($coil_table,$temp)   "copy file to temporary file"
+    delete($coil_table)     "delete original file"
+
+    "Create file header for new file"
+    write('file',$coil_table,$title1)
+    write('file',$coil_table,$title2)
+    write('file',$coil_table,$title3)
+    write('file',$coil_table,$title4)
+    write('file',$coil_table,$title5)
+
+    "copy old entries to new file"
+    lookup('file',$temp)            "open file for reading"
+    lookup('readline',$header_size) "skip header"
+
+    "copy everything blindly before the coil in question"
+    repeat
+      lookup('read',2):$value,$text
+      if ($text = $rfcomment) then
+	"put a blank line between rfcoils"
+	write('file',$coil_table,' ')
+      endif
+      if ($value <> $search_name) then
+        write('file',$coil_table,'%s\t%s',$value,$text)
+      endif
+    until ($value = $search_name)
+    
+    "skip the entries for the coil to be removed/updated"
+    repeat   
+      lookup('read',2):$value,$text
+    until (($text = $rfcomment) or ($value = '')) "either next coil or EOF"
+
+
+    "Now copy the rest of the file"
+    if ($value <> '') then
+      repeat
+	if ($text = $rfcomment) then
+	  "put a blank line between the rfcoils"
+	  write('file',$coil_table,' ')
+	endif
+        write('file',$coil_table,'%s\t%s',$value,$text)
+	lookup('read',2):$value,$text
+      until ($value = '') "EOF"
+    endif
+
+    delete($temp)
+
+    if ($action = 'remove') then
+      "--------------------------------------------------------------------"
+      " Remove entry from choicefile                                       "
+      "--------------------------------------------------------------------"
+      $char = ''
+      $temp = $choicefile + '.old'
+      cp($choicefile,$temp)   "copy file to temporary file"
+      delete($choicefile)     "delete original file"
+
+      lookup('file',$temp)            "open file for reading"
+      "copy everything blindly before the coil in question"
+      repeat
+	lookup('read',2):$value,$text
+        substr($value,1,1):$char "get the first character"
+	if ($char = '"') AND ($value <> ('"' + $coil_name + '"')) then
+          write('file',$choicefile,'%s %s',$value,$text)
+	endif
+      until ($value = '') "EOF"
+    endif
+  endif
+
+  
+  if ($action <> 'remove') then "either add or update"
+    "--------------------------------------------------------------------"
+    "  Add new or updated entry to CoilTable                             "
+    "--------------------------------------------------------------------"
+    if (size('coil_param') < 18) then
+      $coil[18] = 1  "default nucleus to H1"
+    endif
+    if (size('coil_param') < 19) then
+      $coil[19] = 1  "default number of receivers to 1"
+    endif
+    if (size('coil_param') < 20) then
+      $coil[20] = 1  "default coil_type to transmit/receive"
+    endif
+    if (size('coil_param') < 21) then
+      $coil[21] = Prescan_FOV  "default to 120mm"
+    endif
+    if (size('coil_param') < 22) then
+      $coil[22] = parmax[17]  "default to max allowed coarse power to 63"
+    endif
+    if (size('coil_param') < 23) then
+      $coil[23] = Prescan_Thickness  
+    endif
+    if (size('coil_param') < 24) then
+      $coil[24] = 10  "set default FOV to 10cm"  
+    endif
+    if (size('coil_param') < 25) then  "older table, no Default THK entry"
+      $coil[25] = 2  "default to 2mm"
+    endif
+    if (size('coil_param') < 26) then  "older table, no Default VOX entry"
+      $coil[26] = 10  "default to 10mm"
+    endif
+
+    $counter = 1
+    
+    "put a blank line between the rfcoils"
+    write('file',$coil_table,' ')
+    write('file',$coil_table,'%s:\t%s',$coil_name,$rfcomment)    
+    repeat
+      write('file',$coil_table,'%s\t%s',coil_param[$counter],$comment[$counter])
+      $counter = $counter + 1
+    until $counter > $entries
+
+    "--------------------------------------------------------------------"
+    "  Add new entry to choicefiles/coil                                 "
+    "--------------------------------------------------------------------"
+    if ($action = 'add') then
+      nrecords($choicefile):$choice_lines "number of entries in file"
+      lookup('file',$choicefile)          "open file"
+      lookup('readline','$choice_lines')  "skip the original entries"
+      write('file',$choicefile,'"%s" "%s"',$coil_name,$coil_name)
+    endif
+
+    "--------------------------------------------------------------------"
+    "Update pulsecal if there is no entry for this coil"
+    "--------------------------------------------------------------------"
+    $pulsecal = userdir+'/pulsecal'
+    exists($pulsecal,'file'):$e
+    if ($e = 0) then
+      cp(systemdir+'/pulsecal',$pulsecal)  "Start with default pulsecal"
+    endif
+    lookup('file',$pulsecal,'countcs',$coil_name):$occur
+    if ($occur = 0) then "add entry with conservative values"
+      pulsecal($coil_name,'square',4000,90,20)
+    endif
+  endif "end of update/add section"  
+
+  coiltype(coil_param[20])
+  write('line3','CoilTable has been updated')
+
+endif "end of update/add/remove section"  

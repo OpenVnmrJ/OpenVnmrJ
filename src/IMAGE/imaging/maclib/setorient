@@ -1,0 +1,48 @@
+"macro setorient"
+"***************************************************************"
+" setorient                                                     "
+"                                                               "
+" Macro to set the value of the orient parameter to reflect the "
+" state of the Euler angles                                     "
+"***************************************************************"
+
+//if (apptype<>'im1D') then
+
+
+
+"-- Set orient parameter ----------------------------------"
+
+if (psi = 0.0  and  phi = 0.0  and  theta = 0.0) then 
+    orient = 'trans'
+else if (psi = 0.0  and  phi = 0.0  and  theta = 90.0) then
+    orient = 'cor'
+else if (psi = 90.0  and  phi = 0.0  and  theta = 90.0) then
+    orient = 'sag'
+else
+    orient='oblique'
+endif endif endif
+
+//else
+
+
+if (vpsi = 0.0  and  vphi = 0.0  and  vtheta = 0.0) then 
+    vorient = 'trans'
+else if (vpsi = 0.0  and  vphi = 0.0  and  vtheta = 90.0) then
+    vorient = 'cor'
+else if (vpsi = 90.0  and  vphi = 0.0  and  vtheta = 90.0) then
+    vorient = 'sag'
+else
+    vorient='oblique'
+endif endif endif
+
+//endif
+
+
+"-- Check for oblique capabilities ------------------------"
+
+if ((psi % 90) <> 0) or ((phi % 90) <> 0) or ((theta % 90) <> 0) then
+    if (gradstepsz < 2049) then
+        $mess='Oblique imaging not supported with 12 bit DACS'
+        write('error','%s',$0+': '+$mess)
+    endif
+endif

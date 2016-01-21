@@ -1,0 +1,74 @@
+"macro plapt"
+"******************"
+" plapt - plot apt "
+"******************"
+
+jexp:$curexp
+if $#>0 then
+  if typeof('$1') then
+    write('error','plapt: must specify an experiment number between 1 and 9')
+    return
+  else
+    if $1=$curexp then
+      write('error','plapt: must specify an experiment different from #%d',$1)
+      return
+    else
+      if ($1<1) or ($1>9) then
+        write('error','plapt: must specify an experiment # between 1 and 9')
+        return
+      else
+        cleanexp('C13')
+      endif
+    endif
+  endif
+endif
+exists(curexp+'/subexp/C13','directory'):$efile
+
+" +-------------+ "
+" | do the plot | "
+" +-------------+ "
+
+$sc2=sc2 $wc2=wc2 $sc=sc $wc=wc $seqfil=seqfil
+if ($efile>0.5)or($#>0) then
+  vsadjc(($wc2-10)/3)
+  noislm
+  vp=$wc2*2/3
+  pl
+  $sp=sp $wp=wp
+  exists(curexp+'/subexp/apt','directory'):$e
+  if not($e) then
+    svtmp(seqfil)
+  endif
+  if $efile then
+    rttmp('C13')
+    wft('nods')
+  else
+    mf($1,$curexp)
+    wft('nods')
+    cptmp('C13')
+  endif
+  sp=$sp wp=$wp
+  sc=$sc wc=$wc sc2=$sc2 wc2=$wc2 vp=15
+  vsadjc((wc2-10)/3)
+  noislm
+  pl pscale
+  rttmp($seqfil)
+else
+  vsadjc(($wc2-10)/2)
+  noislm
+  vp=$wc2/2
+  pl
+  pscale(15)
+endif
+bpa
+exists('pkpick','parameter','global'):$e
+if ($e) then
+   if pkpick<>'' then
+      exec(pkpick)
+   endif
+endif
+
+page
+if (auto = 'n') then
+  ds
+endif

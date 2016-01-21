@@ -1,0 +1,66 @@
+*******************************************************************************
+writeparam(file,parlist[,tree][,'add' | 'replace'])	- write one of more parameters to a file
+*******************************************************************************
+
+  The writeparam command will write one or more parameters to a specified
+  file.  The first argument is the name of the file.  The second argument
+  is a list of the names of the parameters to be written  or it is the
+  name of an arrayed temporary $ variable.  If it is a list, it is a
+  string parameter and the names can be separated either by a space or a comma.
+  If it is an arrayed temporary $ varaible, each array element is a single
+  parameter name.
+  The optional third argument is the tree from which the parameters are
+  copied.  The variable trees are 'current', 'global'. 'processed' and
+  'systemglobal'.  An optional final argument is the keyword 'add' or 'replace'.
+  The add keyword will cause the parameters to be appended to the specified file.
+  If they already exists in the file, their values will be updated.
+  The replace keyword will replace the values in the file with the current
+  values from the tree.  The parameters must exist in both the file and the tree.
+  A special case for the replace option occurs when the parameter list is an
+  empty string.  In this case, all the parameters in the file will be updated
+  with the current values in the tree.  If the parameter does not exist in the
+  tree, no change will be made for that parameter.
+ 
+  Usage -- writeparam(file,parlist[,tree][,'add' | 'replace'])
+
+  This command may be used to store temporary values.  For example, you may
+  want to save wexp, wbs, wnt, etc. in order to run a setup acquisition.
+  When it is done, you want to reset the original values.  The fread command
+  can to used to read the parameters back into an appropriate parameter tree.
+
+  Examples:
+
+    writeparam(curexp+'/mypar','in')       writes the parameter in into the file
+                                           mypar in the current experiement directory.
+    writeparam(curexp+'/mypar','tin il','add')
+                                           appends the parameters tin and il to
+                                           the file
+    writeparam(curexp+'/mypar','','replace')
+                                           replace all of the parameters in mypar with
+                                           the corresponding values from the current
+                                           tree.
+
+    writeparam(curexp+'/mypar','sw ct np','processed')
+                                           writes the parameters sw, ct, and np from
+                                           the processed tree into the file mypar
+                                           in the current experiement directory.
+
+    writeparam(curexp+'/mypar','at','processed','add')
+                                           appends the at parameter to the file.
+    writeparam(curexp+'/mypar','np sw d1','processed','replace')
+                                           replace np and sw in mypar with
+                                           the corresponding values from the processed
+                                           tree.  Since d1 did not exist in mypar,
+                                           it is not added.
+
+    $list='np sw d1'
+    writeparam(curexp+'/mypar',$list,'processed','replace')
+    This is the same as the previous example.
+
+    $arraylist='np','sw','d1'
+    writeparam(curexp+'/mypar','$arraylist','processed','replace')
+    This is also the same as above example, however the variable names are passed
+    as an arrayed temporary $ variable $arraylist. Note the single quotes
+    around the second argument to writeparam. The name of the local temporary
+    $variable is passed to the command, not its value.  This format is useful
+    if the list of parameters to write becomes large.

@@ -1,0 +1,21 @@
+"macro getshimmethods"
+
+$dirPath=userdir+'/persistence'
+$menu=$dirPath+'/shimmethods'
+$tmpfile=$dirPath+'/tmpfile'
+appdir('info'):$atot
+$i=0
+while ($i < $atot) do
+  $i=$i+1
+  appdir('info',$i):$label,$path
+  exists($path+'/proshimmethods','directory'):$e
+  if ($e) then
+    shell('ls -1 '+$path+'/proshimmethods  >> '+$tmpfile+';cat'):$dum
+  endif
+  exists($path+'/shimmethods','directory'):$e
+  if ($e) then
+    shell('ls -1 '+$path+'/shimmethods  >> '+$tmpfile+';cat'):$dum
+  endif
+endwhile
+shell('cat '+$tmpfile+' | sort | uniq | awk \'{print $1"  "$1}\' >  '+$menu+';cat'):$dum
+rm($tmpfile):$e

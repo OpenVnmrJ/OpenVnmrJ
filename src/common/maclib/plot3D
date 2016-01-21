@@ -1,0 +1,161 @@
+"macro plot3D"
+"*******************************************************************"
+" plot3D - macro to plot a 3d cube                              "
+"              FIVE arguments must be provided                      "
+"              arg 1 - first plane                                  "
+"              arg 2 - last plane                                   "
+"              arg 3 - plane increment                              "
+"              arg 4 - number of contours                           "
+"              arg 5 - contour spacings                             "
+"		vo and ho controls the vertical and horizontal skew "
+"*******************************************************************"
+
+if ($# <> 5) then
+  write('error','five arguments must be provided for this macro')
+  write('alpha','**************************************************')
+  write('alpha','plot3dcube - macro to plot a 3d cube')
+  write('alpha','FIVE arguments must be provided')
+  write('alpha','arg 1 - first plane')
+  write('alpha','arg 2 - last plane')
+  write('alpha','arg 3 - plane increment')
+  write('alpha','arg 4 - number of contours') 
+  write('alpha','arg 5 - contour spacings')
+  write('alpha','**************************************************')
+  return (0)
+endif
+
+
+$i = 1
+$axval = ''
+$f1nuc = ''
+$f2nuc = ''
+$f3nuc = ''
+$tmpnuc = ''
+$axis = axis
+$wp=wp $sp=sp $wp1=wp1 $sp1=sp1 $wp2=wp2 $sp2=sp2
+
+repeat
+  substr(axis,$i,1):$axval
+  if ($axval = 'd') then
+   $tmpnuc = dn
+   $tmpnucfrq=dfrq
+  else
+   if ($axval = '2') then
+    $tmpnuc = dn2
+    $tmpnucfrq=dfrq2
+   else
+    $tmpnuc = tn
+    $tmpnucfrq=sfrq
+   endif
+  endif
+
+  if ($i = 1) then
+   $f3nucfrq = $tmpnucfrq
+   $f3nuc = $tmpnuc
+  else
+   if ($i = 2) then
+    $f1nuc = $tmpnuc
+    $f1nucfrq = $tmpnucfrq
+   else
+    if ($i = 3) then
+     $f2nuc = $tmpnuc
+     $f2nucfrq = $tmpnucfrq
+    endif
+   endif
+  endif
+
+  $i = $i + 1
+until ($i > 3)
+
+$thirdpl = ''
+$thirdnuc = ''
+if ((plane='f1f2') or (plane = 'f2f1'))  then
+  $thirdpl='F3'
+  $csinc = (sw*2/fn)/$f3nucfrq
+  $fplcs = (rfp-rfl+sw)/$f3nucfrq
+  $thirdnuc = $f3nuc
+endif
+
+if ((plane='f2f3') or (plane = 'f3f2')) then 
+  $thirdpl='F1' 
+  $csinc = (sw1*2/fn1)/$f1nucfrq
+  $fplcs = (rfp1-rfl1+sw1)/$f1nucfrq
+  $thirdnuc = $f1nuc
+endif
+
+if ((plane='f1f3') or (plane = 'f3f1')) then
+  $thirdpl='F2' 
+  $csinc = (sw2*2/fn2)/$f2nucfrq
+  $fplcs = (rfp2-rfl2+sw2)/$f2nucfrq
+  $thirdnuc = $f2nuc
+endif
+
+$firstpl = $fplcs-($1-1)*$csinc
+$lastpl  = $fplcs-($2-1)*$csinc
+
+$curwc=wc $curwc2=wc2
+$oldsc=sc $oldsc2=sc2
+$counter=1
+$plane_type=''
+$plane_type=plane
+select($plane_type,$1)
+wp=$wp sp=$sp wp1=$wp1 sp1=$sp1 wp2=$wp2 sp2=$sp2
+pcon('pos',$4,$5)
+$1 = $1+$3
+sc=$oldsc+($counter*ho) sc2=$oldsc2+($counter*vo)
+$counter=$counter+1
+repeat
+  select($plane_type,$1)
+wp=$wp sp=$sp wp1=$wp1 sp1=$sp1 wp2=$wp2 sp2=$sp2
+  pcon('noaxis','pos',$4,$5)
+sc=$oldsc+($counter*ho) sc2=$oldsc2+($counter*vo)
+$counter=$counter+1 
+  $1 = $1 + $3
+until $1 > ($2 - $3)
+axis='nnn'
+select($plane_type,$2)
+wp=$wp sp=$sp wp1=$wp1 sp1=$sp1 wp2=$wp2 sp2=$sp2
+pcon('noaxis','pos',$4,$5)
+axis=$axis
+$newsc=sc $newsc2=sc2
+sc=$oldsc sc2=$oldsc2
+move('plotter',0,0)
+move(wcmax-wc-$newsc,$newsc2)
+draw(wcmax-$newsc,$newsc2)
+draw(wcmax-$newsc,$newsc2+wc2)
+draw(wcmax-$newsc-wc,$newsc2+wc2)
+draw(wcmax-$newsc-wc,$newsc2)
+move(0,0)
+move(wcmax-wc-sc,wc2+sc2)
+draw((wcmax-wc-$newsc),wc2+$newsc2)
+move(0,0)
+move(wcmax-sc,sc2)
+draw((wcmax-$newsc),$newsc2)
+move(0,0)
+move(wcmax-sc,wc2+sc2)
+draw((wcmax-$newsc),wc2+$newsc2)
+move(0,0)
+move(wcmax-wc-sc,sc2)
+draw((wcmax-wc-$newsc),$newsc2)
+move(0,0)
+move(wcmax-sc,sc2)
+draw((wcmax-sc+2),sc2)
+move(0,0)
+move(wcmax-sc+((sc-$newsc)/4),sc2+(($newsc2-sc2)/4))
+draw(wcmax-sc+((sc-$newsc)/4)+2,sc2+(($newsc2-sc2)/4))
+move(0,0)
+move(wcmax-sc+((sc-$newsc)/2),(sc2+$newsc2)/2)
+draw(wcmax-sc+((sc-$newsc)/2)+2,(sc2+$newsc2)/2)
+move(0,0)
+move(wcmax-sc+(3*(sc-$newsc)/4),sc2+(3*($newsc2-sc2)/4))
+draw(wcmax-sc+(3*(sc-$newsc)/4)+2,sc2+(3*($newsc2-sc2)/4))
+move(0,0)
+move(wcmax-$newsc,$newsc2)
+draw(wcmax-$newsc+2,$newsc2)
+move(0,0)
+move(wcmax-$newsc,$newsc2)
+draw(wcmax-$newsc+2,$newsc2) 
+move(0,0)
+write('plotter',(wcmax-((sc+$newsc)/2)+5),((sc2+$newsc2)/2),'%s  (ppm)',$thirdpl)
+write('plotter',(wcmax-sc+3),sc2-2,'%3.1f',$firstpl)
+write('plotter',(wcmax-$newsc+3),$newsc2-2,'%3.1f',$lastpl)

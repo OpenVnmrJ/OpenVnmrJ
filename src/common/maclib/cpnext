@@ -1,0 +1,270 @@
+"macro cpnext"
+$md=archivedir+'/'+sample+'/dirinfo/macdir'
+flush
+
+"*******Cleanup StartPar if this is not the first experiment****"
+exists(archivedir+'/'+sample+'/dirinfo/fidlog','file'):$fidex
+if ($fidex) then
+       shell('(cat '+archivedir+'/'+sample+'/dirinfo/fidlog | wc -l)'):$fidex
+endif
+exists(archivedir+'/'+sample+'/CPQ_StartPar.par','directory'):$parex
+if ($parex) and ($fidex) then
+   shell('rm -rf '+archivedir+'/'+sample+'/CPQ_StartPar.par'):$dum
+endif
+"****************************************************************"
+
+$cmd='' $cmdstr='' $cmd1=''
+cpexplist('next',$md):$cmd
+IF ($cmd='') THEN
+	"**************Branch off to cpdone"
+   cpdone
+   RETURN
+ENDIF
+
+	"*********Do MinSW check for any manual window selection"
+CheckMinSW('manual',$md):$dominsw
+IF ($dominsw) THEN
+     cpbanner('setup','SetUpMinSW')
+     SetUpMinSW
+     exec(wstart)
+     getsampglobal($md)
+     if (alock<>'u') then alock='n' endif
+     wshim='n'
+     if pad[1]>0.5 then pad[1]=0.5 endif
+     explist=''
+     wexp='chempackQ' wdone=''
+     RETURN
+ENDIF
+
+	"**********Proceed further"
+  
+     $SETUP=0
+     strstr($cmd,'SetUp'):$SETUP
+     if ($SETUP=1) then
+	cpexplist('drop',$md)
+     endif
+
+	"************Get appropriate macro for the explist"
+	"   From the alias / EXPlist / EXPLIST files	"
+     $isalias=0
+     $cmd1=$cmd
+     cpalias($cmd):$cmd,$isalias
+     if ($isalias=1) then
+	cpalias($cmd1,'remove')
+     endif
+
+        "************Pause if requested"
+IF ($cmd1='PAUSE') THEN
+   exec($cmd)
+   cpdone
+   return
+ENDIF
+
+$cmdstr='' $cmdret=0
+strstr($cmd,'('):$cmdret,$cmdstr
+if ($cmdret=0) then $cmdstr=$cmd endif
+substr($cmdstr,1):$cmdstr
+
+	"***************Start from the appropriate strtpar"
+    $cmd2=''
+    strstr($cmd1,'_','last'):$cmdret,$cmd2
+    if ($cmdret=0) then $cmd2=$cmd1 endif
+    if ($isalias=2) or ($isalias=3) or ($isalias=4) then
+     	AutoStrtfid($cmdstr,$cmd1)
+    else
+    	AutoStrtfid($cmd2,$cmd1)
+    endif
+     if (strtpar<>'') then 
+		"********minsw? but skip reacquire"
+                "The skip option MUST preceed auto option"
+	CheckMinSW('skip',$md):$dominsw
+	if ($dominsw) then
+		SetUpMinSW
+	endif
+		"********minsw? and reacquire"
+	CheckMinSW('auto',$md):$dominsw
+	if ($dominsw) then
+	  $cmd='SetUpMinSW'
+	  $cmd1=$cmd
+	  $cmdstr=$cmd
+	endif
+     endif
+
+"***************************************************************************************"
+		"********Execute macro for next experiment"
+
+     cpexplist('next',$md):$nextexp
+     cpbanner('setup',$nextexp)
+	exists($cmdstr,'command'):$cmdex
+	if ($cmdex) then	
+		"****************************************************************"
+		"dn and dn2 should be adjusted, in case customization warrants it."
+		"   This is most logically done prior to macro execution"
+		     exists($md+'/'+$nextexp+'acqpars','file'):$acqparex
+		     if ($acqparex) then
+		        readparam($md+'/'+$nextexp+'acqpars','dn dn2')
+		     endif
+		"  dn and dn2 are now adjusted"
+		"***************************************************************"
+			// remember the archivedir and sample just for userprobe
+		getsampglobal($md)
+		savesampglobal('cp','archivedir sample')
+		$err=1
+                wexp='chempackQ' wdone=''
+     		exec($cmd):$err
+			// Cleanup the sampleglobal file
+		if (auto='y') then
+		   shell('rm -f '+autodir+'/sampleglobal'):$dum
+		else
+		   shell('rm -f '+curexp+'/sampleglobal'):$dum
+		endif
+	    if not $err then
+		//*** Macro errored.  Do not proceed to acquisition
+		//  Move on to next item in the queue
+		write('error','%s failed.  Skipped %s',$cmd,$nextexp)
+		cpexplist('drop',$md)
+		getsampglobal($md)
+                cpqadjexpfile($nextexp,$md,'Error')
+		Autobkupmac($nextexp)
+		wexp='chempackQ' wdone=''
+		nextgo
+		return(0)
+	    endif
+	    if ($isalias=5) then 
+			"*******This is a CMD protocol - no acquisition"
+			"  Move on to next item in the queue"
+		Autoexmac($nextexp)
+		write('line3','Executed %s',$cmd)
+		ACQtime=0
+		cpexplist('drop',$md)
+		cpexplist('next',$md):$nextexp2
+		getsampglobal($md)
+                cpqadjexpfile($nextexp,$md,'Completed','CMD_'+$nextexp2)
+		Autobkupmac($nextexp)
+		wexp='chempackQ' wdone=''
+		nextgo
+		return(0)
+	    endif
+	else
+		write('line3','command or macro %s not found. Skipped %s',$cmdstr,$nextexp)
+		cpexplist('drop',$md)
+		getsampglobal($md)
+		Autobkupmac($nextexp)
+		wexp='chempackQ' wdone=''
+		nextgo
+		return(0)
+	endif
+     getsampglobal($md) 
+     wexp='chempackQ' wdone=''
+
+"***************************************************************************************"
+    "****check to make sure that the macro did not ***"
+    "*** do some walkupQ_runtime decision***"
+    "*** and replace its node with an alternative ***"
+    if ($isalias=2) then
+	cpexplist('next'):$nextexp2
+	if ($nextexp<>$nextexp2) then
+            write('line3','Acquisition for %s skipped',$nextexp)
+	    cpqadjexpfile($nextexp,$md,'')
+	    Autobkupmac($nextexp)
+	    nextgo
+	    return(0)
+	endif
+    endif    
+"***************************************************************************************"
+
+     if (alock<>'u') then alock='n' endif
+     wshim='n'
+//     if (seqfil<>'gmapxyz') then
+//        if pad[1]>0.5 then pad[1]=0.5 endif
+//     endif
+     explist=''		"Important to reset explist"
+		"*********Execute execpslabel"
+     execpslabel('acquire')
+     getsampglobal($md)
+     wexp='chempackQ' wdone=''
+
+"***************************************************************************************"
+                "***************Execute Customization and update explist"
+
+     cpexplist('next',$md):$nextexp
+     file='exp'		"A critical step - in case the alias"
+			" macro had an rtp"
+	"First get globaltemp for the automation run"
+	" Then reset temp to whatever the user might have reset"
+     if (auto='y') and not ($SETUP) then
+	getautoglobaltemp('auto')
+        Autoexmac('sampleTemp')
+     endif
+	"remember strtpar, just in case the value from customization"
+	"  is changed due to queue edit"
+     $strtpar=strtpar
+     Autoexmac($nextexp)
+     SamplingSch('write')
+     setddrtc
+     strtpar=$strtpar
+		"Customization macros are better removed after wstart"
+
+		"Is the following needed?"
+		" Yes. In the event customization macros add to explist"
+     if (explist[1]<>'') then
+	cpexplist('read',$md):$explist
+	explist=explist,$explist
+	cpexplist('write',$md)
+	explist=''
+     endif
+
+     getsampglobal($md)
+     wexp='chempackQ' wdone=''
+
+"***************************************************************************************"
+		"***Save parameter in parlib - Useful to keep track of parameters"
+		"   before wstart - This adds minimum time/disk resources"
+	$as='' $nextname=''
+	nextfidname(archivedir+'/'+sample):$as,$nextname
+	$s1='' $s2='' $parlib=''
+	Automacrodir:$s1,$s2,$parlib
+	if ($parlib<>'') and ($nextname<>'') then
+		pwd:$curdir
+		cd($parlib):$dum
+	     abortoff
+		$parliblist=$parlib+'/parliblist'
+		svp($nextname,'force')
+		write('file','parliblist','%s: dirinfo/parlib/%s',$nextexp,$nextname)
+	     aborton
+		cd($curdir):$dum
+	endif
+
+		"****Save first parameter set - in the event cppause"
+		"   is executed during the first acquisition - this will"
+		"   make it easier to resume CPQ		    "
+	if ($fidex=0) then 	
+				"This is the first fid in the sample"
+				"  Save parameter"
+		pwd:$curdir
+		cd(archivedir+'/'+sample):$dum
+	    abortoff
+		svp('CPQ_StartPar','force')
+	    aborton
+		cd($curdir):$dum
+	endif
+
+"********Remove any old current.fid from locdir*********************"
+	if (auto='y') then
+	    $locdir=''
+	    getlocid:$loc,$locdir
+	    if ($locdir<>'') then
+	        exists(autodir+'/enterQ.macdir/'+$locdir+'/current.fid','directory'):$fidex
+	    	if ($fidex) then
+		   shell('rm -rf '+autodir+'/enterQ.macdir/'+$locdir+'/current.fid'):$dum
+	    	endif
+	    endif
+	endif
+"***************************************************************************************"
+		"*********Execute wstart and cleanup "
+     exec(wstart)
+     getsampglobal($md)
+     customizedtext('read',$md,$nextexp)
+     Autobkupmac($nextexp)
+"***************************************************************************************"
+

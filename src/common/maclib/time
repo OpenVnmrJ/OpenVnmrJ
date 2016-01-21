@@ -1,0 +1,83 @@
+"macro time"
+" time - calculate the experiment time                   "
+" time           display experiment time                 "
+" time(<hours>,<minutes>)  set up nt for experiment time "
+
+if $#>2 then
+  write('error','usage - time(<hours>,<minutes>)')
+  return
+endif
+
+calcdim
+$nfids = arraydim
+if ($nfids < 1) then
+   $nfids = 1
+endif
+
+if $#>0 then
+  $org_nt = nt
+  $org_ss = ss
+
+
+  ss = 0
+  nt = 1 exptime:$nt1
+  nt = 4 exptime:$nt4
+  $etime = ($nt4 - $nt1)/3
+  $overhead = ($nt1 - $etime)/$nfids
+  ss = $org_ss
+  "display nt"
+  if $#=1 then $seconds=60*$1
+     else $seconds=3600*$1+60*$2 endif
+  $stime = $etime / $nfids
+  on('bs'):$bson
+  if $bson then
+    $stime = $stime + $overhead/bs
+    $etime = $etime + $nfids*$overhead/bs
+  else
+    $seconds = $seconds - $overhead*$nfids
+  endif
+
+
+  if ss>=0 then
+     $nt = ($seconds - ss*$stime) / $etime
+  else
+    "ss is negative"
+     $nt = $seconds / ($nfids * $stime) + ss
+  endif
+  if $nt>4 then
+    "make nt a multiple of 4"
+    nt=$nt/4
+    if nt*4 > $nt  then
+	nt=nt-1
+    endif
+    nt=nt*4
+    $nt=nt
+  else
+     nt=$nt
+  endif
+  if (($nfids>1) and ($nt>=1)) then
+    write('line3',
+    'There is time for %d transients per FID or %d total transients.',
+    nt,$nfids*nt)
+  else
+    if $nt>=1 then
+      write('line3','There is time for %d total transients.',nt)
+    endif
+  endif
+  if $nt<1 then
+    write('line3','There is insufficient time for NT=1.')
+    nt=$org_nt
+  endif
+else
+  "display the time"
+  $etime=0
+  exists('EXPtime','maclib'):$emacex
+  if ($emacex) then
+    EXPtime:$etime
+  else
+    exptime:$etime
+  endif
+  $setime=''
+  formattime($etime):$setime
+  write('line3','Total acquisition time is %s',$setime)
+endif

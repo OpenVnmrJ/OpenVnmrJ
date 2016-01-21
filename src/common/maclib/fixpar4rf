@@ -1,0 +1,95 @@
+"macro fixpar4rf"
+" ************************* "
+" **** macro fixpar4rf **** "
+" ************************* "
+
+if (numrfch < 4) then
+   write('error','fixpar4rf is only used for systems with a fourth RF channel')
+   return
+endif
+
+length(rfband):$len
+if ($len < 4) then
+   rfband='cccc'
+endif
+
+"Parameters for Second Decoupler Channel"
+exists('dpwr3','parameter'):$e
+if ($e = 0) then
+   create('dpwr3','real')
+   setprotect('dpwr3','on',2)
+   setlimit('dpwr3',21)
+   dpwr3=1
+endif
+
+exists('dof3','parameter'):$e
+if ($e = 0) then
+   create('dof3','frequency')
+   setlimit('dof3',20)
+   setprotect('dof3','on',10)
+   setvalue('dof3',0.0)
+endif
+
+exists('dfrq3','parameter'):$e
+if ($e = 0) then
+   create('dfrq3','real')
+   setlimit('dfrq3',1000000000,0,0)
+   setprotect('dfrq3','on',9)
+endif
+
+exists('homo3','parameter'):$e
+if ($e = 0) then
+   create('homo3','flag')
+   setenumeral('homo3',2,'n','y')
+   homo3 = 'n'
+endif
+
+exists('dm3','parameter'):$e
+if ($e) then
+   $dm3 = dm3
+   destroy('dm3')
+else
+   $dm3 = 'n'
+endif
+create('dm3','flag')
+setenumeral('dm3',4,'a','n','s','y')
+dm3 = $dm3
+
+exists('dmm3','parameter'):$e
+if ($e = 0) then 
+   create('dmm3','flag') 
+   substr(rftype,1,1):$rfchar
+   if ($rfchar='d') then
+      setenumeral('dmm3',9,'c','f','g','m','p','r','u','w','x')
+   else
+      setenumeral('dmm3',5,'c','f','n','p','w')
+   endif
+   dmm3 = 'c'
+endif
+
+exists('dmf3','parameter'):$e
+if ($e = 0) then 
+   create('dmf3','integer')
+   setlimit('dmf3',2e+6,1,0)
+   setprotect('dmf3','on',2)
+   dmf3 = dmf
+endif
+
+exists('dseq3','parameter'):$e
+if ($e = 0) then
+   create('dseq3','string')
+endif
+
+exists('dres3','parameter'):$e
+if ($e = 0) then
+   create('dres3','integer')
+   setlimit('dres3',360,1,0)
+   dres3 = 1
+endif
+
+exists('dn3','parameter'):$e
+if ($e = 0) then
+   create('dn3','string')
+   setprotect('dn3','on',8)
+   dn3 = ''
+endif

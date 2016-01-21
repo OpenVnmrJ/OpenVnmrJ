@@ -1,0 +1,110 @@
+"macro auto_au_mimic"
+"auto_au_mimic - This mimics auto_au on a foreground VNMR - for  	"
+"	trouble-shooting purposes					"
+" auto_au - macro which is run during automation to start experiments  "
+"           from the enter queue. It supplies an au command            "
+"           if wexp is set to procplot or autolist                     "
+
+$tailX='tail'
+whichtail:$tailX
+
+//on('traymax','systemglobal'):$trayon
+//if ($trayon<1) or (traymax=0) then
+//	write('error','traymax parameter is not set')
+//	return
+//endif
+
+  jexp:$cexp
+  expactive($cexp):$active
+  if ($active > 0) then
+     write('error','Current experiment is ACTIVE.  Please join another experiment')
+     return
+  endif
+
+  expactive('auto'):$active
+  if ($active > 0) then
+     write('error','Automation is in progress')
+     return
+  endif
+
+exists(autodir+'/enterQ','file'):$ex
+if ($ex=0) then
+   write('error','autodir not found')
+   return
+endif
+shell('(cat '+autodir+'/enterQ | grep -wc SAMPLE#:)'):$totsamples
+if ($totsamples=0) then
+  return
+endif
+shell('(cat '+autodir+'/enterQ | wc -l)'):$totlines
+$linespersamp=$totlines/$totsamples
+
+$head='' $tail=''
+format($linespersamp,0,0):$head
+format($totlines-$linespersamp,0,0):$tail
+shell('(head -n '+$head+' '+autodir+'/enterQ > '+curexp+'/sampleinfo)'):$dum
+shell('('+$tailX+' -n '+$tail+' '+autodir+'/enterQ > '+curexp+'/sampleinfotail)'):$dum
+shell('mv '+curexp+'/sampleinfotail '+autodir+'/enterQ'):$dum
+
+setvalue('auto','y','global')
+
+$cmd=''
+$solv=''
+$text=''
+$operator=operator
+cat(curexp+'/sampleinfo')
+$s1='' $s2=''
+readfile(curexp+'/sampleinfo','$s1','$s2','','local')
+
+teststr('$s1','SAMPLE#:','local'):$ret
+if ($ret) then format($s2[$ret],'lower'):loc endif
+teststr('$s1','RACK:','local'):$ret
+if ($ret) then format($s2[$ret],'lower'):vrack endif
+teststr('$s1','ZONE:','local'):$ret
+if ($ret) then format($s2[$ret],'lower'):vzone endif
+teststr('$s1','MACRO:','local'):$ret
+if ($ret) then $cmd=$s2[$ret] endif
+teststr('$s1','USER:','local'):$ret
+if ($ret) then substr($s2[$ret],1):$operator endif
+teststr('$s1','SOLVENT:','local'):$ret
+if ($ret) then substr($s2[$ret],1):$solv endif
+teststr('$s1','TEXT:','local'):$ret
+if ($ret) then $text=$s2[$ret] endif
+teststr('$s1','PEAK#:','local'):$ret
+if ($ret) then format($s2[$ret],'lower'):lcpeak endif
+teststr('$s1','PROTOCOL:','local'):$ret
+if ($ret) then vproto=$s2[$ret] endif
+
+"***Execute anything related to protection bit 3****"
+vrack=vrack vzone=vzone lcpeak=lcpeak vproto=vproto
+solvent=$solv loc=loc
+if ($operator<>'') then setvalue('operator',$operator,'global') endif
+
+if (traymax <> 1) then
+    if (traymax = 96) or (traymax = 768) then
+      write('line3','SAMPLE#: %d %d %d',loc,vrack,vzone)
+    else
+      write('line3','SAMPLE#: %d',loc)
+    endif
+else
+  write('line3','PEAK#: %d',lcpeak)
+endif
+
+ABORTOFF
+exec($cmd)
+ABORTON
+dousermacro('auto_au')
+
+"***********************skip if wexp='AutoSKIP'********************"
+IF (wexp <> 'AutoSKIP') THEN  
+   if (loc=0) then loc='n' endif
+   if (wexp='chempackQ') then
+	  nextgo('auto')  
+   elseif (wexp = 'procplot') then
+	  dg
+	  au('wait')
+   endif
+
+ENDIF
+
+setvalue('auto','n','global')

@@ -1,0 +1,86 @@
+import os
+import glob
+import sys
+import string
+sys.path.append(os.path.join(os.getcwd(), 'patch'))
+import myShutil # for better copytree()
+
+swDir = os.path.join(os.getcwd(),os.pardir)
+
+# ---------------   copy files and create the patch build ---------------------
+
+# get envirnment
+env = Environment(ENV = os.environ)
+
+# define the patch name
+patchTarget = '4.2_LNX_DDR_502'
+readmeFile = 'Readme.502'
+
+
+# patchDir = os.path.join(swDir,os.pardir,pardir,os.pardir,
+patchDirParent = os.path.join(swDir,os.pardir,os.pardir,
+                         'patches',patchTarget)
+
+cmd = 'rm -rf ' + patchDirParent
+Execute(cmd);
+os.makedirs(patchDirParent)
+
+dest = os.path.join(patchDirParent,'patchmake')
+src  = os.path.join(swDir,'scripts','patchmake.sh')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
+patchDir = os.path.join(patchDirParent,'patch')
+os.makedirs(patchDir)
+
+# src = os.path.join(swDir,'patch','p_install_101');
+# dest = os.path.join(patchDir,'p_install')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0755))
+
+src = os.path.join(swDir,'patch','p_required');
+dest = os.path.join(patchDir,'p_required')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+
+dest = os.path.join(patchDir,'Readme')
+src  = os.path.join(swDir,'patch',readmeFile)
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+dest = os.path.join(patchDirParent,patchTarget+'.Readme')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0644))
+#
+# ---------------   Patch specific addition need to go here --------
+# You can add tiems here or create a separate SConstruct.105
+# eg: SConscript('SConstruct.105')
+# create any neccessary vnmr-subdirectories inside the patch directory
+# eg: binDir    = os.path.join(patchDir,'bin')
+#     if not os.path.exists(binDir):
+#         os.makedirs(binDir)
+#
+#---------------------------------------------------------------------
+#
+
+acqDir = os.path.join(patchDir,'acq','download')
+if not os.path.exists(acqDir):
+   os.makedirs(acqDir)
+
+acqFileList = [
+                'masterexec',
+                 ]
+acqSrc = os.path.join(swDir,'nvacq','42x')
+
+for i in acqFileList:
+#   print i
+   dest = os.path.join(acqDir,i+'.o')
+   src  = os.path.join(acqSrc,i+'.o')
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+   dest = os.path.join(acqDir,i+'.md5')
+   src  = os.path.join(acqSrc,i+'.md5')
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+cmd = 'cd ' + patchDirParent + ';./patchmake patch ' + patchTarget + '; rm -f patchmake'
+Execute(cmd);

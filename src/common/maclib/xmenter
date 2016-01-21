@@ -1,0 +1,52 @@
+"macro xmenter"
+// add SQ entry to enterQ file
+if $#<3.5 then return endif
+
+$loc='' $nrack=0 $nzone=0 $studyid=''
+$loc=$1
+format($2,1,0):$nrack
+format($3,1,0):$nzone
+$studyid=$4
+
+$text=''
+$title=''
+$eqfile=autodir+'/enterQ'
+$solvent=solvent
+$operator=operator
+$studytime=studytime
+$status='Queued'
+
+if $#>4.5 then $text=$5       endif
+if $#>5.5 then $title=$6      endif
+if $#>6.5 then $eqfile=$7     endif
+if $#>7.5 then $solvent=$8    endif
+if $#>8.5 then $operator=$9   endif
+if $#>9.5 then $studytime=$10 endif
+
+if (traymax = 1) then
+  write('file',$eqfile,'   PEAK#: %s',$loc)
+else
+  write('file',$eqfile,'   SAMPLE#: %s',$loc)
+endif
+if (traymax=96 or traymax=768) then
+  if ($nrack>0.5) then
+    write('file',$eqfile,'      RACK: %g',$nrack)
+  endif
+  if ($nzone>0.5) then
+    write('file',$eqfile,'      ZONE: %g',$nzone)
+  endif
+endif
+if (traymax = 768) then
+  write('file',$eqfile,'   EXPTIME: %s',$studytime)
+  write('file',$eqfile,' CONDITION: 10')
+  write('file',$eqfile,'  PROTOCOL: None')
+endif
+write('file',$eqfile,'      USER: %s',$operator)
+write('file',$eqfile,'     MACRO: startq(\'%s\')',$studyid)
+write('file',$eqfile,'   EXPLIST: %s',$title)
+write('file',$eqfile,'   SOLVENT: %s',$solvent)
+write('file',$eqfile,'      TEXT:')
+write('file',$eqfile,'   USERDIR: %s',userdir)
+write('file',$eqfile,'      DATA: ')
+write('file',$eqfile,'    STATUS: %s',$status)
+write('file',$eqfile,'-------------------------------------------- ')

@@ -1,0 +1,33 @@
+"macro AT07a"
+"AT07a" "Spectral Purity Test:C13 Observe"  
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('C13 Spectral Purity Test')
+   at_currenttest='glitch_c13obs' 
+   ph lb='n'
+   gain=0 pw=0 nt=64,64,64,64 sw=200p full 
+   tn='C13'
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=100p  vsadj(3) dssa dtext'
+   wexp='AT07a(`PART1`)'
+   ATcycle
+   au
+   write('line3','C13 Spectral Purity Test: no pulse, 200ppm Spectral Width')
+
+elseif ($1='PART1') then
+   wft
+
+  if (at_plotauto='y') then
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif
+   pltext(80,wc2max-2)
+   pscale
+   pl('all') ATpage
+  endif
+   ATsvf
+   ATnext
+endif

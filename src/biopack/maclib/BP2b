@@ -1,0 +1,35 @@
+"macro BP2b"
+" BP2b "
+if (r7<6) then
+ $bestone=1 $counter=1
+ select(1) vsadj(50) $best=50
+ repeat
+   select($counter)
+   peak:$ht
+   if $ht>$best then $best=$ht $bestone=$counter endif
+   $counter=$counter+1
+ until $counter>arraydim
+ BPsvf(userdir+'/AutoTripRes/H1pw90cal2_fine_lowpwr')
+ pw=pw[$bestone]
+ select($bestone)
+  dssh pl('all') pap
+  write('plotter',120,wc2max-2,'Lower Power 1H PW90 = %2.1f',pw)
+ BPpage
+ tpwr=tpwr+12 compH=pw/(4.0*pw90)
+ $compH='' $ref_pw90='' $ref_pwr=''
+ format(compH,4,3):$compH
+ BPsetparams('compH',$compH,'H1')
+endif
+ref_pwr=tpwr ref_pw90=trunc(10*pw90*compH + 0.5)/10 pw=pw90
+if r7=6 then
+ array('pwN',21,1.2*pwN,-0.02*pwN)
+else
+ if r7=9 then
+  array('pwC',21,pwC+2,-0.2)
+ else
+  $pwCmax=24*(600/sfrq)  "25usec is maximum at 600 MHz"
+  $steps=trunc($pwCmax)-5
+  array('pwC',$steps,trunc($pwCmax),-1)
+ endif
+endif
+wexp='BP3'  au

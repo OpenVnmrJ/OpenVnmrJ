@@ -1,0 +1,86 @@
+"macro getcpshape"
+"Copies a shape from one shapelib to another "
+
+string2array($1):$1
+$total=size('$1')
+if ($1[1]='') then return endif
+if ($# > 2) then
+   $copylib=$3
+else
+   $copylib=userdir+'/shapelib'
+endif
+
+$shapelib=''
+if ($# > 1) then
+   $2size=size('$2')
+   $i=1 $j=1
+   repeat
+	exists($2[$i],'directory'):$direx
+	if ($2[$i]=$copylib) then $direx=0 endif
+	if ($direx) then $shapelib[$j]=$2[$i] $j=$j+1 endif
+	$i=$i+1
+   until $i > $2size
+   if ($shapelib[1]='') then return endif
+else
+   isnewexp:$isnew
+   if (auto='y') then $isnew=1 endif
+   if ($isnew) then
+	$archsamp=archivedir+'/'+sample
+   else
+	shell('dirname '+file):$archsamp
+   endif
+   $shapelib=$archsamp+'/dirinfo/shapelib'
+   exists($shapelib,'directory'):$shapelibex
+   if ($copylib=$shapelib) then $shapelibex=0 endif
+   if ($shapelibex=0) then return endif
+endif
+
+exists($copylib,'directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+$copylib):$dum
+endif
+
+"*** getall is a key word for arg1 ****"
+" This will copy all shapes from arg2 to arg3 "
+"  If arg2 is an array, only the first element is used"
+"  If arg1 is an array and the first element is"
+"    the getall key word all subsequent elements are ignored"
+
+if ($1[1]='getall')  then
+   shell('cp '+$shapelib[1]+'/* '+$copylib):$dum
+   return
+endif
+"****************************************"
+
+$2size=size('$shapelib')
+$i=1
+repeat
+   $curpar=$1[$i]
+ if ($curpar<>'') then
+   exists($curpar,'parameter'):$parex
+   if ($parex) then
+      $j=1
+      repeat
+	$shape=$shapelib[$j]+'/'+{$curpar}+'.RF'
+	exists($shape,'file'):$shpex
+	if ($shpex) then
+		shell('cp '+$shape+' '+$copylib):$dum
+		$j=$2size
+	endif
+	$j=$j+1
+      until $j>$2size
+      $j=1
+      repeat
+        $shape=$shapelib[$j]+'/'+{$curpar}+'.DEC'
+        exists($shape,'file'):$shpex
+        if ($shpex) then
+                shell('cp '+$shape+' '+$copylib):$dum
+		$j=$2size
+        endif
+	$j=$j+1
+      until $j > $2size
+   endif
+ endif
+   $i=$i+1
+until $i > $total
+

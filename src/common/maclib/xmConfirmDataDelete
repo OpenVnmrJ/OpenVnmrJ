@@ -1,0 +1,28 @@
+"macro xmConfirmDataDelete"
+/*-*- MAGICAL -*-*/
+
+// Whether or not deleting data from the SQ requires confirmation dialog
+// xmConfirmDataDelete(0|1) // disables / enables confirmation
+// xmConfirmDataDelete:$num // $num=0 ==> no confirmation
+
+exists('xmConfirmDataDelete','parameter','global'):$e
+if (not $e) then
+    create('xmConfirmDataDelete','real','global')
+    xmConfirmDataDelete = 1
+endif
+
+if ($# = 1) then // Set confirmation flag
+    if (not xmConfirmDataDelete = $1) then
+        xmConfirmDataDelete = $1
+        $strFlag = '0'
+        if (xmConfirmDataDelete) then
+            $strFlag = '1'
+        endif
+        vnmrjcmd('SQ setConfirmDataDelete ' + $strFlag)
+    endif
+elseif ($# = 2) then // Show the confirmation popup
+    $okcmd = '"ok:xmmenuaction(`ok`,`'+$1+'`,`'+$2+'`)"'
+    vnmrjcmd('popup','file:xmConfirmDataDelete.xml','title:Confirm Delete',$okcmd)
+endif
+
+return(xmConfirmDataDelete)

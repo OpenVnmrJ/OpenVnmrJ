@@ -1,0 +1,144 @@
+"macro ceccref"
+"***********************************************************************"
+"ceccref - create baseline ecc phase derivitive data for subtraction.	"
+"usage:									"
+"ceccref 	no arguments			"
+"									"
+"M. Howitt / SIS Corp. / 03-11-91					"
+"from eddyout by H. Egloff / SIS Corp.					"
+
+"Revision 0: 							"
+"	"
+" Macro calculates the zero order and first order eddy currents "
+" Macro uses the following parameters "
+" delf1 - freq shift of f1 with gradients of -0.25gmax and +0.25gmax	"
+" delf2 - freq shift of f2 with gradients of -0.25gmax and +0.25gmax	"
+" sampdis - Distance between the two flourine samples in cm.		"
+" noiseval - Value that multiplies the noise amplitude to determine the "
+"            minimum signal value used.					"
+" "
+"***********************************************************************"
+
+" ---------------------------  "
+" CONSTANTS AND DECLARATIONS - Frequency"
+"    frq1 - array of 30        "
+" ---------------------------  "
+$frq1=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+$ecpath = curexp + '/ec.inp'
+$b0path = curexp + '/b0.inp'
+$eppath = curexp + '/ecph.inp'
+$bppath = curexp + '/b0ph.inp'
+$epdiff = curexp + '/ecph_ref.inp'
+$bpdiff = curexp + '/b0ph_ref.inp'
+$regresspath = curexp + '/regression.inp'
+$adis=0.0		" distance between f1 and center of gradient "
+$bdis=0.0		" distance between f2 and center of gradient "
+$grads=0.0		" static gradient field"
+$b0val=0.0		" B0 value "
+$ecval=0.0		" ec value "
+
+" ---------------------------  "
+" CONSTANTS AND DECLARATIONS - Phase Derivitive "
+"    frq1 - array of 30        "
+" ---------------------------  "
+$fidpath = curexp + '/acqfil/fid'
+$timpath = curexp + '/ecctime.tbl'
+$timname = 'ecctime.tbl'
+$fdy=''
+$val1=''
+$callstr=''
+$grads=0.0		" static gradient field"
+
+" --------------------------------------------------------------------  "
+" Create parameter etraces if it does not  exist 			"
+" --------------------------------------------------------------------  "
+$ex=0
+exists('etraces','parameter'):$ex
+if ($ex < 0.5)
+then
+   create('etraces','real')
+   etraces=3
+endif
+
+" --------------------------------------------------------------------  "
+" Preliminary Calculations "
+" --------------------------------------------------------------------  "
+
+" Calculate the applied static gradient field in Hz/cm"
+$grads = (delf1 - delf2)/sampdis
+
+" Field shift produced by a static gradient at 1G/cm at 19F"
+$grad1gs = 4200.0*188.0/200.0
+
+" Calculate the distance between f1 and the center of the gradient	"
+$adis = delf1/$grads
+
+" Calculate the distance between f2 and the center of the gradient	"
+$bdis = delf2/$grads
+
+write('line3','Distance between samples: %5.2f cm',sampdis)
+
+" --------------------------------------------------------------------  "
+" FT the data "
+" --------------------------------------------------------------------  "
+" wft "
+
+" ********************************************************************  "
+" Phase derivitive calculations"
+" ********************************************************************  "
+
+" --------------------------------------------------------------------  "
+" Output d2 array"
+" --------------------------------------------------------------------  "
+$ex=0
+exists($timpath,'file'):$ex
+if ($ex>0.5) then
+   rm($timpath)
+endif
+$last1 = arraydim/2
+$tmpcnt = 1
+repeat
+     write('file',$timpath,'%12.7f',d2[$tmpcnt])
+     $tmpcnt = $tmpcnt+1
+until $tmpcnt > $last1
+
+" --------------------------------------------------------------------  "
+" Call eccphase to produce the Ec and B0 data"
+" --------------------------------------------------------------------  "
+rm('-f',$eppath):$x
+rm('-f',$bppath):$x
+rm('-f',$epdiff):$x
+rm('-f',$bpdiff):$x
+
+$callstr = 'eccphase -p "' + curexp +'"'
+format(noiseval,2,1):$val1
+$callstr = $callstr+' -n='+$val1+' '
+format(lsfid,2,1):$val1
+$callstr = $callstr+' -l='+$val1+' '
+format(sampdis,2,1):$val1
+$callstr = $callstr+' -e='+$val1+','
+format(delf1,2,1):$val1
+$callstr = $callstr+$val1+','
+format(delf2,2,1):$val1
+$callstr = $callstr+$val1+','
+format($grad1gs,2,1):$val1
+$callstr = $callstr+$val1
+format(1/sw,8,7):$val1
+$callstr = $callstr+' -t='+$val1+' '
+$callstr = $callstr+' -T '+$timname+' '
+$callstr = $callstr +'"' +$fidpath +'"'
+
+" write('error','calling string: %s',$callstr) "
+" --------------------------------- "
+" Call eccphase			    "
+" --------------------------------- "
+write('line3','Calling eccphase.')
+shell($callstr)
+
+" --------------------------------- "
+" move data 	    "
+" --------------------------------- "
+mv($eppath,$epdiff)
+mv($bppath,$bpdiff)
+
+write('error','ceccref Done!')

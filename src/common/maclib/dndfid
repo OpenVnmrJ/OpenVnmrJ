@@ -1,0 +1,130 @@
+"macro dndfid"
+
+// if in imaging Review viewport, call RQaction and return 
+if(appmode='imaging' and jviewport>2) then
+  RQaction('loadData',$1)
+  return
+endif
+
+if $#>0.5 then
+  expactive:$active
+  if ($active > 0) then
+      $sexp='' $cexp=0
+      jexp:$cexp,$sexp
+      write('error','%s has an active acquisition !!',$sexp)
+      return
+  endif
+  
+  if (appmode<>'imaging') then
+    $studyowner=''
+    rtv($1,'noabort','studyowner'):$studyowner
+    if (($studyowner<>operator) and 
+	(auto<>'y') and 
+	($studyowner<>'')) then
+	operights('viewallopstudies'):$ok
+	if ($ok<0.5) then
+	    write('error','Study owned by %s.  %s does not have access',$studyowner,operator)
+	    return
+	endif
+    endif
+  endif
+
+  is_submitmode:$submit
+  if ($submit) then
+        walkupQ('logout')
+        is_submitmode:$submit
+  endif
+  if ($submit) then
+        write('error','curexp is in submit mode !!')
+        return
+  endif
+
+  is_cpfid:$cpfid0
+  if ($cpfid0) then substr(file,'dirname'):$curarchsamp
+  else $curarchsamp='' endif
+
+  $doprocess='y'
+  exists('prescan','parameter'):$e
+  if ($e) then $prescan=prescan endif
+  vnmrjcmd('tray close')
+  if(jviewports[1] <> 3 or appmode <> 'imaging') then
+     rt($1)
+  elseif(jviewport > 1.5 or testacquire = 'y') then
+     rt($1)
+     if(appmode = 'imaging' and jviewport > 2) then
+        strstr($1,'.fid'):$n,$base
+        if($n) then
+	  exists($base+'.img','directory'):$e
+	  if($e) then
+            vnmrjcmd('RQ rt',$base+'.img')
+          else
+            vnmrjcmd('RQ rt',$base+'.fid')
+	  endif
+        endif
+     endif
+  else
+     $doprocess='n'
+  endif
+  if (activestudy[1]<>'null' and $e) then prescan=$prescan endif
+  $s2=''
+  strstr($1,'.','last'):$ret,$s1,$s2
+  if ($s2 = 'fid') then
+    exists($s1+'.img','directory'):$e
+    if ($e > 0.5) then
+      $doprocess='n'
+      aipShow($1, 'all')
+    elseif(appmode='imaging' and jviewport > 2) then
+      csiCmd('isCSI'):$csi
+      csiCmd('getCSIPath',$1):$csidir
+      if($csi=0 and $csidir='') then
+        aipRQcommand('loadfid',$1)
+      endif
+    endif
+  endif
+  exists('doprocess','parameter','global'):$e
+  if $e>0.5 then
+    if doprocess[1]='n' then
+      $doprocess='n'
+    endif
+  endif
+  if ($# < 2) then 
+     $2='' 
+     strstr($1,'.fid'):$n1
+     strstr($1,'.REC'):$n2
+     strstr($1,'.rec'):$n3
+     if($n2>0 or $n3>0) then $2='vnmr_record' endif
+     if($n1=0 and $n2=0 and $n3=0) then 
+        exists($1+'.REC','directory'):$e
+        if($e > 0) then 
+	   $2='vnmr_record'
+	else
+           exists($1+'.rec','directory'):$e
+	   if($e > 0) then $2='vnmr_record' endif
+        endif
+     endif
+  endif
+  is_cpfid:$cpfid
+  $file=$1
+  if ($cpfid) then
+    substr(file,'dirname'):$archsamp
+  else $archsamp='' endif
+
+  if ($cpfid>0) and ($2<>'quiet') then
+        substr($1,'basename'):$file
+  endif
+  if $doprocess='y' then
+    if ($2<>'quiet') then
+       write('line3','retrieving and processing: %s',$file)
+    endif
+  if($2<>'vnmr_record') then
+    CPdndfid_process
+  endif
+  elseif(jviewports[1] <> 3 or appmode <> 'imaging') then
+    write('line3','retrieving file %s',$1)
+  elseif(jviewport > 1.5 or testacquire = 'y') then
+    write('line3','retrieving file %s',$1)
+  endif
+  if (sqdisplay[1]='sample') and ($cpfid>0) and ($curarchsamp<>$archsamp) then
+            vnmrjcmd('SQ no-op SQDisplay(`sample`)')
+  endif
+endif

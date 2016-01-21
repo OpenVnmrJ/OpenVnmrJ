@@ -1,0 +1,82 @@
+"macro _loc"
+
+if (traymax = 49) or (traymax = 97) then
+  if (loc < 1) or (loc > 96) then
+    setvalue('vloc','','global')
+  else
+    if (loc > 48) then
+      $loc = loc - 48
+      $vloc = 'T2 '
+    else
+      $loc = loc
+      $vloc = 'T1 '
+    endif
+    $row = trunc (($loc+5) / 6)
+    $col = ($loc+5) % 6
+    $letters = 'A','B','C','D','E','F','G','H'
+    $numbers='1','2','3','4','5','6'
+    setvalue('vloc',$vloc + $letters[$row] + $numbers[$col+1],'global')
+  endif
+  return
+endif
+if (traymax = 9) or (traymax = 12) or (traymax=0) then
+  format(loc,'upper'):vloc
+  return
+endif
+
+// get info for current rack from /vnmr/asm/info/currentRacks
+$rows=12 $cols=8
+$file = '/vnmr/asm/info/currentRacks'
+exists($file,'file'):$e
+if $e>0.5 then
+  lookup('mfile',$file,'filekey'):$key
+  $i = 0  // find rack (one "zones" entry per rack)
+  repeat
+    $ret = 0
+    lookup('mfile',$key,'delimiter','(),\n\r\t ','seek','zones','filekey'):$key,$ret
+    $i = $i+1
+  until ($i >= vrack)
+  if ($ret=0) then  // info for vrack not found in the file;  set vrack and vzone to 1
+    vrack=1  vzone=1
+    // Reset the filekey
+    lookup('mfile',$file,'delimiter','(),\n\r\t ','seek','zones','filekey'):$key,$ret
+  endif
+  if ($ret>0) then
+    // Is the number zones defined in the file satisfies vzone?
+    $zones=''  $realzones=0
+    lookup('mfile',$key,'delimiter','(),\n\r\t ','read','filekey'):$zones,$key
+    format($zones,'isreal'):$real
+    if ($real) then
+      format($zones,'lower'):$realzones
+    endif
+    if ($realzones < vzone) then
+      // vzone is too high for this vrack; set vrack and vzone to 1
+      vrack=1 vzone=1
+      $ret=0
+    endif
+  endif
+  if ($ret>0) then
+    // vrack/vzone check passed.  Now read the row and column for this rack/zone"
+    $i = 0  // find zone (one "row" entry per zone)
+    repeat
+      lookup('mfile',$key,'delimiter','(),\n\r\t ','seek','row','filekey'):$key
+      $i = $i+1
+    until ($i >= vzone)
+    // read number of rows and columns
+    lookup('mfile',$key,'delimiter','(),\n\r\t ','read','seek','col','read'):$rows,$cols
+  endif
+endif
+
+// adequate for 16-column format...
+$letters = 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'
+
+$i = 0
+repeat
+  $i = $i+1
+  $scol[$i] = $letters[$cols+1-$i]
+until $i >= $cols
+$srow=''
+$row=trunc((loc+$cols-1)/$cols)
+format($row,1,0):$srow
+$col = loc - ($row-1)*$cols
+vloc = $scol[$col] + $srow

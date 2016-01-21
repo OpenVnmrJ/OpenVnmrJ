@@ -1,0 +1,48 @@
+"macro AT52"
+"AT52" "Gaussian Pulse Phase Stability (13 Degree) Test  "
+
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Gaussian Pulse Phase Stability Test on Channel 1')
+   at_currenttest='gauss_13deg_ch1'
+   seqfil='sh2pul' pwpat='gauss32' pw=2.4*pw90 
+   substr(rfwg,1,1):$waveform
+   if ($waveform='n') then
+    tpwr=tpwr-12 pw=4*pw   "makes sure pw is long enough to do by psg"
+   endif
+   p1pat='gauss32' p1=pw
+   pwsadj('gauss32','pw')
+   pwsadj('gauss32','p1')
+   tof=tof+37 d2=.001
+   f
+   array('nt',20,1,0)
+   wnt='AT52(`WNT`)'
+   wexp='AT52(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining Gaussian Pulse Phase Stability ')
+   dps
+elseif ($1='WNT') then
+   ATwft
+   select(1)
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   vsadj dssh dtext
+elseif ($1='PART1') then
+
+   wft
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   $phstab=trunc(1000*$stddev/7.1)/1000
+   ATrecord('PSTAB90Gch1','Gaussian Phase Stability ','  stab_(deg)',$phstab,'height  ',$avht,'std_dev.  ',$stddev)
+   write('file',autotestdir+'/REPORT','Gaussian Phase Stability           : %2.3f Degree',$phstab)
+
+ATnext
+endif

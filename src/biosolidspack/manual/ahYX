@@ -1,0 +1,149 @@
+Protocol: AhYX  Sequence: ahYX.c  Apptype: solidseq1d
+
+Description: 
+
+A 2D sequence to provide YX correlation with HYX double cross 
+polarization. The F1 period follows HY CP,and F2 acquisition
+follows YX CP after a Z-filter period, tZF. 
+ 
+Decoupling during F1 and F2 uses either SPINAL or TPPM
+and a rotor-synchronized constant-time option, t2max, is 
+provided for F1 acquisition with a simpulse. For standard 
+acquisition d2, X refocusing during F1 is provided by a 
+composite pulse. A constant-time decoupling period, tRF,
+follows acquisition to compensate d2 or t2max. 
+
+The sequence forces rotor synchronization of the constant-
+time F1 based on srate and forces tRF to be at least d2 
+or t2max.
+
+Acknowledgement:
+
+Sequence provided by Chad Reinstra UIUC as hYXX.c. 
+
+Setup:
+
+Load an exisiting dataset or type Settancpx. Type AhYX, select 
+the desired options and determine calibrations for the desired
+experiment. 
+
+Special Parameters: 
+
+DecouplingH: Hseq='tppm' or 'spinal'.
+Standard F1 (ctN='n'): d2 and composite-X refocussing, 4*pwX90. 
+Constant Time F1 (ctN ='y'): d2, t2max, simpulse, 2*pwX90 and 2.0*pwY90
+Constant Time Decoupling: tRF - (d2 (std) or t2max 
+   (constant-time decoupling))
+Z-filter: 2(ea) pwX90, tZH and aZF 
+
+Parameter Groups: 
+
+cpHY:  Module:  yes
+Sequence:  dcptan.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to dec2.
+Parameters:  Sequence Page
+       shHY - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with
+                      chHY.
+       chHY - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhy - median amplitude of the dec channel.
+       aXhy - median amplitude of the dec2 channel.
+       bHY - tangent curvature (>0 to 1.0e5).
+       dHY - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHY - contact time.
+       ofHY - overall offset on the variable channel.
+       frHY = 'dec' - channel with the initial polarization (must be
+              set - not shown).   
+       toHY = 'dec2' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP hy = getcp("HY",0.0,0.0,0,1);
+Underscore function: _cp_(hy,phHhx,phYhy); phHhx is the overall phase
+              table for the H channel and phYhy is that for the Y channel.
+
+cpYX:  Module:  yes
+Sequence: dcptan.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec2 to obs.
+Parameters:  Sequence Page
+       shYX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chYX.
+       chYX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aYyx - median amplitude of the dec2 channel.
+       aXyx - median amplitude of the obs channel.
+       bYX - tangent curvature (>0 to 1.0e5).
+       dYX - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tYX - contact time.
+       ofYX - overall offset on the variable channel.
+       frYX = 'dec2' - channel with the initial polarization (must be
+              set - not shown).
+       toYX = 'obs' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP yx = getcp("YX",0.0,0.0,0,1);
+Underscore function: _cp_(yx,phYyx,phXhx); phYyx is the overall phase
+              table for the Y channel and phXhx is that for the X channel.
+
+90X:  Module:  no
+Sequence:  onepul.c
+Description:  Provides a 90-degree pulse on obs that is used in a composite 
+              refocusing pulse during F1.  
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+Hseq:  Module: yes (implementation 2 for SPINAL (2-angle) and TPPM)
+Sequence:  tancpx.c and ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec channel during acquisition.
+Parameters:   Sequence Page - The Hspinal, Htppm and other groups
+              overlap.  Hseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec = getdseq("H"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec = getdseq2("H"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec); runs decprgoff(dec);
+Underscore functions2:  _dseqon2(dec); runs _tppm(); _spinal2() or _waltz();
+             _dseqoff2(dec); runs decprgoff();
+
+Hspinal:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements (2-angle) SPINAL2 decoupling on the dec channel 
+              with the dseq2 module.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip.
+       phHspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal or (2) is implemented with phases = +/- phHspinal, 
+              +/- (phHspinal + alpHspinal) and +/- (phHspinal + 2.0*alpHspinal).
+       alpHspinal - second angle - set 0.0 for TPPM and phHspinal/2.0
+                     for standard SPINAL64.             
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = getdseq("H");
+Implementation2: SPINAL2 dec = getspinal2s("H"); or DSEQ dec = getdseq2("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+             and _dseqoff(dec);
+Underscore functions2: _spinal2(dec); and decprgoff(); or _dseqon2(dec);
+             and _dseqoff2(dec);
+        
+Htppm:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements TPPM decoupling on the dec channel with the 
+              dseq2 module.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Implementation2: DSEQ dec = getdseq2("H");
+Underscore functions: _tppm(dec); and decprgoff(); or _dseqon(dec); and
+              _dseqoff(dec);
+Underscore functions2: _dseqon2(dec); and _dseqoff2(dec);

@@ -1,0 +1,57 @@
+*************************************************************
+wetgmqcosyps - macro for creating wetgmqcosyps parameters
+	starting from a WET parameter set
+        (see the dglc parameter screen)
+*************************************************************
+Here, the solvent suppression is due to the WET element, rather than
+purely coherence pathway selection.
+
+  wet - a y/n flag determining whether the WET element is used
+        (which uses pwwet, wetpwr, wetshape, gtw, gzlvlw, and gswet).
+  wetpwr - the power level for the WET element.
+  pwwet - the pw90 pulse width at wetpwr.
+  wetshape - the pulse shape used during the wet element.
+  gtw - the duration of the spoiling gradient (in sec).
+  gzlvlw - the amplitude of the gtw gradient. 
+  gswet - the recovery time following each gradient (try 0.002).
+
+  c13wet - a y/n flag controlling the selective 13C decoupling used during WET
+        (which uses dorwet, dpwrwet, and dmfwet; hardcoded to be WALTZ).
+  dofwet - the 13C decoupler offset used during WET.
+  dpwrwet - the decoupler power level for c13wet.
+  dmfwet - the dmf value used for c13wet.
+
+  dz - the delay following the wet element to allow longitudinal recovery
+        (like a T1IR or WEFT inversion recovering through zero).
+  composit - a y/n flag determining whether a composite read pulse is used.
+
+*****************************************************************
+*	gmqcosy:  sets up a gmqcosy parameter set.
+*	Syntax:	gmqcosy  (no arguments)	
+*****************************************************************
+
+   Description:	This macro converts a 1D-s2pul parameter set into a parameter
+		set ready to run a PFG PS MQFCOSY experiment.	
+
+  PARAMETERS:	
+        gzlvl1 = gradient amplitude (use 10000 since it is multipled by qlvl+1)
+        gt1 = gradient duration in seconds (0.001)
+        grise = gradient rise and fall time (in seconds; 0.00001)
+        qlvl = 2 (quantum selection level for DQF COSY)
+        gstab = optional delay for stability
+        phase = 1,2
+	The total time of (gt1+grise+grise+gstab) which is the time the
+	fid is delayed, needs to be a multiple of the dwell time.  The
+	parameter lsfid = -(this multiple). 
+
+  GRADIENT LEVELS:
+           for working with organic samples try:
+                gzlvl1 =  10000
+                gt1 = 0.003
+
+  PROCESSING:
+        process data with wft2da
+
+
+Note: the wetgmqcosyps pulse sequence is not supplied with Mercury 
+      or GEMINI 2000.

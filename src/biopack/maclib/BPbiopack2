@@ -1,0 +1,349 @@
+"macro BPbiopack2"
+"BPbiopack2   updates parameters values in probefile"
+
+$probename=probe
+if ($probename='') then
+  banner('No Probe is specified. New Probefile "HCN" is being created')
+  BPaddprobe('HCN')
+endif
+if (numrfch>4) then
+ if (BPpwrlimits=1) then
+  if ((BPtpwrmax<30) or (BPdpwrmax<30) or (BPspinlock<2000) or (BPdpwr2max<30) or (BPdpwr3max<30) or (BPdpwr4max<30))then
+   banner('BioPack Power Limits need to be set on all five channels, or unset BioPack Power Limits. Update aborting') 
+   return
+  endif
+  BPcheck "adjusts tpwr/dpwr/dpwr2/dpwr3/dpwr4 if BPpwrlimits=1"
+ endif
+endif
+if (numrfch>3) then
+ if (BPpwrlimits=1) then
+  if ((BPtpwrmax<30) or (BPdpwrmax<30) or (BPspinlock<2000) or (BPdpwr2max<30) or (BPdpwr3max<30)) then
+   banner('BioPack Power Limits need to be set on all four channels, or unset BioPack Power Limits. Update aborting') 
+   return
+  endif
+  BPcheck "adjusts tpwr/dpwr/dpwr2/dpwr3 if BPpwrlimits=1"
+ endif
+elseif (numrfch>2) then
+ if (BPpwrlimits=1) then
+  if ((BPtpwrmax<30) or (BPdpwrmax<30) or (BPspinlock<2000) or (BPdpwr2max<30)) then
+   banner('BioPack Power Limits need to be set on all three channels, or unset BioPack Power Limits. Update aborting') 
+   return
+  endif
+  BPcheck "adjusts tpwr/dpwr/dpwr2/dpwr3 if BPpwrlimits=1"
+ endif
+else
+ if (BPpwrlimits=1) then
+  if ((BPtpwrmax<30) or (BPdpwrmax<30) or (BPspinlock<2000)) then
+   banner('BioPack Power Limits need to be set on all channels, or unset BioPack Power Limits. Update aborting') 
+   return
+  endif
+  BPcheck "adjusts tpwr/dpwr/dpwr2 if BPpwrlimits=1"
+ endif
+endif
+banner('Probe File Is Being Updated with These Calibrations')
+pw=trunc(10*pw + 0.5)/10
+pw90=trunc(10*pw + 0.5)/10
+pwC=trunc(10*pwC + 0.5)/10
+pwN=trunc(10*pwN + 0.5)/10
+ref_pw90=trunc(10*pw*compH + 0.5)/10 ref_pwr=tpwr
+fn=np fn=fn*2
+
+ BPN15updatepw90
+
+"add new parameters if missing"
+exists('autocal','parameter'):$e
+ if $e=0 then create('autocal','string') autocal='y' endif
+exists('checkofs','parameter'):$e
+ if $e=0 then create('checkofs','string') checkofs='n' endif
+exists('JNH','parameter'):$e
+ if $e=0 then create('JNH','real') JNH=93 endif
+exists('waltzB1','parameter'):$e
+ if $e=0 then create('waltzB1','real') waltzB1=5p endif
+exists('dmf30','parameter'):$e
+ if $e=0 then create('dmf30','real') dmf30=0 endif
+exists('dmf80','parameter'):$e
+ if $e=0 then create('dmf80','real') dmf80=0 endif
+exists('dmf140','parameter'):$e
+ if $e=0 then create('dmf140','real') dmf140=0 endif
+exists('rf30','parameter'):$e
+ if $e=0 then create('rf30','real') rf30=0 endif
+exists('rf80','parameter'):$e
+ if $e=0 then create('rf80','real') rf80=0 endif
+exists('rf140','parameter'):$e
+ if $e=0 then create('rf140','real') rf140=0 endif
+
+if seqfil='ghn_co' then
+ ai f full setref BPsvp('ghn_co')
+endif
+
+$lb='' format(lb,4,4):$lb
+BPsetparams('lb',$lb,'H1')
+$gf='' format(gf,4,4):$gf
+BPsetparams('gf',$gf,'H1')
+$gfs='' format(gfs,4,4):$gfs
+BPsetparams('gfs',$gfs,'H1')
+$sb='' format(sb,4,4):$sb
+BPsetparams('sb',$sb,'H1')
+$sbs='' format(sbs,4,4):$sbs
+BPsetparams('sbs',$sbs,'H1')
+
+$ssfilter='' format(ssfilter,4,0):$ssfilter
+BPsetparams('ssfilter',$ssfilter,'H1')
+$ssntaps='' format(ssntaps,4,0):$ssntaps
+BPsetparams('ssntaps',$ssntaps,'H1')
+$sslsfrq='' format(sslsfrq,4,4):$sslsfrq
+BPsetparams('sslsfrq',$sslsfrq,'H1')
+$ssorder='' format(ssorder,2,0):$ssorder
+BPsetparams('ssorder',$ssorder,'H1')
+
+$rof1='' format(rof1,4,2):$rof1
+BPsetparams('rof1',$rof1,'H1')
+$rof2='' format(rof2,4,2):$rof2
+BPsetparams('rof2',$rof2,'H1')
+$alfa='' format(alfa,4,2):$alfa
+BPsetparams('alfa',$alfa,'H1')
+if (sw<14p) then sw=14p endif
+$sw='' format(sw,6,1):$sw
+BPsetparams('sw',$sw,'H1')
+$at='' format(at,5,4):$at
+BPsetparams('at',$at,'H1')
+
+$ref_pw90='' format(ref_pw90,2,1):$ref_pw90
+BPsetparams('ref_pw90',$ref_pw90,'H1')
+$ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+BPsetparams('ref_pwr',$ref_pwr,'H1')
+$pw90='' format(pw90,2,1):$pw90
+BPsetparams('pw90',$pw90,'H1')
+$BPd1='' format(d1,2,3):$BPd1
+BPsetparams('BPd1',$BPd1,'H1')
+$waltzB1='' format(waltzB1,6,0):$waltzB1
+BPsetparams('waltzB1',$waltzB1,'H1')
+$tpwr='' format(tpwr,2,0):$tpwr
+BPsetparams('tpwr',$tpwr,'H1')
+$dmf=1e6/(pw*10*compH) $dpwr=tpwr-20
+$dmfH1='' format($dmf,5,0):$dmfH1
+$dpwrH1='' format($dpwr,2,0):$dpwrH1
+BPsetparams('dmf',$dmfH1,'H1')
+BPsetparams('dpwr',$dpwrH1,'H1')
+$tofH2O='' format(tof,4,1):$tofH2O
+BPsetparams('tofH2O',$tofH2O,'H1')
+$compH='' format(compH,4,3):$compH
+BPsetparams('compH',$compH,'H1')
+$BPgain='' format(gain,2,0):$BPgain
+BPsetparams('BPgain',$BPgain,'H1')
+$BPtemp='' format(temp,3,1):$BPtemp
+BPsetparams('BPtemp',$BPtemp,'H1')
+
+$pwC='' format(pwC,2,1):$pwC
+BPsetparams('pwC',$pwC,'C13')
+BPsetparams('pw90',$pwC,'C13')
+$pwClvl='' format(pwClvl,2,0):$pwClvl
+BPsetparams('pwClvl',$pwClvl,'C13')
+BPsetparams('tpwr',$pwClvl,'C13')
+$compC='' format(compC,4,3):$compC
+BPsetparams('compC',$compC,'C13')
+
+$BPgzcal='' format(gzcal,8,6):$BPgzcal
+BPsetparams('BPgzcal',$BPgzcal,'N15')
+BPsetparams('mag_flg',mag_flg,'N15')
+
+if (seqfil='ghn_co') then
+  $pwHs='' format(pwHs,2,1):$pwHs
+  BPsetparams('pwHs',$pwHs,'H1')
+  $tpwrsf='' format(tpwrsf,4,0):$tpwrsf
+  BPsetparams('tpwrsf',$tpwrsf,'H1')
+  $dofCO='' format(dof,4,1):$dofCO
+  BPsetparams('dofCO',$dofCO,'C13')
+  $swCO='' format(sw1,4,1):$swCO
+  BPsetparams('swCO',$swCO,'C13')
+  $spinlock='' format(BPspinlock,4,1):$spinlock
+  BPsetparams('spinlock',$spinlock,'C13')
+  $dofN15='' format(dof2,4,1):$dofN15
+  BPsetparams('dofN15',$dofN15,'N15')
+  $swN='' format(sw2,4,1):$swN
+  BPsetparams('swN',$swN,'N15')
+  $JNH='' format(JNH,3,1):$JNH
+  BPsetparams('JNH',$JNH,'N15')
+  $NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+  BPsetparams('NHgrad1_time',$NHgrad1_time,'N15')
+  $NHgrad1_lvl='' format(gzlvl1,6,0):$NHgrad1_lvl
+  BPsetparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+  $NHgrad2_lvl='' format(gzlvl2,6,0):$NHgrad2_lvl
+  BPsetparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+  $NHgstab='' format(gstab,6,4):$NHgstab
+  BPsetparams('NHgstab',$NHgstab,'N15')
+  $gt5='' format(gt5,1,6):$gt5
+  BPsetparams('gt5',$gt5,'N15')
+  $gt0='' format(gt0,1,6):$gt0
+  BPsetparams('gt0',$gt0,'N15')
+  $gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+  BPsetparams('gzlvl5',$gzlvl5,'N15')
+  $gzlvl0='' format(gzlvl0,6,0):$gzlvl0
+  BPsetparams('gzlvl0',$gzlvl0,'N15')
+  $dres3D='' format(dres3,2,1):$dres3D
+  BPsetparams('dres3D',$dres3D,'H2')
+  $dpwr3D='' format(dpwr3,2,0):$dpwr3D
+  BPsetparams('dpwr3D',$dpwr3D,'H2')
+  $dmf3D='' format(dmf3,5,1):$dmf3D
+  BPsetparams('dmf3D',$dmf3D,'H2')
+  $dof3D='' format(dof3,5,1):$dof3D
+  BPsetparams('dof3D',$dof3D,'H2')
+  if dseq3='' then dseq3='garp1' endif
+  BPsetparams('dseq3D',dseq3,'H2')
+  BPsetparams('dmm3D',dmm3,'H2')
+  BPsetupshapes"makes Pbox waveforms"  
+  BPcal        "makes rf waveforms"
+  BPmakeSTUDpp "makes STUD waveforms and sets dmf30, rf30, etc"
+  $dmf30='' format(dmf30,4,1):$dmf30
+  BPsetparams('dmf30',$dmf30,'C13')
+  $dmf80='' format(dmf80,4,1):$dmf80
+  BPsetparams('dmf80',$dmf80,'C13')
+  $dmf140='' format(dmf140,4,1):$dmf140
+  BPsetparams('dmf140',$dmf140,'C13')
+  $rf30='' format(rf30,4,1):$rf30
+  BPsetparams('rf30',$rf30,'C13')
+  $rf80='' format(rf80,4,1):$rf80
+  BPsetparams('rf80',$rf80,'C13')
+  $rf140='' format(rf140,4,1):$rf140
+  BPsetparams('rf140',$rf140,'C13')
+endif
+
+if (seqfil='rna_gNhsqc') then
+  $NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+  BPsetparams('NHgrad1_time',$NHgrad1_time,'N15')
+  $NHgrad1_lvl='' format(gzlvl1,6,0):$NHgrad1_lvl
+  BPsetparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+  $NHgrad2_lvl='' format(gzlvl2,6,0):$NHgrad2_lvl
+  BPsetparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+  $NHgstab='' format(grecov,6,4):$NHgstab
+  BPsetparams('NHgstab',$NHgstab,'N15')
+endif
+
+if (seqfil='rna_gChsqc') then
+  $CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+  BPsetparams('CHgrad1_time',$CHgrad1_time,'C13')
+  $CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+  BPsetparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+  $CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+  BPsetparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+  $CHgstab='' format(grecov,6,4):$CHgstab
+  BPsetparams('CHgstab',$CHgstab,'C13')
+  BPcal        "makes rf waveforms"
+  BPmakeSTUDpp "makes STUD waveforms and sets dmf30, rf30, etc"
+  $dmf30='' format(dmf30,4,1):$dmf30
+  BPsetparams('dmf30',$dmf30,'C13')
+  $dmf80='' format(dmf80,4,1):$dmf80
+  BPsetparams('dmf80',$dmf80,'C13')
+  $dmf140='' format(dmf140,4,1):$dmf140
+  BPsetparams('dmf140',$dmf140,'C13')
+  $rf30='' format(rf30,4,1):$rf30
+  BPsetparams('rf30',$rf30,'C13')
+  $rf80='' format(rf80,4,1):$rf80
+  BPsetparams('rf80',$rf80,'C13')
+  $rf140='' format(rf140,4,1):$rf140
+  BPsetparams('rf140',$rf140,'C13')
+endif
+
+exists('probeConnect','parameter','global'):$e
+if ($e>0) then
+ BPsetparams('probeConnect',probeConnect,'H1')
+endif
+
+"Biopack power limits are active if BPpwrlimits=1 "
+exists('BPpwrlimits','parameter','global'):$e
+if ($e>0) then
+ $BPpwrlimits='' format(BPpwrlimits,1,0):$BPpwrlimits
+ BPsetparams('BPpwrlimits',$BPpwrlimits,'H1')
+endif
+
+"1H and 13C spinlock upper limits if BPpwrlimits=1 "
+exists('BPtpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrspinlock='' format(BPtpwrspinlock,5,0):$BPtpwrspinlock
+ BPsetparams('BPtpwrspinlock',$BPtpwrspinlock,'H1')
+endif
+
+exists('BPdpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrspinlock='' format(BPdpwrspinlock,5,0):$BPdpwrspinlock
+ BPsetparams('BPdpwrspinlock',$BPdpwrspinlock,'C13')
+endif
+
+"default values for 13C and 1H spinlock fields"
+exists('BPspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPspinlock='' format(BPspinlock,6,0):$BPspinlock
+ BPsetparams('BPspinlock',$BPspinlock,'C13')
+endif
+
+exists('BP1Hspinlock','parameter','global'):$e
+if ($e>0) then
+ $BP1Hspinlock='' format(BP1Hspinlock,6,0):$BP1Hspinlock
+ BPsetparams('BP1Hspinlock',$BP1Hspinlock,'H1')
+endif
+
+"1H and 13C decoupling power upper limits if BPpwrlimits=1 "
+exists('BPtpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrmax='' format(BPtpwrmax,2,0):$BPtpwrmax
+ BPsetparams('BPtpwrmax',$BPtpwrmax,'H1')
+endif
+
+exists('BPdpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrmax='' format(BPdpwrmax,2,0):$BPdpwrmax
+ BPsetparams('BPdpwrmax',$BPdpwrmax,'C13')
+endif
+
+exists('BPdpwr2max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr2max='' format(BPdpwr2max,2,0):$BPdpwr2max
+ BPsetparams('BPdpwr2max',$BPdpwr2max,'N15')
+endif
+
+exists('BPdpwr3max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr3max='' format(BPdpwr3max,2,0):$BPdpwr3max
+ BPsetparams('BPdpwr3max',$BPdpwr3max,'H2')
+endif
+
+exists('BPdpwr4max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr4max='' format(BPdpwr4max,2,0):$BPdpwr4max
+ BPsetparams('BPdpwr4max',$BPdpwr4max,'H2')
+endif
+
+"System power limits"
+exists('maxattench1','parameter','global'):$e
+if ($e>0) then
+ $maxattench1='' format(maxattench1,2,0):$maxattench1
+ BPsetparams('maxattench1',$maxattench1,'H1')
+endif
+
+exists('maxattench2','parameter','global'):$e
+if ($e>0) then
+ $maxattench2='' format(maxattench2,2,0):$maxattench2
+ BPsetparams('maxattench2',$maxattench2,'C13')
+endif
+
+exists('maxattench3','parameter','global'):$e
+if ($e>0) then
+ $maxattench3='' format(maxattench3,2,0):$maxattench3
+ BPsetparams('maxattench3',$maxattench3,'N15')
+endif
+
+exists('maxattench4','parameter','global'):$e
+if ($e>0) then
+ $maxattench4='' format(maxattench4,2,0):$maxattench4
+ BPsetparams('maxattench4',$maxattench4,'H2')
+endif
+
+exists('maxattench5','parameter','global'):$e
+if ($e>0) then
+ $maxattench5='' format(maxattench5,2,0):$maxattench5
+ BPsetparams('maxattench5',$maxattench5,'H2')
+endif
+
+write('line3','Probefile Update Finished')
+banner('Probe File Updated with These Calibrations')
+

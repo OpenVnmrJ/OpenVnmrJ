@@ -1,0 +1,46 @@
+"macro episetauto"
+"****************************************************************************"
+
+" episetauto - Center the echoes and adjust tilt, one pass"
+
+"****************************************************************************"
+
+if ($# = 0) then
+  "first pass, initialize the parameters"
+  groa=0 grora=1 tep=0 
+  nv=nv    "This sets up nf correctly for compressed acquisition"
+
+  "** episet macro **"
+  image=0  "Phase encode off"
+  "** initialize some parameters, images, nseg **, imgno, slice"
+  exists('images','parameter'):$ex
+  if($ex = 0) then
+    create('images')
+  endif
+  if (images = 0) then images=1 endif
+  exists('nseg','parameter'):$ex
+  if($ex = 0) then
+    create('nseg')
+    nseg=1
+  endif
+  if (nseg = 0) then nseg=1 endif
+
+  if(ns = 1) then slice=1 endif
+
+  wdone='' "skip VnmrJ processing"
+  wexp='f full episetauto(`adjust`) ' au
+
+elseif ($1 = 'adjust') then
+  epirfall  
+  epitilt    "determine groa"
+  epishift   "determine tep to align echoes"
+
+  wdone='' "skip VnmrJ processing"
+  wexp='f full episetauto(`ref`) ' au
+
+elseif ($1 = 'ref') then
+  sort('pss'):$sliceindex,$slicevalue
+  $ctr = $sliceindex[ns/2+0.5]
+  f full epirfall epiphms df2d('nf',$ctr) wexp=''
+  return
+endif

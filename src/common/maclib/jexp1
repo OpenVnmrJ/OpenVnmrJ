@@ -1,0 +1,89 @@
+"macro jexp1"
+" ************************************************************* "
+" This macro replaces the jexp1-jexp9 vnmr commands and calls 		 "
+" the command jexp.  If it changes the experiment successfully;		 "
+" it will then clear the graphics window, display the dg screen		 "
+" for the new experiment, and set the main menu.		 		 "
+" May be called with the experiment number as an argument,      "
+" which overrides the number encoded in the macro name.         "
+" ************************************************************* "
+$req_exp=''
+$exp_num=''
+
+length($0):$call_length
+
+if ($# > 1)  then
+   write('error','usage - jexpn for n = [1,9]')
+endif
+
+" *** Get experiment number and Join Experiment *** "
+if ($# >= 1) then
+   " Experiment number is given as argument "
+   format($1,0,0):$req_exp
+else
+   " Parse Command to get experiment number "
+   $jarg = ''
+   substr($0,5,$call_length-4):$jarg
+   $req_exp=$jarg
+endif
+
+jexp:$oldExp
+format($req_exp,0,0):$newExp
+
+jexp($req_exp)
+
+" *** Check to see that the requested experiment was joined *** "
+jexp:$exp_num
+if ($exp_num <> $req_exp) then
+    write('error','Error in joining exp %3f',$req_exp)
+    return
+endif 
+
+// update viewport label
+vpLayout('updateVpLabel', $oldExp, $newExp)
+// eraise inset frame if exists
+mfaction('jexp',$req_exp, 1)
+
+//if (appmode <> 'imaging') then
+//  if ($exp_num <> '0') then
+//    showtray('close')
+//    exec(`xmhaha('refreshSQ')`):$e
+//  endif
+//endif
+
+" *** Clear the graphics screen and display parameters *** "
+clear(2)
+
+" Call updtgcoil if gcoil and updtgcoil exist "
+exists('gcoil','parameter'):$ex
+exists('gcoil','parameter','global'):$ex1
+exists('updtgcoil','maclib'):$ex2
+if (($ex) or ($ex1)) and ($ex2) then
+    updtgcoil
+endif
+exists('spinmax','parameter','global'):$e
+if $e>0.5 then
+  setlimit('spin',spinmax,0,1)
+endif
+
+isvnmrj:$j
+if $j<0.5 then
+  tcl('stopUpdate')
+endif
+dg newdg
+if $j<0.5 then
+  tcl('set seqfil '+seqfil+';set curexp '+curexp+' ;startUpdate')
+endif
+menu('main')
+if (appmode <> 'imaging') then
+  walkupQ_init
+endif
+exists('userjexp','maclib'):$e
+if $e then
+  exec('userjexp($req_exp)'):$e
+endif
+
+if(appmode<>'imaging') then
+  SQDisplay('refresh',$oldExp)
+endif
+

@@ -1,0 +1,130 @@
+"macro Gcal"
+"********************************************************"
+"Gcal - Probe gcal Autocalibration                   "
+"********************************************************"
+
+mkpar('string','execprocess','','execplot','')
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+execplot='execplot=\'\''
+
+if ($# < 1) then $1 = 1 endif
+$arg=''
+if (typeof('$1')) then $arg=$1 else format($1,0,0):$arg endif
+
+IF ($arg = '1') THEN
+
+    $fileex=0 $file=''
+    cplog('PROTON','first'):$file,$asdir
+    if ($file<>'') then rt($asdir+'/'+$file) else return endif
+    wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+    gain='y'
+    ds av 
+    getparam('tpwr',tn):tpwr
+    getparam('pw90',tn):pw90
+    pw=pw90
+    d2=.02 av sw=100000
+    np=512 lb=10 sb=0.001 sbs=0.000237
+    p1=pw90 pw=2*pw90 f full av
+    seqfil='profile'
+
+    $pfgon3=''
+    substr(pfgon,3,1):$pfgon3
+    if ($pfgon3='n') then pfgon='nny' endif
+    $gradtype3=''
+    substr(gradtype,3,1):$gradtype3
+    if ($gradtype3 = 'l') then
+ 	gzlvl1=400
+    else
+ 	gzlvl1=2000
+    endif
+
+    wnt='wft f full dc vsadj(100) ds'
+    caliblist=$0
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_iteration'
+    write('line3','_gzlvl1%d',gzlvl1):calibnode
+    execprocess='Gcal(\'process\')'
+    alock='n' wshim='n' r1=1
+    clear(2)
+
+ENDIF
+
+"********************************************************"
+IF ($arg='process') or ($arg='process2') THEN
+    wft av f full dc vsadj(100) ds
+    execprocess='wft dssh darray(\'CalibrationResults\')'
+    execplot='execplot=\'\''
+    peak:$ht,cr
+    dres(cr,.2):$width
+    if ($arg='process') then $max=40000 else $max=15000 endif
+    if ($width < $max) then
+	if ($arg='process') then
+	    $line=''
+	    write('line3','Gradient level increased to %d and reacquire',1.5*gzlvl1):$line
+            CalibrationResults=CalibrationResults,$line
+	    xmhaha_calib('addNode','Gcal(2)','top')
+	else
+	    Gcal('error')
+	endif
+    else
+	Gcal('finish')
+    endif
+ENDIF
+"********************************************************"
+IF ($arg = '2') THEN
+    cplog('profile','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    wft av f full dc vsadj(100) ds
+    execprocess='Gcal(\'process2\')'
+    execplot='execplot=\'\''
+    gzlvl1=1.5*gzlvl1 
+    write('line3','_gzlvl1%d',gzlvl1):calibnode
+ENDIF
+"********************************************************"
+IF ($arg='error') THEN
+	$line=''
+	write('line3','gradient calibration failed on second try -- check PFG amplifier'):$line
+	CalibrationResults=CalibrationResults,$line
+        write('error','%s',$line)
+        setparams('gradient','n','Probe')
+//            printon
+//            write('alpha','Gradient calibration failed')
+//            write('alpha','Check PFG amplifier and pfgon parameter')
+//            write('alpha','gcal calibration aborted')
+//            printoff
+ENDIF
+"********************************************************"
+IF ($arg='finish') THEN
+
+    wft av f full dc vsadj(100) ds
+    peak:$ht,cr
+    dres(cr,.2):$width
+    execprocess='wft dssh darray(\'CalibrationResults\')'
+    execplot='execplot=\'\''
+
+  	$size=16
+  	getparam('rfsize','Probe'):$size
+  	$size=$size/10
+  	$gammabar=(sfrq*1e6)/(234.94*h1freq)
+  	$gcal=$width/($gammabar*gzlvl1*$size)
+  	if $gcal < 0 then $gcal = -1.0*$gcal endif
+  	$strgcal=''
+  	format($gcal,0,5):$strgcal
+  	setparams('gradient','y','Probe')
+  	setparams('gcal',$strgcal,'Probe')
+  	$text='Gradient Calibration for the probe: '+probe
+  	$atext = '   '+$strgcal+' G/cm/dac unit'
+  	atext($text)
+  	atext($atext)
+	$line=''
+	write('line3','%s - G/cm/dac : %s',caliblist,$strgcal):$line
+	CalibrationResults='',$line
+	execplot='vsadj(100) pl pltext page'
+ENDIF
+"********************************************************"

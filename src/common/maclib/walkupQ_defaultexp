@@ -1,0 +1,27 @@
+"macro walkupQ_defaultexp"
+// Allows multiple experiments to be defined as default
+   is_submitmode:$submit
+   if ($submit=0) then return endif
+   $defaultexp='' getadminfo('defaultexp'):$defaultexp
+   string2array($defaultexp):$defaultexp
+   if ($defaultexp[1]='') then return endif
+   $allowedlist='' $addexp=''
+   getExpList(operator):$allowedlist
+   if ($allowedlist[1]='') then
+	$addexp=$defaultexp
+   else
+	$tot=size('$defaultexp')
+	$i=1 $j=1
+	repeat
+            teststr('$allowedlist',$defaultexp[$i],'local'):$OK
+	    if ($OK) then $addexp[$j]=$defaultexp[$i] $j=$j+1 endif
+	    $i=$i+1
+	until $i > $tot
+   endif
+   if ($addexp[1]='') then return endif
+   $tot=size('$addexp')
+   $i=1
+   repeat
+	walkupQ('add',$addexp[$i])
+	$i=$i+1
+   until $i > $tot

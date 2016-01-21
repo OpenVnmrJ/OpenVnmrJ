@@ -1,0 +1,91 @@
+*******************************************************************************
+dosy (M)	performs DOSY processing of PFG diffusion NMR data
+*******************************************************************************
+NAME
+	dosy (M)
+
+SYNOPSIS
+	dosy('prune')   
+ 	dosy(d1,d2) 
+ 	dosy('prune',d1,d2)  
+
+DESCRIPTION 
+	dosy fits the data from a PFG diffusion NMR experiment (aka DOSY
+experiment) and produces either a 2D DOSY spectrum (for 2D data, dosy3Dproc='n') 
+or a 2D spectrum annotated with diffusion coefficients (for 3D data, 
+dosy3Dproc='y'). 
+	In 2D mode, dosy either uses the command dll to identify all signals 
+above the threshold defined by the parameter 'th' (if dosybypoints='n') or (if 
+dosybypoints='y') treats each point above th in the spectrum as a separate peak.
+fp is then used to determine the height of each peak in successive spectra, 
+storing the data in the file dosy_in. If dosyproc='discrete', the data are then 
+processed with the command dosyfit if ncomp=1, or passed via the command 
+splmod_prepare to the external programme SPLMOD if ncomp>1.  If 
+dosyproc= 'continuous', the data are passed via the command contin_prepare to 
+the external programme CONTIN. The results of fitting are then converted by 
+the command ddif into a 2D dataset for display by dconi. The digital resolution 
+in the second dimension is determined by n1; for dosyproc='discrete', fn1 is 
+typically 512 or 1024, but for dosyproc='continuous', processing times may 
+become prohibitive for fn1>256.
+	In 3D mode, dosy requires the 2D cross-peaks of interest to have been
+marked, either manually or automatically. dosy takes the list of marked peaks,
+compiles the peak volumes into the file dosy_in, and passes this to the 
+command dosyfit which determines the diffusion coefficients and labels the
+2D spectrum appropriately. 2D projections of the 3D DOSY spectrum between 
+different diffusion limits may be calculated using the command makeslice. 
+dosy does not currently support dosyproc='continuous' or ncomp>1.
+
+OPTIONS
+	dosy takes the optional arguments 'prune', d1 and d2, where d1 and d2 
+are minimum and and maximum values for the diffusion display. The argument 
+'prune' causes dosy to enter a dialog with the user to determine which
+gradient levels should be pruned, i.e. omitted from the analysis. 
+
+FILES
+	curexp+'/dosy/diffusion_display.inp'
+	curexp+'/dosy/diffusion_spectrum'
+	curexp+'/dosy/diffusion_display.contin'
+	curexp+'/dosy/dosy_in
+	curexp+'/dosy/dosy_splmod.in'
+	curexp+'/dosy/dosy_contin.out'
+	curexp+'/dosy/dosy_splmod.out'
+	curexp+'/dosy/fit_errors'
+	curexp+'/fp.out'
+	curexp+'/dosy/general_dosy_stats'
+
+SEE ALSO
+	ddif
+	dosyfit
+	dosybypoints
+	dosyproc
+	dosy3Dproc
+	contin_prepare
+	makeslice
+	sdp
+	splmod_prepare
+
+COPYRIGHT
+	Copyright (c) 2009 
+
+REFERENCES
+
+K.F. Morris, C.S. Johnson, Diffusion-Ordered 2-Dimensional
+Nuclear-Magnetic-Resonance Spectroscopy, Journal of the American Chemical
+Society. 114 (1992) 3139-3141.
+K.F. Morris, C.S. Johnson, Resolution of Discrete and Continuous
+Molecular-Size Distributions by Means of Diffusion-Ordered 2D NMR-Spectroscopy,
+Journal of the American Chemical Society. 115 (1993) 4291-4299.
+H. Barjat, G.A. Morris, S. Smart, A.G. Swanson, S.C. Williams,
+High-Resolution Diffusion-Ordered 2D Spectroscopy (HR-Dosy) - A New Tool for the
+Analysis of Complex-Mixtures, Journal of Magnetic Resonance Series B. 108 (1995)
+170-172.
+C.S. JohnsonJr., Diffusion ordered nuclear magnetic resonance spectroscopy:
+principles and applications, Progress in Nuclear Magnetic Resonance
+Spectroscopy. 34 (1999) 203-256.
+G.A. Morris, Diffusion-Ordered Spectroscopy (DOSY)., in: D.M. Grant, R.K.
+Harris (Eds.), Encyclopedia of Nuclear Magnetic Resonance, Chichester, John
+Wiley & Sons Ltd, 2002: pp. 35-44.
+M. Nilsson, M.A. Connell, A.L. Davis, G.A. Morris, Biexponential fitting of
+diffusion-ordered NMR data: Practicalities and limitations, Analytical
+Chemistry. 78 (2006) 3040-3045.
+

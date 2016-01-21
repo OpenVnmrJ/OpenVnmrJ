@@ -1,0 +1,54 @@
+"macro customizedtext"
+
+$action=$1
+$md=$2
+$nextexp=$3
+$acqpar=$md+'/'+$nextexp+'acqpars'
+
+if $action='read' then
+    exists($acqpar,'file'):$aex
+		// Customization is missing for this node
+		//  don't bother
+    if not $aex then return endif
+    fread('','usertree')
+    fread($acqpar,'usertree')
+    $num=0
+    getvalue('text_string','size','usertree'):$num
+    if not $num then
+		//  Text was not customized by the user
+		//   don't bother
+    	fread('','usertree')
+    	return
+    endif
+
+		// write to curexp/text
+    write('reset',curexp+'/text')
+    $i=1
+    while $i<= $num do
+    	$text_string[$i]=''
+    	getvalue('text_string',$i,'usertree'):$text_string[$i]
+    	write('file',curexp+'/text','%s',$text_string[$i])
+    	$i=$i+1
+    endwhile
+		// set text_string in current tree
+    text_string=$text_string
+
+    fread('','usertree')
+
+elseif ($action='write') then
+    exists($md,'directory'):$direx
+    if not $direx then return endif
+    exists(curexp+'/text','file'):$tex
+    if not $tex then return endif
+    $key=curexp+'/text'
+    lookup('mfile',$key,'countline'):$lines
+    text_string=''
+    $i=1
+    while $i <= $lines do
+	$line=''
+	lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+	text_string[$i]=$line
+	$i=$i+1
+    endwhile
+    writeparam($acqpar,'text_string','current','add')
+endif

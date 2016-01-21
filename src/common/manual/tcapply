@@ -1,0 +1,52 @@
+**************************************************************************
+tcapply		Apply Table Conversion Reformatting to Data (C) 
+**************************************************************************
+
+Syntax:		tcapply([<filename>])
+
+
+Description:	"tcapply"  rearranges the spectra in a 2D dataset that
+		reside in the current datafile.  Using values from an 
+		AP table, it arranges the spectra corresponding to the
+		value in the AP table from low value to high value.
+		The values may have already been read in by the "tcopen"
+		command or if the optional <filename> argument has been 
+		provided the values will be read in from  
+		$vnmruser/tablib/<filename>.
+
+		As mention before, this command uses spectra from the current
+		datafile; which means that a "ft1d" should have been done
+		on the data before using this command.
+
+		To give an example, for a standard imaging experiment the 
+		phase encode gradients will progress from a starting negative 
+		value monotonically up through zero to a positive value, e.g.:
+
+		    -64, -63, -62, ... , -1, 0, 1, ... , 62, 63.        
+ 
+		It is possible to acquire the equivalent data in non-monotonic
+		order, either by explicitly coding the desired progression 
+		into a pulse sequence, or by using an external AP table to 
+		control the order.  In either case, "ft2d" will not be able 
+		to properly process the resulting data.  "tcapply" and "tabc" 
+		are functions which reconstruct a properly ordered data set 
+		from any arbitrarily ordered data which has been acquired 
+		under control of an external AP table.  The data must have 
+		been acquired according to a table in the "tablib" directory.
+		The different between "tcapply" and "tabc" is that "tcapply"
+		works on the first dimension transformed spectra residing
+		in Vnmr's data memory and "tabc" works on and changes the raw
+		data in the fid file.
+
+
+Arguments:	'filename' optional argument specifying the AP table to be 
+		read which resides in $vnmruser/tablib/<filename>.
+
+
+ Example:	ft1d(2)
+		tcapply(petable)
+		ft2d(2)
+
+ Related:	tcclose		Table Convert Close
+		tcopen		Table Convert Open
+		tabc

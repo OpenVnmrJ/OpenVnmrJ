@@ -1,0 +1,322 @@
+"macro im2Dfse_create_nfmod"
+"Setup and processing for 2D Fast-Spin echo type of imaging sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+isvnmrj:$vj
+exists('profile','parameter'):$profile
+exists('recon','parameter'):$recon
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  imprep('esp')
+  calcdim
+
+  if (nv > 0) then
+    exists('kzero','parameter'):$e
+    if ($e = 0) then
+      create('kzero','integer')
+      kzero=1
+    endif
+    if ((kzero < 1) or (kzero > etl)) then
+      write('line3','ERROR (%s): kzero must be >= 1 and <= %d',$0,etl)
+      abort
+    endif
+
+    write('line3','fse%d_%d_%d',nv,etl,kzero):petable
+    exists(userdir+'/tablib/'+petable,'file'):$e
+    if ($e = 0) then
+      tabfsems(petable,nv,etl,kzero)
+    endif
+  endif
+
+  "Check FID size against DDR memory"
+  "This is only required until averaging on host becomes available"
+  $seqcon = ''
+  substr(seqcon,3,1):$seqcon
+  if ($seqcon = 'c') AND (nt > 1) then
+    $size=np*nv*ns*2
+    if (dp = 'y') then
+      $size=$size*2
+    endif
+    if ($size > 32*1024*1024) then
+      write('error','fsems FID size > 32 MB, change seqcon to "ncsnn"')
+      abort
+    endif
+  endif
+
+  "Set up real-time recon (for VnmrJ) if compressed in PE"
+  wnt = ''  "default"
+  if ($vj > 0) AND ($do = '') AND (nv > 0) then
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    if ($seqcon = 'c') then
+      if (arraydim > 1) then
+        if ($recon > 0) then
+          if (recon = 'internal') OR (recon = '') then   "use internal recon_all"        
+            wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+          endif
+        else
+          wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+        endif
+      endif
+    endif
+  endif
+    
+ "Execute any sequence specific preparation"
+  execseq('prep')  
+
+  if ($do = 'profile') then
+    if ($profile > 0) then
+      profile = 'y'
+    else
+      petable = ''
+      writeparam(curexp+'/im2Dfse_params.par','nv')
+      nv = 0
+      nf = etl * ns
+    endif
+
+    wexp    = 'im2Dfse(`proc`,`profile`)'
+    wdone   = ''
+    werr    = ''
+  else
+    if ($profile > 0) then 
+      profile = 'n' 
+    endif
+  endif "profile prep"
+
+  setloop  "update nf and ni"
+
+  "and allow for standard 'peloop'"
+  $seqcon = ''
+  substr(seqcon,3,1):$seqcon
+  if ($seqcon = 's') then
+    nf = nf * etl
+    ni = ni/etl
+    if (ni = 1) then
+      ni = 0
+    endif
+  endif
+
+  create('nfmod','integer','current',etl)
+  nfmod=etl
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($do = 'profile') then
+    cf = 1
+    vp = 0
+    if (arraydim = 1) then
+      flashc('rare',ns,etl)
+    endif
+    av ft f full vsadj dscale dssh
+
+    if ($profile = 0) then
+      rtv(curexp+'/im2Dfse_params.par','nv') setloop
+    endif
+        
+    return
+  endif "profile proc"
+
+  if (nv > 0) then
+    if ($vj > 0) then
+      if (wnt = '') then  "not real-time recon"
+        aipDeleteData
+        aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+        if ($recon > 0) then
+          if (recon = 'internal') OR (recon = '') then   "use internal recon_all"
+            recon_all
+	  else                        "external recon"
+            write('line3','ADVISORY: Using external recon ...')
+            flush
+            "Clear old data"
+	    $cmd = 'rm -r '+curexp+'/recon*'
+            shell($cmd)
+	    $cmd = 'rm -r '+curexp+'/raw*'
+            shell($cmd)
+	    $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt'
+            shell($cmd):$trash
+            {apptype}('displayall')
+            clear
+            cat(curexp+'/Xrecon.txt')
+	  endif
+	else
+	  recon_all
+	endif
+      else
+        wnt = ''
+        setvalue('wnt','','processed')  "otherwise <Reprocess> won't work"
+      endif
+    else
+      rarec
+      dmi
+    endif
+  else
+    cf = 1
+    av ft f full vsadj dscale
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+  
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  if (prescan_exec[prescan_control[2]] = 'gain') then
+    im2Dfse('prep','profile')
+    wnt   = ''
+    werr  = ''
+    wdone = ''
+    if (ssc = 0) then ssc = 2 endif
+  endif "gain prep"
+
+"**********************************************************"
+" Display All                                              "
+"**********************************************************"
+elseif ($action = 'displayall') then
+  aipDeleteData('all')              "clear images"
+  aipRQcommand('set','sort','yes')  "enable sorting"
+  rqsort=1                          "sort by slices"
+  rqsort2=1                         "sort by slices"
+  "Figure the number of receivers"
+  $nr=0
+  length(rcvrs):$len
+  $i=1
+  while ($i <= $len) do
+    $str=''
+    substr(rcvrs,$i,1):$str
+    if ($str = 'y') then $nr=$nr+1 endif
+    $i=$i+1
+  endwhile
+  "Find the number of images and split window accordingly"
+  $cmd='a="" ; for i in '+curexp+'/recon/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nframes
+  aipSplitWindow($nframes,2,1)
+  "Load and display data"
+  $ext=''
+  $reconflag=0	    
+
+  "Magnitude output is treated differently: "
+  "There is the option to display combined receiver output"
+  {apptype}('displayMGdir','recon','imMG','imIR',$nr):$reconflag
+  {apptype}('displaydir','reconPH','imPH',$nr):$reconflag
+  {apptype}('displaydir','reconRE','imRE',$nr):$reconflag
+  {apptype}('displaydir','reconIM','imIM',$nr):$reconflag
+  {apptype}('displayMGdir','rawMG','rawMG','rawIR',$nr):$reconflag
+  {apptype}('displaydir','rawPH','rawPH',$nr):$reconflag
+  {apptype}('displaydir','rawRE','rawRE',$nr):$reconflag
+  {apptype}('displaydir','rawIM','rawIM',$nr):$reconflag
+
+  if ($reconflag) then
+    aipRQcommand('load',curexp+'/recon',-1)
+  endif
+  aipDisplay('all')                 "display"
+
+"**********************************************************"
+" Display Directory                                        "
+"**********************************************************"
+elseif ($action = 'displaydir') then
+
+  if ($# > 4) OR ($# < 4) then return endif
+
+  $dir=$2
+  $flag=$3
+  $nr=$4
+
+  exists($flag,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag} = 'y') then
+      if ($nr > 1) then
+        $i=1
+	$ext=''
+        while ($i <= $nr) do
+          format($i+1000,4,0):$ext
+          substr($ext,2,4):$ext
+          exists(curexp+'/'+$dir+$ext,'directory'):$e
+	  if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+          $i=$i+1
+        endwhile
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+	if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      return(0)		
+    endif
+  endif
+
+"**********************************************************"
+" Display Magnitude Directory                              "
+"**********************************************************"
+elseif ($action = 'displayMGdir') then
+
+  if ($# > 5) OR ($# < 5) then return endif
+
+  $dir=$2
+  $flag1=$3
+  $flag2=$4
+  $nr=$5
+
+  exists($flag1,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag1} = 'y') then
+      if ($nr > 1) then
+        exists($flag2,'parameter'):$e
+        if ($e > 0) then
+          if ({$flag2} = 'y') then
+            $i=1
+            $ext=''
+            while ($i <= $nr) do
+              format($i+1000,4,0):$ext
+              substr($ext,2,4):$ext
+              exists(curexp+'/'+$dir+$ext,'directory'):$e
+	      if ($e < 1) then return endif
+              aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+              $i=$i+1
+            endwhile
+          else
+            exists(curexp+'/'+$dir,'directory'):$e
+	    if ($e < 1) then return endif
+            aipRQcommand('load',curexp+'/'+$dir,-1)
+          endif
+        else
+          exists(curexp+'/'+$dir,'directory'):$e
+          if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir,-1)
+        endif
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+        if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      if ($dir <> 'recon') then return(0) endif		
+    else
+      if ($dir = 'recon') then return(1) endif		    
+    endif
+  else
+    if ($dir = 'recon') then return(1) endif		    
+  endif
+
+endif
+
+

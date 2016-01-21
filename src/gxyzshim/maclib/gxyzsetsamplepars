@@ -1,0 +1,105 @@
+"macro gxyzsetsamplepars"
+if ($#<0.5) then $samplename=gxyzsamplename else $samplename=$1 endif
+// don't set gxyzsamplename in the conventional way
+//  May lead to infinite loop in the panel
+//gxyzsamplename=$samplename
+
+if gxyzsamplename<>$samplename then
+    setvalue('gxyzsamplename',$samplename)
+endif
+
+$zgradtype=''
+substr(gradtype,3,1):$zgradtype
+if $samplename='doped_h2o_20' then
+	solvent='d2o'
+	if $zgradtype='h' then
+     	   gxyzsetpars('H1HS')
+	else
+	   gxyzsetpars('H1PFG')
+	   if Console='vnmrs' then del=0.15 else del=0.25 endif
+	endif
+	d1=0.5
+	ref1Dflg='n'
+	exists('gxyzpw90','parameter'):$ex
+	exists('gxyztpwr','parameter'):$ex1
+	if ($ex>0.5 and $ex1>0.5) then
+	   pw90=gxyzpw90
+	   tpwr=gxyztpwr
+	   pw(90)
+	endif
+elseif $samplename='doped_h2o_1' then
+	solvent='d2o'
+	if $zgradtype='h' then
+	   gxyzsetpars('H1HS')
+	else
+	   gxyzsetpars('H1PFG')
+	   d1=0.2
+	   gxyzfieldvar=4
+	endif
+	exists('gxyzpw90','parameter'):$ex
+	exists('gxyztpwr','parameter'):$ex1
+	if ($ex>0.5 and $ex1>0.5) then
+	   pw90=gxyzpw90
+	   tpwr=gxyztpwr
+	   pw(90)
+	endif
+	ref1Dflg='n'
+	//banner('Please ensure that the 1% doped H2O/D2O sample\\is in the magnet and z0 is properly adjusted')
+elseif $samplename='doped_d2o' then
+	solvent='d2o'
+	if $zgradtype='h'
+	   then gxyzsetpars('H2HS')
+	else
+	   gxyzsetpars('H2PFG')
+	   if Console='vnmrs' then del=0.15 else del=0.25 endif
+	endif
+	d1=1
+	ref1Dflg='n'
+	refnuc='lk'
+	refppm=4.67
+	refpw=200
+	reftpwr=42
+	refgain=20
+	//banner('Please ensure that the 1% doped H2O/D2O sample\\is in the magnet and z0 is properly adjusted')
+elseif $samplename='ID_2' then
+	solvent='dmso'
+	if $zgradtype='h' then
+	    gxyzsetpars('H2HS')
+	else
+   	   gxyzsetpars('H2PFG')
+	   if Console='vnmrs' then del=0.15 else del=0.25 endif
+	endif
+	d1=1
+	ref1Dflg='n'
+	//banner('Please ensure that the ID#2 sample\\is in the magnet and z0 is properly adjusted')
+elseif ($samplename='2mM_sucrose' or $samplename='doped_astm' or $samplename='astm') then
+	strstr($samplename,'astm'):$ret
+	if $ret<0.5 then solvent='d2o' d1=2 else solvent='c6d6' d1=5 endif
+	if $samplename='doped_astm' then d1=0.5 endif
+	if $zgradtype='h' then
+	   gxyzsetpars('H1HS')
+	else
+	   gxyzsetpars('H1PFG')
+	   gxyzfieldvar=4
+	endif
+	ref1Dflg='n'
+	//banner('Please ensure that the correct sample is in the magnet\\and z0 is properly adjusted')
+else return
+endif
+
+//Set up pw90
+exists('gxyzpw90','parameter'):$ex
+exists('gxyztpwr','parameter'):$ex1
+if ($ex>0.5 and $ex1>0.5) then
+	pw90=gxyzpw90
+	tpwr=gxyztpwr
+	pw(90)
+endif
+
+//Switch to gradient echo if 'Rough STE shim' option is not enabled and sample/nucleus is appropriate
+if ((gxyzdoscset<>'y') and (tn='H1')) then gxyzsetge endif
+
+//Use a 90-degree pulse for 1% H2O sample
+if $samplename='doped_h2o_1' then pw(90) endif
+
+dps

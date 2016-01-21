@@ -1,0 +1,121 @@
+"macro redoranal2"
+"redoranal2(<<<$1>,$2>>,$3>) - Do primary REDOR analysis to produce a  " 
+"            plot of DS/S versus rotor periods using expl.             " 
+"                                                                      "
+"            Argument 1:  Optional fraction natural abundance, $abund. "
+"                         If $1>1.0 use parameter redorfrctna. Create  "
+"                         this and set to 0.0 if it does not exist.    " 
+"                         If 0.0<=$1<=1.0 set $abund = $1.             "
+"                         if $1<0 or no arguments present request a    "
+"            Argument 2:  Optional 'plot' or 'noplot'. If no argument  "
+"                         present request 'y' or 'n' on the commandline."  
+"            Argument 3:  Optional time axis in microseconds if $3=1.0. "
+"                         If no argument, show rotor periods.          "
+"                                                                      "
+"            Find numerical results in analyze.out in the workspace.   " 
+
+// Input Fraction Natural Abundance   
+                        
+if ($#>0) then 
+   if ($1>1.0) then 
+      exists('redorfrctna','parameter'):$redorfrctna
+      if ($redorfrctna<0.5) then 
+         create('redorfrctna')
+         redorfrctna=0.0
+         redoranal(redorfrctna)
+         return
+      else
+         $abund=redorfrctna
+      endif
+   else 
+      if ($1>=0) then 
+         $abund=$1
+      else 
+         input('Enter fraction natural abundance: '):$abund   
+      endif
+   endif 
+else 
+   input('Enter fraction natural abundance: '):$abund
+endif
+
+// Set a Time Axis
+
+if $#>2 then 
+   $sc=$3/srate 
+else 
+   $sc=1.0 
+endif
+
+exists(curexp+'/expl.out','file'):$a
+if ($a>0.5) then 
+   autoscale 
+endif
+
+// Pick the Largest Peak and Run fp
+
+select(1)
+nll
+getll(1):$ht
+vs=vs*100/$ht
+nll fp
+$i=1 $j=arraydim/2 
+$line=0 $spect=0 $ht=0 $rat=0 $dels=0 $s=0
+lookup('file',curexp+'/fp.out')
+lookup('seek','(mm)')
+$file=curexp+'/analyze.out'
+
+// Write file analyze.out
+
+exists($file,'file'):$a
+if ($a>0.5) then 
+   write('reset',$file) 
+endif
+write('file',$file,'exp 4')
+write('file',$file,' 1 %4.0f',$j)
+if ($sc=1.0) then 
+   write('file',$file,'deltaS/S vs cycles')
+else 
+   write('file',$file,'deltaS/S vs seconds')
+endif
+write('file',$file,' 1 1 1 1')
+repeat
+   lookup('read',3):$l1,$s1,$h1 
+   format($l1,2,2):$line  
+   format($s1,2,2):$spect 
+   format($h1,12,2):$ht
+   if (($spect mod 2)=1) then    
+      $s=$ht
+      $so=$s - $s*$abund 
+   else 
+      if ($s>0.0) then
+         $dels=$s-$ht
+         $rat=$dels/$so
+      endif
+      write('file',$file,' %7.10f %6.3f',nYxy8[trunc($spect/2)]*$sc,$rat)
+   endif
+   $i=$i+1
+until ($i>arraydim)
+clear
+text
+cat(curexp+'/analyze.out')
+expl
+
+// Select Plotting Status
+
+$aa=''
+if ($#>1) then
+   if ($2<>'noplot') then 
+      if ($2='plot') then 
+         $aa='y'
+      else 
+         input('Hard copy ?'):$aa
+      endif
+   endif
+else
+   input('Hard copy ?'):$aa
+endif
+
+if $aa = 'y' then
+   printon text ptext(curexp+'/analyze.out') printoff
+   pexpl pltext page
+endif

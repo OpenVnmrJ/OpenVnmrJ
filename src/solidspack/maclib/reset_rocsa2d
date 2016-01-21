@@ -1,0 +1,42 @@
+"macro reset_rocsa2d"
+//Set the R18 pulses from the Spin Rate
+
+if (srate > 500) then 
+   $pwXr18 = 2.0e6/(9.0*srate)    // 18 180's in 2 rotor periods
+   pwXr18 = 0.1*trunc($pwXr18/0.1 + 0.5)
+   srate = 2.0e6/(9.0*pwXr18)
+   aXr18 = aX90*(4.0*pwX90)/pwXr18
+   if (aXr18 = 4095) then
+      write('error','reset_r18 Error: aXr18 is >= to 4095')
+   endif
+endif
+if (qXr18 < 1.0) then qXr18 = 1 endif
+
+// Set LG (the 2pi pulse is truncated even though it is not used)
+
+aHlg = aH90
+$pwHlg = sqrt(2.0/3.0)*4.0*pwH90
+$pwHlg1 = 0.1*trunc($pwHlg/0.1 + 0.5)
+ofHlg = 1.0/(sqrt(3)*$pwHlg1*1e-6)
+
+// Reset the LG amplitude to match the rounded 2pi pulse.
+
+$aHlg = ($pwHlg1/$pwHlg)*aHlg
+aHlg = trunc($aHlg + 0.5)
+
+// Set Interrupted Decoupling
+
+aXlgref = aX90
+pwXlgref = 2.0*pwX90
+if (srate > 500) then
+   $tHlg = 1.0e6/srate
+   tHlg = 0.0125*trunc($tHlg/0.0125 + 0.5)
+endif
+
+// Set RFDR
+
+aXrfdr = aX90
+pwXrfdr = 2.0*pwX90
+if (qXrfdr < 1.0) then qXrfdr = 1 endif
+
+

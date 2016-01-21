@@ -1,0 +1,47 @@
+"macro spShow"
+// spShow
+
+if (spLogFile='') then
+  spLogFile=systemdir+'/tmp/spLog'
+endif
+write('file',spLogFile,'Current stage: %s',spStage)
+write('file',spLogFile,'Iter: %d  MaxIter: %d',spIter,spMaxIter)
+write('file',spLogFile,'Elapsed time: %4.1f minutes',(spTime[3] - spTime[1]) / 60)
+$i = 0
+$label=''
+$var=''
+while ($i < spDim) do
+  $i = $i + 1
+  substr(spParNames,$i):$var
+  if (spTolExpIndex = $i) then
+    $label= ' ('+$var+')'
+  endif
+  write('fileline',spLogFile,'       %s ',$var)
+endwhile
+write('file',spLogFile,'     Value')
+
+$i = 0
+$index = ''
+if (spDim = 1) then
+  while ($i < spIter) do
+    $i = $i + 1
+    write('file',spLogFile,'%2d   %6d    %g',$i,spVec1[$i],spYval[$i])
+  endwhile
+else
+while ($i < spDim+1) do
+  $i = $i + 1
+  format($i,0,0):$index
+  $vec = 'spVec'+$index
+  $j = 0
+  write('fileline',spLogFile,'%2d   ',$i)
+  while ($j < spDim) do
+    $j = $j + 1
+    $val = {$vec}[$j]
+    write('fileline',spLogFile,'%6d    ',$val)
+  endwhile
+  write('file',spLogFile,'%g',spYval[$i])
+endwhile
+write('file',spLogFile,'Best: %d  Worst: %d Next Worst: %d',spLo,spHi,spNextHi)
+write('file',spLogFile,'Exp. Tol%s: %g  Target Tol: %g',$label,spTolExp,spTol)
+endif
+write('file',spLogFile,'======================================\n')

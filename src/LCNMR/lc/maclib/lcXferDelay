@@ -1,0 +1,167 @@
+"macro lcXferDelay"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcXferDelay"
+
+" Reconcile all LC transfer times "
+// Examples: lcXferDelay('set', 'vol', 'uv', lcXferDelayType, $VALUE)
+//           lcXferDelay('set', 'vol', 'uv', lcXferDelayType, '$VALUE')
+
+if ($# = 0) then
+  write('error','lcXferDelay called with no arguments')
+endif
+
+if ($# = 1) then
+  if (typeof('$1')) then
+    " Passed value of lcexp "
+    if ($1 = 'analyte') then
+      lcXferDelayType = 1
+    elseif ($1 = 'enterA') then
+      lcXferDelayType = 2
+    else
+      lcXferDelayType = 0
+    endif
+    return
+  endif
+endif
+
+$func = 'get'
+// 'get' Return the value
+// 'set' Set the value
+// 'label' Get the label
+if ($# >= 1) then
+  $func = $1
+endif
+//$func?
+
+$what = 'time'
+// 'time' Delay in seconds
+// 'vol'  Volume in ml
+if ($# >= 2) then
+  $what = $2
+endif
+//$what?
+
+$chan = 1
+if ($# >= 3) then
+  if ($3 = 'other1') then
+    $chan = 1
+  elseif ($3 = 'other2') then
+    $chan = 2
+  elseif ($3 = 'other3') then
+    $chan = 3
+  elseif ($3 = 'uv') then
+    $chan = 4
+  elseif ($3 = 'ms') then
+    $chan = 5
+  elseif ($3 = 'pump' or $3 = 'loop') then
+    $chan = 6
+  elseif ($3 = 'ref') then
+    $chan = lcXferRefChannel
+  else
+    strstr($3, 'trace'):$i
+    if ($i) then
+      $tn = ''
+      substr($3, 6, 1):$tn
+      $itn = 0
+      format($tn, 0, 0):$itn
+      $tr = lcTrace[$itn]
+      strstr($tr,':other:adc1'):$i1
+      strstr($tr,':other:adc2'):$i2
+      strstr($tr,':other:adc3'):$i3
+      strstr($tr,':uv'):$i4
+      strstr($tr,':ms'):$i5
+      if ($i1) then
+        $chan = 1
+      elseif ($i2) then
+        $chan = 2
+      elseif ($i3) then
+        $chan = 3
+      elseif ($i4) then
+        $chan = 4
+      elseif ($i5) then
+        $chan = 5
+      endif
+    endif
+  endif
+endif
+
+// If we're just getting the label, we can return it now
+if ($func = 'label') then
+  lcDelayLabel($chan):$label
+  return ($label)
+endif
+
+$type = lcXferDelayType
+// 0  Stop-flow, etc.
+// 1  Analyte Collection
+// 2  Analyte Elution
+if ($# >= 4) then
+  $type = $4
+endif
+//$type?
+
+$value = 0
+if ($# >= 5) then
+  if (typeof('$5')) then
+    format($5, 'isreal'):$isreal
+    if ($isreal) then
+      format($5, 0, 6):$value
+    else
+      $value = 0
+    endif
+  else
+    $value = $5
+  endif
+endif
+//$value?
+
+// Calculate index; make sure lcXferDelay array is big enough
+if ($chan > 0) then
+  $idx = ($chan - 1) * 3 + $type + 1
+  if (size('lcXferDelay') < $idx) then
+    $i = size('lcXferDelay') + 1
+    while ($i <= $idx) do
+      lcXferDelay[$i] = 0
+      $i = $i + 1
+    endwhile
+  endif
+  //$idx?
+endif
+
+format(lcFlowRate,0,6):$flow    // lcFlowRate is a string (ml/min)
+
+if ($func = 'set') then
+  if ($chan > 0) then
+    if ($what = 'time') then
+      if ($flow > 0) then
+        $value = $flow * $value / 60  // Time to volume conversion
+      else
+        $value = 0
+      endif
+    endif
+    lcXferDelay[$idx] = $value
+    if ($chan = 6 and $type = 1) then
+      // Setting the pump-to-loop value -- update lcColumnDeadVolume
+      lcXferDelay('get', 'vol', 'loop', 1):lcColumnDeadVolume
+    endif
+  elseif ($chan = 0 and $what = 'time') then
+    lcXferRefTime = $value
+  endif
+  lcFlowCal('save')     // Save calibrations in global location
+
+elseif ($func = 'get') then
+  if ($chan > 0) then
+    $value = lcXferDelay[$idx]
+  else
+    $value = lcXferRefTime * $flow / 60
+  endif
+  if ($what = 'time') then
+    if ($flow > 0) then
+      $value = 60 * $value / $flow  // Volume to time conversion
+    else
+      $value = 0
+    endif
+  endif
+endif
+
+return ($value)

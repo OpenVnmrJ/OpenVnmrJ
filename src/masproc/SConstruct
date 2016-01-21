@@ -1,0 +1,97 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+procTarget = 'Masproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'errLogLib.h',
+                 'eventHandler.h',
+                 'ipcMsgQLib.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'shrMLib.h',
+                 'hhashLib.h']
+
+vnmrPath = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'acquisition.h',
+                'errorcodes.h']
+
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+expProcPath     = os.path.join(cwd,os.pardir,'expproc')
+expProcHdrList = [ 'parser.h',
+                   'hostMsgChannels.h' ]
+expProcFileList = ['excepthandler.c',
+                   'parser.c',
+                   'daemon.c']
+
+vwacqPath     = os.path.join(cwd,os.pardir,'vwacq')
+vwacqHdrList = ['acqcmds.h']
+
+nvacqPath     = os.path.join(cwd,os.pardir,'nvacq')
+nvacqFileList = ['masSpeed.c']
+
+roboProcPath     = os.path.join(cwd,os.pardir,'roboproc')
+roboProcHdrList = ['termhandler.h',
+                   'iofuncs.h' ]
+roboProcFileList = ['iofuncs.c',
+                    'termhandler.c']
+
+
+masProcFileList = ['masproc.c',
+                   'mascmds.c',
+                   'masSpeedWrap.c',
+                   'masfuncs.c']
+
+
+# build environment
+env = Environment(CCFLAGS    = '-O2 -m32  -DMASPROC -Wall',
+                           CPPDEFINES = ['LINUX','DEBUG'],
+                           LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                           CPPPATH    = [cwd])
+
+                                         # expProcPath,
+                                         # procProcPath,
+                                         # vnmrPath,
+                                         # ncommPath,
+                                         # os.path.join(cwd, os.pardir, 'vwacq')])
+
+# actual builds
+envProg = env.Program(target  = procTarget,
+                                 source  = [expProcFileList,
+                                            nvacqFileList,
+                                            roboProcFileList,
+                                            masProcFileList],
+                                 LIBPATH = [cwd,
+                                            ncommPath],
+                                 LIBS    = ['acqcomm'])
+
+buildMethods.makeSymLinks(env, procTarget, cwd, nvacqPath, nvacqFileList)
+buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(env, procTarget, cwd, roboProcPath, roboProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, roboProcPath, roboProcFileList)
+buildMethods.makeSymLinks(env, procTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, vwacqPath, vwacqHdrList)
+
+# define with absolute path where built files will be copied
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))

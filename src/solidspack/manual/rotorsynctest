@@ -1,0 +1,98 @@
+Protocol: Rotorsynctest  Sequence: rotorsynctest.c  Apptype: solidseq1d
+
+Description: 
+
+Test the rotorsync and xgate commands with a scope. This sequence
+places xgate(1.0) before the spare-one line trigger and applies a
+pulse 4.0 us later. A second pulse follows "periods" rotorperiods
+after the first. Athird pulse folows after a 10.0 us delay so as
+to unambiguously identify the second pulse. 
+
+Setup: 
+
+Install the rotorsync hardware on VNMRS. A multipin-to-BNC cable
+is placed between Tachometer on the Pneumatics Router and the 
+Tach Out BNC Tee on the MAS Speed Controller. A second BNC cable
+is placed between the Tach Out BNC Tee and the Ext Trig port  
+On the Console Interface Panel. 
+
+This test requires a Solids setup with a working probe and 
+MAS Speed Controller. The "Tach Out BNC" can also be replaced by 
+a square-wave signal generator if a Solids probe is not available. 
+
+For this test add a second Tee to the Tach Out BNC Tee (3 cables 
+total on this port) and place a BNC cable between this Tee and 
+channel 1 of a scope. Set 1 mega-ohm resistance for this channel
+(not 50 ohms!). 
+
+Place a second BNC cable between the "Available 1" output of 
+CH1 on Console Interface Panel and channel 4 or the 
+external trigger of the scope. Be sure the scope trigger is 
+set to this channel. 
+
+Remove all cables from the attenuator board outputs 297, 298
+299 and 290. 
+
+Place a third BNC cable between the intended observe channel 
+on the attenuator board (based on probeConnect) and channel 
+2 of the scope. The observe channel number is in the upper 
+right of the obs box on the Channels page of the Acquire tab. 
+1 = 297 2 = 298 3 = 299 and 4 = 290. 
+
+Select the Settancpx protocol (type Settancpx on the commandline)
+and then select the Rotorsynctest protocol (type Rotorsynctest 
+on the commandline). 
+
+Set sw = 5e6, nt = 1e6, d1=0.02s, srate = 10000
+and bs = 'n'. Set the spin rate to 10 kHz and start the rotor
+spinning with spin control. Then start the acquisition.  
+
+If the acquisition starts and runs continuously xgate(1.0) is 
+functioning properly. If the acquisition does not start xgate(1.0)
+is defective or the cables to the MAS controller are incorrect. 
+Check the cable between the Console Interface Panel (Ext Trig) 
+and the Tach Out BNC. 
+
+Observe channel 2. The first pulse should be triggering 2 or 4 us 
+after the beginning of the trace, depending on the polarity of 
+the scope trigger. A second pulse pair should follow after a 
+delay of 1.0/srate. If the MAS speed is stable there should be an 
+approximate +/- 500 ns (or less) jitter in the second pulse. If there
+is no pulse or if the time is not 1/srate, the rotorsync 
+command is not working. Check the cable between the Pneumatics
+Router and the MAS Speed Controller.
+
+Set periods = 2.0.  The delay to the second pulse should be
+2.0/srate. In general if periods = N the delay should be 
+N/srate. 
+
+Observe channel 1. One should see a stable square wave 
+with a positive edge triggered at the beginning of the 
+trace. If the MAS speed is stable the second rising edge 
+should have a jitter of +/- 500 ns or less, similar to the
+second pulse. If the pulse jitter of the previous step
+does not match the jitter of the trace, there is a problem
+with the rotorsync command. 
+
+When finished remove all of the scope cables and the second 
+Tee on the Tach Output. Leave the cables to the Pneumatics
+Router and the Console Interface Panel.
+
+Parameter Groups:
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used 
+              as a preparation pulse. Also used to store the obs 
+              calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+parameter: 
+
+periods - The number of rotorperiods between the first and 
+          second pulses of this test. 
+
+
+

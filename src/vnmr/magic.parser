@@ -1,0 +1,240 @@
+
+#define YYFLAG    -1000
+#define YYERROR   goto yyerrlab
+#define YYACCEPT  return(0)
+#define YYABORT   return(1)
+
+/*******************************************************************************
+*                                                                              *
+*       yyparse/0                                                              *
+*                                                                              *
+*       A restartable version of the yacc parser engine.  A bit slower than    *
+*       the regular engine, but keeps state in static area so parsing may      *
+*       be resumed if suspended.                                               *
+*                                                                              *
+*       yyparse returns...                                                     *
+*                                                                              *
+*           0    If "accepting"                                                *
+*           1    If not "accepting"                                            *
+*           2    If suspending                                                 *
+*                                                                              *
+*******************************************************************************/
+/*   The suspend feature causes problems with acquisition messages.  For example, if
+ *   a close parenthesis is omitted from the command line, an acquisition message
+ *   can be added as an argument to the command.  Also, if someone types
+ *   "while (condition) do stuff" and forgets the endwhile.  All future comamnd
+ *   will be added to the body of the while, with no execution until an endwhile
+ *   is entered.  For some, this might be a feature, but for most this is a bug.
+ *   Note that for macros, multiline commands are okay.  Macros must contain
+ *   complete commands.
+ *   The suspend feature of the parser has been left in the code.  It can be
+ *   reactivated with the SUSP ifdef.
+ */
+
+#ifdef YYDEBUG
+int             yydebug = 0;		/* set to 1 for debugging             */
+#endif 
+YYSTYPE         yyv[YYMAXDEPTH];	/* where the values are stored        */
+int             yychar  = -1;		/* current input token number         */
+int             yynerrs = 0;		/* number of errors                   */
+int             yyEntry = 0;		/* where suspended (0, 1 or 2)        */
+short           yyerrflag = 0;		/* error recovery flag                */
+short           yys[YYMAXDEPTH];	/* state stack                        */
+
+#ifdef SUSP
+static short    yySVstate,
+	       *yySVps,	
+		yySVn;
+static short   *yySVxi;
+static YYSTYPE *yySVpvt;
+static YYSTYPE *yySVpv;
+#endif 
+
+int yyparse()
+{  short             yyj, yym;
+   register short    yystate,
+	            *yyps,
+		     yyn;
+   register short   *yyxi;
+   register YYSTYPE *yypvt;
+   register YYSTYPE *yypv;
+
+#ifdef SUSP
+   if (yyEntry == 0)			/* suspended?                         */
+   {
+#endif 
+      yychar    = -1;
+      yynerrs   = 0;
+      yyerrflag = 0;
+      yyps      = &yys[-1];
+      yypv      = &yyv[-1];
+      yystate   = 0;			/* no:  initialize and go             */
+#ifdef SUSP
+   }
+   else
+   {  yystate = yySVstate;		/* yes: restore state info and resume */
+      yyps    = yySVps;
+      yyn     = yySVn;
+      yyxi    = yySVxi;
+      yypvt   = yySVpvt;
+      yypv    = yySVpv;
+      if (yyEntry == 1)
+      {  yyEntry = 0;
+         goto yySusp1;
+      }
+      else
+      {  yyEntry = 0;
+         goto yySusp2;
+      }
+   }
+#endif 
+
+yystack:				/* push state and value */
+
+#ifdef YYDEBUG
+   if (yydebug)
+      printf("state %d, char 0%o\n",yystate,yychar);
+#endif 
+   if (&yys[YYMAXDEPTH] < ++yyps)
+   {  yyerror( "yacc stack overflow" );
+      return(1);
+   }
+   *yyps = yystate;
+   yypv += 1;
+   *yypv = yyval;
+
+yynewstate:
+
+   yyn = yypact[yystate];
+   if (yyn <= YYFLAG )
+      goto yydefault;			/* simple state */
+   if (yychar < 0)
+yySusp1:
+         if ((yychar=yylex()) < 0)	/* go to lexer... */
+         {
+#ifdef SUSP
+            yyEntry   = 1;		/* suspended! note where and return */
+	    yySVstate = yystate;
+	    yySVps    = yyps;
+	    yySVn     = yyn;
+	    yySVxi    = yyxi;
+	    yySVpvt   = yypvt;
+	    yySVpv    = yypv;
+	    return(2);
+#else 
+            yytext[0] = '\n';
+            yytext[1] = '\0';
+            yyerror( "\n" );
+	    return(1);
+#endif 
+         }
+   if ((yyn += yychar)<0 || YYLAST <= yyn)
+      goto yydefault;
+   if (yychk[yyn=yyact[yyn]] == yychar)	/* valid shift */
+   {  yychar  = -1;
+      yyval   = yylval;
+      yystate = yyn;
+      if (0 < yyerrflag)
+	--yyerrflag;
+      goto yystack;
+   }
+
+yydefault:				/* default state action */
+
+   if ((yyn=yydef[yystate]) == -2)
+   {  if (yychar<0)
+yySusp2:
+         if ((yychar=yylex()) < 0)	/* go to lexer... */
+         {
+#ifdef SUSP
+            yyEntry   = 2;		/* suspended! note where and return */
+	    yySVstate = yystate;
+	    yySVps    = yyps;
+	    yySVn     = yyn;
+	    yySVxi    = yyxi;
+	    yySVpvt   = yypvt;
+	    yySVpv    = yypv;
+	    return(2);
+#else 
+            yytext[0] = '\n';
+            yytext[1] = '\0';
+            yyerror( "\n" );
+	    return(1);
+#endif 
+         }
+
+		/* look through exception table */
+
+      for (yyxi=yyexca; (*yyxi!= (-1)) || (yyxi[1]!=yystate) ; yyxi += 2 )
+	 ;
+      while (0 <= *(yyxi+=2))
+      {  if (*yyxi == yychar )
+	    break;
+      }
+      if ((yyn = yyxi[1]) < 0 )
+	 return(0);			/* accept */
+   }
+
+   if (yyn == 0 )			/* error */
+   {  switch (yyerrflag)		/* ... attempt to resume parsing */
+      { case 0:   yyerror("syntax error");/* brand new error */
+	yyerrlab: yynerrs += 1;
+	case 1:
+	case 2:   yyerrflag = 3;	/* incompletely recovered error ... try again */
+
+			/* find a state where "error" is a legal shift action */
+
+		  while (yys <= yyps)
+		  {  yyn = yypact[*yyps] + YYERRCODE;
+		     if (0 <= yyn && yyn < YYLAST && yychk[yyact[yyn]] == YYERRCODE)
+		     {  yystate = yyact[yyn];  /* simulate a shift of "error" */
+			goto yystack;
+		     }
+		     yyn = yypact[*yyps]; /* the current yyps has no shift onn "error", pop stack */
+
+#ifdef YYDEBUG
+		     if (yydebug )
+			printf("error recovery pops state %d, uncovers %d\n",*yyps,yyps[-1]);
+#endif 
+		     yyps -= 1;
+		     yypv -= 1;
+		  }
+
+			
+
+        yyabort:  return(1);			/* no pushed state with 'error' ... abort */
+	case 3:   /* no shift yet; clobber input char */
+
+#ifdef YYDEBUG
+		  if (yydebug )
+		     printf("error recovery discards char %d\n",yychar);
+#endif 
+		  if (yychar == 0 )
+		     goto yyabort;		/* don't discard EOF, quit */
+		  yychar = -1;
+		  goto yynewstate;		/* try again in the same state */
+
+      }
+   }
+
+	/* reduction by production yyn */
+
+#ifdef YYDEBUG
+   if (yydebug )
+      printf("reduce %d\n",yyn);
+#endif 
+   yyps -= yyr2[yyn];
+   yypvt = yypv;
+   yypv -= yyr2[yyn];
+   yyval = yypv[1];
+   yym   = yyn;
+   yyn   = yyr1[yyn];			/* consult goto table for next state */
+   yyj   = yypgo[yyn] + *yyps + 1;
+   if (YYLAST<=yyj || yychk[yystate=yyact[yyj]] != -yyn )
+      yystate = yyact[yypgo[yyn]];
+   switch (yym)				/* ready... ACTION! */
+   {
+			$A
+   }
+   goto yystack;  /* stack new state and value */
+}

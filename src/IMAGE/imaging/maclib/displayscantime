@@ -1,0 +1,47 @@
+"macro displayscantime"
+
+/******************************************************************
+*  displayscantime(time)
+*
+*  converts time in seconds to a string of the format
+*
+*  hours:minutes:seconds
+*
+*  assigns this string to the parameter scantime.  
+*
+*
+*  ARR   Version 1.0   12/04/07 
+*******************************************************************/
+
+"-- Check existence of scantime parameter -----------------"
+create('scantime','string','current','')
+
+$time = $1
+$hours = trunc($time/3600)
+$time = $time - $hours*3600
+$minutes = trunc($time/60)
+$seconds = $time - $minutes*60
+
+$hstr = ''
+$mstr = ''
+$sstr = ''
+format($hours,0,0):$hstr
+format($minutes,0,0):$mstr
+if ($hours OR $minutes) then $decimal = 0 else $decimal = 1 endif
+format($seconds,0,$decimal):$sstr
+
+if ($hours) then
+  $scantime = $hstr+'h:'+$mstr+'m:'+$sstr+'s'
+elseif ($minutes) then
+  $scantime = $mstr+'m:'+$sstr+'s'
+else
+  $scantime = $sstr+'s'
+endif
+
+scantime = $scantime
+if ((activestudy <> 'null') AND (actionid <> 'null')) then
+  xmgetatts(actionid,'status'):$st
+  if ($st='Active') then
+    xmsetatts(actionid, 'time',scantime)
+  endif
+endif

@@ -1,0 +1,98 @@
+"macro AC12F"
+"AC12F - perform 19F Calibration on HF probe"
+"Automatic Calibration"
+"Performs the following basic instrument calibrations "
+"19F PW90 calibration on the 2nd channel for HF probes "
+"                         including compression factor"
+"Start with au or gmapshim_au"
+"Based on AC10S macro"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the 19F Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then
+        abort
+     endif
+   endif
+endif
+
+setup('F19','c6d6')
+Autosetgpar
+dn='F19'                  "Force decoupler back to F19"
+
+$banner='Calibrating '
+$banner=$banner + dn
+$banner=$banner+ ' decoupling\\      for H1 observe'
+$banner=$banner+'\\It will take about 4-6 minutes'
+banner($banner)
+
+" Put default values into probe file "
+addparams('pwxlvl','00',dn)
+addparams('pwx','00',dn)
+addparams('pwxlvl_cf','1',dn)
+
+if pw90 = 0 then pw90 = 18 endif     "19F pw90 spec.for 400 MHz ASW ATB"
+pw=pw90
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('F19 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_F19cal_' + $date
+archivedir=userdir+'/data'
+$datadir = userdir+'/data/'+sample
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+
+macro=$0
+exists('pw90max','parameter'):$e
+if ($e < 0.5) then
+   create('pw90max','pulse')
+endif
+
+getparam('pwx',dn):$pw90         "Take the 2nd channel value if available"
+if $pw90>0 then
+   pw90max=$pw90
+   getparam('pwxlvl',dn):$tpwr    "Set also the 2nd channel power if available"
+   if $tpwr>0 then
+      tpwr=$tpwr
+   endif
+else
+   getparam('pw90',dn):$pw90     "Otherwise use data from the observe channel"
+   if $pw90>0 then pw90max=$pw90
+   else pw90max=18               "If nothing is available use probe specs"
+   endif
+endif
+
+setref
+wp = sw
+cr = rfp - rfl + sw/2  "sets cr in the center of the spectrum "
+$ctrppm = cr/reffrq
+
+$move = (-63 - $ctrppm)*reffrq
+  " change in tof required to put transmitter about -63 ppm "
+tof = tof + $move
+sw = 2000  setref
+
+rof2 = 100  "let possible background signal more or less decay"
+	   " doesn't matter in a 1-line spectrum "
+nt = 1  at = 2  ss = 1  gain = 30
+gf = 1  lb = 'n' fn = 2*np  lp = 0  ai
+
+if tpwr < 40 then tpwr = 51 endif
+
+if (pw90 < 5) then pw = 10 else pw(90) endif
+
+dn='F19' dof=tof sfrq=dfrq tn='none' seqfil='d2pul'
+
+macro=$0 wnt = '' wexp = 'AC12p'
+write('line3','Enter \'au\' to start.')

@@ -1,0 +1,63 @@
+"macro Aumakegmap"
+"********************************************************"
+"Aumakegmap -	Automatic lk gradient mapping            "
+"		The mapname is stored in the probefile   "
+"********************************************************"
+
+is_postvj22b:$vj22c
+$gradtype=gradtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then $e=$vj22c endif
+if ($e) then $gradtype=tmpgradtype endif
+dousermacro('calibrate')
+
+if ($# < 1) then 
+ if ($gradtype = 'nnh') then $1='hs' else $1 = 'lk' endif
+endif
+
+getProbePath(probe,'alert'):$e,$ppath,$rw
+if ($rw=0) then return endif
+
+//updateprobe(probe)
+cleanexp
+if ($1 = 'hs') then 
+  substr($gradtype,3,1):$gtype
+  if $gtype <> 'h' then
+    if ($vj22c) then
+      write('error','tmpgradtype set to nnh')
+      exists('tmpgradtype','parameter'):$e
+      if not ($e) then
+        create('tmpgradtype','string')
+      endif
+      tmpgradtype='nnh'
+    else
+      write('error','gradtype set to nnh')
+      gradtype='nnh'
+    endif
+  endif
+endif
+
+if ($1 <> 'H1') then
+
+   PROTON('D2O')
+   explist=''
+   Autocalpar
+   wexp='Augmap(0,\''+$1+'\')' wnt='' werr=''
+   pw=pw90
+   macro=$0 seqfil='s2pul' spin=0 at=1 lb=1 
+   alock='n' wshim='n'
+   if (dsp <> 'n') then oversamp=1 endif
+   nt=1 clear(2) d1=1 wbs='' gain='n' ss=1 
+   if (Console = 'mercury') then gain=0 else gain=20 endif
+
+endif
+if (dsp <> 'n') then oversamp=1 endif
+if ($1 = 'H1') then
+  alock='n' wshim='n'
+  Augmap(0,'H1')
+  return
+endif
+
+intmod='off' pltmod='off'
+dg
+au('wait')

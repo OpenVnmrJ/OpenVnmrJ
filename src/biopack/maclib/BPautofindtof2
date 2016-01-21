@@ -1,0 +1,19 @@
+"macro BPautofindtof2"
+"BPautofindtof2- finds best satfrq"
+$bestone=1
+wft av
+crl rfl=sw/2 rfp=0 reffrq=sfrq sp=-200 wp=400
+$counter=1
+select(1) vsadj(180) $best=180
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+satfrq=satfrq[$bestone]
+select($bestone) vsadj(10) dssh
+ph
+tof=satfrq satpwr=6
+lb=3 nt=4 getparam('BPgain','H1'):gain f vp=0 full
+wexp='BPautofindtof3' wnt='' au

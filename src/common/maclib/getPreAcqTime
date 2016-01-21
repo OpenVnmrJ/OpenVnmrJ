@@ -1,0 +1,35 @@
+"macro getPreAcqTime"
+$changetime=0
+if (customflag='y') then
+   if (wqinit='acq') then
+	$changetime=10
+	if (SQalock<>'no') then
+	    $changetime=$changetime+15
+	endif
+	if (SQwshim<>'no') then
+	    $changetime=$changetime+35
+	endif
+   else
+	$changetime=180
+	getadminfo('samplechangetime'):$changetime
+	$changetime=$changetime+SQpad
+   endif
+else
+   if (wqinit='acq') then
+        $changetime=10
+        if (alock<>'n') then
+            $changetime=$changetime+15
+        endif
+        if (wshim<>'n') then
+            $changetime=$changetime+35
+        endif
+   else
+
+        $changetime=180
+        getadminfo('samplechangetime'):$changetime
+	$changetime=$changetime+pad
+   endif
+endif
+
+formattime($changetime):$sctime
+return($changetime,$sctime)

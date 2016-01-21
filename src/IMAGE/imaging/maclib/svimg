@@ -1,0 +1,728 @@
+"macro svimg"
+" @(#)svimg	8.2 2/4/94   Spectroscopy Imaging Systems"
+"*********************************************************************"
+"			      svimg			              "	
+
+"	Make ImageBrowser fdf files for new(oblique) imaging          "
+"	application sequences.                                        "
+
+"	Usage:	svimg('directory_name'[,'outfmt'])		      "
+
+"*********************************************************************"
+
+
+
+
+"*BEGIN: Constants****************************************************"
+"	Program constants and global definitions                      "
+"*********************************************************************"
+
+$prog='svimg: '			"*Program ID*"
+$planes=curexp+'/planes'		"*planes directory of curexp*"
+$phfile='image'                         "*generic phasefile name*"
+$hdfile='header'                        "*generic header name*"
+$ext='.dat'				"*extension added to directory*"
+$outfmt='f'				"*output data type 'f'=float | "
+					"* 'm'= magnetom 12 bit*"
+
+length(userdir):$length
+substr(userdir,1,$length-8):$userhome	"*Users home directory*"
+
+ln(10):$ln10				"*log10 to loge conversion*"
+$us_s=1e-6				"*us to seconds conversion*"
+$MHz_Hz=1e6				"*Mhz to Hz conversion*"
+$BIG=1e6				"*Big number*"
+
+"*END: Constants******************************************************"
+
+
+
+
+
+"*BEGIN: Input Check***************************************************"
+
+if ($# < 0.5) or ($# > 2.5)
+then
+	$mess='Use svimg("directory_name"[,"d"/"m"])'
+	write('error','%s',$prog+$mess)
+	abort
+endif
+
+if ($# > 1.5) then
+	if ($2 = 'm') or ($2 = 'f') or ($2 = 'b') then
+		$outfmt = $2
+	else
+		$mess='Use svimg("directory_name"[,"f"/"m"/"b"])'
+		write('error','%s',$prog+$mess)
+		abort
+	endif
+endif
+
+
+"*END: Input Check*****************************************************"
+
+
+
+
+"*BEGIN: Check Target Directory***************************************"
+"	Does the target directory exist. If yes check with the user   "
+"	about removing it else create it                              "
+"*********************************************************************"
+$directory=$1+$ext		"*Target Directory*"
+
+
+exists($directory,'file'):$exists
+if ($exists > 0.5)
+then
+	$mess='A directory: '+$1+$ext+' already exists'
+	write('error','%s',$prog+$mess)
+	
+	$answer='n'
+	input('Overwrite it ?  (y/n) : > '):$answer 
+
+	if ($answer='y')
+	then
+		rm('-r',$directory):$x
+		mkdir($directory)
+	else
+		abort
+	endif
+else
+	mkdir($directory)
+endif
+
+"*END: Check Target Directory*****************************************"
+
+
+
+"*BEGIN: Establish Arrayed Parameters*********************************"
+"	Parse the array parameter (string value) into tokens          "
+"	which are the names of the arrayed parameters                 "
+"*********************************************************************"
+if (array <> '')
+then
+	$pass0=array
+	length($pass0):$length
+
+
+	"*PASS 1: Remove ( ) and , from array**" 
+	$pass1='' $char='' $k=1
+	repeat
+		substr($pass0,$k,1):$char
+		if ($char='(') or ($char=',') or ($char=')') 
+		then $char=' ' endif
+     		$pass1=$pass1+$char
+	$k=$k+1
+	until ($k > $length)
+
+
+	"*PASS 2: Break array into tokens******"
+	$k=1
+	repeat
+     		$token[$k]=''
+	$k=$k+1
+	until ($k > $length)
+
+
+	$k=1	 $t=1	 $newchar=''	 $oldchar=''
+	repeat
+		substr($pass1,$k,1):$newchar
+	
+		if ($newchar=' ') 
+        	then
+            		if ($k > 1)
+            		then
+               			if ($oldchar <> $newchar) then $t=$t+1 endif
+            		endif
+        	else
+            		$token[$t]=$token[$t]+$newchar
+        	endif
+
+        	$oldchar=$newchar
+	$k=$k+1
+	until ($k > $length)
+
+	$narpar=$t
+else
+	$token[1]=''
+	$narpar=1
+endif
+
+"*END: Establish Arrayed Parameters***********************************"
+
+
+
+"*BEGIN: Establish Image Orientation**********************************"
+"	Images aquired with the conventional applications are         "
+"	assumed to have a fixed orientation encoded in the orient 
+"       parameter.				                      "
+
+"	This encoding is converted to the values of the nine          "
+"	direction cosines which deifne the orientation of the         "
+"	coordinate frame relative relative to the magnet frame.       "
+"*********************************************************************"
+
+"*Determine DC values from Euler angles*************"
+"* assuming default head supine position ****"
+
+atan(1e12):$d_r
+$d_r=$d_r/90.0
+
+cos($d_r*psi):$cospsi
+sin($d_r*psi):$sinpsi
+
+cos($d_r*phi):$cosphi
+sin($d_r*phi):$sinphi
+
+cos($d_r*theta):$costheta
+sin($d_r*theta):$sintheta
+
+$dc[1]=($sinphi*$cospsi)-($cosphi*$costheta*$sinpsi)
+$dc[2]=(-1.0*$sinphi*$sinpsi)-($cosphi*$costheta*$cospsi)
+$dc[3]=($sintheta*$cosphi)
+
+$dc[4]=(-1.0*$cosphi*$cospsi)-($sinphi*$costheta*$sinpsi)
+$dc[5]=($cosphi*$sinpsi)-($sinphi*$costheta*$cospsi)
+$dc[6]=($sintheta*$sinphi)
+
+$dc[7]=($sinpsi*$sintheta)
+$dc[8]=($cospsi*$sintheta)
+$dc[9]=($costheta)
+
+
+"*END: Establish Image Orientation************************************"
+
+
+"*BEGIN: Define DDL Formats For Header File****************************"
+"	The code here forms a structure which defines the format       "
+"	strings used to write meta data into the ASCII file headers    "
+"	used with the new data format.                                 "
+"**********************************************************************"
+
+
+$ddl[1]='float  rank = %d;'
+$ddl[2]='char  *spatial_rank = "%s";'
+$ddl[3]='char  *storage = "%s";'
+$ddl[4]='float  bits = %d;'
+$ddl[5]='char  *type = "%s";'
+$ddl[6]='float  matrix[] = {%d, %d};'
+$ddl[7]='char  *abscissa[] = {"%s", "%s"};'
+$ddl[8]='char  *ordinate[] = { "%s" };'
+$ddl[9]='float  span[] = {%f, %f};'
+$ddl[10]='float  origin[] = {%f, %f};'
+$ddl[11]='char  *nucleus[] = {"%s", "%s"};'
+$ddl[12]='float  nucfreq[] = {%f, %f};'
+$ddl[13]='float  location[] = {%s, %s, %s};'
+$ddl[14]='float  roi[] = {%s, %s, %s};'
+$ddl[15]='float  orientation[] = {%f, %f, %f, %f, %f, %f, %f, %f, %f};'
+
+$ddl[16]='float  %s = %f;'
+$ddl[17]='char  *%s = "%s";'
+
+"*END: Define DDL Formats For Header File******************************"
+
+
+"*BEGIN: Assemble Common Information For All Headers******************"
+"	The phase files share a large amount of common information    "  
+"       this is assembled here from existing program variables        "
+"	NOTE: Vnmr phasefiles are 4 bytes per data point	      "	
+"*********************************************************************"
+$rank=nD
+$spatial_rank='2dfov'
+			
+$type='absval'
+$abs[1]='cm' 		$abs[2]='cm'
+$ord='intensity'
+
+"****************************************"
+" set data format			 "
+"****************************************"
+if ($outfmt = 'f') then
+	$storage='float'
+	$bits=32
+else if ($outfmt = 'b') then
+	$storage='char'
+	$bits=8
+else
+	$storage='integer'
+	$bits=16
+endif
+endif 
+	
+
+"****************************************"
+"  The roi size is written in string     "
+"  format so NaN can be used             "
+"****************************************"
+$roi[1]='' $roi[2]='' $roi[3]=''
+format(lpe,10,6):$roi[1]
+format(lro,10,6):$roi[2]
+$ssthk=thk/10
+format($ssthk,10,6):$roi[3]
+
+
+"****************************************"
+"  The direction cosine matrix dc is     "
+"  reordered so as to follow the axis    "
+"  definitions in the Vnmr phasefile:    "
+"  traces or F1 axis first               "
+"  modified: trace information not used. "
+"****************************************"
+$o1=$dc[2]	$o2=$dc[1]	$o3=$dc[3]
+$o4=$dc[5]	$o5=$dc[4]	$o6=$dc[6]
+$o7=$dc[8]	$o8=$dc[7]      $o9=$dc[9]
+
+"*END: Assemble Common Information For All Headers******************"
+
+
+
+
+"*BEGIN: Establish Count Values***************************************"
+"	Establish maximum count limits for the number of echoes,      "
+"	slices,views etc.                                             "
+"*********************************************************************"
+
+if (seqcon='ncsnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=nf				"*Number of slices*"
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+else if (seqcon='nssnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+else if (seqcon='cssnn')
+then
+	$ne=nf				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+else if (seqcon='nscnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+
+	write('line3','%s','Converting Compressed Data')
+
+	exists('flash_converted','parameter'):$exists
+	if ($exists < 0.5) then flashc endif
+
+	$nv1=ni
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+else
+	write('error','Abort: seqcon type not found.')
+	abort
+endif
+endif
+endif
+endif
+
+
+"*END: Establish Count Values*******************************************"
+
+
+"*BEGIN: Reconstruction Loops*****************************************"
+"	ONLY IF $infmt='fid'                                       	"
+"	Reconstruct all slices, echoes and arrayed FID data     	"
+"	in the current experiment saving the results in the      	"
+"	$userhome+/<name>.dat      			        	" 
+"*********************************************************************"
+
+"*Local Format Values********************"
+$fmt='Transforming: echo: %3d   slice: %3d   element: %3d   ft: %3d'
+
+
+"*Set Display For Saving Phasefile********"
+math='f'
+f full
+av
+
+
+if (seqcon='ncsnn')
+then "*BEGIN: seqcon=ncsnn********************************************"
+	
+	$i=1				"*Echo counter*"
+	$nft=0				"*FT counter*"
+	$k=1				"*element counter*"
+
+
+	repeat           "*loop over all arrayed elements*************"
+			 "   do arrayed elements in index order       "
+			 "********************************************"
+		
+		$j=1			"*slice counter*"
+		
+		repeat   "*loop over all slices***********************"
+			 "   unscramble slices which were collected   "
+			 "   in odds/evens order. The data to be      "
+			 "   transformed is selected via the cf value "
+			 "********************************************"
+
+			$odds=trunc(($ns+1)/2)
+			$modj=$j-2*trunc($j/2+0.25)
+		
+			if ($modj > 0.5)
+			then  cf=trunc((($j+1)/2)+0.5)
+			else  cf=trunc($j/2+$odds+0.5)
+			endif
+
+
+			"*reconstruct and display result**************"
+			write('line3',$fmt,$i,$j,$k,$nft+1)
+			wft2d($k)
+			image
+			$nft=$nft+1
+		
+			"*save the phasefile**************************"
+			ln($nft):$log
+			$digit=1+trunc($log/$ln10)
+			$datext=''
+			format($nft,$digit,0):$datext
+
+			$l=1 
+			repeat
+				$datext='0'+$datext
+			$l=$l+1
+			until ($l > (4-$digit))
+
+			$ifileph=$directory+'/'+$phfile+'.'+$datext
+			exists($ifileph,'file'):$exists
+
+			if ($exists > 0.5)
+			then 
+			    rm($ifileph):$x
+			    svdat($ifileph,$outfmt)
+			else 
+			    svdat($ifileph,$outfmt)
+			endif
+
+			"*Compute Location********************"
+			format(ppe,10,6):$loc[1]
+			format(pro,10,6):$loc[2]
+			format(pss[$j],10,6):$loc[3]
+
+$ifilehd=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$ifilehd)
+write('file',$ifilehd,'%s','#!/usr/local/fdf/startup')
+write('file',$ifilehd,$ddl[1],$rank)		"*rank*"
+write('file',$ifilehd,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$ifilehd,$ddl[3],$storage)		"*storage*"
+write('file',$ifilehd,$ddl[4],$bits)		"*bits*"
+write('file',$ifilehd,$ddl[5],$type)		"*type*"
+write('file',$ifilehd,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$ifilehd,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$ifilehd,$ddl[8],$ord)		"*ordinate*"
+write('file',$ifilehd,$ddl[9],lpe,lro)	"*span*"
+write('file',$ifilehd,$ddl[10],ppe,pro)		"*origin*"
+write('file',$ifilehd,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$ifilehd,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$ifilehd,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$ifilehd,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$ifilehd,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+
+"*Arrayed Parameters*********************"
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$ifilehd,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$ifilehd,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+		" Glue Hdr and data*********************************"
+		$ofileph=$directory+'/'+$phfile+$datext+'.'+'fdf'
+		write('line3','%s','header='+$ifilehd)
+		write('line3','%s','phase='+$ifileph)
+		write('line3','%s','output='+$ofileph)
+		shell('fdfgluer "'+$ifilehd+'" "'+$ifileph+'" "'+$ofileph+'"'):$x
+		rm($ifilehd):$x
+		rm($ifileph):$x
+		"END: Glue Hdr and data*****************************"
+"end: write file block**************************************************"
+
+
+		
+		$j=$j+1
+		until ($j > $ns) "*end slice loop*********************"
+	
+	$k=$k+1
+	until ($k > $nar) "*end array loop****************************"
+
+	write('line3','%s','Transforms complete '+seqcon+' dataset')
+
+endif"*END: seqcon=ncsnn**********************************************"
+
+
+
+if (seqcon='nssnn') or (seqcon='nscnn')
+then "*BEGIN: seqcon=nssnn/nscnn**************************************"
+	
+	$nft=0			"*ft counter*"
+	$i=1			"*echo counter*"
+	$j=1			"*slice counter*"
+	$k=1			"*element counter*"
+
+	repeat	"*loop slices and elements****************************"
+		"  The slice array and element array are either in    "
+		"  parallel or there is only one slice to consider    "
+		"*****************************************************"
+
+		cf=1
+
+		"*reconstruct and display result**************"
+		write('line3',$fmt,$i,$j,$k,$nft+1)
+		wft2d($k)
+		image
+		$nft=$nft+1
+		
+		"*save the phasefile**************************"
+		ln($nft):$log
+		$digit=1+trunc($log/$ln10)
+		$datext=''
+		format($nft,$digit,0):$datext
+		
+		$l=1 
+		repeat
+			$datext='0'+$datext
+		$l=$l+1
+		until ($l > (4-$digit))
+		
+		$ifileph=$directory+'/'+$phfile+'.'+$datext
+		exists($ifileph,'file'):$exists
+
+		if ($exists > 0.5)
+		then 
+		    rm($ifileph):$x
+		    svdat($ifileph,$outfmt)
+		else 
+		    svdat($ifileph,$outfmt)
+		endif
+		
+			"*Compute Location********************"
+			format(ppe,10,6):$loc[1]
+			format(pro,10,6):$loc[2]
+			format(pss[$j],10,6):$loc[3]
+
+$ifilehd=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$ifilehd)
+write('file',$ifilehd,'%s','#!/usr/local/fdf/startup')
+write('file',$ifilehd,$ddl[1],$rank)		"*rank*"
+write('file',$ifilehd,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$ifilehd,$ddl[3],$storage)		"*storage*"
+write('file',$ifilehd,$ddl[4],$bits)		"*bits*"
+write('file',$ifilehd,$ddl[5],$type)		"*type*"
+write('file',$ifilehd,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$ifilehd,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$ifilehd,$ddl[8],$ord)		"*ordinate*"
+write('file',$ifilehd,$ddl[9],lpe,lro)	"*span*"
+write('file',$ifilehd,$ddl[10],ppe,pro)		"*origin*"
+write('file',$ifilehd,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$ifilehd,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$ifilehd,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$ifilehd,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$ifilehd,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+
+"*Arrayed Parameters********"
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$ifilehd,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$ifilehd,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+		" Glue Hdr and data*********************************"
+		$ofileph=$directory+'/'+$phfile+$datext+'.'+'fdf'
+		write('line3','%s','header='+$ifilehd)
+		write('line3','%s','phase='+$ifileph)
+		write('line3','%s','output='+$ofileph)
+		shell('fdfgluer "'+$ifilehd+'" "'+$ifileph+'" "'+$ofileph+'"'):$x
+		rm($ifilehd):$x
+		rm($ifileph):$x
+		"END: Glue Hdr and data*****************************"
+"end: write file block**************************************************"
+
+
+	if ($ns > 1) then $j=$j+1 endif
+	$k=$k+1
+	until ($k > $nar) "*end slice/element loop********************"
+	
+	write('line3','%s','Transforms complete '+seqcon+' dataset')
+
+endif "*END: seqcon=nssnn/nscnn***************************************"
+
+
+
+
+if (seqcon='cssnn')
+then "*BEGIN: seqcon='cssnn'******************************************"
+
+	$nft=0			"*ft counter*"
+	$j=1			"*slice counter*"
+	$k=1			"*element counter*"
+
+	repeat		"*loop over slices & elements*****************"
+			"    The slice array and element array are    "
+			"    either in parallel or we have single     "
+			"    slice data.                              "
+			"*********************************************"
+		
+		$i=1		"*echo counter*"
+
+		repeat	"*loop over echoes****************************"
+			"    Reverse the transform polarity for even  "
+			"    echoes, so that all images are congruent "
+			"*********************************************"
+
+			cf=$i
+
+			if (($i % 2) = 0)
+			then $type='ptype'
+			else $type='ntype'
+			endif
+	
+
+			"*reconstruct and display result**************"
+			write('line3',$fmt,$i,$j,$k,$nft+1)
+			wft2d($type,$k)
+			image
+			$nft=$nft+1
+	
+
+			"*save the phasefile**************************"
+			ln($nft):$log
+			$digit=1+trunc($log/$ln10)
+			$datext=''
+			format($nft,$digit,0):$datext
+			
+			$l=1 
+			repeat
+				$datext='0'+$datext
+			$l=$l+1
+			until ($l > (4-$digit))
+		
+			$ifileph=$directory+'/'+$phfile+'.'+$datext
+			exists($ifileph,'file'):$exists
+			
+			if ($exists > 0.5)
+			then 
+			     rm($ifileph):$x
+			     svdat($ifileph,$outfmt)
+			else 
+			     svdat($ifileph,$outfmt)
+			endif
+
+		
+			"*Compute Location********************"
+			format(ppe,10,6):$loc[1]
+			format(pro,10,6):$loc[2]
+			format(pss[$j],10,6):$loc[3]
+
+$ifilehd=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$ifilehd)
+write('file',$ifilehd,'%s','#!/usr/local/fdf/startup')
+write('file',$ifilehd,$ddl[1],$rank)		"*rank*"
+write('file',$ifilehd,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$ifilehd,$ddl[3],$storage)		"*storage*"
+write('file',$ifilehd,$ddl[4],$bits)		"*bits*"
+write('file',$ifilehd,$ddl[5],$type)		"*type*"
+write('file',$ifilehd,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$ifilehd,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$ifilehd,$ddl[8],$ord)		"*ordinate*"
+write('file',$ifilehd,$ddl[9],lpe,lro)	"*span*"
+write('file',$ifilehd,$ddl[10],ppe,pro)		"*origin*"
+write('file',$ifilehd,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$ifilehd,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$ifilehd,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$ifilehd,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$ifilehd,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+
+"*Arrayed Parameters********"
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$ifilehd,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$ifilehd,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+
+		" Glue Hdr and data*********************************"
+		$ofileph=$directory+'/'+$phfile+$datext+'.'+'fdf'
+		write('line3','%s','header='+$ifilehd)
+		write('line3','%s','phase='+$ifileph)
+		write('line3','%s','output='+$ofileph)
+		shell('fdfgluer "'+$ifilehd+'" "'+$ifileph+'" "'+$ofileph+'"'):$x
+		rm($ifilehd):$x
+		rm($ifileph):$x
+		"END: Glue Hdr and data*****************************"
+
+"end: write file block**************************************************"
+
+
+		$i=$i+1
+		until ($i > $ne) "*end echo loop**********************"
+
+	if ($ns > 1) then $j=$j+1 endif
+	$k=$k+1
+	until ($k > $nar) "*end slice/element loop********************"
+
+	write('line3','%s','Transforms complete '+seqcon+' dataset')
+
+endif "*END: seqcon='cssnn'*******************************************"
+
+
+"*END: Reconstruction Loops*******************************************"
+
+
+
+"*BEGIN: Write Procpar to Target Directory***************************"
+"	The procpar from the CURRENT tree is written to the          "
+"	target data directory. This allows tags and any settings     "
+"	used for reconstruction to be passed along with the data     "
+"********************************************************************"
+
+$procpar=$directory+'/procpar'
+fsave($procpar,'current')
+
+"*END: Write Procpar to Target Directory*****************************"
+
+
+
+"******************************THE END********************************"

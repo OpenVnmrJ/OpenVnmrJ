@@ -1,0 +1,119 @@
+"macro fm_shimcalib"
+"Replaces old shimcalc macro and incorporates isotropic sampling into general case"
+
+if ($#<2) or ($#>2) then 
+  write('error','Usage: %s(`logfile`,`shimcoil`)',$0)
+  ABORT
+endif
+
+jexp:$job
+if $job=addsubexp then
+  write('error','cannot run fastmap in addsub exp, please choose another expt')
+  ABORT
+endif
+if (nf>1) then
+  $nf=nf
+  flashc
+  clradd
+  $i=1
+  $skip=maxproj
+  write('line3','shuffling every %d fid',$skip)
+  while ($i<$skip+1) do
+    $j=0
+    while ($j<$nf) do
+      select($i+$j*$skip)
+      add('new')
+      $j=$j+1
+    endwhile
+    $i=$i+1
+  endwhile
+  mf(addsubexp,$job)
+endif
+
+$psi=0.0
+$sys='' $sysowner=''
+$fastmap = userdir+'/fastmap'
+shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+if (owner = $sysowner) then
+  $psifile = systemdir+'/fastmap/psi_'+gcoil
+  exists(systemdir+'/fastmap','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap') endif
+  exists(systemdir+'/fastmap/calib','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap/calib') endif
+else
+  $psifile = $fastmap+'/psi_'+gcoil
+endif
+exists($psifile,'file'):$e
+if $e>0.5 then
+  lookup('file',$psifile,'read',1):$psi,$f
+
+  if ($f <> 1) then
+    write('error','Fastmap psi file is wrong using psi=0 Rerun calibration')
+    abort
+  endif
+else
+  $psi=0.0
+endif
+
+$fov=lro wft flush
+
+$filename = curexp + '/datdir/data'
+exists($filename,'file'):$e
+if $e = 0 then
+  write('error','file %s does not exist ?',$filename)
+  ABORT
+endif
+
+$count=1
+$nord=2
+repeat
+  $l[$count]=L[$count]
+  $count=$count+1
+until $count>9
+
+" $progname = '$FASTMAP/code/calshim'"
+$progname = 'fm_calshim'
+if ni=arraydim then
+  $t=tau
+endif
+if ni<arraydim then
+  $t=tau
+endif
+
+write('file',userdir+'/fastmap/fastmap.log','\nuser: %s c-program: %s tau=%+8.4f psi=%7.5f',userdir,$progname,$t,$psi)
+write('file',userdir+'/fastmap/fastmap.log','\n*** CALIBRATION ***\n')
+shell('date>fastmap.tmp;cat "$vnmruser/fastmap/fastmap.log" fastmap.tmp > fastmap.tmp1;\mv fastmap.tmp1 "$vnmruser/fastmap/fastmap.log";rm fastmap.tmp'):$x
+
+if (maxproj = 6) then
+
+     shell($progname,'"'+$filename+'"',$t,$nord,$fov,$l[4]/$fov,$l[5]/$fov,$l[6]/$fov,$l[7]/$fov,$l[8]/$fov,$l[9]/$fov,'calib',$psi,X0,Y0,Z0,'>"$vnmruser/fastmap/change"'):$x
+
+elseif (maxproj = 3) then 
+
+    shell($progname,'"'+$filename+'"',$t,$nord,$fov,$l[1]/$fov,$l[2]/$fov,$l[3]/$fov,'calib',$psi,X0,Y0,Z0,'>"$vnmruser/fastmap/change"'):$x
+
+endif
+
+if (tau < 0.0) then tau=-tau endif
+
+$count=1
+$min=0
+while ($count<10) do
+  if ($l[$count]>$min) then $min=$l[$count]
+  endif
+  $count=$count+1
+endwhile
+wp=$min*sw/$fov
+sp=sw*0.5-wp
+
+"the this macro will write the proper k_x, k_y etc to the file specified by the $1 parameter. "
+"$2 specifies the specific shim parameter to be printed to $1 as the first (independent) variable"
+$ntof=0 $nx1=0 $ny1=0 $nz1c=0 $nxz=0 $nyz=0 $nz2c=0 $nxy=0 $nx2y2=0
+lookup('file', userdir + '/fastmap/change', 'read', 9):$ntof, $nx1, $ny1, $nz1c, $nxz, $nyz, $nz2c, $nxy, $nx2y2, $nret
+if $nret<8.5 then
+  write('error','%s: couldn\'t read file',$0)
+  write('file',userdir+'/fastmap/fastmap.log','%s: couldn\'t read file %s',$0,userdir+'/fastmap/change')
+  ABORT
+endif
+write('file',userdir + '/fastmap/'+$1,' %s= %6d %+7.3f %+7.3f %+7.3f %+7.3f %+7.3f %+7.3f %+7.3f %+7.3f', $2,{$2}, -$nx1/1000, -$ny1/1000
+, -$nz1c/1000, -$nxz/1000, -$nyz/1000, -$nz2c/1000, -$nxy/1000, -$nx2y2/1000)

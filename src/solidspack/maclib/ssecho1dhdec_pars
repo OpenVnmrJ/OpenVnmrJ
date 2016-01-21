@@ -1,0 +1,83 @@
+"macro ssecho1dhdec_pars"
+// Set the Sequence Name
+
+seqfil = 'ssecho1dhdec'    
+layout = seqfil
+
+// Make or Replace Standard Parameters
+
+paramgroup('clearparamsinit')
+paramgroup('params','',                                      'BPautonoisecheck','real',0.0,
+                                                             'BPclassic','string','n',
+                                                             'roff','frequency',0.0)
+paramgroup('params','',                                      'chHtppm','channel','obs',
+                                                             'chHspinal','channel','obs')
+// Make ap and dg Displays for Standard Parameters
+
+paramgroup('dgapinit')
+paramgroup('apstring','SAMPLE','','',                        'date','string','',
+                                                             'file','string','')
+paramgroup('dgapstring','ACQUISTION','','',                  'sw','frequency',0,
+                                                             'at','delay',0, 
+                                                             'np','integer',0, 
+                                                             'd1','delay',0,
+                                                             'nt','integer',0,
+                                                             'ct','integer',0,
+                                                             'bs','integer',0,
+                                                             'ss','integer',0,
+                                                             'rd','pulse',0, 
+                                                             'ad','pulse',0,
+                                                             'ddrtc','pulse',0,
+                                                             'rof3(rof3)','pulse',0,
+                                                             'gain','integer',0,
+                                                             'temp','amplitude',0,
+                                                             'srate','amplitude',0)                                                             
+
+// Make New Parameters with/without dg/ap Display
+
+paramgroup('all','echoH','','',                              'aHecho','amplitude',2000.0,
+                                                             'pwHecho','pulse',8.0,
+                                                             't1Hecho','time',1000.0,
+                                                             't2Hecho','time',1000.0)
+
+paramgroup('params','',                                      'chHhdec1','channel','obs')
+paramgroup('all','hdec1H','','',                             'dmHhdec1','string','n',
+                                                             'seqHhdec1','string','pmlg',
+                                                             'aHhdec1','amplitude',2000.0,
+                                                             'pwHhdec1','pulse',16.0,
+                                                             'qHhdec1','integer',-5,
+                                                             'nHhdec1','integer',1,
+                                                             'mHhdec1','integer',1,
+                                                             'ofHhdec1','frequency',0.0,
+                                                             'ofdHhdec1','frequency',0.0, 
+                                                             'pwHshort1','pulse',3.0)
+
+paramgroup('params','',                                      'Xseq','string','tppm',
+                                                             'chXtppm','channel','dec',
+                                                             'chXspinal','channel','dec')
+paramgroup('all','tppmX','(Hseq=\'tppm\')','',               'aXtppm','amplitude',2000.0,
+                                                             'pwXtppm','pulse',8.0,
+                                                             'phXtppm','phase',0.0)
+paramgroup('all','spinalX','(Hseq=\'spinal\')','',           'aXspinal','amplitude',2000.0,
+                                                             'pwXspinal','pulse',8.0,
+                                                             'phXspinal','phase',0.0)
+// Make the dg2 Display Directly
+
+setprotect('dg2','clear',4)
+$dg2 = '1:OBSERVE:tn,sfrq:6,tof:1,tpwr:1,aX90:3,pwX90:1;'
+$dg2=$dg2+'1:1D Acquisition:sw:1,np:0,at:7;'
+$dg2=$dg2+'2:DECOUPLE:dn,dfrq:6,dof:1,dpwr:1,aH90:3,pwH90:1;'
+$dg2=$dg2+'3:DECOUPLE2:dn2,dfrq2:6,dof2:1,dpwr2:1,aY90:3,pwY90:1;'
+$dg2=$dg2+'4:DECOUPLE3:dn3,dfrq3:6,dof3:1,dpwr3:1,aZ90:3,pwZ90:1;'
+dg2 = $dg2
+setprotect('dg2','on',4)
+
+// Call a Reset Macro
+
+destroy('wrtp')
+paramgroup('params','','wrtp','string','')
+
+write('line3','Macro %s is complete\n',$0)
+
+
+                                              

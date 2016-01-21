@@ -1,0 +1,45 @@
+"macro BP_PRgetlim"
+" BP_PRgetlim - get H1 frequency limits        "
+" Eriks K., Palo Alto, April 2006           "
+
+$filepath='' $paswd='' $dummy=''
+
+" argument checking "
+
+if $#>0 then
+
+  if not typeof('$1') then 
+    write('error','BP_PRgetlim : requires filename')
+    write('file','../PRmessages','BP_PRgetlim : requires filename')
+    return 
+  endif
+
+  $filepath=$1
+  exists($filepath,'file'):$e 
+  if not($e) then
+    write('error','BP_PRgetlim: file %s not found', $filepath)
+    write('file','../PRmessages','BP_PRgetlim: file %s not found', $filepath)
+    return 
+  endif
+
+  lookup('file',$filepath)
+  lookup('read',8):$dummy,$dummy,$paswd,$dummy,$dummy,$dummy,$Hmin,$Hmax
+  
+  if ($paswd<>'PRlist') then
+    write('error','BP_PRgetlim: incorrect file format')
+    write('file','../PRmessages','BP_PRgetlim: incorrect file format')
+    return 
+  else   
+    if typeof('$Hmin') or typeof('$Hmax') then 
+      write('error','BP_PRgetlim: incorrect file format')
+      write('file','../PRmessages','BP_PRgetlim: incorrect file format')
+      return 
+    else  
+      return($Hmin, $Hmax)
+    endif
+  endif
+else
+  write('error','BP_PRgetlim: filename required')
+  write('file','../PRmessages','BP_PRgetlim: filename required')
+  return 
+endif

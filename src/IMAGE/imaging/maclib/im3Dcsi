@@ -1,0 +1,267 @@
+"macro im3Dcsi"
+"Setup and Processing for 2D chemical shift imaging sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$action2 = ''
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $action2 = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+
+//Epsi flag ='n' turns off readout gradient
+if (epsi='n') then 
+np=1024
+sw=4000
+endif
+
+
+
+  if ($action2 = 'shim') then 
+    im3Dcsi('prep','profile') 
+    return 
+  endif
+
+  ldrf
+  tof=resto-restol
+  rfl=rfl+rfladjust+rfloffset rfladjust=0 rfloffset=0
+  roff=roff+roffadjust roffadjust=0
+  calcdim  "Set array & arraydim parameters"
+
+
+
+  execseq('prep')  "Execute any sequence specific preparation"
+
+
+  wexp='abortoff save procplot acqWexp aborton'
+
+  if ($action2 = 'profile') then
+    profile = 'yyn'    
+    if ($action2 = 'profile') then 
+      wexp  = 'im3Dcsi(`proc`,`profile`)'
+    else 
+      wexp  = ''
+    endif
+    wdone = ''
+    werr = ''
+  else
+    profile = 'nnn' 
+  endif
+
+  setloop
+  //Start defining circular 3D acquisition:
+  if (seqfil='fepsi3d') then
+   ni=1    
+   ni2=1
+   ni3=1
+   
+   if nv=15 then
+   
+      $tsteps=145
+      petable='tablepe15_145'
+      array('nt',$tsteps,1,0)
+      
+
+                                                            
+   endif
+
+   if nv=23 then
+   
+      $tsteps=373
+      petable='tablepe23_373'
+      array('nt',$tsteps,1,0)
+      
+   endif
+
+
+   if nv=31 then
+   
+      $tsteps=697
+      petable='tablepe31_697'
+      array('nt',$tsteps,1,0)
+      
+   endif
+
+
+
+
+
+ //  write('line3','resetting ni back to 1')
+  endif  //end of circular 3D sequence settings
+
+  create('nfmod','integer','current',nv)
+  seqcon('pe'):$pe                  // is seqcon c or s for phase encode?
+  if ($pe = 'c') then
+    nfmod = nv                      // if 'c' set nfmod to size of one compressed image
+  else
+    nfmod = nf                      // if 's' set nfmod to nf, which will be slices or echoes
+  endif
+
+endif
+
+
+// rt process module
+if ($action = 'rtpar') then
+  //add procmodule
+  exists('procmodule','parameter'):$ee
+  if $ee < 0.5 then
+    create('procmodule','string')
+    setgroup('procmodule','processing')
+  endif
+
+  procmodule='csi3Dproc'
+  module('add',procmodule)
+
+  if(apptype='im3Dcsi') then
+     layout='csi3d'
+     execprocess=`im3Dcsi('proc')` 
+  endif
+
+  return
+
+
+endif
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+if ($action = 'proc') then
+
+  if ($action2 = 'profile') then
+    vp=0 f full wft ph aph0 vsadj dscale ds 
+    im3Dcsi('prep')
+    go('check','checksilent')
+    return
+  endif
+
+  // add procmodule if not already added (this does not overwrite values) 
+  im3Dcsi('rtpar')
+
+  strstr(file,'.fid'):$fid
+  substr(file,1,1):$s
+  if($s<>'/') then
+    $fid=0
+  else
+    canWrite(file):$e
+    if(not $e) then
+      csiCmd('getFidPath',file):$fiddir
+      if($fiddir<>file) then rt($fiddir) endif // rt original fid to be ready to save
+      write('line3','%s is not writable. Please save data to a writable location.',$fiddir)
+      return
+    endif
+  endif
+  if($fid=0 and csiOrigFile='') then // original fid is not available 
+    write('line3','Error: original fid is not available.')
+    return
+
+  else // original fid is saved
+
+   if(csiOrigFile='') then
+     csiOrigFile=file
+   endif
+
+   // do this before saveProc
+   if($fid) then
+     csiCmd('getCSIPath',file,'create'):$csidir
+     strstr($csidir,'.csi'):$n,$s
+     csiOrigFile=$s+'.fid'
+   else
+     csiCmd('getCSIPath',csiOrigFile,'create'):$csidir
+   endif
+   csiCmd('getSpatialFidPath',csiOrigFile):$spatialFid
+
+  // save procmodule to current csidir
+   csiCmd('saveProc',procmodule, $csidir+'/'+procmodule)
+  // do spatial recon
+  // procmodule initially sets csiOrigFile='' and reRecon=1
+  // imcsiXrecon will set csiOrigFile=file and reRecon=0
+  // so imcsiXrecon won't be called unless UI set reRecon=1
+   if($spatialFid='' or reRecon) then 
+     if(file<>csiOrigFile) then
+ 	RT(csiOrigFile)
+        im3Dcsi('rtpar')
+        csiCmd('rtProc',procmodule)
+     endif
+
+    $curexpSpatialFid=''
+    imcsiXrecon('recon'):$curexpSpatialFid
+
+    // copy curexp $spatialFid to destination $csidir
+    if($curexpSpatialFid<>'') then
+      shell('cp -rf '+$curexpSpatialFid+' '+$csidir)
+    endif
+   endif
+
+  // do spectral processing
+   csiCmd('getSpatialFidPath'):$spatialFid
+   exists($spatialFid,'directory'):$e
+   if($e) then
+     if(file<>$spatialFid) then
+        RT($spatialFid)
+        im3Dcsi('rtpar')
+     endif
+     csiCmd('proc1d','show')
+   endif
+  endif
+  
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+
+endif
+
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+if ($action = 'prescan') then                  // Enter through execprescan
+  im3Dcsi('gain','init')
+endif
+
+if ($action = 'gain') then
+  $gainstart = 0                               // Set low gain to acquire data
+  $gainfraction = 0.5                          // fraction of ADC to fill
+  $paramfile = curexp+'/tempparams'            // store some parameters to be reset after prescan
+
+  if ($action2 = 'init') then                  // initialize params and acquire data
+    im3Dcsi('prep','profile')                  // set up for profile
+    nfmod = nf
+    writeparam($paramfile,'nt,ssc,ss')         // back up parameters to be reset after processing
+    nt = 1
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    $ss = 1/(2*tr) + 2                         // estimate ss based on TR
+    if ($seqcon = 'c') then ssc = $ss else ss = $ss endif
+    gain = $gainstart
+    wnt = ''
+    wdone = ''
+    werr = ''
+    wexp = 'im3Dcsi(\'gain\',\'proc\')'
+    au
+
+  elseif ($action2 = 'proc') then              // process gain scan when complete
+    cf='n'                                     // cf=n tells fidmax to look at entire data block
+    fidmaxarray:$fidmax                        // find highest data value
+    $factor = $gainfraction*32767/$fidmax
+    ln($factor):$ln
+    $gain = 20*$ln/2.303                       // calculate gain change based on fidmax and gainfraction
+    gain = $gain + $gainstart                  // set computed gain, then delete gain params
+    if (gain > 60) then
+      gain = 60
+    endif
+    readparam($paramfile,'nt,ssc,ss')          // restore original parameter values
+    cf = 1
+
+  endif
+endif
+

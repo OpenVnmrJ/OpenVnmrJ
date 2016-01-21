@@ -1,0 +1,31 @@
+"macro target_bval"
+"target_bval: Iteratively change gdiff and run go('check') "
+"             until the target b-value is reached          "
+
+
+$dLIM =  0.005   // limit on delta from target bvalue
+$iLIM = 20   // Max number of iterations
+
+$new_b = 1000
+if ($# > 0) then $new_b = $1 endif
+
+//setprotect('gdiff','off',8)   //Don't run _gdiff macro
+if (gdiff = 0) then gdiff = 1 go('check') endif
+
+//write('line3','target is %d',$new_b) abort
+
+$inx = 1
+repeat
+  gdiff = gdiff*sqrt($new_b/max_bval)
+  go('check')
+  abs(max_bval - $new_b):$delta
+//  write('line3','iter %d, delta = %f',$inx,$delta)  
+  $inx = $inx + 1
+until ($delta < $dLIM) OR ($inx > $iLIM)
+
+//setprotect('gdiff','on',8) 
+
+create('bvalSave','real','current',max_bval)
+if (diff='y' AND diffscheme<>'zero_gf') then
+  bvalSave=max_bval
+endif

@@ -1,0 +1,89 @@
+
+******************************************************************************
+wft1da(<arg1> , <arg2>)  -   Weight and transform phase-sensitive data (macro)
+ ft1da(<arg1> , <arg2>)  -   Transform phase-sensitive data (macro)
+wft2da(<arg1> , <arg2>)  -   Weight and transform phase-sensitive data (macro)
+ ft2da(<arg1> , <arg2>)  -   Transform phase-sensitive data (macro)
+******************************************************************************
+
+These macros can be used both to process 2D FID data and to process 2D
+planes at particular t1 or t2 times from a 3D data set for a pure absorp-
+tive display.  (w)ft1da functions analogously to (w)ft2da except that the
+former performs only the F2 FT.  wft1da and wft2da differ from ft1da and
+ft2da only in that weighting of the time-domain data is performed prior
+to the FT in the case of the former two macros.  The following arguments
+may be used with these macros in any order:
+
+	'ntype'
+	'old'
+	'bc',<bcorder>
+	'dc'
+	't2dc'
+	't2dc'
+	'f2sel'
+	'ni',<ni2_element>
+	'ni2',<ni_element>
+        string of coefficients
+
+
+The arguments 'ntype', 't2dc', 't1dc', 'f2sel', 'ni2', and
+'ni' effect the same function as when supplied to the (w)ft2d command.
+The 'bc' argument must be followed immediately by the polynomial order
+to be used in the baseline correction of the F2 spectra prior to the F1 FT.
+The default value for the polynomial order is 1, which leads to a spline
+fit.  The 'dc' argument leads to a drift correction (DC) of the F2 spectra
+prior to the F1 FT.  The arguments 'ni' and 'ni2' must be followed imme-
+diately by the ni2 or ni element number, respectively, indicating which
+2D plane is to be processed out of the 3D FID data set.  The argument
+'old' does not function for selective 2D processing within 3D data sets.
+If no ni2 or ni element number is given, it is assumed that the data set
+is only 2D in either ni2 or ni, respectively.
+
+The argument 'old' allows data acquired before the Feb. 25, 1988 VNMR
+software release to be processed correctly but will not allow a bc2d
+between the F2 and F1 FT's.
+
+The argument 'bc', optionally followed by the order of the polynomial
+baseline correction, effects a baseline correction on the phase-corrected
+F2 spectra prior to the F1 FT.  Note that the "baseline" regions must
+have been previously determined.
+
+These macros function for both hypercomplex 2D FID data (phase = 1,2)
+and TPPI 2D FID data (phase = 3 or phase = 1,4) acquired either with ni
+or ni2.  If the data were acquired with ni, no additional argument need
+be used with these macros.  If the data were acquired with ni2, the
+argument 'ni2' must be used.
+	
+
+For phase = 1,2:    wft2da  =  wft2d('ptype',1,0,0,0,0,0,1,0)
+                               wft2d('ptype',1,0,0,0,0,0,0,1)  ('old' argument)
+
+For phase =   3:    wft2da  =  wft2d(1,0,0,0)
+
+For phase = 1,4:    wft2da  =  wft2d('ptype',1,0,0,0,0,0,1,0)
+
+These macros can be used to process arrayed 2D data sets.
+A single array index can be supplied, as in wft2da(1).  For hyper-complex
+2D FID data, the f1coef parameter will be used to supply the
+combination coefficients. Alternatively, the combination coefficients
+can be supplied as a string argument, in the same format as the f1coef parameter.
+An example is wft2da('1 0 0 0 0 0 1 0'). Any supplied coefficient argument
+will take precedence over the f1coef parameter.
+
+(w)ft1da and (w)ft2da support selective 2D processing within a 3D FID
+data set.  All permutations of hypercomplex and TPPI modes of data acqui-
+sition in t1 and t2 can be handled.  For selective F2F3 processing, the
+numeric argument immediately following the 'ni2' argument is interpreted
+to be the t1 increment number, which specifies the particular F2F3 plane
+to be processed.  For selective F1F3 processing, the t2 increment number
+either follows the argument 'ni', which is optional, or is associated
+with the first numeric argument that does not immediately follow a 'bc'
+argument.
+
+For information on real vs. complex Fourier transforms, see the
+manual entry for proc (or proc1).  For information on the lfs and zfs
+solvent suppression options, see manual entries for "ssfilter", "ssorder",
+and parfidss.
+
+For information on Hadamard transforms, see the manual entries for
+"ht" and "proc1".

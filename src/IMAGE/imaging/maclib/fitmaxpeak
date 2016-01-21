@@ -1,0 +1,78 @@
+"macro fitmaxpeak"
+/******************************************************************
+*  fitmaxpeak: Fits tallest peaks (+/- 2 from max) to parabola and returns
+*  value along the array dimension for the vertex of the fitted
+*  parabola
+*
+*  Usage:  fitmaxpeak(<start index,end index>,<param>):arrayvalue
+*  
+*  Optional first two arguments set start and end index for range of search
+*  Optional third argument specifies which array component to use
+*
+*  ARR   Version 1.0   4/26/10 
+*******************************************************************/
+
+arrayparse:$arraylist,$arrayrank,$arraysize
+$array = $arraylist[1]                           // default to first array component in array string
+
+if ($# = 0) then                                 // If no arguments, search over entire array
+  $start = 1
+  $end = arraydim
+elseif ($# = 2) then                             // If 2 arguments, use for start and end indices
+  $start = $1
+  $end = $2
+elseif ($# = 3) then                             // 3 arguments are start, end, name of arrayed parameter to use
+  $start = $1
+  $end = $2
+  $array = $3
+else
+  write('line3','Warning: fitmaxpeak: Usage - fitmaxpeak(<start index,end index>,<param>)')
+  return
+endif
+
+findmaxpeak($start,$end):$indexmax               // find tallest peak
+
+"-- Make sure tallest peak isn't first or last --"
+if (($indexmax = $start) or ($indexmax = $end)) then
+  write('line3','Warning: Warning: maximum value found at either first or last array element')
+  return({$array}[$indexmax])
+endif
+
+$i = 0
+$j = 1
+repeat                                           // Find x/y values +/- 2 positions from indexmax
+  $i = $i + 1
+  $index = $indexmax - 3 + $i
+  if (($index >= 1) and ($index <= arraydim)) then
+    select($index)
+    peak:$yvalue
+    $xyarray[$j] = {$array}[$index]              // X value in jth array element
+    $xyarray[$j+1] = $yvalue                     // Y value in j+1th array element
+    $j = $j + 2                                  // advance array index to accomodate next pair of values
+  endif
+until ($i = 5)
+
+//select($indexmax-1)                                 // peak height of array index to the left
+//peak:$y1
+//$x1 = {$array}[$indexmax-1]
+
+//select($indexmax)                                   // height of largest peak
+//peak:$y2
+//$x2 = {$array}[$indexmax]
+
+//select($indexmax+1)                                 // peak height of array index to the right
+//peak:$y3
+//$x3 = {$array}[$indexmax+1]
+
+"-- Solve for vertex -------"
+//$denom = ($x1 - $x2)*($x1 - $x3)*($x2 - $x3)
+//$a = ($x3*($y2 - $y1) + $x2*($y1 - $y3) + $x1*($y3 - $y2))/$denom
+//$b = ($x3*$x3*($y1 - $y2) + $x2*$x2*($y3 - $y1) + $x1*$x1*($y2 - $y3))/$denom
+//$c = ($x2*$x3*($x2 - $x3)*$y1 + $x3*$x1*($x3 - $x1)*$y2 + $x1*$x2*($x1 - $x2)*$y3)/$denom
+//
+//$xvertex = -$b/(2*$a)
+
+fitquadratic($xyarray):$xvertex,$yvertex,$a,$b,$c
+
+"-- Return fitted value of vertex --"
+return($xvertex)

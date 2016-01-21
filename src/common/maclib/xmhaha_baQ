@@ -1,0 +1,556 @@
+"macro xmhaha_baQ"
+"******Varian***************************************************" 
+// if (auto<>'y') then return endif
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 1) then $1='init' endif
+
+$target=autodir+'/enterQ.macdir'
+exists($target,'directory'):$direx
+if ($direx=0) then return endif
+
+$locdir='' $loc='' $when=''
+if ($# < 2) then
+   $sampinfo=$target+'/currentsampleinfo'
+   $sampglobal=$target+'/currentsampleglobal'
+else
+   $sampinfo=$target+'/'+$2+'/day/sampleinfo'
+   $sampglobal=$target+'/'+$2+'/sampleglobal'
+endif
+getlocid($sampinfo):$loc,$locdir,$when
+$archive='' $sample='' $samplename=''
+rtv($sampglobal,'noabort','archivedir'):$archive
+rtv($sampglobal,'noabort','sample'):$sample
+rtv($sampglobal,'noabort','samplename'):$samplename
+if ($locdir='') or ($archive='') or ($sample='') then return endif
+$archsamp=$archive+'/'+$sample
+
+$infodir=$target+'/xmldir/info'
+exists($infodir,'directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+$infodir):$dum
+endif
+//shell('chmod -R g+w '+$target+'/xmldir'):$dum
+
+$locxml=$target+'/'+$locdir+'/xmldir/Active'
+$locinfo=$locxml+'/info'
+$cpnodes=$locxml+'/cpnodeinfo'
+$xml1=$locxml+'/fidlog.xml'
+$esq1=$locxml+'/fidlog_SQ'
+$xml2=$locxml+'/Active.xml'
+$esq2=$locxml+'/Active_SQ'
+$xml3=$locxml+'/Queue.xml'
+$esq3=$locxml+'/Queue_SQ'
+$xml4=$archsamp+'/dirinfo/xmldir/fidlog'
+$xml6=$archsamp+'/dirinfo/xmldir/errorlog'
+$xml5=$archsamp+'/dirinfo/xmldir/scoutlog'
+$esq4=$archsamp+'/dirinfo/xmldir/cpnodeinfo'
+
+$fidlog=$locxml+'/fidlog'
+$node=$locxml+'/nodelist'
+$status=$locxml+'/status'
+$tmpfile=userdir+'/persistence/tmpfile'
+
+"********************************************************************"
+IF ($1='init') THEN
+    exists($locinfo,'directory'):$direx
+    if ($direx=0) then
+    	shell('mkdir -p '+$locinfo):$dum
+//	shell('chmod -R g+w '+$locxml):$dum
+    endif
+    exists($locinfo,'directory'):$direx
+    if ($direx=0) then return(0,'') endif
+
+	shell('touch '+$xml1):$dum
+	shell('touch '+$xml2):$dum
+	shell('touch '+$xml3):$dum
+	shell('touch '+$esq1):$dum
+        shell('touch '+$esq2):$dum
+        shell('touch '+$esq3):$dum
+//        shell('touch '+$cpnodes):$dum
+	shell('touch '+$node):$dum
+	shell('touch '+$fidlog):$dum
+	shell('touch '+$status):$dum
+
+    xmhaha_baQ('buildQ')
+
+	shell('chmod -R g+w '+$locxml):$dum
+	shell('chmod -R g+w '+$target+'/xmldir'):$dum
+//  If the buildQ option is called by init ALWAYS
+//	return 1 - so sqwatch will rebuild foreground
+//	SQ display
+    return(1,'')
+ENDIF
+"********************************************************************"
+IF ($1='buildQ') THEN
+
+    exists($locinfo,'directory'):$direx
+    if ($direx=0) then 
+	$ret=0 $NODE=''
+	xmhaha_baQ:$ret,$NODE
+	return($ret,$NODE)
+    endif
+
+//  Always build everything in a copy to avoid
+//	bg and fg vnmr conflict
+
+	$origlocxml=$locxml
+	Svfname($origlocxml,''):$newlocxml
+	$locxml=$newlocxml
+	shell('cp -r '+$origlocxml+' '+$locxml):$dum
+	$locinfo=$locxml+'/info'
+	$cpnodes=$locxml+'/cpnodeinfo'
+	$xml1=$locxml+'/fidlog.xml'
+	$esq1=$locxml+'/fidlog_SQ'
+	$xml2=$locxml+'/Active.xml'
+	$esq2=$locxml+'/Active_SQ'
+	$xml3=$locxml+'/Queue.xml'
+	$esq3=$locxml+'/Queue_SQ'
+	$fidlog=$locxml+'/fidlog'
+	$node=$locxml+'/nodelist'
+	$status=$locxml+'/status'
+// Now work on copy
+
+    $timeX=''
+    estimatestart('getexptime',$locdir,'Active'):$timeX
+
+    $laststatus=$locxml+'/laststatus'
+    shell('cp '+$status+' '+$laststatus):$dum
+
+    write('reset',$xml1)
+    write('reset',$esq1)
+    write('reset',$xml2)
+    write('reset',$esq2)
+    write('reset',$xml3)
+    write('reset',$esq3)
+
+    write('reset',$cpnodes)
+    write('reset',$status)
+
+    $md=$archsamp+'/dirinfo/macdir'
+    if ($when='day') then
+        $LIST=$md+'/EXPLIST'
+    else
+        $LIST=$md+'/LONGLIST'
+    endif
+    $acqlist=$md+'/ACQlist'
+    $CMDnodes=$md+'/CMDnodes'
+    cpexplist('read',$md):$explist
+
+    $cnodes='' $s1='' $s2=''
+    exists($CMDnodes,'file'):$cex
+    if ($cex) then
+    	readfile($CMDnodes,'$cnodes','$s1','','local')
+    endif
+    $enodes='' $enodes2=''
+    readfile($LIST,'$enodes','$enodes2','','local')
+
+    $Tnodes=''
+    $newxml=0
+//  write all completed fids in this location and in this automation
+//  This fidlog is maintained by cplog macro.
+    $s1='' $s2=''
+    readfile($fidlog,'$s1','$s2','','local'):$ftot
+    if ($ftot) then
+	$x=1
+	repeat
+	   $n1=$s1[$x] $n2='' $r1=0
+	   $firstchar='' substr($s2[$x],1,1):$firstchar
+	   if ($firstchar<>'/') then
+		$fidname=userdir+'/data/'+$s2[$x]
+	   else
+		$fidname=$s2[$x]
+	   endif
+	   strstr($fidname,'CmdNode_NullPath'):$cmdnode
+	   if ($cmdnode=0) then
+	      rtv($fidname,'noabort','pslabel'):$n2
+	      rtv($fidname,'noabort','ACQtime'):$r1
+	   endif
+	   if ($n2='') then
+		strstr($n1,'_','last'):$ret,$n2
+		if ($ret=0) then $n2=$n1 endif
+	   endif
+            $sqnode='' $SX=''
+            readfile($node,'$SX','$sqnode',$n1,'local')
+            if ($sqnode='') then $newxml=1 endif
+                $time='' $time2='' 
+		$path=''
+		if ($cmdnode=0) then
+		    $path=$fidname
+//		    formattime($r1):$time2,$time
+		endif
+                $atx=1 $attr=''
+                $attr[$atx]='status','Completed' $atx=$atx+2
+                $attr[$atx]='sqstatus','Completed' $atx=$atx+2
+                $attr[$atx]='title',$n1 $atx=$atx+2
+                $attr[$atx]='CPnode',$n1 $atx=$atx+2
+                $attr[$atx]='sqnode',$sqnode $atx=$atx+2
+                $attr[$atx]='exp',$n2 $atx=$atx+2
+                $attr[$atx]='lock','on' $atx=$atx+2
+                $attr[$atx]='time',$time $atx=$atx+2
+                $attr[$atx]='data',$path $atx=$atx+2
+                $attr[$atx]='tooltext',$n2 $atx=$atx+2
+                $attr[$atx]='macro','return' $atx=$atx+2
+                $newnode=''
+                xmhaha_addnode($n2,$attr,'',$xml1,'Asqn%R4%'):$newnode
+		if ($newnode<>'') then
+		    if ($sqnode='') then
+		    	write('file',$node,'%s %s',$n1,$newnode)
+	            endif
+		    shell('cp -r '+$infodir+'/'+$newnode+' '+$locinfo):$dum
+		endif
+	    $x=$x+1
+	until $x > $ftot
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' > '+$esq1+')'):$dum
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$5}\' >> '+$status+')'):$dum
+	write('reset',$cpnodes)
+//        shell('rm -f '+$cpnodes):$dum
+    endif
+//  Write all errored nodes.  These come from ACQlist in study directory
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlist+' | grep -w Error > '+$tmpfile+')'):$dum
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$ertot
+    shell('rm -f '+$tmpfile):$dum
+    if ($ertot) then
+	$x=1
+	repeat
+            $n1='' $n2='' $r1=0
+            $n1=$s1[$x]
+            substr($s2[$x],2):$n2
+            substr($s2[$x],1):$r1
+            $sqnode='' $SX=''
+            readfile($node,'$SX','$sqnode',$n1,'local')
+            if ($sqnode='') then $newxml=1 endif
+                $time='' $time2='' formattime($r1):$time2,$time
+                $atx=1 $attr=''
+                $attr[$atx]='status','Error' $atx=$atx+2
+                $attr[$atx]='sqstatus','Error' $atx=$atx+2
+                $attr[$atx]='title',$n1 $atx=$atx+2
+                $attr[$atx]='CPnode',$n1 $atx=$atx+2
+                $attr[$atx]='sqnode',$sqnode $atx=$atx+2
+                $attr[$atx]='exp',$n2 $atx=$atx+2
+                $attr[$atx]='lock','on' $atx=$atx+2
+                $attr[$atx]='time','' $atx=$atx+2
+                $attr[$atx]='data','' $atx=$atx+2
+                $attr[$atx]='tooltext',$n2 $atx=$atx+2
+                $attr[$atx]='macro','return' $atx=$atx+2
+                $newnode=''
+                xmhaha_addnode($n2,$attr,'',$xml2,'Asqn%R4%'):$newnode
+                if ($newnode<>'') then
+                    if ($sqnode='') then
+                        write('file',$node,'%s %s',$n1,$newnode)
+                    endif
+                    shell('cp -r '+$infodir+'/'+$newnode+' '+$locinfo):$dum
+                endif
+	    $x=$x+1
+	until $x > $ertot
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq2+')'):$dum
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$5}\' >> '+$status+')'):$dum
+	write('reset',$cpnodes)
+//        shell('rm -f '+$cpnodes):$dum
+    endif
+//  Write Active node.  These come from ACQlist in study directory
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlist+' | grep -w Active | '+$tailX+' -n 1 > '+$tmpfile+')'):$dum
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$atot
+    shell('rm -f '+$tmpfile):$dum
+    if ($atot=1) then
+	    $data=''
+	    shell('(head -n 1 '+$archsamp+'/dirinfo/activeexp)'):$data
+	    substr($data,1):$data
+            $n1='' $n2='' $r1=0
+            $n1=$s1
+            substr($s2,2):$n2
+            substr($s2,1):$r1
+            $sqnode='' $SX=''
+            readfile($node,'$SX','$sqnode',$n1,'local')
+            if ($sqnode='') then $newxml=1 endif
+                $time='' $time2='' formattime($r1):$time2,$time
+                $atx=1 $attr=''
+                $attr[$atx]='status','Executing' $atx=$atx+2
+                $attr[$atx]='sqstatus','Active' $atx=$atx+2
+                $attr[$atx]='title',$n1 $atx=$atx+2
+                $attr[$atx]='CPnode',$n1 $atx=$atx+2
+                $attr[$atx]='sqnode',$sqnode $atx=$atx+2
+                $attr[$atx]='exp',$n2 $atx=$atx+2
+                $attr[$atx]='lock','on' $atx=$atx+2
+                $attr[$atx]='time',$time $atx=$atx+2
+                $attr[$atx]='data',$data $atx=$atx+2
+                $attr[$atx]='tooltext',$n2 $atx=$atx+2
+                $attr[$atx]='macro','return' $atx=$atx+2
+                $newnode=''
+                xmhaha_addnode($n2,$attr,'',$xml2,'Asqn%R4%'):$newnode
+                if ($newnode<>'') then
+                    if ($sqnode='') then
+                        write('file',$node,'%s %s',$n1,$newnode)
+                    endif
+                    shell('cp -r '+$infodir+'/'+$newnode+' '+$locinfo):$dum
+                endif
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq2+')'):$dum
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$5}\' >> '+$status+')'):$dum
+	write('reset',$cpnodes)
+//        shell('rm -f '+$cpnodes):$dum
+    endif
+// Write queued nodes.  These come from the explist parameter
+    $Etot=size('$explist')
+    if ($explist[1]='') then $Etot=0 endif
+    if ($Etot) then
+	$x=1
+	repeat
+	    $n1='' $n2='' $r1=0
+	    $n1=$explist[$x]
+	    strstr($n1,'SetUp'):$issetup
+	    strstr($n1,'PAUSE'):$ispause
+	    if ($issetup) or ($ispause) then $n1='' endif
+          if ($n1<>'') then
+	    teststr('$enodes',$n1,'local'):$ok
+	    if ($ok) then
+           	substr($enodes2[$ok],2):$n2
+           	substr($enodes2[$ok],1):$r1
+	    else
+		cpexptime($n1,$md):$r1
+		strstr($n1,'_','last'):$ret,$n2
+		if ($ret=0) then $n2=$n1 endif
+	    endif
+	    teststr('$cnodes',$n1,'local'):$ret
+	    if ($ret) then $type='CMD' else $type='LIB' endif
+	    $sqnode='' $SX=''
+	    readfile($node,'$SX','$sqnode',$n1,'local')
+	    if ($sqnode='') then $newxml=1 endif
+		$title=$n1
+		$time='' $time2='' formattime($r1):$time2,$time
+                teststr('$timeX',$n1,'local'):$tX
+                if ($tX) then $title=$title+$timeX[$tX+1] $time='' endif
+	        $atx=1 $attr=''
+	        $attr[$atx]='type',$type $atx=$atx+2
+	        $attr[$atx]='status','Queued' $atx=$atx+2
+	        $attr[$atx]='sqstatus','Queued' $atx=$atx+2
+        	$attr[$atx]='title',$title $atx=$atx+2
+        	$attr[$atx]='CPnode',$n1 $atx=$atx+2
+		$attr[$atx]='sqnode',$sqnode $atx=$atx+2
+        	$attr[$atx]='exp',$n2 $atx=$atx+2
+        	$attr[$atx]='lock','on' $atx=$atx+2
+        	$attr[$atx]='time',$time $atx=$atx+2
+        	$attr[$atx]='data','' $atx=$atx+2
+        	$attr[$atx]='tooltext',$n2 $atx=$atx+2
+        	$attr[$atx]='macro','return' $atx=$atx+2
+		$newnode=''
+		xmhaha_addnode($n2,$attr,'',$xml3,'Asqn%R4%'):$newnode
+		if ($tX) then $Tnodes=$Tnodes+' '+$newnode endif
+                if ($newnode<>'') then
+                    if ($sqnode='') then
+                        write('file',$node,'%s %s',$n1,$newnode)
+                    endif
+                    shell('cp -r '+$infodir+'/'+$newnode+' '+$locinfo):$dum
+                endif
+	  endif
+	  $x=$x+1
+	until $x > $Etot
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq3+')'):$dum
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$5}\' >> '+$status+')'):$dum
+	write('reset',$cpnodes)
+//        shell('rm -f '+$cpnodes):$dum
+    endif
+// Write nodes queued during night.  This comes from LONGLIST file
+    $ltot=0
+    if ($when='day') then
+	exists($md+'/LONGLIST','file'):$llex
+	$s1='' $s2=''
+	if $llex then
+	    readfile($md+'/LONGLIST','$s1','$s2','','local'):$ltot
+	endif
+    endif
+    if ($ltot>0) then
+        $x=1
+        repeat
+            $n1='' $n2='' $r1=0
+            $n1=$s1[$x]
+            substr($s2[$x],2):$n2
+            substr($s2[$x],1):$r1
+            teststr('$cnodes',$n1,'local'):$ret
+            if ($ret) then $type='CMD' else $type='LIB' endif
+            $sqnode='' $SX=''
+            readfile($node,'$SX','$sqnode',$n1,'local')
+            if ($sqnode='') then $newxml=1 endif
+
+                $time='' $time2='' formattime($r1):$time2,$time
+                $title=$n1
+                teststr('$timeX',$n1,'local'):$tX
+                if ($tX) then $title=$title+$timeX[$tX+1] $time='' endif
+                $atx=1 $attr=''
+                $attr[$atx]='type',$type $atx=$atx+2
+                $attr[$atx]='status','Night_queued' $atx=$atx+2
+                $attr[$atx]='sqstatus','Night_queued' $atx=$atx+2
+                $attr[$atx]='title',$title $atx=$atx+2
+                $attr[$atx]='CPnode',$n1 $atx=$atx+2
+                $attr[$atx]='sqnode',$sqnode $atx=$atx+2
+                $attr[$atx]='exp',$n2 $atx=$atx+2
+                $attr[$atx]='lock','on' $atx=$atx+2
+                $attr[$atx]='time',$time $atx=$atx+2
+                $attr[$atx]='data','' $atx=$atx+2
+                $attr[$atx]='tooltext',$n2 $atx=$atx+2
+                $attr[$atx]='macro','return' $atx=$atx+2
+                $newnode=''
+                xmhaha_addnode($n2,$attr,'',$xml3,'Asqn%R4%'):$newnode
+		if ($tX) then $Tnodes=$Tnodes+' '+$newnode endif
+                if ($newnode<>'') then
+                    if ($sqnode='') then
+                        write('file',$node,'%s %s',$n1,$newnode)
+                    endif
+                    shell('cp -r '+$infodir+'/'+$newnode+' '+$locinfo):$dum
+                endif
+	    $x=$x+1
+	until $x>$ltot
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq3+')'):$dum
+        shell('(cat '+$cpnodes+' | awk \'{print $1" "$5}\' >> '+$status+')'):$dum
+	write('reset',$cpnodes)
+//        shell('rm -f '+$cpnodes):$dum
+    endif
+    $NODE=''
+    if ($newxml=0) then
+	$s1='' $s2=''  $s3='' $s4=''
+        readfile($laststatus,'$s1','$s2','','local'):$tot2
+	readfile($status,'$s3','$s4','','local'):$tot
+	if ($tot<>$tot2) then $newxml=1 endif
+    endif
+    if ($newxml=0) then
+        if ($tot>0) then
+	    $i=1
+	    repeat
+		teststr('$s1',$s3[$i],'local'):$ret
+		if ($s2[$ret]<>$s4[$i]) then
+			$NODE=$NODE,$s3[$i]
+		endif
+		$i=$i+1
+	    until $i > $tot
+	endif
+	array2string($NODE):$NODE
+	$NODE=$NODE+' '+$Tnodes
+    endif
+    rm('-f',$cpnodes):$dum
+    shell('rm -f '+$laststatus):$dum
+    shell('cp -r '+$locxml+'/* '+$origlocxml):$dum
+    shell('rm -rf '+$locxml):$dum
+
+//    $NODE=''
+	return($newxml,$NODE)
+
+ENDIF
+"********************************************************************"
+exists($locinfo,'directory'):$direx
+if ($direx=0) then return(0) endif
+
+"********************************************************************"
+IF ($1='delete') THEN
+   $s1='' $s2='' $total=0
+   write('reset',$tmpfile)
+   shell('(cat '+$esq1+' >> '+$tmpfile+')'):$dum
+   shell('(cat '+$esq2+' >> '+$tmpfile+')'):$dum
+   shell('(cat '+$esq3+' >> '+$tmpfile+')'):$dum
+   readfile($tmpfile,'$s1','$s2','','local'):$total
+   shell('rm -f '+$tmpfile):$dum
+   if ($total) then
+     $i=1
+     repeat
+	shell('rm -r '+$infodir+'/'+$s1[$i]):$dum
+	$i=$i+1
+     until $i > $total
+   endif
+   shell('rm -rf '+$locxml):$dum
+ENDIF
+"********************************************************************"
+IF ($1='showSQ') THEN
+	expactive('auto'):$isauto
+        cqinitCP
+        vnmrjcmd('SQ delete tmpstudy')
+        $studyxml=sqdir+'/study.xml'
+        $sqinfo=sqdir+'/info'
+        write('reset',$studyxml)
+	write('reset',sqdir+'/enterSQ')
+	if ($loc<>'') and ($loc<>'0') then
+	    $tt=$sample+' (loc'+$loc+')'
+	else
+	    $exp=''
+	    is_activeQ($archsamp):$cactive,$cuser,$exp
+	    strstr($exp,'/enterQ.macdir/'):$isauto
+	    if ($isauto) then
+	    	$tt=$sample+' (active in background)'
+	    else
+		shell('basename '+$exp):$exp
+		if ($exp<>'') then
+		    $tt=$sample+' (active in '+$exp+')'
+		else
+		    $tt=$sample
+		endif
+	    endif
+	endif
+	$ttxt=$samplename
+	$studyowner='' rtv($sampglobal,'noabort','studyowner'):$studyowner
+	if ($studyowner='') then
+		rtv($sampglobal,'noabort','operator_'):$studyowner
+	endif
+	if ($studyowner='') then $studyowner=operator endif
+	if ($studyowner<>operator) and (operator<>owner) then
+	   $tt=$tt+' (study owned by: '+$studyowner+')'
+	endif
+   	write('file',$studyxml,'<?xml version="1.0" encoding="UTF-8"?>')
+   	write('file',$studyxml,'<!DOCTYPE template>')
+   	write('file',$studyxml,'')
+   	write('file',$studyxml,'<template>')
+   	write('fileline',$studyxml,'  <protocol title="%s" ',$tt)
+   	write('fileline',$studyxml,'type="protocol" exp="grandparent" lock="off" ')
+   	write('fileline',$studyxml,'id="tmpstudy" tooltext="%s" expanded="true">\n',$ttxt)
+
+//  While viewing the active study, all fids in the study are
+//  displayed (this is unlike the spectrometer view where only those
+//  fids collected in that autodir are displayed)
+
+    exists($xml4,'file'):$xml4ex
+    if ($xml4ex) then
+	shell('(cat '+$xml4+' >> '+$studyxml+')'):$dum
+	shell('(cat '+$esq4+' | grep -w Completed | awk \'{print $1" "$2" "$3}\' >> '+sqdir+'/enterSQ)'):$dum
+    else
+	shell('(cat '+$xml1+' >> '+$studyxml+')'):$dum
+	shell('(cat '+$esq1+' >> '+sqdir+'/enterSQ)'):$dum
+    endif
+// While viewing the active study, all errored nodes will be displayed
+    exists($xml6,'file'):$xml6ex
+    if ($xml6ex) then
+	shell('(cat '+$xml6+' >> '+$studyxml+')'):$dum
+	shell('(cat '+$esq4+' | grep -w Error | awk \'{print $1" "$2" "$3}\' >> '+sqdir+'/enterSQ)'):$dum
+    endif
+    if ($xml4ex) or ($xml6ex) then
+	shell('cp -r '+$archsamp+'/dirinfo/xmldir/info/* '+$sqinfo):$dum
+    endif
+
+	shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
+        shell('(cat '+$esq2+' >> '+sqdir+'/enterSQ)'):$dum
+        shell('(cat '+$xml3+' >> '+$studyxml+')'):$dum
+        shell('(cat '+$esq3+' >> '+sqdir+'/enterSQ)'):$dum
+
+    exists($xml5,'file'):$xml5ex
+    if ($xml5ex) then
+	shell('(cat '+$xml5+' | grep -c protocol)'):$xml5ex
+    endif
+    if ($xml5ex) then
+//	$showscout='no'
+	SampleViewPref('get','scout'):$parex
+//	exists('ScoutViewPref','parameter','global'):$parex
+//	if ($parex) then $showscout=ScoutViewPref endif
+//	if ($showscout='yes') then
+	if ($parex) then
+	    shell('(cat '+$xml5+' >> '+$studyxml+')'):$dum
+            shell('(cat '+$esq4+' | grep -w Scout | awk \'{print $1" "$2" "$3}\' >> '+sqdir+'/enterSQ)'):$dum
+	    write('file',$studyxml,'  </protocol>')
+	endif
+    endif
+	shell('cp -r '+$locinfo+'/* '+$sqinfo):$dum
+  	write('file',$studyxml,'  </protocol>')
+  	write('file',$studyxml,'</template>')
+  	vnmrjcmd('SQ delete tmpstudy')
+  	vnmrjcmd('SQ read '+$studyxml)
+	return(1)
+ENDIF

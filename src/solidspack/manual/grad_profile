@@ -1,0 +1,96 @@
+Protocol: Grad_profile  Sequence: grad_profile.c  Apptype: solidseq1d
+
+Description: An X spin echo with gradients during the defocus 
+             period and acquisition with SPINAL or TPPM decoupling 
+             during acquisition. Used to create a gradient profile
+             with an MAS solid sample. Setup: 
+
+Load a calibrated data set and select the protocol Grad_profile. For a 
+new nucleus set the desired observe nucleus and array pwX90 to 
+obtain a calibration. 
+
+Select the desired decoupling method tppm or spinal. The manual 
+file onepul describes calibration of decoupling.
+
+Select the protocol Grad_profile. Set aXecho = aX90 and 
+pwXecho = 2.0*pwX90.0. Set t1Xecho = t2Xecho to about 
+50 us each. Set gaZgrad to the desired gradient level and 
+gpwZgrad to the desire gradient pulse width - about 1 ms. 
+
+Set sw large enopugh to encompass the profile for the 
+particular gradient level. Obtain a spectrum. 
+
+The maximum value of gpwZgrad is 10 ms. Adamantane is a good sample 
+to use with recovery measurements.  
+
+Parameter Groups:
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used 
+              as a preparation pulse. Also used to store the obs 
+              calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+gradZ:  Module:  no
+Sequence:  grad_rec.c
+Description:  Implements a gradient pulse on the Z axis followed 
+              by a recovery time. 
+Parameters:  Sequence Page
+       gaZgrad - gradient amplitude in DAC units
+       gpwZgrad - gradient pulse length
+       gtZgrad - gradient recovery time. 
+Implementation: Use with rgradient or zgradpulse.
+
+echoX: Module:  no
+Sequence:  ssecho1d.c
+Description:  Implements a refocusing pulse with delays before and after
+              the pulse.
+Parameters:  Sequence Page
+       aXecho - amplitude of the obs pulses.
+       t1Xecho - delay before the refocusing pulse.
+       pwXecho - 180-degree flip on obs.
+       t2Xecho - delay after the refocusing pulse.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.  
+Parameters:  Sequence Page - Hspinal and Htppm groups overlap. 
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+              getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence:  tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+

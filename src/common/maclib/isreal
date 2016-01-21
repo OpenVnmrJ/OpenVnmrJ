@@ -1,0 +1,90 @@
+"macro isreal"
+
+/**
+ * Usage: isreal(paramname<,tree>)
+ *
+ * Returns 1 if and only if paramname is a real type.  It returns 0 if
+ * paramname is a string type.  If there is an error, the error is reported and
+ * the macro also returns 0.  The value of tree is 'current', 'global',
+ * 'processed' or 'systemglobal' or 'usertree' and the default is 'current'.
+ *
+ * Discussion:  There is some unfortunate ambiguity and vagueness in the
+ * published documentation in regard to vnmr parameters and their types.  In
+ * particular, 'real' and 'string' mean something slightly different in
+ * different contexts.  There are seven types altogether.  The macro gettype
+ * returns a unique integer value when operating on the parameter.  Of the
+ * seven types, two can be broadly categorized as string, and five can be
+ * broadly categorized as real.  Since one of the string category types is
+ * 'string' and one of the real category types is 'real', this is where the
+ * ambiguity arises.
+ *
+ * This table hopefully provides some clarity:
+ *
+ *                               gettype
+ *     category       type       returns
+ *    +----------+-------------+---------+
+ *    | string   |   'string'  |    2    |
+ *    |          |    'flag'   |    4    |
+ *    +----------+-------------+---------+
+ *    |          |   'real'    |    1    |
+ *    |          |   'delay'   |    3    |
+ *    |   real   | 'frequency' |    5    |
+ *    |          |   'pulse'   |    6    |
+ *    |          |  'integer'  |    7    |
+ *    +----------+-------------+---------+
+ *
+ * So specifically, this function returns 0 for the string *category* and 1 for
+ * the real *category*.
+ *
+ * It is worth noting that this function is consistent with the typeof()
+ * operator.  That operator is primarily intended to ascertain the type of the
+ * input argument to a macro, so using it for other purposes is not recommended.
+ * Also, it does not take a tree argument.  Note that typeof() returns 0 for
+ * reals and 1 for strings, the opposite of this macro, but it should be clear
+ * from the name what is intended.  A sister macro isstring returns the same
+ * value as typeof().
+ */
+
+if ($# < 1) then
+    write('line3','Usage: isreal(paramname<,tree>)')
+    return(0)
+endif
+$paramName = $1
+$paramTree = 'current'
+if ($# > 1) then
+    $paramTree = $2
+    if not ($paramTree = 'current') then
+        if not ($paramTree = 'global') then
+	    if not ($paramTree = 'systemglobal') then
+	        if not ($paramTree = 'processed') then
+		    if not ($paramTree = 'usertree') then
+		        write('error', 'isreal: tree argument not valid')
+		        return(0)
+		    endif
+		endif
+            endif
+	endif
+    endif
+endif
+
+exists($paramName, 'parameter', $paramTree):$paramExists
+if not $paramExists then
+    write('error', 'isreal: parameter %s does not exist in %s tree', $paramName, $paramTree)
+endif
+
+$returnValue = 0
+gettype($paramName, $paramTree):$paramType
+if ($paramType = 1) then
+    $returnValue = 1
+elseif ($paramType = 3) then
+    $returnValue = 1
+elseif  ($paramType = 5) then
+    $returnValue = 1
+elseif  ($paramType = 6) then
+    $returnValue = 1
+elseif  ($paramType = 7) then
+    $returnValue = 1
+endif
+
+return($returnValue)
+

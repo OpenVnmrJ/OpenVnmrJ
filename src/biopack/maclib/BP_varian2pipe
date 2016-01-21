@@ -1,0 +1,256 @@
+"macro BP_varian2pipe"
+" *************************************************************  "
+" BP_varian2pipe  - macro for creating conversion scripts        "
+"        for nmrpipe, based on the current experiment.           "
+"                                                                "
+" *************************************************************  "
+" Usage:                                                         "
+"        This script also assumes:                               "
+"        1. Channel 1 is H, channel 2 is C, and channel 3 is N   "
+"        2. The axis parameter is correctly set                  "
+"        3. The spectrum has been referenced to the center of    "
+"           the spectrum. eg. using the iref macro               "
+"                                                                "
+"        This macro is called by the BPsvf  macro                "
+"                                                                "
+" Macro originally written by                                    "
+" Douglas A. Klewer 24Sept04, Arizona State University NMR Lab   "
+" *************************************************************  "
+" Modified by Anastasia Zhuravleva, SNC 2006,  for setref        "
+" ************************************************************   "
+"macro BP_varian2pipe"
+" ************************************************************   "
+
+if ($# > 0.5) then
+   $fid=$1+'fid.com'
+else 
+   $fid='fid.com'
+endif
+
+" Declare variable defaults  "
+$DIM='x','y','z','a'
+$PAR='N','T','MODE','SW','OBS','CAR','P0','P1','LAB'
+$PARDIM = 9
+
+length(axis):$DIMCOUNT
+$i=1
+repeat
+   substr(axis,$i,1):$e
+      if ($e = 'p')     then $LAB[$i] = 'H1'
+         elseif ($e = 'd') then $LAB[$i] = 'C13'
+         elseif ($e = '1') then $LAB[$i] = 'C13'
+         elseif ($e = '2') then $LAB[$i] = 'N15'
+         else $LAB[$i] = 'H'
+      endif
+   $i=$i+1
+until $i > $DIMCOUNT
+
+$i=1
+repeat
+   $MODE[$i]='Complex'
+   $i=$i+1
+until $i > $DIMCOUNT 
+
+if ( $DIMCOUNT = 2 ) then 
+exists('f1coef','parameter'):$fl
+ if ( $fl <> 0 ) then  
+  if (f1coef='1 0 -1 0 0 -1 0 -1') then $MODE[$DIMCOUNT]='Rance-Kay' 
+  elseif (f1coef='1 0 0 1 0 1 1 0') then $MODE[$DIMCOUNT]='Rance-Kay'
+endif 
+endif
+endif
+
+
+if ( $DIMCOUNT = 3 ) then 
+exists('f2coef','parameter'):$fl
+ if ( $fl <> 0 ) then  
+  if (f2coef='1 0 -1 0 0 -1 0 -1') then $MODE[$DIMCOUNT]='Rance-Kay' 
+  elseif (f2coef='1 0 0 1 0 1 1 0') then $MODE[$DIMCOUNT]='Rance-Kay'
+endif 
+endif
+endif
+
+
+if ( $DIMCOUNT = 4 ) then 
+exists('f3coef','parameter'):$fl
+ if ( $fl <> 0 ) then  
+  if (f3coef='1 0 -1 0 0 -1 0 -1') then $MODE[$DIMCOUNT]='Rance-Kay' 
+  elseif (f3coef='1 0 0 1 0 1 1 0') then $MODE[$DIMCOUNT]='Rance-Kay'
+endif 
+endif
+endif
+
+
+" Determine Acquisition Order "
+
+$aqORD=9
+if     (array = 'phase') then $aqORD = 0
+elseif (array = 'phase2') then $aqORD = 0
+elseif (array = 'phase,phase2') then $aqORD = 1
+elseif (array = 'phase2,phase') then $aqORD = 0
+elseif (array = 'phase3,phase2,phase') then $aqORD = 0
+elseif (array = 'phase,phase2,phase3') then $aqORD = 1
+" ********** add for relaxation experiments ****** "
+elseif (array = 'ncyc,phase') then $aqORD = 0
+endif
+
+if ($aqORD = 9) then 
+     echo('Incorrect acquisition order')
+     abort
+endif
+
+$aq2D='States'
+" ******************** Calculate carrier positions ******************"
+$reffl=0
+repeat
+ 
+if ( $2 = 'sfrq' )  then 
+$reffl=1
+$h0=sfrq/(rfp/(sfrq*1e6)+1.0) 
+$c0=0.251449530 * $h0 
+$n0=0.101329118 * $h0  
+
+exists('Hof','parameter'):$yes 
+if ($yes > 0) then 
+  $Hof_car=1.0e6*(sfrq - $h0 + Hof*1.0e-6 - tof*1.0e-6 )/$h0 
+else 
+  $Hof_car=1.0e6*(sfrq-$h0)/$h0 
+endif 
+
+$H_car = 1.0e6 * (sfrq - $h0) / $h0 
+$C_car = 1.0e6 * (dfrq - $c0) / $c0  
+$N_car = 1.0e6 * (dfrq2 - $n0) / $n0 
+$H_obs = sfrq
+$C_obs = dfrq
+$N_obs = dfrq2
+
+endif 
+
+if ( $2 = 'setref' ) then
+$reffl=1
+$Hof_car = (sw/2-rfl+rfp)/reffrq 
+$H_car = (sw/2-rfl+rfp)/reffrq 
+$C_car = (sw1/2-rfl1+rfp1)/reffrq1 
+$N_car = (sw2/2-rfl2+rfp2)/reffrq2 
+$H_obs = reffrq
+$C_obs = reffrq1 
+$N_obs = reffrq2  
+endif
+"write ('line3', 'wrong reference mode')"
+until $reffl > 0.5
+
+
+" ************************* Set parameters *****************************"
+
+$j=1
+repeat
+   if ($j = 1) then 
+      $N[$j] = np
+      $T[$j] = np/2
+      $SW[$j] = sw
+      $P0[$j] = rp
+      $P1[$j] = lp
+      if     ($LAB[$j] = 'C13') then 
+              $OBS[$j] = $C_obs 
+              $CAR[$j] = $C_car
+      elseif ($LAB[$j] = 'N15') then 
+              $OBS[$j] = $N_obs
+              $CAR[$j] = $N_car
+      else    
+              $OBS[$j] = $H_obs
+              $CAR[$j] = $H_car
+      endif
+   elseif ($j = 2) then
+      $N[$j] = ni*2
+      $T[$j] = ni  
+      $SW[$j] = sw1
+      $P0[$j] = rp1
+      $P1[$j] = lp1
+      if ($LAB[$j] = 'C13' ) then 
+              $OBS[$j] = $C_obs
+              $CAR[$j] = $C_car
+      elseif ($LAB[$j] = 'N15') then 
+              $OBS[$j] = $N_obs
+              $CAR[$j] = $N_car
+      else   
+              $OBS[$j] = $H_obs 
+              $CAR[$j] = $Hof_car    
+   endif 
+   elseif ($j = 3) then
+      $N[$j] = ni2*2
+      $T[$j] = ni2
+      $SW[$j] = sw2
+      $P0[$j] = rp2
+      $P1[$j] = lp2
+      if     ($LAB[$j] = 'C13') then 
+              $OBS[$j] = $C_obs
+              $CAR[$j] = $C_car
+      elseif ($LAB[$j] = 'N15') then 
+              $OBS[$j] = $N_obs
+              $CAR[$j] = $N_car
+      else   
+              $OBS[$j] = $H_obs
+              $CAR[$j] = $Hof_car
+      endif
+   elseif ($j = 4) then
+      exists('rp3','parameter'):$yes 
+      $N[$j] = ni3*2
+      $T[$j] = ni3
+      $SW[$j] = sw3
+      if ($yes > 0.0) then 
+         $P0[$j]=rp3 
+         $P1[$j]=lp3 
+      else 
+         $P0[$j] = 0.0
+         $P1[$j] = 0.0
+      endif 
+      if     ($LAB[$j] = 'C13') then 
+              $OBS[$j] = $C_obs
+              $CAR[$j] = $C_car
+      elseif ($LAB[$j] = 'N15') then 
+              $OBS[$j] = $N_obs
+              $CAR[$j] = $N_car
+      else    
+              $OBS[$j] = $H_obs
+              $CAR[$j] = $Hof_car
+      endif
+   endif 
+   $j=$j+1
+until $j > $DIMCOUNT
+
+" ************** Begin to write the conversion script ********************"
+write('file',$fid,'#!/bin/csh ')
+write('fileline',$fid,`\nvar2pipe -in ../fid -noaswap -aqORD %1d \\\n`,$aqORD)
+
+$j=1
+repeat
+   $i=1
+   repeat
+      if ($PAR[$j]='MODE') or ($PAR[$j]='LAB')  then
+            write('fileline',$fid,'  -%c%-4s %12s',$DIM[$i],$PAR[$j],${$PAR[$j]}[$i])
+      elseif ($PAR[$j]='N') or ($PAR[$j]='T') then
+            write('fileline',$fid,'  -%c%-4s %12d',$DIM[$i],$PAR[$j],${$PAR[$j]}[$i])
+      elseif ($PAR[$j]='P0') or ($PAR[$j]='P1') then
+            write('fileline',$fid,'  -%c%-4s %12.2f',$DIM[$i],$PAR[$j],${$PAR[$j]}[$i])
+      else
+            write('fileline',$fid,'  -%c%-4s %12.7f',$DIM[$i],$PAR[$j],${$PAR[$j]}[$i])
+      endif
+      $i=$i+1
+   until $i>$DIMCOUNT
+   write('fileline',$fid,' \\\n')
+$j=$j+1
+until $j>9
+
+write('fileline',$fid,'  -ndim  %12s  -aq2D %13s  \\\n',$DIMCOUNT, $aq2D)
+
+if $DIMCOUNT=2 then
+   write('fileline',$fid,'  -out %s.fid -verb -ov \n\n\n',seqfil)
+elseif $DIMCOUNT=3 then
+   write('fileline',$fid,'  -out ./data/%s%%03d.fid -verb -ov \n\n\n',seqfil)
+elseif $DIMCOUNT=4 then
+   write('fileline',$fid,'| pipe2xyz -out ./data/%s%%07d.fid -verb -ov \n\n\n',seqfil)
+endif
+"cat($fid)"
+
+$cmd='chmod -R u+x '+$fid
+shell($cmd):$dum

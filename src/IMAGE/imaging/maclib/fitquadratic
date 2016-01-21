@@ -1,0 +1,53 @@
+"macro fitquadratic"
+/******************************************************************
+*  y = ax^2 + bx + c
+*  fitquadratic: Fit second order polynomial to pairs of points passed as
+*  argument.  Return Xvalue at vertex, Y max/min at vertex, and a, b, c, coefficients.
+*
+*  Usage:  fitquadratic:xmax,ymax,a,b,c
+*
+*  ARR   Version 1.0   6/10/11 
+*******************************************************************/
+
+$number = size('$1')/2                           // $1 is an array of pairs of points
+
+/*** Initialize sums ***/
+$s00 = $number
+$s01 = 0
+$s10 = 0
+$s11 = 0
+$s20 = 0
+$s21 = 0
+$s30 = 0
+$s40 = 0
+
+$i = 0
+repeat                                           // loop over pairs of values and accumulate sums
+  $i = $i + 1                                    // divide by 1000 to avoid overly large totals in sums
+  $x = $1[$i*2-1]/1000                           // X values in first of each pair
+  $y = $1[$i*2]/1000                             // Y values in second of each pair
+
+  /*** skj = sum(x^k*y^j) ***/
+  $s01 = $s01 + $y
+  $s10 = $s10 + $x
+  $s11 = $s11 + $x*$y
+  $s20 = $s20 + $x*$x
+  $s21 = $s21 + $x*$x*$y
+  $s30 = $s30 + $x*$x*$x
+  $s40 = $s40 + $x*$x*$x*$x
+until ($i = $number)
+
+/*** Solve for a, b, c ***/
+$denom = $s00*$s20*$s40 - $s10*$s10*$s40 - $s00*$s30*$s30 + 2*$s10*$s20*$s30 - $s20*$s20*$s20
+
+$a = ($s01*$s10*$s30 - $s11*$s00*$s30 - $s01*$s20*$s20 + $s11*$s10*$s20 + $s21*$s00*$s20 - $s21*$s10*$s10)/$denom
+$b = ($s11*$s00*$s40 - $s01*$s10*$s40 + $s01*$s20*$s30 - $s21*$s00*$s30 - $s11*$s20*$s20 + $s21*$s10*$s20)/$denom
+$c = ($s01*$s20*$s40 - $s11*$s10*$s40 - $s01*$s30*$s30 + $s11*$s20*$s30 + $s21*$s10*$s30 - $s21*$s20*$s20)/$denom
+
+"-- Solve for vertex -------"
+$xvertex = -$b/(2*$a)*1000                       // multiply by 1000 to correct for divide above
+$yvertex = ($a*$xvertex*$xvertex + $b*$xvertex + $c)*1000
+
+"-- Return fitted value of vertex --"
+return($xvertex,$yvertex,$a,$b,$c)
+

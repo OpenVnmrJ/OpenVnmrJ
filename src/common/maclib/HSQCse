@@ -1,0 +1,90 @@
+"macro HSQCse"
+"***************************************************************"
+" HSQCse - seup macro for HSQCse pulse sequence                     "
+"       if tn=dn then dn defaults to 13C                        "
+"***************************************************************"
+
+if (tn = dn) then dn='C13' endif
+$wet='' substr(seqfil,1,3):$wet 
+
+par2D
+setpresatpar
+mkpar('flag','PFGflg','n')
+getparam('gradient','Probe'):PFGflg
+
+Autopsgset('HSQCse','dg','ap','axis','array','sspul','hs','hst')
+Autopsgset('HSQCse','null','j1xh','pwxlvl','pwx','dpwr','dmf')
+Autopsgset('HSQCse','gzlvl1','gt1','gzlvl3','gt3','gstab','hsglvl','hsgt','nullflg')
+set2D
+
+dm='nny' 
+if (Console='unity') or (Console='vxrs') or (Console='g2000') then
+  dmm='ccw'
+else
+  dmm='ccg'
+endif
+
+setdecpars
+refsource1='dfrq'
+setsw1(dn,100,-100):dof 
+j1xh=150 
+
+if (dn = 'C13') then
+   setsw1(dn,160,-10):dof 
+   j1xh=140
+elseif (dn = 'N15') then
+   setN15sw('sw1'):dof
+//   setsw1(dn,140,90):dof 
+   j1xh=90
+endif
+
+isspincad($0,'quiet'):$scpsg
+if (satmode = 'y') then
+ satdly=1
+ if ($scpsg>0) then d1=satdly+.05 else d1=.05 endif
+else
+ d1=1
+endif
+
+proc='ft' fpmult='n'
+ni=128
+nt=4
+pw=pw90
+fn1=2k phase=1,2,7,8 ph
+
+if (PFGflg = 'y') then 
+ fixgrd(10):hsglvl
+ sspul='y'
+ null=0
+ nullflg='y'
+else
+ sspul='n'
+ nullflg='n'
+endif
+
+if (Console='g2000') then ss=2 else ss=32 endif
+spin=0 wexp='' wnt='' alock='n' wshim='n'
+ai axis='pd'
+pmode='full' rp=rp-90
+seqfil='HSQCse' explist=seqfil
+f1coef='1 0 0 -1 -1 0 0 -1 0 -1 -1 0 0 -1 1 0'
+if (PFGflg = 'y') then
+ setvch('tn','dn','z')
+else
+ setvch('tn','dn','off')
+endif
+numvch=3,2,1,0
+full 
+hs='n' gain='y' full
+if (dn='C13') and (tn='H1') then defparval('set',$0) endif
+if ($wet='wet') then 
+  seqfil='wet'+seqfil explist=seqfil
+  setwetpar(seqfil)
+  setvch('tn','dn','z','dn')
+  numvch=4,3,1,0
+  if (dn='C13') and (tn='H1') then defparval('set','wet'+$0) endif
+endif
+setLP1 gaussian
+dps
+dg
+

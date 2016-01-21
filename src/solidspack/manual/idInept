@@ -1,0 +1,155 @@
+Protocol: IdInept  Sequence: idInept.c  Apptype: solidseq2d
+
+Description:
+       A 2D XH HETCOR with preparation through HX CP, an X 
+       d2 period, mixing through rotary resonance, Z-filter 
+       with XH INEPT, and H detection. The XH INEPT allows 
+       optional refocussing and homonulcear decoupling on H.
+       The d2 period allows decoupling with an optional H 
+       pi pulse or TPPM or SPINAL decoupling. H acquisition
+       allows optional X TPPM or SPINAL decoupling. H-d2 
+       decoupling is balanced with continued decoupling after 
+       a flip to Z. 
+
+Parameter Groups
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from H to X.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the H channel.
+       aXhx - median amplitude of the X channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be set
+              - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore function: _cp_(hx,phHhx,phXhx); phHhx is the overall phase
+              table for the H channel and phXhx is that for the X channel.
+
+ineptXH:  Module:  yes
+Sequence:  ineptxyonepul.c
+Description:  Implements an INEPT polarization transfer from X to H.
+Parameters:  Sequence Page
+       refXHinept - flag to switch refocussed INEPT on/off. Possible
+                  values: 'y' or 'n'.
+       aHxhinept - amplitude of the H pulse.
+       aXxhinept - amplitude of the X pulse.
+       pw1Hxhinept - 180-degree flip angle on the H channel.
+       pw1Xxhinept - 180-degree flip angle on the X channel.
+       pw2Hxhinept - 90-degree flip angle on the H channel.
+       pw2Xxhinept - 90-degree flip angle on the X channel.
+       t1XHinept - delay for J-evolution.
+       t2XHinept - delay for J-refocusing.
+       ch1XHinept = 'obs' must be set (not shown).
+       ch2XHinept = 'dec' must be set (not shown).
+Implementation:  GP inept = getinept("ineptXH");
+Underscore functions: _ineptdec2(inept,ph1Xxhinept,ph1Hxhinept,ph2Xxhinept
+                      ,ph2Hxhinept,homo1,zero,getval("pwHshort1")); 
+	              runs INEPT without refocusing.
+Underscore function:_ineptrefdec2(inept,ph1Xxhinept,ph1Hxhinept,ph2Xxhinept,
+                    ph2Hxhinept, ph3Xxhinept,ph3Hxhinept,homo1,zero,homo2,
+                    zero,getval("pwHshort1"),getval("pwHshort2"));
+                    runs INEPT with refocussing
+
+hdec1H:  Module:  yes
+Sequence: hh2dhdec.c
+Description: Chooses various decoupling methods: PMLG, FSLG, SAM, TPPM.
+	     For each decoupling methods uses "get" functions from
+             SolidsPack. 
+Parameters:  Sequence Page
+       dmHhdec1 - flag to switch on/off the optional decoupling. 
+                  Possible values: 'y' and 'n'. 
+       seqHhdec1 - decoupling method. Possible values - 'pmlg',
+                   'fslg', 'sam', 'tppm'.
+       aHhdec1 - amplitude of the decoupling.
+       pwHhdec1 - pulse width for the decoupling.For FSLG and PMLG: 
+                  360-degree flip, off resonance (the length of
+                  each of the two FSLG/PMLG pulses).
+                  For SAM: the time of one rotor period
+                  For TPPM: approximate 180-degree flip angle on
+                  resonance.
+       qHhdec1 - integer multiplier. Relevant for PMLG and SAM. 
+              For PMLG: the number of phase steps in that make 
+              up pwHhdec1. A negative value implements descending
+              phases in the first pulse.
+	      For SAM: the number of RF cycles per rotor cycle.
+       nHhdec1 - waveform cycles represented in the .DEC file.
+       mHhdec1 - integer parameter. Not currently in use and 
+                 should be set to 1.
+       ofdHhdec1 - for FSLG: +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofHhdec1 - overall frequency offset for the chosen decoupling 
+              technique.
+       pwHshort1 - duration of the correction pulse for tilted axis 
+              (FLSG/PMLG).
+       chHhdec1 - 'obs' must be set (not shown).
+Implementation: MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
+Underscore functions: _mpseqon(hdec1.mps,phHdec) and other MPSEQ functions
+
+rrH:  Module:  no
+Sequence: idInept
+Description: Implements rotary resonance mixing.
+Parameters:  More Page
+      aHrr - amplitude of the H channel during mixing period.
+      nHrr - integer number of the rotor periods per mixing period.
+      tZF - duration of the Z-filer period.
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL, TPPM decoupling or Pi-pulse on the H 
+             channel during acquisition
+Parameters:  More Page - the Hspinal and Htppm groups overlap
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence: tancpx.c
+Description:  Implements SPINAL decouping on the dec channel during
+              acquisition.
+Parameters:  More Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  More Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+180H: Module: No
+Sequence:  idHetcor.c    
+Description:  Provides a 180-degree pulse on H channel.
+Parameters:  More Page
+      aH180  - the amplitude of the pulse.
+      pwH180 - the pulse length.

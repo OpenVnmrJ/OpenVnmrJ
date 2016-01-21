@@ -1,0 +1,104 @@
+"macro mergeAcct"
+"macro mergeAcct"
+
+$acctDir=systemdir+'/adm/accounting'
+exists($acctDir,'directory','rw'):$e
+if (not $e) then
+  return
+endif
+
+$logfile=$acctDir+'/loginrecords.txt'
+exists($logfile,'file'):$elog
+
+$gofile=$acctDir+'/gorecords.xml'
+exists($gofile,'file'):$ego
+if ($elog=0) and ($ego=0) then
+  return
+endif
+
+$out=$acctDir+'/tmp'
+rm('-f',$out):$e
+
+$newacct=$acctDir+'/acctLog.xml'
+exists($newacct,'file'):$e
+if ($e) then
+  shell('head -n -1 '+$newacct+' > '+$out):$e
+  rm('-f',$newacct):$e
+else
+  write('file',$out,'<accounting>'):$e
+endif
+
+if ($elog) then
+  lookup('mfile',$logfile,'filekey'):$key
+  $ret=2
+  $st=''
+  while $ret=2 do
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    if ($ret=2) then
+       strstr($line,'start'):$num
+       if ($num) then
+         write('file',$out,'<entry type="login"')
+         substr($line,4):$st
+         substr($st,2,'delimiter','='):$sec
+         systemtime('%a %b %d %T %Z %Y',$sec):$date
+         write('file',$out,'       start="%s"',$date)
+         write('file',$out,'       startsec="%s"',$sec)
+         substr($line,2):$st
+         write('file',$out,'       %s',$st)
+         substr($line,3):$st
+         write('file',$out,'       %s\n/>',$st)
+       else
+         write('file',$out,'<entry type="logout"')
+         substr($line,4):$st
+         substr($st,2,'delimiter','='):$sec
+         systemtime('%a %b %d %T %Z %Y',$sec):$date
+         write('file',$out,'       end="%s"',$date)
+         write('file',$out,'       endsec="%s"',$sec)
+         substr($line,2):$st
+         write('file',$out,'       %s',$st)
+         substr($line,3):$st
+         write('file',$out,'       %s\n/>',$st)
+       endif
+    endif
+  endwhile
+  rm('-f',$logfile):$e
+endif
+
+if ($ego) then
+  lookup('mfile',$gofile,'readline','readline','filekey'):$line,$line,$key
+  $ret=2
+  $st=''
+  while $ret=2 do
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    if ($ret=2) then
+         substr($line,2):$wd2
+         substr($line,3):$wd3
+         write('file',$out,'<entry type="gorecord" %s %s',$wd2,$wd3)
+         lookup('mfile',$key,'readline','readline','readline','readline','readline','readline','filekey'):$line,$line2,$line3,$line4,$line5,$line6,$key
+         write('file',$out,'%s',$line)
+         write('file',$out,'%s',$line2)
+
+         substr($line3,2,'delimiter','='):$date
+         systemtime('"%a %b %d %T %Y"',$date):$sec
+         systemtime('"%a %b %d %T %Z %Y"',$sec):$date
+         write('file',$out,'        submit=%s',$date)
+
+         substr($line4,2,'delimiter','='):$date
+         systemtime('"%a %b %d %T %Y"',$date):$sec
+         systemtime('"%a %b %d %T %Z %Y"',$sec):$date
+         write('file',$out,'        start=%s',$date)
+         write('file',$out,'        startsec="%s"',$sec)
+
+         substr($line5,2,'delimiter','='):$date
+         systemtime('"%a %b %d %T %Y"',$date):$sec
+         systemtime('"%a %b %d %T %Z %Y"',$sec):$date
+         write('file',$out,'        end=%s',$date)
+         write('file',$out,'        endsec="%s"',$sec)
+
+         write('file',$out,'%s',$line6)
+    endif
+  endwhile
+  rm('-f',$gofile):$e
+endif
+write('file',$out,'</accounting>'):$e
+mv($out,$newacct):$e

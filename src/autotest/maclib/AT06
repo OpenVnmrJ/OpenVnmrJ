@@ -1,0 +1,125 @@
+"macro AT06"
+"AT06" "Image tests"
+write('line3','Determining Quadrature Image Intensity')
+if ($#=0) then
+   ATrtp('standard')
+   text('Image Test: Four single-scan spectra and four four-scan spectra')
+   at_currenttest='image_test'
+   if (at_new='n') then
+    fsq='n'  "should already by set by ATstart" 
+    if (dsp='i') then dsp='n' endif
+   endif
+   tof=tof-2.5p 
+   lb='n' sb=.077
+   nt=1,1,1,1,4,4,4,4
+   axis='h'
+   crl rfl=sw/2 rfp=0
+   sp=-3p wp=6p
+   da
+   av wexp='AT06(`PART1`)'
+   wnt='ATwft f select(1) vsadj vs=vs*100 dscale dssh dtext'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+   wft
+   vs=vs/100
+   ATplot
+   vs=vs*100 atext('vertical scale x100')
+   dssh
+   if (at_plotauto='y') then pl('all') pltext(0,wc2max-5) 
+    write('graphics',10,150,'<---------- 1 percent of peak amplitude ----------->')
+    write('graphics',15,50,'image')     write('graphics',4,20,'center')
+    write('graphics',50,50,'image')     write('graphics',35,20,'center')
+    write('graphics',83,50,'image')     write('graphics',70,20,'center')
+    write('graphics',110,50,'image')     write('graphics',100,20,'center')
+    write('plotter',10,150,'<---------- 1 percent of peak amplitude ----------->')
+    write('plotter',20,50,'image')     write('plotter',10,20,'center')
+    write('plotter',52,50,'image')     write('plotter',41,20,'center')
+    write('plotter',83,50,'image')     write('plotter',73,20,'center')
+    write('plotter',115,50,'image')     write('plotter',104,20,'center')
+    ATpage 
+   endif
+   r1=1 full $peaksum1=0 $imagesum=0  $imagesum2=0
+   repeat
+       select(r1) peak:$ht,$h2ofrq $peaksum1=$peaksum1+$ht
+       r1=r1+1 
+   until r1=5 
+   r1=1
+   s1
+   sp=-$h2ofrq-40 wp=80
+   s2
+   repeat
+    select(r1) peak:$ht $imagesum=$imagesum+$ht
+    r1=r1+1 
+    until r1=5 
+   r1=5
+   repeat
+    select(r1) peak:$ht $imagesum2=$imagesum2+$ht
+    r1=r1+1 
+    until r1=9 
+   $av1=$peaksum1/4 $av2=$imagesum/4 $av3=$imagesum2/4
+   $resid=100*$av2/$av1 $resid2=100*$av3/$av1 
+   if $resid<0 then $resid=-$resid endif
+   if $resid2<0 then $resid2=-$resid2 endif
+   r3=trunc(1000*$resid)/1000
+   r4=trunc(1000*$resid2)/1000
+   
+   r1
+   ATsvf
+   if (at_new='y') then
+    ATrecord('IMAGES','Quadrature images  (percent)','nt=1',r3,'nt=4',r4)
+    write('file',autotestdir+'/REPORT','Quadrature Image (percent): %1.3f (nt=1) %1.3f (nt=4)',r3,r4)
+    ATnext return
+   endif
+    
+   write('line3','Determining Quadrature Image Intensity using FSQ')
+   
+   fsq='n' "temporarily disable"
+   dsp=at_dsp  "dsp=i or r is necessary for fsq"
+
+   dsp='i' oscoef=511 oversamp=20 oslsfrq=10000   "temporary"
+   seqfil='ATfsqd'                                "temporary"
+
+   wexp='AT06(`PART2`)'
+   wnt='ATwft select(1) f vsadj vs=vs*100 dscale dssh dtext'
+   text('  \\image test using Frequency-Shifted Quadrature Detection\\Single transients Only')
+   nt=1,1,1,1 
+   at_currenttest='fsq_image_test'
+   ATcycle au
+
+elseif ($1='PART2') then
+   wft
+  vs=vs/100
+  s1
+  ATplot
+  vs=vs*100 atext('vertical scale x100')
+  dssh
+  $at_printparams=at_printparams at_printparams='n'
+  ATplot at_printparams=$at_printparams
+  r1=1 full $peaksum1=0 $imagesum=0  $imagesum2=0
+  repeat
+   select(r1)  peak:$ht $peaksum1=$peaksum1+$ht
+   r1=r1+1 
+   until r1=5 
+  r1=1
+  peak:$ht,$h2ofrq
+  sp=-$h2ofrq-40 wp=80
+  repeat
+   select(r1) peak:$ht $imagesum=$imagesum+$ht
+   r1=r1+1 
+   until r1=5 
+  $av1=$peaksum1/4 $av2=$imagesum/4 
+  $resid=100*$av2/$av1 
+  if $resid<0 then $resid=-$resid endif
+  r5=trunc($resid*1000)/1000
+  ATrecord('IMAGE','Quadrature images  (percent)','nt=1',r3,'nt=4',r4,'  fsq_nt=1',r5)
+  write('file',autotestdir+'/REPORT','Quadrature Image (percent): %1.3f (nt=1) %1.3f (nt=4) %1.3f (nt=1 with fsq)',r3,r4,r5)
+
+  ATsvf
+  fsq='n'  "restore fsq to n"
+  f full vsadj vs=vs*100
+  crl rfl=sw/2 rfp=0 axis='h' sp=-2000 wp=4000 full dssh 
+  dsp=at_dsp
+  ATnext
+endif

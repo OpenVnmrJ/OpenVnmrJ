@@ -1,0 +1,32 @@
+"macro relayh"
+"*****************************************************"
+" relayh - sets up parameters in accordance with the  "
+"          relayh pulse sequence		      "
+"*****************************************************"
+
+par2D
+sw1=sw ni=sw/24 rfl1=rfl rfp1=rfp
+set2D(6)               "6 Hz/pt in F2"
+psgset('relayh','relay','tau','dg','ap','dgs')
+av  ss=8
+sinebell
+
+if ($# > 0) then
+   relay = $1
+endif
+
+$i=0
+$ntmin=4
+while ($i < relay) do
+   $i=$1+1
+   $ntmin=2*$ntmin
+endwhile
+
+if (nt>$ntmin) then
+   nt=nt/$ntmin
+   nt=nt*$ntmin
+else
+   nt=$ntmin
+endif
+pw=pw90  axis='pp'
+man('relayh')

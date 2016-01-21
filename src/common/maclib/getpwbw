@@ -1,0 +1,32 @@
+"macro getpwbw"
+" *************************************************************  "
+" ***                      getpwbw                          ***  "
+" ***         get the pwbw parameter from wavelib           ***  "
+" ***               waveform definition file                ***  "
+" ***                    Eriks Kupce                        ***  "
+" ***                Oxford, 16/11/2004                     ***  "
+" *************************************************************  "
+
+$pshape='gaus180'
+exists('pshape','parameter'):$e
+if $e>0.5 then
+  $pshape=pshape
+endif
+if $#>0.5 then
+  $pshape=$1
+endif
+$val=0.9
+
+$fname = userdir + '/shapelib/pbox.info'
+$cmd = 'Pbox -i '+ $pshape + ' > "' + $fname +'"'
+
+shell($cmd):$x
+
+$pwbw=''
+lookup('mfile',$fname,'seek','pwbw','skip','read'):$pwbw
+format($pwbw,'isreal'):$ok
+if ($ok) then
+  format($pwbw,5,2):$val
+endif
+
+return ($val) 

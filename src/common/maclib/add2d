@@ -1,0 +1,70 @@
+"macro add2d"
+// Chempacker macro
+
+// Usage add2d(<'new'>,<multiplier>)
+//  The optional first string argument are
+//	'new' - the data in curexp is added to a new addsubexp
+//		This means every ni increment is added as a new trace
+//	'clear' - same as clradd
+//	no argument or any other string
+//	 	- the data in curexp is added to the existing traces
+//		   in addsubexp
+
+// A negative multiplier is equivalent to sub
+// By default multiplier is 1
+
+$new=0 $mult=1 $clear=0
+if $# > 0 then
+    if typeof('$1') then
+	if $1='new' then $new=1 endif
+	if $1='clear' then $clear=1 endif
+	if $# > 1 then $mult=$2 endif
+    else
+	$mult=$1
+    endif
+endif
+
+if $clear then
+    clradd
+    return
+endif
+
+if $mult < 0 then 
+    $addcmd='sub' $mult=$mult*-1
+else
+    $addcmd='add'
+endif
+
+write('line3','%s/exp%d',userdir,addsubexp):$addsub
+if $new then
+    clradd
+    select(1) {$addcmd}($mult)
+    $i=2
+    repeat
+	select($i) {$addcmd}($mult,'new')
+	$i=$i+1
+    until $i > arraydim
+    writeparam($addsub+'/curpar','ni','current','add')
+    writeparam($addsub+'/procpar','ni','current','add')
+else
+    $lsfrq=lsfrq
+    $phfid=phfid
+    on('lsfrq'):$lsfrqon
+    on('phfid'):$phfidon
+
+    rtv($addsub+'/curpar','rfl','rfp','rp'):$rfl,$rfp,$rp
+    $rfl=$rfl-$rfp
+    lsfrq=$rfl-(rfl-rfp)
+    phfid=rp-$rp
+
+    $i=1
+    repeat
+	select($i) {$addcmd}($mult,'trace',$i)
+	$i=$i+1
+    until $i > arraydim
+    phfid=$phfid
+    lsfrq=$lsfrq
+    if not $lsfrqon then off('lsfrq') endif
+    if not $phfidon then off('phfid') endif
+
+endif   

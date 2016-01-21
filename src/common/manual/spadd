@@ -1,0 +1,94 @@
+
+*******************************************************************************
+spadd	-	add the current spectrum to the add/subtract experiment
+spsub	-	subtract the current spectrum from the add/subtract experiment
+spmin   -       take the minimum of two spectra
+spmax   -       take the maximum of two spectra
+spadd<('new')>  - add the current spectrum to the add/subtract experiment
+spsub<('new')>  - subtract the current spectrum from the add/subtract
+                  experiment
+spadd<('trace',index)>  - add the current spectrum to the "index" element
+                          in the add/subtract experiment
+spsub<('trace',index)>  - subtract the current spectrum from the "index"
+                          element in the add/subtract
+spadd<('range'<,highfield,lowfield>)>  - add a spectral range to the add/subtract
+                                         experiment
+*******************************************************************************
+
+Non-interactive spectral addition and subtraction uses the ``spadd'' and
+``spsub'' commands.  The last displayed or selected spectrum is added to
+("spadd") or subtracted from ("spsub") the current contents of the
+add/subtract experiment.  The spmin and spmax, instead of adding or subtracting,
+take the minimum and maximum, respectively, of the two spectra.
+
+The commands have two numeric arguments, both of which are
+optional.  The first is the multiplier; the second is the shift.  Thus the
+spectrum can be multiplied and/or shifted.  (To shift a spectrum without
+multiplying it, use a multiplier of 1.0)  A positive shift values moves
+the current spectrum to higher frequency, or to the right.  A negative shift
+value moves the spectrum to lower frequency, or to the left.
+
+The commands have an optional 'range' argument, which, in turn has optional
+highfield and lowfield values.  The range option adds only the specified
+range of data points to the add / subtract experiment. Points outside the
+range are treated as zeros. If the highfield and lowfield arguments are not
+given, they default to sp and sp+wp. That is, the currently displayed portion
+of the spectrum will be combined with the add / subtract experiment.
+If the range option is used, the normal limit that the Fourier numbers of the
+two data sets being combined is not enforced. The shift option may be used to
+position a section of a spectrum with a smaller fn value into the addsub spectrum.
+If used, the multiplier and shift arguments must precede the 'range' argument
+and its options highfield / lowfield arguments. If used, the shift argument is
+relative to the left edge of the addsub data set. The range option works for
+spadd, spsub, spmax, and spmin.
+
+A multi-element add/subtract experiment may be created with the spadd or spsub
+command.  The optional argument 'new' will create a new spectrum in the
+add/subtract experiment.  For example,  the commands clradd select(1) spadd
+from some experiment will create the add/subtract experiment with a single
+spectrum in it.  If the next commands typed are select(2) spadd,  then a
+single spectrum which is the sum of the original spectra one and two will
+be made in the add/subtract experiment.  If, on the other hand,  the
+commands select(2) spadd('new') were typed,  then the add/subtract experiment
+will contain an array of two spectra corresponding to the original spectra
+one and two, respectively.
+Individual spectra in a multi-elemnet add/subtract experiment may subsequently
+be added to and subtracted from.  The spadd and spsub command without a
+'trace' argument will add or subtract from the first spectrum in the
+add/subtract experiment.  Adding the 'trace' argument followed by a
+required index number will select another spectrum to be the target of the
+add/subtract.  For example, select(4) spadd('trace',6) will take the fourth
+spectrum from the current experiment and add it to the sixth spectrum in the
+add/subtract experiment.  When using the 'trace' argument, that spectrum must
+already exist in the add/subtract experiment by using an appropriate number
+of spadd('new') or spsub('new') commands.
+The results can be examined by joining the add/subtract experiment with the
+jaddsub macro and using the normal spectral display and plotting commands.
+
+spmin takes the minimum of two spectra, considered point-by-point in an
+absolute-value sense. For example, if the two corresponding values are
+-2 and +3, the spmin spectrum will have -2; if the two values are +2 and -3,
+the spmin spectrum will have +2 at that point.
+The function of spmin is to essentially select for common features within two
+spectra while eliminating features that are not common between them. In
+particular, if two CP/MAS spectra are obtained at different spin rates, the peaks
+stay in the same place (and hence the spmin spectrum also contains the same
+peaks), but the sidebands move. If spectrum 1 has baseline where spectrum 2
+has sideband, and spectrum 2 has baseline where spectrum 1 has sideband, then
+the spmin spectrum will contain only baseline in these regions, eliminating the
+spinning sidebands..6101
+
+spmax takes the maximum of two spectra, considered point-by-point in an
+absolute-value sense. For example, if the two corresponding values are
+-2 and +3, the spmax spectrum will have +3; if the two values are +2 and -3,
+the spmax spectrum will have -3 at that point.
+
+
+Examples
+           spadd
+           spsub(0.75)
+           spadd('new')
+           spadd('trace',2)
+           spadd('range')              // And the spectral range between sp and sp+wp
+           spadd('range',cr-delta,cr)  // And the spectral range between the cursors
+

@@ -1,0 +1,185 @@
+"macro getspec"
+"********************************************************************"
+"	getspec: Macro to extract spectra from a 3D transform file   "
+"                Spectra are extracted over a rectangular grid of    "
+"                pixels specified by the start and stop indices      "
+"                given to the command.                               "
+
+"      Version 1:  SPARC 3D WIP                                      "
+"                  @(#)getspec.mac	3.1   4/16/93 "
+
+"	arg1:    Name of 3D transform file to act as the source of   "
+"                the spectra. The file is assumed to exist in the    "
+"                current experiment under the name arg1.transform    "
+
+"	arg2:	 Filename for the extracted data. The extracted      "
+"                data will be stored in the current directory        "
+"                in the sub directory arg2.dat. The contents         "
+"                of arg2.dat will be as follows:                     "
+
+"                data                                                "
+"                phasefile                                           "
+"		 text                                                "
+
+"                These files contain: the complex spectral data      "
+"		 (data); the phased spectral data (phasefile) and    "
+"                a text message with information about the location  "
+"                of the extracted spectra.                           "
+
+"	arg3:    The direction of extraction as a string value       "
+"		 chosen from the set: 'fs', 'fm', 'ms', 'mf',        "
+"		 'sf', 'sm'.                                         "
+
+"	arg4:	 The start index for extraction in the direction     "
+"                specified by the first character of arg3.           "
+
+"	arg5:	 The stop index for extraction in the direction      "
+"                specified by the first character of arg3.           "
+
+"	arg6:	 The start index for extraction in the direction     "
+"		 specified by the second character of arg3           "
+
+"	arg7:	 The stop index for extraction in the direction      "
+"		 specified by the second character of arg3           "
+
+"	arg8:	 Optional string argument: 'sum' to provide          "
+"                a sigle spectrum that is the sum of all spectra     "
+"                in the extraction region.                           "
+"********************************************************************"
+
+
+"*Constants**********************************************************"
+$prog='getspec: '
+$ext='.transform'
+$ext1='.dat'
+$cmd='conv1phf '
+
+
+
+"*Input Check********************************************************"
+
+"*Invalid Cases*"
+if ($# < 6.5) or ($# > 8.5)
+then
+$mes='getspec("3Dfile","filename","direct",start1,end1,start2,end2,<"sum">)'
+write('error','%s',$prog+$mes)
+abort
+endif
+
+"*Vaild Cases*"
+if ($# > 6.5) and ($# < 7.5) then $sum='' endif
+
+if ($# > 7.5) and ($# < 8.5) then $sum='sum' endif
+
+
+
+"*Locate Requested Transform File***********************************"
+$infile=curexp+'/'+$1+$ext
+exists($infile,'file'):$ex1
+
+if ($ex1 < 0.5)
+then
+    write('error','%s',$prog+'Cannot find your 3D transform file: '+$infile)
+    abort
+endif
+
+
+
+
+"*Decode Direction String*******************************************"
+length($3):$len
+
+if ($len <> 2)
+then
+    write('error','%s',$prog+'Direction string '+$3+' is invalid')
+    abort
+endif
+
+substr($3,1,1):$ax1
+substr($3,2,1):$ax2
+
+if ($ax1 <> 'f') and ($ax1 <> 'm') and ($ax1 <> 's')
+then
+    write('error','%s',$prog+'Direction string '+$3+' is invalid')
+    abort
+endif
+
+if ($ax2 <> 'f') and ($ax2 <> 'm') and ($ax2 <> 's')
+then
+    write('error','%s',$prog+'Direction string '+$3+' is invalid')
+    abort
+endif
+
+if ($ax1=$ax2)
+then
+    write('error','%s',$prog+'Direction string '+$3+' is invalid')
+    abort
+endif
+
+
+
+
+"*Check start and stop index values*************************************"
+"*Format values to strings for use in extraction script*****************"
+
+if $4 > $5
+then $start1=$5 $stop1=$4
+else $start1=$4 $stop1=$5
+endif
+
+if $6 > $7
+then $start2=$7 $stop2=$6
+else $start2=$6 $stop2=$7
+endif
+
+$starts1='' format($start1,4,0):$starts1
+$stops1=''  format($stop1,4,0):$stops1
+
+$starts2='' format($start2,4,0):$starts2
+$stops2=''  format($stop2,4,0):$stops2
+
+
+
+"*Create directory to hold the extracted data**************************"
+$outfile=$2+$ext1
+mkdir($outfile)
+
+
+
+"*Assemble UNIX script for extraction**********************************"
+$arglist='"'+$infile+'" "'+$outfile+'"/data'+' "'+$outfile+'"/phasefile'+' '+$3
+$arglist=$arglist+' '+$starts1+' '+$stops1+' '+$starts2+' '+$stops2
+$arglist=$arglist+' '+$sum
+$unixcmd=$cmd+$arglist
+clear(4)
+echo($unixcmd)
+
+
+
+"*Execute the UNIX script**********************************************"
+shell($unixcmd):$x
+
+
+
+"*Assemble the text file***********************************************"
+if ($sum='') then $sum='array' endif
+$textfile=$outfile+'/text'
+write('reset',$textfile)
+write('file',$textfile,'%s','type: '+$sum)
+write('file',$textfile,'%s','direction: '+$3)
+write('file',$textfile,'%s','start1: '+$starts1)
+write('file',$textfile,'%s','stop1: '+$stops1)
+write('file',$textfile,'%s','start2: '+$starts2)
+write('file',$textfile,'%s','stop2: '+$stops2)
+
+"*Sign Off*************************************************************"
+if ($sum='array')
+then $nspectra=(($stop1-$start1)+1)*(($stop2-$start2)+1)
+else $nspectra=1
+endif
+
+$nspecs='' format($nspectra,8,0):$nspecs
+
+write('line3','%s',$prog+$nspecs+' spectra stored as: '+$outfile)
+
+"*************************THE END**************************************"	

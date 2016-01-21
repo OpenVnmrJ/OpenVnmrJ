@@ -1,0 +1,28 @@
+
+OpenVnmrJ for Mac
+
+The following files are added when this package is installed.
+
+This package is installed in the /Applications/OpenVnmrJ.app directory.  A link is made from /vnmr to the appropriate subdirectory of /Applications/OpenVnmrJ.app. The /vnmr/bin/makeuser script is automatically executed. It creates a vnmrsys subdirectory in the HOME directory of the installer. Start the OpenVnmrJ application as you would any other Mac application. The OpenVnmrJ.app can also be placed on the dock for quick access. 
+
+The OpenVnmrJ installation does not change any "dot-files" in the user's home account. If you want to be able to run vnmrj or seqgen or other OpenVnmrJ commands from a terminal window, then the PATH parameter must be updated to include /vnmr/bin. You can add the line
+   source /vnmr/user_templates/.vnmrenvsh
+to a .cshrc file to accomplish this.
+
+If additional users are wanted, use standard MacOS tools to create the accounts. The vnmrj adm program can then be used to make enable OpenVnmrJ for those accounts. However, before this can be done, the password request from sudo must be disabled. To do this, from a shelltool enter the command
+
+   sudo -e /private/etc/sudoers
+
+Change the line (around line 34) from
+
+%admin   ALL=(ALL) ALL
+to
+%admin   ALL=(ALL) NOPASSWD: ALL
+
+After adding the users with vnmrj adm, you can re-enable the password by undoing the change that added the NOPASSWD: field.
+
+If you are using MacOS Lion, the java package is not installed with Lion. If
+you type the command java from a terminal window, the Lion operating system will
+provide instructions for downloading this package. Also, if you intend to do
+pulse programming or other operations that require a C compiler, you will need
+to download the Xcode package from the Mac app-store (it is free).

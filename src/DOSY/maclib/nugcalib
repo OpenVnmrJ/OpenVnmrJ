@@ -1,0 +1,674 @@
+"macro nugcalib"
+"@(#) nugcalib: combine functions of previus nugcalib and 	"
+" nugfit macros, calibrating non-uniform PFGs "
+
+"macro nugcalib"
+
+" 21 ii 08  GAM/MN: combine DOSY analysis and fitting of calibration in a single macro "
+
+"  Adapted from GMdosyp:  dosy macro to take points across signal profile	"
+
+"Arguments: may be run with 4 arguments or none, see man page		"
+
+"MN 18Feb08 - renamed  to nugcalib from GMdosyforNUGcalib"
+"MN 18Feb08 - read/write to curexp instead of userdir"
+"MN/GAM 19Feb08 - rsync results to userdir/Dosy"
+"GAM 17iii08 - use makedosyparams earlier to ensure existence of userdir/Dosy"
+"GAM 11iv08 Change to using curexp/dosy "
+"GAM 13iv08 Change DAC_to_G to gcal_				"
+"GAM 13iv08 Make sure dosyproc, nugflag, ncomp correct		"
+"GAM 13iv08 Force ni to zero after processing, in case of repeat	"
+"GAM 30iv08 Fix dosyproc for new values "
+" 19v08 Add new first line to force fail with old Vnmrbg                "
+" 19v08 Handshake with dosyfit('version') to make sure that macro and   "
+"       dosyfit are compatible                                          "
+" 18vii08 Remove argument count check from gradient fitting section "
+" 18vii08 Remove argument options from fitting section "
+" 18vii08 Change default to 4 gradient coefficients "
+" 16x08 trap and fix pre-existing subexp plain file or directory	"
+" 16x08 Restore $gradfitcoefficients to 8 not 4				"
+" 16x08 rsync curexp copy of dosy directory with userdir/dosy and /Dosy "
+" 16ii09 Show fit plots en route (only works for final plot of NUG fit	"
+" 16ii09 Show results on display, since da command fails; remove da	"
+" 17ii09 Change final values of nugcal_ to correspond to using the	"
+"        corrected value of gcal_					"
+" 9iii09 Set dosygamma to 1H value if zero				"
+" 29iii09 Remove prune and blockprune options and diffusion limits	"
+" 29iii09 Allow arguments to replace standard dialogue			"
+" 30iii09 Use original gcal_ for storage in nugcal and probe file for	"
+"	  the moment; it might be appropriate to use the corrected	"
+"	  nugcal_ in future						"
+" 31iii09 Add saving of gradcoeff, local global and probe file		"
+" 1iv09 default to full display at start, otherwise sp and wp change	"
+
+crl rfl=sw/2 rfp=0 ff vsadj
+clear
+makedosyparams
+$saveglobal=''
+$saveprobe=''
+exists('dosyfitv','command'):$ex
+IF ($ex=0) THEN
+        write('error','This version of the macro dosynew is not compatible with the current version of VnmrJ')
+        abort
+ENDIF
+dosyfitv:$dosyversion
+IF ($dosyversion<>2) THEN
+        write('error','This version of the macro dosynew is not compatible with the current version of VnmrJ')
+        abort
+ENDIF
+
+" Determine diffusion coefficient of calibrant " " For H2O use equation (1) of Holz and Sacco, PCCP 2, 4740 "
+" For HOD estimate using 298 K data for 1% HOD in D2O from Holz and Weingaertner, JMR 92, 115 " " and Arrhenius data for D2O diffusion from Price et al, J Phys Chem A 103, 448"
+
+$s=seqfil
+length($s):$l
+$i=1
+$OK=0
+repeat
+	substr($s,$i,4):$ss
+	if ($ss='read') then $OK=1 endif
+	substr($s,$i,3):$ss
+	if ($ss='map') then $OK=1 endif
+	$i=$i+1
+until $i>($l-2)
+if ($OK=0) then
+	write('error','macro expects a pulse sequence name including the string <read> or <map>')
+	input('Are you sure you want to proceed [y/n] ?'):$input
+	if ($input<>'y') then
+		ABORT
+	endif
+endif
+
+"Determine whether being run interactively or by parameters"
+
+if ($# = 0) then
+	input('Are the data for pure H2O (w), 1% HOD (d) or other (o)? (w/d/o) : '):$answer
+	IF $answer = 'w' THEN
+	        input('Enter the temperature of the sample in degrees Celsius : ' ):$temp
+	        $c = -17.929
+	        $m = 2.063
+	        $temp = $temp + 273.15
+	        ln($temp/215.05-1):$x
+	        $temp = $c + $m/$temp
+	        exp($c+$m*$x):$gradscale
+	write('line3','Calibration diffusion coefficient is %f E-10',$gradscale*10000000000.0)
+	shell('sleep 1')
+	ELSEIF $answer = 'd' THEN
+	        input('Enter the temperature of the sample in degrees Celsius : ' ):$temp
+	        $c = -12.0483
+	        $m = -2392.97
+	        $temp = $temp + 273.15
+       	 $temp = $c + $m/$temp
+       	 exp($temp):$gradscale
+	write('line3','Calibration diffusion coefficient is %f E-10',$gradscale*10000000000.0)
+	shell('sleep 1')
+	ELSE input('Enter the diffusion coefficient in units of 10**-10 m2/s : '):$gradscale
+	$gradscale=$gradscale*0.0000000001
+	ENDIF
+else
+	if ($# <>4) then
+		write('error','nugcalib requires either no arguments or four')
+		abort
+	endif
+	if ($1='w') then
+	        $c = -17.929
+	        $m = 2.063
+	        $temp = $2 + 273.15
+	        ln($temp/215.05-1):$x
+	        $temp = $c + $m/$temp
+	        exp($c+$m*$x):$gradscale
+		write('line3','Calibration diffusion coefficient is %f E-10',$gradscale*10000000000.0)
+		shell('sleep 1')
+	endif
+	if ($1='d') then
+	        $c = -12.0483
+	        $m = -2392.97
+	        $temp = $2 + 273.15
+	       	$temp = $c + $m/$temp
+	       	exp($temp):$gradscale
+		write('line3','Calibration diffusion coefficient is %f E-10',$gradscale*10000000000.0)
+		shell('sleep 1')
+	endif
+	if ($1='o') then
+		$gradscale=$2*0.0000000001
+		write('line3','Calibration diffusion coefficient is %f E-10',$gradscale*10000000000.0)
+		shell('sleep 1')
+	endif
+	if (($1 <>'w') and ($1<>'d') and ($1<>'o')) then
+		write('error','first argument of nugcalib  must be w, d or o')
+		abort
+	endif
+	$saveglobal=$3
+	$saveprobe=$4
+endif
+
+dosyproc='discrete' nugflag='n' ncomp=1
+
+"Find 5% level of signal and set bounds for diffusion coefficient calculation"
+peak:$a,$b
+$5=$a/20
+$l=sp
+$u=$b
+repeat
+	$df5r=($l+$u)/2
+	mark($df5r):$h 
+	if ($5<$h) then $u=$df5r endif
+	if ($5>$h) then $l=$df5r endif
+until $u-$l<1
+$l=$b
+$u=sp+wp
+repeat
+	$df5l=($l+$u)/2
+	mark($df5l):$h 
+	if ($5<$h) then $l=$df5l endif
+	if ($5>$h) then $u=$df5l endif
+until $u-$l<1
+cr=$df5l
+delta=$df5l-$df5r
+" Check for 3D data "
+$3dflag = 0
+if (arraydim<>size('gzlvl1')) then 
+	write('line3','series of 1D profiles required;  array size incorrect ')
+	return
+endif
+$answer='n' $prune='n'  $part='n'  $blockprune='n'
+IF ($#>4) THEN
+		write('error','dosy:  incorrect number of arguments')
+		ABORT
+ELSE
+		IF ($#=1 OR $#=3) THEN
+			IF ($1='prune') THEN
+				$prune='y'
+			ELSE
+				IF ($1='blockprune') THEN
+				$blockprune='y'
+				ELSE
+					write('error','dosy:  incorrect argument')  
+ABORT
+				ENDIF
+			ENDIF
+		ENDIF
+		IF ($#=2) THEN
+			$lower=$1  	$upper=$2  $part='y'
+		ENDIF
+		IF ($#=3) THEN
+			IF ($1='prune') THEN
+				$lower=$2  $upper=$3  $part='y'
+			ELSE
+				if ($1='blockprune') then
+				$lower=$2  $upper=$3  $part='y'
+				else
+			write('error','dosy:  incorrect argument')  ABORT
+				endif
+			ENDIF
+		ENDIF
+ENDIF
+
+exists('gstab','parameter'):$e
+if $e=0 then
+	create('gstab','real') gstab=0
+	exists('grise','parameter'):$e
+	if $e=1 then
+		gstab=grise
+	endif
+endif
+
+ 	exists(curexp+'/subexp','directory'):$ex1
+        if $ex1>0 then
+                shell('rm -r '+curexp+'/subexp')
+        endif
+        exists(curexp+'/subexp','file'):$ex1
+        if $ex1>0 then
+                shell('rm '+curexp+'/subexp')
+                write('error','dosynew:  warning, plain file subexp had to be deleted')
+        endif
+
+	cptmp('dosy1Ddata')
+	exists('ni','parameter'):$e
+	if $e=0 then
+		par_2d
+	endif
+	exists('ni','parameter','processed'):$e
+	if $e=0 then
+		create('ni','integer','processed')
+		create('phase','integer','processed')
+		create('sw1','real','processed')
+	endif
+	setvalue('ni',0,'processed')  setvalue('ni',0,'current')
+
+" Set new unit for Diffusion "
+unit('D','m2s',1)
+
+$dosygamma=267519000.0
+exists('dosygamma','parameter'):$exist
+if ($exist>0.5) then
+	if dosygamma<>0.0 then
+		$dosygamma=dosygamma
+	endif
+else
+	write('line3','No parameter dosygamma, so D values calculated assuming proton gamma')
+endif
+
+if (dosygamma=0) then
+        dosygamma=267519000.0
+        groupcopy('current','processed','acquisition')
+        write('line3','Parameter dosygamma was zero; reset to proton gamma')
+endif
+
+" Set ai mode "
+IF (aig <> 'ai')
+	THEN write('line3','Setting ai mode for Dosy analysis')
+	ai
+ENDIF
+
+$outfile = curexp+'/dosy/dosy_in'
+IF $3dflag = 0  THEN $infile = curexp+'/fp.out'  ENDIF
+
+" Number of parameters set to 2 for the exponential fit, change to 3 is possible "
+$n_fit_params = 2
+
+$cl = 0 
+IF $3dflag = 0  THEN	  write('reset',$infile)  ENDIF
+exists(curexp+'/dosy','file'):$e
+if $e<0.5 then mkdir(curexp+'/dosy') endif
+write('reset',$outfile)
+
+" Check if npoint exists and if not set it to 1 "
+exists('npoint','parameter'):$exist
+IF $exist = 0
+	THEN create('npoint','integer')  
+ENDIF
+npoint=1
+
+$n=0
+$hzpp=2.0*sw/fn
+$nprofile=delta/$hzpp
+write('file',$outfile,'DOSY version 2')
+write('file',$outfile,'%d spectra will be deleted from the analysis : ',$n)
+
+	npoint=1
+        array('llfrq',$nprofile,cr+rfl-rfp-delta,delta/($nprofile-1))
+	fp
+	lookup('file',$infile)
+	lookup('skip',2,'read'):$npeaks
+	write('file',$outfile,'Analysis on %d peaks',$npeaks)
+write('file',$outfile,'%d points per peaks',(size('gzlvl1')-$n))
+write('file',$outfile,'%d parameters fit',$n_fit_params)
+
+exists('dosytimecubed','parameter'):$e
+if $e=0 then
+	create('dosytimecubed','real')	
+" Determine the type of sequence used in order to calculate the delays ... "
+	$seqflg = 0     " set 0 as the default 4vi99 "
+	IF (seqfil = 'gste' OR seqfil='gsteSL' OR seqfil = 'dosycosy' 
+		OR seqfil = 'dohmqc' OR seqfil = 'dohmqc_3') THEN
+		$seqflg = 1
+	ENDIF
+	IF (seqfil = 'bppled' OR seqfil = 'bppste' OR seqfil = 'bppste_new.17vi96')
+	        THEN $seqflg = 2
+	ENDIF
+	IF (seqfil = 'doin' OR seqfil = 'dosyineptbp2')
+	        THEN $seqflg = 3
+	ENDIF
+	IF (seqfil = 'quick_dosyGM')
+	        THEN $seqflg = 4
+	ENDIF
+
+
+	IF $seqflg = 1 THEN
+		$delta = gt1 
+		$del =del+gt1+1.0e-6*rof1+gstab+pw*2.0e-6 
+		$tau = 0.0
+	ENDIF
+	IF $seqflg = 2 THEN
+		$delta = gt1*2.0
+		$del = del+pw*4.0e-6+2.0*gt1+2*gstab+2.0e-6*rof1
+		$tau = 3.0e-6*pw + 2.0e-6*(rof1+rof2)+gstab+gt1 
+	ENDIF
+	IF $seqflg = 3 THEN
+		$delta = (gt1+gstab)*3.5
+		$del = 2.0*(gt1+gstab)+2.0*gstab+pw*4.0e-6+del
+		$tau = 0.0
+	ENDIF
+	IF $seqflg = 4 THEN
+		$delta = (gt1+gstab)*2.0
+		$del = del+(2.0/3.0)*gt1 + ((2.0* gt1/6.0) * ( 0.01 - 2)) + ((tau* ( 0.01 -1.0 )/2.0))
+		$tau = 0.0
+	ENDIF
+	IF $seqflg = 0 THEN
+	        write('error','Pulse sequence not recognised!  ')
+		input('What is the diffusion-encoding gradient pulse width in s ?  '):$delta
+		input('What is the diffusion delay in s ?  '):$del
+		input('Does the sequence use bipolar gradient pulses?  '):$answer
+	        IF $answer = 'y' THEN
+			input('What is the delay in s between the halves of a bipolar pulse pair  ?  '):$tau
+                ELSE $tau=0
+	        ENDIF
+	ENDIF
+
+	dosytimecubed=$delta*$delta*($del-($delta/3.0)-($tau/2.0))
+	write('line3','Old sequence data:  dosytimecubed calculated')
+endif
+$dosyconstant=$dosygamma
+$dosyconstant=$dosyconstant*$dosyconstant*dosytimecubed
+write('file',$outfile,'dosyconstant = %.10f',$dosyconstant)
+write('file',$outfile,'gradient calibration flag : %d',$cl)
+
+IF $dosyconstant=0 THEN
+	write('error','Error in parameters:  calculated dosyconstant is zero')
+	ABORT
+ENDIF
+        "gzlvl1 in dac units, convert to gauss/cm"
+$i = 1
+REPEAT
+	write('file',$outfile,'%.4f',gcal_ * gzlvl1[$i])
+	$i = $i+1
+UNTIL $i = (size('gzlvl1')+1)
+
+	shell('cat '+curexp+'/fp.out  >> '+$outfile)
+	" Check that the dosy_in file has the correct number of lines "
+	$correct_n_lines = 10+arraydim+$npeaks*(1+arraydim)+$n
+        shell('wc -l < '+$outfile+';cat'):$nlines
+	IF $nlines <> $correct_n_lines
+		THEN write('error','The number of lines in dosy_in file is not correct for the analysis')
+		echo('-n','Correct number of lines in dosy_in: ')
+		echo($correct_n_lines)
+		echo('-n','Actual number of lines: ')
+		echo($nlines)
+		$missing_spectra = ($correct_n_lines-$nlines)/$npeaks
+		echo('-n',$missing_spectra)
+		echo(' spectra missing for analysis.')
+    		ABORT
+	ENDIF
+	dosyfit
+	cp(curexp+'/dosy/diffusion_display.inp',curexp+'/.')
+	" Display the content of the error file if it is not empty "
+        shell('wc -l < '+curexp+'/dosy/fit_errors;cat'):$nlines
+	IF $nlines <> 0
+		THEN cat(curexp+'/dosy/fit_errors')
+	ENDIF
+	shell('cp '+curexp+'/dosy/diffusion_display.inp '+curexp+'/subexp')
+	shell('cp '+curexp+'/dosy/general_dosy_stats '+curexp+'/subexp')
+	shell('rsync -uaz '+curexp+'/dosy/* '+userdir+'/dosy')
+
+	setvalue('ni',0,'processed')
+	setvalue('ni',0,'current')
+	IF (fn1<128) THEN fn1=256 ENDIF
+	IF (fn1>1024) THEN fn1=256 ENDIF
+	if ($part='y') then
+		ddif('i',$lower,$upper)
+	else
+		ddif('i')
+	endif
+	shell('rsync -uaz '+curexp+'/dosy/* '+userdir+'/dosy')
+	full trace='f2'
+	th=0
+        shell('wc -l < '+curexp+'/dosy/diffusion_display.inp;cat'):$nlines
+	if $nlines=0 then 
+	    write('error','No statistically reasonable diffusion peaks found, so no display generated')
+	else
+		axis='h'
+		sp=$df5r-($df5l-$df5r)/2
+		wp=($df5l-$df5r)*2
+		dcon
+		cptmp('dosy2Ddisplay') 
+$tmptext=''
+write('graphics',10,wc2max-30,'Apparent diffusion coefficient as a function of position within active volume')
+endif
+
+exists(curexp+'/dosy/NUG','directory'):$ex1
+IF $ex1=0 then
+        shell('mkdir '+curexp+'/dosy/NUG')
+ENDIF
+
+exists(userdir+'/dosy/NUG','directory'):$ex1
+IF $ex1=0 then
+        shell('mkdir '+userdir+'/dosy/NUG')
+ENDIF
+
+
+$gradfitcoeffs=8
+
+$powerfitcoeffs=5
+
+write('line3','Retrieving spectral data')
+undosy
+"GM "  full crl rfl=sw/2 rfp=0
+vsadj
+write('line3','Finding thresholds')
+peak:$p1,$p2
+$p5=$p1/20
+$p20=$p1/5
+$pl=sp
+$u=$p2
+repeat
+	$df5r=($pl+$u)/2
+	mark($df5r):$h 
+	if ($p5<$h) then $u=$df5r endif
+	if ($p5>$h) then $pl=$df5r endif
+until $u-$pl<1
+$pl=sp
+$u=$p2
+repeat
+	$df20r=($pl+$u)/2
+	mark($df20r):$h 
+	if ($p20<$h) then $u=$df20r endif
+	if ($p20>$h) then $pl=$df20r endif
+until $u-$pl<1
+$pl=$p2
+$u=sp+wp
+repeat
+	$df5l=($pl+$u)/2
+	mark($df5l):$h 
+	if ($p5<$h) then $pl=$df5l endif
+	if ($p5>$h) then $u=$df5l endif
+until $u-$pl<1
+$pl=$p2
+$u=sp+wp
+repeat
+	$df20l=($pl+$u)/2
+	mark($df20l):$h 
+	if ($p20<$h) then $pl=$df20l endif
+	if ($p20>$h) then $u=$df20l endif
+until $u-$pl<1
+			"end fth"
+write('line3','Writing first profile to dosy directory')
+exists(curexp+'/dosy/NUG/Signal_profile','file'):$exist
+IF $exist = 1 THEN
+	rm(curexp+'/dosy/NUG/Signal_profile')
+ENDIF
+clear ni=0 groupcopy('current','processed','acquisition')
+	wrspec(curexp+'/dosy/NUG/Signal_profile',1)
+"GM "   write('line3','Fitting relative gradient squared to a polynomial')
+shell('sleep 1')
+gradfit($df20r,$df20l,$gradscale*1.0e10,$gradfitcoeffs)
+write('line3','Integrating the first profile and normalising the area')
+shell('sleep 1')
+expl('tinysymbol','file',curexp+'/dosy/NUG/Gradient_fit_stats_expl')
+write('graphics',95,wc2max-30,'Comparison between experimental and fitted gradient shape')
+shell('sleep 1')
+profile_int($df5r,$df5l)
+shell('sleep 1')
+$ngrads=500
+IF($gradscale > 0.0) THEN
+	write('line3','Generating signal decay, please wait......   ')
+	decay_gen($gradscale,$ngrads)
+ELSE
+	ABORT
+ENDIF
+write('line3','Fitting decay to an exponential of a power series, please wait.....')
+powerfit($powerfitcoeffs)
+write('line3','Fit coefficients now stored in local variable nugcal_')
+shell('rsync -uaz '+curexp+'/dosy/* '+userdir+'/Dosy')
+ds
+$te=''
+clear(2)
+seqfil=seqfil
+shell('sleep 1')
+expl('tinysymbol','file',curexp+'/dosy/NUG/fit_coeff_stats_expl')
+write('graphics',wcmax*0.35,wc2max-35,'Semilog plot of comparison between calculated and fitted signal decay')
+$pos=wc2max*0.66
+write('graphics',wcmax*0.6,$pos,'Original gcal_  %f\n',nugcal_[1])
+$pos=$pos-wc2max/30
+write('graphics',wcmax*0.6,$pos,'Correction factor  %f\n',sqrt(nugcal_[2]))
+$pos=$pos-wc2max/30
+$pos=$pos-wc2max/30
+write('graphics',wcmax*0.6,$pos,'Calculated nugcal_ array:\n')
+$i=1
+	$pos=$pos-wc2max/60
+repeat
+	$pos=$pos-wc2max/30
+	write('graphics',wcmax*0.6,$pos,'%f\n',nugcal_[$i])
+	$i=$i+1
+until ($i>size('nugcal_'))
+
+$nugcal_uncorr=nugcal_
+"Now change the coefficients to correspond to having used the correct average gcal_ in the initial processing"
+$corr=nugcal_[2]
+nugcal_[1]=nugcal_[1]*sqrt($corr)
+$corr2=$corr
+$i=2
+repeat
+	nugcal_[$i]=nugcal_[$i]/$corr2
+	$corr2=$corr2*$corr
+	$i=$i+1
+until ($i>size('nugcal_'))
+$pos=wc2max*0.66
+write('graphics',wcmax*0.8,$pos,'Corrected gcal_  %f\n',nugcal_[1])
+$pos=$pos-wc2max/30
+$pos=$pos-wc2max/30
+$pos=$pos-wc2max/30
+write('graphics',wcmax*0.8,$pos,'Corrected nugcal_ array:\n')
+$i=1
+	$pos=$pos-wc2max/60
+repeat
+	$pos=$pos-wc2max/30
+	write('graphics',wcmax*0.8,$pos,'%f\n',nugcal_[$i])
+	$i=$i+1
+until ($i>size('nugcal_'))
+
+lookup('file',curexp+'/dosy/NUG/Gradient_coefficients')
+$gradcoeff=gzlvl_read
+$i=2
+repeat
+        lookup('read'):$gradcoeff[$i]
+        lookup('read'):$dum
+        echo($gradcoeff[$i])
+        $i=$i+1
+until ($i>9)
+gradcoeff_=$gradcoeff
+
+$te=$saveglobal
+if ($# = 0) then
+	input('Copy result to global parameters? [y/n] : '):$te 
+endif
+if ($te='y') then 
+	nugcal=$nugcal_uncorr 
+	gradcoeff=$gradcoeff
+endif
+$file=''
+if (probe_='') then $pr=0
+               else $pr=1 endif
+getProbePath(probe_):$e1,$file,$e
+
+if ($e>0) then
+  $te=$saveprobe
+  if ($# = 0) then
+	input('Save results in current probe file? [y/n] : '):$te 
+  endif
+  if ($te='y') then 
+	$te1='' $te2='' $te3='' $te4='' $te5=''
+	$te6='' $te7='' $te8='' $te9='' $gcal_corrd=''
+	format(gcal_,9,6):$te1
+	format(nugcal_[1],9,6):$gcal_corrd
+	format($nugcal_uncorr[1],14,11):$te1
+	format($nugcal_uncorr[2],14,11):$te2
+	format($nugcal_uncorr[3],14,11):$te3
+	format($nugcal_uncorr[4],14,11):$te4
+	format($nugcal_uncorr[5],14,11):$te5
+//	if ($e=1) then
+		setparams('gcal',$te1,'Probe')
+		addparams('nugcal1',$te1,'Probe')
+		addparams('nugcal2',$te2,'Probe')
+		addparams('nugcal3',$te3,'Probe')
+		addparams('nugcal4',$te4,'Probe')
+		addparams('nugcal5',$te5,'Probe')
+		addparams('gcal_corrd',$gcal_corrd,'Probe')
+		setparams('nugcal1',$te1,'Probe')
+		setparams('nugcal2',$te2,'Probe')
+		setparams('nugcal3',$te3,'Probe')
+		setparams('nugcal4',$te4,'Probe')
+		setparams('nugcal5',$te5,'Probe')
+		setparams('gcal_corrd',$gcal_corrd,'Probe')
+//	endif
+//	if ($e=2) then
+//		addparams('nugcal1',$te1,'Probe','system')
+//		addparams('nugcal2',$te2,'Probe','system')
+//		addparams('nugcal3',$te3,'Probe','system')
+//		addparams('nugcal4',$te4,'Probe','system')
+//		addparams('nugcal5',$te5,'Probe','system')
+//		addparams('gcal_corrd',$gcal_corrd,'Probe','system')
+//		setparams('nugcal1',$te1,'Probe','system')
+//		setparams('nugcal2',$te2,'Probe','system')
+//		setparams('nugcal3',$te3,'Probe','system')
+//		setparams('nugcal4',$te4,'Probe','system')
+//		setparams('nugcal5',$te5,'Probe','system')
+//		setparams('gcal_corrd',$gcal_corrd,'Probe','system')
+//	endif
+	format($gradcoeff[1],20,16):$te1
+	format($gradcoeff[2],20,16):$te2
+	format($gradcoeff[3],20,16):$te3
+	format($gradcoeff[4],20,16):$te4
+	format($gradcoeff[5],20,16):$te5
+	format($gradcoeff[6],20,16):$te6
+	format($gradcoeff[7],20,16):$te7
+	format($gradcoeff[8],20,16):$te8
+	format($gradcoeff[9],20,16):$te9
+//	if ($e=1) then
+		addparams('gradcoeff1',$te1,'Probe')
+		addparams('gradcoeff2',$te2,'Probe')
+		addparams('gradcoeff3',$te3,'Probe')
+		addparams('gradcoeff4',$te4,'Probe')
+		addparams('gradcoeff5',$te5,'Probe')
+		addparams('gradcoeff6',$te6,'Probe')
+		addparams('gradcoeff7',$te7,'Probe')
+		addparams('gradcoeff8',$te8,'Probe')
+		addparams('gradcoeff9',$te9,'Probe')
+		setparams('gradcoeff1',$te1,'Probe')
+		setparams('gradcoeff2',$te2,'Probe')
+		setparams('gradcoeff3',$te3,'Probe')
+		setparams('gradcoeff4',$te4,'Probe')
+		setparams('gradcoeff5',$te5,'Probe')
+		setparams('gradcoeff6',$te6,'Probe')
+		setparams('gradcoeff7',$te7,'Probe')
+		setparams('gradcoeff8',$te8,'Probe')
+		setparams('gradcoeff9',$te9,'Probe')
+//	endif
+//	if ($e=2) then
+//		addparams('gradcoeff1',$te1,'Probe','system')
+//		addparams('gradcoeff2',$te2,'Probe','system')
+//		addparams('gradcoeff3',$te3,'Probe','system')
+//		addparams('gradcoeff4',$te4,'Probe','system')
+//		addparams('gradcoeff5',$te5,'Probe','system')
+//		addparams('gradcoeff6',$te6,'Probe','system')
+//		addparams('gradcoeff7',$te7,'Probe','system')
+//		addparams('gradcoeff8',$te8,'Probe','system')
+//		addparams('gradcoeff9',$te9,'Probe','system')
+//		setparams('gradcoeff1',$te1,'Probe','system')
+//		setparams('gradcoeff2',$te2,'Probe','system')
+//		setparams('gradcoeff3',$te3,'Probe','system')
+//		setparams('gradcoeff4',$te4,'Probe')
+//		setparams('gradcoeff5',$te5,'Probe')
+//		setparams('gradcoeff6',$te6,'Probe')
+//		setparams('gradcoeff7',$te7,'Probe')
+//		setparams('gradcoeff8',$te8,'Probe')
+//		setparams('gradcoeff9',$te9,'Probe')
+//	endif
+	$date=''
+	shell('date +%d-%b-%Y'):$date
+	getfilepath(probe_,'probes'):$pex,$dir
+	$file=$dir+'/'+seqfil+$date
+	svf($file,'force')
+ 	write('line3','Data saved as %s',$file)
+endif
+endif

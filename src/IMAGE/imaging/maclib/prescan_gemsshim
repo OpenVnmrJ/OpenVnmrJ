@@ -1,0 +1,60 @@
+"macro prescan_gemsshim"
+"************************************************************************"
+"                                                                        "
+" prescan_gemsshim - macro to shim for imaging using gems sequence       "
+"                                                                        "
+" Usage:   this macro is not intended for direct usage.  Use prescan     "
+"                                                                        "
+"************************************************************************"
+
+if ($# = 0) then
+
+  if (prescan[8] = '') then    
+    write('line3','Voxel for shimming must be defined')
+    return
+  else
+    exists(prescan[8],'file'):$e
+    if ($e < 0.5) then
+      write('line3','Voxel for shimming must be defined')
+      return
+    endif
+  endif
+  
+  "ldrf   ?"
+  
+  $prescan=prescan
+  rtppar('prescan_gemsshim_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+    rtppar('gemsshim','nomenu'):$res
+  endif
+  exists('studyid','parameter','global'):$e
+  if ($e > 0.5) then
+    if (studyid <> '') then
+      exists(sqdir+'/studypar','file'):$e
+      if ($e = 1) then
+        fread(sqdir+'/studypar')
+      endif
+    endif
+  endif
+  prescan=$prescan
+  if ($res > 0.5) then
+    setloop
+    ldrf
+    imprep
+    prescan[3]='Active'
+    acqmode='prescan'
+    "retrieve voxel parameters"
+    rtv(prescan[8],'iplanDefaultType','iplanType','vtheta','vphi','vpsi','vox1','vox2','vox3','pos1','pos2','pos3')
+    wdone=''
+    cnt=1 
+    gs_acqb0map  "start shim iterations"    
+  else
+    write('error','gemsshim prescan parameters have not been initialized')
+  endif
+elseif ($1 = 'proc') then
+  prescan[3]='Complete'
+  acqmode=''
+  if ($# = 1) then
+    prescan('next')
+  endif
+endif

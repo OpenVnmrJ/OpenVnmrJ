@@ -1,0 +1,73 @@
+hsqctoxySE.c - 	HSQC-TOCSY-3D	
+	Features -	HSQC  is  "sensitivity enhanced" as per Rance et. al.
+			TOCSY is "sensitivity enhanced" as per Rance et. al.
+			dipsi or mlev-17 spinlock option (dipsiflg flag)
+			F1 dimension can be band selected with shaped pulse
+			 (use of shaped pulse will introduce a small
+			 phase error along F1.  rp1 and lp1 values can be
+			 obtained by examining first np x ni plane)
+			Gradient to kill unwanted signals during H-X INEPT
+			Water presaturation ON or OFF resonance
+
+	Parameters:	phase=1,2,3,4 and phase2=1,2,3,4
+			dm = 'nnyny' (ON during t2 and t3)
+
+			f2coef = '1 0 0 1 1 0 0 -1 0 1 -1 0 0 -1 -1 0'
+                        f1coef = '1 0 0 1 1 0 0 -1 0 1 -1 0 0 -1 -1 0'
+			f1coef and f2coef are used by make3dcoef macro
+			These are processing parameters
+			
+	Processing - There are many ways to process the first inc 2D's 
+			and the 3D
+
+2D coef:
+       (Note 2D plane transforms cannot be done with the 3D datasets.
+       ft2d can handle a maximum of only 8 datasets but ft3d can handle more)
+
+ nixnp or ni2xnp (phase=1,2,3,4 or phase2=1,2,3,4):
+
+	ft2d(<'ni2'>,1,0,0,1,1,0,0,-1,0,1,-1,0,0,-1,-1,0)
+
+3D coef:
+	Use make3dcoef macro to construct 3d coef table
+
+        Alternatively, you can use the following coefficients.
+array = phase2,phase
+
+	 1  0  0  1    1  0  0 -1    0  1 -1  0    0  1  1  0
+	 1  0  0  1    1  0  0 -1    0 -1  1  0    0 -1 -1  0
+
+	 0 -1  1  0    0  1  1  0    1  0  0  1   -1  0  0  1
+	 0 -1  1  0    0  1  1  0   -1  0  0 -1    1  0  0 -1
+
+	 0 -1  1  0    0 -1 -1  0    1  0  0  1    1  0  0 -1
+	 0  1 -1  0    0  1  1  0    1  0  0  1    1  0  0 -1
+
+	-1  0  0 -1    1  0  0 -1    0 -1  1  0    0  1  1  0
+	 1  0  0  1   -1  0  0  1    0 -1  1  0    0  1  1  0
+
+	 1  0  0  0    0  0  1  0 
+
+array =  phase,phase2
+
+	 1  0  0  1    1  0  0 -1    0  1 -1  0    0  1  1  0
+	 1  0  0  1    1  0  0 -1    0 -1  1  0    0 -1 -1  0
+
+	 0  1 -1  0    0  1  1  0   -1  0  0 -1   -1  0  0  1
+	 0 -1  1  0    0 -1 -1  0   -1  0  0 -1   -1  0  0  1
+
+         0 -1  1  0    0  1  1  0    1  0  0  1   -1  0  0  1
+         0 -1  1  0    0  1  1  0   -1  0  0 -1    1  0  0 -1
+
+        -1  0  0 -1    1  0  0 -1    0 -1  1  0    0  1  1  0
+         1  0  0  1   -1  0  0  1    0 -1  1  0    0  1  1  0
+
+         1  0  0  0    0  0  1  0
+
+
+	Phasing:
+		rp  = rp(1D) - 90  	lp = lp(1D)
+		rp1 = 90		lp1 = 0 (for hard pulse)
+		(rp1 and lp1 will be non-zero for shaped pulse expt)
+		rp2 = 90		lp2 = 0
+

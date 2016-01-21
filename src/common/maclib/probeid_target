@@ -1,0 +1,87 @@
+"macro probeid_target"
+if $#<1 then $1='init' endif
+
+if $1='init' then
+  {$0}('clear')
+  create('probeidCalTargetList','string','global'):$el
+  return
+
+elseif $1='check' then
+  probeid('enabled'):$probeid
+  probeidez('native'):$native
+  exists($2,'parameter','global'):$ex
+  return(($probeid or $native) and $ex)
+
+elseif $1='get' then
+  $v='' 
+  format($2,4,1):$v $v='(spec='+$v+')'
+  return($v)
+
+elseif $1='set' then
+  if $#<3 then 
+    write('error',$0+' \''+$1+'\' requires 3 arguments') 
+    abort
+  endif
+  $i=0 $j=0 while ($i<size($2)) do $i=$i+1
+    $name={$2}[$i]
+    $value={$3}[$i]
+    $spec='probeSpec_'+$name
+    format($value,'isreal'):$isreal
+    $col=0 strstr($name,':'):$col     // check for labels like "H1:"
+    if not $col then
+      $j=$j+1
+      if $isreal then
+        format($value,3,2):$r
+        destroy($spec,'global'):$ds
+        create($spec,'real','global',$r):$es
+        probeidCalTargetList[$j]=$spec
+      else
+        destroy($spec,'global'):$ds
+        create($spec,'string','global',$r):$es
+        probeidCalTargetList[$j]=$spec
+      endif
+    endif
+  endwhile
+  return
+
+elseif $1='clear' then
+  exists('probeidCalTargetList','parameter','global'):$e
+  if $e then
+    $i=0 while ($i<size('probeidCalTargetList')) do $i=$i+1
+      exists(probeidCalTargetList[$i],'parameter','global'):$ee
+      if $ee then
+        destroy(probeidCalTargetList[$i],'global'):$e
+      endif
+    endwhile
+    destroy('probeidCalTargetList','global'):$dl          // list of variables
+  endif
+  return
+
+elseif $1='list' then
+  $key='' $value=0
+  exists('probeidCalTargetList','parameter','global'):$e
+  if $e then
+    $i=0 while ($i<size('probeidCalTargetList')) do $i=$i+1
+      strstr(probeidCalTargetList[$i],'probeSpec_'):$j,$prefix,$key[$i]
+      $value[$i]={probeidCalTargetList[$i]}
+      format($value[$i],5,2):$s
+      if $##=0 then
+        write('line3','%s = %s',$key[$i],$s)
+      endif
+    endwhile
+  endif
+  return($key,$value)
+
+else
+  if $#=0 then return endif
+  probeid('getTargets')
+  $key='probeSpec_'+$1
+  teststr('probeidCalTargetList',$key,'global'):$i
+  if $i>0 then
+    $value=probeidCalTargetValue[$i]
+    if $##=0 then 
+      write('line3',probeidattr[4]+'[\''+$1+'\'] = '+probeidCalTargetValue[$i]) 
+    endif
+    return($value)
+  endif
+endif

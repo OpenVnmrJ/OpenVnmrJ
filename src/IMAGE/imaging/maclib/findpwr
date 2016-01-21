@@ -1,0 +1,98 @@
+"macro findpwr"
+"************************************************************************"
+"                                                                        "
+" findpwr - macro to determine the 90/180 degree pulse pwr for imaging   "
+"                                                                        "
+" Usage:   findpwr      interactive mode, requests start and end value   "
+"          findpwr(start_tpwr2_value,end_tpwr2_value)                    "
+"          findpwr(x)  with one argument uses current tpwr2 value        "
+"                                                                        "
+" Details: The routine sets up a tpwr1/tpwr2 array liset between start   "
+"          and end_values.  Determines the maximum and minimum peak.     " 
+"          and displays the results. If necessary the pulsecal database  " 
+"          can be updated. The highest intensity is assumed to be the    " 
+"          the correct 90/180 degree pulse powers.                       "
+"                                                                        "
+"************************************************************************"
+
+" Do some checks"
+write('line3',' Macro to find the 90/180 degree pulse power')
+if ($# > 2) then
+  write('error','%s','Usage: findpwr or findpwr(start_tpwr2,end_tpwr2)')
+  abort
+endif
+exists('tpwr1f','parameter'):$ex
+if($ex <> 0) then
+  tpwr1f = 4095
+endif
+exists('tpwr2f','parameter'):$ex
+if($ex <> 0) then
+  tpwr2f = 4095
+endif
+
+$start = 0.0
+$end = 0.0
+$imode = 0.0  "interactive mode flag"
+"ldrf
+"imprep
+
+"[1] Input Parameter Count and Traps"
+
+if ($# < 1) then
+  input('The start value for tpwr2: '):$start
+  input('The end value for tpwr2: '):$end
+else if ($# = 1) then
+  $imode = 1
+  if (tpwr2 < 5) then tpwr2=5 endif
+  if (tpwr2 > 58) then tpwr2=58 endif
+  $start = tpwr2-5 
+  $end = tpwr2+5
+else
+  $start = $1
+  $end = $2
+endif
+endif
+
+if ($start > 62) or ($start < 0) then
+  write('error','findpwr: illegal start value:%f', $start)
+  abort
+endif
+if ($end > 63) or ($end < 1) then
+  write('error','findpwr: illegal end value: %f', $start)
+  abort
+endif
+
+
+"disable phase encoding and save original value"
+"** initialize some parameters "
+exists('nv','parameter'):$ex
+if ($ex) then
+        exists('nv_1','parameter'):$e
+        if ($e = 0) then
+                create('nv_1','real')
+        endif
+        nv_1 = nv
+        nv = 0
+endif
+exists('nv2','parameter'):$ex
+if ($ex) then
+        exists('nv_2','parameter'):$e
+        if ($e = 0) then
+                create('nv_2','real')
+        endif
+        nv_2 = nv2
+        nv2 = 0
+endif
+tpwrcal($start,$end)
+
+wexp='nv=nv_1 nv2=nv_2 findpwr2' wnt='ft dssh dssl(`list=tpwr1`)' au  
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  " 
+"                                                                        " 
+"970605(ss) First version created and tested                             " 
+" 04Sep97(ss): nv is restored" 
+" 20May98(ss): findpwr() one argument uses current tpwr2 value" 
+" 22Dec05      tpwr1,2f parameters checked; removed sems.c check
+"                                                                        " 
+"************************************************************************"

@@ -1,0 +1,85 @@
+"macro setNewLcid"
+/*-*- Mode: MAGICAL -*-*/
+"macro setNewLcid"
+// setNewLcid - Set lcid to a clean directory.
+//              If current lcid directory in empty, lcid is not changed.
+//              Otherwise, a numerical suffix is added or incremented.
+
+// Make sure we have a clean directory for the data (no lcdata file).
+// Here is what the directory is currently set to:
+getsvfdirpath:$svfdir
+filepath($svfdir, lcid):$basepath
+
+$arg=''
+if $#>0.5 then
+  $arg = $1
+endif
+
+exists('globalauto','parameter','global'):$e
+if $e<0.5 then
+  create('globalauto','string','global')
+endif
+if globalauto='' then
+  globalauto=userdir+'/data'
+endif
+
+// $testfile = '/LcRun.data'
+$testfile = '/lcpar'
+exists($basepath + $testfile, 'file'):$eb
+if ($eb=1 or $arg='new') then
+  // Already have data in directory; point lcid to a new directory.
+  // Strip off any numerical suffix: $idx=suffix as int
+  length(lcid):$len
+  $i = -1
+  $chr = ''
+  if ($len > 0) then
+    repeat
+      // Look at chars in tail until we find a non-digit
+      $i = $i + 1
+      substr(lcid, $len-$i, 1):$chr
+      format($chr, 'isreal'):$isInt
+    until (not $isInt or $len - $i <= 1)
+    if (not $isInt) then
+      $i = $i - 1         // Go back to digit.
+    endif
+  endif
+  $cnt = 0              // Default "previous" suffix count, if none found
+  $sfx = ''
+  if ($i > 0) then
+    // There is an existing suffix
+    substr(lcid, $len-$i, $i+1):$sfx    // Suffix as string
+    substr(lcid, 1, $len-$i-1):lcid     // Basepath w/o suffix
+    format($sfx, 0, 0):$cnt             // Convert suffix to int count
+  endif
+  
+  // Increment suffix until it's unique
+  repeat
+    $cnt = $cnt + 1
+    format($cnt, '03', 0):$sfx
+    filepath($svfdir, lcid):$basepath
+    exists($basepath + $sfx + $testfile, 'file'):$e
+  until (not $e)
+  lcid = lcid + $sfx
+  filepath($svfdir, lcid):$basepath
+endif
+
+// Make the directory if it doesn't exist
+exists($basepath, 'file'):$e
+if (not $e) then
+  mkdir($basepath)
+endif
+
+// Set filepath (for any NMR data associated with the run).
+exists('savefile','parameter'):$e
+if not ($e) then create('savefile','string') endif
+filepath($svfdir, lcid, 'NMR'):savefile
+
+exists(savefile,'directory'):$e
+exists(autodir+'/enterQ.macdir','directory'):$e2
+if ($e < 0.5) or ($e2<0.5) or ($arg='new') or (autodir<>savefile) then
+  lcsq('initauto')
+endif
+cpautodir=autodir
+writeparam(userdir+'/global','cpautodir autodir','global','add')
+
+return

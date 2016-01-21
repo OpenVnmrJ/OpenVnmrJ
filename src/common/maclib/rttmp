@@ -1,0 +1,29 @@
+"macro rttmp"
+"  rttmp - return files saved with cptmp or svtmp to the correct locations "
+"	   locations within an experiment.  The argument passed is used to "
+"	   determine the name of the temporary files.  The combination of  "
+"	   svtmp/cptmp and rttmp allow an experiment to be used without	   "
+"	   having to redo an FT on the original data.			   "
+
+flush
+
+$type = 'none'
+if ($# < 1) then
+   write('error','one argument needs to be passed to %s',$0)
+else
+   " check for the existence of the desired file(s)"
+   exists(curexp + '/subexp/' + $1 + '/acqfil/fid', 'file'):$isthere
+   if ($isthere > 0.5) then
+      $type = 'fid'
+      $file=curexp+'/subexp/'+$1
+      exists($file + '/datdir/data', 'file'):$isthere
+      if ($isthere > 0.5) then
+	 $type = 'data'
+      endif
+      " copy in the desired file(s)"
+      shell('cd '+$file+'; tar cf - * | (cd '+curexp+'; tar xfB - ); cat'):$res
+      fread(curexp+'/curpar','current')
+      fread(curexp+'/procpar','processed')
+   endif
+endif
+return($type)

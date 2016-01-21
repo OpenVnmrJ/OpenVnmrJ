@@ -1,0 +1,122 @@
+"macro ATecc"
+
+" *********************************************************************** "
+" *ATecc($option,$title) - analyzes for peak height and phase deviation* "
+" *                                                                     * " 
+" *$option='n' for amp and phase, 'a' for amp only, or 'p'for phase only* "
+" *$title is optional title for plots                                   * "
+" *********************************************************************** "
+
+if $#=0 then $option='n'
+" **** "
+"echo('macro=',$0)"
+"echo('$option=',$option)"
+" ****** "
+ else $option=$1 endif
+if array='' then
+  write('error','Analysis not possible for non-arrayed data set') 
+  return
+endif 
+
+$index=1 $htsum=0 $htsumsq=0 $rpsum=0 $rpsumsq=0
+$ht=0 $freq=0 $11=0 $fsum=0 $fsumsq=0 ai
+select(1) dc ai ph 
+aph0:$ok,$phase
+if ($ok=0) then
+write('line3','in av mode')
+ av
+else
+ aph0 " for phased mode plots"
+endif
+if $option='p' then
+  peak:$ht,$freq
+  $htav=$ht $rp=rp
+endif  
+
+"****Find peak ht, phase, freq, and do sums for leastsquares***********"
+
+clear
+repeat
+  select($index)
+    aph:$ok,$rp,$lp
+    peak:$ht,$freq
+    
+    $freq = $freq*1e-6 "change to MHz"
+    
+    " ***** "
+"    echo('ht=',$ht)"
+"write('alpha','%3d: ht = %.2f, frq = %.2f, ok/rp/lp = %d/%f/%f',$index,$ht,$freq,$ok,$rp,$lp)"
+
+    " ****** "
+  $htsum=$htsum+$ht $htsumsq=$htsumsq+$ht*$ht
+  $fsum=$fsum+$freq $fsumsq=$fsumsq+$freq*$freq
+  $index=$index+1
+until $index>celem
+
+"**********Calc averages ans std dev*************************************"
+
+$index=celem
+$htvar=($htsumsq-($htsum*$htsum)/$index)
+if $htvar<0 then $htvar=-$htvar endif
+$htsd=SQRT($htvar/($index-1))
+$htav=$htsum/$index
+
+$fvar=($fsumsq-($fsum*$fsum)/$index)
+if $fvar<0 then $fvar=-$fvar endif
+$fsd=SQRT($fvar/($index-1))
+$fav=$fsum/$index
+
+
+"  *** "
+"echo('$htav=',$htav)"
+" **** "
+$vsinit=vs   "save initial vs"
+vs=.7*wc2max*vs/$htav
+
+r6=$htav  r7=100*$htsd/$htav
+
+"***********************************************************************"
+"******************output to graphics and/or plotter********************"
+
+$device='graphics'    "graphics first"
+
+repeat
+  if $device='plotter' then pl('all') else dssh endif
+  if $#=2 then
+    $title=$2
+    write($device,10,wc2max-10,'%s',$title) $incr=10
+    else $incr=0
+  endif
+  if $option<>'p' then
+"   write($device,10,wc2max-10-$incr,'ave ht   =%6.3f',$htav)"
+    $wc_step = 5
+    write($device,10,wc2max-3*$wc_step-$incr,'Amplitude: std dev(%%) = %6.3f, stability(%%) = %6.3f',100*$htsd/$htav,100-100*$htsd/$htav)
+    write($device,10,wc2max-4*$wc_step-$incr,'Frequency: std dev(%%) = %6.3f, stability(%%) = %6.3f',100*$fsd/$fav,100-100*$fsd/$fav)
+    write($device,10,wc2max-5*$wc_step-$incr,'phase error = %2.3f degrees',100*$htsd/(7.1*$htav))
+"    write($device,10,wc2max-15-$incr,'std dev(percent)=%6.3f   [phase error = %2.3f degrees]',100*$htsd/$htav,100*$htsd/(7.1*$htav))"
+  endif
+
+"  write($device,10,wc2max-30-$incr,'pw =%6.1f at tpwr=%3.0f',pw,tpwr) "
+  on('spin'):$spinon
+  if $spinon=1 then
+    write($device,10,wc2max-35-$incr,'sequence=%s  tn=%s   spin=%5.2f',seqfil,tn,spin) 
+  endif
+  if amptype='aa' then write($device,250,wc2max-40-$incr,'tpwr= %3.0f',tpwr) endif
+  if d2<>0 then write($device,10,wc2max-40-$incr,'d2= %6.3f',d2) endif
+  if (dm='yyy')OR(dm='nny') then
+    write($device,10,wc2max-65-$incr,'dm=%s  dmm=%s  dhp=%4.0f  dmf=%6.0f',dm,dmm,dhp,dmf)
+  endif
+
+  if $device='graphics' then  
+      if at_plotauto='y' then
+        $device='plotter'
+      else
+        $device='done'
+      endif
+  else
+        $device='done'
+  endif
+until $device='done'
+
+vs=$vsinit  "restore original vs"
+return(r6,r7)

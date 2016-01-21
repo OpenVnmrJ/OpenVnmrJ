@@ -1,0 +1,320 @@
+"macro qkshimcalib"
+"*****************************************************************************"
+" qkshimcalib - Calibrate shim polarity
+"
+" Details: Assume qkshim sequence loaded and ready to go. "
+"          .fid datasets are acquired for x,y and z shims" 
+
+" Usage: qkshimcalib - first pass, initialize and continue" 
+"        qkshimcalib(n) - n=shim-pass no.,   "
+"
+" Output: gcoil.cal in userdir/qkshimdir/ containing xyz polarity
+"
+" Version: 2005-06-08"
+
+"*****************************************************************************"
+
+$macro = $0
+$GSDIR = userdir+'/qshimdir'
+
+if(console = 'vnmrs') then
+  exists($GSDIR,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSDIR)
+  endif
+  "make a copy of the decc file for reference"
+  $name1 = '/vnmr/imaging/decclib/.'+gcoil
+  $name2 = $GSDIR+'/decc_file.'+gcoil
+  exists($name1,'file'):$ex  "check if decc-file exists "
+  if ($ex = 0) then
+      write('error','%s: %s does not exist',$macro,$name1)
+      abort
+  endif
+  shell('cp '+$name1+' '+$name2)
+  exists($name2,'file'):$ex2
+  if ($ex2 = 0) then
+      write('error','%s: %s does not exist',$macro,$name2)
+      abort
+  endif
+
+  "read shim scaling factor; assume same scaling for all shims "
+  lookup('mfile',$name2,'filekey'):$key
+  lookup('mfile',$key,'seek','totalscale','read','read','read'):$s1,$s2,$s3
+  $signx = 1
+  $signy = 1
+  $signz = 1
+  if($s1 < 0) then
+    $signx = -1
+  endif
+  if($s2 < 0) then
+    $signy = -1
+  endif
+  if($s3 < 0) then
+    $signz = -1
+  endif  
+  "write out the information"
+  $name = $GSDIR+'/qshim.'+gcoil+'.cal'
+  shell('rm -f '+$name)
+  write('reset',$name)  "create file"
+  write('file',$name,'#XYZ_POLARITY')
+  write('file',$name,'%3d  %3d  %3d ',$signx,$signy,$signz)
+            
+  write('line3','Shim polarity X,Y,Z: %3d,  %3d,  %3d ',$signx,$signy,$signz)
+
+  "If system administrator (vnmr1) copy calib file to /vnmr/qshimdir"
+  $sys='' $sysowner=''
+  shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+  if (owner = $sysowner) then
+    $ffile = systemdir+'/qshimdir/qshim.'+gcoil+'.cal'
+  
+    exists(systemdir+'/qshimdir','file'):$e
+    if $e=0 then mkdir(systemdir+'/qshimdir') endif
+
+    exists($ffile,'file'):$ex
+    if($ex > 0) then
+      input('Copy shim calibration file into system directory [y/n]?'):$response
+      if ($response ='y')  then            
+        shell('rm -f '+$ffile)
+        shell('cp '+$name+' '+systemdir+'/qshimdir/') 
+        write('line3','%s copied into system directory','qshim.'+gcoil+'.cal')
+      else
+        write('line3','Calibration file not copied')    
+      endif
+    else
+      shell('rm -f '+$ffile)
+      shell('cp '+$name+' '+systemdir+'/qshimdir/') 
+      write('line3','%s copied into system directory','qshim.'+gcoil+'.cal') 
+    endif
+  endif  
+  
+  return
+
+endif
+  
+"macro gets here if Inova system"
+if parmax[19] < 4000 then
+  $scale = 2000    " 12-bit shim-DAC system "
+else
+  $scale = 32000   " 16-bit shim-DAC system "
+endif
+
+if ($# = 0) then    "** first pass, do initialization **"
+  if (Prescan_ShimMethod <> 'quickshim')  then
+    write('error','illegal shimming method (%s)',Prescan_ShimMethod)
+    abort
+  endif
+
+  exists($GSDIR,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSDIR)
+  endif
+  "make a copy of the decc file for reference"
+  $name1 = '/vnmr/imaging/decclib/.'+gcoil
+  $name2 = $GSDIR+'/decc_file.'+gcoil
+  exists($name1,'file'):$ex  "check if decc-file exists "
+  if ($ex = 0) then
+      write('line3','%s: %s does not exist',$macro,$name)
+      abort
+  endif
+  shell('cp '+$name1+' '+$name2)
+  exists($name2,'file'):$ex2  
+  if (($ex = 0) and ($ex2 = 0)) then
+      write('line3','%s: %s does not exist',$macro,$name2)
+      abort
+  endif
+
+  "read shim scaling factor; assume same scaling for all shims "
+  lookup('mfile',$name2,'filekey'):$key
+  lookup('mfile',$key,'seek','shimscale','read','read','read'):$s1,$s2,$s3
+  shimscale=$s1
+
+  shimnames:$cname,$ns    "check if z1c, z2c shims used"
+  strstr($cname,'z1c'):$c2
+  if($c2 > 0.5) then
+    z1name = 'z1c'
+  else
+    z1name = 'z1'
+  endif
+
+  shimpass=0
+  shimno = 0    "1st expt. reference"
+  "remove old shim fid files"
+  shimmapfid = $GSDIR+'/qshimcal.0'
+  shell('rm -rf '+shimmapfid+'.fid')  "note .fid directory deleted"
+  ldrf tof=H1offset 
+  repeats=0    "no of times a shim is repeated, maximum is 5"
+  gbasex=0 gbasey=0 gbasez=0   "base gradient-shim values"
+  del=0  "gradient-shim offset"
+  shell('rm -f '+userdir+'/shims/start0')
+  svs('start0')   "shim file saved as reference"
+elseif ($1 = 0) then  
+  del = (shimgrad*32000)/gmax "shim-gradient (DAC)" 
+  shimno = 1 "x gradient-shim"
+  shimpass = 1
+  shimmapfid = $GSDIR+'/qshimcal.1'
+  shell('rm -rf '+shimmapfid+'.fid')
+elseif ($1 = 1) then
+  shimno = 2 "y gradient-shim"
+  shimpass=2
+  shimmapfid = $GSDIR+'/qshimcal.2'
+  shell('rm -rf '+shimmapfid+'.fid') 
+elseif ($1 = 2) then
+  shimno = 3 "z gradient-shim"
+  shimpass=3
+  shimmapfid = $GSDIR+'/qshimcal.3'
+  shell('rm -rf '+shimmapfid+'.fid')
+elseif ($1 = 3) then
+  del = 0
+  shimno = 0 
+  shimpass=4
+  shimmapfid = $GSDIR+'/qshimcal.10'
+  shell('rm -rf '+shimmapfid+'.fid')
+  $shimdac = (shimgrad*32000)/(gmax*shimscale) "shim-gradient (DAC)"
+  x1 = x1 + $shimdac  "set x shim"
+  load = 'y'
+  setallshims     
+elseif($1 = 4) then
+  shimpass=5
+  shimmapfid = $GSDIR+'/qshimcal.20'
+  shell('rm -rf '+shimmapfid+'.fid')
+  rts('start0')
+  $shimdac = (shimgrad*32000)/(gmax*shimscale) "shim-gradient (DAC)"
+  y1 = y1 + $shimdac  "set x shim"
+  load = 'y'
+  setallshims     
+elseif($1 = 5) then  
+  shimpass=6
+  shimmapfid = $GSDIR+'/qshimcal.30'
+  delete(shimmapfid)
+  rts('start0')
+  $shimdac = (shimgrad*32000)/(gmax*shimscale) "shim-gradient (DAC)"
+  {z1name} = {z1name} + $shimdac
+  load = 'y'
+  setallshims   
+elseif($1 = 6) then 
+  "all acquisition done"
+  rts('start0')  "restore shims"
+  load='y'
+  setallshims    
+  
+  $error=0
+  $i = 0   "reference spectrum"
+  $name = $GSDIR+'/qshimcal.'
+  rt($name+'0')
+  av   lb=2
+  wft('nods')
+  peak:$ht,$f0 
+  
+  $i = 1         "x gradient data"
+  rt($name+'1')
+  av   lb=2
+  wft('nods')
+  peak:$ht,$f1
+
+  $i=10		"shim x data"
+  rt($name+'10')
+  av   lb=2
+  wft('nods')  
+  peak:$ht,$f10
+  if($f1 > $f0) and ($f10 > $f0) then
+    $signx = 1
+  elseif ($f1 < $f0) and ($f10 < $f0) then
+    $signx = 1
+  else
+    $signx = -1
+  endif
+  $i = 2         "y gradient data"
+  rt($name+'2')
+  av   lb=2
+  wft('nods')
+  peak:$ht,$f2
+  $i=20		"shim y data"
+  rt($name+'20')
+  av   lb=2
+  wft('nods')  
+  peak:$ht,$f20
+  if($f2 > $f0) and ($f20 > $f0) then
+    $signy = 1
+  elseif ($f2 < $f0) and ($f20 < $f0) then
+    $signy = 1
+  else
+    $signy = -1
+  endif
+  $i = 3         "y gradient data"
+  rt($name+'3')
+  av   lb=2
+  wft('nods')
+  peak:$ht,$f3
+  $i=30		"shim y data"
+  rt($name+'30')
+  av   lb=2
+  wft('nods')  
+  peak:$ht,$f30
+  if($f3 > $f0) and ($f30 > $f0) then
+    $signz = 1
+  elseif ($f3 < $f0) and ($f30 < $f0) then
+    $signz = 1
+  else
+    $signz = -1
+  endif    
+  "write out the information"
+  $name = $GSDIR+'/qshim.'+gcoil+'.cal'
+  shell('rm -f '+$name)
+  write('reset',$name)  "create file"
+  write('file',$name,'#XYZ_POLARITY')
+  write('file',$name,'%3d  %3d  %3d ',$signx,$signy,$signz)
+  write('file',$name,'#REF-FREQ')
+  write('file',$name,'%6.2f ',$f0)
+  write('file',$name,'#X')
+  write('file',$name,'%6.2f,  %6.2f ',$f1,$f10)  
+  write('file',$name,'#Y')
+  write('file',$name,'%6.2f,  %6.2f ',$f2,$f20)
+  write('file',$name,'#Z')
+  write('file',$name,'%6.2f,  %6.2f ',$f3,$f30) 
+            
+  write('line3','Shim polarity X,Y,Z: %3d,  %3d,  %3d ',$signx,$signy,$signz)
+  
+  "If system administrator (vnmr1) copy calib file to /vnmr/qshimdir"
+  $sys='' $sysowner=''
+  shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+  if (owner = $sysowner) then
+    $ffile = systemdir+'/qshimdir/qshim.'+gcoil+'.cal'
+  
+    exists(systemdir+'/qshimdir','file'):$e
+    if $e=0 then mkdir(systemdir+'/qshimdir') endif
+
+    exists($ffile,'file'):$ex
+    if($ex > 0) then
+      input('Copy shim calibration file into system directory [y/n]?'):$response
+      if ($response ='y')  then            
+        shell('rm -f '+$ffile)
+        shell('cp '+$name+' '+systemdir+'/qshimdir/') 
+        write('line3','%s copied into system directory','qshim.'+gcoil+'.cal')
+      else
+        write('line3','Calibration file not copied')    
+      endif
+    else
+      shell('rm -f '+$ffile)
+      shell('cp '+$name+' '+systemdir+'/qshimdir/') 
+      write('line3','%s copied into system directory','qshim.'+gcoil+'.cal') 
+    endif
+  endif  
+  
+  abort
+endif
+
+write('line3','Shim calibration pass# %d',shimpass)
+
+wexp = 'svf(shimmapfid) qkshimcalib(shimpass)' 
+wdone = '' werr=''
+au
+
+
+
+"******************************************************************************"
+"		Modification History
+
+" 20060626(ss) - calib file generated for vnmrs
+
+"******************************************************************************"
+"

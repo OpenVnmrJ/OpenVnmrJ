@@ -1,0 +1,17 @@
+"macro go_CRAPT"
+if (tn = 'C13') then
+    setref(tn):$rfl,$rfp,$reffrq
+    $center=(tof+$rfp-$rfl)/$reffrq
+    mkpar('delay','tauC',0)
+    setlimit('tauC',8190,-8190,1.25e-8)
+    tauC = 0.0007*(90-$center)/90
+    if (tauC < 0) then
+   	tauC = (trunc((tauC*1e6)-0.5))/1e6
+    else
+   	tauC = (trunc((tauC*1e6)+0.5))/1e6
+    endif
+    if (tauC < -1.0*pw180r/1e6) or (tauC > pw180r/1e6) then
+  	write('error','tauC exceeds the length of pw180r. aborted')
+  	abort
+    endif
+endif

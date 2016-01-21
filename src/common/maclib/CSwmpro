@@ -1,0 +1,78 @@
+"macro CSwmpro"
+"Create sampling profile from window functions. EK, July 2012, Oxford"
+$wmpro=''
+getbinpath('wmpro'):$infex,$wmpro
+
+$ni='' $domain = '' $f1='' $log=''
+$nimax=0
+flush
+
+if(CSdomain=1) then
+  $ni='ni'
+  on('nimax'):$e
+  if $e > 0 then
+    $nimax=nimax
+  else
+    $nimax=ni
+  endif
+elseif (CSdomain=2) then
+  $ni='ni2'
+  on('ni2max'):$e
+  if $e > 0 then
+    $nimax=ni2max
+  else
+    $nimax=ni2
+  endif
+elseif (CSdomain=3) then
+  $ni='ni3'
+  on('ni3max'):$e
+  if $e > 0 then
+    $nimax=ni3max
+  else
+    $nimax=ni3
+  endif
+else
+  write('error','CSdomain undefined')
+  return
+endif
+
+$log=curexp+'/wmpro_'+$ni+'.log'
+
+$f1=curexp+'/sampling_'+$ni+'.pro' 
+exists($f1,'file'):$e  
+if($e) then 
+  delete($f1) write('line3','old file deleted')
+endif
+
+format(CSdomain,1,0):$domain
+$cmd=$wmpro+ ' ' + curexp + ' ' + $domain
+write('reset', $log)
+write('file',$log,'%s', $cmd)
+$cmd = $cmd + ' >> ' + $log  
+shell($cmd)  
+
+wt2fid       "convert to fid format for display "
+CSfid2pro    "copy to the exp# directory "
+
+exists($f1,'file'):$e
+if($e) then 
+  if(CSshowpro='y') then
+    CSdpro(CSdomain)
+  endif
+  write('line3','Sampling probability profile in %s done.', $ni)
+else
+  write('error','Failed to create sampling probability profile in %s.', $ni)
+endif
+CSprofile[CSdomain]='WinMgr'
+CSprosize[CSdomain]=$nimax
+
+if(CSshowpro='y') then
+  CSdpro
+endif
+
+//Catch for BioPack sequences - use BioPack panels for processing instead
+exists('pwC','parameter'):$ex
+if not ($ex) then
+     write('line3','Now click \'Build\' button on \'NUS\' panel')
+     write('graphics',0.2*wcmax,0.2*wc2max,'Click \'Build\' button on \'NUS\' panel to build a sampling schedule weighted according to the displayed function')
+endif

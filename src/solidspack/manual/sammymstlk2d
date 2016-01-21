@@ -1,0 +1,128 @@
+Protocol: Sammymstlk2d  Sequence: sammymstlk2d.c  Apptype: solidseq1d
+
+Description: 
+
+     A sequence to provide correlation between the chemical-shift and
+     1H-dipolar interaction using a pair of magic sandwich spinlocks (SAMMY).
+
+     Uses MOIST cross polarization.   
+
+     Uses a modified SAMMY sequence based on a personalcommunication by 
+     Alex Nevzorov.  Changes from the paper are: 
+                  1.  invert the X phase at the center of each MS cycle.  
+                      That means the X durations are 6.0*pwX90, 12.0*pwX90, 6.0*pwX90. 
+                  2.  set each of four H spinlocks = 3.5*pwH90 and the two delays
+                      = 3.0*pwH90 each. The four explicit pwH90's fill 2 MS cycles. 
+                  3.  del1 and del2 remain the same but should be zero.     
+ 
+Reference: 
+  
+      Alexander A. Nevzorov and Stanley J. Opella, J. Magn. Reson. 
+      164 (2003) 182-186.
+
+Additional Software:
+
+   reset_sammy - This macro uses the calibrated values of pwH90 and aH90 to 
+      calculate the intial parameters for the smydH and smyoX  waveforms and 
+      sets up 2D parameters. reset_sammy2d is run from the protocol. 
+
+Parameter Groups:
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX (For MOIST):  Module:  no 
+Sequence:  moistlkcp.c
+Description:  Implements MOIST CP with no offset in the sequence
+Parameters:  Sequence Page
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       tHX -  contact time
+
+Parameters defined in the sequence: 
+onHlock: applies a spinlock and compensation pulse if "1". 
+pwHlock: a spinlock follows pwH90 using aH90. 
+aHcomp:  a compensation pulse follows the spin lock. 
+pwHcomp: the width of the compensation pulse.  
+
+smyoX: Module: yes 
+Sequence: sammy2d.c 
+Description:  Implements the "Observe" Waveform of SAMMY on the 
+              observe channel
+
+Parameters: Sequence Page
+       aXsmyo - amplitude of SAMMY OBS pulses.
+       pwXsmyo - 90-degree flip on OBS
+       qXsmyo - SAMMY cycles represented in the .DEC file. 
+       t1Xsmyo - spinlock correction
+       t2Xsmyo - delay correction 
+       ofXsmyo - overall frequency offset.
+       chXsmyo = 'obs' must be set (not shown). 
+
+Implementation:  MPSEQ smyo = getsammyo("smyoX",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.  
+
+smydH: Module: yes 
+Sequence: sammy2d.c 
+Description:  Implements the "Proton" Waveform of SAMMY on the 
+              decoupler channel
+
+Parameters: Sequence Page.
+       aXsmyd - amplitude of SAMMY DEC pulses.
+       pwXsmyd - 90-degree flip on DEC
+       qXsmyd - SAMMY cycles represented in the .DEC file. 
+       t1Xsmyd - spinlock correction
+       t2Xsmyd - delay correction 
+       ofXsmyd - overall frequency offset.
+       chXsmyd = 'dec' must be set (not shown). 
+
+Implementation:  MPSEQ smyd = getsammyd("smydH",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.  
+ 
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);

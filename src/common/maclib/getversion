@@ -1,0 +1,52 @@
+"macro getversion"
+" Varian getversion"
+
+$t='/vnmr/tmp/version'
+shell('rm -f '+$t):$e
+cp('/vnmr/vnmrrev',$t)
+shell('chmod 666 ' +$t):$e
+
+$logfile='/vnmr/adm/log/options'
+exists($logfile,'file'):$e
+if $e then
+  $file='/vnmr/adm/options/options'
+  exists($file,'file'):$e
+endif
+if $e then
+  $psFile=''
+  $psLabel=''
+  readfile($file,'$psFile','$psLabel','','local'):$num
+  if ($num > 0 ) then
+     write('file',$t,'\nOPTIONS:')
+     lookup('mfile',$logfile,'filekey'):$key
+     $i = 0
+     while ($i < $num) do
+        $i = $i + 1
+        lookup('mfile',$key,'countcs',$psFile[$i]):$found
+        if ($found) then
+            write('file',$t,'%s',$psLabel[$i])
+        endif
+     endwhile
+  endif
+endif
+
+$patch=systemdir+'/adm/patch'
+exists($patch,'directory'):$ep
+if $ep then 
+  write('file',$t,'\nPATCHES:')
+  shell('cd '+$patch+'; ls -d * >> '+$t+'; cat'):$e
+endif
+
+exists('/etc/redhat-release','file'):$e
+if $e then
+  write('file',$t,'\nOS:')
+  shell('cat /etc/redhat-release >> ' +$t+'; cat'):$e
+endif
+exists('CP_Version','CP_Readme'):$e,$path
+if ($e) then
+  write('file',$t,'')
+  write('file',$t,'CHEMPACK:')
+  shell('(cat '+$path+' | grep \'^Chempack\' | grep -w Patch | head -n 1 >> '+$t+')'):$e
+  shell('(cat '+$path+' | grep \'Installed on\' >> '+$t+')'):$e
+endif
+shell('chmod 666 ' +$t):$e

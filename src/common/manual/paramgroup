@@ -1,0 +1,182 @@
+paramgroup -  Create a set of new parameters in a workspace and optionally 
+              add a display string to the dg and ap parameters and creates
+              .xml file with panel items. Parameters
+              are created and given a default value, if they do not 
+              already exist. Parameters are replaced if they exist and are 
+              unprotected by bit 14. Parameters protected by bit 14 remain 
+              unchanged.  Bit 14 is set to 1 so parameters can be loaded with
+              the rtx command of modules and protocols. Parameters of the 
+              'channels' type are named in the string clearparams for 
+              subsequent deprotection, bit 14 = 0, in the workspace after 
+              execution of rtx or this macro. 
+
+              Parameters are displayed in dg and ap with a title and an optional, 
+              conditional string. Parameters can be created directly or as 
+              a prefix only (SolidsPack Convention). In the later case 
+              argument 4 must contain a parameter-group name. 
+
+              XML panel items are stored in .xml in 
+              ~/vnmrsys/templates/vnmj/panelitems.
+              To use open panel editor: Edit->Parameter Pages, then
+              open Tools->Browser, browse to the panelitems directory and drag the
+              XML file to the panel
+
+ Syntax1: paramgroup('all','Mytitle','',''<<<,'pt1','amplitude',2000>
+                                              <<,'pt2','pulse',4.0>,(..etc)>)
+          Create a group of parameters pt1, pt2 .. etc with types 'amplitude'
+          'pulse' ... etc and display them in dg and ap with title Mytitle.
+          XML file with panel items will be created too
+          If no parameters are present only the title is displayed. 
+
+ Syntax2: paramgroup('all','Mytitle','','suffixH'<<<,'pt1','amplitude',2000>
+                                              <<,'pt2','pulse',4.0>,(..etc)>)
+
+          Create a group of parameters pt1Hsuffix, pt2Hsuffix .. etc as 
+          above and and display them in dg and ap with title Mytitle
+          XML file with panel items will be created too
+          (SolidsPack Convention). 
+ 
+ Syntax3: paramgroup('all','Mytitle','(mycon=1)',''<<<,'pt1','amplitude',
+                                         2000><<,'pt2','pulse',4.0>,(..etc)>)
+
+          Create a group of parameters pt1, pt2 .. etc as above and 
+          display them in dg and ap with title Mytitle with the conditional
+          string '(mycon=1)'.
+          XML file with panel items will be created too
+
+ For syntax1 to syntax3, if $1 = 'dgapstring' only the display strings in 
+ dg and ap are created. Creation of the parameters is suppressed.  The 
+ values 'dgstring' and 'apstring' can be used to create dg or ap strings
+ individually. 
+
+ Syntax4: paramgroup('params','','pt1','amplitude',2000
+                                         <<,'pt2','pulse',4.0>,(..etc)>)
+          Create parameters pt1, pt2...etc only. Do not create a display 
+          string in dg or ap. Parameters that require only a dg or an ap 
+          string, but not both, should be created with Syntax 4. Then use 
+          syntax1 to syntax3 with 'dgstring' or 'apstring' to create the 
+          template separately.   
+
+ Argument 1 is the function 'all','params','dgapstring','dgstring', 
+            'apstring', 'xmlfile', 'dgapinit', 'xmlfile', 'apinit' or 'dginit'. 
+ Argument 2 is a title for the dg/ap display (syntax1 to syntax3 only).
+ Argument 3 is a conditional for the dg/ap display (syntax1 to syntax3 only).
+ Argument 4(2) is a a string used to label all parameters in the group. The 
+            string must be one or more upper-case "channel identifiers" 
+            following a lower case "suffix". the order of the suffix and 
+            channel identifiers are reversed an appended to the parameter
+            names (prefixes) in the following arguments (Solidpack Convention).
+ Argument 5(3) is a string containing a parameter name or prefix (see 4)
+ Argument 6(4) is the "solids type" of a parameter. The solids type controls
+            the VnmrJ type, the limits and the significant figures in the 
+            dg/ap display. See the table below. 
+            
+Solids Type:  VJ Type:   Max       Min      Step       Figures   Clear
+
+'amplitude'   real       4095.0    0.0   0.0(0.06248)* 3          n
+'delay'       delay      8190(s)   0.0      0.0125e-6  6          n
+'frequency'   frequency  1e9       1e9      0.0        1          n
+'pulse'       pulse      8192      0.0      0.0125     1          n
+'string'      string     na        na       na         na         n
+'flag'        flag       na        na       na         na         n
+'integer'     real       1e7       1e-7     1          0          n
+'idphase'     real       9(12=1,2) 0        1          0          n
+'scaler'      real       63.0      -37****  0.5****    1          n
+'phase'       real       360.0  -360.0  0.0(0.00549)*  3          n
+'real'        real       none      none      none      6          n
+'channel'***  string     na        na       na         na         y**
+
+   *The paramgroup macro does not set a step size for 'amplitude' and
+   'phase' but the step is set by hardware (16 bit for DD2), (12 bit 
+    amplitude and 13 bit phase for VnmrS). 
+
+ ** All parameters are created with bit 14 set (for modules and 
+    protocols). All 'channel' parameter names are added to the string
+    parameter "clearparams", which can be used to clear bit 14 after
+    loading. Subsequent protocols need to change the values of 
+    'channel' parameters, for example to change from direct to 
+    indirect detection.  
+
+*** The paramgroup macro always sets the default values of 'channel' 
+    parameters, whether or not the parameter previously exists. 
+    Existing values of all other parameters are preserved. 
+
+*** For VnmrS the lower limit and step of 'scaler' parameters are
+    set by hardware to -16 and 1.0.      
+
+ Argument 7(5) is a default value, which is set only if the parameter is
+             newly created. 
+ Blocks of 3 subsequent arguments (i.e. 8(6),9(7) and 10(8) etc) are 
+             additional parameters. One can create any number of parameters.
+             within a single paramgroup call. 
+
+ Syntax 5 paramgroup('dgapinit')
+          
+          Initialize dg='' and ap = '' to remove exisiting dg and ap 
+          displays. Also initialize ap = '' in the 'processed' tree. 
+          Use 'apinit' and 'dginit'to initialize the displays 
+          individually.
+
+ Syntax 6 paramgroup('clearparamsinit')
+          
+          Initialize clearparams='' to remove an exisiting clearparams
+          string. Create clearparams, protected by bit 4, if it does
+          not exist. Bit 4 disallows a commandline change of clearparams.
+
+ Syntax 7 paramgroup('clearparams','inputstring')
+          
+          Add a parameter name or a string of parameter names to the 
+          string parameter clearparams. Parameter names should be 
+          separated by spaces. A concluding space is not needed. This 
+          function does not validate the existence of parameters in 
+          the input string. Use this syntax to cause deprotection in 
+          the workspace for an arbitrary parameter, similar to the 
+          'channel' type. Deprotection of parameters in clearparams 
+          takes place automatically in an uppercase protocol macro. 
+          Use: 
+             setprotect(clearparams,'off',16384)
+          to duplicate this result in user macros. 
+            
+ Programming Funtions: 
+
+  (These functions are used internally. See the argument descriptions under 
+  the individual headings. They are available, but not recommended for use
+  in other macros.)
+
+ 1. paramgroup('dgaptitle'... arguments) creates a title and conditional 
+    string in dg and ap (also 'aptitle' and 'dgtitle').
+ 2. paramgroup('dgap' ..... arguments) appends a string for a single 
+    parameter to dg and ap (also 'ap' and 'dg'). 
+ 3. paramgroup('dgapend') replaces the last character (usually a comma) 
+    with a semicolon to conclude the dg and ap parameter group string 
+    (also 'apend' and 'dgend').
+ 4. paramgroup('dgapnull') appends a semicolon to a a string constructed 
+    from 'dgaptitle' only to conclude dg and ap strings without parameters
+    (also 'apnull' and 'dgnull').
+ 5. paramgroup('xmltitle' ... arguments) opens XML file and write the
+    header
+ 6. paramgroup('xmladd' ... arguments) adds an item for the parameter
+    in XML file
+ 7. paramgroup('xmlend') finish XML file
+
+
+
+ Functions 1 to 3 must be used together to create a valid dg and ap entry.
+ These functions create and use the temporary parameters dgcharindex, 
+ dgarrayindex, apcharindex and aparrayindex to keep track of the length
+ of the dg and ap strings. The dg and ap strings can hold an arbitrary 
+ list of parameters as an array of strings of up to 1024 characters. 
+ Function 1 above determines the length of the exisiting dg or ap string
+ and creates a new array if the exisiting number of characters is greater
+ than 768. If an exisiting group string approaches 768 characters, the 
+ string length of a new group could not cause the total to be greater 
+ than 1024 characters. If it does, the macros will abort with an error. 
+
+
+ Functions 5 to 6 must be used together to create a valid XML file.
+ They create temporary parameters xmlfname and xmlposition which
+ stores XML file name and the current x-position of the item in the group
+
+ 4. paramgroup('setparam' ... arguments) creates a single parameter with type 
+    and a default value. Function 4 can be used individually in a macro 
+    or on the command line. 

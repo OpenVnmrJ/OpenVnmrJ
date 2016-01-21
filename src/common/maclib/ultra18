@@ -1,0 +1,17 @@
+"macro ultra18"
+// ultra18 - select 18 shim configuration of the Ultra 18 shim power supply
+
+if (shimset <> 16) then
+  write('line3','%s is only for systems with the Ultra 18 shim power supply',$0)
+  return
+endif
+exists(systemdir+'/acq/acqigroup16','file','rw'):$e
+if ($e > 0.5) then
+  delete(systemdir+'/acq/acqigroup16')
+  copy(systemdir+'/acq/acqigroup16_18',systemdir+'/acq/acqigroup16')
+  delete(systemdir+'/acq/dgs16')
+  copy(systemdir+'/acq/dgs16_18',systemdir+'/acq/dgs16')
+  fread(systemdir+'/acq/dgs16')
+else
+  write('line3','You must have administrator priviledge to change the shim configuration')
+endif

@@ -1,0 +1,42 @@
+"macro sdp"
+"	sdp - show diffusion projection				"
+"	To be used with 2 or 3D DOSY data after DOSY analysis 	"
+"	Displays D spectrum using Varian's dsp facility 	"
+"	12iv08 Change userdir/Dosy to userdir/dosy		"
+"	12iv08 Allow argument to specify experiment containing DOSY data "
+"	13iv08 Increase nuber of data points			"
+"	16ii09 Insist on one argument specifying source experiment	"
+"	28iii09 Allow use with no argument			"
+"	31iii09 Redo display to try to stop spectrum being out of register with scale	"
+"	6v09 Leave display in ai mode					"
+
+$fn=fn
+if (dosyproc='continuous') then
+	write('error','Please use interactive display or proj command to project CONTIN data')
+elseif ($# < 2)  then
+	$estr=''
+	$file=''
+	if ($# = 0)  then
+		jexp:$1
+	endif
+    	format($1,0,0):$estr
+	write('line3','DOSY diffusion projection from experiment '+$estr)
+	$file=userdir+'/exp'+$estr+'/dosy/diffusion_integral_spectrum'
+	exists($file,'file'):$ex
+		if ($ex=0) then
+      			write('line3',' No diffusion data found in experiment '+$estr)
+			abort
+		endif
+	sw = 100 np = 65536 fn = 2*np rfl = 20 rfp = 0 sp=0 wp=40
+	unit('D','D',1)
+	setvalue('axis','D','current')
+	full ai 
+	dsp($file)
+	ds
+	vsadj
+	dscale
+else
+      write('line3','Usage sdp(<expno>) : one argument maximum')
+endif
+fn=$fn
+newdg

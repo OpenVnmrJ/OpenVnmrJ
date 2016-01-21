@@ -1,0 +1,79 @@
+"macro calibplot"
+" procarray - process arrayed 1D spectra "
+
+if arraydim=1 then plot1d return endif
+
+write('plotter',0,0,''):$xs
+$x=3
+$list = ''
+$novals = celem
+$parbelow=0
+
+" initial transformation and parameter adjustments "
+$sc=sc $wc=wc $sp=sp $wp=wp $sc=sc $wc=wc $ho=ho $vo=vo
+intmod='off'
+$maxpos=0 $ixpos=0
+$maxneg=0 $ixneg=0
+
+" now check for the spectra with the largest positive and negative signals "
+
+$ix=1
+repeat
+  select($ix)
+  peak:$ht
+  if $ht>$maxpos then
+    $maxpos=$ht
+    $ixpos=$ix
+  else
+    if $ht<$maxneg then
+      $maxneg=$ht
+      $ixneg=$ix
+    endif
+  endif
+  $ix=1+$ix
+until $ix>arraydim
+$maxneg=0-$maxneg
+
+" select largest spectrum "
+if $maxpos>$maxneg then
+  select($ixpos)
+else
+  select($ixneg)
+endif
+  
+$stackmode='horizontal'
+
+" adjust vs, limit the noise, adjust plot parameters "
+$range=$maxpos+$maxneg
+
+vs=vs*(wc2-10)/$range
+noislm
+vp=$maxneg/$range*(wc2-10)
+" plot parameters / prepare page / chart parameters "
+$ho=ho
+$vo=vo
+$dss_wc=dss_wc
+$dss_sc=dss_sc
+$sc=sc $wc=wc
+full
+dss_wc=(wc-15)/arraydim
+dss_sc=wc-dss_wc
+if (arraydim>1) then
+  ho=-dss_wc - 15/(arraydim-1)
+else
+  ho=-dss_wc
+endif
+vo=0
+$plotoptions='logo','header','plarray','comments_page1','miniplot','params'
+doplotoption($plotoptions)
+ho=$ho
+vo=$vo
+sc=$sc
+wc=$wc
+dss_wc=$dss_wc
+dss_sc=$dss_sc
+
+wexp:$e
+if ($e) then
+  page
+endif

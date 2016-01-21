@@ -1,0 +1,180 @@
+"macro epi_setarray"
+
+"*****************************************************"
+"Some string initializations                          "
+"*****************************************************"
+$sval = ''
+$sparam = ''
+
+
+
+"*****************************************************"
+"What is arrayed, other than image?                   "
+"*****************************************************"
+$sz = size('image')  
+$image = image
+image = 0
+calcdim
+$arraydim = arraydim
+$array    = array
+$arrayparams = ''
+arrayparse:$arrayparams
+
+"*****************************************************"
+" Correct arraydim for number of receivers used       "
+"*****************************************************"
+$nrcvrs = 1  $ch = '' 
+length(rcvrs):$length
+$k = 2
+while ($k <= $length) do
+  substr(rcvrs,$k,1):$ch
+  if ($ch = 'y') then $nrcvrs = $nrcvrs + 1 endif
+  $k = $k + 1
+endwhile
+$arraydim = $arraydim / $nrcvrs
+
+
+"*****************************************************"
+" Strip off reference scans from all arrays           "
+"*****************************************************"
+if ($array <> '') AND (images > 1) then
+  write('error','Can not use images > 1 with another array (%s)',$array)
+  abort
+endif
+ 
+array = ''  // will be reset at end
+
+
+"*****************************************************"
+"Diffusion is a special case; dro/dpe/dsl are forced  "
+"to always be arrayed in parallel by underscore macros"
+"Turn this off temporarily while stripping off the    "
+"reference scans                                      "
+"*****************************************************"
+$diff_array = 0
+if (size('dro') > 0) OR (size('dpe') > 0) OR (size('dsl') > 0) then
+  setprotect('dro','off',8)
+  setprotect('dpe','off',8)
+  setprotect('dsl','off',8)
+  $diff_array = 1
+endif
+
+
+"*****************************************************"
+" Strip off reference scans from all arrays           "
+"*****************************************************"
+if ($array<>'') AND ($sz = $arraydim) then
+  "image was arrayed in parallel with other params "
+  "Strip off ref scans from all other arrayed parameters"
+  $p = 1
+  repeat
+    $i = 1 $ii = 1
+    repeat
+      if ($image[$i] = 1) then
+	isreal($arrayparams[$p]):$isreal
+	if ($isreal) then
+          $param[$ii] = {$arrayparams[$p]}[$i]
+	else
+          $sparam[$ii] = {$arrayparams[$p]}[$i]
+	endif
+	$ii = $ii + 1
+      endif
+      $i = $i + 1
+    until $i > $arraydim
+
+    isreal($arrayparams[$p]):$isreal
+    if ($isreal) then
+      {$arrayparams[$p]} = $param
+    else
+      {$arrayparams[$p]} = $sparam
+    endif
+
+    $p = $p + 1
+  until $p > size('$arrayparams')
+
+  $arraydim = $ii-1  // new arraydim without ref scans
+  
+endif
+
+
+
+"*****************************************************"
+" Set up image array in parallel with other arrays    "
+"*****************************************************"
+if (epiref_type = 'single') then
+  array('image',images*$arraydim,1,0) 
+  image = 0,image
+  if (epi_pc = 'TRIPLE_REF') then
+    write('line3','Warning: Warning: Setting phase correction method to \'Pointwise\'')
+    epi_pc = 'POINTWISE'
+  endif
+
+  if ($arrayparams <> '') then
+    // Add ref scan to other arrays
+    $inx = 1
+    repeat
+      isreal($arrayparams[$inx]):$isreal
+      if ($isreal) then
+        $val = {$arrayparams[$inx]}[1]
+        {$arrayparams[$inx]} = $val,{$arrayparams[$inx]}
+      else
+        $sval = {$arrayparams[$inx]}[1]
+        {$arrayparams[$inx]} = $sval,{$arrayparams[$inx]}
+      endif
+      $inx = $inx + 1
+    until ($inx > size('$arrayparams'))
+  endif
+
+elseif (epiref_type = 'triple') then
+  array('image',images*$arraydim,1,0) 
+  image = 0,-1,-2,image
+
+  if ($arrayparams <> '') then
+    // Add ref scan to other arrays
+    $inx = 1
+    repeat
+      // repeat first value for ref scans
+      isreal($arrayparams[$inx]):$isreal
+      if ($isreal) then
+        $val = {$arrayparams[$inx]}[1]
+        {$arrayparams[$inx]} = $val,$val,$val,{$arrayparams[$inx]}
+      else
+        $sval = {$arrayparams[$inx]}[1]
+        {$arrayparams[$inx]} = $sval,$sval,$sval,{$arrayparams[$inx]}
+      endif
+      $inx = $inx + 1
+    until ($inx > size('$arrayparams'))
+  endif
+
+  if (epi_pc <> 'TRIPLE_REF') then
+      write('line3','Warning: Warning: Setting phase correction method to \'Triple\'')
+      epi_pc = 'TRIPLE_REF'
+  endif
+
+
+endif // end of triple_ref setup
+
+
+"reset array parameter"
+if ($arrayparams <> '') then
+  $inx = 1
+  $array = '(image'
+  repeat
+    $array = $array + ',' + $arrayparams[$inx]
+    $inx = $inx + 1
+  until ($inx > size('$arrayparams'))
+  array = $array + ')'
+endif
+
+da "Display Array"
+
+
+"*****************************************************"
+"Now turn on the underscore macros for diffusion again"
+"*****************************************************"
+if ($diff_array) then
+  setprotect('dro','on',8)
+  setprotect('dpe','on',8)
+  setprotect('dsl','on',8)
+endif
+

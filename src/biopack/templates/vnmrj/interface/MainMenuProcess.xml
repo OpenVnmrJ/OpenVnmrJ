@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='us-ascii'?>
+<!--
+ ! 
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+<mainmenu>
+	<mchoice label = "Process and Display 1D"
+	      vc = "wft"
+	      style="Menu1"
+        />
+        <mchoice label = "Process and Display LCNMR"
+              vc = "wftlc"
+              vq="appmode"
+              show="$SHOW=(appmode='lc')*2-1"
+              style="Menu3"
+        />
+	<mchoice label = "Full Process"
+	      vc = "process"
+	      style="Menu1"
+        />
+	<mchoice label = "Drift Correct Spectrum"
+	      vc = "dc"
+	      style="Menu1"
+        />
+	<mchoice label = "Automatically Set Integrals"
+	      vc = "region"
+	      style="Menu1"
+        />
+	<mchoice label = "Baseline Correct"
+	      vc = "bc"
+	      style="Menu1"
+        />
+	<mchoice label = "Set Spectral Width between Cursors" 
+	      vc = "movesw"
+	      style="Menu1"
+        />
+	<mchoice label = "Set Transmitter at Cursor"
+	      vc = "movetof"
+	      style="Menu1"
+        />
+	<submenu label="Add and Subtract 1D Data" 
+	    style="Menu1"
+	>
+	    <mchoice label = "Clear Buffer and Add Current Spectrum"
+		   vc = "clradd spadd"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Add Second Spectrum Into Buffer"
+		   vc = "addi"
+	           style="Menu1"
+	    />
+	</submenu>
+        <mchoice label = "1D FDM..."
+                vc = "fdm1_init vnmrjcmd('popup', 'mode:modeless',
+                               'file:1DFDM.xml',
+                               'location:topMenuBar',
+                               'title:1D FDM')"
+	        style="Menu1"
+                show = "exists('/vnmr/bin/fdm1','file'):$vjmmenue $SHOW=$vjmmenue*2-1"
+        />
+	<mchoice label = "Full Process 2D"
+	      show = "getdim:$d if $d>1.5 then $SHOW=1 else $SHOW=0 endif"
+	      vq = "seqfil"
+	      vc = "proc2d"
+	      style="Menu1" seperator="yes"
+        />
+	<submenu label="Process 2D (Individual Steps)" vq = "seqfil"
+	      show = "getdim:$d if $d>1.5 then $SHOW=1 else $SHOW=0 endif" 
+	      style="Menu1"
+	    >
+	    <mchoice label = "Phase and Set Weighting F2"
+		   vc = "wft(1)"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Do first FT (t2 Domain)"
+		   vc = "wft1da"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Adjust Weighting in F1 (must do first FT)"
+		   vc = "wti"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Baseline Correct F2"
+		   vc = "bc('f2')"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Full 2D-FT (t1, t2 domains)"
+		   vc = "wft2da"
+	           style="Menu1"
+	    />
+	    <mchoice label = "Baseline Correct F1"
+		   vc = "bc('f1')"
+	           style="Menu1"
+	    />
+	</submenu>
+        <submenu label="Analyze" 
+            style="Menu1"
+	    seperator="yes"
+        >
+            <mchoice label = "Cosy Correlations..."
+                 show = "getdim:$d if $d>1.5 then $SHOW=1 else $SHOW=0 endif"
+                 vq = "seqfil jcurwin"
+                 vc = "vnmrjcmd('popup', 'mode:modeless',
+                             'file:CosyCorr.xml',
+                             'location:controlPanel',
+                             'title:Cosy Correlations')"
+                 style="Menu1"
+            />
+            <mchoice label = "Spin Simulation..."
+                 vc = "spins('init') vnmrjcmd('popup', 'mode:modeless',
+                             'file:SpinSim.xml',
+                             'location:controlPanel',
+                             'title:Spin Simulation')"
+                 style="Menu1"
+            />
+            <mchoice label = "Stars..."
+                 show = "exists('Stars.xml','templates/vnmrj/interface',-1):$SHOW"
+                 vq = "seqfil jcurwin"
+                 vc = "addstars vnmrjcmd('popup', 'mode:modeless',
+                             'file:Stars.xml',
+                             'location:controlPanel',
+                             'title:Stars')"
+                 style="Menu1"
+            />
+            <mchoice label = "Deconvolution..."
+                 vc = "vnmrjcmd('popup', 'mode:modeless',
+                             'file:Deconvolution.xml',
+                             'location:controlPanel',
+                             'title:Deconvolution')"
+                 style="Menu1"
+            />
+            <mchoice label = "Regression..."
+                 vc = "exists(curexp+'/regression.inp','file'):$e
+                       if $e>0.5 then expl('regression') endif
+                       vnmrjcmd('popup', 'mode:modeless',
+                             'file:Regression.xml',
+                             'location:controlPanel',
+                             'title:Regression')"
+                 style="Menu1"
+            />
+        </submenu>
+        <submenu label="NMRpipe" 
+            style="Menu1"
+	    seperator="yes"
+        >
+ 
+            <mchoice label = "Process This Data Set (VJ Processing/Display Parameters)"
+                 vc = "write('line3','NMRpipe Processing has Started') BPpipevj_process"
+                 style="Menu1"
+                show = "exists('BPpipetype','parameter'):$biopack $SHOW=$biopack*2-1"
+            />
+            <mchoice label = "Start NMRdraw"
+                 vc = "getbinpath('vnmrpipe'):$e,$cmd0 $cmd=  'cd  '+ curexp + ';  xterm -bg fireBrick -fg white -cr white  -T NMRPipe -e ' +$cmd0 + ' nmrDraw  &amp;'    shell ($cmd)"
+                 style="Menu1"
+            />
+ 
+        </submenu>
+        <mchoice label = "CRAFT NMR..."
+          vq = "file arraydim"
+          seperator="yes"
+          show = "exists('craft','maclib'):$S getdim:$dim isnewexp:$new if ($S=0) or ($dim>1) then $SHOW=-1 elseif ($new) then $SHOW=0 else $SHOW=1 endif"
+          vc = "craft"
+          style="Menu4"
+          />
+</mainmenu>

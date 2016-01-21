@@ -1,0 +1,178 @@
+"macro setAUTOGLOBAL"
+" setAUTOGLOBAL - Automation globals are written/checked "
+
+    $macdir=$1+'/'+$2+'.macdir'
+    $AUTOGLOBAL=$macdir+'/AUTOGLOBAL'
+    $timeQfile=$macdir+'/TtimeQ'
+    $enterfile=$1+'/'+$2
+    $nQfile=$macdir+'/overniteQ'
+    exists($AUTOGLOBAL,'file'):$autoglobalex
+
+"***************************************************************************"
+	"check if TtimeQ file be rewritten?"
+    shell('touch '+$enterfile):$dum
+    shell('touch '+$nQfile):$dum
+    shell('touch '+$timeQfile):$dum
+    shell('(cat '+$enterfile+' | wc -l)'):$eqtotal
+    shell('(cat '+$nQfile+' | wc -l)'):$nqtotal
+
+    $rewrite=0
+    $daytime=0 $prtime=0 $nitetime=0
+    readTtimeQ($macdir):$prtime,$daytime,$nitetime
+    shell('(cat '+$timeQfile+' | grep -wc priorityQ_TOTALTIME)'):$ret
+    if ($ret=0) then $rewrite=1 endif
+    shell('(cat '+$timeQfile+' | grep -wc enterQ_TOTALTIME)'):$ret
+    if ($ret=0) then $rewrite=1 endif
+    shell('(cat '+$timeQfile+' | grep -wc overniteQ_TOTALTIME)'):$ret
+    if ($ret=0) then $rewrite=1 endif
+    if (($eqtotal=0) and (($daytime<>0) or ($prtime<>0))) then
+        $daytime=0 $prtime=0 $rewrite=1
+    endif
+    if (($nqtotal=0) and ($nitetime<>0)) then
+        $nitetime=0 $rewrite=1
+    endif
+"***************************************************************************"
+
+IF ($2 = 'enterQ') THEN
+
+    	$longrun='n'
+    	$longstarttime=0
+    	$shortstarttime=0
+	$autotemp=''
+	$newautodir='daily'
+	getadminfo('newautodir'):$newautodir
+	getadminfo('autotemp'):$autotemp
+	if (traymax<2) then $newautodir='daily' endif
+
+   expactive:$isactive
+   if ($autoglobalex=0) or (($newautodir<>'daily') and ($isactive>-1)) then
+        shell('date +%H'):$hour
+        shell('date +%M'):$minute
+        $currenttime=$hour*3600+$minute*60
+
+        getautoinfo:$shortstarttime,$shortlength,$longstarttime,$longlength
+	if ($longstarttime>=0) and ($longstarttime<=24*3600) then
+	    if ($shortstarttime<0) or ($shortstarttime>24*3600) then
+		$longrun='y'
+	    elseif ($currenttime > $longstarttime) then
+                $longrun='y'
+	    elseif (($newautodir<>'daily') and
+		($currenttime < $shortstarttime)) then
+		$longrun='y'
+            endif
+	endif
+        if ($shortlength>0) or ($longlength>0) then
+                $sortflg='yes'
+	else
+		$sortflg='no'
+        endif
+	if ($sortflg='yes') and ($newautodir<>'daily') then
+	    $sortok=1
+	    getautoinfo('sortflag'):$sortok
+	    if ($sortok=0) then $sortflg='no' endif
+	endif
+	if ($sortflg='no') and ($newautodir<>'daily') then $longrun='n' endif
+	if (traymax<2) then $longrun='y' endif
+
+	$autosortflg='none'
+	if ($autoglobalex) then
+	   shell('(cat '+$AUTOGLOBAL+' | grep -w AUTOSAFLAG:)'):$line
+	   substr($line,2):$autosortflg
+	endif
+	write('reset',$AUTOGLOBAL)
+        write('file',$AUTOGLOBAL,'LONGRUN: %s',$longrun)
+        write('file',$AUTOGLOBAL,'SORT_FLAG: %s',$sortflg)
+	write('file',$AUTOGLOBAL,'AUTOSAFLAG: %s',$autosortflg)
+	write('file',$AUTOGLOBAL,'AUTOGLOBALTEMP: %s',$autotemp)
+	if (traymax=1) and (appmode<>'lc') then
+	   write('file',$AUTOGLOBAL,'TRAYMAX: 0')
+	else
+	   write('file',$AUTOGLOBAL,'TRAYMAX: %d',traymax)
+	endif
+	shell('chmod a+rw '+$AUTOGLOBAL):$dum
+
+	if ($isactive>-1) and ($longrun<>'y') then setupautomerge($1) endif
+//        if (($longstarttime>=0) and ($longstarttime<=24*3600) and
+//	    ($isactive>-1) and ($longrun<>'y')) then 
+//		setupautomerge($1) 
+//	  endif
+
+        $date=''
+        shell('date +%Y%m%d'):$date
+        $admintemp=userdir+'/adm/walkupadm/SERVICE_'+$date
+        exists($admintemp,'file'):$tempex
+	if ($tempex) then
+		shell('cp '+$admintemp+' '+$macdir+'/SERVICE_'+$date):$dum
+		shell('chmod a+rw '+$macdir+'/SERVICE_'+$date):$dum
+		shell('mv '+$admintemp+' '+$admintemp+'_done'):$dum
+	endif
+
+   endif
+
+ELSE
+
+    $daytotal=0
+    $nighttotal=0
+    $autotemp=''
+    IF ($autoglobalex=0) THEN
+	$shortlength=0 $longlength=0
+	getenterinfo:$daytotal,$shortlength,$nighttotal
+	if ($daytotal=0) and ($nighttotal=0) then 
+		$sortflg='no'
+	else
+		$sortflg='yes'
+	endif
+	getadminfo('autotemp'):$autotemp
+    	if (traymax = 96) or (traymax=768) or (appmode='lc') then 
+		$sortflg='no' 
+	endif
+	write('reset',$AUTOGLOBAL)
+        write('file',$AUTOGLOBAL,'LONGRUN: n')
+     	write('file',$AUTOGLOBAL,'SORT_FLAG: %s',$sortflg)
+     	write('file',$AUTOGLOBAL,'SHORTEXP_TOTAL: %d',$daytotal)
+     	write('file',$AUTOGLOBAL,'LONGEXP_TOTAL: %d',$nighttotal)
+	write('file',$AUTOGLOBAL,'AUTOGLOBALTEMP: %s',$autotemp)
+	if (traymax=1) and (appmode<>'lc') then
+	   write('file',$AUTOGLOBAL,'TRAYMAX: 0')
+	else
+	   write('file',$AUTOGLOBAL,'TRAYMAX: %d',traymax)
+	endif
+	shell('chmod a+rw '+$AUTOGLOBAL):$dum
+    ENDIF
+
+ENDIF
+"***********************************************************************"
+if ($rewrite>0) then
+   writeTtimeQ($macdir,$prtime,$daytime,$nitetime)
+endif
+shell('rm -rf '+$macdir+'/okayQ'):$dum
+shell('rm -rf '+$macdir+'/addQ'):$dum
+
+shell('chmod -R g+rw '+$1):$dum
+
+$refloc=0
+$lastsample='current'
+getadminfo('lastsample'):$lastsample
+format($lastsample,'isreal'):$real
+if ($real) then
+    format($lastsample,'lower'):$refloc
+elseif ($lastsample='traymax') then
+    $refloc=traymax
+    if (traymax=97) then $refloc=96 endif
+endif
+if (traymax=96) or (traymax=768) or (traymax=1) then
+    $refloc=0
+endif
+
+if ($refloc) then
+	$status=''
+	checklocstatus($enterfile,$refloc):$status
+	if ($status<>'Active') and ($status<>'Reference') and ($status<>'preScan') then
+		writerefloc($enterfile,$refloc)
+	endif
+endif
+exists($macdir+'/xmldir','directory'):$xmlex
+if ($xmlex=0) then
+	xmhaha_asx($1)
+endif
+return($enterfile)

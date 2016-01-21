@@ -1,0 +1,148 @@
+# makefile copy src to jvmol directory compiles it there 
+# question how do you copy a dirceotry and all it's contents??  gmb
+# shutil.copytree(source,dest)
+
+import os
+import sys
+import shutil
+import datetime
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+
+# current working directory
+cwd = os.getcwd()
+
+# target
+vjmolTarget = 'vjmol.jar'
+
+# jar file lists
+# may not need these, though in vnmrj makefile they are include for vjmol
+#VnmrJThirdPartyJarPath = os.path.join(cwd, os.pardir,'vnmrj')
+#jarHelpFileList = [os.path.join(cwd, 'jh.jar'),
+#                   os.path.join(cwd, 'jhall.jar'),
+#                   os.path.join(cwd, 'jhbasic.jar'),
+#                   os.path.join(cwd, 'jhtools.jar'),
+#                   os.path.join(cwd, 'jsearch.jar')]
+#
+#VnmrjJarFileList = [os.path.join(cwd, 'gluegen-rt.jar'),
+#               os.path.join(cwd, 'jogl.jar'),
+#               os.path.join(cwd, 'lcaccess.jar'),
+#               os.path.join(cwd, 'msaccess.jar'),
+#               os.path.join(cwd, 'pdaaccess.jar'),
+#               os.path.join(cwd, 'jmol.jar'),
+#               os.path.join(cwd, 'postgresql.jar'),
+#               os.path.join(cwd, 'xml.jar')]
+
+# paths
+classPath = cwd
+
+if (platform!="darwin"):
+   javaPath = os.path.join(ovjtools, 'java', 'bin')
+else:
+   javaPath = os.path.join('/', 'usr', 'bin')
+
+# make src directory for vjmol
+#vjmolPath = os.path.join(cwd, 'vjmol')
+#if not os.path.exists(vjmolPath):
+#   os.makedirs(vjmolPath)
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+#if os.path.exists(classesPath):
+#   shutil.rmtree(classesPath);
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+jarBin = os.path.join(javaPath, 'jar')
+
+jarFileList = [os.path.join(cwd, 'jmol.jar')]
+
+ThirdPartyJarPath = os.path.join(ovjtools, 'JavaPackages')
+ThirdPartyList = ['jmol.jar']
+
+# vjmolFileList = ['VJMol.java']
+
+# method to copy files to remote directory
+def copyFilesHere(path, fileList):
+   for i in fileList:
+      shutil.copy(os.path.join(path, i), i)
+
+def copyFilesThere(path, fileList):
+   for i in fileList:
+      shutil.copy(i, os.path.join(path, i))
+
+# copy jmol.jar to local directory
+copyFilesHere(ThirdPartyJarPath,ThirdPartyList)
+#copyFilesHere(VnmrJThirdPartyJarPath,VnmrjJarFileList)
+
+# actions to perform at interpretation time
+for i in jarFileList:
+   Execute('cd classes; ' + jarBin + ' -xf ' + i)
+
+#for i in jarHelpFileList:
+#   Execute('cd classes; ' + jarBin + ' -xf ' + i)
+
+# define build environment
+if (platform!="darwin"):
+   jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'CLASSPATH' : classesPath + ':' + os.path.join(cwd, 'jmol.jar'),
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+else:
+   jEnv = Environment(ENV = {'CLASSPATH' : classesPath + ':' + os.path.join(cwd, 'jmol.jar'),
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+jEnv.Java(JAVACFLAGS = '-J-mx128m',
+          target     = classesPath,
+          source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd, 'Manifest')
+f = open(manifestFile, 'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: VJMol\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = vjmolTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+installMollib = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'mollib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+#if not os.path.exists(installMollib):
+#   os.makedirs(installMollib)
+
+# copy mollib to vnmr directory 
+# shutil.copytree(os.path.join(ThirdPartyJarPath,'mollib'), installMollib)  always complained about director already present
+#for file in os.listdir(os.path.join(ThirdPartyJarPath,'mollib')):
+#      shutil.copy( os.path.join(ThirdPartyJarPath,'mollib',file) , os.path.join(installMollib, file))
+
+# actions to be performed after targets are built
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
+
+dest = os.path.join(installPath,'jchempaint.jar')
+if not os.path.exists(dest):
+   Execute(Copy(dest,os.path.join(ThirdPartyJarPath,'jchempaint.jar')))
+dest = os.path.join(installPath,'jmol.jar')
+if not os.path.exists(dest):
+   Execute(Copy(dest,os.path.join(ThirdPartyJarPath,'jmol.jar')))

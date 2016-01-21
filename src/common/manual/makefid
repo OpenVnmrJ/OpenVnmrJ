@@ -1,0 +1,105 @@
+****************************************************************************
+makefid( input text file <, element number, format > )
+	-  make a FID element using numeric text input
+makefid( input text file , 'calc'  <,element number > )
+	-  calculate a FID element
+makefid( 'calcstr','freq amp decay phase'  <,element number > )
+	-  calculate a FID element
+writefid( output text file <, element number > )
+	-  write numeric text file using a FID element.
+****************************************************************************
+
+The `makefid' command lets you introduce computed data into your experiment.
+The input files contains numeric values, 2 per line.  The first value is
+assigned to the X (or real) channel; the second value on the line is
+assigned to the Y (or imaginary) channel.
+
+The first argument, which is required, is the name of the file containing
+input.  Arguments specifying the element number and the format are optional
+and may be entered in either order.
+
+The element number is any integer greater than or equal to 0.  If 0 is passed,
+the existing FID file is deleted and element 1 will be added. If the element
+number is greater than 0, then that element will be added.  If that element
+already exists in your FID file, the program will overwrite the old data.
+If not entered, the default is 1.
+
+The format argument lets you select between single precision integer, double
+precision integer, or floating point data in the resulting FID file.
+Use one of the following character strings to specify the format:
+
+	'dp=n'			single precision (16-bit) data
+	'dp=y'			double precision (32-bit) data
+	'16-bit'		single precision (16-bit) data
+	'32-bit'		double precision (32-bit) data
+	'float'		        floating point   (32-bit) data
+
+The number of points comes from the number of numeric values read from the
+file.  `makefid' reads only 2 values per line.
+
+If the current experiment already contains a FID, you will not be able to
+change either the format or the number of points from that present in the
+FID file.  Use this command to remove the FID:
+
+	rm(curexp+'/acqfil/fid')
+
+Be aware that `makefid' does not look at parameter values when establishing
+the format of the data or the number of points in an element.  Thus if the
+FID file is not present it is possible for `makefid' to write a FID file
+with a header that does not match the value of `dp' or `np'.  Since the
+active value is in the processed tree, you will need to use the `setvalue'
+command if any changes are needed.
+
+Be aware that `makefid' can modify saved data; that is, data returned to an
+experiment with the `rt' command.  Either supply 0 as the element number or
+execute this sequence of VNMR commands to avoid this:
+
+	cp(curexp+'/acqfil/fid',curexp+'/acqfil/fidtmp')
+	rm(curexp+'/acqfil/fid')
+	mv(curexp+'/acqfil/fidtmp',curexp+'/acqfil/fid')
+
+
+
+An alternative form of makefid will calculate an FID based on the frequency,
+amplitude, decay rate, and phase of a spectral line. The first argument,
+which is required, is the name of the file containing input.  Arguments
+specifying the element number and the keyword 'calc' and may be entered
+in either order. The 'calc' keyword is not optional. The element number
+is optional. As above, using an element number of 0 will delete the current
+FID file before adding element 1.  Examples include:
+
+makefid(curexp+'/fidlines','calc')
+makefid(curexp+'/fidlines','calc',1)
+makefid(curexp+'/fidlines',1,'calc')
+
+The input file specifies the frequency, amplitude, decay rate and phase.
+All four numbers must be on a single line. Multiple lines may be in the
+file. Lines starting with a # are comments. Blank lines are ignored.
+An example file is:
+
+# Freq   Amp   Decay Phase
+  2500.0 10.0  0.1   0.0
+  0.0    20.0  0.1   0.0
+
+The current values of the sw and np parameters are used to determine 
+the dwell time and the number of points to calculate.  The frequencies
+range between -sw/2 and sw/2. A 0.0 frequency will give a peak in the
+middle of the spectrum.
+
+If only a single line is to be calculated, makefid can be called with
+the keyword 'calcstr' and the  frequency, amplitude, decay rate and phase
+of that line can be passed as the second argument. The second argument must
+be a string of space separated list of the parameters. The optional element
+number can also be passed as the final argument. Examples include:
+
+makefid('calcstr','2500.0 10.0 0.1 0.0',0)
+makefid('calcstr','2500.0 10.0 0.1 0.0',2)
+makefid('calcstr','2500.0 10.0 0.1 0.0')
+
+
+writefid
+--------
+The `writefid' command writes a text file using data from the selected FID
+element.  The default element number is 1.  The program writes 2 values
+per line.  The first is the value from the X (or real) channel; the second
+is the value from the Y (or imaginary) channel.

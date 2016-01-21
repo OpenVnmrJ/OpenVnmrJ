@@ -1,0 +1,23 @@
+"macro dgtune"
+"
+" Print Gradient Amp tuning values in the text window.
+
+if (system <> 'spectrometer') then
+  write('error','Cannot call readhw from a datastation.')
+  return
+endif
+
+sethw('gtuneix', -1)	"Force MSR to read tune values from MTS"
+
+$axnames = 'x','y','z'
+$axis=1
+"clear
+write('alpha','')
+write('alpha', '      Integral   Proportional')
+write('alpha', '        Gain         Gain')
+write('alpha', '-------------------------------')
+repeat
+  readhw('gtunei'+$axnames[$axis], 'gtunep'+$axnames[$axis]):$ig, $pg
+  write('alpha', '%s %10d %13d', $axnames[$axis], $ig, $pg)
+  $axis = $axis + 1
+until ($axis > 3)

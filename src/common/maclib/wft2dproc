@@ -1,0 +1,146 @@
+"macro wft2dproc"
+"Process 2D spectra using ftproc parameter"
+
+exists('ftproc','parameter'):$e
+if $e<0.5 then
+  create('ftproc','real')
+  setgroup('ftproc','processing')
+  setprotect('ftproc','on',256)
+  ftproc[1]=1
+  ftproc[2]=0
+endif
+
+$type='2D'
+if $#>0.5 then
+  $type=$1
+endif
+
+getdim:$dim
+if $dim=2 then
+
+  $phasedata='n'
+  exists('phase','parameter'):$p
+  if $p>0.5 then
+    if (phase=3) then
+      $phasedata='y'
+    else
+      $size = size('phase')
+      if $size=2 then "phase=1,2 or 1,4"
+        $phasedata='y'
+      endif
+    endif
+  endif
+
+  if (ftproc[1] = 0) then
+    if $phasedata='y' then
+      if $type='1Dinc' then
+        $val=ftproc[2]
+        if $val < 0.5 then $val=1 endif
+        ft( $val )
+        setvalue('ftproc',$val,2,'current')
+      elseif $type='1D' then
+        setvalue('ftproc',0,2,'current')
+        ft
+        setvalue('ftproc',0,2,'current')
+      elseif $type='t1' then
+        setvalue('ftproc',0,2,'current')
+        ft1da
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2D' then
+        setvalue('ftproc',0,2,'current')
+        ft2da
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Ddc' then
+        setvalue('ftproc',0,2,'current')
+        ft2da('dc')
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Dbc' then
+        setvalue('ftproc',0,2,'current')
+        ft2da('bc',1)
+        setvalue('ftproc',0,2,'current')
+      endif
+
+    else
+
+      if $type='1Dinc' then
+        $val=ftproc[2]
+        if $val < 0.5 then $val=1 endif
+        ft( $val )
+        setvalue('ftproc',$val,2,'current')
+      elseif $type='1D' then
+        setvalue('ftproc',0,2,'current')
+        ft
+        setvalue('ftproc',0,2,'current')
+      elseif $type='t1' then
+        setvalue('ftproc',0,2,'current')
+        ft1d
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2D' then
+        setvalue('ftproc',0,2,'current')
+        ft2d
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Ddc' then
+        write('line3','Cannot auto dc correct non-hypercomplex data.')
+      elseif $type='2Dbc' then
+        write('line3','Cannot auto bc correct non-hypercomplex data.')
+      endif
+    endif
+
+  else "ftproc[1]=1 : use weighting"
+
+    if $phasedata='y' then
+      if $type='1Dinc' then
+        $val=ftproc[2]
+        if $val < 0.5 then $val=1 endif
+        wft( $val )
+        setvalue('ftproc',$val,2,'current')
+      elseif $type='1D' then
+        setvalue('ftproc',0,2,'current')
+        wft
+        setvalue('ftproc',0,2,'current')
+      elseif $type='t1' then
+        setvalue('ftproc',0,2,'current')
+        wft1da
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2D' then
+        setvalue('ftproc',0,2,'current')
+        wft2da
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Ddc' then
+        setvalue('ftproc',0,2,'current')
+        wft2da('dc')
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Dbc' then
+        setvalue('ftproc',0,2,'current')
+        wft2da('bc',1)
+        setvalue('ftproc',0,2,'current')
+      endif
+
+    else
+
+      if $type='1Dinc' then
+        $val=ftproc[2]
+        if $val < 0.5 then $val=1 endif
+        wft( $val )
+        setvalue('ftproc',$val,2,'current')
+      elseif $type='1D' then
+        setvalue('ftproc',0,2,'current')
+        wft
+        setvalue('ftproc',0,2,'current')
+      elseif $type='t1' then
+        setvalue('ftproc',0,2,'current')
+        wft1d
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2D' then
+        setvalue('ftproc',0,2,'current')
+        wft2d
+        setvalue('ftproc',0,2,'current')
+      elseif $type='2Ddc' then
+        write('line3','Cannot auto dc correct non-hypercomplex data.')
+      elseif $type='2Dbc' then
+        write('line3','Cannot auto bc correct non-hypercomplex data.')
+      endif
+    endif
+  endif
+
+endif

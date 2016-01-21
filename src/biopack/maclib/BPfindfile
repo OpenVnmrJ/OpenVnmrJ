@@ -1,0 +1,51 @@
+"macro BPfindfile"
+"BPfindfile(name,<directory>)"
+" directory is optional vnmrsys or vnmr directory"
+" i.e. psglib, parlib, templates, etc"
+" otherwise the file is in /vnmr/bin or user's bin"
+
+$home=''
+shell('echo $HOME'):$home
+
+if $#=1 then   "one argument searches only bin"
+ $pathuser=$home+'/bin/'+$1
+ $pathsystem='/vnmr/bin/'+$1
+ $2='bin'
+else
+ $pathuser=userdir+'/'+$2+'/'+$1
+ $pathsystem=systemdir+'/'+$2+'/'+$1
+endif
+
+"VJ2.2 or later has appdir approach"
+"appdir bin files are not in normal path, so check where"
+"files are located"
+
+"check to see if files are in user directory"
+exists($pathuser,'file'):$exists1
+
+"check to see if files are in vnmrj(system) directory"
+exists($pathsystem,'file'):$exists2
+
+if ($exists1=1) then
+  $path=$pathuser
+endif
+
+if ($exists1=0) then
+  exists('/vnmr/maclib/appdirs','file'):$appdirs
+  if $appdirs then  "exists does look in appdir bin"
+   exists($1,$2):$ret1,$path
+   if $ret1=0 then
+    banner('program not installed') return
+   endif
+  else
+   if ($exists2=1) then
+    $path=$pathsystem
+   else
+    banner('program not installed') return
+   endif
+  endif
+endif
+
+echo('file is at  ',$path)
+return($path)
+

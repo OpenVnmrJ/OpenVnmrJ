@@ -1,0 +1,94 @@
+
+*******************************************************************************
+setcolor	- 	set colors used by Vnmr
+*******************************************************************************
+
+  The setcolor command can set the colors used on the graphics screen
+  and the colors used by the various plotters.  The general form of the
+  command is setcolor(device, itemindex, color).  The device specifies
+  what device the command will access.  Values of device include
+  'graphics'	to control the colors displayed on the graphics screen
+  'ps'		to control the colors of plotters using the PostScript language.
+  'pcl'		to control the colors of plotters using the PCL language.
+  'hpgl'	to control the colors of plotters using the HPGL language.
+  'pen' 	to control the mapping of a color to a pen of
+                   plotters using the HPGL language. See below.
+
+  The itemindex is a digit which represents a specific drawing item. Examples
+  include indexes for spectra, integrals, contour levels, etc. A complete
+  table of the indexes is listed below. Note: PCL plotters are the laser
+  type of plotter. HPGL plotters are the pen type of plotter.
+
+  The color argument specifies the color which will be used when drawing the
+  item specified by itemindex.  The syntax of the color argument depends on
+  the type of device being specified.  For 'graphics' and 'ps' devices,
+  the color argument is three integers, each between 0 and 255. These
+  integers represent the amount of red, green, and blue to be used in that
+  color. (The UNIX command showrgb prints these three integers for a lot
+  of different colors.) Examples include:
+     setcolor('graphics',11,255,0,0)
+     setcolor('ps',11,255,255,0)
+  For 'hpgl' and 'pcl' devices, the color argument is specified as a
+  single word from the following list:
+     red green blue cyan magenta yellow white black
+  Examples include:
+     setcolor('hpgl',11,'red')
+     setcolor('pcl',11,'green')
+
+  The 'pen' device is used in conjunction with the 'hpgl' device to assign
+  a specific color selection (for example, red) to a physical pen to be
+  used by the HPGL plotter.  The itemindex for the 'pen' device is an
+  integer between 1 and 8, representing the eight physical pens of the
+  plotter.  The color argument is one of the eight colors: red, green,
+  blue, cyan, magenta, yellow, white, or black.  As specific examples,
+  let us say that the spectrum was assigned to black and the scale was
+  assigned to red.  Which physical pen is used is controlled be the 'pen'
+  device.  The commands setcolor('pen',3,'black') and setcolor('pen',4,'red')
+  would cause the black spectrum to be plotted with pen 3 and the red
+  scale to be plotted with pen 4.  Alternatively, the commands
+  setcolor('pen',2,'black') and setcolor('pen',2,'red') would cause the
+  black spectrum to be plotted with pen 2 and the red scale to also be plotted
+  with pen 2.
+  
+  One special format of the setcolor command identifies the plotters as
+  color plotters or monochrome plotters.  This setcolor command has the
+  form setcolor('plotter',"black plane","color planes"). The
+  'plotter' keyword identifies this special format of setcolor.
+  The "black plane" identifies whether the plotter has a separate black
+  mode. Currently, all supported plotters have this feature and that
+  argument must be specified as the integer 1.  The "color planes"
+  specifies how many colors are available.  For color plotters, this
+  value is 3, representing the red, green, and blue color planes.  For
+  black and white plotters, this value is 0, representing no color planes.
+  This format of the setcolor command is only useful for PostScript and
+  PCL plotters.  The two cases available are shown below.
+     setcolor('plotter',1,0)    selects a black and white plotter.
+     setcolor('plotter',1,3)    selects a color plotter.
+
+  The colors command is an interactive program which uses the setcolor
+  command to set the colors.  It is not expected the the setcolor command
+  would be used directly from the Vnmr command line.  It is a utility
+  program used by macros and the colors program.
+
+  The following table lists the available items and the indexes.
+
+  itemindex	item 
+  ---------     ----
+
+  8		background of images
+  9		real channel of an FID
+  10		imaginary channel of an FID
+  11		spectrum 
+  12		integral
+  13		parameters
+  14		scale
+  15		threshhold line (graphics device only)
+  16		second spectrum or FID in addi program (graphics device only)
+  17		result spectrum or FID in addi program (graphics device only)
+  18		cursors (graphics device only)
+  19		foreground of images
+  20		background color of Vnmr graphics area (graphics device only)
+
+  20-35         contour 0 to contour 15 of absolute value 2D displays
+  36-42         contours -7 to -1 of of phased 2D display
+  44-50         contours 1 to 7 of phased 2D display.

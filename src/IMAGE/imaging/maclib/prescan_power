@@ -1,0 +1,278 @@
+"macro prescan_power"
+/********************************************************************
+"
+" NAME:
+"    prescan_power
+"
+" DESCRIPTION:
+"    Finds the transmitter power
+"
+" Ex.: prescan_power(<argument>)
+"
+"    <argument_1> = 'proc'   - Process the acquired transmitter power data
+"    <argument_1> = 'exp'    - Acquire transmitter power data
+"    <argument_1> = 'steps'  - Acquire transmitter power data
+"    <argument_2> = 'man'    - is used to analyze the data without
+"                              verification or invocation of the next
+"                              prescan step
+"    <argument_2> = 'nogo'   - Setup experiment but don't start acquisition
+"    <argument_3> = 'update' - update pulsecalcal file for manual mode
+"
+"********************************************************************/
+
+$macro_name = $0
+$manual = ''
+$action = ''
+
+if ($# > 3) then
+  acqmode = ''
+  write('error',`Use: %s[('<mode>, [man]')] -- <mode> is exp | proc`,$macro_name)
+  prescan_exit('abort')
+endif
+if ($# >= 2) then
+  $manual = $2
+endif
+if ($# = 3) then
+  if ($3 <> 'update') then
+    write('line3',`Third argument <> 'update' `)
+    abort     
+  else
+    $action = $3
+  endif
+endif
+if ($# < 2 ) then
+  $manual = ''
+endif    
+
+"*** adjust start and step size to fill fine power range for number of steps ***"
+if ($1 = 'steps') then
+  if (coil_param[5] > 20) then
+    coil_param[5] = 20
+    write('line3','Prescan Power: Number of steps reduced to 20')
+  endif
+  $stepsize = 10*trunc(4096/coil_param[5]/10) 
+  coil_param[3] = $stepsize
+  coil_param[4] = $stepsize
+  return
+endif
+
+"*** Initialize some variables ***"
+$coarse_power_step = 3.0                         // Coarse power step size for correction
+$max_power = coil_param[22] - 6.0                // maximum coarse power for 90 degree pulse
+$temp_str = ''                                   // Temporary string varaible for output formating
+$update = 0.0                                    // CoilTable update flag
+$cur_index = 2                                   // index holding current module to be executed
+$seq_te = 0.03                                   // Prescan TE
+create('Prescan_ss','integer','global',1)
+
+if ($1 = 'exp') then
+  write('line3','ACQUIRING PRESCAN POWER')
+  if ($manual <> 'man') then
+    apptype='prescan_ex'
+    lro = Prescan_FOV
+    thk = Prescan_Thickness
+    te = $seq_te
+    ss = Prescan_ss
+    ldrf                                         // Get rfcoil and H1offset
+
+volumercv = 'y'  "force receive on volume coil for now"
+rcvrs = 'y'
+
+    imprep "get RO and SS parameters"
+
+    p1 = coil_param[11]                          // Set pulse length from CoilTable
+    p2 = p1
+    tpwr1 = coil_param[1]                        // Set coarse power for 90 from CoilTable
+    tpwr2 = tpwr1 + 6                            // 180 power is 6dB more than 90
+    if (tpwr2 > coil_param[22]) then             // Check for maximum power limit
+      write('error','Power Prescan: Coarse power exceeds allowed maximum, check Prescan Setup')
+      abort
+    endif
+
+    "*** Set acquisition params from CoilTable ***"
+    gain = coil_param[6]
+    gain = 0                               // Force gain to 0
+    tr = coil_param[7]
+    pss = Prescan_SliceOffset/10.0
+    lro = Prescan_FOV
+    thk = Prescan_Thickness
+    orient = Prescan_Orient
+  endif
+
+  Prescan_PowerSteps = coil_param[5]
+  Prescan_numberTries = 1 
+  Prescan_AcqStatus = 0                          // Reset error status"
+     
+  tpwr2f = 0                                     // to avoid error messages if no. steps has changed"
+  array('tpwr1f',coil_param[5],coil_param[3],coil_param[4])     
+  tpwr2f = tpwr1f     
+  array='(tpwr1f,tpwr2f)'
+  setloop
+  ticks = Prescan_Ticks
+  filter(20)                                     // Set up apodization for wft
+
+  if ($manual = 'man') OR ($manual = 'nogo') then
+    werr=''                                      // handle acquisition errors in this macro
+    execprocess=`prescan_power('proc','man')`    // setup to process the experiment in manual mode
+    acqmode=''                                   // we are in prescan mode
+  else
+    werr('prescan_status')                       // handle acquisition errors in this macro
+    execprocess=`prescan_power('proc')`          // setup to process the experiment
+    acqmode='prescan'                            // we are in prescan mode
+  endif
+  wdone=''  
+  wexp = 'process'
+  vs = 1e6
+  wnt  = 'wft $vs=vs select(celem) vsadj if(vs>$vs) then vs=$vs endif dssh dssl'     
+  if ($manual <> 'nogo') then
+    au                                           // run the experiment     
+  endif
+  return                                         // Exit this macro
+
+else                                             // ANALYZE THE RESULT
+  if ($1 = 'proc') then
+    write('line3','PROCESS POWER')
+    $tpwr = tpwr1
+
+    /*** Check acquisition errors ***/
+    if (Prescan_AcqStatus = 2) then
+      if ($manual = 'man') then
+        write('line3','Data acquisition error - abort processing')
+        abort
+      endif
+      prescan_exit('abort',$manual)
+    endif
+
+    /*** Check for ADC overflow ***/
+    if (Prescan_AcqStatus = 1) then
+      if ($manual = 'man') then
+        write('line3','Data error (ADC overflow) - abort processing')
+        abort
+      endif
+    endif
+
+    /*** Process and display ***/
+    vp = 0
+    f full av
+    findmaxpeak:$indexmax
+    select($indexmax)
+    vsadj
+    axis='c'
+    if (Prescan_Display = 1) then
+      dssh dssl
+    endif     
+
+    /*** Check for sufficiently strong signal ***/
+    cr = sp
+    rl
+    select(3) 
+    dsn((wp-110),(wp-500)):$SNR,$n
+    if ($SNR < Prescan_SNRThreshold) then
+      write('line3','Power Prescan: Signal too weak, SNR = %.1f',$SNR)
+      abort
+    endif
+
+    /*** Find RF power optimum by fitting peaks through the array ***/
+    //prescan_proc_power:$power_90,$power_180,$changestep   // old macro to fit and find maximum
+    fitmaxpeak:$power_90
+
+    /*** If highest peak is within 2 array elements of start or finish, set status to adjust and reacquire ***/
+    if ($indexmax <= 2) then
+      $status = -1                               // Coarse power too high to obtain good maximum
+    elseif ($indexmax >= (arraydim - 1)) then
+      $status = -2                               // Coarse power too low to obtain good maximum
+    else
+      $status = 1                                // Satisfactory maximum found
+    endif
+
+    /*** Modify power and repeat scan ***/
+    if ($status < 0) and ($manual <> 'man') then
+      /*** Check for maximum power ***/
+      if ($tpwr = $max_power) then               // Coarse power already at maximum, exit prescan
+        write('error','ABORT PRESCAN: Coarse power at limit')
+        prescan_exit('abort',$manual)
+      endif
+      if ($status = -1) then                     // Coarse power too high
+        $tpwr = $tpwr - 2*$coarse_power_step     // Reduce for next iteration
+        write('line3','Power (coarse) setting reduced to %3.1f --> Retry power calibration',$tpwr)
+      endif   
+
+      if ($status = -2) then                     // Coarse power too low
+        $tpwr = $tpwr + $coarse_power_step       // Increase for next iteration
+        write('line3','Power (coarse) setting increased to %3.1f --> Retry power calibration',$tpwr)
+        if ($tpwr > $max_power) then             // Check that increase doesn't exceed maximum
+          $tpwr = $max_power
+          write('error','%s: ABORT Coarse power at maximum',$macro_name)
+          prescan_exit('abort',$manual)
+        endif
+      endif 
+
+      /*** Increment no. tries counter, check for limit ***/
+      Prescan_numberTries = Prescan_numberTries + 1
+      if (Prescan_numberTries > Prescan_maxTries) then
+        write('error','prescan_power: Maximum number of tries exceeded !')
+        prescan_exit('abort',$manual)
+      endif  
+
+      /*** Adjust power levels and reacquire ***/
+      tpwr1 = $tpwr
+      tpwr2 = tpwr1 + 6
+      wexp = 'process'                           // Return to this macro to process when done
+      au                                         // Start the acquisition
+      return                                     // Skip the rest of this macro and exit
+    endif 
+        
+    /*** Update pulse and possibly CoilTable with results ***/
+    write('line3','Optimum for 90 degree pulse found at fine power %d',$power_90)
+    if ($manual <> 'man') then
+      ln(10.0):$ln10                             // Get 2.303 factor to correct for natural log
+      ln($power_90/fattn[1]):$ln_powerf
+      $power_fine = -20*$ln_powerf/$ln10         // dB reduction from fine power value
+      $power = $tpwr - $power_fine               // Net power for coarse and fine combination
+      $prescan_angle = 90
+    endif        
+
+    /*** Update pulsecal file ***/
+    if ($manual <> 'man') or ($action = 'update') then
+      pulsecal(rfcoil,p1pat,p1,$prescan_angle,$power,'quiet')
+    endif
+    if ($action = 'update') then
+      return                                     // If update was requested stop here
+    endif
+    if ($status > 0) then
+      write('line3','Prescan Power result:  90 Degree Pulse at %5.1f dB',$power)
+    endif
+
+    /*** Update CoilTable if necessary ***/
+    if (($tpwr <> coil_param[1]) and ($manual <> 'man')) then
+      $change = ($tpwr - coil_param[1])/coil_param[1]
+      abs($change):$change
+      if ($change > 0.2) then                    // Check percentage change of coarse power relative to CoilTable
+        $update = 1
+        write('line3','Warning: Power prescan: coarse power changed in CoilTable from %d to %d',coil_param[1],$tpwr)
+      endif 
+
+      $replace = 0
+      if ($update = 1) then                      // Original required user confirmation to update CoilTable
+        //$message = 'CoilTable entries changed by more than 20%. \n ' + $message
+        //confirm($message):$replace
+        $replace = 1
+      endif     
+      if ($replace = 1) then
+        coil_param[1] = $tpwr                    // New power setting
+        prescan_CoilTable('update',rfcoil)
+      endif
+    endif   
+   
+    /*** Save prescan data ***/
+    execplot = 'wt dssh'
+    prescan_data('save','power')
+   
+    /*** Continue if not in manual mode ***/
+    if ($manual <> 'man') then
+      $rfcoil = rfcoil
+      prescan_control[$cur_index]= prescan_control[$cur_index]+1         
+      prescan_handler('exec')
+    endif    
+  endif
+endif

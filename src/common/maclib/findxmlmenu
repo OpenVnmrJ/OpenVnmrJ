@@ -1,0 +1,80 @@
+"macro findxmlmenu"
+"findxmlmenu: find xml menu file"
+if $#>0.5 then
+  $showfile='file'
+  if $#>1.5 then
+    if $2='show' then
+      $showfile='show'
+    endif
+  endif
+  $name='' $s='' $file=''
+  $name=$1
+  length($name):$len
+  if $len>4 then
+    substr($name,$len-3,4):$s
+    if $s<>'.xml' then
+      $name=$name+'.xml'
+    endif
+  else
+    $name=$name+'.xml'
+  endif
+  if $name='.xml' then
+    $e=0 $file=''
+  else
+    $end='q1W2t5Y6'
+    $file='' $found='n'
+    $profile = systemdir+'/adm/users/profiles/user/'+owner
+    exists($profile,'file'):$e
+    if $e>0.5 then
+      $line=''
+      lookup('mfile',$profile,'seek','appdir','readline'):$line
+      $line=$line+' '+$end
+      $j=0 $txt=''
+      repeat
+        $j=$j+1
+        substr($line,$j,'delimiter',' ;\t'):$txt
+        if ($txt <> $end) then
+          $file=$txt+'/templates/vnmrj/interface/'+$name
+          exists($file,'file'):$e
+          if $e>0.5 then $found='y' endif
+        endif
+      until ($found='y' or $txt=$end or $j>1000)
+    endif
+    if $found='n' then
+      $profile = systemdir+'/adm/users/profiles/system/'+owner
+      exists($profile,'file'):$e
+      if $e>0.5 then
+        $line=''
+        lookup('mfile',$profile,'seek','appdir','readline'):$line
+        $line=$line+' '+$end
+        $j=0 $txt=''
+        repeat
+          $j=$j+1
+          substr($line,$j,'delimiter',' ;\t'):$txt
+          if ($txt <> $end) then
+            $file=$txt+'/templates/vnmrj/interface/'+$name
+            exists($file,'file'):$e
+            if $e>0.5 then $found='y' endif
+          endif
+        until ($found='y' or $txt=$end or $j>1000)
+      endif
+    endif
+  endif
+  if $found='n' then
+    $file=userdir+'/templates/vnmrj/interface/'+$name
+    exists($file,'file'):$e
+    if $e<0.5 then
+      $file=systemdir+'/templates/vnmrj/interface/'+$name
+      exists($file,'file'):$e
+    endif
+  endif
+  if $showfile='file' then
+    if $e>0.5 then
+      return($file)
+    else
+      return('')
+    endif
+  else
+    return($e*2-1)
+  endif
+endif

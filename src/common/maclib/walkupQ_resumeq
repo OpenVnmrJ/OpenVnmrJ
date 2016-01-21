@@ -1,0 +1,274 @@
+"macro walkupQ_resumeq"
+"****************************************************************"
+"   walkupQ_resumeq -  More-on-this for automation queue   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+    expactive:$active
+    if ($active > 0) then
+	write('error','Current exp is active')
+	return
+    endif
+    if (archivedir='') or (sample='') then
+	write('error','archivedir and/or sample is an empty string')
+	return
+    endif
+
+// Branch off to do vjeditQ if sample in curexp is in one of the
+//  locations in autodir
+
+    $location='' $autodir='' $locdir=''
+    is_submitmode:$issubmit
+    if ($issubmit<1) then
+       tmpsqcopy('OrigExpPar')
+       isnewexp:$isnew
+       $archsamp=archivedir+'/'+sample
+//       iscurrentfid(explist,$archsamp):$iscurrent,$locdir
+//       if ($iscurrent=0) then
+           iscurrentfid('',$archsamp):$iscurrent,$locdir
+//       else
+//	   shell('dirname '+$locdir):$locdir
+//       endif
+       substr($locdir,'basename'):$locdir
+       if ($iscurrent=0) then
+	   isnewexp:$isnew
+	   if ($isnew=0) then shell('dirname '+file):$archsamp endif
+	   $locpath=$archsamp+'/dirinfo/locationpath'
+	   $lfex=0 
+	   exists($locpath,'file'):$lfex
+	   if ($lfex) then
+		lookup('mfile',$locpath,'read',1):$location
+		strstr($location,'/enterQ.macdir/'):$lfex,$autodir,$locdir
+		if $autodir<>autodir then
+		    write('reset',$locpath)
+		    $lfex=0
+		endif
+	   endif
+//	   if ($autodir<>autodir) then $lfex=0 endif
+	   if ($lfex) then
+		$locex=0
+		shell('(cat '+autodir+'/enterQ.macdir/currentsampleinfo | grep MACRO: | grep -c '+$locdir+')'):$locex
+		if ($locex=0) then
+			shell('(cat '+autodir+'/enterQ | grep MACRO: | grep -c '+$locdir+')'):$locex
+		endif
+		if ($locex=0) then
+		    shell('(cat '+autodir+'/enterQ.macdir/overniteQ | grep -w MACRO: | grep -c '+$locdir+')'):$locex
+		endif
+		if ($locex) then
+		    vjeditQ($location)
+		    return
+		else
+		    write('reset',$locpath)
+		endif
+	   endif
+       else
+           vjeditQ($locdir)
+           return
+       endif
+    endif
+
+    isnewexp:$isnew
+    $archsamp=archivedir+'/'+sample
+    strstr(file,'enterQ.macdir'):$iscur
+    if ($isnew=0) and ($iscur=0) then
+  	shell('dirname '+file):$archsamp
+    endif
+    if ($iscur) then
+	file='exp'
+    endif
+    exists('studyowner','parameter'):$opex
+    if ($opex=0) then $operator=operator else $operator=studyowner endif
+    operights('editallopstudies'):$opok
+    if ($operator<>operator) and (operator<>owner) and ($opok<0.5) then
+	write('error','%s cannot resumeQ on a sample owned by %s',operator,$operator)
+	return
+    endif
+
+    Autockdir($archsamp)
+    exists($archsamp+'/dirinfo','directory'):$ex
+    if ($ex=0) then
+	write('error','%s/dirinfo directory not found',$archsamp)
+	return
+    endif
+
+    getsampglobal($archsamp+'/dirinfo/macdir')
+
+    $archivedir='' shell('dirname '+$archsamp):$archivedir
+    if ($archivedir <> archivedir) then
+	archivedir=$archivedir
+	setvalue('archivedir',$archivedir,'processed')
+    endif
+
+    wshim='n' if (alock<>'u') then alock='n' endif
+    customflag='n'
+    cppauseflg='n'
+    explist=''
+    wqinit='auto'
+    if ($# > 0) then wqinit=$1 endif
+    longQ='n'
+    prioritysample='no','low','sample'
+    setProbepars('force')
+    getadminfo('protuneatstart'):ptuneatsample
+    getfilepath('cpQdefaults','modules'):$modex,$modpath
+    $autolockshim='NewContinue'
+    getadminfo('autolockshim'):$autolockshim
+    strstr($autolockshim,'Continue'):$modex2
+    if ($modex) and ($modex2) then
+        rtv($modpath,'noabort','wshim'):wshim
+        rtv($modpath,'noabort','alock'):alock
+    endif
+//    Gmaplist
+//    getparam('gradient','Probe'):PFGflg
+
+    $status=''
+    exists($archsamp+'/studypar','file'):$sparex
+    if ($sparex) then
+	rtv($archsamp+'/studypar','noabort','studystatus'):$status
+    endif
+    if ($status='Active') then
+	write('error','CAUTION: %s is in Active acquisition mode',sample)
+    endif
+
+    walkupQ('clear')
+    resumeQ='resumeq'
+    walkupQ('renew')
+
+    write('reset',$expfile)
+    $origmacdir=$archsamp+'/dirinfo/macdir'
+    $origfidlog=$archsamp+'/dirinfo/fidlog'
+
+    shell('rm -rf '+$maclibdir+'/*'):$dum
+    shell('cp -r '+$origmacdir+'/* '+$maclibdir):$dum
+    shell('rm -f '+$maclibdir+'/EXPLIST'):$dum
+    shell('rm -f '+$maclibdir+'/LONGLIST'):$dum
+    shell('(cat '+$maclibdir+'/ACQlist | grep -v Error > '+$expfile+')'):$dum
+    shell('rm -f '+$maclibdir+'/ACQlist'):$dum
+//    shell('mv '+$maclibdir+'/ACQlist '+$expfile):$dum
+			"write FIDlist"
+    $s1='' $s2=''
+    exists($origfidlog,'file'):$fileex
+    if ($fileex) then
+        readfile($origfidlog,'$s1','$s2','','local')
+    endif
+    write('reset',$curfidlist)
+    $totfid=size('$s2')
+    $i=1
+    repeat
+	$s3='' $s4=''
+	strstr($s2[$i],samplename+'-'):$ret,$s3,$s4
+	if ($ret<>1) then
+	   $s4=$s2[$i]
+	endif
+	write('file',$curfidlist,'"%s.fid" "%s.fid"',$s4,$s4)
+	$i=$i+1
+    until $i > $totfid
+   
+    exists('loc_','parameter'):$locison
+    if ($locison) and (wqinit='auto') then
+	$sloc_='' format(loc_,'lower'):$sloc_
+	$lastautodir=''
+	shell('('+$tailX+' -n 1 '+archivedir+'/'+sample+'/dirinfo/loc'+$sloc_+')'):$lastautodir
+	if ($lastautodir=autodir) then
+        	format(loc_,'lower'):replaceQ[4]
+	endif
+    endif
+ 
+    $oldsqnode=''
+	$LIST='SampInfo','fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+        xmhaha('buildsq',archivedir+'/'+sample,$LIST):$oldsqnode
+
+    $explist=''
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    cpexplist('read',$md):$explist
+    $elist=''
+    exists($md+'/EXPLIST','file'):$esize
+    if ($esize) then
+           $s2=''
+           readfile($md+'/EXPLIST','$elist','$s2','','local'):$esize
+    endif
+    $pending=0
+    $explist=$explist,$elist
+    array2array($explist):$explist
+    if ($explist[1]<>'') then
+	  $expsize=size('$explist')
+	  $i=1
+	  repeat
+	    $list=$explist[$i]
+	    shell('(cat '+$expfile+' | grep -w Queued | grep -c \'^'+$list+'\')'):$isin
+	    if ($isin=0) then
+		shell('(cat '+$expfile+' | grep Pending | grep -c \'^'+$list+'\')'):$isin
+	    endif
+	    if ($isin=0) then
+		shell('(cat '+$expfile+' | grep Completed | grep -c \'^'+$list+'\')'):$isin
+	    endif
+	    if ($isin=0) then
+		$rtime=0
+		cpexptime($list,$maclibdir):$rtime
+		$expname=''
+		strstr($list,'_','last'):$ret,$expname
+		if ($ret=0) then $expname=$list endif
+		$pending=1
+		write('file',$expfile,'%s  %d  %s  xx000 Pending_day',$list,$rtime,$expname)
+	    endif
+	  $i=$i+1
+	  until $i> $expsize
+    endif
+
+	$longlist=''
+	exists($md+'/LONGLIST','file'):$lsize
+	if ($lsize) then
+	   $s2=''
+	   readfile($md+'/LONGLIST','$longlist','$s2','','local'):$lsize
+	endif
+	if ($lsize) then
+	  $i=1
+	  repeat
+	    $list=$longlist[$i]
+	    shell('(cat '+$expfile+' | grep -w Queued | grep -c \'^'+$list+'\')'):$isin
+	    if ($isin=0) then
+           	shell('(cat '+$expfile+' | grep Pending | grep -c \'^'+$list+'\')'):$isin
+	    endif
+            if ($isin=0) then
+                shell('(cat '+$expfile+' | grep Completed | grep -c \'^'+$list+'\')'):$isin
+            endif
+	    if ($isin=0) then
+                $rtime=0
+		substr($s2[$i],1):$rtime
+                $expname=''
+                strstr($list,'_','last'):$ret,$expname
+                if ($ret=0) then $expname=$list endif
+		$pending=1
+                write('file',$expfile,'%s  %d  %s  xx000 Pending_night',$list,$rtime,$expname)
+	    endif
+	    $i=$i+1
+	    until $i > $lsize
+	endif
+//    exists('loc_','parameter'):$locison
+//    if ($locison) and (wqinit='auto') then
+//	format(loc_,'lower'):replaceQ[4]
+//    endif
+    if ($pending) then
+	if ($autodir='') or ($locdir='') then
+           write('error','CAUTION: There are experiments in this study still pending from another automation run')
+	else
+	   $loc=''
+	   strstr($locdir,'_','last'):$ret,$loc
+	   if ($ret=0) then $loc=$locdir endif
+	   write('error','CAUTION: There are experiments in this study still pending from %s in %s',$loc,$autodir)
+	endif
+    endif
+    walkupQ('time')
+//    newdg
+"****************************************************************"

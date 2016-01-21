@@ -1,0 +1,180 @@
+"macro BPfixup"
+  "Fix up parameter set"
+  exists('probe','parameter'):$e if($e>0.5) then destroy('probe') endif
+  exists('dimension','parameter'):$e  
+  if $e=0 then create('dimension','string') dimension='' endif
+  
+
+  exists('hdwshimlist','parameter'):$e  
+  if $e=0 then create('hdwshimlist','string') endif
+  hdwshimlist=''
+
+  exists('concentration','parameter'):$e
+  if $e=0 then create('concentration','real') concentration=0.000 endif
+
+  exists('compH','parameter'):$e
+  if $e=0 then create('compH','real') compH=1.000 endif
+
+  exists('pwC','parameter'):$e
+  if $e=0 then create('pwC','pulse') pwC=0.000 endif
+
+  exists('pwClvl','parameter'):$e
+  if $e=0 then create('pwClvl','real') pwClvl=0.000 endif
+
+  exists('pwN','parameter'):$e
+  if $e=0 then create('pwN','pulse') pwN=0.000 endif
+
+  exists('pwNlvl','parameter'):$e
+  if $e=0 then create('pwNlvl','real') pwNlvl=0.000 endif
+
+  exists('compC','parameter'):$e
+  if $e=0 then create('compC','real') compC=1.000 endif
+
+  exists('compN','parameter'):$e
+  if $e=0 then create('compN','real') compN=1.000 endif
+
+  exists('compD','parameter'):$e
+  if $e=0 then create('compD','real') compD=1.000 endif
+
+  exists('ddrpm','parameter'):$e  "create for use in studyQ"
+  if $e=0 then create('ddrpm','string') ddrpm='p' endif
+
+  exists('ddrtc','parameter'):$e  "create even if not used-to avoid error in panel"
+  if $e=0 then create('ddrtc','pulse') endif
+
+  exists('ref_pwr','parameter'):$e 
+  if $e=0 then create('ref_pwr','pulse') ref_pwr=tpwr endif
+
+  exists('ref_pw90','parameter'):$e 
+  if $e=0 then create('ref_pw90','real') ref_pwr=pw endif
+
+  exists('empty_noise','parameter'):$e 
+  if $e=0 then create('empty_noise','real') empty_noise=0 endif
+
+  exists('sample_noise','parameter'):$e 
+  if $e=0 then create('sample_noise','real') sample_noise=0 endif
+
+  " a zero value for ddrtc in parameter set or probefile indicates non-vnmrs system"
+
+  if Console='vnmrs' then
+   exists('hdof','parameter'):$e
+   if $e=0 then create('hdof','frequency') hdof=0 endif
+   exists('hdpwr','parameter'):$e
+   if $e=0 then create('hdpwr','real') hdof=0 endif
+   exists('hdmf','parameter'):$e
+   if $e=0 then create('hdmf','real') hdmf=1000 endif
+   exists('hdpwrf','parameter'):$e
+   if $e=0 then create('hdpwrf','real') hdpwrf=4095 endif
+   exists('dutyc','parameter'):$e
+   if $e=0 then create('dutyc','real') dutyc=0.1 endif
+   exists('hdres','parameter'):$e
+   if $e=0 then create('hdres','real') hdres=0.9 endif
+   exists('rof3','parameter'):$e
+   if $e=0 then create('rof3','pulse') rof3=0 endif
+   exists('homorof1','parameter'):$e
+   if $e=0 then create('homorof1','pulse') homorof1=2 endif
+   exists('homorof2','parameter'):$e
+   if $e=0 then create('homorof2','pulse') homorof2=2 endif
+   exists('homorof3','parameter'):$e
+   if $e=0 then create('homorof3','pulse') homorof3=2 endif
+   exists('homo','parameter'):$e
+   if $e=0 then create('homo','flag') homo='n' endif
+   exists('hdseq','parameter'):$e
+   if $e=0 then create('hdseq','string') hdseq='' endif
+    exists('rof3','parameter'):$e
+   if $e=1 then destroy('rof3') endif
+  endif
+
+  exists('mag_flg','parameter'):$e
+  if $e=1 then
+    getparam('mag_flg','N15'):mag_flg
+    if (mag_flg='y') then BPcheckfortriax endif
+  endif
+
+  exists('gzsize','parameter'):$e
+  if $e=0 then create('gzsize','real') endif
+  exists('gzwin','parameter'):$e
+  if $e=0 then create('gzwin','real') endif
+  exists('nv2','parameter'):$e
+  if $e then destroy('nv2') endif
+  exists('nv','parameter'):$e
+  if $e then destroy('nv') endif
+
+  exists('ni','parameter'):$e if $e then fpmult1=0.5 endif
+  exists('ni2','parameter'):$e if $e then fpmult2=0.5 endif
+  if $e=1 then
+   exists('dmg2','parameter'):$e2 if $e2=0 then create('dmg2','string') dmg2='' endif
+  endif
+  exists('STUD','parameter'):$e
+  if $e=1 then STUD='n' endif
+  exists('SPARSE','parameter'):$e
+  if $e=0 then create('SPARSE','flag')
+   SPARSE='n'
+  endif
+  exists('sampling','parameter'):$e
+  if $e=0 then create('sampling','flag')
+   sampling=''
+  endif
+
+  "set local value of samplename to global value"
+  exists('samplename_global','parameter','global'):$e
+  if $e=0 then create('samplename_global','string','global') endif
+  exists('samplename','parameter','global'):$e
+  if $e=1 then destroy('samplename','global') endif
+  exists('samplename','parameter'):$e
+  if $e=0 then create('samplename','string') endif
+  samplename=samplename_global
+
+  exists('SCT','parameter'):$e
+  if $e=1 then
+   SCT='y'
+  endif
+  exists('f1180','parameter'):$e
+  if $e=1 then
+   if f1180='y' then lp1=-180 rp1=90 else lp1=0 rp1=0 endif
+  endif
+  exists('f2180','parameter'):$e
+  if $e=1 then
+   if f2180='y' then lp2=-180 rp2=90 else lp2=0 rp2=0 endif
+  endif
+  cz setref
+  r1=0 r2=0 r3=0 r4=0 r5=0 r6=0  "reset"
+  wnt='' wexp=''
+  pmode='full'
+  fpmult=0.5
+
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+  full ph
+  bs='n'   "makes sure bs='n' for 2D/3D"
+  dcg='cdc' cdc
+  sw=sw
+  lp=0
+  
+/*
+  "set up reasonable limits for typical np/fn, mainly for 3D"
+  if ((np>500) and (np<520)) then np=512 fn=2048 endif
+  if ((np>1010) and (np<1040)) then np=1024 fn=4096 endif
+  if ((np>2020) and (np<2060)) then np=2048 fn=8192 endif
+  if ((np>4060) and (np<4120)) then np=4096 fn=16k endif
+  if ((np>8170) and (np<8210)) then np=8192 fn=32k endif
+  if ((np>16360) and (np<16400)) then np=16384 fn=64k endif
+*/
+
+ if Console='vnmrs' then
+  getlimit('tpwr'):$max,$min,$stepsize  "find stepsize set by fixpar"
+                                       "(run by rtp). stepsize is 0.5 for DD2"
+
+  "change parameter type to real"
+   settype('tpwr pwClvl pwNlvl','real')
+
+   "set parameter limits to override stored values"
+   "global limits should be used (maxattench1,maxattench2, . "
+    setlimit('tpwr',63,$min,$stepsize)
+    setlimit('pwClvl',63,$min,$stepsize)
+    setlimit('pwNlvl',63,$min,$stepsize)
+ endif
+
+  exists('layout','parameter'):$e
+  if $e=1 then layout=seqfil endif
+

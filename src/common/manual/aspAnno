@@ -1,0 +1,181 @@
+******************************************************************************
+aspAnno('save'<,path>) - save annotations to a file. If path not provided, 
+	annotations will be saved as curexp+'/datdir/annos'
+aspAnno('load'<,path>) - load annotations from a file. If path not provided, 
+	curexp+'/datdir/annos' will be loaded.
+aspAnno('clear') - clear annotations list and display.
+aspAnno('delete'<,id>) delete a selected annotation 
+aspAnno('get',$id,$propertyName):$propertyValue - get the value of an annotation property
+aspAnno('set',$id,$propertyName,$propertyValue) - set the value of an annotation property
+	valid propertyNames are 
+	'type' - type of annotation, only to 'get'
+	'label' - label of the annotation
+	'lineColor',
+	'lineThickness',
+	'fontColor',
+	'fontSize',
+	'fontName',
+	'fontStyle',
+	'vert' - 1/0 to display label vertically/horizontally
+	'roundBox' - 1/0 to show box with round or straight corners 
+	'mm' - 1/0 to fix annotation to mm position or ppm position
+	'fill' - 1/0 to fill/not fill box or polygon
+	'transparency' - 0 to 100 from total opaque to total transparency 
+	'arrows' - 1 or 2 to have one or two arrow heads
+	'amp' - amplitude or intensity of a peak (Point)
+	'vol' - volume of a peak (Point).
+	'showRoi',
+	'showLabel',
+	'showLink',
+	'x' - center x coordinate in ppm or mm
+	'y' - center y coordinate in ppm(or intensity) or mm
+	'w' - total width in ppm or mm
+	'h' - total height in ppm(or intensity)  or mm
+	'xN' - x coordinate of point N, in ppm or mm
+	'yN' - y coordinate of point N, in ppm or mm
+
+aspAnno('reset') - reset annotation properties to default defined by Display Options.
+aspAnno('copy',id) - copy annotation specified by id to clipboard.
+aspAnno('paste',x,y) - paste annotation from clipboard to x,y pixel position
+aspAnno('paste',annoStr) - create annotation defined by annoStr
+aspAnno('paste',x,y,annoStr) - create annotation defined by annoStr, 
+				and move it to x,y mm position. 
+	annoStr is a string similar to a line in annotation file. 
+	But only fields before "label" are requited. 
+	see "Annotation File Format" for details.
+
+aspAnno:$e,$n - return $e=1/0 if annotations are/not displayed, $n for number of annotations.
+
+**********************************************************************************
+
+1. Create Annotations
+
+Buttons for creating annotations are located on the Graphics Toolbar.  They are available for "ds", "dss", and "dconi" display modes.
+
+Each button corresponds to a creation mode in which left mouse clicking and dragging will create an annotation of a given type.
+
+ Point - a point at x,y position and a label
+ Text - one-line text
+ Line - straight line
+ Arrow - line with arrow at one or both ends
+ X-Bar - horizontal bar with a label showing the width
+ Y-Bar - vertical bar with a label showing the height
+ Box - rectangular box with round or straight corners
+ Oval - circle defined by two points
+ Polygon - N point polygon that can be filled.
+ Polyline - N point polyline
+
+In creation mode, releasing mouse button without holding CTRL key will automatically exit creation mode. Holding CTRL key enables the creations of multiple annotations of the same type.
+
+To create a Polygon or Polyline of N points, click N-1 points on the canvas with left mouse button, add the last point (and end creation mode) with right mouse click (or left mouse click while holding CTRL key).
+
+The position of an annotation object is defined by frequencies (in PPM). Optionally an annotation may also be defined by chart position (in mm). See "Edit Annotations" for details.
+
+2. Select and Modify Annotations
+
+Annotation can be moved or resized in "select" mode . This button is located on the graphics toolbar.
+
+When exiting creation mode, the mouse button automatically enters "select" mode.
+
+In select mode, hovering over an annotation will highlight the object. Drag the object will move it to a new position.
+
+If the mouse is near a "handle" of the object, the handle will be highlight. Dragging the handle will resize the object.
+
+To add a point to a polygon or polyline, select the line where a point will be added and double click it when holding CTRL key.
+
+To delete a point from a polygon or polyline, select and CTRL/double click the point.
+
+To exit "select" mode, click any button on graphics toolbar.
+
+3. Right Mouse Menus
+
+In select mode, right mouse clicking an annotation will show a pull down menu. This menu has the following options:
+	Edit annotion properties
+	delete this annotion
+	delete all annotations
+	copy this annotation to clipboard
+
+In select mode, right mouse clicking an empty space will show a pull down menu. This menu has the following options:
+	save annotations
+	load annotations
+	print annotated spectrum
+	display annotations on top of the spectrum
+	display annotations behind the spectrum.
+	paste annotation from clipboard to clicked position.
+
+4. Edit Annotation Properties
+
+The default colors, fonts, line thickness of annotation objects are defined by Annotation page of the "Display Options" dialog.
+
+The properties of an individual object can be edited by "Property Editor", by right mouse clicking the object in "select" mode. This will allow individual object overwrites the properties defined by "Display Options".
+
+The property editor of a Point, showing as an example, allows the changes of properties for the label and the point. In addition to the color, font and line thickness, the editor has options to show/hide the label, point or the linker between label and point.
+
+The label of a Point (or other annotation types) may contain a keyword between two %%. Valid keywords are %val%, %ppm%, %hz%, %amp%, %vol%. The keyword will be substituted by appropriate value. 
+
+The label may also contain vnmr parameters between $$. The parameter type can be real or string.
+
+The transparency of an annotation object is defined by a number ranging from 0 to 100, with 0 being total opaque and 100 being total transparent.
+
+The editor also provides an option to fix the annotation at current chart position instead of associating it with a frequency position.
+
+The properties of an annotation can be reset to default by "Reset Properties" button.
+
+Similar property editors are provided for other annotation types.
+
+5. Delete Annotations
+
+One or all annotations can be deleted by right mouse clicking an annotation in "select" mode.
+
+6. Show/Hide Annotations
+
+A toggle button  on graphics toolbar will hide or show annotations. Hidden annotations are saved in curexp+'/datdir/annos'.
+
+7. Save/Load Annotations
+
+Annotations can be saved to a file and loaded back with modal dialogs from right mouse menu. The directory and file name can be specified by the users. By default the directory is $HOME/vnmrsys/Annotations, and the file is annoNN.txt, where NN are auto-generated numbers.
+
+8. Print
+
+Annotated Spectrum can be printed using right mouse menu. A preview will be displayed in Adobe Reader and can be printed from the File menu.
+
+9. Annotation File Format
+
+Annotations can be saved in files in the following format. 
+(columns after ppm and amp coordinates are optional). 
+"amp" is Y axis of 1D display, i.e., intensity of 1D data. 
+	amp = (mmPosition-vp)/vs
+
+number_of_annos: 8
+
+# ind type ppm1 amp1 label labelX labelY lineColor thickness fontColor fontSize font style rotate, mmbind, disFlag 
+1 POINT 8.5661 0.0815  %val% -0.2523 0.0133 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 1792
+2 TEXT  7.4387 0.0532  %val% 0.0000 0.0000 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 512
+
+# ind type ppm1 amp1 ppm2 amp2 lable labelX labelY ROI_color thickness label_color fontSize font style rotate, mmbind, disFlag
+3 LINE  6.9171 0.1285 6.1936 0.1011  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 256
+4 ARROW 5.6383 0.0666 4.5615 0.0995  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 256
+5 BOX   3.8211 0.1058 2.9462 0.0556  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 256
+6 OVAL  2.4751 0.0963 1.2972 0.0548  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 0 0 256
+7 XBAR  5.8907 0.0407 4.9485 0.0407  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 1 0 768
+8 YBAR  4.3427 0.0854 4.3427 0.0360  %val% 0.0 0.0 0xFFFF00 1 0xFF6600 14 Dialog Plain 1 0 768
+
+# ind type npts ppm1 amp1 ppm2 amp2 ppm3 amp3 ... lable labelX labelY ROI_color thickness label_color fontSize font style rotate, mmbind, disFlag
+9 POLYGON 3 6.9171 0.1285 6.1936 0.1011 4.5615 0.0995 %val% ...
+10 POLYLINE 4 6.9171 0.1285 6.1936 0.1011 4.5615 0.0995 4.3427 0.0854 %val% ...
+
+9. Related Commands
+
+	aspSetState(1) - Select 
+	aspSetState(18) - Point
+	aspSetState(28) - Text 
+	aspSetState(20) - Line 
+	aspSetState(22) - Arrow 
+	aspSetState(30) - X_Bar 
+	aspSetState(32) - Y-Bar 
+	aspSetState(5)  - Box
+	aspSetState(24) - Oval
+	aspSetState(26) - Polygon 
+	aspSetState(36) - Polyline 
+
+	iplot('-preview') - to preview and print annotated spectrum. 

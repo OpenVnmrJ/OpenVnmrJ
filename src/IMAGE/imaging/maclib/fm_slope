@@ -1,0 +1,41 @@
+"macro fm_slope"
+" SLOPE: compute slope, intercept and correlation for a series of data pairs"
+" Usage:  fm_slope(xarray, yarray):slope,intercept,correlation "
+
+$x = $1
+$y = $2
+$xsize = size('$x')
+$ysize = size('$y')
+if ($xsize <> $ysize) then
+  write('error','%s: dimensions of arrays are not equal',$0)
+  abort
+endif
+
+$i = 0.0
+$sumx = 0.0
+$sumy = 0.0
+$sumxy = 0.0
+$sumx2 = 0.0
+$sumy2 = 0.0
+
+repeat
+
+  $i = $i + 1.0
+  $sumx = $sumx + $x[$i]
+  $sumy = $sumy + $y[$i]
+  $sumxy = $sumxy + $x[$i]*$y[$i]
+  $sumx2 = $sumx2 + $x[$i]*$x[$i]
+  $sumy2 = $sumy2 + $y[$i]*$y[$i]
+
+until ($i = $xsize)
+
+$num = $xsize*$sumxy - $sumx*$sumy
+$den1 = $xsize*$sumx2 - $sumx*$sumx
+$den2 = $xsize*$sumy2 - $sumy*$sumy
+
+$slope = $num/$den1
+$yintercept = ($sumx2*$sumy - $sumx*$sumxy)/$den1
+$correlation = $num/sqrt($den1)/sqrt($den2)
+$xintercept = -$yintercept/$slope
+
+return($slope,$yintercept,$correlation)

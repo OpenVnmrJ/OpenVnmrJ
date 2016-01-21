@@ -1,0 +1,36 @@
+"macro Mrtpar"
+
+"******************************************************************************"
+"                                                                              "
+"   Mrtpar  - Retrieve parameters for sequence                                 "
+"             If PARDIR is defined parameters loaded from PARDIR               "
+"             or else it is loaded from user's or systems parlib               "
+"   Usage: Mrtpar('spuls')                                                     "
+"                                                                              "
+"******************************************************************************"
+
+exists('PARDIR','parameter','global'):$ep
+if ($ep <> 0) then
+  exists(PARDIR+'/'+$1+'.par','file'):$ep
+endif
+
+if ($ep <> 0) then
+  $rtvfile=PARDIR+'/'+$1
+else
+  exists(userdir+'/parlib','file'):$e
+  if ($e<>0) then
+    exists(userdir+'/parlib/'+$1+'.par','file'):$e
+  endif
+  if ($e<>0) then
+    $rtvfile=userdir+'/parlib/'+$1
+  else
+    $rtvfile=systemdir+'/parlib/'+$1
+    exists($rtvfile+'.par','file'):$e
+    if ($e=0) then
+      write('error','No parameters for pulse sequence %s',$1)
+      return
+    endif
+  endif
+endif
+rtp($rtvfile)
+

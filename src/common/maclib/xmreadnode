@@ -1,0 +1,54 @@
+"macro xmreadnode"
+"find node, read node file, store in parameters sqattr,sqval"
+
+if ($# < 0.5) then return(0) endif
+"use activeid instead of $1??"
+$id=$1
+xm1('studydir'):$sdir
+
+$file=$sdir+'/enterSQ'
+exists($file,'file'):$e
+if $e<0.5 then
+" if $##<0.5 then write('line3','%s: file not found %s',$0,$file) endif"
+  return(-3)
+endif
+
+exists('sqattr','parameter','global'):$e
+if $e < 0.5 then
+  create('sqattr','string','global')
+  setprotect('sqattr','on',16+256+32768,'global')
+  create('sqval','string','global')
+  setprotect('sqval','on',16+256+32768,'global')
+endif
+
+"format given in xmwritesq - id, exp, lock"
+$s1='' $s2=''
+$found=0
+readfile($file,'$s1','$s2',$id,'local'):$found
+
+if ($found = 0) then
+" if $##<0.5 then write('line3','%s: node %s not found',$0,$id) endif"
+  return(-2)
+endif
+
+$file=$sdir+'/info/'+$s1+'/prop'
+exists($file,'file'):$e
+if $e<0.5 then
+" if $##<0.5 then write('line3','%s: file not found %s',$0,$file) endif"
+  return(-1)
+endif
+
+sqattr='' sqval=''
+readfile($file,'sqattr','sqval','','global'):$size
+if $size>0.5 then
+  $i=$size+1
+  repeat
+    $i=$i-1
+    sqattr[$i+1]=sqattr[$i]
+    sqval[$i+1]=sqval[$i]
+  until ($i <= 1)
+  sqattr[1]='id'
+  sqval[1]=$s1
+endif
+
+return($size)

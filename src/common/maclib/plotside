@@ -1,0 +1,136 @@
+"macro plotside"
+"***************************************************************"
+" plotside - macro used by plot2D to do side plot of 1D spectrum"
+"		or projection					"
+"***************************************************************"
+
+if ($# < 1) then
+   $1D=''
+   getpl1dinfo('side'):$1D
+   if ($1D<>'') then plotside($1D) endif
+   return
+endif
+
+if ($# < 2) then $2='' endif
+// Branch point for any non generic plotting options
+$macro=$0
+getpl1dinfo('plotmacro',$0,$1,$2):$macro
+if ($macro<>$0) then
+	exec($macro)
+	return
+endif
+
+$sub1d=''
+substr($1,1,3):$sub1d
+if ($sub1d<>'exp') then $2='' endif
+
+if ($1 = 'proj') then
+    dconi
+    newmenu('dconi_proj') dconi('restart')
+    $th=th vsproj=vs2d
+    if ($th = 0) then
+	vsproj=2*vsproj
+    else
+	if ($th>1) then
+            $i=2
+            repeat
+           	vsproj=vsproj/2
+           	$i=$i+1
+            until $i > $th
+        endif
+    endif
+    dconi('vproj_max') dconi('plot')
+    newmenu('dconi') dconi('restart')
+else
+    if $1 <> 'proj' then $savewc=wc $savesc=sc $savewc2=wc2 $savesc2=sc2 endif
+    $refsource1=refsource1
+    if (trace='f2') then
+        $savewp=wp1/reffrq1 $savesp=sp1/reffrq1
+    else
+        $savewp=wp/reffrq  $savesp=sp/reffrq
+    endif
+    if ($1 <> 'proj') then jexp:$curexp endif
+    if ($1 <> 'proj' and $sub1d <> 'exp') then
+        $ext=''
+	substr($1,'basename'):$fidname,$ext
+	if ($ext<>'') then
+	    exists($1,'directory'):$fidex
+	else
+	    exists($1+'.fid','directory'):$fidex
+	    if ($fidex=0) then
+		exists($1+'.rec','directory'):$fidex
+		if ($fidex=0) then
+		    exists($1+'.REC','directory'):$fidex
+		endif
+	    endif
+	endif
+        if ($fidex=0) then return endif
+        $seqfil=seqfil
+        tmpcopy($seqfil)
+	rt($1)
+	wft
+    elseif ($sub1d = 'exp') then
+        $sx1='' $sx2='' $rx1=0
+        strstr($1,'exp'):$rx1,$sx1,$sx2
+        if ($rx1) then
+          format($sx2,'isreal'):$rx1
+        endif
+        if ($rx1=0) then return endif
+        $1dexp=0 format($sx2,'lower'):$1dexp
+        if ($1dexp=0) then return endif
+        $seqfil=seqfil
+        tmpcopy($seqfil)
+        mf($1dexp,$curexp)
+        wft(1)
+    endif
+
+    f full dc
+    $newwc=$savewc $newsc=$savesc $newwc2=$savewc2 $newsc2=$savesc2
+    $savewp=$savewp*reffrq $savesp=$savesp*reffrq
+    $edge=sp vp=0
+    if $savesp > $edge then 
+	sp=$savesp
+	$width=sw-sp+$edge
+	if ($width > $savewp) then
+	    wp=$savewp
+	else
+	    wp=$width 
+	    $newwc2= wp*$newwc2/$savewp 
+	    $newsc2= $newsc2 + ($savewc2 - $newwc2)
+	endif
+    else
+	sp=$edge
+        $wp=$savewp - (sp-$savesp)
+	$newwc2=$newwc2*$wp/$savewp
+	$width = sw
+	if ($width > $wp) then
+	    wp=$wp
+	else
+	    wp=$width 
+	    $wc2=$newwc2
+	    $newwc2=wp*$newwc2/$wp
+	    $newsc2= $newsc2 + ($wc2 - $newwc2)
+	endif
+    endif	 
+    wc=$newwc-4 wc2=$newwc2 sc=$newsc sc2=$newsc2
+    if ($sub1d<>'exp') or ($2='vsadj') then
+        if (parstyle='' or parstyle='bpa') then 
+	    $wcmax=wcmax*0.98 else $wcmax=wcmax*0.75 
+	endif
+        if (tn = 'H1') then vsadjh($wcmax-wc)
+        elseif (tn='C13') then vsadjc($wcmax-wc)
+        else vsadj(($wcmax-wc)*0.4)
+	endif 
+    endif
+    cutoff=(wcmax-$savewc)/3
+    if ($refsource1='sfrq') then
+	cutoff=2*(wcmax-wc)/5
+    endif
+    if ($1<>'proj') and (parstyle='' or parstyle='bpa') then
+	off('cutoff')
+    endif
+    intmod='off' 
+
+    pl('side')
+    tmpreturn($seqfil)
+endif

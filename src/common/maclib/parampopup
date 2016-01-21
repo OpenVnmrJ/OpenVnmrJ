@@ -1,0 +1,147 @@
+"macro parampopup"
+exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum
+endif
+$file=userdir+'/templates/vnmrj/interface/parampopup.xml'
+if ($# < 2) then $2='enter' endif
+if ($# < 3) then $3='modeless' endif
+if ($# < 4) then $4='' endif
+if ($# < 5) then $5='' endif
+
+strsv2array($4,'\''):$4
+array2strsv($4,'`'):$4
+strsv2array($5,'\''):$5
+array2strsv($5,'`'):$5
+
+write('reset',$file)
+array2array($1):$list
+$total=size('$list')
+if ($total>1) then
+  sort($list,'u'):$index,$list
+endif
+$total=size('$list')
+if ($list[1]='') then $total=0 endif
+if ($total=0) then
+   shell('rm -f '+$file):$dum
+   return(0)
+endif
+
+$where=''
+$i=1
+repeat
+    $w=''
+    is_param($list[$i]):$is,$w
+    if ($is=0) then 
+	write('error','Parameter %s not found',$list[$i])
+	$list[$i]='' $where[$i]=''
+    else
+	$where[$i]=$w
+    endif
+    $i=$i+1
+until $i > $total
+array2array($list):$list
+array2array($where):$where
+$total=size('$list')
+if ($list[1]='') then $total=0 endif
+if ($total=0) then
+   shell('rm -f '+$file):$dum
+   return
+endif
+
+write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+write('file',$file,'<template name="parampopup" element="groups" type="acquisition" >')
+$y=trunc($total + 0.5)*30+10
+write('file',$file,'  <group size="420 %d"',$y)
+write('file',$file,'    bg="transparent"')
+write('file',$file,'    border="Etched"')
+write('file',$file,'    tab="no"')
+write('file',$file,'    reference="parampopup"')
+write('file',$file,'    useref="no"')
+write('file',$file,'    subtype="Basic"')
+write('file',$file,'    expanded="yes"')
+write('file',$file,'    >')
+
+   $i=1 $k=0
+   $x = 5
+   $y = 5
+   repeat
+   	write('file',$file,'     <parameter loc="%d %d" size="400 25"',$x,$y)
+   	write('file',$file,'        style="PlainText"')
+   	write('file',$file,'        vq2="%s"',$list[$i])
+   	write('file',$file,'        unitsenabled="None"')
+   	write('file',$file,'        unitssize="0"')
+   	write('file',$file,'        useref="No"')
+	if ($2='display') then
+               write('file',$file,'        entrycmd="%s=%s"',$list[$i],$list[$i])
+	elseif ($2='processed') and ($where[$i]='current') then
+           if typeof($list[$i]) then
+               write('file',$file,'        entrycmd="%s=\'$VALUE\' setvalue(\'%s\',%s,\'processed\')"',$list[$i],$list[$i],$list[$i])
+           else
+               write('file',$file,'        entrycmd="%s=$VALUE setvalue(\'%s\',%s,\'processed\')"',$list[$i],$list[$i],$list[$i])
+           endif
+	else
+           if typeof($list[$i]) then
+   	       write('file',$file,'        entrycmd="%s=\'$VALUE\'"',$list[$i])
+           else
+	       write('file',$file,'        entrycmd="%s=$VALUE"',$list[$i])
+           endif
+	endif
+   	write('file',$file,'        entryvalue="$VALUE=%s"',$list[$i])
+   	write('file',$file,'        >')
+   	write('file',$file,'     <label loc="0 0" size="300 25"')
+   	write('file',$file,'        style="Label1"')
+   	write('file',$file,'        label="%s"',$list[$i])
+   	write('file',$file,'        vq="null %s"',$list[$i])
+   	write('file',$file,'        subtype="parameter"')
+   	write('file',$file,'        justify="Left"')
+   	write('file',$file,'        />')
+   	write('file',$file,'     <entry loc="0 0" size="140 25"')
+   	write('file',$file,'        style="PlainText"')
+   	write('file',$file,'        vq="null %s"',$list[$i])
+   	write('file',$file,'        subtype="parameter"')
+   	write('file',$file,'        />')
+   	write('file',$file,'     <check loc="0 0" size="140 25"')
+   	write('file',$file,'        style="Label1"')
+   	write('file',$file,'        vq="null %s"',$list[$i])
+   	write('file',$file,'        subtype="parameter"')
+   	write('file',$file,'        />')
+   	write('file',$file,'     <label loc="0 0" size="140 25"')
+   	write('file',$file,'        style="Label1"')
+   	write('file',$file,'        vq="null %s"',$list[$i])
+   	write('file',$file,'        key="units"')
+   	write('file',$file,'        subtype="parameter"')
+   	write('file',$file,'        />')
+   	write('file',$file,'    </parameter>')
+   	$y=$i*30+5
+   	$i=$i+1
+
+   until $i > $total
+
+write('file',$file,'    </group>')
+write('file',$file,'</template>')
+
+if ($2='display') then
+	$title='Parameter Values'
+else
+	$title='Fill in Values of Required Parameters:'
+endif
+exists($file,'file'):$fileex
+if ($fileex) then
+   $vjcmd='vnmrjcmd(\'popup\',\'mode:'+$3+'\',
+	\'file:parampopup.xml\',
+	\'rebuild:yes\',
+	\'pnewupdate:true\',
+	\'title:'+$title+'\''
+   if ($4<>'') then
+	$vjcmd=$vjcmd+',\'ok:'+$4+'\''
+   endif
+   if ($5<>'') then
+   	$vjcmd=$vjcmd+',\'cancel:'+$5+'\''
+   endif
+   $vjcmd=$vjcmd+')'
+   exec($vjcmd)
+else
+   return(0)
+endif
+return(1)

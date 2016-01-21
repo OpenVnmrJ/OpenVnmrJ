@@ -1,0 +1,33 @@
+"macro gxyzrtmap"
+"gxyzrtmap"
+"Macro to retrieve 3D shimmap from 3Dshimlib/shimmaps"
+"PJB"
+
+$mapname=''
+$mapname=$1
+
+if $mapname='none' then return endif
+
+if $mapname='' then write('error','Please select a map to load!') abort endif
+exists(userdir+'/3Dshimlib/shimmaps/'+$mapname+'/'+$mapname+'.fid','file'):$e
+if($e > 0.5) then
+	rt(userdir+'/3Dshimlib/shimmaps/'+$mapname+'/'+$mapname)
+	write('line3','Mapname %s loaded',$mapname)
+	gxyzmapsys('unarray')
+	//gradtype=gradtypelocal
+	//Now create a symbolic link to the shimlog file if it exists
+	$shimlogfile=userdir+'/3Dshimlib/calibs/'+mapname+'/shimlog.txt'
+	exists($shimlogfile,'file'):$ex
+	if $ex > 0.5 then
+		shell('rm -f '+userdir+'/3Dshimlib/calibs/shimlog.txt')
+		shell('ln -s '+$shimlogfile+' '+userdir+'/3Dshimlib/calibs/shimlog.txt')
+	endif
+	//create a copy of gxyzcode for display purposes
+	exists('gxyzmapcode','parameter'):$ex
+	if ($ex<0.5) then create('gxyzmapcode','string') gxyzmapcode=gxyzcode endif
+
+else    write('error','Map does not exist!')
+	abort
+endif
+
+return($e)

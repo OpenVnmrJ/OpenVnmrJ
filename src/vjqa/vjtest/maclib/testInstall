@@ -1,0 +1,64 @@
+"macro testInstall"
+lookup('mfile',curexp+'/qapath','read'):$qapath
+chkname($qapath+'/logs/logVJinstall_%MO%-%DAY%-%YR2%','none'):$file
+
+// temporary
+// substr($file,'basename'):$base
+// cp('/home/vnmr1/vjunit/vjunit/'+$base,$file)
+
+vvLog('Test','VnmrJ installation')
+$res=''
+shell('grep "End of VNMRJ Installation Program" ' + $file):$res
+if ($res = '') then
+  vvLog('Fail','VnmrJ installation')
+  return
+else
+  vvLog('Pass','VnmrJ installation')
+endif
+
+vvLog('Test','VnmrJ adm user update')
+$res=''
+shell('grep "vnmrj adm Done" ' + $file):$res
+if ($res = '') then
+  vvLog('Fail','VnmrJ adm user update')
+else
+  vvLog('Pass','VnmrJ adm user update')
+endif
+
+vvLog('Test','VnmrJ acquisition reset (setacq)')
+$res=''
+shell('grep "Please check that the console and host are connected" ' + $file):$res
+if ($res <> '') then
+  vvLog('Fail','VnmrJ cannot ping master1 (setacq)')
+else
+  shell('grep "download failed" ' + $file):$res
+  if ($res = '') then
+    shell('grep "is either not present or not active" ' + $file):$res
+    if ($res = '') then
+      vvLog('Pass','VnmrJ acquisition reset (setacq)')
+    else
+      vvLog('Fail','VnmrJ acquisition ethernet not connected (setacq)')
+    endif
+  else
+    vvLog('Fail','VnmrJ acquisition reset (setacq)')
+  endif
+endif
+
+vvLog('Test','VnmrJ configuration (config)')
+$res=''
+shell('grep "Dialog with title" ' + $file + ' | grep Configuration | grep "has been opened";cat'):$res
+if ($res = '') then
+  vvLog('Fail','VnmrJ configuration (config)')
+else
+  $res=''
+  shell('grep "with text" ' + $file + ' | grep OK | grep "action has been produced";cat'):$res
+  if ($res = '') then
+    vvLog('Fail','VnmrJ configuration (config)')
+  else
+    vvLog('Pass','VnmrJ configuration (config)')
+  endif
+endif
+
+
+
+

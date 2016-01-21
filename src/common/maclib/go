@@ -1,0 +1,107 @@
+"macro go"
+
+probeid('verify')
+
+/*
+isspincad(seqfil,'quiet'):$x
+if ( $x > 0.5 ) then
+  if ($# = 0) then
+    write('line3','acquisition using spincad sequences not implemented at present. abort')
+    abort
+  endif
+endif
+ */
+
+exists('dsp','parameter','global'):$x
+if ($x > 0.5) then
+  if (dsp = 'n') then
+    setdsp('off',0.0,0.0)
+  else
+    exists('osfilt','parameter'):$x
+    if (dsp = 'i') then
+      if ($x > 0.5) then
+        osfilt = ''
+      endif
+      exists('/vnmr/acqbin/Expproc','file'):$e
+      if ((il='y') and ($e < 0.5)) then
+        setdsp('off',0.0,0.0)
+      endif
+    else
+      if ($x < 0.5) then
+        paros
+      endif
+      if (osfilt = '') then
+        exists('def_osfilt','parameter','global'):$x
+        if ($x > 0.5) then
+          osfilt = def_osfilt
+        endif
+      endif
+    endif
+  endif
+endif
+if (tn='C13') and (rof2<350) then
+  exists('probestyle','parameter','global'):$x
+  if ($x) then
+    if (probestyle='cold') then
+      rof2=350
+    endif
+  endif
+endif
+
+on('execprep'):$ex
+if ($ex < -0.5) then
+  " Run generalized go macro 'usergo' if it exists "
+  exists('usergo','maclib'):$ex
+  if ($ex)  then  usergo  endif
+  " Run sequence specific macro 'go_<seqfil>' if it exists "
+  $macro = 'go_'+seqfil
+  exists($macro,'maclib'):$ex
+  if ($ex)  then  {$macro}  endif
+endif
+
+if (traymax=96) then
+  setvast
+elseif (traymax=768) then
+  set768AS
+endif
+
+// Parse input
+$args = $0
+$i = 0
+while ($i<$#) do
+   $i = $i + 1
+   $args = $args+'\',\''+${$i}
+endwhile
+$args = 'Acq(\'' + $args + '\')'
+
+// conditionally exec Acq command
+on('gain'):$on
+if (Console='vnmrs' and $##<0.5 and $on<0.5) then
+  psMain('psGain'):$ret
+  if ($ret = 'psAcquiring') then
+    psMain('execAfterPs',$args)
+    return
+  endif
+endif
+
+// set reference before go
+if(appmode<>'imaging') then
+  $doRef=1
+  exists('autoRef','parameter','global'):$e
+  if($e) then 
+	if(autoRef<1) then $doRef=0 endif
+  endif
+  if($doRef) then 
+    setfrqCmd('setref_nuc')
+    setfrqCmd('setref_go')
+  endif
+endif
+
+$c1=0
+$args = $args+':$c1'
+exec($args):$e
+
+if ($##>0.5) then
+  return($c1)
+endif
+

@@ -1,0 +1,152 @@
+
+" ******************************************************************* "
+" *pwcalc--analysis of arrayed data for pw90  9-15-86               * "
+" *Analyzes arrayed pw data.  Interpolates to find 180,             * "
+" *pw90 is half of pw180.                                           * "
+" *No arguments                                                     * "
+" ******************************************************************* "
+" Revised 7/22/92 S.Chu"
+
+if array<>'pw' then
+  write('error','Analysis not possible for non-arrayed data set')
+  return
+endif
+$inc=pw[2]-pw[1]
+wft('all')
+" ***Initialize variables*** "
+$index=1 $newmax=0 $newmin=0 $indmax=0 $indmin=0
+$firstneg=0 $indfirstneg=0 $found=0 $12=0 $13=0
+select(3) ai ph aph0
+clear
+peak:$ht cr=wp+sp delta=50 dsn:$sn echo('$sn=',$sn)
+if $sn<5 then
+  write('error','NO PEAKS FOUND, TERMINATING')
+  return
+endif
+repeat
+  select($index) peak:$ht
+  "***debug***"
+  echo('spectrum num ',$index,'ht= ',$ht)
+  "***end debug***"
+  if $ht>$newmax then $newmax=$ht $indmax=$index endif
+  if $ht<$newmin then $newmin=$ht $indmin=$index endif
+  if ($ht<-0.2*$newmax)and($found=0) then 
+    $firstneg=$ht $indfirstneg=$index $found=1
+  endif
+  $index=$index+1
+until $index>arraydim
+$ratio=-$newmin/$newmax
+"***********if no neg peaks, write error and exit*********************"
+
+if $indfirstneg=0 then  "if no 180 found, return" 
+  write('error','No 180 found, use larger est pw90 or check pulse power')
+  vp=wc2max/2 vs=(.80*wc2max/2)*vs/$newmax $newmax=80.0
+  dssh
+  pw=pw90 r1=0 f wc=wcmax vp=0
+  return
+endif
+
+"********if 180 is not between 8 and 14, change pw array*************** "
+
+if ($indfirstneg<8)or($indfirstneg>14)or($indfirstneg=arraydim) then
+  if $indfirstneg<8 then
+    $newincr=$inc*$indfirstneg/10 else $newincr=$indmax*$inc/6.0
+  endif 
+  write('error','pw increment changed to (usec) %g',$newincr)
+  pw=$newincr $inc=$newincr 
+  vp=wc2max/2 vs=(.80*wc2max/2)*vs/$newmax $newmax=80.0
+  dssh
+  array('pw',16,$newincr,$newincr) wexp='pwcalc' au return
+else     " ***back up to find peak 20% of max*** "
+  $index=$indfirstneg 
+  repeat
+    $index=$index-1 select($index) peak:$newht
+  until $newht>0.2*$newmax
+  "  ***interpolate to find 180, 90 is half of 180 *** "
+  $factor=($index-1+$newht*($indfirstneg-$index)/($newht-$firstneg))*$inc 
+  pw90=(pw[1]+$factor)/2
+
+  "*********************compare 90 and 270 phase***************************"
+
+  select($indmin) aph0 $minrp=rp
+  select($indmax) aph0 $maxrp=rp
+  $phdiff=$maxrp-$minrp 
+  if $phdiff < 0 then $phdiff=-$phdiff endif
+  $phdiff=180-$phdiff
+  if $phdiff > 360 then $phdiff=$phdiff-360 endif
+
+
+  "*****************output to graphics or plotter**************************"
+
+  $device='graphics'
+  vp=wc2max/2 vs=(.80*wc2max/2)*vs/$newmax $newmax=80.0
+  repeat
+    if $device='plotter' then pl('all') else dssh endif
+    write($device,10,wc2max-10,'pw90 has been set to %6.1f',pw90)
+    write($device,10,wc2max-20,'maximum is # %g',$indmax)
+    write($device,60,wc2max-20,'  minimum is # %g',$indmin)
+    write($device,10,wc2max-30,'tn=%s ',tn)
+    write($device,40,wc2max-30,'  d1=%6.2f ',d1)
+
+    if seqfil='decpul' then
+      write($device,70,wc2max-30,'     dpwr=%4.0f',dpwr) else
+        if seqfil='dec2pul' then
+          write($device,70,wc2max-30,'     dpwr2=%4.0f',dpwr2) else
+        if seqfil='dec3pul' then
+          write($device,70,wc2max-30,'     dpwr3=%4.0f',dpwr3) else
+            if (seqfil='d2pul')AND(amptype='cc') then
+              write($device,70,wc2max-30,'     dhp=%4.0f',dhp) else
+                write($device,70,wc2max-30,'     tpwr=%4.0f',tpwr)
+    endif endif endif endif
+
+    write($device,10,wc2max-40,'phase diff(90/270) = %6.2f   min/max ratio= %4.2f',$phdiff,$ratio)
+    write($device,10,wc2max-50,'pulse seq=%s',seqfil)
+    if seqfil='d2pul' then
+      write($device,70,wc2max-50,'tof= %6.1f    dof= %6.1f',tof,dof)
+    endif
+    arrayplot(20,.4*wc2max,$device,'pw')
+
+    if $device='graphics' then  "ask about plotting"
+      dsid
+      if n1<>'noplot' then   
+        if n3='' then input('Plot Results? (n/y)'):$plotny
+                 else $plotny='y' 
+        endif "if auto dont ask"
+        if $plotny='y' then 
+          $device='plotter'
+          else $device='done'
+        endif
+        else
+          $device='done'
+      endif
+      else
+        plid page
+        $device='done'
+    endif
+
+  until $device='done'
+endif
+
+" ***restore values*** "
+pw=pw90 r1=0 f wc=wcmax vp=0
+
+  "***********************output to results file***************************"
+
+if n3<>'' then 
+  write('file',userdir+'/results/results.'+n3,'')
+  write('file',userdir+'/results/results.'+n3,'Pulse Width Determination')
+  format(pw90,6,2):$pw90str
+  format($phdiff,5,2):$phdiffstr
+  format($ratio,5,2):$ratiostr
+  if seqfil='decpul' then
+    format(dpwr,4,0):$dpwrstr
+    write('file',userdir+'/results/results.'+n3,'90 degree pulse=%s   dpwr=%s   phase  difference=%s   min/max ratio=%s',$pw90str,$dpwrstr,$phdiffstr,$ratiostr) else
+    if seqfil='dec2pul' then
+      format(tpwr,6,2):$dpwr2str
+      write('file',userdir+'/results/results.'+n3,'90 degree pulse=%s   dpwr2=%s   phase  difference=%s   min/max ratio=%s',$pw90str,$dpwr2str,$phdiffstr,$ratiostr) else
+        format(tpwr,6,2):$tpwrstr
+        write('file',userdir+'/results/results.'+n3,'90 degree pulse=%s   tpwr=%s   phase  difference=%s   min/max ratio=%s',$pw90str,$tpwrstr,$phdiffstr,$ratiostr)
+  endif endif
+  wexp='ten90'
+  au 
+endif 

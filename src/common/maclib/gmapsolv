@@ -1,0 +1,45 @@
+"macro gmapsolv"
+
+// gmapsolv
+//
+// Edit this macro for shimming in automation.
+// Parameter adjustments for other solvents are typical for shimmap made
+// on d2o, and may need further adjustment for your particular system.
+// Typical parameters for d2o: d1=2 nt=1-4 gain=26 (Inova) or 10 (Mercury).
+
+$Solvent = solvent
+if $#>0.5 then
+  $Solvent = $1
+endif
+$style='db'
+getparam('style','Probe'):$style
+
+if (tn='lk') then
+  $solv='' format($Solvent,'lower'):$solv
+  if ($solv='cdcl3' or $solv='cd2cl2' or $solv='thf' or $solv='d2o_10') then
+    if (d1<2) then d1=2 endif
+    if $style='db' then nt=nt*2 gain=gain+6 endif
+    if $style='cold' then nt=nt*4 gain=gain+6 endif
+  elseif ($solv='d2o' or $solv='dmso') then
+    if (d1<2) then d1=2 endif
+  elseif ($solv='acetone' or $solv='cd3od' or $solv='cd3cn') then
+    if (d1<8) then d1=8 endif
+  endif
+    if $style='one' then nt=1  endif
+    if $style='id' then nt=2  endif
+endif
+exists('tmpgradtype','parameter'):$e
+if ($e) then is_postvj22b:$e endif
+if ($e) then
+  substr(tmpgradtype,3,1):$gr
+else
+  substr(gradtype,3,1):$gr
+endif
+if ($gr='h' and d1<2) then d1=2 endif
+
+// solvent=$Solvent
+// Leave the above line commented out.  This ensures tof will be
+// correct for different solvents.  Do not use gmap_findtof='y'.
+// For this to work, z0 MUST be correct for the actual solvent.
+// Otherwise, solvent will be restored to its original value.
+

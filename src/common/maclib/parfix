@@ -1,0 +1,113 @@
+"macro parfix"
+"********************************************************"
+"* parfix -- macro to correct parameter values, such	*"
+"*	 	as upper limit, lower limit, stepsize   *"
+"*		and default values			*"
+"*              It includes new additions since Vnmr 4.3*"
+"*              parfix43 brings parameters sets up to   *"
+"*              Vnmr 4.3 standards and this macro       *"
+"*              brings then up to current standards     *"
+"********************************************************"
+
+exists('parversion','parameter'):$parver
+if ($parver < 0.5) then
+   create('parversion','real')
+   parversion=0
+   setprotect('parversion','on',4)
+endif
+if (parversion < 4.25) then
+   parfix43
+endif
+
+" Set at limits to delay limits "
+setlimit('at',14)
+
+setlimit('wp',5e6,0,0)
+exists('dseq','parameter'):$e
+if ($e < 0.5) then	
+   create('dseq','string')
+endif
+exists('dres','parameter'):$e
+if ($e < 0.5) then	
+   create('dres','integer')
+   setlimit('dres',360,1,0)
+   dres = 1
+endif
+
+settype('in','flag')
+setenumeral('in',3,'n','w','y')
+setenumeral('tin',3,'n','w','y')
+
+exists('x4','parameter'):$e
+if ($e < 0.5) then
+   create('x4','integer')
+   setlimit('x4',19)
+endif
+exists('y4','parameter'):$e
+if ($e < 0.5) then
+   create('y4','integer')
+   setlimit('y4',19)
+endif
+
+" insref "
+exists('insref','parameter'):$e
+if ($e < 0.5) then
+   create('insref','real')
+   setgroup('insref','display')
+   ins=100
+   insref=1
+   insref='n'
+endif
+" ins2 "
+exists('ins2','parameter'):$e
+if ($e < 0.5) then
+   create('ins2','real')
+   setgroup('ins2','display')
+   ins2=100
+endif
+" ins2ref "
+exists('ins2ref','parameter'):$e
+if ($e < 0.5) then
+   create('ins2ref','real')
+   setgroup('ins2ref','display')
+   ins2ref=1
+   ins2ref='n'
+endif
+exists('sf1','parameter'):$e
+if ($e < 0.5) then
+   create('sf1','real')
+   setgroup('sf1','display')
+   sf1=0
+endif
+exists('wf1','parameter'):$e
+if ($e < 0.5) then
+   create('wf1','real')
+   setgroup('wf1','display')
+   wf1=at
+endif
+exists('console','parameter'):$e
+if ($e < 0.5) then
+   create('console','string')
+   console=''
+endif
+exists('reffrq','parameter'):$e
+if ($e < 0.5) then
+   create('reffrq','real')
+   setgroup('reffrq','display')
+   reffrq=sfrq + (rfl - sw/2)/1e6
+endif
+exists('refpos','parameter'):$e
+if ($e < 0.5) then
+   create('refpos','frequency')
+   setgroup('refpos','display')
+   refpos = 0
+endif
+getdim:$e
+if ($e > 1.5) then
+   par2D
+endif
+if ($e > 2.5) then
+   par3d('nodg1')
+endif
+
+setvalue('parversion',5.1)

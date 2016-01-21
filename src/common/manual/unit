@@ -1,0 +1,39 @@
+
+unit - define conversion units
+
+The unit command will define a linear relationship which can be used
+to enter parameters with units.  The unit is applied as a suffix to the
+numerical value.  The definition of the linear relations follows the
+traditional y = mx + b equation, where x is the input value and y
+is the converted result.  The unit command has the generic structure
+unit(suffix,label,m,b) where suffix is the identifying name for the unit,
+label is a name which will be displayed when the axis parameter is set
+to the value of the suffix (if the suffix is only a single character),
+m is the slope of the linear relationship and b is the intercept.
+The suffix and label are limited to twelve characters in length.
+Both m and b may be defined in two ways: either as a numerical value
+or as the name of a parameter.  If a parameter name is used, it may
+be optionally followed with the parameter tree to use (i.e.,  current,
+processed, global, or systemglobal). If a parameter name is used for
+the slope, another optional keyword may be supplied which specifies
+whether the parameter value should be a multiplier (keyword 'mult')
+or a divisor (keyword 'div'). If a parameter name is used for the
+intercept, another optional keyword may be supplied which specifies
+whether the parameter value should be added (keyword 'add') or
+subtracted (keyword 'sub').  The default parameter tree is 'current'.
+The default slope keyword is 'mult' and the default intercept keyword
+is 'add'.  To remove a unit, define the unit with a 0 for the slope.
+Entering the unit command with no arguments displays all currently
+defined units.
+
+A convenient place to put unit commands for all users is in the
+bootup macro.  Put private unit commands in your login macro.
+Some examples of unit commands include:
+
+unit('k','kHz',1000)               r1=10k will set r1 to 10000
+unit('p','ppm','sfrq','processed') r1=10p will set r1 to 10*sfrq where sfrq
+                                   is taken from the processed tree
+unit('p','',0)                     r1=10p will set r1 to 10 and give
+                                   an error 'unknown unit p'
+unit('F','degF',5/9,-32*5/9)       r1=212F will set r1 to 100 (degrees C)
+unit('C','degC',9/5,32)            r1=100C will set r1 to 212 (degrees F)

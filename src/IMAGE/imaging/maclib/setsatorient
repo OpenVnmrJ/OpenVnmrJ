@@ -1,0 +1,74 @@
+"macro setsatorient"
+"************************************************************************************"
+" setsatorient - Set satband orientation                                             "
+"                                                                                    "
+" Details: setsatorient('set') - sets satbands according to satorient parameter      "
+"          setsatorient('add') - adds satbands according to satorient parameter      "
+"                                                                                    "
+"************************************************************************************"
+
+create('satorient','string','current','cor')
+
+$action = ''
+if ($# > 0) then
+  $action=$1 
+elseif($##>0) then // return whether satband is displayed.
+  gplan('isGplan'):$n
+  if(not $n) then return(0) endif
+  $size=size('iplanDefaultType')
+  $i=0
+  while($i<$size) do
+    $i=$i+1
+    if(iplanDefaultType[$i]=4) then
+	return(1)
+    endif
+  endwhile
+  return(0)
+else
+  return
+endif
+
+$size=size('satpos')
+$ind=-1
+if ($action = 'set' or iplanType<>4 or satorient='3orthogonal') then
+  $ind=1
+  spsi=0 sphi=0 stheta=0 satpos=0
+  setvalue('satthk',5) // to avoid calling _satthk
+elseif($action='add') then
+  setsatorient:$n
+  if($n>0) then
+    $ind=$size+1
+  else 
+    $ind=$size
+  endif
+  if($ind>1) then // shift the position.
+    setvalue('satpos',satpos[$ind-1]-satthk[1]*0.1,$ind)
+  else
+    setvalue('satpos',0,$ind)
+  endif
+  setvalue('satthk',satthk[1],$ind)
+endif
+if($ind<0) then return endif // $action is not 'add', nor 'set'
+
+if (satorient='trans') then
+  spsi[$ind]=0.0 sphi[$ind]=0.0 stheta[$ind]=0.0
+elseif (satorient='cor') then
+  spsi[$ind]=0.0 sphi[$ind]=0.0 stheta[$ind]=90.0
+elseif (satorient='sag') then
+  spsi[$ind]=90.0 sphi[$ind]=0.0 stheta[$ind]=90.0
+elseif (satorient='trans90') then
+  spsi[$ind]=0.0 sphi[$ind]=90.0 stheta[$ind]=0.0
+elseif (satorient='cor90') then
+  spsi[$ind]=0.0 sphi[$ind]=90.0 stheta[$ind]=90.0
+elseif (satorient='sag90') then
+  spsi[$ind]=90.0 sphi[$ind]=90.0 stheta[$ind]=90.0
+elseif (satorient='3orthogonal') then
+  spsi[1]=0.0 sphi[1]=0.0 stheta[1]=0.0 satpos[1]=0 
+  setvalue('satthk',satthk[1],1)
+  spsi[2]=0.0 sphi[2]=0.0 stheta[2]=90.0 satpos[2]=0
+  setvalue('satthk',satthk[1],2)
+  spsi[3]=90.0 sphi[3]=0.0 stheta[3]=90.0 satpos[3]=0
+  setvalue('satthk',satthk[1],3)
+endif
+sat='y'
+gplan('addType',4) 

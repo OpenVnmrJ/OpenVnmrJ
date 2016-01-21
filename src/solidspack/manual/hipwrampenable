@@ -1,0 +1,127 @@
+**********************************************************************
+hipwrampenable (P) - set high or low-power RF on VNMRS equipped with high-
+                     power amplifiers. 
+***********************************************************************
+
+  hipwrampenable - sets high or low-power RF on VNMRS equipped with high-
+     power amplifiers. This global parameter is a string whose entries are
+     the characters 'y' and 'n' with no separation. The number of 
+     characters must equal the number of channels, numrfch. The characters
+     from left to right refer to the transmitter channels "1","2","3" ...
+     etc, which for VNMRS correspond to preamps or RF cable outputs from the
+     Front End and from the transmitters in the RF card cage, right to left.
+     Set: 'y' for high power and 'n' for low power. 
+
+  The parameter hipwrampenable affects only those channels whose amplifiers 
+  are controlled by a High/Low Power Relay Panel. Relay Panels are found on
+  systems that require low power for Liquids NMR and high power for Solids 
+  NMR. They are usually located in the same bays that contain the high-power 
+  amplifiers.
+
+  For high-band channels the High-Power Proton RF Amplifier is driven by the 
+  standard 50-Watt amplifier "A" in the standard left bay. In high-power
+  mode the output of the driver is directed through the High-Power Proton RF
+  Amplifier to the Front End to produce up to 800 to 1000 Watts. In low-power 
+  mode the output of the 50-Watt Amplifier "A" goes directly to the Front End. 
+
+  For low-band channels a High-Power 6-200 MHz or 10-130 MHz Amplifier replaces 
+  the standard 300-Watt Amplifier "B" in the standard left bay. In high-power
+  mode the Relay attenuates the input of the Amplifier so that its output is 
+  about 1000 Watts.  In low-power mode the Relay attenuates the input of the 
+  Amplifier so that its output is a maximum of 300 Watts.
+
+  Create hipwrampenable on the commandline with: 
+
+     create('hipwrampenable','string','global')
+
+  If hipwrampenable is not present the default is 'n' for all channels. 
+ 
+
+
+
+
+
+
+
+
+ 
+  
+  preAmpConfig - sets the band of the preamp, high or low, connected to 
+     each transmitter channel. This global parameter is a string whose 
+     entries are the characters "H" "L" and"X" separated by commas.  The 
+     number of characters must equal the number of channels, numrfch. The 
+     characters from left to right refer to the transmitter channels
+     "1","2","3".. etc, which for VNMRS correspond to preamps or RF cable 
+     outputs from the Front End and fom the transmitters in the RF card 
+     cage, right to left. Set: 'H' for a highband preamp, 'L' for a 
+     lowband preamp and 'X' for no preamp. 
+   
+  nm1 - returns the transmitter corresponding to the nucleus in argument 
+     1. nm1 is used to set the channel number for obs, dec, dec2 and dec3 
+     on the Channels screen of the Acquisition Page. If probeConnect and 
+     preAmpConfig are present they are used. Otherwise if rfchannel is
+     present,it is used or if rfchannel is not present the defaults are set. 
+
+  probeConnect and preAmpConfig are required for all experiments that use 
+  transmitters "3" and "4" as Obs or Dec.   Create probeConnect and 
+  preAmpConfig as global parameterson the commandline with: 
+
+     create('probeConnect','string','global')
+     create('preAmpConfig','string','global')
+
+  If probeConnect is present it will overide the transmitter settings in 
+  the 'current' parameter rfchannel. 
+
+  If probeConnect and preAmpconfig are not created and rfchannel is not
+  present the default transmitters are: 
+
+     Obs (highband) "1" Dec (lowband) "2" 
+     Obs (lowband) "2"  Dec (highband "1" 
+     Dec2 (highband or lowband) "3"
+     Dec3 (highband or lowband) "4" 
+
+  If probeConnect and preAmpconfig are not created the default preamps are
+  presumed to be:
+
+     "1" highband 
+     "2" lowband
+     "3" lowband 
+     "4" lowband 
+
+  probeConnect and preAmpConfig must both exist or both be absent. 
+  If they exist both must have correct values.  An empty string or incorrect
+  string in either parameter will cause errors in channel selection. 
+
+  Examples: 
+
+  ProbeConnect = 'H1 C13 F19 N15', PreAmpConfig = 'HLHL', numrfch = 4,
+  tn = 'H1', dn = 'C13', dn2 = 'N15' causes: 
+
+      Obs on channel "1"
+      Dec on channel "2" 
+      Dec2 on channel "4"
+
+  ProbeConnect = 'H1 N15 F19 C13', PreAmpConfig = 'HLHL', numrfch = 4, 
+  tn = 'H1', dn = 'C13', dn2 = 'N15' causes: 
+
+      Obs on channel "1"
+      Dec on channel "4" 
+      Dec2 on channel "2"
+
+  ProbeConnect = 'H1 N15 F19 C13', PreAmpConfig = 'HLHL', numrfch = 4, 
+  tn = 'C13',dn = 'H1', dn2 = 'N15' causes: 
+
+      Obs on channel "2"            
+      Dec on channel "1"
+      Dec2 on channel "4"
+
+  
+
+
+      
+
+
+
+  
+
+

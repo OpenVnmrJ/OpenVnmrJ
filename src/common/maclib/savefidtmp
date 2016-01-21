@@ -1,0 +1,37 @@
+"macro savefidtmp"
+$tmplt=''
+exists('tmpfidtmplt','parameter','global'):$is
+if ($is) then
+   $tmplt=tmpfidtmplt
+   chkname($tmplt,'alnum-/'):$sdum,$tmplt
+endif
+if ($tmplt='') then
+   $tmplt=userdir+'/tmpdata'
+endif
+$svftmplt=svftmplt
+chkname(svftmplt,'alnum-'):$sdum,$svftmplt
+if ($svftmplt<>svftmplt) then
+   svftmplt=$svftmplt
+   setvalue('svftmplt',svftmplt,'processed')
+endif
+Svfname($tmplt+'/'+svftmplt,'','.fid'):$name
+$dirname='' $basename=''
+shell('dirname '+$name):$dirname
+shell('basename '+$name):$basename
+if ($## > 0) then return($dirname,$basename) endif
+
+exists($dirname,'directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+$dirname):$dum
+   exists($dirname,'directory'):$direx
+endif
+if ($direx=0) then
+   write('error','Could not create %s',$dirname)
+   return
+endif
+file=$name
+pwd:$curdir
+cd($dirname):$dum
+svf($basename)
+cd($curdir):$dum
+

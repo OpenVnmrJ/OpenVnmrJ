@@ -1,0 +1,28 @@
+"macro vvAppdir"
+// on puts the appdir at the bottom of the list
+// ontop puts the appdir at the top of the list
+// off removes the appdir from the list
+
+appdir('file'):$path
+if ($1 = 'on') then
+  write('file',$path,'1;%s;%s',$2,$3)
+elseif ($1 = 'ontop') then
+  shell('mv '+$path+' '+$path+'_tmp'):$e
+  write('file',$path,'1;%s;%s',$2,$3)
+  shell('cat '+$path+'_tmp >> '+$path)
+  shell('rm  '+$path+'_tmp')
+elseif ($1 = 'off') then
+  $line=''
+  write('line3','1;%s;%s',$2,$3):$app
+  shell('mv '+$path+' '+$path+'_tmp')
+  lookup('mfile',$path+'_tmp','filekey'):$key1
+  $ret = 2
+  while $ret > 1 do
+    lookup('mfile',$key1,'readline','filekey'):$line,$key1,$ret
+    if (($line <> $app) and ($ret = 2)) then
+      write('file',$path,'%s',$line)
+    endif
+  endwhile
+  shell('rm  '+$path+'_tmp')
+endif
+appdir('reset')

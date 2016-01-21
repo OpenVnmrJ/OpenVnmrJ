@@ -1,0 +1,73 @@
+"macro hethom3D"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for homo2D"
+  module('combine','presat wet gradient par2D par3D hetero2D homo2D',newmodules):newmodules
+  module($1)
+
+return
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+"Acquisition parameters"
+
+hetero2D('acquisition')
+refsource2='sfrq'
+
+	"It is assumed that the gradient coherence "
+	"  selection is for the hetero pathway"
+	"  May be reset by pslabel_setup macro"
+d3=0
+ni=64 ni2=64 at=0.05
+sw=sw
+mult=0
+sw2=sw
+phase2=1,2 	
+	"If needed, phase2 will be reset by rtx or pslabel_setup macro"
+
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+"Processing parameters"
+
+hetero2D('process')
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+refsource2='sfrq'
+f2coef='1 0 0 0 0 0 -1 0'
+	"f2coef will be, if needed, reset by rtx or pslabel_setup macro"
+fn=512 fn1=128 fn2=128
+ph ph1 ph2
+	"The following is needed because ni was reset"
+setLP1
+setLP2
+gaussian
+specdc3d='ynn'
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+"Display parameters"
+
+hetero2D('display')
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+axis='pdp'
+full
+rp2=0 lp2=0
+rfl2=rfl rfp2=rfp
+wp2=wp sp2=sp 
+
+ENDIF
+"**********************************************"
+

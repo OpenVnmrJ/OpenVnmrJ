@@ -1,0 +1,61 @@
+"macro HTth"
+"HTth - calculate amplitude threshold for Hadamard NMR Experiments "
+
+if($# > 0) then 
+  $noise = $1
+endif
+
+$vs=100.0 lb=1.0/at sb='n' gf='n' awc='n' ai 
+
+if (solvent='D2O') or (solvent='d2o') then
+  wft('nods',1) av dc
+  axis='h'
+  vsadj($vs) 
+  delta=sw/50 
+  cr=sp+2*delta
+  $wp = sp+wp-2*delta
+else
+  wft('nods',1) av dc
+  axis='p'
+  solppm:$sol
+  sp=($sol-5.0)*sfrq wp=10p 
+  peak:$x,$sol  
+
+  addpar('ss')
+  ssfilter=100 ssntaps=121 axis='h'
+  f sslsfrq=(sp+wp/2)-$sol 
+
+  wft('nods',1) vsadj($vs) 
+  delta=sw/50 
+
+  if(sslsfrq > 0.0) then
+    cr=sp+wp/2+delta
+    $wp=sp+wp-delta
+  else
+    cr=sp+delta
+    $wp=sp+wp/2-delta
+  endif
+endif
+
+$n=0 $best=0 
+repeat
+  dsn:$try
+  if $try>$best then $best=$try endif
+  cr=cr+delta/2
+  $n=$n+1
+until $n>=100 or cr>$wp
+
+exists('ssfilter','parameter'):$e
+if($e) then ssfilter='n' endif
+
+$th = 4.0*$vs/$best
+
+if ($#>0) then
+  if ($noise > 0) then
+    write('line3','S/N %.2f of required level', $noise/$th)
+    dps plotHT(`inset`)
+  endif
+endif
+
+return($th)
+

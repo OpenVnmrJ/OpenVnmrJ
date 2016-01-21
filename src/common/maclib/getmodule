@@ -1,0 +1,73 @@
+"macro getmodule"
+// getmodule
+// usage: getmodule('modulename'<,dirpath<,tree<,parameter>>>)<:$retvalue>
+// arg1 - modulename
+// arg2 - (optional) pathname where the module should be read from
+//         default is studydir/dirinfo/modules
+//         if arg2 is an empty string, it is set to default
+//         arg2='cp' is a keyword for curexp (auto='n') or autodir (auto='y')
+// arg3 - (optional) (read to which) tree (default is current)
+// arg4 - (optional) specific parameter  - in this case the value
+//	    of the parameter is read into the tree or returned
+//	    the calling macro, but not both.  Consequently, if a return
+//	    argument is supplied arg3 is ignored.
+
+if ($# < 1) then return endif
+
+// define path where the module is saved
+$path=''
+if ($# < 2) then $2='' endif
+if ($2='') then
+    Automacrodir:$2
+    if $2='' then return endif
+        // Automacrodir returns studydir/dirinfo/macdir
+    substr($2,'dirname'):$2
+    $2=$2+'/modules'
+    exists($2,'directory'):$direx
+    if not $direx then return endif
+endif
+$path=$2
+if ($path='cp') then
+        //  special case
+   if (auto='y') then $path=autodir
+   else $path=curexp endif
+endif
+
+// define parameter tree 
+if ($# < 3) then $3='' endif
+if ($3='') then $3='current' endif
+
+$module=$path+'/'+$1
+exists($module,'file'):$moduleex
+if not $moduleex then return endif
+
+if ($# < 4) then
+// read the entire module
+    fread($module,$3)
+else
+    if ($## < 1) then
+// read the specific parameter value
+	readparam($module,$4,$3)
+    else
+// get the value of the parameter and return
+        fread('','usertree')
+        fread($module,'usertree')
+        $type='' $s=''
+        is_param($4,'usertree'):$is,$s,$type
+        if not $is then
+	    fread('','usertree')
+	    return
+        endif
+     	if $type='string' then $value=''
+    	else $value=0 endif
+// What about an arrayed value?
+	getvalue($4,'size','usertree'):$size
+	$i=0
+	while $i < $size do
+	    $i=$i+1
+	    getvalue($4,$i,'usertree'):$value[$i]
+	endwhile
+    	fread('','usertree')
+    	return($value,1)
+    endif
+endif

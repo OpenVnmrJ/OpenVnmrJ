@@ -1,0 +1,740 @@
+"macro xmhaha"
+"******************************************************************"
+"xmhaha - this is a gateway macro for chempack studyqueue actions"
+
+//  Following arg1 are supported
+//	pause 		set activestudy=''
+//	sendcmd		send arg2 to foreground vnmr via send2Vnmr
+//	clearSQ		Clear studyQueue
+//	readstudy	Display studyQueue / prepare for "More on this.."
+//	readloc		Display studyQueue for a given location
+//	autoSQ		Display auto queue for a given automation
+//	refreshSQ	Refresh studyqueue display
+//	showstudy	Display studyQueue for the sample in curexp
+//	mknode		Add a node to studyQueue for a given experiment
+//	writesq		Writes out study.xml and enterSQ in sqdir
+//	deleteSQnode	Delete a given node from the studyQueue
+//	emptytrash	Empty trash can
+//	CQ2SQ		Rebuild studyQueue for a given chempackQ in curexp
+//	buildCQ		Rebuild chempackQ for a given studyQueue in tmpstudy
+//	protocol	executes whatever is in the macro field of a protocol
+//	setupexp	Adds $2 to the queue or executes $2 in curexp 
+//				(depends on seqfil)
+//				Evaluates curpar and recall appropriate
+//				   firstexp parameters if needed
+//	setupdosy	executes $2 in curexp (cannot added to queue)
+//	setupstudy	Adds $2 to queue (cannot be executed in curexp)
+//				Used to add entries from studylib
+//	convcurpar	Converts curpar to "experiment" (cannot be added to queue)
+//				Does not evalues curpar for firstexp
+//	buildsq		Build studyQueue with supplied information
+//	doubleclick 	Do Action for a given node
+//	dnd		Do Action for a given node
+//	delete		Delete a node from studyQueue and adjust chempackQ
+//	move		Move a node within studyQueue and adjust chempackQ
+//	copy		Make a copy of a node in studyQueue and adjust chempackQ
+//	swapqueue	moves a node from day to night and vice versa
+//	grandma		Create the grandma node in studyqueue
+
+$tailX='tail'
+whichtail:$tailX
+
+"******************************************************************"
+
+IF ($1='pause') THEN
+   activestudy=''
+   vnmrjcmd('SQ no-op activestudy=\'\'')
+
+"******************************************************************"
+
+ELSEIF ($1='normalmode') THEN
+   vnmrjcmd('SQ normalmode') // Sets the SQ panel background
+
+"******************************************************************"
+
+ELSEIF ($1='submitmode') THEN
+   vnmrjcmd('SQ submitmode') // Sets the SQ panel background
+
+"*******************************************************************"
+ELSEIF ($1 ='sendcmd') THEN
+    $sendfile=userdir+'/persistence/.talk2j'
+    exists($sendfile,'file'):$e
+    if $e>0.5 then
+        $cmd='send2Vnmr '+$sendfile+' "'+$2+'"&'
+        shell($cmd):$x
+    endif
+"*******************************************************************"
+ELSEIF ($1='clearSQ') THEN
+   is_submitmode:$issubmit
+   if ($issubmit>0) then
+	walkupQ('refresh')
+   else
+	activestudy=''
+	vnmrjcmd('SQ delete all')
+   endif
+"*******************************************************************"
+ELSEIF ($1 = 'moreonthis') THEN
+   $defaultQ=''
+   defaultqueue:$defaultQ
+   $iscpsamp=0
+   is_cpsample:$iscpsamp
+   if ($iscpsamp=0) then
+	write('line3','New study....')
+	newsample
+        return
+   endif
+   $mimic='no' getadminfo('alwaysmimic'):$mimic
+
+   if ($defaultQ='autodir') and ($mimic<>'yes') then
+      if (system='datastation') then
+	walkupQ('resumeq','enter')
+      else
+	walkupQ('resumeq')
+      endif
+   else
+        walkupQ('addq')
+   endif
+"*******************************************************************"
+ELSEIF ($1 = 'clonestudy') or ($1 = 'cloneexp') THEN
+
+    $editok=0
+    operights('canclonestudies'):$editok
+    if ($editok<0.5) then
+        write('error','%s does not have permission to clone',operator)
+        return
+    endif
+
+   expactive:$active
+   if ($active>0) then
+        write('error','curexp has active acquisition')
+        return(1)
+   endif
+
+   is_submitmode:$issubmit
+   if ($issubmit) then
+     if ($1='clonestudy') then
+	walkupQ('savestudy')
+     else
+        write('error','curexp is in submit mode')
+     endif
+        return
+   endif
+
+  if ($1='clonestudy') then
+     $iscpsamp=0
+     is_cpsample:$iscpsamp
+     if ($iscpsamp=0) then
+        write('error','curexp does not have a study to clone')
+	return
+     endif
+     cqinitCP
+     vnmrjcmd('SQ delete tmpstudy')
+     xmhaha('pause')
+     xmhaha_cloneSQ
+  else
+     xmhaha_cloneEXP
+  endif
+
+   return
+"*******************************************************************"
+ELSEIF ($1 = 'readstudy') THEN
+	
+   if (($3 <> 'Canvas') and ($3 <> 'StudyQueue') and ($3 <> 'Default')) then
+	return(0)
+   endif
+
+   expactive:$active
+   if ($active>0) then
+	write('error','curexp has active acquisition')
+	return(1)
+   endif
+
+   exists($2+'/studypar','file'):$iscp
+   if ($iscp=0) then
+	exists($2+'/dirinfo/macdir/sampleglobal','file'):$iscp
+   endif
+   if ($iscp) then
+	$studyowner=''
+	getsampglobal($2+'/dirinfo/macdir','studyowner'):$studyowner
+	if (operator<>$studyowner) and ($studyowner<>'') then
+	    operights('viewallopstudies'):$ok
+	    if ($ok<0.5) then
+		write('error','Study owned by %s.  %s does not have access',$studyowner,operator)
+		return(1)
+	    endif
+	endif
+        exists($2+'/dirinfo/clusterfids','file'):$cluster
+	is_submitmode:$submit
+	if ($submit) then
+	    if (clustermod='yes') then
+		if ($3='StudyQueue') then
+		    if ($cluster) then
+			studyCluster('addcluster',$2)
+		    else
+		    	studyCluster('addstudy',$2)
+		    endif
+		    return(1)
+		else
+		    write('line3','Warning: A study can be added only by drag-n-drop to SQ')
+		    return(1)
+		endif
+	    else
+		write('error','current workspace is in submit mode')
+		return(1)
+	    endif
+	endif
+        if ($cluster=0) then
+            getsampglobal($2+'/dirinfo/macdir')
+        endif
+
+	xmhaha('pause')
+	if ($3='StudyQueue') and (not $cluster) then
+		xmhaha_addQ($2)
+	elseif ($cluster) then
+		studyCluster('studyqueue',$2)
+	else
+		file='exp' 
+		$LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+		xmhaha_buildSQ($2,$LIST,'lock')
+	endif
+	return(1)
+   else
+	return(0)
+   endif
+
+"*******************************************************************"
+ELSEIF ($1 = 'readloc') THEN
+   xmhaha('pause')
+   $LIST='EXPLIST','LONGLIST'
+   if ($# > 3) then
+	xmhaha_buildSQ($2,$LIST,'lock',$3,$4)
+   else
+        xmhaha_buildSQ($2,$LIST,'lock',$3)
+   endif
+   
+"*******************************************************************"
+ELSEIF ($1 = 'autoSQ') THEN
+   if ($2 <>'') then
+	xmhaha('pause')
+	xmhaha_autoSQ($2)
+   endif
+"*******************************************************************"
+ELSEIF ($1='refreshSQ') THEN
+//   write('reset',userdir+'/persistence/SQexp')
+//   write('file', userdir+'/persistence/SQexp', curexp)
+   cqinitCP
+   is_submitmode:$issubmit
+   if (((opentray[1]='close') or (opentray[1]='')) and
+	($issubmit=0)) then
+		vnmrjcmd('SQ delete tmpstudy')
+		xmhaha('showstudy')
+		return
+   endif
+
+   if ($issubmit>0) then
+		$sqnode=''
+		xmhaha('CQ2SQ'):$sqnode
+		if ($sqnode='') or ($sqnode='n') then
+			xmhaha('grandma')
+		endif
+		return
+   endif
+
+   if (opentray[1]<>'close') and (opentray[1]<>'') then
+	return
+
+	$autodir=autodir
+	strstr($autodir,'studytray'):$ret
+	if ($ret) then
+	   shell('dirname '+$autodir):$dir
+	   shell('dirname '+$dir):$autodir
+	endif
+	if ($autodir<>'') and ($autodir<>'.') then
+		xmhaha('autoSQ',$autodir)
+		return
+	endif
+   endif
+
+"*******************************************************************"
+ELSEIF ($1 = 'showstudy') THEN
+   isnewexp:$new
+   bgmode_is:$bg
+   if (auto='y') or ($bg) then return endif
+   SQDisplay('sample')
+/*
+   if ($new=1) then 
+	$archsamp=archivedir+'/'+sample
+   else
+	shell('dirname '+file):$archsamp
+   endif
+
+   xmhaha('pause')
+   exists($archsamp+'/dirinfo','directory'):$direx
+   if ($direx=0) then return endif
+
+   $LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
+   xmhaha_buildSQ($archsamp,$LIST,'lock')
+*/
+
+"*******************************************************************"
+ELSEIF ($1 = 'mknode') THEN
+
+		"Uses modified xmhaha_mknode macro"
+		" arg2 - protocol name                                  "
+		" arg3 - attributes and values as array for action node "
+		" arg4 - node insert point                              "
+		" arg5 - action / both node                             "
+		" arg6 - attributes and values as array for parent node "
+		"               Valids only if arg5='both'              "
+
+   sqdir=cursqexp+'/tmpstudy'
+   studyid='tmpstudy'
+   $node='' $newnodes=''
+   if ($# < 3) then $3='' endif
+   if ($# < 4) then $4='' endif
+   if ($# < 5) then $5='' endif
+   if ($# < 6) then $6='' endif
+
+   xmhaha_mknode($2,$3,$4,$5,$6):$node,$newnodes
+   return($node,$newnodes)
+
+"*******************************************************************"
+ELSEIF ($1='writesq') THEN
+//		OBSOLETE
+//   if ($# < 2) then $2='' endif
+//   vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+//   if ($2='buildCQ') then
+//       $cmd='SQ get nodes > tmpstudy id sqattr xmhaha_writesq(\''+sqdir+'\',\'buildCQ\')'
+//   else
+//       $cmd='SQ get nodes > tmpstudy id sqattr xmhaha_writesq(\''+sqdir+'\')'
+//   endif
+//   vnmrjcmd($cmd)
+return
+"*******************************************************************"
+ELSEIF ($1='deleteSQnode') THEN
+    walkupQ_init
+    $list=$2
+    $sqnode=''
+    getcpnode('rev2',cursqexp,$list):$sqnode
+    if ($sqnode<>'') then
+        strstr($sqnode,'xx'):$ret
+        if ($ret) then $sqnode='' endif
+    endif
+    if ($sqnode<>'') then
+        $file=sqdir+'/enterSQ'
+	vnmrjcmd('SQ delete '+$sqnode)
+	shell('(cat '+$file+' | grep -wv '+$sqnode+' > '+$file+'1)'):$dum
+	shell('mv '+$file+'1 '+$file):$dum
+    endif
+
+"*******************************************************************"
+ELSEIF ($1='emptytrash') THEN
+  shell('rm -rf '+userdir+'/trashstudy'):$dum
+  shell('mkdir -p '+userdir+'/trashstudy/info'):$dum
+  shell('mkdir -p '+userdir+'/trashstudy/data'):$dum
+
+"*******************************************************************"
+ELSEIF ($1='CQ2SQ') THEN
+  $snode=''
+  xmhaha_cq2sq:$snode
+  return($snode)
+"*******************************************************************"
+ELSEIF ($1='buildCQ') THEN
+//	OBSOLETE
+//   xmhaha_bCQ
+   return
+"*******************************************************************"
+ELSEIF ($1='vnmr_data') or ($1='vnmr_record') or ($1='vnmr_rec_data') THEN
+
+   exists('craft_xmhaha','maclib'):$cxex
+   if $cxex then
+   	$ret=0
+   	craft_xmhaha($1,$2):$ret
+   	if $ret then return(1) endif
+   endif
+
+   is_submitmode:$OK
+   if ($OK) then
+      if (clustermod='no') then $OK=0 endif
+   endif
+   if ($OK) then
+	$ext=''
+	getext($2):$bname,$ext
+	if ($ext<>'fid')  and ($ext<>'REC') and ($ext<>'rec') then $OK=0 endif
+   endif
+   if ($OK) then
+// a valid fid is selected in cluster mode
+//   Add the fid to the cluster
+	$node=''
+	studyCluster('add',$2):$node
+	if ($node<>'') then
+	    studyCluster('wrxml')
+	endif
+	return(1)
+   endif
+// Let the locaction take over whatever it usually does
+   return(0)
+
+"*******************************************************************"
+ELSEIF ($1='vfs') THEN
+
+   dndvfs($2)
+   return(1)
+
+"*******************************************************************"
+ELSEIF ($1='craft') THEN
+
+   exists('craft_xmhaha','maclib'):$cxex
+   if $cxex then
+        $ret=0
+        craft_xmhaha($1,$2):$ret
+        if $ret then return(1) endif
+   endif
+    return(1)
+"*******************************************************************"
+ELSEIF ($1='directory') THEN
+
+    if $# < 3 then $3='' endif
+    if $# < 4 then $4='' endif
+    $ret=0
+    if $3<>'' and $4<>'' then
+   	exists('craft_xmhaha','maclib'):$cxex
+   	if $cxex then
+            $ret=0
+            craft_xmhaha($1,$2,$3,$4):$ret
+            if $ret then return(1) endif
+   	endif
+    endif
+
+    $e='' $b=''
+    substr($2,'basename'):$b,$e
+    if ($e='vfs') then
+	dndvfs($2)
+	return(1)
+    endif
+    return(0)
+
+"*******************************************************************"
+ELSEIF ($1='unknown') or ($1='file') THEN
+
+   exists('craft_xmhaha','maclib'):$cxex
+   if $cxex then
+        $ret=0
+        craft_xmhaha($1,$2):$ret
+        if $ret then return(1) endif
+   endif
+
+   is_submitmode:$OK
+   if ($OK) then
+      if (clustermod='no') then $OK=0 endif
+   endif
+   if ($OK) then
+// The file MUST be in clusterlib
+	strstr($2,'/clusterlib/'):$OK
+   endif
+   if ($OK) then
+// The file must have ONLY one column.
+	$ret=0
+	shell('(cat '+$2+' | awk \'{print $2}\' | wc -w)'):$ret
+	if ($ret) then $OK=0 endif
+   endif
+   if ($OK) then
+	studyCluster('addlist',$2)
+	return(1)
+   endif
+   $e=''
+   substr($2,'basename'):$b,$e
+   if $e='txt' then
+	shell('vnmr_open '+$2+'&'):$devnull
+	return(1)
+   endif
+   return(0)
+"*******************************************************************"
+ELSEIF ($1='protocol') THEN
+
+    $exp=''
+    getattr($2,'action','macro'):$exp
+    strstr($exp,'xmhaha('):$cpprotocol
+    if ($cpprotocol) then
+        $exp='' $ext=''
+        substr($2,'basename'):$exp,$ext
+    endif
+    if ($exp<>'') then
+        xmhaha('setupexp',$exp,$2)
+    endif
+
+   return(1)
+"*******************************************************************"
+ELSEIF (($1='setupexp') or 
+	($1='setupdosy') or 
+	($1='setupother') or
+	($1='setupcmd') or
+	($1='setupstudy') or 
+	($1='convcurpar')) THEN
+
+   if ($# < 3) then $3='' endif
+   $pname='' substr($3,'basename'):$pname,$ext
+
+   $macro='' $s1=''
+   strstr($2,'('):$ret,$macro,$s1
+   if ($ret=0) then $macro=$2 endif
+   if ($macro=$0) then $macro=$pname endif
+   if ($macro='') then return endif
+
+   exists($macro,'command'):$macex
+   getfilepath($macro,'studylib'):$studyex
+   if ($macex=0) and ($studyex=0) then return endif
+
+   if ($pname='') then $pname=$macro endif
+   $type=''
+   getattr($3,'action','type'):$type
+   $label=''
+   getattr($3,'template','label'):$label
+   if ($label='') then $label=$pname endif
+
+//   $OK=1
+//   fastuserlogin('evaluate','return'):$OK
+//   if ($OK=0) then
+//	write('error','User is NOT logged in')
+//	return
+//   endif
+   is_submitmode:$issubmit
+   if ($issubmit>0) then
+	if ($1='convcurpar') then
+          write('error','\"convert curpar\" protocol - cannot be added to queue')
+          return
+	endif
+	if (clustermod='yes') then
+	    write('error','Cannot add new experiment while building a study cluster')
+	    return
+	endif
+// If this is the first experiment to the queue, check autodir
+//  to cover a potential possiblity that the VJ is left in submit
+//  mode overnight and the user didn't click the newstudy button 
+//  It is good to check the autodir before any experiment is added to
+//  the queue, but not at submit time 
+        $Nexp='' $Dexp=''
+        walkupQ('readlist'):$Dexp,$Nexp
+        if ($Dexp[1]='') and ($Nexp[1]='') and (wqinit='auto') then
+            $ret=1
+            checkautodir:$ret
+//  if return value is zero, something didn't go right (the checkautodir
+//   would have put the message), so do not add experiment to the queue
+            if not $ret then return endif
+	    setcurrentQ
+        endif
+   endif
+   if (cppauseflg='y') then show_n_pause('close') endif
+   if (customflag='y') then customizepar('save') customizepar('quit') endif
+   if (seqfil='Submitq') or (seqfil='Startq') then
+     if ($## < 1) then
+	write('line3','Adding %s to queue',$label)
+     endif
+	walkupQ('add',$macro,$3)
+   else
+     if ($## < 1) then
+	write('line3','Executing %s',$label)
+     endif
+     if ($1='setupcmd') or ($type='CMD') then
+	exec($2)
+     elseif ($1='setupstudy') or ($studyex) then
+		"The following section is for back compatibility"
+		"  Now all studies will have an associated macro"
+	if ($macex) then 
+	   exec($2)
+	else
+	   studysetup($macro)
+	endif
+     else
+        is_cpfid:$iscpfid
+        isnewexp:$newexp
+        if ($1<>'convcurpar') then
+            $ok=0
+            $arg=$pname
+            is_curreqexp($arg):$ok
+            if ($ok<0) then
+                if ($pname<>$macro) then
+                    is_curreqexp($macro):$ok
+                endif
+            endif
+            if ($ok<0) then $ok=1 endif
+            if ($ok=0) then
+                AutoStrtfid($pname,''):$ok
+            endif
+            if ($ok=0) and ($pname<>$macro) then
+                AutoStrtfid($macro,''):$ok
+            endif
+            if ($ok=0) and ($newexp<0.5) and ($iscpfid<0.5) then
+                setobspars
+            endif
+        endif
+        savesampglobal('cp')
+        exec($2)
+        getsampglobal('cp')
+        if ($newexp<0.5) and ($iscpfid<0.5) then
+            file='exp'
+        endif
+      endif
+   endif
+   return
+"*******************************************************************"
+ELSEIF ($1='buildsq') THEN
+
+   $snode=''
+   xmhaha('pause')
+   if ($# < 3) then
+	$LIST='SampInfo','fidlog','ACQlist'
+   else
+	$LIST=$3
+   endif
+   if ($# < 4) then $4='nolock' endif
+   if ($# > 5) then
+	xmhaha_buildSQ($2,$LIST,$4,$5,$6):$snode
+   elseif ($# > 4) then
+        xmhaha_buildSQ($2,$LIST,$4,$5):$snode
+   else
+        xmhaha_buildSQ($2,$LIST,$4):$snode
+   endif
+
+   return($snode)
+
+"*******************************************************************"
+ELSEIF ($1 = 'doubleclick') or ($1 = 'dnd') then
+
+  if ($2<>'tmpstudy') then
+        $sqattr=sqattr $sqval=sqval $ret=0
+        xmhaha_select($2):$ret
+        if ($ret=0) then sqattr=$sqattr sqval=$sqval endif
+  endif
+  return(1)
+
+"*******************************************************************"
+ELSEIF ($1='delete') THEN
+
+  xmhaha_delete($2)
+  return(1)
+
+"*******************************************************************"
+ELSEIF ($1 = 'move') THEN
+    return(1)
+"*******************************************************************"
+ELSEIF ($1='testmove') THEN
+
+  	$type='' $status='' $lock=''
+	$curid=copyid[1]
+  	if ($curid<>'tmpstudy') then
+	   xmgetatts($curid,'type','status','lock'):$type,$status,$lock
+  	else
+	   return(0)
+  	endif
+        if ($status='') or ($type='') then return(1) endif
+
+    is_submitmode:$issubmit
+    if ($issubmit) and ($lock='on') then
+           write('error','Cannot act on a locked node %s',$2)
+	   return(1)
+    endif
+    xmhaha_move($1,$2,$3)
+    return(1)
+
+"*******************************************************************"
+ELSEIF ($1 = 'swapqueue') THEN
+
+   is_submitmode:$issubmit
+   if ($issubmit=0) then return endif
+   if ($# < 3) then $3=copyid[1] endif
+   
+   if $3='' then return endif
+   $child=''
+   xmhaha2('getchild',$3):$child
+   if ($child='child') then
+        $node=$3
+   else
+        $node=$child
+   endif
+   if ($node='') then return endif
+   $cpnode='' $where=''
+   getcpnode('rev',cursqexp,$node):$cpnode,$where
+   if ($cpnode='') or ($where='') then return endif
+   if ($# < 2) then $2='' endif
+   if ($2='2night') then
+	if ($where='long') then return endif
+   elseif ($2='2day') then
+	if ($where<>'long') then return endif
+   endif
+   if ($where='long') then
+	night2day($cpnode)
+   else
+	day2night($cpnode)
+   endif
+
+"*******************************************************************"
+ELSEIF ($1 = 'copy') THEN
+
+	$ret=0
+        xmhaha_copy(copyid[1],$2):$ret
+	return($ret)
+
+"*******************************************************************"
+ELSEIF ($1 = 'grandma') THEN
+  
+  if ($# < 2) then 
+	$2='new Sample'
+	if (seqfil='Submitq') and (wqinit<>'acq') then
+	   if (replaceQ[4]<>'') then
+		$2='Q from loc'+replaceQ[4]
+		if (traymax=96) or (traymax=768) then
+		   $rack='' format(vrack,'lower'):$rack
+		   $zone='' format(vzone,'lower'):$zone
+		   $2=$2+' zone'+$zone+' rack'+$rack
+		endif
+	   endif
+	endif
+  endif
+  if ($2 = 'new Sample') then
+        $samplename=$2+' [to be Submitted]'
+    if (samplename<>'') then
+	$gtitle=samplename
+    else
+	$gtitle=$2
+    endif
+  else
+        $samplename=$2
+	$gtitle=$2
+  endif
+
+  $snode=studyid
+  $vjcmd='SQ '
+  $vjcmd=$vjcmd+'add new protocol null; '
+  $vjcmd=$vjcmd+'set new id '+$snode+'; '
+  $vjcmd=$vjcmd+'set '+$snode+' title \"'+$gtitle+'\"; '
+  $vjcmd=$vjcmd+'set '+$snode+' exp grandparent; '
+  $vjcmd=$vjcmd+'set '+$snode+' tooltext \"'+$samplename+'\"; '
+  $vjcmd=$vjcmd+'pmove '+$snode+' null; '
+  vnmrjcmd($vjcmd)
+  write('reset',sqdir+'/study.xml')
+  write('reset',sqdir+'/enterSQ')
+
+  $atx=1
+  if ($# < 2) then
+	is_postvj22b:$vj22c
+	if ($vj22c>0) then
+		$attr[$atx]='tooltext','Change Sample Info' $atx=$atx+2
+	else
+        	$attr[$atx]='tooltext','ChangeInfo OR Add Exp' $atx=$atx+2
+	endif
+        $attr[$atx]='title','SampleInfo'  $atx=$atx+2
+  else
+	$attr[$atx]='title',$2  $atx=$atx+2
+  endif
+  $attr[$atx]='time',''  $atx=$atx+2
+	$newnodes='' $node=''
+	xmhaha_mknode('SampInfo',$attr,studyid):$node,$newnodes
+//	xmhaha_enterSQ($newnodes)
+	vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+  samplename=samplename
+  return($node)
+
+"*******************************************************************"
+ENDIF
+

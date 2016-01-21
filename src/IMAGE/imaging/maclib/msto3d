@@ -1,0 +1,547 @@
+"macro msto3d"
+"***********************************************************************"
+" msto3d - multi-slice to 3D data                                       "
+"                                                                       "
+" Modified from svib macro                                              "
+" Usage: msto3d('directory_name')     or msto3d                         "
+"        Load a multislice dataset into current workspace               "
+"        and type msto3d('directory_name')"
+"        The 3D fdf file is created in the directory specified"
+" Comments for svib:                                                    "
+" Make ImageBrowser fdf files from Vnmr fid data                        "
+" A name argument is required, which is used as the name of the         "
+" directory in which the fdf image files will be saved.  Each           "
+" image is saved as a separate file in the directory, with              "
+" binary data in the selected format and plain text header              "
+" information describing the field of view, orientation, etc.           "
+" The image data itself may be saved in several different               "
+" numerical types:                                                      "
+"      'f':  floating point, 32 bit                                     "
+"      'm':  integer, 16 bit                                            "
+"      'b':  integer, 8 bit                                             "
+" Usage:  svib('directory_name',<optional arguments>)                   "
+" Optional arguments:                                                   "
+"   'f', 'm', or 'b'  (output format, default: 'f')                     "
+"   'ph' or 'av'      (phase-sensitive or magnitude, default: 'av')     "
+"   'slice' or 'acq'  (slice or acquisition order, default: 'slice')    "
+"   'epi'             (epi processing)                                  "
+"                                                                       "
+"***********************************************************************"
+
+"** Initialize constants and defaults *********************"
+$prog = 'msto3d: '			"Program ID"
+$basename = 'image'                     "generic phasefile name"
+$headername = 'header'                  "generic header name"
+$ext = '.dat'				"extension added to directory"
+$outfmt = 'f'				"output data type 'f'=float"
+$arraydim = 1
+$deg_to_rad = 3.141592654/180.0		"degree to radian conversion"
+$valuestring = ''
+$arraypss = 0
+$pssorder = 'slice'                     "default image order"
+$phasetype = 1                          "default is magnitude"
+$epi = 0                                "epi processing if set to 1"
+
+if (ns <= 1) then
+    write('error','msto3d:  Error: not a multi-slice dataset')
+    abort  
+endif
+"** Check first argument for directory name ***************"
+if ($# = 0) then
+  input('Enter a directory name: '):$directory
+else
+  $directory = $1
+endif
+
+"** Check for command line arguments **********************"
+if ($# > 0) then
+  $i = 0
+  $count = $#
+  $argno = ''
+  repeat
+    $i = $i + 1
+    format({'$i'},1,0):$argno
+    if (${$i} = 'acq') then
+      $pssorder = 'acq'
+      $count = $count - 1
+    endif
+    if (${$i} = 'slice') then
+      $pssorder = 'slice'
+      $count = $count - 1
+    endif
+    if (${$i} = 'av') then
+      $phasetype = 1
+      $count = $count - 1
+    endif
+    if (${$i} = 'ph') then
+      $phasetype = 2
+      $count = $count - 1
+    endif
+    if (${$i} = 'epi') then
+      $epi = 1
+      $count = $count - 1
+    endif    
+    if (${$i} = 'm'  or  ${$i} = 'f'  or  ${$i} = 'b') then
+      $outfmt = ${$i}
+      $count = $count - 1
+    endif
+    if ($i = 1  and  $count = $#-1) then
+      write('error','svib:  First argument must be directory name.')
+      abort
+    endif
+  until ($i = $#)
+
+  if ($count = 0) then
+    write('error','svib:  First argument must be directory name.')
+    abort
+  else
+    if ($count > 1) then
+      write('error','svib:  Unrecognized argument(s).')
+      abort
+    endif
+  endif
+endif
+
+if ($phasetype = 2)  and  (dmg = 'av'  or  dmg1 = 'av1') then
+  write('error','svib:  Phase-sensitive processing is not possible in av display mode')
+  write('line3','Check dmg and dmg1 parameters')
+  abort
+endif
+
+"** Check existence of target directory *******************"
+$directory = $directory+$ext
+exists($directory,'file'):$exists
+
+if ($exists > 0.5) then
+  write('error',$prog+'A directory '+$directory+' already exists')
+  input('Overwrite it? (y/n): '):$answer 
+
+  if ($answer = 'y') then
+    rm('-r',$directory):$x
+    mkdir($directory)
+  else
+    abort
+  endif
+else
+  mkdir($directory)
+endif
+
+"** Decode the seqcon parameter ***************************"
+" The seqcon string is checked for length and dissected    "
+" into its five standard component fields (assumed to be   "
+" the first five characters). The component fields are     "
+" checked for validity. Seqcon should be composed of 's',  "
+" 'c' & 'n' values only. These indicate n=non loop,        "
+" s=standard loop/array, c=compressed loop.                "
+"----------------------------------------------------------"
+length(seqcon):$length
+$k = 1
+while ($k <= $length) do
+  $seqcon[$k] = ''
+  substr(seqcon,$k,1):$seqcon[$k]
+  $k = $k + 1
+endwhile
+
+if ($seqcon[4] <> 'n') or ($seqcon[5] <> 'n') then
+  write('error','svib does not support 3D or 4D')
+  abort
+endif
+
+" Check for standard flash conversion "
+exists('flash_converted','parameter','processed'):$e
+if ($e > 0.5) and (ni > 1) then
+  $seqcon[3] = 's'
+endif
+
+" Check for compressed flash conversion "
+if ($e > 0.5) and ($seqcon[2] = 'c') and ($seqcon[3] = 'c') then
+  $seqcon[2] = 's'
+endif
+
+"** Check array parameter *********************************"
+if (array <> '') then
+  if ($seqcon[3] = 's') then
+    $arraydim = arraydim/nv
+  else 
+    $arraydim = arraydim
+  endif
+
+if ($epi = 1) then
+     $arraydim = arraydim/ns   "arraydim = arraysize*ns after flashc"
+endif
+
+  "** Check to see if pss is one of the arrayed params ******"
+  arrayvals(1):$namelist,$valuelist
+  $i = 0
+  repeat
+    $i = $i + 1
+    if ($namelist[$i] = 'pss') then
+      $arraypss = 1
+    endif
+  until ($i = size('$namelist'))
+endif
+
+"** Determine slice position index ************************"
+sort('pss'):$sliceindex,$slicevalue
+
+"** Convert Euler angle orientation to nine direction *****"
+" cosines which define the imaging plane orientation       "
+" relative to the magnet frame.                            "
+"**********************************************************"
+cos($deg_to_rad*psi):$cospsi
+sin($deg_to_rad*psi):$sinpsi
+cos($deg_to_rad*phi):$cosphi
+sin($deg_to_rad*phi):$sinphi
+cos($deg_to_rad*theta):$costheta
+sin($deg_to_rad*theta):$sintheta
+
+"** The direction cosine matrix dc is reordered to follow *"
+" the axis definitions in the Vnmr phasefile: traces or   *"
+" F1 axis first. (1<->2, 4<->5, 7<->8)                    *"
+"**********************************************************"
+$dc[1] = -$sinphi*$sinpsi - $cosphi*$costheta*$cospsi
+$dc[2] =  $sinphi*$cospsi - $cosphi*$costheta*$sinpsi
+$dc[3] =  $sintheta*$cosphi
+$dc[4] =  $cosphi*$sinpsi - $sinphi*$costheta*$cospsi
+$dc[5] = -$cosphi*$cospsi - $sinphi*$costheta*$sinpsi
+$dc[6] =  $sintheta*$sinphi
+$dc[7] =  $cospsi*$sintheta
+$dc[8] =  $sinpsi*$sintheta
+$dc[9] =  $costheta
+
+"** Define header entries and formats *********************"
+$format[1] =  'float  rank = %d;'
+$format[2] =  'char  *spatial_rank = "%s";'
+$format[3] =  'char  *storage = "%s";'
+$format[4] =  'float  bits = %d;'
+$format[5] =  'char  *type = "%s";'
+$format[6] =  'float  matrix[] = {%d, %d, %d};'          "3D"
+$format[7] =  'char  *abscissa[] = {"%s", "%s", "%s"};'  "3D"
+$format[8] =  'char  *ordinate[] = { "%s" };'
+$format[9] =  'float  span[] = {%f, %f, %f};'
+$format[10] = 'float  origin[] = {%f, %f, %f};'
+$format[11] = 'char  *nucleus[] = {"%s","%s"};'
+$format[12] = 'float  nucfreq[] = {%f, %f};'  
+$format[13] = 'float  location[] = {%f,%f,%f};'
+$format[14] = 'float  roi[] = {%f,%f,%f};'
+$format[15] = 'float  orientation[] = {%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f};'
+$format[16] = 'char  *file = "%s";'
+$format[17] = 'int    array_index = %d;'
+$format[18] = 'float  %s = %s;'
+$format[19] = 'char  *%s = "%s";'
+
+"**** additional image parameters put into header ****"
+$format[20] = 'int    slice_no = %d;'
+$format[21] = 'int    slices = %d;'
+$format[22] = 'int    echo_no = %d;'
+$format[23] = 'int    echoes = %d;'
+"**** TR, TE, TI parameters are in msec ***"
+$format[24] = 'float  TE = %6.3f;'
+$format[25] = 'float  TR = %6.3f;'
+$format[26] = 'float  TI = %6.3f;'
+$format[27] = 'int ro_size = %d;'   "** original read size **"
+$format[28] = 'int pe_size = %d;'   "** original phase size **"
+$format[29] = 'char *sequence = "%s";'
+$format[30] = 'float  te = %f;'
+$format[31] = 'float  tr = %f;'
+$format[32] = 'float  ti = %f;'
+
+$ti = 0.0
+exists('ti','parameter'):$exists
+if ($exists > 0 ) then
+  exists('ir','parameter'):$e
+  if ($e > 0 ) and (ir[1] = 'y') then
+    $ti = ti 
+  endif
+endif
+
+
+"***** Set $fn, $fn1  *****"
+$isactive=0
+on('fn'):$isactive
+if ($isactive > 0.5) then 
+  $fn = fn else $fn = np
+endif
+
+on('fn1'):$isactive
+if ($isactive > 0.5) then
+  $fn1 = fn1
+else 
+  exists('nv','parameter'):$exists
+  if ($exists) then $fn1 = nv*2 
+  else
+    if (nf > 1) then $fn1 = nf*2
+    else $fn1 = ni*2
+    endif
+  endif
+endif
+
+"** Check 'trace' parameter, match lro, lpe, fn, fn1 ******"
+$sz3 = ns*thk/10  "minimum size in 3rd dimension"
+if(lpe2 < $sz3) then
+  lpe2 = $sz3    "3D, size of dim#3"
+endif
+if (trace = 'f1') then
+  $lro = lro  $lpe = lpe $lpe2 = lpe2 	"?? 3D"
+else
+  $lro = lpe  $lpe = lro  $tmp = $fn $fn = $fn1  $fn1 = $tmp
+  $lpe2 = lpe2 		"?? 3D"
+endif
+
+"** Assemble common information for all headers ***********"
+$rank = 3   "nD=3 for 3D data"
+$spatial_rank = '3dfov'
+$type = 'absval'
+$abs[1] = 'cm'
+$abs[2] = 'cm'
+$abs[3] = 'cm'
+$ord = 'intensity'
+$loc[1] = ppe
+$loc[2] = pro
+$loc[3] = 0	"3D For now"
+$roi[1] = $lpe
+$roi[2] = $lro
+$roi[3] = lpe2  "3D size in dim #3"
+
+
+"** Specify data format ***********************************"
+if ($outfmt = 'f') then
+  $storage = 'float'
+  $bits = 32
+else if ($outfmt = 'b') then
+  $storage = 'char'
+  $bits = 8
+else
+  $storage = 'integer'
+  $bits = 16
+endif endif 
+
+"** Determine if data is compressed-compressed.  If so ****"
+" warn user and abort                                      "
+"**********************************************************"
+
+
+"** check if segmented epi **"
+if ($epi = 1) then
+  $nseg = nseg
+else
+  $nseg = 0
+endif
+"$nseg = num_ints"
+
+if (($epi = 1) and ($nseg > 1)) then epitab endif
+
+"*** fudge it for single slice epi data ***"
+if (($epi = 1) and (ns = 1)) then $seqcon[2] = 's' endif
+$traces = 1
+if ($seqcon[3] = 'c') and ($seqcon[1] = 'c'  or  $seqcon[2] = 'c') then
+  write('error','svib:  Compressed PE with compressed slices/echoes cannot be processed.')
+  write('line3','Use flashc to convert data then re-run svib.')
+  abort
+endif
+
+"** If phasetype=2, repeat twice with 90 deg phase shift **"
+$phase = 0
+repeat
+  $phase = $phase + 1
+  if ($phasetype = 2) then
+    if ($phase = 1) then
+      $filename = $basename+'_re'
+    else
+      $filename = $basename+'_im'
+      rp = rp + 90
+    endif
+  else
+    $filename = $basename
+  endif
+
+  "** Loop through all images, transforming and saving. *****"
+  $fmt = 'Processing  echo:%3d    slice:%3d    array:%3d    image:%3d'
+  $index = ''
+  $param = ''
+  $count = 0
+  $array = 0
+
+  "** Loop through array elements ***************************"
+  f full
+  repeat
+    cf = 0
+    $slice = 0
+    $array = $array + 1
+
+    "** Loop through compressed multislices *******************"
+    repeat
+      $echo = 0
+      $slice = $slice + 1
+
+      "** If compressed slices, determine slice position. *******"
+      " If not, and pss is arrayed, $pssvalue will be set to the "
+      " correct array value farther down.                        "
+    "**********************************************************"
+      if ($arraypss = 0) then
+        if ($pssorder = 'slice') then
+          $pssvalue = $slicevalue[$slice]
+        else
+          $pssvalue = pss[$slice]
+        endif
+      else
+        "** pss is arrayed, not compressed ************************"
+        $pssvalue = pss[$slice]
+      endif
+
+      "** Loop through compressed multiechoes *******************"
+      repeat
+        $echo = $echo + 1
+        $count = $count + 1
+  
+        if ($epi = 1) then   "process epi data"
+          cf = $slice
+          epift($count,$slice)  "count 1 => arraydim, arraydim = arraysize*ns "     
+        else 
+          "** Compressed image must use the 'nf' argument ***********"     
+          if ($seqcon[3] = 'c') then
+            cf = 1
+            wft2d('nf',$array)
+          else
+	    if ($pssorder = 'slice') then
+	      cf = ne*($sliceindex[$slice] - 1) + $echo
+	    else
+	      cf = ne*($slice - 1) + $echo
+	    endif
+  
+            if ($echo % 2) then
+              $fttype = 'ntype'
+            else
+              $fttype = 'ptype'
+            endif
+            wft2d($fttype,$array)
+          endif
+        endif
+        write('line3',$fmt,$echo,$slice,$array,$count)
+        image
+  
+        "** Construct index string to to attach to base name ******"
+        format($count+10000,5,0):$index
+        substr($index,2,4):$index
+        $datafile = $directory+'/'+$filename+'.'+$index
+        $headerfile = $directory+'/'+$headername+'.'+$index
+  
+        "** Save the image data in a temporary file ***************"
+        exists($datafile,'file'):$exists
+        if ($exists > 0.5) then  rm($datafile):$x  endif
+        svdat($datafile,$outfmt)
+  
+        "** Create and write the temporary fdf header file ********"
+        write('reset',$headerfile)
+        write('file',$headerfile,'%s','#!/usr/local/fdf/startup')
+        write('file',$headerfile,$format[1],$rank)
+        write('file',$headerfile,$format[2],$spatial_rank)
+        write('file',$headerfile,$format[3],$storage)
+        write('file',$headerfile,$format[4],$bits)
+        write('file',$headerfile,$format[5],$type)
+        write('file',$headerfile,$format[6],0.5*$fn1,0.5*$fn,ns) "3D size"
+        write('file',$headerfile,$format[7],$abs[1],$abs[2],$abs[3])
+        write('file',$headerfile,$format[8],$ord)
+        write('file',$headerfile,$format[9],$lpe,$lro,$lpe2)
+        write('file',$headerfile,$format[10],ppe,pro,0)
+        write('file',$headerfile,$format[11],tn,dn)
+        write('file',$headerfile,$format[12],sfrq,dfrq)
+        write('file',$headerfile,$format[13],$loc[1],$loc[2],$loc[3])	
+        write('file',$headerfile,$format[14],$roi[1],$roi[2],$roi[3])	
+        write('file',$headerfile,$format[15],$dc[1],$dc[2],$dc[3],$dc[4],\
+            $dc[5],$dc[6],$dc[7],$dc[8],$dc[9])
+        write('file',$headerfile,$format[16],file)
+
+        write('file',$headerfile,$format[20],$slice)
+        write('file',$headerfile,$format[21],ns)
+        write('file',$headerfile,$format[22],$echo)
+        write('file',$headerfile,$format[23],ne)
+        write('file',$headerfile,$format[24],($echo*te*1000)) "** TE msec **" 
+        write('file',$headerfile,$format[30],($echo*te)) "** te sec **"
+        write('file',$headerfile,$format[25],tr*1000)
+        write('file',$headerfile,$format[31],tr)
+        write('file',$headerfile,$format[27],np/2)
+        write('file',$headerfile,$format[28],nv)
+        write('file',$headerfile,$format[29],seqfil)
+  
+	if (array = 'ti') then
+		$ti = ti[$array]
+	endif
+        write('file',$headerfile,$format[26],$ti*1000) "** TI in msec **"
+        write('file',$headerfile,$format[32],$ti)      "** TI in sec  **"
+  
+        "** Write values for any arrayed parameters at this index *"
+        if ($arraydim > 1) then
+          arrayvals($array):$namelist,$valuelist
+          write('file',$headerfile,$format[17],$array)		
+	  $i = 0
+          repeat
+	    $i = $i + 1
+	    if ($namelist[$i] <> ''  and $namelist[$i] <> 'pss') then
+             if (typeof($namelist[$i])) then
+              write('file',$headerfile,$format[19],$namelist[$i],$valuelist[$i])
+             else
+              write('file',$headerfile,$format[18],$namelist[$i],$valuelist[$i])
+             endif
+	    endif
+          until ($i = size('$namelist'))
+        endif
+  
+        "** Write user-specified values if present ****************"
+        exists('sviblist','parameter'):$exists
+        if ($exists) then
+          $i = 0
+          repeat
+	    $i = $i + 1
+	    $param = sviblist[$i]
+	    if ($param <> '') then
+             if (typeof($param)) then
+              write('file',$headerfile,$format[19],$param,{$param}[$array])
+             else
+              format({$param}[$array],0,6):$valuestring
+              write('file',$headerfile,$format[18],$param,$valuestring)
+             endif 
+	    endif
+          until ($i = size('sviblist'))
+        endif
+  
+        "** Glue header and data, put into final fdf file *********"
+          "$fdffile = $directory+'/'+$filename+$index+'.'+'fdf'"
+          "shell('fdfgluer '+$headerfile+' '+$datafile+' '+$fdffile):$trash"
+          "rm($headerfile):$x"
+          "rm($datafile):$x"
+
+	"** generate 3D file from each slice dataset **"
+          if($slice = 1) then
+            $outfile = $directory+'/datams3d'
+            $tmpfile = $directory+'/tmp%'
+            $fdffile = $directory+'/'+$basename+'ms3d.'+'fdf'
+            shell('mv "'+$datafile+'" "'+$outfile+'"'):$x
+          elseif($slice = ns) then
+            shell('cat "'+$datafile+'" "'+$outfile+'" > "'+$tmpfile+'"'):$x
+            shell('fdfgluer "'+$headerfile+'" "'+$tmpfile+'" "'+$fdffile+'"'):$trash
+            rm($outfile):$x
+          else 
+            shell('cat "'+$datafile+'" "'+$outfile+'" > "'+$tmpfile+'"'):$x
+            shell('mv "'+$tmpfile+'" "'+$outfile+'"'):$x
+          endif
+          rm($headerfile):$x  "remove temporary files"
+          rm($datafile):$x
+          rm($tmpfile):$x
+
+      until ($echo >= ne)
+    until ($slice >= ns)
+  until ($array >= $arraydim)
+  if ($phase = 2)  then  rp = rp - 90  endif
+until ($phase = $phasetype)
+   
+"** Write procpar to the new fdf data directory ***********"
+" The procpar from the CURRENT tree is written to the      "
+" target data directory. This allows tags and any settings "
+" used for reconstruction to be passed along with the data "
+"**********************************************************"
+$procpar = $directory+'/procpar'
+fsave($procpar,'current')
+
+"** Processing complete, notify the user ******************"
+write('line3',$prog+'fdf data saved as %s',$directory)

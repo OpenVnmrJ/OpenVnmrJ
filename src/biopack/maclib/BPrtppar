@@ -1,0 +1,91 @@
+"macro BPrtppar"
+"BPrtppar(seqfil)"
+
+if $#>0.5 then
+ BPgetpars($1)                                             "get parameter set"
+ 
+                                   "creates any missing parameters"
+
+ if (BPinstall=1) then
+   // commneted out: all parameter files in BioPack-envinromen are supposed to be up-to date!!! 
+   //  BPfixup   
+                                  "only true after installation"
+     BPupdate_from_probefile         "gets common calibrations from probefile"
+     BPcheck                 "checks powers against user-defined power limits"
+     //BPsetddrtc        "ddrtc/ddrpm should be set by setrc based on ddrpm"
+                "this sets ddrtc=alfa for certain sequences ending in an echo"
+        
+     setrc      " and that set all other sequnces to hopefully (ET) correct defaults"
+
+     BPflipbacks                       "Get water flipback pulse calibrations"
+     BPfixrefs                                             "fixup referencing"
+
+     BPfixup2                                      "final check on parameters"
+     BPfixupCS       "removes sampling.sch and procdir from curexp,if present"
+
+     // should be already fixed in loaded parameter sets
+
+     //exists('ni','parameter'):$e
+     //if ($e>0) then 
+     // module('add','par2D')
+     // proc1='ft'
+     //endif
+     //exists('ni2','parameter'):$e
+     //if ($e>0) then 
+     // module('add','par3D')
+     // proc2='ft'
+     //endif
+    
+     exists('BPpipepar','maclib'):$e
+      if($e) then
+          BPpipepar('reset')                 "checks for NMRpipe-related parameters, and sets them to defaults"
+      
+
+         if((appmode<>'imaging') and (system='spectrometer')) then
+           setfrqCmd('setref_go')
+         endif
+         BPgetrefs     
+      endif
+
+ else
+    banner('BioPack not properly installed(BPinstall=0).\\Parameter set has been loaded,\\but no values have been loaded from the probefile.\\Check/change all parameter values manually')
+ endif
+endif
+
+if BPbasic=1 then
+   vnmrjcmd('toolpanel','Parameter','open')
+   vnmrjcmd('setpage','Acquire')
+   vnmrjcmd('setpage','Acquire','Basic')
+endif
+exists(seqfil,'manual'):$e
+if $e>0 then man(seqfil) else clear endif
+
+$e2=0
+exists('BPexpress_gui','parameter'):$e1
+if ($e1>0) then 
+  if (BPexpress_gui=1) then
+   $e2=1
+  endif 
+endif
+
+if ($e2=1) then
+   vnmrjcmd('setpage','Setup')
+   vnmrjcmd('setpage','Setup','BioPackExpress')
+endif
+
+"For studyQ compatability: "
+"when experiment is run in studyQ, tell VJ not to attempt automatic processing,"
+"and not to attempt any post-acquisition actions, just save the fid"
+
+exists('execprocess','parameter'):$e
+if ($e=0) then
+ create('execprocess','string') 
+endif
+execprocess=' return ' 
+
+exists('userprocess','parameter'):$e
+if ($e=0) then
+ create('userprocess','string') 
+endif
+userprocess='return' 
+

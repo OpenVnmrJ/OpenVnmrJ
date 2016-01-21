@@ -1,0 +1,59 @@
+
+*******************************************************************************
+create	- 	create a new variable
+*******************************************************************************
+
+  This command creates a variable in one of the four variable trees.
+  The variable trees are 'current', 'global'. 'processed' and 'systemglobal'.
+  Each variable can be of type 'real', 'string', 'delay', 'frequency',
+  'flag', 'pulse', and 'integer'.   The default tree and type are
+  'current' and 'real'.
+
+  A return value from create will indicate if the parameter was actually
+  created, or not.  A value of 1 indicates that the parameter was created.
+  A 0 indicates the that parameter already existed in the tree and was not
+  created.
+
+  An optional fourth argument can be given to create. This is an initializing
+  value.  If the parameter is created, its value will be set to the fourth
+  argument.  Using create with four arguments has a subtle difference from
+  using create with less than four arguments. With less than four arguments,
+  create will return a zero or abort if the parameter already exists. It does
+  not matter if the existing parameter is the same type as that given by the
+  create command.  With four arguments, create checks to see if the parameter
+  exists and if it is of the requested type. If it exists but it is of a
+  different type, it is first deleted and then recreated with the requested
+  type.  The examples below, and the associated comments, illustrate
+  this behavior.
+
+  If incorrect values are given for the type or tree values, create will
+  abort the calling macro. If a return value is not requested, and the
+  parameter already exists, and the initializing value is not given, 
+  create will abort the calling macro.
+ 
+  Usage -- create(name[,type[,tree[,initValue]]]):$e
+              type can be  real,string,delay,frequency,flag,pulse,integer
+              tree can be  current,global,processed,systemglobal
+              initValue is an optional initializing value
+              $e will to set to 1 if the parameter is created, 0 otherwise
+
+  Examples:
+
+    create('a')                  // Create a real variable in current tree.
+    create('b','string')         // Create a string variable in current tree.
+    create('c','real','global')  // Create a real variable in global tree.
+
+    create('b','string')         // Abort calling macro since b already exists
+    create('b','string'):$e      // $e=0 since b already exists as a string
+                                 // does not abort the calling macro
+
+    create('b','real'):$e        // $e=0 since b already exists as a string
+    create('b','real','current',3.14):$e  // $e=1 since b is first destroyed
+                                          // because it is the wrong type.
+                                          // b will be set to 3.14. Note
+                                          // that the tree must be given when
+                                          // using an initializing value
+    create('b','real','current',0.0):$e   // $e=0 since b already exists as a
+                                          // real. The value of b remains 3.14
+
+  See also: destroy - destroy a variable

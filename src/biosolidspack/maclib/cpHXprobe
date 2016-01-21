@@ -1,0 +1,564 @@
+"macro cpHXprobe"
+// cpHXprobe - A macro to get or set HX standard and CP HX calibrations 
+//             to or from the probe file for 1D CP spectra (AhX). Also 
+//             set TPPM/SPINAL decoupling and the X band-selective shaped 
+//             pulse. 
+
+//             Argument 1 is the action:
+//                        'set' loads values into the probe file. 
+//                        'get' sets values into the workspace. 
+//                        'init' creates a complete set of parameter entries. 
+//                        'calc' sets the probe file for all parameters of a 
+//                               based on values of aH90,pwH90,dpwr,aX90,pwX90,
+//                               tpwr in the probe file and srate from the workspace.
+//                    (See below for a description of parameters and 
+//                          calculations for each action above.) 
+
+//             Argument 2 is the nucleus, 'C13' or 'N15'.
+
+//             Argument 3 is the region:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'HCa'
+//                   'carbonyl' (13C carbonyl), code 'HCO
+//                   'adam' (13C adamantane 37.77p), code 'HC'
+//                   'amide'(15N amide), code 'HNai'
+//                   'amine' (15N glycine, code 'HNam'
+//                   'amino' (15N glycine, code 'HN' 
+
+//             Also: For calibration with the 13C offset at 100 ppm set:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'sHCa'
+//                   'carbonyl' (13C carbonyl), code 'sHCO
+
+//             Argument 4 is a label: 
+//                        '' is forced as the default, not used in this macro. 
+//             
+//             Argument 5 is a numeral:
+//                        usually 0 or 1 if present, but not used.
+//
+//        (A)  Set Parameters ('get','set','init'): 
+//                       Nucleus             Workspace <-> Probe                   Region
+//                         (H) dof,dpwr,aH90,pwH90 <-> ofH,dbH,aH90_hp,pw90_hp (N15-amide,etc)
+//                                                                             (C13-alpha,carbonyl.etc)
+//                                                                             (for all params)
+//               (X = 13C,15N) tof,tpwr,aX90,pwX90 <-> ofX,dbX,aX90,pwX90                                                      
+//                         (H) chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX <->
+//                                   chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX                                
+//               (X = 13C,15N) aXhx <-> a    
+//                         (H) aHtppm,pwHtppm,phHtppm <-> aHtppm,pwHtppm,phHtppm
+//                         (H) aHspinal,pwHspinal,phHspinal <-> aHtppm,pwHtppm,phHtppm 
+//                         (H) Hseq <-> Hseq  
+//               (X = 13C,15N) aXshp1,dbXshp1,ofXshp1,stXshp1,phXshp1,wvXshp1 <->
+//                                   aXshp1,dbXshp1,ofXshp1,stXshp1,phXshp1,wvXshp1
+   
+//        (B)  Initialize Parameters ('init') 
+//                       Nucleus             Value <-> Probe                       Region
+//                         (H) 0.0,0.0,0.0 <-> R_hp,F_hp,pwH180_hp             (N15-amide,etc)
+//                                                                             (C13-alpha,carbonyl,etc)
+//                                                                             (for all params)
+//                         (H) 0.0,0.0, <-> aH90_mp,pw90_mp
+//                         (H) 0.0,0.0,0.0 <-> R_mp,F_mp,pwH180_mp
+//               (X = 13C,15N) 0.0,0.0,0.0 <-> R,F,pwX180 
+//               (X = 13C,15N) 0.0,0.0 <-> aX32wr,aX52wr
+//               (X = 13C,15N) 0.0,0.0 <-> RXshp1,FXshp1
+//               (X = 13C,15N) 0.0 <-> baserefX   
+     
+//        (C)  Calculate Parameters ('calc'): 
+//                       Nucleus             Value <-> Probe                       Region
+//                         (H) (*no change) <-> ofH,dbH,aH90_hp,pw90_hp        (N15-amide,etc)
+//                                                                             (C13-alpha,carbonyl,etc)
+//                                                                             (for all params)
+//               (X = 13C,15N) (*no change) <-> ofX,dbX,aX90,pwX90                                                      
+//                         (H) 'fr','t','obs','dec',(*1),(*2),(*3),2000.0,0.0 <->
+//                                   chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX                                
+//               (X = 13C,15N) $aX90 <-> aXhx    
+//                         (H) $aH90_hp,(*4),10.0 <-> aHtppm,pwHtppm,phHtppm
+//                         (H) $aH90_hp,(*4),10.0,5.0 <-> aHtppm,pwHtppm,phHtppm,alpHspinal 
+//                         (H) 'spinal' <-> Hseq  
+//               (X = 13C,15N) (*$aXshp1),(*$dbXshp1),(*$7),0.0,0.5,0.0,(*$6) <->
+//                                   aXshp1,dbXshp1,pwXshp1,ofXshp1,stXshp1,phXshp1,wvXshp1    
+//                         (H) 1.0,4.0,2.0*$pwH90_hp <-> R_hp,F_hp,pwH180_hp
+//                         (H) $aX90,$pwX90, <-> aH90_mp,pw90_mp
+//                         (H) 1.0,4.0,2.0*$pwX90 <-> R_mp,F_mp,pwH180_mp
+//               (X = 13C,15N) 1.0,4.0,2.0*$pwX90 <-> R,F,pwX180 
+//               (X = 13C,15N) (*5),(*6) <-> aX32wr,aX52wr
+//               (X = 13C,15N) 1.0,4.0 <-> RXshp1,FXshp1
+//               (X = 13C,15N) 0.0 <-> baserefX   
+
+//             NOTES: for Calculations Above
+//             (*no change)- these values in the probe file are used for calculation
+//                           and '$' refers to input macro arguments or values 
+//                           obtained from the probe file.
+//             $srate - the value of $srate is obtained from the probe file. 
+
+//             (*1) = $aH90_hp*$pwH90/$pwX90+4.0*srate*pwH90_hp*1.0e-6*$aH90_hp      
+//             (*2) = 0.05*$aH90_hp*$pwH90/$pwX90
+//             (*3) = 0.05*$aH90_hp*$pwH90/$pwX90
+//             (*4) = 165.0*$pwH90_hp/90.0,
+//             (*$aXshp1) see line 272
+//             (*$dbXshp1) see line 275
+//             (*$6) argument 6, default = 'rsnob'
+//             (*$7) argument 7, default = 200.0
+//             (*5) = 6.0*$srate*$pwX90*1.0e-6*$aX90,
+//             (*6) = 10.0*$srate*$pwX90*1.0e-6*$aX90)
+
+// Initialize CP Parameters in the Probe File
+
+if (($#>0) and ($1='init')) then 
+
+// Set AhX
+
+   AhX
+
+// Set the X Region
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+
+
+// Initialize Standard X $reg Parameters in the Probe file from OBS.
+
+   probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof,'dbX90',tpwr)
+   probeparamgroup('setlocal',$reg,$nuc,'', 'aX90',aX90,
+                                            'pwX90',pwX90,
+                                            'pwX180',0.0,
+                                            'R',0.0,
+                                            'F',0.0)
+
+// Initialize Standard H $reg Parameters in the Probe file from DEC.
+
+   probeparamgroup('setlocal',$reg,'H1','','ofX90',dof,'dbX90',dpwr)
+
+// Initialize Standard H hp $reg Parameters in the Probe file from DEC.
+
+   probeparamgroup('setlocal','hp'+$reg,'H1','','aH90',aH90,
+                                                'pwH90',pwH90,
+                                                'pwH180',0.0,
+                                                'R',0.0,
+                                                'F',0.0)
+
+// Initialize Standard H mp $reg Parameters in the Probe file from DEC.
+
+   probeparamgroup('setlocal','mp'+$reg,'H1','','aH90',aH90*pwH90/pwX90,
+                                                'pwH90',pwX90,
+                                                'pwH180',0.0,
+                                                'R',0.0,
+                                                'F',0.0)
+// Initialize Spinrate at 0.0 and set HX CP
+
+   probeparamgroup('setlocal',$reg,'H1','','srateHX',1000.0)
+   probeparamgroup('set',$reg,'H1','HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of')
+   probeparamgroup('set',$reg,$nuc,'HX','aX')
+
+
+// Initialize H $reg tppmH and spinalH Parameters.
+
+   probeparamgroup('set',$reg,'H1','tppmH','a','pw','ph')
+   probeparamgroup('set',$reg,'H1','spinalH','a','pw','ph','alp')
+   probeparamgroup('set',$reg,'H1','','Hseq')
+
+// Initialize X Spinlock Amplitudes for DCP.
+
+   probeparamgroup('setlocal',$reg,$nuc,'', 'aX32wr',0.0,
+                                            'aX52wr',0.0)
+
+// Initialize X $reg Band-selective Parameters
+
+   probeparamgroup('setlocal',$reg,$nuc,'','aXshp1',aXshp1,
+                                           'dbXshp1',dbXshp1,
+                                           'pwXshp1',pwXshp1,
+                                           'ofXshp1',ofXshp1,
+                                           'stXshp1',stXshp1,
+                                           'phXshp1',phXshp1,
+                                           'wvXshp1',wvXshp1,
+                                           'RXshp1',0.0,
+                                           'FXshp1',0.0)
+
+// Initialize the X $reg Base Reference Parameter
+
+   probeparamgroup('setstring',$reg,$nuc,'','baserefX','0.0')
+endif
+
+if (($#>0) and ($1='calc')) then 
+
+// Set AhX
+
+   AhX
+
+// Set the X Region
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+
+// Initialize the Probe File with Calculated CP and Decoupling Parameters
+
+// Get Standard X $reg Parameters from the Probe file for Calculation.
+
+   probeparamgroup('getlocal',$reg,$nuc,'','dbX90'):$tpwr
+   probeparamgroup('getlocal',$reg,$nuc,'','aX90','pwX90'):$aX90,$pwX90
+
+// Get Standard H $reg Parameters from the Probe file for Calculation.
+
+   probeparamgroup('getlocal',$reg,'H1','','dbX90'):$dpwr
+   probeparamgroup('getlocal','hp'+$reg,'H1','','aH90','pwH90'):$aH90,$pwH90
+
+// Calculate Standard H hp $reg Parameters 
+
+   probeparamgroup('setlocal','hp'+$reg,'H1','','aH90',$aH90,
+                                                'pwH90',$pwH90,
+                                                'pwH180',2.0*$pwH90,
+                                                'R',1.0,
+                                                'F',4.0)
+
+// Calculate Standard H mp $reg Parameters 
+
+   probeparamgroup('setlocal','mp'+$reg,'H1','','aH90',$aH90*$pwH90/$pwX90,
+                                                'pwH90',$pwX90,
+                                                'pwH180',2.0*$pwX90,
+                                                'R',1.0,
+                                                'F',4.0)
+
+// Calculate HX CP $reg Parameters with Existing Spinrate
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   probeparamgroup('setlocal',$reg,'H1','HX','ch','fr',
+                                             'sh','t',
+                                             'to','obs',
+                                             'fr','dec',
+                                             'aH',$aH90*$pwH90/$pwX90+4.0*$srate*pwH90*1.0e-6*$aH90,
+                                             'b',0.05*$aH90*$pwH90/$pwX90,
+                                             'd',0.05*$aH90*$pwH90/$pwX90,
+                                             't',2000.0,
+                                             'of',0.0)
+   probeparamgroup('setlocal',$reg,$nuc,'HX','aX',$aX90)
+
+// Calculate Standard X $reg Parameters
+
+   probeparamgroup('setlocal',$reg,$nuc,'', 'aX90',$aX90,
+                                            'pwX90',$pwX90,
+                                            'pwX180',2.0*$pwX90,
+                                            'R',1.0,
+                                            'F',4.0)
+
+// Calculate H $reg tppmH and spinalH Parameters
+
+   probeparamgroup('setlocal',$reg,'H1','tppmH','a',$aH90,
+                                                'pw',165.0*$pwH90/90.0,
+                                                'ph',10.0)
+   probeparamgroup('setlocal',$reg,'H1','spinalH','a',$aH90,
+                                                  'pw',165.0*$pwH90/90.0,
+                                                  'ph',10.0,
+                                                  'alp',5.0)
+   probeparamgroup('setlocal',$reg,'H1','','Hseq','spinal')
+
+// Calculate X Spinlock Amplitudes for DCP Based on srate.
+
+   probeparamgroup('setlocal',$reg,$nuc,'', 'aX32wr',6.0*$srate*$pwX90*1.0e-6*$aX90,
+                                            'aX52wr',10.0*$srate*$pwX90*1.0e-6*$aX90)
+
+// Calculate X $reg Band-selective Parameters
+
+   $wvXshp1='rsnob'
+   $pwXshp1=200.0
+   if ($#>5) then 
+      $wvXshp1=$6
+      if ($#>6) then 
+         $pwXshp1=$7
+      endif
+   endif 
+   
+   $pwbw=0.47
+   if ($wvXshp1='square180r') then $pwbw=0.47 endif
+   if ($wvXshp1='gauss180r') then $pwbw=0.90 endif
+   if ($wvXshp1='rsnob') then $pwbw=1.85 endif
+   if ($wvXshp1='sinc180r') then $pwbw=0.67 endif
+   if ($wvXshp1='reburb') then $pwbw=4.875 endif
+
+   $ratio=(2.0*$pwX90*$pwbw)/($pwXshp1*0.47)
+   ln($ratio):$lnratio
+   $lnratio=20*$lnratio/2.3025851
+   $tpwrt=$lnratio + $tpwr
+   $dbXshp1=trunc($tpwrt)+1.0
+   $diff=$tpwrt-trunc($tpwrt)-1.0
+   exp($diff*2.3025851/20):$ratio2
+   $aXshp1=$aX90*$ratio2
+   probeparamgroup('setlocal',$reg,$nuc,'','aXshp1',$aXshp1,
+                                           'dbXshp1',$dbXshp1,
+                                           'pwXshp1',$pwXshp1,
+                                           'ofXshp1',0.0,
+                                           'stXshp1',0.5,
+                                           'phXshp1',0.0,
+                                           'wvXshp1',$wvXshp1,
+                                           'RXshp1',1.0,
+                                           'FXshp1',4.0)
+
+// Calculate the X $reg Base Reference Parameter
+
+   probeparamgroup('setstring',$reg,$nuc,'','baserefX','0.0')
+endif
+
+// Set CP Parameters to the Probe File
+
+if (($#>0) and ($1='set')) then 
+
+// Set AhX
+
+   AhX
+
+// Set the X Region
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+
+// Determine the Spinrate if SPspinrateon='y', Otherwise do Nothing.
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   endif
+
+// Set Standard X $reg Parameters in the Probe file from OBS.
+
+   probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof,'dbX90',tpwr)
+   probeparamgroup('set',$reg,$nuc,'90X','a','pw')
+
+// Set Standard H $reg Parameters in the Probe file from DEC.
+
+   probeparamgroup('setlocal',$reg,'H1','','ofX90',dof,'dbX90',dpwr)
+   probeparamgroup('set','hp'+$reg,'H1','90H','a','pw')
+
+// Set Spinrate as srate and HX CP $reg Parameters in the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: A New Value of srateHX=%f has Been Set in the Probe File\n',srate)
+   endif
+   probeparamgroup('setlocal',$reg,'H1','','srateHX',srate)
+
+   probeparamgroup('set',$reg,'H1','HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of') 
+   probeparamgroup('set',$reg,$nuc,'HX','aX')
+
+// Set H $reg tppmH and spinalH Parameters in the Probe File
+
+   probeparamgroup('set',$reg,'H1','tppmH','a','pw','ph')
+   probeparamgroup('set',$reg,'H1','spinalH','a','pw','ph','alp')
+   probeparamgroup('set',$reg,'H1','','Hseq')
+
+// Set X $reg Band-selective Parameters in the Probe File
+
+   probeparamgroup('set',$reg,$nuc,'shp1X','a','db','pw','of','st','ph','wv')
+endif
+
+// Get CP Parameters from the Probe File
+
+if (($#>0) and ($1='get')) then
+
+// Set AhX
+
+   AhX
+
+// Set the X Region
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+
+// Get the Spinrate
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   else 
+      probeparamgroup('getlocal',$reg,'H1','','srateHX'):srate
+   endif
+
+// Get Standard X $reg Parameters from the Probe File.
+
+   probeparamgroup('getlocal',$reg,$nuc,'','ofX90','dbX90'):$tof,tpwr
+   tof=$tof
+   probeparamgroup('get',$reg,$nuc,'90X','a','pw')
+
+// Get Standard H $reg Parameters from the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','ofX90','dbX90'):$dof,dpwr
+   dof=$dof
+   probeparamgroup('get','hp'+$reg,'H1','90H','a','pw')
+
+// Get Spinrate as srate and HX CP $reg Parameters from the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: Warning: srate=%f Hz and srateHX=%f Hz in the Probe File Disagree\n',srate,$srate)
+   endif
+
+   probeparamgroup('get',$reg,'H1','HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of') 
+   probeparamgroup('get',$reg,$nuc,'HX','aX')
+
+// Get H $reg tppmH and spinalH Parameters from the Probe File
+
+   probeparamgroup('get',$reg,'H1','tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,'H1','spinalH','a','pw','ph','alp')
+   Hseq = 'spinal'
+
+// Get X $reg Band-selective Parameters from the Probe File
+
+   probeparamgroup('get',$reg,$nuc,'shp1X','a','db','pw','of','st','h','wv')
+endif
+
+//-------------------
+// The Region Macro
+//-------------------
+
+if (($# > 0) and ($1 = 'region')) then
+   $nuc=$2
+   $reg=''
+   $pwr=$4
+   if (($# > 4) and ($5 = 1)) then 
+      if ($2='C13') then 
+         tn='C13' dn='H1' dn2='N15' dn3=''   
+         wc = 200 sc =10
+         ad=4.0 rd=4.0 ddrtc=8.0 rp=0 lp=0 d1=2.0 nt=1 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=50 gain=30
+         ofHX=0.0
+         if ($3='alpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='HCa'
+         elseif ($3='salpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            d1=2.0 nt=1.0
+            setref(tn) setoffset('C13',33.3):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=28p wp=20p
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         tn='N15' dn='H1' dn2='C13'  dn3=''   
+         wc = 200 sc =10
+         ad=16.0 rd=4.0 ddrtc=20.0 rp=0 lp=0 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=0  lb='n' gain=30  
+         ofHX=0.0
+         if ($3='amide') then
+            d1=2.0 nt=4
+            setref(tn) setoffset('N15',115):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=90p wp=50p
+            $reg='HNai'
+         elseif ($3='amine') then
+            d1=2.0 nt=1 
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HNam'
+         elseif ($3='amino') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HN'
+         endif         
+      endif
+      probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof)
+   else
+      if ($2='C13') then 
+         if ($3='alpha') then
+            $reg='HCa'
+         elseif ($3='salpha') then
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         if ($3='amide') then
+            $reg='HNai'
+         elseif ($3='amine') then 
+            $reg='HNam'
+         elseif ($3='amino') then 
+            $reg='HN'
+         endif
+      endif
+   endif
+   return($reg,$pwr,$nuc)
+endif
+
+//---------------------
+// The Spin Rate Macro
+//---------------------
+
+if (($# > 0) and ($1 = 'spinrate')) then
+
+// Get the Current Spin Rate with an Average of 10
+
+   banner('Measuring Spinning Rate and Stability')
+   $count=1 srate=0
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      shell('showstat > ',$dest):$dummy
+ 
+      lookup('file',$dest,'currently', 'at:','read'):$masrate,$ret 
+      if $ret then
+         format($masrate,5,0):srate[$count]
+      endif
+//    echo($masrate)
+      shell('sleep 1')
+      $count=$count+1
+   until ($count>10)
+
+   averag(srate[1],srate[2],srate[3],srate[4],srate[5],srate[6],
+       srate[7],srate[8],srate[9],srate[10]):$avgsrate,$dev
+
+   $avgsrate = trunc($avgsrate + 0.5)  
+
+//Check the Spin Rate 
+
+   if ($avgsrate<500) then 
+      $message='Warning: MAS Spin Rate is Less Than 500 Hz - Set srate=0.0'
+      banner($message)
+      srate = 0.0
+   else
+      srate = $avgsrate
+   endif 
+
+// Remove Files Generated by the Spin Rate Measurement
+
+   $count=1
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      rm($dest):$dummy
+      $count=$count+1
+   until ($count>10)
+   return(srate)
+endif 

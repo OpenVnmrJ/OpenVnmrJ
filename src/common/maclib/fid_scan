@@ -1,0 +1,83 @@
+"macro fid_scan"
+
+if (seqfil='info') then
+  seqfil='s2pul'
+endif
+
+exists('displaymode','parameter'):$isdisplaymode
+if (not $isdisplaymode) then
+  string('displaymode')
+  setgroup('displaymode','display')
+  settype('displaymode','flag')
+  displaymode = 'r'
+endif
+setenumeral('displaymode',0)
+
+exists('fidscanmode','parameter'):$isfidscanmode
+if (not $isfidscanmode) then
+  string('fidscanmode')
+  setgroup('fidscanmode','display')
+  settype('fidscanmode','flag')
+  if (appmode='imaging') then
+    fidscanmode = 'af'
+  else
+    fidscanmode = 'r'
+  endif
+endif
+
+exists('dcrmv','parameter'):$isdcrmv
+if (not $isdcrmv) then
+  string('dcrmv')
+  setgroup('dcrmv','display')
+  settype('dcrmv','flag')
+  setenumeral('dcrmv', 2, 'y', 'n')
+  dcrmv = 'n'
+endif
+
+exists('acqmode','parameter','global'):$isacqmode
+if (not $isacqmode) then
+  create('acqmode', 'string', 'global')
+  acqmode = ''
+endif
+
+exists('fidarea','parameter','global'):$isfidarea
+if (not $isfidarea) then
+  create('fidarea', 'real', 'global')
+  setgroup('fidarea','processing','global')
+  fidarea = 1000
+endif
+exists('fidnorm','parameter','global'):$isfidnorm
+if (not $isfidnorm) then
+  create('fidnorm', 'real', 'global')
+  setgroup('fidnorm','processing','global')
+  fidnorm = 0.001
+endif
+
+"$nt=nt $bs=bs $cp=cp"
+
+$bs=bs on('bs'):$onbs
+bs=1
+on('gain'):$ongain
+on('gain')
+wbs='fid_display'
+werr=''
+
+acqmode=''
+au('silent','bsclear','fidscan')
+acqmode='fidscan'
+exists('wdone','parameter'):$e
+if $e>0.5 then
+  setvalue('wdone','','current')
+  setvalue('wdone','','processed')
+endif
+
+bs=$bs if $onbs then on('bs') else off('bs') endif
+if (not $ongain) then off('gain') endif
+"nt=$nt bs=$bs cp=$cp"
+if ($# = 0) then
+  clear(2)
+endif
+if traymax>0.5 then
+  loc='n'
+  vnmrjcmd('tray close')
+endif

@@ -1,0 +1,96 @@
+"macro Mprescan"
+"***************************************************************"
+" Mprescan                                                      "
+"                                                               "
+"***************************************************************"
+
+"** Set frequency *****************************************"
+
+if (prescan[3] = 1) then
+  rm('-rf',userdir+'/parlib/temp.par'):$x
+  svp(userdir+'/parlib/temp')
+  Mprescan_freq
+  return
+else if (prescan[3] = 2) then
+  
+  f full
+  crl
+  av                          "absolute spectrum"
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+  
+  tof=tof + $t                "determine new tof value"
+  wexp=''                   "reset auto go link"
+  
+  "** Initialize global parameter, H1offset"
+  exists('H1offset','parameter','global'):$e
+  
+  if ($e = 0 ) then
+      create('H1offset','real','global')
+  endif
+  H1offset = tof
+  vsadj
+  ds
+  rtp(userdir+'/parlib/temp')
+
+  "** initialize resto and rfcoil parameters"
+  ldrf
+  su
+
+  write('line3','H1offset=%7.2f,',H1offset)
+  prescan[3] = 0
+  menu('prescan')
+endif endif
+
+"** Set power levels **************************************"
+if (prescan[1] = 1) then
+  rm('-rf',userdir+'/parlib/temp.par'):$x
+  svp(userdir+'/parlib/temp')
+  Mprescan_power
+  return
+else if (prescan[1] = 2) then
+  rtp(userdir+'/parlib/temp')
+  ldrf
+  imprep
+  dg
+  prescan[1] = 0
+  menu('prescan')
+endif endif
+
+"** Set gain **********************************************"
+if (prescan[2] = 1) then
+  ldrf
+  if (seqfil <> 's2pul') then 
+    imprep 
+  endif
+  rm('-rf',userdir+'/parlib/temp.par'):$x
+  svp(userdir+'/parlib/temp')
+  Mprescan_gain
+  return
+else if (prescan[2] = 2) then
+  gain = 'y'
+  $gain = gain
+  rtp(userdir+'/parlib/temp')
+  gain = $gain
+  gain?
+  prescan[2] = 0
+  menu('prescan')
+ endif 
+endif
+
+"** Get profile ***********************************"
+if (prescan[5] = 1) then
+  ldrf
+  if (seqfil <> 's2pul') then 
+    imprep 
+  endif
+  rm('-rf',userdir+'/parlib/temp.par'):$x
+  svp(userdir+'/parlib/temp')
+  Mprescan_profile
+  return
+else if (prescan[5] = 2) then
+  prescan[5] = 0
+  menu('prescan')
+  rtp(userdir+'/parlib/temp')
+  dg
+endif endif

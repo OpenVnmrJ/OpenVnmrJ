@@ -1,0 +1,133 @@
+"macro vpsetup"
+"setup viewports and experiment workspaces"
+
+if($# < 0.5) then
+
+"check workspace numbers for negative or overflow"
+$i=0
+repeat
+  $i=$i+1
+  if (jviewports[$i+4]<-0.5 or jviewports[$i+4]>9999.5) then
+    $j=0 $try=1
+    repeat
+      $j=$j+1
+      if ($j <> $i) then
+        if ($try = jviewports[$j+4]) then
+          $j=0 $try=$try+1
+        endif
+      endif
+    until ($j >= jviewports[1])
+    jviewports[$i+4]=$try
+  endif
+until ($i>=jviewports[1])
+
+"check if workspace numbers are equal"
+$i=0
+repeat
+  $j=$i
+  $i=$i+1
+  repeat
+    $j=$j+1
+    if ($j<>$i and jviewports[$i+4]>0.5) then
+      if (jviewports[$i+4]=jviewports[$j+4]) then
+        $k=0 $try=1
+        repeat
+          $k=$k+1
+          if ($k <> $i) then
+            if ($try = jviewports[$k+4]) then
+              $k=0 $try=$try+1
+            endif
+          endif
+        until ($k >= jviewports[1])
+        jviewports[$i+4]=$try
+      endif
+    endif
+  until ($j >= jviewports[1])
+until ($i>=jviewports[1])
+
+   vpsetup(0)
+   return
+endif
+
+if($# < 0.5) then return endif
+
+if(typeof('$1')) then
+  // create exp if needed
+  if($#<3 or $1<>'checkexp') then return endif
+  $vpi=$2
+  $expi=$3
+  $z='' format($expi,1,0):$z
+  $t='' format($vpi,1,0):$t
+  if $z<>'0' then
+    $exp=userdir+'/exp'+$z
+    exists($exp,'file'):$e
+    if $e<0.5 then
+      cexp($expi)
+      vnmrjcmd('VP '+$t+' jexp'+$z+' fixpar vpsetup('+$t+')')
+      "return  no return, may want to create more than one"
+    else
+      exists('jexp'+$z,'maclib'):$j
+      if $j<0.5 then
+        $cmd='ln -s "'+systemdir+'/maclib/jexp1" "'+userdir+'/maclib/jexp'+$z+'"'
+        shell($cmd):$x
+        vnmrjcmd('VP '+$t+' jexp'+$z+' fixpar vpsetup('+$t+')')
+        "return no return, may want to create more than one"
+      endif
+    endif
+  endif
+  return
+endif
+
+if($1 >= jviewports[1]) then return endif
+
+"check if workspaces are swapped or not (jcurwin/jviewports), join if needed"
+$i=$1
+$z=''
+$vc=''
+$end=''
+$qc='\'' $qa='\\' $qb='' $qz='\''
+$do=''
+$c=''
+$vp=0
+repeat
+  $i=$i+1
+  $z='' format(jviewports[$i+4],1,0):$z
+  $t='' format($i,1,0):$t
+  vpsetup('checkexp',$i, jviewports[$i+4])
+  flush  "write global out to disk, for when other viewports can start vnmrbg"
+  $do='z'
+  if (jviewports[$i+4] <> jcurwin[$i]) then
+    $j=$i $do='y'
+    repeat
+      $j=$j+1
+      if ($i<>$j and jviewports[$i+4]=jcurwin[$j] and jcurwin[$j]>0.5) then
+        $do='n'
+ 	$vp = $j
+      endif
+    until ($j>=jviewports[1])
+    $v='vpsetup('+$t+') ' 
+    if ($do='y') then
+      vnmrjcmd('VP '+$t+' jexp'+$z+' '+$v)
+      return
+    else
+      $tmp=jcurwin[1]+jcurwin[2]+jcurwin[3]
+      $tmpstr='' format($tmp,1,0):$tmpstr
+      $c='' format($vp,1,0):$c
+      vpsetup('checkexp',$c,$tmp)
+      $cmd='VP '+$c+' jexp('+$tmpstr+') '
+      vnmrjcmd($cmd+'vnmrjcmd(`VP `,'+$t+', `jexp'+$z+'`,`'+$v+'`)')
+      return
+    endif
+ 
+  endif
+until ($i>=jviewports[1])
+
+"array $cmd[$m] - find jexp(0)'s first and execute all in one vnmrjcmd? - fewer backslashes"
+"problem if unlock fails - may cascade to other viewports"
+"could add to VP - jexp:$j if $j not target then jexp(0)"
+"if fixpar fails, it aborts the rest of the command"
+
+$prod = jviewports[3] * jviewports[4]
+if (jviewports[1] < $prod) then
+  vnmrjcmd('viewport',1)
+endif

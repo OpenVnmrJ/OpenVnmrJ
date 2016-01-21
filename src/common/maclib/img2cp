@@ -1,0 +1,167 @@
+"macro img2cp"
+
+$imdir='' 
+$imfile=userdir+'/persistence/'+$0
+if ($# < 1) then
+   shell('touch '+$imfile):$dum
+   lookup('mfile',$imfile,'read',1):$imdir
+   shell('rm -f '+$imfile):$dum
+   if ($imdir='') then
+	write('error','%s macro aborted',$0)
+	return
+   endif
+   $arg='convert'
+else
+   $arg=$1
+endif
+
+IF ($arg='convert') THEN
+"*************************************************************************"
+  if ($# < 2) then
+       shell('touch '+$imfile):$dum
+       lookup('mfile',userdir+'/persistence/'+$0,'read',1):$imdir
+       shell('rm -f '+$imfile):$dum
+  else
+       $imdir=$2
+  endif
+  if ($imdir='') then
+     write('error','Imaging directory not supplied')
+     return
+  endif
+  $sg=userdir+'/persistence/'+$0+'_sampleglobal'
+  $fidlist=userdir+'/persistence/'+$0+'_fidlist'
+  $firstchar='' substr($imdir,1,1):$firstchar
+  if ($firstchar<>'/') then
+	$imdir=userdir+'/data/studies/'+$imdir
+  endif
+
+  if ($# > 2) then
+     exists($3,'file'):$fileex
+     if ($fileex) then 
+	fread($3)
+     endif
+  endif
+
+  $list='' $list2=''
+  module('list','reqparval'):$list
+  module('list','userreqparval'):$list2
+  $list=$list+' '+$list2
+  string2array($list):$list
+  if ($list[1]<>'') then
+     $listtot=size('$list')
+     $i=1
+     repeat
+	$type='' $where='' $is=0
+	is_param($list[$i]):$is,$where,$type
+	if ($is) and ($where='current') and ($type='string') then
+	   if {$list[$i]}='' then {$list[$i]}='X_'+$0 endif
+	endif
+	$i=$i+1
+    until $i > $listtot
+  endif
+
+  savesampglobal(userdir+'/persistence')
+  shell('mv '+userdir+'/persistence/sampleglobal '+$sg):$dum
+
+  write('reset',$fidlist)
+  shell('(ls -1d '+$imdir+'/data/*.fid > '+$fidlist+')'):$dum
+  $s1='' $s2=''
+  readfile($fidlist,'$s1','$s2','','local'):$total
+  if ($total=0) then
+     write('error','There are no fid in %s',$imdir)
+     return
+  endif
+  tmpsave($0)
+
+  $list='' $list2=''
+  module('list','ChemPack'):$list
+  module('list','userChemPack'):$list2
+  $list=$list+' '+$list2
+
+  $i=1
+  repeat
+    rt($s1[$i])
+    is_cpfid:$cpfid
+    if ($cpfid=0) then
+	exists('time_exp','parameter'):$teex
+	if ($teex) then
+	    invformattime(time_exp):ACQtime
+	endif
+	writeparam(curexp+'/chempackpars',$list)
+	fread(curexp+'/chempackpars','processed')
+	shell('rm -f '+curexp+'/chempackpars'):$dum
+	fread($sg)
+	fread($sg,'processed')
+	archivedir=$imdir sample='data'
+	setvalue('archivedir',archivedir,'processed')
+	setvalue('sample',sample,'processed')
+	Autockdir(archivedir+'/'+sample)
+	savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+           wds='' wstart=''
+           $wqlist=''
+           module('list','walkupQpars'):$wqlist
+           $wqlist='chreqexp '+$wqlist
+           rmpar($wqlist)
+           rmpar($wqlist,'processed')
+	writeparam($s1[$i]+'/procpar',$list,'processed','add')
+	$name='' shell('basename '+file+' .fid'):$name
+	$img=archivedir+'/'+sample+'/'+$name+'.img/procpar'
+	exists($img,'file'):$imgex
+	if ($imgex) then
+           writeparam($img,$list,'processed','add')
+	endif
+	cplog($name,'write',seqfil)
+     endif
+     $i=$i+1
+  until $i > $total
+
+  tmpreturn($0)
+
+ELSEIF ($arg = 'isimgfid') THEN
+"*************************************************************************"
+  $studyid=''
+  isnewexp:$new
+  if ($new=1) then return(0,$studyid) endif
+  $filename=''
+  shell('basename '+file+' .fid'):$filename
+  $datadir='' $studydir=''
+  shell('basename '+$filename):$datadir
+  shell('dirname '+$filename):$studydir
+  exists($studydir+'/info','directory'):$direx
+  if ($datadir='data') and ($direx) then
+     return(1,studyid_)
+  else
+     return(0,$studyid)
+  endif
+
+ELSEIF ($arg='isimgsample') THEN
+"*************************************************************************"
+  if ($#<2) then
+    isnewexp:$new
+    if ($new=1) then
+        $archsamp=archivedir+'/'+sample
+    else
+        shell('dirname '+file):$archsamp
+    endif
+  else
+    $archsamp=''
+    substr($2,1):$archsamp
+  endif
+  $studydir='' $datadir='' $studyid=''
+  substr($archsamp,'basename'):$datadir
+  substr($archsamp,'dirname'):$studydir
+  exists($studydir+'/info','directory'):$infoex
+  if ($infoex) then
+     exists($studydir+'/studypar','file'):$fileex
+     if ($fileex) then
+        rtv($studydir+'/studypar','noabort','studyid_'):$studyid
+     endif
+  endif
+
+  if ($infoex) and $datadir='data' then
+     return(1,$studyid)
+  else
+     return(0,$studyid)
+  endif
+
+ENDIF

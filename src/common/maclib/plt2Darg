@@ -1,0 +1,189 @@
+"macro plt2Darg"
+exists('plt2Darg','parameter'):$parex
+if ($parex=0) then return endif
+
+IF ($# < 1) then
+   plt2Darg('fix')
+   plt2Darg[6]='','',''
+   strstr(plt2Darg[4],'exp'):$ret
+   if ($ret=1) then
+         if (trace='f2') then plt2Darg[4]='f2' else plt2Darg[4]='f1' endif
+   endif
+   strstr(plt2Darg[5],'exp'):$ret
+   if ($ret=1) then
+        if (trace='f2') then plt2Darg[5]='f1' else plt2Darg[5]='f2' endif
+   endif
+   if (trace='f1') then
+        if (plt2Darg[4]='f2') or (plt2Darg[5]='f1') then
+	    plt2Darg('toggle')
+	endif
+   else
+	if (plt2Darg[4]='f1') or (plt2Darg[5]='f2') then
+	    plt2Darg('toggle')
+	endif
+   endif
+   trace=trace
+   return
+ENDIF
+
+IF ($1='fix') THEN
+   $size=size('plt2Darg')
+   if ($size<2) then plt2Darg[2]='20' $size=$size+1 endif
+   if ($size<3) then plt2Darg[3]='1.3' $size=$size+1 endif
+   if ($size<4) then plt2Darg[4]='f2' $size=$size+1 endif
+   if ($size<5) then plt2Darg[5]='f1' $size=$size+1 endif
+   if ($size<6) then plt2Darg[6]='' $size=$size+1 endif
+   if ($size<7) then plt2Darg[7]='' $size=$size+1 endif
+   if ($size<8) then plt2Darg[8]='' $size=$size+1 endif
+   return
+ENDIF
+
+plt2Darg('fix')  
+IF ($1='toggle') THEN
+   $plt2Darg=plt2Darg
+   if (plt2Darg[5]='side') then
+	$plt2Darg[4]='top'
+   elseif (plt2Darg[5]='noside') then
+	$plt2Darg[4]='notop'
+   else
+	$plt2Darg[4]=plt2Darg[5]
+   endif
+   if (plt2Darg[4]='top') then
+	$plt2Darg[5]='side'
+   elseif (plt2Darg[4]='notop') then
+	$plt2Darg[5]='noside'
+   else
+   	$plt2Darg[5]=plt2Darg[4]
+   endif
+   $plt2Darg[7]=plt2Darg[8]
+   $plt2Darg[8]=plt2Darg[7]
+   plt2Darg=$plt2Darg
+   trace=trace
+ENDIF
+
+IF ($1='get') THEN
+   if typeof('$2') then
+	if ($2=trace) then
+	    $parval=plt2Darg[4]
+	    $where='top'
+	else
+	    $parval=plt2Darg[5]
+	    $where='side'
+	endif
+	$s1='' $s2=''
+	strstr($parval,'exp'):$ret,$s1,$s2
+	if ($ret=1) then
+	    return('exp',$s2)
+	endif
+	if ($parval='proj') then
+	    return('proj','')
+	endif
+	if ($parval='f1') or ($parval='f2') then
+	    getpl1dinfo($where):$file
+	    if ($file='proj') then
+		return('proj','')
+	    else
+		shell('basename '+$file+' .fid'):$file
+		return($parval,$file)
+	    endif
+	endif
+	if ($parval='notop') or ($parval='noside') then
+	     return('none','')
+	endif
+   else
+	if ($2=6) then
+	    if plt2Darg[6]='' then 
+		return('resize') 
+	    else
+		return(plt2Darg[6])
+	    endif
+	elseif ($2=1) then
+	    if (plt2Darg[1]='') then
+		return('both')
+	    else
+		return(plt2Darg[1])
+	    endif
+	elseif ($2=2) then
+	    $val=0 $retval=''
+	    format(plt2Darg[2],'lower'):$val
+	    format($val,0,0):$retval
+	    return($retval)
+	elseif ($2=3) then
+            $val=0 $retval=''
+            format(plt2Darg[3],'lower'):$val
+            format($val,0,1):$retval
+            return($retval)
+	elseif ($2=7) then
+	    if (trace='f2') then return(plt2Darg[7]) 
+	    else return(plt2Darg[8]) endif
+	elseif ($2=8) then
+	    if (trace='f2') then return(plt2Darg[8])
+	    else return(plt2Darg[7]) endif
+	endif
+   endif
+ENDIF
+
+IF ($1='set') THEN
+   if typeof('$2') then
+        if ($2=trace) then
+            $arg=4
+            $where='top'
+        else
+	    $arg=5
+            $where='side'
+        endif
+	if ($3='f2') or ($3='f1') then
+	   getpl1dinfo($where):$file
+	   if ($file='proj') then
+		plt2Darg[$arg]='proj'
+	   else
+		plt2Darg[$arg]=$3
+	   endif
+	elseif ($3='proj') then
+		plt2Darg[$arg]=$3
+	elseif ($3='exp') then
+	   if ($# > 3) then
+		$si='' format($4,0,0):$si
+		$parval='exp'+$si
+	   else
+	    	jexp:$curexp
+	    	$i=1 $found=0 $parval=''
+	    	repeat
+	       	    $si='' format($i,0,0):$si
+		    $si='exp'+$si
+		    if ($i<>$curexp) then
+		    	exists(userdir+'/'+$si,'directory'):$found
+		    	if ($found) then $parval=$si endif
+		    endif
+		    $i=$i+1
+	    	until ($found>0) or ($i > 9999)
+	    endif
+	    if ($parval='') then
+		plt2Darg[$arg]='proj'
+	    else
+		plt2Darg[$arg]=$parval
+	    endif
+	elseif ($3='none') then
+	    if ($where='top') then plt2Darg[$arg]='notop' endif
+	    if ($where='side') then plt2Darg[$arg]='noside' endif
+	endif
+   else
+	$3val=''
+	if not typeof('$3') then
+	   format($3,'lower'):$3val
+	else
+	   $3val=$3
+	endif
+	if ($2=7) then
+	   if (trace='f2') then plt2Darg[7]=$3val 
+	   else plt2Darg[8]=$3val endif
+	elseif ($2=8) then
+	   if (trace='f2') then plt2Darg[8]=$3val
+	   else plt2Darg[7]=$3val endif
+	else
+	   plt2Darg[$2]=$3val
+	endif
+   endif
+   trace=trace
+	
+ENDIF

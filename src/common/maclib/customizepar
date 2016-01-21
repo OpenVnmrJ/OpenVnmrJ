@@ -1,0 +1,1064 @@
+"macro customizepar"
+"***************************************************************"
+"customizepar - Macro to start a customization 			"
+"***************************************************************"
+$dum='' $devnull=''
+
+is_postvj22b:$vj22c
+
+format($1,'lower'):$arg
+
+$expfile=cursqexp+'/EXPLIST'
+$lngfile=cursqexp+'/LONGLIST'
+$maclibdir=cursqexp+'/macdir'
+$curfidlist=curexp+'/curFIDlist'
+$fidlist=cursqexp+'/FIDlist'
+$cmdnodes=$maclibdir+'/CMDnodes'
+
+$wqtemppars=''
+module('arraylist','walkupQpars'):$wqtemppars
+$wqtemppars=$wqtemppars,'wqinit','multiloc','customflag','cppauseflg'
+$clonemod='no'
+exists('clonemod','parameter'):$parex
+if ($parex) then $clonemod=clonemod endif
+
+IF ($arg='start') or ($arg='updateacqpars') THEN
+   if (cppauseflg='y') or (customflag='y') then return endif
+   if (seqfil<>'Submitq') and (seqfil<>'Startq') then return endif
+
+   $seqfil=seqfil
+   if ($# < 3) then 
+	if longQ='y' then $3='long' else $3='no' endif
+   endif
+   if ($3='long') then
+        $maclibdir=$maclibdir+'long'
+   endif
+   $allow='Yes'
+   cpattribute('get',$maclibdir+'/'+$2,'AllowCustomization'):$allow
+   if ($allow='No') or ($allow='no') then
+	write('line3','Warning: Customization of %s not allowed',$2)
+	return
+   endif
+
+   $scm1='' $scm2=''
+   exists($cmdnodes,'file'):$cmnex
+   if ($cmnex) then
+        readfile($cmdnodes,'$scm1','$scm2',$2,'local'):$ctot
+        if ($ctot>0) then
+            customizecmd($1,$2,$3)
+            return
+        endif
+   endif
+
+   isexpflg($2,$3):$ison
+   if ($ison=0) then return endif
+
+   $sqnode='' getcpnode('rev2',cursqexp,$2):$sqnode
+   if ($sqnode<>'') then xmhaha_setprop($sqnode,'status','Active') endif
+
+   pwd:$curdir
+   cd(cursqexp):$dum
+   rm('-rf','macdir_bkup'):$dum
+   mkdir('macdir_bkup'):$dum
+   if ($3='long') then
+	shell('cp macdirlong/'+$2+'acq* macdir_bkup'):$devnull
+   else
+	shell('cp macdir/'+$2+'acq* macdir_bkup'):$devnull
+   endif
+
+   cd($curdir):$dum
+
+// convert curexp/text into text_string
+// So it is preserved in current tree as well as
+// in the tmpsqcopy file
+    $text_string='' $text=''
+    $key=curexp+'/text'
+    $ret=0
+    lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+    if ($ret>1) then $text_string=$text endif
+    while ($ret>1) do
+	    $text=''
+            lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+            if ($ret>1) then $text_string=$text_string,$text endif
+    endwhile
+    setprotect('text_string','on',256)
+    text_string=$text_string
+// Done.
+
+   tmpsqcopy('startqpar1')
+   if ($3='long') then longQ='y' else longQ='n' endif
+
+   if ((alock='n') or (alock='y')or (alock='u')) then SQalock='no' else SQalock='yes' endif
+   if (wshim='n') then SQwshim='no' else SQwshim='yes' endif
+   SQtemp=temp SQpad=pad
+   SQgmap=Gmap SQgmapname=Gmapname
+   writeparam(cursqexp+'/wQtemppar','$wqtemppars')
+
+   walkupQ('readlist'):$parflg,$parlng,$exp2,$lng2
+   $cmd='' $cmdmacro=''
+   if ($3='long') then
+	teststr('$parlng',$2,'local'):$where
+	substr($lng2[$where],2):$cmd
+   else
+	teststr('$parflg',$2,'local'):$where
+	substr($exp2[$where],2):$cmd
+   endif
+   if ($cmd='') then $cmd=$2 endif
+   cpattribute('get',$maclibdir+'/'+$2,'SetupMacro'):$cmdmacro
+   if ($cmdmacro='') then 
+       exists($cmd,'command'):$macex
+       if ($macex=0) then
+	   getfilepath($cmd,'studylib'):$studyex
+	   if ($studyex) then $cmd='studysetup(\''+$cmd+'\')' $macex=1 endif
+       endif
+	$cmdmacro=$cmd
+   else
+	$macex=1
+   endif
+   if ($macex=0) then
+	customizepar('quit')
+	return
+   endif
+
+   $macro=$2+'acq'
+   $macfile=$maclibdir+'/'+$macro
+   $macpar=$macfile+'pars'
+
+//  Remove any legacy sampling.sch in curexp before
+//   executing the setup macro
+   rm('-f',curexp+'/sampling.sch'):$dum
+
+   $wqinit=wqinit
+   gcflg='y'
+   isBPexp($cmdmacro):$isbp
+   $ok=0
+   if not $isbp then
+   	AutoStrtfid($cmd,$2,$maclibdir):$ok
+   endif
+
+   savesampglobal('cp')
+   exists($macpar,'file'):$macparex
+   exists(cursqexp+'/newdndn2','file'):$newex
+   if ($newex) then
+        writeparam(cursqexp+'/tmpdndn2','dn dn2')
+        fread(cursqexp+'/newdndn2')
+   elseif ($macparex) and ($ok) then
+	writeparam(cursqexp+'/tmpdndn2','dn dn2')
+	readparam($macpar,'dn dn2')
+   endif
+
+   if $isbp then
+	exists(cursqexp+'/NodeModules/'+$2+'_rtppar','file'):$isbp
+   endif
+   if $isbp then
+	fread(cursqexp+'/NodeModules/'+$2+'_rtppar','current','reset')
+   else
+   	exec($cmdmacro)
+	exists(cursqexp+'/NodeModules','directory'):$direx
+	if not $direx then mkdir(cursqexp+'/NodeModules'):$dum endif
+	fsave(cursqexp+'/NodeModules/'+$2+'_rtppar','current')
+   endif
+   getsampglobal('cp')
+
+   $newseqfil=seqfil
+   gcflg='n'
+   exists(cursqexp+'/wQtemppar','file'):$wqfex
+   if $wqfex then
+   	fread(cursqexp+'/wQtemppar')
+   endif
+   customflag='y'
+   cppauseflg='n'
+   wqinit=$wqinit
+   layoutargs=$2,$3,$cmd
+   on('gain'):$gainon
+   GAINstatus=$gainon
+   writeparam(cursqexp+'/wQtemppar','$wqtemppars')
+
+		"If newseqfil is same as old seqfil, then "
+		" customization for this experiment is disallowed"
+	if ($newseqfil=$seqfil) then
+		customizepar('quit')
+		return
+	endif
+
+   if (alock<>'u') then alock='n' endif
+   wshim='n'
+   on('temp'):$tempon
+   setvalue('temp',SQtemp)
+   if ($tempon<1) then
+	off('temp')
+   endif
+   rm('-rf',cursqexp+'/'+$2+'par1.par'):$dum
+   		 	"Make sure any changes to wds and wstart during"
+			"	customization are recorded"
+   $wds=wds $wstart=wstart
+   wds='' wstart=''
+   if ($newex) or (($macparex) and ($ok)) then
+	writeparam(cursqexp+'/tmp2dndn2','dn dn2')
+  	fread(cursqexp+'/tmpdndn2')
+   endif
+// Make sure text_string is equal to the study
+//  text_string
+   text_string=$text_string
+   $txtsize=size('text_string')
+   write('reset',curexp+'/text')
+   $i=1
+   repeat
+     write('file',curexp+'/text','%s',text_string[$i])
+     $i=$i+1
+   until $i > $txtsize
+
+   svp(cursqexp+'/'+$2+'par1')
+   if ($newex) or (($macparex) and ($ok)) then
+	fread(cursqexp+'/tmp2dndn2')
+   endif
+   rm('-f',cursqexp+'/tmpdndn2'):$dum
+   rm('-f',cursqexp+'/tmp2dndn2'):$dum
+   rm('-f',cursqexp+'/newdndn2'):$dum
+   wds=$wds wstart=$wstart
+
+	"See if this is aliased/paused experiment"
+	"    alias is used only by cppause"
+   $paused='' $isalias=0
+   cpalias($2,'',$maclibdir):$paused,$isalias
+   if ($isalias=1) then
+	exec($paused)
+        fread(cursqexp+'/'+$2+'par1.par/procpar','current','newonly')
+        wds=$wds wstart=$wstart
+	cpalias($2,'remove',$maclibdir)
+   endif
+
+        "This section makes sure last customization are read"
+   exists($macpar,'file'):$ex
+   if ($ex) then fread($macpar) endif
+   exists($macfile,'file'):$ex
+   if ($ex) then
+	macrold($macfile):$dummy
+	exec($macro)
+	purge($macfile)
+   endif
+   customizedtext('read',$maclibdir,$2)
+//  This section makes sure that sampling.sch from previous
+//   customization (if any) is written back in curexp
+   SamplingSch('write',curexp)
+
+   exists('chreqexp','parameter'):$chreqex
+   if $chreqex then $chreqexp=chreqexp endif
+   exists(cursqexp+'/wQtemppar','file'):$wqfex
+   if ($wqfex) then
+       fread(cursqexp+'/wQtemppar')
+   endif
+   if $chreqex then chreqexp=$chreqexp endif
+   ORIGstrtpar=strtpar
+   ORIGreqexp=REQexp[1]
+   GAINstatus=$gainon
+
+   write('reset',$curfidlist)
+   write('file',$curfidlist,'"Defaults" "default"')
+   $reqexp='' getEXPinfo($cmd):$reqexp
+   string2array($reqexp[1]):$reqexp
+   $rtot=size('$reqexp')
+   if ($reqexp[1]<>'') then
+	$i=1
+	repeat
+	   write('file',$curfidlist,'"'+$reqexp[$i]+'" "'+$reqexp[$i]+'"')
+	   $i=$i+1
+	until $i > $rtot
+   endif
+   shell('(cat '+$fidlist+' >> '+$curfidlist+')'):$devnull
+   write('file',$curfidlist,'"Other.." "other"')
+
+   if (resumeQ<>'') and (procdim > 0) and ($wds<>'') then
+        wds='wstart=\''+$wds+'\' wds=\'\' customizepar(\'savequit\')'
+	if (procdim=1) then ds f full elseif (procdim=2) then dconi endif
+//  Since the peak selection customization is now based on a unique strtpar, make
+//	sure that strtpar value is saved with customization
+//	This is achieved by setting this chreqexp parameter to non-zero
+//	as though strtpar was explicitly set to something other than default by the user
+	chreqexp=1 
+   else
+//  If an explicit strtpar was not selected by user then reset strtpar parameter
+//	to an empty string
+	if chreqexp<0.5 then strtpar='' endif
+        dps
+   endif
+   if ($arg='start') then
+	seqfil=seqfil
+	showtray('close')
+   	$page='Quick'
+   	if (seqfil='s2pul') and (seqfil<>pslabel) then
+	    $page='Quick'+tn
+   	endif
+   	vnmrjcmd('setpage','Acquire',$page)
+   else
+	customizepar('savequit')
+   endif
+
+ELSEIF ($1 = 'move2night') THEN
+   if (customflag='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+   exists('layoutargs','parameter'):$layoutex
+   if ($layoutex=0) then return endif
+   if (layoutargs[2]='long') then return endif
+   if (wqinit='acq') then return endif
+
+   $line=''
+   shell('(cat '+$expfile+' | grep \'^'+layoutargs[1]+'\')'):$line
+   if ($line='') then return endif
+
+        if ($# > 1) then $acqtime=$2 endif
+        $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        walkupQ('gettime'):$olddtime,$oldntime
+        $newtime=$oldntime+$acqtime
+        $newtime=trunc(($newtime/60)+0.5)
+        if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+        $maxtime=$maxnighttime
+        $maxtime=trunc(($maxtime/60)+0.5)
+        if ($maxtime=0) then $maxtime=$newtime+1 endif
+        if ($maxtime<$newtime) then
+		return
+	endif
+
+   write('file',$lngfile,'%s',$line)
+   shell('(cat '+$expfile+' | grep -v "'+$line+'" > '+$expfile+'1)'):$devnull
+   rename($expfile+'1',$expfile):$dum
+   rename($maclibdir+'/'+layoutargs[1]+'acq',$maclibdir+'long/'+layoutargs[1]+'acq'):$dum
+   rename($maclibdir+'/'+layoutargs[1]+'acqpars',$maclibdir+'long/'+layoutargs[1]+'acqpars'):$dum
+   rename($maclibdir+'/'+layoutargs[1]+'_Attr',$maclibdir+'long/'+layoutargs[1]+'_Attr'):$dum
+   rename(cursqexp+'/day2nightLIST',cursqexp+'/day2nightLIST_tmp'):$dum
+   layoutargs[2]='long' longQ='y'
+   if (sqflag<>'n') then
+   	xmhaha('refreshSQ')
+   endif
+   write('reset',cursqexp+'/day2nightLIST')
+   rename(cursqexp+'/day2nightLIST_tmp',cursqexp+'/day2nightLIST'):$dum
+   write('file',cursqexp+'/day2nightLIST','%s',$line)
+
+ELSEIF ($1 = 'move2day') THEN
+
+   if (customflag='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+   exists('layoutargs','parameter'):$layoutex
+   if ($layoutex=0) then return endif
+   if (layoutargs[2]<>'long') then return endif
+   if (wqinit='acq') then return endif
+
+   $line=''
+   shell('(cat '+$lngfile+' | grep \'^'+layoutargs[1]+'\')'):$line
+   if ($line='') then return endif
+   substr($line,2):$acqtime
+
+   	if ($# > 1) then $acqtime=$2 endif
+        $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        $night='no'
+        walkupQ('gettime'):$olddtime,$oldntime
+        $newtime=$olddtime+$acqtime
+        $newtime=trunc(($newtime/60)+0.5)
+        if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+                is_night:$night
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+        if ($night='yes') then
+                $maxtime=$maxnighttime
+        else
+                $maxtime=$maxdaytime
+        endif
+        $maxtime=trunc(($maxtime/60)+0.5)
+        if ($maxtime=0) then $maxtime=$newtime+1 endif
+        if ($maxtime<$newtime) then
+            return
+        endif
+
+   write('file',$expfile,'%s',$line)
+   shell('(cat '+$lngfile+' | grep -v "'+$line+'" > '+$lngfile+'1)'):$devnull
+   rename($lngfile+'1',$lngfile):$dum
+   rename($maclibdir+'long/'+layoutargs[1]+'acq',$maclibdir+'/'+layoutargs[1]+'acq'):$dum
+   rename($maclibdir+'long/'+layoutargs[1]+'acqpars',$maclibdir+'/'+layoutargs[1]+'acqpars'):$dum
+   rename($maclibdir+'long/'+layoutargs[1]+'_Attr',$maclibdir+'/'+layoutargs[1]+'_Attr'):$dum
+   layoutargs[2]='no' longQ='n'
+   if (sqflag<>'n') then
+        xmhaha('refreshSQ')
+   endif
+
+
+ELSEIF ($1 = 'back2default') THEN
+
+   if (customflag='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+   exists('layoutargs','parameter'):$layoutex
+   if ($layoutex=0) then return endif
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   exists(cursqexp+'/'+$2+'par1.par','directory'):$direx
+   if ($direx=0) then return endif
+   $wds=wds $wstart=wstart
+   rtp(cursqexp+'/'+$2+'par1')
+   wds=$wds wstart=$wstart
+   if (resumeQ<>'') and (procdim > 0) and ($wds<>'') then
+        if (procdim=1) then ds f full elseif (procdim=2) then dconi endif
+   else
+        dps
+   endif
+
+ELSEIF ($arg = 'quit') THEN
+
+   if (cppauseflg='y') then show_n_pause('close') return endif
+   if (customflag='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+
+   flush
+   shell('rm -f '+curexp+'/acqfil/* 2> /dev/null'):$devnull
+
+   exists('layoutargs','parameter'):$lex
+   if ($lex) then
+     $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   else
+	$2='' $3='' $cmd=''
+   endif
+
+     $oldtime=0
+     $line=''
+     if ($3='long') then
+        shell('(cat '+$lngfile+' | grep \'^'+$2+'\')'):$line
+     else
+        shell('(cat '+$expfile+' | grep \'^'+$2+'\')'):$line
+     endif
+     if ($line<>'') then substr($line,2):$oldtime endif
+
+     $sqnode='' getcpnode('rev2',cursqexp,$2):$sqnode
+     if ($sqnode<>'') then
+	strstr($sqnode,'xx'):$ret
+	if ($ret) then
+		$sqnode=''
+	endif
+     endif
+     $Stime='' $Stime2='' formattime($oldtime):$Stime2,$Stime
+     if ($sqnode<>'') then 
+	xmhaha_setprop($sqnode,'status','Customized','time',$Stime)
+     endif
+
+
+   if ($2<>'') then
+	rm('-rf',cursqexp+'/'+$2+'par1.par'):$dum
+	rm('-rf',cursqexp+'/'+$2+'par2.par'):$dum
+   endif
+   pwd:$curdir
+   cd(cursqexp):$dum
+   if ($3='long') then
+	shell('mv macdir_bkup/* macdirlong'):$devnull
+   else
+	shell('mv macdir_bkup/* macdir'):$devnull
+   endif
+   rm('-rf','macdir_bkup'):$dum
+   cd($curdir):$dum
+   rm('-f',$curfidlist):$dum
+   rm('-f',cursqexp+'/tmpdndn2'):$dum
+   rm('-f',cursqexp+'/tmp2dndn2'):$dum
+   rm('-f',cursqexp+'/newdndn2'):$dum
+
+   tmpsqreturn('startqpar1')
+   exists(cursqexp+'/wQtemppar','file'):$wqfex
+   if ($wqfex) then
+   	fread(cursqexp+'/wQtemppar')
+	rm('-f',cursqexp+'/wQtemppar'):$dum
+   endif
+   customflag='n'
+   walkupQ('time')
+   seqfil=seqfil
+   clear(2)
+   if ($clonemod='no') then
+      if (wqinit='enter') then showtray('toggle','enter')
+      elseif (wqinit='auto') then showtray('toggle','auto') endif
+   endif
+   vnmrjcmd('setpage','Start','Standard')
+   vnmrjcmd('setpage','Setup','Standard')
+
+ELSEIF ($arg = 'time') THEN
+
+   EXPtime:$ACQtime
+   exists('Array','parameter'):$aex
+   if ($aex>0) then 
+	if (Array>0) then $ACQtime=$ACQtime*Array endif
+   endif
+
+   on('selfrqc'):$sfon
+// evaluate slpsat to make sure that multiple
+//  frequency selections are not going to be used
+//  by a single shape.  slpsat='y' means these 
+//  frequencies are for a single shape not for individual
+//  shapes
+   exists('slpsat','parameter'):$slpon
+   if ($slpon>0.5) then
+	if slpsat='n' then $slpon=0 endif
+   endif
+   if ($sfon>0) and ($slpon<0.5) then
+	$selfrqcsize=size('selfrqc')
+	$ACQtime=$ACQtime*$selfrqcsize
+   endif
+//  Similar evaluation need to be done here if the impress
+//   option is ever unleashed in the panels
+   on('selfrq1c'):$sf1fon
+   if ($sf1fon>0) then
+	$selfrq1csize=size('selfrq1c')
+	$ACQtime=$ACQtime*$selfrq1csize
+   endif
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+
+     $oldtime=0
+     $line=''
+     if ($3='long') then
+	shell('(cat '+$lngfile+' | grep \'^'+$2+'\')'):$line
+     else
+	shell('(cat '+$expfile+' | grep \'^'+$2+'\')'):$line
+     endif
+     if ($line<>'') then substr($line,2):$oldtime endif
+
+  format($ACQtime,0,0):$ACQtime
+  if ($## > 0) then
+	return($ACQtime,$oldtime)
+  else
+	$dtime=0 $ltime=0 $dpptime=0 $lpptime=0
+	walkupQ('gettime'):$dtime,$ltime,$dpptime,$lpptime
+	if ($aex>0) then
+	   if (Array>1) then
+		$procplottime=60
+		getadminfo('prpltime'):$procplottime
+		if ($3='long') then
+	                $ltime=$ltime+(Array-1)*$procplottime
+			$lpptime=$lpptime+(Array-1)*$procplottime
+		else
+			$dtime=$dtime+(Array-1)*$procplottime
+			$dpptime=$dpptime+(Array-1)*$procplottime
+		endif
+	   endif
+	endif
+
+	ACQtime=$ACQtime
+   	$Time='' $Time2=''
+   	formattime(ACQtime):$Time2,$Time
+	write('line3','%s - Approx. time: %s',$2,$Time2)
+	if ($3='long') then
+	   formattime($ltime-$oldtime+$ACQtime):nighttime
+	else
+	   formattime($dtime-$oldtime+$ACQtime):daytime
+	endif
+
+           $sqnode=''
+           getcpnode('rev2',cursqexp,$2):$sqnode
+           if ($sqnode<>'') then
+               strstr($sqnode,'xx'):$ret
+               if ($ret) then
+                   $sqnode=''
+               endif
+           endif
+           if ($sqnode<>'') then
+		xmhaha_setprop($sqnode,'time',$Time)
+           endif
+	   samplename=samplename
+  endif
+
+ELSEIF ($arg = 'save') or ($arg = 'savequit') THEN
+
+   if (cppauseflg='y') then show_n_pause('close') return endif
+   if (customflag='n') or (seqfil='Startq') or (seqfil='Submitq') then return endif
+   exists('layoutargs','parameter'):$layoutex
+   if ($layoutex=0) then return endif
+
+    if (apptype='std1D') then
+// for std1D apptype change in tn is NOT allowed
+        $TN='' 
+        exists(layoutargs[3],'parlib'):$parex,$parlib
+        if ($parex) then
+             rtv($parlib,'noabort','tn'):$TN
+        endif
+        if ($TN<>tn) and ($TN<>'') then
+            write('error','%s is std1D apptype for %s.  Change in tn not allowed during customization',layoutargs[3],$TN)
+            return
+        endif
+    endif
+
+   $timecheck='yes'
+   if (layoutargs[2]='long') and ($clonemod='no') then
+	$line=''
+        shell('(cat '+cursqexp+'/day2nightLIST | grep \'^'+layoutargs[1]+'\')'):$line
+      if ($line<>'') then
+	rename(cursqexp+'/day2nightLIST',cursqexp+'/day2nightLIST_tmp'):$dum
+	customizepar('time'):$newtime
+	customizepar('move2day',$newtime)
+	write('reset',cursqexp+'/day2nightLIST')
+	rename(cursqexp+'/day2nightLIST_tmp',cursqexp+'/day2nightLIST'):$dum
+      endif
+      if (layoutargs[2]<>'long') then
+	write('line3','Warning: %s moved back to dayQ',layoutargs[1])
+	shell('(cat '+cursqexp+'/day2nightLIST | grep -v "'+$line+'" > '+cursqexp+'/day2nightLIST1)'):$devnull
+	rename(cursqexp+'/day2nightLIST1',cursqexp+'/day2nightLIST'):$dum
+	$dnlines=0
+	lookup('mfile',cursqexp+'/day2nightLIST','countline'):$dnlines
+	if ($dnlines=0) then rm('-f',cursqexp+'/day2nightLIST'):$dum endif
+	$timecheck='no'
+      endif
+   endif
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+
+   "******Following section checks for max. time option******"
+   "*******Modify as appropriate************************************"
+   if ($clonemod='yes') then $timecheck='no' endif
+   if (wqinit<>'acq') and ($timecheck='yes') then
+	$curacqtime=0 $oldacqtime=0
+	customizepar('time'):$curacqtime,$oldacqtime
+	$acqtime=$curacqtime-$oldacqtime
+        $olddtime=0 $oldntime=0
+	walkupQ('gettime'):$olddtime,$oldntime
+        $maxdaytime=0 $maxnighttime=0
+        $when='' $night='no'
+	if ($3<>'long') then
+                $newtime=$olddtime+$acqtime
+                $when='DayQ'
+        else
+                $newtime=$oldntime+$acqtime
+                $when='NightQ'
+        endif
+        $newtime=trunc(($newtime/60)+0.5)
+        if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+                is_night:$night
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+        $autonight='no'
+        if ($night='yes') or (layoutargs[2]='long') then
+                $maxtime=$maxnighttime
+        else
+                getadminfo('autonight'):$autonight
+                $maxtime=$maxdaytime
+        endif
+        $maxtime=trunc(($maxtime/60)+0.5)
+        if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+        endif
+        if ($maxtime=0) then $maxtime=$newtime+1 endif
+        if ($maxtime<$newtime) then
+                write('error','%s time (%d min) exceeds max (%d min) allowed.',$when,$newtime,$maxtime)
+		if ($autonight='yes') then
+			customizepar('move2night',$curacqtime)
+		endif
+		if (layoutargs[2]='long') and ($when='DayQ') then
+                   write('error','%s moved to nightQ',$2)
+		   $3=layoutargs[2]
+		else
+		   return
+		endif
+	endif
+   endif
+
+   "********End of max time check**********************************"
+
+   strtpar=strtpar[1]
+   $reqexp='' getEXPinfo($cmd):$reqexp
+   if (strtpar <> '') then
+	substr($reqexp[1],'find',strtpar):$isreq
+	if ($isreq) then 
+	    REQexp[1]=strtpar
+	    strtpar=''
+	endif
+   endif
+	
+   if (wds <> '') then
+	$wds=wds wds=''
+	strstr($wds,'customizepar'):$is
+	exec($wds)
+	if ($is) then
+	   return
+	endif
+   endif
+
+   customizepar('time'):ACQtime
+
+   $par1=cursqexp+'/'+$2+'par1.par'
+   $par2=cursqexp+'/'+$2+'par2.par'
+// Make sure to read the sampling.sch from curexp
+//   Should we do this based on CStype?
+   SamplingSch('read',curexp)
+
+   exists($par1,'directory'):$par1ex
+   $par2ex=0
+   if ($par1ex) then 
+     rm('-rf',$par2):$dum
+     isBPexp($cmd):$isbp
+     if (apptype<>'HTapps') and not $isbp then
+	getdim:$dim
+	if ($dim > 1) then
+	    if proc1='lp' then setLP1 endif
+	    if (dmg='ph') then gaussian('acq') else sqsinebell('acq') endif
+	    if (dmg1='ph1') then gaussian('f1') else sqsinebell('f1') endif
+	endif
+	if ($dim > 2) then
+	    if proc2='lp' then setLP2 endif
+	    if (dmg2='ph2') then gaussian('f2') else sqsinebell('f2') endif
+	endif
+     endif
+        $wrtp=''
+        exists($cmd,'parlib'):$parex,$parpath
+        if ($parex) then
+                rtv($parpath,'noabort','wrtp'):$wrtp
+        endif
+	if ($wrtp<>'') then exec($wrtp) endif
+
+// Make sure curexp/text is now recorded into
+//  text_string parameter
+// Now this will make sure any changes to curexp/text
+//  as part of customization are recorded in acqpars
+    	$text_string='' $text=''
+    	$key=curexp+'/text'
+    	$ret=0
+    	lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+    	if ($ret>1) then $text_string=$text endif
+    	while ($ret>1) do
+            $text=''
+            lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+            if ($ret>1) then $text_string=$text_string,$text endif
+    	endwhile
+    	setprotect('text_string','on',256)
+    	text_string=$text_string
+// Done.
+
+   	svp(cursqexp+'/'+$2+'par2')
+   	exists($par2,'directory'):$par2ex
+   endif
+
+   if ($par1ex) and ($par2ex) then
+   	if ($3='long') then
+        	$maclibdir=$maclibdir+'long'
+   	endif
+   	$macro=$maclibdir+'/'+$2+'acq'
+	rm('-f',$macro):$dum
+	rm('-f',$macro+'pars'):$dum
+
+        $parlist='' $parlist2=''
+//  it is potentially possible that the -list option for
+//   diffparam may generate too long a list to fit into a string return variable
+//   Capture it in a file and use readfile
+
+                $tmpfile=cursqexp+'/'+$0
+                write('reset',$tmpfile)
+                shell('diffparams '+$par1+' '+$par2+'  > '+$tmpfile):$devnull
+                shell('diffparams -active '+$par1+' '+$par2+'  >> '+$tmpfile):$devnull
+                shell('diffparams -protection '+$par1+' '+$par2+'  >> '+$tmpfile):$devnull
+                readfile($tmpfile,'$parlist','$parlist2','','local')
+		rm('-f',$tmpfile):$dum
+                $partot=size('$parlist')
+                if ($partot>1) then
+                    sort($parlist,'u'):$index,$parlist
+                endif
+
+  "---------------------------------------------------------"
+  "make sure to adjust obsSW,f1SW and f2SW, if needed   "
+  "	This is just in case, sw/tof is changed manually"
+
+        adjparlist($parlist):$parlist
+
+  "---------------------------------------------------------"
+  "make sure that if wshim is in $parlist, Gmap and Gmapname are also included"
+
+     teststr('$parlist','wshim','local'):$ret
+     if ($ret) or (wshim<>'n') then
+	teststr('$parlist','Gmap','local'):$ret2
+	if not $ret2 then Gmap=SQgmap endif
+	teststr('$parlist','Gmapname','local'):$ret3
+	if not $ret3 then Gmapname=SQgmapname endif
+	$parlist=$parlist,'Gmap','Gmapname'
+     endif
+  "---------------------------------------------------------"
+  "make sure that if wstart is in $parlist then wds is included"
+  " and vice versa"
+
+     teststr('$parlist','wstart','local'):$ret
+     if ($ret) then
+	$parlist=$parlist,'wds'
+     else
+	teststr('$parlist','wds','local'):$ret2
+	if ($ret2) then
+	    $parlist=$parlist,'wstart'
+	endif
+     endif
+  "---------------------------------------------------------"
+  "make sure that the $parlist does not include $wqtemppars"
+  " strtpar / chreqexp / REQexp are conditional parameters, added"
+  "	at the next section in this macro"
+  "sampleglobals are never included in parlist except text_string"
+
+     $WQtmp=$wqtemppars
+     $WQtmp=$WQtmp,'GAINstatus','ORIGreqexp','ORIGstrtpar'
+     $WQtmp=$WQtmp,'strtpar','REQexp','chreqexp'
+     $sglist='' module('arraylist','sampleglobal'):$sglist
+     if $sglist<>'' then $WQtmp=$WQtmp,$sglist endif
+     $sglist='' module('arraylist','usersampleglobal'):$sglist
+     if $sglist<>'' then $WQtmp=$WQtmp,$sglist endif
+
+     $total=size('$WQtmp')
+     $i=1
+     repeat
+	if $WQtmp[$i]<>'text_string' then
+	    teststr('$parlist',$WQtmp[$i],'local'):$ret
+	    if ($ret>0) then $parlist[$ret]='' endif
+	endif
+	$i=$i+1
+     until $i > $total
+  "---------------------------------------------------------"
+	if (strtpar<>'') then
+	   if (chreqexp>0) then
+		teststr('$parlist','REQexp','local'):$fret
+		if ($fret) then $parlist[$fret]='' endif
+		$parlist=$parlist,'strtpar','chreqexp'
+	   else
+	        exists(archivedir+'/'+sample+'/dirinfo/fidlog','file'):$fidlogex
+		if ($fidlogex) then
+		     $fs1='' $fs2=''
+		     readfile(archivedir+'/'+sample+'/dirinfo/fidlog','$fs1','$fs2','','local')
+		     teststr('$fs2',strtpar,'local'):$fret
+		     if ($fret>0) then
+			strstr($fs1[$fret],':','last'):$fret,REQexp
+		     endif
+		endif
+		$parlist=$parlist,'REQexp'
+		teststr('$parlist','strtpar','local'):$fret
+		if ($fret) then $parlist[$fret]='' endif
+                teststr('$parlist','chreqexp','local'):$fret
+                if ($fret) then $parlist[$fret]='' endif
+	    endif
+	else
+           $parlist=$parlist,'REQexp'
+           teststr('$parlist','strtpar','local'):$fret
+           if ($fret) then $parlist[$fret]='' endif
+           teststr('$parlist','chreqexp','local'):$fret
+           if ($fret) then $parlist[$fret]='' endif
+        endif
+  "----------------------------------------------------------"
+	// If pw is in the list and is not an array, then
+	//   write it as tip angle in the macro.  This will
+	//   make it more generic during cloning process!!
+
+	$pwret=0 $tip=0
+	teststr('$parlist','pw','local'):$pwret
+	if ($pwret) then
+	    $pwsize=size('pw')
+	    if ($pwsize>1) then $pwret=0 endif
+	endif
+	if ($pwret) then
+	    $tip=pw*90/pw90
+        endif
+
+        // if at is in the list, then write it in the macro.
+        //  This will makes sure that np/sw relationship is properly
+        //  maintained.
+
+        $atret=0
+        teststr('$parlist','at','local'):$atret
+	writeparam($macro+'pars','$parlist','current')
+
+  "---------------------------------------------------------"
+	if ($pwret) and ($tip) then
+	   write('file',$macro,'pw(%0.1f)',$tip)
+	endif
+        if ($atret) then
+           write('file',$macro,'at=at')
+        endif
+   	write('file',$macro,'ACQtime=%d',ACQtime)
+
+      if (wqinit='enter') then
+                "It is possible that the submissions are done"
+                " on a workstation and conpar/probefile are "
+                " different than those in the host at runtime"
+                " But this will NOT be the case when wqinit<>'enter'"
+        teststr('$parlist','obsSW','local'):$swch
+        if ($swch) then
+                write('file',$macro+'_special','exec(obsSW)')
+        endif
+        teststr('$parlist','f1SW','local'):$swch
+        if ($swch) then
+                write('file',$macro+'_special','exec(f1SW)')
+        endif
+        teststr('$parlist','f2SW','local'):$swch
+        if ($swch) then
+                write('file',$macro+'_special','exec(f2SW)')
+        endif
+        teststr('$parlist','tn','local'):$dnch
+        if ($dnch) then
+                write('file',$macro+'_special','setobspars')
+        endif
+        teststr('$parlist','dn','local'):$dnch
+        if ($dnch) then
+                write('file',$macro+'_special','setdecpars(\'update\')')
+        endif
+        teststr('$parlist','dn2','local'):$dnch
+        if ($dnch) then
+                write('file',$macro+'_special','setdec2pars')
+        endif
+      endif
+	
+	walkupQ('adjtime',$2,$3,ACQtime)
+   endif
+
+   pwd:$curdir
+   cd(cursqexp):$dum
+   rm('-rf','macdir_bkup'):$dum
+   mkdir('macdir_bkup'):$dum
+   if ($3='long') then
+        shell('cp macdirlong/'+$2+'acq* macdir_bkup'):$devnull
+   else
+        shell('cp macdir/'+$2+'acq* macdir_bkup'):$devnull
+   endif
+   cd($curdir):$dum
+
+   if ($arg = 'savequit') then
+	customizepar('quit')
+   else
+	if ($par2ex) then
+		rm('-rf',$par2):$dum
+	endif
+   endif
+
+ELSEIF ($arg = 'acquire') THEN
+
+    if (wqinit <> 'acq') then
+	write('error','Cannot acquire when submitting to Automation')
+	return
+    endif
+    if (cppauseflg='y') then
+	show_n_pause('acquire')
+    else
+	$2=layoutargs[1]
+	customizepar('save')
+	customizepar('quit')
+	walkupQ('testacquire',$2)
+    endif
+
+ELSEIF ($arg = 'updatenuc') THEN
+   if (apptype='std1D') or (apptype='') or (apptype='generic_apptype') then return endif
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   if ($2<>'') then
+        rm('-rf',cursqexp+'/'+$2+'par1.par'):$dum
+        rm('-rf',cursqexp+'/'+$2+'par2.par'):$dum
+   endif
+   rm('-f',$curfidlist):$dum
+   rm('-f',cursqexp+'/tmpdndn2'):$dum
+   rm('-f',cursqexp+'/tmp2dndn2'):$dum
+   rm('-f',cursqexp+'/newdndn2'):$dum
+   writeparam(cursqexp+'/newdndn2','dn dn2')
+
+        if ($3='long') then
+                $maclibdir=$maclibdir+'long'
+        endif
+        $macro=$maclibdir+'/'+$2+'acq'
+        rm('-f',$macro):$dum
+        rm('-f',$macro+'pars'):$dum
+	rm('-f',$macro+'_special'):$dum
+
+   tmpsqreturn('startqpar1')
+   exists(cursqexp+'/wQtemppar','file'):$wqfex
+   if $wqfex then
+   	fread(cursqexp+'/wQtemppar')
+   	rm('-f',cursqexp+'/wQtemppar'):$dum
+   endif
+   customflag='n'
+   rename(cursqexp+'/macdir_bkup',cursqexp+'/macdir_bkup.save'):$dum
+   customizepar('start',$2,$3)
+   rm('-rf',cursqexp+'/macdir_bkup'):$dum
+   rename(cursqexp+'/macdir_bkup.save',cursqexp+'/macdir_bkup'):$dum
+
+
+ELSEIF ($arg = 'update') THEN
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+
+   $update=0 
+   exists('ORIGstrtpar','parameter'):$osex
+   exists('ORIGreqexp','parameter'):$osex2
+   if ($osex=0) or ($osex2=0) then $update=1 endif
+   if ($update=0) then
+
+     if (samplename<>'') then
+        $s1='' $s2='' $ret=0
+        $spar1='' $spar2=''
+        strstr(ORIGstrtpar,samplename+'-'):$ret,$s1,$s2
+        if ($ret) then $spar1=$s2 else $spar1=ORIGstrtpar endif
+        $s1='' $s2='' $ret=0
+        strstr($spar1,'.','last'):$ret,$s1,$s2
+        if ($ret) then $spar1=$s1 endif
+        $s1='' $s2='' $ret=0
+        strstr(strtpar,samplename+'-'):$ret,$s1,$s2
+        if ($ret) then $spar2=$s2 else $spar2=strtpar endif
+     else
+	$spar1=ORIGstrtpar
+	$spar2=strtpar
+     endif
+        $s1='' $s2='' $ret=0
+        strstr($spar2,'.','last'):$ret,$s1,$s2
+        if ($ret) then $spar2=$s1 endif
+
+	if ($spar1<>$spar2) or (ORIGreqexp<>REQexp) then 
+		$update=1 
+	endif
+   endif
+
+   if ($update) then
+	customizepar('save')
+	customizepar('quit')
+	customizepar('start',$2,$3)
+   endif
+
+ELSEIF ($arg = 'resetreqexp') THEN
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   if ($cmd='') then $cmd=$2 endif
+   strtpar=strtpar[1]
+   if (strtpar='default') then
+	getEXPinfo($cmd):REQexp
+	strtpar=''
+	chreqexp=1
+   elseif (strtpar='other') then
+	strtpar=''
+	REQexp=''
+	chreqexp=2
+   elseif (strtpar<>'') then
+        $reqexp='' getEXPinfo($cmd):$reqexp
+	substr($reqexp[1],'find',strtpar):$isreq
+        if ($isreq) then
+            REQexp[1]=strtpar
+            strtpar=''
+        endif
+
+     if (samplename<>'') then
+        $s1='' $s2='' $ret=0
+	$spar1='' $spar2=''
+        strstr(ORIGstrtpar,samplename+'-'):$ret,$s1,$s2
+        if ($ret) then $spar1=$s2 else $spar1=ORIGstrtpar endif
+        $s1='' $s2='' $ret=0
+	strstr($spar1,'.','last'):$ret,$s1,$s2
+	if ($ret) then $spar1=$s1 endif
+        $s1='' $s2='' $ret=0
+        strstr(strtpar,samplename+'-'):$ret,$s1,$s2
+        if ($ret) then $spar2=$s2 else $spar2=strtpar endif
+     else
+	$spar1=ORIGstrtpar
+	$spar2=strtpar
+     endif
+        $s1='' $s2='' $ret=0
+	strstr($spar2,'.','last'):$ret,$s1,$s2
+	if ($ret) then $spar2=$s1 endif
+	
+	if ($spar1<>$spar2) or (REQexp<>ORIGreqexp) then
+		chreqexp=1
+	else
+		chreqexp=0
+	endif
+   endif
+
+ENDIF
+

@@ -1,0 +1,34 @@
+"macro lock_scan"
+
+$stop='n'
+if $#>0.5 then
+  if $1='aa' then
+    $stop='y'
+  endif
+endif
+
+if traymax>0.5 then
+  loc='n'
+  vnmrjcmd('tray close')
+endif
+
+if overlayMode>0.5 then
+  vpLayout('overlayMode','unoverlay')
+endif
+
+exists('acqmode','parameter','global'):$e
+if $stop='n' then
+  if $e>0.5 then
+     if acqmode='fidscan' then
+       aa('  ')
+     endif
+  endif
+  readhw('z0','lockpower','lockgain','lockphase'):z0,lockpower,lockgain,lockphase
+  locki('start')
+  locki('display')
+else
+  locki('stop')
+  if $e>0.5 then acqmode='' endif
+  clear(2)
+  menu('main')
+endif

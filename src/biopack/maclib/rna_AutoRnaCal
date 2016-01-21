@@ -1,0 +1,47 @@
+"macro rna_AutoRnaCal"
+"rna_AutoRnaCal"
+
+if BPdeuterated=1 then banner('AutoCal Requires Protonated RNA,Calibrate Manually') abort endif
+
+if (BPplot='file') then
+ BPplotdir=userdir+'/AutoRna'
+endif
+
+$date=''
+BPgetdate:$date
+printon man('rnapreface') printoff
+$vtset=''
+shell('showstat > ',curexp+'/stat'):$dummy
+lookup('file',curexp+'/stat','VT','active:','read'):$vtset,$ret
+delete(curexp+'/stat')
+if $ret then
+  format($vtset,0,1):$temp
+endif
+$h2oref=4.66
+
+  $dir=userdir+'/AutoRna'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+        shell('mkdir -p ' +$dir2):$dum
+    endif
+    mv($dir,$dir2+'/AutoRna_'+$date)
+  endif
+  mkdir(userdir+'/AutoRna')
+
+
+
+rna_water
+if $ret then
+  temp=$temp  
+endif
+gain=10 write('line3','finding water frequency')
+satdly=1.5 d1=1.5 ss=2 nt=1 satpwr=satpwr+6 
+p1=0 f 
+satfrq=satfrq+8,satfrq+7.2,satfrq+6.4,satfrq+5.6,satfrq+4.8,satfrq+4,satfrq+3.2,satfrq+2.4,satfrq+1.6,satfrq+.8,satfrq,satfrq-.8,satfrq-1.6,satfrq-2.4,satfrq-3.2,satfrq-4,satfrq-4.8,satfrq-5.6,satfrq-6.4,satfrq-7.2,satfrq-8
+av tof=satfrq array='(satfrq,tof)' da wnt='wft f select(1) vsadj dssh'
+dps write('line3','finding water frequency')
+ssfilter='n' wexp='rna_autocal1a' au
+

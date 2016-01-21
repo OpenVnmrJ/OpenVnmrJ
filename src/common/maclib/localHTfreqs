@@ -1,0 +1,37 @@
+"macro localHTfreqs"
+ "Varian"
+//localHTfreqs macro returns appropriate filenames
+//  The 2nd return value will be absolute path and
+//  hence independent of inside or outside VJ3/CP4
+
+exists('is_cpsample','maclib'):$cp
+if (not $cp) then 
+	// Create and assign HTdir parameter and value
+   setHTdir:$svfdir
+else
+	// There is no need for HTdir parameter
+   $svfdir=''
+   is_cpsample:$iscp,$svfdir
+   if ($iscp=0) then return(0,'') endif
+   $svfdir=$svfdir+'/dirinfo'
+endif
+
+if ($#>0) then 
+    if ($1='') then
+	// Return the directory path
+	return($cp,$svfdir)
+    endif
+    $fname = $svfdir+'/'+$1+'.ll'     
+    exists($fname,'file'):$e
+	// If return variable is supplied
+	//   return the filepath, but don't do importHT
+    if ($## > 0) then return($e,$fname) endif
+    if $e>0.5 then
+	// Do importHT and return filepath
+       copy($fname, curexp+'/htll.htfrq1')
+       importHT
+	return($e,$fname)
+    endif
+else
+    return(0,'')
+endif

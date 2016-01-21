@@ -1,0 +1,119 @@
+"macro cprev"
+$tailX='tail'
+whichtail:$tailX
+
+$show='no' $print='no' $email='no' $save='no'
+if ($## = 0) then $show='show' endif
+if ($# > 0) then
+  $show='show'
+  ${$1}=$1
+endif
+
+$CPver=''
+$chempack='Chempack'
+$CPversize=size('$CPver')
+
+$systemname=systemname
+
+$cpf=curexp+'/'+$systemname+'-CPversion'
+write('reset',$cpf)
+$return=''
+$cprev='' 
+$cppat=''
+shell('dirname '+userdir):$myhome
+//shell('echo $HOME'):$myhome
+$savename=$myhome+'/'+$systemname+'-CPversion'
+
+$i=1
+repeat
+  $local=1 $system=0
+  $cpversion=$myhome+'/CP'+$CPver[$i]+'_Readme/CP'+$CPver[$i]+'_Version'
+  $cppatch=$myhome+'/CP'+$CPver[$i]+'_Readme/CP'+$CPver[$i]+'_Patch'
+  exists($cpversion,'file'):$cpex
+  if ($cpex=0) then
+    $cpversion=systemdir+'/chempack/CP'+$CPver[$i]+'_Version'
+    $cppatch=systemdir+'/chempack/CP'+$CPver[$i]+'_Patch'
+    exists($cpversion,'file'):$cpex
+    $local=0 $system=1
+  endif
+  if ($cpex=0) then
+    $cpversion=systemdir+'/CP'+$CPver[$i]+'_Readme/CP'+$CPver[$i]+'_Version'
+    $cppatch=systemdir+'/CP'+$CPver[$i]+'_Readme/CP'+$CPver[$i]+'_Patch'
+    exists($cpversion,'file'):$cpex
+    $local=0 $system=2
+  endif
+  if ($cpex) then
+    shell('head -n 1 '+$cpversion):$cprev
+    $installed=''
+    shell('grep -w Installed '+$cpversion):$installed
+    if ($installed <> '') then
+	$cprev = $cprev+' - '+$installed
+    endif
+    if ($return='') then 
+	$return=$cprev
+    else 
+	$return=$return+'\\    '+$cprev 
+    endif
+
+    exists($cppatch,'file'):$pex
+    if ($pex) then
+	shell('head -n 1 '+$cppatch):$cppat
+	$installed=''
+	shell('grep -w Installed '+$cppatch):$installed
+	if ($installed <> '') then
+		$cppat=$cppat+' - '+$installed
+	endif
+	$return=$return+'\\    '+$cppat
+    else
+	$cppat=''
+	shell('(head -n 2 '+$cpversion+' | '+$tailX+' -n 1)'):$cppat
+	if ($cppat<>'') then
+		$return=$return+'\\    '+$cppat
+	endif
+    endif
+
+    write('file',$cpf,'****************************************')
+    if ($local) then
+       write('file',$cpf,' %s is installed in local vnmrsys',$chempack[$i])
+    elseif ($system=1) then
+        write('file',$cpf,' %s is installed in %s/chempack',$chempack[$i],systemdir)
+    else
+        write('file',$cpf,' %s is installed in %s',$chempack[$i],systemdir)
+    endif
+    write('file',$cpf,'****************************************')
+    write('file',$cpf,'')
+    shell('cat '+$cpversion+' >> '+$cpf):$dum
+    if ($pex) then
+	shell('cat '+$cppatch+' >> '+$cpf):$dum
+    endif
+    write('file',$cpf,'')
+  endif
+  $i=$i+1
+until $i > $CPversize
+
+exists($cpf,'file'):$cpfex
+if ($cpfex) then
+  if ($show = 'show') then
+	clear
+	cat($cpf)
+  endif
+  if ($print = 'print') then
+	printon
+	cat($cpf)
+	printoff
+  endif
+  if ($email='email') then
+     if ($# > 1) then
+       email($cpf,$2)
+     else
+       email($cpf)
+     endif
+  endif
+  if ($save='save') then
+    shell('cp '+$cpf+' '+$savename):$dum
+  endif
+
+  shell('rm -f '+$cpf):$dum
+endif
+
+return($return)

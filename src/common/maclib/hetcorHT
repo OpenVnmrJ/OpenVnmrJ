@@ -1,0 +1,80 @@
+"macro hetcorHT"
+" ********************************************************** "
+" ***                      hetcorHT                      *** "
+" ***           setup macro for hetcorHT experiment      *** "
+" ***                    Eriks Kupce                     *** "
+" ***                 Oxford 12/03/04                    *** "
+" ********************************************************** "
+" usage: hetcorHT                                             " 
+
+exists('htfrq1','parameter'):$ex
+if ($ex) then $htfrq1 = htfrq1 endif
+
+seqfil='hetcorHT' addpar('2d') phase=0 axis='pd'
+layout=seqfil
+refsource1='dfrq' apptype='HTapps'
+
+Autopsgset(seqfil,'dg2','dg','pshape','bscor','repflg','sspul')
+Autopsgset(seqfil,'compC','compH','gt0','gzlvl0','htfrq1','mult','j1xh')
+Autopsgset(seqfil,'ni','sw1','htbw1','htofs1','htss1','htcal1','htpwr1','httof','htsw')
+Autopsgset(seqfil,'pplvl','Cdpwr','Cdres','Cdseq','Cdmf','sc2d','refoc')
+explist=''
+sspul='y'
+
+proc1='ht' sw1=sw dm='nny' dmm='ccw' nt=1 ss=2 gain='y' ai 
+np=8*1024 fn=16k fn1=4*sw1/htbw1 
+if (fn1<1024) then fn1=1024 endif
+sc=10 wc=wcmax-30 sc2=0 wc2=wc2max-10 trace='f2'
+
+exists('dn2','parameter'):$e
+if $e>0.5 then dn2='' endif
+
+if ($ex) then htfrq1 = $htfrq1 setHTni else htfrq1=0 endif
+
+// setheteroHT macro return htfrq1/htbw1 from
+//   PROTON spectrum;  It also sets sw1
+//   and dof based on sw and tof;  But, this macro 
+//   is benign under non VJ3/CP4 environment
+setHTfreqs('PROTON')
+
+$c=0.0
+getparam('pw90','H1'):pp
+getparam('tpwr','H1'):pplvl
+getparam('dpwr','H1'):dpwr
+getparam('dmf','H1'):dmf
+getparam('pwx','C13'):pw
+getparam('pwxlvl','C13'):tpwr
+
+getparam('compHT','H1'):$c
+if($c<0.1) then
+  getparam('tpwr_cf','H1'):$c
+  if($c<0.1) then
+    write('error','probe calibrations missing !')
+    $c=1.0
+  endif
+endif
+compH=$c
+
+$c=0.0
+getparam('compHT','C13'):$c
+if($c<0.1) then
+  getparam('pwxlvl_cf','C13'):$c
+  if($c<0.1) then
+    write('error','probe calibrations missing !')
+    $c=1.0
+  endif
+endif
+compC=$c
+ddrpm='e' setrc
+wexp='autoscaleHT vnmrjcmd(`setpage`,`Process`,`Proc2D_HT`)'
+execpars('delete') execpars('newonly')
+
+substr(gradtype,3,1):$grad
+if ($grad='l') then
+  gzlvl0=350 
+endif
+
+
+man(seqfil)
+
+

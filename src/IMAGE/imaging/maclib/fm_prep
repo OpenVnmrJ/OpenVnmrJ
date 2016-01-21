@@ -1,0 +1,42 @@
+"macro fm_prep"
+exists(userdir+'/fastmap','directory'):$e
+if ($e = 0) then
+  mkdir(userdir+'/fastmap')
+endif
+
+"MACRO FOR SETTING THE CORRECT VALUES OF ni IN FASTESTMAP"
+if (epi[0] = 'y') then 
+  exists('nf_def','parameter','current'):$e
+  if ($e = 0) then
+    create('nf_def','integer','current')
+"   input('Enter default # of echoes : '):nf_def"
+    nf_def=2
+    nf=nf_def
+  else
+    if (nf_def>1) then
+      nf=nf_def
+    else
+      if pilot='n' then
+"       input('nf_def is <1, Enter new default nf value (1 to prevent update)'):nf_def"
+        nf_def=1
+      endif
+    endif
+  endif
+  ni=maxproj
+  if (nf<2) then
+    if pilot='n' then
+      nf=2
+"     input('Enter # of echoes : '):nf"
+    endif
+  endif
+else
+  ni=2*maxproj
+  nf=1
+endif
+if pilot='y' then 
+  ni=maxproj 
+endif
+on('gain'):$gon
+if ($gon < 0.5) then
+  ni=1
+endif

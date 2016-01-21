@@ -1,0 +1,197 @@
+"macro xmlockup"
+"xmlockup - move current node under the last locked node"
+xm1('studydir'):$sdir
+$file = $sdir+'/enterSQ'
+exists($file,'file'):$e
+"if ($e<0.5 or auto='y') then"
+if ($e<0.5) then
+" write('line3','%s: file not found %s',$0,$file)"
+  return(0)
+endif
+
+$queue='n'
+if $#>0.5 then $queue=$1 endif
+
+$id=actionid
+if (auto='y') then
+  exists(userdir+'/psg.error','file'):$e
+  if ($e < 0.5) then
+    xmsetatts($id,'lock','on')
+  endif
+"don't really need xmwritesq here, only when data finished (xmwexp)"
+  xmwritesq('write','')
+  return(0)
+endif
+
+$s1='' $s2='' $s3='' $s4=''
+$ids='' $exps='' $locks='' $stats=''
+readfile($file,'$ids','$s1','','local'):$size
+$i=0
+repeat
+  $i=$i+1
+  xmgetatts($ids[$i],'exp','lock','status'):$exps[$i],$locks[$i],$stats[$i]
+until ($i>=$size)
+
+"assume acquire macro sets actionid"
+"$id=actionid"
+if $##>0.5 then
+  $id=$ids[$size]
+endif
+
+$curpos=0 $lockpos=0 $curparent=0 $lockparent=0
+$f1=0 $f2=0 $f3=0 $f4=0
+$i=$size
+repeat
+  if ($f1=0 and $ids[$i]=$id) then
+    $f1=1 $curpos=$i
+    if $exps[$curpos]='parent' then "parent node"
+      return('null',0)
+    endif
+  endif
+  if ($f1=1 and $f2=0) then
+    if ($exps[$i]='parent') then
+      $f2=1 $curparent=$i
+    endif
+  endif
+  if ($queue='queue') then
+    if ($f3=0 and ($locks[$i]='on' or $stats[$i]='Submitted')) then
+      $f3=1 $lockpos=$i
+    endif
+  else
+    if ($f3=0 and $locks[$i]='on') then
+      $f3=1 $lockpos=$i
+    endif
+  endif
+  if ($f3=1 and $f4=0) then
+    if ($exps[$i]='parent') then
+      $f4=1 $lockparent=$i
+    endif
+  endif
+  $i=$i-1
+until ($i<=0.5 or ($f1=1 and $f2=1 and $f3=1 and $f4=1))
+"assume $id in list, otherwise not found, $index=0?"
+
+if $##>0.5 then
+  if ($lockpos>0.5) then
+    $idl=$ids[$lockpos]
+  else
+    $idl='null'
+  endif
+  return($idl,$lockpos) "return last locked node id"
+endif
+
+$locknextp=0  "next parent after locked node"
+if ($lockpos>0.5 and $lockpos<$size) then
+  $i=$lockpos
+  repeat
+    $i=$i+1
+    if ($exps[$i]='parent') then
+      $locknextp=$i
+    endif
+  until ($i>=$size or $locknextp>0.5)
+endif
+
+$idc='' $idcp='' $idl='' $idlp='' $idnp=''
+if ($curpos>0.5 and $curparent>0.5) then
+  $idc=$ids[$curpos]  $idcp=$ids[$curparent]
+endif
+if ($lockpos>0.5 and $lockparent>0.5) then
+  $idl=$ids[$lockpos] $idlp=$ids[$lockparent]
+endif
+if ($locknextp>0.5) then
+  $idnp=$ids[$locknextp]
+endif
+
+"correct for protocol w/one action, but not more"
+"write('line3','%s: cur=%g,%g (%s,%s) lock=%g,%g (%s,%s)',$0,$curpos,$curparent,$idc,$idcp,$lockpos,$lockparent,$idl,$idlp)"
+
+" $curpos     [$idc]   - current node position"
+" $curparent  [$idcp]  - current node parent"
+" $lockpos    [$idl]   - last locked node position"
+" $lockparent [$idlp]  - last locked node parent"
+" $locknextp  [$idnp]  - next parent after last locked node"
+"   usually $lockparent < $lockpos < $curparent < $curpos"
+"   and $locknextp > $lockparent"
+"   unless $lockparent = $curparent"
+$cmd=''
+if ($locknextp=0) and ($lockparent=0) and ($curparent=0) then // Case 0
+  $i = 0
+  $lastlocked=0
+  while ($i < $size) do
+    $i=$i+1
+    if ($locks[$i]='on') or ($stats[$i]='Submitted') or ($stats[$i]='Executing') or ($stats[$i]='Error') then
+       $lastlocked = $i
+    endif
+  endwhile
+  "The move command 'move a b' moves a below b. It will not move locked nodes"
+  $i = $lastlocked
+  while ($i > 1) do
+    $i=$i-1
+    if ($locks[$i]<>'on') and ($stats[$i]<>'Submitted') and ($stats[$i]<>'Executing') and ($stats[$i]<>'Error') then
+       $cmd=$cmd + 'move '+$ids[$i]+' '+$ids[$lastlocked]+'; '
+    endif
+  endwhile
+elseif ($lockpos < 0.5) then  "case I"
+"write('line3','case I')"
+  if ($curparent > 1.5) then
+    $cmd=$cmd + 'move '+$idcp+' '+$ids[1]+'; '
+    $cmd=$cmd + 'move '+$ids[1]+' '+$idcp+'; '
+  endif
+  if ($curpos > $curparent + 1.5) then
+    $cmd=$cmd + 'move '+$idc+' '+$idcp+'; '
+  endif
+
+elseif ($lockparent = $curparent) then  "case III"
+"write('line3','case III')"
+  if ($curpos > $lockpos + 1.5) then
+    $cmd=$cmd + 'move '+$idc+' '+$idl+'; '
+  endif
+
+elseif ($locknextp = $lockpos + 1) then  "case II"
+"write('line3','case II')"
+  if ($curparent > $locknextp) then
+    $cmd=$cmd + 'move '+$idcp+' '+$idl+'; '
+  endif
+  if ($curpos > $curparent + 1.5) then
+    $cmd=$cmd + 'move '+$idc+' '+$idcp+'; '
+  endif
+
+elseif ($locknextp > $lockpos + 1.5) then  "case IV"
+"write('line3','case IV')"
+" xmmakenode('copy','protocol',$idlp):$newid"
+" $cmd=$cmd + 'move '+$newid+' '+$idl+'; '"
+" $i=$locknextp"
+" repeat"
+"   $i=$i-1"
+"   $cmd=$cmd + 'move '+$ids[$i]+' '+$newid+'; '"
+" until ($i<=($lockpos+1))"
+" $cmd=$cmd + 'move '+$idcp+' '+$idl+'; '"
+" if ($curpos > $curparent + 1.5) then"
+"   $cmd=$cmd + 'move '+$idc+' '+$idcp+'; '"
+" endif"
+
+  $cmd=$cmd + 'move '+$idcp+' '+$idl+'; '
+  if ($curpos > $curparent + 1.5) then
+    $cmd=$cmd + 'move '+$idc+' '+$idcp+'; '
+  endif
+
+endif
+
+"if ($lockpos>$curpos and $curpos>0) then"  "case IV.4"
+"write('line3','case IV.4')"
+"  $cmd=$cmd + 'move '+$idc+' '+$idl+'; '"
+"endif"
+
+if ($cmd <> '') then
+  xm1($cmd)
+endif
+
+exists(userdir+'/psg.error','file'):$e
+if ($e<0.5 and $queue<>'queue') then
+  xmsetatts($id,'lock','on')
+endif
+
+if ($cmd<>'') or ($e<0.5 and $queue<>'queue') then
+  xmwritesq
+endif
+return(0)

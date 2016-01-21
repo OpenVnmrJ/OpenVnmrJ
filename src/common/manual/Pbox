@@ -1,0 +1,895 @@
+
+Pandora's Box (Pbox), Version 1 July 2002 Manual Pages
+==============================================
+
+!!! Principial changes !!!
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   The .Pbox_defaults file is no more active in Pbox 6.1C. The user defined
+default parameter settings should be stored in .Pbox_globals file, which
+should reside in user home directory.
+   The Pbox_psg.h functions are now stored in /vnmr/psg directory. Therefore, 
+the correct syntax for including these functions into "C" pulse programms is
+#include <Pbox_psg.h>
+   The stepsize (in us) parameter has been added for convenience. It replaces 
+the nice parameter.
+   An extra step has been added to the reps parameter defining the extent of
+the output text. The reps = 1 option is no longer the default and is used now
+to produce in the output the first (parameter) line of Pbox shapefiles. The 
+default option now is reps = 2, which produces the usual output. 
+   When runnung from shell any Pbox parameter can be passed to Pbox as an
+option followed by its value, e.g. -stepsize 10 -ref_pwr 51 -ref_pw90 45.2
+The shortcuts are still active, e.g. -s 10 -p 51 -l 45.2 is equivalent to
+the example above. This greatly facilitates pulse shaping "on fly", e.g. 
+from within the pulse programms.
+   A new parameter (bscor) allows to improve excitation/inversion/refocusing
+profiles of multiply selective pulses (see M.Steffen, L.M.K.Vandersypen,
+I.L.Chuang, Abstracts of 41st ENC, p. 268 (2000).
+   The same Pbox software is used on both Unity and Mercury type consoles.
+
+
+Operation
+~~~~~~~~~
+
+From menues
+-----------
+The simplest mode of operation is from Pbox menues. Type ds to display a
+spectrum and click on the "next" menu button. The "Pbox" menu button will
+appear. Click on it and enter the Pbox menu system. Further operation 
+should prove straightforward. Use the "help" button if you get confused.
+
+Using macros
+------------
+The simplest way to create a shape is using the pxshape macro. For instance,
+a single excitation band pulse using E-BURP-1 shape, covering 400 Hz and
+shifted off-resonance by -880 Hz from the carrier frequency (middle of the
+spectrum) can be created and stored in test.RF file as follows :
+
+           pxshape('eburp1 400.0 880','test.RF')
+
+Several steps are neccessary to create multiply selective pulse :
+
+           opx('test.RF')      "Open Pbox.inp file, write the file header"
+           <select an excitation band using cursors>
+           selex('rsnob')
+           <select the second excitation band using cursors>
+           selex('rsnob')
+           ... <repeat the last two steps as many times as needed>
+           cpx                 "Close Pbox.inp file"
+           dshapef             "Display the shape"
+
+If an experimental spectrum is not available, a slightly different set of
+macros can be used :
+
+           opx('test.RF')                    "open Pbox"
+           setwave('iburp2 400.0 -880.0')    "select 1-st band at -880 Hz"
+           setwave('iburp2 400.0 1240.0')    "select 2-nd band at 1240 Hz"
+           cpx                               "close Pbox"
+           dshapef                           "display shapefile"
+
+In order to set up the experiment following macros can be used:
+
+           pbox_pw('test.RF'):selpw
+           pbox_pwr('test.RF'):selpwr
+
+The excitation profiles of shaped pulses can easily be verified using the
+Pbox Bloch simulator :
+
+           opx                               "open Pbox"
+           setwave('iburp2 400.0 -880.0')    "select 1-st band at -880 Hz"
+           setwave('iburp2 400.0 1240.0')    "select 2-nd band at 1240 Hz"
+           pbox_rst                          "reset par-s and write comments"
+           pboxpar('name','test.RF')         "define the output filename"
+           pboxpar('bsim','y')               "activate Bloch simulator"
+           pboxpar('T2', 0.68)               "set relax time T2 to 0.68 sec"
+           cpx                               "close Pbox"
+           dshapef                           "display shapefile"
+           dprofile('z')                     "display inversion (Mz) profile"
+
+See below for more macros.
+
+
+From the Shell
+--------------
+Pbox can be executed from C-shell simply by typing command "Pbox". The name
+of the output shape file can be passed as an argument, e.g. 
+  Pbox filename
+Any of the Pbox parameters initialized by '-' can be used as an option. Several 
+shortcuts and additional options are listed below :
+
+ -b time (s)  - activate Bloch simulator, set simtime (sec)
+ -c           - calibrate only, no shapefile created
+ -f filename  - input filename
+ -h wave      - print wave header
+ -i wave      - print wave parameters
+ -l ref_pw90  - length (us) of reference pw90 pulse
+ -o           - list options
+ -p ref_pwr   - reference power level (dB)
+ -r filename  - re-shape Pbox pulse
+ -s stepsize  - define the length of a single step in shapefile
+ -t wave      - print wave title
+ -u userdir   - set user home directory
+ -w "wavestr" - wave data string
+ -v           - verbose; also print Pbox version
+ -x           - print out all Pbox parameters
+ -value       - sets reps to value
+
+examples : Pbox -h eburp2
+           Pbox myshape -wb "eburp1 450 -1280.0" -2 
+           Pbox sel.RF -w "eburp1 420 -800" "eburp1 420 1200"
+           Pbox -wv "eburp1 200 -1200" "eburp1 200 400" -pl 45 54 -2b 
+           Pbox tst -w "eburp1 20p 170p" -refofs 55p -sfrq 150.02 -attn e
+
+PBOX FILE SYSTEM
+~~~~~~~~~~~~~~~~
+
+Pbox.inp File
+-------------
+
+Syntax -        parameter = value
+Example -       name = myshape.RF
+
+The Pbox input parameters are :
+
+name -          shape filename<.EXT>, extension is optional     
+type -          shape type, r - RF, d - DEC, g - GRD
+dres -          as in VNMR, deg
+steps -         number of steps (< 64k) 
+stepsize -      length of a single steps (us) in the final waveform
+maxincr -       max phase incr, deg (<<180)       
+attn -          attenuation, i (internal), e (external) or d (nearest dB step)
+sfrq -          spectrometer frequency, MHz         
+refofs -        reference offset, Hz (if no units specified)    
+sucyc -         supercycle, d (default), n (no), name           
+reps -          amount of reports (0-4)     
+header -        shape header, y (yes) n (no) i (imaging)          
+bscor -         correction for Bloch-Siegert effects (y/n), default is n (no).
+bsim -          Bloch simulation, y (yes), n (no), a (add), s (subtract),
+                200 (time in sec)       
+T1 -            relax-n time T1 in seconds (if no units specified)      
+T2 -            relax-n time T2 in seconds (if no units specified)      
+dcyc -          duty cycle (0 - 1)      
+sw -            spectral width (Hz)    
+ptype -         pulse type (imaging only) 
+mod -           modulation type ('c' - "const amp" used for MERCURY)      
+
+The number and order of input parameters is optional and not important.
+
+Any shapefile can consist of several waveforms which are combined in a 
+single shapefile for multisite excitation. An excitation band is defined 
+by "wave" parameters - a string of parameters enclosed between the
+delimiters "{" and "}". The number of "waves" is unlimited. Each "wave" 
+is a string of variables provided in a strongly defined order:
+1) shape, 2) bandwidth(Hz)/pulsewidth(sec), 3) offset (Hz), 4) status (0-1),  
+5) phase (deg), 6) flipangle (deg), 7) time reversal flag (y/n),
+8) d1 (sec), 9) d2(sec), 10) d0(sec,a),11) wrap.
+
+The number of variables, however, is optional with a minimum of one (shape).
+The wave variables appear in the order of DECREASING IMPORTANCE. This allows  
+to ommit unimportant parameters.
+
+.Pbox_globals file
+------------------
+
+This file enables users to pre-define the default settings of Pbox parameters.
+This allows to keep to a minimum the number of parameters which have to be
+defined in the Pbox.inp file. 
+The same file can be used to redefine the Pbox global parameters which reflect 
+the hardware and software limitations. 
+The .Pbox_globals file is stored in user home directory. If this file is not 
+present, Pbox resets the global parameters to internal set of global parameters. 
+User can re-define the following Pbox globals :
+
+shdir -   default shape directory
+wvdir -   default wave directory
+maxst -   max # steps in waveform
+defnp -   default number of steps (in undefined otherwise)
+minpw -   min step length, us
+minpwg -  min grad step length, us
+drmin -   minimum dres
+maxamp -  maximum amplitude
+maxgr -   max grad amplitude
+ampres -  amplitude resolution
+phres -   phase resolution
+tmres -   time resolution, us
+dres -    default dres 
+maxpwr -  maximum power level, dB
+minpwr -  minimum power level, dB
+maxitr -  max # iterations
+maxdev -  max deviation, percent
+cmpr -    waveform compression
+minstps - min # steps in Bloch sim
+pw -      default .RF and .DEC pulse length in seconds. Internally
+          set to 0.005
+pwg -     default .GRD pulse length in seconds. Internally set to 0.001
+Console - console type ('i' - INOVA, 'm' - MERCURY)
+
+Wavelib
+-------
+The parameters of individual pulse shapes, like Gaussian, E-BURP-1 or
+hyperbolic secant pulse are stored in wavelib directory. The later has
+several sub-directories, e.g. excitation, inversion, refocussing, etc. 
+Every individual shape is defined by a set of parameters which can be  
+grouped in several categories.
+ 
+Main parameters : 
+
+amf -    (amplitude modulation function)
+fmf -    (frequency modulation function)
+su -     (default supercycle)
+wf -     (windowing function)
+dsp -    (digital filters)
+fla -    (default flipangle on resonance)
+pwbw -   (pulsewidth to bandwidth product)
+pwb1 -   (pulsewidth to B1max product)
+pwsw -   (pulsewidth to sweepwidth product)
+adb -    (adiabaticity on resonance)
+ofs -    (offset of excitation bandwidth)
+dres -   (default tipangle resolution, deg)
+st -     (default status)
+dash -   (dash variable)
+c1 -     (constant)
+c2 -     (constant)
+c3 -     (constant)
+d1 -     (pre-delay, 0-1)
+d2 -     (post-delay, 0-1)
+dutyc -  (dutycycle, 0-1)
+steps -  (default number of steps)
+
+Truncation Parameters :
+
+min -     (minimum truncation threshold, 0-1)
+max -     (maximum truncation threshold, 0-1)
+left -    (truncation from left, 0-1)
+right -   (truncation from right, 0-1)
+cmplx -   (flag, retain real(1), imag(-1) or complex(0) part of wave)
+wrap -    (wrap around factor, 0-1)
+trev -    (time reversal flag, yes = 1, no = 0)
+srev -    (sweep reversal, 0-1)
+stretch - (stretching factor >= 0)
+reflect - (reflection point, 0-1)
+dcflag -  (dc subtraction, y/n)
+
+Additional parameters :
+
+usually data matrices, e.g. Fourier coefficients or square wave parameters
+e.g. length, phase, amplitude, etc. These are listed without parameter names. 
+One must only define the size of the data matrix given by :
+cols -  (number of columns)
+raws -  (number of rows)
+
+
+Pandora's Box currently incorporates the following amplitude and frequency 
+modulation functions :
+
+Amplitude modulation (AM) functions
+-----------------------------------
+
+  sq - square (constant amplitude)
+  sqa - square wave amplitude modulation 
+  gs - gauss,
+  lz - Lorentzian 
+  sch - sech, hyperbolic secant 
+  hta - tanh, hyperbolic tangent
+  sc - sinc 
+  csp - cos^n, cos power 
+  wr - wurst (1 - |sin|^n)
+  sed - seduce-1, mixture of sech and sin
+  qp - quadrupolar  
+  ata - amplitude mod for CA atan frequency sweep pulse 
+  tra - triangular amplitude modulation 
+  elp - semi-ellipse (semi-circle) 
+  exa - exponential amplitude ramp 
+  tna - tangential amplitude ramp 
+  fs - Fourier Series 
+  ft - Fourier tranform (not yet active)
+
+Frequency modulation (FM) functions
+-----------------------------------
+
+  ls - linear sweep (chirp)
+  tns - tangential sweep (tan)
+  ht - hyperbolic tangent sweep (tanh)
+  ats - atan sweep
+  lzs - constant adiabaticity Lorentzian sweep
+  ca - constant adiabaticity (CA) sweep (frequency modulated frame)
+  cas - constant adiabaticity sweep (phase modulated frame)
+  cs - cosine sweep
+  cs2 -  CA cosine square sweep
+  ccs - CA cosine sweep
+  fsw - frequency switched (stepwise) sweep
+  fslg - frequency shifted Lee-Goldburp type modulation
+  sqw - squarewave phase modulation
+
+ 
+Pbox.inp Parameters :
+---------------------
+
+name     - name<.extension> of the output shape file. If the extension 
+           is not given, the shape type is set according to "type" parameter.
+           The default name is "Pbox" and can be re-defined in .Pbox_globals
+           file.
+type     - shape type. Allowed values are "r" (.RF type), "d" (.DEC) or 
+           "g" (.GRD).
+dres     - corresponds to the dres parameter in VNMR. Active only with 
+           .DEC files.
+steps    - defines the number of steps in the waveform. The default number
+           of steps is stored with each individual shape in the Pbox library
+           (wavelib). This number can be overriden by Pbox if it is smaller
+           than internally calculated minimum number of steps, which is 
+           neccessary to maintain the functionality of the waveform. This 
+           number is defined by 1) minimum number of steps neccessary for 
+           adequate representation of the waveform and 2) Nyquist condition
+           if the waveform is shifted off-resonance (see maxincr).
+stepsize - sets the length of a single step (us) in the final waveform. 
+           Replaces a parameter previously known as "nice".
+maxincr  - maximum phase increment. By default set to 30 degrees. This number
+           is active only if the waveform is shifted off-resonance or the
+           shape itself is frequency modulated (e.g. adiabatic sweeps). In 
+           order to satisfy the Nyquist condition "maxincr" should not
+           exceed 180 degrees, otherwise the waveform is folded back. In
+           fact, the degradation of performance and interference with
+           sidebands may be observed even with maxincr of 90 degrees. It 
+           is recommended to keep maxincr < 90.
+attn     - attenuation mode. The allowed values are :
+           "i" internal, default. The waveform is attenuated by adjusting
+               the the maximum amplitude internally. Since VNMR is re-
+               scaling all shapefiles to the maximum amplitude an "anti-
+               rescaling" line (0.0   1023.0   0.0   0) is added to the 
+               .RF files only. This approach should not be used with .DEC 
+               shapefiles;
+           "e" external. The maximum amplitude is set to its maximum value
+               defined in .Pbox_globals (maxamp) and the fine attenuator  
+               setting is produced in the output; 
+           "d" attenuate to the nearest dB step by changing pulse width;
+           "4.5i" attenuate internally to 4.5 kHz B1 field by adjusting
+                  the pulse length;
+           "4.5e" attenuate externally to 4.5 kHz B1 field by adjusting
+                  the pulse length.
+           "45d" attenuate to 45 dB level by changing the pulse width. The
+               internal amplitude is set to maxamp (1024.0 - 1.0).
+           "45I" attenuate internally keping the course power level at 45 dB.
+           "45E" attenuate externally keping the course power level at 45 dB. 
+sfrq     - spectrometer frequency in MHz. Must be specified if any of the
+           frequency related parameters (ofs, refofs, bw) is given in ppm.
+refofs   - reference offset. Usually 0.0. May be useful if the excitation 
+           bands are shifted by or referenced to some frequency. Units -
+           h (Hz), k (kHz) or p (ppm, if sfrq is defined).
+sucyc    - Supercycle. Allowed values are "n" (no), "d" (default) or a name
+           of a supercycle stored in wavelib/suc. By default is set to "d".
+wrap     - Allows to wrap around the waveform. The allowed values are between
+           0 and 1.
+reps     - Defines amount of reports. Allowed values are 0-4. Default is 2.
+header   - Shapefile header. Allowed values are "y" (yes, default), "n" (no)
+           and "i" (imaging). In the later case information required for
+           imaging systems is stored in the shapefile header.
+bscor    - Bloch-Siegert correction. Setting this flag to y (yes) initiates
+           correction for Bloch-Siegert effects. This considerably improves
+           the excitation/inversion/refocusing performance of multiply
+           selective excitation pulses (see M.Steffen, L.M.K.Vandersypen, 
+           I.L.Chuang, Abstracts of 41st ENC, p. 268 (2000).
+bsim     - Bloch simulator. Performs Bloch simulation for the given waveform 
+           at the moment of waveform generation. Allowed values are "y" (yes),
+           "no" (no) and time in seconds. The default maximum length of 
+           simulation can be defined in .Pbox_defaults or altered by defining 
+           the simulation time in seconds. Note, that Bloch simulator can be 
+           activated independently from  waveform generation, e.g. using the 
+           "dprofile" macro. Gradient shapes are not supported in the present 
+           version.
+T1       - Longitudinal relaxation time, T1 in seconds (if no units specified). 
+           May be required by some waveforms (e.g. SLURP pulses). Optional for 
+           the Bloch simulation.
+T2       - Transversal relaxation time T2, in seconds (if no units specified).
+           May be required by some waveforms (e.g. SLURP pulses). Optional for 
+           the Bloch simulation.
+dcyc     - duty cycle. Usually required for homonuclear decoupling applica-
+           tions. Only values between 0.0 and 1.0 are active. Outside these
+           boudaries dcyc is reset to 1.0 (default).
+sw       - spectral width. If given, the step size of waveform is set equal
+           to the dwell time (1/sw). Recommended for H-H homonuclear decoupling 
+           applications. It also helps to make sure that sidebands are kept
+           outide the spectral window. Also required for Bloch simulation.
+ref_pw90 - reference 90 degree pulse width (in us) at ref_pwr. B1 field 
+           calibration.
+ref_pwr  - reference power level (in dB steps).
+ptype    - pulse type. Only neccessary with imaging header. By default set
+           to "selective".
+
+Units :
+------- 
+It is now possible to enter units for parameters associated with frequency 
+(bandwidth, off, refofs) and time (pulse length). 
+
+        Pbox.inp :
+        ~~~~~~~~~~
+        The default units (no units indicated) are the same - seconds for
+        pulse width and Hz for bandwidth. Other units accepted in Pbox.inp are:
+        s - seconds
+        m - ms
+        u - us
+        h - Hz
+        k - kHz
+        p - ppm (sfrq must be defined)
+
+        Syntax : 0.12m    <pulse length in ms>
+                 1.85k    <bandwidth in kHz>
+                 440u/12.5k <pulse length in us and bandwidth in kHz>
+                 172.2p   <offset in ppm, sfrq must be defined>
+
+        Menues :
+        ~~~~~~~~
+        If entered from Pbox menues units are converted into Pbox default
+        units before the numbers are stored in Pbox.inp file. The syntax and
+        units are adjusted to those in vnmr :
+        s - seconds
+        m - ms
+        u - us
+        h - Hz
+        k - kHz
+        p - ppm, relative to sfrq
+        d - ppm, relative to dfrq
+        1 - ppm, relative to dfrq
+        2 - ppm, relative to dfrq2
+        3 - ppm, relative to dfrq3
+
+        Syntax : 0.12,m    <pulse length in ms>
+                 1.85,k    <bandwidth in kHz>
+                 172.2,d   <offset in ppm relative to dfrq>
+                 -12.5,2   <offset in ppm relative to dfrq2>
+
+Wave Variables
+--------------
+           Since these parameters appear without names, a reminder is given in
+           automatically generated (e.g. by macros) Pbox.inp files. Below the
+           wave variables are given as they appear in the reminder.
+shape    - shape name as in wavelib.
+bw/pw    - bandwidth or/and pulsewidth. For most waveforms only one of the two
+           parameters is required. If units are not specified explicitly, Pbox
+           distinguishes between bw (Hz) which is always > 1.0 and pw (sec)
+           which is always < 1.0. It is up to the user which of the two
+           parameters to provide for input, since they are mutually related
+           via the pw*bw product. The later is stored with each individual
+           shape in wavelib.  Some waveforms, e.g. adiabatic sweep pulses may
+           require both bw and pw.  In this case, both can be entered, as
+           bw/pw. For instance "200.0/0.05", where the first is bw in Hz (if
+           no units specified) and the second is pw in sec (if units are not
+           specified explicitly).
+ofs      - offset of centre of the excitation band in Hz (if no units
+           specified).  Units - h (Hz), k (kHz) or p (ppm, if sfrq is
+           defined).
+st       - spin status. Defines whether spins are initially along z axis as for
+           excitation (status = 0) or in the xy plane (status is 1) as for
+           de-excitation. For refocusing pulses st = 0.5. This in turn defines
+           whether the wave starts with phase defined by "ph" (status 1) or
+           ends with phase "ph" (status 0) or phase defined by ph occurs in the
+           middle of the waveform. In addition asymetric waveforms are time
+           reversed if status is 1, as required for spin lock, mixing or
+           de-excitation pulses. This, however, can be undone using the "trev"
+           flag. Furthermore, if several waves of different width are
+           generated, they are bounded to the beginning (st=1), middle 
+           (st=0.5) or end (st=0) of the waveform.  
+           The spin status of the first wave is also used by Bloch simulator.
+ph       - phase in degrees or phasecycle (supercycle). Usually phase is set
+           externally and this parameter is not required. One can also apply a
+           phasecycle (supercycle) from wavelib/supercycles. The difference 
+           between this phasecycle and the "sucyc" parameter is that several 
+           waves of different width can be phase cycled independently and using
+           different phasecycles, whereas sucyc is applied to the final
+           (mixed) waveform.
+fla      - flipangle in deg. Usually this parameter is defined by shape
+           parameters in the wavelib. There are very few applications where
+           intermediate flipangles are required. There are two special units
+           (flags) available with flipangle. The "t" flag indicates the tilt
+           angle required for off-resonance spin lock pulses. For instance,
+           if fla is set to 60t a corresponding 60 degree tilta angle is 
+           achieved. The ofset (ofs) parameter must have non-zero magnitude 
+           in this case. The "r" flag indicates plane rotation angle required 
+           in adiabatic plane rotation pulses, e.g. BIR4 pulses.
+trev     - time reversal flag (see "status" above). Allowed values are
+           "y" (yes) and "n" (no, default).
+d1       - pre-pulse delay in seconds, if units not specified explicitly.
+           Normally not required. If defined, it will disable the internal
+           wave shifting according to the spin status.
+d2       - post-pulse delay in seconds, if units not specified explicitly.
+           Normally not required. If defined, it will disable the internal
+           wave shifting according to the spin status.
+d0       - pre-d1 delay in seconds, if units not specified explicitly. Very
+           similar to d1. Used only for convenience, e.g. if internal
+           dutycycle is defined in shape parameters in wavelib. If set to 'a'
+           the wave is appended to the previous wave.
+wrap     - allows to wrap around the waveform.
+
+Pbox Macros
+-----------
+
+Although most of needs for generation of selective pulses can be satisied by
+using Pbox menues, a set of macros is provided for those who prefer macros
+over menues. They are given below in the order of decreasing importance.
+
+opx      - open Pbox. Writes the Pbox.inp file header and re-sets parameters 
+           r1-r7 and n1-n3. 
+
+           Syntax:    opx<('name<.ext>')>
+
+           Arguments: name - output shapefile name. Extension is optional and  
+                             may be used to specify the file type.
+
+           Examples:  opx('newfile.DEC')
+                      opx <select excitation band> selex('eburp1') cpx dshapef
+
+selex    - select excitation band. Macro defines the excitation band from the 
+           position of cursors in the Vnmr window and reports them to user. 
+           It also sets r1 to excitation bandwidth and r2 to offset. Selex  
+           employs pbox_bw and putwave macros. 
+
+           Syntax: selex<('sh'<,pw<,st<,ph<,fla<,trev>>>)>
+
+           Arguments: sh   - shapename
+                      pw   - pulsewidth in seconds, if units not specified
+                      st   - spin status (0 for Mz; 1 for Mxy)
+                      ph   - phase (or phase cycle, see wavelib/supercycles)
+                      fla  - flipangle (warning ! this may override the
+                             default flipangle, set to 0.0 if not used)
+                      trev - time reversal (can be used to cancel time
+                             reversal introduced by st=1
+
+           Examples:  opx <select excitation band> selex('esnob',0.0,1,'90') 
+                      cpx(ref_pw90, ref_pwr) dshapef
+
+cpx      - close Pbox. The cpx macro calls the Pbox command (UNIX), which
+           generates the specified pulse shape or decoupling / spin locking
+           pattern, as defined by the file shapelib/Pbox.inp. It also checks
+           whether ref_pwr and ref_pw90 parameters exist in the current
+           experiment and puts their values into the Pbox.inp file. If the
+           parameters do not exist, macro creates them and asks user for their
+           magnitudes. Alternatively the calibration parameters can be provided
+           as arguments, for instance cpx(pwx*compC, pwxlvl). If ref_pw90 is 
+           set to 0.0 no power level will be given in the output. Instead, 
+           Pbox will report the B1max in kHz and the corresponding length of 
+           the 90, 180 and 360 deg square pulse.
+
+           Arguments: ref_pw90 - 90 degree pulse length at ref_pwr power level.
+                      ref_pwr - reference power level (dB).
+                      'g' - required only when generating gradient shapes and 
+                      if the file type is not specified otherwise.
+
+           Examples:  cpx
+                      cpx(ref_pw90, ref_pwr)
+                      cpx(pwN*compN, pwNlvl)
+                      cpx('g')
+
+setwave  - setwave sets up a single excitation band in Pbox.inp file.
+           In principle, unlimited number of waves can be combined 
+           simply by reapplying the setwave macro.
+
+           Syntax: setwave('sh  bw/pw  ofs  st  ph  fla  trev  d1  d2  d0')
+
+           Arguments: a single string of wave parameters in predefined order 
+                      (see syntax). The number of parameters must be in the 
+                      range between 1 and 10. The wave parameters are :
+
+              sh - shapename
+              bw - bandwidth in Hz, if units not specified
+              pw - pulsewidth in seconds, if units not specified
+              ofs - offset in Hz, if units not specified
+              st - spin status (0 for excitation; 1 for de-excitation and
+                   0.5 for refocusing)
+              ph - phase (or phase cycle, see wavelib/supercycles)
+              fla - flipangle (warning !!! this may override the default 
+                    flipangle)
+              trev - time reversal (can be used to cancel time reversal
+                     introduced by st=1
+              d1 - delay prior the pulse in seconds, if no units specified
+              d2 - delay after the pulse in seconds, if no units specified
+              d0 - delay/command prior to d1 in seconds, if no units specified. 
+                   If d0 = a, the wave is appended to the previous wave.
+
+           Examples: setwave('eburp1')
+                     setwave('GARP 12000.0')
+                     setwave('esnob 600 -1248.2 1 90.0 n n 0.001)
+                     setwave('WURST2 2500.0/0.005 -1240.0')
+
+putwave  - essentially equivalent to setwave macro, except the syntax is 
+           different.
+
+           Syntax: putwave('sh', bw, pw, ofs, st, ph, fla, trev, d1, d2, d0)
+
+           Arguments: see setwave
+
+           Examples: putwave('eburp1')
+                     putwave('GARP', 12000.0)
+                     putwave('esnob', 600, 0.0, -1248.2, 1, 90.0)
+
+
+pxshape  - pxshape generates a single-band waveform based on wave definition  
+           provided as a single string of wave parameters.
+
+           Syntax: pxshape('sh bw/pw ofs st ph fla trev d1 d2 d0','name','disp')
+
+           Arguments: wave parameter string (see setwave).
+                      name - output filename. Extension is optional and can 
+                             be used to override internally defined shape
+                             type.
+                      disp - the shape is displayed by default in the Vnmr 
+                             window. If disp is set to 'n' the shape will 
+                             not be displayed.
+
+           Examples: pxshape('SEDUCE1 2000.0 12000', 'codec.DEC')
+                     pxshape('esnob  600 -1248.2 1 90.0')
+
+pboxpar  - adds a parameter definition to Pbox.inp file.
+
+           Syntax: pboxpar('name'<,value>)
+
+           Arguments: name - parameter name
+                      value - value of the parameter
+
+           Examples: pboxpar('name','myfile.DEC')
+                     pboxpar('bsim','y')
+                     pboxpar('T1', 0.24)
+
+
+pboxget  - pboxget extracts calibration data from shapefile.ext 
+           generated by Pbox or, if filename is not provided, from 
+           pbox.cal file containing parameters of the last generated 
+           Pbox shapefile. The order of the returned parameters
+           is as follows : name, pw, pwr, pwrf, dres, dmf
+
+           Syntax: pboxget<(shapefile.EXT)>:$name,$p1,$p2,$p3,$p4,$p5
+
+           Arguments: shapefile.EXT - shapefile name including extension. 
+                      name - name returned without extension
+                      pw - pulse width (us)
+                      pwr - power level (dB)
+                      pwrf - fine power level
+                      dres - decoupler resolution
+                      dmf - decoupler modulation frequency
+
+           Examples: pboxget('myfile.DEC'):dseq,r1,dpwr,dpwrf,dres,dmf
+                     pboxget('selshape.RF'):pwpat,selpw,selpwr
+                     pboxget:dseq2,r1,dpwr2,dmf2,dres2,dmf2
+
+           !!! Warning, Parameter will not be changed by this macro if 
+                        it was set previously to 'n' (not used)   
+
+
+pbox_pw  - pbox_pw extracts pulse length (us) from shapefile.RF or .DEC
+           generated by Pbox or, if filename is not provided, from 
+           pbox.cal file containing parameters of the last generated 
+           Pbox shapefile.
+
+           Syntax: pbox_pw<(shapefile.RF)>:exparam
+
+           Arguments: shapefile.RF - shapefile name including extension. 
+                      exparam - experimental parameter (pulse length).
+
+           Examples: pbox_pw('myfile.RF'):softpw
+                     pbox_pw:selpw
+
+           !!! Warning, Parameter will not be changed by this macro if 
+                        it was set previously to 'n' (not used)   
+
+
+pbox_pwr - pbox_pwr extracts the power level (dB) from shapefile.ext 
+           generated by Pbox or, if filename is not provided, from 
+           pbox.cal file containing parameters of the last generated 
+           Pbox shapefile.
+
+           Syntax: pbox_pwr<(shapefile.ext)>:exparam
+
+           Arguments: shapefile.ext - shapefile name. 
+                      exparam - experimental parameter (power).
+
+           Examples: pbox_pwr('myfile.DEC'):mypwr
+                     pbox_pwr:dpwr2
+
+           !!! Warning, Parameter will not be changed by this macro if 
+                        it was set previously to 'n' (not used)   
+
+
+pbox_pwrf - pbox_pwrf extracts the fine power level from shapefile.ext 
+           generated by Pbox or, if filename is not provided, from 
+           pbox.cal file containing parameters of the last generated 
+           Pbox shapefile.
+
+           Syntax: pbox_pwrf<(shapefile.ext)>:exparam
+
+           Arguments: shapefile.ext - shapefile name. 
+                      exparam - experimental parameter (fine power).
+
+           Examples: pbox_pwr('myfile.DEC'):mypwrf
+                     pbox_pwr:dpwrf
+
+           !!! Warning, Parameter will not be changed by this macro if 
+                        it was set previously to 'n' (not used)   
+
+
+pbox_dmf - pbox_dmf extracts the dmf value from shapefile.DEC created by
+           Pbox or, if filename is not provided from pbox.cal file 
+           containing parameters of the last created Pbox shapefile.
+
+           Syntax: pbox_dmf<(shapefile.DEC)>:exparam
+
+           Arguments: shapefile.DEC - shapefile name. 
+                      exparam - experimental parameter (dmf).
+
+           Examples: pbox_dmf('myfile.DEC'):mydmf
+                     pbox_dmf:dmf2
+
+
+pbox_dres - pbox_dres extracts the dres value from shapefile.DEC generated
+           by Pbox or, if filename is not provided, from pbox.cal file 
+           containing parameters of the last created Pbox shapefile.
+
+           Syntax: pbox_dres<(shapefile.DEC)>:exparam
+
+           Arguments: shapefile.DEC - shapefile name. 
+                      exparam - experimental parameter (dres).
+
+           Examples: pbox_dres('myfile.DEC'):mydres
+                     pbox_dres:dres2
+
+
+pbox_name - pbox_name extracts the name of last shapefile generated by 
+           Pbox and stored in pbox.cal file. Note, that filename extension
+           is not stored explicitly and is not provided by this macro.
+
+           Syntax: pbox_name:expname
+
+           Arguments: expname - experimental parameter (pattern name).
+
+           Examples: pbox_pw:pwpat
+
+
+dshape   - dshape displays the real (X) and imaginary (Y) components of
+           a shaped pulse. Any type of waveform (.RF, .DEC or .GRD) can
+           be displayed.
+
+           Syntax: dshape<(patterfile)>
+
+           Arguments: dshape takes the shape or pattern (file) name as 
+                      argument. Absolute and relative filenames can be 
+                      specified, as well as simple pattern file names 
+                      (in this case dshape will first look in the local 
+                      directory, then in the user's shapelib, finally in
+                      /vnmr/shapelib. If no argument is given, dshape 
+                      the last created waveform is displayed. 
+
+           Examples: dshape('Pbox.RF')
+
+pshape   - pshape plots the real (X) and imaginary (Y) components of
+           a shaped pulse. Any type of waveform (.RF, .DEC or .GRD) can
+           be plotted.
+
+           Syntax: pshape<(patterfile)>
+
+           Arguments: see dshape (above)
+
+           Examples: pshape('Pbox.DEC')
+
+pxset    - retrieves experimental settings from a shapefile or pbox.cal
+           file (if no arguments are provided) in a user friendly dialog
+           form.
+
+           Syntax: pxset<(patterfile)>
+
+           Arguments: pxset takes the shape or pattern (file) name as 
+                      argument. If no argument is given, pxset extracts 
+                      data from the pbox.cal file which contains the
+                      output data of the last created waveform.
+
+           Examples: pxset 
+                     pxset('Pbox.RF')
+
+dshapef  - dshapef displays the real (X) and imaginary (Y) components of
+           last generated shaped pulse, stored in pbox.fid file.
+
+           Syntax: dshapef
+
+dshapei  - dshapei displays the real (X) and imaginary (Y) components of
+           a pulse shape, modulation pattern or gradient shape interac-
+           tively. This mode will overwrite the existing data (FID) 
+           after the permission is granted by the user. It also asks 
+           for the duration of the waveform and displays the timescale.
+
+           Syntax: dshapei<(patternfile)>
+
+           Arguments: see dshape (above)
+
+           Examples: dshapei('myfile.DEC')
+
+dprofile - dprofile displays the X, Y and Z excitation (inversion) profile
+           for a pulse shape that has been generated using the Pbox software.
+           If shape names is not provided, the last simulation data stored
+           in shapelib/pbox.sim is displayed. 
+
+           Syntax: dprofile<(axisflag<,profile<,shapefile>>)>
+                   dprofile<(profile<,axisflag<,shapefile>>)>
+
+           Arguments: axisflag - 'y' also displays the full spectrum and 
+                                 a frequency scale; 'n' suppresses scale 
+                                 and spectrum (default).
+                      profile - 'xyz' selects X, Y, and Z (inversion) 
+                                profiles (default); 'xy' only selects the 
+                                excitation (transverse) profiles; 'x' only 
+                                selects the X transverse excitation profile; 
+                                'z' only selects the inversion profile
+                      shapefile - *.RF or *.DEC type files.
+
+           Examples: dprofile('myshape.RF')
+
+pprofile - pprofile plots the X, Y and Z excitation (inversion) profile
+           for a pulse shape that has been generated with the Pbox software.
+           If shape names is not provided, the last simulation data stored
+           in shapelib/pbox.sim are plotted. 
+
+           Syntax: pprofile<(axisflag<,profile<,shapefile>>)>
+                   pprofile<(profile<,axisflag<,shapefile>>)>
+
+           Arguments: see dprofile
+
+           Examples: pprofile('softpls.RF')
+
+pph      - pph prints out the shapefile header (all lines starting with #).
+         
+           Syntax: pph('filename.ext')
+                
+           Arguments: filename.ext - shapefile name including extension. 
+
+           Examples: pph('shgrad.GRD')
+
+pbox_bw  - pbox_bw defines the excitation band from the position of cursors  
+           in the Vnmr window and reports them to user. It also sets r1 to 
+           excitation bandwidth and r2 to offset. The macro is mainly used
+           in Pbox menues and macros (see for example selex). 
+ 
+           Syntax: pbox_bw<(shapename)>
+
+           Arguments: shapename - provided for use with menues.
+
+           Example: opx <select excitation band> pbox_bw 
+                    putwave('esnob', r1, 0.0, r2) cpx dshapef
+
+pbox_bws - pbox_bws defines the excitation band from the position of cursors  
+           in the Vnmr window and reports them to the user. It also sets r1  
+           to excitation bandwidth and r2 to offset. Note, the left cursor 
+           should be placed on the left side of the excitation band and the
+           right cursor on resonance of the solvent signal.
+           The macro is mainly used in Pbox menues and macros. 
+
+           Syntax: pbox_bws<(shapename)>
+
+           Arguments: shapename - provided for use with menues.
+
+pbox_rst - pbox_rst resets variables r1-r4 = 0, n2='n' and n3=''. The macro
+           adds also some standrd comment lines to Pbox.inp file. Used in
+           menues and other Pbox macros before using pboxpar macro.
+
+           Syntax: pbox_rst
+
+           Example: opx <select excitation band> selex('isnob3') pbox_rst 
+                    pboxpar('name','selinv.RF') cpx
+
+
+pbox_files macro is used only in conjunction with Pbox file menues (see for
+           example PboxLib menu)
+
+pboxunits - used by Pbox menues to translate the frequency or time units into 
+            Hz or seconds before the parameter is stored in the Pbox.inp file.
+
+
+Pbox C-programs
+---------------
+
+Pbox - the main program, executed always when a shaped pulse is created.
+
+Pxsim - used in Pbox menues and macros for simulation of the excitation
+        profiles of shaped pulses.
+
+Pxfid - used by dshape and dshapei macros in order to format shapefile
+        into FID-format textfile.
+
+Pxspy - C program for converting alien shapes (.RF, .DEC and .GRD) into
+        Pbox compatible file format. Essentially converts a time-domain
+        shapefile into (frequency-domain) Fourier coefficients, which
+        can be used to create a wave-filein the wavelib directory.

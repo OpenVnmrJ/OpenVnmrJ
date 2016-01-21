@@ -1,0 +1,22 @@
+"macro saveAsScout"
+//      save in scoutfid (chempack sample) directory OR
+//      save in curexp using tmpcopy
+
+is_cpsample:$cp
+if ($cp) then
+    strstr(file,'/scoutfids/'):$saved
+    if not $saved then
+    	$head='' $tail=''
+    	strstr(svftmplt,'$pslabel$'):$isps,$head,$tail
+    	if ($isps=0) then
+       	    $svftmplt='$pslabel$scout_'+svftmplt
+    	else
+       	    $svftmplt=$head+'$pslabel$scout'+$tail
+    	endif
+    	savescoutfid($svftmplt)
+    endif
+else
+    tmpcopy(seqfil)
+endif
+
+

@@ -1,0 +1,31 @@
+"macro msSetAnalogOutput"
+/*-*- Mode: MAGICAL -*-*/
+"macro msSetAnalogOutput"
+
+" Set the analog outputs on the MS "
+
+if (msSelection = '0') then
+    return
+endif
+
+if ($# > 0) then
+    $chan = $1
+else
+    $chan = 1, 2
+endif
+
+$len = size('$chan')
+$i = 1
+while ($i <= $len) do
+    $j = $chan[$i]
+    if (msAnalogOutInUse[$j] <> 'y') then
+        $type = 'off'
+    else
+        $type = msAnalogOutType[$j]
+    endif
+    $scale = msAnalogOutGain[$j]
+    $mass = msAnalogOutMass[$j]
+    $command = msAnalogOutExpr[$j]
+    lccmd('setMsAnalogOut', $j-1, $type, $scale, $mass, $command)
+    $i = $i + 1
+endwhile

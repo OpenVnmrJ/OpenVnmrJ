@@ -1,0 +1,149 @@
+"macro getExpList"
+
+if ($# < 1) then $1=operator endif
+exists(systemdir+'/chempack/templates/vnmrj/interface/ProtocolLabels.xml','file'):$prevj3
+
+$expnames='' $j=1
+// Get the profile for this operator
+   exists(systemdir+'/adm/users/operators/operatorlist','file'):$fileex
+   if ($fileex=0) then return($expnames) endif
+   $op='' $profile=''
+   readfile(systemdir+'/adm/users/operators/operatorlist','$op','$profile','','local'):$ok
+   teststr('$op',$1,'local'):$ok
+   if ($ok=0) then return($expnames) endif
+   $str=''
+   strsv2array($profile[$ok],';'):$str
+   $ok=size('$str')
+   if not ($prevj3) then
+       if ($ok<5) then return($expnames) endif
+       $profile=systemdir+'/adm/users/userProfiles/'+$str[5]+'.xml'
+   else
+   	if ($ok<6) then return($expnames) endif
+// For prevj3, the profile could be in chempack appdir
+   	$profile=systemdir+'/chempack/adm/users/userProfiles/'+$str[6]+'.xml'
+	exists($profile,'file'):$cpprofile
+	if not $cpprofile then
+	    $profile=systemdir+'/adm/users/userProfiles/'+$str[6]+'.xml'
+	endif
+   endif
+   exists($profile,'file'):$ok
+   if ($ok=0) then return($expnames) endif
+
+//  If VJ3....
+// Get all the experiments from local ExperimentSelector xml file
+//  These are always allowed
+   if not ($prevj3) then
+	$file=userdir+'/templates/vnmrj/interface/ExperimentSelector_'+$1+'.xml'
+	exists($file,'file'):$fex
+	if ($fex) then
+	    $key=$file
+	    $done=0
+	    while $done<1 do
+   		lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs','protocol','seekcs','name','filekey'):$key,$ret
+   		if ($ret) then
+        		lookup('mfile',$key,'delimiter','=','readline',1,'filekey'):$val,$key,$ret
+        		if ($ret<2) then
+        		   $done=1
+        		else
+       			    $s1='' $ret2=0
+       			    strstr($val,'"'):$ret2,$s1,$val
+       			    if ($ret2=0) then $val='' endif
+       			    strstr($val,'"'):$ret2,$val
+       			    if ($ret2=0) then $val='' endif
+       			    if ($val<>'') then
+         		       teststr('$expnames',$val,'local'):$OK
+          		       if ($OK=0) then
+          		          $expnames[$j]=$val
+          		          $j=$j+1
+           		       endif
+           		   endif
+   			endif
+   		else
+        		$done=1
+   		endif
+	    endwhile
+	endif
+//  preVJ3 ...
+    else
+	$tmpfile=userdir+'/persistence/protocollist'
+	write('reset',$tmpfile)
+	shell('(ls -1 '+userdir+'/templates/vnmrj/protocols/*.xml > '+$tmpfile+')'):$dum
+	$s1='' $s2=''
+	readfile($tmpfile,'$s1','$s2','','local'):$ptot
+	shell('rm -f '+$tmpfile):$dum
+	if ($ptot>0) then
+	   $i=1
+	   repeat
+		$pname=''
+		getattr($s1[$i],'protocol','title'):$pname
+		if ($pname<>'') then
+		   teststr('$expnames',$pname,'local'):$OK
+		   if ($OK=0) then
+			$expnames[$j]=$pname $j=$j+1
+		   endif
+		endif
+		$i=$i+1
+	   until $i > $ptot
+	endif
+    endif
+
+// Get the disallowed experiments from the RightsConfig file in persistence
+   $disallowed='' $status=''
+   $txt=userdir+'/persistence/RightsConfig_'+$1+'.txt'
+   exists($txt,'file'):$txtex
+   if ($txtex) then
+	$tmpfile=userdir+'/persistence/protocollist'
+	write('reset',$tmpfile)
+	shell('(cat '+$txt+' | grep -w false > '+$tmpfile+')'):$dum
+	readfile($tmpfile,'$disallowed','$status','','local'):$ptot
+	shell('rm -f '+$tmpfile):$dum
+   endif
+
+// Get all the allowed experiments in this profile
+   $tmpfile=userdir+'/persistence/protocollist'
+   write('reset',$tmpfile)
+   shell('(cat '+$profile+' | grep \'approve="true"\' | grep \'<protocol\' > '+$tmpfile+')'):$dum
+
+   $key=$tmpfile
+   $done=0
+   while $done<1 do
+     lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs','protocol','seekcs','name','filekey'):$key,$ret
+     if ($ret) then
+	lookup('mfile',$key,'delimiter','=','readline',1,'filekey'):$val,$key,$ret
+	if ($ret<2) then
+	   $done=1
+	else
+	   $s1='' $ret2=0
+	   strstr($val,'"'):$ret2,$s1,$val
+	   if ($ret2=0) then $val='' endif
+	   strstr($val,'"'):$ret2,$val
+	   if ($ret2=0) then $val='' endif
+	   if ($val<>'') then
+	      teststr('$expnames',$val,'local'):$OK
+	      if ($OK=0) then
+		$expnames[$j]=$val
+		$j=$j+1
+	      endif
+	   endif
+	endif
+     else
+	$done=1
+     endif
+   endwhile
+   shell('rm -f '+$tmpfile):$dum
+
+$allnames=$expnames
+$size=size('$allnames')
+$expnames='' $j=1
+$i=1
+repeat
+    if ($allnames[$i]<>'') then
+	teststr('$disallowed',$allnames[$i],'local'):$notok
+	if not ($notok) then $expnames[$j]=$allnames[$i] $j=$j+1 endif
+    endif
+    $i=$i+1
+until $i > $size
+
+//  Return the list of allowed experiments
+return($expnames)
+

@@ -1,0 +1,62 @@
+"macro Autocalpar"
+"*********************************************************************"
+"Autocalpar - Adds calibration related parameters to the current      "
+"		parameter set.   Used by Glide Autocalibration        "
+"		setup macros					      "
+"*********************************************************************"
+
+module('add','HCcalib','basic','refresh')
+
+getparam('pw90','H1'):H1pw90
+  if (H1pw90 = 0) then H1pw90=15 endif
+getparam('tpwr','H1'):H1tpwr
+  if (H1tpwr = 0) then H1tpwr=51  else H1tpwr=H1tpwr-3 endif
+getparam('pplvl','H1'):H1pplvl
+  if (H1pplvl = 0) then H1pplvl=51 else H1pplvl=H1pplvl-3 endif
+getparam('pp','H1'):H1pp
+  if (H1pp = 0) then H1pp = 15 endif
+getparam('dpwr','H1'):H1dpwr
+  if (H1dpwr = 0) then H1dpwr=40 else H1dpwr=H1dpwr-3 endif
+getparam('dmf','H1'):H1dmf
+  if (H1dmf = 0) then H1dmf= 8000 endif
+getparam('pw90','C13'):C13pw90
+  if (C13pw90 = 0) then C13pw90=15 endif
+getparam('tpwr','C13'):C13tpwr
+  if (C13tpwr = 0) then C13tpwr = 51 else C13tpwr=C13tpwr-3 endif
+getparam('pwxlvl','C13'):C13pwxlvl
+  if (C13pwxlvl = 0) then C13pwxlvl = 51 else C13pwxlvl=C13pwxlvl-3  endif
+getparam('pwx','C13'):C13pwx
+  if (C13pwx = 0) then C13pwx = 15 endif
+getparam('dpwr','C13'):C13dpwr
+  if (C13dpwr = 0) then C13dpwr = C13pwxlvl-20 else C13dpwr=C13dpwr-3 endif
+getparam('dmf','C13'):C13dmf
+  if (C13dmf = 0) then C13dmf = 15873 endif
+
+module('add','N15calib','basic','refresh')
+
+getparam('pw90','N15'):N15pw90
+  if (N15pw90 = 0) then N15pw90=15 endif
+getparam('tpwr','N15'):N15tpwr
+  if (N15tpwr = 0) then N15tpwr = 51  else N15tpwr=N15tpwr-3 endif
+getparam('pwxlvl','N15'):N15pwxlvl
+  if (N15pwxlvl = 0) then N15pwxlvl = N15tpwr  else N15pwxlvl=N15pwxlvl-3 endif
+getparam('pwx','N15'):N15pwx
+  if (N15pwx = 0) then N15pwx = N15pw90 endif
+getparam('dpwr','N15'):N15dpwr
+  if (N15dpwr = 0) then N15dpwr = N15tpwr-15  endif
+getparam('dmf','N15'):N15dmf
+  if (N15dmf = 0) then N15dmf = 40*h1freq endif
+
+$type = ''
+substr(gradtype,3,1):$type
+if $type <> 'l' then
+  gzlvl1=25k 
+endif
+
+gzlvl3=gzlvl1/1.99
+
+exists(userdir+'/probes','directory'):$ex
+if ($ex=0) then shell('mkdir '+userdir+'/probes'):$dum endif
+archivedir=userdir+'/probes/probe_calibs'
+tpwr=H1tpwr pw90=H1pw90
+

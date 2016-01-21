@@ -1,0 +1,47 @@
+"macro BP_sp2a"
+"BP_sp2a - SPARKY to VJ data coversion macro"
+"Eriks Kupce, Oxford, Jan 2011"
+
+$cmd='' $exp='' $fname='' $sp2a='' 
+
+if($#<1) then
+  write('error','filename required')
+  return
+else
+  $fname = $1
+  getext($fname):$sp,$wp
+  if not ($wp = 'fid') then
+    $fname = $fname+'.fid'
+  endif
+  BPfindfile('sp2a'):$sp2a
+endif
+
+exists($fname,'directory'):$e
+if($e) then
+  input('File exists. Delete (y/n): '):$y
+  if($y='y') then
+    $cmd = 'rm -r '+$fname
+    shell($cmd)
+  else
+    return
+  endif
+endif
+
+strstr(curexp,'/','last'):$r1,$s1,$exp
+$cmd = $sp2a+' ' + $exp + ' ' + $fname + ' > BP_sp2a.log'
+write('alpha','cmd = %s',$cmd)
+write('line3','sp2a: SPARKY to VJ data conversion started.')
+shell($cmd)
+
+shell('sleep ')
+exists($fname+'/fid','file'):$e
+if($e) then                      "sp2a worked"
+  $cmd = 'mv BP_sp2a.log ' +  $fname + '/.' 
+  shell($cmd)
+  write('line3','Done.')
+else
+  write('error','sp2a: SPARKY to VJ data conversion failed. Check BP_sp2a.log for details')
+endif
+
+
+

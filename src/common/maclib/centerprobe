@@ -1,0 +1,112 @@
+"macro centerprobe"
+
+$jfile=userdir+'/gshimlib/data/gshim.bas'
+exists($jfile,'file'):$e
+if $e<0.5 then
+  write('error','gshim.bas not found')
+  return
+endif
+$ma=0 $np=0 $js=''
+lookup('file',$jfile,'skip',2,'read','read','readline'):$ma,$np,$js
+lookup('readline'):$js
+if $ma<1.5 then
+  write('error','gshim.bas has no z2 map')
+  return
+endif
+lookup('skip',4)
+lookup('skip',2*$np)
+lookup('skip',4)
+$f=0 $p=0 $n=2
+$v=0
+repeat
+  $v=$v+1
+  lookup('read','read'):$f[$v],$p[$v],$n
+until ($v>=$np or $n<1.5)
+
+$tfile=userdir+'/poly.phase'
+exists($tfile,'file'):$e
+if $e>0.5 then rm($tfile) endif
+$npskip = $np/8
+$npnew = $np*3/4
+write('file',$tfile,'exp 4\n  1  %d\nz2 map\n\n1  0  0  0',$npnew)
+$v=0
+repeat
+  $v=$v+1
+  write('file',$tfile,'%g  %g',$f[$v+$npskip],$p[$v+$npskip])
+until $v>=$npnew
+
+$ufile=userdir+'/poly.list'
+exists($ufile,'file'):$e
+if $e>0.5 then rm($ufile) endif
+write('file',$ufile,'mapname poly')
+write('file',$ufile,'shimset 00   gzsize 3   rms diff        0   rms diff/err        0')
+write('file',$ufile,'\nShim       Offset         Old         New        Diff       Error')
+write('file',$ufile,'-----------------------------------------------------------------')
+write('file',$ufile,'z0              0           0           0           0           0')
+write('file',$ufile,'z1              0           0           0           0           0')
+write('file',$ufile,'z2              0           0           0           0           0')
+write('file',$ufile,'-----------------------------------------------------------------')
+
+$jfile=userdir+'/poly.fit'
+exists($jfile,'file'):$e
+if $e>0.5 then rm($jfile) endif
+gzfit('poly','n','nn')
+"from z2 coeff calculate min position, and then distance"
+lookup('file',$ufile)
+lookup('seek','Error','skip')
+$a=0
+$v=0
+repeat
+  $v=$v+1
+  lookup('skip',4,'read','skip'):$a[$v]
+until $v>=3
+$xmin = 0
+$xmin = -0.5 * $a[2] / $a[3]
+$fmin = $xmin * 0.5 * ($f[$npskip+$npnew] - $f[$npskip+1])
+
+$fullmm=16
+if $#>0.5 then  "not used -see gcal below"
+  $fullmm=$1
+else
+  $fullmm=16
+endif
+$fullmm=$fullmm * 0.5 * 0.75  "$npnew is 0.75*$np"
+$mmin=0
+$mmin = $xmin * $fullmm
+"use gcal??"
+$gammabar=(sfrq*1000000)/(234.94*h1freq)
+if (gcal = 0) then
+  write('error','cannot run %s, gcal is zero!',$0)
+  return
+endif
+$mmin = 10 * $fmin / (gcal * gzlvl * $gammabar)
+exists(curexp+'/expl.out','file'):$e
+if $e>0.5 then autoscale endif
+if ($# = 0) then
+  write('graphics',100,100,''):$ys
+  expl('file',$jfile)
+  if $a[3]>0 then
+    $y = wc2-20
+  else
+    $y = wc2-100
+  endif
+  write('graphics',70,$y,'fmin is %4.2f hz',$fmin)
+  $y = $y - $ys
+  write('graphics',70,$y,'probe center is %5.3f mm',$mmin)
+  $y = $y - $ys
+  write('graphics',70,$y,'')
+else
+  pexpl('file',$jfile)
+  if $a[3]>0 then
+    write('plotter',70,wc2-20,'fmin is %4.2f hz',$fmin)
+    write('plotter',70,wc2-30,'probe center is %5.3f mm',$mmin)
+  else
+    write('plotter',70,wc2-100,'fmin is %4.2f hz',$fmin)
+    write('plotter',70,wc2-110,'probe center is %5.3f mm',$mmin)
+  endif
+  exists('plid','maclib'):$e
+  if ($e > 0) then plid endif
+  page
+endif
+
+return($mmin)

@@ -1,0 +1,20 @@
+"macro do2d"
+" do2d - wft2d with folding "
+$ptype = 0
+exists('phase','parameter'):$phased
+if $phased>0 then 
+  if size('phase')>1 then $phased=1 else $phased=0 endif
+  if phase=0 then $ptype = 1 endif
+endif
+if seqfil='hom2dj' then av wft2d('ptype') "hom2dj"
+ else if $phased>0 then ph wft2da "phase-sensitive 2d"
+ else if (seqfil='cosyps')and ($ptype=1) then av wft2d('ptype') "cosy"
+ else av wft2d endif endif endif "other 2d"
+if (fn=fn1)and(sw=sw1) then foldt endif "cosy,noesy,etc."
+f ai center                     "adjust display position"
+nm2d                            "adjust display scale"
+dcon                            "display"
+if (fn=fn1)and(sw=sw1) then   "cosy or similar, do auto plot"
+ if pltmod='fixed' then plcosy(7,2,-1) endif       "plot 2d only"
+ if pltmod='full' then plcosy(7,2,intmod) endif    "plot 2d and 1d"
+endif

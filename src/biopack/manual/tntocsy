@@ -1,0 +1,55 @@
+ tntocsy - total correlation spectroscopy  (a.k.a. hohaha)
+              "clean tocsy" used with windowing and MLEV16+60degree spin lock
+
+    ref: a. bax and d.g. davis, j. magn. reson. 65, 355 (1985)
+         m. levitt, r. freeman, and t. frenkiel, j. magn. reson. 47, 328 (1982)
+
+  Parameters:
+     window= clean-tocsy window(in us) ~pw
+        pw = 90 degree excitation pulse (at power tpwr)
+    satdly = length of presaturation;
+  strength = spinlock field strength in Hz
+    satmode  = flag for presat control
+               'yn' for during relaxation delay 
+               'yy' for during both "relaxation delay" and "d2" (recommended)
+     phase = 1,2: for HYPERCOMPLEX phase-sensitive F1 quadrature
+               3: for TPPI phase-sensitive F1 quadrature
+     sspul = 'y':  hs-90-hs sequence initiates D1 delay
+             'n':  normal D1 delay
+      trim = spinlock trim pulse time
+       mix = mixing time  (can be arrayed)
+        nt = min:  multiple of 2
+             max:  multiple of 8  (recommended)
+
+   mfsat='y'
+           Multi-frequency saturation. 
+           Requires the frequency list mfpresat.ll in current experiment
+           Pbox creates (saturation) shape "mfpresat.DEC"
+
+                  use mfll('new') to initialize/clear the line list
+                  use mfll to read the current cursor position into
+                  the mfpresat.ll line list that is created in the
+                  current experiment. 
+
+           Note: copying pars or fids (mp or mf) from one exp to another does not copy
+                 mfpresat.ll!
+           Note: the line list is limited to 128 frequencies ! 
+            E.Kupce, Varian, UK June 2005 - added multifrequency presat option 
+           TRANSMITTER MUST BE POSITIONED AT SOLVENT FREQUENCY 
+             this pulse sequence requires a T/R switch,
+             linear amplifiers and computer-controlled attenuators on the
+             observe channel.
+
+        contact- G. Gray (palo alto)  revision- from tocsy.c
+	P.A.Keifer - 940916 - fixed d2 timing
+
+
+        made C13refoc flag for C13 decoupling in t1.
+        15N refocussing done as if N15refoc='y'
+        Both 13C and 15N refocussing done if CNrefoc='y' 
+        Dropped power 3db down for both N15 and 13C if simulaneous 180's.
+        Proper refocussing in t1 limited by bandwidth of 13C pulse in t1
+        Uses composite 13C 180 in t1.
+
+        revised to let the parameter "strength" control amplitude
+        use pw for first pulse at power tpwr

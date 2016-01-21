@@ -1,0 +1,624 @@
+"macro ft1da"
+"**************************************************************************"
+"  ft1da -  F2 phase-sensitive transform without weighting in t2           "
+"  ft2da -  full phase-sensitive transform without weighting in t1 and t2  "
+" wft1da -  F2 phase-sensitive transform with weightng in t2               "
+" wft2da -  full phase-sensitive transform with weightng in t1 and t2      "
+"**************************************************************************"
+
+"    'bc' - invokes a baseline correction after the F2-FT; `bcorder` must "
+"           immediately follow this argument                              "
+"   'old' - invokes the coefficients for old-style States-Haberkorn data  "
+"           acquisition                                                   "
+" 'ntype' - processes NTYPE data for a PTYPE display                      "
+"   'ni2' - processes the NI2 dimension for a 3D or pseudo-3D data set    "
+"   t2dc' - selects DC of the t2 FID prior to the FT                      "
+"   t1dc' - selects DC of the t1 interferogram prior to the FT            "
+" 'f2sel' - region selection in F2 for F1 transform                       "
+"  'noft' - skip the FT                                                   "
+" 									  "
+"   The macro make use of the f1coef and f2coef parameters for the 2D     "
+"   processing coefficients.   If these parameters do not exist or have   "
+"   wrong # of coefficients, the macro reverts to using standard 2D coefs "
+"   These f1coef and f2coef parameters are created by par_2d and par3d    "
+"    macro during setup and used by ft3d macro also to                   "
+"   to construct 3D coef.					          "
+
+
+"Initialize variables"
+$i = 1
+$strargs = 1			"all string arguments must come first      "
+$incx = 0			"no 2D array index                         "
+$bcflag = 0			"default: no F2 baseline correction        "
+$dcflag = 0			"default: no F2 drift correction           "
+$bcorder = 1			"default value                             "
+$oldflag = 0			"default: standard hyercomplex data acq    "
+$coef=0
+$coefpar=''
+
+$ni2s = 'noop'			"recognized as a non-functional argument   "
+$dc2s = 'noop'
+$dc1s = 'noop'
+$f2s = 'noop'
+$noft = 'noop'
+$pns = 'ptype'			"default"
+$vcmd1 = ''			
+$argno = ''
+
+
+"Manipulate the macro callname to the appropriate VNMR command"
+length($0):$len
+if (($len < 5) or ($len > 6)) then
+   write('error','%s - error in parsing macro callname',$0)
+   return
+endif
+
+substr($0,1,$len-1):$vcmd1	"leave off the final 'a'"
+
+
+"Check macro call conditions"
+if ($# > 13) then
+   write('error','%s - too many arguments',$0)
+   return
+endif
+
+
+"Parse all of the string arguments first"
+while (($i <= $#) and $strargs) do
+   format($i,0,0):$argno
+ 
+   if (typeof('$'+$argno)) then
+      $okarg = 0
+      $strval = ${$i}
+
+      if ($strval = 'bc') then
+         $bcflag = 1
+         $okarg = 1
+         $i = $i + 1
+         format({'$i'},1,0):$argno
+
+         if (typeof('$'+$argno)) then	"use default value for `bcorder"
+            $i = $i - 1			"reset argument counter"
+         else
+            $bcorder = ${$i}
+            if (($bcorder < 0) or ($bcorder > 20)) then
+               write('error','%s - BC order is out of range: < 0 or > 20',$0)
+               return
+            endif
+         endif
+      endif
+
+      if ($strval = 'dc') then
+         $dcflag = 1
+         $okarg = 1 
+      endif
+
+      if ($strval = 'old') then
+         $oldflag = 1
+         $okarg = 1 
+      endif
+
+      if ($strval = 'ntype') then
+         $pns = 'noop'
+         $okarg = 1 
+      endif
+
+      if ($strval = 'ni2') then
+         $ni2s = $strval
+         $okarg = 1 
+      endif
+
+      if ($strval = 'ni') then
+         $okarg = 1
+      endif
+
+      if ($strval = 't2dc') then
+         $dc2s = $strval
+         $okarg = 1 
+      endif
+
+      if ($strval = 't1dc') then
+         $dc1s = $strval
+         $okarg = 1 
+      endif
+
+      if ($strval = 'f2sel') then
+         $f2s = $strval
+         $okarg = 1 
+      endif
+
+      if ($strval = 'noft') then
+         $noft = $strval
+         $okarg = 1 
+      endif
+
+      if ($okarg <> 1) then	"check for coef string"
+         substr($strval,'wc'):$e
+         if ($e > 1) then
+           $ii=0
+           $word=''
+           $coefok=1
+           while ( ($ii < $e) and ($coefok = 1) ) do
+              $ii = $ii + 1
+              substr($strval,$ii):$word
+              format($word,'isreal'):$ee
+              if ($ee < 0.5) then $coefok=0 endif
+           endwhile
+           if ($coefok) then
+             $coef=1
+             $coefpar=$strval
+             $okarg=1
+           endif
+         endif
+      endif
+             
+      if ($okarg <> 1) then	"argument check"
+         write('error','%s - invalid string argument',$0)
+         return
+      endif
+   else
+      $strargs = 0
+      $i = $i - 1		"reset argument counter"
+   endif
+
+   $i = $i + 1
+endwhile
+
+
+"Parse the sole numeric argument excluding `bcorder`"
+if ($strargs <> 1) then		"found a numeric argument at some point"
+   if ($i = $#) then
+      $incx = ${$i} 
+      if ($ni2s = 'ni2') then
+         exists('ni','parameter'):$e
+         if ($e <> 0) then		"ni exists"
+            if (($incx < 1) or ($incx > ni)) then
+               write('error','%s - t1 index < 1 or > ni',$0)
+               return
+            endif
+         else
+            $incx = 0	"goes back to initial value"
+         endif
+      else
+         exists('ni2','parameter'):$e
+         if ($e <> 0) then		"ni2 exists"
+            if (ni2 <=1) then           "treat as if ni2 does not exist"
+               $incx = 0
+            else
+              if (($incx < 1) or ($incx > ni2)) then
+                write('error','%s - t2 index < 1 or > ni2',$0)
+                return
+              endif
+            endif
+         else
+            $incx = 0	"goes back to initial value"
+         endif
+      endif
+   else
+      write('error','%s - too many numeric arguments',$0)
+      return
+   endif
+endif
+
+
+"Find size of phase and phase2 parameters"
+$nphase = 1
+exists('phase','parameter'):$e
+if ($e <> 0) then
+   $nphase = size('phase')
+endif
+
+$nphase2 = 1
+exists('phase2','parameter'):$e
+if ($e <> 0) then
+   $nphase2 = size('phase2')
+endif
+
+ if ($nphase + $nphase2 > 8) then
+   write('error','%s - too many array elements to process',$0)
+   return
+ endif
+
+"Is this a 3D experiment?"
+$flag3d = 0
+exists('ni','parameter'):$e
+if ($e <> 0) then
+   exists('ni2','parameter'):$e
+   if ($e <> 0) then
+      if ((ni > 1) and (ni2 > 1)) then
+         $flag3d = 1
+      endif
+   endif
+endif
+
+if ($flag3d) then
+   if ($oldflag) then
+      write('error','%s - argument `old` not supported with 3D data',$0)
+      return
+   endif
+
+   if ($incx = 0) then
+      if ($ni2s = 'ni2') then
+         write('error','%s - must include t1 index for 3D data',$0)
+         return
+      else
+         write('error','%s - must include t2 index for 3D data',$0)
+         return
+      endif
+   endif
+endif
+
+
+"Split up F2 and F1 transforms if BC or DC has been selected"
+if ($bcflag or $dcflag) then
+   $wtstr = ''
+   substr($0,1,1):$wtstr
+   if ($wtstr = 'w') then
+      $vcmd1 = 'wft1d'
+      $vcmd2 = 'wft2d'
+   else
+      $vcmd1 = 'ft1d'
+      $vcmd2 = 'ft2d'
+   endif
+
+   $do2ndft = 0
+   if (($0 = 'ft2da') or ($0 = 'wft2da')) then
+      $do2ndft = 1
+   endif
+endif
+
+if ($coef=0) then
+  if ($ni2s = 'ni2') then
+    exists('f2coef','parameter'):$e
+    if ($e) then
+     if (f2coef <> '') then
+	$coef=1
+        $coefpar=f2coef
+     endif
+    endif
+  else
+    exists('f1coef','parameter'):$e
+    if ($e) then
+     if (f1coef <> '') then
+	$coef=1
+	$coefpar=f1coef
+     endif
+    endif
+  endif
+endif
+
+$first=11
+$x=1
+$sub=''
+$quit=0
+$i2=$first
+if ($coef) then
+   length($coefpar):$coeflen
+   repeat
+     substr($coefpar,$x):$sub
+     if ($sub = '') then
+      	$quit = 1
+     else
+	${$i2}=''
+	${$i2}=$sub
+	$i2=$i2+1
+	$sub=''
+     endif
+     $x=$x+1
+   until $quit = 1
+endif
+
+if ($coef) then
+ $total = $i2-$first					" Do a check "
+ $check=0
+
+ if ($flag3d) then
+    if ($ni2s <> 'ni2') then
+      if ($total <> 4*(arraydim/ni/ni2/$nphase2)) then $check=1 endif
+    else
+      if ($total <> 4*(arraydim/ni/ni2/$nphase)) then $check=1 endif
+    endif
+ else
+   if ($ni2s <> 'ni2') then
+      if ($total <> 4*(arraydim/ni)) then
+        if ($nphase=2) and ($total = 8) and ($# = 1) then
+          if  ($1 <= 0) or ($1 > arraydim/ni/2) then
+            write('error','%s - arrayindex < 1 or > %d',$0,arraydim/ni/2)
+            return
+          else
+            $incx = $1
+          endif
+        else
+          $check=1
+        endif
+      endif
+   else
+      if ($total <> 4*(arraydim/ni2)) then $check=1 endif
+   endif
+ endif
+
+ if ($check) then 
+  $coef=0 
+   if ($ni2s <> 'ni2') then 
+        write('error','f1coef parameter has improper number of coefs. Using std 2d coefs')
+   else 
+        write('error','f2coef parameter has improper number of coefs. Using std 2d coefs')    endif
+ endif
+endif
+
+if ($coef) then
+
+ $x=2 $i2=$first+1 
+ $coefstr=${$i2-1}
+ if (($nphase > 1) and ($nphase2 > 1)) then 
+   if (array = 'phase,phase2') then 
+    if ($ni2s = 'ni2') then
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2*$nphase2
+     $x=1
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2* $nphase
+     $x=1
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x >2*$nphase2
+     $x=1
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x >  2* $nphase
+     $x=1
+    else
+     $y=$x
+     repeat
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $y=$y+1 $x=$x+1 until $y > 2
+     repeat $coefstr=$coefstr+',0' $y=$y+1 $x=$x+1 until $y > 2*$nphase2
+     $y=1
+     until $x > 2*$nphase*$nphase2
+     $x=1 $y=$x
+     repeat 
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $y=$y+1 $x=$x+1 until $y > 2
+     repeat $coefstr=$coefstr+',0' $y=$y+1 $x=$x+1 until $y > 2*$nphase2
+     $y=1
+     until $x > 2*$nphase*$nphase2
+     $x=1
+    endif
+   endif
+   if (array = 'phase2,phase') then 
+    if ($ni2s = 'ni2') then 
+     $y=$x
+     repeat
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $y=$y+1 $x=$x+1 until $y > 2
+     repeat $coefstr=$coefstr+',0' $x=$x+1 $y=$y+1 until $y > 2*$nphase
+     $y=1
+     until $x > 2*$nphase*$nphase2
+     $x=1 $y=$x
+     repeat 
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $y=$y+1 $x=$x+1 until $y > 2
+     repeat $coefstr=$coefstr+',0' $x=$x+1 $y=$y+1 until $y > 2*$nphase
+     $y=1
+     until $x > 2*$nphase*$nphase2
+     $x=1
+    else
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2*$nphase
+     $x=1
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2* $nphase2
+     $x=1
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x >2*$nphase
+     $x=1
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x >  2* $nphase2
+     $x=1
+    endif
+   endif
+ endif
+
+ if (($nphase = 1) and ($nphase2 > 1)) then
+  if ($ni2s = 'ni2') then
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > $total
+  else
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2*$nphase2
+     $x=1
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2*$nphase2
+  endif
+ endif
+
+ if (($nphase > 1) and ($nphase2 = 1)) then
+  if ($ni2s = 'ni2') then 
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2 
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2*$nphase 
+     $x=1  
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > 2 
+     repeat $coefstr=$coefstr+',0' $x=$x+1 until $x > 2*$nphase
+  else
+     repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > $total
+  endif
+ endif
+
+ if (($nphase = 1) and ($nphase2 = 1)) then
+  repeat $coefstr=$coefstr+','+${$i2} $i2=$i2+1 $x=$x+1 until $x > $total
+ endif
+
+"CREATE & execute vnmr command "
+
+  $incxstr=''
+  if ($pns = 'ptype') then $pns='noop' else $pns='ptype' endif
+  if ($incx <> 0) then
+   format($incx,0,0):$incxstr
+   $cmd1=$vcmd1+'(\''+$ni2s+'\',\''+$pns+'\',\''+$dc1s+'\',\''+$dc2s+'\',\''+$f2s+'\',\''+$noft+'\','+$incxstr+','+$coefstr+')'
+   if ($bcflag or $dcflag) then
+   $cmd2=$vcmd2+'(\''+$ni2s+'\',\''+$pns+'\',\''+$dc1s+'\',\''+$dc2s+'\',\''+$f2s+'\',\''+$noft+'\','+$incxstr+','+$coefstr+')' 
+   endif
+  else
+   $cmd1=$vcmd1+'(\''+$ni2s+'\',\''+$pns+'\',\''+$dc1s+'\',\''+$dc2s+'\',\''+$f2s+'\',\''+$noft+'\','+$coefstr+')'
+   if ($bcflag or $dcflag) then
+   $cmd2=$vcmd2+'(\''+$ni2s+'\',\''+$pns+'\',\''+$dc1s+'\',\''+$dc2s+'\',\''+$f2s+'\',\''+$noft+'\','+$coefstr+')'
+   endif
+  endif
+
+  exec($cmd1):$e
+  if ($e < 0.5) then
+    abort
+  endif
+  if ($bcflag or $dcflag) then
+    if ($bcflag) then
+     bc2d('f2',$bcorder)
+    else
+     dc2d('f2')
+    endif 
+   if ($do2ndft) then
+    exec($cmd2):$e
+    if ($e < 0.5) then
+      abort
+    endif
+   endif
+  endif
+
+else
+   if ($nphase > 2) then
+      write('error','%s - parameter phase has too many elements',$0)
+      return
+   endif
+   if ($nphase2 > 2) then
+      write('error','%s - parameter phase2 has too many elements',$0)
+      return
+   endif
+
+"Invoke VNMR command"
+if ($incx <> 0) then		"this is a 3D data set by default"
+   if (($nphase = 1) and ($nphase2 = 1)) then
+      {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0)
+      if ($bcflag or $dcflag) then
+         if ($bcflag) then
+            bc2d('f2',$bcorder)
+         else
+            dc2d('f2')
+         endif
+         if ($do2ndft) then
+            {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0)
+         endif
+      endif
+   endif
+
+   if (($nphase = 2) and ($nphase2 = 1)) then
+      if ($ni2s = 'ni2') then
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0)
+         if ($bcflag or $dcflag) then
+            if ($bcflag) then
+               bc2d('f2',$bcorder)
+            else
+               dc2d('f2')
+            endif
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0)
+            endif
+         endif
+      else
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,1,0)
+         if ($bcflag or $dcflag) then
+            if ($bcflag) then
+               bc2d('f2',$bcorder)
+            else 
+               dc2d('f2') 
+            endif 
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,1,0)
+            endif
+         endif
+      endif
+   endif
+
+   if (($nphase = 1) and ($nphase2 = 2)) then
+      if ($ni2s = 'ni2') then
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,1,0)
+         if ($bcflag or $dcflag) then
+            if ($bcflag) then
+               bc2d('f2',$bcorder)
+            else
+               dc2d('f2')
+            endif
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,1,0)
+            endif
+         endif
+      else
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0) 
+         if ($bcflag or $dcflag) then 
+            if ($bcflag) then 
+               bc2d('f2',$bcorder) 
+            else 
+               dc2d('f2') 
+            endif
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0)
+            endif
+         endif
+      endif
+   endif
+
+   if (($nphase = 2) and ($nphase2 = 2)) then
+      if ( ((array = 'phase,phase2') and ($ni2s = 'ni2')) or
+            ((array = 'phase2,phase') and ($ni2s = 'noop')) ) then
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0)  
+         if ($bcflag or $dcflag) then 
+            if ($bcflag) then  
+               bc2d('f2',$bcorder) 
+            else  
+               dc2d('f2')  
+            endif 
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0) 
+            endif
+         endif
+      else
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0)  
+         if ($bcflag or $dcflag) then 
+            if ($bcflag) then  
+               bc2d('f2',$bcorder) 
+            else  
+               dc2d('f2')  
+            endif 
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,$incx,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0) 
+            endif
+         endif
+      endif
+   endif
+else
+   if ( (($nphase = 1) and ($ni2s = 'noop')) or
+         (($nphase2 = 1) and ($ni2s = 'ni2')) ) then
+      {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0)
+      if ($bcflag or $dcflag) then 
+         if ($bcflag) then  
+            bc2d('f2',$bcorder) 
+         else  
+            dc2d('f2')  
+         endif 
+         if ($do2ndft) then
+            {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0)
+         endif
+      endif
+   else
+      if ($oldflag) then
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0,0,0,0,1)
+         if ($bcflag or $dcflag) then
+            if ($bcflag) then
+               bc2d('f2',$bcorder)
+            else
+               dc2d('f2')
+            endif
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0,0,0,0,1)
+            endif
+         endif
+      else
+         {$vcmd1}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0,0,0,1,0)
+         if ($bcflag or $dcflag) then 
+            if ($bcflag) then 
+               bc2d('f2',$bcorder) 
+            else 
+               dc2d('f2') 
+            endif
+            if ($do2ndft) then
+               {$vcmd2}($ni2s,$pns,$dc1s,$dc2s,$f2s,$noft,1,0,0,0,0,0,1,0)
+            endif
+         endif
+      endif
+   endif
+endif
+endif
+

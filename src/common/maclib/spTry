@@ -1,0 +1,36 @@
+"macro spTry"
+// spTry
+
+if ($1 = 'eval') then
+  {spEval}
+  spNewYval = -spNewYval
+  if (spNewYval < spYval[spHi]) then
+    spYval[spHi] = spNewYval
+    $index = ''
+    format(spHi,0,0):$index
+    $hivec= 'spVec'+$index
+    $j = 0
+    while ($j < spDim) do
+      $j = $j + 1
+      spSum[$j] = spSum[$j] + spVec0[$j] - {$hivec}[$j]
+      {$hivec}[$j] = spVec0[$j]
+    endwhile
+  endif
+
+// Evaluate trial spectrum
+elseif ($1 = 'test') then
+  $factor1 = (1.0 - $2) / spDim
+  $factor2 = $factor1 - $2
+  $index = ''
+  format(spHi,0,0):$index
+  $hivec= 'spVec'+$index
+  $j = 0
+  while ($j < spDim) do
+    $j = $j + 1
+    spVec0[$j] = spSum[$j] * $factor1 - {$hivec}[$j] * $factor2
+  endwhile
+  spVertex = 0
+
+else
+  write('error','first argument to spTry must be eval or test')
+endif

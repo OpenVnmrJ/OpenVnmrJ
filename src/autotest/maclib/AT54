@@ -1,0 +1,50 @@
+"macro AT54"
+"AT54" "Gaussian Excitation Predictability  "
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Gaussian Excitation Predictability ')
+   at_currenttest='gauss_tpwr+pw_90degree_flips_ch1'
+   seqfil='sh2pul' pwpat='gauss32' p1pat='hard'
+   gain=gain-12
+   tpwr=tpwr-12                 "avoid amplifier compression and allow for no wfg"
+   pw=2.4*4*pw90         
+   tpwr=tpwr,tpwr-3,tpwr-6,tpwr-9,tpwr-12,tpwr-15,tpwr-18,tpwr-21,tpwr-24
+   pw=pw,1.4*pw,2*pw,2.8*pw,4*pw,4*1.4*pw,8*pw,8*1.4*pw,16*pw
+   array='(tpwr,pw)'
+   $i=1
+   repeat
+    p1=pw[$i]
+    pwsadj('gauss32','p1')
+    pw[$i]=p1
+    $i=$i+1
+   until $i=10
+   p1=0
+   cdc 
+   wnt='ATwft select(1) av vsadj  dssh dtext'
+   wexp='AT54(`PART1`)'
+   ATcycle
+   au
+   write('line3','Gaussian Excitation Predicatbility ')
+   dps
+elseif ($1='PART1') then
+
+   wft ATsvf
+   vsadj(100) 
+   th=50 fp
+  if (at_plotauto='y') then
+   pl('all') pltext(100,wc2max-2)
+   if (at_printparams='y') then
+    dn2='' pap ATpltext
+    pps(120,0,wcmax-120,90) ATpage
+   endif 
+   ATplfp
+   ATpltext(0,wc2max-2)
+   ATpage
+  endif
+
+  ATnext
+endif

@@ -1,0 +1,54 @@
+"macro saveREC"
+// save REC data, and do data mirror
+
+$orig='' $s1='' $s2='' $dir=''
+if($#>0) then 
+  // $1 is full path or recname
+  substr($1,1,1):$s1
+  strstr($1,'.REC'):$n,$s2
+  if($s1='/' and $n>0) then  
+     // full path wirh .REC suffix
+     $dir=$1
+  elseif($s1='/' and $n=0) then 
+     // full path without .REC
+     $dir=$1+'.REC'
+  elseif($n>0) then 
+     // $s2 is rec name without .REC
+     Svfname(svfdir+'/'+$s2,'.REC','.fid, .img, .rec, .REC'):$dir
+  else 
+     // $1 is rec name without .REC
+     Svfname(svfdir+'/'+$1,'.REC','.fid, .img, .rec, .REC'):$dir
+  endif 
+  
+  svr_as($dir)
+  $orig=$dir
+  strstr($orig,'.REC'):$n,$s1,$s2 
+  if(adir2tmplt = '') then adir2tmplt=svfdir2 endif
+else // save new datdirXXX in current REC
+  svr:$s1,$s2
+  $orig=$s2
+  strstr($s2,'.REC'):$n,$s1,$s2 
+  if($n=0) then return endif // no new .REC/datdirXXX is saved 
+  if(adir2tmplt = '') then return endif // data mirror path is not defined in original data
+endif
+
+isFDAdata:$p11
+if(not $p11) then return endif
+
+// try data mirror
+strstr(adir2tmplt,operator):$n
+if($n=0) then return endif  // data mirror path has to contain operator name 
+
+exists($orig,'directory'):$n
+if($n=0) then return endif 
+
+strstr($s1,'/','last'):$n,$s2
+if($n=0) then return endif 
+strstr($s2,'/','last'):$n,$dir
+if($n=0) then return endif 
+
+strstr($orig,$dir):$n,$s1,$s2
+if($n=0) then return endif
+  
+$dest=adir2tmplt+'/'+$s2
+p11datamirror($orig,$dest)

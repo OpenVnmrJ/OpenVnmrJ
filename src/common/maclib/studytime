@@ -1,0 +1,93 @@
+"macro studytime"
+// Usage:  studytime('next'):$ret1,$ret2
+//		$ret1- when will the dayQ for next (future) study start
+//		$ret2 - when will the nightQ for the next (future) study start
+//	   studytime(#):$ret1,$ret2,$ret3,$ret4
+//		$ret1 - when will the dayQ for the given location (arg1) begin
+//		$ret2 - when will the nightQ for the given location (arg1) begin
+//		$ret3 - when will the dayQ for the given location (arg1) finish
+//		$ret4 - when will the nightQ for the given locaiton (arg1) finish
+//	  studytime('',rack,zone,location):$ret1,$ret2,$ret3,$ret4
+//		Same as the 2nd example.  This syntex is usually used in context with
+//		loacation selection in the tray display
+
+
+$ret1='' $ret2='' $ret3='' $ret4=''
+if ($# < 1) then return endif
+$dir=autodir $q='enterQ'
+
+$rack='' $zone='' $loc=''
+
+format($1,'isreal'):$real
+if ($# < 2) then
+    if not ($real) then
+    	if ($1='next') then
+    	    findstarttime($dir+'/'+$q):$PT,$DT,$NT,$CT
+    	    sec2ampm($DT+$CT):$ret1
+    	    sec2ampm($NT+$CT):$ret2
+	endif
+    	return($ret1,$ret2)
+    else
+	if not typeof('$1') then
+	    format($1,0,0):$loc
+	else
+	    $loc=$1
+	endif
+    endif
+else
+    if not typeof('$4') then
+        format($4,0,0):$loc
+    else
+        $loc=$4
+    endif
+    if (traymax=96) or (traymax=768) then
+        format($2,'lower'):$rack
+        format($3,'lower'):$zone
+    endif
+endif
+
+$samplename='' $locdir='' $status='' $who=operator
+checklocstatus($dir+'/'+$q,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+
+if ($status='') or ($locdir='') or ($samplename='ReFeReNCe') then
+    return($ret1,$ret2,$ret3,$ret4)
+endif
+
+readTtimeQ($dir+'/'+$q+'.macdir/'+$locdir+'/day'):$ptime,$dtime,$ntime
+
+$t1='' $t2=0 $t3='' $t4=0 $t5='' $t6='' $tt=0,0
+estimatestart:$t1,$t2,$t3,$t4,$tt,$t5,$t6
+
+$ok=0
+shell('(cat '+$dir+'/'+$q+' | grep -w '+$locdir+' | grep -wc day)'):$ok
+if ($ok) then
+    $ST=0 $CT=0 $macro=''
+    shell('(cat '+$dir+'/'+$q+' | grep -w '+$locdir+' | grep -w day)'):$macro
+    substr($macro,2):$macro
+    estimatestart('get',$macro,'enterQ',$t1,$t2,$tt):$ST,$CT
+    sec2ampm($ST+$CT):$ret1
+    sec2ampm($ST+$CT+$dtime):$ret3
+endif
+
+$ok=0
+shell('(cat '+$dir+'/'+$q+' | grep -w '+$locdir+' | grep -wc night)'):$ok
+if ($ok) then
+    $ST=0 $CT=0 $macro=''
+    shell('(cat '+$dir+'/'+$q+' | grep -w '+$locdir+' | grep -w night)'):$macro
+    substr($macro,2):$macro
+    estimatestart('get',$macro,'enterQ',$t1,$t2,$tt):$ST,$CT
+    sec2ampm($ST+$CT):$ret2
+    sec2ampm($ST+$CT+$ntime):$ret4
+else
+  shell('(cat '+$dir+'/'+$q+'.macdir/overniteQ | grep -w '+$locdir+' | grep -wc night)'):$ok
+  if ($ok) then
+    $ST=0 $CT=0 $macro=''
+    shell('(cat '+$dir+'/'+$q+'.macdir/overniteQ | grep -w '+$locdir+' | grep -w night)'):$macro
+    substr($macro,2):$macro
+    estimatestart('get',$macro,'overniteQ',$t3,$t4,$tt):$ST,$CT
+    sec2ampm($ST+$CT):$ret2
+    sec2ampm($ST+$CT+$ntime):$ret4
+  endif
+endif
+
+return($ret1,$ret2,$ret3,$ret4)

@@ -1,0 +1,72 @@
+"macro psPreacq"
+// psPreacq - do preacq delay
+
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+  psCmd('rtp')
+  on('pad'):$padon
+  setvalue('nf',1):$e
+  setvalue('ni',1):$e
+  setvalue('ni2',1):$e
+  setvalue('ni3',1):$e
+  wdone=''
+  savesampglobal('cp')
+  exists('s2pul','parlib'):$sparex,$prunepar
+  $prunepar=$prunepar+'/procpar'
+  prune($prunepar)
+  exists('proc1','parameter'):$ex
+  if ($ex) then proc1='ft' endif
+  fixpar
+  getsampglobal('cp')
+
+  seqfil='s2pul'
+  gain=0 dm='nnn'
+  nt=1 ss=0 at=0.2 wshim='n' d1=1 pw=0.2
+  alock='n' in='n'
+  wnt='' wbs='' array=''
+  p1=0
+  if ($padon>0) and (pad[1]>2) then
+    write('line3','Executing preacquisition delay: %g sec',pad)
+    psCmd('set','autoname',autoname)
+    autoname = '_PAD_'
+    psCmd('set','auArgs','wait shimming')
+    return('doau')
+  elseif traymax>1 then
+    on('loc','global'):$locon
+    if ($locon) and (loc>0) then
+      readhw('loc'):$loc
+      if ($loc<>loc) then
+        write('line3','Changing to sample %d',loc)
+        psCmd('set','autoname',autoname)
+        autoname = '_SAMP_'
+        psCmd('set','auArgs','wait shimming')
+        return('doau')
+      endif
+    endif
+  endif
+  return('done')
+
+elseif ($action = 'exp') then
+  if (auto='y') then
+    flush
+    $file=file+'.fid'
+    shell('rm -rf '+$file):$dum
+    psCmd('get','autoname'):autoname
+  endif
+  on('pad'):$padon
+  if ($padon>0) and (pad[1]>2) then
+    psCmd('record','pad[1]=0.5')
+  endif
+  return('done')
+endif

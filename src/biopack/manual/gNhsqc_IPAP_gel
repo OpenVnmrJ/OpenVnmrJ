@@ -1,0 +1,45 @@
+Sequence is modified gNhsqc_IPAP.c by Eric Condamine, 
+IBS, Grenoble, France  
+
+"N15 IPAP-hsqc using 3919 watergate suppression 
+technique, modified to suppress naturel-abundance 15N 
+signals from NH2 groups of polyacrylamide gel"
+
+Ref: J Biomol NMR. 2001 Oct;21(2):141-51.
+
+First tests done by Eric C. seem to indicate a S/N 
+reduction near 17% and a good suppression of the gel 
+signals, comparatively to the standard Bax sequence. 
+Parameters are coming from standard gNhsqc.c and 
+have not yet been optimized specifically for this 
+sequence. To setup the experiment call the Biopack 
+gNhsqc_IPAP macro (i.e. Experiments>>Protein C13/N15 
+experiments> N15 coupling measurements> N15 HSQC IPAP). 
+
+Acquisition:
+Gel='y' IPAP='n','y' phase=1,2 array='IPAP,phase'
+May be usefull to play with d3 (for watergate). 
+Excitation of all resonances except those of the 
+offset of the carrier and at positions k/d3 
+(k is an integer).
+
+Processing:
+you can acquire both antiphase and in-phase spectra 
+at the same time. To obtain both components with 
+the same phase use
+  wft2d(1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0)   (in-phase) 
+  wft2d(0,0,0,0,0,0,1,0,0,0,0,0,-1,0,0,0)  (anti-phase)
+
+To look at individual satellites you can also build 
+sum and difference of the two data sets:
+  wft2d(1,0,0,0,0,0,1.11,0,0,0,1,0,-1.11,0,0,0) sum
+  wft2d(1,0,0,0,0,0,-1.11,0,0,0,1,0,1.11,0,0,0) diff
+
+Note the factor of 1.11. You can adjust this value 
+to get a good match.
+
+To measure exact signal positions in these component 
+spectra, you need line fitting software 
+(such as "fitspec" / deconvolution).
+
+   

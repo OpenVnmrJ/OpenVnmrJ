@@ -1,0 +1,132 @@
+"macro C13sens_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+$date='' $time='' $snrs='' $lws='' $pass_threshold=0
+$sumsnr=0 $avesnr=0 $arraydims='' $deltas=''
+$minsnr=1e6 $maxsnr=-1e6 $minsnrspecno=0 $maxsnrspecno=0
+$minsnrs='' $maxsnrs='' $minsnrspecnos='' $maxsnrspecnos=''
+
+//ft
+ai
+lb=3.7
+wft
+if $phase='dophase' then lp=0 aph0('select',65p,70p) endif
+f
+full
+setref
+axis='h'
+vp=12
+vsadj(0.8*wc2max-vp)
+peak(65p,75p):$ht,$frq
+sp=$frq-3p wp=68p
+$i=1
+repeat
+	select($i)
+	if $phase='dophase' then lp=0 aph0('select',65p,70p) endif
+	region bc
+	res
+	dres:$lw
+	write('line3','Weighted linewidth of C6D6 signal at half-height=%f Hz',$lw)
+	if ($lw > 6.2) then write('error','Warning: Line is broad, check shimming') endif
+
+	cr=-rfl+1400
+	delta=1400
+	dsnmax(1400)
+	dsn:$snr
+	if ($snr<$minsnr) then $minsnr=$snr $minsnrspecno=$i endif
+	if ($snr>$maxsnr) then $maxsnr=$snr $maxsnrspecno=$i endif
+
+	$sumsnr=$sumsnr+$snr
+	$i=$i+1
+until ($i>arraydim)
+
+$avesnr=$sumsnr/arraydim
+$snr=$avesnr
+
+format($minsnr,1,0):$minsnrs
+format($minsnrspecno,1,0):$minsnrspecnos
+format($maxsnr,1,0):$maxsnrs
+format($maxsnrspecno,1,0):$maxsnrspecnos
+
+write('line3','rms signal-to-noise ratio=%d:1',$snr)
+
+VPtext
+$str='13C signal-to-noise ratio measurement'
+atext($str)
+format($snr,1,0):$snrs
+format(arraydim,1,0):$arraydims
+format(delta,1,0):$deltas
+$str='rms signal-to-noise ratio (average of '+$arraydims+' measurements) = '+$snrs+':1'
+atext($str)
+$str=$deltas+' Hz wide noise region used'
+atext($str)
+$text='Minimum measured signal-to-noise: '+$minsnrs+' (spectrum '+$minsnrspecnos+')'
+atext($text)
+$text='Maximum measured signal-to-noise: '+$maxsnrs+' (spectrum '+$maxsnrspecnos+')'
+atext($text)
+format($lw,1,1):$lws
+$text='Resolution: '+$lws+' Hz'
+atext($text)
+
+$targetvalue=0
+$targetvalues=''
+$IPteststatus='FAIL'
+VPgettarget('C13SN'):$targetvalue
+format($targetvalue,1,0):$targetvalues
+$text='Target: >= '+$targetvalues+':1'
+atext($text)
+if ($snr >= $targetvalue) then
+	atext('Test result: PASS')
+	$IPteststatus='PASS'
+else 
+	atext('Test result: FAIL')
+endif
+
+write('line3','13C Sensitivity Test \(ASTM\)'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured RMS signal-to-noise ratio %.1f:1',$snr):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target >= %.1f:1',$targetvalue):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+//Change wp and sp to show p-dioxane and benzene peaks
+sp=62p wp=70p
+
+//Redisplay spectra and text
+dssh dtext
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($snr)
+
+if ($IPteststatus='PASS') then
+
+   "we passed so clear any retestfile counter info"
+   $retestfile=userdir+'/persistence/ReTest'
+   exists($retestfile,'file'):$et
+   if ($et>0.5) then rm($retestfile) endif
+
+elseif ($IPteststatus='FAIL') then
+
+	DoPlanB($0)
+
+endif

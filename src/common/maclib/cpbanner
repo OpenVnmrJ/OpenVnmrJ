@@ -1,0 +1,45 @@
+"macro cpbanner"
+exists('caliblist','parameter'):$calib
+if ($calib) then return endif
+
+if ($# < 2) then $2=pslabel endif
+if ($2 = '') then return endif
+if ($2 ='suselfrq') then $2=pslabel endif
+
+if ($2='s2pul') then
+  $2=tn+' ('+$2+')'
+endif
+
+if ($1='acquire') and ($# < 2) then
+  strstr(explist,pslabel+'scout'):$isscout
+  if ($isscout) then
+     $nexplist=''
+     $md=archivedir+'/'+sample+'/dirinfo/macdir'
+     cpexplist('next',$md):$nexplist
+     strstr($nexplist,'SetUp'):$isscout
+  endif
+  if ($isscout) then
+     exists('scoutinfo','parameter'):$parex
+     if ($parex) then if (scoutinfo='') then $parex=0 endif endif
+     if ($parex) then $2=pslabel+' '+scoutinfo else $2=pslabel+'scout' endif
+  endif
+endif
+
+//if (auto <> 'y') then
+  if ($1 = 'process') then
+     $banner='Processing '+$2
+  elseif ($1 = 'setup') then
+       $banner='Setting up '+$2
+  elseif ($1 = 'acquire') then
+       $banner='Acquiring '+$2
+  elseif ($1 = 'plot') then
+	$banner='Plotting '+$2
+  endif
+if (auto <> 'y') and (wexp='chempackQ') then
+  banner($banner)
+else
+  write('line3',$banner)
+endif
+	"see usercpbanner_example macro for an"
+	" example of how usercpbanner can be used"
+dousermacro($0,$1,$2)

@@ -1,0 +1,79 @@
+#
+
+import os
+import sys
+import glob
+import shutil
+import myShutil # for better copytree()
+import myShutilsym
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+# get options settings
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+
+
+biopackDirList = [ 'bin',
+                   'BioPack.dir',
+                   'maclib',
+                   'manual',
+                   'parlib',
+                   'psg',
+                   'shapelib',
+                   'tablib',
+                   'templates']
+
+vnmrBiopackDirList =  ['wavelib']
+
+
+vnmrBiopackPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','ddr')
+ivnmrBiopackPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova')
+# Alternative path if not installable option
+# vnmrBiopackPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','Biopack')
+#for sure copy it to options/standard/biopack
+standardBiopackPath = os.path.join(vnmrBiopackPath,'biopack')
+istandardBiopackPath = os.path.join(ivnmrBiopackPath,'biopack')
+if not os.path.exists(standardBiopackPath) :
+    os.makedirs(standardBiopackPath)
+if not os.path.exists(istandardBiopackPath) :
+    os.makedirs(istandardBiopackPath)
+		     
+
+#copy the directory
+for i in biopackDirList:
+       myShutil.copytree(i,standardBiopackPath,symlinks = False)
+       myShutil.copytree(i,istandardBiopackPath,symlinks = False)
+
+#copy the directory
+for i in vnmrBiopackDirList:
+       myShutil.copytree(i,vnmrBiopackPath,symlinks = False)
+       myShutil.copytree(i,ivnmrBiopackPath,symlinks = False)
+Execute('chmod 644 ' + standardBiopackPath + '/maclib/*')
+Execute('chmod 644 ' + standardBiopackPath + '/manual/*')
+Execute('chmod 644 ' + standardBiopackPath + '/psg/*')
+Execute('chmod 644 ' + standardBiopackPath + '/shapelib/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/layout/[A-Z]*/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/layout/[a-f]*/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/layout/g*/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/layout/[h-z]*/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/vnmrj/interface/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/vnmrj/panelitems/*')
+Execute('chmod 644 ' + standardBiopackPath + '/templates/vnmrj/protocols/*')
+
+Execute('chmod 644 ' + istandardBiopackPath + '/maclib/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/manual/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/psg/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/shapelib/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/layout/[A-Z]*/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/layout/[a-f]*/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/layout/g*/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/layout/[h-z]*/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/vnmrj/interface/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/vnmrj/panelitems/*')
+Execute('chmod 644 ' + istandardBiopackPath + '/templates/vnmrj/protocols/*')

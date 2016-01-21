@@ -1,0 +1,746 @@
+"macro AuNobs"
+"********************************************************"
+"AuNobs - Carbon observe   Autocalibration             "
+"********************************************************"
+
+exists('CALmethod','parameter'):$calex
+if ($calex) then $CALmethod=CALmethod else $CALmethod='oldcal' endif
+$bio=0    // Check for Bio-NMR referencing (liquid NH3)
+getrefcmpd('N15'):$ref
+if $ref='NH3 (liquid), ext.' then $bio=1 endif
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+IF ($CALmethod = 'oldcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+if ($# < 1) then $1 = 1 endif
+IF ($1 = 1) THEN
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft
+explist=$explist
+
+tn='N15' dn='H1' crl sw=30k
+$N15pwx=100
+getparam('pwx','N15'):$N15pwx
+
+if solvent='dmso' then        // ID2 sample
+  if $bio then setsw(130.4,80.4) else setsw(-250,-300) endif
+  dm='n' d1=3 nt=8
+  pslabel='NITROGEN'
+elseif solvent='d2o' then     // Autotest sample
+  getparam('tpwr','H1'):$H1tpwr
+  getparam('pw90','H1'):$H1pw90
+  if $H1tpwr<1 then $H1tpwr=tpwr endif
+  $N15tpwr=N15tpwr $N15pw90=N15pw90
+  $H1dpwr=H1dpwr $H1dmf=H1dmf $H1pplvl=H1pplvl $H1pp=H1pp $CAL=CALmethod
+  inept
+  module('add','N15calib')
+  module('add','HCcalib')
+  N15tpwr=$N15tpwr N15pw90=$N15pw90
+  H1dpwr=$H1dpwr H1dmf=$H1dmf H1pplvl=$H1pplvl H1pp=$H1pp CALmethod=$CAL
+  pp=H1pp pplvl=H1pplvl dpwr=H1dpwr dmf=H1dmf
+  getparam('pp','H1'):pp
+  if pp=0 then
+    write('error','1H decouple (CH3I) autocal. has not been done yet! Estimating pp/1H dec...')
+    pp=$H1pw90 pplvl=$H1tpwr dpwr=$H1tpwr-20 dmf=1e5/$H1pw90 dmm='w' dres=90
+  endif
+  setref
+  if $bio then setsw(224.4,204.4) else setsw(-156,-136) endif
+  setoffset(dn,1.9):dof
+  mult=2 j=4 at=2 d1=2 lb=0.3 nt=2
+  dm='nny'
+else
+  write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+  return
+endif 
+
+acqdisp
+setddrtc:$dum
+setref
+
+getparam('tpwr'):$power
+if ($power=0) then N15tpwr=51 else N15tpwr=$power-3 endif
+
+tpwr=N15tpwr pw90=N15pw90 pw=pw90
+dm='nnn' dmm='ccc'
+ 
+ai fn=4*np lb=1/at
+if (Console = 'mercury') then
+  gain=20
+else
+  gain=40
+endif
+if $N15pwx>25 then // Indirect Probe - very insensitive on N15 direct...
+  nt=nt*2 write('line3','Long N15 pwx (ID probe?) - may give very low S/N on direct N15...')
+endif    
+wnt=''
+wexp='wft aph0 vsadj AuNobs(2)'
+alock='n' wshim='n' r1=1 r3=1
+clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+$solv='' format(solvent,'lower'):$solv
+wft av f full vsadj setref
+wnt='wft f full vsadj'
+
+getparam('tpwr'):$power
+getparam('pw90'):$oldpw
+
+if ($power <> 0) then
+  $factor = N15pw90/$oldpw
+  ln($factor):$lnfactor
+  $tpwrdiff = trunc(20*0.43429*$lnfactor)
+ if ($tpwrdiff > 2) or ($tpwrdiff < -2) then
+   wexp='f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`N15ref`):$dum AuNobs(3)'
+ else
+  if (($power-$tpwrdiff)>63) then
+     $tpwrdiff=$power-63
+     exp($tpwrdiff*2.303/20):$mult
+     N15pw90=N15pw90*$mult
+  endif
+  tpwr=$power-$tpwrdiff
+  wexp='wft f full vsadj f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`N15ref`):$dum AuNobs(5,N15pw90)'
+ endif
+else
+   wexp='f peak:$ht,cr wp=100 sp=cr-50 Autocalsave(`N15ref`) AuNobs(3)'
+endif
+
+alock='n' wshim='n' clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+getparam('tpwr'):$power
+"if ($power=0) then getparam('pwxlvl'):$power endif "
+if (tpwr = $power-3) then    "if the power came from a probe file use finer step"
+   $strtpw=trunc((N15pw90/4) + 0.5)
+   array('pw',20,$strtpw,2)
+else
+   array('pw',20,4,4)
+endif
+vp=wc2max/2-10
+wnt='wft(`acq`) select(1) vsadj(10) dssh dssl(`value`)'
+wexp='AuNobs(4)'
+alock='n' wshim='n' r1=1 clear(2)
+au('wait','next')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 4) THEN
+
+wft av 
+$counter=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $maxht = $ht $pw90=pw[1] else
+     if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+
+if ($pw90 > 2*N15pw90) then
+  if (r1 < 2) then
+    r1 = r1+1
+    tpwr=tpwr+6
+    au('next','wait')
+    return
+  else
+    write('error','Autocalibration failed on second try -- determine manually')
+    abort
+  endif
+endif
+
+if ($pw90 = N15pw90) then
+ $diff = pw[2] - pw[1]
+ if $diff > 2 then
+  $strtpw=trunc((N15pw90/20) + 2)
+  $totarray=trunc((N15pw90) + 0.5)
+  array('pw',$totarray,$strtpw,2)
+  r3 = r3+1
+  au('next','wait')
+  return
+ else
+  AuNobs(5,$pw90)
+  return
+ endif
+endif
+
+ $factor = N15pw90/$pw90
+ ln($factor):$lnfactor
+ $tpwrdiff = trunc(20*0.43429*$lnfactor)
+ if ((tpwr-$tpwrdiff) > 63) then
+    $tpwrdiff=tpwr-63
+ endif
+
+if ($pw90 < N15pw90) then
+ if (($tpwrdiff <> 0) and (r3 < 2)) then
+  tpwr = tpwr - $tpwrdiff r3=r3+1
+  au('next','wait')
+  return
+ else
+ $diff = pw[2] - pw[1]
+ if $diff > 2 then
+  $strtpw=trunc((N15pw90/20) + 2)
+  $totarray=trunc((N15pw90) + 0.5)
+  array('pw',$totarray,$strtpw,2)
+  r3 = r3+1
+  au('next','wait')
+  return
+ else
+  AuNobs(5,$pw90)
+  return
+ endif
+ endif
+endif
+
+tpwr = tpwr - $tpwrdiff
+$strtpw=trunc((N15pw90/5) + 0.5)
+array('pw',20,$strtpw,$strtpw)
+clear(2) 
+wexp='AuNobs(6)' au('next','wait') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 5) THEN
+
+$pw90=$2
+ds(1)
+array('pw',17,3.2*$pw90,0.1*$pw90)
+clear(2) full
+da
+r1=1 
+vp=wc2max/2-10
+wnt='wft(`acq`) select(1) vsadj(10) dssh dssl(`value`)'
+wexp='AuNobs(7)' 
+au('next','wait')  
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 6) THEN
+
+clear(2)
+wft av 
+$counter=1
+repeat
+  select($counter)
+  peak(sp,sp+wp):$ht
+  if $counter=1 then $maxht = $ht $pw90=pw[1] else
+     if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+select(1)
+
+if (($pw90 < N15pw90) or ($pw90 = N15pw90)) then AuNobs(5,$pw90) return endif
+
+if (tpwr < 63) then
+ $factor = N15pw90/$pw90
+ ln($factor):$lnfactor
+ $tpwrdiff = trunc(20*0.43429*$lnfactor)
+
+ $newtpwr = tpwr-$tpwrdiff
+ if ($newtpwr <> tpwr) then 
+  wexp='AuNobs(6)' 
+  tpwr=$newtpwr
+  clear(2)
+  au('next','wait')
+ else
+  tpwr=tpwr+1
+  AuNobs(5,$pw90) return 
+ endif
+
+else
+ AuNobs(5,$pw90)
+endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 7) THEN
+
+clear(2)
+wft av
+$counter=1
+repeat
+  select($counter)
+  peak(sp,sp+wp):$ht
+  if $counter=1 then $minht = $ht $pw360=pw[1] else
+     if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+
+$pw90=$pw360/4.0
+if ($pw90 > N15pw90) then
+ if (tpwr < 63) then
+  if (r1 < 3) then
+   tpwr=tpwr+1 r1=r1+1
+   array('pw',17,3.2*$pw90,0.1*$pw90)
+   au('wait','next')
+   return
+  endif
+ endif
+endif
+
+pw90=$pw90
+
+$diff = pw[2] - pw[1]
+if ($diff > 1) then
+ array('pw',11,$pw360-4,0.8)
+ au('next','wait')
+ return
+endif
+
+wnt='wft(`acq`) dssh dssl(`value`)' 
+wexp='select(3) ph aph0 vsadj(50) dssh dssl(`value`) Autocalsave(`N15pw90`) pl(`all`) pltext pssl(`value`) page Autocalnext'
+$pwinc= trunc((pw90/3)+0.5)
+array('pw',20,$pwinc,$pwinc)
+$strpw90='' $strtpwr=''
+format(pw90,0,1):$strpw90
+format(tpwr,0,0):$strtpwr
+setparams('pw90',$strpw90)
+setparams('tpwr',$strtpwr)
+$text='N15 obs. 90 degree pw: '+$strpw90
+$atext='  at power level: '+$strtpwr
+atext($text)
+atext($atext)
+if (pltopt = 'y') then
+  au('next','wait')
+else
+  wexp='select(3) ph aph0 vsadj(50) dssh dssl(`value`) Autocalsave(`N15pw90`) pl(`all`) pltext pssl(`value`) page'
+  Autocalsave('N15pw90','par')
+  Autocalnext
+endif
+ENDIF
+
+"********************************************************"
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ELSEIF ($CALmethod = 'newcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+" options/arguments: "
+" (none) : initial setup "
+" 'refine' : refine parameters as needed & initial Haupt result "
+" 'define' : define tpwr for array "
+"  'array' : set up 360 degree pw array "
+" 'save90' : process 360 degree pw array, save data, update probe file "
+
+IF ($# < 1) then
+  " initial setup of N15pw90 calibration "
+$explist=explist
+$N15pw90 = N15pw90
+$h1pp=H1pp
+$h1ref = '' $filex = 0  $solv = ''
+AutoCheck('H1ref'):$filex,$h1ref
+if $filex then
+  rtv($h1ref,'solvent'):$solv
+  format($solv,'lower'):$solv
+else
+  return
+endif
+$prtmod=prtmod
+tn='N15' dn='H1' crl sw=30k
+
+solvent=$solv 
+setref
+
+if solvent='dmso' then        // ID2 sample
+  seqfil='s2pul' vp=0 d1=2 at=1 expfilt('acq')
+  lb=2/at fn=64k pslabel='NITROGEN' dg
+  if $bio then setsw(130.4,80.4) else setsw(-250,-300) endif
+  dm='n'
+elseif solvent='d2o' then     // Autotest sample
+  getparam('tpwr','H1'):$H1tpwr
+  getparam('pw90','H1'):$H1pw90
+  if $H1tpwr<1 then $H1tpwr=tpwr endif
+  $N15tpwr=N15tpwr $N15pw90=N15pw90
+  $H1dpwr=H1dpwr $H1dmf=H1dmf $H1pplvl=H1pplvl $H1pp=H1pp
+  inept
+  module('add','N15calib')
+  module('add','HCcalib')
+  N15tpwr=$N15tpwr N15pw90=$N15pw90
+  H1dpwr=$H1dpwr H1dmf=$H1dmf H1pplvl=$H1pplvl H1pp=$H1pp
+  pp=H1pp pplvl=H1pplvl dpwr=H1dpwr dmf=H1dmf
+  getparam('pp','H1'):pp
+  if pp=0 then
+    write('error','1H decouple (CH3I) autocal. has not been done yet! Estimating pp/1H dec...')
+    pp=$H1pw90 pplvl=$H1tpwr dpwr=$H1tpwr-20 dmf=1e5/$H1pw90 dmm='w' dres=90
+  endif
+  setref
+  if $bio then setsw(224.4,204.4) else setsw(-156,-136) endif
+  setoffset(dn,1.9):dof
+  mult=2 j=4 at=2 d1=3 lb=0.3
+  dm='nny'
+else
+  write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+  return
+endif 
+setddrtc:$dum
+Autocalpar
+prtmod=$prtmod
+
+explist=$explist 
+rtv($h1ref,'pltopt','archivedir','sample')
+tpwr=N15tpwr N15pw90 = $N15pw90 pw90=$N15pw90 
+H1pp = $h1pp
+
+$solv='' format(solvent,'lower'):$solv
+
+  ss=0 ai fn= 4*np  lb=1/at  lp = 0
+
+  if (Console = 'mercury') then
+    gain = 20
+  else
+    gain = 40
+  endif
+  getparam('pw90','N15'):$N15pw90
+  getparam('tpwr','N15'):$N15tpwr
+  getparam('pwxlvl','N15'):$N15pwxlvl
+  getparam('pwx','N15'):$N15pwx
+  if $N15tpwr>0 then
+    tpwr=$N15tpwr
+  else
+    if $N15pwxlvl>0 then tpwr=$N15pwxlvl-1 endif   // Probably N15 pwxcal has been run?
+  endif
+  if N15pw90>0 then
+    $N15pw90=N15pw90   //user entry has preference over probefile
+  else
+    if $N15pwx>0 then $N15pw90=$N15pwx endif
+  endif 
+  N15pw90=$N15pw90
+
+if solvent='dmso' then        // ID2 sample
+  nt = 8 d1=3
+  if $N15pw90 < 0.5 then "calibrations have not been done"
+    pw = 14,28  "values assume tpwr will be at 51 "
+  else
+    pw = trunc(20*$N15pw90/3 + 0.5)/10
+    pw = pw, 2*pw
+  endif
+
+  wnt='wft ds(1) f aph0 vsadj dssh dssl(`value`)'
+else                          // Autotest sample (D2O)
+  nt = 2 d1=2 at=2 av vp=0
+  if $N15pw90 < 0.5 then $N15pw90=14 endif "calibrations have not been done"
+  array('pw',11,0,$N15pw90/5)
+  wnt='wft ds(1) vsadj vs=vs/10 dssh dssl(`value`)'
+endif
+wexp='AuNobs(`refine`)'
+alock='n' wshim='n' spin = 0 r1=1 r3=1
+gettxt(archivedir+'/'+sample+'/H1ref')
+au('wait','next')
+return
+
+ELSEIF ($1 = 'refine') then
+
+wft f full aph
+select(1)
+if solvent='d2o' then     // Autotest sample (D2O): Find tallest signal
+  av vp=0
+  $counter=1
+  $maxspec=1
+  repeat
+    select($counter)
+    peak(sp,wp+sp):$ht
+    if $counter=1 then $maxht = $ht else
+     if $ht>$maxht then $maxht=$ht $maxspec=$counter 
+     endif
+    endif
+    $counter=$counter+1
+  until ($counter>arraydim)
+  select($maxspec) ph aph dc av vsadj
+  $pw90=pw[$maxspec]
+endif
+
+  cr = sp + wp/10  delta = wp/10
+  dsn:$sn
+  if ($sn < 5) then
+   if (pw[1] = 14) then
+     if solvent='dmso' then
+       pw = 20,40  "try larger pulse widths"
+     else
+       array('pw',11,0,N15pw90/2)
+     endif
+   elseif (nt < 33) then
+     nt = nt*4
+     write('line3','S/N too low, nt increased to %d',nt)
+   else
+	"to get here pw & nt already increased "
+     write('line3','S/N too low; N15 pw calibration aborted')
+     Autocalnext
+     return
+   endif
+    au('wait','next')
+    return
+  else
+    " S/N is adequate;  proceed with calibration "
+    dc 
+    aph
+    vsadj(100)
+    th = 40  nll
+  endif
+
+if solvent='dmso' then     // ID2 sample
+  select(2) dc peak:$hgt
+  abortoff
+  if ($hgt > 100) then 
+    aph
+  endif
+  aborton
+
+  fp
+  pw_haupt:$pw90
+  if $pw90 = 0 then
+    write('error','N15 pw90 calibration failed!')
+    abort
+  else
+    write('line3','Estimated pw90=%s',$pw90)
+  endif
+
+  "initial estimate may not be reliable"
+  "reset pw array & find better estimate at initial tpwr" 
+
+  pw = trunc(20*$pw90/3 + 0.5)/10
+  pw = pw, 2*pw
+  da
+  wexp = 'AuNobs(`define`)'
+  au('wait','next')
+  return
+else         // Autotest sample
+   AuNobs('array',$pw90)
+endif
+
+ELSEIF ($1 = 'define') THEN
+  " get good pw90 from Haupt array "
+
+  wft f full
+  select(1)
+  dc aph vsadj(100)
+  th = 40  nll
+
+  fp
+  pw_haupt:$pw90
+  write('line3','Estimated pw90=%s',$pw90)
+
+ $factor = N15pw90/$pw90
+ ln($factor):$lnfactor
+ ln(10):$ln10
+ $tpwrdiff = (20*$lnfactor/$ln10)
+
+ if ($tpwrdiff > 0.7) then
+   $tpwrdiff = trunc($tpwrdiff + 0.5)
+   tpwr = tpwr - $tpwrdiff
+   pw = trunc(20*N15pw90/3 + 0.5)/10
+   pw = pw, 2*pw
+   da
+   au('wait','next')
+   return
+ elseif ($tpwrdiff < -0.7) then
+   $tpwrdiff = trunc($tpwrdiff - 0.5)
+   tpwr = tpwr - $tpwrdiff
+   pw = trunc(20*N15pw90/3 + 0.5)/10
+   pw = pw, 2*pw
+   da
+   au('wait','next')
+   return
+ else
+   "not making a real adjustment to tpwr"
+   $file = archivedir+'/'+sample+'/H1ref'
+   exists($file,'file'):$ex
+   if $ex then gettxt($file) endif
+
+   Autocalsave('N15ref')
+   AuNobs('array',$pw90) 
+   return 
+ endif
+
+ELSEIF ($1 = 'array') then
+
+if ($# < 2) then
+  $pw90 = N15pw90
+else
+  $pw90 = $2
+endif
+
+$pw15=trunc(10*$pw90/6 + 0.5)/10
+ds(1) aph
+
+if solvent='dmso' then    // ID2 sample
+  array('pw',9,20*$pw15,$pw15) "from 300 to 420 degrees, in 15 degree steps "
+  wnt='wft ds(1) vsadj dssh(`dodc`) dssl(`value`)' vp = wc2max/2 - 10
+else                      // Autotest sample
+  array('pw',18,3*$pw15,$pw15/2) "from 45 to 165 degrees, in 7.5 degree steps "
+  wnt='wft dssh dssl(`value`)' vp=0
+endif
+
+clear(2) full   
+wexp='AuNobs(`save90`)'
+if (nt < 2) then nt = 2 endif
+
+au('wait','next')
+return
+
+ELSEIF ($1 = 'save90') then
+
+if solvent='dmso' then "process 360 degree pulse array, update N15pw90 & N15tpwr"
+
+  select(1) f full dc  cr = sp+40 delta=40 crmode = 'b'
+  vsadj(0.25*wc2max)  dssh('dodc')
+  dsn:$sn,$noise
+  $noise = $noise * vs  "scale for comparison with peak heights"
+
+  $i = 2
+  repeat
+    select($i)  dc
+    $i = $i+1
+  until ($i > celem)
+  fp
+
+  $file = curexp+'/fp.out'
+  $key=''
+  lookup('mfile',$file,'seek','of','read','skip',6,'read',1,'filekey'):$filines,$nspecs,$key
+  if ($nspecs <> celem) then
+    write('error','You must run \"fp\" before using %s',$0)
+    return(0)
+  endif
+  lookup('mfile',$key,'seek','(mm)','filekey'):$key
+
+  $nlines = size('llfrq')
+  if ($filines <> $nlines) then
+    write('error','You must run \"fp\" before using %s',$0)
+    return(0)
+  endif
+
+  $j = 1 $k = 0  $pw360 = 0
+  repeat  "for each line"
+    $i = 1  $hgt = 0
+    repeat  "in each spectrum"
+       lookup('mfile',$key,'skip',2,'read','filekey'):$hgt[$i],$key
+       $i = $i+1
+    until($i > celem)
+
+" scan intensity array, looking for the last negative & first positive "
+" peak intensities above the noise level "
+
+  $i = 0
+  repeat
+    $i = $i+1
+  until ($hgt[$i] > -2*$noise) or ($i = (celem-1))
+  $lastneg = $i-1
+
+  repeat
+    $i = $i+1
+  until ($hgt[$i] > 2*$noise) or ($i = celem)
+  $firstpos = $i
+
+  if ($hgt[$firstpos] > 2*$noise) then 
+  " calculate 360 degree pulse width by linear interpolation "
+    $frac = -$hgt[$lastneg]/($hgt[$firstpos] - $hgt[$lastneg])
+    $pw360 =  $pw360 + pw[$lastneg] + $frac*(pw[$firstpos] - pw[$lastneg])
+    $k = $k+1
+  else
+    " didn't find a reliable positive peak "
+    write('error',' unreliable result in N15 pw90 calibration!')
+    return
+  endif
+
+  $j = $j+1  "continue with next line"
+  until ($j > $nlines)
+else   "For Autotest / INEPT, just look for the maximum signal"
+  $counter=1
+  $maxspec=1
+  repeat
+    select($counter)
+    peak(sp,wp+sp):$ht
+    if $counter=1 then $maxht = $ht else
+     if $ht>$maxht then $maxht=$ht $maxspec=$counter 
+     endif
+    endif
+    $counter=$counter+1
+  until ($counter>arraydim)
+  select($maxspec) ph aph dc av vsadj
+  $pw90=pw[$maxspec]
+  $pw360=4*$pw90
+  $k=1
+endif
+
+
+if ($k < 0.5) then
+  write('error','N15 autocalibration failed!')
+  abort
+else
+  pw90 = 0.25 * $pw360/$k
+  write('line3','Found pw90=%s',pw90)
+
+  $strpw90='' $strtpwr=''  $strN15pw90 = ''
+  format(pw90+0.024,0,1):$strpw90
+  format(tpwr,0,0):$strtpwr
+  format(N15pw90 + 0.049,0,1):$strN15pw90
+  setparams('pw90',$strpw90)
+  setparams('tpwr',$strtpwr)
+
+  gettxt(archivedir+'/'+sample+'/H1ref')
+  $text='N15 obs. 90 degree pw: '+$strpw90
+  $atext='  at power level: '+$strtpwr
+  $atext2 = 'Requested value was '+$strN15pw90
+  atext($text)
+  atext($atext)
+  atext($atext2)
+dtext
+endif
+
+if solvent='dmso' then
+  wnt='wft select(1) f peak:$ht,cr wp=100 sp=cr-50 dssh dssl(`value`)'
+  $pwinc= trunc((2*pw90/3)+0.5)/2
+else
+  vp=wc2max/2-10
+  wnt='wft dssh dssl(`value`)'
+  $pwinc= trunc((2*pw90/5)+0.5)/2
+endif
+lb=5/at 
+array('pw',20,$pwinc,$pwinc)
+
+if (pltopt = 'y') then
+  if solvent='dmso' then
+    wexp='select(3) ph aph0 vsadj(50) dssh dssl(`value`) Autocalsave(`N15pw90`) pl(`all`) pltext pssl(`value`) page Autocalnext'
+  else
+    wexp='ph dssh dssl(`value`) Autocalsave(`N15pw90`) pl(`all`) pltext pssl(`value`) page(`/vnmr/tmp/o1`) Autocalnext'
+  endif
+  au('next','wait')
+else
+  wexp='wft dssh dssl(`value`) Autocalsave(`N15pw90`)'
+  Autocalsave('N15pw90','par')
+  Autocalnext
+endif
+
+ENDIF
+
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ENDIF
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"

@@ -1,0 +1,58 @@
+"macro walkupQ_renew"
+"****************************************************************"
+"   walkupQ_renew - sets tray / panel displays    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+  if (clonemod='no') and (clustermod='no') then
+     if (wqinit='auto') then
+        autodir=cpautodir
+	checkautodir:$ret
+	setcurrentQ
+	if ($ret=0) then
+	    walkupQ('logout')
+	    return(0)
+	endif
+	showtray('auto')
+     elseif (wqinit='enter') then
+	checkenterdir
+	showtray('enter')
+     endif
+     if (seqfil<>'Submitq') then seqfil='Submitq' endif
+     if (layout<>'Submitq') then layout='Submitq' endif
+     getautoglobaltemp(wqinit)
+     setwqinitmenu
+	SQWatch('off')
+	SQDisplay('submit')
+  elseif (clonemod='yes') then
+     if (seqfil<>'Submitq') then seqfil='Submitq' endif
+     if (layout<>'Submitq') then layout='Submitq' endif
+     SQWatch('off')
+     SQDisplay('submit')
+     if (size('sqdisplay')>1) then
+	setvalue('sqdisplay','clone',3,'global')
+	vnmrjcmd('pnew','sqdisplayRef')
+     endif
+  else
+     if (seqfil<>'Submitq') then seqfil='Submitq' endif
+     if (layout<>'Submitq') then layout='Submitq' endif
+     SQWatch('off')
+     SQDisplay('clusterQ')
+     if (size('sqdisplay')>1) then
+        setvalue('sqdisplay','cluster',3,'global')
+        vnmrjcmd('pnew','sqdisplayRef')
+     endif
+  endif
+  samplename=samplename
+     return(1)
+"****************************************************************"
+

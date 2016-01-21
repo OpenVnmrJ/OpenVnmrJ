@@ -1,0 +1,87 @@
+"macro jpublish"
+"jpublish - a macro that gathers input for calling the  protopub script"
+"calls the script protopub"
+
+$name=''  $seq=''
+
+if ($#=0) then $name=pslabel $seq=seqfil endif
+if ($#=1) then $name=$1 $seq=$name endif
+if ($#=2) then $name=$1 $seq=$2 endif
+
+exists(userdir+'/templates/vnmrj/protocols/'+$name+'.xml','file'):$pe
+if ($pe<1) then 
+  write('error','Desired protocol does not exist in local vnmrsys.')
+  return
+endif
+
+
+exists(userdir+'/User_Protocols','directory'):$e
+if ($e<0.5) then
+  mkdir(userdir+'/User_Protocols')
+endif
+
+write('line3','Protocol name is %s : sequence is %s .',$name,$seq)
+
+$ok='no'
+repeat
+  $yn=''
+  input('Are these the correct names of the desired protocol and associated pulse sequence? '):$yn
+until ($yn<>'')
+
+if ($yn<>'y') then
+ $ok='n'
+ repeat
+   $name=''
+   input('Enter Protocol name . '):$name
+ until ($name<>'')
+ repeat
+   $seq=''
+   input('Enter name of associated pulse sequence.' ):$seq
+ until ($seq<>'')
+endif
+$banner='Protocol is '+$name+' sequence is '+$seq+'.'
+banner($banner) 
+
+input('Any additional setup macro required? y/n '):$cus
+$custom=''
+if ($cus='y') then
+  repeat
+  $custom=''
+    input('Please enter name of needed additional macro. '):$custom
+  until ($custom<>'')
+endif
+
+write('line3','Protocol is %s, sequence is %s, added macro is %s ',$name,$seq,$custom)
+$yn=''
+input('Are these all correct? y/n '):$yn
+if ($yn<>'y') then
+  write('line3','Try again from beginning...')
+  return
+endif
+
+$protoname=userdir+'/User_Protocols/'+$name+'_proto.tar.Z'
+exists($protoname,'file'):$e
+if ($e=1) then
+   write('line3','Desired file already exists as %s .',$protoname)
+   $ans=''
+   repeat
+     input('Do you wish to replace this archived protocol file? '):$ans
+   until ($ans<>'')
+   if ($ans='y') then
+     rm($protoname)
+   elseif ($ans<>'y') then
+     return
+   endif
+endif
+
+if ($custom='') then
+  $cmd='protopub '+$name+' '+$seq
+elseif ($custom<>'') then
+  $cmd='protopub '+$name+' '+$seq+' '+$custom
+endif
+banner($cmd)
+shell('sleep 3'):$dum
+shell($cmd):$dum
+
+vnmrjcmd('util', 'updatetable', 'protocol')
+banner('protocol tarball created in vnmrsys')

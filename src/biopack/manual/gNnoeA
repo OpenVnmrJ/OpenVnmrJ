@@ -1,0 +1,103 @@
+  gNnoeA
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    2D determination of H1 to N15 NOE, with N15 shift in t1, and inverse
+    INEPT gradient sensitivity enhanced transfer back to H1.
+    Optional magic-angle coherence transfer gradients.
+
+    Standard features include optional 13C sech/tanh pulse on CO and Cab to 
+    refocus 13C coupling during t1; option of obtaining spectrum of only NH2 
+    groups;
+
+    pulse sequence: 	Farrow et al, Biochemistry, 33, 5984 (1994)
+
+    sech/tanh pulse: 	Silver, Joseph and Hoult, JMR, 59, 347 (1984)
+			Bendall, JMR, A116, 46 (1995)
+         
+    Written by MRB, January 1998, starting with gNhsqc from BioPack.
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1998, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gNnoeA
+
+         
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for gNnoeA may be printed using:
+                                      "printon man('gNnoeA') printoff".
+             
+    2. Apply the setup macro "gNnoeA".  This loads the relevant parameter
+       set and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 100ppm, and N15 
+       frequency on the amide region (120 ppm).
+
+    4. Pulse and frequency calibrations are as for gNhsqc, or as generally
+       used for BioPack.
+
+    5. Splitting of resonances by C13 coupling in C13-enriched samples can be 
+       removed by setting C13refoc='y'.
+
+    8. NH2 GROUPS:
+       A spectrum of NH2 groups, with NH groups reduced to 70%, can be obtained
+       with flag NH2also='y'.  This utilises 1/8J (J=94Hz) periods of NH 
+       J-coupling evolution added to t1 in place of 1/4J periods (normal INEPT
+       behaviour).  In consequence the gt1 time is reduced to 1.125ms by the 
+       pulse sequence code - for optimum use it would be a good
+       idea to recalibrate gzlvl2 for gt1 = 1.125ms (in practice we observed
+       a recalibration from 13060 at 2.5ms to 12900 at 1.125ms, which loses
+       5% S/N if not recalibrated).
+
+    9. relaxT is the total time for the N15 NOe to build up.  It should be 
+       long relative to the N15 T1, eg 2.5 seconds.
+
+
+   10. To maintain constant unblanking in the 1H amplifier for both noe/no noe
+       cases, the same repetitive pulse train is used for both, but the power
+       is decreased to mimimum on both the attenuator and modulator for the "no noe"
+       case (only if relaxT=0). This mode will result in very little 
+       excitation of the protons in the no noe case (rf field is on the order of
+       6 millihertz), but will put the same load on the amplifier (unblanking
+       is the primary loading process on the amplifier, not the amplitude of the
+       rf pass through). This will permit more accurate measurements of noe.
+
+       If relaxT>0 the pulse train will occur at saturation power levels.
+       if relaxT=0 the same pulse train will occur (of length d1), but at the
+       lowest power level(no saturation).
+
+       Set d1=relaxT when relaxT>0 (the actual noe experiment). The variable d1 is
+       used to calculate the number of cycles during the non-saturation period, such
+       that the total time can be made equal to relaxT (if d1 is set to the same
+       value of relaxT as used for the saturation experiment).
+
+    11. Step-by-step:
+       a. select value of relaxT to be used for proton saturation (e.g. 3 seconds).
+       b. set d1=relaxT (this ensures the same repetition rate for both experiments).
+       c. set nt, d1, phase for 2D experiment.
+       d. copy parameters to a different experiment.
+       e. set relaxT=0
+       f. acquire both experiments.
+
+       2D spectra should be done in separate runs for each value of relaxT.
+
+   11. mag_flg = y     using magic angle pulsed field gradient 
+                 n     using z-axis gradient only.

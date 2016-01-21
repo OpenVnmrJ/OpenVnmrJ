@@ -1,0 +1,43 @@
+"macro BPupdate_wselshape"
+"BPupdate_wsewlhape - macro to update the water selection shape         "
+"          for sequences wlogsy and CLEANEX-PM sequences              "
+"   the macro takes the current shapename (wselshape) and             "
+"   pulsewidth (wselpw) and recreates the shape and updates the        "
+"   corresponding power level (wselpwr)                               "
+"   for the shape type a gaussin-180 shape is set by the macro        "
+
+exists('wselpw','parameter'):$ex1 exists('wselpwr','parameter'):$ex2
+exists('wselshape','parameter'):$ex3 
+exists('compH','parameter'):$ex5
+if (($ex1=0)or($ex2=0)or($ex3=0)or($ex5=0)) then
+  $banner='Please be sure that the following parameters'
+  $banner=$banner+'\\do exist in the current experiment:'
+  $banner=$banner+'\\                 wselshape'
+  $banner=$banner+'\\         wselpwr,              '
+  $banner=$banner+'\\         wselpw,          compH'
+  banner($banner)
+  return
+endif
+if ((wselshape='')or(wselpw<3000)or(wselpw>30000)) then
+  $banner='Please be sure that the following parameters' 
+  $banner=$banner+'\\are set properly in the current experiment:'
+  $banner=$banner+'\\       wselshape <> \'\' '
+  $banner=$banner+'\\       3000<wselpw<30000 usec'
+  banner($banner)
+  return
+endif
+$wselpw='' $wselpwr='' $wselpwban=''
+ format(wselpw*1e-6,6,6):$wselpw 
+ format(wselpw,1,1):$wselpwban
+$wave='gaus '+$wselpw+' 0 0.5 0 180.0'
+opx(wselshape)
+setwave($wave)
+cpx(pw*compH, tpwr)
+ pbox_pw(wselshape+'.RF'):$wselpw1 wselpw=$wselpw1
+ pbox_pwr(wselshape+'.RF'):$wselpwr1 wselpwr=$wselpwr1
+ format(wselpwr,0,0):$wselpwr
+ $banner='The following parameters have been updated:'
+ $banner=$banner+'\\       wselshape is set to : '+wselshape
+ $banner=$banner+'\\       wselpw    is set to : '+$wselpwban+' usec'
+ $banner=$banner+'\\       wselpwr   is set to : '+$wselpwr+' dB'
+ banner($banner)

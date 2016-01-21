@@ -1,0 +1,31 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+copyDirList = [ 'parlib',
+                'bin',
+                'iconlib',
+                'shapelib',
+                'templates',
+                'maclib']
+
+# build environment
+
+# define with absolute path where built files will be copied to
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console','ddr')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+#
+for i in copyDirList:
+   srcdir = os.path.join(cwd,i)
+   dstdir = vnmrInstallPath;
+   myShutil.copytree(srcdir,dstdir,symlinks = False)
+

@@ -1,0 +1,56 @@
+"macro BP3"
+" BP3 "
+$bestone=1 $counter=1
+setref select(1) vsadj(50) $best=50
+s1 f
+repeat
+  select($counter)
+  dc peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+r1 select($bestone) vsadj(50)
+ dssh
+pl('all') pap
+BPpage
+$r7=r7
+if r7=6 then
+ pwN=pwN[$bestone]
+ banner('1H and 15N pw90 Probefile Update in Process')
+ BPsvf(userdir+'/AutoTripRes/gNfhsqc_pw90')
+ BPH1updatepw90
+ BPN15updatepw90
+ banner('Finished 1H and 15N Probefile Update')
+ return
+else
+ pwC=pwC[$bestone]
+ $pwC=pwC
+ if (r7=9) then
+  BPsvf(userdir+'/AutoTripRes/C13pw90')
+  banner('Updating probe file and recreating *DEC files')
+  $BPplot=BPplot
+  BPC13updatepw90 
+  BPplot=$BPplot
+  r7=$r7  "restore normal level/width"
+  BPrtppar('gNfhsqc')
+  dm2='nny' 
+  d3=.00025*(500/sfrq)
+  r7=$r7 sb='n' gf=.01
+  wnt='wft av select(1) setref sp=6p wp=4p vsadj(20) dssh' wexp='BP6' spin='n'
+  ni=1 phase=1
+  setlimit('pwN',1000,0,1)
+  array('pwN',21,pwN-10,1)
+  au
+ else
+  $i=1
+  repeat
+   pwC[$i]=$pwC-2.3+0.3*$i
+   if pwC[$i]>(24.0*600/sfrq-0.3) then
+     $i=16
+   else
+     $i=$i+1
+   endif
+  until $i=16
+  wexp='BP4'  au
+ endif
+endif

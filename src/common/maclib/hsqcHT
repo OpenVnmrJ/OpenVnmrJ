@@ -1,0 +1,81 @@
+"macro hsqcHT"
+" ********************************************************** "
+" ***                      hsqcHT                        *** "
+" ***           setup macro for hsqcHT experiment        *** "
+" ***                    Eriks Kupce                     *** "
+" ***                 Oxford 12/03/04                    *** "
+" ********************************************************** "
+" usage: hsqcHT                                              " 
+
+exists('htfrq1','parameter'):$ex
+if ($ex) then $htfrq1 = htfrq1 endif
+
+seqfil='hsqcHT'
+layout=seqfil
+addpar('2d') phase=0 axis='pd'
+refsource1='dfrq' apptype='HTapps'
+
+Autopsgset(seqfil,'dg','pshape','bscor','repflg','wet','jXH','pwpat','Hpwr')
+Autopsgset(seqfil,'pwx','pwxlvl','compX','gt0','gt1','gt2','gt3','gstab','zz')
+Autopsgset(seqfil,'gzlvl0','gzlvl1','gzlvl2','gzlvl3','sc2d','mult','Gratio')
+Autopsgset(seqfil,'ni','sw1','htbw1','htofs1','phase','htss1','htcal1','htpwr1')
+Autopsgset(seqfil,'htfrq1','compH','satmode','satdly','satpwr','satfrq','ad180')
+explist=''
+
+
+dmm = 'ccp' setHTdec
+at=0.08 fn=8k ss=4 ai lb='n' gf='n' sb=-at sbs=sb gain='y' 
+sc=10 wc=wcmax-30 sc2=0 wc2=wc2max-10 trace='f2' pmode='full' proc1='ht'
+
+exists('dn2','parameter'):$e
+if $e>0.5 then dn2='' endif
+
+if ($ex) then htfrq1 = $htfrq1 setHTni else htfrq1=0 endif
+
+
+// setHTfreqs macro return htfrq1/htbw1 from
+//   named spectrum;  It also sets sw1, sw
+//   and dof or tof based on sw and tof on list and refsource1;  But, this macro
+//   is benign under non VJ3/CP4 environment
+
+setHTfreqs('CARBON')
+
+$c=0.0
+getparam('pw90','H1'):pw
+getparam('tpwr','H1'):tpwr
+getparam('pwx','C13'):pwx
+getparam('pwxlvl','C13'):pwxlvl
+getparam('GratioHT','C13'):Gratio
+
+getparam('compHT','H1'):$c
+if($c<0.1) then
+  getparam('tpwr_cf','H1'):$c
+  if($c<0.1) then
+    write('error','probe calibrations missing !')
+    $c=1.0
+  endif
+endif
+compH=$c
+
+$c=0.0
+getparam('compHT','C13'):$c
+if($c<0.1) then
+  getparam('pwxlvl_cf','C13'):$c
+  if($c<0.1) then
+    write('error','probe calibrations missing !')
+    $c=1.0
+  endif
+endif
+compX=$c
+
+wnt='if(celem<2) then plotHT(`inset`) endif'
+wexp='autoscaleHT vnmrjcmd(`setpage`,`Process`,`Proc2D_HT`)'
+execpars('delete') execpars('newonly')
+
+substr(gradtype,3,1):$grad
+if ($grad='l') then
+  gzlvl0=350 gzlvl1=1800 gzlvl2=1200 gzlvl3=1100
+endif
+
+man(seqfil)
+

@@ -1,0 +1,274 @@
+"macro makedosyparams"
+"makedosyparams - creates the parameters dosytimecubed 	"
+"dosygamma and dosyfrq, and sets them to the values  	"
+"in the calling pulse sequence"
+" N.B. del used by the new family of DOSY pulse 	"
+"sequences (prefixed with D) actually corresponds to 	"
+"the diffusion delay "
+
+" 17iii8 GAM: create userdir/Dosy if does not exist"
+
+" 21ii08 GAM/MN: only update dosygamma, dosytimecubed, dosyfrq if called with arguments"
+" Add checking and creation of other dosy parameters nugcal, DAC_to_G, dosyproc, ncomp, nugflag "
+" 9iv08 : change to using gcal_ rather than DAC_to_G	" 
+" 9iv08 : change to using  dosy rather than Dosy 	"
+" 9iv08 : change to using global nugcal and local nugcal_	"
+" 9iv08 : update nugcal_ from probe file if possible	"
+" 9iv08 : create cuexp/dosy if necessary		"
+" 10iv08 : use setvalue of global array to circumvent VnmrJ bug in direct assignment	"
+" 17iv08 : restrict dosyproc to 'discrete' or 'continuous'		"
+" 30iv08 : convert old dosyproc values to new				"
+" 22ii09 : test version for acquisition on v500		"
+" 22ii09 : remove duplicate creation of procesed variables		"
+" 2iii09 : allow a 3rd argument, a string to be executed		"
+" 2iii09 : create int_flg						"
+" 2iii09 : move check for zero gcal_ to end				"
+" 2iii09 : use par2D to create 2D parameters such as f1coef		"
+" 31iii09 : create dosy3Dproc						"
+" 31iii09 : create gradcoeff and gradcoeff_				"
+" 31iii09 : create dosypeaks						"
+" 14iv09 : use dosybypoints instead of dosypeaks			"
+" 5v09 : PS/GM add creation of dosy_peaknum, dosy_peakmult and dosy_autoincr	"
+" 5v09 : PS/GM add setting of ll2dmode					"
+" 20x09 : remove creation of userdir/dosy				"
+
+"Check whether curexp/dosy exists, if not create it"
+exists(curexp+'/dosy','file'):$e
+if $e<0.5 then mkdir(curexp+'/dosy') endif
+
+exists('ni','parameter'):$e
+if $e then
+	$ni=ni
+else
+	$ni=0
+endif
+par2D
+ni=$ni
+
+"Check whether int_flg exists, if not create it and set it to 'n' "
+exists('int_flg','parameter'):$exist
+IF $exist = 0
+        THEN create('int_flg','flag')  int_flg='n'
+ENDIF
+
+"Check whether continflag exists, if not create it and set it to 'n' "
+exists('continflag','parameter'):$exist
+IF $exist = 0
+        THEN create('continflag','flag')  continflag='n'
+ENDIF
+setgroup('continflag','processing')
+
+"Check whether nugflag exists, if not create it and set it to 'n' "
+exists('nugflag','parameter'):$exist
+IF $exist = 0
+        THEN create('nugflag','flag')  nugflag='n'
+ENDIF
+setgroup('nugflag','processing')
+
+"Check whether dosy3Dproc exists, if not create it and set it to 'n' "
+exists('dosy3Dproc','parameter'):$exist
+IF $exist = 0
+        THEN create('dosy3Dproc','flag')  dosy3Dproc='n'
+ENDIF
+setgroup('dosy3Dproc','processing')
+
+"Check whether dosybypoints exists, if not create it and set it to 'n' "
+exists('dosybypoints','parameter'):$exist
+IF $exist = 0
+        THEN create('dosybypoints','flag')  dosybypoints='n'
+ENDIF
+setgroup('dosybypoints','processing')
+
+"Check whether dosy_peaknum exists, if not create it and set it to 1 "
+exists('dosy_peaknum','parameter'):$exist
+IF $exist = 0 then
+    create('dosy_peaknum','integer')  dosy_peaknum=1
+    setlimit('dosy_peaknum',10000,0,1)
+ENDIF
+setgroup('dosy_peaknum','processing')
+
+"Check whether dosy_peakmult exists, if not create it and set it to 10 "
+exists('dosy_peakmult','parameter'):$exist
+IF $exist = 0 then
+    create('dosy_peakmult','real')  dosy_peakmult=10
+ENDIF
+setgroup('dosy_peakmult','processing')
+
+"Check whether dosy_autoincr exists, if not create it and set it to 'n' "
+exists('dosy_autoincr','parameter'):$exist
+IF $exist = 0 then
+    create('dosy_autoincr','flag')  dosy_autoincr='n'
+ENDIF
+
+"Change the protection bit for ll2dmode to make it panel compatible"
+exists('ll2dmode','parameter','global'):$ex
+if $ex=0 then create('ll2dmode','string','global') endif
+   ll2dmode='nnnn' setprotect('ll2dmode','on',65536,'global')
+
+"Check whether local nugcal exists, if so destroy it and replace with global "
+"If local nugcal exists and global doesn't, convert local nugcal to nugcal_ and create global nugcal = nugcal_"
+"If local nugcal doesn't exist and global does, create local nugcal_ and set equal to global nugcal"
+"If neither local nugcal nor global exists, create both and set equal to global gcal,0,0,0,0"
+$nugcal=gcal,1,0,0,0
+exists('nugcal','parameter','current'):$exist
+IF $exist = 1
+THEN 
+	$nugcal=nugcal
+	destroy('nugcal','current')
+ENDIF
+$text=''
+"Check whether global nugcal exists, if not create it "
+
+exists('nugcal','parameter','global'):$exist
+IF $exist = 0
+        THEN create('nugcal','real','global')
+        setvalue('nugcal',$nugcal[1],1,'global')
+        setvalue('nugcal',$nugcal[2],2,'global')
+        setvalue('nugcal',$nugcal[3],3,'global')
+        setvalue('nugcal',$nugcal[4],4,'global')
+        setvalue('nugcal',$nugcal[5],5,'global')
+        setgroup('nugcal','processing','global')
+ENDIF
+
+"Check whether global gradcoeff exists, if not create it "
+
+exists('gradcoeff','parameter','global'):$exist
+IF $exist = 0
+        THEN create('gradcoeff','real','global')
+        setvalue('gradcoeff',0,1,'global')
+        setgroup('gradcoeff','processing','global')
+ENDIF
+
+"Check whether local gradcoeff_ exists, if not create it "
+
+exists('gradcoeff_','parameter','current'):$exist
+IF $exist = 0
+        THEN create('gradcoeff_','real','current')
+        setvalue('gradcoeff_',0,1)
+        setgroup('gradcoeff_','processing')
+ENDIF
+
+"Check whether local nugcal_ exists, if not create it "
+exists('nugcal_','parameter','current'):$exist
+IF $exist = 0
+        THEN create('nugcal_','real','current')
+        setgroup('nugcal_','processing')
+        nugcal_=nugcal
+ENDIF
+
+"Check whether local gcal_ exists, if not create it "
+exists('gcal_','parameter','current'):$exist
+IF $exist = 0
+        THEN create('gcal_','real','current')
+	gcal_=gcal
+	exists('DAC_to_G','parameter','current'):$exist
+		IF $exist = 1
+			THEN gcal_=DAC_to_G
+		ENDIF
+ENDIF
+
+"Check whether ncomp exists, if not create it and set it to '1' "
+exists('ncomp','parameter'):$exist
+IF $exist = 0
+        THEN create('ncomp','integer')  ncomp=1
+ENDIF
+setgroup('ncomp','processing')
+
+"Check whether dosyproc exists, if not create it and set it to 'discrete' "
+exists('dosyproc','parameter'):$exist
+IF $exist = 0
+        THEN create('dosyproc','string')  dosyproc = 'discrete'
+ENDIF
+IF (dosyproc='monoexp') then
+	dosyproc='discrete' ncomp=1
+ENDIF
+IF (dosyproc='biexp') then
+	dosyproc='discrete' ncomp=2
+ENDIF
+IF (dosyproc='multiexp') then
+	dosyproc='discrete'
+ENDIF
+IF (dosyproc='contin') then
+	dosyproc='continuous'
+ENDIF
+
+setgroup('dosyproc','processing')
+setenumeral('dosyproc',2,'discrete','continuous')
+
+if ((dosyproc<>'discrete') AND (dosyproc<>'continuous')) THEN
+	write('line3','WARNING : dosyproc must be \'discrete\' or \'continuous\'')
+	ABORT
+ENDIF
+exists('dosytimecubed','parameter'):$e
+if $e=0 then
+create('dosytimecubed','real')
+endif
+exists('dosygamma','parameter'):$e
+if $e=0 then
+create('dosygamma','real')
+endif
+exists('dosyfrq','parameter'):$e
+if $e=0 then
+create('dosyfrq','real')
+endif
+
+"Prepare to calculate the gamma of the diffusing nucleus		"
+setfrq('H1'):$base
+
+"If called by pulse sequence (i.e. with arguments) : "
+"Update values of dosygamma, dosytimecubed and dosy3Dproc "
+"Set gcal_ and nugcal_ from probe file if available, else from global"
+if ($#>0) then
+	"now set the parameters to the values calculated in the pulse sequence"
+	"in curpar ..."
+	dosytimecubed=$1
+	dosygamma=267519000.0*$2/$base
+	dosyfrq=$2
+	if ($#>2) then
+	exec($3)
+	endif
+	
+	if (probe='') then $pr=0
+	   else $pr=1 endif
+	getProbePath:$e,$file
+	$nugcal2=1
+	$nugcal3=0
+	$nugcal4=0
+	$nugcal5=0
+	if (($e>0)and($pr<>0)) then
+           $gcal_corrdex='' $gcal_corrd=0
+           shell('grep Probegcal_corrd '+$file):$gcal_corrdex
+           if ($gcal_corrdex <> '') then
+              getparam('gcal_corrd','Probe'):$gcal_corrd
+              if ($gcal_corrd <> 0) then
+                   gcal_=$gcal_corrd
+              else
+                   getparam('gcal','Probe'):gcal_
+              endif
+           else
+              getparam('gcal','Probe'):gcal_
+              nugcal_[1]=gcal_
+           endif
+	   getparam('nugcal2','Probe'):$nugcal2
+	   getparam('nugcal3','Probe'):$nugcal3
+	   getparam('nugcal4','Probe'):$nugcal4
+	   getparam('nugcal5','Probe'):$nugcal5
+	else
+	   exists('nugcal','parameter','global'):$e
+	   if ($e>0) then
+              setvalue('nugcal_',nugcal,'current')
+              setvalue('gcal_',gcal,'current')
+	   endif
+	endif
+endif
+
+if (gcal_ = 0) THEN
+	write('line3','WARNING : gcal_ should not be zero - gradient calibration needed for DOSY')
+ENDIF
+        groupcopy('current','processed','acquisition')
+
+flush
+shell('cp '+curexp+'/curpar '+curexp+'/acqfil/procpar')
+shell('cp '+curexp+'/curpar '+curexp+'/procpar')
+flush
+

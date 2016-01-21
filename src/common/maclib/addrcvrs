@@ -1,0 +1,60 @@
+"macro addrcvrs"
+" ******************************************************
+" Combine images from different receivers into one image.
+" Images in fid file are individually transformed.
+" Images may be gain corrected by factors in rcvrwt array.
+" Requires: nactivercvrs macro and rmsAddData executable.
+" ******************************************************
+
+if (numrcvrs < 2) then
+    return
+endif
+
+nactivercvrs:$nr
+if ($nr < 2) then
+    return
+endif
+
+$istr=''
+$wtstr=''
+$nwts = size('rcvrwt')
+
+"Shell command for combining images is built in '$cmd' string"
+$cmd = '"'+systemdir+'/bin/rmsAddData" "' + curexp+'/datdir" '
+
+"Do transforms to get individual receiver images"
+"Build up $cmd string at the same time"
+$i=1
+while ($i <= $nr) do
+    "Do a transform and flush to file system"
+    wft2d($i)
+    flush
+
+    "Rename file to make room for next transform"
+    format($i,0,0):$istr
+    $fname = 'data.'+$istr
+    mv(curexp+'/datdir/data', curexp+'/datdir/'+$fname)
+
+    "Get weighting for this image"
+    if ($nwts < $i) then
+	$wt = 1
+    else
+	$wt = rcvrwt[$i]
+    endif
+    format($wt,0,6):$wtstr
+    $cmd = $cmd + $fname+' ' + $wtstr+' '
+    $i = $i + 1
+endwhile
+
+"Combine data files into one image"
+$cmd = $cmd + 'data'
+  "echo($cmd)
+shell($cmd)
+
+"Remove the individual receiver images"
+$i=1
+while ($i <= $nr) do
+    format($i,1,0):$istr
+    rm(curexp+'/datdir/data.'+$istr)
+    $i = $i + 1
+endwhile

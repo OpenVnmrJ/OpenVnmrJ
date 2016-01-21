@@ -1,0 +1,49 @@
+"macro gf"
+" ******************************************************"
+" *** gf - go fid, prepare for fid display in acqi   ***"
+" ******************************************************"
+$cp_sav = cp
+cp = 'n'                           "cp = 'y' routes signals alternately through"
+                                   "the two channels.  Any dc imbalance is"
+                                   "reflected in the FID"
+on('gain'):$gain_on
+gain = 'y'                         "Turn off autogain"
+on('spin'):$spin_on
+spin = 'n'                         "Turn off spin control"
+$vt_tmp = vttype
+vttype = 0                         "Turn off temperature control"
+on('loc','global'):$loc_on
+loc = 'n'                          "Turn off robot control"
+on('ss'):$ss_on                    "Turn off steady states"
+$ss_sav = ss
+ss = 0
+exists('lockacqtc','parameter'):$l_is
+if ($l_is=0) then
+   create('lockacqtc')
+endif
+$ltcs_sav=lockacqtc
+lockacqtc=1                        "Force fast lock loop time"
+
+acqi('par')                        "Use current FID processing parameters"
+go('acqi')                         "Use current acquisition parameters"
+
+cp = $cp_sav                       "Reset parameters to their original value"
+if ($gain_on < 0.5) then
+   gain = 'n'
+endif
+if ($spin_on > 0.5) then
+   spin = 'y'
+endif
+vttype = $vt_tmp
+if ($loc_on > 0.5) then
+   loc = 'y'
+endif
+ss = $ss_sav
+if ($ss_on < 0.5) then
+   ss = 'n'
+endif
+if ($l_is=0) then
+   destroy('lockacqtc')
+else
+   lockacqtc=$ltcs_sav
+endif

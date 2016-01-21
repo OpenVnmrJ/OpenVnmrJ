@@ -1,0 +1,816 @@
+"macro cpADMIN"
+"****************************************************************************"
+//  cpprefs is a global parameter and never used for anything but this purpose
+//      There is no need to maintain this parameter
+//      It is necessary to restart vnmrj if any preference is changed/saved
+//  Prefs 1-8, 15-22 and 39 are read/set from/in
+//      adm/walkupadm/automation.conf file
+//  Prefs 9-11,14,23-26,35-38 are read/set from/in global
+//  Prefs 12-13,34,40,41 are read/set from/in modules/cpQdefaults
+//  cpprefs[1] - sample change time
+//  cpprefs[2] - process/plot time
+//  cpprefs[3] - priority sample limit
+//  cpprefs[4] - Submission location [random choice or next available]
+//  cpprefs[5] - Default Experiment for newstudy
+//  cpprefs[6] - What happens at the time of operatorlogin [appmode='walkup']
+//  cpprefs[7] - Daily new autodir or not?
+//  cpprefs[8] - plot format [eplot and fplot]
+//  cpprefs[9] - svfdir template
+//  cpprefs[10] - sampdirtmplt template
+//  cpprefs[11] - svfname template
+//  cpprefs[12] - queue alock default option
+//  cpprefs[13] - queue wshim default option
+//  cpprefs[14] - emailflag
+//  cpprefs[15] - Should the sample at standby location be replaced for last sample in the queue?
+//			Standby location is defined in cpprefs[72]
+//  cpprefs[16] - Allows datamirroring option
+//  cpprefs[17] - plot option during autosaveplot
+//  cpprefs[18] - save option during autosaveplot
+//  cpprefs[19] - email option during autosaveplot
+//  cpprefs[20] - save dx file option during autosavedx
+//  cpprefs[21] - email dx file option during autosavedx
+//  cpprefs[22] - dx file format (xy or std)
+//  cpprefs[23] - fidmirror template
+//  cpprefs[24] - plotmirror template
+//  cpprefs[25] - dxmirror template
+//  cpprefs[26] - autodirtmplt template
+//  cpprefs[27] - archivedir example
+//  cpprefs[28] - sample example
+//  cpprefs[29] - fidname example
+//  cpprefs[30] - fidmirror example
+//  cpprefs[31] - plotmirror example
+//  cpprefs[32] - dxmirror example
+//  cpprefs[33] - autodir example
+//  cpprefs[34] - queue pad default option
+//  cpprefs[35] - user preference remembrance option
+//  cpprefs[36] - Reuse Errored locations
+//  cpprefs[37] - FASTenv flag [OBSOLETE]
+//  cpprefs[38] - Autoresubmit errorQ option
+//  cpprefs[39] - globaltemp for automation
+//  cpprefs[40] - vtwait (wait time for temp regulation)
+//  cpprefs[41] - tin (temp failure response flag)
+//  cpprefs[42] - plotter/pritner preferences
+//  cpprefs[43] - Reuse Completed locations
+//  cpprefs[44] - protune option when sample change
+//  cpprefs[45] - What happens after a sample submission
+//  cpprefs[46] - Multiple submission option to queued location
+//  cpprefs[47] - svfdir2 template
+//  cpprefs[48] - svfdir2 example
+//  cpprefs[49] - loadshims before each sample
+//  cpprefs[50] - abort at Protune Error
+//  cpprefs[51] - option to load lockphase from the probe file
+//  cpprefs[52] - By default, submit new study to fgexp, bgauto or automation
+//  cpprefs[53] - automation studyqueue display option (SpecViewPref[1])
+//  cpprefs[54] - automation studyqueue chronology option (SpecViewPref[2])
+//  cpprefs[55] - zip option for fidmirror
+//  cpprefs[56] - zip option for plotmirror
+//  cpprefs[57] - zip option for dxmirror
+//  cpprefs[58] - Automatic redirect of experiments to nightQ when time exceeds dayQ limit
+//  cpprefs[59] - adminemailflag option (global paraemter)
+//  cpprefs[60] - adminemailwhen option (global parameter)
+//  cpprefs[61] - emailwhen option (sampleTag)
+//  cpprefs[62] - submitQ options
+//  cpprefs[63] - email fid in savefid (call efid after svf(file)) 
+//  cpprefs[64] - Adaptive NMR
+//  cpprefs[65] - eMessage option
+//  cpprefs[66] - always mimic mode option
+//  cpprefs[67] - scoutfid display option (determines if scoutfids will be in the SQ for review)
+//  cpprefs[68] - AM/PM or 24-hour clock timeformat
+//  cpprefs[69] - alock/wshim [pref 12 and 13] options for ContinueStudy or not
+//  cpprefs[70] - Reserved for extension to option 69
+//  cpprefs[71] - parstyle option for autoplot 
+//  cpprefs[72] - standby location for reference sample
+//  cpprefs[73] - error nodes display option during sample view
+//  cpprefs[74] - SQviewOptions (global parameter)
+//  cpprefs[75] - unassignedprotocols preference (used by PersonaManager)
+//  cpprefs[76] - Max dayQ samples per operator (used by PersonaManager)
+//  cpprefs[77] - Max nightQ samples per operator (used by PersonaManager)
+//  cpprefs[78] - Max dayQ time per operator (used by PersonaManager)
+//  cpprefs[79] - Max nightQ time per operator (used by PersonaManager)
+//  cpprefs[80] - Allow priority samples during night/weekend 
+//  cpprefs[81] - doprocess option
+//  cpprefs[82] - default NUS option
+//  cpprefs[83] - default NUSproc option
+
+"****************************************************************************"
+
+$dum='' $devnull=''
+$cpprefsize=83
+
+$admindir=userdir+'/persistence/'+$0
+exists($admindir,'directory'):$adirex
+if ($adirex=0) then mkdir('-p',$admindir):$dum endif
+
+$tailX='tail'
+whichtail:$tailX
+is_submitmode:$is
+if ($is) then
+    write('error','VnmrJ is in Submit mode.  Cannot manage preferences. Press the Cancel button to return to Review mode.')
+    return(0)
+endif
+
+if ($# < 1) then $1='Init' endif
+
+IF ($1='Init') or ($1='Start') THEN
+
+exists('cpprefs','parameter','global'):$cppex
+if ($cppex=0) then
+   create('cpprefs','string','global')
+endif
+setprotect('cpprefs','on',256,'global')
+cpprefs=''
+$i=1
+repeat
+   cpprefs[$i]=''
+   $i=$i+1
+until $i > $cpprefsize
+
+$changetime=180
+$prpltime=60
+$priority=0
+$smslocation='random'
+$walkuplogin='none'
+$aftersubmit='none'
+$newautodir='daily'
+$plotformat='pcx'
+$lastsample='current'
+$datamirror='no'
+$defaultexp=''
+$autosaveplot='plot'
+$autosavedx='none'
+$dxformat='std'
+$autotemp=''
+$ptune='no'
+$multisubmit='no'
+$loadshims='no'
+$abortpterror='no'
+$loadlkphase='no'
+$editatpause='no'
+$pauseatexp='no'
+$adisp=SpecViewPref[1]
+setprotect('SpecViewPref','on',256,'global')
+$adisp2=''
+$svpsize=size('SpecViewPref')
+if ($svpsize>1) then
+   $adisp2=SpecViewPref[2]
+endif
+$wqwhere='curexp'
+$fidzip='no'
+$dxzip='no'
+$submitopt='fgbgauto'
+$autoresubmit='no'
+$reuseerror='no'
+$reusecompleted='yes'
+$plotzip='no'
+$autonight='no'
+$emailfid='no'
+$emessage=emailflag
+$emailwhen=''
+$mimic='no'
+$showscoutfid='no'
+$showerrnodes='yes'
+$autolockshim='NewContinue'
+$psampleatnight='no'
+$parstyle=parstyle
+$refloc=''
+$nusdefault='no'
+$nusprocdefault='CLEAN'
+
+getadminfo('samplechangetime'):$changetime
+getadminfo('prioritytotal'):$priority
+getadminfo('smslocation'):$smslocation
+getadminfo('walkuplogin'):$walkuplogin
+getadminfo('aftersubmit'):$aftersubmit
+getadminfo('defaultexp'):$defaultexp
+getadminfo('prpltime'):$prpltime
+getadminfo('newautodir'):$newautodir
+getadminfo('plotformat'):$plotformat
+getadminfo('lastsample'):$lastsample
+getadminfo('datamirror'):$datamirror
+getadminfo('autosaveplot'):$autosaveplot
+getadminfo('autosavedx'):$autosavedx
+getadminfo('dxformat'):$dxformat
+getadminfo('autotemp'):$autotemp
+getadminfo('protuneatstart'):$ptune
+if ($ptune='yes') then $ptune='auto' endif
+getadminfo('abortpterror'):$abortpterror
+getadminfo('multisubmit'):$multisubmit
+getadminfo('loadshims'):$loadshims
+getadminfo('loadlkphase'):$loadlkphase
+getadminfo('pauseatexp'):$pauseatexp
+getadminfo('autosqdisplay'):$adisp
+getadminfo('autosqdispchron'):$adisp2
+getadminfo('editatpause'):$editatpause
+//getadminfo('wqwhere'):$wqwhere
+defaultqueue:$wqwhere
+getadminfo('submitoption'):$submitopt
+getadminfo('fidzip'):$fidzip
+getadminfo('plotzip'):$plotzip
+getadminfo('spectrumzip'):$dxzip
+getadminfo('autonight'):$autonight
+getadminfo('autoresubmiterror'):$autoresubmit
+getadminfo('reusecompletedloc'):$reusecompleted
+getadminfo('reuseerrorloc'):$reuseerror
+getadminfo('emailfid'):$emailfid
+getadminfo('emessage'):$emessage
+getadminfo('emailwhen'):$emailwhen
+getadminfo('alwaysmimic'):$mimic
+getadminfo('prioritysampleatnight'):$psampleatnight
+getadminfo('showscoutfid'):$showscoutfid
+getadminfo('showerrnodes'):$showerrnodes
+getadminfo('autolockshim'):$autolockshim
+getadminfo('parstyle'):$parstyle
+getadminfo('nusdefault'):$nusdefault
+getadminfo('nusprocdefault'):$nusprocdefault
+
+format($lastsample,'isreal'):$real
+if ($real) then
+    $refloc=$lastsample
+    $lastsample='standby'
+else
+    format(traymax,0,0):$refloc
+    if (traymax=97) then $refloc='96' endif
+    if ($lastsample='traymax') then $lastsample='standby' endif
+endif
+
+format($changetime,0,0):cpprefs[1]
+format($prpltime,0,0):cpprefs[2]
+if ($priority > 0) then
+  format($priority,0,0):cpprefs[3]
+else
+  cpprefs[3]='nolimit'
+endif
+cpprefs[4]=$smslocation
+cpprefs[5]=$defaultexp
+cpprefs[6]=$walkuplogin
+cpprefs[7]=$newautodir
+cpprefs[8]=$plotformat
+
+$plfmtfile=$admindir+'/plotformats'
+write('reset',$plfmtfile)
+write('file',$plfmtfile,'"tif" "tif"')
+write('file',$plfmtfile,'"pdf" "pdf"')
+write('file',$plfmtfile,'"pcx" "pcx"')
+write('file',$plfmtfile,'"jpg" "jpg"')
+write('file',$plfmtfile,'"postscript" "postscript"')
+
+if (traymax > 1) and (traymax <> 96) and (traymax<>768) then
+  $reffile=$admindir+'/refsample'
+  write('reset',$reffile)
+  write('file',$reffile,'"put standby sample into magnet" "standby"')
+  write('file',$reffile,'"leave current sample in magnet" "current"')
+  if (traymax=97) or (traymax=12) then
+    write('file',$reffile,'"remove current sample from magnet" "empty"')
+  endif
+endif
+
+"****Remove the last annoying / from svfdir***"
+$done=0
+while $done < 1 do
+   $ret=0 $s1='' $s2=''
+   strstr(svfdir,'/','last'):$ret,$s1,$s2
+   if ($ret) then
+        if ($s2='') then svfdir=$s1
+        else $done=1
+        endif
+   else
+        $done=1
+   endif
+endwhile
+"*********************************************"
+
+chkname(svfdir,'alnum-/'):$sdum,svfdir
+cpprefs[9]=svfdir
+if (cpprefs[9]='') then cpprefs[9]='$userdir$/data' endif
+chkname(sampdirtmplt,'alnum-'):$sdum,sampdirtmplt
+cpprefs[10]=sampdirtmplt
+if (cpprefs[10]='') then cpprefs[10]='$samplename$-%DATE%_' endif
+chkname(svfname,'alnum-'):$sdum,svfname
+cpprefs[11]=svfname
+if (cpprefs[11]='') then cpprefs[11]='$samplename$-$pslabel$_' endif
+
+cpprefs[12]='' cpprefs[13]='' cpprefs[14]=''
+$list=''
+module('arraylist','cpQdefaults'):$list,$modulepath
+teststr('$list','alock','local'):$isok
+if ($isok) then
+   rtv($modulepath,'alock'):cpprefs[12]
+endif
+if cpprefs[12]='' then cpprefs[12]='a' endif
+teststr('$list','wshim','local'):$isok
+if ($isok) then
+   rtv($modulepath,'wshim'):cpprefs[13]
+endif
+$spad='0.5'
+teststr('$list','pad','local'):$isok
+if ($isok) then
+   rtv($modulepath,'pad'):$pad
+   format($pad,0,1):$spad
+endif
+$svtwait='300'
+teststr('$list','vtwait','local'):$isok
+if ($isok) then
+   rtv($modulepath,'vtwait'):$vtwait
+   format($vtwait,0,0):$svtwait
+endif
+$tin='n'
+teststr('$list','tin','local'):$isok
+if ($isok) then
+   rtv($modulepath,'tin'):$tin
+endif
+
+if cpprefs[13]='' then cpprefs[13]='e' endif
+cpprefs[14]=emailflag
+cpprefs[15]=$lastsample
+if ($real) then
+    cpprefs[15]='standby'
+endif
+cpprefs[16]=$datamirror
+
+strstr($autosaveplot,'plot'):$is
+if ($is) then cpprefs[17]='plot' else cpprefs[17]='' endif
+strstr($autosaveplot,'save'):$is
+if ($is) then cpprefs[18]='save' else cpprefs[18]='' endif
+strstr($autosaveplot,'email'):$is
+if ($is) then cpprefs[19]='email' else cpprefs[19]='' endif
+strstr($autosavedx,'save'):$is
+if ($is) then cpprefs[20]='save' else cpprefs[20]='' endif
+strstr($autosavedx,'email'):$is
+if ($is) then cpprefs[21]='email' else cpprefs[21]='' endif
+cpprefs[22]=$dxformat
+chkname(fidmirror,'alnum-/'):$sdum,fidmirror
+cpprefs[23]=fidmirror
+chkname(plotmirror,'alnum-/'):$sdum,plotmirror
+cpprefs[24]=plotmirror
+chkname(dxmirror,'alnum-/'):$sdum,dxmirror
+cpprefs[25]=dxmirror
+chkname(autodirtmplt,'alnum-/'):$sdum,autodirtmplt
+cpprefs[26]=autodirtmplt
+cpprefs[27]=''
+cpprefs[28]=''
+cpprefs[29]=''
+cpprefs[30]=''
+cpprefs[31]=''
+cpprefs[32]=''
+cpprefs[33]=''
+//cpADMIN('example')
+cpprefs[34]=$spad
+cpprefs[35]=userremembrance
+cpprefs[36]=$reuseerror
+cpprefs[37]=FASTenv
+cpprefs[37]='n'
+cpprefs[38]=$autoresubmit
+cpprefs[39]=$autotemp
+cpprefs[40]=$svtwait
+cpprefs[41]=$tin
+
+addsampglobal('refresh')
+UserPrefs('init')
+shell('('+$tailX+' -n 1 '+$admindir+'/cpadmin_userprefs_global)'):cpprefs[42]
+substr(cpprefs[42],1):cpprefs[42]
+
+cpprefs[43]=$reusecompleted
+cpprefs[44]=$ptune
+cpprefs[45]=$aftersubmit
+cpprefs[46]=$multisubmit
+isFDAsystem:$p11
+if($p11 > 0) then
+   cpprefs[16]='yes'
+   cpprefs[47]=''
+   setp11svfdr2
+   chkname(svfdir2,'alnum-/'):$sdum,svfdir2
+   cpprefs[47]=svfdir2
+   $sd2ex=0
+else
+   exists('svfdir2','parameter','global'):$sd2ex
+   if ($sd2ex) then
+      chkname(svfdir2,'alnum-/'):$sdum,svfdir2
+      cpprefs[47]=svfdir2
+   else
+      cpprefs[47]=''
+   endif
+endif
+cpprefs[48]=''
+cpprefs[49]=$loadshims
+cpprefs[50]=$abortpterror
+cpprefs[51]=$loadlkphase
+cpprefs[52]=$wqwhere
+cpprefs[53]=$adisp
+cpprefs[54]=$adisp2
+cpprefs[55]=$fidzip
+cpprefs[56]=$plotzip
+cpprefs[57]=$dxzip
+cpprefs[58]=$autonight
+cpprefs[59]=adminemailflag
+cpprefs[60]=adminemailwhen
+cpprefs[61]=$emailwhen
+cpprefs[62]=$submitopt
+cpprefs[63]=$emailfid
+cpprefs[64]=adaptiveNT
+cpprefs[65]=$emessage
+cpprefs[66]=$mimic
+cpprefs[67]=$showscoutfid
+cpprefs[68]=timeformat
+cpprefs[69]='Continue'
+cpprefs[70]='New'
+cpprefs[71]=$parstyle
+cpprefs[72]=$refloc
+cpprefs[73]=$showerrnodes
+array2string(SQviewOptions):cpprefs[74]
+cpprefs[75]='true'
+cpprefs[76]='-1'
+cpprefs[77]='-1'
+cpprefs[78]='-1'
+cpprefs[79]='-1'
+cpprefs[80]=$psampleatnight
+cpprefs[81]=doprocess[1]
+cpprefs[82]=$nusdefault
+cpprefs[83]=$nusprocdefault
+
+strstr($autolockshim,'Continue'):$ret
+if (not $ret) then cpprefs[69]='' endif
+strstr($autolockshim,'New'):$ret
+// New study is always included for the time being 07/14/2011
+//  if (not $ret) then cpprefs[70]='' endif
+cpADMIN('example')
+
+  vnmrjcmd('pnew','cpprefs','appmode','traymax','svfdir','sampdirtmplt','svfname')
+  if ($sd2ex) then vnmrjcmd('pnew','svfdir2') endif
+  vnmrjcmd('pnew','svfname','plotmirror','dxmirror','fidmirror','emailflag','autodirtmplt')
+  vnmrjcmd('pnew','adminemailflag','adminemailwhen','doprocess')
+  if ($1='Init') then
+      vnmrjcmd('popup','mode:modeless','file:cpadmin.xml','rebuild:yes','pnewupdate:true','close:'+$0+'(`close`)','title:Preferences')
+  endif
+  return(1)
+
+"************************************************************************"
+ELSEIF ($1 = 'close') THEN
+//    cpprefs=''
+    return
+
+ELSEIF ($1 = 'defaults') THEN
+
+cptmpltdefaults:cpprefs[9],cpprefs[10],cpprefs[11],cpprefs[26]
+//cpprefs[9]='$userdir$/data'
+//cpprefs[10]='$samplename$_%DATE%_'
+//cpprefs[11]='$samplename$_$pslabel$_'
+//cpprefs[26]='auto_%DATE%_'
+cpADMIN('example')
+
+"************************************************************************"
+ELSEIF ($1='standbysample') THEN
+    if (traymax=1) or (traymax=96) or (traymax=768) then
+	return('')
+    endif
+    if (traymax=97) then $traymax=96 else $traymax=traymax endif
+    $retval=''
+    format($2,'isreal'):$real
+    if not $real then
+	format($traymax,0,0):$retval
+    else
+	$val=0
+	format($2,'lower'):$val
+	if ($val>$traymax) or ($val<1) then
+	    format($traymax,0,0):$retval
+	else
+	    $retval=$2
+	endif
+    endif
+    return($retval)
+"************************************************************************"
+ELSEIF ($1 = 'example') THEN
+
+$archsamp=''
+chkname(cpprefs[9],'alnum-/'):$sdum,cpprefs[9]
+chkname(cpprefs[10],'alnum-'):$sdum,cpprefs[10]
+chkname(cpprefs[11],'alnum-'):$sdum,cpprefs[11]
+chkname(cpprefs[23],'alnum-/'):$sdum,cpprefs[23]
+chkname(cpprefs[24],'alnum-/'):$sdum,cpprefs[24]
+chkname(cpprefs[25],'alnum-/'):$sdum,cpprefs[25]
+chkname(cpprefs[26],'alnum-/'):$sdum,cpprefs[26]
+chkname(cpprefs[47],'alnum-/'):$sdum,cpprefs[47]
+
+SvfnameCP(cpprefs[9]+'/'+cpprefs[10],''):$archsamp
+substr($archsamp,'dirname'):cpprefs[27],cpprefs[28]
+$fidname=''
+SvfnameCP($archsamp+'/'+cpprefs[11],'','.fid'):$fidname
+substr($fidname,'basename'):$fidname
+cpprefs[29]=$fidname+'.fid'
+if (cpprefs[23]<>'') then
+        $fidname2=''
+        SvfnameCP(cpprefs[23],'','.fid'):$fidname2
+        cpprefs[30]=$fidname2+'.fid'
+else
+        cpprefs[30]=''
+endif
+if (cpprefs[24]<>'') then
+        $plotname2=''
+        SvfnameCP(cpprefs[24],'','.'+cpprefs[8]):$plotname2
+        cpprefs[31]=$plotname2+'.'+cpprefs[8]
+else
+        cpprefs[31]=''
+endif
+if (cpprefs[25]<>'') then
+        $dxname2=''
+        SvfnameCP(cpprefs[25],'','.dx'):$dxname2
+        cpprefs[32]=$dxname2+'.dx'
+else
+        cpprefs[32]=''
+endif
+$autoname=''
+SvfnameCP(cpglobalauto+'/'+cpprefs[26]+'_%R2%',''):$autoname
+cpprefs[33]=$autoname
+if (cpprefs[47]<>'') then
+        $arch2samp=''
+        SvfnameCP(cpprefs[47]+'/'+cpprefs[28],''):$arch2samp
+	substr($arch2samp,'dirname'):cpprefs[48]
+else
+        cpprefs[48]=''
+endif
+
+"************************************************************************"
+ELSEIF ($1 ='save') THEN
+
+exists(userdir+'/adm/walkupadm','directory'):$direx
+if ($direx=0) then
+    mkdir('-p',userdir+'/adm/walkupadm'):$dum
+    exists(userdir+'/adm/walkupadm','directory'):$direx
+endif
+if ($direx=0) then
+    write('error','Could not create adm/walkupadm directory in userdir')
+    return
+endif
+
+$size=size('cpprefs')
+if ($size <> $cpprefsize) then
+    write('error','The number of value for cpprefs is wrong')
+    return
+endif
+
+getfilepath('automation.conf','adm/walkupadm'):$isconf,$apath
+$admin=userdir+'/adm/walkupadm/autoschtmp'
+write('reset',$admin)
+shell('(cat '+$apath+' | grep -v cppref_ > '+$admin+')'):$devnull
+shell('(cat '+$apath+' | grep cppref_ | grep dayQlimit >> '+$admin+')'):$devnull
+
+format(cpprefs[3],'lower'):$ptotal
+if not typeof('$ptotal') then
+   $priority=cpprefs[3]
+else
+   $priority='0'
+endif
+$autosaveplot=cpprefs[17]+cpprefs[18]+cpprefs[19]
+substr($autosaveplot,1):$autosaveplot
+if ($autosaveplot='') then $autosaveplot='none' endif
+$autosavedx=cpprefs[20]+cpprefs[21]
+substr($autosavedx,1):$autosavedx
+if ($autosavedx='') then $autosavedx='none' endif
+
+if (cpprefs[15]='standby') then
+    $standbyloc=0
+    format(cpprefs[72],'lower'):$standbyloc
+    $traymax=traymax
+    if (traymax=97) then $traymax=96
+    elseif (traymax=1) or (traymax=96) or (traymax=768) then
+	$traymax=0
+    endif
+    if ($standbyloc>$traymax) then $standbyloc=$traymax endif
+    if ($standbyloc=0) then
+	$lastsample='current'
+    elseif ($standbyloc=$traymax) then
+	$lastsample='traymax'
+    else
+	$lastsample=cpprefs[72]
+    endif
+else
+    $lastsample=cpprefs[15]
+endif
+
+write('file',$admin,'cppref_SAMPLE_CHANGE_TIME: %s',cpprefs[1])
+write('file',$admin,'cppref_PROCPLOT_TIME: %s',cpprefs[2])
+write('file',$admin,'cppref_PRIORITY_TOTAL: %s',$priority)
+write('file',$admin,'cppref_SMS_LOCATION: %s',cpprefs[4])
+write('file',$admin,'cppref_DEFAULTEXP: %s',cpprefs[5])
+write('file',$admin,'cppref_WALKUP_LOGIN: %s',cpprefs[6])
+write('file',$admin,'cppref_NEW_AUTODIR: %s',cpprefs[7])
+write('file',$admin,'cppref_PLOT_FORMAT: %s',cpprefs[8])
+write('file',$admin,'cppref_LAST_SAMPLE: %s',$lastsample)
+write('file',$admin,'cppref_DATA_MIRROR: %s',cpprefs[16])
+write('file',$admin,'cppref_AUTOSAVEPLOT: %s',$autosaveplot)
+write('file',$admin,'cppref_AUTOSAVEDX: %s',$autosavedx)
+write('file',$admin,'cppref_DX_FORMAT: %s',cpprefs[22])
+write('file',$admin,'cppref_AUTO_TEMP: %s',cpprefs[39])
+write('file',$admin,'cppref_REUSE_ERROR_LOC: %s',cpprefs[36])
+write('file',$admin,'cppref_REUSE_COMPLETED_LOC: %s',cpprefs[43])
+write('file',$admin,'cppref_AUTO_RESUBMIT_ERROR: %s',cpprefs[38])
+write('file',$admin,'cppref_PROTUNE_SAMPLE: %s',cpprefs[44])
+write('file',$admin,'cppref_AFTER_SUBMIT: %s',cpprefs[45])
+write('file',$admin,'cppref_MULTI_SUBMIT: %s',cpprefs[46])
+write('file',$admin,'cppref_LOAD_SHIMS: %s',cpprefs[49])
+write('file',$admin,'cppref_ABORT_PTUNE_ERROR: %s',cpprefs[50])
+write('file',$admin,'cppref_LOAD_LOCKPHASE: %s',cpprefs[51])
+write('file',$admin,'cppref_DEFAULT_QUEUE: %s',cpprefs[52])
+write('file',$admin,'cppref_AUTOSQ_DISPLAY: %s',cpprefs[53])
+write('file',$admin,'cppref_AUTOSQ_DISPLAY_CHRON: %s',cpprefs[54])
+write('file',$admin,'cppref_FID_MIRROR_ZIP: %s',cpprefs[55])
+write('file',$admin,'cppref_PLOT_MIRROR_ZIP: %s',cpprefs[56])
+write('file',$admin,'cppref_DX_MIRROR_ZIP: %s',cpprefs[57])
+write('file',$admin,'cppref_AUTONIGHTQ: %s',cpprefs[58])
+write('file',$admin,'cppref_EMAIL_FID: %s',cpprefs[63])
+write('file',$admin,'cppref_SUBMIT_OPTION: %s',cpprefs[62])
+write('file',$admin,'cppref_EMESSAGE: %s',cpprefs[65])
+write('file',$admin,'cppref_EMAILWHEN: %s',cpprefs[61])
+write('file',$admin,'cppref_ALWAYS_MIMIC_MODE: %s',cpprefs[66])
+write('file',$admin,'cppref_SHOW_SCOUTFIDS: %s',cpprefs[67])
+write('file',$admin,'cppref_SHOW_ERRORNODES: %s',cpprefs[73])
+//  Force cpprefs[70] to New for the time being 07/14/2011
+cpprefs[70]='New'
+write('file',$admin,'cppref_AUTO_LOCKSHIM: %s%s',cpprefs[70],cpprefs[69])
+write('file',$admin,'cppref_PARSTYLE: %s',cpprefs[71])
+write('file',$admin,'cppref_PRIORITY_SAMPLE_AT_NIGHT: %s',cpprefs[80])
+write('file',$admin,'cppref_NUS_DEFAULT: %s',cpprefs[82])
+write('file',$admin,'cppref_NUSproc_DEFAULT: %s',cpprefs[83])
+
+rename($admin,userdir+'/adm/walkupadm/automation.conf'):$dum
+
+        $adirtmplt=adirtmplt
+        svfdir=cpprefs[9]
+        exists('adir2tmplt','parameter'):$ad2ex
+        exists('svfdir2','parameter','global'):$sd2ex
+        if ($sd2ex) and ($ad2ex) then
+                $adir2tmplt=adir2tmplt
+                svfdir2=cpprefs[47]
+                setadir2tmplt
+                svfdir2=adir2tmplt
+        endif
+        setadirtmplt
+        svfdir=adirtmplt
+        if ($sd2ex) and ($ad2ex) then
+                adir2tmplt=$adir2tmplt
+        endif
+        adirtmplt=$adirtmplt
+
+        $sdirtmplt=sdirtmplt
+        sampdirtmplt=cpprefs[10]
+        setsdirtmplt
+        sampdirtmplt=sdirtmplt
+        sdirtmplt=$sdirtmplt
+
+        $svftmplt=svftmplt
+        svfname=cpprefs[11]
+        setsvftmplt
+        svfname=svftmplt
+        svftmplt=$svftmplt
+
+        emailflag=cpprefs[14]
+	adminemailflag=cpprefs[59]
+	adminemailwhen=cpprefs[60]
+        userremembrance=cpprefs[35]
+        FASTenv=cpprefs[37]
+        fastuserlogin('setup')
+        fidmirror=cpprefs[23]
+        plotmirror=cpprefs[24]
+        dxmirror=cpprefs[25]
+	timeformat=cpprefs[68]
+        autodirtmplt=cpprefs[26]
+	SpecViewPref[1]=cpprefs[53]
+	SpecViewPref[2]=cpprefs[54]
+	adaptiveNT=cpprefs[64]
+	doprocess[1]=cpprefs[81]
+	string2array(cpprefs[74]):SQviewOptions
+        setautodirtmplt
+
+	SampleViewPref
+
+$alock=alock $wshim=wshim $pad=pad $vtwait=vtwait $tin=tin
+$plist=''
+if (cpprefs[12] <>'') then
+        $plist=$plist+' alock'
+        alock=cpprefs[12]
+endif
+if (cpprefs[13] <>'') then
+        $plist=$plist+' wshim'
+        wshim=cpprefs[13]
+endif
+if (cpprefs[34] <>'') then
+        $plist=$plist+' pad'
+        format(cpprefs[34],'lower'):pad
+endif
+if (cpprefs[40] <>'') then
+        $plist=$plist+' vtwait'
+        format(cpprefs[40],'lower'):vtwait
+endif
+if (cpprefs[41]<>'') then
+        $plist=$plist+' tin'
+        tin=cpprefs[41]
+endif
+
+string2array($plist):$plist
+array2string($plist):$plist
+if ($plist<>'') then
+    $usermodulepath=userdir+'/modules/cpQdefaults'
+    exists($usermodulepath,'file'):$fileex
+    if ($fileex=0) then
+      mkdir('-p',userdir+'/modules'):$dum
+      $sysfileex=0 $sysmodulepath=''
+      getfilepath('cpQdefaults','modules'):$sysfileex,$sysmodulepath
+      if ($sysfileex) then
+	copy($sysmodulepath,$usermodulepath):$dum
+      endif
+      exists($usermodulepath,'file'):$fileex
+    else
+        $newlist=''
+        shell('(diffparams -list '+$usermodulepath+' '+systemdir+'/modules/cpQdefaults)'):$newlist
+        $plist=$plist+' '+$newlist
+    endif
+    if ($fileex) then
+        writeparam($usermodulepath,$plist,'current','add')
+    endif
+endif
+alock=$alock
+wshim=$wshim
+pad=$pad
+vtwait=$vtwait
+tin=$tin
+
+$globalpars='svfdir sampdirtmplt svfname adminemailflag adminemailwhen emailflag timeformat'
+writeparam(userdir+'/global',$globalpars,'global','add')
+if ($sd2ex) then writeparam(userdir+'/global','svfdir2','global','add') endif
+$globalpars='fidmirror plotmirror dxmirror autodirtmplt SpecViewPref SampleViewPref'
+writeparam(userdir+'/global',$globalpars,'global','add')
+$globalpars='userremembrance sqflag FASTenv CPbbx SQviewOptions doprocess'
+writeparam(userdir+'/global',$globalpars,'global','add')
+
+//pltopt=$pltopt
+
+QuickSubmit('start')
+vnmrjcmd('pnew','cpprefs','appmode','traymax','svfdir','sampdirtmplt','svfname','QSpar')
+if ($sd2ex) then vnmrjcmd('pnew','svfdir2') endif
+vnmrjcmd('pnew','plotmirror','dxmirror','fidmirror','emailflag','autodirtmplt')
+vnmrjcmd('pnew','adminemailflag','adminemailwhen','doprocess')
+write('line3','Preferences saved')
+
+ELSEIF ($1 = 'print') THEN
+
+   printon
+   write('alpha','***************************************************')
+   write('alpha','Preferences for %s',owner)
+   write('alpha','***************************************************')
+   write('alpha','')
+   write('alpha','Automation Preferences:')
+   write('alpha','   Sample Change Time: %s',cpprefs[1])
+   write('alpha','   Process/plot Time:  %s',cpprefs[2])
+   write('alpha','   Max Priority samples per operator: %s',cpprefs[3])
+   write('alpha','   Location selection: %s',cpprefs[4])
+   write('alpha','   After login, do...: %s',cpprefs[6])
+   write('alpha','   After submission, do...: %s',cpprefs[45])
+   write('alpha','   Create new autodir?: %s',cpprefs[7])
+   write('alpha','   When enterQ is empty leave "%s" sample in magnet',cpprefs[15])
+   write('alpha','')
+   write('alpha','SaveData Preferences:')
+   write('alpha','   StudyDir (svfdir): %s',cpprefs[9])
+   write('alpha','   SampleDir (sampdirtmplt): %s',cpprefs[10])
+   write('alpha','   FidTemplate (svfname): %s',cpprefs[11])
+   write('alpha','   DataMirroring: %s',cpprefs[16])
+if (cpprefs[16]<>'no') then
+   write('alpha','      Fidmirror template: %s',cpprefs[23])
+   write('alpha','      Plotmirror template: %s',cpprefs[24])
+   write('alpha','      Spectrummirror template: %s',cpprefs[25])
+endif
+   write('alpha','')
+   write('alpha','Queue Preferences:')
+   write('alpha','   Bt default, before First Experiment:')
+   write('alpha','       Autolock: %s   Autoshim: %s',cpprefs[12],cpprefs[13])
+   write('alpha','   By default, after Every Experiment:')
+if (cpprefs[17]='plot') then
+   write('alpha','       Send a plot to plotter: Yes')
+else
+   write('alpha','       Send a plot to plotter: No')
+endif
+if (cpprefs[18]='save') then
+   write('alpha','       Save a plot: Yes')
+else
+   write('alpha','       Save a plot: No')
+endif
+if (cpprefs[19]='email') then
+   write('alpha','       Email a plot: Yes')
+else
+   write('alpha','       Email a plot: No')
+endif
+   write('alpha','       fplot(eplot) format: %s',cpprefs[8])
+if (cpprefs[20]='save') then
+   write('alpha','       Save a JCAMP file of spectrum (1D ONLY): Yes')
+else
+   write('alpha','       Save a JCAMP file of spectrum (1D ONLY): No')
+endif
+if (cpprefs[21]='email') then
+   write('alpha','       Email a JCAMP file of spectrum (1D ONLY): Yes')
+else
+   write('alpha','       Email a JCAMP file of spectrum (1D ONLY): No')
+endif
+if (cpprefs[20]<>'') or (cpprefs[21]<>'') then
+   write('alpha','       JCAMP file format: %s',cpprefs[22])
+endif
+   printoff
+
+ENDIF

@@ -1,0 +1,58 @@
+"macro dsnarray"
+"dsnarray2 - a macro to measure SN on a serires of spectra"
+" moves to exp2 to continue"
+"labell this as trosy"
+
+$message=''
+
+if ($#=2) then
+	$delta=$1
+	$message=$2
+else
+	$delta=500
+	$message=seqfil
+endif
+
+$total=0
+$max=10
+$min=1000
+$count=1
+wft f full
+repeat
+	ds($count) dc
+	cr=sp+$delta+4 delta=$delta
+	dsnmax dsn:$sn
+	$total=$total+$sn
+	if ($sn > $max) then $max=$sn $maxcount=$count endif
+	if ($sn < $min) then $min=$sn $mincount=$count endif
+	$count=$count+1
+until $count>arraydim
+
+ds($maxcount)
+"Throw out the best and the worst but still report them"
+$total=$total-$max-$min
+$snall=$total/(arraydim-2)
+
+write('graphics',160,100,'Average SN = %3.1f',$snall)
+write('graphics',160,80,'lowest SN = %4.1f',$min)
+write('graphics',160,60,'Highest SN = %4.1f',$max)
+
+
+write('plotter',160,140,'Average SN = %3.1f',$snall)
+write('plotter',160,135,'lowest SN = %4.1f',$min)
+write('plotter',160,130,'Highest SN = %4.1f',$max)
+
+pltext
+write('plotter',10,160,'Probe = %s',probe)
+write('plotter',10,155,'%s experiment',$message)
+write('plotter',10,150,'Sequence = %s',seqfil)
+write('plotter',10,145,'%2.0f transients',nt)
+write('plotter',160,100,'Worst result was spectrum # %3.0f',$mincount)
+write('plotter',160,95,'Best result was spectrum # %3.0f',$maxcount)
+write('plotter',160,85,'Noise region was %4.0f Hz',$delta)
+write('plotter',160,80,'Total of %4.0f Spectra',arraydim)
+write('plotter',10,100,'Z = %5.0f',z1)
+write('plotter',10,95,'Z2 = %5.0f',z2)
+
+pl pscale page
+

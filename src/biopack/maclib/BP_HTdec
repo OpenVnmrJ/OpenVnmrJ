@@ -1,0 +1,110 @@
+"macro BP_HTdec"
+" *************************************************************  "
+" ***                    BP_HTdec                           ***  "
+" ***   create a decoupling waveform for HT sequences       ***  "
+" ***                    Eriks Kupce                        ***  "
+" ***                Oxford, 16/11/2004                     ***  "
+" *************************************************************  "
+" usage: BP_ HTdec(fname, pw, bw, Jxy, stepsize, ref_pw90, ref_pwr) "
+
+$su = 'n'
+$stepsize = ''  
+$pw=''
+$bw=''
+$ref_pwr=''
+$ref_pw90=''
+
+$fname = $1
+$Tp = $2
+format($3,3,1):$bw 
+$j = $4
+if ($5 < 0.05) then
+  $stepsize = 'n'
+else
+  format($5,5,2):$stepsize
+endif
+$ref = $6
+format($6,5,2):$ref_pw90
+format($7,2,0):$ref_pwr
+ 
+$nsu = 5.0*$j*$Tp   
+
+if($nsu < 2.0) then $su = 'n' $n = 1.0
+else
+  if($nsu < 4.2) then $su = 'm4'  $n = 4.0
+  else
+    if($nsu < 6.0) then $su = 't5'  $n = 5.0
+    else
+      if($nsu < 10.0) then $su = 'm8'  $n = 8.0
+      else
+        if($nsu < 17.0) then $su = 'm16'  $n = 16.0
+        else
+          if($nsu < 21.0) then $su = 't5,m4'  $n = 20.0
+          else
+            if($nsu < 27.0) then $su = 't5,t5'   $n = 25.0
+            else
+              if($nsu < 45.0) then $su = 't5,m8'   $n = 40.0
+              else
+                if($nsu < 85.0) then $su = 't5,m16'  $n = 80.0
+                else
+                  if($nsu < 110.0) then $su = 't5,t5,m4' $n = 100.0
+                  else
+                    write('error','Use manual setup for %s', fname)
+                    $su = 'n' $n = 1.0
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+
+$Tp = $Tp/$n
+format($Tp,1,7):$pw
+
+" +--------------------+ "
+" | open Pbox.inp file | "
+" +--------------------+ "
+$shapelib=userdir+'/shapelib'
+exists($shapelib,'directory'):$e
+if not($e) then
+  mkdir($shapelib)
+endif
+$filepath = $shapelib + '/' + $fname + '.inp'
+write('reset',$filepath)
+
+" +---------------------+ "
+" | write Pbox header   | "
+" +---------------------+ "
+write('file',$filepath,'  Pbox.inp file.')
+write('file',$filepath,'  For more information see man(\'Pbox\')')
+write('file',$filepath,'********************************************************')
+write('file',$filepath,'  Pbox parameters : name, steps, dres, maxincr, attn,')
+write('file',$filepath,'  stepsize, sfrq, refofs, sucyc, reps, header, bsim,')
+write('file',$filepath,'  T1, T2, sw, dcyc, type, bscor, ref_pwr, ref_pw90.')
+write('file',$filepath,' ')
+write('file',$filepath,'~~~~~~~~~~~~~~~~~~~~~~~~~~~Waves~~~~~~~~~~~~~~~~~~~~~~~~')
+write('file',$filepath,'    sh   bw(/pw)    ofs   st    ph   fla  trev  d1 d2 d0')
+write('file',$filepath,'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+$wave = 'wurst2i ' + $pw + '/' + $bw 
+write('file',$filepath,'{ %s }', $wave) 
+
+write('file',$filepath,' %10s        = %s', 'stepsize', $stepsize) 
+write('file',$filepath,' %10s        = %s', 'sucyc', $su) 
+
+if $ref > 0.01 then
+  write('file',$filepath,' ')
+  write('file',$filepath,'RF Calibration :') 
+  write('file',$filepath,'----------------') 
+  write('file',$filepath,' %10s        = %s', 'ref_pwr', $ref_pwr) 
+  write('file',$filepath,' %10s        = %s', 'ref_pw90', $ref_pw90)   
+endif
+
+$cmd = 'Pbox ' + $fname + ' -f ' + $fname + '.inp'
+
+shell($cmd) 
+

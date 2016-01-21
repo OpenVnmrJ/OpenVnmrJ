@@ -1,0 +1,28 @@
+"macro ATpltext2"
+" ATpltext2(file) - plot test description  "
+" variable file has is in ../TEXTS"
+$file=''
+if ($#>1) then 
+ $file=autotestdir+'/texts/'+$3
+ $x=$1 $y=$2
+else
+ $x=wcmax-110 $y=wc2max
+ $file=autotestdir+'/texts/'+$1
+endif
+exists($file,'file'):$isthere
+if $isthere then
+
+write('plotter',$x,$y,''):$ys      "get the height of characters in $ys"
+$y = $y - $ys                      "position $y at bottom of the character"
+
+$ok = 1
+$t=''
+lookup('file',$file)
+repeat
+   lookup('readline'):$t,$ok
+   if ($ok = 1) then
+      write('plotter',$x,$y,'%s',$t)
+      $y = $y - $ys
+   endif
+until ($ok = 0)
+endif

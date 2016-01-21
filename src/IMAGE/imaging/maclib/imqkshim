@@ -1,0 +1,105 @@
+"macro imqkshim"
+"Setup and Processing for 3D shimming sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+$macro=$0
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+isvnmrj:$vj
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  Prescan_ShimMethod='quickshim'
+  tof = {tn +'offset'}   "transmitter/receiver offset"
+  ldrf
+  imprep
+  
+  execseq('prep')  "Execute any sequence specific preparation"
+
+  if (prescan_control[1] > 0) then  "Part of prescan"
+    "In future implementations (VnmrJ 1.1D) the rtv and shimorder set will be replaced by rtx"  
+    "parameters initialized so correct parameters are written in .param"
+    shsel    = Prescan_ShimSelection
+    shregion = Prescan_ShimRegion
+    shcycle  = Prescan_ShimIteration
+
+    shimcalc = 1  "flag to calculate new shim values"
+    shimload = 1  "flag to load shims"
+  endif  "part of prescan"
+  cnt=1  "initialize iteration counter"
+
+  qkshim(0)   "init only"
+
+  if($do = 'shim') then
+    imqkshim('proc','shim')
+  endif
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  if ($do = 'shim') then 
+
+    if (prescan_control[1] > 0) then   
+      svf(shimmapfid)
+      qkshimcalc 
+      qkshim(shimpass)  "Updates cnt and looks at selected iterations"
+
+      if(cnt <= 4) then
+        au	     "if prescan and multi iterations start acquisition"
+      else
+        if (prescan_control[1] > 0) then "Part of an auto prescan"
+          prescan_control[2]= prescan_control[2]+1	  		    
+          prescan_handler('exec')
+        endif
+      endif
+    else
+      im1Dglobal('proc')
+    endif
+
+  endif
+
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+
+  
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  im1Dglobal('prep')
+  
+  if ($do = '') then
+    $do = prescan_exec[prescan_control[2]]
+  endif
+
+endif
+
+
+"*********************************************************************************"
+"			Modification History
+
+"24nov04(ss) - slab related bugs fixed;
+"		bug: illegal acquisitions prevented
+"27jan05(ss) - iplanDefaultType not rtv'd
+"04aug05     - prescan_control[1] > 0
+"21dec05     - added mods for profile flag from im3D
+"              autogain bug fixed
+
+
+"*********************************************************************************"

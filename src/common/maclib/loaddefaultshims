@@ -1,0 +1,53 @@
+"macro loaddefaultshims"
+if ($# < 1) then $1='no' endif
+IF ($1='findshims') THEN
+   $shims=probe+'_lk_d2o'
+   getparam('defaultshims','Probe'):$shims
+        "The following construct allows for default shims"
+        " file to be a template.  For example: $probe$_$solvent$"
+
+   $shimfile=''
+   Svfname('/'+$shims+'%R0%',''):$shimfile
+   $s1='' $s2=''
+   strstr($shimfile,'/'):$ret,$s1,$shims
+
+        $firstchar=''
+        substr($shims,1,1):$firstchar
+        if ($firstchar='/') then
+                exists($shims,'file'):$shimex
+        else
+                getfilepath($shims,'shims'):$shimex
+        endif
+        if ($shimex>0) then
+		return($shims)
+	else
+		return('')
+	endif
+ELSE
+
+   if ((wshim='n') or (auto<>'y')) and ($1<>'force') then
+	return 
+   endif
+   if ($1='force') and (auto='y') then
+    	return
+   endif
+
+   $loadshims='no'
+   getadminfo('loadshims'):$loadshims
+   if ($1='force') then $loadshims='yes' endif
+   if ($loadshims='yes') then
+   	$shims=''
+	loaddefaultshims('findshims'):$shims
+   	if ($shims='') then 
+	    write('error','defaultshims NOT found')
+	    return 
+   	endif
+	expactive:$isactive
+	rts($shims)
+	write('line3','%s shims loaded',$shims)
+			"The following is to allow auto_au_mimic"
+	if ($isactive>-1) then
+		setallshims
+	endif
+   endif
+ENDIF

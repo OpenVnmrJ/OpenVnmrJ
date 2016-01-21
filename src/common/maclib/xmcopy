@@ -1,0 +1,98 @@
+"macro xmcopy"
+"Used by all applications (Imaging, Liquids, etc.)."
+"xmcopy - copy actions or protocols in a study"
+
+"if (sqval[3] = 'protocol') then"
+"  write('line3','%s: Cannot copy protocols',$0)"
+"  xm1('delete',sqval[1])"
+"  return"
+"endif"
+"check status of copyid[1] before copying? if Active, svp"
+"if (copyid[1] = actionid) then ..."
+
+if ($# = 0) then
+
+  $cid=copyid[1]
+  $i=0 teststr('sqattr','id','global'):$i
+  if $i<1 then return endif
+  $mid=sqval[$i]
+  if ($cid='null' or $cid='' or $mid='null' or $mid='') then
+    write('line3','cannot copy node')
+    return
+  endif
+" xmreadnode(copyid[1]) previously done by xmaction"
+" xmreadnode($mid)"
+" teststr('sqattr','type','global'):$i"
+" if $i>0.5 then $type=sqval[$i] else $type='null' endif"
+
+  $type='null' $lock='off'
+  xmgetatts($mid,'type','lock'):$type,$lock
+  if ($lock='on') then
+    xmlockup:$lastlock
+    if $lastlock<>'null' then
+      $mid=$lastlock
+    endif
+  endif
+  $cmd = 'get protocol < '+$cid+ ' sqattr sqval '
+  if ($type = 'protocol') then
+    $cmd = $cmd + '; get actions in '+$mid+' lock sqtval '
+    $cmd = $cmd + $0+'(0,`'+$mid+'`)'
+  else
+    $cmd = $cmd + '; get protocol < '+$mid+ ' sqattr sqtval '
+    $cmd = $cmd + $0+'(1,`'+$mid+'`)'
+  endif
+  xm1($cmd)
+
+elseif ($# = 2) then
+
+  $cid=copyid[1]
+  $mid=$2
+  $pcid='null' $pmid='null'
+  $i=0 teststr('sqattr','id','global'):$i
+  if ($i > 0.5) then
+    $pcid=sqval[$i]
+    if $1=1 then
+      $pmid=sqtval[$i]
+    else
+      $pmid=$mid
+      $size=size('sqtval')
+      $k=0 $lockch='n'
+      repeat
+        $k=$k+1
+        if sqtval[$k]='on' then $lockch='y' endif
+      until ($k>=$size)
+      if $lockch='y' then
+        xmlockup:$lastlock
+        if $lastlock<>'null' then
+          $mid=$lastlock
+          $cmd = 'get protocol < '+$mid+ ' sqattr sqtval '
+          $cmd = $cmd + $0+'(1,`'+$mid+'`)'
+          xm1($cmd)
+          return
+        endif
+      endif
+    endif
+  endif
+  if ($cid<>'' and $cid<>'null') then
+    xmgetatts($cid,'status'):$st
+    if $st='Active' then
+      if appmode='imaging' then
+        xmselect('savepar','noact')
+      else
+        xmselect('saveid','noact')
+      endif
+    endif
+    if ($pcid <> $pmid) then
+      xmmakenode('copy','protocol',$pcid,$mid):$pid
+      xmmakenode('copy','action',$cid,$pid):$nid
+      xmgetatts($nid,'exp'):$title
+      xmsetatts($pid,'title',$title)
+    else
+      xmmakenode('copy','action',$cid,$mid):$nid
+    endif
+  endif
+  xmdelete('emptytrash')
+  sqfilemenu('init')
+" xmwritesq"
+
+endif

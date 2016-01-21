@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="craftReviewDispOpt" element="groups" type="processing" >      
+      <group size="400 275"
+        vq="craftnmrparRef"
+        style="Heading1"
+        label="Display options"
+        bg="transparent"
+        border="Etched"
+        subtype="Titled"
+        expanded="yes"
+        >
+
+        <label loc="10 20" size="100 20"
+          style="Label1"
+          label="Results from"
+          />
+        <group loc="120 20" size="250 20" >
+          <radio loc="0 0" size="250 20"
+            style="Label1"
+            label="Selected study/FID"
+            vq="craftnmrparRef craftDispPar"
+            vc="$s2='' substr(craftDispPar[15],2):$s2 if ($s2&lt;&gt;'ExpandModel') then craftDispPar[1]='ac' if (craftDispPar[15]='Review Models') then craft('displaymodels') elseif (craftDispPar[15]='Review OrigData') then craft('displayorigdata') else craftDispPar[15]='' craft_clear craft('pnew') endif endif"
+            set="$VALUE=(craftDispPar[1]='ac')"
+            />
+          <textmessage loc="150 0" size="100 20"
+            style="Heading1"
+            vq="craftnmrparRef"
+            set="if craftnmrpar[22]='y' then $VALUE='[index: '+craftnmrpar[36]+']' else $VALUE='' endif"
+            />
+          </group>
+        <group loc="120 40" size="250 20" >
+          <radio loc="0 0" size="250 20"
+            style="Label1"
+            label="All studies/FIDs"
+            vq="craftnmrparRef craftDispPar"
+            vc="craftDispPar[1]='aa' if (craftDispPar[15]='Review Models') then craft('displaymodels') elseif (craftDispPar[15]='Review OrigData') then craft('displayorigdata') else craftDispPar[15]='' craft_clear craft('pnew') endif"
+            set="$VALUE=(craftDispPar[1]='aa')"
+	    show="$s2='' substr(craftDispPar[15],2):$s2 $ENABLE=((craftnmrpar[22]='y') and ($s2&lt;&gt;'ExpandModel'))*2-1"
+            />
+          </group>
+
+	<group loc="5 64" size="390 1"
+	  border="Etched"
+	  />
+
+        <button loc="40 75" size="300 22"
+          style="Heading2"
+          label="Initial data in workspace"
+          vq="craftnmrparRef craftDispPar"
+          vc="if (craftDispPar[15]&lt;&gt;'Review OrigData') then craftDispPar[15]='Review OrigData' craft('displayorigdata') endif"
+          bg="transparent"
+          />
+	<group loc="345 76" size="20 20"
+	  >
+	  <group loc="0 0" size="20 20"
+	    vq="craftnmrparRef craftDispPar"
+	    show="$SHOW=(craftDispPar[15]='Review OrigData')"
+	    >
+	    <label loc="0 0" size="20 20" icon="tick.png" />
+	    </group>
+<!--
+	  <group loc="5 5" size="10 10"
+	    bg="transparent"
+	    border="Etched"
+	    vq="craftnmrparRef craftDispPar"
+	    show="$SHOW=(craftDispPar[15]&lt;&gt;'Review OrigData')"
+	    >
+	    </group>
+-->
+	  </group>
+
+	<group loc="40 100" size="350 130"
+	  vq="craftnmrparRef craftDispPar"
+	  show="$SHOW=(craftDispPar[1]='ac')"
+	  >
+          <button loc="0 0" size="300 22"
+            style="Heading2"
+            label="CRAFT results"
+            vq="craftnmrparRef craftDispPar"
+            vc="craftDispPar[15]='Review Models' craft('displaymodels') craft('pnew')"
+            show="$lock=0 craft('islock',craftnmrpar[17]):$lock $ENABLE=($lock&lt;0.5)*2-1"
+            bg="transparent"
+            />
+	  <group loc="305 1" size="20 20"
+	    >
+	    <group loc="0 0" size="20 20"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]='Review Models'))"
+	      >
+              <label loc="0 0" size="20 20" icon="tick.png" />
+	      </group>
+<!--
+	    <group loc="5 5" size="10 10"
+	      bg="transparent"
+	      border="Etched"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]&lt;&gt;'Review Models'))"
+	      >
+	      </group>
+-->
+	    </group>
+	  <group loc="40 30" size="250 80"
+	    vq="craftnmrparRef craftDispPar"
+	    >
+            <group loc="0 60" size="250 20" >
+              <check loc="0 0" size="250 20"
+                style="Label1"
+                label="Experimental spectrum"
+                vq="craftnmrparRef craftDispPar"
+                vc="craftDispPar[2]='y' craft('asp1D','Review') craft('pnew')"
+                vc2="craftDispPar[2]='n' craft('asp1D','Review') craft('pnew')"
+		show="$ENABLE=(craftDispPar[15]='Review Models')*2-1"
+                set="$VALUE=(craftDispPar[2]='y')"
+                />
+              </group>
+            <group loc="0 40" size="250 20" >
+              <check loc="0 0" size="250 20"
+                style="Label1"
+                label="Downsampled ROIs"
+                vq="craftnmrparRef craftDispPar"
+                vc="craftDispPar[3]='y' craft('asp1D','Review') craft('pnew')"
+                vc2="craftDispPar[3]='n' craft('asp1D','Review') craft('pnew')"
+		show="$ENABLE=(craftDispPar[15]='Review Models')*2-1"
+                set="$VALUE=(craftDispPar[3]='y')"
+                />
+              </group>
+            <group loc="0 20" size="250 20" >
+              <check loc="0 0" size="250 20"
+                style="Label1"
+                label="CRAFT models"
+                vq="craftnmrparRef craftDispPar"
+                vc="craftDispPar[4]='y' craft('asp1D','Review') craft('pnew')"
+                vc2="craftDispPar[4]='n' craft('asp1D','Review') craft('pnew')"
+		show="$ENABLE=(craftDispPar[15]='Review Models')*2-1"
+                set="$VALUE=(craftDispPar[4]='y')"
+                />
+              </group>
+            <group loc="0 0" size="150 20" >
+              <check loc="0 0" size="150 20"
+                style="Label1"
+                label="CRAFT residuals"
+                vq="craftnmrparRef craftDispPar"
+                vc="craftDispPar[5]='y' craft('asp1D','Review') craft('pnew')"
+                vc2="craftDispPar[5]='n' craft('asp1D','Review') craft('pnew')"
+		show="$ENABLE=(craftDispPar[15]='Review Models')*2-1"
+                set="$VALUE=(craftDispPar[5]='y')"
+                />
+              </group>
+	    </group>
+	  </group>
+	<group loc="40 100" size="350 75"
+	  vq="craftnmrparRef craftDispPar"
+	  show="$SHOW=(craftDispPar[1]&lt;&gt;'ac')"
+	  >
+          <button loc="0 0" size="300 22"
+            style="Heading2"
+            label="CRAFT models"
+            vq="craftnmrparRef craftDispPar"
+            vc="is_craft:$craftver craftDispPar[7]='Craft' if craftDispPar[15]='Review Models' and $craftver&gt;1.5 then craft('asp1D','Review') else craftDispPar[15]='Review Models' craft('displaymodels') endif"
+            show="$lock=0 craft('islock',craftnmrpar[17]):$lock $ENABLE=($lock&lt;0.5)*2-1"
+            bg="transparent"
+            />
+	  <group loc="305 1" size="20 20"
+	    >
+	    <group loc="0 0" size="20 20"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]='Review Models') and (craftDispPar[7]='Craft'))"
+	      >
+              <label loc="0 0" size="20 20" icon="tick.png" />
+	      </group>
+<!--
+	    <group loc="5 5" size="10 10"
+	      bg="transparent"
+	      border="Etched"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]&lt;&gt;'Review Models') or (craftDispPar[7]&lt;&gt;'Craft'))"
+	      >
+	      </group>
+-->
+	    </group>
+
+          <button loc="0 24" size="300 22"
+            style="Heading2"
+            label="CRAFT residuals"
+            vq="craftnmrparRef craftDispPar"
+            vc="is_craft:$craftver craftDispPar[7]='Residual' if craftDispPar[15]='Review Models' and $craftver&gt;1.5 then craft('asp1D','Review') else craftDispPar[15]='Review Models' craft('displaymodels') endif"
+	    show="$lock=0 craft('islock',craftnmrpar[17]):$lock $ENABLE=($lock&lt;0.5)*2-1"
+            bg="transparent"
+            />
+	  <group loc="305 25" size="20 20"
+	    >
+	    <group loc="0 0" size="20 20"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]='Review Models') and (craftDispPar[7]='Residual'))"
+	      >
+              <label loc="0 0" size="20 20" icon="tick.png" />
+	      </group>
+<!--
+	    <group loc="5 5" size="10 10"
+	      bg="transparent"
+	      border="Etched"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]&lt;&gt;'Review Models') or (craftDispPar[7]&lt;&gt;'Residual'))"
+	      >
+	      </group>
+-->
+	    </group>
+
+          <button loc="0 48" size="300 22"
+            style="Heading2"
+            label="Downsampled ROIs"
+            vq="craftnmrparRef craftDispPar"
+            vc="is_craft:$craftver craftDispPar[7]='DigFilt' if craftDispPar[15]='Review Models' and $craftver&gt;1.5 then craft('asp1D','Review') else craftDispPar[15]='Review Models' craft('displaymodels') endif"
+	    show="$lock=0 craft('islock',craftnmrpar[17]):$lock $ENABLE=($lock&lt;0.5)*2-1"
+            bg="transparent"
+            />
+	  <group loc="305 49" size="20 20"
+	    >
+	    <group loc="0 0" size="20 20"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]='Review Models') and (craftDispPar[7]='DigFilt'))"
+	      >
+              <label loc="0 0" size="20 20" icon="tick.png" />
+	      </group>
+<!--
+	    <group loc="5 5" size="10 10"
+	      bg="transparent"
+	      border="Etched"
+	      vq="craftnmrparRef craftDispPar"
+	      show="$SHOW=((craftDispPar[15]&lt;&gt;'Review Models') or (craftDispPar[7]&lt;&gt;'DigFilt'))"
+	      >
+	      </group>
+-->
+	    </group>
+	  </group>
+
+	<group loc="5 218" size="390 1"
+	  border="Etched"
+	  />
+        <label loc="10 226" size="300 20"
+          style="Label1"
+          label="Corresponding results from"
+          />
+        <button loc="70 248" size="157 20"
+          style="Heading2"
+          label="Previous study/FID"
+          vq="craftnmrparRef craftDispPar"
+          vc="craft('displaynextsampfid',-1)"
+	  show="$sub1='' substr(craftDispPar[15],1):$sub1 $ENABLE=(($sub1='Review') and (craftnmrpar[22]='y') and (craftDispPar[1]='ac'))*2-1"
+          bg="transparent"
+          />
+        <button loc="232 248" size="158 20"
+          style="Heading2"
+          label="Next study/FID"
+          vq="craftnmrparRef craftDispPar"
+          vc="craft('displaynextsampfid',1)"
+	  show="$sub1='' substr(craftDispPar[15],1):$sub1 $ENABLE=(($sub1='Review') and (craftnmrpar[22]='y') and (craftDispPar[1]='ac'))*2-1"
+          />
+	</group>
+</template>

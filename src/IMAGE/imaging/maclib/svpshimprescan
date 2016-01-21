@@ -1,0 +1,58 @@
+"macro svpshimprescan"
+
+"*************************************************************************"
+" svpshimprescan - save gradient shim parameters for prescan
+
+"*************************************************************************"
+$macro = $0
+
+"local shim parameters transfered to global (prescan) parameters"
+if(apptype = 'imqkshim') then
+  Prescan_ShimMethod = 'quickshim'
+  "create shim stepsize (dac) "
+  exists('Prescan_ShimStep','parameter','global'):$ex
+  if($ex = 0) then
+   create('Prescan_ShimStep','integer','global')
+   setgroup('Prescan_ShimStep','processing','global')
+   Prescan_ShimStep = 500,200,100,50
+  endif
+  Prescan_ShimStep = shdel
+  Prescan_ShimIteration = shcycle
+elseif(apptype = 'im3Dshim') then
+  Prescan_ShimMethod = 'ge3dshim'
+  Prescan_ShimSelection = shsel 
+  Prescan_ShimRegion = shregion
+  Prescan_ShimDelay = shdel
+  Prescan_ShimIteration = shcycle
+elseif(apptype = 'imFM') then
+  Prescan_ShimMethod = 'fastmap'
+  exists('Prescan_epi','parameter','global'):$ex
+  if($ex = 0) then
+   create('Prescan_epi','flag','global')
+  endif
+  exists('Prescan_nf_def','parameter','global'):$ex
+  if($ex = 0) then
+   create('Prescan_nf_def','integer','global')
+  endif
+  "local parameters transfered to global"
+  Prescan_ShimIteration = shcycle
+  Prescan_epi = epiflag     "epi flag"
+  Prescan_nf_def = nf_def  "epi echoes"  
+  Prescan_ShimOrder = shsel   "1=xyz; 2=1st & 2nd order"
+  Prescan_ShimProj = nproj    "1=3; 2=6 projections"
+  Prescan_ShimDelay2 = shdel  "phase delay"
+else
+  write('error','%s: Invalid apptype for shimming',$macro)
+  abort
+endif
+
+
+$file=userdir+'/parlib/prescan'+Prescan_ShimMethod+'_'+gcoil+'_'+rfcoil 
+exists($file+'.par','file'):$ex
+if ($ex>0) then 
+  delete($file) 
+endif 
+svp($file) 
+write('line3',$file)
+
+

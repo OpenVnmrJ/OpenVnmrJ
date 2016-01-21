@@ -1,0 +1,79 @@
+"macro BPchecknoise"
+"BPchecknoise('s' or 'e',<go,ga or au>): measures and displays RMS fid noise"
+"            if second argument is present (go,ga or au) the acquisition follows"
+
+if (($1='s') or ($1='e')) then
+ exists(curexp+'/temp.par','file'):$e
+ if $e=1 then
+  mv(curexp+'/temp.par',curexp+'/temp.par.save')
+ endif
+ svp(curexp+'/temp')
+ setvalue('seqfil','s2pul')  "changes seqfil to s2pul without changing panels"
+ sw=20000
+ wnt=''
+ exists('ni','parameter'):$e if $e then ni=1 endif
+ exists('ni2','parameter'):$e if $e then ni2=1 endif
+ exists('ni3','parameter'):$e if $e then ni3=1 endif
+ exists('phase','parameter'):$e if $e then phase=1 endif
+ exists('phase2','parameter'):$e if $e then phase2=1 endif
+ exists('phase3','parameter'):$e if $e then phase3=1 endif
+ at=2 gain=50 ss=0 dm='nnnn' dm2='nnnn' dm3='nnnn'
+ nt=1 d1=0.1 p1=0 d2=0 pw=0 
+ if ($1='s') then                  "Sample in Probe"
+  if ($#>1) then
+   if $2='go' then
+    wexp='BPchecknoise(`PART1`,`go`)'
+   elseif $2='ga' then
+    wexp='BPchecknoise(`PART1`,`ga`)'
+   elseif $2='au' then
+    wexp='BPchecknoise(`PART1`,`au`)'
+   endif
+  else
+   wexp='BPchecknoise(`PART1`)'
+  endif
+ elseif ($1='e') then              "empty probe"
+   wexp='BPchecknoise(`PART2`)'
+ endif
+ au
+elseif ($1='PART1') then
+ noise:$arg1,$arg2,$arg3,$arg4,$r1,$arg6
+ $r1=trunc($r1*100)/100
+ write('line3','FID RMS Noise = %4.2f',$r1)
+ rtp(curexp+'/temp')
+ shell('rm -r '+curexp+'/temp.par')
+ sample_noise=$r1
+ $empty_noise=0.0      "in case no probefile entry"
+ getparam('empty_noise',tn):$empty_noise
+ if ($empty_noise>0.0) then
+  $ratio = sample_noise/$empty_noise
+  $ratio = trunc($ratio*100)/100
+  write('line3','Sample FID Noise = %4.2f  Ratio of Sample:Empty Probe Noise= %4.2f',sample_noise,$ratio)
+  if (tn='H1') then
+   BPrecord_samplenoise('NOISE_SAMPLE_H1','FID Noise with Sample Present','Noise',sample_noise,'Sample_to_Empty_Ratio',$ratio)
+  elseif (tn='C13') then
+   BPrecord_samplenoise('NOISE_SAMPLE_C13','FID Noise with Sample Present','Noise',sample_noise,'Sample_to_Empty_Ratio',$ratio)
+ endif
+ endif
+ if ($#>1) then   "start acquisition of desired experiment"
+  if ($2='go') then go sample_noise=$r1 return endif
+  if ($2='ga') then ga sample_noise=$r1 return endif
+  if ($2='au') then au sample_noise=$r1 return endif
+ else
+  return($r1)
+ endif
+elseif ($1='PART2') then            "empty probe"
+ noise:$arg1,$arg2,$arg3,$arg4,$r1,$arg6
+ $r1=trunc($r1*100)/100
+ write('line3','Empty Probe FID RMS Noise = %4.2f',$r1)
+ $r1_txt='' format($r1,4,2):$r1_txt
+ if (tn='H1') then
+  BPrecord_emptynoise('NOISE_EMPTY_H1','FID Noise with No Sample Present','Noise',empty_noise)
+ elseif (tn='C13') then
+  BPrecord_emptynoise('NOISE_EMPTY_C13','FID Noise with No Sample Present','Noise',empty_noise)
+ endif
+ BPsetparams('empty_noise',$r1_txt,tn)
+ rtp(curexp+'/temp')
+ shell('rm -r '+curexp+'/temp.par')
+ empty_noise=$r1
+ return($r1)
+endif

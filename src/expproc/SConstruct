@@ -1,0 +1,161 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file name
+procTarget = 'Expproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+
+# library dependancies
+# build ncomm library
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+ncommHdrList = [ 'chanLib.h',
+                 'chanLibP.h',
+                 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'sendAsync.h',
+                 'semLib.h',
+                 'shrMLib.h',
+                 'sockets.h' ]
+
+ncommFileList = ['errLogLib.c',
+                 'hhashLib.c',
+                 'ipcKeyDbm.c',
+                 'ipcMsgQLib.c',
+                 'listObj.c',
+                 'mfileObj.c',
+                 'semLib.c',
+                 'msgQLib.c',
+                 'shrMLib.c',
+                 'asyncIo.c',
+                 'eventHandler.c',
+                 'eventQueue.c',
+                 'sendAsync.c' ]
+
+#		chanLib.c	\
+#		sockets.c	\
+#		signals.c	\
+#		fdmask.c
+
+chanObjPath     = os.path.join(cwd, os.pardir, 'ncomm')
+chanObjHdrList = [ 'sockets.h' ]
+chanObjFileList = ['sockets.c',
+                   'fdmask.c']
+
+procProcPath     = os.path.join(cwd, os.pardir, 'procproc')
+procProcHdrList = [ 'procQfuncs.h' ]
+procProcFileList = [ 'procQfuncs.c' ]
+ 
+acqProcPath  = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = [ 'config.h', 'sram.h' ]
+
+
+vwAcqPath     = os.path.join(cwd, os.pardir, 'vwacq')
+vwAcqHdrList = [ 'acqcmds.h',
+                 'hostAcqStructs.h' ]
+
+# vwAcqFileList = ['rngLLib.c']
+
+
+vnmrPath        = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'errorcodes.h',
+                'acqerrmsges.h' ]
+
+psgPath         = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = [ 'REV_NUMS.h' ]
+
+
+#---- All Sources and headers required for compilation -----
+
+# source files
+# expprocPath     = os.path.join(cwd, os.pardir, 'expproc')
+#expprocHdrList = [ 'commfuncs.h',
+#                   'expDoneCodes.h',
+#                   'hostMsgChannels.h',
+#                   'parser.h',
+#                   'shrstatinfo.h',
+#                   'shrexpinfo.h' ]
+
+expprocFileList = [ 
+		'bill.c',
+		'conhandler.c',
+		'excepthandler.c',
+		'expcmds.c',
+		'expproc.c',	
+		'commfuncs.c',	
+		'expfuncs.c',	
+		'parser.c',	
+		'expQfuncs.c',
+		'msgehandler.c',
+		'prochandler.c',
+		'socketfuncs.c',
+		'statfuncs.c',
+		'daemon.c' ]
+
+
+
+# build environment
+env = Environment(CCFLAGS    = '-O2 -m32',
+                  CPPDEFINES = ['LINUX', 'DEBUG', 'NODUMMY' ],
+                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib' ,
+                  CPPPATH    = [cwd])
+
+
+# actual builds
+envProg = env.Program(target  = procTarget,
+                           source  = [procProcFileList,
+                                      expprocFileList],
+                           LIBPATH = [cwd,
+                                      ncommPath],
+                           LIBS    = ['ncomm', 'm'])
+
+#LIBS    = ['ncomm', 'acqcomm', 'm', 'nsl'])
+#LIBS = -lm -lnsl
+#(umask 2; $(LINK.c) -o $@ -Wl,-rpath /vnmr/lib -L$(NCOMMDIR) $(EXPPROC_OBJ) $(PROCPROC_OBJ) -lncomm $(LIBS))
+
+buildMethods.makeSymLinks(env, procTarget, cwd, vwAcqPath, vwAcqHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(env, procTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, psgPath, psgHdrList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, expprocPath, expprocHdrList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, expprocPath, expprocFileList)
+
+# define with absolute path where built files will be copied
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))
+

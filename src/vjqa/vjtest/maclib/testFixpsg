@@ -1,0 +1,18 @@
+"macro testFixpsg"
+" Agilent test"
+
+$j=0
+$file=curexp+'/fixpsglog'
+write('reset',$file)
+vvLog('Test','fixpsg')
+shell('fixpsg >& '+$file):$e
+$res=''
+shell('grep "PSG Library Complete" ' + $file):$res
+if ($res<>'') then
+  vvLog('Pass','fixpsg')
+else
+  vvLog('Fail','fixpsg')
+  vvLog:$path
+  shell('cat '+$file+' >> '+$path+';cat'):$e
+endif
+shell('rm -f '+$file):$e

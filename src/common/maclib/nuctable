@@ -1,0 +1,87 @@
+"macro nuctable"
+" nuctable - show nucleus table for a given proton frequency "
+" 2005-01-12 - rk, started "
+" 2005-04-29 - rk, added restorenuctable facility "
+exists('/vnmr/nuctables/nuctable','file'):$e
+if not($e) then
+  write('error','%s: file "/vnmr/nuctables/nuctable" not found, aborting.',$0)
+  return
+endif
+if $0='restorenuctable' then
+  exists('/vnmr/nuctables','file','rwx'):$e
+  if not($e) then
+    write('error','error: %s requires write permission on /vnmr/nuctables',$0)
+    return
+  endif
+endif
+$h1std=0
+lookup('file','/vnmr/nuctables/nuctable','readline'):$line
+lookup('seek','H1','read'):$h1std
+if $#>0 then
+  if $0<>'nuctable' then
+    write('error','Usage:  %s',$0)
+    return
+  else
+    if typeof('$1') then
+      write('error','Usage:  %s<(H1_freq)>',$0)
+      return
+    else
+      $mult=$1/$h1std
+    endif
+  endif
+else
+  $ct=ct
+  $tn=tn
+  $sfrq=sfrq
+  tn='H1'
+  $mult=sfrq/$h1std
+  setvalue('tn',$tn)
+  setvalue('sfrq',$sfrq)
+  setvalue('ct',$ct)
+endif
+clear
+$line=''
+lookup('file','/vnmr/nuctables/nuctable','readline'):$line
+if $0='nuctable' then
+  write('alpha',$line)
+  $nu='' $freq=0
+  lookup('read'):$nu,$num
+  while $num>0 do
+    lookup('read','readline'):$freq,$line,$num
+    $freq=$freq*$mult
+    write('alpha','%-5s   %12.7f %s',$nu,$freq,$line)
+    lookup('read'):$nu,$num
+  endwhile
+  write('alpha','')
+else
+  $fstr=''
+  format(h1freq/100,3,1):$fstr
+  substr($fstr,1,1):$fstr
+  $rft1=''
+  substr(rftype,1,1):$rft1
+  $target1='/vnmr/nuctables/nuctab'+$fstr+$rft1
+  shell('rm -f',$target1):$dum
+  write('file',$target1,$line)
+  $nu='' $freq=0
+  lookup('read'):$nu,$num
+  while $num>0 do
+    lookup('read','readline'):$freq,$line,$num
+    $freq=$freq*$mult
+    write('file',$target1,'%-5s   %12.7f %s',$nu,$freq,$line)
+    lookup('read'):$nu,$num
+  endwhile
+  $rft2=''
+  $ix=2
+  length(rftype):$nrft
+  while $ix<=$nrft do
+    substr(rftype,$ix,1):$rft2
+    $target2='/vnmr/nuctables/nuctab'+$fstr+$rft2
+    if $target2<>$target1 then
+      shell('rm -f',$target2):$dum
+      shell('cp',$target1,$target2):$dum
+    endif
+    $ix=1+$ix
+  endwhile
+  shell('cat',$target1)
+  write('line3','Accurate nuctable(s) for this system calculated and stored')
+endif

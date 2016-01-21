@@ -1,0 +1,228 @@
+"macro psEdit"
+" appdirs - handle appdir editing "
+rights('canEditPrescan'):$e
+if ($e <> 1) then
+  return
+endif
+$xmlfile=curexp+'/tmpapp.xml'
+$filename= '/templates/vnmrj/choicefiles/prescanInfo'
+if ($# = 0) then
+  destroy('psOnOff'):$e
+  destroy('psMacro'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+
+  $file=userdir+$filename
+  exists($file,'file'):$e
+  if (not $e) then
+    exists('prescanInfo','templates/vnmrj/choicefiles'):$e,$file
+  endif
+  if (not $e) then
+    write('line3','Cannot edit prescans. prescanInfo file not found.')
+    return
+  endif
+
+  create('psOnOff','string')
+  create('psMacro','string')
+  create('psLabel','string')
+  create('psSave','string')
+  setgroup('psOnOff','display')
+  setgroup('psMacro','display')
+  setgroup('psLabel','display')
+  setgroup('psSave','display')
+  psSave='0'
+  $macros=''
+  $attrs=''
+  readfile($file,'$macros','$attrs','','local'):$num
+  $i = 0
+  $j = 0
+  while ($j < $num) do
+    $i = $i + 1
+    $j = $j + 1
+    psMacro[$i]= ''
+    psOnOff[$i]='-1'
+    psLabel[$i]=''
+    $i = $i + 1
+    psMacro[$i]= $macros[$j]
+    substr($attrs[$j],1,'delimiter',';\n'):$flag
+    psOnOff[$i]=$flag
+    substr($attrs[$j],2,'delimiter',';\n'):$label
+    psLabel[$i]=$label
+  endwhile
+  $i = $i + 1
+  psOnOff[$i]='-1'
+  psMacro[$i]=''
+  psLabel[$i]=''
+  exists(systemdir+$filename,'file','rw'):$perm
+  $ysize = 60 + $i*30 + $perm*30
+  $ys = ''
+  format($ysize,0,0):$ys
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="570 `+$ys+`"  \n\
+    style="Heading2"  \n\
+    label="Appdir"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="135 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Prescan macro" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="300 30" size="180 20" \n\
+      style="PlainText" \n\
+      label="Prescan Label" \n\
+      justify="Left" \n\
+      /> \n`)
+  $num = 0
+  $yp=''
+  $numch=''
+  while ($num < $i) do
+    $num=$num + 1
+    $ypos = 30 + $num * 20
+    format($ypos,0,0):$yp
+    format($num,0,0):$numch
+    write('file',$xmlfile,`\n
+    <entry loc="300 `+$yp+`" size="250 20"
+      style="PlainText"
+      vc="`+$0+`('set',`+$numch+`,'label','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'label'):$VALUE"
+      disable="Grayed out"
+      />
+    <entry loc="135 `+$yp+`" size="150 20"
+      style="PlainText"
+      vc="`+$0+`('set',`+$numch+`,'path','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'path'):$VALUE"
+      disable="Grayed out"
+      />
+    <menu loc="20 `+$yp+`" size="105 20"
+      style="PlainText"
+      label="menu"
+      vc="`+$0+`('set',`+$numch+`,'flag','$VALUE')"
+      set="`+$0+`('get',`+$numch+`,'flag'):$VALUE"
+      editable="No"
+      >
+      <mlabel
+        label="Enabled"
+        chval="on"
+        />
+      <mlabel
+        label="Disabled"
+        chval="off"
+        />
+     <mlabel
+        label="Remove(d)"
+        chval="-1"
+        />
+    </menu> \n`)
+
+
+  endwhile
+  if ($perm = 1) then
+    $ypos = $ypos + 30
+    format($ypos,0,0):$yp
+    write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as global prescans" \n\
+      vc="psSave='2'" \n\
+      set="$VALUE=(psSave='2')" \n\
+      />`)
+  endif
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as private prescans" \n\
+      vq="psSave" \n\
+      vc="psSave='0'" \n\
+      set="$VALUE=(psSave='0')" \n\
+      />`)
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Reset to system default prescans" \n\
+      vq="psSave" \n\
+      vc="psSave='1'" \n\
+      set="$VALUE=(psSave='1')" \n\
+      />`)
+  write('file',$xmlfile,'  </group>\n</template>')
+  
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/'+$0+'.html', \
+   'pnewupdate:true', 'cancel:'+$0+'(`cancel`)', 'ok:'+$0+'(`ok`)', \
+   'title:Prescan Editor')
+
+elseif ($1 = 'set') then
+  if ($3 = 'flag') then
+    psOnOff[$2] = $4
+  elseif ($3 = 'path') then
+    psMacro[$2] = $4
+  elseif ($3 = 'label') then
+    psLabel[$2] = $4
+  endif
+
+elseif ($1 = 'get') then
+  if ($3 = 'flag') then
+    return(psOnOff[$2])
+  elseif ($3 = 'path') then
+    return(psMacro[$2])
+  elseif ($3 = 'label') then
+    return(psLabel[$2])
+  endif
+
+elseif ($1 = 'ok') then
+  delete($xmlfile)
+  if (psSave[1] = '1') then      // return to default
+    rm('-f',userdir+$filename):$e
+  else
+    $file = curexp+'/tmpapp'
+    $num = size('psOnOff')
+    $i = 0
+    write('reset',$file)
+    shell('date'):$date
+    write('file',$file,'# Updated by %s on %s',operator,$date)
+    write('file',$file,'# macro followed by semicolon separated attributes')
+    write('file',$file,'#%-12sonoff;label;',' macro')
+    write('file',$file,'#')
+    while ($i < $num) do
+      $i = $i + 1
+      if (psOnOff[$i] <> '-1') and (psMacro[$i] <> '') then
+        write('file',$file,'%-12s %s;%s;', \
+               psMacro[$i], psOnOff[$i], psLabel[$i])
+      endif
+    endwhile
+    if (psSave = '0') then  // save locally
+      shell('mkdir -p '+userdir+'/templates/vnmrj/choicefiles'):$e
+      copy($file,userdir+$filename)
+    else                           // save globally
+      copy($file,systemdir+$filename)
+    endif
+    delete($file)
+  endif
+  destroy('psOnOff'):$e
+  destroy('psMacro'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+elseif ($1 = 'cancel') then
+  delete($xmlfile)
+  destroy('psOnOff'):$e
+  destroy('psMacro'):$e
+  destroy('psLabel'):$e
+  destroy('psSave'):$e
+endif

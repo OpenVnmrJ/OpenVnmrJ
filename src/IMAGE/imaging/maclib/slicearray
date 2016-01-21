@@ -1,0 +1,44 @@
+"macro slicearray"
+
+" slicearray - Macro to set slice array"
+
+"  Usage: pssarray"
+"         pssarray(slices)              -gap set to thk"
+"         pssarray(slices,gap)          -gap(mm), offset set to 0"
+"         pssarray(slices,gap,offset)   -offset(mm)"
+
+
+
+if ($# = 1) then
+    $slices = $1
+    $gap = thk
+    write('line3','gap set to %6.3f (mm)', thk)
+    $offset = 0
+elseif ($# = 2) then
+    $slices = $1
+    $gap = $2
+    $offset = 0
+elseif ($# = 3) then
+    $slices = $1
+    $gap = $2
+    $offset = $3
+elseif ($# > 3) then
+   write('error','usage:  pssarray<(<slices,gap,offset>)>')
+   return(1)
+endif
+if ($# <1 ) then
+   input('enter number of slices: '):$slices
+   input('enter slice gap(mm): '):$gap
+   input('enter center slice position(mm): '):$offset
+endif
+
+$step = ($gap + thk)/10.0  "separation in mm"
+
+
+$start = $step*($slices-1)/2.0    "1st slice position"
+
+$start = -$start+$offset
+
+$pss='pss'
+$nodg='nodg'
+array($pss,$slices,$start,$step,$nodg)

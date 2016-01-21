@@ -1,0 +1,84 @@
+"macro AT11salt100mM"
+"AT11salt100mM" "90 Degree Stability/Sensitivity using 100mM NaCl Sample  "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('90-Degree Pulse Stability/Sensitivity using 100mM NaCl Sample')
+   at_currenttest='90stability_ch1_salt100mM'
+   array('nt',20,1,0) full
+   sw=20000                " large enough to measure s/n accurately"
+   pw=at_pw90_salt100mM
+   crl rfl=sw/2 rfp=0
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='AT11salt100mM(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 90-Degree Pulse Stability (100mM NaCl sample)')
+   dps
+elseif ($1='PART1') then
+
+   wft crl rfl=sw/2 rfp=0 f
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB90ch1salt100mM','90 Degree Pulse Stability (100mM NaCl sample)','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','90 Degree Pulse Stability (100mM NaCl sample): %3.2f percent',100-$stddev)
+
+
+   cz ph select(1) aph
+   f peak:$int,cr rl(0) z(2000) z(-2000)
+   cr=7000 delta=1000
+   $snav=0 $spectrum=1
+   repeat
+      select($spectrum)
+      bc dsn:$sn
+      $snav=$snav+$sn
+      $spectrum=$spectrum+1
+   until $spectrum>arraydim
+   $snav=trunc($snav/(arraydim))
+   r3=$snav
+   write('graphics',100,175,' Average S/N : %6.0f ',$snav)
+   ATrecord('SENSITIVITYsalt100mM','Average S/N for 20 Trials:','sensitivity',$snav,'  Oversampling_factor',oversamp)
+   write('file',autotestdir+'/REPORT','Average S/N for 20 Trials (100mM NaCl sample) = %5.0f with dsp=%s',$snav,dsp)
+   pw(10)
+   text('Determining 10-Degree Pulse Stability (100mM NaCl sample)')
+   write('line3','Determining 10-Degree Pulse Stability (100mM NaCl sample)')
+   dps gain=gain+12   "higher gain for more accurate s/n measurement for cryogenic probes"
+   at_currenttest='10stability_ch1_salt100mM'
+   wexp='AT11salt100mM(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft crl rfl=sw/2 rfp=0 f
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB10ch1salt100mM','10 Degree Pulse Stability (100mM NaCl sample)','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','10 Degree Pulse Stability (100mM NaCl sample): %3.2f percent',100-$stddev)
+
+
+   cz ph select(1) aph
+   f peak:$int,cr rl(0) z(2000) z(-2000)
+   cr=7000 delta=1000
+   $snav=0 $spectrum=1
+   repeat
+      select($spectrum)
+      bc dsn:$sn
+      $snav=$snav+$sn
+      $spectrum=$spectrum+1
+   until $spectrum>arraydim
+   $snav=trunc($snav/(arraydim))
+   $ratio9010=r3/$snav
+   $ratio9010=trunc($ratio9010*100)/100
+   write('graphics',100,175,' Average S/N : %6.0f ',$snav)
+   ATrecord('SENSITIVITY_10degsalt100mM','Average S/N for 20 Trials (10degree flip) and Ratio of SN(90deg) to SN(10deg):','sensitivity',$snav,' Ratio',$ratio9010,'  Oversampling_factor',oversamp)
+   write('file',autotestdir+'/REPORT','Average S/N for 20 10-degree pulse Trials (100mM NaCl sample) = %5.0f with dsp=%s',$snav,dsp)
+   write('file',autotestdir+'/REPORT','Ratio of S/N for 90-degree to 10-degree Flip Angles (100mM NaCl sample) = %1.2f',$ratio9010)
+ ATnext
+endif

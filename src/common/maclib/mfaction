@@ -1,0 +1,526 @@
+"macro mfaction"
+
+if($# < 0.5) then return endif
+
+if($1 = 'init') then
+    exists('buttonMode','parameter','global'):$e
+    if (not $e) then
+      mfpars
+    endif
+    buttonMode = 0
+    mfText=''
+    mfTextLayout='None'
+    mfMexp=0
+    vnmrjcmd('canvas','frameBox', mfShowPlotterbox)
+
+elseif($1 = 'finishInsetFrame') then
+    setButtonMode(0)
+
+"elseif($1 = 'finishZoomFrame') then" 
+"    setButtonMode(0)" 
+
+elseif($1 = 'new') then
+   if($# > 1.5) then
+     $type = $2
+   else 
+     $type = 'graphics'
+   endif
+    
+   frameAction('new', $type)
+  
+   $multiExpOk = 0
+   exists('mfMexp', 'parameter', 'global'):$e
+   if($e > 0.5) then
+      $multiExpOk = mfMexp
+   endif
+
+   "create new exp if frame type is graphics"
+   if($multiExpOk > 0.5 and $type = 'graphics') then
+	mfaction('newExp')
+   endif
+
+elseif($1 = 'newExp') then
+
+   frameAction('getId'):$id
+   if($id < 1.5) then return endif
+
+   jexp:$en
+   if($en > 999) then $en = 1*$en
+   elseif($en > 99) then $en = 10*$en
+   elseif($en > 9) then $en = 100*$en
+   else $en = 1000*$en
+   endif
+   $en = $en + $id 
+   $s=''
+   format($en,0,0):$s
+   $epath = userdir + '/exp' + $s
+   $emacro = userdir + '/maclib/jexp' + $s
+
+   exists($epath, 'directory'):$e
+   exists($emacro, 'file'):$e2
+   if($e < 0.5 or $e2 < 0.5) then
+      shell('rm -rf ' + $epath +' '+ $emacro)
+      cexp($en)
+   endif
+
+   shell('rm -f ' + userdir + '/lock_'+$s+'*')
+   exec('jexp'+$s+'\n')
+
+elseif($1 = 'deleteAllText') then
+   frameAction('deleteText')
+
+elseif($1 = 'closeAllText') then
+   vnmrjcmd('canvas','textBox','hideAll')
+
+elseif($1 = 'deleteText') then
+   if(mfText = '') then return endif
+   frameAction('deleteSel')
+
+elseif($1 = 'deleteInset') then
+   if(mfText <> '') then return endif
+   frameAction('getId'):$id
+   if($id < 1.5) then return endif
+   frameAction('deleteSel')
+
+elseif($1 = 'deleteSel') then
+   frameAction('deleteSel')
+
+elseif($1 = 'fullsize') then
+   if(mfText <> '') then
+      frameAction('fullsize', 1)
+   elseif($# > 1.5) then
+      frameAction('fullsize', $2)
+   else
+      frameAction('fullsize')
+   endif
+
+elseif($1 = 'deleteAll') then
+   frameAction('deleteAll')
+   "repaint"
+
+elseif($1 = 'showAllText') then
+   vnmrjcmd('canvas','textBox','showAll')
+
+elseif($1 = 'jexp' and $# > 2.5) then
+   if(appmode = 'imaging') then return endif
+   frameAction('getFrameCount'):$nf
+   if($nf<2) then return endif
+   
+   " called at the begining of jexp. $2 expID, $3 is frame id. "
+   frameAction('getId'):$id
+   if($id < -0.5 or $3 < -0.5) then return endif
+
+   $multiExpOk = 0
+   exists('mfMexp', 'parameter', 'global'):$e
+   if($e > 0.5) then
+      $multiExpOk = mfMexp
+   endif
+
+   if($multiExpOk < 0.5) then
+   " if there is multiple frames, select the default frame. "
+   " then delete all frames "
+	frameAction('deleteAll')
+	mfText = 'None' 
+   endif
+/*
+     $s=''
+     format($2,0,0):$s
+     $lpath = userdir + '/lock_' + $s +'.primary'
+     exists($lpath, 'file'):$e
+     if($e > 0.5) then
+        return
+     endif
+
+   $i = 0
+   $k = 0
+   while($i < jviewports[1]) do
+	$i = $i + 1
+	if(jvpexps[$i] > 0.5) then
+	   $k = $k + 1
+	endif
+   endwhile
+   if($k > 1.5 and jviewports[1] > 1.5) then
+      jviewports[4+jviewport]=$2
+
+      vnmrjcmd('overlaySpec','overlayMode')
+   endif
+*/
+elseif($1 = 'rt' and $# > 4.5) then
+   if(appmode = 'imaging') then return endif
+   frameAction('getFrameCount'):$nf
+   if($nf<2) then return endif
+   " called at the beginning of rt. $2 is rt path, $3 is frame id. "
+   " $4 is expID of current frame, $5 is expID of default frame. "
+   $dpath = $2
+   strstr($dpath, '.fid', 'last'):$n,$s1
+   length($dpath):$l
+   " return if not fid"
+   if(($l - 3) <> $n) then return endif
+  
+   frameAction('getId'):$id
+   if($id < -0.5 or $3 < -0.5) then return endif
+
+   $multiExpOk = 0
+   exists('mfMexp', 'parameter', 'global'):$e
+   if($e > 0.5) then
+      $multiExpOk = mfMexp
+   endif
+
+   if($multiExpOk < 0.5) then
+   " if there is multiple frames, select the default frame. "
+   " then delete all frames "
+	frameAction('deleteAll')
+	mfText = 'None' 
+   endif
+/*
+   $i = 0
+   $k = 0
+   while($i < jviewports[1]) do
+	$i = $i + 1
+	if(jvpexps[$i] > 0.5) then
+	   $k = $k + 1
+	endif
+   endwhile
+   if($k > 1.5 and jviewports[1] > 1.5) then
+      vnmrjcmd('overlaySpec','overlayMode')
+   endif
+*/
+elseif($1 = 'showText' and $# > 1.5) then
+" $cmd is name of the text (annotation) file. "
+" $path = $dir + $cmd is fullpath of the text file. "
+" $dir is user or system annotation directory. "
+  $cmd = $2 
+  if($cmd = 'none' or $cmd = 'None') then 
+     frameAction('deleteText')
+     mfText = ''
+     return
+  endif
+
+  mfText = $cmd 
+  if($# >8.5) then
+    frameAction('show','text', $cmd, $3, $4, $5, $6, $7, $8, $9)
+  elseif($# >5.5) then
+    frameAction('show','text', $cmd, $3, $4, $5, $6, mfTextColor, mfTextFontSize, mfTextStyle)
+  else
+    mfaction('getTextPath',$cmd):$path
+    if($path = '') then return endif
+
+    $n = 1
+    frameAction('getFrameCount'):$n
+    $x = 20 * ($n-1)
+    $y = 20 * ($n-1)
+    $wd = 50
+    $ht = 50
+    frameAction('getWinSize'):$wd,$ht
+    $wd = $wd/2
+    $ht = $ht/2
+    shell('wc -l '+$path):$s substr($s, 1):$n
+    if($n > 0 and mfTextFontSize > 0) then
+       $ht = mfTextFontSize*$n*1.2 
+    elseif(n > 0) then
+       $ht = 20*$n
+    endif
+    shell('wc -m '+$path):$s substr($s, 1):$c
+    if($n > 0.5) then $c = $c/$n endif
+    if($c > 0 and mfTextFontSize > 0) then
+       $wd = mfTextFontSize*$c*1.2
+    elseif($c > 0) then
+       $wd = 20*$c
+    endif
+    frameAction('show','text', mfText, $x, $y, $wd, $ht, mfTextColor, mfTextFontSize, mfTextStyle)
+  endif
+
+elseif($1 = 'newText') then
+  $id = ''
+  frameAction('newId'):$id
+  mfText = 'untiltled'+ $id
+  mfaction('getTmpTextPath', 'editor'):$tpath
+  shell('rm -f ' + $tpath) 
+  vnmrjcmd('popup', 'mode:modal', 'file:NewText.xml','location:topMenuBar','title:Text Editor')
+
+elseif($1 = 'textEditor') then
+  mfaction('getTextPath', mfText):$curPath
+  mfaction('getTmpTextPath', 'editor'):$tpath
+  if($curPath = '') then
+     shell('rm -f ' + $tpath) 
+  else
+     shell('cp ' + $curPath +' '+ $tpath) 
+  endif
+  vnmrjcmd('popup', 'mode:modeless', 'file:TextEditor.xml','location:topMenuBar','title:Text Editor')
+
+elseif($1 = 'saveNewText') then
+    if($# > 1.5) then
+	mfText = $2
+    else
+       $path = userdir + '/templates/vnmrj/annotation/text/untiltled'
+       $name = ''
+       $i = 1
+       while($name = '') do
+          format($i, 0, 0):$name
+          $file = $path+$name 
+          exists($file,'file'):$e
+          if($e > 0.5) then 
+	     $name = ''
+             $i = $i + 1
+          endif
+       endwhile
+       mfText = 'untiltled' + $name
+    endif 
+    mfaction('getTmpTextPath', 'editor'):$tpath
+    mfaction('getTextDir'):$dir
+    shell('cp ' + $tpath +' '+ $dir + mfText) 
+    
+    $n = 1
+    frameAction('getFrameCount'):$n
+    $x = 20 * ($n-1)
+    $y = 20 * ($n-1)
+    $wd = 50
+    $ht = 50
+    frameAction('getWinSize'):$wd,$ht
+    $wd = $wd/2
+    $ht = $ht/2
+    shell('wc -l '+$dir + mfText):$s substr($s, 1):$n
+    if($n > 0 and mfTextFontSize > 0) then
+       $ht = mfTextFontSize*$n*1.2 
+    elseif($n > 0) then
+       $ht = 20*$n
+    endif
+    shell('wc -m '+$dir + mfText):$s substr($s, 1):$c
+    if($n > 0.5) then $c = $c/$n endif
+    if($c > 0 and mfTextFontSize > 0) then
+       $wd = mfTextFontSize*$c*1.2
+    elseif($c > 0) then
+       $wd = 20*$c
+    endif
+    frameAction('show','text', mfText, $x, $y, $wd, $ht, mfTextColor, mfTextFontSize, mfTextStyle)
+
+elseif($1 = 'saveText') then
+    if(mfText = '') then return endif
+
+    mfaction('getTmpTextPath', 'editor'):$tpath
+    mfaction('getTextPath', mfText):$path
+    shell('cp ' + $tpath +' '+ $path) 
+
+    $n = 1
+    shell('wc -l '+$path):$s substr($s, 1):$n
+    if($n > 0 and mfTextFontSize > 0) then
+       $ht = mfTextFontSize*$n*1.2 
+    else
+       $ht = 0
+    endif
+    frameAction('show','text', mfText, 0,0,0, $ht, mfTextColor, mfTextFontSize, mfTextStyle)
+
+elseif($1 = 'displayText' and $# > 9.5) then
+    mfaction('getTextPath', $2):$path
+    if($path = '') then return endif
+
+    mfaction('getTmpTextPath', 'editor'):$tpath
+    shell('cp ' + $path +' '+ $tpath)
+    mfaction('getTmpTextPath', 'display'):$tpath
+    mfaction('parseText', $path, $tpath)
+    mfTextColor = $8 
+    mfTextFontSize = $9 
+    mfTextStyle = $10 
+   
+    vnmrjcmd('canvas','textBox','open',$tpath,$3,$4,$5,$6,$7,$8,$9,$10)    
+
+elseif($1 = 'updateText' and $# > 1.5) then
+    mfaction('getTextPath', $2):$path
+    if($path = '') then return endif
+
+    mfaction('getTmpTextPath', 'editor'):$tpath
+    shell('cp ' + $path +' '+ $tpath)
+    mfaction('getTmpTextPath', 'display'):$tpath
+    mfaction('parseText', $path, $tpath)
+
+    vnmrjcmd('pnew','mfText') 
+
+elseif($1 = 'displayText' and $# > 1.5) then
+    mfaction('getTextPath', $2):$path
+    if($path = '') then return endif
+
+    mfaction('getTmpTextPath', 'editor'):$tpath
+    shell('cp ' + $path +' '+ $tpath)
+    mfaction('getTmpTextPath', 'display'):$tpath
+    mfaction('parseText', $path, $tpath)
+    if($# > 4.5) then
+       mfTextColor = $3 
+       mfTextFontSize = $4 
+       mfTextStyle = $5 
+    endif
+    vnmrjcmd('canvas','textfile', $tpath, 0, 0, mfTextColor, mfTextFontSize, mfTextStyle)
+"will replate textEditor with java code, or fix java code so editor will be updated " 
+"    mfaction('textEditor')" 
+   return
+endif
+
+if($1 = 'getTextPath' and $# > 1.5) then
+  $file = $2
+  substr($file, 1, 1):$s
+  if($s <> '/') then
+   $path = curexp +'/' + $file
+   exists($path, 'file'):$e
+   if($e < 0.5) then
+    $path = userdir + '/templates/vnmrj/annotation/text/' + $file
+    exists($path, 'file'):$e
+    if($e < 0.5) then
+      $path = systemdir + '/templates/vnmrj/annotation/text/' + $file
+      exists($path, 'file'):$e
+      if($e < 0.5) then
+        $path = userdir + '/templates/vnmrj/annotation/text'
+        exists($path, 'directory'):$e
+        if($e < 0.5) then
+          shell('mkdir -p ' + $path)
+        endif
+        $path = ''
+      endif
+    endif
+   endif
+   $file = $path
+  endif
+  return($file)
+
+elseif($1 = 'getTextDir') then
+    $dir = userdir + '/templates/vnmrj/annotation/text/'
+    exists($dir, 'directory'):$e
+    if($e < 0.5) then
+	shell('mkdir -p ' +$dir)
+	$path = systemdir + '/templates/vnmrj/annotation/text'
+        exists($path, 'directory'):$e
+        if($e > 0.5) then
+           shell('cp '+ $path +'/* '+$dir)
+	endif
+    endif
+    return($dir)
+
+elseif($1 = 'getTmpTextPath' and $# > 1.5) then
+    if($2 = 'display') then
+       return(userdir + '/mfDisplayText')
+    else
+       return(userdir + '/mfEditText')
+    endif
+
+elseif($1 = 'parseText' and $# > 2.5) then
+      
+" if $file is not a fullpath, check annotation dirs "
+   substr($2, 1, 1):$s
+   if($s <> '/') then
+	mfaction('getTextPath', $2):$file
+   else
+        $file = $2
+   endif
+
+   shell('rm -f ' + $3)
+
+   $ok = 1
+   $t=''
+   $s1=''
+   $s2=''
+   $s3=''
+   $par=''
+   lookup('file',$file)
+   repeat
+      lookup('readline'):$t,$ok
+      if ($ok = 1) then
+
+   " skip comments "
+       substr($t, 1, 1):$s
+       if($s <> '#') then
+" parameter name inside {} will be replaced by its value. "
+         strstr($t, '{'):$n,$s1,$s2
+         if($n > 0.5) then
+           strstr($s2,'}'):$n,$par,$s3
+           if($n > 0.5) then
+              $n = -1
+              $n = typeof($par)
+              if($n > 0.5) then
+                 $t = $s1 + {$par} + $s3
+              elseif($n > -0.5) then
+                 $f = {$par}
+                 format($f, 0, 3):$s2
+                 $t = $s1 + $s2 + $s3
+              endif
+           endif
+         endif
+         write('file',$3, $t)
+       endif
+      endif
+   until ($ok = 0)
+
+elseif($1 = 'getTextMenuPath') then
+    $path = userdir + '/templates/vnmrj/annotation/text/mfTextLayout'
+    exists($path, 'directory'):$e
+    if($e < 0.5) then
+      shell('mkdir -p ' + $path)
+      $spath = systemdir + '/templates/vnmrj/annotation/text/mfTextLayout'
+      exists($spath, 'file'):$e
+      if($e > 0.5) then
+        shell('cp -f ' +$spath +'/* '+ $path)
+      endif
+    endif
+    return($path)
+
+elseif($1 = 'showTextLayout' and $# > 1.5) then
+    mfaction('getTextMenuPath'):$path
+    $path = $path +'/'+$2
+    exists($path, 'file'):$e
+    if($e < 0.5) then return endif
+
+    frameAction('showTextLayout', $path)
+    mfTextLayout = $2 
+    
+
+elseif($1 = 'saveTextLayout' and $# > 1.5) then
+    mfaction('getTextMenuPath'):$path
+    $path = $path +'/'+ $2
+    frameAction('saveTextLayout', $path)
+    mfTextLayout = $2 
+
+elseif($1 = 'deleteTextLayout' and $# > 1.5) then
+    mfaction('getTextMenuPath'):$path
+    $path = $path +'/'+$2
+    exists($path, 'file'):$e
+    if($e > 0.5) then 
+       frameAction('deleteText')
+       shell('rm -f ' + $path)
+       mfTextLayout = 'None'
+    endif
+
+elseif($1 = 'mfZoom' or $1 = 'mfzoom') then
+   if(mfText <> '') then
+      frameAction('select',1)
+      return
+   endif
+  if($# > 1.5) then
+   frameAction('mfZoom', $2)
+  else
+   frameAction('mfZoom', 1)
+  endif
+elseif($1 = 'fullzoom') then
+   if(mfText <> '') then
+      frameAction('select',1)
+      return
+   endif
+   f full frameAction('mfZoom',0)
+
+   // if this is the active viewport, then sync other viewports if needed.
+   if(activeviewport<>jviewport) then return endif
+
+   $sync=0
+   if(overlayMode=3) then $sync=1 endif
+   $n=size('trackAxis') 
+   while($n>0) do
+     $sync=$sync+trackAxis[$n] 
+     $n=$n-1
+   endwhile
+   if($sync<1) then return endif
+   $n=jviewports[1]
+   if(jviewports[1]<2) then return endif
+   while($n>1) do
+     if($n <> jviewport and jvpexps[$n]>0) then
+       vnmrjcmd('VP ',$n,'f full frameAction(`mfZoom`,0)')
+     endif
+     $n=$n-1
+   endwhile
+endif
+

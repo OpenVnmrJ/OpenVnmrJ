@@ -1,0 +1,124 @@
+//@copy-c-declaration /*
+//@copy-c-declaration *
+//@copy-c-declaration * Varian,Inc. All Rights Reserved.
+//@copy-c-declaration * This software contains proprietary and confidential
+//@copy-c-declaration * information of Varian, Inc. and its contributors.
+//@copy-c-declaration * Use, disclosure and reproduction is prohibited without
+//@copy-c-declaration * prior consent.
+//@copy-c-declaration */
+//@copy-c-declaration /*
+//@copy-c-declaration *  Author: Greg Brissey  4/28/2004
+//@copy-c-declaration */
+
+//@copy-c-declaration #include "NDDS_Obj.h"
+
+//@copy-c-declaration /* cmd types */
+
+const long C_DOWNLOAD = 1;
+const long C_REPLY_ACK = 2;
+const long C_XFER_NUMBER = 3;
+const long C_XFER_ACK = 4;
+const long C_XFER_ABORT = 5;
+const long C_NAMEBUF_QUERY = 6;
+const long C_QUERY_ACK = 7;
+const long C_DWNLD_START = 8;
+const long C_DWNLD_CMPLT = 9;
+
+//@copy-c-declaration /* topic name form */
+//@copy-c-declaration /* topic names form: h/rf1/dwnld/strm, rf1/h/dwnld/reply */
+
+const string HOST_PUB_TOPIC_FORMAT_STR = "h/%s/dwnld/strm";
+const string CNTLR_SUB_TOPIC_FORMAT_STR = "h/%s/dwnld/strm";
+
+//@copy-c-declaration /* The Robart's & 128x128 EPI Settings */
+const long HOST_CODES_DOWNLD_PUB_QSIZE = 2;   /* was 1 */
+const long HOST_CODES_DOWNLD_PUB_HIWATER = 1;
+const long HOST_CODES_DOWNLD_PUB_LOWWATER = 0;
+const long HOST_CODES_DOWNLD_PUB_ACKSPERQ = 1;
+
+const long HOST_CODES_DOWNLD_SUB_QSIZE = 4;   /* was 1 */
+const long CTLR_CODES_DOWNLD_SUB_QSIZE = 4;   /* was 1 */
+
+const long CTLR_CODES_DOWNLD_PUB_QSIZE = 2;
+const long CTLR_CODES_DOWNLD_PUB_HIWATER = 1;
+const long CTLR_CODES_DOWNLD_PUB_LOWWATER = 0;
+const long CTLR_CODES_DOWNLD_PUB_ACKSPERQ = 1;
+
+const string CNTLR_PUB_TOPIC_FORMAT_STR = "%s/h/dwnld/reply";
+const string HOST_SUB_TOPIC_FORMAT_STR = "%s/h/dwnld/reply";
+
+const string CNTLR_CODES_DOWNLD_PUB_M21_STR = "cntlr/dwnld/reply";
+const string HOST_CODES_DOWNLD_SUB_M21_STR = "cntlr/dwnld/reply";
+ 
+//@copy-c-declaration /* download types */
+
+const long DYNAMIC =  1;
+const long TABLES = 2;
+const long FIXED = 3;
+const long VME = 4;
+
+
+const long MAX_IPv4_UDP_SIZE_BYTES  =  65535;   /* IPv4 UDP max Packet size */
+const long NDDS_MAX_Size_Serialize = 64512;    /* serialization for NDDS  63KB */
+
+/* const MAX_FIXCODE_SIZE = 64000;	  /* Max data size bytes */
+/* lowered size, that help the no-acode problem at Robarts & a 128x128 EPI , GMB 5/5/06 */
+const long MAX_FIXCODE_SIZE = 32000;		 /* Max data size bytes */
+const long MAX_STR_SIZE = 512;
+const long MAX_CNTLRSTR_SIZE = 32;
+/* const MAX_SIZE = 32600; */
+/* const MAX_FIXCODE_SIZE = 16384; */
+
+struct Codes_Downld {
+        long            key; //@key
+        short           cmdtype;     /* download command, 'downLoad', etc. */
+        short           status;     /* status */
+        unsigned long  totalBytes;  /* total size of data being transferred */
+        unsigned long  dataOffset;  /* for multi parts, offset into the buffer */
+        unsigned long  sn;
+        unsigned long  ackInterval;  /* interval to which ack OK or Error in receiving codes */
+	unsigned long crc32chksum;  /* CRC-32 checksum */
+        string<MAX_CNTLRSTR_SIZE> nodeId;  /* node name, e.g. rf1, master1, ddr1, etc. */
+        string<MAX_STR_SIZE> label;  /* name buffer label */
+        string<MAX_STR_SIZE> msgstr;  /* reserved */
+        sequence<octet, MAX_FIXCODE_SIZE> data;
+};
+
+// struct Codes_Downld_Status {
+//         unsigned long    dynBufsTotal; /*Total  # of dynamic buffers */
+//         unsigned long    dynBufsFree; /* # of dynamic buffers free */
+//         unsigned long    fixBufsTotal; /*Total  # of dynamic buffers */
+//         unsigned long    fixBufsFree; /* # of Fixed buffers free */
+//         unsigned long    fixMaxBufSize; 
+// };
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration     extern "C" {
+//@copy-c-declaration #endif
+//@copy-c-declaration 
+//@copy-c-declaration extern void getCodes_DownldInfo(NDDS_OBJ *pObj);
+// //@copy-c-declaration extern void getCodes_DownldStatusInfo(NDDS_OBJ *pObj);
+//@copy-c-declaration 
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration }
+//@copy-c-declaration #endif
+
+// //@copy-c-declaration /* Direct Code from Codes_Downld.x */
+// //@copy-c void getCodes_DownldInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Codes_DownldNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Codes_DownldNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Codes_DownldAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Codes_DownldMaxSize;
+// //@copy-c }
+// //@copy-c 
+// //@copy-c void getCodes_DownldStatusInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Codes_Downld_StatusNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Codes_Downld_StatusNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Codes_Downld_StatusAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Codes_Downld_StatusMaxSize;
+// //@copy-c }
+

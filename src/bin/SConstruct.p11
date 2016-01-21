@@ -1,0 +1,100 @@
+#!
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath = os.path.join(cwd, os.pardir, 'vnmr')
+safep11TargetList = ['safecp']
+
+pToolsDependantTargetList = ['chVJlist',
+                             'auditcp']
+
+pToolsDependantp11TargetList = ['writeTrash',
+                                'writeAaudit']
+
+md5AndPToolsDependantTargetList = ['vnmrMD5',
+                                   'chchsums']
+
+# build environments
+env = Environment(CCFLAGS = '-m32 -O -DLINUX -DP11',
+                  LINKFLAGS = '-m32')
+
+# shared objects
+md5cObj = env.SharedObject(source = 'md5c.c')
+p11ToolsObj = env.SharedObject(source = 'p11Tools.c')
+
+# define with absolute path where built files will be copied
+optionsInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                  'options', 'standard', 'P11', 'bin')
+
+# define with absolute path where built files will be copied for bin/p11
+optionsInstallP11Path = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                  'options', 'standard', 'P11', 'p11', 'bin')
+
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                  'vnmr', 'bin')
+# make sure the path(s) exist
+if not os.path.exists(optionsInstallPath):
+   os.makedirs(optionsInstallPath)
+
+# make sure the path(s) exist
+if not os.path.exists(optionsInstallP11Path):
+   os.makedirs(optionsInstallP11Path)
+
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actual builds
+for i in safep11TargetList:
+   tempBuildObj = env.Program(target = i,
+                              source = i + '.c')
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, [i + '.c'])
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallP11Path, os.path.join(cwd, i))))
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallPath, os.path.join(cwd, i))))
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(os.path.join(cwd, os.pardir, os.pardir, os.pardir,'vnmr','bin'), os.path.join(cwd, i))))
+
+for i in pToolsDependantTargetList:
+   tempBuildObj = env.Program(target = i,
+                              source = [i + '.c',
+                                        p11ToolsObj])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, [i + '.c'])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['p11Tools.c'])
+   if i == 'auditcp':
+      buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['md5global.h',
+                                                                   'md5.h'])
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallPath, os.path.join(cwd, i))))
+
+for i in pToolsDependantp11TargetList:
+   tempBuildObj = env.Program(target = i,
+                              source = [i + '.c',
+                                        p11ToolsObj])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, [i + '.c'])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['p11Tools.c'])
+   if i == 'auditcp':
+      buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['md5global.h',
+                                                                   'md5.h'])
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallP11Path, os.path.join(cwd, i))))
+
+for i in md5AndPToolsDependantTargetList:
+   tempBuildObj = env.Program(target = i,
+                              source = [i + '.c',
+                                        md5cObj,
+                                        p11ToolsObj])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, [i + '.c'])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['p11Tools.c'])
+   buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['md5c.c'])
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallPath, os.path.join(cwd, i))))
+

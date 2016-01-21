@@ -1,0 +1,74 @@
+"macro SamplingSch"
+
+if ($# < 2) then $2=curexp endif
+$sch=$2+'/sampling.sch'
+getdim:$dim
+if $dim<2 then return endif
+
+exists('CSniIndex','parameter'):$parex
+exists('CSni2Index','parameter'):$par2ex
+if ($parex<0.5) or ($par2ex<0.5) then
+    return
+endif
+
+if ($1='write') then
+    rm('-f',$sch):$dum
+    $parex=0 $par2ex=0
+
+    $parex=size('CSniIndex')
+    $par2ex=size('CSni2Index')
+    if $parex=1 and CSniIndex[1]=0 then $parex=0 endif
+    if $par2ex=1 and CSni2Index[1]=0 then $par2ex=0 endif
+/*
+    if $parex then
+    	$parex=CSniIndex[1]
+    endif
+    if $par2ex then
+    	$par2ex=CSni2Index[1]
+    endif
+*/
+    if $parex and $par2ex then
+    	$size=size('CSniIndex')
+    	$i=1
+    	repeat
+	    write('file',$sch,'%d \t%d',CSniIndex[$i],CSni2Index[$i])
+	    $i=$i+1
+    	until $i > $size
+    elseif ($parex) then
+    	$size=size('CSniIndex')
+    	$i=1
+    	repeat
+            write('file',$sch,'%d',CSniIndex[$i])
+            $i=$i+1
+    	until $i > $size
+    elseif ($par2ex) then
+    	$size=size('CSni2Index')
+    	$i=1
+    	repeat
+            write('file',$sch,'%d',CSni2Index[$i])
+            $i=$i+1
+    	until $i > $size
+    endif
+
+elseif ($1='read') or ($1='clear') then
+
+    CSniIndex=0 CSni2Index=0
+    if ($1='clear') then return endif
+
+    exists($sch,'file'):$fex
+    if not $fex then return endif
+    $r1=0 $r2=0
+    readfile($sch,'$r1','$r2','','local')
+    if ni<2 then
+	CSni2Index=$r1
+    else 
+	exists('ni2','parameter'):$ni2ex
+	if $ni2ex then
+	   CSniIndex=$r1 CSni2Index=$r2
+	else
+	   CSniIndex=$r1 CSni2Index=0
+	endif
+    endif
+
+endif
+    

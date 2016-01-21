@@ -1,0 +1,67 @@
+"macro BP_PRnew"
+" PRnew - set up a new PR exp "
+
+PRcnt=0
+PRppeaks = 0
+PRn = PRn + 1
+
+cd(PRdir)
+
+exists(PRexp[PRn],'directory'):$e " in case the experiment was stopped " 
+if($e) then
+  $del=''
+  write('error','directory %s exists.',PRexp[PRn])
+  input('Delete (y/n) ? '):$del  " Do we need this ? "
+  if($del = 'y') then
+    $cmd = 'rm -r ' + PRexp[PRn]
+    shell($cmd)
+  else
+    return (0.0)
+  endif
+endif   
+
+mkdir(PRexp[PRn])    
+{ PRexp[PRn] } 
+
+sw=PRsw[PRn] sw1=PRsw1[PRn] 
+d1=PRd1 nt=PRnt[PRn] 
+
+if(PRn > 1) and (PRskipF2 = 'y') then
+  exists(PRexp[1],'directory'):$e
+  if not($e) then
+    write('error','The %s data not found. PRskipF2 ignored', PRexp[1])
+    PRskipF2 = 'n'
+  else
+    $cmd = 'cp -r' + PRexp[1] + '/f2.fid ' + seqfil + '/.' 
+    shell($cmd)
+    $cmd = 'cp ' + PRexp[1] + '/F2.ll ' + seqfil + '/.' 
+    shell($cmd)
+    $cmd = 'cp ' + PRexp[1] + '/F2.pk ' + seqfil + '/.' 
+    shell($cmd)
+    phase=1,2 ni=PRni[PRn]      
+    exists('ni2','parameter'):$e
+    if($e) then
+      phase2=1 ni2=0 
+    endif
+    wexp='BP_PR2'
+  endif
+endif  
+
+if(seqfil='gNhsqc') then   "set up f2 plane "
+  phase=1,2 ni=PRni[PRn]      
+  wexp='BP_PR0'
+else
+  if(PRn < 2) or (PRskipF2 = 'n') then 
+    ni2=PRni2[PRn] 
+    phase2=1,2
+    sw2=PRsw2[PRn]
+    phase=1 ni=0
+    wexp='BP_PR1'
+  endif
+endif
+
+BP_PRwc
+write('file','PRmessages','New Experiment is %s',PRexp[PRn])
+banner(PRexp[PRn])
+
+

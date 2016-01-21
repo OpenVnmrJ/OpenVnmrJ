@@ -1,0 +1,66 @@
+"macro vsadjc"
+"***************************************"
+" vsadjc(arg1) - adjust vs for carbon	"
+"		 ignore solvent and TMS "
+"***************************************"
+
+if $#<1 then
+  $max=0.9*(wc2max-vp-sc2)
+else
+  $max=$1
+endif
+if tn<>'C13' then	      "for nuclei other then carbon, switch to vsadj"
+  vsadj($max) return
+endif
+$near=3*sfrq			     "don't look any closer to tms than this"
+solppm:$ppm,$swidth			"get ppm and signal width of solvent"
+$solfrq = $ppm * sfrq
+format(solvent,'lower'):$solv
+if ($solv='cdcl3')or($solv='c6d6') then
+  $swidth=1.2*$swidth
+else
+  $swidth=0.6*$swidth
+endif
+
+" determine solvent position "
+if ((rfp-rfl)<($solfrq-$swidth))and((sw-rfl+rfp)>($solfrq+$swidth)) then
+  peak(($solfrq-7*sfrq),($solfrq+7*sfrq)):$dum,$solfrq
+endif
+
+" determine limits and measure lines to the left of the solvent signal"
+if sp>($solfrq+$swidth) then		" start of left side area "
+  $rstart=sp 
+else
+  $rstart=$solfrq+$swidth
+endif
+if (sp+wp)>($solfrq+$swidth) then	" measure left side peak height "
+  peak($rstart,(sp+wp)):$peak1
+else
+  $peak1=0				" left side not on display "
+endif
+if $peak1<0 then $peak1=-$peak1 endif
+
+" determine limits and measure lines to the right of the solvent signal"
+if sp>$near then			" high field end of right side area "
+  $rstart=sp
+else
+  $rstart=$near
+endif
+if (sp+wp)>($solfrq-$swidth) then	" low field end of right side area "
+  $rend=$solfrq-$swidth
+else
+  $rend=sp+wp
+endif
+if $rstart<$rend then			" measure right side peak height "
+  peak($rstart,$rend):$peak2
+else
+  $peak2=0				" right side not on display "
+endif
+if $peak2<0 then $peak2=-$peak2 endif
+
+if $peak1<$peak2 then $peak1=$peak2 endif
+if $peak1>0 then
+  vs=($max*vs)/$peak1			" scale spectrum "
+else
+  vsadj($max)				" avoid division by 0 "
+endif

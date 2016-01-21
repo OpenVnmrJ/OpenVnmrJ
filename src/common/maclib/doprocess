@@ -1,0 +1,70 @@
+"macro doprocess"
+"doprocess - sets action of Acquire button based on doprocess parameter"
+"          - also sets action of Process panel checkbox"
+"Usage: doprocess('au') starts acquisition"
+"       doprocess('y') sets processing during acquisition (doprocess[2])"
+"       doprocess('n') disables processing during acquisition (doprocess[2])"
+"       doprocess('get') gets the state of whether to do processing during acquisition"
+
+"doprocess[1] - may process a fid on drag-and-drop (dndfid)"
+"doprocess[2] - may process data during acquisition (doprocess - this macro)"
+"doprocess[3] - may set processing parameters when loading a new sequence (cqexp)"
+"doprocess[4] - may set plotting parameters when loading a new sequence (cqexp)"
+
+exists('doprocess','parameter','global'):$e
+if $e<0.5 then
+  create('doprocess','string','global')
+  setprotect('doprocess','on',256,'global')
+  doprocess='y','y','y','y'
+endif
+$size=size('doprocess')
+if $size<1.5 then
+  doprocess[2]='y'
+endif
+if $size<2.5 then
+  doprocess[3]='y'
+  doprocess[4]='y'
+endif
+
+$auget='get'
+if $#>0.5 then
+  if $1='au' then
+    $auget='au'
+  else
+"   check expactive and set processing? no"
+    if $1='y' then
+      doprocess[2]='y'
+      return
+    else
+      if $1='n' then
+        doprocess[2]='n'
+        return
+      endif
+    endif
+  endif
+endif
+
+if $auget='get' then
+  $val=(doprocess[2]='y')
+  return($val)
+endif
+
+if $auget='au' then
+  wdone=''
+  if doprocess[2]='y' then
+    if (wexp='' and wbs='' and wnt='') then
+      getdim:$dim
+      if $dim<1.5 then
+        wexp='wft'  
+      else
+        wexp='wft(1)'  
+      endif
+    endif
+    if dofidsave='y' then
+      wdone='acqdone'
+    endif
+    au
+  else
+    go
+  endif
+endif

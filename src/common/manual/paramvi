@@ -1,0 +1,123 @@
+
+*******************************************************************************
+paramvi	- 	vi (edit) a variable and its parameters
+paramedit -     edit a variable and its parameters with user-selcted editor
+*******************************************************************************
+
+  This command allows a user to edit the parameters of a variable
+  from one of the variable trees.  The three variable trees are 
+  'current', 'global' and 'processed'. The default tree is 'current'.
+  The parameters of the variable are written into a temporary 
+  file and edited with the vi editor.  
+
+  The paramedit command works in the same way as paramvi, except the
+  editor is selected from the value of the environmental variable
+  "vnmreditor".  See the manual entry for edit for more information.
+
+  The parameters are stored in the file the in the same format that
+  they are normally stored in the variable files.  To modify the
+  parameters requires knowledge of the format.  If an error in the
+  format is made, the parameters will not be loaded.  When the editor
+  is exited, the modified variable is reloaded into the system.
+
+  The stored format of variable is made up of several lines.
+  The first line contains the variable parameters.  The second line
+  contains the values of the variables.  The third line contains
+  the enumeral values of the variables.
+
+  The fields of the first line are made up of the following:
+  name  subtype  basictype  maxvalue  minvalue  stepsize  GGroup  
+  Dgroup  protection active intptr
+
+  Below is a description of the first line.
+
+  name - variable name, any valid string.
+  subtype - integer value: 0(undefined), 1(real), 2(string), 3(delay), 
+                    4(flag), 5(frequency), 6(pulse), 7(integer)
+  
+  basictype - integer value:  0(undef), 1(real), 2(string)
+
+  maxvalue,minvalue,stepsize - real numbers.  The maxvalue applies
+     to both string and real types, minvalue and stepsize only apply
+     to real types.
+
+  GGroup -  integer value  	ALL           0
+				SAMPLE        1
+				ACQUISITION   2
+				PROCESSING    3
+				DISPLAY       4
+				SPIN          5
+
+  DGroup -  integer valuedefine ALL                   0
+				ACQUISITION           1
+				2DACQUISITION         2
+				SAMPLE                3
+				DECOUPLING            4
+				AFLAGS                5
+				PROCESSING            6
+				SPECIAL               7
+				DISPLAY               8
+				REFERENCE             9
+				PHASE                 10
+				CHART                 11
+				2DDISPLAY             12
+				INTEGRAL              13
+				DFLAGS                14
+				FID                   15
+				SHIMCOILS             16
+				AUTOMATION            17
+				NUMBERS               24
+				STRINGS               25
+
+  protection - 32 bit word contains protection information
+	The word is made up of the following masks
+
+	P_ARR   1       /* bit 0  - cannot array the parameter */
+	P_ACT   2       /* bit 1  - cannot change active/not active status */
+	P_VAL   4       /* bit 2  - cannot change the parameter value */
+	P_MAC   8       /* bit 3  - causes macro to be executed */
+	P_REX   16      /* bit 4  - avoids automatic re-display */
+	P_DEL   32      /* bit 5  - cannot delete parameter */
+	P_SYS   64      /* bit 6  - system ID for spectrometer - datastation */
+	P_CPY   128     /* bit 7  - cannot copy parameter from tree to tree */
+	P_NOA   256     /* bit 8  - will not set array parameter */
+	P_ENU   512     /* bit 9  - cannot set parameter enumeral values */
+	P_GRP   1024    /* bit 10 - cannot change the parameter's group */
+	P_PRO   2048    /* bit 11 - cannot change protection bits */
+	P_DGP   4096    /* bit 12 - cannot change the display group */ 
+        P_MMS   8192    /* bit 13 - lookup min, max, step values in table */
+
+   active  -   integer    1 - active   0 - not active
+
+  itrptr - not used yet.
+
+
+  The second line contains the value or values of the variable.  The
+  first field is the number of value of a variable. The other fields
+  are the values of the variables.  The values are either real numbers
+  or strings.  String are surrounded by double quotes.
+
+  The third line contains the enumeral values of the variables.  The
+  format is the same as the second line.
+
+  Below is an example of a typical variable parameter format.
+
+  a 3 1 1e+30 -1e+30 0 0 1 0 1 64
+  1 24.126400
+  0
+
+  The variable's name is a, its subtype is delay, its basictype is real,
+  max size is 1e+30, min size is -1e+30, stepsize is 0, Ggroup is ALL,
+  Dgroup is ACQUISITION, protection is 0, and active is 1 (ON).  The
+  last number (64) is not used.
+
+  The variable has one value  24.1264  and no enumeral values.
+
+ 
+  Usage -- paramvi(variablename[,tree])
+              tree can be  current,global,processed
+
+  Examples:
+
+    paramvi('a')               modify variable a in current tree.
+    paramvi('b','global')      modify variable b in global tree.

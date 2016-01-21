@@ -1,0 +1,819 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="acqMap" element="pages" type="acquisition" >
+  <group size="800 280"
+    style="PlainText"
+    label="Map"
+    vq="show_map"
+    show="$VALUE = (show_map &gt; 0)"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="acqMap"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    >
+    <group loc="645 10" size="90 100"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      reference="show"
+      useref="no"
+      subtype="Untitled"
+      expanded="yes"
+      >
+      <toggle loc="10 40" size="80 20"
+        style="PlainText"
+        label="Advanced"
+        vq="show_adv"
+        vc="show_adv = 1"
+        vc2="show_adv = 0"
+        set="$VALUE=show_adv"
+        radiobutton="no"
+        subtype="no"
+        />
+      <toggle loc="10 0" size="80 20"
+        style="PlainText"
+        label="Map"
+        vq="show_map"
+        vc="show_map = 1"
+        vc2="show_map = 0"
+        set="$VALUE=show_map"
+        radiobutton="no"
+        subtype="no"
+        />
+      <toggle loc="10 20" size="80 20"
+        style="PlainText"
+        label="Settings"
+        vq="show_set"
+        vc="show_set = 1"
+        vc2="show_set = 0"
+        set="$VALUE=show_set"
+        radiobutton="no"
+        subtype="no"
+        />
+      <toggle loc="10 60" size="80 20"
+        style="PlainText"
+        label="RF Pulses"
+        vq="show_rf"
+        vc="show_rf = 1"
+        vc2="show_rf = 0"
+        set="$VALUE=show_rf"
+        radiobutton="no"
+        subtype="no"
+        />
+      <toggle loc="10 80" size="80 20"
+        style="PlainText"
+        label="Gradients"
+        vq="show_grad"
+        vc="show_grad = 1"
+        vc2="show_grad = 0"
+        set="$VALUE=show_grad"
+        radiobutton="no"
+        subtype="no"
+        />
+    </group>
+    <textmessage loc="305 235" size="130 20"
+      style="PlainText"
+      label="27.7s"
+      vq="scantime"
+      set="gs_maptime $VALUE = smaptime"
+      />
+    <label loc="220 235" size="100 20"
+      style="Heading1"
+      label="Single Map"
+      justify="Left"
+      />
+    <textmessage loc="85 235" size="130 20"
+      style="PlainText"
+      label="4m:56s"
+      vq="scantime shimmapsel"
+      set="gs_maptime $VALUE = maptime"
+      />
+    <label loc="5 235" size="80 20"
+      style="Heading1"
+      label="Map Time"
+      justify="Left"
+      />
+    <group loc="5 0" size="210 135"
+      style="Heading1"
+      label="Shim Calibration"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ShimCalibration"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <menu loc="80 100" size="70 20"
+        style="PlainText"
+        label="menu"
+        vq="mapindex"
+        vc="mapindex=$VALUE gs_acq1shimmap(-1)"
+        set="$VALUE=mapindex"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="base"
+          chval="0"
+          />
+        <mlabel 
+          label="x1"
+          chval="1"
+          />
+        <mlabel 
+          label="y1"
+          chval="2"
+          />
+        <mlabel 
+          label="z1"
+          chval="3"
+          />
+        <mlabel 
+          label="xz"
+          chval="4"
+          />
+        <mlabel 
+          label="yz"
+          chval="5"
+          />
+        <mlabel 
+          label="z2"
+          chval="6"
+          />
+        <mlabel 
+          label="xy"
+          chval="7"
+          />
+        <mlabel 
+          label="x2y2"
+          chval="8"
+          />
+      </menu>
+      <button loc="10 20" size="140 20"
+        style="Label4"
+        label="Acquire Shimmaps"
+        vc="Prescan_ShimMethod='ge3dshim' werr='' wdone='' prescan_control[1]=0  gs_acqshimmap(0)"
+        bg="darkGreen"
+        decor1="no"
+        />
+      <button loc="10 45" size="140 20"
+        style="PlainText"
+        label="Generate Shimmaps"
+        vc="gs_mkshimmap"
+        bg="transparent"
+        decor1="no"
+        />
+      <check loc="155 45" size="40 20"
+        style="PlainText"
+        vq="shimmapgen"
+        vc="shimmapgen = 1"
+        vc2="shimmapgen = 0"
+        set="$VALUE=(shimmapgen &gt; 0)"
+        />
+      <textmessage loc="155 75" size="40 20"
+        style="PlainText"
+        label="x1"
+        vq="shimname mapindex"
+        set="if(mapindex = 0) then $VALUE='base' else $VALUE=shimname[mapindex] endif"
+        />
+      <button loc="10 75" size="140 20"
+        style="Label4"
+        label="Acquire a map"
+        vc="gs_acq1shimmap(mapindex)"
+        bg="darkGreen"
+        decor1="no"
+        />
+      <menu loc="10 100" size="70 20"
+        style="PlainText"
+        label="menu"
+        vq="mapindex shimmapsel"
+        vc="mapindex=$VALUE gs_acq1shimmap(-1)"
+        set="$VALUE=mapindex"
+        show="$x=(shimmapsel='12&amp;3') $y=(shimmapsel='123&amp;4') $VALUE=$x or $y"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="x3"
+          chval="9"
+          />
+        <mlabel 
+          label="y3"
+          chval="10"
+          />
+        <mlabel 
+          label="z3"
+          chval="11"
+          />
+        <mlabel 
+          label="xz2"
+          chval="12"
+          />
+        <mlabel 
+          label="yz2"
+          chval="13"
+          />
+        <mlabel 
+          label="zxy"
+          chval="14"
+          />
+        <mlabel 
+          label="zx2y2"
+          chval="15"
+          />
+        <mlabel 
+          label="z3x"
+          chval="16"
+          />
+        <mlabel 
+          label="z3y"
+          chval="17"
+          />
+        <mlabel 
+          label="z2x2y2"
+          chval="18"
+          />
+        <mlabel 
+          label="z2xy"
+          chval="19"
+          />
+        <mlabel 
+          label="zx3"
+          chval="20"
+          />
+        <mlabel 
+          label="zy3"
+          chval="21"
+          />
+        <mlabel 
+          label="x4"
+          chval="22"
+          />
+        <mlabel 
+          label="y4"
+          chval="23"
+          />
+        <mlabel 
+          label="z4"
+          chval="24"
+          />
+        <mlabel 
+          label="z5"
+          chval="25"
+          />
+      </menu>
+    </group>
+    <group loc="5 135" size="210 95"
+      style="Heading1"
+      label="Shimmap Parameters"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="z"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <check loc="10 65" size="160 20"
+        style="PlainText"
+        label="Use 'start' shimfile"
+        vq="startshim"
+        vc="startshim = 'y'"
+        vc2="startshim = 'n'"
+        set="$VALUE=(startshim ='y')"
+        />
+      <label loc="10 45" size="100 20"
+        style="Label1"
+        label="z2 freq shift"
+        justify="Left"
+        />
+      <label loc="10 25" size="100 20"
+        style="Label1"
+        label="Phase delay"
+        justify="Left"
+        />
+      <label loc="150 45" size="55 20"
+        style="Label1"
+        label="Hz/DAC"
+        justify="Left"
+        />
+      <entry loc="105 45" size="45 20"
+        style="PlainText"
+        vq="z2z0"
+        vc="z2z0=$VALUE"
+        set="$VALUE=z2z0"
+        show="$VALUE = (z2z0 &lt;&gt; 0)"
+        digits="3"
+        disable="Grayed out"
+        />
+      <label loc="150 25" size="30 20"
+        style="Label1"
+        label="ms"
+        justify="Left"
+        />
+      <entry loc="105 25" size="45 20"
+        style="PlainText"
+        vq="shimmapdel steps"
+        vc="shimmapdel=$VALUE/1000 del=shimmapdel"
+        set="$VALUE=shimmapdel*1000"
+        show="on('del'):$VALUE"
+        digits="1"
+        disable="Grayed out"
+        />
+    </group>
+    <group loc="435 75" size="210 155"
+      style="Heading1"
+      label="Display"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <menu loc="115 105" size="80 20"
+        style="PlainText"
+        label="menu"
+        vq="gsimage  shimmapsel"
+        vc="$val34='$VALUE' gsimage='$VALUE'+'.f'  gs_image(gsimage)"
+        set="$VALUE=$val34"
+        show="$x=(shimmapsel='12&amp;3') $y=(shimmapsel='123&amp;4') $VALUE=$x or $y"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="x3"
+          chval="x3"
+          />
+        <mlabel 
+          label="y3"
+          chval="y3"
+          />
+        <mlabel 
+          label="z3"
+          chval="z3"
+          />
+        <mlabel 
+          label="xz2"
+          chval="xz2"
+          />
+        <mlabel 
+          label="yz2"
+          chval="yz2"
+          />
+        <mlabel 
+          label="zxy"
+          chval="zxy"
+          />
+        <mlabel 
+          label="zx2y2"
+          chval="zx2y2"
+          />
+        <mlabel 
+          label="z3x"
+          chval="z3x"
+          />
+        <mlabel 
+          label="z3y"
+          chval="z3y"
+          />
+        <mlabel 
+          label="z2x2y2"
+          chval="z2x2y2"
+          />
+        <mlabel 
+          label="z2xy"
+          chval="z2xy"
+          />
+        <mlabel 
+          label="zx3"
+          chval="zx3"
+          />
+        <mlabel 
+          label="zy3"
+          chval="zy3"
+          />
+        <mlabel 
+          label="x4"
+          chval="x4"
+          />
+        <mlabel 
+          label="y4"
+          chval="y4"
+          />
+        <mlabel 
+          label="z4"
+          chval="z4"
+          />
+        <mlabel 
+          label="z5"
+          chval="z5"
+          />
+      </menu>
+      <menu loc="115 85" size="80 20"
+        style="PlainText"
+        label="menu"
+        vq="gsimage shimname n1"
+        vc="$val12='$VALUE' gsimage='$VALUE'+'.f'  gs_image(gsimage)"
+        set="$VALUE=$val12"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="base"
+          chval="base"
+          />
+        <mlabel 
+          label="x1"
+          chval="x1"
+          />
+        <mlabel 
+          label="y1"
+          chval="y1"
+          />
+        <mlabel 
+          label="z1"
+          chval="z1"
+          />
+        <mlabel 
+          label="xz"
+          chval="xz"
+          />
+        <mlabel 
+          label="yz"
+          chval="yz"
+          />
+        <mlabel 
+          label="z2"
+          chval="z2"
+          />
+        <mlabel 
+          label="xy"
+          chval="xy"
+          />
+        <mlabel 
+          label="x2y2"
+          chval="x2y2"
+          />
+      </menu>
+      <button loc="115 25" size="80 20"
+        style="Label4"
+        label="Test Image"
+        vc="im3Dshim('prep') gs_testimg"
+        bg="darkGreen"
+        decor1="no"
+        />
+      <menu loc="115 125" size="80 20"
+        style="PlainText"
+        label="menu"
+        vq="gsplane gsimage"
+        vc="gsplane='$VALUE' gs_image(gsimage)"
+        set="$VALUE=gsplane"
+        show="$VALUE=(gsimage&lt;&gt;'') $VALUE=2*$VALUE-1"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="RO-PE"
+          chval="ro-pe"
+          />
+        <mlabel 
+          label="RO-PE2"
+          chval="ro-pe2"
+          />
+        <mlabel 
+          label="PE-PE2"
+          chval="pe-pe2"
+          />
+      </menu>
+      <entry loc="115 65" size="80 20"
+        style="PlainText"
+        vq="gsimage"
+        vc="gsimage='$VALUE' gs_image(gsimage)"
+        set="$VALUE=gsimage"
+        disable="Grayed out"
+        />
+      <button loc="10 25" size="100 20"
+        style="PlainText"
+        label="Base field map"
+        vq="gsimage"
+        vc="aipVs('dmax'):$m if($m&lt;1)then $m=1 aipVs('dmax',$m) endif aipVs('dmin',-$m) gsimage='base.f' gs_image(gsimage)"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <button loc="10 45" size="100 20"
+        style="PlainText"
+        label="Image"
+        vq="gsimage"
+        vc="aipVs('dmin',0) gsimage='base.1.mag' gs_image(gsimage)"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <button loc="10 65" size="100 20"
+        style="PlainText"
+        label="Display"
+        vq="gsimage"
+        vc="gs_image(gsimage)"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <label loc="10 85" size="100 20"
+        style="Label1"
+        label="Shimmap 1&amp;2"
+        vq="gsimage"
+        show="$VALUE=(gsimage&lt;&gt;'') $VALUE=2*$VALUE-1"
+        justify="Left"
+        />
+      <label loc="10 105" size="100 20"
+        style="Label1"
+        label="Shimmap 3&amp;4"
+        vq="gsimage"
+        show="$VALUE=(gsimage&lt;&gt;'') $VALUE=2*$VALUE-1"
+        justify="Left"
+        />
+      <label loc="10 125" size="105 20"
+        style="Label1"
+        label="Orientation"
+        vq="gsimage"
+        show="$VALUE=(gsimage&lt;&gt;'') $VALUE=2*$VALUE-1"
+        justify="Left"
+        />
+    </group>
+    <group loc="435 0" size="210 75"
+      style="Heading1"
+      label="Shimmap Name"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="z"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <entry loc="115 40" size="80 20"
+        style="PlainText"
+        vq="shimpar"
+        vc="shimpar='$VALUE' prep"
+        set="$VALUE=shimpar"
+        show="$VALUE=(shimpar&lt;&gt;'')"
+        digits="1"
+        disable="Grayed out"
+        />
+      <label loc="10 40" size="70 20"
+        style="Label1"
+        label="Extension"
+        justify="Left"
+        />
+      <textmessage loc="10 20" size="185 20"
+        style="PlainText"
+        label="shimmap.205_120_HD"
+        vq="gcoil"
+        set="$VALUE = 'shimmap.'+gcoil"
+        />
+    </group>
+    <group loc="220 0" size="210 230"
+      style="Heading1"
+      label="Shim Selection"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="z"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <menu loc="75 20" size="75 20"
+        style="PlainText"
+        label="menu"
+        vq="np"
+        vc="shimmapsel='$VALUE' "
+        set="$VALUE=shimmapsel"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="1-(xyz)"
+          chval="1"
+          />
+        <mlabel 
+          label="1&amp;2"
+          chval="1&amp;2"
+          />
+        <mlabel 
+          label="1,2&amp;3"
+          chval="12&amp;3"
+          />
+        <mlabel 
+          label="123&amp;4"
+          chval="123&amp;4"
+          />
+        <mlabel 
+          label="1&amp;z2"
+          chval="1&amp;z2"
+          />
+      </menu>
+      <label loc="5 20" size="70 20"
+        style="Label1"
+        label="Selection"
+        justify="Left"
+        />
+      <label loc="5 40" size="90 20"
+        style="Label1"
+        label="Shim Step"
+        justify="Left"
+        />
+      <group loc="5 140" size="200 80"
+        style="Heading1"
+        vq="shimmapsel"
+        show="$VALUE=( (shimmapsel='12&amp;3') or (shimmapsel='123&amp;4') or (shimmapsel='all') )"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="z"
+        useref="no"
+        subtype="Untitled"
+        expanded="yes"
+        >
+        <entry loc="145 60" size="50 20"
+          style="PlainText"
+          vq="step8 shimmapsel"
+          vc="step8=$VALUE"
+          set="$VALUE=step8"
+          show="$VALUE=( (shimmapsel&lt;&gt;'1') and (shimmapsel&lt;&gt;'1&amp;2') )"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="145 40" size="50 20"
+          style="PlainText"
+          vq="step7 shimmapsel"
+          vc="step7=$VALUE"
+          set="$VALUE=step7"
+          show="$VALUE=( (shimmapsel&lt;&gt;'1') and (shimmapsel&lt;&gt;'1&amp;2') )"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="145 20" size="50 20"
+          style="PlainText"
+          vq="step6 shimmapsel"
+          vc="step6=$VALUE"
+          set="$VALUE=step6"
+          show="$VALUE=(shimmapsel&lt;&gt;'1') and (shimmapsel&lt;&gt;'1&amp;2')"
+          digits="1"
+          disable="Grayed out"
+          />
+        <entry loc="145 0" size="50 20"
+          style="PlainText"
+          vq="step5 shimmapsel"
+          vc="step5=$VALUE"
+          set="$VALUE=step5"
+          show="$VALUE=( (shimmapsel&lt;&gt;'1') and (shimmapsel&lt;&gt;'1&amp;2') )"
+          digits="1"
+          disable="Grayed out"
+          />
+        <label loc="70 60" size="75 20"
+          style="Label1"
+          label="(zxy,zx2y2)"
+          justify="Center"
+          />
+        <label loc="70 40" size="75 20"
+          style="Label1"
+          label="(xz2,yz2)"
+          justify="Center"
+          />
+        <label loc="70 20" size="75 20"
+          style="Label1"
+          label="(x3,y3)"
+          justify="Center"
+          />
+        <label loc="70 0" size="75 20"
+          style="Label1"
+          label="(z3)"
+          justify="Center"
+          />
+        <label loc="10 60" size="60 20"
+          style="Label1"
+          label="-VIII %"
+          justify="Left"
+          />
+        <label loc="10 40" size="60 20"
+          style="Label1"
+          label="-VII %"
+          justify="Left"
+          />
+        <label loc="10 20" size="60 20"
+          style="Label1"
+          label="-VI %"
+          justify="Left"
+          />
+        <label loc="10 0" size="60 20"
+          style="Label1"
+          label="-V %"
+          justify="Left"
+          />
+      </group>
+      <label loc="75 120" size="75 20"
+        style="Label1"
+        label="(xy,x2y2)"
+        justify="Center"
+        />
+      <entry loc="150 120" size="50 20"
+        style="PlainText"
+        vq="step4 shimmapsel"
+        vc="step4=$VALUE"
+        set="$VALUE=step4"
+        show="$VALUE=(shimmapsel&lt;&gt;'1') "
+        digits="1"
+        disable="Grayed out"
+        />
+      <label loc="75 100" size="75 20"
+        style="Label1"
+        label="(xz,yz)"
+        justify="Center"
+        />
+      <entry loc="150 100" size="50 20"
+        style="PlainText"
+        vq="step3 shimmapsel"
+        vc="step3=$VALUE"
+        set="$VALUE=step3"
+        show="$VALUE=(shimmapsel&lt;&gt;'1') "
+        digits="1"
+        disable="Grayed out"
+        />
+      <label loc="75 80" size="75 20"
+        style="Label1"
+        label="(z2)"
+        justify="Center"
+        />
+      <entry loc="150 80" size="50 20"
+        style="PlainText"
+        vq="step2 shimmapsel"
+        vc="step2=$VALUE"
+        set="$VALUE=step2"
+        show="$VALUE=(shimmapsel&lt;&gt;'1') "
+        digits="1"
+        disable="Grayed out"
+        />
+      <entry loc="150 60" size="50 20"
+        style="PlainText"
+        vq="step1"
+        vc="step1=$VALUE"
+        set="$VALUE=step1"
+        show="on('step1'):$VALUE"
+        digits="1"
+        disable="Grayed out"
+        />
+      <label loc="75 60" size="75 20"
+        style="Label1"
+        label="(x,y,z)"
+        justify="Center"
+        />
+      <label loc="15 120" size="60 20"
+        style="Label1"
+        label="-IV %"
+        justify="Left"
+        />
+      <label loc="15 100" size="60 20"
+        style="Label1"
+        label="-III %"
+        justify="Left"
+        />
+      <label loc="15 80" size="60 20"
+        style="Label1"
+        label="-II %"
+        justify="Left"
+        />
+      <label loc="15 60" size="60 20"
+        style="Label1"
+        label="-I %"
+        justify="Left"
+        />
+    </group>
+  </group>
+</template>

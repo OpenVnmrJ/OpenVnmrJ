@@ -1,0 +1,104 @@
+"macro Studyprobe"
+
+if ($# < 1) then $1='init' endif
+
+if ($1='init') or ($1='refresh') then
+
+	if (probe='') then
+	    write('error','probe is not defined')
+	    return
+	endif
+
+	is_submitmode:$submit
+	if ($submit) then
+	   walkupQ_init
+	   $file=cursqexp+'/macdir/Studyprobe_'+probe
+	else
+	   $file=archivedir+'/'+sample+'/dirinfo/macdir/Studyprobe_'+probe
+	endif
+	exists($file,'file'):$fileex
+
+	$pfile=userdir+'/persistence/Studyprobe'
+	write('reset',$pfile)
+
+	if ($fileex) then
+	   shell('cat '+$file+' > '+$pfile):$dum
+	endif
+
+	exists('Studyprobepar','parameter','global'):$parex
+	if ($parex=0) then
+	     create('Studyprobepar','string','global')
+	endif
+	setprotect('Studyprobepar','on',256,'global')
+	Studyprobepar='','',''
+
+	vnmrjcmd('pnew','Studyprobepar')
+	if ($1='init') then
+	    shell('sleep 0.5'):$dum
+	    vnmrjcmd('popup','mode:modeless','file:Studyprobe.xml','pnewupdate:true','rebuild:yes','location:shuffler','title:Studyprobe_'+probe)
+	endif
+	return
+endif
+
+if ($1='clear') then
+	Studyprobecal('clear')
+	Studyprobe('refresh')
+	return
+endif
+
+if ($1='set') then
+	if (Studyprobepar[1]='') or (Studyprobepar[2]='') or (Studyprobepar[3]='') then return endif
+	Studyprobecal(Studyprobepar[1],Studyprobepar[2],Studyprobepar[3])
+	Studyprobe('refresh')
+	return
+endif
+
+if ($1='is') then
+     // It is posssible that it is in the middle of a study
+     //         If so, the archivedir and sample parameters must
+     //      come from sampleglobal and should trump
+     //      all other options.
+     //  This should be used by readprobe macro as well for convergence
+     $archdir='' $sample=''
+     $ok=0 $aex=0 $sex=0
+     $file=''
+     exists('archivedir','parameter'):$aex
+     exists('sample','parameter'):$sex
+     if $aex and $sex then
+       getsampglobal('cp','archivedir'):$archdir
+       getsampglobal('cp','sample'):$sample
+       if ($archdir<>'') and ($sample<>'') then
+            $file=$archdir+'/'+$sample+'/dirinfo/macdir/Studyprobe_'+$2
+            exists($file,'file'):$ok
+       endif
+     endif
+
+     // sampleglobal is not found.  Go ahead and search other paths
+     if ($ok=0) then
+        if ($aex) and ($sex) then
+           if archivedir<>'' and sample<>'' then
+                        " Studyprobe option"
+              $file=archivedir+'/'+sample+'/dirinfo/macdir/Studyprobe_'+$2
+              exists($file,'file'):$ok
+           endif
+           if ($ok=0) then
+              is_submitmode:$submit
+              if ($submit) then
+                $file=cursqexp+'/macdir/Studyprobe_'+$2
+              elseif (auto='y') then
+                $file=autodir+'/Studyprobe_'+$2
+                $loc='' $locdir=''
+                getlocid:$loc,$locdir
+                if ($locdir<>'') then
+                   $file=autodir+'/enterQ.macdir/'+$locdir+'/Studyprobe_'+$2
+                endif
+              else
+                $file=curexp+'/Studyprobe_'+$2
+              endif
+              exists($file,'file'):$ok
+           endif // $ok=0
+        endif // archivedir<>'' and sample<>''
+     endif // $aex and $sex
+     return($ok,$file)
+
+endif

@@ -1,0 +1,56 @@
+"macro unarray"
+"********************************************************************
+"
+"
+" NAME:
+"    unarray
+"
+" DESCRIPTION:
+"    Remove parameters from the array list without changing their values
+"    This is useful when the use of an arrayed parameter depends on a flag, 
+"    for example ti and ir. The value of ti should only be used in the
+"    sequence when ir = 'y', but one may want to keep the values in ti
+"    until the next time ir is turned on.
+"    This can be reversed simply by setting, e.g., ti = ti
+"
+" EXAMPLES 
+"    unarray('ti')
+"    unarray('mtfrq','pmt')
+"
+"
+"********************************************************************
+if ($# = 0) then
+  $par = ''
+  arrayparse:$par
+else
+  $inx = 1
+  repeat 
+    $par[$inx] = ${$inx}
+    $inx = $inx + 1
+  until $inx > $#
+endif
+
+$inx = 1
+repeat
+  $vals  = {$par[$inx]}
+
+  if (typeof($par[$inx]) = 0) then "real"
+    {$par[$inx]} = 0
+  elseif (typeof($par[$inx]) = 1) then "string"
+    {$par[$inx]} = ''
+  endif
+
+  setprotect($par[$inx],'getval'):$protect        // get current protection bits value
+  setprotect($par[$inx],'on',256) "don't set array parameter"    // turn on bit 8 to prevent array from being set
+  {$par[$inx]} = $vals                            // re-set parameter to its value(s)
+  setprotect($par[$inx],'set',$protect)           // set protection value back to what it was
+
+  $inx = $inx + 1
+until $inx > size('$par')
+
+
+"Note: I also tried the following: "
+" ti = 'n' - this keeps the array but doesn't affect array"
+" setgroup('ti','display') - same result
+
+

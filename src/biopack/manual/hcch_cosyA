@@ -1,0 +1,98 @@
+ hcchcosyA
+
+ 3D HCCH-COSY with semi-constant evolution in  t1(H1) and t2 (C13) dimension.
+
+  
+    Correlates the adjacent sidechain aliphatic 13C resonances of a given amino acid.
+
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP pulses; full power square pulses on 13C 
+    initially when 13CO excitation is irrelevant; square pulses on the Ca and
+    CaCb with first null at 13CO; one lobe sinc pulses on 13CO with first null
+    at Ca; optional 2H decoupling when CaCb magnetization is transverse and 
+    during 1H shift evolution for 4 channel spectrometers.  
+ 
+    pulse sequence: 
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+
+    Efficient STUD+ decoupling is invoked with STUD='y' without need to 
+    set any parameters.
+    (STUD+ decoupling- Bendall & Skinner, JMR, A124, 474 (1997) and in press)
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [1H]  and t2 [13C].
+    
+    The flag f1180/f2180 should be set to 'y' if t1 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180 = 'n' for (0,0) in 1H and f2180 = 'n' for (0,0) in 13C.
+
+
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF hcch_cosy
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for hcch_cosy may be printed using:
+                                      "printon man('hcch_cosy') printoff".
+             
+    2. Apply the setup macro "hcch_cosy".  This loads the relevant parameter
+       set and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral
+       check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 35ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       35ppm, ie in the center of the aliphatic region throughout the sequence.
+
+    5. H2O_flg = 'y' for H2O samples, 'n' for D2O samples
+
+    6. If 2H decoupling is used, the 2H lock signal may become unstable because
+       of 2H saturation.  Check that a 1D spectrum is stable/reproducible as 
+       when 2H decoupling is not used.  You might also check this for d2 and d3
+       equal to values achieved at say 75% of their maximum.  Remember to return
+       d2=d3=0 before starting a 2D/3D experiment.
+
+   Written by Weixing Zhang,  November 1998
+   Department of Structural Biology
+   St. Jude Children's Research Hospital.
+   Memphis, TN 39105
+   (901)495-3169
+   Weixing.Zhang@stjude.org
+   modified for BioPack format by GG, palo alto, dec 1998
+
+   H2O_flg = y      For protein in H2O
+   H2O_flg = n      For protein in D2O
+
+    Modified for automatic shaped pulse creation using Pbox (EK, Aug 2002)

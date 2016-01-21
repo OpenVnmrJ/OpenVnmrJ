@@ -1,0 +1,50 @@
+"macro ATgetphase_modulator_highpower"
+"ATgetphase_modulator_highpower(first spectrum, last spectrum)"
+
+$filename=curexp+'/mod_array_phase_highpower'
+write('reset',$filename)
+write('file',$filename,'modulator value         intensity      phase   phase difference')
+s1
+f cr=sp+sw/2 sp=3.7p wp=2p nl
+ds($2)
+pa
+mark:$phase1
+$i=$1 
+repeat
+select($i)
+ph
+peak:$ht
+pa                   "phase mode"
+mark:$phase
+$phasediff=($phase*180/$phase1-$phase1*180/$phase1)/2    "divide by 2 to get agreement with manual phasing"
+write('file',$filename,'%10s                 %6.1f      %3.1f       %3.1f',tpwrf[$i],$ht,$phase*180/$phase1,$phasediff)
+$i=$i+1
+until $i>$2
+ph
+fr1
+cp($filename,userdir+'/autotest/data/mod_array_phase_highpower')
+
+$filename=curexp+'/mod_array_phase_highpower.inp'
+write('reset',$filename)
+write('file',$filename,'modulator value')
+write('file',$filename,'phase')
+write('file',$filename,'1 103')
+ds($2)
+pa
+mark:$phase1
+$i=$1 
+repeat
+select($i)
+ph
+peak:$ht
+pa                   "phase mode"
+mark:$phase
+$phasediff=($phase*180/$phase1-$phase1*180/$phase1)/2   "divide by two to force agreement with manual phasing"
+write('file',$filename,'%10s                 %3.1f',tpwrf[$i],$phasediff)
+$i=$i+1
+until $i>$2
+ph
+fr1
+ds($2)
+cp($filename,userdir+'/autotest/data/mod_array_phase_highpower.inp')
+

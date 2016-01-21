@@ -1,0 +1,286 @@
+//Varian
+$tailX='tail'
+whichtail:$tailX
+
+$name='' $archsamp=''
+if ($# < 2) then return($name,$archsamp) endif
+$arg2=$2
+
+isnewexp:$new
+if (auto='y') then $new=1 endif
+if ($new=0) then
+      shell('dirname '+file):$archsamp
+else
+      $archsamp=archivedir+'/'+sample
+endif
+
+if ($arg2='write') then $arg2='fid' endif
+
+IF (($arg2 <> 'last') and 
+    ($arg2 <> 'iscpfid') and 
+    ($arg2 <> 'parud') and 
+    ($arg2 <> 'first') and 
+    ($arg2 <> 'wrautoxml') and
+    ($arg2<>'wrxml')) THEN
+
+  $listfile=$arg2+'list' 
+  exists($archsamp+'/dirinfo','directory'):$direx
+  if ($direx=0) then
+	return($name,$archsamp)
+  endif
+
+  if ($arg2 = 'fid') or ($arg2='cmd') then
+     if ($# < 3) then $3=pslabel endif
+     $fidlog=$archsamp+'/dirinfo/fidlog'
+     $name=$1 $lname=''
+     if ($arg2='fid') then
+  	write('file',$fidlog,'%s: %s',$3,$name)
+	$type='LIB'
+     else
+	$3=$name
+	$name=$name+'_CmdNode_NullPath'
+	$type='CMD'
+     endif
+     iscurrentfid('',archivedir+'/'+sample):$iscurrent
+     if (auto='y') or ($iscurrent) then
+	$relpath=$archsamp+'/'+$name
+	$s1='' $s2=''
+	strstr($relpath,'/vnmrsys/data/'):$retx,$s1,$s2
+	if ($retx) then $relpath=$s2 endif
+	$locdir='' $sloc=''
+	getlocid('current'):$sloc,$locdir
+        if ($arg2<>'cmd') then
+	    if (auto='n') then $sloc='000'
+	    else
+	       if ($sloc='') then $sloc='0' endif
+	       $loc=0 format($sloc,'lower'):$loc
+	       if ($loc<100) then $sloc='0'+$sloc endif
+	       if ($loc<10) then $sloc='0'+$sloc endif
+	    endif
+	    if (traymax=96) or (traymax=768) then
+		write('fileline',autodir+'/enterQ.macdir/fidlog','"Loc%sz%dr%d',$sloc,vrack,vzone)
+	    else
+	    	write('fileline',autodir+'/enterQ.macdir/fidlog','"Loc%s',$sloc)
+	    endif
+	    write('fileline',autodir+'/enterQ.macdir/fidlog','(%s): ',samplename)
+	    write('fileline',autodir+'/enterQ.macdir/fidlog','%s" ',$name)
+	    write('fileline',autodir+'/enterQ.macdir/fidlog','"%s"',$relpath)
+	    write('fileline',autodir+'/enterQ.macdir/fidlog','\n')
+	    $explist=explist if ($explist='') then $explist=$3 endif
+            write('file',autodir+'/enterQ.macdir/expfidlog','%s %s',$explist,$relpath)
+            xmhahasx_add(autodir,'',$relpath,'FidQ')
+        else
+	    $explist=$3
+            write('file',autodir+'/enterQ.macdir/expfidlog','%s %s',$explist,$relpath)
+	endif
+	if ($locdir<>'') then
+		$activedir=autodir+'/enterQ.macdir/'+$locdir+'/xmldir/Active'
+		exists($activedir,'directory'):$direx
+		if ($direx=0) then
+		    shell('mkdir '+$activedir):$dum
+		    exists($activedir,'directory'):$direx
+		endif
+		if ($direx) then
+			write('file',$activedir+'/fidlog','%s %s',$explist,$relpath)
+		endif
+	endif
+     endif
+     cplog($archsamp,'wrxml',$name,$type)
+  endif
+  if ($arg2<>'cmd') then
+     $date=''
+     shell('date +%Y-%m-%d'):$date
+     $time=''
+     shell('date +%H%M%S'):$time
+     $username=operator
+     if (auto = 'y') then
+        $username='auto for '+studyowner
+     else
+        if (operator <> studyowner) then
+	    $username=operator+' for '+studyowner
+        endif
+     endif
+     if ($arg2 <> 'fid') and ($3<>'') then
+	$name=$1+'.'+$3
+     endif
+
+     $chronentry=$date+' : T'+$time+' : '+$name+' : Saved by : '+$username
+     write('file',$archsamp+'/dirinfo/'+$listfile,'%s',$chronentry)
+  endif
+
+ELSEIF ($arg2='wrxml') THEN
+   if ($1<>'') then $archsamp=$1 endif
+	$fids=$3
+	if ($# < 4) then $4='LIB' endif
+	if ($fids='') then return endif
+
+        if ($4='LIB') then
+                exists($archsamp+'/'+$fids+'.fid','directory'):$fidex
+        else
+                $fidex=1
+        endif
+
+	$fidlog=$archsamp+'/dirinfo/fidlog'
+        $xmldir=$archsamp+'/dirinfo/xmldir'
+        $xml=$xmldir+'/fidlog'
+        $cpnodes=$xmldir+'/cpnodeinfo'
+	exists($xmldir,'directory'):$direx
+	if ($direx=0) then
+		xmhaha_subSQ($archsamp)
+		$fidex=0
+	endif
+	if ($fidex) then
+           $xmlcount=0
+	   shell('touch '+$xml):$dum
+           shell('(cat '+$xml+' | wc -l)'):$xmlcount
+	   if ($xmlcount=0) then
+		xmhaha_subSQ($archsamp,'fidlog')
+		$fidex=0
+	   endif
+	endif
+	if ($fidex) then
+		$pslabel='' $cpname=''
+	    if ($4='LIB') then
+                rtv($archsamp+'/'+$fids+'.fid/procpar','pslabel'):$pslabel
+		rtv($archsamp+'/'+$fids+'.fid/procpar','noabort','explist'):$cpname
+		if ($cpname='') then $cpname=$pslabel endif
+		$path=$archsamp+'/'+$fids
+	    else
+		$cpname=$fids
+		strstr($cpname,'_','last'):$ret,$pslabel
+		if ($ret=0) then $pslabel=$cpname endif
+		$path=''
+	    endif
+		$title=$fids
+		$tt='' shell('basename '+$archsamp):$tt
+        	$atx=1 $attr=''
+        	$attr[$atx]='status','Completed' $atx=$atx+2
+		$attr[$atx]='sqstatus','Completed' $atx=$atx+2
+        	$attr[$atx]='time','' $atx=$atx+2
+        	$attr[$atx]='lock','on' $atx=$atx+2
+		$attr[$atx]='CPnode',$cpname $atx=$atx+2
+		$attr[$atx]='title',$title $atx=$atx+2
+		$attr[$atx]='tooltext',$tt $atx=$atx+2
+		$attr[$atx]='data',$path $atx=$atx+2
+		$attr[$atx]='type',$4 $atx=$atx+2
+
+		if ($pslabel<>$cpname) then
+		    write('reset',$cpnodes+'1')
+		    shell('(cat '+$cpnodes+' | grep -w Completed > '+$cpnodes+'1)'):$dum
+                    shell('(cat '+$cpnodes+' | grep -vw Completed | grep -vw '+$cpname+' >> '+$cpnodes+'1)'):$dum
+                    shell('mv '+$cpnodes+'1 '+$cpnodes):$dum
+		endif
+		$snode=''
+		xmhaha_addnode($pslabel,$attr,'',$xml):$snode
+		shell('chmod -R g+w '+$xmldir):$dum
+	endif
+
+ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
+    $xxx=1 $nuc=''
+    $xi=3
+    while ($xi <= $#) do
+       $xiStr=''
+       format($xi,0,0):$xiStr
+       if not typeof('$'+$xiStr) then
+	   $xxx=${$xi}
+       else
+	   if ${$xi} = 'checknuc' then
+		$xi=$xi+1
+		$nuc=${$xi}
+	   else
+		$archsamp=${$xi}
+	   endif
+       endif
+       $xi=$xi+1
+    endwhile
+/*
+    if ($# > 2) then 
+	if typeof('$3') then $archsamp=$3 else $xxx=$3 endif
+	if ($# > 3) then
+	   if typeof('$4') then $archsamp=$4 else $xxx=$4 endif
+	endif
+    endif
+*/
+
+    $fidlog=$archsamp+'/dirinfo/fidlog'
+    $name=$1 $lname='' $total=0 $lastname=''
+    exists($fidlog,'file'):$lsfex
+    if ($lsfex=0) then
+        $fidlog=$archsamp+'/dirinfo/lastfids'
+        exists($fidlog,'file'):$lsfex
+    endif
+    if ($lsfex) then
+      shell('(grep -iw -- '+$1+': '+$fidlog+' | wc -l)'):$total
+    endif
+    if ($total) then
+	$i=1 $j=0
+	repeat
+	   $sx='' format($i,'lower'):$sx
+	   if ($arg2='last') then
+	      shell('(grep -iw -- '+$1+': '+$fidlog+' | '+$tailX+' -n '+$sx+' | head -n 1)'):$lname
+	   else
+              shell('(grep -iw -- '+$1+': '+$fidlog+' | head -n '+$sx+' | '+$tailX+' -n 1)'):$lname
+	   endif
+	   substr($lname,2):$lastname
+	   shell('basename '+$lastname+' .fid'):$lastname
+	   exists($archsamp+'/'+$lastname+'.fid','directory'):$isthere
+	   if ($isthere) then 
+		if ($nuc<>'') then
+		    rtv($archsamp+'/'+$lastname+'.fid','tn'):$tn
+		    if ($tn=$nuc) then $j=$j+1 endif
+		else
+		    $j=$j+1
+		endif
+	   endif
+	   if ($j+1 > $xxx) then $i=$total endif
+	   $i=$i+1
+	until $i > $total
+    endif
+    $name=$lastname
+ELSEIF ($arg2 = 'iscpfid') THEN
+
+    $fidlog=$archsamp+'/dirinfo/fidlog'
+    exists($fidlog,'file'):$lsfex
+    if ($lsfex=0) then
+	$fidlog=$archsamp+'/dirinfo/lastfids'
+	exists($fidlog,'file'):$lsfex
+    endif
+    if ($lsfex=0) then return(0) endif
+
+    $studypar=$archsamp+'/studypar'
+    exists($studypar,'file'):$studyex
+
+    $isthere=0
+    shell('(grep -wc -- '+$1+' '+$fidlog+')'):$isthere
+    if ($isthere=0) then
+	shell('(grep -wc -- '+$1+'.fid '+$fidlog+')'):$isthere
+    endif
+    if ($isthere) and ($studyex=0) then
+	savestudypar($archsamp)
+    endif
+    return($isthere)
+
+ELSEIF ($arg2 = 'parud') THEN
+
+  $listfile='parupdate'
+  exists($archsamp+'/dirinfo','directory'):$direx
+  if ($direx=0) then
+        return
+  endif
+
+  $date=''
+  shell('date +%Y-%m-%d'):$date
+  $time=''
+  shell('date +%H%M%S'):$time
+  $username=operator
+
+  write('file',$archsamp+'/dirinfo/'+$listfile,'-------------------------------------')
+  $chronentry=$date+'-'+$time+' '+$1+' updated by '+$username+'\@'+systemname
+  write('file',$archsamp+'/dirinfo/'+$listfile,'%s',$chronentry)
+  write('file',$archsamp+'/dirinfo/'+$listfile,'Login Username: %s',owner)
+  shell('cat '+$3+' >> '+$archsamp+'/dirinfo/'+$listfile):$dum
+
+ENDIF
+
+    return($name,$archsamp)
+  

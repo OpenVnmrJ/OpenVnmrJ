@@ -1,0 +1,36 @@
+"macro ATfail"
+   "ATfail: macro to save fid with non-spec'd test and add line to FAILREPORT"
+   "        note: usage is ATfail(anything)"
+
+   ATgetdate:$date
+
+   $failreport=autotestdir+'/FAILREPORT'
+
+   exists($failreport,'file'):$e
+   if ($e=0) then 
+    cp(autotestdir+'/texts/reportform',$failreport)
+    shell('date'):$Date
+    write('file',$failreport,'%s %s %s',$Date,rev,revdate)
+    write('file',$failreport,'Run by %s on %s using %s probe at %2.1f C',at_user,at_consolesn,at_probetype,at_temp)
+    write('file',$failreport,'WFG Config.: rfwg = %s   PFG Amplifier: gradtype = %s pfgon = %s dsp = %s',rfwg,gradtype,pfgon,dsp)
+    write('file',$failreport,'   ')
+    write('file',$failreport,'Any Failures of Specifications are Listed Here   ')
+    write('file',$failreport,'**********************************************')
+    write('file',$failreport,'   ')
+   endif
+
+   write('file',$failreport,'Failure Reported for the %s Test on %s',$1,$date)
+
+   write('file',$failreport,'   ')
+
+   exists(autotestdir+'/data.failed','file'):$e
+   if ($e=0) then 
+      mkdir(autotestdir+'/data.failed')
+   endif
+
+   $failfile=autotestdir+'/data.failed/'+$1+'_'+$date
+
+   svf($failfile)
+   if ((dp='y') and (fsq<>'y')) then
+      compressfid($failfile)
+   endif

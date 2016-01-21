@@ -1,0 +1,165 @@
+"macro parunits"
+"parunits('set',param,$VALUE)   setdgroup for param from $VALUE"
+"parunits('get',param)          returns $VALUE from getdgroup"
+"$VALUE is 'sec','ms','us' or 'Hz','ppm1'|'ppm2'|'ppm3' or 'C'|'K'"
+"dgroup is   1    2    3   or  1     4      5      6    or  1   2 "
+
+if $#<1.5 then
+  write('error','Usage: parunits(\'get\'|\'set\',param<,value><,tree>)')
+  return(0)
+endif
+
+$getset = $1  "'get','set'"
+$param  = $2
+$tree   = 'current'
+if ($#>2.5 and $getset='set') then
+  $value=$3
+"  if $#>3.5 then $tree=$4 endif"
+endif
+"if ($#>2.5 and $getset='get') then"
+"  $tree=$3"
+"endif"
+
+"could loop through all trees, find tree"
+"this tree thing is okay, never arrayed"
+gettype($param,$tree):$type
+if ($type=0) then return('') endif
+
+if $getset='get' then
+  getdgroup($param,$tree):$dgroup
+
+  if $param='at' then
+    if $type=1 then
+"      settype($param,'delay')" "don't need settype"
+      $type=3
+    endif
+  else
+    $js='' substr($param,1,2):$js
+    if $js='sw' then "sw,sw1,sw2"
+      if $type=1 then
+"        settype($param,'frequency')" "don't need settype"
+        $type=5
+      endif
+    endif
+  endif
+
+  if $dgroup=1 then
+    if $param='temp' then
+      $value='C'
+    else
+      if $type=1 or $type=5 then "$type=1 is incorrect"
+        $value='Hz'
+      else
+        if $type=6 then
+          $value='us'
+        else "$type=3"
+          $value='sec'
+        endif
+      endif
+    endif
+  else
+    if $dgroup=2 then
+      if $param='temp' then
+        $value='K'
+      else
+        if $type=5 then
+          $value='kHz'
+        else
+          $value='ms'
+        endif
+      endif
+    else
+      if $dgroup=3 then
+        if $type=6 then
+          $value='sec'
+        else
+          if $type=5 then
+            $value='MHz'
+          else
+            $value='us'
+          endif
+        endif
+      else
+        if $dgroup=4 then
+          $value='ppm1'
+        else
+          if $dgroup=5 then
+            $value='ppm2'
+          else
+            if $dgroup=6 then
+              $value='ppm3'
+            else
+              if $dgroup=7 then
+                $value='ppm4'
+              else
+                if $dgroup=8 then
+                  $value='ppm5'
+                else
+                  write('error','parunits: \'%s\' has invalid dgroup %d',$param,$dgroup)
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+"  write('line3','parunits: GET %s label is \'%s\'',$param,$value)"
+"  $VALUE = $value"
+  return($value)
+
+else
+
+  if $getset='set' then
+    if $value='sec' or $value='Hz' or $value='C' then
+      if $type=6 then
+        setdgroup($param,3,$tree) $dgroup=3
+      else
+        setdgroup($param,1,$tree) $dgroup=1
+      endif
+    else
+      if $value='ms' or $value='K' or $value='kHz' then
+        setdgroup($param,2,$tree) $dgroup=2
+      else
+        if $value='us' then
+          if $type=6 then
+            setdgroup($param,1,$tree) $dgroup=1
+          else
+            setdgroup($param,3,$tree) $dgroup=3
+          endif
+        else
+          if $value='MHz' then
+            setdgroup($param,3,$tree) $dgroup=3
+          else
+            if $value='ppm1' then
+              setdgroup($param,4,$tree) $dgroup=4
+            else
+              if $value='ppm2' then
+                setdgroup($param,5,$tree) $dgroup=5
+              else
+                if $value='ppm3' then
+                  setdgroup($param,6,$tree) $dgroup=6
+                else
+                  if $value='ppm4' then
+                    setdgroup($param,7,$tree) $dgroup=7
+                  else
+                    if $value='ppm5' then
+                      setdgroup($param,8,$tree) $dgroup=8
+                    else
+                      write('error','parunits: invalid value \'%s\'',$value)
+                      $dgroup=0
+                    endif
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+"    write('line3','parunits: SET %s dgroup set to %d',$param,$dgroup)"
+
+  else
+    write('error','parunits: invalid first argument \'%s\'',$1)
+  endif
+endif

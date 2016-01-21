@@ -1,0 +1,28 @@
+"macro xmwritenode"
+"find node, write attributes in the node file"
+"assume sqattr,sqval contain all attributes,values"
+
+"use activeid instead of sqval[1] or sqval[2]??"
+
+xm1('studydir'):$sdir
+$i=0
+teststr('sqattr','id','global'):$i
+if $i=0 then return endif
+$file=$sdir+'/info/'+sqval[$i]+'/prop'
+"write('reset',$file)"
+
+$ws=''
+$j=0
+$size=size('sqattr')
+repeat
+  $j=$j+1
+  $attr=sqattr[$j]
+  $val=sqval[$j]
+  if ($attr<>'id') then
+"   write('file',$file,'%s %s',$attr,$val)"
+    $ws=$ws+$attr+' '+$val
+    if $j<$size then $ws=$ws+'\n' endif
+  endif
+until ($j >= $size)
+write('reset',$file)
+write('file',$file,'%s',$ws)

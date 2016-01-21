@@ -1,0 +1,138 @@
+"macro gain2Dproc"
+if ($# < 1) then $1='start' endif
+
+if (auto='y') then
+        $tmpfile=autodir+'/'+$0+'_tmp'
+else
+        $tmpfile=curexp+'/'+$0+'_tmp'
+endif
+
+IF ($1='start') THEN
+   getdim:$dim
+   if ($dim<2) then 
+	write('error','Not a 2D')
+	return 
+   endif
+/*
+   $phsize=size('phase')
+   if (arraydim <> $phsize*ni) then
+	write('error','parameters other than phase and ni are arrayed. autogain2d skipped')
+	return
+   endif
+*/
+   $submitmode=0
+   is_submitmode:$submitmode
+   if ($submitmode) then
+	write('error','curexp is in submit mode')
+	return
+   endif
+
+   if (wexp='chempackQ') then
+	$explist=explist
+	gain2Dproc('init','nogo')
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+	cpexplist('read',$md):explist
+	write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'done\')',$0)
+	explist=pslabel+'scout_firstInc','SetUp',explist
+	scoutinfo='autogain'
+	cpexplist('write',$md)
+	explist=$explist
+	wexp='chempackQ'
+	wds='' wstart=''
+   else
+	gain2Dproc('init')
+	expactive:$active
+	if ($active=0) then
+	    write('line3','doing autogain on first inc. please wait...')
+	    cpgo
+	elseif ($active>0) then
+	    write('error','current exp is active')
+	    gain2Dproc('quit'):$dum
+	else
+	    write('error','Acquisition is NOT possible')
+	    gain2Dproc('quit'):$dum
+	endif
+   endif
+
+ELSEIF ($1='init') THEN
+
+   $array=array
+   strsv2array($array,','):$array
+   array2string($array):$array
+   strsv2array($array,'('):$array
+   array2string($array):$arraypars
+
+   fsave($tmpfile)
+    execpars('delete')
+
+    exists('ni','parameter'):$niex
+    if ($niex) then ni=1 endif
+    exists('ni2','parameter'):$ni2ex
+    if ($ni2ex) then ni2=1 endif
+    exists('ni3','parameter'):$ni3ex
+    if ($ni3ex) then ni3=1 endif
+
+    $asize=size('$array')
+    $i=1
+    repeat
+	$par=$array[$i]
+      if ($par<>'') then
+	{$par}={$par}[1]
+      endif
+	$i=$i+1
+    until $i > $asize
+    gain='n'
+    nt=2 ss=2 pltopt='n' prcopt='n'
+    MinSW='off'
+    wnt=''
+    wexp='gain2Dproc(\'done\')'
+    werr='gain2Dproc(\'error\')'
+    explist=pslabel+'scout_firstInc'
+    wstart='' wds='' wdone=''
+
+ELSEIF ($1='error') THEN
+
+    	"For inova/mercury we need to adjust gain here"
+	"For vnmrs/400mr the following section will not happen"
+    if (acqstatus[2]=103) or (acqstatus[2]=104) then
+	if (gain<>0) then
+	    if (gain<5) then gain=0 else gain=gain-6 endif
+	    aa
+	    write('line3','gain reduced and experiment resubmitted')
+	    shell('sleep 1'):$dum
+	    gmapshim_au('glideau','next')
+	    return
+	endif
+    endif
+    if (wexp='chempackQ') then 
+		"This is a queued acquistiion"
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+	cpalias('SetUp','remove',$md)
+	write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'quit\')',$0)
+	scoutinfo=''
+    else
+	wexp='gain2Dproc(\'quit\')'
+    endif
+    halt
+
+ELSEIF ($1='done') or ($1='quit') THEN
+
+    $gain=gain
+    on('gain')
+    exists($tmpfile,'file'):$fex
+    if ($fex) then
+	fread($tmpfile)
+	rm($tmpfile):$x
+	newdg
+    endif
+    if ($1='done') then
+    	gain=$gain
+	write('line3','gain set to %d',gain)
+    elseif ($## < 1) then
+	write('error','autogain failed')
+    endif
+    wnt='' wdone='' wstart='' wds=''
+    scoutinfo=''
+    explist=pslabel
+
+ENDIF

@@ -1,0 +1,91 @@
+"macro updateautodir"
+  $dir=$1 $filename=$2
+  $date='' shell('date +%Y-%m-%d_%H%M%S'):$date
+
+  $firstchar=''
+  substr($dir,1,1):$firstchar
+  if ($firstchar<>'/') then
+     if (cpglobalauto<>'') then
+	$dir=cpglobalauto+'/'+$dir
+     else
+	$dir=userdir+'/Automation/'+$dir
+     endif
+  endif
+
+  if ($filename='enterQ') then
+    exists($dir+'/exp1','directory'):$direx
+    if ($direx=0) then auto($dir) endif
+    if (traymax>0) then
+      exists($dir+'/autostudies','file'):$fileex
+      if ($fileex=0) then
+        shell('touch '+$dir+'/autostudies'):$dum
+        shell('chmod g+rw '+$dir+'/autostudies'):$dum
+      endif
+    endif
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/curloc','directory'):$direx
+  if ($direx=0) then
+     shell('mkdir -p '+$dir+'/'+$filename+'.macdir/curloc'):$dum
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/curloclong','directory'):$direx
+  if ($direx=0) then
+     shell('mkdir -p '+$dir+'/'+$filename+'.macdir/curloclong'):$dum
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/DATE_creation','file'):$fileex
+  if ($fileex=0) then
+	write('file',$dir+'/'+$filename+'.macdir/DATE_creation','%s',$date)
+  endif
+
+  if ($filename='enterQ') then
+    exists($dir+'/'+$filename+'.macdir/DATE_runstart','file'):$fileex
+    if ($fileex=0) then
+        write('file',$dir+'/'+$filename+'.macdir/DATE_runstart','%s',$date)
+    endif
+  endif
+
+  exists($dir+'/'+$filename,'file'):$fileex
+  if ($fileex=0) then
+     shell('touch '+$dir+'/'+$filename):$dum
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/overniteQ','file'):$fileex
+  if ($fileex=0) then
+     shell('touch '+$dir+'/'+$filename+'.macdir/overniteQ'):$dum
+  endif
+
+  if ($filename='enterQ') then
+     exists($dir+'/'+$filename+'.macdir/submittedQ','file'):$fileex
+     if ($fileex=0) then
+         shell('touch '+$dir+'/'+$filename+'.macdir/submittedQ'):$dum
+     endif
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/reuselocQ','file'):$fileex
+  if ($fileex=0) then
+	shell('touch '+$dir+'/'+$filename+'.macdir/reuselocQ'):$dum
+  endif
+  exists($dir+'/'+$filename+'.macdir/AutoTimeLog','file'):$fileex
+  if ($fileex=0) then
+        shell('touch '+$dir+'/'+$filename+'.macdir/AutoTimeLog'):$dum
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/eventLog','file'):$fileex
+  if ($fileex=0) then
+	$header=''
+	eventLog('Header'):$header
+        $logmsg='' write('line3','%s %s Directory created',$header,$dir):$logmsg
+	write('file',$dir+'/'+$filename+'.macdir/eventLog','%s',$logmsg)
+//	eLogAction('write',$dir+'/'+$filename,'',$logmsg)
+  endif
+
+  exists($dir+'/'+$filename+'.macdir/AUTOGLOBAL','file'):$fileex
+  if ($fileex=0) then
+     setAUTOGLOBAL($dir,$filename)
+  else
+     shell('chmod -R g+rw '+$dir):$dum
+  endif
+
+

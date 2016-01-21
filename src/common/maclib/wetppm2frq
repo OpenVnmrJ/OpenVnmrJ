@@ -1,0 +1,47 @@
+"macro wetppm2frq"
+if ($# < 1) then
+    $1=''
+endif
+
+  on('wetppm'):$ison
+  on('wetfrq'):$ison2
+
+IF ($1='rev') THEN
+
+    mkpar('real','wetppm',0)
+    setprotect('wetppm','on',256)
+    on('wetppm','processed'):$wpon
+    if ($wpon>-1) then
+        setprotect('wetppm','on',256,'processed')
+    endif
+
+    if ($ison2>0) then
+       $wetfrqsize=size('wetfrq')
+       wetppm=0
+       $i=1
+       repeat
+	  if (procdim<1) then
+             setppm(wetfrq[$i],tn):wetppm[$i]
+	  else
+	     getppm(wetfrq[$i]):wetppm[$i]
+	  endif
+          $i=$i+1
+       until $i > $wetfrqsize
+    endif
+    off('wetppm')
+
+ELSE
+
+  if ($ison > 0) and ($ison2 < 1) then 
+	wetfrq=0
+	$size=size('wetppm')
+	$i=1
+	repeat
+	   setoffset(wetppm[$i],tn):wetfrq[$i]
+	   $i=$i+1
+	until $i > $size
+	on('wetfrq')
+	off('wetppm')
+  endif
+
+ENDIF

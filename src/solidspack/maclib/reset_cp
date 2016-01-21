@@ -1,0 +1,28 @@
+"macro reset_cp"
+//reset_cp is a macro for approximate setting of tancpx experiment
+//Usage: reset_cp (no arguments): setup for +1 proton HH sideband and the nutation rate specified by tpwr,aX90,and pwX90 on obs channel
+//	 reset_cp(<sideband number>) : setup for <sideband number> proton HH sideband and the specified by tpwr,aX90,and pwX90 on obs channel
+//	 reset_cp(<sideband number>, <X nutation rate>) : setup for <sideband number> proton HH sideband and <X nutation rate>
+// V.Zorin, 22/10/10
+
+$nuX=1e6/(4.0*pwX90)
+$nuH=1e6/(4.0*pwH90)
+
+if ($#=2) then
+//X field and sidebands provided
+	aXhx=$2/$nuX*aX90
+	aHhx=aH90*($2+$1*srate)/$nuH
+else if ($#=1) then
+//Sidebands provided
+	aXhx=aX90
+	aHhx=aH90*($nuX+$1*srate)/$nuH
+else
+//use default X nutation and +1 proton HH sideband
+	aXhx=aX90	
+	aHhx=aH90*($nuX+srate)/$nuH
+endif
+endif
+
+$nuXcp=aXhx/aX90*1/(4*pwX90)*1000
+$nuHcp=aHhx/aH90*1/(4*pwH90)*1000
+write('line3','Setup CP at H nutation of %5.2fkHz and X nutation of %5.2fkHz',$nuHcp,$nuXcp)

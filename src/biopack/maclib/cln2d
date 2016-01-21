@@ -1,0 +1,38 @@
+"macro cln2d"
+"cln2d - CLEAN 2D processing of under-sampled data. 
+"macro cln2d"
+
+$cln2d=''
+
+BPfindfile('cln2d'):$cln2d
+$procdir='' $fn1='' $fn2='' $log='' $cmd='' $opts=''
+
+$procdir=curexp+'/procdir'
+$log = $procdir+'/cln2d.log'
+$fn1 = $procdir+'/inf.fid'
+$fn2 = $procdir+'/cln2d.fid'
+
+exists($fn1+'/fid','file'):$e  
+if not ($e) then
+  write('line3','cln2d failed.')
+  return
+endif
+
+$s=''
+format(CSthr,1,1):$s
+$opts = ' ' + $s
+
+if(CSdnoise='y') then
+  $opts = $opts + ' -d'
+endif
+
+$opts = $opts + ' >> '
+$cmd = $cln2d +' ' + $fn1 + ' ' + $fn2 + $opts + $log 
+write('reset',$log)
+write('file',$log,$cmd)
+shell($cmd)  
+
+rt($procdir+'/cln2d.fid')
+wft(1) ds
+write('line3','cln2d finished.')
+

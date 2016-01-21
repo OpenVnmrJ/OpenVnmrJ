@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="bpexpress_params_tract" element="groups" type="sample" >
+  <group size="230 135"
+    style="Heading1"
+    label="Express parameters"
+    bg="transparent"
+    border="Etched"
+    tab="no"
+    enable="no"
+    reference="bpexpress_params_tract"
+    useref="no"
+    subtype="Titled"
+    expanded="yes"
+    rows="1"
+    columns="1"
+    >
+    <group loc="165 20" size="60 30"
+      vq="exp_mode"
+      show="$SHOW=1 if (exp_mode='R')  then $SHOW=0 endif"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      reference="process"
+      useref="no"
+      subtype="Untitled"
+      expanded="yes"
+      rows="1"
+      columns="1"
+      >
+      <check loc="5 5" size="50 20"
+        style="PlainText"
+        label="NUS"
+        vq="sampling"
+        vc="sampling='sparse'  {setup_nus_cmd} "
+        vc2="sampling='uniform' time"
+        set="$VALUE=0 if (sampling='sparse') then $VALUE=1 endif"
+        />
+    </group>
+    <group loc="10 85" size="210 30"
+      vq="exp_mode"
+      show="$SHOW=0 if (exp_mode='R') then $SHOW=1 endif"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="false"
+      subtype="Untitled"
+      rows="1"
+      columns="1"
+      >
+      <entry loc="150 5" size="50 20"
+        style="PlainText"
+        vq="relaxT"
+        vc="relaxT=$VALUE*0.001 {setup_macro}('larray')"
+        set="$VALUE=relaxT*1000"
+        digits="1"
+        />
+      <label loc="5 5" size="140 20"
+        style="Label1"
+        label="max T2 for TRACT, ms"
+        />
+    </group>
+    <check loc="15 55" size="170 25"
+      style="PlainText"
+      label="tauC estimate (TRACT)"
+      vq="exp_mode"
+      vc="exp_mode='R'  timeTN=0.0  {setup_macro}('tract1d')  if(ni&gt;1) then {setup_macro}('tract2d') endif   sampling='uniform' time"
+      vc2="exp_mode='n' timeTN=0.0  peak='LR'  time"
+      set="$VALUE=0 if (exp_mode='R') then $VALUE=1 endif"
+      tooltip="exp_mode='R' setup TRACT: 15N U/L component relaxation difference "
+      />
+    <label loc="10 25" size="120 20"
+      style="Label1"
+      label="# transients per fid"
+      />
+    <entry loc="125 25" size="35 20"
+      style="PlainText"
+      vq="nt"
+      vc="nt=$VALUE"
+      set="$VALUE=nt time"
+      />
+  </group>
+</template>

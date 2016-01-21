@@ -1,0 +1,95 @@
+"macro arccos"
+"****************************************************************************"
+"     arccos: Macro to calculate arccos of a real number in the range +1.0   "
+"             to -1.0. The answer is given in radians and degrees. The first "
+"             return value is radians, the second degrees. The displayed     " 
+"             can be suppressed with the silent option. The calculation is   "
+"             based on the identity:                                         "
+"                                                                            "
+"                  arccos(x) = arctan( sqrt(1-x*x)/x)                        "
+"                                                                            "
+"****************************************************************************"
+
+
+"david foxall: 19th june 1987: interface version #1"
+" @(#)arccos	7.1    7/1/91 "
+
+
+"[0] Constants and Declarations"
+$piby2=1.5707963
+$arccosstr=' '
+$degreestr=' '
+$onestr=' '
+
+"[1] Input parameter count"
+if $# < 0.5
+then
+write('error','%s','arccos: Use arccos(real number,<"silent">)')
+abort
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+$state='notsilent'
+endif
+
+if ($# > 1.5) and ($# < 2.5)
+then
+   if $2='silent'
+   then
+   $state='silent'
+   else
+   $state='notsilent'
+   write('error','%s','arccos: Use arccos(real number,<"silent">)')
+   endif
+endif
+
+if $# > 2.5
+then
+write('error','%s','arccos: Use arccos(real number,<"silent">)')
+abort
+endif
+
+"[2] Input Validity trap"
+if ($1 > 1.0) or ($1 < -1.0)
+then
+write('error','%s','arccos: Argument is out of range (-1 < x < 1)')
+abort
+endif
+
+"[3] Calculations"
+$cos=$1
+$sin=sqrt(1.0-$cos*$cos)
+
+if ($cos < 0.00000001) and ($cos > -0.00000001)
+then
+$cos=0.00000001
+endif
+
+$tan=$sin/$cos
+if $cos > 0.0
+then
+arctan($tan,'silent'):$arccos,$degrees
+else
+arctan($tan,'silent'):$dummy1,$dummy2
+$arccos=2.0*$piby2+$dummy1
+$degrees=180.0+$dummy2
+endif
+format($arccos,6,4):$arccosstr
+format($degrees,7,4):$degreestr
+format($1,6,4):$onestr
+$outstring='Arccos of: '+$onestr+'  is  '+$arccosstr+'  radians'
+$outstring=$outstring+'  or  '+$degreestr+' degrees'
+
+
+"[3] Return to user "
+if $state='silent'
+then
+return($arccos,$degrees)
+else
+write('line3','%s',$outstring)
+return($arccos,$degrees)
+endif
+
+"************************************THE END**********************************"
+

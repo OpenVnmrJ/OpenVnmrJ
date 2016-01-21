@@ -1,0 +1,269 @@
+"macro ATc07"
+"ATc07" "Noise Test: Noise measurement on FID with/without C13/N15 decoupling "  
+"        No 1H pulse applied. 100msec acquisition time"
+"        13C decoupling power set at defined maximum limit (at_max_dpwr)"
+"        15N decoupling power set at defined maximum limit (at_max_dpwr2)"
+"        13C/15N decoupling powers each set 3dB below defined maximum limits"
+" For 2-channel probe, set max 15N pulse power = 0.0               "
+
+if (at_c13tests='n') then ATnext return endif
+if ($#=0) then
+   ATrtp('standard')
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+   seqfil='s2pul'
+   text('Spectral Purity (first FID) Test: No Decoupling')
+   at_currenttest='noise' 
+   lsfid=2 ph d1=1.5 at=.1 lb=1/at 
+   gain=at_gain pw=0 nt=1,1,1,1 sw=80p full 
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=4.5p  vsadj(3) dssa dtext'
+   wexp='ATc07(`PART1`)'
+   ATcycle
+   au
+   write('line3','Spectral Purity (first FID) Test: no pulse, 80ppm Spectral Width')
+
+elseif ($1='PART1') then
+     wft
+     noise:$arg1,$arg2,$arg3,$arg4,r2,$arg6
+     $arg1=trunc($arg1*100)/100
+     $arg2=trunc($arg2*100)/100
+     $arg3=trunc($arg3*100)/100
+     $arg4=trunc($arg4*100)/100
+     r2=trunc(r2*100)/100
+     $arg6=trunc($arg6*100)/100
+
+     ATrecord('NOISEc','FID Noise Test',' Av.RMS_noise',r2,' RMS_real',$arg3,' RMS_imag ',$arg4,' re_offset ',$arg1,' imag_offset ',$arg2,' oversamp',oversamp)
+     write('file',autotestdir+'/REPORT','Noise:  (No 13C or 15N Decoupling):                     AV.RMS noise = %4.2f             Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f                 imag dc offset = %4.2f  oversamp = %2.0f',r2,$arg3,$arg4,$arg1,$arg2,oversamp)
+  if (at_plotauto='y') then
+   pap(0,wc2max-40) ATpltext(65,65)
+   pps(120,0,wcmax-120,60) 
+   right ho=0 vo=20
+   vp=80 pscale pl('all')
+   write('plotter',0,wc2max-15,'Noise (first FID) Test (No 13C or 15N Decoupling)')
+   write('plotter',0,wc2max-20,'AV.RMS noise = %4.2f  Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f  imag dc offset = %4.2f  oversamp = %2.0f',r2,$arg3,$arg4,$arg1,$arg2,oversamp)
+
+   s5
+   wft vf=vs
+   sc=wcmax-25 wc=25
+   $count=1
+   vpf=-60
+   clear(2)  
+   repeat
+    dfsn($count,$count) plfid
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,40,'Real FIDs       (Above)')
+   sc=wcmax-25 wc=25
+   $count=1
+   vpfi=-70
+   clear(2)  
+   repeat
+    dfsn($count,$count,'imag') plfid('imag')
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,38,'Imaginary FIDs (Below)')
+   r5
+
+   ATpage
+  endif
+
+   ATsvf
+   wexp='ATc07(`PART2`)'
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=4.5p  dssa dtext'
+   ATcycle
+   dn='C13' dn2='' dm='nny' dmm='ccc' dpwr=at_max_dpwr
+   ss=64 
+   at_currenttest='noiseCdec' 
+   au
+   text('Spectral Purity Test: 13C Decoupling')
+   write('line3','Spectral Purity (first FID) Test: With 13C Decoupling')
+
+elseif ($1='PART2') then
+  wft
+
+     noise:$arg1,$arg2,$arg3,$arg4,r3,$arg6
+     $incr = 100*(r3/r2-1)
+     $incr=trunc($incr*10)/10
+     $arg1=trunc($arg1*100)/100
+     $arg2=trunc($arg2*100)/100
+     $arg3=trunc($arg3*100)/100
+     $arg4=trunc($arg4*100)/100
+     r3=trunc(r3*100)/100
+     $arg6=trunc($arg6*100)/100
+
+     ATrecord('NOISECc','FID Noise Test with 13C Decoupling','Pct.Incr.',$incr,' Av.RMS_noise',r3,' RMS_real',$arg3,' RMS_imag ',$arg4,' re_offset ',$arg1,' imag_offset ',$arg2)
+     write('file',autotestdir+'/REPORT','Noise:  with 13C decoupling:    Percent Increase = %2.1f AV.RMS noise = %4.2f            Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f                  imag dc offset = %4.2f  oversamp = %2.0f',$incr,r3,$arg3,$arg4,$arg1,$arg2,oversamp)
+  if $incr>50 then ATfail('NOISECc') 
+   banner('FID NOISE test failed with 13C decoupling set at maximum permitted level')
+  endif
+
+  if (at_plotauto='y') then
+   pap(0,wc2max-40) ATpltext(65,65)
+   pps(120,0,wcmax-120,60) 
+   right pscale ho=0 vo=20
+   vp=80 pl('all')
+   write('plotter',0,wc2max-15,'Noise (first FID) Test with 13C decoupling at user-specified maximum power = %2.0f',dpwr)
+   write('plotter',0,wc2max-20,'Percent Increase = %2.1f   AV.RMS noise = %4.2f   Re RMS noise = %4.2f   Imag RMS noise = %4.2f     re dc offset = %4.2f   imag dc offset = %4.2f  oversamp = %2.0f',$incr,r3,$arg3,$arg4,$arg1,$arg2,oversamp)
+   s5
+   wft 
+   sc=wcmax-25 wc=25
+   $count=1
+   vpf=-60
+   clear(2)  
+   repeat
+    dfsn($count,$count) plfid
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,40,'Real FIDs       (Above)')
+   sc=wcmax-25 wc=25
+   $count=1
+   vpfi=-70
+   clear(2)  
+   repeat
+    dfsn($count,$count,'imag') plfid('imag')
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,38,'Imaginary FIDs (Below)')
+   r5
+  ATpage
+  endif
+
+   ATsvf
+   wexp='ATc07(`PART3`)'
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=4.5p  dssa dtext'
+   ATcycle
+   dn='' dn2='N15' dm='nnn' dm2='nny' dmm2='ccc'
+   dpwr2=at_max_dpwr2
+   if at_max_pwx2lvl=0.0 then
+    ATnext return
+   endif
+   at_currenttest='noiseNdec' 
+   au
+   text('Spectral Purity Test: 15N Decoupling')
+   write('line3','Spectral Purity Test: With 15N Decoupling')
+
+elseif($1='PART3') then
+  wft
+  ATsvf
+     noise:$arg1,$arg2,$arg3,$arg4,r4,$arg6
+     $incr = 100*(r4/r2-1)
+     $incr=trunc($incr*10)/10
+     $arg1=trunc($arg1*100)/100
+     $arg2=trunc($arg2*100)/100
+     $arg3=trunc($arg3*100)/100
+     $arg4=trunc($arg4*100)/100
+     r4=trunc(r4*100)/100
+     $arg6=trunc($arg6*100)/100
+
+     ATrecord('NOISENc','FID Noise Test with 15N Decoupling',' Pct.Incr.',$incr,' Av.RMS_noise',r4,' RMS_real',$arg3,' RMS_imag ',$arg4,' re_offset ',$arg1,' imag_offset ',$arg2)
+     write('file',autotestdir+'/REPORT','Noise:  with 15N decoupling:    Percent Increase = %2.1f AV.RMS noise = %4.2f            Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f                  imag dc offset = %4.2f  oversamp = %2.0f',$incr,r4,$arg3,$arg4,$arg1,$arg2,oversamp)
+  if $incr>50 then ATfail('NOISENc') 
+   banner('FID NOISE test failed with 15N decoupling set at maximum permitted level')
+  endif
+
+  if (at_plotauto='y') then
+   pap(0,wc2max-40) ATpltext(65,65)
+   pps(120,0,wcmax-120,60) 
+   right pscale ho=0 vo=20
+   vp=80 pl('all')
+   write('plotter',0,wc2max-15,'Noise (first FID) Test with 15N decoupling at user-specified maximum power = %2.0f',dpwr2)
+   write('plotter',0,wc2max-20,'Percent Increase = %2.1f   AV.RMS noise = %4.2f   Re RMS noise = %4.2f   Imag RMS noise = %4.2f     re dc offset = %4.2f   imag dc offset = %4.2f  oversamp = %2.0f',$incr,r4,$arg3,$arg4,$arg1,$arg2,oversamp)
+   s5
+   wft 
+   sc=wcmax-25 wc=25
+   $count=1
+   vpf=-60
+   clear(2)  
+   repeat
+    dfsn($count,$count) plfid
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,40,'Real FIDs       (Above)')
+   sc=wcmax-25 wc=25
+   $count=1
+   vpfi=-70
+   clear(2)  
+   repeat
+    dfsn($count,$count,'imag') plfid('imag')
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,38,'Imaginary FIDs (Below)')
+   r5
+   ATpage
+  endif
+
+   wexp='ATc07(`PART4`)'
+   wnt='ATwft f select(1) crl rfl=sw/2 rfp=4.5p  dssa dtext'
+   ATcycle
+   dpwr=at_max_dpwr-3 dpwr2=at_max_dpwr2-3
+   dn='C13' dn2='N15' dm='nny'
+   dm2='nny'
+   at_currenttest='noiseCNdec' 
+   au
+   text('Spectral Purity Test:15N/13C Decoupling')
+   write('line3','Spectral Purity Test:\\ With 15N/13C Decoupling')
+
+   ATsvf
+
+elseif($1='PART4') then
+
+  wft
+
+     noise:$arg1,$arg2,$arg3,$arg4,r5,$arg6
+     $incr = 100*(r5/r2-1)
+     $incr=trunc($incr*10)/10
+     $arg1=trunc($arg1*100)/100
+     $arg2=trunc($arg2*100)/100
+     $arg3=trunc($arg3*100)/100
+     $arg4=trunc($arg4*100)/100
+     r5=trunc(r5*100)/100
+     $arg6=trunc($arg6*100)/100
+
+     ATrecord('NOISECNc','FID Noise Test with 15N/13C Decoupling','Pct.Incr.',$incr,' Av.RMS_noise',r5,' RMS_real',$arg3,' RMS_imag ',$arg4,' re_offset ',$arg1,' imag_offset ',$arg2)
+     write('file',autotestdir+'/REPORT','Noise:  with 13C15N decoupling: Percent Increase = %2.1f AV.RMS noise = %4.2f            Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f                  imag dc offset = %4.2f  oversamp = %2.0f',$incr,r5,$arg3,$arg4,$arg1,$arg2,oversamp)
+  if $incr>50 then ATfail('NOISECNc') 
+   banner('FID NOISE test failed with 13C/15N decoupling set at maximum permitted levels less 6dB each')
+  endif
+  
+  if (at_plotauto='y') then
+   pap(0,wc2max-40) ATpltext(65,65)
+   pps(120,0,wcmax-120,60) 
+   right pscale ho=0 vo=20
+   vp=80 pl('all')
+   write('plotter',0,wc2max-15,'FID Noise (first FID) Test with 15N/13C decoupling at user-specified maximum powers (less 6dB) = %2.0f for 13C and %2.0f for 15N',dpwr,dpwr2)
+   write('plotter',0,wc2max-20,'Percent Increase = %2.1f   AV.RMS noise = %4.2f   Re RMS noise = %4.2f   Imag RMS noise = %4.2f     re dc offset = %4.2f   imag dc offset = %4.2f  oversamp = %2.0f',$incr,r5,$arg3,$arg4,$arg1,$arg2,oversamp)
+   s5
+   wft 
+   sc=wcmax-25 wc=25
+   $count=1
+   vpf=-60
+   clear(2)  
+   repeat
+    dfsn($count,$count) plfid
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,40,'Real FIDs       (Above)')
+   sc=wcmax-25 wc=25
+   $count=1
+   vpfi=-70
+   clear(2)  
+   repeat
+    dfsn($count,$count,'imag') plfid('imag')
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,38,'Imaginary FIDs (Below)')
+   r5
+   ATpage
+  endif
+
+   ATsvf
+
+   ATnext
+endif

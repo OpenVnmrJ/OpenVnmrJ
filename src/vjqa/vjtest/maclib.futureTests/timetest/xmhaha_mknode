@@ -1,0 +1,279 @@
+"*******************************************************"
+"xmhaha_mknode - 						"
+"	This is the xml section of the xmmakenode macro "
+"	stripped down for ChemPack			"
+" arg1 - protocol                                       "
+" arg2 - attributes and values as array			"
+" arg3 - node insert point				"
+" arg4 (optional) - write out study.xml and enterSQ	"
+"    Not tested with protocols with >1 action nodes	"
+"	Particularly the attributes			"
+"*******************************************************"
+
+timeit($0 + ' started for '+$1,0)
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  if ($# < 4) then $4='write' endif
+
+	"Find existing protocol.  If not, create one using"
+	"  mkCPprotocol macro "
+//  getappdirs:$atot,$adirs
+  appdir('info'):$atot
+  $adirs=''
+  $i=1
+  repeat
+        appdir('info',$i):$dummy,$adirs[$i]
+	$file=$adirs[$i]+'/templates/vnmrj/protocols/'+$1+'.xml'
+	exists($file,'file'):$fileex
+	if ($fileex) then
+	   shell('(cat '+$file+' | grep -cw \'author=\"chempack\"\')'):$fileex
+	endif
+	if ($fileex) then $i=$atot endif
+	$i=$i+1
+  until $i > $atot
+  if ($fileex=0) then
+write('line3','%s did not find %s', $0, $file)
+     $i=1
+     repeat
+        $file=$adirs[$i]+'/templates/vnmrj/interface/'+$1+'.xml'
+        exists($file,'file'):$fileex
+        if ($fileex) then
+           shell('(cat '+$file+' | grep -cw \'author=\"chempack\"\')'):$fileex
+        endif
+        if ($fileex) then $i=$atot endif
+        $i=$i+1
+     until $i > $atot
+  endif
+timeit($0 + ' part1')
+  if ($fileex=0) then 
+	mkCPprotocol($1,userdir+'/persistence')
+  else
+	shell('cp '+$file+' '+userdir+'/persistence/'+$1+'.xml'):$dum
+  endif
+
+  $file=userdir+'/persistence/'+$1+'.xml'
+  exists($file,'file'):$fileex
+  if ($fileex=0) then
+        write('error','Could not find or create protocol for %s',$1)
+        return('','')
+  endif
+
+  $ati=0
+	"protocol was found or created.  Proceed"
+  lookup('mfile',$file,'filekey'):$key
+  lookup('mfile',$key,'delimiter','=" \n\r\t','seek','<template','seek','<protocol','filekey'):$key
+  $s1='' $s2=''
+  $s1[1]='Protocol' $s2[1]='1'
+  $s1[2]='status' $s2[2]='protocol'
+  $s1[3]='exp' $s2[3]='parent'
+  $s1[4]='element' $s2[4]='protocol'
+  $s1[5]='lock' $s2[5]='off'
+  $i=5 $j=0 $n=0 $j1='' $j2='' $action='n' $flock='n'
+  repeat
+    $j=$j+1 $j1=''
+    lookup('mfile',$key,'delimiter','="</>! \n\r\t','read','filekey'):$j1,$key,$n
+    if ($n>1.5) then
+      if ($j1='protocol') then
+        $n=0
+      elseif ($j1='action') then
+        $i=$i+1 $action='y'
+        $s1[$i]='Action' $s2[$i]='1'
+      elseif ($j1='data') then
+        $i=$i+1
+        $s1[$i]=$j1 $s2[$i]=''
+	teststr('$2','data','local'):$xi
+	if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+      elseif ($j1='title') then
+        lookup('mfile',$key,'delimiter','"\n\r','read','filekey'):$j2,$key,$n
+	if ($action='y') then
+		$j=$j+1
+		if ($n>1.5) then
+		   $i=$i+1
+		   $s1[$i]=$j1 $s2[$i]=$j2
+		   $ati=$i
+		   teststr('$2','actiontitle','local'):$xi
+		   if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+		endif
+	else
+                $j=$j+1
+                if ($n>1.5) then
+                   $i=$i+1
+                   $s1[$i]=$j1 $s2[$i]=$j2
+		   teststr('$2','protocoltitle','local'):$xi
+		   if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+                endif
+	endif
+      elseif ($j1='type') then
+        lookup('mfile',$key,'delimiter','"\n\r','read','filekey'):$j2,$key,$n
+	if ($action='y') then
+		$j=$j+1
+		if ($n>1.5) then
+		   $i=$i+1
+		   $s1[$i]=$j1 $s2[$i]=$j2
+		   teststr('$2','actiontype','local'):$xi
+		   if ($xi>0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+		endif
+	else
+                $j=$j+1
+                if ($n>1.5) then
+                   $i=$i+1
+                   $s1[$i]=$j1 $s2[$i]=$j2
+                   teststr('$2','protocoltype','local'):$xi
+                   if ($xi>0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+                endif
+	endif
+      elseif ($j1='time' or $j1='macro' or $j1='required') then
+        lookup('mfile',$key,'delimiter','"\n\r','read','filekey'):$j2,$key,$n
+        $j=$j+1
+        if ($n>1.5) then
+          $i=$i+1
+          $s1[$i]=$j1 $s2[$i]=$j2
+	  if ($j1='time') then
+		invformattime($j2):$xj2
+		formattime($xj2):$xj1,$j2
+		$s2[$i]=$j2
+	  endif
+	  teststr('$2',$j1,'local'):$xi
+	  if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+        endif
+      else
+        $j=$j+1
+        lookup('mfile',$key,'delimiter','="</>! \n\r\t','read','filekey'):$j2,$key,$n
+        if ($n>1.5) then
+          $i=$i+1
+          $s1[$i]=$j1 $s2[$i]=$j2
+          teststr('$2',$j1,'local'):$xi
+          if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+        endif
+        if $j1='lock' then $flock='y' endif
+      endif
+    endif
+  until ($n<1.5 or $j>1000) "avoid infinite loop"
+  if $flock='n' then
+    $i=$i+1
+    $s1[$i]='lock' $s2[$i]='off'
+    teststr('$2','lock','local'):$xi
+    if ($xi > 0) then $s2[$i]=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+  endif
+
+  teststr('$s1','time','local'):$yi
+//  Uncomment the following line for VJ3
+//  $yi=0
+  if ($ati>0) and ($yi>0) then
+     if ($s2[$yi]<>'') then
+        $s2[$ati]=$s2[$ati]+' ['+$s2[$yi]+']'
+        $s2[$yi]=''
+     endif
+  endif
+
+timeit($0 + ' part2')
+$size=size('$s1')
+
+exists(userdir+'/persistence/'+$1+'.xml','file'):$fileex
+if ($fileex) then
+	shell('rm -f '+userdir+'/persistence/'+$1+'.xml'):$dum
+endif
+
+"find protocol or action"
+$i=0 $found=0
+teststr('$s1','Protocol','local'):$found
+if ($found=0) then
+   teststr('$s1','Action','local'):$found
+endif
+if ($found=0) then return('','') endif
+
+$sdir=sqdir
+"build protocol directory"
+$ndir=$sdir+'/info'
+exists($ndir,'file'):$e
+if ($e<0.5) and ($sdir<>'') then
+  shell('mkdir -p '+$ndir):$dum
+endif
+exists($sdir+'/study.xml','file'):$fex
+if ($fex=0) then
+        shell('touch '+$sdir+'/study.xml'):$dum
+endif
+shell('(cat '+$sdir+'/study.xml | wc -l)'):$fex
+$firstnode='n'
+
+$snode=$3
+if (($fex=0) and (($snode='') or ($snode='null'))) then
+	xmhaha('grandma'):$snode
+endif
+if ($snode=studyid) then
+	$firstnode='y'
+	$snode=studyid
+endif
+$newnodes=''
+
+timeit($0 + ' part3')
+$kmax=10000
+$title='' $status=''
+$k=0 $sc=''
+repeat
+  $k=$k+1  "trap for infinite loop"
+  if ($i<=$size) then
+    if ($s1[$i]='Action') then
+      if ($sc<>'') then xm1($sc) $sc='' endif
+      $node='' $ldir=''
+      xm1('mkdir'):$node,$ldir
+      xm1('add new action')
+      if $node<>'' then
+        xm1('set','new','id',$node)
+	$newnodes=$newnodes,$node
+        if $snode<>'' then
+          if $snode<>'null' then
+            if $firstnode='y' then
+              $firstnode='n'
+              xm1('pmove '+$node+' '+$snode)
+            else
+              xm1('move '+$node+' '+$snode)
+            endif
+          endif
+          $snode=$node
+        endif
+        $tt=$title+' '+$node
+        teststr('$2','actiontooltext','local'):$xi
+        if ($xi > 0) then $tt=$2[$xi+1] $2[$xi]='' $2[$xi+1]='' endif
+        $sc=$sc+' set '+$node+' tooltext "'+$tt+'";'
+        xm1($sc) $sc=''
+      endif
+
+    elseif ($s1[$i]='Protocol') then
+      $node='' $ldir=''
+      xm1('mkdir'):$node,$ldir
+      if $node<>'' then
+	$newnodes=$newnodes,$node
+      endif
+    endif
+    repeat
+      $i=$i+1
+      $si=$s1[$i]
+      if ($si<>'Action' and $si<>'Protocol') then
+        if ($node<>'') then
+          if ($si<>'time_created' and $si<>'application') then
+            xm1('writeprop',$ldir+'/prop',$si,$s2[$i])
+          endif
+          $sc=$sc+'set '+$node+' '+$si+' "'+$s2[$i]+'"; '
+        else
+          $sc=$sc+'set new '+$si+' "'+$s2[$i]+'"; '
+        endif
+        if $si='title' then
+          $title=$s2[$i]
+        elseif $si='status' then
+          $status=$s2[$i]
+        endif
+      endif
+    until ($i>=$size or $k>$kmax or $si='' or $si='Action' or $si='Protocol')
+  endif
+until ($i>=$size or $k>$kmax or $si='')
+timeit($0 + ' part4')
+
+if ($sc <> '') then xm1($sc) endif
+if $node<>'' then copyid[1]=$node endif
+if ($4='write') then xmhaha('writesq') endif
+array2string($newnodes):$newnodes
+string2array($newnodes):$newnodes
+timeit($0 + ' done')
+return($node,$newnodes)
+

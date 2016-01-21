@@ -1,0 +1,22 @@
+"macro savevarspec"
+is_cpfid:$cpfid
+if not $cpfid then
+    write('error','fid in curexp is not saved')
+    return(0)
+endif
+
+substr(file,'dirname'):$archsamp,$fidname,$ext
+exists($archsamp,'file','w'):$ok
+if not $ok then
+    write('error','%s is not writable',$archsamp)
+    return(0)
+endif
+
+$saved=0
+svvfs($archsamp+'/'+$fidname):$saved
+if $saved then
+    write('line3','Spectrum saved: %s/%s.vfs',$archsamp,$fidname)
+"*******do usersavevarspec *****"
+    dousermacro($0)
+endif
+return($saved)

@@ -1,0 +1,60 @@
+ ghncoca_sim_trosy_4DA.c - automated version of the original pulse sequence.
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    4D hncoca(co and ca are in the same residue) with trosy
+                       F1      CO
+                       F2      CA
+                       F3      15N + JNH/2
+                       F4(acq) 1H (NH) - JNH/2
+
+    This sequence uses the standard three channel configuration
+         1)  1H             - carrier (tof) @ 4.7 ppm [H2O]
+         2) 13C             - carrier (dof) @ 174 ppm [CO] or CA 56ppm
+         3) 15N             - carrier (dof2)@ 120 ppm [centre of amide 15N]  
+         4)  2H             - carrier (dof3)@ 3.2 ppm
+    
+    Set dm = 'nnnn', dmm = 'cccc' 
+    Set dm2 = 'nnnn', dmm2 = 'cccc'
+
+    Must set phase = 1,2 , phase2 = 1,2, and phase3 = 1,2 
+    for States-TPPI acquisition in t1[Co], t2[Ca], and t3[N].
+    [The fids must be manipulated (add/subtract) with 
+    'grad_sort_nd' program (or equivalent) prior to regular processing.]
+    
+    Flags
+        fsat            'y' for presaturation of H2O
+        fscuba          'y' for apply scuba pulse after presaturation of H2O
+        f1180           'y' for 180 deg linear phase correction in F1
+                            otherwise 0 deg linear phase correction
+        f2180           'y' for 180 deg linear phase coreection in F2
+                            otherwise 0 deg
+        f3180           'y' for 180 deg linear phase coreection in F3
+                            otherwise 0 deg
+	fco180		'y' for checking N/NH 2D 
+	fca180		'y' for checking N/NH 2D 
+        sel_flg         'y' for active suppression of the anti-TROSY
+        sel_flg         'n' for relaxation suppression of the anti-TROSY
+
+	Standard Settings
+        fsat='n',fscuba='n',f1180='y',f2180='y',f3180='n'
+
+    
+    Set f2180 to y for (-90,180) in Ca and f3180 to n for (0,0) in N
+    Set the carbon carrier on the C' and use the waveform to pulse the
+        c-alpha
+
+   Calibration of carbon pulses
+
+	pwc90	  delta/sqrt(15) selective pulse applied at d_c90
+	pwc180on  delta/sqrt(3) selective pulse applied at d_c180
+	pwc180off pwc180on+pad
+	pwchirp	  chirp 180 pulse (about 350 us at 600MHz) applied at d_chirp
+
+    Written By Daiwen Yang on July 12, 1999.
+
+    Modified by L. E. Kay on Aug. 22, 99 to include a sel_flg
+    Modified by L.E.Kay on Aug. 9, 2001 to separate N and adiabatic pulses; especially
+     for 800 MHz application, where the power to the probe is considerable.
+    Modified for BioPack, G.Gray Feb 2005
+

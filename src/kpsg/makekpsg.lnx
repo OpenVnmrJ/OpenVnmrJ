@@ -1,0 +1,385 @@
+#
+# Copyright (c) 1999-2000 Varian,Inc. All Rights Reserved.
+# This software contains proprietary and confidential
+# information of Varian, Inc. and its contributors.
+# Use, disclosure and reproduction is prohibited without
+# prior consent.
+#
+#makekpsg.lnx
+
+ifndef sccsdir
+sccsdir = /vsccs/sccs
+endif
+ifndef lnxobjdir
+lnxobjdir = /vobj/lnx
+endif
+
+SHELL     = /bin/sh
+MAKEFILE= makekpsg.lnx
+SCCSDIR   = $(sccsdir)
+
+NCOMM_LIB_DIR = $(lnxobjdir)/proglib/ncomm
+
+# Shared Library version number   E.G.  3.2 -> libparam.so.3.2,libpsglib.so.3.2
+SO_LIB_VER=$(psg_so_ver)
+
+#-- Normal operational compile flags
+CC        =  gcc
+CFLAGS    =  -fPIC -g -c -Wall -O -m32
+CDEFINE   =  -DLINUX -DNESSIE -DPSG_LC -DULONG -DG2000 -DMERCURY
+COMPILE.c =  $(CC) $(CFLAGS) $(CDEFINE)
+
+LDSOFLAGS =  -m32 -shared
+LINK.c    =  $(CC) $(LDSOFLAGS)
+
+#--- SCCS Sources ----
+PSGSEQ_SCCS_SRC   =$(SCCSDIR)/gpsg/SCCS/s.
+VNMR_SCCS_SRC     =$(SCCSDIR)/vnmr/SCCS/s.
+XRACQ_SCCS_SRC    =$(SCCSDIR)/xracq/SCCS/s.
+GAPMON_SCCS_SRC   =$(SCCSDIR)/gapmon/SCCS/s.
+PSG_SCCS_SRC      =$(SCCSDIR)/psg/SCCS/s.
+SCRIPT_SCCS_SRC   =$(SCCSDIR)/scripts/SCCS/s.
+GEM_SCCS_SRC      =$(SCCSDIR)/gpsg/SCCS/s.
+EXPPROC_SCCS_SRC  =$(SCCSDIR)/expproc/SCCS/s.
+KPSG_SCCS_SRC     =$(SCCSDIR)/kpsg/SCCS/s.
+NCOMM_SCCS_SRC    =$(SCCSDIR)/ncomm/SCCS/s.
+
+#----  PSG Library being updated -----
+LIBPARAM.a   = libparam.a
+LIBPSGLIB.a  = libpsglib.a
+
+LIBPARAM.so   = libparam.so
+LIBPSGLIB.so  = libpsglib.so
+
+#---  SCCS Extraction Commands for Sources Needed.  -------
+PSGSEQ_SGET  = sccs -p$(SCCSDIR)/gpsg/SCCS get
+VNMR_SGET    = sccs -p$(SCCSDIR)/vnmr/SCCS get
+GAPMON_SGET  = sccs -p$(SCCSDIR)/gapmon/SCCS get
+PSG_SGET     = sccs -p$(SCCSDIR)/psg/SCCS get
+SCRIPT_SGET  = sccs -p$(SCCSDIR)/scripts/SCCS get
+GEM_SGET     = sccs -p$(SCCSDIR)/gpsg/SCCS get
+EXPPROC_SGET = sccs -p$(SCCSDIR)/expproc/SCCS get
+KPSG_SGET    = sccs -p$(SCCSDIR)/kpsg/SCCS get
+NCOMM_SGET   = sccs -p$(SCCSDIR)/ncomm/SCCS get
+
+#------------------------------------------------------------------------
+#--- VNMR sources that are needed for PSG
+#------------------------------------------------------------------------
+
+VNMR_SRC=                       \
+		asmfuncs.c	\
+                assign.c	\
+                allocate.c      \
+                pvars.c         \
+		shims.c		\
+                symtab.c        \
+                tools.c         \
+                vfilesys.c      \
+                variables1.c
+
+VNMR_OBJ= $(VNMR_SRC:.c=.o)
+
+#--- VNMR header files that are needed for PSG
+
+VNMR_HDR=			\
+		allocate.h	\
+		asm.h		\
+		data.h		\
+		dpsdef.h	\
+		graphics.h	\
+		group.h		\
+		init.h		\
+		params.h	\
+		pvars.h		\
+		shims.h		\
+		symtab.h	\
+		tools.h		\
+		variables.h	\
+		vfilesys.h	\
+		wjunk.h
+
+#------------------------------------------------------------------------
+#-- common PSG sources files 
+#------------------------------------------------------------------------
+PSG_SRC=			\
+                abort.c         \
+                active.c        \
+                getparm.c       \
+		hash.c		\
+		lc_index.c	\
+                P_receive.c     \
+                setparm.c       \
+		signalhandler.c	\
+                stubs.c         \
+		treefuncs.c	\
+		xmath.c		\
+		x_ps.c
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+SHORT_PSG_SRC=                  \
+		hash.c          \
+                P_receive.c     \
+		treefuncs.c
+
+#----- PSG header files that are needed
+PSG_HDR=			\
+		abort.h		\
+		dsp.h		\
+		Pbox_psg.h	\
+		vnmrsys.h
+
+#------- Expproc header files that are needed
+EXPPROC_HDR=			\
+		expDoneCodes.h	\
+		shrexpinfo.h
+
+
+# files and headers unique to GeminiPLUS
+
+GEM_PSG_SRC=			\
+		gradient.c	\
+		sendasync.c
+
+GEM_PSG_OBJ= $(GEM_PSG_SRC:.c=.o)
+
+
+GEM_PSG_HDR=			\
+		rfconst.h
+
+GAPMON_HDR=	lc_gem.h	\
+		acodes.h
+
+# files and headers unique to Mercury
+
+KPSG_SRC=			\
+		aptable.c	\
+		apshape_pulse.c	\
+		array.c		\
+		autofuncs.c	\
+		convert.c	\
+		eventoverhead.c	\
+		freq_list.c	\
+		looping.c	\
+		hwlooping.c	\
+		initHSlines.c	\
+		initauto.c	\
+		lc_hdl.c	\
+		meat.c		\
+		pre_fid_seq.c	\
+                psg.c		\
+		raparms.c	\
+		wetfuncs.c	\
+		wg.c		\
+		xmtr.c
+
+
+KPSG_OBJ= $(KPSG_SRC:.c=.o)
+
+KPSG_HDR=			\
+		acqparms2.h	\
+		apdelay.h	\
+		aptable.h	\
+		lc_index.h	\
+		PboxM_psg.h	\
+		REV_NUMS.h	\
+		standard.h	\
+		vfilesys.h	\
+		wetfuncs.h
+
+# Communications libraries
+NCOMM_HDR=                      \
+                mfileObj.h
+
+#----- PSG source files that are needed
+PSGSEQ_SRC=			\
+		s2pul.c
+
+PSGSEQ_OBJ= $(PSGSEQ_SRC:.c=.o)
+
+#---- Vnmr Headers Needed for User Programming
+USR_VNMR_HDR=			\
+		asm.h		\
+		data.h		\
+		dpsdef.h	\
+		group.h		\
+		params.h	\
+		pvars.h		\
+		shims.h		\
+		symtab.h	\
+		variables.h	\
+		vfilesys.h
+
+LINTLIB_SRC=			\
+		lintfile.c
+
+#---- seqgen utilities needed -------------------------
+SEQGEN_MAKE=			\
+		seqgenmake
+
+SEQGEN_UTIL=			\
+		seqgen.sh
+
+#---- All Sources and headers required for compilation -----
+ALLSRC= $(VNMR_SRC) $(VNMR_HDR) $(PSG_SRC) $(PSG_HDR) $(PSGSEQ_SRC) $(LINTLIB_SRC)	\
+	$(SEQGEN_MAKE) $(SEQGEN_UTIL) $(GEM_PSG_SRC) $(GEM_PSG_HDR) $(GAPMON_HDR)	\
+	$(EXPPROC_HDR) $(KPSG_SRC) $(KPSG_HDR) $(NCOMM_HDR) makeuserpsg.lnx
+
+ALL_C_SRC= $(VNMR_SRC) $(PSG_SRC) $(PSGSEQ_SRC) $(LINTLIB_SRC) $(SHORT_PSG_SRC)	\
+	   $(GEM_PSG_SRC) $(KPSG_SRC)
+
+USERPSRC= $(PSG_SRC) $(PSG_HDR) $(USR_VNMR_HDR) \
+	  $(GEM_PSG_SRC) $(GEM_PSG_HDR)         \
+	  $(KPSG_SRC) $(KPSG_HDR) $(GAPMON_HDR) $(LINTLIB_SRC) 		    \
+	  $(EXPPROC_HDR) $(NCOMM_HDR) makeuserpsg.lnx
+
+ALLOBJS= $(PSG_OBJ) $(CND_PSG_OBJ) $(VNMR_OBJ) \
+	 $(GEM_PSG_OBJ) $(KPSG_OBJ)
+
+LIBS= -lm
+
+std LINUX : $(MAKEFILE) depend
+	rm -f s2pul.o
+	( $(MAKE) -e -f $(MAKEFILE) "LIBS= -lacqcomm -lm -lnsl"  \
+	  .a_libs $(LIBPARAM.so) $(LIBPSGLIB.so) seqgen s2pul )
+	@echo "Linux PSG static and shared libraries complete ---------------------"
+
+depend: src
+	makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(ALLSRC) 2>/dev/null
+
+.PHONY: clean cleanall
+
+clean:
+	rm -f *.o *.so *.so.*
+
+cleanall:
+	rm -f *.c *.C *.h *.o *.a *.so *.so.* *.p *.sh exp.*
+	rm -f s2pul seqgen seqgenmake
+
+.a_libs : src
+	rm -f s2pul.o
+	$(MAKE) -e -f $(MAKEFILE) $(LIBPARAM.a) $(LIBPSGLIB.a)
+	@echo "   $(MAKEFILE): $(LIBPARAM.a) $(LIBPSGLIB.a) complete ----------------------------"
+
+s2pul :  $(LIBPARAM.a) $(LIBPSGLIB.a) $(PSGSEQ_OBJ) 
+	(umask 2; $(LINK.c) -o $@ -L$(NCOMM_LIB_DIR) \
+			 $(PSGSEQ_OBJ) $(LIBPSGLIB.a) $(LIBPARAM.a) $(LIBPSGLIB.a) $(LIBS)  )
+
+src : $(MAKEFILE) $(ALLSRC)
+	@echo "Sources up to date ............."
+
+$(LIBPARAM.a) : $(VNMR_OBJ)
+	- (umask 2; rm -f $@)
+	(umask 2; ar rv $@ $(VNMR_OBJ))
+	@echo "   DONE: $(LIBPARAM.a) ----------------"
+
+$(LIBPSGLIB.a) : $(PSG_OBJ) $(CND_PSG_OBJ) $(GEM_PSG_OBJ) $(GEM_PSG_HDR) 	\
+		 $(KPSG_OBJ) $(KPSG_HDR)
+	- (umask 2; rm -f $@)
+	(umask 2; ar rv $@ $(PSG_OBJ) $(CND_PSG_OBJ) $(GEM_PSG_OBJ) $(KPSG_OBJ))
+	@echo "   DONE: $(LIBPSGLIB.a) ----------------"
+
+$(LIBPARAM.so) : $($@:.so=.a)
+	- (umask 2; rm -f $@.*)
+	(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(SO_LIB_VER) $(VNMR_OBJ))
+	(umask 2; ln -s $@.$(SO_LIB_VER) $@)
+	@echo "   DONE: $(LIBPARAM.so) ----------------"
+
+$(LIBPSGLIB.so) : $($@:.so=.a)
+	- (umask 2; rm -f $@.*)
+	(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(SO_LIB_VER) $(PSG_OBJ) $(KPSG_OBJ) $(GEM_PSG_OBJ) $(CND_PSG_OBJ))
+	(umask 2; ln -s $@.$(SO_LIB_VER) $@)
+	@echo "   DONE: $(LIBPSGLIB.so) ----------------"
+
+
+#--- Object dependencies -------------------------------------------
+
+$(ALLOBJS) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+$(PSGSEQ_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -I. $(@:.o=.c) )
+
+#------ makefile extraction via SCCS allways. -------
+
+$(MAKEFILE) : 
+	$(KPSG_SGET) $@
+
+#------------  Source Extraction via SCCS or Links ---------------
+
+$(GAPMON_HDR) : %:$(GAPMON_SCCS_SRC)%
+	$(GAPMON_SGET) $@
+
+$(GEM_PSG_SRC) $(GEM_PSG_HDR) : %:$(GEM_SCCS_SRC)%
+	$(GEM_SGET) $@
+
+$(KPSG_SRC) $(KPSG_HDR) makeuserpsg.lnx : %:$(KPSG_SCCS_SRC)%
+	$(KPSG_SGET) $@
+
+$(VNMR_SRC) $(VNMR_HDR) :  %:$(VNMR_SCCS_SRC)%
+	$(VNMR_SGET) $@
+
+$(PSGSEQ_SRC) : %:$(PSGSEQ_SCCS_SRC)%
+	$(PSGSEQ_SGET) $@
+
+$(EXPPROC_HDR) : %:$(EXPPROC_SCCS_SRC)%
+	$(EXPPROC_SGET) $@
+
+$(NCOMM_HDR) : %:$(NCOMM_SCCS_SRC)%
+	$(NCOMM_SGET) $@
+
+$(PSG_SRC) $(PSG_HDR) \
+$(LINTLIB_SRC) $(SEQGEN_MAKE): %:$(PSG_SCCS_SRC)%
+	$(PSG_SGET) $@
+
+$(SEQGEN_UTIL) : %:$(SCRIPT_SCCS_SRC)%
+	$(SCRIPT_SGET) $@
+
+#-----------------------------------------------------------
+# DO NOT DELETE THIS LINE -- make depend uses it
+
+asmfuncs.o: asm.h
+assign.o: group.h params.h variables.h
+pvars.o: vnmrsys.h group.h symtab.h params.h variables.h wjunk.h
+shims.o: group.h
+symtab.o: symtab.h
+tools.o: vnmrsys.h tools.h
+vfilesys.o: vnmrsys.h group.h tools.h
+variables1.o: graphics.h group.h params.h symtab.h variables.h init.h
+pvars.o: variables.h
+abort.o: group.h
+active.o: variables.h group.h
+lc_index.o: lc_index.h
+P_receive.o: group.h symtab.h variables.h
+treefuncs.o: group.h symtab.h params.h variables.h
+xmath.o: REV_NUMS.h group.h variables.h Pbox_psg.h dpsdef.h acqparms2.h
+xmath.o: lc_gem.h aptable.h
+s2pul.o: standard.h acqparms2.h abort.h rfconst.h aptable.h apdelay.h
+s2pul.o: wetfuncs.h PboxM_psg.h
+gradient.o: group.h acodes.h acqparms2.h abort.h
+aptable.o: acqparms2.h acodes.h aptable.h symtab.h variables.h vfilesys.h
+aptable.o: group.h
+apshape_pulse.o: acodes.h rfconst.h acqparms2.h vnmrsys.h vfilesys.h
+array.o: group.h variables.h acqparms2.h shims.h lc_gem.h
+autofuncs.o: group.h acodes.h rfconst.h acqparms2.h shims.h
+convert.o: REV_NUMS.h acodes.h group.h acqparms2.h aptable.h expDoneCodes.h
+convert.o: abort.h
+eventoverhead.o: apdelay.h
+freq_list.o: vnmrsys.h acqparms2.h lc_gem.h acodes.h
+looping.o: acodes.h rfconst.h acqparms2.h
+hwlooping.o: acodes.h rfconst.h acqparms2.h lc_gem.h shrexpinfo.h dsp.h
+initHSlines.o: acodes.h rfconst.h group.h acqparms2.h
+initauto.o: acodes.h rfconst.h acqparms2.h group.h shims.h
+lc_hdl.o: lc_gem.h acodes.h lc_index.h group.h shrexpinfo.h variables.h
+lc_hdl.o: abort.h
+meat.o: params.h group.h variables.h lc_gem.h acodes.h rfconst.h aptable.h
+meat.o: shrexpinfo.h pvars.h abort.h dsp.h
+psg.o: group.h variables.h lc_gem.h lc_index.h asm.h data.h pvars.h
+psg.o: shrexpinfo.h abort.h vfilesys.h
+raparms.o: data.h acqparms2.h lc_gem.h shrexpinfo.h mfileObj.h
+wetfuncs.o: acqparms2.h rfconst.h
+wg.o: acodes.h rfconst.h acqparms2.h vfilesys.h
+xmtr.o: rfconst.h
+standard.o: acqparms2.h abort.h rfconst.h aptable.h apdelay.h wetfuncs.h
+standard.o: PboxM_psg.h
+wetfuncs.o: acqparms2.h

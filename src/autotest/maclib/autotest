@@ -1,0 +1,74 @@
+"macro autotest"
+"Start Auto test GUI from vnmr"
+
+exists(userdir+'/autotest','directory'):$result
+if ($result <> 1) then
+  exists(userdir+'/autotest.orig','directory'):$result
+  if ($result <> 1) then
+    mkdir(userdir+'/autotest')
+  else
+    cp('-r',userdir+'/autotest.orig',userdir+'/autotest')
+  endif
+endif
+
+exists('autotestdir','parameter','global'):$e
+  if ($e=0) then create('autotestdir','string','global') endif
+
+autotestdir=userdir+'/autotest'
+
+exists(autotestdir+'/atdb','directory'):$result
+if ($result <> 1) then
+    cp('-r',systemdir+'/autotest/atdb',autotestdir)
+    $tmp='' 
+    if (appmode='imaging') then
+      exists(autotestdir+'/atdb/at_spec_table.imaging','file'):$e
+      if ($e) then
+        $tmp='.imaging'
+      endif
+    endif
+    if ($tmp='') then
+      format(h1freq,3,0):$tmp
+    endif
+    mv(autotestdir+'/atdb/at_spec_table'+$tmp,autotestdir+'/atdb/at_spec_table')
+    rm(autotestdir+'/atdb/at_spec_table*0'):$x
+endif
+
+exists(autotestdir+'/history','directory'):$result
+if ($result <> 1) then mkdir(autotestdir+'/history') endif
+
+exists(autotestdir+'/parameters','directory'):$result
+if ($result <> 1) then cp('-r',systemdir+'/autotest/parameters',autotestdir) endif
+
+exists(autotestdir+'/data','directory'):$result
+if ($result <> 1) then cp('-r',systemdir+'/autotest/data',autotestdir) endif
+
+exists(autotestdir+'/reports','directory'):$result
+if ($result <> 1) then cp('-r',systemdir+'/autotest/reports',autotestdir) endif
+
+exists(autotestdir+'/texts','directory'):$result
+if ($result <> 1) then cp('-r',systemdir+'/autotest/texts',autotestdir) endif
+
+exists(userdir+'/maclib/ATinit','file','rw'):$result
+if ($result <> 1) then
+   cp(systemdir+'/autotest/maclib/ATinit',userdir+'/maclib')
+endif
+
+if ($# > 0.5) then
+  if ($1 = 'setup') then
+    return
+  endif
+  if ($# = 2) then
+    $file=$2
+  else
+    $file='at_last_selected_tests'
+  endif
+  exists($file,'atdb'):$e,$path
+  if ($e > 0.5) then
+    copy($path,autotestdir+'/atdb/at_selected_tests')
+    ATstart
+  else
+    write('line3','Warning: File %s for autotest is not found.',$file)
+  endif
+  return
+endif
+shell('"'+systemdir+'/tcl/bin/at" "' +vnmraddr +'" &'):$dum

@@ -1,0 +1,303 @@
+****************************************************************************
+substr	-	pick a substring or word out of a string
+****************************************************************************
+
+  This command picks a substring or word out of a string.
+  It can also be used to replace (or delete) a set of characters
+  from a string.  It can also count the number of words in a string.
+  It can also treat a string as a filename an separate it into a
+  'dirname' and a 'basename'.
+
+  Case 1. Get a word from a string.
+
+    substr('string',word_number):stringvar
+       where string is the string or a string variable
+       word_number is the number of the word to be selected
+         In this context,  a word is defined as any string
+         of characters separated by spaces " " or tabs "\t".
+         Alternate delimiters can be supplied, as described below.
+       stringvar is a string variable.
+
+  If additional return arguments are given, the position of the
+  first character of the word is returned and the number of
+  characters of the word are returned.
+  If a fourth return value is given, it is set to the input string with the
+  requested word removed. If the requested word is the first word, then
+  preceding and trailing whitespace is also removed. If the requested word
+  is not the first word, then only preceding whitespace is removed.
+
+  If word_number is larger than the number of words in the 'string', nothing
+  will be returned.
+  Examples
+    substr('There are 10 samples to be run',4):n2    string n2 = 'samples'
+    substr('There are 10 samples to be run',4):n2,$f,$num sets
+       n2 = 'samples'  $f = 14 and $num = 7
+    substr('There are 10 samples to be run',4):n2,$f,$num,$rem sets
+       n2 = 'samples'  $f = 14 $num = 7 and $rem = 'There are 10 to be run'
+    substr('There are 10 samples to be run',11):n2,$f,$num leaves
+       n2, $f and $num unchanged from what they were prior to the call
+       to substr.
+
+  If four arguments are supplied, and the third argument is the
+  keyword 'delimiter', then the fourth argument is used as the delimiter
+  characters.  These separate the words searched for, replacing the default
+  delimiters of space and tab " \t".  Its usage is as follows.
+
+    substr('string',word_number,'delimiter',delimiter):stringvar
+       where string is the string or a string variable
+       word_number is the number of the word to be selected
+       'delimiter' indicates the next argument is a delimiter
+       delimiter is a set of characters used to separate words
+       stringvar is a string variable.
+  Examples
+    substr('This is;a phrase',2):n2    n2 = 'is;a'
+    substr('This is;a phrase',2,'delimiter',' ;\t'):n2,$f,$num
+       n2 = 'is'  $f = 6 and $num = 2
+    substr('This is;a phrase',2,'delimiter',' ;\t'):n2,$f,$num,$rem
+       n2 = 'is'  $f = 6 $num = 2 and $rem = 'This;a phrase'
+       In this case, note that whitespace preceding the word 'is' is removed
+       but the trailing whitespace (a semi-colon) is not removed.
+
+  Strings that represent "Comma Separated Values", or CSV strings have special
+  rules defining separate words. In this case, commas separate words, unless the
+  comma is enclosed in double quotes. Also, adjacent commas indicate additional
+  words that are null strings and a comma at the end of the string indicates an
+  additional null word. Use these parsing rules by using substr with
+  'csv' as the third argument. Its usage is as follows.
+    substr('string',word_number,'csv'):stringvar
+       where string is the string or a string variable
+       word_number is the number of the word to be selected
+       'csv' selects the "CSV" rules to parse the string.
+       stringvar is a string variable.
+  Examples
+    substr('sample,loc,,"my sample, in water",',1,'csv'):n2    string n2 = 'sample'
+    substr('sample,loc,,"my sample, in water",',2,'csv'):n2    string n2 = 'loc'
+    substr('sample,loc,,"my sample, in water",',3,'csv'):n2    string n2 = ''
+    substr('sample,loc,,"my sample, in water",',4,'csv'):n2    string n2 = '"my sample, in water"'
+    substr('sample,loc,,"my sample, in water",',5,'csv'):n2    string n2 = ''
+    substr('sample,loc,,"my sample, in water",',6,'csv'):n2    error, no word 6
+
+  Case 2. Count words in a string.
+    substr('string','wc'):$cnt
+       where string is the string or a string variable
+       'wc' is a keyword to give the word count of the string
+         In this context,  a word is defined as any string
+         of characters separated by spaces " " or tabs "\t".
+         Alternate delimiters can be supplied, as described below.
+       $cnt is number of words found in the string
+  Examples
+    substr('There are 10 samples to be run','wc'):r1    r1 = 7
+
+  If four arguments are supplied, and the third argument is the
+  keyword 'delimiter', then the fourth argument is used as the delimiter
+  characters.  These separate the words searched for, replacing the default
+  delimiters of space and tab " \t".  Its usage is as follows.
+
+    substr('string','wc','delimiter',delimiter):$cnt
+       where string is the string or a string variable
+       'wc' is the keyword to count the number of words in string.
+       'delimiter' indicates the next argument is a delimiter
+       delimiter is a set of characters used to separate words
+       $cnt is a number of words found in the string.
+
+  Examples
+    substr('This is;a phrase','wc'):$cnt                   $cnt=3
+    substr('This is;a phrase','wc','delimiter',' ;\t'):$cnt   $cnt=4
+
+  Strings that represent "Comma Separated Values", or CSV strings have special
+  rules defining separate words. In this case, commas separate words, unless the
+  comma is enclosed in double quotes. Also, adjacent commas indicate additional
+  words that are null strings and a comma at the end of the string indicates an
+  additional null word. Use these parsing rules by using substr with
+  'csv' as the third argument. Its usage is as follows.
+    substr('string','wc','csv'):$cnt
+       where string is the string or a string variable
+       'wc' is the keyword to count the number of words in string.
+       'csv' selects the "CSV" rules to parse the string.
+       $cnt is a number of words found in the string.
+  Examples
+    substr('sample,loc,,"my sample, in water",','wc','csv'):$cnt   $cnt=5
+    substr('a,b','wc','csv'):$cnt                                  $cnt=2
+    substr('a,b,','wc','csv'):$cnt                                 $cnt=3
+    substr(',a,b,','wc','csv'):$cnt                                $cnt=4
+    substr(',a,b,,','wc','csv'):$cnt                               $cnt=5
+
+  Case 3. Get basename of a file path name
+    substr('string','basename'):$base<,$ext>
+       where string is the string or a string variable
+       to be interpreted as a file path name.
+       'basename' is a keyword to give the base file name portion
+       of the string. In this context,  the base file name are all
+       characters following the final '/' character in the string.
+       Trailing ’/’ characters are not counted as part of the pathname.
+       If an optional second return value is requested, the basename
+       is further separated into a name and extension. The extension
+       is defined as all characters following a final '.' in the 
+       name.
+       The 'basename' of the special cases of '/', '.', and '..' return
+       '/', '.', and '..' respectively.
+    substr('string','basename'<,'suffixes'>):$base<,$ext>
+       An optional third argument is a list of suffixes. If the basename
+       has a dot (.) in it, the extension will only be removed if it matches
+       one on the supplied suffixes.
+       The examples will illustrate the behavior.
+  Examples
+    substr('/home/vnmr1','basename'):$base          $base='vnmr1'
+    substr('/home/vnmr1','basename'):$base,$ext     $base='vnmr1' $ext=''
+    substr('s2pul','basename'):$base                $base='s2pul'
+    substr('s2pul','basename'):$base,$ext           $base='s2pul' $ext=''
+    substr('s2pul.c','basename'):$base              $base='s2pul.c'
+    substr('s2pul.c','basename'):$base,$ext         $base='s2pul' $ext='c'
+    substr('s2pul.','basename'):$base               $base='s2pul.'
+    substr('s2pul.','basename'):$base,$ext          $base='s2pul.' $ext=''
+    substr('/home/vnmr1/mydata.fid','basename'):$base,$ext
+                                                    $base='mydata' $ext='fid'
+    substr('/home/vnmr1/mydata.s2pul','basename'):$base,$ext
+                                                    $base='mydata' $ext='s2pul'
+    substr('/home/vnmr1/mydata.s2pul','basename','.fid .REC .rec'):$base,$ext
+                                                    $base='mydata.s2pul' $ext=''
+
+  Case 4. Get parent directory of a file path name
+    substr('string','dirname'):$dir<,$base<,$ext>>
+       where string is the string or a string variable
+       to be interpreted as a file path name.
+       'dirname' is a keyword to give the directory file name portion
+       of the string. In this context,  the directory file name are all
+       characters before the final '/' character in the string.
+       Trailing ’/’ characters are not counted as part of the pathname.
+       If the string contains no '/' character, a '.' is returned as the
+       directory name.  If two or three return values are requested, the
+       second and third values are returned as in the basename case above.
+       The 'dirname' of the special cases of '/', '.', and '..' return
+       '/', '.', and '.' respectively.
+       The following magical expression will reconstruct the string from
+       the $dir,$base, and $ext components.
+
+       if ($ext = '') then
+          $orig = $dir + '/' + $base
+       else
+          $orig = $dir + '/' + $base + '.' + $ext
+       endif
+
+       The input string and $orig may not be identical, but when interpreted
+       as path names, they will describe the same file.  That is, if the input
+       string is 's2pul', $orig will be './s2pul'
+    substr('string','dirname'<,'suffixes'>):$dir<,$base<,$ext>>
+       An optional third argument is a list of suffixes. If the basename
+       has a dot (.) in it, the extension will only be removed if it matches
+       one on the supplied suffixes.
+  Examples
+    substr('/home/vnmr1','dirname'):$dir           $dir='/home'
+    substr('/home/vnmr1','dirname'):$dir,$base     $dir='/home' $base='vnmr1'
+    substr('s2pul','dirname'):$dir                 $dir='.'     $base='s2pul'
+    substr('s2pul','dirname'):$dir,$base           $dir='.'     $base='s2pul'
+    substr('','dirname'):$dir                      $dir='.'
+    substr('/home/vnmr1/mydata.fid','dirname'):$dir,$base,$ext
+                                                   $dir='/home/vnmr1' $base='mydata' $ext='fid'
+    substr('/home/vnmr1/mydata.s2pul','dirname'):$dir,$base,$ext
+                                                   $dir='/home/vnmr1' $base='mydata' $ext='s2pul'
+    substr('/home/vnmr1/mydata.s2pul','dirname','.fid .REC .rec'):$dir,$base,$ext
+                                                   $dir='/home/vnmr1' $base='mydata.s2pul' $ext=''
+
+
+  Case 5. Extract specific characters from a string
+  If the string and two indexes are supplied, its usage is as follows:
+    substr('string',index,length):stringvar
+       where string is the string or a string variable
+       index is what character to start from.
+       length is the length of substring.
+       stringvar is a string variable.
+
+  Example
+    substr('abcdefg',2,3):n2         string n2 = 'bcd'
+
+  If the string, two indexes, and a replacement string are supplied,
+  its usage is as follows:
+    substr('string',index,length,'newstring'):stringvar
+       where string is the string or a string variable
+       index is what character to start from.
+       length is the length of substring.
+       newstring is the string to substitute for the range
+         of characters specified by index and length.  To
+         delete characters from string, set newstring to an
+         empty string.  See the example below.
+       stringvar is a string variable.
+
+  Examples
+    substr('abcdefg',2,3):n2         string n2 = 'bcd'
+    substr('abcdefg',2,3,'1234'):n2  string n2 = 'a1234efg'
+    substr('abcdefg',2,3,''):n2      string n2 = 'aefg'
+    substr('aa bb;cc dd',2,'delimiter',' ;\t'):n2
+       sets string n2 = 'bb'
+
+    n1 = 'There are 10 samples to be run'
+    substr(n1,4):n2,$f,$num
+    substr(n1,$f,$num,'experiments'):n3
+    sets n3 = 'There are 10 experiments to be run'
+
+
+  Case 6.
+    substr('string','find','word'):$num,$index,$len,$newstring
+       where string is the string or a string variable
+       'find' is a keyword to use the next argument as
+       the word to search for in the string.
+         In this context,  a word is defined as any string
+         of characters separated by spaces " " or tabs "\t".
+         Alternate delimiters can be supplied, as described below.
+       $num is returns as the the number of the word found in
+       'string'. A 0 is returned if 'word' is not found in 'string'.
+
+  If additional return arguments are given, the position of the
+  first character of the word is returned and the number of
+  characters of the word are returned.
+  If a fourth return value is given, it is set to the input string with the
+  requested word removed. If the requested word is the first word, then
+  preceding and trailing whitespace is also removed. If the requested word
+  is not the first word, then only preceding whitespace is removed.
+  If the 'word' exists multiple times in 'string', the first occurrence
+  is returned.
+
+  Example
+    substr('This was a test','find','was'):$num,$index,$len,$newstring
+    $num = 2
+    $index = 6
+    $len = 3
+    $newstring = 'This a test'
+
+
+  If five arguments are supplied, and the fourth argument is a
+  keyword 'delimiter', the fifth argument is used as a delimiter
+  to separate the words searched for, replacing the default
+  delimiters of space and tab " \t".  Its usage is as follows.
+
+    substr('string','find','word','delimiter',delimiter)
+
+  Case 7. Remove repeated characters from a string
+    substr('string','squeeze',character):$newstring
+       where string is the string or a string variable
+       'squeeze' is a keyword to use the next argument as
+       the character to search for repeated characters in the string
+       and replace them with a single occurrence of that character.
+
+  Example
+    substr('A sentence   without  differing    number  of     spaces','squeeze',' '):n2 
+        string n2 = 'A sentence without differing number of spaces'
+
+  Case 8. Remove leading characters from a string
+    substr('string','trim','characters'):$newstring
+    substr('string','trim'):$newstring
+       where string is the string or a string variable
+       'trim' is a keyword for this case. An optional third
+       argument is a list of characters to remove from the beginning
+       of the string. If the third argument is not given, the default
+       set of delimiters of space and tab are used. This command may
+       be used to remove leading whitespace.  It can also remove
+       other characters from the beginning of the string.
+
+  Example
+    substr('   leading whitespace','trim',' \t'):n2 
+        string n2 = 'leading whitespace'
+    substr('   leading whitespace','trim'):n2 
+        string n2 = 'leading whitespace'
+    substr('   /home/vnmr','trim','/ \t'):n2 
+        string n2 = 'home/vnmr'

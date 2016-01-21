@@ -1,0 +1,50 @@
+#
+
+import os
+import sys
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# targets
+fdf2avwTarget = 'fdf2avw'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+gslLibPath = os.path.join(ovjtools, 'gsllibs')
+
+# source files
+fdf2avwFileList = ['main_fdf2avw.c']
+
+# build environment
+fdf2avwEnv = Environment(CCFLAGS = '-O2 -Wall',
+                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib ',
+                  LIBS    = ['gsl',
+                             'gslcblas',
+                             'm'])
+
+
+# actual builds
+fdf2avw = fdf2avwEnv.Program(target = fdf2avwTarget,
+                       source = [fdf2avwFileList],
+                       LIBPATH = [gslLibPath],
+                       LIBS   = ['gsl',
+				'gslcblas',
+				'm'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'options', 'standard','IMAGE', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+fdf2avwEnv.AddPostAction(fdf2avw,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, fdf2avwTarget))))
+

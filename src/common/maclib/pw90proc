@@ -1,0 +1,245 @@
+"macro pw90proc"
+if ($# < 1) then $1='start' endif
+
+if (auto='y') then
+        $tmpfile=autodir+'/'+$0+'_tmp'
+else
+        $tmpfile=curexp+'/'+$0+'_tmp'
+endif
+
+IF ($1='setup') THEN
+
+   $frq1=0 $frq2=0
+   exists('dopwCal','parameter'):$parex
+   if ($parex=0) then return endif
+   if dopwCal[1]='n' then return endif
+
+   $size=size('dopwCal')
+   if ($size<3) then dopwCal[1]='n' return endif
+
+   format(dopwCal[2],'isreal'):$real
+   format(dopwCal[3],'isreal'):$real2
+   if ($real=0) or ($real2=0) then dopwCal[1]='n' return endif
+
+   format(dopwCal[2],'lower'):$frq1
+   format(dopwCal[3],'lower'):$frq2
+   if ($frq1<>$frq2) then
+	dopwCal[1]='n' 
+	pw90proc('start',$frq1,$frq2)
+   endif
+   return
+
+ELSEIF ($1='start') THEN
+   getdim:$dim
+   if ($dim>2) then
+	write('error','%s not supported for 3D',$0)
+	return
+   endif
+   $wexp=wexp
+   if ($# > 2) then
+	pw90proc('init','go',$2,$3)
+   else
+        pw90proc('init','go')
+   endif
+   if ($wexp='chempackQ') then
+	$explist=explist
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+	cpexplist('read',$md):explist
+	write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'est90\')',$0)
+	explist=pslabel+'scout_est90','SetUp',explist
+	cpexplist('write',$md)
+	explist=$explist
+	wexp='chempackQ'
+	wds='' wstart=''
+   endif
+
+ELSEIF ($1='init') THEN
+
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+
+    getparam('tpwr'):tpwr
+    $pw90=6
+    getparam('pw90'):$pw90
+
+    writeparam($tmpfile,'nt pw d1 gain pltopt MinSW ss vp pw wexp werr')
+    writeparam($tmpfile,'execprocess execplot execprescan execsetup execprep','current','add')
+    execpars('delete')
+    if ($# > 3) then
+      $wp=wp $sp=sp
+      if ($3>$4) then
+	wp=($3-$4)*reffrq
+	sp=$4*reffrq
+      else
+	wp=($4-$3)*reffrq
+	sp=$3*reffrq
+      endif
+	writeparam($tmpfile+'2','wp sp','current')
+	wp=$wp sp=$sp
+    else
+	shell('rm -f '+$tmpfile+'2'):$dum
+    endif
+    getdim:$dim
+    if ($dim>1) then
+	writeparam($tmpfile,'ni arraydim array','current','add')
+	ni=1
+    endif
+    if (arraydim>1) then
+	$array=array
+	strsv2array($array,','):$array
+	strsv2array($array,'('):$array
+	array2string($array):$savepar
+	$savepar='array '+$savepar
+	writeparam($tmpfile,$savepar,'current','add')
+	$arraydim=size('$array')
+	$xi=1
+	repeat
+	   {$array[$xi]}={$array[$xi]}[1]
+	   $xi=$xi+1
+	until $xi > $arraydim
+   endif
+    on('gain'):$gainon
+    if ($gainon<0.5) then
+       if (Console='mercury') then gain=0 else gain=20 endif
+    endif
+    nt=1 d1=2 ss=0 pltopt='n'
+    MinSW='off'
+    $pw=$pw90*0.67
+    $pw=trunc($pw*10 + 0.5)/10
+    pw=$pw,2*$pw
+    wnt='' 
+    werr='pw90proc(\'error\',\''+$GO+'\')'
+    wexp='pw90proc(\'est90\',\''+$GO+'\')'
+    explist=pslabel+'scout_est90'
+    wstart='' wds='' wdone=''
+
+    if ($GO='manual') then 
+	cpgo 
+	if (auto<>'y') then cpbanner('acquire',pslabel+'_est90') endif
+    else
+	scoutinfo='estimatePW90'
+    endif
+
+
+ELSEIF ($1='est90') THEN
+
+    $do360=1
+//    Uncomment the following line if you want to skip 360 calibration
+//  $do360=0
+
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+
+    wft f full
+    ds(1) 
+    if (console='vnmrs') or (console='mr400') then aph0
+    else aph endif
+    exists($tmpfile+'2','file'):$wpspex
+  if ($wpspex) then
+	fread($tmpfile+'2')
+	shell('rm -f '+$tmpfile+'2'):$dum
+  endif
+    vsadj(100) thadj th=th*2 dc
+  if ($wpspex=0) then
+    $done=0
+    $wp=wp/10 $sp=sp+wp/2-$wp/2 
+    $i=1
+    while $done<1 do
+       wp=$wp*$i sp=$sp-($wp*$i)
+	nll:$peaks
+	if $peaks>5 then $done=1 endif
+	if ($i=10) then $done=1 endif
+	$i=$i+1
+    endwhile
+  else
+    nll:$peaks
+  endif
+    if ($peaks>0) then
+	select(1) dc select(2) dc fp
+	writeparam($tmpfile+'1','llfrq llamp rp lp wp sp')
+	pw_haupt:$pw90
+      if ($do360=0) then
+	pw90=$pw90
+	write('line3','%s pw90 set to %0.2f',pslabel,pw90)
+	Studyprobecal(tn,'pw90',pw90)
+      else
+	$pw90=trunc(10*$pw90 + 0.5)/10
+	array('pw',9,4*$pw90-3.2,0.8)
+	full vp=wc2max/2 - 10 vs=vs*4
+        werr='pw90proc(\'error\',\''+$GO+'\')'
+	wexp='pw90proc(\'est360\',\''+$GO+'\')'
+	explist=pslabel+'scout_est360'
+      endif
+    else
+        write('error','%s pw90 calibration Failed',pslabel)
+      if ($do360) then
+	pw90proc('done')
+      endif
+    endif
+
+  if ($do360=0) then 
+    pw90proc('done')
+    if ($GO='go') then cpgo endif   
+  else
+    if ($GO='go') or ($GO='manual') then cpgo 
+        if (auto<>'y') then cpbanner('acquire',pslabel+'_est360') endif
+    else
+	scoutinfo='estimatePW360'
+    endif
+  endif
+ELSEIF ($1='est360') THEN
+
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+    wft select(1) vsadj(0.3*wc2max) 
+    exists($tmpfile+'1','file'):$fileex
+    if ($fileex) then
+    	fread($tmpfile+'1')
+    	shell('rm -f '+$tmpfile+'1'):$dum
+    endif
+    fp
+    $pw90=0
+    pw360cal:$pw90
+    if ($pw90=0) then
+	write('error','%s pw90 calibration Failed',pslabel)
+    else
+	pw90=$pw90
+	write('line3','%s pw90 set to %0.2f',pslabel,pw90)
+        Studyprobecal(tn,'pw90',pw90)
+    endif
+    pw90proc('done')
+    if ($GO='go') then cpgo endif
+
+ELSEIF ($1='done') THEN
+
+    $pw90=pw90
+    getparam('pw90'):$pw90
+    nt=8 d1=2 ss=0 MinSW='off' pltopt='y' gain=24
+    shell('touch '+$tmpfile):$dum
+    fread($tmpfile)    
+    shell('rm -f '+$tmpfile):$dum
+    $tip=trunc(pw*90/$pw90)
+    pw($tip)
+    pw=pw
+    f full cdc
+    wnt='' wdone='' wstart='' wds=''
+    scoutinfo=''
+    explist=pslabel
+
+ELSEIF ($1='error') THEN
+//  All errors are treated equally.  If there is an error
+//   Don't bother to continue the calibration routine
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+    if (acqstatus[1]=16) then
+	//  This call is based on the abort acq done by
+	//     the first call of this macro
+    	write('error','Error during pw90 calibration')
+	pw90proc('done')
+	if ($GO='go') then cpgo endif
+    else
+	aa
+    endif
+    return
+
+ENDIF

@@ -1,0 +1,28 @@
+"macro rna_autopresatproc1"
+"rna_autopresatproc1- finds best satfrq"
+$bestone=1
+wft av
+crl rfl=sw/2 rfp=0 sp=-200 wp=400
+$counter=1
+select(1) vsadj(180) $best=180
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+satfrq=satfrq[$bestone]
+select($bestone) vsadj(10) dssh
+satpwr=satpwr-6
+ph
+tof=satfrq  
+
+nt=4 ssfilter='n' ga
+"optional pw90 calibration: enable by removing double quotes from lines below and removing previous line "
+
+"ph vs=vs*264 ssfilter=300 ssntaps=200"
+"write('line3','Finding pw90 by finding pw360')"
+"array('pw',11,0.7*pw90,0.2*pw90)"
+"lb=3 nt=2 gain=20 f vp=0 full"
+"wnt='wft crl rfl=sw/2 rfp=4.66p select(celem) BPaph select(1) vsadj(50) dssh'"
+"wexp='write(`line3`,`Maximum Corresponds approximately to 90 degree pulse`) rna_autopresatproc2' au " 

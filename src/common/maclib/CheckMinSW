@@ -1,0 +1,111 @@
+"macro CheckMinSW"
+if (procdim <> 1) then return(0) endif
+if (MinSW = 'off') then return(0) endif
+if ($# < 1) then return(0) endif
+if 	((pslabel <> 'PROTON') and
+	(pslabel <> 'CARBON') and
+	(pslabel <> 'wet1D') and
+	(pslabel <> 'PRESAT') and
+	(pslabel <> 'watergate') and
+	(pslabel <> 'vast1d') and
+	(pslabel <> 'lc1d') and
+	(pslabel <> 'wet1d')) then 
+	return(0)
+endif
+
+$md=$2
+if ($1='manual') then
+   if (auto='y') then return(0) endif
+   if (MinSW='manual') then
+	cpexplist('read',$md):$explist
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+	$newnode=''
+	getcpnode('cp',$md,pslabel):$newnode
+	if ($newnode='') then $newnode=pslabel endif
+	explist=$newnode,$explist
+	cpexplist('write',$md)
+	explist=explist[1]
+	return(1) 
+   endif
+
+elseif ($1 = 'skip') then
+   if (MinSW='skip') then
+	$explist=''
+        cpexplist('read',$md):$explist
+        $nextexp=$explist[1]
+        $parex=0
+        if ($nextexp <> '') then
+           cpalias($nextexp):$expname,$where
+           if ($where<2) then
+                strstr($nextexp,'_','last'):$ret,$expname
+                if ($ret=0) then $expname=$nextexp endif
+           endif
+                exists($expname,'parlib'):$parex,$path
+        endif
+        $apptype=''
+        if ($parex) then
+           rtv($path,'noabort','apptype'):$apptype
+        endif
+        $found=0
+	if ($apptype='homo2D') then
+	   $acqpars=archivedir+'/'+sample+'/dirinfo/macdir/'+$nextexp+'_acqpars'
+	   exists($acqpars,'file'):$acqparex
+	   if $acqparex then
+		$ni=0
+		rtv($acqpars,'noabort','ni'):$ni
+		if $ni=1 then $apptype='' endif
+	   endif
+	endif
+	if ($apptype='homo2D') then
+           $reqexp=''
+           getEXPinfo($expname):$reqexp
+           shell('(echo "'+$reqexp[1]+'" | grep -wc '+pslabel+')'):$found
+        endif
+	if ($found) then return(1) else return(0) endif
+   endif
+
+elseif ($1='auto') then
+
+   if (MinSW='auto') or ((auto='y') and (MinSW='manual')) then
+	$explist=''
+	cpexplist('read',$md):$explist
+	$nextexp=$explist[1]
+	$parex=0
+        if ($nextexp <> '') then
+           cpalias($nextexp):$expname,$where
+           if ($where<2) then
+                strstr($nextexp,'_','last'):$ret,$expname
+                if ($ret=0) then $expname=$nextexp endif
+           endif
+                exists($expname,'parlib'):$parex,$path
+        endif
+	$apptype=''
+	if ($parex) then
+	   rtv($path,'noabort','apptype'):$apptype
+	endif
+	$found=0
+	if ($apptype='homo2D') or 
+	   ($apptype='hetero2D') or 
+	   ($apptype = 'homhom3D') or 
+	   ($apptype = 'homhet3D') or
+	   ($apptype = 'hethom3D') then
+	   $reqexp=''
+	   getEXPinfo($expname):$reqexp
+	   shell('(echo "'+$reqexp[1]+'" | grep -wc '+pslabel+')'):$found
+	endif
+	if ($found) then 
+		$md=archivedir+'/'+sample+'/dirinfo/macdir'
+		$newnode=''
+		getcpnode('cp',$md,pslabel):$newnode
+		if ($newnode='') then $newnode=pslabel endif
+		explist=$newnode,$explist
+		cpexplist('write',$md)
+		explist=explist[1]
+		return(1)
+	else
+		return(0)
+	endif
+   endif
+endif
+
+return(0)

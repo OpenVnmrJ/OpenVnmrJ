@@ -1,0 +1,25 @@
+"macro servicetime"
+$date=''
+shell('date +%Y%m%d'):$date
+
+$servicefile=$1+'.macdir/SERVICE_'+$date
+exists($servicefile,'file'):$sqex
+   $servicestart=0 $serviceduration=0
+   if ($sqex) then
+     $sag1='' $sag2=''
+     readfile($servicefile,'$sag1','$sag2','','local')
+     teststr('$sag1','SERVICE_PAUSE_TIME:','local'):$ret
+     if ($ret) then
+        $pshour=0 $psmin=0
+        strstr($sag2[$ret],':'):$ret,$pshour,$psmin
+        $servicestart=($pshour*3600)+($psmin*60)
+     endif
+     teststr('$sag1','SERVICE_DURATION:','local'):$ret
+     if ($ret) then
+        $pausehr=0 $pausemin=0
+        strstr($sag2[$ret],':'):$ret,$pausehr,$pausemin
+        $serviceduration=($pausehr*3600)+($pausemin*60)
+     endif
+   endif
+
+return($servicestart,$serviceduration)

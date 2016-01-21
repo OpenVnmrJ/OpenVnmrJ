@@ -1,0 +1,64 @@
+******************************************************************************
+aipOverlayGroup(imgPath) - automatically overlay a group of images, specified by
+	imgPath, on another group that are currently displayed.
+******************************************************************************
+
+"imgPath" is a full path containing 2D or 3D image data to be overlaid on 
+currently displayed images according to their orientation and slice position
+Base images can be a 2D scan or 2D planes extracted from a 3D scan.
+
+Dragging a scan to the canvas while holding ctrl key (ctrl/dragging) will 
+overlay the scan on displayed images (execute aipOverlayGroup(imgPath)).
+
+Overlaid images can removed by "Remove Overlay" button in RQ, or by 
+command aipViewLayers('remove'). 
+
+Overlay 2D images:
+
+	The orientation and slice position of the base image and an image in 
+	imgPath will be used to determine whether the two images overlay. 
+	If a image does not co-plane with any base image, it will not be overlaid.
+
+	The criteria for two images to co-plane is that they have the same 
+	orientation and their z position (pss) is within a limit specified by 
+	parameter aipOverlayThk[1]. The default value is 2.0 mm.
+
+	The x,y position of overlay image will be automatically aligned with 
+	the base image.
+
+	The overlay image and base image may have different FOV and resolution.
+
+	More than one group of images can be overlaid on base images.
+
+Overlay 3D data on 2D images:
+
+        The orientation and slice position of the base images will be used to
+	extract image planes from the 3D data, and the extracted planes will be
+	overlaid respectively on the base images.
+
+	The thickness of the overlay is determined by parameter aipOverlayThk[2]. 
+	The default value is 1.5, which represents 1.5 times of the voxel size 
+	in z dimension.
+
+Overlay 3D data on orthogonal planes:
+
+	When double clicking a 3D scan, 3 orthogonal planes of the 3D image, 
+	specified by rotation angles and slice positions, will be displayed.
+
+	Ctrl/dragging another 3D data over the extracted planes will result in 
+	the same planes extracted from the second 3D data and overlay on the 
+	planes extracted from the first 3D data. 
+
+	A third or four 3D data etc... can be dragged to overlay (if computer 
+	memory allows).
+
+	Overlaid 3D data will remain in memory until double clicking a scan 
+	(to clear the memory and display only that scan).	
+ 
+Known issues:
+
+	A bit of slow when overlay more than a few images.
+
+	Image overlay relies on the header info of base image to determine which 
+	image to overlay or which planes to extract. If base image does not have
+	correctly header info, wrong image will be extracted/overlaid.

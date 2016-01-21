@@ -1,0 +1,29 @@
+"macro BPautowatergatenoesy"
+"BPautowatergatenoesy(<no input>)"
+BPgettemp:$temp
+if $#=1 then  "BPautowatergatenoesy(2) for 3919, BPautowatergatenoesy(1) for soft"
+  if (seqfil<>'wgnoesy') then  "don't change if parameter set is wgnoesy"
+    wgnoesy
+    shell('pwd'):$dummy
+    input('Enter Desired Mix Time (sec)    '):mix
+    shell('pwd'):$dummy
+    input('Enter Desired Relaxation (d1) Time (sec)    '):d1
+    shell('pwd'):$dummy
+    input('Enter Desired Watergate H2O Soft Pulse Time (msec)   '):flippw
+    flippw=flippw*1e3          "convert to usec"
+    if ($1=2) then
+      flag3919='y' d3=1/14p
+    else
+      flag3919='n'
+    endif
+  endif
+endif
+temp=$temp pw(90)
+ni=1 phase=1
+p180=2*pw90
+array('flippw',21,0.9*flippw,0.015*flippw) nt=1 gain=10
+ssfilter='n'
+wexp='BPautowatergateproc1' wnt='f wft select(1) av vsadj dssh'
+dg
+av
+dps dtext au

@@ -1,0 +1,51 @@
+"macro BPgnoesyChsqc_BB"
+"BPgnoesyChsqc_BB macro for BioPack"
+
+//generate BIP pulse
+
+	BPmakeBIP(C180shape,pwClvl,pwC):pwC180  pwC180lvl=pwClvl
+//CO decoupling pulse:
+	getparam('dofCO','C13'):$dofCO
+	$freq=$dofCO+2*dfrq-dof $offset='' format($freq,9,1):$offset
+	$bw='' format(30*dfrq,9,1):$bw //setup 40ppm inversion on 13C CO
+	$wave1=''
+
+	COshape='CO_offAli'
+	        pbox_rst opx(COshape+'.RF')
+		pboxpar('stepsize', '1.0') pboxpar('attn','i') 
+	        $wave1 = 'iburp2 '+ $bw + $offset+' 0 0 180 '
+	        setwave($wave1)
+		cpx(pwC,pwClvl)   
+		pboxget(COshape+'.RF'):n1,pwCO,pwCOlvl 
+
+//generate decoupling:
+
+//generating 13C WURST decoupling apttern and setting power levels
+	dseq='Cdec_Ali_Aro'
+
+ 	pbox_rst opx(dseq+'.DEC')
+	pboxpar('stepsize', '2.0') 
+        pboxpar('adb', '2.0') 
+        $bw='' format(180*dfrq,9,1):$bw
+
+	setwave('WURST40 ' +$bw +'/0.0008' )   
+	cpx(pwC,pwClvl)   
+	pboxget(dseq+'.DEC'):dseq,r1,dpwr,r2,dres,dmf
+	dpwr=dpwr+1
+  
+//ZQF filter
+//generating 13C CO pulse shapes and setting power levels
+
+	$shape='H_zqf'
+
+	$freq=0 $offset='' format($freq,9,1):$offset
+
+	$bw='' format(80000,9,1):$bw //setup 60kHz pulse
+        $pwzqf='' format(0.008,9,1):$pwzqf //setup 60kHz pulse
+	$wave1=''
+	        pbox_rst opx($shape+'.RF')
+		pboxpar('stepsize', '1.0') pboxpar('attn','i') 
+	        $wave1 = 'chirp '+ $bw+'/0.008' + $offset+' 0 0 180 '
+	        setwave($wave1)
+		cpx(pw,tpwr)   
+		pboxget($shape+'.RF'):shp_zqf,pw_zqf,tpwr_zqf 

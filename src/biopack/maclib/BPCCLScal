@@ -1,0 +1,72 @@
+"macro BPCCLScal"
+"optimize flipback pulses in sensitivity enhanced 15N HSQC"
+"written by Marco Tonelli @ NMRFAM - August 2003"
+"rewritte by MT on October 2006 - to make it more flexible"
+
+"TWO formats for calibrating flipbacks:"
+">>>ONE:"
+"BPCCLScal3('WTG','both',phincr0,p3,p3_phase,p4,p4_phase,pwHs,pwHs_phase,shape,autocal,tpwrs)"
+"WTG: watergate type of scheme"
+"i.e. flipback is immediately preceding or following a hard pulse"
+"water magnetization is along +/- Z before the 1st pulse (hard or flipback)"
+
+">>>TWO:"
+"BPCCLScal3('INEPT','both',phincr0,p1,p1_phase,p2_phase,p3_phase,p4,p4_phase,gt,gzlvl,gstab,pwHs,pwHs_phase,shape,autocal,tpwrs)"
+"INEPT: INEPT type of scheme"
+"i.e. flipback is immediately following a train of pulses that involves an echo"
+"on water magnetization, with gradient dephasing and rephasing, followed by a recovery delay"
+
+"in both cases, set second argument to 'both' or 'tpwrsf' for calibrating both phase and power 
+"or only power (for 180 flipback pulses)"
+
+"continue contains the name of the parent macro"
+"r7 has the entry point to that macro"
+
+if ($#>=1) then
+   $FLIP=$1
+
+"during calibration, fine power and small angle are returned as the second and third argument, respectively"
+   $tpwrsf=$2	
+   $phincr=$3
+else
+   $FLIP=1
+
+   "set up name of parent macro as a paramter"
+    exists('continue','parameter'):$e
+    if ($e=0) then create('continue','string') endif
+    continue='BPCCLScal'	"remember to update this if the name of the macro is changed"
+
+   "flipback counter"
+    r7=1
+endif
+
+if ($FLIP=1) then
+
+    BPCCLScal3('WTG','both',0, 0.0,0.0, pw,1.0, pwHs,3.0,'H2Osinc','y')
+    return
+endif
+
+if ($FLIP=2) then	
+    tpwrsf_d=$tpwrsf 
+    phincr_d=$phincr
+
+    $gstab = (1.0/(4.0*JNH)) -gt0
+
+    BPCCLScal3('INEPT','both',0, pw,2.0,0.0,1.0, 0.0,0.0, gt0,gzlvl0,$gstab, pwHs,2.0,'H2Osinc','y')
+    return
+endif
+
+if ($FLIP=3) then	
+    tpwrsf_t=$tpwrsf 
+    phincr_t=$phincr
+
+    BPCCLScal3('WTG','both',0, pw,0.0, 2.0*pw,0.0, pwHs,0.0,'H2Osinc','y')
+    return
+endif
+
+if ($FLIP=4) then	
+    tpwrsf_a=$tpwrsf 
+    phincr_a=$phincr
+
+    destroy('continue')
+endif

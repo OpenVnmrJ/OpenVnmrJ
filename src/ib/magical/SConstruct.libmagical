@@ -1,0 +1,119 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+libmagicalStaticTarget = 'libmagical.a'
+libmagicalSharedTarget = 'libmagical.so'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath     = os.path.join(cwd, os.pardir, os.pardir, 'vnmr')
+vnmrFileList = ['allocate.c',
+                'node.c',
+                'ops.c',
+                'tempstuff.c']
+vnmrHdrList = ['allocate.h',
+		         'graphics.h',
+               'group.h',
+               'init.h',
+               'node.h',
+               'params.h',
+               'pvars.h',
+		         'stack.h',
+               'symtab.h',
+               'tools.h',
+               'variables.h',
+               'vnmrsys.h',
+               'wjunk.h']
+
+parmLibPath      = os.path.join(cwd, os.pardir, os.pardir, 'vnmr')
+parmLibCFileList = ['assign.c',
+                    'pvars.c',
+                    'symtab.c',
+                    'tools.c']
+parmLibCppFileList = ['variables1.c']
+
+magicPath     = os.path.join(cwd, os.pardir, os.pardir, 'magic')
+magicFileList = ['magical_gram.c']
+
+magicLibPath     = os.path.join(cwd, os.pardir)
+magicLibFileList = ['magical_cmds.c',
+                    'magical_Exec.c',
+                    'magical_funcs.c',
+                    'magical_io.c',
+                    'magical_macro.c']
+magicLibHdrList = ['magical_cmds.h',
+                   'magical_io.h',
+                   'magicfuncs.h']
+
+lexCPath     = os.path.join(cwd, os.pardir, os.pardir, 'magic')
+lexFileList  = ['magical_lex.l']
+lexCFileList = ['magical_lex.c']
+
+# build environments
+magicalCEnv = Environment(CCFLAGS    = '-m32 -O',
+                          CPPDEFINES = ['LINUX', 'BSDACQ'],
+                          LINKFLAGS  = '-W1 -m32', 
+                          CPPPATH    = [os.path.join(os.sep, 'usr', 'openwin', 'include'),
+                                        cwd])
+magicalCppEnv = magicalCEnv.Clone(CC = 'g++')
+
+sharedObjs = [magicalCEnv.SharedObject(vnmrFileList),
+              magicalCEnv.SharedObject(parmLibCFileList),
+              magicalCEnv.SharedObject(parmLibCppFileList),
+              magicalCEnv.SharedObject(magicLibFileList),
+              magicalCEnv.SharedObject(magicFileList),
+              magicalCEnv.SharedObject(lexCFileList)]
+
+# actual builds
+libmagicalStatic = magicalCppEnv.StaticLibrary(target  = libmagicalStaticTarget,
+                                               source  = sharedObjs,
+                                               LIBPATH = cwd)
+
+libmagicalShared = magicalCEnv.SharedLibrary(target  = libmagicalSharedTarget,
+                                             source  = sharedObjs,
+                                             LIBPATH = cwd)
+
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, parmLibPath, parmLibCFileList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, parmLibPath, parmLibCppFileList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, lexCPath, lexCFileList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, magicLibPath, magicLibFileList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, magicLibPath, magicLibHdrList)
+buildMethods.makeSymLinks(magicalCppEnv, [libmagicalStaticTarget, libmagicalSharedTarget],
+                          cwd, magicPath, magicFileList)
+linkTargetFile =  os.path.join(cwd, 'magic.gram.h')
+linkSourceFile = os.path.join(magicPath, 'magical_gram.h')
+string = 'ln -fs ' + linkSourceFile + ' ' + linkTargetFile
+magicalCppEnv.Command(target = linkTargetFile,
+                      source = linkSourceFile,
+                      action = string)
+magicalCppEnv.Depends(target     = [libmagicalStaticTarget, libmagicalSharedTarget],
+                      dependency = linkTargetFile)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+magicalCEnv.AddPostAction(libmagicalStatic,
+                          Action(Copy(installPath, os.path.join(cwd, libmagicalStaticTarget))))
+magicalCEnv.AddPostAction(libmagicalShared,
+                          Action(Copy(installPath, os.path.join(cwd, libmagicalSharedTarget))))
+

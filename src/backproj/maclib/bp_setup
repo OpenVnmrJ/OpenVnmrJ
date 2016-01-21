@@ -1,0 +1,120 @@
+"macro bp_setup"
+""
+"      Define BP image paramters"
+"		version: 02/02/94
+""
+""
+
+$answer=''
+$seqfil=''
+$gammabar=(sfrq*1000000)/(234.94*h1freq)
+
+input('BP type (bp3d, bp2d, bp2ds)? '):$ttype
+input('Preparation (none,sr,ir,aps,t1r) '):$tprep
+input('Maximum diameter of object (mm)? '):$tlro
+input('Number of points in profile (np)? '):$tnp
+input('Expected pixel resolution (Hz)? '):$lw
+input('Angle phi (180 degree, 360 degree)? '):$tphi
+prep=$tprep
+if not (($tphi=180) or ($tphi=360)) then 
+   repeat
+     input('Only 180 or 360 is a valid angle ! Please retype! '):$tphi
+   until (($tphi = 180) or ($tphi = 360))   
+endif
+phi= $tphi
+if($ttype = 'bp3d') then
+   input('angle theta (180 degree, 360 degree)? '):$ttheta
+   if not (($ttheta=180) or ($ttheta=360)) then 
+      repeat
+         input('Only 180 or 360 is a valid angle ! Please retype! '):$ttheta
+      until (($ttheta= 180) or ($ttheta= 360))   
+   endif
+   theta = $ttheta
+   bptype = 'noslice'
+   $tni=$tnp/4
+   $tni2=$tnp/4
+endif
+if($ttype = 'bp2d') then
+   bptype = 'noslice'
+   $tni=$tnp/4
+   $tni2 = 0
+endif
+if($ttype = 'bp2ds') then
+   bptype = 'slice'
+   $tni=$tnp/4
+   $tni2 = 0
+endif
+$tnp=$tnp/2
+$tsw=$lw*$tnp
+if ($tsw > 100000) 
+then
+  if (parmax[5] > 1e6) then
+    write('error','sw = %8.1f, Digitizer will be 12 bits!',$tsw)
+    if ($tsw>2e6) then
+     $terr=2e6/$lw
+     write('alpha','actual resolution may be reduced.')
+     $tsw = 2e6
+    endif
+  else
+     $terr=1e5/$lw
+     write('error','sw limited to 100000!')
+     write('alpha','sw limited to 100000')
+     write('alpha','actual resolution may be reduced.')
+     $tsw = 1e5
+  endif
+endif
+
+$tat=$tnp/$tsw
+$seqfil=seqfil
+$tte=0.0
+$tgro=$tsw/($tlro/10*gcal*$gammabar)
+""
+"	phase encode set up "
+""
+"a useful estimate +trise"
+
+clear
+write('alpha','')
+write('alpha','---   READOUT SETTINGS   ---')
+write('alpha','')
+write('alpha','field of view    = %7.4f    resolution = %7.5f',$tlro,$tlro/$tnp)
+write('alpha','sweep width      = %7.0f    np/2       = %d',$tsw,$tnp)
+write('alpha','acquisition time = %7.5f    gro        = %d',$tnp/$tsw,$tgro)
+write('alpha','readout gradient = %7.4f gauss/cm',gcal*$tgro)
+write('alpha','')
+""
+"     some checks"
+if ($tgro>32767) or ($tgro<-32768)
+  then
+  write('error','read gradient is to strong  ....  aborted')
+  abort
+endif
+
+input('Use these values? (y/n) '):$answer
+if ($answer = 'y')
+then
+  if te<$tte then
+    te=$tte
+    write('error','te was too short.... Set to minimum te = %7.4f',$tte)
+    endif
+  sw  = $tsw
+  np  = $tnp*2
+  ni  = $tni
+  ni2 = $tni2
+  lro = $tlro/10
+  gro = $tgro
+  if fn<np then
+    fn=np
+    endif
+" check for existence of parameters "
+" rro - read out resolution in cm "
+  exists('rro','parameter','current'):$x
+  if ($x = 0)
+  then
+   create('rro','real')
+   setgroup('rro','display')
+  endif
+  rro = lro/$tnp
+  dg
+endif
+view(orient)

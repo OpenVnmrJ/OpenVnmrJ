@@ -1,0 +1,179 @@
+"macro imFM"
+"Setup and Processing for FastMap sequence"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+$macro=$0
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  Prescan_ShimMethod='fastmap'
+  "initialize global parameters"
+  exists('Prescan_epi','parameter','global'):$ex
+  if($ex = 0) then
+   create('Prescan_epi','flag','global')
+   Prescan_epi=epiflag
+  endif
+  exists('Prescan_nf_def','parameter','global'):$ex
+  if($ex = 0) then
+   create('Prescan_nf_def','integer','global')
+   Prescan_nf_def=nf_def
+  endif
+  if size('Prescan_epi') <> size('epiflag') then
+    Prescan_epi=epiflag
+  endif
+  if size('Prescan_ShimDelay2') <> size('shdel') then
+    Prescan_ShimDelay2=shdel
+  endif
+  if size('Prescan_ShimIteration') <> size('shcycle') then
+    Prescan_ShimIteration=shcycle
+  endif
+  if size('Prescan_ShimOrder') <> size('shsel') then
+    Prescan_ShimOrder=shsel
+  endif
+  if size('Prescan_ShimProj') <> size('nproj') then
+    Prescan_ShimProj=nproj
+  endif
+  ldrf 
+  tof = resto  "needed by processing macros" 
+  setloop
+
+  if ($do = 'profile') then
+    n1 = epi
+    fastmap('init')
+    fm_setmap(0)
+    pilot='y' epi='y' tpwr=tpwr[1] nf=1 nf_def=1 av f full
+    wexp = 'vp=0 f full av wft vsadj ds dscale epi=n1'
+    wdone = ''
+    werr = ''
+    return
+  elseif ($do = 'power') then
+    fastmap('init')
+    wdone = ''
+    werr = ''
+    fm_setmap(0.5) 
+    return 
+  elseif ($do = 'coil') then
+    fastmap('init')
+    n1=epi
+    pilot='y' epi='y' tpwr=tpwr[1] nf=1 nf_def=1 av f full
+    off=0 maxproj=3 X0=0 Y0=0 Z0=0 axis='c' vp=0 vo=0
+    ni=3
+    wnt='wft(celem)'
+    wexp='vsadj vs=vs/2 wft dss dscale epi=n1'
+    wdone = ''
+    werr = ''
+    return
+  endif
+
+    "Set up voxel for shimming; voxel parameters initialized by imFM(prep)"
+    "In the future, we should not rely on a shim voxel being defined,"
+    " but rather define it based on the current plan"
+    $shim_params = userdir + '/prescan/voxel.par'
+    exists($shim_params,'file'):$e
+    if ($e = 0) then
+      write('error','%s: Voxel for shimming has not been selected',$macro)
+      abort
+    endif
+
+    "In future implementations (VnmrJ 1.1D) the rtv and shimorder set will be replaced by rtx"  
+    rtv($shim_params,'iplanDefaultType','iplanType','vtheta','vphi','vpsi','vox1','vox2','vox3','pos1','pos2','pos3'):iplanDefaultType,iplanType,vtheta,vphi,vpsi,vox1,vox2,vox3,pos1,pos2,pos3
+
+  if (prescan_control[1] > 0) then  "check if part of prescan "
+      "copy prescan (global) parameters to local"
+      shsel = Prescan_ShimOrder
+      shdel = Prescan_ShimDelay2
+      nproj = Prescan_ShimProj
+      shcycle = Prescan_ShimIteration
+      epiflag = Prescan_epi
+      nf_def    = Prescan_nf_def
+     " tpwr      = coil_param[13] "
+     " gain      = coil_param[14] "
+     " lro       = coil_param[15] "
+     " thk       = coil_param[16] "
+     " tau       = coil_param[17] "
+  endif
+  
+  if ((numproj <> 1) and (numproj <> 2)) then  "check limits"
+    numproj = 1
+  endif
+  if ((shimorder <> 1) and (shimorder <> 2)) then  "check limits"
+    shimorder = 1
+  endif
+  if(shimorder = 2) then  "6 projections for 1st&2nd order shimming"
+    numproj = 2
+  endif
+
+  fm_setmap(numproj)
+  fm_setvox          "set voxel position"
+  fm_setvox('size')  "set voxel size"
+  fm_prep 
+  execseq('prep')  "Execute any sequence specific preparation"
+
+  cnt = 1
+  fm_acquire   "initialize for first pass; 0=init only"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  if($do = 'study') then  "process if in study mode"
+    "Calculate weighting factors"
+    gfs = at/2   "gaussian shift, position in center of acquisition window"
+    gf  = (at-gfs)/(sqrt(40)) "determined empirically" 
+    fm_calcshim(shimorder)  "This macro calculates tof based on new shims"
+    fm_showmap
+    fm_setshims
+//    fm_acquire(shimpass)  "update cnt"
+
+    "Recommended to do actual NMR measurement of offset through prescan"
+    resto = tof           "set new value from calculations"
+    {tn + 'offset'} = tof "set new global transmitter"
+  else
+    if (prescan_control[1] > 0) then   "check if in prescan mode"
+      "Calculate weighting factors"
+      gfs = at/2 "gaussian shift, position in center of acquisition window"
+      gf  = (at-gfs)/(sqrt(40)) "determined empirically"
+      fm_calcshim(shimorder)  "This macro calculates tof based on new shims"
+      fm_showmap
+      fm_setshims
+      fm_acquire(shimpass)  "update cnt; Note sets prescan_control[0] on last pass"
+
+      "Recommended to do actual NMR measurement of offset through prescan"
+      resto = tof           "set new value from calculations"
+      {tn + 'offset'} = tof "set new global transmitter"
+
+      "end of prescan routines handled here"
+      if(cnt <= 4) then  
+        au	     "if prescan and multi iterations start acquisition"
+      else      "end of prescan; all iterations done"
+        prescan_data('save',Prescan_ShimMethod)
+        prescan_control[2]= prescan_control[2]+1	  		    
+        prescan_handler('exec')
+      endif
+    endif
+  endif
+
+  execseq('proc')  "Execute any sequence specific preparation"
+endif
+
+"****************************************************************************
+"		Modification History
+"
+" 20080908(ss) - nf_def initialized for shimming
+"                epi flag restored
+
+"****************************************************************************

@@ -1,0 +1,70 @@
+"macro diffsetbvals"
+"***********************************************************************"
+"                                                                       "
+" diffsetbvals: Macro to set multiple b values in diffusion experiments "
+"                                                                       "
+"***********************************************************************"
+
+  "Turn _dro, _dpe and _dsl off to eliminate set_gf_array errors"
+  setprotect('dro','off',8)
+  setprotect('dpe','off',8)
+  setprotect('dsl','off',8)
+
+  "Temporarily reset array parameter to eliminate parallel arrays"
+  array='dro,dpe,dsl'
+
+  "Store arrays and unset them"
+  $dro=dro $dpe=dpe $dsl=dsl
+  dro=dro[1] dpe=dpe[1] dsl=dsl[1]
+
+  "Calculate scaling factors"
+  if (dstart>1) then dstart=1 endif
+  if (dstart<-1) then dstart=-1 endif
+  $step=0
+  if (nbval>1) then
+    $largest=1
+    $step=($largest-dstart)/(nbval-1)
+  endif
+
+  $nvals=nbdirs+nbzero
+  $ix=1
+  $i=0
+  if (nbval0>0) then "Propagate the b=0 values"
+    while ($i<nbval) do
+      $factor=1-$i*$step
+      if ($factor<0) then $factor=-sqrt(-$factor) else $factor=sqrt($factor) endif
+      $j=1
+      while ($j<=$nvals) do
+        dro[$ix]=$dro[$j]*$factor
+        dpe[$ix]=$dpe[$j]*$factor
+        dsl[$ix]=$dsl[$j]*$factor
+        $ix=$ix+1
+      $j=$j+1
+      endwhile
+    $i=$i+1
+    endwhile
+  else "Don't propagate the b=0 values"
+    while ($i<nbval) do
+      $factor=1-$i*$step
+      if ($factor<0) then $factor=-sqrt(-$factor) else $factor=sqrt($factor) endif
+      $j=1
+      while ($j<=$nvals) do
+        if ($i=0 OR $dro[$j]<>0 OR $dpe[$j]<>0 OR $dsl[$j]<>0) then
+          dro[$ix]=$dro[$j]*$factor
+          dpe[$ix]=$dpe[$j]*$factor
+          dsl[$ix]=$dsl[$j]*$factor
+          $ix=$ix+1
+        endif
+        $j=$j+1
+      endwhile
+      $i=$i+1
+    endwhile
+  endif
+
+  "Reset array parameter for parallel array"
+  array='(dro,dpe,dsl)'
+
+  "Turn _dro, _dpe and _dsl back on"
+  setprotect('dro','on',8)
+  setprotect('dpe','on',8)
+  setprotect('dsl','on',8)

@@ -1,0 +1,40 @@
+"macro multinucrcvrsetup"
+" ********************************* "
+" **** macro multinucrcvrsetup **** "
+" **** setup parameters for    **** "
+" **** multi nuc multi rcvrs   **** "
+" ********************************* "
+"  this macro is called by fixpar and addpar macros
+
+exists('rcvrstype','parameter'):$e
+if ( $e > 0.5 ) then
+  write('error','parameter rcvrstype should be of systemglobal type')
+endif
+
+exists('rcvrstype','parameter','systemglobal'):$e
+if ( $e > 0.5 ) then
+  if (rcvrstype <> 'm') then
+    write('error','parameter rcvrstype should be set to m')
+  endif
+else
+  write('error','systemglobal parameter rcvrstype does not exist!')
+endif
+
+exists('rcvrs','parameter','current'):$isrcvr
+if ($isrcvr = 0) then
+    create('rcvrs','flag','current')
+    setprotect('rcvrs','on',1)        "cannot array the parameter"
+    setenumeral('rcvrs',2,'n','y')
+    rcvrs='y'
+endif
+
+exists('gain2','parameter','current'):$isgain2
+if ($isgain2 = 0) then
+    create('gain2','real','current')
+    setprotect('gain2','on',1)       "cannot array the parameter"
+    getlimit('gain'):$max,$min,$step
+    setlimit('gain2',$max,$min,$step,'current')
+    gain2=30
+endif
+
+

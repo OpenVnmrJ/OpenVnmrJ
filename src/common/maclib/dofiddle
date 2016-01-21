@@ -1,0 +1,85 @@
+"macro dofiddle"
+"Macro for doing FIDDLE reference deconvolution via the FIDDLE panel"
+
+$writefid='no'
+$satellites='no'
+$checkname='no'
+$selectref='no'
+$showref='no'
+
+$xi=$#
+$x = 1
+while ($x <= $xi) do
+ $val = ${$x}
+ if $val = 'writefid' then $writefid=$val
+ elseif $val = 'satellites' then $satellites=$val
+ elseif $val = 'checkname' then $checkname=$val
+ elseif $val = 'selectref' then $selectref=$val
+ elseif $val = 'showref' then $showref=$val
+ endif
+ $x=$x+1
+endwhile
+
+if file='exp' then
+	$writepath=userdir+'/data/fiddle_corrected_fid'
+else
+	$str=''
+	length(file):$filelength
+	substr(file,1,$filelength-4):$str
+	$writepath=$str+'_corrected'
+endif
+$i=1 $is='' $ex=0
+repeat
+	format($i,1,0):$is
+	$file=$writepath+'_'+$is+'.fid'
+	exists($file,'file'):$ex
+	$i=$i+1
+until $ex<0.5
+$writepath=$file
+
+if $checkname='checkname' then return($writepath) endif
+
+if $selectref='selectref' then
+	ds(1)
+	$cr=cr 
+	"Find the tallest peak inside the cursors"
+	peak(cr-delta,cr):$ht,$freq
+	cr=$freq
+	rl($freq)
+	dres:r5
+	ds('toggle')
+	write('graphics',4,wc2max-10,'Reference line at %.2f ppm',rfp/sfrq)	
+	write('graphics',4,wc2max-20,'Experimental linewidth %.2f Hz at half-height',r5)	
+	write('graphics',4,wc2max-30,'Reference region width: %.1f Hz',delta)	
+	cr=$cr
+	return
+endif
+
+if $showref='showref' then
+	ds(1)
+	write('graphics',4,wc2max-10,'Reference line at %.2f ppm',rfp/sfrq)	
+	write('graphics',4,wc2max-20,'Experimental linewidth %.2f Hz at half-height',r5)	
+	write('graphics',4,wc2max-30,'Reference region width: %.1f Hz',delta)	
+	return
+endif
+
+if fiddle_tmsflg='y' and tn='H1' then
+	$satellites='satellites'
+	write('line3','Including TMS satellite signals in ideal lineshape') 
+endif
+
+if $writefid='writefid' or fiddle_writeflg='y' then
+	if $satellites='satellites' then
+		fiddle('satellites','TMS','writefid',$writepath)
+	else
+		fiddle('writefid',$writepath)
+	endif
+	write('line3','Writing out corrected FID data to %s',$writepath)
+	newdg
+else
+	if $satellites='satellites' then
+		fiddle('satellites','TMS')
+	else
+		fiddle
+	endif
+endif

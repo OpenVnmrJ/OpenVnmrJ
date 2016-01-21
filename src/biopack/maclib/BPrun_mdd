@@ -1,0 +1,29 @@
+"macro BPrun_mdd"
+
+$fname=''
+$cmd = ''
+$fnm = ''
+$ext = ''
+
+if($#<1) then
+  write('error','usage: BPrun_mdd fname.fid')
+  return
+endif
+
+$fname = $1
+getext($fname):$fnm,$ext
+if not ($ext = 'fid') then
+  $fname = $fname+'.fid'
+endif
+
+$fnm = $fname + '/BPmdd_scr' 
+exists($fnm,'file'):$e
+if($e) then
+  $cmd = 'cd ' + $fname + '; ./BPmdd_scr >& BPmdd.log &'
+  shell($cmd)   " run the MDD processing script "
+else
+  write('error','Unable to proceed. The MDD processing script is missing.')
+  return
+endif
+
+

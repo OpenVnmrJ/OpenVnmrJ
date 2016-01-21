@@ -1,0 +1,97 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file name
+procprocTarget = 'Procproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+# os.path.join(cwd, os.pardir, 'procproc'),
+
+vnmrPath = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'locksys.h',
+                'data.h' ]
+
+vwacqPath = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = [ 'hostAcqStructs.h' ]
+
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'chanLib.h',
+                 'chanLibP.h',
+                 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'semLib.h',
+                 'shrMLib.h',
+                 'sockets.h' ]
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+expprocPath     = os.path.join(cwd, os.pardir, 'expproc')
+expprocHdrList = [ 'commfuncs.h',
+                   'expDoneCodes.h',
+                   'hostMsgChannels.h',
+                   'parser.h',
+                   'shrstatinfo.h',
+                   'shrexpinfo.h' ]
+expprocFileList = ['commfuncs.c',
+                   'excepthandler.c',
+                   'statfuncs.c',
+                   'parser.c',
+                   'daemon.c']
+
+procprocFileList = ['proccmds.c',
+                    'procproc.c',
+                    'process.c',
+                    'procfuncs.c',
+                    'procQfuncs.c']
+
+# build environment
+env = Environment(CCFLAGS    = '-O2 -m32 -Wall',
+                  CPPDEFINES = ['LINUX', 'DEBUG'],
+                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib' ,
+                  CPPPATH    = [cwd])
+
+                                # ncommPath,
+                                # expprocPath,
+                                # os.path.join(cwd, os.pardir, 'procproc'),
+                                # os.path.join(cwd, os.pardir, 'vnmr'),
+                                # os.path.join(cwd, os.pardir, 'vwacq')])
+
+# actual builds
+procprocProg = env.Program(target  = procprocTarget,
+                           source  = [procprocFileList,
+                                      expprocFileList],
+                           LIBPATH = [cwd,
+                                      ncommPath],
+                           LIBS    = ['ncomm'])
+
+buildMethods.makeSymLinks(env, procprocTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, procprocTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, procprocTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, procprocTarget, cwd, expprocPath, expprocHdrList)
+buildMethods.makeSymLinks(env, procprocTarget, cwd, expprocPath, expprocFileList)
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'vnmr', 'acqbin')
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+env.AddPostAction(procprocProg, Action(Copy(vnmrInstallPath,
+                                            os.path.join(cwd, procprocTarget))))
+

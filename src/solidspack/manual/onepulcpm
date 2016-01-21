@@ -1,0 +1,52 @@
+Protocol: Onepulcpm  Sequence: onepulcpm.c  Apptype: solidseq1d
+
+Description: 
+
+Single pulse preparation with CPM (eDROOPY) decoupling.
+Used for calibration of the 90-degree pulse-width pwX90. 
+
+Uses the cpmH SHAPE module instead of the DSEQ router. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Onepulcpm. For a 
+new nucleus set the desired observe nucleus and array pwX90 to 
+obtain a calibration. 
+
+Select the desired decoupling method "OFF", "CW" or "PM". 
+
+If no decoupling is desired select OFF.   
+
+If CW decoupling is desired select CW. 
+
+If CPM decoupling is desired select PM. The cpmH parameter 
+group will appear. 
+ 
+Set aHcpm to the desired amplitude 0 to 4095.  Set pwHcpm to 
+just less than the 180-degree pulse width for the field 
+strength provided by aHcpm. Set phHcpm to about 8.0 degrees.  
+Array pwHcpm and phHcpm for a fine calibration.  Choose the 
+narrowest line with the greatest amplitude. Glycine is a 
+good standard for CPM calibration. 
+
+Parameter Groups:
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used 
+              as a preparation pulse. Also used to store the obs 
+              calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+cpmH:  Module:  yes
+Sequence:  tancpxcpm.c
+Description: Implements CPM Decoupling - Used as an alternate to the DSEQ router.
+Parameters:  Sequence Page
+       aHcpm - amplitude of CPM.
+       pwHcpm - approximate 180-degree flip on dec.
+       phHcpm - CPM +/- phase, "phi".
+       ofHspnl - overall frequency offset.
+Implementation: SHAPE cpm = getcpm("cpmH",0.0,0.0,0,1);
+Underscore functions: _SHAPE functions.

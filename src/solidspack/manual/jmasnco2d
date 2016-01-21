@@ -1,0 +1,204 @@
+Protocol: Jmasnco2d  Sequence: jmasnco2d.c  Apptype: solidseq1d
+
+Description: 
+
+     Constant, linear or tangent-ramped CP from H to X followed by 2D 
+     X-Y correlation using a constant-time J-inept transfer between Y and
+     X, with X acquisition using SPINAL or TPPM decoupling. 
+
+Acknowledgement: 
+
+     The initial code for this sequence was obtained from CCNY, Ruth Stark and 
+     Hsin Wang. It was modified to be consistent with SolidsPack conventions. 
+
+Setup: 
+
+     Calibrate the individual shaped pulses with tancpxref.c. Also optimize 
+     The C-H SPINAL decoupling for a maximum intensity of refocussing 
+     with the desired refocussing times. Use these values for Hmixspinal. 
+
+     Obtain a standard spectrum with Tancpx. Determine the offsets for CA,
+     CO shaped pulses from this spectrum and enter the shaped pulse parameters
+     for each pulse using the information above. The N pulse is usually set 
+     as a square 180-degree inversion with hard-pulse calibrations of aY90 
+     and pwY90.
+
+     Enter values of taua and taub for J-defocussing and refocussing as multiples 
+     of the rotor period. 
+
+     Set sw1 to a minimum value to represent the carbonyl region and use
+     64-128 increments, phase=1,2. The maximum F1 acquisition time must 
+     be less than 2.0*(taua) minus the number of rotor periods spanned by the shcoX 
+     shaped pulse. The shcaX pulse only appears if the F1 increment has a value
+     of d2 greater than the number of rotor periods spanned by this pulse. 
+
+     Run and process with wft2da. 
+     
+Parameter Groups
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:  Provides a 90-degree pulse on dec that can be used as a
+              preparation pulse. Also used to store the dec calibration.
+Parameters:  Channels Page
+      aH90  - the amplitude of the pulse.
+      pwH90 - the pulse length.
+
+cpHY:  Module:  yes
+Sequence:  dcptan.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to dec2.
+Parameters:  Sequence Page
+       shHY - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with
+                      chHY.
+       chHY - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhy - median amplitude of the dec channel.
+       aXhy - median amplitude of the dec2 channel.
+       bHY - tangent curvature (>0 to 1.0e5).
+       dHY - +/- amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHY - contact time.
+       ofHY - overall offset on the variable channel.
+       frHY = 'dec' - channel with the initial polarization (must be
+              set - not shown).   
+       toHY = 'dec2' - channel with the final polarization (must be set
+              - not shown).
+Implementation: CP hy = getcp("HY",0.0,0.0,0,1);
+Underscore function: _cp_(hy,phHhx,phYhy); phHhx is the overall phase
+              table for the H channel and phYhy is that for the Y channel.
+
+shY:  Module: yes (also shcaX and shcoX)
+Sequence:  jmasnca2d.c
+Description:  Implements a shaped refocussing pulse on Y for INEPT mixing. This
+              can usually be declared "square" with the amplitude of aY90 and a 
+              180 degree flip angle. 
+               
+              shcoX - implements a selective carbonyl inversion pulse on X for 
+              INEPT transfer. It is typically used as "rsnob" with a width of 
+              about 200 ns. The sampe pulse is used for refocusing. 
+
+              shcaX - implements a selective carbonyl inversion pulse on X for 
+              to refocus the NCA J coupling. It is typically used as "rsnob" 
+              with a width of about 400 ns. 
+ 
+Parameters:  Sequence Page
+       chXsh - must be 'obs'. 
+       wvXsh - pBox pulse waveshape from wavelib.
+       aXsh - amplitude of pBox pulse.
+       dbXsh - attenuator setting for pBox pulse.
+       tXsh - predelay for pBox pulse.
+       pwXsh - width of pBox pulse.
+       phXsh - starting small angle phase adjust.
+       stXsh - shape parameter - see pBox documentation
+Implementation:  PBOXPULSE sh = getpboxpulse("shX",0);
+                 PBOXPULSE shp2 = getpboxpulse("shp2H",0);
+                 PBOXPULSE shp3 = getpboxpulse("shp3Y",0);
+Underscore function: _pboxpulse(sh,phXsh);
+              _pboxsimpulse(sh,shp2,phXsh,phHshp2);
+              _pboxsim3pulse(sh,shp2,shp3,phXsh,phHshp2,phYshp3);
+Notes:  phXsh (and 2 or 3) is the overall phase table for the shape.
+        _pboxsim(3)pulse uses multiple shapes where the arguments are 
+        obs, dec, dec2 in order.  Label the shapes with the correct 
+        channel identifier X, H, Y using getpboxpulse depending on the 
+        channel for which it is used. _pboxsim(3)pulse cannot accept 
+        shapes on dec (identifier Z). 
+
+taua - an individual parameter that sets the J-defocussing time of the 
+       NCA J coupling.  It is usually about 9.6 ms. 
+
+taub - an individual parameter that sets the J refocussing of the NCA 
+       J coupling. It is usually about 12 ms. 
+
+Hmixseq:  Module: yes 
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during F1 and mixing periods when Hseq is used for
+              acquisition.
+Parameters:  Sequence Page - the Hmixspinal and Hmixtppm groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              or SPINAL.
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal() or gettppm(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); or _spinal();
+             _dseqoff(mix); runs decprgoff(mix);
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal.
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix =
+             getdseq("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description: Chooses SPINAL or TPPM decoupling on the dec channel
+             during acquisition
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+             getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence: tancpx.c 
+Description:  Implements SPINAL decouping on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or
+             _dseqon(dec); and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+
+
+
+

@@ -1,0 +1,86 @@
+"macro scpar"
+"Create a dg template for a spincad pulse sequence"
+if ($# < 0.5) then
+   return
+endif
+$info = userdir+'/spincad/info/'+$1
+exists($info,'file'):$e
+if ($e < 0.5) then
+   $info = systemdir+'/spincad/info/'+$1
+   exists($info,'file'):$e
+endif
+if ($e < 0.5) then
+   return
+endif
+lookup('file',$info,'read','read','read'):$dim,$chans,$obsch
+$i = 1
+$rf=0
+$grad=0
+$gen=0
+$type=''
+$label=''
+while ($i <= $chans) do
+   lookup('read','readline'):$type,$label
+   $chanlabel[$i] = $label
+   $chantype[$i] = $type
+   if ($type = 'RF') then
+      $rf=$rf+1
+   elseif ($type = 'Gradient') then
+      $grad=$grad+1
+   else
+      $gen=$gen+1
+   endif
+   $i=$i + 1
+endwhile
+$dgfile=userdir+'/templates/dg/'+$1+'/dg.chmap'
+exists($dgfile,'file'):$e
+if ($e > 0.5) then
+   delete($dgfile)
+endif
+exists(userdir+'/templates/dg/'+$1,'directory'):$e
+if ($e < 0.5) then
+   shell('mkdir -p '+userdir+'/templates/dg/'+$1):$e
+   if $dim = 1 then
+      write('file',userdir+'/templates/dg/'+$1+'/DEFAULT','set default default')
+   else
+      write('file',userdir+'/templates/dg/'+$1+'/DEFAULT','set default default2d')
+   endif
+endif
+copy(systemdir+'/spincad/dg/dg.sc',$dgfile)
+$ch='"RF 1"'
+$val='tn'
+$i=2
+$chval='"RF 1"','"RF 2"','"RF 3"','"RF 4"','"RF 5"','"RF 6"'
+$valval='tn','dn','dn2','dn3','dn4','dn5'
+while ($i <= numrfch) do
+  $ch=$ch+' '+$chval[$i]
+  $val=$val+' '+$valval[$i]
+  $i= $i + 1
+endwhile
+write('file',$dgfile,'set choices {%s}',$ch)
+write('file',$dgfile,'set values "%s"',$val)
+$i = 1
+$ai='1','2','3','4','5','6'
+while ($i <= $chans) do
+  if ($chantype[$i] = 'RF') then
+    shell('cat '+systemdir+'/spincad/dg/vch'+$ai[$i]+' >> '+$dgfile+';cat '):$e
+  elseif ($chantype[$i] = 'Gradient') then
+    shell('cat '+systemdir+'/spincad/dg/gch'+$ai[$i]+' >> '+$dgfile+';cat '):$e
+  else
+    write('file',$dgfile,'set dgIJ %s,0',$ai[$i])
+    shell('cat '+systemdir+'/spincad/dg/nch >> '+$dgfile+';cat '):$e
+  endif
+  write('file',$dgfile,'set dgTemplate(label,%s,0) {%s}',$ai[$i],$chanlabel[$i])
+  $i= $i + 1
+endwhile
+$i = 1
+while ($i <= numrfch) do
+  shell('cat '+systemdir+'/spincad/dg/rfch'+$ai[$i]+' >> '+$dgfile+';cat '):$e
+  $i= $i + 1
+endwhile
+write('file',$dgfile,'set dgTemplate(type,%s,2) {title}',$ai[$obsch])
+write('file',$dgfile,'set dgTemplate(label,%s,2) { RF 1 (observe)}',$ai[$obsch])
+write('file',$dgfile,'set dgTemplate(cols,%s,2) {2}',$ai[$obsch])
+if (seqfil = $1) then
+  newdg
+endif

@@ -1,0 +1,19 @@
+"macro vpMsg"
+
+if $#=0 then
+  if (activestudy[1]<>'null') and (actionid <> 'null') and \
+     (actionid<>'') and (appmode='imaging') then
+    xmsetatts(actionid,'status','Processing')
+  endif
+  return
+endif
+if ($1 = '') then
+  return
+endif
+xmgetatts($1,'status'):$st
+if ($2 = 102) and ($st = 'Submitted') then
+  xmsetatts($1,'status','Executing')
+  xmlockup
+elseif ($2 <> 102) and ($st = 'Executing') then
+  xmsetatts($1,'status','AcqDone')
+endif

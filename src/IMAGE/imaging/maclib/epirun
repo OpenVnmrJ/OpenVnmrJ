@@ -1,0 +1,68 @@
+"macro epirun"
+"************************************************************************"
+"                                                                        "
+" epirun - Macro to acquire and process epi data                         "
+"                                                                        "
+" Usage:   epirun                                                        "
+"                                                                        "
+" Details: You must have setup the tweaking parameters using episet.     "
+"          epirun collects and processes the data using epift   macro.   " 
+"                                                                        "
+"************************************************************************"
+
+setloop  "** initialize loop counters **"
+
+"** initialize some parameters, images, nseg **, imgno, slice"
+exists('images','parameter'):$ex
+if($ex = 0) then
+  create('images')
+  images=1
+  image=1
+endif
+if (images = 0) then images=1 endif
+exists('nseg','parameter'):$ex
+if($ex = 0) then
+  create('nseg')
+  nseg=1
+endif
+if (nseg = 0) then nseg=1 endif
+
+if(images=1) then
+  image=1
+else
+  setarray('image',1,0,images)
+  image[1] = 0
+endif
+if(ns = 1) then slice=1 endif
+exists('imgno','parameter'):$ex
+if($ex = 0) then
+  create('imgno')   "processing parameter"
+endif
+imgno = 1
+
+isvnmrj:$vj
+if ($vj < 0.5) then
+  wexp='epirfall if images>1 then epiphms endif epiftms'
+else
+  wexp='recon_all'
+endif
+
+if ($# > 0.5) then
+  au($1)
+else
+  au
+endif
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  "
+"                                                                        "
+"001222(ss) Even echoes reversed					 "
+"970319(ss) First version created and tested                             "
+"970509(ss) Used the more efficient phase correction routines            "
+"970511(ss) epirun collects image data only                              "
+"981210(ss) epiftms called						 "
+"981211     image initialized 						 "
+"12sep01(di) use activestudy parameter for study			 "
+"19sep01(ss) phasemap generated prior to epift				 "
+"                                                                        "
+"************************************************************************"

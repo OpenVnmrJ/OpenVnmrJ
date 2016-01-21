@@ -1,0 +1,35 @@
+"macro VPprocess"
+"Agilent VPprocess"
+
+exists('VPspecinfo','parameter'):$e
+if not $e then
+  write('line3','Data set must be reprocessed manually')
+  return
+endif
+$macro=VPspecinfo[1]+'_process'
+exists($macro,'maclib'):$ex
+if ($ex<0.5) then
+  write('line3','No processing macro for these data exists!')
+  return
+endif
+
+$opt='dophase'
+if ($#>0.5) then
+   if ($1='nophase') then
+	write('line3','processing without autophasing')
+	$opt='nophase'
+   else
+   	write('line3','Option to VPprocess not recognized!') return 
+   endif
+endif
+
+if ($opt='nophase') then
+  $macro=$macro+`('nophase','activestudy')`
+else
+  $macro=$macro+`('activestudy')`
+endif
+
+write('line3','Executing processing macro %s',$macro)
+write('reset',curexp+'/VPreprocess')
+CalibrationResults=''
+exec($macro)

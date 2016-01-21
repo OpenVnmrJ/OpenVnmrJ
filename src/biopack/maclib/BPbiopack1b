@@ -1,0 +1,136 @@
+"macro BPbiopack1b"
+"BPbiopack1b(option)     version of BPbiopack1a to copy probefile"
+                           "instead of making new probefile"
+
+" option='0':  copies /vnmr/probes/HCN  probefile  " 
+" option='1':  copies .../vnmr1/vnmrsys/probes/HCN  probefile  " 
+" option='2':  copies /vnmr/probes/HCN  probefile  VJ only  " 
+" option='3':  copies .../vnmr1/vnmrsys/probes/HCN  probefile    VJ only" 
+" option='current':  copies ~/vnmrsys/probes current probefile    VJ only" 
+
+$tail='tail'
+exists('/usr/xpg4/bin/tail','file','x'):$e
+if $e then
+  $tail='/usr/xpg4/bin/tail'
+endif
+
+if (BPinstall=0) then    "only true at installation"
+  $gv='' $revfile=systemdir+'/BioPack.dir/BP_rev'
+  exists($revfile,'file'):$v1
+  if ($v1) then
+    shell('grep "version 20" <',$revfile,'|',$tail,'-n 1 | awk \'{print $NF}\'; cat'):$gv
+    $lv='' $revfile=userdir+'/BioPack.dir/BP_rev'
+    exists($revfile,'file'):$v2
+    if ($v2) then
+      shell('grep "version 20" <',$revfile,'|',$tail,'-n 1 | awk \'{print $NF}\'; cat'):$lv
+    endif
+    if ($lv<>'')and($gv<>'') then
+      $lastv=''
+      shell('(echo',$lv,'; echo',$gv,')| sort|',$tail,'-n 1; cat'):$lastv
+      if $lastv=$gv then
+        exists(systemdir+'/Biopack.dir/BP_files','file'):$e
+        if $e then
+          BPrmlocalfiles
+        endif
+      endif
+    elseif $gv<>'' then
+      BPrmlocalfiles
+    endif
+  endif
+
+  $error=0
+  if $1<>'current' then
+   BPcopyprobe('HCN',$1):$error  "other probefile is copied into user probes file as HCN"
+   if $error=1 then return endif  "no source probefile present"
+   probe='HCN'
+  else
+   BPcopyprobe(probe,'current'):$error  "existing probefile is used"
+   if $error=1 then return endif  "no source probefile present"
+  endif
+endif
+
+BPglobalpar   "for VJ3 no installation script is used, do it now"
+
+BPinstall=1            "indicates installation is done"          
+ghn_co                 "ok, since a calibrated probefile now exists"
+
+BPpwrlimits=1   "set power limits as default"
+"using stored pulse/power values in ghn_co.par for C/N"
+"BPdpwr*max are loaded from probefile"
+"these can be modified by user with the BPbiopack2 macro later"
+"assume ch3/4 limits are already in probefile"
+
+"overwrite BPdpwr*max to safe values"
+if (sfrq<650) then
+ ln(50.0/(compC*pwC)):$ln   "5kHz"
+else
+ ln(60.0/(compC*pwC)):$ln   "4.2 kHz"
+endif
+
+$BPdpwrmax=trunc(pwClvl - 20.0*$ln/2.303)
+if BPdpwrmax>$BPdpwrmax then BPdpwrmax=$BPdpwrmax endif
+
+ln(250.0/(compN*pwN)):$ln   "1kHz"
+$BPdpwr2max=trunc(pwNlvl - 20.0*$ln/2.303)
+if BPdpwr2max>$BPdpwr2max then BPdpwr2max=$BPdpwr2max endif
+
+clear(2)
+fn=2*np
+pwC3 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+$pw = pwC3*5.0      $pw = trunc($pw + 0.5)    pwC3 = $pw/5.0
+pwC3a = pwC3
+pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+$pw = pwC4*5.0      $pw = trunc($pw + 0.5)    pwC4 = $pw/5.0
+pwC5 = 88.8*600.0/sfrq
+$pw = pwC5*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC5 = ($pw + 1.0)/5.0
+pwC6 = 88.8*600.0/sfrq
+$pw = pwC6*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC6 = ($pw + 1.0)/5.0
+pwC7 = 80.5*600.0/sfrq
+$pw = pwC7*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC7 = ($pw + 1.0)/5.0
+pwC7a = pwC7
+pwC8 = 80.5*600.0/sfrq
+$pw = pwC8*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC8 = ($pw + 1.0)/5.0
+pwC8a = pwC8
+pwC9 = 80.5*600.0/sfrq
+$pw = pwC9*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC9 = ($pw + 1.0)/5.0
+pwC9a = pwC9
+spin='n' ni=0  ni2=0 phase=1 phase2=1
+exists('waltzB1','parameter'):$e
+if $e=0 then create('waltzB1','real') waltzB1=5p endif
+exists('dmf30','parameter'):$e
+if $e=0 then create('dmf30','real') endif
+exists('rf30','parameter'):$e
+if $e=0 then create('rf30','real') endif
+exists('dmf80','parameter'):$e
+if $e=0 then create('dmf80','real') endif
+exists('rf80','parameter'):$e
+if $e=0 then create('rf80','real') endif
+exists('dmf140','parameter'):$e
+if $e=0 then create('dmf140','real') endif
+exists('rf140','parameter'):$e
+if $e=0 then create('rf140','real') endif
+
+tn=tn dn=dn dn2=dn2    "make sure proper frequencies are set"
+
+setfrq
+if (numrfch>3) then dn3=dn3 endif
+exists('reffrq','parameter'):$e
+if ($e=0) then create('reffrq','real') endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+setref
+
+printon man('BioPacklist') printoff
+man('BioPack.update')
+
+if ($1='0') then menu('BioPack1a') "For VNMR only"
+banner('/vnmr/probes/HCN probefile copied to user probes file\\  \\Check printed list for important parameters.\\   \\Then update parameter values in this parameter set.\\    \\Click "Update Probefile with These Parameters"\\   \\menu button to finish probefile update\\  \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE')
+elseif ($1='1') then                "For VNMR only"
+banner('NMR Admin. vnmrsys/probes/HCN probefile copied to user probes file\\  \\Check printed list for important parameters.\\   \\Then update parameter values in this parameter set.\\    \\Click "Update Probefile with These Parameters"\\   \\menu button to finish probefile update\\  \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE')
+elseif ($1='2') then                 "for VNMRJ only"
+banner('/vnmr/probes/HCN probefile copied to user probes file\\  \\Check printed list for important parameters.\\   \\Then update parameter values in this parameter set.\\   \\Click "Globals&Probefile" tab in Setup Pages.\\    \\Click "Update Probefile ...." button to finish probefile update\\   \\Exit and restart VNMRJ after Updating\\   \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE ')
+elseif ($1='current') then                 "for VNMRJ only"
+banner('current user probefile is used\\  \\Check printed list for important parameters.\\   \\Then update parameter values in this parameter set.\\   \\Click "Globals&Probefile" tab in Setup Pages.\\    \\Click "Update Probefile ...." button to finish probefile update\\   \\Exit and restart VNMRJ after Updating\\   \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE ')
+elseif ($1='3') then                 "for VNMRJ only"
+banner('NMR Admin. /vnmrsys/probes/HCN probefile copied to user probes file\\  \\Check printed list for important parameters.\\   \\Then update parameter values in this parameter set.\\   \\Click "Globals&Probefile" tab in Setup Pages.\\    \\Click "Update Probefile ...." button to finish probefile update\\   \\Exit and restart VNMRJ after Updating\\   \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE ')
+endif

@@ -1,0 +1,425 @@
+"macro sqfilemenu"
+"set study queue filemenu"
+
+if ($# < 0.5) then
+  $cmd='init'
+else
+  $cmd=$1
+endif
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+
+// do any of these commands depend which viewport
+//  they are executed from? yes.
+if ($appmode='imaging') and ($cmd<>'Undo Delete') and ($cmd<>'undo') then
+  if (jviewports[1]>1.5 and jviewport<>1) then
+    $cmd='VP 1 '+$0+'(\''+$cmd
+    $i=1
+    while ($i < $#) do
+      $i=$i+1
+      $cmd=$cmd+'\',\'' + ${$i}
+    endwhile
+    $cmd=$cmd+'\')'
+    vnmrjcmd($cmd)
+    return
+  endif
+endif
+
+if ($cmd='init') or ($cmd='undelete') then
+  return
+endif
+
+xm1('studydir'):$sdir
+$trash=userdir+'/trashstudy'
+$trinfo=$trash+'/info/'
+$trdata=$trash+'/data/'
+$activestudy=activestudy[1]
+
+if ($cmd='Cannot Clear') then
+
+  write('line3','Study active, cannot clear study.')
+
+elseif ($cmd='Updatetime') then
+
+  if (seqfil='info') then
+    xmtime
+  else
+    xm1('time')
+  endif
+
+elseif ($cmd='cleanupActive') then
+  "reset status of Active, Executing nodes"
+  $action='n'
+  if $#>1.5 then $action=$2 endif
+  $ef=$sdir+'/enterSQ'
+  exists($ef,'file'):$e
+  if ($activestudy<>'null' and $e>0.5) then
+    $node='' $field=''
+    readfile($ef,'$node','$field','','local'):$size
+    if $size>0.5 then
+      if $action<>'only' then
+        $i=0
+        repeat
+          $i=$i+1
+          xmgetatts($node[$i],'status'):$st
+          if $st='Executing' then
+            if $action='close' then
+              readhw('status'):$hwval
+              if ($hwval<>10) then
+                write('error','Cannot close study while Executing!')
+                abort
+              endif
+            endif
+            xmsetatts($node[$i],'status','Completed')
+          endif
+        until ($i>=$size)
+      endif
+      $i=0
+      repeat
+        $i=$i+1
+        xmgetatts($node[$i],'status'):$st
+        if $st='Active' then
+          xmsetatts($node[$i],'status','Customized')
+        endif
+      until ($i>=$size)
+      actionid='null'
+    endif
+  endif
+  return
+
+elseif ($cmd='cleanupAutoActive') then
+" clean up Active studies within autodir"
+  $autodir=autodir
+  $studyid=studyid
+  $lastid=''
+  if $#>1.5 then $studyid=$2 $lastid='y' endif
+  if $#>2.5 then $autodir=$3 endif
+  $file=$autodir+'/autostudies'
+  exists($file,'file'):$e
+  if $e>0.5 then
+    $node='' $field='' $change='n' $newst='Error'
+    readfile($file,'$node','$field','','local'):$size
+    if $size>0.5 then
+      if $lastid='y' then
+        $lastid=''
+        $i=$size+1 $found=0
+        repeat
+          $i=$i-1
+          $id=$node[$i]
+          if $id=$studyid then
+            $found=1
+            if $i>1.5 then
+              $lastid=$node[$i-1]
+            endif
+          endif
+        until ($i <= 1 or $found=1)
+      endif
+      $i=0 $s='' $st='' $op='' $qq='' $id='' $name='' $rtt=''
+      repeat
+        $i=$i+1
+        $id=$node[$i]
+        if ($id<>$studyid and $id<>$lastid) then
+          $name=$id
+          substr($name,1,1):$s
+          if $s<>'/' then
+            $name=$autodir+'/'+$name
+          endif
+          $sfile=$name+'/studypar'
+          exists($sfile,'file'):$f
+          if $f>0.5 then
+            rtv($sfile,'studystatus','studytime','queue'):$st,$stime,$qq
+            rtv($sfile,'noabort','operator_'):$op
+            if (traymax=1 and appmode='lc') then
+              rtv($sfile,'retentiontime_'):$rtt
+            endif
+            if $st='Active' then
+              if $qq='nightQ' then
+                xmtime('addnight',-$stime)
+              else
+                xmtime('addday',-$stime)
+              endif
+              if (traymax=1 and appmode='lc' and $rtt<>'') then
+                $tt=$id+'  ['+$rtt+' min] '+$newst
+              else
+                $tt=$id+'  '+$newst
+              endif
+              xm1('set',$id,'title',$tt)
+              $tt=$id+' '+$op+' '+$qq+' ['+$newst+']'
+              xm1('set',$id,'tooltext',$tt)
+"set studystatus in studypar without retrieving all parameters"
+"shell('head -49 s1>>h1;tail -16 s1>>t1;cat h1 m1 t1>s2'):$x"
+              $sfilecp=$sfile+'cp'
+              write('reset',$sfilecp)
+              lookup('mfile',$sfile,'filekey'):$key1
+              $nret=2 $j=0 $line='' $sub=''
+              repeat
+                $j=$j+1
+                $line=''
+                lookup('mfile',$key1,'readline','filekey'):$line,$key1,$nret
+                if $nret>1.5 then
+                  substr($line,1):$sub
+                  write('file',$sfilecp,'%s',$line)
+                  if $sub='studystatus' then
+                    lookup('mfile',$key1,'readline','filekey'):$line,$key1,$nret
+                    write('file',$sfilecp,'1 "%s"',$newst)
+                  endif
+                endif
+              until ($nret<1.5 or $j>2000)
+              mv($sfilecp,$sfile)
+              shell('touch "'+$name+'"'):$x
+              vnmrjcmd('LOC add study "'+$name+'" automation "'+$autodir+'"')
+              $change='y'
+            endif
+          endif
+        endif
+      until ($i>=$size)
+      if $change='y' then
+        vnmrjcmd('util updateLocator')
+        if traymax>0.5 then
+          shell('sleep 2'):$x
+          vnmrjcmd('tray update')
+        endif
+      endif
+    endif
+  endif
+
+elseif ($cmd='Clear Page') then
+  cqreset
+elseif ($cmd='Queue All') then
+  xmq('all')
+elseif ($cmd='Unqueue All') then
+  xmq('none')
+elseif ($cmd='Clear Study New') then
+  if (studyid='tmpstudy') then
+    rights('removenewsamplenode'):$remove
+    sqfilemenu('Clear Study','no')
+    if not ($remove) then
+      xmconvert('mkgrandma')
+      xmwritesq
+    endif
+  endif
+elseif ($cmd='Clear Study Partial') then
+  sqfilemenu('Clear Study','no')
+elseif ($cmd='testacquire') then
+
+  if($# < 1.5) then return endif
+
+  if($2 = 'y') then
+    sqfilemenu('Clear Study', 'no', 'noflip')
+    testacquire='y'
+    xm1('stop')
+  else
+    sqfilemenu('Clear Study', 'no')
+    testacquire='n'
+    xm1('pause')
+  endif
+  return
+  
+elseif ($cmd='Clear Study' or $cmd='NewStudy') then
+
+"when going from non-automation to auto, clear study complains about"
+" 'Cannot create info subdirectory' - from where? (info exists)"
+"  second call to menu allows it "
+
+  $silent='n' "no message"
+  $reset='y' "do not reset prescans"
+  if $#>1.5 then
+    if $2='no' then
+      $reset='n'
+    elseif $2='silent' then
+      $silent='y'
+    endif
+  endif
+
+  if ($appmode='walkup') then
+    xmsubsave
+  endif
+  $dir=$sdir
+  sqend
+  if ($appmode='imaging') then
+    if ($cmd='Clear Study') then
+      xminit('all')
+    elseif ($cmd='NewStudy') then
+      xminit('partial')
+    endif
+  else
+    cqinit($reset)
+  endif
+  exists('studytime','parameter'):$e
+  if $e>0.5 then studytime=0 endif
+  if (auto<>'y') then
+    xmdelete('emptytrash')
+  endif
+  xm1('studydir'):$sdir
+  if ($silent='n') then
+    if ($sdir=$dir) then
+      if ($reset='y') then
+        write('line3','Clear study %s.',$sdir)
+      endif
+    elseif (appmode<>'imaging') then
+      write('line3','New study %s.',$sdir)
+    endif
+  endif
+  sqfilemenu('init')
+
+  if ($appmode='imaging' or $reset='vp') then
+    $cmd='vnmrjcmd(`pnew`,`layout`,`seqfil`)'
+    $i=0 $s=''
+    repeat
+      $i=$i+1
+      format($i,1,0):$s
+      vnmrjcmd('VP '+$s+' '+$cmd)
+    until ($i>=jviewports[1])
+  endif
+
+  $flip = 1
+  if($# > 2.5) then
+    if($3 = 'noflip') then
+       $flip=0
+    endif
+  endif
+  if($flip > 0.5) then
+     vnmrjcmd('viewport 1') "flip to Plan viewport"
+  endif
+  if $appmode='imaging' then
+    vnmrjcmd('setpage','Study')
+    vnmrjcmd('setpage','Study','Info')
+  elseif($reset = 'vp') then
+    vnmrjcmd('setpage','Setup')
+    vnmrjcmd('setpage','Setup','Info')
+  endif
+" write('line3','Join Plan viewport, Study panel to initialize study.')"
+" if $appmode='walkup' then xmtime endif"
+
+elseif ($cmd='ContinueStudy') then
+
+"all parameters are shared globals"
+  $menu='init'
+" exists(globalauto+'/'+studyid+'/study.xml','file'):$e"
+  reserveDisk('deleteall',$sdir)
+  exists($sdir+'/study.xml','file','rw'):$e
+  exists($sdir+'/studypar','file','rw'):$e2
+  if ($e>0.5 and $e2>0.5) then
+    $op='' rtv($sdir+'/studypar','noabort','operator_'):$op
+    if ($op='' or $op = operator) then
+      if (studyid<>'' and studyid<>'null' and $sdir<>'' and $activestudy='null') then
+        activestudy[1]=studyid
+        xm1('pause')
+        sqmode='pause'
+        exists($trinfo,'directory'):$ei
+        if ($ei>0.5 and auto<>'y') then
+          xmdelete('emptytrash')
+        endif
+        sqfilemenu('cleanupActive')
+        write('line3','Continue study %s.',$sdir)
+        $cmd='copyid=`null`,`null`'
+        $i=0 $s=''
+        repeat
+          $i=$i+1
+          format($i,1,0):$s
+          vnmrjcmd('VP '+$s+' '+$cmd)
+        until ($i>=jviewports[1])
+        vnmrjcmd('LOC show protocol')
+      elseif ($activestudy<>'null') then
+        exists($trinfo,'directory'):$ei
+        if ($ei>0.5 and auto<>'y') then
+          xmdelete('emptytrash')
+          shell('cd "'+$trinfo+'"; echo *'):$names
+          length($names):$len
+          if $len>1.5 then $menu='undelete' endif
+        endif
+        xm1('pause')
+        sqmode='pause'
+        sqfilemenu('cleanupActive')
+        write('line3','Study %s already active.',studyid)
+        vnmrjcmd('LOC show protocol')
+      else
+        write('line3','Cannot continue study %s.',$sdir)
+      endif
+    else
+      write('line3','Cannot continue study %s.',$sdir)
+    endif
+  else
+    write('line3','Cannot continue study %s.',$sdir)
+  endif
+  sqfilemenu($menu)
+
+elseif ($cmd='Undo Delete' or $cmd='undo') then
+
+  if ($activestudy<>'null' and $sdir<>'') then
+"   write('line3','Undo Delete Node')"
+    exists($trash,'directory'):$et
+    if $et>0.5 then
+"see getfile, explib"
+      exists($trdata,'directory'):$ed
+      exists($trinfo,'directory'):$ei
+      if $ei>0.5 then
+        shell('cd "'+$trinfo+'"; echo *'):$names
+        length($names):$len
+        $custnames='' $cust=0
+        $name='' $count=0
+        repeat
+          $count=$count+1
+          $old=$name
+          substr($names,$count):$name
+          if $name<>$old then
+            $file=$trinfo+$name+'/prop'
+            exists($file,'file'):$ep
+            if $ep>0.5 then
+              $data=''
+              lookup('mfile',$file,'data','readline'):$data,$ret
+              if ($data<>'' and $ret>0.5) then
+                shell('basename "'+$data+'"'):$base
+                $fid=$trdata+$base+'.fid'
+                $target=$sdir+'/'+$data
+                exists($fid,'directory'):$e
+                if $e>0.5 then mv($fid,$target+'.fid') endif
+                $img=$trdata+$base+'.img'
+                exists($img,'directory'):$e
+                if $e>0.5 then mv($img,$target+'.img') endif
+"test if $target exists before move?"
+              endif  "$data"
+"             mv($trinfo+$name,$sdir+'/info')"
+              cp('-r',$trinfo+$name,$sdir+'/info')
+              xmgetatts($name,'status'):$st
+              if ($st='Active' or $st='Executing') then
+                $cust=$cust+1
+                $custnames[$cust]=$name
+              endif
+            endif "$ep>0.5"
+          endif
+        until ($name=$old or $count>=$len)
+"       mv($trinfo+'/*',$sdir+'/info')"
+      endif
+      exists($trash+'/study.xml','file'):$ex
+      if $ex>0.5 then
+        mv($trash+'/study.xml',$sdir)
+        xm1('read "'+$sdir+'/study.xml"')
+      endif
+      exists($trash+'/plans','file'):$ex
+      if $ex>0.5 then
+        mv($trash+'/plans',$sdir)
+        vnmrjcmd('pnew','$sdir') "reset menu"
+      endif
+      if $cust>0.5 then
+      $i=0
+      repeat
+        $i=$i+1
+        xmsetatts($custnames[$i],'status','Customized')
+      until ($i>=$cust-0.5)
+      endif
+    endif
+    if (auto<>'y') then
+      xmdelete('emptytrash')
+    endif
+    xmwritesq
+    sqfilemenu('init')
+    vnmrjcmd('VP 1 sqfilemenu(\'Updatetime\')')
+  else
+    write('line3','cannot undo')
+  endif
+
+endif
+
+vnmrjcmd('pnew','studyid')

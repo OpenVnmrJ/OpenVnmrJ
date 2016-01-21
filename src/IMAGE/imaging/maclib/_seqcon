@@ -1,0 +1,57 @@
+"macro _seqcon"
+" _seqcon                                                    "
+" Macro to check entered values of the seqcon parameter, and " 
+" to manage the pss parameter when the multislice seqcon     "
+" field is changed.                                          "
+" The seqcon string is checked for length and dissected    "
+" into its five standard component fields (assumed to be   "
+" the first five characters). The component fields are     "
+" checked for validity. Seqcon should be composed of 's',  "
+" 'c' & 'n' values only. These indicate n=non loop,        "
+" s=standard loop/array, c=compressed loop.                "
+"----------------------------------------------------------"
+length(seqcon):$length
+if ($length > 5) then
+  write('error','WARNING: Using non standard seqcon')
+endif
+if ($length < 5) then
+  write('error','seqcon is invalid: less than 5 characters')
+  abort
+endif
+
+"-- Dissection/Validity Check -----------------------------"
+$k = 1
+while ($k <= $length) do
+  $seqcon[$k] = ''
+  substr(seqcon,$k,1):$seqcon[$k]
+  if ($seqcon[$k]<>'n') and ($seqcon[$k]<>'c') and ($seqcon[$k]<>'s') then
+    write('error','seqcon character "'+$seqcon[$k]+'" not recognized')
+    abort
+  endif
+  $k = $k + 1
+endwhile
+
+"-- Convert status of pss ---------------------------------"
+" When changing the type of slice loop control, we must    "
+" change the array feature of the pss parameter            "
+" Setting pss calls _pss (setloop)                         "
+"----------------------------------------------------------"
+$oldarray = array
+if ($seqcon[2] = 'c') then
+  $temp_pss = pss
+  pss = 0
+  setprotect('pss','on',256)	"multiple values will not set array parameter"
+  pss = $temp_pss
+else
+  $temp_pss = pss
+  pss = 0
+  setprotect('pss','off',256)	"multiple values will set array parameter"
+  pss = $temp_pss
+endif
+
+if ( (array <> $oldarray)  and  (array <> '')  and  (array <> 'pss') ) then
+  write('line3','ADVISORY: array parameter reset as: '+array)
+endif
+
+
+setloop

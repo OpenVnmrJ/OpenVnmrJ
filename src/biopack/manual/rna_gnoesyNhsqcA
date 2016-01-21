@@ -1,0 +1,100 @@
+  rna_gnoesyNhsqcA
+
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    3D NOESY-HSQC gradient sensitivity enhanced version for 15N, with
+    H1-H1 NOESY in the first dimension, and N15 shifts in the second.
+
+    optional magic-angle coherence transfer gradients
+
+    Standard features include optional 13C sech/tanh pulse on CO and Cab to 
+    refocus 13C coupling during t1 and t2; one lobe sinc pulse to put H2O back 
+    along z (the sinc one-lobe is significantly more selective than gaussian, 
+    square, or seduce 90 pulses); preservation of H20 along z during t1 and the 
+    relaxation delays; option of obtaining spectrum of only NH2 groups;
+
+    pulse sequence: 	Kay, Keifer and Saarinen, JACS, 114, 10663 (1992)
+    			Zhang et al, J Biol NMR, 4, 845 (1994)
+    sech/tanh pulse: 	Silver, Joseph and Hoult, JMR, 59, 347 (1984)
+			Bendall, JMR, A116, 46 (1995)
+         
+    Written by MRB, January 1998, starting with gNhsqc from BioPack.
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1998, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+
+    modified from proteinpack/gnoesyNhsqc.c for RNA  GG 10/4/00 based
+    on Peter Lukavsky version.
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [H1]  and t2 [N15].
+   
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1 and f2180='n' for (0,0) in N15.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF gnoesyNhsqc
+
+         
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for gnoesyNhsqc may be printed using:
+                                      "printon man('gnoesyNhsqc') printoff".
+             
+    2. Apply the setup macro "gnoesyNhsqc".  This loads the relevant parameter
+       set and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 110ppm, and N15 
+       frequency at 200 ppm.
+
+    4. Pulse and frequency calibrations are as for gNhsqc, or as generally
+       used for BioPack.
+
+    6. Splitting of resonances in the 1st or 2nd dimension by C13 coupling in 
+       C13-enriched samples can be removed by setting C13refoc='y'.
+
+    7. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.  H2O is cycled
+       back to z as much as possible during t1 and t2.
+
+    8. NH2 GROUPS: (set amino='y')
+       A spectrum of NH2 groups, with NH groups cancelled, can be obtained
+       with flag NH2only='y'.  This utilises a 1/2J (J=94Hz) period of NH 
+       J-coupling evolution added to t1 which cancels NH resonances and 
+       inverts NH2 resonances (normal INEPT behaviour).  A 180 degree phase
+       shift is added to a N15 90 pulse to provide positive NH2 signals.  The 
+       NH2 resonances will be smaller (say 80%) than when NH2only='n'.
+
+   SETETUP: dof2 is changed automatically
+        imino='y'
+        -IMINO-REGION:  sw=22ppm
+                        sw1=22ppm
+                        sw2=25ppm (folds aminos)
+                        dof=110ppm
+                        dof2=155ppm
+        amino='y'
+        -AMINO-HMQC:    sw=22ppm
+                        sw1=22ppm
+                        sw2=60ppm (folds iminos)
+                        dof=110ppm
+                        dof2=85ppm
+
+        dof is set to 110 ppm (middle of C13 resonances).
+        Always check the proper folding by running a quick NH plane by setting
+        ni=0,phase=1 and ni2=32,phase=1,2.
+
+
+    Modified for automatic shaped pulse creation using Pbox (EK, Aug 2002)

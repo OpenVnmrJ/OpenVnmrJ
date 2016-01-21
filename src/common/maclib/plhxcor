@@ -1,0 +1,338 @@
+"macro plhxcor"
+"*****************************************************************************"
+" plhxcor(levels,spacing,H1_exp#,C13_exp#) - plot hetcor/hmqc type 2D spectra "
+"					     with 1D plots along the edges    "
+"*****************************************************************************"
+
+"argument 1: 'pos', resp. 'neg'		      (default: both)
+"argument 2: number of contour levels	      (default: 7) "
+"argument 3: spacing of contour levels	      (default: 2) "
+"argument 4: experiment # of 1D H1 data	      (default: 1) "
+"argument 5: experiment # of 1D C13 data      (default: 2) "
+
+jexp:$exp2D	" current experiment "
+expactive($exp2D):$acq
+if ($acq>0) then
+  write('error','Acquisition in progress - cannot use %s',$0)
+  abort
+endif
+$seqfil=seqfil	" pulse sequence name "
+$nucf1=dn	" nucleus for f1 dimension "
+$nucf2=tn	" nucleus for f2 dimension "
+$pos=''		" 'pos' or 'neg' (or ''), for phase-sensitive NMR "
+$levels=7	" number of contour levels "
+$spacing=2	" contour spacing factor "
+$h1exp=1	" experiment number for H1 spectrum (default: 1) "
+$h1file=curexp+'/subexp/H1'
+$fetch1h=0	" flag for fetching H1 data from an other experiment "
+$do1h=1		" flag for 1H trace "
+$Xexp=2		" experiment number for X spectrum (default: 2) "
+
+$h1filea = autodir+'/tempH.fid'
+$Xfilea = autodir+'/tempC.fid'
+
+if tn<>'H1' then
+   $Xfile=curexp+'/subexp/'+tn
+   $Xnuc=tn
+else
+   $Xfile=curexp+'/subexp/'+dn
+   $Xnuc=dn
+endif
+$fetchX=0	" flag for fetching X data from an other experiment "
+$doX=1		" flag for X trace "
+if $#>0 then
+   if typeof('$1') then
+      $pos=$1
+      $ix=2
+   else
+      $ix=1
+   endif
+   if $#>=$ix then
+      $levels=${$ix}
+   else
+      $levels=7
+   endif
+   $ix=1+$ix
+   if $#>=$ix then
+      $spacing=${$ix}
+   else
+      $spacing=2
+   endif
+   $ix=1+$ix
+   if $#>=$ix then
+      if ${$ix}<0.5 then	" third numeric argument (1H experiment) "
+	 $do1h=0
+     else
+	 $h1exp=${$ix}
+	 if $h1exp<>$exp2D then
+	    $fetch1h=1
+	 else
+	    $fetch1h=0
+	 endif
+	 " if 1H data have already been stored in current experiment, "
+	 " the third numeric argument overrides this file "
+	 exists($h1file,'directory'):$eH1
+	 if ($eH1)and($fetch1h) then
+	    rm('-rf',$h1file):$res
+	 endif
+      endif
+   endif
+   $ix=1+$ix
+   if $#>=$ix then
+      if ${$ix}<0.5 then	" fourth numeric argument (X experiment) "
+	 $doX=0
+      else
+	 $Xexp=${$ix}
+	 if $Xexp<>$exp2D then 
+	    $fetchX=1
+	 else 
+	    $fetchX=0 
+	 endif
+	 " if X data have already been stored in current experiment, "
+	 " the fourth numeric argument overrides this file "
+	 exists($Xfile,'directory'):$eX
+	 if ($eX)and($fetchX) then
+	    rm('-rf',$Xfile):$res
+	 endif
+      endif
+   endif
+endif
+if dmg='av' then $pos='' endif	" avoid 'impossible' settings "
+
+" +------------------------------------------------------+ "
+" | verify existence of 1D spectra files, where required | "
+" +------------------------------------------------------+ "
+if auto='y' then
+   exists($h1filea,'directory'):$eH1
+   if not($eH1) then
+      $do1h=0
+   endif
+   exists($Xfilea,'directory'):$eX
+   if not($eX) then
+      $doX=0
+   endif
+else
+   if ($do1h > 0.5) and ($fetch1h=0) then
+      exists($h1file,'directory'):$eH1
+      if not($eH1) then
+	 $do1h=0
+      endif
+   endif
+   if ($doX > 0.5) and ($fetchX=0) then
+      exists($Xfile,'directory'):$eX
+      if not($eX) then
+	 $doX=0
+      endif
+   endif
+endif
+
+" +--------------------------------------+ "
+" | set chart parameters for 2D spectrum | "
+" +--------------------------------------+ "
+$trace=trace
+$size1d=0.15*wc2max
+if $size1d>60 then
+   $size1d=60
+endif
+
+" +-------------------------------------------------------+ "
+" | adjust 2D size to allow for 1D traces, where required | "
+" +-------------------------------------------------------+ "
+" top trace adjustments "
+$topht = $size1d
+if (($h1exp<0.5)and($Xexp<0.5)) or
+   (($trace='f1')and(dn='H1')and($h1exp<0.5)) or
+   (($trace='f1')and(tn='H1')and($Xexp<0.5)) or
+   (($trace='f2')and(tn='H1')and($h1exp<0.5)) or
+   (($trace='f2')and(dn='H1')and($Xexp<0.5)) then
+   wc2=wc2-0
+else
+   wc2=.8*wc2max-$size1d
+endif
+
+" left trace adjustments "
+$leftht = $size1d
+if (($h1exp<0.5)and($Xexp<0.5)) or
+   (($trace='f1')and(dn='H1')and($Xexp<0.5)) or
+   (($trace='f1')and(tn='H1')and($h1exp<0.5)) or
+   (($trace='f2')and(tn='H1')and($Xexp<0.5)) or
+   (($trace='f2')and(dn='H1')and($h1exp<0.5)) then
+   wc=wc-0
+else
+   wc=.8*wcmax-$size1d
+endif
+
+" +-----------------------------+ "
+" | round dimensions to full cm | "
+" +-----------------------------+ "
+wc=trunc(wc/10) wc=10*wc
+wc2=trunc(wc2/10) wc2=10*wc2
+sc=0
+" +----------------+ "
+" | do the 2D plot | "
+" +----------------+ "
+ 
+if (auto = 'n') then
+  exists(curexp+'/eou_saveas','file'):$e
+  if ($e>.5) then
+    $fln=''
+    lookup('file',curexp+'/eou_saveas','read',1):$fln
+    write('plotter',190,wc2max,'Filename: %s', $fln+'_'+macro)
+  endif
+endif
+ 
+
+if ($pos <> '') then
+   pcon($pos,$levels,$spacing)
+else
+   pcon($levels,$spacing)
+endif
+s9
+
+" +---------------------------+ "
+" | do 1D plots, if requested | "
+" +---------------------------+ "
+if ($do1h)or($doX) then
+   " remember 2D parameters "
+   $f1wp = wp1
+   $f1sp = sp1
+   s9
+   svtmp($seqfil)
+
+   " +--------------------------+ "
+   " | do 1H plot, if requested | "
+   " +--------------------------+ "
+   if $do1h then
+      if (auto = 'n') then
+	 if $fetch1h then	" fetch 1D data from other experiment "
+	    jexp:$curexp
+	    mf($h1exp,$curexp)
+	    wft
+	    cptmp('H1')
+	 else
+	    rttmp('H1')		" get 1D data from internal file "
+	    wft
+	 endif
+      else			" automation mode "
+	 rt($h1filea)
+	 wft
+      endif
+      s8
+      $intmod=intmod intmod='off'
+      exists('cutoff','parameter'):$e
+      if $e<0.5 then
+	 create('cutoff','integer')
+	 setprotect('cutoff','on',80)
+	 setgroup('cutoff','display')
+      endif
+      r9
+      if $trace='f1' then
+	 if $nucf1='H1' then	"hetcor - type, f1 mode"
+	    wp=$f1wp sp=$f1sp
+	    vp=-8
+	    vsadjh($topht)
+	    cutoff=$topht,10+vp
+	    $sc2=sc2 sc2=0 wc2=wc2+$sc2
+	    pl('top')
+	 else			"hmqc - type, f1 mode"
+	    vp=-5
+	    vsadjh($leftht)
+	    cutoff=$leftht,10+vp
+	    pl('side')
+	 endif
+      else
+	 if $nucf1='H1' then	"hetcor - type, f2 mode"
+	    wp=$f1wp sp=$f1sp
+	    vp=-5
+	    vsadjh($leftht)
+	    cutoff=$leftht,10+vp
+	    pl('side')
+	 else			"hmqc - type, f2 mode"
+	    vp=-8
+	    vsadjh($topht)
+	    cutoff=$topht,10+vp
+	    $sc2=sc2 sc2=0 wc2=wc2+$sc2
+	    pl('top')
+	 endif
+      endif
+      destroy('cutoff')
+      intmod=$intmod
+      r8 flush
+   endif
+
+   " +-------------------------+ "
+   " | do X plot, if requested | "
+   " +-------------------------+ "
+   if $doX then
+      if (auto = 'n') then
+	 if $fetchX then	" fetch 1D data from other experiment "
+	    jexp:$curexp
+	    mf($Xexp,$curexp)
+	    wft
+	    cptmp($Xnuc)
+	 else
+	    rttmp($Xnuc)	" get 1D data from internal file "
+	    wft
+	 endif
+      else			" automation mode "
+	 rt($Xfilea)
+	 wft
+      endif
+      r8
+      intmod='off'
+      exists('cutoff','parameter'):$e
+      if $e<0.5 then
+	 create('cutoff','integer')
+	 setprotect('cutoff','on',80)
+	 setgroup('cutoff','display')
+      endif
+      r9
+      if $trace='f1' then
+	 if $nucf1='H1' then	"hetcor - type, f1 mode" 
+	    vp=-5
+	    vsadjc($leftht)
+	    noislm
+	    cutoff=$leftht,10+vp
+	    pl('side')
+	 else			"hmqc - type, f1 mode" 
+	    wp=$f1wp sp=$f1sp
+	    vp=-8
+	    vsadjc($topht)
+	    noislm
+	    cutoff=$topht,10+vp
+	    $sc2=sc2 sc2=0 wc2=wc2+$sc2
+	    pl('top') 
+	 endif 
+      else 
+	 if $nucf1='H1' then	"hetcor - type, f2 mode" 
+	    vp=-8
+	    vsadjc($topht)
+	    noislm
+	    cutoff=$topht,10+vp
+	    $sc2=sc2 sc2=0 wc2=wc2+$sc2
+	    pl('top')
+	 else			"hmqc - type, f2 mode" 
+	    wp=$f1wp sp=$f1sp
+	    vp=-5
+	    vsadjc($leftht)
+	    noislm
+	    cutoff=$leftht,10+vp
+	    pl('side') 
+	 endif 
+      endif
+      destroy('cutoff')
+      r8 flush
+   endif
+
+   " if not in automation mode, retrieve 2D data and redisplay spectrum "
+   if (auto = 'n') then
+      rttmp($seqfil)
+   endif
+endif
+
+if (auto = 'n') then
+   dconi
+endif
+ppa
+page
+				" eject page "

@@ -1,0 +1,29 @@
+"macro deleteROI"
+
+if($# < 0.5) then return endif
+
+substr($1,1,1):$s1
+substr(aipROIpath,1,1):$s2
+if($s1 <> '/' and $s2 = '/') then
+   $path = aipROIpath +'/'+ $1
+elseif($s1 <> '/') then
+   $path = curexp +'/ROIs/'+ $1
+else 
+   $path = $1
+endif
+
+exists($path,'file'):$e
+if $e > 0.5 then
+  rm($path):$x
+  strstr($path,'/','last'):$n,$dir
+  getfile($dir):$n
+  if($n > 0) then
+    getfile($dir, 1):$name
+    aipROIname_sel = $name 
+  else
+    aipROIname_sel = '' 
+  endif
+else
+  write('line3','cannot find ROI file: %s', $path)
+endif
+

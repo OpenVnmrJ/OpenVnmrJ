@@ -1,0 +1,63 @@
+"macro prescan_status"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_status
+"
+" DESCRIPTION:
+"    Handles errors during acquisition
+"
+"********************************************************************
+"-------------------------"
+"  initialize variables   "
+"-------------------------"
+$macro_name = 'prescan_status   '
+$message_file = '/vnmr/manual/acq_errors'
+$error_code=''
+$temp_str=''
+$text = ''
+$error_found = 0                                "status flag [0]-not found; [1]-found"
+
+"-------------------------"
+"    Retrieve message     "
+"-------------------------"
+exists($message_file,'file'):$e
+if ($e <> 0) then
+    format(acqstatus[2],0,0):$error_code
+    $error_code=$error_code+'.'
+    lookup('file','/vnmr/manual/acq_errors')
+    lookup('seek',$error_code)
+    lookup('readline',1):$text
+    $error_found = 1 
+else
+    $text='Unknown errer - acqstatus[1] = '
+    format(acqstatus[1],0,0):$temp_str    
+    $text=$text+$temp_str+'; acqstatus[2] = '
+    format(acqstatus[2],0,0):$temp_str     
+    $text=$text+$temp_str 
+    $error_found = 0
+endif
+
+"-------------------------"
+"        WARNING          "
+"-------------------------"
+if (acqstatus[1] = 14) then
+     if (acqstatus[2] = 103) or (acqstatus[2] = 104) then
+          Prescan_AcqStatus = 1
+	  prescan_log('warning',$macro_name,$text)
+     endif
+endif
+"-------------------------"
+"   Acquisition Error     "
+"-------------------------"
+if  (acqstatus[1] = 15) or (acqstatus[1] = 16) then
+     Prescan_AcqStatus = 2
+     prescan_log('error',$macro_name,$text)
+endif     
+"-------------------------"
+"   Unknown Error         "
+"-------------------------"
+if ($error_found = 0) then
+    prescan_log('error',$macro_name,$text)
+endif

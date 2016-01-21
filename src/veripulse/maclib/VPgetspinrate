@@ -1,0 +1,21 @@
+"macro VPgetspinrate"
+" Agilent"
+wexp:$active
+if ($active) then
+  readhw('spin'):$spinrate
+  create('VPspin','integer','processed',0):$e
+  setvalue('VPspin',$spinrate,'processed')
+else
+  exists('VPspin','parameter','processed'):$e
+  if (not $e) then
+    return('Sample spin rate unknown')
+  endif
+  getvalue('VPspin','processed'):$spinrate
+endif
+if ($spinrate=0) then 
+    write('line3','Measurement carried out non-spinning'):$line
+else
+    write('line3','Measurement carried out with sample spinning at %d Hz',$spinrate):$line
+endif
+return($line)
+

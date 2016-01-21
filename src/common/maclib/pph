@@ -1,0 +1,35 @@
+"macro pph"
+	"`````````````````````````````````"
+	" pph - print shaped pulse header "
+	"      Eriks Kupce, 19.11.95      "
+	"                                 "
+	"`````````````````````````````````"
+$sh = ''
+$str = ''
+$com = ''
+
+if $#=0 then
+  input('shapefile.ext : '):$sh 
+else 
+  $sh = $1
+endif
+
+$filepath = userdir+'/shapelib/'+$sh
+
+exists($filepath,'file'):$e
+   if $e=0 then 
+      write('error','shapefile %s not found...', $sh)
+      return(0)
+   endif
+
+      lookup('file',$filepath)
+      lookup('readline',1):$str
+      write('alpha','%s', $str)
+repeat
+      lookup('read',1):$com
+        if $com = '#' or $com = '###' then
+      lookup('readline',1):$str
+      write('alpha','%s %s', $com, $str)
+        endif
+      if $com = '###' then $com = '#' endif
+until $com <> '#' 

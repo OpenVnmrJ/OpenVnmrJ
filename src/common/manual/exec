@@ -1,0 +1,56 @@
+
+*******************************************************************************
+exec('command')       -  execute a VNMR command
+exec('command'):$ret  -  execute a VNMR command and report success or failure
+*******************************************************************************
+
+The exec command allows an arbitrary VNMR command or macro to be executed.  It
+lets a macro construct a character string which is a VNMR command or macro and
+then execute that command or macro.
+
+Some macros and commands abort. This causes the calling macro to also abort.
+By using exec with a return value, whether or not the called macro aborted
+or not is returned as a macro variable. The calling macro is not aborted.
+For example, in the simple macro
+
+macroB
+write('line3','got to here')
+
+if macroB aborts, the write command is not executed and the calling macro
+aborts.
+
+If a return argument is given to exec, it will be set to 0 if the called
+macro aborts and it will be set to 1 if the called macro does not abort.
+For example, in the following macro
+
+exec('macroB'):$ret
+if ($ret = 0) then
+  write('line3','macroB aborted')
+else
+  write('line3','macroB did not abort')
+endif
+
+one or the other write commands will execute, depending on whether macroB
+aborts. The calling macro does not abort, but continues executing its
+instructions.
+
+The ABORTON and ABORTOFF mechanism can also control whether or not the
+calling macro aborts if its called macro (macroB in the above examples)
+aborts. However, continued execution of the called macro is not
+guaranteed. For example,
+
+ABORTOFF
+macroB
+ABORTON
+write('line3','got to here')
+
+will often execute the write command, whether or not macroB aborts.
+However, if macroB calls ABORTON and subsequently aborts, or if
+macroB calls another macro that calls ABORTON, and one of those macros
+aborts, then the calling macro will abort before the write command
+is executed. Using the exec command with a return argument, as in
+exec('macro'):$ret , guarantees that execution of the calling macro
+will continue.
+
+  Usage:    exec($cmdstr):$ret  - execute the contents of $cmdstr
+                                  as a VNMR command 

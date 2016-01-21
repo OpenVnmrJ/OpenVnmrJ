@@ -1,0 +1,240 @@
+"macro gs_mkmap"
+"***************************************************************************"
+"
+" gs_mkmap - macro to generate a single field map"
+" 		
+" Details: The varian fid file is converted a into 32bit int file"
+"          3dft is done on the file and the phase difference between the"
+"          ____.1 and _____.2 files is calculated => ph"
+"          .int integer raw fid file; .ph phase file"
+"          The the image (_2.mag) is used to determine the threshold"
+"	   If delref>0, reference scan ___.{1,A,B}.fid are acquired"
+"	   Note: currexp must have the fieldmap acquisition parameters"
+
+"          The unroll command unwraps the phase roll, if delref=0"
+"          Output are float and fdf files"
+" 	   input: mapname.1.fid mapname.2.fid mapname.param header"
+" 	   output: mapname.{1,2}.{ph,mag,wf}.{fdf}"
+
+"          mapname.f{fdf}   - frequency file"
+"	   file.param should contain matrix size and tau value"
+"	   cleanup='y' will not generate intermediate files"
+"	   cleanup='n' will keep all files including fdf files"
+
+"	   delref>0 will use ref scan for unwrapping"
+"	   _.3.fid is used by gsfield to estimate phase"
+"	   mapname.mag created from mapname.B.mag for thresholding"
+
+"	   B0.r1.{f,mag}  - remapped image to shimmap grid"
+"	   B0.r2.{mag,mask}  - segmented oblique voxel or slab image/mask"
+"	   B0.r1.f and B0.r2.f are the same
+"	   B0.r.{f,mag} - either .r1 or .r2 image for gscalcshim"
+"	   B0.{f,mag} - acquired field map or imageB (te=te+del)"
+
+" Usage:   gs_mkmap('mapname')"
+"
+"
+"***************************************************************************"
+$fdf = 'y'    "generate ALL fdf files for viewing, if y"
+$cleanup = 'n'  "delete all intermediate files, if y"
+$macro = $0
+
+$GSDIR = userdir+'/gshimdir/data'
+$GSCAL = userdir+'/gshimdir/calib/'
+$VCAL = '/vnmr/gshimdir/calib/'
+$logfile = $GSDIR+'/ge3dshim.log' 
+$rootname = $GSDIR+'/'+$1
+$rootnameR = $rootname+'.r'
+$rootname1 = $rootname+'.1'
+$rootname2 = $rootname+'.2'
+$rootnameB = $rootname+'.B'
+$rootnameA = $rootname+'.A'
+
+rm('-f',$rootname+'.?.mag'):$x
+rm('-f',$rootname+'.?.ph'):$x
+rm('-f',$rootname+'.wf'):$x
+rm('-f',$rootname+'.f'):$x
+rm('-f',$rootname+'*.mag'):$x
+mv($GSDIR+'/testimg.fdf', $GSDIR+'/tmp%'):$x
+rm('-f',$rootname+'.*.fdf'):$x     "remove all B0.*.fdf files"
+mv($GSDIR+'/tmp%', $GSDIR+'/testimg.fdf')
+
+exists('phasearray','parameter'):$ex
+if($ex = 0) then
+  create('phasearray','integer')
+  phasearray = 0
+endif
+
+ 
+"process ref scan (A) data, and generate phasemap"
+"** ft and generate the above files **"
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsft(A) => ',$macro)
+rm('-rf',$rootname2+'.bin'):$x
+shell('ln -s "'+$rootnameA+'.bin" "'+$rootname2+'.bin"'):$x
+$msg=''
+shell('gsft "'+$rootname+'"'):$msg  " => B0.{1,2}.mag, B0.{1.2}.ph"
+write('file',$logfile,'%s',$msg)
+mv($rootname2+'.mag',$rootnameA+'.mag')  
+
+shell('ls -l "'+$rootname+'".?.ph >> "'+$logfile+'"'):$x
+shell('ls -l "'+$rootname+'".?.mag >> "'+$logfile+'"'):$x
+shell('gsphdiff "'+$rootname+'"'):$x  "B0.2.ph - B0.1.ph => B0.A.wf"   
+rm('-f',$rootname+'.?.wf'):$x
+mv($rootname+'.wf',$rootname+'.A.wf')
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsphdiff => ',$macro)
+shell('ls -l "'+$rootname+'".?.wf >> "'+$logfile+'"'):$x
+
+rm('-f',$rootname2+'.bin'):$x
+shell('ln -s "'+$rootnameB+'.bin" "'+$rootname2+'.bin"'):$x
+shell('gsft "'+$rootname+'"'):$x
+cp($rootname2+'.mag',$rootnameB+'.mag') 
+
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsft(B) => ',$macro)
+shell('ls -l "'+$rootname+'".?.ph >> "'+$logfile+'"'):$x
+shell('ls -l "'+$rootname+'".?.mag >> "'+$logfile+'"'):$x
+shell('gsphdiff "'+$rootname+'"'):$x   " => B0.B.wf" 
+rm('-f',$rootnameB+'.wf'):$x
+mv($rootname+'.wf',$rootname+'.B.wf')
+cp($rootnameB+'.mag',$rootname+'.mag')   "B0.B.mag => B0.mag"
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsphdiff => ',$macro)
+shell('ls -l "'+$rootname+'".?.wf >> "'+$logfile+'"'):$x
+
+shell('gsfield "'+$rootname+'"'):$x    "B0.A.wf, B0.B.wf  => B0.f " 
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsfield => ',$macro)
+shell('ls -l "'+$rootname+'.f" >> "'+$logfile+'"'):$x
+
+"remap data to shimmap grid; usage: gsremap image_file B0_f(.f,.param) shimmap(.param)" 
+rm('-f',$rootname+'.f.r',$rootname+'.mag.r'):$x
+" shimroi.mag acquired with test image and processed with ft3d"
+" B0.mag processed with gsft; no checks done"
+rm('-f',$rootnameR+'.f',$rootnameR+'.mag'):$x
+
+if(shimregion = 'roi') then
+  "B0.r.mag used as mask for roi shimming"
+  $shimroi = $GSDIR+'/shimroi'
+  exists($shimroi+'.mag','file'):$ex
+  if($ex = 0) then
+    write('error','%s: Shim ROI file does not exist: %s',$shimroi)
+    abort
+  endif
+  "reformat magnitude image"
+  
+  "shimroi.mag will be used as mask as well as for thresholding ?  "
+  " gsremap shimroi.mag testimg.param shimmap.param "
+  shell('gsremap "'+$shimroi+'.mag" "'+$GSDIR+'/testimg" "'+$GSDIR+'/shimmap"'):$x  "=> shimroi.mag.r" 
+  mv($shimroi+'.mag.r',$rootname+'.r1.mag')  "rename =>B0.r1.mag "
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; testimg.param ',$macro,shimregion)  
+  shell('cat "'+$GSDIR+'/testimg.param" >> "'+$logfile+'"'):$x
+  write('file',$logfile,'*******************************************************')
+  shell('ls -l "'+$shimroi+'.mag" >> "'+$logfile+'"'):$x
+  cp($rootname+'.r1.mag',$rootname+'.r2.mag') "So Mask will display"
+else
+  "reformat magnitude image data onto shimmap grid; used by gs_calc"
+  /* gsremap B0.mag B0.param shimmap.param */
+  shell('gsremap  "'+$rootname+'.mag" "'+$rootname+'" "'+$GSDIR+'/shimmap"'):$x  "=> B0.mag.r" 
+  mv($rootname+'.mag.r',$rootname+'.r1.mag')  "rename => B0.r1.mag"  
+endif 
+
+"reformat phase image onto shimmap grid"
+/* gsremap B0.f B0.param shimmap.param */
+shell('gsremap "'+$rootname+'.f" "'+$rootname+'" "'+$GSDIR+'/shimmap"'):$x     "=> B0.f.r"
+mv($rootname+'.f.r',$rootname+'.r1.f')  "rename => B0.r1.f"
+cp($rootname+'.r1.f',$rootnameR+'.f')  ".r. file used by gshimcalc"
+cp($rootname+'.r1.mag',$rootnameR+'.mag')
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: shimregion=%s; gsremap => ',$macro,shimregion) 
+shell('ls -l "'+$rootname+'".r1.* >> "'+$logfile+'"'):$x
+
+rm('-f',$rootname+'.*.r2.*'):$x
+if( (shimregion = 'voxel') or (shimregion = 'slab') ) then
+  "generate magnitude mask of oblique voxel shim ROI"
+  /* Usage: gsmapmask B0.r.mag shimmap.param shimroi.param */
+  shell('gsmapmask "'+$rootnameR+'.mag" "'+$GSDIR+'/shimmap" "'+$GSDIR+'/shimroi"')  "=> B0.r.mag.r2, ..mask"  
+  mv($rootnameR+'.mag.r2',$rootname+'.r2.mag')
+  cp($rootname+'.r2.mag',$rootnameR+'.mag') "shim roi mask - image"
+  mv($rootnameR+'.mag.r2.mask',$rootname+'.r2.mask') "shim roi mask"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; gsmapmask => ',$macro,shimregion) 
+  shell('ls -l "'+$rootname+'".r2.* >> "'+$logfile+'"'):$x
+elseif(shimregion = 'global') then
+  cp($rootname+'.r1.mag',$rootname+'.r2.mag') "shim roi mask same as full image"
+  cp($rootname+'.r1.mag',$rootname+'.r2.mask')
+endif
+
+cp($rootname+'.param',$rootnameR+'.param') "=>B0.r.param for gscalc"
+
+"generate fdf files"
+$hdr = $GSDIR+'/B0.hdr'   "fdf header created by gs_acqb0map"
+"acquired 3D image data and intermediate files"
+if ($fdf = 'y') then
+  shell('fdfgluer "'+$hdr+'" "'+$rootname1+'.mag" "'+$rootname1+'.mag.fdf"'):$x
+  shell('fdfgluer "'+$hdr+'" "'+$rootnameA+'.mag" "'+$rootnameA+'.mag.fdf"'):$x
+  shell('fdfgluer "'+$hdr+'" "'+$rootnameA+'.wf" "'+$rootnameA+'.wf.fdf"'):$x
+  shell('fdfgluer "'+$hdr+'" "'+$rootnameB+'.wf" "'+$rootnameB+'.wf.fdf"'):$x
+
+  "shell('fdfgluer '+$hdr+' '+$rootname1+'.ph '+$rootname1+'.ph.fdf')"
+  "shell('fdfgluer '+$hdr+' '+$rootnameA+'.ph '+$rootnameA+'.ph.fdf')"
+  "shell('fdfgluer '+$hdr+' '+$rootnameB+'.ph '+$rootnameB+'.ph.fdf')" 
+endif
+  
+"shimmap.hdr created by gs_calc=>gs_refhdr"
+$refhdr = $GSDIR+'/shimmap.hdr'
+$B0hdr = $GSDIR+'/B0.hdr'
+"remapped images"
+shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r1.mag" "'+$rootname+'.r1.mag.fdf"'):$x
+shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r1.f" "'+$rootname+'.r1.f.fdf"'):$x
+
+"acquired fieldmap and image data"
+shell('fdfgluer "'+$B0hdr+'" "'+$rootname+'.f" "'+$rootname+'.f.fdf"'):$x
+shell('fdfgluer "'+$B0hdr+'" "'+$rootnameB+'.mag" "'+$rootnameB+'.mag.fdf"'):$x
+
+"segmented, magnitude mask for gshimcalc"
+if(shimregion = 'voxel') or (shimregion = 'slab') or (shimregion = 'global') then
+  shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r2.mag" "'+$rootname+'.r2.mag.fdf"'):$x
+  shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r2.mask" "'+$rootname+'.r2.mask.fdf"'):$x
+endif
+
+if(shimregion = 'roi') then
+  shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r2.mag" "'+$rootname+'.r2.mag.fdf"'):$x
+endif
+
+"input images for gshimcalc; same as r1.f, r1(or r2).mag"
+"shell('fdfgluer '+$refhdr+' '+$rootnameR+'.mag '+$rootnameR+'.mag.fdf')
+"shell('fdfgluer '+$refhdr+' '+$rootnameR+'.f '+$rootnameR+'.f.fdf')
+
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: fdf files:',$macro) 
+shell('ls -l "'+$rootname+'".*.fdf >> "'+$logfile+'"'):$x
+
+"delete intermediate files "
+if ($cleanup = 'y') then
+  rm('-f',$rootname+'*.ph'):$x
+  rm('-f',$rootname+'A.mag'):$x  "B.mag used by gshimcalc for threshold"
+  rm('-f',$rootname+'*.wf'):$x
+  rm('-f',$rootname+'*.bin'):$x
+  rm('-f',$GSDIR+'/shimmap.f'):$x
+endif
+
+write('line3','Field map generated')
+
+
+"************************************************************************"
+"		Modifications History"
+
+" 021121(ss) unroll called twice"
+" 030418(ss) gsfield, reference scan phase unwrapping implemented"
+" 030508(ss): del,delref replaces del,delref"
+" 030916(ss): gsbin replaces stripv. gsbin does dcrmv"
+" 050603      gsremap used; no parameter checks"
+" 050713      gsmapmask oblique voxel shim roi
+" 050818      BUG? (not tested) gsmapmask called with shimmap.param
+" 071004      modified for phasearray coils; bin files generated in gs_calc
+
+"*************************************************************************"
+

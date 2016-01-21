@@ -1,0 +1,475 @@
+"macro vjeditST"
+
+$tailX='tail'
+whichtail:$tailX
+
+if ($1='') then $1='init' endif
+
+$infodir=userdir+'/persistence/'+$0
+exists($infodir,'directory'):$infodirex
+if ($infodirex=0) then shell('mkdir -p '+$infodir):$dum endif
+$cfile=$infodir+'/'+operator+'_text'
+$xmldir=userdir+'/templates/vnmrj/interface'
+exists($xmldir,'directory'):$tvidirex
+if ($tvidirex=0) then shell('mkdir -p '+$xmldir):$dum endif
+$xmlname=operator+'_'+$0
+$xmlname=$xmldir+'/'+$xmlname
+$tmppars=$infodir+'/tmppars'
+
+IF ($1 = 'init') or ($1='display') THEN
+    if (autodir='') then return endif
+
+    $opok=0
+    operights('editsubmittedstudy'):$opok
+    if ($opok<0.5) then
+        write('error','%s does not have permission to edit submitted studies',operator)
+	vnmrjcmd('edit tray')
+        return
+    endif
+
+    $loc=''
+    substr($4,1):$loc
+    if ($loc = '0') or ($loc='') then vnmrjcmd('edit tray') return endif
+
+    $rack='' $zone=''
+    substr($2,1):$rack
+    substr($3,1):$zone
+
+    if (traymax <> 96) and (traymax<>768) then
+   	$rack='' $zone=''
+    endif
+
+"***Where to get info****"
+    strstr(autodir,'studytray'):$enter
+    if ($enter) then
+	shell('dirname '+autodir):$dir
+	shell('dirname '+$dir):$dir
+	shell('basename '+$dir):$file
+    else
+  	$dir=autodir
+  	$file='enterQ'
+    endif
+
+    $status='' $who='' $samplename='' $locdir=''
+    $autofile=$dir+'/'+$file
+    checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+    if ($status='') or ($samplename='ReFeReNCe') then vnmrjcmd('edit tray') return endif
+
+    $macdir=$autofile+'.macdir'
+    $maclibdir=$macdir+'/'+$locdir+'/day'
+    $maclibdirlong=$macdir+'/'+$locdir+'/night'
+
+    $sampinfo=$maclibdir+'/sampleglobal'
+    exists($sampinfo,'file'):$sampqex
+    if ($sampqex=0) then
+   	write('error','Sample information not found for %s',$loc)
+  	return
+    endif
+    $sampinfo=$maclibdir+'/sampleinfo'
+    exists($sampinfo,'file'):$sampqex
+    if ($sampqex=0) then
+        write('error','Sample information not found for %s',$loc)
+        return
+    endif
+    vjeditST('popup',$macdir+'/'+$locdir,$1)
+    return
+
+ENDIF
+
+IF ($1='popup') THEN
+
+    write('reset',$cfile)
+    $sampglobal=$2+'/day/sampleglobal'
+    $sampinfo=$2+'/day/sampleinfo'
+
+    exists($sampinfo,'file'):$sampqex
+    if ($sampqex=0) then return endif
+    exists($sampglobal,'file'):$sampqex
+    if ($sampqex=0) then return endif
+
+    $s1='' $solvent=''
+    readfile($sampinfo,'$s1','$solvent','SOLVENT','local')
+    substr($solvent,1):$solvent
+    format($solvent,'lower'):$solvent
+
+    write('reset',$tmppars)
+    writeparam($tmppars,'adirtmplt sdirtmplt svftmplt adir2tmplt')
+    
+    fread('','usertree')
+    fread($sampglobal,'usertree')
+    $archivedir='' $sample=''
+    getvalue('archivedir','usertree'):$archivedir
+    getvalue('sample','usertree'):$sample
+    if ($archivedir<>'') or ($sample<>'') then
+	$3='display'
+    endif
+    getvalue('adirtmplt','usertree'):adirtmplt
+    getvalue('sdirtmplt','usertree'):sdirtmplt
+    getvalue('adir2tmplt','usertree'):adir2tmplt
+    getvalue('svftmplt','usertree'):svftmplt
+    $par3=''
+    listtmpltpars:$par3
+// $par3 includes template parameters from sampleglobal
+//  but reqparval from current module
+    fread($tmppars)
+    shell('rm -f '+$tmppars):$dum
+
+// Make it an unique array
+   $par3size=size('$par3')
+   if ($par3[1]<>'') and ($par3size>1) then
+        sort($par3,'u'):$index,$par3
+   endif
+
+// Exclude certain parameters from the list
+    $exclude='pslabel','seqfil','tn','dn','solvent','userdir','loc','vrack','vzone','vloc'
+    $exclude=$exclude,'samplename','explabel'
+    $es=size('$exclude')
+    $i=1
+    repeat
+        $is=0
+        teststr('$par3',$exclude[$i],'local'):$is
+        if ($is) then $par3[$is]='' endif
+        $i=$i+1
+    until $i > $es
+
+    array2array($par3):$par3
+    $total=size('$par3')
+    if ($par3[1]='') then $total=0 endif
+
+    $par='' $val='' $type='' $rval=0
+    $par=$2
+    $par=$par,'','','','','','','','',''
+    $par[11]='samplename'
+    getvalue('samplename','usertree'):$par[12]
+    $par[13]='string'
+    $par[14]='solvent',$solvent,'string'
+    $par[17]='text_string'
+    getvalue('text_string',1,'usertree'):$par[18]
+    $par[19]='string'
+
+    getvalue('text_string','size','usertree'):$tssize
+    if ($tssize>0) then
+	$i=1
+	repeat
+	    $line=''
+	    getvalue('text_string',$i,'usertree'):$line
+	    write('file',$cfile,'%s',$line)
+	    $i=$i+1
+	until $i > $tssize
+    endif
+
+    if ($total) then
+	$i=1 $j=20
+	repeat
+	    $par[$j]=$par3[$i]
+	    $type='' $val='' $rval=0
+	    gettype($par3[$i],'usertree'):$r,$type
+	    if ($type='string') or ($type='flag') then
+		getvalue($par3[$i],'usertree'):$val
+	    else
+		getvalue($par3[$i],'usertree'):$rval
+		format($rval,'lower'):$val
+	    endif
+	    $par[$j+1]=$val
+	    $par[$j+2]=$type
+	    $j=$j+3
+	    $i=$i+1
+	until $i > $total
+    endif
+    fread('','usertree')
+
+    create('vjeditSTpar','string','global',''):$dum
+    setprotect('vjeditSTpar','on',256,'global')
+    vjeditSTpar=$par
+
+// Write the xml file
+    $xml=$xmlname+'_'+$1+'.xml'
+    write('reset',$xml)
+    $total=size('vjeditSTpar')
+    $y=trunc(($total-19)/6 + 0.5)*30+10
+    $yoff=150
+    $y=$y+$yoff
+    if ($3='display') then $enable=-1 else $enable=1 endif
+
+    $i=1
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$xml,'<template name="%s" element="groups" type="acquisition" >',$0)
+    write('file',$xml,'  <group size="590 %d"',$y)
+    write('file',$xml,'    bg="transparent"')
+    write('file',$xml,'    border="Etched"')
+    write('file',$xml,'    tab="no"')
+    write('file',$xml,'    useref="no"')
+    write('file',$xml,'    subtype="Basic"')
+    write('file',$xml,'    expanded="yes"')
+    write('file',$xml,'    >')
+
+        write('file',$xml,'     <label loc="5 10" size="140 25"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Samplename"')
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <entry loc="150 10" size="200 25"')
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="vjeditSTpar"')
+	write('file',$xml,'        show="$ENABLE=%d"',$enable)
+        write('file',$xml,'        vc="$v=\'\' ckstring(\'$VALUE\'):$v vjeditSTpar[12]=$v"')
+        write('file',$xml,'        set="$VALUE=vjeditSTpar[12]"')
+        write('file',$xml,'        />')
+
+        write('file',$xml,'     <label loc="5 40" size="140 25"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Solvent"')
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+    if ($3<>'display') then
+        write('file',$xml,'     <filemenu loc="150 40" size="200 25"')
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="vjeditSTpar"')
+        write('file',$xml,'        vq2="vjeditSTpar"')
+        write('file',$xml,'        vc="$v=\'\' format(\'$VALUE\',\'lower\'):$v vjeditSTpar[15]=$v"')
+        write('file',$xml,'        set="$VALUE=vjeditSTpar[15]"')
+        write('file',$xml,'        file="$VALUE=systemdir+\'/solventlist\'"')
+        write('file',$xml,'        type="file"')
+        write('file',$xml,'        display="yes"')
+        write('file',$xml,'        />')
+    else
+        write('file',$xml,'     <textmessage loc="150 40" size="200 25"')
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="vjeditSTpar"')
+        write('file',$xml,'        set="$VALUE=vjeditSTpar[15]"')
+        write('file',$xml,'        />')
+    endif
+
+        write('file',$xml,'     <label loc="5 70" size="140 25"')
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="Comments"')
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        write('file',$xml,'     <textfile loc="150 70" size="300 75"')
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="vjeditSTpar"')
+        write('file',$xml,'        set="$VALUE=\'%s\'"',$cfile)
+	if ($enable) then
+	    write('file',$xml,'		editable="yes"')
+	else
+	    write('file',$xml,'		editable="no"')
+	endif
+	write('file',$xml,'	   wrap="no"')
+        write('file',$xml,'        />')
+
+    if ($total>21) then
+      $i=20 $k=0
+      repeat
+        $y=$k*30+5+$yoff $x=5
+        write('file',$xml,'     <label loc="%d %d" size="140 25"',$x,$y)
+        write('file',$xml,'        style="Label1"')
+        write('file',$xml,'        label="%s"',vjeditSTpar[$i])
+        write('file',$xml,'        justify="Right"')
+        write('file',$xml,'        />')
+        $x=$x+145
+        write('file',$xml,'     <entry loc="%d %d" size="140 25"',$x,$y)
+        write('file',$xml,'        style="PlainText"')
+        write('file',$xml,'        vq="vjeditSTpar"')
+        write('file',$xml,'        vc="vjeditSTpar[%d]=\'$VALUE\'"',$i+1)
+        write('file',$xml,'        set="$VALUE=vjeditSTpar[%d]"',$i+1)
+        write('file',$xml,'        />')
+	$i=$i+3
+
+	if ($i < $total+1) then
+	    $x=$x+150
+            write('file',$xml,'     <label loc="%d %d" size="140 25"',$x,$y)
+            write('file',$xml,'        style="Label1"')
+            write('file',$xml,'        label="%s"',vjeditSTpar[$i])
+            write('file',$xml,'        justify="Right"')
+            write('file',$xml,'        />')
+            $x=$x+145
+            write('file',$xml,'     <entry loc="%d %d" size="140 25"',$x,$y)
+            write('file',$xml,'        style="PlainText"')
+            write('file',$xml,'        vq="vjeditSTpar"')
+            write('file',$xml,'        vc="vjeditSTpar[%d]=\'$VALUE\'"',$i+1)
+            write('file',$xml,'        set="$VALUE=vjeditSTpar[%d]"',$i+1)
+            write('file',$xml,'        />')
+            $i=$i+3
+	endif
+	$k=$k+1
+      until $i > $total
+    endif
+    write('file',$xml,'    </group>')
+    write('file',$xml,'</template>')
+
+    $ok='save'
+    if ($3='display') then $ok='cancel' endif
+    $title='Edit Sample Information'
+    $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        \'file:'+$xml+'\',
+        \'rebuild:yes\',
+        \'pnewupdate:true\',
+        \'ok:vjeditST(`'+$ok+'`)\',
+        \'cancel:vjeditST(`cancel`)\',
+        \'title:'+$title+'\')'
+    exec($vjcmd)
+
+    return
+
+ENDIF
+
+IF ($1='save') or ($1='cancel') THEN
+
+    $par=''
+    $par=vjeditSTpar
+    exists($cfile,'file'):$fileex
+    if ($fileex) then
+	lookup('mfile',$cfile,'readline'):$par[18]
+    endif
+
+    vjeditSTpar=''
+    if ($1='cancel') then return endif
+
+    $sampglobal=$par[1]+'/day/sampleglobal'
+    $sampinfo=$par[1]+'/day/sampleinfo'
+    exists($sampinfo,'file'):$sampqex
+    if ($sampqex=0) then return endif
+    exists($sampglobal,'file'):$sampqex
+    if ($sampqex=0) then return endif
+
+    $locdir='' substr($par[1],'basename'):$locdir
+
+    $s1='' $solvent=''
+    readfile($sampinfo,'$s1','$solvent','SOLVENT','local')
+    substr($solvent,1):$solvent
+    format($solvent,'lower'):$solvent
+
+    fread('','usertree')
+    fread($sampglobal,'usertree')
+    $archivedir='' $sample=''
+    getvalue('archivedir','usertree'):$archivedir
+    getvalue('sample','usertree'):$sample
+    if ($archivedir<>'') or ($sample<>'') then
+	fread('','usertree')
+	return
+    endif
+    getvalue('text_string',1,'usertree'):$textstring
+
+    $editQ=0
+    teststr('$par','solvent','local'):$ok
+    if ($ok) then format($par[$ok+1],'lower'):$solvent1 else $solvent1=$solvent endif
+    if ($solvent<>$solvent1) then $editQ=1 endif
+    teststr('$par','text_string','local'):$ok
+    if ($ok) then $textstring1=$par[$ok+1] else $textstring1=$textstring  endif
+    if ($textstring1<>$textstring) then $editQ=1 endif
+
+    if ($editQ) then
+// edit enterQ and overnightQ because solvent is changed
+	$sedcmd='sed -e \"s|SOLVENT:.*|SOLVENT: '+$solvent1+'|\"'
+	shell('('+$sedcmd+' '+$sampinfo+' > '+$sampinfo+'1)'):$dum
+	shell('mv '+$sampinfo+'1 '+$sampinfo):$dum
+	$sampinfo1=$par[1]+'/night/sampleinfo'
+	shell('('+$sedcmd+' '+$sampinfo1+' > '+$sampinfo1+'1)'):$dum
+        shell('mv '+$sampinfo+'1 '+$sampinfo):$dum
+
+        $sedcmd='sed -e \"s|TEXT:.*|TEXT: '+$textstring1+'|\"'
+        shell('('+$sedcmd+' '+$sampinfo+' > '+$sampinfo+'1)'):$dum
+        shell('mv '+$sampinfo+'1 '+$sampinfo):$dum
+
+	$sampperline=0 shell('(cat '+$sampinfo+' | wc -l)'):$sampperline
+	$tail='' format($sampperline,0,0):$tail
+
+	$autofile='' strstr($par[1],'.macdir'):$ret,$autofile
+	$basefile='' substr($autofile,'basename'):$basefile
+	shell('(cat '+$autofile+' | grep -wc SAMPLE#:)'):$totsamp
+	if ($totsamp) then
+	    expactive('auto'):$active 
+	    if ($active>0.5) and ($basefile='enterQ') then
+		autoq('lock')
+	    endif
+	    $tmpeQ=$infodir+'/enterQ'
+	    write('reset',$tmpeQ)
+	    $i=1
+	    repeat
+		$head='' format($i*$sampperline,0,0):$head
+		$here=0
+		shell('(head -n '+$head+' '+$autofile+' | '+$tailX+' -n '+$tail+' | grep -w '+$locdir+' | grep -wc day)'):$here
+		if ($here) then
+		    shell('(cat '+$sampinfo+' >> '+$tmpeQ+')'):$dum
+		else
+		    shell('(head -n '+$head+' '+$autofile+' | '+$tailX+' -n '+$tail+' | grep -w '+$locdir+' | grep -wc night)'):$here
+		    if ($here) then
+			shell('(cat '+$sampinfo1+' >> '+$tmpeQ+')'):$dum
+		    else
+			shell('(head -n '+$head+' '+$autofile+' | '+$tailX+' -n '+$tail+' >> '+$tmpeQ+')'):$dum
+		    endif
+		endif
+		$i=$i+1
+	    until $i > $totsamp
+	    shell('cp '+$tmpeQ+' '+$autofile):$dum
+	    shell('rm -f '+$tmpeQ):$dum
+	    if ($active>0.5) and ($basefile='enterQ') then
+		autoq('unlock')
+	    endif
+	endif
+	$autofile=$autofile+'.macdir/overnightQ'
+        shell('(cat '+$autofile+' | grep -wc SAMPLE#:)'):$totsamp
+        if ($totsamp) then
+            $tmpeQ=$infodir+'/nightQ'
+            write('reset',$tmpeQ)
+            $i=1
+            repeat
+                $head='' format($i*$sampperline,0,0):$head
+                $here=0
+                shell('(head -n '+$head+' '+$autofile+' | '+$tailX+' -n '+$tail+' | grep -w '+$locdir+' | grep -wc night)'):$here
+                if ($here) then
+                    shell('(cat '+$sampinfo1+' >> '+$tmpeQ+')'):$dum
+                else
+                    shell('(head -n '+$head+' '+$autofile+' | '+$tailX+' -n '+$tail+' >> '+$tmpeQ+')'):$dum
+                endif
+                $i=$i+1
+            until $i > $totsamp
+            shell('cp '+$tmpeQ+' '+$autofile):$dum
+            shell('rm -f '+$tmpeQ):$dum
+        endif
+    endif
+// Done with editing the sampleinfo
+
+    $total=size('$par')
+    if ($total>12) then
+	$i=11
+	repeat
+	    exists($par[$i],'parameter','usertree'):$ex
+	    if ($ex) then
+	      if ($par[$i]<>'text_string') then
+		if ($par[$i+2]='string') or ($par[$i+2]='flag') then
+		    setvalue($par[$i],$par[$i+1],'usertree')
+		else
+		    format($par[$i+1],'isreal'):$real
+		    if ($real) then
+			$rval=0 getvalue($par[$i],'usertree'):$rval
+			format($par[$i+1],'lower'):$rval
+			setvalue($par[$i],$rval,'usertree')
+		    endif
+		endif
+	      else
+		setvalue('text_string','',0,'usertree')
+                $key=$cfile
+                $textlines=0
+                shell('(cat '+$key+' | wc -l)'):$textlines
+                $txi=1
+                repeat
+                    $text=''
+                    lookup('mfile',$key,'readline','filekey'):$text,$key
+                    ckstring($text,4):$text
+		    setvalue('text_string',$text,$txi,'usertree')
+                    $txi=$txi+1
+                until $txi > $textlines
+	      endif
+	    endif
+	    $i=$i+3
+	until $i > $total
+    endif
+
+    fsave($par[1]+'/day/sampleglobal','usertree')
+    fsave($par[1]+'/night/sampleglobal','usertree')
+    fread('','usertree')
+    write('line3','Sample information edited by %s',operator):$msg
+    eventLog('Message',$msg,$locdir)
+
+ENDIF

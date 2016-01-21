@@ -1,0 +1,62 @@
+"macro updtgcoil"
+" Ancestry: updtgcoil 8.3 1/21/94     Spectroscopy Imaging Systems       "
+"**********************************************************************"
+" The macro updtgcoil checks to see if gradient exist."
+" If they do not the macro will exit silently.  If the gcoil	"
+" parameter exists then the macro checks to see if the sysgcoil "
+" gradtable exists.  The gcoil parameter is then set to the 	"
+" system gcoil(sysgcoil) parameter.				"
+" If and argument is passed it is assumed to be a tree, current	"
+" or global, and that will be used to create the parameter	"
+"**********************************************************************"
+
+"-- Check existence of gradients  -----------------"
+if gradtype <> 'nnn' then
+
+  "-- Check existence of file in gradtables -----------------"
+  if (sysgcoil <> '') and (sysgcoil <> 'None') and (sysgcoil <> 'none') then
+
+    "-- Check existence of gcoil  -----------------"
+    exists('gcoil','parameter'):$ex1
+    exists('gcoil','parameter','global'):$ex2
+    if ($ex1 < 0.5) and ($ex2 < 0.5) then
+        if ($# = 1) then
+	    create('gcoil','string',$1)
+	    setprotect('gcoil','set',9,$1)
+	else
+	    create('gcoil','string')
+	    setprotect('gcoil','set',9)
+	endif
+    endif
+
+    $table = systemdir+'/imaging/gradtables/'+sysgcoil
+    exists($table,'file'):$ex1
+    if $ex1 < 0.5 then
+       write('error','%s','Cannot find sysgcoil in gradtables dir.')
+       abort
+    endif
+
+    " Check gcoil against sysgcoil "
+    if (gcoil <> sysgcoil) then
+      $junk = 0    // dummy statement for if, in case we want to uncomment the write
+      //write('line3','updtgcoil ADVISORY: gcoil updated to `'+sysgcoil+'`.')
+    endif
+    gcoil = sysgcoil
+
+    " Create B0 parameter if nonexistent "
+    exists('B0','parameter','current'):$ex1
+    if ($ex1<1) then
+       create('B0','real','current')
+    endif
+    $protongamma = 1e6/4257.707747   "Gauss/MHz"
+    B0 = $protongamma*lockfreq*6.5144
+
+  else
+    "-- Make sure if sysgcoil is not set gmax,gxmax,gymax,gzmax are zero --"
+    exists('gcoil','parameter'):$ex1
+    if $ex1 > 0.5 then
+	gcoil = sysgcoil
+    endif
+  endif
+
+endif

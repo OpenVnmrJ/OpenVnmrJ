@@ -1,0 +1,50 @@
+"macro saveFrameLayout"
+"Usage: saveFrameLayout($fullpath, $layoutlabel, $layoutval)"
+
+"Default values"
+$file = userdir+'/templates/vnmrj/interface/framelayout' 
+$label = framelayoutName
+
+
+if ($# > 0) then
+   strstr($1, '/'):$s
+   if($s = 1) then
+      $file  = $1
+   else
+      $label = $1
+   endif
+elseif($# > 1) then
+      $file  = $1
+      $label = $2
+endif
+
+exists($file,'file'):$ex
+if $ex > 0.5 then
+   lookup('file',$file, 'readline',1):$line
+   $s1=''
+   while ($line <> '') do
+      substr($line,1):$s1
+      if($s1 = $label) then
+        confirm('This entry already exists, would you like to replace it?'):$replace
+	if ($replace > 0) then
+	  deleteFrameLayout($file,$label)
+	else
+	  return
+	endif
+      endif
+      lookup('readline',1):$line
+   endwhile
+else
+   shell('dirname "'+$file+'"'):$dir
+   exists($dir,'directory'):$ex
+   if $ex < 0.5 then
+      mkdir('-p',$dir)
+   endif
+endif
+
+$s1 = ''
+$s2 = ''
+format(aipWindowSplit[1],0,0):$s1
+format(aipWindowSplit[2],0,0):$s2
+
+write('file', $file, $label+' '+ $s1 + ',' + $s2)

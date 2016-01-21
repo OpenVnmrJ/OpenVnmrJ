@@ -1,0 +1,69 @@
+"macro imstatsepi"
+"***************************************************************"
+" imstatsepi                                                         "
+"                                                               "
+" Calculate mean, range, and standard deviation of points from  "
+" the cursor marked position in a set of arrayed spectra.       "
+" An optional argument may be used to discard the first skipval "
+" spectra (useful when full relaxation equilibrium has not been "
+" reached in the first spectrum).                               "
+"                                                               "
+" Usage:  stats(<skipval>)                                      "
+"***************************************************************"
+
+$sum = 0
+$sumsquared = 0
+$min = 1e6
+$max = -1e6
+
+$cr = cr
+$cr1 = cr1
+$delta = delta
+$delta1 = delta1
+
+mark('reset')
+$file = curexp+'/regression.inp'
+write('reset',$file)
+write('file',$file,'Image')
+write('file',$file,'Amp')
+write('file',$file,'    0      0')
+write('file',$file,'NEXT')
+
+if ($# = 1) then
+  $skip = $1
+else
+  $skip = 0
+endif
+
+$number = arraydim
+$nvals = $number - $skip
+
+$i = $skip
+repeat
+
+  $i = $i + 1
+  epift($i)
+  mark($cr1,$delta1,$cr,$delta):$junk,$integral
+  $sum = $sum + $integral
+  $sumsquared = $sumsquared + $integral*$integral
+
+  if ($integral < $min)  then  $min = $integral  endif
+  if ($integral > $max)  then  $max = $integral  endif
+
+  write('file',$file,'%d   %f',$i,$integral)
+
+until ($i = $number)
+
+$mean = $sum/$nvals
+$range = $max - $min
+$std_dev = sqrt($sumsquared/$nvals - $sum*$sum/($nvals*$nvals))
+
+write('line3','Mean: %10.2f    Range: %10.2f%c   Std Deviation: %10.2f%c',
+  $mean, $range/$mean*100, '%', $std_dev/$mean*100, '%')
+
+cr = $cr
+cr1 = $cr1
+delta = $delta
+delta1 = $delta1
+
+expl('regression','link')

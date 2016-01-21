@@ -1,0 +1,33 @@
+"macro AT23"
+"AT23" "Phase Stability (13 Degree) Test (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATd2pul'
+   text('Phase Stability Test on Channel 2')
+   at_currenttest='13deg_ch2'
+   tof=tof+37 p1=at_pw90_ch2 pw=p1 d2=.001
+   dof=tof dpwr=tpwr
+   array('nt',20,1,0)
+   crl rfl=sw/2 rfp=0 f
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT23(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining Phase Stability (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   sp=-1p wp=2p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   $phstab=trunc(1000*$stddev/7.1)/1000
+   ATrecord('PHASESTAB90ch2','Phase Stability (channel 2)','  stab_(deg)',$phstab,'height  ',$avht,' std_dev.  ',$stddev)
+   write('file',autotestdir+'/REPORT','Phase Stability (channel 2): %1.3f Degrees',$phstab)
+
+ATnext
+endif

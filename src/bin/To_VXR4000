@@ -1,0 +1,33 @@
+# 
+# Varian Assoc.,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential 
+# information of Varian Assoc., Inc. and its contributors. 
+# Use, disclosure and reproduction is prohibited without 
+# prior consent. 
+#
+: To_VXR4000 directory  -  write to tape a fid data set in VXR-4000
+: 	 9-track tape format
+: SYNOPSIS: To_VXR4000 directoryname
+: For fids saved by swrite in Vnmr
+: Directory must contain sdata and stext made by swrite
+
+if (test ! -r "$1")
+then
+  echo "$1" "does not exist"
+else 
+if (test -r "$1/sdata" -a -r "$1/stext")
+then
+  Tapedata "$1/sdata"
+  Tapetext "$1/stext"
+i=stext
+echo $i.xl out
+dd obs=10240 if="$i.xl" of=/dev/rmt12
+rm -r "$i.xl"
+i=sdata
+echo $i.xl out
+dd obs=10240 if="$i.xl" of=/dev/rmt12
+rm -r "$i.xl"
+else
+  echo "either sdata or stext missing from" "$1"
+fi
+fi

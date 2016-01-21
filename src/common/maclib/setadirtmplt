@@ -1,0 +1,132 @@
+"macro setadirtmplt"
+"SET adirtmplt based on svfdir"
+"  $sample$ string is removed from svfdir"
+"  $archivedir$ string is removed from svfdir"
+
+
+$adirtmplt=svfdir
+string2array($adirtmplt):$adirtmplt
+array2strsv($adirtmplt,'_'):$adirtmplt
+
+"**************Remove $sample$ from the template******************"
+if $adirtmplt='' then $adirtmplt='$userdir$/data' endif
+$ret=0 $s1='' $s2=''
+strstr($adirtmplt,'$sample$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adirtmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adirtmplt=$s1+'/'+$s2
+        endif
+endif
+
+"**************Remove $archivedir$ from the template******************"
+if $adirtmplt='' then $adirtmplt='$userdir$/data' endif
+$ret=0 $s1='' $s2=''
+strstr($adirtmplt,'$archivedir$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adirtmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adirtmplt=$s1+'/'+$s2
+        endif
+endif
+
+"**************Remove $archivedir2$ from the template******************"
+if $adirtmplt='' then $adirtmplt='$userdir$/data' endif
+$ret=0 $s1='' $s2=''
+strstr($adirtmplt,'$archivedir2$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adirtmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adirtmplt=$s1+'/'+$s2
+        endif
+endif
+
+"**************Remove any %Rn% from the template************************"
+if $adirtmplt='' then $adirtmplt='$userdir$/data' endif
+
+strstr($adirtmplt,'%R'):$rx2
+if ($rx2>0) then
+   $i=0
+   repeat
+        $rxi='' format($i,0,0):$rxi
+        $rx=1 $sx='' $sy=''
+        while $rx>0 do
+            strstr($adirtmplt,'%R'+$rxi+'%'):$rx,$sx,$sy
+            if ($rx) then
+                $adirtmplt=$sx+'_'+$sy
+            endif
+	    strstr($adirtmplt,'%R'+$rxi+':'):$rx,$sx,$sy
+	    if ($rx) then
+		strstr($sy,'%'):$rx,$sz,$sy
+	    endif
+	    if ($rx) then
+		$adirtmplt=$sx+'_'+$sy
+	    endif
+        endwhile
+        $i=$i+1
+   until $i > 9
+endif
+
+"***********check last /'s in adirtmplt*******************"
+"**This is to override an annoying feature of svfdir******"
+$done=0
+while $done < 1 do
+   $ret=0 $s1='' $s2=''
+   strstr($adirtmplt,'/','last'):$ret,$s1,$s2
+   if ($ret) then
+        if ($s2='') then
+                $adirtmplt=$s1
+        else
+                $done=1
+        endif
+   else
+        $done=1
+   endif
+endwhile
+
+"*************************************************************"
+chkname($adirtmplt,'alnum-/'):$sdum,$adirtmplt
+adirtmplt=$adirtmplt
+"*************************************************************"
+exists('adir2tmplt','parameter'):$ad2ex
+if ($ad2ex>0) then
+   if (adir2tmplt='') then
+	setadir2tmplt
+   endif
+endif

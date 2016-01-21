@@ -1,0 +1,31 @@
+*******************************************************************************
+setfrq          -  set the frequencies for all the rf channels in the system
+setfrq(number)  -  set the frequency for all the requested rf channel
+setfrq(nucleus) -  display or return the frequency of the supplied nucleus
+*******************************************************************************
+
+The command setfrq will calculate frequencies based on nucleus (tn, dn, 'C13', etc),
+referencing (lockfreq), solvent, and, except when a nucleus is supplied, the offset
+parameter (tof, dof, etc).  The result of the calculation will be stored in
+parameters sfrq, dfrq, dfrq2, etc., or returned to the calling macro.
+
+setfrq with no argument will calculate frequencies for all rf channels.  setfrq with
+a single integer argument will set the frequency for that rf channel.  setfrq with
+a nucleus name as the argument will display or return the frequency for that nucleus.
+For example, setfrq(2) will set dfrq. setfrq(2):r1 will set r1 to the frequency of
+channel 2. If return arguments are used, setfrq will not set any parameters, only
+return values to the calling macro. The frequencies will be rounded to the resolution
+of that channel (either 0.1 Hz or 100 Hz).  If a nuclues name is supplied as an argument,
+channel 1 is assumed for rounding information.  Also, if a nucleus name is supplied,
+an offset (e.g., tof or dof) is not added to the result.
+
+Whenever a parameter is entered which affects a frequency,  the setfrq command
+will be called from the underscore macro (for example, _tn, _tof, _dn, _dof)
+to recalculate the frequency for that channel.
+Whenever a parameter is entered which affects all frequencies,  the setfrq command
+will be called from the underscore macro (for example, _solvent, _lockfreq, _h1freq)
+to recalculate all the frequencies.
+
+The setfrq command should never need to be entered from the keyboard.
+It will be called when the appropriate parameters are changed or a
+parameter set is returned.

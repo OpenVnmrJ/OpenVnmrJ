@@ -1,0 +1,140 @@
+/*  rna_hcch_cosy.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    2D or 3D HCCH-COSY or RELAY with gradients in H2O or D2O and with editing
+    of spectral regions.
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+    pulse sequence:     Kay et al. JACS, 112, 888 (1990).
+                        Clore et al. Biochemistry, 29, 8172 (1990).
+                        Pardi et al. JACS, 114, 9202 (1992).
+    STUD+ decoupling    Bendall & Skinner, JMR, A124, 474 (1997) and in press
+
+
+
+    In all the above cases:
+    * H2 coupling in triply-labelled samples is refocused by dm3='nyn'.
+    * Efficient STUD+ decoupling is invoked with STUD='y' without need to
+    set any parameters.
+    (STUD+ decoupling- Bendall & Skinner, JMR, A124, 474 (1997) and in press)
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm2 = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [1H]  and t2 [13C].
+    2D experiment in t1: wft2da
+    2D experiment in t2: wft2d('ni2',1,0,0,0,0,0,-1,0)
+    ( or with 5.2F or above just use wft2da or wft2da('ni2') after setting
+      f2coef='1 0 0 0 0 0 -1 0'
+     for 3D just use ft3da )
+    2D transforms using 3D data set will transform properly with the
+    standard wft2da macro.
+    F1F3-plane: wft2d('ni',1,1,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0)
+    F2F3-plane: wft2d('ni2',1,1,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0)
+
+    
+    The flag f1180/f2180 should be set to 'y' if t1 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180 = 'n' for (0,0) in 1H and f2180 = 'n' for (0,0) in 13C.
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF rna_hcch_cosy
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_hcch_cosy may be printed using:
+                                      "printon man('rna_hcch_cosy') printoff".
+
+    2. Apply the setup macro "rna_hcch_cosy".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. H2O_flg = 'y' for H2O samples, 'n' for D2O samples
+
+    5. CHOICE OF C13 REGION:
+       ribose='y' gives a spectrum of ribose resonances centered on dof=80ppm.
+                                                             Set sw  to  5ppm.
+                                                             Set sw1 to  4ppm.
+                                                             Set sw2 to 55ppm.
+
+       aromatic='y' gives a spectrum of pyrimidine-aromatic groups. dof is shifted
+       automatically by the pulse sequence code to 130ppm.   Set sw1 to 10ppm.
+                                                             Set sw2 to 60ppm.
+
+       Setting SHAPE='n' and ribose='y' folds pyrimidine-aromatic groups.
+							     Set sw1 to 10ppm.
+							     Set sw2 to 60ppm.
+
+       Use of SHAPE is only recommended for optimizing the setup. Do not use for
+       2D or 3D experiment!!!!
+
+    6. DELAY TIMES (JCH and JCC):
+       These are listed in dg/dg2 for possible change by the user. JCH is used
+       to calculate the 1/4J time (lambda=0.94*1/4J) for H1 CH coupling evolution
+       and the 1/3J time (tCH) for C13 evolution.
+       Lambda is calculated a little lower (0.94) than the theoretical time to
+       minimise relaxation.
+       JCC is used to calculate the delay (tCC=1/8*J) for COSY transfer and
+       delay (tCCr) for RELAY transfer.
+         ribose CH/CH2:           JCH=145Hz         JCC = 35Hz
+         aromatic CH:             JCH=180Hz         JCC = 70Hz
+
+    7. CHOICE OF SEQUENCE:
+       RELAY='y' adds relay transfer and allows you to run 2D or 3D HCCH RELAY.
+       Not with aromatic='y'.
+       For 2D set ni2=0.
+
+    8. STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling (80ppm) instead. For further information
+       refer to rna_gChsqc.
+
+    9. If 2H decoupling is used, the 2H lock signal may become unstable because
+       of 2H saturation.  Check that a 1D spectrum is stable/reproducible as 
+       when 2H decoupling is not used.  You might also check this for d2 and d3
+       equal to values achieved at say 75% of their maximum.  Remember to return
+       d2=d3=0 before starting a 2D/3D experiment.
+
+   Written by Weixing Zhang,  November 1998
+   Department of Structural Biology
+   St. Jude Children's Research Hospital.
+   Memphis, TN 39105
+   (901)495-3169
+   Weixing.Zhang@stjude.org
+   modified for BioPack format by GG, palo alto, dec 1998
+   modified for RnaPack by Peter Lukavsky, Stanford, june 1999
+
+*/

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_omicsCreate" element="groups" type="acquisition" >
+   <group size="400 530"
+      bg="transparent"
+      border="None"
+      vq="craftnmrparRef"
+      reference="craft_omicsCreate"
+      subtype="Basic"
+      expanded="yes"
+      >
+	<group loc="5 0" size="390 75" 
+          style="Heading1"
+      	  bg="transparent"
+       	  border="Etched"
+	  vq="craftOmicsPar craftAlignTable"
+	  reference="craft_AlignTable"
+       	  label="Alignment table"
+	  show="$SHOW=(craftOmicsPar[19]&lt;&gt;'1')"
+      	  subtype="Titled"
+      	  expanded="no"
+	  useref="yes"
+          >
+	  </group>
+        <group loc="0 0" size="400 75"
+	  vq="craftOmicsPar craftAlignTable"
+	  show="$SHOW=(craftOmicsPar[19]='1')"
+	  >
+	  <group loc="5 0" size="390 45" 
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Etched"
+	    vq="craftOmicsPar craftAlignTable"
+	    reference="craft_AlignTable"
+       	    label="Alignment table"
+      	    subtype="Titled"
+      	    expanded="yes"
+	    useref="no"
+            >
+	    <label loc="30 15" size="330 20"
+	      style="Info"
+	      label="Not applicable"
+	      justify="Center"
+	      />
+	    </group>
+	  <button loc="75 50" size="250 20"
+	    vc="craft_omics('toggle2this')"
+	    label="Display experimental trace"
+	    style="Heading2"
+	    />
+	  </group>
+	<group loc="5 75" size="390 430" 
+          style="Heading1"
+      	  bg="transparent"
+       	  border="Etched"
+	  vq="craftOmicsPar"
+       	  label="Review analyte reports"
+      	  subtype="Titled"
+      	  expanded="yes"
+	  useref="no"
+	  >
+<!--
+	  <label loc="25 20" size="100 20"
+	    style="Label1"
+	    label="Select report"
+	    />
+-->
+          <filemenu loc="25 20" size="210 20"
+            style="PlainText"
+            vq="craftOmicsPar"
+            vc="craft_omics('setAnalyteReport','$VALUE')"
+            set="$VALUE=craftOmicsPar[20]"
+            file="$VALUE=userdir+'/cnmrmodels/Files4xml/OmicsReportsMenu'"
+            vq2="craftOmicsPar"
+	    type="file"
+            />
+          <button loc="240 20" size="130 20"
+            style="Heading2"
+            label="Copy to desktop"
+            vq="craftOmicsParRef"
+	    show="exists(craftOmicsPar[20]+'/analyteLog','file'):$fex if $fex then lookup('mfile',craftOmicsPar[20]+'/analyteLog','countline'):$fex endif $ENABLE=($fex)*2-1"
+            vc="craft_omics('copy2dt',craftOmicsPar[20])"
+            />
+          <label loc="25 42" size="140 20"
+            style="Label1"
+            label="Alignment table used:"
+            />
+	    <textmessage loc="165 42" size="210 20"
+	      style="Info"
+	      set="$v='' substr(craftOmicsPar[22],'basename'):$v $VALUE=$v"
+	      vq="craftOmicsPar"
+              />
+	  <label loc="25 64" size="60 20"
+	    style="Label1"
+	    label="Analyte"
+	    />
+          <filemenu loc="85 64" size="150 20"
+            style="PlainText"
+            vq="craftOmicsPar"
+            vc="craftOmicsPar[21]='$VALUE'"
+	    show="$ENABLE=((craftOmicsPar[20]&lt;&gt;''))*2-1"
+            set="$VALUE=craftOmicsPar[21]"
+            file="$VALUE=userdir+'/cnmrmodels/Files4xml/OmicsReportAnalyteMenu'"
+            vq2="craftOmicsPar"
+	    type="file"
+            />
+          <button loc="240 64" size="130 20"
+            style="Heading2"
+            label="Display ppm"
+            vq="craftOmicsPar"
+	    show="$ENABLE=((craftOmicsPar[20]&lt;&gt;'') and (craftOmicsPar[21]&lt;&gt;''))*2-1"
+            vc="craft_omics('showmarks')"
+            />
+          <button loc="240 87" size="130 20"
+            style="Heading2"
+            label="Show table"
+            vq="craftOmicsPar"
+	    show="$ENABLE=((craftOmicsPar[20]&lt;&gt;'') and (craftOmicsPar[21]&lt;&gt;''))*2-1"
+            vc="craft_omics('showAnalyteTable')"
+            />
+          <button loc="25 87" size="210 20"
+            style="Heading2"
+            label="Display CRAFT models"
+            vq="craftOmicsPar"
+	    show="$ENABLE=((craftOmicsPar[20]&lt;&gt;'') and (craftOmicsPar[21]&lt;&gt;''))*2-1"
+            vc="craft_omics('displayfid')"
+            />
+
+	  <group loc="40 109" size="330 40"
+	    vq="craftOmicsPar"
+	    show="$SHOW=((craftOmicsPar[19]&lt;&gt;'1') and (craftOmicsPar[20]&lt;&gt;'') and (craftOmicsPar[21]&lt;&gt;''))"
+	    >
+	    <group loc="50 0" size="120 20" >
+	      <radio loc="0 0" size="120 20"
+		style="Label1"
+		label="All studies/FIDs"
+		vq="craftOmicsPar"
+		vc="craftOmicsPar[26]='a'"
+		vc2="craftOmicsPar[26]='s' if craftOmicsPar[27]='0' then craftOmicsPar[27]='1' endif"
+		set="$VALUE=(craftOmicsPar[26]='a')"
+		/>
+	      </group>
+	    <group loc="50 20" size="90 20" >
+	      <radio loc="0 0" size="90 20"
+		style="Label1"
+		label="Study/FID#"
+		vq="craftOmicsPar"
+		vc2="craftOmicsPar[26]='a'"
+		vc="craftOmicsPar[26]='s' if craftOmicsPar[27]='0' then craftOmicsPar[27]='1' endif"
+		set="$VALUE=(craftOmicsPar[26]='s')"
+		/>
+	      </group>
+	      <entry loc="140 20" size="40 20"
+		style="Label1"
+		vq="craftOmicsPar"
+		vc="$v='$VALUE' format($v,'isreal'):$vreal if $vreal then craftOmicsPar[27]='$VALUE' else craftOmicsPar[27]='1' endif"
+		show="$ENABLE=(craftOmicsPar[26]='s')*2-1"
+		set="$VALUE=craftOmicsPar[27]"
+	        />
+              <button loc="190 20" size="65 20"
+                style="Heading2"
+                label="Prev"
+                vq="craftOmicsPar"
+		show="$ENABLE=(craftOmicsPar[26]='s')*2-1"
+                vc="craft_omics('displayprevfid')"
+                />
+              <button loc="265 20" size="65 20"
+                style="Heading2"
+                label="Next"
+                vq="craftOmicsPar"
+		show="$ENABLE=(craftOmicsPar[26]='s')*2-1"
+                vc="craft_omics('displaynextfid')"
+                />
+	    </group>
+          <group loc="5 156" size="380 1"
+            border="Etched"
+            />
+
+          <group loc="0 165" size="390 95" >
+            <label loc="25 0" size="200 20"
+              style="Label1"
+              label="Analyte list for review"
+              />
+            <button loc="175 25" size="175 20"
+              style="Heading2"
+              label="Add analyte to list"
+              vq="craftOmicsPar"
+	      show="$ENABLE=((craftOmicsPar[20]&lt;&gt;'') and (craftOmicsPar[21]&lt;&gt;''))*2-1"
+              vc="craft_omics('add2pcalist',craftOmicsPar[21])"
+              />
+            <textfile loc="20 20" size="150 70"
+              style="PlainText"
+              set="$VALUE=userdir+'/cnmrmodels/Files4xml/PCAlist'"
+              editable="no"
+              wrap="no"
+              vq="craftOmicsParRef"
+              />
+            <button loc="175 47" size="175 20"
+              style="Heading2"
+              label="Clear list"
+              vq="craftOmicsPar"
+ 	      show="exists(userdir+'/cnmrmodels/Files4xml/PCAlist','file'):$fex if $fex then lookup('mfile',userdir+'/cnmrmodels/Files4xml/PCAlist','countline'):$fex endif $ENABLE=($fex)*2-1"
+              vc="craft_omics('clrpcalist')"
+              />
+            <button loc="175 69" size="175 20"
+              style="Heading4"
+              label="Compare CRAFT models"
+              vq="craftOmicsPar"
+ 	      show="exists(userdir+'/cnmrmodels/Files4xml/PCAlist','file'):$fex if $fex then lookup('mfile',userdir+'/cnmrmodels/Files4xml/PCAlist','countline'):$fex endif $ENABLE=($fex&gt;1)*2-1"
+              vc="craft_omics('compareanalytes')"
+              />
+	    </group>
+	    <group loc="15 260" size="360 155" 
+              style="Heading1"
+      	      bg="transparent"
+       	      border="Etched"
+              vq="craftOmicsPar"
+              show="$SHOW=(craftOmicsPar[19]&lt;&gt;'1')"
+	      label="PCA options"
+	      reference="craft_PCAoptions"
+      	      subtype="Titled"
+      	      expanded="no"
+	      useref="yes"
+	      >
+	      </group>
+
+	  </group>
+        </group>
+</template>

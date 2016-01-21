@@ -1,0 +1,227 @@
+# 
+
+# Procedures
+
+proc isnum {var} {
+    if {[catch {expr $var * 1}]} {
+	return 0
+    } else {
+	return 1
+    }
+}
+
+proc dir_select {} {
+    global FdvDir diritem
+    # Get selected list item
+    set diritem [.fdv.main.dir.f.list curselection] 
+    if {[isnum $diritem]} {
+	set FdvDir [.fdv.main.dir.f.list get $diritem]
+    }
+
+    # Change directories
+    if {$FdvDir != 1} {
+	cd $FdvDir
+	set diritem 0
+	set FdvDir 1
+    }
+
+    # Fill lists
+    read_dir .fdv.main.dir.f.list \
+	    .fdv.main.files.file_list
+}
+
+proc file_select {} {
+    global FdvFile fileitem
+    catch {set fileitem [.fdv.main.files.file_list curselection]}
+    set FdvFile [.fdv.main.files.file_list get $fileitem]
+    # out we go
+}
+# Fill lists with filenames
+
+proc read_dir { dirlist filelist } {
+
+    # Clear listboxes
+    $dirlist delete 0 end
+    $filelist delete 0 end
+    
+    $dirlist insert end ".."
+    
+    set unsorted [glob -nocomplain *]
+
+    if {$unsorted != "" } {
+
+	set files [lsort $unsorted]
+
+	# Separate out directories
+
+	foreach filename $files {
+
+	    if { [file isdirectory $filename] != 0 } {
+		# Is a directory.
+
+		$dirlist insert end "$filename"
+	    } else {
+		# Is a file.
+		$filelist insert end "$filename"
+
+	    }
+	}
+
+    }
+
+    # Now, store current dir in label.
+    .fdv.menubar.curdir configure \
+	    -text [pwd]
+}
+
+proc dirview {} {
+
+    # Tcl/Tk Directory Viewer
+
+    global FdvFile fileitem FdvDir diritem
+
+    set FdvFile ""
+    set fileitem 0
+    set diritem 0
+    set FdvDir ".."
+
+    if { [winfo exists .fdv] } {
+	wm deiconify .fdv
+	raise .fdv
+	flashWindow .fdv
+    } else {
+	toplevel .fdv
+	wm title .fdv "File Browser"
+	# File menu
+	frame .fdv.menubar -bd 1 \
+		-relief raised
+
+	# Place a label here, too.
+	label .fdv.menubar.curdir -text "Dir"
+
+	pack  \
+		.fdv.menubar.curdir -side left
+
+	# Frame for everything under menubar.
+	frame .fdv.main -bd 0
+
+	frame .fdv.main.dir -bd 1
+
+	label .fdv.main.dir.label -text "Directories"
+
+	frame .fdv.main.dir.f -bd 0
+
+	listbox .fdv.main.dir.f.list \
+		-height 10 \
+		-selectmode single \
+		-yscrollcommand ".fdv.main.dir.f.scrb set" \
+		-xscrollcommand ".fdv.main.dir.f.scrbx set"
+
+	scrollbar .fdv.main.dir.f.scrb \
+		-command ".fdv.main.dir.f.list yview"
+
+	scrollbar .fdv.main.dir.f.scrbx \
+		-command ".fdv.main.dir.f.list xview" \
+		-orient horizontal
+
+
+	pack .fdv.main.dir.f.scrb \
+		-side right -fill y
+
+	pack .fdv.main.dir.f.scrbx \
+		-side bottom -fill x
+
+	pack .fdv.main.dir.f.list \
+		-side left
+
+	pack .fdv.main.dir.label \
+		-side top -fill x 
+	pack .fdv.main.dir.f -side bottom
+
+
+	# Frame for file names.
+	frame .fdv.main.files -bd 0
+
+	label .fdv.main.files.files \
+		-text "Files"
+
+	listbox .fdv.main.files.file_list \
+		-height 10 \
+		-selectmode single \
+		-yscrollcommand ".fdv.main.files.scrb set" \
+		-xscrollcommand ".fdv.main.files.scrbx set"
+
+	pack .fdv.main.files.files \
+		-side top -fill x 
+
+	scrollbar .fdv.main.files.scrb \
+		-command ".fdv.main.files.file_list yview"
+
+	scrollbar .fdv.main.files.scrbx \
+		-command ".fdv.main.files.file_list xview" \
+		-orient horizontal
+
+	pack .fdv.main.files.scrb -side right \
+		-fill y
+
+	pack .fdv.main.files.scrbx -side bottom \
+		-fill x
+
+	pack .fdv.main.files.file_list \
+		-side left
+
+	pack .fdv.main.dir .fdv.main.files  \
+		-side left
+
+	# Pack top-level widgets.
+
+	pack .fdv.menubar -side top \
+		-fill x -expand true
+
+	pack .fdv.main -side top
+
+	# Change dir on double-click.
+	bind .fdv.main.dir.f.list <Double-Button-1> {
+	    dir_select
+	}
+
+	# Make update default after dir select.
+	bind .fdv.main.dir.f.list <Button-1> {
+	    bind .fdv <Return> "dir_select"
+	    .fdv.buts.u configure -bd 4
+	    .fdv.buts.o configure -bd 2
+	}
+
+	# return file name on file double-click
+	bind .fdv.main.files.file_list <Double-Button-1> {
+	    file_select
+	}
+
+	# If file selected make default the Open
+	bind .fdv.main.files.file_list <Button-1> {
+	    bind .fdv <Return> "file_select"
+	    .fdv.buts.o configure -bd 4
+	    .fdv.buts.u configure -bd 2
+	}
+
+	read_dir .fdv.main.dir.f.list \
+		.fdv.main.files.file_list
+
+	frame .fdv.buts -bd 2
+	button .fdv.buts.o -text "Open" -command "file_select"
+	button .fdv.buts.u -text "Update" -command "dir_select"
+	button .fdv.buts.c -text "Cancel" \
+		-command "destroy .fdv; set FdvFile {}"
+	pack .fdv.buts.u .fdv.buts.o .fdv.buts.c -padx 5 -side left -anchor w \
+		-fill x -pady 4
+	pack .fdv.buts -side top
+
+    }
+
+    # wait until a file selection is made
+
+    tkwait variable FdvFile 
+    return $FdvFile 
+
+    # end of dirview.tk
+}

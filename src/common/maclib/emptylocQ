@@ -1,0 +1,33 @@
+"macro emptylocQ"
+if ($# < 1) then return endif
+if ($1='auto') then
+   $autodir=autodir
+   $autofile='enterQ'
+elseif ($1='enter') then
+   $autodir=globalenter
+   shell('basename '+$autodir):$autofile
+else
+   return
+endif
+
+$traymax=traymax
+if (traymax=97) then $traymax=96 endif
+$emptyloc=''
+$i=1
+repeat
+        $status='' $loc=''
+        checklocstatus($autodir+'/'+$autofile,$i):$status
+        if ($status='') or ($status='Complete') then
+		format($i,0,0):$loc
+		if ($emptyloc[1]='') then
+			$emptyloc=$loc
+		else
+			$emptyloc=$emptyloc,$loc
+		endif
+	endif
+   $i=$i+1
+until $i > $traymax
+if($emptyloc[1]='') then $emptytot=0 else
+	$emptytot=size('$emptyloc')
+endif
+return($emptyloc,$emptytot)

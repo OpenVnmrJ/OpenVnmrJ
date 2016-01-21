@@ -1,0 +1,67 @@
+"macro savejcamp"
+
+  pwd:$curdir
+  getdim:$dim
+  if ($dim > 1) or (arraydim > 1) then
+     return('')
+  endif
+
+  if ($# < 1) then $1='' endif
+  if ($# < 2) then $2='none' endif
+  if ($# < 3) then $3=emailaddr endif
+
+  isnewexp:$new
+  if (auto='y') then $new=1 endif
+  if ($new) then
+        $archsamp=archivedir+'/'+sample
+  else
+        shell('dirname '+file):$archsamp
+  endif
+  exists($archsamp,'directory'):$adirex
+  if ($adirex=0) then
+	write('line3','%s directory not found',$archsamp)
+	return
+  endif
+  if ($1='') then
+    if ($new) then
+	cplog(pslabel,'last'):$1
+    else
+	shell('basename '+file+' .fid'):$1
+    endif
+  endif
+  Autockdir($archsamp)
+    cd($archsamp):$dum
+
+    $name=''
+    Svfname($archsamp+'/spectra/'+$1+'_spec','','.dx'):$name
+    shell('basename '+$name+' .dx'):$name
+
+    cd('spectra'):$dum
+    $dxformat='std'
+    getadminfo('dxformat'):$dxformat
+    if ($dxformat='xy') then
+        svxyj($name)
+    else
+        svsj($name)
+    endif
+    cplog($name,'jcamp','dx')
+    datamirror($archsamp+'/spectra/'+$name+'.dx','spectrum')
+
+    if ($2='email') then
+      if ($3 <>'') then
+        if (emailflag='n') then
+	   write('line3','Email option is NOT turned on')
+	else
+	   vnmremail($name+'.dx',$3)
+	   write('line3','%s.dx sent by email to %s',$name,$3)
+        endif
+      else
+	write('line3','%s.dx not sent by email. Empty email address',$name)
+      endif
+    endif
+
+    dousermacro($0)
+
+    cd($curdir):$dum
+    return($name)
+

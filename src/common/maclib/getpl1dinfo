@@ -1,0 +1,189 @@
+"macro getpl1dinfo"
+if ($# < 1) then $1='' endif
+
+IF ($1='plotmacro') THEN
+//  This is a branch point for customized macros to be
+//  called in lieu of the generic plottop and plotside
+    $macro=$2
+
+// use unique dosyprojection for dosy2D apptype
+    if (apptype='dosy2D') then
+	if (($3='proj') or
+	    (($2='plotside') and (trace='f2')) or
+	    (($2='plottop') and (trace='f1')))  then
+	    $macro='pldosyproj(\''+$2+'\')'
+	endif
+    endif
+
+// Add any other conditional branches here
+//  It could be site specific plottop/plotside equivalents
+
+// return the $macro
+    return($macro)
+
+ENDIF
+
+IF ($1='abspath') then
+   $retpath=$2
+   $direx=0
+   $firstchar=''
+   substr($retpath,1,1):$firstchar
+   if ($firstchar='/') then
+   	exists($retpath,'directory'):$direx
+   	if ($direx) then return($retpath,$direx) endif
+	exists($retpath+'.fid','directory'):$direx
+	if ($direx) then return($retpath+'.fid',$direx) endif
+	exists($relpath+'.rec','directory'):$direx
+	if ($direx) then return($retpath+'.rec',$direx) endif
+	exists($relpath+'.REC','directory'):$direx
+	if ($direx) then return($retpath+'.REC',$direx) endif
+	return($2,$direx)
+   endif
+
+   $archsamp=''
+   isnewexp:$newexp
+   if (auto='y') then $newexp=1 endif
+   if ($newexp) then
+	$archsamp=archivedir+'/'+sample
+   else
+	shell('dirname '+file):$archsamp
+   endif
+   $retpath=$archsamp+'/'+$2
+   exists($retpath,'directory'):$direx
+   if ($direx) then return($retpath,$direx) endif
+
+   exists($retpath+'.fid','directory'):$direx
+   if ($direx) then return($retpath+'.fid',$direx) endif
+   exists($retpath+'.rec','directory'):$direx
+   if ($direx) then return($retpath+'.rec',$direx) endif
+   exists($retpath+'.REC','directory'):$direx
+   if ($direx) then return($retpath+'.REC',$direx) endif
+
+   return($retpath,$direx)
+ENDIF
+
+$F2file='' $F1file='' $tfile='' $sfile=''
+$F2exist=0 $F1exist=0
+
+//Find F2file
+   exists('strtpar','parameter'):$strtparex
+   if ($strtparex) then
+     if strtpar='' then $strtparex=0 endif
+   endif
+   if ($strtparex) then
+	getext(strtpar):$STRTPAR,$ext
+        if ($ext='par') then $strtparex=0 endif
+   endif
+   if ($strtparex) then
+      $firstchar='' substr(strtpar,1,1):$firstchar
+      if ($firstchar='/') then
+	shell('dirname '+strtpar):$archivesample
+      else
+	isnewexp:$isnew
+	if ($isnew) or (auto='y') then
+		$archivesample=archivedir+'/'+sample
+	else
+		shell('dirname '+file):$archivesample
+	endif
+      endif
+      $ext='' $strtpar=''
+      substr(strtpar,'basename'):$strtpar,$ext
+      if ($ext<>'') then
+	exists($archivesample+'/'+$strtpar+'.'+$ext,'directory'):$strtparex
+      else
+	exists($archivesample+'/'+$strtpar+'.fid','directory'):$strtparex
+	if ($strtparex=0) then
+	    exists($archivesample+'/'+$strtpar+'.rec','directory'):$strtparex
+	    if ($strtparex=0) then
+		exists($archivesample+'/'+$strtpar+'.REC','directory'):$strtparex
+	    endif
+	endif
+      endif
+   endif
+   if ($strtparex) then
+	reconcilestrtpar($archivesample+'/'+$strtpar):$strtpar,$strtparex
+   endif
+   if ($strtparex) then
+    	$F2file=$archivesample+'/'+$strtpar
+	$F2exist=1
+   else
+   	$required='' $react='' $total=0
+   	string2array(REQexp[1]):$required
+   	$total=size('$required')
+	if $required[1]='' then $total=0 endif
+   	if ($total) then
+		$ex1=1
+		repeat
+	 	   $name=''
+		   $subexp=$required[$ex1]
+		   cplog($subexp,'last'):$name,$dir
+		   if ($name<>'') then 
+			reconcilestrtpar($dir+'/'+$name):$name
+		   endif
+		   if ($name<>'') then
+			$F2file=$dir+'/'+$name 
+			$ex1=$total 
+			$F2exist=1
+		   endif
+		   $ex1=$ex1+1
+		until $ex1 > $total
+   	endif
+   endif
+   getdim:$dim
+   if ($dim<1.5) then return($F2file) endif
+
+// Find F1file
+
+  if (refsource1<>'sfrq') then
+     $F1pslabel='s2pul' $F1nuc=''
+     if (refsource1='dfrq') then
+	$F1nuc=dn
+     elseif (refsource1 = 'dfrq2') then
+	$F1nuc=dn2
+     elseif (refsource1 = 'dfrq3') then
+	$F1nuc=dn3
+     endif
+
+     if $F1nuc='C13' then $F1pslabel='CARBON'
+     elseif $F1nuc='P31' then $F1pslabel='PHOSPHORUS'
+     elseif $F1nuc='H1' then $F1pslabel='wet1D PRESAT PROTON'
+     elseif $F1nuc='F19' then $F1pslabel='FLUORINE'
+     else $F1pslabel='s2pul' endif
+
+     $total=size('$F1pslabel')
+       $ex1=1
+       repeat
+           $name=''
+           $subexp=$F1pslabel[$ex1]
+	   if ($subexp<>'s2pul') then
+	       cplog($subexp,'last'):$name,$dir
+	   else
+               cplog('s2pul','last','checktn',$F1nuc):$name,$dir
+	   endif
+           if ($name<>'') then
+               $F1file=$dir+'/'+$name
+               $ex1=$total
+               $F1exist=1
+           endif
+           $ex1=$ex1+1
+       until $ex1 > $total
+  else
+     $F1file=$F2file
+     $F1exist=$F2exist
+  endif
+
+ if ($F2exist = 0) then $F2file='proj' endif
+ if (apptype='dosy2D') then $F1exist=0 endif
+ if ($F1exist = 0) then $F1file='proj' endif
+
+ if (trace='f2') then
+     $tfile=$F2file
+     $sfile=$F1file
+ else
+     $tfile=$F1file
+     $sfile=$F2file
+ endif
+
+ if ($1='top') then return($tfile) endif
+ if ($1='side') then return($sfile) endif
+ return($tfile,$sfile)

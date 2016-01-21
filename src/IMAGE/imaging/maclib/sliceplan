@@ -1,0 +1,127 @@
+"macro sliceplan"
+" Ancestry: ssplan	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+" sliceplan                                                     "
+"                                                               "
+" Macro to provide slice position and euler angles for an       "
+" oblique target scan. The user marks a ray on the scout image  "
+" using the cursor of the 2D package. The program assumes that  " 
+" the ray corresponds to the center of the target slice plane.  "
+"***************************************************************"
+
+
+"-- Constants ---------------------------------------------"
+$prog = 'sliceplan: '                     "*Program ID*"
+$gamma = sfrq*1e6/B0                      "*Gyromagnetic ratio Hz/G*"
+$mm_cm = 0.1                              "*mm to cm conversion*"
+
+
+$f21 = t_mark[1]
+$f11 = t_mark[2]
+$f22 = t_mark[3]
+$f12 = t_mark[4]
+
+
+"-- Find and read infile ----------------------------------"
+" Find Values of the Euler Angles; Check if array size > 1 "
+"----------------------------------------------------------"
+$len = size('psi')
+if ($len > 1.5)  then  $psi = psi[element]  else  $psi = psi  endif
+
+$len = size('phi')
+if ($len > 1.5)  then  $phi = phi[element]  else  $phi = phi  endif
+
+$len = size('theta')
+if ($len > 1.5)  then  $theta = theta[element]  else  $theta = theta  endif
+
+$spsi=''
+$sphi=''
+$stheta=''
+format($psi,6,3):$spsi
+format($phi,6,3):$sphi
+format($theta,6,3):$stheta
+
+
+"-- Compute logical frame coordinates ---------------------"
+" The variables kr1, kp1, ks1 are the logical frame        "
+" coordinates for the first point; ditto for kr2, kp2, ks2 "
+"                                                          "
+" We assume that all planes are parallel, so that the      "
+" slice position, pss, does not matter.  For future        "
+" expansion, in which multi-angle scout planes may be      "
+" present, the proper pss element will have to be selected "
+"----------------------------------------------------------"
+$kr1 = pro + lro*($f21 + rfl - rfp - 0.5*sw)/sw
+$kp1 = ppe + lpe*($f11 + rfl1 - rfp1 - 0.5*sw1)/sw1
+$ks1 = pss[1]
+
+$kr2 = pro + lro*($f22 + rfl - rfp - 0.5*sw)/sw
+$kp2 = ppe + lpe*($f12 + rfl1 - rfp1 - 0.5*sw1)/sw1
+$ks2 = pss[1]
+
+
+"-- Decode Euler angles & slice offset --------------------"
+$skr1 = ''  $skp1 = ''  $sks1 = '' 
+$skr2 = ''  $skp2 = ''  $sks2 = ''
+format($kr1,6,3):$skr1
+format($kr2,6,3):$skr2
+format($kp1,6,3):$skp1
+format($kp2,6,3):$skp2
+format($ks1,6,3):$sks1
+format($ks2,6,3):$sks2
+
+$cmd = 'plane_decode '+$spsi+' '+$sphi+' '+$stheta
+$cmd = $cmd+' '+$skr1+' '+$skp1+' '+$sks1
+$cmd = $cmd+' '+$skr2+' '+$skp2+' '+$sks2
+shell($cmd):$psi,$phi,$theta,$pss_0
+
+
+"-- Set parameters ----------------------------------------"
+" Values are written into the target parameters for        "
+" transfer to another experiment.  If the values of t_gap  "
+" and t_ns have been set, these are used to define a       "
+" multislice stack about the marked slice.                 "
+"----------------------------------------------------------"
+t_psi = $psi
+t_phi = $phi
+t_theta = $theta
+if (t_thk = 0) then
+  t_thk = thk
+endif
+t_pss = 0
+
+if (t_ns < 2) then
+    t_pss = $pss_0
+    t_ns = 1
+else
+    $step = $mm_cm*(thk + t_gap)
+    $start = $pss_0 - trunc(t_ns/2)*$step
+
+    $k = 1
+    repeat
+        t_pss[$k] = $start + $step*($k - 1)
+        $k = $k + 1
+    until ($k > t_ns)
+endif
+
+
+"-- Print out results to line 3 ---------------------------"
+" Results are advisory only, values are stored in target   "
+" parameters                                               "
+"----------------------------------------------------------"
+write('line3',
+  'Target slice values  psi: %.1f   phi: %.1f   theta: %.1f   pss: %.2f',
+  $psi, $phi, $theta, $pss_0)
+$size = size('t_pss')
+
+"commented out to avoid text window display"
+"if ($size > 1) then"
+"  da('t_pss')   " 
+"endif"
+
+"************************************************************************"
+"                    Modification History"
+
+" 981028(ss) da('t_pss') commented out for DG operation"
+
+"************************************************************************"

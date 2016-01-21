@@ -1,0 +1,118 @@
+"macro tabfsems"
+"******************************************************************"
+"  tabfsems(tabname,nv,etl,k0)					   "
+"	   compute phase-encode table for fast spin-echo imaging   "
+
+"******************************************************************"
+"Default values"
+exists('kzero','parameter'):$ex
+if ($ex > 0) then $k0 = kzero else $k0 = 1 endif
+
+exists('etl','parameter'):$ex
+if ($ex > 0) then $etl = etl else $etl = 4 endif
+
+$nv = nv
+
+$str = ''
+format($nv,0,0):$str
+$name = 'fsems' + $str
+format($etl,0,0):$str
+$name = $name + '_' + $str
+format($k0,0,0):$str
+$name = $name + '_' + $str
+
+"Did we give parameters as input?"  
+if $# > 0 then
+  $name=$1
+  if $# > 1 then 
+    $nv=$2
+    if $# > 2 then
+      $etl=$3
+      if $# > 3 then
+        $k0=$4
+      endif
+    endif
+  endif
+endif
+$tabval = 0
+if ($nv < 0.5) then
+  return
+endif
+
+$dir = userdir+'/tablib'
+exists($dir,'directory'):$ex
+if ($ex = 0) then
+  write('error','tablib directory does not exist.')
+  shell('mkdir '+userdir+'/tablib')
+  write('line3','tablib directory has been created.')
+endif
+
+$name = $dir+'/'+$name
+write('reset',$name)
+write('file',$name,'t1 = ')
+
+$sshot = 0
+if ($etl = $nv) then
+  $sshot = 1  "single shot list"
+endif
+
+if($sshot = 0) then  "multi-shot"
+  $count = 1
+  while ($count <= $nv/2) do
+    $tabval[$count] = -(($count*$nv/(2*$etl)-1) % ($nv/2)) 
+    $tabval[$count] = $tabval[$count] + trunc(($count-1)/$etl)
+    $count = $count + 1
+  endwhile
+
+  while ($count <= $nv) do
+    $tabval[$count] = ($count-$nv/2-1)*$nv/(2*$etl) % ($nv/2)
+    $tabval[$count] = $tabval[$count] + trunc(($count-$nv/2-1)/$etl) + 1
+    $count = $count + 1
+  endwhile
+
+  "tabval is now a matrix ordered as if kzero = 1"
+  "If kzero <> 1, shuffle the columns backwards"
+  "rotating last columns up to front"
+
+  $row = 1  "row in final matrix"
+  repeat
+    $col = 1  "column in final matrix"
+    repeat
+      "select a column in tabval"
+      if ($col < $k0) then  "get a column from the back"
+        $tabcol = $etl - $col + 1
+      else "get a column from the front"
+        $tabcol = $col - $k0 + 1
+      endif
+
+      $inx = ($row - 1)*$etl + $tabcol
+      write('fileline',$name,'  %4d',$tabval[$inx])
+      $col  = $col  + 1
+    until ($col > $etl)
+    write('file',$name,'')  "next line"
+    $row = $row + 1
+  until ($row > $nv/$etl)
+
+else
+  "** single shot array **"
+  $count = 1
+  repeat
+    $j = $count - $k0    
+    write('file',$name,'  %4d', $j)
+    $j = $j + 1
+    $count = $count + 1
+  until ($count > $nv)
+endif
+
+write('line3','table generation complete')
+
+clear
+cat($name)
+
+"*********************************************************************"
+"                         Modification History"
+" 
+" 990503(ss) - Bug fixed; table for single shot generated correctly"
+" 060224(mh) - Fix bug for kzero = etl; more reasonable defaults
+"
+"*********************************************************************"

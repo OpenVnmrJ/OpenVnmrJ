@@ -1,0 +1,32 @@
+"macro rna_makeH2Osinc"
+
+"For version 5.1 software and subsequent"
+
+"Calculates the following shaped sinc one-lobe pulse and stores it in your" "shapelib:  Carrier on H2O, 90 degree pulse on H2O."
+
+"The carrier should be set to 4.7ppm."
+
+"The coarse attenuator setting must be set in the pulse sequence during the"
+"pulse."
+
+"The pulse length parameter 'pwHs' will be created if it doesn't exist."
+"The name of the shaped pulse created is 'H2Osinc.RF'."
+"In the pulse sequence code, the syntax is ...shaped_pulse(!H2Osinc!,pwHs,...  "
+"where ! means double quotes (as used at the end of this sentence)."
+
+
+exists('pwHs','parameter'):$exists 
+if $exists<1 then create('pwHs','pulse') endif
+pwHs = 1700*500.0/sfrq				       "1.7 ms pulse at 500 MHz"
+$stepsH = pwHs   $stepsH = 2.0*trunc($stepsH/2.0) + 1.0   
+pwHs = ($stepsH + 1.0)
+$rfH = 1023.0
+rna_makesinc($stepsH, $rfH)
+$stpsH = '' 	format($stepsH,0,0):$stpsH
+$file1=userdir+'/shapelib/rna_sincs'+$stpsH+'.RF'
+$file2=userdir+'/shapelib/rna_H2Osinc'+'.RF'
+cp($file1,$file2)  rm($file1)
+pwsadj('rna_H2Osinc','pwHs')
+BPmoveshape('rna_H2Osinc.RF')
+write('line3','The SLP pulse "shapelib/rna_H2Osinc.RF" has been created')
+

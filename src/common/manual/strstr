@@ -1,0 +1,62 @@
+****************************************************************************
+strstr(string1,string2):ret,s1,s2 - find position of one string in another
+strstr(string1,string2,'last'):ret,s1,s2 - find last position of one string in another
+****************************************************************************
+
+  This command sets ret to the starting position of the first
+  occurrence of string2 in string1.  The first character position is 1.
+  This command returns 1 if string2 is empty. It returns 0 if
+  string2 does not occur in string 1.  Two additional values can
+  be returned.  These correspond to the segments of string1 which
+  precede and follow string2, respectively.  If string2 does not exist
+  is string1, the two returned segments are both set to a null string.
+  This command can be used in a variety of ways.  The examples below
+  demonstrate determination of the file extension.  Also, it can
+  reproduce the UNIX basename and dirname commands.
+
+  For example,
+
+ n1='/export/home/vnmr1/vnmrsys/data/studies/s_2002-04-10_001/data/sems_01.fid'
+ n2='/s_2002-04-10_001/data/'
+ strstr(n1,n2):$ret,$s1,$s2
+
+ $ret will be set to 40
+ $s1 will be set to parent of the studies directory
+    '/export/home/vnmr1/vnmrsys/data/studies'
+ $s2 will be set to the file name of a saved data set.
+    'sems_01.fid'
+
+ The combined $s1+n2+$s2 will be equal to n1.
+
+  If a third optional 'last' argument is given, then strstr will find the
+  last occurrence of string2 in string1. The return arguments are the same.
+  This might be used to find the extension of a file name.  For example,
+
+ n1='/export/home/vnmr1/vnmrsys/data/old.studies/s_2002-04-10_001/data/sems_01.fid'
+ strstr(n1,'.'):$ret,$s1,$s2
+
+ $ret will be set to 36
+ $s1 will be set to 
+    '/export/home/vnmr1/vnmrsys/data/old'
+ $s2 will be set to
+    'studies/s_2002-04-10_001/data/sems_01.fid'
+
+However,
+
+ strstr(n1,'.','last'):$ret,$s1,$s2
+
+ $ret will be set to 74
+ $s1 will be set to 
+    '/export/home/vnmr1/vnmrsys/data/old.studies/s_2002-04-10_001/data/sems_01'
+ $s2 will be set to the extension.
+    'fid'
+
+  To find the directory and basename of a file path, the following can be used.
+
+ strstr(n1,'/','last'):$ret,$s1,$s2
+
+  The will set $s1 to the directory
+     '/export/home/vnmr1/vnmrsys/data/old.studies/s_2002-04-10_001/data'
+  and $s2 will be the basename
+     'sems_01.fid'
+

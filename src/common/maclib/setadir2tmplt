@@ -1,0 +1,118 @@
+"macro setadir2tmplt"
+"SET adir2tmplt based on svfdir2"
+"  $sample$ string is removed from svfdir2"
+"  $archivedir$ string is removed from svfdir2"
+
+exists('svfdir2','parameter','global'):$sd2ex
+exists('adir2tmplt','parameter'):$ad2ex
+if ($ad2ex=0) then return endif
+if ($sd2ex=0) then adir2tmplt='' return endif
+$adir2tmplt=svfdir2
+if ($adir2tmplt='') then
+   adir2tmplt=''
+   return
+endif
+
+
+string2array($adir2tmplt):$adir2tmplt
+array2strsv($adir2tmplt,'_'):$adir2tmplt
+
+"**************Remove $sample$ from the template******************"
+if $adir2tmplt='' then 
+	adir2tmplt=''
+	return
+endif
+$ret=0 $s1='' $s2=''
+strstr($adir2tmplt,'$sample$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adir2tmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adir2tmplt=$s1+'/'+$s2
+        endif
+endif
+
+"**************Remove $archivedir$ from the template******************"
+if $adir2tmplt='' then 
+        adir2tmplt=''
+        return
+endif
+$ret=0 $s1='' $s2=''
+strstr($adir2tmplt,'$archivedir$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adir2tmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adir2tmplt=$s1+'/'+$s2
+        endif
+endif
+
+"**************Remove $archivedir2$ from the template******************"
+if $adir2tmplt='' then 
+        adir2tmplt=''
+        return
+endif
+$ret=0 $s1='' $s2=''
+strstr($adir2tmplt,'$archivedir2$'):$ret,$s1,$s2
+if ($ret) then
+        $fs2=''
+        substr($s2,1,1):$fs2
+        if ($fs2='/') then
+                strstr($s2,'/'):$rx,$sx,$s2
+        endif
+        if ($s1='') or ($s1='/') then
+                $adir2tmplt=$s2
+        else
+                strstr($s1,'/'):$rx,$sx,$sy
+                if ($rx=1) then $s1=$sy endif
+                strstr($s1,'/','last'):$rx,$sx,$sy
+                if ($rx>0) and ($sy='') then
+                        $s1=$sx
+                endif
+                $adir2tmplt=$s1+'/'+$s2
+        endif
+endif
+
+"***************Remove any %Rn% from the template********************"
+strstr($adir2tmplt,'%R'):$rx2
+if ($rx2>0) then
+   $i=0
+   repeat
+        $rxi='' format($i,0,0):$rxi
+        $rx=1 $sx='' $sy=''
+        while $rx>0 do
+            strstr($adir2tmplt,'%R'+$rxi+'%'):$rx,$sx,$sy
+            if ($rx) then
+                $adir2tmplt=$sx+'_'+$sy
+            endif
+        endwhile
+        $i=$i+1
+   until $i > 9
+endif
+
+chkname($adir2tmplt,'alnum-/'):$sdum,$adir2tmplt
+adir2tmplt=$adir2tmplt
+"*************************************************************"
+

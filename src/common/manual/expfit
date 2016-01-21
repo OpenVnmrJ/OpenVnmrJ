@@ -1,0 +1,83 @@
+*****************************************************************************
+expfit  Unix program for making a least squares fit to a polynomial 
+	or exponential curve.
+*****************************************************************************
+
+        Syntax:	expfit option(s) <analyze.inp  >analyze.list
+
+   Description: The program expfit does a least-squares curve fitting to
+		the data supplied in 'analyze.inp'. Macros are available
+		for the specialized uses of analyze such as 't1' and 'kinetics'.
+		They avoid the need for the user to select options and get 
+		the correct file format.
+		In the regression mode, the type of curve fitting, 
+		('poly1',...) must be selected.  For regression 
+		(generalized curve fitting), the regression section in 
+		the Operation Manual gives the input file format and 
+		describes the menus that permit options choices 
+		indirectly through menu buttons.  
+
+	Files:	The text file analyze.inp which for t1, T2, kinetics,
+			 contact_time, and regression, contains:
+	  	<optional descriptive text line>				
+	  	<optional y-axis title - regression only>			
+	  	number of peaks(data sets)   number of (x,y) pairs per peak		
+			and, regression only, x scale type   y scale type
+		<NEXT  	number of (x,y) pairs for this peak > 
+		peak index    
+	  	x y   (first peak,first pair)					
+	  	x y   (first peak,second pair)				
+	  	......	
+		<NEXT  	number of (x,y) pairs for this peak > 
+		peak index    
+	  	x y   (second peak, first pair)	
+	  	......
+
+  		In the regression mode the line beginning with
+  		'NEXT' is inserted at the start of each data set 
+  		when the number of pairs per peak is variable.
+  		In this case the header contains the maximum number 
+  		of pairs per peak.
+	        For T1, T2, kinetics, and contact_time, information from the 
+		file 'fp.out' and from the array 'xarray' are used to 
+		construct this file, therefore, it is necessary to run 
+		'fp' prior to 'analyze'.  For regression, this file is 
+		made by running "expl('regression')".
+   	        For 'diffusion', 'contact_time', and, if not in regression
+		mode, poly1 and poly2, it is slightly different:	
+
+	  	List of <number> x-y data pairs	 (6 strings)
+	  	<Descriptive text line>					
+	  	<X-values>  	<Y-values>	 (2 strings without blanks)	
+	  	x y   (first peak,first pair)	 (continues as above)		
+
+		'expfit' also makes a file 'analyze.out', which is used
+		by 'expl' to display the results of the analysis in 
+		addition to output to the standard output which is
+		usually directed to 'analyze.list'.
+
+       Options:	The following options are implemented in 'analyze':
+
+		    T1		Perform T1 analysis (default)
+		    T2		Perform T2 analysis
+		    kinetics    Perform kinetics analysis
+					decreasing peak height
+		    increment   Perform kinetics analysis with
+					increasing peak height
+		    list	Extended listing for each peak
+		    diffusion   A special analysis for diffusion experiments
+		    contact_time A special analysis for solids cross-
+					polarization spin-lock experiments
+		    regression  Sets regression mode, signifies generalized
+					curve fitting with choices
+					poly1, poly2, poly3, and exp
+		    poly0	With regression, calculates mean
+		    poly1	With regression, a linear fitting
+		    poly2	With regression, a quadratic fitting
+		    poly3	With regression, a cubic curve fitting
+		    exp		With regression, an exponential curve fitting
+
+
+      Examples: expfit d2 T1 list <analyze.inp >analyze.out
+                expfit regression exp list <analyze.inp >analyze.out
+

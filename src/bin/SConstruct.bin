@@ -1,0 +1,141 @@
+#
+
+import os
+import sys
+import shutil
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+def isUbuntuVersion():
+   if os.path.exists("/etc/debian_version"):
+      value=1
+      f=open("/etc/issue",'r')
+      for line in f:
+         if (line.find("Ubuntu") > -1):
+            print line
+            break
+      f.close()
+   else:
+      value=0
+   return(value)
+
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+standAloneFileList = ['convertbru.c',
+                      'expfit.c',
+                      'fileowner.c',
+                      'findLinks.c',
+                      'expandphase.c',
+                      'import1Dspec.c',
+                      'jdxfid.c',
+                      'jdxspec.c',
+                      'listparam.c',
+                      'writetrace.c',
+                      'loginvjpassword.c',
+                      'PboxAdapter.c',
+                      'setGifAspect.c',
+                      'B0_cor.c',
+                      'ecc4.c',
+                      'header_change.c',
+                      'phcor5.c',
+                      'spins.c']
+
+acqStandAloneFileList = ['cptoconpar.c',
+                         'startmekillme.c']
+
+imageStandAloneFileList = ['read_raw_data.c']
+
+cleanFileList = ['cln2d.c',
+                'cln3d.c',
+                'fidx.c',
+                'inflateND.c',
+                'mkCSsch.c',
+                'proc_se.c',
+                'psg4cs.c',
+                'rsw.c',
+                'sch2fid.c',
+                'wmpro.c']
+
+# build environments
+env = Environment(CCFLAGS = '-O2 -Wall -m32',
+                  LINKFLAGS = '-m32')
+
+env64 = Environment(CCFLAGS = '-O2 -Wall -m64',
+                  LINKFLAGS = '-m64')
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# cleanInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+#                                 'options','standard','Biopack','biopack','bin')
+# if not os.path.exists(cleanInstallPath):
+#    os.makedirs(cleanInstallPath)
+
+# actual builds
+for i in standAloneFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+   if filename == 'jdxspec':
+      env.AddPostAction(tempBuildObj,
+                     Action('cd ' + vnmrInstallPath + ';rm -f jdxlspec; ln -s jdxspec jdxlspec'))
+
+for i in cleanFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = env64.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env64.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+
+if (platform!="darwin"):
+    for i in acqStandAloneFileList:
+       (filename, ext) = os.path.splitext(i)
+       tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+       env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+
+shutil.copy(os.path.join(cwd,'weight.h'),
+            os.path.join(vnmrInstallPath,'weight.h') )
+# The program fitspec contains NR code that cannot be open-sourced.
+# Copy the executable.
+if (platform!="darwin"):
+    src = os.path.join(cwd,'fitspec')
+else:
+    src = os.path.join(cwd,'macos','fitspec')
+
+shutil.copy(src, os.path.join(vnmrInstallPath,'fitspec') )
+os.system('chmod 755 '+os.path.join(vnmrInstallPath,'fitspec') )
+
+#image path
+stdImageBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,
+			'vnmr','bin')
+
+# make sure the path(s) exist
+if not os.path.exists(stdImageBinPath):
+   os.makedirs(stdImageBinPath)
+
+for i in imageStandAloneFileList:
+   (filename, ext) = os.path.splitext(i)
+   imageBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(imageBuildObj,
+                     Action(Copy(stdImageBinPath, os.path.join(cwd, filename))))
+

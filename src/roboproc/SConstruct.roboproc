@@ -1,0 +1,202 @@
+#
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+vnmrPath = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'acqerrmsges.h',
+                'errorcodes.h',
+                'acquisition.h' ]
+
+vwacqPath = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = [ 'hostAcqStructs.h',
+                 'acqcmds.h' ]
+
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'chanLib.h',
+                 'chanLibP.h',
+                 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'semLib.h',
+                 'shrMLib.h',
+                 'sockets.h' ]
+ncommFileList = ['errLogLib.c']
+
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = [ 'parser.h',
+                   'hostMsgChannels.h',
+                   'shrstatinfo.h',
+                   'shrexpinfo.h' ]
+expProcFileList = ['excepthandler.c',
+                   'parser.c',
+                   'daemon.c']
+
+multiBuildFileList = ['rackObj.c',
+                      'gilsonObj.c',
+                      'gilfuncs.c',
+                      'tclfuncs.c',
+                      'timerfuncs.c',
+                      'termhandler.c',
+                      'iofuncs.c' ,
+                      'errLogLib.c' ]
+
+roboProcFileList = ['robocmds.c',
+                    'roboproc.c',
+                    'robofuncs.c',
+                    'hrm_scheduler.c',
+                    'crc16.c']
+
+roboProcStandAloneFileList = ['gilalign.c']
+
+gilScriptFileList = ['gilscript.c']
+
+nmsStandAloneFileList = ['nmsalign.c']
+termHandlerFileList   = ['termhandler.c']
+
+ptStandAloneFileList = ['errLogLib.c',
+                        'ptalign.c']
+
+# build environment
+roboProcEnv = Environment(CCFLAGS    = '-O2 -m32',
+                          CPPDEFINES = ['LINUX', 'DEBUG'],
+                          LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                          CPPPATH    = [cwd,
+                                        os.path.join(ovjtools, 'tcl', 'srcTcl')])
+
+gilAlignEnv = roboProcEnv.Clone(CPPDEFINES = ['LINUX', 'DEBUG', 'GILALIGN' ] )
+gilScriptEnv = roboProcEnv.Clone(CPPDEFINES = ['LINUX', 'DEBUG', 'GILALIGN', 'GILSCRIPT'] )
+
+# actual builds
+roboprocBuildList = []
+for i in multiBuildFileList:
+   roboprocBuildList.append(roboProcEnv.StaticObject(target = i + 'robo.o',
+                                                     source = i))
+
+roboprocTarget = 'Roboproc'
+roboproc = roboProcEnv.Program(target  = roboprocTarget,
+                               source  = [roboProcFileList,
+                                          roboprocBuildList,
+                                          expProcFileList],
+                               LIBPATH = [cwd,
+                                          ncommPath,
+                                          os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                          os.path.join(os.sep, 'vnmr','lib')],
+                               LIBS    = ['tcl8.4', 'acqcomm','m'])
+
+#
+# these linked preaction will cause reuqire headers and source to be symlinked 
+# into this directory
+#
+
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(roboProcEnv, roboprocTarget, cwd, vwacqPath, vwacqHdrList)
+
+gilScriptBuildList = []
+for i in multiBuildFileList:
+   gilScriptBuildList.append(gilScriptEnv.StaticObject(target = i + 'gilScript.o',
+                                                       source = i))
+
+gilscript = gilScriptEnv.Program(target  = 'Gilscript',
+                                 source  = [gilScriptFileList,
+                                            gilScriptBuildList],
+                                 LIBPATH = [cwd,
+                                            ncommPath,
+                                            os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                            os.path.join(os.sep, 'vnmr','lib')],
+                                 LIBS    = ['tcl8.4', 'acqcomm','m'])
+
+gilAlignBuildList = []
+for i in multiBuildFileList:
+   gilAlignBuildList.append(gilAlignEnv.StaticObject(target = i + 'gilAlign.o',
+                                                     source = i))
+
+gilalign = gilAlignEnv.Program(target  = 'gilalign',
+                               source  = [roboProcStandAloneFileList,
+                                          gilAlignBuildList],
+                               LIBPATH = [cwd,
+                                          os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                          os.path.join(os.sep, 'vnmr','lib')],
+                               LIBS    = ['m','tcl8.4' ])
+
+nmsTermHandlerObj = roboProcEnv.StaticObject(target = termHandlerFileList[0] + 'nmsalign.o',
+                                             source = termHandlerFileList[0])
+nmsalign = roboProcEnv.Program(target  = 'nmsalign',
+                               source  = [nmsStandAloneFileList,
+                                          nmsTermHandlerObj],
+                               LIBPATH = [cwd,
+                                          os.path.join(cwd, os.pardir, 'ncomm'),
+                                          os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                          os.path.join(os.sep, 'vnmr','lib')],
+                               LIBS    = ['tcl8.4', 'acqcomm'])
+
+ptTermHandlerObj = roboProcEnv.StaticObject(target = termHandlerFileList[0] + 'ptalign.o',
+                                            source = termHandlerFileList[0])
+ptalign = roboProcEnv.Program(target  = 'ptalign',
+                              source  = [ptStandAloneFileList,
+                                         ptTermHandlerObj],
+                              LIBPATH = [cwd,
+                                         os.path.join(cwd, os.pardir, 'ncomm'),
+                                         os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                         os.path.join(os.sep, 'vnmr','lib')],
+                              LIBS    = ['tcl8.4', 'acqcomm'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+roboProcEnv.AddPostAction(roboproc,
+                          Action(Copy(vnmrInstallPath, os.path.join(cwd, roboprocTarget))))
+
+#copy gilalign to the right places
+gilalignInstallPath1 = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+		'options','standard','Gilson','bin')
+if not os.path.exists(gilalignInstallPath1):
+   os.makedirs(gilalignInstallPath1)
+gilAlignEnv.AddPostAction(gilalign, 
+		Action(Copy(gilalignInstallPath1, os.path.join(cwd, 'gilalign'))))
+
+# gilalignInstallPath2 = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+# 		'options','passworded','768AS','bin')
+# if not os.path.exists(gilalignInstallPath2):
+#    os.makedirs(gilalignInstallPath2)
+# gilAlignEnv.AddPostAction(gilalign, 
+# 	Action(Copy(gilalignInstallPath2, os.path.join(cwd, 'gilalign'))))
+# gilScriptEnv.AddPostAction(gilscript, 
+# 	Action(Copy(gilalignInstallPath2, os.path.join(cwd, 'Gilscript'))))
+
+#
+# TODO: All but Roboproc are password protected
+#

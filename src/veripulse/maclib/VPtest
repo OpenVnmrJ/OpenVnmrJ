@@ -1,0 +1,363 @@
+"macro VPtest"
+" VPtest - handle VeriPulse test selection"
+if ($# = 0) then
+  $action = 'init'
+else
+  $action = $1
+endif
+$max=50
+if ($action = 'init') then
+
+  destroy('VPtype VPtestID VPtests VPlabel VPlabel2 VPcheckbox VPcheckbox2 VPshow VPenable'):$e
+  destroy('VPorder VPmacro VPsample VPsamplename VPduration VPalock VPwshim VPshimmethod VPtune'):$e
+  destroy('VPtest VPresults VPresult VPresultLabel'):$e
+  create('VPtype','string')
+  create('VPtestID','string')
+  create('VPtests','string')
+  create('VPlabel','string')
+  create('VPlabel2','string')
+  create('VPcheckbox','string')
+  create('VPcheckbox2','string')
+  create('VPshow','string')
+  create('VPenable','string')
+  create('VPtest','string')
+  create('VPresults','string')
+  create('VPresult','string')
+  create('VPresultLabel','string')
+
+  create('VPorder','string')
+  create('VPmacro','string')
+  create('VPsample','string')
+  create('VPsamplename','string')
+  create('VPduration','real')
+  create('VPalock','string')
+  create('VPwshim','string')
+  create('VPshimmethod','string')
+  create('VPtune','string')
+
+  setgroup('VPtype','display')
+  setgroup('VPtestID','display')
+  setgroup('VPtests','display')
+  setgroup('VPlabel','display')
+  setgroup('VPlabel2','display')
+  setgroup('VPcheckbox','display')
+  setgroup('VPcheckbox2','display')
+  setgroup('VPshow','display')
+  setgroup('VPenable','display')
+  setgroup('VPtest','display')
+  setgroup('VPresults','display')
+  setgroup('VPresult','display')
+  setgroup('VPresultLabel','display')
+
+  setgroup('VPorder','display')
+  setgroup('VPmacro','display')
+  setgroup('VPsample','display')
+  setgroup('VPsamplename','display')
+  setgroup('VPduration','display')
+  setgroup('VPalock','display')
+  setgroup('VPwshim','display')
+  setgroup('VPshimmethod','display')
+  setgroup('VPtune','display')
+    
+  destroy('VPsampID VPsolvent VPpn VPloc VPsampLabel VPsampUsed'):$e
+  create('VPsampID','string')
+  create('VPsolvent','string')
+  create('VPpn','string')
+  create('VPloc','string')
+  create('VPsampLabel','string')
+  create('VPsampUsed','string')
+  setgroup('VPsampID','display')
+  setgroup('VPsolvent','display')
+  setgroup('VPpn','display')
+  setgroup('VPloc','display')
+  setgroup('VPsampLabel','display')
+  setgroup('VPsampUsed','display')
+
+  destroy('VPtestfile'):$e
+  create('VPtestfile','string')
+  setgroup('VPtestfile','display')
+  destroy('VPsamplefile'):$e
+  create('VPsamplefile','string')
+  setgroup('VPsamplefile','display')
+  destroy('VPprobeindex'):$e
+  create('VPprobeindex','integer')
+  setgroup('VPprobeindex','display')
+
+  destroy('VPprobestyle VPprobetest VPprobesamples VPprobetune VPprobemethod VPproberfsize VPprobelabel'):$e
+  create('VPprobestyle','string')
+  create('VPprobetest','string')
+  create('VPprobesamples','string')
+  create('VPprobetune','string')
+  create('VPprobemethod','string')
+  create('VPproberfsize','string')
+  create('VPprobelabel','string')
+  setgroup('VPprobestyle','display')
+  setgroup('VPprobetest','display')
+  setgroup('VPprobesamples','display')
+  setgroup('VPprobetune','display')
+  setgroup('VPprobemethod','display')
+  setgroup('VPproberfsize','display')
+  setgroup('VPprobelabel','display')
+  $i=0
+  exists('VPprobes','veripulse'):$e,$path
+  if (not $e) then
+    write('line3','Probes list not found')
+    return
+  endif
+  $attrs='' $val=''
+  readfile($path,'$attrs','$val','','local'):$num
+
+//  write('line3','%d entries found',$num)
+  $i=0
+  while ($i < $num) do
+    $i=$i+1
+    VPprobestyle[$i]=$attrs[$i]
+    substr($val[$i],1):VPprobetest[$i]
+    substr($val[$i],2):VPprobesamples[$i]
+    substr($val[$i],3):VPprobetune[$i]
+    substr($val[$i],4):VPprobemethod[$i]
+    substr($val[$i],5):VPproberfsize[$i]
+    substr($val[$i],2,'delimiter',';\n'):VPprobelabel[$i]
+  endwhile
+endif
+
+
+if ($action = 'read') and (VPtestfile <> '') then
+  exists(VPtestfile,'veripulse'):$e,$path
+  if (not $e) then
+    $j=0
+    while $j < $max do
+      $j=$j+1
+      VPtype[$j]=''
+      VPshow[$j]=''
+    endwhile
+    VPtype[2]='Label'
+    VPlabel[2]='Test list not found for selected probe style'
+    return
+  endif
+//  write('line3','found list at %s',$path)
+  VPtype='' VPtestID='' VPtests='' VPlabel='' VPlabel2='' VPcheckbox='' VPcheckbox2='' VPshow='' VPenable='' VPtest='' VPresults='' VPresult='' VPresultLabel=''
+  VPorder='' VPmacro='' VPsample='' VPsamplename='' VPduration=0 VPalock='' VPwshim='' VPshimmethod='' VPtune='' VPsampID='' VPsolvent='' VPpn='' VPloc='' VPsampLabel='' VPsampUsed=''
+//  write('line3','%d entries found',$num)
+  $attrs='' $val=''
+  readfile($path,'$attrs','$val','','local'):$num
+  $i=0
+  $j=0
+  $ii=0
+  $jj=0
+  $show=0
+  $res=0
+  $k=0
+  while ($i < $num) do
+    $i=$i+1
+    if ($attrs[$i]='Show') then
+      substr($val[$i],1,'delimiter',';\n'):$mac
+      doMacro($mac):$res
+      $show=$i
+    elseif ($attrs[$i]='Info') then
+      $k=$k+1
+      substr($val[$i],1):VPorder[$k]
+      substr($val[$i],2):VPmacro[$k]
+      substr($val[$i],3):VPsample[$k]
+      substr($val[$i],4):VPsamplename[$k]
+      substr($val[$i],5):VPduration[$k]
+      substr($val[$i],6):VPalock[$k]
+      substr($val[$i],7):VPwshim[$k]
+      substr($val[$i],8):VPshimmethod[$k]
+      substr($val[$i],9):VPtune[$k]
+    elseif ($attrs[$i]='Report') then
+      $ii=$ii+1
+      substr($val[$i],1):VPtest[$ii]
+      substr($val[$i],2):VPresults[$ii]
+    elseif ($attrs[$i]='Spec') then
+      $jj=$jj+1
+      substr($val[$i],1):VPresult[$jj]
+      substr($val[$i],2,'delimiter',';\n'):VPresultLabel[$jj]
+    else
+      $j=$j+1
+      VPcheckbox[$j]=''
+      VPcheckbox2[$j]=''
+      VPlabel2[$j]=''
+      VPtype[$j]=$attrs[$i] 
+      $type=''
+      substr(VPtype[$j],1,5):$type
+      if ($type=VPtype[$j]) then
+        VPenable[$j]='y'
+      else
+        VPenable[$j]='n'
+        VPtype[$j]=$type
+      endif
+      if ($type='Label') then
+        VPlabel[$j]=$val[$i]
+        VPtestID[$j]=''
+      elseif ($type='Test1') then
+        strstr($val[$i],' '):$e,VPtestID[$j],VPlabel[$j]
+      elseif ($type='Test2') then
+        strstr($val[$i],' '):$e,VPtestID[$j],$s2
+        strstr($s2,'CHECKBOX'):$e,VPlabel[$j],VPlabel2[$j]
+      elseif ($type='Test3') then
+        substr($val[$i],1,'delimiter',';\n'):VPtestID[$j]
+        substr($val[$i],2,'delimiter',';\n'):VPlabel[$j]
+      elseif ($type<>'Spec') then
+        write('error','Unknown keyword %s in VeriPulse test list',VPtype[$j]):$s2
+        VPtype[$j]='Label'
+        VPlabel[$j]=$s2
+      endif
+      if ($show <> 0) then
+        format($res,0,0):VPshow[$j]
+        if ($res = -1) then
+          substr($val[$show],2,'delimiter',';\n'):$mac
+          if ($mac <> '') then
+            VPlabel[$j]=$mac
+          endif
+          if (VPtype[$j] = 'Test2') then
+            VPtype[$j]='Test1'
+          endif
+        endif
+        $show=0
+      else
+        VPshow[$j]='1'
+      endif
+    endif
+  endwhile
+  while $j < $max do
+    $j=$j+1
+    VPtype[$j]=''
+    VPshow[$j]=''
+  endwhile
+elseif ($action = 'readsamp') and (VPsamplefile <> '') then
+  $i=0
+  exists(VPsamplefile,'veripulse'):$e,$path
+  if (not $e) then
+    write('line3','Samples list not found')
+    return
+  endif
+//  write('line3','found samples at %s',$path)
+
+  $attrs='' $val=''
+  readfile($path,'$attrs','$val','','local'):$num
+
+//  write('line3','%d entries found',$num)
+  $i=0
+  while ($i < $num) do
+    $i=$i+1
+    VPsampID[$i]=$attrs[$i]
+    substr($val[$i],1):VPsolvent[$i]
+    substr($val[$i],2):VPpn[$i]
+    if (traymax < 9) then
+      VPloc[$i]='NA'
+    else
+      substr($val[$i],3):VPloc[$i]
+    endif
+    substr($val[$i],2,'delimiter',';\n'):VPsampLabel[$i]
+    VPsampUsed[$i]=''
+  endwhile
+
+  {$0}('makelist')
+elseif ($1 = 'defaultsample') then
+  $spath=userdir+'/veripulse/'+VPsamplefile
+  exists($spath,'file'):$e
+  if ($e) then
+    delete($spath)
+  endif
+  {$0}('readsamp')
+elseif ($1 = 'enableall') then
+  $j=0
+  $num=size('VPtype')
+  while ($j < $num) do
+    $j=$j+1
+    if (VPshow[$j]='1') then
+      if (VPenable[$j]='y') then
+        VPcheckbox[$j]='y'
+      else
+        VPcheckbox[$j]=''
+      endif
+    endif
+  endwhile
+  {$0}('makelist')
+elseif ($1 = 'disableall') then
+  $j=0
+  $num=size('VPtype')
+  while ($j < $num) do
+    $j=$j+1
+    VPcheckbox[$j]=''
+  endwhile
+  {$0}('makelist')
+elseif ($1 = 'makelist') then
+  $j=0
+  $numTest=size('VPtype')
+  $tests=''
+  while ($j < $numTest) do
+    $j=$j+1
+    if (VPtype[$j]='Test1') then
+      $tests[$j]=VPtestID[$j]
+    elseif (VPtype[$j]='Test2') then
+      if (VPcheckbox2[$j]<>'y') then
+        substr(VPtestID[$j],1,'delimiter',','):$tests[$j]
+      else
+        substr(VPtestID[$j],2,'delimiter',','):$tests[$j]
+      endif
+    elseif (VPtype[$j]='Test3') then
+      doMacro(VPtestID[$j]):$tests[$j]
+    else
+      $tests[$j]=''
+    endif
+  endwhile
+  
+    $numSamp=size('VPsampUsed')
+    $j=0
+    while ($j < $numSamp) do
+      $j=$j+1
+      VPsampUsed[$j]=''
+    endwhile
+  $j=0
+  $numExp=size('VPorder')
+  VPtests=''
+  $i=0
+  while ($j < $numExp) do
+    $j=$j+1
+    teststr('$tests',VPorder[$j],'local'):$e
+    if ($e > 0) then
+      if (VPcheckbox[$e]='y') then
+        $i=$i+1
+        VPtests[$i]=VPorder[$j]
+      endif
+    endif
+  endwhile
+  $showfile=userdir+'/persistence/IPtestschedule'
+  write('reset',$showfile)
+  write('file',$showfile,'%-35s     %20s','Test/calibration','Location  Minutes')
+  write('file',$showfile,'==========================================================')
+  $totaltime=0
+  $lab2=''
+  if (VPtests[1] <> '') then
+    $numTest=size('VPtests')
+    $j=0
+    while ($j < $numTest) do
+      $j=$j+1
+      teststr('VPorder',VPtests[$j]):$dur
+      $totaltime=$totaltime+VPduration[$dur]
+      teststr('VPsampID',VPsample[$dur]):$e
+      if ($e) then
+        VPsampUsed[$e]='y'
+      endif
+      teststr('$tests',VPtests[$j],'local'):$lab
+      if (VPloc[$e] = 'NA') then
+        $loc='NA'
+      else
+        $loc=VPloc[$e]
+      endif
+      if (VPtype[$lab] = 'Test2') and (VPcheckbox2[$lab] = 'y') then
+        substr(VPlabel[$lab]+VPlabel2[$lab],'squeeze',' '):$lab2
+      else
+        $lab2=VPlabel[$lab]
+      endif
+      write('file',$showfile,' %-45s %-3s   %-3.0f',$lab2, $loc, VPduration[$dur])
+    endwhile
+    $totaltime=$totaltime/60
+  endif
+  write('file',$showfile,'==========================================================')
+//  write('file',$showfile,'                             Total testing time %.1f hours',$totaltime)
+  write('file',$showfile,'Total testing time                              %.1f hours',$totaltime)
+
+endif

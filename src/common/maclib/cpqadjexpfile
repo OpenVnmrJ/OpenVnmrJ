@@ -1,0 +1,69 @@
+"macro cpqadjexpfile"
+
+     if ($1 = '') or ($2='') then return endif
+     exists($2,'directory'):$direx
+     if ($direx=0) then return endif
+     if ($# < 4) then $4=pslabel endif
+     if ($# < 5) then $5='' endif
+
+     $expfile=$2+'/ACQlist'
+     $line=''
+     shell('touch '+$expfile):$dum
+     shell('touch '+$expfile+'1'):$dum
+     shell('touch '+$expfile+'2'):$dum
+
+     shell('(cat '+$expfile+' | grep -w Completed > '+$expfile+'1)'):$dum
+     shell('(cat '+$expfile+' | grep -vw Completed | grep -v \'^'+$1+' \' > '+$expfile+'2)'):$dum
+
+     $snode='xx000'
+
+     if ($3 = 'Completed') then
+	write('file',$expfile+'1','%s  %d  %s  %s  %s',$1,ACQtime,$4,$snode,$3)
+     endif
+     if ($3 = 'Active') then
+	shell('(sed -e \'s|Active|Error|g\' '+$expfile+'2 >> '+$expfile+'1)'):$dum
+     else
+     	shell('(cat '+$expfile+'2 >> '+$expfile+'1)'):$dum
+     endif
+     if ($3 <> 'Completed') and ($3<>'') then
+        write('file',$expfile+'1','%s  %d  %s  %s  %s',$1,ACQtime,$4,$snode,$3)
+     endif
+
+	shell('mv '+$expfile+'1 '+$expfile):$dum
+	shell('rm -f '+$expfile+'2'):$dum
+
+    $archsamp='' strstr($2,'/dirinfo/'):$ret,$archsamp
+    if ($ret) then
+        $LIST='ACQlist','explist','EXPLIST','LONGLIST'
+        if ($3='Completed') then
+	  strstr($4,'CMD'):$iscmd
+	  if ($iscmd) then
+	    cplog($1,'cmd')
+	    $LIST='fidlog',$LIST
+	  endif
+        endif
+	xmhaha_subSQ($archsamp,$LIST)
+    endif
+
+    if (auto='y') then
+        $ret=0 $nodes=''
+        xmhaha_baQ('buildQ'):$ret,$nodes
+        if ($ret=1) then $nodes='' endif
+        if ($ret>0) or ($nodes<>'') then
+           xmhaha_sqwatch('init',$nodes)
+        endif
+    else
+       expactive:$isactive
+       if (($5 = 'force') or ($isactive)) then
+	 iscurrentfid('',archivedir+'/'+sample):$iscurrent
+	 if ($iscurrent) then
+		$ret=0 $nodes=''
+		xmhaha_baQ('buildQ'):$ret,$nodes
+		if ($ret=1) then $nodes='' endif
+		if ($ret>0) or ($nodes<>'') then
+		    xmhaha_sqwatch('init',$nodes)
+		endif
+	 endif
+	 SQDisplay('refresh')
+      endif
+    endif 

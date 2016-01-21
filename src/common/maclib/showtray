@@ -1,0 +1,136 @@
+"macro showtray"
+bgmode_is:$bg
+
+if ($# < 1) then
+   expactive('auto'):$isauto
+   if ($isauto) then $1='auto' else $1='enter' endif
+endif
+
+if ($1 = 'openbutton') then
+    traydisplay = 'y'
+    showtray('toggle', 'auto')
+    return
+
+elseif ($1 = 'closebutton') then
+    if ((seqfil='Submitq') or (customflag='y') or (cppauseflg='y')) then
+        showtray('close')
+    else
+        showtray('closesq')
+    endif
+    return
+endif
+
+if ((auto='y') or ($bg)) and ($1<>'update') then
+	return
+endif
+
+$dir=$1
+$file=''
+if ($1 = '') then return endif
+if ($dir='auto') then $dir=autodir endif
+if ($dir='enter') then $dir=globalenter endif
+
+"************************************************************************"
+if ($dir='close') or ($dir='closesq') then
+   $curtray='current'
+   if (autodir<>cpautodir) then
+        $curtray='archive'
+   endif
+
+   if ($dir='closesq') and (sqdisplay[1]='tray') and ($curtray='archive') then
+	vnmrjcmd('SQ delete tmpstudy')
+	autodir=cpautodir
+   endif
+   vnmrjcmd('tray close')
+//   autodir=cpautodir
+   on('opentray','global'):$opex
+   if ($opex < 0) then
+	create('opentray','string','global')
+   endif
+   setprotect('opentray','on',256,'global')
+   opentray='close','close',''
+   writeparam(userdir+'/global','opentray','global','add')
+   traydisplay='y'
+   if ($dir='closesq') and ($curtray='archive') then
+	SQDisplay(sqdisplay[1])
+//	xmhaha('autoSQ',autodir)
+   endif
+   return
+endif
+
+"************************************************************************"
+if (traydisplay='n') then return endif
+if (traymax<2) then return endif
+"************************************************************************"
+if ($dir='toggle') then
+   if (opentray[2]='close') or (opentray[2]='') then
+	showtray($2)
+   else
+   	exists(opentray[1]+'/enterQ','file'):$isauto
+   	vnmrjcmd('edit tray')
+   	if ($isauto) then opentray[1]='auto' else opentray[1]='enter' endif
+   endif
+   return
+endif
+
+"************************************************************************"
+if ($dir='update') then
+	"******update the tray display ONLY if the current*****"
+	"***display autodir is same as arg2*****"
+	"***This avoids conflict when archives are being reviewed"
+	"***in the foreground when auotmation is in progress"
+     if (opentray[2]=$2) and (opentray[1]<>'close') and (opentray[1]<>'') then
+	vnmrjcmd('tray update')
+     endif
+   return
+endif
+
+"************************************************************************"
+   exists($dir,'directory'):$ex
+   if ($ex=0) then
+	write('error','Directory %s not found',$dir)
+	return
+   endif
+
+   exists($dir+'/enterQ','file'):$isauto
+   if ($isauto=0) then
+   	shell('basename '+$dir):$file
+   else
+        $file='enterQ'
+   endif
+
+	$rack='' $zone='' $subtray=''
+	format(vrack,'lower'):$rack
+	format(vzone,'lower'):$zone
+	$subtray='/RACK'+$rack+'ZONE'+$zone
+        if ($rack='') or ($zone='') then $subtray='' endif
+
+        exists($dir+'/'+$file+'.macdir/studytray'+$subtray,'directory'):$ex
+        if ($ex=0) then
+                shell('mkdir -p '+$dir+'/'+$file+'.macdir/studytray'+$subtray):$dum
+	        shell('chmod -R g+rw '+$dir+'/'+$file+'.macdir/studytray'):$dum
+        endif
+    if ($file <> 'enterQ') then
+        shell('touch '+$dir+'/'+$file+'.macdir/studytray/enterQ'):$dum
+        autodir=$dir+'/'+$file+'.macdir/studytray'
+    else
+	autodir=$dir
+    endif
+        vnmrjcmd('LOC add automation '+autodir)
+	vnmrjcmd('tray close')
+        vnmrjcmd('tray update')	
+	on('opentray','global'):$opex
+	if ($opex < 0) then
+        	create('opentray','string','global')
+   	endif
+	setprotect('opentray','on',256,'global')
+	$curexp='' $expnum=0
+	jexp:$expnum,$curexp
+	if ($isauto) then
+		opentray='auto',$dir,$curexp
+	else
+		opentray='enter',$dir,$curexp
+	endif
+	writeparam(userdir+'/global','opentray','global','add')
+        vnmrjcmd('edit tray')
+	xmhaha('closeSQ')

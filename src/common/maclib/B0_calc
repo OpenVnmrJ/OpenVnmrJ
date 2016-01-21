@@ -1,0 +1,155 @@
+"macro B0_calc"
+"************************************************************"
+"           MACRO FOR FID FREQUENCY CORRECTION               "
+"           Written by:  Ivan TKAC                           "
+"           Last update: Feb 09, 2007                        "
+"************************************************************"
+
+"-------------------------------------------------------------"
+"   CHECK OF FILE                                             "
+"-------------------------------------------------------------"
+$sp=sp $wp=wp $vs=vs $sc=sc $wc=wc $vp=vp $lp=lp $rp=rp
+$gf=gf $gfs=gfs $lb=lb $fn=fn
+$axis=axis $rfp=rfp $rfl=rfl
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+
+$ex = 1
+$res1 = 'n'
+exists('fid.raw','file'):$ex
+if ($ex = 0) then
+   exists('fid.orig','file'):$ex
+   if ($ex = 1) then
+      input('Restore the original FID from fid.orig? (y/n): (<ret> no) '):$res1
+      if ($res1 = 'y') then
+         shell('mv fid.orig fid.raw')
+         shell('cp fid.raw fid')
+      endif
+   else
+      shell('cp fid fid.raw')
+   endif
+else
+   input('Restore the original FID? (y/n): (<ret> no) '):$res1
+   if ($res1 = 'y') then
+      shell('cp fid.raw fid')
+   endif
+endif
+
+$ex = 1
+$res2 = 'n'
+exists('procpar.orig','file'):$ex
+if ($ex = 1) then
+   input('Restore the original procpar? (y/n): (<ret> no) '):$res2
+   if ($res2 = 'y') then
+      shell('cp procpar.orig procpar')
+   endif
+endif
+
+if (($res1 = 'y') or ($res2 = 'y')) then
+   rt($filename)
+   ho=0 vo=0
+   sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+   lb=$lb gf=$gf gfs=$gfs fn=$fn
+   axis=$axis rfp=$rfp rfl=$rfl
+   
+   wft vo=0 ho=0 dss dscale
+   $cont = 'n'
+   input('Continue? (y/n) '):$cont
+   if not ($cont = 'y') then
+      abort
+   endif
+endif
+
+
+"-------------------------------------------------------------"
+"   FREQUENCY SHIFT CALCULATION                               "
+"-------------------------------------------------------------"
+exists('freq_list','file'):$exist_fl
+if ($exist_fl = 1) then
+   rm('freq_list')
+endif
+
+write('file','freq_list',sw)
+write('file','freq_list',lsfid)
+axis='h'
+
+
+if (nt[1] = 1) then
+   av
+   write('line3','Default mode is ABSOLUTE VALUE')
+   input('Select the mode for peak picking (av/ph): (<ret> AV) '):$mode
+   if ($mode = 'ph') then ph endif
+endif
+
+if (nt[1] > 1) then
+   ph
+   write('line3','Default mode is PHASE SENSITIVE')
+   input('Select the mode for peak picking (av/ph): (<ret> PH) '):$mode
+   if ($mode = 'av') then av endif
+endif
+
+ds(1)
+peak:$heght,$freq1
+cr=$freq1 rl(0)
+
+$i=1
+while ($i < arraydim+1)
+do ds($i) dscale  
+   peak:$heght,$freq
+   format($freq,8,3):$form_freq
+   write('file','freq_list',$form_freq)
+   $i=$i+1
+endwhile
+
+"-------------------------------------------------------------"
+"   DC OFFSET AND FREQUNCY CORRECTION OF FIDS                 "
+"-------------------------------------------------------------"
+// $homedir=''
+// shell('echo $HOME'):$homedir
+
+shell('mv fid fid.tmp')
+// $program1 = $homedir + '/bin/DCoffset'
+// shell($program1 + ' fid.tmp fid.dc')
+ 
+exists('B0_cor','bin'):$e,$program2
+// $program2 = $homedir + '/bin/B0_cor'
+shell($program2 + ' fid.tmp fid freq_list')
+// shell('rm fid.tmp')
+write('line3','FREQUENCY SHIFT PERFORMED !')
+cd('..')
+rt($filename)
+
+
+"-------------------------------------------------------------"
+"   DISPLAY OF CORRECTED SPECTRA                              "  
+"-------------------------------------------------------------"
+ho=0 vo=0
+sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+lb='n' gf=$gf gfs=0 fn=$fn
+axis=$axis rfp=$rfp rfl=$rfl
+if (nt[1] = 1) then av endif
+wft dss dscale
+
+$ok = ''
+input('Is the result of B0 correction OK? (y/n): (<ret> OK) '):$ok
+if (($ok = 'y') or ($ok = '')) then
+   shell('rm '+$filename+'/fid.tmp')
+else
+   shell('rm '+$filename+'/fid')
+   shell('mv '+$filename+'/fid.tmp '+$filename+'/fid')
+   rt($filename)
+   write('line3','Original data retrieved!')
+   ho=0 vo=0
+   sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+   lb='n' gf=0.15 gfs=0 fn=32k
+   axis=$axis rfp=$rfp rfl=$rfl
+   wft dss dscale
+endif
+
+

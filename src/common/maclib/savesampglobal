@@ -1,0 +1,36 @@
+"macro savesampglobal"
+" savesampglobal "
+//uses savemodule macro
+
+if ($# < 1) then $1='' endif
+if ($1='') then
+    Automacrodir:$1
+    if $1='' then return endif
+endif
+
+// text_string is a unique parameter
+$txt=0
+if ($# < 2) then $txt=1 else
+    if ($2='text_string') then $txt=1 endif
+endif
+if ($txt) and ($1<>'cp') then
+    setprotect('text_string','on',256)
+    text_string=''
+    $text=''
+    $key=curexp+'/text'
+    $textlines=0 $ret=0
+    lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+    if ($ret>1) then text_string=$text endif
+    while ($ret>1) do
+            lookup('mfile',$key,'readline',1,'filekey'):$text,$key,$ret
+            if ($ret>1) then text_string=text_string,$text endif
+    endwhile
+endif
+// text_string is adjusted
+
+if ($# < 2) then
+    savemodule('sampleglobal',$1)
+    if ($1='cp') then Studyprobecal('copy',curexp) endif
+else
+    savemodule('sampleglobal',$1,'current',$2)
+endif

@@ -1,0 +1,175 @@
+"macro process_DEPT"
+"****************************************************************************"
+wft('nods',1)
+exists('execprocess','parameter'):$exex
+if ($exex) then $execprocess=execprocess endif
+exists('deptdim','parameter','processed'):$dex
+if ($dex) then
+   setvalue('deptdim','','processed')
+endif
+
+$qsize=size('qphase')
+if ($qsize=1) then
+    if ($exex) then execprocess='' endif
+    process
+    if ($exex) then execprocess=$execprocess endif
+    return
+endif
+
+"****************************************************************************"
+if ($# < 1) then $1='Call' endif
+if ($1<>'Cq') and ($1<>'CHn') and ($1<>'Call') then
+	write('error','Supported arguments: Cq, CHn or Call')
+	return
+endif
+
+  $multdim=arraydim/2
+  jexp:$cexp
+  if ($1='Cq') then 
+	$pdim=1
+  elseif ($1='Call') and ($multdim<3) then
+	$pdim=$multdim+1
+  else
+	$pdim=$multdim
+  endif
+  wft(1,$pdim,1)
+  $sp=sp $wp=wp
+  select(1) f ai full vp=0
+  if (mult=1.5) then aptaph else aph endif
+  if ($pdim>1) then
+    vsadj(wcmax/$pdim/2) dssa
+  else
+    ds
+  endif
+  $addsuborig=addsubexp
+  nextexp:addsubexp
+  $addsubpath='' write('line3','%s/exp%d',userdir,addsubexp):$addsubpath
+  clradd:$dum
+  s9
+  tmpcopy('depttmp')
+
+"************************************************************************"
+  if ($1='Cq') or ($1='Call') then
+    wft('all','nods')
+    if (array='qphase,mult') then
+	$i=1
+	repeat
+	   select($i) add:$dum
+	   $i=$i+1
+	until $i > $multdim
+	repeat
+	   select($i) sub
+	   $i=$i+1
+	until $i > arraydim
+    else
+	$i=1
+	repeat
+	   select($i) add:$dum select($i+1) sub
+	   $i=$i+2
+	until $i > arraydim
+    endif
+	rm(curexp+'/acqfil/fid'):$dum
+	copy($addsubpath+'/acqfil/fid',curexp+'/acqfil'):$dum
+	copy($addsubpath+'/procpar',curexp):$dum
+	copy($addsubpath+'/curpar',curexp):$dum
+	fread(curexp+'/curpar','current','reset')
+	fread(curexp+'/procpar','processed','reset')
+    setvalue('arraydim',1)
+    setvalue('arraydim',1,'processed')
+    mult=mult[1]
+    qphase=qphase[1]
+    setvalue('mult',mult,'processed')
+    setvalue('qphase',qphase,'processed')
+    setvalue('array',array,'processed')
+
+    wft('nods')
+    svvfs(curexp+'/depttmp_Cq','force')
+    tmpreturn('depttmp')
+    tmpcopy('depttmp')
+  endif
+
+"************************************************************************"
+  if ($1='CHn') or ($1='Call') then
+    wft('all','nods')
+    clradd:$dum
+    if (array='qphase,mult') then
+	$i=1
+	repeat
+	   select($i) add('new'):$dum select($multdim+$i) add('trace',$i)
+	   $i=$i+1
+	until $i > $multdim
+    else
+	$i=1 $j=1
+	repeat
+	   select($i) add('new'):$dum select($i+1) add('trace',$j)
+	   $i=$i+2
+	   $j=$j+1
+	until $i > arraydim
+    endif
+	rm(curexp+'/acqfil/fid'):$dum
+        copy($addsubpath+'/acqfil/fid',curexp+'/acqfil'):$dum
+        copy($addsubpath+'/procpar',curexp):$dum
+        copy($addsubpath+'/curpar',curexp):$dum
+        fread(curexp+'/curpar','current','reset')
+        fread(curexp+'/procpar','processed','reset')
+    setvalue('arraydim',$multdim)
+    setvalue('arraydim',$multdim,'processed')
+    qphase=qphase[1]
+    setvalue('qphase',qphase,'processed')
+    setvalue('array',array,'processed')
+    deptproc
+    svvfs(curexp+'/depttmp_CHn','force')
+    tmpreturn('depttmp')
+    tmpcopy('depttmp')
+  endif
+
+"************************************************************************"
+
+  if ($1='Call') then
+    $rp=rp $lp=lp
+    clradd:$dum
+    rtvfs(curexp+'/depttmp_Cq')
+    rm('-rf',curexp+'/depttmp_Cq.vfs'):$dum
+    ds(1) rp=0 lp=0 spadd(1/$multdim):$dum
+    rtvfs(curexp+'/depttmp_CHn')
+    rm('-rf',curexp+'/depttmp_CHn.vfs'):$dum
+    if (arraydim<4) then
+       ds(1) rp=0 lp=0 spadd('new')
+    endif
+    if (arraydim > 1) then
+	select(2) rp=0 lp=0 spadd('new')
+    endif
+    if (arraydim > 2) then
+        select(3) rp=0 lp=0 spadd('new')
+    endif
+    if (arraydim > 3) then
+        select(4) rp=0 lp=0 spadd('new')
+    endif
+    svaddsub(curexp+'/depttmp_Call','force')
+  endif
+    clradd:$dum
+    addsubexp=$addsuborig
+
+    tmpreturn('depttmp')
+    flush
+    exists(curexp+'/depttmp_'+$1+'.vfs/datdir','directory'):$ex
+    if ($ex) then
+	rm('-rf',curexp+'/datdir'):$dum
+	rename(curexp+'/depttmp_'+$1+'.vfs/datdir',curexp):$dum
+    endif
+    rm('-rf',curexp+'/depttmp_'+$1+'.vfs'):$dum
+
+  r9 sp=$sp wp=$wp
+  if ($multdim=1) and ($1<>'Call') then
+	ds 
+  else
+	dssa dscale 
+  endif
+
+  if ($1='Call') and ($multdim=4) then
+	setvalue('deptdim','Ced')
+  else
+  	setvalue('deptdim',$1)
+  endif
+
+"************************************************************************"

@@ -1,0 +1,94 @@
+ ghncnA.c  auto-calibrated version of 3D gradient sensitivity-enhanced  HN(C)N
+
+    t1 evolution is not limited by kappa
+
+    Correlates N(i) with N(i-1), NH(i-1).  Uses constant time evolution for the
+    15N shifts.
+
+    Standard features include square pulses on Cab with first null at 13CO; one
+    lobe sinc pulses on 13CO with first null at Ca; shaka6 composite 180 pulse
+    to simultaneously refocus CO and invert Ca; one lobe sinc pulse to put H2O
+    back along z (the sinc one-lobe is significantly more selective than
+    gaussian, square, or seduce 90 pulses); optional 2H decoupling when CaCb 
+    magnetization is transverse for 4 channel spectrometers.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [15N]  and t2 [15N].
+    
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+    Sequence contributed by S.C.Panchal, N.S.Bhavesh and R.V.Hosur, Tata Institute,
+      Mumbai, India (March 2002). See J.Biomol.NMR, 20, 135-147(2001).
+
+    The waltz16 field strength is enterable (waltzB1).
+    Typical values would be ~6-8ppm, (3500-5000 Hz at 600 MHz).
+  
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghncn
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghncn may be printed using:
+                                      "printon man('ghncn') printoff".
+
+    2. Apply the setup macro "ghncn". This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       At the middle of the t1 period, the 180 degree pulses on CO and 15N are
+       swapped to a 180 degree pulse on Ca, for the first increment of t1, to
+       refocus Ca chemical-shift evolution ensuring a zero first-order phase
+       correction in F1. This is also the case for the 1D spectral check, or
+       for 2D/15N spectra, when ni=0.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 56ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency is shifted to
+       the CO region during the sequence, but phase coherence is not required 
+       after each shift.
+
+    4. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.
+
+    5. tauC (4.5 ms) and timeTN (12.5 ms) were determined for alphalytic 
+       protease and are listed in dg2 for possible readjustment by the user.
+
+    6. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence. 
+       For these sequences H2O flipback is 
+       achieved with two sinc one-lobe pulses, an additional one just before
+       the SE train, similar to gNhsqc.
+
+    7. The autocal and checkofs flags are generated automatically in Pbox_bio.h
+       If these flags do not exist in the parameter set, they are automatically 
+       set to 'y' - yes. In order to change their default values, create the  
+       flag(s) in your parameter set and change them as required. 
+       The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+       The offset (tof, dof, dof2 and dof3) checks can be switched off  
+       individually by setting the corresponding argument to zero (0.0).
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+       shapes are created), 's' (semi-automatic mode - allows access to user  
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code).

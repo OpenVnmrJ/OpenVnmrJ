@@ -1,0 +1,43 @@
+"macro getparam"
+
+if (probe='') then
+   return
+endif
+$param = ''
+if ($# < 1) then
+   write('line3','Minimum of 1 argument required, getparam aborted!!')
+   return
+else
+   $param = $1
+endif
+exists(probe,'probes'):$e,$file
+if $e>0 then
+  $file  = $file+'/'+probe
+else
+  if (appmode <> 'imaging') then
+    write('line3','No probe calibration file, please create with "addprobe"')
+  endif
+  return
+endif
+if ($# > 1) then
+   $param = $2 + $param
+else
+   $param = tn + $param
+endif
+
+$ret='' $ans=0
+lookup('mfile',$file,'seek',$param,'read'):$ret,$num
+if ($num > 0) then
+
+  format($ret,'isreal'):$ans
+  if ($ans=0) then
+    return($ret)
+  else
+    $nret=0
+    format($ret,8,6):$nret
+    return($nret)
+  endif
+
+else
+ return
+endif

@@ -1,0 +1,142 @@
+"macro BP_PRloop"
+"BP_PRloop(arg(s))"
+" arguments are passed as text strings from BP_PRstart"
+"experiments stop when PR_nN > PR_nTilts                  "
+
+"************ Main Loop *****************************"
+if ($#>1) then   "PR42 experiment"
+ if PR_nN > PR_nTilts then BP_PRwrite_cf endif
+
+echo('----Getting Angles for The next plane----')
+ 
+ {$2}={PR_arrayname2}[PR_nN]
+ {$1}={PR_arrayname1}[PR_nN]
+
+ "if then else, determines from the angles, which plane to take sets"
+ "the nt,ni,phase,phase2, and array correctly."
+ if {$1}=90 and {$2}=90 then             "collect N plane"
+	nt=PR_ntN
+	phase=1
+	phase2=1,2
+	ni=PR_niN
+	array='phase2'
+	comment='N_plane'
+	echo('N plane')
+  else if {$1}=0 and {$2}=90 then	"collect plane for angle1=0"
+		nt=PR_ntorthog1
+		phase=1,2
+		phase2=1
+		ni=PR_ni2
+		array='phase'
+		echo('0.0 degree plane for ',$1)
+		comment='plane for angle1=0'		
+     else if {$1}=90 and {$2}=0 then	"collect plane for angle2=0"
+		   nt=PR_ntorthog2
+		   phase=1,3
+		   phase2=1
+		   ni=PR_ni3
+		   array='phase'
+		   echo('0.0 degree plane for ',$2)
+		   comment='plane for angle2=0'
+	else 					"collect Tilt"
+			nt=PR_ntTILT
+			phase=1,2,3,4
+			phase2=1,2
+			ni=PR_niTilt
+			echo('Tilt')
+			comment='Tilt'
+			array='phase,phase2'
+     endif
+   endif
+ endif
+
+ "print out some comments to the screen"
+ echo('nt=',nt)
+ echo('ni=',ni)
+ s1=array
+ echo('phase arrays: ',s1)
+ echo('ss=',ss)
+ echo($2,{$2})
+ echo($1,{$1})
+ echo('loop counter Pr_nN=',PR_nN) 
+ echo('---------------------------------')
+ 
+ format(PR_nN,1,0):PR_f_nam
+ s1=svfdir +'/'+samplename + '_' + seqfil + '_' + PR_f_nam
+ 
+ "save fid, increment counter and call macro again at finish"
+ wexp='BPsvf(s1) PR_nN=PR_nN+1 BP_PRloop(`'+$1+'`,`'+$2+'`)'
+ 
+ if (  ((PR_skipPlanes='n') and (PR_nN=1)) or ((PR_skipPlanes='y') and (PR_nN=4))  ) then
+  $hrs='' $mins=''
+  BP_PRtime:$hr,$min
+  format($hr,3,0):$hrs format($min,2,0):$mins
+  $message='PR Experiments will take'+$hrs+' Hours '+$mins+' Minutes'
+  banner($message)
+  au('wait')
+ else
+  au('wait')
+ endif
+else   "PR43 experiment"
+ if PR_nN > PR_nTilts then BP_PRwrite_cf endif
+
+ echo('----Getting Angles for The next plane----')
+
+ {$1}={PR_arrayname1}[PR_nN]
+
+ "if then else, determines from the angles, which plane to take sets"
+ "the nt,ni,phase,phase2, and array correctly."
+ if {$1}=90 then             "collect 3D plane 1"
+	nt=PR_ntN
+	phase=1,3
+	phase2=1,2
+	ni=PR_niN
+	array='phase,phase2'
+	comment='3Dplane1'
+        echo('90.0 degree plane for ',$1)
+   else if {$1}=0 then	"collect 3D plane for angle1=0"
+		nt=PR_ntorthog1
+		phase=1,2
+		phase2=1,2
+		ni=PR_niTilt
+		array='phase,phase2'
+		echo('0.0 degree plane for ',$1)
+		comment='plane for angle1=90'		
+	else 					"collect Tilt"
+			nt=PR_ntTILT
+			phase=1,2,3,4
+			phase2=1,2
+			ni=PR_niTilt
+			echo('Tilt')
+			comment='Tilt'
+			array='phase,phase2'
+   endif
+ endif
+
+ "print out some comments to the screen"
+ echo('nt=',nt)
+ echo('ni=',ni)
+ s1=array
+ echo('phase arrays: ',s1)
+ echo('ss=',ss)
+ echo($1,{$1})
+ echo('loop counter Pr_nN=',PR_nN) 
+ echo('---------------------------------')
+ 
+ format(PR_nN,1,0):PR_f_nam
+ s1=svfdir +'/'+samplename + '_' + seqfil + '_' + PR_f_nam
+ 
+ "save fid, increment counter and call macro again at finish"
+ wexp='BPsvf(s1) PR_nN=PR_nN+1 BP_PRloop(`'+$1+'`)'
+ 
+ if (  ((PR_skipPlanes='n') and (PR_nN=1)) or ((PR_skipPlanes='y') and (PR_nN=4))  ) then
+  $hrs='' $mins=''
+  BP_PRtime:$hr,$min
+  format($hr,3,0):$hrs format($min,2,0):$mins
+  $message='PR Experiments will take'+$hrs+' Hours '+$mins+' Minutes'
+  banner($message)
+  au('wait')
+ else
+  au('wait')
+ endif
+endif 

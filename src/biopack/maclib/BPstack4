@@ -1,0 +1,154 @@
+"macro BPstack4"
+"stack4(start#,end,#,<dc2d>,<plot 'pos'or'neg'option>,<levels>,<spacing>)"
+" produces a display of planes on the screen with text denoting the"
+" plane type and number"
+
+exists('plane','parameter'):$e
+if ($e = 0) then
+   write('error','dsplanes:  parameter `plane` does not exist')
+   return
+endif
+
+$i = 1
+$axval = ''
+$f1nuc = ''
+$f2nuc = ''
+$f3nuc = ''
+$tmpnuc = ''
+$slice = ''
+
+
+"Label each axis with a nucleus and a frequency"
+repeat
+   substr(axis,$i,1):$axval
+   if ($axval = 'd') then
+      $tmpnuc = dn
+      $tmpnucfrq=dfrq
+   else
+      if ($axval = '2') then
+         $tmpnuc = dn2
+         $tmpnucfrq=dfrq2
+      else
+         $tmpnuc = tn
+         $tmpnucfrq=sfrq
+      endif
+   endif
+
+   if ($i = 1) then
+      $f3nuc = $tmpnuc
+      $f3nucfrq = $tmpnucfrq
+   else
+      if ($i = 2) then
+         $f1nuc = $tmpnuc 
+         $f1nucfrq = $tmpnucfrq
+      else
+         if ($i = 3) then
+            $f2nuc = $tmpnuc 
+            $f2nucfrq = $tmpnucfrq
+         endif
+      endif
+   endif
+
+   $i = $i + 1
+until ($i > 3)
+
+
+"Obtain the particular reference parameters for the stepped axis"
+if ((plane = 'f1f3') or (plane = 'f3f1')) then
+   $rfla = rfl2
+   $rfpa = rfp2
+   $fna = fn2
+   $swa = sw2
+   $frqa = $f2nucfrq
+   $nuca = $f2nuc
+   $slice = 'f2'
+   if (trace = 'f3') then
+      $nuch = $f3nuc
+      $nucv = $f1nuc
+   else
+      $nuch = $f1nuc
+      $nucv = $f3nuc
+   endif
+else
+   if ((plane = 'f2f3') or (plane = 'f3f2')) then
+      $rfla = rfl1
+      $rfpa = rfp1
+      $fna = fn1
+      $swa = sw1
+      $frqa = $f1nucfrq
+      $nuca = $f1nuc
+      $slice = 'f1'
+      if (trace = 'f3') then
+         $nuch = $f3nuc
+         $nucv = $f2nuc
+      else
+         $nuch = $f2nuc
+         $nucv = $f3nuc
+      endif
+   else
+      if ((plane = 'f1f2') or (plane = 'f2f1')) then
+         $rfla = rfl
+         $rfpa = rfp
+         $fna = fn
+         $swa = sw
+         $frqa = $f3nucfrq
+         $nuca = $f3nuc
+         $slice = 'f3'
+         if (trace = 'f1') then
+            $nuch = $f1nuc
+            $nucv = $f2nuc
+         else
+            $nuch = $f2nuc
+            $nucv = $f1nuc
+         endif
+      endif
+   endif
+endif
+
+$i = $1
+wc= (wc2max-30)/2 wc2=wc
+sc=0 sc2=0
+$wcinc= wc+80
+clear(2)
+$count=0
+repeat
+   if ($i = $1) then
+      s9
+      select(plane,$i)
+      r9
+   else
+      select('next')
+   endif
+   if (sc > $wcinc) then
+      if ($count=4) then
+        sc=0 sc2=0 clear(2) $count=0
+       else
+        sc=0 sc2=sc2+wc2 +20
+      endif
+   endif
+   if ($#>2) then dc2d('f2') endif
+   dpconn(10,1.4)
+   if ($#=4) then
+    pcon($4) endif
+   if ($#=5) then
+    pcon($4,$5) endif
+   if ($#=6) then
+    pcon($4,$5,$6) endif
+   $count=$count + 1
+   $ppm = $rfpa - $rfla + 2*($fna/2 - $i)*$swa/$fna
+   $ppm = $ppm/$frqa
+   if ($#>3) then
+   write('plotter',wcmax-sc-wc-30,sc2+wc2+3,'%s %s-%s 2D plane: %s %s plane %d  (%6.3f ppm)',
+		plane,$nucv,$nuch,$slice,$nuca,$i,$ppm)
+   endif
+   write('graphics',wcmax-sc-wc-30,sc2+wc2+3,'%s %s-%s 2D plane: %s %s plane %d  (%6.3f ppm)',
+		plane,$nucv,$nuch,$slice,$nuca,$i,$ppm)
+   if ($#>3) then
+     if ($count=4) then BPpage endif
+   endif
+
+   sc=sc + $wcinc
+
+   $i = $i + 1
+until ($i > $2)
+if ($#>3) then BPpage endif

@@ -1,0 +1,26 @@
+"macro BPcexpnext"
+
+$n=1 "number of experiments to create"
+if $#>0.5 then
+  $n=$1
+endif
+
+$dir = userdir
+$e=0
+$i=0
+$s=''
+repeat
+  $i=$i+1
+  format($i,1,0):$s
+  $f=$dir+'/exp'+$s
+  exists($f,'file'):$e
+  if $e<0.5 then
+    cexp($i) fixpar
+    $n=$n-1
+    if $n<0.5 then
+      jexp($i) dg
+      return
+    endif
+  endif
+until ($i>=9999)
+write('error','%s: maximum number of experiments exceeded',$0)

@@ -1,0 +1,43 @@
+"macro setHTdec1"
+"setHTdec1 - setup decoupling for tn = C13 "
+" Eriks Kupce, Varian R&D "
+
+  $d = '' $p = '' $l='' $bw='' $sh=''
+  $name = '' $cmd1 = '' $cmd2 = ''
+
+  getparam('pwx','C13'):$pwx
+  getparam('pwxlvl','C13'):$dpwr
+  getparam('pwxlvl_cf','C13'):$compX
+
+  $pwx = $pwx*$compX
+  format(Cdpwr,1,0):$d
+  format($dpwr,1,0):$p
+  format($pwx,1,2):$l
+
+  if(Cdseq = 'garp1') then
+    $cmd1 = 'Pbox cal -w ' + 'GARP -attn ' 
+    $cmd2 =  $d + 'd -p ' + $p + ' -l ' + $l write('alpha','cmd = %s', $cmd1+$cmd2)
+    shell($cmd1+$cmd2)
+    pbox_dmf:Cdmf
+    pbox_dres:Cdres
+    dm='nny'
+  endif
+  if(Cdseq = 'wu200') then
+    $name = 'wu200.DEC'
+    format(200*sfrq,1,1):$bw
+    exists(userdir+'/shapelib/'+$name,'file'):$e
+    if not ($e) then       
+      $sh = ' "WURST2 ' + $bw + '/1.2m" '
+      $cmd1 = 'Pbox ' + $name + ' -w' + $sh + '-p ' 
+      $cmd2 =  $p + ' -l ' + $l + ' -s 2.0 -sucyc t5,m4'
+      shell($cmd1+$cmd2)
+    endif
+    pbox_pwr($name):Cdpwr 
+    pbox_dmf($name):Cdmf
+    pbox_dres($name):Cdres
+    Cdpwr = Cdpwr + 3
+    if(Cdpwr > 50) then
+      Cdpwr = 50
+    endif
+  endif
+return

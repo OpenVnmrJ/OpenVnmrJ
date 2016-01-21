@@ -1,0 +1,127 @@
+"macro walkupQ_new"
+"****************************************************************"
+"   walkupQ_new - Prepare cursqexp for new submission     "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+  if ($# < 1) then
+        write('error','The "new" option requies an argument')
+	return
+  endif
+  expactive:$active
+  if ($active > 0) then
+     write('error','Current experiment is ACTIVE.  Please join another experiment')
+     return
+  endif
+
+  $defaultQ='' defaultqueue:$defaultQ
+  if ($1='acq') then
+     if ($defaultQ='bgauto') then
+	expactive('auto'):$bgauto
+	$isinqueue=0
+	if (autodir<>'') then
+    		shell('(cat '+autodir+'/enterQ | grep -cw SAMPLE#:)'):$isinqueue
+	endif
+	if ($bgauto) or ($isinqueue) then
+            write('error','Alert: There are samples in current autodir')
+	endif
+    endif
+  endif
+
+  fastuserlogin('evaluate')
+//  if (jviewports[1]>1) then
+		"****Let us try two ways to maximize the graphics****"
+		"****The following does not work for VJ22C******"
+//     	vnmrjcmd('window',1,1)
+		"*****The following may not work for pre-VJ22C***"
+//	vnmrjcmd('viewport','max')
+//  endif
+
+  tmpsqcopy('OrigExpPar')
+
+  walkupQ('clear','all')
+
+  $solvent=solvent
+  rtppar('PROTON') tn='H1' dn='C13'
+  solvent=$solvent
+  resetsampglobal
+//  if (operator_='') then setvalue('operator_',operator) endif
+  settemp
+
+  if (numrfch > 2) then dn2='N15' endif
+  emessage=emailflag
+  if (emessage='y') then getadminfo('emessage'):emessage endif
+  emailwhen=''
+  getadminfo('emailwhen'):emailwhen
+  getemailaddr(operator):emailaddr
+  module('add','walkupQpars','basic')
+  wshim='e' alock='a'
+  $pad=pad
+  gain='y' pltopt='y'
+  module('add','cpQdefaults','basic','refresh')
+  $autosaveplot='plot'
+  getadminfo('autosaveplot'):$autosaveplot
+  strstr($autosaveplot,'plot'):$isplot
+  if ($isplot) then pltopt='y' else pltopt='n' endif
+  setProbepars('force')
+//  Gmaplist
+  getadminfo('protuneatstart'):ptuneatsample
+  if (userplotter<>'') then
+    $isplotter=0
+    $s1='' $s2=''
+    readfile('/vnmr/devicenames','$s1','$s2','Name','local'):$totdev
+    if ($totdev>0) then
+	$i=1
+	repeat
+	   substr($s2[$i],1):$s2[$i]
+	   $i=$i+1
+	until $i > $totdev
+    endif
+    teststr('$s2',userplotter,'local'):$isplotter
+    if ($isplotter=0) then userplotter='' endif
+  endif
+  if (userplotter='') then userplotter=plotter endif
+  if ($defaultQ='bgauto') then 
+	setvalue('wqacq','autodir',1)
+  else
+	setvalue('wqacq','curexp',1)
+  endif
+  loaduserprefs
+  exists('setcustompars','maclib'):$ex
+  if ($ex) then
+    setcustompars
+  endif
+
+  longQ='n'
+  prioritysample='no','low','sample'
+  clear(2)
+  if ($1<>'') then
+	wqinit=$1
+	$ok=1
+  	walkupQ('renew'):$ok
+	if ($ok=0) then return endif
+  else
+	getautoglobaltemp(wqinit)
+  endif
+  if (wqinit='acq') then pad=$pad endif
+  shell('rm -f '+cursqexp+'/walkupQnewpars'):$dum
+  fsave(cursqexp+'/walkupQnewpars','current')
+  newdg
+  if (sqflag='y') then
+     xmhaha('grandma')
+  endif
+  vnmrjcmd('setpage','Start')
+  vnmrjcmd('setpage','Start','Standard')
+  vnmrjcmd('setpage','Setup')
+  vnmrjcmd('setpage','Setup','Standard')
+
+"****************************************************************"

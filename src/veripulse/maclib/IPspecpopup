@@ -1,0 +1,238 @@
+"macro IPspecpopup"
+" Agilent"
+if ($#<1) then $function='display' else $function=$1 endif 
+if ($# < 2) then $2='modeless' endif
+if ($function='setspec') then
+  $2='modal'
+endif
+$file=curexp+'/IPspecpopup.xml'
+
+getProbePath(probe,'alert'):$e,$ppath
+substr($ppath,'dirname'):$pdir
+
+
+if ($function = 'close') or ($function = 'cancel') then
+  destroy('IPspecname'):$e
+  destroy('IPtarget'):$e
+  delete(curexp+'/IPspecpopup.xml'):$e
+  if ($function = 'cancel') then
+    $specfile=$pdir+'/'+probe+'_specs'
+    $targetfile=$pdir+'/'+probe+'_targets'
+    shell('rm -f '+$specfile+' '+$targetfile):$e
+  endif
+  return
+endif
+getProbePath(probe,'alert'):$e,$ppath
+substr($ppath,'dirname'):$pdir
+
+$specfile=$pdir+'/'+probe+'_specs'
+exists($specfile,'file'):$ex
+if ($ex<0.5) then
+  write('error','Specs file not found')
+  return
+endif
+if ($function='setspec') then
+  $targetfile=$pdir+'/'+probe+'_targets'
+  shell('cp '+ $specfile +' ' +$targetfile)
+  $tmp=$targetfile
+  $targetfile=$specfile
+  $specfile = $tmp
+else
+  $targetfile=$pdir+'/'+probe+'_targets'
+  exists($targetfile,'file'):$ex
+  if ($ex<0.5) then
+    write('error','Targets file not found')
+    return
+  endif
+endif
+exists('test_synonyms','atdb'):$ex,$synonymsfile
+if ($ex<0.5) then
+  write('error','Synonyms file not found')
+  return
+endif
+
+if ($function='display') or ($function='setspec') then
+
+   exists('IPspecname','parameter'):$ex
+   if ($ex<0.5) then create('IPspecname','string') setgroup('IPspecname','display') endif
+   exists('IPtarget','parameter'):$ex
+   if ($ex<0.5) then create('IPtarget','real') setgroup('IPtarget','display') endif
+   readfile($targetfile,'IPspecname','IPtarget'):$tlines
+   $spec='' $specval=0
+   readfile($specfile,'$spec','$specval','','local'):$slines
+
+   //Now resolve into individual elements of two specname and specvalue
+   $synname='' $synval=''
+   readfile($synonymsfile,'$synname','$synval','','local'):$synlines
+   
+   $i=0
+   $specnames=''
+   while ($i < $tlines) do
+     $i=$i+1
+     teststr('$synname',IPspecname[$i],'local'):$index
+     if ($index) then
+       $specnames[$i]=$synval[$index]
+     else
+       $specnames[$i]=IPspecname[$i]
+     endif
+   endwhile
+   
+   write('reset',$file)
+   
+   $total=$tlines
+   
+   write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+   write('file',$file,'<template name="IPspecpopup" element="groups" type="acquisition" >')
+   $y=trunc($total + 0.5)*20+55
+   $w=450
+   if ($function='display') then
+     $y=$y+30
+   endif
+   write('file',$file,'  <group size="%d %d"',$w,$y)
+   write('file',$file,'    border="Etched"')
+   write('file',$file,'    tab="no"')
+   write('file',$file,'    reference="IPspecpopup"')
+   write('file',$file,'    useref="no"')
+   write('file',$file,'    subtype="Basic"')
+   write('file',$file,'    expanded="yes"')
+   write('file',$file,'    >')
+   
+   write('file',$file,'     <label loc="%d %d" size="100 20"',5,5)
+   write('file',$file,'        style="Heading3"')
+   write('file',$file,'        label="Name"')
+   write('file',$file,'    />')
+
+   $x=280
+      write('file',$file,'     <label loc="%d %d" size="100 20"',$x,5)
+      write('file',$file,'        style="Heading3"')
+      if ($function='display') then
+        write('file',$file,'        label="Probe Spec."')
+      else
+        write('file',$file,'        label="Template"')
+      endif
+      write('file',$file,'    />')
+      $x=365
+
+   write('file',$file,'     <label loc="%d %d" size="50 20"',$x,5)
+   write('file',$file,'        style="Heading3"')
+   if ($function='display') then
+     $title='Probe Targets'
+     write('file',$file,'        label="Target"')
+   else
+     $title='Probe Specs.'
+     write('file',$file,'        label="Spec."')
+   endif
+   write('file',$file,'    />')
+
+      $i=1 $k=0
+      $y = 35
+   $x=365
+
+      repeat
+   	   write('file',$file,'     <label loc="%d %d" size="300 20"',5,$y)
+   	   write('file',$file,'        style="PlainText"')
+   	   write('file',$file,'        label="%s"',$specnames[$i])
+   	   write('file',$file,'    />')
+
+   	   	write('file',$file,'     <label loc="%d %d" size="60 20"',285,$y)
+   	   	write('file',$file,'        style="PlainText"')
+   	   	write('file',$file,'        label="%s"',$specval[$i])
+   	   	write('file',$file,'    />')
+   
+   	   write('file',$file,'     <entry loc="%d %d" size="50 20"',$x,$y)
+   	   write('file',$file,'        style="PlainText"')
+   	   write('file',$file,'        vq="IPtarget[%d]"',$i)
+   	   write('file',$file,'        set="$VALUE=IPtarget[%d]"',$i)
+   	   write('file',$file,'        vc="IPtarget[%d]=$VALUE"',$i)
+   	   write('file',$file,'    />')
+   	   $y=$i*20+35
+   	   $i=$i+1
+   
+   until $i > $total
+
+   
+   $x=118
+   if ($function='display') then
+     write('file',$file,'     <button loc="%d %d" size="200 25"',$x,$y+20)
+     write('file',$file,'        style="Heading2"')
+     write('file',$file,'        vc="IPspecpopup\(\'writetargets\'\)"')
+     write('file',$file,'        label="Save Targets"')
+     write('file',$file,'        useref="No"')
+     write('file',$file,'    />')
+   endif
+   
+   write('file',$file,'    </group>')
+   write('file',$file,'</template>')
+   
+   exists($file,'file'):$fileex
+   if ($fileex) then
+      $vjcmd='vnmrjcmd(\'popup\',\'mode:'+$2+'\',
+	   \'file:\'+$file,
+	   \'rebuild:yes\',
+	   \'title:'+$title+'\',
+	   \'pnewupdate:true\''
+      if ($function='setspec') then
+   	 $vjcmd=$vjcmd+',\'cancel:IPspecpopup(`cancel`)\''
+         $vjcmd=$vjcmd+',\'ok:IPspecpopup(`writespecs`)\''
+      else
+         $vjcmd=$vjcmd+',\'close:IPspecpopup(`close`)\''
+      endif
+      $vjcmd=$vjcmd+')'
+      exec($vjcmd)
+   else
+      return(0)
+   endif
+
+   return(1)
+
+elseif ($function='writespecs') then
+   $numspecs=size('IPspecname')
+   write('reset',$specfile)
+   $i=1
+   repeat
+	write('file',$specfile,'%s\t%s',IPspecname[$i],IPtarget[$i])
+	$i=$i+1
+   until ($i>$numspecs)
+   write('line3','Specs written to %s',$specfile)
+   IPspecpopup('close')
+   VPstart('set_specs')
+
+elseif ($function='writetargets') then
+   $numspecs=size('IPspecname')
+   //Back up existing spec table
+   shell('date +%b_%d_%Y'):$date
+   
+   shell('cp '+$targetfile+' '+$targetfile+'.'+$date):$dum
+
+   //Then rewrite spec sheet
+   write('reset',$targetfile)
+   $i=1
+   repeat
+	write('file',$targetfile,'%s\t%s',IPspecname[$i],IPtarget[$i])
+	//Also write pw90 targets to LastTargets module
+	if (IPspecname[$i]='H1pw90') then
+	   H1pw90=IPtarget[$i] H1pp=H1pw90
+	   writeparam($pdir+'/LastTargets','H1pw90','add')
+	   writeparam($pdir+'/LastTargets','H1pp','add')
+	elseif (IPspecname[$i]='F19pw90') then
+	   F19pw90=IPtarget[$i] F19pwx=F19pw90
+	   writeparam($pdir+'/LastTargets','F19pw90','add')
+	   writeparam($pdir+'/LastTargets','F19pwx','add')
+	elseif (IPspecname[$i]='C13pw90') then
+	   C13pw90=IPtarget[$i] C13pwx=C13pw90
+	   writeparam($pdir+'/LastTargets','C13pw90','add')
+	   writeparam($pdir+'/LastTargets','C13pwx','add')
+	elseif (IPspecname[$i]='P31pw90') then
+	   P31pw90=IPtarget[$i] P31pwx=P31pw90
+	   writeparam($pdir+'/LastTargets','P31pw90','add')
+	   writeparam($pdir+'/LastTargets','P31pwx','add')
+	elseif (IPspecname[$i]='N15pw90') then
+	   N15pw90=IPtarget[$i] N15pwx=N15pw90
+	   writeparam($pdir+'/LastTargets','N15pw90','add')
+	   writeparam($pdir+'/LastTargets','N15pwx','add')
+	endif
+	$i=$i+1
+   until ($i>$numspecs)
+   write('line3','Targets written to %s',$targetfile)
+   
+endif

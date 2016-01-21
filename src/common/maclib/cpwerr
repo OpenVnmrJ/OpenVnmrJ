@@ -1,0 +1,56 @@
+"macro cpwerr"
+"macro cpwerr"
+" recover from acquisition error in study"
+
+   if (auto='y') then
+	$loc='' $locdir='' $when='' $rack='' $zone=''
+	getlocid:$loc,$locdir,$when,$zone,$rack
+        $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+	$eline=''
+	geterror:$eline
+//	write('line3','%d  ',acqstatus[1]):$eline
+//	$acqsize=size('acqstatus')
+//	if ($acqsize>1) then
+//		write('line3','%s %d',$eline,acqstatus[2]):$eline
+//	endif
+	write('file',$errlog,'%s Acquisition error: %s',explist[1],$eline)
+	eventLog('ExpError',$eline)
+	sqLog('ExpError',$eline)
+	accountLog('Errored',$eline)
+
+//     if (acqstatus[1] = 13) or (acqstatus[1] = 15) or (acqstatus[1] = 16) then
+     if (acqstatus[1] = 13) or (acqstatus[1] = 15) then
+	    // This is either hard error or soft error.  don't know if
+	    // automation should proceed.  Let us stop it to be safe
+	$samplename=''
+	getsampglobal(autodir+'/enterQ.macdir/'+$locdir,'samplename'):$samplename
+	if ($samplename='ReFeReNCe') then
+		$newstatus='Active'
+		$newstatus='Reference'
+	else
+		$newstatus='Error'
+	endif
+	$subtray=''
+	if (traymax=96) or (traymax=768) then
+		$subtray='/RACK'+$rack+'ZONE'+$zone
+	endif
+   	if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+	$sdir=autodir+'/enterQ.macdir/studytray'+$subtray+'/loc'+$loc
+	exists($sdir+'/studypar','file'):$isthere
+	if ($isthere) then
+		updatestatus(autodir,$loc,$newstatus,$zone,$rack)
+	endif
+        xmhaha_baQ('delete',$locdir)
+        xmhaha_beQ(autodir,$locdir)
+        xmhaha_sqwatch('init','')
+     elseif (acqstatus[1] = 16) then
+	    // This is acquisition abort error.  So, cpreact probably did an aa
+        strstr(werr,'cpreact'):$iscp
+	    // if cpreact was in the werr string, it considered to be aborted by
+	    // cpreact.  In this case, let the automation move on to the next 
+	    // experiment in the queue.
+	if $iscp then nextgo endif
+     endif
+   endif
+   emessage('error')
+

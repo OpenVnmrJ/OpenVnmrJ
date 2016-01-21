@@ -1,0 +1,312 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+platform = sys.platform
+
+# define target file names
+paramStaticTarget  = 'libparam.a'
+paramSharedTarget  = 'libparam.so'
+psglibStaticTarget = 'libpsglib.a'
+psglibSharedTarget = 'libpsglib.so'
+s2pulTarget        = 's2pul'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+ncommHdrList = ['mfileObj.h']
+
+vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList  = ['asm.h',
+                'allocate.h',
+                'CSfuncs.h',
+                'data.h',
+                'dpsdef.h',
+                'graphics.h',
+                'group.h',
+                'init.h',
+                'params.h',
+                'pvars.h',
+                'shims.h',
+                'symtab.h',
+                'tools.h',
+                'variables.h',
+                'vfilesys.h',
+                'wjunk.h']
+vnmrList = ['asmfuncs.c',
+                'assign.c',
+                'allocate.c',
+                'CSfuncs.c',
+                'lockfreqfunc.c',
+                'pvars.c',
+                'shims.c',
+                'symtab.c',
+                'tools.c',
+                'vfilesys.c',
+                'variables1.c']
+
+psgHdrList = ['abort.h',
+                'acqparms.h',
+                'apdelay.h',
+                'aptable.h',
+                'apuserdev.h',
+                'chanstruct.h',
+                'cps.h',
+                'decfuncs.h',
+                'delay.h',
+                'design_flowcomp.h',
+                'dsp.h',
+                'ecc.h',
+                'fcprint.h',
+                'lc_index.h',
+                'macros.h',
+                'objerror.h',
+                'oopc.h',
+                'Pbox_HT.h',
+                'Pbox_psg.h',
+                'power.h',
+                'prescan.h',
+                'psg_utils.h',
+                'REV_NUMS.h',
+                'rcvrfuncs.h',
+                'rfconst.h',
+                'standard.h',
+                'vnmrsys.h',
+                'wetfuncs.h',
+                'apbit_device.p',
+                'ap_device.p',
+                'attn_device.p',
+                'common.p',
+                'device.p',
+                'event_device.p',
+                'freq_device.p',
+                'rfchan_device.p',
+                'revmode.c',
+                'ssha.h',
+                ]
+
+nvpsgPath    = os.path.join(cwd, os.pardir, 'nvpsg')
+psgPath    = os.path.join(cwd, os.pardir, 'psg')
+nvpsgHdrList = ['chempack.h',
+               'arrayfuncs.h',
+               'pboxpulse.h',
+               'Pbox_bld.h',
+               'soliddecshapes.h',
+               'soliddefs.h',
+               'soliddutycycle.h',
+               'solidelements.h',
+               'solidhhdec.h',
+               'solidmpseqs.h',
+               'solidobjects.h',
+               'solidpulses.h',
+               'solidshapegen.h',
+               'solidstandard.h',
+               'solidstates.h',
+               'solidwshapes.h' ]
+
+psgList = ['abort.c',
+               'active.c',
+               'apshape_pulse.c',
+               'aptable.c',
+               'apuserdev.c',
+               'arrayfuncs.c',
+               'autofuncs.c',
+               'convert.c',
+               'convertapbout.c',
+               'convertipa.c',
+               'cps.c',
+               'crb_setup.c',
+               'decfuncs.c',
+               'device.c',
+               'ecc_setup.c',
+               'ecc_worstCase.c',
+               'eventoverhead.c',
+               'formXLwords.c',
+               'freq_device.c',
+               'freq_list.c',
+               'freqfuncs.c',
+               'gate.c',
+               'gatedecoupler.c',
+               'getparm.c',
+               'gradient.c',
+               'hash.c',
+               'hsdelay.c',
+               'hwlooping.c',
+               'initHSlines.c',
+               'initacqparms.c',
+               'initauto.c',
+               'initfreqobj.c',
+               'initfunc.c',
+               'initobjects.c',
+               'initrf.c',
+               'init_u_glbl.c',
+               'initval.c',
+               'interlktests.c',
+               'lc_hdl.c',
+               'lc_index.c',
+               'lk_sh.c',
+               'looping.c',
+               'math.c',
+               'miscfuncs.c',
+               'objerror.c',
+               'Pbox_HT.c',
+               'Pbox_psg.c',
+               'phaseing.c',
+               'preacqdelay.c',
+               'pre_exp_seq.c',
+               'pre_fid_seq.c',
+               'presequence.c',
+               'P_receive.c',
+               'psg.c',
+               'rcvrfuncs.c',
+               'rfchanconst.c',
+               'sendasync.c',
+               'setHSlines.c',
+               'setparm.c',
+               'signalhandler.c',
+               'sis_misc.c',
+               'sis_initpar.c',
+               'sis_loop.c',
+               'sis_oblique.c',
+               'sis_position.c',
+               'sisrfpatterns.c',
+               'sli_device.c',
+               'ssha.c',
+               'status.c',
+               'stubs.c',
+               'timerwords.c',
+               'treefuncs.c',
+               'vtfuncs.c',
+               'wetfuncs.c',
+               'wg.c',
+               'x_ps.c',
+               'xmath.c']
+
+cndPsgList = ['ap_device.c',
+                  'apbit_device.c',
+                  'attn_device.c',
+                  'attr_funcs.c',
+                  'attr_valtype.c',
+                  'delay.c',
+                  'event_device.c',
+                  'freqsweep.c',
+                  'offset.c',
+                  'power.c',
+                  'pulses.c',
+                  'rfchan_device.c']
+
+psgSeqPath       = os.path.join(cwd, os.pardir, 'psglib')
+psgSeqFileList   = ['s2pul.c']
+
+usrPsgList   = ['shape_pulse.c',
+                    'spcl3rdattn.c']
+
+makeList  = ['makeuserpsg.lnx',
+             'seqgenmake']
+
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['acodes.h',
+                'ACQ_SUN.h',
+                'gradient.h',
+                'lc.h']
+
+expProcPath    = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = ['expDoneCodes.h',
+                  'shrexpinfo.h']
+
+# build environment
+env = Environment(CCFLAGS    = '-c -O -m32 -Wall',
+                  CPPDEFINES = ['LINUX', 'NESSIE', 'PSG_LC'],
+                  LINKFLAGS  = '-m32',
+                  CPPPATH    = [cwd])
+
+buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrList)
+buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrHdrList)
+
+buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, psgSeqPath, psgSeqFileList)
+buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, nvpsgPath, nvpsgHdrList)
+
+buildMethods.makeSymLinks(env, s2pulTarget, cwd, psgSeqPath, psgSeqFileList)
+# buildMethods.makeSymLinks(env, s2pulTarget, cwd, vnmrPath, vnmrHdrList)
+
+# aggregated source lists
+psgLibList = psgList + cndPsgList
+s2pulList  = psgSeqFileList
+
+# library lists
+libLists = ['acqcomm', 'm']
+
+# actual builds
+paramStatic = env.StaticLibrary(target  = paramStaticTarget,
+                                source  = vnmrList,
+                                LIBPATH = ncommPath,
+                                LIBS    = libLists)
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    paramShared = env.SharedLibrary(target  = paramSharedTarget,
+                                source  = vnmrList,
+                                LIBPATH = ncommPath,
+                                LIBS    = libLists)
+psglibStatic = env.StaticLibrary(target  = psglibStaticTarget,
+                                 source  = psgLibList,
+                                 LIBPATH = ncommPath,
+                                 LIBS    = libLists)
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    psglibShared = env.SharedLibrary(target  = psglibSharedTarget,
+                                 source  = psgLibList,
+                                 LIBPATH = ncommPath,
+                                 LIBS    = libLists)
+    s2pul = env.Program(target  = s2pulTarget,
+                          source  = s2pulList,
+                          LIBS    = ['psglib', 'param', 'acqcomm', 'm'],
+                          LIBPATH = [cwd, psgPath, ncommPath])
+
+
+# define with absolute path where built files will be copied
+vnmrlibPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'inova', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrlibPath):
+   os.makedirs(vnmrlibPath)
+
+   # actions to be performed after targets are built
+env.AddPostAction(paramStatic,
+               Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    env.AddPostAction(paramShared,
+               Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
+
+env.AddPostAction(psglibStatic,
+               Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
+
+if ( ('darwin' not in platform) and ('interix' not in platform) ):
+    env.AddPostAction(psglibShared,
+               Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
+
+env.AddPostAction(psglibStatic,
+              Action(Copy(vnmrlibPath, os.path.join(cwd, 'x_ps.o'))))
+
+vnmrPsgPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'inova', 'psg')
+
+if not os.path.exists(vnmrPsgPath):
+   os.makedirs(vnmrPsgPath)
+
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, vnmrHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, psgList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, cndPsgList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, psgHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, nvpsgHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, xracqHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, ncommHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, expProcHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, makeList, '644')

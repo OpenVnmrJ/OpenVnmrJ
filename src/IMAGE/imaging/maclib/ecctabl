@@ -1,0 +1,72 @@
+"macro ecctabl"
+""
+" ecctabl "
+""
+" associates an eddy current file with a gcal value "
+" syntax ecctabl(<ecc file name>,<gcal value>)
+" default ecctabl(curecc,gcal) "
+""
+" values are retrieved by getgcal"
+""
+" file is $vnmrsystem/imaging/ecctabl "
+" if no file, make one, write into it and exit "
+" if a file, move it to ecctabl.last, then check lines "
+"    for a duplicate, ask for confirm "
+"    if confirm, over write the line "
+"    copy all non-duplicate lines, write and exit "
+""
+" Phil Hornung"
+""
+$curecc=''
+$temp1=''
+$file=''
+$file=systemdir+'/imaging/ecctabl'
+$lastfile=''
+$lastfile=$file+'.last'
+$curecc=curecc
+$gcal=gcal
+if $# > 0 then
+$curecc=$1
+endif
+if $# = 2 then
+$gcal=$2
+endif
+" argument parsing complete "
+$dstring=''
+shell('date'):$dstring,$xx
+exists($file,'file'):$xx
+if ($xx = 0) then
+  write('reset',$file)
+  write('file',$file,'%s    %14.10f    %s',$curecc,$gcal,$dstring)
+  return
+endif
+mv($file,$lastfile)
+lookup('file',$lastfile)
+write('reset',$file)
+$n1=''
+$n2=''
+$n3=''
+$n3='y'
+repeat 
+   lookup('readline',1):$n1,$ret
+   if $ret = 1 then
+   length($n1):$xx
+   if $xx < 3 then
+     $n2=''
+   else
+     substr($n1,1):$n2
+   endif
+   if $n2 = $curecc then
+      write('line3','Found duplicate %s',$n1)
+      input('overwrite?(Y/y)'):$n3
+      if ($n3 = 'n') or ($n3 = 'N') then
+	write('file',$file,'%s',$n1)
+      endif
+   else
+      write('file',$file,'%s',$n1)
+   endif
+   endif
+until $ret=0
+if $n3='y' or $n3='Y' then
+   write('file',$file,'%s    %14.10f    %s',$curecc,$gcal,$dstring)
+endif

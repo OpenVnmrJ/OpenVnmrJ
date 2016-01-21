@@ -1,0 +1,80 @@
+#
+
+import os
+import shutil
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# define target file names
+vnmrwishTarget = 'vnmrwish'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+tclCSrcFileList = ['vnmrAppInit.c']
+
+# build environment
+env = Environment(CCFLAGS    = '-fPIC -g -c -Wall -O -m32',
+                  CPPDEFINES = ['LINUX', 'NESSIE'],
+                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                  CPPPATH    = [cwd,
+                                os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                os.path.join(ovjtools, 'tcl', 'srcTk')])
+
+# actual build
+vnmrwish = env.Program(target  = vnmrwishTarget,
+                       LIBPATH = [os.path.join(os.sep + 'usr', 'X11R6', 'lib'),
+                                  ncommPath,
+                                  os.path.join(ovjtools, 'tcl', 'srcTk'),
+                                  os.path.join(ovjtools, 'tcl', 'srcTcl'),
+                                  os.path.join(os.sep, 'vnmr', 'lib' )],
+                       source  = [tclCSrcFileList],
+                       LIBS    = ['tk8.4', 'tcl8.4', 'acqcomm', 'X11','m'])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'tcl', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+env.AddPostAction(vnmrwish,
+                  Action(Copy(installPath, os.path.join(cwd, vnmrwishTarget))))
+
+env.AddPostAction(vnmrwish,
+                  Action('ln -sf $TARGET.file vnmrWish', chdir=installPath ))
+#
+#                 Action('ln -sf vnmrwish vnmrWish', chdir=installPath ))
+#
+
+tklibPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'tcl', 'tklibrary','vnmr')
+# make sure the path(s) exist
+if not os.path.exists(tklibPath):
+   os.makedirs(tklibPath)
+tklibList =  [ 'Right',
+               'Left' ]
+for i in tklibList:
+   srcfile = os.path.join(cwd,i)
+   dstfile =  os.path.join(tklibPath,i)
+   shutil.copyfile(srcfile,dstfile)
+
+#the build wound attempt to make symlink even if target 'vnmrwish' wasn't created and thus copied
+#to the install directory, causing the link to fail..
+#tclSymLinkBld = Builder(action = 'cd ' + installPath + ' && ' + \
+#				'ln -f $SOURCE.file $TARGET.file')
+#env.Append(BUILDERS = {'SymLink' : tclSymLinkBld} )
+
+#tclDerived = []
+#tclDerived.append(env.SymLink(target = 'vnmrWish', source = 'vnmrwish' ))

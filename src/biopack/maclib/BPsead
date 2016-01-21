@@ -1,0 +1,62 @@
+"macro BPsead"
+"BPsead - set up SEAD sideband suppression waveforms "
+
+$iw = ''
+$atn=''
+$shape = ''
+$pwbw = ''
+
+$bw = 100.0       "decoupling bandwidth (ppm)"
+$pw = 2.0*seadpw  "decoupling pulse duration"
+$pw=$pw/1000000.0	 "convert to seconds"
+
+$decbw = $bw*dfrq           "calculate decoupling bandwidth" 
+$wuix = $decbw*$pw/2.0
+
+if $wuix < 9.5 then
+  format($wuix,1,0):$iw                 "WURST index"
+  $shape = 'CAWURST-' + $iw
+else 
+  if $wuix < 99.5 then
+    format($wuix,2,0):$iw               "WURST index"
+    $shape = 'CAWURST-' + $iw
+  else 
+    format($wuix,3,0):$iw
+    $shape = 'WURST-' + $iw
+  endif
+endif
+
+format(-$decbw,6,1):$pwbw
+format($pw,8,6):$iw 
+$pwbw = $pwbw + '/' + $iw
+opx
+setwave($shape + ' ' + $pwbw)
+pbox_rst
+pboxpar('name','wusead.DEC')
+pboxpar('stepsize',2.0)
+pboxpar('sucyc','t5,m4')
+pboxpar('attn','e')
+cpx(pwC*compC,pwClvl)
+pboxget:seaddseq,$dum,seaddpwr,$dum,seaddres,seaddmf
+seaddpwr=seaddpwr+3
+
+format(-$decbw,6,1):$pwbw
+format($pw/2.0,8,6):$iw 
+$pwbw = $pwbw + '/' + $iw
+opx
+setwave($shape + ' ' + $pwbw)
+pbox_rst
+pboxpar('name','sead.RF')
+pboxpar('stepsize',2.0)
+pboxpar('sucyc','n')
+format(pwClvl,2,0):$atn
+write('line3','atn = %d\n',$atn)
+pboxpar('attn',$atn+'E')
+pboxpar('$1 adb',4)
+cpx(pwC*compC,pwClvl)
+pboxget:seadpat,seadpw,$dum,seadpwrf,$dum,$dum,$dum
+if(seadpwrf > 4095) then
+  seadpwrf = 4095
+endif
+
+

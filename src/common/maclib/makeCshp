@@ -1,0 +1,64 @@
+"macro makeCshp"
+"makeCshp - macro to create 13C decoupling shape"
+"Creates argument as bandwidth - defaults to 170 ppm"
+"If shape exists parameters are loaded from shapefile"
+
+
+
+if ($#=0) then $decband=170*dfrq $str0=170 endif
+if ($#=1) then $decband=$1*dfrq $str0=$1 endif
+
+$str=''
+format($str0,0,0):$str
+
+$ampcf=1
+$shapefile=''
+
+"Try and make this work for PPack or CP"
+exists('compC','parameter'):$ee
+if ($ee=1) then
+ $ref_pw90=pwC*compC $ref_pwr=pwClvl
+endif
+
+if ($ee=0) then
+ exists('pwx','parameter'):$e
+ if ($e=1) then
+    $ref_pw90=pwx $ref_pwr=pwxlvl
+ else
+    getparam('pwx',dn):$ref_pw90
+    getparam('pwxlvl',dn):$ref_pwr
+ endif
+ $ampcf=0
+ getparam('pwxlvl_cf',dn):$ampcf
+ if ($ampcf = 0) then $ampcf=1 endif
+   $ref_pw90 = $ref_pw90*$ampcf
+endif
+
+$shapefile='W40_'+probe+'_'+$str+'.DEC'
+
+$rfwg2=''
+if (Console <> 'mercury') then
+ substr(rfwg,2,1):$rfwg2
+ if (rfchtype[2] = 'U+ H1 Only') then
+   substr(rfwg,1,1):$rfwg2
+ endif
+else
+ $rfwg2='n'
+endif
+
+if ($rfwg2 = 'y') then
+ $sdecband=''
+ format($decband,0,0):$sdecband
+ $wave='WURST40 0.0014/'+$sdecband
+ exists(userdir+'/shapelib/'+$shapefile,'file'):$e
+ if ($e=0) then
+   opx($shapefile)
+   setwave($wave)
+   cpx($ref_pw90,$ref_pwr)
+ endif
+ pbox_pwr($shapefile):dpwr
+ pbox_dmf($shapefile):dmf
+ dpwr = dpwr + 1
+ dseq = 'W40_'+probe+'_'+$str
+ dres=9
+endif

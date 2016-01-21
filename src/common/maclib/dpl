@@ -1,0 +1,26 @@
+"macro dpl"
+"dpl - default plot.  This is called by plot macro "
+"      dpl_seqfil macro is used if it exists      "
+"	else the macro returns to plot macro		"
+
+$seqfil='' $seqfil=seqfil
+if ($seqfil = 's2pul') then
+ if (tn = 'H1') then $seqfil='PROTON' endif
+ if (tn = 'F19') then $seqfil='FLUORINE' endif
+ if (tn = 'C13') then $seqfil='CARBON' endif
+ if (tn = 'P31') then $seqfil='PHOSPHORUS' endif
+endif
+
+if ($seqfil = 'PRESAT') then
+ if (tn = 'H1') then $seqfil='PROTON' endif
+endif
+
+$seqplot='dpl_'+$seqfil
+exists($seqplot,'maclib'):$seqplotex
+if ($seqplotex) then
+ exec($seqplot)
+ return(1)
+else
+ return(0)
+endif
+

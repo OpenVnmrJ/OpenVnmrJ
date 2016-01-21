@@ -1,0 +1,110 @@
+"macro cpautoQresume"
+"cpautoQ - Generic macro to run samples under automation"
+"   arg1 = location directory for sample information    "
+"   arg2 = day or night                                 "
+
+$tailX='tail'
+whichtail:$tailX
+
+fixacqlog
+fixpar
+$solvent=solvent
+PROTON
+solvent=$solvent
+"*******************************************************"
+                "All Active locations will be set to Error"
+                " This is because hardware related errors are not"
+                " captured by the software.  At any given time only"
+                " one location is Active.  Hence all other Active"
+                " locations are assumed to be hardware errors"
+                " active2error macro does this"
+    active2error
+"*******************************************************"
+
+MinSW='off'
+module('add','studypar','basic')
+setvalue('operator_',operator)
+setvalue('loc_',loc)
+setvalue('vrack_',vrack)
+setvalue('vzone_',vzone)
+setvalue('vloc_',vloc)
+
+getlocid:$loc
+$md=autodir+'/enterQ.macdir'
+$locdir=$md+'/'+$1
+$automacrodir=$locdir+'/'+$2
+"*****************************************************"
+autoname='enterQ.macdir/'+$1+'/current%R0%'
+getsampglobal($locdir)
+wexp='chempackQ'
+wdone=''
+
+  $lastloc='' $lastloc2=0
+//  shell('(cat '+$md+'/cpstartQ | '+$tailX+' -n 1 | awk \'{print $2}\')'):$lastloc
+  checksample:$lastloc2
+  format($lastloc2,0,0):$lastloc
+
+  if ($lastloc<>$loc) then
+  	$maclibdir=archivedir+'/'+sample+'/dirinfo/mcadir'
+  	shell('cp '+$automacrodir+'/walkupQacq* '+$maclib):$dum
+// Find any first experiment WQ customization that includes
+//   parameters from cpQdefaults
+// This customization will follow walkupQ customization
+	mkfirstexpWQacq
+  endif
+
+  shell('cp '+$locdir+'/sampleglobal '+$md+'/currentsampleglobal'):$dum
+  updatestatus(autodir,$loc,'Active')
+  savestudypar(archivedir+'/'+sample)
+
+  shell('cat '+curexp+'/sampleinfo > '+$md+'/currentsampleinfo'):$dum
+   
+    $newname=$locdir+'/current'
+    exists($newname+'.fid','directory'):$direx
+    if ($direx) then
+        shell('rm -rf '+$newname+'.fid'):$dum
+    endif
+    shell('mkdir '+$newname+'.fid'):$dum
+
+"*******************************************************"
+   $locpath=archivedir+'/'+sample+'/dirinfo/locationpath'
+   write('reset',$locpath)
+   write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$1)
+   $activedir=$locdir+'/xmldir/Active'
+   exists($activedir,'directory'):$direx
+   if ($direx) then
+        xmhaha_baQ('delete',$1)
+	shell('rm -rf '+$activedir):$dum
+   endif
+   shell('mkdir -p '+$activedir):$dum
+   exists($activedir,'directory'):$direx
+   if ($direx) then
+        write('reset',$activedir+'/fidlog')
+	$as=archivedir+'/'+sample+'/'
+        shell('(cat '+$md+'/expfidlog | grep "'+$as+'" >> '+$activedir+'/fidlog)'):$fidex
+   endif
+   xmhaha_beQ(autodir,$1,'delete')
+"*******************************************************"
+                "Update TtimeQ file"
+      $priority=''
+      shell('grep USER: '+curexp+'/sampleinfo'):$USER
+      substr($USER,3):$priority
+
+      $samptime=0 $curtotal=0 $curnite=0 $curprt=0
+      shell('(cat '+$automacrodir+'/resumeQtime)'):$samptime
+
+      readTtimeQ($md):$curprt,$curtotal,$curnite
+      $curtotal=$curtotal-$samptime
+      if ($priority='priority') then
+        $curprt=$curprt-$samptime
+      endif
+      writeTtimeQ($md,$curprt,$curtotal,$curnite)
+
+    write('reset',$md+'/cpstartQ')
+    write('file',$md+'/cpstartQ','SAMPLE#: %d %s',loc,$1)
+    autotimelog('start',$1+'/'+$2,sample)
+    eventLog('StudyStart','resumed '+$2+'Q')
+"*******************************************************"
+"  Update sub xml file"
+   xmhaha_asx(autodir,'enterQ')
+

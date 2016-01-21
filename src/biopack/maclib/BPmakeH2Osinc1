@@ -1,0 +1,23 @@
+"macro BPmakeH2Osinc1"
+
+"For version 5.1 software and subsequent"
+
+"Calculates the following shaped sinc one-lobe pulse and stores it"
+"       in your shapelib:  Carrier on H2O, 90 degree pulse on H2O."
+
+"The carrier should be set to 4.7ppm."
+
+"The coarse attenuator setting must be set in the pulse sequence  "
+"during the pulse."
+
+$pwHs1 = 4000*500.0/sfrq				       "4.0 ms pulse at 500 MHz"
+$stepsH1 = $pwHs1   $stepsH1 = 2.0*trunc($stepsH1/2.0) + 1.0   
+$pwHs1 = ($stepsH1 + 1.0)
+$rfH1 = 1023.0
+BPmakesinc($stepsH1, $rfH1)
+$stpsH1 = '' 	format($stepsH1,0,0):$stpsH1
+$file1=userdir+'/shapelib/sincs'+$stpsH1+'.RF'
+$file2=userdir+'/shapelib/H2Osinc1'+'.RF'
+cp($file1,$file2)  rm($file1)
+BPmoveshape('H2Osinc1.RF')
+write('line3','The SLP pulse "shapelib/H2Osinc1.RF" has been created')

@@ -1,0 +1,29 @@
+"macro fixgrd"
+"***************************************************************"
+"fixgrd - Macro returns dac values for a specified gradient     "
+"	  strength (G/cm).   Uses probes file 			"
+"***************************************************************"
+
+$gcal=0
+if (probe <> '') then
+  getparam('gcal','Probe'):$gcal
+endif
+if ($gcal = 0) then
+ return
+endif
+
+$subgrad='l'  "Safely assumes Performa I"
+substr(gradtype,3,1):$subgrad
+if ($subgrad='l') then
+   $maxgrad = $gcal * 2047
+else
+   $maxgrad = $gcal * 32767
+endif
+
+if ($maxgrad*0.95 < $1) then
+ $newlvl = trunc($maxgrad*0.95/$gcal)
+else 
+ $newlvl = trunc($1/$gcal)
+endif
+
+return($newlvl)

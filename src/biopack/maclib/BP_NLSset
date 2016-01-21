@@ -1,0 +1,88 @@
+"macro BP_NLSset"
+
+exists('NDIM','parameter'):$e 
+if $e=0 then 
+ write('line3','Error: run BP_NLSinit macro first')  
+ return
+endif
+
+$outfile=sparse_dir+'/'+sparse_file+'.in'
+write('line3','create %s file',$outfile)
+write('reset',$outfile)
+
+write('fileline',$outfile,'file %s\n',sparse_dir+'/'+sparse_file)
+write('fileline',$outfile,'NDIM %d\n',NDIM)
+write('fileline',$outfile,'SPARSE %s\n',SPARSE)
+write('fileline',$outfile,'seed %d\n',seedSP)
+write('fileline',$outfile,'sptype %s\n',sptype)
+exists('minhole','parameter'):$e
+if $e=1 then write('fileline',$outfile,'MINHOLE %d\n',minhole) endif
+
+
+write('fileline',$outfile,'f180 ')
+exists('f1180','parameter'):r1 if r1 = 1 and NDIM > 1 then write('fileline',$outfile,'%s',f1180) endif 
+exists('f2180','parameter'):r1 if r1 = 1 and NDIM > 2 then write('fileline',$outfile,'%s',f2180) endif 
+exists('f3180','parameter'):r1 if r1 = 1 and NDIM > 3 then write('fileline',$outfile,'%s',f3180) endif 
+write('fileline',$outfile,'n\n')
+
+if NDIM>3 then CT_SP='nnnn' endif 
+write('fileline',$outfile,'CT_SP %s\n',CT_SP)
+if NDIM>3 then CEXP='nnnn' endif
+write('fileline',$outfile,'CEXP %s\n',CEXP)
+
+write('fileline',$outfile,'NIMAX')
+if( NDIM > 1 ) then write('fileline',$outfile,' %d',nimax) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %d',ni2max) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %d',ni3max) endif
+write('fileline',$outfile,' 1\n')
+
+write('fileline',$outfile,'NIMIN')
+if( NDIM > 1 ) then write('fileline',$outfile,' %d',nimin) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %d',nimin2) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %d',nimin3) endif
+write('fileline',$outfile,' 0\n')
+
+" make ni=0 the same as ni=1 "
+$ni=ni if( ni < 1 ) then $ni=1 endif
+exists('ni2','parameter'):$e 
+if $e=1 then
+ $ni2=ni2 if( ni2 < 1 ) then $ni2=1 endif
+endif
+exists('ni3','parameter'):$e 
+if $e=1 then
+ $ni3=ni3 if( ni3 < 1 ) then $ni3=1 endif
+endif
+
+write('fileline',$outfile,'NI')
+if( NDIM > 1 ) then write('fileline',$outfile,' %d',$ni) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %d',$ni2) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %d',$ni3) endif
+write('fileline',$outfile,' 1\n')
+
+write('fileline',$outfile,'SW')
+if( NDIM > 1 ) then write('fileline',$outfile,' %g',sw1) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %g',sw2) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %g',sw3) endif
+write('fileline',$outfile,' %g\n',sw)
+
+write('fileline',$outfile,'T2')
+if( NDIM > 1 ) then write('fileline',$outfile,' %g',T2sp) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %g',T2sp2) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %g',T2sp3) endif
+write('fileline',$outfile,' 1\n')
+
+write('fileline',$outfile,'Jsp')
+if( NDIM > 1 ) then write('fileline',$outfile,' %g',Jsp) endif
+if( NDIM > 2 ) then write('fileline',$outfile,' %g',Jsp2) endif
+if( NDIM > 3 ) then write('fileline',$outfile,' %g',Jsp3) endif
+write('fileline',$outfile,' 0\n')
+
+BPfindfile('nussampler'):$path1
+
+$dum=''
+sparse_dir=curexp   "in case old parameter set is used"
+echo('sparse file: '+sparse_dir+'/'+sparse_file+'.in')
+shell($path1+' ' +sparse_dir+'/'+sparse_file+'.in'):$dum
+
+
+

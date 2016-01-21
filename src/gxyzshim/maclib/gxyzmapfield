@@ -1,0 +1,335 @@
+"macro gxyzmapfield"
+" gxyzmapfield						"
+" GAM 28v03						"
+" from GMproc3Dfieldexp					"
+" check for gzwin misset   GAM 12vi03			"
+
+" gxyzmapfield :  process field map data 		"
+" gxyzmapfield('setup') :  setup and acquire field map data 	"
+" gxyzmapfield('map') :  process field map data 	"
+" gxyzmapfield('process') :  ditto and fit to shim map	"
+" gxyzmapfield('set') :  set resultant shim values	"
+" gxyzmapfield('all') :  all of the above and load shims"
+
+werr=''
+
+$function='error'
+if $#=0 then
+        $function='map'
+else
+        if $1='setup' then $function='setup' endif
+        if $1='map' then $function='map' endif
+        if $1='process' then $function='process' endif
+        if $1='set' then $function='set' endif
+        if $1='all' then $function='all' endif
+endif
+
+if $function='error' then
+        write('error','invalid argument supplied to gxyzmapshims')
+        abort
+endif
+
+"***********************************************************************"
+if $function='setup' then
+	gxyzsetlocalpars
+	length(gxyzcode):$length
+	if $length=16 then ni=4 ni2=4 
+	elseif $length=36 then ni=6 ni2=6
+	elseif $length=64 then ni=8 ni2=8
+	elseif $length=144 then ni=12 ni2=12
+	else ni=4 ni2=4
+	endif 
+	wnt='wft(1,celem) dsshall gxyztext(`fmapping`)'
+	if ($# > 1.5) then
+		if ($2='auto') then wexp='gxyzmapfield(`map`,`auto`)' endif
+	else wexp='gxyzmapfield'
+	endif
+	pad=5 
+	gxyzmapcode=gxyzcode
+	"Force system to readshims before acquiring - 17xi03"
+	"A potential problem on INOVA that x1 and y1 are read DURING acquisition"
+	"So you sometimes have the wrong value of the these shims at the"
+	"end of the expt"
+	readallshims
+	clear(2)
+	gxyztext('fmapping')
+	gxyz_au
+endif
+
+"***********************************************************************"
+if $function='map' then
+" put fieldmap in present directory "
+if (gzwin<1) or (gzwin>99) then write('error','WARNING:  gzwin value is unreasonable') endif
+cd(userdir+'/3Dshimlib/data')
+wft
+gxyzmap('fieldmap')
+disp3Dmap('fieldmap')
+
+if ($# > 1.5) then
+	if $2='auto' then
+		gxyzcentre
+		gxyzmapname
+		readallshims
+	
+		//Attempt to map all shims with good S/N even if 
+		//all shims have been mapped
+		if (tn='lk' or tn='H2') then
+			if ((tau[2]<0.1) and (gxyzshimgroup='all')) then
+				write('line3','Shims will be remapped')
+				gxyzremap='y'
+			else
+				gxyzremap='n'
+			endif
+		endif
+		gxyzmapshims('start','auto')
+	endif
+endif
+//return
+endif
+
+
+"***********************************************************************"
+if $function='process' then
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"process and fit 3D field mapping experiment          "
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"check important parameters"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~"
+clear
+gxyzmapsys('check')
+$origdir='' pwd:$origdir
+$shimmapdir=userdir+'/3Dshimlib/shimmaps/'+mapname
+$datadir=userdir+'/3Dshimlib/data'
+exists($shimmapdir,'directory'):$exists
+if $exists = 0 then
+   write('error','directory shimmap/'+mapname+'  missing, check mapname')
+   abort
+else
+   $shimmapdir=$shimmapdir+'/'
+endif
+
+gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+
+$i=0 $j=1
+repeat
+	$i=$i+1
+	while ($shimtofit[$i]<>$shimtomap[$j]) do
+		$j=$j+1
+	endwhile
+	$change[$i]=$change[$j]
+until $i>$nfitshims
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"use gxyzmap to output fieldmap"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+cd($datadir):$dum
+wft
+gxyzmap('fieldmap')
+
+shell('wc -l < fieldmap; cat'):$nlinesfield
+
+"*** copy fieldmap to shimmap directory ***"
+$cpstr = 'fieldmap'
+$comstr = 'cp '+$cpstr+' '+$shimmapdir
+"write('line3','%s',$comstr)"
+shell($comstr)
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"Add fieldmap and shimmaps to mapdata"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+cd($shimmapdir):$dum
+$linestr='' $npts=0 $phase=0
+
+"*** read fieldmap header  ***"
+lookup('file','fieldmap')
+lookup('readline'):$linestr  "exp 4     "
+lookup('skip','read'):$npts  "x  npts   "
+lookup('readline'):$linestr  "label     "
+lookup('readline'):$linestr  "          "
+lookup('readline'):$linestr  "1  0  0  0"
+
+"*** write mapdata header file ***"
+exists('mapdata','file'):$exists
+if $exists = 1 then
+   shell('rm mapdata')
+endif
+write('file','mapdata','exp 4')
+write('file','mapdata','  %d  %d',$nfitshims+1,$npts)
+write('file','mapdata','mapdata')
+write('file','mapdata','')
+write('file','mapdata','1  0  0  0')
+
+"*** write fieldmap data to mapdata ***"
+$i=0
+repeat
+  $i=$i+1
+  lookup('skip','read'):$phase  "freq   phase"
+  write('file','mapdata','%d\t%f',$i,$phase)
+until $i >= $npts
+
+"*** add other shimmap data to mapdata ***"
+$c=0 $fout='' $filestr='shimmap' $cstr=''
+repeat
+  $c=$c+1
+  if $c < 10 then
+     format($c,1,0):$cstr
+  else
+     format($c,2,0):$cstr
+  endif
+
+  if $fit[$c] = 1 then
+     $fout=$shimmapdir+$filestr+$cstr
+     $comstr='tail -n +4 '+$fout+' >> mapdata'
+     shell($comstr)
+  endif
+until $c >= $nmapshims
+
+"*** move mapdata to data directory ***"
+$comstr='mv mapdata '+$datadir
+shell($comstr)
+
+shell('wc -l < shimmap1; cat'):$nlinesshim
+cd($datadir):$dum
+
+if ($nlinesshim<>$nlinesfield) then
+	cd($origdir):$dum
+	write('error','Field and shim maps are of different sizes:  gzwin and gxyzcode must be the same for field and shim maps')
+	abort
+endif
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~"
+"perform fitting procedure"
+"~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+"*** check if xyshim.list already exists ***"
+exists('xyshim.list','file'):$ex
+if ($ex = 1) then
+   rm('xyshim.list'):$dum
+endif
+"*** write file xyshim.list ***"
+$mapname=mapname
+write('file','xyshim.list','mapname  %s',$mapname)
+write('file','xyshim.list',
+  'shimset 10  nshims   %d   rmsdiff  0.00   rmsdiff/rmserr    0.00',$nmapshims)
+write('file','xyshim.list','')
+write('file','xyshim.list','shim\t offset\t\t old\t\t new\t\t diff\t\t error')
+write('file','xyshim.list',
+  '-----------------------------------------------------------------------------')
+
+$i=0
+repeat
+  $i=$i+1
+  write('file','xyshim.list','%s\t %.0f\t\t %.0f\t\t 0\t\t 0\t\t 0',
+        $shimtofit[$i],$change[$i],{$shimtofit[$i]})
+until $i=$nfitshims
+write('file','xyshim.list',
+  '-----------------------------------------------------------------------------')
+
+gxyzfit
+
+disp3Dmap('xyshim.fit',1,2)
+clear
+cat('xyshim.list')
+cd($origdir):$dum
+return
+endif
+
+"***********************************************************************"
+if $function='set' then
+$origdir='' pwd:$origdir
+$datadir=userdir+'/3Dshimlib/data'
+cd($datadir):$dum
+
+"~~~~~~~~~~~~~~~~~~~"
+"Set new shim values"
+"~~~~~~~~~~~~~~~~~~~"
+$rmserr=0 $nshims=0
+lookup('file','xyshim.list')
+lookup('readline'):$linestr
+lookup('skip','skip','skip','read','skip','skip','skip','read'):$nshims,$rmserr
+lookup('readline'):$linestr
+lookup('readline'):$linestr
+lookup('readline'):$linestr
+lookup('readline'):$linestr
+
+$range=32767
+if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 endif
+$i=0 $newopt=0 $shim='' $sum=0 $relpwr=0
+repeat
+  $i=$i+1
+  lookup('read','skip','skip','read','skip','skip'):$shim,$newopt
+  {$shim}=$newopt
+until $i >= $nshims
+
+"Add shim power dissipation calculation based on shim tables in 3Dshimlib/shimtab"
+"PJB 22iv05"
+if (shimset<10 or shimset>11) then
+   $pospercent=0 $negpercent=0
+   shimamp:$pospercent,$negpercent
+   gxyzshimpwr:$shimpower
+   r2=$shimpower
+   if shimprotect='y' then
+	if (($shimpower > 14) or ($pospercent>90) or ($negpercent>90)) then 
+		write('error','Shim power dissipation or current too high, aborting!')
+		write('line3','Shim power dissipation or current too high, aborting!'):$error
+		is_IP:$isIP
+		if ($isIP) then
+	           atext($error)
+  	           VPlog('ExpError',$error)
+	           IPdoemail('warn')
+ 	           bgmode_is:$b
+	           $cmd='IPpopup(\'message\',\''+$error+'\')'
+	           if ($b < 0.5) then
+	              exec($cmd)
+	           else
+                      xmhaha('sendcmd',$cmd)
+	           endif
+		endif
+		abort
+	endif
+   endif
+endif
+
+"~~~~~~~~~~~~~~~~~~"
+"output fit results"
+"~~~~~~~~~~~~~~~~~~"
+$yn=0 full f
+
+$comstr='cat xyshim.list >> '+$origdir+'/lists'
+shell($comstr)
+shell('sleep 2')
+
+"*** save all shimming data - debugging only, disabled ***"
+$savedata='n'
+if ($savedata = 'y') then
+	$r1str=''
+	if (r1 <= 9) then
+   	    format(r1,1,0):$r1str
+   	    $comstr='cp xyshim.fit fit0'+$r1str
+   	    shell($comstr)
+   	    svf('shim0'+$r1str)
+   	    mv('fit0'+$r1str,$origdir)
+   	    mv('shim0'+$r1str+'.fid',$origdir)
+	else
+   	    format(r1,2,0):$r1str
+   	    $comstr='cp xyshim.fit fit'+$r1str
+   	    shell($comstr)
+   	    svf('shim'+$r1str)
+   	    mv('fit'+$r1str,$origdir)
+   	    mv('shim'+$r1str+'.fid',$origdir)
+	endif
+	r1=r1+1
+endif
+
+cd($origdir):$dum
+endif
+
+"***********************************************************************"
+if $function='all' then
+wft
+gxyzmapfield('process')
+gxyzmapfield('set')
+setallshims
+endif

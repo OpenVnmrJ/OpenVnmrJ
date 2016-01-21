@@ -1,0 +1,31 @@
+"macro ims"
+" ims - define signal value for snr measurement in an image"
+
+" Details: display the image, using the vnmrj interface"
+"          specify an ROI region (box, circle)  and place it in the signal region"
+"          ims will display the mean signal value and snr = ims/imn"
+"          previously determined imn value is used for noise value"
+"          if the noise region is not specified, move the box to"
+"          the noise region and type imn"
+
+" Author: S. Sukumar, Varian, Palo Alto, CA, USA"
+
+exists('ims', 'parameter'):$ex
+if($ex = 0) then
+   create('ims')
+endif
+
+$ims=''
+substr(aipStatMeanMsg,2):$ims
+
+format($ims,0,6):ims
+exists('imn', 'parameter'):$ex
+if($ex > 0) then
+  if(imn = 0) then
+    write('line3','Mean signal value: %f',ims)
+  else
+   write('line3','SNR value: \(%f/%f\) = %5.2f',ims,imn,(ims-imn)/imn)
+  endif
+else
+   write('line3','Mean signal value: %f',ims)
+endif

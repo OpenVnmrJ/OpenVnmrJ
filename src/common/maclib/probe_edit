@@ -1,0 +1,375 @@
+"macro probe_edit"
+// probe_edit - macro to edit a probe file
+//   using xml panel
+//
+// usage: probe_edit(< probe_name >)
+//   If no probe_name is specified, use current probe.
+//   If probe_name is specified, edit probe_name.
+//
+// second usage: probe_edit('probe', probe_name)
+//   Note you only need to use two arguments if
+//   probe_name is one of the keywords:
+//     'make' 'open' 'ok' 'cancel' 'cleanup' 'initpar'
+//     'save' 'get' 'set' 'update' 'build' 'probe'
+
+if $#<0.5 then $1='make' endif
+
+probeid('enabled'):$probeid
+
+if $1='make' then  // edit current probe file
+
+  {$0}('cleanup')  // clean up previous probe edit
+  {$0}('initpar')  // set parameters
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+elseif $1='open' then      
+// open dialog
+
+  $probe=probe
+  if $#>1.5 then $probe=$2 endif
+
+  $cmd = 'vnmrjcmd(\'popup\', \'mode:modal\',
+    \'file:ProbeEdit.xml\',
+    \'rebuild:yes\',
+    \'ok:'+$0+'(`ok`)\',
+    \'cancel:'+$0+'(`cancel`)\',
+    \'location:controlPanel\',
+    \'help:/vnmr/jhelp/dialog/probe.html\',
+    \'title:Probe Edit:  '
+  $cmd=$cmd+$probe+'\''+')'
+  exec($cmd)
+
+elseif $1='ok' then
+  {$0}('save')     // save probe file
+  {$0}('cleanup')  // clean up probe edit
+
+elseif $1='cancel' then
+  {$0}('cleanup')  // clean up probe edit
+
+elseif $1='cleanup' then
+  // clean up probe edit
+  if $probeid > 0.5 then
+    exists('probedtmp','parameter','current'):$e
+    if ($e) then
+      destroy('probedtmp','current')
+    endif
+  endif
+
+  exists('probedattr','parameter','current'):$e
+  if ($e) then
+    destroy('probedattr','current')
+  endif
+  exists('probedval','parameter','current'):$e
+  if ($e) then
+    destroy('probedval','current')
+  endif
+  $dir = userdir+'/templates/vnmrj/interface'
+  $xfile = $dir+'/ProbeEdit.xml'
+  exists($xfile,'file'):$e
+  if ($e) then rm('-f',$xfile):$x endif
+  $pfile=userdir+'/persistence/probe_edit_probe'
+  exists($pfile,'file'):$e
+  if ($e) then rm('-f',$pfile):$x endif
+
+elseif $1='initpar' then
+// create, initialize global parameters from probe file
+  probeidez('native'):$probeidez
+  $probe=probe
+  if $#>1.5 then
+    $probe=$2
+  endif
+
+  if ($probeid) then
+    probe_which($probe):$e,$owner
+    if not($e) then
+      probeid('id'):$id
+      write('error','Probe %s does not have a probe configuration "%s"',$id,$probe)
+      abort
+    else
+      probeid('get',$probe,$owner):$e,$file
+    endif
+  else
+    $file=userdir+'/probes/'+$probe+'/'+$probe
+    exists($file,'file'):$e
+    if not ($e) then
+      $file=systemdir+'/probes/'+$probe+'/'+$probe
+      exists($file,'file'):$e
+    endif
+    if not ($e) then
+      write('error','Cannot find probe file "%s"',$probe)
+      abort
+    endif
+  endif
+
+  if $#>1.5 then
+    $dir=userdir+'/persistence'
+    exists($dir,'directory'):$d
+    if not ($d) then mkdir('-p',$dir) endif
+    write('reset',$dir+'/probe_edit_probe')
+    write('file',$dir+'/probe_edit_probe','%s',$probe)
+  endif
+
+  exists('probedattr','parameter','current'):$e
+  if not ($e) then
+    create('probedattr','string','current')
+    setgroup('probedattr','display','current')
+    setprotect('probedattr','on',16+256+32768,'current')
+  endif
+  exists('probedval','parameter','current'):$e
+  if not ($e) then
+    create('probedval','string','current')
+    setgroup('probedval','display','current')
+    setprotect('probedval','on',16+256+32768,'current')
+  endif
+
+  readfile($file,'probedattr','probedval','','current'):$size
+
+  if $probeid then
+    // a leading underscore indicates read-only values
+    probeid('attr','_'):$probeid_attr,$probeid_val,$pid_sz
+    probedattr = $probeid_attr, probedattr
+    probedval  = $probeid_val, probedval
+    $size      = $size + $pid_sz
+    exists('probedtmp','parameter','current'):$e
+    if not($e) then
+      create('probedtmp','string','current')
+      setgroup('probedtmp','display','current')
+      setprotect('probedtmp','on',16+256+32768,'current')
+    endif
+    probedtmp = $file
+  endif
+
+  if $probeidez then
+    probeidez('attr','_','probedattr','probedval','current'):$size
+  endif
+  $size1 = size('probedattr')
+  $size2 = size('probedval')
+  if ($size1 <> $size) or ($size2 <> $size) then
+    // extra junk at the bottom of the probe file?
+    {$0}('cleanup')
+    write('error','probe editor could not read probe file %s.',$probe)
+    abort
+  endif
+
+elseif $1='save' then
+  probeidez('native'):$probeidez
+
+  if $probeid > 0.5 then
+    exists('probedtmp','parameter','current'):$e
+    if not($e) then
+      write('error',$0+' \'save\' expects initpar to be called first')
+      abort
+    endif
+    probeid_save(probedtmp,'probedattr','probedval','current')
+  elseif $probeidez then
+    $probe=probe
+    $file=userdir+'/probes/'+$probe+'/'+$probe
+    exists($file,'file','rw'):$e
+    if not ($e) then
+      $file=systemdir+'/probes/'+$probe+'/'+$probe
+      exists($file,'file','rw'):$e
+    endif
+    if not ($e) then
+      return
+    endif
+    probeid_save($file,'probedattr','probedval','current')
+  else
+    exists('probedattr','parameter','current'):$e1
+    exists('probedval','parameter','current'):$e2
+    if not ($e1 and $e2) then
+      write('error','probe editor cannot save changes')
+      return
+    endif
+
+    $size1 = size('probedattr')
+    $size2 = size('probedval')
+    $size = $size1
+    if ($size > $size2) then
+      $size = $size2
+    endif
+
+    $probe=probe
+    $pfile=userdir+'/persistence/probe_edit_probe'
+    exists($pfile,'file'):$ed
+    if ($ed) then
+      $pval=''
+      lookup('mfile',$pfile,'read'):$pval
+      if $pval<>'' then $probe=$pval endif
+      rm('-f',$pfile):$x
+    endif
+
+    $file=userdir+'/probes/'+$probe+'/'+$probe
+    exists($file,'file','rw'):$e
+    if not ($e) then
+      $file=systemdir+'/probes/'+$probe+'/'+$probe
+      exists($file,'file','rw'):$e
+    endif
+    if not ($e) then
+      return
+    endif
+
+    $tfile=userdir+'/persistence/probe_edit'
+    write('reset',$tfile)
+    write('file',$tfile,'%-17s %s',probedattr[1],probedval[1])
+    $i=1 $hdr=0
+    repeat
+      $i=$i+1
+      strstr(probedattr[$i],':'):$hdr
+      if ($hdr) then
+        write('file',$tfile,'\n%-17s %s',probedattr[$i],probedval[$i])
+      else
+        write('file',$tfile,'%-17s %s',probedattr[$i],probedval[$i])
+      endif
+    until ($i >= $size)
+    write('file',$tfile,'')
+    mv($tfile,$file)
+  endif // legacy 'save'
+
+elseif $1='get' then
+// get probe value from parameters, similar to getparam
+
+  $ret=''
+  if $#<2.5 then
+    return($ret)
+  endif
+
+  $param=''
+  $param = $3 + $2
+
+  $size = size('probedattr')
+  $i=0 $found=0
+  repeat
+    $i=$i+1
+    if ($param = probedattr[$i]) then
+      $found=1
+    endif
+  until ($found) or ($i>=$size)
+  if ($found) then
+    write('line3',probedval[$i]):$ret
+  endif
+  return($ret)
+
+elseif $1='set' then
+// set probe value into parameters, similar to setparams
+
+  if $#<3.5 then
+    return
+  endif
+
+  $param = ''
+  $param = $3 + $2
+  $value = ''
+  $value = $4
+
+  $size = size('probedattr')
+  $i=0 $found=0
+  repeat
+    $i=$i+1
+    if ($param = probedattr[$i]) then
+      $found=1
+    endif
+  until ($found) or ($i>=$size)
+  if ($found) then
+    probedval[$i] = $value
+  endif
+
+elseif $1='update' then
+// update parameter value and time stamp
+// $1='update', $2='attr', $3='val', $4=$i, $5=$VALUE
+  if $#>4.5 then
+    $i=0 $i=$4
+    $psize = size($2)
+    if ($i<0.5 or $i>$psize) then
+      return
+    endif
+    $val='' $oldval=''
+    write('line3',$5):$val
+    write('line3',{$3}[$i]):$oldval
+
+    if ($val <> $oldval) then  // update parameter
+      {$3}[$i] = $val
+      vnmrjcmd('pnew','probedval')
+      strstr({$2}[$i],'date'):$isdate
+
+      if not ($isdate) then    // update time stamp
+        $hdr=0 $found=0
+        repeat
+          $i=$i+1
+          $name = {$2}[$i]
+          if ($name <> 'NAME:') then
+            strstr($name,':'):$hdr
+            if not ($hdr) then
+              strstr($name,'date'):$found
+            endif
+          endif
+        until ($found) or ($hdr) or ($i >= $psize)
+        if ($found) then
+          $date=''
+          shell('date +%d-%b-%Y'):$date
+          {$3}[$i] = $date
+        endif
+      endif
+    endif
+  endif
+
+elseif $1='build' then
+// build xml file
+
+  $probe=probe
+  if $#>1.5 then $probe=$2 endif
+
+  if $probeid then
+    exists('probedtmp','parameter','current'):$e
+    if $e then     // should have been created by {$0}('initpar')
+      $file=probedtmp 
+    else 
+      probeid('fexists',$probe):$ep
+      probeid('get',$probe):$ep,$file
+    endif
+    exists($file,'file','rw'):$ep
+  else // legacy probe
+    $file=userdir+'/probes/'+$probe+'/'+$probe
+    exists($file,'file','rw'):$ep
+    if not ($ep) then
+      $file=systemdir+'/probes/'+$probe+'/'+$probe
+      exists($file,'file','rw'):$ep
+    endif
+  endif
+  $enable = 2 * $ep - 1
+
+  $dir = userdir+'/templates/vnmrj/interface'
+  exists($dir,'directory'):$d
+  if not ($d) then
+    mkdir('-p',$dir)
+  endif
+
+  // loop through headers and lines
+  probeid_linect('probedattr','probedattr'):$maxlines,$hdrlen,$id,$name
+
+  $maxx = $hdrlen
+  if $maxx<360 then $maxx=360 endif
+  if $maxlines<10 then $maxlines=10 endif
+  $maxy = 20 * $maxlines
+
+  probeid_xml($dir,'only',$maxx,$maxy,$enable,'probedattr','probedval')
+
+elseif ($1='probe' and $#>1.5) then
+// second argument is probe name
+
+  $probe='' $probe=$2
+  {$0}('cleanup')         // clean up previous probe edit
+  {$0}('initpar',$probe)  // set parameters
+  {$0}('build',$probe)    // build xml file
+  {$0}('open',$probe)     // open dialog
+
+else
+// first argument is probe name
+
+  $probe='' $probe=$1
+  {$0}('cleanup')         // clean up previous probe edit
+  {$0}('initpar',$probe)  // set parameters
+  {$0}('build',$probe)    // build xml file
+  {$0}('open',$probe)     // open dialog
+
+endif

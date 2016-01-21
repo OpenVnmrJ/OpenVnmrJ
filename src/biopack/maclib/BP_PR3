@@ -1,0 +1,132 @@
+"macro BP_PR3"
+" PR3  - Projection-Reconstruction macro, Eriks Kupce, 21.07.2005 "
+
+cd(PRdir+'/'+PRexp[PRn])
+$fn1='' 
+$fn2=''
+$fn3=''
+PRcnt=PRcnt+1
+
+$cnt = 2*PRcnt-1
+format($cnt,1,0):$fn1
+format($cnt+1,1,0):$fn2
+
+BP_PRproc1a($cnt)   
+$fn3='p'+$fn1+'p'+$fn2
+BPsvf($fn3)
+$fn1='P'+$fn1+'.pk'
+$fn2='P'+$fn2+'.pk'
+
+"find location of program"
+BPfindfile('pr3db'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/pr3db' then
+ cp($path1,userdir+'/../bin')  
+endif
+$cmd='pr3db ' + $fn1 + ' '+ $fn2 + ' 0.5'
+shell($cmd)
+shell('sleep 2')
+
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/pr3db' then
+ rm(userdir+'/../bin/pr3db') 
+endif
+
+
+$newpeaks=0
+BP_PRnpks:$newpeaks           
+write('alpha','%d peaks expected;', PRnpeaks[PRn])
+write('file','../PRmessages','%d peaks expected;', PRnpeaks[PRn])
+write('alpha','%d peaks detected.', PRppeaks)
+write('file','../PRmessages','%d peaks detected.', PRppeaks)
+write('line3','%d new peaks;', $newpeaks)
+write('line3','%d peaks expected;', PRnpeaks[PRn])
+write('line3','%d peaks detected.', PRppeaks)
+
+$new=0
+if(PRcnt>=PRnpr[PRn]) then 
+  $new=1 
+  write('alpha','Maximum # of planes reached.')
+  write('line3','Maximum # of planes reached.')
+  write('file','../PRmessages','Maximum # of planes reached.')
+endif  
+if($newpeaks<1) then 
+  $new=1 
+  write('alpha','No new peaks found.')
+  write('line3','No new peaks found.')
+  write('file','../PRmessages','No new peaks found.')
+endif
+if(PRppeaks>PRnpeaks[PRn]-1) then 
+  $new=1 
+  write('alpha','All peaks found.')
+  write('line3','All peaks found.')
+  write('file','../PRmessages','All peaks found.')
+endif
+
+if($new<1) then
+  if(PRbpa[PRn]='y') or (PRbpa[PRn]='ny') or (PRbpa[PRn]='yy') then
+    $file=''
+    pwd:$file
+    exists($file+'/PR.bpa','file'):$e
+    if($e) then
+      BP_PRgetbpa($file+'/PR.bpa'):pra
+    else
+      write('error','BP_PR2: failed to open PR.bpa file')
+      write('file','../PRmessages','BP_PR2: failed to open PR.bpa file')
+      return
+    endif
+    if(pra < 0.001) then
+      $new=1
+      write('alpha','pra prediction failed;')
+      write('file','../PRmessages','pra prediction failed;')
+    endif
+  else
+    if(PRbpa[PRn]='r') then            " regular "
+      $prainc = 90.0/(PRnpr[PRn] + 1)
+    else
+      if(PRsw1[PRn] > PRsw2[PRn]) then
+        atan(PRsw2[PRn]/PRsw1[PRn]):$prx
+      else
+        atan(-PRsw1[PRn]/PRsw2[PRn]):$prx
+      endif
+      $prx = $prx*180.0/3.14159
+      $prainc = 2.0*$prx/(PRnpr[PRn] + 1)
+      pra = pra + $prainc
+      if(PRvarsw1[PRn] = 'y') then
+        atan(PRsw2[PRn]/PRsw1[PRn]):$prx
+        $prx=$prx*180/3.14159
+        if(pra > $prx) then
+          cos(pra*3.14159/180.0):$cf
+          sw1 = PRsw1[PRn]/$cf
+        else
+          sin(pra*3.14159/180.0):$cf
+          sw1 = PRsw2[PRn]/$cf
+        endif
+      endif
+    endif
+  endif
+endif
+   
+if($new=1) then
+  if(PRn>=PRnexp) then 
+    $cmd = $cmd + '\\ PR experiments finished. \\'
+    banner($cmd) 
+    return
+  endif
+  write('alpha','Proceeding to the next experiment.')
+  write('line3','Proceeding to the next experiment.')
+  write('file','../PRmessages','Proceeding to the next experiment.\\     ')
+  write('file','../PRmessages','             ')
+  BP_PRnew  
+  au
+else  
+  wexp='BP_PR3'
+  au
+endif
+
+

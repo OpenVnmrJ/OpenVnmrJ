@@ -1,0 +1,69 @@
+"macro lcTraceMenu"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcTraceMenu"
+
+// Constructs a lcTraceMenu file giving choices for chromatogram traces.
+// Based on values of lcDetector and the lcChannelX parameters.
+// 
+
+$adcChan = 0
+if ($# > 0) then
+  $adcChan = $1
+endif
+
+lcChannelLabel(1):$chan1Label, $chan1
+lcChannelLabel(2):$chan2Label, $chan2
+lcChannelLabel(3):$chan3Label, $chan3
+
+filepath(userdir, 'lc', 'lcTraceMenu'):$file
+write('reset', $file)
+write('file', $file, '#')
+write('file', $file, '# This file was made by the macro "lcTraceMenu".')
+write('file', $file, '# Do not edit.')
+write('file', $file, '#')
+
+$line=''
+if (lcDetector = '335') then
+  $line = $line + '"PDA 335 Out-1" ":uv1: PDA 335 Out-1"\n'
+  $line = $line + '"PDA 335 Out-2" ":uv2: PDA 335 Out-2"\n'
+endif
+
+if ($chan1 <> 'none') then
+  strstr($chan1, '%'):$idx  // Make sure channel value is valid
+  if (not $idx) then
+    lcChannel1 = 'none'
+  elseif ($chan1 = 'other') then
+    $chan1 = lcChannel1Label
+  else
+    write('line3', $chan1, 1):$chan1
+  endif
+  $line = $line + '"'+$chan1Label+'" "'+$chan1+' '+$chan1Label+'"\n'
+endif
+
+if ($chan2 <> 'none') then
+  strstr($chan2, '%'):$idx  // Make sure channel value is valid
+  if (not $idx) then
+    lcChannel2 = 'none'
+  elseif ($chan2 = 'other') then
+    $chan2 = lcChannel2Label
+  else
+    write('line3', $chan2, 2):$chan2
+  endif
+  $line = $line + '"'+$chan2Label+'" "'+$chan2+' '+$chan2Label+'"\n'
+endif
+
+if ($chan3 <> 'none') then
+  strstr($chan3, '%'):$idx  // Make sure channel value is valid
+  if (not $idx) then
+    lcChannel3 = 'none'
+  elseif ($chan3 = 'other') then
+    $chan3 = lcChannel3Label
+  else
+    write('line3', $chan3, 3):$chan3
+  endif
+  $line = $line + '"'+$chan3Label+'" "'+$chan3+' '+$chan3Label+'"\n'
+endif
+
+$line = $line + '"Off" "none"\n'
+
+write('fileline', $file, $line)

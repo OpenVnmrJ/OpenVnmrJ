@@ -1,0 +1,140 @@
+"macro RQload"
+"Usage: RQload(locator_category, fullpath) "
+
+if($# < 0.5) then 
+   write('line3', 'Usage: RQload(type, path)')
+   return
+endif
+
+$x=''
+$y=''
+$expand='yes'
+$display='no'
+
+if($# < 1.5) then
+   $dir = $1
+   $type ='default'
+elseif($# < 3.5) then 
+   $dir = $1
+   $type =$2
+elseif($# < 4.5) then 
+   $dir = $1
+   $type =$2
+   $x = $3
+   $y = $4
+else
+   $dir = $1
+   $type =$2
+   $x = $4
+   $y = $5
+endif
+
+exists($dir,'file'):$e
+if $e < 0.5 then 
+  $path = '' 
+  if $type = 'imgstudy' then
+     $path = $dir + '.img'
+  else
+     $path = $dir + '.fid'
+  endif
+  exists($path,'file'):$e
+  if $e < 0.5 then 
+   if $type = 'imgstudy' then
+     $path = $dir + '.fdf'
+     exists($path,'file'):$e
+     if $e < 0.5 then
+	return
+     else
+	$dir = $path
+     endif
+   else
+     return
+   endif
+  else
+   $dir = $path
+  endif
+endif
+
+$e3D = 0
+strstr($dir,'.fdf'):$n
+if($n > 0.5) then
+   lookup('mfile',$dir,'rank','skip','read'):$str
+       if ($str = '3;') then $e3D=1 endif
+else
+  isScan($dir):$n,$file
+  if($n > 0.5) then
+    lookup('mfile',$dir+'/'+$file,'rank','skip','read'):$str
+       if ($str = '3;') then $e3D=1 endif
+  endif
+endif
+
+if($e3D > 0.5) then
+    aipLoadDir($dir)
+    aipExtract('xy',0,nv2-1,1)
+    return
+endif
+
+rqcount[1] = 0
+
+$frame = 0
+if($type = 'imgstudy') then
+
+   if($# > 2.5) then
+     if($type = 'imgstudy' and $3 = 'DoubleClick') then
+      $display = 'yes'
+     endif
+   endif 
+
+" commented out so frame always starts from 0."
+   "if($display <> 'yes') then"
+   "   aipNumOfImgs:rqcount[1]"
+   "endif"
+
+    strstr($dir,'.fid'):$n,$s1,$s2
+    length($dir):$l
+    if($n = ($l-3)) then 
+        $dir = $s1+'.img'      
+        exists($dir,'file'):$e
+        if $e < 0.5 then
+           return
+        endif
+    endif
+
+    aipLoadDir($dir, 'copies')
+
+    if($# > 5.5) then
+	$frame = $6
+    else
+	aipGetFrameToStart:$frame
+    endif
+endif
+
+$tmpxml = userdir +'/templates/vnmrj/interface' 
+exists($tmpxml,'directory'):$e
+if($e < 0.5) then
+   mkdir('-p',$tmpxml)
+endif
+$tmpxml = $tmpxml+'/RQtreetable.xml' 
+rm('-rf',$tmpxml):$x
+
+writefile('open',$tmpxml)
+RQwritexml($type, $dir, 'begin', $frame)
+RQwritexml($type, $dir, $expand, $display, 'parent',$frame)
+RQwritexml($type, $dir, 'end')
+writefile('close')
+
+exists($tmpxml,'file'):$e
+if $e < 0.5 then
+  return
+endif
+
+if $x <> '' and $y <> '' and $display = 'yes' then
+  vnmrjcmd('RQ insert '+$tmpxml+' '+$x+' '+$y+' '+$display)
+elseif $x <> '' and $y <> '' then
+  vnmrjcmd('RQ insert '+$tmpxml+' '+$x+' '+$y)
+elseif $display = 'yes' then
+  vnmrjcmd('RQ add '+$tmpxml+' '+$display)
+else
+  vnmrjcmd('RQ add '+$tmpxml)
+endif
+

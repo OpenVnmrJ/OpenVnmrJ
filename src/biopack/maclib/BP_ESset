@@ -1,0 +1,268 @@
+"macro BP_ESset"
+"BP_ESset  a macro to setup Explicit Sampling"
+
+BPfindfile('seq_mod'):$seq_mod_path
+clear
+SPARSE='n'
+length(seqfil):$seql
+substr(seqfil,$seql-3,4):$sprb
+"Determine if current sequence is already ok"
+if($sprb='_TAB') then
+ write('line3',' sequence '+seqfil+' already exists ')
+else
+ $seqfil_orig=seqfil
+ $seqfil_new=seqfil+'_TAB'
+ exists('/vnmr/maclib/appdirs','file'):$appdir
+ if $appdir=1 then
+  exists($seqfil_orig,'psglib'):$ret,$psglibpath
+  exists('EXPL_samp','manual'):$retm,$samppath
+  if $ret=0 then "source code not in appdir, user psglib or /vnmr/psglib"
+     echo('Base squence does not exist')
+     banner('Base Sequence does not exist')
+     return
+  else            "source code in appdir, system or other directory"
+   cp($psglibpath,userdir+'/psglib')  "put base code into user psglib"
+  endif
+  write('line3','preparing sequence '+$seqfil_new)
+  if (($seq_mod_path<>'') and ($retm>0)) then
+   shell($seq_mod_path+' '+userdir+'/psglib/'+$seqfil_orig+'.c'+' '+$samppath)
+  else
+   echo('sequence conversion program "seq_mod" not in "bin" or "EXPL_samp" file not in "manual"')
+   banner('sequence conversion program "seq_mod" not in "bin" or "EXPL_samp" file not in "manual"')
+   write('line3','sequence conversion program "seq_mod" not in "bin" or "EXPL_samp" file not in "manual"')
+  endif
+  exists(userdir+'/psglib/'+$seqfil_new+'.c','file'):$seq
+  if ($seq=0) then
+   echo('automatic conversion failed, see manual in Text Output Page')
+   banner('automatic conversion failed, see manual in Text Output Page')
+   "man('EXPL_samp_seq')"
+  else
+   seqgen($seqfil_new)
+  endif
+  exists($seqfil_orig,'templates/layout'):$ret,$source_layoutpath
+  exists($seqfil_new,'templates/layout'):$ret1,$layoutpath
+  $target='' $dum=''
+  if $ret1=0 then  "layout file does not exist"
+   $target=userdir+'/templates/layout/'+$seqfil_new
+   shell('cp -r', $source_layoutpath, $target):$dum
+  endif
+
+ else    "non appdir method"
+
+  "find if compiled code exists"
+  exists(userdir+'/seqlib/'+$seqfil_new,'file'):$newseqlocal
+  exists('/vnmr/seqlib/'+$seqfil_new,'file'):$newseqvnmr
+  if (($newseqlocal=0) and ($newseqvnmr=0)) then "no compiled code" 
+
+   "find if source code for new sequence exists"
+   exists(userdir+'/psglib/'+$seqfil_new+'.c','file'):$newpsglocal
+   exists('/vnmr/psglib/'+$seqfil_new+'.c','file'):$newpsgvnmr
+   if $newpsglocal=1 then   "use local file"
+    $path=userdir+'/psglib/'+$seqfil_new+'.c'
+   else                  "look in /vnmr/psglib"
+    if $newpsgvnmr=1 then   "use /vnmr/psglib file"
+     $path='/vnmr/psglib/'+$seqfil_new+'.c'
+    endif
+   endif
+ 
+   if (($newpsgvnmr=1) or ($newpsglocal=1)) then
+    cp($path,userdir+'/psglib')
+    seqgen($seqfil_new)
+   else                   "must create new sequence code"
+     "find if source code for base sequence exists"
+     exists(userdir+'/psglib/'+$seqfil_orig+'.c','file'):$psglocal_orig
+     if $psglocal_orig=1 then   "use local file"
+      $path_orig=userdir+'/psglib/'+$seqfil_orig+'.c'
+     else                  "look in /vnmr/psglib"
+      exists('/vnmr/psglib/'+$seqfil_orig+'.c','file'):$psgvnmr_orig
+      if $psgvnmr_orig=1 then   "use /vnmr/psglib file"
+       $path_orig='/vnmr/psglib/'+$seqfil_orig+'.c'
+      else
+       echo('No Base Pulse Sequence source code available')
+       banner('No Base Pulse Sequence source code available') return
+      endif
+     endif
+     "need to prepare new psglib source code"
+     echo('preparing sequence '+$seqfil_new)
+     banner('preparing sequence '+$seqfil_new)
+     cp($path_orig,userdir+'/psglib')
+     exists(userdir+'/manual/EXPL_samp','file'):$samppathlocal
+     exists('/vnmr/manual/EXPL_samp','file'):$samppathvnmr
+     if $samppathlocal=1 then 
+      $samppath=userdir+'/manual/EXPL_samp'
+     else
+      $samppath='/vnmr/manual/EXPL_samp' 
+     endif
+     shell($seq_mod_path+' '+userdir+'/psglib/'+$seqfil_orig+'.c'+' '+$samppath)
+     exists(userdir+'/psglib/'+$seqfil_new+'.c','file'):$seq
+     if ($seq=0) then
+      echo(' automatic modification of '+$seqfil_orig+' not succesful, try it manually. See manual(Text Output Page) ' )
+      banner(' automatic modification of '+$seqfil_orig+' not succesful, try it manually. See manual(Text Output Page) ' )
+      "man('EXPL_samp_seq')"
+     endif
+     seqgen($seqfil_new)
+   endif
+  endif
+
+  "prepare layout files"
+  "look for local template files"
+  $layout_dir_orig=userdir+'/templates/layout/'+$seqfil_orig
+  exists($layout_dir_orig,'file'):$layoutlocal
+  if $layoutlocal=0 then  "look in /vnmr/templates/layout"
+   exists('/vnmr/templates/layout/'+$seqfil_orig,'file'):$layoutvnmr
+   if $layoutvnmr=1 then   "use /vnmr/templates/layout file"
+    $layout_dir_orig='/vnmr/templates/layout/'+$seqfil_orig
+    cp('-r',$layout_dir_orig,userdir+'/templates/layout')
+    $layout_dir_orig=userdir+'/templates/layout/'+$seqfil_orig
+   else
+    echo('No templates/layout file exists for Base Sequence')
+    banner('No templates/layout file exists for Base Sequence') return
+   endif
+  endif
+   
+  "create layout files"
+  $layout_dir=$layout_dir_orig+'_TAB'
+  exists($layout_dir,'file'):$seq
+  if ($seq=0) then  "copy layout files"
+   cp('-r',$layout_dir_orig,$layout_dir)
+   exists($layout_dir+'/acq.xml','file'):$acq
+   if ($acq=0) then 
+    echo($layout_dir+'/acq.xml does not exist  ')
+    banner($layout_dir+'/acq.xml does not exist  ') return
+   endif
+  endif
+   
+ endif
+endif
+
+seqfil=$seqfil_new
+
+$target=userdir+'/templates/layout/'+$seqfil_new
+if $target<>'' then
+  $template=$target+'/acq.xml'
+  $template_tmp=$template+'.tmp'
+  exists($template, 'file'):$e
+  if $e then
+    shell('cat '+$template+'| sed \'s/label="Sampling"/label="Sampling\\/NLS"/\'',
+ 	' > '+$template_tmp, '; cat'):$dum
+    shell('mv',$template_tmp, $template):$dum
+  endif
+endif
+
+exists('t1max','parameter'):$e
+if ($e=0) then
+ create('t1max') 
+ t1max=0.02
+endif
+ 
+exists('t2max','parameter'):$e
+if ($e=0) then
+ create('t2max') 
+ t2max=0.02
+endif
+ 
+exists(userdir+'/tablib','file'):$e
+if ($e=0) then
+ mkdir(userdir+'/tablib')
+endif
+
+exists('timetab_name','parameter'):$e
+if ($e=0) then
+ create('timetab_name','string') 
+endif
+
+if timetab_name='' then
+ timetab_name=curexp+'/EStimetable'
+endif
+ 
+exists('phi_0','parameter'):$e
+if ($e=0) then
+ create('phi_0') 
+ phi_0=0.0
+endif
+
+exists('d_phi','parameter'):$e
+if ($e=0) then
+ create('d_phi') 
+ d_phi=30.0
+endif
+
+exists('n_phi','parameter'):$e
+if ($e=0) then
+ create('n_phi') 
+ n_phi=3.0
+endif
+
+exists('n_rounds','parameter'):$e
+if ($e=0) then
+ create('n_rounds') 
+ n_rounds=5.0
+endif
+
+exists('sigma','parameter'):$e
+if ($e=0) then
+ create('sigma') 
+ sigma=0.5
+endif
+
+exists('range0','parameter'):$e
+if ($e=0) then
+ create('range0') 
+ range0=5.0
+endif
+ 
+exists('range1','parameter'):$e
+if ($e=0) then
+ create('range1') 
+ range1=11.0
+endif
+ 
+exists('ni3','parameter'):$e
+if ($e=1) then
+ ni3=1
+ exists('t3max','parameter'):$e
+ if ($e=0) then
+  create('t3max') 
+  t3max=0.01
+ endif
+endif
+ 
+ 
+exists('EXP_SAM','parameter'):$e
+if ($e=0) then
+ create('EXP_SAM','string')
+ EXP_SAM='y'
+endif
+ 
+exists('samp_type','parameter'):$e
+if ($e=0) then
+ create('samp_type','string')
+ samp_type='u' 
+endif
+
+exists('tab_opt','parameter'):$e
+if ($e=0) then
+ create('tab_opt','string')
+ tab_opt='n' 
+endif
+
+exists('output_format','parameter'):$e
+if ($e=0) then
+ create('output_format','string')
+ output_format='s' 
+endif
+
+exists('sfshift1','parameter'):$e
+if $e=0 then
+  create('sfshift1')
+  sfshift1=0
+endif
+
+exists('density','parameter'):$e
+if $e=0 then
+  create('density')
+  density=0
+endif
+
+setref
+ni=1 ni2=1 phase=1,2 phase2=1,2 

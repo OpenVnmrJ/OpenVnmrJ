@@ -1,0 +1,49 @@
+"macro plvastget"
+if $# >= 0 then 
+  $numscans=$#
+  $i=1
+  repeat
+  $request[$i]=${$i}
+  $i=$i+1
+  until $i > $#
+else write('line3','You must specify a label') abort endif
+write('plotter',0,0,''):$htchar
+full
+clear(2)
+$vp=vp
+$vpinc=wc2max/$numscans
+vp=vp+($numscans-1)*$vpinc
+$glueorderarraysize=size('glueorderarray')
+$inverseorder=0
+$i=1
+repeat
+  $ch=''
+  substr($request[$i],1,1):$ch
+  substr($request[$i],2,1):$ch2
+  if $ch='H' then $col=1
+  elseif $ch='H' then $col=1
+  elseif $ch='G' then $col=2
+  elseif $ch='F' then $col=3
+  elseif $ch='E' then $col=4
+  elseif $ch='D' then $col=5
+  elseif $ch='C' then $col=6
+  elseif $ch='B' then $col=7
+  elseif $ch='A' then $col=8
+  endif
+  $row=0
+  format($ch2,2,0):$row
+  $loc=($row-1)*8+$col
+  $j=1
+  repeat
+    $match=glueorderarray[$j]=$loc
+    if $match then $inverseorder=$j endif
+    $j=$j+1
+  until (($match) or ($j>$glueorderarraysize))
+  pl($inverseorder)
+  write('plotter',wcmax-sc-wc,vp-$htchar,$request[$i])
+  vp=vp-$vpinc
+  $i=$i+1
+until $i > $numscans 
+select($inverseorder)
+vp=$vp
+

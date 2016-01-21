@@ -1,0 +1,80 @@
+"macro generic_apptype"
+"***************************************************************"
+"generic_apptype -                                              "
+"       This is an apptype macro for generic_apptype experiments"
+"		[i.e., when apptype='']				"
+"       Changes here will be reflected in all experiments       "
+"               with this apptype                               "
+"       All apptype macros have 4 sections                      "
+"         (setup, acquistion, process, display)                 "
+"       Changes over these default values should be done using  "
+"       pslabel_setup or wrtp feature                           "
+"       This macro is typically called by cpsetup               "
+"***************************************************************"
+
+"***********************************************************"
+IF ($1 = 'setup') THEN
+
+  "---------------------------------------------------------"
+  " This apptype uses rtp from parlib 			    "
+  "---------------------------------------------------------"
+  if ($# < 3) then
+      exists($2,'parlib'):$parex,$parpath
+  else
+      $ext=''
+      substr($3,'basename'):$parpath,$ext
+      if ($ext='') then
+        $parpath=$3+'.par'
+      else
+        $parpath=$3
+      endif
+      exists($parpath,'directory'):$parex
+  endif
+
+  if ($parex) then
+        $solv=solvent
+		"Should rtp be avoided so wrtp actions are not performed here?"
+	rtp($parpath)  
+	file='exp'
+	solvent=$solv
+        setprotect('','clear',16384,'current')
+	rmpar('lockfreq_ fsq_')
+  else
+	write('error','parameters for %s not found',$2)
+  endif
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+"Acquisition parameters"
+
+$tip=pw*90/pw90
+setobspars
+pw($tip)
+setdecpars
+seqfil=seqfil
+setProbepars('force')
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+module($1,'Och_adiabatic Dch_adiabatic bip zqfilter '+newmodules)
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+module($1,'Och_adiabatic Dch_adiabatic bip zqfilter '+newmodules)
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+module($1,'Och_adiabatic Dch_adiabatic bip zqfilter '+newmodules)
+        "--------------------------------------------------"
+
+"**********************************************"
+ENDIF
+

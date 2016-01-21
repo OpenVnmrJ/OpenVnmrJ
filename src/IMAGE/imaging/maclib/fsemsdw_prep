@@ -1,0 +1,27 @@
+"macro fsemsdw_prep"
+exists('nav_type','parameter'):$e
+if ($e = 0) then
+  create('nav_type','string')
+endif
+setgroup('nav_type', 'processing')
+nav_type  = 'pairwise'
+
+exists('navigator','parameter'):$e
+if ($e = 0) then
+  create('navigator','string')
+endif
+
+exists('nav_echo','parameter'):$e
+if ($e = 0) then
+  create('nav_echo','integer')
+endif
+setgroup('nav_echo','processing')
+nav_echo = etl+1,etl+2
+
+if (navigator = 'y') then
+  $nshots = nv/etl
+  nf = (etl+2)*$nshots*ns  "This assumes that slices are acquired compressed"
+endif
+
+write('line3','fse%d_%d_%d',nv,etl,kzero):petable
+tabfsems(petable,nv,etl,kzero)

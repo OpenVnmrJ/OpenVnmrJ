@@ -1,0 +1,44 @@
+"macro dLCNMR"
+/*-*- MAGICAL -*-*/
+"macro dLCNMR"
+"dLCNMR"
+"Displays NMR and LC data with time alignment"
+$wc=wc $vp=vp
+if ((lcexp='iso') or (lcexp='scout')) then
+  "if sf1>0 then sf1=sf1+onflowdelay/30 +1/sw1/2 endif"
+  trace='f2'
+  wc=wcmax-70
+  if $#>1 then dconi('dpcon','pos',$1,$2) 
+  elseif $#>0 then dconi('dpcon','pos',$1)
+  else dconi
+  endif
+  lcdatast('side')
+  dconi('expandMacro','lcdatast(`side`)')
+  dconi('againMacro','lcdatast(`side`)')
+  dconi('traceMacro',`write('line3','cr1=%g',cr1)`)
+  dconi('restart')
+else
+  clear(2)
+  $wc=wc
+  wc=wcmax-100
+  lcscale('side')
+  lcdatast('side')
+endif
+"wc=$wc" 
+vp=$vp
+
+// Set "lcdisplay" parameter to the string that called this macro
+$n=''
+$s=$0
+if $#>0 then $s=$s+'(' endif
+$i=1
+while $i<=$# do
+  format(${$i}, 6, 2):$n
+  if $i>1 then $s=$s+',' endif
+  $s=$s+$n
+  $i=$i+1
+endwhile
+if $#>0 then $s=$s+')' endif
+exists('lcdisplay','parameter'):$e
+if not $e then create('lcdisplay','string') endif
+lcdisplay=$s

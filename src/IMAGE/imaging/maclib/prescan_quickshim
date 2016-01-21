@@ -1,0 +1,47 @@
+"macro prescan_quickshim"
+
+"************************************************************************"
+"                                                                        "
+" prescan_quickshim - macro to shim for imaging using quickshim sequence "
+"                                                                        "
+" Usage:   this macro is not intended for direct usage.  Use prescan     "
+"                                                                        "
+"************************************************************************"
+
+if ($# = 0) then
+  
+  $prescan=prescan
+  rtppar('prescan_quickshim_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+    rtppar('quickshim','nomenu'):$res
+  endif
+  exists('studyid','parameter','global'):$e
+  if ($e > 0.5) then
+    if (studyid <> '') then
+      exists(sqdir+'/studypar','file'):$e
+      if ($e = 1) then
+        fread(sqdir+'/studypar')
+      endif
+    endif
+  endif
+  prescan=$prescan
+  if ($res > 0.5) then
+    setloop
+    ldrf
+    imprep
+
+    prescan[3]='Active'
+    acqmode='prescan'
+    wdone=''
+    cnt=1 
+    qkshim  "start shim iterations"
+  else
+    write('error','quickshim prescan parameters have not been initialized')
+  endif
+elseif ($1 = 'proc') then
+  prescan[3]='Complete'
+  acqmode=''
+  if ($# = 1) then
+    prescan('next')
+  endif
+endif

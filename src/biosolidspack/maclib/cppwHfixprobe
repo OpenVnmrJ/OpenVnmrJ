@@ -1,0 +1,162 @@
+"macro cppwHfixprobe"
+// cppwHfixprobe - A macro to propagate H pulsewidth calibrations from the 
+//                 named region to all regions with the same nucleus.
+
+//             Argument 1 is the action:
+//                        'fix' reads H pulsewidth information and propagates it 
+//                              to all other regions with the same nucleus.  
+
+//             Argument 2 is the nucleus, 'C13' or 'N15'.
+
+//             Argument 3 is the region:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'HCa'
+//                   'carbonyl' (13C carbonyl), code 'HCO
+//                   'amide'(15N amide), code 'HNai'
+//                   'amine' (15N glycine, code 'HNam'
+
+//             Also: For calibration with the 13C offset at opposite ppm set:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'sHCa'
+//                   'carbonyl' (13C carbonyl), code 'sHCO
+
+//             Argument 4 is a label: 
+//                        '' is forced as the default, not used in this macro. 
+//             
+//             Argument 5 is a numeral:
+//                        usually 0 or 1 if present, but not used.
+//
+
+// Fix H Pulsewidth Parameters in the Probe File
+
+if (($#>0) and ($1='fix')) then
+
+// Set AhX
+
+   AhX
+
+// Set the X Region
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+   $pwr=''
+
+// Set Array Containing Region Codes
+
+   $regout[1]='HNai'
+   $regout[2]='HNam'
+   $regout[3]='HCa'
+   $regout[4]='HCO'
+   $regout[5]='sHCa'
+   $regout[6]='sHCO'
+   $indexmax=6
+
+// Get H Pulsewidth Parameters from the Named Region 
+
+   probeparamgroup('getlocal',$reg,'H1','','dbX90'):$dpwr
+   probeparamgroup('getlocal','hp'+$reg,'H1','','aH90','pwH90','pwH180','R','F'):
+                                        $aH90_hp,$pwH90_hp,$pwH180_hp,$R_hp,$F_hp
+
+   probeparamgroup('getlocal','mp'+$reg,'H1','','aH90','pwH90','pwH180','R','F'):
+                                        $aH90_mp,$pwH90_mp,$pwH180_mp,$R_mp,$F_mp
+
+// Save H Pulsewidth Parameters to All Regions with the Same Nucleus
+
+   $index=1.0
+   repeat
+      probeparamgroup('setlocal',$regout[$index],'H1','','dbX90',$dpwr)
+      probeparamgroup('setlocal','hp'+$regout[$index],'H1','','aH90',$aH90_hp,
+                                                'pwH90',$pwH90_hp,
+                                                'pwH180',$pwH180_hp,
+                                                'R',$R_hp,
+                                                'F',$F_hp)
+      probeparamgroup('setlocal','mp'+$regout[$index],'H1','','aH90',$aH90_mp,
+                                                'pwH90',$pwH90_mp,
+                                                'pwH180',$pwH180_mp,
+                                                'R',$R_mp,
+                                                'F',$F_mp)
+      $index=$index+1.0
+   until ($index>$indexmax)
+endif
+
+//-------------------
+// The Region Macro
+//-------------------
+
+if (($# > 0) and ($1 = 'region')) then
+   $nuc=$2
+   $reg=''
+   $pwr=$4
+   if (($# > 4) and ($5 = 1)) then 
+      if ($2='C13') then 
+         tn='C13' dn='H1' dn2='N15' dn3=''   
+         wc = 200 sc =10
+         ad=4.0 rd=4.0 ddrtc=8.0 rp=0 lp=0 d1=2.0 nt=1 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=50 gain=30
+         ofHX=0.0
+         if ($3='alpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='HCa'
+         elseif ($3='salpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            d1=2.0 nt=1.0
+            setref(tn) setoffset('C13',33.3):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=28p wp=20p
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         tn='N15' dn='H1' dn2='C13'  dn3=''   
+         wc = 200 sc =10
+         ad=16.0 rd=4.0 ddrtc=20.0 rp=0 lp=0 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=0  lb='n' gain=30  
+         ofHX=0.0
+         if ($3='amide') then
+            d1=2.0 nt=4
+            setref(tn) setoffset('N15',115):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=90p wp=50p
+            $reg='HNai'
+         elseif ($3='amine') then
+            d1=2.0 nt=1 
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HNam'
+         elseif ($3='amino') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HN'
+         endif         
+      endif
+      probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof)
+   else
+      if ($2='C13') then 
+         if ($3='alpha') then
+            $reg='HCa'
+         elseif ($3='salpha') then
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         if ($3='amide') then
+            $reg='HNai'
+         elseif ($3='amine') then 
+            $reg='HNam'
+         elseif ($3='amino') then 
+            $reg='HN'
+         endif
+      endif
+   endif
+   return($reg,$pwr,$nuc)
+endif

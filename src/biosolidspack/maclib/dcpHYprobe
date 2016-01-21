@@ -1,0 +1,227 @@
+"macro dcpHYprobe"
+// dcpHYprobe - A macro to get or set HY standard and CP HY calibrations 
+//             to or from the probe file for 1D and 2D DCP experiments (AhYX).   
+
+//             Argument 1 is:
+//                        'set' loads values into the probe file. 
+//                        'get' sets values into the workspace. 
+
+//                        'init' and 'calc' are used only with cpHXprobe. 
+
+//             Argument 2 is the nucleus 'N15' (at present: 13C is never a Y nucleus)
+
+//             Argument 3 is the region:
+//                   'amide'(15N amide), code 'HNai' (at present: amide HY CP only) 
+
+//             Argument 4 is a label: 
+//                        '' is forced as the default, not used in this macro. 
+//             Argument 5 is a numeral:
+//                        usually 0 or 1 if present, but not used.
+//
+//             Set Parameters('get','set'): 
+//                    Nucleus              Workspace <-> Probe                   Region
+//                         (H) dof,dpwr,aH90,pwH90 <-> ofH,dbH,aH90_hp,pw90_hp (N15-amide) 
+//                   (Y = 15N) dof2,dpwr2,aY90,pwY90 <-> ofX,dbX,aX90,pwX90    (N15-amide)
+//                        
+//                         (H) chHY,shHY,toHY,frHY,aHhy,bHY,dHY,tHY,ofHY <->
+//                                   chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHx (N15-amide)
+//                   (Y = 15N) aYhy <-> aXhx                                   (N15-amide)  
+//                                     
+
+// Set HY Standard and CP Parameters to the Probe File
+
+if (($#>0) and ($1='set')) then 
+
+// Set AhYX
+
+   AhYX
+
+// Set the Y Region, $reg.
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+   $pwr=''
+
+// Determine the Spinrate if SPspinrateon='y', Otherwise do Nothing.
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   endif
+
+// Set Standard Y $reg Parameters to the Probe File from DEC2.
+
+   probeparamgroup('setlocal',$reg,$nuc,'','ofX90',dof2,'dbX90',dpwr2)
+   probeparamgroup('setlocal',$reg,$nuc,'90X','a',aY90,'pw',pwY90)
+
+// Set Standard H $reg Parameters to the Probe File from DEC.
+
+   probeparamgroup('setlocal',$reg,'H1','','ofX90',dof,'dbX90',dpwr)
+   probeparamgroup('set','hp'+$reg,'H1','90H','a','pw')
+
+// Set Spinrate as srate and HY CP $reg Parameters in the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: A New Value of srateHX=%f has Been Set in the Probe File\n',srate)
+   endif
+   probeparamgroup('setlocal',$reg,'H1','','srateHX',srate)
+
+   probeparamgroup('setlocal',$reg,'H1','HX','ch',chHY,
+                                             'sh',shHY,
+                                             'to',toHY,
+                                             'fr',frHY,
+                                             'aH',aHhy,
+                                             'b',bHY,
+                                             'd',dHY,
+                                             't',tHY,
+                                             'of',ofHY)
+   probeparamgroup('setlocal',$reg,$nuc,'HX','aX',aYhy)
+endif
+
+// Set HY Standard and CP Parameters from the Probe File
+
+if (($#>0) and ($1='get')) then
+
+// Set AhYX
+
+   AhYX
+
+// Set the Y Region, $reg.
+
+   $reg='' $pwr='' $nuc='' $4=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)
+   $pwr=''
+
+// Get the Spinrate
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   else 
+      probeparamgroup('getlocal',$reg,'H1','','srateHX'):srate
+   endif
+
+// Obtain Standard Y DEC2 Parameters from $reg of the Probe File.
+
+   probeparamgroup('getlocal',$reg,$nuc,'','ofX90','dbX90'):$dof2,dpwr2
+   dof2=$dof2
+   probeparamgroup('getlocal',$reg,$nuc,'90X','a','pw'):aY90,pwY90
+
+// Obtain Standard H DEC Parameters from $reg of the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','ofX90','dbX90'):$dof,dpwr
+   dof=$dof
+   probeparamgroup('get','hp'+$reg,'H1','90H','a','pw')
+
+// Get Spinrate as srate and HY CP $reg Parameters from the Probe File.
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: Warning: srate=%f Hz and srateHX=%f Hz in the Probe File Disagree\n',srate,$srate)
+   endif
+
+   probeparamgroup('getlocal',$reg,'H1','HX','ch','sh','to','fr',
+                                   'aH','b','d','t','of'):chHY,shHY,toHY,frHY,
+                                    aHhy,bHY,dHY,tHY,ofHY
+   probeparamgroup('getlocal',$reg,$nuc,'HX','aX'):aYhy
+endif
+
+//-------------------
+// The Region Macro
+//-------------------
+
+if (($# > 0) and ($1 = 'region')) then
+   $nuc=$2
+   $reg=''
+   $pwr=$4
+   if (($# > 4) and ($5 = 1)) then 
+      if ($2='C13') then 
+         tn='C13' dn='H1' dn2='N15' dn3=''   
+         wc = 200 sc =10
+         ad=4.0 rd=4.0 ddrtc=8.0 rp=0 lp=0 d1=2.0 nt=1 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=50 gain=30
+         ofHX=0.0
+         if ($3='alpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='HCa'
+         elseif ($3='salpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            d1=2.0 nt=1.0
+            setref(tn) setoffset('C13',33.3):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=28p wp=20p
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         tn='N15' dn='H1' dn2='C13'  dn3=''   
+         wc = 200 sc =10
+         ad=16.0 rd=4.0 ddrtc=20.0 rp=0 lp=0 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=0  lb='n' gain=30  
+         ofHX=0.0
+         if ($3='amide') then
+            d1=2.0 nt=4
+            setref(tn) setoffset('N15',115):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=90p wp=50p
+            $reg='HNai'
+         elseif ($3='amine') then
+            d1=2.0 nt=1 
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HNam'
+         elseif ($3='amino') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HN'
+         endif         
+      endif
+      probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof)
+   else
+      if ($2='C13') then 
+         if ($3='alpha') then
+            $reg='HCa'
+         elseif ($3='salpha') then
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         if ($3='amide') then
+            $reg='HNai'
+         elseif ($3='amine') then 
+            $reg='HNam'
+         elseif ($3='amino') then 
+            $reg='HN'
+         endif
+      endif
+   endif
+   return($reg,$pwr,$nuc)
+endif
+
+
+
+

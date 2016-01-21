@@ -1,0 +1,28 @@
+"macro setgauss"
+"setgauss -								"
+" set a gaussian fraction for a lineshape fit				"
+"format: setgauss(x)							"
+"         where x is the initial guess at the Gaussian fraction		"
+"description: setgauss assumes that a previous fitting operation has	"
+"		been done, producing a 	file fitspec.outpar.  This file	"
+"		is then modified by changing the last parameter to	"
+"		reflect the desired Gaussian width, and then copied into"
+"		fitspec.inpar as new input.  Finally, another fit is	"
+"		performed"       
+if $#<>1 then 
+  write('error','Usage: setgauss(x), where x is the initial guess at the Gaussian fraction')
+  ABORT
+endif
+
+$i=7
+repeat
+ $i=$i-1
+ substr($1,$i,1):$char
+until ($i=1)or($char<>'')
+if $char='*' then "add escape characters"
+ substr($1,1,$i-1):$1
+ $1=$1+'\\\*'
+endif
+shell('vnmr_setgauss','"'+curexp+'"',$1)
+fitspec
+

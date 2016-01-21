@@ -1,0 +1,206 @@
+"macro newregion"
+// newregion - a macro to calculate sw (and sw1,sw2),roff (or lsfrq1 or lsfrq1), 
+//             refpos (or refpos1, refpos2), sp (or sp1, sp2) and wp (or wp1, wp2). 
+//             The input is:
+//                  $1 = 'acq', 'd2', 'd3', the dimension.
+//                  $2 = 'HCa', 'sHCa', 'HCO', 'sHCO', 'HNai', frequency region code
+//                  $3 = 'ca', 'co', 'nai', 'full', the display region code.
+//                  $4 = 'r' (reduced) and 'f' (full). If $4 exists 'r' sets sw just 
+//                       larger than the display region. 'f' sets sw to encompass 0.0
+//                       to 200.0 ppm, with tof at the center. If $4 does not exist, 
+//                       the default is 'f'.
+//              This version allows 15N to be tn or dn2, but H1 must be dn and 13C 
+//              must be tn if it is used. The macro will need a change to allow 
+//              H1 to be tn. 
+
+tof=tof
+setfrqCmd('calcReffrq',tn):$sreffrq
+sreffrq=$sreffrq
+$tofppm=(sfrq-$sreffrq)*1.0e6/$sreffrq
+
+dof=dof
+setfrqCmd('calcReffrq',dn):$dreffrq
+dreffrq=$dreffrq
+$dofppm=(dfrq-$dreffrq)*1.0e6/$dreffrq
+
+dof2=dof2
+setfrqCmd('calcReffrq',dn2):$dreffrq2
+dreffrq2=$dreffrq2
+$dof2ppm=(dfrq2-$dreffrq2)*1.0e6/$dreffrq2
+
+if (($2='HCa') or ($2='sHCO')) then
+   $regionnuc='c13'
+   $centerfull=$tofppm
+   $swfull=2.0*$tofppm
+   if ((200.0-$tofppm)>$tofppm) then
+      $swfull=400.0-$swfull
+   endif
+   if ($3='ca') then
+      $tofacq=0.0
+      $spdisp=$tofppm-25.0 
+      $wpdisp=50.0
+      $center=$tofppm
+   elseif ($3='co') then 
+      $tofacq=175.0-$tofppm
+      $spdisp=165.0
+      $wpdisp=20.0
+      $center=175.0
+   elseif ($3='full') then
+      $tofacq=100.0-$tofppm
+      $spdisp=0.0
+      $wpdisp=200.0
+      $center=100.0
+   else
+      write('error','newregion - invalid display region %s',$3)
+      abort
+   endif
+elseif (($2='sHCa') or ($2='HCO')) then 
+   $regionnuc='c13'
+   $centerfull=$tofppm
+   $swfull=2.0*$tofppm
+   if ((200.0-$tofppm)>$tofppm) then
+      $swfull=400.0-$swfull
+   endif
+   if ($3='ca') then
+      $tofacq=63.0-$tofppm
+      $spdisp=38.0 
+      $wpdisp=50.0
+      $center=63.0
+   elseif ($3='co') then 
+      $tofacq=0.0
+      $spdisp=$tofppm-10.0
+      $wpdisp=20.0
+      $center=$tofppm
+   elseif ($3='full') then
+      $tofacq=100.0-$tofppm
+      $spdisp=0.0
+      $wpdisp=200.0
+      $center=$tofppm
+   else
+      write('error','newregion - invalid display region %s',$3)
+      abort
+   endif
+elseif ($2='HCcenter') then 
+   $regionnuc='c13'
+   $centerfull=$tofppm
+   $swfull=2.0*$tofppm
+   if ((200.0-$tofppm)>$tofppm) then
+      $swfull=400.0-$swfull
+   endif
+   if ($3='ca') then
+      $tofacq=63.0-$tofppm
+      $spdisp=38.0 
+      $wpdisp=50.0
+      $center=63.0
+   elseif ($3='co') then 
+      $tofacq=175.0-$tofppm
+      $spdisp=165.0
+      $wpdisp=20.0
+      $center=175.0
+   elseif ($3='full') then
+      $tofacq=0.0
+      $spdisp=$tofppm-100.0
+      $wpdisp=200.0
+      $center=$tofppm
+   else
+      write('error','newregion - invalid display region %s',$3)
+      abort
+   endif
+elseif ($2='HNai') then 
+   $regionnuc='n15'
+   if (tn='N15') then 
+      $centerfull=$tofppm
+   else 
+      $centerfull=$dof2ppm
+   endif
+   $swfull=2.0*$centerfull
+   if ((200.0-$centerfull)>$centerfull) then
+      $swfull=400.0-$swfull
+   endif
+   if ($3='nai') then
+      $tofacq=0.0
+      $spdisp=$centerfull-25.0 
+      $wpdisp=50.0
+      $center=$centerfull
+   elseif ($3='full') then
+      $tofacq=100.0-$centerfull
+      $spdisp=0.0
+      $wpdisp=200.0
+      $center=100.0
+   else
+      write('error','newregion - invalid display region %s',$3)
+      abort
+   endif
+else
+   write('error','newregion - invalid region %s',$2)
+   abort
+endif
+
+$roffppm=0.0
+$swppm=$swfull
+$centerppm=$centerfull
+if ($#>3) then
+   if ($4='r') then 
+      $roffppm=$tofacq
+      $swppm=$wpdisp
+      $centerppm=$center
+   endif
+endif
+$swppm=$swppm+10.0
+
+if ($1='acq') then 
+   setref
+   $sw=5000.0*trunc($swppm*reffrq/5000.0+1.0)
+   if ($sw<5000.0) then $sw=5000.0 endif
+   sw=$sw
+   roff=$roffppm*reffrq 
+   sp=$spdisp*reffrq
+   wp=$wpdisp*reffrq
+   refpos=roff
+   exists('obscenterppm','parameter'):$e
+   if ($e < 0.5) then 
+      create('obscenterppm')
+   endif
+   obscenterppm=$centerppm
+elseif ($1='d2') then 
+   setref1
+   $sw1=$swppm*reffrq1
+   if ($sw1<=srate) then 
+      $sw1=srate/trunc(srate/$sw1)
+   else  
+      $sw1=srate*trunc($sw1/srate+1.0)
+   endif
+   sw1=$sw1
+   lsfrq1=$roffppm*reffrq1
+   sp1=$spdisp*reffrq1
+   wp1=$wpdisp*reffrq1
+   refpos1=lsfrq1
+   $centerparam=$regionnuc+'reff1'
+   exists($centerparam,'parameter'):$e
+   if ($e < 0.5) then 
+      create($centerparam)
+   endif
+   {$centerparam}=$centerppm
+elseif ($1='d3') then 
+   setref2
+   $sw2=$swppm*reffrq2
+   if ($sw2<=srate) then 
+      $sw2=srate/trunc(srate/$sw2)
+   else  
+      $sw2=srate*trunc($sw2/srate+1.0)
+   endif
+   sw2=$sw2
+   lsfrq2=$roffppm*reffrq2
+   sp2=$spdisp*reffrq2
+   wp2=$wpdisp*reffrq2
+   refpos2=lsfrq2
+   $centerparam=$regionnuc+'reff2'
+   exists($centerparam,'parameter'):$e
+   if ($e < 0.5) then 
+      create($centerparam)
+   endif
+   {$centerparam}=$centerppm
+else
+   write('error','newregion - dimension not set')
+   abort
+endif 

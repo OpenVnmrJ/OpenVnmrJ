@@ -1,0 +1,53 @@
+"macro boxes"
+"boxes - draws boxes using data in mark2d.out"
+" if no data in mark2d.out, uses cursors"
+
+$device='graphics'
+if ($#>0) then
+   if typeof('$1') then
+      if ($1='plotter' or $1='plot') then
+         $device='plotter'
+      endif
+   endif
+endif
+
+graphis:$dp
+if ($dp='dcon' or $dp='dconi' or $dp='dconn' or $dp='dpcon' or $dp='dpconn'
+	or $dp='ds2d' or $dp='ds2dn') THEN
+   $filename=curexp+'/mark2d.out'
+   exists($filename,'file'):$e 
+   if $e then
+      nrecords($filename):$num
+      $num = $num - 1
+   else
+      $num=0
+   endif
+   if ($num <= 0) then
+      if (trace='f2') then
+         hztomm($device,'box',cr,cr-delta,cr1,cr1-delta1)
+      else
+         hztomm($device,'box',cr1,cr1-delta1,cr,cr-delta)
+      endif
+   else
+      lookup('file',curexp+'/mark2d.out','readline')
+      write($device, wc, wc2, ''):$ys
+      $index = 0
+      while ($num > 0) do
+         lookup('read',2,'skip','read',2,'skip',3):$h_f2,$h_f1,$l_f2,$l_f1,$ret
+         if ($ret = 4) then
+            $index = $index + 1
+            if (trace='f2') then
+               hztomm($device,'box',$h_f2, $l_f2, $h_f1, $l_f1):$x1mm,$y2mm
+	    else
+               hztomm($device,'box',$h_f1, $l_f1, $h_f2, $l_f2):$x1mm,$y2mm
+	    endif
+            if ( $y2mm < sc2+wc2 - 1.2 * $ys ) then
+	       write($device,$x1mm,$y2mm+$ys/2, '%d',$index) 
+	    endif
+         endif
+         $num = $num - 1
+      endwhile
+   endif
+ELSE
+   write('line3','%s cannot be used with current display', $0)
+ENDIF

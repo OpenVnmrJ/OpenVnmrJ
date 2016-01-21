@@ -1,0 +1,33 @@
+"macro prescan_pwrcal"
+if ($# <> 2) then
+  write('error','%s usage: %s(mode,value)',$0,$0)
+  abort
+endif
+$mode  = $1
+$value = $2
+
+if ($mode = '%') then
+  if(($value > 100.0) or ($value < 0)) then
+    write('error','llegal power limit %4.2f \%',$value) 
+    abort
+  elseif ($value > 99) then
+    $pwr = 63
+  else
+    ln($value/100):$lx
+    $p = 63+(10 * 0.43429 * $lx)    
+    format($p,2,4):$pwr
+  endif
+  coil_param[1]  = $pwr - 6	"maximum power for 90deg pulse (dB); +6 for 180"
+  return($pwr - 6)
+elseif ($mode = 'dB') then
+    $lx = ($value - 63)/(10*0.43429)
+    exp($lx):$p
+    format($p*100,0,4):$p
+    return($p)
+else
+    write('error','%s: Unknown mode %s',$0,$mode) 
+    abort
+endif
+
+
+

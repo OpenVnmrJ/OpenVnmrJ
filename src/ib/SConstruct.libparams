@@ -1,0 +1,39 @@
+import os
+
+# define target file names
+libparamsTarget = 'libparams.a'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+utilsFileList = ['error.c',
+                 'debug_alloc.c']
+libSrcFileList = ['params.c',
+                  'tree.c',
+                  'stack.c']
+
+# build environments
+paramEnv = Environment(CCFLAGS    = '-O -c -m32 -Wno-deprecated',
+                       CPPDEFINES = ['LINUX', 'SOLARIS'],
+                       LINKFLAGS  = '-m32',
+                       CPPPATH    = [cwd])
+
+# actual builds
+libparam = paramEnv.StaticLibrary(target  = libparamsTarget,
+                                  source  = [utilsFileList,
+                                             libSrcFileList],
+                                  LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+paramEnv.AddPostAction(libparam,
+                       Action(Copy(installPath, os.path.join(cwd, libparamsTarget))))
+

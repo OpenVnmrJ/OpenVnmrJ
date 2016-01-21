@@ -1,0 +1,21 @@
+"macro insert"
+
+if (traymax=12 or traymax=97) then
+  readhw('loc'):$loc,$detected
+  if ($detected) then
+    $msg=''
+    $res=''
+    sethw('robot','getstatus 1 ubgrippresent'):$res,$msg
+    substr($msg,3,'delimiter',' :;'):$res
+    if ($res = '1') then
+      write('error','Cannot insert. Samples in magnet and upper barrel gripper.')
+      return
+    endif
+  endif
+  sethw('eject','on'):$e
+  sethw('robot','openubgrip 30'):$e
+  sethw('robot','displaymessage 1 Inserted','nowait'):$e
+else
+  sethw('eject','off','nowait'):$e
+endif
+loc=0 loc='n'

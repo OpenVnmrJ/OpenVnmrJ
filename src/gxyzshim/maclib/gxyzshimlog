@@ -1,0 +1,13 @@
+"macro gxyzshimlog"
+if $#=0 then $arg='edit' else $arg=$1 endif
+
+$shimlog=userdir+'/3Dshimlib/calibs/shimlog.txt'
+exists($shimlog,'file'):$ex
+if ($ex<0.5) then write('error','Shimlog file does not yet exist') return endif
+shell('uname'):$os
+
+if $arg='edit' then
+  if ($os='Linux') then shell('gedit '+$shimlog+'&'):$dum else shell('dtpad '+$shimlog+'&'):$dum endif
+else
+  if ($os='Linux') then shell('gnome-terminal --geometry 140x20 -x tail -n 20 -f '+$shimlog+' &'):$dum else shell('xterm -e tail -f '+$shimlog+' &'):$dum endif
+endif

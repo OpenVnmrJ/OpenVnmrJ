@@ -1,0 +1,22 @@
+"macro SetUpPSYCHE"
+if ($# < 1) then $arg='stitch' else $arg=$1 endif
+
+   flush
+   $curexplist=explist
+   PSYCHEproc($arg,'nogo')
+   $explist=''
+
+   $head='' $next=''
+   strstr(wexp,'PSYCHEproc'):$is,$head,$next
+   seqfil=seqfil
+   if ($is=1) then
+     $md=archivedir+'/'+sample+'/dirinfo/macdir'
+     cpexplist('read',$md):$explist
+	explist=pslabel+'scout','SetUp',$explist
+	write('file',$md+'/alias','SetUp: SetUpPSYCHE%s',$next)
+     cpexplist('write',$md)
+     explist=$curexplist
+   endif
+   wexp='chempackQ'
+   wdone=''
+

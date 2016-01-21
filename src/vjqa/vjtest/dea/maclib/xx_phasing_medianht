@@ -1,0 +1,173 @@
+lb=2 gf='n' fn=np*2 wft f full aph dc
+sp=-1p wp=0.5p vsadj vs=vs/100 th=10
+f pickpeaks(100) bc
+
+
+$increment=5
+
+$d=1
+repeat  " AAAA  big loop that does coarse then fine adjustments "
+
+
+sp=-0.5p wp=1p peak:$ht,cr
+$pos1=cr
+$direction=0  $dumtest=0
+
+$c=1
+repeat
+  wft bc
+  cr=$pos1+50
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos1 then $leftpts=$a endif
+    cr=cr-1
+    $a=$a+1
+  until cr<$pos1-50
+  $numpts=$a-1
+
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $quart=trunc($midpt*1.5)
+
+  $medianleft=$ht[$midpt]
+  $quartleft=$ht[$quart]
+
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+  $midpt=trunc(3/4*$numpts)
+  $quart=trunc(7/8*$numpts)
+
+  $medianright=$ht[$midpt]
+  $quartright=$ht[$quart]
+
+  if $medianleft<$medianright and $direction=0 then $dumtest=1  endif
+  if $medianleft>$medianright and $direction=0 then $dumtest=-1 endif
+
+  if $medianleft<$medianright then
+    $direction=1 rp=rp+$increment
+    if $dumtest<>$direction then  $c=1000 endif
+  else
+    $direction=-1  rp=rp-$increment
+    if $dumtest<>$direction then $c=1000 endif 
+  endif
+
+  vsadj ds
+rp?
+  $c=$c+1
+until $c>50
+
+
+
+
+
+" ********* adjust left phase ************ "
+
+sp=6p wp=0.6p peak:$ht,cr
+$pos2=cr
+$direction=0  $dumtest=0
+
+$c=1
+repeat
+  wft bc
+  cr=$pos2+50
+  $a=1
+  repeat
+    $ht[$a]=0  mark(cr):$ht[$a]
+    if cr>$pos2 then $leftpts=$a endif
+    cr=cr-1
+    $a=$a+1
+  until cr<$pos2-50
+  $numpts=$a-1
+
+  "find median height on left side "
+
+  $b=1
+  repeat
+    $a=2  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$leftpts
+    $b=$b+1
+  until $b>$leftpts
+
+  $midpt=trunc($leftpts/2)
+  $quart=trunc($midpt*1.5)
+
+  $medianleft=$ht[$midpt]
+  $quartleft=$ht[$quart]
+
+
+  "find median height on right side"
+
+  $b=$leftpts
+  repeat
+    $a=$leftpts+1  $dum=0
+    repeat
+      if $ht[$a]<$ht[$a-1] then $dum=$ht[$a-1] $ht[$a-1]=$ht[$a] $ht[$a]=$dum endif
+      $a=$a+1
+    until $a>$numpts
+    $b=$b+1
+  until $b>$numpts
+
+
+  $midpt=trunc(3/4*$numpts)
+  $quart=trunc(7/8*$numpts)
+
+  $medianright=$ht[$midpt]
+  $quartright=$ht[$quart]
+
+  if $medianleft<$medianright and $direction=0 then $dumtest=1  endif
+  if $medianleft>$medianright and $direction=0 then $dumtest=-1 endif
+
+  if $medianleft<$medianright then
+    $direction=1   lp=lp+$increment  rp=rp-0.1975*$increment
+    if $dumtest<>$direction then  $c=1000 endif
+  else
+    $direction=-1  lp=lp-$increment  rp=rp+0.1975*$increment
+    if $dumtest<>$direction then $c=1000 endif 
+  endif
+
+  vsadj ds
+lp?
+
+  $c=$c+1
+until $c>50
+
+sp=-1p wp=0.5p vsadj vs=vs/100 th=10
+f pickpeaks(100) bc
+
+if $increment<=0.1 then $d=100 endif
+$increment=$increment/5
+if $increment<0.1 then $increment=0.1 endif
+
+$d=$d+1
+until $d>5
+
+lb='n' hregions wft bc
+f full
+

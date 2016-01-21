@@ -1,0 +1,65 @@
+"macro epirfall"
+"***********************************************************************"
+" epirfall - macro to reverse every other fid				"
+" 	block and trace indicies start at one for rfblk,rftrace,rfdata	"
+"
+" Usage: epirfall		  - default, reverse even echoes
+"	 epirfall('first_trace')  -first_trace=1 reverses odd echoes 
+
+"***********************************************************************"
+
+"prevent retrieved data file corruption by making a copy"
+cp(curexp+'/acqfil/fid',curexp+'/acqfil/fidtmp')
+rm(curexp+'/acqfil/fid')
+mv(curexp+'/acqfil/fidtmp',curexp+'/acqfil/fid')
+
+
+$arraysize = arraydim
+cf = 1
+
+exists('navigator','parameter'):$e
+if ($e > 0) then
+  if (navigator = 'n') then
+    $first_trace = 2
+  else
+    $first_trace = 3
+  endif
+endif
+
+if($# > 0) then
+  $first_trace = $1   "user may provide even/odd echo reverse"
+endif
+
+$traces = nf/ns/nseg  "traces per shot per slice"
+
+$a = 1
+mfopen
+repeat
+  $seg = 1  
+  while ($seg <= nseg*ns) do
+    $i = $first_trace
+    while ($i <= $traces) do
+      $ii = $i+($seg-1)*$traces
+       "write('line3','reversing line %d',$ii)"
+      rftrace($a,$ii)
+      $i = $i + 2
+    endwhile
+    $seg = $seg + 1
+  endwhile
+  $a = $a + 1
+until($a > $arraysize)
+mfclose
+if($first_trace = 1) then
+  write('line3','odd echoes reversed')
+else
+  write('line3','even echoes reversed')
+endif
+
+"************************************************************************"
+"                   Modification History				 "
+"									 "
+" 18sep01(ss) Bug in multi-slice processing fixed $arraysize = arraydim  "
+" 08Jun03(mh) Allow navigator                                            "
+" 26Sep05(ss) even/odd echo reversal via first_trace argument
+"									 "
+"************************************************************************"

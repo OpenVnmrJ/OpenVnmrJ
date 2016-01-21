@@ -1,0 +1,31 @@
+"macro BP_PRparams1"
+"BP_PRparams1. A macro to get normal values"
+
+exists(curexp+'/temp.par','file'):$e
+if $e=1 then
+ mv(curexp+'/temp.par',curexp+'/temp.par.save')
+endif
+svp(curexp+'/temp')
+
+$n1=size('PRexp')
+if(PRnexp>$n1) then
+  banner('PRnexp exceeds the number of arrayed experiments')
+  return
+endif
+
+$n=1
+repeat
+  {PRexp[$n]} PRsw[$n]=sw PRsw1[$n]=sw1 PRnt[$n]=nt 
+  PRni[$n]=64 PRniTilt[$n]=64 PRnpeaks[$n]=100
+  PRnpr[$n]=2 PRthr[$n]=0.2 PRpos[$n]='y'
+  PRbpa[$n]='y' PRvarsw1[$n]='n'
+  exists('ni2','parameter'):$e
+  if ($e) then
+    PRni2[$n]=64 PRsw2[$n]=sw2
+  endif  
+  $n=$n+1
+until ($n>PRnexp)
+PRd1=d1
+
+rtp(curexp+'/temp')
+shell('rm -r '+curexp+'/temp.par')

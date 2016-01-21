@@ -1,0 +1,231 @@
+"macro calclockfreq"
+"**************************************************************"
+" calclockfreq - calculate lock frequency from observed signal "
+"**************************************************************"
+
+setfrqCmd('isNewRef'):$e
+if($e) then
+  if($#>0 and $##>0) then
+    setfrqCmd('calclockfreq',$1):$r1,$r2,$r3,$r4,$r5
+    return($r1,$r2,$r3,$r4,$r5)
+  elseif($#>0) then
+    setfrqCmd('calclockfreq',$1)
+    return
+  elseif($##>0) then
+    setfrqCmd('calclockfreq'):$r1,$r2,$r3,$r4,$r5
+    return($r1,$r2,$r3,$r4,$r5)
+  else
+    setfrqCmd('calclockfreq')
+    return
+  endif
+endif
+
+format(solvent,'lower'):$solv
+$rflrfp = rfl - rfp
+$downsamp = 1
+exists('downsamp','parameter'):$e
+if $e then
+  on('downsamp'):$on
+  if ($on)and(downsamp>1) then
+    $downsamp = downsamp
+  endif
+endif
+$scalesw = 1
+exists('scalesw','parameter'):$e
+if $e then
+  on('scalesw'):$on
+  if ($on)and(scalesw>0) then
+    $scalesw = scalesw
+  endif
+endif
+$scl = $scalesw/$downsamp
+
+if ($# > 0) then
+  $pos=$1/reffrq
+else
+  $pos=0
+endif
+$sfrq = sfrq $sw=sw $tn=tn $tof=tof
+$crpos = $sfrq + $scl*($rflrfp + cr - sw/2)/1e6
+reffrq = (1/(1 + $pos/1e6))*$crpos
+refpos=0
+rfl = sw/2 - (sfrq - reffrq)*1e6/$scl
+rfl = rfl + ($crpos - reffrq)*1e6/$scl
+rfp = ($crpos - reffrq)*1e6/$scl
+sp = sp - cr + rfp
+cr = rfp
+
+exists('oslsfrq','parameter'):$e
+exists('fsq','parameter','global'):$e2
+if ($e > 0.5) then
+   if $e2 then
+     if fsq='n' then
+       on('oslsfrq'):$shifted
+       if $shifted then $rfl = $rfl + oslsfrq endif
+     endif
+   else
+     on('oslsfrq'):$shifted
+     if $shifted then $rfl = $rfl + oslsfrq endif
+   endif
+endif
+exists('lsfrq','parameter'):$e
+if ($e > 0.5) then
+   on('lsfrq'):$shifted
+   if $shifted then $rfl = $rfl + lsfrq endif
+endif
+
+" set gamma ratio for referenced nuclei "
+exists('bioref','parameter'):$e
+if not($e) then
+  exists('bioref','parameter','global'):$e
+endif
+if $e then
+  $bioref=bioref
+else
+  $bioref='n'
+endif
+exists(userdir+'/nuctables/nuctabref','file'):$e
+if $e then
+  $nucfil = userdir+'/nuctables/nuctabref'
+else
+  $nucfil = systemdir+'/nuctables/nuctabref'
+endif
+exists(userdir+'/nuctables/nuctabrefBio','file'):$e
+if $e then
+  $nucfilbio = userdir+'/nuctables/nuctabrefBio'
+else
+  $nucfilbio = systemdir+'/nuctables/nuctabrefBio'
+endif
+exists($nucfil,'file'):$e
+exists($nucfilbio,'file'):$ebio
+if not($ebio) then
+  $bioref='n'
+endif
+if $bioref='n' then
+  $file1=$nucfil
+  $file2=''
+else
+  $file1=$nucfilbio
+  $file2=$nucfil
+endif
+$locknuc='H2'
+$tnfreq=0 $lockref=0 $found=0
+$lit=''
+$refcmpd=''
+if $e then
+  lookup('file',$file1)
+  $stnfreq=''
+  lookup('COMMENTEND',$tn,'read'):$stnfreq,$found
+  if $found then
+    format($stnfreq,'lower'):$tnfreq
+    lookup('REF:','readline'):$refcmpd
+    lookup('LIT:','readline'):$lit
+  elseif $file2<>'' then
+    lookup('file',$file2)
+    $stnfreq=''
+    lookup('COMMENTEND',$tn,'read'):$stnfreq,$found
+    if $found then
+      format($stnfreq,'lower'):$tnfreq
+      lookup('REF:','readline'):$refcmpd
+      lookup('LIT:','readline'):$lit
+    endif
+  endif
+  $slockref=''
+  lookup('file',$file1)
+  lookup('COMMENTEND',$locknuc,'read'):$slockref,$found
+  if $found then
+    format($slockref,'lower'):$lockref
+  elseif $file2<>'' then
+    lookup('file',$file2)
+    lookup('COMMENTEND',$locknuc,'read'):$slockref,$found
+    if $found then
+      format($slockref,'lower'):$lockref
+    endif
+  endif
+else
+  write('error','%s: could not open %s',$0,$file1)
+endif
+
+if ($found=0)or($tnfreq=0)or($solv='none')or($solv='') then
+  if ($# < 1) then
+    off('refpos')
+    reffrq = sfrq - (sw/2)/1e6
+    rfp = 0
+    rfl = 0
+  endif
+  if $##>0.5 then
+    return(0,0,0,0,'no referencing')
+  else
+    return
+  endif
+else
+  $lkreffrq = reffrq/$tnfreq*$lockref
+endif
+solvinfo(solvent):$shift
+$lockfreq = $lkreffrq*(1 + $shift/1e6)
+
+" remove archived lockfreq etc. parameter values "
+exists('lockfreq_','parameter'):$e
+if $e then
+  destroy('lockfreq_')
+endif
+exists('z0_','parameter'):$e
+if $e then
+  destroy('z0_')
+endif
+if Console='inova' then
+  $lkof=0
+  exists('lkof_','parameter'):$e
+  if $e then
+    destroy('lkof_')
+  endif
+  exists('lkof','parameter','global'):$e
+  if $e then
+    $lkof=lkof
+  endif
+  lockfreq = $lockfreq - $lkof/1e6
+  if $##=0 then
+    if $#>0 then
+      write('line3','lockfreq: %9.7f MHz (cr at %5.3f ppm)',
+	    lockfreq, cr/reffrq*$scl)
+    else
+      write('line3','lockfreq: %9.7f MHz (cr at 0.0 ppm)',lockfreq)
+    endif
+  endif
+else
+  exists('h1freq_','parameter'):$e
+  if $e then
+    $h1freq = h1freq_
+  else
+    $h1freq = h1freq
+  endif
+
+  " section for UNITY / VXR-S systems "
+  if ($lockfreq < 1.5) or (($lockfreq > 150) and ($h1freq = 600)) then
+    if $h1freq=200 then     lockfreq = $lockfreq - 29.5    " 1.210 -> 30.710 "
+    elseif $h1freq=300 then lockfreq = 47.25 - $lockfreq   " 1.206 -> 46.044 "
+    elseif $h1freq=400 then lockfreq = $lockfreq - 60.25   " 1.145 -> 61.395 "
+    elseif $h1freq=500 then lockfreq = $lockfreq - 75.25   " 1.479 -> 76.729 "
+    elseif $h1freq=600 then lockfreq = $lockfreq + 61.75 " 153.845 -> 92.095 "
+    endif
+    if $##=0 then
+      if $#>0 then
+        write('line3','lockfreq: %6.4f (%9.7f MHz, cr at %5.3f ppm)',
+	      lockfreq, $lockfreq, cr/reffrq*$scl)
+      else
+        write('line3','lockfreq: %6.4f (%9.7f MHz, cr at 0.0 ppm)',
+	      lockfreq, $lockfreq)
+      endif
+    endif
+  else
+    lockfreq = $lockfreq
+    if $##=0 then
+      if $#>0 then
+        write('line3','lockfreq: %9.7f MHz (cr at %5.3f ppm)',
+	      lockfreq, cr/reffrq*$scl)
+      else
+        write('line3','lockfreq: %9.7f MHz (cr at 0.0 ppm)',lockfreq)
+      endif
+    endif
+  endif
+endif

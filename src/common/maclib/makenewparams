@@ -1,0 +1,21 @@
+"macro makenewparams"
+$sequence_name = $1
+format($sequence_name,'lower'):$name_lower
+substr($name_lower,1,1):$lower_character
+format($sequence_name,'upper'):$name_upper
+substr($name_upper,1,1):$upper_character
+length($1):$length
+substr($sequence_name,2,$length - 1):$last_characters
+$name_protocol = $upper_character + $last_characters
+$name_lower = $lower_character + $last_characters
+
+$params = userdir + '/parlib/' + $name_protocol + '.par'
+exists($params,'directory'):$e
+if ($e > 0.5) then 
+   shell('rm -r ' + $params):$dum
+endif
+Settancpx
+exec($name_lower +'_pars')
+svp($params)
+write('line3','Parameter Set %s.par Updated',$1)
+

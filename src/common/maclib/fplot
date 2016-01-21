@@ -1,0 +1,34 @@
+"macro fplot"
+if (auto='y') then 
+   write('line3','fplot cannot be used under automation')
+   return
+endif
+
+if ($# < 1) then $1='' endif
+isnewexp:$isnew
+if ($isnew) then
+   write('line3','Current data is not saved yet. Cannot use fplot')
+   return
+endif
+
+$plotter=plotter
+is_psplotter:$newplotter,$ret
+if ($ret=0) then
+        write('line3','A PS plotter is NOT defined')
+	return
+endif
+
+if ($newplotter<>$plotter) then
+       s9
+       $wc2max=wc2max $wcmax=wcmax $wc2=wc2 $wc=wc
+       plotter=$newplotter
+       wc=$wc*wcmax/$wcmax wc2=$wc2*wc2max/$wc2max
+endif
+
+docpplot('fpage(`'+$1+'`)')
+
+if ($newplotter<>$plotter) then
+	plotter=$plotter
+	r9
+endif
+

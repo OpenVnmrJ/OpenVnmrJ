@@ -1,0 +1,33 @@
+"macro crof2"
+"**************************************************"
+"*                                                *"
+"*  crof2   -   recalculates rof2 so that lp = 0  *"
+"*                                                *"
+"**************************************************"
+
+if (Console='vnmrs') then
+  write('line3','%s should not be used on Direct Drive systems, use setlp0 instead',$0)
+  return
+endif
+
+$totaltime = alfa + rof2 + (lp*1e+6)/(360*sw)
+"Now change phases so that subsequent spectrum will be correct"
+rp=rp+lp/2
+lp=0
+$alfachange = 0
+if ($# > 0.5) then
+   alfa=$1
+   $alfachange = 1
+endif
+if (alfa > ($totaltime-1)) then
+   rof2=1.0               "minimum advisable rof2"
+   alfa=$totaltime-rof2
+   $alfachange = 1
+else
+   rof2=$totaltime-alfa
+endif
+if ($alfachange > 0.5) then
+   write('line3','alfa set to %0.1f usec; rof2 set to %0.1f usec; lp and rp adjusted',alfa,rof2)
+else
+   write('line3','rof2 set to %0.1f usec; lp and rp adjusted',rof2)
+endif

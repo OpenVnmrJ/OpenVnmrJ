@@ -1,0 +1,61 @@
+"macro VPsampleinfo"
+// Returns the part number and sample description of the current sample used by VeriPulse
+if ($# = 1) then
+  $testname=$1
+else
+  $testname=samplename
+endif
+exists('VPprobes','veripulse'):$e,$path
+if ($e) then
+  getparam('style','Probe'):$probestyle
+  $attr=''
+  $vals=''
+  readfile($path,'$attr','$vals','','local'):$num
+  teststr('$attr',$probestyle,'local'):$e
+  if ($e) then
+    $probetestfile=''
+    $probesamplefile=''
+    substr($vals[$e],1):$probetestfile
+    substr($vals[$e],2):$probesamplefile
+  else
+    return('','')
+  endif
+else
+  return('','')
+endif
+exists($probetestfile,'veripulse'):$e,$path
+if (not $e) then
+  $probetestfile='VPtests_one'
+  exists($probetestfile,'veripulse'):$e,$path
+endif
+if ($e) and ($testname <> '')  then
+  $attr='' $vals=''
+  readfile($path,'$attr','$vals','Info','local'):$num
+  $i=0
+  while ($i < $num) do
+    $i=$i+1
+    substr($vals[$i],4):$sampname
+    if ($sampname = $testname) then
+      substr($vals[$i],3):$sample
+      exists($probesamplefile,'veripulse'):$e,$path
+      if (not $e) then
+        $probesamplefile='VPsamples_one'
+        exists($probesamplefile,'veripulse'):$e,$path
+      endif
+      $i=$num+1
+      if ($e) then
+        $attr='' $vals=''
+        readfile($path,'$attr','$vals','','local'):$snum
+        teststr('$attr',$sample,'local'):$index
+        if ($index) then
+          $pn=''
+          $label=''
+          substr($vals[$index],2):$pn
+          substr($vals[$index],2,'delimiter',';\n'):$label
+          return($pn,$label)
+        endif
+      endif
+    endif
+  endwhile
+endif
+return('','')

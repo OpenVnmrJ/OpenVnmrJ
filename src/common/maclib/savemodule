@@ -1,0 +1,58 @@
+"macro savemodule"
+" savemodule "
+// usage savemodule('modulename'<,dirpath<,tree<,parameter>>>)
+
+// arg1 - modulename
+// arg2 - (optional) pathname where the module should be saved
+//	   default is studydir/dirinfo/modules
+//	   if arg2 is an empty string, it is set to default
+//	   arg2='cp' is a keyword for curexp (auto='n') or autodir (auto='y')
+// arg3 - (optional) (save from which) tree (default is current)
+// arg4 - (optional) specific parameter
+
+if ($# < 1) then return endif
+
+// define path where the module will be saved
+$path=''
+if ($# < 2) then $2='' endif
+if ($2='') then
+    Automacrodir:$2
+    if $2='' then return endif
+	// Automacrodir returns studydir/dirinfo/macdir
+    substr($2,'dirname'):$2
+    $2=$2+'/modules'
+    exists($2,'directory'):$direx
+    if not $direx then 
+	mkdir($2):$dum
+	exists($2,'directory'):$direx
+    endif
+    if not $direx then return endif
+endif
+$path=$2
+if ($path='cp') then
+	//  special case
+   if (auto='y') then $path=autodir
+   else $path=curexp endif
+endif
+exists($path,'file','w'):$ok
+if ($ok=0) then return endif
+
+// define parameter tree 
+if ($# < 3) then $3='' endif
+if ($3='') then $3='current' endif
+
+// Generate list of parameters to save
+if ($# > 3) then
+    $list=$4
+else
+    $list='' $list2=''
+    module('arraylist',$1):$list
+    module('arraylist','user'+$1):$list2
+    $list=$list,$list2
+endif
+array2array($list):$list
+if $list[1]='' then return endif
+
+if ($# < 4) then write('reset',$path+'/'+$1) endif
+writeparam($path+'/'+$1,'$list',$3,'add')
+

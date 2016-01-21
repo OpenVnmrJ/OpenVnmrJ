@@ -1,0 +1,97 @@
+"macro preacqdelay_au"
+
+$findz0='no'
+$gshim='no'
+$glideau = 'no'
+$next='notnext'
+$protune='no'
+
+if ($# = 0) then $1 = 'init' endif
+
+$x = 2
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'gshim' then $gshim=$val 
+ elseif $val = 'lkshim' then $gshim=$val
+ elseif $val = 'H1shim' then $gshim=$val
+ elseif $val = 'hsshim' then $gshim=$val
+ elseif $val = 'findz0' then $findz0=$val
+ elseif $val = 'glideau' then $glideau=$val 
+ elseif $val = 'protune' then $protune=$val
+ elseif $val = 'next' then $next=$val
+ endif
+ $x=$x+1
+endwhile
+
+if (auto='y') then
+   $tmppar=autodir+'/padtmp'
+else
+   $tmppar=curexp+'/padtmp'
+endif
+
+IF ($1 = 'init') then
+
+        groupcopy('current','processed','acquisition')  
+        groupcopy('current','processed','display')	 
+        groupcopy('current','processed','processing')	 
+
+    wdone=''
+    svp($tmppar,'force')
+    exists($tmppar+'.par','directory'):$direx
+    if ($direx=0) then
+        preacqdelay_au('quit',$findz0,$gshim,$glideau,$next,$protune)
+	return
+    endif
+
+    savesampglobal('cp')
+    exists('s2pul','parlib'):$sparex,$prunepar
+    $prunepar=$prunepar+'/procpar'
+    prune($prunepar)
+    exists('proc1','parameter'):$ex
+    if ($ex) then proc1='ft' endif
+    fixpar
+    getsampglobal('cp')
+
+    seqfil='s2pul'
+    gain=0 dm='nnn'
+    nt=1 ss=0 at=0.2 wshim='n' d1=1 pw=0.2
+    alock='n' in='n'
+    wnt='' werr='' wbs='' array=''
+    p1=0
+    pad=pad[1]
+
+    if (auto='y') then
+	  $autoname_tmp=autoname
+          if (traymax = 1) then
+            autoname = '_PAD_%PEAK#:%'
+	  elseif (traymax = 96) or (traymax = 768) then
+            autoname = '_PAD_%SAMPLE#:%_%RACK:%_%ZONE:%'
+	  else
+            autoname = '_PAD_%SAMPLE#:%'
+          endif
+    endif
+
+    wexp = 'preacqdelay_au(`done`,`'+$findz0+'`,`'+$gshim+'`,`'+$glideau+'`,`next`,`'+$protune+'`)'
+    write('line3','Executing preacquisition delay: %g sec',pad)
+    au('wait','shimming')  
+
+    if (auto='y') then
+    	autoname=$autoname_tmp
+    endif
+
+ELSEIF ($1 = 'done') THEN
+        flush
+     if (auto='y') then
+        $file=file+'.fid'
+	shell('rm -rf '+$file):$dum
+     endif
+        rtp($tmppar)
+        shell('rm -r '+$tmppar+'.par'):$dum
+	pad[1]=0.5
+	EXPtime:ACQtime
+        dsp=dsp
+	gmapshim_au($findz0,$gshim,$glideau,'next',$protune)
+ELSEIF ($1 = 'quit') THEN
+        dsp=dsp
+        gmapshim_au($findz0,$gshim,$glideau,'next',$protune)
+  ENDIF

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_doAlignAnalyte" element="groups" type="acquisition" >
+    <group size="400 575"
+      bg="transparent"
+      border="Etched"
+      vq="craftnmrparRef"
+      reference="craft_doAlignAnalyte"
+      subtype="Basic"
+      expanded="yes"
+      >
+	<group loc="1 1" size="398 24"
+	  border="Raised"
+	  vq="craftPopupPar"
+	  show="$SHOW=(craftPopupPar&lt;&gt;'')"
+	  bg="darkGray"
+	  />
+	<group loc="1 1" size="398 24"
+	  border="Raised"
+	  vq="craftPopupPar"
+	  show="$SHOW=(craftPopupPar='')"
+	  bg="darkGray"
+	  >
+	  <label loc="10 2" size="360 20"
+	    style="Heading3"
+	    label="Analyte Spectral Alignment"
+	    />
+	  <button loc="376 2" size="20 20"
+	    style="Heading2"
+	    label="X"
+	    tooltip="Close"
+	    vc="craft_doAlignAnalyte('close')"
+	    />
+	  </group>
+        <group loc="5 30" size="390 545"
+          >
+	  <group loc="0 5" size="390 120" border="Etched" >
+	    <label loc="10 15" size="60 20"
+	      label="Analyte"
+	      style="Label1"
+	      />
+            <filemenu loc="75 15" size="270 20"
+              style="PlainText"
+              vq="craftAlignAnalytePar"
+              vc="craft_doAlignAnalyte('setanalyte','$VALUE')"
+              set="$VALUE=craftAlignAnalytePar[5]"
+              file="$VALUE=userdir+'/cnmrmodels/Files4xml/analyteFidListMenu'"
+              type="file"
+              vq2="craftAlignAnalytePar"
+              />
+	    <group loc="350 15" size="25 25"
+	      vq="craftAlignAnalytePar"
+	      show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+	      >
+              <button loc="0 0" size="25 25"
+                style="Heading2"
+                tooltip="Browse..."
+	        icon="folder_open_file_24.gif"
+                vq="craftAlignAnalytePar"
+                vc="vnmrjcmd('LOC fpBrowser')"
+                />
+	      </group>
+	    <group loc="350 15" size="25 25"
+	      vq="craftAlignAnalytePar"
+	      show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+	      >
+              <button loc="0 0" size="25 25"
+                style="Heading2"
+                tooltip="Browse..."
+	        icon="folder_open_file_24.gif"
+                vq="craftAlignAnalytePar"
+                vc="vnmrjcmd('LOC browserPanel')"
+                />
+	      </group>
+	    <label loc="10 44" size="300 20"
+	      label="Display spectrum"
+	      style="Label1"
+	      />
+            <button loc="25 65" size="170 22"
+                style="Heading2"
+                label="Without analyte"
+                vq="craftAlignAnalytePar"
+                vc="craft_doAlignAnalyte('displayorigfid')"
+                bg="transparent"
+                />
+            <button loc="205 65" size="170 22"
+                style="Heading2"
+                label="With analyte"
+                vq="craftAlignAnalytePar"
+                vc="craft_doAlignAnalyte('displayAnalCluster')"
+                bg="transparent"
+                />
+            <button loc="205 90" size="170 22"
+                style="Heading2"
+                label="Show fingerprints"
+                vq="craftAlignAnalytePar"
+		show="substr(craftAlignAnalytePar[5],'basename'):$b,$e $f=craftAlignAnalytePar[1]+'/NMRpipeDir/'+$b $ENABLE=((file=$f) or (file=$f+'.fid'))*2-1"
+                vc="craft_doAlignAnalyte('displayfingerprint')"
+                bg="transparent"
+                />
+	     </group>
+          <group loc="0 130" size="390 120"
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Etched"
+	    vq="craftAlignAnalytePar"
+       	    label="Alignment regions of interest (ROIs)"
+      	    subtype="Titled"
+      	    expanded="yes"
+	    useref="no"
+      	    >
+	   <group loc="45 25" size="305 60"
+            style="Heading1"
+            bg="transparent"
+	    vq="craftnmrparRef craftDispPar"
+            border="Raised"
+            subtype="Basic"
+            expanded="yes"
+            >
+	    <group loc="0 0" size="305 60"
+	      vq="craftnmrparRef craftDispPar craftAlignAnalytePar"
+	      show="substr(craftAlignAnalytePar[5],'basename'):$b,$e $f=craftAlignAnalytePar[1]+'/NMRpipeDir/'+$b $SHOW=((file&lt;&gt;$f) and (file&lt;&gt;$f+'.fid') and (file&lt;&gt;$f+'.vfs'))"
+	      >
+	      <label loc="20 20" size="265 20"
+	        label="Display spectrum with analyte"
+	        style="Info"
+		justify="Center"
+	        />
+	      </group>
+	    <group loc="0 0" size="305 60"
+	      vq="craftnmrparRef craftDispPar craftAlignAnalytePar"
+	      show="substr(craftAlignAnalytePar[5],'basename'):$b,$e $f=craftAlignAnalytePar[1]+'/NMRpipeDir/'+$b $SHOW=((file=$f) or (file=$f+'.vfs') or (file=$f+'.fid'))"
+	      >
+	      <group loc="20 10" size="40 40"
+	        >
+	        <button loc="0 0" size="40 40"
+                  style="Heading2"
+                  icon="1x3.gif"
+                  vq="craftnmrparRef craftDispPar"
+                  vc="craft_autoroi"
+                  bg="transparent"
+		  tooltip="Auto-define ROIs for fingerprints"
+                  />
+	        </group>
+	      <group loc="65 0" size="240 60"
+	        vq="craftnmrparRef craftDispPar"
+                expanded="no"
+	        useref="yes"
+	        reference="craft_RoiTools"
+	        />
+	      </group>
+            </group>
+            <button loc="40 90" size="315 22"
+	      style="Heading1"
+	      label="Align spectra in the defined ROIs"
+	      vq="craftAlignAnalytePar craftAlignTable"
+	      show="substr(craftAlignAnalytePar[5],'basename'):$b,$e $f=craftAlignAnalytePar[1]+'/NMRpipeDir/'+$b $size=size('craftSAmark') $ENABLE=(($size&gt;1.5) and ((file=$f) or (file=$f+'.fid')))*2-1"
+	      vc="craft_doAlignAnalyte('align')"
+	      />
+      	    </group>
+	  <group loc="0 255" size="390 135"
+	    style="Heading1"
+	    border="Etched"
+	    label="Display / save results"
+	    subtype="Titled"
+	    vq="craftAlignAnalytePar craftAlignTable"
+	    expanded="yes"
+	    reference="craft_AlignTable"
+	    useref="no"
+	    >
+	    <textmessage loc="10 25" size="370 20"
+	      style="Info"
+	      vq="craftAlignAnalytePar"
+	      set="if craftAlignAnalytePar[13]&lt;&gt;'' then $VALUE='Result: '+craftAlignAnalytePar[13] else $VALUE='' endif"
+	      />
+            <button loc="60 50" size="275 21"
+              style="Heading2"
+              vq="craftAlignAnalytePar"
+              vc="craft_doAlignAnalyte('displayalignspec')"
+              show="$ok=0 craft_doAlignAnalyte('gettable',craftAlignAnalytePar[5]):$ok $ENABLE=($ok)*2-1"
+              label="Display aligned spectra"
+              />
+            <button loc="60 75" size="275 21"
+              style="Heading2"
+              label="Display alignment ROI"
+              vq="craftAlignAnalytePar"
+              vc="craft_doAlignAnalyte('displayaligninfo')"
+              bg="transparent"
+              show="$ok=0 craft_doAlignAnalyte('gettable',craftAlignAnalytePar[5]):$ok $ENABLE=($ok)*2-1"
+              />
+            <button loc="40 105" size="315 25"
+              style="Heading1"
+              vq="craftAlignAnalytePar"
+              vc="craft_doAlignAnalyte('saveanalyteROI',craftAlignAnalytePar[5])"
+              show="$ok=0 craft_doAlignAnalyte('gettable',craftAlignAnalytePar[5]):$ok $ENABLE=($ok)*2-1"
+              label="Save ROIs with analyte FID"
+              />
+	    </group>
+          </group>
+      </group>
+</template>

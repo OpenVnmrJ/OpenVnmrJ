@@ -1,0 +1,299 @@
+"macro BPcheckprobefile2"
+/*BPcheckprobefile2: check to see if probefile has BioPack params
+
+  macro will abort if missing probefile calibrations (zero or missing)
+  this macro is only called when doing a Biopack Autocalibration
+  requiring three channels and values of channels 2/3 parameters
+  in probefile. If probefile is not a BioPack probefile, this macro
+  will add appropriate parameters based on standard VJ probefiles */
+
+$probefile = userdir+'/probes/' + probe + '/' + probe
+
+exists(userdir+'/probes/'+probe,'file'):$e
+if($e) then
+   lookup('file',$probefile)
+   lookup('count','C13compC'):$e  
+   if $e=1 then return endif   "no need for this macro to run"
+else
+   banner('No active probefile. Aborting!')
+   return
+endif 
+
+banner('Modifying Probefile for BioPack')
+PROTON solvent='D2O'
+sw=20p at=.08 fn=np np=fn
+if at>0.1 then np=np/2 endif
+
+"create BioPack entries in non-BioPack probefile"
+exists('probe','parameter','global'):$e
+if $e<0.5 then
+  create('probe','string','global')
+  setprotect('probe','on',8,'global')
+endif  
+_probe
+
+ pw=trunc(10*pw90 + 0.5)/10
+ pw90=trunc(10*pw90 + 0.5)/10
+ 
+ $gf='' format(gf,4,4):$gf
+ addparams('gf',$gf,'H1')
+ $gfs='' format(gfs,4,4):$gfs
+ addparams('gfs',$gfs,'H1')
+ $sb='' format(sb,4,4):$sb
+ addparams('sb',$sb,'H1')
+ $sbs='' format(sbs,4,4):$sbs
+ addparams('sbs',$sbs,'H1')
+ $lb='' format(lb,4,4):$lb
+ addparams('lb',$lb,'H1')
+ 
+ parfidss ssfilter='n'
+ $ssfilter='' format(ssfilter,4,0):$ssfilter
+ addparams('ssfilter',$ssfilter,'H1')
+ $ssntaps='' format(ssntaps,4,0):$ssntaps
+ addparams('ssntaps',$ssntaps,'H1')
+ $sslsfrq='' format(sslsfrq,4,4):$sslsfrq
+ addparams('sslsfrq',$sslsfrq,'H1')
+ $ssorder='' format(ssorder,2,0):$ssorder
+ addparams('ssorder',$ssorder,'H1')
+ 
+ exists('ddrtc','parameter'):$e
+ if $e=1 then
+  $ddrtc='' format(ddrtc,4,2):$ddrtc
+  addparams('ddrtc',$ddrtc,'H1')
+ else
+  $ddrtc='' format(rof2+alfa,4,2):$ddrtc
+  addparams('ddrtc',$ddrtc,'H1')
+ endif
+
+ $rof1='' format(rof1,4,2):$rof1
+ addparams('rof1',$rof1,'H1')
+ $rof2='' format(rof2,4,2):$rof2
+ addparams('rof2',$rof2,'H1')
+ $alfa='' format(alfa,4,2):$alfa
+ addparams('alfa',$alfa,'H1')
+ $sw='' format(20*sfrq,6,1):$sw
+ addparams('sw',$sw,'H1')
+ $at='' format(at,5,3):$at
+ addparams('at',$at,'H1')
+ 
+ $ref_pw90='' format(pw90,2,1):$ref_pw90
+ addparams('ref_pw90',$ref_pw90,'H1')
+ $ref_pwr='' format(tpwr,2,0):$ref_pwr
+ addparams('ref_pwr',$ref_pwr,'H1')
+ $pw90='' format(pw90,2,1):$pw90
+ addparams('pw90',$pw90,'H1')
+ addparams('wetpw','6000','H1')
+ $BPd1='' format(d1,4,4):$BPd1
+ addparams('BPd1',$BPd1,'H1')
+ $tpwr='' format(tpwr,2,0):$tpwr
+ addparams('tpwr',$tpwr,'H1')
+ addparams('wetpwr','12.0','H1')
+ addparams('wetshape','gauss','H1')
+ $tpwrsf='' format(4095,4,0):$tpwrsf
+ addparams('tpwrsf',$tpwrsf,'H1')
+ $phincr_i='' format(0.0,2,2):$phincr_i
+ addparams('phincr_i',$phincr_i,'H1')
+ $phincr_t='' format(0.0,2,2):$phincr_t
+ addparams('phincr_t',$phincr_t,'H1')
+ $phincr_u='' format(0.0,2,2):$phincr_u
+ addparams('phincr_u',$phincr_u,'H1')
+ $phincr_d='' format(0.0,2,2):$phincr_d
+ addparams('phincr_d',$phincr_d,'H1')
+ $phincr_n='' format(0.0,2,2):$phincr_n
+ addparams('phincr_n',$phincr_n,'H1')
+ addparams('tpwrsf_i',$tpwrsf,'H1')
+ addparams('tpwrsf_t',$tpwrsf,'H1')
+ addparams('tpwrsf_u',$tpwrsf,'H1')
+ addparams('tpwrsf_d',$tpwrsf,'H1')
+ addparams('tpwrsf_n',$tpwrsf,'H1')
+ addparams('finepwrf',$tpwrsf,'H1')
+ $pwHs='' format(1500,2,1):$pwHs
+ addparams('pwHs',$pwHs,'H1')
+ addparams('pwHs2',$pwHs,'H1')
+ $waltzB1='' format(8000,6,0):$waltzB1
+ addparams('waltzB1',$waltzB1,'H1')
+ setoffset('H1',4.67):tof
+ $tofH2O='' format(tof,4,1):$tofH2O
+ addparams('tofH2O',$tofH2O,'H1')
+ $compH='' format(1.00,4,3):$compH
+ addparams('compH',$compH,'H1')
+ $BPgain='' format(gain,2,0):$BPgain
+ addparams('BPgain',$BPgain,'H1')
+ $rna_gain='' format(gain,2,0):$rna_gain
+ addparams('rna_gain',$rna_gain,'H1')
+ $BPtemp='' format(temp,3,1):$BPtemp
+ addparams('BPtemp',$BPtemp,'H1')
+ $empty_noise='' format(0.0,3,1):$empty_noise
+ addparams('empty_noise',$empty_noise,'H1')
+ $sample_noise='' format(0.0,3,1):$sample_noise
+ addparams('sample_noise',$sample_noise,'H1')
+
+ $wtgpwr='' format(tpwr-44,1):$wtgpwr
+ addparams('wtgpwr',$wtgpwr,'H1')
+ $tofwg='' format(tof,3,1):$tofwg
+ addparams('tofwg',$tofwg,'H1')
+ $flippw='' format(1500.0,4,1):$flippw
+ addparams('flippw',$flippw,'H1')
+
+ $p180='' format(2.0*pw90,2,1):$p180
+ addparams('p180',$p180,'H1')
+ $phincr1='' format(0.0,2,2):$phincr1
+ addparams('phincr1',$phincr1,'H1')
+ $phincr2='' format(0.0,2,2):$phincr2
+ addparams('phincr2',$phincr2,'H1')
+ $phincr_i='' format(0.0,2,2):$phincr_i
+ 
+ "check to see if probefile has C13pwx"
+ lookup('file',userdir+'/probes/'+probe+'/'+probe)
+ lookup('count','C13pwx'):$e  
+ lookup('file',userdir+'/probes/'+probe+'/'+probe)
+ lookup('count','C13pwxlvl'):$e2  
+ if (($e = 1) and ($e2 = 1)) then   "pwx/pwxlvl are in probefile for C13"
+   getparam('pwx','C13'):$pwx
+   getparam('pwxlvl','C13'):$pwxlvl
+   if $pwx>0.0 then
+    $pwC='' format($pwx,2,1):$pwC
+    addparams('pwC',$pwC,'C13')
+    $pwC3db='' format(1.4*$pwx,2,1):$pwC3db
+    addparams('pwC3db',$pwC3db,'C13')
+    $pwClvl='' format($pwxlvl,2,0):$pwClvl
+    addparams('pwClvl',$pwClvl,'C13')
+    $compC='' format(1.00,4,3):$compC
+    addparams('compC',$compC,'C13')
+    $compC3db='' format(1.00,4,3):$compC3db
+    addparams('compC3db',$compC3db,'C13')
+    $empty_noise='' format(0.0,3,1):$empty_noise
+    addparams('empty_noise',$empty_noise,'C13')
+    $sample_noise='' format(0.0,3,1):$sample_noise
+    addparams('sample_noise',$sample_noise,'C13')
+   else
+    banner('no channel 2 C13 calibrations in probefile. Calibration aborted')
+    return
+   endif
+ endif
+ dn='C13'
+ setoffset('C13',174):$dof
+ $dofCO='' format($dof,4,1):$dofCO
+ addparams('dofCO',$dofCO,'C13')
+ $swCO='' format(30*dfrq,4,1):$swCO
+ addparams('swCO',$swCO,'C13')
+ addparams('phi7cal','0.0','C13')
+ addparams('phi7calP','60.0','C13')
+ addparams('phi_CO','0.0','C13')
+ addparams('phi_Ca','0.0','C13')
+ addparams('phshift3','O.0','C13')
+ 
+ $CHgrad1_time='' format(0.002,8,6):$CHgrad1_time
+ addparams('CHgrad1_time',$CHgrad1_time,'C13')
+ $CHgrad1_lvl='' format(18000,6,0):$CHgrad1_lvl
+ addparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+ $CHgrad2_lvl='' format(18000,6,0):$CHgrad2_lvl
+ addparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+ $CHgstab='' format(0.0003,6,6):$CHgstab
+ addparams('CHgstab',$CHgstab,'C13')
+ 
+ $hcch_gtime='' format(0.0008,8,6):$hcch_gtime
+ addparams('hcch_gtime',$hcch_gtime,'C13')
+ $hcch_gzlvl1='' format(18000,6,0):$hcch_gzlvl1
+ addparams('hcch_gzlvl1',$hcch_gzlvl1,'C13')
+ $hcch_gzlvl2='' format(18000,6,0):$hcch_gzlvl2
+ addparams('hcch_gzlvl2',$hcch_gzlvl2,'C13')
+ 
+ $spinlock='' format(8000,4,1):$spinlock
+ addparams('spinlock',$spinlock,'C13')
+ $dmf30='' format(1000,4,1):$dmf30
+ addparams('dmf30',$dmf30,'C13')
+ $dmf80='' format(1000,4,1):$dmf80
+ addparams('dmf80',$dmf80,'C13')
+ $dmf140='' format(10000,4,1):$dmf140
+ addparams('dmf140',$dmf140,'C13')
+ $rf30='' format(1000,4,1):$rf30
+ addparams('rf30',$rf30,'C13')
+ $rf80='' format(1000,4,1):$rf80
+ addparams('rf80',$rf80,'C13')
+ $rf140='' format(1000,4,1):$rf140
+ addparams('rf140',$rf140,'C13')
+ 
+  "check to see if probefile has N15pwx2"
+  lookup('file',userdir+'/probes/'+probe+'/'+probe)
+  lookup('count','N15pwx2'):$e  
+  lookup('file',userdir+'/probes/'+probe+'/'+probe)
+  lookup('count','N15pwx2lvl'):$e2  
+  if (($e = 1) and ($e2 = 1)) then   "pwx2/pwx2lvl are in probefile for N15"
+   getparam('pwx2','N15'):$pwx2
+   getparam('pwx2lvl','N15'):$pwx2lvl
+   if $pwx2>0.0 then
+    $pwN='' format($pwx2,2,1):$pwN
+    addparams('pwN',$pwN,'N15')
+    $pwNlvl='' format($pwx2lvl,2,0):$pwNlvl
+    addparams('pwNlvl',$pwNlvl,'N15')
+    $compN='' format(1.00,4,3):$compN
+    addparams('compN',$compN,'N15')
+    $empty_noise='' format(0.0,3,1):$empty_noise
+    addparams('empty_noise',$empty_noise,'N15')
+    $sample_noise='' format(0.0,3,1):$sample_noise
+    addparams('sample_noise',$sample_noise,'N15')
+   else
+    banner('no N15 channel 3 calibrations in probefile. Calibration aborted')
+    return
+   endif
+  endif
+ setoffset('N15',120):$dof2
+ $dofN15='' format($dof2,4,1):$dofN15
+ addparams('dofN15',$dofN15,'N15')
+ $swN='' format(60*dfrq2,4,1):$swN
+ addparams('swN',$swN,'N15')
+ $dpwr2NH='' format(40.0,2,0):$dpwr2NH
+ addparams('dpwr2NH',$dpwr2NH,'N15')
+ $dmm2='ccp'
+ addparams('dmm2NH',$dmm2,'N15')
+ $dseq2='wurst40N'
+ addparams('dseq2NH',$dseq2,'N15')
+ $dres2NH='' format(9.0,5,1):$dres2NH
+ addparams('dres2NH',$dres2NH,'N15')
+ $dmf2NH='' format(4000,3,1):$dmf2NH
+ addparams('dmf2NH',$dmf2NH,'N15')
+ $JNH='' format(95.0,3,1):$JNH
+ addparams('JNH',$JNH,'N15')
+ 
+ $gt0='0.001'
+ addparams('gt0',$gt0,'N15')
+ $gt5='0.002' 
+ addparams('gt5',$gt5,'N15')
+ $gzlvl5='3000' 
+ addparams('gzlvl5',$gzlvl5,'N15')
+ $gzlvl0='1000' 
+ addparams('gzlvl0',$gzlvl0,'N15')
+ $NHgrad1_time='0.002' 
+ addparams('NHgrad1_time',$NHgrad1_time,'N15')
+ $NHgrad1_lvl='18000' 
+ addparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+ $NHgrad2_lvl='18000' 
+ addparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+ $BPgzcal='0.002' 
+ addparams('BPgzcal',$BPgzcal,'N15')
+ $NHgstab='0.0003' 
+ addparams('NHgstab',$NHgstab,'N15')
+ $mag_flg='n'
+ addparams('mag_flg',$mag_flg,'N15')
+ 
+ $dres3D='9' 
+ addparams('dres3D',$dres3D,'H2')
+ $dpwr3D='0' 
+ addparams('dpwr3D',$dpwr3D,'H2')
+ $dmf3D='1000' 
+ addparams('dmf3D',$dmf3D,'H2')
+ $dof3D='500' 
+ addparams('dof3D',$dof3D,'H2')
+ $dseq3='w'
+ addparams('dseq3D',$dseq3,'H2')
+ $dmm3='ccw' 
+ addparams('dmm3D',$dmm3,'H2')
+
+exists('probeConnect','parameter','global'):$e
+if ($e>0) then
+ addparams('probeConnect',probeConnect,'H1')
+endif
+
+ghn_co
+BPbiopack2

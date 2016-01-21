@@ -1,0 +1,29 @@
+"macro IPdoemail"
+if $#<0.5 then return endif
+
+if ($#>1.5) then $file=$2 else $file=curexp+'/text' endif
+
+eOptions=IPeOptions
+
+//Do alerts
+format($1,'upper'):$status
+if ($status='FAIL') then
+   //If emailtestdone but not emailtestfail then send done
+   //if fail only then send fail
+   //if both then send fail
+   teststr('eOptions','emailtestfail'):$fail
+   if ($fail) then 
+       emessage('emailtestfail',emailaddr,$file)
+       return
+   endif
+   teststr('eOptions','emailtestdone'):$done
+   if ($done) then 
+       emessage('emailtestdone',emailaddr,$file)
+       return
+   endif
+elseif ($status='WARN') then
+   emessage('emailtestfail',emailaddr,$file)
+else
+   emessage('emailtestdone',emailaddr,$file)
+endif
+

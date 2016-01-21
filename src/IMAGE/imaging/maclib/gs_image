@@ -1,0 +1,139 @@
+"macro gs_image"
+"********************************************************************"
+" gs_image: Extract 2D images from 3D data"
+"*********************************************************************"
+
+
+
+$fn=''
+if ($# < 1) then
+  input('Enter filename: '):$fn
+else
+  gsimage = $1
+endif
+
+exists('gsplane','parameter'):$e
+if($e = 0) then
+  create('gsplane','string')
+  setgroup('gsplane','processing')
+  gsplane='ro-pe'
+endif
+
+$GSDAT = userdir+'/gshimdir/data'
+if(gsimage = 'z1.f') then
+  exists($GSDAT+'/'+gsimage+'.fdf','file'):$ex
+  if($ex = 0) then
+    gsimage = 'z1c.f'
+  endif
+endif
+if(gsimage = 'z2.f') then
+  exists($GSDAT+'/'+gsimage+'.fdf','file'):$ex
+  if($ex = 0) then
+    gsimage = 'z2c.f'
+  endif
+endif
+if(gsimage = 'z3.f') then
+  exists($GSDAT+'/'+gsimage+'.fdf','file'):$ex
+  if($ex = 0) then
+    gsimage = 'z3c.f'
+  endif
+endif
+if(gsimage = 'z4.f') then
+  exists($GSDAT+'/'+gsimage+'.fdf','file'):$ex
+  if($ex = 0) then
+    gsimage = 'z4c.f'
+  endif
+endif
+if(gsimage = 'z5.f') then
+  exists($GSDAT+'/'+gsimage+'.fdf','file'):$ex
+  if($ex = 0) then
+    gsimage = 'z5c.f'
+  endif
+endif
+$fn = $GSDAT+'/'+gsimage+'.fdf'
+exists($fn,'file'):$ex
+if($ex = 0) then
+  write('error','File does not exist: %s',$fn)
+  abort
+endif
+
+$name=''
+$ext=''
+strstr(gsimage,'.','last'):$e,$name,$ext
+
+magdis = 'y'
+if(($ext = 'f') or ($ext = 'wf')) then
+  magdis = 'n'  "phase display"
+endif
+
+aipDeleteData('all')
+aipLoadFile($fn)  "This enables the Extract page"
+
+if(zflag = 'y') then "zerofill flag checked"
+  $zf = 2
+else
+  $zf = 1
+endif
+if(Prescan_ShimMethod = 'gemsshim') then
+  $nv2 = 32  "nv2 is not set for 2D expt "
+else
+  on('fn'):$fnon
+  if($fnon) then
+    $nv2 = (fn2*$zf/2)
+  else
+    $nv2 = nv2
+  endif
+endif 
+
+
+"note, x,y,z refer to ro,pe1,pe2 "
+if(gsplane='pe-pe2') then
+  aipOrient='yz'
+  aipYZfirst=0
+  on('fn'):$fnon
+  if($fnon) then
+    aipYZlast = (fn*$zf/2)-1
+  else
+    aipYZlast=(np/2)-1
+  endif
+  aipDeleteData('all')
+  aipExtract(aipOrient, aipYZfirst, aipYZlast, 1)
+elseif(gsplane='ro-pe2') then
+  aipOrient='xz'
+  aipXZfirst=0
+  on('fn1'):$fnon
+  if($fnon) then
+    aipXZlast = (fn1*$zf/2)-1
+  else
+    aipXZlast=(nv)-1
+  endif
+  aipDeleteData('all')
+  aipExtract(aipOrient, aipXZfirst, aipXZlast, 1)
+else
+  gsplane='ro-pe'
+  aipOrient='xy'
+  aipXYfirst=0
+  aipXYlast=$nv2-1
+  aipDeleteData('all')
+  aipExtract(aipOrient, aipXYfirst, aipXYlast, 1)
+endif
+
+if(magdis = 'y') then   
+  aipSetVsFunction   "autoscale magnitude image"
+else   
+  aipVs('dmax'):$m    "phase image, dmax,dmin defaults to +/- 1"
+  if($m<1)then
+    $m=1
+    aipVs('dmax',$m)
+  endif
+  aipVs('dmin',-$m)
+
+endif
+
+"***************************************************************"
+"		Modification History
+
+" 26oct05(ss)  - magdis=n if .f or .wf file
+" 04dec07      - zflag checked and fn,fn1,fn2 are set
+
+"***************************************************************"

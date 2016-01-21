@@ -1,0 +1,167 @@
+"macro _sw"
+
+"For G2000 don't check or reset fbmin/fbmax "
+substr(rftype,1,1):$rfchar
+if ( (Console = 'g2000') and ($rfchar = 'e')) then
+  if (h1freq=300) then 
+     $a=1.5 
+     $b=19.0/15.0
+  else
+     $a=1.0
+     $b=1.0
+  endif
+  if (sw>$a*3500.0) then 
+     fb=$b*7500.0
+  else
+     fb=$a*1500.0
+  endif
+  _at
+  exists('dsp','parameter','global'):$x
+  if ($x > 0.5) then
+     if (dsp = 'n') then
+        setdsp('off',0.0,0.0)
+        if (sw>($b*17500.0)) or (sw<($a*2500.0)) or
+           ((sw>($a*3500.0)) and (sw<($b*12500.0))) then
+              write('line3','sw not optimal for best signal-to-noise ratio')
+        endif
+     else
+        setdsp('on',23000.1,64000.1)
+        if (oversamp*sw>($b*17500.0)) or (oversamp*sw<($a*2500.0)) or
+           ((oversamp*sw>($a*3500.0)) and (oversamp*sw<($b*12500.0))) then
+              write('line3','oversamp*sw not optimal for best signal-to-noise ratio')
+        endif
+     endif
+  endif
+  return
+endif
+
+exists('maxsw_loband','parameter','systemglobal'):$x
+if ($x > 0.5) then
+  $maxsw_loband=maxsw_loband + 0.1
+else
+  $maxsw_loband=100000.1
+endif
+
+if (sw < $maxsw_loband) then
+  if ($maxsw_loband > 220000) then
+     $maxnp = 524288
+  else 
+     $maxnp = 128000
+  endif
+  if (fifolpsize < 500) then
+     setlimit('np',$maxnp,64,64)
+  else
+     setlimit('np',$maxnp,32,2)
+  endif
+  _at
+  setprotect('parmax','off',4,'systemglobal')
+  setprotect('parmin','off',4,'systemglobal')
+  setprotect('parstep','off',4,'systemglobal')
+  if (audiofilter = 'b') then
+     parmax[6]=49500    "set maximum value for fb"
+     parmin[6]=100
+     parstep[6]=100
+  else
+     if (audiofilter = 'e') then
+        if (Console='mercury') then
+           $fbmin = 1000
+        else
+           $fbmin = 200
+        endif
+     else if (audiofilter = '2') then
+        $fbmin = 400
+     else if (audiofilter = '5') then
+        $fbmin = 1000
+     endif
+     endif
+     endif
+     parmax[6]=$fbmin*256    "set maximum value for fb"
+     parmin[6]=$fbmin
+     parstep[6]=$fbmin
+  endif
+  setprotect('parmax','on',4,'systemglobal')
+  setprotect('parmin','on',4,'systemglobal')
+  setprotect('parstep','on',4,'systemglobal')
+
+  if (Console <> 'inova') then
+    if (sw > 120000) then    " For special 200 KHz system, turn off dp."
+      if ( ($maxsw_loband > 120000) and ($maxsw_loband < 220000) ) then
+         setenumeral('dp',1,'n')
+         if (dp = 'y') then
+           write('line3','Set dp=\'n\' because 120000<sw<=%d',maxsw_loband)
+           dp='n'
+         endif
+      endif
+    else
+      setenumeral('dp',2,'y','n')
+    endif
+  endif
+
+  $fbtmp = (1.1 * sw / 2) + 40
+  if ($fbtmp > parmax[6]) then
+     fb= parmax[6]
+  else if ($fbtmp < parmin[6]) then
+     fb= parmin[6]
+  else
+     fb=$fbtmp
+  endif endif
+  np=np
+  exists('dsp','parameter','global'):$x
+  if ($x > 0.5) then
+     if (dsp = 'n') then
+        setdsp('off',0.0,0.0)
+     else
+        setdsp('on',$maxsw_loband,$maxnp + 0.1)
+     endif
+  endif
+else 
+  setdsp('off',0.0,0.0)
+  setlimit('np',1e19,64,64)	" Set the proper limit below "
+  if (Console <> 'inova') then
+     setenumeral('dp',1,'y')
+     dp='y'
+     il='n'
+  endif
+  setlimit('at',100.0,1e-6,1e-6)
+  _at
+  setprotect('parmax','off',4,'systemglobal')
+  setprotect('parmin','off',4,'systemglobal')
+  setprotect('parstep','off',4,'systemglobal')
+  parmax[6]=2.4e6    "set maximum value for fb"
+  parmin[6]=0
+  parstep[6]=1
+  setprotect('parmax','on',4,'systemglobal')
+  setprotect('parmin','on',4,'systemglobal')
+  setprotect('parstep','on',4,'systemglobal')
+
+  setlimit('sp',parmax[5],-parmax[5],0)
+  setlimit('wp',parmax[5],0,0)
+  substr(rftype,1,1):$rfchar
+  if ($rfchar = 'd') then
+     if (parmax[5] > 3e6) then
+        setlimit('np',262144,32,2)
+     else
+        setlimit('np',131072,32,2)
+     endif
+     np=np _np
+     if (sw < 465000) then fb=256000
+     else fb=1000000
+       endif
+  else
+     if (cattn = 127) then
+	setlimit('np',131072,64,64)
+     else
+	setlimit('np',16384,64,64)
+     endif
+     np=np _np
+     if (sw < 300001) then fb=170000
+     else if (sw <540001) then fb=300000
+     else if (sw < 1260001) then fb=700000
+     else if (sw < 1800001) then fb=1000000
+     else fb=2000000
+       endif
+       endif
+       endif
+       endif
+  endif
+endif

@@ -1,0 +1,271 @@
+"macro spExec"
+// spExec
+
+if (spStage = 'test') then
+  spCalcPsum
+  spIter = spIter + 1
+  spHiLo
+  spShow
+
+// Evaluate simplex step
+elseif (spStage = 'eval') then
+  spTry('eval')
+  if (spNewYval < spYval[spLo]) then
+    spTry('test',2)
+    spStage = 'eval2'
+    {spSet}
+  elseif (spNewYval >= spYval[spNextHi]) then
+    spYsave = spYval[spHi]
+    spTry('test',0.5)
+    spStage = 'eval3'
+    {spSet}
+  else
+    spHiLo
+  endif
+  spShow
+
+elseif (spStage = 'eval2') then
+  spTry('eval')
+  spHiLo
+  spShow
+  
+elseif (spStage = 'eval3') then
+  spTry('eval')
+  if (spNewYval >= spYsave) then
+    $i = 1
+    $index = ''
+    format(spLo,0,0):$index
+    $veclo = 'spVec'+$index
+    while ($i <= spDim+1) do
+      if ($i <> spLo) then
+        format($i,0,0):$index
+        $vec = 'spVec'+$index
+        $j = 1
+        while ($j <= spDim) do
+          spSum[$j] = 0.5 * ({$vec}[$j] + {$veclo}[$j])
+          {$vec}[$j] = spSum[$j]
+          $j = $j + 1
+        endwhile
+      endif
+      $i = $i + 1
+    endwhile
+    spVertex = 1
+    $i = 0
+    while ($i < spDim+1) do
+      $i = $i + 1
+      spYval[$i] = 0
+    endwhile
+    spTolExp = 0
+    spTolExpIndex = 0
+    spStage = 'evalVec'
+    {spSet}
+  else
+    spHiLo
+  endif
+  spShow
+
+
+// Evaluate test vectors
+elseif (spStage = 'evalVec') then
+  {spEval}
+  spNewYval = -spNewYval
+  spYval[spVertex] = spNewYval
+  if (spVertex <> 0) then
+    if (spVertex = spDim+1) then
+      spStage = 'test'
+    endif
+    if (spVertex < spDim+1) then
+      spVertex = spVertex + 1
+    endif
+    {spSet}
+  endif
+  spShow
+
+elseif (spStage = 'initramp') then
+  readhw(spParNames):spLo // initial dac value
+  spVec1 = spLo
+  {spEval}
+  spIter = 1
+  spYval = spNewYval
+  if (spVec1[1] > 0) then
+    spStep = - spStep
+  endif
+  spVec1[2] = spVec1[1] + spStep
+  spStage = 'ramp'
+  {spParNames} = spVec1[2]
+  {spSet}
+  spShow
+
+elseif (spStage = 'ramp') then
+  spIter = spIter + 1
+  {spEval}
+  spYval[spIter] = spNewYval
+  if (spIter = 2) then
+    if (spYval[2] < spYval[1]) then
+      spStep = -spStep
+      $tmp = spYval[2]
+      spYval[2] = spYval[1]
+      spYval[1] = $tmp
+      $tmp = spVec1[2]
+      spVec1[2] = spVec1[1]
+      spVec1[1] = $tmp
+    endif
+    spHi = 2
+    spVec1[spIter+1] = spVec1[spIter] + spStep
+    {spParNames} = spVec1[spIter+1]
+    {spSet}
+    spShow
+    return
+  endif
+  if (spYval[spIter] > spYval[spHi]) then
+    spHi = spIter
+    spVec1[spIter+1] = spVec1[spIter] + spStep
+    {spParNames} = spVec1[spIter+1]
+    {spSet}
+    spShow
+    return
+  endif
+    spMaxIter = 1
+    $num=(spNumSteps - 3) /2
+    if ($num > 1) then
+       spStage='rampfill'
+    else
+       spStage='rampfill2'
+       spMaxIter = 0
+    endif
+    spVec1[spIter+1] = spVec1[spHi] + spStep / ($num+1)
+    {spParNames} = spVec1[spIter+1]
+    {spSet}
+    spShow
+    return
+
+elseif (spStage = 'rampfill') then
+  spIter = spIter + 1
+  {spEval}
+  spYval[spIter] = spNewYval
+  spMaxIter = spMaxIter + 1
+  $num=(spNumSteps - 3) /2
+  spVec1[spIter+1] = spVec1[spHi] + spStep * spMaxIter / ($num+1)
+  {spParNames} = spVec1[spIter+1]
+  {spSet}
+  spShow
+  if (spMaxIter >= $num) then
+    spStage='rampfill2'
+    spMaxIter = 0
+  endif
+  return
+
+elseif (spStage = 'rampfill2') then
+  spIter = spIter + 1
+  {spEval}
+  spYval[spIter] = spNewYval
+  $num=(spNumSteps - 3) /2
+  if (spIter < spNumSteps) and (spMaxIter <= $num) then
+    spMaxIter = spMaxIter + 1
+    spVec1[spIter+1] = spVec1[spHi] - spStep * spMaxIter / ($num+1)
+    {spParNames} = spVec1[spIter+1]
+    {spSet}
+    spShow
+    return
+  endif
+  $i=0
+  $eval=spIter
+  while ($i < $eval) do
+    $i=$i+1
+    write('line3','%d: dac: %d lvl: %g',$i,spVec1[$i],spYval[$i])
+  endwhile
+  write('line3','best index: %d',spHi)
+  spShow
+
+  $numSteps = spNumSteps
+  $rfile=curexp+'/analyze.inp'
+  write('reset',$rfile)
+  write('file',$rfile,'DAC value')
+  write('file',$rfile,'FID level')
+  write('file',$rfile,'1 %d linear linear',$numSteps)
+  write('file',$rfile,'NEXT  %d',$numSteps)
+  write('file',$rfile,'1')
+  $mindac=32768
+  $maxdac=-32768
+  $maxval=0
+  $maxvaldac=0
+  $i=0
+  while $i < $numSteps do
+    write('line3','%d: dac= %d lklvl= %g',$i+1,spVec1[$eval-$i],spYval[$eval-$i])
+    if (spVec1[$eval-$i] < $mindac) then
+      $mindac = spVec1[$eval-$i]
+    endif
+    if (spVec1[$eval-$i] > $maxdac) then
+      $maxdac = spVec1[$eval-$i]
+    endif
+    if (spYval[$eval-$i] > $maxval) then
+      $maxval = spYval[$eval-$i]
+      $maxvaldac = spVec1[$eval-$i]
+    endif
+    $i=$i + 1
+  endwhile
+  $i=0
+  $avedac= trunc(($maxdac + $mindac) / 2)
+  while $i < $numSteps do
+    write('line3','%d: dac= %d lklvl= %g',$i+1,spVec1[$eval-$i]-$avedac,spYval[$eval-$i])
+    write('file',$rfile,'%d %g',spVec1[$eval-$i]-$avedac,spYval[$eval-$i])
+    $i=$i + 1
+  endwhile
+
+  analyze('expfit','regression','poly3','list')
+  cp(curexp+'/analyze.list',curexp+'/poly3')
+  clear(2)
+  expl
+  write('line3','avedac= %d max= %d min= %d',$avedac,$maxdac,$mindac)
+  scalelimits(2*spRange,-2*spRange,0,1.1*spYval[spHi])
+  expl
+  clear
+  cat(curexp+'/poly3')
+  lookup('mfile',curexp+'/poly3','seek','number','filekey'):$key
+  lookup('mfile',$key,'delimiter',' =\n','seek','a1','read','skip','read','skip','read'):$c,$b,$a,$res
+  substr(spParNames,1):$dacname
+  if ($res<>3) then
+    $curDac = spLo
+    write('line3','No solution: resetting %s = %d',$dacname,$curDac)
+    write('file',spLogFile,'No solution: resetting %s = %d',$dacname,$curDac)
+    {spParNames} = $curDac
+    {spSet}
+    spStage = 'fail'
+    return(0)
+  endif
+  write('line3','a= %g b= %g c= %g',$a,$b,$c)
+  $a=3.0*$a
+  $b=2.0*$b
+  write('line3','mindac= %d maxdac= %d',$mindac,$maxdac)
+
+  $deter= $b * $b - (4.0*$a*$c)
+  $sol=$maxvaldac
+  if ($deter < 0) then
+    write('line3','set to maxdac %d',$maxvaldac)
+    write('file',spLogFile,'set to maxdac %d',$maxvaldac)
+  else
+    $sq = sqrt($deter)
+    write('line3','deter= %g sqrt= %g',$deter, $sq)
+    $sol1 = (-$b - $sq) / (2.0 * $a) + $avedac
+    $sol2 = (-$b + $sq) / (2.0 * $a) + $avedac
+    write('line3','sol1= %d sol2= %d',$sol1,$sol2)
+    if ($sol1 > $maxdac) or ($sol1 < $mindac) then
+      write('line3','solution is= %d',$sol2)
+      write('file',spLogFile,'solution is= %d',$sol2)
+      $sol = $sol2
+    elseif ($sol2 > $maxdac) or ($sol2 < $mindac) then
+      write('line3','solution is= %d',$sol1)
+      write('file',spLogFile,'solution is= %d',$sol1)
+      $sol = $sol1
+    else
+      write('line3','solution is= %d',$maxvaldac)
+      write('file',spLogFile,'solution is= %d',$maxvaldac)
+    endif
+  endif
+  spVec1[spIter+1] = $sol
+
+  spStage = 'pass1d'
+  {spParNames} = $sol
+  {spSet}
+
+endif

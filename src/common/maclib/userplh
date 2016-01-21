@@ -1,0 +1,146 @@
+"macro userplh"
+"*********************************************"
+" userplh - user defined 1H plotting macro "
+"*********************************************"
+" This macro has been supplied by a Varian user. "
+" It is included to illustrate some of the possibilities "
+" for customizing plotting macros.  It has not been "
+" thoroughly tested and its use is not supported. "
+
+sc=0
+wc=wcmax
+vp=0
+if wc2max>200 then
+   $io=20
+else
+   $io=10
+endif
+if io<$io then                     "minimum io"
+   io=$io
+endif
+numreg:$numreg
+if $numreg<2 then                  "no regions"
+    lb=1 wft                       "do region/bc/isadj/vsadj/tmsref first"
+    region(sw/sfrq+10,4,.8,12):$numreg
+    lb='n' wft
+    intmod='partial'
+    bc isadj vsadjh noislm tmsref
+endif
+$count=1
+repeat                             "get first relevant region"
+   getreg($count):$start,$end
+   integ($start,$end):$int
+   $count=1+$count
+until $int>0.05
+getreg($numreg):$start             "set start of main plot"
+if $start<0.2*sfrq then
+   if (rfp-rfl)<(-0.5*sfrq) then
+      sp=-0.5*sfrq
+   else
+      sp=rfp-rfl
+   endif
+else
+   sp=0
+endif
+if (sw-rfl+rfp)>(sp+10*sfrq) then
+   wp=10*sfrq                      "set width of main plot"
+else
+   wp=sw-rfl+rfp-sp
+endif
+apa
+pl                                 "do main plot"
+if (rfl<>0)or(rfl<>0) then         "referenced"
+   axis='p'
+endif
+pscale
+if $end>(sp+wp) then               "first region not fully in main plot" 
+   s9 $spmain=sp $wpmain=wp
+   repeat                          "find first region which was fully plotted"
+      getreg($count):$rstart,$rend
+   until $rend>(sp+wp)
+   getreg($count-2):$rstart        "jump back one region"
+   if $rstart<(sp+wp+0.2*sfrq) then
+      sp=$start-0.2*sfrq           "set sp"
+   else
+      sp=sp+wp
+   endif
+   if $end>(13.3*sfrq) then
+      wp=$end+0.2*sfrq-sp          "plot up to either first region"
+   else
+      if (sw-rfl+rfp)>(13.3*sfrq) then
+         wp=13.5*sfrq-sp           "or plot 13.5ppm"
+      else
+         wp=sw-rfl+rfp-sp          "or plot to the end"
+      endif
+   endif
+   if wp>$wpmain then              "but not more than main plot"
+      wp=$wpmain
+   endif
+   wc=wcmax*wp/$wpmain             "same expansion rate as main plot"
+   if wcmax<=350 then              "for small plots take a new page"
+      page
+      apa
+   else                            "for big plots only" 
+      peak(sp,sp+wp):$height       "set vertical position for tallest peak"
+      if $height<0 then
+         $height=-$height
+      endif
+      vp=wc2max-$height-5
+      if vp<wc2max/2 then          "vp, lower limit"
+         vp=wc2max/2
+      endif
+      if vp>(wc2max-15-io) then    "vp, upper limit"
+         vp=wc2max-15-io
+      endif
+      $lowlimit=vp-20              "lower margin of 'pir' labelling" 
+      $insetwc=wc
+      s8 fr9
+      gap($insetwc,$lowlimit,sc+wc-$insetwc):$insetsc     "find gap"
+      fr8 sc=$insetsc
+   endif                           "set sc for inset"
+   integ(sp,sp+wp):$insetint       "get largest integral in inset"
+   $maxint=wc2max-vp-io-15
+   if ($insetint>$maxint)and(wcmax>350) then      "integral too big"
+      $factor=1                    "reduce vs and is until integral fits"
+      repeat
+         vs=vs/2
+         is=is/2
+         $insetint=$insetint/2
+         $factor=2*$factor
+      until $insetint<=$maxint     "for reduced vs/is label plot" 
+      write('plotter','green',wcmax-sc-wc,vp+io+5,'1/%.0f',$factor)
+   endif
+   pscale
+   pir
+   pl   "second plot, if any relevant regions found downfield"
+else                               "main plot contains all regions found"
+   if (wcmax>350)and((sw-rfl+rfp-sp-wp)>(35*10*sfrq/wcmax)) then 
+      s9                           "if possible plot downfield trace"
+      $spmain=sp $wpmain=wp
+      sp=sp+wp
+      if (sw-rfl+rfp)>13.5*sfrq then
+         wp=13.5*sfrq-sp           "calculate wp"
+      else
+         wp=sw-rfl+rfp-sp
+      endif
+      wc=wcmax*wp/$wpmain          "calculate wc"
+      vp=wc2max-5 $insetvp=vp
+      $insetwc=wc
+      s8                           "store parameters"
+      fr9
+      gap($insetwc,$insetvp-15,wcmax-$insetwc):$insetsc      "find gap"
+      fr8
+      sc=$insetsc
+      pscale
+      intmod='off' pl intmod='partial'
+   else
+      s9
+   endif
+endif
+$newend=sp+wp
+fr9
+$xpos=wcmax-(0.1*sfrq-sp)*wcmax/wp-32
+$ypos=wc2max-8
+write('plotter','blue',$xpos,$ypos,'%4.1f hz/mm',hzmm)   "label hz/mm"
+wp=$newend-sp
+page

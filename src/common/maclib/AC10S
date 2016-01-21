@@ -1,0 +1,60 @@
+"macro AC10S"
+"AC10S - perform 19F Calibration"
+
+if probe = '' then
+   write('error','Probe must be set to use autocalibration!')
+   abort
+endif
+
+if (auto <> 'y') then
+   isvnmrj:$e
+   if ($e < 0.5) then
+     confirm('Have you inserted the 19F Sensitivity Sample?'):$yesno
+     if ($yesno<.5) then
+        abort
+     endif
+   endif
+endif
+
+setup('F19','c6d6')
+Autosetgpar
+
+
+$mon = '' $date = '' $year = ''
+shell('date +%b'):$mon
+shell('date +%d'):$date
+shell('date +%Y'):$year
+text('F19 autocalibration done on '+$mon+' '+$date+', '+$year)
+
+shell('date +%b_%d_%Y'):$date
+sample = probe + '_F19cal_' + $date
+$datadir = userdir+'/data/'+sample
+archivedir=userdir+'/data/'
+exists($datadir,'directory'):$dex
+if not $dex then mkdir($datadir) endif
+  " no need to worry about duplicate file names, as the modified "
+  " Autosave macro overwrites existing data "
+
+setref
+
+wp = sw
+cr = rfp - rfl + sw/2  "sets cr in the center of the spectrum "
+$ctrppm = cr/reffrq
+
+$move = (-63 - $ctrppm)*reffrq
+  " change in tof required to put transmitter about -63 ppm "
+tof = tof + $move
+sw = 2000  setref
+
+if (Console='vnmrs') then setrc endif "retrieve rof2 and alfa"
+rof2 = 100  "let possible background signal more or less decay"
+	   " doesn't matter in a 1-line spectrum "
+nt = 1  at = 2  ss = 1  gain = 'n'
+gf = 1  lb = 'n' fn = 2*np  lp = 0  ai
+
+if tpwr < 40 then tpwr = 51 endif
+
+if (pw90 < 5) then pw = 10 else pw(90) endif
+
+pltmod='fixed'
+macro = '' wnt = '' wexp = 'AC10C'

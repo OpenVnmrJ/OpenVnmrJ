@@ -1,0 +1,272 @@
+"macro walkupQ_setup"
+"****************************************************************"
+"   walkupQ_setup - submit queue to acquisition    "
+"   walkupQ_testacquire - submit a single acquistion "
+"****************************************************************"
+
+$tailX='tail'
+whichtail:$tailX
+
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+
+   $wqacq=wqacq
+
+IF ($0<>'walkupQ_mimic') THEN
+
+   if (mimicmod[1]='yes') then
+	expactive:$isactive
+	expactive('auto'):$isauto
+	if ($isactive>0) and (wqacq[1]='curexp') then
+	    write('error','current workspace has an active acquisition')
+	    return
+	endif
+	if ($isauto>0) and (wqacq[1]='autodir') then
+	    write('error','Automation is in progress')
+	    return
+	endif
+   endif
+
+   $pauseatexp='no'
+   getadminfo('pauseatexp'):$pauseatexp
+   if ($0='walkupQ_testacquire') or ($pauseatexp='yes') then
+        $wqacq[1]='curexp'
+   endif
+   if ($wqacq[1]='autodir') then
+        walkupautodir:$ret
+        if ($ret=0) then
+           write('error','Error in submitting to autodir')
+           return
+        endif
+   endif
+
+   strstr($wqacq[1],'viewport'):$ret
+   if ($ret) then $wqacq[1]='viewport' endif
+   if ($wqacq[1]<>'autodir') and
+	($wqacq[1]<>'newexp') and
+	($wqacq[1]<>'viewport') and
+	($wqacq[1]<>'curexp') then
+	    write('error','illegal wqacq parameter value')
+	    return
+   endif
+
+   $curexpn='' $curexp=0 $acqexpn=0
+   jexp:$curexpn
+   format($curexpn,'lower'):$curexp
+   if ($wqacq[2]=$curexpn) then
+	$wqacq[1]='curexp'
+   endif
+   if ($wqacq[1]<>'viewport') then $wqacq[2]='' endif
+   if ($wqacq[1]='newexp') then
+        newexp:$acqexpn
+        format($acqexpn,0,0):$wqacq[2]
+   endif
+   if ($wqacq[2]<>'') then 
+	format($wqacq[2],'lower'):$acqexpn
+   endif
+   if ($acqexpn<>0) then
+        expactive($acqexpn):$acqactive
+        if ($acqactive>0) then
+                write('error','Experiment %d is active',$acqexpn)
+                return
+	else
+			// Don't try to jexp. Perhaps the experiment
+			// is locked by another viewport
+		$expdir='' format($acqexpn,0,0):$expdir
+		$expdir='exp'+$expdir
+		exists(userdir+'/'+$expdir,'directory'):$direx
+		if ($direx=0) then
+		   cexp($acqexpn)
+		endif
+        endif
+   endif
+
+   customizepar('savequit')
+   if (wqinit='auto') or (wqinit='enter') then walkupQ('submit') return endif
+
+   $parflgsize=0 
+   walkupQ('readlist'):$parflg
+   if ($parflg[1]='') and (replaceQ[1]='') then
+        write('error','no experiment selected')
+        return
+   endif
+
+   expactive('auto'):$isauto
+   if ($isauto) and ($wqacq[1]='curexp') then
+        write('error','Spectrometer in automation mode')
+        return
+   endif
+   if ($isauto) and (replaceQ[1]<>'ActiveDay') then
+        write('error','Spectrometer in automation mode')
+        return
+   endif
+
+   bgmode_is:$bg
+   if (not $bg) then
+   	write('reset',userdir+'/persistence/.talk2j')
+   	write('file',userdir+'/persistence/.talk2j','%s',vnmraddr)
+   	shell('chmod a+rw '+userdir+'/persistence/.talk2j'):$dum
+   endif
+
+   if ($resume='') and calibmod='no' then
+//   if ($resume<>'addq') and ($resume<>'resumeq') then
+     setadirtmplt
+     setsvftmplt
+     setsdirtmplt
+     setsamplename
+   endif
+     checktemplates:$return
+     if ($return=0) then return endif
+//   endif
+
+   if (archivedir='') or (sample='') or ($resume='') then
+        Automkdir
+	$rbld=0
+        fixcpQnodes:$rbld
+	if ($rbld>0) then
+		xmhaha_subSQ(archivedir+'/'+sample)
+		walkupQ('readlist'):$parflg
+	endif
+   endif
+
+   if ($0 = 'walkupQ_testacquire') or ($pauseatexp='yes') then
+        if ($# < 1) then $1=$parflg[1] endif
+	$parflgsize=size('$parflg')
+        teststr('$parflg',$1,'local'):$position
+        if ($position=0) then
+           $position=1
+        endif
+        $explist1=$parflg[$position]
+        $parflg[$position]=''
+	if ($parflgsize>1) then
+        	$parflg=$explist1,'PAUSE',$parflg
+		array2array($parflg):$parflg
+	else
+		$parflg=$explist1
+	endif
+
+	if ($position > 1) then
+	   $line='' $npos=1
+	   shell('(cat '+$expfile+' | grep -w Queued | grep -n \'^'+$parflg[1]+'\')'):$line
+
+	   if ($line<>'') then
+		strstr($line,':'):$ret,$npos
+	   endif
+           if ($npos > 1) then
+	       $head='' format($npos-1,0,0):$head
+	       $head2='' format($npos,0,0):$head2
+	       shell('(head -n '+$head2+' '+$expfile+' | '+$tailX+' -n 1 > '+$expfile+'1)'):$dum
+	       shell('(head -n '+$head+' '+$expfile+' >> '+$expfile+'1)'):$dum
+	       shell('(cat '+$expfile+' | wc -l)'):$expfilesize
+	       if ($expfilesize > $npos) then
+		  $tail='' format($expfilesize-$npos,0,0):$tail
+		  shell('('+$tailX+' -n '+$tail+' '+$expfile+' >> '+$expfile+'1)'):$dum
+	       endif
+	       shell('mv '+$expfile+'1 '+$expfile):$dum
+	   endif
+	endif
+   endif
+
+   explist=$parflg
+   wQinfo($wqacq[1])
+   shell('(cat '+curexp+'/text | wc -w)'):$txtwords
+   if ($txtwords=0) then text(samplename):$dum endif
+   wraptext(curexp+'/text')
+   curexp=curexp
+
+   $md=archivedir+'/'+sample+'/dirinfo/macdir'
+   $macexpfile=$md+'/EXPLIST'
+   $maclngfile=$md+'/LONGLIST'
+   $macalias=$md+'/EXPalias'
+   shell('touch '+$macexpfile):$dum
+   shell('touch '+$maclngfile):$dum
+   shell('touch '+$macalias):$dum
+   shell('(cat '+$expfile+' | grep -w Queued >> '+$macexpfile+')'):$dum
+   shell('(cat '+$expfile+' | grep -w Queued | awk \'{print $1" "$3}\' >> '+$macalias+')'):$dum 
+   shell('cp '+cursqexp+'/macdir/* '+$md):$dum
+   cpexplist('write',$md)
+   savesampglobal($md)
+
+   shell('rm -f '+archivedir+'/'+sample+'/dirinfo/mimicdir'):$dum
+   if (mimicmod[1]='yes') then
+	setvalue('wqacq',$wqacq[1],1)
+	setvalue('wqacq',$wqacq[2],2)
+	studymimic('popup')
+	return
+   endif
+ELSE
+   write('reset',archivedir+'/'+sample+'/dirinfo/mimicdir')
+   if (mimicmod[3]<>'param') then
+   	write('file',archivedir+'/'+sample+'/dirinfo/mimicdir','%s',mimicmod[2])
+   else
+	write('file',archivedir+'/'+sample+'/dirinfo/mimicdir','')
+   endif
+
+ENDIF
+
+   $md=archivedir+'/'+sample+'/dirinfo/macdir'
+   dousermacro($0)
+   if ($wqacq[1]='autodir') then
+        write('line3','Submitting to background acquisition')
+        savesampglobal(cursqexp)
+	$archsamp=archivedir+'/'+sample
+        if ($resume='') then
+                updatestatus(autodir,'0','Empty','','')
+        endif
+        vjsubmitQ('Queued','','','0')
+        $newstatus=''
+        checklocstatus(autodir+'/enterQ','0','',''):$newstatus
+        if ($newstatus='Active') or ($newstatus='preScan') or ($newstatus='Queued') then
+	    operights('canexitsubmitmode'):$canexit
+	    if ($canexit) then
+            	walkupQ('logout')
+		if ($archsamp=archivedir+'/'+sample) and sqdisplay[1]='sample' then
+		    xmhaha('refreshSQ')
+		endif
+	    else
+		walkupQ('refresh')
+	    endif
+        endif
+        if ($0='walkupQ_mimic') then
+	    expactive:$eactive
+	    if ($eactive < 0) then auto_au_mimic endif
+	endif
+        return
+   endif
+
+   submit2fg
+   shell('rm -rf '+cursqexp+'/OrigExpPar'):$dum
+   walkupQ('logout')
+	vnmrjcmd('pnew','sqdisplayRef','seqfil')
+   MinSW='off'          "This is very critical"
+   settemp
+//   dousermacro($0)
+   fixacqlog('userdir'):$acqlog
+
+   if ($wqacq[1]='curexp') then
+        $tune='n'
+        getparam('tuneflg','Probe'):$tune
+        if ($tune='n') or ($0='walkupQ_mimic') then
+           nextgo
+        else
+           nextgo('setup')
+           procdim=0
+        endif
+	return
+   endif
+   if ($wqacq[2]<>'') then
+        write('line3','Acquiring in exp%d',$acqexpn)
+	mp($curexp,$acqexpn)
+        shell('(vbg '+$acqexpn+' "nextgo" '+$acqlog+')&'):$dum
+   endif
+
+"****************************************************************"

@@ -1,0 +1,46 @@
+"macro dproj"
+"**********************************************************"
+"   dproj  -  dproj(<'pltype'>, <...>)                     "
+"                                                          "
+"             displays the requested 3D plane projection;  "
+"             can also be used to change the plane type    "
+"**********************************************************"
+
+$plvar = 0
+if ($# > 0) then
+   if ( ($1 = 'f1f2') or ($1 = 'f2f1') or ($1 = 'f1f3') or
+        ($1 = 'f3f1') or ($1 = 'f2f3') or ($1 = 'f3f2') )
+    then
+      $plvar = 1
+      select($1,'proj')
+   else
+      select('proj')
+   endif
+else
+   select('proj')
+endif
+
+if ($# = 0) then
+   dconi
+else
+   if ($# = 1) then
+      if ($plvar) then dconi else dconi($1) endif
+   else
+      if ($# = 2) then
+         if ($plvar) then dconi($2) else dconi($1,$2) endif
+      else
+         if ($# = 3) then
+            if ($plvar) then dconi($2,$3) else dconi($1,$2,$3) endif
+         else
+            if ($# = 4) then
+               if ($plvar) then
+                  dconi($2,$3,$4)
+               else
+                  write('error','dproj:  too many arguments')
+                  return
+               endif
+            endif
+         endif
+      endif
+   endif
+endif

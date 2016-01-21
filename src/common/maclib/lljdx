@@ -1,0 +1,144 @@
+"macro lljdx"
+"lljdx - perform a line list for JCAMP-DX line list exporting "
+"usage: lljdx<('all')>"
+"  If 'all' keyword is included, solvents are included as type='s'"
+"  lljdx alone omits solvent output"
+
+" 2002-05-24 - r.kyburz, modified from maclib/csll contribution "
+" 2007-03-15 - r.kyburz, adjusted for VnmrJ 2.2C "
+
+
+$solvout=0
+$doll=1
+if $#=1 then
+  if $1='all' then
+    $solvout=1
+  elseif $1='noll' then
+    $doll=0
+  else
+    write('error','Usage:  %s<(\'all\'<,\'noll\'>)>',$0)
+  endif
+elseif $#=2 then
+  if (($1='all')and($2='noll'))or(($1='noll')and($2='all')) then
+    $doll=0 $solvout=1
+  else
+    write('error','Usage:  %s<(\'all\'<,\'noll\'>)>',$0)
+  endif
+elseif $#>2 then
+  write('error','Usage:  %s<(\'all\'<,\'noll\'>)>',$0)
+endif
+
+"first get lines; the threshhold is assumed to be set at this point"
+if $doll then
+  nll:$numlines
+else
+  $numlines=size('llfrq')
+endif
+
+"convert line list to a referenced list"
+$i=1
+repeat
+  $llfrq[$i]=llfrq[$i]-rfl+rfp
+  $i=$i+1
+until $i>$numlines
+
+"get solvent line information from /vnmr/solvents file"
+lookup('file',systemdir+'/solvents','seek',solvent,'seek','C1:')
+lookup('read',3):$solppm,$numsolvlines,$solJ
+
+"set up an array of the solvent lines"
+$i=1
+repeat
+  $solfrq[$i]=$solppm*sfrq-$solJ*trunc($numsolvlines/2)+($i-1)*$solJ
+  $i=$i+1
+until $i>$numsolvlines
+
+"now eliminate lines from the line list which match the solvents"
+"simultaneously find the biggest line in the list for scaling to 100"
+$maxpeak=0
+$absmax=0
+$whichline=1
+repeat
+  $whichsolv=1
+  $lineamp[$whichline]=llamp[$whichline]
+  if $lineamp[$whichline]>$absmax then $absmax=$lineamp[$whichline] endif
+  repeat
+    if (($solfrq[$whichsolv]+2.0)>$llfrq[$whichline]) and
+       (($solfrq[$whichsolv]-2.0)<$llfrq[$whichline]) then
+      $lineamp[$whichline]=-llamp[$whichline]
+      "set amplitude to negative to eliminate"
+    endif
+    $whichsolv=$whichsolv+1
+  until $whichsolv>$numsolvlines
+  if $lineamp[$whichline]>$maxpeak then $maxpeak=$lineamp[$whichline] endif
+  $whichline=$whichline+1
+until $whichline>$numlines
+$scale=100/$maxpeak
+$absmax=$absmax*$scale
+
+"determine carbon type of each line, using dept.out if present"
+$i=1
+repeat
+  $type[$i]='U' "default type (unassigned)"
+  $i=$i+1
+until $i>$numlines
+
+$numdeptlines=0
+exists(curexp+'/dept.out','file'):$edept
+if tn<>'C13' then $edept=0 endif
+if $edept then
+  $dept=curexp+'/dept.out'
+  lookup('file',$dept,'seek','carbons:','read'):$numdeptlines
+  lookup('file',$dept,'readline','readline','readline')
+  $i=1 $letter=''
+  repeat
+    lookup('read',5):$index,$letter,$freqhz,$freqppm,$intensity
+    if $letter='D' then
+      $depttype[$i]='D'  "CH"
+    elseif $letter='T' then
+      $depttype[$i]='T'  "CH2"
+    elseif $letter='Q' then
+      $depttype[$i]='Q'  "CH3"
+    endif
+    $deptfreq[$i]=$freqppm*sfrq
+    $i=$i+1
+  until $i>$numdeptlines
+endif
+
+$reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+"now output the reduced line list to a file"
+
+$file=curexp+'/lljdx.out'
+write('reset',$file)
+$firstx=$llfrq[1]/$reffrq
+$lastx=$llfrq[$numlines]/$reffrq
+$i=1 $depti=1
+repeat
+  if $lineamp[$i]<0 then
+    $type[$i]='s' "'Solvent'"
+    $lineamp[$i]=-$lineamp[$i]
+  else
+    if ($type[$i]='U')and($numdeptlines>=$depti) then
+      $diff=$llfrq[$i]-$deptfreq[$depti]
+      if $diff<0 then $diff=-$diff endif
+      if $diff<5.0 then "found a match in DEPT spectrum"
+        $type[$i]=$depttype[$depti]
+        $depti=$depti+1
+      else
+        $type[$i]='S' "C"
+      endif
+    endif
+  endif
+  if not($edept) then
+    write('file',$file,'%8.6f, %8.6f',$llfrq[$i]/$reffrq,$lineamp[$i]*$scale)
+  elseif $type[$i]<>'s' then
+    write('file',$file,'%8.6f, %8.6f, %s',
+	  $llfrq[$i]/$reffrq,$lineamp[$i]*$scale,$type[$i])
+  elseif $solvout=1 then
+    write('file',$file,'%8.6f, %8.6f, U',
+	  $llfrq[$i]/$reffrq,$lineamp[$i]*$scale)
+  endif
+  $i=$i+1
+until $i>$numlines
+return($file,$numlines,$absmax,$edept,$firstx,$lastx)

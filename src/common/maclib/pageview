@@ -1,0 +1,432 @@
+"macro pageview"
+"pageview - a utility macro to view plots prior to plot/save/email"
+" This uses pdfplotpar global parameter as a tool for popup/action"
+//	pdfplotpar is never set manually nor used for any other function
+//	pdfplotpar[1]=plotname
+//	pdfplotpar[2]=emailaddress
+//	pdfplotpar[3]=plot option
+//	pdfplotpar[4]=save option
+//	pdfplotpar[5]=email option
+//	pdfplotpar[6]=pathname of the sample directory
+//	pdfplotpar[7]=truncated pathname for display purpose
+//	pdfplotpar[8]=tmpplot name with date/time stamp
+//	pdfplotpar[9]=plotformat from preferences
+//	pdfplotpar[10]=flag to save/email in the preferences format
+"************************************************************"
+$dum='' $devnull=''
+if ($# < 1) then $1='review' endif
+if ($1='cancel') then return endif
+bgmode_is:$bg
+if ($bg) or (auto='y') then return endif
+
+if ($1='clear') then
+   shell('rm -f '+userdir+'/persistence/plotpreviews/'+operator+'_tmpplot*'):$dum
+   return
+endif
+
+
+   $uname=''
+   shell('uname'):$uname
+   $acroread='/usr/bin/acroread'
+   exists($acroread,'file','x'):$aex
+   if ($aex=0) then
+      $acroread=systemdir+'/bin/vnmr_open'
+      exists($acroread,'file','x'):$aex
+   endif
+
+   $ps2pdfex=0 $ps2pdfwr=''
+   getbinpath('ps2pdfwr','bin'):$ps2pdfex,$ps2pdfwr
+   if ($1='setup') and ((plotter='none') or ('plotter'='')) then
+	write('error','plotter is not set to a valid device')
+   else
+   	getplottertype(plotter):$plottype
+   endif
+
+"************************************************************"
+if ($1='setup') then
+   $psplotter='' $ret=0
+   is_psplotter:$psplotter,$ret
+   if ($uname = 'Interix') then
+     PDFpreview='y'
+   else
+     if ($aex=0) or ($ps2pdfex=0) or ($ret=0) then
+	   PDFpreview='n'
+     else
+	  PDFpreview='y'
+     endif
+   endif  
+   exists('pdfplotpar','parameter','global'):$plpon
+   if ($plpon=0) then create('pdfplotpar','string','global') endif
+   setprotect('pdfplotpar','on',256,'global')
+   exists('pdfpreview','parameter','global'):$oldpdfon
+   if ($oldpdfon) then destroy('pdfpreview','global') endif
+   exists(userdir+'/persistence/plotpreviews','directory'):$direx
+   if ($direx=0) then
+	shell('mkdir -p '+userdir+'/persistence/plotpreviews'):$dum
+   endif
+   shell('rm -f '+userdir+'/persistence/plotpreviews/'+operator+'_tmpplot*'):$dum
+
+endif
+"************************************************************"
+if ($1='auto') then
+   if ($aex=0) then
+      write('error','acroread is not found')
+      return
+   endif
+
+   if ($ps2pdfex=0) and ($uname <> 'Darwin') then
+      write('error','ps2pdfwr is not found')
+      return
+   endif
+
+   is_psplotter:$psplotter,$ret
+   if ($ret=0) then
+	write('error','A postscript plotter not found')
+	return
+   endif
+   $plotter=plotter
+   if ($psplotter<>$plotter) then
+	plotter=$psplotter
+   endif
+   docpplot('pageview')
+   if ($psplotter<>$plotter) then
+	plotter=$plotter
+   endif
+
+endif
+"************************************************************"
+if ($1='review') then
+
+  $plf='pdf'
+  getadminfo('plotformat'):$plf
+  
+  exists('CPpage','maclib'):$cppex
+  $error=0
+   if ($aex=0) then
+      write('error','acroread is not found')
+      $error=1
+   endif
+   if ($ps2pdfex=0) and ($uname<>'Darwin') then
+      write('error','ps2pdfwr is not found')
+      $error=1
+   endif
+   if ($plottype<>3) and ($plottype<>4) then
+        write('error','%s is not a ps plotter',plotter)
+	$error=1
+   endif
+  if ($error) then
+    if ($cppex) then
+	CPpage('clear')
+    else
+	page('clear')
+    endif
+    return
+  endif
+
+  pdfplotpar[1]=''
+  pdfplotpar[2]=emailaddr
+  pdfplotpar[3]=''
+  pdfplotpar[4]=''
+  pdfplotpar[5]=''
+  pdfplotpar[6]=''
+  pdfplotpar[7]=''
+  pdfplotpar[8]=''
+  pdfplotpar[9]=$plf
+  if ($plf<>'pdf') then 
+	pdfplotpar[10]='y'
+  else
+	pdfplotpar[10]='n'
+  endif
+
+  isnewexp:$isnew
+  $archive='' $sample=''
+  if ($isnew=0) then
+        shell('dirname '+file):$archive
+        exists($archive+'/plots','directory'):$direx
+	if $direx then exists($archive+'/plots','file','w'):$direx endif
+        if ($direx=0) then $isnew=1 endif
+  endif
+  if $plf='postscript' then $plf='ps' endif
+  if ($isnew=0) then
+	$expname='' $plotname='' $name=''
+	substr(file,'basename'):$expname,$ext
+//        shell('basename '+file+' .fid'):$expname
+        Svfname($archive+'/plots/'+$expname+'_plot','','.pdf, .'+$plf):$plotname
+	substr($plotname,'basename'):$name,$ext2
+        shell('basename '+$plotname+' .pdf'):$name
+//  	write('plotter',0,-20,'Plotname:  %s',$name)
+	write('plotter',0,0,''):$ys
+	$y=-(4*$ys+5)
+	$x=5
+	write('plotter',$x,$y,'Plotname: --Not assigned--')
+//        pdfplotpar[1]=$name+'.pdf'
+	pdfplotpar[1]=$name
+	pdfplotpar[6]=$archive
+	shell('basename '+$archive):$sample
+	pdfplotpar[7]='(..../'+$sample+'/plots/)'
+  else
+	exists(userdir+'/plots','directory'):$direx
+	if not $direx then mkdir(userdir+'/plots'):$dum endif
+	pdfplotpar[6]=userdir+'/plots'
+	Svfname(userdir+'/plots/$operator$_plot%R4%','','.pdf, .'+$plf):$name
+	substr($name,'basename'):$name,$ext
+	pdfplotpar[1]=$name
+	pdfplotpar[7]='(.../vnmrsys/plots/)'
+  endif
+
+  pwd:$curdir
+  exists(userdir+'/persistence/plotpreviews','directory'):$direx
+  if ($direx=0) then shell('mkdir -p '+userdir+'/persistence/plotpreviews'):$dum endif
+  cd(userdir+'/persistence/plotpreviews'):$dum
+  $tmpplot='' $pdfname=''
+  Svfname(userdir+'/persistence/plotpreviews/'+operator+'_tmpplot_','','.pdf, .'+$plf):$pdfname
+  shell('basename '+$pdfname+' .pdf'):$tmpplot
+  pdfplotpar[8]=$tmpplot
+
+  shell('rm -f '+$tmpplot):$dum
+  shell('rm -f '+$tmpplot+'.pdf'):$dum
+  if ($cppex) then
+    CPpage($tmpplot)
+  else
+    page($tmpplot)
+  endif
+ 
+    $sedcmd=`sed -e 's|Plotname: --Not assigned--||g'`
+    shell($sedcmd+` `+$tmpplot+` > `+$tmpplot+`2`):$dum
+ 
+  if ($uname <> 'Darwin') then
+  write('line3','Please wait...')
+  shell('('+$ps2pdfwr+' '+$tmpplot+'2 '+$tmpplot+'.pdf)'):$dum
+  exists($tmpplot+'.pdf','file'):$isok
+  if ($isok<>0) then
+      shell('chmod +x '+$tmpplot+'.pdf')
+  endif
+  if ($plf<>'pdf') then
+    if $plf='ps' then
+	copy($tmpplot+'2',$tmpplot+'.'+$plf):$dum
+    else
+        shell('(convert -density 300 '+$tmpplot+'2 '+$tmpplot+'.'+$plf+')'):$dum
+    endif
+  endif
+  if ($uname <> 'Interix') then
+    $tmpplot=$tmpplot+'.pdf'
+  endif
+  else
+    $isok=1
+  endif
+  shell('rm -f '+$tmpplot+'2'):$dum
+  cd($curdir):$dum
+
+  if ($isok=0) then
+        write('error','Generation of pdf plot Failed!')
+  else
+	pageview('popup')
+	if ($uname = 'Interix') then
+        shell('('+$acroread+' '+userdir+'/persistence/plotpreviews/'+$tmpplot+'.pdf) '):$dum
+    else
+        shell('('+$acroread+' '+userdir+'/persistence/plotpreviews/'+$tmpplot+') &'):$dum
+    endif
+  endif
+
+endif
+"************************************************************"
+if ($1='popup') then
+        vnmrjcmd('pnew','pdfplotpar')
+        $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+                \'file:pageview.xml\',
+                \'rebuild:yes\',
+                \'pnewupdate:true\',
+                \'location:topMenuBar\',
+                \'ok:pageview(`proceed`)\',
+                \'cancel:pageview(`cancel`)\',
+                \'title: Plot View\')'
+        exec($vjcmd)
+endif
+"************************************************************"
+if ($1='proceed') then
+
+  $plf=pdfplotpar[9]
+  if $plf='postscript' then $plf='ps' endif
+
+  $archsamp=pdfplotpar[6]
+  $isstudy=0
+  $name=''
+  substr(pdfplotpar[1],1,1):$fc
+  if $fc='/' then
+	substr(pdfplotpar[1],'dirname'):$archsamp,$name,$ext
+	ckstring($name):$name
+  elseif pdfplotpar[1]<>'' then
+	substr(pdfplotpar[1],'basename'):$name,$ext
+        ckstring($name):$name
+  endif
+  exists($archsamp,'dirinfo'):$isstudy
+  if $isstudy then $plotdir=$archsamp+'/plots' else $plotdir=$archsamp endif
+
+  exists($plotdir,'directory'):$pldirex
+  if not $pldirex then
+	mkdir('-p',$plotdir):$dum
+	exists($plotdir,'directory'):$pldirex
+	if not $pldirex then
+	    write('error','Could not create %s',$plotdir)
+	    pageview('popup')
+	    return
+	endif
+  endif
+
+  $plotopt=0
+  $saveopt=0
+  $emailopt=0
+  $eaddress=pdfplotpar[2]
+  if (pdfplotpar[3]='plot') then $plotopt=1 endif
+  if (pdfplotpar[4]='save') then $saveopt=1 endif
+  if (pdfplotpar[5]='email') then $emailopt=1 endif
+//      if plotname is empty, save and email options are OFF
+  if ($name='') then $saveopt=0 $emailopt=0 endif
+
+//      if email flag is off, email option is OFF
+  if (emailflag='n') then 
+	write('line3','emailflag is OFF')
+	$emailopt=0 
+  endif
+//	if emailaddress is empty
+  if ($eaddress='') and ($emailopt>0) then
+	write('error','Please provide email address')
+	pageview('popup')
+	return
+  endif
+
+  $plot=userdir+'/persistence/plotpreviews/'+pdfplotpar[8]
+  exists($plot,'file'):$fileex
+  exists($plot+'.pdf','file'):$fileex2
+  if ($fileex) and ($fileex2) and ($saveopt) then
+	exists($plotdir+'/'+$name+'.pdf','file'):$plotex
+	if ($plotex=0) and ($plf<>'pdf') then
+	    exists($plotdir+'/'+$name+'.'+$plf,'file'):$plotex
+	endif
+        if ($plotex) then
+           write('error','Plot %s already exists. Enter different plot name',$name)
+	   pageview('popup')
+	   return
+	endif
+  endif
+  if ($fileex) then
+	shell('cp '+$plot+' '+$plot+'_tmp'):$dum
+  endif
+
+  if ($fileex) and ($fileex2) and (($saveopt) or ($emailopt)) then
+      if $isstudy then
+      	$sedcmd=`sed -e 's|Plotname: --Not assigned--|Plotname: `+$name+`|g'`
+      else
+	$sedcmd=`sed -e 's|Plotname: --Not assigned--||g'`
+      endif
+      shell($sedcmd+` `+$plot+`_tmp > `+$plot+`2`):$dum
+      exists($plot+'2','file'):$fileex3
+      if ($fileex3) then
+  	shell('('+$ps2pdfwr+' '+$plot+'2 '+$plot+'2.pdf)'):$dum
+	if ($plf<>'pdf') then
+	   if $plf='ps' then
+		copy($plot+'2',$plot+'2.'+$plf):$dum
+	   else
+	   	shell('(convert -density 300 '+$plot+'2 '+$plot+'2.'+$plf+')'):$dum
+	   endif
+	endif
+	exists($plot+'2.pdf','file'):$fileex4
+	if ($fileex4) then
+		shell('mv '+$plot+'2 '+$plot+'_tmp'):$dum
+		shell('mv '+$plot+'2.pdf '+$plot+'.pdf'):$dum
+		if ($plf<>'pdf') then
+		   shell('mv '+$plot+'2.'+$plf+' '+$plot+'.'+$plf):$dum
+		endif
+	endif
+      endif
+  endif
+
+//      send to plotter if plot option is ON
+  if ($fileex) and ($plotopt) then
+     if ($saveopt=0) and ($emailopt=0) then
+      	$sedcmd=`sed -e 's|Plotname: --Not assigned--||g'`
+      	shell($sedcmd+` `+$plot+`_tmp > `+$plot+`2`):$dum
+      	exists($plot+'2','file'):$fileex3
+      	if ($fileex3) then
+                shell('mv '+$plot+'2 '+$plot+'_tmp'):$dum
+	endif
+     endif
+     $osplotter=''
+     getplottertype(plotter,'osname'):$osplotter
+     string2array($osplotter):$osplotter
+     array2string($osplotter):$osplotter
+     if ($osplotter='') then
+       shell('(vnmrplot '+$plot+'_tmp )'):$dum
+     else
+       shell('(vnmrplot '+$plot+'_tmp "'+ $osplotter+'")'):$dum
+     endif
+  endif
+
+  if ($fileex2) then
+//	save to directory if save option is ON
+     $saved=0 $saved2=0
+     if ($saveopt) then
+	copy($plot+'.pdf',$plotdir+'/'+$name+'.pdf'):$dum
+	exists($plotdir+'/'+$name+'.pdf','file'):$saved
+	if ($saved) then
+    		write('line3','Plot saved as %s/%s.pdf',$plotdir,$name)
+	    if $isstudy then
+    		cplog($name,'plot','pdf')
+                datamirror($plotdir+'/'+$name+'.pdf','plot')
+	    endif
+	endif
+        if ($plf<>'pdf') and (pdfplotpar[10]='y') then
+	   copy($plot+'.'+$plf,$plotdir+'/'+$name+'.'+$plf):$dum
+	   exists($plotdir+'/'+$name+'.'+$plf,'file'):$saved2
+	   if ($saved2) then
+                write('line3','Plot saved as %s/%s.%s',$plotdir,$name,$plf)
+	      if $isstudy then
+                cplog($name,'plot',$plf)
+                datamirror($plotdir+'/'+$name+'.'+$plf,'plot')
+	      endif
+	   endif
+	endif
+     endif
+//	email to emailaddress if email option is ON
+     if ($emailopt) then
+	pwd:$curdir
+	$efile=''
+	if ($saved) then
+	    $efile=$efile+' '+$name+'.pdf'
+	    if ($saved2) then
+		$efile=$efile+' '+$name+'.'+$plf
+	    endif
+	    cd($plotdir):$dum
+	    vnmremail($efile,$eaddress)
+	else
+	    cd(userdir+'/persistence/plotpreviews'):$dum
+	    if ($name<>'') then
+		shell('cp '+pdfplotpar[8]+'.pdf '+$name+'.pdf'):$dum
+		copy($name+'.pdf','/vnmr/tmp'):$dum
+		$efile='/vnmr/tmp/'+$name+'.pdf'
+		if ($plf<>'pdf') and (pdfplotpar[10]='y') then
+		   shell('cp '+pdfplotpar[8]+'.'+$plf+' '+$name+'.'+$plf):$dum
+		   copy($name+'.'+$plf,'/vnmr/tmp'):$dum
+		   $efile=$efile+' /vnmr/tmp/'+$name+'.'+$plf
+		endif
+		vnmremail($efile,$eaddress)
+	 	shell('rm -f '+$name+'.pdf'):$dum
+		if ($plf<>'pdf') and (pdfplotpar[10]='y') then
+		   shell('rm -f '+$name+'.'+$plf):$dum
+		endif
+	    else
+		copy(pdfplotpar[8]+'.pdf','/vnmr/tmp'):$dum
+	    	vnmremail('/vnmr/tmp/'+pdfplotpar[8]+'.pdf',$eaddress)
+	    endif
+	endif
+	cd($curdir):$dum
+     endif
+  endif
+  shell('rm -f '+$plot+'_tmp'):$dum
+  pdfplotpar[3]=''
+  pdfplotpar[4]=''
+  pdfplotpar[5]=''
+
+
+endif
+"************************************************************"

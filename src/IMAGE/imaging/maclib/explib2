@@ -1,0 +1,50 @@
+"macro explib2"
+"***************************************************************"
+" explib2                                                       "
+"                                                               "
+" Write list of current experiments to text window.  Unlike     "
+" explib, which is not a Magical macro, explib2 does not list   "
+" the size of each experiment directory.                        "
+"                                                               "
+" Last modified:  6/17/94  ARR                                  "
+"***************************************************************"
+
+"** Initialize variables **********************************"
+$curexp = ''
+$expstring = ''
+$expfile = ''
+$text = ''
+$name = ''
+$expcounter=1
+
+"** Clear text window and write descriptive header ********"
+flush
+clear
+write('alpha','                         EXPERIMENT DIRECTORY')
+write('alpha','  Exp#  Sequence  Text')
+write('alpha','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+"** Check the existence of each experiment ****************"
+repeat
+
+  format($expcounter,1,0):$expstring
+  $expstring = 'exp'+$expstring
+  $expfile = userdir+'/'+$expstring
+  exists($expfile,'file'):$exists
+
+  "** If experiment directory exists, get sequence name *****"
+  "** and text entry. ***************************************"
+  if ($exists) then
+    lookup('file',$expfile+'/curpar','delimiter',' \t\n\r','seek','seqfil','readline')
+    lookup('read',2):$junk,$name
+    lookup('file',$expfile+'/text','readline'):$text
+
+    "** Write experiment and sequence name, and text **********"
+    length($name):$length
+    substr($name,2,$length-2):$name
+    format($expstring,'upper'):$expstring
+    write('alpha','  %s %9s  %s',$expstring,$name,$text)
+  endif
+  $expcounter = $expcounter + 1
+
+until ($expcounter>9)

@@ -1,0 +1,48 @@
+import os
+
+# targets
+pulsetoolTarget = 'pulsetool'
+pulsechildTarget = 'pulsechild'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+pulseToolFileList = ['pulsetool.c',
+                     'pulsetool_mf.c']
+
+pulseChildFileList = ['pulsechild.c',
+                      'pulsechild_mf.c']
+
+# build environments
+pulseEnv = Environment(CCFLAGS    = '-O2 -m32',
+                       CPPDEFINES = ['LINUX'],
+                       LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib ')
+
+# actual builds
+pulsetool = pulseEnv.Program(target  = pulsetoolTarget,
+                             source  = [pulseToolFileList],
+                             LIBPATH = [os.path.join(os.sep, 'usr', 'X11R6', 'lib'),
+                                        os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu')],
+                             LIBS    = ['Xm', 'Xt', 'X11', 'm'])
+
+pulsechild = pulseEnv.Program(target  = pulsechildTarget,
+                              source  = [pulseChildFileList],
+                              LIBPATH = [os.path.join(os.sep, 'usr', 'X11R6', 'lib'),
+                                        os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu')],
+                              LIBS    = ['Xm', 'Xt', 'X11', 'm'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+pulseEnv.AddPostAction(pulsetool,
+                       Action(Copy(vnmrInstallPath, os.path.join(cwd, pulsetoolTarget))))
+
+pulseEnv.AddPostAction(pulsechild,
+                       Action(Copy(vnmrInstallPath, os.path.join(cwd, pulsechildTarget))))
+

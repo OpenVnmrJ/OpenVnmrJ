@@ -1,0 +1,52 @@
+"macro lockfreq_calib_process"
+"Agilent"
+if (owner<>'vnmr1') then write('error','Only vnmr1 can set the system lock frequency') return endif
+
+$activestudy='no'
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'activestudy' then $activestudy=$val endif
+ $x=$x+1
+endwhile
+
+fread(systemdir+'/conpar','systemglobal')
+
+f full
+lb=100
+fn=4*np
+wft
+av
+rfl=sw/2
+rfp=0
+peak(sp,sp+wp):$ht,$frq
+cr=$frq
+
+$newlockfreq=(sfrq+$frq/1e6)*0.153506090
+VPtext
+write('line3','Lock frequency calibration'):$str
+atext($str)
+CalibrationResults=$str
+write('line3','Existing lockfreq = %.6f MHz',lockfreq):$str
+CalibrationResults=CalibrationResults,$str
+atext($str)
+write('line3','New lockfreq = %.6f MHz',$newlockfreq):$str
+CalibrationResults=CalibrationResults,$str
+atext($str)
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft f full vsadj darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+$lockfreqs=''
+format($newlockfreq,1,6):$lockfreqs
+lockfreq=$newlockfreq
+write('line3','Setting lockfreq %g into /vnmr/conpar',$newlockfreq)
+fsave(systemdir+'/conpar','systemglobal')
+if (auto='y') then
+       xmhaha('sendcmd','IPupdatelockfreqfg')
+endif
+
+VPgettarget('lockfreq_calib'):$dum
+VPhistory(lockfreq)

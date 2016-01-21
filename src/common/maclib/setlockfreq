@@ -1,0 +1,28 @@
+"macro setlockfreq"
+
+"Must be UnityPlus, Inova, or Gemini; must be using H1 as observe nucleus"
+
+$rftype=''
+$vtval = vttype
+substr(rftype,1,1):$rftype
+if ($rftype = 'a') or ($rftype = 'b') or ($rftype = 'c')  then
+    write('error','%s will not work on this type of system.',$0)
+    abort
+endif
+if (tn <> 'H1') then
+    write('error','You must acquire a signal with tn=\'H1\' before using %s',$0)
+    abort
+endif
+
+fread(systemdir+'/conpar','systemglobal')
+lockfreq='y'
+
+"sfrq units are MHz, tof units are Hz"
+"lockfreq units are MHz"
+
+lockfreq = ((sfrq*1e6) / 6.51439977668) / 1.0e6
+tof = 0
+write('line3','Lock Frequency: %g', lockfreq)
+write('alpha','Lock Frequency: %g\n', lockfreq)
+fsave(systemdir+'/conpar','systemglobal')
+vttype = $vtval

@@ -1,0 +1,58 @@
+#
+
+import os
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+# order is important for the next two lists
+targets = ['aslmirtime']
+ 
+myList = ['aslmirtime.c']
+
+# build environments
+env = Environment(CCFLAGS = '-O2 -Wall',
+                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib ',
+                  LIBS   = ['gsl', 'gslcblas', 'm'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+                  'options', 'standard', 'IMAGE', 'bin')
+
+# copy the sources to this path
+srcInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 
+                  'options', 'standard', 'IMAGE', 'imaging','src', 'aslmirtime')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+#if not os.path.exists(srcInstallPath):
+#   os.makedirs(srcInstallPath)
+
+# actual builds
+for i in range(len(targets)):
+   tempObj = env.Program(target = targets[i],
+                         source = myList[i])
+   env.AddPostAction(tempObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, targets[i]))))
+
+# this is the list
+srcList = ['aslmirtime.c',
+           'aslmirtime.h',
+           'COPYING',
+           'INSTALL',
+           'Makefile',
+           'README']
+
+# copy the sources
+#for i in srcList:
+#   sourceFile = os.path.join(cwd, i)
+#   targetFile = os.path.join(srcInstallPath, i) 
+#   env.Command(target = targetFile,
+#               source = sourceFile,
+#               action = Copy(targetFile, sourceFile))
+#   env.Depends(target     = targets[0],
+#               dependency = targetFile)
+

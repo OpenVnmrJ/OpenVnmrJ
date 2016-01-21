@@ -1,0 +1,49 @@
+"macro sec2ampm"
+if ($1 < 0) then return('') endif
+$7days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+$today=''
+shell('date "+%a"'):$today
+teststr('$7days',$today,'local'):$todayx
+
+$rday=0
+$sday=''
+$shr=trunc($1/3600)
+$smin=(trunc($1)/60)%60
+if ($shr > 23) then
+        $rday=trunc($shr/24)
+        $ndayx=(($todayx+$rday) mod 7)
+        if ($ndayx=0) then $ndayx=7 endif
+        $sday=' ('+$7days[$ndayx]+')'
+        $shr=$shr%24
+else
+        $sday=''
+endif
+
+$timeformat='ampm'
+exists('timeformat','parameter','global'):$tex
+if ($tex) then $timeformat=timeformat endif
+if ($timeformat<>'24hour') then $timeformat='ampm' endif
+
+$start=''
+$ss=''
+if ($timeformat='ampm') then
+   if ($shr<12) then
+        $sday=' AM'+$sday
+   elseif ($shr>12) then
+        $sday=' PM'+$sday
+        $shr=$shr-12
+   else
+        $sday=' PM'+$sday
+   endif
+else
+   $sday=' Hrs'+$sday
+endif
+
+format($shr,0,0):$ss
+if ($shr<10) then $ss='0'+$ss endif
+$start=$ss+':'
+format($smin,0,0):$ss
+if ($smin<10) then $ss='0'+$ss endif
+$start=$start+$ss+$sday
+
+return($start)

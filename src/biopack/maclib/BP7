@@ -1,0 +1,55 @@
+"macro BP7"
+" BP7 "
+setref $bestone=1 $counter=1
+av select(1) vsadj(20) $best=20
+repeat
+  select($counter)
+  dc peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) ph
+BPaph0
+vsadj(50)
+
+BPsvf(userdir+'/AutoTripRes/gzlvl2cal')
+dssh('dodc') pl('all','dodc') pap BPpage
+gzlvl2=gzlvl2[$bestone]
+gzlvl2=trunc(gzlvl2)
+nt=16 wnt='wft f full'
+wexp='BP10'
+$dof=dof
+
+shell('rm -rf',userdir+'/AutoTripRes/ghn_co.par'):$dum
+if BPBioNMR then seqfil='ghn_coP' endif
+lvl=0 tlt=0
+svp(userdir+'/AutoTripRes/ghn_co')
+
+$pw=pw $gain=gain $tpwr=tpwr $tof=tof $d1=d1 $temp=temp
+$pwN=pwN $pwNlvl=pwNlvl $gzlvl2=gzlvl2
+$pwC=pwC $pwClvl=pwClvl
+$compH=compH $compC=compC $compN=compN
+$dpwr2=dpwr2 $dmf2=dmf2
+$gzlvl1=gzlvl1 
+$tpwrsf=tpwrsf
+
+gNhsqc
+
+pw=$pw gain=$gain tpwr=$tpwr tof=$tof d1=$d1 temp=$temp
+pwN=$pwN pwNlvl=$pwNlvl dpwr=0 gzlvl2=$gzlvl2
+pwC=$pwC pwClvl=$pwClvl
+compH=$compH compC=$compC compN=$compN
+dpwr2=$dpwr2 dmf2=$dmf2
+gzlvl1=$gzlvl1 gzlvl2=$gzlvl2
+tpwrsf=$tpwrsf
+pw90=$pw
+fn=4*np
+dpwr=0 
+ r5=$dof
+d1=.4,1,2.1 nt=16,8,4 array='(d1,nt)'
+gf=.022 full
+addpar('ss') ssfilter=600 ssntaps=200
+ssorder='n'
+wexp='BP7a'
+au
+dps

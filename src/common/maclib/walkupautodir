@@ -1,0 +1,37 @@
+"macro walkupautodir"
+//expactive('auto'):$isauto
+//if (auto='y') then $isauto=1 endif
+//if ($isauto>0) then
+//   write('error','Cannot create walkupautodir with automation in progress')
+//   return(0)
+//endif
+if (auto='y') then return(0) endif
+$isinqueue=0
+if (autodir<>'') and (traymax<1) then
+    shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+//    shell('(cat '+autodir+'/enterQ | grep -cw SAMPLE#:)'):$isinqueue
+    if ($isinqueue>0) then
+	write('error','There are samples in current autodir. Creating new autodir')
+	autodir=''
+    endif
+endif
+
+$td=traydisplay traydisplay='n'
+checkautodir:$ret
+traydisplay=$td
+
+if ($ret<1) then return(0) endif
+
+if (autodir<>'') then
+    shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+//    shell('(cat '+autodir+'/enterQ | grep -cw SAMPLE#:)'):$isinqueue
+    if ($isinqueue>0) then
+        write('error','There are samples in current autodir')
+	return(0)
+    else
+      cpautodir=autodir
+      return(1)
+    endif
+endif
+
+return(0)

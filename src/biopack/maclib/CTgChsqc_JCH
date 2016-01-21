@@ -1,0 +1,50 @@
+"macro CTgChsqc_JCH"
+"CTgChsqc_JCH macro for BioPack"
+
+        BPrtppar('CTgChsqc_JCH')  
+
+	sw1=45*dfrq                   
+	dof=dof-(174-57)*dfrq
+        rp1=-90
+	dm2='nyn' dmm2='cpc'
+
+	ni=0    phase=1  nt=4
+        ddrtc=alfa   
+        write('alpha','recalulating CAB pulses' )
+         
+	$shape='CACB180'
+        pbox_rst opx($shape+'.RF') pboxpar('stepsize', '1.0')
+        pboxpar('attn','i') pboxpar('sfrq',dfrq)
+        setwave('q3 80p' )   
+	cpx(pwC*compC,pwClvl)   
+	pboxget($shape+'.RF'):CACB180shape,CACB180pw,CACB180pwr 
+ 
+        write('alpha','recalculating CO pulses' )
+
+	getparam('dofCO','C13'):$dofCO
+
+	$freq=$dofCO-dof $offset='' format($freq,9,1):$offset
+	 
+	$wave1=''
+
+        $shape='CO_offA'
+        pbox_rst opx($shape+'.RF') pboxpar('stepsize', '1.0')
+        pboxpar('attn','i') pboxpar('sfrq',dfrq)
+        //$wave1 = 'iburp2 30p ' + $offet+s' 0 0 180 '
+	$wave1 = 'gaus 40p ' +$offset+' 0 0 180 '
+        setwave($wave1)
+	cpx(pwC*compC,pwClvl)   
+	pboxget($shape+'.RF'):CO180shape,CO180pw,CO180pwr 
+
+        write('alpha','13C shapes done\n')
+
+	dseq='Cdec_Alfa'
+
+ 	pbox_rst opx(dseq+'.DEC') pboxpar('stepsize', '2.0')   
+        pboxpar('adb', '2.0')  pboxpar('attn','i') pboxpar('sfrq',dfrq)
+	setwave('WURST2 50p/0.0008' )   
+	cpx(pwC*compC,pwClvl)   
+	pboxget(dseq+'.DEC'):dseq,r1,dpwr,r2,dres,dmf
+	dpwr=dpwr+1
+
+echo('MAKE SURE gzlvl4 IS ADJUSTED TO MAX INTENSITY\n')

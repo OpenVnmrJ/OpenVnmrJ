@@ -1,0 +1,83 @@
+"macro epage"
+$dum='' $devnull=''
+if ($# < 1) then $1=emailaddr endif
+if ($# < 2) then $2='' endif
+if ($1='') then $1=emailaddr endif
+exists('CPpage','maclib'):$cppex
+
+if (emailflag='n') then
+    write('line3','Email option is NOT turned on')
+  if ($cppex) then
+    CPpage('clear')
+  else
+    page('clear')
+  endif
+    return
+endif
+
+if ($1='') then
+    write('line3','Usage epage(<address>). emailaddr is empty string')
+  if ($cppex) then
+    CPpage('clear')
+  else
+    page('clear')
+  endif
+    return
+endif
+
+isnewexp:$isnew
+if ($isnew) then
+  $archive=''
+  $expname=samplename+'_'+pslabel+'_emailplot'
+else
+  shell('dirname '+file):$archive
+  shell('basename '+file+' .fid'):$expname
+endif
+
+  pwd:$curdir
+  $plf='pcx'
+  getadminfo('plotformat'):$plf
+
+if ($2<>'') then $plf=$2 endif
+
+if ($isnew) then
+  $name=$expname
+else
+  Svfname($archive+'/plots/'+$expname+'_plot','','.'+$plf):$plotname
+  shell('basename '+$plotname+' .'+$plf):$name
+endif
+
+  write('plotter',0,-20,'Plotname:  %s',$name)
+  $dir=userdir+'/persistence'
+//  cd('/vnmr/tmp'):$dum
+  cd($dir):$dum
+  if ($cppex) then
+    CPpage($name)
+  else
+    page($name)
+  endif
+  write('line3','Please wait...')
+  if ($plf = 'pdf') then
+        shell('ps2pdfwr '+$name+' '+$name+'.'+$plf):$dum
+  else
+        shell('convert -density 300 '+$name+' '+$name+'.'+$plf):$dum
+  endif
+
+exists($name+'.'+$plf,'file'):$isok
+if ($isok=0) then
+	write('error','Generation of %s plot Failed!',$plf)
+else
+   if ($isnew=0) then
+    	shell('cp '+$dir+'/'+$name+'.'+$plf+' '+$archive+'/plots'):$dum
+    	write('line3','Plot saved as %s.%s',$name,$plf)
+    	cplog($name,'plot',$plf)
+   endif
+   copy($dir+'/'+$name+'.'+$plf,'/vnmr/tmp'):$dum
+   vnmremail('/vnmr/tmp/'+$name+'.'+$plf,$1)
+   write('line3','%s.%s sent to %s',$name,$plf,$1)
+endif
+
+shell('rm -f '+$dir+'/'+$name):$dum
+shell('rm -f '+$dir+'/'+$name+'.'+$plf):$dum
+
+cd($curdir):$dum

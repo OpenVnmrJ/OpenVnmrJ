@@ -1,0 +1,243 @@
+"macro iplan"
+""
+"  IPLAN:  prototype interactive image planning"
+""
+"look for any uniniitialized variables and values that are bad "
+"bail if lro lpe not defined"
+exists('lro','parameter'):$e
+exists('lpe','parameter'):$f
+if ($e = 0) and ($f = 0) then
+  write('line3','lro,lpe must be defined')
+  return 
+endif
+  
+if (axis <> 'cc') then
+  write('line3','axis should be cc for iplan')
+  return
+endif
+
+"starting rotation angle"
+exists('p_angle','parameter'):$e
+if($e = 0) then
+  create('p_angle')
+endif
+$ang = p_angle                    
+
+"starting x center coordinate"
+exists('p_x','parameter'):$e
+if($e = 0) then
+  create('p_x')
+endif
+$xcent = wcmax - p_x                    
+
+"starting y center coordinate"
+exists('p_y','parameter'):$e
+if($e = 0) then
+  create('p_y')
+endif
+$ycent = p_y 
+
+"number of slices"
+exists('t_ns','parameter'):$e
+if($e = 0) then 
+  create('t_ns')
+  t_ns=1
+endif
+
+exists('t_thk','parameter'):$e
+if($e=0) then
+  create('t_thk','parameter'):$e
+  t_thk=10
+endif 
+                  
+exists('t_gap','parameter'):$e
+if($e=0) then
+  create('t_gap','parameter'):$e
+  t_gap=10
+endif
+  
+$nslices = t_ns
+$invert = 1
+trfuncd(1.0):$invert
+$thk = t_thk/($invert*10.0) "it is in millimeters"
+$thk2 = $thk
+$fov = lro/$invert
+$spacing = (t_gap + t_thk)/$invert/10.0
+  
+pen('graphics','magenta')
+if($thk<1.0) then
+  $thk=1.0
+endif
+
+tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)   "draw with refresh "
+
+"xcent,ycent are the pivot co-ordinates"
+"crude server loop"
+" $mode = 0 exit, clean up "
+" $mode = 1 move "
+" $mode = 2 tilt "
+" $mode = 3 stretch "
+" $mode = 4 spacing "
+" $mode = 5 thickness "
+" $mode = 6 reset "
+pen('graphics','magenta')
+box(0,30,71,80,'nolimit')
+write('graphics',3,74,'Thickness')
+box(0,30,61,70,'nolimit')
+write('graphics',3,64,'Stretch')
+box(0,30,51,60,'nolimit')
+write('graphics',3,54,'Tilt')
+box(0,30,41,50,'nolimit')
+write('graphics',3,44,'Position')
+box(0,30,31,40,'nolimit')
+write('graphics',3,34,'- Slice +')
+box(0,30,21,30,'nolimit')
+write('graphics',3,24,'Spacing')
+box(0,30,11,20,'nolimit')
+write('graphics',3,14,'Exit')
+$mode = 7 "modeless"
+while ($mode > 0) do 
+  gin('B1_press'):$xm,$ym,$b1
+   if ($b1 < 0.5) then            "if a keyboard key is typed, exit"
+     return
+   endif
+" due to popular demand I'm clipping to graphics area"
+  if ($xm < 0) then
+    $xm = 0
+  endif
+  if ($xm > wcmax) then
+    $xm = wcmax
+  endif
+  if ($ym < 0) then
+    $ym = 0
+  endif
+  if ($ym > wc2max) then
+    $ym = wc2max
+  endif
+  $xm = wcmax - $xm
+"are we in the control area?? "
+  if ($xm < 30) then
+    if ($ym < 80) and ($ym > 70) then
+      $mode=5
+write('graphics','ovly',50,20,'Slice Thickness: %-5.2f mm',$thk2*$invert*10)
+    endif
+    if ($ym < 70) and ($ym > 60) then
+      $mode=3
+    endif
+    if ($ym < 60) and ($ym > 50) then
+      $mode=2
+    endif 
+    if ($ym < 50) and ($ym > 40) then
+      $mode=1
+    endif
+    if ($ym < 40) and ($ym > 30) and ($xm >= 15) then
+      $nslices = $nslices + 1 
+      tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)
+      write('graphics','ovly',33,34,'%5.0f',$nslices)
+    endif
+    if ($ym < 40) and ($ym > 30) and ($xm < 15) then
+      $nslices = $nslices - 1
+      tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)
+      write('graphics','ovly',33,34,'%5.0f',$nslices)
+    endif
+    if ($ym < 30) and ($ym > 20) then
+      $mode=4
+    endif
+    if ($ym < 20) and ($ym > 5) then
+"      the draws are verification only "
+       cos($ang):$f
+       $xu = $xcent + $f*$fov/2
+       sin($ang):$f
+       $yu = $ycent + $f*$fov/2
+p_x = wcmax - $xcent
+p_y = $ycent
+       trfunc($xcent,$ycent):$xcent,$ycent    " this is the center point... "
+       "the end of the slice extent.."
+       trfunc($xu,$yu):$xu,$yu    " every one is in cm so far..."
+       "write('line3','%f,%f  %f,%f',$xcent,$ycent,$xu,$yu)"
+
+menu('slice_transfer')
+       rsliceplan($xcent,$ycent,$xu,$yu,$nslices)
+t_thk = $thk2*$invert*10.0
+t_gap = ($spacing - $thk2)*$invert*10.0
+t_ns = $nslices
+p_angle = $ang
+
+draw('ovlyC')
+       return
+    endif
+    
+  else "interactive function"
+    pen('graphics','magenta')
+    $x1 = $xcent
+    $y1 = $ycent
+  
+    while ($b1) do           "while mouse button 1 is held down"
+     gin:$x2,$y2,$b1
+     $x2 = wcmax - $x2
+     if (($x2 <> $x1) or ($y2 <> $y1)) then "if any mouse movement"
+"for help draw line showing my angle "
+      if ($mode = 2) then " draw the torque bar "
+        move($xcent,$ycent)
+	pen('graphics','yellow')
+        draw('newovly',$x2,$y2)
+	pen('graphics','magenta')
+        atan2($y2-$ycent,$x2-$xcent):$ang
+        tbox('ovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)
+      endif
+      if ($mode=3) then
+        $fov = ($x2-$xcent)*($x2-$xcent)+($ycent-$y2)*($ycent-$y2)
+        $fov = sqrt($fov)*2.0
+        atan2($y2-$ycent,$x2-$xcent):$xang
+	cos($xang-$ang):$xang
+	$fov = $fov*$xang
+        tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)   "draw with refresh "
+      endif
+      if ($mode=1) then
+	$xcent = $x2
+	$ycent = $y2
+        tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)
+      endif
+      if ($mode=4) then
+        $xy = ($x2-$xcent)*($x2-$xcent)+($ycent-$y2)*($ycent-$y2)
+        $xy = sqrt($xy)*2.0
+        atan2($y2-$ycent,$x2-$xcent):$xang
+	cos($xang-$ang-1.5707):$xang
+        if ($nslices > 1) then
+	$spacing = $xy*$xang/($nslices-1)
+	"spacing is alway positive"
+	if ($spacing < 0) then
+	  $spacing = -$spacing
+        endif
+        move($xcent,$ycent)
+        tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)
+        endif
+      endif
+      "proportionate ..thickness adjust"
+      if ($mode=5) then
+        $xy = ($x2-$xcent)*($x2-$xcent)+($ycent-$y2)*($ycent-$y2)
+        $xy = sqrt($xy)
+        atan2($y2-$ycent,$x2-$xcent):$xang
+	cos($xang-$ang-1.5707):$xang
+        $thk2 = (1 + $xy*$xang/25)*$thk
+	"thickness is always positive"
+	if ($thk2 < 0) then
+	  $thk2 = -$thk2
+        endif
+	if ($thk2 < 0.001) then
+	  $thk2 = 0.001
+        endif
+	if ($thk2 > 2*$spacing) then
+	  $thk2 = 2*$spacing
+        endif
+        move($xcent,$ycent)
+        tbox('newovly',$ang,$xcent,$ycent,$fov,$thk2,$spacing,$nslices)
+write('graphics','ovly',33,74,'%-5.2f mm',$thk2*$invert*10)
+      endif
+   endif
+     $x1 = $x2
+     $y1 = $y2
+endwhile
+endif
+endwhile
+tbox('newovly',$ang,$xcent,$ycent,$fov,$thk,$spacing,$nslices)   "draw with refresh " 

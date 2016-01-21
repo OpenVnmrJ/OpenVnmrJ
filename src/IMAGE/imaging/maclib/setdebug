@@ -1,0 +1,32 @@
+"macro setdebug"
+"********************************************************"
+" setdebug                                               "
+"                                                        "
+" setdebug('on')                                         "
+"     Turn command/macro tracing on                      "
+"                                                        "
+" setdebug('off')                                        "
+"     Turn command/macro tracing off                     "
+"                                                        "
+"********************************************************"
+
+$action = 'on'
+if ($# > 0) then
+  $action = $1
+endif
+
+$file=userdir+'/debug.txt'
+
+if ($action='on') then
+  write('line3',`setdebug: Use setdebug('off') to quit debug mode`)
+  rm($file):$trash
+  vnmrjcmd('tty',$file)
+  debug('c')
+endif
+
+if ($action='off') then
+  debug('C')
+  clear
+  cat($file)
+  write('line3',`setdebug: Inspect output in Text Output page or file %s`,$file)
+endif

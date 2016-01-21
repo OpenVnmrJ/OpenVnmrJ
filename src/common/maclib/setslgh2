@@ -1,0 +1,64 @@
+"macro setslgh2"
+if ($# < 1) then $1='' endif
+format($1,'lower'):$1
+
+"*********TOCSY spinlock***********"
+exists('slpatT','parameter'):$sltex
+IF ($sltex) and (($1='') or ($1='tocsy')) THEN
+
+  if (slpatT='MLEV') then
+    if (Console='mercury') then
+	slpatT='mlev17'
+    else
+	slpatT='mlev17c'
+    endif
+  endif
+
+  if slpatT='mlev17c' then
+    spinlockT=sw/0.75
+  else
+    spinlockT=sw/1.1
+  endif
+  if (spinlockT < 10*h1freq) then spinlockT=10*h1freq endif
+  if (spinlockT > 8000) then spinlockT=8000 endif
+  setpower(spinlockT,tn):slpwrT,slpwT
+  getpower(slpwrT,tn):spinlockT
+  slpwT=slpwT
+  spinlockT=spinlockT
+
+ENDIF
+
+"*********ROESY spinlock***********"
+exists('slpatR','parameter'):$slrex
+IF ($slrex) and (($1='') or ($1='roesy')) THEN
+
+  if slpatR='cw' then
+    spinlockR=3000
+  elseif slpatR='troesy' then
+    spinlockR=5000
+    getpower(tpwr-12,tn):$maxB1
+    if ($maxB1 < spinlockR) then
+        spinlockR=$maxB1
+    endif
+  endif
+  setpower(spinlockR,tn):slpwrR,slpwR
+  getpower(slpwrR,tn):spinlockR
+
+  slpwR=slpwR
+  spinlockR=spinlockR
+
+ENDIF
+
+"*********step spinlock***********"
+exists('stepslpwr','parameter'):$stepex
+IF ($stepex) and ($1='step') THEN
+
+  stepspinlock=1.1*sw
+  if (stepspinlock < 10*h1freq) then stepspinlock=10*h1freq endif
+  if (stepspinlock > 8000) then stepspinlock=8000 endif
+  setpower(stepspinlock,tn):stepslpwr,stepslpw
+  getpower(stepslpwr,tn):stepspinlock
+  stepslpw=stepslpw
+  stepspinlock=stepspinlock
+
+ENDIF

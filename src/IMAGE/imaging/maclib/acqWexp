@@ -1,0 +1,39 @@
+"macro acqWexp"
+"*****************************************************************************"
+"
+" acqWexp - macro for running additional reference scans"
+"
+"*****************************************************************************"
+
+"*********************"
+"SENSE reference scans"
+"*********************"
+exists('sense','parameter'):$e
+if ($e > 0) then
+  exists('acq2Dsense','maclib'):$e
+  if (sense = 'y' AND $e > 0) then acq2Dsense('wexp') endif
+endif
+
+"********************"
+"Water Reference scan"
+"********************"
+exists('wref','parameter'):$e
+if ($e > 0) then
+  if (wref = 'y') AND (ws='y')  then  //water suppression is enabled
+    if (wrefstatus = 'wref') then "end of water reference scan"
+      wrefstatus = 'ws'
+      acqInit
+      au('next')
+      xm1(`start`,`Executing`)
+    elseif (wrefstatus = 'ws') then "end of water suppressed scan"
+      "See if a queue has been paused, and if so, resume"
+      exists('Qmode','parameter','global'):$e
+      if ($e > 0) then
+	if (Qmode = 'paused') then
+	  destroy('Qmode','global')
+          wdone=wdone+' shell(\'sleep 2\') startq'
+	endif
+      endif
+    endif
+  endif
+endif

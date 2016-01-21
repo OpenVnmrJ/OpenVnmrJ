@@ -1,0 +1,187 @@
+"macro xmhahasx_add"
+"***************************************************************"
+" arg1 - autodir path						"
+" arg2 - locdir							"
+" arg3 - subxml file to be added from locdir			"
+" arg4 - destination file					"
+"***************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 4) then 
+   return
+endif
+
+$2size=size('$2')
+$3size=size('$3')
+$4size=size('$4')
+if ($2size<>$3size) or ($2size<>$4size) or ($3size<>$4size) then
+	write('error','Arg 2, 3 and 4 do not have same size')
+	return
+endif
+
+$autodir=$1
+$firstchar=''
+substr($autodir,1,1):$firstchar
+if ($firstchar<>'/') then
+   if (cpglobalauto<>'') then
+        $autodir=cpglobalauto+'/'+$autodir
+   else
+        $autodir=userdir+'/Automation/'+$autodir
+   endif
+endif
+exists($autodir,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+"**************************************************************"
+//  Always rebuild location xml file
+$i=1
+repeat
+   if ($2[$i]<>'') then
+   	xmhaha_subautoSQ($autodir,'',$2[$i])
+   endif
+   $i=$i+1
+until $i > $2size
+
+"**************************************************************"
+exists($autodir+'/enterQ.macdir','directory'):$direx
+if ($direx=0) then
+   $st=0 $stx=''
+   strstr($autodir,'.macdir/studytray'):$st,$stx
+   if ($st) then
+	shell('dirname '+$stx):$autodir
+   endif
+   shell('basename '+$autodir):$Qname
+else
+   $Qname='enterQ'
+endif
+$xmlinfodir=$autodir+'/'+$Qname+'.macdir/xmldir/info'
+$tmpfile=userdir+'/persistence/autoqtmp'
+$xmldir=$autodir+'/'+$Qname+'.macdir/xmldir'
+$sqdir=$xmldir+'/sqdir'
+$sqinfo=$sqdir+'/info'
+
+// Build everything if the sqdir is not found
+exists($sqinfo,'directory'):$direx
+if ($direx=0) then
+        xmhaha_asx($autodir)
+        return
+endif
+
+$4u=''
+sort($4,'u'):$index,$4u
+$4usize=size('$4u')
+if ($4u[1]='') then return endif
+$z=1
+repeat
+   $queue=$sqdir+'/'+$4u[$z]+'.xml'
+   $esq=$sqdir+'/'+$4u[$z]+'_SQ'
+   exists($queue,'file'):$fileex
+   if ($fileex) then
+        shell('(cat '+$queue+' | wc -l)'):$totlines
+        if ($totlines<2) then $fileex=0 endif
+   endif
+   if ($fileex=0) then
+		// Build the entire queue file if not found
+        xmhaha_asx($autodir,$4u[$z])
+   else
+		// Create a tmp file without the grandpa node
+   	write('reset',$queue+'tmp')
+   	$tail='' format($totlines-2,0,0):$tail
+   	$head='' format($totlines-1,0,0):$head
+   	shell('(head -n '+$head+' '+$queue+' | '+$tailX+' -n '+$tail+' > '+$queue+'tmp)'):$dum
+	$x=1
+	repeat
+	  if ($4[$x]=$4u[$z]) then
+	     if ($4u[$z]<>'FidQ') then
+	    	$locdir=$autodir+'/'+$Qname+'.macdir/'+$2[$x]
+	    	$subxml=$locdir+'/xmldir/'+$3[$x]+'.xml'
+	    	$cpnodes=$locdir+'/xmldir/'+$3[$x]+'_SQ'
+	    	exists($subxml,'file'):$fileex2
+	    	if ($fileex2=0) and ($4u[$z]='ErrorQ') then
+		    $subxml=$locdir+'/xmldir/LocInfo.xml'
+		    $cpnodes=$locdir+'/xmldir/LocInfo_SQ'
+		    exists($subxml,'file'):$fileex2
+	    	endif
+	    	if ($fileex2) then
+   		    shell('(cat '+$subxml+' >> '+$queue+'tmp)'):$dum
+   		    $s1='' $s2=''
+   		    shell('touch '+$cpnodes):$dum
+   		    readfile($cpnodes,'$s1','$s2','','local'):$nodetot
+   		    if ($nodetot) then
+    		    	$j=1
+     		    	repeat
+   		            shell('cp -r '+$xmlinfodir+'/'+$s1[$j]+' '+$sqinfo):$dum
+  		            $j=$j+1
+   		    	until $j > $nodetot
+   		    endif
+   		    shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+	    	endif
+	     else
+		$fidname=$3[$x]
+		$fc='' substr($fidname,1,1):$fc
+		if ($fc<>'/') then $fidname=userdir+'/data/'+$fidname endif
+		exists($fidname+'.REC','directory'):$fidex
+		if ($fidex=0) then
+		    exists($fidname+'.rec','directory'):$fidex
+		endif
+		if ($fidex=0) then
+            	    exists($fidname+'.fid','directory'):$fidex
+		endif
+            	write('reset',$sqdir+'/cpnodeinfo')
+            	if ($fidex) then
+                    $pslabel='' $cpname='' $studyowner='' $samplename=''
+		    rtv($fidname,'noabort','explist'):$cpname
+               	    rtv($fidname,'pslabel'):$pslabel
+		    rtv($fidname,'noabort','samplename'):$samplename
+		    if ($cpname='') then $cpname=$pslabel endif
+                    rtv($fidname,'noabort','studyowner'):$studyowner
+                    if ($studyowner='') then
+                   	rtv($fidname,'noabort','operator_'):$studyowner
+                    endif
+		    $loc='' 
+		    rtv($fidname,'noabort','loc_'):$loc
+		    if ($loc<>'') and ($loc<>'0') then $loc='loc'+$loc+'_' else $loc='' endif
+		    $sample='' shell('dirname '+$fidname):$sample
+		    shell('basename '+$sample):$sample
+		    if ($samplename='') then $samplename=$sample endif
+                    $path=$fidname
+                    shell('basename '+$fidname):$title
+                    $atx=1 $attr=''
+                    $attr[$atx]='status','Completed' $atx=$atx+2
+                    $attr[$atx]='sqstatus','Completed' $atx=$atx+2
+                    $attr[$atx]='time','' $atx=$atx+2
+                    $attr[$atx]='lock','on' $atx=$atx+2
+                    $attr[$atx]='CPnode',$cpname $atx=$atx+2
+                    $attr[$atx]='title',$title $atx=$atx+2
+		    $tt=$loc+$studyowner+' '+$samplename
+                    $attr[$atx]='tooltext',$tt $atx=$atx+2
+                    $attr[$atx]='data',$path $atx=$atx+2
+                    $snode=''
+                    xmhaha_addnode($pslabel,$attr,'',$queue+'tmp'):$snode
+                    if ($snode<>'') then
+                        shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+                   	write('reset',$sqdir+'/cpnodeinfo')
+                   	shell('cp -r '+$xmlinfodir+'/'+$snode+' '+$sqinfo):$dum
+                    endif
+                endif
+                shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
+	     endif
+	  endif
+	    $x=$x+1
+	until $x > $2size
+		// Now close the queue xml file
+        write('reset',$esq+'tmp')
+        shell('(cat '+$esq+' | grep -v \'^Qn\' > '+$esq+'tmp)'):$dum
+   	xmhahasx_Qnodes($queue)
+   	shell('(cat '+$queue+'tmp >> '+$queue+')'):$dum
+   	write('file',$queue,'  </protocol>')
+   	shell('rm -f '+$queue+'tmp'):$dum
+	shell('(cat '+$esq+'tmp >> '+$esq+')'):$dum
+	shell('rm -f '+$esq+'tmp'):$dum
+   endif
+   $z=$z+1
+until $z>$4usize
+

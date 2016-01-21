@@ -1,0 +1,27 @@
+"macro BPsvp"
+" BPsvp - save parlib parameters under BioPack "
+"         this will save a parameter set in either local or"
+"         or /vnmr parlib during autocalibration"
+ 
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then   "current user is nmr root (has r/w/e privledges)"
+  exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+  if $e then
+    $global=0 "nmr root has local BP files"
+  else
+    $global=1 "nmr root has no local BP files"
+  endif
+else
+  $global=0   "user is not nmr root"
+endif
+if $global=0 then  "local files used"
+  $dir=userdir+'/parlib/'
+else
+  $dir=systemdir+'/parlib/'  "/vnmr files will be updated"
+endif
+BPcheck
+bs='n'
+shell('rm -rf',$dir+$1+'.par'):$dummy
+svp($dir+$1)

@@ -1,0 +1,785 @@
+"macro archive_BIOSOLIDSPACK4"
+// - archive_BIOSOLIDSPACK4: a macro to back up BioSolids sequences and 
+//                       their supporting files into a compressed file 
+//                       for "extract". The path of '/psglib/ahX.c' 
+//                       determines the path of all files.  
+
+
+// Find ahX.c in psglib to Determine Input Path
+
+$sequence_name = 'ahX'
+format($sequence_name,'lower'):$name_lower
+substr($name_lower,1,1):$lower_character
+format($sequence_name,'upper'):$name_upper
+substr($name_upper,1,1):$upper_character
+length($sequence_name):$length
+substr($sequence_name,2,$length - 1):$last_characters
+$name_protocol = $upper_character + $last_characters
+$name_lower = $lower_character + $last_characters
+
+$isok = 0
+$basename=''
+$path=''
+exists($name_lower,'psglib'):$isok,$path
+if ($isok>0.5) then 
+  shell('dirname '+$path):$dirname
+  shell('dirname '+$dirname):$dirname
+  $input_path = $dirname
+  write('line3','Input Path for %s Files: %s\n',$name_protocol, $input_path)
+else 
+  write('line3','Sequence %s.c Not Found',$name_lower)
+  return
+endif
+
+// Set the Output filename as BIOSOLIDSPACK
+
+$name_upper = 'BIOSOLIDSPACKVJ4'
+$name_lower = 'biosolidspackvj4'
+$archive_path =  userdir + '/ARCHIVE'
+$output_path = $archive_path + '/' + $name_upper
+$backup_path = 'none'
+
+exists($archive_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $archive_path)
+endif
+   
+exists($output_path,'directory'):$e1
+if ($e1 > 0.5) then 
+   $i = 0
+   $j = 0
+   while (($i< 20) and ($j<20)) do 
+      $j = $j + 1
+      $i = $i + 1
+      $istring=''
+      format($i,1,0):$istring
+      $backup_path = $output_path + '_' + $istring
+      exists( $backup_path,'directory'):$e2
+      if ($e2 > 0.5) then 
+         if ($i = 20) then
+            write('error','Too Many Backups: Abort')
+            abort 
+         endif
+      else 
+         shell('mv ' + $output_path + ' ' + $backup_path)
+         write('error','Backup %s created',$istring)
+         $i = 20
+      endif
+   endwhile
+endif
+
+shell('mkdir ' + $output_path)
+
+"******** Create MACLIB ********"
+
+$get_path = $input_path + '/maclib'
+$put_path = $output_path +'/maclib'
+shell('mkdir ' + $put_path)
+
+// Archive this Macro
+
+archive_file($get_path,$put_path,$0)
+
+// System files with updates and new files
+
+archive_file($get_path,$put_path,'newregion')         //Not in /vnmr/maclib. 
+
+// Setup _acq Macros
+
+archive_file($get_path,$put_path,'ahX_pars')
+archive_file($get_path,$put_path,'ahXX_pars')
+archive_file($get_path,$put_path,'ahXYX_pars')
+archive_file($get_path,$put_path,'ahYX_pars')
+archive_file($get_path,$put_path,'ahYXX_pars')
+
+// Single-Sequence Archival Macros 
+
+archive_file($get_path,$put_path,'archive_AHX')
+archive_file($get_path,$put_path,'archive_AHXX')
+archive_file($get_path,$put_path,'archive_AHYX')
+archive_file($get_path,$put_path,'archive_AHYXX')
+archive_file($get_path,$put_path,'archive_AHXYX')
+
+// Reset Macros
+
+archive_file($get_path,$put_path,'reset_ahX')
+archive_file($get_path,$put_path,'reset_ahXX')
+archive_file($get_path,$put_path,'reset_ahYXX')
+archive_file($get_path,$put_path,'reset_ahYX')
+archive_file($get_path,$put_path,'reset_ahXYX')
+
+// Protocol Macros"
+
+archive_file($get_path,$put_path,'AhX')
+archive_file($get_path,$put_path,'AhXX')
+archive_file($get_path,$put_path,'AhYXX')
+archive_file($get_path,$put_path,'AhYX')
+archive_file($get_path,$put_path,'AhXYX')
+
+// General Calibration and Setup Macros  
+
+archive_file($get_path,$put_path,'cppwHnut')
+archive_file($get_path,$put_path,'cppwHnull')
+archive_file($get_path,$put_path,'cppwXnut')
+archive_file($get_path,$put_path,'cppwXnull')
+archive_file($get_path,$put_path,'dpXref')
+archive_file($get_path,$put_path,'dppwHnut')
+archive_file($get_path,$put_path,'dppwHnull')
+archive_file($get_path,$put_path,'dppwXnut')
+archive_file($get_path,$put_path,'dppwXnull')
+archive_file($get_path,$put_path,'cpHXprobe')
+archive_file($get_path,$put_path,'cpHXmatch')
+archive_file($get_path,$put_path,'cpHXmatch1')
+archive_file($get_path,$put_path,'cpHXcntct')
+archive_file($get_path,$put_path,'cpHXtanramp')
+archive_file($get_path,$put_path,'cpXspinlock')
+archive_file($get_path,$put_path,'cpHspinal')
+archive_file($get_path,$put_path,'cpHXscans')
+archive_file($get_path,$put_path,'cpHXscans2d')
+archive_file($get_path,$put_path,'dcpYXprobe')
+archive_file($get_path,$put_path,'dcpYXmatch')
+archive_file($get_path,$put_path,'dcpXyxmatch')
+archive_file($get_path,$put_path,'dcpYXcntct')
+archive_file($get_path,$put_path,'dcpYXtanramp')
+archive_file($get_path,$put_path,'dcpYXscans')
+archive_file($get_path,$put_path,'dcpYXscans2d')
+archive_file($get_path,$put_path,'cpshXmax')
+archive_file($get_path,$put_path,'dcpYXscans3d')
+archive_file($get_path,$put_path,'dcpXYXscans3d')
+archive_file($get_path,$put_path,'cppwHfixprobe')
+archive_file($get_path,$put_path,'cpdecHfixprobe')
+archive_file($get_path,$put_path,'cppwXfixprobe')
+archive_file($get_path,$put_path,'cpawrXfixprobe')
+archive_file($get_path,$put_path,'dcpHYprobe')
+
+// Extra NUS Macro 
+
+archive_file($get_path,$put_path,'CSextsch')
+
+// Probe Initialization Macro
+
+archive_file($get_path,$put_path,'DcpH1C13N15probeINIT')
+
+// HX Calibration Protocol and Study Macros
+
+archive_file($get_path,$put_path,'DpC13adamNULL')
+archive_file($get_path,$put_path,'DpC13adamNUT')
+archive_file($get_path,$put_path,'DpC13adamREF')
+archive_file($get_path,$put_path,'DphpH1adamNULL')
+archive_file($get_path,$put_path,'DphpH1adamNUT')
+archive_file($get_path,$put_path,'DpmpH1adamNULL')
+archive_file($get_path,$put_path,'DpmpH1adamNUT')
+archive_file($get_path,$put_path,'STDYdpC13H1adamALL')
+
+archive_file($get_path,$put_path,'CpC13alphaNULL')
+archive_file($get_path,$put_path,'CpC13alphaNUT')
+archive_file($get_path,$put_path,'CpC13alphaSPINLOCK')
+archive_file($get_path,$put_path,'CpH1alphaSPINAL')
+archive_file($get_path,$put_path,'CpH1C13adamMATCH')
+archive_file($get_path,$put_path,'CpH1C13alphaCNTCT')
+archive_file($get_path,$put_path,'CpH1C13alphaMATCH1')
+archive_file($get_path,$put_path,'CpH1C13alphaMATCH')
+archive_file($get_path,$put_path,'CpH1C13alphaTANRAMP')
+archive_file($get_path,$put_path,'CphpH1alphaNULL')
+archive_file($get_path,$put_path,'CphpH1alphaNUT')
+archive_file($get_path,$put_path,'CpmpH1alphaNULL')
+archive_file($get_path,$put_path,'CpmpH1alphaNUT')
+archive_file($get_path,$put_path,'StdycpH1C13alphaALL')
+archive_file($get_path,$put_path,'CpC13alphaSHPMAX')
+
+archive_file($get_path,$put_path,'CpC13salphaNULL')
+archive_file($get_path,$put_path,'CpC13salphaNUT')
+archive_file($get_path,$put_path,'CpC13salphaSPINLOCK')
+archive_file($get_path,$put_path,'CpH1salphaSPINAL')
+archive_file($get_path,$put_path,'CpH1C13salphaCNTCT')
+archive_file($get_path,$put_path,'CpH1C13salphaMATCH1')
+archive_file($get_path,$put_path,'CpH1C13salphaMATCH')
+archive_file($get_path,$put_path,'CpH1C13salphaTANRAMP')
+archive_file($get_path,$put_path,'CphpH1salphaNULL')
+archive_file($get_path,$put_path,'CphpH1salphaNUT')
+archive_file($get_path,$put_path,'CpmpH1salphaNULL')
+archive_file($get_path,$put_path,'CpmpH1salphaNUT')
+archive_file($get_path,$put_path,'StdycpH1C13salphaALL')
+archive_file($get_path,$put_path,'CpC13salphaSHPMAX')
+
+archive_file($get_path,$put_path,'CpC13carbonylNULL')
+archive_file($get_path,$put_path,'CpC13carbonylNUT')
+archive_file($get_path,$put_path,'CpC13carbonylSPINLOCK')
+archive_file($get_path,$put_path,'CpH1carbonylSPINAL')
+archive_file($get_path,$put_path,'CpH1C13carbonylCNTCT')
+archive_file($get_path,$put_path,'CpH1C13carbonylMATCH1')
+archive_file($get_path,$put_path,'CpH1C13carbonylMATCH')
+archive_file($get_path,$put_path,'CpH1C13carbonylTANRAMP')
+archive_file($get_path,$put_path,'CphpH1carbonylNULL')
+archive_file($get_path,$put_path,'CphpH1carbonylNUT')
+archive_file($get_path,$put_path,'CpmpH1carbonylNULL')
+archive_file($get_path,$put_path,'CpmpH1carbonylNUT')
+archive_file($get_path,$put_path,'StdycpH1C13carbonylALL')
+archive_file($get_path,$put_path,'CpC13carbonylSHPMAX')
+
+archive_file($get_path,$put_path,'CpC13scarbonylNULL')
+archive_file($get_path,$put_path,'CpC13scarbonylNUT')
+archive_file($get_path,$put_path,'CpC13scarbonylSPINLOCK')
+archive_file($get_path,$put_path,'CpH1scarbonylSPINAL')
+archive_file($get_path,$put_path,'CpH1C13scarbonylCNTCT')
+archive_file($get_path,$put_path,'CpH1C13scarbonylMATCH1')
+archive_file($get_path,$put_path,'CpH1C13scarbonylMATCH')
+archive_file($get_path,$put_path,'CpH1C13scarbonylTANRAMP')
+archive_file($get_path,$put_path,'CphpH1scarbonylNULL')
+archive_file($get_path,$put_path,'CphpH1scarbonylNUT')
+archive_file($get_path,$put_path,'CpmpH1scarbonylNULL')
+archive_file($get_path,$put_path,'CpmpH1scarbonylNUT')
+archive_file($get_path,$put_path,'StdycpH1C13scarbonylALL')
+archive_file($get_path,$put_path,'CpC13scarbonylSHPMAX')
+
+archive_file($get_path,$put_path,'CpN15amideNULL')
+archive_file($get_path,$put_path,'CpN15amideNUT')
+archive_file($get_path,$put_path,'CpN15amideSPINLOCK')
+archive_file($get_path,$put_path,'CpH1amideSPINAL')
+archive_file($get_path,$put_path,'CpH1N15amideCNTCT')
+archive_file($get_path,$put_path,'CpH1N15amideMATCH1')
+archive_file($get_path,$put_path,'CpH1N15amideMATCH')
+archive_file($get_path,$put_path,'CpH1N15amideTANRAMP')
+archive_file($get_path,$put_path,'CphpH1amideNULL')
+archive_file($get_path,$put_path,'CphpH1amideNUT')
+archive_file($get_path,$put_path,'CpmpH1amideNULL')
+archive_file($get_path,$put_path,'CpmpH1amideNUT')
+archive_file($get_path,$put_path,'StdycpH1N15amideALL')
+archive_file($get_path,$put_path,'CpN15amideSHPMAX')
+
+// HX Get Set Init and Calc Protocol Macros 
+
+archive_file($get_path,$put_path,'CpH1C13adamSET')
+archive_file($get_path,$put_path,'CpH1C13adamGET')
+archive_file($get_path,$put_path,'CpH1C13adamINIT')
+
+archive_file($get_path,$put_path,'CpH1C13alphaSET')
+archive_file($get_path,$put_path,'CpH1C13alphaGET')
+archive_file($get_path,$put_path,'CpH1C13alphaINIT')
+archive_file($get_path,$put_path,'CpH1C13alphaCALC')
+
+archive_file($get_path,$put_path,'CpH1C13carbonylSET')
+archive_file($get_path,$put_path,'CpH1C13carbonylGET')
+archive_file($get_path,$put_path,'CpH1C13carbonylINIT')
+archive_file($get_path,$put_path,'CpH1C13carbonylCALC')
+
+archive_file($get_path,$put_path,'CpH1N15amideSET')
+archive_file($get_path,$put_path,'CpH1N15amideGET')
+archive_file($get_path,$put_path,'CpH1N15amideINIT')
+archive_file($get_path,$put_path,'CpH1N15amideCALC')
+
+archive_file($get_path,$put_path,'CpH1C13salphaSET')
+archive_file($get_path,$put_path,'CpH1C13salphaGET')
+archive_file($get_path,$put_path,'CpH1C13salphaINIT')
+archive_file($get_path,$put_path,'CpH1C13salphaCALC')
+
+archive_file($get_path,$put_path,'CpH1C13scarbonylSET')
+archive_file($get_path,$put_path,'CpH1C13scarbonylGET')
+archive_file($get_path,$put_path,'CpH1C13scarbonylINIT')
+archive_file($get_path,$put_path,'CpH1C13scarbonylCALC')
+
+// HX fix Protocol and Study Macros
+
+archive_file($get_path,$put_path,'CppwH1alphaFIX')
+archive_file($get_path,$put_path,'CppwC13alphaFIX')
+archive_file($get_path,$put_path,'CpdecH1alphaFIX')
+archive_file($get_path,$put_path,'CpawrC13alphaFIX')
+
+archive_file($get_path,$put_path,'CppwH1carbonylFIX')
+archive_file($get_path,$put_path,'CppwC13carbonylFIX')
+archive_file($get_path,$put_path,'CpdecH1carbonylFIX')
+archive_file($get_path,$put_path,'CpawrC13carbonylFIX')
+
+archive_file($get_path,$put_path,'CppwH1amideFIX')
+archive_file($get_path,$put_path,'CppwN15amideFIX')
+archive_file($get_path,$put_path,'CpdecH1amideFIX')
+archive_file($get_path,$put_path,'CpawrN15amideFIX')
+
+// YX Calibration Protocol and Study Macros 
+
+archive_file($get_path,$put_path,'DcpN15C13alphaMATCH')
+archive_file($get_path,$put_path,'DcpN15C13alphaCNTCT')
+archive_file($get_path,$put_path,'DcpN15C13alphaTANRAMP')
+archive_file($get_path,$put_path,'DcpN15C13alphaXMATCH')
+archive_file($get_path,$put_path,'StdydcpN15C13alphaALL')
+
+archive_file($get_path,$put_path,'DcpN15C13salphaMATCH')
+archive_file($get_path,$put_path,'DcpN15C13salphaCNTCT')
+archive_file($get_path,$put_path,'DcpN15C13salphaTANRAMP')
+archive_file($get_path,$put_path,'DcpN15C13salphaXMATCH')
+archive_file($get_path,$put_path,'StdydcpN15C13salphaALL')
+
+archive_file($get_path,$put_path,'DcpN15C13carbonylMATCH')
+archive_file($get_path,$put_path,'DcpN15C13carbonylCNTCT')
+archive_file($get_path,$put_path,'DcpN15C13carbonylTANRAMP')
+archive_file($get_path,$put_path,'DcpN15C13carbonylXMATCH')
+archive_file($get_path,$put_path,'StdydcpN15C13carbonylALL')
+
+archive_file($get_path,$put_path,'DcpN15C13scarbonylMATCH')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylCNTCT')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylTANRAMP')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylXMATCH')
+archive_file($get_path,$put_path,'StdydcpN15C13scarbonylALL')
+
+// YX Get and Set Macros 
+
+archive_file($get_path,$put_path,'DcpN15C13alphaSET')
+archive_file($get_path,$put_path,'DcpN15C13alphaGET')
+archive_file($get_path,$put_path,'DcpN15C13alphaINIT')
+archive_file($get_path,$put_path,'DcpN15C13alphaCALC')
+
+archive_file($get_path,$put_path,'DcpN15C13carbonylSET')
+archive_file($get_path,$put_path,'DcpN15C13carbonylGET')
+archive_file($get_path,$put_path,'DcpN15C13carbonylINIT')
+archive_file($get_path,$put_path,'DcpN15C13carbonylCALC')
+
+archive_file($get_path,$put_path,'DcpN15C13salphaSET')
+archive_file($get_path,$put_path,'DcpN15C13salphaGET')
+archive_file($get_path,$put_path,'DcpN15C13salphaINIT')
+archive_file($get_path,$put_path,'DcpN15C13salphaCALC')
+
+archive_file($get_path,$put_path,'DcpN15C13scarbonylSET')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylGET')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylINIT')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylCALC')
+
+// HY Get and Set Macros 
+
+archive_file($get_path,$put_path,'DcpH1N15amideGET')
+archive_file($get_path,$put_path,'DcpH1N15amideSET')
+
+// Full HXY Calibration Study Macros 
+
+archive_file($get_path,$put_path,'StdyH1N15C13alphcarbALL')
+archive_file($get_path,$put_path,'StdyH1N15C13salphcarbALL')
+archive_file($get_path,$put_path,'FullCalibration')
+
+// ahX.c - Experimental Protocol Macros 
+
+archive_file($get_path,$put_path,'C1dSCANS')
+archive_file($get_path,$put_path,'CA1dSCANS')
+archive_file($get_path,$put_path,'CO1dSCANS')
+archive_file($get_path,$put_path,'N1dSCANS')
+
+// ahXX.c - Experimental Protocol Macros 
+
+archive_file($get_path,$put_path,'CC2dSCANS')
+archive_file($get_path,$put_path,'CC2dDARR')
+archive_file($get_path,$put_path,'CC2dC7')
+archive_file($get_path,$put_path,'CC2dSPC5')
+
+// ahYX.c - Experimental Protocol Macros 
+
+archive_file($get_path,$put_path,'NCA2dSCANS')
+archive_file($get_path,$put_path,'NCO2dSCANS')
+archive_file($get_path,$put_path,'nCA1dSCANS')
+archive_file($get_path,$put_path,'nCO1dSCANS')
+
+// ahYXX.c - Experimental Protocol Macros 
+
+archive_file($get_path,$put_path,'NCACX3dSCANS')
+archive_file($get_path,$put_path,'NCOCX3dSCANS')
+archive_file($get_path,$put_path,'NcaCX2dSCANS')
+archive_file($get_path,$put_path,'NcoCX2dSCANS')
+archive_file($get_path,$put_path,'nCACX2dSCANS')
+archive_file($get_path,$put_path,'nCOCX2dSCANS')
+archive_file($get_path,$put_path,'ncaCX1dSCANS')
+archive_file($get_path,$put_path,'ncoCX1dSCANS')
+
+// aXYX.c - Experimental Protocol Macros 
+
+archive_file($get_path,$put_path,'CANcoCX3dSCANS')
+archive_file($get_path,$put_path,'CONcaCX3dSCANS')
+archive_file($get_path,$put_path,'caNcoCX2dSCANS')
+archive_file($get_path,$put_path,'coNcaCX2dSCANS')
+archive_file($get_path,$put_path,'CAncoCX2dSCANS')
+archive_file($get_path,$put_path,'COncaCX2dSCANS')
+
+"******** Create README ********"
+
+$get_path = $input_path + '/README'
+$put_path = $output_path +'/README'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'biosolidspackvj4.README')
+archive_file($get_path,$put_path,'ahX.README')
+archive_file($get_path,$put_path,'ahXX.README')
+archive_file($get_path,$put_path,'ahYXX.README')
+archive_file($get_path,$put_path,'ahYX.README')
+archive_file($get_path,$put_path,'ahXYX.README')
+
+"******** Create PSGLIB ********"
+
+$get_path = $input_path + '/psglib'
+$put_path = $output_path +'/psglib'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'ahX.c')
+archive_file($get_path,$put_path,'ahXX.c')
+archive_file($get_path,$put_path,'ahYXX.c')
+archive_file($get_path,$put_path,'ahYX.c')
+archive_file($get_path,$put_path,'ahXYX.c')
+
+"******** Create PARLIB ********"
+
+$get_path = $input_path + '/parlib'
+$put_path = $output_path +'/parlib'
+shell('mkdir ' + $put_path)
+
+// Standard parameter files
+
+archive_file($get_path,$put_path,'AhX.par')
+archive_file($get_path,$put_path,'AhXX.par')
+archive_file($get_path,$put_path,'AhYXX.par')
+archive_file($get_path,$put_path,'AhYX.par')
+archive_file($get_path,$put_path,'AhXYX.par')
+
+"******** Create STUDYLIB ********"
+
+$get_path = $input_path + '/studylib'
+$put_path = $output_path +'/studylib'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'STDYdpC13H1adamALL')
+archive_file($get_path,$put_path,'StdycpH1C13alphaALL')
+archive_file($get_path,$put_path,'StdycpH1C13carbonylALL')
+archive_file($get_path,$put_path,'StdycpH1N15amideALL')
+archive_file($get_path,$put_path,'StdydcpN15C13alphaALL')
+archive_file($get_path,$put_path,'StdydcpN15C13carbonylALL')
+
+archive_file($get_path,$put_path,'StdyH1N15C13alphcarbALL')
+archive_file($get_path,$put_path,'StdyH1N15C13salphcarbALL')
+
+archive_file($get_path,$put_path,'StdycpH1C13salphaALL')
+archive_file($get_path,$put_path,'StdycpH1C13scarbonylALL')
+archive_file($get_path,$put_path,'StdydcpN15C13salphaALL')
+archive_file($get_path,$put_path,'StdydcpN15C13scarbonylALL')
+archive_file($get_path,$put_path,'FullCalibration')
+
+"******** Create MANUAL *********************"
+
+$get_path = $input_path + '/manual'
+$put_path = $output_path +'/manual'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'ahX')
+archive_file($get_path,$put_path,'ahXX')
+archive_file($get_path,$put_path,'ahYXX')
+archive_file($get_path,$put_path,'ahYX')
+archive_file($get_path,$put_path,'ahXYX')
+"******** Create TEMPLATES/LAYOUT ***********"
+
+$get_path = $input_path + '/templates/layout'
+$put_path = $output_path +'/templates'
+shell('mkdir ' + $put_path)
+$put_path = $put_path +'/layout'
+shell('mkdir ' + $put_path)
+
+
+archive_file($get_path,$put_path,'ahX')
+archive_file($get_path,$put_path,'ahXX')
+archive_file($get_path,$put_path,'ahYXX')
+archive_file($get_path,$put_path,'ahYX')
+archive_file($get_path,$put_path,'ahXYX')
+
+"******** Create TEMPLATES/VNMRJ/PROTOCOLS ***********"
+
+$get_path = $input_path + '/templates/vnmrj/protocols'
+$put_path = $output_path +'/templates/vnmrj'
+shell('mkdir ' + $put_path)
+$put_path = $put_path +'/protocols'
+shell('mkdir ' + $put_path)
+
+archive_file($get_path,$put_path,'AhX.xml')
+archive_file($get_path,$put_path,'AhXX.xml')
+archive_file($get_path,$put_path,'AhYXX.xml')
+archive_file($get_path,$put_path,'AhYX.xml')
+archive_file($get_path,$put_path,'AhXYX.xml')
+
+// Probe Initialization Protocol
+
+archive_file($get_path,$put_path,'DcpH1C13N15probeINIT.xml')
+
+// HX Calibration Protocols and Studys
+
+archive_file($get_path,$put_path,'DpC13adamNULL.xml')
+archive_file($get_path,$put_path,'DpC13adamNUT.xml')
+archive_file($get_path,$put_path,'DpC13adamREF.xml')
+archive_file($get_path,$put_path,'DphpH1adamNULL.xml')
+archive_file($get_path,$put_path,'DphpH1adamNUT.xml')
+archive_file($get_path,$put_path,'DpmpH1adamNULL.xml')
+archive_file($get_path,$put_path,'DpmpH1adamNUT.xml')
+archive_file($get_path,$put_path,'STDYdpC13H1adamALL.xml')
+
+archive_file($get_path,$put_path,'CpC13alphaNULL.xml')
+archive_file($get_path,$put_path,'CpC13alphaNUT.xml')
+archive_file($get_path,$put_path,'CpC13alphaSPINLOCK.xml')
+archive_file($get_path,$put_path,'CpH1alphaSPINAL.xml')
+archive_file($get_path,$put_path,'CpH1C13adamMATCH.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaCNTCT.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaMATCH1.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaMATCH.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaTANRAMP.xml')
+archive_file($get_path,$put_path,'CphpH1alphaNULL.xml')
+archive_file($get_path,$put_path,'CphpH1alphaNUT.xml')
+archive_file($get_path,$put_path,'CpmpH1alphaNULL.xml')
+archive_file($get_path,$put_path,'CpmpH1alphaNUT.xml')
+archive_file($get_path,$put_path,'StdycpH1C13alphaALL.xml')
+archive_file($get_path,$put_path,'CpC13alphaSHPMAX.xml')
+
+archive_file($get_path,$put_path,'CpC13salphaNULL.xml')
+archive_file($get_path,$put_path,'CpC13salphaNUT.xml')
+archive_file($get_path,$put_path,'CpC13salphaSPINLOCK.xml')
+archive_file($get_path,$put_path,'CpH1salphaSPINAL.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaCNTCT.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaMATCH1.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaMATCH.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaTANRAMP.xml')
+archive_file($get_path,$put_path,'CphpH1salphaNULL.xml')
+archive_file($get_path,$put_path,'CphpH1salphaNUT.xml')
+archive_file($get_path,$put_path,'CpmpH1salphaNULL.xml')
+archive_file($get_path,$put_path,'CpmpH1salphaNUT.xml')
+archive_file($get_path,$put_path,'StdycpH1C13salphaALL.xml')
+archive_file($get_path,$put_path,'CpC13salphaSHPMAX.xml')
+
+archive_file($get_path,$put_path,'CpC13carbonylNULL.xml')
+archive_file($get_path,$put_path,'CpC13carbonylNUT.xml')
+archive_file($get_path,$put_path,'CpC13carbonylSPINLOCK.xml')
+archive_file($get_path,$put_path,'CpH1carbonylSPINAL.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylCNTCT.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylMATCH1.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylMATCH.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylTANRAMP.xml')
+archive_file($get_path,$put_path,'CphpH1carbonylNULL.xml')
+archive_file($get_path,$put_path,'CphpH1carbonylNUT.xml')
+archive_file($get_path,$put_path,'CpmpH1carbonylNULL.xml')
+archive_file($get_path,$put_path,'CpmpH1carbonylNUT.xml')
+archive_file($get_path,$put_path,'StdycpH1C13carbonylALL.xml')
+archive_file($get_path,$put_path,'CpC13carbonylSHPMAX.xml')
+
+archive_file($get_path,$put_path,'CpC13scarbonylNULL.xml')
+archive_file($get_path,$put_path,'CpC13scarbonylNUT.xml')
+archive_file($get_path,$put_path,'CpC13scarbonylSPINLOCK.xml')
+archive_file($get_path,$put_path,'CpH1scarbonylSPINAL.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylCNTCT.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylMATCH1.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylMATCH.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylTANRAMP.xml')
+archive_file($get_path,$put_path,'CphpH1scarbonylNULL.xml')
+archive_file($get_path,$put_path,'CphpH1scarbonylNUT.xml')
+archive_file($get_path,$put_path,'CpmpH1scarbonylNULL.xml')
+archive_file($get_path,$put_path,'CpmpH1scarbonylNUT.xml')
+archive_file($get_path,$put_path,'StdycpH1C13scarbonylALL.xml')
+archive_file($get_path,$put_path,'CpC13scarbonylSHPMAX.xml')
+
+archive_file($get_path,$put_path,'CpN15amideNULL.xml')
+archive_file($get_path,$put_path,'CpN15amideNUT.xml')
+archive_file($get_path,$put_path,'CpN15amideSPINLOCK.xml')
+archive_file($get_path,$put_path,'CpH1amideSPINAL.xml')
+archive_file($get_path,$put_path,'CpH1N15amideCNTCT.xml')
+archive_file($get_path,$put_path,'CpH1N15amideMATCH1.xml')
+archive_file($get_path,$put_path,'CpH1N15amideMATCH.xml')
+archive_file($get_path,$put_path,'CpH1N15amideTANRAMP.xml')
+archive_file($get_path,$put_path,'CphpH1amideNULL.xml')
+archive_file($get_path,$put_path,'CphpH1amideNUT.xml')
+archive_file($get_path,$put_path,'CpmpH1amideNULL.xml')
+archive_file($get_path,$put_path,'CpmpH1amideNUT.xml')
+archive_file($get_path,$put_path,'StdycpH1N15amideALL.xml')
+archive_file($get_path,$put_path,'CpN15amideSHPMAX.xml')
+
+// HX Get Set Init and Calc Protocols 
+
+archive_file($get_path,$put_path,'CpH1C13adamSET.xml')
+archive_file($get_path,$put_path,'CpH1C13adamGET.xml')
+archive_file($get_path,$put_path,'CpH1C13adamINIT.xml')
+
+archive_file($get_path,$put_path,'CpH1C13alphaSET.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaGET.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaINIT.xml')
+archive_file($get_path,$put_path,'CpH1C13alphaCALC.xml')
+
+archive_file($get_path,$put_path,'CpH1C13carbonylSET.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylGET.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylINIT.xml')
+archive_file($get_path,$put_path,'CpH1C13carbonylCALC.xml')
+
+archive_file($get_path,$put_path,'CpH1N15amideSET.xml')
+archive_file($get_path,$put_path,'CpH1N15amideGET.xml')
+archive_file($get_path,$put_path,'CpH1N15amideINIT.xml')
+archive_file($get_path,$put_path,'CpH1N15amideCALC.xml')
+
+archive_file($get_path,$put_path,'CpH1C13salphaSET.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaGET.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaINIT.xml')
+archive_file($get_path,$put_path,'CpH1C13salphaCALC.xml')
+
+archive_file($get_path,$put_path,'CpH1C13scarbonylSET.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylGET.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylINIT.xml')
+archive_file($get_path,$put_path,'CpH1C13scarbonylCALC.xml')
+
+// HX fix Protocols and Studys
+
+archive_file($get_path,$put_path,'CppwH1alphaFIX.xml')
+archive_file($get_path,$put_path,'CppwC13alphaFIX.xml')
+archive_file($get_path,$put_path,'CpdecH1alphaFIX.xml')
+archive_file($get_path,$put_path,'CpawrC13alphaFIX.xml')
+
+archive_file($get_path,$put_path,'CppwH1carbonylFIX.xml')
+archive_file($get_path,$put_path,'CppwC13carbonylFIX.xml')
+archive_file($get_path,$put_path,'CpdecH1carbonylFIX.xml')
+archive_file($get_path,$put_path,'CpawrC13carbonylFIX.xml')
+
+archive_file($get_path,$put_path,'CppwH1amideFIX.xml')
+archive_file($get_path,$put_path,'CppwN15amideFIX.xml')
+archive_file($get_path,$put_path,'CpdecH1amideFIX.xml')
+archive_file($get_path,$put_path,'CpawrN15amideFIX.xml')
+
+// YX Calibration Protocols and Studies 
+
+archive_file($get_path,$put_path,'DcpN15C13alphaMATCH.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaCNTCT.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaTANRAMP.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaXMATCH.xml')
+archive_file($get_path,$put_path,'StdydcpN15C13alphaALL.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13salphaMATCH.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaCNTCT.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaTANRAMP.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaXMATCH.xml')
+archive_file($get_path,$put_path,'StdydcpN15C13salphaALL.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13carbonylMATCH.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylCNTCT.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylTANRAMP.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylXMATCH.xml')
+archive_file($get_path,$put_path,'StdydcpN15C13carbonylALL.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13scarbonylMATCH.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylCNTCT.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylTANRAMP.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylXMATCH.xml')
+archive_file($get_path,$put_path,'StdydcpN15C13scarbonylALL.xml')
+
+// YX Get and Set Protocols 
+
+archive_file($get_path,$put_path,'DcpN15C13alphaSET.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaGET.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaINIT.xml')
+archive_file($get_path,$put_path,'DcpN15C13alphaCALC.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13carbonylSET.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylGET.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylINIT.xml')
+archive_file($get_path,$put_path,'DcpN15C13carbonylCALC.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13salphaSET.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaGET.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaINIT.xml')
+archive_file($get_path,$put_path,'DcpN15C13salphaCALC.xml')
+
+archive_file($get_path,$put_path,'DcpN15C13scarbonylSET.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylGET.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylINIT.xml')
+archive_file($get_path,$put_path,'DcpN15C13scarbonylCALC.xml')
+
+// HY Get and Set Protocols 
+
+archive_file($get_path,$put_path,'DcpH1N15amideGET.xml')
+archive_file($get_path,$put_path,'DcpH1N15amideSET.xml')
+
+// Full HXY Calibration Studies 
+
+archive_file($get_path,$put_path,'StdyH1N15C13alphcarbALL.xml')
+archive_file($get_path,$put_path,'StdyH1N15C13salphcarbALL.xml')
+archive_file($get_path,$put_path,'FullCalibration.xml')
+
+// ahX.c - Experimental Protocols 
+
+archive_file($get_path,$put_path,'C1dSCANS.xml')
+archive_file($get_path,$put_path,'CA1dSCANS.xml')
+archive_file($get_path,$put_path,'CO1dSCANS.xml')
+archive_file($get_path,$put_path,'N1dSCANS.xml')
+
+// ahXX.c - Experimental Protocols
+
+archive_file($get_path,$put_path,'CC2dSCANS.xml')
+archive_file($get_path,$put_path,'CC2dDARR.xml')
+archive_file($get_path,$put_path,'CC2dC7.xml')
+archive_file($get_path,$put_path,'CC2dSPC5.xml')
+
+// ahYX.c - Experimental Protocols
+
+archive_file($get_path,$put_path,'NCA2dSCANS.xml')
+archive_file($get_path,$put_path,'NCO2dSCANS.xml')
+archive_file($get_path,$put_path,'nCA1dSCANS.xml')
+archive_file($get_path,$put_path,'nCO1dSCANS.xml')
+
+// ahYXX.c - Experimental Protocols 
+
+archive_file($get_path,$put_path,'NCACX3dSCANS.xml')
+archive_file($get_path,$put_path,'NCOCX3dSCANS.xml')
+archive_file($get_path,$put_path,'NcaCX2dSCANS.xml')
+archive_file($get_path,$put_path,'NcoCX2dSCANS.xml')
+archive_file($get_path,$put_path,'nCACX2dSCANS.xml')
+archive_file($get_path,$put_path,'nCOCX2dSCANS.xml')
+archive_file($get_path,$put_path,'ncaCX1dSCANS.xml')
+archive_file($get_path,$put_path,'ncoCX1dSCANS.xml')
+
+// aXYX.c - Experimental Protocols 
+
+archive_file($get_path,$put_path,'CANcoCX3dSCANS.xml')
+archive_file($get_path,$put_path,'CONcaCX3dSCANS.xml')
+archive_file($get_path,$put_path,'caNcoCX2dSCANS.xml')
+archive_file($get_path,$put_path,'coNcaCX2dSCANS.xml')
+archive_file($get_path,$put_path,'CAncoCX2dSCANS.xml')
+archive_file($get_path,$put_path,'COncaCX2dSCANS.xml')
+
+"******** Add Current .DATE file ********"
+
+$get_path = $backup_path
+$put_path = $output_path 
+$date_name = $name_lower + '.DATE'
+$date_file = $backup_path + '/' + $date_name
+
+exists($date_file,'file'):$e4
+if ($e4 > 0.5) then
+   archive_file($backup_path, $output_path, $date_name)
+else
+   $date_file = $output_path + '/' + $date_name
+   write('file',$date_file,'%s:',$name_upper)
+   endif
+$date_file = $output_path + '/' + $date_name
+$date='' shell('date +%Y%m%d%H%M%S'):$date
+write('file',$date_file,'LAST ARCHIVE DATE: %s  %s',$date, userdir)
+
+"******** Add a TAR file of the directories ********"
+
+$tar_file = $output_path + '/' + $name_lower + '.tar'
+$directories = ''
+$directories = $directories + ' -C ' + $output_path + ' maclib'
+$directories = $directories + ' -C ' + $output_path + ' psglib'
+$directories = $directories + ' -C ' + $output_path + ' parlib'
+$directories = $directories + ' -C ' + $output_path + ' templates'
+$directories = $directories + ' -C ' + $output_path + ' manual'
+$directories = $directories + ' -C ' + $output_path + ' README'
+$directories = $directories + ' -C ' + $output_path + ' studylib'
+
+shell('tar cfz ' + $tar_file + '.Z ' + $directories)
+
+$expoutput_path = $archive_path + '/EXP_OUTPUT'
+exists($expoutput_path,'directory'):$e
+if ($e < 0.5) then 
+   shell('mkdir ' + $expoutput_path)
+endif
+$readme_file = $output_path + '/README/' + $name_lower + '.README'
+shell('cp ' + $tar_file + '.Z  ' + $expoutput_path + '/' + $name_lower + '.tar.Z') 
+shell('cp ' + $readme_file + ' ' + $expoutput_path + '/' + $name_lower + '.README')
+ 
+write('alpha','ARCHIVE COMPLETE')
+write('line3','ARCHIVE COMPLETE')
+
+
+
+
+

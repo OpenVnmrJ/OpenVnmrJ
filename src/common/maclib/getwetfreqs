@@ -1,0 +1,145 @@
+"macro getwetfreqs"
+"getwetfreqs"
+
+aph:$ok
+if not $ok then aph0 endif
+full f vsadj dss
+crl rfl=sw/2 "Reference to center"
+f "Make sure we're looking at the whole spectrum"
+peak(-5.4p,-4.8p):$noise
+if $noise < 0 then $noise = -$noise endif
+
+on('slp0'):$slp0active
+on('slp'):$slpactive
+on('slp2'):$slp2active
+on('slp3'):$slp3active
+on('slp4'):$slp4active
+on('slp5'):$slp5active
+on('slp6'):$slp6active
+
+peak:$ht,$freq1
+
+$freqch3 = $freq1
+$freqh2o=-10000
+
+
+
+
+if ($slpactive  and (slps='y')) then
+  peak($freq1+0.5p,$freq1+4.0p):$htdown,$freqdown
+  peak($freq1-4.0p,$freq1-0.5p):$htup,$frequp
+  if $htdown < 0 then $htdown = -$htdown endif
+  if $htup < 0 then $htup = -$htup endif
+  if $htup < $htdown then $ht=$htdown else $ht=$htup endif
+  if $ht > noisemult*$noise then  "There is a peak"
+    if ($htup < $htdown) then
+       $freqch3= $freq1 $freqh2o = $freqdown $ht=$htdown
+    else
+       $freqch3= $frequp $freqh2o = $freq1 $ht=$htup
+    endif
+    if slp0s='y' then 
+      slp=$freqh2o-$freqch3+slp0 
+    else 
+      slp=$freqh2o+slp0
+    endif "Find delta for SLP" 
+  endif
+endif
+
+if slp0s='y' then tof=tof+$freqch3-slp0 endif "Move CH3CN to zero"
+
+$freqslp2=slp2+$freqch3
+$freqslp3=slp3+$freqch3
+$freqslp4=slp4+$freqch3
+$freqslp5=slp5+$freqch3
+$freqslp6=slp6+$freqch3
+
+
+if ($slp2active and (slp2s='y'))then
+  peak($freqch3+slp2-0.2p-slp0,$freqch3+slp2+0.2p-slp0):$ht,$freqslp2
+  write('line3',$freqslp2)
+  write('line3',$ht)
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp2>$freqch3+slp0bw/2) or ($freqslp2<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and  not (($freqslp2>$freqh2o+slpbw/2) or ($freqslp2<$freqh2o-slpbw/2))) then $overlap=2 endif      
+    if $overlap>0 then write('line3','Solvent 3 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp2=$freqslp2-$freqch3+slp0
+      else slp2=$freqslp2+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp3active and (slp3s='y'))then
+  peak($freqch3+slp3-0.2p-slp0,$freqch3+slp3+0.2p-slp0):$ht,$freqslp3
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp3>$freqch3+slp0bw/2) or ($freqslp3<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp3>$freqh2o+slpbw/2) or ($freqslp3<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp3>$freqslp2+slp2bw/2) or ($freqslp3<$freqslp2-slp2bw/2))) then $overlap=3 endif      
+    if $overlap>0 then write('line3','Solvent 4 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp3=$freqslp3-$freqch3+slp0
+      else slp3=$freqslp3+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp4active and (slp4s='y'))then
+  peak($freqch3+slp4-0.2p-slp0,$freqch3+slp4+0.2p-slp0):$ht,$freqslp4
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp4>$freqch3+slp0bw/2) or ($freqslp4<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp4>$freqh2o+slpbw/2) or ($freqslp4<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp4>$freqslp2+slp2bw/2) or ($freqslp4<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp4>$freqslp3+slp3bw/2) or ($freqslp4<$freqslp3-slp3bw/2))) then $overlap=4 endif      
+    if $overlap>0 then write('line3','Solvent 5 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp4=$freqslp4-$freqch3+slp0
+      else slp4=$freqslp4+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp5active and (slp5s='y'))then
+  peak($freqch3+slp5-0.2p-slp0,$freqch3+slp5+0.2p-slp0):$ht,$freqslp5
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp5>$freqch3+slp0bw/2) or ($freqslp5<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp5>$freqh2o+slpbw/2) or ($freqslp5<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp5>$freqslp2+slp2bw/2) or ($freqslp5<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp5>$freqslp3+slp3bw/2) or ($freqslp5<$freqslp3-slp3bw/2))) then $overlap=4 endif
+    if ($slp4active  and not (($freqslp5>$freqslp4+slp4bw/2) or ($freqslp5<$freqslp4-slp4bw/2))) then $overlap=5 endif      
+    if $overlap>0 then write('line3','Solvent 6 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp5=$freqslp5-$freqch3+slp0
+      else slp5=$freqslp5+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp6active and (slp6s='y'))then
+  peak($freqch3+slp6-0.2p-slp0,$freqch3+slp6+0.2p-slp0):$ht,$freqslp6
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp6>$freqch3+slp0bw/2) or ($freqslp6<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp6>$freqh2o+slpbw/2) or ($freqslp6<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp6>$freqslp2+slp2bw/2) or ($freqslp6<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp6>$freqslp3+slp3bw/2) or ($freqslp6<$freqslp3-slp3bw/2))) then $overlap=4 endif
+    if ($slp4active  and not (($freqslp6>$freqslp4+slp4bw/2) or ($freqslp6<$freqslp4-slp4bw/2))) then $overlap=5 endif 
+    if ($slp5active  and not (($freqslp6>$freqslp5+slp5bw/2) or ($freqslp6<$freqslp5-slp5bw/2))) then $overlap=6 endif      
+    if $overlap>0 then write('line3','Solvent 7 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp6=$freqslp6-$freqch3+slp0
+      else slp6=$freqslp6+slp0
+      endif
+    endif
+  endif  
+endif
+
+
+

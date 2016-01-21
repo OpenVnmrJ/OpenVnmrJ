@@ -1,0 +1,133 @@
+************************************************************************
+*  editht        -        Create and edit a Hadamard frequency list.   *
+************************************************************************
+
+The editht macro opens the Edit HT Freq dialog, for interactively
+creating and editing a Hadamard frequency line list.  
+
+To set up a Hadamard experiment starting from a 1D experiment, do
+the following.
+  1) First run a Proton, Carbon, or other 1D experiment, depending
+       on the type of Hadamard experiment you wish to run
+       (homonuclear or heteronuclear).
+  2) When the acquisition is finished, process and phase the
+       spectrum.
+  3) Run the editht macro to open the Edit HT Freq dialog.
+       Create a Hadamard frequency list for the nucleus
+       of interest.  Save the frequency list.
+  4) For a heteronuclear Hadamard experiment, run a Proton
+       experiment, and adjust spectral width and decoupling
+       as desired.
+  5) Load the desired Hadamard experiment.  Check the
+       Hadamard frequency list and other parameters.
+  6) Start the acquisition of the Hadamard experiment.
+  7) When acquisition is complete, process with
+       proc1='ht' wft2da.
+
+
+How to use the Edit HT Freq dialog.
+
+  To make a Hadamard frequency list from a 1D spectrum (step 3
+  above), use the buttons in the Edit HT Freq dialog.  
+
+  Create Line List :  Processes the current spectrum as follows.
+    a) Fourier transform with wft.  Multiplet structures can be
+       smoothed out using line broadening.  
+    b) Create a line list using nll, greater than the current
+       threshhold.  
+    c) Keep only frequencies that are the minimum line width
+       apart in the "Min line width" entry box (e.g. 20 Hz).  
+
+  Nearest line : Place the cursor on the nearest line.
+  Select       : Adds the current cursor position to the
+                   line list.  (The cursor must be more than
+                   the minimum line width from an existing
+                   frequency in the line list.) 
+  Remove       : Removes the line nearest the cursor position
+                   from the line list. 
+  Display      : Display the frequency list.  If a 1D spectrum
+                   is displayed, show the frequencies using dpf
+                   in units set by the axis parameter.
+  CLEAR        : Clear all frequencies from the frequency list.
+
+  Save HT Frequencies : Saves the current frequency list as a
+    Hadamard line list for the current nucleus (tn).  It
+    saves the frequency list, band width, current nucleus,
+    spectral width, and frequency offset in a persistence
+    file.  The frequencies and other parameters are loaded
+    from the persistence file when loading a Hadamard experiment
+    (step 5 above).
+
+  Line List    : The line list is displayed in the text entry
+    window on the right hand side of the page.  You may edit the
+    line list directly from this window.  Click the 'Set list
+    into parameters' button to set the line list changes into
+    the parameters.  The first column of numbers is the Hadamard
+    frequency list, e.g. htfrq1.  If there is a second column of
+    numbers, it specifies the bandwidth for each frequency in Hz.  
+
+  Hz/ppm menu  : Select Hz or ppm to display the line list in
+    Hz or ppm.  If Hz is selected, the line list is displayed
+    in Hz from the center of the spectrum.
+
+  Move HT pars to exp  : Move the Hadamard parameters from the
+    current workspace to a new workspace.  The workspace number
+    is specified in the entry box.  
+
+  Set list into parameters : Sets the changes from the line
+    list text entry window into the parameters.
+
+  Import list curexp / htfrq1.ll : Copies a line list file from
+    curexp into the current line list, and sets the line list
+    into the parameters.  The line list file to be copied is
+    named after the frequency parameter, e.g.
+
+      /export/home/vnmr1/vnmrsys/exp2/htfrq1.ll
+
+    The format of the file is the same as the line list
+    display.  
+
+    Example #1: 
+      freq [Hz from center]
+       1172.37
+        327.69
+       -346.37
+      -1292.10
+
+    In Example #1, the Hadamard frequencies are in Hz from the
+    center of the spectrum.  
+
+    Example #2:
+      freq [ppm]      bw [Hz]
+       7.930          20
+       5.819          16
+       4.134          20
+       1.770          20
+
+    In Example #2, the Hadamard frequencies are in ppm, referenced
+    to the current spectrum.  The bandwidth for each frequency is
+    also specified as 16 Hz for the second frequency, and 20 Hz
+    for the rest.  If htbw1 is arrayed to two or more values in
+    the parameter set, the values are written to the line list file.
+    If the size of the htbw1 array is smaller than the size of
+    the htfrq1 array, the last value of htbw1 is applied to the
+    remaining frequencies.  
+
+
+  In a 2D display, the Edit HT Freq dialog may be used to
+  view the Hadamard frequency list in F1.  Interactive
+  frequency selection and display from the graphics window may
+  be done.  You may also edit frequencies from the Line List window.
+  In a 2D display, frequencies in ppm are referenced to F1.  
+
+
+Parameters used:
+htfrq1  - Hadamard frequency list in indirect dimension, in Hz
+            from center of spectrum, or ppm.
+htbw1   - Hadamard band width in indirect dimension, in Hz.  It
+            may be a single value or a list of values for each
+            element in the htfrq1 list.
+tn      - nucleus used for frequency list.
+
+See also:
+ht HsqcHT TocsyHT getht mht sethtfrq1 htfrqdisp dll

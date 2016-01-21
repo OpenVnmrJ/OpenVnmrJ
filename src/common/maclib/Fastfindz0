@@ -1,0 +1,121 @@
+"macro Fastfindz0"
+" in a deuterium spectrum.  Arguments: 'init': record the initial "
+" spectrum; 'move': process spectrum, set z0 and restore initial "
+" parameters. "
+
+//  This is modified from findz0_au
+//   Should not be used under queued acquisition
+//   primarily meant for panel button control
+
+if ($# = 0) then $1 = 'init' endif
+$arg=$1
+
+IF ($arg = 'init') or ($arg='setup') then
+
+    $hzdac=0
+    getparam('hzdac','lk'):$hzdac
+    if ($hzdac=0) then
+	write('error','lock calibration not found')
+        return
+    endif
+     
+    groupcopy('current','processed','acquisition')  
+    groupcopy('current','processed','display')	 
+    groupcopy('current','processed','processing')	 
+
+    savesampglobal('cp')
+    exists('s2pul','parlib'):$sparex,$prunepar
+    $prunepar=$prunepar+'/procpar'
+    wdone=''
+    tmpsave('findz0tmp')
+
+    prune($prunepar)
+    exists('proc1','parameter'):$ex
+    if ($ex) then proc1='ft' endif
+    fixpar
+    getsampglobal('cp')
+
+    seqfil='findz0'
+    tn='lk' sw=60*sfrq np=16k
+    newdg
+
+    dn='H1' gain=10 dm='nnn' homo='n'
+    nt=1 ss=0 at=0.2 wshim='n' d1=0.5
+    lb=1/at
+    alock='u' 
+    $oldz0=z0
+
+    getparam('solv','lk'):solvent
+    solvent=solvent
+    //getparam('z0','lk'):z0
+    //getparam('tof','lk'):tof
+    //Set tof to zero and correct difference between sfrq and lockfreq
+    tof=0
+    getparam('tpwr','lk'):tpwr
+    getparam('pw90','lk'):pw
+    expactive:$isactive
+    if ($isactive=0) then
+        sethw('z0',z0)
+    endif
+
+//  The d1 is based on 1 sec per 1 ppm shift in lk frequency
+//    This is purely arbitrary
+     $ppmshift=($oldz0-z0)*$hzdac/sfrq
+     $ppmshift=trunc($ppmshift+0.5)
+     if ($ppmshift<0) then $ppmshift=-1*$ppmshift endif
+     d1=$ppmshift
+     d1=5
+     if (d1<0.5) then d1=0.5 endif
+// d1 is set
+
+     wnt=''
+     werr=''
+     wbs=''
+     array=''
+     p1=0 sb='n' dmg='ph' fn=2*np lp=0
+ 
+     wexp = 'Fastfindz0(`move`)'
+     spin=0 in='n'
+     if ($arg <> 'setup') then
+	write('line3','Finding z0')
+        au('wait')  
+     endif
+
+ELSEIF ($arg = 'move') then
+
+    "process H2 spectrum, calculate new z0"
+
+    f expfilt proc='ft' lsfrq=0 wft('nods') lp = 0  av
+    rfl = sw/2  rfp = 0  
+    dsn(-rfl+110,-rfl+10):$sn
+    if ($sn < 25) then
+      write('line3','S/N too low; z0 not changed')
+      Fastfindz0('quit')
+    else
+     "makes result independent of referencing in the parameter set"
+      peak:$hgt,cr
+      ph
+      getparam('hzdac','lk'):$hzdac
+      $diff=(sfrq-lockfreq)*1e6
+      $deltaz0=($diff+cr)/$hzdac
+      $newz0 = z0 - $deltaz0 
+      "hz_per_dac must be calibrated and set in the findz0 parameters "
+      z0=$newz0
+      sethw('z0',$newz0)
+//      sethw('lock','on')
+      alock='n'
+      write('line3','z0 set to %d', $newz0)
+      Fastfindz0('done')
+    endif
+    dg
+
+ELSEIF ($arg='done') THEN
+    clear(2)
+    tmpreturn('findz0tmp')   
+    getlkpars
+    sethw('lock','on','lockpower',lockpower,'lockgain',lockgain)
+
+ELSEIF ($arg='quit') THEN
+    clear(2)
+    tmpreturn('findz0tmp')
+ENDIF

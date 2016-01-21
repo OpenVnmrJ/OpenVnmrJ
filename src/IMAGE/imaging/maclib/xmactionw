@@ -1,0 +1,829 @@
+"macro xmactionw"
+"Used by all applications (Imaging, Liquids, etc.)"
+"xmactionw - xmaction for liquids walkup interface"
+"xmaction is used for a mouse event in study queue"
+
+if ($# < 1.5) then
+  write('error','%s: at least two arguments needed',$0)
+  return
+endif
+"$1 is action: click, doubleclick, move, copy, delete"
+"$2 is node id"
+
+"sqattr sqval - parameters used in study node (new format VnmrJ 1.1c 1/2003)"
+"actionid=node id of study element to use for acq "
+
+  if ($2 = 'null') then return('','','') endif
+
+  $activestudy=activestudy[1]
+  if ($1 = 'getaq') then
+"   find aqid, aqstudy for autoQ"
+    $aqstudy='' $aqid='' $aqdir=''
+    $found=0
+    $afile=autodir+'/autostudies'
+    exists($afile,'file'):$e
+    if $e>0.5 then
+      $attr='' $val='' $size=0
+      readfile($afile,'$attr','$val','','local'):$size
+      if $size>0.5 then
+        $i=$size+1
+        repeat
+          $i=$i-1
+          if ($attr[$i]=$2) then
+            $found=1
+            $aqstudy=$2
+          endif
+        until ($found>0.5 or $i<=1)
+      endif
+    endif
+    if $found=0 then
+      $r1=0 $r2=0 $word1='' $word2=''
+      strstr($2,'_','last'):$r1,$word1,$word2
+      if $r1>0.5 then
+        $found=2
+        $aqstudy=$word1
+        $aqid=$word2
+"       strstr($word1,'_'):$r2"
+"       if $r2<0.5 then"
+"         $found=2"
+"         $aqstudy=$2"
+"         $aqid=''"
+"       endif"
+      endif
+    endif
+    if $found>0.5 then
+      $aqdir=$aqstudy
+      $ch='' substr($aqdir,1,1):$ch
+      if $ch<>'/' then
+        $aqdir=autodir+'/'+$aqdir
+      endif
+    endif
+    exists($aqdir,'directory'):$d
+    if not ($d) then $aqstudy='' $aqdir='' $aqid='' endif
+    return($aqstudy,$aqdir,$aqid)
+  endif
+
+  if ($1='click') then
+    return(1) "disallow action, handled by xmaction"
+  endif
+  if ($1='select11b') then return(0) endif
+
+  if ($1='delete' and $2='tmpstudy') then
+    sqfilemenu('Clear Study','no')
+    return(0)
+  endif
+
+  xmactionw('getaq',$2):$aqstudy,$aqdir,$aqid
+  $op='' $stat=''
+  exists($aqdir+'/studypar','file'):$ex
+  if $ex>0.5 then
+    if ($aqdir='') then
+      shell('rm -f /studypar'):$x
+      exists('/studypar','file'):$ex
+      if $ex>0.5 then
+        write('error','Cannot delete file \'/studypar\'.')
+        return(0)
+      endif
+    else
+      rtv($aqdir+'/studypar','studystatus'):$stat
+      $op='' rtv($aqdir+'/studypar','noabort','operator_'):$op
+    endif
+  endif
+  rights('editallopstudies'):$editop
+  rights('showallopstudies'):$showop
+  rights('caneditprotocols'):$editpro
+
+  if not (($editop and $showop) or $op=operator or $op='') then
+    return(0)
+  elseif not ($editpro) and ($1<>'doubleclick') and ($1<>'dnd') and ($1<>'delete') and ($1<>'delreq') and ($1<>'deleteQ') then
+    return(0)
+  endif
+
+" doubleclick, dnd, delete allowed under some circumstances"
+" move allowed in tmpstudy"
+" copy could be allowed sometimes, if I can figure it out"
+" copy should be allowed in background"
+
+  if ($1='copy') then
+    xmactionw('getaq',copyid[1]):$aqstudy,$aqdir,$aqid
+    if $aqstudy<>'' then
+      return(0)  "disallow action"
+    endif
+  endif
+
+  if (($1='testmove' or $1='testmovemake') and $#>2.5) then
+    if ($2 = $3) then return(0) endif  // can't drop a node on itself
+    if ($2<>'tmpstudy') and ($activestudy<>'null') then
+      if ($aqstudy='') then  // valid move in tmpstudy area
+        xm1('getparent',$2,sqdir):$par
+        xm1('getparent',$3,sqdir):$pard
+        if ($par<>'' and $pard<>'') then
+          if ($3='tmpstudy' and $par='parent') then
+            vnmrjcmd('SQ pmove '+$2+' '+$3)
+            xmwritesq
+          elseif ($pard=$par) or ($par='parent') or ($pard='parent' and $par=$3) then
+            vnmrjcmd('SQ move '+$2+' '+$3)
+            xmwritesq
+          endif
+        endif
+      else  // check move in Queued area
+        xmactionw('getaq',$3):$aqstudyd,$aqdird,$aqidd
+        if ($aqstudy<>'' and $aqid='') then
+          $par='grandparent'
+        else
+          xm1('getparent',$aqid,$aqdir):$par
+          if ($1='testmovemake' and $par='') then $par='parent' endif
+        endif
+        if ($aqstudyd<>'' and $aqidd='') then
+          $pard='grandparent'
+        else
+          xm1('getparent',$aqidd,$aqdird):$pard
+          if ($1='testmovemake' and $pard='') then $pard='parent' endif
+        endif
+        $stat='' $statd='' $aq='' $aqd='' $op='' $opd='' $doit=0
+        exists($aqdir+'/studypar','file'):$ex
+        if $ex>0.5 then
+          rtv($aqdir+'/studypar','studystatus','queue','operator_'):$stat,$aq,$op
+        endif
+        exists($aqdird+'/studypar','file'):$ex
+        if $ex>0.5 then
+          rtv($aqdird+'/studypar','studystatus','queue','operator_'):$statd,$aqd,$opd
+        endif
+        $eqfile=autodir+'/enterQ'
+        if ($aq='nightQ') then
+          xmtime('getq'):$curQ
+          $nqfile=autodir+'/nightQ'
+          exists($nqfile,'file'):$e
+          if ($curQ='day' and $e=1) then
+            $str='' lookup('mfile',$nqfile,'read'):$str
+            if $str<>'' then
+              $eqfile=$nqfile
+            endif
+          endif
+        endif
+        $origfile=$eqfile
+        $eqfile=$eqfile+'.save'
+        expactive('auto'):$acq
+
+        if ($par='grandparent' and $pard='grandparent') then
+          if ($editop and $showop) and (($stat='Queued' and $statd='Queued') or ($stat='NightQueue' and $statd='NightQueue')) then
+// rearrange enterQ file, switch sample order
+
+            if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+              autosa
+            endif
+            $doit=1 $ect=-1 $ect2=-1
+            $sqfile=$aqdir+'/enterSQ'
+            $sqfile2=$aqdird+'/enterSQ'
+            exists($sqfile,'file'):$e
+            exists($sqfile2,'file'):$e2
+            if ($e) and ($e2) then
+              $ids='' $val='' $qsize=0
+              readfile($sqfile,'$ids','$val','','local'):$qsize
+              $i=0
+              repeat
+                $i=$i+1
+                substr($val[$i],1):$str
+                if $str<>'parent' then $ect=$ect+1 endif
+              until ($i>=$qsize)
+              $ids='' $val='' $qsize=0
+              readfile($sqfile2,'$ids','$val','','local'):$qsize
+              $i=0
+              repeat
+                $i=$i+1
+                substr($val[$i],1):$str
+                if $str<>'parent' then $ect2=$ect2+1 endif
+              until ($i>=$qsize)
+              if ($ect>-0.5 and $ect2>-0.5) then
+                xmentermv($origfile,$eqfile,'savedel',$aqstudy,1,$ect)
+                xmentermv($origfile,$eqfile,'insert',$aqstudyd,$ect2+1)
+              endif
+            endif
+// rearrange autostudies file
+            $afile=autodir+'/autostudies'
+            exists($afile,'file'):$e
+            if $e>0.5 then
+              $attr='' $val='' $size=0 $pos=0 $posd=0
+              readfile($afile,'$attr','$val','','local'):$size
+              teststr('$attr',$aqstudy,'local'):$pos
+              teststr('$attr',$aqstudyd,'local'):$posd
+              $afilecp=$afile+'cpm'
+              write('reset',$afilecp)
+              $i=0
+              repeat
+                $i=$i+1
+                if not ($i=$pos) then
+                  if ($i=$posd) then
+                    write('file',$afilecp,'%s %s',$attr[$i],$val[$i])
+                    write('file',$afilecp,'%s %s',$attr[$pos],$val[$pos])
+                  else
+                    write('file',$afilecp,'%s %s',$attr[$i],$val[$i])
+                  endif
+                endif
+              until ($i>=$size)
+              mv($afilecp,$afile)
+            endif
+
+            if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+              autora
+            endif
+
+            vnmrjcmd('SQ move '+$2+' '+$3)
+          endif
+        elseif ($aqstudy=$aqstudyd and $aqdir=$aqdird) and ($par<>'' and $pard<>'') and (($stat='Queued') or ($stat='NightQueue')) then
+          if ($op=$opd) and (($3=$aqstudy and $par='parent') or ($pard=$par) or ($par='parent') or ($pard='parent' and $par=$aqidd)) then
+
+// rearrange enterQ file, switch experiment order within sample
+            if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+              autosa
+            endif
+// loop and find all child protocols, if parent
+            $doit=1 $dpos=0 $epos=0 $fpos=0 $dpos2=0 $epos2=0 $fpos2=0
+            $sqfile=$aqdir+'/enterSQ'
+            exists($sqfile,'file'):$e
+            if ($e) then
+              $ids='' $val='' $qsize=0
+              readfile($sqfile,'$ids','$val','','local'):$qsize
+              teststr('$ids',$aqid,'local'):$dpos
+              if ($par='parent' and $dpos>0.5) then $dpos=$dpos+1 endif
+              teststr('$ids',$aqidd,'local'):$dpos2
+              if ($pard='parent' and $dpos2>0.5) then $dpos2=$dpos2+1 endif
+              $i=0 $str='' $found=0 $found2=0
+              repeat
+                $i=$i+1
+                substr($val[$i],1):$str
+                if ($dpos>0.5) then
+                  if ($i<=$dpos) and ($str<>'parent') then
+                    $epos=$epos+1
+                  endif
+                  if ($i>$dpos) then
+                    if ($found=0) and ($str<>'parent') and ($par='parent') then
+                      $fpos=$fpos+1
+                    else
+                      $found=1
+                    endif
+                  endif
+                endif
+                if ($dpos2>0.5) then
+                  if ($i<=$dpos2) and ($str<>'parent') then
+                    $epos2=$epos2+1
+                  endif
+                  if ($i>$dpos2) then
+                    if ($found2=0) and ($str<>'parent') then
+                      $fpos2=$fpos2+1
+                    else
+                      $found2=1
+                    endif
+                  endif
+                endif
+              until ($i>=$qsize)
+              $epos2=$epos2+$fpos2
+              if ($epos2>1.5) then $epos2=$epos2-1 endif
+            endif
+
+            if ($epos>0.5) then
+              xmentermv($origfile,$eqfile,'savedel',$aqstudy,$epos,$fpos)
+              xmentermv($origfile,$eqfile,'insert',$aqstudy,$epos2)
+            endif
+            if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+              autora
+            endif
+          endif
+
+          if ($doit) then
+            if ($3=$aqstudy and $par='parent') then
+              vnmrjcmd('SQ pmove '+$2+' '+$3)
+            elseif ($pard=$par) or ($par='parent') or ($pard='parent' and $par=$aqidd) then
+              vnmrjcmd('SQ move '+$2+' '+$3)
+            endif
+            $sqdir=sqdir
+            $studyid=studyid
+            sqdir=$aqdir
+            studyid=$aqstudy
+            xmwritesq('studyid=\\\''+studyid+'\\\' sqdir=\\\''+sqdir+'\\\'')
+            sqdir=$sqdir
+            studyid=$studyid
+          endif
+
+        endif
+      endif
+    endif
+    return(0)  "disallow action"
+  elseif ($1='move') then
+    return(0)  "disallow action"
+  elseif $aqstudy='' then
+    return(1)  "back to xmaction"
+  endif
+
+  if ($activestudy='null') then
+    if ($1='copy' or $1='move') then
+      write('line3','Cannot %s node unless study is continued.',$1)
+"     if ($1='copy') then xm1('delete',$2) endif"  "which $id?"
+      return(0)
+    endif
+  endif
+
+  if ($1 = 'copy') then
+    xmreadnode(copyid[1]):$ret  "assigns sqattr sqval from enterSQ"
+    $i=0 teststr('sqattr','id','global'):$i
+    sqval[$i] = $2
+  else
+
+    $sqdir=sqdir
+    sqdir=$aqdir
+    xmreadnode($aqid):$ret  "assigns sqattr sqval from enterSQ"
+"fails if gp node"
+    sqdir=$sqdir
+
+  endif
+
+  $type=''
+  $status=''
+  $id=$2
+  if ($aqstudy<>'' and $aqid='') then
+    $type='grandparent'
+    $id=$aqid
+  else
+    teststr('sqattr','type','global'):$i
+    if $i>0.5 then $type=sqval[$i] endif
+    $status='' $i=0 teststr('sqattr','status','global'):$i
+    if $i>0.5 then $status=sqval[$i] endif
+  endif
+
+  if ($1 = 'copy') then
+
+    if ($activestudy='null') then
+      write('line3','Cannot copy when not in study mode')
+    else
+      if ($type='protocol' or $type='grandparent') then
+"worked with old version, but didn't mkdir"
+        write('line3','Cannot copy a protocol')
+        return
+      endif
+      xmcopy
+    endif
+
+// elseif ($1 = 'move') then
+//
+//  xmwritesq
+
+  elseif ($1='doubleclick' or $1='dnd') then
+
+    if ($type='protocol' or $type='grandparent') then
+      write('line3','Cannot open a parent protocol')
+    else // if ($type='LIB' or $type='REQ' or $type='CMD') then
+
+      if ($aqstudy<>'') then
+
+        if (auto='n') and ($stat='Active') and ($status='Ready' or $status='Customized' or $status='Skipped' or $status='Active') then
+          return(0)
+        endif
+
+        $custom='n'
+        if (studyid='tmpstudy') and ($status='Ready' or $status='Customized' or $status='Skipped' or $status='Active') then
+          $custom='y'
+        endif
+        if $custom='y' then
+          xm1('studydir'):$sdir
+          $ff=$sdir+'/enterSQ'
+          exists($ff,'file'):$e
+          if ($e) then
+            rm('-rf',$sdir):$x
+            xm1('delete tmpstudy')
+            xmdelete('emptytrash')
+            cqinit('n')
+          endif
+        endif
+
+        xmselect($1,$aqdir,$aqstudy)
+
+        if $custom='y' then
+          sqsaveid=$aqstudy
+          if ($stat='Error' or $stat='Completed') then
+            $actionid=actionid
+            $sqsaveid=sqsaveid
+            xmsubsave
+            $sqdir=sqdir
+            $studyid=studyid
+            studyid=$sqsaveid
+            sqdir=autodir+'/'+studyid
+            xmsetatts($actionid,'status',$status)
+            xm1('set',studyid+'_'+$actionid,'status',$status)
+            sqdir=$sqdir
+            studyid=$studyid
+          endif
+        endif
+      endif
+    endif
+"   return(0)"
+
+  elseif ($1 = 'delete') then
+
+    if ($activestudy='null') then
+      write('line3','Cannot delete nodes while study is not active.')
+      return(0)
+    endif
+
+"only allow if Delete,Delete (cannot undo)"
+    exists('trashnodepref','parameter','global'):$e
+    if $e<0.5 then  "trashnodemode?"
+      create('trashnodepref','string','global')
+      setprotect('trashnodepref','set',256,'global')
+      trashnodepref='Delete','Delete','Delete'  "values are: Delete,Skip/RemoveData,No"
+                "1st value for Ready/Customized, 2nd for Completed/Error nodes"
+                "3rd for composite protocols (Delete/No) - do not use"
+    endif
+
+    $op='' $stat='' $aq=''
+    exists($aqdir+'/studypar','file'):$ex
+    if $ex>0.5 then
+      rtv($aqdir+'/studypar','studystatus','operator_','queue','studytime'):$stat,$op,$aq,$sttime
+    endif
+
+    if ($type='grandparent') then
+
+      exists('sqtval','parameter','global'):$x
+      if $x<0.5 then
+        create('sqtval','string','global')
+        setprotect('sqtval','on',16+256+32768,'global')
+      endif
+      expactive('auto'):$acq
+      if ($acq=1 and $stat='Active') then
+        write('line3','Cannot delete active sample %s.',$aqstudy)
+        return(0)
+      elseif (owner<>operator and $op<>operator) then "use doprocess[6]?"
+        write('line3','Cannot delete samples from operator %s.',$op)
+        return(0)
+      else
+        if ($stat='Queued' or $stat='NightQueue') then
+          if (trashnodepref[1]='Delete') then
+            sqtval=''
+            xmactionw('delreq',$2) "no data to delete"
+          else
+            write('line3','Deleting Queued nodes is not allowed.')
+          endif
+        else "if ($stat='Completed' or $stat='Error') then"
+          if (trashnodepref[2]='Delete') then
+            sqtval=''
+            $cmd='get actions in ' +$2+ ' id sqtval xmactionw(`delreq`,`' +$2+ '`)'
+            xm1($cmd)
+          else
+            write('line3','Deleting Completed or Error nodes is not allowed.')
+          endif
+        endif
+      endif
+
+    elseif ($type='protocol') then
+
+      if ($stat='Queued' or $stat='NightQueue') then
+        if (trashnodepref[1]<>'Delete') then
+          write('line3','Deleting Queued nodes is not allowed.')
+          return(0)
+        endif
+// delete from enterQ/nightQ
+        $dpos=0
+        $sqfile=$aqdir+'/enterSQ'
+        exists($sqfile,'file'):$e
+        if ($e) then
+          $ids='' $val='' $qsize=0
+          readfile($sqfile,'$ids','$val','','local'):$qsize
+          teststr('$ids',$aqid,'local'):$dpos
+        endif
+
+// delete child nodes
+        $nochild=''
+        if $#>2.5 then
+          format($3,'isreal'):$isr
+          if not ($isr) then if $3='nochild' then
+            $nochild='nochild'
+          endif endif
+        endif
+        if ($nochild <> 'nochild') then
+          $i=$dpos $str='' $done='n' $inc=0
+          if ($i<$qsize) then
+            repeat
+              $i=$i+1
+              substr($val[$i],1):$str
+              if $str='parent' then
+                $done='y'
+              else
+                xmactionw('delete',$aqstudy+'_'+$ids[$i],$inc)
+                $inc=$inc+1
+              endif
+            until ($done='y' or $i>=$qsize)
+          endif
+        endif
+
+        $sqdir=sqdir
+        $studyid=studyid
+        sqdir=$aqdir
+        studyid=$aqstudy
+        xm1('studydir'):$sdir
+
+// delete from prop file, SQ
+        xm1('delete',studyid+'_'+$aqid)
+        exists($sdir+'/info/'+$aqid,'file'):$e
+        if ($e) then rm('-rf',$sdir+'/info/'+$aqid):$x endif
+
+        xmwritesq('studyid=\\\''+studyid+'\\\' sqdir=\\\''+sqdir+'\\\'')
+        sqdir=$sqdir
+        studyid=$studyid
+      endif
+
+    else // if ($type='LIB' or $type='REQ' or $type='CMD') then
+//    child node
+
+      if ($stat='Queued' or $stat='NightQueue') then
+        if (trashnodepref[1]<>'Delete') then
+          write('line3','Deleting Queued nodes is not allowed.')
+          return(0)
+        endif
+        $nopar='' $inc=0
+        if $#>2.5 then
+          format($3,'isreal'):$isr
+          if ($isr) then
+            $inc=$3
+            $nopar='noparent'
+          endif
+        endif
+        $sqdir=sqdir
+        $studyid=studyid
+        sqdir=$aqdir
+        studyid=$aqstudy
+        xm1('studydir'):$sdir
+
+        expactive('auto'):$acq
+        if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1 and $nopar<>'noparent') then
+          autosa
+        endif
+
+// delete from enterQ/nightQ
+        $epos=0 $dpos=0 $parid=''
+        $sqfile=$aqdir+'/enterSQ'
+        exists($sqfile,'file'):$e
+        if ($e) then
+          $ids='' $val='' $qsize=0
+          readfile($sqfile,'$ids','$val','','local'):$qsize
+          teststr('$ids',$aqid,'local'):$dpos
+        endif
+        $i=0 $str=''
+        repeat
+          $i=$i+1
+          substr($val[$i],1):$str
+          if ($str<>'parent') then
+            $epos=$epos+1
+          endif
+        until ($i>=$dpos)
+        $epos=$epos-$inc
+
+// delete parent node if ok to do so
+        if ($dpos>1.5 and $nopar<>'noparent') then
+          $pstr='' $nstr=''
+          substr($val[$dpos-1],1):$pstr
+          if $dpos<$qsize then
+            substr($val[$dpos+1],1):$nstr
+          endif
+          if ($pstr='parent' and ($nstr='' or $nstr='parent')) then
+            $parid = $ids[$dpos-1]
+            xmactionw('delete',$aqstudy+'_'+$parid,'nochild')
+          endif
+        endif
+
+        if ($epos > 0.5) then
+          $eqfile=autodir+'/enterQ'
+          if ($aq='nightQ') then
+            xmtime('getq'):$curQ
+            $nqfile=autodir+'/nightQ'
+            exists($nqfile,'file'):$e
+            if ($curQ='day' and $e=1) then
+              $str='' lookup('mfile',$nqfile,'read'):$str
+              if $str<>'' then
+                $eqfile=$nqfile
+              endif
+            endif
+          endif
+          $origfile=$eqfile
+          $eqfile=$eqfile+'.sub'
+          xmentermv($origfile,$eqfile,'delete',studyid,$epos)
+        endif
+
+// check studytime
+// should not subtract off $sec if node is Skipped
+        $nstat='' $timestr=''
+        xmgetatts($aqid,'time','status'):$timestr,$nstat
+        if ($timestr<>'' and $sttime>0 and $nstat<>'Skipped') then
+          $studytime=studytime
+          $sec=0
+          xmtime('getsec',$timestr):$sec
+          studytime=$sttime-$sec
+          if ($ex) then
+            if ($stat<>'Error' and $stat<>'Completed') then
+              $tt=$aqstudy+' '+$op+' '+$aq
+              formattime(studytime,'minutes'):$time
+              $tt=$tt+' ['+$time+']'+' ['+$stat+']'
+              xm1('set',$aqstudy,'tooltext',$tt)
+            endif
+            if $aq='nightQ' then
+              xmtime('addnight',-$sec)
+            else
+              xmtime('addday',-$sec)
+            endif
+// save studytime into studypar file
+            xmtime('savepar',studytime)
+          endif
+          studytime=$studytime
+        endif
+
+// delete from SQ, prop file
+        xm1('delete',studyid+'_'+$aqid)
+        exists($sdir+'/info/'+$aqid,'file'):$e
+        if ($e) then rm('-rf',$sdir+'/info/'+$aqid):$x endif
+
+        if ($nopar<>'noparent') then
+          xmwritesq('studyid=\\\''+studyid+'\\\' sqdir=\\\''+sqdir+'\\\'')
+        endif
+        sqdir=$sqdir
+        studyid=$studyid
+        if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1 and $nopar<>'noparent') then
+          autora
+        endif
+      endif
+
+      return(0)
+
+    endif
+
+  elseif ($1 = 'delreq') then
+"Use this section to reenter delete"
+
+    $size=size('sqtval')
+    xmdelete('emptytrash')
+    if ($size>1.5 or sqtval[1]<>'') then
+      $sqdir=sqdir
+      sqdir=$aqdir
+      length($aqstudy):$alen
+      $i=0
+      repeat
+        $i=$i+1
+        length(sqtval[$i]):$ilen
+        substr(sqtval[$i],$alen+2,$ilen-$alen-1):$id
+        xmgetatts($id,'data'):$data
+        substr($data,1,1):$ds
+        if $ds<>'/' then
+          $data=sqdir+'/'+$data
+        endif
+        vnmrjcmd('LOC remove vnmr_data "'+$data+'.fid"')
+        if $ds='/' then
+          shell('rm -rf "'+$data+'".*'):$x
+        endif
+      until ($i>=$size)
+      sqdir=$sqdir
+    endif
+    xmactionw('deleteQ',$2) "remove from enterQ, subtract from sqtime"
+"   remove from autostudies"
+    $afile=autodir+'/autostudies'
+    exists($afile,'file'):$e
+    if $e>0.5 then
+      $attr='' $val='' $size=0
+      readfile($afile,'$attr','$val','','local'):$asize
+      if $asize>0.5 then
+        $a2file=$afile+'cpd'
+        write('reset',$a2file)
+        $i=0
+        repeat
+          $i=$i+1
+          if ($attr[$i]<>$aqstudy) then
+            write('file',$a2file,'%s %s',$attr[$i],$val[$i])
+          endif
+        until ($i>=$asize)
+        mv($a2file,$afile)
+      endif
+    endif
+    vnmrjcmd('LOC remove study "'+$aqdir+'"') "remove from database"
+    if traymax>0.5 then
+      vnmrjcmd('tray remove '+$aqdir)  // needs double quotes
+    endif
+    vnmrjcmd('util updateLocator')
+"   shell('managedb removeentry fullpath host')" "$aqdir instrument"
+    rm('-r',$aqdir):$x "almost last step done"
+    xm1('delete',$2)  "delete protocol"
+    xm1('write "'+autodir+'/auto.xml"')
+
+  elseif ($1 = 'deleteQ') then
+" remove from enterQ doneQ nightQ"
+" $2 contains studyid"
+    $delid=$2
+
+    $aqdir=$delid
+    $ch='' substr($aqdir,1,1):$ch
+    if $ch<>'/' then
+      $aqdir=autodir+'/'+$aqdir
+    endif
+
+"may not need these"
+    $stat='' $loc=0 $rack=0 $zone=0
+"   rtv($aqdir+'/studypar','studystatus','loc_','vrack_','vzone_'):$stat,$loc,$rack,$zone"
+"look at traymax=96 or 768 ?"
+
+"copy this section, replace $dfile with enterQ, nightQ, doneQ - or array?"
+"   look in enterQ"
+"   else look in nightQ"
+"   if $stat='Completed' or 'Error'? then look in doneQ"
+
+    expactive('auto'):$acq
+    if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+      autosa
+    endif
+
+"   adjust sqtime"
+    $stat='' $time=0
+    rtv($aqdir+'/studypar','studystatus','studytime','queue'):$stat,$time,$queue
+    if ($stat<>'Completed' and $stat<>'Error') then
+      $time = -$time
+      if ($queue = 'nightQ') then
+        xmtime('addnight',$time)
+      else
+        xmtime('addday',$time)
+      endif
+    endif
+
+    $qfiles='enterQ','nightQ','doneQ'
+"for other Qfiles, make inside loop into a subroutine"
+    $loopsize=size('$qfiles')
+    $floop=0
+    repeat
+      $floop=$floop+1
+      $dfile=autodir + '/' + $qfiles[$floop]
+      exists($dfile,'file'):$e
+      if $e>0.5 then
+        lookup('mfile',$dfile,'countcs','MACRO:'):$ct
+        lookup('mfile',$dfile,'filekey'):$key
+        $i=0 $str='' $sub=' ' $nret=2
+        repeat
+          $i=$i+1
+          lookup('mfile',$key,'readline','filekey'):$str,$key,$nret
+          substr($str,1,2):$sub
+        until ($sub='--' or $nret<1.5)
+        if $nret<1.5 then
+"         write('line3','%s: file error in %s',$0,$dfile)"
+          $i=0
+        endif
+        $persamp=$i
+
+        if ($persamp > 0.5) then
+          lookup('mfile',$dfile,'filekey'):$key
+          $i=0 $j=1 $sampno=0 $nret=2
+          repeat
+            $i=$i+1
+            lookup('mfile',$key,'MACRO:','delimiter',' ()\'\n\r\t','skip','read','filekey'):$str,$key,$nret
+            if ($str = $delid) then
+              $j=$j+1 $sampno[$j]=$i
+            endif
+          until ($i>=$ct or $nret<1.5)
+          $newQ=$dfile+'.newQ'
+          $size=size('$sampno')
+
+          if ($size>1.5) then
+            $tempQ=$dfile+'.tempQ'
+            $deleteQ=$dfile+'.deleteQ'
+            write('reset',$newQ)
+            write('reset',$deleteQ)
+            cp($dfile,$tempQ)
+            $hlines='' $dlines='' $tlines=''
+            $i=1
+            repeat
+              $i=$i+1
+              lookup('mfile',$tempQ,'countcs','MACRO:'):$samptotal
+              $head = $sampno[$i] - $sampno[$i-1] - 1
+              $tail = $samptotal - $head
+              format($head * $persamp,0,0):$hlines
+              format($persamp,0,0):$dlines
+              format($tail * $persamp,0,0):$tlines
+              shell('head -'+$hlines+' "'+$tempQ+'" >> "'+$newQ+'"'):$x  ";cat"
+              shell('tail -'+$tlines+' "'+$tempQ+'" > "'+$tempQ+'1"'):$x
+              shell('head -'+$dlines+' "'+$tempQ+'1" >> "'+$deleteQ+'"'):$x
+              $tail1=$tail-1
+              $tlines1='' format($tail1*$persamp,0,0):$tlines1
+              shell('tail -'+$tlines1+' "'+$tempQ+'1" > "'+$tempQ+'"'):$x
+            until ($i>=$size)
+            shell('cat "'+$tempQ+'" >> "'+$newQ+'"'):$x
+          endif
+          exists($newQ,'file'):$eq
+          if ($eq) then
+            cp($newQ,$dfile)
+          endif
+          shell('rm -f "'+$dfile+'".*'):$x
+"for undo, keep copy of old $dfile before deleting"
+
+        endif
+      endif
+
+    until ($floop >= $loopsize)
+
+    if (system='spectrometer' and $acq=1 and auto='n' and traymax<>1) then
+      autora
+    endif
+
+  endif
+
+return(0)

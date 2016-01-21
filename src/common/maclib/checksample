@@ -1,0 +1,33 @@
+"macro checksample"
+"Macro to find the sample number in the magnet"
+$tailX='tail'
+whichtail:$tailX
+
+if (traymax = 96) then return(0) endif
+if (traymax = 1) then return(0) endif
+if (traymax = 768) then return(0) endif
+
+$sample=''
+if (auto='y') then
+   "under automation the last entry in locQ is the current sample"
+	$lastloc=''
+	shell('(cat '+autodir+'/locQ | '+$tailX+' -n 1)'):$line
+	substr($line,2):$sample
+else
+     shell('showstat > /vnmr/tmp/shsttemp'):$dum
+     exists('/vnmr/tmp/shsttemp','file'):$shsex
+     if ($shsex) then
+	lookup('mfile','/vnmr/tmp/shsttemp','seek','sample','read',2):$dum,$sample
+//	lookup('seek','sample')
+//	lookup('read',2):$dum,$sample
+	shell('rm /vnmr/tmp/shsttemp'):$dum
+     endif
+endif
+format($sample,'lower'):$sample2
+format($sample2,'isreal'):$real
+if $real>0.5 then 
+   return($sample2)
+else 
+   return(0)
+endif
+

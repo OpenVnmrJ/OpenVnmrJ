@@ -1,0 +1,105 @@
+"macro epitilt"
+"*****************************************************************************"
+
+" epitilt - Macro to set groa parameters to align echoes"
+
+"08mar02"
+
+"*****************************************************************************"
+
+"temporarily save tep"
+$tep = tep
+
+$cf1 = 3
+
+$nv = nv
+exists('fract_ky','parameter'):$e
+if ($e > 0) then
+  $nv = nv/2 + fract_ky
+endif
+$etl = $nv/nseg "echoes per shot"
+
+if(nseg > 1) then
+  $cf2 = $etl - 1  "select echo; note, odd echo chosen"
+else
+  $cf2 = $nv/2 + 1
+endif
+
+exists('navigator','parameter'):$e
+if ($e > 0) then
+  if (navigator = 'y') then
+    $cf1 = $cf1 + 1
+    $cf2 = $cf2 + 1
+    $etl = $etl + 1
+  endif
+endif
+
+
+sort('pss'):$sliceindex,$slicevalue
+$ctr = $sliceindex[ns/2+0.5]
+
+
+$cf_offset  = ($ctr-1)*$etl
+
+
+$blk_offset = 1
+exists('flash_converted','parameter'):$flashc
+if ($flashc > 0) then 
+  $cf_offset  = 0 
+  $blk_offset = $ctr
+endif
+
+av
+cf = $cf1 + $cf_offset write('line3','%s: using cf = %d',$0,cf)
+ft('noft',$blk_offset) 
+peak:$ht,$cr1
+
+cf = $cf2 + $cf_offset write('line3','%s: using cf = %d',$0,cf)
+ft('noft',$blk_offset) 
+peak:$ht,$cr2
+
+df2d('nf',$ctr)
+
+$del0 = (sw/2)-$cr1  "center to echo center in Hz"
+$del1 = (sw/2)-$cr2  "center to echo center in Hz"
+
+
+"These values are from the sequence - use putval"
+$gro  = gro
+$rgro = rgro
+$at   = at_calc
+
+$dw = 1/sw
+
+$del = $del1 - $del0 "remove offset"
+$delpts = $at*$del    "echo shift in points, (minus offset)"
+$delt = $dw*$delpts*1e6   "time in usec "
+$delt = $delt/($cf2-$cf1)   "shift in usec per echo"
+
+
+$gint = $delt*$gro
+$groa = $gint/($at*1e6+$rgro)  "change in gradient value, in G/cm"
+
+if($groa < -0.1) or ($groa > 0.1) then
+  write('error','groa exceeds set limit = %4.3f',$groa)
+  abort
+endif
+
+
+$groa = groa + $groa
+"reset tep"
+tep = $tep
+
+format($groa,0,3):groa  "only 3 decimal points"
+write('line3','groa set to %4.3f %%',groa)
+
+
+
+"*****************************************************************************"
+" MODIFICATION HISTORY  ******************************************************"
+"*****************************************************************************"
+" 020316(mh) Modify to use parameters set from epidw"
+" 040607(mh) Fix bug to select correct traces in multi-shot"
+" 040607(mh) Allow fract_ky and navigator echoes"
+"*****************************************************************************"
+

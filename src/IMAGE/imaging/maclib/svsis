@@ -1,0 +1,1304 @@
+"macro svsis"
+" @(#)svsis	8.2 2/4/94   Spectroscopy Imaging Systems"
+"*********************************************************************"
+"			      svsis			              "	
+
+"	Make image browser headers and phasefiles for original        "
+"	SIS application sequences.                                    "
+"	This will work for other sequences as long as they use	      "
+"	the standard sis conventions and parameters.		      "
+
+"	Usage:	svsis('directory_name'[,'outfmt'])		      "
+
+"*********************************************************************"
+
+
+
+
+"*BEGIN: Constants****************************************************"
+"	Program constants and global definitions                      "
+"*********************************************************************"
+
+$prog='svsis: '			"*Program ID*"
+$planes=curexp+'/planes'		"*planes directory of curexp*"
+$phfile='image'                         "*generic phasefile name*"
+$hdfile='header'                        "*generic header name*"
+$ext='.dat'				"*extension added to directory*"
+$outfmt='f'				"*output data type 'f'=float | "
+					"* 'm'= magnetom 12 bit*"
+
+length(userdir):$length
+substr(userdir,1,$length-8):$userhome	"*Users home directory*"
+
+ln(10):$ln10				"*log10 to loge conversion*"
+$us_s=1e-6				"*us to seconds conversion*"
+$MHz_Hz=1e6				"*Mhz to Hz conversion*"
+$BIG=1e6				"*Big number*"
+
+$cal=(gxcal+gycal+gzcal)/3		"*mean DAC to G/cm conversion*"
+$nucleus='H1','F19','P31','Li7','B11','Xe129','Na23,','C13',\
+    'H2','O17','B10','N15','N14','Ca43','K39','end'
+					"*gamma is in Hz/G*"
+$gamlist=4257.49,4005.32,1723.47,1654.61,1369.57,1177.64,1126.16,1070.51,\
+    653.55,577.18,457.53,431.40,307.54,286.45,198.68
+
+"*END: Constants******************************************************"
+
+
+
+
+
+"*BEGIN: Input Check***************************************************"
+
+if ($# < 0.5) or ($# > 2.5)
+then
+	$mess='Use svsis("directory_name"[,"d"/"m"])'
+	write('error','%s',$prog+$mess)
+	abort
+endif
+
+if ($# > 1.5) then
+	if ($2 = 'm') or ($2 = 'f') or ($2 = 'b') then
+		$outfmt = $2
+	else
+		$mess='Use svsis("directory_name"[,"f"/"m"/"b"])'
+		write('error','%s',$prog+$mess)
+		abort
+	endif
+endif
+
+
+"*END: Input Check*****************************************************"
+
+
+
+"* Generate gamma *****************************************************"
+$ex=0
+exists('B0','parameter'):$ex
+if ($ex < 0.5) then
+	create('B0','real')
+endif
+if  (B0=0) then
+	$i=0
+	repeat
+	   $i=$i+1
+	until ($nucleus[$i]=tn) or ($nucleus[$i]='end')
+	if ($nucleus[$i]='end') then
+	   write('error','Unknown nucleus, tn: %s',tn)
+	   input('Input gamma for nucleus in Hz/G > '):$gamma
+	else
+	   $gamma=$gamlist[$i]
+	endif
+else
+	$gamma=sfrq*$MHz_Hz/B0		"*tranmitter nucleus gamma*"
+endif
+
+write('line3','gamma = %7.2f Hz/G',$gamma)
+
+
+"* Check for Gradient Calibration Values *****************************"
+if ($cal=0.0) then
+	$mess='No Gradient Calibration Values. '
+	write('error','%s',$prog+$mess)
+	$mess='Set gcoil, or set values of gxcal,gycal,gzcal.'
+	write('line3','%s',$prog+$mess)
+	abort
+endif
+
+
+
+"*BEGIN:Valid Sequences***********************************************"
+"	The code here forms a structure which will define             "
+"	the reconstruction properties of fid data types.              "
+
+"	seqfil: sequence name	seq: reconstruction type	      "
+
+"       thk: slice thickness type                                     "   
+
+"	The sequence name corresponds to the value of the seqfil      "
+"	parameter. Seqtyp is a designation for the acquisition        "
+"	loop structure provided by the sequence. The meaning is       "
+"	the same as defined for SEQD applications.                    "
+"*********************************************************************"
+
+$k=0
+$k=$k+1 $seqfil[$k]='image'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='hs_image'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='shorte'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='hs_shorte'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='stecho'		$seq[$k]='ncsnn'  $thk[$k]='stecho'
+$k=$k+1 $seqfil[$k]='hs_stecho'		$seq[$k]='ncsnn'  $thk[$k]='stecho'
+$k=$k+1 $seqfil[$k]='multiecho'		$seq[$k]='cssnn'  $thk[$k]='multiecho'
+$k=$k+1 $seqfil[$k]='hs_multiecho'	$seq[$k]='cssnn'  $thk[$k]='multiecho'
+$k=$k+1 $seqfil[$k]='csi2D'		$seq[$k]='nssnn'  $thk[$k]='csi2D'
+$k=$k+1 $seqfil[$k]='hs_csi2D'		$seq[$k]='nssnn'  $thk[$k]='csi2D'
+$k=$k+1 $seqfil[$k]='ssfp' 		$seq[$k]='nscnn'  $thk[$k]='ssfp'
+$k=$k+1 $seqfil[$k]='hs_ssfp' 		$seq[$k]='nscnn'  $thk[$k]='ssfp'
+$k=$k+1 $seqfil[$k]='t1image'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='t2image'		$seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='warp2b'           $seq[$k]='ncsnn'  $thk[$k]='image'
+$k=$k+1 $seqfil[$k]='msmdeft'           $seq[$k]='ncsnn'  $thk[$k]='image'
+
+"*END:Valid Sequences***********************************************"
+
+
+
+
+
+
+
+"*BEGIN: Test seqfil if $infmt='fid'**********************************"
+"	Test the value of the seqfil parameter against the list of    "
+"	valid sequences. Establish the sequence type for the current  "
+"	data.						              "
+"*********************************************************************"
+
+$seqok='no'
+$seqcon='nnnnn'
+$thktyp='image'
+
+$k=1 $klim=size('$seqfil')
+repeat
+	if ($seqfil[$k]=seqfil) 
+	then 
+		$seqok='yes' 
+		$seqcon=$seq[$k]
+		$thktyp=$thk[$k]
+	endif
+$k=$k+1
+until ($k > $klim)
+
+if ($seqok='no') 
+then
+	$mess='Do not recognize sequence name.'
+	write('error','%s',$prog+$mess)
+	$mess='If similar to standard sequences, you may continue.'
+	write('line3','%s',$prog+$mess)
+	$answer='n'
+	input('Continue ?  (y/n) : > '):$answer 
+	if ($answer='n')
+	then
+		abort
+	endif
+	input('Sequence type (ie. image=ncsnn,ssfp=nscnn) ? >'):$seqcon
+	input('Pulse train type (image,stecho,multiecho,csi2D,ssfp)? >'):$thktyp
+endif
+
+"*END: Test seqfil****************************************************"
+
+
+
+
+
+
+
+"*BEGIN: Check Target Directory***************************************"
+"	Does the target directory exist. If yes check with the user   "
+"	about removing it else create it                              "
+"*********************************************************************"
+$directory=$1+$ext		"*Target Directory*"
+
+
+exists($directory,'file'):$exists
+if ($exists > 0.5)
+then
+	$mess='A directory: '+$1+$ext+' already exists'
+	write('error','%s',$prog+$mess)
+	
+	$answer='n'
+	input('Overwrite it ?  (y/n) : > '):$answer 
+
+	if ($answer='y')
+	then
+		rm('-r',$directory):$x
+		mkdir($directory)
+	else
+		abort
+	endif
+else
+	mkdir($directory)
+endif
+
+"*END: Check Target Directory*****************************************"
+
+
+
+
+"*BEGIN: Establish Count Values***************************************"
+"	Establish maximum count limits for the number of echoes,      "
+"	slices,views etc.                                             "
+"*********************************************************************"
+
+if ($seqcon='ncsnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=nf				"*Number of slices*"
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+endif
+
+if ($seqcon='nssnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+endif
+
+if ($seqcon='cssnn')
+then
+	$ne=nf				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+	$nv1=ni				"*Number of views*"
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+endif
+
+if ($seqcon='nscnn')
+then
+	$ne=1				"*Number of echoes*"
+	$ns=size('slcto')		"*Number of slices*"	
+
+	write('line3','%s','Converting Compressed Data')
+
+	exists('flash_converted','parameter'):$exists
+	if ($exists < 0.5) then flashc endif
+
+	$nv1=ni
+	$nar=trunc((arraydim/ni)+0.5)	"*Number of arrayed elements*"
+endif
+
+
+"*END: Establish Count Values*******************************************"
+
+
+"*BEGIN: Reconstruction Loops*****************************************"
+"	ONLY IF $infmt='fid'                                       	"
+"	Reconstruct all slices, echoes and arrayed FID data     	"
+"	in the current experiment saving the results in the      	"
+"	$userhome+/<name>.dat      			        	" 
+"*********************************************************************"
+
+"*Local Format Values********************"
+$fmt='Transforming: echo: %3d   slice: %3d   element: %3d   ft: %3d'
+
+
+"*Set Display For Saving Phasefile********"
+math='f'
+f full
+av
+
+
+if ($seqcon='ncsnn')
+then "*BEGIN: seqcon=ncsnn********************************************"
+	
+	$i=1				"*Echo counter*"
+	$nft=0				"*FT counter*"
+	$k=1				"*element counter*"
+
+
+	repeat           "*loop over all arrayed elements*************"
+			 "   do arrayed elements in index order       "
+			 "********************************************"
+		
+		$j=1			"*slice counter*"
+		
+		repeat   "*loop over all slices***********************"
+			 "   unscramble slices which were collected   "
+			 "   in odds/evens order. The data to be      "
+			 "   transformed is selected via the cf value "
+			 "********************************************"
+
+			$odds=trunc(($ns+1)/2)
+			$modj=$j-2*trunc($j/2+0.25)
+		
+			if ($modj > 0.5)
+			then  cf=trunc((($j+1)/2)+0.5)
+			else  cf=trunc($j/2+$odds+0.5)
+			endif
+
+
+			"*reconstruct and display result**************"
+			write('line3',$fmt,$i,$j,$k,$nft+1)
+			wft2d($k)
+			image
+			$nft=$nft+1
+		
+			"*save the phasefile**************************"
+			ln($nft):$log
+			$digit=1+trunc($log/$ln10)
+			$datext=''
+			format($nft,$digit,0):$datext
+
+			$l=1 
+			repeat
+				$datext='0'+$datext
+			$l=$l+1
+			until ($l > (4-$digit))
+
+			$file=$phfile+'.'+$datext
+			exists($directory+'/'+$file,'file'):$exists
+
+			if ($exists > 0.5)
+			then 
+			    rm($directory+'/'+$file):$x
+			    svdat($directory+'/'+$file,$outfmt)
+			else 
+			    svdat($directory+'/'+$file,$outfmt)
+			endif
+
+		
+		$j=$j+1
+		until ($j > $ns) "*end slice loop*********************"
+	
+	$k=$k+1
+	until ($k > $nar) "*end array loop****************************"
+
+	write('line3','%s','Transforms complete '+$seqcon+' dataset')
+
+endif"*END: seqcon=ncsnn**********************************************"
+
+
+
+if ($seqcon='nssnn') or ($seqcon='nscnn')
+then "*BEGIN: seqcon=nssnn/nscnn**************************************"
+	
+	$nft=0			"*ft counter*"
+	$i=1			"*echo counter*"
+	$j=1			"*slice counter*"
+	$k=1			"*element counter*"
+
+	repeat	"*loop slices and elements****************************"
+		"  The slice array and element array are either in    "
+		"  parallel or there is only one slice to consider    "
+		"*****************************************************"
+
+		cf=1
+
+		"*reconstruct and display result**************"
+		write('line3',$fmt,$i,$j,$k,$nft+1)
+		wft2d($k)
+		image
+		$nft=$nft+1
+		
+		"*save the phasefile**************************"
+		ln($nft):$log
+		$digit=1+trunc($log/$ln10)
+		$datext=''
+		format($nft,$digit,0):$datext
+		
+		$l=1 
+		repeat
+			$datext='0'+$datext
+		$l=$l+1
+		until ($l > (4-$digit))
+		
+		$file=$phfile+'.'+$datext
+		exists($directory+'/'+$file,'file'):$exists
+
+		if ($exists > 0.5)
+		then 
+		    rm($directory+'/'+$file):$x
+		    svdat($directory+'/'+$file,$outfmt)
+		else 
+		    svdat($directory+'/'+$file,$outfmt)
+		endif
+		
+	if ($ns > 1) then $j=$j+1 endif
+	$k=$k+1
+	until ($k > $nar) "*end slice/element loop********************"
+	
+	write('line3','%s','Transforms complete '+$seqcon+' dataset')
+
+endif "*END: seqcon=nssnn/nscnn***************************************"
+
+
+
+
+if ($seqcon='cssnn')
+then "*BEGIN: seqcon='cssnn'******************************************"
+
+	$nft=0			"*ft counter*"
+	$j=1			"*slice counter*"
+	$k=1			"*element counter*"
+
+	repeat		"*loop over slices & elements*****************"
+			"    The slice array and element array are    "
+			"    either in parallel or we have single     "
+			"    slice data.                              "
+			"*********************************************"
+		
+		$i=1		"*echo counter*"
+
+		repeat	"*loop over echoes****************************"
+			"    Reverse the transform polarity for even  "
+			"    echoes, so that all images are congruent "
+			"*********************************************"
+
+			cf=$i
+
+			if (($i % 2) = 0)
+			then $type='ptype'
+			else $type='ntype'
+			endif
+	
+
+			"*reconstruct and display result**************"
+			write('line3',$fmt,$i,$j,$k,$nft+1)
+			wft2d($type,$k)
+			image
+			$nft=$nft+1
+	
+
+			"*save the phasefile**************************"
+			ln($nft):$log
+			$digit=1+trunc($log/$ln10)
+			$datext=''
+			format($nft,$digit,0):$datext
+			
+			$l=1 
+			repeat
+				$datext='0'+$datext
+			$l=$l+1
+			until ($l > (4-$digit))
+		
+			$file=$phfile+'.'+$datext
+			exists($directory+'/'+$file,'file'):$exists
+			
+			if ($exists > 0.5)
+			then 
+			     rm($directory+'/'+$file):$x
+			     svdat($directory+'/'+$file,$outfmt)
+			else 
+			     svdat($directory+'/'+$file,$outfmt)
+			endif
+
+
+		$i=$i+1
+		until ($i > $ne) "*end echo loop**********************"
+
+	if ($ns > 1) then $j=$j+1 endif
+	$k=$k+1
+	until ($k > $nar) "*end slice/element loop********************"
+
+	write('line3','%s','Transforms complete '+$seqcon+' dataset')
+
+endif "*END: seqcon='cssnn'*******************************************"
+
+
+"*END: Reconstruction Loops*******************************************"
+
+
+
+
+"*BEGIN: Establish Arrayed Parameters*********************************"
+"	Parse the array parameter (string value) into tokens          "
+"	which are the names of the arrayed parameters                 "
+"*********************************************************************"
+if (array <> '')
+then
+	$pass0=array
+	length($pass0):$length
+
+
+	"*PASS 1: Remove ( ) and , from array**" 
+	$pass1='' $char='' $k=1
+	repeat
+		substr($pass0,$k,1):$char
+		if ($char='(') or ($char=',') or ($char=')') 
+		then $char=' ' endif
+     		$pass1=$pass1+$char
+	$k=$k+1
+	until ($k > $length)
+
+
+	"*PASS 2: Break array into tokens******"
+	$k=1
+	repeat
+     		$token[$k]=''
+	$k=$k+1
+	until ($k > $length)
+
+
+	$k=1	 $t=1	 $newchar=''	 $oldchar=''
+	repeat
+		substr($pass1,$k,1):$newchar
+	
+		if ($newchar=' ') 
+        	then
+            		if ($k > 1)
+            		then
+               			if ($oldchar <> $newchar) then $t=$t+1 endif
+            		endif
+        	else
+            		$token[$t]=$token[$t]+$newchar
+        	endif
+
+        	$oldchar=$newchar
+	$k=$k+1
+	until ($k > $length)
+
+	$narpar=$t
+else
+	$token[1]=''
+	$narpar=1
+endif
+
+"*END: Establish Arrayed Parameters***********************************"
+
+
+
+
+
+
+
+
+"*BEGIN: Establish Image Orientation**********************************"
+"	Images aquired with the conventional applications are         "
+"	assumed to have a fixed orientation encoded in the orient 
+"       parameter.				                      "
+
+"	This encoding is converted to the values of the nine          "
+"	direction cosines which deifne the orientation of the         "
+"	coordinate frame relative relative to the magnet frame.       "
+"*********************************************************************"
+
+"*Determine DC values from the gradient signs*************"
+if (gro < 0) then $sgro=-1 else $sgro=1 endif
+if (gpe < 0) then $sgpe=-1 else $sgpe=1 endif
+if (gss < 0) then $sgss=-1 else $sgss=1 endif
+
+
+"*Decode orient*******************************************"
+$gread=''
+substr(orient,1,1):$gread
+$gphase=''
+substr(orient,2,1):$gphase
+$gslice=''
+substr(orient,3,1):$gslice
+
+
+"*Assign the values of the DC matrix**********************"
+$k=1
+repeat
+	$dc[$k]=0
+$k=$k+1
+until ($k > 9)
+
+
+"*Row 1 Read Out Axis*************************************"
+if ($gread='x') then $dc[1]=$sgro endif
+if ($gread='y') then $dc[2]=$sgro endif
+if ($gread='z') then $dc[3]=$sgro endif
+
+"*Row 2 Phase Encode Axis*********************************"
+if ($gphase='x') then $dc[4]=$sgpe endif
+if ($gphase='y') then $dc[5]=$sgpe endif
+if ($gphase='z') then $dc[6]=$sgpe endif
+
+"*Row 3 Slice Select Axis*********************************"
+if ($gslice='x') then $dc[7]=$sgss endif
+if ($gslice='y') then $dc[8]=$sgss endif
+if ($gslice='z') then $dc[9]=$sgss endif
+
+
+"*END: Establish Image Orientation************************************"
+
+
+
+
+
+
+
+"*BEGIN: RF pulse data base*******************************************"
+"	The following code establishes a strucutre used to define     "
+"	the properties of RF pulses used with traditional sequences.  "
+
+"	The information content in the structure has the same         "
+"	definition as that in the headers of SEQD RF templates:       "
+
+"	$pat:	Name of the pulse template file			      "
+"	$typ:	Type of pulse selective/non selective                 "
+"	$mod:   Modulation type of the pulse                          "
+"	$ew:    Excitation width factor (-1 means not defined)        "
+"	$iw:    Inversion width factor (-1 means not defined)         "
+"	$ff:    Flip factor (-1 means not defined)                    "
+"*********************************************************************"
+$k=0
+
+"*Gaussian Pulse*********************************"
+$k=$k+1
+$pat[$k]='gauss' $typ[$k]='selective' $mod[$k]='amplitude' 
+$ew[$k]=2.69 $iw[$k]=1.54 $ff[$k]=0.4134
+
+"*Hermite180 Pulse*******************************"
+$k=$k+1
+$pat[$k]='hrm180' $typ[$k]='selective' $mod[$k]='amplitude' 
+$ew[$k]=6.02 $iw[$k]=3.48 $ff[$k]=0.1547
+
+"*Hermite90 Pulse********************************"
+$k=$k+1
+$pat[$k]='hrm90' $typ[$k]='selective' $mod[$k]='amplitude' 
+$ew[$k]=5.41 $iw[$k]=3.27 $ff[$k]=0.1975
+
+"*Sc180 Pulse************************************"
+$k=$k+1
+$pat[$k]='sc180' $typ[$k]='selective' $mod[$k]='adiabatic' 
+$ew[$k]= -1 $iw[$k]=14.53 $ff[$k]= -1
+
+"*Sech180 Pulse**********************************"
+$k=$k+1
+$pat[$k]='sech180' $typ[$k]='selective' $mod[$k]='adiabatic' 
+$ew[$k]= -1 $iw[$k]=15.79 $ff[$k]= -1
+
+"*Sech90 Pulse***********************************"
+$k=$k+1
+$pat[$k]='sech90' $typ[$k]='nonselective' $mod[$k]='adiabatic' 
+$ew[$k]= -1 $iw[$k]= -1 $ff[$k]= -1
+
+"*Sinc Pulse*************************************"
+$k=$k+1
+$pat[$k]='sinc' $typ[$k]='selective' $mod[$k]='amplitude' 
+$ew[$k]=5.96 $iw[$k]=4.44 $ff[$k]=0.1769
+
+"*Square Pulse***********************************"
+$k=$k+1
+$pat[$k]='square' $typ[$k]='selective' $mod[$k]='amplitude' 
+$ew[$k]=1.37 $iw[$k]=0.8 $ff[$k]=1
+
+"*ts90 Pulse*************************************"
+$k=$k+1
+$pat[$k]='ts90' $typ[$k]='nonselective' $mod[$k]='adiabatic' 
+$ew[$k]= -1 $iw[$k]= -1 $ff[$k]= -1
+
+"*ts180 Pulse************************************"
+$k=$k+1
+$pat[$k]='ts180' $typ[$k]='nonselective' $mod[$k]='adiabatic' 
+$ew[$k]= -1 $iw[$k]= -1 $ff[$k]= -1
+
+"*END: RF pulse data base*********************************************"
+
+
+
+
+
+
+
+"*BEGIN: Establish Image Slice Thickness******************************"
+"	The slice thickness has to be calculated for each sequence    "
+"	on a case by case basis. To do this information about the     "
+"	slice selection structure of each sequence is stored in       "
+"	the lists $pulse (pulse names) and $flip (typical flip angle) "
+
+"	The slice thickness value is stored as the string parameter   "
+"	$slcthk, so that the value NaN can be written in to the       "
+"	header file. Images are assumed to have only one slice        "
+"	thickness.                                                    "
+"*********************************************************************"
+
+"*Image & Shorte Sequences**********************"
+"    Two selective pulses as 90 & 180           "
+"***********************************************"
+if ($thktyp='image') 
+then $pulse='p1','pw' $flip=90,180 endif 
+
+
+"*ssfp Sequence*********************************"
+"    One selective pulse as a 90 or less        "
+"***********************************************"
+if ($thktyp='ssfp') 
+then $pulse='pw' $flip=90 endif 
+
+
+"*csi2D sequence*******************************"
+"    One selective pulse as a 180              "
+"**********************************************"
+if ($thktyp='csi2D') 
+then $pulse='pw' $flip=180 endif 
+
+
+"*Multiecho sequence****************************"
+"    One selective pulse as a 90                "
+"***********************************************"
+if ($thktyp='multiecho')
+then $pulse='p1' $flip=90 endif 
+
+
+"*stecho sequence******************************"
+"    Three selective pulses as 90s             "
+"**********************************************"
+if ($thktyp='stecho')
+then $pulse='p1','p2','p3' $flip=90,90,90 endif
+
+
+
+
+
+"**********************************************"
+"    Determine a list of pulse bandwidth       "
+"    factors for the sequence using the $pulse "
+"    and $flip information. Non selective or   "
+"    missing pattern data are defaulted to     "
+"    a pulse bandwidth factor $BIG.            "
+
+"    The assumption is made that p1/p1pat,     "
+"    pw/pwpat, p2/p2pat are used together      "
+"    in the usual applications convention      "
+"**********************************************"
+$j=1 $jlim=size('$pulse')
+repeat
+	$k=1 $klim=size('$pat') $found='no'
+	repeat
+		if ({$pulse[$j]+'pat'}=$pat[$k])
+		then
+			if ($flip[$j] < 135.0) or ($flip[$j] > 225.0)
+			then $sbw[$j]=$ew[$k] 
+			else $sbw[$j]=$iw[$k]
+			endif
+			
+			$found='yes' 
+		endif
+	$k=$k+1
+	until ($k > $klim)
+
+	if ($found='no') then $sbw[$j]=$BIG endif
+
+$j=$j+1
+until ($j > $jlim)
+
+
+
+
+"**********************************************"
+"   Find the minimum pulse bandwidth for the   "
+"   pulses on the $pulse list.                 "
+"**********************************************"
+
+$sbwmin=$BIG $jmin=1
+
+$j=1 $jlim=size('$pulse')
+repeat
+	if ($sbw[$j] < $sbwmin) and ($sbw[$j] > 0)
+	then $sbwmin=$sbw[$j] $jmin=$j endif
+$j=$j+1
+until ($j > $jlim)
+
+if ({$pulse[$jmin]} > 0) and ($sbwmin > 0)
+then $pbw=$sbwmin/($us_s*{$pulse[$jmin]}) 
+else $pbw=$BIG 
+endif
+
+
+
+
+"*Determine The Slice Thickness******************"
+"	Same code for all cases when we know     "
+"       pbw for the sequence.                    "
+"************************************************"
+if ($pbw < $BIG)
+then
+	if (gss > -1) and (gss < 1)
+	then
+		$slcthk='NaN'
+	else
+		$slcthk=''
+		$slice=$pbw/($gamma*$cal*gss)
+		format($slice,10,6):$slcthk
+	endif
+
+else
+	$slcthk='NaN'                 
+endif
+
+
+"*END: Establish Image Slice Thickness********************************"
+
+
+
+
+
+
+
+"BEGIN: Calculate The Data Scale Origin & Span************************"
+"	The first point of the phase file is assumed to correspond    "
+"	to the bottom LH corrner of the image display with trace='f1' "
+"	using Vnmr.						      " 
+"	modified: trace no longer set to f1, but orientation assumes  "
+"		it is set to f1.				      " 
+"*********************************************************************"
+
+if (gro < 0) then $absgro=0-gro else $absgro=gro endif
+if (gpe < 0) then $absgpe=0-gpe else $absgpe=gpe endif
+if (gss < 0) then $absgss=0-gss else $absgss=gss endif
+
+$kro=(tof+0.5*sw-resto)/($gamma*$cal*$absgro)
+$kpo=(0.5*sw1)/($gamma*$cal*$absgpe)
+
+$rspan=lro
+$pspan=lpe
+
+"END: Calculate The Data Scale Origin & Span*************************"
+
+
+
+
+
+
+
+
+
+"*BEGIN: Write Procpar to Target Directory***************************"
+"	The procpar from the CUURENT tree is written to the          "
+"	target data directory. This allows tags and any settings     "
+"	used for reconstruction to be passed along with the data     "
+"********************************************************************"
+
+$procpar=$directory+'/procpar'
+fsave($procpar,'current')
+
+"*END: Write Procpar to Target Directory*****************************"
+
+
+
+
+
+
+
+
+"*BEGIN: Define DDL Formats For Header File****************************"
+"	The code here forms a structure which defines the format       "
+"	strings used to write meta data into the ASCII file headers    "
+"	used with the new data format.                                 "
+"**********************************************************************"
+
+
+$ddl[1]='float  rank = %d;'
+$ddl[2]='char  *spatial_rank = "%s";'
+$ddl[3]='char  *storage = "%s";'
+$ddl[4]='float  bits = %d;'
+$ddl[5]='char  *type = "%s";'
+$ddl[6]='float  matrix[] = {%d, %d};'
+$ddl[7]='char  *abscissa[] = {"%s", "%s"};'
+$ddl[8]='char  *ordinate[] = { "%s" };'
+$ddl[9]='float  span[] = {%f, %f};'
+$ddl[10]='float  origin[] = {%f, %f};'
+$ddl[11]='char  *nucleus[] = {"%s", "%s"};'
+$ddl[12]='float  nucfreq[] = {%f, %f};'
+$ddl[13]='float  location[] = {%s, %s, %s};'
+$ddl[14]='float  roi[] = {%s, %s, %s};'
+$ddl[15]='float  orientation[] = {%f, %f, %f, %f, %f, %f, %f, %f, %f};'
+
+$ddl[16]='float  %s = %f;'
+$ddl[17]='char  *%s = "%s";'
+
+"*END: Define DDL Formats For Header File******************************"
+
+
+
+
+
+
+
+
+
+
+"*BEGIN: Assemble Common Information For All Headers******************"
+"	The phase files share a large amount of common information    "  
+"       this is assembled here from existing program variables        "
+"	NOTE: Vnmr phasefiles are 4 bytes per data point	      "	
+"*********************************************************************"
+$rank=2
+$spatial_rank='2dfov'
+			
+$type='absval'
+$abs[1]='cm' 		$abs[2]='cm'
+$ord='intensity'
+
+"****************************************"
+" set data format			 "
+"****************************************"
+if ($outfmt = 'f') then
+	$storage='float'
+	$bits=32
+else if ($outfmt = 'b') then
+	$storage='char'
+	$bits=8
+else
+	$storage='integer'
+	$bits=16
+endif
+endif 
+	
+
+"****************************************"
+"  The roi size is written in string     "
+"  format so NaN can be used             "
+"****************************************"
+$roi[1]='' $roi[2]='' $roi[3]=$slcthk
+format(lpe,10,6):$roi[1]
+format(lro,10,6):$roi[2]
+
+
+"****************************************"
+"  The direction cosine matrix dc is     "
+"  reordered so as to follow the axis    "
+"  definitions in the Vnmr phasefile:    "
+"  traces or F1 axis first               "
+"****************************************"
+$o1=$dc[2]	$o2=$dc[1]	$o3=$dc[3]
+$o4=$dc[5]	$o5=$dc[4]	$o6=$dc[6]
+$o7=$dc[8]	$o8=$dc[7]      $o9=$dc[9]
+
+"*END: Assemble Common Information For All Headers******************"
+
+
+
+
+
+
+
+
+"*BEGIN: Write Header Files********************************************"
+"	The header file creation and management is similiar to the     "
+"	reconstruction loop used to generate the corresponding data.   "
+"**********************************************************************"
+
+"*Local Format Value*******************************"
+$fmt='Writing Header: echo: %3d   slice: %3d   element %3d   file: %3d'
+
+
+if ($seqcon='ncsnn')
+then  "begin seqcon=ncsnn**********************************************"
+
+	$i=1		"*echo counter*"
+	$nhd=1          "*header counter*"	
+	$k=1		"*element counter*"
+	repeat "begin element loop*************************************"
+
+		$j=1    "*slice counter*"
+		repeat "begin slice loop*******************************"
+
+			"*Compute Location********************"
+			$kr=(tof+rfl-rfp-resto)/($gamma*$cal*$absgro)
+			$kp=(rfl1-rfp1)/($gamma*$cal*$absgpe)
+
+			if ($absgss < 0.5)
+			then $ks=0
+			else
+				$slice=slcto+($j-1)*delto
+				$ks=($slice-resto)/($gamma*$cal*$absgss)
+			endif
+
+			$loc[1]='' $loc[2]='' $loc[3]=''
+			format($kp,10,6):$loc[1]
+			format($kr,10,6):$loc[2]
+			format($ks,10,6):$loc[3]
+
+
+"begin: write file block************************************************"
+
+write('line3',$fmt,$i,$j,$k,$nhd)
+
+"*Establish header file name*************"
+ln($nhd):$log
+$digit=1+trunc($log/$ln10)
+$datext=''
+format($nhd,$digit,0):$datext
+
+$l=1 
+repeat
+	$datext='0'+$datext
+$l=$l+1
+until ($l > (4-$digit))
+
+$file=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$file)
+write('file',$file,'%s','#!/usr/local/fdf/startup')
+write('file',$file,$ddl[1],$rank)		"*rank*"
+write('file',$file,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$file,$ddl[3],$storage)		"*storage*"
+write('file',$file,$ddl[4],$bits)		"*bits*"
+write('file',$file,$ddl[5],$type)		"*type*"
+write('file',$file,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$file,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$file,$ddl[8],$ord)		"*ordinate*"
+write('file',$file,$ddl[9],$pspan,$rspan)	"*span*"
+write('file',$file,$ddl[10],$kpo,$kro)		"*origin*"
+write('file',$file,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$file,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$file,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$file,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$file,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+"*Arrayed Parameters*********************"
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$file,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$file,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+"end: write file block**************************************************"
+
+
+
+		$nhd=$nhd+1
+		$j=$j+1
+		until ($j > $ns) "end slice loop***********************"
+
+	$k=$k+1
+	until ($k > $nar) "end array loop******************************"
+
+endif "end seqcon=ncsnn************************************************"
+
+
+if ($seqcon='nssnn') or ($seqcon='nscnn')
+then  "begin seqcon=nssnn**********************************************" 
+
+	$i=1		"*echo counter*"
+	$j=1		"*slice counter*"
+	$nhd=1          "*header counter*"	
+	$k=1		"*element counter*"
+	repeat "begin element loop*************************************"
+
+		"*Compute Location********************"
+		$kr=(tof+rfl-rfp-resto)/($gamma*$cal*$absgro)
+		$kp=(rfl1-rfp1)/($gamma*$cal*$absgpe)
+
+		if ($absgss < 0.5)
+		then $ks=0
+		else
+			if ($ns = $nar)
+			then $slice=slcto[$j]
+			else $slice=slcto[1]
+			endif
+
+			$ks=($slice-resto)/($gamma*$cal*$absgss)
+		endif
+
+		$loc[1]='' $loc[2]='' $loc[3]=''
+		format($kp,10,6):$loc[1]
+		format($kr,10,6):$loc[2]
+		format($ks,10,6):$loc[3]
+
+		
+"begin: write file block************************************************"
+
+write('line3',$fmt,$i,$j,$k,$nhd)
+
+"*Establish header file name*************"
+ln($nhd):$log
+$digit=1+trunc($log/$ln10)
+$datext=''
+format($nhd,$digit,0):$datext
+
+$l=1 
+repeat
+	$datext='0'+$datext
+$l=$l+1
+until ($l > (4-$digit))
+
+$file=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$file)
+write('file',$file,'%s','#!/usr/local/fdf/startup')
+write('file',$file,$ddl[1],$rank)		"*rank*"
+write('file',$file,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$file,$ddl[3],$storage)		"*storage*"
+write('file',$file,$ddl[4],$bits)		"*bits*"
+write('file',$file,$ddl[5],$type)		"*type*"
+write('file',$file,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$file,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$file,$ddl[8],$ord)		"*ordinate*"
+write('file',$file,$ddl[9],$pspan,$rspan)	"*span*"
+write('file',$file,$ddl[10],$kpo,$kro)		"*origin*"
+write('file',$file,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$file,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$file,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$file,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$file,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+"*Arrayed Parameters*********************"
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$file,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$file,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+"end: write file block**************************************************"
+
+
+	
+	if ($ns > 1) then $j=$j+1 endif
+	$nhd=$nhd+1
+	$k=$k+1
+	until ($k > $nar) "end element loop****************************"
+
+endif "end seqcon=nssnn************************************************"
+
+
+if ($seqcon='cssnn')
+then "begin seqcon=cssnn**********************************************"
+
+	$nhd=1			"*header counter*"
+	$j=1			"*slice counter*"
+	$k=1   			"*element counter*"
+	repeat "begin element loop*************************************"
+
+		$i=1
+		repeat "begin echo loop********************************"
+
+			"*Compute Location********************"
+			$kr=(tof+rfl-rfp-resto)/($gamma*$cal*$absgro)
+			$kp=(rfl1-rfp1)/($gamma*$cal*$absgpe)
+
+			if ($absgss < 0.5)
+			then $ks=0
+			else
+				if ($ns = $nar)
+				then $slice=slcto[$j]
+				else $slice=slcto[1]
+				endif
+
+				$ks=($slice-resto)/($gamma*$cal*$absgss)
+			endif
+
+			$loc[1]='' $loc[2]='' $loc[3]=''
+			format($kp,10,6):$loc[1]
+			format($kr,10,6):$loc[2]
+			format($ks,10,6):$loc[3]
+
+"begin: write file block************************************************"
+
+write('line3',$fmt,$i,$j,$k,$nhd)
+
+"*Establish header file name*************"
+ln($nhd):$log
+$digit=1+trunc($log/$ln10)
+$datext=''
+format($nhd,$digit,0):$datext
+
+$l=1 
+repeat
+	$datext='0'+$datext
+$l=$l+1
+until ($l > (4-$digit))
+
+$file=$directory+'/'+$hdfile+'.'+$datext
+
+
+"*Create and write the file**************"
+write('reset',$file)
+write('file',$file,'%s','#!/usr/local/fdf/startup')
+write('file',$file,$ddl[1],$rank)		"*rank*"
+write('file',$file,$ddl[2],$spatial_rank)	"*spatial_rank*"
+write('file',$file,$ddl[3],$storage)		"*storage*"
+write('file',$file,$ddl[4],$bits)		"*bits*"
+write('file',$file,$ddl[5],$type)		"*type*"
+write('file',$file,$ddl[6],0.5*fn1,0.5*fn)	"*matrix*"
+write('file',$file,$ddl[7],$abs[1],$abs[2])	"*abscissa*"
+write('file',$file,$ddl[8],$ord)		"*ordinate*"
+write('file',$file,$ddl[9],$pspan,$rspan)	"*span*"
+write('file',$file,$ddl[10],$kpo,$kro)		"*origin*"
+write('file',$file,$ddl[11],tn,dn)		"*nucleus*"
+write('file',$file,$ddl[12],sfrq,dfrq)		"*nucleus frequency*"
+
+write('file',$file,$ddl[13],$loc[1],$loc[2],$loc[3])	
+write('file',$file,$ddl[14],$roi[1],$roi[2],$roi[3])	
+write('file',$file,$ddl[15],$o1,$o2,$o3,$o4,$o5,$o6,$o7,$o8,$o9)
+
+"*Arrayed Parameters*********************"
+"  Multiecho data sets have a variable   "
+"  te value. The correct value of te     "
+"  should be written in to the header    "
+"****************************************"
+write('file',$file,$ddl[16],'te',$i*te)
+
+if ($token[1] <> '')
+then
+	$l=1 
+	repeat
+		if (typeof($token[$l]))
+		then
+		    write('file',$file,$ddl[17],$token[$l],{$token[$l]}[$k])
+		else
+		    write('file',$file,$ddl[16],$token[$l],{$token[$l]}[$k])
+		endif	
+	$l=$l+1
+	until ($l > $narpar)
+endif
+
+"end: write file block**************************************************"
+
+
+		$nhd=$nhd+1
+		$i=$i+1
+		until ($i > $ne) "*end echo loop***********************"
+
+
+	if ($ns > 1) then $j=$j+1 endif
+	$k=$k+1
+	until ($k > $nar) "end element loop****************************"
+
+
+endif "end seqcon=csnnn***********************************************"
+
+write('line3','%s','Phasefile & Header Generation Complete')
+
+$k=1			"*element counter*"
+$nhd=$nhd-1
+
+repeat		"*loop over files*****************"
+		"*********************************************"
+		
+
+"*Establish file name*************"
+	ln($k):$log
+	$digit=1+trunc($log/$ln10)
+	$datext=''
+	format($k,$digit,0):$datext
+
+	$l=1 
+	repeat
+		$datext='0'+$datext
+	$l=$l+1
+	until ($l > (4-$digit))
+
+	$ifilehd=$directory+'/'+$hdfile+'.'+$datext
+	$ifileph=$directory+'/'+$phfile+'.'+$datext
+	$ofileph=$directory+'/'+$phfile+$datext+'.'+'fdf'
+	write('line3','%s','header='+$ifilehd)
+	write('line3','%s','phase='+$ifileph)
+	write('line3','%s','output='+$ofileph)
+	shell('fdfgluer "'+$ifilehd+'" "'+$ifileph+'" "'+$ofileph+'"'):$x
+	rm($ifilehd):$x
+	rm($ifileph):$x
+
+	$k=$k+1
+until ($k > $nhd) "end element loop****************************"
+
+"*END: Write Header Files**********************************************"
+
+
+"******************************THE END********************************"

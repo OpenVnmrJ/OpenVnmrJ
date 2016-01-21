@@ -1,0 +1,50 @@
+"macro VPtempcal_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+VPtext
+VPgettarget('TempCal'):$targetvalue
+
+clear(2)
+fn=4*np
+ft
+lp=0
+aph
+f full
+intmod='off'
+axis='h'
+
+vsadj
+thadj(2)
+dll
+
+cr=llfrq[1]-rfl
+delta=llfrq[1]-llfrq[2]
+sp=llfrq[2]-rfl-500
+wp=delta+1k
+tempcal('e'):$samptemp
+readhw('temp'):$vtsetpt
+
+write('line3','VT Calibration'):$text
+CalibrationResults=$text
+write('line3','VT set point: %.2f deg. C    Sample temperature: %.2f deg. C',$vtsetpt,$samptemp)
+write('line3','VT set point: %.2f deg. C    Sample temperature: %.2f deg. C',$vtsetpt,$samptemp):$text
+CalibrationResults=CalibrationResults,$text
+atext($text)
+
+if ($activestudy<>'activestudy') then return endif
+
+VPhistory($vtsetpt,$samptemp)
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')

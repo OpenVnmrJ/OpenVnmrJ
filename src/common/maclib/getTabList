@@ -1,0 +1,144 @@
+"macro getTabList"
+// This is derived from the updateExpSelector macro
+
+if ($# < 1) then $1='' endif
+$cdir=userdir+'/persistence/CloneManager'
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir($cdir) endif
+$tablist=$cdir+'/ProtocolTabList'
+
+    exists('expselnu','parameter','global'):$e
+    if ($e < 0.5) then
+        create('expselnu','real','global')
+        setgroup('expselnu','display','global')
+        expselnu=0
+    endif
+    exists('expselu','parameter','global'):$e
+    if ($e < 0.5) then
+        create('expselu','real','global')
+        setgroup('expselu','display','global')
+        expselu=0
+    endif
+
+    $tabnames='' $j=1 $tabtot=0
+
+// This section collects the tabnames from systemdir
+//  For prevj3, stick with ProtocolLabels in the chempack appdir
+//  For vj3, use the ExperimentSelector file in the appropriate appdir
+   $key=systemdir+'/chempack/templates/vnmrj/interface/ProtocolLabels.xml'
+   exists($key,'file'):$prevj3
+   if ($prevj3) then
+	$fileex=1
+	$type='apptype' $node='label'
+   else
+	findExpSelXml:$fileex,$key
+//	exists('ExperimentSelector.xml','templates/vnmrj/interface'):$fileex,$key
+	$type='protocol' $node='tab'
+   endif
+   exists($key,'file'):$fileex
+   if ($fileex) then
+     $done=0
+
+     while $done<1 do
+       lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs',$type,'seekcs',$node,'filekey'):$key,$ret
+       if ($ret) then
+         lookup('mfile',$key,'delimiter','=','readline',1,'filekey'):$val,$key,$ret
+         if ($ret<2) then 
+	    $done=1
+         else
+            $s1='' $ret2=0
+            strstr($val,'"'):$ret2,$s1,$val
+            if ($ret2=0) then $val='' endif
+            strstr($val,'"'):$ret2,$val
+            if ($ret2=0) then $val='' endif
+            if $val<>'' then
+                teststr('$tabnames',$val,'local'):$OK
+                if ($OK=0) then
+                    $tabnames[$j]=$val
+                    $j=$j+1
+                    $tabtot=$tabtot+1
+                endif
+            endif
+         endif
+       else
+         $done=1
+       endif
+     endwhile
+   endif
+
+//  Add any tabname supplied as an argument
+   if ($1<>'') then $tabnames[$j]=$1 $j=$j+1 $tabtot=$tabtot+1 endif
+
+// This section collects the tabnames from appdirs other than systemdir
+    getappdirs:$atot,$adirs,$alabels
+    $tmpfile=$cdir+'/tabname_tmplist'
+    write('reset',$tmpfile)
+    if ($atot>0) then
+        $i=1
+        repeat
+            $ret=0
+            strstr($adirs[$i],systemdir):$ret
+            if ($ret<>1) then
+                shell('(ls -1 '+$adirs[$i]+'/templates/vnmrj/protocols/*.xml >> '+$tmpfile+')'):$dum
+            endif
+            $i=$i+1
+        until $i > $atot
+    endif
+
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$total
+    shell('rm -f '+$tmpfile):$dum
+    if ($total>0) then
+        $i=1
+        repeat
+            $tab='' $title='' $label='' $menu1='' $menu2='' $appdirlabel=''
+            $filepath=$s1[$i]
+            $appdir='' strstr($filepath,'/templates/vnmrj/protocols/'):$ret,$appdir
+            if ($ret) then
+                teststr('$adirs',$appdir,'local'):$ret2
+                if ($ret2) then $appdirlabel=$alabels[$ret2] endif
+            endif
+            getattr($filepath,'template','tabname'):$tab
+
+            strstr($appdir, userdir):$ret
+            if($ret > 0) then
+                if(expselu=1) then
+                    if($appdirlabel <> '') then
+                        $tab=$appdirlabel
+                    endif
+                else
+                    if($tab='') then
+                        getattr($filepath,'template','apptype'):$tab
+                    endif
+                endif
+            else
+                if(expselnu=1) then
+                    if($appdirlabel <> '') then
+                        $tab=$appdirlabel
+                    endif
+                else
+                    if ($tab='') then
+                        getattr($filepath,'template','apptype'):$tab
+                    endif
+                endif
+            endif
+            if ($tab<>'') then 
+		teststr('$tabnames',$tab,'local'):$isin
+		if ($isin=0) then $tabnames[$j]=$tab $j=$j+1 $tabtot=$tabtot+1 endif
+	    endif
+            $i=$i+1
+        until $i > $total
+    endif
+
+    write('reset',$tablist)
+    if ($tabtot) then
+        $i=1
+        repeat
+           write('file',$tablist,'"%s" "%s"',$tabnames[$i],$tabnames[$i])
+           $i=$i+1
+        until $i > $tabtot
+    endif
+    write('file',$tablist,'"New Tabname" "NeWTaBNaMe"')
+
+    return($tabnames,$tabtot)
+

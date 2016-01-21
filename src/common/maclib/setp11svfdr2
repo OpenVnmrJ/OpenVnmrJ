@@ -1,0 +1,43 @@
+"macro setp11svfdr2"
+// setsvfdir2(path) is used to set  svfdir2
+//      cpprefs[47] will be used to set svfdir2 by cpADMIN('example'). 
+// setsvfdir2 without argument will be used by p11 to check and 
+//	set svfdir2 (to a subdirectroy of $p11dir). 
+//  
+isFDAsystem:$p11
+if($p11=0) then // non-p11
+  if($#>0) then
+    svfdir2=$1
+  endif
+  return
+endif
+
+// svfdir2 should be $p11dir or a subdirectory in $p11dir
+// getP11Dir('system'):$p11dir // gives the root of p11 dir, i.e., /home/vnmrp11
+getP11Dir:$p11dir // gives user's p11 dir, i.e., /home/vnmrp11/data/username
+
+exists('svfdir2','parameter','global'):$ex
+if ($ex=0) then
+  create('svfdir2','string','global')
+endif
+
+if($#>0) then
+
+  strstr($1,$p11dir):$n 
+  if($n=1) then
+    svfdir2=$1
+  else 
+    write('line3','svfdir2 should be a directory in %s.',$p11dir)
+  endif
+
+else 
+
+  if(svfdir2='') then
+      svfdir2=$p11dir
+  else
+    strstr(svfdir2,$p11dir):$n 
+    if($n=0) then // force svfdir2 to be a subdir of $p11dir 
+      svfdir2=$p11dir
+    endif
+  endif
+endif

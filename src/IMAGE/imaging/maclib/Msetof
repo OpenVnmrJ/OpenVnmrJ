@@ -1,0 +1,27 @@
+"macro Msetof"
+
+"*******************************************************************"
+" Msetof - macro to set offset frequency " 
+"          The initial parameters are picked up from a file"
+"          The RFCOIL.f.par must exist in pardir or PARDIR"
+"          or else currrent or default spuls parameters are used"
+"********************************************************************"
+
+$par = ''
+$par = RFCOIL+'.f.par'
+
+exists(PARDIR+'/'+$par,'file'):$ex
+if($ex = 0) then
+  exists(userdir+'/parlib/'+$par,'file'):$e
+  if ($e = 0) then
+    if (seqfil <> 'spuls') then
+      spuls    "** load spuls parameters **"
+    endif
+  else
+    rtp($par)   "get spuls.f.par from parlib"
+  endif
+else
+  "Load spuls.f.par parameters and determine tof"
+  rtp(PARDIR+$par) 
+endif
+setof

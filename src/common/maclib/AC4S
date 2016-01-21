@@ -1,0 +1,26 @@
+"macro AC4S"
+"Auto calibrate"
+clear(2)
+write('error','finding estimate of pw360')
+wft av
+$counter=1
+repeat
+  select($counter)
+  if tn='H1' then peak(.5p,2p):$ht else peak:$ht endif
+  if $counter=1 then $minht = $ht $pw360=pw[1] else
+     if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+pw90=$pw360/4.0
+echo('pw90 = ',pw90)
+write('plotter',125,200,'The 90 degree pulse is %2.1f',pw90)
+ph pl('all') pap page
+$strpw90='' $strtpwr=''
+format(pw90,0,1):$strpw90
+format(tpwr,0,0):$strtpwr
+setparams('pw90',$strpw90)
+setparams('tpwr',$strtpwr)
+ACreport
+

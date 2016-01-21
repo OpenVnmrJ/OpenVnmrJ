@@ -1,0 +1,76 @@
+"macro plotoption"
+
+if ($#<1) then
+  write('error','Usage: plotoption(<add/remove/default>,<option name>)')
+  return
+endif
+
+exists('plotoption','parameter'):$ex
+if ($ex<0.5) then
+   create('plotoption','string')
+   setgroup('plotoption','display')
+endif
+
+if ($1='default') then
+    // This sets up default values of plotoption parameters
+    plotoption='comments','params','logo','header','miniplot'
+    if procdim<=1 then
+	plotoption='plarray','axis',plotoption
+	if arraydim=1 then
+	    plotoption[1]='pl'
+	endif
+    else
+	plotoption='custompl','plot2D(`plt2Darg`)',plotoption
+    endif
+    return
+endif
+if ($1='1d') then
+  teststr('plotoption','plot2D(`plt2Darg`)'):$index
+  if ($index) then
+    {$0}('remove','custompl')
+  endif
+  return
+endif
+if ($1='2d') then
+  teststr('plotoption','custompl'):$index
+  if ($index) then
+    plotoption[$index+1]='plot2D(`plt2Darg`)'
+  else
+    {$0}('add','custompl','plot2D(`plt2Darg`)')
+  endif
+  teststr('plotoption','pl'):$index
+  if ($index) then destroy('plotoption','current',$index):$dum endif
+  teststr('plotoption','plarray'):$index
+  if ($index) then destroy('plotoption','current',$index):$dum endif
+  teststr('plotoption','axis'):$index
+  if ($index) then destroy('plotoption','current',$index):$dum endif
+  return
+endif
+
+teststr('plotoption',$2):$index
+if ($1='add') then 
+  if ($index=0) then
+    $size=size('plotoption')
+    if ($size=1) and (plotoption='') then
+      plotoption=$2
+    else
+      plotoption[$size+1]=$2
+    endif
+    if ($2='custompl') and ($#=3) then
+      plotoption[$size+2]=$3
+    endif
+  endif
+endif
+if ($1='remove') then 
+  if ($index<>0) then
+    $size=size('plotoption')
+    if ($size=1) then
+      plotoption=''
+    else
+      destroy('plotoption','current',$index):$dum
+      if $2='custompl' then
+	destroy('plotoption','current',$index):$dum
+      endif
+    endif
+  endif
+endif

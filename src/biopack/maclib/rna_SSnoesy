@@ -1,0 +1,53 @@
+"macro rna_SSnoesy"
+"rna_SSnoesy macro for BioPack, Nov 2006"
+
+BPrtppar('rna_SSnoesy')
+
+setfrq reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+dm='nnnn' dm2='nnnn'
+"default is no decoupling, but parameters are set"
+dof=dof-(174-70)*dfrq
+BPcheckdpwr2
+dmm2='c'+dmm2 
+dmm='cccp'
+BPsetwurstparams
+
+$pw1='' $pw2=''
+$pw3='' $pw4=''
+
+"243usec ok for 600MHz for SS pw90 at 12ppm"
+$pw12ss=0.000243*(600/sfrq)
+"pw90 for excitation at 7.5ppm is 7.5/2.5 longer"
+$pw7ss=(7.5/2.5)*$pw12ss
+format($pw12ss,1,6):$pw1
+format($pw7ss,1,6):$pw2
+
+"122usec ok for 600MHz for S pw90 at 12ppm"
+$pw12s=0.000122*(600/sfrq)
+"pw90 for excitation at 7.5ppm is 7.5/2.5 longer"
+$pw7s=(7.5/2.5)*$pw12s
+format($pw12s,1,6):$pw3
+format($pw7s,1,6):$pw4
+
+$ss_wave12='ss '+$pw1
+$ss_wave7='ss '+$pw2
+$s_wave12='s '+$pw3
+$s_wave7='s '+$pw4
+
+opx('SS_at_12p') setwave($ss_wave12) cpx(pw*compH,tpwr)
+pbox_rst
+opx('SS_at_7.5p') setwave($ss_wave7) cpx(pw*compH,tpwr)
+pbox_rst
+opx('S_at_12p') setwave($s_wave12) cpx(pw*compH,tpwr)
+pbox_rst
+opx('S_at_7.5p') setwave($s_wave7) cpx(pw*compH,tpwr)
+pbox_rst
+
+BPmoveshape('S_at_12p.RF')
+BPmoveshape('S_at_7.5p.RF')
+BPmoveshape('SS_at_12p.RF')
+BPmoveshape('SS_at_7.5p.RF')
+BPpboxget('SS_at_7.5p.RF'):SSshape,pwSS,SSpwr
+
+spin='n' ni=1 phase=1
+man('rna_SSnoesy')

@@ -1,0 +1,112 @@
+Protocol: Oneput1rhol  Sequence: onepult1rho1.c  Apptype: solidseq1d
+
+Description:
+
+Single pulse preparation and spinlock with a choice of SPINAL64 or TPPM
+decoupling.
+
+Parameter Groups:
+
+90X:  Module:  no
+Sequence:  onepul.c
+Description:  Provides a 90-degree pulse on obs that can be used 
+              as a preparation pulse. Also used to store the obs 
+              calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+
+spinlockX:  Module:  no
+Sequence:  tancpxt1rho.c.
+Description:  Implements a CW spinlock on obs for T1u measurements with
+              dec CW deoupling.
+Parameters:  Sequence Page
+       aXlock - amplitude of the obs spinlock.
+       tXlock - the spinlock delay.
+       
+Hmixseq:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during F1 and mixing periods when Hseq is used for
+              acquisition.
+Parameters:  Sequence Page - the Hmixspinal and Hmixtppm groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              or SPINAL.
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal() or gettppm(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); or _spinal();
+             _dseqoff(mix); runs decprgoff(mix);
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal.
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix =
+             getdseq("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.  
+Parameters:  Sequence Page - Hspinal and Htppm groups overlap. 
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+              getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence:  tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+

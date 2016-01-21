@@ -1,0 +1,307 @@
+"macro im2Depi"
+"Setup and Processing for 2D slice-selective EPI sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$action2 = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $action2 = $2
+endif
+
+"**********************************************************"
+" Retrieve Parameters                                      "
+"**********************************************************"
+if ($action = 'rtpar') then
+  "Strip image array if in Plan VP"
+  $vp = ''
+  xm1('vp'):$vp
+  if ($vp = 'plan') then
+    epiarray('strip')
+  endif
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+
+  ldrf     "Set resto = H1offset"
+
+  "Set the number of data volumes which will be used to set expt time"
+  im2Depi('getnvols'):volumes        "Number of image volumes"
+  im2Depi('getnrefs'):nrefs,nsges    "Number of reference volumes"
+
+  go('check')
+
+  "Check flipscale has correct number of values (for compressed segments)"
+  im2Depi('checkflips')
+
+  "For ASL make sure control planes are correct"
+  aslset('prep')
+
+  seqcon='ncnnn'
+  nf=size('pss')*nseg
+
+  on('execprocess'):$proc
+
+  if ($action2 = 'check') then
+    return
+  elseif ($action2 = 'ref') then
+    recon='prescanEPI'
+    image = 0
+    volumes = 0 nrefs = 1 nsges = 0
+    werr  = 'image=1'
+    wdone = ''
+    wexp  = 'im2Depi(`proc`,`ref`)'
+  elseif ($action2 = 'refauto') then
+    recon='prescanEPI'
+    image = 0
+    volumes = 0 nrefs = 1 nsges = 0
+    werr  = 'image=1'
+    wdone = '' 
+    tep=gpropdelay "Guess a suitable tep"
+    wexp  = 'im2Depi(`proc`,`refauto`)'
+  elseif ($action2 = 'checkref') then
+    "Check type of reference scan"
+    if (epiref_type = 'single') then epi_pc = 'POINTWISE' endif
+    if (epiref_type = 'triple') then epi_pc = 'SCALED_TRIPLE' endif
+    if (epiref_type = 'fulltriple') then epi_pc = 'TRIPLE' endif
+  elseif ($action2 = 'test') then
+    im2Depi('prep','checkref')
+    if (allvolumes='y') then aipXrecon('allvolumes') endif
+    recon='external'
+    epiarray('strip')
+    epiarray('set')
+    werr = 'epiarray(`strip`)'
+    if ($proc = 1 ) then wexp = 'im2Depi(`proc`)' else wexp='epiarray(`strip`)' endif
+  else
+    im2Depi('prep','checkref')
+    if (allvolumes='y') then aipXrecon('allvolumes') endif
+    recon='external'
+    epiarray('strip')
+    epiarray('set')
+    "If we have just loaded a protocol we want to strip the array"
+    $cmd='VP 1 epiarray(`strip`)'
+    vnmrjcmd($cmd)
+  endif
+
+  "Set up real-time recon"
+  wnt = ''
+  "wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'"
+
+  "Execute any sequence specific preparation"
+  execseq('prep')
+
+endif
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+if ($action = 'proc') then
+  if ($action2 = 'ref') then  "Process setup scan"
+    aipDeleteData
+    gplan('clearStacks')
+    im2Dxrecon('recon')
+    image=1
+  elseif ($action2 = 'refauto') then
+    aipDeleteData
+    gplan('clearStacks')
+    im2Dxrecon('recon')
+    im2Depi('proc','tepadj')
+    wexp='im2Depi(`proc`,`ref`)'
+    au
+  elseif ($action2 = 'tepadj') then
+    $parfile=curexp+'/tepadjust'
+    exists($parfile,'file'):$ex
+    if ($ex=1) then
+      lookup('file',$parfile)
+      lookup('seekcs','tepadjust','read'):$tepadjust
+      tep=tep+$tepadjust
+      rm($parfile):$trash
+    endif
+  else
+    if (wnt = '') then
+      aipDeleteData
+      aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+      $vp = ''
+      xm1('vp'):$vp
+      if ($vp = 'plan') then
+        epiarray('strip')
+        epiarray('set')
+        im2Dxrecon('recon')
+        epiarray('strip')
+      else
+        im2Dxrecon('recon')
+      endif
+    else
+      wnt=''
+      setvalue('wnt','','processed') "otherwise <Reprocess> won't work"
+    endif
+  endif
+  $vp = ''
+  xm1('vp'):$vp
+  "Review VP"
+  if ($vp = 'review') then
+    aipData='reprocessed'
+  endif
+  execseq('proc')  "Execute any sequence specific processing"
+endif
+
+"**********************************************************"
+" Data Volumes                                             "
+"**********************************************************"
+if ($action='getnvols') then
+  aipXrecon('getnvols'):$nvols
+  if (size('image') = 1) then "image array will be set automatically"
+    $nvols = $nvols*images
+  else "image array has already been set"
+    $i=1 $nref = 0
+    while ($i <= size('image')) do
+      if (image[$i] <> 1) then $nref=$nref+1 endif
+      $i=$i+1
+    endwhile
+    $nvols=$nvols-$nref
+  endif
+  return($nvols) 
+endif
+
+"**********************************************************"
+" Reference Volumes                                        "
+"**********************************************************"
+if ($action='getnrefs') then
+  if (size('image') = 1) then "image array will be set automatically"
+    if (epiref_type='manual') then $nrefs=0 endif
+    if (epiref_type='single') then $nrefs=1 endif
+    if (epiref_type='triple') then $nrefs=3 endif
+    if (epiref_type='fulltriple') then im2Depi('getnvols'):$nrefs $nrefs=$nrefs+2 endif
+    if (sgeref='y') then $nsges=1 else $nsges=0 endif
+  else "image array has already been set"
+    $i=1 $nrefs=0 $nsges=0
+    while ($i <= size('image')) do
+      if (image[$i] <> 1) then
+        if (image[$i] = 0) then $nrefs=$nrefs+1 endif
+        if (image[$i] = -1) then $nrefs=$nrefs+1 endif
+        if (image[$i] = -2) then $nrefs=$nrefs+1 endif
+        if (image[$i] = -3) then $nsges=$nsges+1 endif
+      endif
+      $i=$i+1
+    endwhile
+  endif
+  return($nrefs,$nsges) 
+endif
+
+"**********************************************************"
+" Set Dwell Time                                           "
+"**********************************************************"
+if ($action='setdwell') then
+  $oversample=1 $dwmod=1            "Default dw is multiple of 0.4 us with no oversample"
+  if (pro <> 0.0) then              "Oversample if readout FOV is offset"
+    $oversample=2 $dwmod=$dwmod*2   "For oversample dw must be a multiple of 0.8 us"
+  endif
+  "If sw < 100kHz (dw>10us) there's an additional x2 (why??)"
+  if (dw>10e-6*$oversample) then $dwmod = $dwmod*2 endif
+  "Set dw to a suitable multiple of 0.4 us"
+  if ($dwmod > 1) then
+    $dwreal=dw*1e6/0.4
+    $dwint = trunc($dwreal)
+    if ($dwreal-$dwint > 0.5) then $dwint = $dwint+1 endif
+    while ($dwint mod $dwmod <> 0) do "dw not a suitable multiple"
+      if (dwlast > dw) then 
+        $dwint = $dwint - 1
+      else
+        $dwint = $dwint + 1
+      endif
+    endwhile
+    if ($dwint=0) then dw=$dwmod*0.4e-6 else dw=$dwint*0.4e-6 endif
+  endif
+  episw=1/dw dwlast=dw
+endif
+
+"**********************************************************"
+" Display flip angles used in compressed segments          "
+"**********************************************************"
+if ($action='displayflips') then
+  im2Depi('checkflips')
+  $flips=''
+  $i=1
+  while ($i<=nseg) do
+    $str=''
+    format(flipscale[$i],5,3):$str
+    $flips=$flips+$str
+    if ($i<nseg) then $flips=$flips+',' endif
+    $i=$i+1
+  endwhile
+  write('line3','flipscale = %s',$flips)
+endif
+
+"**********************************************************"
+" Check flip angles used in compressed segments            "
+"**********************************************************"
+if ($action='checkflips') then
+  "Only do the check for compressed segments"
+  if (cseg<>'y') then return endif
+  "Only do the check if values are not automatically calculated"
+  if (autoscale=1) then return endif
+  "Do nothing if flipscale is the correct size"
+  $size=size('flipscale')
+  if ($size = nseg) then return endif
+  $flips=flipscale
+  $i=1
+  if ($size < nseg) then
+    while ($i<=nseg-$size) do
+      flipscale[$i]=$flips[1]
+      $i=$i+1
+    endwhile
+  else
+    flipscale=1 "reinitialise flipscale"
+  endif
+  while ($i<=nseg) do
+    flipscale[$i]=$flips[$size-nseg+$i]
+    $i=$i+1
+  endwhile
+endif
+
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+if ($action = 'prescan') then
+  im2Depi('gain','init')
+endif
+
+if ($action = 'gain') then
+  $gainstart = 0                               // set low gain to acquire data
+  $gainfraction = 0.5                          // fraction of ADC to fill
+  $paramfile = curexp+'/tempparams'            // store some parameters to be reset after prescan
+  if ($action2 = 'init') then                  // initialize params and acquire data
+    im2Depi('prep')
+    image = 0
+    writeparam($paramfile,'nt,ss')             // back up parameters to be reset after processing
+    nt = 1
+    ss = 1/(2*tr) + 2                          // estimate ss based on TR
+    gain = $gainstart
+    wnt = ''
+    wdone = ''
+    werr = ''
+    wexp = 'im2Depi(\'gain\',\'proc\')'
+    au
+  elseif ($action2 = 'proc') then              // process gain scan when complete
+    cf='n'                                     // cf=n tells fidmax to look at entire data block
+    fidmaxarray:$fidmax                        // find highest data value
+    $factor = $gainfraction*32767/$fidmax
+    ln($factor):$ln
+    $gain = 20*$ln/2.303                       // calculate gain change based on fidmax and gainfraction
+    gain = $gain + $gainstart                  // set computed gain, then delete gain params
+    if (gain > 60) then
+      gain = 60
+    endif
+    readparam($paramfile,'nt,ss')              // restore original parameter values
+    cf = 1
+  endif
+endif

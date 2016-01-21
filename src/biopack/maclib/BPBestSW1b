@@ -1,0 +1,91 @@
+"macro BPBestSW1b"
+"BPBestSW1b ASCOM (Automatic Spectral Compression)"
+" Contributed by Bernhard Brutscher and Ewen Lescop"
+" Grenoble"
+
+"check if 2D or 3D parameter set"
+exists('ni2','parameter'):$3D
+$ni2exp=''
+$frq=''
+$axis=''
+if $3D=1 then
+ if ((ni>2) and (ni2<2)) then   "F1F3 experiment"
+  substr(axis,2,1):$axis   "find second character of axis"
+  if $axis='p' then n2='1H' $frq='sfrq' endif
+  if $axis='d' then n2='13C' $frq='dfrq' endif
+  if $axis='2' then n2='15N' $frq='dfrq2' endif
+ endif
+ if ((ni<2) and (ni2>2)) then   "F2F3 experiment"
+  $ni2exp='y'
+  substr(axis,3,1):$axis   "find third character of axis"
+  if $axis='p' then n2='1H' $frq='sfrq' endif
+  if $axis='d' then n2='13C' $frq='dfrq' endif
+  if $axis='2' then n2='15N' $frq='dfrq2' endif
+ endif
+else "must be 2D parameter set"
+ if axis='pp' then n2='1H' $frq='sfrq' endif
+ if axis='pd' then n2='13C' $frq='dfrq' endif
+ if axis='p2' then n2='15N' $frq='dfrq2' endif
+endif
+
+ if ($# < 1) then
+ "input('Enter the number of a peak having a representative line width '):$w"
+  format(n1,3,1):$pnum
+  ll2d('info',$pnum):$peak_number,$f1,$f2,$amplitude,$volume,$label,$comment,$FWHH1,$FWHH2,$f1_min,$f1_max,$f2_min,$f2_max
+  $smaxSw1=''
+  $smaxSw2=''
+  format($FWHH1*{$frq},5,2):$smaxSw1
+  format($FWHH2*sfrq,5,2):$smaxSw2
+ else
+  $smaxSw1=''
+  $smaxSw2=''
+  $FWHH1=$1/{$frq}
+  $FWHH2=$2/sfrq
+  format($FWHH1*{$frq},5,2):$smaxSw1
+  format($FWHH2*sfrq,5,2):$smaxSw2
+ endif
+
+ write('line3','max line width in Indirect Dimension: '+$smaxSw1)
+ write('line3','max line width in Direct Dimension: '+$smaxSw2)
+ write('line3','please wait during optimization of Indirect Dimension SW ...')
+
+
+"find location of program"
+BPfindfile('BestSW4varian.pl'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/BestSW4varian.pl' then
+ cp($path1,userdir+'/../bin')  
+endif
+
+ $cmd=userdir+'/../bin/BestSW4varian.pl '+$smaxSw2+' '+$smaxSw1+' '+n2
+ $dum=''
+ shell($cmd):$dum
+
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/BestSW4varian.pl' then
+ rm(userdir+'/../bin/BestSW4varian.pl'):$e
+endif
+
+ lookup('file','./bestSW.dat')
+ lookup('read'):$sw $sw=$sw*{$frq}
+ $SW=''
+ $inc=''
+ $ni=$sw/$FWHH1/{$frq}
+ if $ni2exp='y' then
+   ni2=$ni sw2=$sw 
+   format(sw2,5,2):$SW
+   format(ni2,5,0):$inc
+ else 
+   ni=$ni sw1=$sw 
+   format(sw1,5,2):$SW
+   format(ni,5,0):$inc
+ endif
+ cd(n3):$dum
+ write('line3','Indirect SW set to:'+$SW+' Hz; #increments set to:'+$inc)
+ BPBestSW='n'
+

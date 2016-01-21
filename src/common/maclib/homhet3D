@@ -1,0 +1,104 @@
+"macro homhet3D"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for hetero2D"
+  module('combine','presat wet gradient par2D par3D homo2D hetero2D',newmodules):newmodules
+  module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+"Acquisition parameters"
+
+homo2D('acquisition')
+refsource2='dfrq'
+
+dm='nnn' dmm='ccg' d3=0
+if (dn='H1') then dmm='ccw' endif
+setdecpars
+	"Decoupler is safely turned OFF"
+	"Individual experiments should turn them ON via"
+	"rtx or wrtp"
+
+        "It is assumed that the gradient coherence "
+        "  selection is for the hetero pathway"
+        "  May be reset by pslabel_setup macro"
+
+fixgrd(10):gzlvlE
+gtE=0.002
+EDratio=sfrq/dfrq
+if (tn = 'H1') then
+  getparam('gHratio',dn):EDratio
+elseif (dn = 'H1') then
+  $EDratio=1/EDratio
+  getparam('gHratio',dn):$EDratio
+  EDratio=1/$EDratio
+endif
+
+ni=64 ni2=64 at=0.05
+if (np > 1024) then np=1024 endif
+sw=sw sw1=sw
+
+	"setup default F2 spectral width"
+    if (dn='C13') then
+        setsw2(dn,160,-10)
+    elseif (dn='N15') then
+	setN15sw('sw2')
+    elseif (dn='H1') then
+        setsw2(dn,10,0)
+    else
+        setsw2(dn,100,-100)
+    endif
+phase2=1,2
+        "If needed, phase2 will be reset by rtx or pslabel_setup macro"
+
+nullflg=PFGflg
+if PFGflg='y' then null=0 else null=0.35 endif
+j1xh=146
+if (dn='N15') then j1xh=90 endif
+jnxh=8
+j1min=130 j1max=165 jnmin=5 jnmax=8
+mult=0
+
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+"Processing parameters"
+
+homo2D('process')
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+refsource2='dfrq'
+f2coef='1 0 0 0 0 0 -1 0'
+        "f2coef will be, if needed, reset by rtx or pslabel_setup macro"
+fn=512 fn1=128 fn2=128
+ph ph1 ph2
+        "The following is needed because ni was reset"
+setLP1
+setLP2
+gaussian
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+"Display parameters"
+
+homo2D('display')
+        "**************************************************"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "**************************************************"
+
+axis='ppd'
+full
+rp2=0 lp2=0
+
+ENDIF
+"**********************************************"

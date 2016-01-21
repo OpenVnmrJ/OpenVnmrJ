@@ -1,0 +1,53 @@
+"macro BPccspinlock"
+" BPccspinlock   "
+" if BPpwrlimits=1, power levels may reduced, but bandwidths remain, at"
+"   the expense of increased sidebands"
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+exists('BPspinlock','parameter','global'):$e2
+if $e2=1 then
+   if BPspinlock=0 then 
+    BPspinlock=50*dfrq            "set C-13 spinlock bandwidth to default value"
+   endif
+else 
+   create('BPspinlock','real','global')
+   BPspinlock=50*dfrq            "set C-13 spinlock bandwidth to default value"
+endif
+
+            "check BPspinlock relative to user-defined maximum BPdpwrspinlock"
+if BPpwrlimits=1 then
+  if BPdpwrspinlock<BPspinlock then
+    BPspinlock=BPdpwrspinlock
+  endif
+endif
+
+format(BPspinlock,9,1):$bw    " set C-13 spinlock bandwidth to global stored value"
+
+ $wave = 'WURST2m' + $bw + '/0.08ms'
+ opx			          " setup CC spinlock "
+ setwave($wave)  
+ pbox_rst
+ pboxpar('name', 'cctocsy.DEC')
+ pboxpar('stepsize', '1.0')
+ pboxpar('sfrq', dfrq)
+ pboxpar('sucyc', 't9,t5,m4')
+ pboxpar('ref_pwr', pwClvl)
+ pboxpar('ref_pw90', pwC*compC)
+ " pboxpar('reps', '0')  - to suppress the Pbox output "
+ shell('Pbox')
+ if BPpwrlimits=1 then
+  BPpboxget('cctocsy.DEC'):$name,$par,$dpwr,$par,$par,$par
+  if $dpwr>BPdpwrmax then
+     pboxpar('attn',$attn)
+     echo($attn)
+     shell('Pbox')
+  endif
+ endif
+ BPmoveshape('cctocsy.DEC')

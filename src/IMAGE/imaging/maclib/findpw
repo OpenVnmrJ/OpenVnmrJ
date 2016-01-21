@@ -1,0 +1,171 @@
+"macro findpw"
+"************************************************************************"
+"                                                                        "
+" findpw - macro to determine the 90/180 degree pulse                    "
+"                                                                        "
+" Usage:   findpw       interactive mode, requests start and end value   "
+"          findpw(start_value,end_value <,90 or 180>)                    "
+"                                                                        "
+" Details: The routine sets up a pw array of ten values between start    "
+"          and end_values.  Determines the maximum and minimum peak.     " 
+"          and displays the results. If necessary the pulsecal database  " 
+"          can be updated.                                               " 
+"                                                                        "
+"************************************************************************"
+
+/*** Check arguments and set for data acquisition or processing ***/
+if ($# = 0) then                                 // no arguments, ask for input from operator
+  input('Enter start value for pw: '):$start
+  input('Enter end value for pw: '):$end
+  input('Calibrate 90 or 180? '):$flip
+  $action = 'acq'
+elseif ($# = 1) then
+  if (typeof('$1') = 1) then                     // 1 string argument
+    if ($1 = 'proc') then                        // only allowed option is 'proc'
+      $action = 'proc'
+      $flip = 90                                 // default to 90 degree calibration if no 2nd argument
+    else
+      write('Warning: findpw: unrecognized argument %s',$1)
+      abort
+    endif
+  else
+    write('Warning: findpw usage:  findpw(pw start, pw end, 90 or 180)')
+    abort
+  endif
+elseif ($# = 2) then
+  if (typeof('$1') = 0) then                     // 1st argument is numerical, set up start and end values
+    $start = $1
+    $end = $2
+    $flip = 90                                   // default to 90 degree calibration if no 3rd argument
+    $action = 'acq'
+  else
+    if ($1 = 'proc') then                        // only allowed option is 'proc'
+      $action = 'proc'
+      $flip = $2                                 // 2nd argument 90 or 180 processing
+    else
+      write('Warning: findpw: unrecognized argument %s',$1)
+      abort
+    endif
+  endif
+elseif ($# = 3) then                             // 3 arguments: start, end, flip
+  $start = $1
+  $end = $2
+  $flip = $3
+  $action = 'acq'
+endif
+
+if ($action = 'acq') then
+  if (seqfil <> 'spuls') then                    // Only spuls supported
+    write('error','findpw: use spuls sequence')
+    abort
+  endif
+  write('line3','Finding estimate of %d degree pulse',$flip)
+
+  if ( (pwpat = 'hard') OR (pwpat = 'square') ) then
+    if ($start > 200) then
+      write('error','findpw: start value too large: %f', $start)
+      abort
+    endif
+  
+    if ($end > 5000) or ($end < 20) then
+      write('error','findpw: illegal end value: %f', $end)
+      abort
+    endif
+  endif
+
+  create('findpwgain','integer','current',0)     // temporary params to adjust gain, presig, lb
+  create('findpwpresig','flag','current','h')
+  create('findpwlb','real','current',10)
+  create('findpwss','integer','current',2)
+  create('findpwpw','pulse','current',10)
+  findpwgain = gain
+  findpwpresig = presig
+  findpwlb = lb
+  findpwss = ss
+  findpwpw = pw[1]
+
+  $number = 12
+  $step = ($end - $start)/($number - 1)
+  setarray('pw',$start,$step,$number)            // array pw
+  gain = 0  presig = 'h'  lb = 20  ss = 2
+
+  $flipstr = ''
+  format($flip,0,0):$flipstr
+  wexp = 'findpw(\'proc\','+$flipstr+')'
+  wnt = 'wft findmaxpeak:$index select($index) vsadj dssh'
+  au  
+
+elseif ($action = 'proc') then
+  ph findmaxpeak:$index select($index) aph0
+  vsadj(wc2max/2)
+  vp = wc2max/3
+  dssh dssl('value','format=%.1f')
+  $ok = 0                                        // flag to signal satisfactory calibration
+
+  if ($flip = 90) then
+    if ($index = 1 or $index = arraydim) then
+      write('line3','findpw: maximum peak height found at either first or last array element')
+    else
+      fitmaxpeak:$pw
+      write('line3','90-degree pulse calibration: %.1f usec',$pw)
+      $ok = 1
+    endif
+
+  elseif ($flip = 180) then                      // find 180 at first zero crossing
+    $indexneg = 0
+    $i = 0
+    repeat
+      $i = $i + 1
+      select($i)
+      peak:$height
+      if ($height < 0  and  $indexneg = 0) then 
+        $indexneg = $i                           // first negative peak
+      endif
+      $amp[$i] = $height
+    until ($i = arraydim)
+
+    if ($indexneg = 0) then
+      write('line3','findpw: 180 degree pulse not found, try increasing power or maximum pulse length')
+    elseif (($indexneg = 1) or ($indexneg = arraydim)) then
+      /*** Make sure first negative peak isn't first or last ***/
+      write('line3','findpw: zero crossing found at either first or last array element')
+    else                                         // fit line through zero crossing
+      $i = 0  $xval = 0  $yval = 0
+      repeat                                     // Find x and y values +/- 2 positions from indexneg
+        $i = $i + 1
+        $index = $indexneg - 3 + $i
+        if (($index >= 1) and ($index <= arraydim)) then
+          $xval[$i] = pw[$index]                 // store x and y values to pass to fm_slope for linear regression
+          $yval[$i] = $amp[$index]
+        endif
+      until ($i = 4)
+      fm_slope($xval,$yval):$slope,$yintercept,$correlation
+      $xintercept = -$yintercept/$slope
+      $ok = 1                                    // Successful, OK to update pulsecal
+      $pw = $xintercept
+      write('line3','180-degree pulse calibration: %.1f usec',$pw)
+    endif
+  else
+    write('line3','findpw: flip angle %d not recognized, must be 90 or 180',$flip)
+  endif
+
+  gain = findpwgain                              // restore saved param values
+  presig = findpwpresig
+  lb = findpwlb
+  ss = findpwss
+  pw = findpwpw
+  destroy('findpwgain') destroy('findpwpresig')  destroy('findpwlb') destroy('findpwss') destroy('findpwpw')
+  wnt = ''  wexp = ''
+
+  if ($ok = 1) then                              // update pulsecal
+    pulsecal(RFCOIL,pwpat,$pw,$flip,tpwr,'quiet')
+  endif
+endif
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  " 
+"                                                                        " 
+"060711 ARR modified to find either 90 or 180                            " 
+"970225(ss) First version created and tested                             " 
+"************************************************************************"
+

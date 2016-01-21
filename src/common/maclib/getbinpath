@@ -1,0 +1,16 @@
+"macro getbinpath"
+// Return binpath
+// First check UNIX path rules
+// Then check appdir bin directories
+
+if ($# = 0) then
+  write('line3','%s requires an argument',$0)
+  return
+endif
+$binpath=''
+$isok=1
+shell('which',$1,'2>/dev/null'):$binpath // check UNIX path rules
+if ($binpath='') then                    // check appdirs
+  exists($1,'bin'):$isok,$binpath
+endif
+return($isok,$binpath)

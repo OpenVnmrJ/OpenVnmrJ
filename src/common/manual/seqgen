@@ -1,0 +1,93 @@
+*************************************************************************
+seqgen		Initiate compilation of pulse sequence (M,U)
+seqgenupdate    Update directories with the results of the last seqgen (M,U)
+*************************************************************************
+
+
+  Syntax 1:	seqgen(file<.c>)			from VNMR
+  Syntax 2:	seqgen          			from VNMR
+  Syntax 3:	seqgen('file<.c> file2 file3 ...')	from VNMR
+  Syntax 4:	seqgen <-static> file<.c> <more files>	from UNIX
+
+  Description:	The VNMR macro seqgen compiles pulse sequences.
+		seqgen can also be called directly from UNIX as shown in
+		syntax 4 shown above.
+
+                From Vnmr, if no argument is passed, the value of
+                the seqfil parameter is used to determine which sequence
+                should be compiled.  To compile more than one sequence,
+                give a list of the names in the first argument.  For example,
+                seqgen('s2pul HMBC HMQC') will compile the three listed
+                sequences.  The ".c" suffix used on pulse sequence file
+                names is optional.  That is, the command
+                seqgen('s2pul.c HMBC.c HMQC.c') gives equivalent results.
+
+                The seqgen shellscript calls the
+		compilation makefile seqgenmake, located in the directory
+		/vnmr/psg.
+
+		The specified pulse sequence can be located in any defined
+                applications directory.  Absolute path names can also be passed
+                to seqgen.  If the pulse sequence does not exist in ~/vnmrsys/psglib
+                seqgen will first copy the file to ~/vnmrsys/psglib and
+                compile it there; the resulting
+		executable will be placed in ~/vnmrsys/seqlib. seqgen will
+		report where if found the specified sequence(s).
+                If the pulse sequence uses "include files", the psg directories
+                of all defined applications directories will be searched for the
+                include file.
+
+		seqgen uses library files (object modules) found in
+		/vnmr/lib.  If setuserpsg / psggen has been run, the
+		library files in the local directory ~/vnmrsys/psg take
+		precedence over those in /vnmr/psg.
+
+		Additional options to seqgen are available when called from
+		UNIX.  First, multiple sequences can be specified in the same
+		call, e.g.:
+
+			seqgen apt dept noesy
+			seqgen *.c
+			seqgen /vnmr/psglib/*.c
+
+		Note that seqgen not only accepts filenames with and without
+		extension - the files can also be specified with wildcards
+		and complex pathnames 
+		Any error messages will be put into a file "file.errors"
+		(where "file" is the name of the pulse sequence) in the psglib
+		in which the compilation is performed.
+
+		Second, if an option -static is specified as first argument,
+		seqgen will use static rather than dynamic binding. This will
+		result in rather large executables in seqlib (several hundred
+		Kbytes) - on Solaris computers, these sequences (i.e., the go
+                command) will then execute slightly faster, which is helpful
+                in some special applications like LC-NMR, where the time spend
+                on the go command becomes critical.  (Static binding results in a fixed
+		size time gain, regardless of the number of increments; for
+		large nD experiments the difference will not be noticeable).
+                On Linux systems, it is not clear that there is any advantage
+                to using the static option.
+
+  Arguments:	-static is an optional first argument to activate static
+			binding
+		file	is the name of a pulse sequence; it can either be just
+			the name (with or without ".c" extension), or it can
+			be an absolute or relative pathname (again with or
+			without extension).
+
+  Syntax 1:	seqgenupdate(file<.c>)			from VNMR
+  Syntax 2:	seqgenupdate          			from VNMR
+  Syntax 3:	seqgenupdate('file<.c> file2 file3 ...')	from VNMR
+  Syntax 4:	seqgenupdate file<.c> <more files>	from UNIX
+
+                seqgenupdate has the same syntax as seqgen. Just like seqgen, one or more
+                pulse sequence names can be supplied. seqgenupdate proceeds in two steps.
+                In the first step, if any arguments are given, it passes them to seqgen
+                for compilation. In the second step, it looks at the results of a preceeding
+                seqgen. If permissions allow, it will move the compiled sequences back to the
+                application directories or absolute paths they were copied from.
+
+  See also:	VNMR User Programming, Chapter 2, "Pulse Sequence Programming".
+
+  Related:	psggen - compile a user PSG object library (M.U)

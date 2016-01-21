@@ -1,0 +1,64 @@
+"macro sar"
+"***************************************************************************"
+"  sar:  This macro computes SAR values for each transmit channel.  Input   "
+"        is obtained from the sar computation resulting from go or          "
+"        go('SAR').  The result of the SAR calculation in go is a value in  "
+"        units of tpwr.  This sar macro converts the tpwr result into a     "
+"        true measure of SAR in Watts/kg, taking into account the actual RF "
+"        power, and the geometry factor of the RF coil in use.              "
+"                                                                           "
+"        The average power in tpwr units is expected as the first           "
+"        argument.  The SAR in W/kg is returned as an output value.         "
+"                                                                           "
+"  Usage:  sar(tpwr_val):sar_result                                         "
+"                                                                           "
+"  Alan Rath   Version 1.0   Jun 20, 2001                                   "
+"***************************************************************************"
+
+
+"*****"
+" Check for an input argument, the tpwr/sec                              "
+"*****"
+if ($# <> 0) then
+  write('error','Usage:  sar:sar_value')
+  abort
+endif
+
+"*****"
+" Determine the conversion from tpwr units to Watts                      "
+" This is where we'll read from a power calibration file later           "
+" For now, assume 4 kw max ouput, 1dB compression at tpwr=63, a little   "
+" overestimate of power at the top, but conservative                     "
+" Approximate power at tpwr=50 is down by factor of 16                   "
+"*****"
+  $watts_at_50 = 4000/16
+
+"*****"
+" Determine power, in Watts, for the input tpwr value                    "
+"*****"
+  go('SAR'):$ch1
+  ln(10.0):$ln10
+  exp(($ch1 - 50)/10*$ln10):$power_ratio
+  $watts = $watts_at_50*$power_ratio
+
+"*****"
+" Compute SAR in watts/kg                                                "
+" This is where we will read from a coil file with geometric factors     "
+" For now, assume a homogeneous head coil, 3kg head                      "
+"*****"
+  $coil_factor = 1
+  $q_factor = 1
+  $weight = 3
+  $sar = $watts*$coil_factor*$q_factor/$weight
+
+"*****"
+" Done, return the sar value              "
+"*****"
+if ($## <> 0) then
+   return($sar)
+else
+   write('line3','SAR = %g',$sar)
+endif
+
+
+

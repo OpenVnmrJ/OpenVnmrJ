@@ -1,0 +1,27 @@
+"macro rtglued"
+"rtglued macro.  Daina Avizonis 6/004/04"
+"The purupose of this rt is to retrieve a glued data set.  The glued data should have been saved with svf glued"
+"Originally the glued data should have been saved with rack,zone information"
+
+"build name based on rack zone and if user had used a plateglue template"
+$r=vrack
+$z=vzone
+$plateglue=plateglue
+$sr=''
+$sz=''
+
+format($r,1,0):$sr
+format($z,1,0):$sz
+
+if $plateglue='' then
+   $plateglue='_'
+endif
+
+"retrieve data"
+$dir=autodir+'/R'+$sr+'Z'+$sz+$plateglue+'glued'
+exists($dir,'file'):$e
+if ($e < 1) then write('error', 'glued dataset not found') endif
+rt($dir)
+
+wft1da trace='f2' endwell=96 wf1=96-sf1 full dconi
+write('line3','getting glued data %s',$dir)

@@ -1,0 +1,182 @@
+Protocol: Wpmlg1d  Sequence: wpmlg1d.c  Apptype: solidseq1d
+
+Description: 
+
+Quadrature, windowed PMLG (wPMLG) for multiple-pulse acquisition. This 
+sequence uses a composite preparation pulse involving a quadrature 
+phase-shifted 90 and a 54.7-degree pulse along Y to place the 
+magnetization perpendicular to the multiple-pulse axis of precession 
+(sqrt(2/3), 0 sqrt(1/3)),  wPMLG has a cycle time of tauXwpmlg = 
+2.0*(4.0*pwX90)*sqrt(2/3)) + B where pwX90 is the 90-degree pulse and B 
+is the window time. The pulse time is fixed, and changing tauXwpmlg 
+changes the window time B.  Wpmlg1d is used with moderate spinning 
+speeds of 8 to 14 kHz. 
+
+Additional Software
+
+reset_wpmlg1d - This macro uses the calibrated values of pwH90 and aH90 
+to calculate the intial parameters for the wpmlgX waveform and sets up 
+2D parameters. 
+   
+Setup:
+
+Load a calibrated data set and select the protocol Wpmlg1d.  For a new 
+calibration set the observe nucleus to protons and calibrate pw90X with 
+a sample of Benzene doped with Chromium AcAc using Onepul, Xx and Xmx.  
+An alternative sample is "RTV" silicon rubber spinning at about 2.5 
+kHz. 
+
+An alternate calibration is to set the proton pulse width pwH90 using 
+Tancpx, a sample of Glycine and 13C observe. After calibration set the 
+nucleus to proton and set tpwr, aX90 and pwX90 (of protons) equal to 
+the calibrated values of dpwr, aH90 and pwH90 of Tancpx.  Set the 
+sequence to Onepul and turn off the decoupler.  Observe a proton 
+wideline spectrum with a 200 kHz spectral width and gain < 10. A good 
+spin rate for this measurement is 10 kHz.  
+
+Load the proton data set obtained with Onepul of either calibration and 
+select Wpmlg1d. 
+
+The macro reset_wpmlg1d is run from the Wpmlg1d protocol.  This macro 
+performs the following 4 steps. 
+
+1. Set aXprep1 = aH90.  Set pw1Xprep1 = pwX90, pw2Xprep1 = 
+pwX90*54.7/90.0.
+2. Set aXwpmlg = aX90.  Set pwXwpmlg = sqrt(2/3)*4.0*pwX90. The value 
+of pwXwpmlg is rounded to a 12.5 ns grid and the value of aXwpmlg is 
+adjusted to reflect the change. 
+3. Set tauXwpmlg = (6/5)*2.0*pwXwpmlg, allowing a window of 1/6 of a 
+cycle or a minimum of 4.0 us. 
+4. Set sw = 1.0/tauXwpmlg. 
+
+Set qXwpmlg = -5.  qXwpmlg = 5 is incorrect.   qXwpmlg can be reset to 
+a larger value to provide PMLGN.  The maximum value of qXwpmlg is 
+determined by pwXwpmlg/qXwpmlg >= 50 ns and large values will generate 
+an acquisition error. 
+
+To optimize the sample window. Set r1Xwpmlg = 0.5 us, r2Xwpmlg = 0.5uus 
+and r3Xwpmlg = 1.0uus.  Set rof3 = r3Xwpmlg on the Receiver page 
+(important!!). Set npaXwpmlg = 10 for a 1.0 us reciever on-time.  It 
+may be necessary to increase tauXwpmlg to allow more time for 
+acquisition.  An error will be generated on acquisition if tauXwpmlg is 
+too small to.   Noise and spikes in the spectrum from ring-down in the 
+window are also evidence that tauXwpmlg must be increased. 
+
+Set scalesw = sqrt(3) for an approximate default scale factor. 
+
+Obtain a spectrum of the glycine (spin rate 10.0 kHz) or doped benzene 
+with a minimum of 4 scans.  The quadrature phase cycle must be used to 
+avoid artifacts.  See the discussion below to optimize the spectrum. 
+
+Referencing and Scaling Wpmlg2d:
+
+Fine-adjust the scale factor with two lines of known ppm.  A good test 
+sample is n.a. glycine where the two methylene lines are 1.0 ppm apart.  
+To set the F2 scale factor put a cursor on each methylene line and set 
+scalesw = (ppm2- ppm1)*sfrq/delta.  To set the F1 scale factor put a 
+cursor on each methylene line and set scalesw1 = (ppm2-
+ppm1)*sfrq/delta.  To reference F2 of the scaled 2D spectrum put a 
+cursor on the line of interest and type rl(ppm*sfrq/scalesw).  To 
+reference F1 of the scaled 2D spectrum put a cursor on the line of 
+interest and type rl1(ppm*sfrq/scalesw1). 
+
+Optimizing the Spectrum: 
+
+All multiple-pulse spectra are strongly affected by phase transient of 
+the probe. The effect of phase transient is to shift the frequency of 
+the entire spectrum and increase the individual linewidths.  In an 
+optimized setup, a Benzene (or RTV) line should be on resonance with 
+both the sequences Onepul and Wpmlg1d. Likewise a good spectrum of 
+glycine obtained with tof = 0.0 and proper referencing with setref 
+should be centerd around 5 ppm and have the minimum linewidths.  
+
+A spectrum that is strongly affected by phase transient will be shifted 
+to lower frequencies and it will be necessary to set a lower frequency 
+offset to get the best linewidths.  A common practice in the presence 
+of phase transient is to shift the carrier to about -5 ppm and obtain 
+the entire spectrum at higher frequencies. Good spectra can be obtained 
+this way and historically a low frequency carrier was needed anyway for 
+non-quadrature experiments. 
+
+Phase transient can be minimized through the adjustment of the cable 
+length between the preamplifier and the probe.  A small further 
+adjustment can be made by moving the center of the tuning dip off of 
+the carrier frequency. The manual file tunerp has the procedures for 
+minimization of phase transient. 
+
+Spectra obtained with Wpmlg1d also can show a strong center glitch or 
+"pedestal". The pedestal is a real signal that results from spins that 
+have been spin-locked along the axis of precession of wPMLG.  Spins 
+from the sample end up in pedestal if the preparation pulse pw2Xprep1 
+is adjusted incorrectly. Also, proton background spins from the module 
+end up along the precession axis because they have a low flip-angle and 
+are not refocused by wPMLG. Vespel modules have a strong proton signal 
+that may be larger than the signal of the sample so pedestal removal 
+involvesan exact subtraction of two large numbers. Kel-f modules have 
+fewer protons but have a 19F background.  Also, spectra that are not 
+obtainedwith a multiple of 4 scans will have a pedestal. 
+
+The pedestal can be removed completely, even in the presence of high 
+background, by adjustment of pw2Xprep1, if the pulses are close to 
+resonance and phase transient has been minimized. Array pw2Xprep1 over 
+several microseconds around the 54.7-degree pulse. If one would rather 
+not make the effort to remove the pedestal move the carrier and 
+pedestal to lower a frequency where it is out of the spectrum. 
+
+wPMLG spectra are best obtained with a medium spinning frequency, in 
+the range 8.0 to 14.0 kHz. At faster speeds the rotor cycle interferes 
+with the multiple pulse cycle and lowers the performance.  At slower 
+speeds spinning does not contribute to averaging. 
+
+Referencing and Scaling Wpmlg2d:
+
+Fine-adjust the scale factor with two lines of known ppm.  A good test 
+sample is n.a. glycine where the two methylene lines are 1.0 ppm apart.  
+To set the scale factor put a cursor on each methylene line and set 
+scalesw = (ppm2- ppm1)*sfrq/delta.  To reference F2 of the scaled 2D 
+spectrum put a cursor on the line of interest and type 
+rl(ppm*sfrq/scalesw).  
+
+Parameter Groups: 
+
+prep1X:  Module:  no 
+Sequence:  c7inadwpmlg2d.c       
+Description:  Implements a composite pulse consisting of a 90-degree 
+              flip followed by a smaller flip-angle to implement quadrature 
+              detection about a tilted precession axis.  Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses. 
+       pw1Xprep1 - 90-degree flip on the obs channel. 
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse.
+
+scaleX: (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.       
+
+wpmlgX:  Module:  yes
+Sequence:  wpmlg1d.c  
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwpmlg - amplitude of PMLG on obs.
+       pwXwpmlg - 360-degree flip on obs, off resonance (the length of 
+              each of the two PMLG pulses).  
+       qXwpmlg - number of phase steps that make up pwXpmlg. A negative 
+              value implements descending phases in the first pulse.
+       r1Xwpmlg - pre-pulse delay (similar to rof1). 
+       r2Xwpmlg - post_pulse delay (similar to rd or rof2).
+       r3Xwpmlg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined. 
+       tauXwpmlg - time for one PMLG cycle including the window.
+       npaXwpmlg - number of 100 ns ticks in the detection window.
+       chXwpmlg = 'obs' must be set (not shown).
+Implementation:  WMPA wpmlg = getwpmlg("wpmlgX");
+Underscore function: _wpmlg(wpmlg,phXwpmlg);  phXwpmlg is the overall 
+              phase table. 

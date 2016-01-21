@@ -1,0 +1,57 @@
+Satellite file format for FIDDLE
+================================
+
+Each line corresponds to one pair of satellite signals, and contains three
+floating point numbers separated by tab characters or spaces:
+
+- half the splitting between the satellite signals
+- the intensity of the satellites as a fraction of the parent signal
+- the isotope shift in ppm
+
+Thus a satellite file for just a pair of one-bond 13C satellites with
+a 1JCH of 125 Hz and a secondary isotope shift of 2 ppb would, given the
+natural abundance of 13C of 1.109%, be 
+
+62.5	0.00561	0.002
+
+Where a single line rather than a pair of lines is required (e.g. to use as
+reference a signal containing chlorine, which has different secondary isotope
+shifts for 35Cl and 37Cl), just set the coupling constant to zero and halve
+the required relative intensity. Thus a reference signal that has a secondary
+peak of 10% of the parent peak amplitude 10 ppb away would require the line
+
+0	0.05	0.01
+
+When calculating the relative intensities of satellite signals, the effects of
+all the isotopomers present should be include in the calculation. Thus to
+generate a satellite file for the 1H signal of TMS that includes the effects of
+one-bond and two-bond 13C couplings and of two-bond 29Si couplings, but not of
+the 13C satellites of the 29Si satellites etc. (i.e. that ignores isotopomers
+with more than one rare isotope), the original signal is split into 1.109%
+one-bond 13C satellites, 3.327% two-bond 13C satellites (because the methyl
+being observed is adjacent to three other methyls) and 4.67% two-bond 29Si
+satellites. This leaves a parent signal of only 90.894%.
+
+A satellite file suitable for the 1H signal of TMS could contain the following lines
+
+59.1  0.00610  0.00155
+	one-bond 13C coupling 118.2 Hz
+natural abundance 1.109% gives relative intensity 1.109/(2*90.894)
+      secondary isotope shift  1.55 ppb
+
+3.31  0.0257   0.00013
+	29Si two-bond satellites
+	4.67% natural abundance
+      secondary isotope shift  0.13 ppb
+
+1.37  0.00229   0.0002
+1.16  0.00687   0.0002
+0.95  0.00687   0.0002
+0.74  0.00229   0.0002
+	13C two-bond satellites (quartets)
+      2JCH = 2.11 Hz, 4JHH = 0.21 Hz
+	secondary isotope shift  0.2 ppb
+
+
+
+

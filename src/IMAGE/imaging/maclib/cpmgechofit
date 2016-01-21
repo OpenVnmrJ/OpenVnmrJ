@@ -1,0 +1,103 @@
+"macro cpmgechofit"
+
+"**************************************************************************
+"
+" cpmgechofit - Macro to process CPMG/T2 data (time domain)
+
+" Details - The CPMG/T2 time domain data is collected
+"	    The echo max is used in the T2 analysis
+"	    lsfid parameter is used to indicate the no of fid points to skip
+"	    The magnitude of the fid point is put in 
+"	    analyze.inp, which has the format:
+
+"	    no_of_peaks no_of_pairs
+"	    peaks
+"	    time   echo_amplitude
+
+"	    analyze is called to do the fitting
+
+"BUGS: lsfid must be set to 0 or 'n'
+
+"**************************************************************************
+
+$macro = $0
+"get no of fid points (re+im) to skip"
+on('lsfid'):$e
+if($e = 0) then
+  $skip = 0
+else
+  write('error','lsfid must be set to 0 or \'n\' ')
+  abort
+  if(lsfid > 32) then	"arbitrary limit, 32"
+    write('error','%s: lsfid=$d exceeds limit',$macro,lsfid)
+  endif
+  $skip = lsfid*2   "words to skip"
+endif
+
+$name = curexp+'/fp.out'
+shell('rm -f '+$name)
+$name2 = curexp+'/t2.out'
+shell('rm -f '+$name2)
+
+write('reset',$name)
+write('file',$name,'List of 1 lines in spectrum 1 to spectrum %d',np/2)
+write('file',$name,'line    frequency    (Hz)')
+write('file',$name,'1    %d',np/2)
+write('file',$name,'line spectrum amplitude (mm)')
+write('reset',$name2)
+
+f full
+df(1)  "assume 1 fid "
+shell('rm -rf /vnmr/tmp/t')
+writefid('/vnmr/tmp/t',1)	"write fid values as ascii file"
+$t = 1   
+$u = 1
+lookup('file','/vnmr/tmp/t')	"skip points=lsfid"
+lookup('skip',$skip)
+
+bt=0  "initialize array"
+while($t <= (np-$skip) ) do
+  $rs='' $is=''
+  lookup('read',2):$rs,$is	"read real+imag pair"
+  format($rs,4,6):$r
+  format($is,4,6):$i
+
+  $m = sqrt(($r*$r)+($i*$i))	"magnitude"
+  if($t = 1) then
+    $m1 = $m
+  endif
+
+  write('file',$name,'1        %d             %f',$u,$m)
+
+  write('file',$name2,'%f    %f',te*$u,$m)
+  bt[$u] = te*$u               "bt contains time(te) array"
+
+  $t = $t + 2
+  $u = $u + 1
+
+endwhile
+
+av ft('noft')
+clear
+
+analyze('expfit', 'bt',  'T2', 'list')  "bt variable used as te array "
+
+cat(curexp+'/analyze.list')
+
+   "extract the t2 value from the analyze.out file"
+   exists('t2','parameter'):$ex
+   if($ex < 1) then
+     create('t2')
+   endif
+
+   lookup('file',curexp+'/analyze.out')
+   lookup('skip',10,'read',1):t2
+   write('line3','T2 estimate is %1.3f sec ',t2)
+   t2=trunc(1000*t2)/1000
+center 
+expl   "exponential/polynomial curve display "
+wc=80  
+  
+
+
+

@@ -1,0 +1,106 @@
+"macro AT29"
+"AT29" "Modulator test-high power (channel 2) " 
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATd2pul'
+   text('Modulator Test -high power') 
+   at_currenttest='mod_array_ch2' 
+
+   if (fifolpsize<1024) then   "only unity+ or inova has modulator"
+    write('line3','No Linear Modulator Present. Test Skipped')
+    ATnext return
+   endif
+    tpwr=tpwr-20 pw=10
+    array('dpwrf',102,0,40)
+    atext('Test Using Channel 2')
+    if (sfrq<500) then nt=4 endif
+    dpwr=tpwr dof=tof 
+    ph f vp=0
+
+    wnt='ATwft crl rfl=sw/2 rfp=0 sp=-1p wp=2p if(celem>1) then select(celem) aph0:$ok if $ok then aph0 endif endif peak:$ht if $ht<0 then rp=-rp endif vsadj(150) dssh dtext'
+    wexp='AT29(`PART1`)' 
+
+    ATcycle
+    au
+    write('line3','Modulator Test (channel 2)')
+    dps
+
+elseif ($1='PART1') then
+   wft
+   
+   $count1=arraydim-10
+   select($count1) aph:$ok if $ok then aph endif
+   $rpsum=0 $count2=1
+   repeat
+    select($count1) aph0:$ok if $ok then aph0 endif $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+    $count1=$count1+1   $count2=$count2+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   peak:$ht,cr rl(0) sp=-500 wp=1000
+   dssh('dodc') dtext
+   ATsvf
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    ATpage
+   endif
+   ATrecord('MOD2','Modulator Test: channel 2','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Linearity (Channel 2: dpwr=%2.0f  ) -Standard Deviation: %1.3f',tpwr,$dev)
+
+   pw=8190
+   atext('   \\rf attenuator set at full 79 db attenuation\\rf modulator run over full range\\producing 139db of attenuation for spectrum #1')
+   tpwr=-16 dn='H1'
+   text('Modulator Test -reduced power- channel 2') 
+   at_currenttest='mod_array2_ch2'
+   f vp=0
+   wnt='ATwft if(celem>1) then select(celem) aph0:$ok if $ok then aph0 endif endif peak:$ht if $ht<0 then rp=-rp endif vsadj(150) dssh dtext'
+   wexp='AT29(`PART2`)'
+   ATcycle au
+   write('line3','Modulator Test-reduced power (channel 2)')
+   dps
+
+elseif ($1='PART2') then
+   wft
+
+   $count1=arraydim-10
+   select($count1) aph:$ok
+   if $ok then aph endif
+   $rpsum=0 $count2=1
+   repeat
+    select($count1) aph0:$ok if $ok then aph0 endif $rpsum=rp+$rpsum $rpav=$rpsum/$count2 
+    $count1=$count1+1   $count2=$count2+1
+   until ($count1>arraydim)
+   select(arraydim) rp=$rpav vsadj 
+   peak:$ht,cr rl(0) sp=-500 wp=1000
+   dssh('dodc') dtext
+   ATsvf
+   full ATreg3:$dev abs($dev):$dev
+   if (at_plotauto='y') then
+     if (at_printparams='y') then
+      pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+     endif
+     pltext(0,wc2max-5)
+     full wc2=65 pexpl expl
+     vp=70 select(arraydim) vsadj(95) 
+     dsshn('dodc') pl('all','dodc')
+     vp=0
+    ATpage
+   endif
+   ATrecord('MOD2LO','Modulator Test:low power range channel 2','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Modulator Linearity (Channel 2: tpwr=%2.0f ) -Standard Deviation: %1.3f',tpwr,$dev)
+ATnext
+endif

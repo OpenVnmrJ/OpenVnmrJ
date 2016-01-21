@@ -1,0 +1,24 @@
+"macro loadannos"
+// Chempacker macro
+
+is_cpfid:$cp
+if not $cp then return(0) endif
+substr(file,'dirname'):$as,$b,$e
+$annos=$as+'/dirinfo/Annotations/'+$b+'.txt'
+exists($annos,'file'):$anex
+if not $anex then
+    exists($as+'/dirinfo/Annotations','directory'):$direx
+    if not $direx then mkdir($as+'/dirinfo/Annotations'):$dum endif
+	// back compatibility
+    $annos2=$as+'/dirinfo/'+$b+'_annos4roi.txt'
+    exists($annos2,'file'):$anex2
+    if $anex2 then
+	rename($annos2,$annos):$dum
+    endif
+    exists($annos,'file'):$anex
+endif
+aspAnno('clear')
+if $anex then
+    aspAnno('load',$annos)
+endif
+return(1)

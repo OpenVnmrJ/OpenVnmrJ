@@ -1,0 +1,51 @@
+"macro iscurrentfid"
+$md=autodir+'/enterQ.macdir'
+
+exists($md+'/currentsampleglobal','file'):$fex
+if ($fex=0) then return(0,'') endif
+
+exists($md+'/currentsampleinfo','file'):$fex
+if ($fex=0) then return(0,'') endif
+
+$archive='' $sample=''
+rtv($md+'/currentsampleglobal','noabort','archivedir'):$archive
+rtv($md+'/currentsampleglobal','noabort','sample'):$sample
+if ($archive='') or ($sample='') then
+   return(0,'')
+endif
+if ($archive+'/'+$sample <> $2) then
+   return(0,'')
+endif
+
+$loc='' $locdir=''
+getlocid('current'):$loc,$locdir
+if ($locdir='') then return(0,'') endif
+
+if ($1='') then
+   return(1,$md+'/'+$locdir)
+endif
+
+exists($md+'/'+$locdir+'/current.fid','directory'):$fidex
+if ($fidex=0) then return(0,'') endif
+
+exists($md+'/currentQ','file'):$fex
+if ($fex=0) then return(0,'') endif
+
+lookup('mfile',$md+'/currentQ','read',1):$firstexp
+if ($firstexp='SAMPLE_CHANGE_TIME') then
+   lookup('mfile',$md+'/currentQ','readline','read',1):$sexp,$firstexp
+endif
+if ($firstexp <> $1) then
+   return(0,'')
+endif
+
+$explist=''
+exists($md+'/'+$locdir+'/current.fid/procpar','file'):$procparex
+if ($procparex=0) then
+    return(0,$md+'/'+$locdir+'/current')
+endif
+rtv($md+'/'+$locdir+'/current.fid','noabort','explist'):$explist
+if ($explist<>$1) then return(0,'') endif
+
+return(1,$md+'/'+$locdir+'/current')
+

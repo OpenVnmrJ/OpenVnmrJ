@@ -1,0 +1,68 @@
+"macro checkcalmethod"
+"checkcalmethod"
+
+exists('CALmethod','parameter'):$calex
+if ($calex) then
+
+  $explistsize=size('explist')
+  if (explist <> '') then
+  $i=1
+  repeat
+     if (explist[$i] = 'Hobs') then
+	$tpwr=0
+	getparam('tpwr'):$tpwr
+	if ($tpwr=0) then CALmethod='oldcal' endif
+     elseif (explist[$i] = 'Cdec') then
+	$pwxlvl=0
+	getparam('pwxlvl','C13'):$pwxlvl
+	if ($pwxlvl=0) then CALmethod='oldcal' endif
+     elseif (explist[$i] = 'Cobs') then
+	$tpwr=0
+	getparam('tpwr','C13'):$tpwr
+	if ($tpwr=0) then CALmethod='oldcal' endif
+     elseif (explist[$i] = 'Ndec') then
+	$pwxlvl=0
+	getparam('pwxlvl','N15'):$pwxlvl
+	if ($pwxlvl=0) then CALmethod='oldcal' endif
+     endif
+     $i=$i+1
+  until $i > $explistsize
+  endif
+
+  if (CALmethod='oldcal') then
+	if (solvent='d2o' or solvent='D2O') then
+		wexp='AuCALch3oh(2)' wnt=''
+	elseif (solvent='cdcl3' or solvent='CDCl3') then
+        	wexp='AuCALch3i(2)' wnt=''
+	else
+        	wexp='AuCALbenzamide(2)' wnt=''
+	endif
+  elseif (CALmethod='newcal') then
+        "set initial guesses (or recalled values, set tpwr & pw90"
+        tpwr = H1tpwr  pw = H1pw90
+        format(solvent,'lower'):solvent
+        setref  
+	if (solvent='d2o' or solvent='D2O') then
+		cr = 7.6p  
+		delta=6p
+	elseif (solvent='cdcl3' or solvent='CDCl3') then
+		cr = 6p
+		delta=6p
+	else
+		cr = 9p
+		delta=7.5p
+	endif
+	movesw
+        f full ph
+	wnt=''
+	if (solvent='d2o' or solvent='D2O') then
+		wexp='AuCALch3oh(`process`) Autocalsave(`H1ref`) Autocalnext(`start`)'
+	elseif (solvent='cdcl3' or solvent='CDCl3') then
+                wexp='AuCALch3i(`process`) Autocalsave(`H1ref`) Autocalnext(`start`)' 
+	else
+                wexp='AuCALbenzamide(`process`) Autocalsave(`H1ref`) Autocalnext(`start`)' 
+	endif
+  endif
+
+endif
+

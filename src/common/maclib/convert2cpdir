@@ -1,0 +1,60 @@
+"macro convert2cpdir"
+// The macro converts a non-cp directory to a cp study
+//  Note: archivedir and sample parameter values will be
+//	changed for all fids to reflect current directory
+//	as archivedir/sample
+//	Also, sampleglobals are added, but no values are set
+
+if $# < 1 then
+   substr(file,'dirname'):$1
+endif
+
+is_cpsample($1):$iscp
+if $iscp then return endif
+
+$tmpfile=userdir+'/persistence/'+$0
+write('reset',$tmpfile)
+shell('(ls -1d '+$1+'/*.fid > '+$tmpfile+')'):$devnull
+$s1='' $s2=''
+readfile($tmpfile,'$s1','$s2','','local'):$total
+rm('-f',$tmpfile):$dum
+if not $total then return endif
+
+Autockdir($1)
+wrsampdirchron($1)
+$archivedir='' $sample=''
+substr($1,'dirname'):$archivedir,$sample
+getfilepath('sampleglobal','modules'):$sex,$sampglobal
+getfilepath('usersampleglobal','modules'):$sex2,$sampglobal2
+
+$i=1
+repeat
+    $d='' $b='' $e=''
+    substr($s1[$i],'dirname'):$d,$b,$e
+    fread('','usertree')
+    fread($s1[$i]+'/procpar','usertree')
+    if ($sex) then
+	fread($sampglobal,'usertree','newonly')
+    endif
+    if ($sex2) then
+	fread($sampglobal2,'usertree','newonly')
+    endif
+    setvalue('adirtmplt',$archivedir,'usertree')
+    setvalue('sdirtmplt',$sample+'%R0%','usertree')
+    setvalue('svftmplt',$b+'%R0%','usertree')
+    setvalue('archivedir',$archivedir,'usertree')
+    setvalue('sample',$sample,'usertree')
+    getvalue('pslabel','usertree'):$pslabel
+    if ($i=1) then
+	$path=$archivedir+'/'+$sample+'/dirinfo/macdir'
+	savemodule('sampleglobal',$path,'usertree')
+    endif
+    fsave($s1[$i]+'/procpar','usertree')
+    fread('','usertree')
+    write('file',$archivedir+'/'+$sample+'/dirinfo/fidlog','%s: %s',$pslabel,$b)
+    $i=$i+1
+until $i > $total
+
+if $## < 1 then
+    write('line3','Warning: Done !')
+endif

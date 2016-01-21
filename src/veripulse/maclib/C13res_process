@@ -1,0 +1,147 @@
+"macro C13res_process"
+"C13res_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+fn=4*np
+ft
+f full
+abortoff
+if $phase='dophase' then aph0 endif
+aborton
+dc
+res
+rl(0)
+abortoff
+if $phase='dophase' then aph0('select',40,-40) endif
+aborton
+dc
+res
+rl(0)
+peak(sp,sp+wp):$ht,$frq
+cr=$frq
+wp=50
+sp=-25
+vsadj
+axis='h'
+
+dres(cr,0.5):$lw50
+dres(cr,0.0055):$lw55
+dres(cr,0.0011):$lw11
+
+VPgettarget('C13res'):$target50,$target55,$target11,$targetsidebands
+
+if (($lw50<=$target50) and ($lw55<=$target55) and ($lw11<=$target11)) then $IPteststatus='PASS' else $IPteststatus='FAIL' endif
+
+write('line3','13C lineshape and resolution: %.2f/%.2f/%.2f Hz',$lw50,$lw55,$lw11)
+write('line3','Target: %.2f/%.2f/%.2f Hz',$target50,$target55,$target11)
+
+$date='' $time=''
+shell('date +%d%b%y'):$date
+shell('date +%H:%M'):$time
+VPtext
+$str='13C spinning lineshape test'
+atext($str)
+
+$lw50s='' $lw55s='' $lw11s=''
+$target50s='' $target55s='' $target11s=''
+
+format($lw50,1,2):$lw50s
+format($lw55,1,2):$lw55s
+format($lw11,1,2):$lw11s
+format($target50,1,2):$target50s
+format($target55,1,2):$target55s
+format($target11,1,2):$target11s
+
+$str='Measured linewidth: '+$lw50s+'/'+$lw55s+'/'+$lw11s+' Hz'
+atext($str)
+$str='Target: <= '+$target50s+'/'+$target55s+'/'+$target11s+' Hz'
+atext($str)
+$str='Test status: '+$IPteststatus
+atext($str)
+
+
+//Now do the spinning sidebands measurement
+$htparent=0 $frq=0
+$htsideband1=0 $htsideband2=0
+//Determine spinning sideband amplitude
+peak(-20,40):$htparent,$frq
+write('line3','Amplitude of parent signal=%f, freq=%f',$htparent,$frq)
+$spin=20        
+peak($spin-5,$spin+5):$htsideband1,$frq
+abs($htsideband1):$htsideband1
+write('line3','Amplitude of downfield spinning sideband=%f, freq=%f',$htsideband1,$frq)
+peak(-1.0*$spin-5,-1.0*$spin+5):$htsideband2,$frq
+abs($htsideband2):$htsideband2
+write('line3','Amplitude of upfield spinning sideband=%f, freq=%f',$htsideband2,$frq)
+$percent1=$htsideband1/$htparent*100
+$percent2=$htsideband2/$htparent*100
+write('line3','Downfield sideband is %f %% of parent signal',$percent1)
+write('line3','Upfield sideband is %f %% of parent signal',$percent2)
+if (($percent1<=$targetsidebands) and ($percent2<=$targetsidebands)) then $IPteststatus1='PASS' else $IPteststatus1='FAIL' endif
+if ($percent1>=$percent2) then $percent=$percent1 else $percent=$percent2 endif
+$targets=''
+format($targetsidebands,1,2):$targets
+
+//Adjust display to show sidebands
+nm vp=20 vs=10k
+
+//Add results to text file
+$percents=''
+format($percent,2,2):$percents
+$str='Spinning sideband amplitude: '+$percents+' % of parent signal amplitude'
+atext($str)
+$str='Target <= '+$targets+' % (nt=4)'
+atext($str)
+$str='Test status: '+$IPteststatus1
+atext($str)
+
+write('line3','13C Lineshape and Resolution Test - spinning'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured linewidth %.2f/%.2f/%.2f Hz',$lw50,$lw55,$lw11):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target linewidth < %.2f/%.2f/%.2f Hz',$target50,$target55,$target11):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Spinning sideband amplitude %.2f%% of parent peak',$percent):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus1):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target spinning sideband amplitude < %.2f%%',$targetsidebands):$line
+CalibrationResults=CalibrationResults,$line
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+darray('CalibrationResults')
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft dscale darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($lw50,$lw55,$lw11,$percent)
+
+if ($IPteststatus='PASS') then
+
+   "we passed so clear any retestfile counter info"
+   $retestfile=userdir+'/persistence/ReTest'
+   exists($retestfile,'file'):$et
+   if ($et>0.5) then rm($retestfile) endif
+
+elseif ($IPteststatus='FAIL') then
+       write('line3','Doing PlanB')
+
+	DoPlanB($0)
+
+endif

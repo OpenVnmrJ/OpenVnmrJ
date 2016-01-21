@@ -1,0 +1,64 @@
+"macro walkupQ_lcnew"
+"****************************************************************"
+"   walkupQ_new - Prepare cursqexp for new submission     "
+"****************************************************************"
+
+  walkupQ
+  autodir=savefile
+  cpautodir=autodir
+  writeparam(userdir+'/global','autodir cpautodir','global','add')
+  savesampglobal('cp')
+  tmpsqcopy('OrigExpPar')
+  walkupQ('clear','all')
+  emessage=emailflag
+  getemailaddr(operator):emailaddr
+  module('add','walkupQpars','basic')
+  gain='y' 
+//  module('add','cpQdefaults','basic','refresh')
+  module('add','cpQdefaults','basic')
+  $autosaveplot='plot'
+  getadminfo('autosaveplot'):$autosaveplot
+  strstr($autosaveplot,'plot'):$isplot
+  if ($isplot) then pltopt='y' else pltopt='n' endif
+  getadminfo('protuneatstart'):ptuneatsample
+  userplotter=plotter
+  loaduserprefs
+  exists('setcustompars','maclib'):$ex
+  if ($ex) then
+    setcustompars
+  endif
+
+  longQ='n'
+  prioritysample='no','low','sample'
+  clear(2)
+  wqinit='acq'
+  walkupQ('renew')
+  shell('rm -f '+cursqexp+'/walkupQnewpars'):$dum
+  fsave(cursqexp+'/walkupQnewpars','current')
+  setvalue('wqacq','autodir',1)
+  setvalue('wqacq','',2)
+  getsampglobal('cp')
+  newdg
+  $lastlcexp=lcexp
+  cplcsq('LastLcExp'):$lastlcexp
+  if ($lastlcexp=lcexp) then
+     cplcsq('BackupCursq','get')
+  endif
+  AdjSvftmplt
+  $esq=cursqexp+'/tmpstudy/study.xml'
+  shell('(cat '+$esq+' | wc -l)'):$ok
+  if ($ok=0) then
+    if (lcexp='stop') then
+	xmhaha('grandma')
+	walkupQ('add','Autoscout')
+    else
+	addPeakNode
+    endif
+  else
+      vnmrjcmd('SQ read '+cursqexp+'/tmpstudy/study.xml')
+      samplename=samplename
+  endif
+  vnmrjcmd('setpage','Start')
+  vnmrjcmd('setpage','Start','StandardLC')
+
+"****************************************************************"

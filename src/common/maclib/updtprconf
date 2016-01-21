@@ -1,0 +1,26 @@
+"macro updtprconf"
+// update protocols
+if (Console='vnmrs') or (Console='mr400') or (Console='mercury') then return endif
+
+//At this time rfwg dependence on tn and dn is ignored
+//This will fall apart if someone sets tn=dn='H1'
+//   in single FullBand inova systems
+
+$rfwg=''
+if (rfchtype[2]='U+ H1 Only') then
+	substr(rfwg,2,1):$rfwg1
+	substr(rfwg,1,1):$rfwg2
+	$rfwg=$rfwg1+$rfwg2
+else
+	substr(rfwg,1,2):$rfwg
+endif
+
+exists(systemdir+'/templates/vnmrj/protocols_'+$rfwg,'directory'):$ok
+if not $ok then return endif
+
+pwd:$curdir
+cd(systemdir+'/templates/vnmrj'):$dum
+shell('rm -f protocols'):$dum
+shell('(ln -s protocols_'+$rfwg+' protocols)'):$dum
+cd($curdir):$dum
+

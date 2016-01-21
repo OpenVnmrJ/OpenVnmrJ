@@ -1,0 +1,54 @@
+"macro probetmplt"
+" get a probe configuration template "
+" combinations: <'tmplt'|probename>,<'local'|'system'>"
+"   without Probe ID, 'user' is meaningless, but with Probe ID, it uses"
+"   the specified user file on the probe, while with 'local' it uses a"
+"   a file in the local file system"
+" the 1st output parameter is the complete file path"
+
+if $# < 1.5 then
+  $usage=$0+'(\'tmplt\'|probe,\'local\'|\'system\'|\'user\')'
+  write('error',$0+' usage: '+$usage)
+  abort
+endif
+probeid('enabled'):$probeid
+
+// by default use the current probefile as a template
+$file=probe
+$subdir='probes/'+probe
+$probefile=userdir+'/'+$subdir+'/'+$file
+
+if ($2 = 'local') then
+  if ($1 = 'tmplt') then
+    $file = 'probe.tmplt'
+    $subdir = 'probes'
+    $probefile=userdir+'/'+subdir+'/'+$file
+    exists($probefile,'file'):$e
+    if ($e=0) then // copy system file to user file
+      cp(systemdir+'/'+subdir+'/'+$file,$probefile):$e
+    endif
+  else
+    $file = probe
+    $subdir = 'probes/'+probe
+    $probefile=userdir+'/probes/'+probe+'/'+probe
+  endif
+
+else
+
+  if $probeid then
+    if ($1 = 'tmplt') then   //--<>  =systemdir+'/probes/'+probe.tmplt
+      probeid('template',probe,$2):$probefile
+      info('probeid template '+$probefile)
+    else                     //--<>  =systemdir+'/probes/'+probe+'/'+probe
+      probeid('get',$1,$2):$probefile
+    endif
+  else // don't have probe id
+     if ($1 = 'tmplt') then
+       $probefile=systemdir+'/probes/probe.tmplt'
+     else
+       $probefile=systemdir+'/probes/'+probe+'/'+probe
+    endif
+  endif // probeid
+endif
+
+return($probefile)

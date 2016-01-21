@@ -1,0 +1,26 @@
+"macro showloginbox"
+
+exists(systemdir+'/adm/users/profiles/system/'+owner,'file'):$e
+if ($e > 0.5) then
+  $apptype=''
+  lookup('mfile',systemdir+'/adm/users/profiles/system/'+owner,'itype','read'):$apptype,$res
+  if ($res < 0.5) then
+    lookup('mfile',systemdir+'/adm/users/profiles/user/'+owner,'itype','read'):$apptype,$res
+  endif
+//  if ($apptype = 'Walkup') or ($apptype = 'Spectroscopy') then
+    $operators=''
+    lookup('mfile',systemdir+'/adm/users/profiles/system/'+owner,'operators','readline'):$operators,$res
+    if ($res < 0.5) then
+      lookup('mfile',systemdir+'/adm/users/profiles/user/'+owner,'operators','readline'):$operators,$res
+    endif
+    if ($res > 0.5 and $operators <> '') then
+      nextlocQ:$nextloc
+      $strnext=''
+      if ($nextloc) and (traymax>0) then
+      format($nextloc,0,0):$strnext
+      endif
+      vnmrjcmd('util', 'logout', '"'+autodir+'"', h1freq, traymax, 'help:/vnmr/jhelp/dialog/login.html', 'nextloc:'+$strnext, 'frameBounds:'+loginBox)
+    endif
+//  endif
+endif
+

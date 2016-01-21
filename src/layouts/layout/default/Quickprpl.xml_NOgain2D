@@ -1,0 +1,725 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="Quickprpl" element="pages" type="acquisition" >
+  <group size="720 280"
+    style="PlainText"
+    label="ProcPlotAdv"
+    vq="customflag panellevel"
+    show="$SHOW=((customflag='y') and (panellevel&gt;29))"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="Quickprpl"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="480 35" size="215 220"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      reference="custompar6"
+      useref="no"
+      subtype="Convenience"
+      expanded="yes"
+      >
+      <group loc="0 5" size="215 185"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="customizepar2"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <group loc="0 45" size="210 20"
+          show="getdim:$dim $dim=0 $SHOW=($dim&gt;1)"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Convenience"
+          >
+          <check loc="5 0" size="195 20"
+            style="Label1"
+            label="Autogain with First Increment"
+            vq="wstart"
+            vc="wstart='gain2Dproc'"
+            vc2="wstart=''"
+            set="$VALUE=(wstart='gain2Dproc')"
+            show="$ENABLE=((wstart='') or (wstart='gain2Dproc'))*2-1"
+            />
+        </group>
+        <textmessage loc="140 25" size="55 20"
+          style="PlainText"
+          vq="gain"
+          set="$VALUE=gain"
+          digits="0"
+          />
+        <label loc="5 25" size="135 20"
+          style="Label1"
+          label="Receiver Gain (dB):"
+          justify="Left"
+          />
+        <label loc="5 65" size="85 20"
+          style="Label1"
+          label="Starting with:"
+          />
+        <check loc="100 65" size="70 20"
+          style="Label3"
+          label="Change"
+          vq="chreqexp"
+          vc="chreqexp=1"
+          vc2="chreqexp=0"
+          set="$VALUE = chreqexp"
+          />
+        <textmessage loc="10 85" size="200 20"
+          style="PlainText"
+          vq="strtpar REQexp chreqexp"
+          set="if (strtpar='') or (strtpar='other') or (strtpar='default') then $VALUE=REQexp[1] else $VALUE=strtpar endif"
+          />
+        <filemenu loc="5 105" size="205 20"
+          style="PlainText"
+          vq="strtpar curexp chreqexp"
+          vc="strtpar='$VALUE' customizepar('resetreqexp')"
+          set="$VALUE=strtpar"
+          show="$ENABLE=(chreqexp&gt;0)*2-1"
+          file="$VALUE=curexp+'/curFIDlist'"
+          type="file"
+          editable="No"
+          statshow="yes"
+          elastic="no"
+          display="yes"
+          />
+        <group loc="5 125" size="205 20"
+          vq="chreqexp REQexp strtpar"
+          show="$SHOW=(chreqexp&gt;1)"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Convenience"
+          >
+          <entry loc="55 0" size="145 20"
+            style="PlainText"
+            vq="REQexp chreqexp"
+            vc="REQexp='$VALUE' customizepar('resetreqexp')"
+            set="$VALUE=REQexp"
+            />
+          <label loc="0 0" size="55 20"
+            style="Label1"
+            label="Other.."
+            />
+        </group>
+        <button loc="30 145" size="150 20"
+          style="Label2"
+          label="Update curpar"
+          vq="chreqexp"
+          vc="customizepar('update')"
+          show="$ENABLE=(chreqexp&gt;0)*2-1"
+          bg="transparent"
+          decor1="no"
+          />
+        <label loc="40 2" size="135 20"
+          style="Label1"
+          label="Advanced Options"
+          justify="Center"
+          />
+      </group>
+    </group>
+    <group loc="35 35" size="420 120"
+      vq="arraydim"
+      show="getdim:$dim $SHOW=($dim=1)"
+      bg="transparent"
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="prpl1D"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <group loc="5 5" size="205 110"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="proc1d-ez"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <label loc="30 0" size="140 20"
+          style="Label1"
+          label="Process Options"
+          justify="Center"
+          />
+        <menu loc="100 40" size="100 20"
+          style="PlainText"
+          label="menu"
+          vc="exec('$VALUE')"
+          set="$VALUE=''"
+          editable="No"
+          >
+          <mlabel 
+            label="none"
+            chval="lb='n' gf='n' gfs='n' sb='n' sbs='n' awc='n'"
+            />
+          <mlabel 
+            label="exponential"
+            chval="expfilt('acq')"
+            />
+          <mlabel 
+            label="gaussian"
+            chval="gaussian('acq')"
+            />
+          <mlabel 
+            label="cosine"
+            chval="cosine('acq')"
+            />
+          <mlabel 
+            label="sq-cosine"
+            chval="sqcosine('acq')"
+            />
+          <mlabel 
+            label="res-enhance"
+            chval="resenhance('acq')"
+            />
+        </menu>
+        <menu loc="100 20" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="fn"
+          vc="fn=$VALUE"
+          set="on('fn'):$on if($on&gt;0.5) then $VALUE=fn else $VALUE='n' endif"
+          editable="No"
+          >
+          <mlabel 
+            label="Default"
+            chval="n"
+            />
+          <mlabel 
+            label="16k"
+            chval="16384"
+            />
+          <mlabel 
+            label="32k"
+            chval="32768"
+            />
+          <mlabel 
+            label="64k"
+            chval="65536"
+            />
+          <mlabel 
+            label="128k"
+            chval="131072"
+            />
+          <mlabel 
+            label="256k"
+            chval="262144"
+            />
+        </menu>
+        <label loc="5 40" size="120 20"
+          style="Label1"
+          label="Weighting:"
+          justify="Left"
+          />
+        <label loc="5 20" size="100 20"
+          style="Label1"
+          label="Transform size:"
+          justify="Left"
+          />
+      </group>
+      <group loc="215 5" size="205 110"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="plot1d-ez"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <menu loc="100 60" size="100 20"
+          style="Label3"
+          label="Peak Pick"
+          vq="pkpick"
+          vc="pkpick='$VALUE'"
+          set="$VALUE=pkpick"
+          editable="No"
+          >
+          <mlabel 
+            label="On Peaks"
+            chval="ppf"
+            />
+          <mlabel 
+            label="List, at Left"
+            chval="pll"
+            />
+          <mlabel 
+            label="List, at Right"
+            chval="pll(wc-50)"
+            />
+          <mlabel 
+            label="None"
+            />
+        </menu>
+        <menu loc="100 40" size="100 20"
+          style="Label3"
+          label="Integral"
+          vq="intmod"
+          vc="intmod='$VALUE'"
+          set="$VALUE=intmod"
+          editable="No"
+          >
+          <mlabel 
+            label="Partial"
+            chval="partial"
+            />
+          <mlabel 
+            label="Full"
+            chval="full"
+            />
+          <mlabel 
+            label="Off"
+            chval="off"
+            />
+        </menu>
+        <menu loc="100 20" size="100 20"
+          style="Label3"
+          label="menu"
+          vq="parstyle"
+          vc="parstyle='$VALUE'"
+          set="$VALUE=parstyle"
+          editable="No"
+          >
+          <mlabel 
+            label="Full"
+            chval="pap"
+            />
+          <mlabel 
+            label="Basic"
+            chval="ppa"
+            />
+          <mlabel 
+            label="Text only"
+            chval="pltext"
+            />
+        </menu>
+        <label loc="5 60" size="80 20"
+          style="Label3"
+          label="Peak Values: "
+          justify="Left"
+          />
+        <label loc="5 40" size="70 20"
+          style="Label3"
+          label="Integrals: "
+          justify="Left"
+          />
+        <label loc="5 20" size="100 20"
+          style="Label3"
+          label="Plot Parameters:"
+          justify="Left"
+          />
+        <label loc="65 0" size="95 20"
+          style="Label3"
+          label="Plot Options"
+          justify="Center"
+          />
+      </group>
+    </group>
+    <group loc="45 35" size="420 120"
+      vq="arraydim"
+      show="getdim:$dim $SHOW=($dim&gt;1)"
+      bg="transparent"
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="prpl2d-hoph"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <group loc="5 5" size="205 110"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="proc2d-ez"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <label loc="5 80" size="95 20"
+          style="Label1"
+          label="Weighting (F1):"
+          justify="Left"
+          />
+        <label loc="5 60" size="95 20"
+          style="Label1"
+          label="Weighting (F2):"
+          justify="Left"
+          />
+        <group loc="105 80" size="95 20"
+          vq="dmg1"
+          show="$SHOW=(dmg1&lt;&gt;'av1')"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          reference="prpl2d-hoph"
+          useref="no"
+          subtype="Convenience"
+          expanded="yes"
+          >
+          <menu loc="5 0" size="90 20"
+            style="PlainText"
+            label="menu"
+            vc="exec('$VALUE')"
+            set="$VALUE=''"
+            editable="No"
+            >
+            <mlabel 
+              label="gaussian"
+              chval="gaussian('f1')"
+              />
+            <mlabel 
+              label="sq Cosine"
+              chval="sqcosine('f1')"
+              />
+            <mlabel 
+              label="cosine"
+              chval="cosine('f1')"
+              />
+            <mlabel 
+              label="pi/3 ssbsq"
+              chval="pi3ssbsq('f1')"
+              />
+            <mlabel 
+              label="pi/4 ssbsq"
+              chval="pi4ssbsq('f1')"
+              />
+          </menu>
+        </group>
+        <group loc="110 80" size="95 20"
+          vq="dmg1"
+          show="$SHOW=(dmg1='av1')"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          reference="prpl2d-hoph"
+          useref="no"
+          subtype="Convenience"
+          expanded="yes"
+          >
+          <menu loc="0 0" size="90 20"
+            style="PlainText"
+            label="menu"
+            vc="exec('$VALUE')"
+            set="$VALUE=''"
+            editable="No"
+            >
+            <mlabel 
+              label="sinebell"
+              chval="sinebell('f1')"
+              />
+            <mlabel 
+              label="sqsinebell"
+              chval="sqsinebell('f1')"
+              />
+          </menu>
+        </group>
+        <group loc="105 60" size="95 20"
+          vq="dmg"
+          show="$SHOW=(dmg&lt;&gt;'av')"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          reference="prpl2d-hoph"
+          useref="no"
+          subtype="Convenience"
+          expanded="yes"
+          >
+          <menu loc="5 0" size="90 20"
+            style="PlainText"
+            label="menu"
+            vc="exec('$VALUE')"
+            set="$VALUE=''"
+            editable="No"
+            >
+            <mlabel 
+              label="gaussian"
+              chval="gaussian('acq')"
+              />
+            <mlabel 
+              label="sq Cosine"
+              chval="sqcosine('acq')"
+              />
+            <mlabel 
+              label="cosine"
+              chval="cosine('acq')"
+              />
+            <mlabel 
+              label="pi/3 ssbsq"
+              chval="pi3ssbsq('acq')"
+              />
+            <mlabel 
+              label="pi/4 ssbsq"
+              chval="pi4ssbsq('acq')"
+              />
+          </menu>
+        </group>
+        <group loc="110 60" size="95 20"
+          vq="dmg"
+          show="$SHOW=(dmg='av')"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          reference="prpl2d-hoph"
+          useref="no"
+          subtype="Convenience"
+          expanded="yes"
+          >
+          <menu loc="0 0" size="90 20"
+            style="PlainText"
+            label="menu"
+            vc="exec('$VALUE')"
+            set="$VALUE=''"
+            editable="No"
+            >
+            <mlabel 
+              label="sinebell"
+              chval="sinebell('acq')"
+              />
+            <mlabel 
+              label="sqsinebell"
+              chval="sqsinebell('acq')"
+              />
+          </menu>
+        </group>
+        <menu loc="110 40" size="90 20"
+          style="PlainText"
+          vq="dmg1"
+          vc="setLP1($VALUE) if (dmg1='av1') then sinebell('f1') else gaussian('f1') endif"
+          set="getLP1:$VALUE"
+          editable="No"
+          >
+          <mlabel 
+            label="2*ni"
+            chval="2*ni"
+            />
+          <mlabel 
+            label="4*ni"
+            chval="4*ni"
+            />
+          <mlabel 
+            label="none"
+            chval="0"
+            />
+        </menu>
+        <label loc="5 40" size="100 20"
+          style="Label1"
+          label="Linear Pred. (F1):"
+          justify="Left"
+          />
+        <menu loc="110 20" size="90 20"
+          style="PlainText"
+          label="menu"
+          vq="fn fn1"
+          vc="fnfn1('set',$VALUE)"
+          set="fnfn1('get'):$VALUE"
+          editable="No"
+          >
+          <mlabel 
+            label="1k x 1k"
+            chval="1024,1024"
+            />
+          <mlabel 
+            label="2k x 1k"
+            chval="2048,1024"
+            />
+          <mlabel 
+            label="2k x 2k"
+            chval="2048,2048"
+            />
+          <mlabel 
+            label="4k x 2k"
+            chval="4096,2048"
+            />
+          <mlabel 
+            label="2k x 4k"
+            chval="2048,4096"
+            />
+          <mlabel 
+            label="4k x 4k"
+            chval="4096,4096"
+            />
+        </menu>
+        <label loc="5 20" size="90 20"
+          style="Label1"
+          label="fn x fn1 size:"
+          justify="Left"
+          />
+        <label loc="30 0" size="140 20"
+          style="Label1"
+          label="Process Options"
+          justify="Center"
+          />
+      </group>
+      <group loc="215 5" size="205 110"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="plot2d-ez"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <label loc="45 40" size="60 20"
+          style="Label3"
+          label="along F2:"
+          justify="Right"
+          />
+        <label loc="5 40" size="45 20"
+          style="Label3"
+          label="Plot 1D"
+          justify="Left"
+          />
+        <label loc="50 60" size="55 20"
+          style="Label3"
+          label="along F1:"
+          justify="Right"
+          />
+        <menu loc="110 60" size="90 20"
+          style="Label3"
+          label="menu"
+          vq="plt2Darg"
+          vc="plt2Darg[5]='$VALUE'"
+          set="$VALUE=plt2Darg[5]"
+          editable="No"
+          >
+          <mlabel 
+            label="spectrum"
+            chval="f1"
+            />
+          <mlabel 
+            label="projection"
+            chval="projection"
+            />
+          <mlabel 
+            label="None"
+            chval="noside"
+            />
+        </menu>
+        <menu loc="110 20" size="90 20"
+          style="Label3"
+          label="menu"
+          vq="parstyle"
+          vc="parstyle='$VALUE'"
+          set="$VALUE=parstyle"
+          editable="No"
+          >
+          <mlabel 
+            label="Full"
+            chval="pap"
+            />
+          <mlabel 
+            label="Basic"
+            chval="ppa"
+            />
+          <mlabel 
+            label="Text only"
+            chval="pltext"
+            />
+        </menu>
+        <menu loc="110 40" size="90 20"
+          style="Label3"
+          label="menu"
+          vq="plt2Darg"
+          vc="plt2Darg[4]='$VALUE'"
+          set="$VALUE=plt2Darg[4]"
+          editable="No"
+          >
+          <mlabel 
+            label="spectrum"
+            chval="f2"
+            />
+          <mlabel 
+            label="projection"
+            chval="projection"
+            />
+          <mlabel 
+            label="none"
+            chval="notop"
+            />
+        </menu>
+        <label loc="5 20" size="100 20"
+          style="Label3"
+          label="Plot Parameters:"
+          justify="Left"
+          />
+        <label loc="65 0" size="95 20"
+          style="Label3"
+          label="Plot Options"
+          justify="Center"
+          />
+      </group>
+    </group>
+    <group loc="5 5" size="610 25"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="homcordisplay"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <textmessage loc="330 0" size="270 25"
+        style="Label3"
+        vq="tn dn refsource1"
+        set="getdim:$dim if ($dim=1) then $VALUE='Observe: '+tn+'          Decoupler: '+dn else if (refsource1='sfrq') then $VALUE=tn+'--'+tn+' Correlation         [ Decoupler: '+dn+' ]' else $VALUE='Observe: '+tn+'         '+tn+'--'+dn+' Correlation' endif endif"
+        />
+      <textmessage loc="5 0" size="310 25"
+        style="Heading1"
+        vq="pslabel"
+        set="$VALUE='Experiment: '+pslabel+'   Solvent: '+solvent"
+        />
+    </group>
+  </group>
+</template>

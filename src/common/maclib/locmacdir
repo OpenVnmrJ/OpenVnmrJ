@@ -1,0 +1,66 @@
+"macro locmacdir"
+"***************************************************************"
+"locmacdir -       Makes copy of the current custom macro dir   "
+"		    to selected location directories		"
+"			Used by enter.conf			"
+"***************************************************************"
+
+$shdum=''
+$curloc=$1+'.macdir/curloc'
+exists($curloc,'directory'):$curlocex
+if ($curlocex = 0) then
+ return
+endif
+
+if ($# < 3) then
+ if typeof('$2') then
+  if $2 = 'remove' then
+   rm('-rf',$curloc+'/*'):$x
+  endif
+  return
+ endif
+endif
+
+if ($# > 2) then
+ $loc='' format($2,0,0):$loc
+ $sub='' $macro='' $solstr=''
+if traymax=768 then
+  $rack='' $zone=''
+  format($4,0,0):$rack format($5,0,0):$zone
+  $loc=$loc+$rack+$zone
+else
+  $loc=$loc
+endif
+ substr($3,1,1):$macro
+ length($3):$length
+ $i=2 $quit=0
+ repeat
+   substr($3,$i,1):$sub
+   if ($sub = '(') then 
+    $sub='_' 
+    substr($3,$i+1,7):$solstr
+    if ($solstr = 'solvent') then
+     $i=$i+8
+    endif
+   endif
+   if ($sub = ',') then $sub='_' endif
+   if ($sub = '`') or ($sub = `'`) then $sub='' endif
+   if ($sub = ')') or ($sub = ' ') then $sub='' $quit=1 endif
+   $macro=$macro+$sub
+   $i=$i+1
+ until ($i > $length) or ($quit > 0.5)
+  
+ $directory=$1+'.macdir/loc'+$loc+'_'+$macro 
+ $ex=0
+ exists($directory,'directory'):$ex
+ 
+ if ($ex = 0) then 
+  mkdir($directory)
+ endif
+ 
+ getfile($curloc):$num
+ if ($num >= 0.5) then
+   $cmd2='cp -r "'+$curloc+'"/* "'+$directory+'"'
+   shell($cmd2):$shdum
+ endif
+endif

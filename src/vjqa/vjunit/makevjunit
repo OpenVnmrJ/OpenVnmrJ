@@ -1,0 +1,54 @@
+# @(#)makevnmrj 5.33 09/07/06 Copyright (c)1991-2006 Varian, Inc.
+#
+# Varian, Inc. All Rights Reserved. 
+# This software contains proprietary and confidential information of
+# Varian, Inc. and its contributors.  Use, disclosure and reproduction
+# is prohibited without prior consent.
+#
+
+SHELL = /bin/sh
+
+MAKEFILE=        makevjunit
+JAR_FILE=        vjunit.jar
+
+CLASS_PATH=./lib/jemmy.jar:./lib/junit.jar:./lib/vnmrj.jar
+
+# PatientTableAdapter ShufObj TwoColumnPanel
+
+BO_SRC=			\
+	LoadNmrDir.java	\
+	LoadNmrTest.java	\
+	VJAdminTest.java	\
+	VJAdminTrustedTest.java	\
+	VJTrustedTest.java	\
+	VnmrJTest.java
+
+# CanvasBorder ContourMapUI ControlAction ControlDropTargetListener
+# DataGraphUI  ExpIFrame  ExpQueueComp  ExpTearFrame
+# ExpTopBar    Filler    Glue    ParamArray
+# PrintContainer ProcessTabPane  SaveData  SaveFileButton
+# VjMenuBar  ContourThresholdFilter  DisplayControls  ColorSetter
+# Colorable  VnmrXCanvas ExperimentIF
+
+BO_CLASS= $(BO_SRC:.java=.class)
+
+class: 
+	($(MAKE) -ef $(MAKEFILE) Buildclass \
+	 "J_CLASS=$(BO_CLASS) " )
+	 @echo
+
+	jar cf $(JAR_FILE) *class
+
+	@echo +++++++ DONE makevnmrj +++++++
+
+classclean: 
+	(rm -f *.class )
+
+clean: classclean
+
+Buildclass: $(J_CLASS)
+	pwd
+	@echo
+
+$(J_CLASS):
+	(umask 2; javac -J-mx128m -Xlint:unchecked -deprecation -classpath $(CLASS_PATH) $(@:.class=.java))

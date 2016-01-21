@@ -1,0 +1,38 @@
+"macro reset_wpmlg2d"
+// Set pmlgX
+
+aXpmlg = aX90
+$pwXpmlg = sqrt(2.0/3.0)*4.0*pwX90
+pwXpmlg = 0.1*trunc($pwXpmlg/0.1 + 0.5)
+if (nXpmlg < 1.0) then nXpmlg = 1 endif
+if ((qXpmlg > -1.0) and (qXpmlg < 1.0)) then qXpmlg = 1 endif
+
+// Set wpmlgX
+
+aXwpmlg = aX90
+$pwXwpmlg = sqrt(2.0/3.0)*4.0*pwX90
+if ((qXwpmlg > -1.0) and (qXwpmlg < 1.0)) then qXwpmlg = 1 endif
+pwXwpmlg = 0.0125*qXwpmlg*trunc($pwXwpmlg/(qXwpmlg*0.0125) + 0.5)
+
+// set tau to add a 2-step window
+
+tauXwpmlg = 0.0125*trunc(2.0*pwXwpmlg*(qXwpmlg+1)/(qXwpmlg*0.0125) + 0.5)
+if (tauXwpmlg < 2.0*pwXwpmlg + 4.0) then tauXwpmlg = 2.0*pwXwpmlg+4.0 endif
+sw = 1/(tauXwpmlg*1e-6)
+
+if (npaXwpmlg < 10) then npaXwpmlg = 10 endif
+
+// Synchronize the dwell with the PMLG Cycle
+
+if (pwXpmlg > 0.0) then 
+   sw1 = 1.0/(8.0*pwXpmlg*1e-6)
+endif
+
+// Reset the prep pulses
+
+aXprep1 = aX90
+pw1Xprep1 = pwX90
+pw2Xprep1 = pwX90*54.7/90.0
+phXprep1 = 0.0 
+
+

@@ -1,0 +1,51 @@
+"macro xcln3d"
+"xcln3d - stop cln3d processing                       "
+"Agilent technologies, Eriks Kupce, Oxford, June 2011 "
+
+$xcln3d='' $fname='' $dir='' $dm1='' $dm2='' $id='' $proc='' 
+$cmd=''   $id1='' $id2='' 
+
+BPfindfile('xcln3d'):$xcln3d
+if($# < 1) then
+  write('error','Usage: xcln3d(fname)')
+endif
+
+$dir = $1
+getext($dir):$dm1,$dm2
+if not ($dm2 = 'fid') then 
+  $dir = $dir+'.fid'
+endif
+
+$fname = $dir+'/stop.txt' 
+
+exists($fname,'file'):$e
+if not($e) then
+  write('line3','%s not found',$fname)
+  return
+endif
+
+nrecords($fname):$nr
+if($nr>2) then 
+  $nr = 2
+endif
+
+lookup('file',$fname)
+
+$i=0
+repeat
+  lookup('read',4):$id,$dm1,$dm2,$proc
+  if($proc = 'cln3d') then 
+    $id1=$id
+  else
+    if($proc = 'cln3dwait') then 
+      $id2=$id
+    endif
+  endif
+  $i = $i+1
+until($i=$nr)
+
+$cmd = $xcln3d +' ' + $dir + ' ' + $id1 + ' ' + $id2 
+write('alpha','cmd: %s', $cmd)
+shell($cmd)
+write('error','cln3d calculations stopped')
+

@@ -1,0 +1,567 @@
+"Copyright (c) Varian Assoc., Inc.  All Rights Reserved."
+"send commands to vnmrj, plus mkdir rmdir"
+
+return
+$activestudy=activestudy[1]
+if $#=1 then
+  if ($1='mkdir') then
+    $node='' $ldir=''
+    xm1('studydir'):$sdir
+    if ($sdir<>'' and $activestudy<>'null') then
+      Svfname($sdir+'/info/n%R3%',''):$ldir
+      shell('basename "'+$ldir+'"'):$node
+      mkdir($ldir)  "if exists, try R4?"
+      exists($ldir,'directory'):$d
+      if $d<0.5 then $node='' $ldir='' endif
+    endif
+    return($node,$ldir)
+  elseif ($1='studydir') then
+"construct studydir, do not assign studyid, sqname, etc."
+    if (auto='y') then "don't check traymax"
+      $sdir=autodir
+      exists('studyid_','parameter'):$e
+      exists('studyid','parameter','global'):$eg
+      if ($e and $eg) then
+        $sdir=studyid_
+        studyid=studyid_
+      elseif ($eg) then
+        $sdir=studyid
+      endif
+      $s='' substr($sdir,1,1):$s
+      if $s<>'/' then
+        $sdir=autodir+'/'+$sdir
+      endif
+    else
+      $sdir = sqdir
+    endif
+    return($sdir)
+  elseif ($1='mkautopar') then
+    exists(autodir+'/autopar','file'):$f
+    if ($f < 0.5) then
+      exists('console','parameter'):$e
+      if $e<0.5 then create('console','string') endif
+      console=Console
+      exists('h1freq_','parameter'):$e
+      if $e<0.5 then create('h1freq_','integer') endif
+      setvalue('h1freq_',h1freq)
+      exists('hostname','parameter'):$e
+      if $e<0.5 then create('hostname','string') endif
+      $host='' substr(vnmraddr,1):$host
+      setvalue('hostname',$host)
+      exists('osversion','parameter'):$e
+      if $e<0.5 then create('osversion','string') endif
+      $os='' shell('uname -rs'):$os
+      setvalue('osversion',$os)
+      exists('rev_','parameter'):$e
+      if $e<0.5 then create('rev_','string') endif
+      $s1='' substr(rev,1):$s1
+      $s2='' substr(rev,3):$s2
+      $s3='' substr(rev,5):$s3
+      setvalue('rev_',$s1+' '+$s2+' '+$s3)
+      exists('revdate_','parameter'):$e
+      if $e<0.5 then create('revdate_','string') endif
+      $s1='' substr(revdate,1):$s1
+      $s2='' substr(revdate,2):$s2
+      $s3='' substr(revdate,3):$s3
+      $s4=''
+      if ($s1='May' or $s1='June' or $s1='July') then
+        $s4=$s1
+      elseif ($s1='September') then
+        substr($s1,1,4):$s4 $s4=$s4+'.'
+      else
+        substr($s1,1,3):$s4 $s4=$s4+'.'
+      endif
+      setvalue('revdate_',$s4+' '+$s2+' '+$s3)
+      exists('traymax_','parameter'):$e
+      if $e<0.5 then create('traymax_','integer') endif
+      setvalue('traymax_',traymax)
+      $parlist='console h1freq_ hostname osversion rev_ revdate_ traymax_'
+      writeparam(autodir+'/autopar',$parlist)
+    endif
+  elseif ($1='checkprobe') then
+    $file=userdir+'/probes/'+probe+'/'+probe
+    exists($file,'file'):$e
+    if $e<0.5 then
+      $file=systemdir+'/probes/'+probe+'/'+probe
+      exists($file,'file'):$e
+    endif
+    if $e<0.5 then
+      write('error','No probe calibration file found for %s.',probe)
+      return(0)
+    else
+      return(1)
+    endif
+  elseif ($1='checklock') then
+// check if any previous sq nodes Completed, turn off alock if true
+    if appmode='imaging' then return endif
+    xm1('studydir'):$sdir
+    if ($sdir<>'') then
+      $sqfile=$sdir+'/enterSQ'
+      exists($sqfile,'file'):$e
+      if $e>0.5 then
+        $attr='' $val=''
+        readfile($sqfile,'$attr','$val','','local'):$qsize
+        $i=0 $status='' $done=0
+        repeat
+          $i=$i+1
+          if ($attr[$i]=actionid) then
+            $done=1
+          else
+            xmgetatts($attr[$i],'status'):$status
+            if ($status='Ready' or $status='Customized') then
+              $done=1
+            elseif ($status='Completed') then
+              if alock='y' then alock='n' endif
+              $done=1
+            endif
+          endif
+        until ($done=1 or $i>=$qsize)
+      endif
+    endif
+  elseif ($1='vp') then "return viewport selected"
+    if appmode='imaging' then
+      exists('jviewports','parameter','global'):$e
+      if ($e < 0.5) then
+        $vp='one'
+      elseif jviewports[1]=1 then
+        $vp='one'
+      else
+        if jviewport=1 then
+          $vp='plan'
+        elseif jviewport=2 then
+          $vp='current'
+        else
+          $vp='review'
+        endif
+      endif
+    else
+      $vp='one'
+    endif
+    return($vp)
+  elseif ($1='time') then
+    xm1('time','')
+  elseif ($1='addcomment') then
+    if ($activestudy<>'null' and actionid<>'null') then
+      xmgetatts(actionid,'status'):$st
+      if ($st='Active' or $st='Ready' or $st='Customized') then
+        $title=pslabel
+        if comment<>'' then $title=$title+' '+comment endif
+        xmsetatts(actionid,'title',$title)
+      endif
+    endif
+  elseif ($1='dofidsave') then
+    flush
+    if (prescan[9]='on') then  "or dofidsave[1]='y'"
+      if auto<>'y' then save endif
+    else
+      if auto='y' then
+        rm('-rf',file+'.fid'):$x
+        xmsetatts(actionid,'data','null')
+"use au('shimming') to remove from doneQ"
+      endif
+    endif
+  elseif ($1='protocolexists') then
+    $f=''
+    Svfname(userdir+'/parlib/'+pslabel+'%R0%',''):$ff,$str
+    exists('protoFile','parameter'):$x
+    if $x>0.5 then
+      if (size('protoFile') > 2.5) then
+        Svfname(userdir+'/parlib/'+protoFile[3]+'%R0%',''):$ff,$str
+      endif
+    endif
+    $pat='name="'+$str+'"'
+    shell(`grep -l '`+$pat+`' "` +userdir+`"/templates/vnmrj/protocols/*.xml`):$f
+    if ($f<>'') then $e=1 else $e=0 endif
+    return($e,$f)
+  elseif ($1='showautoq') then
+    exists(autodir,'directory'):$d
+    if ($d>0.5 and autodir<>'') then
+      xm1('read "'+autodir+'/auto.xml"')
+    endif
+    $size=size('doprocess')
+    if $size<2.5 then doprocess[3]='y' endif
+    if $size<3.5 then doprocess[4]='y' endif
+    if $size<4.5 then doprocess[5]='y' endif
+    rights('showallopstudies'):$showall
+    if not ($showall) then
+      $file=autodir+'/autostudies'
+      exists($file,'file'):$e
+      if $e>0.5 then
+        $node='' $nn='' $size=0
+        readfile($file,'$node','$nn','','local'):$size
+        if $size>0.5 then
+          $i=0 $s='' $op='' $id='' $name='' $nodes=''
+          repeat
+            $i=$i+1
+            $id=$node[$i]
+            $name=$id
+            substr($name,1,1):$s
+            if $s<>'/' then
+              $name=autodir+'/'+$name
+            endif
+            $op=operator
+            $sfile=$name+'/studypar'
+            exists($sfile,'file'):$f
+            if $f>0.5 then
+              rtv($sfile,'noabort','operator_'):$op
+              if ($op <> operator) then
+	        $nodes=$nodes+' '+$id	
+              endif
+            endif
+          until ($i>=$size)
+          if $nodes<>'' then
+	    vnmrjcmd('SQ show false '+$nodes) 
+          endif
+        endif
+      endif
+    endif
+  elseif ($1='updtexplist') then "Update EXPLIST entry"
+    $sampfile1=curexp+'/sampleinfo'
+    $sampfile2=curexp+'/sampleinfo2'
+    exists($sampfile1,'file'):$ee
+    if (auto='y' and $ee>0.5) then
+      write('reset',$sampfile2)
+      $res=2
+      lookup('mfile',$sampfile1,'filekey'):$key
+      while ($res > 1.5) do
+        $line='' $word=''
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$res
+        if $res>1.5 then
+          substr($line,1):$word
+          if $word='EXPLIST:' then
+            $line='   EXPLIST: '
+            if pslabel='s2pul' then
+              if tn='H1' then
+                $line=$line + 'PROTON'
+              elseif tn='C13' then
+                $line=$line + 'CARBON'
+              elseif tn='F19' then
+                $line=$line + 'FLUORINE'
+              elseif tn='P31' then
+                $line=$line + 'PHOSPHORUS'
+              else
+                $line=$line + pslabel+'-'+tn
+              endif
+            else
+              $line=$line + pslabel
+            endif
+          endif
+          write('file',$sampfile2,'%s',$line)
+        endif
+      endwhile
+      mv($sampfile2,$sampfile1)
+      cat($sampfile1)
+    endif
+  else
+    if auto<>'y' then
+      $cmd= 'SQ ' + $1
+//      if (appmode='imaging') then
+//         vnmrjcmd(`VP current vnmrjcmd('`+$cmd+`')`)
+//      else
+write('line3','cmd: %s',`VP current vnmrjcmd('`+$cmd+`')`)
+         xm1('sendsq',$cmd)
+//      endif
+    endif
+  endif
+elseif $#=2 then
+  if ($1='rmdir') then
+    if $2<>'' then
+      xm1('studydir'):$sdir
+      $f=$sdir+'/info/'+$2
+      exists($f,'file'):$e
+      if $e>0.5 then rm('-r',$f):$x endif
+    endif
+  elseif ($1='start') then
+"actionid may be different in Current than Plan"
+    $cmd='VP 1 copyid[2]=\'null\''
+    vnmrjcmd($cmd)
+    $title=pslabel
+    if comment<>'' then $title=$title+' '+comment endif
+    $psgfile=userdir+'/psg.error'
+    exists($psgfile,'file'):$e
+    if ($e < 0.5) then
+      xmsetatts(actionid,'status','Executing','title',$title)
+    elseif (actionid<>'null' and actionid<>'') then
+      xmsetatts(actionid,'title',$title)
+      xm1('studydir'):$sdir
+      $dest=$sdir+'/info/'+actionid
+      exists($dest,'directory'):$d
+      if $d>0.5 then
+        cp($psgfile,$dest+'/acqlog')
+      endif
+      lookup('mfile',$psgfile,'filekey'):$key
+      $nret=2
+      repeat
+        lookup('mfile',$key,'readline','filekey'):$line,$key,$nret
+        strstr($line,'P.S.G. Aborted'):$d
+      until ($nret<1.5 or $d)
+      if ($d) then
+        xmsetatts(actionid,'status','Error')
+        xm1('time')
+      else
+        xmsetatts(actionid,'status','Executing')
+      endif
+    endif
+    xmlockup
+    if ($2 = '') then
+      if appmode='imaging' then
+        aipDeleteData
+      endif
+      clear(2)
+      menu('main')
+    endif
+  elseif ($1 = 'psgerror') then
+    if ($2 <> actionid) then
+      $actionid=actionid
+"     xmsetatts(actionid,'status','Customized')"
+"     xmsetatts($2,'status','Customized')"
+    endif
+  elseif ($1='time') then
+    $silent='n'
+    if $#>1.5 then if $2='silent' then
+      $silent='y'
+    endif endif
+    if apptype='dosy2d' then $ni=ni ni=0 endif
+    exptime:$t
+    if apptype='dosy2d' then ni=$ni endif
+    formattime($t):time_exp
+    if time_exp<>'unknown' then
+      if $silent='n' then
+        if appmode='imaging' then
+          write('line3','Scan time: %s',time_exp)
+        else
+          write('line3','Experiment time: %s',time_exp)
+        endif
+      endif
+      if ($activestudy<>'null' and testacquire<>'y') then
+        $time=time_exp
+        if (appmode='walkup' or appmode='lc') then
+          formattime($t,'minutes'):$time
+        endif
+        xmsetatts(actionid, 'time',$time)
+        if (appmode='walkup' or appmode='lc') and (sqsaveid<>'null') then
+          xm1('set',sqsaveid+'_'+actionid,'time',$time)
+        endif
+      endif
+    endif
+    if (appmode='walkup' or appmode='lc') then xmtime endif
+  elseif ($1 = 'sendcmd') then
+"send a command from background to foreground"
+    $sendfile=userdir+'/persistence/.talk2j'
+    exists($sendfile,'file'):$e
+"test once at bootup so I don't have to repeat?"
+    if $e>0.5 then
+      bgmode_is:$b
+      if $b>0.5 then
+        $cmd='send2Vnmr "'+$sendfile + '" "' + $2 + '"&'
+        shell($cmd):$x
+      endif
+    endif
+  elseif ($1='sendsq' or $1='sendsqcmd') then
+"send a command from background to sq in foreground"
+    bgmode_is:$b
+    if ($b>0.5) then "or auto='y'"
+      if ($1='sendsq') then
+        $cmd= 'SQ ' + $2
+      else
+        $cmd=$2
+      endif
+      $cmd='xm1(\'autocmd\',\''+$cmd+'\')'
+      xm1('sendcmd',$cmd)
+    else
+      vnmrjcmd($2) "foreground"
+    endif
+  elseif ($1='autocmd') then
+"command from automation (background), exec if sq active"
+    if (autodir=$activestudy) then
+      $cmd=$2
+      substr($2,1):$s
+      if $s='SQ' then
+        $cmd='vnmrjcmd(\''+$2+'\')'
+      endif
+      exec($cmd)
+    endif
+  else
+    if auto<>'y' then
+      $cmd= 'SQ ' + $1 + ' ' + $2
+      xm1('sendsq',$cmd)
+    endif
+  endif
+elseif $#=3 then
+  if ($1='getparent') then  // return parent node of child
+    $ret=''
+    $id=$2
+    $sdir=$3
+    $sqfile=$sdir+'/enterSQ'
+    exists($sqfile,'file'):$e
+    if ($e) then
+      $ids='' $val='' $type='' $qsize=0
+      readfile($sqfile,'$ids','$val','','local'):$qsize
+      teststr('$ids',$id,'local'):$pos
+      substr($val[$pos],1):$type
+      if ($pos) and ($type='parent') then
+        $ret=$type
+      elseif ($pos>1.5) then
+        $i=$pos
+        repeat
+          $i=$i-1
+          substr($val[$i],1):$type
+        until ($i<=1 or $type='parent')
+        if $type='parent' then
+          $ret=$ids[$i]
+        endif
+      endif
+    endif
+    return($ret)
+  elseif $1='insertnode' then
+"make and insert new node, usually from background"
+    $mid=$2 $node=$3
+    xm1('studydir'):$sdir
+    $enfile=$sdir+'/enterSQ'
+    $attr='' $val=''
+    readfile($enfile,'$attr','$val','','local'):$qsize
+    $i=0 $ex=0 $index=0
+    repeat
+      $i=$i+1
+      if ($mid=$attr[$i]) then $ex=$ex+1 $index=$i endif
+      if ($node=$attr[$i]) then $ex=$ex+2 endif
+    until ($i>=$qsize)
+    if ($ex<>1 or $index=0) then
+      write('line3','Cannot copy node %s.',$mid)
+      return(0)
+    endif
+    $qsize=$qsize+1
+    $i=$qsize
+    repeat
+      $attr[$i]=$attr[$i-1]
+      $val[$i]=$val[$i-1]
+      $i=$i-1
+    until ($i<=$index)
+    $attr[$index+1]=$node
+    $wd='' substr($val[$index],1):$wd
+    $val[$index+1]=$wd+' lockoff '
+    $cpfile=$enfile+'2'
+    exists($cpfile,'file'):$e
+    if $e>0.5 then rm($cpfile):$x endif
+    $ws='' $i=0
+    repeat
+      $i=$i+1
+"     write('file',$cpfile,'%s %s',$attr[$i],$val[$i])"
+      $ws=$ws+$attr[$i]+' '+$val[$i]
+      if ($i<$qsize) then $ws=$ws+'\n' endif
+    until ($i>=$qsize)
+    write('file',$cpfile,'%s',$ws)
+    mv($cpfile,$enfile)
+"   if auto='y' then"
+"     xmwritesq('write','')"
+"   else"
+"     xmwritesq('write','show')"
+"   endif"
+    return(1)
+  elseif $1='sendbgstudy' then
+    $sdir=$2
+"save $sdir into parameter, for xmconvert('updatestudy') ??"
+    $autodir=$3
+    if traymax>0.5 then
+      $cmd='tray delta '+$sdir+''
+      vnmrjcmd($cmd)
+    endif
+    $cmd='LOC add study "'+$sdir+'"'
+    if ((appmode='walkup' or appmode='lc') and $autodir<>'') then
+      $cmd=$cmd+' automation "'+autodir+'"'
+    endif
+    vnmrjcmd($cmd)
+    vnmrjcmd('util updateLocator')
+    if ($autodir=autodir) then
+"check $activestudy?"
+      exists($sdir,'directory'):$e
+      if $e>0.5 then
+        $id='' $st='' $op='' $qq='' $rtt=''
+        exists($sdir+'/studypar','file'):$f
+        if $f>0.5 then
+          rtv($sdir+'/studypar','studyid_','studystatus','operator_','queue','studytime'):$id,$st,$op,$qq,$time
+          if (traymax=1 and appmode='lc') then
+            rtv($sdir+'/studypar','retentiontime_'):$rtt
+          endif
+        endif
+        if (traymax=1 and appmode='lc' and $rtt<>'') then
+          $tt=$id+'  ['+$rtt+' min] '+$st
+        else
+          $tt=$id+'  '+$st
+        endif
+        xm1('set',$id,'title',$tt)
+        $tt=$id+' '+$op+' '+$qq
+        if ($st<>'Error' and $st<>'Completed') then
+          formattime($time,'minutes'):$ti
+          $tt=$tt+' ['+$ti+']'
+        endif
+        $tt=$tt+' ['+$st+']'
+        xm1('set',$id,'tooltext',$tt)
+        xm1('write "'+$autodir+'/auto.xml"')
+      endif
+    endif
+  else
+    if auto<>'y' then
+      $cmd= 'SQ ' + $1 + ' ' + $2 + ' ' + $3
+      xm1('sendsq',$cmd)
+    endif
+  endif
+elseif $#=4 then
+  if $1='set' then
+    if ($3='type' or $3='status' or $3='title' or $3='exp' or $3='macro' or $3='time' or $3='lock' or $3='data' or $3='id' or $3='tooltext') then
+      if auto<>'y' then
+        $cmd='SQ set '+$2+' '+$3+' "'+$4+'"'
+        xm1('sendsq',$cmd)
+      endif
+    endif
+  elseif $1='showlast' then
+    $id=$2
+    $op=$3
+    $autodir=$4
+    $proc='n'
+    if size('doprocess')>4.5 then if doprocess[5]='y' then
+      $proc='y'
+    endif endif
+    graphis:$gr
+    if ($proc='y' and $gr='clear' and $autodir=autodir and $op=operator) then
+      $doproc=doprocess[1]
+      doprocess[1]='y'
+      xmactionw('getaq',$2):$aqstudy,$aqdir,$aqid
+      if not ($aqstudy<>'' and $aqid='') then  // not grandparent
+        $sqdir=sqdir
+        sqdir=$aqdir
+        xmreadnode($aqid):$ret
+        sqdir=$sqdir
+        $type='' teststr('sqattr','type','global'):$i
+        if $i>0.5 then $type=sqval[$i] endif
+        if ($type<>'CMD') then
+          xmactionw('doubleclick',$id)  // retrieve data
+        endif
+      endif
+      doprocess[1]=$doproc
+      off('loc','global')
+    endif
+  elseif $1='writeprop' then
+    if (jviewport > 1.5) then
+      $ss=$4
+      if $3='macro' then
+        $ss='' $tt=''
+        length($4):$len $l=0
+        repeat
+          $l=$l+1
+          substr($4,$l,1):$tt
+          if $tt='\'' then
+            $ss=$ss+'\\'
+          endif
+          $ss=$ss+$tt
+        until ($l>=$len)
+      endif
+      $cmd=$0+'(\''+$1+'\',\''+$2+'\',\''+$3+'\',\''+$ss+'\')'
+      vnmrjcmd('VP 1 '+$cmd)
+"does not work in background ????"
+      return
+    else
+      write('file',$2,'%s %s',$3,$4)
+    endif
+  endif
+endif

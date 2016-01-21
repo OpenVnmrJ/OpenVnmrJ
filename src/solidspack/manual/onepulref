@@ -1,0 +1,84 @@
+Protocol: Onepulref  Sequence: onepulref.c  Apptype: solidseq1d
+
+Description: X direct polarization followed by a soft inversion 
+             spin echo, using SPINAL or TPPM decoupling. 
+
+Parameter Groups: 
+
+90X:  Module:  no
+Sequence:  onepul.c
+Description:  Provides a 90-degree pulse on obs that can be used as a
+              preparation pulse. Also used to store the obs calibration.
+Parameters:  Channels Page
+      aX90  - the amplitude of the pulse.
+      pwX90 - the pulse length.
+ 
+Hmixseq:  Module: yes 
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during F1 and mixing periods when Hseq is used for
+              acquisition.
+Parameters:  Sequence Page - the Hmixspinal and Hmixtppm groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              or SPINAL.
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal() or gettppm(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); or _spinal();
+             _dseqoff(mix); runs decprgoff(mix);
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal.
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix =
+             getdseq("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+
+shp1X:  Module:  yes
+Sequence:  pboxonepul.c
+Description:  Implements a soft pulse with pBox with selection of any
+              channel.
+Parameters:  Sequence Page
+       chXshp1 = 'obs','dec','dec2','dec3' selected in panel.
+       wvXshp1 = pBox pulse waveshape from wavelib.
+       aXshp1 - amplitude of pBox pulse.
+       dbXshp1 - attenuator setting for pBox pulse.
+       tXshp1 - predelay for pBox pulse.
+       pwXshp1 - width of pBox pulse.
+       phXshp1 - starting small angle phase adjust.
+       stXshp1 - shape parameter  see pBox documentation
+Implementation:  PBOXPULSE shp1 = getpboxpulse("shp1X",0);
+              PBOXPULSE shp2 = getpboxpulse("shp2X",0);
+              PBOXPULSE shp3 = getpboxpulse("shp3X",0);
+Underscore function: _pboxpulse(shp1,phXshp1);
+              _pboxsimpulse(shp1,shp2,phXshp1,phXshp2);
+              _pboxsim3pulse(shp1,shp2,shp3,phXshp1,phXshp2,phXshp3);
+Notes:  No two shapes can be defined on the same channel.  phXshp1
+             (and 2 or 3) is the overall  phase table for the shape.
+             _pboxsimpulse and _pboxsim3pulse cannot accept shapes on
+             dec3.

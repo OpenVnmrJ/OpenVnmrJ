@@ -1,0 +1,697 @@
+"macro BP_PRcalcnimax"
+"BP_PRcalcnimax    Equations from pulse sequence used "
+$nimax1=1000 $ni2max=1000 $ni3max=1000 $least=1000 $least1=1000
+$nimax1t=1000 $ni2maxt=1000 $ni3maxt=1000 $dummy=''
+$debug=0
+
+if (seqfil='PR42_gha_caco_nhP') then
+   $zeta=4.7e-3
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   $pwCO180=80.8e-6*(600.0/sfrq)   "pulse is 80.8 at 600 MHz"
+   cos(3.1416*angle_Ha/180.0):$cos_Ha
+   if $cos_Ha<0.01 then $cos_Ha=0 endif
+   $cos_Ha=trunc(1000*$cos_Ha)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_Ha*$cos_Ha + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swHa*$cos_Ha + swCa*$cos_Ca + swN*$cos_N)
+
+ echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_Ha =',angle_Ha)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_Ha =',$cos_Ha)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((timeTN*2*swN)-1.0)  
+   $ni3max=trunc(($zeta - gt8 - $pwCa180*1.0e-6/2 - $pwCO180*1.0e-6 -4.0e-6)/(0.5/swCa) -1.0)
+   $ni2max=trunc((tauCH - 2*pwC*1e-6 - 2.0e-6 - gt3)/(0.5*0.25/swHa) -1.0)
+
+ echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_Ha>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((timeTN*2*$swTilt)/$cos_N)-1.0) 
+    $ni2maxt=trunc((tauCH - 2*pwC*1e-6 - 2.0e-6 - gt3)/(0.5*0.25*$cos_Ha/$swTilt) -1.0)
+    $ni3maxt=trunc(($zeta - gt8 - $pwCa180*1.0e-6/2 - $pwCO180*1.0e-6 -4.0e-6)/(0.5*$cos_Ca/$swTilt) -1.0)
+   endif
+
+ echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_Ha',$least)
+
+
+elseif (seqfil='PR42_ghacanhP') then
+   $eta=12.7e-3
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   $pwCO180=80.8e-6*(600.0/sfrq)   "pulse is 80.8 at 600 MHz"
+   cos(3.1416*angle_Ha/180.0):$cos_Ha
+   if $cos_Ha<0.01 then $cos_Ha=0 endif
+   $cos_Ha=trunc(1000*$cos_Ha)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_Ha*$cos_Ha + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swHa*$cos_Ha + swCa*$cos_Ca + swN*$cos_N)
+
+ echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_Ha =',angle_Ha)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_Ha =',$cos_Ha)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((timeTN*2*swN)-1.0)  
+   $ni3max=trunc(($eta - gt7 - $pwCa180*1.0e-6/2 - 2.0*pwN*1.0e-6 -4.0e-6)/(0.5/swCa) -1.0)
+   $ni2max=trunc((tauCH - 2*pwC*1e-6 - 2.0e-6 - gt3)/(0.5*0.25/swHa) -1.0)
+
+ echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_Ha>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((timeTN*2*$swTilt)/$cos_N)-1.0) 
+    $ni2maxt=trunc((tauCH - 2*pwC*1e-6 - 2.0e-6 - gt3)/(0.5*0.25*$cos_Ha/$swTilt) -1.0)
+    $ni3maxt=trunc(($eta - gt7 - $pwCa180*1.0e-6/2 - 2.0*pwN*1.0e-6 -4.0e-6)/(0.5*$cos_Ca/$swTilt) -1.0)
+   endif
+
+ echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ha',$ni3max,'angle_Ca',$least)
+
+elseif ((seqfil='PR42_ghn_ca_coA') or (seqfil='PR42_ghn_ca_coA_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+   echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_CO =',angle_CO)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_CO =',$cos_CO)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc(((bigTN -$pwCa180*1.0e-6)*2*swN)-1.0)  
+   $ni2max=trunc((bigTC - 1.5*$pwCa180*1.0e-6/2  -4.0e-6)/(0.5/swCa) -1.0)
+
+   echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+  
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc((((bigTN-$pwCa180*1.0e-6)*2*$swTilt)/$cos_N)-1.0) 
+    $ni2maxt=trunc((bigTC - 1.5*$pwCa180*1.0e-6/2 -4.0e-6)/(0.5*$cos_Ca/$swTilt) -1.0)
+   endif
+
+   echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+  
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_CO',$least)
+
+elseif ((seqfil='PR42_ghn_ca_coP') or (seqfil='PR42_ghn_ca_coP_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+   echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_CO =',angle_CO)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_CO =',$cos_CO)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc(((bigTN -$pwCa180*1.0e-6)*2*swN)-1.0)
+   $ni3max=trunc((bigTC - 2.15*$pwCa180*1.0e-6/2  -4.0e-6)/(0.5/swCa) -2.0)
+
+   echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+ 
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc((((bigTN-$pwCa180*1.0e-6)*2*$swTilt)/$cos_N)-1.0)
+    $ni2maxt=trunc((bigTC - 2.15*$pwCa180*1.0e-6/2 -4.0e-6)/(0.5*$cos_Ca/$swTilt) -2.0)
+   endif
+
+   echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+ 
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_CO',$ni3max,'angle_Ca',$least)
+
+elseif ((seqfil='PR42_ghn_co_caA') or (seqfil='PR42_ghn_co_caA_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+ echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_CO =',angle_CO)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_CO =',$cos_CO)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc(((bigTN - $pwCa180*1.0e-6)*2*swN)-1.0)  
+   if (seqfil='PR42_ghn_co_caA_TROSY') then
+    if (fCTCa='y') then
+     $ni2max=trunc((bigTCa-gt11-50.2e-6)/(0.5/swCa) -1.0)
+    else
+     $ni2max=trunc((($ni2max-1)/swCa)/(0.5/swCa) -1.0)
+    endif
+   else
+    $ni2max=trunc((($ni2max-1)/swCa)/(0.5/swCa) -1.0)
+   endif
+   $ni3max=trunc(bigTCo/(0.5/swCO) -1.0)
+
+   if $debug then
+     echo('nimax1 = ',$nimax1)
+     echo('ni2max = ',$ni2max)
+     echo('ni3max = ',$ni3max)
+   endif
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc((((bigTN-$pwCa180*1.0e-6)*2*$swTilt)/$cos_N)-1.0) 
+    if (seqfil='PR42_ghn_co_caA_TROSY') then
+     if (fCTCa='y') then
+       $ni2maxt=trunc((bigTCa-gt11-50.2e-6)/(0.5*$cos_Ca/$swTilt) -1.0)
+      else
+       $ni2maxt=trunc(((PR_niTilt-1)/$swTilt)/(0.5*$cos_Ca/$swTilt) -1.0)
+     endif
+    else
+     $ni2maxt=trunc(((PR_niTilt-1)/$swTilt)/(0.5*$cos_Ca/$swTilt) -1.0)
+    endif
+    $ni3maxt=trunc(bigTCo/(0.5*$cos_CO/$swTilt) -1.0)
+   endif
+
+   if $debug then
+     echo('')
+     echo('nimax1t = ',$nimax1t)
+     echo('ni2maxt = ',$ni2maxt)
+     echo('ni3maxt = ',$ni3maxt)
+   endif
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_CO',$least)
+
+elseif ((seqfil='PR42_ghn_co_caP') or (seqfil='PR42_ghn_co_caP_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+   if $debug then
+     echo('Maximum swTilt = ',$swTilt)
+     echo('Angle_CO =',angle_CO)
+     echo('Angle_Ca =',angle_Ca)
+     echo('Angle_N =',$angle_N)
+
+     echo('')
+     echo('cos_N =',$cos_N)
+     echo('cos_CO =',$cos_CO)
+     echo('cos_Ca =',$cos_Ca)
+   endif
+
+   "orthogonal planes maxima"
+   $nimax1=trunc(((bigTN -1.65*$pwCa180)*2*swN)-1.0)  
+   $ni3max=trunc((bigTCo -4.0e-6)/(0.5/swCO) -1.0)
+   if (seqfil='PR42_ghn_co_caP_TROSY') then
+    if (fCTCa='y') then
+     $ni2max=trunc((bigTCa-gt11-50.2e-6)/(0.5/swCa) -1.0)
+    endif
+   endif
+
+   if $debug then
+     echo('nimax1 = ',$nimax1)
+     echo('ni2max = ',$ni2max)
+     echo('ni3max = ',$ni3max)
+   endif
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc((((bigTN -1.65*$pwCa180)*2*$swTilt)/$cos_N)-1.0) 
+    if (seqfil='PR42_ghn_co_caP_TROSY') then
+     if (fCTCa='y') then
+       $ni2maxt=trunc((bigTCa-gt11-50.2e-6)/(0.5*$cos_Ca/$swTilt) -1.0)
+     endif
+    endif
+    $ni3maxt=trunc((bigTCo -4.0e-6)/(0.5*$cos_CO/$swTilt) -1.0)
+   endif
+
+   if $debug then
+     echo('')
+     echo('nimax1t = ',$nimax1t)
+     echo('ni2maxt = ',$ni2maxt)
+     echo('ni3maxt = ',$ni3maxt)
+   endif
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_CO',$least)
+
+elseif ((seqfil='PR42_sim_ghn_co_caA') or (seqfil='PR42_sim_ghn_co_caA_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+ echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_CO =',angle_CO)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_CO =',$cos_CO)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((bigTN*2*swN)-1.0)  
+
+ echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((bigTN*2*$swTilt)/$cos_N)-1.0) 
+   endif
+
+ echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_CO',$least)
+
+elseif ((seqfil='PR42_sim_ghn_co_caP') or (seqfil='PR42_sim_ghn_co_caP_TROSY')) then
+   $pwCa180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_CO/180.0):$cos_CO
+   if $cos_CO<0.01 then $cos_CO=0 endif
+   $cos_CO=trunc(1000*$cos_CO)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_CO*$cos_CO + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCO*$cos_CO + swCa*$cos_Ca + swN*$cos_N)
+
+ echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_CO =',angle_CO)
+   echo('Angle_Ca =',angle_Ca)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_CO =',$cos_CO)
+   echo('cos_Ca =',$cos_Ca)
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((bigTN*2*swN)-1.0)  
+
+ echo('nimax1 = ',$nimax1)
+   echo('ni2max = ',$ni2max)
+   echo('ni3max = ',$ni3max)
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_CO>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((bigTN*2*$swTilt)/$cos_N)-1.0) 
+   endif
+
+ echo('')
+   echo('nimax1t = ',$nimax1t)
+   echo('ni2maxt = ',$ni2maxt)
+   echo('ni3maxt = ',$ni3maxt)
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_CO',$ni3max,'angle_Ca',$least)
+
+elseif ((seqfil='PR42_ghn_coca_cbP') or (seqfil='PR42_ghn_coca_cbP_TROSY')) then
+
+   $pwCO180=80.8e-6*(600.0/sfrq)
+   $pwCab180=44.6e-6*(600.0/sfrq)   "pulse is 44.6 at 600 MHz"
+   cos(3.1416*angle_Cb/180.0):$cos_Cb
+   if $cos_Cb<0.01 then $cos_Cb=0 endif
+   $cos_Cb=trunc(1000*$cos_Cb)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_Cb*$cos_Cb + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCb*$cos_Cb + swCa*$cos_Ca + swN*$cos_N)
+
+   if $debug then
+     echo('Maximum swTilt = ',$swTilt)
+     echo('Angle_Cb =',angle_Cb)
+     echo('Angle_Ca =',angle_Ca)
+     echo('Angle_N =',$angle_N)
+
+     echo('')
+     echo('cos_N =',$cos_N)
+     echo('cos_Cb =',$cos_Cb)
+     echo('cos_Ca =',$cos_Ca)
+   endif
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((timeTN*2*swN)-1.0)  
+   $ni3max=trunc((tauCC - $pwCO180*1e-6 -$pwCab180*1e-6/2.0 -4.0e-6)/(0.5/swCa) -2.0)
+
+   if $debug then
+     echo('nimax1 = ',$nimax1)
+     echo('ni2max = ',$ni2max)
+     echo('ni3max = ',$ni3max)
+   endif
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_Cb>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((timeTN*2*$swTilt)/$cos_N)-1.0) 
+    $ni3maxt=trunc((tauCC - $pwCO180*1e-6 -$pwCab180*1e-6/2.0 - 4.0e-6)/(0.5*$cos_Ca/$swTilt) -2.0)
+   endif
+
+   if $debug then
+     echo('')
+     echo('nimax1t = ',$nimax1t)
+     echo('ni2maxt = ',$ni2maxt)
+     echo('ni3maxt = ',$ni3maxt)
+   endif
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Cb',$ni3max,'angle_Ca',$least)
+
+elseif ((seqfil='PR42_ghncacbP') or (seqfil='PR42_ghncacbP_TROSY')) then
+   $pwCO180=80.8e-6*(600.0/sfrq)   "pulse is 80.8 at 600 MHz"
+   $pwCab180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_Cb/180.0):$cos_Cb
+   if $cos_Cb<0.01 then $cos_Cb=0 endif
+   $cos_Cb=trunc(1000*$cos_Cb)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_Cb*$cos_Cb + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCb*$cos_Cb + swCa*$cos_Ca + swN*$cos_N)
+
+   if $debug then
+     echo('Maximum swTilt = ',$swTilt)
+     echo('Angle_Cb =',angle_Cb)
+     echo('Angle_Ca =',angle_Ca)
+     echo('Angle_N =',$angle_N)
+
+     echo('')
+     echo('cos_N =',$cos_N)
+     echo('cos_Cb =',$cos_Cb)
+     echo('cos_Ca =',$cos_Ca)
+   endif
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((timeTN*2*swN)-1.0)  
+   $ni3max=trunc((tauCC - $pwCO180*1e-6 -$pwCab180*1e-6/2.0 -14.0e-6)/(0.5/swCa) -3.0)
+
+   if $debug then
+     echo('nimax1 = ',$nimax1)
+     echo('ni2max = ',$ni2max)
+     echo('ni3max = ',$ni3max)
+   endif
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_Cb>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((timeTN*2*$swTilt)/$cos_N)-1.0) 
+    $ni3maxt=trunc((tauCC - $pwCO180*1e-6 -$pwCab180*1e-6/2.0 -4.0e-6)/(0.5*$cos_Ca/$swTilt) -3.0)
+   endif
+
+   if $debug then
+     echo('')
+     echo('nimax1t = ',$nimax1t)
+     echo('ni2maxt = ',$ni2maxt)
+     echo('ni3maxt = ',$ni3maxt)
+   endif
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Cb',$ni3max,'angle_Ca',$least)
+
+elseif (seqfil='PR42_intra_ghncacbP_TROSY') then
+   $pwCab180=44.8e-6*(600.0/sfrq)   "pulse is 44.8 at 600 MHz"
+   cos(3.1416*angle_Cb/180.0):$cos_Cb
+   if $cos_Cb<0.01 then $cos_Cb=0 endif
+   $cos_Cb=trunc(1000*$cos_Cb)/1000.0
+   cos(3.1416*angle_Ca/180.0):$cos_Ca
+   if $cos_Ca<0.01 then $cos_Ca=0 endif
+   $cos_Ca=trunc(1000*$cos_Ca)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_Cb*$cos_Cb + $cos_Ca*$cos_Ca))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swCb*$cos_Cb + swCa*$cos_Ca + swN*$cos_N)
+
+   if $debug then
+     echo('Maximum swTilt = ',$swTilt)
+     echo('Angle_Cb =',angle_Cb)
+     echo('Angle_Ca =',angle_Ca)
+     echo('Angle_N =',$angle_N)
+
+     echo('')
+     echo('cos_N =',$cos_N)
+     echo('cos_Cb =',$cos_Cb)
+     echo('cos_Ca =',$cos_Ca)
+   endif
+
+   "orthogonal planes maxima"
+   $nimax1=trunc((timeTN*2*swN)-1.0)  
+
+   if $debug then
+     echo('nimax1 = ',$nimax1)
+     echo('ni2max = ',$ni2max)
+     echo('ni3max = ',$ni3max)
+   endif
+
+   "tilted planes"
+   if (($cos_N>0.01) and ($cos_Cb>0.01) and ($cos_Ca>0.01)) then
+    $nimax1t=trunc(((timeTN*2*$swTilt)/$cos_N)-1.0) 
+   endif
+
+   if $debug then
+     echo('')
+     echo('nimax1t = ',$nimax1t)
+     echo('ni2maxt = ',$ni2maxt)
+     echo('ni3maxt = ',$ni3maxt)
+   endif
+
+   if (($nimax1t<$ni2maxt) or ($nimax1t=$ni2maxt)) then
+    $least=$nimax1t else $least=$ni2maxt
+   endif
+   if (($ni3maxt<$least) or ($ni3maxt=$least)) then
+    $least=$ni3maxt else $least=$least
+   endif
+
+   return($nimax1,'angle_N',$ni2max,'angle_Ca',$ni3max,'angle_Cb',$least)
+
+elseif ((seqfil='PR43_intra_gc_c_nhP') or (seqfil='PR43_ghc_co_nhP')) then
+   cos(3.1416*angle_H/180.0):$cos_H
+   if $cos_H<0.01 then $cos_H=0 endif
+   $cos_H=trunc(1000*$cos_H)/1000.0
+   $angle_C=90.0-angle_H
+   cos(3.1416*$angle_C/180.0):$cos_C
+   if $cos_C<0.01 then $cos_C=0 endif
+   $cos_C=trunc(1000*$cos_C)/1000.0
+   $cos_N = sqrt(1.0 - ($cos_H*$cos_H + $cos_C*$cos_C))
+   if $cos_N<0.01 then $cos_N=0 endif
+   $cos_N=trunc(1000*$cos_N)/1000.0
+   acos($cos_N):$acos 
+   $angle_N = trunc(10.0*180.0*$acos/3.1416)/10.0
+
+   $swTilt=trunc(swH*$cos_H + swC*$cos_C + sw2*$cos_N)
+
+   echo('Maximum swTilt = ',$swTilt)
+   echo('Angle_H =',angle_H)
+   echo('Angle_C =',$angle_C)
+   echo('Angle_N =',$angle_N)
+
+   echo('')
+   echo('cos_N =',$cos_N)
+   echo('cos_H =',$cos_H)
+   echo('cos_C =',$cos_C)
+
+   $ni2max=trunc(timeTN*2*sw2)
+
+   echo('')
+   echo('ni2max = ',$ni2max)
+
+   return($ni2max)
+else
+   return($nimax1,$dummy,$ni2max,$dummy,$ni3max,$dummy,$least)
+endif

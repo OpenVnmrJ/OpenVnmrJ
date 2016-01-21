@@ -1,0 +1,33 @@
+"macro rna_makedipsi2"
+
+"Makes a dipsi2 decoupling pattern in your personal shapelib called"
+"rna_dipsi2.DEC if it does not already exist."
+
+"Within the pulse sequence code use the statements:		"
+"	obsprgon(!dipsi2!, pw, 5.0),  where ! means double quotes	"
+"	xmtron()						"
+"	.............						"
+"	xmtroff()						"
+"	obsprgoff()						"
+"where pw is the 90 degree pulse length,  OR use equivalent decprgon and "
+"decon statements etc for the 2nd channel etc"
+
+$file=userdir + '/shapelib/rna_dipsi2.DEC'
+exists($file,'file'):$exists 
+if $exists<1  then
+write('line3','Writing data to %s...',$file)
+write('reset',$file)
+$dur=320.0,410.0,290.0,285.0,30.0,245.0,375.0,265.0,370.0,320.0,410.0,290.0,285.0,30.0,245.0,375.0,265.0,370.0
+$p=0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0,0.0,180.0
+
+$i=1  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%6.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+
+$i=1  repeat  $phase=$p[$i]+180.0
+write('file',$file,'%5.1f\t%6.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+BPmoveshape('rna_dipsi2.DEC')
+write('line3','Done!')
+
+endif

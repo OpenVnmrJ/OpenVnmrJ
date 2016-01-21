@@ -1,0 +1,394 @@
+"macro autoschedule"
+getfilepath('automation.conf','adm/walkupadm'):$is,$apath
+if ($# < 1) then $1='init' endif
+if ($is=0) then return endif
+
+$admindir=userdir+'/persistence/cpADMIN'
+exists($admindir,'directory'):$adirex
+if ($adirex=0) then shell('mkdir -p '+$admindir):$dum endif
+
+$days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+$tmpfile=$admindir+'/autoconftmp'
+$tmpfile2=$tmpfile+'2'
+
+IF ($1='init') THEN
+
+   exists('AutoSchdl','parameter','global'):$parex
+   if ($parex=0) then
+	create('AutoSchdl','string','global')
+   endif
+   setprotect('AutoSchdl','on',256,'global')
+
+//   $a2path='/vnmr/adm/users/operators/automation.conf'
+   AutoSchdl[1]='no'				"ReUse alert message"
+						" NOT USED"
+// The SampleReuse field is now obsolete
+//   lookup('mfile',$a2path,'seekcs','SampleReuse','read',1):AutoSchdl[1]
+   AutoSchdl[2]='current'			"newautodir when?"
+   if ($# > 1) then
+	AutoSchdl[2]=$2
+   else
+   	getadminfo('newautodir'):AutoSchdl[2]
+   endif
+   if (AutoSchdl[2]<>'current') and (AutoSchdl[2]<>'daily') then
+	AutoSchdl[2]='current'
+   endif
+   AutoSchdl[3]=''				"autodir start Message display"
+// values 4 thru 10 are used by flexday definition popup
+   AutoSchdl[4]=''				" Which flex day being displayed"
+   AutoSchdl[5]=''				" dayQ start time"
+   AutoSchdl[6]=''				" dayQ end time"
+   AutoSchdl[7]=''				" max dayQ duration"
+   AutoSchdl[8]=''				" flexdayQ start time"
+   AutoSchdl[9]=''				" flexdayQ end time"
+   AutoSchdl[10]=''				" flexdayQ duration"
+
+   AutoSchdl[11]=''				"autodir start Message display2"
+
+   getfilepath('hourtable','adm/walkupadm'):$ok,$tabpath
+   shell('cp '+$tabpath+' '+$admindir):$dum
+   getfilepath('ampmtable','adm/walkupadm'):$ok,$tabpath
+   shell('cp '+$tabpath+' '+$admindir):$dum
+   getfilepath('lengthtable','adm/walkupadm'):$ok,$tabpath
+   shell('cp '+$tabpath+' '+$admindir):$dum
+   write('reset',$tmpfile)
+   write('reset',$tmpfile2)
+   shell('(cat '+$apath+' | grep cppref_ | grep dayQlimit > '+$tmpfile+')'):$dum
+
+   $i=1
+   repeat
+
+//		MonSchdl[1]	- DayQ start time on Monday
+//		MonSchdl[2]	- MaxTime per sample during day
+//		MonSchdl[3]	- NightQ merge time on Monday
+//		MonSchdl[4]	- MaxTime per night sample during day and per sample during night
+//		MonSchdl[5]	- Total time for shortQ (AutoFile)
+//		MonSchdl[6]	- MaxTime per sample in shortQ
+//		MonSchdl[7]	- Total time for LongQ (AutoFile)
+//		MonSchdl[9]	- MaxTime per sample in LongQ
+//		MonSchdl[8]	- Flag used by the popup for variable maxtime for day
+//			Note that the assignment of value9 and value8 above are NOT typo error
+
+	$params=$days[$i]+'Schdl'
+	exists($params,'parameter','global'):$parex
+	if ($parex=0) then
+	    create($params,'string','global')
+	endif
+	setprotect($params,'on',256,'global')
+	lookup('mfile',$apath,'seekcs',$days[$i],'readline',1):$line
+	string2array($line):{$params}
+	$parsize=size($params)
+	if ($parsize<9) then
+	   $x=$parsize+1
+	   repeat
+		{$params}[$x]='0:00'
+		$x=$x+1
+	   until $x > 9
+	endif
+	{$params}[9]={$params}[8]
+	{$params}[8]=''
+	shell('(cat '+$tmpfile+' | grep -c '+$days[$i]+'_dayQlimit)'):$isflex
+	if ($isflex) then
+		{$params}[8]='flex'
+	else
+		{$params}[8]=''
+	endif
+	if {$params}[1]='-0:00' then {$params}[1]='25:00' endif
+	vnmrjcmd('pnew',$params)
+	$i=$i+1
+   until $i > 7
+   autoschedule('updatehourtable')
+   autoschedule('newautowhen')
+
+   vnmrjcmd('pnew','AutoSchdl')
+   vnmrjcmd('popup','mode:modeless','file:autoschedule.xml','rebuild:yes','pnewupdate:true','close:'+$0+'(`close`)','title: Automation Time Scheduler')
+
+ELSEIF ($1='close') THEN
+    destroy('AutoSchdl','global'):$dum
+    destroy('MonSchdl','global'):$dum
+    destroy('TueSchdl','global'):$dum
+    destroy('WedSchdl','global'):$dum
+    destroy('ThuSchdl','global'):$dum
+    destroy('FriSchdl','global'):$dum
+    destroy('SatSchdl','global'):$dum
+    destroy('SunSchdl','global'):$dum
+
+ELSEIF ($1='setval') THEN
+
+   $param=$2+'Schdl'
+   strstr($4,':'):$r1,$a1,$a2
+   $val=($a1*60+$a2)*60
+
+   strstr({$param}[1],':'):$r1,$a1,$a2
+   $val1=($a1*60+$a2)*60
+   strstr({$param}[3],':'):$r1,$a1,$a2
+   $val3=($a1*60+$a2)*60
+   if ($3=1) or ($3=3) then $valX=$val else $valX=$val1 endif
+   $ok=1
+   if ($valX>0) and ($valX-1 < 24*3600) then
+   if ($3=1) then
+	if (($val3-$val) < 0) then
+		$val=$val3-1800
+		$ok=0
+	endif
+   elseif ($3=2) then
+	if ($val > ($val3-$val1)) then
+		$val=$val3-$val1
+		$ok=0
+	endif
+   elseif ($3=3) then
+	if (($val-$val1) < 0) then
+		$val=$val1+1800
+		$ok=0
+	endif
+   endif
+   endif
+   if ($ok=0) then
+   	$a1=trunc($val/3600)
+   	$a2=trunc($val/60)-($a1*60)
+   	$sval1='' $sval2=''
+   	format($a1,0,0):$sval1
+   	format($a2,0,0):$sval2
+   	if ($a2<10) then $sval2='0'+$sval2 endif
+   	$retval=$sval1+':'+$sval2
+   else
+	$retval=$4
+   endif
+   {$param}[$3]=$retval
+   if ($3=1) or ($3=3) then
+	autoschedule('setval',$2,2,{$param}[2])
+   endif
+   if ($3=1) then
+	autoschedule('newautowhen')
+   endif
+   vnmrjcmd('pnew',$param)
+
+ELSEIF ($1='setval2') THEN
+   
+   $param=$2+'Schdl'
+   $s1='' $s2=''
+   strstr($4,':'):$ret,$s1,$s2
+   if ($ret=0) then $s1=$4 $s2='00' endif
+   format($s1,'isreal'):$r1
+   format($s2,'isreal'):$r2
+   if ($r1<0.5) or ($r2<0.5) then 
+	vnmrjcmd('pnew',$param)
+	return 
+   endif
+   {$param}[$3]=$s1+':'+$s2
+
+   autoschedule('updatehourtable',$2)
+
+ELSEIF ($1='updatehourtable') THEN
+
+   if ($# > 1) then $d=$2 else $d=$days endif
+   $dtot=size('$d')
+   $i=1
+   repeat
+	$update=0
+	$param=$d[$i]+'Schdl'
+   	shell('(cat '+$admindir+'/hourtable | grep -wc "'+{$param}[5]+'")'):$ok
+   	if not ($ok) then
+            write('file',$admindir+'/hourtable','"%s" "%s"',{$param}[5],{$param}[5])
+	    $update=1
+   	endif
+   	shell('(cat '+$admindir+'/hourtable | grep -wc "'+{$param}[7]+'")'):$ok
+   	if not ($ok) then
+            write('file',$admindir+'/hourtable','"%s" "%s"',{$param}[7],{$param}[7])
+	    $update=1
+   	endif
+	if ($update) then vnmrjcmd('pnew',$param) endif
+	$i=$i+1
+   until $i > $dtot
+
+ELSEIF ($1='flexpopup') THEN
+
+   AutoSchdl[4]=$2
+   vnmrjcmd('pnew','AutoSchdl')
+   $day='' substr($2,1,3):$day
+   $param=$day+'Schdl'
+   AutoSchdl[5]={$param}[1]
+   AutoSchdl[6]={$param}[3]
+   AutoSchdl[7]={$param}[2]
+   AutoSchdl[8]=AutoSchdl[5]
+   AutoSchdl[9]=AutoSchdl[6]
+   AutoSchdl[10]=AutoSchdl[7]
+   write('reset',$tmpfile2)
+   write('file',$tmpfile2,'#Start         End         Duration')
+   write('file',$tmpfile2,'#----------------------------------')
+
+   $s1='' $s2='' $stot=0
+   readfile($tmpfile,'$s1','$s2','cppref_'+$day+'_dayQlimit','local'):$stot
+   if ($stot>0) then
+	$i=1
+	repeat
+	   write('file',$tmpfile2,' %s',$s2[$i])
+	   $i=$i+1
+	until $i > $stot
+   endif
+   vnmrjcmd('pnew','AutoSchdl',$param)
+
+ELSEIF ($1='flexwrite') THEN
+
+   $a1=0 $a2=0
+   strstr(AutoSchdl[5],':'):$ret2,$a1,$a2
+   $maxstart=($a1*60 + $a2)*60
+   $a1=0 $a2=0
+   strstr(AutoSchdl[6],':'):$ret2,$a1,$a2
+   $maxend=($a1*60 + $a2)*60
+   $a1=0 $a2=0
+   strstr(AutoSchdl[7],':'):$ret2,$a1,$a2
+   $maxduration=($a1*60 + $a2)*60
+
+   $a1=0 $a2=0
+   strstr(AutoSchdl[8],':'):$ret2,$a1,$a2
+   $start=($a1*60 + $a2)*60
+   $a1=0 $a2=0
+   strstr(AutoSchdl[9],':'):$ret2,$a1,$a2
+   $end=($a1*60 + $a2)*60
+   $a1=0 $a2=0
+   strstr(AutoSchdl[10],':'):$ret2,$a1,$a2
+   $duration=($a1*60 + $a2)*60
+
+   if ($duration>$maxduration) then $duration=$maxduration endif
+   if ($start<$maxstart) then $start=$maxstart endif
+   if ($end> $maxend) then $end=$maxend endif
+
+        $a1=trunc($start/3600)
+        $a2=trunc($start/60)-($a1*60)
+        $sval1='' $sval2=''
+        format($a1,0,0):$sval1
+        format($a2,0,0):$sval2
+        if ($a2<10) then $sval2='0'+$sval2 endif
+	AutoSchdl[8]=$sval1+':'+$sval2
+
+        $a1=trunc($end/3600)
+        $a2=trunc($end/60)-($a1*60)
+        $sval1='' $sval2=''
+        format($a1,0,0):$sval1
+        format($a2,0,0):$sval2
+        if ($a2<10) then $sval2='0'+$sval2 endif
+        AutoSchdl[9]=$sval1+':'+$sval2
+
+        $a1=trunc($duration/3600)
+        $a2=trunc($duration/60)-($a1*60)
+        $sval1='' $sval2=''
+        format($a1,0,0):$sval1
+        format($a2,0,0):$sval2
+        if ($a2<10) then $sval2='0'+$sval2 endif
+        AutoSchdl[10]=$sval1+':'+$sval2
+
+   write('file',$tmpfile2,' %s         %s         %s',AutoSchdl[8],AutoSchdl[9],AutoSchdl[10])
+
+ELSEIF ($1 = 'flexcancel') THEN
+   write('reset',$tmpfile2)
+   AutoSchdl[4]=''
+   AutoSchdl[5]=''
+   AutoSchdl[6]=''
+   AutoSchdl[7]=''
+   AutoSchdl[8]=''
+   AutoSchdl[9]=''
+   AutoSchdl[10]=''
+   vnmrjcmd('pnew','AutoSchdl')
+
+ELSEIF ($1 = 'flexclear') THEN
+   write('reset',$tmpfile2)
+   write('file',$tmpfile2,'#Start         End         Duration')
+   write('file',$tmpfile2,'#----------------------------------')
+   AutoSchdl[8]=AutoSchdl[5]
+   AutoSchdl[9]=AutoSchdl[6]
+   AutoSchdl[10]=AutoSchdl[7]
+   vnmrjcmd('pnew','AutoSchdl')
+
+ELSEIF ($1 = 'flexsave') THEN
+
+   substr(AutoSchdl[4],1,3):$day
+   shell('(cat '+$tmpfile+' | grep -v cppref_'+$day+'_dayQlimit > '+$tmpfile+'_xx)'):$dum
+   shell('mv '+$tmpfile+'_xx '+$tmpfile):$dum
+   shell('(sort -k 1 '+$tmpfile2+' -o '+$tmpfile2+')'):$dum
+   $newflex=0
+   shell('(cat '+$tmpfile2+' | grep -v \'^#\' | wc -l)'):$newflex
+   if ($newflex>0) then
+	shell('(cat '+$tmpfile2+' | grep -v \'^#\' | awk \'{print "cppref_'+$day+'_dayQlimit:   "$0}\' >> '+$tmpfile+')'):$dum
+   endif
+   autoschedule('flexcancel')
+
+ELSEIF ($1='write') THEN
+
+   exists(userdir+'/adm/walkupadm','directory'):$direx
+   if ($direx=0) then
+	shell('mkdir -p '+userdir+'/adm/walkupadm'):$dum
+   endif
+
+   $tmp=$admindir+'/tmpautosch'
+   write('reset',$tmp)
+   shell('(cat '+$apath+' | grep \'^#\' > '+$tmp+')'):$dum
+   shell('(cat '+$apath+' | grep cppref_ | grep -v dayQlimit >> '+$tmp+')'):$dum
+
+   $i=1
+   $parval=''
+   repeat
+	$param=$days[$i]+'Schdl'
+	write('fileline',$tmp,'%s',$days[$i])
+	$parval={$param}[1]
+	if ($parval='') then $parval='0:00' endif
+	write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[2]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[3]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[4]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[5]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[6]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[7]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+        $parval={$param}[9]
+        if ($parval='') then $parval='0:00' endif
+        write('fileline',$tmp,'   %s',$parval)
+	write('fileline',$tmp,'\n')
+	$i=$i+1
+   until $i > 7
+
+   $i=1
+   repeat
+	$param=$days[$i]+'Schdl'
+	$parval=''
+	$parval={$param}[8]
+	if $parval='flex' then
+   	    shell('(cat '+$tmpfile+' | grep cppref_'+$days[$i]+'_dayQlimit >> '+$tmp+')'):$dum
+	endif
+	$i=$i+1
+   until $i>7
+   shell('(cat '+$tmp+' > '+userdir+'/adm/walkupadm/automation.conf)'):$dum
+   shell('rm -f '+$tmp):$dum
+
+ELSEIF ($1 = 'newautowhen') THEN
+
+   $autoschdl=''
+   $autoschdl2=''
+   if (AutoSchdl[2]='daily') then
+     $i=1
+     repeat
+	$param=$days[$i]+'Schdl'
+	if ({$param}[1]<>'25:00') and ({$param}[1]<>'-1:00') then
+		$autoschdl=$autoschdl+' '+$days[$i]+'('+{$param}[1]+')'
+	else
+		$autoschdl2=$autoschdl2+' '+$days[$i]
+	endif
+	$i=$i+1
+     until $i > 7
+   endif
+   AutoSchdl[3]=$autoschdl
+   AutoSchdl[11]=$autoschdl2
+   vnmrjcmd('pnew','AutoSchdl')
+
+ENDIF

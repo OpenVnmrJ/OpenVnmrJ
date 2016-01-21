@@ -1,0 +1,75 @@
+"macro xmaddprotocol"
+"faster for SQ display than xmmakenode(prototypes)"
+
+if ($# = 0) then
+
+  xm1('studydir'):$sdir
+  if ($sdir='' or activestudy='null') then
+    return
+  endif
+
+  vnmrjcmd('SQ set new exp null')
+  vnmrjcmd('SQ set new status protocol')
+  $cmd='SQ get new sqattr sqval '+$0+'(`new`)'
+  vnmrjcmd($cmd)
+
+elseif ($# = 1) then
+
+  if ($1 = 'new') then
+    $i=0 teststr('sqattr','id','global'):$i
+    $id=sqval[$i]
+    $node='' $ldir=''
+    xm1('mkdir'):$node,$ldir
+    xmaddprotocol('write',$ldir)
+    $cmd='SQ get actions in '+$id+' id sqtval '+$0+'(`root`)'
+    vnmrjcmd($cmd)
+    vnmrjcmd('SQ set '+$id+' id '+$node)
+  elseif ($1 = 'root') then
+    $id=sqtval[1]
+    $cmd='SQ get '+$id+' sqattr sqval '+$0+'(`next`,`'+$id+'`)'
+    vnmrjcmd($cmd)
+  endif
+
+elseif ($# = 2) then
+
+  if ($1 = 'next') then
+
+    $id=$2
+    xm1('mkdir'):$node,$ldir
+    xmaddprotocol('write',$ldir)
+    vnmrjcmd('SQ set '+$id+' id '+$node)
+    copyid[1]=$node
+
+    $size=size('sqtval')
+    $i=0
+    repeat
+      $i=$i+1
+      if (sqtval[$i]=$id and $i<$size) then  "get next node"
+        $newid = sqtval[$i+1]
+        $cmd='SQ get '+$newid+' sqattr sqval '+$0+'(`next`,`'+$newid+'`)'
+        vnmrjcmd($cmd)
+        return
+      endif
+    until ($i>=$size)
+    sqtval='' sqval='' sqattr=''
+    xmwritesq
+
+  elseif ($1 = 'write') then
+    $ldir=$2
+    $size=size('sqattr')
+    $i=0 $nolock=1
+    repeat
+      $i=$i+1
+      if (sqattr[$i]<>'id') then
+        if (sqattr[$i]='lock') then $nolock=0 endif
+        $val=sqval[$i]
+"       if $val='' then $val='null' endif"
+        write('file',$ldir+'/prop','%s %s',sqattr[$i],$val)
+      endif
+    until ($i>=$size)
+    if ($nolock=1) then
+      write('file',$ldir+'/prop','lock off')
+    endif
+  endif
+
+endif

@@ -1,0 +1,56 @@
+"macro setlk"
+" setlk(arg1) - set up lock parameters 			"
+" first argument (required) - lock solvent 		"
+" this macro provides two approaches to setting z0 and  "
+" lockpower, lockgain, lockphase			"
+" Used by psLock prescan mechanism for systems 		"
+"  without z0 calibration in the probe file		"
+"  Note that if the probe file does not have z0 value	"
+"  For a given solvent, this is a do nothing event	"
+
+if ($# <> 1) then return(0) endif
+format($1,'lower'):$solv
+
+"z0, lockpower and lockgain can be set in the probes file"
+"  and called by the getparam macro "
+
+    $z0=0 getparam('z0_'+$solv,'lk'):$z0
+    if ($z0<>0) then z0=$z0 getlkpars endif
+
+"if one prefers to explicitly set z0/lockpower/lockgain for each solvent,"
+"the lines below must be updated to correspond to"
+"the non-saturating values for the spectrometer in use."
+
+/*
+    if $solv='cdcl3'  then $z0=0 lockpower=22 lockgain=70 
+    elseif $solv='d2o'    then $z0=0 lockpower=22 lockgain=70 
+    elseif $solv='acetone' then $z0=0 lockpower=15 lockgain=40 
+    elseif $solv='dmso'   then $z0=0 lockpower=20 lockgain=50 
+    elseif $solv='c6d6'   then $z0=0 lockpower=20 lockgain=50
+    else $z0=0 lockpower=25 lockgain=50 endif
+*/
+
+        "Sleep for 15 sec if a real acquisition "
+        "   immediately follows sethw.  Else there "
+        "   will not be enough time to settle z0"
+
+    if ($z0<>0) then
+	z0=$z0
+	sethw('z0',z0):$e
+	write('line3','z0 set to %d',z0)
+	systemtime:$t2
+	psCmd('set','acqpause',$t2+16)
+      if (auto='y') then
+    	alock='y'
+    	sethw('lockpower',lockpower,'lockgain',lockgain):$e
+    	psCmd('record','alock=y')
+      else
+    	sethw('lock','on','lockpower',lockpower,'lockgain',lockgain):$e
+    	alock='n'
+    	psCmd('record','alock=n')
+      endif
+      return(1)
+    endif
+
+return(0)
+

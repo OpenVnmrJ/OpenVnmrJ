@@ -1,0 +1,21 @@
+"macro readTtimeQ"
+$autofile=$1
+
+exists($1+'/TtimeQ','file'):$fex
+if ($fex=0) then
+  return(0,0,0)
+endif
+
+pwd:$curdir
+cd($1):$dum
+  $ptime=0 $dtime=0 $ntime=0 $s1='' $s2=0
+  readfile('TtimeQ','$s1','$s2','','local')
+  teststr('$s1','enterQ_TOTALTIME','local'):$ret
+  if ($ret) then $dtime=$s2[$ret] endif
+  teststr('$s1','priorityQ_TOTALTIME','local'):$ret
+  if ($ret) then $ptime=$s2[$ret] endif
+  teststr('$s1','overniteQ_TOTALTIME','local'):$ret
+  if ($ret) then $ntime=$s2[$ret] endif
+cd($curdir):$dum
+
+return($ptime,$dtime,$ntime)

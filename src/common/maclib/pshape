@@ -1,0 +1,174 @@
+"macro pshape"
+" ************************************************************* "
+" ***             dshape - display Pbox shape               *** "
+" ***        displays shape stored in pbox.fid file         *** "
+" ***             Eriks Kupce /  Rolf Kyburz                *** "
+" ************************************************************* "
+" modified 95/05/29, EK & R.K - fixed spectrum display parameters "
+
+" argument checking "
+
+if $#>0 then
+  $shape=$1
+else
+  dshapef
+  return
+endif
+
+getext($shape):$body,$ext
+substr($shape,1,1):$firstch
+
+" try finding the input file: "
+"   file can be given with absolute or relative    "
+"   pathname (in which case it is first searched   "
+"   locally, then in the user's shapelib, then in  "
+"   /vnmr/shapelib          			   "
+
+if $ext='' then
+  write('error','dshape: shapefile extension required !')
+  return  
+else
+  $ext='.'+$ext
+  if $firstch='/' then 
+    exists($shape,'file'):$e 
+  else   
+    exists($shape,'file'):$e
+    if not($e) then 
+      $shape=userdir+'/shapelib/'+$shape 
+      exists($shape,'file'):$e 
+      if not($e) then 
+        $shape=userdir+'/shapelib/'+$body+$ext
+        exists($shape,'file'):$e 
+        if not($e) then 
+          $shape=systemdir+'/shapelib/'+$body+$ext 
+          exists($shape,'file'):$e
+        endif 
+      endif 
+    endif   
+  endif
+endif
+if not($e) then
+  write('error','dshape: input file %s not found', $1)
+  return
+endif
+
+" now convert the input file to an FID text file "
+write('alpha','displaying data from %s',$shape)
+shell('Pxfid','"'+$shape+'"')
+
+" check command name, determine output device-specific parameters "
+if $0='dshape' then
+  clear(2)
+  $device='graphics'
+  $axiscolor='magenta'
+  $rcolor='cyan'
+  $icolor='yellow'
+else   " pshape "
+  write('line3','%s: drawing shape, please wait ... ',$0)
+  $device='plotter'
+  $axiscolor='pen2'
+  $rcolor='pen1'
+  $icolor='pen3'
+endif
+write($device,0,0,''):$ys	" line height for text "
+
+" define path names "
+$filepath = userdir+'/shapelib/pbox.fid'
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+
+" temporarily save experiment data and parameters "
+flush
+copy($fid,$fid+'.tmp')
+rm($fid)
+copy($procpar,$procpar+'.bk')
+copy($curpar,$curpar+'.bk')
+copy($data,$data+'.bk')
+copy($phasefile,$phasefile+'.bk')
+
+" find the number of lines (slices) in the shape definition "
+nrecords($filepath):$nstp
+
+" fix acquisition parameters to match the pseudo-dataset "
+setvalue('dp','n','processed')
+setvalue('np',$nstp*2,'processed')
+off('fpmult')
+setvalue('at',($nstp-1)/sw)
+setvalue('nt',1)
+setvalue('ct',1)
+setvalue('array','')
+setvalue('arraydim',1)
+
+" create an fid from the pulse shape "
+makefid($filepath,'dp=n')
+
+setvalue('np',$nstp*2)
+
+" set up processing and display parameters "
+phfid=0		" we want to be looking at the real part when we mean it "
+fn=2*$nstp	" adjust fn "
+if fn<2*$nstp then fn=2*fn endif
+
+exists('ssfilter','parameter'):$e	"check if present"
+if ($e<>0) then ssfilter='n' endif
+exists('lsfrq','parameter'):$e		"check is present"
+if ($e<>0) then lsfrq='n' endif
+lsfid='n' proc='ft' 
+
+ft('noft','nodc',1)	" ft without FT, no DC correction "
+wp=((np-1)/fn)*sw
+sp=sw-rfl+rfp-wp	" don't want to see the zerofilled part "
+rp=0 lp=0		" look at the 'pure' real part first "
+cdc lvl=0 tlt=0		" avoid dc corrections upon display "
+$x0=3			" leave a little gap at both sides "
+
+" scale shape by looking at noth the real and the imaginary part "
+peak:$re		" size of real part "
+if $re<0 then $re=0-$re endif
+rp=90 peak:$im		" size of imaginary part "
+if $im<0 then $im=0-$im endif
+if $re<$im then		" pick the larger of the two sizes "
+  $max=$im
+else
+  $max=$re
+endif
+$ymax=wc2max/2		" desired height "
+vs=vs*$ymax/$max	" scale display size "
+
+" display the pulse shape "
+full wc=wcmax-2*$x0 sc=$x0
+vp=wc2max/2-5		" display in center of page "
+rp=0			" display / plot real part first "
+if $device='graphics' then
+  dss($rcolor)
+  rp=90 dssn($icolor)
+else
+  pl($rcolor)
+  rp=90 pl($icolor)
+endif
+
+" label plot / display "
+write($device,$rcolor,$x0+2,wc2max-8,'Real')
+write($device,$icolor,$x0+2,wc2max-8-$ys,'Imaginary')
+
+" draw axes "
+pen($device,$axiscolor)
+move($x0,vp-$ymax)
+draw($x0,vp+$ymax)
+move($x0,vp)
+draw($x0+wc,vp)
+draw($x0+wc-1,vp)
+
+" restore experiment data "
+flush
+rm($fid):$x	  rename($fid+'.tmp',$fid)
+rm($procpar):$x	  rename($procpar+'.bk',$procpar)
+rm($curpar):$x	  rename($curpar+'.bk',$curpar)
+rm($data):$x	  rename($data+'.bk',$data)
+rm($phasefile):$x rename($phasefile+'.bk',$phasefile)
+fread($procpar,'processed')
+fread($curpar,'current')
+vp=0 full

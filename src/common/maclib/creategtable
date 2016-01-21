@@ -1,0 +1,92 @@
+"macro creategtable"
+"***************************************************************"
+" This macro prompts user for the gradient coil type, boresize, "
+" maximum gradient strength [G/cm], and trise, creates 	"
+" gcoil file which contains these parameters if they do not     "
+" exist and writes into /vnmr/imaging/gradtables directory.		"
+" For vnmrs it pops up a dialog box, asking fr these and more    "
+
+"[0] Constant and Declaration **********************************"
+
+if (Console='vnmrs') then
+   vnmrjcmd('popup','mode:modeless','rebuild:yes','file:SysGCoil.xml','location:controlPanel','title:Gradient Tables')
+   return
+endif
+
+
+$ans=' '
+$ans1=' '
+$desc=' '
+$name=' '
+$gmax=' '
+$size=' '
+$grad_dir=systemdir+'/imaging/gradtables'
+
+"[1] Input paramater *******************************************"
+
+input('Are all Gradient axis calibrated to the same maximum value? y/n: '):$ans
+if ($ans = 'n') then
+   createpfgtable
+   return
+else if ($ans <> 'y') then
+    write('error','%s is a invalid entry, macro aborted, try again.',$ans)
+    abort
+endif endif
+
+  input('Enter (m) for main coil, (h) for HPAG coil, (o) for other --> '):$ans 
+	
+  if ($ans = 'm') then
+    $name = 'main'
+  else if ($ans = 'h') then
+    $name = 'hpag'
+  else if ($ans = 'o') then
+    input('Enter name for gradient coil entry: '):$name
+  else
+    write('error','%s is a invalid entry, macro aborted, try again.',$ans)
+    abort
+  endif endif endif 
+
+
+"[2] Check file existence *************************************"
+
+$filename = $grad_dir+'/'+$name
+
+exists($filename,'file'):$ex
+if ($ex > 0) then
+  write('error','File : "%s" currently exists in %s ',$name, $grad_dir)
+  input('Select <o> Overwrite or <cr> default to abort macro --->'):$ans1
+
+  if ( ($ans1 = 'o') or ($ans1 = 'O') ) then	
+    write('line3','Existing file "%s" is being moved to /tmp directory.',$name)
+    mv($filename,'/tmp/'+$name)
+  else 
+    write('error','Macro terminated !')
+    abort
+  endif
+endif
+
+"[3] More input parameters **************************************"
+
+  input('Enter a brief description of this gradient table : '): $desc 
+  input('Enter the boresize in ( cm ) : '): $size
+  input('Enter the maximum gradient strength ( gauss/cm ) : '): $gmax
+  input('Enter the risetime ( usec ) : '): $trise
+
+"[4] Write to file *********************************************"
+
+  write('reset',$filename)
+  write('file',$filename,'####################################################')
+  write('file',$filename,'# Gradient Coil Name:  '+$name+' ')
+  write('file',$filename,'# Description : '+$desc)   
+  write('file',$filename,'####################################################')
+  write('file',$filename,'VARIABLE NAME	VALUE')
+  write('file',$filename,'boresize        %.2f cm',$size)
+  write('file',$filename,'gmax		%.2f gauss/cm',$gmax)
+  write('file',$filename,'trise		%.6f sec',$trise*1e-6)
+
+  write('line3',$filename+' created')
+  shell('chmod 444 '+$grad_dir+'/'+$name)
+
+"[5] Display contents of new gradtable ************************************"
+
+cat($grad_dir+'/'+$name)

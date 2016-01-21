@@ -1,0 +1,382 @@
+"macro lkHSmap"
+"********************************************************"
+"lkHSmap - Auto homospoil map generation macro            "
+"********************************************************"
+// works only for gradient lk map
+
+$d3optlk=0,0.25
+if (h1freq<450) then $d3optlk=0,0.18 endif
+$style='db'
+getparam('style','Probe'):$style
+
+if ($# < 1) then $1=0 endif
+IF ($1 = 0) THEN
+
+    cplog('PROTON','first'):$file,$asdir
+
+    if ($file<>'') then rt($asdir+'/'+$file) else abort endif
+    wft
+    execprocess='wft dssh'
+    execplot='execplot=\'\''
+    $pfgon3=''
+    substr(pfgon,3,1):$pfgon3
+    if ($pfgon3='n') then pfgon='nny' endif
+    $dn=dn
+    $xyshimflg=xyshimflg
+    $LKtpwr=LKtpwr
+    savesampglobal('cp')
+    module('list','calibpars'):$list
+    writeparam('/vnmr/tmp/calibpars',$list)
+
+//    groupcopy('current','processed','acquisition')
+//    groupcopy('current','processed','display')
+//    groupcopy('current','processed','processing')
+
+    is_IP:$isIP
+    gmapsys
+    if ($isIP) then
+	IPmodule('get')
+    else
+	$IPparlist=''
+        module('list','IPpars'):$IPparlist
+        destroy($IPparlist):$e
+    endif
+    fread('/vnmr/tmp/calibpars')
+    shell('rm -f /vnmr/tmp/calibpars'):$dum
+    LKtpwr=$LKtpwr
+    file='exp'
+    $dum=''
+    beepoff
+    gmapsys('setHSforH2'):$dum
+
+    nt=4
+   //Needs well calibrated pw90 to work
+    d1=2 pw=300 tpwr=38
+    getparam('tpwr','lk'):tpwr
+    getparam('pw90','lk'):pw90
+    if (tpwr=0) then tpwr=38 endif
+    if (pw=0) then pw=300 endif
+    pw(90) p1=2*pw90
+    beepon
+    xyshimflg=$xyshimflg
+
+    //sb=at/3 sbs=sb/2 gf='n' lb='n' awc='n'
+    sb='n' sbs='n' gf='n' lb='n' awc='n'
+    sinebell
+    tn='lk' d3=0 r1=1
+    dn='H1' gain=20
+
+    //Switch off shimming option for now
+    xyshimflg='n'
+    if (xyshimflg='y') then
+    	wstart='wshim=\'s\' method=\'xyz_basic\' wstart=\'\''
+	$str='Optimizing low-order radial shims and offset'
+    else
+    	wstart='wshim=\'n\' wstart=\'\''
+	$str='Adjusting offset'
+    endif
+
+    //$size=16
+    //getparam('rfsize','Probe'):$size
+    //$size=$size/10
+    //if ($size=0) then $size=1.6 endif
+    //getgamma(tn):$gamma
+    //$gammabar=$gamma/(2*3.1416*10000)
+//"Find GperCM that will give a profile with half the sw"
+    //$gpercm=(sw/($gammabar*$size))/2
+    //format($gpercm,0,1):$gpercm
+    //fixgrd($gpercm):gzlvl
+
+    if (spintype<>'tach') then spin=0 endif
+
+    fread($asdir+'/'+$file+'.fid/procpar','current','newonly')
+    getsampglobal('cp')
+    PFGflg='y'
+    mkpar('real','vtcomplvl',0)
+    vtcomplvl=0
+
+//    wnt='proc=\'ft\' wft f full dssh'
+    wnt=''
+    seqfil='s2pul' p1=0 nt=1 np=np*8 
+    pslabel='s2pul'
+    exists('proc1','parameter'):$pon
+    if ($pon>0) then proc1='ft' endif
+    sinebell
+    execprocess='proc=\'ft\' wft dssh'
+    execplot='return'
+    caliblist=$0
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_findtof'
+    xmhaha_calib('addNode','lkHSmap(1)')
+
+    banner($str)
+
+ENDIF
+
+"********************************************************"
+IF ($1 = 1) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft('nodc') setref f full av peak:$ht,cr movetof
+    nt=4
+    np=np/8
+    //sb=at/3 sbs=sb/2
+    sinebell
+    //sb='n' sbs='n'
+    seqfil='gmapz'
+    pw(90) p1=2*pw90
+    beepon
+    execprocess='proc=\'ft\' wft dssh'
+    execplot='return'
+    calibnode='_profile'
+    xmhaha_calib('addNode','lkHSmap(2)')
+
+    banner('Measuring homospoil profiles')
+ 
+ENDIF
+
+"********************************************************"
+IF ($1 = 2) THEN
+
+    cplog('gmapz','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft f full
+    ai vsadj(100)
+    rfl=sw/2 rfp=0 cr=0
+    dres(cr,.1):$width,$hzpp,$f1,$f2
+
+    write('line3','Homospoil profile width: %.1f Hz',$width)
+
+    if (($width < 0.25*sw) or ($width > 0.75*sw)) then
+      printon
+      write('alpha','Homospoil map failed')
+      write('alpha','Check system homospoil output')
+      write('alpha','Homospoil gradient map generation aborted')
+      printoff
+      gmapsys('quit')
+      abort
+    endif
+
+    $date=''
+    shell('date +%Y-%m-%d'):$date
+    d3=$d3optlk
+    ss=1
+    $mapname=probe+'_'+tn+'hs_'+$date
+    $ok=''
+    gmaplistfunc('wrshimcal',$mapname):$ok
+    $exec='' gmaplistfunc('unarray'):$ok,$exec
+    exec($exec)
+    gmapset('disable')
+    calibnode='_gzwin'
+    xmhaha_calib('addNode','lkHSmap(5)')
+    execprocess='proc=\'ft\' wft dssh'
+
+    banner('Optimizing window')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+    if shimset=4 then gzsize=7 endif
+    gmap_findtof='y'
+    gmapauto('startmap','nogo','ow')
+    gmapset('setb')
+    gmapset('disable')
+    calibnode='_shimmap'
+    execprocess=wexp+' lkHSmap(4)'
+    execplot='pltext(80,wc2max*0.98) gmaprep(\'explmenu\',\'pbase\')'
+    banner('Making Gradient map')
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 4) THEN
+
+    $mapname=''
+    gmapshim('mapname'):$mapname
+    $text=tn+' Gradient map for the probe: '+probe
+    $atext='   Mapname : '+$mapname
+    text($text) atext($atext)
+    gmaprep('explmenu','ebase')
+    dtext
+    
+    $dum=''
+    $ffile = userdir+'/gshimlib/shimmaps/'+$mapname+'.fid'
+
+    exists('/vnmr/vnmrrev','file','rw'):$owner
+    if ($owner>0.5) then
+      	exists(systemdir+'/gshimlib/shimmaps','directory'):$xx
+      	if ($xx < 0.5) then
+	    shell('mkdir -p '+systemdir+'/gshimlib/shimmaps'):$dum
+        endif
+      	$tfile = systemdir+'/gshimlib/shimmaps'
+      	$cmd = 'cp -r '+$ffile+' '+$tfile
+      	shell($cmd):$dum
+    endif
+
+// make a copy of the shimmap in study directory
+    $gdir=archivedir+'/'+sample+'/dirinfo/gshimlib'
+    shell('mkdir '+$gdir):$dum
+    shell('mkdir '+$gdir+'/shimmaps'):$dum
+    shell('mkdir '+$gdir+'/data'):$dum
+    shell('cp -r '+$ffile+' '+$gdir+'/shimmaps'):$dum
+    shell('cp '+userdir+'/gshimlib/data/* '+$gdir+'/data'):$dum
+
+    setparams('hsmap',$mapname,'Probe')
+    $tpwrs='' $pw90s=''
+    format(tpwr,0,0):$tpwrs
+    format(pw,0,1):$pw90s
+//    addlknuc
+//    setlkpars(lockpower,lockgain,lockphase)
+    addparams('tpwr',$tpwrs,'lk')
+    addparams('pw90',$pw90s,'lk')
+    execprocess='lkHSmap(8,\'ebase\') dtext'
+    execplot='pltext(80,wc2max*0.98) lkHSmap(8,\'pbase\')'
+
+//    gmapsys('quit')
+
+    cplog('PROTON','first'):$file,$asdir
+    $macro=''
+    rtv($asdir+'/'+$file,'macro'):$macro
+    rtv($asdir+'/'+$file,'caliblist'):$caliblist
+    rtv($asdir+'/'+$file,'svftmplt'):$svftmplt
+    $cl=caliblist
+    caliblist=$caliblist
+    $md=archivedir+'/'+sample+'/dirinfo/macdir'
+    xmhaha_calib('addNode',$macro+'(\'repeat\')','top'):$newnode
+    write('file',$md+'/'+$newnode+'acq','wshim=\'e\'')
+    write('file',$md+'/'+$newnode+'acq','execprocess=\'%s(7)\'',$0)
+    write('file',$md+'/'+$newnode+'acq','Gmap=\'hs\' wstart=`svftmplt=\'%s\'`',$svftmplt)
+    caliblist=$cl
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 5) THEN
+
+    cplog('gmapz','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    gmapset('setsw')
+
+    pw=0 tpwr=0
+    getparam('pw90','lk'):pw
+    getparam('tpwr','lk'):tpwr
+    $tpwr=tpwr
+    exists('LKtpwr','parameter'):$parex
+    if ($parex) then $tpwr=LKtpwr endif
+    if (tpwr=0) or ($tpwr=0) then 
+	seqfil='s2pul'
+	pslabel='s2pul'
+	d3=0 nt=1
+  	if (pw=0) then pw=300 endif
+  	tpwr=38 
+        $probestyle='' $arraydim=15
+        getparam('style','Probe'):$probestyle
+ 	if ($probestyle='one' or $probestyle='cold') then $arraydim=22 endif
+  	array('tpwr',$arraydim,tpwr-7,1)
+	execprocess='return'
+	execplot='return'
+	calibnode='_tpwr'
+	xmhaha_calib('addNode','lkHSmap(6)')
+  	banner('Optimizing pulse width')
+    else
+  	full
+  	d3=$d3optlk seqfil='gmapz'
+	nt=4
+   	lkHSmap(3)
+    endif
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 6) THEN
+
+    cplog('s2pul','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft av f full ds(1) vsadj(100)
+    $counter=1
+    repeat
+  	select($counter)
+  	peak:$ht
+  	if $counter=1 then $maxht = $ht $tpwr=tpwr[1] else
+     	    if $ht>$maxht then 
+		$maxht=$ht $tpwr=tpwr[$counter] 
+     	    else 
+		$counter=arraydim 
+	    endif
+  	endif
+  	$counter=$counter+1
+    until ($counter>arraydim)
+
+    ds(1) full
+    tpwr=$tpwr 
+    d3=$d3optlk seqfil='gmapz'
+    nt=4
+    lkHSmap(3)
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 7) then
+    wft
+    $date=''
+    shell('date +%Y-%m-%d_%H%M%S'):$date
+    $probepath='' $pex=0 $appdir=''
+    exists(probe,'probes/'+probe):$pex,$probepath
+    strstr($probepath,'/probes/'):$pex,$appdir
+    exists($appdir+'/shims/'+probe+'_lk_d2o','file'):$shimex
+    if ($shimex) then
+         shell('rm '+$appdir+'/shims/'+probe+'_lk_d2o')
+    endif
+    exists($appdir+'/shims','directory'):$shimdirex
+    if ($shimdirex=0) then
+           shell('mkdir '+$appdir+'/shims'):$dum
+    endif
+    svs($appdir+'/shims/'+probe+'_lk_d2o') 
+    svs($appdir+'/shims/'+probe+'_lk_d2o_'+$date)
+    execprocess='wft'
+
+
+    is_IP:$isIP
+    if ($isIP) then
+       VPtext
+       VPgettarget('z0calib'):$target
+       //Do reporting
+       VPhistory(z0)
+
+    endif
+
+ENDIF
+"********************************************************"
+IF ($1=8) THEN
+
+    $dirn='' substr(file,'dirname'):$dirn
+    $dirn=$dirn+'/dirinfo/gshimlib/data'
+    exists(curexp+'/expl.out','file'):$e
+    if $e>0.5 then rm(curexp+'/expl.out'):$x endif
+    $jfile=$dirn+'/gshim.bas'
+    exists($jfile,'file'):$e
+    if $e<0.5 then
+        write('error','gshim.bas not found')
+	return
+    else
+        wrspec('expl_avg_scale',$jfile)
+    endif
+    if ($2 = 'ebase') then
+    	full
+      	expl('file',$jfile,'tinysymbol')
+    elseif ($2='pbase') then
+      	pexpl('file',$jfile,'tinysymbol')
+      	page
+    endif
+    return
+
+ENDIF
+"********************************************************"

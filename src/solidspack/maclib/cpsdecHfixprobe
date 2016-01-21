@@ -1,0 +1,58 @@
+"macro cpsdecHfixprobe"
+// cppwHfixprobe - A macro to propagate H decoupling calibrations from the 
+//                 named region to all regions with the same nucleus.
+
+//                 Argument 1 is the action:
+//                 'fix' reads H decoupling information and propagates it 
+//                 to all other regions with the same nucleus.  
+
+//                 Argument 2 is the region number with a default of 1.  
+
+
+
+// Fix H Decoupling Parameters in the Probe File
+
+if (($#>0) and ($1='fix')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif 
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0  $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Set Array Containing Region Codes
+
+   $regout[1]='HCa'
+   $regout[2]='HCO'
+   $regout[3]='HC'
+   $indexmax=3
+
+// Get Decoupling Parameters from the Named Region 
+
+   probeparamgroup('getlocal',$reg,$dnuc,'tppmH','a','pw','ph'):
+                                       $aHtppm,$pwHtppm,$phHtppm
+                                       
+   probeparamgroup('getlocal',$reg,$dnuc,'spinalH','a','pw','ph'):
+                            $aHspinal,$pwHspinal,$phHspinal
+   probeparamgroup('getlocal',$reg,$dnuc,'','Hseq'):$Hseq
+
+// Save Decoupling Parameters to All Regions with the Same Nucleus 
+
+   $index=1.0
+   repeat
+      probeparamgroup('setlocal',$regout[$index],$dnuc,'tppmH','a',$aHtppm,
+                                                   'pw',$pwHtppm,
+                                                   'ph',$phHtppm)
+      probeparamgroup('setlocal',$regout[$index],$dnuc,'spinalH','a',$aHspinal,
+                                                   'pw',$pwHspinal,
+                                                   'ph',$phHspinal)
+      probeparamgroup('setlocal',$regout[$index],$dnuc,'','Hseq',$Hseq)
+      $index=$index+1.0
+   until ($index>$indexmax)
+endif
+

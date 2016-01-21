@@ -1,0 +1,40 @@
+"macro partop"
+"*********************************************************************"
+" partop - setup plotting parameters for pl('top')                  "
+"*********************************************************************"
+"use parside to setup plotting parameters for pl('side')" 
+
+
+ write('line3','setting parameters for top plot in 2D spectrum')
+ jexp:$1dexp
+ $2dexp=0
+ if ($# = 0) then
+   input('experiment number containing the 2D spectrum:'):$2dexp
+ else
+   $2dexp=$1
+ endif
+ if ($2dexp=$1dexp) then
+   write('error','2D spectrum and 1D spectrum cannot be in the same experiment')
+   return(1)
+ endif
+ "get plotting parameters from 2D experiment"
+ jexp($2dexp)
+ exists('ni','parameter'):$niexist
+ if ($niexist = 0) then
+   jexp($1dexp)
+   write('error','input experiment is NOT a 2D experiment')
+   return(1)
+ endif
+ $savewc=wc $savesc=sc $savewc2=wc2 $savesc2=sc2
+ if (trace = 'f1') then
+   $savewp=wp1 $savesp=sp1
+ else
+   $savewp=wp  $savesp=sp
+ endif
+ jexp($1dexp)
+   wc=$savewc wc2=$savewc2 wp=$savewp
+   sc=$savesc vp=$savesc2 sp=$savesp sc2=0
+ write('line3','adjust vs and plot')
+ ds
+
+

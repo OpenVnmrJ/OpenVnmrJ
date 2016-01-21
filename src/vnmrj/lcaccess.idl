@@ -1,0 +1,124 @@
+/*
+ * Copyright (c) Varian Assoc., Inc.  All Rights Reserved.
+ *
+ * This software contains proprietary and confidential information of
+ * Varian, Inc. and its contributors.  Use, disclosure and
+ * reproduction is prohibited without prior consent.
+ */
+
+/* This interface specifies access to Varian LC-type methods.  The
+ * "server" resides on the PC.  The Sun (or other remote client) gets
+ * a reference to the RemoteObjectAccessor and from then on gets
+ * access to the methods as needed.
+ */
+
+module lcaccess {
+
+    exception InvalidValueException {
+        long value;
+    };
+
+    exception InvalidAddressException {
+        long address;
+    };
+
+    exception InvalidMethodException {};
+
+    struct MethodLine {
+        long time;
+        long opCode;
+        long value;
+    };
+
+    typedef sequence<long> StatusArray;
+    
+    typedef sequence<long> FileStatus;
+
+    typedef sequence<MethodLine> ModuleMethod;
+
+    interface ModuleAccessor {
+        long    getNumberOfConnectedModules();
+        string  getModuleName(in long address);
+        boolean setReferences();
+    };
+
+    interface Pump9012 {
+        const long ENDACTION_EQUILIBRATE = 0;
+        const long ENDACTION_STOP = 1;
+        const long ENDACTION_HOLD = 2;
+
+        boolean validateMethod(in ModuleMethod method);
+
+        void downloadMethod(in long address, in ModuleMethod method)
+            raises (InvalidAddressException, InvalidMethodException);
+
+        void start(in long address)
+            raises (InvalidAddressException);
+
+        void stop(in long address)
+            raises (InvalidAddressException);
+
+        void reset(in long address)
+            raises (InvalidAddressException);
+
+        void pump(in long address)
+            raises (InvalidAddressException);
+
+        void purge(in long address)
+            raises (InvalidAddressException);
+
+        void prime(in long address, in long reservoir)
+            raises (InvalidAddressException, InvalidValueException);
+
+        void activateMethod(in long address, in long methodNumber)
+            raises (InvalidAddressException, InvalidValueException);
+
+        void requestStatus(in long address, in long updatesPerMinute)
+            raises (InvalidAddressException, InvalidValueException);
+
+        StatusArray getLatestStatus(in long address)
+            raises (InvalidAddressException);
+
+        FileStatus getFileStatus(in long address)
+            raises (InvalidAddressException);
+    };
+
+
+    interface Detector9050 {
+        boolean validateMethod(in ModuleMethod method);
+
+        void downloadMethod(in long address, in ModuleMethod method)
+            raises (InvalidAddressException, InvalidMethodException);
+
+        void autozero(in long address)
+            raises (InvalidAddressException);
+
+        void start(in long address)
+            raises (InvalidAddressException);
+
+        void stop(in long address)
+            raises (InvalidAddressException);
+
+        void reset(in long address)
+            raises (InvalidAddressException);
+
+        void activateMethod(in long address, in long methodNumber)
+            raises (InvalidAddressException, InvalidValueException);
+
+        void setLampOn(in long address)
+            raises (InvalidAddressException);
+
+        void setLampOff(in long address)
+            raises (InvalidAddressException);
+
+        void requestStatus(in long address, in long updatesPerMinute)
+            raises (InvalidAddressException, InvalidValueException);
+
+        StatusArray getLatestStatus(in long address)
+            raises (InvalidAddressException);
+
+        FileStatus getFileStatus(in long address)
+            raises (InvalidAddressException);
+    };
+
+};

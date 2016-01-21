@@ -1,0 +1,25 @@
+"macro getlkpars"
+
+        $solv=''
+        format(solvent,'lower'):$solv
+        $lkpwr=0 $lkgn=0 $lkphase=0
+        getparam('pwr_'+$solv,'lk'):$lkpwr
+        if $lkpwr <> 0 then lockpower=$lkpwr endif
+        getparam('gn_'+$solv,'lk'):$lkgn
+        if $lkgn <> 0 then lockgain=$lkgn endif
+	if (auto='y') then
+	   $loadlkphase='no'
+	   getadminfo('loadlkphase'):$loadlkphase
+	   if ($loadlkphase='yes') then
+		getparam('phase','lk'):$lkphase
+		if ($lkphase <> 0) then lockphase=$lkphase endif
+	   endif
+	endif
+
+	exists('Gmap','parameter'):$gmapex
+	if ($gmapex) then
+	   if (Gmap='H1') and ($solv='d2o') then
+		lockpower=lockpower+10
+		lockgain=lockgain+10
+	   endif
+	endif

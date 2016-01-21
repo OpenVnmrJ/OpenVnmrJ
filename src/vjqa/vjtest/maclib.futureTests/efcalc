@@ -1,0 +1,24 @@
+"construct 2nd term"
+ln(msna_on/msna_off -1):$q1
+$q1 = 4.3429*$q1
+"construct 3rd term"
+$q2 =  (tambient+273.16)/290 -1
+$q2 =  $q2*msna_on/msna_off
+exp(0.2302585*enr):$h1
+$q3 = 1-$q2/$h1
+"10 log q3 "
+ln($q3):$q3
+$q3 = 4.3429*$q3
+$ans = enr - $q1 + $q3
+write('line3','proto noise figure = %f',$ans)
+"SYSTEM gain calculation"
+$g1=(msna_on - msna_off)/sw
+ln($g1):$g1
+$g1=$g1*4.3429 
+"g1 = 10 log((msna_on - msna_off)/sw) "
+$g2=(290*(1+$h1)-273.16+tambient)
+ln($g2):$g2
+$g2 = $g2*4.3429
+"g2 = 10 log (290*(1 + 10 (enr/10)) - 273 + temp) " 
+$gain = 120.1895 + $g1 - $g2
+write('line3','proto gain = %f',$gain)

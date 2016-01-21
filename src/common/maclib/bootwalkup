@@ -1,0 +1,175 @@
+"macro bootwalkup"
+
+loc='n'
+xm1('validate move')
+
+if (Console='vnmrs') and (system='spectrometer') and (dsp<>'n') then
+  dsp='n'
+endif
+
+testacquire='y'
+activestudy=''
+vnmrjcmd('SQ pause activestudy=\'\'')
+personalogin('bootup')
+fixpar_walkup
+if (seqfil='info') then seqfil='s2pul' endif
+
+  "***svfname cannot be an empty string***"
+  "*** nor any legacy value***"
+	if ((svfname='') or 
+	    (svfname='$samplename$-$explist$_') or
+	    (svfname='$nameprefix$-$explist$_')) then 
+		svfname='$samplename$-$pslabel$_'
+		writeparam(userdir+'/global','svfname','global','add')
+	endif
+
+  "***svfdir cannot be an empty string***"
+	if (svfdir='') then
+		svfdir='$userdir$/data'
+		writeparam(userdir+'/global','svfdir','global','add')
+	endif
+
+  "***This section is to add cpglobals module***"
+	$cpglist=''
+	module('arraylist','cpglobals'):$cpglist,$globalpar
+	if ($cpglist[1]<>'') then
+		$operator=operator
+		if ($operator='') then $operator=owner endif
+		fread($globalpar,'global','newonly')
+		setvalue('operator',$operator,'global')
+                setprotect('','clear',16384,'global')
+		rtx($globalpar,'global','keep','clear')
+		writeparam(userdir+'/global','$cpglist','global','add')
+	endif
+
+	$cpglist2=''
+	module('arraylist','usercpglobals'):$cpglist2,$globalpar2
+	if ($cpglist2[1]<>'') then
+                $operator=operator
+                fread($globalpar2,'global','newonly')
+                setvalue('operator',$operator,'global')
+                setprotect('','clear',16384,'global')
+                rtx($globalpar2,'global','keep','clear')
+                writeparam(userdir+'/global','$cpglist2','global','add')
+        endif
+	exists('craftglobals','modules'):$crex,$globalpar3
+	if $crex then fread($globalpar3,'global','newonly') endif
+	exists('asppars','maclib'):$aspmacex
+	if $aspmacex then asppars endif
+	exists('is_craft','maclib'):$macex
+	if $macex then is_craft('setup') endif
+
+  "****Fix opentray parameter***"
+	$otsize=size('opentray')
+        if ($otsize<2) then opentray[2]='',''
+	elseif ($otsize<3) then opentray[3]='' endif
+	cpsaveglobal=''
+
+  "****Set systemname parameter value****"
+        $pfrq='' format(h1freq,'lower'):$pfrq
+	$systemname=systemname
+        systemname=instrument+'-'+Console+$pfrq
+	if ($systemname<>systemname) then
+		writeparam(userdir+'/global','systemname','global','add')
+	endif
+
+  "***customflag and wqinit are local - this is for legacy cleanup****"
+	exists('customflag','parameter','global'):$cfex
+	if ($cfex) then destroy('customflag','global') endif
+        exists('wqinit','parameter','global'):$wqex
+        if ($wqex) then destroy('wqinit','global') endif
+	mkpar('string','wqinit','')
+	setgroup('wqinit','display')
+	mkpar('flag','customflag','n')
+	setgroup('customflag','display')
+	mkpar('flag','cppauseflg','n')
+	setgroup('cppauseflg','display')
+
+  "**** Make sure gcflg is off and sqflag is on ***"
+        sqflag='y' gcflg='n'
+//	getadminfo('autosqdisplay'):SpecViewPref
+        getadminfo('autosqdisplay'):SpecViewPref[1]
+        setprotect('SpecViewPref','on',256,'global')
+        $spcsize=size('SpecViewPref')
+        if ($spcsize<2) then SpecViewPref[2]='' endif
+//	getadminfo('showscoutfid'):ScoutViewPref
+	$scout='no' $errnode='yes'
+	getadminfo('showscoutfid'):$scout
+	if ($scout='yes') then
+	    SampleViewPref('set','scout')
+	else
+	    SampleViewPref('remove','scout')
+	endif
+	getadminfo('showerrnodes'):$errnode
+	if ($errnode='yes') then
+	    SampleViewPref('set','error')
+	else
+	    SampleViewPref('remove','error')
+	endif
+  "****sampdirtmplt cannot be empty string****"
+	if (sampdirtmplt='') then
+		sampdirtmplt='$samplename$_%DATE%_'
+		writeparam(userdir+'/global','sampdirtmplt','global','add')
+	endif
+
+  "**** Generate operator menu for use by other macros ****"
+	operightsManager('operatormenu')
+
+  "****cpglobalauto cannot be an empty string****"
+	if (cpglobalauto='') then 
+		cpglobalauto=userdir+'/Automation' 
+		writeparam(userdir+'/global','cpglobalauto','global','add')
+	endif
+	$firstchar='' substr(cpglobalauto,1,1):$firstchar
+	if ($firstchar<>'/') then 
+		cpglobalauto=userdir+'/'+cpglobalauto 
+		writeparam(userdir+'/global','cpglobalauto','global','add')
+	endif
+
+  "***cpautodir cannot be empty string***"
+        if (cpautodir='') then
+                cpautodir=autodir
+                writeparam(userdir+'/global','cpautodir','global','add')
+        endif
+
+  "***setup autodirtmplt, PDFpreview, and FASTuser***"
+	$autodirtmplt=autodirtmplt
+	setautodirtmplt
+	if ($autodirtmplt<>autodirtmplt) then
+		writeparam(userdir+'/global','autodirtmplt','global','add')
+	endif
+  if (jviewport=activeviewport) then
+	pageview('setup')
+	vjplotmenu
+	FASTenv='n'
+//	fastuserlogin('setup')
+//	autoschedule('fixit')
+
+  "***Findout which sample is in the magnet ***"
+        if (traymax>1) then
+                $sampno=0
+                if (traymax <> 96) and (traymax <> 768) then
+                  expactive:$isactive
+                  if ($isactive > -1) then
+                    readhw('loc'):$sampno
+                  endif
+                endif
+                setvalue('loc',$sampno,'global')
+                off('loc','global')
+		showtray('close')
+        endif
+  endif
+  "***Load userpreferences ***"
+        loaduserprefs('global')
+
+  "*****Login preferences option****"
+  if (jviewport=activeviewport) then
+	loginCPprefs
+	QuickSubmit('start')
+  //****Set the tray show/hide commands****
+        vnmrjcmd('tray','setHideTrayCmd','showtray(\'closebutton\')')
+        vnmrjcmd('tray','setShowTrayCmd','showtray(\'openbutton\')')
+
+ //****Refresh SQ area*********
+	SQDisplay('refresh')
+  endif

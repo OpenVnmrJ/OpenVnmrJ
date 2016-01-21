@@ -1,0 +1,88 @@
+"macro pbox_bws"
+" ************************************************************* "
+" ***                     pbox_bws                          *** "
+" ***              select Pbox excitation band              *** "      
+" ***                    Eriks Kupce                        *** "
+" ***                 Pbox 5.2 01/08/96                     *** "
+" ************************************************************* "
+
+
+$swcenter = sw/2-(rfl-rfp)            "spectrum center"           
+$bwcenter = cr-delta                  "band center"  
+$sh = 'wave data : '  
+
+if crmode = 'b' then         
+  r1 = 2*delta
+  r2 = $bwcenter-$swcenter
+endif
+
+if $# > 0 then $sh = $1+' : ' endif
+
+$r1s='' $r2s='' $r3s='' $r4s=''
+format(r1,5,1):$r1s
+format(r2,5,1):$r2s
+format(r3,8,6):$r3s
+format(r4,3,1):$r4s
+$vnmrjsh = ''
+
+if (r3=0.0) then 
+  if (n3<>'n') then 
+    $vnmrjsh=$sh+' bw='+$r1s+', off='+$r2s+', st='+$r4s+', ph='+n2+', trev='+n3
+    write('line3','%s bw=%5.1f, off=%5.1f, st=%3.1f, ph=%s, trev=%s', 
+                  $sh, r1, r2, r4, n2, n3)
+  else if (n2<>'n') then 
+      $vnmrjsh=$sh+' bw='+$r1s+', off='+$r2s+', st='+$r4s+', ph='+n2
+      write('line3','%s bw=%5.1f, off=%5.1f, st=%3.1f, ph=%s', 
+                    $sh, r1, r2, r4, n2)
+    else if (r4<>0) then 
+        $vnmrjsh=$sh+' bw='+$r1s+', off='+$r2s+', st='+$r4s
+        write('line3','%s bw=%5.1f, off=%5.1f, st=%3.1f', 
+                      $sh, r1, r2, r4)
+      else if (r2<>0) then 
+          $vnmrjsh=$sh+' bw='+$r1s+', off='+$r2s
+          write('line3','%s bw=%5.1f, off=%5.1f', $sh, r1, r2)
+        else if (r1<>0) then 
+            $vnmrjsh=$sh+' bw='+$r1s
+            write('line3','%s bw=%5.1f', $sh, r1)
+          else
+            $vnmrjsh=$sh+' pw defaulted to 5 ms'
+            write('line3','%s pw defaulted to 5 ms', $sh) r1=0.005
+          endif
+        endif
+      endif
+    endif
+  endif
+else
+  if (n3<>'n') then 
+    $vnmrjsh=$sh+' bw='+$r1s+', pw='+$r3s+', off='+$r2s+', st='+$r4s+', ph='+n2+', trev='+n3
+    write('line3','%s bw=%5.1f, pw=%8.6f, off=%5.1f, st=%3.1f, ph=%s, trev=%s', 
+                  $sh, r1, r3, r2, r4, n2, n3)
+  else if (n2<>'n') then 
+      $vnmrjsh=$sh+' bw='+$r1s+', pw='+$r3s+', off='+$r2s+', st='+$r4s+', ph='+n2
+      write('line3','%s bw=%5.1f, pw=%8.6f, off=%5.1f, st=%3.1f, ph=%s', 
+                    $sh, r1, r3, r2, r4, n2)
+    else if (r4<>0) then 
+        $vnmrjsh=$sh+' bw='+$r1s+', pw='+$r3s+', off='+$r2s+', st='+$r4s
+        write('line3','%s bw=%5.1f, pw=%8.6f, off=%5.1f, st=%3.1f', 
+                      $sh, r1, r3, r2, r4)
+      else if (r2<>0) then 
+          $vnmrjsh=$sh+' bw='+$r1s+', pw='+$r3s+', off='+$r2s
+          write('line3','%s bw=%5.1f, pw=%8.6f, off=%5.1f', $sh, r1, r3, r2)
+        else if (r1<>0) then 
+            $vnmrjsh=$sh+' bw='+$r1s+', pw='+$r3s
+            write('line3','%s bw=%5.1f, pw=%8.6f', $sh, r1, r3)
+          else
+            $vnmrjsh=$sh+', pw='+$r3s
+            write('line3','%s pw=%8.6f', $sh, r3)
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+if ($vnmrjsh<>'') then
+  exists('pboxstr','parameter','global'):$e
+  if ($e) then
+    pboxstr[14]=$vnmrjsh
+  endif
+endif

@@ -1,0 +1,171 @@
+"macro quant"
+// quant apptype macro - rtp personality with no parsing of the probe file
+
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+if ($action = 'setup') then
+
+  if ($do = '') then
+    $do = macro
+  endif
+  exists($do,'parlib'):$e,$path
+  if ($e) then
+    rtp($path)
+  else
+    write('error','parameters for %s do not exist',macro)
+    return
+  endif
+
+  $PFGflg=''
+  homo='n'  "is this for all pulse sequences?"
+  getparam('gradient','Probe'):$PFGflg
+  if ($PFGflg = '') then
+    $PFGflg='n'
+  endif
+  PFGflg=$PFGflg
+
+  substr(pfgon,3,1):$pfgon
+  if ($pfgon = 'n') then
+    if (PFGflg = 'y') then
+      pfgon='nny'
+    endif
+  endif
+"Keep exact parameters on retrieved parameter set"
+//  getparam('pw90',tn):pw90
+//  getparam('tpwr',tn):tpwr
+//  write('line3','pw90 = %s tpwr = %s ',pw90,tpwr)
+
+"When protocols are made by the quantsaveprotocol macro probe is remembered"
+  exists('probe_','parameter'):$e
+  if ($e) then if (probe_<>probe) then
+    write('line3','This quantitation method was created with a different probe')
+    write('line3','Comparisons with older data not likely to be valid')
+  endif endif
+
+  if (tn='H1' or tn='F19') then
+    exists('tpwr_cf','parameter'):$e 
+    if not ($e) then 
+      create('tpwr_cf')
+    endif 
+    tpwr_cf = 1
+    getparam('tpwr_cf',tn):tpwr_cf
+    setprotect('tpwr_cf','on',16384) 
+  else
+    exists('pwxlvl_cf','parameter'):$e 
+    if not ($e) then 
+      create('pwxlvl_cf')
+    endif 
+    pwxlvl_cf = 1
+    getparam('pwxlvl_cf',tn):pwxlvl_cf
+    setprotect('pwxlvl_cf','on',16384) 
+  endif
+
+"do not alter pw"
+//  pw(45)
+  " dn is H1 if the system is H/C gemini "
+  " for other systems dn is set to C13   "
+  if (tn = 'H1') then
+    if (rftype <> 'ee') then
+      dn='C13'
+    elseif (Console <> 'g2000') then
+      dn='C13'
+    endif
+  endif
+
+  setdecpars
+
+  if (tn <> 'H1') then
+    $sfactor=1 $spfactor=0 $solv=''
+    format(solvent,'lower'):$solv
+    getparam($solv,'SF'):$sfactor
+    pw90=pw90*$sfactor
+    getparam($solv,'SP'):$spfactor
+    tpwr=tpwr+$spfactor
+  endif
+
+  if (tn='F19') and (Console='inova') and (rfchtype[2]='U+ H1 Only') then
+    dn='H1'
+  endif
+
+  if (auto <> 'y' and system <> 'datastation') then
+    off('temp')
+    if (vttype > 0) then
+      vnmrinfo('get','tempExpControl'):$tempon
+      if ($tempon) then
+        vnmrinfo('get','tempOnOff'):$vtison
+        if ($vtison = 1) then
+          vnmrinfo('get','tempSetPoint'):temp
+          on('temp') 
+        endif
+      endif
+    endif
+  endif
+
+  setrc
+
+  if (traymax=96 or traymax=768 or traymax=1) then spin=0 endif
+  on('wrtp'):$e
+  if ($e > 0.5) then
+    exec(wrtp)
+  endif
+  setref('setup')
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+  execseq('setup')  // Execute any sequence specific setup
+
+  exists('solvent_','parameter'):$e
+  if ($e) then
+    write('line3','Parent Quant protocol used %s as solvent',solvent_)
+  endif
+  dps newdg dg
+
+elseif ($action = 'process') then
+  
+  exists(userdir+'/Quantitation_Results','directory'):$e
+  if ($e<0.5) then
+    mkdir(userdir+'/Quantitation_Results')
+  endif
+
+  exists(pslabel+'p','maclib'):$mac
+  if ($mac>0.5) then
+    {pslabel+'p'}
+  elseif ($mac<0.5) then
+    wft
+    lp=0 aph0
+    quantdocalc
+  endif
+
+  if (auto='y' or sqmode='go') then
+    $file=file
+    exists($file,'directory'):$e
+    if $e<0.5 then
+      $file=$file+'.fid'
+      exists($file,'directory'):$e
+    endif
+    if $e>0.5 then
+      groupcopy('current','processed','display')
+      fsave($file+'/procpar')  "save lifrq etc."
+    endif
+  endif
+
+  execseq('proc') // Execute any sequence specific processing
+
+elseif ($action = 'plot') then
+
+  if arraydim=1 then		" non-arrayed 1D spectra "
+    plot1d			" other non-arrayed 1D spectra "
+  else				" arrayed 1D spectra "
+    plarray			" other arrayed 1D spectra "
+  endif
+
+  execseq('plot') // Custom  sequence-based plots if desired
+
+endif
+

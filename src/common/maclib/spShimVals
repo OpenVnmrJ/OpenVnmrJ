@@ -1,0 +1,36 @@
+"macro spShimVals"
+// spShimVals
+
+getlimit('z1'):$max
+$index = ''
+if (spDim=1) then
+  $vec='spVec1'
+  $i=spIter + 1
+  $var = ''
+  substr(spParNames,1):$var
+  if ($var <> '') then
+    if ({$vec}[$i] > $max) then
+      {$vec}[$i] = $max
+    elseif ({$vec}[$i] < -$max) then
+      {$vec}[$i] = -$max
+    endif
+    {$var} = {$vec}[$i]
+  endif
+else
+  format(spVertex,0,0):$index
+  $vec = 'spVec'+$index
+  $i = 1
+  repeat
+    $var = ''
+    substr(spParNames,$i):$var
+    if ($var <> '') then
+      if ({$vec}[$i] > $max) then
+        {$vec}[$i] = $max
+      elseif ({$vec}[$i] < -$max) then
+        {$vec}[$i] = -$max
+      endif
+      {$var} = {$vec}[$i]
+    endif
+    $i = $i + 1
+  until ($var = '')
+endif

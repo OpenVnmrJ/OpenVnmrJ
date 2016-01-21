@@ -1,0 +1,179 @@
+"macro xmcmdedit"
+// xmcmdedit - CMD protocol editor
+
+// if $1 is 'open' then
+//   if $2=actionid then
+//     open current actionid CMD protocol
+//   else if $1=protocol name then
+//     open protocol name if CMD
+//   else open the default CMD protocol
+// else $1 is other button action
+
+$name='macro'
+$action='open'
+if ($# > 0.5) then
+  if ($1='open' or $1='close' or $1='save' or $1='cancel' or $1='exec') then
+    $action=$1
+  else
+    $name=$1
+  endif
+endif
+
+if ($action='open') then  // open editor
+
+// initialize from actionid
+  $id=''
+  if ($# > 1.5) then $id=$2 endif
+  if ($id<>'null' and $id<>'') then
+    if (appmode='imaging') then
+      sqprotocol(0,0,0,3)
+      $p5s=''
+      xmgetatts($id,'title','macro','time'):protoFile[3],protoFile[4],$p5s
+      sqprotocol(3,$p5s,0,3):protoFile[5]
+    else
+      cqprotocol(0,0,0,3)
+      $p7s=''
+      xmgetatts($id,'title','exp','required','macro','time'):protoFile[3],protoFile[4],protoFile[5],protoFile[6],$p7s
+      cqprotocol(3,$p7s,0,3):protoFile[7]
+    endif
+// get apptype
+    $p3=protoFile[3]
+    exists($p3+'.xml','templates/vnmrj/protocols'):$e,$file
+    if ($e) then
+      $nret=0
+      lookup('mfile',$file,'delimiter',' "<!>','apptype=','delimiter','="','read'):$app,$nret
+      if appmode='imaging' then
+        if $nret>0.5 then apptype=$app endif
+      else
+        if $nret>0.5 then protoFile[2]=$app endif
+      endif
+    endif
+
+    if appmode='imaging' then
+      layout='cmdprotocol'
+    else
+      seqfil='cmdprotocol'
+    endif
+    vnmrjcmd('setpage','Acquire')
+    vnmrjcmd('setpage','Acquire','Command')
+
+//  vnmrjcmd('popup', 'mode:modeless', 'rebuild:no', 'file:protocolcmd.xml', 'location:topMenuBar', 'help:/vnmr/jhelp/dialog/protocolcmd.html', 'title:Edit CMD Protocol')
+
+  elseif ($name <> '') then
+// read protocol xml file
+    if (actionid<>'null') then
+      xmcmdedit('save')
+    endif
+    if (appmode='imaging') then
+      sqprotocol(0,0,0,3)
+      protoFile[3]=$name
+      protoFile[6]=$name
+      protoFile[7]=''
+      protoFile[8]=''
+      protoFile[9]='Enter Tab Name'
+      protoFile[10]=''
+      protoFile[11]=''
+      sqprotocol(1,0,0,3)
+    else
+      cqprotocol(0,0,0,3)
+      protoFile[3]=$name
+      cqprotocol(1,0,0,3)
+    endif
+
+    vnmrjcmd('popup', 'mode:modeless', 'rebuild:no', 'file:protocolcmd.xml', 'location:topMenuBar', 'help:/vnmr/jhelp/dialog/protocolcmd.html', 'title:Make CMD Protocol')
+
+  endif
+
+elseif ($action='close') then  // save changes to sq node
+
+  exists('protoFile','parameter'):$e
+  if ($e) and (actionid<>'null' and actionid<>'') then
+    if (appmode='imaging') then
+      xmsetatts(actionid,'title',protoFile[3])
+      xmsetatts(actionid,'macro',protoFile[4])
+      $t=0 $ts=''
+      if (protoFile[5]<>'') then
+        format(protoFile[5],0,0):$t
+      endif
+      formattime($t):$ts
+      xmsetatts(actionid,'time',$ts)
+    else
+      xmsetatts(actionid,'title',protoFile[3])
+      xmsetatts(actionid,'exp',protoFile[4])
+      xmsetatts(actionid,'required',protoFile[5])
+      xmsetatts(actionid,'macro',protoFile[6])
+      $t=0 $ts=''
+      if (protoFile[7]<>'') then
+        format(protoFile[7],0,0):$t
+      endif
+      formattime($t*60,'minutes'):$ts
+      xmsetatts(actionid,'time',$ts)
+      if (sqsaveid<>'null') then
+        xm1('set',sqsaveid+'_'+actionid,'title',protoFile[3])
+        xm1('set',sqsaveid+'_'+actionid,'exp',protoFile[4])
+        xm1('set',sqsaveid+'_'+actionid,'required',protoFile[5])
+        xm1('set',sqsaveid+'_'+actionid,'macro',protoFile[6])
+        xm1('set',sqsaveid+'_'+actionid,'time',$ts)
+      endif
+    endif
+  endif
+  vnmrjcmd('pnew','protoFile')
+
+elseif ($action='cancel') then  // cancel button action
+  if appmode='imaging' then     // close sq node
+    xmselect('savepar','n')
+  else
+    $setstudy='n'
+    if (appmode='walkup' or appmode='lc') then
+      $setstudy='y'
+    endif
+    $studyid=studyid
+    if ($setstudy='y' and sqsaveid<>$studyid and sqsaveid<>'null') then
+      studyid=sqsaveid
+      $sqdir=sqdir
+      $dir='' $dir=sqsaveid
+      $ch='' strstr($dir,1,1):$ch
+      if $ch<>'/' then $dir=autodir+'/'+$dir endif
+      sqdir=$dir
+    endif
+    xmselect('saveid','n')
+    if ($setstudy='y' and sqsaveid<>$studyid and sqsaveid<>'null') then
+      studyid=$studyid
+      sqsaveid='null'
+      sqdir=$sqdir
+    endif
+  endif
+  actionid='null'
+
+elseif ($action='save') then  // ok button action
+  if appmode='imaging' then   // save and close sq node
+    xmselect('savepar')
+  else
+    $setstudy='n'
+    if (appmode='walkup' or appmode='lc') then
+      $setstudy='y'
+    endif
+    if ($setstudy='y' and sqsaveid<>studyid and sqsaveid<>'null') then
+      xmsubsave
+    else
+      xmselect('saveid')  // needs more? see save2
+    endif
+  endif
+  actionid='null'
+
+elseif ($action='exec') then  // Execute button
+
+  if appmode='imaging' then
+    $macro=protoFile[4]
+  else
+    $macro=protoFile[6]
+  endif
+  if ($macro<>'') then
+    $protoFile=protoFile
+    $actionid=actionid
+    exec($macro)
+    protoFile=$protoFile
+    actionid=$actionid
+  endif
+
+endif

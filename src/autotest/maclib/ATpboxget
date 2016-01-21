@@ -1,0 +1,77 @@
+"macro ATpboxget"
+" ***************************************************************** "
+" ***         ATpboxget - get pbox output parameters              *** "
+" ***************************************************************** "
+
+" Usage : ATpboxget(<'name.EXT'>):$name,$par1,$par2,$par3,$par4,$par5 "
+" Macro returns exp-al parameters stored in pbox.cal or shape file  "
+" in the following order : name, pw, pwr, pwrf, dres, dmf           "
+" !!! Warning, Parameter is not changed by this macro if it was     "
+" set to 'n' (not used)                                             "
+
+$type=0
+$name='' $ext='' $paswd=''
+$par1='' $par2='' $par3='' $par4='' $par5=''
+
+" argument checking "
+
+if $#>0 then
+  $name=$1
+  $filepath=userdir+'/shapelib/'+$name 
+  exists($filepath,'file'):$e 
+  if not($e) then
+    $filepath=systemdir+'/shapelib/'+$name
+    exists($filepath,'file'):$e 
+    if not($e) then
+      write('error','ATpboxget: input file shapelib/%s not found', $name)
+      return
+    endif
+  endif
+  getext($name):$1,$ext
+  if ($ext='RF') or ($ext='DEC') then                 ".RF & .DEC"
+    $type=6
+    lookup('file',$filepath)
+    lookup('read',7):$dummy,$paswd,$par1,$par2,$par3,$par4,$par5
+    if ($paswd<>'Pbox') then
+      write('error','Pbox shapefile header is missing')
+      return
+    endif    
+  else 
+    if ($ext='GRD') then
+      write('error','.GRD files not supported by this macro') ".GRD etc "
+      return
+    else 
+      write('error','incorrect filename extension')      "other "
+      return
+    endif
+  endif
+  $name = $1
+else
+  $filepath = userdir+'/shapelib/pbox.cal'
+  exists($filepath,'file'):$e
+  if not($e) then 
+    write('error','calibration data not found !')
+    return
+  else
+    nrecords($filepath):$type
+    if $type=6 then                                   ".RF & .DEC"
+      lookup('file',$filepath)
+      lookup('read',6):$name,$par1,$par2,$par3,$par4,$par5
+    else
+      write('error','Unsupported data type.')         ".GRD etc "
+      return
+    endif
+  endif
+endif
+
+if $type=6 then                                         ".RF & .DEC"
+  format($par1,6,1):$pw
+  format($par2,3,0):$pwr
+  format($par3,4,0):$pwrf
+  format($par4,4,1):$dres
+  format($par5,6,0):$dmf
+  return($name,$pw,$pwr,$pwrf,$dres,$dmf)
+else
+  return
+endif
+

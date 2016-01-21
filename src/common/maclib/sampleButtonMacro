@@ -1,0 +1,71 @@
+"macro sampleButtonMacro"
+// This macro shows examples of using USER_MODE to capture mouse events
+// and do simple tasks.
+//
+// In USER_MODE, a user specified macro (such as this one) will be called
+// when mouse clicks, drags, scrolls on the graphics area. 
+// Mouse event and x,y coordinates will be passed to the macro.
+//
+// Command to enter USER_MODE, and register the macro:  
+// setButtonMode(14,'sampleButtonMacro')
+//
+// Command to exit USER_MODE:
+// setButtonMode(0), or click a mode button on graphics tool bar.
+// see setButtonMode macro for details.
+//
+// In USER_MODE, user registered macro will be called and the
+// following arguments will be passed:
+//
+// $1 can be one of the following mouse events:
+// $1='b1+drag' 
+// $1='b1+ctrl+shift+click+1'
+// $1='b1+shift+click+1'
+// $1='b1+ctrl+click+1'
+// $1='b1+click+1'
+// $1='b2+click+1'
+// $1='b3+click+1'
+// $1='b1+down'
+// $1='b2+down'
+// $1='b3+down'
+// $1='b1+up'
+// $1='b2+up'
+// $1='b3+up'
+// $1='wheel'
+//
+// if $#=4
+// $2,$3 are x,y
+// $4 is frame id (1, but not used)
+//
+// if $#=3 ($1 must be 'wheel')
+// $2=+/-1 for normal scroll down/up, or +/-2 for fast scroll down/up.
+// $3 is frame id (1, but not used)
+
+// convert x,y from pixels to mm 
+// Note, origin is upper left corner for pixels, but lower left corner for mm. 
+graphis:$mode,$xppmm,$yppmm
+if($xppmm<=0) then $xppmm=1 endif
+if($yppmm<=0) then $yppmm=1 endif
+$x=$2/$xppmm
+$y=wc2max-$3/$yppmm
+
+// Example 1: display $1 at x, y when left mouse click (b1+click+1)
+if($1='b1+click+1') then 
+  write('graphics',$x,$y,$1)
+endif
+
+// Example 2: draw a line when drag the mouse
+if($1='b1+down') then 
+   move($x,$y)
+elseif($1='b1+up') then
+   draw($x,$y)
+endif
+
+// Example 3: mouse wheel (cannot think of a good use) 
+if($1='wheel') then
+  if($2=1) then
+    write('line3','scroll down')
+  elseif($2=-1) then
+    write('line3','scroll up')
+  endif
+endif
+

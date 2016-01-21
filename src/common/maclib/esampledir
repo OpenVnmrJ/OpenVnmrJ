@@ -1,0 +1,44 @@
+"macro esampledir"
+if (auto='y') then 
+   write('line3','esampledir is not functional under automation')
+   return
+endif
+
+if ($# < 1) then $1=emailaddr endif
+if ($1='') then
+    write('line3','Usage esampledir(<address>). emailaddr is empty string')
+    return
+endif
+
+if (emailflag='n') then
+        write('line3','Email option is NOT turned on')
+        return
+endif
+
+isnewexp:$isnew
+if ($isnew) then
+  if (sample='') or (archivedir='') then
+	write('line3','Sample not known')
+	return
+  endif
+  $archive=archivedir+'/'+sample
+else
+  shell('dirname '+file):$archive
+endif
+
+shell('dirname '+$archive):$adir
+shell('basename '+$archive):$sample
+
+pwd:$curdir
+cd($adir):$dum
+exists($sample,'directory'):$sampex
+cd($curdir):$dum
+if ($sampex=0) then
+  write('line3','Sample directory %s not found')
+  return
+endif
+
+  cd($adir):$dum
+  vnmremail($sample,$1)
+  cd($curdir):$dum
+  write('line3','%s sent to %s',$sample,$1)

@@ -1,0 +1,162 @@
+******************************************************************************
+ll2d(<params>):$num	- automatic and interactive 2-D peak picking.
+ll2d('info'<,#>):$num,$f1,$f2,$amp,$vol,$label,$comment,$FWHH1,$FWHH2,$f1_min,
+			$f1_max,$f2_min,$f2_max.
+pll2d(<params>)		- plot results of 2-D peak picking.
+******************************************************************************
+
+ll2d automatically finds and integrates peaks that are above the threshold
+"th" in a 2D spectrum or a 2D plane of a 3D spectrum and writes the peak
+frequencies, FWHH, volume, and the boundaries of the integrated region to a
+file in the "ll2d" subdirectory of the current experiment directory.  For 2D
+spectra, the file name is "peaks.bin" and for 2D planes of 3D spectra, 
+the file name is "peaks_f#f#_#.bin", where "f#f#" gives the plane direction
+(e.g. "f1f3") and the final "#" gives the number of the plane.  ll2d also
+allows for interactive insertion and deletion of peaks and for reading and
+writing of text peak files for easy import and export of peak data.
+
+The possible options are :
+	NONE or  'peak'  Finds all peaks in the displayed area that are above
+			a threshold "th".  If dconi is active and in BOX mode,
+			then only find peaks in the area defined by the cursors.
+	 'volume'	For all peaks in the displayed area, finds the bounds
+			of the peak and integrates its volume.
+	 'adjust'	Adjusts boundaries of all peaks in the displayed area
+			so that no boundaries overlap and recalculates peak
+			volumes.
+	 'reset'	Deletes the peak table.
+	 'read'		Reads in a binary peak file.  If a full pathname is
+			not specified, the file is searched for first in
+			the current working directory and then in the "ll2d"
+			subdirectory of the current experiment directory.
+	 'read','FILENAME'	Reads in a binary peak file named "FILENAME".
+	 'readtext'	Reads in a text peak file.  If a full pathname is
+			not specified, the file is searched for first in
+			the current working directory and then in the "ll2d"
+			subdirectory of the current experiment directory.
+	 'readtext','FILENAME'	Reads in a text peak file named "FILENAME".
+	 'writetext'	Write a text peak file into the ll2d subdirectory
+			of the current experiment directory.
+	 'writetext','FILENAME'	Writes a text peak file named "FILENAME".
+	 'pos' or 'neg' These options can be used in addition to 'peak',
+			or 'clear' to operate only on positive
+			or negative peaks.
+	 'draw'         Draws the peaks, boxes, numbers, and labels on the
+			spectrum based on the value of the
+			parameter "ll2dmode".
+
+	dconi must be active for these :
+	 'mark'		If in dconi CURSOR mode, inserts a peak at the current
+			cursor position.  If in dconi BOX mode, integrates the
+			area within the cursors and assigns that volume to all
+			peaks within the cursors which do not have their bounds
+			already defined. If there are no peaks within the area
+			defined by the cursors, finds the highest point within
+			this area, marks that as a peak, integrates the area
+			within the cursors, and assigns that volume to the peak.
+	 'unmark'	If in dconi CURSOR mode, deletes the nearest peak.  If
+			in dconi BOX mode, deletes all peak bounds which are
+			completely within the area defined by the cursors.
+			Peaks are not deleted in BOX mode.
+	 'clear'	Deletes all peaks in the displayed region in dconi
+			CURSOR mode or all peaks within the cursors in dconi
+			BOX mode.
+	 'label'	Prompts for a 15 character label which is assigned to
+			the nearest peak in dconi CURSOR mode or to all peaks
+			within the cursors in dconi BOX mode.  To erase an
+			existing label, enter a label which consists of one or
+			more spaces.
+	 'label','LABEL'	Executes 'label' option using "LABEL"
+			instead of prompting for a label.
+	 'comment'	Prompts for an 80 character comment which is assigned
+			to the nearest peak in dconi CURSOR mode or to all
+			peaks within the cursors in dconi BOX mode.
+	 'comment','COMMENT'	Executes 'comment' option using "COMMENT"
+			instead of prompting for a comment.
+	 'combine'      Must be in dconi BOX mode for this.  Combines all peaks
+			within the area defined by the cursors into one peak
+			with its center at the average of all combined peaks'
+			centers, and its bounds containing the maximum extents
+			of the combined peaks' bounds.  If all combined peaks
+			have the same label, this label is assigned to the new
+			peak.  NOTE :  All peaks which are to be combined are
+			deleted prior to the creation of the new combination
+			peak, and there is no automatic way to restore the
+			original peaks.  Therefore, it is recommended that you
+			make a backup copy of the peak file prior to using
+			this command.
+	 'info'         Prints information about the peak nearest the cursor
+			to the text window.  If return values are requested,
+			the printing is suppressed.  The return values are 
+			(in this order) : peak number, f1, f2, amplitude,
+			volume, label, comment, FWHH1, FWHH2, f1_min, f1_max,
+			f2_min, f2_max.
+
+	 dconi does not have to be active for these :
+
+	 'label','LABEL',#	Executes 'label' option on peak # using "LABEL"
+			instead of prompting for a label.
+	 'comment','COMMENT',#	Executes 'comment' option on peak # using
+			"COMMENT" instead of prompting for a comment.
+	 'combine',#,#,...	Executes combine option on the list of peak
+			numbers which follows 'combine'.  With this option
+			a single return value is available from ll2d -
+			the peak number of the new combination peak.
+	 'info','total'	Prints the total number of peaks in the current peak
+			table.  If a single return value is requested, the
+			printing is suppressed, and the total number of peaks
+			is returned.
+	 'info',#	Prints information about peak # to the text window.
+			If return values are requested, then the printing is
+			suppressed.  The return values are the same as given
+			above for the 'info' option.
+	 'unmark',#	Deletes peak number #.
+
+The return values are :
+	 $num		When not using the 'info' or 'combine' options, ll2d
+			will return a single value - the number of peaks which
+			have been picked.  When using the combine option, ll2d
+			returns the number of the new combination peak.
+     When using the 'info' option, the return values are :
+	 $num		The peak number.
+	 $f1		The frequency of the peak in the f1 dimension.
+	 $f2		The frequency of the peak in the f2 dimension.
+	 $amp		The amplitude of the peak.
+	 $vol		The volume of the peak.
+	 $label		The label of the peak.
+	 $comment	The comment of the peak.
+	 $FWHH1		The full width at half-height of the peak in f1.
+	 $FWHH2		The full width at half-height of the peak in f2.
+	 $f1_min, $f1_max, $f2_min, $f2_max
+			The frequencies of the bounding box for the peak.
+	
+
+Related parameters :
+    ll2dmode :  Four character string composed of the characters 'y' and 'n'.
+		   The first character determines if a "+" is drawn on the
+		   screen in dconi displays to mark peaks, the second controls
+		   drawing of the peak number, the third controls drawing of
+		   the peak bounds box, and the fourth controls drawing of the
+		   peak label.
+
+    th2d :	This parameter is used by ll2d when determining the bounds of
+		   a peak and calculating its volume.  It can take a value
+		   between 0.0 and 1.0.  If th2d is set to 1.0, ll2d
+		   integrates all points in the peak which are above the
+		   current threshold for the spectrum (that is, the portion
+		   of the peak which can be seen in a contour plot of the
+		   spectrum).  A smaller value of th2d will cause ll2d to
+		   integrate a larger area when determining the volume of
+		   a peak.  If th2d is 0.5, for example, ll2d will integrate
+		   all points in a peak which are above 0.5 times the current
+		   threshold.
+
+    xdiag :	This parameter is used by ll2d to exclude diagonal peaks when
+		   peak picking.  Peaks within xdiag Hertz of the diagonal
+		   will not be picked by ll2d.  Setting xdiag to 0.0 will
+		   cause ll2d to pick all peaks including diagonal peaks.
+
+
+Related manual entries :
+		addpar('ll2d')	(command)	creates parameters for ll2d.
+		parll2d		(command)	creates parameters for ll2d.

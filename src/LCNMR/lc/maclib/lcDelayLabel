@@ -1,0 +1,63 @@
+"macro lcDelayLabel"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcDelayLabel"
+
+// Returns the 'label' for a given xfer delay index.
+// index   label
+// 1       Other #1 label
+// 2       Other #2 label
+// 3       Other #3 label
+// 4       UV label
+// 5       MS label
+// 6       'Pump' or 'Loop' label
+//
+
+$idx = $1
+$chanLabel=''
+if ($idx <= 3) then
+  lcChannelLabel($idx):$chanLabel,$chanTag
+  strstr($chanTag,':other:'):$i
+  if ($i <= 0) then
+    $chanLabel=''
+  endif
+elseif ($idx = 4) then
+  if (lcDetector <> '0') then
+    // Look through lcDetectorMenu file for the line with the lcDetector code
+    lookup('file', userdir+'/lc/lcDetectorMenu')
+    $done=0
+    while (not $done) do
+      lookup('readline'):$line,$isline
+      if (not $isline) then
+        // Didn't find the key -- improvise
+        $done=1
+        $chanLabel='UV '+lcDetector
+      else
+        strstr($line,'\"'+lcDetector+'\"'):$i
+        if ($i > 0) then
+          // Grab the first double-quoted token
+          $done=1
+          length($line):$len
+          strstr($line,'\"'):$i          // Find first '\"'
+          substr($line, $i+1, $len-$i+1):$line // Strip off leading '\"'
+          strstr($line,'\"'):$i // Find trailing '\"'
+          substr($line, 1, $i-1):$chanLabel
+        endif
+      endif
+    endwhile
+  endif
+elseif ($idx = 5) then
+  if (msSelection <> '0') then
+    if (msSelection = '1200') then
+      $chanLabel='320/1200 MS'
+    else
+      $chanLabel='MS '+msSelection
+    endif
+  endif
+elseif ($idx = 6) then
+  if (lcXferDelayType = 2) then
+    $chanLabel='Loop'
+  elseif (lcXferDelayType = 1) then
+    $chanLabel='Pump'
+  endif
+endif
+return($chanLabel)

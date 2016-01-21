@@ -1,0 +1,28 @@
+"macro logain"
+"logain-recover from autogain having to set too low a gain"
+"if error is MAX TRANSIENTS, then change to double precision"
+"and try again."
+"if error is AUTOGAIN FAILURE, then reduce pulse width"
+"(but not below 0.5 us) and try again immediately"
+
+if (acqstatus[ 1 ] = 16) then      "no further processing"
+    return                         "if experiment aborted"
+endif
+
+if (acqstatus[ 2 ] = 200) then     "max transients accumulated"
+    write('line3','changing to double precision and re-starting experiment')
+    dp='y'                         "restart with double precision"
+    au
+    return
+endif 
+if (acqstatus[ 2 ] = 801) then     "autogain failure"
+    pw=0.5*pw
+    if pw<0.5 then
+        write('line3','sample too concentrated-acquisition stopped')
+        return
+    else
+        write('line3','lowering pulse width and resubmitting experiment')
+        wshim='n'
+        au('next')
+    endif
+endif

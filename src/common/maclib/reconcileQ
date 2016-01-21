@@ -1,0 +1,148 @@
+"macro reconcileQ"
+"This utility macro makes sure that duplicate nodes"
+"   are not added to EXPLIST and LONGLIST.  First"
+"   remove all nodes in arg1 and arg2 from EXPLIST/LONGLIST"
+"   Then cat arg1 to EXPLIST and arg2 to LONGLIST"
+
+  if ($# < 2) then return endif
+  exists($1,'file'):$fileex
+  exists($2,'file'):$file2ex
+  if ($fileex=0) and ($file2ex=0) then return endif
+
+$uname=''
+shell('uname'):$uname
+"*******If Linux, use the grep with -f option.  Faster****"
+IF ($uname='Linux') THEN
+  shell('touch EXPLIST'):$dum
+  shell('touch LONGLIST'):$dum
+  shell('touch EXPLIST1'):$dum
+  shell('touch LONGLIST1'):$dum
+  shell('touch EXPLIST2'):$dum
+  shell('touch LONGLIST2'):$dum
+  if ($fileex) then
+  	shell('(cat '+$1+' | awk \'{print "\^"$1}\' > EXPLIST2)'):$dum
+  endif
+  if ($file2ex) then
+  	shell('(cat '+$2+' | awk \'{print "\^"$1}\' > LONGLIST2)'):$dum
+  endif
+  shell('(cat EXPLIST | grep -vw -f EXPLIST2 > EXPLIST1)'):$dum
+  shell('(cat LONGLIST | grep -vw -f LONGLIST2 > LONGLIST1)'):$dum
+  shell('(cat EXPLIST1 > EXPLIST)'):$dum
+  shell('(cat LONGLIST1 > LONGLIST)'):$dum
+  if ($fileex) then
+  	shell('(cat '+$1+' >> EXPLIST)'):$dum
+  endif
+  if ($file2ex) then
+  	shell('(cat '+$2+' >> LONGLIST)'):$dum
+  endif
+
+//      Future options
+/*
+  if ($# > 2) then
+  	shell('touch QlinkLIST'):$dum
+  	shell('touch QlinkLIST1'):$dum
+  	shell('(cat QlinkLIST | grep -vw -f EXPLIST2 > QlinkLIST1)'):$dum
+  	shell('(cat QlinkLIST1 > QlinkLIST)'):$dum
+  	shell('(cat QlinkLIST | grep -vw -f LONGLIST2 > QlinkLIST1)'):$dum
+  	shell('(cat QlinkLIST1 > QlinkLIST)'):$dum
+     if ($fileex) then
+  	shell('(cat '+$1+' | awk \'{print $1"  '+$3+'  day"}\' >> QlinkLIST)'):$dum
+     endif
+     if ($file2ex) then
+  	shell('(cat '+$2+' | awk \'{print $1"  '+$3+'  night"}\' >> QlinkLIST)'):$dum
+     endif
+  	shell('rm -f QlinkLIST1'):$dum
+  endif
+*/
+
+  shell('rm -f EXPLIST2'):$dum
+  shell('rm -f LONGLIST2'):$dum
+  shell('rm -f EXPLIST1'):$dum
+  shell('rm -f LONGLIST1'):$dum
+
+  RETURN
+ENDIF
+"******************************************************************"
+
+"*****If SunOS, use the write option - slower ****"
+if ($fileex) then
+  shell('touch EXPLIST'):$dum
+  $s1='' $s2=''
+  readfile($1,'$s1','$s2','','local'):$etot
+  $s3='' $s4=''
+  readfile('EXPLIST','$s3','$s4','','local'):$etot2
+  if ($etot2>0) then
+        write('reset','Temp1')
+        $i=1
+        repeat
+           teststr('$s1',$s3[$i],'local'):$is
+           if ($is=0) then
+                write('file','Temp1','%s  %s',$s3[$i],$s4[$i])
+           endif
+           $i=$i+1
+        until $i > $etot2
+  	shell('(cat Temp1 > EXPLIST)'):$dum
+  	shell('rm -f Temp1'):$dum
+  endif
+  shell('(cat '+$1+' >> EXPLIST)'):$dum
+endif
+
+if ($file2ex) then
+  shell('touch LONGLIST'):$dum
+  $s1='' $s2=''
+  readfile($2,'$s1','$s2','','local'):$etot
+  $s3='' $s4=''
+  readfile('LONGLIST','$s3','$s4','','local'):$etot2
+  if ($etot2>0) then
+        write('reset','Temp1')
+        $i=1
+        repeat
+           teststr('$s1',$s3[$i],'local'):$is
+           if ($is=0) then
+                write('file','Temp1','%s  %s',$s3[$i],$s4[$i])
+           endif
+           $i=$i+1
+        until $i > $etot2
+	shell('(cat Temp1 > LONGLIST)'):$dum
+  	shell('rm -f Temp1'):$dum
+  endif
+  shell('(cat '+$2+' >> LONGLIST)'):$dum
+endif
+
+/*
+if ($# > 2) then
+  shell('touch QlinkLIST'):$dum
+  $s1='' $s2=''
+  if ($fileex) then
+  	readfile($1,'$s1','$s2','','local')
+  endif
+  $s1a='' $s2a=''
+  if ($file2ex) then
+  	readfile($2,'$s1a','$s2a','','local')
+  endif
+  $s3='' $s4=''
+  readfile('QlinkLIST','$s3','$s4','','local'):$etot2
+  if ($etot2>0) then
+        write('reset','Temp1')
+        $i=1
+        repeat
+           teststr('$s1',$s3[$i],'local'):$is
+	   teststr('$s1a',$s3[$i],'local'):$is2
+           if ($is=0) and ($is2=0) then
+                write('file','Temp1','%s  %s',$s3[$i],$s4[$i])
+           endif
+           $i=$i+1
+        until $i > $etot2
+        shell('(cat Temp1 > QlinkLIST)'):$dum
+        shell('rm -f Temp1'):$dum
+  endif
+  if ($fileex) then
+  	shell('(cat '+$1+' | awk \'{print $1"  '+$3+'  day"}\' >> QlinkLIST)'):$dum
+  endif
+  if ($file2ex) then
+  	shell('(cat '+$2+' | awk \'{print $1"  '+$3+'  night"}\' >> QlinkLIST)'):$dum
+  endif
+endif
+*/
+
+

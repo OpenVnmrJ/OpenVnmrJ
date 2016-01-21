@@ -1,0 +1,74 @@
+"macro gspul_process"
+
+text('Gradient threshold determination')
+$foundneg=0 $foundpos=0
+f full
+ft
+setref
+select(21)
+aph
+peak(sp,sp+wp):$ht,$frq
+cr=$frq
+rl(0)
+dres(cr,0.5):$lwref
+write('line3','Reference linewidth at half-height: %.1f Hz',$lwref):$str
+atext($str)
+
+//Line cannot be too broad for this test, otherwise results will be bogus
+if ($lwref>7.5) then
+   write('line3','Reference line too width for calibration, skipping')
+   write('line3','Reference line too width for calibration, skipping'):$str
+   atext($str)
+   return
+endif
+   
+axis='h'
+sp=-100 wp=200
+vsadj(30)
+
+//Firse do +ve threshold determination
+//Use criterion that when linewidth increases by more than 5% of linewidth
+$i=22
+$DACpos=0
+repeat
+   select($i)
+   peak(sp,sp+wp):$ht,$frq
+   cr=$frq
+   dres(cr,0.5):$lw
+   if ($lw>$lwref*1.05) then
+      $foundpos=1 $indexpos=$i-1 $DACpos=gzlvl1[$i-1]
+   endif
+   $i=$i+1
+until (($i>arraydim) or ($foundpos))
+
+if ($foundpos) then 
+    write('line3','Threshold for positive gradient: %d DAC units',$DACpos):$str
+else
+    write('line3','No threshold found for positive gradient'):$str
+endif
+atext($str)
+
+//Now negative
+$i=20
+$DACneg=0
+repeat
+   select($i)
+   peak(sp,sp+wp):$ht,$frq
+   cr=$frq
+   dres(cr,0.5):$lw
+   if ($lw>$lwref*1.05) then
+      $foundneg=1 $indexneg=$i-1 $DACneg=gzlvl1[$i+1]
+   endif
+   $i=$i-1
+until (($i<1) or ($foundneg))
+
+if ($foundneg) then 
+    write('line3','Threshold for negative gradient: %d DAC units',$DACneg):$str
+else
+    write('line3','No threshold found for negative gradient'):$str
+endif
+atext($str)
+
+ho=0
+vo=wc2max/arraydim
+dss

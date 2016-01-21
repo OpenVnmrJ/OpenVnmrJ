@@ -1,0 +1,54 @@
+"macro walkupQ_refresh"
+"****************************************************************"
+"   walkupQ_refresh -  Refresh submission panels / studyQ   "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+   if (cppauseflg='y') then show_n_pause('close') endif
+   if (customflag='y') then customizepar('quit') endif
+   $wqinit=wqinit
+
+   if ($resume='addq') then
+     walkupQ('addq')
+   elseif ($resume='resumeq') then
+     walkupQ('resumeq')
+   elseif ($resume='edit') then
+	walkupQ('clear','partial')
+	walkupQ('edit')
+   elseif (replaceQ[4]<>'') then
+	walkupQ('clear','all')
+	if (sqflag='y') then
+	   xmhaha('grandma')
+	endif
+	samplename=samplename
+   else
+     exists(cursqexp+'/walkupQnewpars','file'):$fileex
+     if ($fileex) then
+	walkupQ('clear','all')
+	$solvent=solvent
+	fread(cursqexp+'/walkupQnewpars','current','reset')
+	solvent=$solvent
+  	text(''):$dum
+  	text_string=''
+	walkupQ('renew')
+	if (sqflag='y') then
+	   xmhaha('grandma')
+	endif
+	vnmrjcmd('setpage','Start','Standard')
+	vnmrjcmd('setpage','Setup','Standard')
+     else
+	tmpsqreturn('OrigExpPar')
+     	walkupQ('new',$wqinit)
+     endif
+   endif
+
+"****************************************************************"

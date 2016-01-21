@@ -1,0 +1,61 @@
+
+*******************************************************************************
+dli		-	Display listed integral values
+dlni		-	Display listed normalized integral values
+nli		-	Find integral values
+nlni		-	Find normalized integral values
+z<(freq)>	-	add integral reset point at the cursor position
+cz<(freq)>	-	clear integral reset points
+*******************************************************************************
+
+  "dli" displays a list of integrals at the integral reset points.
+  The reset points are stored in the parameter "lifrq" and the integral
+  amplitudes are stored in the parameter "liamp".
+  The frequency units of the reset points are defined by the parameter
+  axis.  The results of this calculation are stored in the parameters
+  "lifrq" and "liamp".  The reset points are stored as hertz and are not
+  referenced to "rfl" and "rfp".  The amplitudes are stored as the actual
+  value; they are not scaled by parameters.
+
+  To display the values of liamp, enter display('liamp').  Values of liamp
+  can also be accessed in MAGICAL macros using, e.g., liamp[$i].
+  liamp values are stored as absolute numbers (summations of data point values),
+  and as such will be a function of fn.  The values which are displayed by the
+  dli, pir, and dpir programs are related to the liamp values by the following
+  equation:
+         numeric integral VALUE = liamp[$i]*ins/insref/fn
+
+  The parameter "ins" is the integral value of the reference integral. For
+  example, if the reference integral is a methyl group, ins might be set to
+  3.  The parameter insref is the Fourier number scaled value of the
+  reference integral.  For example, insref would be set to something like
+  liamp[$ref]/fn where the $ref selects the appropriate array value.
+  With these definitions, for the selected reference integral (i.e., when
+  $i = $ref), the above equation reduces to
+        SUM of the DISPLAYED numeric integral VALUES = ins
+  If insref is 0 or not defined, the reported integrals will be
+        numeric integral VALUE = liamp[$i]*ins/fn
+  The macro setint can be used to set the value of a reference integral.
+  NOTE: The displayed integral trace is independent of ins and insref.
+  Its amplitude is controlled by the parameter is.
+
+  If insref is set to 'Not Used', (insref='n'), the normalized integrals
+  are displayed.  In this case, ins represents the value of the sum of
+  all the integrals.  The dlni macro displays normalized integrals by
+  temporarily setting insref='n' and then calling dli.
+
+  When the integral blanking mode is used, every other integral is displayed
+  and listed.  Also, when the integral blanking mode is used with "dlni",
+  every other integral is used in the summation. The summation includes integrals
+  that are outside the current sp and wp range.
+
+  "nli" is the equivalent of "dli" except that no screen display is produced.
+
+  The command "z" puts an integral reset at the current cursor position.
+  Specific frequencies can be specified as the reset points by passing
+  them as arguments to the command "z".
+
+  "cz" removes all currently defined integral reset points.  If
+  arguments are supplied to "cz", then only those reset points
+  corresponding to the specified frequencies are removed.
+

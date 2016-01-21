@@ -1,0 +1,170 @@
+"macro gs_init"
+"**************************************************************************"
+" gs_init - Initialize some parameters"
+
+  "creates gshimdir/data directory"
+  "shimname - shims to be used for gradient shimming"
+  "step1, step2 - step size in % for shim calibration. step1 for x,y,z"
+  "shimmap - 1/0 shims to be mapped from the list"
+  "shimfit - 1/0 shims to be adjusted for shimming"
+  
+" Most of the parameters should be in the parameter file. So gs_init is"
+" not used"
+"**************************************************************************"
+if(not(apptype = 'im3Dshim') or (apptype = 'im2Dshim')) then
+  write('error','wrong apptype: %s',apptype)
+  abort
+endif
+  
+  $GD = userdir+'/prescan'        "create directory"
+  exists($GD,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GD)
+  endif 
+  $GSHIMD = userdir+'/gshimdir'        "create data directory"
+  exists($GSHIMD,'file'):$ex
+  if ($ex = 0) then
+    mkdir($GSHIMD)
+  endif
+  $GSHIMDIR = userdir+'/gshimdir/data'
+  exists($GSHIMDIR,'file'):$ex1
+  if ($ex1 = 0) then
+    mkdir($GSHIMDIR)
+  endif
+  exists($GSHIMDIR+'/maplist','file'):$ex
+  if($ex = 0) then
+    shell('touch '+$GSHIMDIR+'/maplist'):$xx
+  endif
+  exists($GSHIMDIR+'/gshim.out','file'):$ex
+  if($ex = 0) then
+    shell('touch '+$GSHIMDIR+'/gshim.out'):$xx
+  endif
+  $GSHIMDIR = userdir+'/gshimdir/calib'  "calibration file directory"
+  exists($GSHIMDIR,'file'):$ex1
+  if ($ex1 = 0) then
+    mkdir($GSHIMDIR)
+  endif
+
+if parmax[19] < 4000 then
+    $scale = 10    " 12-bit DAC shim system "
+else
+    $scale = 320  " 16-bit DAC shim system "
+endif  
+
+"create integers
+$params = 'shimfit','shimmap','shcycle','shimcalc','shimload','cnt'
+$n = size('$params')
+$inx = 1
+repeat
+  exists($params[$inx],'parameter'):$ex
+  if($ex = 0) then
+    create($params[$inx],'integer')
+    setgroup($params[$inx],'processing')
+  endif
+  $inx = $inx + 1
+until $inx > $n
+
+
+"create delays"
+$params = 'del','delref'
+$n = size('$params')
+$inx = 1
+repeat
+  exists($params[$inx],'parameter'):$ex
+  if($ex = 0) then
+    create($params[$inx],'delay')
+  endif
+  $inx = $inx + 1
+until $inx > $n
+
+"create real Processing parameters"
+$params = 'shimval','shimcntr','shimcnt','thresh','z2z0'
+$params = $params,'current','shimpass','maxshims','shdel'
+$params = $params,'step1','step2','step3','step4','shimstep'
+
+$n = size('$params')
+$inx = 1
+repeat
+  exists($params[$inx],'parameter'):$ex
+  if($ex = 0) then
+    create($params[$inx],'real')
+    setgroup($params[$inx],'processing')
+  endif
+  $inx = $inx + 1
+until $inx > $n
+
+"create flags"
+$params = 'magdis','setf','setres','slab','zflag'
+$n = size('$params')
+$inx = 1
+repeat
+  exists($params[$inx],'parameter'):$ex
+  if($ex = 0) then
+    create($params[$inx],'flag')
+    setgroup($params[$inx],'processing')
+    {$params[$inx]} = 'n'
+  endif
+  $inx = $inx + 1
+until $inx > $n
+
+"create strings"
+$params = 'shimname','shimcoil','shimmap','shimsel','shimmapsel','shimmapfid'
+$params = $params,'shregion','shimfile','gsimage','gsplane','shimpar','shimparname'
+$params = $params,'shsel','shimregion'
+$n = size('$params')
+$inx = 1
+repeat
+  exists($params[$inx],'parameter'):$ex
+  if($ex = 0) then
+    create($params[$inx],'string')
+    setgroup($params[$inx],'processing')
+  endif
+  $inx = $inx + 1
+until $inx > $n
+
+"Initialize some parameters"
+  shimsel='1&2'     "default 1st order shimming'
+  shimmapsel='1&2' 
+  step1 = 10  "shim step size for first order"
+  step2 = 25  "step size for higher order"
+  $f = step1*$scale   
+  $h = step2*$scale       
+  shimstep=    $f,    $f,    $f,    $h,      $h,     $h,   $h,    $h
+  shimmap=      1,     1,     1,     0,       0,      0,    0,     0  
+  shimfit=      1,     1,     1,     0,       0,      0,    0,     0 
+  "shimname - shims to be used for gradient shimming"
+  "step1, step2 - step size in % for shim calibration. step1 for x,y,z"
+  "shimmap - 1/0 shims to be mapped from the list"
+  "shimfit - 1/0 shims to be adjusted for shimming"
+  
+  " 1st and 2nd order shims selected"
+  if (shimset=1 or shimset=2 or shimset=5 or shimset=10 or shimset=16) then
+    shimname = 'x1','y1','z1c','xz','yz','z2c','xy','x2y2','n'
+  else
+    shimname = 'x1','y1','z1','xz','yz','z2','xy','x2y2','n'
+  endif  
+  
+  shcycle = 1,0,0,0
+  shdel = 0.001,0.002,0.003,0.004
+  shsel = '1&2','1&2','1&2','1&2'
+  shregion = 'global','global','global','global'
+  step1 = 1
+  step2 = 1
+  step3 = 5
+  step4 = 10
+  del = 0.001
+  delref = 0.00025
+  gsplane = 'ro-pe'
+  magdis = 'y'
+  thresh = 12
+  cnt = 1
+  
+  
+  prescan_control[1] = 0
+  
+"**********************************************************************"
+"			Modification History"
+
+" 030509(ss) - calib directory created"
+
+"**********************************************************************"

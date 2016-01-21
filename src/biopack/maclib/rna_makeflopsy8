@@ -1,0 +1,59 @@
+"macro rna_makeflopsy8"
+"rna_makeflopsy8                     Peter Lukavsky, Stanford, Oct 1998"
+
+"Makes a flopsy8 decoupling pattern in your personal shapelib called"
+"rna_flopsy8.DEC if it does not already exist."
+
+" rna_flopsy8.DEC - FLOPSY-8 broadband decoupling/spin lock sequence "
+" reference: M. Kadkhodaie, O. Rivas, M. Tan, A. Mohebbi, and A. J. Shaka, "
+"            JMR 91, 437 (1991) "
+" length = 94.22 * 90 degree pulse width "
+
+
+"Within the pulse sequence code use the statements:             "
+"       decprgon(!rna_flopsy8!, p_c, 2.0);			"
+"       decon();						"
+"       delay(p_c*ncyc_cc*94.4);				"
+"       decprgoff();						"
+"       decoff();						"
+"where pw is the 90 degree pulse length,  OR use equivalent decprgon and "
+"decon statements etc for the 2nd channel etc"
+
+
+$file=userdir + '/shapelib/rna_flopsy8.DEC'
+exists($file,'file'):$exists
+if $exists<1  then
+write('line3','Writing data to %s...',$file)
+write('reset',$file)
+$dur=46.0,96.0,164.0,159.0,130.0,159.0,164.0,96.0,46.0,46.0,96.0,164.0,159.0,130.0,159.0,164.0,96.0,46.0
+$p=0.0,45.0,67.5,315.0,22.5,315.0,67.5,45.0,0.0,180.0,225.0,247.5,135.0,202.5,135.0,247.5,225.0,180.0
+
+$i=1  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+
+$i=10  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+
+$i=1  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>9
+$i=1  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>9
+$i=1  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>9
+
+$i=10  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+$i=10  repeat  $phase=$p[$i]
+write('file',$file,'%5.1f\t%5.1f',$dur[$i],$phase)
+$i=$i+1  until $i>18
+BPmoveshape('rna_flopsy8.DEC')
+write('line3','Done!')
+
+endif
+

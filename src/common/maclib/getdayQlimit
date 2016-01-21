@@ -1,0 +1,52 @@
+"macro getdayQlimit"
+getfilepath('automation.conf','adm/walkupadm'):$confex,$conf
+if ($confex=0) then return($1) endif
+
+   $s1='' $s2='' $start=0 $end=0 $duration=0
+   readfile($conf,'$s1','$s2','cppref_'+$2+'_dayQlimit','local'):$ntot
+   if ($ntot) then
+	$i=1 $j=1
+	repeat
+	   $s3=''
+	   if ($s2[$i]<>'') then
+	   	strsv2array($s2[$i],':'):$s3
+		array2array($s3):$s3
+		$hr=0 $min=0
+		format($s3[1],'lower'):$hr
+		format($s3[2],'lower'):$min
+		$start[$j]=($hr*60+$min)*60
+                $hr=0 $min=0
+                format($s3[3],'lower'):$hr
+                format($s3[4],'lower'):$min
+                $end[$j]=($hr*60+$min)*60
+                $hr=0 $min=0
+                format($s3[5],'lower'):$hr
+                format($s3[6],'lower'):$min
+                $duration[$j]=($hr*60+$min)*60
+		$j=$j+1
+	    endif
+	    $i=$i+1
+	until $i > $ntot
+   endif
+
+   $ntot=size('$start')
+   if ($start[1]=0) then $ntot=0 endif
+
+   $daylength=$1
+   if ($ntot>0) then
+	"Find current time"
+   	shell('date +%H'):$hour 
+	shell('date +%M'):$minute 
+	shell('date +%S'):$second
+   	$currenttime=$hour*3600+$minute*60+$second
+	$i=1
+	repeat
+	   if ($currenttime>=$start[$i]) and ($currenttime < $end[$i]) then
+		$daylength=$duration[$i]
+		$i=$ntot
+	   endif
+	   $i=$i+1
+	until $i > $ntot
+   endif
+
+   return($daylength)

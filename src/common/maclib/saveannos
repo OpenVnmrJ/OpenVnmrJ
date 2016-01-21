@@ -1,0 +1,23 @@
+"macro saveannos"
+// Chempacker macro
+
+if ($# < 1) then $1='' endif
+is_cpfid:$cp
+if not $cp then return(0) endif
+if $1='rotate' then
+    getdim:$dim
+    if $dim>1 then
+	if trace='f1' then
+	    rotateannos
+	endif
+    endif
+endif
+
+substr(file,'dirname'):$as,$b,$e
+exists($as+'/dirinfo/Annotations','directory'):$direx
+if not $direx then
+    mkdir($as+'/dirinfo/Annotations'):$dum
+endif
+$annos=$as+'/dirinfo/Annotations/'+$b+'.txt'
+aspAnno('save',$annos)
+return(1)

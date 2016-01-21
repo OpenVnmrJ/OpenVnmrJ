@@ -1,0 +1,123 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, os.pardir, 
+                           os.pardir,os.pardir,os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# define target file names
+mathFuncTargetList = [ 'addms',
+                       'maxof',
+                       'stats',
+                       'baseline',
+                       'circ',
+                       'mean',
+                       'object',
+                       'snr',
+                       'snrme',
+                       'subms',
+                     ]
+# print mathFuncTargetList
+
+fitTarget = 'fit'
+
+ufuncSrcFile = [ 'ufuncs.c', 'parmlist.c' ]
+
+# create c source list
+srcFileList = []
+for i in mathFuncTargetList:
+    srcFileList.append(i+'.c')
+# print srcFileList
+
+fitFileList = [ 'fit.c', 'linfit.c', 'chisq.c' ]
+
+# library dependancies
+ddlPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ddl')
+SConscript(os.path.join(ddlPath, 'SConstruct'))
+
+ibPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ib')
+SConscript(os.path.join(ibPath, 'SConstruct'))
+
+# build environments
+cEnv = Environment(CCFLAGS    = '-O -DLINUX -m32 -fPIC',
+                   CPPDEFINES = ['LINUX'],
+                   LINKFLAGS  = '-m32 -shared -Wl,-rpath,.:/vnmr/lib ',
+                   CPPPATH    = [cwd,
+                                 ])
+LibList = [ 'ddl', 'port3', 'f2c', 'm' ]
+
+fit = cEnv.Program(target  = fitTarget,
+                        source  = [ fitFileList, ufuncSrcFile ], 
+                        LIBPATH = [cwd,
+                                   ddlPath,
+                                   ibPath ],
+                        LIBS    = LibList,
+                                   )
+
+#
+# create the build targets, for each of the tearget in the list, 
+# this start the compilation of the programs
+#
+buildList = []
+for i in range(len(mathFuncTargetList)):
+    buildList.append(cEnv.Program(target = mathFuncTargetList[i],
+                        source  = [ srcFileList[i], ufuncSrcFile ], 
+                        LIBPATH = [cwd,
+                                   ddlPath,
+                                   ibPath ],
+                        LIBS    = LibList,
+                                   )
+                    )
+
+#  option directory
+installDir = os.path.join(cwd, os.pardir, os.pardir, os.pardir, os.pardir,
+                               os.pardir, os.pardir, os.pardir, os.pardir,
+                               'options','standard','IMAGE','user_templates',
+                               'ib_initdir','math','functions','bin')
+
+if not os.path.exists(installDir):
+    os.makedirs(installDir)
+
+#
+# rather then symlink just copy it to ../bin, relative symlinks just
+# work well when running this SCosntruct files from up the directory tree
+#
+for i in range(len(buildList)):
+    execFile = os.path.join(cwd,mathFuncTargetList[i])
+    destFile = os.path.join(cwd,os.pardir,'bin',mathFuncTargetList[i])
+    optionsBinFile = os.path.join(installDir,mathFuncTargetList[i])
+    cEnv.AddPostAction(buildList[i], Copy(destFile,execFile))
+    cEnv.AddPostAction(buildList[i], Copy(optionsBinFile,execFile))
+
+
+# copy fit as well
+execFile = os.path.join(cwd,'fit')
+destFile = os.path.join(cwd,os.pardir,'bin','fit')
+optionsBinFile = os.path.join(installDir,'fit')
+cEnv.AddPostAction(fit, Copy(destFile,execFile))
+cEnv.AddPostAction(fit, Copy(optionsBinFile,execFile))
+
+for i in mathFuncTargetList:
+    cEnv.Install(installDir, os.path.join(cwd,i))
+
+#
+# Note: the observed behavior of the Install build (i.e. scons install) , is that this will end the
+#       scons build even the top invoking SConstruct level, ending the entire build
+#       causing many programs not to be compile.  Go figure...
+#  So it back to a PostAction to get the copy done for now.
+#
+#    Greg B.
+#
+cEnv.Install(installDir, os.path.join(cwd,'fit'))
+
+# add an simple alias for installing programs rather than having to specify the full dir path
+cEnv.Alias('install', installDir )
+
+# add the '.' to build all the targets, and install target as a default to it is always done
+# As mentioned above, this does not work, since the install terminates the complete build process
+# not just this SConstruct..
+# Default('.' , 'install' )

@@ -1,0 +1,71 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file name
+atprocTarget = 'Atproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+atprocFileList = ['atcmds.c',
+                  'atproc.c',
+                  'atfuncs.c']
+
+expprocPath     = os.path.join(cwd, os.pardir, 'expproc')
+expprocHdrList  = ['hostMsgChannels.h',
+                   'parser.h']
+expprocFileList = ['excepthandler.c',
+                   'parser.c']
+
+ncommHdrList = ['ipcMsgQLib.h',
+                'errLogLib.h',
+                'eventHandler.h',
+                'hhashLib.h',
+                'mfileObj.h',
+                'msgQLib.h',
+                'shrMLib.h']
+
+vnmrPath     = os.path.join(cwd,os.pardir,'vnmr')
+vnmrHdrList = [ 'asm.h']
+vnmrFileList = ['asmfuncs.c']
+
+# build environment
+env = Environment(CCFLAGS    = '-m32 -O2',
+                  CPPDEFINES = ['LINUX', 'DEBUG'],
+                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                  CPPPATH    = [cwd])
+
+buildMethods.makeSymLinks(env, atprocTarget, cwd, expprocPath, expprocFileList)
+buildMethods.makeSymLinks(env, atprocTarget, cwd, expprocPath, expprocHdrList)
+buildMethods.makeSymLinks(env, atprocTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, atprocTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(env, atprocTarget, cwd, vnmrPath, vnmrHdrList)
+
+# actual build
+atprocProg = env.Program(target  = atprocTarget,
+                         LIBPATH = [ncommPath],
+                         source  = [atprocFileList,
+                                    expprocFileList,
+                                    vnmrFileList],
+                         LIBS    = ['acqcomm'])
+
+# define with absolute path where built files will be copied
+vnmrPath = os.path.join(cwd, os.pardir, os.pardir,
+                        os.pardir, 'vnmr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrPath):
+   os.makedirs(vnmrPath)
+
+# actions to be performed after targets are built
+env.AddPostAction(atprocProg, Action(Copy(vnmrPath,
+                                          os.path.join(cwd, atprocTarget))))
+

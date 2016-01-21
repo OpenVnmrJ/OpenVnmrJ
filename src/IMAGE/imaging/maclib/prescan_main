@@ -1,0 +1,139 @@
+"macro prescan_main"
+"********************************************************************
+"
+" NAME:
+"    prescan_main
+"
+" DESCRIPTION:
+"    Main script to execute prescan routines.
+"
+" Ex: prescan (<argument>)
+"
+"    <argument> = ''         - When call with no argument a full prescan
+"                              is launched.
+"                              Depending on prescan_order[1], running 
+"                              either standard prescan ('stop') or user
+"                              defined list ('skip').
+"    <argument> = 'freq'     - A center freuquency search is done
+"    <argument> = 'shim'     - A first order shim is done
+"    <argument> = 'power'    - A transmitter gain search is done
+"    <argument> = 'gain'     - A receiver gain search is is done
+"    <argument> = 'specific' - Sequence specific prescan
+"
+"
+"********************************************************************
+"---------------------------------"
+" define and initialize variables "
+"---------------------------------"
+$macro_name                    = $0                   
+$temp_str                      = ''                    "initialize as string"
+$cur_index                     = 2                     "index holding current module to be executed"
+$prescan_flag                  = 1                     "index for Prescan flag -> 0 = no prescan running"
+                                                       "                          1 = user prescan"
+                                                       "                          2 = full prescan"
+                                                       "                          3 = single module prescan"
+prescan_control[$prescan_flag] = 0	               "Reset user-prescan flag"  
+prescan_control[$cur_index ]   = 1                     "Initialize prescan index"
+$response                      = 0                     "User Response"
+
+
+"---------------------------------"
+" check and assign argument "
+"---------------------------------"
+if ($# > 0) then
+     if ($1 <> 'freq') and ($1 <> 'shim') and ($1 <> 'power') and ($1 <> 'gain') and ($1 <> 'specific') and ($1 <> 'full') and ($1 <> 'user') then
+	  write('error','Call to prescan_main with illegal argument')
+	  abort
+     endif
+elseif ($# < 1) then
+  $1 = ''
+  sqmode='pause'
+  xm1('pause')
+endif
+
+if ($# > 1) then
+  write('error',`Use: prescan[('<step>')] - <step> = freq | shim | power | gain | specific | full | user`)
+  prescan_exit('abort')
+endif
+
+$action = 'full'
+prescan_order[1] = 'skip'    // force user list all the time
+if ($# < 1) then 
+     if (prescan_order[1] = 'stop') then
+       $action = 'full'
+     elseif (prescan_order[1] = 'skip') then
+       $action = 'user'
+     endif
+else
+     $action=$1
+     if ($action = 'user') then
+       prescan_order[1] = 'skip'
+     endif
+endif     
+
+
+"-------------------"
+" Setup for prescan "
+"-------------------"
+setprotect('coil_param','set',256,'global')
+setprotect('prescan_order','set',256,'global')
+write('line3','- - - - - STARTING PRESCAN - - - - -')
+aborton                                          "terminate completely on any error"
+wdone=''
+
+"--------------------
+" log start of prescan "
+"----------------------"
+$message='Prescan called with argument: '+ $action
+prescan_log('start',$macro_name,$message)
+
+rfcoil = RFCOIL
+
+if (Prescan_Orient = '') then "prescan globals have not been initialized"
+  write('line3','Initializing Prescan global variables')
+  prescan_init
+endif
+
+
+"-----------------------------"
+" retrieve coil table entries "
+"-----------------------------"
+if not(($1 = 'shim') or ($1 = 'gain')) then  "coil table not used for shim routines"
+  prescan_CoilTable('read',rfcoil)
+endif
+if (coil_param[1] > coil_param[22] ) then
+     $message = 'max Power in CoilTable larger then max Power allowed! - Reseting max Power'
+     write('line3',$message)
+     format(coil_param[1],4,1):$temp_str
+     $message = $message + ' to : ' + $temp_str
+     prescan_log('warning',$macro_name,$message )
+     coil_param[1] = coil_param[22] 
+endif
+if (coil_param[2] > fattn[1] ) then
+     $message = 'max Power (Fine) in CoilTable larger then max Power (Fine) allowed! - Reseting max Power Fine'
+     write('line3',$message)
+     format(coil_param[2],5,1):$temp_str
+     $message = $message + ' to : ' + $temp_str
+     prescan_log('warning',$macro_name,$message )
+     coil_param[2] = fattn[1] 
+endif
+
+"-----------------------------------------"
+" Execute the appropriate part of prescan "
+"-----------------------------------------"
+
+if ($action = 'user') then
+     prescan_control[$prescan_flag] = 1           "User defined prescan module"
+     prescan_exec = prescan_order                 "set execution order to user defined order"
+elseif ($action = 'full') then                       " Full prescan "
+     prescan_exec = 'freq','shim','freq','power','gain','specific'
+     prescan_control[$prescan_flag] = 2          "Full prescan module"     
+else
+     prescan_control[$prescan_flag] = 3          "Single module"
+     prescan_exec = $action
+endif
+"-----------------------------------------"
+" Hand over control to  prescan_handler   "
+"-----------------------------------------"
+prescan_handler('exec')                           "Calling handler for user defined prescan order"
+

@@ -1,0 +1,313 @@
+**************************************************
+*						 *
+*  aptables  -  manual for the use of real-time  *
+*	        AP tables in pulse sequences.    *
+*						 *
+**************************************************
+Applicabitlity: All systems except GEMINI 2000 and as noted below.
+
+All user-accessible PSG modules are described.  The user can access
+up to 60 real-time AP tables.  These tables are associated in PSG
+with the variables t1-t60.  They are defined as type "codeint" to
+be compatible with the AP variables, e.g., v1-v14.
+	
+
+
+LOADTABLE("filename"):
+
+	This function is designed to be the most high-level user
+	interface for tables.  The table is written as a UNIX file
+	without an extension and is stored in the directory TABLIB
+	(table library).
+
+	The argument "filename" specifies the name of the UNIX
+	table file in $VNMRUSER/TABLIB.  If the filename is not
+	found, the function will return a value of 1, to indicate
+	an INCOMPLETE status.  There is no system TABLIB!
+	
+	The format for the UNIX table file is quite flexible, allows
+	comments, and uses several special notations.  All tables
+	are labeled as t1-t60.  NO exceptions to this rule
+	are allowed for this function.  A label may be used only once
+	in any one pulse sequence.  That is to say, if two table
+	files are loaded by LOADTABLE, each file must specify a
+	unique set of table variables.  Individual tables in the
+	table file  are to be delimited from the actual elements by
+	either an '=' or a '+=' sign.  No exceptions to this rule are
+	allowed.  Elements are to be written as integer numbers and
+	must be >= 0, i.e., negative numbers cannot be parsed.  For
+	phase tables, 0 represents phase 'x' and 1, phase 'y'.  Each
+	element in a table must be separated from one another by
+	some form of white space.  The maximum number of elements al-
+	lowed per table is 8192.  An example of a UNIX table file is
+	given in ADDENDUM 1.
+
+	The notation (...)# indicates that the table array segment
+	contained within the parentheses is to be replicated # times
+	before proceeding to any succeeding table elements.  The no-
+	tation [...]# indicates that each element in the table seg-
+	ment contained within the square brackets is to be replicated
+	# times before proceeding to the next element in the delimited
+	segment.  The notation {...}#, which MUST enclose the COMPLETE
+	table array, indicates that the actual index into the table
+	is to be index/#.  Nesting of () and [] expressions is not al-
+	lowed.  Multiple {} expressions within in one table are not
+	allowed.  () and [] expressions may be placed within a {} ex-
+	pression.  The notation '+=', which can delimit the table name
+	from the table values, indicates that the VMO2 is to incre-
+	ment the index into the table after EACH access of the table.
+	This is the auto-increment attribute for a real-time AP table.
+	and can be used both with the () and [] notations and with
+	the divn-return attribute (see {} notation).  Comments are
+	delimited by /*..*/.  See ADDENDUM 2 for a more detailed
+	explanation of the aforementioned table notations.
+
+	The PSG functions TXPHASE, DECPHASE, XMTRPHASE, DCPLRPHASE,
+	PHASESHIFT, and POWER now accept the arguments t1-t60.  In
+	order to allow these functions to distinguish between real-
+	time AP variables and the variables labeling real-time AP
+	tables, t1 is offset from 0 by BASEINDEX, which is 1024; t60,
+	by BASEINDEX + 59.  This method provides a quick and conven-
+	ient way to distinguish between these two classes of variables.
+	As an example,
+
+
+			rgpulse(pw, t1, rof1, rof2);
+
+
+	performs a transmitter pulse whose phase is specified in
+	the real-time AP table labeled by t1 whereas
+
+
+			rgpulse(pw, v1, rof1, rof2);
+
+
+	performs a transmitter pulse whose phase is specified by
+	the AP variable v1.
+
+	If LOADTABLE is called N times in a pulse sequence with N
+	different filename arguments, the N UNIX table files are
+	parsed only for the first increment IF AND ONLY IF the file-
+	name arguments AND the order in which they are acessed in
+	the pulse sequence do not change between increments.  The
+	maximum number of times that LOADTABLE can be called from
+	within a pulse sequence has been defined to be 60.
+
+	LOADTABLE automatically has the table values packed by the
+	function WRITETABLE.  There is one important limitation with
+	LOADTABLE:  negative values may not be included in the table.
+	The following function SETTABLE does not impose this restric-
+	tion.
+
+
+
+SETTABLE(tablename, numelements, tablearray):
+
+	"tablename" specifies the name of the table and must be one
+	of the variables t1-t60.  "numelements" specifies the size
+	of the table.  "tablearray" is a C integer array which con-
+	tains the table elements.  The user must pre-define and
+	pre-dimension this array in the pulse sequence.  SETTABLE
+	creates and initializes the table.  SETTABLE does not itself
+	allow the user to attach any attributes, e.g., auto-incremen-
+	tation or divn-return, to the table.  As an example,
+
+
+		int  tablearray[8],
+		     i;
+
+		for (i = 0; i < 8; i++)
+		   tablearray[i] = Function(i);
+
+		settable(t1, 8, tablearray);
+
+
+	loads the elements stored in tablearray into the real-time
+	AP table labeled by t1.  As an aside, one can add attributes
+	to this table with the following statements:
+
+
+		setautoincrement(t1)	-    sets autoincrement
+					     attribute for t1
+
+		setdivnfactor(t1,#)	-    sets divn-factor for
+					     t1 to #
+
+
+INITTABLE(tablename, numelements):  (available only on VNMRS or newer systems).
+
+	"tablename" specifies the name of the table and must be one
+	of the variables t1-t60.  "numelements" specifies the size
+	of the table.  INITTABLE creates and initializes the table.
+        INITTABLE does not itself
+	allow the user to attach any attributes, e.g., auto-incremen-
+	tation or divn-return, to the table.  INITTABLE can be used
+        with the PUTELEM statement for storage on any number of real-time
+        values. An example is
+
+        inittable(t1,128);
+
+        to allocate space for 128 real-time variables.
+
+GETELEM(tablename, indexptr, destptr):
+
+	This function extracts an element from an AP table, whose
+	name is given by "tablename."  "tablename" must be t1-t60.
+	"indexptr" is an AP variable whose value is the index into
+	the requested table.  "destptr" is an AP variable, restricted
+	to V1-V14 or OPH, into which the value extracted from the
+	table is placed.
+
+PUTELEM(tablename, indexptr, scrptr):  (available only on VNMRS or newer systems).
+
+	This function puts an element into an AP table, whose
+	name is given by "tablename."  "tablename" must be t1-t60.
+	"indexptr" is an AP variable whose value is the index into
+	the requested table.  "scrptr" is an AP variable, restricted
+	to V1-V14 or OPH, which contains the value to be put into
+        the table.
+
+
+SETRECEIVER(tablename):
+
+	This function associates the table specified by "tablename"
+	with the phase of the receiver.  If SETRECEIVER is called
+	more than one time from within a pulse sequence (which it
+	should NOT be!), the last call takes precedence.
+
+
+
+TSADD(tablename, scalar, moduloval):
+
+	This macro adds a scalar to a table.  "tablename" specifies
+	the table.  The result of the addition is taken modulo
+	"moduloval" if "moduloval" is > 0.
+
+
+
+TSSUB(tablename, scalar, moduloval):
+
+	This macro subtracts a scalar from a table.  "tablename"
+	specifies the table.  The result of the subtraction is taken
+	modulo "moduloval" if "moduloval" is > 0.
+
+
+
+TSMULT(tablename, scalar, moduloval):
+
+	This macro multiplies a table by a scalar.  "tablename"
+	specifies the table.  The result of the multiplication is
+	taken modulo "moduloval" if "moduloval" is > 0.
+
+
+
+TSDIV(tablename, scalar, moduloval):
+
+	This macro divides a table  by a scalar.  "tablename"
+	specifies the table.  If parameter "scalar" has the value
+	0, an error is returned and PSG is aborted.  The result
+	of the division is taken modulo "moduloval" if "moduloval"
+	is > 0.
+
+
+
+TTADD(dest_tablename, operand_tablename, moduloval):
+
+	This macro performs the folowing "vector" operation:
+	dest_tablename + operand_tablename ---> dest_tablename.
+	The table "dest_tablename" must have greater than or
+	equal to the number of elements in "operand_tablename".
+	In the former case, a cyclic addition with respect to
+	"operand_tablename" is performed.  The result of the
+	addition, stored in "dest_tablename", is taken modulo
+	"moduloval" if "moduloval" is > 0.
+
+
+	
+TTSUB(dest_tablename, operand_tablename, moduloval):
+
+	This macrmacro performs the folowing "vector" operation:
+	dest_tablename - operand_tablename ---> dest_tablename.
+	The table "dest_tablename" must have greater than or
+	equal to the number of elements in "operand_tablename".
+	In the former case, a cyclic subtraction with respect to
+	"operand_tablename" is performed.  The result of the
+	subtraction, stored in "dest_tablename", is taken modulo
+	"moduloval" if "moduloval" is > 0.
+
+
+
+TTMULT(dest_tablename, operand_tablename, moduloval):
+
+	This macro performs the folowing "vector" operation:
+	dest_tablename * operand_tablename ---> dest_tablename.
+	The table "dest_tablename" must have greater than or
+	equal to the number of elements in "operand_tablename".
+	In the former case, a cyclic multiplication with respect
+	to "operand_tablename" is performed.  The result of the
+	multiplication, stored in "dest_tablename", is taken modulo
+	"moduloval" if "moduloval" is > 0.
+
+
+
+TTDIV(dest_tablename, operand_tablename. moduloval):
+
+	This macro performs the folowing "vector" operation:
+	dest_tablename / operand_tablename ---> dest_tablename.
+	The table "dest_tablename" must have greater than or
+	equal to the number of elements in "operand_tablename".
+	In the former case, a cyclic division with respect to
+	"operand_tablename" is performed.  If an element with a
+	value of 0 is encountered in "operand_tablename", an
+	error is returned and PSG is aborted.  The result of the
+	division, stored in "dest_tablename", is taken modulo
+	"moduloval" if "moduloval" is > 0.
+
+
+
+
+ADDENDUM 1
+----------
+
+
+#include <standard.h>
+
+void pulsesequence()
+{
+   loadtable("filename");	/* loads the table elements */
+   setreceiver(t3);		/* specifies the table for receiver phase */
+   mod4(ct, v1);
+
+   status(A);
+      hsdelay(d1);
+
+   status(B);
+      rgpulse(p1/2, v1, rof1, rof2);
+      rgpulse(p1/2, t1, rof1, rof2);
+      delay(d2);
+
+   status(C);
+      rgpulse(pw, t2, rof1, rof2);
+}
+
+
+UNIX Table File:  (in $vnmruser/tablib)
+
+      t1   =    0 1 2 3 2 3 0 1		/* t1 phase table */
+      t2   =    [0 1 2 3]4 (0 0 2 2)4	/* t2 phase table */
+      t3  +=    {0 0 1 1 2 2 3 3}4	/* t3 phase table */
+
+
+
+
+ADDENDUM 2
+----------
+
+
+    1.  (0 1 2 3)3   ----->   0 1 2 3 0 1 2 3 0 1 2 3
+
+    2.  [0 1 2 3]3   ----->   0 0 0  1 1 1 2 2 2 3 3 3
+
+    3.  {0 1 2 3}3   ----->   divn_return = 3
+
+    4.  t1 += 0 1    ----->   auto-increment attribute

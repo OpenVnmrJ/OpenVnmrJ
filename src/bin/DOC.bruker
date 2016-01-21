@@ -1,0 +1,158 @@
+# 
+# Varian Assoc.,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential 
+# information of Varian Assoc., Inc. and its contributors. 
+# Use, disclosure and reproduction is prohibited without 
+# prior consent. 
+#
+
+
+	     Processing of Bruker Data on a VXR-5000 System.
+			   (All Real Points)
+			       (3-29-88)
+
+	The following five steps summmarizes the processing or Bruker data
+on a Varian VXR-5000 system.
+
+1.  Read data from tape with readbrutape in unix.
+2.  Convert data into 32 bit integers with convertbru.
+3.  Run vnmr.
+4.  Use sread to read data into current experiment.
+5.  Process data as if it were Varian data with ft, ft2d, or other commands.
+
+'readbrutape' is a shell script that reads a file from a 9-track tape
+containing Bruker data with an argument naming the file 
+and an optional second argument setting 
+the number of data files skipped.  A '.bru' suffix is added to the name
+of the data file.  At this point the data is stored as 24 bit integers.
+If the data is not obtained from a tape, but is placed in the system by 
+some other method, readbrutape is not run.
+If Bruker data is stored on a Varian system, it usually should be saved  
+in the totally unconverted form since it takes the least amount of space.
+
+'convertbru' converts the data into a form that can be converted by sread
+into the usual VXR-5000 format.  It takes a filename as an argument.
+If the filename has the suffix '.bru' it is removed, and 
+'.cv' is added to form the output directory name.  It assumes the first
+block of 1536 unix bytes contains the parameters and the remainder of the
+file contains data in 24 bit form.  'sdata' in the output directory contains
+the data converted to 32 bit integers. 
+'convertbru' converts enough of the Bruker parameters into Varian parameters
+for processing and display of the Bruker data.  Most do not have a Varian 
+equivalent.  Bruker has more than one parameter format.  The remainder of
+the Varian parameters are obtained from the standard parameter file
+/vnmr/parlib/bruker.par or another which is supplied as the second argument of
+sread. The command 'dgs' displays many of the Brucker parameters not normally
+used by Varian when this standard parameter file is used.
+
+The following is the method by which the VXR-5000 identifies the
+data as to be from a Bruker spectrometer: 'convertbru' sets  
+system = 'bru' in the file 'stext'.  When sread finds system ='bru',
+it sets the S_BRU bit(15th) in datafilehead.status of the FID data. 
+The weighting and fourier-transform programs which need to identify 
+real data were modified to check this bit.
+
+The ft program ('ft','wft', 'wft2d', etc) also was modified in the 
+following way:
+	If the first argument is 'realft', the ft program assumes that
+the data is all real points and processes the data with postproc following
+the ft.  In the case of 2d data, postproc is run following the first ft.
+ 
+All processing, display, and plotting programs can be used just as
+they would be for Varian data.
+
+Wti has also been modified to do post processing on the ft under two
+conditions: the first argument is 'realft' or the S_BRU bit FID data 
+status.
+
+The ft program and wti can accept all the usual arguments following 'realft'.
+
+
+EXAMPLE. In line with the preceding explanation, an example of the actual 
+operations follows:
+
+	1. mount the tape on the 9-track tape drive.
+	2. readbrutape BPIN1 1
+	3. convertbru BPIN1.bru
+ 	4. vn
+	5. jexp5
+	6. sread('BPIN1.cv'<,'parameter file'>)
+
+The data is now ready for processing in the current experiment.  
+Readbrutape adds the suffix '.bru' to form the output file.
+The 'parameter file' name is optional with sread; it defaults to
+	/vnmr/parlib/bruker.
+
+Description of function postproc:
+ 	A post processing routine for real data 
+  		transformed with an ft normally used for complex data.
+		It unscrambles the output of the complex data ft 
+		giving the correct spectrum for the real data.
+ 	This version worked for Bruker real data with 2nd and 3rd
+ 		points in set of 4 negated.
+ 	Derived from Press,Flannnery,.. "Numerical Recipes", 
+ 	        Cambridge U. Press
+ 	Halves of data table swapped at the beginning of postproc (after ft).
+ 	Sin argument negated. (sign of wi changed).
+	Spectrum is backwards so points are swapped end for end.
+
+Modified or new programs:
+  	ft2d.c
+  	wti.c
+  	sread.c
+    	Type vmake vnmr with these sources in your directory.
+
+  	convertbru runs in unix. 
+      	  Assembled by
+  	    make -f makeconvertbru 
+	      requires makeconvertbru and convertbru.c
+
+  	readbrutape is a shell script. 
+
+Further modification by Sandy Farmer, December 14, 1988:
+
+
+	CONVERTBRU.C  -  reads in decoupler power levels, DFRQ,
+			 SW1 (correctly), dwell time, and dead
+			 time (equivalent to our BETA + ALFA
+			 delay); if DFRQ is not found, the user
+			 is interrogated as to the value for
+			 DFRQ.
+
+	FT2D.C    -	 the flag for REALFT can now be set in
+			 two ways:  by wft('realft') or by the
+			 15th bit in the fidhead status integer
+			 being set to 1; the INIT_WT2 and WEIGHT-
+			 FID functions were modified to correctly
+			 handle real FID data.
+
+	DS.C      -	 modified CALC_YBARS for WTI.
+
+	DSWW.C    -	 modified CALC_YBARS for WTI.
+
+	DCONI.C   -	 modified CALC_YBARS for WTI.
+
+	WTI.C     -	 modified to correctly display weighting
+			 function for real FID data and to cor-
+			 rectly weight real FID data.
+
+Sandy Farmer notes, December 14, 1988:
+
+All of the above files are back in SCCS with the exception of FT2D.C.
+I am still working on other aspects of FT2D.C.
+
+I have also revised the BRUKER.PAR parameter set.  The only aspect that
+I have not tested is reading the tape with READBRUTAPE.  I have done 1D
+FT's, 1D WTI's, 2D FT's, 2D WTI's, DS's, and DCONI's on 2D BRUKER data.
+I have confirmed that the weighting data and time scale are correct for
+the real FID data.
+
+I have made a "makeconvertbru" makefile and entered it and the "convert-
+bru.c" program into the SCCS bin directory.  I have placed the appro-
+priately compiled version (Sun3 and Sun4) of "convertbru.c" into both
+/sun3obj/bin and /sun4obj/bin.  I am in the process of writing a macro
+to allow the execution of "convertbru" from within VNMR.  The two final
+aspects will involve the appropriate manual files for the "readbrutape"
+program (which Bob should write), the "convertbru" program (which I will
+write), and the "convertbru" macro (which I will write).
+

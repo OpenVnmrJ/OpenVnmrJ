@@ -1,0 +1,19 @@
+"macro readLcData"
+/*-*- MAGICAL -*-*/
+"macro readLcData"
+
+// Reads an LC chromatogram
+
+if ($# > 0) then
+    $file = $1
+else
+    $file = lcDataFile
+endif
+
+substr($file, 1, 1):$ch
+if ($ch <> '/') then
+    $file = curexp + '/lcdatdir/' + $file
+endif
+
+lccmd('readData ' + $file)
+cp($file, curexp+'/lcdata')  // Also put data in current expt. (bug#374)

@@ -1,0 +1,253 @@
+
+*********************************************************
+*							*
+*	ft   -   Fourier Transform 1D data		*
+*	wft  -   Weight and Fourier Transform 1D data	*
+*	calcECC - Calculate ECC phase corrections based *
+*                 on a reference data set               *
+*       ftarg -  create "FID parameters" described below*
+*       fidproc - Process and write FID
+*       wfidproc - Process and write FID
+*							*
+*********************************************************
+
+The commands wft and ft commands perform a Fourier transform on one or more
+1D FIDs with or without weighting applied to the FID, respectively.
+Both commands execute a left-shift, zero-order phase rotation, and
+a frequency shift (first-order phase rotation) according to the
+parameters "lsfid", "phfid", and "lsfrq" respectively, on the time-domain
+data prior to the weighting (if appropriate) and Fourier transformation.
+All string arguments supplied to these two commands must precede the
+numeric arguments, e.g., ft('nodc','noft',1,10,2).  The type of Fourier
+transformation is determined by the parameter "proc".  Solvent suppression
+is turned on or off with the parameters ssfilter and ssorder.
+
+String arguments:
+
+ft('acq') checks if any elements of a multi-FID experiment have already
+been transformed.  If so, these previously transformed elements will not
+be re-transformed.
+
+ft('nodc') does not perform the fid drift correction.  ft('dodc') does
+perform the fid drift correction.  The global parameter dc1d determines the
+default if neither 'nodc' nor 'dodc' is used.  If the global parameter dc1d
+does not exists, or it exists and is set to 'y', then fid drift correction is
+performed. If the dc1d parameter exists and is set to 'n', fid drift correction
+is not performed.
+
+ft('nods') prevents an automatic spectral display (ds) from occurring.
+This is useful for various plotting macros.
+
+ft('noft') skips the actual ft step, thereby allowing to use all spectral
+manipulation and plotting commands on FIDs.
+
+ft('zero') zeroes the imaginary channel of the FID prior to the Fourier
+transform.  This zeroing occurs after any FID phasing.  Its use will be
+generally limited to wideline solids applications.
+
+ft('nf') allows a single FID element containing 'nf' traces to be trans-
+formed as if it were 'nf' separate FID elements.
+
+ft('ftargs') provides additional parameter-based FID processing.
+These parameters control amplitude, phase, frequency, sampling
+window, and frequency shifting corrections of individual FIDs. There
+is a mechanism to do ECC correction of the FIDs, based on a reference FID.
+The FIDs can also be combined using a set of coefficients. These are described
+in the "FID parameters" section below.
+
+wft also supports the 'inversewt' argument, which takes the defined weighting function
+and inverts it prior to applying it. If there are any zeros in the weighting function,
+wft('inversewt') will abort.
+
+
+Numeric arguments:
+
+For arrayed data sets, both of these commands will Fourier transform
+all of the array elements.  To Fourier transform selected elements of
+the array, wft and ft can be passed numeric arguments.  Passing a
+single numeric argument will transform only that element.  For example,
+wft(3) will transform only array element 3.  Passing two numeric
+arguments will transform the inclusive array elements.  For example,
+wft(3,7) will transform array elements 3, 4, 5, 6, and 7.  Passing
+three numeric arguments is similar to passing two arguments with the
+addition that the third argument is used as the increment between
+successive elements that are to be transformed.  For example, wft(2,10,2)
+will transform elements 2, 4, 6, 8, and 10.  This use of numeric
+parameters is identical to the scheme used for displaying spectra with
+the dss command and other related commands.
+
+If the string argument 'nf' precedes the list of numeric arguments, the
+rules for interpreting the numeric arguments change slightly.  Passing
+no numeric arguments results in the transformation of all 'nf' traces in
+the first FID element.  Passing a single numeric argument results in the
+transformation of all 'nf' traces in the requested FID element.  For 
+example, ft('nf',3) transforms all 'nf' traces for element 3.  Regardless
+of the requested FID element, the resulting spectra are labeled as 1
+to nf since multiple elements cannot be transformed using ft('nf').  Sub-
+sequent numeric arguments are interpreted as previously described.
+
+FID parameters:
+
+There are a set of parameters that are used to process individual FIDs
+prior to the FID weighting step. In each case, if the parameter does not exist
+or is set to "Not active", the function associated with the parameter will
+be omitted. The order of parameter descriptions below corresponds to the
+order in which any additional FID processing is done.
+
+ fidinfo
+   This parameter does not control any processing. It is the pathname of
+   a file where the details of the following processing will be written.
+
+ fidecc
+   Pathname of the phase values of a reference data set. These
+   phase values need to be pre-calculated using the calcECC
+   program. The ECC correction involves measuring the phase of
+   each data point in the FID and adjusting it so that the
+   difference on phase between that data point and the first
+   data point is the same as the corresponding phase difference
+   in the reference data set.
+
+ fideccls 
+    The ECC left-shift value. These parameter is ignored if the
+    fidecc processing is omitted. This may be used to re-define
+    the "first point" in the reference FID. Its default value is 0. 
+
+ fidfreq
+    Frequency shift individual FIDs using the values from this parameter. The shifts
+    are in Hertz. If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidautofreq
+    This is a special case of frequency shifting individual FIDs. Instead of specifying
+    a frequency shift for each FID, this parameter consists of only two values.
+    The first is an initial offset and the second is a increment for subsequent FIDs.
+    For example, if fidautofreq=10,100, the first FID will be offset by 10,
+    the second by (10 + 100), the third by (10 + 200), etc.
+
+ fidautophase 
+    Phase individual FIDs, relative to the first FID. The fidautophase
+    parameter consists of four numbers. The first number specifies
+    the number if FID points to be used to determine of phase of that
+    FID. Maximum value is 500. The second number is the number of points to
+    skip from the beginning of the FID when determining the phase.
+    The third number is the number of points at the end of the FID to use
+    to determine the RMS noise of the FID. Maximum value is np/8. The fourth
+    and last number is a multiplier for the RMS noise value. For a point to
+    be considered when determining the phase, its magnitude (sqrt(re*re + im*im))
+    must be greater than the RMS noise time the multiplier.
+
+ fidautophasepar
+    The parameter is used in conjunction with fidautophase. It will hold
+    the results of the phases calculated when fidautophase is selected.
+
+ fidphase
+    Phase individual FIDs using the values from this parameter. The phase angles
+    are in degrees. If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidsa
+    Sampling window adjust individual FIDs using the values from this parameter.
+    FID data points on either side of the shifted sampling window will
+    be set to zero. This value is entered as the number of complex data points in
+    the sampling window. If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidsas
+    Sampling window shift adjusts the sampling window of individual FIDs. FID data
+    points on either side of the shifted sampling window will be set to zero.
+    This value is entered as the number of complex data points to shift
+    the sampling window. If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidamp
+    Amplitude adjust individual FIDs using the values from this parameter.
+    If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidshift
+    Shift individual FIDs using the values from this parameter. The shifts
+    are in number of complex points. Positive values shift data to the right. Negative
+    values shift data to the left. This can be used with fidadd and fidsa to combine
+    sections of a set of FIDs into a single FID, as is done when processing "pureshift"
+    data sets. If the number of elements of this arrayed parameter is less
+    than the number of FIDs, the element that will be used for a specific FID
+    will be (FID number - 1) modulo (parameter array size) + 1.
+
+ fidautoshift
+    This is a special case of frequency shifting individual FIDs. Instead of specifying
+    a frequency shift for each FID, this parameter consists of only two values.
+    The first is an initial number of complex point to shift and the second is a increment
+    for subsequent FIDs.
+    For example, if fidautoshift=10,100, the first FID will be offset by 10,
+    the second by (10 + 100), the third by (10 + 200), etc.
+
+ fidadd
+    Individual FIDs can be combined. The fidadd parameter specifies how many FIDs to
+    combine into a single one. If fidadd=0, this is a special value to indicate all
+    the FIDs should be combined into a single FID. This is equivalent to fidadd=arraydim.
+    If, for example, fidadd=3, fta and wfta will combine FIDs in groups of three.
+    The fidadd parameter can have either a single value, as just described, or it can
+    have another four optional values. These values are used as the coefficients to
+    combine the FIDs. The default values of rr,ir,ri,ii are 1,0,0,1.  These coefficients
+    multiply the real(r) and imaginary(i) components of the FID, as in
+ 
+          rr * (input real point) + ir * (input imag point) => output real point
+          ri * (input real point) + ii * (input imag point) => output imag point
+
+    These coefficients are still active even if the first value of fidadd=1, that is,
+    one input FID produces one output FID. For example, fidadd=1,1,0,0,0 will zero
+    the imaginary channel of the resulting FID. fidadd=1,1,0,0,-1 will negate the
+    imaginary channel, result in a frequency reversal.
+  
+
+INVERSE FOURIER TRANSFORMATION:
+
+ft('inverse', expnum, expansion_factor) performs an inverse FT, storing
+the resulting fid in the experiment defined by the second argument (first
+numeric argument).  The expansion_factor defines the expansion of the
+spectrum before the inverse FT is performed.  This argument is equivalent
+to a multiplier for the "fn" parameter, must lie between 1 and 32, and
+is rounded up internally to the nearest power of 2.  Note that this com-
+mand performs an inverse FT of the entire spectrum.  Vnmr does not cur-
+rently support the inverse FT of arrayed 1D or 2D data sets.
+
+ftarg 
+ftarg is a macro to create the parameters used by ft('ftargs') and wft('ftargs').
+
+fidproc and wfidproc
+
+fidproc processes an FID using the same parameters as the ft program, except it stops
+before the actual FT step. It also does not do the "first point multiply" step. The result
+is written to the current experiment in a directory named fidproc.fid. In addition to all
+the arguments available to the ft program, fidproc takes a 'file' argument, which must be
+followed by another argument that specifies an alternative filename for the .fid directory.
+If the .fid is not supplied as part of the filename, it will be appended.
+The wfidproc program is the same as fidproc, except that it also weights the FID using the
+current weighting parameters. The wfidproc program also supports the 'inversewt' argument
+as described for wft.
+
+
+calcECC(infile, outfile)
+
+The calcECC command requires two arguments. The first is a pathname to a reference data
+set to be used to do the ECC corrections. The first argument should be the name of a 
+".fid" directory, containing a data set saved by VnmrJ. The second argument is a
+filename where to place the results. A typical value would be curexp+'/eccref', as in
+
+calcECC(userdir+'/data/waterref.fid',curexp+'/eccref')
+
+In this case, the parameter fidecc=curexp+'/eccref' accesses this information for the
+ft('ftargs') and wft('ftargs') commands. The calcECC commands calculated the phase angle
+for each data point in the FID and writes it to the output file.
+
+   
+
+
+Related Manual Entries:		proc		(parameter)
+                                ssfilter        (parameter)
+                                ssorder         (parameter)

@@ -1,0 +1,64 @@
+*******************************************************************************
+setref -   Set Frequency Referencing Based on Lock Signal Shift (M)
+*******************************************************************************
+
+      Syntax: setref
+              setref<(nucleus)><:r1<,r2<,r3<,r4>>>>
+
+
+ Description: "setref" assumes the sample is locked. It extracts the 2H
+	      chemical shift from "/vnmr/solvents", calculates the (auxiliary)
+	      2H reference frequency (TMS-d1) from the lock frequency (lockf =
+	      lockfreq + lkof/1e6) as follows:
+        		H2_TMSfreq = lockf / (1 + solppm/1e6)
+	      then takes the Xi values for 2H and "tn" and calculates the
+	      auxiliary reference frequency ("reffrq") for the observe nucleus
+	      at the given field strength:
+        		reffrq = H2_TMSfreq / Xi(H2) * Xi(tn)
+	      from this, "rfl" and "rfp" are set:
+        		rfp=0
+        		rfl = sw/2 - (sfrq - reffrq)*1e6
+	      You can NOT say you have referenced your sample to TMS after
+	      calling "setref", but you have simply ESTIMATED the reference
+	      frequency based on an estimated chemical shift value for the
+	      lock signal. Note that the chemical shifts for many lock
+	      solvents (such as D2O, CDCl3) are subject to changes by
+	      temperature, pH (pD), sample interaction, etc., and in the case
+	      of external locking, bulk susceptibility effects may also affect
+	      the accuracy of the result.
+	      "setref" reports its referencing action on line 3; if you want
+	      to suppress that feedback (e.g., when calling "setref" in
+	      macros), you can simply add a return argument.
+              If a global (or local) flag "bioref" exists and is set to 'y',
+              bio-NMR referencing (based on "nuctables/nuctabrefBio") is used
+              rather than standard IUPAC / organic chemistry referencing
+              (based on "nuctables/nuctabref").
+
+	      "setref" is also a utility macro that is called by other macros.
+	      It returns four numeric values:
+		- the calculated value of "rfl"
+		- the calculated value of "rfp"
+		- the calculated value of "reffrq"
+		- the calculated value of "refpos"
+	      If used with return arguments, output on line3 is suppressed.
+	      If used with a nucleus name as argument, e.g.,
+			setref(tn):$rfl,$rfp,$reffrq,$refpos
+	      or
+	      		setref('C13'):$rfl,$rfp,$reffrq,$refpos
+	      "setref" does NOT set any referencing parameter, but ONLY
+	      returns the calculated values, assuming "sw=0.0 offset=0.0"
+	      (where "offset" is equivalent to "tof", "dof", etc.).
+
+    Examples: setref
+	      setref:r1
+	      setref:$rfl,$rfp,$reffrq,$refpos
+	      setref(tn):$rfl,$rfp,$reffrq,$refpos
+	      setref('C13'):$rfl,$rfp,$reffrq,$refpos
+
+     Related: setref1 - Set Frequency Referencing for f1 Evolution Dimension (M)
+              setref2 - Set Frequency Referencing for f2 Evolution Dimension (M)
+	      reff1 - Reference f1 Indirect Dimension from Observe Dimension (M)
+              reff2 - Reference f2 Indirect Dimension from Observe Dimension (M)
+              mref - Set Referencing Based on Spectrum from the Same Sample (M)
+              bioref - Flag for Bio-NMR Referencing (P)
+

@@ -1,0 +1,75 @@
+"macro wetpbox"
+
+$tpwr_cf=0
+getparam('tpwr_cf',tn):$tpwr_cf
+if ($tpwr_cf=0) then
+  $ref_pw90=ref_pw90
+  $ref_pwr=ref_pwr
+else
+  $pw90=pw90
+  getparam('pw90',tn):$pw90
+  $ref_pw90=$pw90*$tpwr_cf
+  $ref_pwr=tpwr
+  getparam('tpwr',tn):$ref_pwr
+endif
+
+if ($# > 0) then $ref_pw90=$1 endif
+if ($# > 1) then $ref_pwr=$2 endif
+
+$outshape='pbx.RF'
+$filepath = userdir+'/shapelib/'+$outshape
+
+rm('-f',$filepath):$res
+$inputfile = userdir + '/shapelib/Pbox.inp'
+rm('-f',$inputfile):$res
+
+on('slp0'):$slp0active
+on('slp'):$slpactive
+on('slp2'):$slp2active
+on('slp3'):$slp3active
+on('slp4'):$slp4active
+on('slp5'):$slp5active
+on('slp6'):$slp6active
+
+if ($slp0active and slp0w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp0bw/2,slp0) endif
+
+if ($slpactive and slpw = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slpbw/2,slp) endif
+
+if ($slp2active and slp2w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp2bw/2,slp2) endif
+  
+if ($slp3active and slp3w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp3bw/2,slp3) endif
+  
+if ($slp4active and slp4w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp4bw/2,slp4) endif
+  
+if ($slp5active and slp5w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp5bw/2,slp5) endif 
+  
+if ($slp6active and slp6w = 'y') then
+  write('file',$inputfile,'{seduce %3.1f %3.1f 0 0 90}',slp6bw/2,slp6) endif
+  
+write('file',$inputfile,'    ref_pwr        = %d',$ref_pwr)
+write('file',$inputfile,'   ref_pw90        = %4.2f',$ref_pw90)
+
+$pw=0 $pwr=0
+shell('Pbox',$outshape,' -u ', '"'+userdir+'"', '| grep \'>>>\' | awk \'{print $6}\'; cat'):$pw,$pwr
+exists('wetpwr','parameter'):$e
+if $e then
+  wetpwr=$pwr
+else
+  write('alpha','wetpwr = %d',$pwr)
+endif
+exists('pwwet','parameter'):$e
+if $e then
+  pwwet=$pw*1000
+else
+  write('alpha',' pwwet = %3.1f',$pw*1000)
+endif
+exists('wetshape','parameter'):$e
+if $e then
+  wetshape='pbx'
+endif

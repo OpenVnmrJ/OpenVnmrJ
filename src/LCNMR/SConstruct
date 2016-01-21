@@ -1,0 +1,28 @@
+#
+
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import myShutil # for better copytree()
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd() 
+
+optionsLCPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','LC')
+if not os.path.exists(optionsLCPath) :
+    os.makedirs(optionsLCPath)
+
+dest = os.path.join(optionsLCPath,'lc')
+myShutil.copytree('lc',optionsLCPath,symlinks = False)
+
+def runSconsPostAction(dir):
+   dirList = os.listdir(dir)
+   for i in dirList:
+      sconsFile = os.path.join(dir,i,'sconsPostAction')
+      if os.path.exists(sconsFile):
+         cmd='cd '+os.path.join(dir,i)+';chmod +x sconsPostAction; ./sconsPostAction; rm sconsPostAction'
+         print "cmd: ",cmd
+         os.system(cmd)
+
+runSconsPostAction(os.path.join(optionsLCPath,'lc'))

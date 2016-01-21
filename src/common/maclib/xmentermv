@@ -1,0 +1,107 @@
+"macro xmentermv"
+// move or rearrange parts of enterQ file
+// $mode is 'append', 'insert', 'delete', or 'savedel'
+//   (savedel - save one section of file, then delete)
+
+if $#<3.5 then return endif
+
+$origfile = $1
+$eqfile   = $2
+$mode     = $3
+$mvid     = $4
+
+$offset = -1
+if $#>4.5 then $offset=$5 endif
+$delta = 0
+if $#>5.5 then $delta=$6 endif
+
+exists($origfile,'file'):$e
+if not ($e) then return endif
+
+$eqstr=''
+exists($eqfile,'file'):$eq
+if ($eq) then
+  lookup('mfile',$eqfile,'read'):$eqstr
+endif
+
+// insert sample at correct location within $origfile
+$str=''
+lookup('mfile',$origfile,'delimiter',' ()\'\n\r\t',$mvid,'read'):$str
+if ($mode<>'savedel') and ($mvid='start' or $str='') then
+// if start of queue or $mvid not found, append to start
+  $nfile=$eqfile+'.n'
+  $cmd='cat "'+$eqfile+'" "'+$origfile+'" > "'+$nfile+'";'
+  $cmd=$cmd+'mv "'+$nfile+'" "'+$origfile+'";'
+  $cmd=$cmd+'rm "'+$eqfile+'"'
+  shell($cmd):$x
+else
+// $mvid is in $origfile, insert below $mvid
+  lookup('mfile',$origfile,'countcs','MACRO:'):$ct
+  lookup('mfile',$origfile,'filekey'):$key
+  $i=0 $str='' $sub=' ' $nret=2
+  repeat
+    $i=$i+1
+    lookup('mfile',$key,'readline','filekey'):$str,$key,$nret
+    substr($str,1,2):$sub
+  until ($sub='--' or $nret<1.5)
+  $persamp=$i
+  if ($persamp>0.5 and $nret>1.5) then
+    lookup('mfile',$origfile,'filekey'):$key
+    $i=0 $sampno=0 $found=0 $nret=2
+    repeat
+      $i=$i+1
+      lookup('mfile',$key,'MACRO:','delimiter',' ()\'\n\r\t','skip','read','filekey'):$str,$key,$nret
+      if ($mode='append') then
+        if ($str = $mvid) then
+          $sampno=$i $found=1
+        elseif ($found=1) then
+          $found=2
+        endif
+      else  // if ($mode='insert' or $mode='delete' or $mode='savedel') then
+        if ($str = $mvid) then
+          $sampno=$i-1+$offset
+          $found=2
+        endif
+      endif
+    until ($found=2 or $i>=$ct or $nret<1.5)
+    if $sampno<0 then $sampno=0 endif
+    if ($mode='append' and $eqstr<>'' and $found=1) then $found=2 endif
+    if ($found=2) then
+      $hlines='' $tlines=''
+      $hfile=$origfile+'.h'
+      $tfile=$origfile+'.t'
+      $t2file=$origfile+'.t2'
+      $nfile=$origfile+'.n'
+      if ($mode='savedel') then  // save part of file
+        format(($ct - $sampno + 1) * $persamp,0,0):$tlines
+        format(($delta+1) * $persamp,0,0):$hlines
+        $cmd = 'tail -'+$tlines+' "'+$origfile+'" > "'+$t2file+'"; '
+        $cmd = $cmd + 'head -'+$hlines+' "'+$t2file+'" > "'+$eqfile+'"; '
+        shell($cmd):$x
+        rm($t2file):$x
+      endif
+
+      format($sampno * $persamp,0,0):$hlines
+      if (($mode='delete' or $mode='savedel') and $sampno>0) then
+        format(($sampno-1) * $persamp,0,0):$hlines
+      endif
+      format(($ct - $sampno - $delta) * $persamp,0,0):$tlines
+      $cmd = 'head -'+$hlines+' "'+$origfile+'" > "'+$hfile+'"; '
+      if (($ct - $sampno - $delta) > 0.5) then
+        $cmd = $cmd + 'tail -'+$tlines+' "'+$origfile+'" > "'+$tfile+'"; '
+      else
+        $cmd = $cmd + 'touch "'+$tfile+'"; '
+      endif
+      if ($mode='delete' or $mode='savedel') then  // don't need if write(reset,$eqfile)
+        $cmd = $cmd + 'cat "'+$hfile+'" "'+$tfile+'" > "'+$nfile+'"'
+      else  // $mode='insert', 'append'
+        $cmd = $cmd + 'cat "'+$hfile+'" "'+$eqfile+'" "'+$tfile+'" > "'+$nfile+'"'
+      endif
+      shell($cmd):$x
+      if ($mode='insert' or $mode='append') then rm($eqfile):$x endif
+      rm($hfile):$x
+      rm($tfile):$x
+      mv($nfile,$origfile)
+    endif
+  endif
+endif

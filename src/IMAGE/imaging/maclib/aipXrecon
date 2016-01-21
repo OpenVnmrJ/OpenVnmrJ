@@ -1,0 +1,353 @@
+"macro aipXrecon"
+"*****************************************************************************"
+"                                                                             "
+" aipXrecon - macro to set Xrecon parameters                                  "
+"                                                                             "
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+"**********************************************************"
+" Set parameters according to the selected recon           "
+"**********************************************************"
+if ($action='set') then
+  aipXrecon('genpars')
+  if (recon='sense') then 
+    exists('/vnmr/imaging/maclib/acq2Dsense','file'):$file
+    if ($file > 0) then 
+      accelread=initaread 
+      accelphase=initaphase
+    else
+      recon='external'
+    endif 
+  else 
+    exists('foldnp','parameter'):$fold
+    if ($fold>0) then 
+      exists('nread','parameter'):$e 
+      if ($e>0) then foldnp=nread else foldnp=np endif
+    endif
+    exists('foldnv','parameter'):$fold
+    if ($fold>0) then 
+      exists('nphase','parameter'):$e 
+      if ($e>0) then foldnv=nphase else foldnv=nv endif
+    endif
+    exists('foldnv2','parameter'):$fold
+    if ($fold>0) then 
+      exists('nphase2','parameter'):$e 
+      if ($e>0) then foldnv2=nphase2 else foldnv2=nv2 endif
+    endif
+  endif
+  aipXrecon('allvolumes')   
+endif
+
+
+"**********************************************************"
+" Data Volumes                                             "
+"**********************************************************"
+if ($action='allvolumes') then
+  startvol=1
+  endvol=volumes
+  if (endvol=0) then endvol=1 endif
+endif
+
+if ($action='checkvols') then
+  $nvols=volumes
+  if ($nvols=0) then $nvols=1 endif
+  if (startvol < 1) then startvol = 1 endif
+  if (startvol > $nvols) then startvol = 1 endif
+  if (endvol > $nvols) then endvol = $nvols endif
+  if (endvol < 1) then endvol = $nvols endif
+  if (startvol > endvol) then
+    $temp = startvol
+    startvol = endvol
+    endvol = $temp
+  endif
+  if (startvol > 1) OR (endvol < $nvols) then 
+    allvolumes='n'
+  else
+    allvolumes='y'
+  endif
+endif
+
+if ($action='getnvols') then
+
+  "Set image scaling"
+  aipScale=aipImageScale
+
+  "Make sure arraydim is set appropriately"
+  calcdim
+
+  "number of echoes"
+  $ne=ne
+  "number of slices"
+  $ns=size('pss')
+  "number of receivers"
+  aipXrecon('nrcvrs'):$nr
+  
+  "use arraydim to calculate the number of volumes"
+  $nvols=arraydim
+  
+  "multiple echoes generate $ne volumes that are not arrayed"
+  $nvols=$nvols*$ne
+  
+  "multiple receivers generate $nr volumes included in arraydim"
+  $nvols=$nvols/$nr
+
+  "Check for EPI or FSE type experiment using etl or nseg"
+  $nv = nv
+  exists('nseg','parameter'):$ex  "nseg takes priority over etl"
+  if ($ex > 0) then 
+    $nv = nseg 
+  else 
+    exists('etl','parameter'):$ex
+    if ($ex > 0) then $nv = nv/etl endif
+  endif
+
+  "check for standard slice and phase loops as these generate volumes included in arraydim"
+  "decode seqcon string"
+  length(seqcon):$length
+  $k = 1
+  while ($k <= $length) do
+    $seqcon[$k] = ''
+    substr(seqcon,$k,1):$seqcon[$k]
+    $k = $k + 1
+  endwhile
+
+  "standard phase loops don't generate volumes included in arraydim if a profile is acquired"
+  $profile[1]='n' $profile[2]='n' $profile[3]='n'
+  "decode profile string"
+  length(profile):$length
+  $k = 1
+  while ($k <= $length) do
+    substr(profile,$k,1):$profile[$k]
+    $k = $k + 1
+  endwhile
+
+  "calculate the number of volumes"
+  if ($seqcon[2] = 's') then $nvols=$nvols/$ns endif
+  if ($seqcon[3] = 's' AND $profile[1] = 'n' AND $nv > 0) then $nvols=$nvols/$nv endif
+  if ($seqcon[4] = 's' AND $profile[2] = 'n' AND nv2 > 0) then $nvols=$nvols/nv2 endif
+  "for 3D multiple slices generate additional volumes"
+  if ($seqcon[4] <> 'n') then $nvols=$nvols*$ns endif
+
+  return($nvols)
+  
+endif
+
+
+"**********************************************************"
+" Number of receivers                                      "
+"**********************************************************"
+if ($action='nrcvrs') then
+  $nr=0
+  length(rcvrs):$len
+  $i=1
+  while ($i <= $len) do
+    $str=''
+    substr(rcvrs,$i,1):$str
+    if ($str = 'y') then $nr=$nr+1 endif
+    $i=$i+1
+  endwhile
+  return($nr)
+endif
+
+
+"**********************************************************"
+" Number of arrayed parameters and their names             "
+"**********************************************************"
+if ($action='parsearray') then
+
+  length(array):$len
+  if ($len = 0) then return(0,'') endif
+  
+  $i=0
+  $npars=1
+  $pars=''
+  while ($i < $len) do
+    substr(array,$i+1,1):$str
+    if ($str <> '(') AND ($str <> ')') AND ($str <> ',') then
+      $pars[$npars] = $pars[$npars]+$str
+    endif
+    if ($str = ',') then $npars=$npars+1 $pars[$npars]='' endif
+    $i=$i+1
+  endwhile
+  return($npars,$pars)
+
+endif
+
+
+"**********************************************************"
+" NIFTI-1/Analyze                                          "
+"**********************************************************"
+if ($action = 'nifti') then
+
+  "Allow different sub-types of action"
+  $do = ''
+  if ($# > 1) then
+    $do = $2
+  endif
+
+  "The number of volumes"
+  $nvols=volumes
+  if ($nvols=0) then $nvols=1 endif
+
+  "Internal argument for increasing/decreasing nifti volumes and cycles"
+  $val=''
+  if ($# > 2) then
+    $val = $3
+  endif
+
+  if (niftiauto = 'y') then
+    niftivols = $nvols
+    nifticycle = 1
+    nifticyclebak = 1
+    niftifiles = 1
+    niftit = tr
+    niftitoffset = 0
+  else
+    if (niftivols < 1) then niftivols=1 endif
+    if (niftivols > $nvols) then niftivols=$nvols endif
+    if (nifticycle < 1) then nifticycle=1 endif
+    if (nifticycle > $nvols) then nifticycle=$nvols endif
+    if ($do = 'vols') then  "Volumes per File (niftivols)"
+      if ($val = 'down') then "Volumes per File (niftivols) decreased"
+        while (($nvols mod niftivols <> 0) AND (niftivols > 1)) do
+          niftivols=niftivols-1
+        endwhile
+        niftifiles=$nvols/niftivols
+      endif
+      if ($val = 'up') then "Volumes per File (niftivols) increased"
+        while (($nvols mod niftivols <> 0) AND (niftivols < $nvols)) do
+          niftivols=niftivols+1
+        endwhile
+        niftifiles=$nvols/niftivols
+        aipXrecon('nifti','cycle','down')
+      endif
+      $vols=$nvols/niftifiles
+      if (niftivols < $vols) then aipXrecon('nifti','vols','down') endif
+      if (niftivols > $vols) then aipXrecon('nifti','vols','up') endif
+    endif
+    if ($do = 'cycle') then  "Cycle (nifticycle)"
+      if ($val = 'down') then "Cycle (nifticycle) decreased"
+        while ((niftifiles mod nifticycle <> 0) AND (nifticycle > 1)) do
+          nifticycle=nifticycle-1
+        endwhile
+        nifticyclebak=nifticycle
+      endif
+      if ($val = 'up') then "Cycle (nifticycle) increased"
+        if (nifticycle > niftifiles) then
+          while (($nvols mod nifticycle <> 0) AND (nifticycle < $nvols)) do
+            nifticycle=nifticycle+1
+          endwhile
+          nifticyclebak=nifticycle
+          niftivols=$nvols/nifticycle
+          niftifiles=$nvols/niftivols
+        else
+          while ((niftifiles mod nifticycle <> 0) AND (nifticycle < $nvols)) do
+            nifticycle=nifticycle+1
+          endwhile
+          nifticyclebak=nifticycle
+        endif
+      endif
+      if (nifticycle < nifticyclebak) then aipXrecon('nifti','cycle','down') endif     
+      if (nifticycle > nifticyclebak) then aipXrecon('nifti','cycle','up') endif     
+    endif
+  endif
+
+endif
+
+
+"**********************************************************"
+" Clear data                                               "
+"**********************************************************"
+if ($action='cleardata') then
+  "NB don't remove curexp+'/mask*' as they could be used in subsequent recon"
+  $cmd = 'rm -r '+curexp+'/recon*'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/raw*'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/nifti'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/analyze'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/*.img'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/addmaps'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/smap*'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/gmap'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/Rsnr'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/datadir3d'
+  shell($cmd)
+endif
+
+
+"**********************************************************"
+" Generate parameters                                      "
+"**********************************************************"
+if ($action='genpars') then
+
+  "Recon type"
+  create('recon','string','current','') setgroup('recon','processing')
+
+  "Image scaling"
+  create('aipScale','real','current',aipImageScale) setgroup('aipScale','processing')
+
+  "Volumes"
+  create('allvolumes','string','current','y')
+  create('startvol','real','current',1)
+  create('endvol','real','current',1)
+
+  "Processing blocks"
+  create('nblocks','integer','current',1)
+
+  "Output types"
+  create('imMG','string','current','n')
+  create('imPH','string','current','n')
+  create('imRE','string','current','n')
+  create('imIM','string','current','n')
+  create('rawMG','string','current','n')
+  create('rawPH','string','current','n')
+  create('rawRE','string','current','n')
+  create('rawIM','string','current','n')
+
+  "Individual receiver output flags"
+  create('imIR','string','current','n')
+  create('rawIR','string','current','n')
+
+  "Reference data output flag"
+  create('imRF','string','current','n')
+
+  "Noise equalization"
+  create('eqnoise','string','current','n')
+
+  "Recon_all"
+  create('raw','string','current','')
+  create('rcvrout','string','current','')
+
+  "NIFTI-1/Analyze7.5"
+  create('niftipage','string','current','n')
+  create('nifti','string','current','n')
+  create('niftitime','string','current','n')
+  create('niftiauto','string','current','y')
+  create('niftivols','integer','current',1)
+  create('nifticycle','integer','current',1)
+  create('nifticyclebak','integer','current',1)
+  create('niftifiles','integer','current',1)
+  create('niftifile','string','current','')
+  create('niftit','real','current',1)
+  create('niftitslice','real','current',0)
+  create('niftitoffset','real','current',0)
+  create('niiMG','string','current','n')
+  create('niiPH','string','current','n')
+  create('niiRE','string','current','n')
+  create('niiIM','string','current','n')
+  create('niiIR','string','current','n')
+
+endif

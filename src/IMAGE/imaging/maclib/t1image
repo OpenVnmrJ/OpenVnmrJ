@@ -1,0 +1,34 @@
+"macro t1image"
+" @(#)t1image	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************************"
+"  t1image: "
+"     Alan R. Rath   Version 1.0   June 5, 1992                              "
+"***************************************************************************"
+
+"*****"
+"Initialize variables"
+"*****"
+$basename = ''
+$threshstring = ''
+$minthresh = 0.0
+
+"*****"
+"Get base name of phasefiles, and noise threshold"
+"*****"
+input('Enter base name for phasefiles: '): $basename
+input('Enter minimum threshold level: '): $threshstring
+if ($threshstring = '') then
+  $minthresh = 0.0
+else
+  format($threshstring,8,5):$minthresh
+endif
+
+"*****"
+"Transform all images, and save as phasefiles"
+"*****"
+makephf($basename)
+
+"*****"
+"Fit the set of images to an inversion-recovery T1 model"
+"*****"
+imfit('t1',$basename,$minthresh)

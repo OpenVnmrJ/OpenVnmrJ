@@ -1,0 +1,113 @@
+"macro reviewplot"
+if ($# <1) then $1='init' endif
+
+   // vnmr_open now used instead of acroread
+  $acroread='/vnmr/bin/vnmr_open'
+  $uname=''
+  shell('uname'):$uname
+  if ($uname='Linux') then
+    $acroread='/usr/bin/acroread'
+  elseif ($uname='Interix') then
+    $acroread='/vnmr/bin/vnmr_open'
+  else
+    $acroread=systemdir+'/bin/vnmr_open'
+  endif
+
+  exists($acroread,'file'):$aex
+  if ($aex=0) then
+    write('error','%s not found',$acroread)
+    return
+  endif
+
+  isnewexp:$isnew
+  if ($isnew) then 
+     write('error','No pdf plots saved for this sample')
+     return 
+  endif
+
+  $filename=''
+  shell('basename '+file+' .fid'):$basename
+  shell('dirname '+file):$archsamp
+  shell('basename '+$archsamp):$sample
+  shell('dirname '+$archsamp):$archive
+  exists($archsamp+'/dirinfo/plotlist','file'):$pex
+  if ($pex=0) then 
+     write('error','No plots saved for this sample')
+     return
+  endif
+
+  $pex=0
+  shell('(cat '+$archsamp+'/dirinfo/plotlist | grep -c \'.pdf\')'):$pex
+  if ($pex=0) then
+     write('error','No pdf plots saved for this sample')
+     return
+  endif
+
+IF ($1='init') THEN
+
+   exists(userdir+'/persistence/plotpreviews','directory'):$direx
+   if ($direx=0) then
+        shell('mkdir -p '+userdir+'/persistence/plotpreviews'):$dum
+   endif
+
+	$tmpfile=userdir+'/persistence/plotpreviews/'+operator+'_reviewplot_list'
+	write('reset',$tmpfile)
+	shell('(cat '+$archsamp+'/dirinfo/plotlist | grep \'.pdf\' | awk \'{print $5}\' > '+$tmpfile+')'):$dum
+	$s1='' $s2=''
+	readfile($tmpfile,'$s1','$s2','','local'):$pex
+	if ($pex=0) then return endif
+	write('reset',$tmpfile)
+	$i=1
+	repeat
+	   $s4=$s1[$i]
+	   write('file',$tmpfile,'"'+$s4+'" "'+$s4+'"')
+	   $i=$i+1
+	until $i > $pex
+
+	exists('pdfplotpar','parameter','global'):$plpon
+	if ($plpon=0) then create('pdfplotpar','string','global') endif
+	setprotect('pdfplotpar','on',256,'global')
+	pdfplotpar='','',''
+	pdfplotpar[2]=emailaddr
+	pdfplotpar[3]='','','','','',''
+	pdfplotpar[6]=$archsamp
+
+	vnmrjcmd('pnew','pdfplotpar')
+	vnmrjcmd('popup','mode:modeless','file:reviewplot.xml','rebuild:yes','title: "'+$sample+'"')
+
+ELSEIF ($1='view') or ($1='email') THEN
+
+  $s1=''
+  strstr($2,'.pdf'):$ret,$s1
+  if ($ret) then $2=$s1 endif
+  $firstchar=''
+  substr($2,1,1):$firstchar
+  if ($firstchar<>'/') then
+	$plot=$archsamp+'/plots/'+$2+'.pdf'
+  else
+	$plot=$2+'.pdf'
+  endif
+  exists($plot,'file'):$plex
+  if ($plex=0) then
+	write('error','Could not find %s',$2)
+ 	return
+  endif
+
+  shell('dirname '+$plot):$plotdir
+  shell('basename '+$plot):$plotname
+  write('line3','%s',$plotname)
+  shell('chmod +x '+$plotname)
+  pwd:$curdir
+  cd($plotdir):$dum
+  if ($1='view') then
+    if ($uname='Interix') then
+      shell('('+$acroread+' '+$plotname+') '):$dum
+    else
+      shell('('+$acroread+' '+$plotname+') &'):$dum
+    endif
+  elseif ($1='email') then
+      email($plotname,$3)
+  endif
+  cd($curdir):$dum
+
+ENDIF

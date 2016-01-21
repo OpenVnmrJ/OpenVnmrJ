@@ -1,0 +1,231 @@
+"macro display_1D"
+"  ***********************************************************  "
+"  ****  M E N U :   D I S P L A Y    1 D ,   P A R T 1   ****  "
+"  ***********************************************************  "
+
+lastmenu=''
+
+mlabel=''
+mstring=''
+micon=''
+
+$vjmbut=0
+
+dssi:$arraydim
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Interactive'
+micon[$vjmbut]='dspec2.gif'
+if $arraydim > 1.5 then
+  mstring[$vjmbut]='lastmenu=`display_1D` if wc<0.3*wcmax then full endif ds'
+else
+  mstring[$vjmbut]='lastmenu=`main` ds'
+endif
+
+if $arraydim > 1.5 then
+  showarrays('setup')
+  setvalue('showcontent','s')
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Stack Spectra Vertically'
+  mstring[$vjmbut]='full dssi:$arraydim vo=wc2max/($arraydim+1) showarrays(`setup`) showarray=`vert` showarrays(`redisplay`)'
+  micon[$vjmbut]='dss.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Stack Spectra Horizontally'
+  mstring[$vjmbut]='showarrays(`setup`) showarray=`horiz` showarrays(`redisplay`)'
+  micon[$vjmbut]='dssh.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Stack Spectra Diagonally'
+  mstring[$vjmbut]='showarrays(`setup`) showarray=`auto` showarrays(`redisplay`)'
+  micon[$vjmbut]='dssa.gif'
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Show/Hide Axis'
+  mstring[$vjmbut]='showarrays(`setup`) if arraydscale=`y` then arraydscale=`n` else arraydscale=`y` endif showarrays(`redisplay`)'
+  micon[$vjmbut]='1Dscale.gif'
+  exists('arraydscale','parameter'):$e
+  if $e>0 then 
+    if arraydscale='y' then
+      micon[$vjmbut]='1Dscale.gif:on'
+    endif
+  endif
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Label'
+  exists('shownumbers','parameter'):$e
+  mstring[$vjmbut]='showarrays(`setup`) if shownumbers<>`s` then shownumbers=`s` else shownumbers=`n` endif showarrays(`redisplay`)'
+  micon[$vjmbut]='number.png'
+  if $e>0 then 
+    if shownumbers='s' then
+      micon[$vjmbut]='number.png:on'
+    endif
+  endif
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Value'
+  mstring[$vjmbut]='showarrays(`setup`) if shownumbers<>`v` then shownumbers=`v` else shownumbers=`n` endif showarrays(`redisplay`)'
+  micon[$vjmbut]='value.png'
+  if $e>0 then 
+    if shownumbers='v' then
+      micon[$vjmbut]='value.png:on'
+    endif
+  endif
+endif
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Pan & Stretch Mode'
+if(buttonMode=3) then
+   micon[$vjmbut]='1Dspwp.gif:on'
+   mstring[$vjmbut]='setButtonMode(0) menu(`display_1D`)'
+else
+   micon[$vjmbut]='1Dspwp.gif'
+   mstring[$vjmbut]='setButtonMode(3) menu(`display_1D`)'
+endif
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom Mode'
+if(buttonMode=2) then
+   micon[$vjmbut]='ZoomMode.gif:on'
+   mstring[$vjmbut]='setButtonMode(0) menu(`display_1D`)'
+else
+   micon[$vjmbut]='ZoomMode.gif'
+   mstring[$vjmbut]='setButtonMode(2) menu(`display_1D`)'
+endif
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom in'
+micon[$vjmbut]='1Dexpand.gif'
+mstring[$vjmbut]='sp=sp+wp/10 wp=wp-wp/5 showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Zoom out'
+micon[$vjmbut]='1Dzoomout.gif'
+mstring[$vjmbut]='sp=sp-wp/10 wp=wp+wp/5 showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Show Full Spectrum'
+micon[$vjmbut]='1Dfull.gif'
+mstring[$vjmbut]='f if(dss_wc=wc) then full endif showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+mlabel[$vjmbut]='Redisplay'
+micon[$vjmbut]='recycle.gif'
+mstring[$vjmbut]='setButtonMode(0) showarrays(`redisplay`)'
+
+$vjmbut=$vjmbut+1
+
+mlabel[$vjmbut]='Return'
+mstring[$vjmbut]='menu(`main`)'
+micon[$vjmbut]='return.gif'
+
+  // separator
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]=''
+  mstring[$vjmbut]=''
+  micon[$vjmbut]='blackHorBumps.gif'
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='show/hide annotations'
+  aspAnno:$e,$n
+  if($e>0 and $n>0) then
+     mstring[$vjmbut]='aspAnno(`save`) aspAnno(`clear`)'
+     micon[$vjmbut]='Annotations_down.png'
+  else
+     mstring[$vjmbut]='aspAnno(`load`)'
+     micon[$vjmbut]='Annotations_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='select'
+  mstring[$vjmbut]='aspSetState(1)'
+  if(aspMode=1) then
+    micon[$vjmbut]='Select_down.png'
+  else
+    micon[$vjmbut]='Select_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Peak Annotation'
+  mstring[$vjmbut]='aspSetState(18)'
+  if(aspMode=18) then
+    micon[$vjmbut]='Peaks_down.png'
+  else
+    micon[$vjmbut]='Peaks_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Text'
+  mstring[$vjmbut]='aspSetState(28)'
+  if(aspMode=28) then
+    micon[$vjmbut]='Text_down.png'
+  else
+    micon[$vjmbut]='Text_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Line'
+  mstring[$vjmbut]='aspSetState(20)'
+  if(aspMode=20) then
+    micon[$vjmbut]='Line_down.png'
+  else
+    micon[$vjmbut]='Line_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Arrow'
+  mstring[$vjmbut]='aspSetState(22)'
+  if(aspMode=22) then
+    micon[$vjmbut]='Arrow_down.png'
+  else
+    micon[$vjmbut]='Arrow_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Box'
+  mstring[$vjmbut]='aspSetState(5)'
+  if(aspMode=5) then
+    micon[$vjmbut]='Rectangle_down.png'
+  else
+    micon[$vjmbut]='Rectangle_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Oval'
+  mstring[$vjmbut]='aspSetState(24)'
+  if(aspMode=24) then
+    micon[$vjmbut]='Circle_down.png'
+  else
+    micon[$vjmbut]='Circle_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Polygon'
+  mstring[$vjmbut]='aspSetState(26)'
+  if(aspMode=26) then
+    micon[$vjmbut]='Polygon_down.png'
+  else
+    micon[$vjmbut]='Polygon_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Polyline'
+  mstring[$vjmbut]='aspSetState(36)'
+  if(aspMode=36) then
+    micon[$vjmbut]='Open_Poly_down.png'
+  else
+    micon[$vjmbut]='Open_Poly_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='X Bar'
+  mstring[$vjmbut]='aspSetState(30)'
+  if(aspMode=30) then
+    micon[$vjmbut]='X_bar_down.png'
+  else
+    micon[$vjmbut]='X_bar_up.png'
+  endif
+
+  $vjmbut=$vjmbut+1
+  mlabel[$vjmbut]='Y Bar'
+  mstring[$vjmbut]='aspSetState(32)'
+  if(aspMode=32) then
+    micon[$vjmbut]='Y_bar_down.png'
+  else
+    micon[$vjmbut]='Y_bar_up.png'
+  endif
+

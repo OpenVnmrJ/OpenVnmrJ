@@ -1,0 +1,28 @@
+"macro dndtr"
+"drag and drop to trash can for vnmrj"
+if $#>3.5 then
+write('line3','%s(%s,%s,%s,%s)',$0,$1,$2,$3,$4)
+  if ($2='workspace') then
+    length($3):$ln
+    length(userdir):$lu
+    $len=$ln-$lu-4
+    $s='' substr($3,$lu+5,$len):$s
+    $cmd='delexp('+$s+')'
+"   write('line3','echo: %s',$cmd)"
+    exec($cmd)
+  elseif (($2='command_n_macro') or ($2='pulse_sequence_macro')) then
+    return
+  elseif (($2='protocol') and ($4='TrashCan')) then
+    return
+
+  elseif (($2='protocol') and ($4='Delete')) then
+    return
+  elseif (($2='protocol') and ($4='Undelete')) then
+    return
+
+  else
+"$2='vnmr_data' or 'shims' or 'panels_n_components' or 'protocol' or 'study' "
+    write('line3','removing file %s',$3)
+    rmfile($1,$2,$3)
+  endif
+endif

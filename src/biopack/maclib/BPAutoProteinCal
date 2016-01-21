@@ -1,0 +1,102 @@
+"macro BPAutoProteinCal"
+"BPAutoProteinCal(<option>)"
+" uses either hcch_tocsy (no spinlock or decoupling-essentially INEPT) or gCfhsqc"
+
+exists('dofidsave','parameter'):$e
+if $e then dofidsave='n' endif
+
+$date=''
+BPgetdate:$date
+BPdeuterated=0  "not used for autocalibrates (is used in 2D)"
+
+  $dir=userdir+'/AutoTripRes'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+      shell('mkdir -p '+ $dir2):$dum
+    endif
+    mv($dir,$dir2+'/AutoTripRes_'+$date)
+  endif
+  mkdir(userdir+'/AutoTripRes')
+
+BPcheckprobefile2  "checks if probefile is BioPack-type"
+$tof=tof $pw=pw
+$vtset=''
+shell('showstat > ',curexp+'/stat'):$dummy
+lookup('file',curexp+'/stat','VT','active:','read'):$vtset,$ret
+delete(curexp+'/stat')
+if $ret then
+  format($vtset,0,1):temp
+endif
+if BPquick=1 then gCfhsqc dof=dof-35d else hcch_tocsy ncyc=0 endif
+if ($#>0) then  "No argument uses probefile values, full calibrate"
+
+  if $1=2 then tof=$tof endif
+  if $1=3 then tof=$tof pw=$pw endif
+  if $1=4 then r7=1 endif              "For Fast RF-Only Calibration (stops at BP5d)"
+  if $1=5 then r7=2 endif              "For 1H pw90 Calibration only (not compH)"
+  if $1=7 then r7=7 N15refoc='n' endif "For 1H/13C pw90 Calibration (13C-labelled cmpd)"
+
+  if $1=6 then                "For 1H/15N Calibration on 15N-labelled compound"
+     gNfhsqc dm2='nnn' r7=6
+  endif    
+  if $1=9 then r7=9 endif     "For Fastest RF/Gradient Calibration"
+endif
+
+if (BPplot='file') then
+ BPplotdir=userdir+'/AutoTripRes'
+endif
+
+if ((BPplot='plot') or (BPplot='on')) then
+ if ($#>0) then  "Option calibrate"
+  if $1=4 then  "Fast Option"
+    if (BPBioNMR) then   "BioNMR selected"
+      printon man('proteinpreface4P') printoff
+    else
+      printon man('proteinpreface4') printoff
+    endif    "use global variable BPBioNMR as specifier"
+  else           "other option"
+    if (BPBioNMR) then   "BioNMR selected"
+      printon man('proteinprefaceP') printoff
+    else
+      if ($1=5 or $1=15) then  "1H pw90-only Option"
+          printon man('proteinpreface5') printoff
+      elseif ($1=6 or $1=16) then
+          printon man('proteinpreface6') printoff
+      elseif ($1=7 or $1=17) then
+          printon man('proteinpreface7') printoff
+      elseif ($1=9 or $1=19) then
+          printon man('proteinpreface9') printoff
+      else
+          printon man('proteinpreface') printoff
+      endif
+    endif    "use global variable BPBioNMR as specifier"
+  endif
+ else   "Full calibration"
+  if (BPBioNMR) then   "BioNMR selected"
+    printon man('proteinprefaceP') printoff
+  else
+    printon man('proteinpreface') printoff
+  endif    "use global variable BPBioNMR as specifier"
+ endif
+endif
+
+if (seqfil='gNfhsqc') then
+   wnt='wft select(1) setref sp=6p wp=4p vsadj(50) dssh'
+else
+   dm='nnn' 
+   wnt='wft select(1) setref sp=-1p wp=4p vsadj(50) dssh'
+endif
+
+ni=0 phase=1 
+pw=trunc(10*pw + 0.5)/10 "ensures pw is multiple of 100nsec"
+setlimit('pw',1000,0,.1)
+setlimit('pwC',1000,0,.1)
+nt=2 array('pw',15,pw-0.35*pw,0.05*pw)
+f ss=4 ssfilter=500 ssntaps=200 ssorder='n' full av
+vp=0 cdc f fn=4*np 
+wexp='BP1'
+spin='n'
+au

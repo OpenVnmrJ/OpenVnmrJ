@@ -1,0 +1,56 @@
+Protocol: Tancpxblew  Sequence: tancpxblew.c  Apptype: solidseq1d
+
+Description: 
+
+   "X" tangent CP preparation with BLEW24 decoupling during acquisition.
+
+Additional Software: 
+
+   reset_blew - rests the values of BLEW from aH90 and pwH90. 
+
+Parameter Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used as a 
+              preparation pulse.  Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the 
+channel designated with 
+                      chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).  
+       dHX - amplitude width of the ramp. A negative width sets a ramp 
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be 
+             set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be set 
+             - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phxhx);
+
+blewH:  Module:  yes
+Sequence:  tancpxblew.c
+Description:  Implements BLEW24 homonuclear decoupling on the dec
+              channel
+Parameters:  Sequence Page
+       aHblew - amplitude of dec pulses.
+       pwHblew - 360-degree flip on dec, on resonance.
+       nHblew - BLEW24 cycles represented in the .DEC file.
+       ofHblew - overall frequency offset.
+       chHblew = 'dec' must be set (not shown).
+Implementation: MPSEQ blew = getblew("blewH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+ 

@@ -1,0 +1,36 @@
+"macro psg4cs"
+"psg4cs - check/modify the pulse sequence"
+
+"1. recompile the pulse sequence to make sure it works "
+
+$psg4cs=''
+BPfindfile('psg4cs'):$psg4cs
+
+$seqfil=userdir+'/seqlib/'+seqfil
+
+exists($seqfil,'file'):$e
+if($e) then
+  $cmd = 'rm '+$seqfil
+  shell($cmd)               "remove current object code from seqlib"
+  $cmd = 'rm '+$seqfil+'.c'
+  shell($cmd)               "remove current source code from seqlib"
+endif
+
+seqgen(seqfil)              " now it must exist locally "
+
+exists($seqfil,'file'):$e
+if($e) then                           "compiled OK"
+  pwd:$curdir
+  cd(userdir+'/psglib')
+  $cmd = $psg4cs +' ' + seqfil       "2. convert 4 CS"
+  shell($cmd)
+  seqgen(seqfil)
+  exists($seqfil,'file'):$e
+  cd($curdir)
+endif
+
+if ($e) then
+  write('error','pulse sequence ready to use')
+else
+  write('error','pulse sequence did not compile')
+endif

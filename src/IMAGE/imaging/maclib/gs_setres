@@ -1,0 +1,79 @@
+"macro gs_setres"
+
+"*******************************************************************************************"
+
+" gs_setres - Macro to set H1offset using spuls
+
+" Details - The current acquisition parameters are saved and the spuls sequence is
+"	    used to determine the resonance frequency. H1offset is set to the new value
+"	    The default spuls.par in the userdir or system directory must have valid
+"	    parameters to acquire and measure the frequency.
+
+"*******************************************************************************************
+
+$macro = $0
+$GSDAT = userdir+'/gshimdir/data'
+if($# = 0) then
+  $pass=1
+elseif($1 = 2) then
+  $pass=2
+else
+  write('error','%s: Invalid argument %d',$macro,$1)
+  abort
+endif
+  
+if($pass = 1) then
+  "first pass "
+  "Save the current parameters"
+  rm('-rf',$GSDAT + '/gs_bkup.par'):$x
+  svp($GSDAT + '/gs_bkup.par')
+
+  spuls   "retrieve default spuls parameters"
+  tof = H1offset   "this is the current transmitter freq"
+else    "second pass, process"
+  f full
+  av                          "absolute spectrum"
+  ft('nods')
+  vsadj
+
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+
+  $toflim = 0.9*sw/2          "offset limit set to 80% of sw"
+
+  $tt = tof + $t
+  if ($tt < 0 ) then
+    $tt = -$tt
+  endif
+  if ($tt > $toflim) then
+    write('error', '%s: Frequency offset too large, check spectrum or increase sw',$macro)
+    abort 
+  endif
+
+  tof=tof + $t                "determine new tof value"
+  $tnoffset = tn+'offset'
+  $cmd = $tnoffset+'=tof'
+  exec($cmd)
+  write('line3','H1offset changed by %4.1f',$t)
+
+  ph aph0 
+  peak:$ht,$freq
+  dres:$line
+  write('line3','Linewidth: %6.2f',$line)
+  
+  $name = $GSDAT+'/gshim.line'
+  exists($name,'file'):$ex
+  if ($ex > 0) then
+    rm('-f',$name):$x
+  endif
+  
+  write('reset',$name)  "create file"
+  write('file',$name,'--------------------------------')
+  write('file',$name,'Experimental(spuls) Measurement:')
+  write('file',$name,'Linewidth:  %5.2f Hz',$line)
+  write('file',$name,'H1offset changed by:  %4.1f',$t)
+  write('file',$name,'........................')
+
+  rtp($GSDAT + '/gs_bkup.par')   "restore original parameters"
+  return
+endif

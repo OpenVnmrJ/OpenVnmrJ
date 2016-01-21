@@ -1,0 +1,36 @@
+
+*******************************************************************************
+on('name'<,'tree'>)	-  turn a variable on (active flag on)
+off('name'<,'tree'>)	-  turn a variable off (active flag off)
+on('name'<,'tree'>):$x	-  check active flag of a variable
+*******************************************************************************
+
+  Real variables (not strings) can be turned on and off. This can be done
+in any tree with the commands "on" and "off", and by entering "name='y'" or
+"name='n'" to change the active flag for variables in the current tree
+only.  The variable trees are 'current', 'global', 'processed' and
+'systemglobal'.  The default tree is 'current'.
+
+  To test the active flag of a variable, use "on(...):$x". This will not
+change the active flag of the variable, but will set $x to 1, if the
+variable is active, or to 0, if it is not active.  If the variable does
+not exist, a value of -1 is returned.  Care should be taken if using
+the return value as a test for a conditional statement.  For example,
+in the following fragment,
+
+on('var1'):$e
+if $e then
+  write('line3','if statement is true with value of %d',$e)
+endif
+
+the write command will be executed if 'var1' is active, writing the message
+'if statement is true with value of 1'  It will also be executed if 'var1'
+does not exist, writing the message 'if statement is true with value of -1'
+
+To only execute the write command if the variable is active, use something
+like the following.
+
+on('var1'):$e
+if ($e > 0.5) then
+  write('line3','var1 is active')
+endif

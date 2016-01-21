@@ -1,0 +1,44 @@
+"macro BPprobe"
+" plot probefile at position x,y "
+
+exists(userdir+'/probes/'+probe,'file'):$e
+if $e then
+  $probefile=userdir+'/probes/'+probe
+else
+  exists(systemdir+'/probes/'+probe,'file'):$e
+  if $e then
+    $probefile=systemdir+'/probes/'+probe
+  else
+    write('error','%s:  probe file for probe "%s" not found!',$0,probe)
+    return
+  endif
+endif
+$calibfile=$probefile+'/'+probe
+  
+write('plotter',0,wc2max,'Automatic BioPack Calibration Results')
+write('plotter',150,wc2max,'Probe File %s is stored at %s',probe,$probefile)
+if ($#>0) then
+  $x=$1 $y=$2
+else
+  $x=0 $y=wc2max-12
+endif
+
+write('plotter',$x,$y,''):$ys    "get the height of characters in $ys"
+$y = $y - $ys                    "position $y at bottom of the character"
+$yinit=$y  $xinit=$x
+$ok = 1
+$t=''
+lookup('file',$calibfile)
+
+repeat
+  lookup('readline'):$t,$ok
+  if ($ok = 1) then
+    if $y < -20 then
+      $y=$yinit $x=$x+60
+    endif
+    write('plotter',$x,$y,'%s',$t)
+    $y = $y - $ys
+  endif
+until ($ok = 0)
+BPpage
+if BPplot='off' then BPplot='' endif "reset plotter"

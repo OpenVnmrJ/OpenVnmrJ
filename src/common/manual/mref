@@ -1,0 +1,74 @@
+*******************************************************************************
+ mref  -  Set Referencing Based on Other Spectrum from the Same Sample (M)
+*******************************************************************************
+
+      Syntax: mref(<source_exp,>target_exp)<:$ret>
+	      mref(source_fid)<:$ret>
+
+ Description: Assume you have measured a spectrum (typically a 1H spectrum)
+	      and referenced it on the signal from an internal reference (such
+	      as TMS, see the IUPAC recommendations). Now you join a different
+	      experiment and measure a second spectrum on a different nucleus.
+	      To reference this spectrum, you don't need to add a (secondary)
+	      reference compound, but you can use "mref" to PROPERLY reference
+	      this spectrum, based on the reference signal in the first
+	      spectrums, using the Xi values from the IUPAC recommendations.
+	      The primary requirement for "mref" to work is that the sample
+	      must be AT THE SAME TEMPERATURE AND LOCKED ON THE SAME SIGNAL
+	      for the two acquisitions (reference source and target). With nD
+	      experiments, "mref" only references the observe dimension. The
+	      indirect dimensions can be referenced using "reff1" and "reff2"
+	      (after using "mref" or after manual referencing of the observe
+	      dimension). The reference frequency "reffrq" is calculated as
+	      follows:
+		    reffrq_b = reffrq_a / Xi_a * Xi_b
+	      "mref" also corrects for possible changes in the lock frequency:
+		    reffrq_b = reffrq_b / lockfreq_a * lockfreq_b
+	      This means that "mref" works even if the lock frequency changed
+	      between the two acquisitions, or even if the two spectra were
+	      acquired on different instruments, maybe even at different field
+	      strengths.
+	      Once "reffrq" is calculated, "mref" calculates "rfl" and "rfp":
+		    rfp = 0
+		    rfl = sw/2 - (sfrq - reffrq)*1e6
+	      Note that "mref" can only track lock frequency changes if the
+	      systemglobal parameters "lockfreq" and "h1freq" have been saved
+	      in the local parameters at "go" time, through "saveglobal",
+	      i.e., if both data sets were acquired under VNMR 6.1C or later.
+	      With earlier data, "mref" can only work if a) both data sets
+	      were acquired at the same lock frequency (on the same
+	      instrument), and if (on a datastation) the parameters "lockfreq"
+	      and (on older instruments) "h1freq" are set to the values used
+	      to acquire the data.
+	      "mref" reports the referencing action on line 3. If you want to
+	      suppress, you can call it with a return argument, e.g.:
+		    $ret='' mref('myfid.fid'):$ret
+	      In this case, the referencing message is captured in the return
+	      argument "$ret" (you could use the contents of this string
+	      variable to label plots with the referencing information).
+	      If a global (or local) flag "bioref" exists and is set to 'y',
+	      bio-NMR referencing (based on "nuctables/nuctabrefBio") is used
+	      rather than standard IUPAC / organic chemistry referencing
+	      (based on "nuctables/nuctabref").
+
+   Arguments: If one numeric argument is specified, the referencing is
+	      transferred FROM THE CURRENT EXPERIMENT to the specified one.
+	      If two numeric arguments are given, the first argument indicates
+	      the reference source, the second one the reference target (i.e.,
+	      the experiment in which the referencing is set by "mref").
+	      Alternatively, the name of a FID file (with or without
+	      extension) can be given as (single) argument; in this case, the
+	      data in the CURRENT experiment are referenced based on the
+	      referencing in the specified FID file.
+
+    Examples: mref(3)
+	      mref(1,2)
+	      mref('myfid')
+	      mref('/data/fids/myfid.fid')
+
+     Related: setref - Set Frequency Referencing Based on Lock Signal Shift (M)
+	      setref1 - Set Frequency Referencing for f1 Evolution Dimension (M)
+              setref2 - Set Frequency Referencing for f2 Evolution Dimension (M)
+	      reff1 - Reference f1 Indirect Dimension from Observe Dimension (M)
+              reff2 - Reference f2 Indirect Dimension from Observe Dimension (M)
+	      bioref - Flag for Bio-NMR Referencing (P)

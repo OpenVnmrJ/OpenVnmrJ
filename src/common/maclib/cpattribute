@@ -1,0 +1,51 @@
+"macro cpattribute"
+
+
+$arg=$1
+$afile=$2+'_Attr'
+$adir=''
+substr($afile,'dirname'):$adir
+if ($adir='') then return endif
+exists($adir,'directory'):$adirex
+if ($adirex=0) then return endif
+
+
+IF ($1='clear') THEN
+    write('reset',$afile)
+
+ELSEIF ($arg='set') THEN
+    $type='' substr($3,1):$type
+    if ($type<>'') then
+//	cpattribute('unset',$2,$type)
+    	write('file',$afile,'%s',$3)
+    endif
+
+ELSEIF ($arg='get') THEN
+    exists($afile,'file'):$fileex
+    if ($fileex) then
+	$attr='' $val=''
+	readfile($afile,'$attr','$val',$3,'local'):$ok
+	if ($ok) then return($val[$ok]) endif
+    endif
+    return('')
+
+ELSEIF ($arg='unset') THEN
+    exists($afile,'file'):$fileex
+    $type='' substr($3,1):$type
+    if ($fileex) then
+      	$attr='' $val=''
+      	readfile($afile,'$attr','$val','','local'):$tot
+      	teststr('$attr',$type,'local'):$ok
+      	if ($ok) then
+            cpattribute('reset',$2)
+            $i=1
+            repeat
+              	if ($attr[$i]<>$type) then
+                    write('file',$afile,'%s %s',$attr[$i],$val[$i])
+              	endif
+                $i=$i+1
+            until $i > $tot
+        endif
+    endif
+
+ENDIF

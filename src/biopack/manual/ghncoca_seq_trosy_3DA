@@ -1,0 +1,103 @@
+  ghncoca_seq_trosy_3DA.c - auto-calibrated version of the original sequence
+ 
+    This pulse sequence will allow one to perform the following experiment:
+
+    3D hncoca (Hn,N,Ca) (enhanced sensitivity PFG) with deuterium decoupling
+                        F1       C_alpha     (i-1)
+                        F2       N  + JNH/2  (i)
+                        F3(acq)  NH - JNH/2  (i)
+
+    This sequence is designed for highly deuterated samples and makes use
+     of TROSY principles to enhance sensitivity in N and HN dimensions.
+
+    This sequence uses the standard four channel configuration
+         1)  1H             - carrier @ 4.7 ppm [H2O]
+         2) 13C             - carrier @ 56 ppm (CA)
+         3) 15N             - carrier @ 120 ppm  
+	 4)  2H		    - carrier @ 4.5 ppm  
+
+    Standard flag setting
+	CT_flg = 'y'  for constant time Ca chemical shift evol. period
+	c180_flg = 'n' for Ca chemical shift refocussing (only when CT_flg='n')
+	f1180 = 'n'  for (0,0) phase correction in f1
+	f2180 = 'n'  for (0,0) phase correction in f2
+	fsat = 'n' fscuba = 'n'. don't saturate water
+        sel_flg = 'y' for active suppression of the fast relaxing component
+                  'n' for relaxation suppression of the fast relaxing
+                      component 
+	dm = 'nnn'
+	dm2 = 'nnn' dmm2 = 'ccc' [NO 15N decoupling during acquisition]
+	dm3 = 'nnn' dmm3 = 'ccc'
+	
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [Ca]  and t2 [N]. [The fids must be manipulated (add/
+    subtract) with 'grad_sort_nd' program (or equivalent) before regular
+    processing with non-VNMR processing software]
+    
+    This scheme uses TROSY principle in 15N and NH with transfer of
+    magnetization achieved using the enhanced sensitivity pfg approach,
+
+    Yang and Kay, J. Biomol. NMR, January 1999, 13, 3-9.
+    Yang and Kay, J. Am. Chem. Soc., 1999.
+
+    If sel_flg =='n' then the component of interest is not actively
+    selected for; relaxation will attenuate the undesired component.
+    Selection is achieved during the first N---> 13C' transfer.
+
+    In general it is very difficult to present rules indicating when
+    sel_flg should be set to y or n. In the case of applications at
+    750 or 800 MHz and for correlation times in excess of 20 ns the
+    sel_flg can be set to no and selection via relaxation should suffice.
+
+    At lower field or for smaller molecules set sel_flg == 'y', for
+    example at 500 or 600 MHz and for correlation times between 15 and 25ns
+    set sel_flg=='y'. We have used sel_flg=='n' for a molecule with a
+    correlation time of 43 ns and not observed any residual signal from
+    the undesired component.
+
+    See Figure 3 in Yang and Kay, J. Biomol NMR, Jan 1999.
+
+    Use ampmode='dddp'
+
+REF: Yamazaki et. al.   J. Am. Chem. Soc. 116, 11655 (1994)
+     Yamazaki et. al.   J. Am. Chem. Soc. 116,  6464 (1994)
+     Pervushin et al. PNAS, 94, 12366-12371 (1997)
+     Pervushin et al. J. Biomol. NMR Aug 1998
+     Yang and Kay, J. Biomol. NMR, Jan 1999
+     Yang and Kay, J. Am. Chem. Soc., 1999.
+
+
+  Setup:  delta is the difference in Hz between C' and Ca 
+   At a:  carbon carrier on C' (174ppm).
+      b:  carbon carrier on Ca (56 ppm).
+          pwco90a:  C' 90 at delta/sq(15), on res.
+          pwco180a: C' 180 (seduce), on res.
+          pwca180a: Ca 180 at delta/sq(3), off res.
+          pwca90b:  Ca 90 at delta/sq(15), on res.
+          pwca180b: reburp 180, at 45 ppm. 
+          pwco180b: C' 180 (seduce), off res. --> if CT_flg==y
+                    C' 180 at delta/sq(3), off res. --> if CT_flg==n
+          shared_CT: set to y to extend N15 acq. time
+     
+
+   Modified by L.E.Kay on March 3, 1999 to insert C' 90 purge after 15N
+    evolution to ensure in case where the N-C' refocussing is not complete
+    (2*bigTN < 1/2JNC') that the remaining NxCz' magnetization which
+    becomes NHxCz' is not present. This will remove a dispersive contribution
+    to the F3 lineshape 
+
+   Modified by L.E.Kay on Nov. 22 2001 to include shared CT in the 15N dimension (F2)
+
+   Modified by L.E.Kay to include a nietl_flg to suppress the anti-trosy component
+     in an active manner with no sensitivity loss 
+                        (D.Nietlispach,J.Biomol.NMR,31,161(2005))
+
+   Modified by E.Kupce for AutoCalibrate, Jan 2005 from hncoca_D_trosy_lek_500.c
+   Modified by G.Gray for BioPack, Feb 2005
+
+
+   pw_sl, tpwrsl unless sel_flg == y
+      Used for the first flip back
+
+   pw_sl1, tpwrsl1
+      Used only if nietl_flg == y

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="SidesExp" element="groups" type="acquisition" >
+  <group size="300 82"
+    bg="transparent"
+    border="None"
+    tab="no"
+    reference="SidesExp"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="10 0" size="260 42"
+      vq="sideslvl"
+      show="$SHOW=(sideslvl&gt;1.5)"
+      >
+      <label loc="0 0" size="140 20"
+        style="Label1"
+        label="Select Experiment :"
+        />
+      <filemenu loc="140 0" size="120 20"
+        style="Label1"
+        vq="QSpar owner"
+        vq2="QSpar owner"
+        vc="QSpar[3]='$VALUE'"
+        set="$VALUE=QSpar[3]"
+        file="$VALUE=userdir+'/persistence/QuickSubmit/'+owner+'/QSmenu3'"
+        type="file"
+        editable="No"
+        statshow="yes"
+        elastic="no"
+        display="yes"
+        />
+        <button loc="10 22" size="120 20"
+          style="Label1"
+          label="Add to DayQ"
+          vq="QSpar"
+          vc="QuickSubmit('add',QSpar[3],'day')"
+          show="QuickSubmit('isinqueue',QSpar[3],'day'):$is $ENABLE=(($is=0) and (QSpar[2]&lt;&gt;'nightQ'))"
+          decor1="yes"
+          />
+        <button loc="140 22" size="120 20"
+          style="Label1"
+          label="Add to NightQ"
+          vq="QSpar"
+          vc="QuickSubmit('add',QSpar[3],'night')"
+          show="QuickSubmit('isinqueue',QSpar[3],'night'):$is $ENABLE=(($is=0) and (QSpar[2]&lt;&gt;'dayQ'))"
+          decor1="yes"
+          />
+      </group>
+    <group loc="10 0" size="260 42"
+      vq="sideslvl"
+      show="$SHOW=(sideslvl&lt;1.5)"
+      >
+      <label loc="0 0" size="140 20"
+        style="Label1"
+	label="Experiments to submit :"
+	/>
+      <textmessage loc="140 0" size="120 20"
+	style="Label1"
+	set="$VALUE=TrayLocStatus[103]"
+	vq="TrayLocStatus"
+	/>
+      <textmessage loc="25 22" size="220 20"
+        style="Label1"
+        set="if (QSpar[2]='nightQ') then $VALUE='Currently running nightQ' else $VALUE='Currently running dayQ' endif"
+        vq="QSpar"
+        />
+      </group>
+      <textmessage loc="25 42" size="250 20"
+        style="Label1"
+        set="$VALUE='DayQ: '+QSpar[9] if QSpar[8]&lt;&gt;'' then $VALUE=$VALUE+' ('+QSpar[8]+')' endif"
+        vq="QSpar"
+        />
+      <textmessage loc="25 62" size="250 20"
+        style="Label1"
+        set="$VALUE='NightQ: '+QSpar[11] if QSpar[10]&lt;&gt;'' then $VALUE=$VALUE+' ('+QSpar[10]+')' endif"
+        vq="QSpar"
+        />
+<!--
+        <textfile loc="10 50" size="290 120"
+          style="PlainText"
+          vq="QSpar owner"
+          set="$VALUE=userdir+'/persistence/QuickSubmit/'+owner+'/QSfile'"
+          editable="no"
+          wrap="no"
+          units="char"
+          />
+-->
+    </group>
+</template>

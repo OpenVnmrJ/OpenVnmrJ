@@ -1,0 +1,46 @@
+"macro getFrameLayout"
+"Find the label that matches a particular value in a filemenu"
+"Usage: getFrameLayout($fullpath, $value)"
+"Notice, that this will pick the first label where the value matches!"
+
+
+"Default values"
+$file = userdir+'/templates/vnmrj/interface/framelayout' 
+$value = '1'
+
+if ($# > 0) then
+   strstr($1, '/'):$ex
+   if($ex = 1) then
+      $file  = $1
+   else
+      $value = $1
+   endif
+elseif($# > 1) then
+      $file  = $1
+      $value = $2
+endif
+
+exists($file,'file'):$ex
+if $ex < 0.5 then
+   write('line3','File %s does not exist',$file)
+   abort
+endif
+
+lookup('file',$file, 'readline',1):$line
+
+$s = ''
+$label = ''
+while ($line <> '') do 
+   substr($line,2):$s
+   if($s = $value) then
+     substr($line,1):$label
+     return($label)
+   endif
+   lookup('readline',1):$line
+endwhile
+
+if ($label = '') then
+  write('line3','No such value found in %s',$file)
+endif
+
+

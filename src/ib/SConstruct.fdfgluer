@@ -1,0 +1,54 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+fdfgluerTarget = 'fdfgluer'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['data.h']
+
+fdfgluerFileList = ['gluer.c']
+
+fdfCommonFileList = ['crc.c',
+                     'getreply.c',
+                     'nfgets.c',
+                     'error.c']
+
+# build environments
+cEnv = Environment(CCFLAGS    = '-O -m32 -g',
+                   CPPDEFINES = ['LINUX', 'MAIN', 'DEBUG'],
+                   LINKFLAGS  = '-m32 `getconf LFS_LDFLAGS` `getconf LFS_LIBS`',
+                   CPPPATH    = [cwd])
+
+# actual builds
+fdfCommonObjs = []
+for i in fdfCommonFileList:
+   tempObj = cEnv.StaticObject(target = i + '-gluer.o',
+                               source = i)
+   fdfCommonObjs.append(tempObj)
+
+   buildMethods.makeSymLinks(cEnv, tempObj, cwd, vnmrPath, vnmrHdrList)
+
+fdfgluer = cEnv.Program(target  = fdfgluerTarget,
+                        source  = [fdfgluerFileList,
+                                   fdfCommonObjs],
+                        LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+cEnv.AddPostAction(fdfgluer,
+                   Action(Copy(installPath, os.path.join(cwd, fdfgluerTarget))))
+

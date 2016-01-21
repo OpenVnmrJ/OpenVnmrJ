@@ -1,0 +1,33 @@
+"macro sampleChange"
+/* macro to change sample in magnet. Used by automation to remove the last sample */
+
+if ($# = 1) then
+  $newloc=$1
+else
+  $newloc=0
+endif
+$loc=loc
+$seq=seqfil
+$temp=temp
+on('temp'):$tempon
+on('loc','global'):$locon
+on('loc','global')
+setvalue('loc',$newloc,'global')
+setvalue('seqfil','s2pul')
+if ($#=2) then
+  temp=$2
+else
+  off('temp')
+endif
+change('silent')
+setvalue('loc',$loc,'global')
+if (not $locon) then
+  off('loc','global')
+endif
+setvalue('seqfil',$seq)
+setvalue('temp',$temp)
+if ($tempon) then
+  on('temp')
+else
+  off('temp')
+endif

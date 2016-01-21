@@ -1,0 +1,130 @@
+"macro parNUS"
+"parCS - add parameters for Compressive Sensing options, EK, Oxford 17/02/2011 "
+
+$curdir=''
+exists('ni','parameter'):$e
+if not ($e) then return endif    "make no changes for 1D parameter sets "
+
+exists('sampling','parameter'):$e 
+if not ($e) then 
+  create('sampling','string') 
+  sampling='s'
+endif
+
+//exists('skey','parameter'):$e 
+//if not ($e) then 
+  //create('skey','real') 
+  //skey=169  " seed parameter "
+//endif
+
+//exists('stype','parameter'):$e 
+//if not ($e) then 
+  //create('stype','flag') 
+  //stype='a'
+//endif
+
+exists('CSlines','parameter'):$e 
+if not ($e) then 
+  create('CSlines','integer') 
+  CSlines=4  " number of lines to print "
+endif
+
+//exists('CSdensity','parameter'):$e 
+//if not ($e) then 
+  //create('CSdensity','real') 
+  //CSdensity=100.0  " sampling density "
+//endif
+
+exists('CSwp','parameter'):$e 
+if not ($e) then 
+  create('CSwp','integer') 
+  setgroup('CSwp','processing')
+  CSwp=0  " region of interest "
+endif
+
+exists('CSsp','parameter'):$e 
+if not ($e) then 
+  create('CSsp','integer') 
+  setgroup('CSsp','processing')
+  CSsp=0  " region of interest "
+endif
+
+create('CSreconmethod','string','current','CLEAN'):$dum
+setgroup('CSreconmethod','processing')
+exists('CSreconmethod','parameter','processed'):$e
+if $e then
+    setgroup('CSreconmethod','processing','processed')
+endif
+
+exists('CS_se','parameter'):$e 
+if not ($e) then 
+  create('CS_se','flag') 
+  setgroup('CS_se','processing')
+  CS_se='n'  " flag for sensitivity enhanced data "
+endif
+
+exists('CS_inf','parameter'):$e 
+if not ($e) then 
+  create('CS_inf','flag') 
+  setgroup('CS_inf','processing')
+  CS_inf='n'  " flag for inflated data "
+endif
+
+//exists('BP_SPARSEproc','parameter'):$e 
+//if not ($e) then 
+  //create('BP_SPARSEproc','string') 
+  //setgroup('BP_SPARSEproc','processing')
+  //BP_SPARSEproc='CLEAN'  " flag for CLEAN processing "
+//endif
+
+exists('CS_cln','parameter'):$e 
+if not ($e) then 
+  create('CS_cln','flag') 
+  setgroup('CS_cln','processing')
+  CS_cln='y'  " flag for CLEAN processing "
+endif
+
+exists('CS_dpars','parameter'):$e 
+if not ($e) then 
+  create('CS_dpars','flag') 
+  setgroup('CS_dpars','processing')
+  CS_dpars='n'  " flag for default processing functions "
+  exists('ni2','parameter'):$e
+  if($e) and (ni>1) then
+    if(ni2>1) then
+      CS_dpars='y'
+    endif
+  endif
+endif
+
+exists('CSdnoise','parameter'):$e 
+if not ($e) then 
+  create('CSdnoise','flag') 
+  setgroup('CSdnoise','processing')
+  CSdnoise='n'  " de-noising flag "
+endif
+
+exists('CSthr','parameter'):$e 
+if not ($e) then          " processing threshold level "
+  create('CSthr','real') 
+  setgroup('CSthr','processing')
+  setlimit('CSthr',100.0,1.0,0.1)
+  CSthr=2.0  
+  exists('ni2','parameter'):$e
+  if($e) then
+    if(ni>1) and (ni2>1) then 
+      CSthr=4.0
+    endif
+  endif
+endif
+
+$sch=''
+$sch = curexp+'/acqfil/sampling.sch' 
+exists($sch,'file'):$e 
+if ($e) then 
+  rm($sch)
+endif
+
+return (1)
+
+

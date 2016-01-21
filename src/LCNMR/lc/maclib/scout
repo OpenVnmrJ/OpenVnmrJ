@@ -1,0 +1,233 @@
+"macro scout"
+"scout - Process LC-NMR data"
+"  Process a scout scan, set up conditions for water suppression"
+" need to create curscans, nscans, and savefile"
+"and set wexp='scout('proc')' and run with scout    "
+
+$start=($#=0)
+IF ($#>0) THEN $start=($start)OR($1='start') ENDIF
+IF $start THEN
+  IF (wexp='scout(\'proc\')') THEN wexp='' ENDIF "Prevents problems"
+  $y=''
+  $continue=(1=0)
+  REPEAT
+    IF (savefile='') THEN
+      $date=''
+      shell('date +%y%m%d.%H:%M'):$date
+      savefile='scout.'+$date
+    ENDIF 
+    exists(savefile+'/1.fid/fid','file'):$e
+    IF $e THEN
+      confirm('Warning! file name already exist! Create new filename?'):$yesno
+      if $yesno < 0.5 then
+        RETURN "Bail out"
+      ELSE
+        savefile='' "Reset it; a new one will be generated on next pass"
+      ENDIF
+    ELSE
+     $continue=(1=1)
+    ENDIF
+  UNTIL $continue
+  exists(savefile,'directory'):$e
+  if (not $e) then
+    mkdir(savefile)  "create a directory for scout data"
+  endif
+  curscan=1  "Start of experiment"
+  IF scoutap='y' THEN wexp='wftlc' ELSE wexp='' ENDIF
+  if scoutrt='y'then  wysiwyg='n'
+    wc=2*wcmax/3 sc=wcmax/3 ho=-5 vo=10 vp=0
+  endif
+
+  globalnt=nt	"Save 'real' nt for use by 'real' runs"
+  globalni=ni
+  globalwexp=wexp "'Real' wexp to run at end of entire process"
+  on('ss'):globalss
+
+
+  nt=1 ni=1  "Parameters for scout scan"
+  IF wet='y' THEN np=np/2 ENDIF
+  pad='n'
+  wet='n'    "Start with one-pulse scout scan"
+  composit='n'
+
+  ssfilter='n' ss='n'
+  IF tpwr>40 THEN tpwr=tpwr-35 ENDIF "Reduce for scout scan"
+  wexp='scout(\'proc\')' wnt='' wbs='' werr='' dg
+  clear au
+
+  RETURN
+ENDIF
+IF $1='proc' THEN
+IF wet='y' THEN "A real data set was just acquired, process it"
+  IF scoutrt='y' THEN
+    wft('nods')
+    IF vp=0 THEN clear(2) dscale ENDIF
+    dssn('dodc',1)
+    IF ((sc+ho)<0) OR ((vp+vo+7)>wc2max) THEN
+      sc=wcmax/3 vp=0
+    ELSE
+      sc=sc+ho vp=vp+vo
+    ENDIF
+  ENDIF
+  "Now do another scout scan if more are needed"
+  $file=''
+  format(curscan,0,0):$file
+  $file=savefile+'/'+$file
+  "write('line3','Saving data to file %s',$file)"
+  svf($file,'nodb')
+  IF curscan<nscans THEN
+    nt=1 wet='n' "And whatever else to set up scout scan"
+    np=np/2
+ 
+
+    composit='n' tpwr=tpwr-35 ssfilter='n' ss='n'
+    curscan=curscan+1 "Keeps track of which one we're on"
+    au
+    write('line3','Doing the %dth scout scan',curscan)
+  ELSE
+    write('line3','LC run finished!!')
+    wexp=globalwexp "Reset so another experiment can be run"
+    vp=10 full
+    {globalwexp}
+  ENDIF
+ELSE "A scout scan was just acquired"
+"  $file='' "
+"  format(curscan,0,0):$file "
+"  $file=savefile+'.'+$file+'scout'   "
+"  write('line3','Saving data to file %s',$file) "
+"  svf($file) "
+  wft('nods')
+  s9 "Save current parameters to restore later"
+  
+  on('slp'):$slpactive
+  on('slp2'):$slp2active
+  on('slp3'):$slp3active
+  on('slp4'):$slp4active
+  on('slp5'):$slp5active
+  on('slp6'):$slp6active
+
+aphold:$ok
+if not $ok then aph0 endif
+  crl rfl=sw/2 "Reference to center"
+  f "Make sure we're looking at the whole spectrum"
+  $mult=1.5   "multiplier to anticipate CH3CN movement during real scans"
+  peak(-5.4p,-4.8p):$noise
+  if $noise < 0 then $noise = -$noise endif
+  peak(-0.2p-slp0,0.2p-slp0):$ht,$freqch3
+  tof=tof+$mult*$freqch3+slp0 "Move CH3CN to zero"
+
+  if ($slpactive and(slps='y')) then
+    peak(slp-0.1p-slp0,slp+0.1p-slp0):$ht,$freqh2o
+    if $ht > noisemult*$noise then slp=$freqh2o-$mult*$freqch3+slp0 endif "Find delta for SLP"
+  endif
+ $freqslp2=slp2+$freqch3
+ $freqslp3=slp3+$freqch3
+ $freqslp4=slp4+$freqch3
+ $freqslp5=slp5+$freqch3
+ $freqslp6=slp6+$freqch3
+
+
+ if ($slp2active and (slp2s='y'))then
+   peak($freqch3+slp2-0.2p-slp0,$freqch3+slp2+0.2p-slp0):$ht,$freqslp2
+   write('line3',$freqslp2)
+   write('line3',$ht)
+   if $ht > noisemult*$noise then
+     $overlap=0
+     if ($slp0active and not (($freqslp2>$freqch3+slp0bw/2) or ($freqslp2<$freqch3-slp0bw/2))) then $overlap=1 endif
+     if ($slpactive  and  not (($freqslp2>$freqh2o+slpbw/2) or ($freqslp2<$freqh2o-slpbw/2))) then $overlap=2 endif      
+     if $overlap>0 then write('line3','Solvent 3 Frequency is too close to solvent %1.0f',$overlap)
+     else 
+       if slp0s='y' then slp2=$freqslp2-$freqch3+slp0
+       else slp2=$freqslp2+slp0
+       endif
+     endif
+   endif  
+ endif
+
+if ($slp3active and (slp3s='y'))then
+  peak($freqch3+slp3-0.2p-slp0,$freqch3+slp3+0.2p-slp0):$ht,$freqslp3
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp3>$freqch3+slp0bw/2) or ($freqslp3<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp3>$freqh2o+slpbw/2) or ($freqslp3<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp3>$freqslp2+slp2bw/2) or ($freqslp3<$freqslp2-slp2bw/2))) then $overlap=3 endif      
+    if $overlap>0 then write('line3','Solvent 4 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp3=$freqslp3-$freqch3+slp0
+      else slp3=$freqslp3+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp4active and (slp4s='y'))then
+  peak($freqch3+slp4-0.2p-slp0,$freqch3+slp4+0.2p-slp0):$ht,$freqslp4
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp4>$freqch3+slp0bw/2) or ($freqslp4<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp4>$freqh2o+slpbw/2) or ($freqslp4<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp4>$freqslp2+slp2bw/2) or ($freqslp4<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp4>$freqslp3+slp3bw/2) or ($freqslp4<$freqslp3-slp3bw/2))) then $overlap=4 endif      
+    if $overlap>0 then write('line3','Solvent 5 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp4=$freqslp4-$freqch3+slp0
+      else slp4=$freqslp4+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp5active and (slp5s='y'))then
+  peak($freqch3+slp5-0.2p-slp0,$freqch3+slp5+0.2p-slp0):$ht,$freqslp5
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp5>$freqch3+slp0bw/2) or ($freqslp5<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp5>$freqh2o+slpbw/2) or ($freqslp5<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp5>$freqslp2+slp2bw/2) or ($freqslp5<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp5>$freqslp3+slp3bw/2) or ($freqslp5<$freqslp3-slp3bw/2))) then $overlap=4 endif
+    if ($slp4active  and not (($freqslp5>$freqslp4+slp4bw/2) or ($freqslp5<$freqslp4-slp4bw/2))) then $overlap=5 endif      
+    if $overlap>0 then write('line3','Solvent 6 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp5=$freqslp5-$freqch3+slp0
+      else slp5=$freqslp5+slp0
+      endif
+    endif
+  endif  
+endif
+
+if ($slp6active and (slp6s='y'))then
+  peak($freqch3+slp6-0.2p-slp0,$freqch3+slp6+0.2p-slp0):$ht,$freqslp6
+  if $ht > noisemult*$noise then
+    $overlap=0
+    if ($slp0active and not (($freqslp6>$freqch3+slp0bw/2) or ($freqslp6<$freqch3-slp0bw/2))) then $overlap=1 endif
+    if ($slpactive  and not (($freqslp6>$freqh2o+slpbw/2) or ($freqslp6<$freqh2o-slpbw/2))) then $overlap=2 endif
+    if ($slp2active  and not (($freqslp6>$freqslp2+slp2bw/2) or ($freqslp6<$freqslp2-slp2bw/2))) then $overlap=3 endif
+    if ($slp3active  and not (($freqslp6>$freqslp3+slp3bw/2) or ($freqslp6<$freqslp3-slp3bw/2))) then $overlap=4 endif
+    if ($slp4active  and not (($freqslp6>$freqslp4+slp4bw/2) or ($freqslp6<$freqslp4-slp4bw/2))) then $overlap=5 endif 
+    if ($slp5active  and not (($freqslp6>$freqslp5+slp5bw/2) or ($freqslp6<$freqslp5-slp5bw/2))) then $overlap=6 endif      
+    if $overlap>0 then write('line3','Solvent 7 Frequency is too close to solvent %1.0f',$overlap)
+    else 
+      if slp0s='y' then slp6=$freqslp6-$freqch3+slp0
+      else slp6=$freqslp6+slp0
+      endif
+    endif
+  endif  
+endif
+  wetpbox
+  fr9
+  "Now run real data"
+  nt=globalnt wet='y' composit='y' ssfilter='y' tpwr=tpwr+35
+  if globalss then
+    if ((ss < 0) OR (curscan=1)) then ss='y' endif 
+  endif
+  inject='n'
+  "ni=scoutni"
+  "Whatever other changes of parameters"
+  np=np*2
+
+  au
+  write('line3','Doing the %dth real scan',curscan)
+ENDIF
+ELSE
+  write('error','Unrecognized argument to scout')
+ENDIF

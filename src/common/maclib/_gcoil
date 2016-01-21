@@ -1,0 +1,216 @@
+"macro _gcoil"
+" Ancestry: _gcoil	8.1 4/16/93   Spectroscopy Imaging Systems"
+"**********************************************************************"
+"                               _gcoil                                 "
+"                                                                      "
+"       Macro to read gradient calibration tables and load             "
+"       the gradient calibration parameters                            "
+"                                                                      "
+"                                                                      "
+"       The gradtable file format should correspond to the following   "
+"       rules:                                                         "
+"                                                                      "
+"       [1] It should contain information in lines of the form:        "
+"                                                                      "
+"               keyword         value                                  "
+"                                                                      "
+"       [2] The keywords are defined below in the search table section "
+"                                                                      "
+"       [3] The first occurrance of keyword will be used               "
+"                                                                      "
+"       [4] Lines other than those containing keywords are ignored     " 
+"                                                                      "
+"                                                                      "
+"       The program expects to find following types of files           "
+"                                                                      "
+"       [1] Those containing gxcal,gycal,gzcal,griserate & boresize    "
+"           with an optional value for peccfile.                       "
+"                                                                      "
+"       [2] Those contining gmax, trise & boresize with an optional "
+"           value for peccfile.                                        "
+"                                                                      "
+"       Files of mixed type (not clearly in the above categories)      "
+"       produce an error. The special case handling allows smooth      "
+"       transfer of information to parameters: gxcal,gycal,gzcal,      "
+"       griserate,gmax,trise only if all the parameters for a       "
+"       particular gradient calibration system exist.                  "
+"**********************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog = '_gcoil: '
+
+"-- Check existence of various parameters --------------"
+create('trise','real','current',0)
+create('boresize','real','current',0)
+create('gmax','real','current',0)
+create('gpropdelay','pulse','current',0)
+create('gxdelay','pulse','current',0)
+create('gydelay','pulse','current',0)
+create('gzdelay','pulse','current',0)
+create('b0delay','pulse','current',0)
+create('gradstepsz','real','systemglobal',32767)
+create('RMScurrentlimit','real','current',0)
+create('currentlimit','real','current',0)
+create('sglduty','integer','global',0)
+
+"-- Set some starting defaults -------------------------"
+gmax = 0.0
+gpropdelay = 0.0
+gxdelay = 0.0
+gydelay = 0.0
+gzdelay = 0.0
+b0delay = 0.0
+gradstepsz = 32767
+currentlimit = 0
+RMScurrentlimit = 0
+
+exists('gxmax','parameter'):$ex1
+if $ex1 > 0.5 then
+  gxmax = 0.0
+endif
+exists('gymax','parameter'):$ex1
+if $ex1 > 0.5 then
+  gymax = 0.0
+endif
+exists('gzmax','parameter'):$ex1
+if $ex1 > 0.5 then
+  gzmax = 0.0
+endif
+
+"-- Check for no configured gcoil  ------------------------"
+if (gcoil = '') or (gcoil = 'None') or (gcoil = 'none') then
+   return
+endif
+
+"-- Check existence of file in gradtables -----------------"
+$table = systemdir+'/imaging/gradtables/'+gcoil
+exists($table,'file'):$ex1
+
+if $ex1 < 0.5 then
+    write('error','%s',$prog+'Cannot locate requested gradtable file')
+    abort
+endif
+
+"-- Search keywords ---------------------------------------"
+" This list of keywords will be used to extract gradient   "
+" characteristics from the gradtable defined by the        "
+" gcoil parameter                                          "
+"----------------------------------------------------------"
+$search[1] = 'boresize'
+$search[2] = 'trise'
+$search[3] = 'gmax'
+$search[4] = 'gxmax'
+$search[5] = 'gymax'
+$search[6] = 'gzmax'
+$search[7] = 'gtotlimit'
+$search[8] = 'gxlimit'
+$search[9] = 'gylimit'
+$search[10] = 'gzlimit'
+$search[11] = 'gpropdelay'
+$search[12] = 'gxdelay'
+$search[13] = 'gydelay'
+$search[14] = 'gzdelay'
+$search[15] = 'b0delay'
+$search[16] = 'currentlimit'
+$search[17] = 'RMScurrentlimit'
+
+$oldsearch[1] = 'griserate'
+$oldsearch[2] = 'gxcal'
+$oldsearch[3] = 'gycal'
+$oldsearch[4] = 'gzcal'
+
+
+"-- Search and read the table -----------------------------"
+" Scan the table for keywords in the gradient table and    "
+" read the corresponding values in.                        "
+"                                                          "
+" Check the existence of gradient calibration parameters.  "
+"----------------------------------------------------------"
+$k = 1 
+$size = size('$search')
+repeat
+  exists($search[$k],'parameter'):$ex[$k]
+  ${$search[$k]} = -1
+    
+  lookup('file',$table,'count',$search[$k]):$count[$k]
+  if ($count[$k] > 0) then
+    lookup('file',$table,'seek',$search[$k],'read',1):${$search[$k]}
+  endif
+  $k = $k + 1
+until $k > $size
+
+"-- Assign parameter values -------------------------------"
+" If a parameter corresponding to the search table exists, "
+" and a value was found in the gradtable, assign it.  If   "
+" it exists, but was not found in the gradtable, calculate "
+" it as a special case.                                    "
+"----------------------------------------------------------"
+
+$k = 1
+repeat
+  if $count[$k] > 0 then
+    if $ex[$k] < 0.5 then
+      create($search[$k],'real','current')
+    endif
+    {$search[$k]} = ${$search[$k]}
+  endif
+  $k = $k + 1
+until $k > $size
+ 
+"-- if gpropdelay wasn't in the file then use the delta delays"
+if (gpropdelay = 0.0) then
+  $max=0
+  if (gxdelay > $max) then $max = gxdelay endif
+  if (gydelay > $max) then $max = gydelay endif
+  if (gzdelay > $max) then $max = gzdelay endif
+  if (b0delay > $max) then $max = b0delay endif
+  gpropdelay = $max
+endif
+
+"-- Assign gmax if not in table --------------------------"
+" gmax is assigned to the smallest value of gxmax,gymax,  "
+" gzmax.                                                  "
+"---------------------------------------------------------"
+if $count[3] <= 0 then
+  if $ex[3] < 0.5 then
+    create($search[3],'real','current')
+  endif
+  if $count[4] and $count[5] and $count[6] then
+    if {$search[4]} < {$search[5]} then 
+      if {$search[4]} < {$search[6]} then
+        {$search[3]} = {$search[4]}
+      else
+        {$search[3]} = {$search[6]}
+      endif
+    else
+      if {$search[5]} < {$search[6]} then
+        {$search[3]} = {$search[5]}
+      else
+        {$search[3]} = {$search[6]}
+      endif
+    endif
+  endif
+else
+  "-- Assign gxmax, gymax, gzmax ---"
+  if ($count[4] <= 0) and ($ex[4] > 0.5) then
+    {$search[4]} = {$search[3]}
+  endif
+  if ($count[5] <= 0) and ($ex[5] > 0.5) then
+    {$search[5]} = {$search[3]}
+  endif
+  if ($count[6] <= 0) and ($ex[6] > 0.5) then
+    {$search[6]} = {$search[3]}
+  endif
+endif
+
+"-- Assign limit parameters if exist but are not in table ------"
+if ($ex[8] > 0.5) and ($count[8] <= 0) then
+  {$search[8]} = {$search[4]}
+endif
+if ($ex[9] > 0.5) and ($count[9] <= 0) then
+  {$search[9]} = {$search[5]}
+endif
+if ($ex[10] > 0.5) and ($count[10] <= 0) then
+  {$search[10]} = {$search[6]}
+endif
+

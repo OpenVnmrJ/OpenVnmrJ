@@ -1,0 +1,163 @@
+"macro prescan_gain"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_gain
+"
+" DESCRIPTION:
+"    Set the transmitter gain
+"
+"********************************************************************
+if ($# <> 1) then
+     acqmode = ''
+     write('error',`Use: %s[('<mode>')] -- <mode> is exp | proc`,$0)
+     prescan_exit('abort')
+endif
+"-------------------------------------------------------"
+" Initialize variables                                  "
+"-------------------------------------------------------"
+$temp_str        = ''
+$macro_name      = $0
+$dac_value       = 1
+$cur_index       = 2                          "index holding current module to be executed"
+$prescan_flag    = 1                          "Prescan flag -> 1 = user prescan"
+
+
+"------------------------"
+" Perform the experiment "
+"------------------------"
+if ($1 = 'exp') then
+     write('line3','ACQUIRE GAIN')
+     prescan_params('load')                   "Reload sequence"
+     rfcoil=RFCOIL	
+     wnt=''
+     on('execprescan'):$e
+     if ($e > 0) then
+	  exec(execprescan)                   "uses prescan preparation set by execparams"
+     else
+          nv=0  
+     endif
+     wexp = `prescan_gain('proc')`       "setup to process the experiment"
+     acqmode='prescan'                        "we are in prescan mode"
+     wdone=''   
+     
+     Prescan_numberTries = 1
+     Prescan_AcqStatus   = 0
+     
+     $message='Receiver Gain - Sequence: ' + seqfil + ' , Gain: '
+     format(gain,4,1):$temp_str
+     $message = $message + $temp_str
+     prescan_log('acquire',$macro_name,$message)
+     werr('prescan_status')                   "handle acquisition errors in this macro"
+     au                                       "run the experiment"
+     return
+"------------------------"
+" Analyze the experiment "
+"------------------------"
+else 
+     if ($1 = 'proc') then
+          write('line3','PROCESS RECEIVER GAIN')
+	   "----------------------------------------"
+	   " Check acquisition error                "
+	   "----------------------------------------"
+	   if (Prescan_AcqStatus = 2) then
+	        write('error','GAIN ->  Abort prescan due to acquisition error') 
+		prescan_log('abort',$macro_name,'Abort prescan due to acquisition error')
+		prescan_exit('abort')
+	   endif
+	   "----------------------------------------"
+	   " Check for ADC overflow                 "
+	   "----------------------------------------"
+	   if (Prescan_AcqStatus = 1) then
+		Prescan_numberTries = Prescan_numberTries + 1		 "Increment trial counter"
+		"-----------------------------------------"
+		" Check if Gain is min.-> reduce Power  "
+		"-----------------------------------------"
+		if (gain = 2) then                 "receiver gain is at minimum"
+        	     prescan_log('error',$macro_name,'Signal strength too large')
+		     write('error','PRESCAN GAIN - Signal strength to large!')
+		     prescan_exit('abort')
+                endif
+		"----------------------------------------------"
+		" Retry if max number of tries is not exceeded "
+		"----------------------------------------------"       
+		if (Prescan_numberTries < Prescan_maxTries) then          "Retry if number of tries is not exceeded"	
+		     gain=gain/2
+     
+		     "-----------------"
+		     " re-acquire data "  
+		     "-----------------"
+                     write('line3','RE-ACQUIRE GAIN')
+		     $message = 'Re-acquire Receiver Gain - Gain : '
+		     format(gain,0,0):$temp_str
+		     $message = $message + $temp_str 
+		     write('line3',$message)                      "Display warningmessage"
+		     prescan_log('re-try',$macro_name,$message)     "log event"
+		     Prescan_AcqStatus = 0                          "reset acquisition status"
+        	     wexp = `prescan_gain('proc')`                "come back here when done"
+		     au                                             "submit the new experiment"
+        	     return   
+		else
+               	     "-------------------------------------------------"
+        	     " if  max number of tries is exceeded report error"
+        	     "-------------------------------------------------"	    
+		     acqmode = ''
+		     wexp = ''
+		     $message ='Exceeded maximum number of tries ! Trial ='
+		     format(Prescan_numberTries,0,0):$temp_str
+		     prescan_log('error',$macro_name,$message+$temp_str)				"log event"
+		     write('error','%s: No valid signal found after maximum number of tries',$0)	"display error"
+		     prescan_exit('abort')
+		endif
+          else
+		"-----------------------------------------"
+		"  Retrieve max DAC value from FID file   "
+		"-----------------------------------------"
+		$counter = 1
+		repeat
+		    fidmax($counter):$maxval
+		    if ($dac_value < $maxval) then
+        	 	  $dac_value = $maxval
+                    endif
+		    $counter = $counter +1
+		until ($counter > arraydim)    
+		
+	       "-----------------------"
+	       " Calculate new setting "
+	       "-----------------------"
+               $gain_scale=(32768*0.8 * Prescan_GainScale/100) / $dac_value
+               ln(10.0):$ln10
+               ln($gain_scale):$ln_gain
+               $new_gain = 20.0 * ( $ln_gain /$ln10)
+               gain = gain + $new_gain
+	       $message='New gain : '
+	       format(gain,4,1):$temp_str
+               $message = $message + $temp_str
+               prescan_log('calc',$macro_name,$message)
+	              
+	       "-----------------------------------------------------------"
+               " Reloading main sequence parameters                        "
+               "-----------------------------------------------------------"
+	       $gain = gain
+               prescan_params('load')
+	       gain = $gain
+	       rfcoil=RFCOIL
+               prescan_params('save') "Save params with new gain value"
+	       "-----------------------------------------------"
+	       " Update with results from receiver gain"
+	       "-----------------------------------------------"
+	       $message = $message + $temp_str + ', Sequence :' + seqfil
+	       prescan_log('gain',$macro_name,$message)
+	       write('line3','-----------Receiver Gain Results ---------')
+	       write('line3','Gain scaled to %3.2f [%s] of full scale',Prescan_GainScale,'%')
+               write('line3','Gain : %d ',gain)
+	       write('line3','---------------------------------------------')
+               "------------------------------------------------"
+               " Reset prescan parameter and log end of prescan "
+               "------------------------------------------------"
+               prescan_control[$cur_index]= prescan_control[$cur_index]+1	  
+               prescan_handler('exec')
+          endif    
+     endif
+endif

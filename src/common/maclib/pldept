@@ -1,0 +1,149 @@
+"macro pldept"
+"*************************************************"
+" pldept - plot out dept data, edited or unedited "
+"*************************************************"
+
+// The macro is typically called by other macros without any argument
+//  The macro call with argument is used by pldept itself
+
+exists('qphase','parameter'):$qex
+$qsize=1
+if $qex then $qsize=size('qphase') endif
+$multdim=arraydim/$qsize
+
+IF ($# < 2) THEN
+	// Do all necessary adjustments befor executing the macro
+	// with appropriate arguments
+	 "find the largest peak in all spectra and adjust vs"
+    if $# < 1 then $1='' endif
+    $ix=1
+    $lpeak=0			   "$lpeak=largest peak in any spectrum"
+    repeat				   "check each spectrum"
+   	select($ix)
+   	peak:$peak
+   	if $peak<0 then $peak=-$peak endif
+   	if $peak>$lpeak then $lpeak=$peak endif
+   	$ix=$ix+1
+    until $ix>$multdim
+    $vsize=wc2max/6
+    $vs=vs
+    vs=($vsize/$lpeak)*vs
+    th=$vsize*0.4
+
+	"decide if data are edited or not, $edited=1 if so, 0 if not"
+    if $multdim<>4 then		   "must have 4 spectra to edit"
+   	$edited=0
+    else				   "compare spectra #2 and 3"
+   	select(2)			   "data from spectrum 2"
+   	nll:$lines2
+   	getll(1):$ht2,$frq2
+   	select(3)			   "data from spectrum 3"
+   	nll:$lines3
+   	getll(1):$ht3,$frq3
+   	if $lines2<$lines3 then	   "difference in number of lines"
+      	    $delta_l=$lines3-$lines2
+   	else
+      	    $delta_l=$lines2-$lines3
+   	endif
+   	if $frq2<$frq3 then		   "difference in freq. of 1st line"
+      	    $delta_f=$frq3-$frq2
+   	else
+            $delta_f=$frq2-$frq3
+   	endif
+   	if ($ht2+$ht3) = 0 then $ht2 = 1e-6 endif
+   	$delta_ht=(1-2*($ht2/($ht3+$ht2)))  "difference in height of 1st line"
+   	if $delta_ht<0 then
+      	    $delta_ht = -$delta_ht
+   	endif
+	"spectra are not edited if # lines in spectra 2 and 3 differ	"
+	"by one or fewer, if frequency of first line is the same	"
+	"within 2 data points, and if height of first line is the	"
+	"same within 10%"
+   	if ($delta_l<2)and($delta_f<(4*sw/fn))and($delta_ht<.1) then
+      	    $edited=0
+   	else
+            $edited=1
+   	endif
+    endif
+s(23)
+    $wc=wc $sc=sc $vp=vp
+    full
+    vp=0
+
+    vo=(wc2max-sc2 - vp -10)/4
+    cutoff=vo-2,vo-2
+    vs=$vs
+	" look for CARBON 1D, use that instead of first edited spectrum, if found"
+    $cex = 0  $cfile = ''
+    AutoCheck('CARBON'):$cex,$cfile
+    if (auto='y') then $cfile='' endif
+    write('line3','%s(`%s`,%d)',$0,$cfile,$edited):$custompl
+
+    if $1='nopage' then
+	exec($custompl)
+    else
+    	$plotoptions='custompl',$custompl
+    	$plotoptions=$plotoptions,'molecule','axis','comments','params','logo','header','miniplot'
+    	doplotoption($plotoptions)
+
+    	page
+    endif
+    vp=$vp wc=$wc sc=$sc
+r(23)
+
+    if auto='n' then dss endif
+    off('cutoff')
+
+ELSE
+    $ht=10+sc2+vp		"y-coordinate of first label"
+    $cfile=$1 $edited=$2
+    if ($cfile<>'') then
+    	$savewpD=wp $savespD=sp
+	    " find & create new experiment "
+    	jexp:$curexp
+    	s1
+	newexp('quiet'):$ctr
+     	md($ctr)
+	  " join new experiment "
+    	jexp($ctr)
+    	rt($cfile)
+    	wft f
+    	$savewpC=wp $savespC=sp
+    	$protonated = ''
+    	r1
+    	if trunc(wp) > trunc($savewpD) then wp=$savewpD sp=$savespD endif
+    	vsadjc(vo)
+    	cutoff = vo-5
+    	pl
+    	jexp($curexp)
+    	delexp($ctr):$dum
+    	if trunc(wp) > trunc($savewpC) then wp=$savewpC sp=$savespC endif
+    else
+    	select(1) pl nll
+    	$protonated = ' protonated'
+    endif
+
+    vp=vp+vo
+    select(2) pl
+    vp=vp+vo
+    if $edited=1 then		   "edited only"
+   	select(3)
+   	pl
+    endif
+    vp=vp+vo
+    select($multdim)
+    pl
+"now write labels on spectra"
+    select(1)
+    write('plotter',0,0,''):$ys
+    gap(24*$ys/2,10,50):$dum,$xpos	   "x-coordinate of label"
+    write('plotter',$xpos,$ht,'All'+$protonated+' carbons')
+    write('plotter',$xpos,$ht+vo,'CH carbons')
+    if $edited=1 then
+   	write('plotter',$xpos,$ht+2*vo,'CH2 carbons')
+   	write('plotter',$xpos,$ht+3*vo,'CH3 carbons')
+    else
+   	write('plotter',$xpos,$ht+3*vo,'CH2 down, CH/CH3 up')
+    endif
+
+ENDIF

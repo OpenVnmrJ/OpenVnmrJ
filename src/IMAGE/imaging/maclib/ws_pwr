@@ -1,0 +1,87 @@
+"macro ws_pwr"
+"*********************************************************************"
+
+" ws_pwr - Power optimization for water suppression pulse"
+
+" Details: 1. Calculates the H1offset frequency using setof"
+"          2. sets wsfrq=H1offset+ws_delta; satpwrf=4096"
+"	   3. arrays satpwr and finds minimum signal"
+
+" Note: assumes the residual water is the highest signal"
+
+"*********************************************************************"
+
+if ($# = 0) then
+  ldrf "sets rfcoil = RFCOIL"
+  imprep
+  if (tof   = 0) then tof   = H1offset endif
+  if (wsfrq = 0) then wsfrq = H1offset endif
+  ws = 'y'
+  satpwrf = 4096   "reset fine power level"
+  
+  wdone = ''
+  wexp = 'ws_pwr(`procfrq`) '
+  au
+
+elseif ($1 = 'procfrq') then
+  av                          "absolute spectrum"
+  ft
+  vsadj
+
+  peak:$ht,$freq              "get maximum peak freq"
+  $t = $freq - (sw/2 + sp )   "calculate offset"
+  write('line3','%10.2f ',$t) "print it"
+  wexp=''                     "reset auto go link"
+  dmg='ph'                    "phase sensitive mode"
+
+  $toflim = 0.9*sw/2          "offset limit set to 80% of sw"
+
+  $tt = tof + $t
+  if ($tt < 0 ) then
+    $tt = -$tt
+  endif
+
+  if ($t > $toflim) then  "setof used $tt; BUG? "
+    write('line3', 'Offset too large, check spectrum or increase sw')
+    abort
+  endif
+  wsfrq = tof+$t  "set water frequency"
+
+  ws_pwr('pwr')
+
+elseif ($1 = 'pwr') then
+  setarray('satpwr',satpwr-4,1,9) 
+  wdone = ''
+  wexp = 'ws_pwr(`procpwr`)'
+  au
+
+elseif ($1 = 'procpwr') then
+  ft('nods') vsadj
+  av dssh dssl
+  $counter=1
+  select(1) vsadj(10) $high=10 $low=10
+  $lowest=1 $highest=1
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$low then $low=$ht $lowest=$counter endif
+    if $ht>$high then $high=$ht $highest=$counter endif
+    $counter=$counter+1
+  until $counter > arraydim
+  $old=satpwr[1]
+  $satpwrlo=satpwr[$lowest]
+  satpwr=satpwr[5]  "reset original satpwr"  
+  
+  ds($lowest) vsadj f full
+  write('line3','lowest is #%d: %d dB',$lowest,$satpwrlo)
+  ph
+
+  return
+endif
+
+"***********************************************************************"
+"		Modification History"
+
+"030421(ss) Created from ws_pwrf"
+
+"***********************************************************************"

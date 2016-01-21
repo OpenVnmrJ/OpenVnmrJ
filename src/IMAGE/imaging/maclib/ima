@@ -1,0 +1,40 @@
+"macro ima"
+" ima - define artifact region to measure artifact level in an image"
+
+" Details: display the image using the vnmrj interface"
+"          specify the ROI region (box, or circle) and place it in the noise region and type imn"
+"	   similarly place the ROI in the signal region and type ims"
+"          ims will display the SNR = ims/imn"
+"          previously determined snn value is used for noise value"
+"          now move the box to the phase-encode 'artifact' region"
+"          and type ima"
+"	   ghost level(%) is calculated as: 100*(ima-imn)/ims  "
+
+exists('ima', 'parameter'):$ex
+if($ex = 0) then
+   create('ima')
+endif
+$ima=''
+substr(aipStatMeanMsg,2):$ima
+format($ima,0,6):ima
+
+exists('ims', 'parameter'):$ex
+if($ex > 0) then
+  if(ims = 0) then
+    write('error','You must first measure signal and noise levels using ims and imn')
+    abort
+  endif
+else
+  write('error','You must first measure signal and noise levels using ims and imn')
+  abort
+endif
+
+exists('imn', 'parameter'):$ex
+if($ex > 0) then
+   $a = (ima-imn)*100/ims
+   write('line3','Artifact level: \(%f - %f/%f\) = %5.2f percent ',ima,imn,ims,$a)
+else
+  write('error','You must first measure signal and noise levels using ims and imn')
+  abort
+endif
+

@@ -1,0 +1,344 @@
+"macro editparlib"
+
+$cdir=userdir+'/persistence/CloneManager'
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir('-p',$cdir) endif
+
+if ($# < 1) then $1='init' endif
+$tmpsetup=$cdir+'/editparlib_setup'
+$tmpusermac=$cdir+'/editparlib_usermac'
+
+is_submitmode:$is
+if ($is) then
+    write('error','curexp is in submit mode.  Cannot manage parameters')
+    return
+endif
+
+exists('editparlibtab','parameter','global'):$parex
+if ($parex=0) then create('editparlibtab','string','global') endif
+setprotect('editparlibtab','on',256,'global')
+
+IF ($1 = 'init') THEN
+
+    jexp:$curexp
+    expactive($curexp):$active
+    if ($active>0) then
+  	write('error','Current experiment is active. %s macro aborted.',$0)
+  	return
+    endif
+    $editok=0
+    operights('canclonestudies'):$editok
+    if ($editok<0.5) then
+   	write('error','%s cannot edit parameters.',operator)
+   	return
+    endif
+    if (apptype<>'std1D') then
+	write('error','This tool is meant ONLY for std1D apptype')
+	return
+    endif
+
+    if (parlabel='') then setvalue('parlabel',pslabel) endif
+
+    exists(parlabel,'parlib'):$ex,$path
+    if ($ex) then
+  	$pars=$path+'/procpar'
+  	exists($pars,'file'):$ex
+    endif
+
+    destroy('Hprescan'):$dum
+    destroy('prescan'):$dum
+
+    $macpath='' $ex=0
+    exists('user'+parlabel,'maclib'):$ex,$macpath
+    write('reset',$tmpusermac)
+    if ($ex) then
+        shell('cp '+$macpath+' '+$tmpusermac):$dum
+    endif
+
+    $macpath='' $ex=0
+    exists(pslabel+'_setup','maclib'):$ex,$macpath
+    write('reset',$tmpsetup)
+    if ($ex) then
+	shell('cp '+$macpath+' '+$tmpsetup):$dum
+    endif
+
+
+    editparlibtab[1]=parlabel            // parlib name
+    editparlibtab[2]='UserExp' 		// tabname
+    editparlibtab[3]='NeWTaBNaMe'	// used by the menu widget - no macro value
+    editparlibtab[4]=userdir		// applications directory
+    editparlibtab[5]=''			// menu level
+    editparlibtab[6]=''			// submenu level
+    editparlibtab[7]='no'		// do dialog option
+    editparlibtab[8]=''			// selected exp from the library
+
+	$liblist='' $libname=''
+	editparlib('appdirs')
+	editparlib('library'):$liblist,$libname
+    	getTabList
+
+    teststr('$libname',parlabel,'local'):$ok
+    if ($ok) then
+	editparlib('getinfo',$liblist[$ok])
+    endif
+
+    vnmrjcmd('pnew','editparlibtab','apptype','pslabel','modules')
+    vnmrjcmd('popup','mode:modeless','file:editparlib.xml','rebuild:yes','pnewupdate:true','close:editparlib(`close`)','title:Edit/Make Parlib')
+
+ELSEIF ($1 = 'close') THEN
+    editparlibtab=''
+
+ELSEIF ($1 = 'update') THEN
+
+    $name=editparlibtab[1]
+    $tab=editparlibtab[2]
+    $appdir=editparlibtab[4]
+    $menu1=editparlibtab[5]
+    $menu2=editparlibtab[6]
+    $dialog=editparlibtab[7]
+
+    if ($name='') then 
+	write('error','parlib name not specified.  aborted')
+	return
+    endif
+    if (apptype<>'std1D') then
+	write('error','The %s tool is designed only for std1D apptype.  Use other clone tools for %s apptype',$0,apptype)
+	return
+    endif
+    $1char='' substr($name,1,1):$1char
+    format($1char,'isreal'):$real
+    if ($real) then
+	write('error','parlib name cannot start with a number. aborted')
+	return
+    endif
+
+"***************************************************************"
+    getappdirs:$atot,$adirs
+   "Make sure that this is not in studylib"
+    exists($name,'studylib'):$studyex
+    if ($studyex) then
+         write('error','')
+         $banner=$name+' is a study in studylib \\   Use a different name'
+         banner($banner,'red','script')
+         return
+    endif
+
+"*****************************************************************"
+
+    exists($name,'maclib'):$parmacex,$parpath
+    exists(pslabel,'maclib'):$psmacex,$pspath
+    if ($parmacex) and ($psmacex) then
+     	shell('(diff '+$parpath+' '+$pspath+' | wc -l)'):$diff
+     	if ($diff) then
+	    shell('(cat '+$parpath+' | grep -v cpsetup | wc -l)'):$diff
+     	endif
+     	if ($diff) then
+	    write('error','')
+	    $banner=$name+' macro exists - \\    But differs from '+pslabel+' macro \\  Use a different name'
+	    banner($banner,'red','script')
+	    return
+     	endif
+    endif
+
+    exists($appdir+'/parlib','directory'):$direx
+    if ($direx=0) then
+	shell('mkdir -p '+$appdir+'/parlib'):$dum
+    endif
+    exists($appdir+'/parlib','file','w'):$direx
+    if ($direx=0) then
+	write('error','Could not create or do not have write access to %s/parlib',$appdir)
+	return
+    endif
+
+    exists($appdir+'/maclib','directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$appdir+'/maclib'):$dum
+    endif
+    exists($appdir+'/maclib','file','w'):$direx
+    if ($direx=0) then
+        write('error','Could not create or do not have write access to %s/maclib',$appdir)
+        return
+    endif
+
+    exists($appdir+'/adm/walkupadm','directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$appdir+'/adm/walkupadm'):$dum
+    endif
+    exists($appdir+'/adm/walkupadm','file','w'):$direx
+    if ($direx=0) then
+        write('error','Could not create or do not have write access to %s/adm/walkupadm',$appdir)
+        return
+    endif
+
+    EXPtime:ACQtime
+    setprotect('','clear',16384,'current')
+    $parlabel=parlabel
+    setvalue('parlabel',pslabel)
+    svp($appdir+'/parlib/'+$name,'force')
+    $celist=$appdir+'/adm/walkupadm/CustomExpList'
+    shell('touch '+$celist):$dum
+    shell('(cat '+$celist+' | grep -wc '+$name+')'):$isok
+    if not ($isok) then
+    	write('file',$appdir+'/adm/walkupadm/CustomExpList','%s',$name)
+    endif
+
+//    $setupex=0
+//    shell('(cat '+$tmpsetup+' | wc -l)'):$setupex
+//    if ($setupex) then
+//	shell('(cp '+$tmpsetup+' '+$appdir+'/maclib/'+$name+'_setup)'):$dum
+//    else
+//	shell('rm -f '+$appdir+'/maclib/'+$name+'_setup'):$dum
+//	exists($name+'_setup','maclib'):$macex
+		// if the xxx_setup macro exists somewhere, make sure an empty file exist in appdir
+//	if ($macex) then write('reset',$appdir+'/maclib/'+$name+'_setup') endif
+//    endif
+
+    $setupex=0
+    shell('(cat '+$tmpusermac+' | wc -l)'):$setupex
+    if ($setupex) then
+        shell('(cp '+$tmpusermac+' '+$appdir+'/maclib/user'+$name+')'):$dum
+    else
+        shell('rm -f '+$appdir+'/maclib/user'+$name):$dum
+	exists('user'+$name,'maclib'):$macex
+	if ($macex) then write('reset',$appdir+'/maclib/user'+$name) endif
+    endif
+
+    exists($name,'maclib'):$macex
+    if ($macex=0) then
+	write('file',$appdir+'/maclib/'+$name,'cpsetup($0)')
+    endif
+    write('line3','Customized experiment %s created',$name)
+    exists(userdir+'/ExpModules/'+$name,'file'):$emodex
+    if $emodex then
+	rm('-f',userdir+'/ExpModules/'+$name):$dum
+    endif
+
+    $pdir=$appdir+'/templates/vnmrj/protocols'
+    mkCPprotocol($name,$pdir,$tab,ACQtime,seqfil,'LIB',$name,'',$name,$menu1,$menu2,$dialog)
+  
+  // Add protocol to Experiment Selector using apptype as the Tab location
+  vnmrjcmd('util','updateexpsel', $name, $name, $tab, $menu1, $menu2)
+    editparlib('library')
+    vnmrjcmd('pnew','editparlibtab','apptype','pslabel','modules')
+
+ELSEIF ($1 = 'delete') THEN
+
+    $2=editparlibtab[8]
+    if ($2='') then return endif
+    substr($2,'dirname'):$appdir,$name
+    strstr($appdir,systemdir):$ret
+    if ($ret=1) then
+	write('error','%s is in systemdir.  Cannot be deleted',$name)
+	return
+    endif
+
+    $clist=$appdir+'/adm/walkupadm/CustomExpList'
+    shell('(cat '+$clist+' | grep -vw '+$name+' > '+$clist+'1)'):$dum
+    shell('mv '+$clist+'1 '+$clist):$dum
+
+      $tmpeditparlib=$cdir+'/tmpeditparlib'
+      write('reset',$tmpeditparlib)
+      exists($appdir+'/parlib/'+$name+'.par','directory'):$exex
+      if ($exex) then
+        write('file',$tmpeditparlib,'parlib/%s.par',$name)
+      endif
+      exists($appdir+'/maclib/'+$name,'file'):$exex
+      if ($exex) then
+        write('file',$tmpeditparlib,'maclib/%s',$name)
+      endif
+//      exists($appdir+'/maclib/'+$name+'_setup','file'):$exex
+//      if ($exex) then
+//        write('file',$tmpeditparlib,'maclib/%s_setup',$name)
+//      endif
+      exists($appdir+'/maclib/user'+$name,'file'):$exex
+      if ($exex) then
+        write('file',$tmpeditparlib,'maclib/user%s',$name)
+      endif
+      exists($appdir+'/templates/vnmrj/protocols/'+$name+'.xml','file'):$exex
+      if ($exex) then
+	write('file',$tmpeditparlib,'templates/vnmrj/protocols/%s.xml',$name)
+      endif
+      shell('(cat '+$tmpeditparlib+' | wc -l)'):$exex
+      if ($exex) then
+	exists($appdir+'/restorelib','directory'):$rdirex
+        if ($rdirex=0) then
+	    shell('mkdir '+$appdir+'/restorelib'):$dum
+	endif
+        pwd:$curdirX
+	cd($appdir):$dum
+	shell('(tar cvf restorelib/'+$name+'.tar `cat '+$tmpeditparlib+'`)'):$dum
+	shell('rm -rf parlib/'+$name+'.par'):$dum
+	shell('rm -f maclib/'+$name):$dum
+//	shell('rm -f maclib/'+$name+'_setup'):$dum
+	shell('rm -f maclib/user'+$name):$dum
+	shell('rm -f templates/vnmrj/protocols/'+$name+'.xml'):$dum
+	cd($curdirX):$dum
+      endif
+      shell('rm -f '+$tmpeditparlib):$dum
+      exists($name+'.xml','templates/vnmrj/protocols'):$ex
+      if not $ex then
+      	vnmrjcmd('util','removeexpsel',$name)
+      endif
+    editparlib('library')
+    vnmrjcmd('pnew','editparlibtab','apptype','pslabel','modules')
+
+ELSEIF ($1 = 'appdirs') THEN
+
+        getappdirs:$atot,$adirs,$alabels
+        $appdirlist=$cdir+'/writable_appdirs'
+        write('reset',$appdirlist)
+        $i=1
+        repeat
+           exists($adirs[$i],'file','w'):$writable
+           if ($writable) then
+                write('file',$appdirlist,'"%s" "%s"',$alabels[$i],$adirs[$i])
+           endif
+           $i=$i+1
+        until $i > $atot
+        write('file',$appdirlist,'"" ""')
+
+ELSEIF ($1='library') THEN
+
+	$liblist='' $libname=''
+        getappdirs:$atot,$adirs,$alabels
+        $clist=$cdir+'/writable_CustomExpList'
+        write('reset',$clist)
+        $i=1 $j=1
+        repeat
+           exists($adirs[$i],'file','w'):$writable
+           if ($writable) then
+                $cfile=$adirs[$i]+'/adm/walkupadm/CustomExpList'
+                exists($cfile,'file'):$listex
+                if ($listex) then
+                    $s1='' $s2=''
+                    readfile($cfile,'$s1','$s2','','local'):$ctot
+                    if ($ctot) then
+                        $x=1
+                        repeat
+			    $liblist[$j]=$adirs[$i]+'/'+$s1[$x]
+			    $libname[$j]=$s1[$x]
+			    $j=$j+1
+                            write('file',$clist,'"%s [%s]" "%s/%s"',$s1[$x],$alabels[$i],$adirs[$i],$s1[$x])
+                            $x=$x+1
+                        until $x > $ctot
+                    endif
+                endif
+           endif
+           $i=$i+1
+        until $i > $atot
+        write('file',$clist,'"" ""')
+	return($liblist,$libname)
+
+ELSEIF ($1='getinfo') THEN
+
+    substr($2,'dirname'):$adir,$name
+    $xml=$adir+'/templates/vnmrj/protocols/'+$name+'.xml'
+    exists($xml,'file'):$ex
+    if ($ex=0) then return endif
+
+    getattr($xml,'template','tabname'):editparlibtab[2]
+    getattr($xml,'template','menu1'):editparlibtab[5]
+    getattr($xml,'template','menu2'):editparlibtab[6]
+    editparlibtab[4]=$adir
+
+ENDIF

@@ -1,0 +1,48 @@
+import os
+
+# define target file names
+dicomStoreTargetList = ['byte_swap',
+                        'create_ctn_input',
+                        'create_fdf_dicom',
+                        'split_fdf',
+                        'create_dicom',
+                        'start_server',
+                        'stop_server',
+                        'store_image']
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+
+# source files
+
+dicom_storeEnv = Environment(CCFLAGS   = '-m32 -O -DHAVE_CONFIG_H -D_REENTRANT -DNDEBUG',
+                             LINKFLAGS = '-m32 ',
+                             CPPPATH   = [cwd])
+
+# actual builds
+dicom_store_builds = []
+for i in dicomStoreTargetList:
+    dicom_store_builds.append(dicom_storeEnv.Program(target  = i,
+                                                     source  = [i + '.c' ],
+                                                     LIBPATH = [cwd]))
+
+
+
+# for sure copy it to options/dicom/bin
+optionsDicomBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,
+			'options','standard','IMAGE','dicom','bin')
+if not os.path.exists(optionsDicomBinPath) :
+    os.makedirs(optionsDicomBinPath)
+optionsDicomConfPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,
+			'options','standard','IMAGE','dicom','conf')
+if not os.path.exists(optionsDicomConfPath) :
+    os.makedirs(optionsDicomConfPath)
+Execute(Copy(optionsDicomConfPath, os.path.join(cwd, 'dicom_store.cfg')))
+
+# actions to be performed after targets are built
+for i in range(len(dicomStoreTargetList)):
+   dicom_storeEnv.AddPostAction(dicom_store_builds[i],
+                                Action(Copy(optionsDicomBinPath, os.path.join(cwd, dicomStoreTargetList[i]))))
+

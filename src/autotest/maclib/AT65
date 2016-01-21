@@ -1,0 +1,51 @@
+"macro AT65"
+"AT65" "Shaped Excitation Predictability at Constant Peak Power: (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Shaped Excitation Predictability on Channel 2')
+   at_currenttest='gauss_vs_hard_vs_eburp1_90_ch2'
+   seqfil='ATdsh2pul' pwpat='gauss' p1pat='hard'
+   vchannelmap='1'
+   tpwr=at_tpwrLowpower                 "avoid amplifier compression"
+   dof=tof
+   pw90=at_pw90_ch2*(at_pw90Lowpower/at_pw90)
+   pw=pw90,2.40*pw90,16*pw90
+   pwpat='hard','gauss32','eburp1' 
+   array='(pw,pwpat)'
+   dof=tof
+   cdc 
+   p1=pw[1]
+   pwsadj('hard','p1')  "insures proper 100nsec resolution"
+   p1=pw[2]
+   pwsadj('gauss32','p1')  "insures proper 100nsec resolution"
+   p1=pw[3]
+   pwsadj('eburp1','p1')  "insures proper 100nsec resolution"
+   p1=0 p1pat='hard'
+   wnt='ATwft select(1) av vsadj  dssh dtext'
+   wexp='AT65(`PART1`)'
+   ATcycle
+   au
+   write('line3','Shaped Excitation Predicatbility at Constant Peak Power: (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   th=50 fp
+  if (at_plotauto='y') then
+    vsadj(100) pl('all') pltext(100,wc2max-2)
+   if (at_printparams='y') then
+    dn2='' pap ATpltext
+    pps(120,0,wcmax-120,90) ATpage
+   endif 
+   ATpltext(0,wc2max-2)
+   ATplfp
+   ATpage
+  endif
+
+ATnext
+endif

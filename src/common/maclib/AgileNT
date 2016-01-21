@@ -1,0 +1,211 @@
+"macro AgileNT"
+"AgileNT 1.0  - macro to set nt based on concentration"
+"In appdir maclib a calibration file called scancalFile has factors for sequences"
+"Sample concentration set by user from qest tool with Save Result button"
+"Probe signal to noise retrieved from probe file"
+"r crouch 25 July 2010"
+
+exists('adaptiveNT','parameter','global'):$parex
+if ($parex=0) then return endif
+if adaptiveNT<>'y' then return endif
+
+if ($# < 1) then $1=pslabel endif
+
+if ($1='savepar') then
+        is_cpsample:$iscp
+// Don't bother if curexp has a NewStudy
+//        if ($iscp>0) then module('tmpsave','quant','sampleglobal') endif
+	module('tmpsave','quant','sampleglobal')
+	return
+elseif ($1='readpar') then
+        module('tmpreturn','quant')
+	return
+elseif ($1='time') then
+	exists($2,'parlib'):$parex,$parpath
+	if ($parex=0) then return($3) endif
+        $nt=0 $ss=0 $ad=0 $pad=0 $tn='' $ni=0
+        rtv($parpath,'noabort','nt'):$nt
+	rtv($parpath,'noabort','ss'):$ss
+	rtv($parpath,'noabort','arraydim'):$ad
+	rtv($parpath,'noabort','pad'):$pad
+	rtv($parpath,'noabort','tn'):$tn
+	rtv($parpath,'noabort','ni'):$ni
+//  for 1D and for ss<0
+        if ($ni<2) or (($ni>1) and ($ss<0)) then
+	    $dim=1
+	else
+	    $dim=2
+	endif
+        if ($ss<0) then $ss=-1*$ss endif
+	if ($dim=1) then
+	    $timeperscan=($3)/(($nt+$ss)*$ad)
+	else
+//  for 2D and ss>0
+		$timeperscan=($3)/(($nt*$ad)+$ss)
+	endif
+	$newnt=$nt
+	AgileNT($2,$tn):$newnt
+	if ($dim=1) then
+	    $ACQtime=$timeperscan*(($newnt+$ss)*$ad)
+	else
+	    $ACQtime=$timeperscan*(($newnt*$ad)+$ss)
+	endif
+
+//	write('line3','%s %s %s %f timeperscan %f orig nt %d new nt %d',$0,$2,$1,$ACQtime,$timeperscan,$nt,$newnt)
+	return($ACQtime)
+else
+
+  exists('concentration','parameter'):$e
+  if ($e<0.5) then
+    if ($##<1) then
+	write('error','Concentration parameter does not exist.')
+     endif
+	return
+  elseif ($e>0.5) then
+// a positive value of concentration in curpar always
+//   trumps over what is saved in sampleTags
+//   A user might have set concentration in curpar, if so that is
+//     an explicit action by the user and MUST be respected
+// Get concentration from sampleTags
+    if (concentration<=0) then
+        $studyconc=0
+        is_submitmode:$submit
+    	if (archivedir<>'') and (sample<>'') and (not($submit)) then
+            $md=archivedir+'/'+sample+'/dirinfo/macdir'
+            getsampglobal($md,'concentration'):$studyconc
+	    concentration=$studyconc
+    	endif
+    endif
+	if (concentration<=0) then
+	   if ($##<1) then
+		write('line3','Concentration value not yet defined for sample.')
+	   endif
+		return
+	endif
+  endif
+
+//exists($0,'maclib'):$e,$path
+//substr($path,'dirname'):$maclibpath
+
+  $SNCal=-1
+  exists('scancalFile','adm/walkupadm'):$ex,$scanscalfile
+
+  if ($ex) then
+    $s1=''  $s2=''
+    readfile($scanscalfile,'$s1','$s2',$1+':','local'):$ex
+  endif
+  if ($ex=1) then
+    substr($s2,1):$SNCal
+    substr($s2,2):$ScanConcCal
+    substr($s2,3):$MinScans
+  endif
+
+  if ($SNCal=-1) then
+    if ($##<1) then
+	write('line3','Adaptive nt calibration not available. Using default value.')
+    endif
+    return
+  endif
+
+  $par='Signal2Noise'
+  $signoise=0
+  if ($# < 2) then $tn=tn else $tn=$2 endif
+  getparam($par,$tn):$signoise
+// The following line is for testing purpose
+//  $signoise=$SNCal
+  if ($signoise=0) then
+	$parname=$tn+$par
+    if ($##<1) then
+	write('error','Probefile needs parameter %s',$parname)
+    endif
+    return
+  endif
+
+"Calc nt ratio based on signal to noise considerations"
+  if ($signoise>$SNCal) then
+	$factorSN=$signoise/$SNCal
+	$ntfactorSN=1/($factorSN*$factorSN)
+  elseif ($SNCal>$signoise) then
+	$factorSN=$SNCal/$signoise
+	$ntfactorSN=$factorSN*$factorSN
+  elseif ($SNCal=$signoise) then
+	$ntfactorSN=1.00
+  endif
+
+
+//write('line3','Probe SN factor = %f',$ntfactorSN)
+
+
+"Calc nt ratio based on concentration considerations"
+  if (concentration>$ScanConcCal) then
+	$factorConc=concentration/$ScanConcCal
+	$ntfactorConc=1/($factorConc*$factorConc)
+  elseif (concentration<$ScanConcCal) then
+	$factorConc=$ScanConcCal/concentration
+	$ntfactorConc=$factorConc*$factorConc
+  elseif (concentration=$ScanConcCal) then
+	$ntfactorConc=1.00
+  endif
+
+//write('line3','Concentration SN factor = %f',$ntfactorConc)
+
+
+  $newntmult=$ntfactorSN*$ntfactorConc
+
+
+  $newnt=$MinScans*$newntmult
+  if ($newnt<$MinScans) then $newnt=$MinScans endif
+
+  $newnt=trunc($newnt + 0.5)
+  if ($newnt=3) then $newnt=4 endif  "Trap for 3 scans"
+
+  if ($newnt<>$MinScans) then
+	if ($MinScans=1) then $modulus=2 else $modulus=4 endif
+	$rem=$newnt mod $modulus
+    
+	if ($rem<>0) then
+  	 $newnt=$newnt+$modulus-$rem
+	endif
+  endif
+
+  if ($## < 1) then
+	write('line3','Number of transients calculated to be %d',$newnt)
+  endif
+// return $newnt ONLY if $## and $# are greater than 0
+//  $##>0 and $#>0 means the calling macro is looking for newnt
+//  $##>0 and $#=0 means the calling macro is NOT looking for newnt
+//	but want to suppress all the line3 echos
+//  $##=0 means generate all line3 echos
+//   - Modified by KrishK
+
+  if ($## > 0) and ($# > 0) then 
+    return($newnt) 
+  endif
+
+  nt=$newnt 
+// Modified by KrishK
+  if ($## < 1) then time endif
+
+// Do not use sw1 to evaluete 2D or 1D
+//exists('sw1','parameter'):$2dflg
+  getdim:$dim
+  if ($dim > 1.5) then
+        if ((nt>4) and (nt<16)) then
+	bs=4 il='y'
+	elseif ((nt>16) and (nt<64)) then
+	bs=8 il='y'
+	elseif (nt>64) then
+	bs=16 il='y'
+	else
+	il='n'
+	endif
+  else
+	if ((nt>128) and (nt<1024)) then
+	bs=32
+        elseif (nt>1024) then
+	bs=128
+	endif
+        il='y'
+  endif
+
+endif

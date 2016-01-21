@@ -1,0 +1,35 @@
+"macro BPfixup2"
+"BPfixup2  - a macros to check parameters"
+  if (Console='vnmrs') then
+   length(dmm):$length
+   substr(dmm,$length,1):$mode1  "last character"
+   length(dmm2):$length
+   substr(dmm2,$length,1):$mode2  "last character"
+   length(dmm3):$length
+   substr(dmm3,$length,1):$mode3  "last character"
+   if ($mode1<>'p') then dres=90.0 endif
+   if ($mode2<>'p') then dres2=90.0 endif
+   if ($mode3<>'p') then dres3=90.0 endif
+  endif
+
+  exists('mag_flg','parameter'):$e
+  if $e=1 then
+    getparam('mag_flg','N15'):mag_flg
+    if (mag_flg='y') then BPcheckfortriax endif
+  endif
+
+  getparam('BPtemp','H1'):temp "installs temp value used in autocalibrate"
+                                  "or autoupdate"
+  sb=-at sbs=sb gf='n' awc='n' lb='n'        "set reasonable weighting"
+
+  parfidss                                   "set solvent suppression"
+  getparam('ssfilter','H1'):ssfilter
+  getparam('ssntaps','H1'):ssntaps
+  getparam('ssorder','H1'):ssorder
+  getparam('sslsfrq','H1'):sslsfrq
+
+  if (tn='H1') then
+   dn='C13' "prevents 1H on channel 2 with obs 1H on channel 1"
+  endif
+
+

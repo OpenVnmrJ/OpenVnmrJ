@@ -1,0 +1,85 @@
+/*  rna_Ahnctocsych.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    Base-correlation from Adenine-amino (N6) to H2/8 with options for the
+    initial H->N transfer.
+
+    H   -->   N   -->   C6/2   -->   C8   -->   H8 - det
+    t1   CP       CP         FLOPSY     re-INEPT
+       CPMG
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    pulse sequence:     Simorre, J.P. et al, J. Am. Chem. Soc. 1996, 118, 5316-17.
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [H1].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1.  f1180='y' is ignored if ni=0.
+
+
+
+                  DETAILED INSTRUCTIONS FOR USE OF rna_Ahnctocsych
+
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gChsqc may be printed using:
+                                      "printon man('rna_Ahnctocsych') printoff".
+
+    2. Apply the setup macro "rna_Ahnctocsych". This loads the relevant
+       parameter set and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Center H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. CHOICE of transfer:
+
+       CP='y' uses CP for amino H1 -> N15 transfer.
+       ncyc_hn should be set to ~7.5ms (1 or 2 at 500MHz) according to J(H-N) = 95Hz.
+
+       CPMG='y' uses CPMG for amino H1 -> N15 transfer.
+       ncyc should be set to 16 or 24.
+
+       ncyc_nc should be set to ~45ms (3 at 500MHz) according to J(N6-C6) = 20Hz.
+       ncyc_cc should be set to ~40ms (11 at 500MHz) according to J(C-C) = 12Hz.
+
+
+       CP is generally the best.                     Set sw1 to 4ppm.
+       A S/N of 3 is generally sufficient for this 2D experiment. Check
+       by typing: ft dc getsn.
+
+       If the adenine amino protons are broadened due to exchange, the initial
+       magnetization transfer into the purine system is too low to yield the
+       desired correlation. Check in N15 HSQCs. In that case use the rna_hcch_tocsy
+       sequence to correlate adenine H2 to H8 (AH2H8='y').
+
+    5. GRADIENTS:
+       G3 and G4 should be optimized for sufficient water suppression.
+       Typical values are G3=12G/cm and G4:-28G/cm.
+
+       G5 and G0 should be 2-3G/cm.
+
+       Gr suppresses radiation damping during t1 and should be 0.5 G/cm.
+
+       In general, gradient-levels should be as low as possible.
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+        @                                                      @
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

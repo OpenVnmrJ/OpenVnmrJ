@@ -1,0 +1,851 @@
+#############################################################################
+#        Device Table
+#
+#   This table contains devices supported for the VNMR program.
+#
+#   Each device contains various parameters 
+#
+#   Most entries are documented below, three entries are described here.
+#
+#   The printcap base entry is the base entry in /etc/printcap that the
+#   device should use.  Several devices might be able to use one
+#   printcap entry (such as the LaserJet series only needed one).
+#   The available printcap entries are
+#   1. qj     Usable for all quietjet and thinkjet printers
+#   2. las    Usable for all LaserJet type printers
+#   3. plt    Usable for all HP7550, DraftMaster, and Zeta plotters
+#   4. plt_dp Usable for HP DraftPro (HP7570) plotters
+#   5. plt_ps Usable for HP LaserJet III Postscript plotters
+#
+#   The raster entry is used to identify the type of plotter
+#   language and the plot orientation mode. Five values are supported.
+#   0  -  Plotters which use the HPGL language.
+#   1  -  Plotters which use the PCL language and are in portrait mode.
+#   2  -  Plotters which use the PCL language and are in landscape mode.
+#   3  -  Plotters which use the PostScript language and are in portrait mode.
+#   4  -  Plotters which use the PostScript language and are in landscape mode.
+#
+#   The raster_page entry is unused.
+#
+#   The x and y offset entries in this table are used, in
+#   conjunction with the parameters x0 and y0,  to set the
+#   x and y offset on the plotter.  The x and y offset is used
+#   only for the plotting devices (non raster devices). 
+#   The algorithm for setting the x and y offset variable is sort of
+#   complex.  Initially the algorithms for the HP plotters were
+#  For HP7550A */
+#      x offset     = HP7550_steps * x0 */
+#      y offset     = HP7550_steps * (y0 + 27.5) */
+#  For DraftPro_C */
+#      x offset     = HP7550_steps * x0 - 10400  */
+#      y offset     = HP7550_steps * (y0 + 27.5) - 7400 */
+#  For DraftPro_D */
+#      x offset     = HP7550_steps * x0 - 16000  */
+#      y offset     = HP7550_steps * y0 - 10000  */
+#  where HP7550_steps = 40 plotter steps per millimeter
+#
+#  For the device table, we divide x and y offset into two entries each.
+#  The new algorithm is  x offset = xoffset * x0 + xoffset1
+#  and                   y offset = yoffset * y0 + yoffset1
+#  xoffset and yoffset are factors which convert x0 and y0, which
+#  are in units of mm, into units which are appropriate for the
+#  plotting device.  For HP pen plotters, this conversion factor
+#  will typically be 40.0 plotter steps per mm.  For Postscript
+#  plotters, this conversion factor will be 1.0 mm per mm.
+#  The xoffset1 and yoffset1 values are constants expressed with
+#  units appropriate to the plottering device.
+#  
+#  For HP7550A  xoffset entry = 40.0,  xoffset1 = 0,  
+#               yoffset entry = 40.0,  yoffset1 = 40.0 * 27.5
+#
+#  For DraftPro_C  xoffset entry = 40.0  xoffset1 = -10400
+#                  yoffset entry = 40.0  yoffset1 = 40.0 * 27.5 -7400
+#
+#  For DraftPro_D  xoffset entry = 40.0  xoffset1 = -16000
+#                  yoffset entry = 40.0  yoffset1 = -10000
+#
+#  For PS_A        xoffset entry = 1.0  xoffset1 = 0
+#                  yoffset entry = 1.0  yoffset1 = 0
+#
+################################################
+### Example Device entry
+PrinterType		HPExample	#Type of printer
+Printcap		qj		#base printcap entry
+ppmm			5.0		# points per millimeter
+raster			0		# see explaination above
+raster_charsize		0		# char size
+raster_page		0		# see explaination above
+raster_resolution	0		# resolution
+right_edge		0		# right edge
+xoffset			0		# see explaination above
+yoffset			0		# see explaination above
+xoffset1		0		# see explaination above
+yoffset1		0		# see explaination above
+xcharp1			15		# char pixels in x direction
+ycharp1			30		# char pixels in y direction
+wcmaxmin		100.0		# These are min and max of
+wcmaxmax		400.0		# width of the plot device
+wc2maxmin		100.0		# These are checked before 
+wc2maxmax		210.0		# program plots.
+################################################
+PrinterType		Lexmark
+Printcap		plt		#base printcap entry
+ppmm			20.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		400.0	
+yoffset1		0.0
+xcharp1			45
+ycharp1			90
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		 50.0
+wc2maxmax		237.5
+################################################
+PrinterType		HP7550A
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		0.0	
+yoffset1		1100.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		 50.0
+wc2maxmax		210.0
+################################################
+PrinterType		HP7550A8
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		0.0	
+yoffset1		500.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		80.0
+wcmaxmax		250.0
+wc2maxmin		 50.0
+wc2maxmax		155.0
+################################################
+PrinterType		HP7475A
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		0.0	
+yoffset1		1100.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		 50.0
+wc2maxmax		210.0
+################################################
+PrinterType             DraftPro_C
+Printcap                plt_dp          #base printcap entry
+ppmm                    10.0
+raster                  0
+raster_charsize         0
+raster_page             0
+raster_resolution       0
+right_edge              0
+xoffset                 40.0
+yoffset                 40.0
+xoffset1                -10400.0
+yoffset1                -7400.0
+xcharp1                 30
+ycharp1                 60
+wcmaxmin                100.0
+wcmaxmax                520.0
+wc2maxmin                50.0
+wc2maxmax               350.0
+################################################
+PrinterType             DraftPro_D
+Printcap                plt_dp          #base printcap entry
+ppmm                    10.0
+raster                  0
+raster_charsize         0
+raster_page             0
+raster_resolution       0
+right_edge              0
+xoffset                 40.0
+yoffset                 40.0
+xoffset1                -16000.0
+yoffset1                -10000.0
+xcharp1                 30
+ycharp1                 60
+wcmaxmin                100.0
+wcmaxmax                800.0
+wc2maxmin                50.0
+wc2maxmax               480.0
+################################################
+PrinterType		DICOM
+Printcap		plt_ps		#base printcap entry
+ppmm			2.8346
+raster			3	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		180.0
+wc2maxmin		 50.0
+wc2maxmax		140.0
+################################################
+PrinterType		PostScript_Portrait
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			3	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		186.0
+wc2maxmin		 50.0
+wc2maxmax		143.0
+################################################
+PrinterType		PostScript_Landscape
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			4	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		250.0
+wc2maxmin		 50.0
+wc2maxmax		186.0
+################################################
+PrinterType		PS_A
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			3	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		186.0
+wc2maxmin		 50.0
+wc2maxmax		143.0
+################################################
+PrinterType		PS_AR
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			4	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		250.0
+wc2maxmin		 50.0
+wc2maxmax		186.0
+################################################
+PrinterType             PS_A3R
+Printcap                plt_ps          #base printcap entry
+ppmm                    11.81
+raster                  4
+raster_charsize         0
+raster_page             0
+raster_resolution       0
+right_edge              0
+xoffset                 1.0
+yoffset                 1.0
+xoffset1                0.0
+yoffset1                0.0
+xcharp1                 15
+ycharp1                 30
+wcmaxmin                80.0
+wcmaxmax                370.0
+wc2maxmin                50.0
+wc2maxmax               255.0
+################################################
+PrinterType		HP2800
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			3	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		0.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		180.0
+wc2maxmin		 50.0
+wc2maxmax		140.0
+################################################
+PrinterType		HP2800R
+Printcap		plt_ps		#base printcap entry
+ppmm			11.81
+raster			4	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			1.0
+yoffset			1.0	
+xoffset1		15.0	
+yoffset1		0.0
+xcharp1			15
+ycharp1			30
+wcmaxmin		80.0
+wcmaxmax		250.0
+wc2maxmin		 50.0
+wc2maxmax		180.0
+################################################
+PrinterType		LaserJet_150
+Printcap		las		#base printcap entry
+ppmm			5.905
+raster			1
+raster_charsize		15
+raster_page		96.0	
+raster_resolution	150
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		200.0
+wc2maxmin		50.0
+wc2maxmax		140.0
+################################################
+PrinterType		LaserJet_150R
+Printcap		las		#base printcap entry
+ppmm			5.905
+raster			2
+raster_charsize		15
+raster_page		96.0	
+raster_resolution	150
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		250.0
+wc2maxmin		50.0
+wc2maxmax		180.0
+################################################
+PrinterType		LaserJet_300
+Printcap		las		#base printcap entry
+ppmm			11.81
+raster			1
+raster_charsize		30
+raster_page		0	
+raster_resolution	300
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		200.0
+wc2maxmin		50.0
+wc2maxmax		140.0
+################################################
+PrinterType		LaserJet_300R
+Printcap		las		#base printcap entry
+ppmm			11.81
+raster			2
+raster_charsize		30
+raster_page		0	
+raster_resolution	300
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		250.0
+wc2maxmin		50.0
+wc2maxmax		180.0
+################################################
+PrinterType		LJ_B_300R
+Printcap		las		#base printcap entry
+ppmm			11.81
+raster			2
+raster_charsize		30
+raster_page		0	
+raster_resolution	300
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		50.0
+wc2maxmax		210.0
+################################################
+PrinterType		LJ_A3_300R
+Printcap		las		#base printcap entry
+ppmm			11.81
+raster			2
+raster_charsize		30
+raster_page		0	
+raster_resolution	300
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		380.0
+wc2maxmin		50.0
+wc2maxmax		235.0
+################################################
+PrinterType		LaserJet_600
+Printcap		las		#base printcap entry
+ppmm			23.62
+raster			1
+raster_charsize		60
+raster_page		0	
+raster_resolution	600
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		200.0
+wc2maxmin		50.0
+wc2maxmax		140.0
+################################################
+PrinterType		LaserJet_600R
+Printcap		las		#base printcap entry
+ppmm			23.62
+raster			2
+raster_charsize		60
+raster_page		0	
+raster_resolution	600
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		250.0
+wc2maxmin		50.0
+wc2maxmax		180.0
+################################################
+PrinterType		LJ_B_600R
+Printcap		las		#base printcap entry
+ppmm			23.62
+raster			2
+raster_charsize		60
+raster_page		0	
+raster_resolution	600
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		50.0
+wc2maxmax		210.0
+################################################
+PrinterType		LJ_A3_600R
+Printcap		las		#base printcap entry
+ppmm			23.62
+raster			2
+raster_charsize		60
+raster_page		0	
+raster_resolution	600
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		380.0
+wc2maxmin		50.0
+wc2maxmax		235.0
+################################################
+PrinterType             PS4079_HPGL
+Printcap                plt
+ppmm                    15
+raster                  0
+raster_charsize         0
+raster_page             0
+raster_resolution       0
+right_edge              0
+xoffset                  20.0
+yoffset                  20.0
+xoffset1                400.0
+yoffset1               1240.0
+xcharp1                   45
+ycharp1                   90
+wcmaxmin                 100.0
+wcmaxmax                 400.0
+wc2maxmin                 50.0
+wc2maxmax                205.0
+################################################
+PrinterType             DeskJet_300
+Printcap                las             #base printcap entry
+ppmm                    11.81
+raster                  1
+raster_charsize         30
+raster_page             0
+raster_resolution       300
+right_edge              0
+xoffset                 0
+yoffset                 0
+xoffset1                0
+yoffset1                0
+xcharp1                 0
+ycharp1                 0
+wcmaxmin                100.0
+wcmaxmax                200.0
+wc2maxmin               50.0
+wc2maxmax               140.0
+################################################
+PrinterType             DeskJet_300R
+Printcap                las             #base printcap entry
+ppmm                    11.81
+raster                  2
+raster_charsize         30
+raster_page             0
+raster_resolution       300
+right_edge              0
+xoffset                 0
+yoffset                 0
+xoffset1                0
+yoffset1                0
+xcharp1                 0
+ycharp1                 0
+wcmaxmin                100.0
+wcmaxmax                240.0
+wc2maxmin               50.0
+wc2maxmax               180.0
+################################################
+PrinterType		QuietJet_96
+Printcap		qj		#base printcap entry
+ppmm			3.808
+raster			1
+raster_charsize		10
+raster_page		0	
+raster_resolution	96
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		330.0
+wc2maxmin		 50.0
+wc2maxmax		220.0
+################################################
+PrinterType		QuietJet_192
+Printcap		qj		#base printcap entry
+ppmm			7.618
+raster			1
+raster_charsize		20
+raster_page		0	
+raster_resolution	-192
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		330.0
+wc2maxmin		50.0
+wc2maxmax		220.0
+################################################
+PrinterType		ThinkJet_96
+Printcap		qj		#base printcap entry
+ppmm			3.808
+raster			1
+raster_charsize		10
+raster_page		96.0	
+raster_resolution	-96
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		165.0
+wc2maxmin		50.0
+wc2maxmax		120.0
+################################################
+PrinterType		ThinkJet_96R
+Printcap		qj		#base printcap entry
+ppmm			3.808
+raster			2
+raster_charsize		10
+raster_page		96.0	
+raster_resolution	-96
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		200.0
+wc2maxmin		50.0
+wc2maxmax		150.0
+################################################
+PrinterType		ThinkJet_192
+Printcap		qj		#base printcap entry
+ppmm			7.618
+raster			1
+raster_charsize		20
+raster_page		96.0	
+raster_resolution	-192
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		165.0
+wc2maxmin		50.0
+wc2maxmax		120.0
+################################################
+PrinterType		ThinkJet_192R
+Printcap		qj		#base printcap entry
+ppmm			7.618
+raster			2
+raster_charsize		20
+raster_page		96.0	
+raster_resolution	-192
+right_edge		0
+xoffset			0	
+yoffset			0	
+xoffset1		0	
+yoffset1		0
+xcharp1			0	
+ycharp1			0	
+wcmaxmin		100.0
+wcmaxmax		200.0
+wc2maxmin		50.0
+wc2maxmax		120.0
+################################################
+PrinterType		Zeta		#use sw03 6-0,7-0,8-0
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		0.0	
+yoffset1		600.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		400.0
+wc2maxmin		 50.0
+wc2maxmax		240.0
+################################################
+PrinterType		Zeta_L
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0
+yoffset			40.0	
+xoffset1		0.0	
+yoffset1		600.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		800.0
+wc2maxmin		 50.0
+wc2maxmax		240.0
+################################################
+PrinterType		DraftMaster_A
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0	
+yoffset			40.0	
+xoffset1		-4400.0
+yoffset1		-3200.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		220.0
+wc2maxmin		 50.0
+wc2maxmax		140.0
+################################################
+PrinterType		DraftMaster_B
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0	
+yoffset			40.0	
+xoffset1		-7400.0
+yoffset1		-4900.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		370.0
+wc2maxmin		 50.0
+wc2maxmax		225.0
+################################################
+PrinterType		DraftMaster_C
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0	
+yoffset			40.0	
+xoffset1		-10400.0
+yoffset1		-7400.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		520.0
+wc2maxmin		 50.0
+wc2maxmax		350.0
+################################################
+PrinterType		DraftMaster_D
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0	
+yoffset			40.0	
+xoffset1		-16000.0
+yoffset1		-10000.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		800.0
+wc2maxmin		 50.0
+wc2maxmax		480.0
+################################################
+PrinterType		DraftMaster_E
+Printcap		plt		#base printcap entry
+ppmm			10.0
+raster			0	
+raster_charsize		0	
+raster_page		0	
+raster_resolution	0	
+right_edge		0
+xoffset			40.0	
+yoffset			40.0	
+xoffset1		-20000.0
+yoffset1		-16000.0
+xcharp1			30
+ycharp1			60
+wcmaxmin		100.0
+wcmaxmax		1000.0
+wc2maxmin		 50.0
+wc2maxmax		780.0
+################################################
+#end of devicetable

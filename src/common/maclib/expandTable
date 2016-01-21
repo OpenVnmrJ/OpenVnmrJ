@@ -1,0 +1,187 @@
+"macro expandTable"
+// expandTable
+// Return vaue is an array of strings
+// arg1 is a string.  The valid supported options are...
+//   option1 :  $1='1 4 8 24 36' - returns '1','4','8','24','36'
+//   option2 :  $1='24 thru 47' - returns '24','25',....,'47'
+//   option3 :  $1='24 repeat 4' - returns '24','24','24','24'
+//   option4 :  $1='3 thru 17 repeat 2' - returns '3','4',...,'17','3','4',...,'17'
+//   option5 :  $1='3 repeat 2 thru 17' - returns '3','3','4','4',...,'17','17'
+//  repeat and thru keyword are case-insensitive
+//  Mix and match of above options are NOT suppored
+
+// Make sure $1 is in lower case
+
+format($1,'lower'):$1
+
+$arg=''
+string2array($1):$arg
+
+$size=size('$arg')
+if ($size=1) then return($arg,1) endif
+
+// The first and last value must be REAL
+format($arg[1],'isreal'):$real
+format($arg[$size],'isreal'):$real2
+if (not $real) or (not $real2) then
+    write('error','Illegal argument for %s',$0)
+    return('',0)
+endif
+
+// Only 2 keywords are allowed: thru and repeat
+//  All other values must be real numbers
+$i=1 $error=0
+repeat
+    format($arg[$i],'isreal'):$real
+    if (not $real) and ($arg[$i]<>'thru') and ($arg[$i]<>'repeat') then
+	$error=1
+	$i=$size
+    endif
+    $i=$i+1
+until $i > $size
+if ($error) then
+    write('error','Illegal argument for %s',$0)
+    return('',0)
+endif
+
+//  If thru and repeat keywords are not supplied
+//    there is no need to expand the array
+
+$t=0 $r=0
+teststr('$arg','thru','local'):$t
+teststr('$arg','repeat','local'):$r
+if (not $t) and (not $r) then
+    return($arg,1)
+endif
+
+//  If thru or repeat keyword is supplied the $size MUST be 3
+if (($t) and (not $r)) or (($r) and (not $t)) then
+    if ($size<>3) then
+	write('error','Illegal argument for %s',$0)
+	return('',0)
+    endif
+endif
+
+//  If both thru and repeat keywords are supplied the $size MUST be 5
+if ($t) and ($r) then
+    if ($size<>5) then
+	write('error','Illegal argument for %s',$0)
+	return('',0)
+    endif
+endif
+
+$ret=''
+// Now do the expansion 
+if ($t) and (not $r) then
+// Thru option ON but repeat option OFF
+    $start=0 format($arg[1],'lower'):$start
+    $end=0 format($arg[3],'lower'):$end
+    if ($start=$end) then
+	$ret=$arg[1]
+    else
+	$i=$start $j=1
+        if ($start>$end) then 
+	    repeat
+		format($i,0,0):$ret[$j]
+		$j=$j+1
+		$i=$i-1
+	    until $i <$end
+	else
+            repeat
+		format($i,0,0):$ret[$j]
+                $j=$j+1
+                $i=$i+1
+            until $i > $end
+	endif
+    endif
+
+elseif ($r) and (not $t) then
+//  Thru option OFF and repeat option ON
+    $start=0 format($arg[1],'lower'):$start
+    $rep=0 format($arg[3],'lower'):$rep
+    if ($rep<1) then $rep=1 endif
+    $j=1
+    repeat
+	$ret[$j]=$arg[1]
+	$j=$j+1
+    until $j > $rep
+
+elseif ($t < $r) then
+//  Thru option first and repeat second
+    $start=0 format($arg[1],'lower'):$start
+    $end=0 format($arg[3],'lower'):$end
+    $rep=0 format($arg[5],'lower'):$rep
+    if ($rep<1) then $rep=1 endif
+    if ($start=$end) then
+        $ret=$arg[1]
+    else
+        $i=$start $j=1
+        if ($start>$end) then
+            repeat
+		format($i,0,0):$ret[$j]
+                $j=$j+1
+                $i=$i-1
+            until $i <$end
+        else
+            repeat
+		format($i,0,0):$ret[$j]
+                $j=$j+1
+                $i=$i+1
+            until $i > $end
+        endif
+    endif
+    if ($rep>1) then
+	$k=1 $ret2=$ret 
+	repeat
+	    $ret=$ret,$ret2
+	    $k=$k+1
+	until $k >= $rep
+    endif
+
+elseif ($t > $r) then
+//  repeat option first and thru option second
+    $start=0 format($arg[1],'lower'):$start
+    $end=0 format($arg[5],'lower'):$end
+    $rep=0 format($arg[3],'lower'):$rep
+    if ($rep<1) then $rep=1 endif
+    $j=1 $k=1
+    repeat
+        $ret[$j]=$arg[1]
+        $j=$j+1
+    until $j > $rep
+
+    if ($start=$end) then
+	$j=1
+	repeat
+	    $ret[$j]=$arg[1]
+	    $j=$j+1
+	until $j > $rep
+    else
+        $i=$start $j=1
+        if ($start>$end) then
+            repeat
+		$k=1
+		repeat
+		    format($i,0,0):$ret[$j]
+		    $j=$j+1
+		    $k=$k+1
+		until $k > $rep
+                $i=$i-1
+            until $i <$end
+        else
+            repeat
+                $k=1
+                repeat
+		    format($i,0,0):$ret[$j]
+                    $j=$j+1
+                    $k=$k+1
+                until $k > $rep
+                $i=$i+1
+            until $i > $end
+        endif
+    endif
+
+endif
+
+if ($ret[1]='') then return('',0) endif
+return($ret,1)

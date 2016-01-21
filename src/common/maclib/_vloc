@@ -1,0 +1,94 @@
+"macro _vloc"
+
+if (traymax = 49) or (traymax = 97) then
+  if (vloc = '') then return endif
+  $zone = 0
+  $col=''
+  $row=''
+  $tray=''
+  substr(vloc,1,1):$tray
+  if ($tray = 'T') or ($tray = 't') then
+    substr(vloc,2,1):$tray
+    if ($tray = '2') then
+      $zone = 48
+    endif
+    substr(vloc,3,1):$row
+    if ($row = ' ') then
+      substr(vloc,4,1):$row
+      substr(vloc,5,1):$col
+    else
+      substr(vloc,4,1):$col
+    endif
+  else
+    substr(vloc,1,1):$row
+    substr(vloc,2,1):$col
+  endif
+  if ($col >= '1') and ($col <= '6') then
+    format($col,'lower'):$icol
+  else
+    write('line3','syntax error for vloc; Column between 1 and 6')
+    _loc
+    return
+  endif
+  format($row,'upper'):$row
+  if ($row < 'A') or ($row > 'H') then
+    write('line3','syntax error for vloc; Row between A and H')
+    _loc
+    return
+  endif
+  $letters = 'A','B','C','D','E','F','G','H'
+  $i = 1
+  while ($i <= 8) do
+    if ($row = $letters[$i]) then
+      setvalue('loc', $icol + ($i-1)*6 + $zone,'global')
+      return
+    endif
+    $i = $i + 1
+  endwhile
+  return
+endif
+if (traymax = 0) then
+  return
+endif
+if (traymax = 9) or (traymax = 12) then
+  format(vloc,'isreal'):$a
+  if ($a) then
+    format(vloc,0,0):loc
+  endif
+  return
+endif
+substr(vloc,1,1):$scol
+substr(vloc,2,2):$row
+format($scol,'upper'):$scol
+// get info for current rack from /vnmr/asm/info/currentRacks
+$rows=12 $cols=8
+$file = '/vnmr/asm/info/currentRacks'
+exists($file,'file'):$e
+if $e>0.5 then
+  lookup('mfile',$file,'filekey'):$key
+  $i = 0  // find rack (one "zones" entry per rack)
+  repeat
+    lookup('mfile',$key,'delimiter','(),\n\r\t ','seek','zones','filekey'):$key
+    $i = $i+1
+  until ($i >= vrack)
+  $i = 0  // find zone (one "row" entry per zone)
+  repeat
+    lookup('mfile',$key,'delimiter','(),\n\r\t ','seek','row','filekey'):$key
+    $i = $i+1
+  until ($i >= vzone)
+// read number of rows and columns
+  lookup('mfile',$key,'delimiter','(),\n\r\t ','read','seek','col','read'):$rows,$cols
+endif
+
+// adequate for 16-column format...
+$letters = 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'
+
+$i=0 $ok=0
+repeat
+  $i=$i+1
+  $col=$cols-$i+1
+  if ($scol=$letters[$i]) then
+    $ok=1
+  endif
+until ($ok>0.5 or $i>=$cols)
+loc = ($row-1)*$cols + $col

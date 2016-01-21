@@ -1,0 +1,226 @@
+"macro NUSproc"
+"NUSproc macro for pre-processing randomly sampled data sets "
+"macro NUSproc"
+"modified as CSproc2 from CSproc, George Gray, Nov 2011     "
+"Modified as CSproc3 for CP5 PJB/KK Aug 2012"
+// Unique for chempack
+// This has no reference to execprocess nor does it do any 
+// saving - just process whatever is in curexp
+
+// This macro need to be more generic for all CSreconmethods
+//  similar to process macro.  Only if CSreconmethod specific processing
+//  is not available, this should default to CLEAN.
+
+isInflated:$isinflated
+if ($isinflated=1) then
+    write('line3','NUSproc: data already inflated')
+    exists('execprocess','parameter'):$execprocex
+    if ($execprocex) then
+       if (execprocess='NUSproc') then execprocess='' setvalue('execprocess',execprocess,'processed') endif
+    endif
+    process
+    return 
+endif
+
+exists('CSreconmethod','parameter'):$parex
+if $parex then
+    $procmethod=$0+CSreconmethod
+    exists($procmethod,'maclib'):$ex
+    if $ex then exec($procmethod):$ok
+	if $ok then return endif
+    endif
+endif
+
+"Use defaults"
+if(CS_dpars='y') then NUSdefpars endif
+
+isnewexp:$new
+$origfile=''
+if not $new then $origfile=file endif
+
+$proc1=proc1
+proc1='ft'
+exists('proc2','parameter'):$proc2ex
+if $proc2ex then $proc2=proc2 proc2='ft' endif
+
+phfid=-rp
+$rp1=rp1
+$lp1=lp1
+
+$ift=0 $inf=1 $cln=1 $cmd='' $s1='' $s2='' 
+$procdir = curexp+'/procdir'
+
+if(CS_cln='n') then
+  $ift=1
+endif
+
+exists($procdir,'directory'):$e
+if ($e) then
+  // determine whether to retrieve the original data
+  $n1='' $n2='' $n3=''
+  strstr(file,'/','last'):$r1,$n1,$n2
+  strstr($n1,'/','last'):$r1,$n1,$n3
+  if($n3='procdir') then
+    if not ($n2='orig') then
+      rt(curexp+'/procdir/orig')
+    endif
+  endif
+  $cmd = 'rm -r '+$procdir  " remove the old procdir "
+  shell($cmd)
+endif
+$cmd = 'mkdir '+$procdir
+shell($cmd)
+svf($procdir+'/orig')
+
+$file=file    "make sure we have the correct schedule"
+if (file='exp') then
+   $file=curexp+'/acqfil/sampling.sch'
+   exists($file,'file'):$e
+   if($e) then
+     copy($file,curexp+'/sampling.sch')
+     write('line3','using sampling schedule found in acqfil')
+   endif
+else
+  strstr($file,'.fid'):$r,$s1,$s2
+  if $s1='' then 
+    $file=$file+'.fid'
+  endif
+  $file=$file+'/sampling.sch'
+  exists($file,'file'):$e
+  if($e) then
+    copy($file,curexp+'/sampling.sch')
+    write('line3','using sampling schedule found in file directory')
+  endif
+endif
+
+// WARNING: some test NUS data sets have no schedule in data directory 
+//          and will fail to process unless CSschedule called here
+
+$file=curexp+'/sampling.sch'
+exists($file,'file'):$e
+if not($e) and (CStype='a' or CStype='') then
+  write('line3','sampling schedule not found - building using CSschedule.')
+  CSschedule
+endif
+
+if(CS_inf = 'y') then
+  exists($file,'file'):$e
+  if not($e) then
+    write('line3','sampling schedule not found - inflateND aborted.')
+    return 
+  endif
+endif
+
+NUSrsw($ift):$ok
+if not ($ok) then
+  return 
+endif
+if($ift) and (CS_inf='n') and (CS_se='n') then
+  rt(curexp+'/procdir/rsw')
+  wft(1) ds
+endif
+
+if(CS_se='y') then
+  NUSproc_se:$ok
+  //Binary proc_se sets f1coef=''
+  //Causes issues with third-party software packages
+  //Set default values for SE-processed NUS data
+  f1coef='1 0 0 0 0 0 -1 0'
+  writeparam(curexp+'/procdir/rsw.fid/procpar','f1coef','add')
+  if not ($ok) then
+    write('line3','NUSproc_se failed - NUSproc aborted.')
+    return 
+  endif
+  if($ift) and (CS_inf='n')  then
+    rt(curexp+'/procdir/rsw')
+    wft(1) ds
+  endif
+endif
+
+$CScln='y'                    
+if(CS_inf='y') then
+  NUSinflate:$ok
+  if not ($ok) then
+    write('line3','NUSinflate failed - NUSproc aborted.')
+    return 
+  endif
+  if($ift) then
+    rt(curexp+'/procdir/inf')
+    wft(1) ds NUSppp 
+  endif
+else
+  write('line3','CS_inf=n - NUSproc completed without inflate or clean')
+  $CScln='n' 
+endif
+
+$dim=2
+if(CS_cln='y' and $CScln='y') then          
+  exists('ni2','parameter'):$e
+  if ($e) then
+    if(ni>1) and (ni2>1) then
+      $dim = 3
+    endif
+    exists('ni3','parameter'):$e
+    if($e) then
+      if(ni3>1) and ($dim=3) then
+        $dim=4
+      endif
+    endif
+  endif
+  if($dim=2) then
+    full
+    cln2d
+    //reset proc1/proc2 for the case ='lp' if CS_dpars='n'
+    if (CS_dpars='y') then
+      proc1=$proc1
+      if (proc1='lp') then setLP1andWindow endif
+      if $proc2ex then proc2=$proc2 endif
+    endif
+
+    rp1=$rp1 lp1=$lp1
+    rp=-phfid phfid=0 off('phfid')
+    exists('ni2','parameter'):$e
+    if($e) then 
+     if(ni2>1) then
+       wft2da('ni2') 
+     else
+       wft2da 
+     endif
+    else
+     wft2da 
+    endif
+    if (dmg='av') and (dmg1='av1') and (fn=fn1) then
+      foldt
+    endif 
+    if (CSdnoise='y') then nm2d(64) else nm2d(8) endif
+    dconi
+  elseif $dim=3 then
+    cln3d
+    $f=curexp+'/procdir/cln3d.fid' 
+    exists($f,'directory'):$e
+    if($e) then 
+     rt($f) wft('noft',1) vsadj 
+     vs=vs/10 vs2d=1 
+     ft3d('noft','f1f3','f2f3')
+    else
+     ft3d('f1f3','f2f3') 
+    endif
+  endif
+else
+  if $CScln='y' then
+    write('line3','CS_cln=n - NUSproc completed without clean')
+  endif
+endif
+if(CS_inf='n') then
+  f1coef='' // prevents redundant recombination if "process" called later
+endif
+
+if ($origfile<>'') then
+    file=$origfile
+    setvalue('file',file,'processed')
+    exists('execprocess','parameter'):$ex
+    if ($ex>0.5) then
+	execprocess=''
+	setvalue('execprocess',execprocess,'processed')
+    endif
+endif

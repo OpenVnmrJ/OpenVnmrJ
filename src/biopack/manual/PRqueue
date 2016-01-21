@@ -1,0 +1,407 @@
+ 
+Automated Projection Reconstruction Experiment Queuing
+******************************************************
+
+Automated PR data collection is available in BioPack for queuing multiple 
+PR experiments. Control is accessed by selecting  "Proj.Reconstr."  in the 
+column at the left of the displayed page controlled by the "Acquire" folder 
+in VnmrJ . This is the principal tool used for setting up and executing a 
+series of different PR pulse sequence experiments and includes the option 
+of automatic optimization and selection of projection angles. 
+
+How to Run a PR Series 
+**********************
+
+Once a sample is ready for acquisition, a 1D ghn_co spectrum 
+should be obtained with good S/N, adequate to show all NH's. The spectrum 
+should be phased, referenced and then expanded to show the NH region only. 
+The phase settings and display settings will be used for analysis of data 
+from the PR experiments.
+
+Select the "Proj.Recontstr." page in the "Aquire" Folder.
+(At this point the parameters in the current experiment are irrelevant
+except for the sp/wp and rp/lp values). All experiment control is done
+via the "Proj.Reconstr." page. At first use, or for any experiment
+in the list that has not been yet set up with parameters, the entry
+boxes are empty. They will be filled when the "Initialize" button is used, 
+as indicated below).
+
+Enter the number of PR experiments desired in the top entry box and then
+their names in the "experiment" column, scrolling if more than 3 sequences 
+are to be used. Make sure that the sequences entered (except for gNhsqc) 
+have the Projection Reconstruction option (they have a "pra" parameter 
+that is active). Do not enter any other parameters at this time. 
+(The currently possible sequences using the "pra" variable are listed in the
+dropdown menu  "Experiments...Protein Triple-Resonance..Projection Recon-
+struction (TILT)". gNhsqc may be used as a 2D experiment as desired. The
+displayed ni/sw/sw1 values are used as normal for gNhsqc. No tilted planes
+are acquired when gNhsqc is in the experiment list (note that the entry
+boxes are grey'd out for gNhsqc).
+
+Set Options if desired (see below for details), particularly the relaxation
+delay used for all experiments.
+
+Enter the full pathname of the storage directory and the name of the
+directory used for this series. 
+
+Click the "NH Region Phased and Expanded" button to store NH region
+display parameters into global variables. Click the "Initialize" button 
+to populate the parameter settings.
+
+Modify any of these values as desired at this time,
+whether to collect F2F3 NH planes for each (as opposed to using data from 
+gNhsqc or ghn_co)` and whether to have the software automatically select 
+the NH region of the first experiment for the basis of analysis . The spectral 
+widths in F1 and F2 for 13C and 15N should be matched to the actual 
+spread of frequencies for these nuclei in order to have the highest 
+possible resolution for the chosen ni, ni2 and niTilt. This will permit 
+the most accurate analysis of peak positions (see below for details of
+setting sw1 and sw2).
+
+Click the "Show Time" button to obtain 
+an estimate of the total time. This step also checks for too many 
+increments in constant time experiments and will display output in the 
+text window if the maximum number of increments is exceeded for any of 
+the experiments, assuming that the pulse sequence code has been written 
+to show these messages. (Note, if the Spectrometer Message button on 
+the hardware toolbar turns red, it is likely that this has happened.) 
+
+Note that the total time will be within a range depending on the need
+for more projection planes than one. The Max # Proj. entry box allows
+you to limit the total number in order to fit within the total time
+available.
+
+If this time is acceptable, click "Begin", otherwise adjust parameters 
+to meet the requirements. The data will be stored in the specified 
+storage directory. This directory will have subdirectories named for 
+the sequences used. These subdirectories will have the stored fids and 
+analysis output in the form of text files. While the experiments are 
+running, histograms are displayed showing the optimum angle used for 
+the next experiment for the best chance of resolving overlapped peaks.
+
+It is possible to reset the PR variables for experiments still not run 
+while acquisition is proceeding. However, the output file PRglobals will 
+not reflect these changes. 
+
+Setting the optimum sw1 in tilted experiments
+*********************************************
+
+The optimum setting for sw1 in tilted experiments is determined from 
+the peak positions in the orthogonal planes. For instance, in HNCO 
+spectra of ubiquitin the CO signals are found in the range between 
+170.50 and 180.75 ppm. On a 600 MHz instrument this corresponds to a 
+bandwidth of 1537.5 Hz. Likewise the N-15 chemical shifts range from 
+102.42 to 132.94 ppm which corresponds to a bandwidth of 1831.2 Hz. 
+Hence the maximum theoretically possible span of signals in tilted 
+experiments is :
+
+sqrt(1537.5*1537.5 + 1831.2*1831.2) = 2391.07 Hz
+
+In practice the real bandwidth depends on the sample and is always 
+smaller than the theoretically calculated value because we rarely 
+(if ever) find cross-peaks in the corners of the 3D space. Therefore, 
+the largest setting for the spectral width in the indirect dimension 
+in this particular case is sw1 = 2400 Hz. 
+
+In order to accommodate the displaced axial peaks (particularly the 
+water signal) the sw1 setting needs to be somewhat wider than the 
+chemical shift range. Hence practical settings for sw1 (CO) and 
+sw2 (N15) are ~ 2000 Hz and 2200 Hz. There are two options for setting 
+sw1 for the tilted planes. Setting the global variable PRvarsw1 (variable 
+sw1 flag) to 'n' (using the "Auto sw1" checkbox) will always use displayed sw1 
+value (PRsw1), which in the case of HNCO should be set to 2400 Hz (at 
+600 MHz). If the "Auto sw1" checkbox is set (PRvarsw1 is set to 'y') 
+the sw1 is recalculated depending on the displayed sw1, sw2 and  
+projection angle values (PRsw1, PRsw2 and pra). This, however, may 
+cause problems in constant time experiments because the preliminary 
+check (see above) is done for pra=0 only. However, increasing an 
+indirect dimension spectral width for fixed # increments usually will 
+not cause an error.
+
+Global BioPack PR parameters common to all pulse sequences
+ (these are set by the entry/check boxes or menus in the
+  Proj.Reconstr. panel)
+**********************************************************
+
+PRsp, PRwp - determines the spectral range that is used for PR processing. 
+These parameters are set by the "NH Region Phased & Expanded" button.
+
+PRrp, PRlp - stores user-determined rp and lp values for PR processing. 
+These would normally be determined by first running a first increment 
+gNhsqc or ghn_co, transforming, phasing and expanding to show the NH 
+region containing peaks. Adequate S/N should be obtained for confident 
+accounting of all NH's. PRsp and PRwp are derived from the resultant 
+display. These parameters are set by clicking the "NH Region Phased & 
+Expanded" button.
+
+PRsetlim - y/n determines whether the display limits PRwp and PRsp are 
+further optimized beyond on preliminary user defined values. This flag 
+is only used once prior to the execution of the queue of PR experiments. 
+It is set by the "Auto NH Region" checkbox.
+
+PRskipF2 - allows the skipping acquisition of  the F2F3 (N-15) dimension. 
+A value of 'y' means that the F2F3 (NH) plane of the first experiment, 
+e.g. N-15 HSQC or HNCO, is used for analysis (peak picking) to produce 
+a peak list for use in experiments for subsequent pulse sequences. This 
+peak list is copied into the experiment subdirectories for use by the 
+automatic angle prediction. The flag is set by the "Skip 15N F2F3 Planes" 
+checkbox.
+
+PRd1 - relaxation delay used for all PR experiments. Its value is set in 
+the "Proj.Reconstr." page.
+
+PRnexp - number of PR pulse sequences to be used in the PR queue. Its 
+value is set in the "Proj.Reconstr." page.
+
+Global BioPack PR parameters specific to each pulse sequence
+************************************************************
+
+These global parameters contain settings for the corresponding variables 
+in each of the pulse sequences used in the queue. They are arrayable 
+parameters and they store the settings as arrays. For example, PR[5]npeaks 
+would contain the value for the number of expected peaks for the fifth 
+pulse sequence used. Their values are set in entry boxes, menus or in 
+checkboxes in the "Proj.Reconstr." page.    
+
+PRexp - pulse sequence name as stored in the active seqlib. This is 
+entered in the "experiment" entry box.
+
+PRnpeaks - approximate number of expected peaks in the spectrum. It 
+is important to set this parameter to a reasonable number. If a large 
+number of spurious (noise) peaks is picked up by the automatic routines, 
+the calculation of the best projection angle may fail. This is 
+selected via the "peaks" entry box. 
+
+PRnpr - maximum number of tilted projections. Typically 2 to 3 for 
+small proteins. The experiment may finish sooner if all PRnpeaks are 
+found or if no new peaks are found. This is entered in the "Max # Proj." 
+entry box
+
+PRbpa - (y/r/n) determines whether to use optimized projection angles ('y') 
+or to run the experiments with PRnpr regularly spaced ('r') tilt angles 
+spanning 90 degrees. The third, option ('n') chooses the projection angles 
+according to the sw1/sw2 ratio. 
+
+PRpos - (y/n) determines whether to expect only positive peaks in the 
+analysis. This helps to limit the number of spurious peaks in the peak 
+lists and improves the prediction of the best projection angle. This is 
+selected via the "Pos. Peaks" checkbox.
+
+PRthr - the threshold (dynamic range) is used to reduce the number of 
+spurious peaks in the peak lists and improves the prediction of the 
+best projection angle. The expected values are between 0 and 1 with 
+typical values ranging between 0 and 0.3. The PRthr value can be 
+considered as the fraction of the average peak's height that is used 
+to certify the acceptance of a peak as "real". The higher the value of 
+PRthr, the fewer peaks that are found. For example, use 0.3 in N-15 HSQC 
+of a small protein. This is entered in the "Thr." entry box.
+
+PRvarsw1 - (y/n) variable sw1 flag. If set to 'y' the sw1 is recalculated 
+for all tilted experiments from pra, PRsw1 and PRsw2 settings. Otherwise 
+PRsw1 is used for all tilted experiments.
+
+PRsw,  PRsw1,  PRsw2,  PRni, PRni2, PRnt, PRniTilt - These global 
+parameters contain settings for the corresponding variables sw, sw1, 
+sw2, ni, ni2 and nt in each of the pulse sequences used in the queue.  
+These are entered in the relevant entry boxes. The value of PRniTilt 
+is entered in the "niTilt" entry box. Its value determines the number 
+of increments in the tilted plane experiments.
+
+Global BioPack PR parameters used internally
+********************************************
+
+PRn - experiment counter; 
+
+PRcnt - counter for tilted planes; 
+
+PRppeaks - counter for resolved peaks;
+
+PRdir - directory where data is stored. This is constructed from the 
+"svfdir" VnmrJ variable along with the user-specified PR series name. 
+This directory has subdirectories having the pulse sequence names. 
+These contain the raw data files and analysis results.
+
+PRpage - counter used in BioPack Projection Reconstruction page in 
+the Acquire Folder. 
+
+BP PR macros
+************
+
+BPglobalpar - Creates all global PR parameters. This macro is run only 
+at the installation or update of BioPack. It should not be necessary for 
+a user to run it.
+
+BP_PRstartQ - macro, starts the experiment queue.
+1) Sets phase PRrp, PRlp and display variables PRsp and PRwp from the 
+   current settings of rp, lp, sp and wp;
+2) Resets the sequence counter PRn;
+3) Creates the working directory and stores the name  in PRdir;
+4) Initializes the first pulse sequence in the queue (PRnew macro );
+5) Creates the text file PRglobals in PRdir. This contains a record of 
+   the PR variables used for the experiment.
+6) Creates a text file PRmessages in PRdir. This accumulates messages 
+   also displayed in the message window during the experimental run.
+7) Starts the first experiment with au command.
+
+BP_PRparams1 - macro, initializes global parameters.
+1) Saves the current parameter set;
+2) For each pulse sequence in turn - runs the experiment setup macro. 
+   Sets PR global parameters from current values into the global parameter 
+   arrays (PRsw, PRsw1, etc);
+3) Recalls the saved current parameter set into the current experiment;
+4) Deletes the saved current parameter set;
+
+BP_PRQtime - macro, estimates total time.
+1) Saves the current parameter set;
+2) For each pulse sequence in turn - runs the experiment setup macro. 
+   Sets local parameters from values into the global parameter arrays 
+   (PRsw, PRsw1, etc);
+3) Runs go('check') on each sequence to verify max. # increments not 
+   exceeded. Messages are displayed in Text Output window.
+4) Calculates total time of each experiment and displays the result. 
+   Displays total time for all experiments.
+5) Recalls the saved current parameter set into the current experiment;
+6) Deletes the saved current parameter set;
+
+BP_PRnew - macro; sets up a new pulse sequence
+1) Resets the PRcnt and PRppeaks counters; increments PRn counter;
+2) Creates directory according the pulse sequence name;
+3) Executes the pulse sequence macro;
+4) If PRskipF2 flag is active, copies F2 analysis data from the first 
+   sequence directory;
+5) Sets parameters for sw1, sw2, ni, ni2, niTilt, etc. from global 
+   parameters entered in Projection Reconstruction page in the Acquire 
+   folder ;
+6) Sets the wexp parameter;
+7) Calls BP_PRwc macro to adjust the display settings, wc and sc; 
+
+BP_PR0 - macro, used exclusively for gNhsqc  data processing.
+1) Executes BP_Rproc1b processing macro;
+2) Saves data;
+3) Calls BP_PRnew macro to sets up the next pulse sequence in the queue;
+4) Starts the new experiment with au command.
+
+BP_PR1 - macro, used for pre-processing of the F2F3 orthogonal plane data.
+1) Executes BP_PRproc1 processing macro;
+2) Saves data;
+3) Sets up acquisition parameters for the next (F1F3) plane;
+4) Starts the acquisition with au command.
+
+BP_PR2 - macro, used for processing the F1F3 and F2F3  orthogonal plane data.
+1) Executes BP_PRproc1 processing macro to pre-process F1F3 plane data;
+2) Predicts (BP_PRgetbpa) and displays (BP_PRdbpa) the best projection angle 
+   from F1F3 and F2F3 analysis data;
+3) Sets up the tilted plane experiment (enters value for the angle "pra");
+4) Starts the acquisition with au command.
+
+BP_PR3 - macro, used for processing tilted plane data.
+1) Increments the PRcnt counter;
+2) Saves data;
+3) Executes BP_PRproc1a processing macro to pre-process tilted plane data;
+4) Decides whether to continue the experiment; If not, calls the BP_PRnew 
+   macro to set up a new pulse sequence; Otherwise, predicts (BP_PRgetbpa) 
+   and displays the best projection angle from the processing of the last 
+   data set;
+5) Starts the acquisition with au command.
+
+BP_PRproc1 - macro used for processing of the orthogonal plane data. 
+1) Executes 2D processing;
+2) If PRsetlim parameter is active, calls BP_PRgetlim macro to establish 
+   the spectral region of interest and sets PRsp and PRwp accordingly;
+3) Calls getpr1 binary executable for pre-processing of  orthogonal 
+   plane data.
+
+BP_PRproc1a - macro used for processing of the tilted plane data. 
+1) executes 2D processing;
+2) Calls getpr1 binary executable for pre-processing of the tilted plane 
+   data.
+
+BP_PRproc1b - macro used for processing of the N-15 HSQC data. 
+1) Executes 2D processing;
+2) If PRsetlim parameter is active, calls BP_PRgetlim macro to establish 
+   the spectral region of interest and sets PRsp and PRwp accordingly;
+3) Calls getpr1 binary executable for pre-processing of the orthogonal 
+   planes data.
+
+BP_PRwc - macro, adjusts the sc and wc parameters
+
+List of active BP PR macros
+***************************
+BPglobalpar, BP_PRparams1, BP_PRQtime, BP_PRstartQ, BP_PRnew, 
+BP_PRglobals, BP_PR0, BP_PR1, BP_PR2, BP_PR3, BP_PRproc1, 
+BP_PRproc1a, BP_PRproc1b, BP_PRwc, BP_PRgetlim, BP_PRgetnpks, B
+P_PRnpks, BP_PRgetbpa,  BP_PRvs2d.
+
+Usage of BP PR macros
+*********************
+BP_PRstartQ    >> BP_PRnew, BP_PRglobals
+BP_PRnew       >> BP_PRwc, BP_PR0 / BP_PR1 / BP_PR2
+BP_PR0 (N15)   >> BP_PRproc1b, BP_PRnew
+BP_PR1 (F2)    >> BP_PRproc1, BP_PR2 
+BP_PR2         >> BP_PRproc1, BP_PRgetbpa, BP_PR3
+BP_PR3         >> BP_PRproc1a, BP_PRnpks, BP_PRnew, BP_getbpa, BP_PR3 
+BP_proc1       >> BP_PRgetlim, BP_PRgetnpks, BP_PRvs2d
+BP_proc1a      >> BP_PRvs2d
+BP_proc1b      >> BP_PRgetlim, BP_PRgetnpks, BP_PRvs2d
+
+	Pulse sequences
+The following BioPack sequences have the option for Projection 
+Reconstruction  and have a 15N Semi-Constant-Time option - SCT = 'y':
+
+ghn_co, ghn_coA, ghn_ca, ghn_caA, ghn_co_ca, ghn_co_caA, 
+ghn_ca_co, ghn_ca_coA, gcbca_co_nh, gcbca_co_nhA, gcbca_nh, 
+ghc_co_nh, ghc_co_nhA, ghn_cacb, ghn_cacbA.
+
+This permits collection of much higher resolution data with more 
+accurate peak picking and reduction of overlap.
+
+Output files
+************
+A set of files is generated in the process of predicting the next best 
+projection angle. These files are a by-product of the automation routine 
+and are updated after each completed 2D plane. Hence, if the calculation 
+needs to be repeated, the processing must be restarted from the beginning 
+(F1 and F2). The final output file, PR.out contains some preliminary 
+information about the peak positions found by the standard peak picking 
+routine in the process of predicting the next best projection angle. Note 
+that the standard peak picking routines often miss peaks that are closely 
+overlapping. A more complete and accurate list can be generated following 
+a full reconstruction of the nD spectra which, in general, requires fewer 
+tilted experiments. Such reconstruction routines have been implemented in 
+third party software (e.g. Olivia from Hokkaido University, PR-CALC, Duke 
+University, and others) and a VnmrJ version is also on its way.  
+
+The PR.out file contains the F3, F1 and F2 chemical shifts (in ppm), 
+normalized peak intensity and number of hits (maximum is 4 - two in the 
+orthogonal planes and two in any of the tilted planes).
+
+The PR.list file is for internal use and contains the same information 
+as the PR.out file, except the peak positions are in Hz with respect to 
+the carrier frequency. The additional columns are internal scores, the 
+projection angle used for this data set and peak positions in XX.pk lists.
+
+The XX.pk lists are produced from the standard XX.ll peak lists generated 
+by the ll2d command and contain the F2 peak positions in Hz relative to 
+the carrier frequency, peak linewidth, the same for F1, the absolute peak 
+intensities and some internal scoring.
+
+The PR.more file contains additional information relative to that in PR.list. 
+The columns show the peak intensities in F1, F2 and projections P1 and P2 
+with respect to the average intensity in each corresponding dimension, the 
+same intensities relative to F1, the frequency deviations in F3, F1 and F2, 
+the H-1 linewidth and its variation in Hz and finally F1 and F2 linewidth 
+in Hz. 
+ 
+The PR.bpa file contains the number of projected peaks at projection angles 
+spanning from 0 to 90 degrees. The data from both, positive and negative 
+angles are added together. After this file is accessed to find the next 
+projection angle it is renamed with an index appended, increasing with 
+each new experiment.
+
+The PRglobals file contains a record of all the PR global variable values 
+present at the start of the experiment. 
+
+The PRmessages file contains a record of all the output messages produced 
+by the above macros. These same messages are displayed in the message 
+window of VnmrJ.
+

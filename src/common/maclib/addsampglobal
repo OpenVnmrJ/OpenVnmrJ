@@ -1,0 +1,225 @@
+"macro addsampglobal"
+$dum='' $devnull=''
+
+is_submitmode:$is
+if ($is) then 
+    write('error','curexp is in submit mode.  Cannot manage preferences')
+    return
+endif
+
+if ($# < 1) then $1='init' endif
+$admindir=userdir+'/persistence/cpADMIN'
+exists($admindir,'directory'):$adirex
+if ($adirex=0) then mkdir('-p',$admindir):$dum endif
+
+$adminfile=$admindir+'/cpadmin_sampleglobal'
+$adminfile2=$admindir+'/cpadmin_usersampleglobal'
+$adminfile3=$adminfile2+'_temp'
+$adminfile4=$admindir+'/cpadmin_reqparvals'
+$adminfile5=$adminfile4+'_temp'
+
+IF ($1='init') or ($1='refresh') THEN
+
+write('reset',$adminfile)
+write('reset',$adminfile2)
+write('reset',$adminfile3)
+write('reset',$adminfile4)
+write('reset',$adminfile5)
+
+$list=''
+module('arraylist','sampleglobal'):$list
+$total=size('$list')
+$i=1
+repeat
+   write('file',$adminfile,'%s',$list[$i])
+   $i=$i+1
+until $i > $total
+
+$list=''
+module('arraylist','usersampleglobal'):$list
+$total=size('$list')
+$i=1
+repeat
+   write('file',$adminfile2,'%s',$list[$i])
+   $i=$i+1
+until $i > $total
+
+$list=''
+module('arraylist','reqparvals'):$list
+$total=size('$list')
+$i=1
+repeat
+   write('file',$adminfile4,'%s',$list[$i])
+   $i=$i+1
+until $i > $total
+
+copy($adminfile2,$adminfile3):$dum
+copy($adminfile4,$adminfile5):$dum
+
+if ($1='init') then
+     vnmrjcmd('popup','mode:modeless','file:sampglobal.xml','rebuild:yes','pnewupdate:true','title:Sample Globals')
+endif
+
+"************************************************************************"
+ELSEIF ($1 ='save') THEN
+
+if ($# < 2) then $2='init' endif
+
+exists(userdir+'/modules','directory'):$direx
+if ($direx=0) then
+	mkdir(userdir+'/modules'):$dum
+	exists(userdir+'/modules','directory'):$direx
+endif
+
+write('reset',$adminfile2+'1')
+write('reset',$adminfile4+'1')
+write('reset',$adminfile+'_xx')
+shell('(cat '+$adminfile2+' | awk \'{print $1}\' > '+$adminfile2+'1)'):$devnull
+copy($adminfile2+'1',$adminfile2):$dum
+shell('(cat '+$adminfile4+' | awk \'{print $1}\' > '+$adminfile4+'1)'):$devnull
+copy($adminfile4+'1',$adminfile4):$dum
+shell('cat '+$adminfile+' > '+$adminfile+'_xx'):$devnull
+shell('cat '+$adminfile2+' >> '+$adminfile+'_xx'):$devnull
+
+$s1='' $s2='' $satot=0
+readfile($adminfile+'_xx','$s1','$s2','','local'):$satot
+write('reset',$adminfile4+'1')
+if ($satot) then
+   copy($adminfile4,$adminfile4+'1'):$dum
+   write('reset',$adminfile4+'_xx')
+   $i=1
+   repeat
+	shell('(cat '+$adminfile4+'1 | grep -vw \''+$s1[$i]+'\' > '+$adminfile4+'_xx)'):$devnull
+	rename($adminfile4+'_xx',$adminfile4+'1'):$dum
+	$i=$i+1
+   until $i > $satot
+   rm('-f',$adminfile4+'_xx'):$dum
+endif
+shell('(cat '+$adminfile4+'1 >> '+$adminfile2+')'):$devnull
+
+rm('-f',$adminfile+'_xx'):$dum
+rm('-f',$adminfile2+'1'):$dum
+rm('-f',$adminfile4+'1'):$dum
+
+$diff=0
+shell('(diff -b '+$adminfile2+' '+$adminfile3+' | wc -l)'):$diff
+if ($diff) then
+        write('reset',userdir+'/modules/usersampleglobal')
+        $list2='' $s2=''
+        readfile($adminfile2,'$list2','$s2','','local'):$total
+	if ($total=0) then  $diff=0 endif
+endif
+
+$list3=''
+if ($diff) then
+	$list=''
+	module('arraylist','sampleglobal'):$list
+	$i=1 $j=1
+	repeat
+	   $parname=$list2[$i]
+	  if ($parname<>'') then
+	     $where='' $is=0 $type=''
+	     is_param($parname):$is,$where,$type
+	     if ($is>0) then
+		if ($where<>'current') then
+		   write('error','Parameter %s is %s. Cannot use in usersampleglobal',$parname,$where)
+		   $is=0
+		endif
+		if ($type<>'real') and ($type<>'string') then
+		   $is=0
+		endif
+	     else
+		write('error','Parameter %s not found in curpar',$parname)
+	     endif
+	     if ($is>0) then
+		teststr('$list',$parname,'local'):$ret
+		if ($ret) then
+		   write('error','Parameter %s is already in sampleglobal',$parname)
+		   $is=0
+		endif
+	     endif
+	     if ($is>0) then
+		$list3[$j]=$parname
+		$j=$j+1
+	     endif
+	   endif
+	   $i=$i+1
+	until $i > $total
+
+	$total=size('$list3')
+	if ($list3[1]='') then $total=0 endif
+	if ($total>0) then
+	   writeparam(curexp+'/cpadmintemp','$list3')
+	   $i=1
+	   repeat
+		$parname=$list3[$i]
+		if typeof($parname) then
+		   {$parname}=''
+		else
+		   {$parname}=0
+		endif
+		$i=$i+1
+	   until $i > $total
+	   writeparam(userdir+'/modules/usersampleglobal','$list3')
+	   fread(curexp+'/cpadmintemp')
+	   rm('-f',curexp+'/cpadmintemp'):$dum
+	   write('line3','usersampleglobal module edited')
+	endif
+endif
+
+$diff=0
+shell('(diff -b '+$adminfile4+' '+$adminfile5+' | wc -l)'):$diff
+if ($diff) then
+        write('reset',userdir+'/modules/reqparvals')
+        $list2='' $s2=''
+        readfile($adminfile4,'$list2','$s2','','local'):$total
+        if ($total=0) then  $diff=0 endif
+endif
+
+$list3=''
+if ($diff) then
+        $list=''
+        module('arraylist','sampleglobal'):$list
+        $Ulist=''
+        module('arraylist','usersampleglobal'):$Ulist
+	$list=$list,$Ulist
+        $i=1 $j=1
+        repeat
+          $parname=$list2[$i]
+          if ($parname<>'') then
+	     teststr('$list',$parname,'local'):$is
+	     if ($is=0) then
+		write('error','Parameter %s is NOT in sampleglobal or usersampleglobal',$parname)
+	     else
+                $list3[$j]=$parname
+                $j=$j+1
+             endif
+           endif
+           $i=$i+1
+        until $i > $total
+
+        $total=size('$list3')
+        if ($list3[1]='') then $total=0 endif
+        if ($total>0) then
+	   writeparam(curexp+'/cpadmintemp','$list3')
+           $i=1
+           repeat
+                $parname=$list3[$i]
+                if typeof($parname) then
+                   {$parname}=''
+                else
+                   {$parname}=0
+                endif
+                $i=$i+1
+           until $i > $total
+	   writeparam(userdir+'/modules/reqparvals','$list3')
+           fread(curexp+'/cpadmintemp')
+	   rm('-f',curexp+'/cpadmintemp'):$dum
+           write('line3','reqparvals module edited')
+        endif
+endif
+
+addsampglobal($2)
+if ($2='refresh') then vnmrjcmd('pnew','cpprefs') endif
+
+ENDIF

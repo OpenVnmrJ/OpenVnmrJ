@@ -1,0 +1,45 @@
+"macro invformattime"
+"@(#)invformattime "
+
+$stime=''
+$rtime=0
+$hours=0
+$minutes=0
+$seconds=0
+
+if ($1<>'') and ($1<>'unknown') then
+  strstr($1,':'):$ret
+  if ($ret=0) then
+     format($1,'isreal'):$ret
+  endif
+  if ($ret) then
+     strsv2array($1,':'):$stime
+     array2array($stime):$stime
+     $stsize=size('$stime')
+     format($stime[$stsize],'lower'):$seconds
+     if ($stsize>1) then
+	format($stime[$stsize-1],'lower'):$minutes
+     endif
+     if ($stsize>2) then
+	format($stime[$stsize-2],'lower'):$hours
+     endif
+  else
+     strsv2array($1,','):$stime
+     array2array($stime):$stime
+     teststr('$stime','hr','local'):$ret
+     if ($ret>1) then
+	format($stime[$ret-1],'lower'):$hours
+     endif
+     teststr('$stime','min','local'):$ret
+     if ($ret>1) then
+        format($stime[$ret-1],'lower'):$minutes
+     endif
+     teststr('$stime','sec','local'):$ret
+     if ($ret>1) then
+        format($stime[$ret-1],'lower'):$seconds
+     endif
+  endif
+endif
+$rtime=((($hours*60)+$minutes)*60)+$seconds
+return($rtime)
+

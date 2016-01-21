@@ -1,0 +1,159 @@
+Protocol: Pisema2d  Sequence: pisema2d.c  Apptype: solidseq1d
+
+Description: 
+
+A sequence to correlate X chemical shift with the X-H dipolar 
+interaction in the rotating frame.  PISEMA is used to characterize 15N-
+1H dipolar interactions for static, oriented membrane protein samples. 
+
+Additional Software: 
+
+reset_pisema2d - This macro uses the calibrated values of pwH90 and 
+aH90 to calculate the initial parameters for the fslgH waveform and 
+sets up 2D parameters.  This macro is run from the protocol. 
+ 
+Setup:
+
+Load a calibrated data set and select the protocol Pisema2d.   For a 
+new nucleus calibrate CP with Onepul and Tancpx and then select 
+Pisema2d.  
+   
+Select the desired decoupling method, TPPM or SPINAL. The manual file 
+onepul describes calibration of decoupling.
+
+The macro reset_pisema2d performs the next 5 steps. 
+
+1. Set aHfslg = aH90.  Set pwHtilt = pwH90*35.3/90.0.  pwHtilt has the 
+same amplitude as aH90. 
+2. Set pwHfslg = sqrt(2/3)*4.0*pwH90.  pwHfslg is rounded to a 100 ns 
+grid and aHfslg is adjusted to accommodate the change. 
+3. Set ofdHfslg = 1.0/(sqrt(3)*pwHfslg*1e-6)).  Note that ofdHfslg = - 
+1.0/(sqrt(3)*pwHfslg*1e-6)) is incorrect. 
+4. Set sw1 = 1.0/(8.0*pwHfslg*1e-6). Set ni = 64 and phase = 1,2. 
+5. Set aXfslg = aX90, pwXfslg = pwHfslg, ofdXfslg = 0.0. 
+
+Set scalesw1 = 0.801
+
+Collect a 2D dataset and process with wft2da.  
+
+PISEMA is very sensitive to phase transient on the X and H channels. 
+Side effects of a large transient are a short T2 in F1 and potential 
+amplifier overload on X from a large reflected power during phase 
+changes. It is recommended that one spend significant effort to remove 
+phase transient for PISEMA.  A typical reference compound is a crystal 
+of 15N labelled N-acetyl valine (NAV).  One should be able to sustain 
+the F1 signal for 3 to 5 ms if phase transient is controlled. Details 
+about removal of phase transient are described in the manual file 
+tunerp. 
+ 
+Parameter Groups: 
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used as a 
+              preparation pulse.  Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the 
+              channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).  
+       dHX - amplitude width of the ramp. A negative width sets a ramp 
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be 
+              set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be set 
+              - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phXhx);  
+
+fslgH:  Module:  yes 
+Sequence:  tancpxfslg.c      
+Description:  Implements "frequency switched Lee Goldburg", FSLG, 
+              homonuclear decoupling on the dec channel.
+Parameters:  Sequence Page
+       aHfslg - amplitude of the FSLG dec pulses.
+       pwHfslg - 360-degree flip on dec, off resonance (the length of 
+              each of the two FSLG pulses).  
+       nHfslg - FSLG cycles represented in the .DEC file. 
+       ofdHfslg - +/- frequency offset of alternating pulses, a 
+negative value indicates that 
+              the first pulse has negative offset. 
+       ofHfslg - overall frequency offset.
+       chHfslg = 'dec' must be set (not shown). 
+Implementation: MPSEQ fslg = getfslg("fslgH",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.   
+
+fslgX:  Module:  yes 
+Sequence:  none      
+Description:  Implements "frequency switched Lee Goldburg", FSLG, 
+              homonuclear decoupling on the obs channel.
+Parameters:  Sequence Page
+       aXfslg - amplitude of FSLG obs pulses.
+       pwXfslg - 360-degree flip on obs, off resonance (the length of 
+              each of the two FSLG pulses).  
+       nXfslg - FSLG cycles represented in the .DEC file. 
+       ofdXfslg - +/- frequency offset of alternating pulses, a 
+              negative value indicates that the first pulse has negative offset. 
+       ofXfslg - overall frequency offset.
+       chXfslg = 'obs' must be set (not shown). 
+Implementation: MPSEQ fslg = getfslg("fslgX",0,0.0,0.0,0,1); 
+Underscore functions: _MPSEQ functions.  scalef1H:  (processing) 
+
+scalef1H: (processing)  Module:  no 
+Sequence:  hetcorlgcp2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the 
+              dec nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the 
+              inverse of the mutiple-pulse scale factor. 
+ 
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel 
+              during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap. 
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+              getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented with 
+              phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec); 
+              and _dseqoff(dec);   
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec); 
+              and _dseqoff(dec);   

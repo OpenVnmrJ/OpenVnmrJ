@@ -1,0 +1,259 @@
+"macro xmhaha_addnode"
+"*******************************************************"
+"xmhaha_addnode or xmhaha_addexpnode - 			"
+" arg1 - protocol                                       "
+" arg2 - attributes and values as array	for action node	"
+" arg3 - attributes and values as array for parent node "
+" arg4 - xml file					"
+" arg5 - sqnode template 				"
+" arg6 - protocol / action / both / closeprotocol node	"
+"		protocol nodes will be left OPEN	"
+"		while action/both nodes will be CLOSED	"
+"		closeprotocol is same as protocol but	"
+"			CLOSED				"
+"*******************************************************"
+
+  if ($# < 4) then
+        write('error','wrong usage of %s',$0)
+        return
+  endif
+
+//  Required attributes more attributes and/or alternate
+//  values can be supplied in arg2 and arg3
+
+  $pattr='status',  'exp',   'element', 'lock','title','type',    'name','CPnode','tooltext'
+  $pval ='protocol','parent','protocol','off', '',     'protocol','',    '',      $1
+
+  $aattr='type','status','lock','title','exp','time','macro', 'data','CPnode','tooltext'
+  $aval ='LIB', 'Ready', 'off',  $1,     $1,  '',    'return','',    '',      $1
+
+// Set optional argument default values
+  $auto='' $iscursq=0 $isauto=0
+  strstr($4,'.macdir'):$isauto,$auto
+  strstr($4,'/tmpstudy/'):$iscursq
+  if ($# < 5) then $5='' endif
+  $nodetype=$5
+  if ($nodetype='') then
+     if ($isauto) then 
+	$nodetype='Aqn%R7%' 
+     elseif ($iscursq) then
+	$nodetype='n%R3%'
+     else
+	$nodetype='Sqn%R4%'
+     endif
+  endif
+
+  if ($# < 6) then
+	$6='action'
+  endif
+  if ($6='') then $6='action' endif
+  $nodeopt=$6
+  if ($nodeopt='closeprotocol') then $nodeopt='protocol' endif
+  if ($nodeopt<>'protocol') and ($nodeopt<>'action') and ($nodeopt<>'both') then
+	write('error','illegal node option  %s',$nodeopt)
+	return
+  endif
+//  Get values from protocol.xml for action node
+$time2=''
+if ($0='xmhaha_addexpnode') then
+    getattr($1,'action','exp'):$exp
+    getattr($1,'action','macro'):$macro
+    getattr($1,'action','time'):$time
+    teststr('$aattr','exp','local'):$ret
+    $aval[$ret]=$exp
+    teststr('$aattr','macro','local'):$ret
+    $aval[$ret]=$macro
+    invformattime($time):$rtime
+    formattime($rtime):$time,$time2
+endif
+
+//  Get values of action attributes from arg2
+    $attot=size('$aattr')
+    $i=1
+    repeat
+	teststr('$2',$aattr[$i],'local'):$ret
+	if ($ret) then $aval[$i]=$2[$ret+1] endif
+	$i=$i+1
+    until $i > $attot
+
+//  Get values of parent attributes from arg3
+    $pttot=size('$pattr')
+    $i=1
+    repeat
+        teststr('$3',$pattr[$i],'local'):$ret
+        if ($ret) then $pval[$i]=$3[$ret+1] endif
+        $i=$i+1
+    until $i > $pttot
+
+//  Check arg2 for any special values for attributes
+  teststr('$2','time','local'):$ret2
+  teststr('$aattr','title','local'):$ret
+  teststr('$aattr','time','local'):$ret3
+  if ($ret2) then
+	$aval[$ret]=$aval[$ret]+' '+$2[$ret2+1]
+  elseif ($time2<>'') then
+	$aval[$ret]=$aval[$ret]+' ['+$time2+']'
+  endif
+  $aval[$ret3]=''
+
+// Include any attribute supplied in arg2 but not accounted for
+  $2size=size('$2')
+  if ($2[1]='') then $2size=0 endif
+  if ($2size) then
+    $i=1
+    repeat
+      if ($2[$i]<>'CPnode') and ($2[$i]<>'sqstatus') then
+        teststr('$aattr',$2[$i],'local'):$isin
+        if ($isin=0) then
+            $aattr=$aattr,$2[$i]
+            $aval=$aval,$2[$i+1]
+        endif
+      endif
+      $i=$i+2
+    until $i > $2size
+  endif
+
+// Include any attribute supplied in arg3 but not accounted for
+  $3size=size('$3')
+  if ($3[1]='') then $3size=0 endif
+  if ($3size) then
+    $i=1
+    repeat
+      if ($3[$i]<>'CPnode') and ($3[$i]<>'sqstatus') and ($3[$i]<>'expanded') then
+        teststr('$pattr',$3[$i],'local'):$isin
+        if ($isin=0) then
+            $pattr=$pattr,$3[$i]
+            $pval=$pval,$3[$i+1]
+        endif
+      endif
+      $i=$i+2
+    until $i > $3size
+  endif
+
+  $cpnodename=''
+  teststr('$2','CPnode','local'):$ret2
+  if ($ret2) then
+        $cpnodename=$2[$ret2+1]
+  else
+     teststr('$3','CPnode','local'):$ret2
+     if ($ret2) then 
+	$cpnodename=$3[$ret2+1]
+     endif
+  endif
+
+  $sqstatus=''
+  teststr('$2','sqstatus','local'):$ret2
+  if ($ret2) then
+	$sqstatus=$2[$ret2+1]
+  else
+     teststr('$3','sqstatus','local'):$ret2
+     if ($ret2) then
+	$sqstatus=$3[$ret2+1]
+     endif
+  endif
+
+// prepare parent directory
+$xml=$4
+//shell('dirname '+$4):$sdir
+substr($4,'dirname'):$sdir
+exists($sdir,'directory'):$e
+if ($e<0) then shell('mkdir -p '+$sdir):$dum endif
+
+$ndir=$sdir+'/info'
+if ($isauto) then $ndir=$auto+'.macdir/xmldir/info' endif
+exists($ndir,'file'):$e
+if ($e<0.5) then
+  shell('mkdir -p '+$ndir):$dum
+endif
+
+// prepare the xml file
+//shell('touch '+$xml):$dum
+
+$newnodes='' $retnode=''
+// put the protocol node
+IF ($nodeopt<>'action') THEN
+   teststr('$3','sqnode','local'):$ret2
+   if ($ret2) then
+      if ($3[$ret2+1]='') then $ret2=0 endif
+   endif
+   if ($ret2) then
+      $node=$3[$ret2+1]
+      $ldir=$ndir+'/'+$node
+   else
+      Svfname($ndir+'/'+$nodetype,'','keepspaces'):$ldir
+      //shell('basename '+$ldir):$node
+      substr($ldir, 'basename'):$node,$ext
+   endif
+   $newnodes=$node
+   exists($ldir,'directory'):$ldirex
+   if ($ldirex=0) then mkdir($ldir) endif
+   $sx='' $sp=''
+   $size=size('$pattr')
+   $i=1
+   write('reset',$ldir+'/prop')
+   $sx=$sx+'  <protocol '
+   repeat
+	$sp=$sp+$pattr[$i]+'   '+$pval[$i]+'\n'
+	$sx=$sx+'  '+$pattr[$i]+'=\"'+$pval[$i]+'\"'
+     $i=$i+1
+   until $i > $size
+   $sx=$sx+'  id=\"'+$node+'\"'
+   teststr('$3','expanded','local'):$ret
+   if ($ret) then
+	$sx=$sx+'  expanded=\"'+$3[$ret+1]+'\"'
+	$sp=$sp+'expanded   '+$3[$ret+1]+'\n'
+   endif
+   $sx=$sx+'  >\n'
+   if ($sx<>'') then  write('fileline',$xml,'%s',$sx) endif
+   if ($sp<>'') then write('fileline',$ldir+'/prop','%s',$sp) endif
+   write('file',$sdir+'/cpnodeinfo','%s parent lockoff  %s   %s',$node,$cpnodename,$sqstatus)
+   $retnode=$node
+ENDIF
+
+//put the action node
+IF ($nodeopt<>'protocol') THEN
+   teststr('$2','sqnode','local'):$ret2
+   if ($ret2) then
+      if ($2[$ret2+1]='') then $ret2=0 endif
+   endif
+   if ($ret2) then
+      $node=$2[$ret2+1]
+      $ldir=$ndir+'/'+$node
+   else
+      Svfname($ndir+'/'+$nodetype,'','keepspaces'):$ldir
+      substr($ldir, 'basename'):$node,$ext
+      //shell('basename '+$ldir):$node
+   endif
+   $newnodes=$newnodes,$node
+   exists($ldir,'directory'):$ldirex
+   if ($ldirex=0) then mkdir($ldir) endif
+   $sx='' $sp=''
+   $size=size('$aattr')
+   $i=1
+   write('reset',$ldir+'/prop')
+   $sx=$sx+'    <action '
+   repeat
+      $sp=$sp+$aattr[$i]+'   '+$aval[$i]+'\n'
+      $sx=$sx+'  '+$aattr[$i]+'=\"'+$aval[$i]+'\"'
+      $i=$i+1
+   until $i > $size
+   $sx=$sx+'  id=\"'+$node+'\"  />\n'
+   if ($sx<>'') then write('fileline',$xml,'%s',$sx) endif
+   if ($sp<>'') then write('fileline',$ldir+'/prop','%s',$sp) endif
+   teststr('$aattr','title','local'):$ret
+   substr($aval[$ret],1):$title
+   teststr('$aattr','lock','local'):$ret
+   if ($aval[$ret]='on') then $lock='lockon' else $lock='lockoff' endif
+   write('file',$sdir+'/cpnodeinfo','%s  %s  %s   %s  %s',$node,$title,$lock,$cpnodename,$sqstatus)
+
+   $retnode=$node
+ENDIF
+
+IF ($nodeopt='both') or ($6='closeprotocol') THEN
+   write('file',$xml,'  </protocol>')
+ENDIF
+//array2array($newnodes):$newnodes
+
+//shell('chmod -R g+w '+$sdir):$dum
+//shell('chmod -R g+w '+$ndir):$dum
+return($retnode,$newnodes)

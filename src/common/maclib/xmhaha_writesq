@@ -1,0 +1,68 @@
+"macro xmhaha_writesq"
+"chempack version of xmwritesq macro to write enterSQ file"
+//This macro is now OBSOLETE
+
+RETURN
+
+if ($# < 1) then $1='' endif
+$sdir=$1
+if ($sdir='') then
+    return
+endif
+
+  $file = $sdir+'/enterSQ'
+  $tfile = $sdir+'/enterSQ.tmp'
+  write('reset',$tfile)
+  $id='' $sqv='' $sqt='' $sqd=''
+  $v=0
+//  if (appmode='walkup' or appmode='lc') then
+//    $v=1
+//  endif
+  $len=size('sqattr') $len=trunc($len+0.5)
+  if ($len < $v+0.5) then
+    mv($tfile,$file)
+    $xfile=$sdir+'/study.xml'
+    exists($xfile,'file'):$e
+    if ($e) then rm($xfile):$x endif
+    if ($v=1) and (studyid='tmpstudy') then
+      $idir=$sdir+'/info'
+      exists($idir,'directory'):$d
+      if ($d) then
+        shell('cd "'+$idir+'";echo *'):$ilist
+        $i=1 $f='' substr($ilist,$i):$f
+        while ($f<>'') do
+          if ($f<>'') then xm1('delete '+$f) endif
+          $i=$i+1 $f='' substr($ilist,$i):$f
+        endwhile
+      endif
+      sqfilemenu('Clear Study','silent')
+    endif
+  else
+    repeat
+      $v=$v+1
+      $id=sqattr[$v]
+      if ((appmode='walkup' or appmode='lc') and studyid<>'tmpstudy') then
+        strstr($id,studyid+'_'):$pos,$s1,$id
+      endif
+      if ($id<>'' and $id<>'null') then
+        xmgetatts($id,'exp','lock','data'):$sqv,$sqt,$sqd
+        if $id='' then $id='null' endif
+        if $sqv='' then $sqv='null' endif
+        if $sqt='' then $sqt='off' endif
+        write('file',$tfile,'%s %s lock%s %s',$id,$sqv,$sqt,$sqd)
+      endif
+    until ($v >= $len)
+    mv($tfile,$file)
+  endif
+
+  if ($# > 1) then
+     if ($2='buildCQ') then
+	xmhaha_bCQ('')
+     endif
+  endif
+
+  if (actionid<>'null') then
+    xmaction('click',actionid)
+  else
+    xmaction('click',$id)
+  endif

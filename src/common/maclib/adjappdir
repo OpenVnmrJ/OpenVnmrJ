@@ -1,0 +1,135 @@
+"macro adjappdir"
+//  adjappdir('add or remove or disable','path','label','operator',<position>)
+//  add option requires 5 arguments while other options require only 4
+//  An appdir('reset') will be called if the appdir file is edited by
+//	this macro
+//  A return argument will suppress appdir('reset') call.
+//	A return value of 1 would mean an appdir('reset') is required
+//	A return value of 0 would mean an appdir('reset') is not required
+
+// add/remove/disable option here
+
+    if ($# < 4) then return(0) endif
+    if ($1='add') and ($# < 5) then return(0) endif
+
+    if ($1='disable') or ($1='remove') then
+	$5=0
+    elseif ($1='add') then
+	if ($5<0.5) then return(0) endif
+    else
+	write('error','Arg1 must be add / remove / disable')
+	return(0)
+    endif
+
+    $inpath=$2
+    $inlabel=$3
+    $operator=$4
+    $inpos=$5
+    $update=0
+
+//  Get all the appdirs, do not use getappdirs macro
+    $flag=''
+    $path=''
+    $label=''
+    $i=1
+    appdir('file'):$file
+    lookup('mfile',$file,'readline','filekey'):$line,$key,$ret
+    while ($ret = 2) do
+        substr($line,1,1):$ch
+        if ($ch <> '#') then
+            strstr($line,';'):$ret
+            if ($ret > 1) then
+		$flag[$i]='' $path[$i]='' $label[$i]=''
+              	substr($line,1,'delimiter',';\n'):$flag[$i]
+              	substr($line,2,'delimiter',';\n'):$path[$i]
+              	substr($line,3,'delimiter',';\n'):$label[$i]
+		$i=$i+1
+	    endif
+	endif
+	lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+    endwhile
+
+    if ($1='remove') or ($1='disable') then
+	teststr('$path',$inpath,'local'):$ret
+	$proceed=1
+	if ($ret=0) then $proceed=0 endif
+	if ($proceed) then
+	  if ($1='disable') then
+	    if ($flag[$ret]='0') then $proceed=0 endif
+	  endif
+	endif
+	if ($proceed) then
+	  if ($1='disable') then $flag[$ret]='0' else $flag[$ret]='' endif
+	  exists(userdir+'/persistence','directory'):$direx
+	  if ($direx=0) then shell('mkdir '+userdir+'/persistence'):$dum endif
+	  $file=userdir+'/persistence/tmpapp'
+	  write('reset',$file)
+          shell('date'):$date
+          write('file',$file,'# Updated by %s on %s',owner,$date)
+	  $num=size('$flag')
+	  $i=1
+	  repeat
+	    if ($flag[$i]<>'') then
+		write('file',$file,'%s;%s;%s',$flag[$i],$path[$i],$label[$i])
+	    endif
+	    $i=$i+1
+	  until $i > $num
+	  copy($file,userdir+'/persistence/appdir_'+$operator)
+	  delete($file)
+	  $update=1
+	endif
+
+    elseif ($1='add') then
+
+	teststr('$path',$inpath,'local'):$ret
+	$proceed=1
+	if ($ret>0.5) then
+	    if ($ret<>$5) then
+		adjappdir('remove',$inpath,$inlabel,$operator):$update
+		$flag[$ret]=''
+	    else
+		if ($flag[$ret]='1') then $proceed=0 else $flag[$ret]='1' endif
+	    endif
+	endif
+	if ($proceed) then
+	    $num=size('$flag')
+	    $i=1 $j=1
+	    repeat
+		if ($j=$5) then
+		    $newflag[$j]='1'
+		    $newpath[$j]=$inpath
+		    $newlabel[$j]=$inlabel
+		    $j=$j+1
+		endif
+		$newflag[$j]=$flag[$i]
+		$newpath[$j]=$path[$i]
+		$newlabel[$j]=$label[$i]
+		$i=$i+1
+		$j=$j+1
+	    until $i > $num
+	    $flag=$newflag
+	    $path=$newpath
+	    $label=$newlabel
+            exists(userdir+'/persistence','directory'):$direx
+            if ($direx=0) then shell('mkdir '+userdir+'/persistence'):$dum endif
+            $file=userdir+'/persistence/tmpapp'
+            write('reset',$file)
+            shell('date'):$date
+            write('file',$file,'# Updated by %s on %s',owner,$date)
+            $num=size('$flag')
+            $i=1
+            repeat
+              if ($flag[$i]<>'') then
+                write('file',$file,'%s;%s;%s',$flag[$i],$path[$i],$label[$i])
+              endif
+              $i=$i+1
+            until $i > $num
+            copy($file,userdir+'/persistence/appdir_'+$operator)
+            delete($file)
+            $update=1
+	endif
+    endif
+
+    if ($update>0.5) and ($## < 0.5) then appdir('reset') endif
+    return($update)
+

@@ -1,0 +1,55 @@
+"macro lcdownloadMethod"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcdownloadMethod"
+
+// Download methods to LC modules
+// Usage: lcdownloadMethod(which), where <which> is 'all', 'pump', 'uv', 
+//            'ms' or 'as'.
+//        lcdownloadMethod('as' [,<command>]), where <command> is command
+//            string to execute after downloading method, starting method,
+//            and waiting for injection to happen.
+// Autosampler method is downloaded only if $cmd is 'as', otherwise 'all'
+// downloads methods to all other modules.
+
+// Get current version of method from current method file
+lccmd('loadMethod', '\"' + lcMethodFile + '\"')
+
+$cmd = 'all'
+if ($# >= 1) then
+  $cmd = $1
+else
+  lcsq('checkgo')
+endif
+
+if ($cmd = 'all' or $cmd = 'pump') then
+  lccmd('gpib', lcPump, 'downloadMethod')
+  lccmd('gpib', lcPump, 'reset')
+endif
+
+if (msSelection <> '0' and ($cmd = 'all' or $cmd = 'ms')) then
+  msSetMethod('init')	// Set Mode and Method
+endif
+
+if (lcDetector <> '0' and ($cmd = 'all' or $cmd = 'uv')) then
+  // Update lcLambda, lcLambda2
+  lcLambda('setInst', 1)
+  lcLambda('setInst', 2)
+  lccmd('pdadownloadMethod')
+endif
+
+// NB: Autosampler method not downloaded on cmd='all'
+if (lcAutoSampler <> '0' and $cmd = 'as') then
+    $row = lcSampleNumber[1]
+    $col = lcSampleNumber[2]
+    $vol = lcSampleVolume
+    $flush = lcFlushVolume
+    $type = lcInjectionType
+    if ($# >= 2) then
+        // Download method and inject and then execute command in arg #2
+        // (Set $2='y' to start injection but omit the command)
+        lccmd('autosampCmd', 'download', $row, $col, $vol, $flush, $type, $2)
+    else
+        // Download injection method
+        lccmd('autosampCmd', 'download', $row, $col, $vol, $flush, $type)
+    endif
+endif

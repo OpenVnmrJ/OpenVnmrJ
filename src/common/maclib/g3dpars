@@ -1,0 +1,253 @@
+"macro g3dpars"
+$e=0
+$reset = 0
+if($# > 0.5) then
+  $reset=1
+endif
+
+exists('g3dtype','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3dtype','integer', 'global')
+  setprotect('g3dtype','set',256,'global')
+  setprotect('g3dtype','set',32768,'global')
+  if(appmode = 'imaging') then
+      g3dtype=2  "dimension 0:1D 1:2D 2:3D type 0:fdf 4:dconi 8:fid 12:spectrum"
+  else
+      g3dtype=8  "dimension 0:1D 1:2D 2:3D type 0:fdf 4:dconi 8:fid 12:spectrum"
+  endif
+endif
+
+"status and control"
+exists('g3ds','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3ds','integer', 'global')
+  setprotect('g3ds','set',256,'global')
+  setprotect('g3ds','set',32768,'global')
+endif
+if(size('g3ds')<>9 or $reset=1) then
+  g3ds[1]=0  "animation * 1:run[stop] 2:next[prev] 4:reverse slice order 8:phasing"
+  g3ds[2]=1  "locks     * 1:sliceplane 2:axis "
+  g3ds[3]=3  "auto      * 1:scale 2:xfer1 4:reset 8:frontface 16:select"
+  if(appmode = 'imaging') then
+    g3ds[4]=2  "com     * 1:ortho 2:pace  4:nomap"
+  else
+    g3ds[4]=0  "com     * 1:ortho 2:pace  4:nomap"
+  endif
+  g3ds[5]=3  "animate   * 1:slice 2:rotation"
+  g3ds[6]=0  "mousemode + 0:intensity 1:transparency 2:resolution"
+  g3ds[7]=0  "window    + 0:float 1:full 2:split "
+  g3ds[8]=0  "showing   + 0:false 1:true"
+  g3ds[9]=0  "2d view   + 0:2D 1:1D+"
+endif
+
+"prefs and tools"
+exists('g3dp','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3dp','integer', 'global')
+  setprotect('g3dp','set',256,'global')
+  setprotect('g3dp','set',32768,'global')
+endif
+if(size('g3dp')<>3 or $reset=1) then
+  g3dp[1]=4   "1:show advanced 2:show percent 4: join viewport"
+  g3dp[2]=7   "1:info  2:labels 4:cursors"
+  g3dp[3]=63  "1:tools 2:data   4:vpnt 8:vrot 16:vbox 32:width plane 64:view-axis (3D tools)"
+endif
+
+"display state"
+exists('g3di','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3di','integer','global')
+  setprotect('g3di','set',256,'global')
+  setprotect('g3di','set',32768,'global')
+endif
+if(size('g3di')<>10 or $reset=1) then
+  g3di[1]=2  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  g3di[2]=4  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  g3di[3]=3  "color mode    + 0:single 1:id 2:value"
+  g3di[4]=2  "palette       + 0:abs 1:phs 2:grayscale"
+  g3di[5]=7  "texture mode  * 1:blend 2:clamp 4:transparency"
+  g3di[6]=15 "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+  g3di[7]=0  "sliceplane    + 0:Z 1:Y 2:X"
+  g3di[8]=0  "complex data  + 0:real 1:imag 2:real&imag 3:abs-value"
+  g3di[9]=3  "density range + 0:hide below 1:hide above"
+  g3di[10]=0 "3D shader     + 0:Volume 1:MIP"
+endif
+
+"defaults: 1D"
+exists('glsave_1d','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('glsave_1d','integer','global')
+  setprotect('glsave_1d','set',256,'global')
+  setprotect('glsave_1d','set',32768,'global')
+endif
+if(size('glsave_1d')<>6 or $reset=1) then
+  glsave_1d[1]=1  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  glsave_1d[2]=0  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  glsave_1d[3]=0  "color mode    + 0:single 1:id 2:value"
+  glsave_1d[4]=1  "palette       + 0:abs 1:phs 2:grayscale"
+  glsave_1d[5]=3  "texture opt   * 1:blend 2:clamp 4:transparent"
+  glsave_1d[6]=0  "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+endif
+
+"defaults: 1D+"
+exists('glsave_1dp','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('glsave_1dp','integer','global')
+  setprotect('glsave_1dp','set',256,'global')
+  setprotect('glsave_1dp','set',32768,'global')
+endif
+if(size('glsave_1dp')<>6 or $reset=1) then
+  glsave_1dp[1]=5  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  glsave_1dp[2]=1  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  glsave_1dp[3]=1  "color mode    + 0:single 1:id 2:value"
+  glsave_1dp[4]=0  "palette       + 0:abs 1:phs 2:grayscale"
+  glsave_1dp[5]=1  "texture opt   * 1:blend 2:clamp 4:transparent"
+  glsave_1dp[6]=15 "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+endif
+
+"defaults: 2D"
+exists('glsave_2d','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('glsave_2d','integer','global')
+  setprotect('glsave_2d','set',256,'global')
+  setprotect('glsave_2d','set',32768,'global')
+endif
+if(size('glsave_2d')<>6 or $reset=1) then
+  glsave_2d[1]=2  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  glsave_2d[2]=2  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  glsave_2d[3]=2  "color mode    + 0:single 1:id 2:value"
+  glsave_2d[4]=0  "palette       + 0:abs 1:phs 2:grayscale"
+  glsave_2d[5]=1  "texture opt   * 1:blend 2:clamp 4:transparent"
+  glsave_2d[6]=15 "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+endif
+
+"defaults: 2D+"
+exists('glsave_2dp','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('glsave_2dp','integer','global')
+  setprotect('glsave_2dp','set',256,'global')
+  setprotect('glsave_2dp','set',32768,'global')
+endif
+if(size('glsave_2dp')<>6 or $reset=1) then
+  glsave_2dp[1]=2  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  glsave_2dp[2]=3  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  glsave_2dp[3]=1  "color mode    + 0:single 1:id 2:value"
+  glsave_2dp[4]=2  "palette       + 0:abs 1:phs 2:grayscale"
+  glsave_2dp[5]=5  "texture opt   * 1:blend 2:clamp 4:transparent"
+  glsave_2dp[6]=0  "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+endif
+
+"defaults: 3D"
+exists('glsave_3d','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('glsave_3d','integer','global')
+  setprotect('glsave_3d','set',256,'global')
+  setprotect('glsave_3d','set',32768,'global')
+endif
+if(size('glsave_3d')<>6 or $reset=1) then
+  glsave_3d[1]=2  "draw mode     + 0:points 1:lines 2:polygons 4:points-hsr 5:lines-hsr"
+  glsave_3d[2]=4  "projection    + 0:1D 1:1D+ 2:2D 3:2D+ 4:3D"
+  glsave_3d[3]=2  "color mode    + 0:single 1:id 2:value"
+  glsave_3d[4]=2  "palette       + 0:abs 1:phs 2:grayscale"
+  glsave_3d[5]=7  "texture opt   * 1:blend 2:clamp 4:transparent"
+  glsave_3d[6]=0  "1D-2D effects + 0:contours 1:lighting 2:AA Lines 4:grid"
+endif
+
+"FDF file path"
+exists('imagedir','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('imagedir','string','global')
+  setprotect('imagedir','set',32768,'global')
+  imagedir=curexp+'/datadir3d/data/img_slab001image001echo001.fdf'
+endif
+
+"volume point position"
+exists('g3dpnt','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3dpnt','real','global')
+  setprotect('g3dpnt','set',256,'global')
+  setprotect('g3dpnt','set',32768,'global')
+endif
+if(size('dpnt')<>4 or $reset=1) then
+  g3dpnt[1]=0.5  "X position range: 0-1"
+  g3dpnt[2]=0.5  "Y position range: 0-1"
+  g3dpnt[3]=0.5  "Z position range: 0-1"
+  g3dpnt[4]=0.5  "S sliceplane range: 0-1"
+endif
+
+"volume point rotation"
+exists('g3drot','parameter', 'global'):$e
+if ($e < 0.5) then
+  create('g3drot','real','global')
+  setprotect('g3drot','set',256,'global')
+  setprotect('g3dpnt','set',32768,'global')
+endif
+if(size('g3drot')<>3 or $reset=1) then
+  g3drot[1]=0.0  "X rotation angle"
+  g3drot[2]=0.0  "Y rotation angle"
+  g3drot[3]=0.0  "Z rotation angle"
+endif
+
+"current float values"
+exists('g3df','parameter','global'):$s
+if ($s < 0.5) then
+  create('g3df','real','global')
+  setprotect('g3df','set',256,'global')
+  setprotect('g3df','set',32768,'global')
+endif
+if(size('g3df')<>10 or $reset=1) then
+  g3df[1]=1.0 "intensity"
+  g3df[2]=1.0 "contrast"
+  g3df[3]=0.1 "alpha threshold"
+  g3df[4]=1.0 "alpha limit"
+  g3df[5]=1.0 "alpha scale"
+  g3df[6]=1.0 "data scale"
+  g3df[7]=1.0 "display scale"
+  g3df[8]=1.0 "slab width"
+  g3df[9]=0.02 "contour width"
+  g3df[10]=0.0 "color bias"
+endif
+
+"axis labels"
+exists('g3daxis','parameter','global'):$e
+if ($e < 0.5) then
+  create('g3daxis','string', 'global')  
+  setprotect('g3daxis','set',32768,'global')
+  g3daxis='+R +P +S -R -P -S'
+endif
+
+"global int values"
+exists('g3dgi','parameter','global'):$s
+if ($s < 0.5) then
+  create('g3dgi','integer','global')
+  setprotect('g3dgi','set',256,'global')
+endif
+if(size('g3dgi')<>2 or $reset=1) then
+  g3dgi[1]=500 "max. number of psuedo slices (3D projection)"
+  g3dgi[2]=8   "max. slice gap (2D+,3D projections)"
+endif
+
+"global float values"
+exists('g3dgf','parameter','global'):$s
+if ($s < 0.5) then
+  create('g3dgf','real','global')
+  setprotect('g3dgf','set',256,'global')
+endif
+if(size('g3dgf')<>2 or $reset=1) then
+  g3dgf[1]=0.1 "slice plane opacity"
+  g3dgf[2]=0.1 "non-slice plane opacity"
+endif
+
+"global float values"
+exists('volmapdir','parameter','global'):$s
+if ($s < 0.5) then
+  create('volmapdir','string','global')
+  setlimit('volmapdir',256,0,1,'global')
+  setprotect('volmapdir','on',8,'global')
+  volmapdir=''
+endif
+
+
+
+" + 1-of-n selection"
+" * additive bit selection"

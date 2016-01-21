@@ -1,0 +1,85 @@
+"macro qconv"
+"H. Bildsoe, Aarhus University, Denmark, march 1995"
+"qconv('par1','par2'<,site_no>) - interconversion of eta,cq,soqe,and vi"
+
+if ($#<2 or $#>3) then
+  write('error','Error: Useage: qconv(\'par1\',\'par2\'<,site_no>)')
+  abort endif
+
+if (ival=0.5) then  
+  write('error','Error: Requires ival>0.5')
+  abort endif
+
+$m=size('mval')
+if $m<>1 then
+  write('error','Error: mval may not be arrayed')
+  abort endif
+
+if (mval=0.5 or $m<>1) then     "vi defined only for mval<>1/2"
+  write('error','Error: Requires mval>0.5')
+  abort endif
+
+if ($#=3) then
+  $site=$3
+  else
+  if (sites>1) then
+    input('Site 1 or 2? '):$site
+    else 
+    $site=1
+    endif
+  endif
+if ($site<1 or $site>sites) then
+  write('error','Error: Illegal site number')
+  abort 
+  endif
+
+if ($site=1) then
+  $cq='cq' $etaq='etaq' $vi='vi' $soqe='soqe'
+  else
+  $cq='cq2' $etaq='etaq2' $vi='vi2' $soqe='soqe2'
+  endif
+
+if (($1='vi' and $2='etaq') or ($1='etaq' and $2='vi')) then
+  if ({$etaq}<0.0 or {$etaq}>1.0) then 
+    write('error','Error: %5s must be in the range 0 to 1',$etaq)
+    abort endif
+  if ((1-{$etaq})<1.0e-5) then 
+    write('error','Error: No solution to %3s, %5s for %5s = 0',$cq,$soqe,$etaq)
+    abort endif
+  {$cq}=4*ival*(2*ival-1)*{$vi}/(mval-0.5)/(1.0-{$etaq})/3.0e6
+  {$soqe}={$cq}*sqrt(1.0+{$etaq}*{$etaq}/3.0)
+
+else if (($1='vi' and $2='cq') or ($1='cq' and $2='vi')) then
+  if ({$vi}>3*1.0e6*{$cq}*(mval-0.5)/(4*ival*(2*ival-1))) then
+    write('error','Error: Inconsistent values for ival, mval, %3s, %3s',$cq,$vi)
+    abort endif
+  {$etaq}=1-4*ival*(2*ival-1)*{$vi}/(mval-0.5)/3.0e6/{$cq}
+  {$soqe}={$cq}*sqrt(1.0+{$etaq}*{$etaq}/3.0)
+
+else if (($1='vi' and $2='soqe') or ($1='soqe' and $2='vi')) then
+  if ({$vi}> 3*1.0e6*sqrt(3)*{$soqe}*(mval-0.5)/(8*ival*(2*ival-1))) then
+    write('error','Error: Inconsistent values for ival, mval, %5s, %3s',$soqe,$vi)
+    abort endif
+  $a=({$vi}*1.0e-6/{$soqe})*8*ival*(2*ival-1)/(6*mval-3)
+  $b=$a*sqrt((4-$a*$a)/3)
+  {$etaq}=(1-$b)/(1-$a*$a/3)
+  {$cq}={$soqe}/sqrt(1+{$etaq}*{$etaq}/3.0)
+
+else if (($1='soqe' and $2='etaq') or ($1='etaq' and $2='soqe')) then
+  if ({$etaq}<0.0 or {$etaq}>1.0) then 
+    write('error','Error: %5s must be in the range 0 to 1',$etaq)
+    abort endif 
+  {$cq}={$soqe}/sqrt(1+{$etaq}*{$etaq}/3)
+  {$vi}=3*{$cq}*(1-{$etaq})*(mval-0.5)/4/ival/(2*ival-1)*1.0e6
+
+else if (($1='soqe' and $2='cq') or ($1='cq' and $2='soqe')) then
+  if ({$soqe}<{$cq} or {$soqe}>{$cq}*sqrt(4.0/3.0)) then
+    write('error','Error: Inconsistent values for %3s and %5s',$cq,$soqe)
+    abort endif
+  {$etaq}=sqrt(3*({$soqe}*{$soqe}/{$cq}/{$cq}-1))
+  {$vi}=3*{$cq}*(1-{$etaq})*(mval-0.5)/4/ival/(2*ival-1)*1.0e6
+
+else write('error','Error: Illegal arguments')
+  endif endif endif endif endif 
+dg('dgstars')
+

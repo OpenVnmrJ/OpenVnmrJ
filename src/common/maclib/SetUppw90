@@ -1,0 +1,22 @@
+"macro SetUppw90"
+if ($# < 1) then $arg='est90' else $arg=$1 endif
+
+   flush
+   $curexplist=explist
+   pw90proc($arg,'nogo')
+   $explist=''
+
+   $head='' $next=''
+   strstr(wexp,'pw90proc'):$is,$head,$next
+   seqfil=seqfil
+   if ($is=1) then
+     $md=archivedir+'/'+sample+'/dirinfo/macdir'
+     cpexplist('read',$md):$explist
+	explist=pslabel+'scout','SetUp',$explist
+	write('file',$md+'/alias','SetUp: SetUppw90%s',$next)
+     cpexplist('write',$md)
+     explist=$curexplist
+   endif
+   wexp='chempackQ'
+   wdone=''
+

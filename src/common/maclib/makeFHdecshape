@@ -1,0 +1,86 @@
+"macro makeFHdecshape"
+"Create default BB decoupling shape for 1H obs - 19F dec "
+"                                  or   19F obs - 1H dec "
+"usage: makeFHdecshape(bandwidth,maxjhf,dutycycle)       "
+"Default parameters: shape = WURST40, bandwidth=12000    "
+"                    maxjhf=60, dutycycle=0.4            " 
+"If shape exists parameters are loaded from shapefile    "
+
+if tn<>'none' then
+ if (tn='H1' or tn='F19') then 
+   if tn='F19' then dn='H1' endif
+   if tn='H1' then dn='F19' endif
+ else
+   write('error','tn must be set to either H1 or F19!')
+   return
+ endif
+endif
+$shapefile=''
+
+if $#=0 then
+    $decbw=12000 $pwad=0.004 $dutyc=0.4 $bwn='8'
+else
+    $decbw=1.1*$1 $pwad=1/5/$2 $dutyc=$3 
+    $bwn='' 
+    $decbw1=$decbw/1100
+    format($decbw1,0,0):$bwn
+endif
+
+ $amp_cf=0
+ $ref_pw90=0
+ $ref_pwr=0
+ getparam('pwx',dn):$ref_pw90
+ getparam('pwxlvl',dn):$ref_pwr
+ getparam('pwxlvl_cf',dn):$amp_cf
+ if ($amp_cf = 0) then $amp_cf=1 endif
+   $ref_pw90 = $ref_pw90*$amp_cf
+
+if ($ref_pw90=0 or $ref_pwr=0) then
+  banner('Wrong F19 calibration data in probe file!!\\   Please do autocalibration first')
+  return
+endif
+
+ $dtc=''
+ format($dutyc,0,2):$dtc
+ $shapefile=dn+'dec_WURST40_'+$bwn+'_kHz_dutyc_'+$dtc+'.DEC'
+
+ $sdecband=''
+ format($decbw,0,0):$sdecband
+ $pwadn=''
+ format($pwad,0,5):$pwadn
+ $wave='WURST40 '+$pwadn+'/'+$sdecband
+ exists(userdir+'/shapelib/'+$shapefile,'file'):$e
+// It is a bad idea to avoid recreation.  There is no
+//   telling what refpwr and refpw90 were used
+// We are not checking that.  So, let us create it anyway
+ $e=0
+ if ($e=0) then
+   opx($shapefile)
+   setwave($wave)
+   pboxpar('dcyc', $dutyc)
+   cpx($ref_pw90,$ref_pwr):$dum
+ endif
+ pbox_pwr($shapefile):dpwr
+ pbox_dmf($shapefile):dmf
+ if dpwr>46 then
+   banner('Decoupling power is too high\\Please relax decoupling conditions, reduce: \\    decoupling bandwidth or \\    the magnitude of FH couplings to be decoupled')
+   dpwr=0
+   shell('rm -f $shapefile')
+   return
+ else
+   dpwr = dpwr + 1
+   dseq = dn+'dec_WURST40_'+$bwn+'_kHz_dutyc_'+$dtc
+   dres=9
+   dmm='ccp'
+   dm='nnn'
+   if seqfil='FHdec' then dm='nny' endif
+   exists('dutyc','parameter'):$dtcex
+   if $dtcex>0 then dutyc=$dutyc endif
+   $banner='Decoupling shape: \\'
+   $banner=$banner + $shapefile
+   $banner=$banner + '\\         ready to use'
+   banner($banner) 
+// Why does this macro sets at and d1?
+ if at>1.5 then at=1.5 endif 
+ if d1 < 2 then d1=2.0 endif
+endif

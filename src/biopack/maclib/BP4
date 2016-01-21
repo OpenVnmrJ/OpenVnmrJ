@@ -1,0 +1,35 @@
+"macro BP4"
+" BP4 "
+$bestone=1 $counter=1
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoTripRes/pwC90cal')
+select($bestone) vsadj(50)  dssh pl('all') pap BPpage
+pwC=pwC[$bestone]
+if (r7=7) then
+ banner('Updating probe file and recreating *DEC files')
+ BPH1updatepw90
+ BPC13updatepw90 
+ banner('Finished 1H and 13C Probefile Update')
+ return
+endif
+r1=pwC r2=pwClvl
+if seqfil='hcch_tocsy' then
+ pwClvl=pwClvl-12
+ $range=4.0*pwC-pwC+2.0 
+ $stepsize=trunc(10*$range/40)/10.0
+ array('pwC',60,pwC-2.0,$stepsize)
+ wexp='BP4aa' au
+endif
+if seqfil='gCfhsqc' then
+ pwClvl=pwClvl-3
+ $steps=trunc(2*pwC) 
+ array('pwC',$steps,pwC-2,0.4)
+ wexp='BP4aaa' au
+endif
+

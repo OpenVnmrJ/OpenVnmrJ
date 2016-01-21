@@ -1,0 +1,71 @@
+*****************************************************************
+*
+*	gtnroesy:  sets up a gtnroesy parameter set.
+*
+*	Syntax:	gtnroesy  (no arguments)	
+*
+*****************************************************************
+   Description:	This macro converts a 1D-s2pul parameter set into a parameter
+		set ready to run either a Pulsed Field Gradient AV ROESY
+		experiment, or a tnroesy experiment.	
+
+    Parameters:	
+        gzlvl1 = gradient amplitude (-32768 to +32768; use 3000)
+        gt1 = gradient time (duration) in seconds (0.0015)
+        gzlvl2 = gradient amplitude (-32768 to +32768; use 3000)
+        gt2 = gradient time (duration) in seconds (0.0015)
+        grise = gradient rise and fall time (in seconds; 0.00001)
+        gstab = optional delay for stability (in seconds)
+        phase = 1 (selects P-type coherence selection; default)
+              = 2 (selects N-type coherence selection)
+
+        p1 = 90 degree pulse on protons (power level at "p1lvl")
+        pw = small (30 degree) pulse on protons (active only if ratio > 0)
+             if pw=0, pw is set to p1/3
+     p1lvl = power level for the p1 pulse
+      tpwr = power level for the spin lock pulse(s)
+     ratio = tau/pw (uses cw lock if ratio is zero)
+     phase = 1,2: F1 quadrature by the hypercomplex method
+              (uses F1 axial peak displacement)
+               3: F1 quadrature by the TPPI method
+       mix = mixing time
+     sspul = 'y': selects for trim(x)-trim(y) sequence at start of pulse sequence
+    rocomp = 'n': no resonance offset compensation
+             'y': resonance offset compensation (recommended)
+  satmode  = saturation mode. Use analogously to dm, i.e. satmode='nnn' or
+             satmode='ynn' or  satmode='yyn' (recommended)
+    satdly  = length of saturation during relaxation delay
+   satpwr  = power level for solvent saturation
+        nt = min:  multiple of 2
+             max:  multiple of 8  (recommended)
+   d2corr  = empirical correction(in us) of d2 (dependent on effective field of
+             spin lock, i.e. TPWR and/or RATIO). It can be determined from the
+             lp1 and sw1 values from a properly phased spectrum by the relation
+ 
+                    d2corr = (lp1*1e6)/(360*sw1)
+ 
+             Note that the d2corr seems to be dependent on sw1. It is independent
+             of sw1 since changes in sw1 result in corresponding changes in lp1
+             so that their ratio is constant.
+ 
+        Procedure for finding d2corr(so that lp1 will = 0, giving better
+             baselines in F1):
+                1. Run a tnroesy experiment with d2corr set either at 0 or at a
+                   value found previously. (nt and ni can be smaller, and the
+                   spectrum may be transformed early to do step 2)
+                2. Phase the resulting spectrum in F1. Determine lp1 and
+                   calculate d2corr from the above relationship.
+                3. Add this value to the value of d2corr used in step 1.
+                4. Rerun the experiment and lp1 should be close to zero.
+                5. Note this value for any future experiment with the same
+                   value of tpwr and ratio.
+
+    Use of any method to make lp1=0 will result in a dc offset of F1 slices. This   should be removed by dc2d('f1') after the 2d transform. Enough noise should
+   be left on the edges (in F1) to permit this dc correction.
+ 
+
+        process N-type data with wft2d(1,0,0,1)
+        process P-type data with wft2d(1,0,0,-1)
+                   the ('t2dc') arguement to wft2d may be useful
+
+NOTE: the gtnroesy pulse sequence is not supplied with Mercury and GEMINI 2000.

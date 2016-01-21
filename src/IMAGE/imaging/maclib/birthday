@@ -1,0 +1,92 @@
+"macro birthday"
+if ($1 = 'month') then
+  birthday[2] = $2
+elseif ($1 = 'day') then
+  birthday[3] = $2
+else  "year"
+  if $2 < 5 then  "convenient only near y2k - should enter 4 digits"
+    write('line3','%d',$2+2000):birthday[4]
+  elseif $2 < 100 then
+    write('line3','%d',$2+1900):birthday[4]
+  else
+    write('line3','%d',$2):birthday[4]
+  endif
+endif
+//birthday[1] = birthday[2] + ' ' + birthday[3] + ', ' + birthday[4]
+
+"calculate age from birthday and date"
+$txt=''
+"Svfname('/%YR%-%MO%-%DAY%%R0%'):$txt"
+shell('date +%\Y%\m%\d'):$txt
+$yr=0 $mo=0 $dy=0
+substr($txt,1,4):$yr
+substr($txt,5,2):$mo
+substr($txt,7,2):$dy
+$byr=0 $bmo=0 $bdy=0
+if (birthday[4] <> '') then
+  format(birthday[4],4,2):$byr
+else
+  age = 0
+  return
+endif
+if (birthday[3] <> '') then
+  format(birthday[3],4,2):$bdy
+endif
+$monstr = birthday[2]
+if ($monstr = 'January') then
+  $bmo = 1 
+  $smo = '01'
+elseif ($monstr = 'February') then
+  $bmo = 2
+  $smo = '02'
+elseif ($monstr = 'March') then
+  $bmo = 3
+  $smo = '03'
+elseif ($monstr = 'April') then
+  $bmo = 4
+  $smo = '04'
+elseif ($monstr = 'May') then
+  $bmo = 5
+  $smo = '05'
+elseif ($monstr = 'June') then
+  $bmo = 6
+  $smo = '06'
+elseif ($monstr = 'July') then
+  $bmo = 7
+  $smo = '07'
+elseif ($monstr = 'August') then
+  $bmo = 8
+  $smo = '08'
+elseif ($monstr = 'September') then
+  $bmo = 9
+  $smo = '09'
+elseif ($monstr = 'October') then
+  $bmo = 10
+  $smo = '10'
+elseif ($monstr = 'November') then
+  $bmo = 11
+  $smo = '11'
+elseif ($monstr = 'December') then
+  $bmo = 12
+  $smo = '12'
+endif
+$age = $yr - $byr
+if ($bmo > $mo) then
+  $age = $age - 1
+elseif ($bmo = $mo) then
+  if ($bdy > $dy) then
+    $age = $age - 1
+  endif
+endif
+if ($age < 0) then $age=0 endif
+age = $age
+
+birthday[1] = birthday[4]+$smo+birthday[3]
+
+"*******************************************************************************
+" 		Modification History
+
+" 20080121(ss)   birthday[1] format changed to yyyymmdd
+
+"********************************************************************************
+

@@ -1,0 +1,119 @@
+"macro vjrearrangeQ"
+$autodir=autodir
+exists($autodir+'/enterQ','file'):$isauto
+if ($isauto) then
+   $autofile=$autodir+'/enterQ'
+else
+   shell('basename '+$autodir):$autofile
+   $autofile=$autodir+'/'+$autofile
+endif
+
+if ($3='overniteQ') then
+  $autofile=$autofile+'.macdir/overniteQ'
+endif
+
+$ok=0
+shell('(cat '+$autofile+' | grep -w MACRO: | grep -c '+$1+')'):$ok
+if ($ok) and ($2<>'') then
+   shell('(cat '+$autofile+' | grep -w MACRO: | grep -c '+$2+')'):$ok
+endif
+if ($ok=0) then return(0) endif
+
+$s1='' $s2=''
+readfile($autofile,'$s1','$s2','MACRO:','local'):$total
+
+$i=1
+repeat
+   strstr($s2[$i],$1):$ret
+   if ($ret) then $1loc=$i $i=$total endif
+   $i=$i+1
+until $i > $total
+
+$2loc=0
+if ($2<>'') then
+   $i=1
+   repeat
+   	strstr($s2[$i],$2):$ret
+   	if ($ret) then $2loc=$i $i=$total endif
+   	$i=$i+1
+   until $i > $total
+endif
+
+shell('(cat '+$autofile+' | wc -l)'):$totlines
+$linespersample=$totlines/$total
+write('reset',$autofile+'_tmp')
+//write('line3','%d  %d  %d',$1loc,$2loc,$total)
+
+expactive:$isactive
+if (autodir=cpautodir) and ($isactive>-1) then
+    autoq('lock')
+endif
+if ($2loc=0) then
+   if ($1loc>1)then
+        $head=''
+        format(($1loc-1)*$linespersample,0,0):$head
+        shell('(head -n '+$head+' '+$autofile+' > '+$autofile+'_tmp)'):$dum
+   endif
+   $head='' format($total*$linespersample,0,0):$head
+   $tail='' format(($total-$1loc)*$linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   $head='' format($1loc*$linespersample,0,0):$head
+   $tail='' format($linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   shell('mv '+$autofile+'_tmp '+$autofile):$dum
+elseif ($1loc>$2loc) then
+   if ($2loc>1) then
+   	$head=''
+   	format(($2loc-1)*$linespersample,0,0):$head
+   	shell('(head -n '+$head+' '+$autofile+' > '+$autofile+'_tmp)'):$dum
+   endif
+   $head='' format($1loc*$linespersample,0,0):$head
+   $tail='' format($linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   $head='' format(($1loc-1)*$linespersample,0,0):$head
+   $tail='' format(($1loc-$2loc)*$linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   if ($total-$1loc > 0) then
+	$head='' format($total*$linespersample,0,0):$head
+	$tail='' format(($total-$1loc)*$linespersample,0,0):$tail
+	shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   endif
+   shell('mv '+$autofile+'_tmp '+$autofile):$dum
+else
+   if ($1loc>1)then
+	$head=''
+	format(($1loc-1)*$linespersample,0,0):$head
+        shell('(head -n '+$head+' '+$autofile+' > '+$autofile+'_tmp)'):$dum
+   endif
+   $head='' format(($2loc-1)*$linespersample,0,0):$head
+   $tail='' format(($2loc-$1loc-1)*$linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   $head='' format($1loc*$linespersample,0,0):$head
+   $tail='' format($linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   $head='' format($total*$linespersample,0,0):$head
+   $tail='' format(($total-$2loc+1)*$linespersample,0,0):$tail
+   shell('(head -n '+$head+' '+$autofile+' | tail -n '+$tail+' >> '+$autofile+'_tmp)'):$dum
+   shell('mv '+$autofile+'_tmp '+$autofile):$dum
+endif
+
+expactive:$isactive
+if (autodir=cpautodir) and ($isactive>-1) then
+     autoq('unlock')
+//     pauseautomation
+//     $autosaflag='none'
+//     getautosaflag($autodir+'/'+$autofile):$autosaflag
+//     if ($autosaflag='none') then
+//           autora
+//     elseif ($autosaflag='service') then
+//           write('error','Automation is paused by Administrator for Service')
+//     elseif ($autosaflag='admin') then
+//	   write('error','Automation is paused by Administrator')
+//     endif
+endif
+if ($3='overniteQ') then
+    xmhaha_asx($autodir,'NightQ')
+else
+    xmhaha_asx($autodir,'enterQ')
+endif
+return(1)

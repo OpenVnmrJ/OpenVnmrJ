@@ -1,0 +1,127 @@
+"macro ATc340a"
+"ATc340a" "N15 Decoupling Heating Test Using Channel 2 "  
+         "using user-defined N15 decoupling power limit"
+
+if (at_n15tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')
+   at_currenttest='Decoupler_heating_n15_ch2_c' 
+   dn='N15'
+   nt=1 f full 
+   wnt=''
+   wexp='ATc340a(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+
+
+ wft av f  
+ lb='n' sb=.205 at=.8 
+ sp=2.5p wp=0.8p vsadj th=40 nll
+ getll(1):$int,cr  sp=cr-0.02p wp=.1p
+ ss=1 wp=wp/2
+ vp=0 wc=80 sc=0 fn=2*np axis='h' 
+ create('scalesw','real') scalesw=100/(1.11696*sfrq)
+ vo=1 th=10
+
+ at=.41 d2=.075 d1=.646 sb=.102 fn='n'
+ lb='n' 
+ ss=2
+ dn='N15' 
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+
+ $pwx=1e6/(2.0*4000)  "2kHz Field  at 600MHz"
+ ln($pwx/at_n15pwx90Lowpowera):$ln
+ dpwr=at_n15pwx90Lowpowerlvla-20.0*$ln*0.43429
+ dpwr=trunc(dpwr)
+ dmf=1e6/$pwx
+ text('Test of 15N Decoupler Heating \\ One spectrum every 1.5 seconds with 75 msec\\15N decoupling for first 100 spectra and no decoupling in last 100 spectra\\Scale in Degrees Centigrade\\Using Channel 2 for 15N RF')
+
+ dmm='ccc' 
+ if ((sfrq>198) and (sfrq< 298)) then   " reduced power for lower fields"
+  dpwr=dpwr-10 dmf=dmf/3
+ endif
+ if ((sfrq>298) and (sfrq< 398)) then
+  dpwr=dpwr-6 dmf=dmf/2
+ endif
+ if ((sfrq>398) and (sfrq< 498)) then
+  dpwr=dpwr-4 dmf=dmf/(3*1.12)
+ endif
+ if ((sfrq>498) and (sfrq< 598)) then
+  dpwr=dpwr-2 dmf=dmf/(1.12*1.12)
+ endif
+ 
+ $count=1 
+ if (dpwr>at_max_dpwr2) then
+  write('line3','N15 Dec Power Requested Exceeds Defined Power Limit (at_max_dpwr2)')
+  write('line3',' Power Reduced to Permitted Level (at_max_dpwr2)')
+  n1='Dec Power > Defined Power Limit (at_max_dpwr2)'
+  n2='Power Reduced to Permitted Level(at_max_dpwr2)'
+  atext(n1) atext(n2)
+  $diff=dpwr - at_max_dpwr2
+  repeat
+    dmf =dmf/1.12 
+    dpwr=dpwr - 1
+    $count=$count+1
+  until $count>$diff
+  dmfadj
+ endif
+ 
+ r1=1 repeat
+  dm[r1]='nyn'
+  r1=r1+1
+ until r1>100
+ r1=101 repeat
+  dm[r1]='nnn' r1=r1+1
+ until r1>200
+ 
+ wnt='ATdec_heat'
+ wexp='ATc340a(`PART2`)' 
+ ATcycle dtext au
+
+elseif ($1='PART2') then
+  wft
+ $power=trunc(dmf/4)
+ select(arraydim/2) peak:$ht,r3
+ if r3<0 then r3=0 endif
+ r3=trunc(100*r3*scalesw)/100
+ ATrecord('N15DEC_HEATING_ch2_c','N15 Decoupler Heating Test (Channel 2)','Temp_Rise',r3,' power',dpwr,' RF Field(Hz)',$power)
+ write('file',autotestdir+'/REPORT','Temp Rise (Ch2 N15 Dec Heating Test)= %1.1f at power %2.0f with RF Field of %4.0f Hz',r3,dpwr,$power)
+
+ if (at_plotauto='y') then
+  if (at_printparams='y') then
+   dn2='' pap(0,wc2max-40) ATpltext 
+   pps(180,0,wcmax-180,90)
+   ATpage 
+  endif
+  pltext(0,wc2max-5)
+  ATpltext
+  r1 sc=sc+30 plww(1,100) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  0.0 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  150 sec')
+  write('plotter',wcmax-sc-wc,wc2max-65,'Heating:  15N Decoupling')
+  write('plotter',wcmax-sc-wc,wc2max-70,'First 100 Spectra')
+  write('plotter',0,wc2max-45,'Maximum Heating From 15N Decoupling = %2.1f Degrees',r3)
+  write('plotter',0,wc2max-47,'RF Power Level For 15N Decoupling = %2.0f ',dpwr)
+  write('plotter',0,wc2max-49,'RF Field Strength of 15N Decoupling = %4.0f Hz',$power)
+  r2  sc=sc+60 plww(101,200) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  151.5 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  300 sec')
+  write('plotter',wcmax-sc-wc,wc2max-65,'Cooling: No 15N Decoupling')
+  write('plotter',wcmax-sc-wc,wc2max-70,'Last 100 Spectra')
+  ATpage 
+ endif
+
+ ATsvf
+
+ATnext
+endif

@@ -1,0 +1,70 @@
+"macro seteOptions"
+
+// Ideally this should be used in submit mode only 
+//   via resetsampglobal
+// Use caution if used outside of resetsampglobal
+// more eOptions can be built here
+// The eOptions parameter values will be evaluated as needed by
+//   other macros during run time
+
+//  arg1 can be supplied to check for a specific option
+//  This is more useful outside submit mode use of this macro
+
+//  Other eOptions can be added as well
+
+// NOTE:  Avoid setting eOptions at every step in this macro. 
+//   eOptions has protection bit 3 ON. Let the _eOptions macro get
+//   executed once at the end
+
+if $# < 1 then $1='' endif
+
+setprotect('eOptions','on',256,'current')
+$eOptions=eOptions
+
+if ($1='') or ($1='emailplot') or ($1='saveplot') then
+     $autosaveplot='plot'
+     getadminfo('autosaveplot'):$autosaveplot
+  if ($1<>'saveplot') then
+     strstr($autosaveplot,'email'):$isemail
+     if $isemail then $eOptions=$eOptions,'emailplot' endif
+  endif
+  if ($1<>'emailplot') then
+     strstr($autosaveplot,'save'):$issave
+     if $issave then $eOptions=$eOptions,'saveplot' endif
+  endif
+endif
+
+if ($1='') or ($1='savejcamp') or ($1='emailjcamp') then
+     $autosavedx='none'
+     getadminfo('autosavedx'):$autosavedx
+  if ($1<>'savejcamp') then
+     strstr($autosavedx,'email'):$isemail
+     if $isemail then $eOptions=$eOptions,'emailjcamp' endif
+  endif
+  if ($1<>'emailjcamp') then
+     strstr($autosavedx,'save'):$issave
+     if $issave then $eOptions=$eOptions,'savejcamp' endif
+  endif
+endif
+
+if ($1='') or ($1='savespec') then
+     $autosavespec='no'
+     getadminfo('autosavespec'):$autosavespec
+     if $autosavespec='yes' then $eOptions=$eOptions,'savespec' endif
+endif
+
+if ($1='') or ($1='emailfid') then
+     $emailfid='no'
+     getadminfo('emailfid'):$emailfid
+     if $emailfid='email' then $eOptions=$eOptions,'emailfid' endif
+endif
+// if $1 is supplied but not one of the above keywords
+//  simply add that to eOptions parameter
+if ($1<>'') then
+     teststr('$eOptions',$1,'local'):$ok
+     if not $ok then $eOptions=$eOptions,$1 endif
+endif
+
+if $eOptions<>eOptions then
+    eOptions=$eOptions
+endif

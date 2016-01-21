@@ -1,0 +1,113 @@
+"macro homo2D"
+"***************************************************************"
+"homo2D -							" 
+"	This is an apptype macro for homo2D experiments		"
+"	Changes here will be reflected in all experiments	"
+"		with this apptype				"
+"	All apptype macros have 4 sections 			"
+"	  (setup, acquistion, process, display)			"
+"	Changes over these default values should be done using	"
+"	pslabel_setup or wrtp feature				"
+"	This macro is typically called by cpsetup		"
+"***************************************************************"
+
+"**********************************************"
+IF ($1 = 'setup') THEN
+
+	"The following are REQUIRED modules for homo2D"
+  module('combine','presat wet gradient par2D homo2D',newmodules):newmodules
+  module($1)
+
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+if ($# < 2) then $2='' endif
+if ($2 <> $0) then $update=0 else $update=1 endif
+
+seqfil=seqfil
+refsource1='sfrq'
+setProbepars
+dm='nnn' dmm='ccc' d2=0
+
+  " If any character in the wet or satmode parameter is set to y "
+  " wet/satmode parameter is reset to y (single character).  "
+  " They should be corrected to appropriate multicharacter value"
+  " by wrtp or pslabel_setup macro "
+
+strstr(wet,'y'):$iswet
+if ($iswet) then wet='y' else wet='n' endif
+strstr(satmode,'y'):$issatmode
+if ($issatmode) then satmode='y' else satmode='n' endif
+  "purge cycle is set to 2.  If prgcycle of 4 is needed, it"
+  "  should be set by rtx feature for individual experiment"
+prgcycle=2
+
+sspul=PFGflg
+ss=32 ni=200 pw=pw90
+if (at > 0.15) then at=0.15 endif
+if (np > 4096) then np=4096 endif
+sw=sw sw1=sw
+        "If needed, phase will be reset by rtx or pslabel_setup macro"
+phase=1,2
+EDratio=1
+
+"****************************************************************************"
+"*******The following section is done only if oldapptype <> apptype **********"
+if ($update=0) then
+   if (wet='y') then satmode='n' endif
+   satdly=1 d1=1
+
+   fixgrd(10):gzlvlE
+   gtE=.001
+   gstab2=gstab
+endif
+
+"****************************************************************************"
+
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+    module('add','parlp parlp1 parlp2','basic')
+
+refsource1='sfrq'
+proc='ft' fpmult='n'
+pmode='full'
+f1coef='1 0 0 0 0 0 -1 0'
+	"f1coef will be, if needed, reset by rtx or pslabel_setup macro"
+fn=np fn1=fn 
+ph ph1
+setLP1
+gaussian
+
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+if ($# < 2) then $2='' endif
+        "--------------------------------------------------"
+        "   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+axis='pp' trace='f2'
+full
+rp1=0 lp1=0
+if (wc > wc2) then wc=wc2 else wc2=wc endif
+ai
+if ($0<>$2) or (wds='') or (procdim<2) then
+   th=2 vs2d=200
+endif
+rfl1=rfl rfp1=rfp reffrq1=reffrq refpos1=refpos
+wp1=wp sp1=sp 
+intmod='off'
+
+ENDIF
+"**********************************************"
+

@@ -1,0 +1,42 @@
+"macro convert2Dto3D"
+exists('aip2to3Dfile','parameter'):$e
+if ($e = 0) then
+  create('aip2to3Dfile','string')
+  aip2to3Dfile = 'curexp'
+endif
+
+strstr(aip2to3Dfile,'SQ'):$a23 
+
+
+if($a23 = 0)then 
+  exists(curexp+'/datadir3d','directory'):$e1	
+  exists(curexp+'/datadir3d/data','directory'):$e2
+	
+  if $e1 = 0 then mkdir(curexp+'/datadir3d') endif
+  if $e2 = 0 then mkdir(curexp+'/datadir3d/data') endif
+
+  $a23file = curexp+'/datadir3d/data/pseudo3D' 
+  aip3Dfile='converted'
+  aipData='reprocessed'
+else 
+  $a23file = sqdir+'/pseudo3D' 
+  aip3Dfile='converted'
+  aipData='saved'
+endif 
+
+$a23file = $a23file + '.fdf'
+//write('line3','write to %s',$a23file) 
+
+
+aip2Dto3D($a23file)
+
+aipDeleteData('all')
+aipLoadFile($a23file)
+
+if(aipOrient='xy') then
+  aipExtract(aipOrient, aipXYfirst, aipXYlast, aipXYincr)
+elseif(aipOrient='xz') then
+  aipExtract(aipOrient, aipXZfirst, aipXZlast, aipXZincr)
+elseif(aipOrient='yz') then
+  aipExtract(aipOrient, aipYZfirst, aipYZlast, aipYZincr)
+endif

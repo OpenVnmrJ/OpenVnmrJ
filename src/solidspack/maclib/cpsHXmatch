@@ -1,0 +1,281 @@
+"macro cpsHXmatch"
+// cpsHXmatch1 -  Match the Hartmann-Hahnn condition at the 
+//                any +/-2 1H sideband.
+// 
+//                Argument 1 = 'setup' or it is set to 'process' 
+//                internally for automatic processing. 
+
+//                Argument 2 = 'init' sets aXhx = aX90 (default)
+//                           = 'adam' sets aXhx = aX90 and Hseq='spinal'
+//                              and aHtppm = aHspinal = aH90*pwH90/7.0
+//                              and phHspinal = 0.0.
+//                           =  else use exsiting params. 
+//                Argument 3 is the region number with a default of 1. 
+
+//==================
+// The SETUP macro
+//==================
+
+if (($#>0) and ($1='setup')) then  
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 'init' endif 
+   if ($# < 3) then $3 = 1 endif
+
+// Set Sequence and Read Modules 
+   
+   parammodule('setsampleglobals')
+   Settancpx
+   Tancpx
+   parammodule('updatesampleglobals')
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqregion',$3):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$3,'setacqregion')
+   $ret2 = 0
+   parammodule('setacqdisplay',$3,''):$ret2
+   parammodule('errorcheck',$ret2,$3,'setacqdisplay')
+   $ret3 = 0
+   parammodule('setsample1D',1):$ret3
+   parammodule('infocheck',$ret3,1,'setsample1D','sample')
+
+// Obtain Standard CP and Decoupling Parameters from Probe File
+
+   probeparamgroup('getlocal',$reg,$dnuc,'HX','srate'):srate
+   probeparamgroup('get',$reg,$dnuc,'HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of')
+   probeparamgroup('get','hp'+$reg,$dnuc,'90H','a','pw')
+   probeparamgroup('get',$reg,$tnuc,'90X','a','pw')
+   probeparamgroup('get',$reg,$tnuc,'HX','aX')
+   probeparamgroup('get',$reg,$dnuc,'tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,$dnuc,'spinalH','a','pw','ph')
+   Hseq='spinal'
+
+// Calibrate setddrtc for CP
+
+   exists('ddrpm','parameter'):$e
+   if ($e < 0.5) then
+      create('ddrpm','string')
+      ddrpm='r'
+   endif   
+   rof2=rd-0.6 alfa=ad
+
+// Initialize Decoupling
+
+   if ($2 = 'adam') then
+      Hseq = 'tppm'   
+      aHspinal = aH90*pwH90/7.0 phHspinal = 0.0
+      aHtppm = aH90*pwH90/7.0 phHtppm = 0.0
+   endif
+
+// Initialize aXhx
+
+   if (($2 = 'init') or ($2 = 'adam')) then 
+      aXhx = aX90
+   endif
+
+// Get the Appropriate H Specification
+
+   probeparamgroup('getlocal','mp'+$reg,$dnuc,'','pwH90'):$pwH90_mp
+   probeparamgroup('getlocal','mp'+$reg,$dnuc,'','aH90'):$aH90_mp  
+   probeparamgroup('getlocal','hp'+$reg,$dnuc,'','aH90'):$aH90_hp
+
+// Setup the Tancpx Match Array for the Medium-Power $B1 +/- 3.0*srate
+
+   $B1=1.0e6/(4.0*$pwH90_mp)
+//   write('line3','$B1 = %f\n', $B1)
+//   write('line3','srate = %f\n', srate)
+//   write('line3','$amp = %f\n', $aH90_mp)
+   $aHhxmax=$aH90_mp*($B1 + 3.0*srate)/$B1
+//   write('line3','$max = %f\n', $aHhxmax)
+   if ($aHhxmax>$aH90_hp) then $aHhxmax=$aH90_hp endif
+   $aHhxmin=$aH90_mp*($B1 - 3.0*srate)/$B1
+//   write('line3','$min = %f\n', $aHhxmin)
+   if ($aHhxmin<50.0) then $aHhxmin=50 endif  
+   $aHhxstep=($aHhxmax - $aHhxmin)/40.0
+   array('aHhx',41,$aHhxmax,-$aHhxstep)
+
+// Set Automatic Linebroadening 
+
+   fn=16*np lb = 2.0*sw/(3.14159*np) sb = at/2.0 sbs=0.0 sbs='n' lb=0
+
+// Linear Prediction
+
+   parlp
+   proc = 'ft'
+
+// Set the Auto Display to Absolute Value
+
+   $macroname = $0 + '(\'maxamp\',100)'
+   wnt='vp=0 sb=\'y\' wft setref av ' + $macroname + ' noislm(1.0) dssh'
+
+// Set Macro-Specific Processing and Plotting 
+
+   wexp = 'chempackQ'
+   $arg3 = '' format($3,1,0):$arg3
+   execprocess = $0 + '(\'process\',\'' + $2 + '\',' + $arg3 + ')'
+   execplot = ''
+   clear(2)
+   write('line3','%s Setup is Complete\n',$0)
+   return
+endif
+
+//===========================
+// Macro-Specific Processing
+//===========================
+
+if (($# > 0) and ($1 = 'process')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 'init' endif 
+   if ($# < 3) then $3 = 1 endif
+
+// Set the Region
+
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$3):$ret,$reg,$tnuc,$dnuc
+
+// Analyze the CP Match Curve 
+
+   $bestone=1 $counter=1 $best=0
+   lb = 2.0*sw/(3.14159*np) sb = at/2.0 sbs=0.0 sbs='n'
+   fn=16*np vp=0 av wft
+   repeat
+      select($counter)
+      peak:$ht
+      if ($ht>$best) then $best=$ht $bestone=$counter endif
+      $counter=$counter+1
+   until ($counter>arraydim)
+
+// Select the best H1 CP Match 
+
+   $aHhx=aHhx[$bestone]
+
+// Update aXhx and aHhx from a CP Optimization 
+
+   probeparamgroup('set',$reg,$tnuc,'','aXhx')
+   probeparamgroup('setlocal',$reg,$dnuc,'','aHhx',$aHhx)
+endif
+
+//===========================
+// Macro-Specific Plotting
+//===========================
+
+if (($# > 0) and ($1 = 'plot')) then 
+   wc = 50 sc = 50
+   plot1d
+   return  
+endif 
+
+//==================================
+// Begin AutoCalibration Utilities
+//==================================
+
+//--------------------
+// The maxamp function
+//--------------------
+
+if (($# > 0) and ($1 = 'maxamp')) then
+   select(celem) 
+   if (celem=1) then 
+      vsadj($2) 
+   endif
+   peak:$ht
+   if ($ht>$2) then 
+      vsadj($2) 
+   endif 
+   return    
+endif  
+
+//--------------------------
+// The  minmaxfit function
+//--------------------------
+
+if (($# > 0) and ($1 = 'minmaxfit')) then 
+
+   $bestone=$2
+   $lim=2
+   if ($#>3) then $lim=$4 endif
+
+// Prepare 'analyze.inp'
+
+   $file=curexp+'/analyze.inp'
+   exists($file,'file'):$a
+   if ($a>0.5) then 
+      write('reset',$file) 
+   endif
+
+   format((2*$lim+1),2,0):$sizes
+
+   write('file',$file,'AMPLITUDE')
+   write('file',$file,'INTENSITY')
+   write('file',$file,'%12s%13s%7s%7s\n','1',$sizes,'linear','linear')
+   format((2*$lim+1),2,0):$sizes
+   write('file',$file,'%8s%5s','NEXT',$sizes)
+   write('file',$file,'1')
+
+   $step=$bestone-$lim
+   repeat
+      select($step)
+      peak:$ht
+      write('file',$file,'%14.1f%12.2f',$step,$ht)
+      $step=$step+1
+   until ($step>$bestone+$lim)
+
+// 'poly2 Analysis with 'expfit'
+
+   analyze('expfit','regression','poly2')
+   $file=curexp+'/analyze.out'
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   format($a1s,8,4):$a1
+   format($a2s,8,4):$a2
+   $inf=-$a1/(2.0*$a2)
+   $infval=$a0+$a1*$inf+$a2*$inf*$inf
+
+// Mean Value from 'poly0' 
+
+   analyze('expfit','regression','poly0')
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   $mean=$a0
+//   write('line3','$inf=%f $infval=%f $mean=%f',$inf,$infval,$mean)
+//  write('line3','$2 = %f',$2)
+
+// Min ($minmax<0) or Max ($minmax>0) or none ($minmax=0)
+
+   $minmax=0 $ret=0.0
+   if (($bestone-$lim)<$inf)and($inf<($bestone+$lim)) then 
+      $ret=$inf
+      if ($infval<$mean) then 
+         $minmax=-1
+      else
+         $minmax=1
+      endif
+   endif
+
+//   write('line3','$xmin = %f $ret = %f $xmax = %f $minmax=%f',$bestone-$lim,$ret,$bestone+$lim,$minmax)
+
+// Return the new $bestone and a Fraction After $bestone,
+// else Return $bestone=$2 and $remainder=0.0 
+
+   $remainder=0 
+   if (($3='min')and($minmax<0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if (($3='max')and($minmax>0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if ($minmax=0) then
+      $bestone=$2 
+      $remainder=0.0
+   endif
+//   write('line3','$bestone=%f',$bestone)
+   return($bestone,$remainder)
+endif 

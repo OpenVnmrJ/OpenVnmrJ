@@ -1,0 +1,54 @@
+"macro htlist2cpq"
+if ($# < 1) then $1='import' endif
+
+walkupQ_init
+if ($1='import') then
+   $dir=cursqexp+'/'+tn+'hadamard'
+   exists('refsource1','parameter'):$parex
+   if ($parex) then
+       if (refsource1='sfrq') then
+          $dir=cursqexp+'/'+tn+'hadamard'
+       else
+          $dir=cursqexp+'/'+dn+'hadamard'
+       endif
+   endif
+   exists($dir+'/htfrq1','file'):$fileex
+   if ($fileex) then
+        fread($dir+'/htfrq1')
+        $r=2*sw1/htbw1 fn1=$r if (fn1<$r) then fn1=2*fn1 endif
+   else
+	return(0)
+   endif
+   exists($dir+'/htll.htfrq1','file'):$fileex
+   if ($fileex) then
+	shell('cp '+$dir+'/htll.htfrq1',curexp):$dum
+   endif
+   exists($dir+'/htfrq1.ll','file'):$fileex
+   if ($fileex) then
+        shell('cp '+$dir+'/htfrq1.ll',curexp):$dum
+   endif
+   return(1)
+
+elseif ($1='export') then
+   $dir=cursqexp+'/'+tn+'hadamard'
+   exists($dir,'directory'):$direx
+   if ($direx=0) then
+	shell('mkdir '+$dir):$dum
+   endif
+   exists(curexp+'/htll.htfrq1','file'):$fileex
+   if ($fileex) then
+        shell('cp '+curexp+'/htll.htfrq1',$dir):$dum
+   endif
+   exists(curexp+'/htfrq1.ll','file'):$fileex
+   if ($fileex) then
+        shell('cp '+curexp+'/htfrq1.ll',$dir):$dum
+   endif
+   writeparam($dir+'/htfrq1','htfrq1 htbw1')
+elseif ($1='clear') then
+   shell('rm -rf '+cursqexp+'/*hadamard'):$dum
+   shell('rm -f '+curexp+'/htll.htfrq1'):$dum
+   shell('rm -f '+curexp+'/htfrq1.ll'):$dum
+   exists('htfrq1','parameter'):$parex
+   if ($parex) then htfrq1=0 endif
+endif
+seqfil=seqfil

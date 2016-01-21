@@ -1,0 +1,24 @@
+$file='' $fileex=0
+substr($1,1,1):$firstchar
+if ($firstchar='/') then
+   exists($1,'file'):$fileex
+   $file=$1
+else
+   getfilepath($1+'.xml','templates/vnmrj/protocols'):$fileex,$file
+endif
+if ($fileex=0) then
+    return('')
+endif
+
+$node=$2
+$attr=$3
+$key=$file
+$attval=''
+
+lookup('mfile',$key,'delimiter','= \n\r\t\<\>\!','seekcs',$node,'seekcs',$attr,'filekey'):$key,$ret
+if ($ret) then
+  lookup('mfile',$key,'delimiter','=','readline',1):$attval
+  strstr($attval,'"'):$ret,$s1,$attval
+  strstr($attval,'"'):$ret,$attval
+endif
+return($attval)

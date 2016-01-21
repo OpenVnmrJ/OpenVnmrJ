@@ -1,0 +1,55 @@
+"macro gxyzcentre"
+"gxyzcentre:  use amplitude map to estimate lsfrq1 and lsfrq2"
+"Estimate shift needed in lsfrq1/2 from xy centre of gravity of signal"
+"GAM  5iv04"
+
+write('line3','Optimising lsfrq1/2 - this may take a few moments')
+$iter=1
+repeat
+ft('nods') 
+gxyzmap(userdir+'/3Dshimlib/data/fieldmap')
+
+$barcode=''
+$test=''
+lookup('file',userdir+'/3Dshimlib/data/fieldmap.dat')
+lookup('skip',2)          
+lookup('read'):$ni    "reads in matrix size"
+lookup('skip',2)          
+lookup('read'):$barcode    "read barcode as a string"
+lookup('skip',5)          
+lookup('read'):$npt    "reads in number of points per profile"
+lookup('file',userdir+'/3Dshimlib/data/fieldmap.amp')
+lookup('readline',5):$dum      "skip 5 lines"
+
+$m0=0 $m1x=0 $m1y=0
+$i=1 $k=1 $l=1
+repeat
+	$yij=0.5-(2*$i-1)/(2*$ni)
+	$j=1
+	repeat
+		$k=1
+		$xij=-0.5+(2*$j-1)/(2*$ni)
+		$m=$ni*($i-1)+$j
+		substr($barcode,$m,1):$test
+		if ($test ='1') then
+		repeat
+		lookup('skip') lookup('read'):$amp
+			$m0=$m0+$amp
+			$m1x=$m1x+$amp*$xij
+			$m1y=$m1y+$amp*$yij
+			$k=$k+1
+		until ($k>$npt)
+		endif
+	$j=$j+1
+	until ($j>$ni)
+$i=$i+1
+until $i>$ni
+
+$xshift=2*$m1x/$m0
+$yshift=2*$m1y/$m0
+"echo('old lsfrq1 = ',lsfrq1,'   old lsfrq2 = ',lsfrq2)"
+lsfrq1=lsfrq1-$xshift
+lsfrq2=lsfrq2+$yshift
+"echo('new lsfrq1 = ',lsfrq1,'   new lsfrq2 = ',lsfrq2)"
+$iter=$iter+1
+until $iter>10

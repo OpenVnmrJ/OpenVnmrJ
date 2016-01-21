@@ -1,0 +1,194 @@
+
+convertbru filename <options>     -  from UNIX shell
+convertbru('filename'<,options>)  -  from Vnmr
+
+	This is a C program for converting 32-bit Bruker AMX FID data and
+	24- and 32-bit Bruker AM FID data into a 32-bit format compatible
+	with Varian's Sread program.  For AMX data the filename given
+	to convertbru should be the name of the directory which contains
+	the acqus, acqu2s, and fid or ser files.  For AM data the filename
+	given to convertbru should be the file containing the AM data.
+	The input file is not required to have a '.bru' extension, but if it
+	does, the '.bru' extension is stripped before creating the output
+	file.  The output file is called 'filename.cv' and will be written
+	in the current working directory unless the "-c" option is present.
+
+	For AMX data and AM data containing the "-1" (parameter) sector,
+	the following options will usually NOT be necessary, but can be
+	used to override the convertbru program's default actions.
+
+	Options :
+	    -bxxx	xxx = am or amx.  Specifies whether data is AM or
+			AMX data. (default : determined from filename given)
+	    -cfilename	append ".cv" to "filename" and use it as the output
+			filename.
+	    -dxxx	xxx = decoupler frequency (must be a value
+			between 10.0 and 640.0 MHz).
+			(default : read from data set)
+	    -f		Specifies that old output file is to be overwritten.
+			(default : don't overwrite old files)
+	    -oxxx	xxx = lsb, msb.  Specifies whether the data has 
+			least- or most-significant bit first.
+			(default : For AM data, determined from data set.
+				   For AMX data, default is lsb.)
+	    -pxxx	xxx = number of 24- or 32-bit words to skip before
+			converting data.  (For use with "-tdata" option to
+			skip the header in AM data without converting it).
+			Typical header sizes are 216 or 256 words.
+			(default : 0)
+	    -sxxx	xxx = 3 or 4.  Specifies whether data is 24-bit (3-byte)
+			or 32-bit (4-byte) AM data.  (AMX data is 32-bit.)
+			(default : determined from data set.)
+	    -txxx	xxx = all, hdr, or data.  Specifies whether convertbru
+			should convert both the header and the data, just the
+			header, or just the data.
+			(default : all)
+
+	Examples of use for AM data :
+
+	UNIX Shell :
+	  convertbru filename		"determines file format and converts
+					 header and data in filename.bru"
+	  convertbru filename -d250.0
+					"determines file format and converts
+					 header and data in filename.bru.  Sets
+					 decoupler frequency to 250.0 MHz.
+	  convertbru filename -thdr	"determines file format and converts
+					 only the header in filename.bru"
+	  convertbru filename -tdata -p256 -s3 -omsb
+					"converts only the data in filename.bru
+					 after skipping the 256-word header.
+					 The data is converted assuming it is
+					 24-bit AM data words with the most-
+					 significant bit first."
+
+	Vnmr :
+	  convertbru('filename','-tdata','-p256','-s3','-omsb')
+					"converts only the data in filename.bru
+					 after skipping the 256-word header.
+					 The data is converted assuming it is
+					 24-bit AM data words with the most-
+					 significant bit first."
+
+	Examples of use for AMX data :
+
+	UNIX Shell :
+	  convertbru filename -f	"Converts acqus and acqu2s files
+					 to ASCII, if necessary.  Then
+					 converts data and overwrites an
+					 existing filename.cv file"
+
+	Vnmr :
+	  convertbru('filename','-f')	"Converts acqus and acqu2s files
+					 to ASCII, if necessary.  Then
+					 converts data and overwrites an
+					 existing filename.cv file"
+	  convertbru('filename','-c/home/vnmr1/brukerdata/data1')
+					"Converts acqus and acqu2s files
+					 to ASCII, if necessary.  Then
+					 converts data and writes it to
+					 the file :
+					 "/home/vnmr1/brukerdata/data1.cv".
+
+	The order of the options in both formats (UNIX shell and Vnmr)
+	is arbitrary.  However, the filename must be the first argument in
+	both cases.
+
+	After converting the Bruker data into the new format, the converted
+	data can be read into Vnmr using the command :
+
+	     sread('filename.cv', <'parameter template name'>)
+
+	from within Vnmr.  The name of the file containing the param-
+	eter template is optional; the default is bruker.par.  If no
+	parameter template is specified and bruker.par cannot be
+	found in either the user or system parlib directory, sread
+	will abort with an appropriate error message.
+
+	The data can then be processed normally.  The parameters "proc"
+	and "proc1" are set appropriately by sread, so that wft or wft2da
+	will correctly process the data.
+
+	Bruker AM and AMX parameters are converted to Varian parameters as
+	described below.
+
+	AM Parameter Conversion :
+
+	   Bruker Parameter	  Varian Parameter
+		num sweeps completed	ct
+		td			np
+		dw			dw
+		fw			fb=fw/2.5
+		ds			ss
+		sw			sw
+		num experiments done	ni
+		o1			tof
+		o2			dof
+		rd (or d1 if rd==0)	rd
+		pw (of p0 if pw==0)	pw
+		de			de
+		ns			nt
+		sp			satdly
+		dp			dpwr
+		te			temp=te-273
+		id			dw1
+		id			sw1=1/id
+		sfo1			sfrq=sfo1+o1
+		sfo2			dfrq=sfo2+o2
+		p#			p#
+		d#			d#
+		s#			s#
+		ro			spin
+		date			date
+		time			time
+
+	The above Bruker parameters which are named and which don't conflict
+		with a Varian parameter name are also converted under the
+		original name : td,fw,ds,o1,o2,ns,te,id,sfo1,sfo2,ro.
+	The parameters proc and proc1 are set to rft for all spectra.  (This
+		assumes that data is TPPI in both dimensions).
+
+
+	AMX Parameter Conversion :
+	   Bruker Parameter	  Varian Parameter
+
+		ns (from acqu)		nt
+		ns (from acqus)		ct
+		td			np
+		td (from acqu2s)	ni
+		sw_h			sw
+		sw_h			dw=1/sw*1.0e6
+		sw_h (from acqu2s)	sw1
+		sw_h (from acqu2s)	dw1=1/sw_h
+		fw			fb=*sw/2.5
+		ds			ss
+		rd (or d1 if rd==0)	rd
+		de			de
+		pw (or p0 if pw==0)	pw
+		p1			pw90
+		te			temp=te-273
+		sfo1			sfrq=sfo1
+		sfo2			dfrq=sfo2
+		o1			tof
+		o2			dof
+		ro			spin
+		date			date
+		date			time
+		nucleus			tn
+		decnuc			dn
+		pulprog			pslabel
+		pulprog			seqfil
+
+
+	These and all other Bruker parameters are converted under their
+		original names, if it doesn't conflict with the name of a
+		Varian parameter.  Arrayed Bruker parameters like P and D are
+		converted to the names P# and D# where # is the index into the
+		array.  Because of the limitation of 8 character parameter
+		names in sread, the parameters routwd1# and routwd2# are
+		converted to rtwd1# and rtwd2#.  The parameter proc is set to
+		ft when the Bruker parameter aq_mod is 1 and set to rft when
+		aq_mod is 2.  proc1 is always set to rft, assuming TPPI in t1.
+		If there is a file named 'info' in the directory with the
+		Bruker data, it is read in and put into the text file for the
+		converted data set.

@@ -1,0 +1,80 @@
+"macro ATpl3"
+" ************************************************************* "
+" *turnon - analyzes small pw array for turn-on characteristics* "
+"             (calls macro ATpl3a)
+" ************************************************************** "
+
+"$1= percent of maximum to ignore in line fit.  Default is 10%"
+if $#>0 then $factor=$1/100 else $factor=.10 endif
+if array='' then
+  write('error','Analysis not possible for non-arrayed data set')
+  return
+endif 
+$index=1 $num=0 $indsum=0 $htsum=0 $htinsum=0 $insqsum=0 $htsqsum=0
+ai
+select(arraydim)
+peak:$ht0,$freq wp=.25*sw sp=$freq-wp/2
+vs=(wc2max-20)*vs/$ht0
+vp=0 s1 f
+
+"******************find peak hts, and do summs for least squares***********"
+
+clear
+repeat
+  select($index) dc  peak:$ht,$freq
+  " ****** "
+  format($index,6,1):$istr format(pw[$index],7,2):$pwstr format($ht,7,2):$htstr
+  echo('spectrum number  ',$istr,' pw= ',$pwstr,'   Ht= ',$htstr)
+    " ****** "
+  if $ht>($ht0*$factor) then  " all sums for ht > $1% of max "
+    $ind2=pw[$index] $indsum=$indsum+$ind2 $htsum=$htsum+$ht
+    $htinsum=$htinsum+$ind2*$ht $insqsum=$insqsum+$ind2*$ind2
+    $htsqsum=$htsqsum+$ht*$ht
+    " ****** "
+    $num=$num+1
+  endif
+  $index=$index+1
+until $index>arraydim
+
+"***********calculate intercept****************************************"
+
+$numer1=$num*$htinsum-$indsum*$htsum
+$g=$numer1/($num*$insqsum-$indsum*$indsum)
+$a=$htsum/$num-$indsum*$g/$num
+$t0=-$a/$g
+if $t0<0 then $t0=0 endif
+$denom1=$num*$insqsum-$indsum*$indsum
+$denom2=$num*$htsqsum-$htsum*$htsum
+$corr=$numer1/SQRT($denom1*$denom2)
+
+"*****************output to graphics or plotter**************************"
+
+$device='graphics'
+
+repeat
+select(arraydim) vsadj(100)
+sc=wcmax-4 wc=4 vo=0 ho=-4
+if $device='plotter' then pl('all','dodc') 
+ else r1 dssn('dodc') endif
+write($device,10,wc2max-5,'Turn-on pulse length(nsec) =%6.0f',$t0*1000)
+write($device,10,wc2max-10,'Correlation coefficient    =%6.2f',$corr)
+write($device,10,wc2max-15,'first n ignored, n=%2.0f  (%3.0f percent of max)',arraydim-$num,$factor*100)
+write($device,10,wc2max-20,'tn=%s ',tn)
+on('spin'):$ison
+if $ison then write($device,50,wc2max-25,'spin=%g ',spin) endif
+write($device,10,wc2max-30,'sequence=%s ',seqfil)
+ATpl3a(10,wc2max-35,$device,'pw')
+
+if $device='graphics' then  "ask about plotting"
+     if (at_plotauto='y') then
+      $device='plotter'
+     else
+      $device='done'
+     endif
+    else
+      $device='done'
+  endif
+
+until $device='done'
+return($t0*1000,$corr)
+

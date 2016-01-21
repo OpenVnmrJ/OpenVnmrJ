@@ -1,0 +1,106 @@
+"macro ATc99"
+"ATc99" "CPMG T2 experiment with y-gradients in echo periods (10G/cm y-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+
+   substr(pfgon,2,1):$yon
+   if ($yon)='n' then
+     write('line3','Y-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext return
+   endif
+ 
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   text('CPMG T2 with 10 G/cm y-gradients in \\spinecho. From 2 to 44 echos\\4 to 88 gradient pulses used')
+   at_currenttest='gcpmgt2_y'
+   seqfil='ATcpmgt2' gt1=.0005 gzlvl1=trunc(10/at_gycal)
+   vchannelmap='0','y' gradaxis='y' shaped='n'
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   gt2=gt1 gzlvl2=gzlvl1 tpwr=at_tpwr-12 r4=gzlvl1
+   nt=4 d2=.001  p1=8.0*pw90 pw=4.0*pw90
+   loops=1,2,4,5,7,8,10,11,13,14,16,17,19,20,22,23
+   bigtau=.004,.008,.016,.020,.028,.032,.04,.044,.052,.056,.064,.068,.076,.08,.088,.092
+   array='(loops,bigtau)'
+   wnt='ATwft sp=3.8p wp=2p select(1) av vsadj dssh dtext'
+   wexp='ATc99(`PART1`)'
+   ATcycle
+   au
+   write('line3','CPMG T2 with 10 G/cm y-gradients in spinecho. From 2 to 44 echos4 to 88 gradient pulses used')
+   dps
+
+elseif ($1='PART1') then
+
+   select(1) ph aph0 vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r1                   "store t2 value"
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      dn2='' pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+    endif
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=2p pl('all') pap ATpage
+   endif
+   gzlvl2=1.01*gzlvl1
+   at_currenttest='gcpmgt2_mismatch_y'
+   text('CPMG T2 with 1 percent mismatched y-gradients')
+   wnt='ATwft select(1) vsadj dssh dtext'
+   wexp='ATc99(`PART2`)'
+   ATcycle au
+   dps
+   dtext
+
+elseif ($1='PART2') then
+
+   select(1) ph aph0 vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r2                   "store t2 value"
+   if (at_plotauto='y') then
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=2p pl('all') pap ATpage
+   endif
+   gzlvl2=0 gzlvl1=0
+   at_currenttest='gcpmgt2_nogradients_y'
+   text('CPMG T2 with no y gradients')
+   wnt='ATwft select(1) vsadj dssh dtext'
+   wexp='ATc99(`PART3`)'
+   ATcycle au
+   dps
+   dtext
+
+elseif ($1='PART3') then
+
+   select(1) ph aph0 vsadj(100)
+   ATsvf 
+   th=40
+   nll fp t2 full expl center 
+   ATt1cal:r3                   "store t2 value"
+   if (at_plotauto='y') then
+    wc=80 sc=97 pexpl ATplreg
+    select(1) vsadj(100) sc=90 ho=-6 wc=5
+    sp=3.8p wp=2p pl('all') pap ATpage
+   endif
+
+   r1=trunc(1e3*r1)/1e3
+   r2=trunc(1e3*r2)/1e3
+   r3=trunc(1e3*r3)/1e3
+   ATrecord('YCPMGT2c','T2 Relaxation Times','Temp',temp,' Gy',r4,'T2(Gy)',r1,'T2(1%)',r2,'T2(0)',r3)
+   write('file',autotestdir+'/REPORT','YCPMGT2 (cryo,gzlvl= %5.0f ,mismatched,0): %1.3f , %1.3f , %1.3f sec',r4,r1,r2,r3)
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+ATnext
+endif

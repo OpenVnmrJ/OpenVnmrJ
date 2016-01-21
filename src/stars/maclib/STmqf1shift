@@ -1,0 +1,76 @@
+"macro STmqf1shift"
+beepoff
+exists('ival','parameter'):$ival
+
+if ($ival>0) then 
+   if (ival <= 0.5) then 
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=0.0
+      $omegaf1=0.0
+   endif 
+   if (ival=1.5) then 
+      $omegaq=(6.0*3.1459*cq)/(2.0*ival*(2.0*ival-1.0))
+      $omega0=sfrq*2*3.1459
+      $omegaf1=(17/8)*viso/sfrq + (1.0e6/8.0)*($omegaq*$omegaq/($omega0*$omega0))*(((etaq*etaq)/3.0)+1.0)
+      write('line3',$omegaf1)
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=$omegaf1
+   endif
+
+   if (ival=2.5) then 
+      $omegaq=(6.0*3.1459*cq)/(2.0*ival*(2.0*ival-1.0))
+      $omega0=sfrq*2*3.1459
+      $omegaf1=(-17/31)*viso/sfrq - (8.0e6/93.0)*($omegaq*$omegaq/($omega0*$omega0))*(((etaq*etaq)/3.0)+1.0)
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=$omegaf1
+   endif
+
+   if (ival=3.5) then 
+      beepoff
+      write('line3','MQMAS F1 shift not available for ival=3.5')
+      beepon
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=0.0
+      $omegaf1=0.0
+   endif
+
+   if (ival=4.5) then
+      beepoff 
+      write('line3','MQMAS F1 shift not available for ival =4.5.')
+      beepon
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=0.0
+      $omegaf1=0.0
+   endif
+
+   if (ival > 4.5) then
+      beepoff
+      write('error','Set ival less than or equal to 4.5')
+      beepon
+      exists('mqf1val','parameter'):$mqf1val
+      if ($mqf1val=0) then 
+         create('mqf1val')
+      endif
+      mqf1val=0.0
+      $omegaf1=0.0
+   endif 
+else
+   write('error','ERROR: STARS Option Required ')
+endif
+return($omegaf1)
+beepon

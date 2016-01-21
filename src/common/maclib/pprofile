@@ -1,0 +1,333 @@
+"macro pprofile"
+" **************************************************************** "
+" ***        dprofile - display Pbox excitation profile        *** "
+" ***  displays Bloch simulation data stored in pbox.sim file  *** "
+" ***                  Eriks Kupce / Rolf Kyburz               *** "
+" **************************************************************** "
+" modified 94/12/13, R.Kyburz - use makefid for more speed                "
+" modified 94/12/14, R.Kyburz - rearranged, allows for 'xy'/'xyz'/'z' arg "
+" modified 94/12/27, R.Kyburz - fixed spectrum display parameters sp/wp   "
+" modified 95/05/29, EK & R.K - fixed other spectrum display parameters   "
+" modified 95/07/04, R.Kyburz - fixed x,y rel. vert. scaling, added x arg "
+" modified 96/08/29, E.Kupce  - modified to avoid splitsim for more speed "
+
+$simfile = userdir+'/shapelib/pbox.sim'
+$xyfid = userdir+'/shapelib/pbox.xy'
+$zfid  = userdir+'/shapelib/pbox.mz'
+
+" +-----------------------------------------------------------------+ "
+" | if shapefile is given as an argument, do Bloch simulation first | "
+" +-----------------------------------------------------------------+ "
+
+if $#>2 then 
+  rm($simfile):$x
+  write('alpha','Bloch simulation...')
+  shell('Pxsim', '"'+ $3 +'"')
+endif
+
+exists($simfile,'file'):$e
+if not($e) then
+  write('error','%s: input file %s not found!',$0,$simfile)
+  return
+endif
+
+" +-----------------------------------------------------------------+ "
+" | check command name, determine output device-specific parameters | "
+" +-----------------------------------------------------------------+ "
+if $0='dprofile' then
+  clear(2)
+  $device='graphics'
+  $axiscolor='blue'
+  $xcolor='green'
+  $ycolor='red'		" magenta XOR green is yellow --> don't use yellow! "
+  $zcolor='yellow'
+  $drawcmd='dssn'
+  $scalecmd='dscale'
+else   " pprofile "
+  write('line3','%s: drawing profile, please wait ... ',$0)
+  $device='plotter'
+  $axiscolor='pen1'
+  $xcolor='pen2'
+  $ycolor='pen3'
+  $zcolor='pen4'
+  $drawcmd='pl'
+  $scalecmd='pscale'
+endif
+write($device,0,0,''):$ys
+
+" +-------------------+ "
+" | argument checking | "
+" +-------------------+ "
+" default selection parameters "
+$spectrum='n'	" flag for spectrum and scale (y|n) "
+$profile='xyz'	" profile selector (xy|z|xyz) "
+
+if $#=0 then
+  " no argument given - use default profile selection and ask about spectrum "
+  write('error','')
+  $reply=''
+  if $device='graphics' then
+    input('display spectrum and scale (y/n)? [n] '):$reply
+  else
+    input('plot spectrum and scale (y/n)? [n] '):$reply
+  endif
+  if ($reply='y') or ($reply='Y') then
+    $spectrum='y'
+  else
+    $spectrum='n'
+  endif
+else
+  " arguments were given - check argument type for first argument "
+  if not(typeof('$1')) then
+    write('error','%s: string arguments required, see man(\'%s\')', $0, $0)
+    return
+  endif
+
+  " arguments were given - set spectrum/scale flag or profile selection "
+  " in the latter case ask about spectrum, if necessary (if only 1 arg) "
+  if ($1 = 'y')or($1 = 'Y') then
+    $spectrum='y'
+  else
+    if ($1 = 'n') or ($1 = 'N') then
+      $spectrum='n'
+    else
+      if $#=1 then
+        write('error','')
+        $reply=''
+        if $device='graphics' then
+          input('display spectrum and scale (y/n)? [n] '):$reply
+        else
+          input('plot spectrum and scale (y/n)? [n] '):$reply
+        endif
+        if ($reply='y') or ($reply='Y') then
+          $spectrum='y'
+        else
+          $spectrum='n'
+        endif
+      endif
+      if ($1 = 'xy') or ($1 = 'XY') then
+        $profile='xy'
+      else
+        if ($1 = 'x') or ($1 = 'X') then
+          $profile='x'
+	else
+          if ($1 = 'z') or ($1 = 'Z') then
+            $profile='z'
+	  else
+            if ($1 = 'xyz') or ($1 = 'XYZ') then
+              $profile='xyz'
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+
+  " if more than one arguments were given check the second argument "
+  if $#>1 then
+    " check argument type for second argument "
+    if not(typeof('$2')) then 
+      write('error','%s: string arguments required, see man(\'%s\')', $0, $0) 
+      return 
+    endif  
+
+    " arguments were given - set spectrum/scale flag or profile selection "
+    if ($2 = 'y')or($2 = 'Y') then
+      $spectrum='y'
+    else  
+      if ($2 = 'n') or ($2 = 'N') then
+        $spectrum='n'    
+      else
+        if ($2 = 'xy') or ($2 = 'XY') then
+          $profile='xy'   
+        else 
+          if ($2 = 'z') or ($2 = 'Z') then 
+            $profile='z'  
+          else 
+            if ($2 = 'xyz') or ($2 = 'XYZ') then
+              $profile='xyz'
+            endif
+          endif    
+        endif 
+      endif 
+    endif
+  endif
+endif
+
+" +--------------------------+ "
+" | define global parameters | "
+" +--------------------------+ "
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+$ymax=wc2max/2+5   "vert size"
+$y0=wc2max/2-10    "vert position"
+$x0=3                   " leave a little gap at both sides "
+$xmax=wcmax-$x0    "end of graph"
+$doscale=0	   "draw spectral frequency axis"
+$maxscale=32767
+select:$trace
+
+" +----------------------------------------------------+ "
+" | convert data to x/y and z files in FID text format | "
+" +----------------------------------------------------+ "
+
+$str = '' $str1 = '' $str2 = '' $str3 = ''
+lookup('file',$simfile)
+lookup('read',6):$str,$str,$str,$str1,$str2,$str3
+format($str,5,0):$npoints
+format($str1,5,0):$xmaxval
+format($str2,5,0):$ymaxval
+format($str3,5,0):$zmaxval
+
+if ($npoints = 0) then
+  write('error','%s: problem with input data conversion!',$0)
+  return
+endif
+
+" +-------------------------------------------------+ "
+" | temporarily save experiment data and parameters | "
+" +-------------------------------------------------+ "
+flush
+copy($fid,$fid+'.tmp')
+rm($fid)
+copy($procpar,$procpar+'.bk')
+copy($curpar,$curpar+'.bk')
+copy($data,$data+'.bk')
+copy($phasefile,$phasefile+'.bk')
+
+" +--------------------------------------------------------+ "
+" | fix acquisition parameters to match the pseudo-dataset | "
+" +--------------------------------------------------------+ "
+setvalue('dp','n','processed')
+setvalue('np',$npoints*2,'processed')
+setvalue('at',($npoints-1)/sw)
+off('fpmult')
+setvalue('nt',1)
+setvalue('ct',1)
+setvalue('array','')
+setvalue('arraydim',1)
+
+" set up some principal processing and display parameters "
+phfid=0         " we want to be looking at the real part when we mean it "
+setvalue('np',$npoints*2)
+fn=2*$npoints   " adjust fn "
+if fn<2*$npoints then fn=2*fn endif
+exists('ssfilter','parameter'):$e	"check if present"
+if ($e<>0) then ssfilter='n' endif
+exists('lsfrq','parameter'):$e		"check is present"
+if ($e<>0) then lsfrq='n' endif
+lsfid='n' proc='ft' 
+full wc=wcmax-2*$x0 sc=$x0 ai
+vp=$y0        				" display in center of page "
+cdc lvl=0 tlt=0				" avoid dc corrections upon display "
+
+" +-------------------------------------------------------------------+ "
+" | display x,y profile by looking at the real and the imaginary part | "
+" +-------------------------------------------------------------------+ "
+if ($profile<>'z') then
+
+  " scale maximum xy response "
+  if $ymaxval>$xmaxval then
+    $max=$ymaxval
+  else
+    $max=$xmaxval
+  endif
+  $ymax1=$ymax*$max/$maxscale
+
+  " create an fid from the x,y profile "
+  makefid($xyfid,'dp=n')
+
+  " set up processing and display parameters "
+  ft('noft','nodc',1)		" ft without FT, no DC correction "
+  wp=sw/fn*(np-1) sp=sw-wp	" don't want to see the zerofilled part "
+  rp=0 lp=0			" look at the 'pure' real part first "
+
+  " scale data for display "
+  peak:$re			" size of real part "
+  if $re<0 then $re=0-$re endif
+  rp=90 peak:$im		" size of imaginary part "
+  if $im<0 then $im=0-$im endif
+  if ($re=0) and ($im=0) then
+    write('error','%s: x/y scaling error - division by zero!',$0)
+    return
+  endif
+  vs=vs*$ymax1/$re
+ 
+  " display the x,y excitation profile "
+  rp=0                    " display / plot real part first "
+  {$drawcmd}($xcolor)
+  write($device,$xcolor,2*$x0,$y0+1.5*$ys,'X profile')
+  if ($profile<>'x') then
+    rp=90
+    {$drawcmd}($ycolor)
+    write($device,$ycolor,2*$x0,$y0+0.5*$ys,'Y profile')
+  endif
+  flush
+endif
+
+" +----------------------------------------------------+ "
+" | display z profile by looking at the real part only | "
+" +----------------------------------------------------+ "
+if (($profile='xyz') or ($profile='z')) then
+
+  " create an fid from the z profile "
+  makefid($zfid,'dp=n')
+
+  " set up processing and display parameters "
+  ft('noft','nodc',1)		" ft without FT, no DC correction "
+  wp=sw/fn*(np-1) sp=sw-wp	" don't want to see the zerofilled part "
+  rp=0 lp=0			" look at the 'pure' real part first "
+  $x0=3				" leave a little gap at both sides "
+
+  " scale data for display "
+  peak:$re			" size of real part "
+  if $re<0 then $re=0-$re endif
+  if ($zmaxval>0) and ($re>0) then
+    vs=vs*$zmaxval/$maxscale*$ymax/$re
+  else
+    write('error','%s: z scaling error - division by zero!',$0)
+    return
+  endif
+
+  " display the x,y excitation profile "
+  rp=0                    " display / plot real part first "
+  {$drawcmd}($zcolor)
+  write($device,$zcolor,2*$x0,$y0+$ymax-$ys,'Z profile')
+  flush
+endif
+
+" +-----------+ "
+" | draw axes | "
+" +-----------+ "
+pen($device,$axiscolor)
+move($x0,$y0-$ymax)
+draw($x0,$y0+$ymax)
+move($x0,$y0-1)
+draw($xmax,$y0-1)
+
+" +-------------------------+ "
+" | restore experiment data | "
+" +-------------------------+ "
+rm($fid)        rename($fid+'.tmp',$fid)
+rm($procpar)    rename($procpar+'.bk',$procpar)
+rm($curpar)     rename($curpar+'.bk',$curpar)
+rm($data)       rename($data+'.bk',$data)
+rm($phasefile)  rename($phasefile+'.bk',$phasefile)
+fread($procpar,'processed')
+fread($curpar,'current')
+vp=0
+
+" +--------------------------------------+ "
+" | display frequency scale and spectrum | "
+" +--------------------------------------+ "
+sc=wcmax-$xmax wc=wcmax-2*$x0
+if $spectrum = 'y' then
+  wft($trace)
+  vp=0 sp=0-rfl+rfp wp=sw
+  {$drawcmd}($trace)
+  {$scalecmd}
+  full
+endif

@@ -1,0 +1,51 @@
+"macro maxlctime2"
+/*-*- MAGICAL -*-*/
+"macro maxlctime2"
+// maclctime - this version reads LCD 2.x format data
+
+$filename = curexp + '/lcdata'
+exists($filename,'file'):$e
+if (not $e) then
+  write('line3','lcdata file does not exist in current experiment')
+  abort
+endif
+
+// Read the lcdata file
+lookup('file', $filename)
+
+// Get version number
+lookup('readline'):$versionline
+$s1=''
+$ver=''
+strstr($versionline, 'LCD 2.'):$newversion,$s1,$ver
+if ($ver <> '') then
+  $ver = '2.' + $ver
+endif
+if (not $newversion) then
+  write('line3','lcdata file is in an unknown format: ' + $versionline)
+  abort
+endif
+
+// Set scale factors for auto-scaling
+vslc = 0
+oclc = 0
+
+// Get time from last good data line
+$tlast = 0
+$dataline = ''
+$idx = 0
+$i = 0
+while ($idx <= 1 and $i < 10) do
+  $i = $i + 1
+  $stri = ''
+  format($i, 0, 0):$stri
+  shell('tail -'+$stri+' "' + $filename +'"'):$dataline
+  strstr($dataline, ','):$idx
+endwhile
+if ($idx > 1) then
+  substr($dataline, 1, $idx - 1):$tlast
+endif
+
+sf1 = 0
+wf1 = $tlast
+return($tlast)

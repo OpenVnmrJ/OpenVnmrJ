@@ -1,0 +1,30 @@
+"macro rna_autowatergate"
+" rna_autowatergate"
+"use automatic power calculation and H2Osinc.RF pulse"
+
+BPgettemp:$temp 
+BPrtppar('water') presat='n' watergate='y'
+autosoft='y' flipshap='' flippwr='n' flipback='y'
+
+wet='n' shaped='n' jumpret='n' 
+d3=1/14p tofwg=tof 
+
+if ($1=0) then flagsoft='y' flag3919='n' flagW5='n' endif
+if ($1=1) then flagsoft='n' flag3919='y' flagW5='n' endif
+if ($1=2) then flagsoft='n' flag3919='n' flagW5='y' endif
+
+setlimit('flippw',50000,0,.1)
+temp=$temp pw(90)
+p180=2*pw90
+$flippw=$flippw*1e3
+if (autosoft='y') then
+ flippw=$flippw nt=1 gain=gain-6
+ ssfilter='n' wnt='f wft select(1) av vsadj dssh'
+ rna_autowatergateproc4 return
+endif
+array('flippw',26,0.5*$flippw,0.05*$flippw) nt=1 gain=10
+ssfilter='n'
+wexp='rna_autowatergateproc1' wnt='f wft select(1) av vsadj dssh'
+dg
+av
+atext('Automatic Watergate ') dps dtext au

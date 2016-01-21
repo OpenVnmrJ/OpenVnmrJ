@@ -1,0 +1,90 @@
+"macro gs_slice"
+"**************************************************************"
+"                                                              "
+" gs_slice  - Save/load slice region as a voxel for shimming   "
+"                                                              "
+"**************************************************************"
+
+$macro=$0
+
+"Default options"
+$action = 'save'
+if ($# > 0) then
+  $action = $1
+endif
+
+"Make sure voxel parameters exist"
+create('vpsi','real','current',0.0)
+create('vphi','real','current',0.0)
+create('vtheta','real','current',0.0)
+create('vox1','real','current',5.0)
+create('vox2','real','current',5.0)
+create('vox3','real','current',5.0)
+create('pos1','real','current',0.0)
+create('pos2','real','current',0.0)
+create('pos3','real','current',0.0)
+
+if ($action='save') then
+
+  if(iplanType = 5) then  "CSI"
+    $vox1=lpe2
+    $pos1=ppe2
+  else
+    $vox1=lro
+    $pos1=pro
+  endif
+  $GDIR = userdir+'/prescan'
+  exists($GDIR,'file'):$ex
+  if($ex = 0) then
+    mkdir($GDIR)
+  endif
+  $name = $GDIR+'/slab.par'
+  exists($name,'file'):$ex    
+  if ($ex > 0) then
+    rm('-f',$name):$x
+  endif
+  scoutpath=scoutpaths[1]
+  vtheta = theta
+  vphi = phi
+  vpsi = psi
+  vox1 = $vox1*10
+  vox2 = lpe*10
+  vox3 = (ns*thk)+((ns-1)*gap*10)
+  pos1 = $pos1
+  pos2 = ppe
+  pos3 = pss0
+  writeparam($name,'vtheta vphi vpsi vox1 vox2 vox3 pos1 pos2 pos3 scoutpath')
+  write('line3','slice/slab saved for shimming')
+
+endif
+
+if ($action='savevoxel') then
+
+  $GDIR = userdir+'/prescan'
+  exists($GDIR,'file'):$ex
+  if($ex = 0) then
+    mkdir($GDIR)
+  endif
+  $name = $GDIR+'/slab.par'
+  exists($name,'file'):$ex    
+  if ($ex > 0) then
+    rm('-f',$name):$x
+  endif
+  scoutpath=scoutpaths[1]
+  writeparam($name,'vtheta vphi vpsi vox1 vox2 vox3 pos1 pos2 pos3 scoutpath')
+  write('line3','slice/slab saved for shimming')
+
+endif
+
+if ($action='load') then
+
+  $name = userdir+'/prescan/slab.par'
+  exists($name,'file'):$e
+  if ($e=1) then
+    rtv(userdir+'/prescan/slab.par','vtheta','vphi','vpsi','vox1','vox2','vox3','pos1','pos2','pos3','scoutpath'):vtheta,vphi,vpsi,vox1,vox2,vox3,pos1,pos2,pos3,scoutpath
+    gplan('setDefaultType', 3) gplan('getCurrentStacks')
+  else
+    write('error','%s: slice/slab information not saved at %s',$macro,$name)
+  endif
+
+endif

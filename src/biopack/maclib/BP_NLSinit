@@ -1,0 +1,150 @@
+"macro BP_NLSinit"
+"BP_NLSinit(<arg>)"
+"this macro is used only once to add sparse relevant parameters to a nD Biopack exp"
+
+ length(seqfil):$size
+ substr(seqfil,$size-1,2):$lasttwo   "_S if already set"
+ substr(seqfil,1,$size-2):$baseseq   "parent sequence"
+ if $lasttwo='_S' then
+  SPARSE='n' 
+  seqfil=$baseseq
+  seqfil?
+  write('line3','Re-setting seqfil to parent value %s',seqfil)
+  return
+ endif
+
+if $# <> 1   then
+ write('line3','Specify number of dimensions for the experiment as argument. Aborting')
+ return
+endif
+
+$seq=seqfil+'_S'
+
+exists('NDIM','parameter'):$e 
+if $e =1 then 
+ write('line3','Parameter Set already initialized')  
+ if $lasttwo<>'_S' then 
+ seqfil=seqfil+'_S' endif
+ return
+else
+ create('NDIM','integer') 
+endif
+
+exists('BP_MDDproc','parameter'):$e  "determines which panel is shown"
+if $e =0 then 
+ create('BP_MDDproc','string') 
+endif
+BP_MDDproc='n'
+
+NDIM=$1     "argument to BP_NLSinit is the dimensionality of the experiment"
+$ndims=' '
+format(NDIM,1,0):$ndims
+write('line3','Setting NLS for %dD experiment %s',NDIM,seqfil)
+
+pwd:$curdir
+
+exists(userdir+'/seqlib/'+$seq, 'file'):$e1
+exists('/vnmr/seqlib/'+$seq, 'file'):$e2
+$gawk='' $nawk='' $orig_seq_path=''
+
+if  (($e1=1) or ($e2=1))   then
+ write('line3','pulse sequence %s exists',$seq)
+else
+ BPfindfile(seqfil+'.c','psglib'):$orig_seq_path
+ cd cp($orig_seq_path, 'vnmrsys/psglib')
+ write('line3','Create NLS version of sequence with name %s',$seq)
+" $awk=userdir+'/../bin/init_SP.gawk'"
+ BPfindfile('init_SP.gawk'):$gawk
+ exists('/bin/nawk','file'):$e
+ if $e=1 then "Solaris"
+  shell('cd; cd vnmrsys/psglib; nawk -v NDIM='+$ndims+' -f '+$gawk,seqfil+'.c >'+$seq+'.c'):$dummy
+ else  "Linux"
+  shell('cd; cd vnmrsys/psglib; gawk -v NDIM='+$ndims+' -f '+$gawk,seqfil+'.c >'+$seq+'.c'):$dummy
+ endif
+ seqgen($seq)
+endif
+
+$layout=''
+BPfindfile(seqfil,'templates/layout'):$layout
+
+if ($layout<>'') then
+cp('-r', $layout, userdir+'/templates/layout/'+$seq)
+endif
+
+if $layout<>'' then
+  $template=userdir+'/templates/layout/'+$seq+'/acq.xml'
+  $template_tmp=$template+'.tmp'
+  exists($template, 'file'):$e
+  if $e then
+    shell('cat '+$template+'| sed \'s/label="Sampling"/label="Sampling\\/NLS"/\'',
+	' > '+$template_tmp, '; cat'):$dum
+    shell('mv',$template_tmp, $template):$dum
+  endif
+endif
+
+seqfil=$seq
+
+create('dgnls','string') setlimit('dgnls',1024,0,0) 
+dgnls='1:SAMPLING:SPARSE,seqfil,NDIM,CT_SP,CEXP,printSP,sparse_dir,sparse_file,seedSP,sptype,minhole;'
+
+create('sparse_file','string') sparse_file='nls'
+create('sparse_dir','string') sparse_dir=curexp
+create('CT_SP','string') CT_SP='nyn'
+create('CEXP','string') CEXP='yyn'
+create('printSP','string') printSP='y'
+create('seedSP','integer') seedSP=4321
+create('sptype','string') sptype='shuffle'
+create('minhole','integer') minhole=0 setlimit('minhole',1000,-1000,1)
+
+if( $1 >= 2 ) then 
+dgnls=dgnls+'2:DIM 1:nimax,nimin,ni,T2sp:4,Jsp;'
+exists('nimin','parameter'):$e
+if ($e=0) then
+ create('nimin','integer')
+endif
+nimin=0
+exists('nimax','parameter'):$e
+if ($e=0) then
+ create('nimax','integer')
+endif
+nimax=ni
+create('T2sp','delay') T2sp=0.02
+create('Jsp','delay') Jsp=0
+endif
+
+if( $1 >= 3 ) then 
+dgnls=dgnls+'3:DIM 2:ni2max,nimin2,ni2,T2sp2:4,Jsp2;'
+exists('nimin2','parameter'):$e
+if ($e=0) then
+ create('nimin2','integer')
+endif
+nimin2=0
+exists('ni2max','parameter'):$e
+if ($e=0) then
+ create('ni2max','integer')
+endif
+ni2max=ni2
+create('T2sp2','delay') T2sp2=1.00
+create('Jsp2','delay') Jsp2=0
+endif
+
+if( $1 >= 4 ) then 
+dgnls=dgnls+'3:DIM 3:ni3max,nimin3,ni3,T2sp3:4,Jsp3;'
+exists('nimin3','parameter'):$e
+if ($e=0) then
+ create('nimin3','integer')
+endif
+nimin3=0
+exists('ni3max','parameter'):$e
+if ($e=0) then
+ create('ni3max','integer')
+endif
+ni3max=ni3
+create('T2sp3','delay') T2sp3=1.00
+create('Jsp3','delay') Jsp3=0
+endif
+
+return
+cd($curdir)
+echo('seqfil is set to '+seqfil)
+echo('Non-Linear Sampling parameters are set')

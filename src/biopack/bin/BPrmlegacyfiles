@@ -1,0 +1,239 @@
+#!/bin/sh
+#
+# BPrmlegacyfiles - remove local files from older ProteinPack and RnaPack
+#		    installations
+#
+# Usage:	BPrmlegacyfiles <-h> <list <backup_directory>>
+#
+# Revision history:
+#	2003-05-08 - rk (created based on suggestion by Jack Howarth,
+#		     Univ. of Cincinnati College of Medicine)
+#       2005-01-12 - rk (fixed Linux issues)
+#       2009-02-22 - rk (adjusted for "appdirs" approach)
+#
+
+
+#------------------------------------------------------------------------------
+#  Compatibility section
+#------------------------------------------------------------------------------
+
+echo=`which echo`
+tail=`which tail`
+pwd=`which pwd`
+if [ `uname` = SunOS ]; then
+  awk=nawk
+  tail=/usr/xpg4/bin/tail
+elif [ `uname` = Linux ]; then
+  echo="$echo -e"
+  awk=awk
+else
+  awk=awk
+fi
+
+
+#------------------------------------------------------------------------------
+# global settings etc.
+#------------------------------------------------------------------------------
+
+cmd=`basename $0`
+if [ x$vnmrsystem = x ]; then
+  vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = x ]; then
+  vnmruser=$HOME/vnmrsys
+fi
+BPdir=BioPack.dir
+wd=`$pwd`
+
+
+#------------------------------------------------------------------------------
+# Argument checking
+#------------------------------------------------------------------------------
+
+wait=0
+while [ x`$echo $1 | $awk '{print substr($1,1,1)}'` = "x-" -a $# -gt 0 ]; do
+  if [ x$1 = x-h ]; then
+    wait=1
+  fi
+  shift
+done
+if [ $# -eq 2 ]; then
+  bkdir=$2
+fi
+if [ $# -ge 1 ]; then
+  list=$1
+  if [ ! -f $list ]; then
+    $echo "$0 error: file \"$list\" not found - aborting."
+    if [ $wait -eq 1 ]; then
+      sleep 5
+    fi
+    exit 1
+  fi
+else
+  list=`ls -trd $vnmruser/biopack/$BPdir/legacy_files \
+                $vnmruser/$BPdir/legacy_files \
+	        $vnmrsystem/$BPdir/legacy_files \
+                $vnmrsystem/biopack/$BPdir/legacy_files 2>/dev/null | \
+	$tail -n 1`
+  if [ "x${list}" = x ]; then
+    $echo "$0 error: file of legacy files not found - aborting."
+    if [ $wait -eq 1 ]; then
+      sleep 5
+    fi
+    exit 1
+  fi
+fi
+if [ `$echo $list | grep -c '^/'` -eq 0 ]; then
+  list=$wd/$list
+fi
+if [ x$bkdir = x ]; then
+  if [ -d $vnmruser/biopack/$BPdir ]; then
+    backuppath=$vnmruser/biopack/$BPdir/backups
+  else
+    backuppath=$vnmruser/$BPdir/backups
+  fi
+  date=`date +%Y-%m-%d_%H:%M`
+  bkdir=$backuppath/$date
+fi
+if [ ! -d $bkdir ]; then
+  mkdir -p $bkdir
+fi
+
+
+
+#------------------------------------------------------------------------------
+# removing files in list, if found
+#------------------------------------------------------------------------------
+
+$echo "Checking for legacy files from ProteinPack / RnaPack installations ... "
+found=0
+for f in `cat $list`; do
+  file=$f
+  dir=`dirname $file`
+  if [ `$echo $f | grep -c '^templates/'` -gt 0 ]; then
+    if [ -f user_$f -a ! -f $f ]; then
+      file=user_$f
+      dir=`dirname $file`
+    fi
+  elif [ `$echo $f | grep -c '^bin/'` -gt 0 ]; then
+    if [ -f $HOME/$f -a ! -f $f ]; then
+      file=$HOME/$f
+    fi
+  fi
+  if [ -h $file ]; then
+    found=`expr $found + 1`
+    if [ ! -d $bkdir/$dir ]; then
+      mkdir -p $bkdir/$dir
+    fi
+    if [ ! -d $bkdir/$dir ]; then
+      $echo "   Unable to create directory $bkdir/$dir -"
+      $echo "     symbolic link $file removed, NOT backed up"
+      rm -f $file
+    elif [ ! -w $bkdir/$dir ]; then
+      $echo "   Directory $bkdir/$dir not writable -"
+      $echo "     symbolic link $file removed, NOT backed up"
+      rm -f $file
+    else
+      mv $file $bkdir/$dir
+      $echo $file $bkdir/$dir | $awk '{
+        l1=length($1)
+	l2=length($2)
+	linelen=80
+	overhead=27
+	if (l1 + l2 + overhead < linelen)
+        {
+	  printf("   Symbolic link %s moved to %s\n",$1,$2)
+	}
+	else
+	{
+	  printf("   Symbolic link %s moved to\n",$1)
+	  printf("     %s\n",$2)
+	}
+      }'
+    fi
+  elif [ -d $file ]; then
+    found=`expr $found + 1`
+    if [ ! -d $bkdir/$dir ]; then
+      mkdir -p $bkdir/$dir
+    fi
+    if [ ! -d $bkdir/$dir ]; then
+      $echo "   Unable to create directory $bkdir/$dir -"
+      $echo "     subdirectory $file removed, NOT backed up"
+      rm -rf $file
+    elif [ ! -w $bkdir/$dir ]; then
+      $echo "   Directory $bkdir/$dir not writable -"
+      $echo "     subdirectory $file removed, NOT backed up"
+      rm -f $file
+    else
+      tar cf - $file | (cd $bkdir/$dir; tar xfBp -)
+      rm -rf $file
+      $echo $file $bkdir/$dir | $awk '{
+        l1=length($1)
+        l2=length($2)
+        linelen=80
+        overhead=28
+        if (l1 + l2 + overhead < linelen)
+        {
+          printf("   Directory %s backed up in %s\n",$1,$2)
+        }
+        else
+        {
+          printf("   Directory %s backed up in\n",$1)
+          printf("     %s\n",$2)
+        }
+      }'
+    fi
+  elif [ -f $file ]; then
+    found=`expr $found + 1`
+    if [ ! -d $bkdir/$dir ]; then
+      mkdir -p $bkdir/$dir
+    fi
+    if [ ! -d $bkdir/$dir ]; then
+      $echo "   Unable to create directory $bkdir/$dir -"
+      $echo "     file $file removed, NOT backed up"
+      rm -f $file
+    elif [ ! -w $bkdir/$dir ]; then
+      $echo "   Directory $bkdir/$dir not writable -"
+      $echo "     file $file removed, NOT backed up"
+      rm -f $file
+    else
+      mv $file $bkdir/$dir
+      $echo $file $bkdir/$dir | $awk '{
+        l1=length($1)
+	l2=length($2)
+	linelen=80
+	overhead=23
+	if (l1 + l2 + overhead < linelen)
+        {
+	  printf("   File %s backed up in %s\n",$1,$2)
+	}
+	else
+	{
+	  printf("   File %s backed up in\n",$1)
+	  printf("     %s\n",$2)
+	}
+      }'
+    fi
+  fi
+done
+if [ -f $HOME/ProteinPack_rev ]; then
+  found=`expr $found + 1`
+  mv $HOME/ProteinPack_rev $bkdir
+fi
+if [ -f $vnmruser/ProteinPack_rev ]; then
+  found=`expr $found + 1`
+  mv $vnmruser/ProteinPack_rev $bkdir
+fi
+if [ $found -gt 0 ]; then
+  $echo "        ... done, found and removed $found legacy files."
+else
+  $echo "   ... done, no legacy files found in $wd"
+fi
+$echo
+
+if [ $wait -eq 1 ]; then
+  $echo
+  $echo 'Type [Return] to close window: \c'
+  read a
+fi
+exit 0

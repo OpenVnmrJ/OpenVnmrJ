@@ -1,0 +1,65 @@
+  gNhsqcS3
+    
+    HSQC gradient sensitivity enhanced version for N15.
+    Set dm2='nnn'
+
+    For NH:
+      Set NH2='n'
+      Set abfilter='a' or 'b', phase=1,2 for the subspectral editing i.e. to select
+      a or b state of 1JNH doublet. Use wft2d(1,0,-1,0,0,-1,0,-1).
+      Set abfilter='a','b' and phase=1,2 for interleaved collection. Set array='abfilter,phase'
+
+    For NH2:
+      Set NH2='y'
+      Set abfilter='a' or 'b', phase=1,2 for the subspectral editing i.e. to select
+      inner or outer lines of 1JNH2 doublet of doublets. Use wft2d(1,0,-1,0,0,-1,0,-1).
+      Set abfilter='a','b' and phase=1,2 for interleaved collection. Set array='abfilter,phase' 
+
+    For Interleaved collection:
+      for one component use wft2d(1,0,-1,0,0,0,0,0,0,-1,0,-1,0,0,0,0) and
+      for other component,  wft2d(0,0,0,0,1,0,-1,0,0,0,0,0,0,-1,0,-1) 
+
+      for both components (s/n reduced by sqrt(2)):
+       wft2d(1,0,-1,0,1,0,-1,0,0,-1,0,-1,0,-1,0,-1) 
+
+
+    pulse sequence: 	P. Permi, J. Biomol. NMR 22, 27-35 (2002).  
+    sech/tanh pulse: 	Silver, Joseph and Hoult, JMR, 59, 347 (1984)
+			Bendall, JMR, A116, 46 (1995)
+    
+    Written by P.Permi, starting with gNhsqc.c from BioPack, as gNhsqc_jnh_pp.c
+       and gNhsqc_jnh2_pp.c
+    Modified for BioPack by G.Gray (Varian). Combined NH and NH2 options as gNhsqcS3.c
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nnn', dmm2 = 'ccc'
+    Set dm3='nyn', dmm2='cwc' for 2H decoupling using 4th channel
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+    
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the 
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+
+       Center H1 frequency on H2O (4.7ppm), C13 frequency on 100ppm, and N15 
+       frequency on the amide region (120 ppm).
+
+       Splitting of resonances in the N15 dimension by C13 coupling in C13
+       enriched samples can be removed by setting C13refoc='y'.
+
+       H2O preservation is achieved with sinc one-lobe selective pulse 
+       used to put H2O back along z.
+
+       The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.

@@ -1,0 +1,128 @@
+"macro gs_setshims"
+"*******************************************************************************"
+" gs_setshims - read shim changes and set new shim values"
+
+" Details:  Reads the shim changes from gshimcalc output file"
+"           Sets the shims if none exceed limits"
+"           gs_setshims(0) -does not update shims or frequency
+
+" BUGS: shim limits not checked"
+
+"*******************************************************************************"
+if($# > 0) then
+  $update = 'n'  "do not update shims"
+else
+  $update = 'y'
+endif
+$GSDIR = userdir+'/gshimdir/data'
+$out = $GSDIR+'/gshim.out'
+exists($out,'file'):$ex  "check if gshim.out file exists"
+if ($ex = 0) then
+  write('line3','%s does not exist',$out)
+  abort
+endif
+
+rts('start0') "original (fieldmap) shim values used for reference"
+load='n'
+
+$hdr = $GSDIR+'/header'
+$shimpar = $GSDIR+'/shimmap.param'
+
+"** read in shim parameters **"
+lookup('mfile',$shimpar,'filekey'):$key
+lookup('mfile',$key,'seek','#DATASIZE','read','read','read'):$sz1,$sz2,$sz3
+lookup('mfile',$key,'seek','#FOV-MM','read','read','read'):$f1,$f2,$f3
+lookup('mfile',$key,'seek','#DELAY-MSEC','read'):$delay
+lookup('mfile',$key,'seek','#THRESHOLD-PERCENT','read'):$thresh
+lookup('mfile',$key,'seek','#REFERENCE-DELAY-MSEC','read'):$delayref
+lookup('mfile',$key,'seek','#NO-OF-SHIMS','read'):$maxshims
+lookup('mfile',$key,'seek','#SHIM','readline','filekey'):$tmp,$key
+
+"** read shim info: #SHIM	OFFSET	UNITS	ADJUST	MAP "
+$i = 1
+while ($i <= $maxshims) do
+  lookup('mfile',$key,'read','read','read','read','read','filekey'):$shim[$i],$st[$i],$u[$i],$map[$i],$aj[$i],$key
+  $i = $i+1
+endwhile
+"** read in shim changes and set new values **"
+$shimout = $GSDIR+'/gshim.out'
+lookup('mfile',$shimout,'filekey'):$key
+lookup('mfile',$key,'seek','z0','read','filekey'):$z0change,$key
+
+$i = 1
+$change=''
+$error = 0  "error check for shim limits"
+while ($i <= $maxshims) do
+  lookup('mfile',$key,'read','read','filekey'):$shim[$i],$change[$i],$key
+ 
+  "start0 shim file read in. start0 was saved by gs_acqb0map"
+  if ($aj[$i] = 1) then           "adjust shim? "
+  
+    $cmd = $shim[$i]+'='+$shim[$i]+' + '+$change[$i]
+    exec($cmd)   
+    $shval = {$shim[$i]}     
+
+    if (parmax[19] < 4000) then
+      if ($shval >= 2047) or ($shval <= -2047) then
+        $error = 1
+        write('line3','shim limit exceeded for %s = %d',$shim[$i],$shval)
+      endif
+    else 
+      if ($shval >= 32767) or ($shval <= -32767) then
+        $error = 1
+        write('error','shim limit exceeded for %s = %d',$shim[$i],$shval)
+      endif 
+    endif  
+  endif 
+  $i = $i+1 
+endwhile
+if($update = 'n') then
+  return
+else
+  if ($error > 0) then
+    write('error', 'Shims will not be modified')
+    rts('start0')
+    load='n'
+    abort
+  else
+    exists('setf','parameter'):$ex
+    if($ex = 0) then
+      create('setf','flag')
+      setf='n'
+    endif
+    "check Z0 shift and set H1offset"
+    if(setf='y') then
+      exists('z0shift','parameter'):$ex
+      if($ex = 0) then
+        create('z0shift','real')
+      endif
+      z0shift=$z0change
+      if (z0shift > 500) or (z0shift < -500) then
+        write('error','Measured frequency shift, %5.1f Hz too large; do frequency prescan',z0shift)
+        $error = 1
+      endif
+      $h=H1offset0+z0shift "set the new proton frequency"
+      $v = H1offset-$h
+      if($v > 500) or ($v < -500) then
+        write('error','Frequency change is too high; do frequency prescan')
+        $error = 1
+      else
+        write('line3','Z0 shift = %6.1f Hz; H1offset changed to %6.1f hz',z0shift,$h)
+        H1offset=$h
+      endif
+    endif
+    write('line3','Updating shims')
+    load='y'  "update shims"
+    setallshims
+  endif
+endif
+
+"**************************************************************"
+"		Modification History"
+
+" 021111(ss): start0 shim file recalled and updated"
+" 021209(ss): setallshims loads new shims"
+" 030909(ss) gshim.out file checked"
+" 040402(ss) proton frequency updated"
+
+"**************************************************************"

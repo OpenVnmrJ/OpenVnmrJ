@@ -1,0 +1,52 @@
+"macro getemailaddr"
+//  Modified on 2010-12-01 to read addresses from the operatorlist file
+
+$emailaddr=''
+$oplist=systemdir+'/adm/users/operators/operatorlist'
+exists($oplist,'file'):$filex
+if ($filex) then
+        $s1='' $s2='' $s3=''
+        readfile($oplist,'$s1','$s2','','local')
+        teststr('$s1',$1,'local'):$ret
+        if ($ret>0) then
+            strsv2array($s2[$ret],';'):$s3
+            $s3size=size('$s3')
+            if ($s3size>1) then
+		$emailaddr=$s3[2]
+	    endif
+	endif
+endif
+if ($emailaddr='null') then $emailaddr='' endif
+return($emailaddr)
+"*****************************************************************"
+// The following section is kept here for any back-compatibility
+//    requirement.  The macro completed at the line above.
+
+  $emailaddr=email
+  $ex=0
+  $emailfile=systemdir+'/emailaddress'
+  exists($emailfile,'file'):$ex
+  if ($ex) then
+
+"************************************************************************"
+"****The next line(s) depends on the format of the emailaddress file *** "
+"****Couple of examples are given below******************************"
+"****The first one is if the address and name are separated by a space***"
+"***The second one is if the address and name are separated by a comma***"
+"************************************************************************"
+
+          lookup('mfile',$emailfile,'seekcs',$1,'readline',1):$emailaddr
+"         shell(`(grep -i `+$1+`, `+$emailfile+` | awk -F, '{print $2}')`):$emailaddr   "
+
+"If the emailaddress is same as the username, reset the address to an "
+" empty string. "
+
+  	$eaddr=''
+  	substr($emailaddr,1):$eaddr
+ 	if ($eaddr = $1) then
+	     $emailaddr=''
+  	endif
+  endif
+
+
+return($emailaddr)

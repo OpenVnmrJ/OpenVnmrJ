@@ -1,0 +1,170 @@
+"macro udUserChemPackExpts"
+exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+if ($direx=0) then
+   shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum
+endif
+$tmpfile='/vnmr/tmp/tmpfile'
+
+if ($# < 4) then $4='CustomEXP' endif
+exp2panel($1,$4,$2,ACQtime)
+
+IF  ($1 = 'add') THEN
+        "Two xml files need to be edited"
+        "********** Edit UserChemPackExpts.xml"
+  $edited=0
+  $isthere=0
+   $xml=userdir+'/templates/vnmrj/interface/UserChemPackExpts.xml'
+   exists($xml,'file'):$xmlex
+   if ($xmlex=0) then
+        getappdirs:$atot,$adirs
+        $i=1
+        repeat
+            $xml2=$adirs[$i]+'/templates/vnmrj/interface/UserChemPackExpts.xml'
+            exists($xml2,'file'):$xml2ex
+            if ($xml2ex) then
+                shell('(cat '+$xml2+' | grep -wc \'\"'+$2+'\')'):$isthere
+                if ($isthere=0) then
+                   shell('cp '+$xml2+' '+$xml):$dum
+                endif
+                $i=$atot
+            endif
+            $i=$i+1
+        until $i > $atot
+   endif
+
+   exists($xml,'file'):$xmlex
+   if ($xmlex) then
+        shell('(cat '+$xml+' | grep -wc \'\"'+$2+'\')'):$isthere
+   endif
+   if ($isthere=0) then
+      write('reset',$tmpfile)
+      write('file',$tmpfile,'<mainmenu>')
+      if ($xmlex) then
+	shell('(cat '+$xml+' | grep -v mainmenu >> '+$tmpfile+')'):$dum
+      endif
+      write('file',$tmpfile,'    <mchoice label= "%s (%s)" vc= "savesampglobal(\'cp\') %s getsampglobal(\'cp\')" style="menu1" fg="black" />',$2,$3,$2)
+      write('file',$tmpfile,'</mainmenu>')
+      $edited=1
+      shell('cp '+$tmpfile+' '+$xml):$dum
+      shell('rm -f '+$tmpfile)
+   endif
+
+        "********** Edit UserChemPackExptsNew.xml"
+  $isthere=0
+   $xml=userdir+'/templates/vnmrj/interface/UserChemPackExptsNew.xml'
+   exists($xml,'file'):$xmlex
+   if ($xmlex=0) then
+        getappdirs:$atot,$adirs
+        $i=1
+        repeat
+            $xml2=$adirs[$i]+'/templates/vnmrj/interface/UserChemPackExptsNew.xml'
+            exists($xml2,'file'):$xml2ex
+            if ($xml2ex) then
+                shell('(cat '+$xml2+' | grep -wc \'\"'+$2+'\')'):$isthere
+                if ($isthere=0) then
+                   shell('cp '+$xml2+' '+$xml):$dum
+                endif
+                $i=$atot
+            endif
+            $i=$i+1
+        until $i > $atot
+   endif
+
+   exists($xml,'file'):$xmlex
+   if ($xmlex) then
+        shell('(cat '+$xml+' | grep -wc \'\"'+$2+'\')'):$isthere
+   endif
+   if ($isthere=0) then
+      write('reset',$tmpfile)
+      write('file',$tmpfile,'<mainmenu>')
+      if ($xmlex) then
+        shell('(cat '+$xml+' | grep -v mainmenu >> '+$tmpfile+')'):$dum
+      endif
+      write('file',$tmpfile,'    <mchoice label= "%s (%s)" vc= "resetsampglobal %s" style="menu1" fg="brown" />',$2,$3,$2)
+      write('file',$tmpfile,'</mainmenu>')
+      $edited=1
+      shell('cp '+$tmpfile+' '+$xml):$dum
+      shell('rm -f '+$tmpfile)
+   endif
+   if ($edited) then
+       $banner='\\ \\'+$2+' added to\\Experiments Menu\\Exit and Restart VJ\\ \\'
+       banner($banner)
+   endif
+
+ELSEIF ($1 = 'delete') THEN
+
+   $edited=0
+   $xml=userdir+'/templates/vnmrj/interface/UserChemPackExpts.xml'
+   exists($xml,'file'):$xmlex
+   if ($xmlex=0) then
+        getappdirs:$atot,$adirs
+        $i=1
+        repeat
+            $xml2=$adirs[$i]+'/templates/vnmrj/interface/UserChemPackExpts.xml'
+            exists($xml2,'file'):$xml2ex
+            if ($xml2ex) then
+                shell('(cat '+$xml2+' | grep -wc \'\"'+$2+'\')'):$isthere
+                if ($isthere>0) then
+                   shell('cp '+$xml2+' '+$xml):$dum
+                endif
+                $i=$atot
+            endif
+            $i=$i+1
+        until $i > $atot
+   endif
+
+  exists($xml,'file'):$xmlex
+  if ($xmlex) then
+        shell('(cat '+$xml+' | grep -wc \'\"'+$2+'\')'):$isthere
+        if ($isthere>0) then
+           shell('(cat '+$xml+' | grep -vw \'\"'+$2+'\' > '+$xml+'1)'):$dum
+           shell('mv '+$xml+'1 '+$xml):$dum
+           $entries=1
+           shell('(cat '+$xml+' | grep -v mainmenu | wc -l)'):$entries
+           if ($entries=0) then
+                shell('rm -f '+$xml):$dum
+           endif
+	   $edited=1
+        endif
+  endif
+
+   $xml=userdir+'/templates/vnmrj/interface/UserChemPackExptsNew.xml'
+   exists($xml,'file'):$xmlex
+   if ($xmlex=0) then
+        getappdirs:$atot,$adirs
+        $i=1
+        repeat
+            $xml2=$adirs[$i]+'/templates/vnmrj/interface/UserChemPackExptsNew.xml'
+            exists($xml2,'file'):$xml2ex
+            if ($xml2ex) then
+                shell('(cat '+$xml2+' | grep -wc \'\"'+$2+'\')'):$isthere
+                if ($isthere>0) then
+                   shell('cp '+$xml2+' '+$xml):$dum
+                endif
+                $i=$atot
+            endif
+            $i=$i+1
+        until $i > $atot
+   endif
+
+  exists($xml,'file'):$xmlex
+  if ($xmlex) then
+        shell('(cat '+$xml+' | grep -wc \'\"'+$2+'\')'):$isthere
+        if ($isthere>0) then
+           shell('(cat '+$xml+' | grep -vw \'\"'+$2+'\' > '+$xml+'1)'):$dum
+           shell('mv '+$xml+'1 '+$xml):$dum
+           $entries=1
+           shell('(cat '+$xml+' | grep -v mainmenu | wc -l)'):$entries
+           if ($entries=0) then
+                shell('rm -f '+$xml):$dum
+           endif
+           $edited=1
+        endif
+  endif
+
+  if ($edited) then
+           $banner='\\ \\'+$2+' removed from\\Experiments Menu\\Exit and Restart VJ\\ \\'
+           banner($banner)
+  endif
+
+ENDIF

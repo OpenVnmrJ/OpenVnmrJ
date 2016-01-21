@@ -1,0 +1,488 @@
+"macro AuHobs"
+"********************************************************"
+"AuHobs - Proton observe Autocalibration               "
+"********************************************************"
+
+exists('CALmethod','parameter'):$calex
+if ($calex) then $CALmethod=CALmethod else $CALmethod='oldcal' endif
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+IF ($CALmethod = 'oldcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+if ($# < 1) then $1 = 1 endif
+
+  IF ($1 = 1) THEN
+
+  $fileex=0 $file=''
+  AutoCheck('H1ref'):$fileex,$file
+  $explist=explist
+  if ($fileex) then RT($file) else return endif
+  wft
+  explist=$explist
+  $solv='' format(solvent,'lower'):$solv
+  if ($solv = 'd2o') then
+   sp=4.3p wp=1p
+  endif
+
+  ds av vsadj(20) vp=wc2max/2
+  array('pw',40,2,2)
+  ai at=0.5 fn=4*np lb=1/at
+  wnt='wft(`acq`) select(1) vsadj(10) dssh'
+  wexp='AuHobs(2)'
+  alock='n' wshim='n' r1=1 r3=1
+  clear(2)
+  au('wait','next')
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 2) THEN
+
+  wft av 
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,wp+sp):$ht
+    if $counter=1 then $maxht = $ht $pw90=pw[1] else
+       if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+       endif
+    endif
+    $counter=$counter+1
+  until ($counter>arraydim)
+
+  if ($pw90 > 2*H1pw90) then
+    if (r1 < 2) then
+      r1 = r1+1
+      tpwr=tpwr+6
+      au('next','wait')
+      return
+    else
+      write('error','Autocalibration failed on second try -- determine manually')
+      abort
+    endif
+  endif
+
+   $factor = H1pw90/$pw90
+   ln($factor):$lnfactor
+   $tpwrdiff = trunc(20*0.43429*$lnfactor)
+   if ((tpwr-$tpwrdiff) > 63) then
+     $tpwrdiff = tpwr-63
+   endif
+  if ($pw90 = H1pw90) then AuHobs(3,$pw90) return endif
+  if ($pw90 < H1pw90) then 
+   if (($tpwrdiff > 0) and (r3 < 2)) then
+    tpwr=tpwr - $tpwrdiff r3 = r3+1
+    au('next','wait')
+    return
+   else
+    AuHobs(3,$pw90) return 
+   endif
+  endif
+
+  tpwr = tpwr - $tpwrdiff
+  array('pw',4*H1pw90,1,1)
+  clear(2) 
+  wexp='AuHobs(4)' au('next','wait') 
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 3) THEN
+
+  $pw90=$2
+  ph ds(1) ph if (console='vnmrs') then aph0 else aph endif
+  array('pw',17,3.2*$pw90,0.1*$pw90)
+  clear(2) full
+  da
+  wexp='AuHobs(5)' 
+  au('next','wait')  
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 4) THEN
+
+  clear(2)
+  wft av 
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,sp+wp):$ht
+    if $counter=1 then $maxht = $ht $pw90=pw[1] else
+       if $ht>$maxht then $maxht=$ht $pw90=pw[$counter] 
+       endif
+    endif
+    $counter=$counter+1
+  until ($counter>arraydim)
+  select(1)
+
+  if (($pw90 < H1pw90) or ($pw90 = H1pw90)) then AuHobs(3,$pw90) return endif
+
+  if (tpwr < 63) then
+   $factor = H1pw90/$pw90
+   ln($factor):$lnfactor
+   $tpwrdiff = trunc(20*0.43429*$lnfactor)
+   $newtpwr = tpwr - $tpwrdiff
+   if ($newtpwr <> tpwr) then 
+    wexp='AuHobs(4)' 
+    tpwr=$newtpwr
+    clear(2)
+    au('next','wait')
+   else
+    AuHobs(3,$pw90) return 
+   endif
+
+  else
+   AuHobs(3,$pw90)
+  endif
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 5) THEN
+
+  clear(2)
+  wft av
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,sp+wp):$ht
+    if $counter=1 then $minht = $ht $pw360=pw[1] else
+       if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+       endif
+    endif
+    $counter=$counter+1
+  until $counter>arraydim
+  pw90=$pw360/4.0
+
+  if (pw90 > H1pw90) then
+   if (tpwr < 63) then
+    tpwr=tpwr+1
+    array('pw',17,3.2*pw90,0.1*pw90)
+    au('next','wait')
+    return
+   endif
+  endif
+
+  $diff = pw[2] - pw[1]
+  if ($diff > 0.5) then
+   array('pw',21,$pw360-4,0.4)
+   au('next','wait')
+   return
+  endif
+
+  clear(2)
+  tpwr=tpwr-12 $pw90=pw90*4
+  ph
+  array('pw',41,3*$pw90,0.05*$pw90)
+  clear(2) full
+  da
+  wexp='AuHobs(6)' 
+  au('next','wait')  
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 6) THEN
+
+  clear(2)
+  wft av
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,sp+wp):$ht
+    if $counter=1 then $minht = $ht $pw360=pw[1] else
+       if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+       endif
+    endif
+    $counter=$counter+1
+  until $counter>arraydim
+
+  array('pw',21,$pw360-8,0.8)
+   wexp='AuHobs(7)'
+  au('next','wait')
+
+  ENDIF
+
+  "********************************************************"
+
+  IF ($1 = 7) THEN
+
+  clear(2)
+  wft av
+  $counter=1
+  repeat
+    select($counter)
+    peak(sp,sp+wp):$ht
+    if $counter=1 then $minht = $ht $pw360=pw[1] else
+       if $ht<$minht then $minht=$ht $pw360=pw[$counter]
+       endif
+    endif
+    $counter=$counter+1
+  until $counter>arraydim
+  $ref_pw90=$pw360/4.0
+  $ref_pwr=tpwr
+  $tpwr_cf = $ref_pw90/4/pw90
+  tpwr=tpwr+12
+
+  wnt='wft(`acq`) dssh' 
+  wexp='ph select(5) aph0 vsadj(50) dssh Autocalsave(`H1pw90`) cpplss Autocalnext'
+  $pwinc= trunc((pw90/5)+0.5)
+  array('pw',50,$pwinc,$pwinc)
+  $strpw90='' $strtpwr='' $strref_pwr='' $strref_pw90=''
+  $strtpwr_cf = ''
+  format(pw90,0,1):$strpw90
+  format(tpwr,0,0):$strtpwr
+  format($ref_pwr,0,0):$strref_pwr
+  format($ref_pw90,0,1):$strref_pw90
+  format($tpwr_cf,0,4):$strtpwr_cf
+  setparams('pw90',$strpw90)
+  setparams('tpwr',$strtpwr)
+  setparams('tpwr_cf',$strtpwr_cf)
+  "setparams('ref_pwr',$strref_pwr)"
+  "setparams('ref_pw90',$strref_pw90)"
+  $text='H1 obs. 90 degree pw: '+$strpw90
+  $atext='  at power level: '+$strtpwr
+  $atext1 = '  compression factor: '+$strtpwr_cf
+  atext($text)
+  atext($atext)
+  atext($atext1)
+
+  if (pltopt = 'y') then
+     au('next','wait')
+  else
+     wexp='ph select(5) aph0 vsadj(50) dssh Autocalsave(`H1pw90`) cpplss' 
+     Autocalsave('H1pw90','par')
+     Autocalnext
+  endif
+
+  ENDIF
+
+  "********************************************************"
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ELSEIF ($CALmethod = 'newcal') THEN
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+
+"AuHobs: macro to do H1 pw90 calibration"
+" arguments: "
+"   (none) :  initial setup "
+" 'refine' :  refinement of Haupt results "
+"  'array' :  set up 360 degree pw array for actual calibration "
+" 'save90' :  process pw360 array, update probe file, save data "
+"		and continue with compression factor determination "
+"    'cf'  :  process compression data, continue with next calibration "
+
+
+IF ($# < 1) then
+  " initial setup of H1pw90 calibration "
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then 
+  RT($file) 
+else 
+  write('error','H1 reference FID not found')
+  return 
+endif
+ai f wft dc vp = 12 vsadj th = 40  nll
+explist=$explist
+
+pw = 4,8  d1 = 2  nt = 1  ss = 0  fn = 4*np  gain = 'y'
+wnt='wft(`acq`) select(1) vsadj(wc2max/3) dssh'
+wexp='AuHobs(`refine`)'
+alock='n' wshim='n' r1=1 r3=1
+clear(2)
+da
+au('wait','next') 
+return
+
+ELSEIF ($1 = 'refine') then
+"********************************************************"
+"AuHobs_2 - Proton observe Autocalibration               "
+"  refine pw90 estimate "
+"********************************************************"
+
+select(1) dc select(2) dc fp
+pw_haupt:$pw90  "estimate of current pw90"
+
+if ($pw90 > 2*H1pw90) or ($pw90=0) then  "way off- intercept the flow & try again"
+  if (tpwr < 58) then
+    tpwr=tpwr+6
+    au('next','wait')
+    return
+  else
+    write('error','Autocalibration failed - determine manually')
+    abort
+  endif
+endif
+
+IF (pw[1] = 4) then "first pass- refine pw90 estimate"
+  pw = trunc(10*(2*$pw90/3)+0.5)/10 
+  if (pw = 4) then pw = 3.9 endif
+    "avoids endless loop in the case that pw90 = 6 "
+  pw = pw, 2*pw
+  wexp = 'AuHobs(`refine`)'
+  au('next','wait')
+  return
+
+ELSE  "continue with standard system"
+
+if (($pw90 >= 0.9*H1pw90) and ($pw90 <= 1.06*H1pw90)) or (r3 > 2.5)  then 
+  "close enough- get on with it "
+  AuHobs('array',$pw90) 
+  return 
+
+else "adjust power, make a new pw array"
+
+ $factor = $pw90/H1pw90
+ ln($factor):$lnfactor
+ ln(10):$ln10
+ $tpwrdiff = (20*$lnfactor/$ln10)
+ if ($tpwrdiff > 0.5) then
+   $tpwrdiff = trunc($tpwrdiff + 0.5)
+ elseif ($tpwrdiff < -0.5) then
+   $tpwrdiff = trunc($tpwrdiff - 0.5)
+ else
+   AuHobs('array',$pw90)
+   return
+ endif
+
+  tpwr=tpwr + $tpwrdiff r3 = r3+1
+  pw = trunc(10*(2*H1pw90/3) + 0.5)/10
+  if (pw = 4) then pw = 3.9 endif
+  pw = pw, 2*pw
+  da
+  wexp = 'AuHobs(`refine`)'
+  au('next','wait')
+  return
+endif
+
+ENDIF
+
+ELSEIF ($1 = 'array') then
+"********************************************************"
+"AuHobs_3 - Proton observe Autocalibration               "
+" set up 360 degree pw array at normal tpwr "
+"********************************************************"
+
+$pw90=trunc(10*$2 + 0.5)/10
+ds(1) if (console='vnmrs') then aph0 else aph endif
+
+array('pw',9,4*$pw90-3.2,0.8)
+clear(2) full vp = wc2max/2 - 10  vs=vs*4
+wexp='AuHobs(`save90`)' 
+au('next','wait') 
+return
+
+ELSEIF ($1 = 'save90') then
+"********************************************************"
+"AuHobs_5 - Proton observe Autocalibration               "
+" save 90 degree calibration, set up compression factor test "
+"********************************************************"
+
+clear(2)
+wft   select(1)  vsadj(0.3*wc2max)
+fp pw360cal:pw90
+if (pw90 = 0) then
+  write('error','H1 autocalibration failed!')
+  abort
+endif
+
+$strpw90='' $strtpwr=''  $strh1pw90 = ''
+format(pw90+0.024,0,1):$strpw90
+format(tpwr,0,0):$strtpwr
+format(H1pw90 + 0.024,0,1):$strh1pw90
+setparams('pw90',$strpw90)
+setparams('tpwr',$strtpwr)
+
+"set up for lower power (compression factor) calibration"
+tpwr=tpwr-12 $pw90=pw90*4
+$step = trunc(2.22*$pw90)/10 "20 degree steps, 0.1 usec resolution"
+array('pw',11,3*$pw90-$step,$step) "270 to 450 in 10 easy steps"
+clear(2) full
+wexp='AuHobs(`cf`)'
+au('next','wait')  
+return
+
+ELSEIF ($1 = 'cf') then
+"********************************************************"
+"AuHobs_7 - Proton observe Autocalibration               "
+" process and save compression factor data "
+"********************************************************"
+
+clear(2)
+wft 
+$counter=1
+repeat
+  select($counter)
+  dc
+  $counter=$counter+1
+until $counter>arraydim
+
+fp pw360cal:$ref_pw90
+$tpwr_cf = 0.25*$ref_pw90/pw90
+$strtpwr_cf=''
+format($tpwr_cf,0,4):$strtpwr_cf
+setparams('tpwr_cf',$strtpwr_cf)
+
+$explist=explist
+rt(archivedir+'/'+sample+'/H1ref')
+wft
+format(solvent,'lower'):$solv
+        setref
+   if ($solv='cdcl3') then
+        f peak(1p,3p):$ht,cr
+        wp=2p sp=1p
+        $maxpeak=3
+   else
+        f peak(2p,4p):$ht,cr
+        wp=2p sp=2p
+        $maxpeak=2
+   endif
+        $thresh=0.9 $peaks=0
+        repeat
+         th=$thresh*$ht nll:$peaks
+         $thresh=$thresh-0.1
+        until ($peaks > $maxpeak-1)
+        cr=llfrq[1]-rfl+rfp wp=100 
+	sp=llfrq[1]-rfl+rfp-50
+
+explist=$explist
+$strpw90='' $strtpwr=''
+getparam('tpwr'):tpwr
+getparam('pw90'):pw90
+format(tpwr,0,0):$strtpwr
+format(pw90,0,2):$strpw90
+ai vp=wc2max/2
+wnt='wft(`acq`) dssh(`dodc`)' 
+wexp='ph select(5) aph0 vsadj(50) dssh(`dodc`) Autocalsave(`H1pw90`) cpplss Autocalnext'
+$pwinc= trunc((pw90/5)+0.5)
+array('pw',50,$pwinc,$pwinc)
+
+$text='H1 obs. 90 degree pw: '+$strpw90
+$atext='  at power level: '+$strtpwr
+$atext1 = '  compression factor: '+$strtpwr_cf
+atext($text)
+atext($atext)
+atext($atext1)
+
+if (pltopt = 'y') then
+   au('next','wait')
+else
+   wexp='ph select(5) aph0 vsadj(50) dssh Autocalsave(`H1pw90`) cpplss' 
+   Autocalsave('H1pw90','par')
+   Autocalnext
+endif
+
+ENDIF
+
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"
+ENDIF
+"*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&*&"

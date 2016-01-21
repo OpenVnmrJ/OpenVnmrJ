@@ -1,0 +1,508 @@
+"macro fixpar"
+" ********************** "
+" **** macro fixpar **** "
+" ********************** "
+"  this macro is called by the rtp (and rt) command"
+
+exists('parver','parameter'):$exists
+if($exists) then
+  if(parver=rev and appmode='imaging' and jviewport=3) then return endif
+endif
+
+exists('parversion','parameter'):$parver
+if ($parver < 0.5) then
+   "*** Update old SIS parameter sets ***"
+   exists('sccs','parameter'):$sccsver
+   exists('rev','parameter'):$revver
+   if ($revver > 0.5) and ($sccsver > 0.5) then
+	updtsispar
+   endif
+   "**** Fix Parameters ****"
+   parfix
+elseif (parversion < 5.05) then
+   parfix
+endif
+
+substr(rftype,1,1):$chan
+substr(amptype,2,1):$decamp
+if (($decamp = 'c')and(Console<>'mercury')) then
+   off('dpwr')
+   on('dlp')
+else
+   on('dpwr')
+   off('dhp')
+   off('dlp')
+endif
+substr(amptype,1,1):$obsamp
+if (($obsamp = 'c')and(Console<>'mercury')) then
+   off('tpwr')
+else
+   on('tpwr')
+endif
+
+if (Console = 'mercury') then
+  setenumeral('dmm',9,'c','f','g','p','m','r','u','w','x')
+  setenumeral('dmm',9,'c','f','g','p','m','r','u','w','x','processed')
+  setlimit('gain',38,0,2)
+  setlimit('gain',38,0,2,'processed')
+  if (gain>38) then
+    setvalue('gain',38)
+  endif
+  setvalue('gain',gain,'processed')
+  setlimit('fb',55000,1000,200)
+  setlimit('fb',55000,1000,200,'processed')
+  dp='y'
+  setenumeral('alock',5,'a','n','s','u','y')
+  exists('tpwrm','parameter'):$e
+  if ($e > 0.5) then
+     if (tpwrm > 255) then
+        tpwrm=255
+     endif
+     setlimit('tpwrm',255,0,1)
+  endif
+  exists('dpwrm','parameter'):$e
+  if ($e > 0.5) then
+     if (dpwrm > 255) then
+        dpwrm=255
+     endif
+     setlimit('dpwrm',255,0,1)
+  endif
+
+
+  exists('tpwrf','parameter'):$e
+  if ($e > 0.5) then
+     if (tpwrf > 255) then
+        tpwrf=255
+     endif
+     setlimit('tpwrf',255,0,1)
+  endif
+
+  exists('dpwrf','parameter'):$e
+  if ($e > 0.5) then
+     if (dpwrf > 255) then
+        dpwrf=255
+     endif
+     setlimit('dpwrf',255,0,1)
+  endif
+else
+  if ((Console = 'vnmrs') or (Console = 'inova') or (Console = 'uplus')) then
+    setenumeral('dmm',9,'c','f','g','m','p','r','u','w','x')
+  else
+    setenumeral('dmm',5,'c','f','n','p','w')
+  endif
+  setlimit('gain',60,0,2)
+  setlimit('delta',parmax[5],0,0)
+  setlimit('delta1',parmax[5],0,0)
+endif
+
+exists('acqdim','parameter'):$e
+if $e<0.5 then
+  create('acqdim','integer')
+endif
+exists('procdim','parameter'):$e
+if $e<0.5 then
+  create('procdim','integer')
+  setgroup('procdim','processing')
+endif
+"* sis systems *"
+if ($obsamp = 'b') then
+   exists('sispar','maclib'):$exists
+   if ($exists) then
+       sispar
+   endif
+endif
+"* force calculation of correct rfband for sis 100, 85 Mhz systems"
+if (h1freq < 150) then
+   tn=tn
+   if (numrfch > 1) then
+      dn=dn
+   endif
+endif
+
+if ( Console = 'vnmrs') then
+   if (tn=dn) and (numrfch > 1) then
+      if (tn='H1') then dn='C13'
+      else              dn='H1'
+      endif
+      write('line3','Please note: dn set to %s',dn)
+   endif
+endif
+
+if (numrfch > 2) then
+   fixpar3rf
+endif
+if (numrfch > 3) then
+   fixpar4rf
+endif
+if (numrfch > 4) then
+   fixpar5rf
+endif
+
+exists('rfinterface','parameter','systemglobal'):$e
+if ($e >= 1) then
+  if (rfinterface = 2) then
+    exists('hfmode','parameter'):$e
+    if ($e <= 0.5) then
+      create('hfmode','flag')
+      setprotect('hfmode','on',1)
+      hfmode=''
+    endif
+  endif
+endif
+
+exists('dss_sc','parameter'):$e
+if not($e) then
+   create('dss_sc','real')
+   setgroup('dss_sc','display')
+   dss_sc = 0 
+endif
+
+exists('dss_wc','parameter'):$e
+if not($e) then
+   create('dss_wc','real')
+   setgroup('dss_wc','display')
+   dss_wc = wc
+endif
+
+exists('dss_sc2','parameter'):$e
+if not($e) then
+   create('dss_sc2','real')
+   setgroup('dss_sc2','display')
+   dss_sc2 = 0 
+endif
+
+exists('dss_wc2','parameter'):$e
+if not($e) then
+   create('dss_wc2','real')
+   setgroup('dss_wc2','display')
+   dss_wc2 = wc2
+endif
+
+exists('dpf_wc2','parameter'):$e
+if not($e) then
+   create('dpf_wc2','real')
+   setgroup('dpf_wc2','display')
+   dpf_wc2 = wc2
+endif
+
+exists('reffrq1','parameter'):$e
+if not($e) then
+   create('reffrq1','real')
+   setgroup('reffrq1','display')
+endif
+if reffrq1<0.1 then
+   if dn=tn then
+      reffrq1=reffrq
+   else
+      reffrq1=dfrq
+   endif
+endif
+
+exists('parvast','maclib'):$e
+if ($e>0.5) then parvast endif
+
+if (($chan = 'd') and (system = 'spectrometer')) then
+   $warn = 0
+   exists('tpwrf','parameter'):$e
+   if ($e > 0.5) then
+      if (tpwrf[1] < 10) then
+         $warn = 1
+      endif
+   endif
+   exists('dpwrf','parameter'):$e
+   if ($e > 0.5) then
+      if (dpwrf[1] < 10) then
+         $warn = $warn + 2
+      endif
+   endif
+   if ($warn > 2.5) then
+      write('error','tpwrf and dpwrf are set to low values for this system')
+   elseif ($warn > 1.5) then
+      write('error','dpwrf is set to a low value for this system')
+   elseif ($warn > 0.5) then
+      write('error','tpwrf is set to a low value for this system')
+   endif
+endif
+settype('tpwr dpwr dpwr2 dpwr3 dpwr4 tpwrf dpwrf dpwrf2 dpwrf3 dpwrf4 dpwrm dpwrm2 dpwrm3 dpwrm4','real'):$e
+
+"set frequencies"
+_solvent
+sw=sw  "do not use _sw. makes dsp parameters if needed"
+
+homo=homo "make sure homodec module is added via _homo macro"
+
+exists('apptype','parameter'):$e
+if ($e < 0.5) then
+  create('apptype','string')
+  setgroup('apptype','display')
+  apptype=seqfil
+endif
+
+$shimset=''
+format(shimset,1,0):$shimset
+exists(systemdir+'/acq/dgs'+$shimset,'file'):$e
+if ($e > 0.5) then
+   fread(systemdir+'/acq/dgs'+$shimset)
+endif
+
+"this overwrite updtsispar, spinmax is global, set by _probe"
+exists('spinmax','parameter','global'):$e
+if ($e > 0.5) then
+  setlimit('spin',spinmax,0,1)
+endif
+
+module('add','stdpar','basic')
+
+"for non-pneumatic systems"
+if (spinopt = 'n') then
+   if (alock='s') then
+      alock='a'
+   endif
+   if (wshim='s') then
+      wshim='e'
+   endif
+endif
+
+setenumeral('wshim',15,'e','f','g','n','s','0','1','2','3','4','5','6','7','8','9') 
+" hipwrampenable must be a global parameter "
+destroy('hipwrampenable','current'):$e
+destroy('hipwrampenable','processed'):$e
+
+exists('loc','parameter','processed'):$e
+if ($e > 0.5) then
+   destroy('loc','processed')
+endif
+$tmp=0
+$isactive=0
+exists('loc','parameter','current'):$e
+if ($e > 0.5) then
+   $tmp=loc
+   on('loc'):$isactive
+   destroy('loc','current')
+endif
+exists('loc','parameter','global'):$e
+if ($e < 0.5) then
+   create('loc','integer','global')
+   setlimit('loc',12,'global')
+   setprotect('loc','on',1,'global')
+   loc=$tmp
+   if ($isactive = 0) then
+         loc='n'
+   endif
+endif
+exists('vs2d','parameter'):$e
+if ($e < 0.5) then
+   create('vs2d','real')
+   setgroup('vs2d','display')
+   setprotect('vs2d','on',3)
+   setlimit('vs2d',1e9,1e-6,0)
+   vs2d = vs
+endif
+exists('vsproj','parameter'):$e
+if ($e < 0.5) then
+   create('vsproj','real')
+   setgroup('vsproj','display')
+   setprotect('vsproj','on',3)
+   setlimit('vsproj',1e9,1e-6,0)
+   vsproj = vs
+endif
+settype('wc','real')
+settype('wc2','real')
+settype('sc','real')
+settype('sc2','real')
+settype('io','real')
+
+"homodecoupling parameters for vnmrs"
+
+if (Console='vnmrs') then
+  exists('homo','parameter'):$e
+  if ($e < 0.5) then
+    create('homo','string')
+    setenumeral('homo',2,'y','n')
+    homo='n'
+  endif
+  setprotect('homo','on',8)
+endif
+
+"macro that creates a lot of parameters for VnmrJ"
+localpars
+
+exists('wdone','parameter'):$e
+if $e<0.5 then
+  create('wdone','string')
+  setgroup('wdone','processing')
+endif
+exists('investigator','parameter'):$e
+if $e<0.5 then
+  create('investigator','string')
+  setgroup('investigator','display')
+endif
+exists('operator_','parameter'):$e
+if ($e < 0.5) then
+  create('operator_','string')
+  operator_=operator
+endif
+exists('samplename','parameter'):$e
+if $e<0.5 then
+  create('samplename','string')
+endif
+exists('shims','parameter'):$e
+if $e<0.5 then
+  create('shims','string')
+endif
+exists('notebook','parameter'):$e
+if $e<0.5 then
+  create('notebook','string')
+endif
+exists('page','parameter'):$e
+if $e<0.5 then
+  create('page','string')
+endif
+exists('ref','parameter'):$e
+if $e<0.5 then
+  create('ref','frequency')
+  setgroup('ref','processing')
+  setdgroup('ref',4)
+endif
+exists('ref1','parameter'):$e
+if $e<0.5 then
+  create('ref1','frequency')
+  setgroup('ref1','processing')
+  setdgroup('ref1',5)
+endif
+exists('ftproc','parameter'):$e
+if $e<0.5 then
+  create('ftproc','real')
+  setprotect('ftproc','on',256)
+  ftproc[1]=1
+  ftproc[2]=0
+endif
+setgroup('ftproc','processing')
+exists('ftproc','parameter','processed'):$d
+if $d<0.5 then
+  create('ftproc','real','processed')
+  setprotect('ftproc','on',256,'processed')
+  setvalue('ftproc',1,1,'processed')
+  setvalue('ftproc',0,2,'processed')
+endif
+setgroup('ftproc','processing','processed')
+
+"parameters for multiple receivers"
+exists('numrcvrs','parameter','systemglobal'):$isnumrcvrs
+if ($isnumrcvrs <> 0) then
+    if (numrcvrs > 1) then
+      exists('rcvrstype','parameter','systemglobal'):$e
+      if ( $e > 0.5 ) then
+        if (rcvrstype = 'm') then
+          multinucrcvrsetup
+        else
+          mrsetup
+        endif
+      else
+        mrsetup
+      endif
+    endif
+endif
+
+exists('time_submitted','parameter'):$e
+if $e<0.5 then
+  create('time_submitted','string')
+endif
+exists('time_run','parameter'):$e
+if $e<0.5 then
+  create('time_run','string')
+endif
+exists('time_complete','parameter'):$e
+if $e<0.5 then
+  create('time_complete','string')
+  setgroup('time_complete','display')
+endif
+exists('time_saved','parameter'):$e
+if $e<0.5 then
+  create('time_saved','string')
+  setgroup('time_saved','display')
+endif
+exists('time_processed','parameter'):$e
+if $e<0.5 then
+  create('time_processed','string')
+  setgroup('time_processed','processing')
+endif
+exists('time_plotted','parameter'):$e
+if $e<0.5 then
+  create('time_plotted','string')
+  setgroup('time_plotted','processing')
+endif
+
+exists('displaymode','parameter'):$isdisplaymode
+if (not $isdisplaymode) then
+    string('displaymode')
+    setgroup('displaymode','display')
+    settype('displaymode','flag')
+    displaymode = 'r'
+endif
+
+exists('dcrmv','parameter'):$isdcrmv
+if (not $isdcrmv) then
+    string('dcrmv')
+    setgroup('dcrmv','display')
+    settype('dcrmv','flag')
+    setenumeral('dcrmv', 2, 'y', 'n')
+    dcrmv = 'n'
+endif
+
+exists('CSreconmethod','parameter'):$csrex
+if $csrex then setgroup('CSreconmethod','processing') endif
+exists('CSreconmethod','parameter','processed'):$csrex
+if $csrex then setgroup('CSreconmethod','processing','processed') endif
+
+exists('celem','parameter'):$iscelem
+if (not $iscelem) then
+    create('celem','real')
+endif
+exists('fdfdir','parameter'):$e
+if $e<0.5 then
+  create('fdfdir','string')
+  setgroup('fdfdir','processing')
+endif
+exists('avwdir','parameter'):$e
+if $e<0.5 then
+  create('avwdir','string')
+  setgroup('avwdir','processing')
+endif
+exists('fdffile','parameter'):$e
+if $e<0.5 then
+  create('fdffile','string')
+  setgroup('fdffile','processing')
+endif
+
+exists('lllabel','parameter'):$e
+if $e<0.5 then
+  create('lllabel','string')
+  setgroup('lllabel','processing')
+endif
+
+exists('layout','parameter'):$j
+if ($j < 0.5) then
+    create('layout','string')
+    setgroup('layout','display')
+endif
+if (layout = '') then
+    layout = seqfil
+endif
+
+if (appmode = 'imaging') then
+  fixpar_imaging
+else
+  cqpars
+  fixpar_walkup
+endif
+xmtune('addpar')
+
+exists('userfixpar','maclib'):$exists
+if $exists then userfixpar endif
+
+exists('parver','parameter'):$exists
+if(not $exists) then
+   create('parver','string')
+endif
+parver=rev

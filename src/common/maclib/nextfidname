@@ -1,0 +1,43 @@
+"macro nextfidname"
+if ($# > 0) then 
+   $archsamp=$1
+else
+   isnewexp:$nexp
+   if ($nexp) then
+      if (archivedir='') then 
+	$archsamp=adirtmplt 
+      else 
+	$archsamp=archivedir 
+      endif
+      if (sample='') then 
+	$archsamp=$archsamp+'/'+sdirtmplt 
+      else 
+	$archsamp=$archsamp+'/'+sample 
+      endif
+      if (archivedir='') or (sample='') then
+	 chkname($archsamp,'alnum-/'):$sdum,$archsamp
+         Svfname($archsamp,''):$archsamp
+      else
+         exists($archsamp,'directory'):$asex
+         if ($asex=0) then
+            Svfname($archsamp,''):$archsamp
+         endif
+      endif
+   else
+      shell('dirname '+file):$archsamp
+   endif
+endif
+
+if (svftmplt='') then
+   $fidname=''
+else
+   $svftmplt=svftmplt
+   chkname($svftmplt,'alnum-'):$sdum,$svftmplt
+   Svfname($archsamp+'/'+$svftmplt,'','.fid'):$fidname
+   if ($# < 1) then
+	shell('dirname '+$fidname):$archsamp
+   endif
+   shell('basename '+$fidname+' .fid'):$fidname
+endif
+
+return($archsamp,$fidname)

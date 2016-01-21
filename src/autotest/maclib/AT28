@@ -1,0 +1,131 @@
+"macro AT28"
+"AT28" "Attenuator test-high power (channel 2) " 
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATd2pul'
+   text('Attenuator Test -high power- channel 2') 
+   at_currenttest='atten_array_ch2' 
+
+   exists('maxattench2','parameter','global'):$e
+   if $e=1 then
+    $attendrop=63-maxattench2
+    $maxattn=cattn[1]-$attendrop
+    $maxpower=maxattench2
+   else
+    $maxattn=cattn[1] $maxpower=63
+   endif
+   $steps=($maxattn+1)/2 r4=$steps
+   array('tpwr',$steps,$maxpower,-2)
+   dpwr=0 
+   pw90=at_pw90_ch2
+   if (pw90>6) then  pw(5) else pw=.3 endif
+   f vp=0
+   if (sfrq<500) then nt=4 endif
+   dof=tof
+   wnt='ATwft f select(1) av vsadj dssh(`dodc`) dtext'
+   wexp='AT28(`PART1`)' 
+   ATcycle
+   au
+   write('line3','Attenuator Test (channel 2)')
+   dps
+
+elseif ($1='PART1') then
+
+   wft ph cdc 
+   $select=5 lp=0 $rp=0      
+   repeat
+    select($select) aph0
+    $rp=$rp+rp
+    $select=$select+1
+   until $select=15
+   rp=$rp/10
+   select(1) vsadj dssh('dodc') dtext
+   select(1) peak:$ht,cr rl(0) sp=-2.5p wp=5p
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+       dn2='' pap ATpltext
+       pps(120,0,wcmax-120,90) ATpage
+    endif 
+    pl('all','dodc') pltext ATpltext ATpage
+   endif
+   vs=vs*4 s1
+   cutoff=150
+   ATpl4
+   s2
+   
+   r1 $count=arraydim f 
+   repeat                "find last spectrum with enough s/n"
+    select($count) dc
+    peak:$int,cr
+    sp=-1p wp=3p 
+    cr=2p delta=1p dsn:$sn
+    $count=$count-1
+   until ($sn>200) or ($count <= 2)
+   r4=$count+1
+   if (at_ampl_compr>0.98) then r5=1  "don't try to fit compression points"
+   elseif (at_ampl_compr>0.95) then r5=2 
+   elseif (at_ampl_compr>0.92) then r5=3
+   elseif (at_ampl_compr<0.92) then r5=6
+   endif
+   r2 ATreg2(r5,r4):$corr,$dev
+   if $corr>1.00 then $corr=1.00 endif
+
+   ATrecord('ATTEN2','Attenuator Test: channel 2','corr.coef.',$corr,'std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Atten Test (Ch 2-high power   )-Corr. Coef.: %1.3f  Std. Dev.: %1.3f ',$corr,$dev)
+   if (at_plotauto='y') then ATpage pexpl ATplreg ATpage endif
+   ATsvf
+
+   if (fifolpsize<1024) then   "only unity+ or inova has modulator"
+    write('line3','No Linear Modulator Present. Low Power Test Skipped')
+    ATnext return 
+   endif
+
+   pw=4*pw  dpwrf=1024   "lower input power by x4 "
+   at_currenttest='atten_array2_ch2'
+   text('Attenuator Test -reduced power- channel 2') 
+   f vp=0
+   wnt='ATwft select(1) av vsadj dssh(`dodc`) dtext'
+   wexp='AT28(`PART2`)'
+   ATcycle
+   au
+   write('line3','Attenuator Test-reduced power (channel 2)')
+   dps
+
+elseif ($1='PART2') then
+   wft 
+   ph
+   $select=5 lp=0 $rp=0      
+   repeat
+    select($select) aph0
+    $rp=$rp+rp
+    $select=$select+1
+   until $select=15
+   rp=$rp/10
+   select(1) vsadj dssh('dodc') dtext
+   select(1) peak:$ht,cr rl(0) sp=-2.5p wp=5p
+   if (at_plotauto='y') then pl('all','dodc') pltext ATpltext(wcmax-110,wc2max-40) ATpage endif
+   vs=vs*4
+   s1 cutoff=150 
+   ATpl4 s2
+
+   r1 $count=arraydim f 
+   repeat                "find last spectrum with enough s/n"
+    select($count) dc
+    peak:$int,cr
+    sp=-1p wp=3p 
+    cr=2p delta=1p dc dsn:$sn
+    $count=$count-1
+   until $sn>200
+   r4=$count+1
+   r2 ATreg2(1,r4):$corr,$dev
+   if $corr>1.00 then $corr=1.00 endif
+
+   ATrecord('ATTEN2LO','Attenuator Test:reduced power channel 2','corr.coef.',$corr,'std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Atten Test (Ch 2-reduced power)-Corr. Coef.: %1.3f  Std. Dev.: %1.3f ',$corr,$dev)
+   if (at_plotauto='y') then ATpage pexpl ATplreg ATpage endif
+   ATsvf
+ATnext
+endif

@@ -1,0 +1,137 @@
+
+*************************************************************************
+*									*
+*    ft1d(coefficients)    -   Fourier transform  of 2D data		*
+*    wft1d(coefficients)   -   Weight and Fourier transform F2		*
+*			       of 2D data				*
+*    ft2d(coefficients)    -   Fourier transform 2D data		*
+*    wft2d(coefficients)   -   Weight and Fourier transform 2D data	*
+*									*
+*************************************************************************
+
+wft1d and ft1d perform the first Fourier transformation along the F2
+dimension, with and without weighting respectively, and matrix trans-
+position.  This allows the display of t1 interferograms with the "dcon"
+and "dconi" commands.  wft2d and ft2d perform the complete 2D Fourier
+transformation, with and without weighting in both dimensions respectively.
+For arrayed 2D FID data, a single array element can be transformed using,
+as an example, "ft2d(array element number)".  Complex and Hypercomplex
+interferograms can be constructed explicitly using the following coef-
+ficient table:
+
+	ft2d(rr1,ir1,rr2,ir2,...,ri1,ii1,ri2,ii2,...)
+
+where
+
+		rr1 * REAL(w2, element=1) -->   REAL(t1)
+		ir1 * IMAG(w2, element=1) --> + REAL(t1)
+		rr2 * REAL(w2, element=2) --> + REAL(t1)
+		ir2 * IMAG(w2, element=2) --> + REAL(t1)	[etc.]
+
+		ri1 * REAL(w2, element=1) -->   IMAG(t1)
+		ii1 * IMAG(w2, element=1) --> + IMAG(t1)
+		ri2 * REAL(w2, element=2) --> + IMAG(t1)
+		ii2 * IMAG(w2, element=2) --> + IMAG(t1)	[etc.]
+
+
+Arrayed hypercomplex data can be transformed by supplying the array index
+followed by the eight coefficients needed to construct the interferograms:
+	ft2d(array_element_number, rr1,ir1,rr2,ir2,ri1,ii1,ri2,ii2)
+This is used in the special case where phase=1,2 and phase has the highest
+precedence in the array parameter, as for example, array='gzlvl1,phase'
+
+ft2d('ptype') will transform P-type data to yield a P-type contour display.
+ft2d('ntype') will transform N-type data to yield a P-type contour display.
+The same applies to wft2d.  Although ft1d and wft1d will accept the string
+arguments 'ptype' and 'ntype', it serves no useful function in these two
+commands since the differential effect of these two arguments is applied
+only during the course of the second Fourier transformation.
+
+
+ft2d('t2dc') causes a DC correction to be applied to each t2 FID prior
+to the first FT; ft2d('t1dc') causes a DC correction to be applied to
+each t1 interferogram prior to the second FT.  In both cases, the last
+1/16-th of the time domain data is used to calculate the DC level.
+
+
+ft2d('f2sel') allows only pre-selected F2 regions to be transformed
+along t1; the t1 interferograms in the non-selected F2 regions are
+zeroed but NOT transformed.  The same mechanism used to select baseline
+regions for baseline correction (bc) is used to select the F2 regions
+which are to be transformed along t1.  Set intmod='partial' and partition
+the integral of the spectrum into several regions.  The even numbered
+F2 regions, e.g., 2, 4, etc., will be transformed along t1; the odd
+numbered ones will not be transformed along t1.
+
+
+ft2d('nf') transforms a non-arrayed 2D experiment which has been
+collected as a single 2D FID with multiple (nf) traces.  In this
+example, each trace of the 2D FID corresponds to t2 time domain data
+collected at an incremented value of t1.
+
+ft2d('nods') and wft2d('nods') prevents the spectrum display following
+the transform.
+
+The 'noft' option to ft1d, wft1d, ft2d, and wft2d prevents the actual
+Fourier transform step. ft1d ft2d('noft') will Fourier transform the
+t2 time domain data but not the resulting t1 interferograms. Both axes
+will be treated as frequency axes. ft2d('noft') will present the
+FID data, interpreted as if both axes are frequency axes. Other operations,
+such as weighting, solvent suppression, etc., will be performed as requested.
+Just the actual FT step is bypassed when this option is given.
+
+ft2d('noop') does not perform any operation on the FID data.  It is used
+mainly to allow macros, e.g., wft2da, to have the same flexibility as
+actual VNMR commands.
+
+
+ft2d('ni2') transforms non-arrayed 2D data which have been collected
+with ni2 and sw2 (instead of ni and sw1).  par3d creates the necessary
+processing parameters for the ft2d('ni2') operation.  ft2d('ni',#)
+is used to selectively transform a particular "np-ni" 2D plane within a
+non-arrayed 3D data set; # is an integer which can range from 1 to ni2
+in this example.  ft2d('ni2',#) is used to selectively transform a
+particular "np-ni2" 2D plane within a non-arrayed 3D data set; # is an
+integer which can range from 1 to ni in this example.  If an arrayed
+3D data set is to be selectively processed, the format of the arguments
+to ft2d changes.  For example, ft2d('ni',#1,#2) performs a 2D transform
+along np and ni of the #2-th ni2 increment and the #1-th element within
+the explicit array.  This yields a 2D "np-ni" frequency plane.  #1 ranges
+from 1 to ni2; and #2, from 1 to [arraydim/(ni*ni2)].
+
+Arrayed 3D data sets can also be subjected to 2D processing to yield
+2D absorptive spectra.  If the States-Haberkorn method is used along
+both F1 (ni dimension) and F2 (ni2 dimension), there will generally be
+4 spectra per (ni,ni2) 3D element.  In this case, the command
+ft2d('ni2',#1, <16 coefficients>) would perform a 2D transform along
+np and ni2 of the #1-th ni increment using the ensuing 16 coefficients
+to construct the 2D t1-interferogram from appropriate combinations of
+the 4 spectra per (ni,ni2) 3D element.
+
+
+For information on real vs. complex Fourier transforms, see the manual
+entry for "proc#".  For information on left-shifting, zero-order phase
+rotation, and frequency shifting of FID and/or interferogram time-domain
+data during the 2D FT, see manual entries for "lsfid#", "phfid#", or
+"lsfrq#" respectively. For information on the lfs and zfs solvent
+suppression options, see manual entries for "ssfilter", "ssorder",
+and parfidss.
+
+For information on Hadamard transforms, see the manual entries for
+"ht" and "proc1".
+
+
+
+Related Manual Entries:		phfid		(parameter)
+				lsfid		(parameter)
+				phfid1		(parameter)
+				lsfid1		(parameter)
+				phfid2		(parameter)
+				lsfid2		(parameter)
+				proc		(parameter)
+				proc1		(parameter)
+				proc2		(parameter)
+				pmode		(parameter)
+				ssorder		(parameter)
+				ssfilter	(parameter)
+				parfidss	(command)

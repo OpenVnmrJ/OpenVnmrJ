@@ -1,0 +1,47 @@
+"macro AT87"
+"AT87" "Gradient Echo Stability (10G/cm x-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+
+   substr(pfgon,1,1):$xon
+   if ($xon)='n' then
+     write('line3','X-axis is disabled. Re-set "pfgon". Gradient Tests Skipped') 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   text('Gradient Echo Stability using\\ a 10G/cm 1msec X-axis Gradient')
+   at_currenttest='gecho10_x'
+   array('nt',20,1,0)
+   seqfil='ATgecho' gt1=.001 gzlvl1=10/at_gxcal
+   vchannelmap='0','x'
+   gt2=.001 gzlvl2=-gzlvl1
+   d2=.0005 d3=.0005 shaped='n' gradaxis='x'
+   sp=3.8p wp=2p
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT87(`PART1`)'
+   ATcycle
+   au
+   write('line3','Gradient Echo Stability using a 10G/cm X-axis Gradient')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('XECHOSTAB10','Gradient Echo Stability using a 10G/cm X Gradient Pulse','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','Gradient Echo Stability (10G/cm X) =  %3.3f ',100-$stddev)
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+ATnext
+endif

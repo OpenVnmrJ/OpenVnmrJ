@@ -1,0 +1,74 @@
+"macro pw360cal"
+" pw360cal: find 360 degree pulse from a series of spectra "
+" return 'pw360' if seqfil is pwxcalib, otherwise return pw90 "
+" return 0 on error "
+
+" a peaks file must have been created with the 'fp' command before "
+" calling pw360cal "
+
+  $file = curexp+'/fp.out'
+  exists($file,'file'):$filex
+  if not $filex then
+    write('error','the "fp" command must be used before %s',$0)
+    return(0)
+  endif
+  lookup('file',$file,'seek','of','read',1):$npairs
+  lookup('seek','(mm)')
+
+  $nlines = size('llfrq')
+
+$j = 1 $k = 0  $pw360 = 0
+repeat  "for each line"
+  $i = 1
+  repeat  "in each spectrum"
+     lookup('skip',2,'read'):$hgt[$i]
+     $i = $i+1
+  until($i > celem)
+
+" scan intensity array, looking for the first positive spectrum "
+" after a negative spectrum. If successful, after the scan $i will "
+" be the index of the last negative spectrum.  "
+
+  $i = 2  $found = 0
+  repeat
+    if ($hgt[$i] > 0) then
+      if ($hgt[$i-1] < 0) then
+         $found = 1
+      else
+         $i = $i+1
+      endif
+    else "current spectrum is positive- continue the scan "
+      $i = $i+1
+    endif
+  until ($found > 0) or ($i > celem)
+
+  if ($found) then  
+
+  " calculate 360 degree pulse width by linear interpolation "
+    $frac = -$hgt[$i-1]/($hgt[$i] - $hgt[$i-1])
+    $pw360 = $pw360 + {array}[$i-1] + $frac*({array}[$i] - {array}[$i-1])
+    $k = $k+1
+  endif
+
+  $j = $j+1  "continue with next line"
+until ($j > $nlines)
+
+if ($k > 0.5) then  "at least 1 good peak found "
+  $pw360 = $pw360/($k)  "take average of all estimates"
+else
+  write('error','No useable data found!')
+  return(0)
+endif
+
+"adjust to nearest timeable value"
+if (Console = 'mercury') or (Console = 'gemini') then
+  $pw90 = trunc((2.5*$pw360) + 0.5)/10
+else
+  $pw90 = trunc((10*$pw360) + 0.5)/40
+endif
+
+if (seqfil = 'pwxcalib') or (seqfil = 'DEPT') then
+  $pw90 = $pw360
+endif
+write('line3','pw90 calculated to be %5.2f', $pw90)
+return($pw90)

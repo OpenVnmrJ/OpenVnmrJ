@@ -1,0 +1,33 @@
+/* Change sample in magnet. Used by automation to remove the last sample */
+
+readhw('loc'):$oldloc,$detect
+if ($oldloc <= 0) or ($detect<>1) then
+  return
+endif
+if ($# = 1) then
+  $newloc=$1
+else
+  $newloc=0
+endif
+$loc=loc
+$seq=seqfil
+on('temp'):$tempon
+off('temp')
+on('loc','global'):$locon
+on('loc','global')
+setvalue('loc',$newloc,'global')
+setvalue('seqfil','s2pul')
+if ($newloc) then
+  write('line3','Putting sample %s into magnet',$newloc)
+else
+  write('line3','Removing final automation sample (%d) from magnet',$oldloc)
+endif
+change('silent')
+setvalue('loc',$loc,'global')
+if (not $locon) then
+  off('loc','global')
+endif
+setvalue('seqfil',$seq)
+if ($tempon) then
+  on('temp')
+endif

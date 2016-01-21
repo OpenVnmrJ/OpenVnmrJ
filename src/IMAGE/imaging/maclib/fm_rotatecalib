@@ -1,0 +1,82 @@
+"macro fm_rotatecalib"
+"[2] Input argument count"
+if ($#>0.5) then
+  write('error','Usage: %s',$0)
+  abort
+endif
+
+exists('cnt','parameter'):$ex1
+if ($ex1<0.5) then
+  create('cnt','real')
+  setgroup('cnt','processing')
+endif
+exists('shimval','parameter'):$ex1
+if ($ex1<0.5) then
+  create('shimval','real')
+  setgroup('shimval','processing')
+endif
+exists('shimcoil','parameter'):$ex2
+if ($ex2<0.5) then
+  create('shimcoil','string')
+  setgroup('shimcoil','processing')
+endif
+exists('current','parameter'):$ex2
+if ($ex2<0.5) then
+  create('current','real')
+  setgroup('current','processing')
+endif
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $shname = 'x1','y1','z1c','xz','yz','z2c','xy','x2y2'
+else
+  $shname = 'x1','y1','z1','xz','yz','z2','xy','x2y2'
+endif
+
+$f=1
+shimval=0
+shimcoil='x1'
+$filename='temp'
+$ffile=userdir+'/fastmap/fastmap.calib'
+exists($ffile,'file'):$f
+if $f>0.5 then
+" input('Do you wish to erase the fastmap.calib file (y/n/) ?'):$e"
+  rm($ffile)
+endif
+
+readallshims
+$i=1
+while $i<=2 do
+  $j=1
+  current={$shname[$i+3]}
+  while $j<8 do
+    $step=trunc((parmax[19]+1)/8)
+    shimcoil[($i-1)*7+$j]=$shname[$i+3]
+    $shvalue=current+$step*($j-4)
+    if ($shvalue<-parmax[19] or $shvalue>parmax[19]) then
+      write('error','shim array of %s out-of-range at %g, set near zero and try again',$shname[$i],$shvalue)
+      ABORT
+    else
+      shimval[($i-1)*7+$j]=$shvalue
+    endif
+    $j=$j+1
+  endwhile
+  $i=$i+1
+endwhile
+
+$log=userdir+'/fastmap/fastmap.log'
+exists($log,'file'):$e
+if $e>0.5 then rm($log) endif
+wexp='fm_psiautocalib'
+"readallshims"
+$shimfile=userdir+'/shims/current'
+exists($shimfile,'file'):$e
+if $e>0.5 then rm($shimfile) endif
+svs('current')
+cnt=1
+{shimcoil[cnt]}=shimval[cnt]
+resto=tof
+setallshims
+echo('cnt should be set to one and the shimcoil[1] should be set to shimval[1]')
+echo('You can interrupt the calibration at any time and resume using au')
+au

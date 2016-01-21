@@ -1,0 +1,153 @@
+"macro setpower"
+"*******************************************************"
+" setpower - macro to output power level and pw90       "
+"		for a given rB1 (argument 1) value 	"
+"		for a given nucleus (argument 2)	"
+"		using power,pulsewidth and compression  "
+"		 in the curpar 				"
+"		If not found in curpar, the values from "
+"		the probe table are used		"
+"	A third optional argument can be given to	"
+"	force the macro to use the probe file		"
+"       With 3rd argument, curpar is ignored            "
+"  Usage:  setpower(gB1,nucleus,<probename>)		"
+"*******************************************************"
+
+$ref_pw90=0 $ref_pwr=0 $pw90=0
+$width=0 $level=0
+
+$ampcf=1
+$where='curpar'
+$probe=probe
+if ($# > 2) then $where='' $probe=$3 endif
+
+if ($where = '') then
+    getProbePath($probe,'alert'):$isprobe
+    if ($isprobe=0) then return endif
+endif
+
+IF ($probe <> '') THEN
+
+ $params=''
+ if ($2 = tn) then 
+    $params='tpwr','pw90','tpwr_cf'
+ elseif ($2=dn) and ((dn<>'H1') and (dn<>'F19')) then
+    $params='pwxlvl','pwx','pwxlvl_cf'
+ elseif ($2=dn) and ((dn='H1') or (dn='F19')) then
+    $params='pplvl','pp','pplvl_cf'
+ elseif (numrfch > 2) then
+    if ($2=dn2) then
+	$params='pwx2lvl','pwx2','pwx2lvl_cf'
+    endif
+ endif
+
+ if ($params[1]<>'') then
+	on($params[1]):$ison
+	if ($where='') then
+	    $ison=0
+	endif
+	if ($ison < 1) then
+	    getparam($params[1],$2,$probe):$ref_pwr
+	else
+	    $ref_pwr={$params[1]}
+	endif
+ endif
+ if ($params[2]<>'') then
+        on($params[2]):$ison
+        if ($where='') then
+            $ison=0
+        endif
+        if ($ison < 1) then
+            getparam($params[2],$2,$probe):$pw90
+        else
+            $pw90={$params[2]}
+        endif
+ endif
+ if ($params[3]<>'') then
+        on($params[3]):$ison
+        if ($where='') then
+            $ison=0
+        endif
+        if ($ison < 1) then
+            getparam($params[3],$2,$probe):$ampcf
+        else
+            $ampcf={$params[3]}
+        endif
+ endif
+ if ($ampcf=0) then $ampcf=1 endif
+
+ELSE
+
+  if ($2 = tn) then
+     exists('ref_pwr','parameter'):$f
+     exists('ref_pw90','parameter'):$ff
+     if ($f) then 
+       $ref_pwr = ref_pwr
+     endif
+     if ($ff) then
+       $pw90 = ref_pw90
+     endif
+  elseif ($2 = dn) and (dn <> 'H1') then
+     exists('pwxlvl','parameter'):$pwxex
+     if ($pwxex) then
+       $ref_pwr=pwxlvl $pw90=pwx
+     else
+	$ref_pwr=dpwr $pw90=1/dmf
+     endif
+  elseif ($2 = dn) and (dn = 'H1') then
+    exists('pplvl','parameter'):$ppex
+    if ($ppex) then
+	$ref_pwr=pplvl $pw90=pp
+    else
+	$ref_pwr=dpwr $pw90=1/dmf
+    endif
+  elseif (numrfch > 2) then
+   if ($2 = dn2) then
+    exists('pwx2lvl','parameter'):$pwxex
+    if ($pwxex) then
+       $ref_pwr=pwx2lvl $pw90=pwx2
+    else
+       $ref_pwr=dpwr2 $pw90=1/dmf2
+    endif
+   endif
+  endif
+  $ampcf=1 
+
+ENDIF
+
+if (($ref_pwr = 0) or ($pw90 = 0)) then 
+  if ($2 = tn) then
+    $ref_pwr=tpwr $pw90=pw90 
+  elseif ($2 = dn) then
+    $ref_pwr=dpwr $pw90=1/dmf
+  elseif (numrfch > 2) then
+	if ($2 = dn2) then
+	  $refpwr=dpwr2 $pw90=1/dmf2
+	endif
+  endif
+  $ampcf=1
+endif
+
+$ref_pw90 = $pw90*$ampcf
+
+"**********Calculate requested power and pulse values *****"
+$width=250000/$1
+$mult = $width/$ref_pw90
+ln($mult):$lnmult
+$attnval = trunc(20*0.43429*$lnmult)
+exp($attnval*2.303/20):$mult
+$width=$ref_pw90*$mult
+$level=$ref_pwr-$attnval
+
+$min=-16
+if (Console='mercury') then
+   $min=0
+endif
+if $level < $min then
+ repeat
+  $level=$level+1
+  $width=$width/1.12
+ until $level >= $min
+endif
+"****************Return calculated values******************"
+return($level,$width,$ref_pwr,$ref_pw90,$ampcf)

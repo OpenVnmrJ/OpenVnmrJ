@@ -1,0 +1,52 @@
+"macro Autockdir"
+"Autockdir :  macro to create all subdirectories	      " 
+
+  if ($# > 0) then $directory=$1 else
+     $directory=archivedir+'/'+sample
+  endif
+  exists($directory,'directory'):$direx
+  if ($direx=0) then return endif
+
+  $s1='' $s2=''
+  strstr($directory,'/scoutfids'):$ret,$s1,$s2
+  if ($ret) and $s2='' then
+	exists($s1+'/dirinfo','directory'):$ret
+  endif
+  if ($ret) then
+	$directory=$s1
+  endif
+
+  exists($directory+'/dirinfo/macdir/maclib_attic','directory'):$ex
+  if ($ex=0) then
+        shell('mkdir -p '+$directory+'/dirinfo/macdir/maclib_attic'):$dum
+  endif
+  exists($directory+'/dirinfo/shapelib','directory'):$ex
+  if ($ex=0) then
+	shell('mkdir -p '+$directory+'/dirinfo/shapelib'):$dum
+  endif
+  exists($directory+'/dirinfo/parlib','directory'):$ex
+  if ($ex=0) then
+	shell('mkdir -p '+$directory+'/dirinfo/parlib'):$dum
+  endif
+  exists($directory+'/dirinfo/psglib','directory'):$ex
+  if ($ex=0) then
+	shell('mkdir -p '+$directory+'/dirinfo/psglib'):$dum
+  endif
+  exists($directory+'/plots','directory'):$ex
+  if ($ex=0) then
+        shell('mkdir -p '+$directory+'/plots'):$dum
+	shell('chmod g+w '+$directory+'/plots'):$dum
+  endif
+  exists($directory+'/spectra','directory'):$ex
+  if ($ex=0) then
+        shell('mkdir -p '+$directory+'/spectra'):$dum
+	shell('chmod g+w '+$directory+'/spectra'):$dum
+  endif
+  exists($directory+'/scoutfids','directory'):$ex
+  if ($ex=0) then
+	shell('mkdir -p '+$directory+'/scoutfids'):$dum
+	shell('chmod g+w '+$directory+'/scoutfids'):$dum
+  endif
+  shell('touch '+$directory+'/dirinfo/macdir/EXPLIST'):$dum
+  shell('touch '+$directory+'/dirinfo/macdir/LONGLIST'):$dum
+  dousermacro($0,$directory)

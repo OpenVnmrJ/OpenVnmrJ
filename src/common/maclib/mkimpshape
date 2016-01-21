@@ -1,0 +1,296 @@
+"macro mkimpshape"
+
+$impppm1=impppm1
+$impppm2=impppm2
+$impppm3=impppm3
+$impppm4=impppm4
+if ($impppm1[1]>$impppm1[2]) then
+   impppm1=$impppm1[2],$impppm1[1]
+   $impppm1=impppm1
+endif
+if ($impppm2[1]>$impppm2[2]) then
+   impppm2=$impppm2[2],$impppm2[1]
+   $impppm2=impppm2
+endif
+if ($impppm3[1]>$impppm3[2]) then
+   impppm3=$impppm3[2],$impppm3[1]
+   $impppm3=impppm3
+endif
+if ($impppm4[1]>$impppm4[2]) then
+   impppm4=$impppm4[2],$impppm4[1]
+   $impppm4=impppm4
+endif
+
+$ppm[1]=impppm1[2]-impppm1[1]
+$ppm[2]=impppm2[2]-impppm2[1]
+$ppm[3]=impppm3[2]-impppm3[1]
+$ppm[4]=impppm4[2]-impppm4[1]
+
+  if (refsource1 = 'dfrq') then
+     $nuc=dn $pwx=pwx $pwxlvl=pwxlvl
+        $pwxlvl_cf=pwxlvl_cf $dof='dof'
+	$shapepar='dnshapes'
+  elseif (refsource1 = 'dfrq2') then
+     $nuc=dn2 $pwx=pwx2 $pwxlvl=pwx2lvl
+        $pwxlvl_cf=pwx2lvl_cf $dof='dof2'
+	$shapepar='dn2shapes'
+  elseif (refsource1 = 'dfrq3') then
+     $nuc=dn3 $pwx=pwx3 $pwxlvl=pwx3lvl
+        $pwxlvl_cf=pwx3lvl_cf $dof='dof3'
+	$shapepar='dn3shapes'
+  else
+     $nuc=tn $dof=''
+        $pwx=pw90 $pwxlvl=tpwr
+        $pwxlvl_cf=tpwr_cf
+	$shapepar='tnshapes'
+  endif
+  $ref_pw90=$pwx*$pwxlvl_cf $ref_pwr=$pwxlvl
+
+assignshapename(pslabel):$shapename
+$shape=shape180
+if ($shape='') then $shape='wurst2i' endif
+
+if (impress = 1) then
+  setsw1(impppm1[1],impppm1[2],$nuc):$offset,sw1
+  sw1=sw1
+  if ($dof<>'') then {$dof}=$offset reff1:$dum endif
+  impshp1=$shapename+'x'
+  $shapefile=impshp1+'.RF'
+  opx($shapefile)
+  putwave($shape,sw1)
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw1
+  pbox_pwr($shapefile):imppwr1
+
+  saveshapes('add',$shapepar,'impshp1','imppwr1','imppw1')
+
+elseif (impress = 2) then
+  mkpar('flag','impsymflg','n')
+  if ($ppm[2] > $ppm[1]) then
+	impppm1=$impppm2
+	impppm2=$impppm1
+  endif
+  $ppm2=impppm2[2]-impppm2[1]
+  setoffset((impppm2[2]-$ppm2/2),$nuc):$offset2
+  setsw1(impppm1[1],impppm1[2],$nuc):$offset,sw1
+
+  sw1=sw1
+/*
+  if ($dof<>'') then {$dof}=$offset reff1:$dum endif
+  $ppm2=impppm2[2]-impppm2[1]
+  getoffset((impppm2[2]-$ppm2/2),$nuc):$offset2
+
+  $band=sw1,$ppm2*reffrq1
+*/
+  if (impsymflg='y') then
+     $slp=($offset-$offset2)/2,($offset2-$offset)/2
+     if ($dof<>'') then {$dof}=($offset+$offset2)/2 reff1:$dum endif
+     fadflg='n'
+  else
+     $slp=0,($offset2-$offset)
+     if ($dof<>'') then {$dof}=$offset reff1:$dum endif
+     fadflg='y'
+  endif
+  $band=sw1,$ppm2*reffrq1
+
+  impshp1=$shapename+'xx'
+  $shapefile=impshp1+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,0)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw1
+  pbox_pwr($shapefile):imppwr1
+
+  impshp2=$shapename+'xy'
+  $shapefile=impshp2+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,90)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw2
+  pbox_pwr($shapefile):imppwr2
+
+  saveshapes('add',$shapepar,'impshp1','imppwr1','imppw1')
+  saveshapes('add',$shapepar,'impshp2','imppwr2','imppw2')
+ 
+elseif (impress = 3) then
+
+  $ppm=$ppm[1],$ppm[2],$ppm[3]
+  sort($ppm,'r'):$index
+  if ($index[1]=2) then 
+	impppm1=$impppm2 
+  elseif ($index[1]=3) then 
+	impppm1=$impppm3 
+  endif
+  if ($index[2]=1) then
+	impppm2=$impppm1
+  elseif ($index[2]=3) then
+	impppm2=$impppm3
+  endif
+  if ($index[3]=1) then
+	impppm3=$impppm1
+  elseif ($index[3]=2) then
+	impppm3=$impppm2
+  endif
+  setsw1(impppm1[1],impppm1[2],$nuc):$offset,sw1
+  sw1=sw1
+  if ($dof<>'') then {$dof}=$offset reff1:$dum endif
+  $ppm2=impppm2[2]-impppm2[1]
+  $ppm3=impppm3[2]-impppm3[1]
+  setoffset((impppm2[2]-$ppm2/2),$nuc):$offset2
+  setoffset((impppm3[2]-$ppm3/2),$nuc):$offset3
+
+  $band=sw1,$ppm2*reffrq1,$ppm3*reffrq1
+  $slp=0,($offset2-$offset),($offset3-$offset)
+
+  impshp1=$shapename+'xxx'
+  $shapefile=impshp1+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,0)
+  putwave($shape,$band[3],0,$slp[3],0,0)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw1
+  pbox_pwr($shapefile):imppwr1
+
+  impshp2=$shapename+'xxy'
+  $shapefile=impshp2+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,0)
+  putwave($shape,$band[3],0,$slp[3],0,90)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw2
+  pbox_pwr($shapefile):imppwr2
+
+  impshp3=$shapename+'xyx'
+  $shapefile=impshp3+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,90)
+  putwave($shape,$band[3],0,$slp[3],0,0)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw3
+  pbox_pwr($shapefile):imppwr3
+
+  impshp4=$shapename+'xyy'
+  $shapefile=impshp4+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,90)
+  putwave($shape,$band[3],0,$slp[3],0,90)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw4
+  pbox_pwr($shapefile):imppwr4
+
+  saveshapes('add',$shapepar,'impshp1','imppwr1','imppw1')
+  saveshapes('add',$shapepar,'impshp2','imppwr2','imppw2')
+  saveshapes('add',$shapepar,'impshp3','imppwr3','imppw3')
+  saveshapes('add',$shapepar,'impshp4','imppwr4','imppw4')
+
+elseif (impress = 4) then
+
+  sort($ppm,'r'):$index
+  if ($index[1]=2) then
+        impppm1=$impppm2
+  elseif ($index[1]=3) then
+        impppm1=$impppm3
+  elseif ($index[1]=4) then
+	impppm1=$impppm4
+  endif
+  if ($index[2]=1) then
+        impppm2=$impppm1
+  elseif ($index[2]=3) then
+        impppm2=$impppm3
+  elseif ($index[2]=4) then
+	impppm2=$impppm4
+  endif
+  if ($index[3]=1) then
+        impppm3=$impppm1
+  elseif ($index[3]=2) then
+        impppm3=$impppm2
+  elseif ($index[3]=4) then
+	impppm3=$impppm4
+  endif
+  if ($index[4]=1) then
+        impppm4=$impppm1
+  elseif ($index[4]=2) then
+        impppm4=$impppm2
+  elseif ($index[4]=3) then
+        impppm4=$impppm3
+  endif
+
+  setsw1(impppm1[1],impppm1[2],$nuc):$offset,sw1
+  sw1=sw1
+  if ($dof<>'') then {$dof}=$offset reff1:$dum endif
+  $ppm2=impppm2[2]-impppm2[1]
+  $ppm3=impppm3[2]-impppm3[1]
+  $ppm4=impppm4[2]-impppm4[1]
+  setoffset((impppm2[2]-$ppm2/2),$nuc):$offset2
+  setoffset((impppm3[2]-$ppm3/2),$nuc):$offset3
+  setoffset((impppm4[2]-$ppm4/2),$nuc):$offset4
+
+  $band=sw1,$ppm2*reffrq1,$ppm3*reffrq1,$ppm4*reffrq1
+  $slp=0,($offset2-$offset),($offset3-$offset),($offset4-$offset)
+
+  impshp1=$shapename+'xxxx'
+  $shapefile=impshp1+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,0)
+  putwave($shape,$band[3],0,$slp[3],0,0)
+  putwave($shape,$band[4],0,$slp[4],0,0)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw1
+  pbox_pwr($shapefile):imppwr1
+
+  impshp2=$shapename+'xxyy'
+  $shapefile=impshp2+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,0)
+  putwave($shape,$band[3],0,$slp[3],0,90)
+  putwave($shape,$band[4],0,$slp[4],0,90)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw2
+  pbox_pwr($shapefile):imppwr2
+
+  impshp3=$shapename+'xyxy'
+  $shapefile=impshp3+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,90)
+  putwave($shape,$band[3],0,$slp[3],0,0)
+  putwave($shape,$band[4],0,$slp[4],0,90)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw3
+  pbox_pwr($shapefile):imppwr3
+
+  impshp4=$shapename+'xyyx'
+  $shapefile=impshp4+'.RF'
+  opx($shapefile)
+  putwave($shape,$band[1],0,$slp[1],0,0)
+  putwave($shape,$band[2],0,$slp[2],0,90)
+  putwave($shape,$band[3],0,$slp[3],0,90)
+  putwave($shape,$band[4],0,$slp[4],0,0)
+  pboxpar('bscor','y')
+  cpx($ref_pw90,$ref_pwr):$dum
+  pbox_pw($shapefile):imppw4
+  pbox_pwr($shapefile):imppwr4
+
+  saveshapes('add',$shapepar,'impshp1','imppwr1','imppw1')
+  saveshapes('add',$shapepar,'impshp2','imppwr2','imppw2')
+  saveshapes('add',$shapepar,'impshp3','imppwr3','imppw3')
+  saveshapes('add',$shapepar,'impshp4','imppwr4','imppw4')
+
+endif

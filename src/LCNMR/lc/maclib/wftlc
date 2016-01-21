@@ -1,0 +1,64 @@
+"macro wftlc"
+/*-*- Mode: MAGICAL -*-*/
+"macro wftlc"
+
+" There is a pecking order for which is the best data: "
+$run=svfdir+'/'+lcid+'/LcRun001.lcd'	"First choice for data (no longer used)"
+$lcdata=svfdir+'/'+lcid+'/lcdata'	"... Second choice"
+$explcdata=curexp+'/lcdata'		"... Last choice - standard place"
+exists($run, 'file'):$e
+if ($e) then
+  cp($run, $lcdata)
+endif
+//shell('cp '+$run+' '+$explcdata):$x
+//cp($lcdata, $explcdata)
+
+$expflag=(file='exp')
+exists('det2','parameter'):$e
+$initflag=($expflag or not $e)
+setssfilter
+
+if ((lcexp='stop') OR (lcexp='enter')) then 
+    if ni<2 then gluest $initflag=(1=1) endif
+    wft 
+    if $initflag then vsadjlc maxlctime endif 
+    dLCNMR
+else "on flow data"
+//    if ((ni<2) and (curscan> 0)) then
+//	glue
+//	$initflag=(1=1)
+//	//shell('cp '+$run+' '+$explcdata):$x	// Already did this
+//    endif
+    if ((ni<2) and (curscan> 0)) then
+      exists(curexp+'/lcdata','file'):$exlc
+      if $exlc then
+        copy(curexp+'/lcdata',curexp+'/lcdata.bk')
+      endif
+      glue
+      if $exlc then
+        copy(curexp+'/lcdata.bk',curexp+'/lcdata')
+        rm(curexp+'/lcdata.bk')
+      endif
+      $initflag=(1=1)
+      //shell('cp '+$run+' '+$explcdata):$x // Already did this
+    endif
+
+    if fn > 33000 then fn=32000 endif
+    pmode='full'
+    trace='f2'
+
+    if lcexp='iso' then 
+       ni=celem
+       setvalue('ni',ni,'processed')
+       setvalue('arraydim',ni,'processed')
+    endif
+
+    fn1='n'
+    write('line3','LC-NMR data is being processed by wftlc')
+    setmin
+    wft1da
+    full
+    if $initflag then vsadjlc maxlctime endif 
+    f
+    dLCNMR
+endif  

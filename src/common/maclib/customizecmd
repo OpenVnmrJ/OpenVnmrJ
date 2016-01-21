@@ -1,0 +1,135 @@
+"macro customizecmd"
+"***************************************************************"
+"customizecmd - Macro to start a customization of a cmd node   "
+"***************************************************************"
+is_postvj22b:$vj22c
+if ($vj22c<1) then
+   return
+endif
+
+format($1,'lower'):$arg
+$expfile=cursqexp+'/EXPLIST'
+$lngfile=cursqexp+'/LONGLIST'
+$maclibdir=cursqexp+'/macdir'
+$curfidlist=curexp+'/curFIDlist'
+$fidlist=cursqexp+'/FIDlist'
+$cmdnodes=$maclibdir+'/CMDnodes'
+$file=cursqexp+'/tmpCMDacq'
+$file0=$file+'0'
+
+IF ($arg='start') THEN
+   if (cppauseflg='y') or (customflag='y') then return endif
+   if (seqfil<>'Submitq') and (seqfil<>'Startq') then return endif
+
+   $seqfil=seqfil
+   if ($# < 3) then 
+	if longQ='y' then $3='long' else $3='no' endif
+   endif
+
+   isexpflg($2,$3):$ison
+   if ($ison=0) then return endif
+
+/*
+   if (appmode='walkup') then
+        $sqnode='' getcpnode('rev2',cursqexp,$2):$sqnode
+        if ($sqnode<>'') then xmsetatts($sqnode,'status','Active') endif
+   endif
+*/
+
+   if ($3='long') then
+	$maclibdir=$maclibdir+'long'
+   endif
+
+   walkupQ('readlist'):$parflg,$parlng,$exp2,$lng2
+   $cmd=''
+   if ($3='long') then
+	teststr('$parlng',$2,'local'):$where
+	substr($lng2[$where],2):$cmd
+   else
+	teststr('$parflg',$2,'local'):$where
+	substr($exp2[$where],2):$cmd
+   endif
+   if ($cmd='') then $cmd=$2 endif
+   exists($cmd,'maclib'):$macex
+   if ($macex=0) then
+	return
+   endif
+
+   $macro=$2+'acq'
+   $macfile=$maclibdir+'/'+$macro
+
+   write('reset',$file)
+   write('reset',$file0)
+   exists($macfile,'file'):$fileex
+   if ($fileex) then 
+	shell('(cat '+$macfile+' | grep -v \'^ACQtime\' > '+$file+')'):$dum
+   endif
+   $cmdpath=''
+   getfilepath($cmd,'maclib'):$macex,$cmdpath
+   if ($macex) then
+	shell('(cat '+$cmdpath+' > '+$file0+')'):$dum
+   endif
+   layoutargs=$2,$3,$cmd
+   vnmrjcmd('pnew','layoutargs')
+
+   $xml=$cmd+'customize'
+   getfilepath($xml+'.xml','templates/vnmrj/interface'):$xmlex
+   if $xmlex then
+	exists($xml,'maclib'):$xmlex
+   endif
+   if ($xmlex=0) then
+	$xml=$0
+	$ok=0
+   else
+	{$xml}('init'):$ok
+// A return value of 1 means the protocol specific macro
+//  had its own popup
+   endif
+   if  not $ok then
+   	$vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+	    \'file:'+$xml+'.xml\',
+	    \'rebuild:yes\',
+	    \'pnewupdate:true\',
+	    \'cancel:'+$xml+'(`quit`)\',
+	    \'ok:'+$xml+'(`save`)\',
+	    \'title:Customize '+$2+'\')'
+   	exec($vjcmd)
+   elseif $ok < -0.5 then
+	{$0}('quit')
+   endif
+
+//   vnmrjcmd('popup','mode:modal','file:'+$xml+'.xml','rebuild:yes','pnweupdate:true','cancel:'+$xml+'(`quit`)','ok:customizecmd(`save`)','title:Customize '+$2)
+
+ELSEIF ($arg ='save') or $arg='savenoquit' THEN
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   if ($3='long') then
+        $maclibdir=$maclibdir+'long'
+   endif
+   $macro=$2+'acq'
+   $macfile=$maclibdir+'/'+$macro
+   write('reset',$macfile)
+   shell('cp '+$file+' '+$macfile):$dum
+   write('file',$macfile,'ACQtime=0')
+   if $arg='save' then
+   	customizecmd('quit')
+   endif
+ELSEIF ($arg = 'quit') THEN
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   $sqnode='' getcpnode('rev2',cursqexp,$2):$sqnode
+   if ($sqnode<>'') then
+//      xmsetatts($sqnode,'status','Customized')
+	xmhaha_setprop($sqnode,'status','Customized')
+   endif
+   shell('rm -f '+$file):$dum
+   shell('rm -f '+$file0):$dum
+   vnmrjcmd('pnew','layoutargs')
+
+ELSEIF ($arg = 'clear') THEN
+
+   $2=layoutargs[1] $3=layoutargs[2] $cmd=layoutargs[3]
+   write('reset',$file)
+   vnmrjcmd('pnew','layoutargs')
+
+ENDIF

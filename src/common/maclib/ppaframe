@@ -1,0 +1,552 @@
+"macro ppaframe"
+"***************************************************"
+" ppaframe - print chemist parameters into text file"
+"***************************************************"
+
+exists('plotfile','parameter'):$exf
+if $exf then $plotfile=plotfile endif
+groupcopy('processed','current','acquisition')
+groupcopy('processed','current','processing')
+if $exf then plotfile=$plotfile endif
+
+exists(userdir+'/templates/vnmrj','directory'):$vnmrj
+if not $vnmrj then shell('mkdir '+userdir+'/templates/vnmrj') endif
+exists(userdir+'/templates/vnmrj/textbox','directory'):$textbox
+if not $textbox then shell('mkdir '+userdir+'/templates/vnmrj/textbox') endif
+exists(userdir+'/templates/vnmrj/textbox/templates','directory'):$templ
+if not $templ then shell('mkdir '+userdir+'/templates/vnmrj/textbox/templates') endif
+exists(userdir+'/templates/vnmrj/textbox/templates/BasicParams','directory'):$basic
+if not $basic then
+  shell('cp -r /vnmr/templates/vnmrj/textbox/templates/BasicParams '+userdir+'/templates/vnmrj/textbox/templates')
+endif
+
+write('reset',curexp+'/ppatext')
+shell('cat '+curexp+'/text > '+curexp+'/ppatext')
+
+isvnmrj:$j
+
+IF (auto='y' or $j) THEN
+  exists('samplename','parameter'):$eex
+  if $eex>0.5 then
+    if samplename<>'' then
+      write('file',curexp+'/ppatext','Sample: %s',samplename)
+    endif
+  endif
+
+  exists('studyid_','parameter'):$eex
+  if ($eex and file<>'exp') then
+    if (studyid_<>'' and studyid_<>'tmpstudy') then
+      write('file',curexp+'/ppatext','Sample ID: %s',studyid_)
+    endif
+  endif
+
+  $autonamex=file
+  length(autodir):$l1 length(file):$l2
+  strstr(file,autodir):$strpos
+  if ($strpos>0.5 and $l2>$l1 and file<>'exp') then
+    substr(file,$l1+2,$l2-$l1):$autonamex
+  endif
+  write('file',curexp+'/ppatext','File: %s',$autonamex)
+
+  if (autodir<>'' and auto='y') then
+    write('file',curexp+'/ppatext','Automation directory: %s',autodir)
+  endif
+ELSE
+
+exists('sample','parameter'):$sampex
+if ($sampex) then
+  exists('archivedir','parameter'):$ardirex
+  if ($ardirex) then
+     if (archivedir <> '') then
+        write('file',curexp+'/ppatext','  Archive directory: %s',archivedir)
+     endif
+  endif
+  if (sample <> '') then
+     write('file',curexp+'/ppatext','  Sample directory: %s',sample)
+  endif
+  if (file<>'') and (file<>'exp') then                            "** file **"
+    $file=''
+    shell('basename "' + file + '" .fid'):$file
+  else
+    exists('explist','parameter'):$ex
+    $file=''
+    if ($ex) then $file=explist[1] endif
+    if ($file = '') then $file=pslabel endif
+    if ($file = 's2pul') then
+      if (tn = 'H1') then $file='PROTON'
+      elseif (tn = 'C13') then $file='CARBON'
+      elseif (tn = 'F19') then $file='FLUORINE'
+      elseif (tn = 'P31') then $file='PHOSPHORUS'
+      else $file=tn endif
+    endif
+  endif
+  write('file',curexp+'/ppatext','  File: %s',$file)
+endif
+ENDIF
+
+write('file',curexp+'/ppatext','Pulse Sequence: %s',seqfil)
+
+if (solvent<>'') and (solvent<>'none') then
+  write('file',curexp+'/ppatext','  Solvent: %s',solvent)
+  
+endif
+on('temp'):$e
+if $e then
+  write('file',curexp+'/ppatext','  Temp. %1.1f C / %1.1f K',temp,temp+273.15)
+else
+  write('file',curexp+'/ppatext','  Ambient temperature')
+endif
+
+$user=''
+$userlabel='User'
+exists('user','parameter'):$e					"** user **"
+if $e then
+  if user<>'' then
+    $user=user
+  endif
+endif
+exists('operator_','parameter'):$e
+if $e>0.5 then
+  if operator_<>'' then
+    $userlabel='Operator'
+    $user=operator_
+  endif
+endif
+$sample=0
+on('loc_'):$on						"** loc **"
+if $on>0.5 then
+  if (loc_ > 0) then
+    $sample = loc_
+  endif
+endif
+if $user<>'' then
+  if $sample>0 then
+    write('file',curexp+'/ppatext','Sample #%d, %s: %s',$sample,$userlabel,$user)
+  else
+    write('file',curexp+'/ppatext','%s: %s',$userlabel,$user)
+  endif
+else
+  if $sample>0 then
+    write('file',curexp+'/ppatext','Sample #%d',$sample)
+  endif
+endif
+if (file<>'') and (file<>'exp') then				"** file **"
+  $file=''
+  shell('basename "' + file + '" .fid'):$file
+  write('file',curexp+'/ppatext','File: %s',$file)
+endif
+$frq=''
+substr(rftype,1,1):$rf
+format(h1freq,3,0):$frq
+if ($rf='b')or($rf='a') then
+  $sys='VXR-'+$frq+'S'
+else
+  if $rf='c' then
+    $sys='UNITY-'+$frq
+  else
+    if $rf='d' then
+      if (Console='vnmrs') then
+         $sys='VNMRS-'+$frq
+      elseif (Console='inova') then
+         $sys='INOVA-'+$frq
+      else
+         $sys='UNITYplus-'+$frq
+      endif
+    else
+      if $rf='e' then
+        if (Console='mercury') then
+	   $sys='Mercury-'+$frq
+        else
+	   $sys='GEMINI-'+$frq
+        endif
+      else
+	if $rf='f' then
+           if (Console='mercury') then
+	      $sys='Mercury-'+$frq+'BB'
+           else
+	      $sys='GEMINI-'+$frq+'BB'
+           endif
+	else
+	  $sys='Processed on'
+	endif
+      endif
+    endif
+  endif
+endif
+$sysname=''
+shell('uname -n'):$sysname
+write('file',curexp+'/ppatext','%s  "%s"',$sys,$sysname)
+
+
+" check for 2D "
+getdim:$dim
+" check for wideline "
+exists('tau1','parameter'):$e
+if $e then exists('tau2','parameter'):$e endif
+if $e then $wideline=1 else $wideline=0 endif
+" check for solids "
+exists('srate','parameter'):$e
+if $e then $solids=1 else $solids=0 endif
+$solids=0
+if ($wideline) then
+  write('file',curexp+'/ppatext','Solid-state echo')
+	"Pulse sequence name is already written by pltext"
+"else"
+"  if seqfil<>'s2pul' then "
+"    length(seqfil):$len "
+"    if $len>10 then "
+"      write('file',curexp+'/ppatext','SEQUENCE: %s',seqfil) "
+"    else "
+"      write('file',curexp+'/ppatext','PULSE SEQUENCE: %s',seqfil) "
+"    endif "
+"  else "
+"    write('file',curexp+'/ppatext','PULSE SEQUENCE') "
+"  endif "
+endif
+
+
+" pulse-sequence related parameters"
+if ($wideline>0) then						"** np/dwell **"
+  write('file',curexp+'/ppatext','  Acq. size %d points',np)
+  write('file',curexp+'/ppatext','  Sample time %1.1f us',1e6/sw)
+endif
+
+$a=size('d1')
+if $a = 1 then
+   if d1>0 then							"** d1 **"
+     write('file',curexp+'/ppatext','  Relax. delay %1.3f s',d1)
+   endif
+else
+   write('file',curexp+'/ppatext','  Relax. delay arrayed')
+endif
+
+if ($dim=1) then						"** p1 (1D) **"
+  $a=size('p1')
+  if ($a = 1) then
+     if p1>0 then
+       if pw90>0 then
+         write('file',curexp+'/ppatext','  1st pulse %1.1f degrees',p1/pw90*90)
+       else
+         write('file',curexp+'/ppatext','  1st pulse %1.1f us',p1)
+       endif
+       $pulsename='2nd pulse'
+     else
+       $pulsename='Pulse'
+     endif
+  else
+        write('file',curexp+'/ppatext','  1st pulse arrayed')
+        $pulsename='2nd pulse'
+  endif
+  if pw90>0 then						"** pw (1D) **"
+    write('file',curexp+'/ppatext','  %s %1.1f degrees',$pulsename,pw/pw90*90)
+  else
+    write('file',curexp+'/ppatext','  %s %1.1f us',$pulsename,pw)
+  endif
+endif
+
+if $wideline>0 then						"** comp/WL **"
+  exists('compul','parameter'):$e
+  if $e then
+    if compul='y' then
+      write('file',curexp+'/ppatext','Composite pulses')
+    endif
+  endif
+  write('file',curexp+'/ppatext','  1st tau %1.1f us',tau1)		"** tau1/WL **"
+  write('file',curexp+'/ppatext','  2nd tau %1.1f us',tau2)		"** tau2/WL **"
+endif
+
+if ($dim>1) then
+  if seqfil='relayh' then  "exception: for cosy experiment label type"
+    if relay=0 then
+      $a=size('p1')
+      if ($a = 1) then
+        if p1>0 then
+	  if pw=pw90 then
+	    write('file',curexp+'/ppatext','  COSY 90-%2.0f',p1/pw90*90)
+	  else
+	    write('file',curexp+'/ppatext','  COSY 90-%2.0f',p1/pw*90)
+	  endif
+        else
+	  write('file',curexp+'/ppatext','  COSY 90-90')			"** 'cosy' **"
+        endif
+      endif
+    endif
+  endif
+endif
+
+exists('mix','parameter'):$e					"** mix **"
+if $e then
+  write('file',curexp+'/ppatext','  Mixing %1.3f s',mix)
+endif
+write('file',curexp+'/ppatext','  Acq. time %1.3f s',at)		"** at **"
+
+if (sw>99999) then						"** sw **"
+  write('file',curexp+'/ppatext','  Width %1.1f kHz',sw/1000)
+else
+  if $dim>1 then
+    write('file',curexp+'/ppatext','  Width    %1.1f Hz',sw)
+  else
+    write('file',curexp+'/ppatext','  Width %1.1f Hz',sw)
+  endif
+endif
+
+exists('ni','parameter'):$e					"** sw1 **"
+if ($dim>1) then
+  write('file',curexp+'/ppatext','  2D Width %1.1f Hz',sw1)
+endif
+
+if (ct=0)or($dim>1)or(arraydim>1) then
+  $nt=nt
+else
+  $nt=ct
+endif
+$a=size('nt')
+if ($a=1) then
+   if $nt>1 then
+     write('file',curexp+'/ppatext','  %d repetitions',$nt)
+   else
+     write('file',curexp+'/ppatext','  Single scan')
+   endif
+else
+   write('file',curexp+'/ppatext','  Arrayed repetitions')
+endif
+
+
+if $dim>1 then							"** ni **"
+  if size('phase')=2 then
+    write('file',curexp+'/ppatext','  2 x %d increments',ni)
+  else
+    write('file',curexp+'/ppatext','  %d increments',ni)
+  endif
+endif
+
+
+" observe channel information"
+if (rfl<>0)or(rfp<>0) then					"** tn/sfrq **"
+  $corr=0-sw/2+rfl-rfp
+else
+  $corr=0
+endif
+write('file',curexp+'/ppatext','OBSERVE %4s, %11.7f MHz',tn,sfrq+$corr/1e6)
+
+" decoupler channel information"
+$i=4
+$lastdmchar = ''
+repeat
+  substr(dm,$i,1):$lastdmchar
+  $i=$i-1
+until ($lastdmchar<>'') or ($i<1)
+$i=$i+1
+$char = ''
+$dmon=0
+$continuous=1
+repeat
+  substr(dm,$i,1):$char
+  if $char<>'n' then $dmon=1 else $continuous=0 endif
+  $i=$i-1
+until ($i<1)
+$i=4
+$lastdmm = ''
+repeat
+  substr(dmm,$i,1):$lastdmm
+  $i=$i-1
+until ($lastdmm<>'') or ($i<1)
+
+if $dmon>0 then
+  if ($solids=0) then
+    write('file',curexp+'/ppatext','DECOUPLE %3s, %11.7f MHz',dn,dfrq)	"** dn/dfrq **"
+    substr(amptype,2,1):$char
+    if ($char = 'c') then
+      on('dhp'):$on
+      if $on then
+	$power = dhp
+	$pwr='High power'
+	$unit=''
+      else
+	$pwr='Low power'
+	$unit='dB atten.'
+	$power=dlp
+      endif
+    else
+      on('dpwr'):$on
+      $power = dpwr
+      $pwr='Power'
+      $unit='dB'
+    endif
+    write('file',curexp+'/ppatext','  %s %d %s',$pwr,$power,$unit)	"** 'power' **"
+    $dmm=''
+    if $lastdmchar='n' then					"** gating **"
+      write('file',curexp+'/ppatext','  off during acquisition')
+      substr(dm,1,1):$char
+      if $char='y' then
+	write('file',curexp+'/ppatext','  on during delay')
+	substr(dmm,1,1):$dmm
+      endif
+    else
+      if $continuous then
+	write('file',curexp+'/ppatext','  continuously on')
+      else
+	write('file',curexp+'/ppatext','  on during acquisition')
+	substr(dm,1,1):$char
+	if $char='n' then
+	  write('file',curexp+'/ppatext','  off during delay')
+	endif
+      endif
+      $dmm=$lastdmm
+    endif
+    if $dmm<>'' then						"** dmm **"
+      if $lastdmm='c' then write('file',curexp+'/ppatext','  single frequency') endif
+      if $lastdmm='f' then write('file',curexp+'/ppatext','  broadband modulated') endif
+      if $lastdmm='g' then write('file',curexp+'/ppatext','  GARP-1 modulated') endif
+      if $lastdmm='m' then write('file',curexp+'/ppatext','  MLEV-16 modulated') endif
+      if $lastdmm='n' then write('file',curexp+'/ppatext','  noise modulated') endif
+      if $lastdmm='p' then write('file',curexp+'/ppatext','  %s modulated',dseq) endif
+      if $lastdmm='r' then write('file',curexp+'/ppatext','  square wave modulated') endif
+      if $lastdmm='u' then write('file',curexp+'/ppatext','  user modulation') endif
+      if $lastdmm='w' then write('file',curexp+'/ppatext','  WALTZ-16 modulated') endif
+      if $lastdmm='x' then write('file',curexp+'/ppatext','  XY-32 modulated') endif
+      
+    endif
+  else "solids"
+    if xpol='y' then						"** xpolar **"
+      write('file',curexp+'/ppatext','  Cross polarization')
+      write('file',curexp+'/ppatext','  Contact time %1.3f us',p2)
+      if (p3>0) then
+	write('file',curexp+'/ppatext','  T1-rho(C) decay %1.3f us',p3)
+      endif
+      if (level1>0) or (level2>0) then
+	write('file',curexp+'/ppatext','  Decoupler power levels')
+	write('file',curexp+'/ppatext','	 Contact %d',level1)
+	write('file',curexp+'/ppatext','	 Dipolar %d',level2)
+      endif
+    else "gated"
+      write('file',curexp+'/ppatext','  Gated decoupling')
+    endif
+  endif
+endif
+
+" specific solids NMR parameters"
+if $solids>0 then
+  if pdp='y' then						"** pdp **"
+    write('file',curexp+'/ppatext','  CHn (n=1,2,3) suppressed')
+  endif
+  if toss='y' then						"** TOSS **"
+    write('file',curexp+'/ppatext','  TOSS Sideband Suppression')
+  endif
+  write('file',curexp+'/ppatext','  Spinner rate %d',srate)		"** srate **"
+endif
+
+if dp='n' then							"** dp='n' **"
+  write('file',curexp+'/ppatext','Single precision data')
+endif
+
+
+" Processing parameters"
+write('file',curexp+'/ppatext','DATA PROCESSING')
+
+on('lb'):$on
+if $on then
+  if lb>0 then							"** lb **"
+    write('file',curexp+'/ppatext','  Line broadening %1.1f Hz',lb)
+  else								"** lb<0 **"
+    write('file',curexp+'/ppatext','  Resol. enhancement %1.1f Hz',-lb)
+  endif
+  
+endif
+on('gf'):$on							"** gf **"
+if $on then
+  on('gfs'):$on
+  if $on then
+    write('file',curexp+'/ppatext','  Gauss window %1.3f s',gf)
+    write('file',curexp+'/ppatext','     center at %1.3f s',gfs)	"** gfs **"
+  else
+    write('file',curexp+'/ppatext','  Gauss apodization %1.3f s',gf)	"** gf **"
+  endif
+  
+endif
+on('sb'):$on
+if $on then
+  if (sb>0) then						"** sb **"
+    write('file',curexp+'/ppatext','  Sine bell %1.3f s',sb)
+  else
+    write('file',curexp+'/ppatext','  Sq. sine bell %1.3f s',-sb)	"** sb<0 **"
+  endif
+  
+  on('sbs'):$on
+  if $on then							"** sbs **"
+    write('file',curexp+'/ppatext','   Shifted by %1.3f s',sbs)
+  endif
+endif
+on('awc'):$on
+if $on then							"** awc **"
+  write('file',curexp+'/ppatext','  Add. wt. constant %g',awc)
+endif
+
+" F1 Processing parameters"
+if $dim>1 then
+  write('file',curexp+'/ppatext','F1 DATA PROCESSING')
+  
+  on('lb1'):$on
+  if $on then
+    if lb1>0 then						"** lb1 **"
+      write('file',curexp+'/ppatext','  Line broadening %1.1f Hz',lb1)
+    else							"** lb1<0 **"
+      write('file',curexp+'/ppatext','  Resol. enhancement %1.1f Hz',-lb1)
+    endif
+    
+  endif
+  on('gf1'):$on
+  if $on then
+    on('gfs1'):$on
+    if $on then							"** gf1 **"
+      write('file',curexp+'/ppatext','  Gauss window %1.3f s',gf1)
+      
+      write('file',curexp+'/ppatext','	 center at %1.3f s',gfs1)	"** gfs1 **"
+    else
+      write('file',curexp+'/ppatext','  Gauss apodization %1.3f s',gf1) "** gf1 **"
+    endif
+    
+  endif
+  on('sb1'):$on
+  if $on then
+    if (sb1>0) then						"** sb1 **"
+      write('file',curexp+'/ppatext','  Sine bell %1.3f s',sb1)
+    else							"** sb1<0 **"
+      write('file',curexp+'/ppatext','  Sq. sine bell %1.3f s',-sb1)
+    endif
+    
+    on('sbs1'):$on
+    if $on then							"** sbs1 **"
+      write('file',curexp+'/ppatext','   Shifted by %1.3f s',sbs1)
+      
+    endif
+  endif
+  on('awc1'):$on
+  if $on then							"** awc1 **"
+    write('file',curexp+'/ppatext','  Add. wt. constant %g',awc1)
+    
+  endif
+  write('file',curexp+'/ppatext','  FT size %d x %d',fn,fn1)
+else
+  write('file',curexp+'/ppatext','  FT size %d',fn)
+endif
+
+" calculate experiment time"
+if apptype='dosy2d' then $ni=ni ni=0 endif
+exptime:$etime
+if apptype='dosy2d' then ni=$ni endif
+$seconds = $etime % 60
+$minutes = $etime / 60
+$hours = $minutes / 60
+$minutes= $minutes % 60
+if $hours<1 then
+  write('file',curexp+'/ppatext','Total time %d min, %d s',$minutes, $seconds)
+else
+  if ($minutes < 0.5) then
+    write('file',curexp+'/ppatext','Total time %d h, %d s', $hours,$seconds)
+  else
+    write('file',curexp+'/ppatext','Total time %d h, %d min, %d s',$hours,$minutes,$seconds)
+  endif
+endif
+
+shell('cp '+curexp+'/ppatext '+userdir+'/templates/vnmrj/textbox/templates/BasicParams/box1')

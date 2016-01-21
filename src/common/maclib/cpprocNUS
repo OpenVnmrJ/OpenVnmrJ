@@ -1,0 +1,61 @@
+"macro cpprocNUS"
+// This is a wrapper macro executed by execprocess as part of
+//   queued acquisition.  This does the following:
+//   1. Resets execprocess='NUSproc'
+//   2. saves the data via cpsave
+//   3. Calls NUSproc to do CLEAN processing
+//   4. creates and sets saveopt flag to 'n' - so a 2nd cpsave is skipped
+
+// This macro is NEVER called directly, but only via execprocess
+
+"**************************************************************************"
+// Check for reasons to bail out
+exists('execprocess','parameter'):$parex
+if not $parex then 
+    write('error','%s should not be called directly',$0) 
+    return 
+endif
+strstr(execprocess,$0):$ok
+if not ($ok) and execprocess<>'skIpExEcprOcEss' then
+    write('error','%s should be called ONLY via execprocess',$0)
+    return
+endif
+if (sampling<>'sparse') then return endif
+"**************************************************************************"
+// proceed
+// Reset execprocess
+
+    execprocess='NUSproc'
+    setvalue('execprocess',execprocess,'processed')
+    wstart='NUSwstart'
+    setvalue('wstart',wstart,'processed')
+    $3coef='' substr(f1coef,3):$3coef
+    if $3coef='' or $3coef='0' then CS_se='n' else CS_se='y' endif
+
+    strstr(file,'enterQ.macdir'):$current
+    //if $current or auto='y' then
+// This processing is called either under automation OR on an active node in foreground
+    	//copy(autodir+'/enterQ.macdir/current_sampling.sch',curexp+'/sampling.sch'):$dum
+    //endif
+
+    if not $current or auto='y' then
+//  The data is not Active node - save this data via cpsave
+//  Create saveopt so this will not be saved again via procsave
+    	destroy('saveopt'):$dum destroy('saveopt','processed'):$dum
+	write('line3','About to call cpsave')
+    	cpsave
+    	create('saveopt','flag') create('saveopt','flag','processed')
+    	saveopt='n' setvalue('saveopt','n','processed')
+    endif
+// Do NUS processing
+// Let NUSproc do the branching
+//    $procmethod='NUSproc'+CSreconmethod
+//    exists($procmethod,'maclib'):$ex
+//    if ($ex>0.5) then
+//	write('line3','Executing NUS processing method %s',$procmethod)
+//	exec($procmethod)
+//    else
+        NUSproc
+//    endif
+
+"**************************************************************************"

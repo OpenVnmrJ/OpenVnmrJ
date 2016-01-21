@@ -1,0 +1,499 @@
+"macro vjdeleteQ"
+"  This macro is applicable ONLY to SMS automation - 2007-08-01 "
+
+if ($# < 1) then
+     vnmrjcmd('submitstudy '+$0)
+     vnmrjcmd('tray update')
+     return
+endif
+if ($1='day') or ($1='daynight') or ($1='init') or ($1='') then
+    $ret=0
+    vjdeleteQ('refresh',$4,$3,$2):$ret
+    if ($ret) then
+    	vnmrjcmd('pnew','userdir')
+    	vnmrjcmd('popup','file:vjdeleteQ.xml','mode:modeless','pnewupdate:true','rebuild:yes','title:Delete Queue Option')
+    endif
+    return
+endif
+
+$tailX='tail'
+whichtail:$tailX
+$cdir=userdir+'/persistence/'+$0
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir($cdir) endif
+
+$info=$cdir+'/vjdelQinfo'
+$info2=$info+'2'
+$info3=$info+'3'
+$info4=$info+'4'
+$info5=$info+'5'
+
+"***Where to get info****"
+strstr(autodir,'studytray'):$istray
+if ($istray) then
+      $dir=globalenter
+      shell('basename '+globalenter):$file
+else
+      $dir=autodir
+      $file='enterQ'
+endif
+$autofile=$dir+'/'+$file
+$eQ=$autofile
+$nQ=$autofile+'.macdir/overniteQ'
+
+"**************************************************************"
+$arg=$1 $2=$2
+
+IF ($arg='refresh') THEN
+"********************************************************************"
+   write('reset',$info)
+   write('reset',$info2)
+   write('reset',$info3)
+   write('reset',$info4)
+   write('reset',$info5)
+
+   $loc='' format($2,'lower'):$loc
+   $zone='' format($3,'lower'):$zone
+   $rack='' format($4,'lower'):$rack
+   $subtray=''
+   if (traymax=96) or (traymax=768) then
+	$subtray='/RACK'+$rack+'ZONE'+$zone
+   else
+	$rack='' $zone=''
+   endif
+   if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+   if ($loc = '0') or ($loc='') then
+	write('error','Select location to delete')
+	return
+   endif
+
+   $samplename='' $locdir='' $status='' $who=operator
+   checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+   if ($status='') then
+	updatestatus($dir,$loc,'Empty',$zone,$rack)
+//	write('error','There is no pending study in this location')
+        return
+   endif
+   updatestatus($dir,$loc,$status,$zone,$rack)
+
+   is_postvj22b:$vj22c
+   $okedit=0 $ok2edit=0
+   operights('editsubmittedstudy'):$okedit
+   operights('editallopstudies'):$ok2edit
+   if ($okedit=0) then
+	write('error','%s cannot delete submitted study',operator)
+	return
+   endif
+   if ($who<>operator) and ($ok2edit=0) then
+        write('error','This Queue is owned by %s',$who)
+        return
+   endif
+
+   exists($autofile+'.macdir/'+$locdir,'directory'):$direx
+   if ($direx=0) then
+	write('error','Unable to find Queue information in %s',$locdir)
+	return
+   endif
+
+   "******Now proceed to gather information*****"
+   $locdir2=$autofile+'.macdir/'+$locdir
+   $studypar=$locdir2+'/Studypar'
+   $sampleglobal=$locdir2+'/sampleglobal'
+   $EXPLIST=$locdir2+'/day/EXPLIST'
+   $LONGLIST=$locdir2+'/night/LONGLIST'
+   $explist='' $longlist=''
+   $s2=''
+   readfile($EXPLIST,'$explist','$s2','','local'):$etot
+   readfile($LONGLIST,'$longlist','$s2','','local'):$ltot
+   array2string($explist):$explist
+   array2string($longlist):$longlist
+
+   $sampinfo=$locdir2+'/day/sampleinfo'
+   $daydone=0
+   shell('(cat '+$autofile+'.macdir/cpdonedayQ | grep -wc '+$locdir+')'):$daydone
+   if ($daydone>0) or ($explist='') then
+	$sampinfo=$locdir2+'/night/sampleinfo'
+   endif
+
+   shell('(cat '+$sampinfo+' > '+$info+')'):$dum
+   shell('(cat '+$sampinfo+' | grep -vw MACRO: | grep -vw STATUS: | grep -vw DATA: | grep -vw TEXT: > '+$info5+')'):$dum
+   shell('(cat '+$info5+' | grep -vw USERDIR: | grep -vw SampleDir: | grep -v \'^------\' > '+$info5+'1)'):$dum
+   shell('mv '+$info5+'1 '+$info5):$dum
+
+   $text=''
+   rtv($sampleglobal,'noabort','text_string'):$text
+   write('file',$info5,'TEXT:')
+   write('file',$info5,'%s',$text)
+
+	$whenerror=''
+        if ($status='Error') then
+            if ($ltot=0) then $whenerror='day' endif
+            if ($etot=0) then $whenerror='night' endif
+            if ($whenerror='') then
+                shell('(cat '+$eQ+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc night)'):$isnight
+                if ($isnight=0) then
+                   shell('(cat '+$nQ+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc night)'):$isnight
+                endif
+                if ($isnight>0) then $whenerror='day' else $whenerror='night' endif
+            endif
+        endif
+
+   write('file',$info2,'Study status: \"%s\"',$status)
+   if ($daydone>0) or ($status='Complete') then
+	write('file',$info2,'  Completed DayQ: ')
+   elseif ($explist<>'') and (($status='Active') or ($status='preScan')) then
+	write('file',$info2,'  Active DayQ: ')
+   elseif ($status='Error') and ($whenerror='day') then
+        write('file',$info2,'  Errored DayQ: ')
+   else
+        write('file',$info2,'  Pending DayQ: ')
+   endif
+   write('file',$info2,'    %s',$explist)
+   if ($status='Complete') then
+	write('file',$info2,'  Completed NightQ: ')
+   elseif ($longlist<>'') and ($daydone>0) and (($status='Active') or ($status='preScan')) then
+        write('file',$info2,'  Active NightQ: ')
+   elseif ($status='Error') and ($whenerror='night') then
+	write('file',$info2,'  Errored NightQ: ')
+   else
+   	write('file',$info2,'  Pending NightQ: ')
+   endif
+   write('file',$info2,'    %s',$longlist)
+
+   shell('(diffparams '+$studypar+' '+$info4+' | sed -e \'s|\\tundefined||g\'  > '+$info3+')'):$dum
+   shell('(diffparams '+$sampleglobal+' '+$info4+' | sed -e \'s|\\tundefined||g\'  >> '+$info3+')'):$dum
+   shell('(sort -k 1 -u '+$info3+' -o '+$info4+')'):$dum
+   shell('mv '+$info4+' '+$info3):$dum
+   "***************************************************"
+        "Six parameters are unique and are not"
+        " typically entered by the operator"
+        "    adirtmplt, sdirtmplt, svftmplt,text_string, and nameprefix"
+        "One can add more to this list"
+
+	$sppar='adirtmplt','sdirtmplt','svftmplt','nameprefix','text_string','adir2tmplt'
+	$sptotal=size('$sppar')
+	$i=1
+	repeat
+	   shell('(cat '+$info3+' | grep -vw \'^'+$sppar[$i]+'\' > '+$info4+')'):$dum
+	   shell('mv '+$info4+' '+$info3):$dum
+	   $i=$i+1
+	until $i > $sptotal
+   "***************************************************"
+   write('reset',$info4):$dum
+   userdir=userdir
+   return(1)
+
+ELSEIF ($arg = 'delete4real') THEN
+
+	shell('(cat '+$info+' | wc -l)'):$isinfo
+	if ($isinfo=0) then return endif
+	$s1='' $s2=''
+	readfile($info,'$s1','$s2','','local')
+	teststr('$s1','SAMPLE#:','local'):$ret
+	$loc=$s2[$ret]
+	teststr('$s1','MACRO:','local'):$ret
+	$macro=$s2[$ret]
+	$locdir=''
+ 	$s3='' $s4=''
+	strstr($macro,'\''):$ret,$s3,$s4
+	strstr($s4,'\''):$ret,$locdir,$s3
+	teststr('$s1','USER:','local'):$ret
+	$pr=0
+	strstr($s2[$ret],'priority'):$pr
+        $rack='' $zone=''
+	teststr('$s1','RACK:','local'):$ret
+	if ($ret>0) then $rack=$s2[$ret] endif
+	teststr('$s1','ZONE:','local'):$ret
+	if ($ret>0) then $zone=$s2[$ret] endif
+
+   	$samplename='' $locdir2='' $status='' $who=operator
+	checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir2
+	if (($status='Active') or ($status='Reference') or ($status='preScan')) and ($locdir=$locdir2) and ($samplename<>'ReFeReNCe') then
+	   $when='day'
+	   shell('(cat '+$autofile+'.macdir/currentsampleinfo | grep -w MACRO: | grep -cw night)'):$isnight
+	   if ($isnight>0) then $when='night' endif
+	   if ($2='both') or ($2=$when) then
+		write('error','Location %s is now Active',$loc)
+		updatestatus($dir,$loc,'Active',$zone,$rack)
+		vjdeleteQ('refresh',$loc,$zone,$rack)
+		return
+	   endif
+	endif
+
+        $s1='' $longlist='' $explist=''
+        $EXPLIST=$autofile+'.macdir/'+$locdir+'/day/EXPLIST'
+        $LONGLISTn=$autofile+'.macdir/'+$locdir+'/night/LONGLIST'
+        $LONGLIST=$autofile+'.macdir/'+$locdir+'/day/LONGLIST'
+        $EXPLISTn=$autofile+'.macdir/'+$locdir+'/night/EXPLIST'
+        readfile($EXPLIST,'$explist','$s1','','local'):$etot
+        readfile($LONGLISTn,'$longlist','$s1','','local'):$ltot
+
+	if ($status='Error') then
+	    $whenerror=''
+	    if ($ltot=0) then $whenerror='day' endif
+	    if ($etot=0) then $whenerror='night' endif
+	    if ($whenerror='') then
+		shell('(cat '+$eQ+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc night)'):$isnight
+		if ($isnight=0) then
+                   shell('(cat '+$nQ+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc night)'):$isnight
+		endif
+	   	if ($isnight>0) then $whenerror='midway' else $whenerror='final' endif
+	    endif
+	    if ($2='both') then $whenerror='final' endif
+	    if ($whenerror=$2) then $whenerror='final' endif
+	    if $whenerror='' then $whenerror='final' endif
+	endif
+
+   "************Calculate time adjustment****************"
+        shell('(cat '+$autofile+'.macdir/cpdonedayQ | grep -wc '+$locdir+')'):$daydone
+        readTtimeQ($autofile+'.macdir/'+$locdir+'/day'):$p,$d,$n
+        if ($daydone>0) then $d=0 endif
+        if ($pr>0) then $p=$d endif
+        readTtimeQ($autofile+'.macdir'):$P,$D,$N
+
+	$AUTOGLOBAL=$autofile+'.macdir/AUTOGLOBAL'
+	$line='' $longrun='n'
+	shell('(cat '+$AUTOGLOBAL+' | grep -w LONGRUN:)'):$line
+	if ($line<>'') then
+	   substr($line,2):$longrun
+	endif
+	if ($2 = 'day') or ($2 = 'both') then
+		$P=$P-$p $D=$D-$d
+	endif
+	if ($2 = 'night') or ($2 = 'both') then
+	   if ($longrun='y') then
+		$D=$D-$n
+	   else
+		$N=$N-$n
+	   endif
+	endif
+
+    "**********Cleanup sample directory, if the sample already started*******"
+    "***This could have happened for errored locations or daycomplete locations****"
+	$sample='' $archivedir=''
+	rtv($autofile+'.macdir/'+$locdir+'/sampleglobal','noabort','sample'):$sample
+        rtv($autofile+'.macdir/'+$locdir+'/sampleglobal','noabort','archivedir'):$archivedir
+	$md=$archivedir+'/'+$sample+'/dirinfo/macdir'
+	exists($md,'directory'):$mdex
+
+	if ($status='Complete') then $mdex=0 endif
+	  if ($2='day') then
+	     if ($etot>0) then
+		if ($mdex) then
+		    pwd:$curdir
+		    cd($md):$dum
+		    $i=1
+		    repeat
+			shell('(cat EXPLIST | grep -vw '+$explist[$i]+' > EXPLIST1)'):$dum
+			shell('mv EXPLIST1 EXPLIST'):$dum
+			$i=$i+1
+		    until $i > $etot
+		    cd($curdir):$dum
+		endif
+		    if ($ltot>0) then
+			shell('cp '+$EXPLISTn+' '+$EXPLISTn+'_deleted'):$dum
+                        shell('cp '+$EXPLIST+' '+$EXPLIST+'_deleted'):$dum
+			write('reset',$EXPLISTn)
+                        write('reset',$EXPLIST)
+		    endif
+	     endif
+	  elseif ($2='both') then
+             if ($etot>0) and ($daydone<1) then
+		if ($mdex) then
+                    pwd:$curdir
+                    cd($md):$dum
+		    $i=1
+                    repeat
+                        shell('(cat EXPLIST | grep -vw '+$explist[$i]+' > EXPLIST1)'):$dum
+                        shell('mv EXPLIST1 EXPLIST'):$dum
+                        $i=$i+1
+                    until $i > $etot
+                    cd($curdir):$dum
+		endif
+                        shell('cp '+$EXPLISTn+' '+$EXPLISTn+'_deleted'):$dum
+                        shell('cp '+$EXPLIST+' '+$EXPLIST+'_deleted'):$dum
+                        write('reset',$EXPLISTn)
+                        write('reset',$EXPLIST)
+             endif
+             if ($ltot>0) then
+		if ($mdex) then
+                    pwd:$curdir
+                    cd($md):$dum
+		    $i=1
+                    repeat
+                        shell('(cat LONGLIST | grep -vw '+$longlist[$i]+' > LONGLIST1)'):$dum
+                        shell('mv LONGLIST1 LONGLIST'):$dum
+                        $i=$i+1
+                    until $i > $ltot
+                    cd($curdir):$dum
+		endif
+                        shell('cp '+$LONGLISTn+' '+$LONGLISTn+'_deleted'):$dum
+                        shell('cp '+$LONGLIST+' '+$LONGLIST+'_deleted'):$dum
+                        write('reset',$LONGLISTn)
+                        write('reset',$LONGLIST)
+             endif
+	  elseif ($2='night') then
+             if ($ltot>0) then
+		if ($mdex) then
+                    pwd:$curdir
+                    cd($md):$dum
+		    $i=1
+                    repeat
+                        shell('(cat LONGLIST | grep -vw '+$longlist[$i]+' > LONGLIST1)'):$dum
+                        shell('mv LONGLIST1 LONGLIST'):$dum
+                        $i=$i+1
+                    until $i > $ltot
+                    cd($curdir):$dum
+		endif
+		    if ($etot>0) then
+                        shell('cp '+$LONGLISTn+' '+$LONGLISTn+'_deleted'):$dum
+                        shell('cp '+$LONGLIST+' '+$LONGLIST+'_deleted'):$dum
+                        write('reset',$LONGLISTn)
+                        write('reset',$LONGLIST)
+		    endif
+	     endif
+	  endif
+    "***********************************************************************************"
+   "****Pause automation***********"
+	expactive:$isactive
+	if ($file='enterQ') and ($isactive>-1) then
+		autoq('lock')
+	endif
+
+        shell('(cat '+$autofile+'.macdir/'+$locdir+'/day/sampleinfo | wc -l)'):$linespersamp
+	shell('(cat '+$eQ+' | grep -wc SAMPLE#:)'):$eQtot
+	shell('(cat '+$nQ+' | grep -wc SAMPLE#:)'):$nQtot
+	if ($eQtot>0) then
+	   write('reset',$eQ+'1')
+	   $i=1
+	   $tail='' format($linespersamp,0,0):$tail
+	   repeat
+	      $head='' format($i*$linespersamp,0,0):$head
+	      $is=0
+	      if ($2='day') then
+	      	  shell('(head -n '+$head+' '+$eQ+' | '+$tailX+' -n '+$tail+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc day)'):$is
+              elseif ($2='night') then
+                  shell('(head -n '+$head+' '+$eQ+' | '+$tailX+' -n '+$tail+' | grep -w MACRO: | grep -w '+$locdir+' | grep -wc night)'):$is
+              elseif ($2='both') then
+                  shell('(head -n '+$head+' '+$eQ+' | '+$tailX+' -n '+$tail+' | grep -w MACRO: | grep -wc '+$locdir+')'):$is
+	      endif
+	      if ($is=0) then
+              	  shell('(head -n '+$head+' '+$eQ+' | '+$tailX+' -n '+$tail+' >> '+$eQ+'1)'):$dum
+	      endif
+	      $i=$i+1
+	   until $i > $eQtot
+	   shell('mv '+$eQ+'1 '+$eQ):$dum
+	endif
+        if ($nQtot>0) and ($2<>'day') then
+           write('reset',$nQ+'1')
+           $i=1
+           $tail='' format($linespersamp,0,0):$tail
+           repeat
+              $head='' format($i*$linespersamp,0,0):$head
+              $is=0
+              shell('(head -n '+$head+' '+$nQ+' | '+$tailX+' -n '+$tail+' | grep -w MACRO: | grep -wc '+$locdir+')'):$is
+              if ($is=0) then
+                shell('(head -n '+$head+' '+$nQ+' | '+$tailX+' -n '+$tail+' >> '+$nQ+'1)'):$dum
+              endif
+              $i=$i+1
+           until $i > $nQtot
+           shell('mv '+$nQ+'1 '+$nQ):$dum
+        endif
+
+	writeTtimeQ($autofile+'.macdir',$P,$D,$N)
+   "**** Restart Automation ****"
+        expactive:$isactive
+        if ($file = 'enterQ') and ($isactive > -1) then
+		autoq('unlock')
+//                pauseautomation
+//                $autosaflag='none'
+//                getautosaflag($autofile):$autosaflag
+//                if ($autosaflag='none') then
+//                   autora
+//                elseif ($autosaflag='service') then
+//                   write('error','Automation is paused by Administrator for Service')
+//                elseif ($autosaflag='admin') then
+//                   write('error','Automation is paused by Administrator')
+//                endif
+        endif
+
+   "**********Now update Q files *************"
+    if ($status<>'Complete') and ($status<>'Active') and ($status<>'Reference') and ($status<>'preScan') then
+        $sampdoneq='SAMPLE#: '+$loc
+        $reuseq=$eQ+'.macdir/reuselocQ'
+	$doneq=$eQ+'.macdir/cpdoneQ'
+        $errorq=$eQ+'.macdir/cperrorQ'
+        $daydoneq=$eQ+'.macdir/cpdonedayQ'
+	if ($status='Error') then
+	    if ($whenerror='final') then
+		write('reset',$errorq+'2')
+		shell('(cat '+$errorq+' | grep "'+$sampdoneq+'" | awk \'{print $4}\' > '+$errorq+'2)'):$dum
+		$elocdir='' $elocdir2=''
+		readfile($errorq+'2','$elocdir','$elocdir2','','local'):$ie
+		shell('rm -f '+$errorq+'2'):$dum
+		if ($ie>0) then
+	    		shell('(cat '+$errorq+' | grep -v "'+$sampdoneq+'" > '+$errorq+'1)'):$dum
+	    		shell('mv '+$errorq+'1 '+$errorq):$dum
+			shell('chmod g+rw '+$errorq):$dum
+			xmhaha_beQ($dir,$elocdir,'delete')
+			xmhaha_asx($dir,'ErrorQ')
+		endif
+	    endif
+	endif
+	if ($daydone>0) and (($2='both') or ($2='night')) then
+	    $line=''
+	    shell('(cat '+$daydoneq+' | grep "'+$sampdoneq+'" | grep -w '+$locdir+')'):$line
+	    if ($line<>'') then
+		shell('(cat '+$daydoneq+' | grep -v "'+$line+'" > '+$daydoneq+'1)'):$dum
+	    	shell('mv '+$daydoneq+'1 '+$daydoneq):$dum
+		shell('chmod g+rw '+$daydoneq):$dum
+		write('file',$doneq,'%s',$line)
+		write('file',$reuseq,'%s',$sampdoneq)
+		xmhaha_asx($dir,'DoneQ')
+		xmhaha_asx($dir,'DoneDayQ')
+	    endif
+	endif
+	$newstatus=$status
+        if ($status='Queued') and ($2<>'night') then
+	   if ($daydone) then $newstatus='Complete' else $newstatus='Empty' endif
+	endif
+	if ($status='NightQueue') and ($2='both') then
+           if ($daydone) then $newstatus='Complete' else $newstatus='Empty' endif
+	endif
+	if ($status='NightQueue') and ($2='night') then
+	   if $daydone then $newstatus='Complete'
+	   else
+	      if ($etot=0) then
+		$newstatus='Empty'
+	      else
+		$newstatus='Queued'
+	      endif
+	   endif
+	endif
+	if ($status='Error') then
+	   if ($whenerror='final') then
+		if ($daydone) then $newstauts='Complete' else $newstatus='Empty' endif
+	   elseif ($2='day') then
+		if ($ltot>0) then $newstatus='NightQueue' else $newstatus='Empty' endif
+	   endif
+	endif
+        $rloc=0 format($loc,'lower'):$rloc
+	updatestatus(autodir,$loc,$newstatus,$zone,$rack)
+//	refreshtraycolor($rloc,$rloc,$zone,$rack)
+     else
+        updatestatus(autodir,$loc,$status,$zone,$rack)
+     endif
+     if ($# < 3) then
+	xmhaha_asx(autodir,'enterQ')
+	xmhaha_asx(autodir,'overniteQ')
+	if (sqdisplay='tray') then SQDisplay('refresh') endif
+	vjdeleteQ('init',$rack,$zone,$loc)
+     endif
+
+ELSEIF ($arg = 'forcedelete') THEN
+	vjdeleteQ('refresh',$2,$3,$4)
+	vjdeleteQ('delete4real','both',$2,$3,$4)
+	xmhaha_asx(autodir,'enterQ')
+	xmhaha_asx(autodir,'overniteQ')
+ENDIF

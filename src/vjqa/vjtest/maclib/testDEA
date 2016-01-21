@@ -1,0 +1,23 @@
+"macro testDEA"
+vvLog('Test','DEA integration and baseline correction')
+exists($0,'maclib'):$e,$testpath
+substr($testpath,'dirname'):$testpath
+substr($testpath,'dirname'):$testpath
+$testPath=$testpath+'/dea'
+vvAppdir('on',$testPath,'DEA')
+exists('DEA_Test.fid','data'):$e,$path
+rt($path)
+execdea
+vvAppdir('off',$testPath,'DEA')
+$s=''
+lookup('mfile',curexp+'/text','seek','Integral','skip','readline'):$s,$ret
+
+if ($s = '98.02 +/-0.33% (7 of 8 integrals)' ) then
+  vvLog('Pass','')
+elseif ($s = '98.05 +/-0.37% (7 of 8 integrals)' ) then
+  vvLog('Pass',' with secondary values')
+elseif ($s = '98.04 +/-0.37% (7 of 8 integrals)' ) then
+  vvLog('Pass',' with tertiary values')
+else
+  vvLog('Fail','Dea test: ' + $s)
+endif

@@ -1,0 +1,56 @@
+"macro reqparclear"
+
+/**
+ * Clears the parameters listed in reqparlist.  If for some reason reqparlist
+ * has been destroyed, then this macro exits without a message.  The parameter
+ * is cleared on the current tree, if it exists there, or on the global tree, if
+ * it exists there.  If it exists in neither place, a message is printed and the
+ * routine moves on to the next parameter in reqparlist.
+ *
+ * The definition of "clear" is that real parameters are turned "off" and
+ * string parameters are set to the empty string ''.
+ *
+ * There is a known issue with this macro, which due to its obscurity will
+ * reamin as "user beware."  The issue is that if a parameter of the same name
+ * exists in both the 'global' and 'current' trees, and if that parameter is
+ * part of reqparlist, then it will be cleared in the 'current' tree but not
+ * in the 'global' tree.  Users should just not be doing this.
+ *
+ * Also note that while this macro checks for reqparlist='', if it is an array
+ * and any element in the array is '' then it assumes '' is a parmeter and
+ * reports a "does not exist" message.
+ */
+exists('reqparlist','parameter','global'):$paramExists
+if not $paramExists then
+    return
+endif
+
+if (reqparlist = '') then
+    return
+endif
+
+$reqparListLength = size('reqparlist')
+$i = 1
+while ($i <= $reqparListLength) do
+    exists(reqparlist[$i], 'parameter', 'global'):$paramExistsGlobal
+    exists(reqparlist[$i], 'parameter', 'current'):$paramExistsCurrent
+
+    if $paramExistsCurrent then
+        $thisTree = 'current'
+    elseif $paramExistsGlobal then
+        $thisTree = 'global'
+    else
+        write('line3', 'parameter %s in reqparlist does not exist -- cannot clear', reqparlist[$i])
+    endif
+
+    if $paramExistsCurrent or $paramExistsGlobal then
+        isreal(reqparlist[$i], $thisTree):$paramIsReal
+        if $paramIsReal then
+            off(reqparlist[$i], $thisTree)
+        else
+            setvalue(reqparlist[$i], '', $thisTree)
+        endif
+    endif
+    $i= $i + 1
+endwhile
+

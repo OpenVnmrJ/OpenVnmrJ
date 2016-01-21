@@ -1,0 +1,113 @@
+ gNT1T2     Heteronuclear T1 with TROSY option
+
+	The pulse sequence is used to measure T1 or T2 of 15N with 
+	TROSY selection of the slowest relaxing component.
+
+	written by Youlin Xia, HKUST on Jan. 20, 1999.
+
+        modified by Marco Tonelli @NMRFAM (October 2004) to include
+	the possibility of measuring both T1 and T2 within the same
+	sequence, the use of water flipback pulses throughout the 
+	sequence instead of square selective pulses, option to use 
+	watergate 3919 instead of soft-watergate during the last inept
+	transfer, the possibility of turning on C13 refocusing in t1 
+	and the f1180 flag for starting t1 at half dwell time.
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nnn', dmm = 'ccc'
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for N15 decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [N15].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in N15.  f1180='y' is ignored if ni=0.
+
+    Must use f1coef = '1 0 1 0 0 -1 0 1' for processing T1 data and
+    f1coef = '1 0 -1 0 0 1 0 1' for processing T2 data.
+    (the same coefficients can be used for both T1 and T2 data, but then 
+     the phase in f1 and/or f2 needs to be adjusted by +/-90 for T1 or T2 
+     data depending on the coefficients used)
+
+
+Note:   
+        
+    1. T1 MEASUREMENTS OF NH GROUPS:
+       Implemented by setting the flag T1='y'.  An array of 1D
+       spectra is obtained by arraying the relaxation time parameter,
+       relaxT, to a multiple of 10 milliseconds.  relaxT corresponds
+       exactly to the relaxation time of the N15 spins.  The method uses 180
+       degree H1 pulses every 5ms during relaxT as according to Kay et al.
+       Hard 180 1H pulses are used unless the HNshape flag is set to 'y' then 
+       shaped pulses (shape_ss) are used to invert the NH resonances, without 
+       disturbing H2O. 
+       This shape is produced at installation of BioPack as cosine-
+       modulated pulse with 180's +-4ppm from H2O. The pw_shpss is
+       calculated by the setup macro "gNT1" to match the stored shape.
+       Its power ,shss_pwr, is calculated in the pulse sequence. 
+
+       Note: maxrelaxT as in point 2 is not used when T1='y'.
+
+    2. T2 MEASUREMENTS OF NH GROUPS:
+       Implemented by setting the flag T2='y' and arraying relaxT as above.
+       relaxT corresponds exactly to the relaxation time of the N15 spins.
+       Care should be taken for relaxT times greater than 0.25 seconds, and 
+       times greater than 0.5 seconds are automatically aborted.
+       The method is according to Kay et al, with N15 180's every 625 us, and
+       H1 180's every 10 ms.  625us was used instead of approx 500us used by
+       Kay et al to reduce sample heating.
+       A dummy period of N15 180's is delivered at the beginning of each pulse 
+       sequence to ensure constant average sample heating.
+
+       If T2 measurements are to be made in different experiments with different 
+       relaxTs as for 2D, including arrays of relaxT's, set the parameter 
+       maxrelaxT to the maximum relaxT you have set in all experiments - this 
+       will ensure constant average sample heating in all experiments.  
+       maxrelaxT does not need to be set for a single array in a single exp.
+        
+    3. Splitting of resonances in the N15 dimension by C13 coupling in C13
+       enriched samples can be removed by setting C13refoc='y'.
+
+    4. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  
+       H2O is cycled back to z as much as possible during t1, and during the 
+       relaxation delays for the following relaxation time measurements.
+
+       Watergate is used for solvent suppression during the last spin-echo.
+       Hard 3919 watergate pulses can be used instead of the soft pulses by 
+       setting the wtg3919 flag to 'y'
+
+    5. Weak gradients during t1 evolution can be turned on by setting gt0, 
+       gzlvl0 and gstab. Then, then the evolution time is long enough a
+       pair of opposite sign gradients of lenght gt0 and strenght gzlvl0
+       (+/-) are turned on with a gstab recovery delay after the last 
+       gradient. To turn off these gradients either set gt0 or gzlvl0 equal
+       to 0.0. (gradient strength below 500 are recommended)
+
+       Note: gradients that are too short can not be executed by the
+       spectrometer, resulting in :
+	- the experiment will not run at all, with or without an error message
+	  (depending on the software).
+	- the experiment will run but the spectrometer will increase the 
+	  short gradients to the minimum lenght without any warning, causing
+	  a timing error in the first few points of the experiment (and baseline
+	  distorsions in t1).
+
+
+References:
+	   
+	1.   Neil A.F., ...., Lewis E.K., Biochemistry 33, 5984-6003(1994)
+	   
+	2.   K. Pervushin,R.Riek,G.Wider,K.Wuthrich,
+	     Proc.Natl.Acad.Sci.USA,94,12366-71,1997.
+	
+	3.   G. Zhu, Y. Xia, L.K. Nicholson, and K.H. Sze,
+	     J. Magn. Reson. 143, 423-426(2000).
+	
+Please quote Reference 3 if you use this pulse sequence
+Modified for BioPack by GG, Palo Alto, May 2002
+Added Modified Tonelli version to BioPack, Sept 2006
+		

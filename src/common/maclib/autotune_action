@@ -1,0 +1,30 @@
+"macro autotune_action"
+exists('atune','parameter','systemglobal'):$atuneex
+if not ($atuneex) then
+  write('error','Auto-tuning not enabled - aborting') return
+elseif (atune<>'y') then
+  write('error','Auto-tuning not enabled - aborting') return
+endif
+
+exists('/vnmr/acqqueue/lasttunepar','file'):$lasttuneparex
+if ($lasttuneparex) then rm('/vnmr/acqqueue/lasttunepar'):$dum endif
+
+getparam('wtune','Probe'):$wtune
+getparam('tunemethod','Probe'):$tunemethod
+if ($wtune='n' or $tunemethod='n') then
+   write('error','Probe file not configured for auto-tuning')
+   return
+endif
+
+exists('wtune','parameter'):$wtuneex
+if not ($wtuneex) then create('wtune','string') endif
+exists('tunemethod','parameter'):$tunemethodex
+if not ($tunemethodex) then create('tunemethod','string') endif
+
+$origmethod=tunemethod
+$origwtune=wtune
+tunemethod=$tunemethod
+wtune=$wtune
+
+psMain('psTune')
+

@@ -1,0 +1,137 @@
+"macro RQwriteparamlist"
+"read a list of params, get their value from procpar file"
+"in directory $path, and write to $outfile"
+
+$path = ''
+$outfile = ''
+if $# > 1.5 then
+   $path = $1
+   $outfile = $2
+else return endif
+exists($outfile,'file'):$ex
+if $ex > 0.5 then
+   delete($outfile)
+endif
+
+$seqfile = ''
+exists($path+'/procpar','file'):$ex
+if $ex > 0.5 then
+   readpars($path, 'seqfil'):$seqfile
+else
+   return
+endif
+
+if($seqfile = '') then
+   $seqfile = 'default'
+endif
+
+$acqfile = userdir + '/templates/layout/'+$seqfile +'/acqAcq.xml'
+exists($acqfile,'file'):$ex
+if $ex < 0.5 then
+   $acqfile = systemdir + '/imaging/templates/layout/'+$seqfile +'/acqAcq.xml'
+   exists($acqfile,'file'):$ex
+   if $ex < 0.5 then
+       $acqfile = userdir + '/templates/layout/default/acqAcq.xml'
+       exists($acqfile,'file'):$ex
+       if $ex < 0.5 then
+           $acqfile = systemdir + '/imaging/templates/layout/default/acqAcq.xml'
+           exists($acqfile,'file'):$ex
+           if $ex < 0.5 then
+		$acqfile = ''
+	   endif
+       endif
+   endif
+endif
+
+$scanfile = userdir + '/templates/layout/'+$seqfile +'/acqScan.xml'
+exists($scanfile,'file'):$ex
+if $ex < 0.5 then
+   $scanfile = systemdir + '/imaging/templates/layout/'+$seqfile +'/acqScan.xml'
+   exists($scanfile,'file'):$ex
+   if $ex < 0.5 then
+       $scanfile = userdir + '/templates/layout/default/acqScan.xml'
+       exists($scanfile,'file'):$ex
+       if $ex < 0.5 then
+           $scanfile = systemdir + '/imaging/templates/layout/default/acqScan.xml'
+           exists($scanfile,'file'):$ex
+           if $ex < 0.5 then
+		$scanfile = ''
+	   endif
+       endif
+   endif
+endif
+
+$type = ''
+
+$value = ''
+$key = ''
+if($acqfile <> '') then
+  lookup('file',$acqfile, 'readline',1):$line
+  while ($line <> '</template>') do
+   substr($line, 1):$first
+   if $first = '<entry' or $first = '<menu' then
+	$key = $first
+   elseif $first = '/>' or $first = '</menu>' or $first = '>' then
+	$key = '' 
+   endif
+   strstr($first, '="'):$s1,$s2,$s3 
+   if $key <> '' and $s2 = 'vq' then
+       strstr($s3, '"'):$s1,$name 
+   else
+       $name = ''
+   endif
+   if($name <> '') then
+     readpars($path, $name):$value
+     write('file', $outfile, '%s', $name+' '+$value)
+   endif
+   if($name = 'gap') then $type = 'slices' endif
+   lookup('readline',1):$line
+  endwhile
+endif
+$value = ''
+$key = ''
+if($scanfile <> '') then
+  lookup('file',$scanfile, 'readline',1):$line
+  while ($line <> '</template>') do
+   substr($line, 1):$first
+   if $first = '<entry' or $first = '<menu' then
+	$key = $first
+   elseif $first = '/>' or $first = '</menu>' or $first = '>' then
+	$key = ''	
+   endif
+   strstr($first, '="'):$s1,$s2,$s3 
+   if $key <> '' and $s2 = 'vq' then
+       strstr($s3, '"'):$s1,$name 
+   else
+       $name = ''
+   endif
+   if($name <> '') then
+     readpars($path, $name):$value
+     write('file', $outfile, '%s', $name+' '+$value)
+   endif
+   if($name = 'gap') then $type = 'slices' endif
+   lookup('readline',1):$line
+  endwhile
+endif
+
+if($type = 'slices') then
+" always read the following"
+   $strns = ''
+   readpars($path, 'ns'):$ns
+   format($ns, 0, 0):$strns
+     write('file', $outfile, '%s', 'ns '+$strns)
+   $i = 0
+   while($i < $ns) do
+     $i = $i + 1
+     format($i, 0, 0):$strns
+     readpar($path, 'pss', $i):$value
+     write('file', $outfile, '%s', 'pss['+$strns+'] '+$value)
+   endwhile
+   readpars($path, 'theta'):$value
+     write('file', $outfile, '%s', 'theta '+$value)
+   readpars($path, 'psi'):$value
+     write('file', $outfile, '%s', 'psi '+$value)
+   readpars($path, 'phi'):$value
+     write('file', $outfile, '%s', 'phi '+$value)
+endif
+

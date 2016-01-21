@@ -1,0 +1,35 @@
+"macro setrfcoil"
+
+"***************************************************************************
+"
+"  setrfcoil - Set global RFCOIL parameter
+"
+"  usage - setrfcoil                  prompts user for input
+"          setrfcoil('rfcoil_name')   rfcoil_name must exist in pulsecal
+"
+"***************************************************************************
+
+   
+$e=0
+exists('RFCOIL','parameter','global'):$e
+if ($e = 0) then
+    create('RFCOIL','string','global')
+endif
+
+"list pulsecal entries
+"pulsecal
+
+if ($# > 0) then
+    RFCOIL = $1
+else
+    input('Enter system RF coil name ['+RFCOIL+']: '):$rfcoil
+    if ($rfcoil <> '') then
+        RFCOIL = $rfcoil
+    endif
+endif
+write('line3','%s','RFCOIL set to: '+RFCOIL)
+exists('rfcoil','parameter'):$e
+if ($e > 0) then
+    rfcoil=RFCOIL
+    write('line3','%s','rfcoil set to: '+RFCOIL)
+endif

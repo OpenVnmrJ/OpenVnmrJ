@@ -1,0 +1,37 @@
+"macro getsn"
+"********************************************"
+" getsn - calculate signal/noise of spectrum "
+"********************************************"
+" exits with present and final s/n as output "
+" any argument suppresses output message "
+
+		     "adjust largest peak of interest to be 0.8*wc2max"
+if tn='C13' "carbon" then vsadjc(0.8*wc2max) else
+ if tn='H1' "proton" then vsadjh(0.8*wc2max) else
+	  "other nucleus" vsadj(0.8*wc2max) endif endif
+$left=sw-rfl+rfp-1/at			  "$left=left edge of spectrum"
+$wp=wp $sp=sp
+wp=0.2*sw sp=$left-wp delta=wp/4 cr=$left
+$noise=1e9
+while (cr-delta>sp+1) do
+  dsn(cr,cr-delta):$snx,$rms
+  if $noise>$rms then
+    $noise=$rms
+  endif
+  cr=cr-delta
+endwhile
+$noise=vs*$noise
+sp=$sp wp=$wp
+$sn=(2.5*0.8*wc2max)/(2*$noise)			       "calculate s/n"
+if (ct<100000)and(ct>0) then 
+  $finalsn=$sn*sqrt(nt/ct)
+  if $#=0 then
+    write('line3','s/n=%7.1f      est. s/n at end of expt=%7.1f',$sn,$finalsn)
+  endif
+else
+  if $#=0 then
+    write('line3','s/n=%7.1f',$sn)
+  endif
+  $finalsn=sn
+endif
+return($sn,$finalsn)

@@ -1,0 +1,391 @@
+"Copyright (c) Varian Assoc., Inc.  All Rights Reserved."
+
+// probe tune
+
+probeid('enabled'):$probeid
+
+$lw=4
+$action = 'setup'
+if ($# > 0) then
+  $action = $1
+endif
+
+"create parameters for markers"
+
+exists('marker1','parameter'):$marker
+if ($marker < 0.5) then
+  create('marker1','string')
+  create('marker2','string')
+  create('markerfrq1','real')
+  create('markerfrq2','real')
+  marker1=''
+  marker2=''
+endif
+
+"create marker persistence file"
+
+$out=userdir+'/persistence/mtune_nuc'
+if $probeid then
+  $probe='none'
+  probeid('get'):$e,$probe
+else
+  $userprobe=userdir+'/probes/'+probe+'/'+probe
+  $sysprobe=systemdir+'/probes/'+probe+'/'+probe
+  exists($userprobe,'file'):$userex
+  exists($sysprobe,'file'):$sysex
+  if probe<>'' then
+    if $userex then
+      $probe=$userprobe
+    elseif ($sysex) then
+       $probe=$sysprobe
+    else
+      $probe='none'
+    endif
+  else
+    $probe='none'           "For imaging, no probe file set"
+  endif
+endif
+write('reset',$out)
+if $probe='none' then     "For imaging, no probe file set"
+  write('file',$out,'"H1" H1')
+  write('file',$out,'"H2" H2')
+  write('file',$out,'"C13" C13')
+  write('file',$out,'"F19" F19')
+  write('file',$out,'"P31" P31')
+  write('file',$out,'"Na23" Na23')
+  write('file',$out,'"Xe129" Xe129')
+else                      "Read nuclei present in probe file"
+  lookup('file',$probe)
+  repeat
+    lookup('readline'):$string,$nret
+    $b=''
+    strstr($string,'dmf '):$a,$b
+    if ($b<>'') and ($b<>'lkgn_') and ($b<>'lkpwr_') then
+      write('file',$out,'"'+$b+'" '+$b)
+    endif
+  until ($nret=0)
+endif
+
+if $action='prep' then return endif
+
+
+if ($action = 'setup') then
+  $temp=temp $pslabel=pslabel
+  on('temp'):$tempon
+
+"save current experiment"
+
+  exists(curexp+'/tutmp','file'):$e
+  if ($e < 0.5) then
+    tmpsave('tutmp')
+    exists(curexp+'/tmptext','file'):$e
+    if $e then rm(curexp+'/tmptext'):$x endif
+    cp(curexp+'/text',curexp+'/tmptext')
+  endif
+
+  exists('mtune','parlib'):$e,$path
+  if ($e) then
+    rtp($path)
+  else
+    write('error','parameters for mtune do not exist')
+    return
+  endif
+  
+  if ($tempon) then
+    temp = $temp
+  else
+    temp = 'n'
+  endif
+  gain = tugain
+  werr=''
+  wdone=''
+  np=512
+  in='n'
+  pad=0
+  spin = 'n'
+  ss = 0
+  bs=1
+  full
+  av
+  alock='n'
+  wshim='n'
+elseif ($action = 'start') then
+  wbs='mtune(`process`)'
+  wexp='mtune(`reset`)'
+  acqmode='mtune'
+  au('silent','tune','bsclear')
+  clear(2)
+  f
+elseif ($action = 'reset') then
+  au('silent','tune','bsclear')
+  clear(2)
+elseif ($action = 'process') then
+  ft('noft','fidshim','nods','nopars')
+  if (acqstatus[2] = 1) then
+    if (tchan = 1) then
+       $freq = sfrq
+    elseif (tchan = 2) then
+       $freq = dfrq
+    elseif (tchan = 3) then
+       $freq = dfrq2
+    elseif (tchan = 4) then
+       $freq = dfrq3
+    elseif (tchan = 5) then
+       $freq = dfrq4
+    endif
+    menu('ds_1','mtune')
+    xoroff($lw)
+    ds
+    dscale('rev','MHz',0,$freq-tunesw/2*1e-6,tunesw*1e-6)
+    xoron
+  else
+    xoroff($lw)
+    ds
+    xoron
+  endif
+
+"draw markers"
+
+  if tchan=1 then $mfreq=sfrq $mnuc=tn
+  elseif tchan=2 then $mfreq=dfrq $mnuc=dn
+  elseif tchan=3 then $mfreq=dfrq2 $mnuc=dn2
+  elseif tchan=4 then $mfreq=dfrq3 $mnuc=dn3
+  elseif tchan=5 then $mfreq=dfrq4 $mnuc=dn4
+  endif
+  
+  pen('graphics','integral')
+
+  if (marker1 <> '') and (marker1 <> 'none') then
+    $markerset1=wcmax-sc-wc/2-($mfreq-markerfrq1)/tunesw*1e6*wc
+    move($markerset1,-20)
+    draw($markerset1,wc2max)
+    write('graphics',$markerset1 +2,wc2max-10,'%s',marker1)
+  endif
+  if (marker2 <> '') and (marker2 <> 'none') then
+    $markerset2=wcmax-sc-wc/2-($mfreq-markerfrq2)/tunesw*1e6*wc
+    move($markerset2,-20)
+    draw($markerset2,wc2max)
+    write('graphics',$markerset2+2,wc2max-10,'%s',marker2)
+  endif
+  if (marker1 = '') or (marker1 = 'none') then
+    if (tn = 'none') then $tnmark='' else $tnmark=$mnuc endif
+    xoroff($lw)
+    move(wcmax-sc-wc/2,-20)
+    draw(wcmax-sc-wc/2,wc2max)
+    xoron
+    write('graphics',wcmax-sc-wc/2+2,wc2max-10,'%s',$tnmark)
+  endif
+
+
+elseif ($action = 'getfreq') then
+  if tchan=1 then
+    return(sfrq)
+  elseif (tchan=2) then
+    return(dfrq)
+  elseif (tchan=3) then
+    return(dfrq2)
+  elseif (tchan=4) then
+    return(dfrq3)
+  elseif (tchan = 5) then
+    return(dfrq4)
+  endif
+elseif ($action = 'getnuc') then
+  if tchan=1 then
+    return(tn)
+  elseif (tchan=2) then
+    return(dn)
+  elseif (tchan=3) then
+    return(dn2)
+  elseif (tchan=4) then
+    return(dn3)
+  elseif (tchan=5) then
+    return(dn4)
+  endif
+elseif ($action = 'setnuc') then
+  if tchan=1 then
+    tn=$2 setvalue('tn',tn,'processed')
+  elseif (tchan=2) then
+    dn=$2 setvalue('dn',dn,'processed')
+  elseif (tchan=3) then
+    dn2=$2 setvalue('dn2',dn2,'processed')
+  elseif (tchan=4) then
+    dn3=$2 setvalue('dn3',dn3,'processed')
+  elseif (tchan=5) then
+    dn4=$2 setvalue('dn4',dn4,'processed')
+  endif
+  expactive:$e
+  if ($e) then
+    halt(' ')
+  endif
+elseif ($action = 'setfreq') then
+  if tchan=1 then
+    sfrq=$2 setvalue('sfrq',sfrq,'processed')
+  elseif (tchan=2) then
+    dfrq=$2 setvalue('dfrq',dfrq,'processed')
+  elseif (tchan=3) then
+    dfrq2=$2 setvalue('dfrq2',dfrq2,'processed')
+  elseif (tchan=4) then
+    dfrq3=$2 setvalue('dfrq3',dfrq3,'processed')
+  elseif (tchan=5) then
+    dfrq4=$2 setvalue('dfrq4',dfrq4,'processed')
+  endif
+  expactive:$e
+  if ($e) then
+    halt(' ')
+  endif
+elseif ($action = 'disp') then
+  if (tchan = 1) then
+     $freq = sfrq
+  elseif (tchan = 2) then
+     $freq = dfrq
+  elseif (tchan = 3) then
+     $freq = dfrq2
+  elseif (tchan = 4) then
+     $freq = dfrq3
+  elseif (tchan = 5) then
+     $freq = dfrq4
+  endif
+  menu('ds_1','mtune')
+  xoroff($lw)
+  ds
+  dscale('rev','MHz',0,$freq-tunesw/2*1e-6,tunesw*1e-6)
+  ds
+  xoron
+
+"set marker1 frequency"
+
+elseif ($action = 'setmarker1') then
+  aa('Marker1 changed')
+  marker1=$2
+  if (marker1 <> '') and (marker1 <> 'none')  then
+    if tchan=1 then
+      $nuc=tn
+      write('line3','tn before=%s',$nuc)
+      $freq=sfrq
+      tn=marker1
+      markerfrq1=sfrq
+      tn=$nuc 
+      write('line3','tn after=%s',$nuc)
+      sfrq=$freq
+    elseif (tchan=2) then
+      $nuc=dn 
+      $freq=dfrq
+      dn=marker1
+      markerfrq1=dfrq
+      dn=$nuc 
+      dfrq=$freq
+    elseif (tchan=3) then
+      $nuc=dn2 
+      $freq=sfrq2
+      dn2=marker1
+      markerfrq1=dfrq2
+      dn2=$nuc 
+      sfrq2=$freq
+    elseif (tchan=4) then
+      $nuc=dn3 
+      $freq=sfrq3
+      dn3=marker1
+      markerfrq1=dfrq3
+      dn3=$nuc 
+      sfrq3=$freq
+    elseif (tchan=5) then
+      $nuc=dn4
+      $freq=sfrq4
+      dn4=marker1
+      markerfrq1=dfrq4
+      dn4=$nuc
+      sfrq4=$freq
+    endif
+  elseif (marker1 <> '') or (marker1 = 'none') then
+    marker1=''
+  endif
+  mtune('start')
+
+"set marker2 frequency"
+
+elseif ($action = 'setmarker2') then
+  aa('Marker2 changed')
+  marker2=$2
+  if (marker2 <> '') and (marker2 <> 'none')  then
+    if tchan=1 then
+      $nuc=tn
+      $freq=sfrq
+      tn=marker2
+      markerfrq2=sfrq
+      tn=$nuc 
+      sfrq=$freq
+    elseif (tchan=2) then
+      $nuc=dn 
+      $freq=dfrq
+      dn=marker2
+      markerfrq2=dfrq
+      dn=$nuc 
+      dfrq=$freq
+    elseif (tchan=3) then
+      $nuc=dn2 
+      $freq=sfrq2
+      dn2=marker2
+      markerfrq2=dfrq2
+      dn2=$nuc 
+      sfrq2=$freq
+    elseif (tchan=4) then
+      $nuc=dn3 
+      $freq=sfrq3
+      dn3=marker2
+      markerfrq2=dfrq3
+      dn3=$nuc 
+      sfrq3=$freq
+    elseif (tchan=5) then
+      $nuc=dn4
+      $freq=sfrq4
+      dn4=marker2
+      markerfrq2=dfrq4
+      dn4=$nuc
+      sfrq4=$freq
+    endif
+  elseif (marker2 = '') or (marker2 = 'none') then
+    marker2=''
+  endif
+  mtune('start')
+
+elseif ($action = 'betweenmarkers') then
+  if (marker1 <> '') and (marker1 <> 'none') and (marker2 <> '') and (marker2 <> 'none') then
+    if (markerfrq1 >= markerfrq2) then
+      $setfreq=markerfrq2+(markerfrq1-markerfrq2)/2
+    else
+      $setfreq=markerfrq1+(markerfrq2-markerfrq1)/2
+    endif
+    if tchan=1 then
+      sfrq=$setfreq setvalue('sfrq',sfrq,'processed') halt('  ')
+    elseif (tchan=2) then
+      dfrq=$setfreq setvalue('dfrq',dfrq,'processed') halt('  ')
+    elseif (tchan=3) then
+      dfrq2=$setfreq setvalue('dfrq2',dfrq2,'processed') halt('  ')
+    elseif (tchan=4) then    
+      dfrq3=$setfreq setvalue('dfrq3',dfrq3,'processed') halt('  ')
+    elseif (tchan=5) then
+      dfrq4=$setfreq setvalue('dfrq4',dfrq4,'processed') halt('  ')
+    endif
+    menu('ds_1','mtune')
+    xoroff($lw)
+    dss
+    dscale('rev','MHz',0,$setfreq-tunesw/2*1e-6,tunesw*1e-6)
+    xoron
+  else
+    write('error','Two markers needed!')
+  endif
+ 
+
+"enable graceful quitting"
+
+elseif ($action = 'quit') then
+  clear(2)
+  if (acqmode='mtune') then
+    aa('Do not forget to STOP first')
+  endif
+  acqmode=''
+  tmpreturn('tutmp')
+  cp(curexp+'/tmptext',curexp+'/text')
+  newdg dg su
+  return
+endif

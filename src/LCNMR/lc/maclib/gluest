@@ -1,0 +1,117 @@
+"macro gluest"
+/*-*- Mode: MAGICAL -*-*/
+"macro gluest"
+"gluest - Process LC-NMR data"
+"modified to read from savefile directory and return to current exp"
+"modified to read from study queue directory
+
+if $# > 0 then $numscans = $1 else $numscans = nscans endif
+$y=''
+$makearray=(1=1)
+$file=''
+
+$savefile=autodir
+//$savefile?
+
+// find first fid from each peak, usually 'Lc1d'
+//xmgetdata(-1,-1,'','-1','','first'):$sqfile
+GetFirstFids:$sqfile
+if ($sqfile<>'') then
+   exists($sqfile,'file'):$ex
+   if ($ex=0) then $sqfile='' endif
+endif
+if ($sqfile='') then
+  write('line3','gluest: no fids found')
+  return
+endif
+
+$files='' $junk=''
+readfile($sqfile,'$files','$junk','','local'):$numfids
+if $numfids=0 then
+  write('error','NMR data file not found, check current directory')
+  abort
+endif
+
+$lastfile=''
+$curscan=1
+clradd
+$done=0
+repeat
+  $file = $files[$curscan]
+  substr($file,1,1):$s1
+  if ($s1 <> '/') then
+    $file=$savefile+'/'+$file
+  endif
+
+  exists($file,'file'):$e
+  if $e=1 then
+    write('line3','Reading data from file %s',$file)
+    if $curscan=1 then
+      lookup('file',$file+'.fid/log','readline'):$timestr
+      write('alpha','gluest  log time  %s',$timestr)
+    endif
+    if $curscan=$numscans then
+      lookup('file',$file+'.fid/log','readline'):$timestr2
+      write('alpha','gluest  log time  %s',$timestr2)
+    endif
+    rt($file,'nodg')
+    $i = 1
+    repeat
+      select($i)
+      if $makearray then add('new') else add endif
+      $i = $i +1
+    until $i > ni
+    $lastfile=$file
+    $curscan=$curscan+1 "Keeps track of which one we're on"
+  else
+    $done=1
+  endif
+until (($curscan > $numfids) or $done)
+$numscans=$curscan-1
+if $numscans=0 then
+  write('error','NMR data file not found, check current directory')
+  abort
+endif
+
+if ni=0 then ni=1 endif
+$n = $numscans*ni
+write('alpha','gluest  numfids %g',$n)
+jexp:$curexp
+mf(addsubexp,$curexp)
+clradd
+copy($lastfile+'/text',curexp+'/text')
+if $n>1 and $makearray then
+  ni=$n
+  fn1=2*ni
+  setvalue('arraydim',$n,'processed')
+  setvalue('ni',$n,'processed')
+  unixtime('%a %b %d %T %Y:',$timestr):$time1
+  unixtime('%a %b %d %T %Y:',$timestr2):$time2
+  $time=($time2-$time1)/($numscans-1)
+  if ($time1 < 0) or ($time2 < 0) or ($time < 0) then
+    $time=1
+  endif
+  setlimit('sw1',50000000,0.01,-1.25e-08) "This may not be needed, but is put in for safety"
+  sw1=60/$time
+  setvalue('sw1',sw1,'processed')
+endif
+getsvfdirpath:$svfdir
+isvnmrj:$isvj
+if ($isvj) then
+  "add in for processing to work in VnmrJ"
+  $run=$svfdir+'/'+lcid+'/LcRun001.lcd'
+  $lcdata=$svfdir+'/'+lcid+'/lcdata'
+  $explcdata=curexp+'/lcdata'
+  shell('cp "'+$run+'" "'+$explcdata+'"'):$x
+else
+  $lcdata=$savefile+'/lcdata'
+endif
+exists($lcdata,'file'):$e
+if $e then
+  copy($lcdata,curexp+'/lcdata') 
+else 
+  write('line3','No LC data')
+  exists(curexp+'/lcdata','file'):$e
+  if $e then rm(curexp+'/lcdata'):$x endif
+endif
+ 

@@ -1,0 +1,98 @@
+"macro maxlctime"
+/*-*- MAGICAL -*-*/
+"macro maxlctime"
+"maxlctime - this version checks the LC-NMR 2000 format data or calls ,maxlctime_old"
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if $e=0 then write('line3','lcdata file does not exist in current experiment') abort endif
+"lcdata file exists"
+lookup('file',$filename)
+lookup('readline',2):$line1
+$version=''
+strstr($line1,'LCD'):$idx
+if ($idx > 0) then
+  substr($line1, $idx + 4, 1):$version
+else
+  lookup('read'):$version
+endif
+
+exists('vslc','parameter'):$e
+if not $e then create('vslc') setgroup('vslc','processing') endif
+exists('oclc','parameter'):$e
+if not $e then create('oclc') setgroup('oclc','processing') endif
+exists('lcdisplay','parameter'):$e
+if not $e then create('lcdisplay','string') setgroup('lcdisplay','processing') endif
+exists('det2','parameter'):$e
+if not $e then create('det2','flag') setgroup('det2','processing') endif
+exists('dconi','parameter'):$e
+if not $e then create('dconi','string') setgroup('dconi','processing') endif
+
+if ($version = '2') then
+  // Read LCD version 2.x data file
+  maxlctime2
+  return
+elseif (not $version = '2000') then
+  // Read pre-LC2000 data file
+  maxlctime_old
+  return
+endif
+
+lookup('readline'):$filetext
+
+lookup('readline',8)
+
+lookup('read','read','readline'):$text1,$text2,$text3   "active detectors"
+//write('line3',$text2)
+$det2onflag = ($text2 = '#TRUE#')
+
+lookup('readline',24)
+
+lookup('read'):$numtimeevents
+
+lookup('readline',$numtimeevents)
+
+lookup('readline',3)
+lookup('readline'):$numpoints
+
+
+$max1=0 $max2=0
+$min1=1e6 $min2=1e6
+$tlast=0
+$index=1
+
+$skipnumber=$numpoints/1000
+$skipnumber=trunc($skipnumber-1)
+
+
+$point=1
+while ($point < $numpoints-$skipnumber-1) do
+  $dum='' 
+  if $skipnumber>0 then lookup('readline',$skipnumber):$dum endif
+  lookup('read','read','read','readline'):$t,$a1,$a2,$dum
+  $point=$point+1+$skipnumber
+  if $t>.01 then 
+    if $a1> $max1 then $max1=$a1 endif
+    if $a2> $max2 then $max2=$a2 endif
+    if $a1< $min1 then $min1=$a1 endif
+    if $a2< $min2 then $min2=$a2 endif
+    $tlast=$t
+  endif
+endwhile
+exists('vslc2','parameter'):$e
+if not $e then create('vslc2') setgroup('vslc2','processing') endif
+exists('oclc2','parameter'):$e
+if not $e then create('oclc2') setgroup('oclc2','processing') endif
+
+if ($max1-$min1) > 0 then
+vslc=400/($max1-$min1)
+oclc=$min1
+endif
+
+if ($det2onflag and (($max2-$min2) > 0)) then 
+vslc2=400/($max2-$min2)
+oclc2=$min2 + 10
+endif
+
+sf1=0 wf1=$tlast
+
+return($t,$max1,$max2)

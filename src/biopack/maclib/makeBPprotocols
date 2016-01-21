@@ -1,0 +1,330 @@
+"macro makeBPprotocols"
+$mastertab='BioPack'
+$tabname='WaterSupp'
+$tabname=$tabname,'ProTripleRes'
+$tabname=$tabname,'ProHSQC'
+$tabname=$tabname,'RNADNAExpts'
+$tabname=$tabname,'C13Observe'
+
+$xmlname='BioPackWater'
+$xmlname=$xmlname,'BioPackTriple'
+$xmlname=$xmlname,'BioPackHSQC'
+$xmlname=$xmlname,'BioPackRNA'
+$xmlname=$xmlname,'BioPackC13'
+
+$sm1='C13/N15 2D'  				$sm2='C/N 2D'
+$sm1=$sm1,'C13/N15 2D F1-Filters' 		$sm2=$sm2,'F1filt 2D'
+$sm1=$sm1,'C13/N15 3D' 				$sm2=$sm2,'C/N 3D'
+$sm1=$sm1,'C13/N15 3D Edited-NOESYS' 		$sm2=$sm2,'ed.NOESY 3D'
+$sm1=$sm1,'C13/N15 3D F1-Filtered NOESYS' 	$sm2=$sm2,'F1filt NOESY 3D'
+$sm1=$sm1,'C13/N15 3D For Small Molecules' 	$sm2=$sm2,'SmMolecule 3D'
+$sm1=$sm1,'C13/N15 3D For Small Moleclues'      $sm2=$sm2,'SmMolecule 3D'
+$sm1=$sm1,'C13/N15 3D TOCSYS' 			$sm2=$sm2,'TOCSYS 3D'
+$sm1=$sm1,'C13/N15 4D' 				$sm2=$sm2,'C/N 4D'
+$sm1=$sm1,'Coupling Measurements' 		$sm2=$sm2,'J-measure'
+$sm1=$sm1,'For Fully Deuterated Proteins' 	$sm2=$sm2,'2H Proteins'
+$sm1=$sm1,'Heteronuclear 3D' 			$sm2=$sm2,'Hetero3D'
+$sm1=$sm1,'Homonuclear 2D' 			$sm2=$sm2,'Homo2D'
+$sm1=$sm1,'N15 Coupling Measurements' 		$sm2=$sm2,'N15 J-measure'
+$sm1=$sm1,'N15 Diffusion Measurements' 		$sm2=$sm2,'N15 Diff.'
+$sm1=$sm1,'N15 Relaxation' 			$sm2=$sm2,'N15 Relax.'
+$sm1=$sm1,'Non-Linear Sampling (Wagner)' 	$sm2=$sm2,'NL Sampling'
+$sm1=$sm1,'Water Suppression' 			$sm2=$sm2,'WaterSupp'
+$sm1=$sm1,'C13/N15 3D Projection Reconstruction (TILT)'	$sm2=$sm2,'C/N 3D ProjRecon'
+$sm1=$sm1,'3D Projection-Reconstruction (TILT)'    $sm2=$sm2,'3D ProjRecon'
+$sm1=$sm1,'4D Projection-Reconstruction (TILT)'    $sm2=$sm2,'4D ProjRecon'
+
+
+$tmpdir=userdir+'/persistence/'+$0
+exists($tmpdir,'directory'):$direx
+if ($direx=0) then
+    shell('mkdir '+$tmpdir):$dum
+endif
+
+$total=size('$tabname')
+$total=$2
+
+$i=$1
+repeat
+    $key='/vnmr/biopack/templates/vnmrj/interface/'+$xmlname[$i]+'.xml'
+    shell('(cat '+$key+' | grep -wc \'<submenu\')'):$sub
+    lookup('mfile',$key,'seek','<mainmenu>','filekey'):$key
+    $lead=''
+    if ($sub>0) then
+	lookup('mfile',$key,'seek','<submenu','filekey'):$key
+	$lead='<submenu'
+    endif
+    $x=1
+    $subfile='' format($x,0,0):$subfile
+    if ($x < 10) then $subfile='0'+$subfile endif
+    $subfile=$tmpdir+'/'+$xmlname[$i]+'_subfile'+$subfile
+    write('reset',$subfile)
+    $done=0
+    while $done<1 do
+	lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+	if ($ret<2) then $done=1 endif
+	if ($done=0) then
+	   strstr($line,'mainmenu'):$done
+	endif
+	if ($done=0) then
+	   write('file',$subfile,'%s %s',$lead,$line)
+	   $lead=''
+	   strstr($line,'submenu>'):$sub2
+	   if ($sub2) then
+		$x=$x+1
+		$subfile='' format($x,0,0):$subfile
+		if ($x < 10) then $subfile='0'+$subfile endif
+		$subfile=$tmpdir+'/'+$xmlname[$i]+'_subfile'+$subfile
+		write('reset',$subfile)
+	   endif
+	endif
+    endwhile
+    $i=$i+1
+until $i > $total
+
+$menu='' $submenu=''
+$name='' $tab='' $macro=''
+$origmacro='' $tmpmacro=''
+$origmenu='' $origsubmenu=''
+$origlabel=''
+$tmplabel='' $tmpsubmenu=''
+$j=1
+
+$i=$1
+repeat
+   $tmpfile=$tmpdir+'/tmp'
+   write('reset',$tmpfile)
+   shell('(ls -1 '+$tmpdir+'/'+$xmlname[$i]+'_sub* > '+$tmpfile+')'):$dum
+   $s1='' $s2=''
+   readfile($tmpfile,'$s1','$s2','','local'):$totfile
+   shell('rm -f '+$tmpfile):$dum
+   $k=1
+   repeat
+     $key=$s1[$k]
+     shell('(cat '+$key+' | wc -l)'):$ok
+     if ($ok) then
+	$submenu=''
+	lookup('mfile',$key,'seek','<submenu','filekey'):$key,$ret
+	if ($ret) then
+	    lookup('mfile',$key,'delimiter','=','seek','label','readline',1):$line
+	    strstr($line,'"'):$ret,$sx,$line
+	    if ($ret=0) then $line='' endif
+	    strstr($line,'"'):$ret,$line
+	    if ($ret=0) then $line='' endif
+	    $submenu=$line
+	    $tmpsubmenu=$submenu
+	    string2array($submenu):$submenu
+	    array2string($submenu):$submenu
+	    strsv2array($submenu,','):$submenu
+	    array2string($submenu):$submenu
+	    $tmpsubmenu=$submenu
+            teststr('$sm1',$submenu,'local'):$sret
+            if ($sret>0) then $submenu=$sm2[$sret] endif
+	endif
+	$key=$s1[$k]
+	$done=0
+	while $done<1 do
+	    lookup('mfile',$key,'<mchoice','filekey'):$key
+	    lookup('mfile',$key,'delimiter','= ','seek','label','readline',1,'filekey'):$line,$key,$ret
+	    if ($ret<2) then $done=1 else
+		strstr($line,'"'):$ret,$sx,$line
+		strstr($line,'"'):$ret,$sublabel
+		$tmplabel=$sublabel
+		string2array($sublabel):$sublabel
+		array2string($sublabel):$sublabel
+	  	strsv2array($sublabel,','):$sublabel
+		array2string($sublabel):$sublabel
+		$tmplabel=$sublabel
+		ckstring($sublabel,5):$subname
+                $subret=0 $subx='' $suby=''
+		strstr($subname,'3919_'):$subret,$subx,$suby
+		if ($subret=1) then
+			$subname=$suby+'_3919'
+		endif
+		$subret=0 $subx='' $suby=''
+		strstr($subname,'_'):$subret,$subx,$suby
+		if ($subret=1) then $subname=$suby endif
+                $subret=0 $subx='' $suby=''
+		strstr($subname,'_','last'):$subret,$subx,$suby
+		if ($subret) then if ($suby='') then $subname=$subx endif endif
+/*
+		exists(userdir+'/templates/vnmrj/protocols/'+$subname+'.xml','file'):$isin
+		if ($isin=0) then
+		    teststr('$name',$subname,'local'):$isin
+		endif
+		if ($isin) then
+		   $ext='' substr($tabname[$i],1,3):$ext
+		   if ($ext='Wat') then $ext='Water' endif
+		   exists(userdir+'/templates/vnmrj/protocols/'+$subname+'_'+$ext+'.xml','file'):$isin
+		   if ($isin=0) then
+			$subname=$subname+'_'+$ext
+		   endif
+		endif
+		if ($isin) then
+		   $ext=''
+		   substr($submenu,1):$ext
+		   ckstring($ext,5):$ext
+		   if ($ext<>'') then
+                        exists(userdir+'/templates/vnmrj/protocols/'+$subname+'_'+$ext+'.xml','file'):$isin
+			if ($isin=0) then
+			   teststr('$name',$subname+'_'+$ext,'local'):$isin
+			endif
+			if ($isin=0) then
+			    $subname=$subname+'_'+$ext
+			endif
+		   endif
+		endif
+		if ($isin) then
+		   $z=1 $zd=0
+		   repeat
+			$ext='' format($z,0,0):$ext
+                        exists(userdir+'/templates/vnmrj/protocols/'+$subname+'_'+$ext+'.xml','file'):$isin
+			if ($isin=0) then
+			    teststr('$name',$subname+'_'+$ext,'local'):$isin
+			endif
+			if ($isin=0) then
+			    $subname=$subname+'_'+$ext
+			    $zd=1
+			endif
+			$z=$z+1
+		   until $zd>0
+		endif
+*/
+		lookup('mfile',$key,'delimiter','= ','seek','vc','readline',1,'filekey'):$line,$key,$ret
+	      if ($ret<2) then $done=1 else
+		strstr($line,'"'):$ret,$sx,$line
+		strstr($line,'"'):$ret,$submacro
+		$tmpmacro=$submacro
+		wc($submacro):$words
+		if ($words>1) then
+//		    teststr('$origmacro',$submacro,'local'):$macex
+//		    if ($macex) then
+//			$submacro=$macro[$macex]
+//		    else
+		      $macex=0 $macpath=''
+		      exists($tabname[$i]+'_'+$subname,'maclib'):$macex,$macpath
+
+//	Modification to put BP in front of all new macros [2010-10-27]
+		      $macex=1
+
+		      if ($macex) and ($macpath<>userdir+'/maclib/'+$tabname[$i]+'_'+$subname) then
+			$expmacro=userdir+'/maclib/BP_'+$tabname[$i]+'_'+$subname
+			write('reset',$expmacro)
+			write('file',$expmacro,'%s',$submacro)
+			$submacro='BP_'+$tabname[$i]+'_'+$subname
+		      else
+		        $expmacro=userdir+'/maclib/'+$tabname[$i]+'_'+$subname
+                        write('reset',$expmacro)
+                        write('file',$expmacro,'%s',$submacro)
+                        $submacro=$tabname[$i]+'_'+$subname
+		      endif
+//		    endif
+		endif
+	      endif
+	    endif
+	    if ($done=0) then
+		$tab[$j]=$tabname[$i]
+		$menu[$j]=$submenu
+		$label[$j]=$sublabel
+		if ($submenu='') then
+			$nex=0 $n1='' $n2=''
+			strstr($subname,'C13_'):$nex,$n1,$n2
+			if ($nex=1) and ($n2<>'') then $subname=$n2 endif
+		endif
+		$name[$j]=$tabname[$i]+'_'+$submenu+'_'+$subname
+		ckstring($name[$j],5):$name[$j]
+		$macro[$j]=$submacro
+		$origlabel[$j]=$tmplabel
+		$origmenu[$j]=$xmlname[$i]
+		$origmacro[$j]=$tmpmacro
+		$origsubmenu[$j]=$tmpsubmenu
+		$j=$j+1
+	    endif
+	endwhile
+     endif
+     $k=$k+1
+   until $k > $totfile
+   $i=$i+1
+until $i > $total
+
+$total=size('$tab')
+$i=1
+$outfile=$tmpdir+'/outfile'
+write('reset',$outfile)
+$outfile2=$outfile+'2'
+$outfile2x=$outfile2+'x'
+write('reset',$outfile2)
+write('reset',$outfile2x)
+$es=systemdir+'/templates/vnmrj/interface/ExperimentSelector.xml'
+exists($es,'file'):$fileex
+if ($fileex) then
+    shell('(cat '+$es+' | grep -v "</ProtocolList>" > '+$outfile2+')'):$dum
+endif
+write('file',$outfile2,'    <!--  BioPack protocols -->')
+
+repeat
+    write('file',$outfile,'"%s" "%s" "%s" "%s" "%s" "%s"',$tab[$i],$label[$i],$menu[$i],$name[$i],$macro[$i],$origmacro[$i])
+    $i=$i+1
+until $i > $total
+
+$lasttab='' $lastmenu='' $lastsubmenu=''
+$i=1
+repeat
+    $pdir=userdir+'/templates/vnmrj/protocols'
+  abortoff
+    exec($macro[$i]):$dum
+    $time=0
+    exptime:$time
+  aborton
+    mkCPprotocol($name[$i],$pdir,$mastertab,$time,seqfil,'LIB',$macro[$i],'',$origlabel[$i],$tab[$i],$origsubmenu[$i],'yes')
+    if ($lasttab<>$tab[$i]) then
+	write('file',$outfile2,'<!-- \t %s Menu -->',$tab[$i])
+	$lasttab=$tab[$i]
+    endif
+    if ($lastmenu<>$origsubmenu[$i]) then
+	write('file',$outfile2,'<!-- \t\t %s SubMenu -->',$origsubmenu[$i])
+	$lastmenu=$origsubmenu[$i]
+    endif
+    write('file',$outfile2,'\t <protocol name="%s" label="%s" tab="%s" menu1="%s" menu2="%s" />',$name[$i],$origlabel[$i],$mastertab,$tab[$i],$origsubmenu[$i])
+    write('file',$outfile2x,'\t <protocol name="%s" label="%s" tab="%s" menu1="%s" menu2="%s" />',$name[$i],$origlabel[$i],$mastertab,$tab[$i],$origsubmenu[$i])
+
+    $i=$i+1
+until $i > $total
+
+if ($fileex) then
+    write('file',$outfile2,'</ProtocolList>')
+    shell('mv '+$outfile2+' '+$tmpdir+'/ExperimentSelector.xml'):$dum
+endif
+
+$i=$1 $j=1
+repeat
+    $outfile4=$tmpdir+'/'+$xmlname[$i]+'.xml'
+//    $outfile3=$tmpdir+'/'+$xmlname[$i]+'_v2.xml'
+//    write('reset',$outfile3)
+    write('reset',$outfile4)
+    $key=systemdir+'/biopack/templates/vnmrj/interface/'+$xmlname[$i]+'.xml'
+    $totline=0 shell('(cat '+$key+' | wc -l)'):$totline
+    $x=1
+    repeat
+	$head='' format($x,'lower'):$head
+	$line='' 
+	shell('(head -n '+$head+' '+$key+' | tail -n 1)'):$line
+	$line2=$line
+	$is=0 $is2=0
+	shell('(head -n '+$head+' '+$key+' | tail -n 1 | grep -wc vc)'):$is
+	if ($is) then
+	    $s1='' $s2=''
+	    strstr($line,$origmacro[$j]):$is2,$s1,$s2
+            if ($is2) then
+		$line=$s1+$macro[$j]+$s2
+	    	$line2=$s1+'BPxmhaha(\'setupexp\',\''+$macro[$j]+'\',\''+$name[$j]+'\')'+$s2
+		$j=$j+1
+	    endif
+	endif
+//	write('file',$outfile3,'%s',$line)
+	write('file',$outfile4,'%s',$line2)
+	$x=$x+1
+    until $x > $totline
+    $i=$i+1
+until $i > $2
+

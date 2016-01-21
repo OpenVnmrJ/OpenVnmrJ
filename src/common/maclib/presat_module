@@ -1,0 +1,92 @@
+"macro presat_module"
+"presat_module - This is a setup macro for presat module"
+
+$module='presat'
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+     getlimit('tpwr'):$max,$min,$step
+     setlimit('satpwr',30,-16,$step)
+     format(pslabel,'lower'):$pslabel
+     strstr($pslabel,'presat'):$is
+     strstr($pslabel,'wet'):$is2
+     if (($is) or ($is2)) and (apptype='lstd1D') then
+        "Setup presat parameters ONLY if pslabel='PRESAT' or 'wet1D' "
+
+	$ok=0
+	if (tn='H1') then
+           format(solvent,'lower'):psatsolv
+           if (psatsolv='dmso') then
+                psatsolv='dmsowet'
+	   elseif (psatsolv='d2o_10') then
+		psatsolv='h2o'
+           endif
+	   if (procdim<1) then off('gain') endif
+	   $ok=0
+           getsolvinfo(psatsolv):$ppm,$width,$gh2,$cppm,$gmap,$shape,$ok
+	   if ($ok) then presatgh2=$gh2 endif
+	else
+	   psatsolv=''
+	endif
+        setpower(presatgh2,tn):satpwr
+	satpwr=satpwr
+        if (Console ='mercury') and (satpwr < 0) then
+                satpwr=0
+        endif
+        getpower(satpwr,tn):presatgh2
+        satfrq=tof
+        slpsat='n' pstof=tof
+        off('wetpeaks')
+        if (satmode='y') then
+	    wstart='PRESATproc(\'wstart\')'
+//	    if (tn='H1') then
+		doscout=0
+//	    else
+//		doscout=1
+//	    endif
+        endif
+	mkpar('frequency','tofh2o',tof)
+        tofh2o=tof
+        getparam('tofh2o',tn):tofh2o
+     endif
+     fixgrd(39):prggzlvl
+     prgpw=pw90
+
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

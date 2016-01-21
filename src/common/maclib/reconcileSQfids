@@ -1,0 +1,46 @@
+"macro reconcileSQfids"
+	$esqfile=cursqexp+'/tmpstudy/enterSQ'
+	exists($esqfile,'file'):$fileex
+	if ($fileex=0) then return endif
+        $s1='' $s2=''
+        readfile($esqfile,'$s1','$s2','','local'):$rtot
+        if ($rtot) then 
+            $i=1
+            repeat
+                $prop=cursqexp+'/tmpstudy/info/'+$s1[$i]+'/prop'
+                $s3='' $s4=''
+                exists($prop,'file'):$propex
+                if ($propex) then
+                    readfile($prop,'$s3','$s4','data','local')
+                    if ($s4<>'') and ($s4<>'null') then
+			$firstchar='' substr($s4,1,1):$firstchar
+			if ($firstchar<>'/') then
+			    $s4=userdir+'/data/'+$s4
+			endif
+                        $fidex=0
+                        $ext='' $bname=''
+                        substr($s4,'basename'):$bname,$ext
+                        if ($ext='') then
+                            exists($s4+'.REC','directory'):$OK
+                            if ($OK=0) then
+                                exists($s4+'.rec','directory'):$OK
+				if not $OK then
+				    exists($s4+'.fid','directory'):$OK
+				    if not $OK then
+					exists($s4+'.vfs','directory'):$OK
+				    endif
+				endif
+			    endif
+			    $fidex=$OK
+                        else
+                            exists($s4,'directory'):$fidex
+                        endif
+                        if ($fidex=0) then
+                            xmhaha_setprop($s1[$i],'status','NotFound')
+                        endif
+                    endif
+                endif
+                $i=$i+1
+            until $i>$rtot
+        endif
+

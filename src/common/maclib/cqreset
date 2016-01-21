@@ -1,0 +1,63 @@
+"macro cqreset"
+"cqreset - reset parameters for a chemistry study"
+
+rights('selectallprescans'):$rt
+if ($rt) then
+  prescan[1]='Not done'  "status for findz0"
+  prescan[2]='Not done'  "status for gmapshim"
+  prescan[3]='y'         "autoprocess"
+else
+  prescan[1]='Complete'
+  prescan[2]='Complete'
+  prescan[3]='n'
+endif
+prescan[4]='n'         "status for protune"
+if ($rt and atune='y') then
+  exists('wtune','parameter'):$e
+  if ($e) then if wtune<>'n' then
+    prescan[4]='y'
+  endif endif
+endif
+prescan[5]=''          "used in prescan to store actionid"
+prescan[6]='n'         "used to reshim after tune"
+prescan[7]='off'       "status of a protocol in a chained study queue (sqmode='go'/auto='y')"
+prescan[8]='nnn'       "when email"
+prescan[9]='off'       "save all prescan fids/save only last prescan fid"
+prescan[10]=''         "scout macro"
+if (prescan[1]='Not done') then
+  prescan[11]='Not done'   "run alock or not"
+else
+  prescan[11]='Complete'
+endif
+
+sqmode='pause'         "stop, pause, next, go"
+sqsaveid='null'
+actionid='null'
+
+xmpref('set','PriorityUse','n')  "turn off priority sample"
+
+if $#>0.5 then if $1='prescan' then
+  return  "only reset prescans"
+endif endif
+
+if appmode<>'lc' then
+  seqfil='info'  "should also reset parameters w/rt? previous parameter values persist?"
+endif
+exists('studytime','parameter'):$e
+if $e>0.5 then setvalue('studytime',0) endif
+exists('Gmap','parameter'):$e
+if $e<0.5 then create('Gmap','string') endif
+Gmap='lk'
+name=''
+ident=''
+study=''
+protocols=''
+scans=''
+samplename=''
+notebook=''
+page=''
+
+// cqrempars('rt')  // retrieve remembered parameters if enabled
+
+wexp=''
+ctext

@@ -1,0 +1,194 @@
+"macro startautomation"
+" A generic macro for starting automation "
+
+if ($# < 1) then $1='start' endif
+"**************************************************************************"
+if ($1='isready') then
+
+    on('traymax','systemglobal'):$trayon
+    if ($trayon<1) or (traymax<2) then
+       return(0)
+    endif
+
+   expactive('current'):$expactive
+   if ($expactive>0) then
+       return(0)
+    endif
+
+    exists('globalenter','parameter','global'):$globalenterex
+    if ($globalenterex=0) then
+        return(0)
+    endif
+
+    if (globalenter='') then
+       return(0)
+    endif
+
+    $eqname=''
+    shell('basename '+globalenter):$eqname
+    shell('(cat '+globalenter+'/'+$eqname+' | grep -wc SAMPLE#:)'):$totentry
+    if ($totentry=0) then
+       return(0)
+    endif
+
+    RETURN(1)
+
+endif
+"****************************************************************************"
+if ($1='start') then
+    isvnmrj:$VJ
+    bgmode_is:$bg
+
+    on('traymax','systemglobal'):$trayon
+    if ($trayon<1) or (traymax=0) then
+       write('error','traymax parameter is not set')
+       return
+    endif
+
+    if ($VJ) then showtray('close') endif
+
+    $Q='' $queued=0
+    shell('showstat > /vnmr/tmp/stat'):$dum 
+    shell('grep queue /vnmr/tmp/stat'):$Q
+    shell('rm /vnmr/tmp/stat'):$dum
+    substr($Q,5):$queued
+    if ($queued) then
+       write('error','There are active experiments in the queue. aborted')
+       return
+    endif
+
+    expactive('current'):$expactive
+    if ($expactive>0) then
+       write('error','There is an active experiment running. aborted')
+       return
+    endif
+
+    exists('globalenter','parameter','global'):$globalenterex
+    if ($globalenterex=0) then
+        write('error','globalenter parameter doesnot exist. aborted')
+        return
+    endif
+
+    if (globalenter='') then
+       write('error','globalenter parameter does not have a value. aborted')
+       return
+    endif
+
+    $date=''
+    shell('date +%Y-%m-%d_%H%M%S'):$date
+
+    $eqname=''
+    shell('basename '+globalenter):$eqname
+    if ($bg>0) then
+        $submitted=0
+        shell('(cat '+globalenter+'/'+$eqname+'.macdir/DATE_submit2acq | wc -l)'):$submitted
+        if ($submitted > 0) then return endif
+    endif
+
+    shell('(cat '+globalenter+'/'+$eqname+' | grep -wc SAMPLE#:)'):$totentry
+    if ($totentry=0) then
+       write('error','There are no samples in %s/%s',globalenter,$eqname)
+       write('reset',globalenter+'/'+$eqname+'.macdir/DATE_submit2acq')
+       write('file',globalenter+'/'+$eqname+'.macdir/DATE_submit2acq','%s',$date)
+       return
+    endif
+
+    autodir=''
+    newautodir('auto')
+
+    if (autodir='') then
+       write('error','Could not create an automation directory. aborted')
+       return
+    endif
+
+    shell('cp '+globalenter+'/'+$eqname+' '+autodir+'/enterQ'):$dum
+    shell('cp -r '+globalenter+'/'+$eqname+'.macdir/* '+autodir+'/enterQ.macdir'):$dum
+
+    $AUTOGLOBAL=autodir+'/enterQ.macdir/AUTOGLOBAL'
+    $longrun='' $nlongrun=''
+    shell('(cat '+$AUTOGLOBAL+' | grep -w LONGRUN:)'):$longrun
+    if ($longrun='') then $longrun='LONGRUN: n' endif
+    $autoglobaltemp=''
+    shell('(cat '+$AUTOGLOBAL+' | grep -w AUTOGLOBALTEMP:)'):$autoglobaltemp
+    if ($autoglobaltemp='') then $autoglobaltemp='AUTOGLOBALTEMP: ' endif
+
+    shell('rm -f '+$AUTOGLOBAL):$dum
+    setAUTOGLOBAL(autodir,'enterQ')
+    shell('(cat '+$AUTOGLOBAL+' | grep -w LONGRUN:)'):$nlongrun
+
+    if ($longrun<>$nlongrun) then
+      if ($longrun='n') and ($nlongrun='y') then
+	automerge
+      elseif ($longrun='y') and ($nlongrun='n') then
+	shell('(cat '+$AUTOGLOBAL+' | grep -wv LONGRUN: > '+$AUTOGLOBAL+'1)'):$dum
+        write('file',$AUTOGLOBAL+'1','%s',$longrun)
+	shell('mv '+$AUTOGLOBAL+'1 '+$AUTOGLOBAL):$dum
+	shell('chmod a+rw '+$AUTOGLOBAL):$dum
+	write('reset',autodir+'/enterQ.macdir/DATE_automerge')
+	write('file',autodir+'/enterQ.macdir/DATE_automerge','%s',$date)
+      endif
+    endif
+    shell('(cat '+$AUTOGLOBAL+' | grep -wv AUTOGLOBALTEMP: > '+$AUTOGLOBAL+'1)'):$dum
+    write('file',$AUTOGLOBAL+'1','%s',$autoglobaltemp)
+    shell('mv '+$AUTOGLOBAL+'1 '+$AUTOGLOBAL):$dum
+
+    write('reset',autodir+'/enterQ.macdir/DATE_runstart')
+    write('file',autodir+'/enterQ.macdir/DATE_runstart','%s',$date)
+    write('reset',autodir+'/enterQ.macdir/START_from')
+    write('file',autodir+'/enterQ.macdir/START_from','%s',globalenter)
+    write('reset',globalenter+'/'+$eqname+'.macdir/DATE_submit2acq')
+    write('file',globalenter+'/'+$eqname+'.macdir/DATE_submit2acq','%s',$date)
+
+   autotimelog('reset',autodir)
+   if ($VJ) then
+     $studytray=autodir+'/enterQ.macdir/studytray'
+     exists($studytray,'directory'):$stex
+     if ($stex) then
+       $curdir=''
+       pwd:$curdir
+       exists($studytray+'/enterQ','file'):$eqex
+       if ($eqex) then
+   	  shell('rm -f '+$studytray+'/enterQ'):$dum
+       endif
+	$autostudies=autodir+'/autostudies'
+	write('reset',$autostudies)
+      	cd($studytray):$dum
+	if (traymax=96) or (traymax=768) then
+	    shell('(ls -1d */loc* > /vnmr/tmp/eqtmploc)'):$dum
+	else
+      	    shell('(ls -1d loc* > /vnmr/tmp/eqtmploc)'):$dum
+        endif
+      	$locs='' $dummy=''
+      	readfile('/vnmr/tmp/eqtmploc','$locs','$dummy','','local')
+      	shell('rm -f /vnmr/tmp/eqtmploc'):$dum
+      	cd($curdir):$dum
+      	$totloc=size('$locs')
+      	if $locs[1]='' then $totloc=0 endif
+      	if ($totloc>0) then
+	   $i=1
+	   repeat
+		$sdir=$studytray+'/'+$locs[$i]
+		$studypath='enterQ.macdir/studytray/'+$locs[$i]
+		write('file',$autostudies,'%s',$studypath)
+		shell('touch '+$sdir):$dum
+		vnmrjcmd('LOC add study '+$sdir+' automation '+autodir)
+		vnmrjcmd('tray update')
+		$i=$i+1
+	   until $i > $totloc
+      	endif
+     endif
+     showtray(autodir)
+   endif
+   globalenter=''
+
+    shell('chmod -R a+w '+autodir):$dum
+
+    dousermacro($0)
+
+    expactive:$isactive
+    if ($isactive > -1) then
+	autora
+    endif
+
+endif
+"********************************************************************************"

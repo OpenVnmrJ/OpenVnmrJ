@@ -1,0 +1,52 @@
+"macro gxyzfitshims"
+"gxyzfitshims"
+"Sets up fit shims for 3D shim mapping"
+"PJB 27viii04"
+
+"Varian 13- or 14-channel"
+if (shimset=1 or shimset=10 or shimset=11) then
+	if gxyzfitgroup='z1' then fitshims='z1c' endif
+	if gxyzfitgroup='scset' then fitshims='z1c z2c z3 x1 y1 xz yz xy x2y2' endif
+	if gxyzfitgroup='all' then fitshims=mapshims gxyzfitgroup=gxyzshimgroup endif
+endif
+
+"Varian/Agilent 23/26/28/35/40-channel"
+if (shimset<10 or shimset>11) then
+	if gxyzfitgroup='z1' then fitshims='z1' endif
+	if gxyzfitgroup='scset' then fitshims='z1 z2 z3 x1 y1 xz yz xy x2y2' endif
+	if gxyzfitgroup='3rd' then fitshims='z1 z2 z3 z4 z5 x1 y1 xz yz xy x2y2 x3 y3 xz2 yz2 zxy zx2y2' endif
+	if gxyzfitgroup='4th' then fitshims='z1 z2 z3 z4 z5 z6 x1 y1 xz yz xy x2y2 x3 y3 xz2 yz2 zxy zx2y2 z3x z3y z2x2y2 z2xy' endif
+	if gxyzfitgroup='all' then fitshims=mapshims gxyzfitgroup=gxyzshimgroup endif
+endif
+
+"Oxford 40-channel only"
+if (shimset=9) then
+  if gxyzfitgroup='5th' then
+    fitshims='z1 z2 z3 z4 z5 z6 z7 x1 y1 xz yz xy x2y2 x3 y3 xz2 yz2 zxy zx2y2 z3x z3y z2x2y2 z2xy zx3 zy3 x4 y4 z4x z4y z3x2y2 z3xy z2x3 z2y3'
+  endif
+endif
+
+"Oxford 32-channel only"
+if (shimset=26) then
+  if gxyzfitgroup='5th' then
+    fitshims='z1 z2 z3 z4 z5 z6 z7 x1 y1 xz yz xy x2y2 x3 y3 xz2 yz2 zxy zx2y2 z3x z3y z2x2y2 z2xy zx3 zy3 z4x z4y'
+  endif
+endif
+
+length(fitshims):$fitshimlength
+length(mapshims):$mapshimlength
+if ($fitshimlength > $mapshimlength) then fitshims=mapshims gxyzfitgroup=gxyzshimgroup endif
+
+//Now reconcile any issues where a shim is included in fitshims but not mapshims
+$i=0
+repeat
+   $fitshimname=''
+   $i=$i+1
+   substr(fitshims,$i):$fitshimname
+   if ($i=1) then $fitshimname2=$fitshimname+' ' else $fitshimname2=' '+$fitshimname endif
+   strstr(mapshims,$fitshimname2):$keep,$str1,$str2
+   if not ($keep) then
+	write('line3','Shim %s included in fit group \'%s\' but not mapped - removing',$fitshimname,gxyzfitgroup)
+	gxyzsetfitshims('remove',$fitshimname)
+   endif
+until ($fitshimname='')

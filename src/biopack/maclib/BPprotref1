@@ -1,0 +1,106 @@
+"macro BPprotref1"
+" BPprotref - reference observe dimension in protein NMR spectra "
+" BPprotref1 - reference f1 dimension in protein NMR spectra "
+" BPprotref2 - reference f2 dimension in protein NMR spectra "
+
+" Sets reference point ('rfl') to the center of the relevant frequency   "
+" axis, calculate 'reffrq' and 'rfp' such that center of axis appears at "
+" the specified position from arg #1 (which is in ppm, NOT Hz!). The     "
+" default reference source (refsource) is 'sfrq' for 'BPprotref', 'dfrq'   "
+" for 'BPprotref1', 'dfrq2' for 'BPprotref2'; if 'refsource1' exists,        "
+" 'BPprotref1' takes its value as default reference source (similarly,     "
+" 'BPprotref2' takes 'refsource2' as default); if a second argument is     "
+" specified ('BPprotref1' / 'BPprotref2' only), 'refsource1' or 'refsource2' "
+" are set to the value of arg #2, respectively.                          "
+
+" 2002-04-29 - rk "
+
+" checking arguments "
+if ($#=0)or($#>2) then
+  if $0='BPprotref' then
+    write('error','Usage: %s(ppm)',$0)
+  else
+    write('error','Usage: %s(ppm<,\'sfrq\'|\'dfrq\'|\'dfrq2\'|\'dfrq3\'>)',$0)
+  endif
+  return(0)
+endif
+if (typeof('$1'))or(($0='BPprotref')and($#>1)) then
+  if $0='BPprotref' then
+    write('error','Usage: %s(ppm)',$0)
+  else
+    write('error','Usage: %s(ppm<,\'sfrq\'|\'dfrq\'|\'dfrq2\'|\'dfrq3\'>)',$0)
+  endif
+  return(0)
+endif
+if $#>1 then
+  if not(typeof('$2')) then
+    write('error','Usage: %s(ppm<,\'sfrq\'|\'dfrq\'|\'dfrq2\'|\'dfrq3\'>)',$0)
+    return(0)
+  endif
+  if ($2<>'sfrq')and($2<>'dfrq')and($2<>'dfrq2')and($2<>'dfrq3') then
+    write('error','Usage: %s(ppm<,\'sfrq\'|\'dfrq\'|\'dfrq2\'|\'dfrq3\'>)',$0)
+    return(0)
+  endif
+endif
+
+" select channel-specific parameters "
+if $0='BPprotref' then
+  $crl = 'crl'
+  $rfl = 'rfl'
+  $rfp = 'rfp'
+  $sw = 'sw'
+  $refpos = 'refpos'
+  $reffrq = 'reffrq'
+  $refsrc = 'sfrq'
+  $refsource = ''
+elseif $0='BPprotref1' then
+  $crl = 'crl1'
+  $rfl = 'rfl1'
+  $rfp = 'rfp1'
+  $sw = 'sw1'
+  $refpos = 'refpos1'
+  $reffrq = 'reffrq1'
+  $refsrc = 'dfrq'
+  $refsource = 'refsource1'
+elseif $0='BPprotref2' then
+  $crl = 'crl2'
+  $rfl = 'rfl2'
+  $rfp = 'rfp2'
+  $sw = 'sw2'
+  $refpos = 'refpos2'
+  $reffrq = 'reffrq2'
+  $refsrc = 'dfrq2'
+  $refsource = 'refsource2'
+endif
+
+" take info from arguments "
+$ppm=$1
+if $ppm>1000 then
+  if $0='BPprotref' then
+    write('error','%s: argument must be in PPM, NOT Hz!',$0)
+  else
+    write('error','%s: first argument must be in PPM, NOT Hz!',$0)
+  endif
+  return(0)
+endif
+if $#>1 then
+  $refsrc=$2
+elseif $refsource <> '' then
+  exists($refsource,'parameter'):$e
+  if $e then
+    $refsrc={$refsource}
+  endif
+endif
+
+" now set referencing "
+exec($crl)
+{$rfl} = {$sw}/2
+{$reffrq} = 1/(1 + $ppm*1e-6)*{$refsrc}
+{$rfp} = ({$refsrc}-{$reffrq})*1e6
+{$refpos} = 0
+if $refsource <> '' then
+  exists($refsource,'parameter'):$e
+  if $e then
+    {$refsource}=$refsrc
+  endif
+endif

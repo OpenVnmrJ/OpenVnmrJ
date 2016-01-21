@@ -1,0 +1,27 @@
+"macro calfa"
+"**************************************************"
+"*                                                *"
+"*  calfa   -   recalculates alfa so that lp = 0  *"
+"*                                                *"
+"**************************************************"
+
+setlimit('alfa',parmax[13],-parmax[13],parstep[13])
+if (Console='vnmrs') then
+  write('line3','%s should not be used on Direct Drive systems, use setlp0 instead',$0)
+  return
+endif
+
+alfa = alfa + (lp*1e+6)/(360*sw)
+
+"Now change phases so that subsequent spectrum will be correct"
+rp=rp+lp/2 lp=0
+
+exists('oversamp','parameter'):$e
+if $e then         "If dsp is active, change proportion of alfa, rof2"
+  on('oversamp'):$a
+  if ($a)and(oversamp>1) then
+     crof2(6.6)
+     return
+  endif
+endif
+write('line3','alfa set to %0.1f usec; lp and rp adjusted',alfa)

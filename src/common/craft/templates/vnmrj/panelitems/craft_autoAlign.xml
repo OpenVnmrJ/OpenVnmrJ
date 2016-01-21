@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoAlign" element="groups" type="acquisition" >
+
+        <group size="400 350"
+          style="Heading1"
+          bg="transparent"
+	  reference="craft_autoAlign"
+          expanded="yes"
+	  useref="no"
+          >
+	<button loc="378 10" size="20 20"
+	  style="Heading1"
+	  label="X"
+	  tooltip="Close"
+	  vc="craft_doAlign('close')"
+	  />
+	    <label loc="30 20" size="160 20"
+	      label="Table name template"
+	      style="Label1"
+	      />
+            <entry loc="195 20" size="170 20"
+              style="PlainText"
+              vq="craftAlignPar"
+              vc="$V='' chkname('$VALUE'):$dpar,$V craftAlignPar[10]=$V"
+              set="$VALUE=craftAlignPar[10]"
+              />
+	    <textmessage loc="30 42" size="360 20"
+	      style="Info"
+	      vq="craftAlignPar"
+	      set="Svfname(craftAlignPar[1]+'/AlignBandInfo/AlignTables/'+craftAlignPar[10],''):$n substr($n,'basename'):$n $VALUE='Next alignment table name: '+$n"
+	      />
+
+          <group loc="5 65" size="390 165"
+            style="Heading1"
+      	    bg="transparent"
+       	    border="Etched"
+	    vq="craftAlignPar"
+       	    label="Alignment regions of interest (ROIs)"
+      	    subtype="Titled"
+      	    expanded="yes"
+	    useref="no"
+      	    >
+            <group loc="40 25" size="315 60"
+              style="Heading1"
+              bg="transparent"
+	      vq="craftAlignPar"
+              border="Raised"
+              subtype="Basic"
+              expanded="yes"
+              >
+	      <group loc="40 0" size="240 60"
+	        vq="craftnmrparRef craftDispPar"
+                expanded="no"
+	        useref="yes"
+	        reference="craft_RoiTools"
+	        />
+	      </group>
+	    <label loc="50 90" size="130 20"
+	      style="Label1"
+	      value="Frequency reference"
+	      />
+	    <radio loc="180 90" size="120 20"
+	      style="Label1"
+	      label="Trace number"
+	      vq="craftAlignPar"
+	      vc="craftAlignPar[12]='y'"
+	      vc2="craftAlignPar[12]='n'"
+	      set="$VALUE=(craftAlignPar[12]='y')"
+	      />
+	    <entry loc="300 90" size="40 20"
+	      style="Label1"
+	      vq="craftAlignPar"
+	      vc="format('$VALUE','isreal'):$real if $real then getvalue('arraydim','processed'):$dim format('$VALUE','lower'):$val if $val&lt;1 then $val=1 elseif ($val&gt;$dim) then $val=$dim endif format($val,0,0):craftAlignPar[11] vnmrjcmd('pnew','craftAlignPar') else craftAlignPar[11]=craftAlignPar[11] endif"
+	      set="$VALUE=craftAlignPar[11]"
+	      show="$ENABLE=(craftAlignPar[12]='y')*2-1"
+	      />
+	    <radio loc="180 110" size="180 20"
+	      style="Label1"
+	      label="Trace with max amplitude"
+	      vq="craftAlignPar"
+	      vc="craftAlignPar[12]='n'"
+	      vc2="craftAlignPar[12]='y'"
+	      set="$VALUE=(craftAlignPar[12]='n')"
+	      />
+            <button loc="40 135" size="315 25"
+	      style="Heading2"
+	      label="Align spectra in the defined ROIs"
+	      vq="craftAlignPar craftAlignTable"
+	      vc="craft_doAlign('align')"
+	      />
+      	    </group>
+
+	  <group loc="5 235" size="390 95"
+	    style="Heading1"
+	    border="Etched"
+	    label="Display alignment results"
+	    subtype="Titled"
+	    vq="craftAlignPar craftAlignTable"
+	    expanded="yes"
+	    useref="no"
+	    >
+	    <textmessage loc="40 18" size="340 20"
+	      style="Info"
+	      vq="craftAlignTable"
+	      set="$v='' substr(craftAlignTable,'basename'):$v $VALUE='Current Alignment table:'+ $v"
+	      />
+            <button loc="40 42" size="315 22"
+              style="Heading2"
+              label="Display alignment ROIs"
+              vq="craftAlignPar"
+              vc="craft_doAlign('displayaligninfo','',craftAlignTable)"
+              bg="transparent"
+	      show="$ENABLE=(craftAlignTable&lt;&gt;'')*2-1"
+              />
+	    <button loc="40 67" size="315 22"
+	      style="Heading2"
+	      vq="craftAlignTable"
+	      vc="craft_dsAlignSpec('after',craftAlignTable)"
+	      show="$ENABLE=((craftAlignTable&lt;&gt;'') and (craftAlignTable&lt;&gt;'none'))*2-1"
+	      label="Display spectra after alignment"
+	      />
+	    </group>
+        </group>
+
+</template>

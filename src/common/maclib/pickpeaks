@@ -1,0 +1,41 @@
+"macro pickpeaks"
+" pickpeaks "
+" if a numeric argument, this will be the number of hz "
+" on either side of peaks for integral"
+
+if ($# > 0) then $space=$1 else $space=25 endif
+$wp=wp $sp=sp
+f full  
+dll
+nll:$nlines
+if $nlines=0 then write('line3','No peaks found') return endif
+if $nlines>199 then
+repeat
+  th=th+5
+  nll:$nlines
+until $nlines<200
+endif
+
+"  make the integrals 25 (or $space) Hz from peak  "
+
+cz
+$i=1
+getll:$ht,r1
+z(r1+$space)
+if $nlines=1 then 
+z(r1-$space)
+else
+repeat
+ getll($i):$ht,r1
+ getll($i+1):$ht,r2
+  if r1-r2>($space*2+1) then z(r1-$space,r2+$space) endif
+ $i=$i+1
+until ($i=$nlines)
+z(r2-$space)
+endif
+
+f full
+ds dscale
+intmod='partial'
+isadj
+wp=$wp sp=$sp

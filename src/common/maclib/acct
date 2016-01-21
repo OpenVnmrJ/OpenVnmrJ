@@ -1,0 +1,94 @@
+"macro acct"
+"acctLog - add entry to operator accounting log, acctLog.xml"
+
+" $1 = log type"
+" where type = login, logout"
+
+" No Logging if acctLog.xml files does not exist. On/off control."
+$logfile=systemdir+'/adm/accounting/acctLog.xml'
+exists($logfile,'file','rw'):$e
+if ($e < 0.5) then
+  return
+endif
+
+$pid=''
+substr(vnmraddr,3):$pid
+$logfile = userdir+'/persistence/acct'+$pid
+write('reset',$logfile)
+
+" Add some std params to the list in case they are not in loggingParamList"
+$std=''
+$std[1]='operator'
+$std[2]='owner'
+exists('systemname','parameter','global'):$e
+if ($e) then
+  $std[3]='systemname'
+else
+  $std[3]='instrument'
+endif
+$std[4]='vnmraddr'
+$numstd=4
+
+" Get the date in the desired format "
+systemtime('%a %b %d %T %Z %Y'):$curtime
+" Get the date/time in seconds "
+systemtime:$curtimesec
+
+" Get the list of extra params to be written to the log file"
+exists('loggingParamList','adm/accounting'):$ok,$path
+$total=0 $param='' $paramtype=''
+if ($ok) then
+    readfile($path,'$param','$paramtype','','local'):$total
+endif
+
+" If login or start, write the current time as 'start'"
+if ($1 = 'login') or ($1 = 'start') then
+    write('file', $logfile, '<entry type=\"login\"\n       start=\"%s\"', $curtime)
+    write('file', $logfile, '       startsec=\"%s\"', $curtimesec)
+elseif ($1 = 'logout') or ($1 = 'done')  then
+    " If logout, write the current time as 'end'"
+    write('file', $logfile, '<entry type=\"logout\"\n       end=\"%s\"', $curtime)
+    write('file', $logfile, '       endsec=\"%s\"', $curtimesec)
+else
+    write('error', 'Argument to acctLog must be login, start, done or logout')
+endif
+
+" Write out the standard params defined above"
+$i=1
+repeat
+    write('file', $logfile, '       %s=\"%s\" ', $std[$i], {$std[$i]})
+    $i=$i+1
+until $i > $numstd
+
+
+" Write out the user defined params IF they are not in the std list already, "
+"   and if there were any in the file and if the param exists"
+if ($ok) then
+    $i=1
+    repeat
+        $k=1
+        $skip='false'
+        repeat
+            if ( $param[$i]=$std[$k] ) then
+                " Skip params that were already printed out above "
+                $skip='true'
+            endif
+            $k=$k+1
+        until $k > $numstd
+        is_param($param[$i]):$ex,$where,$type
+        if ( $ex = 0) then
+            $skip='true'
+        endif
+        if ($skip = 'false') then
+            write('file', $logfile, '       %s=\"%s\"', $param[$i], {$param[$i]} )
+        endif
+        $i=$i+1
+    until $i > $total
+endif
+
+write('file', $logfile, '/>')
+
+shell('chmod 666 '+ $logfile):$e
+
+" Add to the log file"
+autoq('addAcct',$logfile)

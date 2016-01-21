@@ -1,0 +1,37 @@
+"macro BPdssh"
+"BPdssh   Works only for single arrayed parameter"
+$comparray=0
+shell('echo "'+array+'" | grep -c "[,()]"; cat'):$comparray
+if $comparray then
+  write('error','%s: only works with simple arrays',$0)
+  return
+endif
+$bestc=1 $c=1 select(1) peak:$best
+repeat select($c) peak:$ht
+  if $ht>$best then $bestc=$c $best=$ht endif
+  $c=$c+1
+until $c>arraydim
+select($bestc) vsadj dssh 
+$string=0
+if typeof({'array'}) then $string=1 endif
+if $string then
+  write('graphics',0,wc2max-5,'Best Peak Height is for %s = %s',array,{array}[$bestc])
+else
+  write('graphics',0,wc2max-5,'Best Peak Height is for %s = %4.1f',array,{array}[$bestc])
+endif
+abs(ho):$width
+if $width<20 then
+  $c=1 $x=0 $y=-10
+else
+  $c=1 $x=10 $y=-10
+  write('graphics',0,$y,'%s=',array)
+endif
+repeat
+  if $string then
+    write('graphics',$x,$y,'%s',{array}[$c])
+  else
+    write('graphics',$x,$y,'%4.1f',{array}[$c])
+  endif
+  $x=$x-ho $c=$c+1
+until $c>arraydim
+ 

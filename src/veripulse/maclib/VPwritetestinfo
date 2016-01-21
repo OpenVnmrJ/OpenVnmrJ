@@ -1,0 +1,34 @@
+"macro VPwritetestinfo"
+
+if ($#<0.5) then return endif
+
+$historydir=IPdatadir+'/'+probe+'/History'
+exists($historydir,'directory'):$direx
+if ($direx<0.5) then shell('mkdir -p '+$historydir):$dum endif
+
+$listfile=$historydir+'/'+IPrunid+'.testlist'
+exists($listfile,'file'):$ex
+if ($ex<0.5) then write('reset',$listfile) endif
+
+teststr('VPtest',$1):$i
+if ($i=0) then
+  return
+endif
+substr(VPresults[$i],'wc','csv'):$num
+
+$j=0
+$found=0 
+$testresult=''
+while ($j < $num) do
+  $j=$j+1
+  substr(VPresults[$i],$j,'csv'):$testresult
+  teststr('VPresult',$testresult):$index
+  if ($index) then
+    $found=1
+    write('file',$listfile,'%s %s',$testresult,VPresultLabel[$index])
+  endif
+endwhile
+
+if not ($found) then
+  write('error','No specs ( %s ) associated with study %s',$testresult,$1)
+endif

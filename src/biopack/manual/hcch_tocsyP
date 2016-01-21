@@ -1,0 +1,128 @@
+  hcch_tocsyP.c               
+
+    This pulse sequence will allow one to perform the following
+    experiment:
+
+    3D HCCH-TOCSY utilising gradients but not coherence gradients.
+
+
+    Correlates the sidechain aliphatic 13C resonances of a given amino acid.
+    Uses isotropic 13C mixing.
+
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP pulses; full power square pulses on 13C 
+    initially when 13CO excitation is irrelevant; square pulses on the Ca and
+    CaCb with first null at 13CO; one lobe sinc pulses on 13CO with first null
+    at Ca; optional 2H decoupling when CaCb magnetization is transverse and 
+    during 1H shift evolution for 4 channel spectrometers.  
+ 
+    pulse sequence: Bax, Clore and Gronenborn, JMR 88, 425 (1990)
+                    Kay, Xu, Muhandiram and Forman-Kay, JMR B101, 333 (1993)
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+
+    Derived from gc_co_nh.c written by Robin Bendall, Varian, March 94 and 95
+    based on hcchtocsy_3c_pfg_500.c written by Lewis Kay, Sept and Dec 92.  
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1997. Increased and scaled spinlock field (GG).
+
+    CC spinlock now called from decspinlock statement, permitting waveforms
+    from shapelib. Pbox macros can prepare the waveform, allowing adiabatic
+    decoupling for good bandwidth with reduced sample heating. E.Kupce sep01
+    Added to BioPack, G.Gray sep01.
+
+    Efficient STUD+ decoupling is invoked with STUD='y' without need to 
+    set any parameters.
+    (STUD+ decoupling- Bendall & Skinner, JMR, A124, 474 (1997) )
+
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of BioPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [1H]  and t2 [13C].
+    
+    The flag f1180/f2180 should be set to 'y' if t1 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180 = 'n' for (0,0) in 1H and f2180 = 'n' for (0,0) in 13C.
+
+
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF hcch_tocsyP
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for hcch_tocsyP may be printed using:
+                                      "printon man('hcch_tocsyP') printoff".
+             
+    2. Apply the setup macro "hcch_tocsyP".  This loads the relevant parameter
+       set and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral
+       check. 
+
+      
+    3. Sufficient bandwidth is needed to cover the aliphatic region (50 ppm =
+       10 kHz on 800 MHz spectrometers) and adequate for the CC J's.  The
+       pulse sequence "hcch_tocsy.c" uses a "hard-coded" DIPSI-3 (constant
+       amplitude modulation) with no parameter input except for the number
+       of cycles. This version (hcch_tocsyP) uses the decspinlock function. 
+       
+       Parameters:
+        ncyc(typ 2-3), spinlock(e.g. 9000 at 600 MHz), mixpwr, mixpwrf, mixpat, mixdmf, mixres
+
+        If Pbox is used to create the waveform, the *DEC file contains the
+        values to be used for these parameters. The BioPack macro
+        "setupwurst" creates one specific "cctocsy.DEC" file based on the
+        values of pwC/pwClvl/compC. This macro also is run during the 
+        AutoCalibration Process. The macro "setwurstparams" runs also, and
+        it gets values from the "cctocsy.DEC" for the above parameters and
+        updates the hcch_tocsyP.par appropriately. Thus, using the             
+        "hcch_tocsyP" macro or button/menu entry will return a parameter set
+        ready to go.
+          
+      
+    4. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 35ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       35ppm, ie in the center of the aliphatic region throughout the sequence.
+
+    5. The flag H2Opurge = 'y' is provided to bring H2O and other H1 z 
+       magnetization to the xy plane for gradient suppression.
+
+    6. taua (1.7 ms), taub (0.42 ms) and tauc (1 ms) were determined for
+       alphalytic protease and are listed in dg2 for possible readjustment by
+       the user.
+
+    7. If 2H decoupling is used, the 2H lock signal may become unstable because
+       of 2H saturation.  Check that a 1D spectrum is stable/reproducible as 
+       when 2H decoupling is not used.  You might also check this for d2 and d3
+       equal to values achieved at say 75% of their maximum.  Remember to return
+       d2=d3=0 before starting a 2D/3D experiment.
+

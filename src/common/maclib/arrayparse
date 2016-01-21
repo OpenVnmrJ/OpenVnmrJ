@@ -1,0 +1,65 @@
+"macro arrayparse"
+"***************************************************************"
+" arrayparse                                                    "
+"                                                               "
+" Dissect the array parameter, and get the name of each arrayed "
+" parameter, the number of arrayed values, and the order of     "
+" acquisition.                                                  "
+"***************************************************************"
+
+"** Initialize variables **********************************"
+" arraylist will be the list of arrayed parameters         "
+" arrayrank will be the arrayed execution priority         "
+" arraysize will hold the number of arrayed values         "
+"**********************************************************"
+$arraylist = ''
+$arrayrank = 0
+$arraysize = 0
+
+if (array <> '') then
+
+  $arrayrank = 1
+  $rank_inc = 1
+  $element = 1
+  length(array):$length
+
+  "** Check each character in the array parameter, looking **"
+  " for commas which separate each parameter name, and       "
+  " parenthesis which indicate simultaneously arrayed        "
+  " parameters                                               "
+  "**********************************************************"
+  $i = 0
+  repeat
+    $i = $i + 1
+    substr(array,$i,1):$array[$i]
+
+    "** rank increment is 1 unless inside parenthesis, ********"
+    "** which indicates a simultaneous array ******************"
+    if ($array[$i] = '(' ) then
+      $rank_inc = 0
+    else if ($array[$i] = ')' ) then
+      $rank_inc = 1
+
+    "** If character is a , then determine the size of the ****"
+    " current arrayed parameter, increment the element         "
+    " counter, and start building the next array name          "
+    "**********************************************************"
+    else if ($array[$i] = ',' ) then
+      $arraysize[$element] = size($arraylist[$element])
+      $element = $element + 1
+      $arraylist[$element] = ''
+      $arrayrank[$element] = $arrayrank[$element-1] + $rank_inc
+
+    "** Otherwise, add current character to the current name **"
+    else
+      $arraylist[$element] = $arraylist[$element]+$array[$i]
+    endif endif endif
+  until ($i = $length)
+
+  "** Get the size of the last arrayed name *****************"
+  $arraysize[$element] = size($arraylist[$element])
+
+endif
+
+"** Return the lists of names, ranks, and sizes ***********"
+return($arraylist,$arrayrank,$arraysize)

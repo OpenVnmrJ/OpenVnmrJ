@@ -1,0 +1,73 @@
+"macro ATnext"
+"ATnext"
+   shell('date'):$date
+   shell('hostname'):$hostname
+   $report=autotestdir+'/REPORT'
+   $atrecord_report=autotestdir+'/atrecord_report'
+if ($#=0) then
+   at_cur_smacro=''
+   $num=999999
+
+   lookup('file',autotestdir+'/atdb/at_selected_tests')
+   lookup('read'):at_cur_smacro,$num
+   if ($num=0) then
+         write('file',$report,'AutoTest Finished %s  %4.0f FIDS Obtained and Stored',$date,slw)
+         write('file',$atrecord_report,'AutoTest Finished %s  %4.0f FIDS Obtained and Stored',$date,slw)
+         if slw<1.0 then
+          banner('No Tests Performed. Check Autotest "Enabled" Checkboxes')
+          abort
+         endif
+         slw=0.01     "restore slw value"
+         $day=''
+         $month=''
+         $daynumber=''
+         $time=''
+         $zone=''
+         $year=''
+         lookup('file',autotestdir+'/REPORT')
+         lookup('file',autotestdir+'/REPORT','Finished','read',6):$day,$month,$daynumber,$time,$zone,$year
+         $date=$day+'_'+$month+'_'+$daynumber+'_'+$time+'_'+$zone+'_'+$year
+         chkname($date):$date
+         cp(autotestdir+'/REPORT',autotestdir+'/reports/REPORT_for_'+$date)
+         cp(autotestdir+'/atrecord_report',autotestdir+'/reports/atrecord_report_for_'+$date)
+      if (at_plotauto='y') then 
+         ptext(autotestdir+'/REPORT')
+         exists(autotestdir+'/FAILREPORT','file'):$e
+         if $e=1 then ptext(autotestdir+'/FAILREPORT') 
+          cp(autotestdir+'/FAILREPORT',autotestdir+'/reports/FAILREPORT_for_'+$date)
+         endif
+      endif
+      if (at_graphhist='y') then
+         ATregplot('all')
+      endif
+      if (at_cycletest='n') or (at_cycletest='') then
+         if (at_new='n') then
+          fsq=at_fsq   "restore fsq mode (disabled in ATstart)"
+         endif
+         exists('probeConnect','parameter','global'):$e
+           if ($e>0) then probeConnect=at_probeConnect
+           endif    "restores value of probeConnect"
+         exists('ATdone','maclib'):$e
+         if $e then
+           ATdone
+         else
+           banner('AutoTest Complete')
+         endif
+         return
+      else
+         ATnext(`PART1`)
+         return
+      endif
+   endif
+
+   $dum=''
+   shell( 'sed  1d "'+ autotestdir+'/atdb/at_selected_tests" > "'+ curexp+'/tmp"' ):$dum
+   mv(curexp+'/tmp',autotestdir+'/atdb/at_selected_tests')
+   exec(at_cur_smacro)
+
+elseif  ($1='PART1') then
+
+  at_cycletest='yy'
+  ATrestart
+  ATnext
+endif

@@ -1,0 +1,104 @@
+"macro createpfgtable"
+"***************************************************************"
+" Macro Name: createpfgtable 	3/24/93				"
+" 	Revised from creategtable				"
+
+" This macro prompts user for the gradient coil type, boresize, "
+" maximum gradient strength [G/cm], and trise, creates 	"
+" gcoil file which contains these parameters if they do not     "
+" exist and writes into /vnmr/imaging/gradtables directory.		"
+
+"[0] Constant and Declaration **********************************"
+
+$ans=' '
+$ans1=' '
+$desc=' '
+$name=' '
+$gmax=' '
+$gxmax=' '
+$gymax=' '
+$gzmax=' '
+$gtotlimit=' '
+$gxlimit=' '
+$gylimit=' '
+$gzlimit=' '
+$size=' '
+$grad_dir=systemdir+'/imaging/gradtables'
+
+"[1] Input paramater *******************************************"
+
+if ( $# < 0.5 ) then
+    input('Enter name for gradient coil entry: '):$name
+endif
+
+
+"[2] Check file existence *************************************"
+
+$filename = $grad_dir+'/'+$name
+
+exists($filename,'file'):$ex
+if ($ex > 0) then
+  write('error','File : "%s" currently exists in %s ',$name, $grad_dir)
+  input('Select <o> Overwrite or <cr> default to abort macro --->'):$ans1
+
+  if ( ($ans1 = 'o') or ($ans1 = 'O') ) then	
+    write('line3','Existing file "%s" is being moved to /tmp directory.',$name)
+    mv($filename,'/tmp/'+$name)
+  else 
+    write('error','Macro terminated !')
+    abort
+  endif
+endif
+
+"[3] More input parameters **************************************"
+
+input('Enter a brief description of this gradient table : '): $desc 
+input('Enter the boresize in ( cm ) : '): $size
+input('Enter the risetime ( usec ) : '): $trise
+input('Enter maximum gradient strength in X axis( gauss/cm ) : '): $gxmax
+input('Enter maximum gradient strength in Y axis( gauss/cm ) : '): $gymax
+input('Enter maximum gradient strength in Z axis( gauss/cm ) : '): $gzmax
+input('Does the amplifier limit the combined gradient outputs? y/n: '): $ans1
+if $ans1 <> 'n' then
+  input('Enter maximum combined gradient strength ( gauss/cm ) : '): $gtotlimit
+endif
+
+  "*** Note: gxlimit, gylimit, gzlimit, are currently not entered ***"
+
+
+"[4] Write to file *********************************************"
+
+  write('reset',$filename)
+  write('file',$filename,'####################################################')
+  write('file',$filename,'# Gradient Coil Name:  '+$name+' ')
+  write('file',$filename,'# Description : '+$desc)   
+  write('file',$filename,'####################################################')
+  write('file',$filename,'VARIABLE NAME	VALUE')
+  write('file',$filename,'boresize        %.2f cm',$size)
+  write('file',$filename,'trise		%.6f sec',$trise*1e-6)
+  if ( ($gxmax = $gymax) and ($gxmax = $gzmax) ) then
+     write('file',$filename,'gmax		%.2f gauss/cm',$gxmax)
+  else
+     write('file',$filename,'gxmax		%.2f gauss/cm',$gxmax)
+     write('file',$filename,'gymax		%.2f gauss/cm',$gymax)
+     write('file',$filename,'gzmax		%.2f gauss/cm',$gzmax)
+  endif
+  if ($gtotlimit <> ' ') then
+     write('file',$filename,'gtotlimit	%.2f gauss/cm',$gtotlimit)
+  endif
+  if ($gxlimit <> ' ') then
+     write('file',$filename,'gxlimit		%.2f gauss/cm',$gxlimit)
+  endif
+  if ($gylimit <> ' ') then
+     write('file',$filename,'gylimit		%.2f gauss/cm',$gylimit)
+  endif
+  if ($gzlimit <> ' ') then
+     write('file',$filename,'gzlimit		%.2f gauss/cm',$gzlimit)
+  endif
+
+  write('line3',$filename+' created')
+  shell('chmod 444 '+$grad_dir+'/'+$name)
+
+"[5] Display contents of new gradtable ************************************"
+
+cat($grad_dir+'/'+$name)

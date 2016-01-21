@@ -1,0 +1,160 @@
+"macro dpsXonepul"
+// dpsXonepul -   Obtain a spectrum with direct polarization and 
+//                process using standard using linebroadening in ph 
+//                mode with decoupling obtained from the probe file. 
+//                
+//                The argument1 'setup' sets up direct polarization
+//                with region 1 and sets the display with region 2.
+
+//                Argument 2 sets and alternate region for cross 
+//                polarization and argument 3 sets an alternate region 
+//                for display. 
+//   
+//                The argument1 'region' sets regions 1 and 2 based 
+//                on arguments 2 and 3. 
+
+
+
+
+
+//==================
+// The REGION Macro
+//==================
+
+// Read Macro Arguments
+
+
+if (($#>0) and ($1='region')) then
+
+   if ($# < 2) then $2 = '' endif
+   if ($# < 3) then $3 = '' endif
+
+// Set Module Parameters
+
+   parammodule('paramname',1)
+   parammodule('paramname',2)
+   parammodule('removename',3)
+   parammodule('removename',4)
+   parammodule('removename',5)
+   parammodule('removename',6)
+   parammodule('removename',7)
+   parammodule('paramname',1,'sample')
+   parammodule('removename',2,'sample')
+   parammodule('removename',3,'sample')
+   parammodule('removename',4,'sample')
+   parammodule('removename',5,'sample')
+   parammodule('removename',6,'sample')
+   parammodule('removename',7,'sample')
+   SPregionname1 = $2
+   SPregionname2 = $3
+   if ($# > 3) then
+      SPsamplename1 = $4
+   endif
+   write('line3','%s Region Setup is Complete\n',$0)
+endif
+
+//==================
+// The SETUP Macro
+//==================
+
+if (($#>0) and ($1='setup')) then  
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+   if ($# < 3) then $3 = 2 endif
+
+// Set Sequence and Read Modules 
+   
+   parammodule('setsampleglobals')
+   Settancpx
+   Onepul
+   parammodule('updatesampleglobals')
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = ''
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+   $ret2 = 0 $reg2 = '' $tnuc = '' $dnuc = ''
+   parammodule('setacqregion',$3):$ret2,$reg2,$tnuc,$dnuc
+   parammodule('errorcheck',$ret2,$3,'setacqregion')
+   $ret2a = 0
+   parammodule('setacqdisplay',$3,''):$ret2a,$reg2
+   parammodule('errorcheck',$ret2a,$3,'setacqdisplay')
+   $ret3 = 0
+   parammodule('setsample1D',1):$ret3
+   parammodule('infocheck',$ret3,1,'setsample1D','sample')
+
+// Calibrate setddrtc for CP
+
+   exists('ddrpm','parameter'):$e
+   if ($e < 0.5) then
+      create('ddrpm','string')
+      ddrpm = 'r'
+   endif   
+   rof2 = rd-0.6 alfa = ad
+
+// Obtain Standard DP and Decoupling Parameters from Probe File
+
+   probeparamgroup('getlocal',$reg,$dnuc,'HX','srate'):srate
+   probeparamgroup('get','hp'+$reg,$dnuc,'90H','a','pw')
+   probeparamgroup('get',$reg,$tnuc,'90X','a','pw')
+   probeparamgroup('get',$reg,$dnuc,'tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,$dnuc,'spinalH','a','pw','ph')
+   Hseq='spinal'
+
+// Adjust Amplitudes for New Offset (tof) or Power (tpwr)
+
+   probeparamgroup('getlocal',$reg2,$tnuc,'90X','of','db'):$tof,$tpwr
+   probeparamgroup('getlocal',$reg2,$dnuc,'90X','of','db'):$dof,$dpwr
+   parammodule('powerampadjust','obs',$tpwr,aX90,aXhx):tpwr,aX90
+   parammodule('powerampadjust','dec',$dpwr,aH90,aHtppm,aHspinal):dpwr,
+                                      aH90,aHtppm,aHspinal
+
+// Set Automatic Linebroadening 
+
+   fn=16*np lb = 2.0*sw/(3.14159*np)
+
+// Linear Prediction
+
+   parlp
+   proc = 'ft'
+
+// Set Macro-Specific Processing and Plotting 
+
+   wnt= ''
+   wexp = 'chempackQ'
+   execprocess = $0 + '(\'process\')'
+   execplot = ''
+   clear(2)
+   write('line3','%s Setup is Complete\n',$0)
+   return
+endif
+
+//===========================
+// Macro-Specific Processing
+//===========================
+
+if (($# > 0) and ($1 = 'process')) then 
+
+// Process and Phase the Data
+  
+   fn=16*np sb='n' ph wft vsadj(100) noislm(1.0)
+   aph0:$aphok
+   if ($aphok=1) then
+      aph0
+      peak:$int
+      if ($int<-10) then rp=rp+180 endif
+   endif
+   setrefpos 
+endif
+
+//===========================
+// Macro-Specific Plotting
+//===========================
+
+if (($# > 0) and ($1 = 'plot')) then 
+   wc = 50 sc = 50
+   plot1d
+   return  
+endif 
+

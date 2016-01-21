@@ -1,0 +1,110 @@
+"macro BPplot2"
+" BPplot2 "
+write('plotter',70,wc2max-50,'AutoTripleResonance CH signal Spectral Comparison')
+write('plotter',70,wc2max-65,'All spectra have same number of scans at same gain')
+clear(2)
+rt(userdir+'/AutoTripRes/gChsqc_1Ds')
+if (mag_flg='y') then ssfilter='n' endif
+wft
+select(1) BPaph2(1)
+vsadj(50) f full vp=0
+sp=-1p
+wp=7p
+$x=10
+write('graphics',$x,wc2max-5,'HCACO')
+write('graphics',$x,wc2max-60,'AutoTripleResonance CH signal Spectral Comparison')
+write('graphics',$x,wc2max-80,'Comparison of "Receptivity" for Different Pulse Sequences')
+write('plotter',$x,wc2max-5,'HCACO')
+$x=$x+24
+write('graphics',$x,wc2max-15,'HCACON')
+write('plotter',$x,wc2max-5,'HCACON')
+$x=$x+23
+write('graphics',$x-3,wc2max-25,'DE-HCCHTOCSY')
+write('graphics',$x+3,wc2max-35,'(vs x1.4)')
+write('plotter',$x,wc2max-5,'DE-HCCHTOCSY')
+write('plotter',$x+3,wc2max-10,'(vs x1.4)')
+$x=$x+24
+write('graphics',$x+5,wc2max-35,'HCCHTOCSY')
+write('plotter',$x,wc2max-5,'HCCHTOCSY')
+$x=$x+20
+write('graphics',$x,wc2max-25,'HCCHCOSY')
+write('plotter',$x,wc2max-5,'HCCHCOSY')
+$x=$x+25
+write('graphics',$x,wc2max-5,'<-------------------C13 HSQCs-------------------->')
+write('plotter',$x,wc2max-5,'<-----------------------------------C13 HSQCs------------------------------------>')
+write('graphics',$x,wc2max-25,'aromatics')
+write('plotter',$x,wc2max-25,'aromatics')
+$x=$x+20
+write('graphics',$x,wc2max-15,'alpha CH2s')
+write('plotter',$x,wc2max-15,'alpha CH2s')
+$x=$x+24
+write('graphics',$x,wc2max-25,'alphas')
+write('plotter',$x,wc2max-25,'alphas')
+$x=$x+20
+write('graphics',$x,wc2max-15,'aliphatic CH2s')
+write('plotter',$x,wc2max-15,'aliphatic CH2s')
+$x=$x+24
+write('graphics',$x,wc2max-25,'aliphatics')
+write('plotter',$x,wc2max-25,'aliphatics')
+$x=$x+20
+write('graphics',$x+4,wc2max-15,'all')
+write('plotter',$x+10,wc2max-15,'all')
+sc=0 wc=21
+r1=1 repeat
+  select(r1)
+  BPaph2(r1) dc pl pscale dssn(r1,r1)
+  sc=sc+wc+1
+  r1=r1+1
+until r1=6
+select(6) sp=6p wp=4p
+BPaph2(6) dc pl pscale dssn(6,6)
+s1
+rt(userdir+'/AutoTripRes/hcch_cosy_1D')
+wft r1 sp=-1p wp=7p peak:$int if $int<0 then rp=rp+180 endif sc=sc+wc+1 dssn('dodc') s1
+dc pl pscale
+rt(userdir+'/AutoTripRes/hcch_tocsy_1D')
+wft r1 sp=-1p wp=7p peak:$int if $int<0 then rp=rp+180 endif sc=sc+wc+1 dssn('dodc') s1
+dc pl pscale
+rt(userdir+'/AutoTripRes/ghcch_tocsy_1D')
+wft r1 vs=vs*1.4 peak:$int if $int<0 then rp=rp+180 endif sc=sc+wc+1 dssn('dodc')
+dc pl pscale
+vs=vs/1.4 s1
+rt(userdir+'/AutoTripRes/ghca_co_n_1D')
+wft r1 peak:$int if $int<0 then rp=rp+180 endif sc=sc+wc+1 dssn('dodc') s1
+dc pl pscale
+rt(userdir+'/AutoTripRes/ghca_co_1D')
+wft r1 peak:$int if $int<0 then rp=rp+180 endif sc=sc+wc+1 dssn('dodc') s1
+dc pl pscale
+BPpage
+BPprobe(0,wc2max-20)
+$pltt=''
+    plotinfo(plotter):$pltt
+    lookup('file','/vnmr/devicetable','seek','Example','readline',2)
+    $devtype='' $res=1
+    while ($devtype<>$pltt) and ($res=1) do
+      lookup('seek','PrinterType','read'):$devtype,$res
+    endwhile
+    $ext=''
+    if $devtype=$pltt then
+      $raster=''
+      lookup('seek','raster','read'):$raster
+      if $raster='0' then
+        $ext='.pgl'
+      elseif ($raster='3')or($raster='4') then
+        $ext='.ps'
+      endif
+    endif
+
+    if $ext='.ps' then         "prepare pdf file"
+     $string='cd '+userdir+'/AutoTripRes; cat *.ps >> '+userdir+'/AutoTripRes/plots; ps2pdf '+userdir+'/AutoTripRes/plots;'
+     shell($string):$dummy
+     shell('vnmr_open '+userdir+'/AutoTripRes/plots.pdf &'):$dummy
+    endif
+
+if $ext='.ps' then
+ banner('Automatic  Processing/Plotting Finished.Open plots.pdf')
+else
+ banner('Automatic  Processing/Plotting Finished')
+endif
+write('line3','Automatic  Processing and Plotting Finished')
+ 

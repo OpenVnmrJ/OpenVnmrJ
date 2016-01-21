@@ -1,0 +1,80 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+expProcTarget = 'Expproc2'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+ncommHdrList = ['chanLib.h',
+                'errLogLib.h',
+                'eventHandler.h',
+                'hhashLib.h',
+                'hostAcqStructs.h',
+                'ipcMsgQLib.h',
+                'mfileObj.h',
+                'msgQLib.h',
+                'sendAsync.h',
+                'shrMLib.h',
+                'sockets.h']
+
+procProcPath     = os.path.join(cwd, os.pardir, 'procproc')
+procProcHdrList  = ['procQfuncs.h']
+procProcFileList = ['procQfuncs.c']
+
+expProcFileList = ['conhandler.c',
+                   'excepthandler.c',
+                   'expcmds.c',
+                   'expproc2.c',
+                   'commfuncs.c',
+                   'expfuncs.c',
+                   'parser.c',
+                   'msgehandler2.c',
+                   'prochandler.c',
+                   'socketfuncs.c',
+                   'daemon.c']
+
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['acqerrmsges.h',
+               'errorcodes.h']
+
+acqProcPath    = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = ['config.h',
+                  'sram.h']
+
+vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = ['acqcmds.h']
+
+psgPath    = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = ['REV_NUMS.h']
+
+# build environment
+expProcEnv = Environment(CCFLAGS    = '-m32 -DLINUX -O2',
+                         CPPDEFINES = ['DEBUG', 'NODUMMY', 'NIRVANA'],
+                         LINKFLAGS  = '-m32 -Wl,-rpath /vnmr/lib' ,
+                         CPPPATH    = [cwd])
+
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(expProcEnv, expProcTarget, cwd, psgPath, psgHdrList)
+
+# actual builds
+expproc = expProcEnv.Program(target  = expProcTarget,
+                             source  = [expProcFileList,
+                                        procProcFileList],
+                             LIBPATH = [cwd,
+                                        ncommPath],
+                             LIBS    = ['acqcomm'])

@@ -1,0 +1,60 @@
+"macro prescan_fastmap"
+"************************************************************************"
+"                                                                        "
+" prescan_fastmap - macro to shim for imaging                            "
+"                                                                        "
+" Usage:   this macro is not intended for direct usage.  Use prescan     "
+"                                                                        "
+"************************************************************************"
+
+if ($# = 0) then
+  if (prescan[8] = '') then
+    write('line3','Voxel for shimming must be selected')
+    return
+  else
+    exists(prescan[8],'file'):$e
+    if ($e < 0.5) then
+      write('line3','Voxel for shimming must be selected')
+      return
+    endif
+  endif
+  ldrf
+  $prescan=prescan
+  rtppar('prescan_fastmap_' + gcoil + '_' + rfcoil,'nomenu'):$res
+  if ($res < 0.5) then
+    rtppar('fastestmap','nomenu'):$res
+  endif
+  exists('studyid','parameter','global'):$e
+  if ($e > 0.5) then
+    if (studyid <> '') then
+      exists(sqdir+'/studypar','file'):$e
+      if ($e = 1) then
+        fread(sqdir+'/studypar')
+      endif
+    endif
+  endif
+  prescan=$prescan
+  if ($res > 0.5) then
+    ldrf
+    tof=H1offset
+    prescan[3]='Active'
+    acqmode='prescan'
+    if (numproj <> 1) and (numproj <> 2) then
+      numproj = 1
+    endif
+    fm_setmap(numproj)
+    rtv(prescan[8],'iplanDefaultType','iplanType','vtheta','vphi','vpsi','vox1','vox2','vox3','pos1','pos2','pos3')
+    fm_setvox('size')
+    wexp='fm_calcshim(shimorder) fm_setshims prescan_fastmap(`proc`)'
+    wdone=''
+    au
+  else
+    write('error','Fastmap prescan has not been calibrated')
+  endif
+elseif ($1 = 'proc') then
+  prescan[3]='Complete'
+  acqmode=''
+  if ($# = 1) then
+    prescan('next')
+  endif
+endif

@@ -1,0 +1,43 @@
+"macro BP2"
+" BP2 "
+$bestone=1 $counter=1
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone) 
+ph
+BPaph0
+BPsvf(userdir+'/AutoTripRes/H1pw90cal2_fine')
+$tpwr='' $pw=''
+pw=pw[$bestone] pw90=pw
+$r7=r7
+$BPplot=BPplot
+BPH1updatepw90  "Updates probefile for those parameters affected by pw90"
+BPplot=$BPplot
+r7=$r7
+dssh pl('all') pap
+write('plotter',120,wc2max-2,'1H PW90 = %2.1f',pw)
+
+BPpage
+
+
+if (r7=2) then   "Fast 1H  Calibrate only"
+ banner('Fast 1H pw90 Calibration Finished')
+ return         "Fast 1H pw90 Calibration Only"
+endif
+
+if (r7=6) then  "Fast 1H/15N Calibrate Only"
+ BP2b return
+endif
+
+if ((r7=7) or (r7=9)) then  "Fast 1H/13C Calibrate Only"
+ BP2b return
+endif
+
+tpwr=tpwr-12
+array('pw',15,1.5*4*pw90,-.07*pw90*4)
+wexp='BP2a'  au

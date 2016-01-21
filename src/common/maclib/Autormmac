@@ -1,0 +1,63 @@
+"macro Autormmac"
+"***********************************************************"
+"Autormmac - Cleans up maclibdir entries for a specified expt  "
+"***********************************************************"
+$long='' $type='all'
+$x=2
+while ($x <= $#) do
+  $val=${$x}
+  if $val = 'long' then $long=$val
+  else $type=$val
+  endif
+  $x=$x+1
+endwhile
+
+$maclibdir=''
+Automacrodir('check'):$maclibdir
+$maclibdir=$maclibdir+$long
+
+$total=0
+shell('(echo "'+$1+'" | wc -w)'):$total
+if ($maclibdir <> '') then
+  $x=1
+  repeat
+     if ($type<>'all') then
+      	$file=$maclibdir+'/'+${$x}+$type
+      	exists($file,'file'):$ex
+      	if ($ex) then shell('rm '+$file):$dum endif
+	$file=$file+'pars'
+	exists($file,'file'):$ex
+	if ($ex) then shell('rm '+$file):$dum endif
+     else
+      	$file=$maclibdir+'/'+${$x}+'acq'
+      	exists($file,'file'):$ex
+      	if ($ex) then shell('rm '+$file):$dum endif
+        $file=$file+'pars'
+        exists($file,'file'):$ex
+        if ($ex) then shell('rm '+$file):$dum endif
+
+      	$file=$maclibdir+'/'+${$x}+'prc'
+      	exists($file,'file'):$ex
+      	if ($ex) then shell('rm '+$file):$dum endif
+        $file=$file+'pars'
+        exists($file,'file'):$ex
+        if ($ex) then shell('rm '+$file):$dum endif
+
+      	$file=$maclibdir+'/'+${$x}+'plt'
+      	exists($file,'file'):$ex
+      	if ($ex) then shell('rm '+$file):$dum endif
+        $file=$file+'pars'
+        exists($file,'file'):$ex
+        if ($ex) then shell('rm '+$file):$dum endif
+
+      	$file=$maclibdir+'/'+${$x}+'acq_special'
+      	exists($file,'file'):$ex
+      	if ($ex) then shell('rm '+$file):$dum endif
+        $file=$file+'pars'
+        exists($file,'file'):$ex
+        if ($ex) then shell('rm '+$file):$dum endif
+     endif
+     $x=$x+1
+  until $x > $total
+endif
+

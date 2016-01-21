@@ -1,0 +1,433 @@
+"macro gXYZ_xycalib"
+
+werr='return'
+eOptions=''
+gxyzsetlocalpars
+create('execprocess','string','current',''):$dum
+create('execplot','string','current',''):$dum
+setgroup('execprocess','display')
+setgroup('execplot','display')
+$macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+$initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+
+if $# < 1 then $1='init' endif
+if ($1 = 'init') then
+
+    $do1Dmap='n'
+// Krish not sure if the 2nd argument is ever needed
+    if ($# < 1.5) then
+        exists($initpar,'directory'):$direx
+        if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+        endif
+        rtp($initpar)
+        gxyzsetlocalpars
+    endif
+
+	$pltopt=pltopt $gxyzshimPS=gxyzshimPS $gxyzshimPSn=gxyzshimPSn
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$lkpw90=lkpw90 $lktpwr=lktpwr
+	$lkflg=lkflg
+	$solv=solvent
+	PROTON
+        getsampglobal($macdir)
+        getmodule('calibpars')
+        getmodule('g3Dcalib')
+        create('execprocess','string','current',''):$dum
+        create('execplot','string','current',''):$dum
+        setgroup('execprocess','display')
+        setgroup('execplot','display')
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	if (Console='vnmrs') then
+                alfa=10 rof2=25
+	endif
+	setddrtc
+	pslabel='xycalib'
+	pltopt=$pltopt r2=$gxyzshimPSn n2=$gxyzshimPS
+
+	if $tempon>0.5 then temp=$temp endif
+	pw=$lkpw90 tpwr=$lktpwr 
+	if $lkflg='y' then tn='lk' else tn='H2' endif
+	sw=6000 tof=0 dn='H1'
+	dm='nnn' wshim='n' spin=0 gain=30 dsp='n'
+	lb='n' np=8192 fn=2*np nt=1 ai
+	if $solv='acetone' then d1=15 else d1=5 endif
+	lockpower=0 lockgain=0 alock='n'
+	setlimit('pad',172800,0,1.25e-8)
+        exists('gxyzwaitflg','parameter'):$parex
+        if $parex then
+            if gxyzwaitflg='y' then
+                pad=gxyzwait
+                gxyzwaitflg='n'
+            endif
+        else
+           pad=0.5
+        endif
+        expactive:$active
+        if $active > -0.5 then readallshims endif
+	$range=32767 $radius=16000
+	if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 $radius=1000 endif
+	if (x1+$radius > $range) then $radius=$range-x1
+		else if (x1-$radius < -$range) then $radius=$range+x1
+		endif
+	endif
+	if (y1+$radius > $range) then $radius=$range-y1
+		else if (y1-$radius < -$range) then $radius=$range+y1
+		endif
+	endif
+
+	" set up rotating gradient for profile experiment 		"
+	if (arraydim>1) then
+   	write('line3','Please remove any arrays before using gxyzcal')
+   	abort
+	endif
+	
+	$range=32767
+	if (shimset<3) or (shimset=10) or (shimset=11) then $range=2047 endif
+	
+// development convenience
+	$x1init=x1
+	$y1init=y1
+	$gxysweep=$radius
+	$n=16
+	if (x1+$gxysweep)>$range  then write('error','sweep radius is too large;  x1 will go out of range') abort endif
+	if (x1-$gxysweep)<-$range then write('error','sweep radius is too large;  x1 will go out of range') abort endif
+	if (y1+$gxysweep)>$range  then write('error','sweep radius is too large;  y1 will go out of range') abort endif
+	if (y1-$gxysweep)<-$range then write('error','sweep radius is too large;  y1 will go out of range') abort endif
+	
+	$i=1
+	$th=0.0
+	repeat
+		cos($th):$c
+		sin($th):$s
+		x1[$i]=$x1init+$gxysweep*$c
+		y1[$i]=$y1init+$gxysweep*$s
+		$th=$th+3.141592654*2.0/$n
+		$i=$i+1
+	until $i>$n
+	x1[$n+1]=$x1init
+	y1[$n+1]=$y1init
+	array='(x1,y1)'
+        wnt='ft(`acq`,1,celem) f full lp=0 abortoff aph0 aborton vsadj dssh gxyztext(`xycalib`)'
+	werr='return'
+	load='y'
+	da
+	clear(2)
+	r1=1
+	gxyztext('xycalib')
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_xyshimcal'
+        xmhaha_calib('addNode',$0+'(\'xycalib1\')','next',120)
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'xycalib1\')'
+        execplot='execplot=\'\''
+
+endif
+
+if ($1='xycalib1') then
+
+    if ($# < 2) then $2='process' endif
+    if $2='repeat' then
+	cplog('xycalib','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+    endif
+
+	"----------------------------------------------"
+	"  step 1 - measurement of the profile widths  "
+	"----------------------------------------------"
+	ai fpmult=0.5 wft
+	
+	"---set gyromagnetic ratio in radian/(s*T)-----"
+	" Reference: Encyclopedia of NMR,vol.4,pp.3302-3304."
+	
+	if tn='H1' then  $gamma=267522128.00 endif
+	if tn='H2' then  $gamma=41066279.10 endif
+	if tn='lk' then  $gamma=41066279.10 endif
+	if tn='none' then  $gamma=41066279.10 endif
+	if tn='F19' then $gamma=251814800.00 endif
+	if ((tn<>'H1') and (tn<>'H2') and (tn<>'none') and (tn<>'F19') and (tn<>'lk')) then
+                	write('line3','Nucleus not recognised')
+                	abort
+	endif
+	
+	"----------------------------------------------"
+	
+	" default to 5% threshold "
+	$thr=0.05
+	exists('tubeid','parameter','global'):$tid
+	if $tid=0 then 
+  		create('tubeid','real','global')
+  		tubeid=4.2
+  		write('error','Tube inside diameter assumed to be 4.2 mm')
+	endif
+
+	exists('gcalx','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalx','real')
+	else
+		exists('gcalxold','parameter','global'):$e2
+		if $e2=0 then create ('gcalxold','real') endif
+		gcalxold=gcalx
+	endif
+	exists('gcaly','parameter'):$e1
+	if $e1=0 then 
+		create ('gcaly','real')
+	else
+		exists('gcalyold','parameter'):$e2
+		if $e2=0 then create ('gcalyold','real') endif
+		gcalyold=gcaly
+	endif
+	exists('gcalang','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalang','real')
+	else
+		exists('gcalangold','parameter'):$e2
+		if $e2=0 then create ('gcalangold','real') endif
+		gcalangold=gcalang
+	endif
+	exists('gcalxerr','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalxerr','real')
+	else
+		exists('gcalxerrold','parameter'):$e2
+		if $e2=0 then create ('gcalxerrold','real') endif
+		gcalxerrold=gcalxerr
+	endif
+	exists('gcalyerr','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalyerr','real')
+	else
+		exists('gcalyerrold','parameter'):$e2
+		if $e2=0 then create ('gcalyerrold','real') endif
+		gcalyerrold=gcalyerr
+	endif
+	exists('gcalxoff','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalxoff','real')
+	else
+		exists('gcalxoffold','parameter'):$e2
+		if $e2=0 then create ('gcalxoffold','real') endif
+		gcalxoffold=gcalxoff
+	endif
+	exists('gcalyoff','parameter'):$e1
+	if $e1=0 then 
+		create ('gcalyoff','real')
+	else
+		exists('gcalyoffold','parameter'):$e2
+		if $e2=0 then create ('gcalyoffold','real') endif
+		gcalyoffold=gcalyoff
+	endif
+	
+	$fn=curexp+'/xydata'
+	write('reset',$fn)
+	write('file',$fn,arraydim-1)
+	refpos='n' crl f
+	$chr=''
+	
+	"Reference 1st profile's centre to zero freq"
+	select(1) axis='h'
+	f full
+	peak:r1,cr
+	rl(0) 
+	f full
+	dssh(1,arraydim)
+	"compile profile widths "
+	$i=1
+	repeat
+  		select($i)
+		f full
+		lp=0
+		abortoff
+		aph0
+		peak:r1,cr
+		//write('line3','Compiling profile widths, profile #%d, cr=%f',$i,cr)
+		dres:$hw
+		//If autophasing fails then linewidths can be bogus
+		//Try and phase with line broadening, then remove line broadening 
+		//for linewidth measurement
+		if ($hw>200) then
+			lb=50
+			wft
+			select($i)
+			aph0
+			lb='n'
+			ft
+			select($i)
+			peak:r1,cr
+			dres:$hw
+		endif
+		cz lifrq=rfl+$hw*1.5,rfl-$hw*1.5,0 
+		bc
+		aborton
+		peak:$int,cr
+		dres(cr,$thr):$w
+		write('file',$fn,'%5d\t%5d\t%10.5f',x1[$i],y1[$i],$w)
+  		$i=$i+1
+	until ($i>=arraydim)
+
+	"compile profile maxima (as temporary approximation to midpoints) "
+	"use extra weighting to bring peak maximum closer to midpoint"
+	select(2)
+	peak:r1,cr
+	dres:$hw
+	cz lifrq=rfl+$hw*1.5,rfl-$hw*1.5,0
+	bc
+	peak:$int,cr
+	dres(cr,$thr):$w
+	$lb=lb
+	on('lb'):$lbon
+	lb=2*$w
+	fpmult=0.5 wft bc
+	if $lbon then lb=$lb else lb='n' endif
+
+	"Re-reference after extra weighting has been applied"
+	select(1)
+	f full
+	peak:r1,cr
+	rl($hw) 
+	
+	$i=1
+	repeat
+  		select($i)
+		peak:r1,cr
+		dres:$hw
+	        //write('line3','Compiling profile centre freqs, profile #%d, cr=%f',$i,cr)
+		write('file',$fn,'%5d\t%5d\t%10.5f',x1[$i],y1[$i],cr)
+  		$i=$i+1
+	until ($i>=arraydim)
+	fpmult=0.5 wft
+	clear
+	"---------------------------------------"
+	"--step 2 - fitting of the parameters --"
+	"---------------------------------------"
+	
+	calibxy:$wx,$wy,gcalang,gcalxerr,gcalyerr,$freq,gcalxoff,gcalyoff
+	
+	"Convert the fitted parameters into G/cm units"
+	
+	gcalx=2*3.14159*$wx*100000.0/($gamma*tubeid)
+	gcaly=2*3.14159*$wy*100000.0/($gamma*tubeid)
+
+	write('line3','gcalx = %f; gcaly = %f',gcalx,gcaly)
+
+
+	//Now write gcalx, gcaly and gcalang to gxyzInit.par
+
+
+
+	"The following has been added because the xy calibration can sometimes fail during the full autocalibration due to a problem with calibxy"
+	"8v06"
+	if (gcalx < 4e-6) or (gcaly < 4e-6) then
+	   if (r1<2) then
+	      if ($2='process') then
+		  xmhaha('addNode',$0+'(\'xycalib1\',\'repeat\')','next',120)
+		  return
+	      endif
+	      write('error','gcalx/y outside the expected range, retrying calibration')
+	      svf(userdir+'/3Dshimlib/calibs/xycalib_fail','force')
+	      r1=r1+1
+        	create('GradTypeOverride','string','current',''):$dum
+        	GradTypeOverride='aa'
+		auargs('gradtype_aa')
+        	execprocess=$0+'(\'xycalib1\')'
+        	execplot='execplot=\'\''
+	      return
+	   else
+	      write('error','gcalx/y calibration failed on second attempt - aborting')
+	      return
+	   endif
+	endif
+	
+	"---------------------------------------------------"
+	" if expl.out doesn't exist, need to create it and  "
+	" ensure that autoscale finds suitable parameters   "
+	"---------------------------------------------------"
+	
+	full 
+	shell('touch '+curexp+'/expl.out')
+	expl('regression','link')
+	autoscale
+	expl('regression','link')
+	echo('')
+	echo('gcalx = ',gcalx,'G/cm per DAC point')
+	echo('gcaly = ',gcaly,'G/cm per DAC point')
+	echo('gcalang = ',gcalang,'degrees from orthogonality')
+	
+	x1=x1[arraydim] y1=y1[arraydim]
+	
+	"Save data into userdir/calibs/3Dshimlib"
+	$gxyzcalibdir=userdir+'/3Dshimlib/calibs'
+	exists($gxyzcalibdir,'file'):$e
+	if $e < 0.5 then shell('mkdir '+$gxyzcalibdir):$dum endif
+	shell('date +%h_%d_%g_%H.%M.%S'):$date
+	text('')
+	$str='3D shimming XY calibration carried out on '+$date
+	atext($str)
+	atext('')
+	$str='Probe name: '+probe
+	atext($str)
+	$str=''
+	format(gcalx,8,8):$str
+	$atext='gcalx = '+$str+' G/cm per DAC point'
+	atext($atext)
+	format(gcaly,8,8):$str
+	$atext='gcaly = '+$str+' G/cm per DAC point'
+	atext($atext)
+	format(gcalang,1,1):$str
+	if (gcalang>5 or gcalang<-5) then write('error','Warning: gcalang outside expected range, setting to zero') gcalang=0 endif	
+	$atext='gcalang = '+$str+' degrees from orthogonality'
+	atext($atext)
+	svf($gxyzcalibdir+'/gxyzcal_'+$date)
+	
+	"Plot results"
+	if (plotter <> 'none' and pltopt<>'n') then
+		wc=0.9*wcmax wc2=0.9*wc2max sc=0 sc2=0
+		pexpl('regression','link')
+		pltext(0.2*wc,wc2max)
+		if pltopt='p' then
+			$n='' format(r2,'lower'):$n
+			write('line3','Executing page with ps filename')
+			page(n2+$n+'.ps')
+			r2=r2+1
+		else
+			page
+		endif
+	endif
+	$gxyzshimPSn=r2
+
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    fread('','usertree')
+    fread($initpar+'/procpar','usertree')
+    setvalue('gxyzshimPSn',$gxyzshimPSn,'usertree')
+    setvalue('gcalx',gcalx,'usertree')
+    setvalue('gcaly',gcaly,'usertree')
+    setvalue('gcalang',gcalang,'usertree')
+    fsave($initpar+'/procpar','usertree')
+    fread('','usertree')
+	
+//        tmpreturn('gxyztmp')
+//        shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+//	seqfil=seqfil
+
+//        gxyzshimPSn=$gxyzshimPSn
+//	shell('rm -r '+curexp+'/gxyztmp.par'):$dum
+	clear(2)
+	"Now redraw the curves"
+	expl('regression','link')
+	write('line3','X and Y shim calibration complete; data saved into %s/3Dshimlib/calibs',userdir)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+	setvalue('execprocess',execprocess,'processed')
+endif

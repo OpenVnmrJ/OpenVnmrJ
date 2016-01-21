@@ -1,0 +1,73 @@
+"macro optpower"
+"************************************************************************"
+"                                                                        "
+" optpwr - macro to determine the 90 or 180 degree pulse pwr for imaging   "
+"                                                                        "
+" Usage:   optpwr('x')  with one argument uses the value of the input power        "
+"                                                                        "
+" Details: Determines the maximum                       "
+"                                                                        "
+"************************************************************************"
+"Set fine power to the highest level
+exists('tpwr1f','parameter'):$ex
+if($ex <> 0) then
+  tpwr1f = 4095
+endif
+exists('tpwr2f','parameter'):$ex
+if($ex <> 0) then
+  tpwr2f = 4095
+endif
+
+$ppower=''
+
+" Do some checks"
+write('line3',' Macro to find the localized pulse power')
+  if ($# <> 1) then
+    write('line3','%s','Use one input parameter (eg. `tpwr2`)')
+    input('The pulse power name: '):$ppower
+  else if ($# = 1) then
+  $ppower=$1
+  endif
+  endif
+
+$start=0.0
+$end = 0.0
+$nsteps=10
+
+
+"[1] Input Parameter Count and Traps"
+
+ write('line3',' arraying RF power :%s', $ppower)
+ write('line3',' using as initial power :%f', {$ppower})
+ 
+
+ if ({$ppower} < $nsteps/2) then {$ppower}=$nsteps/2 endif
+ if ({$ppower} > 63-$nsteps/2) then {$ppower}=63-$nsteps/2 endif
+  
+
+  $start = {$ppower}-$nsteps/2 
+  $end = {$ppower}+$nsteps/2
+
+
+if ($start > 63-$nsteps/2) or ($start < 0) then
+  write('error','findpwr: illegal start value:%f', $start)
+  abort
+endif
+if ($end > 63) or ($end < 1) then
+  write('error','findpwr: illegal end value: %f', $start)
+  abort
+endif
+
+array($ppower,$nsteps,$start,1)
+
+
+
+
+
+
+
+wnt='ft dssh  vsadj(10)' 
+
+au
+
+

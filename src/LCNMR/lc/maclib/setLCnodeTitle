@@ -1,0 +1,39 @@
+"macro setLCnodeTitle"
+    if (lcid='') then
+	$title='new Sample'
+    else
+	$title=lcid
+    endif
+    vnmrjcmd('SQ set '+studyid+' title "'+$title+'"')
+    $p=0 $e='' $t=0 $n=''
+    sortPeakNodes:$p,$e,$t,$n
+    $tot=size('$p')
+    if ($tot=1) and ($p[1]=0) then
+        shell('(cat '+sqdir+'/enterSQ | grep -w SampleInfo)'):$node
+	substr($node,1):$node
+	$d2='' $d1=''
+	formattime($t):$d2,$d1
+	if ($d1<>'') then xmhaha_setprop($node,'time',$d1) endif
+    else
+    	$i=1
+    	repeat
+	  if ($n[$i]<>'') then
+	    $pname='' format($p[$i],0,0):$pname
+	    if $p<10 then $pname='0'+$pname endif
+	    $pname='Peak_'+$pname
+            $r1='' $r2=''
+	    $prop=cursqexp+'/tmpstudy/info/'+$n[$i]+'/prop'
+            readfile($prop,'$r1','$r2','EstRetTime','local')
+	    if ($r2<>'') then
+		$pname=$pname+' (expected RT: '+$r2+' min)'
+	    endif
+	    $d2='' $d1=''
+	    formattime($t[$i]):$d2,$d1
+	    if ($d1<>'') then
+		$pname=$pname+' ['+$d1+']'
+	    endif
+	    xmhaha_setprop($n[$i],'title',$pname)
+	  endif
+	  $i=$i+1
+    	until $i > $tot
+    endif

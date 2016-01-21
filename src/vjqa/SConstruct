@@ -1,0 +1,24 @@
+#!
+
+import os
+import sys
+
+#get current working directory
+cwd = os.getcwd()
+
+# get the envirionment
+env = Environment()
+
+Execute('cd vjunit; make -f makevjunit')
+Execute('cd VJQA/src; make -f makexmlcheck')
+
+Execute('rm -rf ovj_qa')
+path = os.path.join(cwd, 'ovj_qa')
+if not os.path.exists(path):
+   os.makedirs(path)
+
+Execute('cp -r VJQA ovj_qa/OVJQA; rm -rf ovj_qa/OVJQA/src')
+Execute('rm -f ovj_qa/OVJQA/bin/lib/vjunit.jar; cp vjunit/vjunit.jar ovj_qa/OVJQA/bin/lib/.')
+Execute('rm -f ovj_qa/OVJQA/java/*; cp VJQA/src/XmlTest.jar VJQA/src/*.class ovj_qa/OVJQA/java')
+Execute('cp -r vjtest ovj_qa/ovjtest')
+

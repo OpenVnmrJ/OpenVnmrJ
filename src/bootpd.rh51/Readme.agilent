@@ -1,0 +1,26 @@
+Adedd  August 28, 2008
+----------------------
+To build/modify. Copy the tar file to  RedHat 4,.0.u3 system and untar the bootpd.tar. 
+Then recompile with "make -f Makefile bootpd"
+
+Added  August 26, 2008
+----------------------
+Modified bootpd for VnmrJ 2.2C. This version will look at the bootp request if it has a bootfile specified. As long as the request starts with '/tftpboot' and the filename starts with 'vxWorks' (with or wihtout PPC at the end) it is accepted and returned with the bootp reply. Otherwise /etc/bootptab is consulted.
+The PPC will supply a bootfile-name, the 68040 does not, so bootptab specifies the vxWorks and setac no longer adds the PPC extension.
+Finally, I compiled bootpd under 4.0.u3, which runs under 5.1 as well (the reverse is not true). So I updated bootpd and bootp.tar in this directory
+Finally, I compiled bootpd under 4.0.u3, which runs under 5.1 as well (the reverse is not true). So I updated bootpd and bootp.tar in this directory. You will need the corresponding lsetacq as well (scripts/lsetacq.sh). bootptab.vnmr remained the same at this point, but see below.
+
+
+Initial readme
+--------------
+This directory contains the tar file that holds the source code for bootpd. I modified the files (bootpd.c readfile.chwaddr.c and report.c) so it would compile under RedHat 5.1 with the gcc version 4.1.2 compiler. Particular I commented out the code in report.c -> strerror(), because it gave a "TLS mismatch" error
+
+The two part that are needed from the tar file I extracted, bootpd -- as compiled under RedHat 5.1 with gcc version 4.1.2, and bootptab.vnmr -- a slightly modified bootptab. The boopd insists that global host entries start with a period. I needed to define sa=10.0.0.2 for everything to work.
+\
+Under normal installaton we could be installing the bootpd rpm. This one needs to be overwritten with this latest version. The rpm version sgmentaion fault-s under RedHat 5.1. I plan to include bootptab.vnmr as bootptab.51 and adjust setacq accordingly.
+
+I would recommend that you simple copy bootpd and bootptab.vnmr to include in your patch or CD.
+       bootpd        -> acqbin/bootpd.51
+       bootptab.vnmr -> acq/bootptab.51
+If you include the right lsetacq, setacq will put things in the right place.
+

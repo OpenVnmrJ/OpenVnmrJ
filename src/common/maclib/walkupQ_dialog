@@ -1,0 +1,86 @@
+"macro walkupQ_dialog"
+// arg1 can be either a full path of the xml file
+//	OR a basename of a protocol xml file
+//  In the first case, the diaolog option is based on
+//      the dodialog attribute in the xml file.
+//	If the dodialog attribute is not found, the default is 'no'
+//  In the 2nd case, it first checks for the dodialog attribute
+//	in the corresponding xml file.  If the attribute is not
+//	found, the dialog option is based on old-fashioned
+//	hardcoded checks (for back compatibility)
+
+if ($# < 1) then return('no') endif
+
+"****************************************************"
+// If arg1 is a full path and has .xml extension
+//  get the yes or no dialog option from the xml file
+   $firstchar='' substr($1,1,1):$firstchar
+   $s1='' $s2='' $ret=0
+   strstr($1,'.xml'):$ret,$s1,$s2
+   if ($firstchar='/') and ($ret) and ($s2='') then
+	$return='no'
+	getattr($1,'action','dodialog'):$return
+	if ($return<>'no') and ($return<>'yes') then
+		return('no')
+	else
+		return($return)
+	endif
+   endif
+"****************************************************"
+// First check if dodialog attribute is in the protocol
+   getfilepath($1+'.xml','templates/vnmrj/protocols'):$is,$ppath
+   if ($is) then
+	$return=''
+	getattr($ppath,'action','dodialog'):$return
+	if ($return<>'') then return($return) endif
+   endif
+
+// Now check the old-fashioned way
+// The following section is for back compatibility
+$required='' $acqtime=0 $apptype=''
+getEXPinfo($1):$required,$acqtime,$apptype
+$reqsize=size('$required')
+if ($reqsize<2) then $required[2]='always' endif
+$react=$required[2]
+
+if ($apptype='sel1D') or ($apptype='iact1D') then
+   return('yes')
+elseif ($apptype='HTapps') then
+
+// This is a bit involved.  If the htfrq1 already exists
+//   in the appropriate PROTON or CARBON fids, then don't
+//   bother to jump to customization - the macros get them
+//   at runtime or at user customizatino time.  
+//   Else jump to customization
+//   Currently supports only PROTON and CARBON
+
+   exists($1,'parlib'):$parex,$parpath
+   if ($parex=0) then return('yes') endif
+   $rs1='' $nuc=''
+   rtv($parpath,'noabort','refsource1'):$rs1  
+   if ($rs1='') then return('yes') endif
+   $pex=0 $ppath=''
+   if ($rs1='sfrq') then
+	AutoCheck('PROTON'):$pex,$ppath
+   elseif ($rs1='dfrq') then
+	rtv($parpath,'noabort','dn'):$dn
+	if ($dn='H1') then
+	    AutoCheck('PROTON'):$pex,$ppath
+	else
+	    AutoCheck('CARBON'):$pex,$ppath
+	endif
+   endif
+   if ($pex=0) then return('yes') endif
+   $htfrq1=0
+   getext($ppath):$ppath
+   rtv($ppath,'noabort','htfrq1'):$htfrq1
+   $size=size('$htfrq1')
+   if ($htfrq1[1]=0) and ($size<2) then return('yes') endif
+   return('update')
+
+elseif ($apptype='lstd1D') and (($react='ignore') or ($react='')) then
+   return('yes')
+else
+   return('no')
+endif
+

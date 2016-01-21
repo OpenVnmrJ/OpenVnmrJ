@@ -1,0 +1,867 @@
+"macro makeStudy"
+$dum='' $devnull=''
+
+$cdir=userdir+'/persistence/CloneManager'
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir($cdir) endif
+
+$studylist=$cdir+'/userstudyList'
+$studydetail=$cdir+'/studyDetails'
+$sampletags=$cdir+'/studySampleTags'
+$studyfile=$cdir+'/studylibList'
+$studyfile2=$studyfile+'2'
+
+if ($# < 1) then $1='init' endif
+exists(userdir+'/studylib','directory'):$direx
+if ($direx=0) then
+   mkdir('-p'+userdir+'/studylib'):$dum
+endif
+
+   exists('cpstudyname','parameter','global'):$parex
+   if ($parex=0) then
+      create('cpstudyname','string','global')
+   endif
+   setprotect('cpstudyname','on',256,'global')
+   $cssize=size('cpstudyname')
+   if ($cssize<2) then cpstudyname[2]='' endif
+   if ($cssize<3) then cpstudyname[3]='0' endif
+   if ($cssize<4) then cpstudyname[4]='' endif
+   if ($cssize<5) then cpstudyname[5]='no' endif
+   if ($cssize<6) then cpstudyname[6]='q' endif
+   if ($cssize<7) then cpstudyname[7]='UserStudies' endif
+   if ($cssize<8) then cpstudyname[8]='yes' endif
+   if ($cssize<9) then cpstudyname[9]=userdir endif
+   if ($cssize<10) then cpstudyname[10]='Home account' endif
+   if ($cssize<11) then cpstudyname[11]='NeWTaBNaMe' endif
+   if ($cssize<12) then cpstudyname[12]='' endif
+   if ($cssize<13) then cpstudyname[13]='' endif
+   if ($cssize<14) then cpstudyname[14]='no' endif
+   if ($cssize<15) then cpstudyname[15]='LIB' endif
+   if ($cssize<16) then cpstudyname[16]='1' endif
+   if ($cssize<17) then cpstudyname[17]='' endif
+
+//  cpstudyname[1] - studyname of an existing study [selected via the menu widget]
+//  cpstudyname[2] - OK to save or not [ok2save if it is a new study else emptystring]
+//  cpstudyname[3] - Is this study in userdir? [0 or 1]
+//  cpstudyname[4] - New studyname [value entered in the entry widget]
+//  cpstudyname[5] - Is sampletag included? (yes or no)
+//  cpstudyname[6] - Is this EXP clone or Queue clone? [e or q]
+//  cpstudyname[7] - study tabname [default is UserStudies]
+//  cpstudyname[8] - Allow customization or not
+//  cpstudyname[9] - appdir path where the study be saved
+//  cpstudyname[10] - appdir label for display purpose in the popup
+//  cpstudyname[11] - used by tablist menu
+//  cpstudyname[12] - menu (menu1) level
+//  cpstudyname[13] - submenu (menu2) level
+//  cpstudyname[14] - dodialog option (applicable only for single node studies)
+//  cpstudyname[15] - LIB or CMP (collection vs composite)
+//  cpstudyname[16] - number of experiments in the study
+//  cpstudyname[17] - label for the protocol button
+
+IF ($1='init') or ($1='refresh') THEN
+
+   if ($# < 2) then $2='Study Library' endif
+
+   write('reset',$studyfile)
+   write('reset',$studyfile2)
+   write('reset',$studylist)
+   write('reset',$studydetail)
+   write('reset',$sampletags)
+//   getfile(userdir+'/studylib'):$entrys
+
+   	getappdirs:$atot,$adirs,$alabels
+        $appdirlist=$cdir+'/writable_appdirs'
+        write('reset',$appdirlist)
+        $i=1
+        repeat
+           exists($adirs[$i],'file','w'):$writable
+           if ($writable) then
+                write('file',$appdirlist,'"%s" "%s"',$alabels[$i],$adirs[$i])
+           endif
+           $i=$i+1
+        until $i > $atot
+        write('file',$appdirlist,'"" ""')
+	getTabList
+
+   $i=1
+   repeat
+      exists($adirs[$i]+'/studylib','directory'):$entrys
+      if ($entrys>0) then
+      	getfile($adirs[$i]+'/studylib'):$entrys
+      endif
+      if ($entrys>0) then
+	   pwd:$curdir
+	   cd($adirs[$i]+'/studylib'):$dum
+	   shell('ls -1d * >> '+$studyfile2):$devnull
+	   cd($curdir):$dum
+      endif
+      $i=$i+1
+   until $i > $atot
+
+   shell('(sort -u '+$studyfile2+' -o '+$studyfile+'3)'):$devnull
+   $s1='' $s2=''
+   readfile($studyfile+'3','$s1','$s2','','local'):$total
+   if ($total>0) then
+        $i=1
+        repeat
+           $sname=$s1[$i]
+	   $spath=''
+	   exists($sname,'studylib'):$sex,$spath
+	   $label=''
+	   getattr($spath+'/'+$sname+'.xml','template','label'):$label
+	   if ($label<>'') then $label=' ('+$label+')' endif
+           write('file',$studyfile,'"%s%s" "%s"',$sname,$label,$sname)
+           $i=$i+1
+        until $i > $total
+   endif
+   write('file',$studyfile,'"" ""')
+
+   rm('-f',$studyfile+'3'):$dum
+   rm('-f',$studyfile2):$dum
+   cpstudyname[1]=''
+   cpstudyname[4]='' cpstudyname[5]='no'
+   cpstudyname[7]='UserStudies'
+   cpstudyname[11]='NeWTaBNaMe'
+   cpstudyname[17]=''
+   if ($1='init') then
+     cpstudyname[2]=''
+     cpstudyname[3]='0'
+     cpstudyname[6]='q'
+     cpstudyname[9]=userdir
+     cpstudyname[10]='Home account'
+     cpstudyname[12]=''
+     cpstudyname[13]=''
+     cpstudyname[14]='no'
+     cpstudyname[15]='LIB'
+     cpstudyname[16]='1'
+
+     teststr('$adirs',cpstudyname[9],'local'):$ret
+     if ($ret) then cpstudyname[10]=$alabels[$ret] endif
+     vnmrjcmd('pnew','cpstudyname')
+     vnmrjcmd('popup','mode:modeless','file:makeStudy.xml','rebuild:yes','pnewupdate:true','close:makeStudy(`close`)','title:'+$2)
+   else
+     vnmrjcmd('pnew','cpstudyname')
+   endif
+
+ELSEIF ($1 = 'close') THEN
+    cpstudyname=''
+ELSEIF ($1 = 'delete') or ($1='remove') THEN
+
+   if $2='' then return endif
+   $stdir=$2
+   $appdir=cpstudyname[9]
+   if ($appdir='') then $appdir=userdir endif
+   if ($# > 2) then $appdir=$3 endif
+// Make sure the appdir has write permission
+   exists($appdir,'file','w'):$direx
+   if ($direx=0) then
+	write('error','%s does not have write permission to %s',owner,$appdir)
+   else
+// This study must be in appdir studylib as a directory and writable
+   	exists($appdir+'/studylib/'+$stdir,'directory'):$direx
+	if ($direx=0) and ($1='delete') then
+	     write('error','Study %s not found in %s',$2,$appdir)
+	endif
+   endif
+   if ($direx) then
+	exists($appdir+'/studylib/'+$stdir,'file','w'):$direx
+	if ($direx=0) and ($1='delete') then
+	     write('error','%s does not have write permission to %s/studylib/%s',owner,$appdir,$stdir)
+	endif
+   endif
+// Proceed ONLY if the above conditions are met
+   if ($direx) then
+	exists($appdir+'/studylib_bkup','directory'):$dir2ex
+	if ($dir2ex=0) then
+	    mkdir($appdir+'/studylib_bkup'):$dum
+	endif
+	rm('-rf',$appdir+'/studylib_bkup/'+$stdir):$dum
+	rename($appdir+'/studylib/'+$stdir,$appdir+'/studylib_bkup/'+$stdir):$dum
+	exists($appdir+'/maclib/'+$2,'file'):$macex
+	if ($macex) then rm('-f',$appdir+'/maclib/'+$2):$dum endif
+	rm('-f',$appdir+'/templates/vnmrj/protocols/'+$2+'.xml'):$dum
+        	// udStudyExpts moves the protocol to a backup dir
+        	// Now remove it from the Experiment Selector
+        vnmrjcmd('util','removeexpsel',$2)
+     	if ($1='delete') then
+		$isnew=0
+		shell('(cat '+$studyfile+' | grep -c NeWSTuDYCLoNe)'):$isnew
+		makeStudy('refresh')
+		write('line3','Study %s in %s successfully backedup',$2,$appdir)
+                if ($isnew) then
+			cpstudyname[1]='NeWSTuDYCLoNe'
+                        makeStudy('shownew')
+                endif
+	endif
+	getfilepath($2,'studylib'):$stillex,$stillpath
+	if ($stillex) then
+	    write('error','Another version of this study still exists in %s',$stillpath)
+	endif
+   endif
+
+ELSEIF ($1 = 'shownew') THEN
+   write('reset',$studydetail)
+   write('reset',$sampletags)
+
+   $etotal=1
+   cpstudyname[3]='0'
+   $spath=cursqexp
+   exists(cursqexp,'directory'):$sex
+   if ($sex) then
+     if (cpstudyname[6]='e') then
+	write('file',$studydetail,'StudyName: (Experiment clone)')
+	write('file',$studydetail,'   [Mimic experiment in curexp]')
+	$stime=''
+	formattime(ACQtime):$stime
+	write('file',$studydetail,'   Time:  %s',$stime)
+	write('file',$studydetail,'   Experiment:  %s',pslabel)
+	write('file',$studydetail,'   PulseSequence:  %s',seqfil)
+     else
+        write('file',$studydetail,'StudyName: (New Study)')
+	write('file',$studydetail,'----DayQ----')
+        write('reset',$studydetail+'2')
+        shell('(cat '+$spath+'/EXPLIST | grep -w Queued | awk \'{print $3" "$2}\' > '+$studydetail+'2)'):$devnull
+        $s1='' $r1=0
+        readfile($studydetail+'2','$s1','$r1','','local'):$total
+        if ($total>0) then
+           $i=1
+           repeat
+                $stime=''
+                formattime($r1[$i]):$stime
+                write('file',$studydetail,'  %s\t%s',$s1[$i],$stime)
+                $i=$i+1
+           until $i > $total
+        endif
+	$etotal=$total
+
+        write('file',$studydetail,'----NightQ----')
+        write('reset',$studydetail+'2')
+        shell('(cat '+$spath+'/LONGLIST | grep -w Queued | awk \'{print $3" "$2}\' > '+$studydetail+'2)'):$devnull
+        $s1='' $r1=0
+        readfile($studydetail+'2','$s1','$r1','','local'):$total
+        if ($total>0) then
+           $i=1
+           repeat
+                $stime=''
+                formattime($r1[$i]):$stime
+                write('file',$studydetail,'  %s\t%s',$s1[$i],$stime)
+                $i=$i+1
+           until $i > $total
+        endif
+	$etotal=$etotal+$total
+        rm('-f',$studydetail+'2'):$dum
+     endif
+
+   	$info4=cursqexp+'/tmpfile'
+   	$sampleglobal=$cdir+'/sampleglobal'
+   	savesampglobal($cdir)
+   	write('reset',$info4)
+   	shell('(diffparams '+$sampleglobal+' '+$info4+' | sed -e \'s|\\tundefined||g\'  >> '+$sampletags+')'):$devnull
+   	shell('(sort -k 1 -u '+$sampletags+' -o '+$info4+')'):$devnull
+   	rename($info4,$sampletags):$dum
+   	rm('-f',$sampleglobal):$dum
+   	"***************************************************"
+        "Six parameters are unique and are not"
+        " typically entered by the operator"
+        "    adirtmplt, sdirtmplt, svftmplt,text_string, and nameprefix"
+        "One can add more to this list"
+
+        $sppar='adirtmplt','sdirtmplt','svftmplt','nameprefix','text_string','adir2tmplt'
+	$sppar=$sppar,'sample','archivedir','studyowner'
+        $sptotal=size('$sppar')
+        $i=1
+        repeat
+           shell('(cat '+$sampletags+' | grep -vw \'^'+$sppar[$i]+'\' > '+$info4+')'):$devnull
+           rename($info4,$sampletags):$dum
+           $i=$i+1
+        until $i > $sptotal
+   	"***************************************************"
+   	rm('-f',$info4):$dum
+     write('reset',$studylist)
+     if (cpstudyname[6]='e') then
+	write('file',$studylist,'"(Experiment Clone)" "NeWSTuDYCLoNe"')
+     else
+	write('file',$studylist,'"(New Study)" "NeWSTuDYCLoNe"')
+     endif
+     write('file',$studylist,'"" ""')
+     shell('(cat '+$studyfile+' >> '+$studylist+')'):$devnull
+     rename($studylist,$studyfile):$dum
+
+     cpstudyname[8]='yes'
+   endif
+   format($etotal,'lower'):cpstudyname[16]
+   vnmrjcmd('pnew','cpstudyname')
+
+ELSEIF ($1 = 'show') THEN
+   write('reset',$studydetail)
+   write('reset',$sampletags)
+   $etotal=1
+   if ($# < 2) then
+      if (cpstudyname[4]='') then 
+	$2=cpstudyname[1] 
+      else 
+	$2=cpstudyname[4] 
+      endif
+   endif
+   if $2='' then cpstudyname[3]='0' return endif
+   if ($2=cpstudyname[4]) or ($2='NeWSTuDYCLoNe') then 
+	$spath=cursqexp
+	exists(cursqexp,'directory'):$sex
+	getfilepath($2,'studylib'):$sex2
+	if ($sex2>0) then cpstudyname[1]=$2 endif
+   else
+   	getfilepath($2,'studylib'):$sex,$spath
+   endif
+   if ($sex) then
+      $expclone=0
+      if ($spath=cursqexp) then
+	  if (cpstudyname[6]='e') then
+        	write('file',$studydetail,'StudyName: (Experiment clone)')
+        	write('file',$studydetail,'   [Mimic experiment in curexp]')
+        	$stime=''
+        	formattime(ACQtime):$stime
+        	write('file',$studydetail,'   Time:  %s',$stime)
+        	write('file',$studydetail,'   Experiment:  %s',pslabel)
+		write('file',$studydetail,'   PulseSequence:  %s',seqfil)
+		$expclone=-1
+	  else
+		write('file',$studydetail,'StudyName: (New Study)')
+	  endif
+      else
+	  write('file',$studydetail,'StudyName: %s',$2)
+	  exists($spath+'/'+$2+'.par','directory'):$expclone
+      endif
+      if ($expclone=0) then
+            write('file',$studydetail,'----DayQ----')
+	    write('reset',$studydetail+'2')
+	    shell('(cat '+$spath+'/EXPLIST | grep -w Queued | awk \'{print $3" "$2}\' > '+$studydetail+'2)'):$devnull
+	    $s1='' $r1=0
+	    readfile($studydetail+'2','$s1','$r1','','local'):$total
+	    if ($total>0) then
+	   	$i=1
+	   	repeat
+			$stime=''
+			formattime($r1[$i]):$stime
+			write('file',$studydetail,'  %s\t%s',$s1[$i],$stime)
+			$i=$i+1
+	   	until $i > $total
+	    endif
+	    $etotal=$total
+            write('file',$studydetail,'----NightQ----')
+            write('reset',$studydetail+'2')
+            shell('(cat '+$spath+'/LONGLIST | grep -w Queued | awk \'{print $3" "$2}\' > '+$studydetail+'2)'):$devnull
+            $s1='' $r1=0
+            readfile($studydetail+'2','$s1','$r1','','local'):$total
+            if ($total>0) then
+           	$i=1
+           	repeat
+                	$stime=''
+                	formattime($r1[$i]):$stime
+                	write('file',$studydetail,'  %s\t%s',$s1[$i],$stime)
+                	$i=$i+1
+           	until $i > $total
+            endif
+	    $etotal=$etotal+$total
+	    rm('-f',$studydetail+'2'):$dum
+      elseif ($expclone>0) then
+	    $ACQtime=0  $seqfil='' $pslabel=''
+	    rtv($spath+'/'+$2,'noabort','ACQtime'):$ACQtime
+	    rtv($spath+'/'+$2,'noabort','seqfil'):$seqfil
+	    rtv($spath+'/'+$2,'noabort','pslabel'):$pslabel
+            $stime=''
+            formattime($ACQtime):$stime
+            write('file',$studydetail,'   Time:  %s',$stime)
+            write('file',$studydetail,'   Experiment:  %s',$pslabel)
+	    write('file',$studydetail,'   PulseSequence:  %s',$seqfil)
+      endif
+
+        $info4=cursqexp+'/tmpfile'
+        $sampleglobal=$spath+'/sampleglobal'
+	if ($spath=cursqexp) then
+            $sampleglobal=$cdir+'/sampleglobal'
+            savesampglobal($cdir)
+ 	endif
+        write('reset',$info4)
+	write('reset',$sampletags)
+        shell('(diffparams '+$sampleglobal+' '+$info4+' | sed -e \'s|\\tundefined||g\'  >> '+$sampletags+')'):$devnull
+        shell('(sort -k 1 -u '+$sampletags+' -o '+$info4+')'):$devnull
+        rename($info4,$sampletags):$dum
+	if ($spath=cursqexp) then
+            rm('-f',$sampleglobal):$dum
+	endif
+        "***************************************************"
+        "Six parameters are unique and are not"
+        " typically entered by the operator"
+        "    adirtmplt, sdirtmplt, svftmplt,text_string, and nameprefix"
+        "One can add more to this list"
+
+        $sppar='adirtmplt','sdirtmplt','svftmplt','nameprefix','text_string','adir2tmplt'
+	$sppar=$sppar,'sample','archivedir','studyowner'
+        $sptotal=size('$sppar')
+        $i=1
+        repeat
+           shell('(cat '+$sampletags+' | grep -vw \'^'+$sppar[$i]+'\' > '+$info4+')'):$devnull
+           rename($info4,$sampletags):$dum
+           $i=$i+1
+        until $i > $sptotal
+        "***************************************************"
+        rm('-f',$info4):$dum
+
+        cpstudyname[3]='0'
+	$appdir=cpstudyname[9]
+     getappdirs:$atot,$adirs,$alabels
+     if ($spath<>cursqexp) then
+	strstr($spath,'/studylib/'):$udex,$appdir
+	exists($appdir,'file','w'):$udex
+        if ($udex>0) then
+	   cpstudyname[3]='1'
+	endif
+	getattr($2,'template','apptype'):cpstudyname[7]
+	$label=''
+	getattr($2,'template','label'):$label
+    	if ($label<>'') then cpstudyname[17]=$label else cpstudyname[17]=cpstudyname[4] endif
+	$lock='off'
+	getattr($spath+'/'+$2+'.xml','action','lock'):$lock
+	if ($lock='on') then cpstudyname[8]='no' else cpstudyname[8]='yes' endif
+        if ($etotal>1) then
+           $type='LIB'
+           getattr($spath+'/'+$2+'.xml','action','type'):$type
+           if ($type='CMP') then cpstudyname[15]=$type endif
+        else
+           cpstudyname[15]='LIB'
+        endif
+
+     else
+	cpstudyname[8]='yes'
+	if (cpstudyname[7]='') then 
+	   cpstudyname[7]='UserStudies'
+	   cpstudyname[11]='NeWTaBNaMe'
+	endif
+	$appdir=userdir
+     endif
+     cpstudyname[9]=$appdir
+     cpstudyname[10]=''
+     teststr('$adirs',$appdir,'local'):$ret
+     if ($ret) then cpstudyname[10]=$alabels[$ret] endif
+     format($etotal,'lower'):cpstudyname[16]
+   endif
+   vnmrjcmd('pnew','cpstudyname')
+
+ELSEIF ($1 = 'save') or ($1='tmpsave') THEN
+
+   if $2='' then return endif
+   if cpstudyname[2]<>'ok2save' then cpstudyname[4]='' cpstudyname[5]='no' return endif
+   if (cpstudyname[6]='q') then
+      exists(cursqexp,'directory'):$entrys
+      if ($entrys>0) then
+      	getfile(cursqexp):$entrys
+      endif
+      if ($entrys=0) then 
+	write('error','No study information in %s',cursqexp)
+	cpstudyname[4]='' cpstudyname[5]='no'
+        vnmrjcmd('pnew','cpstudyname')
+	return
+      endif
+   endif
+
+  $1char='' substr($2,1,1):$1char
+  format($1char,'isreal'):$real
+  if ($real) then
+        write('error','study name cannot start with a number. aborted')
+        vnmrjcmd('pnew','cpstudyname')
+        return
+  endif
+
+// A clone cannot have the same label as a system protocol and at the
+//   same time exists in system tab.  This will negate inclusion of this
+//   clone in ExperimentSelector_operator.xml
+
+   findExpSelXml:$esex,$ESsystem
+   if cpstudyname[17]='' then $newname=$2 else $newname=cpstudyname[17] endif
+   shell('(cat '+$ESsystem+' | grep \'name="'+$newname+'"\' | grep -c \'tab="'+cpstudyname[7]+'"\')'):$is
+   if not $is then
+   	shell('(cat '+$ESsystem+' | grep \'name="'+$2+'"\' | grep -c \'tab="'+cpstudyname[7]+'"\')'):$is
+   endif
+   if ($is) then
+	write('error','%s button already exists in systemlevel tab',$newname)
+	vnmrjcmd('pnew','cpstudyname')
+   endif
+
+  if ($1='tmpsave') then
+	$appdir=userdir
+  else
+	$appdir=cpstudyname[9]
+	if ($appdir='') then $appdir=userdir endif
+  endif
+  "*******************************************************************"
+   exists($2,'maclib'):$macex
+   getfilepath($2,'studylib'):$direx
+   if ($macex) and ($direx=0) then
+            write('error','%s is an existing macro, but not associated with a study!',$2)
+            cpstudyname[4]='' cpstudyname[5]='no'
+            vnmrjcmd('pnew','cpstudyname')
+            return
+   endif
+   $studydir=$appdir+'/studylib/'+$2
+   exists($studydir,'directory'):$direx2
+   exists($appdir+'/maclib/'+$2,'file'):$macex2
+   if ($direx2) and ($macex2) and ($1='save') then
+	makeStudy('remove',$2,$appdir)
+   endif
+   exists($studydir,'directory'):$direx3
+   if ($direx3) then
+	write('error','%s is an existing study in %s, unable to overwrite',$2,$appdir)
+        cpstudyname[4]='' cpstudyname[5]='no'
+        vnmrjcmd('pnew','cpstudyname')
+        return
+   endif
+   exists($appdir+'/maclib/'+$2,'file'):$macex3
+   if ($macex3) then
+	write('error','%s is an existing macro in %s, but not associated with a study!',$2,$appdir)
+	cpstudyname[4]='' cpstudyname[5]='no'
+	vnmrjcmd('pnew','cpstudyname')
+	return
+   endif
+
+
+   if (cpstudyname[6]<>'e') then
+   	mkdir('-p',$studydir):$dum
+   	pwd:$curdir
+   	cd(cursqexp):$dum
+   	shell('(cat EXPLIST | grep -w Queued > '+$studydir+'/EXPLIST)'):$devnull
+   	shell('(cat LONGLIST | grep -w Queued > '+$studydir+'/LONGLIST)'):$devnull
+	copy('-r','macdir',$studydir):$dum
+	copy('-r','macdirlong',$studydir):$dum
+        cd($curdir):$dum
+        $s1='' $s2=''
+        $tottime=0
+        readfile($studydir+'/EXPLIST','$s1','$s2','','local'):$total
+        if ($total>0) then
+             $i=1
+             repeat
+                 $rtime=0
+                 substr($s2[$i],1):$rtime
+                 $tottime=$tottime+$rtime
+                 $i=$i+1
+             until $i > $total
+         endif
+   else
+	$parlabel=parlabel
+        setprotect('','clear',16384,'current')
+
+	setvalue('parlabel',$2)
+  	$archsamp=''
+	isnewexp:$isnew
+	if ($isnew) then
+	   $archsamp=archivedir+'/'+sample
+           $shapelib=userdir+'/shapelib',$archsamp+'/dirinfo/shapelib'
+	   mkpar('string','probe_',probe)
+	   setvalue('probe_',probe)
+	else
+	   substr(file,'dirname'):$archsamp
+           $shapelib=$archsamp+'/dirinfo/shapelib',userdir+'/shapelib'
+        endif
+  	newmodules=''
+  	apptype=''
+  	mkdir('-p',$studydir+'/macdir'):$dum
+  	mkdir('-p',$studydir+'/macdirlong'):$dum
+
+  	$parpath=$studydir+'/'+$2
+  	savesampglobal('cp')
+        writeparam(curexp+'/sampleglobal','fsq_','current','add')
+	$file=file
+  	resetsampglobal
+	$wds=wds $wstart=wstart
+	wds='' wstart=''
+        rmpar('fsq_')
+  	svp($parpath)
+	wds=$wds wstart=$wstart
+	file=$file
+  	getsampglobal('cp')
+
+  	exists('tnshapes','parameter'):$svshpex
+  	if ($svshpex) then
+		getcpshape(tnshapes[1],$shapelib,$studydir+'/shapelib')
+	endif
+        exists('dnshapes','parameter'):$svshpex
+        if ($svshpex) then
+                getcpshape(dnshapes[1],$shapelib,$studydir+'/shapelib')
+        endif
+        exists('dn2shapes','parameter'):$svshpex
+        if ($svshpex) then
+                getcpshape(dn2shapes[1],$shapelib,$studydir+'/shapelib')
+        endif
+        exists('dn3shapes','parameter'):$svshpex
+        if ($svshpex) then
+                getcpshape(dn3shapes[1],$shapelib,$studydir+'/shapelib')
+        endif
+
+  	write('reset',$studydir+'/EXPLIST')
+  	write('file',$studydir+'/EXPLIST','%s_001  %d  %s  xx001  Queued',$2,ACQtime,$2)
+  	write('reset',$studydir+'/LONGLIST')
+	write('reset',$studydir+'/macdir/'+$2+'_001acq')
+	write('file',$studydir+'/macdir/'+$2+'_001acq','ACQtime=%d',ACQtime)
+	setvalue('parlabel',$parlabel)
+	$tottime=ACQtime
+  endif
+  exists($appdir+'/maclib','directory'):$maclibex
+  if ($maclibex=0) then mkdir($appdir+'/maclib'):$dum endif
+  write('reset',$appdir+'/maclib/'+$2)
+  write('file',$appdir+'/maclib/'+$2,'studysetup($0)')
+
+   if (cpstudyname[5]='yes') then
+      sample='' archivedir=''
+      savesampglobal($studydir)
+   else
+        write('reset',$studydir+'/sampleglobal')
+   endif
+
+"*********************************************************************"
+  "This is just house keeping.  None of these files are needed"
+  "  and are never used when adding a study"
+   $delfiles='TtimeQ','sampleinfo','EXPLIST','LONGLIST','SHORTLIST'
+   $delfiles=$delfiles,'walkupQacq','walkupQacqpars','sampleTempacq'
+   $delfiles=$delfiles,'sampleglobal','pauselock'
+   $deltotal=size('$delfiles')
+   $i=1
+   repeat
+	rm('-f',$studydir+'/macdir/'+$delfiles[$i]):$dum
+        rm('-f',$studydir+'/macdirlong/'+$delfiles[$i]):$dum
+	$i=$i+1
+   until $i > $deltotal
+   exists($studydir+'/macdir/maclib_attic','directory'):$maex
+   if ($maex) then
+   	rm('-rf',$studydir+'/macdir/maclib_attic'):$dum
+   endif
+   exists($studydir+'/macdirlong/maclib_attic','directory'):$maex
+   if ($maex) then
+   	rm('-rf',$studydir+'/macdirlong/maclib_attic'):$dum
+   endif
+"*********************************************************************"
+
+   if ($1='save') then
+	if cpstudyname[17]='' then cpstudyname[17]=$2 endif
+
+	$pdir=$appdir+'/templates/vnmrj/protocols'
+	mkCPprotocol($2,$pdir,cpstudyname[7],$tottime,$2,'LIB',$2,'',cpstudyname[17],cpstudyname[12],cpstudyname[13],cpstudyname[14])
+   	getfilepath($2+'.xml','templates/vnmrj/protocols'):$pex,$ppath
+   	if ($pex) then
+	   if (cpstudyname[8]='no') then
+		$sedcmd=`sed -e 's|lock="off"|lock="on"|g'`
+		shell(`(`+$sedcmd+` `+$ppath+` > `+$studydir+`/`+$2+`.xml)`):$devnull
+	   else
+       		copy($ppath,$studydir):$dum
+	   endif
+           $etotal=1 format(cpstudyname[16],'lower'):$etotal
+           if (cpstudyname[15]='CMP') and ($etotal>1) then
+                $sedcmd=`sed -e 's|type="LIB"|type="CMP"|g'`
+                shell(`(`+$sedcmd+` `+$studydir+`/`+$2+`.xml`+` > `+$studydir+`/`+$2+`1.xml)`):$devnull
+                rename($studydir+'/'+$2+'1.xml',$studydir+'/'+$2+'.xml'):$dum
+           endif
+        endif
+        vnmrjcmd('util','updateexpsel', cpstudyname[4], cpstudyname[17], cpstudyname[7], cpstudyname[12],cpstudyname[13],'opOnly')
+        cpstudyname[2]='','0','','no','q','UserStudies','yes'
+   	makeStudy('refresh')
+	is_submitmode:$issubmit
+	if ($issubmit) then
+	    if (clonemod='yes') then
+		walkupQ('logout')
+	    endif
+	endif
+   else
+	cpstudyname='','','0','','no','q','UserStudies','yes'
+   endif
+   
+ELSEIF ($1 = 'execute') THEN
+
+   is_submitmode:$issubmit
+   if ($issubmit) then
+	write('error','curexp is in submit mode')
+ 	return
+   endif
+   expactive:$active
+   if ($active>0) then
+	write('error','curexp is active')
+	return
+   endif
+   if ($2='') then return endif
+   xmhaha('setupstudy',$2)
+   cpstudyname[1]=''
+   write('reset',$studydetail)
+   write('reset',$sampletags)
+
+ELSEIF ($1 = 'submit') THEN
+
+  if ($# < 2) then
+	write('error','arg2 is undefined')
+	return
+  endif
+  if ($2<>'auto') and ($2<>'enter') and ($2<>'acq') then
+    write('error','arg2 %s is not supported',$2)
+    return
+  endif
+  if ($# < 3) then $3='no' endif
+  if ($2='auto') then
+	checkautodir:$ret
+	if ($ret=0) then
+	    return
+	endif
+  elseif ($2='enter') then
+	checkenterdir:$ret
+	if ($ret=0) then
+	    return
+	endif
+  else
+     if ($3='curexp') then
+	expactive:$active
+	if ($active>0) then
+	    write('error','curexp has active acquisition')
+	    return
+	endif
+     elseif ($3='autodir') then
+        expactive('auto'):$bgauto
+        $isinqueue=0
+        if (autodir<>'') then
+		lookup('mfile',autodir+'/enterQ','countcs','SAMPLE#:'):$isinqueue
+        endif
+        if ($bgauto) or ($isinqueue) then
+            write('error','Alert: There are samples in current autodir')
+	    return
+        endif
+     endif
+  endif
+
+  $is=0
+  if (parlabel='') then setvalue('parlabel',pslabel) endif
+  if (parlabel<>'') then
+  	exists(parlabel,'maclib'):$is
+  	getfilepath(parlabel,'studylib'):$isstudy
+  endif
+  write('reset',$cdir+'/tmpacqpars')
+  if ($is) then
+	$tmppar1=$cdir+'/tmppar1'
+	$tmppar2=$cdir+'/tmppar2'
+	tmpcopy(parlabel)
+	strtpar='' 
+	if wds<>'' then wstart=wds wds='' endif
+	fsave($tmppar2,'current')
+	savesampglobal('cp')
+	rename(curexp+'/sampleglobal',curexp+'/sampleglobal_save'):$dum
+	resetsampglobal
+	if ($isstudy=0) then
+	   xmhaha('setupexp',parlabel):$dum
+	else
+	   xmhaha('setupstudy',parlabel):$dum
+	endif
+	exists(curexp+'/sampleglobal_save','file'):$sfex
+	write('reset',curexp+'/sampleglobal')
+	if $sfex then
+	    rename(curexp+'/sampleglobal_save',curexp+'/sampleglobal'):$dum
+	endif
+	getsampglobal('cp')
+	fsave($tmppar1,'current')
+	$parlist=''
+	$tmpdiff=cursqexp+'/'+$0
+	write('reset',$tmpdiff)
+	shell('diffparams '+$tmppar1+' '+$tmppar2+' > '+$tmpdiff):$devnull
+	shell('diffparams -active '+$tmppar1+' '+$tmppar2+' >> '+$tmpdiff):$devnull
+	$parlist='' $parlist2=''
+	readfile($tmpdiff,'$parlist','$parlist2','','local')
+	rm('-f',$tmpdiff):$dum
+
+	$parlist=$parlist,'REQexp','ACQtime'
+	fread('','usertree')
+	fread($tmppar2,'usertree')
+        teststr('$parlist','wshim','local'):$ret
+        if ($ret) then
+                $parlist=$parlist,'Gmap','Gmapname'
+		setvalue('Gmap',SQgmap,'usertree')
+		setvalue('Gmapname',SQgmapname,'usertree')
+        endif
+	writeparam($cdir+'/tmpacqpars','$parlist','usertree')
+	fread('','usertree')
+	tmpreturn(parlabel)
+        rm('-f',$tmppar1):$dum
+        rm('-f',$tmppar2):$dum
+	$studyname=parlabel
+  else
+		"It is highly unlikely this is possible"
+		" - but just in case"
+  	$name=samplename
+  	if ($name='') then $name=studyowner endif
+  	if ($name='') then $name=operator endif
+  	if ($name='') then $name=owner endif
+
+  	$studyname=''
+  	$i=1 $done=0
+  	while $done < 1 do
+	    $si='' format($i,0,0):$si
+	    if ($i < 100) then $si='0'+$si endif
+	    if ($i<10) then $si='0'+$si endif
+	    $name2=$name+'_'+pslabel+'_'+$si
+	    getfilepath($name2,'studylib'):$stex
+	    if ($stex=0) then 
+	       getfilepath($name2,'maclib'):$stex
+	    endif
+	    if ($stex=0) then $studyname=$name2 $done=1 endif
+	    $i=$i+1
+	    if ($i > 999) then $done=1 endif
+  	endwhile
+  	if ($studyname='') then 
+	     write('error','More than 999 studies for %s_%s in studylib',$name,pslabel)
+	     return
+  	endif
+  	walkupQ_init
+  	EXPtime:ACQtime
+     	exists('cpstudyname','parameter','global'):$parex
+     	if ($parex=0) then
+        	create('cpstudyname','string','global')
+     	endif
+     	setprotect('cpstudyname','on',256,'global')
+     	cpstudyname='','ok2save','0','','yes','e','UserStudies'
+     	makeStudy('tmpsave',$studyname)
+  endif
+
+     EXPtime:$acqtime
+     tmpcopy('makeStudypar')
+     $iscpsample=0
+     is_cpsample:$iscpsample
+     if ($iscpsample=0) then
+	walkupQ('new',$2)
+     elseif ($2='acq') then
+	walkupQ('addq')
+     else
+	walkupQ('resumeq',$2)
+     endif
+     if (wqinit='acq') then
+	if (wqacq[1]<>$3) and ($3<>'no') then
+	    wqacq[1]=$3
+	endif
+     endif
+
+     $sqnode=''
+     walkupQ('add',$studyname,$3,'noreqcheck','nodialog'):$sqnode
+     if ($sqnode<>'') then
+	$macdir=cursqexp+'/macdir'
+	if ($3='long') then 
+	   $macdir=$macdir+'long'
+	endif
+        $cqnode=''
+        getcpnode('rev',cursqexp,$sqnode):$cqnode
+	if ($cqnode<>'') then
+	   shell('cat '+$cdir+'/tmpacqpars >> '+cursqexp+'/macdir/'+$cqnode+'acqpars'):$devnull
+	   write('file',cursqexp+'/macdir/'+$cqnode+'acq','ACQtime=%d',$acqtime)
+	   walkupQ('adjtime',$cqnode,$3,$acqtime)
+	endif
+	$Time='' $Time2=''
+	formattime($acqtime):$Time2,$Time
+	xmhaha_setprop($sqnode,'time',$Time)
+	walkupQ('time')
+	rm('-rf',curexp+'/makeStudypar'):$dum
+     else
+	write('error','Error in submitting curexp')
+	walkupQ('logout')
+	tmpreturn('makeStudypar')
+     endif
+"******************************************************************"
+ENDIF

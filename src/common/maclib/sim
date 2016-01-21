@@ -1,0 +1,249 @@
+"macro sim"
+" sim - sample in magnet "
+/* 
+    sImSaMpLe parameter is created and holds details of the popup.
+    sImSaMpLe[1] is assignment location
+    sImSaMpLe[2] is change location
+    sImSaMpLe[3] is current location -99 is empty; 0 is unknown
+    sImSaMpLe[4] is radio button state
+    sImSaMpLe[5] is which groups to show
+    sImSaMpLe[6] is textmessage about current sample
+    sImSaMpLe[7] is current sample checkbox
+    sImSaMpLe[8] is textmessage about entry description string 
+ */
+
+$inputloc=0
+if ($# = 0) then
+  $arg='init'
+else
+  if typeof('$1')<0.5 then
+    $inputloc=$1 $arg='init'
+  else
+    $arg=$1
+  endif
+endif
+
+if ($arg = 'init') or ($arg='check') then
+  readhw('status'):$e
+  if ($e <=0) then
+    $loc=-1
+    $detect=0
+  else
+    readhw('loc'):$loc,$detect
+    if ($loc=-99) and ($detect=1) then $loc=0 endif
+  endif
+  if ($arg='check') then
+    if ($loc=-1) then
+      return(0)
+    elseif ($loc>0) or ($detect=0) then
+      return(1)
+    else
+      return(0)
+    endif
+  endif
+  destroy('sImSaMpLe'):$e
+  create('sImSaMpLe','string')
+  setgroup('sImSaMpLe','display')
+  sImSaMpLe='','','','leave','','','n',''
+  if $inputloc<>0 then format($inputloc,0,0):sImSaMpLe[2] endif
+  if ($detect=0) then
+    if ($loc=-1) then
+      sImSaMpLe[5] = 'off'
+      sImSaMpLe[6] = 'Acquisition system not available'
+    else
+      sImSaMpLe[3] = 'empty'
+      sImSaMpLe[4] = 'replace'
+      sImSaMpLe[5] = 'empty'
+      sImSaMpLe[6] = 'Magnet is empty'
+    endif
+  else
+    if ($loc=0) then
+      sImSaMpLe[3] = 'unknown'
+      sImSaMpLe[5] = 'unknown'
+      sImSaMpLe[6] = 'Magnet has unknown sample'
+      sImSaMpLe[7] = 'y'
+    else
+      sImSaMpLe[5] = 'known'
+      $vloc=''
+      format($loc,0,0):$vloc
+      sImSaMpLe[4]='replace'
+      if (traymax = 97) then
+        if ($loc > 48) then
+          $loc = $loc - 48
+          $vloc = $vloc + ' (T2 '
+        else
+          $vloc = $vloc + ' (T1 '
+        endif
+        $row = trunc (($loc+5) / 6)
+        $col = ($loc+5) % 6
+        $letters = 'A','B','C','D','E','F','G','H'
+        $numbers='1','2','3','4','5','6'
+        $vloc = $vloc + $letters[$row] + $numbers[$col+1] +')'
+      endif
+      sImSaMpLe[3]=$vloc
+      sImSaMpLe[6] = 'Sample in magnet is from tray location '+$vloc
+      expactive:$isactive
+      if ($isactive) then
+        sImSaMpLe[5] = sImSaMpLe[5]+ '_active'
+      endif
+    endif
+  endif
+  if (sImSaMpLe[5] = 'off') then
+    sImSaMpLe[8] = ''
+  elseif (traymax = 97) then
+    sImSaMpLe[8] = 'Input tray locations as, for example, 6, B3, T2 C6, t1 d4, or g6'
+  else
+    sImSaMpLe[8] = 'Input tray locations as integer'
+  endif
+
+  exists('sim.xml','templates/vnmrj/interface'):$e,$xmlfile
+
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/appdir.html', \
+   'cancel:'+$0+'(`cancel`)', 'ok:'+$0+'(`ok`)', \
+   'title:Sample in Magnet')
+
+elseif ($arg = 'ok') then
+  format(sImSaMpLe[1],'isreal'):$e1
+  $label1=sImSaMpLe[1]
+  if (not $e1) and (traymax=97) then
+    {$0}('vloc',sImSaMpLe[1]):$e1
+    if ($e1) then
+       format($e1,0,0):sImSaMpLe[1]
+    endif
+  endif
+  if ($e1) then
+    format(sImSaMpLe[1],0,0):$loc1
+    if ($loc1<1) then
+      if (traymax=50) or (traymax=100) then
+        if ($loc1<0) then
+          $e1=0
+        endif
+      else
+        $e1=0
+      endif
+    elseif (traymax=97) and ($loc1>96) then
+      $e1=0
+    elseif ($loc1>traymax) then
+      $e1=0
+    endif
+  endif
+  format(sImSaMpLe[2],'isreal'):$e2
+  $label2=sImSaMpLe[2]
+  if (not $e2) and (traymax=97) then
+    {$0}('vloc',sImSaMpLe[2]):$e2
+    if ($e2) then
+       format($e2,0,0):sImSaMpLe[2]
+    endif
+  endif
+  if ($e2) then
+    format(sImSaMpLe[2],0,0):$loc2
+    if ($loc2<1) then
+      $e2=0
+    elseif (traymax=97) and ($loc2>96) then
+      $e2=0
+    elseif ($loc2>traymax) then
+      $e2=0
+    endif
+  endif
+  if ($e1 and (sImSaMpLe[7]<>'y') ) then
+     write('line3','Checkbox must be selected in order to reassign sample in magnet')
+  elseif ($e2) and (sImSaMpLe[4]='replace') then // change sample
+    if ($e1) then
+      sethw('loc',sImSaMpLe[1],'nowait'):$e
+      write('line3','Reassigning sample in magnet to %s',$label1)
+      sImSaMpLe[3]=sImSaMpLe[1]
+    endif
+    if (sImSaMpLe[3]='unknown') then
+      write('line3','Cannot change sample with unknown sample in magnet')
+    else
+      $seq=seqfil
+      setvalue('seqfil','s2pul')
+      loc=$loc2 change
+      setvalue('seqfil',$seq)
+      write('line3','Putting sample %s into magnet',$label2)
+    endif
+  elseif (sImSaMpLe[2]<>'') and (sImSaMpLe[4]='replace') then
+    write('line3',`Illegal sample '%s' to put into magnet`,$label2)
+  elseif (sImSaMpLe[4]='remove') then // remove sample
+    if ($e1) then
+      sethw('loc',sImSaMpLe[1],'nowait'):$e
+      write('line3','Reassigning sample in magnet to %s',$label1)
+      sImSaMpLe[3]=sImSaMpLe[1]
+    endif
+    if (sImSaMpLe[3]='unknown') then
+      write('line3','Cannot remove unknown sample from magnet')
+    else
+      $seq=seqfil
+      setvalue('seqfil','s2pul')
+      loc=0 change
+      setvalue('seqfil',$seq)
+      write('line3','Removing sample %s from magnet',sImSaMpLe[3])
+    endif
+  elseif ($e1) then // assign sample
+    sethw('loc',sImSaMpLe[1],'nowait'):$e
+    if (traymax = 97) then
+      if ($loc1>48) then
+        $label = 'Tray 2: '
+        $loc1 = $loc1 - 48
+      else
+        $label = 'Tray 1: '
+      endif
+      $row = trunc (($loc1+5) / 6)
+      $col = ($loc1+5) % 6
+      $letters = 'A','B','C','D','E','F','G','H'
+      $numbers='1','2','3','4','5','6'
+      $label = $label + $letters[$row] + $numbers[$col+1] + '('+sImSaMpLe[1]+')'
+      sethw('robot','displaymessage 1 '+$label,'nowait'):$e
+    else
+      $label=sImSaMpLe[1]
+    endif
+    write('line3','%s defined in magnet',$label)
+  elseif (sImSaMpLe[1] <> '') then
+    write('line3',`Illegal sample '%s' for sample in magnet`,sImSaMpLe[1])
+  endif
+  destroy('sImSaMpLe'):$e
+elseif ($arg = 'cancel') then
+  destroy('sImSaMpLe'):$e
+elseif ($arg = 'vloc') then
+  $zone = 0
+  $col=''
+  $row=''
+  $tray=''
+  substr($2,1,1):$tray
+  if ($tray = 'T') or ($tray = 't') then
+    substr($2,2,1):$tray
+    if ($tray = '2') then
+      $zone = 48
+    endif
+    substr($2,3,1):$row
+    if ($row = ' ') then
+      substr($2,4,1):$row
+      substr($2,5,1):$col
+    else
+      substr($2,4,1):$col
+    endif
+  else
+    substr($2,1,1):$row
+    substr($2,2,1):$col
+  endif
+  if ($col >= '1') and ($col <= '6') then
+    format($col,'lower'):$icol
+  else
+    return(0)
+  endif
+  format($row,'upper'):$row
+  if ($row < 'A') or ($row > 'H') then
+    return(0)
+  endif
+  $letters = 'A','B','C','D','E','F','G','H'
+  $i = 1
+  while ($i <= 8) do
+    if ($row = $letters[$i]) then
+      return($icol + ($i-1)*6 + $zone)
+    endif
+    $i = $i + 1
+  endwhile
+  return(0)
+endif
+return(1)

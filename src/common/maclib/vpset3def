@@ -1,0 +1,66 @@
+"macro vpset3def"
+"setup 3 default viewports - called from popup or initial menu"
+
+$action='setup3'
+if $#>0.5 then $action=$1 endif  "$1='init'"
+
+exists('jviewportlabel','parameter','global'):$e
+if $e<0.5 then
+  create('jviewportlabel','string','global')
+  setprotect('jviewportlabel','set',65808,'global')
+  if appmode='imaging' then
+    jviewportlabel='"   Plan & Start   "','" Current Scan "','"  Review  "','Review2'
+  else
+    jviewportlabel='1','2','3','4'
+  endif
+endif
+exists('jviewports','parameter','global'):$e
+if $e<0.5 then
+  create('jviewports','real','global')
+  setprotect('jviewports','set',65808,'global')
+  jviewports=1,1,1,1,1,2,3,4
+endif
+"jviewports = number of viewports"
+"             flag to switch layout with viewport"
+"             rows"
+"             columns"
+"             copy of jcurwin[1-4]"
+
+if ($action = 'setup3') then
+  jviewports[1]=3
+  if appmode='imaging' then
+    jviewportlabel[1]='"   Plan & Start   "'
+    jviewportlabel[2]='" Current Scan "'
+    jviewportlabel[3]='"  Review  "'
+    jviewportlabel[4]='Review2'
+  else
+    jviewportlabel[1]='1'
+    jviewportlabel[2]='2'
+    jviewportlabel[3]='3'
+    jviewportlabel[4]='4'
+  endif
+endif
+
+"check workspace numbers"
+$i=0
+repeat
+  $i=$i+1
+  if (jcurwin[$i] < 0.5) then
+    $try=1
+    $j=0
+    repeat
+      $j=$j+1
+      if ($j <> $i) then
+        if ($try = jcurwin[$j]) then
+          $try=$try+1
+          $j=0
+        endif
+      endif
+    until ($j >= jviewports[1])
+    jcurwin[$i] = $try
+  endif
+until ($i >= jviewports[1])
+
+if ($action = 'setup3') then
+  vnmrjcmd('viewport', 'default')
+endif

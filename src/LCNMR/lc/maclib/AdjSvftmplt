@@ -1,0 +1,26 @@
+"macro AdjSvftmplt"
+// A lcpack unique macro to set svftmplt
+//  Parses the svftmplt parameter and makes sure
+//   that loop# or peak# is included in the template
+
+$str1='' $str2=''
+if (lcexp='stop') or (lcexp='enter') then
+	$str1='peak$lcpeak$' $str2='loop$lcpeak$'
+elseif (lcexp='enterA') then
+        $str1='loop$lcpeak$' $str2='peak$lcpeak$'
+endif
+if ($str1='') or ($str2='') then return endif
+
+$s1='' $s2=''
+strstr(svftmplt,$str1):$ret
+strstr(svftmplt,$str2+'_'):$ret2,$s1,$s2
+
+if ($ret=0) then
+   if ($ret2) then
+	svftmplt=$s1+$str1+'_'+$s2
+   else
+	svftmplt=$str1+'_'+svftmplt
+   endif
+else
+   if ($ret2) then svftmplt=$s1+$s2 endif
+endif

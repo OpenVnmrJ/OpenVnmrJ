@@ -1,0 +1,27 @@
+"macro combi_preproc"
+" ******************************************************"
+" combi_preproc(ftflag) - preprocess data of a plate "
+" ******************************************************"
+if $# > 0 then $ftflag=$1
+ else $ftflag='y' endif
+findwin(addsubexp):$winno   "find addsub exp"
+$wincur=curwin[1]
+if $winno = 0 then
+ write('error','No window available for summed spectra!')
+else if $winno < 0 then
+  $winno = -$winno
+ endif
+endif
+jexp:$cur
+if $ftflag='y' then wft endif
+clradd
+$index=0
+repeat
+  $index=$index+1
+  select($index)
+  bc(5) dc ds
+  spadd(0.01)
+until $index = arraydim
+jwin($winno) jaddsub ds dscale(0)
+write('graphics',10,wc2max-10,'Sum of all spectra')
+jwin($wincur)

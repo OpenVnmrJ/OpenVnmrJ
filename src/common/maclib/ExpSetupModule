@@ -1,0 +1,622 @@
+"macro ExpSetupModule"
+//  The ExpModules exists ONLY in userdir
+//  Future options may include other appdirs and
+//    subdirectory for each operator
+//  $1='isok' - checks the validity of an exepriment module
+//		and returns it pathname to the calling macro
+//  $1='make' - makes a default experiment module
+//  $1='setup' - Executes a experiment module
+//  ONLY certain apptypes and experiments are approved for this type
+//     of setup.  Edit the adm/walkupadm/approvedExpModule list as
+//	appropriate
+
+// Approved list of apptypes....
+
+$dum='' $devnull=''
+
+getfilepath('approvedExpModule','adm/walkupadm'):$ok,$alpath
+$appAppType='' $appExp='' $s1=''
+if ($ok) then
+    readfile($alpath,'$s1','$appAppType','apptype','local')
+    readfile($alpath,'$s1','$appExp','experiment','local')
+endif
+
+if ($# < 1) then $1='make' endif
+
+$submit=0 $active=0
+//is_submitmode:$submit
+expactive:$active
+$macrotag=$0+'_version_20151217'
+
+IF ($1='isok') THEN
+//  If the probe parameter is an empty string, don't make the module
+    if probe='' then return(0) endif
+// If Studyprobe exists then  there is no telling
+//  What could be defined by the user for this study
+//  Under such circumstances, continue the old-fashioned way
+    $probe=probe
+    substr($probe,'basename'):$probe
+    Studyprobe('is',$probe):$ok
+    if ($ok) then return(0,'','') endif
+// If probe file is not specified nor found, continue
+//   the old-fashioned way
+    getProbePath(probe):$pex,$ppath
+    if not ($pex) then return(0,'','') endif
+
+    teststr('$appExp',$2,'local'):$ok
+    if ($ok=0) then return(0,'','') endif
+
+    $apptype='' $REQexp='' $ACQtime=0
+    getEXPinfo($2):$REQexp,$ACQtime,$apptype
+    if ($apptype='') then return(0,'','') endif
+    teststr('$appAppType',$apptype,'local'):$ok
+    if ($ok=0) then return(0,'','') endif
+   
+    $rights=0
+    if ($submit<0.5) and ($active<0.5) then
+    	operights('cansetpreferences'):$rights
+    endif
+
+    $update=0
+
+    if ($# < 3) then $3='' endif
+    if ($3='noupdate') then $rights=0 endif
+
+    $ok=0
+// First check for unique operator specific directory
+// This is needed in the event different operators have
+//    different appdirs with different user macros
+//******Turned OFF
+//    $rtppath=userdir+'/ExpModules/'+operator+'/'+$2
+//    exists($rtppath,'file'):$ok
+
+// Check for owner specific directory
+//*****Turned OFF
+//    if ($ok=0) then
+//    	$rtppath=userdir+'/ExpModules/'+owner+'/'+$2
+//    	exists($rtppath,'file'):$ok
+//    endif
+
+// Check for nonspecific directory
+//  This is only active scenario for the time being.
+    if ($ok=0) then
+    	$rtppath=userdir+'/ExpModules/'+$2
+    	exists($rtppath,'file'):$ok
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then return(0,'','') endif
+
+//  check for modules parameter in parlib
+    $oldmodules=''
+    exists($2,'parlib'):$rtpex,$rtppar
+    if not $rtpex then return(0,'','') endif
+    fread('','usertree')
+    fread($rtppar+'/procpar','usertree')
+    exists('modules','parameter','usertree'):$rtpex
+    if not $rtpex then fread('','usertree') return(0,'','') endif
+    getvalue('modules','usertree'):$oldmodules
+    fread('','usertree')
+
+//  If expmodule exists, read the values of SysIDkey, tn, dn, apptype
+//    More parameter can be included here if need be
+    $params='SysIDkey','tn','dn','apptype'
+    $parsize=size('$params')
+    $i=1
+    repeat
+	$par1='$'+$params[$i]
+	{$par1}=''
+	$i=$i+1
+    until $i > $parsize
+    if ($ok) then
+	fread('','usertree')
+	fread($rtppath,'usertree')
+	$i=1
+	repeat
+	    $par1='$'+$params[$i]
+	    getvalue($params[$i],'size','usertree'):$size
+	    if ($size>0.5) then
+		$x=1
+		repeat
+		    getvalue($params[$i],$x,'usertree'):{$par1}[$x]
+		    $x=$x+1
+		until $x>$size
+	    endif
+	    $i=$i+1
+	until $i > $parsize
+	fread('','usertree')
+    endif
+
+// Does the module have SysIDkey?
+    $size=size('$SysIDkey')
+    if ($size<1.5) then
+	$ok=0
+    	if ($ok=0) and ($rights) then $update=1 endif
+    	if ($ok=0) and ($update=0) then return(0,'','') endif
+    endif
+// Compare the systemID attributes with current system configuration
+//    Check macrotag
+  if ($ok) then
+    teststr('$SysIDkey','macroTag','local'):$ok
+    if ($ok) then
+	$val=$SysIDkey[$ok+1]
+	if ($val<>$macrotag) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+	return(0,'','')
+    endif
+  endif
+//    Check systemname
+  if ($ok) then
+    teststr('$SysIDkey','systemname','local'):$ok
+    if ($ok) then 
+	$val=$SysIDkey[$ok+1]
+	if ($val<>systemname) then $ok=0 endif 
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+//    Check rev
+  if ($ok) then
+    teststr('$SysIDkey','rev','local'):$ok
+    if ($ok) then 
+	$val=$SysIDkey[$ok+1]
+	if ($val<>rev) then $ok=0 endif 
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+//    Check patchlevel
+  if ($ok) then
+    $curpatch=''
+    exists(systemdir+'/adm/patch','directory'):$e
+    if ($e) then
+      shell('(ls -1dt '+systemdir+'/adm/patch/* | head -n 1)'):$curpatch
+    endif
+    teststr('$SysIDkey','patchlvl','local'):$ok
+    if ($ok) then 
+	$val=$SysIDkey[$ok+1]
+	if ($val<>$curpatch) then $ok=0 endif 
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+//	Check numrfch
+  if ($ok) then
+    teststr('$SysIDkey','numrfch','local'):$ok
+    if ($ok) then
+        $val=$SysIDkey[$ok+1]
+	$val2='' format(numrfch,0,0):$val2
+        if ($val<>$val2) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+//	Check numrcvrs
+  if ($ok) then
+    teststr('$SysIDkey','numrcvrs','local'):$ok
+    if ($ok) then
+        $val=$SysIDkey[$ok+1]
+        $val2='' format(numrcvrs,0,0):$val2
+        if ($val<>$val2) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+
+//      Check modules
+  if ($ok) then
+    teststr('$SysIDkey','modules','local'):$ok
+    if ($ok) then
+        $val=$SysIDkey[$ok+1]
+        $val2=$oldmodules
+	string2array($val):$val
+	array2string($val):$val
+	string2array($val2):$val2
+	array2string($val2):$val2
+	strstr($val,$val2):$ok
+//        if $val<>$val2 then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+
+//  Check probe updates
+  if ($ok) then
+    teststr('$SysIDkey','probeName','local'):$ok
+    if ($ok) then
+	$val=$SysIDkey[$ok+1]
+	if ($val<>probe) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+  if ($ok) then
+    if ($tn='') then $ok=0 endif
+    if ($ok) then
+    	teststr('$SysIDkey','probe'+$tn+'date','local'):$ok
+    endif
+    if ($ok) then
+	$val=$SysIDkey[$ok+1]
+	$tndate=''
+	getparam('date',$tn,$ppath):$tndate
+        if ($val<>$tndate) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+  if ($ok) then
+    if ($dn='') then $ok=0 endif
+    if ($ok) then
+    	teststr('$SysIDkey','probe'+$dn+'date','local'):$ok
+    endif
+    if ($ok) then
+        $val=$SysIDkey[$ok+1]
+	$dndate=''
+        getparam('date',$dn,$ppath):$dndate
+        if ($val<>$dndate) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+  if ($ok) then
+    teststr('$SysIDkey','probeProbedate','local'):$ok
+    if ($ok) then
+	$val=$SysIDkey[$ok+1]
+	$probedate=''
+	getparam('date','Probe',$ppath):$probedate
+        if ($val<>$probedate) then $ok=0 endif
+    endif
+    if ($ok=0) and ($rights) then $update=1 endif
+    if ($ok=0) and ($update=0) then
+        return(0,'','')
+    endif
+  endif
+
+  if ($ok) then
+    if (tn=$tn) and ($apptype<>'') and ($apptype<>apptype) then
+        teststr('$SysIDkey',$tn+'pw90','local'):$ok
+    	if ($ok) then
+	    $val=$SysIDkey[$ok+1]
+	    format($val,'isreal'):$real
+	    if ($real) then
+	    	$rval=0 format($val,'lower'):$rval
+	    	if ($rval<>pw90) then
+		    $pw90=0
+		    getparam('pw90',tn,$ppath):$pw90
+		    if ($pw90=pw90) and ($rights) then
+			$update=1
+		    else
+			return(0,'','')
+		    endif
+		endif
+	    else
+		if ($rights) then $update=1 else
+                    return(0,'','')
+		endif
+	    endif
+	else
+	    if ($rights) then $update=1 else
+		return(0,'','')
+	    endif
+    	endif
+    endif
+  endif
+
+// Module needs to be created or updated
+  if ($update) then
+    $ret0=0
+    ExpSetupModule('make',$2,'quiet'):$ret0
+    if ($ret0=0) then return(0,'','') endif
+// Module created/updated.  Reexecute macro for isok
+//   But make sure it doesn't get into infinite loop
+    $ret1=0 $ret2='' $ret3=''
+    ExpSetupModule('isok',$2,'noupdate'):$ret1,$ret2,$ret3
+    return($ret1,$ret2,$ret3)
+  endif
+
+// Get the apptype parameter value
+    $apptype=''
+    rtv($rtppath,'noabort','apptype'):$apptype
+    if ($apptype='') then $apptype='generic_apptype' endif
+
+    return(1,$rtppath,$apptype)
+
+"******************************************************************"
+ELSEIF ($1='make') THEN
+
+    if ($submit) then
+    	write('error','cannot use %s while in submit mode',$0)
+    	return(0)
+    endif
+    if ($active > 0) then
+     	write('error','Current experiment is ACTIVE.  Please join another experiment')
+     	return(0)
+    endif
+//  If the probe parameter is an empty string, don't make the module
+    if probe='' then return(0) endif
+// If Studyprobe exists then  there is no telling
+//  What could be defined by the user for this study
+//  Under such circumstances, don't make the module
+    $probe=probe
+    substr($probe,'basename'):$probe
+    Studyprobe('is',$probe):$ok
+    if ($ok) then return(0) endif
+// If probe file is not specified nor found don't make the module
+    getProbePath(probe):$pex,$ppath
+    if not ($pex) then return(0) endif
+
+    $pars=''
+    if ($# > 1) then $pars=$2 endif
+    if ($# < 3) then $3='' endif
+
+    walkupQ_init
+    tmpsqcopy($0+'_'+$2)
+
+    $rtpdir=userdir+'/ExpModules'
+    exists($rtpdir,'directory'):$direx
+    if ($direx=0) then
+    	mkdir('-p',$rtpdir):$dum
+    endif
+
+    if ($pars='') then $pars=$appExp endif
+ 
+    $curpatch=''
+    exists(systemdir+'/adm/patch','directory'):$e
+    if ($e) then
+      shell('(ls -1dt '+systemdir+'/adm/patch/* | head -n 1)'):$curpatch
+    endif
+    $tndate='' $dndate='' $probedate=''
+    getparam('date','Probe'):$probedate
+ 
+    exists('adaptiveNT','parameter','global'):$antok
+    if ($antok) then
+	$adaptiveNT=adaptiveNT
+	adaptiveNT='n'
+    endif
+
+    $total=size('$pars')
+    $i=1
+    repeat
+      $ok=0
+      if ($pars[$i]<>'') then
+	teststr('$appExp',$pars[$i],'local'):$ok
+      endif
+      if ($ok) then
+         $apptype='' $reqexp='' $REQexp=''
+         getEXPinfo($pars[$i]):$REQexp,$ACQtime,$apptype
+         if ($apptype='') then $ok=0 else 
+             teststr('$appAppType',$apptype,'local'):$ok
+         endif
+      endif
+      if ($ok) then
+        if ($apptype<>'std1D') then
+            string2array($REQexp[1]):$reqexp
+            $reqsize=size('$reqexp')
+            $reqexp=$reqexp[$reqsize]
+        endif
+	if ($reqexp='') then
+//   There is no starting experiment, so it must be
+//   either std1D or generic_apptype.  The entire
+//   parameter set is saved as the module
+            cpsetup($pars[$i],$apptype)
+            flush
+	    fsave($rtpdir+'/'+$pars[$i],'current')
+	else
+//   There is a specific starting experiment, save the
+//   difference as a module for conversion
+            $par1=userdir+'/persistence/'+$0+'par1'
+            $par2=userdir+'/persistence/'+$0+'par2'
+            $par3=userdir+'/persistence/'+$0+'par3'
+
+	    exec($reqexp)
+	    flush
+	    fsave($par1,'current')
+            cpsetup($pars[$i],$apptype)
+	    flush
+	    fsave($par2,'current')
+
+//   Always include tn/dn/apptype/layout parameters
+            writeparam($rtpdir+'/'+$pars[$i],'tn dn apptype layout','current')
+//   Include gain only if autogain is ON
+	    on('gain'):$gainon
+	    if ($gainon<0.5) then
+		writeparam($rtpdir+'/'+$pars[$i],'gain','current')
+	    else
+		writeparam($par1,'gain','current','add')
+	    endif
+
+//   Always include bip module because this is included
+//   in the std1D apptype as a basic module
+	    $biplist=''
+	    module('arraylist','bip'):$biplist
+	    writeparam($rtpdir+'/'+$pars[$i],'$biplist','current','add')
+
+//   Always include decoupler parameters.  There are reset by
+//   apptype macros anyway from the probe file
+//   It is safe because dn and dndate are always recorded
+	    $decpars='pwxlvl','pwx','pplvl','pp','dpwr','dmf','dmm','dseq','dres','decwave'
+	    $decpars=$decpars,'pwxlvl_cf','pplvl_cf'
+            writeparam($rtpdir+'/'+$pars[$i],'$decpars','current','add')
+
+//   The list option for diffparams may generate a string that could
+//   be too long.  Generate an output file, use readfile/writeparam utility
+
+	    write('reset',$par3)
+	    shell('diffparams '+$par2+' '+$par1+' > '+$par3):$devnull
+	    shell('diffparams -active '+$par2+' '+$par1+' >> '+$par3):$devnull
+	    shell('diffparams -protection '+$par2+' '+$par1+' >> '+$par3):$devnull
+	    $s2='' $parlist=''
+	    readfile($par3,'$parlist','$s2','','local'):$partot
+	    if ($partot) then
+		writeparam($rtpdir+'/'+$pars[$i],'$parlist','current','add')
+	    endif
+	    rm('-f',$par3):$dum
+            rm('-f',$par1):$dum
+            rm('-f',$par2):$dum
+	endif
+
+//  Write a System ID key which includes systemname
+//    rev, and patchlevel
+//  Also record the probe name AND Probedate,tndate,dndate fields
+//    from the probe file. These are used to decide if obs/dec
+//    needs to be updated when these modules are used
+//    Also records pw90 for the tn
+
+	destroy('SysIDkey'):$dum
+	create('SysIDkey','string')
+	setprotect('SysIDkey','on',256)
+	
+        getparam('date',tn):$tndate
+        getparam('date',dn):$dndate
+
+	$x=1
+	SysIDkey[$x]='macroTag',$macrotag $x=$x+2
+	SysIDkey[$x]='systemname',systemname $x=$x+2
+	SysIDkey[$x]='patchlvl',$curpatch $x=$x+2
+	SysIDkey[$x]='rev',rev $x=$x+2
+	$srfch='' format(numrfch,0,0):$srfch
+	SysIDkey[$x]='numrfch',$srfch $x=$x+2
+	$srcvr='' format(numrcvrs,0,0):$srcvr
+	SysIDkey[$x]='numrcvrs',$srcvr $x=$x+2
+        SysIDkey[$x]='modules',modules $x=$x+2
+	SysIDkey[$x]='probeName',probe $x=$x+2
+	SysIDkey[$x]='probe'+tn+'date',$tndate $x=$x+2
+	SysIDkey[$x]='probe'+dn+'date',$dndate $x=$x+2
+	SysIDkey[$x]='probeProbedate',$probedate $x=$x+2
+	$val='' format(pw90,'lower'):$val
+	SysIDkey[$x]=tn+'pw90',$val $x=$x+2
+	writeparam($rtpdir+'/'+$pars[$i],'SysIDkey','current','add')
+
+//  Report results
+        if ($3<>'quiet') then
+            write('line3','%s/%s created',$rtpdir,$pars[$i])
+	endif
+      endif
+      $i=$i+1
+    until $i > $total  
+    if ($antok) then
+	adaptiveNT=$adaptiveNT
+    endif
+    clear(2)
+    tmpsqreturn($0+'_'+$2)
+    return(1)
+
+"*************************************************************************"
+ELSEIF ($1='setup') THEN
+
+    $rtppath=$2
+    exists($rtppath,'file'):$parex
+    if ($parex=0) then return(0) endif
+
+    substr($rtppath,'basename'):$basename
+    $apptype=$3
+    $oldapptype=$4
+    if ($apptype='') or ($apptype='generic_apptype') then
+	return(0)
+    endif
+
+//  Applicable ONLY for 4 apptypes
+  if (($apptype<>'std1D') and ($apptype<>'homo2D')
+	and ($apptype<>'hetero2D') and ($apptype<>'hetero1D')) then
+	    return(0)
+  endif
+
+//  By default turn on gain.  It will be turned back to OFF
+//    by the module if needed
+    on('gain')
+    exists('AgileNT','maclib'):$antex
+    if ($antex) then AgileNT('savepar') endif
+
+// std1D apptype
+  IF ($apptype='std1D') THEN
+    $solv=solvent
+    fread($rtppath,'current','reset')
+    exists('userfixpar','maclib'):$umex
+    if ($umex) then fixpar endif
+    destroy('SysIDkey'):$dum
+    destroy('probe_'):$dum
+    setlimit('tpwr',17)
+    setlimit('pwxlvl',9)
+    solvent=$solv
+    seqfil=seqfil
+    create('explabel','string'):$e
+    explabel=pslabel
+    setref:$rfldum
+    file='exp'
+    settemp
+
+// non std1D apptype
+  ELSE
+
+    if ($oldapptype=$apptype) then return(0) endif
+    fread('','usertree')
+    fread($rtppath,'usertree')
+
+    $tn='' $dn='' $origapptype=''
+    exists('tn','parameter','usertree'):$parex
+    if ($parex) then getvalue('tn','usertree'):$tn  endif
+    exists('dn','parameter','usertree'):$parex
+    if ($parex) then getvalue('dn','usertree'):$dn  endif
+    exists('apptype','parameter','usertree'):$parex
+    if ($parex) then getvalue('apptype','usertree'):$origapptype endif
+    $d1ex=0 $satdlyex=0
+    exists('d1','parameter','usertree'):$d1ex
+    exists('satdly','parameter','usertree'):$satdlyex
+
+    fread('','usertree')
+//    if ($apptype='homo2D') then $dn=dn endif
+    if (tn<>$tn) or ($dn<>dn) or ($origapptype<>$apptype) then return(0) endif
+
+    $solv=solvent
+    fread($rtppath,'current')
+    destroy('SysIDkey'):$dum
+    solvent=$solv
+    seqfil=seqfil
+    create('explabel','string'):$e
+    explabel=pslabel
+    if ($apptype='homo2D') then sw1=sw endif
+    if not ($d1ex) then d1=1 endif
+    if not ($satdlyex) then satdly=1 endif
+
+    if ($apptype<>'hetero1D') then reff1:$dum endif 
+
+  ENDIF
+
+//  The following are generic
+    sw=sw
+    checkdecshape
+    execpslabel('setup')
+    if plotoption='' then plotoption('default','') endif
+    cpsetNUS('pref')
+    dousermacro($basename)
+    setsrate
+    setddrtc:$dum
+    if ($antex) then AgileNT('readpar') AgileNT:$dum endif
+    dousermacro('cpsetup')
+
+    if (gcflg='n') then
+   	EXPtime:ACQtime
+   	dps
+    endif
+    newdg
+    return(1)
+ENDIF

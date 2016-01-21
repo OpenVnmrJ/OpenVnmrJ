@@ -1,0 +1,336 @@
+"macro qest"
+" qest - calculate concentration estimates based on calibrations "
+
+/*
+  qestNum     holds the number of nuclei associated with an integral.
+  qestAve     tells whether or not to use that integral in the averaging
+  qestSummary holds a text line for the panel to display
+  qestGuess   holds the integral guessing
+  qestSolv    tells whether a signal belongs to the solvent or not
+  qestAcc     is the accuracy in percent for integral guessing
+  qestInfo    holds information for the panel
+  qestInfo[1] is the scaling factor to convert liamp into a concentration.
+      conc. = liamp[i] * qestInfo[1] / fn / qestNum[i]
+  qestInfo[2] is the current active integral.
+  qestInfo[3] is the active integral number, based on intmod='partial' or not
+  qestInfo[4] is the number of integrals to average.
+  qestInfo[5] is the average
+  qestInfo[6] is the standard deviation
+ */
+
+$op='init'
+if ($#) then
+  $op=$1
+endif
+nli
+$nsize=size('liamp')
+if $nsize>1 then $qsize=trunc($nsize/2) else $qsize=1 endif
+format(solvent,'lower'):$solv
+
+if ($op = 'init') then
+  create('qestNum','real','current',1):$e
+  setgroup('qestNum','display')
+  create('qestAve','string','current','n'):$e
+  setgroup('qestAve','display')
+  create('qestSolv','string','current',''):$e
+  setgroup('qestSolv','display')
+  create('qestSummary','string','current',''):$e
+  setgroup('qestSummary','display')
+  create('qestGuess','real','current',1):$e
+  setgroup('qestGuess','display')
+  create('qestAcc','real','current',10):$e
+  setgroup('qestAcc','display')
+  create('qestInfo','real','current',0):$e
+  setgroup('qestInfo','display')
+  create('qestIntW','real','current',25):$e
+  setgroup('qestIntW','display')
+  qEstimate:$ins,$insref
+  qestInfo[1]= $ins / $insref
+  if (qestInfo[1] < 0.0) then
+    qestInfo[1] = 0.0
+  endif
+  qestInfo[2]=1
+  qestInfo[3]=1
+
+  $i = 0
+  setvalue('qestNum',1,0)
+  setvalue('qestAve','n',0)
+  setvalue('qestSolv','',0)
+  while ($i < $qsize) do
+    $i = $i + 1
+    setvalue('qestNum',1,$i)
+    setvalue('qestAve','n',$i)
+    setvalue('qestSolv','',$i)
+  endwhile
+
+  qest('reset')
+  exists('qest.xml','templates/vnmrj/interface'):$e,$path
+  vnmrjcmd('popup', 'mode:modeless', 'file:'+$path, 'rebuild:yes', \
+   'location:topMenuBar', \
+   'title:Concentration')
+
+elseif ($op = 'reset') then
+  if qestInfo[2]>$qsize then qestInfo[2]=1 endif
+  $i=1
+  repeat
+    qestAve[$i]='n'
+    qestSolv[$i]=''
+    qestNum[$i]=1
+    $i=$i+1
+  until $i=$qsize+1
+  qest('show')
+
+elseif ($op = 'guess') then
+
+  qestGuess=1
+  qest('reset')
+
+  if $qsize=1 and $nsize=1 then
+    write('line3','NOTE: No integrals set yet - doing all automatic estimation!')
+    thadj(200):$dum
+    pickpeaks:$dum
+    bc
+    thadj
+    pickpeaks:$dum
+    if intmod<>'partial' then intmod='partial' endif
+    isadj
+    qest('guess')
+    return
+  endif
+
+  sort('qestGuess','r'):$qestOrder,$qestGuessSorted  // Sort by integral size, largest 1st
+
+  IF $qsize=1 then
+    $qestGav=$qestGuessSorted[1]
+    qestAve[1]='y'
+    qestNum[1]=2           // Set integral to 2
+    write('line3','NOTE: One integral only -> setting # of nuclei to 2, may be wrong!')
+  ELSE
+
+  $q=1 $Qmin=1
+  repeat   // Start with 1 proton being the lowest possible divider - if not, try with 2
+  $i=1 $qestGmaxN=0 $qestGav=0 $qestGmaxN=1,1
+  repeat   // Start with largest number as denominator, then go down in list
+    $j=1 $qestGtmp=1 $qestGmax=1 
+    if qestSolv[($qestOrder[$i])]='' then
+    repeat   // Start with 2nd largest number and divide denominator by it, then go down in list
+    if $qestGuessSorted[$j+$i]>0 and qestSolv[($qestOrder[$i+$j])]='' then
+      $div[$j]=$qestGuessSorted[$i]/$qestGuessSorted[$i+$j]
+    else
+      $div[$j]=-1   // Exclude negative and solvent peaks
+    endif
+    $k=1
+    repeat             // Check if factor $div is lying within accuracy
+      if $div[$j] < $k+$k*qestAcc/100 and $div[$j] > $k-$k*qestAcc/100 then
+        $qestGtmp=$k
+      endif
+    $k=$k+1
+    until $k=6
+    if $qestGtmp > $qestGmax then
+      $qestGmax=$qestGtmp
+      $qestGmaxN=$i,$i+$j
+      $qestGav=0
+    endif  // largest divisor
+
+    if ($qestGtmp = $qestGmax) and ($div[$j]>0 and $div[$j]<6.4) then  // max. 6 protons
+      if $qestGav=0 then
+	$qestGav=$qestGuessSorted[$j+$i]
+      else
+	$qestGav=($qestGav+$qestGuessSorted[$j+$i])/2
+      endif
+    endif
+    $j=$j+1
+  until ($j=$qsize-$i+1) or ($div[$j-1]>6.4)
+  endif
+  $i=$i+1
+  until ($i=$qsize or (($qestGuessSorted[$i-1]/$qestGmax < $qestGav*(1+qestAcc/2/100)) and ($qestGuessSorted[$i-1]/$qestGmax > $qestGav*(1-qestAcc/2/100))))
+  if $qestGmaxN[1]=$qestGmaxN[2] and $q=1 then  // Try if min. # nuclei is 2 instead of 1
+    write('line3','NOTE: Only one reliable integral -> trying with min. 2 nuclei')
+    $Qmin=2
+  else
+    $q=2
+  endif
+  $q=$q+1
+  until ($q>2)
+  if $qestGmaxN[1]=$qestGmaxN[2] then  // Neither 1 nor 2 min. nuclei, giving up...
+    write('line3','NOTE: All integrals the same or only one reliable integral -> setting # of nuclei to 2, may be wrong!')
+                                       // 
+  endif
+
+  $i=1
+  $max=$qestGuessSorted[$qestGmaxN[1]]
+  $min=$qestGav
+  $Gnum=0
+  if ($min = 0) then
+    write('line3','Unable to guess integrals')
+    return
+  endif
+  repeat
+  $Gnum[$i]=$qestGuessSorted[$i+$qestGmaxN[1]-1]/$min*$Qmin
+    $k=1
+    repeat
+      if ($Gnum[$i] < $k+$k*qestAcc/100) and ($Gnum[$i] > $k-$k*qestAcc/100) and qestSolv[($qestOrder[$i+$qestGmaxN[1]-1])]<>'X' then
+        qestAve[($qestOrder[$i+$qestGmaxN[1]-1])]='y'
+        qestNum[($qestOrder[$i+$qestGmaxN[1]-1])]=$k  // factory lying within accuracy
+      endif
+    $k=$k+1
+    until $k=6
+    $i=$i+1
+  until $i=$qsize-$qestGmaxN[1]+2
+  ENDIF
+
+  qest('show')
+
+
+elseif ($op = 'select') then
+  if (qestInfo[2] > $qsize) then
+    qestInfo[2] = 1
+  endif
+  $step = 1
+  if ($2='first') then
+    qestInfo[2]= $step
+  elseif ($2 = 'last') then
+    qestInfo[2]= $qsize
+  elseif ($2 = 'prev') then
+    if (qestInfo[2] >  $step) then
+      qestInfo[2]=qestInfo[2]- $step
+    endif
+  elseif ($2 = 'next') then
+    if qestInfo[2] < $qsize then
+      qestInfo[2]=qestInfo[2]+ $step
+    endif
+  endif
+  qestInfo[3]= trunc(qestInfo[2]/ $step)
+  qestInfo[4] = 0
+  qestInfo[5] = 0
+  qestInfo[6] = 0
+  cr=(lifrq[qestInfo[2]*2]+lifrq[qestInfo[2]*2-1])/2 + rfp - rfl
+  qest('show')
+
+elseif ($op = 'average') then
+  if ($# = 1) then
+    return(qestAve[qestInfo[2]]='y')
+  else
+    qestAve[qestInfo[2]] = $2
+    qest('show')
+  endif
+
+elseif ($op = 'solvent') then
+  if ($# = 1) then
+    return(qestSolv[qestInfo[2]]='X')
+  else
+    qestSolv[qestInfo[2]] = $2
+    qest('show')
+  endif
+
+elseif ($op = 'show') then
+
+  $nsize=size('liamp')
+  $qsize=trunc($nsize/2)
+  if $nsize<0.5 then
+    return
+  endif
+  if (size('qestNum') <> $qsize) then
+    $i = 0
+    setvalue('qestNum',1,0)
+    setvalue('qestAve','n',0)
+    setvalue('qestSolv','',0)
+    while ($i < $qsize) do
+      $i = $i + 1
+      setvalue('qestNum',1,$i)
+      setvalue('qestAve','n',$i)
+      setvalue('qestSolv','',$i)
+    endwhile
+  endif
+
+  $file=curexp+'/qest.out'
+  write('reset',$file)
+  $ch=''
+  substr(axis,1,1):$ch
+  if $ch='p' then
+    $title='Integral start (ppm)     end      Nuclei  Concentration (mM)  Average  Solvent'
+  else
+    $title='Integral start (Hz)      end      Nuclei  Concentration (mM)  Average  Solvent'
+  endif
+  write('file',$file,'%s',$title)
+
+  $downsamp = 1
+  on('downsamp'):$dson
+  if $dson>0.5 then $downsamp = downsamp endif
+
+  "init"
+  $rflrfp = rfl - rfp
+  $ifrq = 1.0 / reffrq
+  $start = (sp + wp) / $downsamp
+  if $ch='p' then $start = $start * $ifrq endif
+
+  "number conversion, write to file"
+  $n=1
+  $aves=0
+  $nucs=0
+  $sum=0
+  $sum2=0
+  $cmd=''
+  getsolvinfo($solv):$solvppm
+  $solvdelta=0
+  if $solv='dmso' then $solvppm=$solvppm,3.3 endif
+  if $solv='d2o' or $solv='d2o_10' or $solv='dmso' then $solvdelta=0.1 endif
+
+  repeat
+    $m=trunc($n/2)
+    $frq = (lifrq[$n] - $rflrfp)
+    if $ch='p' then $frq = $frq * $ifrq endif
+    $frq = $frq / $downsamp
+    if $ch='p' then
+      if ($frq < sp * $ifrq/$downsamp) then $frq = sp * $ifrq/$downsamp endif
+    else
+      if ($frq < sp/$downsamp) then $frq = sp/$downsamp endif
+    endif
+    $amp = liamp[$n] * qestInfo[1] / fn / qestNum[$m]
+    if ($n/2 = $m) then qestGuess[$m]=$amp endif         // Prepare for Guessing
+    $star = ' '
+    if ($m = qestInfo[2]) then
+      $star = '*'
+    endif
+    $doave = 1
+
+    if ($n/2 = $m) then
+      $s=1
+      repeat
+        if $ch='p' and ($frq-$solvdelta < $solvppm[$s]) and ($start+$solvdelta > $solvppm[$s]) then qestSolv[$m]='X' qestAve[$m]='n' endif
+      $s=$s+1
+      until $s=size('$solvppm')+1
+      write('file',$file,'%s %4d  %10g  %10g  %6g   %10.3f %14s %3s %4s', \
+             $star,$m,$start,$frq,qestNum[$m], $amp,qestAve[$m],$star,qestSolv[$m])
+      $start = $frq
+    else
+      $start = $frq
+      $doave = 0
+    endif
+    if ($doave=1) and (qestAve[$m]='y') then
+      $aves= $aves+1
+      $nucs= $nucs+qestNum[$m]
+      $sum= $sum+ $amp
+      $sum2= $sum2+ $amp*$amp
+    endif
+    $n=$n+1
+  until ($n=$nsize+1)
+  qestInfo[4] = $aves
+  qestInfo[5] = $sum
+  qestInfo[6] = 0
+  if (qestInfo[1]=0) then
+    qestSummary='No quantification calibrations in the probe file'
+  elseif ($aves=0) then
+    qestSummary='No integrals are averaged.'
+  elseif ($aves=1) then
+    write('line3','Using %d integral.  Concentration: %g mM', \
+          $aves,$sum):qestSummary
+  else
+    qestInfo[5] = $sum / $aves
+    $ave = $sum / $aves
+    qestInfo[6]= sqrt($sum2 + $ave*$ave*$aves - 2*$ave*$sum) / ($aves-1)
+    write('line3','Using %d integrals. Concentration: %g +- %g mM', \
+          $aves,$ave,qestInfo[6]):qestSummary
+  endif
+
+endif

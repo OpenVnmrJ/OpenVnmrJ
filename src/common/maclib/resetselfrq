@@ -1,0 +1,36 @@
+"macro resetselfrq"
+"**********************************************************************"
+" resetselfrq - reset all selective frequency information  "
+"**********************************************************************"
+
+if ($# < 1) then $1='' endif
+
+exists('selfrqc','parameter'):$ex
+if ($ex) then selfrqc=0 off('selfrqc') endif
+
+exists('selfrqppm','parameter'):$ex
+if ($ex) then selfrqppm=0 off('selfrqppm') endif
+
+exists('selfrqw','parameter'):$ex
+if ($ex) then selfrqw=0 endif
+
+if ($1='presat') then
+	exists('satfrq','parameter'):$ex
+	if ($ex) then satfrq=tof endif
+
+	exists('pstof','parameter'):$ex
+	if ($ex) then pstof=tof endif
+endif
+if ($1='wet') then
+	exists('wetfrq','parameter'):$ex
+	if ($ex) then wetfrq=0 wetfrq='n' endif
+
+	exists('wetfrqw','parameter'):$ex2
+	if ($ex2) then wetfrqw=0 wetfrqw='n' endif
+
+	exists('wetfrqs','parameter'):$ex
+	if ($ex) then wetfrqs='' endif
+
+	shell('rm -f '+curexp+'/wetinfo'):$dum
+	shell('touch '+curexp+'/wetinfo'):$dum
+endif

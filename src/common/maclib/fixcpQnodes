@@ -1,0 +1,170 @@
+"macro fixcpQnodes"
+// This macro reconciles EXPLIST/LONGLIST if someone
+//    submitted experiments to an existing study, but
+//    did so via 'NewStudy' route instead of ContinueStudy
+//    or EditStudy.
+
+$rbld=0
+if ($#<1) then
+   $ld=cursqexp
+   $ddir=$ld
+   $ndir=''
+   $dmd=$ld+'/macdir'
+   $nmd=''
+else
+   $ld=autodir+'/enterQ.macdir/'+$1
+   $ddir=$ld+'/day'
+   $ndir=$ld+'/night'
+   $dmd=$ddir
+   $nmd=$ndir
+endif
+$md=archivedir+'/'+sample+'/dirinfo/macdir'
+$ldtmp=$ld+'/tmp'
+shell('mkdir '+$ldtmp):$dum
+
+$d=$ddir+'/EXPLIST'
+$dx=$ndir+'/EXPLIST'
+$n=$ndir+'/LONGLIST'
+$nx=$ddir+'/LONGLIST'
+
+exists($d,'file'):$fileex
+exists($n,'file'):$file2ex
+if ($fileex=0) and ($file2ex=0) then return($rbld) endif
+
+$a=$md+'/ACQlist'
+$e=$md+'/EXPLIST'
+$l=$md+'/LONGLIST'
+shell('touch '+$e):$dum
+shell('touch '+$l):$dum
+shell('touch '+$d):$dum
+shell('touch '+$n):$dum
+
+$s0='' $s1='' $s2='' $s3=''
+exists($a,'file'):$aex
+if ($aex) then
+    readfile($a,'$s0','$s1','','local')
+endif
+$s1=''
+readfile($e,'$s1','$s2','','local'):$etot
+readfile($l,'$s2','$s3','','local'):$ltot
+if ($etot=0) and ($ltot=0) and ($aex=0) then return($rbld) endif
+$s1=$s0,$s1,$s2
+
+shell('cp '+$e+' '+$ldtmp):$dum
+shell('cp '+$l+' '+$ldtmp):$dum
+if ($aex) then
+    shell('cp '+$a+' '+$ldtmp):$dum
+endif
+
+$c1='' $c2='' $c3=''
+exists($ddir+'/CMDnodes','file'):$cex
+if ($cex) then
+   readfile($ddir+'/CMDnodes','$c1','$c2','','local')
+endif
+if ($ndir<>'') then
+    exists($ndir+'/CMDnodes','file'):$cex
+    if ($cex) then
+    	readfile($ndir+'/CMDnodes','$c2','$c3','','local')
+	$c1=$c1,$c2
+    endif
+endif
+
+$s2='' $s3='' $s4='' $s5=''
+readfile($d,'$s2','$s3','','local'):$dt
+if ($ndir<>'') then
+    readfile($n,'$s4','$s5','','local'):$nt
+else 
+    $nt=0
+endif
+
+if ($dt) then
+    $tmp=$d+'_tmp'
+    write('reset',$tmp)
+    $i=1
+    repeat
+	teststr('$s1',$s2[$i],'local'):$ok
+	if ($ok) and ($# < 1) then
+	    $sq=''
+	    substr($s3[$i],4):$sq
+	    if ($sq<>'Queued') then $ok=0 endif
+	endif
+	if ($ok=0) then
+	    write('file',$tmp,'%s  %s',$s2[$i],$s3[$i])
+            write('file',$ldtmp+'/EXPLIST','%s  %s',$s2[$i],$s3[$i])
+	else
+	    $rbld=1
+	    $s6='' $s7=$s2[$i]
+	    substr($s3[$i],2):$s6
+	    getcpnode('cp',$ldtmp,$s6):$s7
+	    write('file',$tmp,'%s  %s',$s7,$s3[$i])
+	    write('file',$ldtmp+'/EXPLIST','%s  %s',$s7,$s3[$i])
+	    teststr('$c1',$s2[$i],'local'):$ok2
+	    if ($ok2) then
+		write('file',$ddir+'/CMDnodes','%s',$s7)
+		if ($ndir<>'') then
+			write('file',$ndir+'/CMDnodes','%s',$s7)
+		endif
+	    endif
+	    exists($dmd+'/'+$s2[$i]+'acq','file'):$fex
+	    if ($fex) then
+		shell('mv '+$dmd+'/'+$s2[$i]+'acq '+$dmd+'/'+$s7+'acq'):$dum
+	    endif
+            exists($dmd+'/'+$s2[$i]+'acqpars','file'):$fex
+            if ($fex) then
+                shell('mv '+$dmd+'/'+$s2[$i]+'acqpars '+$dmd+'/'+$s7+'acqpars'):$dum
+            endif
+            exists($dmd+'/'+$s2[$i]+'_Attr','file'):$fex
+            if ($fex) then
+                shell('mv '+$dmd+'/'+$s2[$i]+'_Attr '+$dmd+'/'+$s7+'_Attr'):$dum
+            endif
+	endif
+	$i=$i+1
+    until $i > $dt
+    shell('mv '+$tmp+' '+$d):$dum
+    if ($ndir<>'') then
+        shell('cp '+$d+' '+$dx):$dum
+    endif
+endif
+
+if ($nt) and ($ndir<>'')  then
+    $tmp=$n+'_tmp'
+    write('reset',$tmp)
+    $i=1
+    repeat
+        teststr('$s1',$s4[$i],'local'):$ok
+        if ($ok=0) then
+            write('file',$tmp,'%s  %s',$s4[$i],$s5[$i])
+	    write('file',$ldtmp+'/LONGLIST','%s  %s',$s4[$i],$s5[$i])
+        else
+	    $rbld=2
+            $s6='' $s7=$s4[$i]
+	    substr($s5[$i],2):$s6
+            getcpnode('cp',$ldtmp,$s6):$s7
+            write('file',$tmp,'%s  %s',$s7,$s5[$i])
+	    write('file',$ldtmp+'/LONGLIST','%s  %s',$s7,$s5[$i])
+            teststr('$c1',$s4[$i],'local'):$ok2
+            if ($ok2) then
+                write('file',$ddir+'/CMDnodes','%s',$s7)
+                write('file',$ndir+'/CMDnodes','%s',$s7)
+            endif
+            exists($nmd+'/'+$s4[$i]+'acq','file'):$fex
+            if ($fex) then
+                shell('mv '+$nmd+'/'+$s4[$i]+'acq '+$nmd+'/'+$s7+'acq'):$dum
+            endif
+            exists($nmd+'/'+$s4[$i]+'acqpars','file'):$fex
+            if ($fex) then
+                shell('mv '+$nmd+'/'+$s4[$i]+'acqpars '+$nmd+'/'+$s7+'acqpars'):$dum
+            endif
+            exists($nmd+'/'+$s4[$i]+'_Attr','file'):$fex
+            if ($fex) then
+                shell('mv '+$nmd+'/'+$s4[$i]+'_Attr '+$nmd+'/'+$s7+'_Attr'):$dum
+            endif
+        endif
+        $i=$i+1
+    until $i > $nt
+    shell('mv '+$tmp+' '+$n):$dum
+    shell('cp '+$n+' '+$nx):$dum
+endif
+
+shell('rm -rf '+$ldtmp):$dum
+return($rbld)

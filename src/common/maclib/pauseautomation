@@ -1,0 +1,95 @@
+"macro pauseautomation"
+
+shell('(cat '+autodir+'/enterQ | wc -l)'):$total
+if ($total=0) then return endif
+
+	"Is there a service pause request for today?"
+$date=''
+shell('date +%Y%m%d'):$date
+$servicefile=autodir+'/enterQ.macdir/SERVICE_'+$date
+exists($servicefile,'file'):$eqex
+if ($eqex=0) then return endif
+
+	"Is automation already paused?"
+$autosaflag='none'
+getautosaflag(autodir+'/enterQ'):$autosaflag
+if ($autosaflag<>'none') then return endif
+
+	"Is the service pause file with proper format?"
+$pausetime='' $pausedur=''
+lookup('mfile',$servicefile,'seekcs','SERVICE_PAUSE_TIME:','readline',1):$pausetime
+lookup('mfile',$servicefile,'seekcs','SERVICE_DURATION:','readline',1):$pausedur
+if ($pausetime='') or ($pausedur='') then
+	return
+endif
+
+	"When does service start?"
+$servicestart=0 
+$pshour=0 $psmin=0
+strstr($pausetime,':'):$ret,$pshour,$psmin
+$servicestart=($pshour*3600)+($psmin*60)
+
+$pausehr=0 $pausemin=0
+strstr($pausedur,':'):$ret,$pausehr,$pausemin
+
+	"What time is it now?"
+shell('date +%H'):$hour shell('date +%M'):$minute
+$currenttime=$hour*3600+$minute*60
+
+	"How long will the next sample take?"
+$enterq=autodir+'/enterQ'
+	"Find sampleinfo for next sample"
+   $MACRO='' $dum2=''
+   readfile($enterq,'$dum2','$MACRO','MACRO:','local'):$total
+   $next=0
+   $i=1
+   repeat
+	$macro=$MACRO[$i]
+	strstr($macro,'cpautoQ'):$ret
+	if ($ret) then
+	   $next=$i
+	   $i=$total
+	endif
+	$i=$i+1
+   until $i >$total
+	
+if ($next=0) then return endif  "All entries are refsample entries"
+
+	$macro=$MACRO[$next]
+        $locdir='' $when=''
+        $s1='' $s2='' $s3=''
+        strstr($macro,'\''):$ret,$s1,$s2
+        strstr($s2,'\''):$ret,$locdir,$s1
+        strstr($s1,'\''):$ret,$s3,$s2
+        strstr($s2,'\''):$ret,$when
+
+	$ptime=0 $ntime=0 $dtime=0 $nexttime=0
+	readTtimeQ($enterq+'.macdir/'+$locdir+'/'+$when):$ptime,$dtime,$ntime
+	if $when='night' then $nexttime=$ntime else $nexttime=$dtime endif
+
+        "Is currenttime+nexttime less than servicestart time?"
+if ($currenttime+$nexttime-1 < $servicestart) then
+	return
+endif
+
+"Now it is time to pause automation"
+
+    autosa
+    setautosaflag(autodir+'/enterQ','service')
+
+if (auto='y') then
+	$cmd='write(\'error\',\'Automation Paused for SERVICE\')'
+	xmhaha('sendcmd',$cmd)
+endif
+
+    $resumetime=''
+    $minX=$psmin+$pausemin
+    $hrX=trunc($minX/60)
+    $resumemin=$minX-($hrX*60)
+    $resumehr=$pshour+$pausehr+$hrX
+    $shr='' format($resumehr,0,0):$shr
+    $smin='' format($resumemin,0,0):$smin
+    $resumetime=$shr+':'+$smin
+    atcmd('resumeautomation','cancel')
+    atcmd('resumeautomation',$resumetime)
+    atcmd

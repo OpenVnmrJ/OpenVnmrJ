@@ -1,0 +1,161 @@
+  ghn_co_ca
+
+    3D HNCOCA gradient sensitivity enhanced version.
+
+
+    Correlates Ca(i) with N(i+1), NH(i+1).  Uses constant time evolution for the
+    15N shifts.
+
+    Standard features include square pulses on Cab with first null at 13CO; one
+    lobe sinc pulses on 13CO with first null at Ca; shaka6 composite 180 pulse
+    to simultaneously refocus CO and invert Ca; one lobe sinc pulse to put H2O
+    back along z (the sinc one-lobe is significantly more selective than
+    gaussian, square, or seduce 90 pulses); optional 2H decoupling when CaCb 
+    magnetization is transverse for 4 channel spectrometers.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+    pulse sequence:
+          Yamazaki, Lee, Arrowsmith, Muhandiram, Kay, JACS, 116, 11655 (1994)
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+    shaka6 composite: Chem. Phys. Lett. 120, 201 (1985)
+    TROSY:	    Weigelt, JACS, 120, 10778 (1998)
+ 
+    Based on hncoca_D_sel_pfg_500.c written by LEK et al.
+
+    Revised and improved to a standard format by MRB, BKJ and GG for the 
+    BioPack, January 1997, so as to include calculation of the above 
+    standard features within the pulse sequence code and associated macro.
+    TROSY added Dec 98, based on similar addition to gNhsqc. (Version Dec 1998).
+
+    Made the waltz16 field strength enterable (waltzB1) in Hz.  (GG jan03)
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+    
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+    Constant Time C-13 option -  Eriks Kupce, Oxford, 23.11.2006  
+    Semi-Constant Time option -  Eriks Kupce, Oxford, 26.01.2006, based on  
+                                 example provided by Marco Tonelli at NMRFAM
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghn_co_ca
+
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghn_co_ca may be printed using:
+                                      "printon man('ghn_co_ca') printoff".
+
+    2. Apply the setup macro "ghn_co_ca". This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       At the middle of the t1 period, the 180 degree pulses on CO and 15N are
+       swapped to a 180 degree pulse on Ca, for the first increment of t1, to
+       refocus Ca chemical-shift evolution ensuring a zero first-order phase
+       correction in F1. This is also the case for the 1D spectral check, or
+       for 2D/15N spectra, when ni=0.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 56ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency is shifted to
+       the CO region during the sequence, but phase coherence is not required 
+       after each shift.
+
+    4. The normal 13C 180 degree pulse on CO at the middle of t1 induces a
+       phase shift, which should be field-invariant, and so this phase shift has
+       been calibrated and compensated in the pulse sequence. This phase shift
+       can be checked by setting ni=1 whereby a special 1D method is invoked
+       in which both the 13C CO 180 degree pulse and the simultaneous 15N 180
+       degree pulse are applied just as for all t1 times other than t1=0.  First
+       eliminate the CO pulse by setting pwC9=0 and obtain a 1D spectrum. This
+       spectrum will have reduced intensity compared to ni=0 because of 13Ca
+       chemical-shift evolution during the time of the 180 pulses. If the
+       phase shift is adequately compensated, a second very similar 1D spectrum
+       will be obtained with pwC9=pwC8.  As described in more detail for  
+       ghn_co, a more sensitive comparison of the two spectra with pwC9=0,pwC8 
+       can be obtained with phase=2.  If not adequately compensated, the
+       first increment will be out of phase with all succeeding increments and a
+       zero-order phase-shift will be necessary in F1, which is easily done
+       after the 2D/3D transform. Alternatively, change the calibration by
+       changing the phshift9 parameter in the INITIALIZE VARIABLES section of
+       the code. The pulse pwC9 is automatically reset to its calibrated value
+       (=pwC8) within the pulse sequence code for 3D work and 2D/t1 studies.
+       DO NOT CHANGE pwC8 from its calibrated value.
+
+    5. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.
+
+    6. Another difference from the work of Kay et al is that the phases of the
+       first and last Ca 90 degree pulses are alternated to eliminate artifacts
+       from the CO 180 degree pulse.
+
+    7. tauC (4.5 ms) and timeTN (12.5 ms) were determined for alphalytic 
+       protease and are listed in dg2 for possible readjustment by the user.
+
+    8. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghn_co_ca so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.
+       For ghn_c... type sequences, H1 decoupling during the first timeTN is
+       replaced by a pi pulse at kappa/2 to reduce S/N loss for large molecules
+       during the first TN period.  For these sequences H2O flipback is 
+       achieved with two sinc one-lobe pulses, an additional one just before
+       the SE train, similar to gNhsqc.
+
+    9. Radiation Damping:
+       At fields 600MHz and higher with high-Q probes, radiation damping is a
+       factor to be considered. Its primary effect is in the flipback pulse
+       calibration. Radiation damping causes a rotation back to the +Z axis
+       even without a flipback pulse. Hence, the pwHs pulse often needs to 
+       be reduced in its flip-angle. This can be accomplished by using the
+       parameter tpwrsf. If this value is less than 4095.0 the value of tpwrs
+       (calculated in the psg code) is increased by 6dB, thereby permitting
+       the value of tpwrsf to be optimized to obtain minimum H2O in the 
+       spectrum. The value of tpwrsf is typically lower than 2048 (half-maximum
+       to compensate for the extra 6dB in tpwrs). 
+
+   10. PROJECTION-RECONSTRUCTION experiments:  
+       Projection-Reconstruction experiments are enabled by setting the projection 
+       angle, pra to values between 0 and 90 degrees (0 < pra < 90). Note, that for 
+       these experiments axis='ph', ni>1, ni2=0, phase=1,2 and phase2=1,2 must be used. 
+       Processing: use wft2dx macro for positive tilt angles and wft2dy for negative 
+       tilt angles. 
+       wft2dx = wft2d(1,0,-1,0,0,1,0,1,0,1,0,1,-1,0,1,0)
+       wft2dy = wft2d(1,0,-1,0,0,-1,0,-1,0,1,0,1,1,0,-1,0)
+       The following relationships can be used to inter-convert the frequencies (in Hz) 
+       between the tilted, F1(+)F3, F1(-)F3 and the orthogonal, F1F3, F2F3 planes:       
+         F1(+) = F1*cos(pra) + F2*sin(pra)  
+         F1(-) = F1*cos(pra) - F2*sin(pra)
+         F1 = 0.5*[F1(+) + F1(-)]/cos(pra)
+         F2 = 0.5*[F1(+) - F1(-)]/sin(pra)
+       References: 
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 125, pp. 13958-13959 (2003).
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 126, pp. 6429-6440 (2004).
+       Related:
+       S.Kim and T.Szyperski, J. Amer. Chem. Soc., vol. 125, pp. 1385-1393 (2003).
+       Eriks Kupce, Oxford, 26.08.2004.       

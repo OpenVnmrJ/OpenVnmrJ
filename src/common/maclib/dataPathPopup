@@ -1,0 +1,417 @@
+"macro dataPathPopup"
+" dataNamePopup - handle Data naming "
+/*
+   datapref[1] = Parent directory
+   datapref[2] = Sample/Study Directory
+   datapref[3] = Data file name
+   datapref[4] = Mirror parent directory
+   datapref[5] = Default Parent directory
+   datapref[6] = Default Sample/Study Directory
+   datapref[7] = Default Data file name
+   datapref[8] = Default Mirror parent directory
+   datapref[9] = Require non-null template parameters
+ */
+/*
+   dataprefTmp[1-9] mirror above
+   dataprefTmp[10] expanded dataprefTmp[1]
+   dataprefTmp[11] expanded dataprefTmp[2]
+   dataprefTmp[12] expanded dataprefTmp[3]
+   dataprefTmp[13] flag for fullpath
+   dataprefTmp[14] textmessage value for dataprefTmp[10]
+   dataprefTmp[15] textmessage value for dataprefTmp[11]
+   dataprefTmp[16] textmessage value for dataprefTmp[12]
+ */
+  $xmlfile=curexp+'/tmpdn.xml'
+if ($# = 0) then
+  rights('canEditDataName'):$e
+  if ($e <> 1) then
+    return
+  endif
+  exists('datapref','parameter','global'):$e
+  if (not $e) then
+    create('datapref','string','global')
+    setgroup('datapref','display','global')
+    datapref[1]=''
+    datapref[2]=''
+    datapref[3]=''
+    datapref[4]=''
+    datapref[5]=''
+    datapref[6]=''
+    datapref[7]=''
+    datapref[8]=''
+    datapref[9]='y'
+  endif
+  if (appmode = 'imaging') then
+    datapref[5]='$userdir$/studies'
+    datapref[6]='s_%DATE%'
+    datapref[7]='$pslabel$_'
+  else
+    datapref[5]='$userdir$/data'
+    datapref[6]='$samplename$'
+    datapref[7]='$pslabel$_%DATE%'
+  endif
+  destroy('dataprefTmp'):$e
+  create('dataprefTmp','string'):$e
+  setgroup('dataprefTmp','display')
+  $num = size('datapref')
+  $i = 0
+  while ($i < $num) do
+     $i = $i + 1
+     dataprefTmp[$i] = datapref[$i]
+  endwhile
+  dataprefTmp[$num+1]='','','','','','',''
+  {$0}('set','adir',dataprefTmp[1])
+  {$0}('set','sdir',dataprefTmp[2])
+  {$0}('set','svfname',dataprefTmp[3])
+  dataprefTmp[13]='y'
+
+  exists('adirfile','templates/vnmrj/choicefiles'):$e,$adirpath
+  exists('sdirfile','templates/vnmrj/choicefiles'):$e,$sdirpath
+  exists('svfdirfile','templates/vnmrj/choicefiles'):$e,$svfdirpath
+  rights('unrestrictedSave'):$unrestricted
+  
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="1000 330"  \n\
+    style="Heading2"  \n\
+    label="Save Data Setup"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <button loc="250 30" size="200 25"
+      style="Heading2"
+      label="Set to defaults"
+      vc="`+$0+`('defaults') vnmrjcmd('Modeless')"
+      decor1="yes"
+      /> \n\
+    <button loc="450 30" size="200 25"
+      style="Heading2"
+      label="Save as defaults"
+      vc="`+$0+`('save') vnmrjcmd('Modeless')"
+      decor1="yes"
+      /> \n\
+    <label loc="700 30" size="200 20" \n\
+      style="Heading2" \n\
+      label="Common choices" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 90" size="180 20" \n\
+      style="PlainText" \n\
+      label="Sample/study directory" \n\
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 120" size="180 20" \n\
+      style="PlainText" \n\
+      label="Data file name" \n\
+      justify="Left" \n\
+        /> \n\
+   <check loc="20 150" size="500 20"
+     style="Label3"
+     label="Template parameters must have a value. They cannot be set to ''."
+     vq="dataprefTmp"
+     vc="`+$0+`('set','req','y') vnmrjcmd('Modeless')"
+     vc2="`+$0+`('set','req','n') vnmrjcmd('Modeless')"
+     set="`+$0+`('get','req'):$VALUE"
+    /> \n`)
+    if ($unrestricted = 1) then
+    write('file',$xmlfile,`\n
+    <label loc="20 60" size="160 20" \n\
+      style="PlainText" \n\
+      label="Parent directory" \n\
+      justify="Left" \n\
+      /> \n\
+    <entry loc="250 60" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','adir','$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get','adir'):$VALUE"
+      disable="Grayed out"
+      /> `)
+    else
+    write('file',$xmlfile,`\n
+    <label loc="20 60" size="240 20" \n\
+      style="PlainText" \n\
+      label="Parent directory (restricted)" \n\
+      justify="Left" \n\
+      /> \n\
+    <textmessage loc="250 60" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      set="`+$0+`('get','adir'):$VALUE"
+      /> `)
+    endif
+    write('file',$xmlfile,`\n
+    <entry loc="250 90" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','sdir','$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get','sdir'):$VALUE"
+      disable="Grayed out"
+      />
+    <entry loc="250 120" size="400 20"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','svfname','$VALUE') vnmrjcmd('Modeless')"
+      set="`+$0+`('get','svfname'):$VALUE"
+      disable="Grayed out"
+      /> \n`)
+    write('file',$xmlfile,`\n
+    <selfilemenu loc="700 60" size="300 20"
+      label="Parent directory choices"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','adir','$VALUE') vnmrjcmd('Modeless')"
+      file="$VALUE='`+$adirpath+`'"
+      type="file"
+      bg="default"
+      />
+    <selfilemenu loc="700 90" size="300 20"
+      label="Sample/study directory choices"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','sdir','$VALUE') vnmrjcmd('Modeless')"
+      file="$VALUE='`+$sdirpath+`'"
+      type="file"
+      bg="default"
+      />
+    <selfilemenu loc="700 120" size="300 20"
+      label="Data file name choices"
+      style="PlainText"
+      vq="dataprefTmp"
+      vc="`+$0+`('set','svfname','$VALUE') vnmrjcmd('Modeless')"
+      file="$VALUE='`+$svfdirpath+`'"
+      type="file"
+      bg="default"
+      /> \n`)
+    write('file',$xmlfile,`\n
+    <label loc="20 180" size="100 20"
+      style="Heading2"
+      label="Example:"
+      fg="darkGreen"
+      />
+    <label loc="20 210" size="160 20" \n\
+      style="PlainText" \n\
+      label="Parent directory" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 240" size="180 20" \n\
+      style="PlainText" \n\
+      label="Sample/study directory" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+      /> \n\
+   <label loc="20 270" size="180 20" \n\
+      style="PlainText" \n\
+      label="Data file name" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+        /> \n\
+   <label loc="20 300" size="180 20" \n\
+      style="PlainText" \n\
+      label="Full name" \n\
+      fg="darkGreen"
+      justify="Left" \n\
+        /> \n\
+    <textmessage loc="250 210" size="400 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="$VALUE=dataprefTmp[14]"
+      /> \n`)
+    write('file',$xmlfile,`\n
+    <textmessage loc="250 240" size="400 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="$VALUE=dataprefTmp[15]"
+      />
+    <textmessage loc="250 270" size="400 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="$VALUE=dataprefTmp[16]"
+      />
+    <textmessage loc="250 300" size="800 20"
+      style="Label1"
+      label=""
+      fg="darkGreen"
+      vq="dataprefTmp"
+      set="`+$0+`('get','fullpath'):$VALUE"
+      /> \n`)
+
+  write('file',$xmlfile,'  </group>\n</template>')
+  
+  vnmrjcmd('popup', 'mode:modal', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/'+$0+'.html', \
+   'pnewupdate:true', 'cancel:'+$0+'(`cancel`)', 'ok:'+$0+'(`ok`)', \
+   'title:Save Data Setup')
+
+elseif ($1 = 'set') then
+  if ($2 = 'adir') then
+    dataprefTmp[1] = $3
+    chkname($3):dataprefTmp[10],$dum,$dum2,$pars
+    dataprefTmp[13] = 'y'
+    Svfname(dataprefTmp[10]+'/././'+dataprefTmp[11],'',''):$pfile
+    strstr($pfile,'/././'):$e,dataprefTmp[10]
+    dataprefTmp[14] = dataprefTmp[10]
+    if (dataprefTmp[9]='y') then
+      if ($pars <> '') then
+        dataprefTmp[14] = dataprefTmp[14] + ` (The following cannot be set to '': `+$pars+`)`
+        dataprefTmp[13] = 'n'
+      else
+        chkname(dataprefTmp[11]):$dum,$dum2,$dum3,$spars
+        chkname(dataprefTmp[12]):$dum,$dum2,$dum3,$svfpars
+        if ($spars <> '') or ($svfpars <> '') then
+          dataprefTmp[13] = 'n'
+        endif
+      endif
+    endif
+  elseif ($2 = 'sdir') then
+    dataprefTmp[2] = $3
+    chkname($3):dataprefTmp[11],$dum,$dum2,$pars
+    Svfname(dataprefTmp[10]+'/././'+dataprefTmp[11],'',''):$pfile
+    strstr($pfile,'/././'):$e,$s1,dataprefTmp[11]
+    dataprefTmp[15] = dataprefTmp[11]
+    dataprefTmp[13] = 'y'
+    if (dataprefTmp[9]='y') then
+      if ($pars <> '') then
+        dataprefTmp[15] = dataprefTmp[15] + ` (The following cannot be set to '': `+$pars+`)`
+        dataprefTmp[13] = 'n'
+      else
+        chkname(dataprefTmp[10]):$dum,$dum2,$dum3,$spars
+        chkname(dataprefTmp[12]):$dum,$dum2,$dum3,$svfpars
+        if ($spars <> '') or ($svfpars <> '') then
+          dataprefTmp[13] = 'n'
+        endif
+      endif
+    endif
+  elseif ($2 = 'svfname') then
+    dataprefTmp[3] = $3
+    chkname($3):dataprefTmp[12],$dum,$dum2,$pars
+    Svfname(dataprefTmp[10]+'/'+dataprefTmp[11]+'/././'+dataprefTmp[12],'.fid',''):$pfile
+    strstr($pfile,'/././'):$e,$s1,dataprefTmp[12]
+    dataprefTmp[16] = dataprefTmp[12]
+    if (dataprefTmp[9]='y') then
+      if ($pars <> '') then
+        dataprefTmp[16] = dataprefTmp[16] + ` (The following cannot be set to '': `+$pars+`)`
+        dataprefTmp[13] = 'n'
+      else
+        chkname(dataprefTmp[10]):$dum,$dum2,$dum3,$spars
+        chkname(dataprefTmp[11]):$dum,$dum2,$dum3,$svfpars
+        if ($spars <> '') or ($svfpars <> '') then
+          dataprefTmp[13] = 'n'
+        endif
+      endif
+    endif
+  elseif ($2 = 'req') then
+    dataprefTmp[9] = $3
+    dataprefTmp[13] = 'y'
+    chkname(dataprefTmp[1]):dataprefTmp[10],$dum,$dum2,$apars
+    chkname(dataprefTmp[2]):dataprefTmp[11],$dum,$dum2,$spars
+    Svfname(dataprefTmp[10]+'/././'+dataprefTmp[11],'',''):$pfile
+    strstr($pfile,'/././'):$e,dataprefTmp[10],dataprefTmp[11]
+    dataprefTmp[14] = dataprefTmp[10]
+    if (dataprefTmp[9]='y') and ($apars <> '') then
+      dataprefTmp[14] = dataprefTmp[14] + ` (The following cannot be set to '': `+$apars+`)`
+      dataprefTmp[13] = 'n'
+    endif
+    dataprefTmp[15] = dataprefTmp[11]
+    if (dataprefTmp[9]='y') and ($spars <> '') then
+      dataprefTmp[15] = dataprefTmp[15] + ` (The following cannot be set to '': `+$spars+`)`
+      dataprefTmp[13] = 'n'
+    endif
+    chkname(dataprefTmp[3]):dataprefTmp[12],$dum,$dum2,$svfpars
+    Svfname(dataprefTmp[10]+'/'+dataprefTmp[11]+'/././'+dataprefTmp[12],'.fid',''):$pfile
+    strstr($pfile,'/././'):$e,$s1,dataprefTmp[12]
+    dataprefTmp[16] = dataprefTmp[12]
+    if (dataprefTmp[9]='y') and ($svfpars <> '') then
+      dataprefTmp[16] = dataprefTmp[16] + ` (The following cannot be set to '': `+$svfpars+`)`
+      dataprefTmp[13] = 'n'
+    endif
+  endif
+
+elseif ($1 = 'get') then
+  if ($2 = 'adir') then
+    return(dataprefTmp[1])
+  elseif ($2 = 'sdir') then
+    return(dataprefTmp[2])
+  elseif ($2 = 'svfname') then
+    return(dataprefTmp[3])
+  elseif ($2 = 'req') then
+    if (dataprefTmp[9] = 'y') then
+      return(1)
+    else
+      return(0)
+    endif
+  elseif ($2 = 'fullpath') then
+    if (dataprefTmp[13] = 'y') then
+      return(dataprefTmp[10]+'/'+dataprefTmp[11]+'/'+dataprefTmp[12])
+    else
+      return('Some parameters are not set.')
+    endif
+  endif
+
+elseif ($1 = 'init') then
+  if (appmode = 'imaging') then
+    exists('datapref','parameter','global'):$e
+    if (not $e) then
+      create('datapref','string','global')
+      setgroup('datapref','display','global')
+      datapref[1]='$userdir$/studies'
+      datapref[2]='s_%DATE%'
+      datapref[3]='$pslabel$_'
+      datapref[4]=''
+      datapref[5]='$userdir$/studies'
+      datapref[6]='s_%DATE%'
+      datapref[7]='$pslabel$_'
+      datapref[8]=''
+      datapref[9]='n'
+    endif
+    if (datapref[2] = '') then
+      datapref[1]='$userdir$/studies'
+      datapref[2]='s_%DATE%'
+      datapref[3]='$pslabel$_'
+    endif
+  endif
+
+elseif ($1 = 'defaults') then
+  dataprefTmp[1] = datapref[5]
+  dataprefTmp[2] = datapref[6]
+  dataprefTmp[3] = datapref[7]
+  chkname(dataprefTmp[1]):dataprefTmp[10]
+  chkname(dataprefTmp[2]):dataprefTmp[11]
+  chkname(dataprefTmp[3]):dataprefTmp[12]
+
+elseif ($1 = 'save') then
+  datapref[5] = dataprefTmp[1]
+  datapref[6] = dataprefTmp[2]
+  datapref[7] = dataprefTmp[3]
+
+elseif ($1 = 'ok') then
+  datapref[1] = dataprefTmp[1]
+  datapref[2] = dataprefTmp[2]
+  datapref[3] = dataprefTmp[3]
+  datapref[9] = dataprefTmp[9]
+  destroy('dataprefTmp'):$e
+  delete($xmlfile)
+elseif ($1 = 'cancel') then
+  destroy('dataprefTmp'):$e
+  delete($xmlfile)
+else
+  return(-1)
+endif

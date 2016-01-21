@@ -1,0 +1,54 @@
+"macro setselinv"
+"***********************************************************************"
+" setselinv - macro used by suselfrq to setup power, pulsewidth and	"
+"		shape for selective inversion				"
+"		By default the macro selects q3 gaussian cascade	"
+"		if WFG or linear modulator is present (Inova & Uplus).  "
+"		On resonance pulse with linear modulator and off-res.	"
+"		(slp) pulse with WFG					"
+"		Else selects rectangular pulse				"
+"		Uses Pbox						"
+"***********************************************************************"
+"*****Removed all references to older consoles******"
+
+$shapefile='' $shape='' $rfwg1=''
+
+$ampcf=1
+$ref_pw90=pw90 $ref_pwr=tpwr
+getcf('tpwr'):$ampcf
+$ref_pw90 = $ref_pw90*$ampcf
+
+$shapefile=$1+'.RF'
+$offset=$2
+$width=$3
+
+isrfwg('tn'):$rfwg
+if ($rfwg) then 
+   $shape='q3' 
+   exists(pslabel,'parlib'):$parex,$parlib
+   if ($parex) then
+	rtv($parlib,'noabort','selshapeA'):$shape
+   endif
+   if ($shape='') then $shape='q3' endif
+else 
+   $shape='isnob2' 
+   $offset=$offset[1]
+   $width=$width[1]
+   pickshape($offset,$width):$shape,$width
+endif
+
+ $array=size('$offset')
+ opx($shapefile)
+ $i=1
+ repeat
+ 	putwave($shape,$width[$i],0.0,$offset[$i])
+	$i=$i+1
+ until $i > $array
+ if (Console='mercury') then
+   pboxpar('maxincr','45')
+ endif
+ cpx($ref_pw90,$ref_pwr):$dum
+ pbox_pw($shapefile):$selpw
+ pbox_pwr($shapefile):$selpwr
+
+return($selpw,$selpwr,$width)

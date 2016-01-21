@@ -1,0 +1,68 @@
+$arg = 0
+exists('enr10MHz','parameter'):$e
+if ($e < 0.5) then
+create('enr10MHz','real')
+$arg = 1
+endif
+exists('enr100MHz','parameter'):$e
+if ($e < 0.5) then
+create('enr100MHz','real')
+$arg = 1
+endif
+exists('enr1000MHz','parameter'):$e
+if ($e < 0.5) then
+create('enr1000MHz','real')
+$arg = 1
+endif
+exists('enr2000MHz','parameter'):$e
+if ($e < 0.5) then
+create('enr2000MHz','real')
+$arg = 1
+endif
+exists('enr','parameter'):$e
+if ($e < 0.5) then
+create('enr','real')
+endif
+exists('tambient','parameter'):$e
+if ($e < 0.5) then
+create('tambient','real')
+tambient = 10
+endif
+exists('msna_off','parameter'):$e
+if ($e < 0.5) then
+create('msna_off','real')
+endif
+exists('msna_on','parameter'):$e
+if ($e < 0.5) then
+create('msna_on','real')
+endif
+exists('noiseFigure','parameter'):$e
+if ($e < 0.5) then
+create('noiseFigure','real')
+endif
+
+if ($arg > 0) then
+write('line3','you must set enr 10,100,1000,2000 to continue')
+return
+endif
+$lfrq=10
+$hfrq=100
+$lval=enr10MHz
+$hval=enr100MHz
+if (sfrq > 100) then
+$lval=enr100MHz
+$hval=enr1000MHz
+$lfrq=100
+$hfrq=1000
+endif
+if (sfrq > 1000) then
+$lval=enr1000MHz
+$hval=enr2000MHz
+$lfrq=1000
+$hfrq=2000
+endif
+enr = $lval+(($hval-$lval)/($hfrq-$lfrq))*(sfrq - $lfrq)
+write('line3','enr value = %5.3f',enr)
+input('reply Cold when noise head cold'):$reply
+wexp = 'efcold' 
+au

@@ -1,0 +1,144 @@
+"macro xmwexp"
+"processing macro for end of scan in study"
+
+bgmode_is:$b
+
+$appmode=appmode
+if appmode='lc' then $appmode='walkup' endif
+$sdir='' xm1('studydir'):$sdir
+
+if $appmode='imaging' then
+  gplan('endIplan')
+// should put this into procplot macro? do in wexp, not wdone?
+endif
+newdg
+
+acqmode=''
+if ((activestudy[1]<>'null') and (actionid <> 'null') and (actionid<>'') and not ($appmode='walkup' and studyid='tmpstudy')) then
+  xmgetatts(actionid,'type','status'):$type,$st
+  $p7=prescan[7]
+  $num=size('prescan')
+  if ($num < 9) then
+    $p9=''
+  else
+    $p9=prescan[9]
+  endif
+  if ($appmode='imaging') or not ($p9<>'on' and ($p7='Not done' or $p7='Last' or $p7='Pause')) then
+    svaction('wdone')
+    xmsetatts(actionid,'status','Completed','lock','on','time','null')
+// put this into save macro, use here only if auto='y'?
+  endif
+
+  if (auto='y' and prescan[7]<>'Not done') then
+    exists('actionid','parameter'):$e
+    if (activestudy[1]<>'null' and $e>0.5) then
+      if ($type='LIB' or $st='Executing' or $st='Error') then
+        $sdir='' xm1('studydir'):$sdir
+        $rpath=file
+        strstr(file,$sdir):$pos
+        if $pos>0.5 then
+          length($sdir):$alen
+          length(file):$plen
+          substr(file,$alen+2,$plen-$alen-1):$rpath
+        endif
+        xmsetatts(actionid, 'data', $rpath)
+        exists('getbarcode','maclib'):$e
+        if $e>0.5 then getbarcode endif
+      endif
+    endif
+    xmwritesq('write','')
+  else
+//  xmwritesq('write','show')
+    xmwritesq
+  endif
+
+  if (sqmode='stop' and auto<>'y') then
+    sqmode='pause'
+    xm1('pause')
+    abort
+  endif
+
+// update file in study
+  strstr(file,'.REC'):$e
+  if($e < 0.5) then
+     strstr(file,'.rec'):$e
+  endif
+
+  if($e > 0.5) then
+    $file = file
+    exists($file,'directory'):$e
+    if $e>0.5 then
+      xm1('studydir'):$sdir
+      if $b>0.5 then
+        $sendfile=userdir+'/persistence/.talk2j'
+        exists($sendfile,'file'):$e
+	if $e>0.5 then
+           $cmd='LOC add vnmr_record "'+$file+'" study "'+$sdir+'"'
+           $cmd='vnmrjcmd(\''+$cmd+'\')'
+           xm1('sendcmd',$cmd)
+        else
+          $cmd='managedb addfile "'+$file+'" '+owner
+          $cmd=$cmd+';managedb setattr vnmr_record "'+$file+'" study "'+$sdir+'"&'
+          shell($cmd):$x
+	endif
+      else
+        $cmd='LOC add vnmr_record "'+$file+'" study "'+$sdir+'"'
+        vnmrjcmd($cmd)
+      endif
+    endif
+  else
+    $file=file+'.fid'
+    exists($file,'directory'):$e
+    if $e>0.5 then
+      xm1('studydir'):$sdir
+      if $b>0.5 then
+        $sendfile=userdir+'/persistence/.talk2j'
+        exists($sendfile,'file'):$e
+        if $e>0.5 then
+          $cmd='LOC add vnmr_data "'+$file+'" study "'+$sdir+'"'
+          $cmd='vnmrjcmd(\''+$cmd+'\')'
+          xm1('sendcmd',$cmd)
+        else
+          $cmd='managedb addfile "'+$file+'" '+owner
+          $cmd=$cmd+';managedb setattr vnmr_data "'+$file+'" study "'+$sdir+'"&'
+          shell($cmd):$x
+	endif
+      else
+        $cmd='LOC add vnmr_data "'+$file+'" study "'+$sdir+'"'
+        vnmrjcmd($cmd)
+      endif
+    endif
+  endif
+  exists('user_xmwexp','maclib'):$e
+  if ($e) then exec('user_xmwexp') endif
+
+// prescan[7]='Not done','Complete','Pause','Pause2','Last'
+    $doAcq=0
+    if (prescan[7]='Not done') then
+      $doAcq=1
+    elseif (prescan[7]='Last') then
+      prescan[7]='Complete'
+      $doAcq=1
+    elseif (prescan[7]='Pause') then // and sqmode<>'go' ??
+      prescan[7]='Pause2'
+    else
+      xmemail('fid')
+      if (auto='y') then
+	xmendq('check')
+      elseif (sqmode='go') then
+        xmnext
+      endif
+    endif
+    if ($doAcq=1) then
+      rm('-f',curexp+'/psgdone'):$dum
+      acquire
+      if (auto='y') then
+        exists(curexp+'/psgdone','file'):$e
+        if ($e < 0.5) then  // psg failed
+           xmsetatts(actionid,'status','Error','time','null','data','null')
+           cqsavestudy
+        endif
+      endif
+    endif
+
+endif

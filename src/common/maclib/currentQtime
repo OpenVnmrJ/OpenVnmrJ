@@ -1,0 +1,44 @@
+"macro currentQtime"
+shell('basename '+$1):$basename
+if ($basename<>'enterQ') then return endif
+$currentQ=$1+'.macdir/currentQ'
+
+$remtime=0 $curremtime=0
+$oldcurremtime=0 $firstexp='' $firsttime=0
+$ppt=60
+getadminfo('prpltime'):$ppt
+
+	"Find current remaining time from acqstatus"
+checkautoexp:$curremtime
+$curexptime=$curremtime+$ppt
+
+	"Find Total time from CurrentQ and see what is it doing now"
+	"If it is doing lock&shim, then remaining time for the sample"
+	"  is same as total time for the sample                 "
+	"  else remaining time is adjusted based on what is in acqstat"
+
+exists($currentQ,'file'):$currentQex
+if ($currentQex) then
+ shell('(cat '+$currentQ+' | wc -l)'):$currentQex
+endif
+if ($currentQex) then
+   $s1='' $s2=''
+   readfile($currentQ,'$s1','$s2','','local'):$tot
+   if ($s1[1]='SAMPLE_CHANGE_TIME') and ($tot>1) then
+	format($s2[1],'isreal'):$real
+	if ($real) then format($s2[1],'lower'):$curremtime endif
+	format($s2[2],'isreal'):$real
+	if ($real) then format($s2[2],'lower'):$curexptime endif
+   endif
+   format($s2[1],'isreal'):$real
+   if ($real) then format($s2[1],'lower'):$oldcurremtime endif
+   teststr('$s1','TOTAL','local'):$isok
+   if ($isok) then
+	format($s2[$isok],'isreal'):$real
+	if ($real) then format($s2[$isok],'lower'):$remtime endif
+   endif
+endif
+	
+$remtime=$remtime+$curremtime-$oldcurremtime
+
+return($remtime,$curexptime)

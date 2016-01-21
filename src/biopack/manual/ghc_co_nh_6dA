@@ -1,0 +1,169 @@
+  ghc_co_nh_6dA             
+
+    3D H(CCO)NH (or HCCH-TOCSY-NNH) gradient sensitivity enhanced
+    Semi-Constant Time version. Allows PR experiments up to 6 dimensions.
+    Only 2D experiments are run.
+
+    Correlates all the aliphatic 1H resonances of a given amino acid directly
+    with the amide of the next residue.  Uses isotropic 13C mixing and 15N
+    constant time evolution. 
+
+    Standard features include maintaining the 13C carrier in the CaCb region
+    throughout using off-res SLP pulses; full power square pulses on 13C 
+    initially when 13CO excitation is irrelevant; square pulses on the Ca and
+    CaCb with first null at 13CO; one lobe sinc pulses on 13CO with first null
+    at Ca;  shaka6 composite 180 pulse to simultaneously refocus Ca and invert
+    CO; optional 2H decoupling when CaCb magnetization is transverse and during 
+    1H shift evolution for 4 channel spectrometers.  
+ 
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+    pulse sequence:	 J Magn. Reson.  B  101, 114-119 (1993)
+     see also:           J Magn. Reson.  B  101, 206-209 (1993)
+    SLP pulses:     	 J Magn. Reson. 96, 94-102 (1992)
+    shaka6 composite:	 Chem. Phys. Lett. 120, 201 (1985) 
+    TROSY:		 JACS, 120, 10778 (1998)
+
+    ( comments such as "point g" refer to pulse sequence diagram in reference)
+
+    Written by M Robin Bendall, Varian, Jan 97 from ghc_co_nh.c written in
+    March 94 and 95.  Revised and improved to a standard format by MRB, BKJ and
+    GG for the BioPack, January 1997. TROSY added Dec 98, based on similar 
+    addition to gNhsqc. (Version Dec 1998).
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+    1H decoupling power enterable (in Hz)  NM jan03
+    Semi-Constant Time option -  Eriks Kupce, Oxford, 26.01.2006, based on  
+                                 example provided by Marco Tonelli at NMRFAM
+    Sequence modified for Semi-Constant Time, Z-mixing and use of waveform 
+    spinlock. EK nov2007.
+
+    Modified from ghc_co_nhA.c to permit up to 6 dimensions as 2D PR experiments
+    (Eriks Kupce, Varian, September 2008)
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+    Must set = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [13C]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 13C and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghc_co_nhA
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghc_co_nhA may be printed using:
+                                      "printon man('ghc_co_nhA') printoff".
+             
+    2. Apply the setup macro "ghc_co_nhA".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+
+    3. The parameter ncyc corresponds to the number of cycles of DIPSI-3 mixing.
+       Use ncyc = 2 or 3 usually.  This corresponds to a total mixing time of
+       (2 or 3)*6.07*600/sfrq ms.  A DIPSI rf field of 9 kHz for a 600Mhz 
+       spectrometer is sufficient to cover 14.4 kHz bandwidth (96ppm) and is
+       more than adequate for the CC J's.  Change the value of spinlock if a
+       different rf strength is required.
+
+    4. The two C13 180 degree pulses after the DIPSI-3 decoupling have been
+       replaced by a single 6-pulse composite dubbed "shaka6" which povides
+       near perfect refocusing with no phase roll over the Cab region and
+       near perfect inversion over the CO region 18kHz off-resonance provided
+       pwC < 20 us in a 600 MHz system.
+      
+    5. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 46ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       46ppm, ie at CaCb throughout the sequence.
+
+    6. The H1 frequency is NOT shifted to the amide region during the sequence.
+       The H1 DIPSI2 decoupling is enterable in Hz via the waltzB1 parameter.
+
+   7.  The parameter phi7cal (listed in dg and dg2) is provided to adjust 
+       the phase of the last 90 degree C13 pulse, which is phase-shifted by
+       the prior 180 degree pulse on the Ca region and by the use of SLP
+       pulses on the CO region. The experimentally determined value of this
+       phase is also very sensitive to small timing differences (microseconds)
+       between the two theta delays. Check this phase via 1D spectra - maximise
+       signal, or for greater accuracy obtain the value for a null and then add 
+       or subtract 90 degrees.  The value must be a positive number. It needs to
+       be calibrated once only for each spectrometer and the gc_co_nh and 
+       gcbca_co_nh pulse sequences if you forget to do so.
+
+   8.  tauCH (1.7 ms) and timeTN (14 ms) were determined for alphalytic protease
+       and are listed in dg2 for possible readjustment by the user.
+
+   9.  The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+   10. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghc_co_nhA so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.  
+
+   11. The autocal and checkofs flags are generated automatically in Pbox_bio.h
+       If these flags do not exist in the parameter set, they are automatically 
+       set to 'y' - yes. In order to change their default values, create the  
+       flag(s) in your parameter set and change them as required. 
+       The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+       The offset (tof, dof, dof2 and dof3) checks can be switched off  
+       individually by setting the corresponding argument to zero (0.0).
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+       shapes are created), 's' (semi-automatic mode - allows access to user  
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code). 
+    
+       When autocal<>'n':
+       the spinlock waveform is selectable via the "mixpat" parameter.
+       Pbox uses the "spinlock" parameter to calculate the
+       attenuator setting. From this it creates the proper waveform to give a
+       spinlock field strength of "spinlock" Hz, and sets the proper decspinlock
+       parameters.
+
+       When autocal is 'n':
+        For mixpat='n': The hardcoded DIPSI3 sequence is  used and the user only enters
+        the spinlock field strength (spinlock) and the number of cycles. The mix time is
+        derived from these and is visible in the PulseSequence.xml VnmrJ page.
+
+        For mixpat=a name, the user supplies all parameters.
+
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code). If autocal<>'n' Pbox creates the desired spinlock
+       waveform using the "mixpat" scheme and sets all the relevant decspinlock
+       arguments. If autocal='n' the user-entered parameters are used.
+
+       Projection Reconstruction:
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 125, pp. 13958-13959 (2003).
+       E.Kupce and R.Freeman, J. Amer. Chem. Soc., vol. 126, pp. 6429-6440 (2004).
+       Related:
+       S.Kim and T.Szyperski, J. Amer. Chem. Soc., vol. 125, pp. 1385-1393 (2003).
+       Eriks Kupce, Oxford, 26.08.2004.       

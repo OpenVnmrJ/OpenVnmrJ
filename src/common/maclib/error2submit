@@ -1,0 +1,48 @@
+"macro error2submit"
+   $rack='' $zone='' $subtray=''
+   if (traymax=96) or (traymax=768) then
+      format(vrack,'lower'):$rack
+      format(vzone,'lower'):$zone
+      $subtray='/RACK'+$rack+'ZONE'+$zone
+   endif
+   if ($rack='') or ($zone='') then $rack='' $zone='' $subtray='' endif
+
+      $traymax=traymax $start=1
+      if (traymax=768) or (traymax=97) then $traymax=96 endif
+
+      if ($# > 0) then
+        if (typeof('$1')) then
+           autodir=$1
+        else
+           $traymax=$1 $start=$1
+        endif
+      endif
+
+   $studytray=autodir+'/enterQ.macdir/studytray'
+   exists($studytray,'directory'):$stex
+   if ($stex) then
+	"Find Errored locations, if any"
+	$i=$start $errloc=0 $j=1 $eok=0
+	repeat
+	  $status=''
+	  checklocstatus(autodir+'/enterQ',$i,$zone,$rack):$status
+	  if ($status='Error') then
+		$eok=1
+		$errloc[$j]=$i
+	  	$j=$j+1
+	  endif
+	  $i=$i+1
+	until $i > $traymax
+	if ($eok>0) then
+	   $etot=size('$errloc')
+	   $i=1
+	   repeat
+		if ($errloc[$i]<>0) then
+		   write('line3','Resubmitting loc%d',$errloc[$i])
+		   vjresubmitQ($errloc[$i],$zone,$rack)
+		endif
+		$i=$i+1
+	   until $i > $etot
+	endif
+   endif
+   showtray(autodir)

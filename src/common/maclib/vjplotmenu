@@ -1,0 +1,64 @@
+"macro vjplotmenu"
+// make printer and plotter menus for VnmrJ
+
+$plotter='none' $printer='none'
+$printfile=userdir+'/persistence/printers'
+$plotfile=userdir+'/persistence/plotters'
+write('reset',$printfile)
+write('reset',$plotfile)
+
+$found=0
+$devfile=systemdir+'/devicenames'
+exists($devfile,'file'):$e
+if ($e) then
+   $name='' $use='' $host='' $type='' $s1=''
+   readfile($devfile,'$s1','$name','Name','local'):$total
+   readfile($devfile,'$s1','$use','Use','local')
+   readfile($devfile,'$s1','$host','Host','local')
+   readfile($devfile,'$s1','$type','Type','local')
+   if ($total>0) then
+	$i=1
+	repeat
+	   substr($name[$i],1):$name[$i]
+	   substr($use[$i],1):$use[$i]
+	   substr($host[$i],1):$host[$i]
+	   substr($type[$i],1):$type[$i]
+	   $i=$i+1
+        until $i > $total
+   endif
+   teststr('$host','dummy','local'):$ret
+   if ($ret) then $name[$ret]='' endif
+   $found=0
+   if ($total>0) then
+      $i=1 $j=1 $k=1
+      repeat
+        if ($name[$i]<>'') then
+	  getplotterpens($name[$i]):$pens
+	  if ($pens>1) then
+		$color='color'
+	  else
+		$color='b+w'
+	  endif
+	  if ($use[$i]='Printer') or ($use[$i]='Both') then
+		write('file',$printfile,'"%s [%s]" "%s"',$name[$i],$color,$name[$i])
+		$printer[$k]=$name[$i] $k=$k+1
+		$found=1
+	  endif
+	  if ($use[$i]='Plotter') or ($use[$i]='Both') then
+		write('file',$plotfile,'"%s [%s]" "%s"',$name[$i],$color,$name[$i])
+		$plotter[$j]=$name[$i] $j=$j+1
+		$found=1
+	  endif
+        endif
+        $i=$i+1
+      until $i > $total
+   endif
+endif
+     
+if $found=0 then
+   if plotter <> '' then
+     write('error','No printers or plotters configured.')
+   endif
+endif
+
+return($plotter,$printer)

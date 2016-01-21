@@ -1,0 +1,47 @@
+"macro RQdisplay"
+
+" RQdisplay calls IB command aipRQcommand to display images "
+" this macro could be merged with RQaction, since they both "
+" are macro that set up and call aipRQcommand. RQdisplay does "
+" image display only, while as RQaction does image load, display, "
+" and interaction with RQ "
+
+if($# < 0.5) then
+    "display using current parameter setting "
+    aipRQcommand('display')
+    return
+endif
+
+if($1 = 'batch') then 
+      "display current or given batch"
+      if($# > 1.5) then 
+	if($2 <= aipBatches) then aipBatch = $2 endif
+      endif
+      aipRQcommand('displayBatch', aipBatch)
+
+elseif($1 = 'prev') then 
+      "display previous batch"
+      if(aipBatch <= 1 or aipBatch > aipBatches) then
+	aipBatch = aipBatches 
+      else 
+	aipBatch = aipBatch -1
+      endif
+      aipRQcommand('displayBatch', aipBatch)
+
+elseif($1 = 'next') then 
+      "display next batch"
+      if(aipBatch >= aipBatches or aipBatch < 1) then
+	aipBatch = 1
+      else 
+	aipBatch = aipBatch +1
+      endif
+      aipRQcommand('displayBatch', aipBatch)
+
+elseif($1 = 'refresh') then 
+      "refresh display "
+      aipDisplay('redisplay')
+
+else
+      " display user selection. $1 is the selection "
+      aipRQcommand('display', $1,rqsort, aipAutoLayout)  
+endif

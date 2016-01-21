@@ -1,0 +1,649 @@
+"macro bpa"
+"*****************************"
+" bpa - plot boxed parameters "
+"*****************************"
+
+pllogo
+write('plotter',0,0,''):$ys		" evaluate line height with text "
+$xchar=$ys/2				" estimation for character width "
+$columns=trunc(wcmax/(32*$xchar))
+if $columns<5 then $columns=5 endif
+if $columns>8 then $columns=8 endif	" # of parameter columns "
+$colch=wcmax/($ys/2)/$columns-2		" characters per column (estd.) "
+$rows=8					" text rows in parameter printout "
+$x=0					" lower left corner: x "
+$ymin=-20				" lower left corner: y "
+$xt=$x+1+wcmax/$columns*($columns-1)	" x position for 'sample' column "
+$y=$rows*$ys+$ymin+1			" upper left corner of box (y) "
+$y0=$y-$ys				" y position of parameter text "
+$yt=$y					" y position for sample column "
+$retval=$y+15				" return value: sc2(min) "
+if $#>0 then
+  return($retval)
+endif
+
+" plot frame (horizontal)"
+pen('plotter','pen5')
+$box=''
+move($x,$y) draw(wcmax,$y)
+$topline=$y
+move($x,$ymin)
+draw($x,$topline) draw(wcmax,$topline) draw(wcmax,$ymin) draw($x,$ymin)
+$ix=0
+repeat
+  $x=$x+wcmax/$columns move($x,$ymin)
+  $cury=$ymin+0.5 $done=0
+  repeat
+    draw($x,$cury)
+    move($x,$cury+0.5)
+    $cury=$cury+1
+    if $cury>=$y then
+      $done=1
+    endif
+  until $done
+  $ix=1+$ix
+until $ix=$columns
+$x=1 $y=$y-$ys
+
+" make sure processed parameters are used"
+if (procdim>0) then
+   setvalue('procdim',procdim,'processed')
+   groupcopy('processed','current','acquisition')
+   groupcopy('processed','current','processing')
+endif
+
+" plot text and parameter 'header'"
+pltext(curexp+'/text',$xt,$yt,$colch):$xt,$yt	     "plot text at supplied x and y positions"
+pen('plotter','pen5')
+move(wcmax/$columns*($columns-1),$yt+$ys-0.5)
+draw(wcmax,$yt+$ys-0.5)
+draw(wcmax,$yt+$ys)
+$yt = $yt - 0.5
+if (solvent<>'') and (solvent<>'none') then			"** solvent **"
+  write('plotter',$xt,$yt,'Solvent: %s',solvent)
+  $yt = $yt - $ys 
+endif 
+on('temp'):$on							"** temp **"
+if $on then
+  write('plotter',$xt,$yt,'Temp. %1.1f C / %1.1f K',temp,temp+273.15)
+else
+  write('plotter',$xt,$yt,'Ambient temperature')
+endif
+$yt = $yt - $ys
+if $yt>$ymin then
+  $user=''
+  $userlabel='User'
+  exists('user','parameter'):$e					"** user **"
+  if $e then
+    if user<>'' then
+      $user=user
+    endif
+  endif
+  exists('operator_','parameter'):$e
+  if $e>0.5 then
+    if operator_<>'' then
+      $userlabel='Operator'
+      $user=operator_
+    endif
+  endif
+  $sample=0
+  on('loc_'):$on							"** loc **"
+  if $on>0.5 then
+    if (loc_ > 0) then
+      $sample = loc_
+    endif
+  endif
+  if $user<>'' then
+    if $sample>0 then
+      write('plotter',$xt,$yt,'Sample #%d, %s: %s',$sample,$userlabel,$user)
+    else
+      write('plotter',$xt,$yt,'%s: %s',$userlabel,$user)
+    endif
+    $yt = $yt - $ys
+  else
+    if $sample>0 then
+      write('plotter',$xt,$yt,'Sample #%d',$sample)
+      $yt = $yt - $ys
+    endif
+  endif
+endif
+if (file<>'') and (file<>'exp') and ($yt>$ymin) then		"** file **"
+  shell('basename ' + file + ' .fid'):$file
+  write('plotter',$xt,$yt,'File: %s',$file) 
+  $yt = $yt - $ys 
+endif 
+if ($yt>$ymin) then						"** file **"
+  $frq='' $rf=''
+  substr(rftype,1,1):$rf
+  format(h1freq,3,0):$frq
+  if ($rf='b')or($rf='a') then
+    $sys='VXR-'+$frq+'S'
+  else
+    if $rf='c' then
+      $sys='UNITY-'+$frq
+    else
+      if $rf='d' then
+	if (console='vnmrs') then
+         $sys='VNMRS-'+$frq
+	elseif (console='inova') then
+         $sys='INOVA-'+$frq
+        else
+         $sys='UNITYplus-'+$frq
+        endif
+      else
+	if $rf='e' then
+           if (console='mercury') then
+	      $sys='Mercury-'+$frq
+           else
+	      $sys='GEMINI-'+$frq
+           endif
+	else
+	  if $rf='f' then
+             if (console='mercury') then
+	        $sys='Mercury-'+$frq
+             else
+	        $sys='GEMINI-'+$frq
+             endif
+	  else
+	    $sys='Processed on'
+	  endif
+	endif
+      endif
+    endif
+  endif
+  $sysname=''
+  shell('uname -n'):$sysname
+  write('plotter',$xt,$yt,'%s  "%s"',$sys,$sysname)
+  $yt = $yt - $ys 
+endif 
+
+" determine experiment class "
+" label pulse sequence (type)"
+" check for 2D "
+getdim:$dim
+" check for wideline "
+exists('tau1','parameter'):$e
+if $e then exists('tau2','parameter'):$e endif
+if $e then $wideline=1 else $wideline=0 endif
+" check for solids "
+exists('srate','parameter'):$e
+if $e and spintype='mas' then $solids=1 else $solids=0 endif
+if ($wideline) then
+  write('plotter',$x,$y,'Solid-state echo')
+else
+  if seqfil<>'s2pul' then
+    length(seqfil):$len						"** seqfil **"
+    if $len>10 then
+      write('plotter',$x,$y,'SEQUENCE: %s',seqfil)
+    else
+      write('plotter',$x,$y,'PULSE SEQUENCE: %s',seqfil)
+    endif
+  else
+    write('plotter',$x,$y,'PULSE SEQUENCE')
+  endif
+endif
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+
+" pulse-sequence related parameters"
+if ($wideline>0) then						"** np/dwell **"
+  write('plotter',$x,$y,' Acq. size %d points',np)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  write('plotter',$x,$y,' Sample time %1.1f usec',1e6/sw)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if d1>0 then							"** d1 **"
+  write('plotter',$x,$y,' Relax. delay %1.3f sec',d1)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if ($dim=1) then						"** p1 (1D) **"
+  if p1>0 then
+    if pw90>0 then
+      write('plotter',$x,$y,' 1st pulse %1.1f degrees',p1/pw90*90)
+    else
+      write('plotter',$x,$y,' 1st pulse %1.1f usec',p1)
+    endif
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    $pulsename='2nd pulse'
+  else
+    $pulsename='Pulse'
+  endif
+  if pw90>0 then						"** pw (1D) **"
+    write('plotter',$x,$y,' %s %1.1f degrees',$pulsename,pw/pw90*90)
+  else
+    write('plotter',$x,$y,' %s %1.1f usec',$pulsename,pw)
+  endif
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if $wideline>0 then						"** comp/WL **"
+  exists('compul','parameter'):$e
+  if $e then
+    if compul='y' then
+      write('plotter',$x,$y,'Composite pulses')
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    endif
+  endif
+  write('plotter',$x,$y,' 1st tau %1.1f usec',tau1)		"** tau1/WL **"
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  write('plotter',$x,$y,' 2nd tau %1.1f usec',tau2)		"** tau2/WL **"
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if ($dim>1) then
+  if seqfil='relayh' then  "exception: for cosy experiment label type"
+    if relay=0 then
+      if p1>0 then
+	if pw=pw90 then
+	  write('plotter',$x,$y,' COSY 90-%2.0f',p1/pw90*90)
+	else
+	  write('plotter',$x,$y,' COSY 90-%2.0f',p1/pw*90)
+	endif
+      else
+	write('plotter',$x,$y,' COSY 90-90')			"** 'cosy' **"
+      endif
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    endif
+  endif
+endif
+
+exists('mix','parameter'):$e					"** mix **"
+if $e then
+  write('plotter',$x,$y,' Mixing %1.3f sec',mix)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+write('plotter',$x,$y,' Acq. time %1.3f sec',at)		"** at **"
+$y=$y-$ys if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+
+if (sw>99999) then						"** sw **"
+  write('plotter',$x,$y,' Width %1.1f kHz',sw/1000)
+else
+  if $dim>1 then
+    write('plotter',$x,$y,' Width    %1.1f Hz',sw)
+  else
+    write('plotter',$x,$y,' Width %1.1f Hz',sw)
+  endif
+endif
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+
+exists('ni','parameter'):$e					"** sw1 **"
+if ($dim>1) then
+  write('plotter',$x,$y,' 2D Width %1.1f Hz',sw1)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if (ct=0)or($dim>1)or(arraydim>1) then
+  $nt=nt
+else
+  $nt=ct
+endif
+if $nt>1 then
+  write('plotter',$x,$y,' %d repetitions',$nt)
+else
+  write('plotter',$x,$y,' Single scan')
+endif
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+
+if $dim>1 then							"** ni **"
+  if size('phase')=2 then
+    write('plotter',$x,$y,' 2 x %d increments',ni)
+  else
+    write('plotter',$x,$y,' %d increments',ni)
+  endif
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+
+" observe channel information"
+if $x<wcmax/$columns then $x=$x+wcmax/$columns $y=$y0 endif
+if (rfl<>0)or(rfp<>0) then					"** tn/sfrq **"
+  $corr=0-sw/2+rfl-rfp
+else
+  $corr=0
+endif
+write('plotter',$x,$y,'OBSERVE %4s, %11.7f',tn,sfrq+$corr/1e6)
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+
+" decoupler channel information"
+$i=4
+$lastdmchar = ''
+repeat
+  substr(dm,$i,1):$lastdmchar
+  $i=$i-1
+until ($lastdmchar<>'') or ($i<1)
+$i=$i+1
+$char = ''
+$dmon=0
+$continuous=1
+repeat
+  substr(dm,$i,1):$char
+  if $char<>'n' then $dmon=1 else $continuous=0 endif
+  $i=$i-1
+until ($i<1)
+$i=4
+$lastdmm = ''
+repeat
+  substr(dmm,$i,1):$lastdmm
+  $i=$i-1
+until ($lastdmm<>'') or ($i<1)
+
+if $dmon>0 then
+  if ($solids=0) then
+    if $y<$ymin+$ys then $x=$x+wcmax/$columns $y=$y0 endif
+    write('plotter',$x,$y,'DECOUPLE %3s, %11.7f',dn,dfrq)	"** dn/dfrq **"
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    substr(amptype,2,1):$char
+    if ($char = 'c') then
+      on('dhp'):$on
+      if $on then
+	$power = dhp
+	$pwr='High power'
+	$unit=''
+      else
+	$pwr='Low power'
+	$unit='dB atten.'
+	$power=dlp
+      endif
+    else
+      on('dpwr'):$on
+      $power = dpwr
+      $pwr='Power'
+      $unit='dB'
+    endif
+    write('plotter',$x,$y,' %s %d %s',$pwr,$power,$unit)	"** 'power' **"
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    $dmm=''
+    if $lastdmchar='n' then					"** gating **"
+      write('plotter',$x,$y,' off during acquisition')
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      substr(dm,1,1):$char
+      if $char='y' then
+	write('plotter',$x,$y,' on during delay')
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+	substr(dmm,1,1):$dmm
+      endif
+    else
+      if $continuous then
+	write('plotter',$x,$y,' continuously on')
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      else
+	write('plotter',$x,$y,' on during acquisition')
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+	substr(dm,1,1):$char
+	if $char='n' then
+	  write('plotter',$x,$y,' off during delay')
+	  $y=$y-$ys
+	  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+	endif
+      endif
+      $dmm=$lastdmm
+    endif
+    if $dmm<>'' then						"** dmm **"
+      if $lastdmm='c' then write('plotter',$x,$y,' single frequency') endif
+      if $lastdmm='f' then write('plotter',$x,$y,' broadband modulated') endif
+      if $lastdmm='g' then write('plotter',$x,$y,' GARP-1 modulated') endif
+      if $lastdmm='m' then write('plotter',$x,$y,' MLEV-16 modulated') endif
+      if $lastdmm='n' then write('plotter',$x,$y,' noise modulated') endif
+      if $lastdmm='p' then write('plotter',$x,$y,' %s modulated',dseq) endif
+      if $lastdmm='r' then write('plotter',$x,$y,' square wave modulated') endif
+      if $lastdmm='u' then write('plotter',$x,$y,' user modulation') endif
+      if $lastdmm='w' then write('plotter',$x,$y,' WALTZ-16 modulated') endif
+      if $lastdmm='x' then write('plotter',$x,$y,' XY-32 modulated') endif
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    endif
+  else "solids"
+    if xpol='y' then						"** xpolar **"
+      write('plotter',$x,$y,' Cross polarization')
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      write('plotter',$x,$y,' Contact time %1.3f usec',p2)
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      if (p3>0) then
+	write('plotter',$x,$y,' T1-rho(C) decay %1.3f usec',p3)
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      endif
+      if (level1>0) or (level2>0) then
+	write('plotter',$x,$y,' Decoupler power levels')
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+	write('plotter',$x,$y,'	 Contact %d',level1)
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+	write('plotter',$x,$y,'	 Dipolar %d',level2)
+	$y=$y-$ys
+	if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      endif
+    else "gated"
+      write('plotter',$x,$y,' Gated decoupling')
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    endif
+  endif
+endif
+
+" specific solids NMR parameters"
+if $solids>0 then
+  if pdp='y' then						"** pdp **"
+    write('plotter',$x,$y,' CHn (n=1,2,3) suppressed')
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  endif
+  if toss='y' then						"** TOSS **"
+    write('plotter',$x,$y,' TOSS Sideband Suppression')
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  endif
+  write('plotter',$x,$y,' Spinner rate %d',srate)		"** srate **"
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+if dp='n' then							"** dp='n' **"
+  write('plotter',$x,$y,'Single precision data')
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+endif
+
+
+" Processing parameters"
+if ($y<$ymin+$ys)or($x<2*wcmax/$columns) then $x=$x+wcmax/$columns $y=$y0 endif
+write('plotter',$x,$y,'DATA PROCESSING')
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+on('lb'):$on
+if $on then
+  if lb>0 then							"** lb **"
+    write('plotter',$x,$y,' Line broadening %1.1f Hz',lb)
+  else								"** lb<0 **"
+    write('plotter',$x,$y,' Resol. enhancement %1.1f Hz',-lb)
+  endif
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  if $x>wcmax*($columns-1)/$columns then return($retval) endif
+endif
+on('gf'):$on							"** gf **"
+if $on then
+  on('gfs'):$on
+  if $on then
+    write('plotter',$x,$y,' Gauss window %1.3f sec',gf)
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+    write('plotter',$x,$y,'    center at %1.3f sec',gfs)	"** gfs **"
+  else
+    write('plotter',$x,$y,' Gauss apodization %1.3f sec',gf)	"** gf **"
+  endif
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  if $x>wcmax*($columns-1)/$columns then return($retval) endif
+endif
+on('sb'):$on
+if $on then
+  if (sb>0) then						"** sb **"
+    write('plotter',$x,$y,' Sine bell %1.3f sec',sb)
+  else
+    write('plotter',$x,$y,' Sq. sine bell %1.3f sec',-sb)	"** sb<0 **"
+  endif
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  on('sbs'):$on
+  if $on then							"** sbs **"
+    write('plotter',$x,$y,'  Shifted by %1.3f sec',sbs)
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  endif
+endif
+on('awc'):$on
+if $on then							"** awc **"
+  write('plotter',$x,$y,' Add. wt. constant %g',awc)
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  if $x>wcmax*($columns-1)/$columns then return($retval) endif
+endif
+
+
+" F1 Processing parameters"
+if $dim>1 then
+  if $y<$ymin+$ys then $x=$x+wcmax/$columns $y=$y0 endif
+  write('plotter',$x,$y,'F1 DATA PROCESSING')
+  $y=$y-$ys
+  if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+  if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  on('lb1'):$on
+  if $on then
+    if lb1>0 then						"** lb1 **"
+      write('plotter',$x,$y,' Line broadening %1.1f Hz',lb1)
+    else							"** lb1<0 **"
+      write('plotter',$x,$y,' Resol. enhancement %1.1f Hz',-lb1)
+    endif
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  endif
+  on('gf1'):$on
+  if $on then
+    on('gfs1'):$on
+    if $on then							"** gf1 **"
+      write('plotter',$x,$y,' Gauss window %1.3f sec',gf1)
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      if $x>wcmax*($columns-1)/$columns then return($retval) endif
+      write('plotter',$x,$y,'    center at %1.3f sec',gfs1)	"** gfs1 **"
+    else
+      write('plotter',$x,$y,' Gauss apodization %1.3f sec',gf1) "** gf1 **"
+    endif
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  endif
+  on('sb1'):$on
+  if $on then
+    if (sb1>0) then						"** sb1 **"
+      write('plotter',$x,$y,' Sine bell %1.3f sec',sb1)
+    else							"** sb1<0 **"
+      write('plotter',$x,$y,' Sq. sine bell %1.3f sec',-sb1)
+    endif
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+    on('sbs1'):$on
+    if $on then							"** sbs1 **"
+      write('plotter',$x,$y,'  Shifted by %1.3f sec',sbs1)
+      $y=$y-$ys
+      if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+      if $x>wcmax*($columns-1)/$columns then return($retval) endif
+    endif
+  endif
+  on('awc1'):$on
+  if $on then							"** awc1 **"
+    write('plotter',$x,$y,' Add. wt. constant %g',awc1)
+    $y=$y-$ys
+    if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+    if $x>wcmax*($columns-1)/$columns then return($retval) endif
+  endif
+  write('plotter',$x,$y,'FT size %d x %d',fn,fn1)
+else
+  write('plotter',$x,$y,'FT size %d',fn)
+endif
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+if $x>wcmax*($columns-1)/$columns then return($retval) endif
+
+" calculate experiment time"
+$pad = 0 $i=1 repeat $pad=$pad+pad[$i]/size('pad') $i=$i+1 until $i>size('pad')
+$d1 = 0 $i=1 repeat $d1=$d1+d1[$i]/size('d1') $i=$i+1 until $i>size('d1')
+$d2 = 0 $i=1 repeat $d2=$d2+d2[$i]/size('d2') $i=$i+1 until $i>size('d2')
+exists('ni','parameter'):$e
+if $e then
+  $ni = ni if $ni<1 then $ni = 1 else $d2=$d2+ni/(2*sw1) endif
+else $ni = 1 endif
+$nfids = arraydim
+" handle parameter d3 "
+exists('d3','parameter'):$e
+if $e then
+  $d3 = 0 $i=1 repeat $d3=$d3+d3[$i] $i=$i+1 until $i>size('d3')
+else $d3 = 0 endif
+" handle parameter mix "
+exists('mix','parameter'):$e
+if $e then
+  $mix = 0 $i=1 repeat $mix=$mix+mix[$i] $i=$i+1 until $i>size('mix')
+else $mix = 0 endif
+if (ct=0)or($dim>1)or(arraydim>1) then
+  $nt=nt
+else
+  $nt=ct
+endif
+if ($dim>1) then
+  if ss<0 then
+    $ss2d=0 $ss1d=0-ss
+  else
+    $ss2d=ss $ss1d=0
+  endif
+else
+  $ss2d=0 $ss1d=ss
+endif
+$minutes = ((($d1+$d2+$d3+$mix+at)*(($nt+$ss1d)*$nfids+$ss2d)+$pad))/60
+if $minutes<1 then $minutes=1 endif
+if $minutes<120 then
+  if $minutes<1.5 then
+    write('plotter',$x,$y,'Total time 1 minute')
+  else
+    write('plotter',$x,$y,'Total time %d minutes',$minutes)
+  endif
+else
+  write('plotter',$x,$y,'Total time %1.1f hours',$minutes/60)
+endif
+$y=$y-$ys
+if $y<$ymin then $x=$x+wcmax/$columns $y=$y0 endif
+if $x>wcmax*($columns-1)/$columns then return($retval) endif
+
+return($retval)

@@ -1,0 +1,65 @@
+
+******************************************************************************
+rt<(filename<,'nolog'>)>  -  Retrieve Fid
+rtp<(filename)> -  Retrieve Parameters
+rtv(filename,paramname,....):val - Retrieve individual parameter(s)
+******************************************************************************
+  
+  "rt" retrieves all fid's stored in the file "filename.fid" into the
+  current experiment. If "filename.fid" does not exist, and "filename.par" does,
+  it retrieves the parameters only from "filename.par". If the argument 'nolog'
+  is specified the log-file will not be retrieved.
+  "rtp" does retrieve parameters from "filename.par", if this file exists. If
+  not, and if "filename.fid" exists, it retrieves the parameters only from 
+  "filename.fid".
+
+  "rtv" retrieves one or several parameters from a parameter file. The file
+  may have been made with "svf" or "svp" or "sd" commands, or it may be
+  from another experiment. For rtv, if the supplied filename is a directory,
+  (with or without the .fid or .par extension), then the
+  parameters will be retrieved from the procpar file in that directory.
+  If the filename does not correspond to a directory but rather is a 
+  Vnmr parameter file, that file will be used.  If rtv is used without
+  returning values to the macro by appending a colon and macro variables,
+  then the parameters will be copied into the experiments "current" tree.
+  If the parameter does not already exist in the current tree, it will be
+  created.  If the returned parameter is an array, the entire array will be
+  returned.  If the rtv command returns values into the macro by appending
+  a colon and macro variables, then an array index may be supplied as the
+  argument following the parameter name.  If no index is supplied, it defaults
+  to the first index.  This form of the rtv command, in which values are only
+  passed to macro variables, is useful if you do not want additional parameters
+  created in your experiments current tree.  If the requested parameter do
+  not exist in the parameter file, rtv will abort.  There is only one exception.
+  If a single parameter is requested and it is being returned into a macro parameter
+  and the 'noabort' option is given to the command, it will not abort if the
+  parameter does not exist.  An example is
+    rtv('parmaster','noabort','parameter'):$pm
+  In the case, the first argument is the filename of the parameter set. The
+  second argument must be 'noabort'. The third argument is the name of the parameter.
+
+  If rtv is executed without macro return values, then the fixpar macro will
+  automatically be run.  If return values are requested, fixpar is not executed.
+
+  One additional form of rtv is used to return parameters to a macro variable, where
+  the parameter may be arrayed.  In this case, the name of the macro variable is
+  passed as the last argument to rtv. The 'noabort' option is available in this
+  form of rtv.  When using this form of rtv, all array elements are stored in the
+  variable supplied as the last argument and the return value from the rtv command is set
+  to the number of array elements. The "$" variable must be pre-defined before using
+  it as an argument to rtv.  For example,
+
+     $tmp=''
+     rtv(userdir+'/global','noabort','saveglobal','$tmp'):$num
+
+  will set $tmp to an array of strings, corresponding to the array values of the
+  'saveglobal' parameter. The value of $num will be set to the number of array elements
+  in $tmp.  $num will be set to 0 if the requested parameter does not exist. Note the single
+  quotes around the "$" variable ('$tmp' in example above) to pass the name of the variable.
+
+  If these commands are executed without an argument, they will ask for a
+  file name. In that case, the file name can be given without single quotes.
+
+  In LC-NMR, rt will retrieve the lcdata (and drunlog) files if these files
+  were saved along with the NMR data by using svf.
+

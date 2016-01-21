@@ -1,0 +1,78 @@
+"macro plexpinfo"
+"plexpinfo<(x<,y>)> - plot exp info at position x, y"
+" same as pltext except text is not plotted"
+
+$x=3
+$y=0.98*wc2max
+
+if $#>0 then
+    $x=$1
+  if $#>1 then
+    $y=$2
+  endif
+endif
+
+write('plotter',$x,$y,''):$ys	   "get the height of characters in $ys"
+
+  exists('samplename','parameter'):$sampnameex
+  if ($sampnameex) then
+     write('plotter',$x,$y,' Sample Name:')
+     $y = $y - $ys
+     write('plotter',$x,$y,'   %s',samplename)
+     $y = $y - $ys
+  endif
+
+  exists('systemname_','parameter'):$sysnameex
+  if ($sysnameex) then
+     write('plotter',$x,$y,' Data Collected on:')
+     $y = $y - $ys
+     write('plotter',$x,$y,'   %s',systemname_)
+     $y = $y - $ys
+  endif
+  exists('archivedir','parameter'):$ardirex
+  if ($ardirex) then
+     write('plotter',$x,$y,' Archive directory:')
+     $y = $y - $ys
+     write('plotter',$x,$y,'   %s',archivedir)
+     $y = $y - $ys
+  endif
+  write('plotter',$x,$y,' Sample directory:')
+  $y = $y - $ys
+  write('plotter',$x,$y,'   %s',sample)
+  $y = $y - $ys
+  $file=''
+  if (auto <> 'y') then			"It is automation but ignore file"
+    shell('basename ' + file + ' .fid'):$file
+  else
+	cplog(pslabel,'last'):$file
+  endif
+  if ($file = 'exp') then $file='' endif
+  if ($file = '') then
+    $file=pslabel
+    if ($file = 's2pul') then
+       $file=tn
+    endif
+  endif
+    write('plotter',$x,$y,' FidFile: %s',$file)
+    $y = $y - $ys
+$y=$y - $ys
+
+if (pslabel<>seqfil) then
+   write('plotter',$x,$y,'Pulse Sequence: %s (%s)',pslabel,seqfil)
+else
+   write('plotter',$x,$y,'Pulse Sequence: %s',seqfil)
+endif
+$y=$y-$ys
+if (solvent<>'') and (solvent<>'none') then
+  write('plotter',$x,$y,'Solvent: %s',solvent)
+  $y = $y - $ys
+endif
+write('plotter',$x,$y,'Data collected on: %s',date)
+$y=$y-$ys
+if $x > wc/2-50 then pllogo(0) else pllogo endif
+exists('userplexpinfo','maclib'):$umex
+if ($umex) then
+   userplexpinfo($x,$y):$x,$y
+   $y=$y-$ys
+endif
+return($x,$y,$ys)

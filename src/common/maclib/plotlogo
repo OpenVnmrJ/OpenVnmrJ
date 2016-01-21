@@ -1,0 +1,43 @@
+"macro plotlogo"
+exists('plotlogo','parameter','global'):$el
+exists('doplotlogo','parameter','global'):$edl
+exists('plotlogox','parameter','global'):$ex
+exists('plotlogoy','parameter','global'):$ey
+if not $el  then create('plotlogo','string','global') endif
+if not $edl then create('doplotlogo','string','global') doplotlogo='n' endif
+if not $ex then create('plotlogox','real','global') plotlogox=40 endif
+if not $ey then create('plotlogoy','real','global') plotlogoy=25 endif
+
+$arg='' if $#>0 then $arg=$1 endif
+
+if $arg='setup' then return endif
+
+" If the plotlogo variable still has the varianlogo file, we need to"
+" switch to the agilent default"
+substr(plotlogo, 'basename'):$logofilename
+if ($logofilename='varianlogo.gif') or ($logofilename='AgilentLogo_Plot.gif') then plotlogo='' endif
+
+if plotlogo='' then plotlogo=systemdir+'/iconlib/plotLogo.gif' plotlogox=40 plotlogoy=25 endif
+
+exists('imagefile','command'):$i
+if $i then
+  if (doplotlogo='y' or $arg='get') then
+    exists(plotlogo,'file'):$elogo
+    if $elogo then
+      if (parstyle='bpa' and $arg<>'get') then
+        $x=0 $y=wc2max-5
+      elseif (parstyle='bpav' and $arg<>'get') then
+        $x=wcmax/10-plotlogox/2 $y=155
+      elseif ($arg='get') then
+        $x=wcmax-plotlogox $y=wc2max
+      else
+        $x=wcmax-plotlogox $y=wc2max-6
+      endif
+      imagefile('display',plotlogo,$x,$y,plotlogox,plotlogoy)
+      if $#=0 or $arg<>'get' then
+        imagefile('plotall')
+        imagefile('clear')
+      endif
+    endif
+  endif
+endif

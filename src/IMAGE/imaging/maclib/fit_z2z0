@@ -1,0 +1,42 @@
+"macro fit_z2z0"
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil='z2c'
+else
+  $coil='z2'
+endif
+
+exists('yval','parameter'):$e
+if $e<0.5 then
+  create('yval','real')
+  setgroup('yval','processing')
+endif
+
+yval=0,0,0,0,0
+wft
+$i=0
+repeat
+  $i=$i+1
+  select($i)
+" peak(0,sw):$height,cr"
+  peak:$height,cr
+  offset:yval[$i]
+until ($i >= arraydim)
+f full dss
+
+exists(userdir+'/fastmap','file'):$e
+if $e<0.5 then mkdir(userdir+'/fastmap') endif
+$infile=userdir+'/fastmap/'+gcoil+'_'+'z2z0'
+fm_slope({$coil},yval):$r1,$r2,$r3 
+if (($r3>0.9) or ($r3<-0.9)) then
+  write('reset',$infile)
+  write('file',$infile,'z2z0= %11.4e Hz/DAC(%s) r=%8.5f',$r1,$coil,$r3)
+  cat($infile)
+  write('line3','B0 shift of %s coil found (z2z0=%g Hz/DAC  r=%g).',$coil,$r1,$r3)
+else
+  write('error','Fit for B0 shift of %s coil unreliable (z2z0=%g Hz/DAC  r=%g).',$coil,$r1,$r3)
+  write('reset',$infile)
+  write('file',$infile,'z2z0= %11.4e Hz/DAC(%s) r=%8.5f',$r1,$coil,$r3)
+  cat($infile)
+endif

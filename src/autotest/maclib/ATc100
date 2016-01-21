@@ -1,0 +1,133 @@
+"macro ATc100"
+"ATc100 C13 HSQC 2D Test"
+" For indirect probe, set max 15N pulse power = 0.0 in autotest window"
+" This test uses user-defined decoupling power limits"
+
+if (at_c13tests='n') then ATnext return endif
+
+  if ($#=0) then
+   gChsqc  "Proteinpack or BioPack must be installed "
+   text('13C gHSQC')
+   exists('sample','parameter'):$e
+   if $e then destroy('sample') endif
+   dof=dof-6d  "to put decoupling on methanol"
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   at=.080
+   gain=at_gain
+   pw=at_pw90
+   tpwr=at_tpwr
+   pwC=at_pwx90c
+   pwClvl=at_pwx90lvlc
+
+   at_currenttest='C13hsqc_c' 
+
+ $count=1
+ if (pwClvl>at_max_pwxlvl) then
+  write('line3','13C Pulse Power Requested Exceeds Defined Power Limit (at_max_pwxlvl)')
+  write('line3','13C Pulse Power Reduced to Permitted Level %2.0f (at_max_pwxlvl)',at_max_pwxlvl)
+  n1='13C Pulse Power Requested Exceeds Defined Power Limit (at_max_pwxlvl)'
+  n2=' Power Reduced to Permitted Level (at_max_pwxlvl)'
+  atext(n1) atext(n2)
+  $diff=pwClvl - at_max_pwxlvl
+  repeat
+    pwC =pwC*1.12 
+    pwClvl=pwClvl - 1
+    $count=$count+1
+  until $count>$diff
+ endif
+
+ if (at_max_pwx2lvl=0.0) then pwN=0.0 endif  "for 2-channel probe, for example"
+
+ $count=1
+ if ((pwNlvl>at_max_pwx2lvl) and (at_max_pwx2lvl<>0.0))then
+  write('line3','15N Pulse Power Requested Exceeds Defined Power Limit (at_max_pwx2lvl)')
+  write('line3',' Power Reduced to Permitted Level %2.0f (at_max_pwx2lvl)',at_max_pwx2lvl)
+  n1='15N Pulse Power Requested Exceeds Defined Power Limit (at_max_pwx2lvl)'
+  n2=' Power Reduced to Permitted Level (at_max_pwx2lvl)'
+  atext(n1) atext(n2)
+  $diff=pwNlvl - at_max_pwx2lvl
+  repeat
+    pwN =pwN*1.12 
+    pwNlvl=pwNlvl - 1
+    $count=$count+1
+  until $count>$diff
+ endif
+
+  opx('ATwurst.DEC')
+  pboxpar('sfrq',dfrq)
+  setwave('WURST2 80p')
+  pboxpar('$1 adb', '2.0')   "add 2dB for better intensities"
+  cpx(at_pwx90Lowpowerc,at_pwx90Lowpowerlvlc)
+
+  pbox_pwr('ATwurst.DEC'):dpwr
+
+  $n3=n3
+  format(at_max_dpwr,2,0):n3
+  n3=n3+'d'
+  $attn=n3
+
+  if dpwr>at_max_dpwr then
+      pboxpar('attn',$attn)
+      echo($attn)
+      shell('Pbox')
+      pbox_pwr('ATwurst.DEC'):dpwr
+      write('line3','Decoupling Power reduced to Maximum (at_max_dpwr)')
+      n3='Decoupling Power reduced to Maximum (at_max_dpwr)'
+      atext(n3)
+  endif
+
+  pbox_dmf('ATwurst.DEC'):dmf
+  vp=0 dmm='ccp'
+  dm='nny' dres=9.0 dseq='ATwurst'
+
+
+   d1=1.5 dm='nny'
+   dm2='nnn' 
+   ZZ='y' SE='n' allC='n' arom='n' alphaC='y' aliph='n'
+   array('nt',24,4,0) phase=1 d2=.01 "forces N15 180 in t1"
+   ss=256 av
+   sb=-at sbs=sb fn=4*np gf='n' lb='n'
+   ssfilter=300 f full crl rfl=sw/2 rfp=0
+   cr=4p delta=3p
+   wexp='ATc100(`PART1`)'
+   wnt='ATwft f select(1) f vsadj(100) if (celem>1) then select(celem-1) vsadj(100) select(celem) peak:$int if ($int>105 or $int<95) then r6=r6+1 endif if r6>2 then halt ATfail(`C13HSQCc_STABILITY`) ATnext return endif endif  dssh'
+
+   "examine each spectrum as acquired for int. within 5% of first spectrum, else abort and save fid"
+   "if this happens. continue with rest of autotest runs, otherwise increment pulse power and repeat"
+   au
+
+elseif ($1='PART1') then
+
+ if (at_plotauto='y') then 
+   if (at_printparams='y') then
+     dn2='' pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ sb=-at sbs=sb fn=4*np gf='n' lb='n'
+ ssfilter=300 wft f full crl rfl=sw/2 rfp=0
+ select(1) vsadj 
+ cr=4p delta=3p
+ dsn:r1
+ select(arraydim) aph0 dsn:r2
+ r1=trunc(r1*10)/10
+ r2=trunc(r2*10)/10
+ peak:$int,$pos
+ sp=$pos-200 wp=400
+ $avht=0 $stddev=0
+ ATplot2:$avht,$stddev 
+ if (at_plotauto='y') then 
+   ATpltext(80,wc2max-2)
+   ATpage
+ endif
+ $avht=trunc(10*$avht)/10
+ $stddev=trunc(1000*$stddev)/1000
+
+ ATrecord('C13HSQCc','C13HSQC Stability (1024 trials)','stability',100-$stddev,'  sn_first',r1,'   sn_last',r2,'   oversamp',oversamp)
+ write('file',autotestdir+'/REPORT','C13 HSQC First Spectrum SN= %4.0f, Last Spectrum SN= %4.0f ,Stability =%2.2f',r1,r2,100-$stddev)
+ ATsvf
+
+ATnext
+endif

@@ -1,0 +1,28 @@
+"macro AC6S"
+"Auto calibrate"
+"Determine proper C13 power level"
+
+lb=3.5 wft av f ds
+peak:$ht,$frq
+cr=$frq
+rl(129p)
+sp = 50p wp=30p
+ai vsadj(20)
+d1=d1_temp  vp=wc2max/2
+getparam('tpwr'):$power
+if (tpwr = $power) then
+   array('pw',10,8,2)    "use finer steps if the power comes from file"
+else
+   array('pw',10,5,5)
+endif
+wnt='wft vsadj(10) dssh'
+wexp='AC3S'
+alock='n' wshim='n'
+clear(2)
+if (d1_temp > 30) then
+   text('Determining proper C13 pulse power level\\This will take about 10 minutes')
+else
+   text('Determining proper C13 pulse power level\\This will take about 1 minute')
+endif
+dtext
+au('wait')

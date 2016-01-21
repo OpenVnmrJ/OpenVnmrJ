@@ -1,0 +1,70 @@
+"macro testsn"
+" testsn - tests for proper s/n and aborts acquisition "
+" sets r7 to target number of transients "
+
+" check sn parameter"
+exists('sn','parameter'):$e 
+if $e then 
+  on('sn'):$snon 
+  if not($snon) then
+    return
+  else
+    if sn<1 then
+      return
+    endif
+  endif
+endif
+
+wft
+aph
+
+" evaluate signal-to-noise ratio"
+$wp=wp $sp=sp
+if ($# > 1.5) then
+  if ($1>$2) then
+        $newwp=($1-$2)*reffrq
+        $newsp=$2*reffrq
+  else
+        $newwp=($2-$1)*reffrq
+        $newsp=$1*reffrq
+  endif
+  $right=-rfl+rfp                     "$right=right edge of spectrum"
+  if ($newsp < $right) then $newsp=$right endif
+  if ($newwp > sw) then $newwp=sw endif
+  sp=$newsp wp=$newwp
+endif
+getsn:$sn,$finalsn				     "calculate s/n"
+wp=$wp sp=$sp
+if (auto = 'y') then
+   groupcopy('current','processed','processing')
+endif
+
+if ($sn>sn)and((ct+bs)<nt) then			      "s/n target reached"
+    exists('ACQtime','parameter'):$atex
+    if ($atex) then
+	ACQtime=ACQtime*ct/nt
+	exists('ACQtime','parameter','processed'):$atex
+	if ($atex) then setvalue('ACQtime',ACQtime,'processed') endif
+    endif
+    halt				"acquisition abort with halt will"
+    return				   "initiates the wexp processing"
+endif
+
+" no automatic plot for very low s/n"
+if $finalsn<5 then
+    write('line3','s/n too low, spectrum not plotted!')
+    pltmod='off'
+    return
+endif
+
+" determine when to re-evaluate s/n"
+if $finalsn>=sn then
+    $targetct=sn*sn/($sn*$sn)*ct			       "target ct"
+    $targetct=$targetct-0.3*($targetct-ct)  "correction for noise effects"
+    if ($targetct-ct > bs) then				   "pause testing"
+	r7=$targetct
+	wbs('testct')
+    endif
+else
+    write('line3','s/n will not be reached')
+endif		       "re-establish testing only when s/n can be reached"

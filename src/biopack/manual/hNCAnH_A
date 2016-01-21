@@ -1,0 +1,77 @@
+ hNCAnH_A.c   
+ 
+   (H)NCA(N)H with double-TROSY feature
+    Use for 2H-13C-15N labeled proteins. 
+  
+ Correlations: 
+          t1(ni)   : N[i],N[i-1],N[i+1]
+          t2(ni2)  : C[i],C[i-1]
+          t3(np/at): HN[i]
+
+ Depending upon tmeCN and size of the protein: 
+  [default] timeCN 14-16ms    auto-peak N[i] has different sign than cross-peaks N[i +/-1] 
+            timeCN 20-24ms    auto-peak N[i] almost absent, cross-peaks have larger intensity
+
+ Sensitivity is about 1/2 of HNCACB experiment
+ (See Supplementary material for hNCAnh experiment paper)
+
+ Reference hNCAnH:   Frueh, Arthanari, Koglin, Walsh, Wagner      JACS 2009 v 131 pp 12880-12881
+ Reference hNcaNH:   Frueh, Sun, Vosburg, Walsh, Hoch and Wagner, JACS 2006 v 128 pp 5757-5763
+
+
+ phase cycle slightly modified to utilize steady-state 15N magnetization 
+  
+
+ This is an "A" style of the pulse sequence programming: 
+  all shaped pulses (except proton) are generated automatically on-the-fly by Pbox calls.
+  User needs to have only three reference (calibration) parameters per channel: 
+  pw90, pw90 power level and compression factor (see BioPack manual)
+
+  For any automatically generated shaped pulse,shape parameters are determined by a single
+ "Pbox input string parameter" (see Pbox manual).
+   
+     Example: 180-degree shaped pulse on CO while sitting on CA will be  
+              determined by "Pbox input string" parameter 
+              
+              CO180offCA_in_str = 'gaus 60p 120p 0 0 180', i.e.
+              Gaussian shape, covering 60ppm, offset by 120ppm,
+              spin state 0, pulse phase 0, flip angle on resonance 180 degrees.
+
+     NOTE:    due to this particular pulse sequence implementation peculiarities,  
+              arraying  string parameter "whatever_pulse_in_str" will not work:
+              experiment will run with whatever_pulse_in_str = first-element-of-array  
+
+   Jun  2012 : SOME CARE TAKEN FOR INOVA-TYPE AP DELAYS; NOT TESTED ON INOVA SYSTEMS
+ 
+    exp_mode='t' for trosy in the double-trosy hNcaNH
+
+    exp_mode='R' to check signal in 1D and test relaxation losses during 2*timeCN 
+                 (~2*16ms=32ms) transfers
+    
+    set dm3='nyn' for deuterium decoupling on CA during 2*timeCN transfer
+
+
+How to set up:
+
+  1a)  Set exp_mode='R', timeCN=0.0005 (=500us), run 1D expriment.
+  1b)  array  gzlvl6 (coherence-selection decoding gradient) for max transfer efficiency
+       at this stage, 1D sensitivity should be almost the same as regular TROSY-HNCA
+
+  2a) [optional] Check 2H decoupler efficiency
+
+      Set exp_mode='R', timeCN=0.016, dm3='nnn','nyn'. Run arrayed 1D 
+      There should be a noticable difference between 2H-decoupled and coupled spectra.
+      Calibrate 2H decoupling parameters by the button on the Setup/Calibrations page.
+
+  2b) [optional] Check relaxation during 2*timeCN
+      Set exp_mode='R',  array timeCN=0.0005, 0.003, 0.006 ... up to 0.025 (25ms)
+      Run this arrayed 1D to get an idea of CA* T2*. (that would help to choose timeCN,
+      see supplemetary for the original paper for hNcaNH)
+
+  3)  set exp_mode='t', timeCN around 16ms, dm3='nyn' and run as 3D with normal (linear)
+      sampling or with NUS (Non-Uniform Sampling, recommended)
+
+  timeTN1 = first N[i]-> Ca[i,i-1] tranfer 11-13ms, 1/(4*JNCa)          (12.4ms)
+  timeCN  = Ca[i,i-1]-> N[i,i+1,i-1] transfer, 16-25ms          
+  timeTN  = last NCa->N transfer, shortened by 1/(4JHN) = timeTN1-tauNH (10ms) 
+    

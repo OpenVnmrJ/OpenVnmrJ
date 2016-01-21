@@ -1,0 +1,44 @@
+"macro plp"
+" ********************************** "
+" plp(pltmod,nopage) - plot phosphorus spectrum "
+" any second argument suppresses page command "
+" ********************************** "
+
+$plotoptions='molecule','pl','axis','comments','params','logo','header','miniplot'
+
+$pltmod=pltmod $vp=vp $wc=wc $vs=vs $is=is $io=io
+
+if (rfl<>0) or (rfp<>0) then "referenced"
+  axis='p'
+endif
+if intmod='full' then
+   integ(sp,sp+wp):$maxint
+   cz
+   isadj($maxint)
+endif
+if intmod<>'off' then
+   isadj(wc2max/5)
+endif
+if intmod = 'partial' then
+  numreg:$numreg                    "must have regions for pir"
+  if ($numreg > 0.5) then           "there are regions"
+    if vp < 12 then vp=12 endif
+    exists('intstyle','parameter','global'):$e
+    if $e then
+      exec(intstyle)
+    else
+	$plotoptions=$plotoptions,'intlist'
+    endif
+  endif
+endif
+exists('pkpick','parameter','global'):$e
+if $e then
+  if pkpick<>'' then
+    exec(pkpick)
+	$plotoptions=$plotoptions,'linelist'
+  endif
+endif
+
+doplotoption($plotoptions)
+page
+vp=$vp wc=$wc vs=$vs is=$is io=$io

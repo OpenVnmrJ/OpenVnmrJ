@@ -1,0 +1,393 @@
+"macro vpLayout"
+if($# < 0.5) then return endif
+
+if($1 = 'rotate') then 
+   if($# > 2.5) then 
+       if($2 = 'dconi') then 
+          write('line3', 'rotated dconi %s', $3) 
+          trace = $3 
+          dconi('again') 
+       elseif($2 = 'ds') then 
+          write('line3', 'rotated ds %s', $3) 
+	  vnmrjcmd('frame', 'orientation', 0, 'Verticalx left')
+       endif
+   endif
+   return
+endif
+
+// return smallest available expNum (not been used by vp $i<=$nvps)
+if($1='getExpNumForVP' and $# > 2.5) then
+  $vp=$2
+  $nvps=$3
+  $found=0
+  $i=0
+  while(not $found) do
+    $i=$i+1
+    vpLayout('isExpNumUsed',$vp,$i,$nvps):$e
+    if(not $e) then $found=1 endif 
+  endwhile
+  return($i)  
+endif
+
+// check whether exp# $3 is used by other viewports other than viewport $2
+if($1='isExpNumUsed' and $# > 3.5) then
+    $vp=$2
+    $expn=$3
+    $nvps=$4
+    $i=0
+    while($i<$nvps) do
+      $i=$i+1
+      if($i<>$vp and jcurwin[$i]=$expn) then return(1) endif
+    endwhile
+    return(0)
+endif
+
+if($1='checkExpNum') then
+  $maxn=size('jcurwin')
+  $i=0
+  $expStr=''
+  while($i<$maxn) do
+    $i=$i+1
+    // if exp jcurwin[$i] is not locked, set jcurwin[$i] to next available exp.
+    // also make the viewport selected
+    format(jcurwin[$i],0,0):$expStr
+    $lpath = userdir + '/lock_' + $expStr +'.primary'
+    exists($lpath, 'file'):$e
+    if($e < 0.5) then
+        if(jvpexps[$i]<1) then jvpexps[$i]=1 endif
+        vpLayout('getExpNumForVP',$i,$i):$expn
+        jcurwin[$i]=$expn
+    endif
+    // if needed, create exp for viewports if $i<=jviewports[1]
+    if($i<=jviewports[1] and jcurwin[$i]>0) then
+      format(jcurwin[$i],0,0):$expStr
+      $epath = userdir + '/exp' + $expStr
+      exists($epath, 'directory'):$e
+      if($e < 0.5) then
+        $cmd = 'cexp('+$expStr+') '
+	exec($cmd)
+      endif
+    endif
+  endwhile
+  return
+endif
+
+// vpLayout('setViewports',n) shows n VPs. It WILL NOT kill unused VPs, 
+//	and WILL NOT bring up new Vnmrbg if died in a VP.
+// vpLayout('setViewports',n, 'purge') shows n VPs. It WILL kill unused VPs,
+//	but WILL NOT bring up new Vnmrbg if died in a VP.
+// vpLayout('setViewports',n, 'recover') shows n VPs. It WILL NOT kill 
+//	unused VPs, but WILL bring up new Vnmrbg if died in a VP.
+if($1 = 'setViewports' and $# > 1.5) then
+   // viewport 1 should be selected when changing # of viewports
+   jvpexps[1]=1
+   vnmrjcmd('viewport','select', 1, 'on')
+   $curVPs=jviewports[1]
+
+   // set # of viewports from viewport 1. This makes sure that 
+   // viewport 1 knows how many viewports there will be.
+   $vp=''
+   format($2,0,0):$vp
+   vnmrjcmd('VP 1','jviewports[1]='+$vp)
+
+   // does not hurt to set # of viewports again from avtive viewport.
+   jviewports[1]=$2
+
+   // make sure jcurwin is properly set, and create exps if needed.
+   vpLayout('checkExpNum')   
+
+   // flush viewport 1 if more viewports will be created.
+   if(jviewports[1]>$curVPs) then
+     fsave(userdir+'/global','global') // this is to flush out global file
+   endif
+
+   // undo overlay
+   if(overlayMode>0) then
+     vpLayout('overlayMode','unoverlay')
+   endif
+
+   // set 3 of viewports
+   $purge=''
+   $recover=''
+   if(jviewportproperty[1]>0) then $purge='purge' endif
+   if(jviewportproperty[2]>0) then $recover='recover' endif
+   vnmrjcmd('vpnum', jviewports[1], $purge, $recover)
+//   vpsetup setSpecColor
+
+   return
+endif
+
+if($1 = 'overlayMode') then
+   $mode = 0
+   if($# > 1.5) then
+        if($2 = 'overlay') then
+           $mode = 1
+        elseif($2 = 'align' and overlayMode = 0) then
+            $mode = 2
+        elseif($2 = 'align') then
+            $mode = 3
+        elseif($2 = 'unalign' and overlayMode = 3) then
+            $mode = 1
+        elseif($2 = 'unalign') then
+            $mode = 0
+        elseif($2 = 'stack') then
+            $mode = 4
+        elseif($2 = 'unstack') then
+            $mode = 5
+        endif
+   endif
+   if($2 = 'align') then // all viewports should have the same mfShowFields
+     $i=0
+     while($i<jviewports[1]) do
+       $i=$i+1
+       $cmd=''
+       format(mfShowFields,0,0):$cmd
+       $cmd='setvalue(`intmod`,`off`) mfShowFields='+$cmd
+       vnmrjcmd(`VP `,$i,$cmd)
+     endwhile 
+   endif
+   vnmrjcmd('overlayMode',$mode)
+   overlayMode=$mode
+   return
+endif
+
+// this is called by jexp entry on vertical viewports panel
+// note, jexp command will update jcurwin, then call vpLayout('jexp',vpid)
+// to update jviewports and jviewportlabels
+if($1 = 'jexp' and $# > 2.5) then
+     if($2 <> jviewport) then
+        $str1='' $str2='' format($2,0,0):$str1 format($3,0,0):$str2
+	vnmrjcmd('VP ',$2,'vpLayout(`jexp`,'+$str1+','+$str2+')')
+	return
+     endif
+
+     jexp:$expn
+     if($expn<>jcurwin[jviewport]) then
+       jcurwin[jviewport]=$expn
+     endif
+     if($expn=$3) then 
+       return 
+     endif
+
+     if($2 > jviewports[1] or $2 < 1) then
+	jcurwin[$2] = jcurwin[$2]
+	write('line3', 'Error: viewport id out of range (1-9).')
+	return
+     endif
+     if($3 < 0.5 or $3 > 9999.5) then
+	jcurwin[$2] = jcurwin[$2]
+	write('line3', 'Error: experiment out of range (1-9999).')
+	return
+     endif
+
+     $s=''
+     format($3,0,0):$s
+     $lpath = userdir + '/lock_' + $s +'.primary'
+     exists($lpath, 'file'):$e
+     if($e > 0.5) then
+
+	// exp $3 is in use by another vp, swap exp in the two viewports
+        // find vp id of exp $3
+        $i = 1
+        $size = size('jcurwin')
+	$vp=1
+        while($i < $size) do
+          $i=$i+1
+          if($i<>$2 and jcurwin[$i] = $3) then
+	     $vp=$i
+          endif
+        endwhile
+
+	swapExps($2,jcurwin[$2],$vp,$3)
+	return
+     endif
+
+     $i = jviewports[1]	
+     $size = size('jcurwin')
+     while($i < $size) do
+       $i=$i+1
+       if($i<>$2 and jcurwin[$i] = $3) then
+	 jcurwin[$i]=jcurwin[$2]
+       endif
+     endwhile
+
+     $cmd=''
+
+     $epath = userdir + '/exp' + $s
+     exists($epath, 'directory'):$e
+     if($e < 0.5) then
+        $cmd = 'cexp('+$s+') '
+     endif
+
+     $cmd = $cmd + 'jexp' +$s
+
+     vnmrjcmd('VP ',$2, $cmd)
+
+  return
+endif
+
+// this is called by jexp macro 
+if($1 = 'updateVpLabel') then
+
+   if($#>2.5) then // check exp # in jviewports 
+     $i = jviewports[1]	
+     $size = size('jcurwin')
+     while($i < $size) do
+       $i=$i+1
+       if(jcurwin[$i] = $3) then
+	 jcurwin[$i]=$2
+       endif
+     endwhile
+   endif
+
+  vpLayout(`updateLabel`)
+  return
+endif
+
+if($1 = 'updateLabel') then
+
+   if(appmode='imaging') then return endif
+
+   $vpid=''
+   format(jviewport,0,0):$vpid
+
+   $vplabel=''
+// try fid name. 
+   exists('file','parameter'):$e
+   if($e>0) then
+     strstr(file, '.', 'last'):$n,$s1
+     if($n>0) then 
+       $s3 = ''
+       strstr($s1, '/', 'last'):$n,$s2,$s3
+       if($n > 0) then
+        $vplabel = $s3
+       endif
+     endif
+   endif
+
+   if($vplabel='') then
+// fid name empty, then try pslabel 
+     exists('pslabel','parameter'):$e
+     if($e>0) then
+        $vplabel = pslabel 
+     endif
+   endif
+
+   if($vplabel = '' or jviewportlabel[jviewport] = $vplabel) then return endif
+
+// use active viewport to set shared global parameter jviewportlabel
+   $vp1=''
+   $vp2=''
+   format(activeviewport,0,0):$vp1
+   format(jviewport,0,0):$vp2
+   vnmrjcmd('VP '+$vp1,'jviewportlabel['+$vp2+'] =`'+ $vplabel+'`')
+
+/*
+   $i=0
+   while($i<jviewports[1]) do
+     $i=$i+1
+     if($i <> jviewport) then
+        vnmrjcmd('VP ',$i,'vpLayout(`updateLabel`)')
+     endif
+   endwhile
+*/
+   
+   return
+endif
+
+" layout viewports"
+
+$nvp=0
+$i=0
+while($i < jviewports[1]) do
+    $i=$i+1
+    if(jvpexps[$i] > 0.5) then
+         $nvp=$nvp+1
+    endif
+endwhile
+
+if($nvp<0.5) then
+   $nvp=1
+endif
+
+if($1 = 'vertical' or $1 = 'Vertical') then
+  vnmrjcmd('window', $nvp, '1') 
+  "vnmrjcmd('VP overlay','off')"
+  vpLayout('overlayMode', 'unoverlay')
+  jviewports[3]=$nvp 
+  jviewports[4]=1
+  return
+endif
+
+if($nvp = 1 or $1 = 'horizontal' or $1 = 'Horizontal') then
+  vnmrjcmd('window', '1', $nvp) 
+  "vnmrjcmd('VP overlay','off')"
+  vpLayout('overlayMode', 'unoverlay')
+  jviewports[3]=1 
+  jviewports[4]=$nvp
+  return
+endif
+
+if($1 = 'overlay' or $1 = 'Overlay') then
+
+  if($# > 1.5) then
+     if($2 = 'on') then
+  	 vpLayout('overlayMode', 'overlay')
+         "vnmrjcmd('VP overlay','on')"
+     elseif($2 = 'off') then
+  	 vpLayout('overlayMode', 'unoverlay')
+         "vnmrjcmd('VP overlay','off')"
+     endif
+     return
+  endif
+ 
+  vpLayout('overlayMode', 'overlay')
+  "vnmrjcmd('VP overlay','on')"
+  if(jviewports[3]*jviewports[4] <> $nvp) then
+     jviewports[3]=$nvp 
+     jviewports[4]=1
+  endif
+  vnmrjcmd('window', jviewports[3], jviewports[4]) 
+  return
+endif
+
+if($1 = 'auto' or $1 = 'Auto') then
+  if($nvp = 2 or $nvp = 3 or $nvp = 5 or $nvp = 7) then
+     vnmrjcmd('window', '1', $nvp) 
+  "   vnmrjcmd('VP overlay','off')"
+     jviewports[3]=1 
+     jviewports[4]=$nvp
+  elseif($nvp = 4) then
+     vnmrjcmd('window', 2, 2) 
+   "  vnmrjcmd('VP overlay','off')"
+     jviewports[3]=2 
+     jviewports[4]=2
+  elseif($nvp = 6 and jviewports[3] > jviewports[4]) then
+     vnmrjcmd('window', 2, 3) 
+   "  vnmrjcmd('VP overlay','off')"
+     jviewports[3]=2 
+     jviewports[4]=3
+  elseif($nvp = 6) then
+     vnmrjcmd('window', 3, 2) 
+   "  vnmrjcmd('VP overlay','off')"
+     jviewports[3]=3 
+     jviewports[4]=2
+  elseif($nvp = 8 and jviewports[3] > jviewports[4]) then
+     vnmrjcmd('window', 2, 4) 
+"     vnmrjcmd('VP overlay','off')"
+     jviewports[3]=2 
+     jviewports[4]=4
+  elseif($nvp = 8) then
+     vnmrjcmd('window', 4, 2) 
+"     vnmrjcmd('VP overlay','off')"
+     jviewports[3]=4 
+     jviewports[4]=2
+  elseif($nvp = 9) then
+     vnmrjcmd('window', 3, 3) 
+  "   vnmrjcmd('VP overlay','off')"
+     jviewports[3]=3 
+     jviewports[4]=3
+  endif
+  vpLayout('overlayMode', 'unoverlay')
+  return
+endif

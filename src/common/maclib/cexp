@@ -1,0 +1,61 @@
+"macro cexp"
+
+$estr=''
+$enum=0
+if ($# = 1) then
+    if (typeof('$1')) then
+      format($1,0,0):$enum
+    else
+      $enum=$1
+    endif
+    format($1,0,0):$estr
+    CEXP($1):$stat,$msg
+elseif ($# = 2) then
+    format($2,'isreal'):$isr
+    if not ($isr) then
+        $enum=$1
+        format($1,0,0):$estr
+        CEXP($2,$1):$stat,$msg
+    else
+        $enum=$2
+        format($2,0,0):$estr
+        CEXP($1,$2):$stat,$msg
+    endif
+
+"next two cases are actually error conditions"
+"let the VNMR command report the error"
+"it knows the maximum experiment number; Magical does not"
+"2 separate cases to avoid references to potenially bogus command args"
+
+elseif ($# = 0) then
+    CEXP:$stat,$msg
+else
+    CEXP($1,$2,$3):$stat,$msg
+endif
+
+if (not $stat) then
+  if ($##) then
+    return($stat,$msg)
+  else
+    write('error',$msg)
+    abort
+  endif
+endif
+
+"for exp10 and higher, create a jexpNNN"
+"macro as a link to /vnmr/maclib/jexp1"
+
+if ($estr <> '' and $enum > 9) then
+    $jmacro=userdir+'/maclib/jexp'+$estr
+    $e=0
+    exists($jmacro,'file'):$e
+    if ($e <> 0) then
+        rm($jmacro):$x
+    endif
+    shell('ln -s "'+systemdir+'/maclib/jexp1" "'+$jmacro+'"'):$x
+endif
+if ($##) then
+  return($stat,$msg)
+else
+  write('line3',$msg)
+endif

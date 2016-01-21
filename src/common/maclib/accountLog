@@ -1,0 +1,81 @@
+"macro accountLog"
+
+if (auto<>'y') then 
+    if ($1='Done') then
+//	This is where one would do whatever needs to be done
+//	with the accountLog for customer use.  Considering that
+//	there is no particular recommendation, this section is left
+//	to the user with user macros (i.e., useraccountLog).
+
+	dousermacro($0)
+    endif
+    return
+endif
+    if ($1='Done') and auto='y' then return endif
+
+    if ($# < 2) then $2='' endif
+
+    exists('accounting_template','adm/walkupadm'):$ok,$path
+    $total=0 $s1='' $s2=''
+    if ($ok) then
+    	readfile($path,'$s1','$s2','','local'):$total
+    endif
+    $log=autodir+'/enterQ.macdir/AccountLog.csv'
+    exists($log,'file'):$logex
+    if ($logex) then
+	shell('(cat '+$log+' | wc -l)'):$logex
+    endif
+
+    if not ($logex) then
+      $header='StudyLocDir,Queue,ExperimentNode,location'
+      if ($total) then
+	$i=1
+	repeat
+	    $s3='' $s4='' $s5=''
+	    chkname($s1[$i]):$s3,$s4,$s5
+	    if ($s5='') then $s5=$s4 endif
+	    $header=$header+','+$s5
+	    $i=$i+1
+	until $i > $total
+      endif
+      $header=$header+',StartTime,EndTime,TotalTime,Status,Info'
+      write('file',$log,'%s',$header)
+    endif
+
+    $loc='' $locdir='' $when=''
+    getlocid:$loc,$locdir,$when
+    $entry=$locdir+','+$when+','+explist[1]+','+$loc
+    if ($total) then
+        $i=1
+        repeat
+            $s3=''
+            chkname($s1[$i]):$s3
+	    $entry=$entry+','+$s3
+            $i=$i+1
+        until $i > $total
+    endif
+    $date=''
+    shell('date +%Y%m%d%H%M%S'):$date
+
+    $line='' $s3='' $difftime=''
+    if ($1<>'Started') then
+	$line='' $s3='' $difftime=''
+	shell('(cat '+$log+' | grep \''+$entry+'\' | tail -n 1)'):$line
+	if ($line<>'') then
+            shell('(cat '+$log+' | grep -v \''+$entry+'\' > '+$log+'1)'):$dum
+            shell('mv '+$log+'1 '+$log):$dum
+            $r1=0 $s3='' $s4=''
+            strstr($line,$entry+','):$r1,$s3,$s4
+            $s3=''
+            strstr($s4,','):$r1,$s3
+	    format($s3,'isreal'):$real
+	    if not $real then $s3='' else 
+		autotimelog('getddiff',$date,$s3):$difftime 
+	    endif
+	endif
+	$entry=$entry+','+$s3+','+$date+','+$difftime
+    else
+	$entry=$entry+','+$date+','+$s3+','+$difftime
+    endif
+    write('file',$log,'%s,%s,%s',$entry,$1,$2)
+

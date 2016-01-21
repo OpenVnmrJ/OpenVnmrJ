@@ -1,0 +1,97 @@
+"macro PboxOpt"
+
+"  ********************************  "
+"  ****  M E N U : PboxOpt     ****  "
+"  ********************************  "
+
+graphis:$gd
+if ($gd <> 'ds') then
+  if (lastmenu<>'') then
+    menu(lastmenu) lastmenu=''
+  else
+    menu('display_1D')
+  endif
+else
+
+  mlabel=''
+  mstring=''
+
+  micon[1]='questionmark.gif'
+  mlabel[1]='Bloch'
+  mstring[1]='$par=`` input(`Bloch Simulation (y/n/a/s/sec) : `):n2 
+              if n2=`` then n2=`n` endif 
+              pboxpar(`bsim`, n2) format(sw,4,1):$par pboxpar(`sw`, $par)'
+
+  micon[2]='g.gif'
+  mlabel[2]='T1 (s)'
+  mstring[2]='r4 = 0.0 $u=`` input(`Relaxation time, T1 (s) : `):r4,$u 
+              if r4 <> 0.0 then pboxunits($u):$m r4=r4*$m
+              format(r4,6,7):$u pboxpar(`T1`, $u) endif'
+
+  micon[3]='h.gif'
+  mlabel[3]='T2 (s)'
+  mstring[3]='r4 = 0.0 $u=`` input(`Relaxation time, T2 (s) : `):r4,$u 
+              if r4 <> 0.0 then pboxunits($u):$m r4=r4*$m r7=0
+              format(r4,6,7):$u pboxpar(`T2`, $u) endif'
+
+  if (Console = 'mercury') then
+
+    micon[4]='c.gif'
+    mlabel[4]='Refofs'
+    mstring[4]='$u=`` input(`Carrier Frequency : `):r4,$u 
+                if r4 <> 0.0 then pboxunits($u):$mult r4=r4*$mult 
+                format(r4,6,1):$u pboxpar(`refofs`, $u) endif'
+
+    micon[5]='d.gif'
+    mlabel[5]='Maxincr'
+    mstring[5]='$par=`` input(`Maximim phase increment (deg) : `):$par 
+                        pboxpar(`maxincr`, $par)'              
+    micon[6]='e.gif'
+    mlabel[6]='# Steps'
+    mstring[6]='$par=`` input(`Number of steps : `):$par pboxpar(`steps`, $par)'
+  
+    micon[7]='f.gif'
+    mlabel[7]='Name'
+    mstring[7]='$par=`` input(`Shapefile name : `):$par pboxpar(`name`, $par)'
+  
+    micon[8]='a.gif'
+    mlabel[8]='BScor'
+    mstring[8]='$par=`` input(`Bloch-Siegert correction (y/n) : `):$par 
+                        pboxpar(`bscor`, $par)'
+  
+  else
+
+    micon[4]='c.gif'
+    mlabel[4]='Dutycyc'
+    mstring[4]='$par=`` input(`Duty cycle (0 - 1) : `):$par pboxpar(`dcyc`, $par)
+                        format(sw,4,1):$par pboxpar(`sw`, $par)'
+                      
+    micon[5]='d.gif'
+    mlabel[5]='Sucyc'
+    mstring[5]='$par=`` if n3=`n` then n3=`` endif  
+                input(`Supercycle : `):$par if $par=`` then n3=$par endif
+                if n3=`` then n3=$par else n3=n3+`,`+$par endif
+                write(`line3`,`Supercycle : %s`,n3)'
+              
+    micon[6]='e.gif'
+    mlabel[6]='Name'
+    mstring[6]='$par=`` input(`Shapefile name : `):$par pboxpar(`name`, $par)'
+  
+    micon[7]='f.gif'
+    mlabel[7]='BScor'
+    mstring[7]='$par=`` input(`Bloch-Siegert correction (y/n) : `):$par 
+                        pboxpar(`bscor`, $par)'
+  
+    micon[8]='rightarrow.gif'
+    mlabel[8]='More'
+    mstring[8]='menu(`PboxOpt2`)'
+  
+  endif
+
+  micon[9]='closepbox.gif'
+  mlabel[9]='Close'
+  mstring[9]='if n3 <> `` then pboxpar(`sucyc`, n3) endif
+              if r7>0 then write(`error`,`Relaxation (T2) information required`) 
+              else cpx lastmenu=`` if (arraydim < 2) then dshapef 
+              if n2<>`n` then dprofile(n1) endif else ds endif endif'
+endif

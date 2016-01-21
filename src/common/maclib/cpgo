@@ -1,0 +1,154 @@
+"macro cpgo"
+probeid('verify')
+
+if ($# < 1) then $1='au' endif
+
+exec(wstart) wstart=''
+exec(wds) wds=''
+getfilepath(seqfil,'seqlib'):$scex
+if ($scex=0) then
+	//Send message and stop prior to prescan
+	write('error','pulse sequence %s not found',seqfil)
+        if (auto='y') then eventLog('ExpError','Sequence not found') endif
+    	if (wexp='chempackQ') and ($1='au') then
+		nextgo
+    	endif
+    	return
+endif
+
+cpbanner('acquire')
+EXPtime:ACQtime
+
+if ($1='go') then
+    	wexp='' wnt='' werr='' wbs='' wdone=''
+endif
+
+// There are too many reports about ADC overflow in 2D
+//  without really any ADC overflow.  So, the following
+//  lines are now commented out.  The std1D experiemnts
+//  will come with werr='cpreact' and others come with werr=''
+
+//if (((auto='y') or (wexp='chempackQ')) and (werr='')) then
+//    werr='cpreact'
+//endif
+
+$maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+exists($maclibdir,'directory'):$macdirex
+//if (wexp='chempackQ') then
+if ($macdirex) then
+        $activeexp=archivedir+'/'+sample+'/dirinfo/activeexp'
+        write('reset',$activeexp)
+	$exppath=''
+        if (auto='n') then
+	    $exppath=curexp
+	else
+	    $loc='' $locdir=''
+	    getlocid(autodir+'/enterQ.macdir/currentsampleinfo'):$loc,$locdir
+	    if ($locdir<>'') then
+		$exppath=autodir+'/enterQ.macdir/'+$locdir+'/current'
+	    endif
+        endif
+	if ($exppath<>'') then
+	    write('file',$activeexp,'%s %s',$exppath,studyowner)
+	endif
+        shell('chmod g+rw '+$activeexp):$dum
+	$saveopt=0 $status=''
+	if (auto='y') then $saveopt=1 endif
+	if ($saveopt=0) then
+	    if (wexp='chempackQ') then $saveopt=1 endif
+	endif
+	if ($saveopt=0) then
+	   strstr(wexp,'procsave'):$saveopt
+	endif
+   	if ($saveopt) then
+      	    //  Save option is ON. Put an active node SQ
+	    $status='Active'
+   	endif
+	cpqadjexpfile(explist,$maclibdir,$status,pslabel,'force')
+        udstudypar(archivedir+'/'+sample,'studystatus','Active')
+endif
+
+exptimelog('start')
+expactive:$eactive
+sqLog('ExpStart')
+
+$mimic=0
+exists('studymimic','maclib'):$macex
+if ($macex) then
+    studymimic('ismimic'):$mimic
+endif
+
+if ($eactive < 0) and (not $mimic) then
+	write('line3','Acquisition not possible')
+else
+     	setsrate
+	"*******Check error conditions***************************************"
+	$checkpars='wds','customflag','cppauseflg'
+	$okvals='','n','n'
+	$cksize=size('$checkpars')
+	$i=1
+	$error=''
+	repeat
+	   $parval={$checkpars[$i]}
+	   if ($parval <> $okvals[$i]) then
+	        $error=$error+' '+$checkpars[$i]+'='+$parval+';'
+	   endif
+	   $i=$i+1
+	until $i > $cksize
+	if (wexp = 'AutoSKIP') then
+	   $error=$error+' Queue Error'
+	endif
+	if ($error<>'') then
+	   if (auto = 'y') then
+	        emessage('error')
+	        write('line3','SAMPLE#: %d Error: %s',loc,$error)
+	 	eventLog('StudyError',$error)
+	   else
+	        write('error','')
+	        $y=wc2max-50
+	        write('graphics','red',20,wc2max-50,'Error: %s',$error):$ys
+	        $y=$y-$ys
+	        dtext(curexp+'/text',30,$y)
+	   endif
+           sqLog('ExpError',$error)
+	   return
+	endif
+	"*****Error conditions check done*********************************"
+	accountLog('Started')
+        if ($mimic) then
+            studymimic('go')
+            nextgo
+            return
+        endif
+
+    	if (($1='go') or (wexp<>'chempackQ')) then
+		//not a queue.  Suppress protune
+            psMain('setup')
+            psCmd('remove','psTune')
+            psMain('start'):$ret
+	else
+                //Evaluate all options
+	    psMain:$ret
+	endif
+        if ($ret = 'psAcquiring') then
+            psMain('acquireAfterPs')
+        elseif ($ret = 'psDone') then
+            preau
+// This needs to be redone with auargs
+	    $gopt=''
+	    exists('GradTypeOverride','parameter'):$parex
+	    if $parex then 
+		$gopt=GradTypeOverride
+		destroy('GradTypeOverride'):$dum
+	    endif
+	    if $gopt<>'' then
+		au('wait','gradtype_'+$gopt):$res
+	    else
+            	au('wait'):$res
+	    endif
+            if ($res = 0) and (auto='y') then
+              eventLog('ExpError','Sequence aborted')
+              nextgo
+            endif
+        endif
+endif

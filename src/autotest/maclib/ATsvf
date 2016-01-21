@@ -1,0 +1,21 @@
+"macro ATsvf"
+"ATsvf"
+
+exists(autotestdir+'/data','file'):$e
+if ($e=0) then mkdir(autotestdir+'/data') endif
+
+if ($#>0) then
+   $savefile=autotestdir+'/data/'+$1
+else 
+   $savefile=autotestdir+'/data/'+at_currenttest
+endif
+svf($savefile,'force')
+copy(userdir+'/global',$savefile+'.fid')                   "saves global"
+if (at_new='n') then
+ if ((dp='y') and (fsq<>'y') and (dsp<>'i')) then
+    compressfid($savefile)
+ endif
+endif
+calcdim
+slw=slw+arraydim  "adds the number of FIDS acquired to a running total of FIDS acquired"
+slw=trunc(slw)

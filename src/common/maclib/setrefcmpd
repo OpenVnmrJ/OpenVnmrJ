@@ -1,0 +1,60 @@
+"macro setrefcmpd"
+"*******************************************************"
+" setrefcmpd - sets tnref, dnref, etc parameters using	"
+"	getrefcmpd macro				"
+"   Usage: setrefcmpd(nucleus)				"
+"   If arg1 is not supplied then it sets ref for all channels"
+"   If arg1 doesn't match with tn, dn or etc, this macro"
+"	does nothing					"
+"	Works only within CP4 - uses module		"
+"*******************************************************"
+
+	"Make sure nucrefernce parameters are added"
+module('add','nucreference','basic')
+
+	"By default set nothing"
+$tn=0 $dn=0 $dn2=0 $dn3=0 $dn4=0
+
+if ($# < 1) then
+	"Without any argument set all channels"
+   tnref='' dnref='' dn2ref='' dn3ref='' dn4ref=''
+   $tn=1 $dn=1 $dn2=1 $dn3=1 $dn4=1
+else
+	"Work only if arg1 matches with one of the channels"
+   if ($1=tn) then $tn=1 endif
+   if ($1=dn) then $dn=1 endif
+   if (numrfch > 2) then
+	if ($1=dn2) then $dn2=1 endif
+   endif
+   if (numrfch > 3) then
+        if ($1=dn3) then $dn3=1 endif
+   endif
+   if (numrfch > 4) then
+        if ($1=dn4) then $dn4=1 endif
+   endif
+endif
+
+	"Use getrefcmpd macro to set the values"
+if ($tn=1) then
+    tnref=''
+    getrefcmpd(tn):tnref
+endif
+if ($dn=1) then
+    dnref=''
+    getrefcmpd(dn):dnref
+endif
+if (numrfch>2) and ($dn2) then
+   dn2ref=''
+   getrefcmpd(dn2):dn2ref
+endif
+if (numrfch>3) and ($dn3) then
+   dn3ref=''
+   getrefcmpd(dn3):dn3ref
+endif
+if (numrfch>4) and ($dn4) then
+   dn4ref=''
+   getrefcmpd(dn4):dn4ref
+endif
+	"Update panels if no argument is supplied"
+	" This is typically used by the button in Channels page"
+if ($# < 1) then seqfil=seqfil endif

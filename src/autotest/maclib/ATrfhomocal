@@ -1,0 +1,60 @@
+"macro ATrfhomocal"
+"ATrfhomocal"
+
+$counter=1
+select(1) peak:$bestheight $bestindex=$counter
+repeat
+   select($counter)
+   peak:$ht
+   if ($ht>$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($ht<.5*$bestheight) or ($counter>arraydim)
+$firstmaxindex=$bestindex
+$firstmaxheight=$bestheight
+
+if ($bestindex>20) then
+   write('line3','not enough increments to determine rf homogeneity. Make sure desired power and approx. pw90 are correct and restart')
+   banner('AutoTest Stopped.\\Either power level is too low or nominal pw90 too long. \\Check power and nominal pw90.\\Then restart')
+   abort
+endif
+
+$counter=$firstmaxindex+2.0*$firstmaxindex          "approx array member for next (negative) maximum"
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter=6*$firstmaxindex) or ($counter>arraydim)
+$pw450=pw[$bestindex]
+$secondmaxindex=$bestindex
+$secondmaxheight=$bestheight
+
+$counter=$secondmaxindex+2.0*$firstmaxindex          "approx array member for next negative maximum"
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht
+   if ($ht>$bestheight) then
+      $bestheight=$ht 
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter=10*$firstmaxindex) or ($counter>arraydim)
+$pw810=pw[$bestindex]
+$thirdmaxindex=$bestindex
+$thirdmaxheight=$bestheight
+
+$ratio1=$secondmaxheight/$firstmaxheight
+$ratio2=$thirdmaxheight/$firstmaxheight
+$ratio1=trunc(100*$ratio1)/100
+$ratio2=trunc(100*$ratio2)/100
+$pw90=trunc(1000*$pw810/9)/1000
+return($ratio1,$ratio2,$pw90,$pw450,$pw810)
+

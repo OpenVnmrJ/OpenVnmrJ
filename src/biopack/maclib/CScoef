@@ -1,0 +1,63 @@
+"macro CScoef"
+"CScoef - Check coefs for Comp. Sens. processing     "
+"macro CScoef"
+
+$c1='0' $c2='0' $c3='0'
+
+exists('f1coef','parameter'):$e
+if ($e) and (ni>0) then 
+  substr(f1coef,3):$c1
+  if($c1='') then
+    $c1='0'
+  endif
+endif
+
+exists('f2coef','parameter'):$e
+exists('ni2','parameter'):$e2
+if ($e) and ($e2) then 
+  if(ni2>0) then
+    substr(f2coef,3):$c2
+    if($c2='') then
+      $c2='0'
+    endif
+  endif
+endif
+
+exists('f3coef','parameter'):$e
+exists('ni3','parameter'):$e3
+if ($e) and ($e3) then 
+  if(ni3>0) then
+    substr(f3coef,3):$c3
+    if($c3='') then
+      $c3='0'
+    endif
+  endif
+endif
+
+if not ($c1='0') then
+  $c1 = '2'
+  if (array = 'phase,phase2') or (array = 'phase,phase3') then
+    $c1 = '4'
+  endif
+  if (array = 'phase,phase2,phase3') then
+    $c1 = '8' 
+  endif
+endif
+
+if not ($c2='0') then
+  $c2 = '2'
+  if (array = 'phase2,phase') or (array = 'phase2,phase3') or
+  (array = 'phase,phase2,phase3') then
+    $c2 = '4'
+  endif
+endif
+
+if not ($c3='0') then
+  $c2 = '2'
+  if (array = 'phase3,phase') or (array = 'phase3,phase2') then
+    $c2 = '4'
+  endif
+endif
+
+return($c1,$c2,$c3)
+

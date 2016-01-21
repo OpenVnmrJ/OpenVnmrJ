@@ -1,0 +1,54 @@
+"macro dll"
+"dll macro - to replace dll command"
+
+$file=curexp+'/dll.out'
+if $#>1.5 then
+  nll($1,$2):$nsize,$scale
+else
+  if $#>0.5 then
+    nll($1):$nsize,$scale
+  else
+    if (apptype='HTapps') then
+      nll(0):$nsize,$scale
+    else
+      nll:$nsize,$scale
+    endif
+  endif
+endif
+"if normalized, scale is vs * normalize"
+"otherwise scale is vs"
+"write('line3','dll: scale=%g vs=%g nsize=%d',$scale,vs,$nsize)"
+$axis=axis
+substr($axis,1,1):$axis
+
+isvnmrj:$isj
+if $nsize>0.5 then
+  write('reset',$file)
+  if $isj>0.5 then
+    if $axis='p' then
+      $title='index   freq(ppm)      intensity'
+    else
+      $title='index   freq(Hz)       intensity'
+    endif
+    write('file',$file,'%s',$title)
+  endif
+  $rflrfp = rfl - rfp
+  $ifrq = 1.0 / reffrq
+  $n=0
+  repeat
+    $n=$n+1
+    $frq = llfrq[$n] - $rflrfp
+    if $axis='p' then
+      $frq = $frq * $ifrq
+    endif
+    $amp = llamp[$n] * $scale
+    write('file',$file,'%4d  %10g    %10g',$n,$frq,$amp)
+  until ($n>=$nsize)
+  if $isj>0.5 then
+    curexp=curexp
+  endif
+  clear
+  cat($file)
+endif
+
+return($nsize,$scale)

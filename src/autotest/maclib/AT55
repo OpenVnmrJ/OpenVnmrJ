@@ -1,0 +1,47 @@
+"macro AT55"
+"AT55" "Shaped Excitation Predictability at Constant Peak Power  "
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Shaped Excitation Predictability at Constant Peak Power')
+   at_currenttest='gauss_vs_hard_vs_eburp1_90_ch1'
+   seqfil='sh2pul' 
+   gain=gain-12
+   tpwr=at_tpwrLowpower                 "avoid amplifier compression"
+   pw=at_pw90Lowpower,2.40*at_pw90Lowpower,16*at_pw90Lowpower
+   pwpat='hard','gauss32','eburp1' 
+   array='(pw,pwpat)'
+   p1=pw[1]
+   pwsadj('hard','p1')  "insures proper 100nsec resolution"
+   p1=pw[2]
+   pwsadj('gauss32','p1')  "insures proper 100nsec resolution"
+   p1=pw[3]
+   pwsadj('eburp1','p1')  "insures proper 100nsec resolution"
+   p1=0 p1pat='hard'
+   cdc 
+   wnt='ATwft select(1) av vsadj  dssh dtext'
+   wexp='AT55(`PART1`)'
+   ATcycle
+   au
+   write('line3','Shaped Excitation Predicatbility at Constant Peak Power: ')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   th=50 fp
+  if (at_plotauto='y') then
+    vsadj(100) pl('all') pltext(100,wc2max-2)
+   if (at_printparams='y') then
+    dn2='' pap ATpltext
+    pps(120,0,wcmax-120,90) ATpage
+   endif 
+   ATpltext(0,wc2max-2)
+   ATplfp
+   ATpage
+  endif
+
+ATnext
+endif

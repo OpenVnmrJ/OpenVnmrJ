@@ -1,0 +1,74 @@
+hmbcHT:   Hadamard HMBC experiment.
+
+To set up a 2D Hadamard HMBC experiment, hmbcHT:
+
+  1) record a 1d H1 spectrum, ft and phase correct; 
+  2) in another experiment record a C-13 spectrum;
+  3) Select Setup Hadamard Encoding from Hadamard Experiments menu and
+     set threshold as required. Click the "Create Line List" button and 
+     edit the created line list if necessary (e.g. to remove the solvent
+     peaks). Use Set List into Parameters button to save the line list.
+     Transfer the list to the required experiment.
+  4) return to experiment in step (1)
+  5) Select the HMBC experiment from the Hadamard Experiments -> 
+     Use Current Parameters menu. Import the frequency list from 
+     the experiment in step (2), if necessary.
+  6) adjust any paramaters, if necessary, e.g. pw, ni, sw1, etc.;
+  7) use the Sequence button to ensure the setup is correct and then Acquire 
+     to start the experiment;
+  8) process with wft2da (proc1 = 'ht') or use the Process menus.
+
+  Experimental Parameters:
+  ========================
+  j1XH -   One-bond XH coupling constant
+  jnXH -   multiple bond XH coupling constant
+  pwx - X pw90 pulse duration at pwxlvl
+  pwxlvl - X-nucleus pulse power
+  compX - amplifier compression factor for X-nuclei
+  compH - amplifier compression factor for protons  
+  sspul - 'y' selects magnetization randomization option
+  hsglvl - Homospoil gradient level (DAC units)
+  hsgt	-  Homospoil gradient time
+  gzlvl1 - encoding Gradient level
+  gt1	-  encoding gradient time
+  gzlvl3 - decoding Gradient level
+  gt3 -    decoding gradient time
+  gstab -  recovery delay
+
+  Hadamard parameters:
+  ====================
+
+    htfrq1 - list of frequencies used for Hadamard encoding.
+    ni     - number of increments. Must be a power of 2. Other allowed values 
+             are n*12, n*20 and n*28, where n is a power of 2.
+    htofs1 - ni offset. Sets the number of increments to be omitted. Typical
+             value is htofs1 = 1.
+    htbw1  - excitation bandwidth. For pshape = 'gaus180' good numbers are 
+             90, 45, 30 or 20 Hz.
+    pshape - shape used for Hadamard encoding, typically gaus180, square180,
+             sinc180.
+    bscor  - Bloch-Siegert shift correction for Hadamard encoding, typically 
+             set bscor = 'y'.
+    repflg - set repflg = 'n' to suppress Pbox reports. repflg = 'h' prints
+             Hadamard matrix only.
+    htss1  - stepsize for Hadamard encoding pulses. This parameter is adjusted
+             by looking at the maximum phase increments in Hadamard enconing
+             pulses, e.g. F1_2.RF. If unsure, set htss1 = 0 to disable it.
+    pwpat  - CH decoupling (.RF) pulse. Use inversion pulses of 1 - 1.5 ms and
+             an appropriate supercycle. The total length must be the same as  
+             that of the Hadamard encoding pulse (F1_1.RF). For example, 
+             with 45 ms long pulse us a 40 step supercycle (e.g. t5,m8) and
+             1.125 ms long adiabatic pulse:
+             >Pbox CHdec -w "wurst2i 25k/1.125m" -sucyc t5,m8 -s 5.0 -p ... -l ...       
+             They are generated on-the-fly by pboxHT_dec().
+    htcal1 - allows calibration of selective pulses. Set htcal1=ni, ni=0, nt=2, 
+             and array htpwr1. If ni=12 (and others that are not a power of two) 
+             use htcal1=8. Set compH such that pulse power matches the optimum 
+             power found from the calibration.
+    htss1  - stepsize for Hadamard encoding pulses. This parameter is adjusted
+             by looking at the maximum phase increments in Hadamard enconing
+             pulses, e.g. F1_2.RF. If unsure, set htss1 = 0 to disable it.
+
+processing: proc1='ht' wft2da
+
+See also man pages for:  ht editht getht sethtfrq1 ft2d ft2da

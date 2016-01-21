@@ -1,0 +1,50 @@
+"macro dfmode"
+" ********************** "
+" **** macro dfmode **** "
+" ********************** "
+"
+" Sets the dfmode parameter, which determines what "df" displays.
+" Usage: dfmode('riae')	[Any combination of the characters 'r', 'i',
+"			'a', and 'e' to show the real, imaginary,
+"			absval, and envelope traces.]
+"	 dfmode('+r')	[To add the selected trace(s) to the display.]
+"	 dfmode('-r')	[To remove the selected trace(s) from the display.]
+"
+"	If a command would result in nothing being displayed, real
+"	alone will be displayed.
+"
+
+length($1):$cmdlen
+
+" Get the possible operand char "
+$op = ''
+substr($1, 1, 1):$op
+if ($op = '+') then
+    $i = 2
+    while ($i <= $cmdlen) do
+	substr($1, $i, 1):$chr			" Get command char "
+	strstr(dfmode, $chr):$j
+	if ($j = 0) then
+	    dfmode = dfmode + $chr		" Add char to dfmode string "
+	endif
+	$i = $i + 1
+    endwhile
+elseif ($op = '-') then
+    $i = 2
+    while ($i <= $cmdlen) do       
+        substr($1, $i, 1):$chr          	" Get command char "
+	repeat
+            strstr(dfmode, $chr):$j
+            if ($j > 0) then
+	        substr(dfmode, $j, 1, ''):dfmode
+            endif
+	until ($j = 0)
+        $i = $i + 1
+    endwhile
+else
+    dfmode = $1
+endif
+
+if (dfmode = '') then
+    dfmode = 'r'
+endif

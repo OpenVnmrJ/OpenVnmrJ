@@ -1,0 +1,130 @@
+"macro gs_shimroi"
+
+"*************************************************************************
+" gs_shimroi - macro to define shim ROI
+"
+" Details - From a ge3dshim image the shim ROI is defined. It is used as
+"	  mask by the shimming program. Only pixels within the ROI are
+"	  used in shim calculations.
+"	  Acquire a Test image by clicking the button on the Acq page 
+"	  Display the images
+"	  Draw the ROI - the same ROI can be used for all the images or  
+"	  each image can have its own ROI specified. 
+"	  Now run the shimroi macro. It will:
+"	  Segment the images, clear the background, save them and link the images
+"	  into one file. This file is used in gs_mkslicemap
+"	  Basically, the magnitude file B0sl.1.mag is now the segmented file
+"	  which serves as a mask for the calculation routines.
+"	  The segmented images are saved in gshimdir/data/shimroi/roi#.fdf
+"
+" Usage: 1. Acquire the ge3dshim Test image
+"        2. Image=>Re-process (if necessary)
+"        3. Extract the ROxPE images
+"        4. Select the frames and define the ROI
+"        5. Save ROI for reference (optional)
+"        6. gs_shimroi          - segment image and save 
+"
+" Limitations: 
+"              The shimroi must be defined using the ge3dshim, test image
+"              The shimroi must be defined using planes extracted along ROxPE
+"
+" Last Modified: 2005-07-21
+
+"*************************************************************************
+
+"The ge3dshim image is displayed and the ROI should be specified"
+
+$macro=$0
+"Do some checks"
+if(apptype <> 'im3Dshim') then
+  write('line3','%s: Data file may not be valid',$macro)
+  abort
+endif
+
+if (gsplane<>'ro-pe') then
+  write('line3','%s: Data must be extracted in ROxPE orientation',$macro)
+  abort
+endif
+
+"This is a work-around to clear regions outside the ROI
+$GSDIR = userdir+'/gshimdir/data'
+ 
+exists(curexp+'/ROIs','file'):$ex
+if($ex < 0.5) then
+  mkdir(curexp+'/ROIs','file')
+endif
+$name = curexp+'/ROIs/pt'
+rm('-f',$name):$x
+
+write('reset',$name)  "create param file"
+write('file',$name,'Point')
+write('file',$name,'1.0 1.0')
+
+aipSelectFrames('all')  
+loadROI($name)
+aipSelectRois('all')
+off('aipStatCursMax','global')  "disable segmentation limits"
+off('aipStatCursMin','global')
+aipSegment('r')
+
+$nv2 = nv2
+exists('zflag','parameter'):$ex
+if($ex = 1) then
+  if(zflag = 'y') then
+    $nv2 = nv2*2
+  endif
+endif
+aipNumOfImgs:$images
+if($images > $nv2) then   "only nv2 checked"
+  write('error','%s: ROI must be selected from ROxPE slices',$macro)
+  abort
+endif
+
+aipWriteFmtConvert = 'FDF'
+$mdir = $GSDIR+'/shimroi'
+rm('-rf',$mdir):$x
+mkdir($mdir) 
+printfile = $mdir+'/roi'
+aipWriteData(printfile)
+
+$i = 1
+$index = ''
+rm('-rf',$GSDIR+'/shimroi.mag'):$x
+shell('touch "'+$GSDIR+'/shimroi.mag"'):$x
+write('line3','Generating shim ROI')
+while($i <= $images) do
+  "** Construct index string to attach to base name ******"
+  format($i+10000,5,0):$index
+  substr($index,2,4):$index
+  $fn = $mdir+'/roi.'+$index+'.fdf'
+  $hd = $mdir+'/h'
+  $dt = $mdir+'/din'
+  rm('-rf',$hd):$x
+  rm('-rf',$dt):$x
+  $cmd = 'fdfsplit "'+$fn+'" "'+$dt+'" "'+$hd+'"'   "generate binary data file"
+  shell($cmd):$x
+  "shimroi's are linked"
+"  $cmd = 'cat '+$dt+' '+$GSDIR+'/shimroi.mag >> '+$GSDIR+'/shimroi.mag'  "
+   $cmd = 'cat "'+$dt+'" >> "'+$GSDIR+'/shimroi.mag"'
+  shell($cmd):$x
+  $i=$i+1
+endwhile
+
+$hd = $GSDIR+'/testimg.hdr'
+exists($hd, 'file'):$ex
+if($ex = 0) then
+  write('line3','%s: fdf header not found - %s',$macro,$hd)
+  abort
+endif
+$dt = $GSDIR+'/shimroi.mag'
+rm('-rf',$dt+'.fdf'):$x
+$cmd = 'fdfgluer "'+$hd+'" "'+$dt+'" "'+$dt+'.fdf"'  "fdf file created"
+shell($cmd):$x
+write('line3','Done')
+
+"**********************************************************************"
+"		Modification History
+
+" 20050726(ss)  - Bug; ROIs directory checked 
+
+"**********************************************************************"

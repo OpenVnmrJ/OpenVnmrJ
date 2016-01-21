@@ -1,0 +1,187 @@
+Protocol: Redor1onepul  Sequence: redor1onepul.c  Apptype: solidseq1d
+
+Description: 
+
+Rotational Echo Double Resonance (REDOR) with one-pulse preparation, 
+XY8 decoupling with pulses alternating on X and Y, with a choice of 
+SPINAL64 or TPPM decoupling during both acquisition and REDOR 
+evolution. Used to measure XY bond distances for organic materials 
+where one-pulse preparation is preferred. 
+
+Additional Software:
+
+reset_redor1 - This macro uses the calibrated values of pwX90 and pwY90 
+to set up xy8XY.   The parameters for decoupling in Htppm and Hspinal 
+are copied to Hmixtppm and Hmixspinal.  
+
+redoranal1 - This macro creates a deltaS/S plot for REDOR data obtained as 
+a double array of cycles with alternating control and REDOR spectra. 
+
+Setup: 
+
+Be sure that an HXY probe is set up for three-channel observe and set 
+the parameters probeConnect and preAmpConfig in the Channels page. 13C-
+15N glycine, 10% in natural abundance, is an excellent REDOR standard. 
+
+Load a calibrated data set and select the protocol Redor1tancp. For new 
+nuclei calibrate pwX90 and pwY90 with Onepul and Tancpx and then select 
+Redor1tancp. 
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file 
+onepul describes calibration of decoupling. 
+
+Calibrate the X nucleus with Onepul or Tancpx and place the resonance 
+for which REDOR will be observed on-resonance. 
+
+To calibrate the third channel, Y, nucleus set it as obs and be sure 
+that the obs transmitter switches to the correct transmitter, 3 or 4. 
+The switch will take place if the Y nucleus is in the correct position 
+of probeConnect.  See the manual file tunerp for instructions in 
+setting up three-channel experiments and observing on the third 
+channel.  Be sure the third-channel nucleus is on resonance. 
+
+With third-channel obs copy calibrations aY90 = aX90 and pwY90 = pwX90.  
+Also set dof2 = tof. Return to the original obs nucleus and restore the 
+original calibrations for the channel-two obs.  
+
+Select Redor1tancp.  The protocol sets aXxyxy8 = aX90, aYxyxy8 = aY90, 
+pwXxyxy8 = 2.0*pwX90 and pwYxyxy8 = 2.0*pwY90.  Set fXYxy8 = 0.5. 
+
+Read the name aXxyxy8 as the "amplitude of the X channel for the group 
+xy8XY located on the X and Y channels" of the sequence.  The "xy" of 
+"xy8" refers to the 0 and 90-degree phases of the sequence while the 
+"Xxy" refers to the fact that the amplitude is applied to the X channel 
+of two possible choices "x" and "y". 
+
+Note that for nuclei other than spin 1/2 one may need to fine-adjust 
+pwXxyxy8 and pwYxyxy8. 
+
+Set nXYxy8 = 0 and onXYxy8 = 1 to collect a CP spectrum with no REDOR 
+evolution. 
+
+Array nXYxy8 from 0 to 64 in steps of 8 to observe the T2 of the 
+observe nucleus. Optimize TPPM or SPINAL decoupling during REDOR 
+evolution with the parameters of Hmixtppm or Hmixspinal. It is helpful 
+to set nXYxy8 = 32 and array the parameters of TPPM or SPINAL for 
+maximum intensity.  Note that line width is unaffected because one is 
+optimizing T2 during REDOR evolution. 
+
+First array nXYxy8 from 0 to 64 in steps of 2. Then set onXYxy8 = 1,2. 
+Collect the REDOR data. 
+
+To process, pick the peak of interest and type fp on the command line.  
+Type redoranal1 on the command line and enter the fraction natural 
+abundance to cause the REDOR curve to approach 1.0. 
+
+Parameter Groups: 
+
+90X:  Module:  no
+Sequence:  onepul.c    
+Description:  Provides a 90-degree pulse on obs that can be used as a 
+              preparation pulse. Also used to store the obs calibration.
+Parameters:  Channels Page
+       aX90  - the amplitude of the pulse.
+       pwX90 - the pulse length.
+
+xy8XY:  Module:  no
+Sequence:  redor1tancp.c     
+Description:  Implements obs pulses at each rotor period with the XY8 
+              phase cycle and implements dec2 pulses within each rotor
+              period with the XY8 phase cycle, used for REDOR evolution.
+Parameters:  Sequence Page
+       aXxyxy8 - amplitude of the obs pulses. 
+       aYxyxy8 - amplitude of the dec2 pulses. 
+       pwXxyxy8 - 180-degree flip on obs. 
+       pwYxyxy8 - 180-degree flip on dec2. 
+       fXYxy8 - position of the dec2 pulse, 0.5 is the middle of the 
+
+Hmixseq:  Module: yes 
+Sequence:  redor1tancp.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during F1 and mixing periods when Hseq is used for
+              acquisition.
+Parameters:  Sequence Page - the Hmixspinal and Hmixtppm groups
+              overlap.  Hmixseq chooses the decoupling sequence TPPM
+              or SPINAL.
+Implementation:  DSEQ mix = getdseq("H"); The router implements
+              getspinal() or gettppm(), as selected.
+Underscore functions:  _dseqon(mix); runs _tppm(); or _spinal();
+             _dseqoff(mix); runs decprgoff(mix);
+
+Hmixspinal:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              typical F1 and mixing periods when Hspinal is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixspinal - amplitude of the dec channel.
+       pwHmixspinal - approximate 180-degree flip.
+       phHmixspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHmixspinal.
+       chHmixspinal = 'dec' must be set (not shown).
+Implementation: SPINAL mix = getspinal("H"); or DSEQ mix =
+             getdseq("H");
+Underscore functions: _spinal(mix); and decprgoff(); or _dseqon(mix);
+             and _dseqoff(mix);
+        
+Hmixtppm:  Module: yes
+Sequence:  redor1tancp.c
+Description:  Implements TPPM decoupling on the dec channel during
+              typical F1 and mixing periods when Htppm is used for
+              acquisition.
+Parameters:  Sequence Page
+       aHmixtppm - amplitude of the dec channel.
+       pwHmixtppm - approximate 180-degree flip angle on resonance.
+       phHmixtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHmixtppm for alternating
+              pulses.
+       chHmixtppm = 'dec' must be set (not shown).
+Implementation: TPPM mix = gettppm("H"); or DSEQ mix = getdseq("H");
+Underscore functions: _tppm(mix); and decprgoff(); or _dseqon(mix); and
+              _dseqoff(mix);
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel 
+              during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap. 
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+              getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence:  tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented with 
+               phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+               getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec); 
+               and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec); 
+              and _dseqoff(dec);   
+             rotor period.
+       nXYxy8 - number of rotor cycles. 
+       onYxyxy8 - "2" provides dec2 pulses and "1" is a control without 
+              dec2 pulses. 
+

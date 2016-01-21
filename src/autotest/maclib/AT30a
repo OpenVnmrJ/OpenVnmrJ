@@ -1,0 +1,128 @@
+"macro AT30a"
+"AT30a" "Find C13 pw90 ,power level, and BB amplifier compression"
+        "Uses channel 3 hardware. Requires recabling of channel 3 amplifier output"
+        "into 13C bandpass filter in place of 15N or other bandpass filter."
+        "Output of 13C bandpass filter should be connected to 13C BNC on probe."
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   at_currenttest='c13pw90_1_ch3'
+   dn='C13' 
+   create('rfchannel','string')
+   if (numrfch>4) then rfchannel='13245' endif
+   if (numrfch=4) then rfchannel='1324' endif
+   if (numrfch=3) then rfchannel='132' endif
+   if (numrfch<3) then ATnext return endif   "no 3rd channel to test"
+   seqfil='ATrfhomo' 
+   text('Finding Null for 15 usec 13C Pulse Using Channel 3 (vary 13C Pulse Power)')
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   write('line3','Finding Proper Power Level for pw(C13)=15 usec Using Third RF Channel')
+
+   exists('maxattench3','parameter','global'):$e
+   if ($e=1) then $maxpower=maxattench3 else $maxpower=63 endif
+   pwx=15 array('pwxlvl',23,$maxpower-22,1)
+   lb='n' sb=at/4 s1 av
+      
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='AT30a(`PART1`)'
+   r1=1
+   text 
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   wft ATsvf
+   $pwxlvlmax=pwxlvl[23]
+   write('line3','Finding C13 pwx90 (Channel 3)')
+
+   ATpwx90cal('pwxlvl'):$pwxlvl
+   pwxlvl=$pwxlvl
+   if ((pwxlvl=$pwxlvlmax) and (r1=1)) then
+    pwx=pwx*1.4            " increase pwx once (typ. for 8mm/10mm probes "
+    exists('maxattench3','parameter','global'):$e
+    if ($e=1) then $maxpower=maxattench3 else $maxpower=63 endif
+    array('pwxlvl',23,$maxpower-22,1)
+    r1=0
+    at_currenttest='c13pw90_1a_ch3'
+    ATcycle au return
+   endif
+   at_currenttest='c13pw90_2_ch3'
+                          "use old value if close"
+   if ((pwxlvl=at_pwx90lvl_ch3+1.0) or (pwxlvl=at_pwx90lvl_ch3-1.0)
+    or (pwxlvl=at_pwx90lvl_ch3+2.0) or (pwxlvl=at_pwx90lvl_ch3-2.0))
+     then pwxlvl=at_pwx90lvl_ch3
+   else
+     at_pwx90lvl_ch3=pwxlvl
+   endif
+
+   text('Finding 90 Degree 13C Pulse Width Using Channel 3')
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+
+   wexp='AT30a(`PART2`)'
+   ATcycle au
+ 
+elseif ($1='PART2') then
+   wft ATsvf
+   at_currenttest='c13pw90_3_ch3'
+   write('line3','Determining C13 pwx90 at Reduced Power (Channel 3)')
+   av
+   ATpwx90cal('pwx'):pwx r4=pwx
+   text('Finding 90 Degree 13C Pulse Width at lower power\\using channel 3 hardware')
+
+   at_pwx90_ch3=trunc(pwx*10)/10
+   pwx=pwx*4.0 pwxlvl=pwxlvl-12
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='AT30a(`PART3`)'
+   ATcycle au
+ 
+elseif ($1='PART3') then
+   wft ATsvf
+   at_currenttest='c13pw90_4_ch3'
+
+   ATpwx90cal('pwx'):pwx 
+   array('pwx',21,pwx-0.1*pwx,0.01*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='AT30a(`PART4`)'
+   ATcycle au
+
+elseif ($1='PART4') then
+   wft av
+   ATpwx90cal('pwx'):$pwx 
+   pwx=$pwx
+
+   at_pwx90Lowpower_ch3=trunc(10*pwx)/10
+   at_pwx90Lowpowerlvl_ch3=pwxlvl
+
+   write('line3','C13 pw90 (Channel 3) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+
+   if (at_plotauto='y') then
+      printon
+         echo('Pulse Calibration Data for 13C on Channel 3')
+         echo('For the probe   ',at_probetype)
+         echo('Based on Finding a 90 Degree Pulse  =  ',pwx)
+         echo('At Power Level',pwxlvl) 
+         echo('Done on    ',date)
+         ATatten(pwx,pwxlvl)
+      printoff
+   else
+      ATatten(pwx,pwxlvl)
+   endif
+   at_LBampl_compr_ch3=trunc(100*pwx/(4.0*at_pwx90))/100 
+   ATrecord('LOAMPCOMPa','Low-Band Channel 3 Amplifier Compression','compression',at_LBampl_compr_ch3,'at_power',pwxlvl+12)
+   write('file',autotestdir+'/REPORT','Low-Band Channel 3 Amplifier Compression = %1.2f at power level: %2.0f ',at_LBampl_compr_ch3,pwxlvl+12)
+   ATsvf
+   ATrecord('C13PW90a','C13 Pulse Width Calibration and Amplifier Compression using Channel 3','pw90_hi',at_pwx90_ch3,'power1',at_pwx90lvl_ch3,'pw90_low',pwx,'power2  ',pwxlvl,'comp_power1',at_LBampl_compr_ch3)
+   write('file',autotestdir+'/REPORT','C13 pw90(ch3) = %2.1f  at power level: %2.0f ',r4,pwxlvl+12)
+
+ATnext
+endif

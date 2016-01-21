@@ -1,0 +1,71 @@
+#! /bin/csh -f
+
+set me = $0
+set me = $me:t
+
+if ($#argv != 9) then
+    echo "Usage: $me exp-type in-param-file in-model-file in-2d-model-dir fid procpar out-model-dir model-fid model-points"
+    exit(1)
+endif
+
+set exp_type        = "$1"
+set in_param_file   = "$2"
+set in_model_file   = "$3"
+set in_2d_model_dir = "$4"
+set fid             = "$5"
+set procpar         = "$6"
+set out_model_dir   = "$7"
+set nums = (`awk 'BEGIN{printf("%011d %011d\n",'$8','$9');exit}'`)
+set model_fid = "$nums[1]"
+set model_pts = "$nums[2]"
+
+if ("$exp_type" != "1D" && "$exp_type" != "2D") then
+    echo "${me}: Invalid experiment type; must be '1D' or '2D'."
+    exit
+endif
+
+if (! -f $in_param_file) then
+    echo "${me}: Given parameter file $in_param_file does not exist."
+    exit
+endif
+
+if (! -f $in_model_file) then
+    echo "${me}: Given model file $in_model_file does not exist."
+    exit
+endif
+
+if ("$exp_type" == "2D") then
+    if (! -d $in_2d_model_dir) then
+	echo "${me}: Given 2D model directory $in_2d_model_dir does not exist."
+	exit
+    endif
+endif
+
+if (! -f $fid) then
+    echo "${me}: Given fid file $fid_file does not exist."
+    exit
+endif
+
+if (! -f $procpar) then
+    echo "${me}: Given fid file $procpar_file does not exist."
+    exit
+endif
+
+#if (! -d $out_model_dir) then
+#    echo "${me}: Given model directory $out_model_dir does not exist."
+#    exit
+#endif
+
+echo "Updating files with model parameters:"
+foreach file ($in_param_file $in_model_file)
+    echo $file
+    ex -s +'%s#.*Fid File     .*#    Fid File       = '$fid'#|x' $file >&/dev/null
+    ex -s +'%s#.*Procpar File .*#    Procpar File   = '$procpar'#|x' $file >&/dev/null
+    ex -s +'%s#.*Analysis Dir .*#    Analysis Dir   = '$procpar:h'#|x' $file >& /dev/null
+    ex -s +'%s#.*Model Dir    .*#    Model Dir      = '$out_model_dir'#|x' $file>& /dev/null
+    ex -s +'%s#.*Model Dir Org.*#    Model Dir Org  = DATA#|x' $file >&/dev/null
+    ex -s +'%s#.*Model Fid    .*#    Model Fid      = '$model_fid'#|x' $file >& /dev/null
+    ex -s +'%s#.*Model Points .*#    Model Points   = '$model_pts'#|x' $file >& /dev/null
+end
+
+exit(0)

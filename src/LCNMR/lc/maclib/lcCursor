@@ -1,0 +1,44 @@
+"macro lcCursor"
+/*-*- MAGICAL -*-*/
+"macro lcCursor"
+
+// React to LC cursor actions
+
+$iarg = 1
+$action = 'up'
+if ($# >= 1 and typeof('$1') = 1) then
+    if ($1 = 'up' or $1 = 'down' or $1 = 'drag') then
+        $action = $1
+        $iarg = 2
+    endif
+endif
+
+$cname = 'lcCr1'
+$time = 0
+if ($# >= $iarg+1) then		" At least 2 more args "
+    $namearg = ''
+    format($iarg,0,0):$namearg
+    $namearg = '$'+$namearg
+    format({$namearg},0,0):$cname
+    $cname = 'lcCr'+$cname
+    $iarg = $iarg + 1
+
+    format($iarg,0,0):$namearg
+    $namearg = '$'+$namearg
+    $time = {$namearg}
+    {$cname} = $time
+    $iarg = $iarg + 1
+
+    if (msShowOldData = 'y') then
+        msDataFile(svfdir, lcid):$file
+        $file = '"' + $file + '.dat"'
+
+        " Old style filename to try if that one fails "
+        msDataFile(svfdir, lcid, lcBaseName):$file2
+        $file2 = '"' + $file2 + '.dat"'
+        lccmd('showMsGraph', $time, $file, $file2)
+    endif
+
+    filepath(svfdir, lcid):$path
+    lccmd('showPdaSpectrum', $time, $path)
+endif

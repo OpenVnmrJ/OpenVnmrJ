@@ -1,0 +1,86 @@
+"macro setgplan"
+"setgplan - utility macro used by the planning menu."
+
+if($#=2) then 
+  $orientParam=$1
+  $value=$2
+
+  $path=''
+  if($value='milestone') then
+    $path=curexp+'/iplan_milestone'
+  elseif($value='shimvoxel') then
+    $path=userdir + '/prescan/voxel.par/procpar'
+  endif
+
+  if($path<>'') then //  milestone or shim voxel.
+    exists($path,'file'):$e
+    if($e) then
+      gplan('loadPrescription',$path)
+    else
+      write('line3','Plan parameters not found (%s)',$path)
+    endif
+  else // standard orientation
+    gplan('setValue',$orientParam,$value)
+  endif
+  return
+elseif($#=1 and $##=1) then
+  if($1='trans') then return('Axial') 
+  elseif($1='cor') then return('Coronal')
+  elseif($1='sag') then return('Sagittal')
+  elseif($1='trans90') then return('Axial 90')
+  elseif($1='cor90') then return('Coronal 90')
+  elseif($1='sag90') then return('Sagittal 90')
+  else return('Oblique')
+  endif
+endif
+
+// the rest will not be used
+if ($# < 1) then
+  return
+endif
+substr($1,1):$type
+substr($1,2):$name
+
+$theta=''
+$psi=''
+$phi=''
+substr($1,3):$theta
+substr($1,4):$psi
+substr($1,5):$phi
+
+if ($type = 'standard' and $theta <> '' and $psi <> '' and $phi <> '') then
+  scoutpath=''
+  gplan($name, $theta, $psi, $phi)
+elseif ($type = 'standard') then
+  scoutpath=''
+  gplan($name)
+  if($name = 'getMilestoneStacks') then
+    vnmrjcmd('pnew','iplanType')
+    if(iplanType = 3) then
+	vnmrjcmd('pnew','vtheta', 'vpsi', 'vphi', 'pos1', 'pos2', 'pos3', 'vox1', 'vox2', 'vox3')
+    else
+	vnmrjcmd('pnew','ns', 'thk', 'gap', 'theta', 'psi', 'phi', 'lpe', 'lro', 'lpe2', 'ppe', 'ppe2', 'pro', 'pss0')
+    endif
+  endif
+else
+  if ($type = 'shims') then
+    $name = userdir + '/' + $name
+  else
+      $name=sqdir+'/'+$name
+  endif
+  exists($name,'file'):$e
+
+  if ($e > 0.5) then
+    fread($name)
+    gplan('startIplan',-1,'current')
+    vnmrjcmd('pnew','iplanType')
+    if(iplanType = 3) then
+	vnmrjcmd('pnew','vtheta', 'vpsi', 'vphi', 'pos1', 'pos2', 'pos3', 'vox1', 'vox2', 'vox3')
+    else
+	vnmrjcmd('pnew','ns', 'thk', 'gap', 'theta', 'psi', 'phi', 'lpe', 'lro', 'lpe2', 'ppe', 'ppe2', 'pro', 'pss0')
+    endif
+  else
+    write('line3','Plan parameters not found (%s)',$name)
+  endif
+endif
+

@@ -1,0 +1,755 @@
+"macro gXYZ_mkmap"
+
+werr='return'
+//gxyzsetlocalpars
+create('execprocess','string','current',''):$dum
+create('execplot','string','current',''):$dum
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+if $# < 1 then $1='init' endif
+if ($1 = 'init') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+
+    if (tn='H1' and gxyzdoscset<>'y') then gxyzsetge endif
+    werr='return'
+    r6=ni
+    n1=gxyzshimgroup
+    if autont='y' then nt=1 endif
+
+        gxyzmapsys('unarray') ni=0 ni2=0 pad=5 calcdim
+        vp=0 f full ai tof=0 gain=10
+	sinebell
+        wnt='wft(`acq`,1,celem) f full ds(1) vsadj dssh'
+        lockpower=0 lockgain=0 alock='n'
+	if (steflg='n') then gxyzsetge endif
+        "Read shims before acquiring"
+	expactive:$active
+	if $active > -0.5 then readallshims endif
+        banner('Acquiring trial profiles')
+	pslabel='godssh'
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_profile'
+        xmhaha_calib('addNode',$0+'(\'tofacq\')','last',120)
+	xmhaha_calib('addNode',$0+'(\'gainacq\')','last',120)
+	if (autont='y') then
+	    xmhaha_calib('addNode',$0+'(\'ntacq\')','last',120)
+	endif
+	xmhaha_calib('addNode',$0+'(\'gzwinacq\')','last',120)
+	xmhaha_calib('addNode',$0+'(\'gmap3Dgodssh\')','last',120)
+	xmhaha_calib('addNode',$0+'(\'tau2acq\')','last',120)
+	xmhaha_calib('addNode',$0+'(\'tau2acq2\')','last',120)
+	xmhaha_calib('addNode',$0+'(\'gmap3Dmkmap\')','last',600)
+	xmhaha_calib('addNode',$0+'(\'gmap3Dshims\')','last',120)
+	if (gxyzdo3Dshim='y') then
+	    xmhaha_calib('addNode','gXYZ_autoshim(8)','last',120)
+	endif
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+        execprocess='return'
+        execplot='execplot=\'\''
+	svp($initpar,'force')
+
+endif
+
+if ($1='tofacq') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+
+        on('temp'):$tempon
+        if $tempon >0.5 then $temp=temp endif
+        $nuc=''
+        $solv=''
+        $solv=solvent
+        $nuc=tn
+	PROTON
+        getsampglobal($macdir)
+        getmodule('calibpars')
+        getmodule('g3Dcalib')
+        create('execprocess','string','current',''):$dum
+        create('execplot','string','current',''):$dum
+        setgroup('execprocess','display')
+        setgroup('execplot','display')
+        execprocess='return'
+        execplot='execplot=\'\''
+        pw=1 d1=0.5 tpwr=40
+        sw=40k fn=2*np
+        exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then if maxattench1<40 then tpwr=maxattench1 endif endif
+        endif
+        if $tempon > 0.5 then temp=$temp endif
+        tn=$nuc
+        pslabel=tn+'tofadj'
+        if tn='lk' or tn='H2' then tpwr=42 pw=100 endif
+        nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai gain='n' lsfrq=0
+	wtune='n'
+
+// development convenience
+        expactive:$active
+        if $active > -0.5 then readallshims endif
+        clear(2)
+	caliblist=pslabel
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tofAdjust'
+//        xmhaha_calib('addNode',$0+'(\'gainacq\')')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'tofproc\')'
+        execplot='execplot=\'\''
+
+endif
+
+if ($1='tofproc') then
+        lsfrq=0
+        ft('nods') f full lp=0
+        abortoff aph0 aborton
+        dc res
+        movetof
+	execprocess='return'
+        $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+	writeparam($initpar+'/procpar','tof','current','add')
+endif
+
+if ($1='gainacq') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+
+    gxyzmapsys('unarray') ni=0 ni2=0 pad=5 calcdim
+    vp=0 f full ai
+    wnt='wft(`acq`,1,celem) f full ds(1) vsadj dssh'
+    pslabel=tn+'_gainacq'
+    // development convenience
+    expactive:$active
+    if $active > -0.5 then readallshims endif
+    clear(2)
+    caliblist=pslabel
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_gainAdjust'
+    create('GradTypeOverride','string','current',''):$dum
+    GradTypeOverride='aa'
+    auargs('gradtype_aa')
+
+    execprocess=$0+'(\'gainproc\')'
+    execplot='execplot=\'\''
+
+endif
+
+if ($1='gainproc') then
+
+        execprocess='return'
+        $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+        exists(curexp+'/fidtext','file'):$e
+        if $e then rm(curexp+'/fidtext'):$dum endif
+        writefid(curexp+'/fidtext')
+        lookup('file',curexp+'/fidtext')
+        $i=0 $max=0
+        repeat
+                $i=$i+1
+                lookup('read','read'):$re,$im
+                abs($re):$re
+                abs($im):$im
+                if $re>$max then $max=$re endif
+                if $im>$max then $max=$im endif
+        until $i>=np/2
+        if ($max < 32767 or gain=0) then
+                rm(curexp+'/fidtext'):$dum
+                ln(32768/$max):$l
+                gain=gain+$l*(20/2.303)-10
+                if gain>60 then gain=60 endif
+                write('line3','Gain set to %d, done!',gain)
+        	writeparam($initpar+'/procpar','gain','current','add')
+	else
+                write('line3','Reducing gain by 6 dB and reacquiring')
+                gain=gain-6
+                writeparam($initpar+'/procpar','gain','current','add')
+		xmhaha_calib('addNode',$0+'(\'gainacq\')','top',120)
+	endif
+
+endif
+
+if ($1='ntacq') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+
+        r1=tau[2]
+        tau=0
+        calcdim
+        array('nt',10,nt,0)
+        calcdim
+        wnt='wft dssh'
+        pslabel=tn+'_ntacq'
+        caliblist=pslabel
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_ntadj'
+//        xmhaha_calib('addNode',$0+'(\'gzwinacq\')')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'ntproc\')'
+        execplot='execplot=\'\''
+
+endif
+
+if ($1='ntproc') then
+
+        execprocess='return'
+        $sntot=0
+        f
+        $i=1
+        repeat
+                select($i)
+                $sn=1.0  $sn2=1.0
+                $hpt = 0.5 * sw / (fn/2)  "half of a point"
+                $npt = 0.0625 * sw + $hpt
+                dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+                $npt = sw - 0.5 * sw / (fn/2)
+                $hpt = sw - 0.0625 * sw + $hpt
+                dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+                $sn=0.5*($sn+$sn2)
+                $sntot=$sntot+$sn
+                $i=$i+1
+        until $i>10
+        $snave=$sntot/10
+        write('line3','Ave S/N of ten profiles is %d:1',$snave)
+        //Use SNR of 300:1 as a reference 
+        $nt=nt*90000/($snave*$snave)
+        //write('line3','$nt=%f',$nt)
+        $i=0
+        ln(2):$ln2
+        repeat
+                exp($i*$ln2):$denom
+                $j=$nt/$denom
+                $i=$i+1
+        until $j<1
+        nt=$denom
+        if nt>16 then write('error','Signal-to-noise too low, aborting!') abort endif
+        write('line3','Setting number of scans to %d',nt)
+        //End of nt adjustment
+        tau=0,r1
+        calcdim
+        $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+        writeparam($initpar+'/procpar','nt','current','add')
+
+endif
+
+if ($1='gzwinacq') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+        gxyzmapsys('unarray') ni=0 ni2=0 calcdim
+        wnt='wft(`acq`,1,celem) dssh'
+        werr='return'
+        gzwin=100
+	lsfrq='n'
+        pslabel=tn+'_gzwinacq'
+        caliblist=pslabel
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_winadj'
+//        xmhaha_calib('addNode',$0+'(\'gmap3Dgodssh\')')
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'gzwinproc\')'
+        execplot='execplot=\'\''
+
+endif
+
+if ($1='gzwinproc') then
+
+        execprocess='return'
+        //$thper=15
+        $thper=45
+        $thper = $thper/100
+        lsfrq=0
+        wft(1)
+        av f vsadj
+        lvl=0 tlt=0
+        $sn=1.0  $sn2=1.0
+        $hpt = 0.5 * sw / (fn/2)  "half of a point"
+        $npt = 0.0625 * sw + $hpt
+        dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+        $npt = sw - 0.5 * sw / (fn/2)
+        $hpt = sw - 0.0625 * sw + $hpt
+        dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn2
+        $sn=0.5*($sn+$sn2)
+//      write('line3','$sn=%f',$sn)
+        if $sn<3 then
+                write('error','insufficient signal to find gzwin, s/n %g',$sn)
+                return(1)
+        endif
+
+        $lw=1 $hzpp=0 $f1=0 $f2=0 $maxht=0 $maxfreq=0
+        "set cr in center"
+        peak:$maxht,$maxfreq
+        $snmin=8
+        if $sn<$snmin/$thper then
+                if $sn>2*$snmin then
+                        dres($maxfreq,$snmin/$sn):$lw,$hzpp,$f1,$f2
+                else
+                        write('line3','low signal-to-noise in profile')
+                        dres($maxfreq,0.5):$lw,$hzpp,$f1,$f2
+                endif
+        else
+                dres($maxfreq,$thper):$lw,$hzpp,$f1,$f2
+        endif
+
+        $gzwintmp = 100*($f1-$f2)/sw
+        cr=$f1
+        delta=$f1-$f2
+        split rl
+        lsfrq=lsfrq+(sw/2-rfl)
+        ds(1)
+        gzwin = $gzwintmp
+        write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
+        $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+	$pslabel=pslabel
+	seqfil=seqfil
+	svp($initpar,'force')
+	pslabel=$pslabel
+
+endif
+
+if ($1 ='gmap3Dgodssh') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+
+        wnt='wft select(1) vsadj dssh'
+        pslabel=tn+'_gzwinacq'
+        caliblist=pslabel
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_trialprofile'
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'gmap3D_tau2adj\')'
+        execplot='execplot=\'\''
+
+endif
+
+if ($1 = 'gmap3D_tau2adj') then
+        execprocess='return'
+        select(1)
+        f full
+        peak:$ht,$frq
+        dres($frq,0.6):$lw,$hzpp,$left,$right
+        cr=$left delta=$left-$right
+        sp=cr-delta wp=delta
+        dres(cr):$lw,$hzpp,$left,$right
+        select(1)
+        vsadj
+        $htmin1=1e8
+        $htmin2=1e8
+        cr=sp
+        repeat
+                peak(cr,cr+$hzpp):$ht,$frq
+                if $ht < $htmin1 then $htmin1=$ht endif
+                cr=cr+$hzpp
+        until cr >= (wp+sp)
+        write('line3','Min amp of first profile is %f',$htmin1)
+        cr=sp
+        select(2)
+        repeat
+                peak(cr,cr+$hzpp):$ht,$frq
+                if $ht < $htmin2 then $htmin2=$ht endif
+                cr=cr+$hzpp
+        until cr >= (wp+sp)
+        write('line3','Min amp of second profile is %f',$htmin2)
+	f full
+        if ($htmin2 < $htmin1/3) then
+	    tau[2]=tau[2]/2
+            write('line3','Reducing tau[2] to %.3f s and remeasuring profiles',tau[2])
+	endif
+        $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+	$pslabel=pslabel
+	seqfil=seqfil
+        svp($initpar,'force')
+	pslabel=$pslabel
+	if ($htmin2 < $htmin1/3) then
+	    xmhaha_calib('addNode',$0+'(\'gmap3Dgodssh\')','top',120)
+	endif
+
+endif
+
+if ($1 = 'tau2acq') or ($1='tau2acq2') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+
+// The ref1Dflg option is not incorporated here
+    gxyzmatrix(4)
+    wnt='wft(`acq`,1,celem) dsshall gxyztext(`fmapping`)'
+    werr=''
+    pad=5
+    expactive:$active
+    if $active > -0.5 then readallshims endif
+    gxyztext('fmapping')
+
+
+        pslabel=tn+'_tau2optimize'
+        caliblist=pslabel
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tau2adjust'
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+    if ($1='tau2acq') then
+	calibnode='_tau2optimize'
+        execprocess=$0+'(\'tau2proc\')'
+    else
+	calibnode='_tau2optimize'
+        execprocess=$0+'(\'tau2proc2\')'
+    endif
+        execplot='execplot=\'\''
+
+endif
+
+if ($1='tau2proc') or ($1='tau2proc2') then
+
+    execprocess='return'
+    gxyzmapfield('map')
+    gxyzcentre
+    disp3Dmap
+    $inputfile='' $max=-1e10 $min=1e10 $trash='' 
+    $num='' $values='' $value=0 $numlines=0 $amax=0 $amin=0
+    $inputfile=userdir+'/3Dshimlib/data/fieldmap'
+    shell('wc -l < '+$inputfile+'; cat'):$numlines
+    exists($inputfile,'file'):$ex
+    if $ex<0.5 then write('error','No fieldmap!') abort endif
+    lookup('file',$inputfile)
+    lookup('readline',5):$trash
+    $i=1
+    repeat
+        lookup('read','read'):$num,$values
+        format($values,3,6):$value
+        if $value>$max then $max=$value endif
+        if $value<$min then $min=$value endif
+        $i=$i+1
+    until $i > $numlines-5
+    $range=$max-$min
+    write('line3','Range is %f %s Hz',$range,tn)
+    $tauopt=1/$range
+    $taumax=0.025*h1freq/sfrq
+    if (tn='lk' or tn='H2') then $taumax=0.12 endif
+    if $tauopt>$taumax then $tauopt=$taumax endif
+    tau[2]=$tauopt
+    format(tau[2],1,4):tau[2]
+    write('line3','tau[2] set to %f, done!',tau[2])
+
+    if $1='tau2proc' then
+	if (tn='lk' or tn='H2') then
+             if tau[2]<0.03 then gzwin=0.8*gzwin endif
+        elseif tn='H1' then
+             if tau[2]<0.005 then gzwin=0.8*gzwin endif
+        endif
+        write('line3','gzwin reduced to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
+    endif
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    $pslabel=pslabel
+    seqfil=seqfil
+    svp($initpar,'force')
+    pslabel=$pslabel
+
+endif
+if ($1='gmap3Dmkmap') then
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par'
+    exists($initpar,'directory'):$direx
+    if not $direx then
+            write('error','gxyzInit.par not found')
+            abort
+    endif
+    rtp($initpar)
+    seqfil=seqfil
+    //gxyzsetlocalpars
+        if (tn='lk' or tn='H2') then
+            if (gxyzdoscset='y') then
+                //gxyzshimgroup='scset'
+		gxyzshimgroup='3rd'
+                gxyzsetmap
+                gxyzmatrix(4)
+                gxyzdoscset='n'
+		writeparam($initpar+'/procpar','gxyzdoscset','current','add')
+            elseif (tau[2] < 0.04) then
+                if (shimset=1 or shimset=10) then
+                    gxyzshimgroup='all'
+                else
+                    gxyzshimgroup='3rd'
+                endif
+                gxyzsetmap
+                gxyzmatrix(4)
+            else
+                gxyzshimgroup='all'
+                gxyzsetmap
+                if shimset=9 or shimset=14 or shimset=26 then
+                     gxyzmatrix(6)
+                else
+                     gxyzmatrix(4)
+                endif
+            endif
+	elseif (tn='H1') then
+            if (gxyzdoscset='y') then
+                //gxyzshimgroup='scset'
+		gxyzshimgroup='3rd'
+                gxyzsetmap
+                gxyzmatrix(4)
+                gxyzdoscset='n'
+		writeparam($initpar+'/procpar','gxyzdoscset','current','add')
+            elseif (tau[2] < 0.010) then
+                if (shimset=1 or shimset=10) then
+                     gxyzshimgroup='all'
+                else
+                     gxyzshimgroup='3rd'
+                endif
+                gxyzsetmap
+                gxyzmatrix(4)
+            else
+		if (tau[2]<0.015) then gxyzremap='y' else gxyzremap='n' endif
+                gxyzshimgroup='all'
+                gxyzsetmap
+                gxyzmatrix(8)
+            endif
+	endif
+        //gxyzsetmapshims('check','z7'):$z7set
+        //if ($z7set) then gxyzsetmapshims('remove','z7') gxyzsetfitshims('remove','z7')  endif
+        gxyzsetmapshims('check','z7'):$z7set
+        if ($z7set) then gxyzsetmapshims('remove','z7') gxyzsetfitshims('remove','z7')  endif
+        gxyzexclude
+
+//  The following is the setup function in gxyzmapfield macro
+        length(gxyzcode):$length
+        if $length=16 then ni=4 ni2=4
+        elseif $length=36 then ni=6 ni2=6
+        elseif $length=64 then ni=8 ni2=8
+        elseif $length=144 then ni=12 ni2=12
+        else ni=4 ni2=4
+        endif
+        wnt='wft(1,celem) dsshall gxyztext(`fmapping`)'
+	execprocess=$0+'(\'gmap3Dmap_map\')'
+	execplot='execplot=\'\''
+/*
+        if ($# > 1.5) then
+                if ($2='auto') then wexp='gxyzmapfield(`map`,`auto`)' endif
+        else wexp='gxyzmapfield'
+        endif
+*/
+        pad=5
+        gxyzmapcode=gxyzcode
+        "Force system to readshims before acquiring - 17xi03"
+        "A potential problem on INOVA that x1 and y1 are read DURING acquisition"
+        "So you sometimes have the wrong value of the these shims at the"
+        "end of the expt"
+        readallshims
+        clear(2)
+        gxyztext('fmapping')
+	calibnode='_gxyzFieldmap'
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+//        gxyzmapfield('setup','auto')
+
+endif
+
+if ($1='gmap3Dmap_map') then
+// This is the map function in gxyzmapfield macro
+    execprocess='return'
+    if (gzwin<1) or (gzwin>99) then
+	 write('error','WARNING:  gzwin value is unreasonable') 
+    endif
+    cd(userdir+'/3Dshimlib/data')
+    wft
+    gxyzmap('fieldmap')
+    disp3Dmap('fieldmap')
+
+    gxyzcentre
+    gxyzmapname
+    readallshims
+
+                //Attempt to map all shims with good S/N even if 
+                //all shims have been mapped
+    if (tn='lk' or tn='H2') then
+	if ((tau[2]<0.1) and (gxyzshimgroup='all')) then
+	    write('line3','Shims will be remapped')
+	    gxyzremap='y'
+        else
+            gxyzremap='n'
+        endif
+    endif
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzMapInit.par'
+    $pslabel=pslabel
+    seqfil=seqfil
+    svp($initpar,'force')
+    pslabel=$pslabel
+    
+//    gxyzmapshims('start','auto')
+
+endif
+
+if ($1='gmap3Dshims') then
+// This is the start/setup function in the gxyzmapshims macro
+    $initpar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzMapInit.par'
+    rtp($initpar)
+    seqfil=seqfil
+
+    $shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+    rm('-rf',$shimmapdir):$dum
+
+    gxyzmapshims('setup')
+    clear(2)
+    gxyztext('smapping')
+    write('line3','_gxyzShimMap%d',shimno):calibnode
+//    calibnode='_gxyzShimMap'
+    execprocess=$0+'(\'save3Dmap\')'
+    execplot='execplot=\'\''
+    create('GradTypeOverride','string','current',''):$dum
+    GradTypeOverride='aa'
+    auargs('gradtype_aa')
+
+endif
+
+if ($1='save3Dmap') then
+    execprocess='return'
+    $shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+    write('line3','%s/%s%1.0f',$shimmapdir,mapname,shimno):$file
+    xmhaha_calib('addNode',$0+'(\'gmap3Dshims_map\',\''+$file+'\')','top',1200):$node
+    svf($file)
+
+endif
+
+if ($1='gmap3Dshims_map') then
+// This is the map function in the gxyzmapshims macro
+    $shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+    $file=''
+    $file=$shimmapdir+'/'+mapname
+
+    rt($2)
+    shimno=shimno+1
+    $startshims='tmp'+mapname
+    rts($startshims):$dum
+    gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+
+    {$shimtomap[shimno]} = {$shimtomap[shimno]} + $change[shimno]
+    load='y'
+
+    if shimno=$nmapshims then
+// This is the last iteration go to processing
+	execprocess=$0+'(\'gmap3Dshims_process\')'
+    else
+	execprocess=$0+'(\'save3Dmap\')'
+    endif
+
+    pad=15
+    write('line3','_gxyzShimMap%d',shimno):calibnode
+
+    execplot='execplot=\'\''
+    create('GradTypeOverride','string','current',''):$dum
+    GradTypeOverride='aa'
+    auargs('gradtype_aa')
+
+endif
+
+if ($1='gmap3Dshims_process') then
+    execprocess='return'
+    $shimmapdir = userdir+'/3Dshimlib/shimmaps/'+mapname
+    write('line3','%s/%s%1.0f',$shimmapdir,mapname,shimno):$file
+    write('line3','$file=%s in process bit',$file)
+    xmhaha_calib('addNode',$0+'(\'gmap3Dshims_merge\',\''+$file+'\')','top',0):$node
+    write('line3','$node=%s in process bit',$node)
+    //write('file',archivedir+'/'+sample+'/dirinfo/macdir/CMDnodes','%s',$node)
+    svf($file)
+endif
+
+if ($1='gmap3Dshims_merge') then
+    cplog('gmapxyz','last'):$file,$asdir
+    execprocess='return'
+//    xmhaha_calib('addNode',$0+'(\'gmap3Dfinish\',\''+$2+'\')','last',0):$node
+//    write('file',archivedir+'/'+sample+'/dirinfo/macdir/CMDnodes','%s',$node)
+    rt($2)
+    $startshims='tmp'+mapname
+    rts($startshims):$dum
+    setallshims
+    gxyzmapshims('merge')
+    gxyzmapshims('process','y')
+    $gxyzmappar=archivedir+'/'+sample+'/dirinfo/parlib/gxyzmap.par'
+    svp($gxyzmappar,'force')
+//    rt($2)
+endif
+
+if ($1='gmap3Dfinish') then
+    cplog('gmapxyz','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+//    rt($2)
+//    cplog('gmapxyz','last',archivedir+'/'+sample):$file
+//    rt(archivedir+'/'+sample+'/'+$file)
+endif
+

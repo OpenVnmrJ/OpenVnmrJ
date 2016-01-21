@@ -1,0 +1,123 @@
+"macro gxyzsetfitshims"
+"gxyzsetfitshims"
+"Macro to add or remove individual shims from fitshims"
+"PJB 14iv09"
+
+if $# <> 2 then write('error','Usage!') abort endif
+
+if $1='add' then
+	$shim2add=$2 $return=1 $shim2addws=''
+	"First search fitshims to see if shim is already there"
+	$i=0 $return=0 $ret=0
+	repeat
+               	$i=$i+1 $fitshim=''
+               	substr(fitshims,$i):$fitshim
+		if $fitshim=$shim2add then $ret=1 endif
+	until $fitshim=''
+		
+	if $ret then
+		write('line3','Shim %s already set to be used in fitting',$shim2add) 
+		$return=0
+	else
+
+		"Need to ensure that fitshims is in same order as mapshims!"
+		"First find out the current mapshims"
+		$i=0
+		repeat
+                	$i=$i+1
+                	substr(mapshims,$i):$mapshims[$i]
+			//write('line3','$mapshims[%d]=%s',$i,$mapshims[$i])
+                	$mapshims[$i+1]=''
+        	until ($mapshims[$i]='')
+	
+		"Now find out existing fitshims"
+		$i=0
+		repeat
+                	$i=$i+1
+                	substr(fitshims,$i):$fitshims[$i]
+			//write('line3','$fitshims[%d]=%s',$i,$fitshims[$i])
+                	$fitshims[$i+1]=''
+        	until ($fitshims[$i]='')
+
+		"Now compare each mapshim and fitshim to determine order of new fitshims"
+		$i=1
+		repeat
+			$j=1
+			$shim2beincluded[$i]=0
+			repeat
+				//write('line3','$shim2beincluded[%d]=%s',$i,$shim2beincluded[$i])
+				if (($fitshims[$j]=$mapshims[$i]) or ($shim2add=$mapshims[$i])) then $shim2beincluded[$i]=1 endif
+				$j=$j+1
+			until ($fitshims[$j]='')
+			$i=$i+1
+		until ($mapshims[$i]='')
+		$k=$i-1
+		
+		"Now reconstruct fitshims!"
+		fitshims=''
+		$i=1
+		repeat
+			if $shim2beincluded[$i]=1 then
+				if $i=1 then 
+					fitshims=$mapshims[$i]
+				else
+					fitshims=fitshims+' '+$mapshims[$i]
+				endif
+			endif
+			$i=$i+1
+		until $i>$k
+	endif
+	return($return)
+endif
+
+if $1='remove' then
+	$shim2remove=$2 $return=1
+	"First search fitshims to see if shim is there"
+        strstr(fitshims,$shim2remove):$ret
+	//echo($ret)
+        if not $ret then
+                write('line3','Shim %s already not set to be mapped',$shim2remove)
+		$return=0
+	else
+		"Now find in fitshims where the shim to be removed is"	
+		$mapsteps='' $fitshims='' 
+		$i=0
+		repeat
+                	$i=$i+1
+                	substr(fitshims,$i):$fitshims[$i]
+			if $fitshims[$i]=$shim2remove then $shim2bincluded[$i]=0 else $shim2bincluded[$i]=1 endif
+			//write('line3','$fitshims[%d]=%s, $shim2beincluded[%d]=%d',$i,$fitshims[$i],$i,$shim2bincluded[$i])
+                	$fitshims[$i+1]=''
+        	until ($fitshims[$i]='')
+        	$j=$i-1
+
+		"Now reconstruct fitshims"
+		fitshims=''
+		$i=1
+		repeat
+			if ($shim2bincluded[$i]) then
+				if $i=1 then
+					//write('line3','$shim2beincluded[%d] = %d',$i,$shim2bincluded[$i])
+					fitshims=$fitshims[$i]
+				else
+					fitshims=fitshims+' '+$fitshims[$i]
+				endif
+			endif
+		$i=$i+1
+		until $i > $j
+	endif
+return($return)
+endif
+
+if $1='check' then
+	$shim2check=$2 $return=0
+	$i=0
+	repeat
+               	$i=$i+1
+               	substr(fitshims,$i):$fitshim[$i]
+		$fitshim[$i+1]=''
+		if $fitshim[$i]=$shim2check then $return=1 endif
+	until $fitshim[$i]=''
+return($return)
+endif
+

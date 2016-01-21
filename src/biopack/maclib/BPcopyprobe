@@ -1,0 +1,85 @@
+"macro BPcopyprobe"
+"BPcopyprobe(probename,option)- macro to copy vnmr or nmr admin probe file"
+                              " to user probe file. nmr admin typ. vnmr1"
+"if argument 2 is 'current', no new probefile is made, existing probefile"
+"given by value of 'probe' will be used"
+
+shell(`ls -l /vnmr/vnmrrev | awk '{print $3}';cat`):$admin 
+shell('/bin/csh -c "echo ~'+$admin+'"'):$adminhome 
+
+if (($2='0') or ($2='2')) then
+$sourceprobedir = systemdir + '/probes'
+else
+$sourceprobedir = $adminhome +'/vnmrsys/probes'
+endif
+
+$userprobedir = userdir + '/probes'
+$userprobefile=$userprobedir+'/'+probe
+
+if ($2<>'current') then
+
+  exists($userprobedir,'file'):$e
+  if not($e) then
+    mkdir($userprobedir)
+  endif
+
+  exists($sourceprobedir,'file'):$e
+  if not($e) then
+   banner('No source probes directory present') return(1)
+  endif
+
+  exists($sourceprobedir+'/'+$1,'file'):$e
+  if not($e) then
+   banner('No source probefile present') return(1)
+  endif
+
+  exists($sourceprobedir+'/'+$1+'/'+$1,'file'):$e
+  if not($e) then
+   banner('No source probefile textfile present') return(1)
+  endif
+
+  $probe =$1 
+  $date=''
+  BPgetdate:$date
+  exists(userdir+'/probes/'+$probe,'file'):$e
+  if $e then
+    mv(userdir+'/probes/'+$probe,userdir+'/probes/'+$probe+'.bkup_'+$date)
+    write('line3','existing user probe file backed up as %s',$probe+'.bkup_'+$date)
+  endif
+  exists('probe','parameter','global'):$e
+  if $e<0.5 then
+    create('probe','string','global')
+    setprotect('probe','on',8,'global')
+  endif  
+  $probedir=$sourceprobedir+'/'+$probe
+
+  "check for BioPack-style probefile"
+  lookup('file',$probedir+'/'+$probe)
+  lookup('count','C13pwClvl'):$biopack_probefile
+  if $biopack_probefile then
+   cp('-r',$probedir,userdir+'/probes/')
+  else
+   banner('Requested probefile is not appropriate for BioPack')
+   return(1)
+  endif
+  probe = $1
+  BPsetlimits "gets global values from new probefile and enters into local global"
+
+else   "Check current probefile for BioPack nature"
+
+  exists($userprobedir,'file'):$e
+  if not($e) then
+   banner('No probes directory present') return(1)
+  endif
+
+  exists($userprobefile,'file'):$e
+  if not($e) then
+   banner('No current probefile present with name given by probe variable') return(1)
+  endif
+
+  exists($userprobefile+'/'+probe,'file'):$e
+  if not($e) then
+   banner('No source probefile textfile present') return(1)
+  endif
+
+endif

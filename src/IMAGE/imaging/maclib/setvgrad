@@ -1,0 +1,74 @@
+"macro setvgrad"
+"***************************************************************"
+" setvgrad                                                      "
+"                                                               "
+" Macro to set up voxel selection gradients for all three axes  "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog='setvgrad: '
+
+
+"-- Set gradient levels -----------------------------------"
+" Use the setgss macro to setup the arrays of gradient   "
+" levels.                                                  "
+"----------------------------------------------------------"
+setgss('gvox1','vox1')
+setgss('gvox2','vox2')
+setgss('gvox3','vox3')
+
+
+"-- Build the array parameter -----------------------------"
+" The array string that controls acquisition needs to be   "
+" setup as a diagonal array in voxel gradient, position    "
+" and size.                                                "
+"----------------------------------------------------------"
+$array = '('
+$ext = ''
+$k = 1
+$arraysize = 1
+
+repeat
+    format($k,0,0):$ext
+
+    $sizeG = size('gvox'+$ext)
+    $sizeP = size('pos'+$ext)
+    $sizeV = size('vox'+$ext)
+
+    if ($sizeG <> $sizeV) then
+        $message='gvox and vox array dimensions do not match.'
+        write('error',$prog+$message)
+        abort
+    endif
+
+    if ($sizeV > 1  and  $arraysize = 1)  then  $arraysize = $sizeV  endif
+    if ($sizeP > 1  and  $arraysize = 1)  then  $arraysize = $sizeP  endif
+
+    if (($sizeV <> 1  and  $sizeV <> $arraysize)  or
+        ($sizeP <> 1  and  $sizeP <> $arraysize))  then
+
+        $message='vox or pos array dimensions do not match.'
+        write('error',$prog+$message)
+        abort
+    endif
+
+    if ($sizeP > 1)  then  $array=$array+'pos'+$ext+','  endif
+    if ($sizeV > 1)  then  $array=$array+'vox'+$ext+','  endif
+    if ($sizeG > 1)  then  $array=$array+'gvox'+$ext+','  endif
+
+    $k=$k+1
+until ($k > 3)
+
+
+"-- Set the array string ----------------------------------"
+" The array string assembled so far has an unwanted comma  "
+" at the end.  Remove it and add the closing paranthesis.  "
+"----------------------------------------------------------"
+length($array):$len
+if ($len > 1) then
+    $array1 = ''
+    substr($array,1,$len-1):$array1
+    $array1 = $array1+')'
+    array = $array1
+endif
+da

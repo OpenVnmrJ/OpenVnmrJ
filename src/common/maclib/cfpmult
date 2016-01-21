@@ -1,0 +1,52 @@
+"macro cfpmult"
+"cfpmult - Calculates an optimized fpmult "
+
+setlimit('fpmult',10,-10,0)
+$wp=wp $sp=sp
+on('fpmult'):$fpon $orig=fpmult
+$fpmax=0 $fpmin=0
+  $i=1
+  repeat
+	fpmult=$i wft(1) f dc $lvlmax=lvl
+	fpmult=-1*$i wft(1) f dc $lvlmin=lvl
+	if (($lvlmax>0) and ($lvlmin<0)) or
+	   (($lvlmax<0) and ($lvlmin>0)) then
+		$fpmax=$i
+		$fpmin=-1*$i
+		$i=5
+	endif
+	$i=$i+1
+   until $i > 5
+
+write('alpha','fpmult=%6.3f dc-offset= %6.4f',$fpmax,$lvlmax)
+write('alpha','fpmult=%6.3f dc-offset= %6.4f',$fpmin,$lvlmin)
+$fpdiff=$fpmax-$fpmin
+if ($fpdiff=0) then
+  if ($fpon<1) then fpmult=$orig off('fpmult') else fpmult=0.5 endif
+  if (console='vnmrs') then fpmult=0.5 endif
+  wft(1) f dc
+  wp=$wp sp=$sp
+  write('alpha','Failed to find fpmult between +5 and -5')
+  return
+endif
+
+$lvldiff=$lvlmax-$lvlmin
+$finalfp=$fpmax-($lvlmax*$fpdiff/$lvldiff)
+
+$fpmax=$finalfp+0.5
+$fpmin=$finalfp-0.5
+fpmult=$fpmax wft(1) f dc $lvlmax=lvl
+fpmult=$fpmin wft(1) f dc $lvlmin=lvl
+
+write('alpha','fpmult=%6.3f dc-offset= %6.4f',$fpmax,$lvlmax)
+write('alpha','fpmult=%6.3f dc-offset= %6.4f',$fpmin,$lvlmin)
+$fpdiff=$fpmax-$fpmin
+$lvldiff=$lvlmax-$lvlmin
+$finalfp=$fpmax-($lvlmax*$fpdiff/$lvldiff)
+
+fpmult=$finalfp wft(1) f dc
+wp=$wp sp=$sp
+
+write('alpha','fpmult=%6.3f dc-offset= %6.4f',fpmult,lvl)
+write('line3','calculated fpmult = %6.3f',fpmult)
+

@@ -1,0 +1,116 @@
+"macro fm_setvox"
+"***************************************************************************"
+"									    "
+" fm_setvox - Macro to set voxel position and size for fastmap		    "
+"									    "
+" Usage: fm_setvox('size') - load voxel dimension			    "
+"        fm_setvox - load voxel position				    "
+"									    "
+" Details: From a scout image, transfer voxel parameters to the current exp "
+"          using the usual planning procedure. 				    "
+"          Note: only trans, sag, cor image orientations are allowed	    "
+"          The voxel defines the region to shim. The current experiment is  "
+"          assumed to be loaded with the fastestmap.c sequence		    "
+"          The transfer routine intializes the following parameters: vpsi,  "
+"          vphi, vtheta, pos1-3, vox1-3. fm_setvox then initializes the X0, "
+"          Y0, Z0, lx, ly, lz parameters for fastmap			    "
+"									    "
+"***************************************************************************"
+
+if ($# = 0) then
+  $size = 0
+elseif ($1 = 'size') then
+  $size = 1
+else
+  write('error', 'Usage: fm_setvox(<\'size\'>)')
+  abort
+endif
+
+//isvnmrj:$j
+
+
+
+  $si = size('vpsi')
+  if ($si > 1.5) then
+    write('error', 'Can only shim on a single voxel')
+    return
+  elseif ((vpsi=0) and (vphi=0) and (vtheta=0)) then     "trans"
+    X0 = -pos2  Y0 = -pos1  Z0 = pos3
+    if ($size = 1) then
+      lx = vox2  ly = vox1  lz = vox3
+    endif
+  elseif ((vpsi=0) and (vphi=0) and (vtheta=90)) then    "cor"
+    X0 = -pos2  Y0 = pos3  Z0 = pos1
+    if ($size = 1) then
+      lx = vox2  ly = vox3  lz = vox1
+    endif
+  elseif ((vpsi=90) and (vphi=0) and (vtheta=90)) then  "sag"
+    X0 = pos3  Y0 = pos2  Z0 = pos1
+    if ($size = 1) then
+      lx = vox3  ly = vox2  lz = vox1
+    endif
+  
+  elseif ((vpsi=0) and (vphi=90) and (vtheta=0)) then  "axial90"
+    X0 = pos1  Y0 = -pos2  Z0 = pos3
+    if ($size = 1) then
+      lx = vox1  ly = vox2  lz = vox3
+    endif
+
+
+  elseif ((vpsi=0) and (vphi=90) and (vtheta=90)) then  "cor90"
+    X0 = pos1  Y0 = pos3  Z0 = pos2
+    if ($size = 1) then
+      lx = vox1  ly = vox3  lz = vox2
+    endif
+
+  elseif ((vpsi=90) and (vphi=90) and (vtheta=90)) then  "sag90"
+    X0 = pos3  Y0 = -pos1  Z0 = pos2
+    if ($size = 1) then
+      lx = vox3  ly = vox1  lz = vox2
+    endif
+  else
+    write('error', 'Orientation of scout image must be transverse, sagittal or coronal')
+    abort
+    return
+  endif
+
+
+
+"Set voxel size L parmeter"
+if($size = 1) then
+  $minsize = 5
+  exists('boresize','parameter'):$e
+  if ($e > 0.5) then
+    if (boresize < 40) then $minsize = 1 endif
+  endif
+
+  "reset lx, ly, lz to minimum size if too small"
+  if (lx < $minsize) then lx=$minsize endif 
+  if (ly < $minsize) then ly=$minsize endif 
+  if (lz < $minsize) then lz=$minsize endif 
+
+  $lx=lx/10 $ly=ly/10 $lz=lz/10  "set L array in cm"
+  L[1]=$lx L[2]=$ly L[3]=$lz
+
+  if ($lx <= $ly) then L[4] = $lx*1.41 endif
+  if ($ly < $lx) then L[4] = $ly*1.41 endif
+  L[5] = L[4]
+  if ($lz <= $ly) then L[6] = $lz*1.41 endif
+  if ($ly < $lz) then L[6] = $ly*1.41 endif
+  L[7] = L[6]
+  if ($lx <= $lz) then L[8] = $lx*1.41 endif
+  if ($lz < $lx) then L[8] = $lz*1.41 endif
+  L[9] = L[8]
+
+  $b = ''
+  $count = 1
+  $diamtext = 'L='
+  repeat
+    format(L[$count], 3, 2):$b
+    $diamtext = $diamtext+$b+' '
+    $count = $count + 1
+  until $count > 9
+
+  write('line3', $diamtext)
+endif
+

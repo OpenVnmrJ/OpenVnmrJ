@@ -1,0 +1,127 @@
+Proshim uses a sophisticated curve-fitting technique to
+optimize shim values.  By default proshim will make
+adjustments using the method defined in  the parameter "method".
+Shimming methods for proshim reside in the directory called 
+"proshimmethods" located inside of this applications directory.
+
+If the parameter method='z1z2', which is the old default value for 
+lock simplex shimming, the proshim family of macros will replace this
+with a method called "touchup".  
+
+There is a menu and and entry box located in the group with the
+Proshim Now button. The menu lists several provided methods that are
+described in more detail below. If the user creates their own method
+by adding a file inside a local ~/vnmrsys/proshimmethods directory
+the menu source that is hard-coded in the proshimmethods directory
+inside of this proshim applications directory can be edited in a 
+simple fashion or the name of the new shim method can just be typed
+into the entry box.
+
+The format for proshimmethods files is very simple: One line each 
+containing the name of the DAC that is to be adjusted. Proshim simply
+goes through the list from top to bottom. Blank lines or invalid DAC
+names are simply skipped. Inside of proshimmethods the word "spin"
+is treated as a special case and when encounted the spinner is set
+as defined in the line.  For example: spin=0 or spin=20.
+
+An example method (xyz_extended) is shown below:
+
+spin=0
+z1
+z2
+x1
+y1
+xz
+x1
+yz
+y1
+xz2
+xz
+x1
+yz2
+yz
+y1
+xy
+x2y2
+x1
+y1
+z1
+
+Clicking "Proshim Now" will run the desired shimming method in a 
+background macro.  The current workspace will from time to time
+be updated with messages showing which DAC is being adjusted. To
+stop proshim that is running in background click the big red Abort
+Proshim button and when the currently adjusting DAC is complete
+proshim will halt.
+
+If desired, proshim can be run in foreground but keep in mind that
+since it is a running macro nothing else can be done until proshim 
+is complete.  To do this type proshim on the commandline.  To abort
+such a foreground macro click the Cancel Command button on the toolbar.
+
+In all cases proshim will begin by adjusting lock parameters unless the 
+ignore lock box is checked. This
+is done to ensure that lockpower and lockphase are correct. The 
+adjustment of lock parameters is done by a call to a macro called
+set_lockpars.
+
+There are additional factors involved in any shimming method based on lock
+which are the delay between steps and the step sizes associated with
+each shim.  These are defined in two files inside of the maclib called
+shiminfo1 and shiminfo2. One of these has long delays and slightly
+smaller steps and is chosen automatically for the case of solvent
+equal to acetone, methanol, benzene, or cd2cl2.
+
+The time required for proshim to execute is reasonably predictable. 
+A time of right at 1 minute per DAC in the method should be expected
+for solvents with the long delay time. This time reduces to about 25 
+seconds per DAC for all other solvents. 
+
+Also located on the Proshim panel is a is a group that is shown if an
+autosampler of any type is present. This group contains the shim scheduler 
+and it provides tools to easily define a sample location for the
+lineshape sample and chose a shim maintenance method. Once this has
+been done the bottom part of the Shim Scheduler allows the act of 
+maintenence shimming to be scheduled. Note that this Shim_Scheduler
+has it's very own help button.
+
+The menu in the shim_scheduler offers three choices for lineshape
+maintenance.  One is simply "Lineshape" which records a lineshape
+result but no shimming is done other than normal Z-PFG shimming. The
+other two methods are "FastLineshape" and "DeepFactoryShim". The 
+FastLineshape method first acquires a lineshape spectrum with just
+Z-PFG shimming followed by the proshim method xyz_extended. After 
+proshim completes Z-PFG shimming is repeated followed by the final
+lineshape spectrum.  The FastLineshape method should be a good choice
+for weekly shim maintenance.
+
+The protocol DeepFactoryShim first does lineshape with Z-PFG shim followed
+by the  proshim method "allshims".  Z-PFG shim with a 2nd lineshape spectrum
+is followed by the proshim method "xyz_basic" (default for proshim). The
+method is completed by a final Z-PFG shim and lineshape spectrum.
+
+Both of the provided lineshape shim maintenance methods provided in the
+Service tab in the experiment selector that are listed in the shim_scheduler
+method menu are built as userStudies with a combination of submissions
+of Lineshape (with reshim option checked by customization) interspersed
+with submissions of comman protocols of shimming macros.
+
+The lineshape sample is perhaps the best choice to refined maintenance
+shimming. A good 2nd choice might be the 19F signal to noise sample.
+Absolutely avoid any doped d2o samples because they are not responsive
+enough to yield good shimming results. 
+
+In addition to the methods solely and specifically for Proshim contained in
+the directory proshimmethods there is also a shimmethods directory provided
+for use with traditional "simplex lock" autoshim. The provided methods
+are constructed to work with the lineshape sample and are as follows:
+
+simplex_xyz  - just x1, y1, and z1
+simplex_xyz_basic  - xz, x1, yz, y1, z1
+simplex_allnonspins - all radial shims that are accessible by lock autoshim
+simplex_allzs  - z4, z3, z2, z1
+
+Please remember that the parameter method is at this time shared between
+both proshim and the traditional lock simplex autoshim.  Keeping the names
+for methods in each world unique is not strictly required but is a good idea.
+

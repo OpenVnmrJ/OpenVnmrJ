@@ -1,0 +1,70 @@
+"macro ATc30f_10usec"
+"ATc30f_10usec" "Find C13 fine power level, and BB amplifier compression"
+
+"        fine power is found for 10 usec pw90 for coarse power at_max_pwxlvl"
+"        Power is varied from at_max_pwxlvl to lower levels by use of the"
+"        fine power (dpwrf) parameter. The pulse width is left at 10usec"
+
+"new versions of existing parameters: results of this test are stored in :  "              
+"             at_dpwrf_10usec_c        High power 13C fine power"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   at_currenttest='c13pw90fc_10usec_1'
+   dn='C13' 
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+   seqfil='ATrfhomo' 
+   text('Finding Null for 10 usec 13C Pulse (vary 13C Pulse Power)')
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   write('line3','Finding Fine Power Level(below Max.Power) for pw(C13)=10 usec')
+   pwxlvl=at_max_pwxlvl pwx=10 array('dpwrf',20,4095,-80)
+   lb='n' sb=at/4 s1 av
+   r1=1
+      
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='ATc30f_10usec(`PART1`)'
+   text 
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   ATsvf wft
+   $dpwrfmax=dpwrf[1]
+   write('line3','Finding C13 pwx90 fine power (Channel 2)')
+
+   ATpwx90cal('dpwrf'):$dpwrf
+   dpwrf=$dpwrf
+   at_currenttest='c13pw90fc_10usec_2'
+   at_dpwrf_10usec_c=dpwrf
+
+   text('Finding 90 Degree 13C Pulse Fine Power')
+   if dpwrf<3700 then
+    array('dpwrf',20,1.1*dpwrf,-0.01*dpwrf)
+   else
+    array('dpwrf',20,4095,-40)
+   endif
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+
+   wexp='ATc30f_10usec(`PART2`)'
+   ATcycle au
+ 
+elseif ($1='PART2') then
+   ATsvf wft
+   av
+   ATpwx90cal('dpwrf'):dpwrf 
+   dpwrf=trunc(dpwrf)
+   at_dpwrf_10usec_c=dpwrf
+   write('line3','C13 10usec Fine Power is %4.0f at pwxlvl of %2.0f',at_dpwrf_10usec_c,pwxlvl)
+   ATrecord('C13PW90fc_10usec','C13 Pulse Power Calibration for 10usec C13 pulse','fine_power',at_dpwrf_10usec_c,' power',pwxlvl)
+   write('file',autotestdir+'/REPORT','C13 Fine Power for 10usec pw90 = %4.0f  at power level: %2.0f ',at_dpwrf_10usec_c,pwxlvl)
+
+ATnext
+endif

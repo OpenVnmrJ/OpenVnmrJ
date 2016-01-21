@@ -1,0 +1,65 @@
+"macro coilidchanged"
+
+$coilName = 'unknown'
+$dir = '/vnmr/imaging/gradtables/'
+getfile($dir):$numfiles                          // get number of files in gradtables directory
+$i = 0
+$coilid = ''
+repeat                                           // loop through all the files
+  $i = $i + 1
+  getfile($dir,$i):$filename,$ext                // get name of next file, and any extension it might have
+  if ($ext = '') then                            // only look at files with no extension (such as .bak, .orig)
+    lookup('file',$dir+$filename,'Name:','read'):$name
+    lookup('seek','coilID','read'):$coilid       // check coilID in the file against the argument to this macro
+    //write('line3','%s   %s   %s    %s',$filename,$ext,$name,$coilid)
+    if ($coilid = $1) then
+      $i = $numfiles                             // skip to end of repeat loop if coilID matches $1
+      $coilName = $name                          // use the gradient coil name found in this file
+      write('line3','Coil ID %d matched to gradient coil name %s',$coilid,$coilName)
+    endif
+  endif
+until ($i = $numfiles)
+
+if ($coilName='unknown') then
+  write('error','Coil ID match not found, check gradtables and gcoil before proceeding')
+  return
+ endif
+setgcoil($coilName,$1)
+
+$XAmpl=0.0 $YAmpl=0.0 $ZAmpl=0.0 $current=0.0 $flow=0.0
+$file=systemdir+'/imaging/gradtables/'+$coilName
+$Ampl=''  $tmpstr=''
+lookup('file',$file,'delimiter','\t\n\r ')
+lookup('XRMScurrentlimit','read'):$Ampl,$ret
+if ($ret <> 0) then
+  format($Ampl,3,0):$XAmpl
+  lookup('YRMScurrentlimit','read'):$tmpStr
+  format($tmpStr,3,0):$YAmpl
+  lookup('ZRMScurrentlimit','read'):$tmpStr
+  format($tmpStr,3,0):$ZAmpl
+  lookup('currentlimit','read'):$tmpStr
+  format($tmpStr,3,0):$current
+  $XAmpl = ($XAmpl * $XAmpl) / ($current * $current) * 32767
+  $YAmpl = ($YAmpl * $YAmpl) / ($current * $current) * 32767
+  $ZAmpl = ($ZAmpl * $ZAmpl) / ($current * $current) * 32767
+else
+  lookup('file',$file,'delimiter','\t\n\r ')
+  lookup('RMScurrentlimit','read'):$tmpStr
+  format($tmpStr,3,0):$XAmpl
+  lookup('currentlimit','read'):$tmpStr
+  format($tmpStr,3,0):$current
+  $XAmpl = ($XAmpl * $XAmpl) / ($current * $current) * 32767
+  $YAmpl = $XAmpl
+  $ZAmpl = $XAmpl
+endif
+lookup('flowrate','read'):$tmpStr
+format($tmpStr,3,1):$flow
+$flow = $flow*10
+lookup('tunechoice','read'):$tune
+
+// write('line3',' %d %d %d %d %5.2f %d ', $XAmpl, $YAmpl, $ZAmpl, $current,$flow, $tune)
+wsram(-5, $XAmpl, $YAmpl, $ZAmpl, $current, $flow, $tune, 0)
+
+
+
+

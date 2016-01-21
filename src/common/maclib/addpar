@@ -1,0 +1,53 @@
+"macro addpar"
+
+if ($# < 1) then
+   man('addpar')
+   RETURN
+endif
+
+"  Set dimension to -1 if not present; parlp accepts 0, 1 or 2 as dimension param"
+
+if ($# > 1) then
+   $dimen = $2
+else
+   $dimen = -1
+endif
+
+if ($1 = 'fid') then
+   fidpar
+elseif ($1 = '2d') then
+   par_2d
+elseif ($1 = '3d') then
+   par3d
+elseif ($1 = '3rf') then
+   par3rf
+elseif ($1 = '4d') then
+   par4d
+elseif ($1 = 'ss') then
+   if ($dimen <> -1) then
+      parfidss( $dimen )
+   else
+      parfidss
+   endif
+elseif ($1 = 'image') then
+   exists('parim','maclib'):$e
+   if ($e > 0.5) then
+      parim
+   endif
+elseif ($1 = 'lp') then
+   if ($dimen <> -1) then
+      parlp( $dimen )
+   else
+      parlp
+   endif
+elseif ($1 = 'll2d') then
+   parll2d
+elseif ($1 = 'downsamp') then
+   pards
+elseif ($1 = 'oversamp') then
+   paros
+elseif ($1 = 'multinucrcvr') then
+   multinucrcvrsetup
+else
+   write('error','%s: doesn`t recognize %s',$0,$1)
+endif

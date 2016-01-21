@@ -1,0 +1,33 @@
+"macro setSysBaseref"
+
+if($#>1) then
+  $nucname=$1
+  $baseref=$2
+elseif($#>0) then
+  $nucname=tn
+  if(typeof('$1')) then
+    if($1='reset') then
+      crl
+      $baseref=reffrq
+    else
+      write('line3','Unknown argument %s.',$1)
+      return
+    endif
+  else
+    setfrqCmd('rl',tn,$1)
+    $baseref=reffrq
+  endif
+else
+  $nucname=tn
+  setfrqCmd('rl',tn,0)
+  $baseref=reffrq
+endif
+
+canWrite(systemdir):$e
+if($e) then
+  setfrqCmd('setSysBaseref',$nucname,$baseref)
+
+  // refpos should be zero
+  refpos=0
+  reffrq=$baseref
+endif

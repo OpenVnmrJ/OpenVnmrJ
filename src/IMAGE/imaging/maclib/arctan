@@ -1,0 +1,108 @@
+"macro arctan"
+"****************************************************************************"
+"     arctan: Macro to calculate arctangent of a real number. Answer is      "
+"             in units of radians and degrees. First return is radians       "
+"             second return is degrees. The displayed answer can be          "
+"             suppressed with the silent option. Based on rational           "
+"             approximation given in Harts computer approximations           "
+"             page 275 and CPOS Pascal programming manual page A8            "
+"****************************************************************************"
+
+"david foxall: 19th june 1987: interface version #1"
+" @(#)arctan	7.1  7/1/91 "
+
+"[0] Constants and Declarations"
+$piby2=1.5707963
+$p0=80.78998
+$p1=72.58144
+$p2=11.11774
+$q0=$p0
+$q1=99.51127
+$q2=28.13286
+$arctanstr=' '
+$degreestr=' '
+$onestr=' '
+
+"[1] Input parameter count"
+if $# < 0.5
+then
+write('error','%s','arctan: Use arctan(real number,<"silent">)')
+abort
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+$state='notsilent'
+endif
+
+if ($# > 1.5) and ($# < 2.5)
+then
+   if $2='silent'
+   then
+   $state='silent'
+   else
+   $state='notsilent'
+   write('error','%s','arctan: Use arctan(real number,<"silent">)')
+   endif
+endif
+
+if $# > 2.5
+then
+write('error','%s','arctan: Use arctan(real number,<"silent">)')
+abort
+endif
+
+"[2] Calculations"
+$x=$1
+$x1=1.0
+
+if $x < 0.0
+then
+$x1=(0.0-1.0)
+$x=0.0-$x
+endif
+
+if $x < 0.0001 
+then
+$y=$x
+else
+   if $x > 100000000
+   then
+   $y=$piby2
+   else
+   $x2=0.0
+      if $x > 1.0
+      then
+      $x2=1.0
+      $x=1.0/$x
+      endif
+      $y=$x*$x
+      $x3=$p0+$y*($p1+$y*$p2)
+      $x4=$q0+$y*($q1+$y*($q2+$y))
+      $y=($x*$x3)/$x4
+      if $x2 > 0.5
+      then
+      $y=$piby2-$y
+      endif
+   endif
+endif
+$arctangent=$y*$x1
+$degrees=(90/$piby2)*$arctangent
+format($arctangent,6,4):$arctanstr
+format($degrees,7,4):$degreestr
+format($1,8,3):$onestr
+$outstring='Arctangent of: '+$onestr+'   is   '+$arctanstr+' radians'
+$outstring=$outstring+'   or  '+$degreestr+' degrees'
+
+
+"[3] Return to user "
+if $state='silent'
+then
+return($arctangent,$degrees)
+else
+write('line3','%s',$outstring)
+return($arctangent,$degrees)
+endif
+
+"************************************THE END**********************************"
+

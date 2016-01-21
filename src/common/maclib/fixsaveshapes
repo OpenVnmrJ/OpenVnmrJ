@@ -1,0 +1,121 @@
+"macro fixsaveshapes"
+"This macro is used only on data that were collected prior to saveshapes"
+"   feature & someone tries to do a clone of the experiment"
+"   Eventually, this macro will become obsolete"
+"   Let us bother with generality.  Hard coded what we know so far"
+"   This is also used when the (nuc)shapes parameter values go out of sync"
+
+if ($#<1) then $1='' endif
+
+$maclib='' $shapelib=''
+Automacrodir('check'):$maclib,$shapelib
+if ($shapelib='') then return endif
+
+$shapes='selshapeA'		$powers='selpwrA'		$pulses='selpwA'
+$shapes=$shapes,'selshapeB'	$powers=$powers,'selpwrB'	$pulses=$pulses,'selpwB'
+$shapes=$shapes,'selpwxshpA'	$powers=$powers,'selpwxlvlA'	$pulses=$pulses,'selpwxA'
+$shapes=$shapes,'selpwxshpB'	$powers=$powers,'selpwxlvlB'	$pulses=$pulses,'selpwxB'
+$shapes=$shapes,'wetshape'	$powers=$powers,'wetpwr'	$pulses=$pulses,'pwwet'
+$shapes=$shapes,'wetshape1'	$powers=$powers,'wetpwr1'	$pulses=$pulses,'pwwet1'
+$shapes=$shapes,'wetshape2'	$powers=$powers,'wetpwr2'	$pulses=$pulses,'pwwet2'
+$shapes=$shapes,'wetshape3'	$powers=$powers,'wetpwr3'	$pulses=$pulses,'pwwet3'
+$shapes=$shapes,'wetshape4'	$powers=$powers,'wetpwr4'	$pulses=$pulses,'pwwet4'
+
+$default='selshapeA','q3','tn'
+$default=$default,'selshapeB','q3','tn'
+$default=$default,'wetshape','wetshp','tn'
+$default=$default,'wetshape1','wetshp','tn'
+$default=$default,'wetshape2','wetshp','tn'
+$default=$default,'wetshape3','wetshp','tn'
+$default=$default,'wetshape4','wetshp','tn'
+$default=$default,'selpwxshpA','','dn'
+$default=$default,'selpwxshpB','','dn'
+
+$total=size('$shapes')
+if ($1='tnshapes') or ($1='') then
+   tnshapes='','',''
+endif
+if ($1='dnshapes') or ($1='') then
+   dnshapes='','',''
+endif
+$i=1 $j=1
+$k=1 $m=1
+repeat
+   $param=$shapes[$i]
+   $nuc=''
+   $parsize=0
+   exists($param,'parameter'):$parex
+   if ($parex) then
+	$parsize=size($param)
+   endif
+   if ($parex) and ($parsize=1) then
+	if {$param}[1]='hard' then $parex=0 endif
+   endif
+   if ($parex) and ($parsize=1) then
+       	teststr('$default',$param,'local'):$ret
+	if ($ret) then
+	   if {$param}[1]=$default[$ret+1] then 
+		$parex=0 
+	   else
+		$nuc=$default[$ret+2]
+	   endif
+	endif
+   endif
+   if ($parex) then
+	if (($nuc='tn') and (($1='tnshapes') or ($1=''))) then
+	   tnshapes[1]=tnshapes[1]+' '+$shapes[$i]
+	   tnshapes[2]=tnshapes[2]+' '+$powers[$i]
+	   tnshapes[3]=tnshapes[3]+' '+$pulses[$i]
+	elseif (($nuc='dn') and (($1='dnshapes') or ($1=''))) then
+	   dnshapes[1]=dnshapes[1]+' '+$shapes[$i]
+	   dnshapes[2]=dnshapes[2]+' '+$powers[$i]
+	   dnshapes[3]=dnshapes[3]+' '+$pulses[$i]
+	endif
+   endif
+   $i=$i+1
+until $i > $total
+
+if ($1<>'') then return endif
+
+
+string2array(tnshapes[1]+' '+dnshapes[1]):$saveshapes
+$total=size('$saveshapes')
+if ($saveshapes[1]='') then $total=0 endif
+write('reset',curexp+'/PsgFile')
+
+if ($total>0) then
+   $i=1
+   repeat
+	$param=$saveshapes[$i]
+	$paramsize=size($param)
+	$x=1
+	repeat
+                $pshape={$param}[$x]+'.RF'
+                getfilepath($pshape,'shapelib'):$pex,$pfile
+		if ($pex) then
+                        shell('basename '+$pfile):$filename
+                        exists($shapelib+'/'+$filename,'file'):$ex1
+                        if ($ex1) then $pex=0 endif
+		endif
+		if ($pex) then
+			write('file',curexp+'/PsgFile','%s',$pfile)
+		endif
+                $pshape={$param}[$x]+'.DEC'
+                getfilepath($pshape,'shapelib'):$pex,$pfile
+                if ($pex) then
+                        shell('basename '+$pfile):$filename
+                        exists($shapelib+'/'+$filename,'file'):$ex1
+                        if ($ex1) then $pex=0 endif
+                endif
+                if ($pex) then
+                        write('file',curexp+'/PsgFile','%s',$pfile)
+                endif
+		$x=$x+1
+	until $x > $paramsize
+	$i=$i+1
+   until $i > $total
+endif
+
+SavePsgShapes
+shell('rm -f '+curexp+'/PsgFile'):$dum
+

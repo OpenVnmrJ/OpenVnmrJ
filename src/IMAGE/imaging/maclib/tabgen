@@ -1,0 +1,42 @@
+"macro tabgen"
+" @(#)tabgen	8.1 4/16/93   Spectroscopy Imaging Systems"
+"******************************************************************"
+"  tabgen: Example macro to create AP table for phase encode order "
+"     ARR   Version 1.0   August 5, 1992                           "
+"******************************************************************"
+
+input('Enter (1) Centric; (2) Monotonic: '):$type
+input('Number of steps: '):$steps
+input('Table name: '):$name
+
+$dir = userdir+'/tablib'
+exists($dir,'file'):$ex
+if ($ex = 0) then
+  write('error','tablib directory does not exist.')
+  mkdir(userdir+'/tablib')
+  write('line3','tablib directory has been created.')
+endif
+
+$name = $dir+'/'+$name
+write('reset',$name)
+write('file',$name,'t1 = ')
+
+$count = 1
+while ($count <= $steps) do
+
+  if ($type = 1) then
+    $mod = $count % 2
+    if ($mod = 0) then
+      $tabval = trunc(-$count/2)
+    else
+      $tabval = trunc($count/2)
+    endif
+  else if ($type = 2) then
+    $tabval = $count - $steps/2
+  endif endif
+
+  write('file',$name,'  %d',$tabval)
+  $count = $count + 1
+
+endwhile
+write('line3','table generation complete')

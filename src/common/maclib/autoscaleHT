@@ -1,0 +1,73 @@
+"macro autoscaleHT"
+" autoscaleHT macro adjusts the vertical scale of a 2D Hadamard experiment "
+" Eriks Kupce, Oxford, Dec. 2009 "
+
+exists('execprocess','parameter'):$execparex
+if ($execparex) then execprocess='' endif
+
+vp=0 full f
+sc=10 wc=wcmax-30 
+sc2=0 wc2=wc2max-10 
+
+$sc2d=50
+exists('sc2d','parameter'):$e
+if($e) then
+  $sc2d=sc2d
+endif
+if($#>0) then 
+  $sc2d=$1
+endif
+
+wft(1) f peak:$p,$p
+wp=0.02*sw
+if(wp<100) then 
+  wp=100
+endif
+sp=$p-wp/2 
+
+setrefs
+wft2da dcon 
+
+trace='f2' th=3 vs2d=100 dconi 
+write('line3','2D auto scaling in progress...')
+
+ll2d:$npeaks ll2d('reset'):$n
+if($npeaks=0) then
+  repeat
+    vs2d=vs2d*2.0
+    ll2d:$npeaks ll2d('reset'):$n
+  until ($npeaks > 0)
+  repeat
+    vs2d=vs2d/1.1  
+    ll2d:$npeaks ll2d('reset'):$n
+  until ($npeaks = 0)  
+else
+  repeat
+    vs2d=vs2d/2.0
+    ll2d:$npeaks ll2d('reset'):$n
+  until ($npeaks=0)
+  repeat
+    vs2d=vs2d*1.1  
+    ll2d:$npeaks ll2d('reset'):$n
+  until ($npeaks>0)  
+  vs2d=vs2d/1.1
+endif
+
+vs2d=vs2d*$sc2d f write('line3','2D auto scaling finished.')
+
+if(seqfil='noesyHT') or (seqfil='roesyHT') then
+  dconi('dpcon',30,1.4)
+elseif(seqfil='hsqcHT') then
+  if(mult=1) then 
+    vs2d=vs2d/4 
+  endif
+  if(mult=2) then
+    vs2d=vs2d/2
+    dconi('dpcon',30,1.4)
+  else
+    dconi('dpcon','pos',30,1.4)
+  endif
+else
+  dconi('dpcon','pos',30,1.4)
+endif
+

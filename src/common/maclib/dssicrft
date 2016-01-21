@@ -1,0 +1,31 @@
+"macro dssicrft"
+
+$craftpar=file+'/craftpar'
+exists($craftpar,'file'):$direx
+if not $direx then
+    $craftpar=file+'.fid/craftpar'
+    exists($craftpar,'file'):$direx
+endif
+if not $direx then
+    $craftpar=file+'.vfs/craftpar'
+    exists($craftpar,'file'):$direx
+endif
+
+if $direx then
+    fread($craftpar,'current')
+    exists('craft_fixcraftpath','maclib'):$mex
+    if $mex then
+        substr($craftpar,'dirname'):$fdir
+        craft_fixcraftpath($fdir)
+    endif
+else
+    $craftpar=''
+endif
+exists('craftllout','maclib'):$macex
+if $macex then
+//    craftllout('set')
+    craftllout('setparams',$craftpar)
+    craftllout('text')
+endif
+module('add','craftpar','basic')
+vnmrjcmd('pnew','craftpath','fSWmodels')

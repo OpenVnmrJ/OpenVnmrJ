@@ -1,0 +1,73 @@
+"macro maxlctime_old"
+"maclctime"
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if $e=0 then write('line3','lcdata file does not exist in current experiment') 
+else
+"lcdata file exists"
+
+$det2onflag=(1=0)
+
+lookup('file',$filename)
+
+lookup('readline',5)
+lookup('read'):$det2on
+"write('line3',$det2on)"
+$det2onflag=$det2on>0
+lookup('readline',5)
+
+$max1=0 $max2=0
+$min1=1e6 $min2=1e6
+$tlast=0
+$index=1
+if $det2onflag then $resok=6 else $resok=5 endif
+repeat
+  $s1='' $s2='' $s3='' $s5='' $s6='' $dum='' $a1=0 $a2=0 $stop=0 $det=0
+  if $det2onflag then lookup('read','read','read','read','read','readline'):$s1,$s2,$s3,$dum,$s5,$s6,$res
+  else lookup('read','read','read','read','readline'):$s1,$s2,$s3,$s5,$s6,$res endif
+  if $res=$resok then
+  format($s1,5,3):$t
+  if not typeof('$t') then if $t>0 then
+  format($s2,5,3):$a1
+  format($s3,5,3):$a2
+  format($s5,1,0):$stop
+  format($s6,1,0):$det
+  endif 
+  if $t>.01 then 
+  if $a1> $max1 then $max1=$a1 endif
+  if $a2> $max2 then $max2=$a2 endif
+  if $a1< $min1 then $min1=$a1 endif
+  if $a2< $min2 then $min2=$a2 endif
+  $tlast=$t
+  endif
+  endif endif
+until $res<>$resok
+exists('vslc','parameter'):$e
+if not $e then create('vslc') endif
+exists('vslc2','parameter'):$e
+if not $e then create('vslc2') endif
+exists('oclc','parameter'):$e
+if not $e then create('oclc') endif
+exists('oclc2','parameter'):$e
+if not $e then create('oclc2') endif
+exists('lcdisplay','parameter'):$e
+if not $e then create('lcdisplay','string') endif
+exists('det2','parameter'):$e
+if not $e then create('det2','flag') endif
+exists('dconi','parameter'):$e
+if not $e then create('dconi','string') endif
+
+if ($max1-$min1) > 0 then
+vslc=400/($max1-$min1)
+oclc=$min1
+endif
+
+if ($det2onflag and (($max2-$min2) > 0)) then 
+vslc2=400/($max2-$min2)
+oclc2=$min2 + 10
+endif
+
+sf1=0 wf1=$tlast
+return($t,$max1,$max2)
+endif
+

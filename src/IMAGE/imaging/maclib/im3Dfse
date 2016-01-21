@@ -1,0 +1,241 @@
+"macro im3Dfse"
+"Setup and Processing for 3D imaging sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+g3dpars
+$action = 'prep'
+$action2 = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $action2 = $2
+endif
+
+isvnmrj:$vj
+exists('profile','parameter'):$profile
+
+"**********************************************************"
+" Retrieve Parameters                                      "
+"**********************************************************"
+if ($action = 'rtpar') then
+  "Update old parameters"
+  exists('nseg','parameter'):$e
+  if ($e=0 AND layout='fse3d') then
+    create('nseg','real','current',nv/etl)
+    create('tabscheme','real','current',0)
+    create('images','real','current',1)
+    create('autocrush','string','current','n')
+    genpars('diff')
+    genpars('ir')
+    genpars('irseq')
+    genpars('irnti')
+    create('te1','real','current',0)
+    setprotect('te1','on',256)
+    te1=te
+    seprep('sette')
+    create('thk2fact','real','current',0)
+    setprotect('thk2fact','off',8)
+    create('tpwr3','real','current',0)
+    create('tpwr3f','real','current',0)
+    create('thk3fact','real','current',0)
+    create('pelist','real','current',0)
+    setgroup('pelist','processing')
+    if (spinecho='n' AND diff='n') then te=kzero*esp endif
+    xm1('vp'):$vp
+    if ($vp = 'plan') then recon='external' endif
+
+  endif
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+
+  if ($action2 = 'shim') then 
+    im3Dfse('prep','profile') 
+    return 
+  endif
+
+  ldrf
+  create('slabfract','real','current',1)
+
+  on('fn'):$onfn on('fn1'):$onfn1 on('fn2'):$onfn2
+
+  $fn=fn $fn1=fn1 $fn2=fn2  "remember zero-filling, initft3d resets it"
+  initft3d
+
+  if ($onfn)  then fn  = $fn  else fn  = 'n' endif
+  if ($onfn1) then fn1 = $fn1 else fn1 = 'n' endif
+  if ($onfn2) then fn2 = $fn2 else fn2 = 'n' endif
+
+  imprep('esp')
+
+  exists('slabctr','parameter'):$ex
+  $iplanType=iplanType
+  if ($ex > 0) then if (slabctr = 'y') then
+    pss0 = ppe2   "Center slab selection on FOV in 2nd PE direction"
+    gplan('addType','slices')
+    gplan('setValue','pss0',ppe2)
+    gplan('alternateSlices',sliceorder)
+    gplan('clearStacks')
+  endif endif
+  iplanType=$iplanType
+
+  seqcon('pe'):$pe    "is seqcon c or s for phase encode?"
+  seqcon('pe2'):$pe2  "is seqcon c or s for 2nd phase encode?"
+  if ($pe = 's' AND $pe2 = 's') then ss=ssc else ss=0 endif
+
+  "Multiple slabs need external recon"
+  if (ns>1) then recon='external' endif
+  
+  "Defaults"
+  slabix=1 element=1 echo=1
+  aipAllslabs='n' aipAllelements='n' aipAllechoes='n'
+  
+  execseq('prep')  "Execute any sequence specific preparation"
+
+  if ($action2 = 'profile') then
+    if ($profile > 0) then
+      profile = 'yy'
+      sl=1 ec=1 rc=1 slices='single'
+    else
+      writeparam(curexp+'/im3D_params.par','nv nv2')
+      nv  = 0
+      nv2 = 0
+    endif
+    setloop
+    wexp  = 'im3Dfse(`proc`,`profile`)'
+    wdone = ''
+    werr  = ''
+  elseif ($action2 = 'image2d_pe') then
+    profile = 'ny'  /* No phase encoding in 2nd PE dimension */
+    setloop
+    wexp  = 'im3Dfse(`proc`,`image2d`)'
+    wdone = ''
+    werr  = ''
+  elseif ($action2 = 'image2d_pe2') then
+    profile = 'yn'  /* No phase encoding in 1st PE dimension */
+    setloop
+    seqcon('pe2'):$pe2
+    if ($pe2 = 'c') then nf=nv2*ns else nf=ns endif
+    nfmod=nf
+    wexp  = 'im3Dfse(`proc`,`image2d`)'
+    wdone = ''
+    werr  = ''
+  else
+    if ($profile > 0) then 
+       profile = 'nn'
+    endif
+    setloop
+  endif
+
+  aipXrecon('getnvols'):volumes            // set the number of data volumes
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($action2 = 'profile') then
+    im2Dfse('proc','profile')
+    return
+  elseif ($action2 = 'image2d') then
+    if (recon = 'internal') OR (recon = '') then   "use internal recon_all"
+      f full cf = 1
+      recon_all
+      aipDeleteData
+      aipLoadDir(curexp+'/recon')
+      aipDisplay('all')
+      return
+    else  "external recon"
+      im2D('proc')
+      return
+    endif
+  endif
+  
+  "3D recon"
+  if (recon = 'internal') OR (recon = '') then   "use internal recon_all"
+    recon_all
+  else  "external recon"
+    write('line3','ADVISORY: Using external recon ...')
+    flush
+    "Clear old data"
+    aipXrecon('cleardata')
+    $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt 2>&1'
+    shell($cmd):$trash
+    clear
+    cat(curexp+'/Xrecon.txt')
+  endif
+
+  on('fn2'):$onfn
+  if ($onfn = 0) then $nv2 = nv2 else $nv2 = fn2 endif
+
+  if ($vj > 0) then
+    aipDeleteData
+    if (recon = 'internal') OR (recon = '') then
+      aipLoadFile(curexp+'/datadir3d/data/img_slab001image001echo001.fdf')  "This enables the Extract page"
+    else
+      aipLoadFile(curexp+'/recon/slab001image001echo001.fdf')  "This enables the Extract page"
+    endif
+    aipExtract('xy',0,$nv2-1,1) "Display ROxPE images"
+  endif
+
+  $vp = ''
+  xm1('vp'):$vp
+  "Review VP"
+  if ($vp = 'review') then
+    aipData='reprocessed'
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+
+"**********************************************************"
+" Gain                                                     "
+"**********************************************************"
+elseif ($action = 'prescan') then              // Enter through execprescan
+  im3Dfse('gain','init')
+elseif ($action = 'gain') then
+  $gainstart = 0                               // Set low gain to acquire data
+  $gainfraction = 0.5                          // fraction of ADC to fill
+  $paramfile = curexp+'/tempparams'            // store some parameters to be reset after prescan
+
+  if ($action2 = 'init') then                  // initialize params and acquire data
+    writeparam($paramfile,'nt,ssc,ss')         // back up parameters to be reset after processing
+    im3Dfse('prep','profile')                  // set up for a 1D profile
+    nfmod = nf
+    nt = 1
+    ssc = 0
+    ss = 1/(2*tr) + 2                          // estimate ss based on TR
+    gain = $gainstart
+    wnt = ''
+    wdone = ''
+    werr = ''
+    wexp = 'im3Dfse(\'gain\',\'proc\')'
+    au
+
+  elseif ($action2 = 'proc') then              // process gain scan when complete
+    cf='n'                                     // cf=n tells fidmax to look at entire data block
+    fidmaxarray:$fidmax                        // find highest data value
+    $factor = $gainfraction*32767/$fidmax
+    ln($factor):$ln
+    $gain = 20*$ln/2.303                       // calculate gain change based on fidmax and gainfraction
+    if ($gainstart + $gain < 0) then
+      write('line3','Advisory: gain set to minimum value of 0')
+      gain = 0
+    elseif ($gainstart + $gain > 60) then
+      write('line3','Advisory: low signal, gain set to maximum value of 60')
+      gain = 60
+    else
+      gain = $gain + $gainstart                // set computed gain, then delete gain params
+    endif
+    readparam($paramfile,'nt,ssc,ss')          // restore original parameter values
+    cf = 1
+  endif
+endif

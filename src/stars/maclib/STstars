@@ -1,0 +1,220 @@
+"macro STstars"
+"H. Bildsoe, Aarhus University, Denmark, march 1995"
+"stars($1)- start STARS simulation/iteration of solids MAS/VAS spectra"
+
+"modified - D. Rice 2/17/97 to allow for downsamp > 1 .   "
+"modified - D. Rice 11/22/98 renamed STstars.  "  
+"modified - D. Rice 03/22/03 to a mqf1val and mqf1val2.  " 
+
+rm('/export/home/daver/starsdata')
+exists('downsamp','parameter'):$downsamp
+if ($downsamp>0) then
+   on('downsamp'):$downsampv
+   if ($downsampv=0) then 
+      $downsampm=1.0
+   else
+      $downsampm=downsamp
+   endif
+else
+   $downsampm=1.0
+endif
+
+if $#<>1 then 
+   write('error','Useage: stars(\`mode\`)')
+   abort
+endif
+
+if iter='n' then 
+   iter='' 
+endif
+
+$fid=curexp+'/sim.fid'"
+$data=$fid+'/simdata'           "file of input data to the simulation programs"
+exists($fid,'file'):$a
+
+if not $a then 
+   mkdir($fid) 
+endif
+exists($data,'file'):$a
+if $a then 
+   rm($data) 
+endif
+
+$mac=userdir+'/maclib/simmacro'
+exists($mac,'file'):$a
+
+if $a then 
+   rm($mac) 
+endif
+$type=''
+if (ival<=0.5) then
+   $type='csa '
+else 
+   if (csaon) then 
+      $type='qcsa'
+  else 
+      $type='quad' 
+  endif 
+endif
+
+if (lshp='y') then
+   $order=2 
+else 
+   $order=1 
+endif
+
+$oldnp=np 
+$oldsw=sw                       "adjust swsim to the ADC resolution"
+sw=swsim 
+swsim=sw
+$oldfn=fn
+np=$oldnp 
+dp='y' 
+$np=np/2           "simulations in double precision and complex points"
+
+$m1=size('mval')
+write('file',$data,'%d %f %d %d %4s',sites,ival,trunc($m1+0.1),$order,$type)
+
+$i=1 
+while ($i<=$m1) do 
+   write('file',$data,'%f',mval[$i])
+   $i=$i+1
+endwhile
+
+if (($type='quad') or ($type='qcsa')) then
+   write('file',$data,'%f %f',cq,etaq) 
+endif
+if (($type='csa ') or ($type='qcsa')) then
+   write('file',$data,'%f %f',csa,etas) 
+endif
+if ($type='qcsa') then
+  write('file',$data,'%f %f %f',psi,chi,xi) 
+endif
+write('file',$data,'%f %f',amp,viso)
+
+if (sites=2) then
+  if (($type='quad') or ($type='qcsa')) then
+      write('file',$data,'%f %f',cq2,etaq2) 
+  endif
+  if (($type='csa ') or ($type='qcsa')) then
+     write('file',$data,'%f %f',csa2,etas2) 
+  endif
+  if ($type='qcsa') then
+    write('file',$data,'%f %f %f',psi2,chi2,xi2)
+  endif
+  write('file',$data,'%f %f',amp2,viso2)
+  $i=$i+1
+endif
+
+write('file',$data,'%f %f',srate,theta)
+write('file',$data,'%f %f %f %5s',gb1,pw,rfw,pulse)
+write('file',$data,'%f %f %f',swsim,spsim,sfrq) 
+
+if ($#>1) then 
+   $maxiter=$2 
+else 
+   $maxiter=400 
+endif
+write('file',$data,'%d %d %d %d',trunc(ant),trunc($np),trunc(fn/2),trunc($maxiter))
+if (lshp='y') then 
+   $expfil=curexp+'/datdir/phasefile'
+else 
+   $expfil=curexp+'/expint' 
+endif
+
+$res=curexp+'/resfile'
+if (($1 ='rms') or ($1='iter')) then
+   exists($expfil,'file'):$a
+   if not $a then
+      write('error','abort. Missing file of experimental data')
+      abort 
+   endif
+   if ($1='rms') then 
+      write('file',$data,'rms')
+   else 
+      write('file',$data,'%s',iter)
+   endif  
+   if lshp='y' then                                   "2.nd order calculations" 
+      fn=$oldfn
+      on('lb'):$a
+      if $a=0 then 
+         $lb=0 
+      else 
+         $lb=lb 
+     endif
+     on('gf'):$a
+     if $a=0 then 
+        $gf=0 
+     else 
+        $gf=gf 
+     endif
+    write('file',$data,'%f %f %f %f %d',$oldsw/$downsampm,(rfp-rfl)/$downsampm,$lb,$gf,trunc(fn/2))
+    numreg:$nreg                             "number of spectrum regions to fit"
+    write('file',$data,'%d',trunc($nreg))
+    $i=0
+    repeat
+       $i=$i+1
+       getreg($i):$min,$max  "limits of this region"
+       write('file',$data,'%f %f',$max/$downsampm,$min/$downsampm)
+    until $i=$nreg
+    flush
+ endif
+endif
+
+dg('dgstars')
+$prog='' 
+$prog='/vnmr/bin/starsprg'
+
+shell($prog+' '+$data+' '+$expfil+' '+$mac+' '+$res+' '+$fid+'/fid'):$sh1,$sh2
+
+"$sh2 contains:"
+" 1) the string 'ok' if the calculation was successful"
+" 2) error messages if the STARS calculation aborted intentionally (errors" 
+"    in or inconsistent parameters)"
+" 3) nothing if the STARS program aborted for unknown reasons"
+
+length($sh2):r1 "check status for the calculation"
+if (r1=0) then
+    write('error','Error: Abnormal termination')
+    abort
+else
+   substr($sh2,1,2):$ok
+   if ($ok <> 'ok') then
+      write('error','%s',$sh2)
+      abort 
+   endif
+endif
+
+length($sh1):r1   "contains warnings"
+if (r1>0) then 
+   write('line3','%s',$sh1)
+endif 
+simmacro        "simmac contains modified parameters, set new values in parameter table"
+rm($mac)
+if ($1<>'rms') then
+
+"Adjust tof and rfl to new position of spectral window. Take care: Changing "
+"tof sets sfrq according to tn and the system spectrometer frequency in "
+" 'config-table'. This must be avoided when fitting/simulating spectra at other"
+" spectrometer frequencies, so use setvalue-command. "
+
+   $tof=0.5*(swsim-$oldsw)+spsim+rfl-rfp+tof 
+   setvalue('tof',$tof)
+
+   rfl=rfp-spsim
+   fsave($fid+'/procpar','current')
+   cp(curexp+'/text',$fid+'/text')
+   rt($fid)
+   length(curexp):$len
+   substr(curexp,$len-3,4):$exp
+   setvalue('file',$exp,'processed')
+   delete($fid+'/text')
+   delete($fid+'/procpar')
+   delete($fid+'/fid')
+endif
+delete($fid+'/simdata')
+rmdir($fid)
+isvnmrj:$isvnmrj
+if ($isvnmrj=0) then 
+   menu('stars2')
+endif

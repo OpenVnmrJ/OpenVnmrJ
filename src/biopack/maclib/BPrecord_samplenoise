@@ -1,0 +1,22 @@
+"macro BPrecord_samplenoise"
+"BPrecord_samplenoise"
+
+ exists(userdir+'/autotest/atdb/at_spec_table','file'):$e
+ if $e=0 then
+  write('line3','AutoTest Files are missing: Run AutoTest to automatically have Noise Results Stored') return
+ else
+  $dir='' pwd:$dir
+  cd(userdir+'/autotest/atdb')
+  lookup('file','at_spec_table')
+  lookup('count','NOISE_SAMPLE'):$isthere
+  if $isthere then
+   $trecord='"'+systemdir+'"/tcl/bin/atrecord '+$1+' "'+$2+'" "'+userdir+'" '+owner
+   shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6):$rtrn
+  else
+   $string='BPchecknoise           NOISE_SAMPLE     1    *            *           Sample Noise'
+   write('file','at_spec_table',$string)
+   $trecord='"'+systemdir+'"/tcl/bin/atrecord '+$1+' "'+$2+'" "'+userdir+'" '+owner
+   shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6):$rtrn
+  endif
+  cd($dir)
+ endif

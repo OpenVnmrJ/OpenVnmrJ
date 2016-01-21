@@ -1,0 +1,54 @@
+Protocol: Wsam1d  Sequence: wsam1d.c  Apptype: solidseq1d
+
+Description: 
+
+Windowed SAMn acquisition on X.  
+
+Additional Software
+
+reset_wsam1d - This macro uses the calibrated values of pwH90 and aH90 
+to calculate the intial parameters for the wsamX waveform and sets up 
+2D parameters. 
+Parameter Groups: 
+
+prep1X:  Module:  no 
+Sequence:  c7inadwpmlg2d.c       
+Description:  Implements a composite pulse consisting of a 90-degree 
+              flip followed by a smaller flip-angle to implement quadrature 
+              detection about a tilted precession axis.  Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses. 
+       pw1Xprep1 - 90-degree flip on the obs channel. 
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse.
+
+scaleX: (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.       
+
+wsamX:  Module:  yes
+Sequence:  wsam1d.c  
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwsam - amplitude of PMLG on obs.
+       pwXwsam - 360-degree flip on obs, off resonance (the length of 
+              each of the two PMLG pulses).  
+       qXwsam - number of phase steps that make up pwXpmlg. A negative 
+              value implements descending phases in the first pulse.
+       r1Xwsam - pre-pulse delay (similar to rof1). 
+       r2Xwsam - post_pulse delay (similar to rd or rof2).
+       r3Xwsam - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined. 
+       tauXwsam - time for one PMLG cycle including the window.
+       npaXwsam - number of 100 ns ticks in the detection window.
+       chXwsam = 'obs' must be set (not shown).
+Implementation:  WMPA wsam = getwsamn("wpmlgX");
+Underscore function: _wsamn(wsam,phXwsam);  phXwsam is the overall 
+              phase table. 

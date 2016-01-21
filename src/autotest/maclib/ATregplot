@@ -1,0 +1,208 @@
+"macro ATregplot"
+"ATregplot('all')"
+"ATregplot('display')"
+"ATregplot('hist_file',column#)"
+
+shell('date'):$date
+at_reg_avrg=0
+at_reg_stdev=0
+$g_label=''
+$histdir=''
+$tablefile=''
+$avrstdfile=''
+
+exists(curexp+'/regression.inp','file'):$e
+if $e=1 then rm(curexp+'/regression.inp') endif
+exists(curexp+'/analyze.inp','file'):$e
+if $e=1 then rm(curexp+'/analyze.inp') endif
+exists(curexp+'/analyze.out','file'):$e
+if $e=1 then rm(curexp+'/analyze.out') endif
+exists(curexp+'/analyze.list','file'):$e
+if $e=1 then rm(curexp+'/analyze.list') endif
+exists(curexp+'/expl.out','file'):$e
+if $e=1 then rm(curexp+'/expl.out') endif
+exists(curexp+'/fp.out','file'):$e
+if $e=1 then rm(curexp+'/fp.out') endif
+
+$histdir=autotestdir+'/history'
+$report2file=autotestdir+'/report2'
+$tablefile=autotestdir+'/atdb/at_spec_table'
+$avrstdfile=curexp+'/avrgstdev.inp'
+
+if (($#=1) and ($1='all')) then
+   exists($report2file,'file'):$e 
+   if $e=1 then rm($report2file) endif
+   write('file',$report2file,'************************************************************************')
+   write('file',$report2file,'       Current Performance Results for %s',$date)
+   write('file',$report2file,'          (results are calculated using all history files)')
+   write('file',$report2file,'************************************************************************')
+
+   sc=5 sc2=0 wc=51 wc2=45
+   $av=0 $sd=0
+   $wcinc= 85
+   $wc2inc=65
+   $rownum=1
+   $colnum=1
+   $firstpage=1
+   $alen=0
+   "at_currenttest='regplots'"
+   ATpltext3(autotestdir+'/texts/regplots',0,wc2max-10)
+     
+   $retnum=0
+   lookup('file',$tablefile)
+   repeat
+      lookup('readline'):$aline,$retnum
+      length($aline):$alen
+      $thisfile=''
+      $thiscol=0
+      $ok2plot=0
+      if ($retnum=0) OR ($alen<1.5) then
+         $ok2plot=0
+      else
+         $firstchar=''
+         substr($aline,1,1):$firstchar
+         if ($firstchar='#') OR ($firstchar='') OR ($firstchar=' ') OR ($alen=0) then 
+            $ok2plot=0
+         else
+            substr($aline,2):$thisfile
+            substr($aline,3):$thiscol
+            $ok2plot=1
+         endif
+      endif
+      if ($ok2plot) then
+         if ($firstpage=1) AND ($colnum=3) AND ($rownum=3) then
+            "this corner saved for the 'regplots' text file"
+            $firstpage=0
+            ATpage($thisfile) sc=5 sc2=0
+            $colnum=1
+            $rownum=1
+         endif
+         ATregbuilt($histdir+'/'+$thisfile,$thiscol)
+         exists(curexp+'/regression.inp','file'):$e
+         if ($e=1) then
+            shell( 'awk \'$1 ~ /average/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_avrg
+            shell( 'awk \'$1 ~ /stdev/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_stdev      
+            shell( 'awk \'$1 ~ /glabel/ {$1 = ""; print}\' "'+$avrstdfile+'"' ):$g_label
+            pexpl('regression')
+            expl('regression')
+            write('graphics',60,140,'Average Value = %5.3f    Standard Deviation = %2.3f',at_reg_avrg,at_reg_stdev)
+            write('plotter',wcmax-wc-sc,sc2+wc2-44,'History File: %19s',$thisfile)
+            write('plotter',wcmax-wc-sc,sc2+wc2+1,'Mean = %5.3f  Std.Dev. = %3.3f',at_reg_avrg,at_reg_stdev)
+            write('file',$report2file,'Test: %20s      Mean = %10.3f   Std.Dev. = %10.3f',$g_label,at_reg_avrg,at_reg_stdev)
+            $colnum=$colnum+1
+            sc=sc+$wcinc
+            if ($colnum>3) then
+               sc=5 sc2=sc2+$wc2inc
+               $rownum=$rownum+1
+               $colnum=1
+            endif
+            if ($rownum>3) then
+               ATpage($thisfile) sc=5 sc2=0
+               $colnum=1
+               $rownum=1
+            endif
+         endif
+
+      endif
+   until($retnum=0)
+   ATpage($thisfile)
+   ptext(autotestdir+'/report2')
+   sc2=0 wc2=wc2max full
+
+elseif (($#=1) and ($1='display')) then
+   full  
+   $av=0 $sd=0
+   $rownum=1
+   $colnum=1
+   $ttfile=0
+   getfile($histdir):$ttfile
+   $i=0  
+ 
+   while ($i < $ttfile) do
+      $i = $i + 1
+      $thiscol=''
+      $retnum=0
+      $coln=0
+      getfile($histdir,$i):$finame
+      lookup('file',$tablefile)
+ 
+      repeat
+         lookup('readline'):$aline,$retnum
+         $bb=''
+         if ($retnum=0) then
+            $bb='BREAK_LOOP'
+         else
+            substr($aline,2):$bb
+         endif
+ 
+         if ($bb=$finame) then
+            substr($aline,3):$thiscol
+ 
+            if ($thiscol<>'') then
+               format($thiscol,1,0):$coln
+               ATregbuilt($histdir+'/'+$finame,$coln)
+               shell( 'awk \'$1 ~ /average/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_avrg
+               shell( 'awk \'$1 ~ /stdev/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_stdev
+               shell( 'awk \'$1 ~ /glabel/ {$1 = ""; print}\' "'+$avrstdfile+'"' ):$g_label
+               expl('regression')
+               write('graphics',80,wc2max-5,'Test: %s  ',$g_label)
+               write('graphics',60,wc2max-15,'Average Value = %5.3f    Standard Deviation = %2.3f',at_reg_avrg,at_reg_stdev)
+               input('Use enter key to advance to next graph, Type "quit" followed the enter key to stop   '):$ans
+               if $ans='quit' then return endif
+               $colnum=$colnum+1
+  
+               if ($colnum>3) then
+                  $rownum=$rownum+1
+                  $colnum=1
+               endif
+ 
+               if ($rownum>3) then
+                  $colnum=1
+                  $rownum=1
+               endif
+            endif
+         endif
+      until($retnum=0)
+   endwhile
+ 
+elseif ($#=2) then
+   $thiscol=''
+   $retnum=0
+   $coln=0
+
+   lookup('file',$tablefile)
+
+   repeat
+      lookup('readline'):$aline,$retnum
+      $bb=''
+      if ($retnum=0) then
+         $bb='BREAK_LOOP'
+      else
+         substr($aline,2):$bb
+      endif
+
+      if ($bb=$1) then
+         substr($aline,3):$thiscol
+         if ($thiscol<>'') then
+            format($thiscol,1,0):$coln
+            if ($coln=$2) then
+               ATregbuilt($histdir+'/'+$1,$coln)
+               shell( 'awk \'$1 ~ /average/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_avrg
+               shell( 'awk \'$1 ~ /stdev/ {print $2}\' "'+$avrstdfile+'"' ):at_reg_stdev
+               shell( 'awk \'$1 ~ /glabel/ {$1 = ""; print}\' "'+$avrstdfile+'"' ):$g_label
+               full wc2=125 wc=200
+               expl('regression')
+               write('graphics',60,140,'Average Value = %5.3f    Standard Deviation = %2.3f',at_reg_avrg,at_reg_stdev)
+               write('plotter',60,140,'Mean = %5.3f  Std.Dev. = %3.3f',at_reg_avrg,at_reg_stdev)
+               write('plotter',160,140,'History File: %19s',$1)
+               sc=10 sc2=20
+               pexpl('regression')
+               ATpage($1)
+            endif
+         endif
+      endif
+   until($retnum=0)
+
+else
+   write('line3','Usage: ATregplot(\'all\')  or  ATregplot(\'history_file\',column#)')
+endif

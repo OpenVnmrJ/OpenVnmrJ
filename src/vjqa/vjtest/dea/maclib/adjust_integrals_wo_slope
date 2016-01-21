@@ -1,0 +1,80 @@
+" assumes that integrals are already set "
+" and need a little adjustment to find baseline "
+
+
+$fast='slow'  " only the slow adjustment performed "
+
+if $#=1 then
+  if $1='fast' then $fast='fast'
+  elseif $1='slow' then $fast='slow'
+  else $fast='mid' endif
+endif
+
+f full vp=12
+
+" store all the original integral setpoints "
+
+$numregs=0
+numreg:$numregs
+$a=1
+repeat
+  $right[$a]=0 $left[$a]=0
+  getreg($a):$right[$a],$left[$a]
+  $a=$a+1
+until $a>$numregs
+
+cz
+
+$intmodnow='' $intmodnow=intmod
+intmod='full'
+
+" move to side of setpoints till next point is higher "
+
+$high=0 $low=0 $position=0
+$a=1
+repeat
+  sp=$right[$a] wp=$left[$a]-$right[$a]
+  sp=$right[$a]-20 wp=$left[$a]-$right[$a]+40
+  cr=$left[$a] 
+
+  $position=cr
+  repeat
+    integ(cr,cr+0.5):$low
+    integ(cr-0.5,cr):$high
+    if $low>=$high then cr=$left[$a]+100 else $high=$low $position=cr endif
+    cr=cr+0.5
+  until  cr>$left[$a]+20
+  $left[$a]=$position
+
+  cr=$right[$a]
+  $position=cr
+  repeat
+    integ(cr-0.5,cr):$low
+    integ(cr,cr+0.5):$high
+    if $low>$high then cr=$right[$a]-100 else $high=$low $position=cr endif
+    cr=cr-0.5
+  until cr<$right[$a]-20
+  $right[$a]=$position
+  $a=$a+1
+until $a>$numregs
+intmod=$intmodnow
+
+"  Prevent overlapping of the integral setpoints  "
+
+$a=1
+repeat
+    if $a>1 then
+      if $right[$a-1]<$left[$a] then 
+        r1=($right[$a-1]+$left[$a])/2 $right[$a-1]=r1 $left[$a]=r1 
+      endif
+    endif
+    z($left[$a],$right[$a])
+    $a=$a+1
+until $a>$numregs
+
+f 
+sp=$right[$numregs]-50 wp=$left[1]-$right[$numregs]+100
+intmod='partial'
+ds
+
+

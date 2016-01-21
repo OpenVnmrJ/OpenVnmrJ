@@ -1,0 +1,118 @@
+"macro caco"
+
+"caco setup macro"
+
+BPrtppar('caco')
+setfrq reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+at=0.1 d1=1.5
+fn=2*np 
+getparam('dofCO','C13'):tof
+getparam('tofH2O','H1'):dof
+
+ref_pw90=pwC*compC ref_pwr=pwClvl
+wexp='' wnt='' spin='n'
+	// tof on CO, indirect dim on CA
+	sw=45p
+        Hstart='n' dm='yyy' dm2='nyy'
+        dof=dof-(4.7-4.2)*dfrq
+	tofCACB=tof-(174-57)*sfrq sw1=35p //CA t1
+
+        getparam('pw90','H1'):pwH
+        getparam('tpwr','H1'):pwHlvl
+
+ 
+        ddrtc=alfa
+        IPAP='i' ni=1 phase=1  nt=16  
+        gf='n' lb='n' sb=at sbs=-sb 
+        setref gain=30
+
+
+//generate 15N decoupling:
+
+
+	getparam('dofN15','N15'):dof2
+       
+
+	getparam('pwN','N15'):pwN
+	getparam('pwNlvl','N15'):pwNlvl
+        getparam('compN','N15'):$compN
+  
+	dm2='nny'
+        dn2='N15'
+	 
+
+	dseq2='N15_wurst_low'
+
+ 	pbox_rst opx(dseq2+'.DEC')	pboxpar('stepsize', '2.0')    pboxpar('adb', '2.0') 
+
+        $bw='' format(40*dfrq2,9,1):$bw
+
+	setwave('WURST40 ' +$bw +'/0.003' )   
+	cpx(pwN,pwNlvl)   
+	pboxget(dseq2+'.DEC'):dseq2,r1,dpwr2,r2,dres2,dmf2
+	dpwr2=dpwr2+1
+  
+
+  // for WURST
+
+//generate C pulses
+
+BPmakeBIP(shCBIP,pwClvl,pwC):pwCBIP  
+
+
+// CA(B) 90 degrees
+
+  $shape='CA90'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('Q5  85p 0 0 0 90 ')	cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_90,pwCACB_90,pwrCACB_90 
+  shCACB_90r=shCACB_90
+  BPmoveshape($shape+'.RF')
+// CA(CB) 180
+  $shape='CA180'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('q3  80p 0 0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_180,pwCACB_180,pwrCACB_180
+  BPmoveshape($shape+'.RF')
+// CA(CB) 180 from CO
+  $shape='CA180offCO'
+  $offset='' format(-tof+tofCACB,9,1):$offset
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('q3  80p ' +$offset +' 0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCACB_180off,pwCACB_180,pwrCACB_180
+  BPmoveshape($shape+'.RF')
+// CB 180 from CA 
+  $shape='CB180offCA'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('iburp1  40p -37p  0 0 180 ') cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCB_180,pwCB_180,pwrCB_180
+  BPmoveshape($shape+'.RF')
+// CO 90 degrees
+  $shape='CO90'
+  pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+  setwave('gaus  80p 0 0 0 90 ')	cpx(pwC,pwClvl)   
+  pboxget($shape+'.RF'):shCO_90,pwCO_90,pwrCO_90 
+  BPmoveshape($shape+'.RF')
+// CO 180 degrees
+   $shape='CO180'
+   pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+   setwave('gaus  80p 0 0 0 180 ')	cpx(pwC,pwClvl)   
+   pboxget($shape+'.RF'):shCO_180,pwCO_180,pwrCO_180 
+   BPmoveshape($shape+'.RF')
+// CO 180 shifted  
+   $shape='CO180offCA'
+   $offset='' format(tof-tofCACB,9,1):$offset
+                pbox_rst opx($shape+'.RF') pboxpar('stepsize', 0.5) pboxpar('attn','i') pboxpar('sfrq',sfrq)
+   setwave('gaus  80p ' +$offset +' 0 0 180 ')	cpx(pwC,pwClvl)   
+   pboxget($shape+'.RF'):shCO_180off,pwCO_180,pwrCO_180 
+   BPmoveshape($shape+'.RF')
+
+//1H decoupling
+  dseq='garp1' dres=1 
+  $pw_dec=5.0/(4*dfrq*4)*1e6 
+  if ($pw_dec > 180) then $pw_dec=180 endif  //   dec covering 4ppm, B1> 1.5kHz
+  ln(pwH*compH/$pw_dec):r3   format(pwHlvl+r3*8.68+0.5,0,0):dpwr 
+  exp((pwHlvl-dpwr)*0.115):r1
+  $pw_dec=pwH*r1*compH dmf=1.0e6/$pw_dec
+write('alpha','...done' )
+

@@ -1,0 +1,63 @@
+"macro tsnspwp"
+if ($# < 1) then return('','') endif
+
+if ($1='get') then
+   strstr(wbs,'testsn'):$ret
+   if ($ret=0) then return('','') endif
+
+   $s1='' $s2='' $ret=0
+   strstr(wbs,'testsn('):$ret,$s1,$s2
+   if ($ret=0) then
+	format((wp+sp)/reffrq,0,1):$s1
+	format(sp/reffrq,0,1):$s2
+	return($s1,$s2)
+   endif
+   $ret=0
+   strstr($s2,')'):$ret,$s2
+   if ($ret=0) then
+        format((wp+sp)/reffrq,0,1):$s1
+        format(sp/reffrq,0,1):$s2
+        return($s1,$s2)
+   endif
+   $s3=$s2
+   $s1='' $s2='' $ret=0
+   strstr($s3,','):$ret,$s1,$s2
+   if ($ret=0) then
+        format((wp+sp)/reffrq,0,1):$s1
+        format(sp/reffrq,0,1):$s2
+        return($s1,$s2)
+   endif
+   return($s1,$s2)
+
+endif
+
+if ($1='set') then
+   if ($# < 1.5) then
+	$ret=0 $s1='' $s2=''
+	strstr(obsSW,'setsw('):$ret,$s1,$s2
+	if ($ret) then
+	   strstr($s2,')'):$ret,$s1
+	endif
+	if ($ret) then
+	   wbs='testsn('+$s1+')'
+	else
+	   wbs='testsn'
+	endif
+   else
+   	$s1='' $s2=''
+   	if typeof('$2') then
+		$s1=$2
+   	else
+		format($2,0,1):$s1
+   	endif
+   	if typeof('$3') then
+        	$s2=$3
+   	else
+        	format($3,0,1):$s2
+   	endif
+   	wbs='testsn('+$s1+','+$s2+')'
+   endif
+
+endif
+
+

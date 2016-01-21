@@ -1,0 +1,77 @@
+"macro AT77"
+"AT77" "Gradient Echo Stability (30G/cm z-axis) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   substr(gradtype,3,1):$pfgamp   "performa I has maximum of ~25G/cm($pfgamp='l')"
+   if ($pfgamp)='l' then
+     write('line3','Gradient amplifier inappropriate for this test. Test skipped' ) 
+     ATnext return
+   endif
+
+   at_pfgon=pfgon
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+
+   text('Gradient Echo Stability using\\ a 30G/cm 1msec Z-axis Gradient')
+   at_currenttest='gecho30_z'
+   array('nt',20,1,0)
+   seqfil='ATgecho' gt1=.001 gzlvl1=30/at_gzcal
+   vchannelmap='0','z'
+   gt2=.001 gzlvl2=-gzlvl1
+   d2=.0005 d3=.0005 
+   gradaxis='z'
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   f
+   wnt='ATwft select(1) av vsadj dssh dtext'
+   wexp='AT77(`PART1`)'
+   ATcycle
+   au
+   write('line3','Gradient Echo Stability using a 30G/cm Z-axis Gradient')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   sp=3.8p wp=1.6p
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+  if shaped='s' then
+   ATrecord('ZECHOSTAB30s','Gradient Echo Stability using a 30G/cm Z Autoshaped Gradient Pulse','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','Gradient Echo Stability (30G/cm Autoshaped Z) =  %3.3f ',100-$stddev)
+  else
+   ATrecord('ZECHOSTAB30','Gradient Echo Stability using a 30G/cm Z Gradient Pulse','stability',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','Gradient Echo Stability (30G/cm Z) =  %3.3f ',100-$stddev)
+  endif
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+ATnext
+endif

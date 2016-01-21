@@ -1,0 +1,81 @@
+"macro gradient_module"
+"gradient_module - This is a setup macro for gradient module"
+
+$module='gradient'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+ */
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+
+  "By default gzlvl1 is 1G/cm, gzlvl2 is 2G/cm, etc.  "
+  "By default hsglvl is 12G/cm gzlvl0 is 10G/cm		"
+  "  This is done ONLY if they are 0 			"
+  "  This assures that the level values in curpar are "
+  "  maintained. Within the confines of module philosophy"
+
+   invgcal=0
+   fixgrd(1):invgcal
+   format(invgcal,0,0):invgcal
+   if (invgcal>0) then
+   	if (gzlvl1=0) then gzlvl1=1*invgcal endif
+   	if (gzlvl2=0) then gzlvl2=2*invgcal endif
+   	if (gzlvl3=0) then gzlvl3=3*invgcal endif
+   	if (gzlvl4=0) then gzlvl4=4*invgcal endif
+   	if (gzlvl5=0) then gzlvl5=5*invgcal endif
+   	if (gzlvl6=0) then gzlvl6=6*invgcal endif
+   	if (gzlvl7=0) then gzlvl7=7*invgcal endif
+   	if (gzlvl8=0) then gzlvl8=8*invgcal endif
+   	if (gzlvl9=0) then gzlvl9=9*invgcal endif
+        if (gzlvl0=0) then gzlvl0=10*invgcal endif
+	if (hsglvl=0) then hsglvl=12*invgcal endif
+   endif
+
+   if (gt1=0) then gt1=0.001 endif
+   if (gt2=0) then gt2=0.001 endif
+   if (gt3=0) then gt3=0.001 endif
+   if (gt4=0) then gt4=0.001 endif
+   if (gt5=0) then gt5=0.001 endif
+   if (gt6=0) then gt6=0.001 endif
+   if (gt7=0) then gt7=0.001 endif
+   if (gt8=0) then gt8=0.001 endif
+   if (gt9=0) then gt9=0.001 endif
+   if (gt0=0) then gt0=0.0016 endif
+   if (hsgt=0) then hsgt=0.002 endif
+   gstab=0.0005
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

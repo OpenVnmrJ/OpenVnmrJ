@@ -1,0 +1,114 @@
+"macro BP_v2mdd"
+"           use 'se' as second argument for sensitivity-enhanced data"
+"           use 'states' as second argument for states-haberkorn data"
+
+$fname='' $tmpfil='' $ok=''       $SE='n'    $log='' 
+$cmd=''   $cmd1=''   $cmd2=''     $cmd3=''   $cmd4=''
+$rsw=''   $v2mdd=''  $proc_se=''  $tmpfil='' $nls=''       
+
+if($# < 1) then
+  write('error','usage - BP_v2mdd(fname,se or states)')
+  return
+endif
+
+$fname = $1
+if($# > 1) then
+  if (($2='se') or ($2='SE')) then 
+    $SE='y'
+  endif 
+endif
+
+BPfindfile('v2mdd'):$v2mdd
+BPfindfile('rsw'):$rsw
+BPfindfile('proc_se'):$proc_se
+BPcopy_to_bin('mddnmr4varian')  "copies mddnmr4varian program to user bin"
+                                "if not present in user bin or /vnmr/bin "
+
+if not (file='exp') then        
+  $cmd = file
+  getext($cmd):$cmd1,$cmd2
+  if not ($cmd2 = 'fid') then 
+    $cmd = $cmd+'.fid'
+  endif
+  copy($cmd+'/nls.in', curexp)
+  copy($cmd+'/nls.hdr_3', curexp)
+endif
+
+$nls = curexp + '/nls'  
+$cmd = $nls + '.hdr_3'     
+exists($cmd, 'file'):$e
+if not($e) then
+  write('error','mdd parameter files not found')
+  return
+endif
+ 
+getext($fname):$cmd1,$cmd2
+if not ($cmd2 = 'fid') then 
+  $fname = $fname+'.fid'
+endif
+
+exists($fname,'directory'):$e 
+if($e) then
+  $cmd3 = 'file ' + $fname + ' exists. Remove ? (y/n) : '
+  input($cmd3):$ok
+  if($ok='y') then 
+    $cmd3 = 'rm -r ' + $fname 
+    shell($cmd3)
+  else return
+  endif
+endif
+
+$tmpfil = $fname+'.orig'
+exists($tmpfil,'directory'):$e 
+if($e) then
+  $cmd3 = 'file ' + $tmpfil + ' exists. Remove ? (y/n) : '
+  input($cmd3):$ok
+  if($ok='y') then 
+    $cmd3 = 'rm -r ' + $tmpfil 
+    shell($cmd3)
+  else return
+  endif
+endif
+
+BP_select_mdd_region:$from,$size
+$pt1 = '' $sze = ''
+format($from,5,0):$pt1
+format($size,5,0):$sze
+
+wft
+flush
+
+$log = ' > v2mdd.log; '
+$cmd1 = $rsw+' ' + curexp + ' ' + $fname + ' ' + $pt1 + ' ' + $sze + $log 
+$log = ' >> v2mdd.log; '
+$cmd3 = $v2mdd +' ' + $fname + $log
+$cmd4 = 'rm -r ' + $tmpfil + $log 
+if($SE = 'y') then
+  $cmd2 = $proc_se+' ' + $fname + $log
+else
+  $cmd2 = 'cp '+curexp+'/nls.*' + ' ' + $fname + '/. ;'
+endif
+
+$cmd = $cmd1 + $cmd2 + $cmd3 + $cmd4  "execute all commands here "
+shell($cmd)
+
+$log = $fname + '/v2mdd.log'
+$cmd = 'mv v2mdd.log ' + $log
+shell($cmd)
+
+$cmd1 = $fname + '/fid.v2m'
+exists($cmd1,'file'):$e
+if not ($e) then
+  write('error','BP_v2mdd: VJ to MDD data conversion failed')
+  return
+endif
+
+BPmk_mdd_scr($fname, $size)    
+$cmd2 = 'cp ' + $nls + '.hdr_3' + ' ' + $fname + '/.'
+shell($cmd2)
+$cmd3 = 'cp ' + $nls + '.in' + ' ' + $fname + '/.'
+shell($cmd3)
+$cmd4 = 'echo '+$cmd2+$log+$cmd2+$log+' echo '+$cmd3+$log+$cmd3+$log
+shell($cmd4)
+write('line3','The VJ to MDD data conversion finished. See %s for details. \n', $log)
+

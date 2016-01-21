@@ -1,0 +1,99 @@
+Protocol: Mqmas7qzf2d  Sequence: mqmas7qzf2d.c  Apptype: solidseq1d
+
+Description: 
+    Z-filtered MQMAS with a 7Q phase cycle, with SPINAL or TPPM
+    decoupling. 
+ 
+Additional Software: 
+
+reset_mqmas - sets a 2D spectrum with par2d.  This macro is run from 
+              the protocol. 
+mqf1shear - macro that sets the parameter daslp that is used to shear 
+              the data in F1. 
+mqf1ref7q - references and scales F1 using the "split T1" dwell time.
+mqf1ref7qs - references and scales F1 using the scaled method of 
+              Amoureux and Pruski. 
+
+Parameter Groups: 
+
+mqmasX:  Module:  no 
+Sequence:  mqmas3qzf2d.c      
+Description:  Implements two-pulse MQMAS on obs with an F1 delay d2 in 
+              between the pulses.
+Parameters:  Sequence Page
+       aXmqmas - the amplitude of the obs pulses. 
+       pw1Xmqmas - the first pulse of MQMAS, typically a 20 to 40-
+              degree flip angle, based on the solution-state 90-degree 
+              pulse. 
+       pw2Xmqmas - the second pulse of MQMAS, typically a 90-degree 
+              flip angle based on the solution-state 90-degree pulse.  
+
+7QshearX: (processing) Module:  no
+Sequence:  mqmas7qzf2d.c     
+Description:  Shows the parameters for MQMAS shearing for 9Q sequences.  
+Parameters:  Sequence Page
+       ival - the spin quantum number.
+       daslp - first-order phase increment in F1.
+       scalesw1 - scale factor for F1.
+Macros: 
+       mqf1shear - sets daslp. 
+       mqf1ref7q - scales F1 to correspond to a "split-t1" dwell time. 
+       mqf1ref7qs- scales F1 according to the procedure of Amoureux and 
+              Pruski.  
+
+zfselX:  Module:  no
+Sequence:  mqmas3qzf2d.c  
+Description:  Implements a selective, square 90-degree pulse with both 
+              amplitude and attenuation control to provide a Z-filter 
+              in MQMAS and STMAS experiments.  The amplitude change 
+              takes 3.0 us during the t1Xzfsel delay. The attenuation must 
+              be reset for further hard pulses.  
+Parameters:  Sequence Page
+       aXzfsel - amplitude of the selective obs Z-filter pulse. 
+       dbXzfsel - attenuator setting for the selective obs Z-filter 
+              pulse. 
+       tXzfsel - delay before the refocusing pulse requires a minimum 
+              value of 3.0 us for the attenuator change. 
+       pwXzfsel - selective 90-degree flip on obs. 
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

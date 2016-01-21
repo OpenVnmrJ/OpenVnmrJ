@@ -1,0 +1,123 @@
+"macro H1sens_process"
+"H1sens_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1 
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+$date='' $time='' $snrs='' $lws='' $arraydims=''
+$minsnr=1e6 $maxsnr=-1e6 $minsnrspecno=0 $maxsnrspecno=0
+$minsnrs='' $maxsnrs='' $minsnrspecnos='' $maxsnrspecnos=''
+$sumsnr=0 $avesnr=0 $deltas=''
+
+wft
+ai
+setref
+axis='h'
+select(1)
+if $phase='dophase' then lp=0 aph0 endif
+sp=2.4p wp=4.5p
+vsadj(0.8*wc2max-vp)
+
+$i=1
+repeat
+	select($i)
+	if $phase='dophase' then lp=0 aph0 endif
+	dc
+	res
+	dres:$lw
+	write('line3','Weighted linewidth of methylene proton signal at half-height=%f Hz',$lw)
+	cr=sp+200
+	delta=200
+	dsnmax(200)	
+	dsn:$snr
+	if ($snr<$minsnr) then $minsnr=$snr $minsnrspecno=$i endif
+	if ($snr>$maxsnr) then $maxsnr=$snr $maxsnrspecno=$i endif
+	
+	write('line3','rms Signal-to-noise ratio=%d:1',$snr)
+
+	$sumsnr=$sumsnr+$snr
+	$i=$i+1
+until ($i>arraydim)
+
+$avesnr=$sumsnr/arraydim
+$snr=$avesnr
+
+format($minsnr,1,0):$minsnrs
+format($minsnrspecno,1,0):$minsnrspecnos
+format($maxsnr,1,0):$maxsnrs
+format($maxsnrspecno,1,0):$maxsnrspecnos
+
+VPtext
+$str='1H signal-to-noise ratio measurement'
+atext($str)
+format(arraydim,1,0):$arraydims
+format($snr,1,0):$snrs
+format(delta,1,0):$deltas
+$str='rms signal-to-noise ratio (average of '+$arraydims+' measurements) = '+$snrs+':1'
+atext($str)
+$str=$deltas+' Hz wide noise region used'
+atext($str)
+$text='Minimum measured signal-to-noise: '+$minsnrs+' (spectrum '+$minsnrspecnos+')'
+atext($text)
+$text='Maximum measured signal-to-noise: '+$maxsnrs+' (spectrum '+$maxsnrspecnos+')'
+atext($text)
+format($lw,1,1):$lws
+$str='CH2 linewidth at half-height = '+$lws+' Hz'
+atext($str)
+
+$targetvalue=0 $targetvalues=''
+$IPteststatus='FAIL'
+VPgettarget('H1SN'):$targetvalue
+format($targetvalue,1,0):$targetvalues
+$text='Target: >= '+$targetvalues+':1'
+atext($text)
+if $lw > 2.3 then write('line3','Warning: half-height of CH2 signal is broad; check shimming') endif
+if ($snr > $targetvalue) then
+	atext('Test result: PASS')
+	$IPteststatus='PASS'
+else
+	atext('Test result: FAIL')
+endif
+
+dssh
+dtext
+
+write('line3','1H Sensitivity Test'):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Measured RMS signal-to-noise ratio %.1f:1',$snr):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Target >= %.1f:1',$targetvalue):$line
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+CalibrationResults=CalibrationResults,$line
+VPgetspinrate:$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+
+if ($activestudy<>'activestudy') then return endif
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($snr)
+
+if ($IPteststatus='PASS') then
+	"we passed so clear any retestfile counter info"
+	$retestfile=userdir+'/persistence/ReTest'
+	exists($retestfile,'file'):$et
+	if ($et>0.5) then
+		rm($retestfile)
+	endif
+
+elseif ($IPteststatus='FAIL') then
+	DoPlanB($0)
+endif

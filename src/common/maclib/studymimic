@@ -1,0 +1,193 @@
+"macro studymimic"
+
+if ($# < 1) then $1='init' endif
+
+$mimicpath=archivedir+'/'+sample+'/dirinfo/mimicdir'
+$md=archivedir+'/'+sample+'/dirinfo/macdir'
+
+IF ($1='ismimic') THEN
+	$mex=0
+        exists($mimicpath,'file'):$mex
+	return($mex)
+ENDIF
+
+IF ($1='go') THEN
+
+	$s1='' $mimicdir=''
+	readfile($mimicpath,'$mimicdir','$s1','','local')
+
+/*
+        setsrate
+        "*******Check error conditions***************************************"
+        $checkpars='wds','customflag','cppauseflg'
+        $okvals='','n','n'
+        $cksize=size('$checkpars')
+        $i=1
+        $error=''
+        repeat
+           $parval={$checkpars[$i]}
+           if ($parval <> $okvals[$i]) then
+                if ($error='') then $error='Error: ' endif
+                $error=$error+' '+$checkpars[$i]+'='+$parval+';'
+           endif
+           $i=$i+1
+        until $i > $cksize
+        if (wexp = 'AutoSKIP') then
+           if ($error='') then $error='Error: ' endif
+           $error=$error+' Queue Error'
+        endif
+        if ($error<>'') then
+           if (auto = 'y') then
+                emessage('error')
+                write('line3','SAMPLE#: %d  %s',loc,$error)
+           else
+                write('error','')
+                $y=wc2max-50
+                write('graphics','red',20,wc2max-50,'%s',$error):$ys
+                $y=$y-$ys
+                dtext(curexp+'/text',30,$y)
+           endif
+           sqLog('ExpError',$error)
+           return
+        endif
+        "*****Error conditions check done*********************************"
+*/
+
+	expactive('auto'):$isauto
+	if (not $isauto) then
+	    banner('prescans will be done at this juncture\\  please wait...')
+            shell('sleep 2'):$dum
+	    banner('acquisition will be done at this juncture\\  please wait...')
+	    shell('sleep 2'):$dum
+	else
+	    write('line3','prescans will be done at this junture')
+	    write('line3','acquisition will be done at this juncture')
+	endif
+
+//Is it a scout experiment?
+//This happens only if explist has (pslabel)scout string
+//and the next explist has SetUp string"
+	strstr(explist,pslabel+'scout'):$isscout
+	if ($isscout) then
+	   $nexplist=''
+	   cpexplist('next',$md):$nexplist
+	   strstr($nexplist,'SetUp'):$isscout
+	endif
+
+//  If scout..., 
+//   1. get the svftmplt from the sampletags
+//   2. Drop 2 nodes
+
+	if ($isscout) then
+	    $stdtmplt=svftmplt
+	    $stdexplist=explist
+	    getsampglobal($md,'svftmplt'):$stdtmplt
+	    cpexplist('drop',$md)
+	    cpexplist('next',$md):$stdexplist
+	    cpexplist('drop',$md)
+	    cpqadjexpfile(explist,$md,'')
+	    $oldexplist=explist
+	    explist=$stdexplist
+            cpqadjexpfile($stdexplist,$md,'Active',pslabel,'force')
+//	    explist=$oldexplist
+	    svftmplt=$stdtmplt
+	endif
+
+	if ($mimicdir<>'') then
+	    $mname=''
+	    cplog(pslabel,'last',$mimicdir):$mname
+	    if ($mname='') then $mimicdir='' endif
+	endif
+
+            $svftmp2=svftmplt
+            chkname(svftmplt,'alnum-'):$sdum,$svftmp2
+            if ($svftmp2<>svftmplt) then
+                svftmplt=$svftmp2
+                setvalue('svftmplt',svftmplt,'processed')
+            endif
+            Svfname(archivedir+'/'+sample+'/'+svftmplt,'.fid','.fid'):file
+            $name='' shell('basename '+file+' .fid'):$name
+            $dirname='' shell('dirname '+file):$dirname
+	    $wexp=wexp wexp='procsave'
+            svp($dirname+'/'+$name,'force')
+	    if ($isscout) then
+		write('file',$dirname+'/'+$name+'.par/text','Parameters: 1st scout')
+		explist=$stdexplist
+	    endif
+	    wexp=$wexp
+
+	if ($mimicdir<>'') then
+	    write('line3','Recalling %s from %s',$mname,$mimicdir)
+	    savesampglobal('cp')
+	    $explist=explist
+	    dndfid($mimicdir+'/'+$mname)
+	    if (auto='y') then $sg=autodir+'/sampleglobal' else $sg=curexp+'/sampleglobal' endif
+	    exists($sg,'file'):$sgex
+	    if ($sgex) then fread($sg,'processed') endif
+	    getsampglobal('cp')
+	    explist=$explist setvalue('explist',explist,'processed')
+	    $prcopt=prcopt prcopt='n'
+	    file='exp' setvalue('file',file,'processed')
+	    if (auto='y') then eventLog('ExpEnd') endif
+	    procsaveplot
+	    prcopt=$prcopt
+	else
+            write('line3','Parameters are saved')
+	    setvalue('file',file,'processed')
+	    shell('mv '+$dirname+'/'+$name+'.par '+$dirname+'/'+$name+'.fid'):$dum
+	    shell('touch '+$dirname+'/'+$name+'.fid/fid'):$dum
+            shell('touch '+$dirname+'/'+$name+'.fid/log'):$dum
+	    cplog($name,'write')
+            if (auto='y') then eventLog('ExpDone',$name) endif
+            sqLog('ExpEnd')
+            exptimelog('saved')
+            cpqadjexpfile(explist[1],$md,'Completed')
+            shell('rm -f '+archivedir+'/'+sample+'/dirinfo/activeexp'):$dum
+	endif
+
+ENDIF
+
+IF ($1 = 'init') THEN
+    walkupQ('clone')
+    studymimic('initmimic')
+ENDIF
+IF ($1='initmimic') THEN
+    if (size('sqdisplay')>1) then
+        setvalue('sqdisplay','mimic',3,'global')
+        vnmrjcmd('pnew','sqdisplayRef')
+    endif
+
+    wqinit='acq'
+    wqinitacq('set','acq curexp')
+    clonemod='no'
+    mimicmod[1]='yes'
+    exists('mimicpath','parameter','global'):$ex
+    if ($ex) then 
+	mimicmod[2]=mimicpath
+    else 
+	mimicmod[2]=systemdir+'/fidlib/Ethylindanone' 
+    endif
+    if (mimicmod[2]='') then mimicmod[3]='param' else mimicmod[3]='' endif
+    replaceQ='','','',''
+
+ENDIF
+
+IF ($1 = 'popup') THEN
+    $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        \'file:'+$0+'.xml\',
+        \'rebuild:yes\',
+        \'pnewupdate:true\',
+        \'cancel:return\',
+        \'ok:'+$0+'(`submit`)\',
+        \'title:DataPath for Mimic directory\')'
+
+   exec($vjcmd)
+
+ENDIF
+IF ($1 = 'submit') THEN
+    exists('mimicpath','parameter','global'):$ex
+    if ($ex=0) then create('mimicpath','string','global') endif
+    mimicpath=mimicmod[2]
+    walkupQ_mimic
+
+ENDIF

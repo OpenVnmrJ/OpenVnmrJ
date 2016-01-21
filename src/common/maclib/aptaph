@@ -1,0 +1,31 @@
+"macro aptaph"
+"*********************************************"
+"aptaph - automatic processing for apt spectra"
+"*********************************************"
+on('lb'):$lbon
+if ($lbon = 1) then
+   $lbval = lb
+endif
+lb = 3                             "broaden lines for aph of difficult spectrum"
+$rpsave = rp                       "remember current phases, assuming that"
+$lpsave = lp                       "original carbon spectrum was phased"
+wft
+aph:$ok
+if ($ok = 1) then                  "autophase ok but may be off by 180 degrees"
+   $rpsave = $rpsave - rp          "check absolute difference in rp"
+   if ($rpsave < 0) then
+      $rpsave = -$rpsave
+   endif
+   if ($rpsave > 90) then          "most likely upside down"
+      rp = 180 + rp
+   endif
+else                               "automatic phasing failure"
+   rp=$rpsave                      "restore original phases"
+   lp=$lpsave
+endif
+if ($lbon = 1) then                "restore original lb and re-transform"
+   lb = $lbval
+else
+   lb = 'n'
+endif
+wft

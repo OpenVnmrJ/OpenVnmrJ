@@ -1,0 +1,229 @@
+"macro xmhaha_copy"
+is_submitmode:$issubmit
+IF ($issubmit) THEN
+
+        $type='' $status='' $lock=''
+        $curid=$1
+        if ($curid<>'tmpstudy') then
+           xmgetatts($curid,'type','status','lock'):$type,$status,$lock
+        else
+           $type='grandparent'
+        endif
+
+        if ($status='Queued') and ($lock='on') then
+           write('error','Cannot act on a locked node %s',$1)
+           return(1)
+        endif
+
+	walkupQ_init
+	$snode=$2
+
+		"Find the status of the copyid node ($1)"
+	$status='' $data='' $tooltext=''
+	xmgetatts($1,'status','data','lock','tooltext'):$status,$data,$lock,$tooltext
+	if ($status='Error') then
+		write('error','Cannot copy an Errored node')
+		return(1)
+	endif
+	if ($status='Queued') and ($lock='on') then
+                write('error','Cannot copy a locked node')
+                return(1)
+        endif
+	$rtime=0
+	$procpar=''
+	if ($status='Completed') then
+	    if ($data='') then
+		write('error','Cannot locate data for this node')
+		return(1)
+	    endif
+	    $firstchar='' substr($data,1,1):$firstchar
+	    if ($firstchar<>'/') then
+		$data=userdir+'/data/'+$data
+	    endif
+	    $s2='' $s1='' 
+	    $file=$data
+	    strstr($file,'.fid'):$ret,$s1,$s2
+	    if ($ret) then $file=$s1 endif
+	    $data=$file+'.fid'
+	    exists($data,'directory'):$fidex
+	    if ($fidex=0) then
+	      strstr($file,'.REC'):$ret,$s1,$s2
+	      if ($ret) then $file=$s1 endif
+	      $data=$file+'.REC/acqfil'
+	      exists($data,'directory'):$fidex
+	      if ($fidex=0) then
+	        strstr($file,'.rec'):$ret,$s1,$s2
+	        if ($ret) then $file=$s1 endif
+	        $data=$file+'.rec/acqfil'
+	        exists($data,'directory'):$fidex
+	        if ($fidex=0) then
+                  write('error','Cannot locate data for this node')
+                  return(1)
+                endif
+	      endif
+	    endif
+	    $archsamp='' shell('dirname '+$data):$archsamp
+	    $fidname='' //shell('basename '+$data+' .fid'):$fidname
+	    substr($data,'basename'):$fidname,$ext
+	    $cpnode='' $rtime=0 $expname=''
+	    rtv($data,'noabort','explist'):$cpnode
+            rtv($data,'noabort','ACQtime'):$rtime
+            rtv($data,'noabort','pslabel'):$expname
+
+	    exists(cursqexp+'/macdir/maclib_attic/'+$cpnode+'acq','file'):$fileex
+	    if ($fileex) then
+		$maclibdir=cursqexp+'/macdir/maclib_attic'
+	    else
+		$procpar=$archsamp+'/dirinfo/parlib/'+$fidname+'.par/procpar'
+		exists($procpar,'file'):$parex
+		if ($parex=0) then
+		   $procpar=$data+'/procpar'
+		endif
+	    endif
+	else
+                	"Find cpnode for $1"
+       	    getcpnode('rev',cursqexp,$1):$cpnode,$when
+            strstr($cpnode,'_','last'):$ret,$expname,$ext
+            if ($when='long') then
+           	$maclibdir=cursqexp+'/macdirlong'
+            else
+           	$maclibdir=cursqexp+'/macdir'
+            endif
+	    cpexptime($cpnode,$maclibdir):$rtime
+	endif
+
+        if (longQ='y') then
+           $newmaclibdir=cursqexp+'/macdirlong'
+           $newwhen='long'
+        else
+           $newmaclibdir=cursqexp+'/macdir'
+           $newwhen='no'
+        endif
+
+   "******Following section checks for max. time option******"
+   "*******Modify as appropriate************************************"
+   $day2night='no'
+   if (wqinit<>'acq') then
+        $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        $where='' $night='no'
+        walkupQ('gettime'):$olddtime,$oldntime
+        if ($newwhen='no') then
+                $newtime=$olddtime+$rtime
+                $where='DayQ'
+        else
+                $newtime=$oldntime+$rtime
+                $where='NightQ'
+        endif
+        $newtime=trunc(($newtime/60)+0.5)
+        if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+                is_night:$night
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+        $autonight='no'
+        if ($night='yes') or ($newwhen='long') then
+                $maxtime=$maxnighttime
+        else
+                getadminfo('autonight'):$autonight
+                $maxtime=$maxdaytime
+        endif
+        $maxtime=trunc(($maxtime/60)+0.5)
+        if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+        endif
+        if ($maxtime=0) then $maxtime=$newtime+1 endif
+        if ($maxtime<$newtime) then
+                write('error','%s time (%d min) exceeds max (%d min) allowed.',$where,$newtime,$maxtime)
+                if ($autonight='yes') then
+		    $day2night='yes'
+		    write('error','%s will be copied to nightQ',$expname)
+		else
+		    return(1)
+		endif
+        endif
+   endif
+   "********End of max time check**********************************"
+
+                	"Add a copy of this experiment in EXPLIST/LONGLIST"
+	if ($day2night='yes') then 
+		$newwhen='long' $snode='' 
+		$newmaclibdir=cursqexp+'/macdirlong'
+	endif
+	$newnode=''
+        walkupQ('add',$expname,'nodialog','notimecheck','noreqcheck','nostudycheck',$newwhen,'sqnode',$snode):$newnode
+	if ($newnode='') then 
+		write('error','ERROR: Did not add %s to the queue',$expname)
+		return(1) 
+	endif
+        if ($day2night='yes') then
+	    $tailX='tail'
+	    whichtail:$tailX
+	    shell('(cat '+cursqexp+'/LONGLIST | '+$tailX+' -n 1 >> '+cursqexp+'/day2nightLIST)'):$dum
+	endif
+	if ($tooltext<>'') then
+	    xmhaha_setprop($newnode,'tooltext',$tooltext)
+	endif
+        getcpnode('rev',cursqexp,$newnode):$newcpnode
+	$fixacqpars=0
+	if ($procpar='') then
+       	   shell('cp '+$maclibdir+'/'+$cpnode+'acq '+$newmaclibdir+'/'+$newcpnode+'acq'):$dum
+       	   shell('cp '+$maclibdir+'/'+$cpnode+'acqpars '+$newmaclibdir+'/'+$newcpnode+'acqpars'):$dum
+           shell('cp '+$maclibdir+'/'+$cpnode+'_Attr '+$newmaclibdir+'/'+$newcpnode+'_Attr'):$dum
+	else
+           shell('(cp '+$procpar+' '+$newmaclibdir+'/'+$newcpnode+'acqpars)'):$dum
+	   $tmpsavepar='explist strtpar wexp wnt werr wbs wdone alock wshim'
+	   write('reset',$newmaclibdir+'/tmpCOPYpars')
+	   writeparam($newmaclibdir+'/tmpCOPYpars',$tmpsavepar)
+           explist='' strtpar=''
+	   wexp='' werr='' wbs='' wdone='' alock='n' wshim='n'
+           writeparam($newmaclibdir+'/'+$newcpnode+'acqpars',$tmpsavepar,'current','add')
+	   fread($newmaclibdir+'/tmpCOPYpars')
+	   shell('rm -f '+$newmaclibdir+'/tmpCOPYpars'):$dum
+           $fixacqpars=1
+	endif
+
+        $Time2='' $Time=''
+        formattime($rtime):$Time2,$Time
+//        xmsetatts($newnode,'time',$Time)
+	xmhaha_setprop($newnode,'time',$Time)
+	walkupQ('adjtime',$newcpnode,$newwhen,$rtime)
+                "Make sure enterSQ and EXPLIST/LONGLIST are in sync"
+	xmhaha_bCQ
+	if ($procpar<>'') and ($fixacqpars>0) then
+		write('line3','Please wait...')
+		customizepar('updateacqpars',$newcpnode,$newwhen)
+	endif
+        write('line3','%s added to the queue',$newcpnode)
+        return(1)
+
+ELSE
+	$isautosq=0
+        xmhaha2('isautoSQ'):$isautosq
+        if ($isautosq=0) then
+             return
+        endif
+
+        $1par=''
+        xmhaha2('getparent',$1):$1par
+        if ($1par='parent') then $1par=$1 endif
+
+        $cpnode=''
+        xmgetatts($1par,'CPnode'):$cpnode
+        if ($cpnode='DoneQ') or ($cpnode='DoneDayQ') or
+                ($cpnode='ErrorQ') or
+                ($cpnode='PriorityQ') or ($cpnode='DayQ') or
+                ($cpnode='NightQ') or ($cpnode='FidQ') then
+                        write('error','Cannot act on an information node')
+                        return(1)
+        endif
+        $1loc='' $s1='' $ret=0
+	xmgetatts($1par,'name'):$1loc
+	strstr($1loc,'loc'):$ret
+	if ($ret<>1) then return(0) endif
+	$ret=0
+//	clonestudyNsubmit($loc):$ret
+	return($ret)
+
+ENDIF

@@ -1,0 +1,48 @@
+"macro findpw2"
+"************************************************************************"
+"                                                                        "
+" findpw2 - macro to determine the 90/180 degree pulse                   "
+"           Called by findpw                                             "
+"                                                                        "
+" Usage:   findpw       interactive mode, requests start and end value   "
+"          findpw(start_value,end_value)                                 "
+"                                                                        "
+"************************************************************************"
+
+av
+$counter=1
+select(1) vsadj(10) $high=10 $low=10
+$lowest=1 $highest=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$low then $low=$ht $lowest=$counter endif
+  if $ht>$high then $high=$ht $highest=$counter endif
+  $counter=$counter+1
+until $counter > arraydim
+$pwhi=pw[$highest]
+$pwlo=pw[$lowest]
+"select($highest) ph vsadj(75) peak:$int,cr rl(0) sp=-2p wp=4p"
+select($highest) ph vsadj
+dssh dssl('value')
+write('line3',' 180-degree pulse calibration:')
+write('line3',' (highest peak pw=%5.2f); lowest peak pw=%5.2f',$pwhi,$pwlo)
+
+ph
+wnt=''
+wexp=''
+pw=$pwhi
+
+$name = RFCOIL  
+Mpulsecal($name,'square',$pwlo,180,tpwr)
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  "
+"                                                                        "
+"970225(ss) First version created and tested                             "
+"970228(ss) pw reset at the end                                          "
+" 03Sep97(ss) scaling adjusted by vsadj                                  "
+" 12Apr99 Mpulsecal checks for rfupdate "
+"                                                                        "
+"************************************************************************"
+

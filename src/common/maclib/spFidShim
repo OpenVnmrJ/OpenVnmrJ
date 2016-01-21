@@ -1,0 +1,79 @@
+"macro spFidShim"
+
+
+$action = ''
+if ($# = 0) then
+  $action = 'init'
+else
+  $action = $1
+endif
+
+$abortFile=systemdir+'/acqqueue/shimfitAbort'
+exists($abortFile,'file'):$e
+if ($e) then
+  write('line3','Aborting Proshim')
+  if (spLo > 0) then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+  endif
+  return('quit')
+endif
+
+if ($action = 'init') then
+  spInit('fid')
+  {spSet}:$res
+  return($res)
+
+// Evaluate trial spectrum
+elseif ($action = 'exp') then
+  systemtime:$now
+  spTime[3] = $now
+  spExec
+  if (spStage = 'pass') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim complete')
+    return('done')
+  elseif (spStage = 'pass1d') then
+    return('done')
+  elseif (spStage = 'fail') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim failed')
+    return('done')
+  elseif (spStage = 'timefail') then
+    spVertex = spLo
+    spShimVals
+    setallshims(spParNames)
+    write('line3','shim time limit (%4.1f minutes) exceeded', spTime[2] / 60)
+    return('done')
+  endif
+  return('doau')
+
+// Error handling
+elseif ($action = 'err') then
+  if (acqstatus[2]=103) or (acqstatus[2]=104) then
+    // ignore ADC overflow
+    return('')
+  endif
+  if (acqstatus[1] = 14) then
+    aa
+    return('shimabort')
+  endif
+  $i = 0
+  if (spLo = 0) then
+    spVertex = 1
+  else
+    spVertex = spLo
+  endif
+  spShimVals
+  spStage='AcqError'
+  return('done')
+
+else
+  write('line3','%s: unknown action (%s)', $0, $action)
+  return('done')
+endif

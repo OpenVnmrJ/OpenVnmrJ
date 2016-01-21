@@ -1,0 +1,44 @@
+"macro showsampglobal"
+"  This is convenience macro to show a popup"
+"  to populate or display sampleglobal parameters in one-shot"
+"  Optional arg1 can be enter or display (default) "
+
+if ($# < 1) then $1='display' endif
+if ($1 <> 'display') and ($1 <> 'enter') then
+   write('error','usage: showsampglobal(<\'display\' or \'enter\'>')
+   return
+endif
+
+
+"***************************************************"
+"  Get the list from sampleglobal, usersampleglobal"
+"   and reqparval modules"
+$list='' $list2='' $list3='' $list4=''
+module('arraylist','sampleglobal'):$list
+module('arraylist','usersampleglobal'):$list2
+module('arraylist','reqparval'):$list3
+$list=$list,$list2,$list3
+array2array($list):$list4
+
+"***************************************************"
+	"Eight parameters are unique and are not"
+	" typically entered by the operator"
+	"    adirtmplt, sdirtmplt, svftmplt"
+	"    sample, archivedir and nameprefix"
+	"    studyowner and text_string"
+	"One can add more to this list"
+
+$sppar='adirtmplt','sdirtmplt','svftmplt','adir2tmplt'
+$sppar=$sppar,'sample','nameprefix','archivedir'
+$sppar=$sppar,'studyowner','text_string','userplotter'
+$sptotal=size('$sppar')
+$i=1
+repeat
+   teststr('$list4',$sppar[$i],'local'):$ret
+   if ($ret>0) then $list4[$ret]='' endif
+   $i=$i+1
+until $i > $sptotal
+
+"***************************************************"
+		"***Now call popup"
+parampopup($list4,$1)

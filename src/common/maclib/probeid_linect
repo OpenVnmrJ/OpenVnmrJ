@@ -1,0 +1,59 @@
+"macro probeid_linect"
+// calculate the sum of the lengths of all of the arrays
+// used by probeid version probe_edit
+//
+if $# < 0.5 then
+  write('line3',$0+': no probe calibration file specified')
+  return
+endif
+
+$probe_name=''
+$probe_id=''
+
+$arg = 1
+$hdr = 0 
+$lct = 0 
+$hct = 0
+$hdrlen = 0
+$maxlines = 0
+$probe_name = ''
+$probe_id = ''
+
+while ($arg<=$#) do
+// loop through headers and lines
+  //write('line3','starting with '+${$arg})
+  $attr = ${$arg}
+  $psize = size(${$arg})
+  $i=0
+  repeat
+    $i=$i+1
+    $name = {${$arg}}[$i] //probedattr[$i]
+
+    if ($name = 'NAME:') then
+      $probe_name = $name
+    elseif ($name = 'ID:') then
+      $probe_id = $name
+    else
+      $lct=$lct+1
+      strstr({$attr}[$i],':'):$hdr
+      if ($hdr) then
+        //write('line3','hdr=%g ::'+$name,$hct)
+        $lct=$lct-1
+        $hct=$hct+1  // count number of headers
+        length($name):$len
+        $hdrlen=$hdrlen+6*($len+2)
+      //else write('line3','lct=%g ::'+$name,$lct)
+      endif
+      if ($hdr) or ($i=$psize) then
+        if $lct>$maxlines then
+          $maxlines = $lct
+        endif
+        $lct=0       // count number of lines per header
+      endif
+    endif
+  until ($i >= $psize)
+  //write('line3','length of '+${$arg}+' max=%g,lct=%g lines',$maxlines, $hdrlen)
+  $arg = $arg + 1
+endwhile
+
+return($maxlines,$hdrlen,$probe_id,$probe_name)

@@ -1,0 +1,31 @@
+"macro BPspinlock"
+"BPspinlock(<1>: a macro to check spinlock value relative to user-defined maximum"
+"  BPspinlock(1) is used in setup macros and will set strength=user-defined value"
+"  otherwise, BPspinlock checks value relative to user-defined limit"
+exists('spinlock','parameter'):$e
+if $e=1 then
+ if (BPpwrlimits=1) then
+   if spinlock>BPdpwrspinlock then
+    spinlock=BPdpwrspinlock
+    write('line3','C13 Spinlock too large, reset to user-defined limit (BPdpwrspinlock = %6.0f)',BPdpwrspinlock)
+   endif
+ endif
+ BPspinlock=spinlock
+ BPccspinlock   "re-create cctocsy.DEC"
+endif
+
+exists('strength','parameter'):$e
+if $e=1 then
+ if $#>0 then strength=BP1Hspinlock endif
+ if (BPpwrlimits=1) then
+   if strength>BPtpwrspinlock then
+    strength=BP1Hspinlock
+    if strength>BPtpwrspinlock then
+     strength=BPtpwrspinlock
+     write('line3','1H Spinlock Field too large, reset to user-defined limit (BPtpwrspinlock = %6.0f)',BPtpwrspinlock)
+    else
+     write('line3','1H Spinlock Field too large, reset to user-defined default (BP1Hspinlock = %6.0f)',BP1Hspinlock)
+    endif
+   endif
+ endif
+endif

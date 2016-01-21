@@ -1,0 +1,246 @@
+"macro NUSprocIST"
+"Process NUS data with IST"
+
+
+$mode=''
+if ($#>0.5) then $mode=$1 endif
+
+// A 2nd argument can be supplied to override the 
+//  default adjusted cosine window pipe uses
+//  This section was introduced as a convenience for
+//  craft.  The default window (adj cosine) is preferable
+//  for normal operation.
+//  This override is only for the F1 dimension
+//  craft 'likes' to use a simple cosine.  The 2nd
+//  argument would be '0.5 1 1' for cosine. These would
+//  be passed to -yQ1, -yQ2 and -yQ3 arguments for $pipe_cmd
+
+if ($# < 2) then 
+    exists('pipeF1window','parameter'):$parex
+    if $parex then $2=pipeF1window else $2='' endif
+endif
+$f1window=$2
+substr($f1window,'wc'):$words
+if $words<>3 then $f1window='' endif
+$w=1
+while $w<=$words do
+    $s1='' substr($f1window,$w):$s1
+    format($s1,'isreal'):$real
+    if not $real then $f1window='' $w=$words endif
+    $w=$w+1
+endwhile
+substr($f1window,'wc'):$words
+if $words=3 then
+    $s1='' substr($f1window,1):$s1 $s2='-yQ1 '+$s1
+    $s1='' substr($f1window,2):$s1 $s2=$s2+' -yQ2 '+$s1
+    $s1='' substr($f1window,3):$s1 $s2=$s2+' -yQ3 '+$s1
+    $f1window=$s2
+endif
+// $f1window section is done
+
+getbinpath('vj2pipe.com'):$pipeex,$pipe
+getbinpath('vnmrpipe'):$ok,$prg
+strstr(file,'enterQ.macdir'):$current
+
+exists('CScleaned','parameter'):$csex
+if ($csex) then
+   if (CScleaned='y') then
+      write('error','Data already reconstructed using CLEAN, aborting')
+      return
+   endif
+endif
+
+if (wexp='chempackQ' and $current) then wft(1) vsadj return endif
+
+// for legacy data:
+module('add','par2D') // we are always at least in 2D mode
+
+flush
+
+// if experiment is run in studyQ, do processing inside actual .fid directory
+// otherwise, use curexp for processing
+$file=curexp+'/acqfil'
+
+if (wexp='chempackQ') then "Running in StudyQ -> send to BG vnmr"
+    strstr(file,'.fid'):$ext
+    if not ($ext) then $file=file+'.fid' else $file=file endif
+endif
+ 
+$logfile=$file+'/../ISTbglogfile'
+
+if (auto<>'y') then banner('     Reconstructing NUS data using IST - please wait...     ') endif
+
+//Work out what sort of data we have
+exists('ni','parameter'):$niex
+if not ($niex) then
+    write('error','These data are not suitable for IST - aborting') return
+endif
+
+$ni=ni // not really needed, but for style consistency below
+
+//Sort out fn and fn1 and fn2
+$fns='' $fn1s='' $fn2s=''
+on('fn'):$fnon
+if ($fnon) then
+    $fn=fn/2
+    format($fn,1,0):$fns
+else
+    fn=np
+    $fn=fn/2
+    format($fn,1,0):$fns
+endif
+
+$xZFarg= ' -xZFARG size=' + $fns + '  ' 
+
+on('fn1'):$fn1on
+if ($fn1on) then
+    $fn1=fn1/2
+    format($fn1,1,0):$fn1s
+else
+    fn1=ni
+    $fn1=fn1*2
+    format($fn1,1,0):$fn1s
+endif
+
+$yZFarg= ' -yZFARG size=' + $fn1s + '  ' 
+
+// check if we have 3D-type experiment
+$zZFarg=''
+$ni2=1
+ 
+exists('ni2','parameter'):$ex_ni2
+
+if ($ex_ni2>0.5) then
+     // for legacy data:
+     module('add','par3D') 
+    $ni2=ni2
+    on('fn2'):$fn2on
+
+    if ($fn2on) then
+    	$fn2=fn2/2
+    	format($fn2,1,0):$fn2s
+    else
+    	fn2=ni2*2
+    	$fn2=fn2 
+    	format($fn2,1,0):$fn2s
+     endif  
+     if ($ni2>1) then
+     $zZFarg= ' -zZFARG size=' + $fn2s + '  ' 
+     endif
+endif    
+
+$nDIM=2 if ( ($ni>1 ) and ($ni2>1) ) then $nDIM=3 endif
+$option=''
+
+if $mode='quiet' then $progress='-noprogress' else $progress='' endif
+
+// Check if this is an ni2 2D plane
+if ( ($ni<2 ) and ($ni2>1) )   then 
+       $zZFarg= ' -zZFARG size=' + $fn2s + '  ' //double-check later what pread actually wants fn1 or fn2
+       $yZFarg=  '  '
+    // another temporary fix for pread:
+        fn1=fn2
+  
+   // temporarily fix: make sure vj2pipe catches schedule properly in case of ni2 2D
+   //   $ss=''  shell('(wc -l '+curexp+'/sampling.sch| /bin/gawk \'{{print($1*2)}}\'   )'):$ss 
+   //   $ss1='' shell('(wc -l '+curexp+'/sampling.sch| /bin/gawk \'{{print($1)}}\'   )'):$ss1  
+   //   $option= ' -zN  ' + $ss + ' -zT ' + $ss1 + ' ' 
+   // end of temporary fix for ni2+proper size
+   $option=' '
+    
+endif
+
+// if BioPack, use selected region
+ exists('BPpiperegion','parameter'):$e if($e>0.5) then BPpiperegion = 'y' endif  
+
+// Ideologicaly, there should be no difference between 2D and 3D processing, but current behaviour is:
+// 2D is processed in foreground with fn1/fn2 zero-filling and  displayed in vnmrj graphics
+// 3D is processed in background with minimum zerofilling and displayed in nmrDraw
+
+// 2D case. 
+
+flush 
+
+if ($nDIM < 3) then 
+
+       // situation when data is acquired and processed via studyQ:
+       // everything is processed within .fid itself, all nmrPipe-related stuff is within whatever-data.fid
+	if (wexp='chempackQ') then "Running in StudyQ -> send to BG vnmr"
+	    newexp('quiet'):$nexp
+	    write('line3',`Vnmrbg -mback -n%d -u%s "DELEXP('auto') NUSprocISTbg('%s','%s','%s','%s')" > %s &`,$nexp,userdir,$file,$file+'/procpar',$fns,$fn1s,$logfile):$cmd
+	    write('line3','Sending IST processing to bg VnmrJ')
+	    shell($cmd):$devnull
+	    return
+	endif
+
+       // data is in experiment - all processing done in curexp/pipe directory:
+        
+	$pipe_cmd=' xterm -iconic -geom 30x20 -bg dodgerblue3 -fg white -cr white   -T NMRPipe -e " '\
+                  + $prg +' vj2pipe.com    -nograph  -clean -cd '+curexp+ ' -vjfid ' + curexp+  '/acqfil/fid '\
+		  + ' '+$f1window+' -istTMult '+pipeistTMult+' -istCMult '+pipeistCMult+' -istIter '+pipeistIter+' -istMaxRes '+pipeistMaxRes\
+                  + '  -pipeDir '+  curexp+ '/pipe '  + ' -procpar ' +  curexp+ '/curpar'\
+                  + $xZFarg + $yZFarg + $zZFarg + $progress + $option +'; sleep 5" '
+ 
+	exists('CSreconmethod','parameter'):$csreconex
+	if $csreconex then
+	    if CSreconmethod<>'IST' then CSreconmethod='IST' endif
+	endif 
+//	$pipe_cmd?
+	shell($pipe_cmd)
+	wft(1)
+	pread(curexp+'/pipe/spec_ist.ft2')
+	nm2d
+	dconi
+	procdim=2
+	setvalue('procdim',procdim,'processed')
+// record some key values in the pipe directory
+// This helps to decide (by other macros) if reprocessing is required
+// For now record fn,fn1,fn2 and file parameters
+	if $f1window<>'' then
+	    create('pipeF1window','string','current',$2):$dum
+	endif
+	writeparam(curexp+'/pipe/PipePar','fn fn1 pipeF1window fn2 file pipeGLB pipeELB','current')
+	if $f1window<>'' then
+	    destroy('pipeF1window'):$dum
+	endif
+
+endif // for 2D case
+
+
+// 3D case: defaut vj2pipe processing (fastest) display in NMRdraw
+
+$option=''
+if ($nDIM = 3) then 
+
+       // data is in experiment - all processing done in curexp/pipe directory:
+        // generate scripts first:
+        banner('generating scripts for 3D NUS processing in nmrPipe')
+	$pipe_cmd=' xterm -geom 30x20 -iconic -bg dodgerblue3 -fg white -cr white   -T NMRPipe  -e " '\
+                  + $prg  +' vj2pipe.com     -noexec   -clean -cd ' +  curexp\
+                  + '  -vjfid ' + curexp+  '/acqfil/fid '\
+		  + ' -istTMult '+pipeistTMult+' -istCMult '+pipeistCMult+' -istIter '+pipeistIter+' -istMaxRes '+pipeistMaxRes\
+                  + '  -pipeDir '+  curexp+ '/pipe '  + ' -procpar ' +  curexp+ '/curpar'\
+                  +   $option +'; sleep 5" '
+  
+	//echo($pipe_cmd)
+       
+	shell($pipe_cmd)
+
+         banner('converting 3D NUS FID to nmrPipe')
+        // convert data
+        $conv_cmd= ' cd '+ curexp+ '/pipe;   xterm  -geom 30x20 -iconic -bg dodgerblue3 -fg white -cr white   -T NMRPipe -e "   '\
+                     + $prg  + ' ./vj_fid.com; sleep 5 " ' 
+        shell($conv_cmd)
+
+        // make automatic nmrDraw display after finished
+        $cmd =' echo "nmrDraw -in ./ist/spec%03d.ft3" >> ' +    curexp+ '/pipe/vj_xyz_ist_user.com '
+        shell($cmd)
+
+        banner('Processing 3D NUS data by IST, this can  take a while. \\Processing is run in background,\\ data stored in  ' + curexp + '/pipe')
+
+        $proc_cmd= ' cd '+ curexp+ '/pipe;   xterm -geom 30x20  -iconic -bg dodgerblue3 -fg white -cr white   -T NMRPipe -e "   '\
+                     + $prg  + ' ./vj_xyz_ist_user.com ;   " &' 
+
+         shell($proc_cmd)
+ 
+endif // for 3D case

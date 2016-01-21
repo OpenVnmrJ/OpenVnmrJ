@@ -1,0 +1,99 @@
+"macro fm_acquire"
+"*****************************************************************************"
+" fm_acquire - Acquire fid's for fastmap 
+"
+" Details: Assume fastmap sequence loaded and ready to go. "
+"          fm_acquire manages multi-iteration shimming"
+"          prescan_control[1] is set to -1 for interactive quickshim
+"          if prescan_control[1] > 0 then in prescan mode
+
+" Usage: fm_acquire - first pass, initialize and continue" 
+"        fm_acquire(n) - n=shim-pass no  "
+"
+" Version: 2004-01-09"
+
+"*****************************************************************************"
+
+$macro = $0
+
+if ($# = 0) then    "** first pass, do initialization **"
+  Prescan_ShimMethod = 'fastmap'
+
+  $done=0
+  while($done = 0) do
+   if (shcycle[cnt]=0) then
+     cnt=cnt+1
+     if(cnt>4) then  "upto 4 iterations"
+       write('line3','Shimcycles Complete')
+       prescan_control[1] = 0  "reset control parameter; -1 =non prescan mode"
+       return
+     endif
+   else
+     tau=shdel[cnt]   "copy current iteration parameters"
+     shimorder=shsel[cnt]
+     if(shsel[cnt] = 2) then  "if 1&2nd order, 6 projections; numproj=2"
+       numproj=2 nproj[cnt]=2
+     else
+       numproj=nproj[cnt]
+     endif
+     epi=epiflag[cnt]     
+     $done=1
+   endif 
+  endwhile
+
+  if ((numproj <> 1) and (numproj <> 2)) then  "check limits"
+    numproj = 1
+  endif
+  if ((shimorder <> 1) and (shimorder <> 2)) then  "check limits"
+    shimorder = 1
+  endif
+  if(shimorder = 2) then  "6 projections for 1st&2nd order shimming"
+    numproj = 2
+  endif
+  fm_setmap(numproj)
+  fm_setvox          "set voxel position"
+  fm_setvox('size')  "set voxel size"
+  fm_prep 
+   
+  "** first pass; init parameters **"
+  shimpass=2
+  ldrf tof=H1offset 
+  $cmd = '/bin/rm -rf '+userdir+'/shims/start0'
+  shell($cmd)
+  svs('start0')   "shim file saved as reference"
+elseif ($1 = 2) then
+
+  write('line3','Cycle#: %d Data acquisition complete',cnt)
+  shimpass = 0 "reset shimpass"
+  $actionid=actionid  "bug: during the calculations parameters lost!!"
+  if(prescan_control[1] = -1) then  "in study mode"
+    imFM('proc','study')    "process and load shims"
+  endif
+  actionid=$actionid
+
+  cnt = cnt+1  "bump shim-cycle counter"
+  if(cnt > 4) then  "upto 4 iterations allowed"
+    write('line3','Quick-shim Done')
+    prescan_control[1] = 0
+    dgs
+    return
+  else
+    fm_acquire "next cycle; note: first pass initialization done"
+    return
+  endif    
+endif
+
+write('line3','Prepared for for shim: cycle# %d',cnt)
+    
+if(prescan_control[1] = -1 ) then   "-1 =protocol mode; >0 =prescan mode"
+  wexp = 'fm_acquire(shimpass)'  "interactive fastmap"
+  wdone = ''
+  au
+endif
+
+"******************************************************************************
+"               Modification History
+"
+
+"******************************************************************************
+

@@ -1,0 +1,86 @@
+"macro ecc_showdelays"
+"***************************************************************"
+" ecc_showdelays:                                               "
+" Display a label for each element in a set of stacked spectra. "
+"***************************************************************"
+
+write('graphics',0,0,''):$htchar
+$novals = arraydim
+$string = ''
+$list = ''
+$format = '%1.4f'
+
+$xstart = wcmax - sc - wc
+$ystart = vp - 1.2*$htchar
+
+$ydelta = vo
+"** Check for command line arguments **********************"
+if ($# > 0) then
+  $i = 0
+  $argno = ''
+  repeat
+    $i = $i + 1
+    if ($i > 9) then
+      format({'$i'},2,0):$argno
+    else
+      format({'$i'},1,0):$argno
+    endif
+			  
+    if (typeof('$'+$argno) = 0) then
+      $novals = ${$i}
+    else
+      if (${$i} = 'center') then
+	$xstart = wcmax - sc - wc/2
+      endif
+      if (${$i} = 'left') then
+	$xstart = wcmax - sc - wc
+      endif
+      if (${$i} = 'right') then
+	$xstart = wcmax - sc
+      endif
+      if (${$i} = 'top') then
+	$ystart = wc2max
+	$ydelta = 0
+      endif
+      if (${$i} = 'bottom') then
+	$ystart = -18
+	$ydelta = 0
+      endif
+      if (${$i} = 'above') then
+	$ystart = vp + 0.2*$htchar
+	$ydelta = vo
+      endif
+      if (${$i} = 'below') then
+	$ystart = vp - 1.2*$htchar
+	$ydelta = vo
+      endif
+      if (${$i} = 'value') then
+	$list = array
+      endif
+      "** Look for 'list=x' syntax ******************************"
+      substr(${$i},1,4):$string
+      if ($string = 'list') then
+        substr(${$i},6,10):$list
+      endif
+      "** Look for 'format=x' syntax ****************************"
+      substr(${$i},1,6):$string
+      if ($string = 'format') then
+        substr(${$i},8,10):$format
+      endif
+    endif
+  until ($i = $#)
+endif
+
+$count = 1
+$x = $xstart
+$y = $ystart
+repeat
+  if ($list <> '') then
+    write('graphics',$x,$y,$format,{$list}[$count])
+  else
+    write('graphics',$x,$y,'%3.3f',d2[$count]*1000)
+  endif
+  $x = $x - ho
+  $y = $y + $ydelta
+  $count = $count + 1
+until (($x < 0) or ($x > wcmax) or ($count > $novals) or ($count > arraydim))

@@ -1,0 +1,101 @@
+"macro AC9S"
+"Auto calibrate"
+
+f wft select(1) aph
+
+IF ($1 = 'h2cal') then
+  select(1) vsadj(100) peak:$hgt,cr
+  peak(cr+20,cr+100):$hgt,$dwnfld
+  peak(cr-100,cr-20):$hhgt,$upfld
+  $delta1 = $dwnfld - $upfld
+
+  select(2) vsadj(100) peak:$hgt,cr
+  peak(cr+20,cr+100):$hgt,$dwnfld
+  peak(cr-100,cr-20):$hhgt,$upfld
+  $delta2 = $dwnfld - $upfld
+
+  h2cal($delta1/2,$delta2/2,142):$gb2,$pp,$freq
+
+  $target = 5.5*h1freq
+  $factor = $gb2/$target
+  if ($factor < 0.92) or ($factor > 1.08) then
+    ln($factor):$lnfactor
+    ln(10):$ln10
+    $dpwrdiff = 20*$lnfactor/$ln10
+    if $dpwrdiff > 0 then
+      $dpwrdiff = trunc($dpwrdiff + 0.5)
+    else
+      $dpwrdiff = trunc($dpwrdiff - 0.5)
+    endif
+
+    dpwr = dpwr - $dpwrdiff
+    dof = $freq+3d,$freq-3d
+    write('alpha','calibrating H1 decoupler at power %d',dpwr)
+    au('wait')
+    return
+  else
+    dmf = 4*$gb2 dres = 90 dmfadj
+    $strdmf='' $strdpwr = ''
+    format(dmf,0,0):$strdmf
+    format(dpwr,0,0):$strdpwr
+    setparams('dmf',$strdmf,'H1')
+    setparams('dpwr',$strdpwr,'H1')
+  endif
+  AC9S('setpp',$freq)
+  return
+
+ELSEIF ($1 = 'setpp') then
+  "determine 90 degree pulse on decoupler"
+  seqfil = 'DEPT'
+    exists('mult','parameter'):$mex
+    if not $mex then create('mult') endif
+    exists('j1xh','parameter'):$jex
+    if not $jex then create('j1xh') endif j1xh = 142
+    exists('pp','parameter'):$ppex
+    if not $ppex then create('pp','pulse') endif
+    exists('pplvl','parameter'):$lvlex
+    if not $lvlex then create('pplvl','integer') endif
+    dm = 'nny' dmm = 'ccw'  pw = pw90
+    d1 = 3  at = 3  ss = 2  nt = 4  
+    lb = 1/at  gf = 'n' fn = 2*np
+    dof = $2  "coalesence from h2cal "
+    getparam('dmf','H1'):dmf
+
+  getparam('pplvl','H1'):pplvl
+  if (pplvl < 40) then
+    getparam('tpwr','H1'):pplvl
+  endif
+
+  getparam('pp','H1'):pp
+  if (pp < 1) then
+    getparam('pw90','H1'):pp
+  endif
+
+  array('mult',11,0.5,.1)
+
+  wexp='AC9S(`ppcal`)'
+  wnt='wft(`nodc`) dssh(`dodc`)' 
+  full vp = wc2max/2 - 10  rp = rp-90  vs = vs/5
+  au('wait')
+  return
+
+ELSEIF ($1 = 'ppcal') then
+
+  phase(180) wft('nodc')  f dssh('dodc')
+  select(1) vsadj(wc2max/2.2)  th = wc2max/4
+  nll fp
+  pw360cal:$mult0
+
+  $pps = ''  $lvls = ''
+  format(pp*$mult0,0,1):$pps
+  format(pplvl,0,0):$lvls
+
+  setparams('pp',$pps,'H1')
+  setparams('pplvl',$lvls,'H1')
+
+  write('alpha','H1pp calibrated at %s, at a power of %d',$pps,pplvl)
+
+  ACreport
+  banner('H1 decoupler calibration complete')
+
+ENDIF "for $1 = ?? "

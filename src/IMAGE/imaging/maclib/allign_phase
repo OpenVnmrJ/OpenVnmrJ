@@ -1,0 +1,122 @@
+"macro allign_phase"
+"************************************************************"
+"           MACRO FOR ARRAYED FID PHASE CORRECTION           "
+"           Written by:  Ivan TKAC                           "
+"           Last update: Feb 09, 2007                        "
+"************************************************************"
+
+"-------------------------------------------------------------"
+"   BACKUP OF RAW FID                                         "
+"-------------------------------------------------------------"
+$sp=sp $wp=wp $vs=vs $sc=sc $wc=wc $vp=vp $lp=lp $rp=rp
+$gf=gf $gfs=gfs $lb=lb $fn=fn
+$axis=axis $rfp=rfp $rfl=rfl
+
+if (celem < 2) then
+   
+   
+   write('line3','Number of FIDs < 2, exiting!')
+   write('alpha','Number of FIDs < 2, exiting!')
+   clear
+   abort
+endif
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+
+$ex = 1
+exists('fid.raw','file'):$ex
+if ($ex = 0) then
+   exists('fid.orig','file'):$ex
+   if ($ex = 1) then
+      input('Save FID backup from fid.orig? (y/n) '):$orig
+      if ($orig = 'y') then
+         shell('mv fid.orig fid.raw')
+      endif
+   else
+ write('line3','Saving original to fid.raw...')
+      shell('cp fid fid.raw')
+   endif
+endif
+
+exists('phase_list','file'):$ex
+if ($ex = 1) then
+   write('line3','Phase correction already performed!')
+   
+   if (a_repeat = 'n') then
+      write('line3','Program Stopped!')
+      abort
+   else
+      shell('mv phase_list phase_list.old')
+   endif
+endif
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION PARAMETERS                               "
+"-------------------------------------------------------------"
+
+$fid_noF = ''
+if (a_fid_no < 10) then
+   format(a_fid_no,1,0):$fid_noF
+endif
+if ((a_fid_no > 9) and (a_fid_no < 100)) then
+   format(a_fid_no,2,0):$fid_noF
+endif
+if ((a_fid_no > 99) and (a_fid_no < 1000)) then
+   format(a_fid_no,3,0):$fid_noF
+endif
+if ((a_fid_no > 999) and (a_fid_no < 10000)) then
+   format(a_fid_no,4,0):$fid_noF
+endif
+
+$ph_file = 'ph_list' + $fid_noF
+
+$ph_list = 'phase_list'
+
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION CALCULATION                              "
+"-------------------------------------------------------------"
+shell('mv fid fid.tmp')
+
+// $homedir=''
+// shell('echo $HOME'):$homedir
+// $program = $homedir + '/bin/phcor5'
+exists('phcor5','bin'):$e,$program
+
+$pointsF = ''
+$skip = ''
+$rmsdF = ''
+$s2nF = ''
+$fidnoF = ''
+
+format(a_no_points,3,0):$pointsF
+format(a_no_skip,3,0):$skipF
+format(a_rmsd,3,0):$rmsdF
+format(a_s2n,6,2):$s2nF
+format(a_fid_no,3,0):$fidnoF
+
+shell($program,'fid.tmp','fid',$pointsF,$skipF,$rmsdF,$s2nF,$ph_file,$fidnoF,$ph_list)
+write('line3','PHASE CORRECTION PERFORMED !')
+cd('..')
+rt($filename)
+
+
+"-------------------------------------------------------------"
+"   DISPLAY PHASE CORRECTED SPECTRA                           "  
+"-------------------------------------------------------------"
+ho=0 vo=0
+sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+lb=0 lb='n' gf=$gf gfs=$gfs fn=$fn
+axis=$axis rfp=$rfp rfl=$rfl
+wft dss dscale
+
+shell('rm '+$filename+'/fid.tmp')
+clear

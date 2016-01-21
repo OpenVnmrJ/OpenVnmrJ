@@ -1,0 +1,17 @@
+"macro eccnums"
+"eccnums - macro to report tc and amp data from eccfit"
+
+
+$device='graphics'
+if $#>0 then if $1='plot' then $device='plotter' endif endif
+$input=curexp+'/analyze.out'
+lookup	('file',$input)
+
+lookup('readline',6)
+lookup('read','read','read','read'):$dum,$amp,$tc,$res
+$fudge=0.45
+$normamp=$fudge*$amp/(1000*$tc)
+write($device,100,100,'Time Constant = %6.3f msec',1000*$tc)
+write($device,100,90,'Approximate Amplitude = %6.4f' ,$normamp)
+tcl('invokeTab Sequence; startUpdate')
+return($amp,$tc,$normamp,$res)

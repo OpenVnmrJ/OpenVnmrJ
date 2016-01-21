@@ -1,0 +1,56 @@
+"macro get_z2drift"
+$coil='z2'
+$oldval=0
+
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil='z2c'
+else
+  $coil='z2'
+endif
+r1={$coil} 
+if {$coil}>0 then
+   z2c=-parmax[19]
+else
+   z2c=parmax[19]
+endif
+
+exists('tr','parameter'):$e
+if $e>0.5 then
+  $delay='tr'
+else
+  $delay='d1'
+endif
+{$delay}=60 
+
+exists(userdir+'/fastmap','file'):$e
+if $e<0.5 then mkdir(userdir+'/fastmap') endif
+$infile=userdir+'/fastmap/'+gcoil+'_z2drift'
+write('reset',$infile)
+
+$i = 2.0
+while ($i < 21) do
+  {$delay}[$i]=3
+  $i=$i+1
+ endwhile
+array='tr' 
+setallshims
+
+if $delay='tr' then
+  wnt='wft z2c=r1 setallshims select(celem) peak(0,sw):$height,cr offset:$y write(`file`,`'+$infile+'`,`t= %5d s B0 = %11.1f Hz`,celem*tr[celem],$y)'
+  if ($coil='z2c') then
+    wexp='ft ho=0 vo=0 full dss z2c=r1 tr=tr[2] setallshims cat(`'+$infile+'`)'
+  else
+    wexp='ft ho=0 vo=0 full dss z2=r1 tr=tr[2] setallshims cat(`'+$infile+'`)'
+  endif
+else
+  wnt='wft z2c=r1 setallshims select(celem) peak(0,sw):$height,cr offset:$y write(`file`,`'+$infile+'`,`t= %5d s B0 = %11.1f Hz`,celem*d1[celem],$y)'
+  if ($coil='z2c') then
+    wexp='ft ho=0 vo=0 full dss z2c=r1 d1=d1[2] setallshims cat(`'+$infile+'`)'
+  else
+    wexp='ft ho=0 vo=0 full dss z2=r1 d1=d1[2] setallshims cat(`'+$infile+'`)'
+  endif
+endif
+
+au

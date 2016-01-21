@@ -1,0 +1,93 @@
+#!/bin/csh
+# script to build console software for Inova and Mercplus.
+# Must to executed on a Sun computer.
+# After this script completes, the console software will be in
+# a directory in "sourcedir" named consoles. See the end of
+# this script to see how to put the results into git.
+
+# set the following parameters to point to
+# gitrep     : where the git repo is located.
+# vwacqfiles :  where the "wind" directories are located
+# sourcedir  :  where the files should be built
+# logdir     :  where the log files should be put
+setenv gitrepo /sw2/vnmr1/vjbuild/git-repo/software
+setenv vwacqfiles /export/home/dji/sunbuild
+setenv sourcedir /export/home/dji/sunbuild/common
+setenv logdir /export/home/dji/sunbuild/logs/
+
+rm -rf $sourcedir
+
+mkdir -p $sourcedir/consoles/inova/vxBoot.auto
+mkdir $sourcedir/consoles/inova/vxBoot.big
+mkdir $sourcedir/consoles/inova/vxBoot.small
+mkdir $sourcedir/consoles/inova/vxBootPPC.big
+mkdir $sourcedir/consoles/inova/vxBootPPC.small
+mkdir -p $sourcedir/consoles/mercury/vxBoot.big 
+mkdir $sourcedir/consoles/mercury/vxBoot.small 
+
+if (! -d $logdir) then
+   mkdir $logdir
+endif
+
+set arch="solaris"
+set rti="sparcSol2"
+set makepath="/usr/ccs/bin"
+setenv WIND_HOST_TYPE sun4-solaris2
+setenv WIND_LMHOST  enterprise
+setenv WIND_BASE $vwacqfiles/wind
+setenv WIND_REGISTRY  `hostname`
+setenv VW_HOME $vwacqfiles/target
+
+setenv PATH  /usr/bin
+
+# add for ccppc
+setenv WIND_BASE_FIXED $vwacqfiles/windT2_2_1_PPC_fixed
+
+setenv CPU MC68040
+setenv VX_CPU_FAMILY 68k
+setenv GCC_EXEC_PREFIX $WIND_BASE/host/$WIND_HOST_TYPE/lib/gcc-lib/
+setenv LD_LIBRARY_PATH /usr/dt/lib:/usr/openwin/lib
+
+setenv WIND_HOME $vwacqfiles/wind
+setenv vxwksdir $vwacqfiles      # for UpdateobjMI vwacqkernel kvwacqkernel
+
+set short_date=`date +%F`
+# ISO quality record log
+setenv lognam Objlog`uname -m`
+./UpdateobjMI >& $logdir/log_$short_date
+
+cp $sourcedir/sysvwautokernel/* $sourcedir/consoles/inova/vxBoot.auto
+
+cp $sourcedir/sysvwacq/68k/vwhdobj.o $sourcedir/consoles/inova/vxBoot.big/.
+cp $sourcedir/sysvwacq/68k/vwlibs.o  $sourcedir/consoles/inova/vxBoot.big/.
+cp $sourcedir/sysvwacq/68k/vwtasks.o $sourcedir/consoles/inova/vxBoot.big/.
+cp $sourcedir/sysvwcom/68k/vwcom.o   $sourcedir/consoles/inova/vxBoot.big/.
+cp $sourcedir/sysvwacqkernel/68k/NMRdev.vxWorks $sourcedir/consoles/inova/vxBoot.big/vxWorks
+cp $sourcedir/sysvwacqkernel/68k/NMRdev.vxWorks.sym $sourcedir/consoles/inova/vxBoot.big/vxWorks.sym
+cp $sourcedir/sysvwacqkernel/68k/NMRrel.vxWorks $sourcedir/consoles/inova/vxBoot.small/vxWorks
+
+cp $sourcedir/sysvwacq/ppc/vwhdobj.o $sourcedir/consoles/inova/vxBootPPC.big/.
+cp $sourcedir/sysvwacq/ppc/vwlibs.o  $sourcedir/consoles/inova/vxBootPPC.big/.
+cp $sourcedir/sysvwacq/ppc/vwtasks.o $sourcedir/consoles/inova/vxBootPPC.big/.
+cp $sourcedir/sysvwcom/ppc/vwcom.o   $sourcedir/consoles/inova/vxBootPPC.big/.
+cp $sourcedir/sysvwacqkernel/ppc/NMRdev.vxWorks $sourcedir/consoles/inova/vxBootPPC.big/vxWorks
+cp $sourcedir/sysvwacqkernel/ppc/NMRdev.vxWorks.sym $sourcedir/consoles/inova/vxBootPPC.big/vxWorks.sym
+cp $sourcedir/sysvwacqkernel/ppc/NMRrel.vxWorks $sourcedir/consoles/inova/vxBootPPC.small/vxWorks
+
+cp $sourcedir/syskvwacq/vwhdobj.o $sourcedir/consoles/mercury/vxBoot.big/.
+cp $sourcedir/syskvwacq/vwlibs.o  $sourcedir/consoles/mercury/vxBoot.big/.
+cp $sourcedir/syskvwacq/vwtasks.o $sourcedir/consoles/mercury/vxBoot.big/.
+cp $sourcedir/sysvwcom/vwcom.o   $sourcedir/consoles/mercury/vxBoot.big/.
+cp $sourcedir/syskvwacqkernel/NMRdev.vxWorks $sourcedir/consoles/mercury/vxBoot.big/vxWorks
+cp $sourcedir/syskvwacqkernel/NMRdev.vxWorks.sym $sourcedir/consoles/mercury/vxBoot.big/vxWorks.sym
+cp $sourcedir/syskvwacqkernel/NMRrel.vxWorks $sourcedir/consoles/mercury/vxBoot.small/vxWorks
+
+
+# AT this point, the console software is in
+# a directory in "sourcedir" named consoles. To update git,
+# copy the contents of this directory to git.
+# Comment the next lines to avoid the step
+
+# cd $sourcedir/consoles
+# cp -r inova/* $gitrepo/inova
+# cp -r mercury/* $gitrepo/mercury

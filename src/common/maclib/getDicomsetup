@@ -1,0 +1,41 @@
+"macro getDicomsetup"
+" Usage: getDicomsetup('storage', 'HOST'):$VALUE "
+
+if($# > 1.5) then
+   $type = $1
+   $name = $2
+elseif($# > 0.5) then
+   $type = 'storage'
+   $name = $1
+else
+   return
+endif
+
+" Get the path for the appropriate dicom_store.cfg file based "
+" on the appdir scheme "
+if($type = 'storage') then
+   exists('dicom_store.cfg', 'dicom/conf'):$e,$file
+elseif($type = 'print') then
+   exists('dicom_print.cfg', 'dicom/conf'):$e,$file
+else
+   return
+endif
+
+" We know it exists now, is it readable? "
+exists($file,'file','r'):$e
+if($e < 0.5) then
+   return 
+endif
+
+lookup('file',$file, 'readline',1):$line
+
+$s = ''
+$label = ''
+while ($line <> '') do
+   substr($line,1):$s
+   if($s = $name) then
+     substr($line,3):$s
+     return($s)
+   endif
+   lookup('readline',1):$line
+endwhile

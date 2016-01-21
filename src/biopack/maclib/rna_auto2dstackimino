@@ -1,0 +1,77 @@
+"macro rna_auto2dstackimino"
+"auto2dplot. uses linear prediction to extend data"
+ph ph1
+pmode='full'
+trace='f2'
+gf1='n' lb1='n' awc1='n'
+full wc2=wc2max-5 wc=wc2 
+exists('vs2d','parameter'):$e if ($e=0) then
+create('vs2d','real','current') vs2d=1000  endif
+s1
+parlp(1) parlp(2)
+if (seqfil <> 'rna_gNhmqc') then
+  if (ni>1) then
+   proc2='ft'
+   fn1=4*ni
+   lpopt1='f' strtlp1=ni
+   if (ni>16) then
+    lpfilt1=8
+   else
+    lpfilt1=7         "no fewer than ni=16 used"
+   endif
+   lpnupts1=ni lpext1=fn1/2-ni
+   strtext1=ni+1
+   sb1=fn1/(2*sw1) sbs1=-sb1 
+   proc1='lp'
+   wft2da
+  else
+   fn2=4*ni2
+   lpopt2='f' strtlp2=ni2
+   lpnupts2=ni2 lpext2=fn2/2-ni2
+   if (ni2>16) then
+    lpfilt2=8
+   else
+    lpfilt2=7         "no fewer than ni=16 used"
+   endif
+   strtext2=ni2+1
+   sb2=fn2/(2*sw2) sbs2=-sb2
+   proc2='lp'
+   proc1='ft'
+   wft2da('ni2')
+  endif
+else
+   fn1=4*ni proc1='lp' proc2='ft'
+   lpopt1='b','f' strtlp1=3,ni
+   if (ni>16) then
+    lpfilt1=8
+   else
+    lpfilt1=6         "no fewer than ni=16 used"
+   endif
+   lpnupts1=ni-3,ni lpext1=2,fn1/2-ni
+   strtext1=2,ni+1
+   sb1=fn1/(2*sw1) sbs1=-sb1 
+   wft2da
+endif
+
+
+peak2d:$intmax
+if (ni>0) then
+ if $intmax<0 then rp1=rp1+180 endif
+else
+ if $intmax<0 then rp2=rp2+180 endif
+endif
+
+
+r1
+wc2=wc2max-5 wc=wc2-25
+dc2d('f2')
+nm2d th=th-1
+left
+dconi('dpcon',15,1.2)
+pcon(20,1.2)
+vs2d=vs2d/4 right ds2dn
+pl2d
+dtext pltext
+BPpage
+
+

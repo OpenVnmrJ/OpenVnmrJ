@@ -1,0 +1,78 @@
+"macro im1Dglobal"
+"Setup for 1D non-localized spectroscopy sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+exists('recon','parameter'):$exrecon
+if ($exrecon) then $recon = recon else $recon = 'internal' endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  $tof=tof
+  ldrf
+  tof=$tof
+  imprep 
+
+  if ($recon = 'internal') OR ($recon = '') then   "use internal ft"
+    wnt='wft dssh'
+  else  "external recon"
+    wnt='im1D(\'proc\')'
+  endif
+  
+  execseq('prep')  "Execute any sequence specific preparation"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($recon = 'internal') OR ($recon = '') then   "use internal ft"
+    vp=0 f full wft aph0 dc vsadj ds
+  else  "external recon"
+    write('line3','ADVISORY: Using external recon ...')
+    "Do ft so VnmrJ thinks one is done"
+    vp=0 vs=1e-6 ft flush
+    "Now write data and phasefile"
+    $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt 2>&1'
+    shell($cmd):$trash
+    clear
+    cat(curexp+'/Xrecon.txt')
+    aipXrecon('nrcvrs'):$nr
+    if (arraydim = $nr) then
+      ds aph0 f full dc vsadj
+      if (ne > 1) then dssh(1,ne,1) endif
+    else
+      aph0 f full vsadj dssh(1,arraydim,$nr)
+    endif
+  endif
+  
+  execseq('proc')  "Execute any sequence specific processing"
+
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  im1Dglobal('prep')
+
+  "Here could go coarse power calibration"
+  if ($do = '') then
+    $do = prescan_exec[prescan_control[2]]
+  endif
+  
+  wexp = ''
+
+endif

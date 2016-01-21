@@ -1,0 +1,208 @@
+"macro eLogAction"
+
+exists('eventLog','templates/vnmrj/loginfo'):$e,$path
+if ($e=0) then return endif
+
+
+exists('eventLogpar','parameter','global'):$parex
+if ($parex=0) then create('eventLogpar','string','global') endif
+$infodir=userdir+'/persistence/eventLog'
+$info=$infodir+'/'+operator+'_eventLog_info'
+"**********************************************************************"
+IF ($1='write') THEN
+    $datestamp='' shell('date +%F'):$datestamp
+    $timestamp='' shell('date +%H-%M-%S'):$timestamp
+    $header=$datestamp+' at '+$timestamp+','
+    shell('basename '+$2):$file
+    if ($file='enterQ') then
+        $elog=''
+        eventLog:$elog
+        if ($elog<>$2+'.macdir/eventLog') then
+            $elog=$elog,$2+'.macdir/eventLog'
+        endif
+    else
+	$elog=$2+'.macdir/eventLog'
+    endif
+    $str=''
+    write('line3','%s %s by %s',$header,$4,operator):$str
+
+    if ($3<>'') then
+	exists($2+'.macdir/'+$3,'directory'):$direx
+	if ($direx=0) then $3='' endif
+    endif
+    if ($3<>'') then
+	write('file',$2+'.macdir/'+$3+'/eventLog','%s',$str)
+	$str=$str+' ['+$3+']'
+    endif
+
+    $elogsize=size('$elog')
+    $ei=1
+    repeat
+	write('file',$elog[$ei],'%s',$str)
+	$ei=$ei+1
+    until $ei > $elogsize
+    return
+
+ENDIF
+"**********************************************************************"
+IF ($1='infoautodir') THEN
+    strstr(autodir,'.macdir/studytray'):$isnotauto
+    if ($isnotauto) then 
+	$dir=globalenter
+	shell('basename '+globalenter):$q
+	$qdir=globalenter+'/'+$q+'.macdir'
+    else
+	$dir=autodir
+	$q='enterQ'
+	$qdir=autodir+'/enterQ.macdir'
+    endif
+    $file=$qdir+'/eventLog'
+    exists($file,'file'):$fileex
+    exists($infodir,'directory'):$iex
+    if ($iex=0) then
+	shell('mkdir '+$infodir):$dum
+    endif
+    write('reset',$info)
+    $basename='' shell('basename '+$dir):$basename
+    write('file',$info,'Automation directory: %s',$basename)
+    write('file',$info,'------------------------------------------')
+    if ($fileex) then
+	shell('cat '+$file+' >> '+$info):$dum
+    endif
+    setprotect('eventLogpar','on',256,'global')
+    eventLogpar[1]='' eventLogpar[2]=$basename
+    eLogAction('popup',$basename)
+    return
+ENDIF
+"**********************************************************************"
+IF ($1='infolocdir') THEN
+    strstr(autodir,'.macdir/studytray'):$isnotauto
+    if ($isnotauto) then
+	$dir=globalenter
+        shell('basename '+globalenter):$q
+        $qdir=globalenter+'/'+$q+'.macdir'
+    else 
+	$dir=autodir
+	$q='enterQ'
+        $qdir=autodir+'/enterQ.macdir'
+    endif
+    $rack='' $zone='' $loc=''
+    if not typeof('$4') then
+     	format($4,0,0):$loc
+    else
+     	$loc=$4
+    endif
+    if (traymax=96) or (traymax=768) then
+      	format($2,'lower'):$rack
+      	format($3,'lower'):$zone
+    endif
+    if ($loc='') then return endif
+
+    $samplename='' $locdir='' $status='' $who=operator
+    checklocstatus($dir+'/'+$q,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+    if ($status='') or ($locdir='') then
+        return
+    endif
+
+    if ($samplename='ReFeReNCe') then
+        write('error','Loc %s is a reference location',$loc)
+        return
+    endif
+    operights('viewallopstudies'):$ok
+    if ($who<>operator) and (operator<>owner) and ($ok<1) then
+	write('error','%s does not have rights to view other operator\'s studies')
+	return
+    endif
+   
+    $st1='' $st2=''
+    studytime('',$zone,$rack,$loc):$st1,$st2
+
+// Get the list of day and night queues in this location
+    $d='' $s1='' $n=''
+    $tmp=userdir+'/persistence/'+$0+'tmp'
+    write('reset',$tmp)
+    shell('(cat '+$qdir+'/'+$locdir+'/day/EXPLIST | awk \'{print $3}\' > '+$tmp+')'):$dum
+    readfile($tmp,'$d','$s1','','local')
+    array2string($d):$d
+    write('reset',$tmp)
+    shell('(cat '+$qdir+'/'+$locdir+'/night/LONGLIST | awk \'{print $3}\' > '+$tmp+')'):$dum
+    readfile($tmp,'$n','$s1','','local')
+    array2string($n):$n
+    shell('rm -f '+$tmp):$dum
+
+    $file=$qdir+'/'+$locdir+'/eventLog'
+    exists($file,'file'):$fileex
+    exists($infodir,'directory'):$iex
+    if ($iex=0) then
+        shell('mkdir '+$infodir):$dum
+    endif
+    write('reset',$info)
+    write('file',$info,'Samplename : %s',$samplename)
+    write('file',$info,'Studyowner : %s',$who)
+    if ($d<>'') then
+    	write('line3','DayQ   : %s',$d):$line1
+    else
+	write('line3','DayQ'):$line1
+    endif
+    if ($n<>'') then
+    	write('line3','NightQ : %s',$n):$line2
+    else
+	write('line3','NightQ'):$line2
+    endif
+    if not ($isnotauto) then
+	if (cpautodir=autodir) then
+    	    if ($status='Queued') or ($status='NightQueue') then
+		if ($d<>'') then
+		    write('line3','DayQ   (%s) : %s',$st1,$d):$line1
+		endif
+		if ($n<>'') then
+		    write('line3','NightQ (%s) : %s',$st2,$n):$line2
+		endif
+    	    endif
+	endif
+    endif
+    write('file',$info,'%s',$line1)
+    write('file',$info,'%s',$line2)
+    write('file',$info,'--------------------------------------')
+    if ($fileex) then
+        shell('cat '+$file+' >> '+$info):$dum
+    endif
+
+    $basename=''
+    shell('basename '+$dir):$basename
+    $title=$basename+' [loc '+$loc+']'
+    setprotect('eventLogpar','on',256,'global')
+    eventLogpar[1]=''
+    eventLogpar[2]=$basename+'_loc'+$loc
+    eLogAction('popup',$title)
+    return
+
+ENDIF
+"**********************************************************************"
+IF ($1='popup') THEN
+    exists('eventLogpar','parameter','global'):$parex
+    if ($parex=0) then create('eventLogpar','string','global') endif
+    setprotect('eventLogpar','on',256,'global')
+    eventLogpar[1]=''
+    vnmrjcmd('pnew','operator autodir eventLogpar emailflag')
+    vnmrjcmd('popup','mode:modeless','pnewupdate:true','file:eventLog.xml','rebuild:yes','title:'+$2)
+    vnmrjcmd('pnew','operator autodir eventLogpar emailflag')
+    return
+ENDIF
+"**********************************************************************"
+IF ($1='print') THEN
+    printon 
+    cat($info)
+    printoff
+    return
+ENDIF
+"**********************************************************************"
+IF ($1='email') THEN
+    if (eventLogpar[1]='') then return endif
+    shell('cp '+$info+' '+$infodir+'/'+eventLogpar[2]+'.txt'):$dum
+    vnmremail($infodir+'/'+eventLogpar[2]+'.txt',eventLogpar[1])
+    shell('rm -f '+$infodir+'/'+eventLogpar[2]):$dum
+    return
+ENDIF
+"**********************************************************************"
+

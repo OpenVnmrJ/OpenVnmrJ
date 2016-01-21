@@ -1,0 +1,166 @@
+"macro asl_opt"
+"*******************************************************************************"
+" asl_opt - Flip angle optimization for IR pulse for ASL sequence"
+"
+"*******************************************************************************"
+
+"Check that we have the correct parameters"
+exists('asltag','parameter'):$ex
+if ($ex = 0) then
+   write('error','asltag does not exists, is this an ASL sequence?')
+   abort
+endif
+
+$steps = 11    "Number of steps"
+$C0    = 30    "Starting point, coarse (dB)"
+$C     =  2    "Coarse step size"
+
+$F0    = 3000  "Starting point, fine "
+$F     =  100  "Fine step size"
+
+$action = 'irC'
+$do     = '' 
+if ($# > 0) then $action = $1 endif
+if ($# > 1) then $do     = $2 endif
+
+$paramfile  = 'ASL_params.par'
+
+"Parameters that will be changed, but should be reset at end"
+"need two parameters because writeparam takes a list"
+"but rtv needs individual params"
+$paramlist1 = 'slprofile sglarray, asltag, quipss'
+$paramlist2 = 'slprofile','sglarray','asltag','quipss'
+
+if ($action = 'irC') then
+  writeparam(curexp+'/'+$paramfile,$paramlist1)
+
+  slprofile = 'y'
+  sglarray =  1
+  flipir   = -1
+  array    = ''
+
+  imEPI('prep')  // this sets up array for asltag
+  image  = 0
+  asltag =  1
+  tpwrif = 4095
+  
+  $C0 = tpwri[1] - $steps/2 * $C
+  setarray('tpwri',$C0,$C,$steps)
+  
+  if (tpwri[$steps] = 63) then
+    confirm('Power level at maximum (63), increase the pulse width')
+    abort
+  endif
+
+  epi_setarray
+
+  wdone = ''
+  wexp = 'imEPI(`proc`) asl_opt(`reset`,`array`)'
+  au
+
+elseif ($action = 'irF') then
+  writeparam(curexp+'/'+$paramfile,$paramlist1)
+
+  slprofile = 'y'
+  flipir   = -1
+  sglarray =  1
+  array    = ''
+  
+  imEPI('prep')  // this sets up array for asltag
+  image  = 0
+  asltag =  1
+  tpwri  = tpwri[1] + 1
+  setarray('tpwrif',$F0,$F,$steps)
+  tpwrif = tpwrif[1],tpwrif // add an entry for the reference scan
+
+  epi_setarray
+
+  wdone = ''
+  wexp = 'imEPI(`proc`) asl_opt(`reset`,`array`)'
+  au
+
+elseif ($action = 'show3') then
+  /* acquire:
+       ref scans (tag off)
+       tag off
+       tag on
+       control
+  */
+  writeparam(curexp+'/'+$paramfile,$paramlist1)
+  slprofile = 'y'
+  sglarray  =  1
+
+  array = ''
+  imEPI('prep')
+  image  = 0
+  asltag = 0,1,-1
+  epi_setarray
+  
+  wdone = ''
+  wexp = 'imEPI(`proc`) asl_opt(`reset`)'
+
+elseif ($action = 'showall') then
+  /* acquire:
+       ref scans (tag off)
+       tag off
+       tag on
+       control
+       tag on quipss
+       control quipss
+  */
+  writeparam(curexp+'/'+$paramfile,$paramlist1)
+  slprofile = 'y'
+  sglarray  =  1
+
+  array = ''
+  imEPI('prep')
+  image  = 0
+  asltag = 0,1,-1,1,-1
+  quipss = n,n, n,y, y
+  array = '(asltag,quipss)'
+  epi_setarray
+  
+  wdone = ''
+  wexp = 'imEPI(`proc`) asl_opt(`reset`)'
+
+elseif ($action = 'tiarray') then
+  image = 0
+  asltag=0
+  
+  $tistep = 0.1
+  $ti0    = ti - ($steps-1)/2*$tistep
+  $ti0 = 0.2
+  
+  $inx = 1
+  ti = $ti0,$ti0,$ti0
+  asltag = 0,1,-1
+  repeat
+    $ti    = $ti0+$inx*$tistep
+    ti     = ti,$ti,$ti
+    asltag = asltag,1,-1
+    $inx   = $inx + 1
+  until ($inx > $steps)
+  array = '(ti,asltag)'
+
+  imEPI('prep')
+  wdone = ''
+  wexp = 'imEPI(`proc`) asl_opt(`reset`,`array`)'
+  
+
+elseif ($action = 'reset') then
+  if ($do = 'array') then 
+    vnmrjcmd('array','popup') 
+    confirm('Please choose optimal value in array window...')
+  endif
+  
+  "Reset parameters"
+  image = 0 "old parameters may have array of asltag that doesn't match"
+  $n = size('$paramlist2')
+  $inx = 1
+  repeat
+    rtv(curexp+'/'+$paramfile,$paramlist2[$inx])
+    $inx = $inx + 1
+  until $inx > $n
+endif
+
+

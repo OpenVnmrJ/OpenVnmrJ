@@ -1,0 +1,44 @@
+"macro deleteFrameLayout"
+"Usage: deleteFrameLayout($fullpath, $layoutlabel)"
+
+"Default values"
+$file = userdir+'/templates/vnmrj/interface/framelayout' 
+$label = framelayoutName
+
+if ($# > 0) then
+   strstr($1, '/'):$ex
+   if($ex = 1) then
+      $file  = $1
+   else
+      $label = $1
+   endif
+elseif($# > 1) then
+      $file  = $1
+      $label = $2
+endif
+
+exists($file,'file'):$ex
+if $ex < 0.5 then
+   write('line3','File %s does not exist',$file)
+   abort
+endif
+
+$tmpfile = $file+'.tmp'
+exists($tmpfile,'file'):$ex
+if $ex > 0.5 then
+   delete($tmpfile)
+endif
+
+lookup('file',$file, 'readline',1):$line
+
+$s = ''
+while ($line <> '') do 
+   substr($line,1):$s
+   if($s <> $label) then
+       write('file', $tmpfile, $line)
+   endif
+   lookup('readline',1):$line
+endwhile
+
+delete($file)
+mv('-f',$tmpfile,$file)

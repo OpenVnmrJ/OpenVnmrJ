@@ -1,0 +1,172 @@
+"macro studysetup"
+
+   getfilepath($1,'studylib'):$isstudy,$studypath
+
+   if ($isstudy=0) then
+	write('error','%s study could not be found',$1)
+	return
+   endif
+
+   $etot=0 $ltot=0
+   shell('(cat '+$studypath+'/EXPLIST | grep -wc Queued)'):$etot
+   shell('(cat '+$studypath+'/LONGLIST | grep -wc Queued)'):$ltot
+   if ($etot=0) and ($ltot=0) then
+	write('error','No experiments in %s',$1)
+	return
+   endif
+   exists($studypath+'/'+$1+'.par','directory'):$parex
+
+is_cpsample:$cp,$archsamp
+
+if (gcflg='n') and (auto='n') then
+   walkupQ_init
+   pwd:$curdir
+   cd($studypath):$dum
+   shell('(cp -r * '+cursqexp+')'):$dum
+//   shell('(tar -cf - * | (cd '+cursqexp+'; tar xfBp -))'):$dum
+   cd($curdir):$dum
+
+   shell('(cat '+cursqexp+'/LONGLIST >> '+cursqexp+'/EXPLIST)'):$dum
+   write('reset',cursqexp+'/LONGLIST'):$dum
+   exists(cursqexp+'/macdirlong','directory'):$e
+   if ($e) then
+     shell('mv '+cursqexp+'/macdirlong/* '+cursqexp+'/macdir'):$dum
+   endif
+
+   $explist='' $s2=''
+   readfile(cursqexp+'/EXPLIST','$explist','$s2','','local'):$total
+   $ACQtime=0
+   $firstexp='' 
+   strstr($explist[1],'_','last'):$er,$firstexp,$er2
+   if ($er) then format($er2,'isreal'):$er endif
+   if ($er<0.5) then substr($s2[1],2):$firstexp endif
+
+   $firstmacro=''
+   cpattribute('get',cursqexp+'/macdir/'+$explist[1],'SetupMacro'):$firstmacro
+   if ($firstmacro='') then
+        $firstmacro=$firstexp
+   endif
+
+   $prpltime=0
+   getadminfo('prpltime'):$prpltime
+   $i=1 $allexp=''
+   repeat
+	$time=0 $exp=''
+	substr($s2[$i],1):$time
+	substr($s2[$i],2):$exp
+	if ($time>0) then
+	   $ACQtime=$ACQtime+$time
+	endif
+	$allexp=$allexp+' '+$exp
+	$i=$i+1
+   until $i > $total
+
+	"Execute First experiment macro"
+//   resetsampglobal
+//   exists($firstexp,'maclib'):$firstmacex
+endif
+
+if ($parex) then
+		"Make sure the clone is ok to use in current system/probe"
+	$lk=lockfreq
+	rtv($studypath+'/'+$1,'noabort','lockfreq_'):$lk
+	if ($lk=0) then $lk=lockfreq endif
+	$oldh1frq=trunc(($lk*0.065144)+0.5)*100
+	if ($oldh1frq<>h1freq) then
+	   write('error','ALERT: Study "%s" is from a %d MHz spectrometer',$1,$oldh1frq)
+	endif
+	$fsq=fsq
+	rtv($studypath+'/'+$1,'noabort','fsq_'):$fsq
+	if ($fsq<>fsq) then
+	   write('error','ALERT: Study "%s" was run with fsq=\'%s\'. Current fsq=\'%s\' ',$1,$fsq,fsq)
+	endif
+	$tpwr=0 $tpwr_cf=0 $pw90=0
+	$pwxlvl=0 $pwxlvl_cf=0 $pwx=0
+	abortoff
+	   rtv($studypath+'/'+$1,'tpwr','pw90','tpwr_cf'):$tpwr,$pw90,$tpwr_cf
+	   rtv($studypath+'/'+$1,'pwxlvl','pwx','pwxlvl_cf'):$pwxlvl,$pwx,$pwxlvl_cf
+	aborton
+	getcpshape('getall',$studypath+'/shapelib')
+	savesampglobal('cp')
+	cpsetup($1,'',$studypath+'/'+$1+'.par')
+	getsampglobal('cp')
+
+		// Evaluate if the shapes need to be recreated
+	$recreate=0
+	exists('probe_','parameter'):$probe_ex
+	if ($probe_ex) then $probe=probe_ else $probe=probe endif
+	if ($probe<>probe) then $recreate=1 endif
+	if ($tpwr<>tpwr) and ($tpwr<>0) then $recreate=1 endif
+	if ($tpwr_cf<>tpwr_cf) and ($tpwr_cf<>0) then $recreate=1 endif
+        if ($pw90<>pw90) and ($pw90<>0) then $recreate=1 endif
+        if ($pwxlvl<>pwxlvl) and ($pwxlvl<>0) then $recreate=1 endif
+        if ($pwx<>pwx) and ($pwx<>0) then $recreate=1 endif
+        if ($pwxlvl_cf<>pwxlvl_cf) and ($pwxlvl_cf<>0) then $recreate=1 endif
+	if (probe='') then $recreate=0 endif
+	$shapepars=tnshapes[1]+' '+dnshapes[1]+' '+dn2shapes[1]+' '+dn3shapes[1]
+	string2array($shapepars):$saveshapes
+	if ($saveshapes[1]='') then $recreate=0 endif
+
+	if ($probe<>probe) then
+                write('error','ALERT: Some shapes were generated with %s calibrations',$probe)
+	endif
+	if ($recreate) then
+		write('line3','shapes will be regenerated based on current calibrations')
+		saveshapes('recreate','tnshapes',$studypath+'/shapelib')
+                saveshapes('recreate','dnshapes',$studypath+'/shapelib')
+                saveshapes('recreate','dn2shapes',$studypath+'/shapelib')
+                saveshapes('recreate','dn3shapes',$studypath+'/shapelib')
+	endif	
+        if (auto='y') or (gcflg='y') then wstart='' return endif
+elseif (gcflg='y') then
+    wstart='' return
+else
+   $ok=0
+   is_curreqexp($firstmacro,$explist[1],cursqexp+'/macdir'):$ok
+   if ($ok=0) then
+       AutoStrtfid($firstmacro,$explist[1],cursqexp+'/macdir')
+   endif
+   savesampglobal('cp')
+//   if ($firstmacex) then
+   	exec($firstmacro)
+//   else
+//   	cpsetup($firstmacro)
+//   endif
+   getsampglobal('cp')
+   Autoexmac($explist[1],cursqexp+'/macdir')
+   SamplingSch('write')
+   setddrtc
+endif
+   if ($cp) then
+	substr($archsamp,'dirname'):archivedir,sample
+   endif
+// Assuming the sampglobals are also saved with the clone
+   getsampglobal(cursqexp)
+
+    if (sample='') or (archivedir='') then
+       setadirtmplt
+       setsvftmplt
+       setsdirtmplt
+       setsamplename
+    endif
+
+    explist=$explist
+    dps
+    if ($parex) then wstart=''
+    elseif ($etot+$ltot>1) then
+	if (wstart='') then wstart='studywstart'
+	else
+	wstart='studywstart '+wstart
+	endif
+   	$stime=''
+   	formattime($ACQtime):$stime
+   	write('graphics',0,0,''):$ys
+   	write('graphics',10,wc2max*0.9,'Study: %s',$1)
+   	write('graphics',10,wc2max*0.9-$ys,'   samplename: %s',samplename)
+   	write('graphics',10,wc2max*0.9-$ys-$ys,'Experiments: %s',$allexp)
+   	write('graphics',10,wc2max*0.9-$ys-$ys-$ys,'Time: %s',$stime)
+    else
+	$s1='' $s2=''
+	strstr(wstart,'studywstart'):$ret,$s1,$s2
+	if ($ret) then wstart=$s1+$s2 endif
+    endif

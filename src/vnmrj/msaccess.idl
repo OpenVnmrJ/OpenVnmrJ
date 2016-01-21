@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) Varian Assoc., Inc.  All Rights Reserved.
+ *
+ * This software contains proprietary and confidential information of
+ * Varian, Inc. and its contributors.  Use, disclosure and
+ * reproduction is prohibited without prior consent.
+ */
+
+module msaccess {
+
+    struct Scan {
+        long spectrumType;          // = CENTROID or PROFILE
+        long firstMass;
+        long lastMass;
+        sequence<long> mass;
+        sequence<long> intensity;
+    };
+
+    typedef sequence<long> DataArray;
+
+    interface PmlListener {
+        void setMessage(in string msg);
+    };
+
+    interface Bear1200 {
+        const long PROFILE = 0;
+        const long CENTROID = 1;
+
+        const long OFF = 0;
+        const long TIC = 1;
+        const long AREA = 2;
+        const long USER = 3;
+
+        Scan getDisplayScanCORBA();
+
+        boolean setScanSaveCORBA(in boolean saveOn);
+
+        boolean dispatchToPmlCORBA(in string cmd);
+
+        boolean setFileNameCORBA(in string fileName);
+
+        long getNumberOfScansCORBA();
+
+        long getRetentionTimeCORBA(in long scanNumber);
+
+        DataArray getDataCORBA(in long scanNumber);
+
+        boolean setAnalogOut1CORBA(in long   type,
+                                   in string command,
+                                   in double mass,
+                                   in double scale);
+
+        boolean setAnalogOut2CORBA(in long   type,
+                                   in string command,
+                                   in double mass,
+                                   in double scale);
+
+        boolean requestFileTransferCORBA(in string sourceFilePath,
+                                 in string destinationFilePath,
+                                 in string destinationUserName,
+                                 in string destinationPassword,
+                                 in string destinationRawIPAddress);
+
+        string getPmlReplyCORBA();
+
+        void registerPmlListener(in PmlListener pl);
+    };
+
+}; 

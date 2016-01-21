@@ -1,0 +1,90 @@
+"macro IPshowtestresults"
+if $#<>1 then write('error','Usage!') abort endif
+
+rm(curexp+'/expl.out'):$dum
+$testname=$1
+$resultsfile=IPdatadir+'/'+IPprobe+'/History/'+IPtestname
+exists($resultsfile,'file'):$ex
+if $ex<0.5 then write('error','Results file does not exist for this test!') return endif
+lookup('file',$resultsfile)
+$probename=''
+$result=0
+$index=0
+$sum=0
+$sumsq=0
+$date=''
+$teststr=''
+$numlines=0
+$var=0
+$stddev=0
+$sumsqdev=0
+shell('(cat '+$resultsfile+' | wc -l)'):$numlines
+$numresults=$numlines-7
+//write('line3','$numlines=%d, $numresults=%d',$numlines,$numresults)
+lookup('readline'):$customer
+lookup('readline'):$system
+lookup('readline'):$probe
+lookup('readline'):$test
+lookup('seekcs','Target:','read'):$target
+lookup('readline'):$blank
+lookup('readline'):$columnhd
+
+$i=1
+repeat
+	lookup('read',2):$date[$i],$result[$i]
+	$sum=$sum+$result[$i]
+	$sumsq=$sumsq+$result[$i]*$result[$i]
+	$i=$i+1
+until $i>$numresults
+$mean=$sum/$numresults
+
+//Now calculate sample std dev
+$i=1
+repeat
+	$sumsqdev=$sumsqdev+($result[$i]-$mean)*($result[$i]-$mean)
+	$i=$i+1
+until $i>$numresults
+if ($numresults>1) then $var=$sumsqdev/($numresults-1) endif
+$stddev=sqrt($var)
+
+$outfile=curexp+'/IPoutfile'
+write('reset',$outfile)
+write('file',$outfile,'exp 4')
+write('file',$outfile,'  1 %d',$numresults)
+write('file',$outfile,'Test number')
+write('file',$outfile,'')
+write('file',$outfile,'1 0 0 0')
+$i=1
+repeat
+        write('file',$outfile,'%d\t%f',$i,$result[$i])
+        $i=$i+1
+until $i>$numresults
+showtray('closesq')
+clear(2)
+full
+autoscale
+expl('file',$outfile,'nocurve')
+write('graphics',wcmax*0.2,wc2max*0.85,'%s',$test)
+write('graphics',wcmax*0.2,wc2max*0.75,'Mean = %.1f; Std Dev = %.2f',$mean,$stddev)
+write('graphics',wcmax*0.2,wc2max*0.65,'Specification for probe = %.1f',$target)
+pexpl('file',$outfile,'nocurve')
+write('plotter',wcmax*0.2,wc2max*0.85,'%s',$test)
+write('plotter',wcmax*0.2,wc2max*0.75,'Mean = %.1f; Std Dev = %.2f',$mean,$stddev)
+write('plotter',wcmax*0.2,wc2max*0.65,'Specification for probe = %.1f',$target)
+$imagefileps=userdir+'/iconlib/IPresults.ps'
+$imagefilegif=userdir+'/iconlib/IPresults.gif'
+$imagefilepdf=userdir+'/iconlib/IPresults.pdf'
+if IPresultsfile='1' then
+   IPresultsfile='2' 
+elseif IPresultsfile='2' then
+   IPresultsfile='1'
+endif
+$imagefilepng1=userdir+'/iconlib/IPresults1.png'
+$imagefilepng2=userdir+'/iconlib/IPresults2.png'
+page($imagefileps):$dum
+shell('convert -rotate 90 -density 75 -quality 95 -size 800x600 '+$imagefileps+' '+$imagefilepng1):$dum
+shell('convert -rotate 90 -density 75 -quality 95 -size 800x600 '+$imagefileps+' '+$imagefilepng2):$dum
+shell('convert -rotate 90 -density 75 -quality 95 -size 800x600 '+$imagefileps+' '+$imagefilegif):$dum
+shell('ps2pdf '+$imagefileps+' '+$imagefilepdf):$dum
+
+vnmrjcmd('pnew','1 IPdispresults')

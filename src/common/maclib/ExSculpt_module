@@ -1,0 +1,69 @@
+"macro ExSculpt_module"
+"presat_module - This is a setup macro for presat module"
+
+$module='ExSculpt'
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+   getlimit('tpwr'):$max,$min,$step
+   setlimit('prgpwr',tpwr-10,-16,$step)
+   format(pslabel,'lower'):$pslabel
+   strstr($pslabel,'_es'):$is
+   if ($is) and (apptype='lstd1D') then
+        "Setup presat parameters ONLY if pslabel='PRESAT' or 'wet1D' "
+	if d1<0.1 then d1=0.1 endif
+        off('wetpeaks')
+	wstart='ESproc(\'wstart\')'
+	doscout=1
+	ESpwrcalflg='y'
+	mkpar('frequency','tofh2o',tof)
+        tofh2o=tof
+        getparam('tofh2o',tn):tofh2o
+	ESproc('makeshapes')
+   endif
+//  Shouldn't we use gzlvl5 in the sequences for convenience?
+   fixgrd(5):gzlvl1
+   satmode='n'
+   ESmode='y'
+   prgpwr=tpwr-12
+   fixgrd(16):esgzlvl
+   esgt=0.0010 sspul='y'
+   pw(90) espw180=2*pw
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

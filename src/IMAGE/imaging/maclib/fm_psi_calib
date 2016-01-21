@@ -1,0 +1,95 @@
+"macro fm_psi_calib"
+"FASTMAP_CALIB reads field coefficients from file in $vnmuser/shims specified by $1 and writes  accepted values to calibration file $2"
+
+if $#<0.5 then $1='fastmap.calib' endif
+if $#<1.5 then $2=gcoil endif
+$calibfile = userdir+'/fastmap/'+$1
+$fastmap=userdir+'/fastmap'
+$corrfile = $fastmap+'/correlation'
+
+$sys='' $sysowner=''
+shell('ls -l '+systemdir+'/conpar'):$sys substr($sys,3):$sysowner
+if (owner = $sysowner) then
+  $outfile = systemdir+'/fastmap/psi_'+$2
+  exists(systemdir+'/fastmap','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap') endif
+  exists(systemdir+'/fastmap/calib','file'):$e
+  if $e<0.5 then mkdir(systemdir+'/fastmap/calib') endif
+else
+  $outfile = $fastmap+'/psi_'+$2
+endif
+
+$coilname = 'xz','yz'
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+$coil ='xz','yz'
+
+write('reset',$outfile)
+write('reset',$corrfile)
+
+"loop through each shim coil"
+$j = 1
+while ($j <= 2) do
+
+  lookup('file',$calibfile,'count',$coil[$j]+'='):$nentry
+  if ($nentry>3) then
+    write('line3','reading was successful with %d values',$nentry)
+    write('file',$corrfile,'reading was successful with %d values',$nentry)
+  else
+    write('error','not enough values found in calib file skipping this shim coil')
+    write('file',$corrfile,'not enough values found in calib file skipping this shim coil')
+    return
+  endif
+
+"loop through all the entries for coil $j"
+  $i = 1
+  $dac=0 $x1=0 $y1=0 $z1=0 $xz=0 $yz=0 $z2=0 $xy=0 $x2y2=0
+  lookup('file',$calibfile)
+
+  while ($i <= $nentry) do
+    lookup('seek',$coil[$j]+'=','read',9):$dac[$i],$x1[$i],$y1[$i],$z1[$i],$xz[$i],$yz[$i],$z2[$i],$xy[$i],$x2y2[$i],$nret
+    if $nret<8.5 then
+      write('error','%s: couldn\'t read entry for coil %s',$0,$coil[$j])
+      write('file',$fastmap+'/fastmap.log','%s: couldn\'t read entry for coil %s',$0,$coil[$j])
+      return
+    endif
+    "write('line3','%d %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e %7.3e ',\"
+    "  $dac[$i],$x1[$i],$y1[$i],$z1[$i],$xz[$i],$yz[$i],$z2[$i],$xy[$i],$x2y2[$i])"
+    $i = $i + 1      
+  endwhile
+
+  $i = 1
+  while ($i <= 2) do
+
+    fm_slope($dac,${$coilname[$i]}):$slope[$i],$intcpt,$correlation
+
+      write('line3','%s->%s  Slope = %.3e   Correlation = %6.4f', $coilname[$j], $coilname[$i], $slope[$i], $correlation) 
+      write('file',$corrfile,'%s->%s  Slope = %.3e   Correlation = %6.4f', $coilname[$j], $coilname[$i], $slope[$i], $correlation) 
+      abs($correlation):$abscorr
+"     if ($abscorr>0.97) then"
+"     if ($abscorr>0.90) then"
+      if ($abscorr>0.95) then
+        $answer='y'
+        "input('Do you want to include this term (y/n)? '):$answer"
+      else
+        $answer='n'
+      endif
+
+    if ($answer <> 'y') then
+      if ($i = $j) then
+        $slope[$i] = 1e3
+      else
+        $slope[$i] = 1e-9
+      endif
+    endif
+    $i = $i + 1
+  endwhile
+
+  atan($slope[2]/$slope[1]):$psi[$j]
+  if $j=2 then
+    write('file',$outfile,'%11.5e ',(-$psi[1]+$psi[2])*0.5) 
+  endif
+  $j = $j + 1
+endwhile
+
+

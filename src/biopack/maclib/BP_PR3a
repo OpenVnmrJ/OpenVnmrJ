@@ -1,0 +1,97 @@
+"macro BP_PR3a"
+" PR3  - Projection-Reconstruction macro, Eriks Kupce, 21.07.2005 "
+
+$fn1='' 
+$fn2=''
+$fn3=''
+
+PRcnt=PRcnt+1
+
+$cnt = 2*PRcnt-1
+format($cnt,1,0):$fn1
+format($cnt+1,1,0):$fn2
+
+BP_PRproc1a($cnt)   
+
+$fn3='p'+$fn1+'p'+$fn2
+BPsvf($fn3)
+
+$fn1='P'+$fn1+'.pk'
+$fn2='P'+$fn2+'.pk'
+
+"find location of program"
+BPfindfile('pr3db'):$path1  
+
+"make bin direcory if needed"
+exists(userdir+'/../bin','file'):$e
+if $e=0 then mkdir(userdir+'/../bin') endif
+
+"copy program from appdir/bin or /vnmr/bin if not there" 
+if $path1<>userdir+'/../bin/pr3db' then
+ cp($path1,userdir+'/../bin')  
+endif
+$cmd='pr3db ' + $fn1 + ' '+ $fn2 + ' 0.5'
+shell($cmd)
+shell('sleep 2')
+
+"remove program if already in appdir/bin or /vnmr/bin"
+if $path1<>userdir+'/../bin/pr3db' then
+ rm(userdir+'/../bin/pr3db') 
+endif
+
+$newpeaks=0
+BP_PRnpks:$newpeaks         
+ write('alpha','%d new peaks\n', $newpeaks)
+format(PRnpeaks[PRn],2,0):$fn1
+format(PRppeaks,2,0):$fn2
+$cmd = $fn1 + ' peaks' + ' expected\\'+$fn2+' peaks detected. \\'
+banner($cmd)
+$new=0
+if(PRcnt>=PRnpr[PRn]) then $new=1 endif  " Maximum # of planes reached "
+if($newpeaks<1) then $new=1 endif  " No new peaks found "
+if(PRppeaks>PRnpeaks[PRn]-1) then $new=1 endif
+
+if($new=1) then
+  if(PRn>=PRnexp) then
+    banner('PRexperiments finished')
+    return
+  endif
+  if(PRcnt>PRnpr[PRn]) then
+    write('line3','PRcnt > PRnpr[PRn]. Experiment completed')
+    write('file','../PRmessages','PRcnt > PRnpr[PRn]. Experiment completed')
+    $cmd=$cmd+'PRcnt > 1. \\Experiment completed'
+  else
+    if($newpeaks<1) then
+      write('line3','No new peaks. Experiment completed.')
+      write('file','../PRmessages','No new peaks. Experiment completed.')
+      $cmd=$cmd+'No new peaks. \\Experiment completed'
+    else
+      $cmd=$cmd+'All peaks found. \\Experiment completed'
+    endif
+  endif
+"  banner($cmd) "
+else
+  write('line3','Continuing the current experiment')
+  write('file','../PRmessages','Continuing the current experiment')
+
+  if(PRbpa[PRn]='y') or (PRbpa[PRn]='ny') or (PRbpa[PRn]='yy') then
+    $file=''
+    pwd:$file
+    exists($file+'/PR.bpa','file'):$e
+    if($e) then
+      BP_PRgetbpa($file+'/PR.bpa'):pra
+    else
+      write('error','PR2: failed to open PR.bpa file')
+      write('file','../PRmessages','PR2: failed to open PR.bpa file')
+      return
+    endif
+  else
+    $prainc = 90.0/(PRnpr[PRn] + 1)
+    pra = pra + $prainc
+  endif
+  
+  wexp='BP_PR3a'
+  au
+endif
+
+

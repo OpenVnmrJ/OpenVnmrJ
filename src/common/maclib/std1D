@@ -1,0 +1,128 @@
+"macro std1D"
+"***************************************************************"
+"std1D -                                                        "
+"       This is an apptype macro for std1D experiments          "
+"       Changes here will be reflected in all experiments       "
+"               with this apptype                               "
+"       All apptype macros have 4 sections                      "
+"         (setup, acquistion, process, display)                 "
+"       Changes over these default values should be done using  "
+"       pslabel_setup or wrtp feature                           "
+"       This macro is typically called by cpsetup               "
+"***************************************************************"
+
+"***********************************************************"
+IF ($1 = 'setup') THEN
+
+  "---------------------------------------------------------"
+  " This apptype uses rtp from parlib or setup(nuc,solvent) "
+  "	from stdpar      				    "
+  "---------------------------------------------------------"
+  $wrtp=wrtp
+  exists($2,'parlib'):$parex,$parpath
+  if ($parex) then
+        $solv=solvent
+		"Should rtp be avoided so wrtp actions are not performed here?"
+	rtp($parpath)  
+	solvent=$solv
+        setprotect('','clear',16384,'current')
+	rmpar('lockfreq_ fsq_')
+		// Both tpwr and pwxlvl must exists at least
+		// via the Chempack module
+	setlimit('tpwr',17)
+	setlimit('pwxlvl',9)
+	setref:$rfldum
+  else
+  	$nuc=''
+  	if ($2='PROTON') then $nuc='H1' 
+  	elseif ($2='CARBON') then $nuc='C13'
+  	elseif ($2='PHOSPHORUS') then $nuc='P31'
+  	elseif ($2='FLUORINE') then $nuc='F19' 
+  	else  $nuc=$2
+  	endif
+	getfilepath($nuc+'.par','stdpar'):$ex
+	if ($ex=0) then
+		CARBON(solvent)
+		dm='nny' tn=$nuc
+		pslabel=seqfil
+		setsw(100,-100)
+	else
+  		setup($nuc,solvent)
+	endif
+  endif
+  file='exp'
+	"Good idea to clear any sample global parameters"
+	" that might have inadvertantly left behind in parlib"
+  module('add','sampleglobal','basic','refresh')
+
+  bgmode_is:$bg
+  if (auto<>'y') and ($bg=0) and (gcflg='n') then
+     if (sqdisplay[1]='sample') then
+	vnmrjcmd('SQ delete tmpstudy')
+     endif
+  endif
+	
+  newmodules=modules
+	"The following are required modules for std1D"
+  module('combine','presat wet gradient quant std1D',newmodules):newmodules
+  module($1)
+  mkpar('flag','sbbiflg','n')
+  mkpar('delay','segt5',0.0005,'segstab',0.0005)
+  settemp
+  wrtp=$wrtp
+   
+"**********************************************"
+ELSEIF ($1 = 'acquisition') THEN
+"Acquisition parameters"
+
+		"Never protect sw for std1D"
+Plock('obsSW','off'):$dum
+if (Console<>'inova') then
+   if (tn='H1') or (tn='F19') then
+	dn='C13' else dn='H1'
+   endif
+else
+   if (tn = 'H1') or ((tn = 'F19') and (rfchtype[2]='U+ Direct Synthesis')) then
+        dn='C13' else dn='H1'
+   endif
+endif
+
+setobspars
+setdecpars
+satdly=d1 satfrq=tof
+satmode='n' wet='n'
+prgflg='n' prgpw=pw90 prgcycle=2
+seqfil=seqfil
+setProbepars('force')
+sspul='n'
+
+        "--------------------------------------------------"
+	"   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+settnbip
+
+"**********************************************"
+ELSEIF ($1 = 'process') THEN
+        "--------------------------------------------------"
+	"   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+
+    module('add','parlp parlp1 parlp2','basic')
+	"Linear prediction is set via Plock"
+	" or user macros - by default turn it off"
+    setLP(0)
+"**********************************************"
+ELSEIF ($1 = 'display') THEN
+        "--------------------------------------------------"
+	"   Module specific parameter setup   "
+if (apptype = $0) then module($1) endif
+        "--------------------------------------------------"
+	"allow wp/sp/wc/sc be set in the parameter file itself"
+"f full" 
+parunits('set','ref','ppm1')
+
+"**********************************************"
+ENDIF
+

@@ -1,0 +1,43 @@
+"macro prepRecFiles"
+"copy acq related files to curexp "
+
+if ($# > 0.5) then
+
+    // put files in curexp, then svf or svr will cp them the the destination.
+    $out = curexp
+
+    if($1 = 'shims') then
+        $destpath = $out + '/shims'
+        rm('-rf',$destpath):$x
+        shell('mkdir -p "' + $destpath+'"'):$x
+	svs($destpath +'/currentShim')
+    endif
+
+    if($1 = 'waveforms') then
+        $destpath = $out + '/shapelib'
+        rm('-rf',$destpath):$x
+        shell('mkdir -p "' + $destpath+'"'):$x
+        $file = curexp + '/PsgFile'
+	exists($file, 'file'):$ex
+        if($ex > 0.5) then
+	    lookup('file', $file, 'readline',1):$line
+	    while ($line <> '') do
+	    	$origpath = $line 	
+            	cp('-rf',$origpath,$destpath)
+		lookup('readline',1):$line
+	    endwhile
+	endif
+    endif
+
+
+    if($1 = 'pulseSequence') then
+
+        exists(seqfil,'psglib'):$ex,$file
+	if($ex) then
+          $destpath = $out + '/psglib'
+          rm('-rf',$destpath):$x
+          shell('mkdir -p "' + $destpath+'"'):$x
+          cp('-rf',$file,$destpath)
+	endif
+    endif
+endif

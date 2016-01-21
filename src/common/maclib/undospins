@@ -1,0 +1,55 @@
+"macro undospins"
+" **************************************************************************"
+" *** undospins - returns parameters and line assignments from before	 ***"
+" ***	  last iteration.						 ***"
+" **************************************************************************"
+
+" spins('iterate') begins by putting chemical shifts and coupling"
+" 	constants in 'spins.inpar' "
+
+  $oldsys=''
+  $filepath = curexp + '/spins.inpar'
+  lookup('file',$filepath,'skip',3,'read'):$oldsys,$ret
+  if $oldsys<>spinsys then
+      "write('line3','oldsys=%s spinsy=%s',$oldsys,spinsys)"
+      write('line3','Cannot return line assignments, spin system has been changed.')
+      return
+  endif
+  $filepath = curexp + '/spini.inpar'
+  $par=' '
+  $value=0
+  $ret=2
+  lookup('file',$filepath,'read',2):$par,$value,$ret
+  while ($ret=1) or ($ret=2) do
+      {$par}=$value
+      lookup('read'):$par,$ret
+      if $ret=1 then
+          lookup('read'):$value,$ret
+          "write('alpha','par=%s value=%f ret=%d',$par,$value,$ret)"
+      endif
+  endwhile
+
+  $clasize=size('cla')
+  $slfreqsize = size('slfreq')
+  $filepath = curexp + '/spini.savela'
+  lookup('file',$filepath,'read',2):$oldclasize,$oldslfreqsize,$ret
+  if ($ret=2) then
+      if (($oldclasize<>$clasize) or ($oldslfreqsize<>$slfreqsize)) then
+          write('line3','cannot return line assignments')
+	  return
+      else
+	  $i=0
+	  $j=1
+	  clindex[1]=0,0
+          while $j<$clasize do
+	      $j=$j+1
+	      clindex[$j]=0
+          endwhile
+	  dlalong('returnla')
+	  spins
+	  dga
+      endif
+  else
+      write('line3', 'cannot return line assignments from \'spini.savela\'')
+  endif
+

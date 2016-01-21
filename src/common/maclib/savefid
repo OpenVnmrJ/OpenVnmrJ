@@ -1,0 +1,148 @@
+"macro savefid"
+is_cpfid:$cpfid
+if ($cpfid=0) then file='exp' endif
+
+if ($# < 2) then $2='' endif
+$new=$2
+isnewexp:$isnew
+if (auto='y') then $isnew=1 endif
+
+updatesampglobal
+$svftmplt=svftmplt
+if ($# > 0) then svftmplt=$1 endif
+
+"***Make sure templates are not an empty strings***"
+if (adirtmplt='') then
+        setadirtmplt
+        setvalue('adirtmplt',adirtmplt,'processed')
+endif
+if (svftmplt='') then
+        setsvftmplt
+        setvalue('svftmplt',svftmplt,'processed')
+endif
+if (sdirtmplt='') then
+        setsdirtmplt
+        setvalue('sdirtmplt',sdirtmplt,'processed')
+endif
+if (samplename='') then setsamplename endif
+
+"******************************************************************"
+"The following section makes sure that none of the three"
+"   Templates has any string parameter with empty value"
+$return=1
+checktemplates('processed'):$return
+if ($return=0) then return($return) endif
+"******************************************************************"
+
+"****Create sample directory if needed***"
+if (sample='') or (archivedir='') then
+  Automkdir
+  setvalue('sample',sample,'processed')
+  setvalue('samplename',samplename,'processed')
+  setvalue('nameprefix',nameprefix,'processed')
+  setvalue('archivedir',archivedir,'processed')
+  savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+  $archsamp=archivedir+'/'+sample
+else
+  if ($isnew) then
+        exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$ex
+	$archsamp=archivedir+'/'+sample
+  else
+	substr(file,'dirname'):$archsamp
+	Autockdir($archsamp)
+	$ex=1
+  endif
+  if ($ex=0) then
+        Automkdir
+        setvalue('sample',sample,'processed')
+        setvalue('samplename',samplename,'processed')
+        setvalue('nameprefix',nameprefix,'processed')
+	setvalue('archivedir',archivedir,'processed')
+        savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+	$archsamp=archivedir+'/'+sample
+  endif
+endif
+"**********************************************************"
+	"Reset wds and wstart"
+wds='' wstart='' flush
+	"***Remove any leftover panel control parameters before saving the fid***"
+	"  This could have been a left over from non-CP macro driven "
+	"	acquisition.  This step is just a cleanup. no harm done"
+$wqlist=''
+module('list','walkupQpars'):$wqlist
+$wqlist='chreqexp '+$wqlist
+rmpar($wqlist)
+rmpar($wqlist,'processed')
+exists('rmcraftpar','maclib'):$macex
+if $macex then rmcraftpar endif
+
+"*****Save data *****************"
+if ($isnew) or ($2='new') then
+   isFDAsystem:$p11
+   isFDAdir($archsamp):$p11dir
+   if($p11 > 0) then
+      $ext='.REC'
+   elseif(recordSave > 0) then
+      $ext='.rec'
+   else
+      $ext='.fid'
+   endif
+   $svftmp2=svftmplt
+   chkname(svftmplt,'alnum-'):$sdum,$svftmp2
+   if ($svftmp2<>svftmplt) then
+        svftmplt=$svftmp2
+        setvalue('svftmplt',svftmplt,'processed')
+   endif
+   Svfname($archsamp+'/'+svftmplt,$ext,'.fid, .rec, .REC'):file
+endif
+setvalue('file',file,'processed')
+strstr(file,$archsamp+'/'):$e,$dum,filename
+strstr(filename,'.','last'):$e,filename
+setvalue('filename',filename,'processed'):$e
+svf(file,'opt') // 'opt' is a flag to save optional files.
+if $## < 0.5 then
+    write('line3','FID saved: %s',file)
+endif
+
+"*****Record this fid in fidlog*****"
+if ($isnew) or ($2='new') then
+  $name=''
+  substr(file,'basename'):$name,$ext
+  cplog($name,'write')
+endif
+
+// email fid is flag is set
+teststr('eOptions','emailfid'):$emailfid
+//getadminfo('emailfid'):$emailfid
+//if(emailflag='y' and $emailfid='email') then
+if (emailflag='y') and ($emailfid) then
+  efid
+endif
+
+"*******Do mirroring*******"
+datamirror(file,'fid')
+
+isFDAsystem:$p11
+if ($p11) then
+   samplemirror
+else
+   $mirror='no'
+   getadminfo('datamirror'):$mirror
+   exists('adir2tmplt','parameter'):$ad2ex
+   if ($ad2ex) then
+      if (adir2tmplt='') then $ad2ex=0 endif
+   endif
+   if ($ad2ex) and ($mirror='yes') then
+	samplemirror
+   endif
+endif
+
+"*******do usersavefid *****"
+dousermacro($0)
+
+"**********Save all shapes in sample/dirinfo/shapelib*****"
+SavePsgShapes
+
+"*******************************************************"
+svftmplt=$svftmplt
+return($return)

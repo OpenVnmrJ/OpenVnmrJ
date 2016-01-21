@@ -1,0 +1,45 @@
+#! /bin/sh
+#************************************************************************
+#									
+# Copyright (c) Varian Assoc., Inc.  All Rights Reserved.
+#
+#************************************************************************
+#
+#  This script is used to create a LOG file and start browser programs
+#
+#************************************************************************
+LOGFILE="LOG_browser.`hostname`"
+PROG_UI="ib_ui"
+PROG_GRAPHICS="ib_graphics"
+
+# Check the log file.  If browser exist, quit.
+if [ -f $LOGFILE ]; then
+   echo " Cannot start another browser on \"`hostname`\"."
+   cat $LOGFILE
+   exit 1
+fi
+
+(
+   # Create a log file
+   echo " `whoami` is running browser on `hostname` since `date`" > $LOGFILE
+   echo "     from directory `pwd`" >> $LOGFILE
+   echo " Browser programs are: ">> $LOGFILE
+
+   # Start the browser programs, register their IDs and wait for their deaths
+   # Note that the server program PROG_UI should start first before the 
+   # client program PROG_GRAPHICS.
+   $PROG_UI & 
+   PID_UI="$!"
+   # N.B. The graphics program is now started by forking from the UI program.
+   #$PROG_GRAPHICS &
+   #PID_GRAPHICS="$!"
+
+   echo "      ($PID_UI) `which $PROG_UI`" >> $LOGFILE
+   #echo "      ($PID_GRAPHICS) `which $PROG_GRAPHICS`" >> $LOGFILE
+
+   wait
+
+   # Remove log file
+   /bin/rm -f $LOGFILE
+) &
+exit 0

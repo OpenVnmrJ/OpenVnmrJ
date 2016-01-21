@@ -1,0 +1,17 @@
+"macro lclisten"
+"lclisten - listen for lc complete message"
+" first argument is the directory name to put result into (passed to lclisten)"
+" second argument is the file to look for: systemdir + '/tmp/lcdata"
+" third argument is the macro to call after the file is found: lcdone"
+" the macro will be called with the exp number as the first argument"
+" and the filename as the second argument"
+
+$exp=''
+jexp:$exp
+$file= systemdir + '/tmp/*.lcd'
+rm('-f ' + $file):$x
+$exitfile= systemdir+ '/tmp/ignore.lcd'
+$cmd= systemdir +'/tcl/bin/fileListen "' +vnmraddr +'" '
+$cmd= $cmd + '"' + $1 + '"' + ' ' + $exp + ' "' + $file + '" lcdone "' + $exitfile + '" &'
+shell($cmd):$dum
+shell('touch "'+$exitfile+'"'):$dum

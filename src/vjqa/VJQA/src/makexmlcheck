@@ -1,0 +1,64 @@
+# @(#)makevnmrj 5.33 09/07/06 Copyright (c)1991-2006 Varian, Inc.
+#
+# Varian, Inc. All Rights Reserved. 
+# This software contains proprietary and confidential information of
+# Varian, Inc. and its contributors.  Use, disclosure and reproduction
+# is prohibited without prior consent.
+#
+
+SHELL = /bin/sh
+
+# SCCSJDIR=        $(sccsjdir)
+MAKEFILE=        makexmlcheck
+# BASE_DIR:sh =    pwd
+JDIR= $(JDK_DIR)
+JAR_FILE=        XmlTest.jar
+
+CP1=$(BASE_DIR)/xml.jar:$(BASE_DIR)/postgresql.jar
+CP2=$(CP1):$(BASE_DIR)/jh.jar:$(BASE_DIR)/jhall.jar
+CP3=$(CP2):$(BASE_DIR)/jhbasic.jar:$(BASE_DIR)/jhtools.jar
+CP4=$(CP3):$(BASE_DIR)/jsearch.jar
+CP5=$(CP4):$(BASE_DIR)/lcaccess.jar:$(BASE_DIR)/msaccess.jar
+CP6=$(CP5):$(BASE_DIR)/pdaaccess.jar
+CLASS_PATH=$(CP6):./lib/jemmy.jar:./lib/junit.jar:./lib/vnmrj.jar
+CLASS_PATH=./
+
+IDIR= -I$(JDIR)/include -I$(JDIR)/include/solaris
+CFLAGS= -G
+
+# PatientTableAdapter ShufObj TwoColumnPanel
+
+BO_SRC=			\
+	XmlChecker.java	\
+	XmlTest.java
+
+# CanvasBorder ContourMapUI ControlAction ControlDropTargetListener
+# DataGraphUI  ExpIFrame  ExpQueueComp  ExpTearFrame
+# ExpTopBar    Filler    Glue    ParamArray
+# PrintContainer ProcessTabPane  SaveData  SaveFileButton
+# VjMenuBar  ContourThresholdFilter  DisplayControls  ColorSetter
+# Colorable  VnmrXCanvas ExperimentIF
+
+BO_CLASS= $(BO_SRC:.java=.class)
+
+class: 
+	($(MAKE) -ef $(MAKEFILE) Buildclass \
+	 "BASE_DIR=$(BASE_DIR)" \
+	 "J_CLASS=$(BO_CLASS) " )
+	 @echo
+
+	jar cf $(JAR_FILE) *class
+
+	@echo +++++++ DONE makevnmrj +++++++
+
+classclean: 
+	(rm -f *.class )
+
+clean: classclean
+
+Buildclass: $(J_CLASS)
+	pwd
+	@echo
+
+$(J_CLASS):
+	(umask 2; javac -J-mx128m -Xlint:unchecked -deprecation -classpath $(CLASS_PATH) $(@:.class=.java))

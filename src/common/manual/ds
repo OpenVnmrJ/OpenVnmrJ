@@ -1,0 +1,107 @@
+*******************************************************************************
+ds<(index)>	    -  Display a Spectrum
+ds<options>	    -  Specify interactive display options for ds
+select(...)         -  Select a Spectrum or 2D plane without Displaying it
+phasing             -  Parameter to control update region during phasing
+lvltlt              -  Parameter to control sensitivity of lvl tlt adjustments
+*******************************************************************************
+
+ds:
+
+  "ds" displays a single spectrum.   Integral display is controlled by the
+  parameter "intmod".
+    intmod="off"       turns off the integral display.
+    intmod="full"      displays the entire integral.
+    intmod="partial"   displays every other integral region.
+  Parameter entry after a spectrum has been displayed with the "ds" command
+  will cause the spectrum to be updated.
+
+  Two additional parameters control the behavior of the "ds" command.
+  The parameter "phasing" (in the "global" parameter set) controls the
+  percentage of the spectrum that is updated during interactive
+  phasing.  This parameter can be set in the range of 10 to 100.  A
+  value of 100 will cause the entire spectrum to be updated.  A value
+  of 20 will cause the area between the two horizontal cursors to be
+  updated.  The parameter "lvltlt" (in the "current" parameter set)
+  controls the sensitivity of the interactive lvl / tlt adjustment.
+  The parameter can be set to any positive real number.  It is basically
+  a multiplier for the sensitivity.  The default value is 1.0.  Larger
+  values will make the adjustments larger.  Smaller values will make the
+  adjustments smaller.
+
+  For arrayed 1-D spectra or for 2-D spectra, a particular trace can
+  be viewed by supplying the index number as an argument.
+  For 2-D data sets, spectra can be displayed from either the f1 or f2
+  domain by setting "trace" equal to 'f1' or 'f2', respectively.
+  Following the command "ft1d", interferograms may be viewed by
+  setting "trace='f1'" and then typing "ds".
+
+
+select:
+
+  "select" is used to used to direct future actions to apply either
+  to a particular spectrum in a 1D array or trace in a 2D or to a
+  particular 2D plane from a 3D data set.  For 1D operations, "select"
+  has the following usages:
+
+			select('next')
+			select('prev')
+			select(index):r1
+                        select:r1
+
+  "select('next')" increments the 1D spectrum or trace index to the
+  next one; "select('prev')" decrements it to the previous one.  If
+  a non-sequential index is desired, "select(index)" can be used.
+  The index of the selected spectrum can be returned to the caller
+  if the command is suffixed with a colon and a parameter name, e.g.,
+  r1.  If select is called with no arguments but is suffixed with a
+  colon and a parameter name, it will return the current index to the
+  parameter.
+
+
+  For selecting various 2D planes of a 3D data set, "select" has the
+  following usages:
+
+			select('next')
+			select('prev')
+			select('proj')
+
+			select('plane_type','proj')
+			select('plane_type',plane_index)
+
+  "select('next')" increments the parameter "index2" to its next
+  value and sets up VNMR to be ready to display the 2D plane whose
+  number is the new "index2" value.  "select('prev')" performs
+  analogously except that "index2" is decremented.  "select('proj')"
+  selects the 2D projection whose plane type is determined by the
+  parameter "plane".  The type of plane can also be specified in the
+  arguments to "select" in the 2D mode, e.g., select('plane_type') where
+  'plane_type' can take the values 'f1f3', 'f2f3', and 'f1f2'.  The
+  plane_index (number of the plane to be selected) can also be speci-
+  fied.  The parameters "plane" and "index2" serve to indicate the
+  exact 2D plane that is currently viewable by VNMR.  Note that index2
+  can not be entered from the keyboard.  That is,  one can not select
+  a new 2D plane by changing the value of index2.  One must use the
+  command "select".
+  
+
+  When VNMR is first booted up, "select" is in 1D mode.  "select"
+  enters into 2D mode if any of the key words 'f1f3', 'f2f3', 'f1f2',
+  or 'proj' are present in the argument list.  The "ds" and "jexp"
+  commands reset "select" back to the 1D mode.
+
+
+  ds can take several options :
+
+	toggle	- switch between BOX and CURSOR mode.
+	restart	- redraw cursor if it has been turned off.
+	expand	- toggle between expanded and full view of spectrum.
+	spwp	- interactively adjust start and width of spectrum display.
+	phase	- enter interactive phasing mode.
+	thresh	- interactively adjust threshold.
+	z	- interactively set integral resets.
+	dscale	- toggle scale below spectrum on and off.
+	lvltlt	- interactively adjust lvl and tlt parameters.
+	scwc	- interactively adjust start and width of chart.
+	noclear	- start or restart the ds display without clearing the graphics screen.
+	exit   	- exit the ds display, leaving a non-interactive dss display

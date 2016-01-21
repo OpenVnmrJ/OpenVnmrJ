@@ -1,0 +1,61 @@
+"macro _probe"
+
+jexp:$e
+if (not $e) then return endif
+operights('canmanageprobe'):$ok
+if ($ok<1) then
+    write('error','%s does not have the rights to change probe',operator)
+    $probe='' 
+    exists(systemdir+'/acqqueue/probe','file'):$e
+    if ($e>0.5) then
+	lookup('file',systemdir+'/acqqueue/probe','read'):$probe
+    endif
+    setvalue('probe',$probe,'global')
+    vnmrjcmd('pnew','probe')
+    return
+endif
+write('reset','/vnmr/acqqueue/probe')
+write('file','/vnmr/acqqueue/probe','%s',probe)
+
+probeidez('set')
+$e=0
+getProbePath:$e,$file
+if $e=0 then
+    if (appmode <> 'imaging') then
+      write('line3','Current probe calibration file does not exist, please create using "Probe" popup.')
+    endif
+    return
+endif
+
+updateprobe(probe)
+"copy bearing for the liquids bearing air  from the probe file"
+exists('liqbear','parameter','global'):$e
+if ($e>0.5) then
+   getparam('bearing','Probe'):liqbear
+endif
+exists('spintype','parameter','global'):$e
+if ($e>0.5) then
+   getparam('spintype','Probe'):spintype
+endif
+exists('spinmax','parameter','global'):$e
+if ($e>0.5) then
+   getparam('spinmax', 'Probe'):spinmax
+   setlimit('spin',spinmax,0,1)
+endif
+exists('probetype','parameter','global'):$e
+if ($e<0.5) then
+   create('probetype','string','global')
+endif
+probetype='liquids'
+getparam('probetype','Probe'):probetype
+
+exists('probestyle','parameter','global'):$e
+if ($e<0.5) then
+   create('probestyle','string','global')
+endif
+getparam('style','Probe'):probestyle
+
+exists('pfgmapset','maclib'):$macex
+if ($macex) then
+   pfgmapset:$ret
+endif

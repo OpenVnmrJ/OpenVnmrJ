@@ -1,0 +1,53 @@
+"macro BPC13updatepw90"
+"BPC13updatepw90"
+pwC=trunc(10*pwC + 0.5)/10
+
+$pwC='' format(pwC,3,1):$pwC
+$pwClvl='' format(pwClvl,2,0):$pwClvl
+$compC='' format(compC,1,3):$compC
+
+BPsetparams('pw90',$pwC,'C13')
+BPsetparams('pwC',$pwC,'C13')
+BPsetparams('compC',$compC,'C13')
+BPsetparams('pwClvl',$pwClvl,'C13')
+BPsetparams('tpwr',$pwClvl,'C13')
+
+"Biopack power limits are active if BPpwrlimits=1 "
+exists('BPpwrlimits','parameter','global'):$e
+if ($e>0) then
+ $BPpwrlimits='' format(BPpwrlimits,1,0):$BPpwrlimits
+ BPsetparams('BPpwrlimits',$BPpwrlimits,'H1')
+endif
+
+"1H and 13C spinlock upper limits if BPpwrlimits=1 "
+exists('BPdpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrspinlock='' format(BPdpwrspinlock,5,0):$BPdpwrspinlock
+ BPsetparams('BPdpwrspinlock',$BPdpwrspinlock,'C13')
+endif
+
+"default values for 13C and 1H spinlock fields"
+exists('BPspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPspinlock='' format(BPspinlock,6,0):$BPspinlock
+ BPsetparams('BPspinlock',$BPspinlock,'C13')
+endif
+
+"1H and 13C decoupling power upper limits if BPpwrlimits=1 "
+exists('BPdpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrmax='' format(BPdpwrmax,2,0):$BPdpwrmax
+ BPsetparams('BPdpwrmax',$BPdpwrmax,'C13')
+endif
+
+"System power limits"
+exists('maxattench2','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench2='' format(maxattench2,2,0):$maxattench2
+ BPsetparams('maxattench2',$maxattench2,'C13')
+endif
+
+if BPplot='off' then BPplot='' endif "reset plotter"
+BPsetupshapes "recreate *.DEC shapes with new pwC"
+BPcal
+banner('C13 Pulse Probefile Parameters Updated and Decoupling Shapes Re-created')

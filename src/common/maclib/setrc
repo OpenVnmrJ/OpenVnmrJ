@@ -1,0 +1,226 @@
+"macro setrc"
+"setrc - set receiver time constants"
+
+"***************************************************************"
+// Is it a cryo probe
+$iscryo='no'
+if (tn='C13') then
+  exists('probestyle','parameter','global'):$x
+  if ($x) then
+    if (probestyle='cold') then
+      $iscryo='yes'
+    endif
+  endif
+endif
+
+$stepsize=0.4  // for vnmrs only
+if (Console='vnmrs') then
+    setlimit('alfa',8190,0,$stepsize)
+endif
+
+"**************************Set rof2***************************"
+// $minrof2 is the lowest rof2 value in curpar
+	$rsize=size('rof2')
+	if ($rsize>1) then
+	   sort(rof2):$ra,$minrof2
+	   $minrof2=$minrof2[1]
+	else
+	   $minrof2=rof2
+	endif
+	$r1=0 $raction='min'
+//	--------------------------------------------------------
+
+// Check if probe file has a rof2 value for tn
+//   but ONLY if rof2 is not an array
+	if ($rsize<2) then
+	   getparam('rof2'):$r1
+	endif
+	if ($r1) then	// $minrof2 is now set based on probe file
+	   $raction='set' 
+	   $minrof2=$r1
+	else		// Check if probe file has a minrof2 value for tn
+	   getparam('minrof2'):$minrof2
+	endif
+//	-------------------------------------------------------
+
+// rof2 safty.  Check if the probe file has
+//   minimum rof2 value for the Probe
+	$absminrof2=2 $safty=0
+	getparam('minrof2','Probe'):$absminrof2
+//      -------------------------------------------------------
+
+// For cryosafty, the Proberof2 cannot be less than 350
+	if ($iscryo='yes') and ($absminrof2<350) then
+	    $absminrof2=350
+	endif
+//      -------------------------------------------------------
+
+// A tnrof2 cannot be less than Proberof2
+	if ($minrof2<$absminrof2) then $safty=1 $minrof2=$absminrof2 endif
+//      -------------------------------------------------------
+
+// Now take action in setting or checking rof2
+	if ($raction='set') then   // rof2 from the probe file
+	   if (rof2<>$minrof2) then
+		if ($safty) then
+		    write('error','rof2 set to %g - minimum safe value allowed',$minrof2)
+		else
+		    write('line3','rof2 set to %g - from the probe file',$minrof2)
+		endif
+	   endif
+	   rof2=$minrof2
+	else
+		// There is no tn specific rof2 in the probe file OR
+		//   rof2 is an array.  Make sure all rof2
+		//   values are equal or greater than $minrof2
+	   $i=1
+	   $array=array
+	   repeat
+		if (rof2[$i]<$minrof2) then
+		    if ($## < 1) then
+		    	write('line3','rof2[%d] set to minimum of %g',$i,$minrof2)
+		    endif
+		    rof2[$i]=$minrof2
+		else
+		    rof2[$i]=rof2[$i]
+		endif
+		$i=$i+1
+	   until $i > $rsize
+	   array=$array
+	endif
+//      -------------------------------------------------------
+
+"**************************Set alfa***************************"
+// $minalfa is the lowest alfa value in curpar
+        $asize=size('alfa')
+        if ($asize>1) then
+           sort(alfa):$ra,$minalfa
+           $minalfa=$minalfa[1]
+        else
+           $minalfa=alfa
+        endif
+        $r1=0 $aaction='min'
+//      --------------------------------------------------------
+
+// Check if probe file has a alfa value for tn
+//   but ONLY if alfa is not an array
+        if ($asize<2) then
+           getparam('alfa'):$r1
+        endif
+        if ($r1) then   // $minalfa is now set based on probe file
+           $aaction='set'
+           $minalfa=$r1
+        else            // Check if probe file has a minalfa value for tn
+           getparam('minalfa'):$minalfa
+        endif
+//      -------------------------------------------------------
+
+// Now take action in setting or checking alfa
+        if ($aaction='set') then   // alfa from the probe file
+           if (alfa<>$minalfa) then
+                write('line3','alfa set to %g - from the probe file',$minalfa)
+	   endif
+           alfa=$minalfa
+        else
+                // There is no tn specific alfa in the probe file OR
+                //   alfa is an array.  Make sure all alfa
+                //   values are equal or greater than $minalfa
+           $i=1 
+	   $array=array
+           repeat
+                if (alfa[$i]<$minalfa) then
+                    if ($## < 1) then
+                        write('line3','alfa[%d] set to minimum of %g',$i,$minalfa)
+                    endif
+		    alfa[$i]=$minalfa
+		else
+		    alfa[$i]=alfa[$i]
+                endif
+                $i=$i+1
+           until $i > $asize
+	   array=$array
+        endif
+//      -------------------------------------------------------
+
+"**************************Set ddrtc and adjust rof2***************************"
+$dwell = 1e6/sw
+$value = alfa[1] + rof2[1] + 2*pw[1]/3.14159
+if (Console='vnmrs') then
+     mkpar('pulse','ddrtc',0)
+     setlimit('ddrtc',1000,0,$stepsize)
+     lp=0
+     exists('ddrpm','parameter'):$e
+     if ($e>0.5) then
+        if (ddrpm = 'e') then
+           $value = alfa[1]
+        elseif (ddrpm = 'r') then
+           $value = alfa[1]+rof2[1]
+	elseif (ddrpm='n') then
+	   $value=ddrtc
+        endif
+     endif
+     if $value>1000 then ddrtc=1000 else ddrtc=$value endif
+
+	"Readjust rof2 if ddrtc is rounded due to stepsize limit"
+     if (ddrtc<>$value) then
+	$rof2=rof2[1]
+	if ($e) then
+          if (ddrpm = 'r') then
+	     $rof2=ddrtc-alfa[1]
+	  elseif (ddrpm='p') then
+	     $rof2=ddrtc - alfa[1] - 2*pw[1]/3.14159
+          endif
+	else
+	  $rof2=ddrtc - alfa[1] - 2*pw[1]/3.14159
+	endif
+		//Make sure rof2 doesn't violate minrof2 condition
+		// because of the above recalculation
+		// Increase rof2/ddrtc appropriately to accomodate this
+	if ($rof2<>rof2[1]) then
+	   if ($rof2<$minrof2-($stepsize/2)) then
+		    //Adjust the difference to nearest higher multiple
+		    //  of stepsize.  This will make sure ddrtc continues
+		    //  to respect stepsize
+		$stepshift=trunc(($minrof2-$rof2)/$stepsize)+1
+		ddrtc=ddrtc+($stepshift*$stepsize)
+		$rof2=$rof2+($stepshift*$stepsize)
+	   endif
+
+	   rof2[1]=$rof2
+	endif
+        $value=ddrtc
+     endif
+     if ($e) then
+	if ddrpm='p' then
+          $ddrtccorr=0.8
+          getparam('ddrtccorr'):$ddrtccorr
+          ddrtc=ddrtc-$ddrtccorr $value=ddrtc
+        endif
+     endif
+endif
+
+// Set up linear prediction if necessary.  
+if ($value > $dwell) and ($asize<2) and ($rsize<2) then
+  if (Console='vnmrs') then
+     $ndwell= trunc(($value/$dwell)+0.5)
+     if ($ndwell<0) then $ndwell=0 endif
+     lsfid='n'
+  else
+     $ndwell=trunc(((rof2+alfa)/$dwell)+0.5)
+     if ($ndwell<0) then $ndwell=0 endif
+     $rof2 = $ndwell*1e6/sw - alfa
+     if ($rof2 < $minrof2) then
+	$ndwell=$ndwell+1
+	$rof2=$ndwell*1e6/sw - alfa
+     endif
+     rof2=$rof2
+     lsfid=-1*$ndwell
+     lp=0
+  endif
+  parlp
+  $setlp=1
+  if (proc='lp') and (lpopt='b') and (lpext-3 >= $ndwell) then
+    $setlp=0
+  endif
+  if ($setlp) then setLP(3+$ndwell) endif
+endif

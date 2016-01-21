@@ -1,0 +1,77 @@
+"macro BPauto_2DplotBEST"
+" BPauto2DplotBEST "
+cd(userdir+'/Auto2DBEST')
+
+if (BPplot='file') then
+ BPplotdir=userdir+'/Auto2DBEST'
+else
+ printon man('proteinpreface3PD') printoff
+endif
+
+shell('rm *.ps')
+shell('rm 2Dplots*')
+ 
+rt(userdir+'/Auto2DBEST/N15hsqc')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hnco_CH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hnco_NH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncocacb_CH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncocacb_NH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncaco_CH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncaco_NH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncacb_CH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncacb_NH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncoca_CH_2D')
+BPauto2dftBEST 
+
+rt(userdir+'/Auto2DBEST/hncoca_NH_2D')
+BPauto2dftBEST 
+
+ $pltt=''
+    plotinfo(plotter):$pltt
+    lookup('file','/vnmr/devicetable','seek','Example','readline',2)
+    $devtype='' $res=1
+    while ($devtype<>$pltt) and ($res=1) do
+      lookup('seek','PrinterType','read'):$devtype,$res
+    endwhile
+    $ext=''
+    if $devtype=$pltt then
+      $raster=''
+      lookup('seek','raster','read'):$raster
+      if $raster='0' then
+        $ext='.pgl'
+      elseif ($raster='3')or($raster='4') then
+        $ext='.ps'
+      endif
+    endif
+
+    if $ext='.ps' then         "prepare pdf file"
+    $string='cd '+userdir+'/Auto2DBEST; cat *.ps >> '+userdir+'/Auto2DBEST/2Dplots; ps2pdf '+userdir+'/Auto2DBEST/2Dplots;'
+     shell($string):$dummy
+     shell('vnmr_open '+userdir+'/Auto2DBEST/2Dplots.pdf &'):$dummy
+    endif
+
+if $ext='.ps' then
+ banner('Automatic 2D Processing/Plotting Finished.Open 2Dplots.pdf')
+else
+ banner('Automatic 2D Processing/Plotting Finished')
+endif
+
+write('line3','Automatic 2D Processing and Plotting Finished')

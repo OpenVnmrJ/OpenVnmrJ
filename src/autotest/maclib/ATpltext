@@ -1,0 +1,29 @@
+"macro ATpltext"
+"ATpltext(x,y)"
+" plot test description at position x,y "
+
+$textfile=autotestdir+'/texts/'+at_currenttest
+exists($textfile,'file'):$isthere
+
+if ($isthere) then
+   if ($#>0) then
+      $x=$1 $y=$2
+   else
+      $x=wcmax-110 $y=wc2max
+   endif
+
+   write('plotter',$x,$y,''):$ys    "get the height of characters in $ys"
+   $y = $y - $ys                  "position $y at bottom of the character"
+
+   $ok = 1
+   $t=''
+   lookup('file',$textfile)
+
+   repeat
+      lookup('readline'):$t,$ok
+      if ($ok = 1) then
+         write('plotter',$x,$y,'%s',$t)
+         $y = $y - $ys
+      endif
+   until ($ok = 0)
+endif

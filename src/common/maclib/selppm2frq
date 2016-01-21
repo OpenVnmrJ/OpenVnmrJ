@@ -1,0 +1,92 @@
+"macro selppm2frq"
+if ($# < 1) then $1='setup' endif
+
+IF ($1 = 'setup') THEN
+  on('selfrqppm'):$ison
+  if ($ison > 0) then
+    		$selfrqw=selfrqw selfrqw=0
+    		$selfrqppm=selfrqppm 
+    		selfrqppm=0 off('selfrqppm')
+    		selfrqc=0 off('selfrqc')
+
+                exists('findfrqflg','parameter'):$ffex
+                if ($ffex>0) then
+                   if (findfrqflg='y') then
+                        findselfrq($selfrqppm):$selfrqppm,$selfrqw
+                   endif
+                endif
+
+    		$spsize=size('$selfrqppm')
+    		$swsize=size('$selfrqw')
+
+    		if ($swsize < $spsize) then
+    		   	$x=$swsize+1
+       			repeat
+			    $selfrqw[$x]=$selfrqw[$swsize]
+			    $x=$x+1
+       			until $x > $spsize
+    		endif
+    		$x=1
+    		repeat
+			if $selfrqw[$x]=0 then $selfrqw[$x]=50 endif
+				"if the width is zero it is reset to 50 Hz - avoid Pbox panic"
+			setselfrqc($selfrqppm[$x]*reffrq,$selfrqw[$x])
+			$x=$x+1
+    		until ($x > $spsize)
+   endif
+
+ELSEIF ($1 = 'init') THEN
+
+   $sps=size('selfrqppm')
+   $sws=size('selfrqw')
+   if ($2 = 0) then
+	selfrqppm=0 off('selfrqppm')
+   elseif ($2 > $sps) then
+	$i=$sps+1
+	repeat
+	  selfrqppm[$i]=0
+	  $i=$i+1
+	until $i > $2
+   elseif ($2 < $sps) then
+	$selfrqppm=selfrqppm
+	selfrqppm=0
+	$i=1
+	repeat
+	    selfrqppm[$i]=$selfrqppm[$i]
+	    $i=$i+1
+	until $i > $2
+   elseif ($2 = $sps) then
+	selfrqppm=selfrqppm
+   endif
+
+   if ($2 = 0) then
+        selfrqw=10 
+   elseif ($2 >= $sws) then
+        $i=$sws+1
+        repeat
+          selfrqw[$i]=0
+          $i=$i+1
+        until $i > $2
+   elseif ($2 < $sws) then
+        $selfrqw=selfrqw
+        selfrqw=0
+        $i=1
+        repeat
+            selfrqw[$i]=$selfrqw[$i]
+            $i=$i+1
+        until $i > $2
+   elseif ($2 = $sws) then
+	selfrqw=selfrqw
+   endif
+
+ "The following section is for layout display"
+   on('selfrqppm'):$ison
+   if ($ison>0) then
+     if (customflag='n') then
+	wstart='suselfrq'
+     elseif (customflag='y') then
+	wstart='' wds='wstart=\'suselfrq\'' 
+     endif
+   endif
+ENDIF
+

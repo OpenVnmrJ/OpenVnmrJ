@@ -1,0 +1,92 @@
+"macro bashdbw"
+if ($1='getbw') then
+   $wsppm='' $csppm='' $shape=''
+   $width=0 $offset=0
+   pbox_shapeinfo(selshapeA+'.RF'):$shape,$width,$offset
+   if ($shape='') then
+	on('selfrqc'):$sfcon
+	on('selfrqppm'):$sfppmon
+	if ($sfcon) then
+	   $offset=selfrqc[1]
+	   $width=selfrqw[1]
+	elseif ($sfppmon) then
+	   getoffset(selfrqppm[1]*reffrq):$offset
+	   $width=selfrqw[1]
+	else
+	   $width=sw
+	   $offset=$offset+tof
+	endif
+   else
+	$offset=$offset+tof
+   endif
+   $offset=trunc($offset+0.5)
+   $width=trunc($width+0.5)
+	format($width/reffrq,0,2):$wppm
+	format($wppm,'lower'):$wsppm
+	getppm($offset):$ppm
+	format($ppm,0,2):$cppm
+	format($cppm,'lower'):$csppm
+	return($wsppm,$csppm,$width,$offset-tof)
+
+elseif ($1='setsw1') then
+
+   $wsppm='' $csppm='' $shape=''
+   $width=0 $offset=0
+   if ($# > 1) then $width=$2 $offset=$3
+   else
+     pbox_shapeinfo(selshapeA+'.RF'):$shape,$width,$offset
+     if ($shape='') then
+        on('selfrqc'):$sfcon
+        on('selfrqppm'):$sfppmon
+        if ($sfcon) then
+           $offset=selfrqc[1]-tof
+           $width=selfrqw[1]
+        elseif ($sfppmon) then
+           getoffset(selfrqppm[1]*reffrq):$offset
+	   $offset=$offset-tof
+           $width=selfrqw[1]
+        endif
+     endif
+   endif
+   $lsfrq1=-$offset
+   $offset=trunc($offset+0.5)
+   $width=trunc($width+0.5)
+
+   $fold=0
+   if ($width=0) then $sw=sw $lsfrq1=0
+   elseif ($offset=0) then $sw=$width*1.1
+   else
+
+      if ($offset<0) then $absoff=-$offset else $absoff=$offset endif
+      $i=1  $sw=sw
+
+//	Do calculations based on different pads.
+//	Use the minimum calculated sw1 with at least
+//	10% extra w.r.t. bw
+
+	$width1=$width*0.75,$width*0.85,$width*0.9,$width*0.95,$width,$width*1.05,$width*0.9,$width*1.15,$width*1.25
+	$widthsize=size('$width1')
+	$j=1
+	repeat
+      	   $fold1=trunc($absoff*2/$width1[$j])
+           if ($fold1=0) then 
+		$sw1=((trunc($width1[$j]/$absoff))+1)*$absoff
+           else
+		$sw1=($width1[$j]/2 + (($absoff - $fold1*$width1[$j]/2)/$fold1))*2
+           endif
+	   if ($sw1 > 1.1*$width) and ($sw1 < $sw) then
+	    	$sw=$sw1 $fold=$fold1
+	   endif
+	   $j=$j+1
+	until $j > $widthsize
+   endif
+   $foldx=($fold mod 2)
+   if ($foldx>0) then $fadflg='n' else $fadflg='y' endif
+   if ($## < 1) then
+	sw1=$sw fadflg=$fadflg lsfrq1=$lsfrq1
+	gaussian('f1') reff1:$dum
+   else
+        return($sw,$lsfrq1,$fadflg)
+   endif
+
+endif

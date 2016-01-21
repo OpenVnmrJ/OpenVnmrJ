@@ -1,0 +1,77 @@
+"macro plothires"
+"***************************************************************"
+" plothires - macro used by plot_seqfil to plot 1D spectrum  "
+"***************************************************************"
+
+// if (auto='y') then return endif
+if ($1 = 'nohires') then return endif
+if ($# < 2) then $2='' endif
+
+$sub1d=''
+substr($1,1,3):$sub1d
+
+	if arraydim > 1 then $vo=vo else $vo=wc2max/2 endif
+        $savewc=wc $savesc=sc
+        $savewp=wp  $savesp=sp
+	jexp:$curexp
+
+    if ($sub1d <> 'exp') then
+        $seqfil=seqfil
+        tmpcopy($seqfil)
+        RT($1)
+        wft
+    else
+	$cmd='j'+$1
+        exec($cmd)
+	ds(1)
+    endif
+
+        f full dc
+	numreg:$regions
+        if (tn = 'H1') then
+         if ($regions > 4) and (console = 'mercury') then
+          bc else dc
+         endif
+        endif
+        $newwc=$savewc $newsc=$savesc 
+        $edge=sp 
+        if $savesp > $edge then 
+          sp=$savesp
+          $width=sw-sp+$edge
+          if ($width > $savewp) then
+           wp=$savewp
+          else
+           wp=$width 
+           $newwc= wp*$newwc/$savewp 
+          endif
+        else
+          sp=$edge
+          $wp=$savewp - sp+$savesp
+          $newwc=$newwc*$wp/$savewp
+          $newsc = $newsc + ($savewc - $newwc)
+          $width = sw
+          if ($width > $wp) then
+           wp=$wp
+          else
+           wp=$width 
+           $wc=$newwc
+           $newwc=wp*$newwc/$wp
+           $newsc= $newsc + ($wc - $newwc)
+          endif
+        endif
+         
+	wc=$newwc 
+	sc=$newsc
+
+	$vp=vp 
+	intmod='off' cutoff=0.8*$vo,0.1*$vo pl 
+	if $2='axis' then pscale endif
+	vp=$vp 
+    	if ($sub1d <> 'exp') then
+               tmpreturn($seqfil)
+	else
+          $jexp='' format($curexp,'lower'):$jexp
+          $jexp='jexp'+$jexp
+          exec($jexp)
+    	endif
+

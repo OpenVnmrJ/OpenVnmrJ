@@ -1,0 +1,68 @@
+"macro quantsetint"
+"quant_setint - set integral interactively for Quantitation panel. "
+"jmd 070506"
+
+"A single argument supplied to this macro is used to calculate"
+"the integral value for the peak selected by the cursor position."
+"Three supplied arguments will take the second and third arguments"
+"as the start & stop reset points for the integral specified in the"
+"first argument.  This is so that the Quantitation panel can redisplay"
+"all the integrals correctly when 'insref' is changed." 
+
+
+if $#=3 then
+	$frq=(($2+$3)/2)+rfl-rfp
+write('line3','$frq for %s : %2.1f',$1,$frq)
+else
+	$frq = cr - rfp + rfl
+write('line3','$frq : %2.1f',$frq)
+endif
+
+if (intmod = 'partial') then
+  $num = trunc(size('lifrq'))
+  $step = 2
+else
+  $num = size('lifrq')
+  $step = 1
+endif
+if ($num = 1) then
+  $index = 1
+  $found = 1
+  integ:$ht,$val
+write('line3','$val : %2.1f',$val)
+write('line3','Only one integral region used')
+else
+  $index = 0
+  $found = 0
+  $num = $num - $step
+write('line3','Searching the integrals for this selection')
+  while ($index < $num) and not $found do
+     $index = $index + $step
+     if ($frq > lifrq[$index]) then
+        $found = 1
+     endif
+  endwhile
+  if ($found and ($step = 2)) then
+     if ($frq > lifrq[$index-1]) then
+        $found = 0
+     endif
+  endif
+  if ($found) then
+     integ(lifrq[$index]+rfp-rfl,lifrq[$index-1]+rfp-rfl):$ht,$val
+write('line3','Found $val : %2.1f',$val)
+  endif
+endif
+
+if ($found) then
+	$intAorC='int'+$1
+	$startintAorC='startint'+$1
+	$endintAorC='endint'+$1
+write('line3','$intAorC : %s',$intAorC)
+	{ $intAorC } = $val
+	{ $startintAorC } = lifrq[$index-1]+rfp-rfl
+	{ $endintAorC } = lifrq[$index]+rfp-rfl
+write('line3','intAorC $val : %2.1f',$val)
+write('line3','intAorC : %2.1f',{$intAorC})
+else
+  write('error','cursor is outside of integral region')
+endif

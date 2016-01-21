@@ -1,0 +1,29 @@
+"macro calc_power"
+"macro calc_power"
+"********************************************************************
+"    finds the transmitter power
+"
+" Ex.:
+"    prescan_power(<argument>)
+"
+"       <argument_1> = 'coarse power' - coarse power value
+"       <argument_2> = 'fine power'   - fine pwer value
+"********************************************************************
+if ($# <> 2) then
+     write('line3','Function calc_power needs two (2) input arguments!')
+     abort
+endif     
+$coarse = $1
+$fine = $2
+if ($fine < 1) then
+  $fine = 1
+endif
+
+ln(10.0):$ln10
+ln($fine/fattn[1]):$ln_powerf
+$power_fine = -20.0 * ( $ln_powerf /$ln10)
+$power = $coarse - $power_fine
+$c1=$ln10/20.0
+exp($coarse*$c1):$c2
+$lpwr=$fine*$c2/4095
+return($power,$lpwr)

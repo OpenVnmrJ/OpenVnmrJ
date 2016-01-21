@@ -1,0 +1,154 @@
+"macro gradsign"
+
+"*************************************************************************************
+"  gradsign - Determine gradient polarity for decctool
+
+" Details - The x1, y1, z1 shimmap files (__.f.fdf) are used to determine the sign of 
+"           the gradient field. gsign routine searches the center trace starting from 
+"           size/4. Four consecutive points are checked.
+"           Shimmaps are acquired as sagital: z,y,x = r,p,s
+
+"**************************************************************************************
+
+$macro = $0
+$GSCAL = userdir+'/gshimdir/calib'
+$GSHIMD = userdir+'/gshimdir'        "create gshim directories"
+exists($GSHIMD,'file'):$ex
+if ($ex = 0) then
+    write('error','%s:Directory does not exist- %s',$macro,$GSHIMDIR)
+    abort
+endif
+$GSHIMDIR = userdir+'/gshimdir/data' "data files here"
+exists($GSHIMDIR,'file'):$ex1
+if ($ex1 = 0) then
+    write('error','%s:Directory does not exist - %s',$macro,$GSHIMDIR)
+    abort
+endif
+
+exists($GSCAL,'file'):$ex1
+if ($ex1 = 0) then
+    write('error','%s:Directory does not exist - %s',$macro,$GSCAL)
+    abort
+endif
+$shimpar = 'shimmap.'+gcoil+'.atp.param' 
+$shimpar = $GSCAL+'/'+$shimpar
+exists($shimpar,'file'):$ex
+if ($ex = 0) then
+    write('error','%s:File does not exist - %s',$macro,$shimpar)
+    abort
+endif
+
+"z1.f file, sagital, z,y,x = RO,PE,PE2"
+$zfile = $GSHIMDIR+'/z1.f.fdf'
+$zcfile = $GSHIMDIR+'/z1c.f.fdf'
+exists($zfile,'file'):$ex
+exists($zcfile,'file'):$ex2
+if($ex2 > 0) then
+  $zfile = $zcfile
+endif
+if ($ex = 0) and ($ex2 = 0) then
+    write('error','%s:File does not exist - %s',$macro,$zfile)
+    abort
+endif
+
+"split fdf file
+shell('rm -f '+$GSHIMDIR+'/tmp*'):$x
+cp($shimpar,$GSHIMDIR+'/tmp.param'):$x
+$cmd='fdfsplit '+$zfile+' '+$GSHIMDIR+'/tmp.1 '+$GSHIMDIR+'/tmp'
+shell($cmd)
+"determine sign of field along each dimension, => RO PE PE2"
+$cmd='gsign '+$GSHIMDIR+'/tmp > '+$GSHIMDIR+'/tmp.out' 
+shell($cmd)
+$name2 = $GSHIMDIR+'/tmp.out'
+exists($name2,'file'):$ex2
+if ($ex2 = 0) then
+  write('error','%s: %s does not exist',$macro,$name2)
+  abort
+endif
+lookup('mfile',$name2,'filekey'):$key
+lookup('mfile',$key,'seek','Field','read','read','read'):$zfield,$s2,$s3
+
+"y field map"
+exists($GSHIMDIR+'/y1.f.fdf','file'):$ex
+if ($ex = 0) then
+    write('error','%s:File does not exist - %s/y1.f.fdf',$macro,$GSHIMDIR)
+    abort
+endif
+shell('rm -f '+$GSHIMDIR+'/tmp*'):$x
+cp($shimpar,$GSHIMDIR+'/tmp.param'):$x
+$cmd='fdfsplit '+$GSHIMDIR+'/y1.f.fdf '+$GSHIMDIR+'/tmp.1 '+$GSHIMDIR+'/tmp'
+shell($cmd)
+$cmd='gsign '+$GSHIMDIR+'/tmp > '+$GSHIMDIR+'/tmp.out'
+shell($cmd)
+$name2 = $GSHIMDIR+'/tmp.out'
+exists($name2,'file'):$ex2
+if ($ex2 = 0) then
+  write('error','%s: %s does not exist',$macro,$name2)
+  abort
+endif
+lookup('mfile',$name2,'filekey'):$key
+lookup('mfile',$key,'seek','Field','read','read','read'):$s1,$yfield,$s3
+
+"x field map"
+exists($GSHIMDIR+'/x1.f.fdf','file'):$ex
+if ($ex = 0) then
+    write('error','%s:File does not exist - %s/x1.f.fdf',$macro,$GSHIMDIR)
+    abort
+endif
+shell('rm -f '+$GSHIMDIR+'/tmp*'):$x
+cp($shimpar,$GSHIMDIR+'/tmp.param'):$x
+$cmd='fdfsplit '+$GSHIMDIR+'/x1.f.fdf '+$GSHIMDIR+'/tmp.1 '+$GSHIMDIR+'/tmp'
+shell($cmd)
+$cmd='gsign '+$GSHIMDIR+'/tmp > '+$GSHIMDIR+'/tmp.out'
+shell($cmd)
+exists($name2,'file'):$ex2
+if ($ex2 = 0) then
+  write('error','%s: %s does not exist',$macro,$name2)
+  abort
+endif
+lookup('mfile',$name2,'filekey'):$key
+lookup('mfile',$key,'seek','Field','read','read','read'):$s1,$s2,$xfield
+
+"make a copy of the decc file for reference"
+$name1 = $GSHIMDIR+'/decc_file.'+gcoil
+exists($name1,'file'):$ex  "check if decc-file exists "
+if ($ex = 0) then
+  write('error','%s: %s does not exist',$macro,$name1)
+  abort
+endif
+
+"read shim scaling factor; assume same scaling for all shims"
+lookup('mfile',$name1,'filekey'):$key
+lookup('mfile',$key,'seek','totalscale','read','read','read'):$deccx,$deccy,$deccz
+
+"write out the information"
+$ATDIR = userdir+'/autotest'   "check and create autotest directory"
+exists($ATDIR,'file'):$ex
+if ($ex = 0) then
+  mkdir($ATDIR)
+endif
+$name = $ATDIR+'/gradient.sign'
+shell('rm -f '+$name)
+write('reset',$name)  "create file"
+$xfield = -$xfield  $yfield = -$yfield  $zfield = -$zfield
+write('file',$name,'#XYZ_DECC_GRADIENT_SCALE')
+write('file',$name,'%4.2f  %4.2f %4.2f ',$deccx*100,$deccy*100,$deccz*100)
+
+if($xfield = 1) AND ($yfield = 1) AND ($zfield = 1) then
+  write('file',$name,'#GRADIENT_POLARITY_IS_OK')
+  write('line3','X, Y and Z Gradient polarity is OK')
+elseif($xfield = 0) OR ($yfield = 0) OR ($zfield = 0) then  
+  write('file',$name,'#GRADIENT_POLARITY_ERROR')
+  write('file',$name,'%4.2f %4.2f %4.2f ',$deccx*$xfield,$deccy*$yfield,$deccz*$zfield)
+  write('error','Error in Gradient Polarity measurement(x,y,z) %d  %d  %d ',$xfield,$yfield,$zfield)
+  abort
+else
+  write('file',$name,'# CHANGE TO =>')
+  write('file',$name,'%4.2f  %4.2f  %4.2f ',$deccx*$xfield*100,$deccy*$yfield*100,$deccz*$zfield*100)
+  write('line3','Change DECC X,Y,Z gradient polarity: %4.2f %4.2f %4.2f => %4.2f %4.2f %4.2f', 
+         $deccx*100,$deccy*100,$deccz*100,$deccx*$xfield*100,$deccy*$yfield*100,$deccz*$zfield*100)
+endif
+
+
+
+

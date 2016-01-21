@@ -1,0 +1,83 @@
+"macro setarray"
+" Ancestry: setarray	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************************"
+"     setarray: macro to set regular parameter arrays                       "
+"     Usage: setarray(param_name, start_value, step_value, number)          "
+"***************************************************************************"
+
+"[0] Constants and Declarations"
+$nullstring = ''
+$param = ''
+$start = 0.0
+$step = 0.0
+$count = 0.0
+
+"[1] Input Parameter Count and Traps"
+
+if $# < 0.5 then
+  input('Enter the parameter name: '):$param
+  input('The start value for the array: '):$start
+  input('The step size for the array: '):$step
+  input('The number of array elements: '):$count
+endif
+
+if ($# > 0.5) and ($# < 3.5) then
+  write('error','%s','Usage: setarray or setarray("name",start,step,count)')
+  abort
+endif
+
+if ($# > 3.5) and ($# < 4.5) then
+  $param = $1
+  $start = $2
+  $step = $3
+  $count = $4
+endif
+
+if $# > 4.5 then
+  write('error','%s','Usage: setarray or setarray("name",start,step,count)')
+  abort
+endif
+
+exists($param,'parameter'):$ex1
+if ($ex1 < 0.5) then
+  write('error','%s','setarray: Requested parameter does not exist in expt')
+  abort
+endif
+
+if (typeof($param) > 0.5) then
+  write('error','%s','setarray:Sorry does not do string parameters')
+  abort
+endif
+
+
+"[2] Actions"
+
+$exisiting_array = array
+   
+$i = 1 
+$value = $start
+
+while ($i<=$count)
+do
+  $temparray[$i] = $value
+  $value = $value + $step
+  $i = $i + 1
+endwhile
+{$param} = $temparray
+
+exists('tcldg','parameter','global'):$ex
+if($ex = 0) then
+  da
+endif
+
+
+if (array <> $exisiting_array  and  array <> $param) then
+  write('error','Advisory: "%s" is also arrayed', $exisiting_array)
+endif
+
+"***************************************************************************"
+"             Modification History"
+"
+" 9910269 - if tcldg don't list array"
+
+"***************************************************************************"

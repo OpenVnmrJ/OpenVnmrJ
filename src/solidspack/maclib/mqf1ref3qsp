@@ -1,0 +1,77 @@
+"macro mqf1ref3qsp"
+"mqf1ref3q - references F1 of 3Q MQMAS spectra for spin"
+"values I = 3/2 to 9/2 using the method of Massiot etal." 
+
+"For a standard shearing transformation:" 
+
+"The value of 'ratio' is the shearing constant 'k'. B/A = ratio"
+"where A/(A+B) is the 3Q dwell and B/(A+B) is the time during" 
+"the acquisition to refocus the 1Q coherence." 
+
+"scalesw = A/(A+B)"
+"$mqscale = ABS(mQ - ratio) where mQ = 3. mQ = -3 if ival = |mQ|/2." 
+
+"For a Split t1 Spectrum:"
+
+"The dwell is the full split t1 dwell dd2*(1 + ratio) = dd2*(A+B)/A and"
+"F1 needs no scaling. $mqscale = ABS(mQ - ratio) = ABS(A*mQ-B)/(A+B)"
+
+"scalesw1 = 1.0"
+"$mqscale = ABS(mQ - ratio)*A/(A+B)"
+
+exists('ival','parameter'):$ival
+if ($ival=0) then 
+   create('ival')
+   setgroup('ival','processing')
+   ival=0.5
+endif
+
+exists('scalesw1','parameter'):$scalesw1
+if ($scalesw1=0) then
+   create('scalesw1')
+   setgroup('scalesw1','processing')
+endif
+
+if (ival = 1.5) then     "ratio = 7/9"
+   scalesw1 = 1
+   $mqscale = 17/8
+   write('line3','Scaling and Referencing MQMAS f1 axis for Spin 3/2')
+else
+   if (ival = 2.5) then     "ratio = 19/12"
+      scalesw1 = 1
+      $mqscale = 17/31
+      write('line3','Scaling and Referencing MQMAS f1 axis for Spin 5/2')
+   else
+      if (ival = 3.5) then     "ratio = 101/45"
+         scalesw1 = 1.0
+         $mqscale = 35/146
+         write('line3','Scaling and Referencing MQMAS f1 axis for Spin 7/2')
+      else
+         if (ival = 4.5) then     "ratio = 91/36" 
+            scalesw1 = 1
+            $mqscale = 17/127
+            write('line3','Scaling and Referencing MQMAS f1 axis for Spin 9/2')
+         else     
+            write('error','Set ival to the correct spin number (1.5 to 4.5).')
+         endif
+      endif
+   endif
+endif
+
+rfl=rfl-rfp
+$delta_rfl = rfl - sw/2
+rfp=0.0
+
+exists('refpos','parameter'):$refpos
+if ($refpos>0.0) then 
+   reffrq = sfrq + $delta_rfl/1e6
+   refpos = 0.0
+endif
+
+$delta_rfl1=$delta_rfl*$mqscale
+rfl1 = $delta_rfl1 + sw1/2
+exists('lsfrq1','parameter'):$lsfrq1
+if ($lsfrq1 > 0) then 
+   rfl1 = rfl1 + lsfrq1
+endif
+rfp1 = 0.0

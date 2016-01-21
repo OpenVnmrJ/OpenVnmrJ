@@ -1,0 +1,36 @@
+"macro ATfilesprint"
+"ATfilesprint"
+"while in files program, this prints selected entries"
+printon
+$n=0
+filesinfo('number'):$n
+if ($n > 0) then
+        $f=''
+        $file_array=''
+        $i=1
+        while ($i <= $n) do
+            filesinfo('name',$i):$f
+            $file_array[ $i ] = $f
+            $i=$i+1
+        endwhile
+
+        $i=1
+        while ($i <= $n) do
+            exists($file_array[ $i ],'directory'):$e
+            cat($file_array[ $i ])
+            $i = $i + 1
+        endwhile
+
+
+"If files is still active, then use the redisplay option of"
+"the filesinfo command; otherwise, just start files again"
+
+        $gcmd=''
+        graphis:$gcmd
+        if ($gcmd = 'files') then
+            filesinfo('redisplay')
+        else
+            files
+        endif
+endif
+printoff

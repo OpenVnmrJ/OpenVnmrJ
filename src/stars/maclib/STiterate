@@ -1,0 +1,225 @@
+"macro STiterate"
+beepoff
+tcl('stopUpdate')
+$lbv=lb
+on('lb'):$lb
+getvalue('lb','processed'):lb
+on('lb','processed'):$lbp
+if ($lbp<0.5) then 
+   off('lb')
+endif
+
+$gfv=gf
+on('gf'):$gf
+getvalue('gf','processed'):gf
+on('gf','processed'):$gfp
+if ($gfp<0.5) then 
+   off('gf')
+endif
+
+$npv=np
+on('np'):$np
+getvalue('np','processed'):np
+on('np','processed'):$npp
+if ($npp<0.5) then 
+   off('np')
+endif
+
+$sratev=srate
+on('srate'):$srate
+getvalue('srate','processed'):srate
+on('srate','processed'):$sratep
+if ($sratep<0.5) then 
+   off('srate')
+endif
+
+$dsp=dsp
+if $dsp<>'n' then 
+   dsp='n'
+   $sratetv=srate
+   wft
+   srate=$sratetv
+endif
+
+jexp:$data_exp_number
+$data_exp_name=curexp
+
+write('line3','%s/exp%d',userdir,addsubexp):$addsub_name
+$exp4_name=userdir+'/exp4'
+exists($exp4_name,'directory'):$exp4
+if ($exp4<0.5) then
+   cexp(4)
+endif
+
+if ($data_exp_number=addsubexp) then 
+   write('error','No Iteration in addsub experiment - Choose Another')
+   abort
+endif
+
+if ($data_exp_number=4) then   
+   $data_exp_number=data_exp
+   jexp($data_exp_number)
+   exists('ni','parameter'):$ni
+   if ($ni>0.5) then 
+      if (ni>1) then
+         dconi dconi('trace')
+      endif
+   endif
+   ds
+
+   mvstars(4,$data_exp_number)
+
+   getvalue('lb','processed'):lb
+   on('lb','processed'):$lbp
+   if ($lbp<0.5) then 
+      off('lb')
+   endif
+   getvalue('gf','processed'):gf
+   on('gf','processed'):$gfp
+   if ($gfp<0.5) then 
+      off('gf')
+   endif
+   getvalue('np','processed'):np
+   on('np','processed'):$npp
+   if ($npp<0.5) then 
+      off('np')
+   endif
+   getvalue('srate','processed'):srate
+   on('srate','processed'):$sratep
+   if ($sratep<0.5) then 
+      off('srate')
+   endif
+endif
+
+exists('ni','parameter'):$ni
+if ($ni>0.5) then 
+   if (ni>1) then
+      dconi dconi('trace')
+   endif
+endif
+ds
+
+clradd
+spadd
+
+exists($data_exp_name+'/expint','file'):$data_expint
+exists($addsub_name+'/expint','file'):$expint5
+if ($expint5>0.5) then 
+   rm($addsub_name+'/expint')
+endif
+if ($data_expint>0.5) then
+   cp($data_exp_name+'/expint',$addsub_name+'/expint')
+endif
+
+jaddsub
+
+cdc
+$sp=sp $wp=wp f
+dc
+sp=$sp wp=$wp
+ds
+
+lb=$lbv 
+if ($lb<0.5) then 
+   off('lb')
+endif
+
+gf=$gfv
+if ($gf<0.5) then 
+   off('gf')
+endif
+
+np=$npv
+if ($np<0.5) then 
+   off('np')
+endif
+
+srate=$sratev
+if ($srate<0.5) then 
+   off('srate')
+endif
+
+STstars('iter')
+fpmult=0.5
+phsim 
+phfid=0
+proc='ft'
+lsfid=0
+
+exists('downsamp','parameter'):$downsamp
+if ($downsamp>0) then
+   on('downsamp'):$downsampv
+   if ($downsampv=1) then
+      numreg:$nreg
+      $nresets=2.0*$nreg+1
+      $i=1
+      repeat 
+         lifrq[$i]=lifrq[$i]/downsamp
+         $i=$i+1
+      until $i>$nresets
+      downsamp='n'
+   endif
+endif
+
+mf(addsubexp,4)
+
+exists($addsub_name+'/expint','file'):$expint5
+exists($exp4_name+'/expint','file'):$expint4
+if ($expint4>0.5) then
+   rm($exp4_name+'/expint')
+endif
+if ($expint5>0.5) then 
+   cp($addsub_name+'/expint',$exp4_name+'/expint')
+endif
+
+exists($addsub_name+'/resfile','file'):$resfile5
+exists($exp4_name+'/resfile','file'):$resfile4
+if ($resfile4>0.5) then 
+   rm($exp4_name+'/resfile')
+endif
+if ($resfile5>0.5) then
+   cp($addsub_name+'/resfile',$exp4_name+'/resfile')
+endif
+
+jexp($data_exp_number)
+
+exists('ni','parameter'):$ni
+if ($ni>0.5) then 
+   if (ni>1) then
+      dconi dconi('trace')
+   endif
+endif
+ds
+
+clradd
+spadd
+
+jexp4
+
+tcl('invokeTab LCNMR/STARS')
+
+if $dsp<>'n' then 
+   dsp=$dsp
+endif
+$sratetv=srate
+wft
+srate=$sratetv
+
+cdc
+$sp=sp $wp=wp f
+dc
+sp=$sp wp=$wp
+
+intmod='off'
+
+ds
+tcl('invokeTab LCNMR/STARS')
+vsadj vs=vs/3
+ds
+
+beepon
+newdg
+tcl('startUpdate; invokeTab LCNMR/STARS')
+
+write('line3','Iteration Complete')
+

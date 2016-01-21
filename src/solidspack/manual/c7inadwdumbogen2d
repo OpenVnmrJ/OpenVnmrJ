@@ -1,0 +1,112 @@
+Protocol: C7inadwdumbogen2d  Sequence: c7inadwdumbogen2d.c  Apptype: solidseq1d
+
+Description:
+
+   A 2Q-1Q correlation using C7 on "X", DUMBOgen during t1 on "X" and wDUMBOgen
+   during t2.
+
+Additional Softtware
+
+reset_c7inadwdumbogen2d - This macro uses the calibrated values of pwX90, aX90 and 
+srate to set up the C7 recoupling mixing sequence, DUMBO for F1 and windowed 
+DUMBO for F2. The macro is executed by the protocol.
+
+Parameter Groups
+
+dumboX: Module:  yes
+Sequence:  tancpxdumbo.c
+Description: Implements DUMBO homonuclear decoupling on the obs
+channel.
+Parameters:  Sequence Page
+       aXdumbo - amplitude of the DUMBO on obs.
+       pwXdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       nXdumbo - DUMBO cycles represented in the .DEC file.
+       ofXdumbo - overall frequency offset.
+       chXdumbo = 'dec' must be set (not shown).
+Implementation: MPSEQ dumbo = getdumbo("dumboX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+scalef1X: (processing)  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the
+              inverse of the mutiple-pulse scale factor.
+
+c7X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.	      
+
+wdumboX:  Module:  yes
+Sequence:  wdumbo1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling with
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwdumbo - amplitude of DUMBO on obs.
+       pwXwdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       r1Xwdumbo - prepulse delay (similar to rof1).
+       r2Xwdumbo - postpulse delay (similar to rd or rof2).
+       r3Xwdumbo - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXwdumbo - time for one DUMBO cycle including the window.
+       npaXwdumbo - number of 100 ns ticks in the detection window.
+       phXwdumbo - overall small-angle phase for DUMBO to align  the
+              tilted precession axis in the XY plane.
+       chXwdumbo = 'obs' must be set (not shown).bo
+Implementation:  WMPA wdumbo = getwdumbo("wdumboX");
+Implementation:  WMPA wdumbo = getwdumboxmx("wdumboX");
+Underscore function: _wdumbo(wdumbo,phXwdumbo); phXwdumbo is the
+              overall phase table.
+
+dcfX:  Module: yes (called by getwdumbogen()) 
+Sequence:   wdumbogen1d.c
+Description:  A set of 12 coefficents - used to calculate DUMBO phases.
+              Includes the parameter "sc" to turn on Z-rotation and "q" 
+              to set the number of phases. Check boxes call reset_edcf
+              (eDUMBO and reset_dcf (standard DUMBO) to set starting 
+              coeeficients. 
+Parameters:  Sequence Page
+       ca#Xdcf - # = 1 to 6. 
+       cb#Xdcf - # = 1 to 6. 
+       scXdcf - supercycle "1" turns on Z-rotation and "0" turns it off. 
+       qXdcf - the number of phases in the 3-pi DUMBO cycle. 
+Implementation: WMPA wdumbo = getwdumbogen("wdumboX","dcfX") only;
+Underscore function: _wdumbo(wdumbo,phXwdumbo); phXwdumbo is the
+              overall phase table.
+
+dcf1X:  Module: yes (called by getdumbogen()) 
+Sequence:   c7inadwdumbogen2d.c
+Description:  A set of 12 coefficents - used to calculate DUMBO phases.
+              Includes the parameter "sc" to turn on Z-rotation and "q" 
+              to set the number of phases. Check boxes call reset_edcf1X
+              (eDUMBO and reset_dcf1X (standard DUMBO) to set starting 
+              coeficients. 
+Parameters:  Sequence Page
+       ca#Xdcf - # = 1 to 6. 
+       cb#Xdcf - # = 1 to 6. 
+       scXdcf - supercycle "1" turns on Z-rotation and "0" turns it off. 
+       qXdcf - the number of phases in the 3-pi DUMBO cycle. 
+Implementation: MPSEQ dumbo = getdumbogen("dumboX","dcf1X",0,0.0,0.0,0,1) only;
+Underscore function: _mpseqon(dumbo,phXdumbo); phXdumbo is the
+              overall phase table.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+

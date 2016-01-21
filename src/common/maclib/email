@@ -1,0 +1,30 @@
+"macro email"
+exists($1,'file'):$fex
+if ($fex=0) then
+  write('error','The file %s does not exist',$1)
+  return
+endif
+if ($# < 2) then $2='' endif
+
+$address=$2
+
+if ($address = '') then
+   $yesno='n'
+   if (emailaddr<>'') then
+	$question='Send to this address? (y or n):'
+	write('error','%s',emailaddr)
+	input($question):$yesno
+	if ($yesno='y') then
+		$address=emailaddr
+	endif
+   endif
+endif
+
+if ($address='') then
+  input('Your email address please:'):$address
+endif
+
+if ($address <> '') then
+   vnmremail($1,$address)
+   write('line3','File %s sent by email to %s',$1,$address)
+endif

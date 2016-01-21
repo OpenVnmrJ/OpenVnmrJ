@@ -1,0 +1,109 @@
+"macro savescoutfid"
+"***savescoutfid - this is identical to savefid, except****"
+"*** the fids are stored in scoutfids sub directory*****"
+
+if ($# < 2) then $2='' endif
+$new=$2
+isnewexp:$isnew
+if (auto='y') then $isnew=1 endif
+
+updatesampglobal
+$svftmplt=svftmplt
+
+//exists('scoutinfo','parameter'):$parex
+//if ($parex) then if scoutinfo='' then $parex=0 endif
+//if ($parex) then
+//    $ret=0 $s1='' $s2=''
+//    strstr(svftmplt,'$pslabel$scout'):$ret,$s1,$s2
+//    if ($ret) then
+//	svftmplt=$s1+scoutinfo+$s2
+//    endif
+//endif
+
+"***Make sure templates are not an empty strings***"
+if (adirtmplt='') then
+        setadirtmplt
+        setvalue('adirtmplt',adirtmplt,'processed')
+endif
+if (svftmplt='') then
+        setsvftmplt
+        setvalue('svftmplt',svftmplt,'processed')
+endif
+if (sdirtmplt='') then
+        setsdirtmplt
+        setvalue('sdirtmplt',sdirtmplt,'processed')
+endif
+if (samplename='') then setsamplename endif
+
+"******************************************************************"
+"The following section makes sure that none of the three"
+"   Templates has any string parameter with empty value"
+$return=1
+checktemplates('processed'):$return
+if ($return=0) then return($return) endif
+"******************************************************************"
+
+"****Create sample directory if needed***"
+exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$ex
+if (sample='') or (archivedir='') or ($ex=0) then
+  Automkdir
+  setvalue('sample',sample,'processed')
+  setvalue('samplename',samplename,'processed')
+  setvalue('nameprefix',nameprefix,'processed')
+  setvalue('archivedir',archivedir,'processed')
+  savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+endif
+$archsamp=archivedir+'/'+sample
+"**********************************************************"
+	"Reset wds and wstart"
+wds='' wstart='' flush
+	"***Remove any leftover panel control parameters before saving the fid***"
+	"  This could have been a left over from non-CP macro driven "
+	"	acquisition.  This step is just a cleanup. no harm done"
+$wqlist=''
+module('list','walkupQpars'):$wqlist
+$wqlist='chreqexp '+$wqlist
+rmpar($wqlist)
+rmpar($wqlist,'processed')
+
+"*****Save data *****************"
+exists($archsamp+'/scoutfids','directory'):$direx
+if ($direx=0) then Autockdir($archsamp) endif
+
+if ($isnew) or ($2='new') then
+   $svftmp2=svftmplt
+   chkname(svftmplt,'alnum-'):$sdum,$svftmp2
+   if ($svftmp2<>svftmplt) then
+	svftmplt=$svftmp2
+	setvalue('svftmplt',svftmplt,'processed')
+   endif
+   Svfname($archsamp+'/'+svftmplt,'','.fid'):$file
+   substr($file,'basename'):$filebase,$ext
+   exists('scoutinfo','parameter'):$parex
+   if ($parex) then if (scoutinfo[1]='') then $parex=0 endif endif
+   if ($parex) then
+	file=$archsamp+'/scoutfids/'+$filebase+'_'+scoutinfo
+   else
+	Svfname($archsamp+'/scoutfids/'+$filebase+'_scout','','.fid'):file
+   endif
+endif
+svf(file,'force')
+write('line3','FID saved: %s',file)
+setvalue('file',file,'processed')
+
+"*****Record this fid in scoutlog*****"
+substr(file,'basename'):$name,$ext
+cplog($name,'scout')
+
+"*******Do mirroring*******"
+//datamirror(file,'fid')
+
+"*******do usersavefid *****"
+dousermacro('savefid')
+
+"**********Save all shapes in sample/dirinfo/shapelib*****"
+//SaveShapes
+
+"*******************************************************"
+svftmplt=$svftmplt
+return($return)

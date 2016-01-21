@@ -1,0 +1,58 @@
+"macro gettoken"
+
+/**
+ * Usage: gettoken(input_string<,delimiter>):output_string, next_location
+ * 
+ * Gets the first occurence of a substring in input_string which is delimited by
+ * delimiter, or by the default delimiter '$'.  The substring is returned in
+ * output_string.  The next location in the string after the second delimiter is
+ * returned as a real in next_location.  If there are not both one occurrence of
+ * each of the beginning delimiter and the second delimiter -- in other words,
+ * if the delimiters are not paired -- an empty string is returned in
+ * output_string, and -1 is returned in next_location.  If the delimited
+ * substring is the last substring in input_string, then the substring is
+ * returned as expected, but next_location returns -1.     
+ */
+
+if ($# < 1) then
+    write('line3','Usage: gettoken(input_string<,delimiter>):output_string, next_location')
+    return('',-1)
+endif
+
+$inputString = $1
+length($inputString):$inputStringLength
+//write('line3','DEBUG: input string length = %d', $inputStringLength)
+
+$delimiter = '$'
+if ($#>1) then
+    $delimiter = $2
+endif
+
+length($delimiter):$delimiterLength
+if not ($delimiterLength = 1) then
+    write('line3','gettoken delimiter must be one character only')
+    return('',-1)
+endif
+
+strstr($inputString, $delimiter):$containsDelimiter,$preceedingString,$succeedingString
+if not $containsDelimiter then
+    return('',-1)
+endif
+length($preceedingString):$preceedingStringLength
+
+strstr($succeedingString, $delimiter):$containsDelimiter,$token
+if not $containsDelimiter then
+    return('',-1)
+endif
+
+length($token):$tokenLength
+
+$returnValue = $preceedingStringLength + $tokenLength + 3
+
+if ($returnValue >= $inputStringLength) then
+    $returnValue = -1
+endif
+
+//write('line3', 'DEBUG: returning %s, %d',$token,$returnValue)
+return($token,$returnValue)
+

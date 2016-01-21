@@ -1,0 +1,141 @@
+"macro ckresloc"
+"***********************************************************************"
+"A macro to check automation.conf for any reserved location		"
+"  Operator specific reservations are in the following format		"
+"	cppref_reserveloc_operator: 1 2 4				"
+"  dayQ/nightQ specific reservatiosn are in the following format	"
+"	cppref_DAYQ_ONLY: 1 2 3 4					"
+"	cppref_NIGHTQ_ONLY: 41 42 43					"
+"  neitherQ (i.e., blocked) specific reservations are in the format	"
+"	cppref_NEITHERQ: 23 38						"
+"  Any location not specifically assigned are always allowed		"
+"If cppref_SMSLOCATION: is set to next, all locations except NEITHERQ   "
+"		are allowed						"
+"***********************************************************************"
+
+getfilepath('automation.conf','adm/walkupadm'):$aex,$apath
+if ($aex=0) then return(1) endif
+
+$sloc=''
+string2array($2):$sloc
+$s1='' $s2='' $notok=''
+readfile($apath,'$s1','$s2','cppref_NEITHERQ','local'):$total
+$return=1
+if ($total>0) then
+   $locsize=size('$sloc')
+   string2array($s2):$s2
+   $i=1
+   repeat
+	teststr('$s2',$sloc[$i],'local'):$ok
+	if ($ok) then
+	   if ($1<>'blocked') then
+	    	write('error','Location %s is blocked from any submission',$sloc[$i])
+	   else
+		$i=$locsize
+	   endif
+	   $return=0
+	endif
+	$i=$i+1
+   until $i > $locsize
+endif
+if ($1='blocked') or ($return=0) then return($return) endif
+
+$isnext='random'
+getadminfo('smslocation'):$isnext
+if ($isnext='next') then return(1) endif
+
+IF ($1='operator') THEN
+
+   $sloc=''
+   string2array($2):$sloc
+
+   $s1='' $s2='' $s3='' $notok=''
+   readfile($apath,'$s1','$s2','cppref_reserveloc_','local'):$total
+   if ($total=0) then return(1) endif
+
+   $locsize=size('$sloc')
+   teststr('$s1','cppref_reserveloc_'+operator+':','local'):$ret
+   if ($ret) then
+	string2array($s2[$ret]):$s3
+	$i=1
+	repeat
+	   teststr('$s3',$sloc[$i],'local'):$ok
+	   if ($ok=0) then $notok=$notok+' '+$sloc[$i] endif
+	   $i=$i+1
+	until $i > $locsize
+	string2array($notok):$notok
+	$s2[$ret]=''
+   else
+	$notok=$sloc
+   endif
+
+   $sloc=$notok
+        "If all selected locations belong to the operator"
+        "  Then return 1"
+   if ($sloc[1]='') then return(1) endif
+
+   $return=1
+   $locsize=size('$sloc')
+   $i=1 $s3=''
+   repeat
+	$s3='' $s4='' $ret4=0 $oper=''
+	string2array($s2[$i]):$s3
+	strstr($s1[$i],'cppref_reserveloc_'):$retx,$s4,$oper
+	strstr($oper,':','last'):$retx,$oper
+	$x=1
+	repeat
+	   teststr('$s3',$sloc[$x],'local'):$ok
+	   if ($ok) then
+		write('error','Location %s is reserved for %s',$sloc[$x],$oper)
+		$return=0
+	   endif
+	   $x=$x+1
+	until $x>$locsize
+	$i=$i+1
+   until $i > $total
+
+   return($return)
+
+ELSEIF (($1='dayNnightq') or 
+	($1='dayq') or
+	($1='nightq')) THEN
+
+   $sloc=''
+   string2array($2):$sloc
+
+   $s1='' $s2='' $s3='' $notok=''
+   if ($1='dayq') or ($1='dayNnightq') then
+      	readfile($apath,'$s1','$s3','cppref_NIGHTQ_ONLY','local'):$total
+   else
+      	$total=0
+   endif
+   if ($1='nightq') or ($1='dayNnightq') then
+   	readfile($apath,'$s1','$s2','cppref_DAYQ_ONLY','local'):$total2
+   else
+	$total2=0
+   endif
+   if ($total=0) and ($total2=0) then return(1) endif
+
+   $return=1
+   $locsize=size('$sloc')
+   string2array($s2):$s2
+   string2array($s3):$s3
+   $i=1
+   repeat
+        teststr('$s2',$sloc[$i],'local'):$ok
+        teststr('$s3',$sloc[$i],'local'):$ok2
+	if ($ok) and ($ok2=0) then
+                write('error','Location %s is reserved for DAYQ only',$sloc[$i])
+                $return=0
+	elseif ($ok=0) and ($ok2) then
+                write('error','Location %s is reserved for NIGHTQ only',$sloc[$i])
+                $return=0
+	endif
+	$i=$i+1
+   until $i > $locsize
+   return($return)
+
+ELSEIF ($1='nextloc') THEN
+
+   return(1)
+ENDIF

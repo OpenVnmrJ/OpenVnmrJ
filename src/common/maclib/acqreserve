@@ -1,0 +1,96 @@
+"macro acqreserve"
+// acqreserve - control access to the NMR console
+
+bgmode_is:$e
+if ($e) then
+  return
+endif
+$arg1='on'
+$force='no'
+$noAutoOff='no'
+$setauto=0
+if ($# >= 1) then
+  $arg1=$1
+  $i=2
+  $ch=''
+  while ($i <= $#) do
+    substr(${$i},1,1):$ch
+    if ($ch = 'f') or ($ch = 'F') then
+      $force='yes'
+    endif
+    if ($ch = 'n') or ($ch = 'N') then
+      $noAutoOff='yes'
+    endif
+    $i=$i + 1
+  endwhile 
+endif
+$file=systemdir+'/acqqueue/acqreserve'
+exists($file,'ascii'):$e
+if ($e) then
+  lookup('file',$file,'read'):$owner
+  // force case
+  if ($force = 'yes') then
+    if (($arg1 = 'off') or ($arg1='autooff')) and (owner = $owner) then
+      delete($file)
+      $noAutoOff='no'
+    elseif (($arg1 = 'off') or ($arg1='autooff')) and (owner <> $owner) then
+      write('line3','Acquisition reservation of %s forced off',$owner)
+      shell('date'):$date
+      write('file',$file+'_force',\
+            '%s: Acquisition reservation of %s forced off by %s',\
+            $date,$owner,owner)
+      shell('chmod 666 "'+$file+'_force"'):$x
+      delete($file)
+      system='spectrometer'
+      $noAutoOff='no'
+    elseif ($arg1 = 'on') then
+      if (owner <> $owner) then
+        write('line3','Acquisition reservation forced from %s to %s',$owner,owner)
+        shell('date'):$date
+        write('file',$file+'_force',\
+              '%s: Acquisition reservation forced from %s to %s',\
+              $date,$owner,owner)
+        write('reset',$file)
+        write('file',$file,'%s',owner)
+        shell('chmod 666 "'+$file+'"'):$x
+        shell('chmod 666 "'+$file+'_force"'):$x
+      endif
+      system='spectrometer'
+    endif
+    $setauto=1
+  
+  // non-force case
+  elseif ($arg1 = 'off') and (owner = $owner) then
+    delete($file)
+    $noAutoOff='no'
+    $setauto=1
+  elseif ($arg1 = 'autooff') and (owner = $owner) then
+    exists($file+'_noauto','file'):$e
+    if ($e < 0.5) then
+      delete($file)
+    endif
+  elseif ($arg1 = 'off') and (owner <> $owner) then
+    write('error','Acquisition is reserved by %s',$owner)
+  elseif ($arg1 = 'on') and (owner <> $owner) then
+    write('error','Acquisition is reserved by %s',$owner)
+  elseif ($arg1 = 'on') and (owner = $owner)  then
+    $setauto=1
+  endif
+
+elseif ($arg1 = 'on') then
+  write('file',$file,'%s',owner)
+  shell('chmod 666 "'+$file+'"'):$x
+  system='spectrometer'
+  $setauto=1
+endif
+if ($setauto = 1) then
+  if ($noAutoOff = 'yes') then
+    write('file',$file+'_noauto','%s',owner)
+    shell('chmod 666 "'+$file+'_noauto"'):$x
+  else
+    exists($file+'_noauto','file'):$e
+    if ($e) then
+      delete($file+'_noauto')
+    endif
+  endif
+endif

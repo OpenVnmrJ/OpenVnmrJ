@@ -1,0 +1,746 @@
+"macro cpHXscans2d"
+//cpHXscans2D - Obtain a 2D CP HXX spectrum with 4 scans and 32 increments
+//              using a variety of mixing sequences. 
+
+//            Argument 1 is the action: 'setup', 'process' or 'plot'. The 
+//            action 'setup' initiates an experiment.  The actions 'process'
+//            and 'plot' are called by chempackQ. 
+
+//            Argument 2 is the nucleus, 'C13' or 'N15'.
+
+//            Argument 3 is the region:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'HCa'
+//                   'carbonyl' (13C carbonyl), code 'HCO
+//                   'adam' (13C adamantane 37.77p), code 'HC'
+//                   'amide'(15N amide), code 'HNai'
+//                   'amine' (15N glycine, code 'HNam'
+//                   'amino' (15N glycine, code 'HN' 
+
+//             Also: For calibration with the 13C offset at 100 ppm set:
+//                   'alpha' (13C alpha carbons or glycine methylene), code 'sHCa'
+//                   'carbonyl' (13C carbonyl), code 'sHCO
+
+//            Arguments 4 and 5 are not used. 
+
+//            Argument 6 is 'ctdn' for *no* constant-time decoupling. For the default 
+//            tRFmax is set automatically with a minimum of 5 ms. 
+
+//            Argument 7 is 'spinal', 'tppm' or 'waltz' for dec2, Y-channel 
+//            decoupling. The appropriate parameters are loaded from the probe file.
+
+//            Argument 8 is a code for the 2D display regions: 
+//                    'CC2D' (~200 ppm in F1 and acquisition)
+
+//==================
+// The SETUP macro
+//==================
+
+if (($#>0) and ($1='setup')) then   
+
+// Set the Nuclei and Region
+
+   parammodule('setsampleglobals')
+   rtppar('Settancpx')
+   AhXX
+   parammodule('updatesampleglobals')
+   parammodule('studydir')
+
+// Set the Region
+
+   $reg='' $pwr='' $nuc=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,1):$reg,$pwr,$nuc'
+   exec($macroname) 
+   $pwr='' 
+
+// Get the Spinrate
+
+   exists('SPspinrateon','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPspinrateon','string','global')
+      SPspinrateon='n'
+   endif
+   if (SPspinrateon='y') then 
+      $macronamespin = $0 + '(\'spinrate\'):$srate'
+      exec($macronamespin)
+   else 
+      probeparamgroup('getlocal',$reg,'H1','','srateHX'):srate
+   endif
+
+   if (srate<500) then 
+      write('error','Warning: Error: srate<500, Calibrate srateHX>500 in the Probe File')
+      abort
+   endif
+
+// Calibrate setddrtc for CP
+
+   exists('ddrpm','parameter'):$e
+   if ($e < 0.5) then
+      create('ddrpm','string')
+      ddrpm='r'
+   endif   
+   rof2=rd-0.6 alfa=ad
+
+// Check the Spinrate
+
+   probeparamgroup('getlocal',$reg,'H1','','srateHX'):$srate
+   if (((srate < 0.995*$srate) or (srate > 1.005*$srate)) and (SPspinrateon='y')) then       
+      write('error','Warning: Warning: srate=%f Hz and srateHX=%f Hz in the Probe File Disagree\n',srate,$srate)
+   endif
+
+// Obtain Standard CP and Decoupling Parameters from Probe File
+
+   probeparamgroup('getlocal',$reg,$nuc,'','ofX90','dbX90'):$tof,tpwr
+   tof=$tof
+   probeparamgroup('getlocal',$reg,'H1','','ofX90','dbX90'):$dof,dpwr
+   dof=$dof
+   probeparamgroup('get',$reg,'H1','HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of') 
+   probeparamgroup('get','hp'+$reg,'H1','90H','a','pw')
+   probeparamgroup('get',$reg,$nuc,'90X','a','pw')
+   probeparamgroup('get',$reg,$nuc,'HX','aX')
+   probeparamgroup('get',$reg,'H1','tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,'H1','spinalH','a','pw','ph','alp')
+   Hseq = 'spinal'
+
+// Set Parameters for Mixing (default 'darr', tXmix=200 aHmix=0.0 for Z-filter)
+
+   mMix='darr'
+   tXmix=200.0
+   aHmix=0.0
+   if ($# > 3) then 
+      if ($4 = 'darr') then 
+         tXmix = 0.0
+         if ($# > 4) then 
+            tXmix = $5
+         endif
+         aHmix = aH90*srate*4.0e-6*pwH90
+         mMix = 'darr'
+      elseif (($4 = 'c7') or ($4 = 'c7dqf')) then
+         qXc7 = 10
+         if ($# > 4) then
+            qXc7 = $5
+         endif
+         aXc7 = 2000.0
+         if (srate>500) then
+            $pwXc7 = 1.0e6/(7.0*srate)
+            pwXc7 = 0.4*trunc($pwXc7/0.4 + 0.5)
+            $srate = 1.0e6/(7.0*pwXc7)
+//            sethw('spin', $srate, 'nowait')
+            aXc7 = aX90*(4.0*pwX90)/pwXc7
+            if (aXc7 >= 4095) then 
+               write('error','cpHXscans2d Error: aXc7 is >= to 4095')
+               abort
+            endif
+         endif
+         aHmixc7=aH90
+         dqfXc7='n'
+         if ($4 = 'c7dqf') then 
+            dqfXc7 = 'y'
+         endif
+         mMix = 'c7'
+      elseif (($4 = 'spc5') or ($4 = 'spc5dqf')) then
+         qXspc5 = 10
+         if ($# > 4) then 
+            qXspc5 = $5
+         endif
+         aXspc5 = 2000.0
+         if (srate>500) then 
+            $pwXspc5 = 1.0e6/(5.0*srate)
+            pwXspc5 = 0.1*trunc($pwXspc5/0.1 + 0.5)
+            $srate = 1.0e6/(5.0*pwXspc5)
+//            sethw('spin', $srate, 'nowait')
+            aXspc5 = aX90*(4.0*pwX90)/pwXspc5
+            if (aXspc5 >= 4095) then 
+               write('error','cpHXscans2d Error: aXspc5 is >= to 4095')
+               abort
+            endif
+         endif
+         aHmixspc5=aH90
+         dqfXspc5='n'
+         if ($4='spc5dqf') then 
+            dqfXspc5 = 'y'
+         endif
+         mMix='spc5'
+      elseif ($4 = 'rfdr') then
+         qXrfdr = 10
+         if ($# > 4) then 
+            qXrfdr = $5
+         endif
+         aXrfdr = aX90
+         pwXrfdr= 2.0*pwX90
+         aHrfdr=aH90
+         mMix = 'rfdr'
+      elseif ($4 = 'paris') then
+         aHmparis = 0.0
+         pwHmparis = 8.0
+         ofHmparis = 0.0
+         mMix = 'paris'
+      endif
+   endif
+  
+// Set Region and Indirect Acquisition Parameters from the Display Code
+
+   $regtemp=$reg   
+   axis='pp' pmode='full' dmg1='ph1'
+   setref(tn) setref1(tn)
+   if ($# > 7) then 
+      if ($8='CC2d') then 
+         setoffset('C13',100.0):$tof
+         tof=$tof
+         $reg='HCcenter'      
+         newregion('acq',$reg,'full','f')
+         newregion('d2',$reg,'full','f')
+         BPpipetype='CC'
+         ni=32 phase=1,2 fn1=256
+         dimension='C13 C13'
+      else
+         newregion('acq',$reg,'full','f')
+         newregion('d2',$reg,'full','f')
+         BPpipetype='CC'
+         ni=32 phase=1,2 fn1=256
+         dimension='C13 C13'
+      endif
+   else
+      newregion('acq',$reg,'full','f')
+      newregion('d2',$reg,'full','f')
+      BPpipetype='CC'
+      ni=32 phase=1,2 fn1=256
+      dimension='C13 C13'
+   endif 
+
+// Reset the Offset to 100 ppm and Adjust aHhx for 'Hcenter'
+
+   if ($reg='HCcenter') then 
+      $temptof = tof
+      setref(tn) setoffset('C13',100):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=0p wp=200p
+      $dtof = $temptof - tof
+      $field = (0.25/(pwX90*1e-6))*(aXhx/aX90)
+      $fac = sqrt(1.0 + $dtof*$dtof/($field*$field))
+      aHhx = aHhx*$fac
+   endif 
+   $reg=$regtemp
+
+// Set Direct Acquisition Parameters
+
+   ph at=0.015 fn=4.0*np sb=at/2.0 sb='n' sbs=0.0 sbs='n' 
+   lb=0.0 lb='n' gain=30 nt=4 d1=0.7 dmg='ph'
+
+// Set Linebroadening 
+
+   lb1=sw1/(3.14159*1.0*ni)
+   lb=2.0*sw/(3.14159*np)
+
+// Default No NUS
+
+   sampling='' 
+   CSextschname=''
+   CSext='n'
+   CStype='a'
+   CSdensity=100.0
+
+// Linear Prediction
+
+   parlp
+   proc='ft'
+   parlp(1) proc1='ft' lpopt1='f' lpfilt1=8 lpnupts1=ni strtlp1=ni lpext1=ni strtext1=ni+1
+   if (ni>7) then 
+      proc1='lp' lpnupts1=ni-3 
+   endif
+
+// Constant-time Decoupling (default is 'y')
+
+   ctd='y'
+   tRFmax=5000.0
+   if ($#>5) then
+      if ($6='ctdn') then
+         ctd='n'
+         tRFmax=0.0
+      endif
+   endif
+
+// DEC2 Y-channel Decoupling (default is 'n')
+
+   ddec2='n'
+   if ($#>6) then 
+      if ($7='spinal') then 
+         ddec2='y'
+         Yseq='spinal'
+         probeparamgroup('get',$reg,$nuc,'spinalY','a','pw','alp','ph')
+      elseif ($7='tppm') then
+         ddec2='y'
+         Yseq='tppm'
+         probeparamgroup('get',$reg,$nuc,'tppmY','a','pw','alp','ph')
+      elseif ($7='waltz') then
+         ddec2='y'
+         Yseq='waltz'
+         probeparamgroup('get',$reg,$nuc,'waltzY','a','pw','alp','ph')
+      endif
+   endif
+
+// Access Sample Module
+
+   exists('SPsamplefilename','parameter','global'):$e
+   if ($e<0.5) then 
+      create('SPsamplefilename','string','global')
+      SPsamplefilename=''
+   endif
+
+   exists('samplefilename','parameter'):$e
+   if ($e<0.5) then 
+      create('samplefilename','string')
+      samplefilename=''
+   endif
+
+   samplefilename=''
+   $e=0 $e1=0
+   if (SPsamplefilename<>'') then 
+      $studysamplefilename=archivedir+'/'+sample+'/dirinfo/'+SPsamplefilename
+      exists($studysamplefilename,'file'):$e
+      if ($e>0.5) then
+         shell('touch '+$studysamplefilename):$dum
+         fread($studysamplefilename)
+         samplefilename=SPsamplefilename
+         write('line3','Obtain Sample Module %s from Study',SPsamplefilename)
+      else
+         $usersamplefilename=userdir+'/modules/'+SPsamplefilename
+         exists($usersamplefilename,'file'):$e1
+         if ($e1>0.5) then
+            shell('touch '+$usersamplefilename):$dum
+            fread($usersamplefilename)
+            samplefilename=SPsamplefilename
+            write('line3','Obtain Sample Module %s from Modules Directory',SPsamplefilename)
+         else 
+            write('error','ERROR: Sample Module Does Not Exist')
+         endif
+      endif
+   endif 
+
+   if (samplefilename<>'') then
+      if (tn='C13') then
+         if (C13d1>0.0) then d1=C13d1 endif
+         if (C13nt>0.0) then nt=C13nt endif
+         if (C13sw>0.0) then sw=C13sw endif
+         if (C13at>0.0) then at=C13at endif
+         if (C13np>0.0) then np=C13np endif
+         if (C13ss>0.0) then ss=C13ss endif
+      endif
+      if (refsource1='sfrq') then
+         if (C13ni>0.0) then ni=C13ni endif
+         if (C13sw1>0.0) then sw1=C13sw1 endif
+      endif
+
+      if (tn='N15') then
+         if (N15d1>0.0) then d1=N15d1 endif
+         if (N15nt>0.0) then nt=N15nt endif
+         if (N15sw>0.0) then sw=N15sw endif
+         if (N15at>0.0) then at=N15at endif
+         if (N15np>0.0) then np=N15np endif
+         if (N15ss>0.0) then ss=N15ss endif
+      endif
+      if (refsource1='dfrq2') then
+         if (N15ni>0.0) then ni=N15ni endif
+         if (N15sw1>0.0) then sw1=N15sw1 endif
+      endif
+
+      if (XXCSextschname<>'') then CSextschname=XXCSextschname endif
+      if (XXCSdensity>0.0) then $CSdensity=XXCSdensity endif
+      if (XXsampling<>'') then sampling=XXsampling endif 
+   endif
+
+// Save Sample Module with Study
+
+   $e=0
+   if (SPsamplefilename<>'') then
+      $studysamplefiledir=archivedir+'/'+sample+'/dirinfo'
+      exists($studysamplefiledir,'directory'):$e
+      if ($e>0.5) then
+         module('list',SPsamplefilename):$list
+         writeparam(archivedir+'/'+sample+'/dirinfo/'+SPsamplefilename,$list,'current')
+         write('line3','Write Sample Module %s to Study',SPsamplefilename)
+      else
+         write('line3','Sample Module not Written')
+      endif
+   endif
+
+// Implement NUS
+
+   if (sampling='sparse') then
+      CSdensity=$CSdensity
+      if (CSdensity=100.0) then CSdensity=50.0 endif
+      if (CSextschname<>'') then
+         CSext='y'
+         CStype='i'
+         CSextsch('get') 
+      else
+         sampling=''
+         CSext='n'
+         CStype='a'
+      endif
+   else 
+      CSdensity=100.0
+   endif
+
+// Set the Auto Display to Null
+
+   wnt = ''
+  
+// Set Macro-Specific Processing and Plotting 
+
+   wexp = 'chempackQ'
+   execprocess = $0 + '(\'process\',\''+$2+'\',\''+$3+'\',\''+$4+'\',0)'
+   execplot = ''
+   clear(2)
+//   au
+   return
+endif
+
+//===========================
+// Macro-Specific Processing
+//===========================
+
+if (($# > 0) and ($1 = 'process')) then 
+
+// Analyze the 1H Nutation Curve
+
+   $macroname = $0 + '(\'scans2dhx\',$2,$3,$4,0)'
+   exec($macroname)  
+endif
+
+//===========================
+// Macro-Specific Plotting
+//===========================
+
+if (($# > 0) and ($1 = 'plot')) then 
+   wc = 50 sc = 50
+   plot1d
+   return  
+endif 
+
+//==================================
+// Begin AutoCalibration Utilities
+//==================================
+
+//--------------------
+// The maxamp function
+//--------------------
+
+if (($# > 0) and ($1 = 'maxamp')) then
+   select(celem) 
+   if (celem=1) then 
+      vsadj($2) 
+   endif
+   peak:$ht
+   if ($ht>$2) then 
+      vsadj($2) 
+   endif 
+   return    
+endif  
+
+//--------------------------
+// The  minmaxfit function
+//--------------------------
+
+if (($# > 0) and ($1 = 'minmaxfit')) then 
+
+   $bestone=$2
+   $lim=2
+   if ($#>3) then $lim=$4 endif
+
+// Prepare 'analyze.inp'
+
+   $file=curexp+'/analyze.inp'
+   exists($file,'file'):$a
+   if ($a>0.5) then 
+      write('reset',$file) 
+   endif
+
+   format((2*$lim+1),2,0):$sizes
+
+   write('file',$file,'AMPLITUDE')
+   write('file',$file,'INTENSITY')
+   write('file',$file,'%12s%13s%7s%7s\n','1',$sizes,'linear','linear')
+   format((2*$lim+1),2,0):$sizes
+   write('file',$file,'%8s%5s','NEXT',$sizes)
+   write('file',$file,'1')
+
+   $step=$bestone-$lim
+   repeat
+      select($step)
+      peak:$ht
+      write('file',$file,'%14.1f%12.2f',$step,$ht)
+      $step=$step+1
+   until ($step>$bestone+$lim)
+
+// 'poly2 Analysis with 'expfit'
+
+   analyze('expfit','regression','poly2')
+   $file=curexp+'/analyze.out'
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   format($a1s,8,4):$a1
+   format($a2s,8,4):$a2
+   $inf=-$a1/(2.0*$a2)
+   $infval=$a0+$a1*$inf+$a2*$inf*$inf
+
+// Mean Value from 'poly0' 
+
+   analyze('expfit','regression','poly0')
+   lookup('file',$file)
+   lookup('seek','NEXT','skip', '2','read','4'):$a0s,$a1s,$a2s
+   format($a0s,8,4):$a0
+   $mean=$a0
+//   write('line3','$inf=%f $infval=%f $mean=%f',$inf,$infval,$mean)
+//   write('line3','$2 = %f',$2)
+
+// Min ($minmax<0) or Max ($minmax>0) or none ($minmax=0)
+
+   $minmax=0 $ret=0.0
+   if (($bestone-$lim)<$inf)and($inf<($bestone+$lim)) then 
+      $ret=$inf
+      if ($infval<$mean) then 
+         $minmax=-1
+      else
+         $minmax=1
+      endif
+   endif
+
+//   write('line3','$xmin = %f $ret = %f $xmax = %f $minmax=%f',$bestone-$lim,$ret,$bestone+$lim,$minmax)
+
+// Return the new $bestone and a Fraction After $bestone,
+// else Return $bestone=$2 and $remainder=0.0 
+
+   $remainder=0 
+   if (($3='min')and($minmax<0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if (($3='max')and($minmax>0)) then 
+      $bestone=trunc($ret) 
+      $remainder=$ret-$bestone
+   endif
+   if ($minmax=0) then
+      $bestone=$2 
+      $remainder=0.0
+   endif
+//   write('line3','$bestone=%f',$bestone)
+   return($bestone,$remainder)
+endif 
+
+//---------------------
+// The Scans2d HX Macro
+//---------------------
+
+if (($# > 0) and ($1 = 'scans2dhx')) then
+
+// Set the Region
+
+   $reg='' $pwr='' $nuc=''
+   $macroname = $0 + '(\'region\',$2,$3,$4,0):$reg,$pwr,$nuc'
+   exec($macroname)  
+   $pwr=''
+
+// Phase the Data
+
+   $fn=fn   
+   fn=16.0*np sb='n' ph wft(1) vsadj(100) noislm(1.0)
+   ds(1)
+   aph0:$aphok
+   if ($aphok=1) then
+      aph0
+      peak:$int
+      if ($int<-10) then rp=rp+180 endif
+   endif
+
+//2D Transform 
+
+   $execprocess=execprocess
+   fn=$fn
+   if (ni>1) then 
+      if (sampling='sparse') then 
+         wstart='NUSwstart'
+         setvalue('wstart',wstart,'processed')
+         $3coef='' substr(f1coef,3):$3coef
+         if $3coef='' or $3coef='0' then CS_se='n' else CS_se='y' endif
+         strstr(file,'enterQ.macdir'):$current
+         if not $current or auto='y' then
+            isInflated:$i
+            if ($i<0.5) then 
+               exists('saveopt','parameter'):$eopt
+               if ($eopt>0.5) then destroy('saveopt'):$dum endif 
+               exists('saveopt','parameter','processed'):$peopt
+               if ($peopt>0.5) then destroy('saveopt','processed'):$dum endif 
+    	       cpsave
+               $procmethod='NUSproc'+CSreconmethod
+               exists($procmethod,'maclib'):$ex
+               if ($ex>0.5) then
+	          exec($procmethod)
+               else
+                  NUSproc
+               endif
+            else
+               wft2da nm2d
+               write('line3','Inflated NUS Data is not Saved')
+            endif
+            exists('saveopt','parameter'):$eopt
+            if ($eopt<0.5) then create('saveopt','flag'):$dum endif 
+            exists('saveopt','parameter','processed'):$peopt
+            if ($peopt<0.5) then create('saveopt','flag','processed'):$dum endif 
+            saveopt='n' setvalue('saveopt','n','processed')
+         endif
+         $procmethod='NUSproc'+CSreconmethod
+         exists($procmethod,'maclib'):$ex
+      else 
+         wft2da nm2d
+      endif 
+   else
+      wft
+   endif
+   setref setref1
+   execprocess=$execprocess
+endif
+
+//-------------------
+// The Region Macro
+//-------------------
+
+if (($# > 0) and ($1 = 'region')) then
+   $nuc=$2
+   $reg=''
+   $pwr=$4
+   if (($# > 4) and ($5 = 1)) then 
+      if ($2='C13') then 
+         tn='C13' dn='H1' dn2='N15' dn3=''   
+         wc = 200 sc =10
+         ad=4.0 rd=4.0 ddrtc=8.0 rp=0 lp=0 d1=2.0 nt=1 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=50 gain=30
+         ofHX=0.0
+         if ($3='alpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='HCa'
+         elseif ($3='salpha') then
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=38p wp=50p
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',175):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('C13',63):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=165p wp=20p
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            d1=2.0 nt=1.0
+            setref(tn) setoffset('C13',33.3):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=28p wp=20p
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         tn='N15' dn='H1' dn2='C13'  dn3=''   
+         wc = 200 sc =10
+         ad=16.0 rd=4.0 ddrtc=20.0 rp=0 lp=0 ss=2 bs=4
+         sw=100000.0 at=0.01 fn=16.0*np sb=at/2.0 sb='y' sbs='n' lb=0  lb='n' gain=30  
+         ofHX=0.0
+         if ($3='amide') then
+            d1=2.0 nt=4
+            setref(tn) setoffset('N15',115):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=90p wp=50p
+            $reg='HNai'
+         elseif ($3='amine') then
+            d1=2.0 nt=1 
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HNam'
+         elseif ($3='amino') then 
+            d1=2.0 nt=1
+            setref(tn) setoffset('N15',35):$tof tof=0.1*trunc($tof/0.1 + 0.5) sp=15p wp=40p
+            $reg='HN'
+         endif         
+      endif
+      probeparamgroup('setlocal',$reg,$nuc,'','ofX90',tof)
+   else
+      if ($2='C13') then 
+         if ($3='alpha') then
+            $reg='HCa'
+         elseif ($3='salpha') then
+            $reg='sHCa'
+         elseif ($3='carbonyl') then 
+            $reg='HCO'
+         elseif ($3='scarbonyl') then 
+            $reg='sHCO'
+         elseif ($3='adam') then 
+            $reg='HC'
+         endif
+      elseif ($2='N15') then 
+         if ($3='amide') then
+            $reg='HNai'
+         elseif ($3='amine') then 
+            $reg='HNam'
+         elseif ($3='amino') then 
+            $reg='HN'
+         endif
+      endif
+   endif
+   return($reg,$pwr,$nuc)
+endif
+
+//---------------------
+// The Spin Rate Macro
+//---------------------
+
+if (($# > 0) and ($1 = 'spinrate')) then
+
+// Get the Current Spin Rate with an Average of 10
+
+   banner('Measuring Spinning Rate and Stability')
+   $count=1 srate=0
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      shell('showstat > ',$dest):$dummy
+ 
+      lookup('file',$dest,'currently', 'at:','read'):$masrate,$ret 
+      if $ret then
+         format($masrate,5,0):srate[$count]
+      endif
+//    echo($masrate)
+      shell('sleep 1')
+      $count=$count+1
+   until ($count>10)
+
+   averag(srate[1],srate[2],srate[3],srate[4],srate[5],srate[6],
+       srate[7],srate[8],srate[9],srate[10]):$avgsrate,$dev
+
+   $avgsrate = trunc($avgsrate + 0.5)  
+
+//Check the Spin Rate 
+
+   if ($avgsrate<500) then 
+      $message='MAS Spin Rate Measurement is Less Than 500 Hz - Aborting with 0.0 '
+      banner($message)
+      srate = 0.0
+//      abort
+   else
+      srate = $avgsrate
+   endif 
+
+// Remove Files Generated by the Spin Rate Measurement
+
+   $count=1
+   repeat
+      $index=''
+      if ($count<10) then
+         format($count,1,0):$index
+      else
+         format($count,2,0):$index
+      endif
+      $dest=curexp+'/stat'+$index
+      rm($dest)
+      $count=$count+1
+   until ($count>10)
+   return(srate)
+endif 

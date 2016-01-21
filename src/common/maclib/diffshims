@@ -1,0 +1,39 @@
+"macro diffshims"
+
+" **************************************************** "
+" **** macro diffshims(shim file #1, shim file #2) *** "
+"                                                      "
+" checks for existance of each shim file; with one     "
+" argument, compares shims in that file with those     "
+" in the current experiment          March 1990        "
+" **************************************************** "
+
+IF ($#<>2 AND $#<>1) THEN
+    write('error','diffshims - use 1 or 2 arguments')
+    ABORT
+ENDIF
+
+exists($1,'file'):$e
+IF ($e=0) THEN
+    write('error','%s:  no such file',$1)
+    abort
+ENDIF
+
+IF $#=2 THEN
+    exists($2,'file'):$e
+    IF ($e=0) THEN
+        write('error','%s:  no such file',$2)
+        abort
+    ENDIF
+    shell('diffshims "'+$1+'" "'+$2+'"')
+ELSE
+    $tmpshimfile=curexp+'/tmpshims'
+    exists($tmpshimfile,'file'):$e
+    IF ($e<>0) THEN
+        delete($tmpshimfile)
+    ENDIF
+    $s=''			"tell Magical it is a string"
+    svs($tmpshimfile):$s
+    shell('diffshims "'+$tmpshimfile+'" "'+$1+'"')
+    delete($tmpshimfile)
+ENDIF

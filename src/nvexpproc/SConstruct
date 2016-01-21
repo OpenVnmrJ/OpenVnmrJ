@@ -1,0 +1,278 @@
+#
+# Notes: nvrecvproc include path must be prior to vwacq, since there are two rngBlkLib.h
+#        that conflict.  GMB
+#        Also the inttypes.h that was used for SFU required a file name changed since it 
+#        was overriding the system inittypes.h 
+#
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+#import variables  and environment from SConstruct
+Import("*")
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+
+## NDDS include/lib paths
+# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+# define target file names
+# expProcTarget = 'Expproc'
+
+## NDDS include/lib paths
+print 'nvExpproc NDDS_VERSION ' + boEnv['NDDS_VERSION']
+
+# if 'Expproc4x' in COMMAND_LINE_TARGETS:   
+#  generate NDDS home path from NDDS_VERSION
+nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
+print 'Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this'
+expProcTarget = 'Expproc'
+nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
+print nddsHome
+nddsGen = os.path.join(nddsHome, 'scripts', 'nddsgen')
+nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
+
+#  ndds header paths
+nddsHdrPathUnix = os.path.join(nddsHome, 'include')
+nddsHdrPathShare = os.path.join(nddsHome, 'include', 'ndds')
+
+#  NDDSGEN options
+nddsOpts = ' -language C -notypecode -replace '
+
+# libraries and paths
+#  nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
+nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
+LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl' ]
+
+
+#
+# source header files  that reside in other directories
+#
+ncommPath     = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = [ 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'semLib.h',
+                 'shrMLib.h' ]
+
+ncommFileList = ['errLogLib.c',
+                 'hhashLib.c',
+                 'ipcKeyDbm.c',
+                 'ipcMsgQLib.c',
+                 'listObj.c',
+                 'mfileObj.c',
+                 'semLib.c',
+                 'msgQLib.c',
+                 'shrMLib.c']
+
+chanObjPath     = os.path.join(cwd, os.pardir, 'ncomm')
+chanObjHdrList = [ 'sockets.h' ]
+chanObjFileList = ['sockets.c',
+                   'fdmask.c']
+
+nvRecvProcPath     = os.path.join(cwd, os.pardir, 'nvrecvproc')
+nvRecvProcHdrList = [ 'rngBlkLib.h']
+nvRecvProcFileList = ['rngBlkLib.c']
+
+nvSendProcPath     = os.path.join(cwd, os.pardir, 'nvsendproc')
+nvSendProcHdrList = [ 'nddsbufmngr.h' ]
+nvSendProcFileList = ['nddsbufmngr.c']
+
+procProcPath     = os.path.join(cwd, os.pardir, 'procproc')
+procProcHdrList = [ 'procQfuncs.h' ]
+procProcFileList = ['procQfuncs.c']
+
+vwAcqPath     = os.path.join(cwd, os.pardir, 'vwacq')
+vwAcqHdrList = [ 'rngLLib.h',
+                 'acqcmds.h',
+                 'hostAcqStructs.h' ]
+vwAcqFileList = ['rngLLib.c']
+
+nvAcqPath     = os.path.join(cwd, os.pardir, 'nvacq')
+nvAcqHdrList = [ 'sysUtils.h',
+                 'crc32.h',
+                 'NDDS_Obj.h',
+                 'NDDS_PubFuncs.h',
+                 'NDDS_SubFuncs.h' ]
+nvAcqFileList = ['crc32.c',
+                 'sysUtils.c',
+                 'NDDS_Obj.c',
+                 'NDDS_PubFuncs.c',
+                 'NDDS_SubFuncs.c']
+
+vnmrPath        = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = [ 'errorcodes.h',
+                'acqerrmsges.h' ]
+
+expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = [ 'commfuncs.h',
+                    'hostMsgChannels.h',
+                    'expentrystructs.h',
+                    'expDoneCodes.h',
+                    'expQfuncs.h',
+                    'parser.h',
+                    'prochandler.h',
+                    'shrexpinfo.h',
+                    'shrstatinfo.h' ]
+expProcFileList = ['expcmds.c',
+                   'expfuncs.c',
+                   'parser.c',
+                   'expQfuncs.c',
+                   'statfuncs.c',
+                   'bill.c',
+                   'daemon.c']
+
+acqProcPath     = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = [ 'config.h',
+                   'sram.h' ]
+
+
+psgPath  = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = [ 'REV_NUMS.h' ]
+
+
+#
+#   local C file list
+#
+nvExpProcFileList = ['expproc.c',
+                     'expsocket.c',
+                     'msgehandler.c',
+                     'conhandler.c',
+                     'nddscomfuncs.c',
+                     'HBthread.c',
+                     'HBListener.c',
+                     'exceptHandler.c',
+                     'prochandler.c']
+
+# NDDS build files
+nddsFileList = [ 'Monitor_Cmd',
+                 'Console_Stat',
+               ]
+#                 'App_HB']
+
+nddsIdlFileList = [ 'Monitor_Cmd.idl',
+                    'Console_Stat.idl',
+               ]
+
+
+# if 'Expproc4x' in COMMAND_LINE_TARGETS:
+
+nddsCFileList = [ 'Monitor_Cmd.c',
+                     'Monitor_CmdPlugin.c',
+                     'Monitor_CmdSupport.c',
+                     'Console_Stat.c',
+                     'Console_StatPlugin.c',
+                     'Console_StatSupport.c',
+               ]
+# create some ndds files
+# nddsgen of 3x files can not be threads so for 3x we do the nddsgen during parse time
+# build environment
+nvexpProcCEnv = Environment(CCFLAGS    = '-O -g -m32 -Wall',
+                            CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX', 
+                                          'NIRVANA', 'NOASYNC', 'DEBUG', 'USE_HTONS',
+                                          'LINUX', 'NODUMMY', 'RTI_UNIX', 'NIRVANA'],
+                            LINKFLAGS  = '-m32',
+                            CPPPATH    = [cwd,
+                                          nddsHdrPathUnix,
+                                          nddsHdrPathShare ])
+
+# link in ndds x & idl files
+#buildMethods.symLinkNow(nvexpProcCEnv, cwd, nvAcqPath, nddsIdlFileList)
+#buildMethods.symLinkNow(nvexpProcCEnv, cwd, nvAcqPath, nddsXFileList)
+
+# if 'Expproc4x' in COMMAND_LINE_TARGETS:
+nvexpProcCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+
+#nvexpProcCppEnv = nvexpProcCEnv.Copy(CC = 'g++')
+
+# define Builders
+#nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
+#                           nddsGen + ' ' + \
+#                           '-replace ' + '$SOURCES.file')
+
+#nvexpProcCppEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
+
+#
+# symlinks headers to this directory
+#
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, chanObjPath, chanObjHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, chanObjPath, chanObjFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvSendProcPath, nvSendProcFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvRecvProcPath, nvRecvProcHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvRecvProcPath, nvRecvProcFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vwAcqPath, vwAcqHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vwAcqPath, vwAcqFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvAcqPath, nvAcqHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvAcqPath, nvAcqFileList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, expProcPath, expProcFileList)
+
+# actual build
+expproc = nvexpProcCEnv.Program(target  = expProcTarget,
+                                  source  = [nvexpProcCEnv.SharedObject(ncommFileList),
+                                             nvexpProcCEnv.SharedObject(chanObjFileList),
+                                             nvexpProcCEnv.SharedObject(nvAcqFileList),
+                                             nvexpProcCEnv.SharedObject(nddsCFileList),
+                                             nvexpProcCEnv.SharedObject(expProcFileList),
+                                             nvexpProcCEnv.SharedObject(nvExpProcFileList),
+                                             nvexpProcCEnv.SharedObject(procProcFileList),
+                                             nvexpProcCEnv.SharedObject(nvRecvProcFileList),
+                                             nvexpProcCEnv.SharedObject(nvSendProcFileList),
+                                             nvexpProcCEnv.SharedObject(vwAcqFileList)],
+                                  LIBPATH = [cwd,
+                                             nddsLibPath],
+                                  LIBS    = [ LibList ] )
+
+# really only need for NDDS 3x clean
+# nvexpProcCEnv.Clean( expProcTarget, [ nddsXFileList, nddsIdlFileList, nddsCFileList, 'Monitor_Cmd.h','Console_Stat.h','App_HB.h'])
+
+
+
+# buildMethods.makeSymLinks(nvexpProcCEnv, genTargets, cwd, nvAcqPath, nddsIdlFileList)
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'ddr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actions to be performed after targets are built
+nvexpProcCEnv.AddPostAction(expproc,
+                              Action(Copy(os.path.join(vnmrInstallPath,'Expproc'),
+                                          os.path.join(cwd, expProcTarget))))
+

@@ -1,0 +1,101 @@
+Protocol: R14inad2d  Sequence: r14inad2d.c  Apptype: solidseq1d
+
+Description:
+  
+   1Q-2Q "X" correlation using R14 mixing, with TPPM or SPINAL 
+   decoupling. 
+
+Additional Software: 
+
+reset_r14 - This macro uses the calibrated values of pwX90, aX90 and 
+srate to set up the R14 recoupling sequence.  The amplitude aHmix is set
+to aH90. The macro is executed by the protocol.
+ 
+Parameter  Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).  
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must 
+              be set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phXhx);  
+
+r14X:  Module:  yes
+Sequence:  r14inad2d.c     
+Description:  Implements the R1462 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXr14 - amplitude of obs pulses.
+       pwXr14 - 360-degree flip on obs.
+       qXr14 - R14 cycles represented in the .DEC file.
+       ofXr14 - overall frequency offset.
+       chXr14 = 'obs' must be set (not shown).
+Implementation: MPSEQ r14 = getr1462("r14X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   
+

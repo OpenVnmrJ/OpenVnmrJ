@@ -1,0 +1,80 @@
+import os
+import sys
+import shutil
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+#SConscript(os.path.join(ncommPath, 'SConstruct'))
+cmd='cd ../ncomm;scons'
+os.system(cmd)
+
+# dependancies
+binPath = os.path.join(cwd, os.pardir, 'bin')
+#SConscript(os.path.join(binPath, 'SConstruct'))
+cmd='cd ../bin;scons -f SConstruct.dps_ps_gen'
+os.system(cmd)
+
+psgPath = os.path.join(cwd, os.pardir, 'kpsg')
+cmd='cd ../kpsg;scons'
+os.system(cmd)
+
+vnmrPath   = os.path.join(cwd, os.pardir, 'vnmr')
+
+#function to create symlink
+def symlink(src, dest):
+   if not os.path.exists(dest):
+      try:
+         os.symlink(src, dest)
+      except:
+         print "Can't link %s." % src
+
+#create symlink for the header file from psg to xrach
+#symlink(os.path.join(acodeHeaderPath,'acodes.h'),os.path.join(psgPath,'acodes.h'))
+
+#create symlink for the header file from psg to nvpsg 
+#for i in range(len(headerFiles)):
+#        symlink(os.path.join(psgPath,headerFiles[i]),os.path.join(nvpsgPath,headerFiles[i]))
+
+
+#symlink(os.path.join(nvpsgPath,'chempack.h'),os.path.join(psgPath,'chempack.h'))
+
+
+# build environments
+seqLibEnv = Environment(CCFLAGS    = '-O -m32 -Wno-return-type',
+                        CPPDEFINES = ['LINUX', 'NESSIE'],
+                        LINKFLAGS  = '-O -m32 -Wl,-rpath,/vnmr/lib',
+                        CPPPATH    = [psgPath])
+                                      
+# custom builder for dps_ps_gen
+bld = Builder(action = os.path.join(cwd, os.pardir, 'bin', 'dps_ps_gen') + \
+                       ' -DDPS -I$CPPPATH $SOURCE  \" \" 2')
+
+# append builder to both environments
+seqLibEnv.Append(BUILDERS = {'DpsPsGen' : bld})
+
+
+seqlibPath =  os.path.join(cwd,'seqlib')
+Execute('rm -rf seqlib; mkdir seqlib')
+Execute('cp  *.c ' + seqlibPath)
+Execute('cp -f SConstruct.inova ' + seqlibPath)
+seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','mercury')
+SConscript('seqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
+
+dosyDirName = os.path.join('DOSY')
+# alternate path for a DOSY appdir
+# dosyDirName = os.path.join('DOSY','dosy')
+dosyseqlibPath =  os.path.join(cwd,'dosyseqlib')
+Execute('rm -rf dosyseqlib; mkdir dosyseqlib')
+Execute('cp ' + os.path.join(cwd,os.pardir,'DOSY','psglib') + '/*.c '+ dosyseqlibPath)
+Execute('cd '+ dosyseqlibPath+';rm -f Ddeptse.c Dproject_cc.c')
+Execute('cp -f SConstruct.inova ' + dosyseqlibPath)
+seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','mercury',dosyDirName)
+SConscript('dosyseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
+

@@ -1,0 +1,109 @@
+"macro hs90anal"
+"hs90anal   -   takes the small-angle jump as an input and outputs a plot"
+"               of deviation versus versus start-angle. D. Rice 3/5/02   "
+"               The start-angle step is an optional second argument.     "
+if ($#<1) then 
+   write('error','FORMAT: hs90anal(small-angle jump,<start-angle step>')
+   abort
+endif
+if ($#>1) then 
+   $step=$2
+else
+   $step=0.25
+endif
+$aa=''
+if ($#>2) then 
+   $aa=$3
+endif
+$nm=''
+if ($#>3) then 
+   $nm=$4
+endif
+wft
+wc=180 sc=0
+
+$file=curexp+'/analyze.out'
+exists($file,'file'):$a
+if ($a>0.5) then 
+   delete($file) 
+endif
+$expl= curexp+'/expl.out'
+exists($expl,'file'):$a
+if ($a>0.5) then 
+   delete($expl)
+endif
+
+write('file',$file,'exp 4')
+write('file',$file,' 1 %4.0f',arraydim)
+write('file',$file,'START ANGLE')
+write('file',$file,' 1 1 1 1')
+$phase=$1
+if ($phase>45.0) then 
+   $phase=90.0-$phase
+endif
+$sp=($phase - 1.0) 
+if ($sp<0.3) then $sp=0.3 endif
+if ($sp>42.7) then $sp=42.7 endif
+sp=$sp/scalesw
+$wp=2.0
+wp=$wp/scalesw
+$index=0
+$total=0
+llfrq='y'
+clear
+while ($index<arraydim) do 
+  $index=$index+1
+  ds($index)
+  vsadj th=75 dpf
+  $cursor=(llfrq[1]-rfl)*scalesw
+  $total=$total+$cursor
+  $savecursor[$index]=$cursor
+endwhile
+$index=0
+$error=0
+$total=$total/arraydim
+if ($nm='') then 
+   input('Normalize?'):$nm 
+endif
+$hsfact=1.0
+if ($nm='y') then 
+   $hsfact=$phase/$total
+endif
+while ($index<arraydim) do 
+   $index=$index+1
+   $error= $error + ($savecursor[$index]-$total)*($savecursor[$index]-$total)
+   write('file',$file,'%f  %f',ph1Xhssmall[1] + ($index-1)*$step,$savecursor[$index]*$hsfact)
+endwhile
+$error=$error*$hsfact/arraydim
+$error=sqrt($error)
+text
+cat(curexp+'/analyze.out')
+if ($nm='y') then
+   write('line3','Phase Normalized to %f',$phase)
+   write('line3','HS Normalization Factor = %f',$hsfact)
+else
+   write('line3','Average Phase = %f\n',$total)
+endif
+   write('line3','Phase Error rms +/- = %f\n',$error)
+expl
+scalelimits(ph1Xhssmall[1],ph1Xhssmall + (arraydim-1)*$step,$phase-0.5,$phase+0.5)
+expl('nocurve')
+if ($aa='') then 
+   input('Hard copy ?'):$aa
+endif
+if $aa = 'y' then
+   pexpl
+   if ($nm='y') then
+      write('plotter',0,60,'Phase Normalized to %f',$phase)
+      write('plotter',0,55,'HS Normalization Factor = %f',$hsfact)
+   else
+      write('plotter',0,60,'Average Phase = %f',$total)
+   endif
+   write('plotter',0,50,'Phase Error (rms) +/- = %f',$error)
+   pltext
+//   page
+endif
+
+
+
+

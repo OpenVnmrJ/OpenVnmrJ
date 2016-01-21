@@ -1,0 +1,91 @@
+"macro gmapxyz"
+"setup macro for gmapxyz sequence"
+"PJB 13iv10"
+
+"Use psgset if no mapname given as argument to macro"
+IF $#<0.5 then	
+	exists('ni2','parameter','current'):$e
+	if $e<0.5 then par3d endif
+	"default parameters are for 1H gradient shimming, using homospoil - 4x4 XY data matrix"
+        psgset('gmapxyz','d4','del','tau','hspcorr','gt1','gt2','gt3','gzlvl1','gzlvl3','gzlvlhs','gths')
+        psgset('gmapxyz','gzwin','fov','gxyzcode','dg','ap','nt','gxyzfitgroup')
+        psgset('gmapxyz','hspcorr','mapname','mapshims','fitshims','mapsteps','shimprotect')
+        psgset('gmapxyz','tn','tpwr','pw','dm','sw1','sw2','dn','pltopt','ss','dmg2','gstab')
+        psgset('gmapxyz','lkflg','refnuc','lkpw90','lktpwr','reftpwr','refpw','gain','gxyzshimPDF','gxyzshimPS','gxyzshimPSn')
+	psgset('gmapxyz','refppm','gxyzshimdisp','gxyzshimgroup','ncycles','varytau','refgain','ref1Dflg')
+	exists('gradtypeglobal','parameter','global'):$e
+	getparam('pw90','H1'):refpw
+	getparam('tpwr','H1'):reftpwr
+	getparam('pw90','lk'):lkpw90
+	getparam('tpwr','lk'):lktpwr
+
+	"Check to see if gradtypeglobal exists"
+	//if ($e=0) then create('gradtypeglobal','string','global') gradtypeglobal=gradtype endif
+        np=256 fn=256 lb='n' gf='n' sb=at/2 ni2=ni sw1=1.0 sw2=1.0
+        av cdc d2=0 d3=0 d1=2.5 gain=20
+	substr(gradtype,3,1):$zgradtype
+	//gradtype='aa'+$zgradtype
+        ni=4 ni2=4 gxyzcode='0110111111110110' tau=0,0.02 gxyzsetmap
+  	exists('oversamp','parameter'):$e
+  	if $e>0.5 then setvalue('oversamp',1) endif
+	//exists('gradtypelocal','parameter','current'):$e
+  	//if $e>0.5 then gradtype=gradtypelocal
+	//else
+		//$zgradtype=''
+		//substr(gradtype,3,1):$zgradtype
+		//create('gradtypelocal','string')
+		//gradtype='aa'+$zgradtype gradtypelocal=gradtype
+	//endif
+	exists('gcalx','parameter','global'):$e
+	if $e < 0.5 then
+		create('gcalx','real','global')
+		if $zgradtype='l' then gcalx=1.6e-4 else gcalx=1e-5 endif
+	endif
+	exists('gcaly','parameter','global'):$e
+	if $e < 0.5 then
+		create('gcaly','real','global')
+		if $zgradtype='l' then gcaly=1.6e-4 else gcaly=1e-5 endif
+	endif
+	exists('gcalang','parameter','global'):$e
+	if $e < 0.5 then
+		create('gcalang','real','global')
+		gcalang=0
+	endif
+  	gxyzmapsys('unarray') array='tau'
+ELSE		"process the mapname and use rtv instead of psgset"
+  $js='' $jmap='' $jmap=$1
+  "Check that the mapname directory exists"
+  $ext='3Dshimlib/shimmaps/'+$jmap
+  $jfile=userdir+'/'+$ext
+  exists($jfile,'file'):$e
+  if $e>0.5 then
+    	"Have the data been acquired and merged?"
+    	"If so, then use rtv to retrieve parameters from mapname.fid"
+    	$ext=$jmap+'.fid'
+    	$jfile=$jfile+'/'+$ext
+    	exists($jfile,'file'):$e2
+    	if $e2 >0.5 then 
+        	rtv($jfile,'d1','d4','del','tau','hspcorr','gt1','gt2','gt3','gzlvl1','gzlvl3','gzlvlhs','gths')
+        	rtv($jfile,'gzwin','fov','gxyzcode','ap','tof','np','fn','sb','sbs','at','nt','ss','gstab')
+        	//rtv($jfile,'gradtypelocal','hspcorr','mapname','mapshims','fitshims','mapsteps','gxyzfitgroup')
+        	rtv($jfile,'hspcorr','mapname','mapshims','fitshims','mapsteps','gxyzfitgroup')
+        	rtv($jfile,'tn','tpwr','pw','dm','dn','lsfrq','lsfrq1','lsfrq2','sw','sw1','sw2','ni','ni2','dmg2')
+        	rtv($jfile,'lkflg','refnuc','lkpw90','lktpwr','reftpwr','refpw','pltopt','gain','gxyzshimPDF','gxyzshimPS','gxyzshimPSn')
+		rtv($jfile,'refppm','gxyzshimdisp','gxyzshimgroup','ncycles','varytau','refgain')
+		rtv($jfile,'shimprotect','ref1Dflg','steflg','gxyzdoscset')
+		
+    		psgset('gmapxyz','dg','dg2') 
+		//gradtype=gradtypelocal
+    		lb='n' gf='n' gfs='n' awc='n' aig='ai'
+    		proc='ft' wexp='' hs='nn' lvl=0 tlt=0
+    		alock='n' homo='n' in='n' dp='y' dm='n' av
+    		exists('oversamp','parameter'):$e
+    		if $e>0.5 then setvalue('oversamp',1) endif
+    		gxyzmapsys('unarray') array='tau'
+	else
+		gmapxyz
+	endif
+  else
+	gmapxyz
+  endif
+ENDIF

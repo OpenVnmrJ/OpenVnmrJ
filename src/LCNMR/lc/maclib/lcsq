@@ -1,0 +1,581 @@
+"macro lcsq"
+// study queue commands for LC-NMR interface
+
+// startlc option is OK
+
+if $#<0.5 then $1='initauto' endif
+
+exists('cplcsq','maclib'):$cplc
+if ($cplc) then
+   if ($1='initauto') then cplcsq($1) return endif
+   if ($1='go') then cplcsq($1) return endif
+   if ($1='mkprotocol') then cplcsq($1) return endif
+   if ($1='initstudy') then cplcsq($1) return endif
+   if ($1='done') then cplcsq($1) return endif
+   if ($1='convert') then 
+	if ($# > 1) then
+	    cplcsq($1,$2)
+	else
+	    cplcsq($1)
+	endif
+	return
+   endif
+   if ($1='startnmr') then
+	if ($#>2) then cplcsq($1,$2,$3)
+	elseif ($#>1) then cplcsq($1,$2)
+	else cplcsq($1)
+	endif
+	return
+   endif
+endif
+
+if ($1 = 'initauto') then
+// initialize autodir, study queue
+// call from lcgo (lcexp='enter'), setNewLcid
+
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    lcpeak = 0
+    retentiontime = ''
+    sqname = 'peak$lcpeak$_'
+    if lcexp='enterA' then
+      sqname = 'loop$lcpeak$_'
+    endif
+    if autoname='' then
+      autoname = '$studyid$/$pslabel$_'
+    endif
+    autodir = savefile
+    activestudy = autodir
+    xmtune('autoinit')
+
+    bgmode_is:$bg
+    if ($bg=0) then
+      $file=userdir+'/persistence/.talk2j'
+      write('reset',$file)
+      write('file',$file,'%s',vnmraddr)
+    endif
+
+// create autodir
+    exists(autodir,'directory'):$d
+    if not ($d) then
+      mkdir(autodir)
+      auto(autodir)
+      xm1('mkautopar')
+      vnmrjcmd('LOC add automation "'+autodir+'"')
+      vnmrjcmd('LOCTRASH autodir active "'+autodir+'"')
+      vnmrjcmd('LOCTRASH autodir sqloaded "'+autodir+'"')
+
+      if (lcexp='enterA') then
+        lcsq('bypass','delete')
+        lcsq('bypass','add')
+      endif
+      if (lcexp='enter' or lcexp='enterA') then
+        vnmrjcmd('tray update')
+        vnmrjcmd('tray show')
+      endif
+      lcsq('checkgo')
+      lcsq('updatesq')
+
+// initialize study queue
+      if not (lcexp='stop' and lcHoldType<>'indefinite') then
+        sqfilemenu('Clear Study','no')
+      endif
+      xm1('delete all')
+    endif
+  endif
+
+elseif ($1 = 'bypass') then  // block tray well for bypass loop
+
+  $action='update'
+  if $#>1.5 then $action=$2 endif  // 'add', 'delete'
+
+  if (lcexp='enterA') then
+    exists(autodir,'file'):$ed
+    exists(autodir+'/../lcpar','file'):$ep
+    if (lcBypassLoop>0.5 and $ed>0.5 and $ep<0.5) then
+      $asfile=autodir+'/autostudies'
+      $lcpeak=lcpeak
+      lcpeak=lcBypassLoop
+      $sqname=sqname
+      if $action='delete' then
+        $sqname=sqname+'%R0%'
+      endif
+      substr($sqname,1,1):$s1
+      if $s1<>'/' then
+        $sqname=autodir+'/'+$sqname
+      endif
+      Svfname($sqname,''):$path
+      $stid=$path
+      if $s1<>'/' then
+        length(autodir):$alen
+        length($path):$plen
+        substr($path,$alen+2,$plen-$alen-1):$rpath
+        $stid=$rpath
+      endif
+
+      if ($action = 'add') then
+        write('file',$asfile,'%s',$stid)
+        exists($path,'directory'):$d
+        if $d<0.5 then
+          mkdir('-p',$path)
+        endif
+        $sqdir=sqdir
+        sqdir=$path
+        exists('loc_','parameter'):$e
+        if $e<0.5 then create('loc_','integer') endif
+        setvalue('loc_',lcpeak)
+        exists('studystatus','parameter'):$e
+        if $e<0.5 then create('studystatus','string') endif
+        $status=studystatus
+        studystatus='NightQueue'
+        exists('studyid_','parameter'):$e
+        if $e<0.5 then create('studyid_','string') endif
+        setvalue('studyid_',$stid)
+        exists('studytime','parameter'):$e
+        if $e<0.5 then create('studytime','real') endif
+        exists('queue','parameter'):$e
+        if $e<0.5 then create('queue','string') queue='day' endif
+        exists('retentiontime_','parameter'):$e
+        if $e<0.5 then create('retentiontime_','string') endif
+        exists('operator_','parameter'):$e
+        if $e<0.5 then create('operator_','string') endif
+        setvalue('operator_',operator+' ')
+        exists('samplename','parameter'):$e
+        if $e<0.5 then create('samplename','string') endif
+        $retentiontime = retentiontime_
+        retentiontime_ = ''
+        $samplename=samplename $studytime=studytime
+        samplename='bypass loop' studytime=0
+        $parlist='studyid_ loc_ operator_ queue retentiontime_ samplename studytime studystatus'
+        writeparam(sqdir+'/studypar',$parlist)
+        vnmrjcmd('LOC add study "'+sqdir+'" automation "'+autodir+'"')
+        samplename=$samplename studytime=$studytime
+        retentiontime_ = $retentiontime
+        sqdir=$sqdir
+        studystatus=$status
+
+      else  // ($action = 'delete')
+        exists($asfile,'file'):$e
+        if $e>0.5 then
+          $ids='' $s1='' $asize=0
+          readfile($asfile,'$ids','$s1','','local'):$asize
+          if $asize>0.5 then
+            $i=0 $js=0 $list='' $end='q1W2e3R4'
+            repeat
+              $i=$i+1 $id=$ids[$i]
+              strstr($id,$stid):$found
+              if $found>0.5 then
+                $list=$list+$id+' '  $js=$js+1
+                substr($id,1,1):$s
+                if $s<>'/' then
+                  $id=autodir+'/'+$id
+                endif
+                rm('-rf',$id):$x
+                vnmrjcmd('LOC remove study "'+$id+'"')
+              endif
+            until ($i >= $asize)
+            if $js>0.5 then
+              $a2file=autodir+'/autostudies_cp'
+              write('reset',$a2file)
+              $i=0
+              repeat
+                $i=$i+1
+                $j=0
+                repeat
+                  $j=$j+1 substr($list,$j):$lid
+                  if ($ids[$i]<>$lid) then
+                    write('file',$a2file,'%s',$ids[$i])
+                  endif
+                until ($j>=$js)
+              until ($i>=$asize)
+              mv($a2file,$asfile)
+            endif
+          endif
+        endif
+      endif
+      lcpeak=$lcpeak
+    endif
+    if ($action='add' and $ed>0.5 and $ep<0.5 and $cplc<1) then
+      shell('sync; sync; sync'):$x
+      vnmrjcmd('tray update')
+      vnmrjcmd('tray show')
+    endif
+  endif
+
+elseif ($1 = 'updatesq') then
+
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    $status=''
+    if (actionid <> 'null') then
+      xmgetatts(actionid,'status'):$status
+      if ($status = 'Active') then
+        xmselect('saveid')
+        sqfilemenu('cleanupActive','only')
+      endif
+    endif
+  endif
+
+elseif ($1 = 'svp') then
+
+  if seqfil='lc1d' then
+    apptype='lcapp'
+    prescan[10]='xmHprescan(\'scout\')'
+    exists('wrtp','parameter'):$x
+    if $x<0.5 then
+      create('wrtp','string')
+      setgroup('wrtp','display')
+    endif
+    exists('Hprescan','parameter'):$e
+    if $e<0.5 then
+      create('Hprescan','string')
+      setgroup('Hprescan','processing')
+      Hprescan='off','auto','lc1d','','Complete','Complete'
+    endif
+    Hprescan[1]='off'  // turn off minsw
+    Hprescan[3]='lc1d'
+    xmHprescan('setup')
+    wdone='xmwexp'
+    werr='xmreact'
+    if pslabel='Scout' then pslabel='Lc1d' endif
+    $filename =systemdir+'/tmp/Autoscout.par'
+    write('line3','Saving Autoscout parameters.')
+    svp($filename,'nodb','force')
+    shell('chmod 777 "'+$filename+'";chmod 666 "'+$filename+'"/*'):$dum
+    lcsq('mkprotocol')
+  endif
+
+elseif ($1 = 'go') then  // call from lcgo
+
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+
+    exists(systemdir+'/tmp/Autoscout.par','file'):$e
+    if not ($e) then
+      write('error','Cannot find Autoscout.par.  Please run Trial Wet before LC-NMR run.')
+      return
+    endif
+
+    if (lcexp='stop' and lcHoldType<>'indefinite') then
+      lcsq('initstudy')
+      if (auto='n') then
+        write('reset',userdir+'/persistence/sqstop')
+      endif
+    endif
+
+    autodir = savefile
+    activestudy = autodir
+    vnmrjcmd('tray hide')
+    vnmrjcmd('pnew','lcid')
+
+  endif
+
+elseif ($1 = 'mkprotocol') then
+// make Autoscout protocol if it does not exist
+
+  $dir=userdir+'/templates/vnmrj/protocols'
+  exists($dir,'directory'):$e
+  if $e<0.5 then mkdir('-p',$dir) endif
+  $pfile=$dir+'/Autoscout.xml'
+  exists($pfile,'file'):$e
+  if $e<0.5 then
+    $time = ''
+    exists('time_saved','parameter'):$ep
+    if $ep>0.5 then
+      $time=time_saved
+    else
+      shell('date +%\Y%\m%\dT%\H%\M%\S'):$time
+    endif
+    write('file',$pfile,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    write('file',$pfile,'<template type="basic" name="Autoscout" author="%s" investigator="" time_created="%s" apptype="lcapp" application="liquids" scans="Autoscout" seqfil="%s">',owner,$time,seqfil)
+    write('file',$pfile,'  <protocol title="Autoscout" type="protocol">')
+//  write('file',$pfile,'    <action type="LIB" status="Ready" lock="off" title="Autoscout" exp="Proton" time="1 min" macro="cqexp(&apos;Autoscout&apos;,&apos;lcapp&apos;)" data="" />')
+    write('file',$pfile,'    <action type="LIB" status="Ready" lock="off" title="Autoscout" exp="Proton" time="1 min" macro="cqexp(\'Autoscout\',\'lcapp\')" data="" />')
+    write('file',$pfile,'  </protocol>\n</template>')
+  endif
+
+elseif ($1 = 'initstudy') then  // initialize tmpstudy
+// called from lcsq('initauto') for lcexp='stop'
+
+  autodir = savefile
+  activestudy = autodir
+
+  if (lcHoldType = 'indefinite') then
+    return
+  endif
+
+  xm1('studydir'):$sdir
+  $tmpfile=autodir+'/tmpstudy.xml'
+  $qfile=$sdir+'/enterSQ'
+  exists($qfile,'file'):$eqx
+
+  cqsavestudy
+
+  exists('studytime','parameter'):$e
+  if $e>0.5 then studytime=0 endif
+  xmdelete('emptytrash')
+  sqfilemenu('init')
+
+  if ($eqx > 0.5) then
+//  tmpstudy already exists
+
+    testacquire='n'
+    copyid='null','null'
+    xm1('pause')
+    xm1('nwrite tmpstudy "'+$tmpfile+'"')
+
+  else
+//  tmpstudy does not exist, create tmpstudy
+
+    cqinit('n')
+
+    write('reset',$qfile)
+    write('file',$qfile,'n001 parent lockoff\nn002 std1d lockoff')
+    $ndir=$sdir+'/info/n001'
+    mkdir('-p',$ndir)
+    $nfile=$ndir+'/prop'
+    write('reset',$nfile)
+    write('file',$nfile,'status protocol\nexp parent\nelement protocol\nlock off\ntitle Autoscout\ntype protocol')
+    $ndir=$sdir+'/info/n002'
+    mkdir('-p',$ndir)
+    $nfile=$ndir+'/prop'
+    write('reset',$nfile)
+    write('file',$nfile,'type LIB\nstatus Ready\nlock off\ntitle Autoscout\nexp std1d\ntime 1 min\nmacro cqexp(\'Autoscout\',\'lcapp\')\ndata')
+    xmwritesq('write','')
+
+    write('reset',$tmpfile)
+    write('file',$tmpfile,'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE template>\n<template>')
+    write('file',$tmpfile,'  <protocol title="new sample" type="protocol" exp="grandparent" lock="off" id="tmpstudy" tooltext="new sample [to be Submitted]" expanded="true">')
+    write('file',$tmpfile,'    <protocol title="Autoscout" type="protocol" exp="parent" lock="off" id="n001" status="protocol" tooltext="Autoscout n001" expanded="true">')
+    write('file',$tmpfile,'      <action type="LIB" status="Ready" title="Autoscout" exp="Proton" lock="off" time="1 min" data="" id="n002" macro="cqexp(&apos;Autoscout&apos;,&apos;lcapp&apos;)" tooltext="Autoscout n002 [Ready]" />')
+    write('file',$tmpfile,'    </protocol>\n  </protocol>\n</template>')
+
+  endif
+
+  xmtime
+
+elseif ($1 = 'startlc') then  
+// stop nmr, restart lc run
+
+// if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    $stop=''
+    if (lcexp='stop' and lcHoldType='indefinite') then
+      $file=autodir+'/enterQ'
+      exists($file,'file'):$e
+      if $e>0.5 then
+        $word=''
+        lookup('mfile',$file,'read'):$stop
+      endif
+    endif
+    if $stop='' then
+      autosa
+    endif
+    if (lcHoldType <> 'indefinite') then
+      $cmd='lccmd(\'nmrDone\')'
+      $cmd=$cmd+' sethw(\'lock\',\'off\'):r7'
+      xm1('sendcmd',$cmd)
+    endif
+// endif
+
+elseif ($1 = 'startnmr') then  
+// start NMR run
+
+  $lcpeak=0 $time=''
+  if $#>1.5 then $lcpeak=$2 endif
+  if $#>2.5 then
+    format($3,5,3):$time
+//  write('line3','%g',$3):$time
+  endif
+
+  retentiontime = $time
+  exists('retentiontime_','parameter'):$e
+  if $e<0.5 then
+    create('retentiontime_','string')
+  endif
+  retentiontime_ = retentiontime
+
+  $dtrig=0
+  exists('dtrig','parameter'):$e
+  if ($e) then $dtrig=trunc(dtrig) endif
+  if ($dtrig > 0.5) then
+    write('line3','%s:  peak %g  retention time %s  equilibrating %g sec',$1,$lcpeak,$time,$dtrig)
+    $s='' format($dtrig,1,0):$s
+    shell('sleep '+$s):$x
+    shell('sync; sync; sync'):$x
+  else
+    write('line3','%s:  peak %g  retention time %s',$1,$lcpeak,$time)
+  endif
+
+  if (lcHoldType = 'indefinite') then
+    lcpeak=$lcpeak
+    if (lcexp='stop') then
+//    lcsq('convert',$lcpeak)  // create and add new peak
+//    autora
+      return
+    endif
+  endif
+  if (lcexp='enter' or lcexp='enterA') then
+    autora
+  elseif (lcexp = 'stop') then
+    lcsq('convert',$lcpeak)
+    autora
+  endif
+
+elseif ($1 = 'submit') then
+// submit study on indefinitely held peak
+
+  if (lcexp='stop' and lcHoldType='indefinite') then
+    lcsq('svp')
+    $peak='' format(lcpeak,1,0):$peak
+    xmsubmit('day','1','1',$peak)
+  elseif (lcexp='enter' or lcexp='enterA') then
+    $endfile=autodir+'/../lcpar'
+    exists($endfile,'file'):$e
+    if $e>0.5 then
+      lcenter
+    else
+      vnmrjcmd('submitstudy xmsubmit day Queued')
+    endif
+  endif
+
+elseif ($1 = 'submitgo') then
+// start automation on indefinitely held peak
+
+  if (lcHoldType='indefinite' and (lcexp='stop' or lcexp='enter' or lcexp='enterA')) then
+    autora
+  endif
+
+elseif ($1 = 'checkgo') then  // allow full sq operation
+
+  if (auto='n') then
+    $stop=userdir+'/persistence/sqstop'
+    exists($stop,'file'):$e
+    if $e>0.5 then rm($stop):$x endif
+  endif
+
+elseif ($1 = 'checkstop') then  // disallow adding tmpstudy nodes
+
+  $ret='go'
+  if (lcexp='stop' and lcHoldType<>'indefinite' and auto='n') then
+    $stop=userdir+'/persistence/sqstop'
+    exists($stop,'file'):$e1
+    $lcfile=autodir+'/../lcpar'
+    exists($lcfile,'file'):$e2
+    if ($e1>0.5 and $e2<0.5) then
+      $ret='stop'
+    endif
+  endif
+  return($ret)
+
+elseif ($1 = 'checkrun') then  // enable or disable panel
+
+  $ret = (1 - lcRunActive) * 2 - 1
+  return($ret)
+
+elseif ($1 = 'getrtime') then  // get retentiontime for sq display
+  $tt=''
+  exists('retentiontime_','parameter'):$e
+  if $e>0.5 then
+    $val=0
+    if (retentiontime_ <> '') then
+      write('line3','%g',retentiontime_):$val
+      if $val>0 then
+        $tt = '['+retentiontime_+' min]'
+      endif
+    endif
+  endif
+  return($tt)
+
+elseif ($1 = 'convert') then
+// convert tmpstudy -> study, called when running new peak
+
+  $loc=loc
+  $lcpeak=lcpeak
+  if $#>1.5 then lcpeak=$2 endif
+  $mvid=''
+  loc=lcpeak
+  exists('loc_','parameter'):$e
+  if $e<0.5 then create('loc_','integer') endif
+  setvalue('loc_',lcpeak)
+
+  xm1('studydir'):$sdir
+  exists($sdir+'/enterSQ','file'):$e
+  if ($e < 0.5) then
+    lcsq('initstudy')
+  endif
+
+  xmconvert('mktmp')
+
+  $tmpstudy=globalauto+'/tmpstudy'
+  $queue='day' $qstatus='Queued'
+  $rack=1 $zone=1
+  text:$text
+  strstr($text,'\n'):$i,$text
+  $sloc='' format(lcpeak,1,0):$sloc
+  $eqfile=autodir+'/enterQ'
+
+  $sqname=sqname
+  substr($sqname,1,1):$s1
+  if $s1<>'/' then
+    $sqname=autodir+'/'+$sqname
+  endif
+  Svfname($sqname,''):$path
+  $stid=$path
+  if $s1<>'/' then
+    length(autodir):$alen
+    length($path):$plen
+    substr($path,$alen+2,$plen-$alen-1):$rpath
+    $stid=$rpath
+  endif
+  shell('dirname "'+$path+'"'):$ppath
+  exists($ppath,'directory'):$d
+  if $d<0.5 then
+    mkdir('-p',$ppath)
+  endif
+  cp('-r',$tmpstudy,$path)
+  cqsavestudy($path,$stid,$qstatus,$queue+'Q')
+  xmconvert($queue+'Q',$qstatus,$stid,$mvid):$mvid
+  xmsample($sloc,$rack,$zone,$stid,$text,$eqfile)
+
+  xm1('set all actions lock on')
+  xm1('write "'+autodir+'/auto.xml"')
+
+  loc=$loc
+  lcpeak=$lcpeak
+
+elseif ($1 = 'done') then
+// call from EndRun
+
+  lcsq('checkgo')
+  if (lcexp='stop') then  // delete tmpstudy
+    xm1('studydir'):$sdir
+    $tmpfile=autodir+'/tmpstudy.xml'
+    exists($tmpfile,'file'):$e
+    if $e>0.5 then delete($tmpfile) endif
+    sqfilemenu('Clear Study','no')
+  endif
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    xm1('write "'+autodir+'/auto.xml"')
+  endif
+  vnmrjcmd('pnew','lcid')
+  xmemail('endrun')
+
+  // save study parameters
+  getsvfdirpath:$svfdir
+  filepath($svfdir, lcid):$dir
+  exists($dir,'file'):$e
+  if $e<0.5 then
+    mkdir('-p',$dir)
+  endif
+  exists($dir+'/lcpar','file'):$e
+  if $e<0.5 then
+    exists('studyid_','parameter'):$e
+    if $e<0.5 then create('studyid_','string') endif
+    setvalue('studyid_',lcid)
+    exists('operator_','parameter'):$e
+    if $e<0.5 then create('operator_','string') endif
+    setvalue('operator_',operator)
+    $parlist = 'name ident studyid_ operator_ lcexp samplename notebook page'
+    writeparam($dir+'/lcpar',$parlist)
+    //save study to locator
+    vnmrjcmd('LOC add lcstudy "'+$dir+'"')
+  endif
+
+endif

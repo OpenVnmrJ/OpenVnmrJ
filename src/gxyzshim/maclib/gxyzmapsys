@@ -1,0 +1,237 @@
+"macro gxyzmapsys"
+" gxyzmapsys						"
+" GAM 28v03						"
+" set up 3D gradient shimming system			"
+
+" GAM 10vi03 default to 4x4, psgset mapshims etc 	"
+
+" gxyzmapsys :  set up mapping system			"
+" gxyzmapsys('setup') :  ditto				"
+" gxyzmapsys('getpars') :  retrieve mapshims etc.	"
+" gxyzmapsys('check') :  check file structure exists	"
+" gxyzmapsys('unarray') :  unarray shims		"
+" gxyzmapsys('exit') :  quit and return to original experiment		"
+
+$dum=''
+$function='error'
+if $#=0 then
+        $function='setup'
+else
+        if $1='setup' then $function='setup' endif
+        if $1='getpars' then $function='getpars' endif
+        if $1='check' then $function='check' endif
+        if $1='unarray' then $function='unarray' endif
+        if $1='exit' then $function='exit' endif
+endif
+
+if $function='error' then
+        write('line3','invalid argument supplied to gxyzmapsys')
+        abort
+endif
+
+"***********************************************************************"
+
+if ($function='setup') then
+gxyzsetshimgroup
+"save existing experiment as a subexperiment"
+"Use tmpsave as with 1D gradient shimming"
+if (seqfil <> 'gmapxyz') then 
+	$jstr=curexp+'/gxyzsave'
+	exists($jstr,'file'):$e
+	if $e>0.5 then
+		shell('rm '+$jstr+'/*'):$dum
+		rmdir($jstr):$dum
+	endif
+	tmpsave('gxyzsave')
+	resetsampglobal
+	par3d	
+	"Check to see what the last mapname was, and use those parameters if available"
+	$jstr=userdir+'/3Dshimlib/data/xyshim.list'
+	exists($jstr,'file'):$e
+	if $e<0.5 then
+		gmapxyz
+	else
+		//Instead use gxyzrtmap
+		lookup('file',$jstr,'mapname','read'):$jmap
+		gxyzrtmap($jmap)
+	endif
+        exists('gcalx','parameter'):$e
+        if ($e<0.5) then
+           create('gcalx'):$dum
+           create('gcaly'):$dum
+           create('gcalang'):$dum
+           if (shimset=1 or shimset=10 or shimset=11) then gcalx=1.9e-4 else gcalx=1.2e-5 endif
+           gcaly=gcalx
+        endif
+ 	vnmrjcmd('setpage','Acquire')
+  	vnmrjcmd('setpage','Acquire','3D Shim Simple') 
+	spin=0
+	alock='u' wshim='n'
+	setlimit('pad',172800,0,1.25e-8)
+endif
+endif
+
+"***********************************************************************"
+
+if ($function='check') or ($function='setup') then
+
+   " ensure 3Dshimlib is set up "
+   exists(userdir+'/3Dshimlib','file'):$e
+   if ($e<0.5) then shell('mkdir '+userdir+'/3Dshimlib') endif
+   exists(userdir+'/3Dshimlib/data','file'):$e
+   if ($e<0.5) then shell('mkdir '+userdir+'/3Dshimlib/data') endif
+   exists(userdir+'/3Dshimlib/shimmaps','file'):$e
+   if ($e<0.5) then
+	shell('mkdir '+userdir+'/3Dshimlib/shimmaps')
+	"Create a dummy file none for the shimmap files menu"
+	shell('touch '+userdir+'/3Dshimlib/shimmaps/none')
+   endif
+   exists(userdir+'/3Dshimlib/calibs','file'):$e
+   if $e < 0.5 then shell('mkdir '+userdir+'/3Dshimlib/calibs') endif
+   exists('tubeid','parameter','global'):$e
+   if $e < 0.5 then create ('tubeid','real','global') tubeid=4.2 endif
+   exists('gxyzwaitflg','parameter'):$e
+   if $e < 0.5 then create('gxyzwaitflg','flag') gxyzwaitflg='n' endif
+   exists('gxyzwait','parameter'):$e
+   if $e < 0.5 then create('gxyzwait','real') gxyzwait=5 endif
+   exists('gxyzstarthour','parameter'):$e
+   if $e < 0.5 then create('gxyzstarthour','string') endif
+   exists('gxyzstartmin','parameter'):$e
+   if $e < 0.5 then create('gxyzstartmin','string') endif
+   exists('gxyzautorepeat','parameter'):$e
+   if $e < 0.5 then create('gxyzautorepeat','flag') gxyzautorepeat='y' endif
+   exists('gxyzrmserr_coarse','parameter'):$e
+   if $e < 0.5 then create('gxyzrmserr_coarse','real') gxyzrmserr_coarse=3 endif
+   exists('gxyzrmserr_fine','parameter'):$e
+   if $e < 0.5 then create('gxyzrmserr_fine','real') gxyzrmserr_fine=2 endif
+   exists('H1pw90calibmethod','parameter'):$e
+   if $e < 0.5 then create('H1pw90calibmethod','string')  H1pw90calibmethod='calib' endif
+   exists('autont','parameter'):$e
+   if $e < 0.5 then create('autont','flag')  autont='n' endif
+   exists('gxyzcaliblist','parameter'):$e
+   if $e < 0.5 then create('gxyzcaliblist','string')  gxyzcaliblist='pw90 1Dautoshim xycalib' endif
+   exists('gxyzmake1Dmap','parameter'):$e
+   if $e < 0.5 then create('gxyzmake1Dmap','string')  gxyzmake1Dmap='n' endif
+   exists('gxyzfieldvar','parameter'):$e
+   if $e < 0.5 then create('gxyzfieldvar','real') gxyzfieldvar=0.6 endif
+   exists('gxyzremap','parameter'):$e
+   if $e < 0.5 then create('gxyzremap','flag') gxyzremap='n' endif
+   exists('steflg','parameter'):$e
+   if $e < 0.5 then create('steflg','flag') steflg='y' endif
+   exists('gxyzsamplename','parameter'):$e
+   if $e < 0.5 then create('gxyzsamplename','string') endif
+   exists('gxyzdo3Dshim','parameter'):$ex
+   if ($ex<0.5) then create('gxyzdo3Dshim','flag') gxyzdo3Dshim='y' endif
+   exists('gxyzdoscset','parameter'):$ex
+   if ($ex<0.5) then create('gxyzdoscset','flag') gxyzdoscset='y' endif
+   exists('gxyzrfsize','parameter'):$ex
+   if ($ex<0.5) then
+      create('gxyzrfsize')
+      getparam('rfsize','Probe'):gxyzrfsize
+      if gxyzrfsize=0 then gxyzrfsize=18 endif
+   endif
+   exists('gxyzmapcode','parameter'):$ex
+   if ($ex<0.5) then create('gxyzmapcode','string') endif
+   gxyzmapcode=gxyzcode
+   return
+endif
+
+"***********************************************************************"
+
+if ($function='getpars') then
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+" from GMgetmapshims : 27th June 1997 : GAM               "
+" return no. of shims to map and fit, and their names"
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"Check that relevant parameters exist"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+exists('fitshims','parameter'):$ex
+if ($ex = 0) then 
+   write('line3','parameter fitshims is missing')
+	abort
+endif
+exists('mapshims','parameter'):$ex
+if ($ex = 0) then 
+   write('line3','parameter mapshims is missing')
+	abort
+endif
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"Find out which shims to fit, and how many        "
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$fitshims=fitshims
+$nfitshims=0
+$shimtofit[1]=''
+$i=0
+repeat
+        $i=$i+1
+        substr(fitshims,$i):$shimtofit[$i]
+        $shimtofit[$i+1]=''
+until $shimtofit[$i]=''
+$nfitshims=$i-1
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"Find out which shims to map, and how many        "
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$nmapshims=1
+$shimtomap[1]=''
+$i=0
+repeat
+        $i=$i+1
+	$fit[$i]=0
+        substr(mapshims,$i):$shimtomap[$i]
+	$j=0
+	repeat
+		$j=$j+1
+		if $shimtofit[$j]=$shimtomap[$i] then $fit[$i]=1 endif
+	until $j=$nfitshims
+        $shimtomap[$i+1]=''
+until $shimtomap[$i]=''
+$nmapshims=$i-1
+if $nfitshims>$nmapshims then $nfitshims=$nmapshims endif
+
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+"Find out what mapping step to use for each shim  "
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+$mapsteps=''
+$i=0
+repeat
+        $i=$i+1
+        substr(mapsteps,$i):$mapsteps[$i]
+        $change[$i]=0
+        if ($mapsteps[$i]<>'') then exec('r7='+$mapsteps[$i]) endif
+        $change[$i]=r7
+        $mapsteps[$i+1]=''
+until ($mapsteps[$i]='')
+if ($nmapshims<>($i-1)) then
+        write('line3','No. of map steps does not match no. of shims to map')
+        abort
+endif
+return($nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit)
+
+endif
+
+"***********************************************************************"
+
+if ($function='unarray') then
+
+gxyzmapsys('getpars'):$nmapshims,$nfitshims,$shimtomap,$shimtofit,$change,$fit
+
+"~~~~~~~~~~~~~"
+"unarray shims"
+"~~~~~~~~~~~~~"
+$i=0
+repeat
+  $i=$i+1
+  {$shimtomap[$i]} = {$shimtomap[$i]}[1]
+until $i >= $nmapshims
+
+endif
+
+if ($function = 'exit') then
+tmpreturn('gxyzsave')
+//gradtype=gradtypeglobal
+seqfil=seqfil dps
+endif

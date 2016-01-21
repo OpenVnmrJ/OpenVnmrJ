@@ -1,0 +1,22 @@
+"macro saveROI"
+
+if($# < 0.5) then return endif
+
+substr($1,1,1):$s1
+substr(aipROIpath,1,1):$s2
+if($s1 <> '/' and $s2 = '/') then
+   $path = aipROIpath +'/'+ $1
+elseif($s1 <> '/') then
+   $path = curexp +'/ROIs/'+ $1
+else
+   $path = $1
+endif
+
+strstr($path,'/','last'):$n,$dir,$name
+exists($dir,'directory'):$e
+if $e < 0.5 then
+   mkdir('-p',$dir)
+endif
+
+aipSaveRois($path)
+aipROIname_sel = $name

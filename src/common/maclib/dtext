@@ -1,0 +1,33 @@
+"macro dtext"
+" dtext               - display exp. text file at default position "
+" dtext(filename)     - display filename at default position "
+" dtext(x,y)          - display exp. text file at position x,y "
+" dtext(filename,x,y) - display filename at position x,y "
+
+if ($# = 1) or ($# = 3) then       "file name is supplied as an argument"
+   $file = $1
+else
+   $file = curexp + '/text'        "print text"
+endif
+
+if ($# = 2) or ($# = 3) then       "file name is supplied as an argument"
+   $x = ${$# - 1}                  "first or second argument"
+   $y = ${$#}                  	   "second or third argument"
+else
+   $x = 5                          "default for x"
+   $y = 0.98*wc2max                "default for y"
+endif
+write('graphics',$x,$y,''):$ys      "get the height of characters in $ys"
+$y = $y - $ys                      "position $y at bottom of the character"
+
+$ok = 2
+$t=''
+$key=$file
+repeat
+   lookup('mfile',$key,'readline',1,'filekey'):$t,$key,$ok
+   if ($ok = 2) then
+      write('graphics',$x,$y,'%s',$t)
+      $y = $y - $ys
+   endif
+until ($ok < 2)
+return($x,$y,$ys)

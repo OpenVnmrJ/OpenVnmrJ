@@ -1,0 +1,79 @@
+"macro wetghmqcps"
+"ghmqc - setup macro"
+"wetghmqcps - modified for LCNMR "
+"PAKeifer 950718 "
+
+"hmqc macro"
+" arg1 - specifies nuclear isotope for HMQC experiment "
+
+
+if ($# = 1) then
+   if ($1 = 15) then $name='hmqc'+'15'
+      else $name='hmqc'+'13' endif
+endif
+if ($# = 0) then $name='hmqc'+'13' endif
+if ($# > 1) then
+   write('line3','Only C13 and N15 are supported by this macro for HMQC.')
+   return
+endif
+
+lcpar2d
+lcpsgset($name,'satdly','satfrq','satpwr','satflg','array','null','taumb')
+lcpsgset($name,'dmf','dn','j','pwxlvl','pwx','dpwr','dof','sw1','ni','mbond')
+lcpsgset($name,'phase','dg','ap','ss','dm','dmm','d1','at','dgs','hs')
+
+dof=dof*sfrq/500  sw1=sw1*sfrq/500  ni=ni*sfrq/500
+np=2*at*sw
+if ((sw/np) > 4) then
+   at=(sw*at/4)/np
+   np=2*at*sw
+endif
+if ((at/(d1+at)) > 0.15) then
+   d1=(0.85*at)/0.15
+endif
+lcset2d($name) 
+refsource1='dfrq'
+ 
+ph  bs='n'  homo='n'  wshim='n'
+if (nt < 16) then
+   nt=16
+else
+   nt=nt/16
+   nt=nt*16
+endif
+pw=pw90  axis='pd'  spin=0
+mbond='n'  taumb=0
+"then move on to PFG and LC-NMR portion"
+
+lcpsgset('ghmqc','gzlvl1','gzlvl2','gzlvl3','gt1','gt2','gt3')
+lcpsgset('ghmqc','grise','gstab','dg','dg2','ap','pfgon')
+lcpsgset('ghmqc','pwx','pwxlvl','phase','array','sw1','dpwr','dmf','dseq')
+lcpsgset('ghmqc','dmf','null','hs','dcrmv','dm')
+"adjust for performa I"
+$ss=''
+substr(gradtype,3,1):$ss
+if $ss='l' 
+then
+  gzlvl1 = gzlvl1 * 0.2
+  gzlvl2 = gzlvl2 * 0.2
+  gzlvl3 = gzlvl3 * 0.2
+  setlimit('gzlvl1',2047.0,-2047.0,1.0)
+  setlimit('gzlvl2',2047.0,-2047.0,1.0)
+  setlimit('gzlvl3',2047.0,-2047.0,1.0)
+endif
+f ph ph1
+fn1=1024
+
+seqfil='wetghmqcps'
+phase=1,2
+pmode='full'
+ni=256 ss=64
+
+
+dm='nny'  dmm='ccg'
+
+
+lcpsgset('wetghmqcps','dg','dg2','ap','dglc','pwxpwr')
+ dg
+man('wetghmqcps')
+write('line3','Parameters created for a WET PFG HMQC(ps)')

@@ -1,0 +1,76 @@
+"macro parfidss"
+"***********************************************"
+"						"
+"  parfidss  -  creates parameters for F2 (2D)	"
+"		or F3 (3D) time-domain solvent	"
+"		subtraction			"
+"						"
+"***********************************************"
+
+if ($# < 1) then
+   $dimval = 0
+else
+   $dimval = $1
+endif
+
+if (($dimval < 0) or ($dimval > 2)) then
+   write('error','parfidss:  usage - parfidss(<n>) for n = [0,2]')
+   return(-1)
+endif
+
+$ssfiltname='ssfilter'
+$ssordername='ssorder'
+$ssntapsname='ssntaps'
+$sslsfrqname='sslsfrq'
+
+if ($dimval <> 0) then
+   $dimen=''
+   format($dimval,1,0):$dimen
+   $ssfiltname=$ssfiltname+$dimen
+   $ssordername=$ssordername+$dimen
+   $ssntapsname=$ssntapsname+$dimen
+endif
+
+exists($ssfiltname,'parameter'):$e
+if ($e = 0) then
+   create($ssfiltname,'real')
+   {$ssfiltname}=100
+   {$ssfiltname}='y'
+endif
+
+setgroup($ssfiltname,'processing')
+setlimit($ssfiltname,50000,10,0.1)
+
+exists($ssordername,'parameter'):$e
+if ($e = 0) then
+   create($ssordername,'integer')
+   {$ssordername}=7
+   {$ssordername}='n'
+endif
+
+setgroup($ssordername,'processing')
+setlimit($ssordername,20,1,1)
+
+exists($ssntapsname,'parameter'):$e
+if ($e = 0) then
+   create($ssntapsname,'integer')
+   {$ssntapsname}=121
+   {$ssntapsname}='y'
+endif
+
+setgroup($ssntapsname,'processing')
+setlimit($ssntapsname,2500,0,1)
+
+exists($sslsfrqname,'parameter'):$e
+if ($e = 0) then
+   create($sslsfrqname,'real')
+   {$sslsfrqname}=0
+   {$sslsfrqname}='n'
+endif
+setgroup($sslsfrqname,'processing')
+
+//cannot use downsamp and ssfilter together
+exists('downsamp','parameter'):$e
+if($e) then
+  off('downsamp')
+endif

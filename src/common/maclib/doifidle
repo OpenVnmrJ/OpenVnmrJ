@@ -1,0 +1,35 @@
+"macro doifidle"
+expactive('current'):$active
+expactive('auto'):$active2
+if ($active>0) then
+   write('error','Exp %d is active',$active)
+   return
+endif
+if ($active<0) then
+   write('error','Acquisition is not active')
+   return
+endif
+if ($active2>0) then
+   write('error','Automation in progress')
+   return
+endif
+$macro=$1
+if ($# > 1) then
+        $macro=$macro+'('
+        $i=2
+        repeat
+          format(${$i},'isreal'):$s
+          if ($s=1) then
+                $arg=''
+                format(${$i},'lower'):$arg
+                $macro=$macro+$arg
+          else
+                $arg=${$i}
+                $macro=$macro+'\''+$arg+'\''
+          endif
+          if ($i < $#) then $macro=$macro+',' endif
+          $i=$i+1
+        until $i > $#
+        $macro=$macro+')'
+endif
+{$macro}

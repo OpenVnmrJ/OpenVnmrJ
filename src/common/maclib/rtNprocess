@@ -1,0 +1,54 @@
+"macro rtNprocess"
+  "This is current acquisition"
+  expactive:$active
+  if ($active > 0) then
+      $sexp='' $cexp=0
+      jexp:$cexp,$sexp
+      write('error','%s has an active acquisition !!',$sexp)
+      return(0)
+  endif
+
+if ($# < 2) then $2='process' endif
+
+$fid='' strstr($1,'.fid','last'):$ret,$fid
+if ($ret=0) then $fid=$1 endif
+exists($fid+'.fid/procpar','file'):$pex
+if ($pex=0) then
+   write('error','%s.fid/procpar not found',$fid)
+   return(0)
+endif
+
+rt($1)
+clear(2)
+  "Redo window functions"
+getdim:$dim
+if ($dim<2) then
+    if (ct<bs) then
+	return(0)
+    endif
+else
+    if not celem then
+	return(0)
+    endif
+endif
+
+if ($dim>1) then
+    wft('nods'):$dum,celem setLP1 gaussian
+    if (dmg='av') then sqsinebell('acq') endif
+    if (dmg1='av1') then sqsinebell('f1') endif
+endif
+if ($2='process') then
+    abortoff
+    execpslabel('process')
+    process f full
+    aborton
+else
+    if $dim=1 then
+	ACQtime=ACQtime*ct/nt
+	setvalue('ACQtime',ACQtime,'processed')
+    else
+	ACQtime=ACQtime*celem/ni
+        setvalue('ACQtime',ACQtime,'processed')
+    endif
+endif
+return(1)

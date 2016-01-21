@@ -1,0 +1,81 @@
+"macro _samplename"
+ckstring(samplename,1):samplename
+exists('nameprefix','parameter'):$parex
+if ($parex) then
+//  nameprefix is an archaic samplename arameter.
+//  doesn't hurt to set its value.
+    nameprefix=samplename
+endif
+
+is_submitmode:$submit
+exists('gcflg','parameter','global'):$parex
+if ($parex) then
+    if (gcflg='y') then
+// This is called in the middle of customization
+//  and all walkupQpar module parameters may not
+//  exist though it is considered submitmode.
+//  Don't bother to proceed any further
+	$submit=0
+    endif
+endif
+
+if ($submit) and (appmode<>'imaging') then
+  if (appmode='lc') then
+     exists('setLCnodeTitle','maclib'):$macex
+     if ($macex) then
+	setLCnodeTitle
+     endif
+  else
+    if (clustermod='yes') then
+	if (sample='') and (samplename='') then
+	    $title='New Cluster'
+	elseif (sample<>'') then
+	    $title=sample
+	else
+	    $title=samplename+' (to be created)'
+	endif
+	vnmrjcmd('SQ set '+studyid+' title "'+$title+'"')
+	return
+    endif
+    if (sample='') then
+	$isnext='random'
+	getadminfo('smslocation'):$isnext
+	if ($isnext='next') and (NextLoc<>'') and (NextLoc<>'0') then
+	    $loc='Location: '+NextLoc+' - '
+	else
+	    $loc=''
+	endif
+	$title=samplename+' ('+$loc+'to be submitted)'
+    	if (samplename='') then
+	    if ($loc<>'') then
+	    	$title='New Sample (Location: '+NextLoc+')'
+	    else
+		$title='New Sample'
+	    endif
+	elseif (replaceQ[4]<>'') then
+	    $title=samplename+' (loc'+replaceQ[4]+')'
+	else
+	    $title=samplename+' ('+$loc+'to be submitted)'
+    	endif
+    	vnmrjcmd('SQ set '+studyid+' title "'+$title+'"')
+    endif
+    $node=''
+    shell('(cat '+sqdir+'/enterSQ | grep -w SampleInfo)'):$node
+    substr($node,1):$node
+    if ($node<>'') then
+	$dtime=0 $ltime=0
+	invformattime(daytime):$dtime
+	formattime($dtime):$daytime2,$daytime
+	invformattime(nighttime):$ltime
+	formattime($ltime):$nighttime2,$nighttime
+	$time=''
+	if (wqinit='acq') then $time=$daytime
+	else 
+		if (daytime<>'') then $time='Day:'+$daytime endif
+		if (nighttime<>'') then $time=$time+' Night:'+$nighttime endif
+	endif
+//	xmsetatts($node[1],'time',$time)
+	xmhaha_setprop($node,'time',$time)
+    endif
+  endif
+endif

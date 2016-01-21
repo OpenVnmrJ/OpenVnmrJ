@@ -1,0 +1,79 @@
+"macro C13pw90_process"
+//Reprocess C13 pw90 data in VeriPulse
+
+
+$phase='dophase'
+
+$x = 1
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+wp=1.5p
+sp=-23.6p
+
+$counter=1 //start counter with first index
+select(1)  //select first index
+peak:$bestheight //peak gives : height(mm) freq(ppm)
+$bestindex=$counter //keeps track of counter
+repeat
+   select($counter)//select index
+   peak:$ht,$freq  //define new height and freq
+   if ($ht>$bestheight) then //compare new height with previous 
+      $bestheight=$ht //if it's greater replace best height with $ht
+      $bestindex=$counter  //and replace best index with new counter
+      cr=$freq  //go to the peak
+      dres(cr,0.5):$lw  //measure linewidth
+   endif
+   $counter=$counter+1
+until ($ht<.5*$bestheight) or ($counter>arraydim)
+$firstmaxindex=$bestindex
+$firstmaxheight=$bestheight
+
+select($bestindex)
+
+if $phase='dophase' then aph endif
+
+VPgettarget('C13pw90'):$target
+$IPteststatus='FAIL'
+
+//now calculate pw90
+  VPthadj(1)
+  nll
+  fp
+  pw360cal:$pw90
+  dssh
+if ($pw90<=$target) then $IPteststatus='PASS' endif
+
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest($pw90) endif
+
+//Add the sample info to the text file
+  VPtext
+  write('line3','13C 90-degree pulse width \(direct\)'):$line
+  atext($line)
+  CalibrationResults=$line
+  write('line3','pw90: %.1f us at pulse power level %.1f dB',$pw90,tpwr):$line
+  atext($line)
+  CalibrationResults=CalibrationResults,$line
+  write('line3','Target <= %.1f us',$target):$line
+  atext($line)
+  CalibrationResults=CalibrationResults,$line
+  write('line3','Test status: %s',$IPteststatus):$line
+  atext($line)
+  CalibrationResults=CalibrationResults,$line
+
+//Add amp power information if calibration table exists
+  exists('VPgetpower','maclib'):$vpex
+if ($vpex) then
+      VPgetpower('check'):$pwrtabex
+      if ($pwrtabex) then
+  	   VPgetpower(VPpowertabpath,'C13','direct',tpwr,pw90,$target):$atext
+	   atext($atext)
+      endif
+endif
+
+VPhistory($pw90,tpwr)

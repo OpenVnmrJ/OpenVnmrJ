@@ -1,0 +1,57 @@
+"macro getHTfrqpath"
+$filename='' $fidexists=0
+$as='' $sample='' $archive=''
+$name=$1
+
+$archive=archivedir
+$sample=sample
+$as=$archive+'/'+$sample
+
+isnewexp:$new
+if (auto='y') then $new=1 endif
+if ($new=0) then
+    substr(file,'dirname'):$as
+    substr($as,'basename'):$sample
+    substr($as,'dirname'):$archive
+endif
+
+if ($archive='') or ($sample='') then
+	return($fidexists,$filename)
+endif
+
+$n=''
+cplog($name,'last',$as):$n
+if ($n='') then
+    return($fidexists,$filename)
+endif
+
+$tfid=0 $htf=0 $num=0
+shell('(cat '+$as+'/dirinfo/fidlog | grep -iwc -- '+$name+':)'):$tfid
+if ($tfid>0) then
+    $i=1
+    repeat
+	$n=''
+	cplog($name,'last',$i,$as):$n
+	if ($n<>'') then
+	    rtv($as+'/'+$n,'noabort','htfrq1','$htf'):$num
+	    if ($num>0) then
+		$i=$tfid
+	    endif
+	endif
+	$i=$i+1
+    until $i > $tfid
+endif
+if ($num>0) then
+    $filename=$as+'/'+$n+'.REC'
+    exists($filename,'directory'):$fidexists
+    if ($fidexists=0) then
+	$filename=$as+'/'+$n+'.rec'
+	exists($filename,'directory'):$fidexists
+	if ($fidexists=0) then
+	    $filename=$as+'/'+$n+'.fid'
+	    exists($filename,'directory'):$fidexists
+	endif
+    endif
+endif
+
+return($fidexists,$filename)

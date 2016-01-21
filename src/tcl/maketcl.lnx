@@ -1,0 +1,166 @@
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+#maketcl.lnx
+
+SHELL         =  /bin/sh
+SCCSDIR       =  $(sccsdir)
+
+MAKEFILE      =  maketcl.lnx
+
+TCL_SCCS_SRC  =  $(SCCSDIR)/tcl/SCCS/s.
+TCL_SGET      =  sccs -p$(sccsdir)/tcl/SCCS get
+
+TCL_VER       =  8.3
+BYTECODE_VER  = tbcload1.3
+
+TCL_LIB.so    = libtcl$(TCL_VER).so
+TK_LIB.so     = libtk$(TCL_VER).so
+BLT_LIB.so    = libBLT24.so
+TIX_LIB.so    = libtix4.1.8.3.so
+
+TCL_DIR       = $(vcommondir)/tcl/srcTcl
+TK_DIR        = $(vcommondir)/tcl/srcTk
+
+TIX_DIR       = $(vcommondir)/tcl/srcTix
+BLT_DIR       = $(vcommondir)/tcl/srcBlt
+ACQCOMM_DIR   = $(lnxobjdir)/proglib/ncomm
+ 
+TCL_so_LIBS       = $(TCL_LIB.so) $(TK_LIB.so) $(BLT_LIB.so) $(TIX_LIB.so)
+
+#-- Normal operational compile flags
+CC         =  gcc
+CFLAGS     = -fPIC -g -c  -Wall -O -m32
+CDEFINE    = -DLINUX -DNESSIE
+CINCLUDE   = -I$(TCL_DIR) -I$(TK_DIR)
+COMPILE.c  = $(CC) $(CFLAGS) $(CDEFINE) $(CINCLUDE)
+
+LDFLAGS    =  -m32
+LD_LIBS    = -L/usr/X11R6/lib -L$(vcommondir)/tclPro1.5.lnx/linux-ix86/lib \
+             -L $(ACQCOMM_DIR) -L$(TK_DIR) -L$(TCL_DIR) \
+             -Wl,-rpath /vnmr/lib \
+	     -ltk$(TCL_VER) -ltcl$(TCL_VER) -l$(BYTECODE_VER) \
+             -lc -lacqcomm -lX11 -lnsl -ldl -lm 
+
+LINK.c     = $(CC) $(LDFLAGS)
+
+#--- TCL scripts needed for "vnmrwish" applications
+TCL_SCRIPTS=			\
+		at.tcl		\
+		atrecord.tcl	\
+		atregbuilt.tcl	\
+		combiplate.tcl	\
+		decctool.tcl	\
+		Dg		\
+		dg.tcl		\
+		dgconf.tcl	\
+		enter.tcl	\
+		fileListen.tcl	\
+		plate_glue.tcl	\
+		status.tcl	\
+		pl_color.tcl	\
+		add_printer.tcl	\
+		nms.tcl		\
+		spin.tcl	\
+		gilson.tcl	\
+		xcal2.tcl	\
+		temp.tcl
+
+TCL_LIB_SCRIPTS=		\
+		collection.tcl	\
+		composite.tcl	\
+		docker.tcl	\
+		spincad.tcl	\
+		spingen.tcl	\
+		popup.tcl	\
+		psgcolor.tcl	\
+		psghelp.tcl	\
+		splash.tcl	\
+		combi.help	\
+		combi.m.xbm	\
+		dirview.tk	\
+		scroll2.tk	\
+		accnt_helpTip	\
+		menu2.tk	\
+		deck.tk		\
+		arrow.bmp	\
+		arrow2.bmp
+
+#---object modules needed for "vnmrwish"
+TCL_C_SRC=                       \
+		vnmrAppInit.c
+
+TCL_OBJ=                       \
+		vnmrAppInit.o
+
+ALLSRC = $(TCL_C_SRC) $(TCL_SCRIPTS) $(TCL_LIB_SCRIPTS)
+
+std LINUX : $(MAKEFILE) depend  vnmrwish_lnx
+	@echo "Linux $@ complete --------------------------"
+
+LIB_SOLARIS: $(MAKEFILE) $(TCL_so_LIBS)
+	@echo "Linux Tcl libraries complete --------------------------"
+
+depend: src
+	/usr/X11R6/bin/makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(TCL_C_SRC) 2>/dev/null
+
+.PHONY: clean cleanall
+
+clean:
+	rm -f *.a *.o *.so *.so.*
+
+cleanall:
+	rm -f *.a *.o *.so *.so.* *.c *.C *.h  *.tcl *.tk *.tbc \
+	      Dg accnt_helpTip *.bmp *.help *.xbm vnmrwish
+	rm -rf vnmr
+
+
+vnmrwish_lnx : $(TCL_OBJ)
+	 umask 2; $(LINK.c) $(LD_LIBS) -o vnmrwish $(TCL_OBJ)
+
+vnmrAppInit.o: $(@:.o=.c)
+	  umask 2; $(COMPILE.c) vnmrAppInit.c
+
+# No obvious way to get the dependency names for libraries automatically
+# ... not to mention the names stripped of version numbers, so just
+# write it all out.
+$(TCL_LIB.so) : $(TCL_DIR)/$@
+	rm -f $@
+	cp $? $@
+	rm -f libtcl.so
+	ln -s $@ libtcl.so
+$(TK_LIB.so) : $(TK_DIR)/$@
+	rm -f $@
+	cp $? $@
+	rm -f libtk.so
+	ln -s $@ libtk.so
+$(BLT_LIB.so) : $(BLT_DIR)/$@
+	rm -f $@
+	cp $? $@
+	rm -f libBLT.so
+	ln -s $@ libBLT.so
+$(TIX_LIB.so) : $(TIX_DIR)/$@
+	rm -f $@
+	cp $? $@
+	rm -f libtix.so
+	ln -s $@ libtix.so
+
+src Source : $(ALLSRC)
+	rm -rf vnmr; mkdir vnmr; cp $(TCL_LIB_SCRIPTS) vnmr
+	echo Sources up to date...
+
+#------ makefile extraction via SCCS allways. -------
+$(MAKEFILE) :
+	$(TCL_SGET) $@
+
+$(TCL_SCRIPTS) $(TCL_LIB_SCRIPTS) vnmrAppInit.c:  %:$(TCL_SCCS_SRC)%
+	$(TCL_SGET) $@
+
+# DO NOT DELETE THIS LINE -- make depend uses it

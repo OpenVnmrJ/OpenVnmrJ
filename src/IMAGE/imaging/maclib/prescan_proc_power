@@ -1,0 +1,613 @@
+"macro prescan_proc_power"
+"********************************************************************
+"
+"
+" NAME:
+"    prescan_proc_power
+"
+" DESCRIPTION:
+"    Proceses data for prescan transmitter power
+"
+" Ex:  prescan_proc_power(<argument>)   -- argument is optinal
+"
+"    <argument> - contains the file name of the power data file
+"                 if no argument is passed the default is defined
+"                 be prescan_defaults
+"
+"********************************************************************
+"----------------------------------"
+" define data output file & path   "
+"----------------------------------"
+$file = curexp+'/prescan_data.txt'
+
+"----------------------------------"
+" define & initialize variables    "
+"----------------------------------"
+$macro_name         = 'prescan_proc_power'           "name of macro"
+$counter            = 1				     "loop counter"
+$index              = 0				     "initalize index"
+$power_90           = 0                              "initialize 90-degree pulse power"
+$power_180          = 0                              "initialize 180-degree pulse power"
+$pulse_90_index     = 0				     "initialize 90-degree pulse power index"
+$pulse_180_index    = 0				     "initialize 180-degree pulse power index"
+$points_90          = 2				     "number of point left and "
+$points_180         = 4			             "number of point left and"
+					             "right of min used for fit"
+					             "at least 4 points required"
+$temp_str           = ''			     "temporary string variable"
+$action             = ''
+$log_coeffs         = ''                             "string create - containing coeffs."
+$entries            = 3                              "number of coefficients in analyze.list file"
+$fit_file           = curexp+'/analyze.list'         "path to file containing the fitting results"
+$writefit_file      = curexp+'/analyze.inp'          "path to file for curve fitting input"
+$x_label            = 'Gain' 			     "Label x_axis"
+$y_label            = 'Height'			     "Label y_axis
+$x_scale            = 'linear'			     "scaling for x-axis"
+$y_scale            = 'linear'			     "scaling for y-axis"
+$number_datasets    = 1				     "number of datasets -1 for Power"
+$changestep         = Prescan_PowerSteps             "number of power steps required"
+$step_variation     = 2.0                            "Allow up to two more steps then necessary"
+$no_steps           = 0.0                            "Initialize value for step number determination"
+
+prescan_log('enter',$macro_name,'PRESCAN POWER PROCESSING - started !')
+"----------------------------------"
+" Check arguments                  "
+"----------------------------------"
+if ($# > 1) then
+    write('error','Too many arguments in call to <prescan_proc_power> !')
+    prescan_exit('abort')
+endif
+if ($# = 1) then
+   $action='external'
+   $input_file=$1
+endif
+"----------------------------------"
+" check if data file exists        "
+"----------------------------------"
+exists($file,'file'):$e
+if ($e <> 0) then                              		"data file exists"
+    delete($file)					"remove peak data if is already existent"
+endif
+"----------------------------------"
+" load data file and extract peaks "
+"----------------------------------"
+if ($action = 'external') then
+     exists($input_file,'file'):$e
+     if ($e <> 0) then                         		"input file exists"
+          rt($input_file)			        "input data file"
+          prescan_log('load',$macro_name,'External file <'+$input_file)		"log load"
+     else
+          write('line3','Data file <%s> not found !',$input_file)
+	  $message = 'Data file <' + $input_file + '> not found'
+ 	  prescan_log('error',$macro_name,$message)	   "log error"
+	  write('error',$message)
+	  prescan_exit('abort')
+     endif	  
+endif
+"----------------------------------"
+" extract peaks                    "
+"----------------------------------"
+calcdim
+repeat
+     "ft('nods',$counter)"				"fft FID"
+     select($counter)
+     peak:$height[$counter]				"get peak height"
+     $power[$counter]=coil_param[3]+(($counter-1)*coil_param[4])             "calculate new power "
+     write('file',$file,'%d\t%f',$power[$counter],$height[$counter]) 
+     $counter=$counter+1				"increment counter"
+until $counter > arraydim  
+
+"-------------------------------------------------------------------------------------"
+"                     9 0 - d e g r e e   p u l s e   p o w e r                       "
+"-------------------------------------------------------------------------------------"
+"----------------------------------"
+" find tallest peak in dataset     "
+"----------------------------------" 
+getmax($height):$max	  			        "get maxima and its index"
+$pulse_90_index = $max[2]                     		"save index of maximum"
+"----------------------------------"
+"  check for valid maxima          "
+"----------------------------------"
+if $pulse_90_index < 0 then
+     write('line3','NO 90!!!!')
+     prescan_log('error',$macro_name,'No 90 degree pulse power found')		"log error"
+     write('error','PRESCAN ERROR - No 90 degree pulse power found')
+     $power_90 = -2
+     return($power_90,0,0)
+else							        "do this if maxima is valid"  
+    if ($pulse_90_index-$points_90 <= 0) then                   "enough points left of max for fit?"
+         dssh                                                   "Display data "
+	 dssl('list=tpwr1f')                                    "Label data"
+         $message='Not enough points left of maximum !'
+         write('line3','WARNING -'+$message)		        "display warning"
+         prescan_log('warning',$macro_name,$message)		"log event"
+	 $power_90 = -1                                         "set 90 degree pulse power to -1"
+	 return($power_90,$power_180,$changestep)
+    else
+"         if ($pulse_90_index+$points_90 > Prescan_PowerSteps) then  " "enough points right of max for fit?"
+         if ($pulse_90_index+$points_90 > arraydim) then
+	      dssh                                               "Display data "
+              dssl('list=tpwr1f')                                "Label data"
+	      $message='Not enough points right of maximum !'
+              write('line3','WARNING -'+$message)		 "display warning"
+              prescan_log('warning',$macro_name,$message)	 "log event"
+	      $power_90 = -2                                     "set 90 degree pulse power to -2"
+	      return($power_90,$power_180,$changestep)
+	 else                                                    "do this if maxima is valid"  
+	      "------------------------------"
+	      " prepare output and log event "
+	      "------------------------------"
+	       $message='Peak: '			         "create text for event logging"
+	       format($max[1],6,2):$temp_str
+	       $message=$message+$temp_str+' , @ Index/Power: '
+	       format($max[2],0,0):$temp_str
+	       $message=$message+$temp_str+' / '
+	       format($power[$max[2]],0,0):$temp_str
+	       $message=$message+$temp_str
+	       prescan_log('found',$macro_name,$message)          "log event"
+	       "----------------------------------"
+	       "  write file for curve fitting    "
+	       "----------------------------------"
+	       $index=$max[2]-$points_90		          "setup fit area"
+	       $loop_counter = 1				  "reset counter"
+	       repeat 
+        	   $fit_height[$loop_counter]=$height[$index]	  "assign peak values"
+        	   $fit_power[$loop_counter]=$power[$index]	  "assign power values"
+        	   $loop_counter=$loop_counter+1		  "increment counter"
+        	   $index=$index+1				  "increment index"
+	       until $loop_counter > (($points_90*2)+1)
+	       $loop_counter =1				          "loop counter"
+	       $number_pairs = size('$fit_height')                "number of x, y pairs"
+	       "-------------------------------"
+	       " check if file exists          "
+	       "-------------------------------"
+	       exists($writefit_file,'file'):$e
+	       if ($e <> 0) then
+		    delete($writefit_file)
+		    prescan_log('remove',$macro_name,$writefit_file)
+	       endif
+	       "-------------------------------------"
+	       " Create input file for curve fitting "
+	       "-------------------------------------"
+	       write('file',$writefit_file,'%s',$x_label)
+	       write('file',$writefit_file,'%s',$y_label)
+	       write('file',$writefit_file,'%d\t%d\t%s\t%s',$number_datasets,$number_pairs,$x_scale,$y_scale)
+	       write('file',$writefit_file,'%s\t%d','NEXT',$number_pairs)
+	       write('file',$writefit_file,'%s',$number_pairs)
+	       repeat
+		    write('file',$writefit_file,'\t%f\t%f',$fit_power[$loop_counter],$fit_height[$loop_counter])
+		    $loop_counter = $loop_counter + 1
+	       until $loop_counter > $number_pairs
+	       prescan_log('create',$macro_name,$writefit_file)
+	       "----------------------------------"
+	       "  fit data - quadratic fit        "
+	       "----------------------------------"
+	       analyze('expfit','regression','poly2','list')	  "fit data to 2nd order polynomial"
+	       prescan_log('fit_90',$macro_name,'fit successful') "log event"
+	       "-------------------------------------------------------------------"
+	       "                       get coefficients                            "
+	       "-------------------------------------------------------------------"
+	       $counter = 1                                       "reset counter"
+	       $coef_a = ''   			                  "establish these as strings"
+	       "---------------------------------"
+	       "  checkif file exists            "
+	       "---------------------------------"
+	       exists($fit_file,'file'):$e
+	       if ($e <> 0) then                                  "file exists"
+		   lookup('file',$fit_file)                       "open the analyze.list file"
+		   lookup('seek','Coefficients:')                 "find the start of coefficients"
+		   repeat
+        		lookup('read',2):$coef_a[$counter],$value_a[$counter]
+			$counter = $counter + 1
+		   until ($counter > $entries)	
+		   $counter = 1
+		   lookup('seek','deviation:')
+		   repeat	 
+        		lookup('read',1):$def[$counter]
+			$counter = $counter + 1
+		   until ($counter > $entries)	
+	       else
+		   write('error',$macro_name + ':File <'+$fit_file+'> does not exist!') 	
+		   prescan_exit('abort')
+	       endif
+	       "----------------------------------"
+	       "  create string                   "
+	       "----------------------------------"
+               $log_coeffs = ''                                   "reset log_coeffs"	       
+	       $size=size('$value_a')                             "number of values passed in"
+	       $counter = 1
+	       repeat
+		    $log_coeffs = $log_coeffs + 'a'
+		    format($counter,1,0):$temp_str
+		    $log_coeffs = $log_coeffs + $temp_str +'= '
+		    format($value_a[$counter],12,6):$temp_str
+		    $log_coeffs = $log_coeffs + $temp_str + ', '
+		    $counter = $counter + 1
+	       until ($counter > $size)
+	       prescan_log('fit_90',$macro_name,$log_coeffs)	  "log event"
+	       $power_90 = -$value_a[2]/(2*$value_a[3])		  "define 90 degree pulse power"
+	       "----------------------------------"
+	       " round result to nearest integer  "
+	       "----------------------------------"
+	       $power_90 = trunc($power_90+0.5)			   "round to nearest integer"
+	       "----------------------------------"
+	       " log result                       "
+	       "----------------------------------"
+	       $message='Pulse power 90 = '
+	       format($power_90,0,0):$temp_str
+	       $message=$message+$temp_str
+	       prescan_log('found',$macro_name,$message)
+	  endif
+     endif
+endif
+
+if ($power_90 < 0) then                            
+     return($power_90,$power_180,$changestep)                     "return to repeat with different power setting"
+endif     
+"-------------------------------------------------------------------------------------"
+"             1 8 0 - d e g r e e   p u l s e   p o w e r                             "
+"-------------------------------------------------------------------------------------"
+"----------------------------------"
+" locate minimum right of maximum  "
+"----------------------------------"
+getmin($height,$pulse_90_index):$min			          "get minima and its index"
+$pulse_180_index = $min[2]				          "save index of minima"
+"----------------------------------"
+"  check for valid minima          "
+"----------------------------------"
+if ($pulse_180_index < 0) then
+     "----------------------------------"
+     "  set to twice 90 if within limit "
+     "----------------------------------"
+     if (2 * $power_90) > fattn[1] then
+          "---------------------------"
+	  " return error              "
+          "---------------------------"	  
+	  dssh                                                    "Display data "
+	  dssl('list=tpwr1f')                                     "Label data"
+	  $message='PRESCAN ERROR - No 180 degree pulse power found !'           
+          prescan_log('error',$macro_name,$message)		  "log error"
+          $power_180 = -99                                        "indicate that no valid 180 was detected"
+	  return($power_90,$power_180,$changestep)
+     else
+          "---------------------------"
+	  " set to twice 90           "
+          "---------------------------"	  
+     	  $power_180 = 2 * $power_90 
+	  dssh                                                    "Display data "
+	  dssl('list=tpwr1f')                                     "Label data"
+	  $message='180 pulse power set to twice 90 degree pulse power !'
+	  write('line3','WARNING - '+$message)
+	  prescan_log('warning',$macro_name,$message)		  "log error"
+	  $no_steps = $power_180 + ($points_180 * coil_param[4])
+	  $no_steps = $no_steps + coil_param[4]
+	  $temp_steps = $no_steps mod coil_param[4]
+	  $changestep = ($no_steps - $temp_steps ) / coil_param[4]
+	  $maxgain = coil_param[3] + (coil_param[4] * $changestep)
+	  if ($maxgain >  coil_param[2]) then
+               write('line3','Can not adjust nunber of steps to find 180 pulse power -> adjustment exceeds max fine power!')
+	       $changestep = Prescan_PowerSteps
+	  endif
+	  return($power_90,$power_180,$changestep)
+     endif	  	  
+else 								 "do this if minima is valid"
+     "----------------------------------"
+     " check if ennough points right    "
+     " of minima                        "
+     "----------------------------------"
+"     if ($pulse_180_index+$points_180 > Prescan_PowerSteps) then"
+     if ($pulse_180_index+$points_180 > arraydim) then
+          "------------------------------------"
+	  " calculate new number of steps      "
+	  "------------------------------------"
+	  $changestep = $pulse_180_index + $points_180 
+	  $maxgain = coil_param[3] + (coil_param[4] * $changestep)
+	  if ($maxgain > coil_param[2]) then
+	      $changestep = Prescan_PowerSteps
+	  endif
+	  dssh                                                    "Display data "    
+	  dssl('list=tpwr1f')                                     "Label data"
+	  write('line3','NOT ENOUGH POINTS')
+	  $message='Not enough points right of minima - 180 degree pulse power set to zero crossing value !'
+	  write('line3','WARNING -'+$message)		      	  "display warning"
+	  prescan_log('warning',$macro_name,$message)	      	  "log event"
+	  $power_180 = $power[$pulse_180_index]		      	  "set to minima"
+	  return($power_90,$power_180,$changestep)
+     else     
+          "---------------------------------"
+	  " check number of excessive steps "
+          "---------------------------------"
+	  $maxgain = $pulse_180_index + $points_180
+          if ($maxgain < arraydim) then
+	       $changestep = $pulse_180_index + $points_180 + $step_variation
+	  endif	      
+	  "------------------------------"
+	  " prepare output and log event "
+	  "------------------------------"
+	  $message='Minima: '					  "create text for event logging"
+	  format($min[1],6,2):$temp_str
+	  $message=$message+$temp_str+' , @ Index/Power: '
+	  format($min[2],0,0):$temp_str
+	  $message=$message+$temp_str+' / '
+	  format($power[$min[2]],0,0):$temp_str
+	  $message=$message+$temp_str
+	  prescan_log('found',$macro_name,$message)		  "log event"	
+
+	  "----------------------------------"
+	  "  write file for curve fitting    "
+	  "        - left of minima -        "
+	  "----------------------------------"
+	  $index = $min[2] - $points_180 -1  		
+	  $loop_counter = 1				          "reset counter"
+	  $fit_height=0.0					  "reset variable/array"
+	  $fit_power=0.0					  "reset variable/array"
+	  repeat 
+	      $fit_height[$loop_counter]=$height[$index]	  "assign peak values"
+	      $fit_power[$loop_counter]=$power[$index]		  "assign power values"
+	      $loop_counter=$loop_counter+1			  "increment counter"
+	      $index=$index+1					  "increment index"
+	  until $loop_counter > $points_180
+	  $loop_counter =1				          "loop counter"
+	  $number_pairs = size('$fit_height')       		  "number of x, y pairs"
+	  "-------------------------------"
+	  " check if file exists          "
+	  "-------------------------------"
+	  exists($writefit_file,'file'):$e
+	  if ($e <> 0) then
+	       delete($writefit_file)
+	       prescan_log('remove',$macro_name,$writefit_file)
+	  endif
+	  "-------------------------------------"
+	  " Create input file for curve fitting "
+	  "-------------------------------------"
+	  write('file',$writefit_file,'%s',$x_label)
+	  write('file',$writefit_file,'%s',$y_label)
+	  write('file',$writefit_file,'%d\t%d\t%s\t%s',$number_datasets,$number_pairs,$x_scale,$y_scale)
+	  write('file',$writefit_file,'%s\t%d','NEXT',$number_pairs)
+	  write('file',$writefit_file,'%s',$number_pairs)
+	  repeat
+	       write('file',$writefit_file,'\t%f\t%f',$fit_power[$loop_counter],$fit_height[$loop_counter])
+	       $loop_counter = $loop_counter + 1
+	  until $loop_counter > $number_pairs
+	  prescan_log('create',$macro_name,$writefit_file)
+	  "----------------------------------"
+	  "  fit data - quadratic fit        "
+	  "----------------------------------"
+	  analyze('expfit','regression','poly2','list')		  "fit data to 2nd order polynomial"
+	  prescan_log('fit_180_I',$macro_name,'fit successful')	  "log event"
+	  "-------------------------------------------------------------------"
+	  "                get coefficients for left of 180                   "
+          "-------------------------------------------------------------------"
+	  $counter = 1                                       "reset counter"
+	  $coef_a = ''   			                  "establish these as strings"
+	  "---------------------------------"
+	  "  checkif file exists            "
+	  "---------------------------------"
+	  exists($fit_file,'file'):$e
+	  if ($e <> 0) then                                  "file exists"
+	      lookup('file',$fit_file)                       "open the analyze.list file"
+	      lookup('seek','Coefficients:')                 "find the start of coefficients"
+	      repeat
+        	   lookup('read',2):$coef_a[$counter],$value_l[$counter]
+		   $counter = $counter + 1
+	      until ($counter > $entries)	
+	      $counter = 1
+	      lookup('seek','deviation:')
+	      repeat	 
+        	   lookup('read',1):$def[$counter]
+		   $counter = $counter + 1
+	      until ($counter > $entries)	
+	  else
+	      write('error',$macro_name + ':File <'+$fit_file+'> does not exist!') 	
+	      prescan_exit('abort')
+	  endif
+	  "----------------------------------"
+	  "  create string                   "
+	  "----------------------------------"
+	  $log_coeffs = ''                                        "reset log_coeffs"	  
+	  $size=size('$value_l')                                  "number of values passed in"
+	  $counter = 1
+	  repeat
+	       $log_coeffs = $log_coeffs + 'a'
+	       format($counter,1,0):$temp_str
+	       $log_coeffs = $log_coeffs + $temp_str +'= '
+	       format($value_l[$counter],12,6):$temp_str
+	       $log_coeffs = $log_coeffs + $temp_str + ', '
+	       $counter = $counter + 1
+	  until ($counter > $size)
+	  prescan_log('fit_180_I',$macro_name,$log_coeffs)	  "log event"
+	  "----------------------------------"
+	  "  write file for curve fitting    "
+	  "        - right of minima -       "
+	  "----------------------------------"
+	  $index=$min[2]+1         				  "setup fit area"
+	  $loop_counter = 1					  "reset counter"
+	  $fit_height=0.0					  "reset variable/array"
+	  $fit_power=0.0					  "reset variable/array"
+	  repeat 
+	      $fit_height[$loop_counter]=$height[$index]	  "assign peak values"
+	      $fit_power[$loop_counter]=$power[$index]		  "assign power values"
+	      $loop_counter=$loop_counter+1			  "increment counter"
+	      $index=$index+1					  "increment index"
+	  until $loop_counter > $points_180
+	  $loop_counter =1				          "loop counter"
+	  $number_pairs = size('$fit_height')       		  "number of x, y pairs"
+	  "-------------------------------"
+	  " check if file exists          "
+	  "-------------------------------"
+	  exists($writefit_file,'file'):$e
+	  if ($e <> 0) then
+	       delete($writefit_file)
+	       prescan_log('remove',$macro_name,$writefit_file)
+	  endif
+	  "-------------------------------------"
+	  " Create input file for curve fitting "
+	  "-------------------------------------"
+	  write('file',$writefit_file,'%s',$x_label)
+	  write('file',$writefit_file,'%s',$y_label)
+	  write('file',$writefit_file,'%d\t%d\t%s\t%s',$number_datasets,$number_pairs,$x_scale,$y_scale)
+	  write('file',$writefit_file,'%s\t%d','NEXT',$number_pairs)
+	  write('file',$writefit_file,'%s',$number_pairs)
+	  repeat
+	       write('file',$writefit_file,'\t%f\t%f',$fit_power[$loop_counter],$fit_height[$loop_counter])
+	       $loop_counter = $loop_counter + 1
+	  until $loop_counter > $number_pairs
+	  prescan_log('create',$macro_name,$writefit_file)
+	  "-----------------------------------"
+	  "  fit data - quadratic fit         "
+	  "-----------------------------------"
+	  analyze('expfit','regression','poly2','list')		  "fit data to 2nd order polynomial"
+	  prescan_log('fit_180_II',$macro_name,'fit successful')  "log event"
+	  "--------------------------------------------------------"
+	  "            get coefficients for right of 180           "
+	  "--------------------------------------------------------"
+	  $counter = 1                                            "reset counter"
+	  $coef_a = ''   			                  "establish these as strings"
+	  "---------------------------------"
+	  "  checkif file exists            "
+	  "---------------------------------"
+	  exists($fit_file,'file'):$e
+	  if ($e <> 0) then                                       "file exists"
+	      lookup('file',$fit_file)                            "open the analyze.list file"
+	      lookup('seek','Coefficients:')                      "find the start of coefficients"
+	      repeat
+        	   lookup('read',2):$coef_a[$counter],$value_r[$counter]
+		   $counter = $counter + 1
+	      until ($counter > $entries)	
+	      $counter = 1
+	      lookup('seek','deviation:')
+	      repeat	 
+        	   lookup('read',1):$def[$counter]
+		   $counter = $counter + 1
+	      until ($counter > $entries)	
+	  else
+	      write('error',$macro_name + ':File <'+$fit_file+'> does not exist!') 	
+	      prescan_exit('abort')
+	  endif
+	  "----------------------------------"
+	  "  create string                   "
+	  "----------------------------------"
+	  $log_coeffs = ''                                        "reset log_coeffs"
+	  $size=size('$value_r')                                  "number of values passed in"
+	  $counter = 1
+	  repeat
+	       $log_coeffs = $log_coeffs + 'a'
+	       format($counter,1,0):$temp_str
+	       $log_coeffs = $log_coeffs + $temp_str +'= '
+	       format($value_r[$counter],12,6):$temp_str
+	       $log_coeffs = $log_coeffs + $temp_str + ', '
+	       $counter = $counter + 1
+	  until ($counter > $size)
+	  prescan_log('fit_180_II',$macro_name,$log_coeffs)	  "log event"
+	  "-----------------------------------------------------------------"
+	  "           get root / intersction 2 fits                         "
+	  "-----------------------------------------------------------------"
+	  "--------------------------------------"
+	  " create coefficients for calculation  "
+	  "--------------------------------------"
+	  $a=$value_l[3]-$value_r[3]		
+	  $b=$value_l[2]-$value_r[2]
+	  $c=$value_l[1]-$value_r[1]
+	  $det=($b*$b)-(4*$a*$c)
+	  $div=(2*$a)
+	  "----------------------------"
+	  " check intermmittent result "
+	  "----------------------------"
+	  if ($det < 0) then
+	       "-----------------------"
+	       " Complex root          "
+	       "-----------------------" 
+	       $power_180 = -1
+	       dssh                                              "Display data "
+	       dssl('list=tpwr1f')                               "Label data"
+	       $message='COMPLEX Root ! - Set to minima'
+	       write('line3','WARNING - '+$message)	         "display warning"
+	       prescan_log('found',$macro_name,$message)
+	  else
+	       "----------------------------------"
+	       " find root (two solutions)        "
+	       "----------------------------------"
+	       $x1=(-$b+sqrt($det))/$div
+	       $x2=(-$b-sqrt($det))/$div
+	       "----------------------------------"
+	       " check results                    "
+	       "----------------------------------"
+	       if ($x1 < 0.0) and ($x2 < 0.0) then		 "if both roots smaller 0"
+		    $message='Both roots are negative !'
+		    dssh                                         "Display data "
+		    dssl('list=tpwr1f')                          "Label data"
+		    write('line3','WARNING - '+$message)	 "display warning"
+		    prescan_log('warning',$macro_name,$message)    "log event"
+		    $power_180 = -1
+	       else
+		    if ($x1 > 0.0) and ($x2 > 0.0) then	         "if both roots larger 0"
+			    abs($x1-$pulse_180_index):$diff1       "difference between 1st root and minima"
+			    abs($x2-$pulse_180_index):$diff2	 "difference between 2nd root and minima"
+			    if ($diff1 < $diff2) then	         "if 1st root closer to minima"
+	        		 $power_180 = $x1		         "result is 1st root"
+			    else				         "if 2nd root closer to minima"
+	        		 $power_180 = $x2		         "result is 2nd root"
+			    endif
+		    else
+        		 if ($x1 > 0.0) then		         "if 1st root large 0 and 2nd root smaller 0"
+        		      $power_180 = $x1		         "result is 1st root"
+        		 else				         "if 2nd root large 0 and 1st root smaller 0"
+        		      $power_180 = $x2		         "result is 1st root"
+        		 endif
+		    endif     
+	       endif
+	  endif
+	  "----------------------------------"
+	  " log result                       "
+	  "----------------------------------"
+	  $message='Root = '
+	  format($power_180,0,0):$temp_str
+	  $message=$message+$temp_str
+	  prescan_log('found',$macro_name,$message)
+	  "-----------------------------------"
+	  " check root                        "
+	  "-----------------------------------"
+	  if ($power_180 < 0) then
+               "---------------------"
+	       " invalid root        "
+	       "---------------------"
+	       $message='No valid root found ! -> 180 degree pulse power set to minima !'
+	       write('line3','WARNING -'+$message)			"display warning"
+	       prescan_log('warning',$macro_name,$message)		"log event"
+	       $power_180 = $power[$pulse_180_index]			"set to minima if fit does not"
+     								        "fall between minima and next point"
+	  else 
+	       "--------------------"
+	       " valid root         "
+	       "--------------------"
+	       if ($power_180 > $power[$pulse_180_index+1]) or ($power_180 < $power[$pulse_180_index-1]) then
+		    "--------------------------------"
+		    " root outside window index +- 1 "
+		    "--------------------------------"
+		    $message='180 degree pulse power set to minima !'
+		    write('line3','WARNING -'+$message)	       "display warning"
+		    prescan_log('warning',$macro_name,$message)	       "log event"
+		    $power_180 = $power[$pulse_180_index]	       "set to minima if fit does not"
+     								       "fall between minima and next point"
+	       endif
+	  endif  
+	  "----------------------------------"
+	  " round result to nearest integer  "
+	  "----------------------------------"
+	  $power_180=trunc($power_180+0.5)			       "round to nearest integer value"
+	  "----------------------------------"
+	  " log result                       "
+	  "----------------------------------"
+	  $message='Pulse power 180 = '
+	  format($power_180,0,0):$temp_str
+	  $message=$message+$temp_str
+	  prescan_log('found',$macro_name,$message)
+     endif
+endif
+"----------------------------------"
+" log result and cleanup           "
+"----------------------------------"
+prescan_log('done',$macro_name,'PRESCAN POWER PROCESSING - completed !')
+
+return($power_90,$power_180,$changestep)
+

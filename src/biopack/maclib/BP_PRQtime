@@ -1,0 +1,69 @@
+"macro BP_PRQtime"
+"BP_PRQtime. A macro to calculate total time of PR series"
+
+exists(curexp+'/temp.par','file'):$e
+if $e=1 then
+  exists(curexp+'/temp.par.save','file'):$e
+    if $e=1 then
+     shell('rm -r '+curexp+'/temp.par.save')
+    endif
+  mv(curexp+'/temp.par',curexp+'/temp.par.save')
+endif
+svp(curexp+'/temp')
+$totalsecsmax=0
+$totalsecsmin=0
+$secs3max=0 $secs3min=0 $secs2=0
+
+clear  "clear Text Output window"
+$count=1
+repeat
+BPrtppar(PRexp[$count])
+ d1=PRd1 nt=PRnt[$count]
+ phase=1 phase2=1,2
+ ni=PRni[$count] 
+ if (seqfil<>'gNhsqc') then ni2=1 endif 
+ echo(seqfil) go('check')
+ exptime:$secs1 "format($time,6,0):$secs1"
+ echo($secs1)
+ if (seqfil<>'gNhsqc') then
+  if (PRskipF2='n') then
+   ni2=PRni2[$count] ni=1
+   echo(seqfil) go('check')
+   exptime:$secs2 "format($time,6,0):$secs2"
+  endif
+  ni=PRniTilt[$count] ni2=0 phase=1,2 phase2=1,2
+  echo(seqfil) go('check')
+  exptime:$secs3 "format($time,6,0):$secs3"
+  $secs3max=$secs3*PRnpr[$count]
+  $secs3min=$secs3
+ endif
+  $secs1max=$secs1+$secs2+$secs3max
+  $secs1min=$secs1+$secs2+$secs3min
+  $totalsecsmax=$totalsecsmax+$secs1max
+  $totalsecsmin=$totalsecsmin+$secs1min
+  echo('Maximum Exp1_secs=',$secs1max)
+  echo('Minimum Exp1_secs=',$secs1min)
+ $count=$count+1
+until $count>PRnexp
+write('line3','If any PSG abort occurred, see Text Output window')
+ 
+rtp(curexp+'/temp')
+shell('rm -r '+curexp+'/temp.par')
+echo('Maximum Total time =',$totalsecsmax)
+echo('Minimum Total time =',$totalsecsmin)
+$hoursmax=$totalsecsmax/3600
+$hoursmin=$totalsecsmin/3600
+$hrmax=trunc($hoursmax)
+$hrmin=trunc($hoursmin)
+$hrmax=trunc($hoursmax)
+$hrmin=trunc($hoursmin)
+$minmax=trunc(($hoursmax-$hrmax)*60)
+$minmin=trunc(($hoursmin-$hrmin)*60)
+
+$hrsmax='' $minsmax=''
+$hrsmin='' $minsmin=''
+format($hrmax,3,0):$hrsmax format($minmax,2,0):$minsmax
+format($hrmin,3,0):$hrsmin format($minmin,2,0):$minsmin
+$message='PR Experiments will take a Minimum of'+$hrsmin+' Hours '+$minsmin+' Minutes'+'\\ and a Maximum of'+$hrsmax+' Hours '+$minsmax+' Minutes'
+banner($message)
+write('line3',$message)

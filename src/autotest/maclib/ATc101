@@ -1,0 +1,116 @@
+"macro ATc101"
+"ATc101 CNNOESY Test"
+" 13C/15N pulses are set to 3dB below max levels:
+" 13C/15N decoupling powers set 3dB below max decoupling levels"
+" In CNnoesy stability test, three spectra with +-5% change in intensity will cause a halt"
+" ProteinPack or BioPack must be installed and calibrated"
+
+" For use with a 2 channel probe, set max 15N pulse power to 0.0 in autotest window"
+  if (at_c13tests='n') then ATnext return endif
+  if (at_max_pwx2lvl=0.0) then ATnext return endif  "for 2channel probe this test unnecessary"
+
+  if ($#=0) then
+   
+   gnoesyCNhsqc   "proteinpack must be installed and calibrated"
+   seqfil='ATCNnoesy'     "change sequence to avoid automatic power reduction in pulse sequence"
+
+   exists('sample','parameter'):$e
+   if $e then destroy('sample') endif
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   gain=at_gain
+   dof=dof+6d     "sets for menthanol"
+   tpwr=at_tpwr
+   pw=at_pw90
+   pwC180=1   "forces normal 180's instead of sech180's"
+   pwClvl=at_max_pwxlvl-3
+   pwNlvl=at_max_pwx2lvl-3
+   if pwNlvl<0 then pwNlvl=0.0 endif
+
+    exp((at_pwx90Lowpowerlvlc-(at_max_pwxlvl-3))*2.303/20):$mult        "uses calibration to calculate pwC at"
+     pwC=at_pwx90Lowpowerc*$mult/at_LBampl_comprc                       "3dB below at_max_pwxlvl power level"
+
+    exp((at_pwx90Lowpowerlvlc-(at_max_dpwr-3))*2.303/20):$mult            "uses calibration to calculate dmf at"
+    $pwC=at_pwx90Lowpowerc*$mult/at_LBampl_comprc dpwr=at_max_dpwr-3      "3dB below at_max_dpwr power level"
+    dmf=1e6/$pwC
+
+   at_currenttest='CNnoesy_pwxcalib' 
+
+   at=.052
+   r6=0
+   vp=0 dmm='cccw'
+   dm='nnns' "use synchronous(s) rather than asynchronous(y)" 
+   mag_flg='n'
+   wet='n' 
+   d1=1.5
+   if at_max_pwx2lvl>0.0 then
+    dm2='nnny' dmm2='cccc' dpwr2=at_max_dpwr2-3
+   endif
+   nt=1 av array('pwC',30,7.0,0.4)
+   text('CNnoesy: check pwC calibration at 3dB below maximum level')
+   wnt='ATwft select(1) sp=2.4p wp=2p vsadj(10) dssh'
+   wexp='ATc101(`PART1a`)'
+   au
+
+   elseif ($1='PART1a') then
+   wft
+   $count=1 $ht=0 $bestone=1 $htbest=0
+   repeat
+    select($count)
+    peak:$ht if $ht>$htbest then $bestone=$count $htbest=$ht endif
+    $count=$count+1
+   until $count>arraydim
+
+   pwC=pwC[$bestone]
+   pwC=trunc(10*pwC)/10
+
+   if (at_plotauto='y') then
+    pl('all') pap ATpage
+   endif
+   at_currenttest='CNnoesy_with_dec'
+    ss=128
+   array('nt',24,4,0) phase=1 d2=.01 
+   text('CNnoesy: Stability under Simultaneous Pulses and Decoupling')
+   ssfilter=300 av 
+   sb=-at sbs=sb fn=2*np gf='n' lb='n' th=150
+   wnt='ATwft select(1) vsadj(th) if (celem>1) then select(celem-1) vsadj(th) select(celem) peak:$int if ($int>1.05*th or $int<0.95*th) then r6=r6+1 endif if r6>2 then halt ATfail(`CNnoesy`) ATnext return endif endif  dssh'
+
+             "examine each spectrum as acquired for int. within 5% of previous spectrum, else abort and save fid"
+             "if this happens. continue with rest of autotest runs"
+
+   wexp='ATc101(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+ if (at_plotauto='y') then
+   if (at_printparams='y') then
+     pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+ endif
+ wft 
+ select(1) av f vsadj 
+ cr=10p delta=3p
+ dsn:r1
+ select(arraydim) dsn:r2
+ r1=trunc(r1*10)/10
+ r2=trunc(r2*10)/10
+ peak:$int,$pos
+ sp=$pos-200 wp=400
+ $avht=0 $stddev=0
+ ATplot2:$avht,$stddev 
+ if (at_plotauto='y') then
+   ATpltext(100,wc2max-10)
+   ATpage('CNnoesy_with_dec_1')
+ endif
+ $avht=trunc(10*$avht)/10
+ $stddev=trunc(1000*$stddev)/1000
+
+ ATrecord('CNNOESYc','CNnoesy Stability (1024 trials)','stability',100-$stddev,'  sn_first',r1,'  sn_last',r2,'  oversamp',oversamp)
+ write('file',autotestdir+'/REPORT','CNnoesy First Spectrum SN= %4.0f, Last Spectrum SN= %4.0f ,Stability =%2.2f',r1,r2,100-$stddev)
+ ATsvf
+
+ATnext
+endif

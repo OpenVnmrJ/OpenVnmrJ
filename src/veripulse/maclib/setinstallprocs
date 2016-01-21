@@ -1,0 +1,30 @@
+"macro setinstallprocs"
+"setinstallprocs - utility to set exec stuff for installation processing"
+"Also sets test-specific values for test parameters such as IPsample and IPpart"
+"Each unique execprocess macro will read the IPspecs and set into processed tree"
+
+"First set procs..."
+exists('execplot','parameter'):$ee
+if not $ee then
+	create('execplot','string')
+endif
+exists('execprocess','parameter'):$ee
+if not $ee then
+	create('execprocess','string')
+endif
+
+$name=$1+'_process'
+$name2=$1+'_plot'
+exists($name,'maclib'):$e,$path
+exists($name2,'maclib'):$epl,$path
+if ($e>0.5) then
+   execprocess=$name+'(\'activestudy\')'
+endif
+if ($epl>0.5) then
+   execplot=$name2
+else
+   execplot='VPplot'
+endif
+
+"load the module so we have IPsampinfo for later"
+module('setup','calibpars','basic')

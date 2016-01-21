@@ -1,0 +1,168 @@
+"macro setwetshape"
+"  Optional REAL arg = compression factor 		"
+"  Optional STRING arg = shapename 			"
+
+"The following section is commented out on 2005-05-14"
+
+/*
+on ('wetfrq'):$ison
+if ($ison=0) then  
+   write('error','wetfrq parameter is inactive')
+   abort
+endif
+*/
+
+  $ref_pw90=pw90*tpwr_cf
+  $ref_pwr=tpwr
+  $wetshape=''
+if ($# > 0) then
+  format($1,'isreal'):$real
+  if ($real>0) then
+      $ref_pw90=pw90*$1
+  else
+      $wetshape=$1
+  endif
+endif
+if ($# > 1) then
+  format($2,'isreal'):$real
+  if ($real>0) then
+      $ref_pw90=pw90*$2
+  else
+      $wetshape=$2
+  endif
+endif
+
+  if ($wetshape='') then
+	assignshapename('wet'):$wetshape
+  endif   
+  $wetshape1=$wetshape+'_1'
+  $wetshape2=$wetshape+'_2'
+  $wetshape3=$wetshape+'_3'
+  $wetshape4=$wetshape+'_4'
+
+  $shapefile=$wetshape+'.RF'
+  $shapefile1=$wetshape1+'.RF'
+  $shapefile2=$wetshape2+'.RF'
+  $shapefile3=$wetshape3+'.RF'
+  $shapefile4=$wetshape4+'.RF'
+
+  $wetfrqsize=size('wetfrq')
+
+  wetppm2frq('rev')
+
+if (Console <> 'mercury') then
+   opx($shapefile)
+   $i=1
+   repeat
+    putwave(wetfrqs[$i],wetfrqw[$i],0.0,wetfrq[$i]-tof,0,0,90)
+    $i=$i+1
+   until $i > $wetfrqsize
+   pboxpar('bscor','y')
+   cpx($ref_pw90,$ref_pwr):$dum
+   pbox_pw($shapefile):$pwwet
+   pbox_pwr($shapefile):$wetpwr
+
+   off('wetfrq')
+   if ($## > 0) then
+	return($pwwet,$wetpwr,$wetshape)
+   else
+	pwwet=$pwwet
+	wetpwr=$wetpwr
+        wetshape=$wetshape
+	saveshapes('add','tnshapes','wetshape','wetpwr','pwwet')
+   endif
+
+else
+
+   shell('touch '+userdir+'/shapelib/'+$shapefile):$dum  
+   $i=1
+   $minwidth=25
+   repeat
+     $offset=wetfrq[$i]-tof
+     if ($offset < 0) then $offset=-1*$offset endif
+     if ($offset > 1700) then
+       if (wetfrqw[$i] < 50) then 
+          wetfrqw[$i]=50 
+          if ($minwidth < wetfrqw[$i]) then $minwidth=wetfrqw[$i] endif
+       endif
+     elseif ($offset > 1400) then
+       if (wetfrqw[$i] < 40) then 
+          wetfrqw[$i]=40 
+          if ($minwidth < wetfrqw[$i]) then $minwidth=wetfrqw[$i] endif
+       endif
+     elseif ($offset > 1000) then
+       if (wetfrqw[$i] < 35) then 
+          wetfrqw[$i]=35 
+          if ($minwidth < wetfrqw[$i]) then $minwidth=wetfrqw[$i] endif
+       endif
+     else
+       if (wetfrqw[$i] < 25) then 
+          wetfrqw[$i]=25 
+          if ($minwidth < wetfrqw[$i]) then $minwidth=wetfrqw[$i] endif
+       endif
+     endif
+     $i=$i+1
+   until ($i > $wetfrqsize)
+
+   opx($shapefile1)
+   $i=1
+   repeat
+    if (wetfrqw[$i] < $minwidth) then wetfrqw[$i]=$minwidth endif
+    putwave(wetfrqs[$i],wetfrqw[$i],0.0,wetfrq[$i]-tof,0,0,81.4)
+    $i=$i+1
+   until $i > $wetfrqsize
+   cpx($ref_pw90,$ref_pwr):$dum
+   pbox_pw($shapefile1):$pwwet
+   pbox_pwr($shapefile1):$wetpwr
+   wetpwr1=$wetpwr
+   wetshape1=$wetshape1
+   pwwet1=$pwwet
+        saveshapes('add','tnshapes','wetshape1','wetpwr1','pwwet1')
+
+   opx($shapefile2)
+   $i=1
+   repeat
+    if (wetfrqw[$i] < $minwidth) then wetfrqw[$i]=$minwidth endif
+    putwave(wetfrqs[$i],wetfrqw[$i],0.0,wetfrq[$i]-tof,0,0,101.4)
+    $i=$i+1
+   until $i > $wetfrqsize
+   cpx($ref_pw90,$ref_pwr):$dum
+   pbox_pw($shapefile2):$pwwet
+   pbox_pwr($shapefile2):$wetpwr
+   wetpwr2=$wetpwr
+   wetshape2=$wetshape2
+   pwwet2=$pwwet
+        saveshapes('add','tnshapes','wetshape2','wetpwr2','pwwet2')
+
+   opx($shapefile3)
+   $i=1
+   repeat
+    if (wetfrqw[$i] < $minwidth) then wetfrqw[$i]=$minwidth endif
+    putwave(wetfrqs[$i],wetfrqw[$i],0.0,wetfrq[$i]-tof,0,0,69.3)
+    $i=$i+1
+   until $i > $wetfrqsize
+   cpx($ref_pw90,$ref_pwr):$dum
+   pbox_pw($shapefile3):$pwwet
+   pbox_pwr($shapefile3):$wetpwr
+   wetpwr3=$wetpwr
+   wetshape3=$wetshape3
+   pwwet3=$pwwet
+        saveshapes('add','tnshapes','wetshape3','wetpwr3','pwwet3')
+
+   opx($shapefile4)
+   $i=1
+   repeat
+    if (wetfrqw[$i] < $minwidth) then wetfrqw[$i]=$minwidth endif
+    putwave(wetfrqs[$i],wetfrqw[$i],0.0,wetfrq[$i]-tof,0,0,161.0)
+    $i=$i+1
+   until $i > $wetfrqsize
+   cpx($ref_pw90,$ref_pwr):$dum
+   pbox_pw($shapefile4):$pwwet
+   pbox_pwr($shapefile4):$wetpwr
+   wetpwr4=$wetpwr
+   wetshape4=$wetshape4
+   pwwet4=$pwwet
+        saveshapes('add','tnshapes','wetshape4','wetpwr4','pwwet4')
+
+   off('wetfrq')
+endif

@@ -1,0 +1,149 @@
+"macro msMethod"
+/*-*- MAGICAL -*-*/
+"macro msMethod"
+
+// Load or save an MS method 
+
+$read=0
+$write=0
+$save=0
+$methodonly=0
+if ($# = 1) then
+    $read=1
+    $file=$1
+endif
+
+if ($# = 2) then
+    if ($1 = 'read') then
+	$read=1
+        $file=$2
+    endif
+    if ($1 = 'readmethodonly') then
+	$read=1
+        $file=$2
+	$methodonly=1
+    endif
+    if ($1 = 'save') then
+	$save=1
+    endif
+    if ($1 = 'write' or $1 = 'save') then
+	$write=1
+        $file=$2
+    endif
+endif
+
+$methoddir = userdir + '/lc/msmethods/'
+exists($methoddir,'directory'):$e
+if (not $e) then
+  shell('mkdir -p "'+$methoddir+'"'):$e
+endif
+
+$str=''
+substr($file,1,1):$str
+if ($str = '/') then
+    $path = ''
+else
+    $path = $methoddir
+endif
+
+// Make $file just the file name; $path contains the rest
+$s1=''
+$s2=''
+strstr($file, '/','last'):$ex,$s1,$s2
+if ($ex) then
+    $path = $path + $s1
+    $file = $s2
+endif
+$filepath=''
+filepath($path, $file):$filepath
+
+
+// NB: $pars is a space-separated list of parameters to write/read 
+$pars=msMethodParameters
+if (not $methodonly) then
+    $pars = $pars + ' ' + msModeParameters
+endif
+$npars=''
+shell('(echo '+$pars+' | wc -w)'):$npars
+
+//
+// TODO:
+// May want to clear all the parameters in the list ($pars)
+// before reading in the new values.  That way, if new parameters
+// have been added to the list since the values were written,
+// they will be cleared instead of being left at the old values.
+//
+if ($read) then
+    if ($methodonly) then
+	" Save mode variables for later restoration "
+	$i = 1
+        $var = ''
+	substr(msModeParameters, 1):$var
+	repeat
+	    {'$'+$var}={$var}
+	    $i = $i + 1
+	    $var=''
+	    substr(msModeParameters, $i):$var
+	until ($var = '')
+    endif
+    exists($filepath, 'file'):$ex
+    if (not $ex) then
+        $path = systemdir + '/lc/msmethods/'
+	$filepath = $path + $file
+    endif
+    exists($filepath, 'file'):$ex
+    if ($ex) then
+        fread($filepath, 'global')
+    endif
+    if ($methodonly) then
+	" Restore mode variables "
+	$i = 1
+        $var = ''
+	substr(msModeParameters, 1):$var
+	repeat
+	    {$var}={'$'+$var}
+	    $i = $i + 1
+	    $var=''
+	    substr(msModeParameters, $i):$var
+	until ($var = '')
+    endif
+    writeToVnmrJcmd('pnew',$npars+' '+$pars)
+endif
+
+if ($write) then
+    exists($path, 'directory'):$e
+    if (not $e) then
+	shell('mkdir -p "'+$path+'"'):$x
+    endif
+    writeparam($filepath, $pars, 'global')
+    if (not $save) then
+        write('line3', 'Method saved in ' + $filepath)
+    endif
+endif
+
+if ($save) then
+    " Add a .msm extension to indicate an MS method "
+    " Make unique file name if file different from version in msmethods dir"
+
+    " Is this method in msmethods? "
+    exists($methoddir + $file, 'file'):$ex
+    if (not $ex) then
+        $methoddir = systemdir + '/lc/msmethods/'
+        exists($methoddir + $file, 'file'):$ex
+    endif
+    if ($ex) then
+        " Method exists, but is it the same? "
+        $diff = ''
+        shell('cmp "' + $filepath + '" "' + $methoddir + $file + '"; echo x'):$diff
+        if ($diff <> 'x') then
+            $ex = 0
+        endif
+    endif
+    $date = ''
+    if (not $ex) then
+        shell('date +_%\Y%\m%\d%\H%\M%\S'):$date
+    endif
+    mv($filepath, $filepath + $date + '.msm')
+    $filepath = $filepath + $date + '.msm'
+    write('line3', 'Method saved in ' + $filepath)
+endif

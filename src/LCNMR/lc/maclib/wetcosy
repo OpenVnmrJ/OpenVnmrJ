@@ -1,0 +1,34 @@
+"macro wetcosy"
+"*************************************************"
+" cosy - convert parameter set to cosy experiment "
+"*************************************************"
+"wetcosy - modified for LCNMR "
+"PAKeifer 950718 "
+
+
+av
+if ct>0 then $nt=ct else $nt=nt endif
+lcset2d('relayh',6)      "6 Hz/pt is the desired F2 digital resolution"
+lcpsgset('relayh','dg','dgs','ap','ss','d1','axis','array','tau','relay')
+sw1=sw rfl1=rfl rfp1=rfp
+refpos1=refpos reffrq1=reffrq
+if ($nt < 32) then
+   nt=1
+else
+   nt=$nt/32
+endif
+nt=4*nt
+p1=pw90	 pw=pw90
+tau=0  relay=0	       "both zero for normal cosy"
+noisemult(20)
+fn1=fn
+time
+man('relayh')
+
+lcpsgset('wetrelayh','dg','ap','dg2','dglc')
+seqfil='wetrelayh'
+dg
+man('wetgcosy')
+write('line3','Parameters created for a WET COSY')
+
+

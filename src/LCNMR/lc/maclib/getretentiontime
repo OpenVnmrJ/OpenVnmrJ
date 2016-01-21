@@ -1,0 +1,50 @@
+"macro getretentiontime"
+"getretentiontime"
+$filename=curexp+'/lcdata'
+exists($filename,'file'):$e
+if $e=0 then write('line3','lcdata file does not exist in current experiment') 
+else
+"lcdata file exists"
+if $#>0 then $request=$1 else $request=1 endif
+
+$det2onflag=(1=0)
+
+
+lookup('file',$filename)
+lookup('readline'):$filename
+lookup('readline',4)
+lookup('read'):$det2on
+"write('line3',$det2on)"
+$det2onflag=$det2on>0
+lookup('readline',5)
+
+
+$peak=0
+if $det2onflag then $resok=6 else $resok=5 endif
+repeat
+  $s1='' $s2='' $s3='' $s5='' $s6='' $dum='' $a1=0 $a2=0 $stop=0 $det=0
+  if $det2onflag then lookup('read','read','read','read','read','readline'):$s1,$s2,$s3,$dum,$s5,$s6,$res
+  else lookup('read','read','read','read','readline'):$s1,$s2,$s3,$s5,$s6,$res endif
+  if $res=$resok then
+  format($s1,5,3):$t
+  if not typeof('$t') then if $t>0 then
+    format($s2,5,3):$a1
+    format($s3,5,3):$a2
+    format($s5,1,0):$stop
+    format($s6,1,0):$det 
+    if $stop>0 then
+      $peak=$peak+1
+      if $peak=$request then $retentiontime=$t $res=0
+      write('line3','found stop') endif
+    endif
+  endif
+  endif
+  endif
+until $res<>$resok
+return($filename,$retentiontime)
+endif
+
+
+
+
+

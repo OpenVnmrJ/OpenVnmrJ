@@ -1,0 +1,368 @@
+"macro xmhaha_fullSQ"
+
+$tailX='tail'
+whichtail:$tailX
+
+$xmldir=$2
+$sqdir=$2+'/sqdir'
+$xml=$sqdir+'/study.xml'
+$esq=$sqdir+'/enterSQ'
+$xml2=$sqdir+'/scoutfid_study.xml'
+$esq2=$sqdir+'/scoutfid_enterSQ'
+$xml3=$sqdir+'/error_study.xml'
+$esq3=$sqdir+'/error_enterSQ'
+$xml4=$sqdir+'/scoutfid_error_study.xml'
+$esq4=$sqdir+'/scoutfid_error_enterSQ'
+$info=$sqdir+'/info'
+
+IF ($1='get') THEN
+
+    is_submitmode:$submit
+    if ($submit) then
+	$error=1 $scout=0
+    else
+	SampleViewPref('get','scout'):$scout
+	SampleViewPref('get','error'):$error
+    endif
+    $retok=0 $retnode=''
+    if ($error) and ($scout) then
+	$xmlfile=$xml4
+	$esqfile=$esq4
+    elseif ($error) then
+	$xmlfile=$xml3
+	$esqfile=$esq3
+    elseif ($scout) then
+	$xmlfile=$xml2
+	$esqfile=$esq2
+    else
+	$xmlfile=$xml
+	$esqfile=$esq
+    endif
+    exists($xmlfile,'file'):$retok
+    if ($retok) then
+	exists($esqfile,'file'):$retok
+    endif
+    if ($retok) then
+	exists($info,'directory'):$retok
+    endif
+    if ($retok) then
+        cqinitCP
+	shell('cd "'+$sqdir+'"; cp -r * '+cursqexp+'/tmpstudy'):$dum
+	if ($error) and ($scout) then
+	    shell('mv '+cursqexp+'/tmpstudy/scoutfid_error_study.xml '+cursqexp+'/tmpstudy/study.xml'):$dum
+	    shell('mv '+cursqexp+'/tmpstudy/scoutfid_error_enterSQ '+cursqexp+'/tmpstudy/enterSQ'):$dum
+	elseif ($error) then
+	    shell('mv '+cursqexp+'/tmpstudy/error_study.xml '+cursqexp+'/tmpstudy/study.xml'):$dum
+	    shell('mv '+cursqexp+'/tmpstudy/error_enterSQ '+cursqexp+'/tmpstudy/enterSQ'):$dum
+	elseif ($scout) then
+	    shell('mv '+cursqexp+'/tmpstudy/scoutfid_study.xml '+cursqexp+'/tmpstudy/study.xml'):$dum
+	    shell('mv '+cursqexp+'/tmpstudy/scoutfid_enterSQ '+cursqexp+'/tmpstudy/enterSQ'):$dum
+	endif
+	shell('rm -f '+cursqexp+'/tmpstudy/*_study.xml'):$dum
+	shell('rm -f '+cursqexp+'/tmpstudy/*_enterSQ'):$dum
+  	vnmrjcmd('SQ delete tmpstudy')
+  	vnmrjcmd('SQ read '+cursqexp+'/tmpstudy/study.xml')
+	shell('(cat "'+$esqfile+'" | '+$tailX+' -n 1 | awk \'{print $1}\')'):$retnode
+        reconcileSQfids
+    endif
+    return($retok,$retnode)
+ENDIF
+
+IF ($1='set') THEN
+
+    exists($sqdir,'directory'):$direx
+    if ($direx) then
+    	shell('rm -rf "'+$sqdir+'"'):$dum
+    endif
+    mkdir($sqdir):$e
+    exists($sqdir,'file','w'):$ok
+    if not ($ok) then return endif
+    write('reset',$sqdir+'.info')
+
+    $archsamp='' 
+    strstr($xmldir,'/dirinfo/'):$ret,$archsamp
+    $xmlreturn='','','','','','',''
+    $xmlct=0,0,0,0,0,0,0
+    $cxml='' $cxmlct=0
+    $cpnodes='' $cpnodes2=''
+    $sample='' $archive='' $samplename='' $studyowner=''
+"**************************************************************"
+    substr($archsamp,'dirname'):$archive
+    substr($archsamp,'basename'):$sample
+    $archivedirsample=$archsamp
+    exists($archsamp+'/dirinfo/macdir/sampleglobal','file'):$sgex
+    if ($sgex) then
+    	rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','samplename'):$samplename
+    	rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','studyowner'):$studyowner
+    	if ($studyowner='') then
+	    rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','operator_'):$studyowner
+    	endif
+    else
+	return
+    endif
+
+    $tmpfile=userdir+'/persistence/'+$sample+'_tmp'
+    $tmpfile2=$tmpfile+'2'
+    write('reset',$tmpfile)
+
+    $fidlog='dirinfo/fidlog'
+    $spectrumlog='dirinfo/spectrumlog'
+    $craftlog='dirinfo/craftlog'
+    $explistpar='dirinfo/macdir/explist'
+    $expqueuepar='dirinfo/macdir/expqueue'
+    $cmdnodes='dirinfo/macdir/CMDnodes'
+    $acqlog='dirinfo/macdir/ACQlist'
+    $EXPLIST='dirinfo/macdir/EXPLIST'
+    $LONGLIST='dirinfo/macdir/LONGLIST'
+"**************************************************************"
+"  Find out what info should be used to build SQ        "
+
+    $usefidlog='yes'
+    $usespectrumlog='yes'
+    $usecraftlog='yes'
+    $useexplist='yes'
+    $useEXPLIST='yes'
+    $useACQlist='yes'
+    $useLONGLIST='yes'
+"**************************************************************"
+"*****All local variable defined, proceed***"
+"**********************************************************************"
+    pwd:$curdir
+    cd($archsamp):$dum
+    $cpdir=$xmldir+'/cpnodeinfo'
+
+"*************************************************************************"
+	"***Get fidlog subxml***"
+   	exists($xmldir+'/fidlog','file'):$xmlfileex
+   	if ($xmlfileex) then
+            $xmlreturn[1]=$xmldir+'/fidlog'
+	    shell('(cat "'+$cpdir+'" | grep -w Completed | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+	    exists($xmldir+'/clusterlog','file'):$cxmlfileex
+	    if $cxmlfileex then
+		$cxml=$xmldir+'/clusterlog'
+		lookup('mfile',$cxml,'countline'):$cxmlct
+		if $cxmlct=0 then $cxml='' endif
+	    endif
+   	endif
+"*************************************************************************"
+        "***Get spectrumlog subxml***"
+        exists($xmldir+'/spectrumlog','file'):$xmlfileex
+        if ($xmlfileex) then
+            $xmlreturn[2]=$xmldir+'/spectrumlog'
+            shell('(cat "'+$cpdir+'" | grep -w Spectrum | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        endif
+"*************************************************************************"
+        "***Get craftlog subxml***"
+        exists($xmldir+'/craftlog','file'):$xmlfileex
+        if ($xmlfileex) then
+            $xmlreturn[3]=$xmldir+'/craftlog'
+            shell('(cat "'+$cpdir+'" | grep -w Craft | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        endif
+"*************************************************************************"
+	"***Get errorlog subxml***"
+   	exists($xmldir+'/errorlog','file'):$xmlfileex
+   	if ($xmlfileex) then
+	    $xmlreturn[4]=$xmldir+'/errorlog'
+            shell('(cat "'+$cpdir+'" | grep -w Error | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+   	endif
+
+"*************************************************************************"
+        "***Get a explist subxml***"
+
+    exists($xmldir+'/expqueue','file'):$xmlfileex
+    if ($xmlfileex) then
+        $xmlreturn[5]=$xmldir+'/expqueue'
+    else
+    	exists($xmldir+'/explist','file'):$xmlfileex
+    	if ($xmlfileex) then
+		$xmlreturn[5]=$xmldir+'/explist'
+	endif
+    endif
+    if ($xmlfileex) then
+        shell('(cat "'+$cpdir+'" | grep -w Queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+
+"****************************************************************************"
+        "***Get a EXPLIST subxml***"
+
+    exists($xmldir+'/EXPLIST','file'):$xmlfileex
+    if ($xmlfileex) then
+	$xmlreturn[6]=$xmldir+'/EXPLIST'
+        shell('(cat "'+$cpdir+'" | grep -w Day_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+
+"****************************************************************************"
+        "***Get a LONGLIST subxml***"
+
+    exists($xmldir+'/LONGLIST','file'):$xmlfileex
+    if ($xmlfileex) then
+	$xmlreturn[7]=$xmldir+'/LONGLIST'
+        shell('(cat "'+$cpdir+'" | grep -w Night_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+    endif
+
+"****************************************************************************"
+    cd($curdir):$dum
+"****************************************************************************"
+"  Now proceed to build the studyQ for this list"
+
+    $xmlsize=size('$xmlreturn')
+    $i=1 $xmlok=0
+    repeat
+     	if ($xmlreturn[$i]<>'') then
+	    exists($xmlreturn[$i],'file'):$ok
+	    if $ok then
+		lookup('mfile',$xmlreturn[$i],'countline'):$xmlct[$i]
+	    endif
+            if ($xmlct[$i]=0) then $xmlreturn[$i]='' else $xmlok=1 endif
+     	endif
+        $i=$i+1
+    until $i>$xmlsize
+    if ($xmlok=0) then
+	shell('rm -f '+$tmpfile):$dum
+    	return
+    endif
+
+    $gtitle=$sample
+    exists('img2cp','maclib'):$imgex
+    if ($imgex) then
+	$studyid='' $isimg=0
+	img2cp('isimgsample',$archive+'/'+$gtitle):$isimg,$studyid
+	if ($isimg) and ($studyid<>'') then
+	    $gtitle=$studyid
+	endif
+    endif
+    if ($sample='NMR') then  //This is LC NMR
+        shell('basename '+$archive):$lcid
+        $gtitle=$lcid
+    endif
+
+    $ttxt=$samplename
+    $tt=$gtitle
+    if ($studyowner<>operator) and (operator<>owner) then
+	$tt=$tt+' (study owned by: '+$studyowner+')'
+    endif
+
+    write('reset',$xml)
+    write('reset',$esq)
+    mkdir($info):$e
+
+    write('file',$xml,'<?xml version="1.0" encoding="UTF-8"?>')
+    write('file',$xml,'<!DOCTYPE template>')
+    write('file',$xml,'')
+    write('file',$xml,'<template>')
+    write('fileline',$xml,'  <protocol title="%s" ',$tt)
+    write('fileline',$xml,'type="protocol" exp="grandparent" lock="off" ')
+    write('fileline',$xml,'id="tmpstudy" tooltext="%s" expanded="true">\n',$ttxt)
+    write('reset',$sqdir+'/cpnodeinfo')
+    shell('cp "'+$xml+'" "'+$xml3+'"'):$dum
+
+    $filter='Completed','Spectrum','Craft','Error','Queued','Day_queued','Night_queued'
+    pwd:$curdir
+    if $cxml<>'' then
+        shell('(cat "'+$cxml+'" >> "'+$xml3+'")'):$dum
+        shell('(cat "'+$cxml+'" >> "'+$xml+'")'):$dum
+    endif
+    write('reset',$tmpfile2)
+    $i=1
+    repeat
+        if ($xmlreturn[$i]<>'') then
+            shell('(cat "'+$xmlreturn[$i]+'" >> "'+$xml3+'")'):$dum
+	    if ($i<>4) then
+			// not error nodes
+		shell('(cat "'+$xmlreturn[$i]+'" >> "'+$xml+'")'):$dum
+	    endif
+	    if $i=3 then
+			// craft nodes. close protocols
+		write('file',$xml3,'  </protocol>')
+		write('file',$xml,'  </protocol>')
+	    endif
+	    cd($xmldir):$dum
+	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1" "$2" "$3}\' >> "'+$esq3+'")'):$dum
+	    if ($i<>4) then
+			// not error nodes
+		shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1" "$2" "$3}\' >> "'+$esq+'")'):$dum
+	    endif
+	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1}\' >> "'+$tmpfile2+'")'):$dum
+        endif
+        $i=$i+1
+    until $i > $xmlsize
+
+    if $cxmlct then
+    	write('file',$sqdir+'.info','clusterlog %d',$cxmlct)
+    endif
+	write('file',$sqdir+'.info','fidlog %d',$xmlct[1])
+        write('file',$sqdir+'.info','spectrumlog %d',$xmlct[2])
+        write('file',$sqdir+'.info','craftlog %d',$xmlct[3])
+        write('file',$sqdir+'.info','errorlog %d',$xmlct[4])
+        write('file',$sqdir+'.info','explist %d',$xmlct[5])
+        write('file',$sqdir+'.info','EXPLIST %d',$xmlct[6])
+        write('file',$sqdir+'.info','LONGLIST %d',$xmlct[7])
+
+    cd($curdir):$dum
+
+    shell('cp "'+$xml+'" "'+$xml2+'"'):$dum
+    shell('cp "'+$esq+'" "'+$esq2+'"'):$dum
+    shell('cp "'+$esq3+'" "'+$esq4+'"'):$dum
+    shell('cp "'+$xml3+'" "'+$xml4+'"'):$dum
+    write('file',$xml,'  </protocol>')
+    write('file',$xml,'</template>')
+    write('file',$xml3,'  </protocol>')
+    write('file',$xml3,'</template>')
+
+        exists($xmldir+'/scoutlog','file'):$xmlfileex
+        if ($xmlfileex) then
+	    shell('(cat "'+$xmldir+'/scoutlog" | grep -c protocol)'):$xmlfileex
+	endif
+	if ($xmlfileex) then
+            shell('(cat "'+$xmldir+'/scoutlog" >> '+$xml2+')'):$dum
+            shell('(cat "'+$xmldir+'/scoutlog" >> '+$xml4+')'):$dum
+            cd($xmldir):$dum
+            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1" "$2" "$3}\' >> '+$esq2+')'):$dum
+            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1" "$2" "$3}\' >> '+$esq4+')'):$dum
+            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1}\' >> '+$tmpfile2+')'):$dum
+            write('file',$xml2,'  </protocol>')
+            write('file',$xml4,'  </protocol>')
+        endif
+        cd($curdir):$dum
+
+    	write('file',$xml2,'  </protocol>')
+    	write('file',$xml2,'</template>')
+        write('file',$xml4,'  </protocol>')
+        write('file',$xml4,'</template>')
+
+  $ts1='' $ts2='' $tstot=0
+  readfile($tmpfile2,'$ts1','$ts2','','local'):$tstot
+  if ($tstot) then
+    $ti=1
+    repeat
+        shell('(cp -r "'+$xmldir+'/info/'+$ts1[$ti]+'" "'+$info+'")'):$dum
+        $ti=$ti+1
+    until $ti>$tstot
+  endif
+  shell('rm -f '+$tmpfile2):$dum
+
+    shell('chmod -R g+w "'+$xmldir+'"'):$dum
+    shell('rm -f "'+$sqdir+'/cpnodeinfo"'):$dum
+    shell('rm -f '+$tmpfile):$dum
+
+ENDIF
+
+IF ($1='check') THEN
+    shell('touch "'+$sqdir+'.info"')
+    exists($sqdir+'.info','file'):$ok
+    if not ($ok) then return endif
+    $s1='' $s2=0
+    readfile($sqdir+'.info','$s1','$s2','','local'):$total
+    if ($total<6) then return(0) endif
+    $i=1
+    repeat
+	$s3=0
+	exists($xmldir+'/'+$s1[$i],'file'):$fex
+	if $fex then
+	    lookup('mfile',$xmldir+'/'+$s1[$i],'countline'):$s3
+	endif
+	if $s2[$i]<>$s3 then return(0) endif
+	$i=$i+1
+    until $i > $total
+    return(1)
+ENDIF

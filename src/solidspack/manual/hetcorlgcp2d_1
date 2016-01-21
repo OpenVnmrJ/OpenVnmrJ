@@ -1,0 +1,189 @@
+Protocol: Hetcorlgcp2d_1  Sequence: hetcorlgcp2d_1.c  Apptype: solidseq1d
+
+Description:
+
+    H to X HETCOR using FSLG during F1 followed by a Lee-Goldburg CP and
+    acquisition on X with TPPM or SPINAL decoupling.
+
+Apply a frequency offset to pw1Htilt, fslgH, pw2Htilt, pwHtilt3 to offset F1
+FSLG without disturbing CP or decoupling on resonance.
+
+Additional Software:
+
+reset_hetcorlgcp2d_1 - This macro uses the calibrated values of pwH90 and aH90
+to calculate the intial parameters for the fslgH waveform, set up 2D and set the
+width of the three tilt pulses. This macro is run from the protocol.
+
+Setup:
+
+Load a calibrated data set and select the protocol Hetcorlgcp2d_1. For a
+new nucleus calibrate CP with Onepul and Tancpx and then set up Lee
+Goldburg CP with Lgcp. Then select the protocol Hetcorlgcp2d_1.
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file
+onepul describes calibration of decoupling.
+
+Lee-Goldburg CP and Decoupling should use an optimum dof value, usually used
+for CP.
+
+The macro reset_hetcorlgcp2d_1 is run from the Hetcorlgcp2d_1 protocol.  This
+macro performs the next 4 steps.
+
+1. Set aHfslg = aH90.  Set pwHtilt1 = pwH90*35.3/90.0.  pwHtilt2 =
+pwH90*54.7/90.0, pwHtilt3 = pwH90.  aH90 governs the amplitude of the
+three tilt pulses.
+2. Set pwHfslg = sqrt(2/3)*4.0*pwH90.  pwHfslg is rounded to a 100 ns
+grid and aHfslg is adjusted to accommodate the change.
+3. Set ofdHfslg = 1.0/(sqrt(3)*pwHfslg*1e-6)). Note that ofdHfslg = -
+1.0/(sqrt(3)*pwHfslg*1e-6)) is incorrect.
+4. Set sw1 = 1.0/(8.0*pwHfslg*1e-6). Set ni = 64 and phase = 1,2.
+
+The parameter pwHfslg is rounded to a 100 ns grid. The value of aHfslg
+is readjusted slightly to accommodate the rounding of pwHfslg so that
+it has an exact 360 degree flip angle.
+
+Set pwX180 = 0.0 to not place an X refocusing pulse in the middle of the
+F1 delay.  Most HETCOR's are run without a refocussing pulse.  A
+refocusing pulse is only desirable if the X-H J-coupling is limiting
+proton resolution.  MAS is adequate to remove the X-H dipolar
+interaction.   If a refocusing pulse is desired then the spin rate must
+be synchronized with the F1 dwell so that the refocusing pulse falls at
+a multiple of the rotor period
+
+For pwHtilt1, fslgH, pwHtilt2 and pwHtilt3, set the parameter with "of"
+prefixto -1000 to -5000.  The F1 spectrum will be to the left of the
+center and FSLG resolution will be the best with this offset if phase
+transient is present.  There may be a center spike in F1. Be sure all
+lines are to the left of the spike.
+
+Collect a 2D dataset and process with wft2da.  Adjust ni to accommodate
+greater or lesser proton resolution of the sample in F1.
+
+HETCOR is very sensitive to phase transient on the proton channel. Side
+effects of a large transient are a short T2 and an offset of the
+spectrum in F1.  It is recommended that one spend significant effort to
+remove phase transient for HETCOR.  The procedure for phase-transient
+removal is in the manual file tunerp.
+
+A good sample for a HETCOR setup is natural abundance glycine. A quick
+HETCOR can be ni = 64, nt = 4, d1 = 1 and ss = 4.  Hetcorlgcp2d_1 works
+best with spin rate of 8 to 14 kHz.  Calibrate the pwH90 = 2.5 us to do
+100 kHz FSLG during F1 if the probe has the appropriate specification.
+With a good result one will see a substantial splitting in the two upfield
+methylene lines - from 20% to the baseline depending upon the probe and
+calibration. In a Solenoid probe HETCOR can be improved by constricting
+sample to 50% of the coil width.
+
+The indirect axis of HETCOR is scaled by the value scalesw1 = sqrt(3).
+It will be necessary to adjust scalesw1 to obtain the correct ppm scale.
+A rough calibration with glycine is obtained by putting two cursors on 
+the two methylene lines of glycine. On the command line type scalesw1 =
+dfrq/delta.  In general, set two lines with a known ppm difference ?ppm
+and set scalesw1 = ?ppm*dfrq/delta where ?ppm is the shift difference.
+
+To reference F1 of a scaled HETCOR spectrum put a cursor on the peak
+with a known ppm value and type rl1(ppm*dfrq/scalesw1). Note that
+HETCOR spectra are displayed with axis ='pd' and refsource = 'dfrq'.
+
+Parameter  Groups:
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:  Provides a 90-degree pulse on dec that can be used
+              as a preparation pulse.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+tiltnH:  Module:  yes  (n = 1,2,3)
+Sequence:  hetcorlgcp2d_1.c
+Description:  Implements a tilt pulse (35.3, 54.5, 90.0) on the dec2 channel
+              with offset.
+Parameters:  Sequence Page
+       aHtilt  - amplitude of the dec pulses.
+       pwHtilt - 35.3, 54.7 or 90.0 tip angle
+       chHtilt = 'dec2' must be set (not shown).
+       ofHtilt - offset of tilt pulse
+Implementation:  shape p1 = getpulse("tiltH", 0.0,0.0,0,1);
+Underscore function: _shape(p1,ph1Htilt);  ph1tilt is the overall phase
+              table of the tilt pulse. 
+
+fslgH:  Module: yes
+Sequence:  hetcorlgcp2_1.c
+Description:  Implements "frequency switched Lee Goldburg", FSLG,
+              homonuclear decoupling on the dec2 channel.
+Parameters:  Sequence Page
+       aHfslg - amplitude of the FSLG dec2 pulses.
+       pwHfslg - 360-degree flip on dec, off resonance (the length of
+              each of the two FSLG pulses).
+       nHfslg - FSLG cycles represented in the .DEC file.
+       ofdHfslg - +/- frequency offset of alternating pulses, a
+              negative value indicates that the first pulse has
+              negative offset.
+       ofHfslg - overall frequency offset.
+       chHfslg = 'dec2' must be set (not shown).
+
+Implementation: MPSEQ fslg = getfslg("fslgH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.	  
+    
+cpHX:  Module:  yes
+Sequence:  tancpxyr.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec2 to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec2 channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec2' -  channel with the initial polarization (must
+              be set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore functions: _cp_(hx, phHhx, phXhx);
+
+Hseq:  Module:  yes
+Sequence:  tancpx.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec2 channel
+              during acquisition.
+Parameters:  Sequence Page - Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+              getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec2 channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+

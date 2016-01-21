@@ -1,0 +1,36 @@
+"macro BP5a"
+" BP5a "
+$bestone=1 $counter=1
+sp=6p wp=5p
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  dc peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoTripRes/NHgzlvl2cal')
+select($bestone) dc vsadj(50)  dssh('dodc') pl('all') pap BPpage
+$gzlvl1='' $gzlvl2=''
+gzlvl2=gzlvl2[$bestone]
+format(gzlvl1,6,0):$gzlvl1
+BPsetparams('NHgrad1_lvl',$gzlvl1,'N15')
+format(gzlvl2,6,0):$gzlvl2
+BPsetparams('NHgrad2_lvl',$gzlvl2,'N15')
+if (r7=9) then
+ $r7=r7
+ gChsqc aliph='y' allC='n'
+ r7=$r7
+ SE='y' ZZ='n'  nt=2 wnt='wft setref select(1) BPaph0 vsadj(20) dssh'
+ array('gzlvl2',21,gzlvl2-200,20)
+ wnt='wft av select(1) vsadj(40) dssh'
+ wexp='BP8a' au
+else
+ array('compC',21,0.5*compC,0.05*compC)
+ $count=1
+ repeat
+  compC[$count]=trunc(compC[$count]*1000)/1000
+  $count=$count+1
+ until $count>arraydim
+ wexp='BP5c'  au
+endif

@@ -1,0 +1,110 @@
+"macro plotmanual"
+
+if $1='1d' then
+  $vs=vs $vp=vp $vpf=vpf $wc=wc $intmod=intmod
+ 
+  if parstyle='bpa' then 
+    vs=vs*0.9 vp=vp+30 vpf=vpf+30
+  elseif parstyle='bpav' then
+    wc=wc*0.77 vp=vp+10 vpf=vpf+10
+  endif
+
+  if     $2='pscale'  then pscale
+  elseif $2='pl'      then pl
+  elseif $2='plall'   then pl('all')
+  elseif $2='plsel'   then select:$v pl($v)
+  elseif $2='pscalef' then pscale('fid')
+  elseif $2='plf'     then plfid
+  elseif $2='plfsel'  then select:$v plfid($v)
+  elseif $2='int'     then
+    intmod='partial'
+    if vp<12 then vp=12 endif
+    pl('int')
+    if intstyle<>'' then exec(intstyle) endif
+  elseif $2='pir'     then pir
+  elseif $2='pirn'    then pirn
+  elseif $2='piv'     then piv
+  elseif $2='pivn'    then pivn
+  endif
+
+  vp=$vp vs=$vs wc=$wc vpf=$vpf intmod=$intmod
+  if $2='pl' then ds endif
+
+elseif $1='2d' then
+  $wc=wc $wc2=wc2 $sc2=sc2
+  
+  if parstyle='bpa' then
+    wc2=wc2-15 sc2=30
+  elseif parstyle='bpav' then 
+    sc2=10 "wc=165" wc=wcmax-85
+  endif
+  format(plt2Darg[2],'lower'):$level
+  format(plt2Darg[3],'lower'):$space
+
+  if     $2='pos'    then pcon('pos',$level,$space)
+  elseif $2='neg'    then pcon('neg',$level,$space)
+  elseif $2='posneg' then pcon($level,$space)
+  elseif $2='pl2d'   then pl2d
+  elseif $2='hproj'  then dconi('hproj_max') dconi('plot')
+  elseif $2='vproj'  then dconi('vproj_max') dconi('plot')
+  elseif $2='trace'  then dconi('trace') dconi('plot')
+  elseif $2='top' or $2='side' then
+     plt2Darg('fix')
+     if (trace='f1') then
+        if (plt2Darg[4]='f2') or (plt2Darg[5]='f1') then
+            plt2Darg('toggle')
+        endif
+     else
+        if (plt2Darg[4]='f1') or (plt2Darg[5]='f2') then
+            plt2Darg('toggle')
+        endif
+     endif
+     if ($2='top') then 
+		"If plt2Darg[4] is not a absolute path to a workspace"
+		"   or a 1D dadta - find the HiRes 1D"
+	if ((plt2Darg[4]='notop') or 
+	    (plt2Darg[4]='proj') or 
+	    (plt2Darg[4]='') or 
+	    (plt2Darg[4]='top') or
+	    (plt2Darg[4]='f1') or 
+	    (plt2Darg[4]='f2')) then
+		$tfile='proj'
+		getpl1dinfo('top'):$tfile
+		if ($tfile='proj') then
+			write('error','HiRes %s 1D spectrum not found',trace)
+		else
+			plottop($tfile)
+		endif
+	else
+		plottop(plt2Darg[4],plt2Darg[7])
+	endif
+     endif
+     if ($2='side') then 
+               "If plt2Darg[5] is not a absolute path to a workspace"
+                "   or a 1D dadta - find the HiRes 1D"
+	if ((plt2Darg[5]='noside') or 
+	    (plt2Darg[5]='proj') or 
+	    (plt2Darg[5]='') or 
+	    (plt2Darg[5]='side') or
+	    (plt2Darg[5]='f1') or
+	    (plt2Darg[5]='f2')) then
+		$sfile='proj'
+		getpl1dinfo('side'):$sfile
+		if ($sfile='proj') then
+		    if (trace='f2') then
+			write('error','HiRes f1 1D spectrum not found')
+		    else
+			write('error','HiRes f2 1D spectrum not found')
+		    endif
+		else
+			plotside($sfile)
+		endif
+	else
+		plotside(plt2Darg[5],plt2Darg[8])
+	endif
+      endif
+  endif
+
+  wc=$wc wc2=$wc2 sc2=$sc2
+  dconi
+endif

@@ -1,0 +1,120 @@
+"macro xmhaha_delete"
+"*******************************************************************"
+// Note that arg1 could be multiple nodes
+//  But for now (dec. 2011) we will deal with only one node
+//  while in submit mode or in spectrometer view
+
+$isautosq=0
+xmhaha('isautoSQ'):$isautosq
+is_submitmode:$submit
+string2array($1):$1
+$1size=size('$1')
+if ($1size>1) then
+    sort($1,'u'):$index,$1
+    $1size=size('$1')
+endif
+if (($submit) or ($isautosq)) and ($1size > 1) then
+	write('error','delete action can be done only on one node at a time')
+	return
+endif
+
+if ($submit) then
+     if (cppauseflg='y') then show_n_pause('close') endif
+     if (customflag='y') then customizepar('save') customizepar('quit') endif
+     if (clustermod='yes') then studyCluster('delete',$1) return endif
+
+     if ($1='tmpstudy') then
+        walkupQ('clear')
+     else
+    	$status=''
+    	xmgetatts($1,'status'):$status
+    	if (($status<>'Ready') and
+            ($status<>'Customized') and
+            ($status<>'Active')) then
+            	write('line3','Cannot delete a %s node (%s)',$status,$1)
+        else
+            getcpnode('rev',cursqexp,$1):$cpnode,$when
+            walkupQ('delete',$cpnode,$when)
+    	endif
+     endif
+
+elseif ($isautosq=0) then
+
+	    $sqdsize=size('sqdisplay')
+	    if ($sqdsize<>1) or (sqdisplay<>'sample') then
+		return
+	    endif
+	    string2array($1):$1
+	    $1size=size('$1')
+	    $archsamp=''
+	    strstr(file,'/scoutfids/'):$ok,$archsamp
+	    if ($ok=0) then substr(file,'dirname'):$archsamp endif
+	    $i=0 $update=0
+	    while $i < $1size do
+		$i=$i+1
+		$node=$1[$i]
+		$status='' xmgetatts($node,'status'):$status
+		if ($status='Error') then
+		    $ok=0
+		    delErrorNode($node,$archsamp):$ok
+		    if ($ok) then $update=1 endif
+		endif
+	    endwhile
+	    if ($update) then
+		xmhaha_subSQ($archsamp,'ACQlist')
+		xmhaha_fullSQ('set',$archsamp+'/dirinfo/xmldir')
+		SQDisplay('refresh')
+	    endif
+            return
+
+else
+
+        $1par=''
+        xmhaha2('getparent',$1):$1par
+        if ($1par='parent') then $1par=$1 endif
+	$infonode=0
+	strstr($1par,'Qn'):$infonode
+	if ($infonode>0) then
+             write('error','Cannot delete an information node')
+             return
+        endif
+
+	xmhaha2('nodelist'):$ppos
+	teststr('$ppos','Qn009','local'):$chron
+
+	$1loc='' $when=''
+        strstr($1par,'_','last'):$ret,$1loc,$when
+        if ($ret=0) then return endif
+	$md=''
+	strstr(autodir,'.macdir'):$isnotauto
+	if ($isnotauto) then
+	    $eq='' shell('basename '+globalenter):$eq
+	    $md=globalenter+'/'+$eq+'.macdir'
+	else
+	    $md=autodir+'/enterQ.macdir'
+	endif
+	if ($when='D') then
+	    $sg=$md+'/'+$1loc+'/day/sampleinfo'
+	    $where='day'
+	else
+	    $sg=$md+'/'+$1loc+'/night/sampleinfo'
+	    $where='night'
+	endif
+	$loc='' $locdir='' $when='' $zone='' $rack=''
+	$owner=owner
+	getlocid($sg):$loc,$locdir,$when,$zone,$rack,$owner
+	operights('editallopstudies'):$opok
+	if ($owner<>operator) and (operator<>owner) and ($opok<0.5) then
+	   write('error','Study owned by %s.  Cannot delete',$owner)
+	   return
+	endif
+	if ($chron) then $where='both' endif
+        if ($loc<>'') then
+	    vjdeleteQ('refresh',$loc,$zone,$rack)
+	    vjdeleteQ('delete4real',$where,$loc,$zone,$rack)
+	    xmhaha_asx(autodir,'enterQ')
+	    xmhaha_asx(autodir,'overniteQ')
+	    if (sqdisplay='tray') then SQDisplay('refresh') endif
+	endif
+
+endif

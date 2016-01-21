@@ -1,0 +1,24 @@
+"macro msGetPcFile"
+/*-*- MAGICAL -*-*/
+"macro msGetPcFile"
+
+// Copy a file from the PC to the host 
+
+// This implementation uses FTP client on the PC to send data to the Sun 
+// Needs login and password for some host user--msLogin and msPasswd 
+// This user should not have any special privileges 
+// Also assumes the host IP address is in lcMyIpAddress 
+
+// First, make file with write access for everybody 
+// Second, FTP the true file over as any user 
+
+// TODO: have VJ reset file access to desired state. 
+
+if ($# <> 2) then
+    write('error','Usage: msGetPcFile(path_on_PC, path_on_host)')
+    abort
+endif
+
+write('line3','getPcFile ' + $1 + '-->' + $2)
+shell('touch '+$2+'; chmod 666 '+$2)
+lccmd('getPcFile', $1, $2, msLogin, msPasswd, lcMyIpAddress)

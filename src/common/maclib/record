@@ -1,0 +1,50 @@
+"macro record"
+"record - Macro recorder"
+
+$command=''
+if ($# <> 1) then
+   input('Please enter a name for your command: '):$basemacroname
+   if $basemacroname='' then abort endif
+else
+   $basemacroname=$1
+endif
+$macroname=userdir+'/maclib/'+$basemacroname
+exists($macroname,'file'):$exists
+if $exists then
+   $letter=''
+   input('Macro '+$basemacroname+' exists. Do you want to overwrite it? (y or n): '):$letter
+   if ($letter='n') or ($letter='N') or ($letter='no') or ($letter='No') then
+      abort
+   endif
+endif
+write('reset',$macroname)
+abortoff
+$repeat=(1=1)
+$char1='' $char2=''
+repeat
+   $num=0
+   input('Command? '):$command
+   if ($command='record(\'off\')') or ($command='off') then
+      $repeat=(1=0)
+   else
+      substr($command,1,1):$char1
+      if ($char1='f') then
+         substr($command,2,1):$char2 
+         format($char2,0,0):$num
+      endif
+      if ($num>0) and ($num<9) then
+         length(mstring[$num]):$len
+         $i=1 $command=''
+         repeat
+            substr(mstring[$num],$i,1):$char1 "read each character"
+            if $char1='`' then $char1='\'' endif
+            $command=$command+$char1
+            $i=$i+1
+         until $i>$len
+      endif
+      {$command}
+      write('file',$macroname,'%s',$command)
+   endif
+until not $repeat
+aborton
+write('error','Macro \'%s\' is now ready to use!',$basemacroname)

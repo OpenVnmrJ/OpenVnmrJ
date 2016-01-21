@@ -1,0 +1,110 @@
+"macro sethtfrq1"
+// set Hadamard frequency list htfrq1 from line list
+// sort the list as follows:
+//     biggest to smallest amplitude
+//     frequencies cannot be closer than htbw1 (20 Hz) to each other
+//     only first nimax frequencies, if nimax is defined
+
+$ok=1
+on('llfrq'):$on
+if not $on then
+  $ok=0
+endif
+
+if $ok=0 then
+  write('error','line list not defined')
+  return
+endif
+
+exists('htfrq1','parameter'):$e
+if $e<0.5 then
+  create('htfrq1','frequency')
+  setprotect('htfrq1','on',256)
+  parunits('set','htfrq1','Hz')
+endif
+
+exists('sw1','parameter'):$exsw1
+if $exsw1>0.5 then
+  $sw = sw1
+else
+  $sw = sw
+endif
+
+$frq=0 $amp=0
+$size=size('llfrq')
+$i=0
+repeat
+  $i=$i+1
+  $frq[$i] = llfrq[$i] - $sw/2
+  $amp[$i] = llamp[$i]
+until ($i>=$size)
+
+$jsize=1e4
+htfrq1=htfrq1[1]
+exists('nimax','parameter'):$emax
+if $emax>0.5 then
+  if ($size>nimax and nimax>3) then
+    $jsize=nimax
+  endif
+endif
+
+$bw=20 $on=0
+exists('htbw1','parameter'):$e
+if $e>0.5 then
+  on('htbw1'):$on
+  if ($on) then
+    if ($bw>1) then $bw=htbw1 endif
+  endif
+// htbw1 may be arrayed
+endif
+
+// sort frequencies by amplitude from biggest to smallest
+$htfrq1 = htfrq1[1]
+htfrq1 = $amp
+
+sort('htfrq1','ru'):$order,$val
+htfrq1 = $htfrq1
+htfrq1[1] = $frq[$order[1]]
+
+$osize=size('$order')
+$vsize=size('$val')
+if ($size > $osize) then $size=$osize endif
+if ($size > $vsize) then $size=$vsize endif
+
+$i=1 $j=1
+if ($size > 1.5) then
+  $i=1 $j=1
+  repeat
+    $i=$i+1
+    $tstfrq = $frq[$order[$i]]
+    $k=0 $ok=1
+//  exclude frequencies where $dif < $bw
+    repeat
+      $k=$k+1
+      abs($tstfrq - htfrq1[$k]):$dif
+      if ($dif < $bw) then
+        $ok=0
+      endif
+    until ($k>=$j)
+    if ($ok) then
+      $j=$j+1
+      htfrq1[$j] = $tstfrq
+    endif
+  until ($i>=$size or $j>=$jsize)
+endif
+
+if ($i<$size and $j>=$jsize) then
+  write('line3','Using only the first %d (nimax) peaks.',$jsize)
+endif
+
+$size = size('htfrq1')
+sort('htfrq1','ru'):$order,$val
+$i=0
+repeat
+  $i=$i+1
+  htfrq1[$i]=$val[$i]
+until ($i>=$size)
+
+if $exsw1>0.5 then
+  sethtnifn1
+endif

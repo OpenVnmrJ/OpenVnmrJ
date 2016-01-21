@@ -1,0 +1,173 @@
+Description of BioPack Options in "Calibrations" Page
+
+
+AutoCalibrate Buttons:
+**********************
+
+When using a 13C,15N-labeled compound:
+
+ "Full, Using Probefile Values"
+   This button begins a fully automated calibration of all important
+   parameters for doing Biomolecular NMR experiments. It should be 
+   used after installation of BioPack so that all parameters will be
+   properly calibrated and values stored in the probefile. Many
+   parameters such as gradient levels and small-angle phase shifts
+   are calibrated in this process. These do not change as a function
+   of sample, so the "Full" autocalibrate does not need to be done
+   for each sample. In addition to calibrations, first-increment
+   spectra are obtained for a wide variety of experiments and these
+   spectra are displayed and plotted in a side-by-side manner to
+   permit easy comparison of "receptivity" for the sample used.
+   A copy of the probefile is also printed.
+
+   One important operation that is included for any of these buttons
+   is the automatic update of the probefile and the automatic re- 
+   generation of all shaped pulse files and waveforms used for 
+   spinlocks and decoupling. 
+
+ "Full, But use Current 1H Offset and pw"
+   This button does the same as that described above, but uses the
+   tpwr and pw values in the current experiment as starting guesses.
+   It is useful if the user has calibrated the 1H pw90 manually.
+
+ "Full RF (Faster)"
+   This button will use the same experiments as above, but will stop 
+   after the RF and NH gradient coherence transfer calibrations. It can
+   be used once the "Full" calibration is performed and is often
+   preferred because of the shorter time required.
+
+ "RF and Gradients (Fastest)"
+   This button will use similar experiments as above, but will not
+   do amplifier compression determinations or flipback pulse calibrations. 
+   Use of this assumes a reasonably calibrated probefile and is used for a
+   quick check of the most important parameters, pw90's and gradients.
+
+ "1H pw90 only"
+   This button will use the similar experiments as above, but will only
+   do 1H pw90 and related calibrations. This may result in a slightly
+   different value than that obtained by using a single pulse because
+   the pulse sequence used here involves multiple 90's and 180's. This
+   results in a more appropriate value for Biomolecular NMR experiments.
+
+For a 13C-labeled Compound:
+
+ "1H and 13C PW90 only"
+   This button will use the same experiments as above, but will only
+   do 1H/13C pw90 and related calibrations. 
+
+For a 15N-labeled Compound:
+
+ "1H and 15N PW90 only"
+   This button will use the same experiments as above, but will only
+   do 1H/15N pw90 and related calibrations. 
+
+  In all cases data are stored in ~/vnmrsys/AutoTripRes. New runs
+  cause the existing directory to be moved to ~/vnmrsys/BioPack.dir/backups
+  with a date stamp appended.
+
+
+Calibrate 2H Decoupling Buttons
+*******************************
+
+ "Channel#"
+  This button initiates a fully automatic calibration of the channel
+  used for 2H decoupling. The proper button should be used for your
+  hardware configuration. The experiments involve pulses derived from
+  the 2H decoupling channel, with observe in the tn=lk mode so that
+  the observe channel detects 2H signals via the lock diplexer,not the
+  normal broadband preamp. This ensures that the RF path is the same
+  as that used for 2H decoupling. Thus, the 2H decouplng channel should
+  be connected to the proper relay in the "magnet leg" or "front end".
+ 
+  After the 2H pw90 and power level are determined, the probefile is 
+  updated with proper power and dmf values for broadband decoupling of
+  2H from 13C. Experiment setup macros use these probefile values to
+  install proper numbers so that 2H decoupling is typically called for
+  by setting dm3='nyn'(for sequences having internally coded 2H decoupling
+  portions).
+
+ "Instructions"
+  This button produces an instruction manual which is displayable by
+  selecting the "Text Out" page.
+
+Flipback Pulses
+***************
+
+ "Calibrate/Create"
+  This button performs the flipback(selective pw90 on H2O) pulse calibration
+  on the H2O in the sample. These are optimized for power and phase and
+  new shaped pulses "H2Osinc_*" are created for specific use in several
+  pulse sequences. Any H2O sample can be used, but this process is normally 
+  done in the above experiments.
+
+Automated Triple-Resonance Experiments:
+**************************************
+
+Auto 1D:
+
+ "Standard"
+  This button skips the calibration parts of the "Full,.." buttons above,but
+  does the first increment spectra for comparison purposes. It takes much
+  less time and can be used when changing samples or adjusting conditions for
+  the same sample (pH, temperature, etc.).
+
+ "First Calibrate 1H"
+  This button does the same as "Standard",but first calibrates the 1H pw90 (and
+  updates the probefile). This is useful if the probe tuning changes or the
+  salinity of the sample is changed, but all other aspects are the same. 
+
+ "Use this tpwr/pw"
+  This button does the same as "Standard",but uses the 1H pw90 in the
+  current parameter set. This is useful if the user has manually calibrated
+  the sample.
+
+  In all Auto 1D cases data are stored in ~/vnmrsys/AutoTripRes1D. New runs
+  cause the existing directory to be moved to ~/vnmrsys/BioPack.dir/backups
+  with a date stamp appended.
+
+Auto 2D:
+
+ "Auto2D (# hours)"
+  This button runs a series of 2D experiments using both 2D and 3D pulse
+  sequences. It relies on a calibrated probefile. Fixed numbers of increments
+  are used for a screening mode. The relaxation delay is adjusted so that
+  all experiments will finish within # hours. Data is stored in the user's
+  vnmrsys/AutoTripRes2D
+
+ "Fully-Deuterated Check Box"
+  This check box should be checked if the sample is per-deuterated. This 
+  results in CH-detected 2D's being skipped.
+
+Auto BEST 2D:
+
+  This button runs a series of BEST (fast) 2D experiments using both 2D and
+  3D sequences. It relies on a calibrated probefile. Fixed numbers of increments
+  are used for a screening mode. The relaxation delay is typically short
+  from 10-300msec. By default, 100msec is used. The acquisition time is also
+  dropped in half from normal experiments because of the higher decoupling
+  duty cycle. The macro that begins the experiments is BPauto2dBEST(optional
+  relaxation delay, optional halving "at"). Data is stored in the user's
+  vnmrsys/Auto2DBEST directory.
+
+ "Do Automatic Proc/Plot of 2D (at end)"
+  This check box causes automatic processing and plotting of the 2D
+  experiments at the end of the the Auto2D process. If checked, the
+  BEST experiments plot at the end of every experiment. 
+
+ "Do it Now" (4,8 or 16 hour experiments)
+  This button performs the same automatic proc/plot as above, but can be
+  done once the experiments have finished.
+
+ "Plot Auto Best Now"
+  This button performs the same automatic proc/plot as above, but can be
+  done once the BEST experiments have finished.
+
+Plotting Mode:
+
+  "No Plots"
+  No plotted output of AutoCalibration data is produced. However, raw data 
+  is still archived in ~/vnmrsys/AutoTripRes.
+
+  "Plots"
+  Spectra are plotted as the experiments complete in the AutoCalibration 
+  process. Data is archived in ~/vnmrsys/AutoTripRes.

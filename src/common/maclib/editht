@@ -1,0 +1,161 @@
+"macro editht"
+// edit Hadamard frequencies
+
+//localHTfreqs macro returns appropriate filenames
+//  The 2nd return value will be absolute path and
+//  hence independent of inside or outside VJ3/CP4
+
+localHTfreqs(''):$iscp,$svfdir
+
+if $#<0.5 then $1='popup' endif
+
+exists('lockHT','parameter'):$e
+if not ($e) then
+  create('lockHT','flag')
+  setgroup('lockHT','processing')
+  lockHT='n'
+endif
+
+if $#<0.5 then 
+  $1='popup'   
+endif
+
+if $1='show' then
+  $1='popup'
+  lockHT='y'
+endif
+
+if $1='makell' then
+// make line list
+  $intmod=intmod
+  $sp=sp $wp=wp
+  wft('nods',1)
+  sp=$sp wp=$wp 
+  nll:$size
+  if $size<0.5 then
+    write('error','no lines found')
+  else
+    on('llfrq')    
+    htll  
+  endif
+  ds(1)
+  selecthtfrq1('display')
+
+elseif $1='saveni' then
+// save ht parameters for nucleus
+
+  $dir=curexp   
+  $dim=tn
+  exists('sw1','parameter'):$e
+  if ($e) then if (trunc(sw/10) <> trunc(sw1/10)) then
+    $dim=dn
+  endif endif
+  $ext='htfrq1_'+$dim
+  $file=$dir+'/'+$ext
+
+  exists('htfrq1','parameter'):$e
+  if $e<0.5 then
+    write('error','No HT frequencies defined, cannot save.')
+    return
+  else
+    on('htfrq1'):$on
+    if ($on < 0.5) then
+      write('error','No HT frequencies defined, cannot save.')
+      return
+    endif
+  endif
+
+  $pars='htfrq1'
+  exists('htbw1','parameter'):$e
+  if $e>0.5 then $pars=$pars+' htbw1' endif
+  if $dim='dn' then
+    $sw=sw $tof=tof $tn=tn
+    sw=sw1 tof=dof tn=dn
+  endif
+  $pars=$pars+' sw tof tn'
+  writeparam($file,$pars)
+  if $dim='dn' then
+    sw=$sw tof=$tof tn=$tn
+  endif
+
+  write('line3','HT frequencies saved to persistence/%s',$ext)
+
+elseif $1='getni' then
+// get ht parameters, set htfrq1 sw1 dof ni fn1
+
+  $dn=dn $sw1=0 $dof=0
+  if $#>1.5 then $dn=$2 endif
+  $dir=userdir+'/persistence'
+  $ext='htfrq1_'+$dn
+  $file=$dir+'/'+$ext
+  exists($file,'file'):$e
+  if $e>0.5 then
+    $exp='' strstr(curexp,'/','last'):$num,$str,$exp
+    rtv($file,'tn','sw','tof'):$tn,$sw,$tof
+    if $tn=$dn then
+      rtv($file,'htfrq1')
+      $bw='' lookup('mfile',$file,'seek','htbw1','read'):$bw
+      if $bw<>'' then
+        rtv($file,'htbw1')
+      endif
+      write('line3','HT frequencies retrieved from persistence/%s',$ext)
+// do not set sw, sw1?
+      exists('sw1','parameter'):$e
+      if $e>0.5 then
+        sethtnifn1
+        if (trunc(sw1/10) = trunc(sw/10)) then
+          sw=$sw
+          sw1=$sw
+          tof=$tof
+write('line3','setting sw1=%g, tof=%g, ni=%g in %s',sw1,tof,ni,$exp)
+        else
+          sw1=$sw
+          dof=$tof
+write('line3','setting sw1=%g, dof=%g, ni=%g in %s',sw1,dof,ni,$exp)
+        endif
+      else
+        sw=$sw
+        tof=$tof
+write('line3','setting sw=%g, tof=%g in %s',sw,tof,$exp)
+      endif
+    endif
+  endif
+
+elseif $1='popup' then               // bring up popup to edit htfrq1
+  exists('htfrq1','parameter'):$e
+  if not ($e) then
+    create('htfrq1','frequency')
+    setprotect('htfrq1','on',256)
+    parunits('set','htfrq1','Hz')
+  endif
+  exists('htbw1','parameter'):$e
+  if not ($e) then
+    create('htbw1','frequency')
+    setprotect('htbw1','on',256)
+    parunits('set','htbw1','Hz')
+    htbw1=20.0
+  endif
+
+	//If the htfrq1 in curpar is already an array
+	// sync the htfrq1.ll and htll.htfrq1 files in curexp
+  $size=size('htfrq1')
+  if (htfrq1[1]=0) then $size=0 endif
+  if ($size) then
+	writeHT
+	htfrqdisp('write','htfrq1','htbw1')
+  endif
+      
+  r6=0 r7=0 n3=$svfdir                          // used by the popup 
+  if not (lockHT='y') then 
+    write('line3','Note: window functions lb, sb, gt and awc reset')
+    sb='n' gf='n' awc='n' 
+    if(tn = 'H1') then
+      lb=20.0  
+    else
+      lb=trunc(100.0/at)/100.0
+    endif
+    $sp=sp $wp=wp wft(1) sp=$sp wp=$wp ds peak:$a1 th=$a1/6.0 
+  endif
+  vnmrjcmd('popup','mode:modeless','file:HTfreq.xml','rebuild:yes','location:controlPanel','title:Edit Hadamard Encoding Frequencies')
+
+endif

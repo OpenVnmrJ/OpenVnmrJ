@@ -1,0 +1,54 @@
+"macro ATc90"
+"ATc90" "Y-Axis Gradient Strength Calibration "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+
+   substr(pfgon,2,1):$yon
+   if ($yon)='n' then
+     write('line3','Y-axis is disabled. Re-set "pfgon". Gradient Tests Skipped') 
+     ATnext
+     return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   if (at_new='n') then dsp='n' endif         "disable dsp value"
+   su shell('sleep 2')
+   text('Y-Axis Gradient Strength Calibration')
+   at_currenttest='profile_y_c'
+   seqfil='ATprofile'
+   vchannelmap='0','y'
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   pw=2.0*pw90 p1=pw90
+   exists(autotestdir+'/history/SENSITIVITY','file'):$e
+   if $e=1 then   "set up nt for adequate s/n"
+    lookup('file',autotestdir+'/history/SENSITIVITY')
+    lookup('#Average:','read',1):r1
+    nt=nt*(40000/r1)*(40000/r1) "scales for same s/n by increasing nt"
+    nt=nt/4 nt=nt*4
+   endif
+   sw=99000 np=512 ss=2 tpwr=at_tpwr
+   d1=.5 d2=.00135 sb=-.001444
+   fn=2048 shaped='n' gradaxis='y'
+   gt1=.001  "only to have dg/ap active"
+   gzlvl1=4096,-4096 
+   wnt='ATwft f select(1) av vsadj dssh dtext'
+   wexp='ATc90(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining Y-Gradient Strength')
+   dps
+
+elseif ($1='PART1') then
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+   ATcgycal
+endif

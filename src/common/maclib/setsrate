@@ -1,0 +1,22 @@
+"macro setsrate"
+exists('srate','parameter'):$parex
+if ($parex=0) then
+    create('srate','integer')
+    setlimit('srate',5000,0,1)
+endif
+setprotect('srate','on',1)
+
+exists('probetype','parameter','global'):$parex
+if ($parex=0) then return endif
+if (probetype<>'nano') then return endif
+
+exists('spintype','parameter','global'):$sparex
+if ($sparex) then
+   if (spintype='tach') then
+      if ($# > 0) then srate=$1 return endif
+   	srate=spin
+   endif
+endif
+if srate<200 then
+   write('error','srate is less then 200 for a nano probe. Are you sure?')
+endif

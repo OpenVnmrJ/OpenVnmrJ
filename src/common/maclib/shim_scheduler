@@ -1,0 +1,145 @@
+"macro shim_scheduler"
+"shim_scheduler - macro to aid shim service setup"
+
+/*
+  shim_sched holds information for the panel
+  shim_sched[1] is the sample location (loc)
+  shim_sched[2] is scheduled hour
+  shim_sched[3] is scheduled min
+  shim_sched[4] is appdir directory holding the csv file
+  shim_sched[5] is the name of the csv file
+  shim_sched[6] is the name of the sample
+  shim_sched[7] is the solvent
+  shim_sched_meth is the shim method
+  shim_sched_day is scheduled day
+ */
+
+if ($#=0) then $arg='show' else $arg=$1 endif
+
+IF ($arg='show') THEN
+  checktemplates:$e
+  if (not $e) then
+    write('line3','Rerun shim scheduler after setting required parameters')
+    return
+  endif
+  create('shim_sched','string','current',''):$e
+  setgroup('shim_sched','display')
+  create('shim_sched_meth','string','current',''):$e
+  setgroup('shim_sched_meth','display')
+  create('shim_sched_day','string','current',''):$e
+  setgroup('shim_sched_day','display')
+  shim_sched='','','','csvlib','Shim.csv','',''
+  exists('schedulerhelp','manual'):$e,$path
+  exists(shim_sched[5],shim_sched[4]):$e,$spath
+  if ($e) then
+    lookup('mfile',$spath,'readline','readline'):$str1,$str2
+    substr($str2,1,'delimiter',',"'):shim_sched[1]
+    substr($str2,2,'delimiter',',"'):shim_sched[7]
+    substr($str2,3,'delimiter',',"'):shim_sched[6]
+    substr($str2,7,'delimiter',',"'):shim_sched_meth
+  endif
+  vnmrjcmd('popup','mode:modeless','file:scheduler.xml','pnewupdate:true','rebuild:no','location:shuffler','title:Shim Maintenance Scheduler','close:'+$0+'(`close`)','help:'+$path)
+
+ELSEIF ($arg='create') THEN
+  $dir=userdir+'/'+shim_sched[4]
+  exists($dir,'directory'):$e
+  if ($e < 0.5) then
+     mkdir($dir)
+  endif
+
+  $shimfile=$dir+'/'+shim_sched[5]
+  write('reset',$shimfile)
+  $pars=''
+  $parnames=0
+  listtmpltpars:$pars
+  $num=size('$pars')
+  $str1='"sample","solvent","samplename","explist"'
+  $exclude='pslabel','explabel','seqfil','tn','dn','solvent','userdir','loc','vrack','vzone','vloc'
+  $i=0
+  while ($i < $num) do
+    $i=$i+1
+    if ($pars[$i] <> '') then
+      substr($str1,'find',$pars[$i],'delimiter','"'):$e
+      if (not $e) then
+         teststr('$exclude',$pars[$i],'local'):$is
+         if (not $is) then
+           $str1= $str1+',"'+$pars[$i]+'"'
+           $parnames=$parnames+1
+         endif
+      endif
+    endif
+  endwhile
+
+  write('file',$shimfile,'%s',$str1)
+  if (shim_sched[1]='') then shim_sched[1]='0' endif
+  if (shim_sched[6]='') then shim_sched[6]='Shim_Service' endif
+  if (shim_sched[7]='') then shim_sched[7]='cdcl3' endif
+
+  write('line3','CSV File to shim sample %s in solvent %s for sample %s using study %s has been created',shim_sched[1],shim_sched[7],shim_sched[6],shim_sched_meth)
+  if (not $parnames) then
+    write('file',$shimfile,'%s,"%s","%s","%s"',shim_sched[1],shim_sched[7],shim_sched[6],shim_sched_meth)
+  else
+    write('fileline',$shimfile,'%s,"%s","%s","%s"',shim_sched[1],shim_sched[7],shim_sched[6],shim_sched_meth)
+    $str1='"sample","solvent","samplename","explist"'
+    $i=0
+    while ($i < $num) do
+      $i=$i+1
+      substr($str1,'find',$pars[$i],'delimiter','"'):$e
+      if (not $e) then
+       teststr('$exclude',$pars[$i],'local'):$is
+       if (not $is) then
+         write('fileline',$shimfile,',"%s"',{$pars[$i]} )
+       endif
+      endif
+    endwhile
+    write('fileline',$shimfile,'\n')
+  endif
+  shim_sched[1]=shim_sched[1]
+
+ELSEIF ($arg='delete') THEN
+  exists(userdir+'/'+shim_sched[4]+'/'+shim_sched[5],'file'):$e
+  if ($e) then
+    rm(userdir+'/'+shim_sched[4]+'/'+shim_sched[5]):$e
+    write('line3','Shim CSV File deleted')
+  else
+    write('line3','Shim CSV File already deleted')
+  endif
+  shim_sched[1]=shim_sched[1]
+
+ELSEIF ($arg='schedule') THEN
+  if (shim_sched_day='') or (shim_sched[2]='') or (shim_sched[3]='') then
+    write('line3','You must enter a day & time for shim service')
+    return
+  endif
+  exists(shim_sched[5],shim_sched[4]):$e
+  if ($e<0.5) then
+    write('error','You need to create the Shim CSV file in this popup before scheduling')
+    return
+  endif
+
+  if (shim_sched_day='all') then
+    $days='sun mon tue wed thu fri sat'
+  else
+    $days=shim_sched_day
+  endif
+
+  if ($days='once') then
+    $time=shim_sched[2]+':'+shim_sched[3]
+  else
+    $time=shim_sched[2]+':'+shim_sched[3]+' '+$days
+  endif
+  write('line3','Shim maintenance scheduled for %s',$time)
+
+  atcmd('service_csv',$time,'start')
+
+ELSEIF ($arg='cancel') THEN
+  atcmd('service_csv','cancel')
+  atcmd
+
+ELSEIF ($arg='close') THEN
+  destroy('shim_sched'):$e
+  destroy('shim_sched_meth'):$e
+  destroy('shim_sched_day'):$e
+
+ENDIF
+

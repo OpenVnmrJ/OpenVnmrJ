@@ -1,0 +1,81 @@
+"macro xmhaha_settime"
+$isautosq=0
+xmhaha2('isautoSQ'):$isautosq
+if ($isautosq=0) then return endif
+$parnodelist=''
+xmhaha2('locationlist'):$parnodelist
+$parnodesize=size('$parnodelist')
+
+$isnight='n'
+$Nx=0
+shell('(cat '+autodir+'/enterQ.macdir/overniteQ | grep -wc SAMPLE#:)'):$Nx
+if ($Nx>0) then
+  $isnight='n'
+else
+  exists(autodir+'/enterQ.macdir/AUTOGLOBAL','file'):$e
+  if ($e) then
+    lookup('mfile',autodir+'/enterQ.macdir/AUTOGLOBAL','seekcs','LONGRUN:','read',1):$isnight
+  endif
+endif
+
+$t1='' $t2=0 $t3='' $t4=0 $t5='' $t6='' $tt=0,0
+estimatestart:$t1,$t2,$t3,$t4,$tt,$t5,$t6
+$i=1
+repeat
+   $cnode=$parnodelist[$i]
+   if ($cnode<>'') then
+     $cloc='' $when=''
+     strstr($cnode,'_','last'):$ret,$cloc,$when
+     if ($when='N') then $when='night' else $when='day' endif
+     if ($ret) then
+       $ST=0 $CT=0
+       $macro=''
+	if ($when='day') then
+	    shell('(cat '+autodir+'/enterQ | grep -w '+$cloc+' | grep -w day)'):$macro
+	    substr($macro,2):$macro
+	    estimatestart('get',$macro,'enterQ',$t1,$t2,$tt):$ST,$CT
+	else
+	    if ($isnight='y') then
+                shell('(cat '+autodir+'/enterQ | grep -w '+$cloc+' | grep -w night)'):$macro
+                substr($macro,2):$macro
+                estimatestart('get',$macro,'enterQ',$t1,$t2,$tt):$ST,$CT
+	    else
+                shell('(cat '+autodir+'/overniteQ | grep -w '+$cloc+' | grep -w night)'):$macro
+                substr($macro,2):$macro
+                estimatestart('get',$macro,'overniteQ',$t3,$t4,$tt):$ST,$CT
+	    endif
+	endif
+       if ($ST) and ($CT) then
+           xmgetatts($cnode,'title'):$title
+           sec2ampm($ST+$CT):$ampm
+           $title=$title+' ['+$ampm+']'
+           vnmrjcmd('SQ set '+$cnode+' title \"'+$title+'\"')
+       endif
+     endif
+   endif
+   $i=$i+1
+until $i > $parnodesize
+
+if ($# > 0) then
+   $childs=''
+   xmhaha2('getchild','Qn004'):$childs
+   if ($childs='') or ($childs='child') then
+	return
+   endif
+   $size=size('$childs')
+   $i=1
+   repeat
+	$cnode=$childs[$i]
+	$title='' $cpname=''
+	xmgetatts($cnode,'title','CPnode'):$title,$cpname
+	if ($cpname<>'') then
+	    teststr('$1',$cpname,'local'):$ret
+	    if ($ret) then
+		substr($title,1):$title
+		$title=$title+$1[$ret+1]
+		vnmrjcmd('SQ set '+$cnode+' title \"'+$title+'\"')
+	    endif
+	endif
+	$i=$i+1
+   until $i > $size
+endif

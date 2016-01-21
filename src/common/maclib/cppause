@@ -1,0 +1,127 @@
+"macro cppause"
+$tailX='tail'
+whichtail:$tailX
+
+if ($# < 1) then $1='' endif
+
+"*********************************************************"
+if (auto ='y') then return endif
+
+$actexp=0 
+expactive('current'):$actexp,$who
+if ($who='auto') then 
+  if ($1='stop') then
+     if ($# < 2) then $2='' endif
+// If arg2 is autopause, then this macro was called by
+//	autopause.  Don't send it back to avoid infinite
+//	loop.
+     if ($2<>'autopause') then
+	autopause('stop',$0)
+     else
+	write('error','Error in stopping this acquisition')
+     endif
+  else
+    	write('error','Automation in progress. Use autopause macro')
+  endif
+    return 
+endif
+if ($actexp<1) then return endif
+if ($who <> owner) then
+     write('error','current active acquisition is not owned by %s',owner)
+     return
+endif
+
+jexp:$curexp
+if ($actexp<>$curexp) then
+   if ($1='stop') then
+        killpshim:$dum
+	aa
+        write('error','Acquisition in workspace %d successfully aborted.',$actexp)
+   else
+   	write('error','current workspace is not active')
+   endif
+   return
+endif
+
+"***************now proceed*********************"
+if ($1='now') or ($1='stop') then
+  killpshim:$dum
+  aa
+endif
+vnmrjcmd('pnew','file')
+strstr(wexp,'chempackQ'):$ret
+if ($ret=0) then return endif
+"************************************************"
+$firstexp=''
+IF ($1<>'stop') THEN
+    $firstexp='PAUSE'
+ENDIF
+    $maclib='' $parlib='' $shapelib=''
+    Automacrodir:$maclib,$shapelib,$parlib
+    if ($maclib='') or ($parlib='') then return endif
+IF ($1='now') THEN
+  if explist[1]='' then explist[1]=pslabel endif
+  $pausepar=''
+  $parlist=$parlib+'/parliblist'
+  shell('(cat '+$parlist+' | grep -w \''+explist[1]+':\' | awk \'{print $2}\' | '+$tailX+' -n 1)'):$pausepar
+  if ($pausepar<>'') then
+     $firstchar='' 
+     substr($pausepar,1,1):$firstchar
+     if ($firstchar<>'/') then 
+	$pausepar=archivedir+'/'+sample+'/'+$pausepar 
+     endif
+  endif
+  if ($pausepar='') then
+	$pausepar=$parlib+'/'+explist[1]+'_paused'
+   	svp($pausepar,'force')
+  endif
+
+   $alias=$maclib+'/alias'
+   write('file',$alias,'%s:   rtp(\'%s\')',explist[1],$pausepar)
+   $firstexp=explist[1]
+ENDIF
+
+   $oldexplist=explist
+   cpexplist('read',$maclib):explist
+
+if ($firstexp='PAUSE') then
+   "What if the sample is in SetUp mode?"
+      $expsize=size('explist')
+      $i=1 $setup=0
+      repeat
+        strstr(explist[$i],'SetUp'):$ret
+        if ($ret=1) then        "This experiment is in setup mode"
+           $setup=1
+        else
+           if ($setup) then
+                explist[$i+1]=explist[$i+1]+' PAUSE'
+           else
+                explist[$i]='PAUSE '+explist[$i]
+           endif
+           $i=$expsize
+        endif
+        $i=$i+1
+      until $i > $expsize
+      array2array(explist):explist
+      teststr('explist','PAUSE','local'):$isthere
+      if ($isthere=0) then
+        explist='PAUSE',explist
+      endif
+else
+      explist=$firstexp,explist
+endif
+   cpexplist('write',$maclib)
+   explist=$oldexplist
+//   cppauseflg='y'
+if ($1='now') then
+//   banner('Queue successfully paused\\Resume from MainMenu=>Automation')
+   write('error','Sample:%s successfully paused.  Restart using "Mainmenu=>Automation=>Foreground Acquisition=>Resume paused study\" menu',sample)
+elseif ($1='stop') then
+//   banner('Current Acquisition successfully aborted\\Resume from MainMenu=>Automation')
+   write('error','Sample:%s Current Acquisition successfully aborted.  Restart using "Mainmenu=>Automation=>Foreground Acquisition=>Resume paused study\" menu',sample)
+elseif ($1 <> 'quiet') then
+//   banner('Queue will be paused after the current experiment')
+   write('error','Sample:%s. Study will be paused after the current acquisition.  Restart using "Mainmenu=>Automation=>Foreground Acquisition=>Resume paused study\" menu',sample)
+endif
+
+

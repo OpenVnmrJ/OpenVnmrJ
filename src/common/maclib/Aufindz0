@@ -1,0 +1,159 @@
+"macro Aufindz0"
+"findz0: macro to find z0 from the position of the lock resonance "
+" in a deuterium spectrum.  Arguments: 'init': record the initial "
+" spectrum; 'move': process spectrum, set z0 and restore initial "
+" parameters. "
+
+probeid('enabled'):$probeid
+
+  IF ($1 = 1) THEN
+
+   groupcopy('current','processed','acquisition')
+   groupcopy('current','processed','display')
+   groupcopy('current','processed','processing')
+
+"     gmapsys "
+     tmpsave('findz0tmp')
+     addlknuc
+     tn='lk' seqfil='s2pul' sw=100*sfrq np=16k
+     dn='H1' tof=0
+     nt=1 ss=0 at=2 
+     tpwr=45 pw=200
+     getparam('tpwr','lk'):tpwr
+     getparam('pw90','lk'):pw
+     if (Console = 'g2000') then alock ='n' 
+     elseif (Console = 'mercury') then
+       exists('/vnmr/acqbin/Expproc','file'):$expprocex
+       if ($expprocex) then alock = 'u' else alock = 'n' endif
+     else
+       alock='u' 
+     endif
+     wnt='' wexp='Aufindz0(2)'
+     array=''
+     p1=0 sb='n' dmg='ph' fn=2*np lp=0 
+"     au('wait','next')   "
+     gmapshim_au('gshim','glideau')
+
+  ENDIF
+
+  IF ($1 = 2) THEN
+    
+     f lb=1/at wft('nods') lp=0 aph0
+     rfl=sw/2 rfp=0
+     peak:$hgt,cr
+     movetof
+     wexp='Aufindz0(3)'
+     au('wait','next') 
+
+  ENDIF
+
+  IF ($1 = 3) THEN
+
+     f lb=1/at wft('nods') lp=0 aph0
+     rfl=sw/2 rfp=0
+     peak:$hgt,cr
+     if (cr > 1) or (cr < -1) then
+       movetof
+       wexp='Aufindz0(3)'
+       au('wait','next') 
+      
+     else
+
+       $ref_z0s='' $ref_tofs=''
+       $ref_tpwrs='' $ref_pw90s=''
+       readhw('z0'):$ref_z0
+       format($ref_z0,0,0):$ref_z0s
+       format(tof,0,1):$ref_tofs
+       format(tpwr,0,0):$ref_tpwrs
+       format(pw,0,1):$ref_pw90s
+
+       setparams('solv',solvent,'lk')
+       setparams('tof',$ref_tofs,'lk')
+       setparams('z0',$ref_z0s,'lk')
+       setparams('tpwr',$ref_tpwrs,'lk')
+       setparams('pw90',$ref_pw90s,'lk')
+ 
+       $range='hi'
+       if ((shimset < 3) or (shimset = 8) or (shimset = 10)) then
+         $range='lo'
+       endif
+       if $range='hi' then $diff=5000 else $diff=150 endif
+       z0=$ref_z0+$diff
+       sethw('z0',$ref_z0+$diff)
+       write('line3','Please wait...')
+       shell('sleep 15')		"wait for 15 sec to settle z0"
+       r5=$diff
+       wexp='Aufindz0(4,r5)'
+       au('wait','next') 
+
+     endif
+
+   ENDIF
+
+
+   IF ($1 = 4) THEN
+
+	f lb=1/at wft('nods') lp=0 aph0
+	rfl=sw/2 rfp=0
+	peak:$hgt,cr
+	r6=cr
+	$ref_z0=0
+	getparam('z0','lk'):$ref_z0
+	z0=$ref_z0-$2
+	sethw('z0',$ref_z0-$2)
+	write('line3','Please wait...')
+	shell('sleep 15')		"wait for 15 sec to settle z0"
+        wexp='Aufindz0(5,-2*r5,r6)'
+        au('wait','next') 
+
+   ENDIF
+
+   IF ($1 = 5) THEN
+
+	f lb=1/at wft('nods') lp=0 aph0
+	rfl=sw/2 rfp=0 
+	peak:$hgt,cr
+	r4=cr
+	$hzperdac=(r4 - $3)/$2
+        $hpds=''
+        format($hzperdac,0,5):$hpds
+	setparams('hzdac',$hpds,'lk')
+	$ref_z0=0
+	getparam('z0','lk'):$ref_z0
+	sethw('z0',$ref_z0)
+"	seqfil='gmapz' "
+"	gmapsys('quit') "
+
+        $date=''
+        shell('date +%Y-%m-%d_%H%M%S'):$date
+
+        if (gradtype='nnh') then
+          $tn='hs'
+        else
+          $tn=tn
+        endif
+	$probepath='' $pex=0 $appdir=''
+        if $probeid then
+	  probeid('shimdir'):$appdir
+        else
+	  exists(probe,'probes/'+probe):$pex,$probepath
+	  strstr($probepath,'/probes/'):$pex,$appdir
+        endif
+        exists($appdir+'/shims/'+probe+'_'+$tn+'_d2o','file'):$shimex
+        if ($shimex) then
+         shell('rm '+$appdir+'/shims/'+probe+'_'+$tn+'_d2o')
+        endif
+	exists($appdir+'/shims','directory'):$shimdirex
+	if ($shimdirex=0) then
+	   shell('mkdir '+$appdir+'/shims'):$dum
+	endif
+        svs($appdir+'/shims/'+probe+'_'+$tn+'_d2o') 
+        svs($appdir+'/shims/'+probe+'_'+$tn+'_d2o_'+$date)
+
+//        setlkpars(lockpower,lockgain,lockphase) 
+
+        tmpreturn('findz0tmp')
+        dsp=dsp
+        banner('DONE')
+   
+    ENDIF

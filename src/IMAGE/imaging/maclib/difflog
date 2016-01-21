@@ -1,0 +1,40 @@
+"macro difflog"
+
+if ($# = 1) then
+  $frames=$1
+else
+  aipXrecon('nrcvrs'):$nr
+  $arraydim=arraydim/$nr
+  $frames=$arraydim
+  $nref=0
+  exists('epiref_type','parameter'):$ex
+  if ($ex > 0) then
+    if (size('image') = $arraydim) then
+      if (epiref_type='single') then $nref=1 endif
+      if (epiref_type='triple') then $nref=3 endif
+      if (epiref_type='fulltriple') then $nref=$arraydim/2+1 endif
+    endif
+  endif
+  $frames=$frames-$nref
+endif
+
+$i=2
+$n=''
+while ($i <= $frames) do
+  if ($i > 99) then
+    format($i,3,0):$n
+  elseif ($i > 9) then
+    format($i,2,0):$n
+  else
+    format($i,1,0):$n
+  endif  
+  $aipcmd = '#'+$n+' = -2.3025*log(#'+$n+'/#1)'
+  setvalue('aip2CExp',$aipcmd,'global')
+  setvalue('aip2JExp',$aipcmd,'global')
+  aipMathExecute('aip2CExp','aipMupdate')
+  $i=$i+1
+endwhile
+$aipcmd = '#1 = -2.3025*log(#1/#1)'
+setvalue('aip2CExp',$aipcmd,'global')
+setvalue('aip2JExp',$aipcmd,'global')
+aipMathExecute('aip2CExp','aipMupdate')

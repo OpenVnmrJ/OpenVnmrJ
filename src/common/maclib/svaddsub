@@ -1,0 +1,45 @@
+"macro svaddsub"
+
+if ($# < 2) then $2='' endif
+$fc='' substr($1,1,1):$fc
+if $fc<>'/' then
+    pwd:$curdir
+    $1=$curdir+'/'+$1
+endif
+
+$b='' $e='' $d=''
+substr($1,'dirname'):$d,$b,$e
+$1=$d+'/'+$b+'.vfs'
+exists($1,'directory'):$direx
+if ($direx) then
+    if ($2='force') then $confirm=1
+    else
+    	$confirm=0
+    	write('line3','%s exists. overwrite?',$1):$conf
+    	confirm($conf):$confirm
+    endif
+    if not $confirm then return endif
+    rm('-rf',$1):$dum
+endif
+exists($1,'directory'):$direx
+if $direx then
+    write('error','%s could not be overwritten',$1)
+    return
+endif
+mkdir('-p',$1):$dum
+exists($1,'directory'):$direx
+if not $direx then
+    write('error','%s could not be created',$1)
+    return
+endif
+
+write('line3','%s/exp%d',userdir,addsubexp):$addsub
+mkdir($1+'/datdir'):$dum
+mkdir($1+'/acqfil'):$dum
+copy($addsub+'/curpar',$1):$dum
+copy($addsub+'/procpar',$1):$dum
+copy($addsub+'/text',$1):$dum
+copy($addsub+'/datdir/data',$1+'/datdir'):$dum
+copy($addsub+'/datdir/phasefile',$1+'/datdir'):$dum
+
+return($1)

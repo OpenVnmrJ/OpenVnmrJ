@@ -1,0 +1,46 @@
+"macro page"
+
+"page - Send a plot page to a plotter"
+
+setplotdev:$fmt,$host,$ppmm,$raster
+if ($# = 1) then
+  if (typeof('$1')) then
+    if ($1 = 'clear') or ($fmt <> 'DICOM') then
+      plotpage($1)
+      return
+    endif
+  else
+    plotpage($1)
+    return
+  endif
+elseif(auto='y') then
+ isFDAsystem:$e
+ if($e > 0.5) then 
+  shell('rm -f "'+curexp +'"/datdir/spec.*')
+  if($raster = 0) then
+     $suf='plt'
+  elseif($raster < 2.5) then
+     $suf='pc'
+  else
+     $suf='ps'
+  endif
+  $path = curexp+'/datdir/spec.'+$suf
+  writeDataID plotpage($path)
+  shell('lp "'+$path+'"')
+  return
+ endif
+endif
+if ($fmt = 'DICOM') then
+  write('line3','DICOM printing not supported by page')
+else
+  exists('printout','parameter','global'):$expo
+  if $expo then
+    if (auto='n') and ((printout='preview') or (printout='file')) then
+      plotpage('/vnmr/tmp/tmpplot.ps')
+    else
+      plotpage
+    endif
+  else
+    plotpage
+  endif
+endif

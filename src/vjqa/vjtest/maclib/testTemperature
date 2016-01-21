@@ -1,0 +1,34 @@
+"macro testTemperature"
+if (vttype = 0) then
+  vvLog('Test','Temperature skipped. No VT available.')
+  return
+endif
+vvLog('Test','Temperature')
+readhw('temp'):$temp,$stat,$origset
+if ($stat <> 1)  then
+  vvLog('Fail','Temperature must be regulated at start of test')
+  return
+endif
+sethw('temp',$origset+5):$e
+readhw('temp'):$temp,$stat,$set
+if ($stat <> 2)  then
+  vvLog('Fail','Temperature did not go to not regulated after 5 deg. jump')
+endif
+shell('sleep 30'):$e
+readhw('temp'):$temp,$stat,$set
+if ($stat <> 1)  then
+  vvLog('Fail','Temperature did not regulate after 30 seconds')
+endif
+sethw('vt','off')
+readhw('temp'):$temp,$stat,$set
+if ($stat <> 0) then
+  vvLog('Fail','Start VT off')
+endif
+sethw('temp',$origset)
+shell('sleep 30'):$e
+readhw('temp'):$temp,$stat,$set
+if ($stat <> 1)  then
+  vvLog('Fail','Temperature did not re-regulate after 30 seconds')
+  return
+endif
+vvLog('Pass','')

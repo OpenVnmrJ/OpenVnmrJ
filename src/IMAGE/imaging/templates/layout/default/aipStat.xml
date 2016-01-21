@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ ! 
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="aipStat" element="pages" type="imaging" >
+  <group size="830 285"
+    style="PlainText"
+    label="Statistics"
+    vc="aipStatUpdate"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="aipStat"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="5 0" size="650 280"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <textmessage loc="10 120" size="130 15"
+        style="PlainText"
+        vq="aipStatVolumeMsg"
+        set="$VALUE=aipStatVolumeMsg"
+        />
+      <button loc="60 160" size="75 20"
+        style="PlainText"
+        label="No Header"
+        vc="curdir:$str $str=$str+'/'+aipUserStatListFile aipStatPrint($str,'a','nohead') write('line3','Statistics saved in '+$str) aipStatUpdateCount=aipStatUpdateCount+1"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="10 160" size="50 20"
+        style="PlainText"
+        label="Header"
+        vc="curdir:$str $str=$str+'/'+aipUserStatListFile aipStatPrint($str,'a') write('line3','Statistics saved in '+$str) aipStatUpdateCount=aipStatUpdateCount+1"
+        bg="transparent"
+        decor1="yes"
+        />
+      <label loc="10 140" size="75 20"
+        style="Label1"
+        label="Save Stats:"
+        justify="Left"
+        />
+      <entry loc="30 180" size="105 20"
+        style="PlainText"
+        vq="aipUserStatListFile"
+        vc="aipUserStatListFile='$VALUE'"
+        set="$VALUE=aipUserStatListFile"
+        disable="Grayed out"
+        />
+      <label loc="10 180" size="20 20"
+        style="Label1"
+        label="In:"
+        justify="Left"
+        />
+      <check loc="10 200" size="130 20"
+        style="PlainText"
+        label="Dynamic Update"
+        vq="aipStatUpdateOnMove"
+        vc="aipStatUpdateOnMove=1"
+        vc2="aipStatUpdateOnMove=0"
+        set="$VALUE=aipStatUpdateOnMove"
+        />
+      <button loc="10 225" size="90 20"
+        style="PlainText"
+        label="Update Now"
+        vc="aipStatUpdate"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="540 255" size="105 20"
+        style="PlainText"
+        label="ROIs (Keep Bkg)"
+        vc="aipSegment('R')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="435 255" size="105 20"
+        style="PlainText"
+        label="ROIs (Clear Bkg)"
+        vc="aipSegment('r')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="375 255" size="55 20"
+        style="PlainText"
+        label="Images"
+        vc="aipSegment('i')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <label loc="260 255" size="115 20"
+        style="Label1"
+        label="Do segmentation of: "
+        justify="Right"
+        />
+      <entry loc="100 255" size="135 20"
+        style="PlainText"
+        vq="aipUserStatGraphFile"
+        vc="aipUserStatGraphFile='$VALUE'"
+        set="$VALUE=aipUserStatGraphFile"
+        disable="Grayed out"
+        />
+      <button loc="10 255" size="90 20"
+        style="PlainText"
+        label="Save graph in:"
+        vc="curdir:$str $str=$str+'/'+aipUserStatGraphFile cp(aipStatGraphFile, $str) write('line3','Graph saved in '+$str)"
+        bg="transparent"
+        decor1="yes"
+        />
+      <textmessage loc="325 25" size="130 15"
+        style="Label2"
+        vq="aipStatClipped"
+        set="$VALUE=aipStatClipped"
+        />
+      <plot loc="136 0" size="512 232"
+        style="PlainText"
+        vq="aipStatGraphFile aipStatCursMin aipStatCursMax aipStatCursEnable"
+        set="$VALUE=aipStatGraphFile"
+        bg="VJBackground"
+        jointpts="No"
+        fillhistgm="Yes"
+        pointsize="Large"
+        lcset="$VALUE=aipStatCursMin"
+        lccmd="if (aipStatCursEnable &gt; 0) then setvalue('aipStatCursMin',$VALUE,'global') endif"
+        lccmd2="if (aipStatCursEnable &gt; 0) then aipStatCursMin=$VALUE endif"
+        lcshow="on('aipStatCursMin','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)"
+        lccolor="LeftCursor"
+        rcset="$VALUE=aipStatCursMax"
+        rccmd="if (aipStatCursEnable &gt; 0) then setvalue('aipStatCursMax',$VALUE,'global') endif"
+        rccmd2="if (aipStatCursEnable &gt; 0) then aipStatCursMax=$VALUE endif"
+        rcshow="on('aipStatCursMax','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)"
+        rccolor="RightCursor"
+        graphbgcolor="GraphBackground"
+        graphfgcolor="GraphForeground"
+        graphfgcolor2="transparent"
+        graphfgcolor3="transparent"
+        xaxisshow="Yes"
+        yaxisshow="Yes"
+        logyaxis="No"
+        showgrid="No"
+        gridcolor="GraphGrid"
+        tickcolor="GraphTick"
+        />
+      <textmessage loc="8 104" size="120 16"
+        style="PlainText"
+        vq="aipStatAreaMsg"
+        set="$VALUE=aipStatAreaMsg"
+        />
+      <textmessage loc="8 88" size="120 16"
+        style="PlainText"
+        vq="aipStatSdvMsg"
+        set="$VALUE=aipStatSdvMsg"
+        />
+      <textmessage loc="8 72" size="120 16"
+        style="PlainText"
+        vq="aipStatMeanMsg"
+        set="$VALUE=aipStatMeanMsg"
+        />
+      <textmessage loc="8 56" size="120 16"
+        style="PlainText"
+        vq="aipStatMedianMsg"
+        set="$VALUE=aipStatMedianMsg"
+        />
+      <textmessage loc="8 40" size="120 16"
+        style="PlainText"
+        vq="aipStatMaxMsg"
+        set="$VALUE=aipStatMaxMsg"
+        />
+      <textmessage loc="8 24" size="120 16"
+        style="PlainText"
+        vq="aipStatMinMsg"
+        set="$VALUE=aipStatMinMsg"
+        />
+      <label loc="4 4" size="112 20"
+        style="Heading1"
+        label="ROI Statistics"
+        justify="Left"
+        />
+    </group>
+    <group loc="665 85" size="160 90"
+      label="Statistics / Histogram limits"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <entry loc="88 40" size="64 20"
+        style="PlainText"
+        vq="aipStatHistMin "
+        vc="aipStatHistMin=$VALUE aipStatUpdate"
+        set="$VALUE=aipStatHistMin"
+        disable="Grayed out"
+        />
+      <label loc="32 40" size="56 20"
+        style="Label1"
+        label="User Min:"
+        justify="Left"
+        />
+      <label loc="56 60" size="32 20"
+        style="Label1"
+        label="Max:"
+        justify="Left"
+        />
+      <entry loc="88 60" size="64 20"
+        style="PlainText"
+        vq="aipStatHistMax "
+        vc="aipStatHistMax=$VALUE aipStatUpdate"
+        set="$VALUE=aipStatHistMax"
+        disable="Grayed out"
+        />
+      <menu loc="8 16" size="144 24"
+        style="PlainText"
+        label="menu"
+        vq="aipStatHistRangeType"
+        vc="aipStatHistRangeType=$VALUE aipStatUpdate"
+        set="$VALUE=aipStatHistRangeType"
+        editable="No"
+        >
+        <mlabel 
+          label="Span Image Values"
+          chval="1"
+          />
+        <mlabel 
+          label="Span ROI Values"
+          chval="0"
+          />
+        <mlabel 
+          label="Use Cursor Values"
+          chval="2"
+          />
+        <mlabel 
+          label="User Specified"
+          chval="3"
+          />
+      </menu>
+    </group>
+    <group loc="665 5" size="160 70"
+      label="Segmentation Cursors"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <entry loc="10 40" size="65 20"
+        style="PlainText"
+        vq="aipStatCursMin aipStatCursEnable"
+        vc="aipStatCursMin=$VALUE"
+        set="$VALUE=aipStatCursMin"
+        show="on('aipStatCursMin','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)*2-1"
+        digits="6"
+        disable="Label"
+        />
+      <entry loc="80 40" size="70 20"
+        style="PlainText"
+        vq="aipStatCursMax aipStatCursEnable"
+        vc="aipStatCursMax=$VALUE"
+        set="$VALUE=aipStatCursMax"
+        show="on('aipStatCursMax','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)*2-1"
+        digits="6"
+        disable="Label"
+        />
+      <check loc="80 20" size="65 20"
+        style="PlainText"
+        label="Right"
+        vq="aipStatCursMax aipStatCursEnable"
+        vc="on('aipStatCursMax','global')"
+        vc2="off('aipStatCursMax','global')"
+        set="on('aipStatCursMax','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)"
+        />
+      <check loc="10 20" size="60 20"
+        style="PlainText"
+        label="Left"
+        vq="aipStatCursMin aipStatCursEnable"
+        vc="on('aipStatCursMin','global')"
+        vc2="off('aipStatCursMin','global')"
+        set="on('aipStatCursMin','global'):$VALUE $VALUE=($VALUE &gt; 0 and aipStatCursEnable &gt; 0)"
+        />
+    </group>
+    <group loc="665 185" size="160 85"
+      label="Scatterplot Axis Values"
+      vq="aipStatNumRois"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <menu loc="24 20" size="128 24"
+        style="PlainText"
+        label="menu"
+        vq="aipStatOrdinate"
+        vc="aipStatOrdinate=$VALUE aipStatUpdate"
+        set="$VALUE=aipStatOrdinate"
+        editable="No"
+        >
+        <mlabel 
+          label="Area"
+          chval="0"
+          />
+        <mlabel 
+          label="Volume"
+          chval="1"
+          />
+        <mlabel 
+          label="Total Intensity"
+          chval="2"
+          />
+        <mlabel 
+          label="Mean Intensity"
+          chval="3"
+          />
+        <mlabel 
+          label="Median Intensity"
+          chval="4"
+          />
+        <mlabel 
+          label="Min Intensity"
+          chval="5"
+          />
+        <mlabel 
+          label="Max Intensity"
+          chval="6"
+          />
+        <mlabel 
+          label="SDV of Intensity"
+          chval="7"
+          />
+      </menu>
+      <label loc="8 20" size="16 22"
+        style="Label1"
+        label="Y:"
+        justify="Left"
+        />
+      <label loc="8 42" size="16 22"
+        style="Label1"
+        label="X:"
+        justify="Left"
+        />
+      <menu loc="24 42" size="128 22"
+        style="PlainText"
+        label="menu"
+        vq="aipStatAbscissa"
+        vc="aipStatAbscissa=$VALUE aipStatUpdate"
+        set="$VALUE=aipStatAbscissa"
+        editable="No"
+        >
+        <mlabel 
+          label="Frame Number"
+          chval="0"
+          />
+        <mlabel 
+          label="ROI Number"
+          chval="1"
+          />
+        <mlabel 
+          label="Slice Position"
+          chval="2"
+          />
+        <mlabel 
+          label="User Variable"
+          chval="3"
+          />
+        <mlabel 
+          label="Area"
+          chval="4"
+          />
+        <mlabel 
+          label="Volume"
+          chval="5"
+          />
+        <mlabel 
+          label="Total Intensity"
+          chval="6"
+          />
+        <mlabel 
+          label="Mean Intensity"
+          chval="7"
+          />
+        <mlabel 
+          label="Median Intensity"
+          chval="8"
+          />
+        <mlabel 
+          label="Min Intensity"
+          chval="9"
+          />
+        <mlabel 
+          label="Max Intensity"
+          chval="10"
+          />
+        <mlabel 
+          label="SDV of Intensity"
+          chval="11"
+          />
+      </menu>
+      <entry loc="25 63" size="107 19"
+        style="PlainText"
+        vq="aipStatUserVar aipStatAbscissa"
+        vc="aipStatUserVar='$VALUE' aipStatUpdate"
+        set="$VALUE=aipStatUserVar"
+        show="$VALUE=(aipStatAbscissa=3)"
+        disable="Grayed out"
+        />
+    </group>
+  </group>
+</template>

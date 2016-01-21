@@ -1,0 +1,155 @@
+"macro CPwtmenu"
+" CPwtmenu(dimension,'get'):$VALUE "
+" CPwtmenu(dimension,'set',$VALUE) "
+" CPwtmenu(dimension,'save'<,directory>) "
+" CPwtmenu(dimension,'read'<,directory>) "
+"       arg1 is typically 'acq' or 'f1' or 'f2' or 'f3' "
+"	arg3 for set option can be 'none' - "
+"		- turns off all window functions"
+"	default arg3 for save/read option is curexp or autodir"
+
+if $#<1.5 then
+  write('line3','%s requires at least two arguments',$0)
+  return('')
+endif
+
+$arg1=$1
+$arg2=$2
+
+  getdim:$dim
+  if ($dim=2) and ($arg1='f2') then
+	$arg1='acq'
+  endif
+  if ($dim=3) and ($arg1='f3') then
+	$arg1='acq'
+  endif
+  if ($arg1<>'acq') and ($arg1<>'f1') and ($arg1<>'f2') then
+	write('error','Argument %s not supported',$arg1)
+	return($ret)
+  endif
+
+    if $arg1='acq' then
+	$lb='lb' $gf='gf' $gfs='gfs' $sb='sb' $sbs='sbs' $awc='awc'
+	$pars='lb gf gfs sb sbs awc'
+    elseif ($arg1='f1') then
+        $lb='lb1' $gf='gf1' $gfs='gfs1' $sb='sb1' $sbs='sbs1' $awc='awc1'
+        $pars='lb1 gf1 gfs1 sb1 sbs1 awc1'
+    elseif ($arg1='f2') then
+        $lb='lb2' $gf='gf2' $gfs='gfs2' $sb='sb2' $sbs='sbs2' $awc='awc2'
+        $pars='lb2 gf2 gfs2 sb2 sbs2 awc2'
+    endif
+
+IF ($arg2='set') THEN
+        if ($3='none') then
+		off($lb) off($gf) off($gfs) off($sb) off($sbs) off($awc)
+        else
+           exists($3,'maclib'):$macex
+           if ($macex) then
+                $macro=$3+'(\''+$arg1+'\')'
+                {$macro}
+           endif
+        endif
+
+ELSEIF ($arg2='get') THEN
+
+    $ret=''
+    on($lb):$onlb on($gf):$ongf on($gfs):$ongfs
+    on($sb):$onsb on($sbs):$onsbs on($awc):$onawc
+    $sbval={$sb} $sbsval={$sbs}
+    if ($sbsval=0) then $onsbs=0 endif  // cover sbs=0
+
+    if ($onlb) and not ($ongf or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='expfilt'
+    elseif ($ongf) and not ($onlb or $ongfs or $onsb or $onsbs or $onawc) then
+        $ret='gaussian'
+    elseif ($onlb and $ongf) and not ($ongfs or $onsb or $onsbs or $onawc) then
+        $ret='pseudoecho'
+    elseif ($onsb) and not ($onlb or $ongf or $ongfs or $onsbs or $onawc) then
+        if $sbval<0 then
+          $ret='sqsinebell'
+        else
+          $ret='sinebell'
+        endif
+    elseif ($onsb and $onsbs) and not ($onlb or $ongf or $ongfs or $onawc) then
+        $ratio=$sbval/$sbsval format($ratio,0,2):$ratio
+        if $sbval<0 then
+	  if ($ratio>0.95) and ($ratio<1.05) then
+             $ret='sqcosine'
+	  elseif ($ratio>1.45) and ($ratio<1.55) then
+	     $ret='pi4ssbsq'
+	  elseif ($ratio>1.2) and ($ratio<1.3) then
+	     $ret='pi3ssbsq'
+	  endif
+        else
+          $ret='cosine'
+        endif
+    elseif not ($onsb and $onsbs and $onlb or $ongf or $ongfs or $onawc) then
+        $ret='none'
+    endif
+    return($ret)
+
+ELSEIF ($arg2 = 'save') THEN
+
+  if ($# < 3) then $3='' endif
+  if ($3<>'') then
+    exists($3,'directory'):$direx
+    if ($direx=0) then
+	$3=''
+    endif
+  endif
+  if ($3='') then
+        if (auto='y') then $3=autodir
+        else $3=curexp endif
+  endif
+  $parfile=$3+'/windowpars_'+$arg1
+  writeparam($parfile,$pars,'current')
+
+ELSEIF ($arg2 = 'read') THEN
+
+  if ($# < 3) then $3='' endif
+  if ($3<>'') then
+    exists($3,'directory'):$direx
+    if ($direx=0) then
+        $3=''
+    endif
+  endif
+  if ($3='') then
+        if (auto='y') then $3=autodir
+        else $3=curexp endif
+  endif
+  $parfile=$3+'/windowpars_'+$arg1
+  shell('touch '+$parfile):$dum
+  fread($parfile)
+	"Now update panel pages"
+  string2array($pars):$pars
+  $size=size('$pars')
+  $i=1
+  repeat
+     if ($pars[$i] <> '') then
+	on($pars[$i]):$paron
+	{$pars[$i]}={$pars[$i]}
+	if ($paron<1) then
+	   off($pars[$i])
+	endif
+     endif
+     $i=$i+1
+  until $i > $size
+
+ELSEIF ($arg2 = 'purge') THEN
+
+  if ($# < 3) then $3='' endif
+  if ($3<>'') then
+    exists($3,'directory'):$direx
+    if ($direx=0) then
+        $3=''
+    endif
+  endif
+  if ($3='') then
+        if (auto='y') then $3=autodir
+        else $3=curexp endif
+  endif
+  $parfile=$3+'/windowpars_'+$arg1
+  shell('rm -f '+$parfile):$dum
+
+ENDIF
+

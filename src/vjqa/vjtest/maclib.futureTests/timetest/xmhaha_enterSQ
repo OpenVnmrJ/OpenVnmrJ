@@ -1,0 +1,58 @@
+timeit($0+' started')
+$esq=sqdir+'/enterSQ'
+exists(sqdir+'/info','directory'):$direx
+if ($direx=0) then return endif
+$nodelist=$1
+if ($# < 2) then $2='' endif
+$prevnode=$2
+$total=size('$nodelist')
+
+"If any of the nodes in arg2 is already in enterSQ and is locked"
+"  then the move would not have happened"
+$lock=0
+$i=1
+repeat
+    if ($nodelist[$i]<>'') then
+	shell('(cat '+$esq+' | grep \'^'+$nodelist[$i]+' \' | grep -wc lockon)'):$lock
+	if ($lock>0) then $i=$total endif
+    endif
+	$i=$i+1
+until $i > $total
+if ($lock>0) then return endif
+
+$i=1
+repeat
+    if ($nodelist[$i]<>'') then
+	"First take this node out of enterSQ - it is possible this call is just rearranagement"
+
+	shell('(cat '+$esq+' | grep -v \'^'+$nodelist[$i]+' \' > '+$esq+'1)'):$dum
+	shell('mv '+$esq+'1 '+$esq):$dum
+
+	$val1='' $val2='' $val3=''
+	xmgetatts($nodelist[$i],'exp','lock','data'):$val1,$val2,$val3
+	if ($prevnode='') then
+		write('file',$esq,'%s %s lock%s %s',$nodelist[$i],$val1,$val2,$val3)
+	else
+	   $prevline=''
+	   if ($prevnode='tmpstudy') then
+		write('file',$esq+'1','%s %s lock%s %s',$nodelist[$i],$val1,$val2,$val3)
+		shell('(cat '+$esq+' >> '+$esq+'1)'):$dum
+		shell('mv '+$esq+'1 '+$esq):$dum
+		$prevnode=$nodelist[$i]
+	   else
+	   	shell('(cat '+$esq+' | grep \'^'+$prevnode+' \')'):$prevline
+	   	if ($prevline='') then
+                    write('file',$esq,'%s %s lock%s %s',$nodelist[$i],$val1,$val2,$val3)
+	   	else
+		   $newline=$nodelist[$i]+' '+$val1+' lock'+$val2+' '+$val3
+		   $sedcmd='sed -e \'s|'+$prevline+'|'+$prevline+'\\n'+$newline+'|g\''
+		   shell('('+$sedcmd+' '+$esq+' > '+$esq+'1)'):$dum
+		   shell('mv '+$esq+'1 '+$esq):$dum
+		   $prevnode=$nodelist[$i]
+	   	endif
+	   endif
+	endif
+    endif
+    $i=$i+1
+until $i > $total
+timeit($0+' done')

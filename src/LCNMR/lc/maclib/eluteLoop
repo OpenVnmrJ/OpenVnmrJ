@@ -1,0 +1,154 @@
+"macro eluteLoop"
+/*-*- MAGICAL -*-*/
+"macro eluteLoop"
+
+// eluteLoop - called during an lc run, elutes a loop for NMR.
+// Usage: eluteLoop	Elute the next loop (unless we are on 'endloop')
+//        eluteLoop([n,] [<action>])   Set nextloop to "n", then do "action".
+// If "n" is not present, the parameter "nextloop" is used unchanged.
+// The default "action" is 'next'.
+//
+// Loop elution requires a series of actions and pauses each time a new
+// loop is to be eluted. These are handled in this macro. For each step in
+// the process, this macro is called with the correct "action". The macro
+// performs the action, and queues up a call to itself with the correct
+// next action when the system is ready. It begins with:
+//
+// eluteLoop('next'):
+//     Loads the new LC method for the next loop (nextloop).
+// eluteLoop('loop'):
+//     Ensures that the analyte collecter is on the correct loop for
+//     equilibration.
+// eluteLoop('download')
+//     Downloads the method to the pump and detector.
+//     Waits for the pump to start.
+// eluteLoop('equilibrate')
+//     Waits for the selected "lcInterLoopDelay" time for the system
+//     to equilibrate at the new concentrations.
+// eluteLoop('start')
+//     Starts the elution run, while stepping the valve to the next loop.
+//
+// The downloaded method handles stopping at the right time (either by
+// peak detection or after a fixed time) and starting the NMR.
+// When the NMR is done, VJ will either call "eluteLoop('next')" -- if
+// lcHoldType='nmr' -- or just do nothing, requiring manual intervention
+// by the user to say they're ready for the next loop. (Note that lcHoldType
+// is part of the LC method.)
+
+$action = 'next'
+
+if ($# >= 1) then
+    if (typeof('$1') = 0) then
+        nextloop = $1
+        if ($# >= 2) then
+            $action = $2
+        endif
+    else
+        $action = $1
+    endif
+endif
+
+if (nextloop = 1) then
+    $prevloop = lcAnalyteCollector
+else
+    $prevloop = nextloop - 1
+endif
+
+//write('line3','%s: %d, action=\'%s\'', $0, nextloop, $action)
+
+if ($action = 'abort' and lcexp = 'enterA') then
+    lccmd('waitForTime', 'cancel')
+    lccmd('waitForPump', 'cancel')
+    lcEquilibrationCount=0
+    write('line3', 'Loop Elution Aborted')
+endif
+
+if ($action = 'next') then
+
+    if ($prevloop = endloop) then
+        lccmd('clearEvents')
+        lccmd('restartRun') // Marks end of hold time if we are holding
+        lccmd('stopRun')
+        lccmd('gpib ' + lcPump + ' reset')
+        lccmd('gpib ' + lcDetector + ' reset')
+        write('line3', 'Loop Elution Done')
+        return
+    endif
+
+    // Get the method for next loop.
+    // Need to wait for it to be digested by VJ
+    lccmd('clearEvents')
+    lccmd('setPauseDuration')
+    lcMethodFile = lcElutionMethods[nextloop]
+
+    $peakEnableA = lcPeakDetect[1]
+    $peakEnableB = lcPeakDetect[2]
+    $peakEnableC = lcPeakDetect[3]
+    $peakEnableD = lcPeakDetect[4]
+    $peakEnableE = lcPeakDetect[5]
+    lcMethod('read',lcMethodFile)
+    lcPeakDetectA = $peakEnableA
+    lcPeakDetectB = $peakEnableB
+    lcPeakDetectC = $peakEnableC
+    lcPeakDetectD = $peakEnableD
+    lcPeakDetectE = $peakEnableE
+    if (lcTimedStop = 'n' and lcCommand[2] = 'timedElution') then
+        "Remove timedElution cmd from row 2"
+        setvalue('lcCommand', 'null', 2, 'global')
+    endif
+    lccmd('waitForTime', 0.03, 'null', 'eluteLoop(nextloop,\'loop\')')
+    write('line3','Loading Next Method')
+endif
+
+
+// Go to the correct loop for equilibration.
+// (The loop just before the one we're about to elute.)
+if ($action = 'loop') then
+    lccmd('gotoLoop', $prevloop, 'eluteLoop(\'download\')')
+    write('line3', 'Waiting for Loop')
+endif
+
+
+//
+// Download methods to modules.
+// Wait for modules to digest new state and get flow going.
+//
+if ($action = 'download') then
+    lccmd('toCollector')
+    lccmd('toNmr')
+    lccmd('gpib ' + lcPump + ' reset')
+    lccmd('gpib ' + lcDetector + ' reset')
+    lccmd('gpib ' + lcPump + ' downloadMethod')
+    lccmd('gpib ' + lcDetector + ' downloadMethod')
+    lccmd('gpib ' + lcPump + ' reset')
+    lccmd('gpib ' + lcPump + ' pump')
+    lccmd('waitForPump', 'eluteLoop(\'equilibrate\')')
+    write('line3', 'Waiting for Pump')
+endif
+
+
+//
+// New concentrations running -- system is equilibrating.
+// Wait for specified time.
+//
+if ($action = 'equilibrate') then
+    write('line3', 'System is Equilibrating')
+    lccmd('waitForTime', lcInterLoopDelay, 'lcEquilibrationCount', 'eluteLoop(\'start\')')
+endif
+
+
+//
+// Everything is ready -- system equilibrated.
+// Restart run and step to loop to be eluted.
+//
+if ($action = 'start') then
+    write('line3', 'eluteLoop: restarting run')
+    lccmd('gpib ' + lcPump + ' start')	// Detector will also start
+    if (nextloop = startloop) then
+        lcStartRun
+    else
+        lccmd('restartRunAppend')
+    endif
+    lccmd('step')
+    nextloop = nextloop + 1
+endif

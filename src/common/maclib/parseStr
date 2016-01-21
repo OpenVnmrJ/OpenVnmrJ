@@ -1,0 +1,94 @@
+"macro parseStr"
+" parse string to substitute parameter names with values"
+" example:  'curexp +'/ROIs'' "
+
+if($# < 0.5) then return endif
+
+" the menu options"
+if($1 = 'current exp') then
+  return(curexp+'/ROIs')
+elseif($1 = 'current study') then
+  "aipCurrentKey gives the loaded data that is displayed"
+  substr(aipCurrentKey,1):$roipath
+  "If there is .img or .fid extension at end of aipInPath assume it belongs to the base scan"
+  substr($roipath,'basename'):$name,$ext
+  if ($ext = 'img' OR $ext = 'fid') then
+    substr($roipath,'dirname'):$roipath
+    "If there is .img or .fid extension at end of $roipath it could still belong to the base scan"
+    "This is the case, for example, for images calculated with imagmath"
+    substr($roipath,'basename'):$name2,$ext2
+    if ($ext2 = 'img' OR $ext2 = 'fid') then
+      substr($roipath,'dirname'):$roipath
+    endif
+    "But just maybe study has been configured by user to end in .img or .fid?"
+    substr(studyid_,'basename'):$studyname,$studyext
+    if ($studyext = 'img' OR $studyext = 'fid') then
+      substr($roipath,'basename'):$name3,$ext3
+      if ($studyext <> $ext3) then
+        $roipath=$roipath+'/'+$name2
+        if ($ext2 <> '') then 
+          $roipath=$roipath+'.'+$ext2
+        endif
+      endif
+    endif
+  endif
+  $roipath=$roipath+'/ROIs'
+  exists($roipath,'directory'):$e
+  if ($e<0.5) then mkdir($roipath):$ok endif
+  return($roipath)
+elseif($1 = 'ROI directory') then
+  $roipath=userdir+'/ROIs'
+  exists($roipath,'directory'):$e
+  if ($e<0.5) then mkdir($roipath):$ok endif
+  return($roipath)
+endif
+
+$s=$1
+$s1=''
+$s2=''
+$v=''
+strstr($s,'+'):$n,$s1,$s2
+if($n = 0) then 
+" $1 does not contain '+', treat it literally."
+  substr($s,1,1):$s1
+  if($s1 <> '/' and aipROIpath <> '') then 
+    strstr(aipROIpath,'/','last'):$n,$s1 
+    return($s1+'/'+$1)
+  else
+    return($1)
+  endif
+else
+
+" $1 contains '+', treat string without single quotations as"
+" vnmr parameters. " 
+
+while $s <> '' do
+   if($n=0) then
+     $s1=$s
+     $s2=''
+     $s=''
+   else
+     $s=$s2
+   endif
+   "remove space around + sign"
+   substr($s1,1):$s1
+   strstr($s1,'\''):$n
+   if($n=1) then
+     length($s1):$n
+     substr($s1,2,$n-2):$v1
+   else
+     substr($s1,1,1):$s2
+     if($s2='/') then
+        $v1=$s1
+     else
+        $v1={$s1}
+     endif
+   endif
+   $v=$v+$v1
+
+   strstr($s,'+'):$n,$s1,$s2
+endwhile
+
+return($v)
+
+endif

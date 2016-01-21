@@ -1,0 +1,48 @@
+"macro rna_autocal2g"
+f $bestone=1 $counter=1
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoRna/pwC90cal_lowpower_fine')
+write('plotter',100,wc2max,'Determination of 13C pw90 at pwClvl-12 (fine): Finding compC')
+select($bestone) vsadj(50)  dssh('dodc') pl('all','dodc') pap BPpage 
+pwC=pwC[$bestone]
+pwClvl=pwClvl+12
+compC=pwC/(4.0*r5) $compH=compH
+pwC=r5
+$temp=temp $tof=tof $pw=pw $pwClvl=pwClvl $pwC=pwC $compC=compC
+$ref_pwr=ref_pwr $ref_pw90=ref_pw90 $pw90=pw90
+
+rna_setupshapes
+
+ $dmf30='' format(dmf30,4,1):$dmf30
+ BPsetparams('dmf30',$dmf30,'C13')
+ $dmf80='' format(dmf80,4,1):$dmf80
+ BPsetparams('dmf80',$dmf80,'C13')
+ $dmf140='' format(dmf140,4,1):$dmf140
+ BPsetparams('dmf140',$dmf140,'C13')
+ $rf30='' format(rf30,4,1):$rf30
+ BPsetparams('rf30',$rf30,'C13')
+ $rf80='' format(rf80,4,1):$rf80
+ BPsetparams('rf80',$rf80,'C13')
+ $rf140='' format(rf140,4,1):$rf140
+ BPsetparams('rf140',$rf140,'C13')
+
+rna_gNhsqc
+setref 
+sw=20p sw1=40*dfrq2 fn=np np=fn
+temp=$temp tof=$tof pwClvl=$pwClvl
+pwC=$pwC compH=$compH
+nt=2 pw90=$pw90 pw=$pw90 
+imino='n' amino='y' NH2only='n'
+TROSY='n' dm2='nny'
+ss=4 nt=8 ssfilter=300 compC=$compC
+ref_pwr=$ref_pwr ref_pw90=$ref_pw90 
+array('pwN',14,pwN-7,1)
+wnt='wft f select(1)  av vsadj(30) dssh(\'dodc\')'
+wexp='rna_autocal6' au
+

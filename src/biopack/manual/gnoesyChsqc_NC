@@ -1,0 +1,95 @@
+  gnoesyChsqc_NC   for Heterodimer Studies
+      14N-H(t1) ->noe-> 13C(t2) -13C-H(t3)
+  (unlabeled mol.)        (labeled mol.)
+
+    3D C13 edited noesy with separation via the carbon of the destination site
+         recorded on a water sample 
+
+    NOTE: cnoesy_3c_sed_pfg(1).c 3D C13 edited NOESYs with separation via the
+          carbon of the origination site. (D2O experiments)
+
+
+	  MODIFIED G.V.T.Swapna, Rutgers Univ. 
+          SUBMITTED to BioPack, October 2004
+
+        1) first rgpulse of a regular 15C-edited NOESY is replaced by a (90H)-180(N,H
+    -90(N) pulse sandwich that is cycled so that the magnetization from protons connected
+     to N15 are cycled out and only the protons connected to N14 are frequency labeled 
+     during the t1 period. Subsequently the Hs connected to N14 transfer magnetization to 
+     protons connected to C13 and are detected through C13 and H(C13) in the t2 and t3 periods.
+ 
+        2) The protons connected to  13C also transfer magnetization to 13C connected
+     protons and are not cycled out. Therefore, this version of the pulsesequence only 
+     provides information of the CN region of the spectrum that is inter-chain noes. The C-C
+     region however has both intra and interchain information.
+
+   For VNMR/VNMRJ processing: set f1coef='1 0 0 0 0 0 1 0' and wft2da or
+                              wft2d('1,0,0,0,0,0,1,0')
+
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 35 ppm
+         3) 15N             - carrier @ 118 ppm
+
+    Set dm = 'nnny', [13C decoupling during acquisition].
+    Set dm2 = 'nyny', [15N dec during t1 and acq] 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI
+    acquisition in t1 [H]  and t2 [C].
+
+    Set f1180 = 'y' and f2180 = 'y' for (-90,180) in F1 and (-90,180) in  F2.    
+    c180_flg='y' for HH 2D (ni) experiment (fixed d3 (t2) in this case) 
+    c180_flg='n' for carbonyl decoupling using wfg during t2 (3D only)
+    Note: Zero order phase correct may not be exactly -90 in F2 due to seduce.
+
+    Modified by L. E. Kay to allow for simult N, C acq   July 19, 1993
+    original code: noesyc_pfg_h2o_NC_dps.c
+    Modified for dps and magic angle gradients D.Mattiello, Varian, 6/8/94
+    Modified for vnmr5.2 (new power statements, use status control in t1)
+      GG. Palo Alto  16jan96
+    Modified to use only z-gradients and only C13 editing (use wCNnoesy for
+     simultaneous editing of N15 and C13
+    Modified to permit magic-angle gradients
+    Modified to use ProteinPack-style of C=O decoupling
+     
+    STUD DECOUPLING.   SET STUD='y':
+       Setting the flag STUD='y' overrides the decoupling parameters listed in
+       dg2 and applies STUD+ decoupling instead.  In consequence is is easy
+       to swap between the decoupling scheme you have been using to STUD+ for
+       an easy comparison.  The STUD+ waveforms are calculated for your field
+       strength at the time of ProteinPack installation and RF power is 
+       calculated within the pulse sequence.  The calculations are for the most 
+       peaks being greater than 90% of ideal. If you wish to compare different 
+       decoupling schemes, the power level used for STUD+ can be obtained from 
+       dps - subtract 3dB from that level to compare to decoupling schemes at
+       a continuous RF level such as GARP.  The value of 90% has
+       been set to limit sample heating as much as possible.  If you wish to 
+       change STUD parameters, for example to increase the quality of decoupling
+       (and RF heating) change the 95% level for the centerband
+       by changing the relevant number in the macro makeSTUDpp and 
+       rerun the macro (don't use 100% !!).  (At the time of writing STUD has
+       been coded to use the coarse attenuator, because the fine attenuator
+       is not presently included in the fail-safe calculation of decoupling 
+       power which aborts an experiment if the power is too high - this may
+       lower STUD efficiency a little).
+
+     LP in t2:
+       The finite delays necessary during 13C evolution make the first few data
+       points in t2 distorted in intensity. The timing is correct so that lp2
+       may be set to zero, but the intensity distortion, particularly of the
+       second complex point, lead to a "dish" aspect of the baseline. This is not
+       due to the presence of a first-order phase correction (lp2), so adjustment
+       of the timing of the pulse sequence events is not needed.
+   
+       The solution to this is to use linear prediction in t2, the 13C dimension.
+       In VNMR you can both "fix up" the first few points using the rest of the
+       data table as the basis set, as well as extend the data set for better F2
+       resolution and less distortion from truncation. The macro "BPsetlp2" can be
+       used in the format "BPsetlp2(desired ni2, acquired ni2, #fixed)". Set
+       "desired ni2" to be the final extended data size, "acquired ni2" to be the
+       total # of increments to be used as a basis (it may be less than ni2, for
+       example if the experiment is running), and "#fixed" to the number of
+       initial points in t2 to be predicted (typically 2-4). Try this with a 2D
+       data set for varying numbers of fixed points until the baseline is sufficiently
+       flat in F2.

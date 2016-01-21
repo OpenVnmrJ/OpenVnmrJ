@@ -1,0 +1,181 @@
+"macro STsimulate"
+write('line3','hithere')
+beepoff
+tcl('stopUpdate')
+$lbv=lb
+on('lb'):$lb
+exists('lb','parameter','processed'):$elbp
+if ($elbp<0.5) then 
+   create('lb','real','processed')
+   lb=0.0
+endif
+getvalue('lb','processed'):lb
+on('lb','processed'):$lbp
+if ($lbp<0.5) then 
+   off('lb')
+endif
+
+$gfv=gf
+on('gf'):$gf
+exists('gf','parameter','processed'):$egfp
+if ($egfp<0.5) then 
+   create('gf','real','processed')
+   setvalue('gf',0.003,'processed')
+endif
+getvalue('gf','processed'):gf
+on('gf','processed'):$gfp
+if ($gfp<0.5) then 
+   off('gf')
+endif
+
+$npv=np
+on('np'):$np
+exists('np','parameter','processed'):$enpp
+if ($enpp<0.5) then 
+   create('np','real','processed')
+   setvalue('np',64,'processed')
+endif
+getvalue('np','processed'):np
+on('np','processed'):$npp
+if ($npp<0.5) then 
+   off('np')
+endif
+
+$sratev=srate
+on('srate'):$srate
+exists('srate','parameter','processed'):$esratep
+if ($esratep<0.5) then 
+   create('srate','real','processed')
+   setvalue('srate',0.0,'processed')
+endif
+getvalue('srate','processed'):srate
+on('srate','processed'):$sratep
+if ($sratep<0.5) then 
+   off('srate')
+endif
+
+$d=0
+
+$dsp=dsp
+if $dsp<>'n' then 
+   dsp='n'
+   $srate=srate
+   wft
+   srate=$srate
+endif
+
+jexp:$data_exp_number
+$data_exp_name=curexp
+
+$exp4_name=userdir+'/exp4'
+exists($exp4_name,'directory'):$exp4
+if ($exp4<0.5) then
+   cexp(4)
+endif
+
+if ($data_exp_number=5) then 
+   write('error','No Simulation in EXP5 - Choose Another Experiment')
+   abort
+endif
+
+if ($data_exp_number<>4) then
+   data_exp=$data_exp_number
+   write('line3','No Simulation in the Data Experiment')
+   write('line3','Moving Parameters to Experiment 4 for Simulation')
+   mp($data_exp_number,4)
+
+   exists($data_exp_name+'/expint','file'):$data_expint
+   exists($exp4_name+'/expint','file'):$expint4
+     if ($expint4>0.5) then 
+      rm($exp4_name+'/expint')
+   endif
+   if ($data_expint>0.5) then 
+      cp($data_exp_name+'/expint',$exp4_name+'/expint')
+   endif
+   jexp(4)
+
+   exists('downsamp','parameter'):$downsamp
+   if ($downsamp>0) then
+      on('downsamp'):$downsampv
+      if ($downsampv=1) then
+         numreg:$nreg
+         $nresets=2.0*$nreg+1
+         $i=1
+         repeat 
+            lifrq[$i]=lifrq[$i]/downsamp
+            $i=$i+1
+         until $i>$nresets
+      endif
+   endif
+endif
+
+jexp(data_exp)
+
+exists('ni','parameter'):$ni
+if ($ni>0.5) then 
+   if (ni>1) then
+      dconi dconi('trace')
+   endif
+endif
+ds
+
+clradd
+spadd
+
+jexp4
+
+lb=$lbv 
+if ($lb<0.5) then 
+   off('lb')
+endif
+
+gf=$gfv
+if ($gf<0.5) then 
+   off('gf')
+endif
+
+np=$npv
+if ($np<0.5) then 
+   off('np')
+endif
+
+srate=$sratev
+if ($srate<0.5) then 
+   off('srate')
+endif
+
+STstars('sim') 
+
+fpmult=0.5 
+phsim 
+phfid=0 
+proc='ft'
+lsfid=0
+exists('downsamp','parameter'):$downsamp
+if ($downsamp>0.5) then
+   downsamp='n'
+endif
+
+if $dsp<>'n' then 
+   dsp=$dsp
+endif
+$srate=srate
+wft 
+srate=$srate
+
+cdc
+$sp=sp $wp=wp f
+dc 
+sp=$sp wp=$wp
+
+intmod='off'
+
+vsadj
+vs=vs/3
+ds dtext 
+
+beepon
+newdg
+tcl('startUpdate; invokeTab LCNMR/STARS')
+
+write('line3','Simulation Complete')

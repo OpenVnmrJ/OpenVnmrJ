@@ -1,0 +1,133 @@
+"macro dli"
+"dli macro - to replace dli command"
+"display list of integrals"
+
+"find integrals"
+if $#>1.5 then
+  nli($1,$2)
+else
+  if $#>0.5 then
+    nli($1)
+  else
+    nli
+  endif
+endif
+
+$nsize=size('liamp')
+if $nsize<0.5 then
+  return
+endif
+
+if $nsize<1.5 then // only one integral
+  $regions='n'
+elseif intmod='partial' then
+  $regions='y'
+else
+  $regions='n'
+endif
+"title"
+$file=curexp+'/dli.out'
+write('reset',$file)
+$ch=''
+substr(axis,1,1):$ch
+if $ch='p' then
+  $title='Integral start(ppm)    end         value'
+else
+  $title='Integral start(Hz)     end         value'
+endif
+write('file',$file,'%s',$title)
+
+"normalization constants"
+$normInt = 'n'
+$insval = 1.0
+exists('ins','parameter'):$e1
+if $e1>0.5 then
+  $insval = ins
+  on('insref'):$o2
+  if ($o2 > 0.5) then
+    if (insref > 0.0) then
+      $insval = $insval / insref
+    endif
+  else
+    if ($o2 > -0.5) then
+      $normInt = 'y'
+    endif
+  endif
+endif
+  if ($insval <= 0.0) then
+    $insval = 1.0
+  endif
+  if $normInt='n' then
+    $insval = $insval / fn
+  endif
+  $downsamp = 1
+  on('downsamp'):$dson
+  if $dson>0.5 then $downsamp = downsamp endif
+
+  "init"
+  $rflrfp = rfl - rfp
+  $ifrq = 1.0 / reffrq
+  $start = (sp + wp) / $downsamp
+  if $ch='p' then $start = $start * $ifrq endif
+  $edge = $start
+  $right_edge = sp / $downsamp
+  if $ch='p' then $right_edge = $right_edge * $ifrq endif
+
+  "normalization"
+  if ($normInt = 'y') then
+    $norm = 0.0
+    $n=0
+    repeat
+      $n=$n+1
+        $amp = liamp[$n]
+        if $regions='y' then
+          if (($n/2) = trunc($n/2)) then
+            $norm = $norm + $amp
+          endif
+        else
+          $norm = $norm + $amp
+        endif
+    until ($n>=$nsize)
+    if $norm=0.0 then
+      $vs1 = 1.0
+    else
+      $vs1 = $insval / $norm
+    endif
+  else
+    $vs1 = $insval
+  endif
+  if $vs1 = 0.0 then
+    $vs1 = 1.0
+  endif
+
+  "number conversion, write to file"
+  $n=0
+  repeat
+    $n=$n+1
+    $frq = (lifrq[$n] - $rflrfp)
+    if $ch='p' then $frq = $frq * $ifrq endif
+    $frq = $frq / $downsamp
+    if ($frq < $edge) and ($start > $right_edge) then
+      if $ch='p' then
+        if ($frq < sp * $ifrq/$downsamp) then $frq = sp * $ifrq/$downsamp endif
+      else
+        if ($frq < sp/$downsamp) then $frq = sp/$downsamp endif
+      endif
+      $amp = liamp[$n] * $vs1
+      if $regions='y' then
+        if (($n/2) = trunc($n/2)) then
+          write('file',$file,'%4d  %10g    %10g  %10.3f',$n/2,$start,$frq,$amp)
+        else
+          $start = $frq
+        endif
+      else
+        write('file',$file,'%4d  %10g    %10g  %10.3f',$n,$start,$frq,$amp)
+        $start = $frq
+      endif
+    endif
+  until ($n>=$nsize)
+
+"output"
+clear
+cat($file)
+curexp=curexp

@@ -1,0 +1,31 @@
+"macro gxyzshimpwr"
+"gxyzshimpwr"
+"Macro to calculate shim power dissipation using external shim tables"
+"PJB - 14vi10"
+
+gxyzshimtab:$e,$shimfile
+if $e<0.5 then write('error','No shim table exists for this shimset!') return endif
+//write('line3','$shmfile=%s',$shimfile)
+
+lookup('file',$shimfile)
+lookup('skip',3,'read',1,'skip',1,'read',1):$maxdac,$nshims
+lookup('skip',5)
+$i=1
+$sumshimpwr=0
+$shim=''
+repeat
+   lookup('read',5):$shim,$daclimit,$maxI,$coilR,$mapstep
+   //For high-power radial shim sets
+   if ($maxI=1) then $maxI=$maxI*shimsetamp endif
+   format($shim,'lower'):$shim
+   abs({$shim}):$absshimdac
+   $shimI=$absshimdac/$maxdac*$maxI
+   $shimpwr=$shimI*$shimI*$coilR
+   $sumshimpwr=$sumshimpwr+$shimpwr
+   $i=$i+1
+until $i>$nshims
+write('line3','Estimated shim power dissipation =  %.1f W',$sumshimpwr)
+return($sumshimpwr)
+   
+
+

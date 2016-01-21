@@ -1,0 +1,41 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# targets
+showConsoleTarget = 'showconsole'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+showConsoleFileList = ['showconsole.c']
+
+acqProcPath    = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = ['config.h',
+                  'sram.h']
+
+# build environments
+env = Environment(CCFLAGS    = '-O2 -m32',
+                  CPPDEFINES = ['LINUX'],
+                  LINKFLAGS  = '-m32',
+                  CPPPATH    = [cwd])
+
+buildMethods.makeSymLinks(env, showConsoleTarget, cwd, acqProcPath, acqProcHdrList)
+
+# actual builds
+showConsole = env.Program(target = showConsoleTarget,
+                          source = [showConsoleFileList])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+env.AddPostAction(showConsole,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, showConsoleTarget))))
+

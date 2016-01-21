@@ -1,0 +1,20 @@
+"macro BPmakecos"
+"BPmakecos		Youlin Xia, Apr. 1999"
+"                       modified for BioPack, GG Oct 2001"
+
+"Calculates the following shaped SLP pulse and stores it in your shapelib:"
+"Carrier on H2O, 180 degree pulse on NH 4.0ppm away, null at H2O."
+
+"The carrier should be set to 4.7ppm."
+
+"The fine attenuator setting must be set in the pulse sequence during the"
+" pulse."
+
+$pw = 500*500/sfrq
+$steps = 500*500.11/sfrq   $steps = trunc($steps+0.5)  
+$pw = $steps
+$rf = 1023.0
+BPmakehard($steps, $rf)
+$stps = ''     format($steps,0,0):$stps     $shape = 'hard' + $stps
+$newshape = 'NH180'     $freq = sfrq*4.0     
+BPconvolute($shape,$newshape,$pw,$freq,-$freq)

@@ -1,0 +1,472 @@
+"macro vjdataQ"
+IF ($1='init') or ($1 = 'refresh') THEN
+
+   if ($2='') then $Qdir=$3 else $Qdir=$2 endif
+   if ($#<5) then $5='' endif
+
+   $datapath='' $locQ=''
+   $s1='' $s2='' $title=''
+   strstr($3,'.macdir/'):$ret,$s1,$s2
+   $timelog=$s1+'.macdir/AutoTimeLog'
+   strstr($s2,'_CustomQ'):$ret2,$title
+   if ($ret2=0) then
+	strstr($s2,'/day'):$ret2,$title
+   endif
+   shell('dirname '+$s1):$locQ
+   shell('basename '+$locQ):$locQ
+   $locQ=$locQ+'/.../'+$title
+
+   shell('basename '+$2):$datapath
+
+   exists('cpvjdataQ','parameter','global'):$parex
+   if ($parex=0) then
+      create('cpvjdataQ','string','global')
+   endif
+   setprotect('cpvjdataQ','on',256,'global')
+   cpvjdataQ=''
+
+//      cpvjdataQ[1]=Full pathname of sample directory
+//      cpvjdataQ[2]=fid name to be recalled
+//      cpvjdataQ[3]=relative pathname (w.r.t. userdir/data) of sample directory
+//      cpvjdataQ[4]=location directory within autodir
+//      cpvjdataQ[5]=samplechange time
+//      cpvjdataQ[6]=plotprocess time
+//      cpvjdataQ[7]=arg3
+//      cpvjdataQ[8]=arg4
+//      cpvjdataQ[9]=cpq experiment name to be deleted from Q
+//      cpvjdataQ[10]=sample owner
+//      cpvjdataQ[11]=priority flag
+//      cpvjdataQ[12]=pathname for dataexplist file
+//	cpvjdataQ[13]=dayQ submit time
+//	cpvjdataQ[14]=dayQ start time
+//	cpvjdataQ[15]=dayQ end time
+//	cpvjdataQ[16]=nightQ submit time
+//	cpvjdataQ[17]=nightQ start time
+//	cpvjdataQ[18]=nightQ end time
+//	cpvjdataQ[19]=Executing (current) experiment name
+//	cpvjdataQ[20]=current fid pathname
+//	cpvjdataQ[21]=location status
+//	cpvjdataQ[22]=editq permission
+
+        cpvjdataQ[1]=$2
+        cpvjdataQ[2]=''
+        cpvjdataQ[3]=$datapath
+        cpvjdataQ[4]=$locQ
+        cpvjdataQ[5]=''
+        cpvjdataQ[6]=''
+        cpvjdataQ[7]=$3
+        cpvjdataQ[8]=''
+        array2string($4):cpvjdataQ[8]
+        cpvjdataQ[9]=''
+        cpvjdataQ[10]=''
+        cpvjdataQ[11]=''
+        cpvjdataQ[12]=userdir+'/persistence/dataQexplist'
+	cpvjdataQ[13]=''
+	cpvjdataQ[14]=''
+	cpvjdataQ[15]=''
+	cpvjdataQ[16]=''
+	cpvjdataQ[17]=''
+	cpvjdataQ[18]=''
+	cpvjdataQ[19]=''
+	cpvjdataQ[20]=''
+	cpvjdataQ[21]=''
+	cpvjdataQ[22]='yes'
+	operights('editsubmittedstudy'):$editok
+	if ($editok<1) then cpvjdataQ[22]='no' endif
+
+   $lastsqnode=''
+   $pslabel=''
+   $cpnames=''
+   $status=''
+   $acqtime=''
+   $acqtimeR=0
+   $path=''
+   $when=''
+   array2array($4):$4
+
+   $datalist=userdir+'/persistence/dataQlist'
+   $daynightlist=userdir+'/persistence/daynightQlist'
+   $dataexplist=userdir+'/persistence/dataQexplist'
+
+   write('reset',$datalist)
+   write('reset',$dataexplist)
+   write('reset',$daynightlist)
+   xmhaha_dataQ($Qdir,$4,'lock','',$5):$lastsqnode,$pslabel,$cpnames,$status,$acqtimeR,$path,$when
+
+   $total=size('$pslabel')
+   if ($pslabel[1]='') then $total=0 endif
+   if ($total=0) then 
+	vnmrjcmd('pnew','cpvjdataQ')
+	return 
+   endif
+
+   strstr($3,'CustomQ'):$oldauto
+   $curexplist=''
+   if ($oldauto=0) then
+	shell('dirname '+$3):$curfid
+	$curfid=$curfid+'/current'
+	exists($curfid+'.fid','directory'):$cfidex
+	strstr($3,'enterQ'):$isauto
+	if ($isauto=0) then $cfidex=0 endif
+   else
+	$cfidex=0
+   endif
+
+   if ($cfidex) then
+	exists($curfid+'.fid/procpar','file'):$cfidex
+   endif
+   if ($cfidex) then
+	rtv($curfid+'.fid','noabort','explist'):$curexplist
+	if ($curexplist='') then $cfidex=0 endif
+   endif
+
+   $qcomplete=0 $qactive=0 $qpending=0
+   $i=1
+   repeat
+      $acqtime=''
+      formattime($acqtimeR[$i]):$acqtime
+      if ($status[$i]='Completed') then
+	if ($path[$i]<>'') then
+		$qcomplete=1
+		$relpath='' $s1='' $s2='' $s3=''
+		strstr($path[$i],$Qdir+'/'):$ret,$s1,$relpath
+		if ($ret=0) then
+		    strstr($Qdir,userdir+'/data/'):$ret2,$s2,$s3
+		    if ($ret2) then
+			strstr($path[$i],$s3+'/'):$ret,$s1,$relpath
+		    endif
+		endif
+		if ($ret=0) then $relpath=$path[$i] endif
+		write('file',$datalist,'"%s" %s',$relpath,$relpath)
+	endif
+      elseif ($status[$i]='Executing') then
+	$qactive=1
+	if ($cfidex>0) and ($curexplist=$cpnames[$i]) then
+	    cpvjdataQ[19]=$cpnames[$i]
+	    cpvjdataQ[20]=$curfid
+            write('file',$dataexplist,'%s (%s) [%s] - Acquiring',$cpnames[$i],$pslabel[$i],$acqtime)
+	else
+            write('file',$dataexplist,'%s (%s) [%s] - %s',$cpnames[$i],$pslabel[$i],$acqtime,$status[$i])
+	endif
+//	write('file',$datalist,'"%s(acquiring)" %s',$cpnames[$i],$curfid)
+//      write('file',$dataexplist,'%s (%s) [%s] - %s',$cpnames[$i],$pslabel[$i],$acqtime,$status[$i])
+      elseif ($status[$i]='Error') then
+        write('file',$dataexplist,'%s (%s) [%s] - %s',$cpnames[$i],$pslabel[$i],$acqtime,$status[$i])
+      else
+	$qpending=1
+	if ($when[$i]<>'') then
+           write('file',$dataexplist,'%s (%s) [%s] - %s',$cpnames[$i],$pslabel[$i],$acqtime,$when[$i])
+	else
+	   write('file',$dataexplist,'%s (%s) [%s] - %s',$cpnames[$i],$pslabel[$i],$acqtime,$status[$i])
+	endif
+      endif
+      $i=$i+1
+   until $i > $total
+
+   write('file',$datalist,'"" ""')
+   write('file',$daynightlist,'"" ""')
+
+   if ($qactive) then cpvjdataQ[21]='Active'
+   else
+     if ($qpending) then cpvjdataQ[21]='Queued'
+     else 
+	cpvjdataQ[21]='Complete'
+     endif
+   endif
+   if (autodir<>cpautodir) then
+	cpvjdataQ[21]='Archive'
+   endif
+   $tline=''
+   shell('(cat '+$timelog+' | grep \'^'+$title+'\' | grep priorityQ)'):$tline
+   if ($tline='') then
+	shell('(cat '+$timelog+' | grep \'^'+$title+'\' | grep dayQ)'):$tline
+   endif
+   $stline=''
+   substr($tline,5):$stline
+//   if ($stline<>'0') then cpvjdataQ[13]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[13] endif
+   $stline=''
+   substr($tline,6):$stline
+//   if ($stline<>'0') then cpvjdataQ[14]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[14] endif
+   $stline=''
+   substr($tline,7):$stline
+//   if ($stline<>'0') then cpvjdataQ[15]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[15] endif
+   $tline=''
+   shell('(cat '+$timelog+' | grep \'^'+$title+'\' | grep overniteQ)'):$tline
+   $stline=''
+   substr($tline,5):$stline
+//   if ($stline<>'0') then cpvjdataQ[16]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[16] endif
+   $stline=''
+   substr($tline,6):$stline
+//   if ($stline<>'0') then cpvjdataQ[17]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[17] endif
+   $stline=''
+   substr($tline,7):$stline
+//   if ($stline<>'0') then cpvjdataQ[18]=$stline endif
+   if ($stline<>'0') then convdateformat($stline):cpvjdataQ[18] endif
+
+   $sampchange=180
+   getadminfo('samplechangetime'):$sampchange
+   $procplot=60
+   getadminfo('prpltime'):$procplot
+   $sct='' $ppt=''
+   formattime($sampchange):$sct
+   formattime($procplot):$ppt
+   if ($qpending=0) then $sct='' $ppt='' endif
+
+   $user='' $who='' $priority=''
+   if ($2<>'') then
+	shell('(cat '+$2+'/dirinfo/macdir/sampleinfo | grep -w USER:)'):$user
+   else
+	shell('(cat '+$3+'/sampleinfo | grep -w USER:)'):$user
+   endif
+   if ($user<>'') then substr($user,2):$who endif
+   if ($who='') then $who=owner endif
+   if ($user<>'') then substr($user,3):$priority endif
+
+	cpvjdataQ[5]=$sct
+	cpvjdataQ[6]=$ppt
+	cpvjdataQ[10]=$who
+	cpvjdataQ[11]=$priority
+
+  vnmrjcmd('pnew','cpvjdataQ')
+  if ($1='init') then
+   	vnmrjcmd('popup','mode:modeless','file:vjdataQfiles.xml','pnewupdate:true','rebuild:yes','location:shuffler','title:Location Queue')
+  endif
+
+ELSEIF ($1='rt') THEN
+
+   if ($# <>3) then return(0) endif
+   if ($2='') then return(0) endif
+   $f='' substr($2,1,1):$f
+   if ($f='') then return(0) endif
+   if ($f='/') then
+	dndfid($2)
+   else
+	$reldir=$3
+	dndfid($reldir+'/'+$2)
+   endif
+   return(1)
+
+ELSEIF ($1='activert') THEN
+
+   if ($2='') then return(0) endif
+   vnmrjcmd('tray close')
+   $ret=0
+   rtNprocess($2):$ret
+   return($ret)
+
+ELSEIF ($1='editq') THEN
+
+   if (cpvjdataQ[21]='Queued') then
+	$dir='' $locdir='' $loc1='' $loc='' $s2=''
+	shell('dirname '+cpvjdataQ[7]):$dir
+	shell('basename '+$dir):$locdir
+	strstr($locdir,'_'):$ret,$loc1
+	strstr($loc1,'loc'):$ret,$s2,$loc
+	if ($loc='') then return endif
+	walkupQ('new','auto')
+	vjeditQ('','','',$loc)
+   elseif (cpvjdataQ[21]='Complete') then
+	strstr(file,cpvjdataQ[2]):$ret
+	if ($ret=0) then
+	   vjdataQ('rt',cpvjdataQ[2],cpvjdataQ[1]):$ret
+	endif
+	if ($ret) then
+		walkupQ('resumeq')
+	endif
+   endif
+
+ELSEIF ($1='delete') THEN
+
+  if ($# <> 2) then return endif
+  if ($2='') then return endif
+  $daynight='' $node=''
+  substr($2,1):$node
+  substr($2,2):$daynight
+  if ($node='') then return endif
+
+  if (cpvjdataQ[10]='') then return endif
+  if (cpvjdataQ[10]<>operator) then
+     write('line3','This sample is owned by %s; current operator is %s',cpvjdataQ[10],operator)
+     operights('editallopstudies'):$opok
+     if ($opok<0.5) and (owner<>operator) then
+	return
+     endif
+  endif
+  $locQ=cpvjdataQ[4]
+  $sampdir=cpvjdataQ[1]
+  strstr(cpvjdataQ[4],'CustomQ'):$isold
+
+  $autofile='' $locdir=''
+  strstr(cpvjdataQ[7],'.macdir/'):$ret,$autofile,$locdir
+  shell('dirname '+$autofile):$autodir
+  shell('basename '+$autofile):$Qname
+
+  iscpoldauto($autofile):$oldauto
+  if ($oldauto=0) then
+	strstr($locdir,'/'):$ret,$locdir
+	$daydir=$locdir+'/day'
+	$nitedir=$locdir+'/night'
+  else
+	strstr($locdir,'_CustomQ'):$ret,$locdir
+        $daydir=$locdir+'_CustomQ'
+        $nitedir=$locdir+'_CustomQlong'
+  endif
+
+  $found=0 $time=0
+"Identify the node and its time"
+  if ($sampdir<>'') then
+     if ($daynight='night') then
+	$line=''
+	shell('(cat '+$sampdir+'/dirinfo/macdir/LONGLIST | grep \'^'+$node+'\')'):$line
+	if ($line<>'') then $found=1 substr($line,2):$time endif
+     else
+	cpexplist('read',$sampdir+'/dirinfo/macdir'):$explist
+	teststr('$explist',$node,'local'):$found
+	if ($found) then
+	   cpexptime($node,$sampdir+'/dirinfo/macdir'):$time
+	endif
+     endif
+  else
+     if ($daynight='night') then
+        $line=''
+        shell('(cat '+cpvjdataQ[7]+'/LONGLIST | grep \'^'+$node+'\')'):$line
+        if ($line<>'') then $found=1 substr($line,2):$time endif
+     else
+        $line=''
+        shell('(cat '+cpvjdataQ[7]+'/EXPLIST | grep \'^'+$node+'\')'):$line
+        if ($line<>'') then $found=1 substr($line,2):$time endif
+     endif
+  endif
+  if ($found=0) then 
+	write('error','%s not found in the queue',$node)
+	return 
+  endif
+
+   $sampchange=180
+   getadminfo('samplechangetime'):$sampchange
+   $procplot=60
+   getadminfo('prpltime'):$procplot
+  $time=$time+$procplot
+  if (cpvjdataQ[11]='') then $psubtime=0 else $psubtime=$time endif
+
+  pwd:$curdir
+
+  cd($autofile+'.macdir'):$dum
+  $line='' $longrun='n'
+  shell('(cat AUTOGLOBAL | grep -w LONGRUN:)'):$line
+  if ($line<>'') then substr($line,2):$longrun endif
+  cd($autodir):$dum
+  readTtimeQ($Qname+'.macdir'):$ptime,$dtime,$ntime
+  cd($curdir):$dum
+
+  if ($daynight='night') then
+     if ($sampdir<>'') then
+	shell('(cat '+$sampdir+'/dirinfo/macdir/LONGLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+	shell('cp '+curexp+'/tmpfile '+$sampdir+'/dirinfo/macdir/LONGLIST'):$dum
+	shell('rm -f '+curexp+'/tmpfile'):$dum
+     endif
+	cd($autofile+'.macdir'):$dum
+     if ($oldauto=0) then
+        shell('(cat '+$daydir+'/LONGLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+        shell('cp '+curexp+'/tmpfile '+$daydir+'/LONGLIST'):$dum
+        shell('rm -f '+curexp+'/tmpfile'):$dum
+	shell('(cat '+$daydir+'/LONGLIST | wc -l)'):$leftover
+ 	if ($leftover=0) then $sctime=$sampchange else $sctime=0 endif
+        readTtimeQ($daydir):$p2time,$d2time,$n2time
+        writeTtimeQ($daydir,$p2time,$d2time,$n2time-$time-$sctime)
+
+        shell('(cat '+$nitedir+'/EXPLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+        shell('cp '+curexp+'/tmpfile '+$nitedir+'/EXPLIST'):$dum
+        shell('rm -f '+curexp+'/tmpfile'):$dum
+        shell('(cat '+$nitedir+'/EXPLIST | wc -l)'):$leftover
+        if ($leftover=0) then $sctime=$sampchange else $sctime=0 endif
+        readTtimeQ($nitedir):$p2time,$d2time,$n2time
+        writeTtimeQ($nitedir,$p2time,$d2time,$n2time-$time-$sctime)
+     else
+        exists($nitedir,'directory'):$niteex
+        if ($niteex) then
+           shell('(cat '+$daydir+'/LONGLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+           shell('cp '+curexp+'/tmpfile '+$daydir+'/LONGLIST'):$dum
+           shell('rm -f '+curexp+'/tmpfile'):$dum
+           shell('(cat '+$daydir+'/LONGLIST | wc -l)'):$leftover
+           if ($leftover=0) then $sctime=$sampchange else $sctime=0 endif
+           readTtimeQ($daydir):$p2time,$d2time,$n2time
+           writeTtimeQ($daydir,$p2time,$d2time,$n2time-$time-$sctime)
+
+	   shell('(cat '+$nitedir+'/EXPLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+	   shell('cp '+curexp+'/tmpfile '+$nitedir+'/EXPLIST'):$dum
+	   shell('rm -f '+curexp+'/tmpfile'):$dum
+           shell('(cat '+$nitedir+'/EXPLIST | wc -l)'):$leftover
+           if ($leftover=0) then $sctime=$sampchange else $sctime=0 endif
+	   readTtimeQ($nitedir):$p2time,$d2time,$n2time
+	   writeTtimeQ($nitedir,$p2time,$d2time,$n2time-$time-$sctime)
+	else
+           shell('(cat '+$daydir+'/EXPLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+           shell('cp '+curexp+'/tmpfile '+$daydir+'/EXPLIST'):$dum
+           shell('rm -f '+curexp+'/tmpfile'):$dum
+           shell('(cat '+$daydir+'/EXPLIST | wc -l)'):$leftover
+           if ($leftover=0) then $sctime=$sampchange else $sctime=0 endif
+           readTtimeQ($daydir):$p2time,$d2time,$n2time
+           writeTtimeQ($daydir,$p2time,$d2time,$n2time-$time-$sctime)
+	endif
+     endif
+
+        if ($longrun='y') then
+                writeTtimeQ($autofile+'.macdir',$ptime,$dtime-$time-$sctime,$ntime)
+        else
+                writeTtimeQ($autofile+'.macdir',$ptime,$dtime,$ntime-$time-$sctime)
+        endif
+
+	cd($curdir):$dum
+
+  else
+     if ($sampdir<>'') then
+	$newexplist=''
+	cpexplist('read',$sampdir+'/dirinfo/macdir'):$newexplist
+	teststr('$newexplist',$node,'local'):$iswhere
+	if ($iswhere>0) then 
+		$explist=explist
+		$newexplist[$where]='' 
+		explist=$newexplist
+		cpexplist('write',$sampdir+'/dirinfo/macdir')
+		explist=$explist
+	endif
+        shell('(cat '+$sampdir+'/dirinfo/macdir/EXPLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+        shell('cp '+curexp+'/tmpfile '+$sampdir+'/dirinfo/macdir/EXPLIST'):$dum
+        shell('rm -f '+curexp+'/tmpfile'):$dum
+     endif
+        cd($autofile+'.macdir'):$dum
+        shell('(cat '+$daydir+'/EXPLIST | grep -v \'^'+$node+'\' > '+curexp+'/tmpfile)'):$dum
+        shell('cp '+curexp+'/tmpfile '+$daydir+'/EXPLIST'):$dum
+        shell('rm -f '+curexp+'/tmpfile'):$dum
+        shell('(cat '+$daydir+'/EXPLIST | wc -l)'):$leftover
+        if ($leftover=0) then $sctime=$sampchange $psctime=$sampchange else $sctime=0 $psctime=0 endif
+        readTtimeQ($daydir):$p2time,$d2time,$n2time
+        writeTtimeQ($daydir,$p2time-$psubtime-$psctime,$d2time-$time-$sctime,$n2time)
+
+     if ($oldauto=0) then
+//	shell('cp '+$daydir+'/EXPLIST '+$nitedir+'/SHORTLIST'):$dum
+	shell('cp '+$daydir+'/TtimeQ '+$nitedir+'/TtimeQ'):$dum
+     else
+        exists($nitedir,'directory'):$niteex
+        if ($niteex) then
+//           shell('cp '+$daydir+'/EXPLIST '+$nitedir+'/SHORTLIST'):$dum
+           shell('cp '+$daydir+'/TtimeQ '+$nitedir+'/TtimeQ'):$dum
+//	else
+//	   shell('(cat '+$daydir+'/EXPLIST > '+$daydir+'/SHORTLIST)'):$dum
+        endif
+     endif
+     if ($sampdir='') then
+        writeTtimeQ($autofile+'.macdir',$ptime-$psubtime-$psctime,$dtime-$time-$sctime,$ntime)
+     endif
+
+        cd($curdir):$dum
+  endif
+  write('error','%s successfully removed from the %s Q',$node,$daynight)
+  vjdataQ('refresh',cpvjdataQ[1],cpvjdataQ[7],cpvjdataQ[8])
+ENDIF

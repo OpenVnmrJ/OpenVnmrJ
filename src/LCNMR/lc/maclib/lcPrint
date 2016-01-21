@@ -1,0 +1,38 @@
+"macro lcPrint"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcPrint"
+
+// Print a postscript file on the current LC printer
+// TODO: Go through system print filters or standard Vnmr printing
+
+$file = $1
+
+$device=''
+format(lcPrinter[1],'lower'):$name
+if ($name <> 'default') then
+    $device = '-d\'' + $name + '\''
+endif
+
+shell('which gs'):$gs
+if ($gs = '') then
+    $vnmrgs = systemdir + '/bin/gs'
+    exists($vnmrgs,'file'):$exvnmrgs
+    if (not $exvnmrgs) then
+        write('error','"gs" not found - please install GhostScript')
+        return
+    else
+        $gs = $vnmrgs
+    endif
+endif
+
+$type=''
+format(lcPrinter[2],'lower'):$type
+
+if ($type = 'postscript') then
+    shell('lp ' + $device + ' "' + $file+'"'):$x
+else
+    $cmd = $gs + ' -q -sDEVICE=' + $type
+    $cmd = $cmd + ' -dBATCH -dNOPAUSE -sOutputFile=%pipe%"lp ' + $device + '" ' 
+    $cmd = $cmd + '"' + $file + '"'
+    shell($cmd):$x
+endif

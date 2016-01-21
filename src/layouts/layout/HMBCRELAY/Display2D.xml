@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ !
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="Display2D" element="pages" type="processing" >
+  <group size="730 250" style="Heading1" label="Display"
+    bg=""
+    border="None"
+    side="Top"
+    justify="Left"
+    vq="panellevel"
+    show="$SHOW=(panellevel&gt;29)"
+    tab="yes"
+    reference="Display2D"
+    useref="no"
+    expanded="yes"
+    >
+    <group loc="640 60" size="60 30" vq="sw sw1 ref1 seqfil"
+      show="$SHOW=(trunc(sw/10)=trunc(sw1/10))"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <menu loc="0 0" size="60 20" style="PlainText"
+        label="menu"
+        vq="ref1"
+        vc="parunits('set','ref1','$VALUE')"
+        set="parunits('get','ref1'):$VALUE"
+        >
+        <mlabel label="Hz" chval="Hz"/>
+        <mlabel label="ppm" chval="ppm1"/>
+        <mlabel />
+      </menu>
+    </group>
+    <group loc="640 60" size="70 20" vq="sw sw1 ref1 seqfil"
+      show="$SHOW=(trunc(sw/10)&lt;&gt;trunc(sw1/10))"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <menu loc="0 0" size="60 20" style="PlainText"
+        label="menu"
+        vq="ref1"
+        vc="parunits('set','ref1','$VALUE')"
+        set="parunits('get','ref1'):$VALUE"
+        >
+        <mlabel label="Hz" chval="Hz"/>
+        <mlabel label="ppm" chval="ppm2"/>
+        <mlabel />
+      </menu>
+    </group>
+    <entry loc="590 60" size="50 20" style="PlainText"
+      vq="ref"
+      vc="vnmrunits('set','ref1',$VALUE) rl1(ref1)"
+      set="vnmrunits('get','ref1'):$VALUE"
+      show="on('ref1'):$VALUE"
+      digits="2"
+      disable="Grayed out"
+      />
+    <label loc="590 40" size="80 20" style="Label1"
+      label="Set cursor to"
+      justify="Left"
+      />
+    <group loc="590 90" size="120 150" style="Heading1"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <menu loc="50 120" size="60 20" style="PlainText"
+        label="menu"
+        vq="ref"
+        vc="parunits('set','ref','$VALUE')"
+        set="parunits('get','ref'):$VALUE"
+        >
+        <mlabel label="Hz" chval="Hz"/>
+        <mlabel label="ppm" chval="ppm1"/>
+        <mlabel />
+      </menu>
+      <entry loc="0 120" size="50 20" style="PlainText"
+        vq="ref"
+        vc="vnmrunits('set','ref',$VALUE) rl(ref)"
+        set="vnmrunits('get','ref'):$VALUE"
+        show="on('ref'):$VALUE"
+        digits="2"
+        disable="Grayed out"
+        />
+      <label loc="0 100" size="80 20" style="Label1"
+        label="Set cursor to"
+        justify="Left"
+        />
+      <button loc="0 80" size="120 20" style="Heading2"
+        label="By Cursor"
+        vc="rl(0) ref=0"
+        />
+      <button loc="0 60" size="120 20" style="Heading2"
+        label="Cancel"
+        vc="$rfl=rfl crl sp=sp + $rfl"
+        />
+      <button loc="0 40" size="120 20" style="Heading2"
+        label="By TMS"
+        vc="setref tmsref sp=sp-rfl ds"
+        />
+      <button loc="0 20" size="120 20" style="Heading2"
+        label="By Solvent"
+        vc="setref sp=sp-rfl ds"
+        />
+      <label loc="0 0" size="100 20" style="Label1"
+        label="Reference F2"
+        justify="Left"
+        />
+    </group>
+    <group loc="210 100" size="100 40" style="Heading1"
+      label="TraceAxis"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <label loc="10 0" size="90 20" style="Heading1"
+        label="Trace Axis"
+        justify="Left"
+        />
+      <radio loc="60 20" size="40 20" style="Label1"
+        label="F2"
+        vq="trace"
+        vc="trace='f2' dconi('again')"
+        vc2="trace='f1' dconi"
+        set="if (trace='f2') then $VALUE=1 else $VALUE=0 endif"
+        />
+      <radio loc="10 20" size="40 20" style="Label1"
+        label="F1"
+        vq="trace"
+        vc="trace='f1' dconi('again')"
+        vc2="trace='f2' dconi"
+        set="if (trace='f1') then $VALUE=1 else $VALUE=0 endif"
+        />
+    </group>
+    <group loc="110 0" size="84 174" style="Heading1"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <group loc="0 110" size="83 63" bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        useref="no"
+        >
+        <group loc="10 40" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="kHz"
+            vq="axis"
+            vc="substr(axis,1,1,'k'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,1,1):$a $VALUE=($a='k')"
+            />
+        </group>
+        <group loc="10 20" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="PPM"
+            vq="axis"
+            vc="substr(axis,1,1,'p'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,1,1):$a $VALUE=($a='p')"
+            />
+        </group>
+        <group loc="10 0" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="Hertz"
+            vq="axis"
+            vc="substr(axis,1,1,'h'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,1,1):$a $VALUE=($a='h')"
+            />
+        </group>
+        <label loc="0 0" size="20 20" style="Label1"
+          label="F2"
+          justify="Left"
+          />
+      </group>
+      <group loc="0 20" size="83 63" bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        useref="no"
+        >
+        <group loc="10 40" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="kHz"
+            vq="axis"
+            vc="substr(axis,2,1,'k'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,2,1):$a $VALUE=($a='k')"
+            />
+        </group>
+        <group loc="10 20" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="PPM"
+            vq="axis"
+            vc="substr(axis,2,1,'d'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,2,1):$a $VALUE=($a='d')"
+            />
+        </group>
+        <group loc="10 0" size="70 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="60 20" style="Label1"
+            label="Hertz"
+            vq="axis"
+            vc="substr(axis,2,1,'h'):axis $st='' graphis:$st if $st='ds' then dscale elseif $st='dconi' then dconi endif"
+            set="substr(axis,2,1):$a $VALUE=($a='h')"
+            />
+        </group>
+        <label loc="0 0" size="20 20" style="Label1"
+          label="F1"
+          justify="Left"
+          />
+      </group>
+      <label loc="10 0" size="50 20" style="Label1"
+        label="Axis"
+        justify="Left"
+        />
+    </group>
+    <button loc="210 200" size="110 20" style="Heading2"
+      label="AutoScale 2D"
+      vc="nm2d th=th-1 dconi"
+      />
+    <button loc="210 180" size="110 20" style="Heading2"
+      label="Display Trace"
+      vc="graphis:$st if ($st&lt;&gt;'dconi') then dconi endif dconi('trace')"
+      />
+    <button loc="210 160" size="110 20" style="Heading2"
+      label="Display 2D"
+      vc="dconi"
+      />
+    <group loc="200 0" size="140 80" style="Heading1"
+      label="Position1D"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <button loc="0 60" size="140 20" style="Heading2"
+        label="Projections"
+        vc="fullt $st='' graphis:$st if $st='ds' then ds else dconi endif"
+        />
+      <button loc="0 20" size="70 20" style="Heading2"
+        label="Full"
+        vc="full $st='' graphis:$st if $st='ds' then ds else dconi endif"
+        />
+      <button loc="70 20" size="70 20" style="Heading2"
+        label="Center"
+        vc="center $st='' graphis:$st if $st='ds' then ds else dconi endif"
+        />
+      <button loc="0 40" size="70 20" style="Heading2"
+        label="Left"
+        vc="left $st='' graphis:$st if $st='ds' then ds else dconi endif"
+        />
+      <button loc="70 40" size="70 20" style="Heading2"
+        label="Right"
+        vc="right $st='' graphis:$st if $st='ds' then ds else dconi endif"
+        />
+      <label loc="0 0" size="120 20" style="Label1"
+        label="Screen Position"
+        justify="Left"
+        />
+    </group>
+    <group loc="380 140" size="160 100" bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <button loc="0 20" size="120 20" style="Heading2"
+        label="Display 1D #"
+        vc="ds"
+        />
+      <entry loc="120 20" size="40 20" style="PlainText"
+        vc="ds($VALUE)"
+        set="select:$VALUE"
+        disable="Grayed out"
+        />
+      <label loc="0 0" size="100 20" style="Label1"
+        label="1D Spectrum"
+        justify="Left"
+        />
+      <button loc="0 40" size="120 20" style="Heading2"
+        label="Autoscale 1D"
+        vc="vsadj ds"
+        />
+      <button loc="0 60" size="120 20" style="Heading2"
+        label="Autophase 1D Full"
+        vc="aph"
+        />
+      <button loc="0 80" size="120 20" style="Heading2"
+        label="Autophase 1D Zero"
+        vc="aph0"
+        />
+    </group>
+    <group loc="0 0" size="110 174" style="Heading1"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <group loc="0 110" size="93 63" bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        useref="no"
+        >
+        <group loc="10 40" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="PowerMode"
+            vq="dmg"
+            vc="dmg='pwr' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg='pwr') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <group loc="10 20" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="Absval"
+            vq="dmg"
+            vc="dmg='av' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg='av') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <group loc="10 0" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="Phased"
+            vq="dmg"
+            vc="dmg='ph' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg='ph') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <label loc="0 0" size="20 20" style="Label1"
+          label="F2"
+          justify="Left"
+          />
+      </group>
+      <group loc="0 20" size="93 83" bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        useref="no"
+        >
+        <group loc="10 60" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="None"
+            vq="dmg1"
+            vc="dmg1='' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="$VALUE=(dmg1&lt;&gt;'ph1' and dmg1&lt;&gt;'av1' and dmg1&lt;&gt;'pwr1')"
+            />
+        </group>
+        <group loc="10 40" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="PowerMode"
+            vq="dmg1"
+            vc="dmg1='pwr1' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg1='pwr1') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <group loc="10 20" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="Absval"
+            vq="dmg1"
+            vc="dmg1='av1' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg1='av1') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <group loc="10 0" size="80 20" bg=""
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          useref="no"
+          >
+          <radio loc="10 0" size="70 20" style="Label1"
+            label="Phased"
+            vq="dmg1"
+            vc="dmg1='ph1' $st='' graphis:$st if $st='dconi' then dconi endif"
+            set="if (dmg1='ph1') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <label loc="0 0" size="20 20" style="Label1"
+          label="F1"
+          justify="Left"
+          />
+      </group>
+      <label loc="0 0" size="100 20" style="Label1"
+        label="Display Mode"
+        justify="Left"
+        />
+    </group>
+    <group loc="0 180" size="140 60" style="Heading1"
+      label="Scaling"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <radio loc="10 40" size="80 20" style="Label1"
+        label="Absolute"
+        vq="aig"
+        vc="aig='ai'"
+        set="if (aig='ai') then $VALUE=1 else $VALUE=0 endif"
+        />
+      <radio loc="10 20" size="100 20" style="Label1"
+        label="Normalized"
+        vq="aig"
+        vc="aig='nm'"
+        set="if (aig='nm') then $VALUE=1 else $VALUE=0 endif"
+        />
+      <label loc="0 0" size="140 20" style="Label1"
+        label="Amplitude Scaling"
+        justify="Left"
+        />
+    </group>
+    <group loc="380 70" size="150 60" style="Heading1"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <button loc="70 40" size="70 20" style="Heading2"
+        label="DC F2"
+        vc="dc2d('f2') dconi"
+        />
+      <button loc="0 40" size="70 20" style="Heading2"
+        label="DC F1"
+        vc="dc2d('f1') dconi"
+        />
+      <button loc="0 20" size="70 20" style="Heading2"
+        label="BC F1"
+        vc="bc('f1') dconi"
+        />
+      <button loc="70 20" size="70 20" style="Heading2"
+        label="BC F2"
+        vc="bc('f2') dconi"
+        />
+      <label loc="0 0" size="150 20" style="Label1"
+        label="Baseline Correct 2D"
+        justify="Left"
+        />
+    </group>
+    <group loc="350 0" size="220 60" style="Heading1"
+      bg=""
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <button loc="70 40" size="50 20" style="Heading2"
+        label="+ only"
+        vc="dconi('dpcon','pos',20,1.3)"
+        />
+      <label loc="30 0" size="170 20" style="Label1"
+        label="2D Contour Display"
+        justify="Center"
+        />
+      <button loc="170 40" size="50 20" style="Heading2"
+        label="both +/-"
+        vc="dconi('dpcon',20,1.3)"
+        />
+      <button loc="170 20" size="50 20" style="Heading2"
+        label="both +/-"
+        vc="dpcon(20,1.3)"
+        />
+      <button loc="120 40" size="50 20" style="Heading2"
+        label="- only"
+        vc="dconi('dpcon','neg',20,1.3)"
+        />
+      <button loc="120 20" size="50 20" style="Heading2"
+        label="- only"
+        vc="dpcon('neg',20,1.3)"
+        />
+      <button loc="70 20" size="50 20" style="Heading2"
+        label="+ only"
+        vc="dpcon('pos',20,1.3)"
+        />
+      <label loc="0 40" size="70 20" style="Label1"
+        label="Interactive "
+        justify="Right"
+        />
+      <label loc="0 20" size="70 20" style="Label1"
+        label="Static "
+        justify="Right"
+        />
+    </group>
+    <label loc="590 0" size="110 20" style="Label1"
+      label="Referencing"
+      justify="Left"
+      />
+    <button loc="590 20" size="130 20" style="Heading2"
+      label="AutoReference F1"
+      vc="$msw=(trunc(sw/10)=trunc(sw1/10)) if $msw=0 then setref1(tn) else setref1(dn) endif"
+      />
+  </group>
+</template>

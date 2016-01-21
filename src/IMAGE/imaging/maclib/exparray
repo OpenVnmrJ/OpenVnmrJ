@@ -1,0 +1,95 @@
+"macro exparray"
+" Ancestry: exparray	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************************"
+"     exparray: macro to set exponential parameter arrays             "
+"***************************************************************************"
+
+"    ARR 7/10/92 "
+
+"[0] Constants and Declarations"
+$nullstring = ''
+$param = ''
+$start = 0.0
+$end = 0.0
+$count = 0.0
+
+"[1] Input Parameter Count and Traps"
+
+if $# < 0.5 then
+  input('Enter the parameter name: '):$param
+  input('The start value for the array: '):$start
+  input('The end value for the array: '):$end
+  input('The number of array elements: '):$count
+endif
+
+if ($# > 0.5) and ($# < 3.5) then
+  write('error','%s','Usage: exparray or exparray("name",start,step,count)')
+  abort
+endif
+
+if ($# > 3.5) and ($# < 4.5) then
+  $param = $1
+  $start = $2
+  $end = $3
+  $count = $4
+endif
+
+if $# > 4.5 then
+  write('error','%s','Usage: exparray or exparray("name",start,step,count)')
+  abort
+endif
+
+exists($param,'parameter'):$ex1
+if ($ex1 < 0.5) then
+  write('error','%s','exparray: Requested parameter does not exist in expt')
+  abort
+endif
+
+if (typeof($param) > 0.5) then
+  write('error','%s','exparray: does not do string parameters')
+  abort
+endif
+
+
+"[2] Actions"
+
+$exisiting_array = array
+{$param} = 0.0
+   
+$i = 1 
+$value = $start
+
+ln($end/$start):$const
+$const = $const/($count - 1)
+ln(10.0):$ln10
+
+while ($i<=$count) do
+
+  exp($const*($i-1)):$value
+  $value = $value*$start
+
+  ln($value):$ln
+  $log = trunc($ln/$ln10)
+
+  if ($value > 2) then
+    $log = $log - 1
+  else
+    $log = $log - 2
+  endif
+
+  if ($i > 1  and  $i < $count) then
+    exp($log*$ln10):$divisor
+    $value = $divisor*trunc($value/$divisor + 0.5)
+  endif
+
+  $temparray[$i] = $value
+  $i = $i + 1
+
+endwhile
+{$param} = $temparray
+
+da
+
+if (array <> $exisiting_array  and  array <> $param) then
+  write('error','Advisory: "%s" is also arrayed', $exisiting_array)
+endif

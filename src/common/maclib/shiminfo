@@ -1,0 +1,129 @@
+"macro shiminfo"
+
+/*
+  Measured shim responses for about a 10% drop in the
+  lock level for a well shimmed magnet (MR400). Assume for now that the
+  complimentary shim responds in a similar manner.
+
+  Table is shim name and step-size for 10% drop followed by delay time
+  for equilibration
+ */
+
+if ($# <> 1) then
+  return(0,0)
+endif
+
+substr($1,'wc'):$num
+if ($num > 1) then
+  $max=0
+  $maxdelay=0
+  $i=0
+  $dac=''
+  while ($i < $num) do
+    $i=$i+1
+    substr($1,$i):$dac
+    {$0}($dac):$step,$delay
+    if ($step > $max) then
+      $max = $step
+    endif
+    if ($delay > $maxdelay) then
+      $maxdelay = $delay
+    endif
+  endwhile
+  return($max,$maxdelay)
+endif
+
+$sampl=''
+$isDoped=0
+format(sample,'lower'):$sampl
+strstr($sampl,'dope'):$isDoped
+format(solvent,'lower'):$solv
+
+"add special hook for doped samples"
+if ($isDoped) then
+       if ($1 = 'z1')     then return(7,     2)
+   elseif ($1 = 'z2')     then return(10,    2)
+   elseif ($1 = 'z3')     then return(15,    4) 
+   elseif ($1 = 'z4')     then return(150,   4)
+   elseif ($1 = 'x1')     then return(30,    2) 
+   elseif ($1 = 'y1')     then return(30,    2)
+   elseif ($1 = 'xz')     then return(40,    2)
+   elseif ($1 = 'yz')     then return(40,    2)
+   elseif ($1 = 'xz2')    then return(150,   4)
+   elseif ($1 = 'yz2')    then return(150,   4)
+   elseif ($1 = 'xy')     then return(200,   4)
+   elseif ($1 = 'x2y2')   then return(200,   4)
+   elseif ($1 = 'zxy')    then return(250,   4)
+   elseif ($1 = 'zx2y2')  then return(250,   4)
+   elseif ($1 = 'x3')     then return(400,   6)
+   elseif ($1 = 'y3')     then return(400,   6)
+   elseif ($1 = 'z3x')    then return(125,   6)
+   elseif ($1 = 'z3y')    then return(125,   6)
+   elseif ($1 = 'z2x2y2') then return(900,   6)
+   elseif ($1 = 'z2xy')   then return(900,   6)
+   elseif ($1 = 'zx3')    then return(2000,  6)
+   elseif ($1 = 'zy3')    then return(2000,  6)
+   elseif ($1 = 'z4x')    then return(1500,  6)
+   elseif ($1 = 'z4y')    then return(1500,  6)
+   else
+     return(0,0)
+   endif
+
+elseif (($solv='acetone') or ($solv='cd3od') or ($solv='cd2cl2') or ($solv='c6d6')) then
+       if ($1 = 'z1')     then return(5,     12)
+   elseif ($1 = 'z2')     then return(7,     12)
+   elseif ($1 = 'z3')     then return(10,    12) 
+   elseif ($1 = 'z4')     then return(50,    12)
+   elseif ($1 = 'x1')     then return(10,    12) 
+   elseif ($1 = 'y1')     then return(10,    12)
+   elseif ($1 = 'xz')     then return(30,    12)
+   elseif ($1 = 'yz')     then return(30,    12)
+   elseif ($1 = 'xz2')    then return(40,    12)
+   elseif ($1 = 'yz2')    then return(40,    12)
+   elseif ($1 = 'xy')     then return(100,   12)
+   elseif ($1 = 'x2y2')   then return(100,   12)
+   elseif ($1 = 'zxy')    then return(150,   12)
+   elseif ($1 = 'zx2y2')  then return(150,   12)
+   elseif ($1 = 'x3')     then return(400,   15)
+   elseif ($1 = 'y3')     then return(400,   15)
+   elseif ($1 = 'z3x')    then return(40,    12)
+   elseif ($1 = 'z3y')    then return(40,    12)
+   elseif ($1 = 'z2x2y2') then return(500,   12)
+   elseif ($1 = 'z2xy')   then return(500,   12)
+   elseif ($1 = 'zx3')    then return(1000,  12)
+   elseif ($1 = 'zy3')    then return(1000,  12)
+   elseif ($1 = 'z4x')    then return(700,   12)
+   elseif ($1 = 'z4y')    then return(700,   12)
+   else
+     return(0,0)
+   endif
+
+else
+       if ($1 = 'z1')     then return(7,     4)
+   elseif ($1 = 'z2')     then return(10,    4)
+   elseif ($1 = 'z3')     then return(15,    4) 
+   elseif ($1 = 'z4')     then return(150,   4)
+   elseif ($1 = 'x1')     then return(30,    4) 
+   elseif ($1 = 'y1')     then return(30,    4)
+   elseif ($1 = 'xz')     then return(40,    4)
+   elseif ($1 = 'yz')     then return(40,    4)
+   elseif ($1 = 'xz2')    then return(150,   4)
+   elseif ($1 = 'yz2')    then return(150,   4)
+   elseif ($1 = 'xy')     then return(200,   6)
+   elseif ($1 = 'x2y2')   then return(200,   6)
+   elseif ($1 = 'zxy')    then return(250,   6)
+   elseif ($1 = 'zx2y2')  then return(250,   6)
+   elseif ($1 = 'x3')     then return(400,   7)
+   elseif ($1 = 'y3')     then return(400,   7)
+   elseif ($1 = 'z3x')    then return(125,   6)
+   elseif ($1 = 'z3y')    then return(125,   6)
+   elseif ($1 = 'z2x2y2') then return(900,   6)
+   elseif ($1 = 'z2xy')   then return(900,   6)
+   elseif ($1 = 'zx3')    then return(2000,  6)
+   elseif ($1 = 'zy3')    then return(2000,  6)
+   elseif ($1 = 'z4x')    then return(1500,  6)
+   elseif ($1 = 'z4y')    then return(1500,  6)
+   else
+     return(0,0)
+   endif
+endif

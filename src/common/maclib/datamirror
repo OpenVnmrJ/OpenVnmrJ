@@ -1,0 +1,188 @@
+"macro datamirror"
+
+$datamirror='no'
+getadminfo('datamirror'):$datamirror
+isFDAsystem:$p11
+if ($p11=0 and $datamirror<>'yes') then RETURN endif
+
+// always make sure svfdir2 and adir2tmplt are set properly for p11.
+if($p11>0) then
+   setp11svfdr2 
+   if($1='p11setup') then return endif
+endif
+
+if($# = 4) then // do p11datamirror. $3 is original, $4 is destination
+   if($1 = 'p11datamirror') then 
+      $orig=$3
+      $dest=$4
+      isFDAsystem:$p11
+      if($p11=0) then 
+	write('line3','%s is not writable.',$dest)
+	return 
+      endif
+
+      if($2='.zip') then 
+ 	// cannot directly zip to $dest. So put the zip file in /tmp
+	// and change $orig to '/tmp/p11datamirror.zip' (to be copied to $dest).
+	$orig='/tmp/p11datamirror.zip'
+	exists($orig,'file'):$e
+	if($e>0) then delete($orig) endif
+
+        $dest=$dest+'.zip'
+
+        // cd to original directory to zip 
+	$filedir=$3
+	$filename=''
+	shell('dirname '+$3):$filedir
+	shell('basename '+$3):$filename
+	pwd:$curdir
+	cd($filedir):$dum
+	shell('(zip -ryq /'+$orig+' '+$filename+') &')
+	cd($curdir):$dum
+      endif
+
+      // copy from $orig to $dest
+      p11datamirror($orig,$dest)
+      return
+
+   endif
+endif
+
+"The real macro section starts here"
+"***********************************************************"
+if ($# < 2) then return endif
+$template=''
+if ($2='fid') then
+   $template='fidmirror'
+elseif ($2='plot') then
+   $template='plotmirror'
+elseif ($2 = 'spectrum') then
+   $template='dxmirror'
+elseif ($2 = 'sample') then
+   $template='adir2tmplt'
+endif
+if ($template='') then return endif
+
+"***********If $template parameter does not exists"
+"		or is an empty string, do nothing"
+exists($template,'parameter'):$fmex
+if ($fmex=0) then
+    exists($template,'parameter','global'):$fmex
+endif
+if ($fmex) then
+   if ({$template}='') then $fmex=0 endif
+endif
+exists('adir2tmplt','parameter'):$fmex2
+if ($fmex2) then
+   if adir2tmplt='' then $fmex2=0 endif
+endif
+if ($fmex=0) and ($fmex2=0) then return endif
+
+"********If arg1 is not found do nothing"
+$firstchar=''
+substr($1,1,1):$firstchar
+if ($firstchar<>'/') then
+        write('error','%s is not an absolute pathname',$1)
+        return
+endif
+
+$file='' $ext='' $sample='' $archsamp=''
+if ($2<>'sample') then
+      	getext($1):$file,$ext
+      	if ($ext='') then $file=$1 $ext='fid' endif
+	exists($file+'.'+$ext,'file'):$fileex
+else
+	$file=$1
+	exists($file,'directory'):$fileex
+endif
+if ($fileex=0) then
+   write('line3','%s not found',$1)
+   return
+endif
+
+"**********************Proceed**********************"
+if ($2='sample') then
+   $archsamp=$1
+elseif ($ext='fid' or $ext='REC' or $ext='rec') then
+   shell('dirname '+$file):$archsamp
+else
+   shell('dirname '+$file):$a2
+   shell('dirname '+$a2):$archsamp
+endif
+shell('basename '+$archsamp):$sample
+
+if ($2<>'sample' and $fmex2>0) then
+   datamirror($archsamp,'sample')
+endif
+
+if ($datamirror='yes' and $2<>'sample') then
+   if ($fmex>0) then
+	$zip='' $zipopt='no'
+	getadminfo($2+'zip'):$zipopt
+	if ($zipopt='yes') then $zip='.zip' endif
+	$os=''
+	shell('uname'):$os
+	if ($os<>'Linux') then $zip='' endif
+
+	"*********Generate the mirror name"
+	Svfname({$template},'','.'+$ext+$zip):$filename
+	ckstring($filename,2):$filename
+
+	"*********Create directory to save the mirror"
+	$filedir=''
+	shell('dirname '+$filename):$filedir
+	shell('basename '+$filename+' .'+$ext+$zip):$filename
+	
+/* don't allow user to do partial mirror in p11dir
+	canWrite($filedir):$e
+	if($p11 and $e=0) then
+	  datamirror('p11datamirror',$zip,$file+'.'+$ext,$filedir+'/'+$filename+'.'+$ext)
+	else
+*/
+	  exists($filedir,'directory'):$direx
+	  if ($direx=0) then shell('mkdir -p '+$filedir):$dum endif
+
+	  "*********The data is saved via copy or zip command"
+	  exists($filedir,'directory'):$direx
+	  if ($direx=0) then
+		write('line3','%s could not be created',$filedir)
+	  else
+	    if ($zip<>'.zip') then
+		shell('(cp -r '+$file+'.'+$ext+' '+$filedir+'/'+$filename+'.'+$ext+' ) &'):$dum
+	    else
+		shell('(zip -ryq '+$filedir+'/'+$filename+'.'+$ext+$zip+' '+$file+'.'+$ext+') &'):$dum
+	    endif
+	  endif
+/*
+	endif
+*/
+   endif
+elseif ($2='sample') then
+   if ($fmex2>0) then
+	Svfname(adir2tmplt+'/'+$sample+'%R0%',''):$filename
+        ckstring($filename,2):$filename
+
+	canWrite($filename):$e
+	if($p11 and $e=0) then
+	  datamirror('p11datamirror','',$archsamp,$filename)
+        else
+          exists($filename,'directory'):$direx
+          if ($direx=0) then
+	     shell('mkdir -p '+$filename):$dum
+	     exists($filename,'directory'):$direx
+          endif
+	  if ($direx) then
+	     exists($filename,'file','w'):$direx
+	  endif
+	  if ($direx=0) then
+		write('line3','%s is not a writable directory',$filename)
+		return
+	  endif
+	  pwd:$curdir
+	  cd($archsamp):$dum
+//	  shell('(tar cf - * | (cd '+$filename+'; tar xfBp -)) &'):$dum
+	  shell('(tar cf - * | (cd '+$filename+'; tar xfBp -))'):$dum
+	  cd($curdir):$dum
+	endif
+   endif
+endif

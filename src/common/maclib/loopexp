@@ -1,0 +1,48 @@
+"macro loopexp"
+// Macro which repeats the current experiment multiple times
+// Usage:  loopexp(#repeats,basefilename,'start'|'continue')
+// uses r1 parameter to keep track of loop count
+// n1 to hold base file name for saving
+// ARR 4/15/09
+
+if ($# <> 3) then
+ write('error','loopexp usage: loopexp(#repeats,basefilename,\'start\'|\'continue\')')
+ abort
+endif
+
+$repeats = $1
+$filename = $2
+$status = $3
+
+if ($status = 'start') then
+  r1 = 0                                          // initialize r1 at 0 first time through
+  n1 = $filename                                  // remember base file name
+
+  $repeatstr = ''
+  format($repeats,0,0):$repeatstr
+  $cmd = 'loopexp('+$repeatstr+',n1,\'continue\')'
+
+  wexp = $cmd                                     // set wexp to call this macro when exp is complete
+  au
+
+elseif ($status = 'continue') then
+  r1 = r1 + 1                                     // increment r1 counter
+  $ext = ''
+  format(r1,0,0):$ext                             // reformat r1 to a string for the file name extenstion
+  length($ext):$strlength                         // how many digits in the extension?
+  if ($strlength = 1) then $ext = '000'+$ext endif
+  if ($strlength = 2) then $ext = '00'+$ext endif
+  if ($strlength = 3) then $ext = '0'+$ext endif
+  
+  $filename = n1+'_'+$ext
+  svf($filename)
+
+  if (r1 < $repeats) then
+    au
+  endif
+
+else
+  write('error','loopexp: unrecognized argument \'%s\'',$status)
+endif
+
+

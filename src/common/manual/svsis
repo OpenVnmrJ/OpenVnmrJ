@@ -1,0 +1,71 @@
+******************************************************************************
+svsis 		Generate and Save images as FDF files. 	(macro)
+******************************************************************************
+
+Applicability:	Systems with Imaging Module.
+
+Format: svsis('directory_name'[,'outfmt'])
+
+Description:	
+	The "svsis" command generates images from the current experiment 
+	and saves them into the specified directory as Flexible Data 
+	Format (fdf) files.  It will save one image or a number of images
+	in the case of multislice experiments. 
+
+	Currently the specified directory is made in the user's data 
+	directory, and will be appended with a ".dat".  Image files will 
+	be created under this directory as "image0001.fdf", "image0002.fdf", 
+	and so on.  A "procpar" file will also be saved into this directory.
+
+	The 'outfmt' parameter is an optional character which defines the
+	type of image data.  It can take two character values:
+	'f' - Outputs the data in floating point format.  
+	'm' - Outputs the data in 12 bit integer values in 16 bit words.
+	The default is 'f' (floating point) and currently ImageBrowser
+	only accepts floating point data.
+	
+	The macro only saves images from the standard SISCO imaging 
+	sequences: "image", "shorte", "stecho", "multiecho", "csi2D", 
+	and "ssfp".  However, it can be easily modified to produce images
+	from users own sequences provided the sequences use standard 
+	SISCO parameters, slice select pulse shapes, and generate data in 
+	the same manner as the standard SISCO sequences.
+
+	To easily modify the macro to use a user's sequence the user need 
+	only add a line similar to the following in the "Valid Sequences"
+	section:
+
+	$k=$k+1 $seqfil[$k]='t1image'    $seq[$k]='ncsnn'  $thk[$k]='image'
+
+	The new sequence name is 't1image'.  Its reconstruction properties
+	are given by $seq whose values are similar to the parameter "seqcon".
+	"seqcon"'s characters are defined as follows:
+        	First character:        multiecho looping
+        	Second charcter:        multislice looping
+        	Third charcter:         2D phase encode loop
+        	Fourth character:       3D phase encode loop
+        	Fifth character:        4D phase encode loop
+	The values of each character are: 
+		'n':	null loop
+		's':	standard loop
+		'c':	compressed loop
+	In this case 'ncsnn' is a standard 2D image with compressed 
+	multislice. The $thk value is the slice thickness type defined by
+	the type of acquisition which in this case is the standard 'image'
+	sequence.
+
+	More detailed modifications can be made to the macro but it is
+	left to the user to make these adjustments.
+
+	The macro uses a Vnmr command "svsdfd" to dump the transformed
+	data out to the data file. After dumping the headers out a unix
+	shell command "fdfgluer" is called to glue the headers to the
+	data.  The "svsdfd" command dumps the data in such a way that the 
+	(0,0) coordinates are the first data point in the file.
+
+
+	NOTE: Modifications to the macro should be made in the user's
+	      maclib.
+
+See Also:
+	svimg

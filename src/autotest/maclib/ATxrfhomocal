@@ -1,0 +1,67 @@
+"macro ATxrfhomocal"
+"Xrfhomocal"
+
+$counter=1
+select(1) peak:$firstmaxheight $bestindex=$counter
+$bestheight=$firstmaxheight
+repeat
+   select($counter)
+   peak:$ht
+   if ($ht<$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($ht>$bestheight) or ($counter>arraydim)
+$firstnullindex=$bestindex
+
+if ($bestindex>20) then
+   write('line3','not enough increments to determine rf homogeneity. Make sure desired power and approx. pwx90 are correct and restart')
+   banner('AutoTest Stopped.\\Either power level is too low or nominal pwx90 too long. \\Check power and nominal pwx90.\\Then restart')
+   abort
+endif
+
+
+$counter=3.0*$firstnullindex          "starts at 270 degrees"     
+select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+repeat
+   select($counter) 
+   peak:$ht 
+   if ($ht>$bestheight) then
+      $bestheight=$ht
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+until ($counter=5*$firstnullindex) or ($counter>arraydim)
+$pwx360=pwx[$bestindex]
+$360maxindex=$bestindex
+$360maxheight=$bestheight
+
+$counter=2.0*$360maxindex-$firstnullindex         
+if ($counter < arraydim) then
+ select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+ repeat
+   select($counter) 
+   peak:$ht
+   if ($ht>$bestheight) then
+      $bestheight=$ht 
+      $bestindex=$counter
+   endif
+   $counter=$counter+1
+ until ($counter=9*$firstnullindex) or ($counter>arraydim)
+ $pwx720=pwx[$bestindex]
+ $720maxindex=$bestindex
+ $720maxheight=$bestheight
+else
+ $pwx720=2*$pwx360
+ $720maxindex = 2*$360maxindex
+ $720maxheight = $360maxheight/($firstmaxheight*$firstmaxheight)
+endif
+
+$ratio1=$360maxheight/$firstmaxheight
+$ratio2=$720maxheight/$firstmaxheight
+$ratio1=trunc(100*$ratio1)/100
+$ratio2=trunc(100*$ratio2)/100
+$pwx90=trunc(10*$pwx720/8)/10
+return($pwx90,$pwx360,$pwx720,$ratio1,$ratio2)
+

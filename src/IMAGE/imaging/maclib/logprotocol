@@ -1,0 +1,51 @@
+"macro logprotocol"
+/***************************************************************"
+  logprotocol
+
+  Macro to write info on selected protocol to a log file in user account
+  The following are written to the log file .logprotocols:
+  Date
+  Operator
+  Interface source (Experiment selector, protocol browser, other)
+  Protocol name
+  System, User, or Other (source directory is from the system, user modified, or another appdir)
+  Full path of the protocol
+  ARR May, 2012
+****************************************************************/
+
+$fullpath = $1                                   // full path name to protocol
+$interface = $2                                  // where in the interface protocol was selected
+if ($interface = 'null') then $interface = 'LOCATOR' endif
+
+$date = ''
+shell('date +%y%m%d'):$date
+shell('file '+systemdir):$string                 // string of form /vnmr: symbolic link to `/home/vnmrj_3.2BETA_2012-05-29'
+substr($string,5):$word,$p,$len                  // 5th word in $string
+substr($word,2,$len-2):$systemdir                // remove ' at start and end of word
+
+$file = userdir+'/.logprotocols_'+operator
+$protocol = ''
+$path = ''
+$base = ''
+$subdir = ''
+
+substr($fullpath,'dirname'):$path,$protocol
+//write('line3','%s   %s',$path,$protocol)
+
+$i = 0
+$stop = 0 
+$base = $path
+$sourcedir = 'Other'
+repeat
+  $i = $i + 1
+  substr($base,'dirname'):$base,$subdir[$i]      // store successive subdirectory names, last to first
+  length($base):$lenbase                         // compare remaining subdir string to 
+  length($subdir[$i]):$lensubdir                 // string after the last '/' in the current base
+  substr($base,2,$lenbase-1):$substr
+  if ($substr = $subdir[$i]) then $stop = 1 endif  // top directory differs only by having a / at the front of the string
+  if ($base = $systemdir) then $sourcedir = 'System' endif
+  if ($base = userdir) then $sourcedir = 'User' endif
+  //write('line3','%s   %s',$base,$subdir[$i])
+until ($i = 20 or $stop = 1)
+
+write('file',$file,'%s   %s   %s   %s   %s   %s',$date,operator,$sourcedir,$interface,$protocol,$path)

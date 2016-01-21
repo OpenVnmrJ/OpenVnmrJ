@@ -1,0 +1,126 @@
+"macro lcgo"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcgo"
+"lcgo - Run a continuous (non-scout) LC NMR run"
+"Can be with an argument for wexp"
+
+if traymax<>1 then
+  write('error','Config not set for LC-NMR; traymax=%d', traymax)
+  abort
+endif
+
+// Make sure we have a clean directory for the data.
+setNewLcid
+
+exists('lcstopsnmr','parameter'):$e
+if $e<0.5 then
+  create('lcstopsnmr','flag')
+  setenumeral('lcstopsnmr',2,'y','n')
+  lcstopsnmr='y'
+endif
+exists('confirminject','parameter'):$e
+if $e<0.5 then create('confirminject','flag') confirminject='n' endif
+exists('injectatstart','parameter'):$e
+if $e<0.5 then create('injectatstart','flag') injectatstart='n' endif
+exists('inject','parameter'):$e
+if $e<0.5 then create('inject','flag') inject='n' endif
+exists('ntrig','parameter'):$e
+if $e<0.5 then create('ntrig','integer') endif
+exists('nscans','parameter'):$es
+exists('ni','parameter'):$ei
+
+$dummy=''
+if auto='n' then
+  loc=0
+  lcpeak=0
+  lastlcpeak=0
+endif
+inject=injectatstart
+if ((inject='y') AND (confirminject='y')) then
+  confirm('Inject is "y" is that what you want?'):$yesno
+  if $yesno < 0.5 then abort endif
+endif
+$autodir=savefile
+if (lcstopsnmr='y' and $es and $ei) then nscans=512 ni=1 endif
+fsave(userdir+'/global','global')
+
+if lcexp='scout' then 
+        // Let the sampletags be set when
+        //  the data is saved via savefid
+  savesampglobal('cp')
+  resetsampglobal
+  getsampglobal('cp','text_string')
+  shell('rm -f '+curexp+'/sampleglobal'):$dum
+  scout 
+endif
+
+if lcexp='stop' then 
+  Autosetgpar  // replace for SQ?
+  setLCnmrSampleTags
+
+  exists(savefile,'file'):$e
+  if $e then
+    if seqfil='lc1d' then
+      lcsq('svp')
+    endif
+//  lastloc=0
+
+    lcsq('go')
+  else
+    write('error', 'lcgo: Savefile does not exist: ' + savefile)
+  endif
+endif
+
+if (lcexp='enter' or lcexp='enterA') then
+  getsvfdirpath:$svfdir
+  filepath($svfdir, lcid, 'NMR/enterQ'):$Qdir
+  $e=0
+  shell('(cat '+$Qdir+' | wc -l)'):$e
+//  exists($Qdir, 'file'):$e
+  if (not $e) then
+    write('error', 'Warning: Select NMR experiments, then try again.')
+    lcsq('initauto')
+    abort
+  endif
+  
+//lastloc=0
+  Autosetgpar  // replace for SQ?
+  setLCnmrSampleTags
+
+  if seqfil='lc1d' then
+    lcsq('svp')
+  endif
+  lcsq('go')
+
+endif
+
+if lcexp='iso' then
+  if scoutap='y' then wexp='wftlc' else wexp='' endif
+  if scoutrt='y'then  wysiwyg='n'
+    wc=2*wcmax/3 sc=wcmax/3 ho=-5 vo=10 vp=0
+    wnt='showlc'
+  endif
+  $te=(nt)*(at+d1+dz+4*(pwwet/1e6+gtw+gswet))
+  sw1=60/$te
+  setvalue('sw1',sw1,'processed')
+  ntrig=0 
+  ni=nscans
+	// Let the sampletags be set when 
+	//  the data is saved via savefid
+  savesampglobal('cp')
+  resetsampglobal
+  getsampglobal('cp','text_string')
+  shell('rm -f '+curexp+'/sampleglobal'):$dum
+//  au 
+  cpgo
+endif
+
+ // TODO: Is this needed??
+$file=curexp + '/curautodir'
+write('reset',$file)
+write('file',$file,autodir)
+file='exp'
+
+if (lcexp = 'enterA') then
+  eluteLoop(startloop)
+endif

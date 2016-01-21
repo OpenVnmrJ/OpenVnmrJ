@@ -1,0 +1,93 @@
+"macro plh"
+"*********************************"
+" plh(pltmod,paramstyle) - 1H plotting macro "
+"*********************************"
+
+//Plotting options
+//Customize this string to customize output 
+//Defaults
+$plotoptions='molecule','pl','axis','comments','params','logo','header','miniplot'
+
+//Store chart and spectral layouts - reinstate later
+$pltmod=pltmod $vp=vp $wc=wc $vs=vs $is=is $io=io
+
+//Conditional options
+//Peak picking
+exists('pkpick','parameter','global'):$e
+if $e then
+  if pkpick <> '' then
+        exec(pkpick)
+	$plotoptions=$plotoptions,'linelist'
+  endif
+endif
+
+//Integrals
+if intmod='full' then
+   integ(sp,sp+wp):$maxint
+   cz
+   isadj($maxint)
+else
+  if intmod = 'partial' then
+    numreg:$numreg                    "must have regions for integrals to be plotted"
+    if ($numreg > 0.5) then           "there are regions"
+      if vp < 12 then vp=12 endif
+      exists('intstyle','parameter','global'):$e
+      if $e then
+        exec(intstyle)
+      else
+	$plotoptions=$plotoptions,'intlist'
+      endif
+    endif
+  endif
+endif
+
+if ($#>0) then
+  if (($1='off') or ($1='full') or ($1='fixed') or ($1='variable') or
+      ($1='standard')) then "use argument as pltmod"
+    $pltmod=$1
+  endif
+endif
+if (pltmod='off' and auto='y') then return endif
+
+if ($pltmod='variable') then		"for variable plot range"
+  numreg:$numreg			"must have regions to adjust width"
+  if ($numreg > 0.5) then		"there are regions"
+    getreg($numreg):$start		"last region"
+    if $start<0.4*sfrq then		"set start of plot"
+      sp=-0.5*sfrq
+    else
+      sp=0
+    endif
+    if $start<sp then			"very high field signals"
+      sp=$start-10
+    endif
+    getreg(1):$dum,$end			"first region"
+    if $end>sp+10*sfrq then		"lowfield signals: compress"
+      wp=$end-sp+10
+    else				"otherwise plot 10 ppm"
+      wp=10*sfrq
+    endif
+    if sp+wp<9*sfrq then		"highfield signals: compress"
+      wp=10*sfrq-sp
+    endif
+  else
+    $pltmod='full'
+  endif
+endif
+
+if ($pltmod='full') then
+  sp=rfp-rfl
+  wp=sw
+endif
+
+if (rfl<>0) or (rfp<>0) then	"referenced"
+  axis='p'
+endif
+
+//Do the plotting now
+doplotoption($plotoptions)
+
+page
+
+//Reset layout
+vp=$vp wc=$wc vs=$vs is=$is io=$io

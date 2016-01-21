@@ -1,0 +1,29 @@
+"macro getlcdata"
+"getlcdata - starts the LC data listener and"
+"sends the LC data to automation file associated with the current experiment."
+$file=''
+$curauto=''
+if file='exp' then
+  $file=curexp + '/curautodir'
+  exists($file,'file'):$e
+  if $e then
+    lookup('file',$file)
+    lookup('readline'):$curauto
+  endif
+  if $curauto=autodir then $savefile = autodir 
+  else write('line3','Please return fid from desired automation directory')
+  endif
+else
+  length(file):$length
+  $i=$length
+  write('line3',$length)
+  $ch=''
+  repeat
+  substr(file,$i,1):$ch
+  $done=$ch='/'
+  $i=$i-1
+  until ($done or ($i<=0))
+  substr(file,1,$i):$savefile
+endif
+write('line3',$savefile)  
+// lclisten($savefile)

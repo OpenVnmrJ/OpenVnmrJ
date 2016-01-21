@@ -1,0 +1,77 @@
+"macro QuantCal"
+"********************************************************"
+"QuantCal - Proton Quantitation Autocalibration               "
+"********************************************************"
+
+mkpar('string','execprocess','','execplot','')
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+execplot='execplot=\'\''
+
+if ($# < 1) then
+	$arg=1
+else
+	$arg=$1 
+endif
+
+// *********** Old method ***************
+IF ($arg = 1) THEN
+
+  	$fileex=0 $file=''
+  	cplog('PROTON','first'):$file,$asdir
+  	if ($file<>'') then rt($asdir+'/'+$file) else return endif
+  	wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	d1=60 
+	getparam('tpwr',tn):tpwr
+	getparam('pw90',tn):pw90
+	pw(90)
+	dm='nnn' dmm='ccc'
+	ds ph vsadj vp=0 ss=0
+	setsw(4.5,10)
+	peak(6p,8p):$ht,cr
+	wp=5p sp=4.5p
+
+  	ai at=2 fn=8k lb=1/at
+  	wnt='wft(`acq`) vsadj vp=0'
+	caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+	calibnode='_'
+	execprocess=$0+'(2)'
+	execplot='cpplss'
+
+  	alock='n' wshim='n' r1=1 r3=1
+  	clear(2)
+
+"********************************************************"
+ELSEIF ($arg = 2) THEN
+
+	lb=1/at wft aph intmod='partial'
+	region
+	cr=7.3p
+	ins=15*48.5  // set concentration
+	quant_cal('setprobe',48.5,15)
+
+        $line=''
+        write('line3','Concentration: 48.5 mM'):$line
+        CalibrationResults=CalibrationResults,$line
+
+	is_IP:$isIP 
+	if ($isIP>0.5) then
+	   //Append info to text file
+           VPtext
+	   atext('1H quantitation calibration')
+	   atext($line)
+           VPgettarget('QuantCal')
+  	   $IPteststatus='PASS'
+  	   $tempp=''
+  	   format(temp,2,1):$tempp
+  	   $results='48.8 mM; sample temp. '+$tempp+' deg. C'
+  	   write('line3','Results are %s',$results)
+  	   VPhistory('48.5 mM')
+	endif
+ENDIF

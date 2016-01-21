@@ -1,0 +1,91 @@
+*********************************
+*				*
+*	      cexp		*
+*	      CEXP		*
+*	     delexp		*
+*	     DELEXP		*
+*				*
+*********************************
+
+cexp:		create a VNMR experiment
+
+       Syntax:	cexp(<exp_dir,>exp_no):$stat,$message
+
+  Description:	cexp creates a VNMR experiment which is used as a temporary
+		work space and can hold a complete 1D, 2D, or 3D data set.
+                The cexp macro will copy the "current" and "processed"
+                parameter trees to the newly created experiment's
+                curpar and procpar files. If the current experiment is exp0,
+                or experiments 1-4 are being created as part of the "auto" command,
+                the curpar and procpar files for the newly created experiment
+                are copied from the procpar file in /vnmr/fidlib/fid1d.fid
+
+                The cexp macro calls the CEXP command to create the experiment
+                and copy the parameters.  The cexp macro then does the additional
+                step of creating an appropriate jexp<N> macro in the user's maclib,
+                where the  <N> is the exp_no and if exp_no is greater than 9.
+                The macros jexp1 to jexp9 do not need to be created since they
+                exist as standard VnmrJ macros.
+
+                Both the CEXP command and cexp macro will return two optional
+                values to the calling macro. The first ($stat) is set to 0 if
+                the command / macro fails and it is set to 1 if the command /
+                macro succeeds. The second return value is a text message that
+                can be used.
+
+    Arguments:	exp_no specifies the VNMR experiment number and must be
+		between 1 and 9999.  exp_dir is an optional argument which
+		specifies the path of the directory in which the particular
+		experiment is to be created.  If exp_dir is not entered,
+		the default directory is the VNMR user directory (userdir).
+
+     Examples:	cexp(3)
+		cexp('/data',2)
+                cexp(32):$stat,$msg  // silently create exp32 and the jexp32 macro.
+                                     // $stat reports success or failure. The $msg
+                                     // message could be displayed.
+                CEXP(33):$stat,$msg  // silently create exp33, but do not make
+                                     // the jexp33 macro. $stat reports success
+                                     // or failure. The $msg message could be
+                                     // displayed.
+
+
+
+delexp:		delete a VNMR experiment
+
+       Syntax:	delexp(exp_no):$stat,$message
+
+  Description:	delexp deletes a VNMR experiment.  Only experiments 2-9999
+		can be deleted; experiment 1 cannot be deleted by
+		delexp.
+
+                The delexp macro calls the DELEXP command to delete the experiment
+                The delexp macro then does the additional step of deleting an
+                appropriate jexp<N> macro from the user's maclib, where the <N>
+                is the exp_no and if exp_no is greater than 9.
+
+                Both the DELEXP command and delexp macro will return two optional
+                values to the calling macro. The first ($stat) is set to 0 if
+                the command / macro fails and it is set to 1 if the command /
+                macro succeeds. The second return value is text message that can
+                be used.
+
+                The DELEXP command has one special syntax, DELEXP('auto'). This
+                schedules the current experiment to be deleted when the current
+                background Vnmrbg finishes executing its command. This is only
+                available from a background Vnmrbg. A typical usage would be for
+                a foreground macro to assign a task to a background Vnmrbg in a
+                separate experiment. For example,
+                    nextexp:$e     // find number for a new experiment
+                    CEXP($e):$stat // silently create the experiment
+                    write('line3',`Vnmrbg -mback -n%d "DELEXP('auto') doMyMacro" &`,$e):$cmd
+                    shell($cmd):$e  // run doMyMacro in background and delete experiment when done
+
+    Arguments:	exp_no specifies the VNMR experiment number which is to be
+		deleted.
+
+     Examples:	delexp(2)
+                delexp(75):$stat,$msg   // Silently delete exp75. If the deletion
+                                        // is successful, also delete the jexp75 macro.
+                DELEXP(77):$stat,$msg   // Silently delete exp77, but do not
+                                        // delete the jexp77 macro.

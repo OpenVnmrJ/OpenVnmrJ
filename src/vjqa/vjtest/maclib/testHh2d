@@ -1,0 +1,41 @@
+"macro testHh2d"
+"hh2dhdec setup macro"
+
+if ($# = 0) then
+  $stage='init'
+else
+  $stage=$1
+endif
+
+if ($stage='exptime') then
+  return(120)
+elseif ($stage='init') then
+vvLog('Test','Solids HH2D fifo')
+exists($0,'maclib'):$e,$testpath
+substr($testpath,'dirname'):$testpath
+substr($testpath,'dirname'):$testpath
+$testPath=$testpath+'/hh2dhdec'
+vvAppdir('on',$testPath,'HH2D')
+$name='hh2dhdec'
+rtppar($name)
+
+ni=32
+seqgenupdate(seqfil)
+dps
+
+tpwr=0
+dpwr=0
+spin='n'
+vttype=0
+
+wexp=$0+`('pass')`
+werr=$0+`('fail')`
+au
+vvAppdir('off',$testPath,'HH2D')
+elseif ($stage='pass') then
+  vvLog('Pass','')
+elseif ($stage='fail') then
+  geterror:$msg
+  vvLog('Fail',$msg)
+endif
+

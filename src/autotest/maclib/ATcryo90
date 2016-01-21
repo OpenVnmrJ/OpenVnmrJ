@@ -1,0 +1,265 @@
+"macro ATcryo90"
+"ATcryo90 "
+"   modified from cryo_noisetest macro 2 aug 02 Version 2.1(RC)"
+
+" a series of experiments to automate the testing of ChilliProbe decoupling noise  "
+
+"abort acquisition to stop"
+" for VNMRJ usage, command line must be open before beginning"
+
+
+$timefile='/vnmr/tmp/burntime'
+$outfile=curexp+'/noisefile'
+$outfile2=curexp+'/specnoise'
+$vsfactor='/vnmr/tmp/vsfactor'
+$strtflg='n'
+dsp='n'
+
+beepoff
+if ($#=0) then 
+   write('reset',$timefile)
+   write('file',$timefile,'%s %3.0f','y',90.0)
+   ATcryo90('TESTC1','START')
+endif
+	
+"NOBURN option added to allow testing noise return with system idle between tests"
+
+IF ($1='NOBURN') THEN 
+	$burntime=60.0 $burnflg='no'
+	input('How many minutes between each test cycle? 60 is default. '):$burntime
+	write('reset',$timefile)
+	write('file',$timefile,'%s %3.0f',$burnflg,$burntime)
+	ATcryo90('TESTC1','START')
+ENDIF
+	
+if ($#=2) then
+	if ($2= 'START') then $strtflg='y' endif
+endif
+
+IF ($1 = 'TESTC1') THEN
+	if ($strtflg='y') then
+		ATrtp('standard') dn='C13' 
+		dm='nnn' dmm='ccc' fn=16000 dmf=8000 dpwr=-12
+		if (numrfch>2) then dn2='N15' dm2='nnn' endif
+		at=.128 d1=.872 tpwr=-16 pw=0 nt=1 ss=0 pad=0 gain=50 
+		wshim='n' fn=16000 in='n' spin='n' alock='n' vs=1000 ai av
+		write('reset',$outfile)
+		write('reset',$outfile2)
+		wexp='ATcryo90(\'TESTC1\')'
+		au purge
+	endif
+	if (dpwr=-12) then 
+		write('file',$outfile,'Carbon Decoupling')
+		write('file',$outfile,'at= %2.4f dmm= %s ',at,dmm)
+		write('file',$outfile,'dpwr     noise ')
+		write('file',$outfile2,'Carbon Decoupling')
+		write('file',$outfile2,'at= %2.4f dmm= %s ',at,dmm)
+		write('file',$outfile2,'dpwr     noise ')
+
+		wft rfl=0 rfp=-sw/2 sp=10 wp=.8*(sw/2) dc peak:$hgt,$dum
+		vs=vs*(5/$hgt)
+		write('reset',$vsfactor)
+		write('file',$vsfactor,'%5.0f ',vs)		
+	endif
+	noise:$dum1,$dum2,$dum3,$dum4,$noise
+	write('file',$outfile,'%2.0f       %2.2f  ',dpwr,$noise)
+	wft rfl=0 rfp=-sw/2 sp=10 wp=.8*(sw/2) dc peak:$hgt,$dum
+	write('file',$outfile2,'%2.0f      %4.0f ',dpwr,$hgt)
+
+	if (dpwr<48) then
+		dpwr=dpwr+2 dm='nny'
+		wexp='ATcryo90(\'TESTC1\')'
+		au
+	else 
+		ATcryo90('TESTC2','START')
+	endif
+ENDIF
+
+
+IF ($1 = 'TESTC2') THEN
+	if ($strtflg='y') then
+		ATrtp('standard') dn='C13'
+		dm='nnn' dmm='ccw' fn=16000 dmf=8000 dpwr=-12
+		if (numrfch>2) then dn2='N15' dm2='nnn' endif
+		at=.128 d1=.872 tpwr=-16 pw=0 nt=1 ss=0 pad=0 gain=50
+		wshim='n' in='n' spin='n' alock='n' vs=1000 ai av
+		lookup('file',$vsfactor)
+		lookup('read',1):vs
+		wexp='ATcryo90(\'TESTC2\')'
+		au purge
+	endif
+	if (dpwr=-12) then 
+		write('file',$outfile,'at= %2.4f dmm= %s  ',at,dmm)
+		write('file',$outfile,'dpwr     noise ')
+		write('file',$outfile2,'at= %2.4f dmm= %s ',at,dmm)
+		write('file',$outfile2,'dpwr     noise ')
+	endif
+	noise:$dum1,$dum2,$dum3,$dum4,$noise
+	write('file',$outfile,'%2.0f       %2.2f  ',dpwr,$noise)
+	wft rfl=0 rfp=-sw/2 sp=10 wp=.8*(sw/2) dc peak:$hgt,$dum
+	write('file',$outfile2,'%2.0f      %4.0f ',dpwr,$hgt)
+
+	if (dpwr < 48) then
+		dpwr=dpwr+2 dm='nny'
+		wexp='ATcryo90(\'TESTC2\')'
+		au
+	else
+           if (numrfch>2) then
+		ATcryo90('TESTN1','START')
+           else
+		ATcryo90('DONE')
+           endif
+	endif
+ENDIF
+
+
+IF ($1 = 'TESTN1') THEN
+	if ($strtflg='y') then
+		ATrtp('standard') dn='C13' dn2='N15'
+		dm='nnn' dmm2='ccc' fn=16000 dmf2=8000 dm2='nnn' dpwr2=-12
+		at=.128 d1=.872 tpwr=-16 pw=0 nt=1 ss=0 pad=0 gain=50
+		wshim='n' in='n' spin='n' alock='n' vs=1000 ai av
+		lookup('file',$vsfactor)
+		lookup('read',1):vs
+		wexp='ATcryo90(\'TESTN1\')'
+		au purge
+	endif
+	if (dpwr2=-12) then 
+		write('file',$outfile,'Nitrogen Decoupling')
+		write('file',$outfile,'at= %2.4f dmm2= %s ',at,dmm2)
+		write('file',$outfile,'dpwr2     noise ')
+		write('file',$outfile2,'at= %2.4f dmm2= %s ',at,dmm2)
+		write('file',$outfile2,'dpwr     noise ')
+	endif
+	noise:$dum1,$dum2,$dum3,$dum4,$noise
+	write('file',$outfile,'%2.0f       %2.2f  ',dpwr2,$noise)
+	wft rfl=0 rfp=-sw/2 sp=10 wp=.8*(sw/2) dc peak:$hgt,$dum
+	write('file',$outfile2,'%2.0f      %4.0f ',dpwr2,$hgt)
+
+	if (dpwr2 < 48) then
+		dpwr2=dpwr2+2 dm2='nny'
+		wexp='ATcryo90(\'TESTN1\')'
+
+		au
+	else
+		ATcryo90('TESTN2','START')
+	endif
+ENDIF
+
+
+IF ($1 = 'TESTN2') THEN
+	if ($strtflg='y') then
+		ATrtp('standard') dn='C13' dn2='N15'
+		dm='nnn' dmm2='ccw' fn=16000 dmf2=8000 dm2='nnn' dpwr2=-12
+		at=.128 d1=.872 tpwr=-16 pw=0 nt=1 ss=0 pad=0 gain=50
+		wshim='n' in='n' spin='n' alock='n' vs=1000 ai av
+		lookup('file',$vsfactor)
+		lookup('read',1):vs
+		wexp='ATcryo90(\'TESTN2\')'
+		au purge
+	endif
+	if (dpwr2=-12) then 
+		write('file',$outfile,'at= %2.4f dmm2 %s ',at,dmm2)
+		write('file',$outfile,'dpwr2     noise ')
+		write('file',$outfile2,'at= %2.4f dmm2= %s ',at,dmm2)
+		write('file',$outfile2,'dpwr     noise ')
+	endif
+	noise:$dum1,$dum2,$dum3,$dum4,$noise
+	write('file',$outfile,'%2.0f       %2.2f  ',dpwr2,$noise)
+	wft rfl=0 rfp=-sw/2 sp=10 wp=.8*(sw/2) dc  peak:$hgt,$dum
+	write('file',$outfile2,'%2.0f      %4.0f ',dpwr2,$hgt)
+
+	if (dpwr2 < 48) then
+		dpwr2=dpwr2+2 dm2='nny'
+		wexp='ATcryo90(\'TESTN2\')'
+		au	
+	else
+		ATcryo90('DONE')
+	endif
+ENDIF
+
+
+" Archive the Results "
+
+IF ($1 = 'DONE') THEN
+	$date=''
+	shell('date +%d-%b-%Y-%T'):$date
+
+	exists(autotestdir+'/cryonoisetest','file'):$t
+	if ($t=0) then mkdir(autotestdir+'/cryonoisetest') endif
+	exists(autotestdir+'/cryonoisetest/testlib','file'):$tl
+	if ($tl=0) then mkdir(autotestdir+'/cryonoisetest/testlib') endif
+	$probe=probe	
+	$archive=autotestdir+'/cryonoisetest/testlib/'+$probe+'FID'+$date
+	$archive2=autotestdir+'/cryonoisetest/testlib/'+$probe+'SPEC'+$date
+
+	cp(curexp+'/noisefile',$archive)
+	cp(curexp+'/specnoise',$archive2)
+	
+
+
+	f full
+	ATcryo_cnd    "This will display the result"
+	shell('sleep 5')
+	ATcryo_cnd('plot')
+	ATcryo_cndspec
+	shell('sleep 5')
+	ATcryo_cndspec('plot')	
+	ATcryo90('BURN')
+ENDIF
+
+IF ($1 = 'BURN') THEN
+    ATrtp('standard')
+    echo('here')
+    dn='C13' at=.1 d1=1 seqfil='gHSQC'
+    exp((at_pwx90lvlc-at_max_pwxlvl)*2.303/20):$mult  "uses calibration to calculate pwx at"
+    pwx=at_pwx90c*at_LBampl_comprc*$mult pwxlvl=at_max_pwxlvl          "at_max_pwxlvl power level"
+    tpwr=at_tpwr pw=at_pw90
+    create('hsglvl','real') hsglvl=2000
+    create('hsgt','delay') hsgt=.002
+    create('mult','real') mult=0
+    exists('PFGflg','parameter'):$e if $e=0 then
+    create('PFGflg','flag') endif PFGflg='y'
+    create('nullflg','flag') nullflg='n'
+    create('null','delay') null=0
+    gt1=0.003
+    create('gt3','delay') gt3=0.003
+    create('j1xh','real') j1xh=140
+    create('gzlvl3','real') gzlvl3=8400
+    gzlvl1=6400
+    par_2d
+    ni=0 av phase=1 sw1=10000 sw=20000 np=4096 fn='n'
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   temp=at_temp
+   tof=at_tof
+   sw=sw          "force oversamp to be calculated"
+   gain=at_gain
+
+   dpwr=at_max_dpwr
+   dmf=10000
+
+   vp=0 dmm='ccc'
+   dm='nny' 
+   d1=1 ni=1 phase=1
+   if (numrfch>2) then
+     dn2='N15' dof2=0 dmm2='ccc' dmf2=10000
+     dm2='nny' dpwr2=at_max_dpwr2-3 dpwr=dpwr-3
+   endif
+   ss=16 
+
+	beepon
+	wexp='ATcryo90(\'TESTC1\',\'START\')'
+	time(15.0)
+	au purge dps
+ENDIF
+
+
+"end"
+

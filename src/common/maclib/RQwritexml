@@ -1,0 +1,122 @@
+"macro RQwritexml"
+" Usage: "
+" RQwritexml(type, dir)"
+" RQwritexml(type)"
+" RQwritexml()"
+
+if($# < 2.5) then
+
+  return
+
+elseif($# < 3.5 and $3 = 'end') then
+
+    if($1 = 'imgstudy') then 
+
+       strstr($2,'.fdf'):$img
+       if($img > 0) then
+	   writefile('line','</filenode>')
+       endif
+
+       isStudy($2):$e
+       if($e > 1.5) then
+	   writefile('line','</filenode>')
+       endif
+
+    endif
+
+    writefile('line','</template>')
+
+elseif($# < 4.5 and $3 = 'begin') then
+
+    $type = $1 
+    $dir = $2
+    $frame = $4
+
+    " for now, there is only imgstudy, study or default "
+    if($type <> 'imgstudy' and $type <> 'study') then 
+	$type='default' 
+    endif
+
+    writefile('line','<?xml version="1.0" encoding="UTF-8"?>')
+    writefile('line','<!DOCTYPE template>')
+    writefile('line','<template type="'+$type+'" >')
+
+    if($type <> 'imgstudy') then return endif
+
+    isStudy($2):$e,$studydir
+    if($e > 1.5) then
+	    RQwritexml_imgstudy($studydir, 2, 'no',$frame):$r
+
+    	    if($r <> '') then
+		writefile('line',$r)
+    	    endif
+    endif
+       
+    strstr($2,'.fdf'):$img,$imgdir
+    if($img > 0) then
+	strstr($imgdir,'/','last'):$img,$imgdir,$imgfile
+	RQwritexml_imgstudy($imgdir, 2, 'yes', $frame, $imgfile+'.fdf'):$r
+
+    	if($r <> '') then
+	    writefile('line',$r)
+	endif
+    endif
+
+elseif $# > 4.5 then
+
+    $type = $1
+    $dir = $2
+    $expnd = $3
+    $display = $4
+
+    $parent = ''
+    if $# > 4.5 then
+	$parent = $5
+    endif
+
+    $frame = 0 
+    if $# > 5.5 then
+	$frame = $6
+    endif
+
+    exists($dir,'directory'):$e
+    if $e < 0.5 then
+      $count = 1
+    else
+      getfile($dir):$count
+    endif
+
+    $r = ''
+    if($type = 'imgstudy') then
+	RQwritexml_imgstudy($dir, $count, $display, $frame):$r
+    elseif ($type = 'study') then 
+	RQwritexml_study($dir, $count, $expnd, $parent):$r
+    else 
+	RQwritexml_default($dir, $count, $expnd):$r
+    endif
+	
+    if($r <> '') then
+	writefile('line',$r)
+    endif
+
+    if $e > 0.5 then
+      $expnd = 'no'
+      $w = 0
+      while($w < $count) do 
+       	$w = $w + 1
+	getfile($dir,$w):$path,$ext	
+	if $ext <> '' then
+	   $path = $dir+'/'+$path +'.'+$ext
+	else
+	   $path = $dir+'/'+$path
+	endif
+
+	RQwritexml($type, $path, $expnd, $display, '', $frame)
+	
+      endwhile
+      if $r <> '' then
+         writefile('line','</filenode>')
+      endif
+    endif
+endif
+

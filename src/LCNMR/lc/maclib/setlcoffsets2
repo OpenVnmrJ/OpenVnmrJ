@@ -1,0 +1,137 @@
+"macro setlcoffsets2"
+
+" Set NMR offsets for solvents. "
+
+$dofwetA=0.00000
+$dofwetB=0.00000
+$dofwetC=0.00000
+
+
+if solvA='cdcl3' then setoffset(dn,77):$dofwetA
+   elseif solvA='d2o' then $dofwetA=0.00000
+   elseif solvA='d2o_tfa' then $dofwetA=0.00000
+   elseif solvA='none' then $dofwetA=0.00000
+   elseif solvA='dmso' then setoffset(dn,39.8):$dofwetA
+   elseif solvA='acetone' then setoffset(dn,29.8):$dofwetA
+   elseif solvA='benzene' then setoffset(dn,128):$dofwetA
+   elseif solvA='cd3od' then setoffset(dn,49):$dofwetA
+   elseif solvA='cd3cn' then setoffset(dn,1):$dofwetA
+   elseif solvA='cd3cn_tfa' then setoffset(dn,1):$dofwetA
+write('line3','dofwetA set to %s',$dofwetA)
+   elseif solvA='ch3cn_tfa' then setoffset(dn,1):$dofwetA
+write('line3','dofwetA set to %s',$dofwetA)
+   elseif solvA='ch3cn' then setoffset(dn,1):$dofwetA
+write('line3','dofwetA set to %s',$dofwetA)
+   elseif solvA='thf' then setoffset(dn,47):$dofwetA
+   else write('line3','Solvent does not exist!!! ')
+endif
+
+if solvB='cdcl3' then setoffset(dn,77):$dofwetB
+   elseif solvB='d2o' then $dofwetB=0.00000
+   elseif solvB='d2o_tfa' then $dofwetB=0.00000
+   elseif solvB='none' then $dofwetB=0.00000
+   elseif solvB='dmso' then setoffset(dn,39.8):$dofwetB
+   elseif solvB='acetone' then setoffset(dn,29.8):$dofwetB
+   elseif solvB='benzene' then setoffset(dn,128):$dofwetB
+   elseif solvB='cd3od' then setoffset(dn,49):$dofwetB
+   elseif solvB='cd3cn' then setoffset(dn,1):$dofwetB
+   elseif solvB='cd3cn_tfa' then setoffset(dn,1):$dofwetB
+write('line3','dofwetB set to %s',$dofwetB)
+   elseif solvB='ch3cn_tfa' then setoffset(dn,1):$dofwetB
+write('line3','dofwetB set to %s',$dofwetB)
+   elseif solvB='ch3cn' then setoffset(dn,1):$dofwetB
+write('line3','dofwetB set to %s',$dofwetB)
+   elseif solvB='thf' then setoffset(dn,47):$dofwetB
+   else write('line3','Solvent does not exist!!! ')
+endif
+
+if solvC='cdcl3' then setoffset(dn,77):$dofwetC
+   elseif solvC='none' then $dofwetC=0.00000
+   elseif solvC='d2o' then $dofwetC=0.00000
+   elseif solvC='d2o_tfa' then $dofwetC=0.00000
+   elseif solvC='dmso' then setoffset(dn,39.8):$dofwetC
+   elseif solvC='acetone' then setoffset(dn,29.8):$dofwetC
+   elseif solvC='benzene' then setoffset(dn,128):$dofwetC
+   elseif solvC='cd3od' then setoffset(dn,49):$dofwetC
+write('line3','dofwetC set to %s',$dofwetC)
+   elseif solvC='cd3cn' then setoffset(dn,1):$dofwetC
+   elseif solvC='cd3cn_tfa' then setoffset(dn,1):$dofwetC
+   elseif solvC='ch3cn_tfa' then setoffset(dn,1):$dofwetC
+   elseif solvC='ch3cn' then setoffset(dn,1):$dofwetC
+write('line3','dofwetC set to %s',$dofwetC)
+   elseif solvC='thf' then setoffset(dn,47):$dofwetC
+   else write('line3','Solvent does not exist!!! ')
+endif
+
+"Check to see if dofwet values are set for A B and C.  IF more"
+"exists then set dofwet and dpwrwet and dmfwet appropriately"
+
+"First check for combinations of A & B then A & C if B & C are not set then"
+"set the dofwet to dofwetA"
+
+if ($dofwetA <> 0.00000 ) then 
+	if($dofwetB <> 0.00000) then
+	     dofwet=($dofwetA+$dofwetB)/2
+write('line3','a+b/c is dofwet = %s', dofwet)
+         
+             abs($dofwetA-$dofwetB):r3
+
+               if r3>1 then
+                  r3=r3*1.2/4
+                  setpower(r3,dn):dpwrwet,r4
+                  dmfwet=1/(r4*1e-6)
+               endif
+	endif
+
+	if($dofwetC <> 0.00000) then
+		dofwet=($dofwetA+$dofwetC)/2
+write('line3','a+c/2 is dofwet = %s', dofwet)
+         
+          abs($dofwetA-$dofwetC):r3
+
+               if r3>1 then
+                  r3=r3*1.2/4
+                  setpower(r3,dn):dpwrwet,r4
+                  dmfwet=1/(r4*1e-6)
+               endif
+        endif 
+        
+if (($dofwetB=0.00000) and ($dofwetC=0.00000) and ($dofwetC <> 0.00000)) then
+          dofwet=$dofwetA
+          dpwrwet=30
+          dmfwet=700
+ endif
+endif
+
+"Check solvent B combintations"
+if ($dofwetB <> 0.00000 ) then
+        if($dofwetC <> 0.00000) then
+                dofwet=($dofwetB+$dofwetC)/2
+write('line3','b+c/2 is dofwet = %s', dofwet)
+
+          abs($dofwetB-$dofwetC):r3
+
+               if r3>1 then
+                  r3=r3*1.2/4
+                  setpower(r3,dn):dpwrwet,r4
+                  dmfwet=1/(r4*1e-6)
+               endif
+        endif
+
+if (($dofwetA=0.00000) and ($dofwetC=0.00000) and ($dofwetB <> 0.00000)) then 
+    dofwet=$dofwetB
+    dpwrwet=30
+    dmfwet=700
+ endif
+
+endif
+
+if (($dofwetA=0.00000) and ($dofwetB=0.00000) and ($dofwetC <> 0.00000)) then
+    dofwet=$dofwetC 
+    dpwrwet=30
+    dmfwet=700
+endif
+
+if (($dofwetA=0.00000) and ($dofwetB=0.00000) and ($dofwetC=0.00000)) then c13wet='n'
+else c13wet='y'
+ endif

@@ -1,0 +1,105 @@
+"macro sucrose_sens_process"
+"Processes sucrose sensitivity data"
+
+fn=4*np
+setref
+//autophase but exclude water signal
+lb=10
+wft
+//aph('ignore',4.5p,5.2p)
+aph
+
+lb='n'
+ft
+
+//Rereference after autophase
+tmsref
+
+region bc
+
+//Zoom in to show anomeric signal at RHS  
+sp=5.3p
+wp=5.7p
+vp=0 vsadj(100)
+//dc
+
+//Check anomeric splitting
+thadj(2)
+dll
+cr=llfrq[1]-rfl
+delta=llfrq[1]-llfrq[2]
+split
+mark(cr):$splitht,$frqht
+
+//Now calculate SNR
+cr=wp+200 delta=200
+dsnmax(200):$snrmax
+VPtext
+write('line3','Anomeric proton signal split to %.1f %%',$splitht)
+write('line3','Anomeric proton signal split to %.1f %%',$splitht):$text
+CalibrationResults=$text
+atext($text)
+write('line3','SNR using 200 Hz-wide noise region = %d:1 ',$snrmax)
+write('line3','SNR using 200 Hz-wide noise region = %d:1 ',$snrmax):$text
+CalibrationResults=CalibrationResults,$text
+atext($text)
+
+//Find the residual water linewidth at the anomeric height
+$hzpp=sw/(fn/2)
+$start=5.1p
+$end=4.5p
+$lhsfound=0
+$lshfrq=0
+$rhsfound=0
+$rhsfrq=0
+
+cr=$start
+repeat
+  mark(cr):$ht,$frqht
+  if ($ht>=100) then
+	$lhsfound=1
+	$lhsfrq=cr
+  endif
+  cr=cr-$hzpp
+until ((cr<$end) or ($lhsfound))
+
+if not($lhsfound) then
+  write('error','Water signal poorly defined, aborting')
+  return
+endif
+cr=$lhsfrq
+
+//Now the other side of the water
+cr=$end
+repeat
+  mark(cr):$ht,$frqht
+  if ($ht>=100) then
+	$rhsfound=1
+	$rhsfrq=cr
+  endif
+  cr=cr+$hzpp
+until ((cr<$end) or ($rhsfound))
+
+if not($rhsfound) then
+  write('error','Water signal poorly defined, aborting')
+  return
+endif
+
+delta=$lhsfrq-$rhsfrq
+cr=cr+delta
+
+write('line3','Water linewidth at anomeric proton signal height: %d Hz',delta)
+write('line3','Water linewidth at anomeric proton signal height: %d Hz',delta):$text
+atext($text)
+CalibrationResults=CalibrationResults,$text
+
+//Redisplay anomeric signal and noise region 
+sp=5.3p wp=4.7p
+
+VPgettarget('sucroseSN'):$target
+VPhistory($snrmax)
+
+execprocess='ft bc dscale darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+darray('CalibrationResults')

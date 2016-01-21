@@ -1,0 +1,289 @@
+"macro AT18a"
+"AT18a" "Attenuator test-low/high power  "
+
+if ($#=0) then
+   
+ATrtp('standard')
+
+   create('list1','real','current',0)   
+   create('list2','real','current',0)   
+   create('list3','real','current',0)   
+   "permit arrays without affecting acquisition"
+   setgroup('list1','processing')    
+   setgroup('list2','processing')    
+   setgroup('list3','processing')    
+   setlimit('tpwr',63,-37,0.5)
+   text('Attenuator Test -low power region') 
+   at_currenttest='atten_array_lowpower' 
+   tof=at_tof
+   pw90=at_pw90
+   nt=16 bs=4 il='y'
+   setlimit('pw',100000,0,0.0001)
+   create('compH','real') compH=at_ampl_compr
+   pw=2000
+    settype('tpwr','real')
+    $steps=(37+10)*2+1  "from -37 to 10 in 0.5dB steps"
+    array('tpwr',$steps,-37,0.5)
+    $i=1
+    array('pw',$steps,pw,0) "set up proper size for pw array"
+    repeat                "now start at last value and set pw values"
+     pw[$i+1]=pw[$i]/1.05925
+     $i=$i+1
+    until $i=$steps 
+    array='(tpwr,pw)' 
+    da
+   f vp=0 
+   wnt='AT18a(`WNT`)'
+   wexp='AT18a(`PART1`)' 
+   ATcycle
+   au
+   write('line3','Attenuator Test Lower power region ')
+   dps
+
+elseif ($1='WNT') then
+   ATwft
+   select(celem)
+   aph0
+   f peak:$ht,$frq
+   wp=1.8p sp=$frq-0.9p
+   vsadj(100)
+   dssh('dodc')
+   dtext
+elseif ($1='PART1') then
+
+   wft ph
+   f peak:$ht,$frq
+   wp=1.8p sp=$frq-0.9p
+   cdc 
+   $select=arraydim lp=0 $rp=0      
+   repeat
+    select($select) aph0
+    $rp=$rp+rp
+    $select=$select-1
+   until $select=arraydim-10
+   rp=$rp/10
+   select(arraydim)
+   vsadj dssh('dodc') dtext
+   peak:$ht,cr
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+       dn2='' pap ATpltext
+       pps(120,0,wcmax-120,90) 
+       ATpage('atten_array_lowpower_par')
+    endif 
+    pl('all','dodc') pltext ATpltext 
+    ATpage('atten_array_lowpower')
+   endif
+   $count=1 select(1) vsadj(1000)
+   repeat
+    select($count)
+    peak:$int if $int>1000 then vsadj(1000) endif
+    $count=$count+1
+   until $count>arraydim
+   ATgetpeaks_lowpower(1,95):r1  "produces list1 array of all pk hts"
+   ATgetphase(1,95,'lowpower')
+   fp
+   mv(curexp+'/fp.out',curexp+'/fp.out.lowpower')
+   s2
+   ATsvf('atten_array_lowpower')
+   ATreg3r:$dev
+   abs($dev):$dev
+   ATrecord('ATTEN1r_low','Attenuator Test: channel 1 reversed array low power','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Atten Test (Rev-low power   )- Std. Dev.: %1.3f ',$dev)
+   if (at_plotauto='y') then 
+    full wc2=35 pexpl ATplregr(0,wc2max)
+    ATpage('atten_lowpower2') 
+   endif
+
+   tpwr=at_tpwr pw90=at_pw90           "normal autotest pw/pw90"
+
+   "check for latest RF (stepsize is 0.5dB)"
+   getlimit('tpwr'):$max,$min,$stepsize
+   if ($stepsize<1.0) then
+    exists('maxattench1','parameter','global'):$e
+    if $e=1 then
+     $attendrop=63-maxattench1
+     $maxpower=maxattench1
+     exp((at_tpwr-$maxpower)*2.303/20):$mult       "find pw90 for tpwrmax"
+     pw90 = at_pw90*$mult
+     pw(10)
+    else
+     $maxpower=63 $attendrop=0
+     exp((at_tpwr-63)*2.303/20):$mult       "find pw90 for tpwr=63"
+     pw90 = pw90*$mult
+     pw(10)
+    endif
+    settype('tpwr','real')
+    $steps= ($maxpower -0)*2+1 r4=$steps
+    array('tpwr',$steps,0,$stepsize)
+
+    $i=$steps
+    array('pw',$steps,pw,0) "set up proper array size"
+    repeat        "starting with last pw, increase appropriately"
+     pw[$i-1]=pw[$i]*1.05925
+     $i=$i-1
+    until $i=1 
+    array='(tpwr,pw)' 
+   else
+    exists('maxattench1','parameter','global'):$e
+    if $e=1 then
+      $maxpower=maxattench1
+    else
+      $maxpower=63
+    endif
+    $steps=($maxpower+18)/2 r4=$steps
+    array('tpwr',$steps,-16,2) "set up increasing power"
+   endif
+   f vp=0 
+   wexp='AT18a(`PART2`)'
+   ATcycle
+   dps
+   at_currenttest='atten_array_highpower'
+   write('line3','Attenuator Test: High Power Region ')
+   au
+
+elseif ($1='PART2') then
+
+   wft ph
+   f peak:$ht,$frq
+   wp=1.8p sp=$frq-0.9p
+   cdc 
+   $select=arraydim-5 lp=0 $rp=0      
+   repeat
+    select($select) aph0
+    $rp=$rp+rp
+    $select=$select-1
+   until $select=arraydim-15
+   rp=$rp/10
+   select(arraydim)
+   dssh('dodc') dtext
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+       dn2='' pap ATpltext
+       pps(120,0,wcmax-120,90)
+      ATpage('atten_array_highpower_par')
+    endif 
+    pl('all','dodc') pltext ATpltext 
+    ATpage('atten_array_highpower1')
+   endif
+  $count=1 select(1) vsadj(1000)
+   repeat
+    select($count)
+    peak:$int if $int>1000 then vsadj(1000) endif
+    $count=$count+1
+   until $count>arraydim
+   ATgetpeaks_highpower(1,arraydim):r2
+   ATgetphase(1,arraydim,'highpower')
+   fp
+   mv(curexp+'/fp.out',curexp+'/fp.out.highpower')
+
+   ATreg3r:$dev
+   abs($dev):$dev
+
+   ATrecord('ATTEN1r_high','Attenuator Test: channel 1 reversed array high power','std.dev',$dev)
+   write('file',autotestdir+'/REPORT','Atten Test (Rev-high power   )- Std. Dev.: %1.3f ',$dev)
+   if (at_plotauto='y') then 
+    full wc2=35 pexpl ATplregr(0,wc2max)
+    ATpage('atten_array_highpower2')
+   endif
+   ATsvf('atten_array_highpower')
+
+"data reduction"
+   $i=1 $ii=1 $iii=75
+   d3=0 $d3sum=0        "use d3 for the ratio of peak heights"
+                        "for low and high powers(stored in list1/list2)."
+                        "r1(r2) is the vs for the low(high) power array"
+   repeat   "average ratios over common tpwr range of 0 to 10"
+    d3[$i]=list2[$ii]/list1[$iii]  "ratio of high to low peak heights"
+    $d3sum=$d3sum+d3[$i]
+    $i=$i+1 $ii=$ii+1 $iii=$iii+1
+   until $i=22
+   r3=$d3sum/21          "r3 stores the average ratio"
+   d3=0 
+
+
+  list3=0
+  $i=1
+  repeat
+   list3[$i]=list1[$i]*r3   "bring low power spectra to same intensities"
+   $i=$i+1                        "as high power spectra" 
+  until $i>95
+
+
+$filename=curexp+'/linear.out'  "use scaled list3 values for tpwr -37 to 0"
+write('reset',$filename)
+write('file',$filename,'attenuator value             response')
+$i=0 
+repeat
+write('file',$filename,'%10s                 %5.1f',-37+$i/2,list3[$i])
+$i=$i+1
+until $i>73                              "tpwr=0 for spectrum 74"
+$i=1             "use high power values from list2 for tpwr 0 to tpwrmax"
+repeat
+write('file',$filename,'%10s                 %5.1f',tpwr[$i],list2[$i])
+$i=$i+1
+until $i>r4
+$lines=73+$i
+format($lines,3,0):n3
+$filename=curexp+'/linear.inp'
+write('reset',$filename)
+write('file',$filename,'attenuator value')
+write('file',$filename,'nmr response')
+write('file',$filename,'1  %s',n3)
+$i=0 
+repeat
+write('file',$filename,'%10s                 %5.1f',-37+$i/2,list3[$i])
+$i=$i+1
+until $i>73
+$i=1
+repeat
+write('file',$filename,'%10s                 %5.1f',tpwr[$i],list2[$i])
+$i=$i+1
+until $i>r4                                "r4 stores the number of spectra"
+$lines=73+$i
+
+cp(curexp+'/attenarray_phase_lowpower.inp',userdir+'/autotest/data/attenarray_phase_lowpower.inp')
+cp(curexp+'/attenarray_phase_highpower.inp',userdir+'/autotest/data/attenarray_phase_highpower.inp')
+cp(curexp+'/linear.out',userdir+'/autotest/data/attenuator_linear.out')
+mv(curexp+'/regression.inp',curexp+'/regression.inp.highpower')
+cp(curexp+'/regression.inp.highpower',userdir+'/autotest/data/attenuator_highpower_regression.inp')
+cp(curexp+'/linear.inp',userdir+'/autotest/data/attenuator_fullrange_regression.inp')
+
+
+cp(curexp+'/attenarray_phase_lowpower.inp',curexp+'/regression.inp')
+full wc2=wc2max
+clear(2)
+expl('regression')
+analyze('expfit','regression','poly1','list')
+if (at_plotauto='y') then
+  wc2=35 pexpl  ATplregr(0,wc2max)
+  ATpage('attenuator_phase_lowpower_linear.reg')
+  wc2=wc2max-10 pexpl ATpltext
+  ATpage('attenuator_phasediff_lowpower.reg')
+endif
+
+cp(curexp+'/attenarray_phase_highpower.inp',curexp+'/regression.inp')
+full wc2=wc2max
+clear(2)
+expl('regression')
+analyze('expfit','regression','poly1','list')
+if (at_plotauto='y') then
+  wc2=35 pexpl  ATplregr(0,wc2max)
+  ATpage('attenuator_phase_highpower_linear.reg')
+  wc2=wc2max-10 pexpl ATpltext
+  ATpage('attenuator_phasediff_highpower.reg')
+endif
+
+cp(curexp+'/linear.inp',curexp+'/regression.inp')
+full wc2=wc2max
+clear(2)
+expl('regression')
+analyze('expfit','regression','poly1','list')
+if (at_plotauto='y') then
+  wc2=35 pexpl  ATplregr(0,wc2max)
+  ATpage('attenuator_fullrange_linear.reg')
+  wc2=wc2max-10 pexpl ATpltext
+  ATpage('attenuator_fullrange_linear2.reg')
+endif
+  ATnext
+endif

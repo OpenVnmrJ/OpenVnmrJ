@@ -1,0 +1,230 @@
+"macro estimatestart"
+$eq=autodir+'/enterQ'
+$md=$eq+'.macdir'
+$nq=$md+'/overniteQ'
+
+exists($eq,'file'):$fileex
+if ($fileex=0) then return endif
+$eqtime=$md+'/eQtime'
+$nqtime=$md+'/nQtime'
+if $# < 1 then $1='init' endif
+
+IF ($1='init') THEN
+   $ret1='' $ret2=0 $ret3='' $ret4=0 $ret5='' $ret6=''
+   $tottime=0,0
+   $s5='' $s6=''
+   readfile($eq,'$s5','$s6','MACRO:','local'):$total
+   if ($total>0) then
+      $i=1
+      repeat
+      	$s1='' $s2='' $s3='' $locdir='' $when=''
+	$macro='' substr($s6[$i],1):$macro
+      	strstr($macro,'\''):$ret,$s1,$s2
+      	strstr($s2,'\''):$ret,$locdir,$s1
+      	strstr($s1,'\''):$ret,$s3,$s2
+      	strstr($s2,'\''):$ret,$when
+      	$ptime=0 $dtime=0 $ntime=0 $time=0
+      	readTtimeQ($md+'/'+$locdir+'/day'):$ptime,$dtime,$ntime
+      	if ($when='day') then $time=$dtime else $time=$ntime endif
+	$ret1[$i]=$macro $ret2[$i]=$time
+	$ret5[$i]=$locdir
+	$tottime[1]=$tottime[1]+$time
+      	$i=$i+1
+      until $i > $total
+   endif
+
+   $s5='' $s6=''
+   readfile($nq,'$s5','$s6','MACRO:','local'):$total
+   if ($total>0) then
+      $i=1
+      repeat
+      	$s1='' $s2='' $s3='' $locdir='' $when=''
+        $macro='' substr($s6[$i],1):$macro
+      	strstr($macro,'\''):$ret,$s1,$s2
+      	strstr($s2,'\''):$ret,$locdir,$s1
+      	strstr($s1,'\''):$ret,$s3,$s2
+      	strstr($s2,'\''):$ret,$when
+      	$ptime=0 $dtime=0 $ntime=0 $time=0
+      	readTtimeQ($md+'/'+$locdir+'/day'):$ptime,$dtime,$ntime
+      	if ($when='day') then $time=$dtime else $time=$ntime endif
+	$ret3[$i]=$macro $ret4[$i]=$time
+	$ret6[$i]=$locdir
+	$tottime[2]=$tottime[2]+$time
+      	$i=$i+1
+      until $i > $total
+   endif
+   return($ret1,$ret2,$ret3,$ret4,$tottime,$ret5,$ret6)
+
+ELSEIF ($1='get') THEN
+   if ($2='') then return endif
+   if ($# < 4) then
+      $ret1='' $ret2=0 $ret3='' $ret4=0 $tottime=0,0
+      estimatestart:$ret1,$ret2,$ret3,$ret4,$tottime
+      if ($3='enterQ') then
+	$4=$ret1 $5=$ret2
+      else
+	$4=$ret3 $5=$ret4
+      endif
+      $6=$tottime
+   endif
+   $tottime=$6
+   teststr('$4',$2,'local'):$ret
+   if ($ret=0) then return(-1,-1) endif
+
+   $priortime=0
+   if ($ret>1) then
+	$i=1
+	repeat
+	    $priortime=$priortime+$5[$i]
+	    $i=$i+1
+	until $i > $ret-1
+   endif
+
+   $DT=0 $ST=0 $NT=0 $CT=0
+   if ($3='enterQ') then
+	findstarttime($eq,$priortime,$priortime,0):$ST,$DT,$NT,$CT
+	return($DT,$CT)
+   else
+	findstarttime($eq,$6[1],$6[1],$priortime):$ST,$DT,$NT,$CT
+	return($NT,$CT)
+   endif
+
+ELSEIF ($1='getexptime') THEN
+
+   $ret='' $2ret=''
+   $locdir=$2
+   $status=$3
+   if ($2='') then return($ret,$2ret) endif
+   if ($3<>'Active') and ($3<>'Queued') and ($3<>'NightQueue') and ($3<>'preScan') then
+	return($ret,$2ret)
+   endif
+
+   shell('date +%H'):$hour shell('date +%M'):$minute shell('date +%S'):$second
+   $CT=$hour*3600+$minute*60+$second
+   $AT=0 $DT=-1 $NT=-1
+
+   $sampchange=180
+   $procplot=60
+   getadminfo('samplechangetime'):$sampchange
+   getadminfo('procplottime'):$procplot
+
+   $j=1
+   if ($3='Active') or ($3='preScan') then
+	$curexptime=0
+	currentQtime($eq):$AT,$curexptime
+	if ($AT=0) then $ok=0 else $ok=1 endif
+	if ($ok) then 
+	   $cq=$md+'/currentQ'
+	   exists($cq,'file'):$ok
+	endif
+	if ($ok) then
+	   $s1='' $s2=''
+	   readfile($cq,'$s1','$s2','','local'):$total
+	   if ($total=0) then $ok=0 endif
+	endif
+	if ($ok) then
+	   if ($s1[1]='SAMPLE_CHANGE_TIME') then
+	      $s1[2]=''
+	   endif
+	   $s1[1]='' $s1[$total]=''
+	   $i=1
+	   repeat
+	     if ($s1[$i]<>'') then
+		$ampm=''
+		sec2ampm($CT+$curexptime):$ampm
+		$ret[$j]=$s1[$i]
+		$ret[$j+1]=' ['+$ampm+']'
+		$j=$j+2
+		$newtime=0
+		substr($s2[$i],1):$newtime
+		$curexptime=$curexptime+$newtime+$procplot
+	     endif
+	     $i=$i+1
+	   until $i > $total
+	endif
+	$ampm=''
+	sec2ampm($CT+$curexptime):$ampm
+	$2ret=$ampm
+   endif
+
+   shell('(cat '+$eq+' | grep -w MACRO: | grep -c '+$locdir+')'):$isinq
+   if ($isinq=0) then
+	shell('(cat '+$nq+' | grep -w MACRO: | grep -c '+$locdir+')'):$isinq
+   endif
+   if ($isinq=0) then
+	return($ret,$2ret)
+   endif
+
+   if ($# < 8) then
+        $ret1='' $ret2=0 $ret3='' $ret4=0 $tottime=0,0
+        estimatestart('init'):$ret1,$ret2,$ret3,$ret4,$tottime
+   else
+	$ret1=$4 $ret2=$5 $ret3=$6 $ret4=$7 $tottime=$8
+   endif
+
+    $mline=''
+    shell('(cat '+$eq+' | grep -w MACRO: | grep '+$locdir+' | grep day)'):$mline
+    substr($mline,2):$mline
+    estimatestart('get',$mline,'enterQ',$ret1,$ret2,$tottime):$DT
+    if ($DT>-1) then
+        $explist=$md+'/'+$locdir+'/day/EXPLIST'
+	$sct=$sampchange
+	$curexptime=0
+        $s1='' $s2=''
+        readfile($explist,'$s1','$s2','','local'):$total
+	$i=1
+	repeat
+            if ($s1[$i]<>'') then
+                $ampm=''
+                sec2ampm($CT+$DT+$curexptime):$ampm
+                $ret[$j]=$s1[$i]
+                $ret[$j+1]=' ['+$ampm+']'
+                $j=$j+2
+                substr($s2[$i],1):$curexptime
+		$curexptime=$curexptime+$sct+$procplot
+		$sct=0
+             endif
+             $i=$i+1
+        until $i > $total
+	$ampm=''
+	sec2ampm($CT+$DT+$curexptime):$ampm
+	$2ret=$ampm
+    endif
+
+    $mline=''
+    shell('(cat '+$eq+' | grep -w MACRO: | grep '+$locdir+' | grep night)'):$mline
+    substr($mline,2):$mline
+    if ($mline<>'') then
+            estimatestart('get',$mline,'enterQ',$ret1,$ret2,$tottime):$NT
+    else
+            shell('(cat '+$nq+' | grep -w MACRO: | grep '+$locdir+' | grep night)'):$mline
+            substr($mline,2):$mline
+            estimatestart('get',$mline,'overniteQ',$ret3,$ret4,$tottime):$NT
+    endif
+    if ($NT>-1) then
+        $explist=$md+'/'+$locdir+'/night/LONGLIST'
+        $sct=$sampchange
+        $curexptime=0
+        $s1='' $s2=''
+        readfile($explist,'$s1','$s2','','local'):$total
+        $i=1
+        repeat
+          if ($s1[$i]<>'') then
+                $ampm=''
+                sec2ampm($CT+$NT+$curexptime):$ampm
+                $ret[$j]=$s1[$i]
+                $ret[$j+1]=' ['+$ampm+']'
+                $j=$j+2
+                substr($s2[$i],1):$curexptime
+                $curexptime=$curexptime+$sct+$procplot
+                $sct=0
+           endif
+           $i=$i+1
+        until $i > $total
+     endif
+
+     return($ret,$2ret)
+
+
+ENDIF
+

@@ -1,0 +1,41 @@
+"macro setappmode"
+// setappmode - Set the appmode parameter to be consistent with what
+//              VnmrJ Admin has assigned as the user's interface.
+// this is called by admin when interface type is set.
+// this macro also remove appdir_* in persistence if appmode changed.
+
+$e=0
+exists('appmode','parameter','global'):$e
+if ($e < 0.5) then
+  create('appmode','string','global')
+  appmode='walkup'
+endif
+$appmd = appmode
+exists(systemdir+'/adm/users/profiles/system/'+owner,'file'):$e
+if ($e > 0.5) then
+  $etype=''
+  lookup('file',systemdir+'/adm/users/profiles/system/'+owner,'itype','read'):$etype,$res
+  if ($res < 0.5) then
+    lookup('file',systemdir+'/adm/users/profiles/user/'+owner,'itype','read'):$etype,$res
+  endif
+  if ($res > 0.5) then
+    if ($etype = 'Imaging') then
+      if (appmode <> 'imaging') then
+        appmode='imaging'
+      endif
+    elseif ($etype = 'LC-NMR/MS') then
+      if (appmode <> 'lc') then
+        appmode='lc'
+      endif
+    else
+      if (appmode <> 'walkup') then
+        appmode='walkup'
+      endif
+    endif
+
+    if(appmode <> $appmd) then
+	shell('rm -f ' + userdir +'/persistence/appdir_*')
+    endif
+
+  endif
+endif

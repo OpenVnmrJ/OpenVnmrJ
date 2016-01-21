@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="DOSYproc" element="pages" type="processing" >
+  <group size="795 300"
+    style="Heading1"
+    label="DOSY Process"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="DOSYproc"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="545 0" size="225 290"
+      style="Heading1"
+      label="Misc"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Data"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="0 10" size="225 265"
+        label="Display"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="10 15" size="50 20"
+          style="Label1"
+          label="Peak #"
+          justify="Left"
+          />
+        <label loc="85 15" size="85 20"
+          style="Label1"
+          label="Fit multiplier"
+          justify="Right"
+          />
+        <button loc="10 200" size="90 25"
+          style="Heading2"
+          label="Plot DOSY"
+          vc="plot resetplotter"
+          />
+        <button loc="100 200" size="115 25"
+          style="Heading2"
+          label="Preview DOSY"
+          vc="pageview('auto') resetplotter"
+          />
+        <button loc="10 240" size="205 20"
+          style="Heading2"
+          label="Clear subexperiment"
+          vc="cleardosy"
+          />
+        <button loc="10 165" size="205 20"
+          style="Heading2"
+          label="Recall original NMR spectra"
+          vc="undosy"
+          />
+        <button loc="10 140" size="205 20"
+          style="Heading2"
+          label="Recall DOSY display"
+          vc="redosy "
+          />
+        <button loc="10 115" size="205 20"
+          style="Heading2"
+          label="Show diffusion projection"
+          vc="sdp"
+          />
+        <button loc="10 90" size="205 20"
+          style="Heading2"
+          label="Show residual for peak # above"
+          vc="if (dosy_peaknum&gt;0)and(dosy_peakmult&gt;0) then showdosyresidual(dosy_peaknum,dosy_peakmult) else banner('Please set peak number \\ and fit multiplier') endif if dosy_autoincr='y' then dosy_peaknum=dosy_peaknum+1 endif"
+          />
+        <button loc="10 65" size="205 20"
+          style="Heading2"
+          label="Show fit for peak # above"
+          vc="if (dosy_peaknum&gt;0)and(dosy_peakmult&lt;&gt;0) then showdosyfit(dosy_peaknum,dosy_peakmult) else banner('Please set peak number \\ and fit multiplier') endif if dosy_autoincr='y' then dosy_peaknum=dosy_peaknum+1 endif"
+          />
+        <check loc="35 40" size="165 20"
+          style="Label1"
+          label="Auto increment peak #"
+          vc="dosy_autoincr='y'"
+          vc2="dosy_autoincr='n'"
+          />
+        <entry loc="175 15" size="35 20"
+          style="PlainText"
+          vq="dosy_peakmult"
+          vc="dosy_peakmult=$VALUE"
+          set="$VALUE=dosy_peakmult"
+          digits="1"
+          />
+        <entry loc="55 15" size="35 20"
+          style="PlainText"
+          vq="dosy_peaknum"
+          vc="dosy_peaknum=$VALUE"
+          set="$VALUE=dosy_peaknum"
+          digits="0"
+          />
+      </group>
+    </group>
+    <group loc="250 0" size="290 290"
+      style="Heading1"
+      label="DOSY"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="DOSY"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="5 10" size="280 275"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <textmessage loc="80 255" size="185 20"
+          style="Info"
+          label="AutoXID_8937"
+          vq="probe_"
+          set="$VALUE=probe_"
+          />
+        <menu loc="185 10" size="90 20"
+          style="PlainText"
+          label="menu"
+          vq="ncomp"
+          vc="ncomp=$VALUE"
+          set="$VALUE=ncomp"
+          editable="No"
+          >
+          <mlabel 
+            label="1"
+            chval="1"
+            />
+          <mlabel 
+            label="2"
+            chval="2"
+            />
+          <mlabel 
+            label="3"
+            chval="3"
+            />
+        </menu>
+        <menu loc="220 105" size="55 20"
+          style="PlainText"
+          label="menu"
+          vq="fn1"
+          vc="fn1=$VALUE"
+          set="$VALUE=fn1"
+          editable="No"
+          >
+          <mlabel 
+            label="128"
+            chval="128"
+            />
+          <mlabel 
+            label="256"
+            chval="256"
+            />
+          <mlabel 
+            label="512"
+            chval="512"
+            />
+          <mlabel 
+            label="1k"
+            chval="1024"
+            />
+        </menu>
+        <menu loc="185 30" size="90 20"
+          style="PlainText"
+          vq="dosyproc"
+          vc="dosyproc='$VALUE'"
+          set="$VALUE=dosyproc"
+          editable="No"
+          >
+          <mlabel 
+            label="Discrete"
+            chval="discrete"
+            />
+          <mlabel 
+            label="Continuous"
+            chval="continuous"
+            />
+        </menu>
+        <radio loc="145 135" size="140 20"
+          style="Label1"
+          label="Use integral values"
+          vq="int_flg"
+          vc="int_flg='y'"
+          set="if (int_flg='y') then $VALUE=1 else $VALUE=0 endif"
+          />
+        <radio loc="10 135" size="130 20"
+          style="Label1"
+          label="Use peak heights"
+          vq="int_flg"
+          vc="int_flg='n'"
+          set="if (int_flg='n') then $VALUE=1 else $VALUE=0 endif"
+          />
+        <button loc="195 190" size="80 25"
+          style="Heading2"
+          label="w/ dialogue"
+          vq="lowlim uplim"
+          vc="iscmdopen:$r if $r=0 then write('error','Please open command line for this option') else dosy('prune',lowlim,uplim) endif"
+          />
+        <button loc="195 160" size="80 25"
+          style="Heading2"
+          label="w/ dialogue"
+          vc="iscmdopen:$r if $r=0 then write('error','Please open command line for this option') else dosy('prune') endif "
+          />
+        <button loc="5 160" size="190 25"
+          style="Heading2"
+          label="Calculate full DOSY"
+          vc="dosy"
+          />
+        <label loc="205 220" size="70 20"
+          style="Label1"
+          label="10⁻¹⁰ m²/s"
+          justify="Left"
+          />
+        <button loc="5 190" size="190 25"
+          style="Heading2"
+          label="Calculate partial DOSY"
+          vq="lowlim uplim"
+          vc="dosy(lowlim,uplim)"
+          />
+        <check loc="30 75" size="225 20"
+          style="Label1"
+          label="Perform point-by-point analysis"
+          vq="dosybypoints"
+          vc="dosybypoints='y'"
+          vc2="dosybypoints='n'"
+          set="$VALUE=(dosybypoints='y')"
+          />
+        <check loc="30 55" size="225 20"
+          style="Label1"
+          label="Correct for non-uniform gradients"
+          vq="nugflag"
+          vc="nugflag='y'"
+          vc2="nugflag='n'"
+          set="$VALUE=(nugflag='y')"
+          />
+        <label loc="5 10" size="185 20"
+          style="Label1"
+          label="Number of components for fit"
+          justify="Left"
+          />
+        <label loc="5 30" size="140 20"
+          style="Label1"
+          label="Processing type"
+          justify="Left"
+          />
+        <label loc="5 105" size="215 20"
+          style="Label1"
+          label="Fourier number in the diffusion dim."
+          justify="Left"
+          />
+        <label loc="5 255" size="80 20"
+          style="Label1"
+          label="Probe used:"
+          justify="Left"
+          />
+        <label loc="135 220" size="20 20"
+          style="Label1"
+          label="-"
+          justify="Center"
+          />
+        <entry loc="155 220" size="45 20"
+          style="PlainText"
+          vq="uplim"
+          vc="uplim=$VALUE"
+          set="$VALUE=uplim"
+          digits="1"
+          />
+        <entry loc="95 220" size="40 20"
+          style="PlainText"
+          vq="lowlim"
+          vc="lowlim=$VALUE"
+          set="$VALUE=lowlim"
+          digits="1"
+          />
+        <label loc="5 220" size="90 20"
+          style="Label1"
+          label="D value range"
+          justify="Left"
+          />
+      </group>
+    </group>
+    <group loc="5 0" size="240 290"
+      style="Heading1"
+      label="Data"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Data"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="5 20" size="235 265"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <textmessage loc="155 20" size="70 20"
+          style="Info"
+          label="8,192"
+          vq="np"
+          set="$VALUE=np/2"
+          digits="0"
+          />
+        <menu loc="155 0" size="70 20"
+          style="PlainText"
+          label="menu"
+          vq="fn"
+          vc="fn=$VALUE*2"
+          set="$VALUE=fn/2"
+          show="on('fn'):$VALUE"
+          editable="No"
+          >
+          <mlabel 
+            label="4k"
+            chval="4096"
+            />
+          <mlabel 
+            label="8k"
+            chval="8192"
+            />
+          <mlabel 
+            label="16k"
+            chval="16384"
+            />
+          <mlabel 
+            label="32k"
+            chval="32768"
+            />
+          <mlabel 
+            label="64k"
+            chval="65536"
+            />
+          <mlabel 
+            label="128k"
+            chval="131072"
+            />
+          <mlabel 
+            label="256k"
+            chval="262144"
+            />
+          <mlabel 
+            label="512k"
+            chval="524288"
+            />
+        </menu>
+        <label loc="5 20" size="140 20"
+          style="Label1"
+          label="Acquired points (np/2)"
+          justify="Left"
+          />
+        <button loc="5 40" size="220 20"
+          style="Heading2"
+          label="Interactive weighting"
+          vc="wti"
+          />
+        <button loc="5 155" size="220 25"
+          style="Heading2"
+          label="Process all spectra"
+          vc="wft"
+          />
+        <button loc="115 220" size="110 20"
+          style="Heading2"
+          label="FIDDLE (no TMS)"
+          vc="fiddle_tmsflg='n' dofiddle"
+          />
+        <button loc="5 220" size="105 20"
+          style="Heading2"
+          label="FIDDLE (TMS)"
+          vc="fiddle_tmsflg='y' dofiddle"
+          />
+        <button loc="5 185" size="220 25"
+          style="Heading2"
+          label="Baseline correct all spectra"
+          vc="fbc"
+          />
+        <check loc="5 245" size="215 20"
+          style="Label1"
+          label="Write out corrected FID data"
+          vq="fiddle_writeflg"
+          vc="fiddle_writeflg='y'"
+          vc2="fiddle_writeflg='n'"
+          set="$VALUE=(fiddle_writeflg='y')"
+          />
+        <check loc="5 0" size="130 20"
+          style="Label1"
+          label="1D FT size (fn/2)"
+          vq="fn"
+          vc="on('fn')"
+          vc2="off('fn')"
+          set="on('fn'):$VALUE"
+          />
+        <label loc="10 125" size="105 20"
+          style="Label1"
+          label="Shifted sinebell"
+          justify="Right"
+          />
+        <check loc="185 125" size="20 20"
+          style="Label1"
+          vq="sbs"
+          vc="on('sbs')"
+          vc2="off('sbs')"
+          set="on('sbs'):$VALUE"
+          />
+        <entry loc="125 125" size="60 20"
+          style="PlainText"
+          vq="sbs"
+          vc="sbs=$VALUE"
+          set="$VALUE=sbs"
+          show="on('sbs'):$ENABLE"
+          digits="4"
+          />
+        <check loc="185 105" size="20 20"
+          style="Label1"
+          vq="sb"
+          vc="on('sb')"
+          vc2="off('sb')"
+          set="on('sb'):$VALUE"
+          />
+        <entry loc="125 105" size="60 20"
+          style="PlainText"
+          vq="sb"
+          vc="sb=$VALUE"
+          set="$VALUE=sb"
+          show="on('sb'):$ENABLE"
+          digits="4"
+          />
+        <label loc="60 105" size="55 20"
+          style="Label1"
+          label="Sinebell"
+          justify="Right"
+          />
+        <label loc="55 85" size="60 20"
+          style="Label1"
+          label="Gaussian"
+          justify="Right"
+          />
+        <entry loc="125 85" size="60 20"
+          style="PlainText"
+          vq="gf"
+          vc="gf=$VALUE"
+          set="$VALUE=gf"
+          show="on('gf'):$ENABLE"
+          digits="4"
+          />
+        <check loc="185 85" size="20 20"
+          style="Label1"
+          vq="gf"
+          vc="on('gf')"
+          vc2="off('gf')"
+          set="on('gf'):$VALUE"
+          />
+        <check loc="185 65" size="20 20"
+          style="Label1"
+          vq="lb"
+          vc="on('lb')"
+          vc2="off('lb')"
+          set="on('lb'):$VALUE"
+          />
+        <entry loc="125 65" size="60 20"
+          style="PlainText"
+          vq="lb"
+          vc="lb=$VALUE"
+          set="$VALUE=lb"
+          show="on('lb'):$ENABLE"
+          digits="1"
+          />
+        <label loc="10 65" size="105 20"
+          style="Label1"
+          label="Line broadening"
+          justify="Right"
+          />
+      </group>
+    </group>
+  </group>
+</template>

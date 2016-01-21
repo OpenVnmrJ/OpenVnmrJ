@@ -1,0 +1,60 @@
+"macro darray"
+" *************************************************************"
+" *darray($1,$2,$3,$4)-- display array * "
+" ************************************************************* "
+
+"$2,$3 are x,y coordinates in mm "
+" $1=name of array "
+
+if ($# < 2) then
+ $2=10
+endif
+if ($# < 3) then
+  $3=0.90*wc2max
+endif
+if ($# < 4) then
+  $4=1
+endif
+if ($4 > 5) then $4=1 endif
+
+$name=$1
+$par={$name}[1]
+$size=size($name)
+$column=trunc($size/15)+1
+$index=1 $incr=0 $ix=1
+$col=0
+$y=$3
+write('graphics',$2,$y,'%s',$name):$ys
+$y=$y-$ys
+repeat
+  if typeof('$par') then
+    $sval={$name}[$index]
+  else
+    $val={$name}[$index]
+   if ($4 > 0) then
+    $vi=1 $mult=1
+    repeat
+	$mult=$mult*10
+	$vi=$vi+1
+    until $vi > $4
+    $val=(trunc($val*$mult))/$mult
+   else
+    $val=trunc($val)
+   endif
+    $sval=''
+    format($val,'lower'):$sval
+  endif
+  write('graphics',$2,$y,'%s',$sval)
+  $y=$y-$ys
+  $ix=$ix+1
+  $index=$index+1
+  $incr=$incr+1
+  if ($ix>15) and ($col<$column) then
+    $2=$2+30 $incr=0 $col=$col+1 $ix=1
+    $y=$3-$ys
+  endif
+until $index>$size
+length($name):$length
+$xs=$ys*wc2max/wcmax
+return($length*$xs+$2)
+

@@ -1,0 +1,132 @@
+"macro walkupQ"
+"***WalkupQ macro ********"
+// The following arguments are supported.  This macro serves as
+//	a gateway to all walkupQ_arg1 macros
+//
+//   new -  walkupQ_new($2)
+//   renew -  walkupQ_renew
+//   add -  {$cmd}(arguments)
+//   delete-  walkupQ_delete(arguments)
+//   submit - walkupQ_submit(arguments)
+//   setup - walkupQ_setup
+//   testacquire - walkupQ_testacquire($2) (a softlink to walkupQ_setup)
+//   nextgo - walkupQ_nextgo
+//   clear - walkupQ_clear
+//   logout - walkupQ_logout
+//   adjtime - walkupQ_adjtime($2,$3,$4)
+//   resettime - walkupQ_resettime
+//   gettime - walkupQ_gettime
+//   time - walkupQ_time
+//   addq - walkupQ_addq
+//   edit - walkupQ_edit
+//   resumeq - walkupQ_resumeq
+//   DelEdit - walkupQ_DelEdit($2)
+//   refresh - walkupQ_refresh
+//   readlist - walkupQ_readlist
+//   readcpnodeexp - walkupQ_readcpnodeexp
+//   clone - walkupQ_clone
+//   cluster - walkupQ_cluster
+//   no argument will prepare cursqexp directory
+
+if ($# < 1) then return endif
+"****The following are generic for all arguments*****"
+  walkupQ_init
+  is_submitmode:$submit
+  if ($submit=0) then
+        $expfile=cursqexp+'/EXPLIST'
+        shell('touch '+$expfile):$dum
+        $lngfile=cursqexp+'/LONGLIST'
+        shell('touch '+$lngfile):$dum
+        $timefile=cursqexp+'/EXPTIME'
+        shell('touch '+$timefile):$dum
+        $expdeledit=cursqexp+'/EXPdeledit'
+        shell('touch '+$expdeledit):$dum
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        shell('touch '+$lngdeledit):$dum
+        $curfidlist=cursqexp+'/FIDlist'
+        shell('touch '+$curfidlist):$dum
+        $maclibdir=cursqexp+'/macdir'
+        exists($maclibdir,'directory'):$direx
+        if ($direx=0) then shell('mkdir '+$maclibdir):$dum endif
+        exists($maclibdir+'long','directory'):$direx
+        if ($direx=0) then shell('mkdir '+$maclibdir+'long'):$dum endif
+	module('add','walkupQpars','basic')
+	if (wqinit='acq') then longQ='n' endif
+        $longQ=longQ $resume=resumeQ
+   endif
+"***********************************************************"
+$arg=$#
+$cmd=$0+'_'+$1
+$retval='real'
+
+if ($1='add') or ($1='addcmd') or ($1='addstudy') or ($1='delete') then
+    $retval='string'
+    if ($arg<2) then return('') endif
+endif
+if ($1='resumeq') then
+   if ($arg < 2) then $2='auto' endif
+   $arg=2
+endif
+if ($1='clear') or ($1='logout') or ($1='edit') then
+   if ($arg < 2) then $2='' endif
+   $arg=2
+endif
+"***********************************************************"
+if ($1='new') then
+    if ($submit=0) then
+        if ($arg < 2) then
+            write('error','The "new" option requies a 2nd argument')
+            return
+        endif
+	{$cmd}($2)
+    else
+	resumeQ='' replaceQ='','','',''
+	walkupQ('refresh')
+    endif
+    return
+"***********************************************************"
+elseif ($1='gettime') then
+   $dtime=0 $ltime=0 $dpptime=0 $lpptime=0
+   {$cmd}:$dtime,$ltime,$dpptime,$lpptime
+   return($dtime,$ltime,$dpptime,$lpptime)
+
+"***********************************************************"
+elseif ($1='readlist') or ($1='readcpnodeexp') then
+   $parflg='' $parlng='' $exp2='' $lng2=''
+   $mac2='' $lmac2=''
+   {$cmd}:$parflg,$parlng,$exp2,$lng2,$mac2,$lmac2
+   return($parflg,$parlng,$exp2,$lng2,$mac2,$lmac2)
+
+"***********************************************************"
+else
+   if ($retval='string') then $ret='' else $ret=0 endif
+   if ($arg=1) then   
+        {$cmd}:$ret
+   elseif ($arg=2) then
+        {$cmd}($2):$ret
+   elseif ($arg=3) then
+        {$cmd}($2,$3):$ret
+   elseif ($arg=4) then
+        {$cmd}($2,$3,$4):$ret
+   elseif ($arg=5) then
+        {$cmd}($2,$3,$4,$5):$ret
+   elseif ($arg=6) then
+        {$cmd}($2,$3,$4,$5,$6):$ret
+   elseif ($arg=7) then
+        {$cmd}($2,$3,$4,$5,$6,$7):$ret
+   elseif ($arg=8) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8):$ret
+   elseif ($arg=9) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8,$9):$ret
+   elseif ($arg=10) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8,$9,$10):$ret
+   elseif ($arg=11) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8,$9,$10,$11):$ret
+   elseif ($arg=12) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12):$ret
+   elseif ($arg=13) then
+        {$cmd}($2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13):$ret
+   endif
+   return($ret)
+endif
+"****************************************************************"

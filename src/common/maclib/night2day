@@ -1,0 +1,72 @@
+"macro night2day"
+if ($0='night2day') then
+    $fromlist='LONGLIST'
+    $tolist='EXPLIST'
+else
+    $fromlist='EXPLIST'
+    $tolist='LONGLIST'
+endif
+
+$cpnode=$1
+pwd:$curdir
+
+shell('(cat '+cursqexp+'/'+$fromlist+' | grep \'^'+$cpnode+'\')'):$line
+if ($line='') then return endif
+$curacqtime=0 substr($line,2):$curacqtime
+
+IF ($0='night2day') THEN
+"************************************************************"
+       $olddtime=0 $oldntime=0
+        $maxdaytime=0 $maxnighttime=0
+        $when='' $night='no'
+        walkupQ('gettime'):$olddtime,$oldntime
+	if ($0='night2day') then
+                $newtime=$olddtime+$curacqtime
+		$when='DayQ'
+        else
+                $newtime=$oldntime+$curacqtime
+		$when='NightQ'
+	endif
+        $newtime=trunc(($newtime/60)+0.5)
+	if (wqinit='auto') then
+                getautoinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+                is_night:$night
+        else
+                getenterinfo:$xx1,$maxdaytime,$xx2,$maxnighttime
+        endif
+	if ($0='night2day') and ($night<>'yes') then
+                $maxtime=$maxdaytime
+	else
+		$maxtime=$maxnighttime
+	endif
+        $maxtime=trunc(($maxtime/60)+0.5)
+
+        if prioritysample[1]='yes' and prioritysample[2]='high' then
+                $maxtime=$newtime+1
+        endif
+	if ($maxtime=0) then $maxtime=$newtime+1 endif
+        if ($maxtime<$newtime) then
+	    clear(2)
+            write('error','%s time (%d min) exceeds max (%d min) allowed.',$when,$newtime,$maxtime)
+	    return
+	endif
+"************************************************************"
+ENDIF
+
+cd(cursqexp):$dum
+write('reset',$fromlist+'2')
+shell('(cat '+$fromlist+' | grep -v "'+$line+'" > '+$fromlist+'2)'):$dum
+shell('mv '+$fromlist+'2 '+$fromlist):$dum
+write('file',$tolist,'%s',$line)
+if ($0='day2night') then
+   shell('mv macdir/'+$cpnode+'acq macdirlong'):$dum
+   shell('mv macdir/'+$cpnode+'acqpars macdirlong'):$dum
+   shell('mv macdir/'+$cpnode+'_Attr macdirlong'):$dum
+else
+   shell('mv macdirlong/'+$cpnode+'acq macdir'):$dum
+   shell('mv macdirlong/'+$cpnode+'acqpars macdir'):$dum
+   shell('mv macdirlong/'+$cpnode+'_Attr macdir'):$dum
+endif 
+cd($curdir):$dum
+xmhaha('refreshSQ')
+

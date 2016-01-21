@@ -1,0 +1,204 @@
+"macro selecthtfrq1"
+// set Hadamard frequencies htfrq1 interactively from 1D spectrum
+
+$file=''
+$file = curexp+'/htll.htfrq1'
+
+$arg='select'
+if $#>0.5 then
+  $arg=$1  // 'select', 'remove', 'display', 'clear', 'nl'
+endif
+
+exists('htfrq1','parameter'):$e
+if $e<0.5 then
+  create('htfrq1','frequency')
+  setprotect('htfrq1','on',256)
+  parunits('set','htfrq1','Hz')
+  off('htfrq1')
+endif
+vnmrjcmd('pnew','htfrq1')
+
+graphis:$gm
+if ($arg<>'display' and $gm<>'ds' and $gm<>'dpf' and $gm<>'dconi' and $gm<>'dpcon') then
+  write('error','Must be in spectrum display mode to edit HT frequencies.')
+  return
+endif
+
+exists('sw1','parameter'):$exsw1
+if ($exsw1>0.5 and procdim>1.5) then
+  $sw=sw1 $rfl=rfl1 $rfp=rfp1 $cr=cr1 $reffrq=reffrq1
+else
+  $sw=sw  $rfl=rfl  $rfp=rfp  $cr=cr  $reffrq=reffrq
+endif
+
+exists($file,'file'):$e
+if ($e) then
+    lookup('mfile',$file,'skip',3,'read',2):$newtof,$newsw
+else
+    $newtof=tof
+    $newsw=$sw
+endif
+
+if ($arg = 'clear') then
+// clear all frequencies from frequency list
+  if not (lockHT='y') then
+    wft(1)
+  endif
+  htfrq1=0
+  off('htfrq1')
+  off('llfrq')
+  write('line3','All HT frequencies cleared.')
+  exists($file,'file'):$e 
+  if($e) then rm($file) endif
+
+elseif ($arg = 'nl') then
+// set cursor to nearest line
+  if $gm='dpf' then
+    ds
+  endif
+  nl
+  return
+
+elseif ($arg = 'display') then
+// display Hadamard frequencies on top of spectrum
+
+  htfrqdisp('line3','htfrq1')
+  if ($gm<>'ds' and $gm<>'dpf') then
+    return
+  endif
+
+  $size=size('htfrq1')
+  on('htfrq1'):$on
+  if ($size=1 and $on=0) then
+    htfrqdisp('line3','htfrq1')
+  elseif procdim<1.5 then
+//  $llfrq=llfrq
+//  $llamp=llamp
+    llfrq=llfrq[1]
+    $i=0
+    repeat
+      $i=$i+1
+//      llfrq[$i] = htfrq1[$i] + $sw/2 + r5  // r5 set by htll
+      llfrq[$i] = htfrq1[$i] + $newtof - tof + $sw/2
+      llamp[$i] = 1.0
+    until ($i>=$size)
+
+    if $gm='dpf' then ds endif
+    dpf('noll')
+//  llfrq=$llfrq
+//  llamp=$llamp
+  endif
+  return
+
+elseif ($arg = 'remove') then
+// remove frequency nearest cursor from frequency list
+  getoffset:$newfrq
+  $newfrq=$newfrq-$newtof
+//  $newfrq = cr + rfl - rfp - $sw/2
+
+  $size=size('htfrq1')
+  if $size<1.5 then
+    htfrq1=0
+    htfrq1='n'
+    off('llfrq')
+    write('line3','Removed all frequencies.')
+  else
+    $i=0 $dif=$sw $pos=1
+    repeat
+      $i=$i+1
+      $frq[$i]=htfrq1[$i]
+      abs($newfrq-htfrq1[$i]):$newdif
+      if ($newdif < $dif) then
+        $dif=$newdif $pos=$i
+      endif
+    until ($i>=$size)
+    htfrq1=0
+    $i=0 $j=0
+    repeat
+      $i=$i+1
+      if ($i <> $pos) then
+        $j=$j+1
+        htfrq1[$j]=$frq[$i]
+      endif
+    until ($i>=$size)
+    getppm($frq[$pos]+$newtof):$val
+//    $val = $frq[$pos] - $rfl + $rfp + $sw/2
+//    $val = $val / $reffrq
+    $sval='' format($val,3,3):$sval
+    write('line3','Removed HT frequency at %s ppm.',$sval)
+  endif
+
+elseif ($arg = 'select') then
+// add selected frequency to Hadamard frequency list
+
+  getoffset:$frq
+  $frq=$frq-$newtof
+//  $frq = $cr + $rfl - $rfp - $sw/2
+
+  $size=size('htfrq1')
+  $jsize=1e4
+  exists('nimax','parameter'):$emax
+  if $emax>0.5 then
+    if ($size>nimax and nimax>3) then
+      $jsize=nimax
+    endif
+  endif
+
+  if ($size+1 >= $jsize) then
+    write('line3','Can only use the first %d (nimax) peaks.',$jsize)
+    if $gm<>'ds' then ds endif
+    return
+  endif
+
+  $bw=20 $on=0
+  exists('htbw1','parameter'):$e
+  if $e>0.5 then
+    on('htbw1'):$on
+    if ($on) then
+      if ($bw>1) then $bw=htbw1 endif
+    endif
+// htbw1 may be arrayed
+  endif
+
+  on('htfrq1'):$on
+  if ($size<1.5 and htfrq1[1]=0 and not $on) then
+    htfrq1=$frq
+  else
+    $i=0
+    repeat
+      $i=$i+1
+      abs($frq-htfrq1[$i]):$dif
+      if ($dif < $bw) then
+        write('line3','Selected frequency too close to a frequency in the list.')
+        if $gm<>'ds' then ds endif
+        return
+      endif
+    until ($i>=$size)
+    $size=$size+1
+    htfrq1[$size]=$frq
+//  sort frequencies
+    sort('htfrq1','ru'):$order,$val
+    $i=0
+    repeat
+      $i=$i+1
+      htfrq1[$i]=$val[$i]
+    until ($i>=$size)
+  endif
+  $val = $cr / $reffrq
+  $sval='' format($val,3,3):$sval
+  write('line3','Added HT frequency at %s ppm.',$sval)
+
+endif
+
+if $exsw1>0.5 then
+  sethtnifn1
+endif
+
+graphis:$gm
+if ($gm<>'dconi' and $gm<>'dpcon') then
+  if $gm<>'ds' then
+    ds
+  else
+    ds('restart')
+  endif 
+endif 

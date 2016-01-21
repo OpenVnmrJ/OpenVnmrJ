@@ -1,0 +1,25 @@
+"macro dpfgse_tocsy"
+"************************************************************************"
+" dpfgse_tocsy - convert parameter set to dpfgse noesy experiment "
+"************************************************************************"
+BPrtppar('dpfgse_tocsy')
+getparam('gcal','Probe'):gcal_local
+getparam('rfsize','Probe'):coil_size
+if ((compH=0)or(gcal_local=0)or(coil_size=0)) then
+        banner('Wrong data in probe file!!!!\\Please correct it first.')
+   return
+endif
+if coil_size=0 then coil_size=18 endif
+zqflg='n' 
+BPupdate_wrefshape BPupdate_flipshape BPupdate_zqshape
+BPspinlock(1)
+substr(gradtype,3,1):$ss
+if $ss='l' then
+  setlimit('gzlvl0',2047.0,-2047.0,1.0) gzlvl0=900
+  setlimit('gzlvl1',2047.0,-2047.0,1.0) gzlvl1=1000
+  setlimit('gzlvl2',2047.0,-2047.0,1.0) gzlvl2=1600
+endif
+ni=1 phase=1 f full sb=-at sbs=sb pmode='full' pfgon='nny'
+sw1=sw rfl1=rfl rfp1=rfp dm='n'
+d1=1.5 ss=4 dg dps
+man(seqfil)

@@ -1,0 +1,109 @@
+*********************************************************
+*							*
+*    parfidss:	creates the additional parameters	*
+*		for time-domain solvent subtraction	*
+*							*
+*    ssorder						*
+*    ssfilter						*
+*    ssntaps						*
+*    sslsfrq						*
+*							*
+*********************************************************
+
+ssfilter :
+
+This parameter specifies the full bandwidth of the digital filter
+that is applied to the original FID to yield a filtered FID.  It
+is created as a real, assigned to the "processing" group, and has
+limits [10,sw/2] in steps of 0.1 Hz.  The default value is 100 Hz.
+By setting this parameter to "Not Used" (ssfilter='n'), both
+the zfs and lfs options are turned off.
+
+
+ssorder :
+
+This parameter specifies the order of the polynomial that is used
+to fit the digitally filtered FID if the 'zfs' processing option is
+selected. It is not used if the 'lfs' option is selected.  It is
+created as an integer, assigned to the "processing" group, and has
+limits [1,20].  The default value is "Not Active".  Therefore,
+by default, the lfs option is selected.
+
+
+ssntaps :
+
+This parameter specifies the number of taps (coefficients) to be
+used in the digital filter.  The more taps in a filter, the flatter
+the passband response and the steeper the transition from passband
+to stopband, i.e., the more rectangular the filter.  It is created
+as an integer, assigned to the "processing" group, and has limits
+[1, np/4].  The default value is 121 and is suitable for use with
+the 'lfs' option.  A smaller value of ssntaps (3 <= ssntaps <= 21)
+usually works better with the 'zfs' option.  It is generally best
+to use an odd number of taps with either option.
+
+
+sslsfrq :
+
+This parameter specifies the location of the center of the solvent-suppressed
+region of the spectrum.  Setting the parameter to 0 or 'n' (the default) will
+solvent-suppress a region centered about the transmitter frequency.  A non-zero
+value for this parameter will shift the solvent-suppressed region by sslsfrq
+Hz.
+
+
+Example:
+
+  addpar('ss'): creates the parameters ssfilter, ssorder, ssntaps, and sslsfrq.
+  parfidss:     creates the parameters ssfilter, ssorder, ssntaps, and sslsfrq.
+
+
+1D Usage:
+
+In a 1D transform, subtraction of the zero-frequency component from
+the time-domain data, usually in the context of solvent subtraction,
+is selected by setting ssorder and ssfilter to desired values and
+then typing wft.  If ssfilter is set to "Not Used", both the lfs and
+zfs options are turned off.  If ssfilter is set to a value, then
+the zfs option is selected if ssorder is set to some value.  If
+ssorder is set to "Not Used", then the lfs option is selected.
+
+
+'zfs' leads to the following series of processing events :
+    1) The raw FID is frequency-shifted by sslsfrq Hz.
+    2) The raw FID is subjected to a low-pass digital filter.
+    3) The filtered FID is fit to a polynomial of order 'ssorder'.
+    4) The polynomial function is subtracted from the raw FID.
+    5) The resulting FID is frequency-shifted by -sslsfrq Hz.
+
+'lfs' leads to the following series of processing events :
+    1) The raw FID is frequency-shifted by sslsfrq Hz.
+    2) The raw FID is subjected to a low-pass digital filter.
+    3) The filtered FID is directly subracted from the raw FID.
+    4) The resulting FID is frequency-shifted by -sslsfrq Hz.
+
+The quality of filtering with 'zfs' diminishes rapidly as the solvent
+peak moves off the exact center of the digital filter.  It may be
+necessary to adjust lsfrq or sslsfrq to move the solvent peak to
+within +/- 0.2Hz of the center of the filter to obtain optimal solvent
+suppression.  'lfs' is less sensitive to small offsets, but will
+typically remove or distort peaks very near to the solvent peak.
+
+
+2D Usage:
+
+In a 2D transform, this correction to the t2 FIDs is invoked in the same
+manner both with the (w)ft1d and (w)ft2d commands and with the (w)ft2da and
+(w)ft1da macros.
+
+
+3D Usage:
+
+Solvent suppression works on t3 FIDs of 3D spectra just like in the 1D and
+2D cases.
+
+Related Manual Entries:		(w)ft		(command)
+				(w)ft1d		(command)
+				(w)ft2d		(command)
+				(w)ft1da	(command)
+				(w)ft2da	(command)

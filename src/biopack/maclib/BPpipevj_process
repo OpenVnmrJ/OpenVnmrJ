@@ -1,0 +1,84 @@
+"macro BPpipevj_process"
+"BPpipevj_process1   Processes data in current experiment using NMRpipe"
+
+/*Relevant parameters:
+   BPpipeSOL               'y' for NMRpipe H2O suppression (on-resonance)
+   BPpiperegion            'y' use only region defined by sp/wp
+   BPpipedraw              'y' data displayed with NMRdraw
+                           'n' data is automatically converted pipe > VnmrJ
+                               Normal VnmrJ display commands/parameters used.
+  These may be implemented in the future
+   BPpipevjautoproc        'y' for processing using NMRpipe defaults
+   BPpipevjproc            'y' for using VnmrJ processing parameters
+   BPpipevjdisp            'y' for using VnmrJ display parameters
+
+  added argument to macro: one can pass vj2pipe option directly as an argument
+
+ 'BPpipe_pipeDir',               (default 'pipe') 
+ 'BPpipe_fidDir',                (default 'acqfil/fid')
+ 'BPpipe_par',                   (default 'curpar')
+
+*/
+
+$ans=''
+shell('echo $NMRBASE'):$ans
+if ($ans <> '') then
+  write('error','Deactivate existing NMRPipe application (edit .cshrc, logout, and login )')
+  return
+endif
+
+getbinpath('vnmrpipe'):$e,$path
+flushpars
+
+/*the following command runs vj2pipe.com with options to:
+    remove existing files Pipe files from curexp
+    sets the path of the fid file to that contained in BPpipe_fidDir
+    sets the path of the output director to that contained in BPpipe_pipeDir
+    sets the path of the procpar used to that contained in BPpipe_par
+*/
+$cmd1=' vj2pipe.com -clean -cd '+curexp+' -vjfid ' + BPpipe_fidDir + '  -pipeDir ' + BPpipe_pipeDir + ' -procpar ' +  BPpipe_par
+$cmd2=' vj_orient.com'
+
+clear(0)
+getdim:$nd
+
+if BPpipeSOL='n' then                 "removes solvent suppression"
+   $cmd1=$cmd1+' -pset -xSOL None'
+endif
+
+if BPpipedraw='n' then                 "removes progress bars and nmrDraw display"
+   $cmd1=$cmd1+' -nograph -noprogress'
+   $cmd2=$cmd2+' -nograph -noprogress'
+elseif ($nd = 2) then
+   $cmd1=$cmd1+' &'
+endif
+
+if ($nd=3) then
+  $cmd=$path + $cmd1 +'; cd '+curexp+'/'+BPpipe_pipeDir+';' + $path + $cmd2 + ' &'
+else
+  $cmd=$path + $cmd1
+endif
+
+exists('ni','parameter'):$e
+if $e then if (ni > 1) then fn1=ni*4 endif endif
+exists('ni2','parameter'):$e
+if $e then if (ni2 > 1) then fn2=ni2*4 endif endif
+
+fn=np*2
+create('proccmd','string','current',''):$e
+if ($e) then
+  setprotect('proccmd','on',1+2+4)
+endif
+setvalue('proccmd','pipe')                "lets VJ know that data used pipe processing"
+groupcopy('current','processed','processing')
+$ans=''
+shell($cmd)
+if ($nd < 3) then
+  shell('sleep 5'):$dum
+  pread(curexp+'/'+BPpipe_pipeDir+'/spec.ft2')
+  if BPpipedraw='n' then
+    dconi
+  endif
+elseif BPpipedraw='n' then
+  write('line3','NMRPipe processing finished')
+endif

@@ -1,0 +1,79 @@
+"macro AT350_modulator"
+"AT350_modulator" "Check action of fine power` for 90 degree N15 pulse"
+"       Uses channel 3 rf controlled by channel 2 parameters (rfchanel='132')""
+"       requires channel 3 which is hooked up to an 15N port on probe"
+
+if (at_n15tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   setlimit('pwx',2000,0,.1)
+   at_currenttest='n15_finepower'
+   seqfil='ATgNhmqc' 
+   exists('rfchannel','parameter'):$e
+   if $e=0 then create('rfchannel','string') endif
+   rfchannel='132'
+
+
+  if (numrfch>4) then rfchannel='13245' endif
+  if (numrfch=4) then rfchannel='1324' endif
+
+
+   dn='N15' dn2='' j=4  
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   pwxlvl=at_n15pwx90Lowpowerlvl      "use uncompressed power"
+   pwx=at_n15pwx90Lowpower ss=4 nt=2
+   at=.3 av
+   sinebell 
+
+   fn=64k
+   wnt='ATwft select(1) sp=1.5p wp=1p vsadj(80) dssh dtext'
+   text('Vary dpwrf ')
+   $step=trunc(.03*pwx*10)/10
+   exists('dpwrf','parameter'):$e
+   if $e=0 then create('dpwrf','real') endif
+   array('dpwrf',21,4095,-200)
+   text('N15 channel 3 array fine power')
+   atext('Vary finepwr from 4095 down in steps of 200')
+   atext('First spectrum is for 90 degree pulse')
+   atext('Flip angle decreases from left to right')
+
+   wexp='AT350_modulator(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   wft ATsvf
+   sp=1.5p wp=1.0p vsadj(100) dssh dtext
+   $counter=1
+   select(1) peak:$firstmaxheight $bestindex=$counter
+   $counter=2     
+   select($counter) peak:$ht $bestheight=$ht $bestindex=$counter
+   repeat
+      select($counter) 
+      peak:$ht 
+      if ($ht<$bestheight) then
+         $bestheight=$ht                  "finds 180 (first minimum)"
+         $bestindex=$counter
+      endif
+      $counter=$counter+1
+   until $counter>arraydim
+
+   $firstnullindex=$bestindex
+   $ratio=$bestheight/$firstmaxheight
+   $ratio=trunc($ratio*10000)/10000
+   write('line3','ratio of minimum to maximum = %2.2f',$ratio)
+   if (at_printparams='y') then
+     pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage('n15mod_parameters')
+   endif
+
+   ATrecord('N15MOD','N15 Linear Modulator','ratio',$ratio)
+   write('file',autotestdir+'/REPORT','N15 Linear Modulator: Raio=%2.2f',$ratio)
+ATnext
+endif

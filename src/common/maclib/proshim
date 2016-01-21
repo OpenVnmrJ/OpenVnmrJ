@@ -1,0 +1,61 @@
+"macro proshim"
+"proshim -  macro to shim using shimming prescan"
+"looks in proshimmethods directories in current appdir for method"
+"Classic shimmethods are not allowed but simply skipped"
+
+$dolock='y'  
+$port=0
+if ($#>0) then
+  $dolock=$1
+  if ($#>1) then
+    $port=$2
+  endif
+endif
+	
+"Lets just use the method parameter for better or worse right now. Need new parameter or not?"
+if (method='z1z2') then  "trap for old timers"
+	method='xyz_basic'
+endif
+
+$method=method
+
+$methodbas=''
+substr($method,'basename'):$methodbas
+write('line3','Shimmming with method %s',$methodbas)
+
+exists(method,'proshimmethods'):$e,$shimfile
+if ($e=0) then
+  write('line3','Requested proshimmethod %s not found',$method):$msg
+  if ($port) then
+    $msg=`banner('`+$msg+`')\n`
+    write('net',instrument,$port,$msg)
+  else
+    write('line3',$msg)
+  endif
+  clear(2)
+  return
+endif
+
+"Adjust lock gain, power, and phase"
+load='n'
+readhw('lockpower'):lockpower
+readhw('lockgain'):lockgain
+readhw('lockphase'):lockphase
+
+if ($dolock='y') then
+  $msg='Adjust lock'
+else
+  $msg='Skip lock adjust'
+endif
+if ($port) then
+  $msg=`banner('`+$msg+`')\n`
+  write('net',instrument,$port,$msg)
+else
+  banner($msg)
+endif
+if ($dolock='y') then
+  set_lockpars('gainonly')
+endif
+
+wshim='s'
+psMain('psPshim')

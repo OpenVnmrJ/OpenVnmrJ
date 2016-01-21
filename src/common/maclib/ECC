@@ -1,0 +1,36 @@
+"macro ECC"
+"macro ECC"
+"********************************************************************
+"    Set up parameters for:
+"       ECC a sequence derived from gems to measure eddy currents
+"               parameter checking
+"********************************************************************
+
+exists(userdir+'/parlib','file'):$e
+if ($e<>0) then
+     exists(userdir+'/parlib/'+$0+'.par','file'):$e 
+endif
+if ($e<>0) then 
+     $rtvfile=userdir+'/parlib/'+$0
+else
+     $rtvfile=systemdir+'/parlib/'+$0
+     exists($rtvfile+'.par','file'):$e 
+     if ($e=0) then
+	  write('error','No parameters for pulse sequence %s',$0)
+	  return
+     endif
+endif
+
+rtp($rtvfile)
+
+exists('trampfixed','parameter','global'):$e "check for prior existance of fixed ramp"
+if ($e = 0) then
+	create('trampfixed','real','global')
+	trampfixed = 0.0					"initialize to off"
+endif
+
+setprotect('trampfixed','on',256,'global')
+
+ldrf
+imprep
+go('check')

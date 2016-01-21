@@ -1,0 +1,346 @@
+"macro module"
+"module"
+
+$dum='' $devnull=''
+
+"**************************************************"
+IF (($1 = 'add') or
+    ($1 = 'setup') or 
+    ($1 = 'acquisition') or
+    ($1 = 'process') or
+    ($1 = 'display')) THEN
+
+if ($1 = 'add') then $arg1='setup' else $arg1=$1 endif
+
+if ($# < 2) then $2=newmodules endif
+if ($# < 3) then $3='' endif
+if ($# < 4) then $4='' endif
+if ($2='') then return endif
+
+substr($2, 'wc'):$modtot
+
+if ($modtot) then
+   $i=1
+   repeat
+	$module=''
+	substr($2,$i):$module
+		"***Execute module specific macro***"
+	  $modmacro=$module+'_module'
+	  exists($modmacro,'maclib'):$macex
+	  if ($macex) then
+	      $cmd=$modmacro+'(\''+$arg1+'\',\''+$4+'\',\''+$3+'\')'
+	      exec($cmd)
+	  elseif ($arg1='setup') then 	 "****Do a generic addition****"
+	      module('genericadd',$module,$3,$4)
+	  endif
+
+	$i=$i+1
+   until $i > $modtot
+endif
+
+"*************************************************"
+ELSEIF ($1 = 'genericadd') THEN
+
+   if ($# <> 4) then return endif
+		"The following makes the arguments generic"
+   $basic='no'
+   $refresh='no'
+   if ($3='basic') then $basic=$3
+   elseif ($3='refresh') then $refresh=$3 endif
+   if ($4='basic') then $basic=$4
+   elseif ($4='refresh') then $refresh=$4 endif
+
+	$module=$2
+   if ($module='') then return endif
+
+  "If $module is same as apptype, always add as basic"
+     exists('apptype','parameter'):$appex
+     if ($appex) then
+       if (apptype = $module) and (apptype<>'') then
+           $basic='basic'
+           module('remove',modules,$module):modules
+       endif
+     endif
+
+  "apptype is removed from the modules parameter"
+
+	getfilepath($module,'modules'):$ex,$param
+        if ($ex) then
+          $oldplock=''
+          setprotect('','list',16384):$oldplock
+          if ($refresh = 'refresh') then
+                fread($param)
+          else
+                fread($param,'current','newonly')
+          endif
+          setprotect('','clear',16384,'current')
+          rtx($param,'current','keep','clear')
+          setprotect($oldplock,'on',16384)
+
+          if ($basic <> 'basic') then
+                module('isthere',$module):$isthere
+                if ($isthere=0) then
+                        modules=modules+' '+$module
+                endif
+          endif
+        endif
+
+        getfilepath('user'+$module,'modules'):$ex,$param
+        if ($ex) then
+          $oldplock=''
+          setprotect('','list',16384):$oldplock
+          if ($refresh = 'refresh') then
+                fread($param)
+          else
+                fread($param,'current','newonly')
+          endif
+          setprotect('','clear',16384,'current')
+          rtx($param,'current','keep','clear')
+          setprotect($oldplock,'on',16384)
+        endif
+
+"*************************************************"
+ELSEIF ($1 = 'isthere') THEN
+
+   $isthere=0
+   if ($2 <>'') then
+      substr(modules,'find',$2):$num
+      if($num>0) then
+          $isthere=1
+      endif
+   endif
+   return($isthere)
+
+"*************************************************"
+ELSEIF ($1 = 'remove') THEN
+   string2array($3):$3
+   if $3[1]='' then return($2) endif
+   string2array($2):$2
+   $total=size('$3')
+   $i=1
+   repeat
+        $isthere=0
+	teststr('$2',$3[$i],'local'):$isthere
+	if ($isthere) then
+	   $2[$isthere]=''
+	endif
+        $i=$i+1
+   until $i>$total
+   array2string($2):$2
+   return($2)
+"*************************************************"
+ELSEIF ($1 = 'combine') THEN
+   string2array($3):$3
+   if $3[1]='' then return($2) endif
+   $total=size('$3')
+   $i=1
+   repeat
+	$isthere=0
+	substr($2,'find',$3[$i]):$isthere
+	if ($isthere=0) then
+	   $2=$2+' '+$3[$i]
+	endif
+	$i=$i+1
+   until $i>$total
+   return($2)
+"*************************************************"
+ELSEIF ($1='manage') THEN
+   jexp:$curexp
+   expactive($curexp):$active
+   if ($active>0) then
+      write('error','Acquisition is Active in current experiment. aborted')
+      return
+   endif
+
+   $file=userdir+'/persistence/module_user'
+   $file1=userdir+'/persistence/module_system'
+   $tempfile=userdir+'/persistence/tempfile'
+   write('reset',$file)
+   write('reset',$file1)
+
+   pwd:$curdir
+   exists(userdir+'/modules','directory'):$direx
+   if ($direx) then
+	cd(userdir+'/modules'):$dum
+	shell('(ls -1 > '+$file+')'):$devnull
+	cd($curdir):$dum
+   endif
+   exists(systemdir+'/chempack/modules','directory'):$direx
+   if ($direx) then
+	cd(systemdir+'/chempack/modules'):$dum
+	shell('(ls -1 > '+$file1+')'):$devnull
+	cd($curdir):$dum
+   else
+      exists(systemdir+'/modules','directory'):$direx
+      if ($direx) then
+	shell('(ls -1 > '+$file1+')'):$devnull
+	cd($curdir):$dum
+      endif
+   endif
+   write('reset',$tempfile)
+   copy($file,$tempfile):$dum
+   shell('(cat '+$tempfile+' | awk \'{print "\\""$1"\\" \\""$1"\\""}\' > '+$file+')'):$devnull
+   write('reset',$tempfile)
+   copy($file1,$tempfile):$dum
+   shell('(cat '+$tempfile+' | awk \'{print "\\""$1"\\" \\""$1"\\""}\' > '+$file1+')'):$devnull
+   rm('-f',$tempfile):$dum
+   write('file',$file,'"" ""')
+   write('file',$file1,'"" ""')
+   exists('modulemanager','parameter','global'):$parex
+   if ($parex=0) then
+	create('modulemanager','string','global')
+   endif
+   modulemanager=''
+
+"******************************************************"
+ELSEIF ($1 = 'list') or ($1='arraylist') THEN
+	$modulepar='' $list=''
+	getfilepath($2,'modules'):$sex,$modulepar
+        if ($sex) then
+	   if ($1='list') then
+	   	readparam($modulepar,'','list'):$list
+	   else
+		readparam($modulepar,'','alist $list'):$num
+	   endif
+	endif
+	return($list,$modulepar)
+"******************************************************"
+ELSEIF ($1 = 'popup') THEN
+   if ($2='') then return endif
+   jexp:$curexp
+   expactive($curexp):$active
+   if ($active>0) then
+      write('error','Acquisition is Active in current experiment. aborted')
+      return
+   endif
+   tmpcopy('moduletemp')
+   $list='' $modulepar=''
+   module('list',$2):$list,$modulepar
+   if ($modulepar<>'') then
+	fread($modulepar,'current','newonly')
+   endif
+   parampopup($list,'display')
+   tmpreturn('moduletemp')
+"******************************************************"
+ELSEIF ($1 = 'show') or ($1 = 'print') THEN
+
+if ($2='') then return endif
+jexp:$curexp
+expactive($curexp):$active
+if ($active>0) then
+   write('error','Acquisition is Active in current experiment. aborted')
+   return
+endif
+
+flush
+substr($2,'wc'):$modtot
+if ($modtot) then
+   if ($1='print') then printon endif
+   svp(curexp+'/temp','force')
+   clear
+   $i=1
+   repeat
+	substr($2,$i):$module
+	getfilepath($module,'modules'):$ex,$param
+	if ($ex) then
+		fread($param,'current','reset')
+		write('alpha','*****parameters in module %s******',$module)
+		display('*','current')
+		$rtx=''
+		setprotect('','list',16384,'current'):$rtx
+                write('alpha','')
+                write('alpha','----------------------------------')
+                write('alpha','*****P_LOCK parameters in module %s******',$module)
+		write('alpha','** %s **',$rtx)
+		write('alpha','----------------------------------')
+		write('alpha','')
+	   $macpath='' $macex=0
+	   getmacropath($module+'_module'):$macex,$macpath
+	   if ($macex) then
+		write('alpha','Also See %s module specific macro:',$module)
+		write('alpha','     %s',$macpath)
+                write('alpha','----------------------------------')
+                write('alpha','')
+	   endif
+	endif
+	$i=$i+1
+   until $i > $modtot
+   fread(curexp+'/temp.par/procpar','current','reset')
+   rm('-r',curexp+'/temp.par')
+   if ($1 = 'print') then printoff endif
+endif
+
+"*************************************************"
+ELSEIF ($1 = 'make') THEN
+
+  if ($# < 3) then return endif
+  if ($2 = '') then return endif
+  exists(userdir+'/modules','directory'):$mdirex
+  if ($mdirex=0) then
+	mkdir(userdir+'/modules'):$dum
+  endif
+  writeparam(userdir+'/modules/'+$2,$3)
+
+"*************************************************"
+ELSEIF ($1='tmpsave') THEN
+//  Temporary save of a module parameter (arg2)
+//  A 3rd argument is optional.  The parameter list
+//     in arg2 module will be filtered using the
+//     parameter list in arg3 and only those parameters
+//     that are in both arg2 and arg3 will be saved
+
+  if ($# < 2) then return endif
+  if (auto='y') then
+	$path=autodir+'/'+$2+'_tmppars'
+  else
+	$path=curexp+'/'+$2+'_tmppars'
+  endif
+  exists($path,'file'):$pathex
+  if ($pathex) then
+  	rm('-f',$path):$dum
+  endif
+
+  $list1='' $list2='' $modpars=''
+  module('arraylist',$2):$list1
+  module('arraylist','user'+$2):$list2
+  $modpars=$list1,$list2
+  array2array($modpars):$modpars
+  if ($modpars[1]='') then return endif
+
+  $list1='' $list2='' $filterpar=''
+  if ($# > 2) then
+      module('arraylist',$3):$list1
+      module('arraylist','user'+$3):$list2
+      $filterpar=$list1,$list2
+      array2array($filterpar):$filterpar
+  endif
+  if ($filterpar[1]<>'') then
+     $total=size('$modpars')
+     $i=1
+     repeat
+	teststr('$filterpar',$modpars[$i],'local'):$ok
+	if ($ok=0) then $modpars[$i]='' endif
+	$i=$i+1
+     until $i > $total
+  endif
+  array2array($modpars):$modpars
+  if ($modpars[1]='') then return endif
+
+  writeparam($path,'$modpars')
+
+"*************************************************"
+ELSEIF ($1='tmpreturn') THEN
+
+  if (auto='y') then
+        $path=autodir+'/'+$2+'_tmppars'
+  else
+        $path=curexp+'/'+$2+'_tmppars'
+  endif
+  exists($path,'file'):$pathex
+  if ($pathex) then
+	fread($path)
+	rm('-f',$path):$dum
+  endif
+
+"*************************************************"
+ENDIF

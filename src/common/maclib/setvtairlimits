@@ -1,0 +1,44 @@
+"macro setvtairlimits"
+
+// vtairflow limits are set based on two parameters:
+//  vtflowrange - type of flow meter, 25 or 50 l/min
+//  vtezscale   - EZVT unit installed or not
+//                  1 - not installed  2 - installed
+// Usually vtflowrange=50 if EZVT is installed.
+//
+// Choices are:
+//   (1) vtflowrange=25 vtezscale=1  -common
+//   (2) vtflowrange=50 vtezscale=2  -common
+//   (3) vtflowrange=50 vtezscale=1  -uncommon
+//   (4) vtflowrange=25 vtezscale=2  -not allowed, insufficient airflow
+
+setlimit('vtairflow',vtflowrange,0,1,'global')
+if vtairflow > vtflowrange then
+  vtairflow=vtflowrange
+endif
+return
+/* old style
+if $#>1.5 then vtezscale=$2 endif
+$max=25 $min=7 $step=1
+if (vtflowrange=50) and (vtezscale=1) then
+  $max=50 $min=14
+endif
+if (vtflowrange=50) then
+  $max=50 $min=14
+endif
+$smax='' $smin='' $sstep=''
+format($max,1,0):$smax
+format($min,1,0):$smin
+format($step,1,0):$sstep
+$cmd='setlimit(\'vtairflow\','+$smax+','+$smin+','+$sstep+',\'global\')'
+$i=0 $s=''
+repeat
+  $i=$i+1
+  format($i,1,0):$s
+  vnmrjcmd('VP '+$s+' '+$cmd)
+until ($i>=jviewports[1])
+if (vtairflow>0) and (vtairflow<$min or vtairflow>$max) then
+  $cmd='vtairflow=vtairflow'
+  vnmrjcmd('VP 1 '+$cmd)
+endif
+ */

@@ -1,0 +1,32 @@
+"macro STremove"
+beepoff
+exists('downsamp','parameter'):$downsamp
+if ($downsamp>0) then
+   on('downsamp'):$downsampv
+   if ($downsampv=0) then 
+      $downsampm=1.0
+   else
+      $downsampm=downsamp
+   endif
+else
+   $downsampm=1.0
+endif
+
+$delflag=0
+numreg:$nr
+$i=$nr
+repeat
+   getreg($i):$min,$max
+   if (($min>(cr-delta)) and ($min<cr)) then
+      cz($min,$max)
+      $delflag=1
+   endif
+   $i=$i-1
+until($i=0)
+
+if ($delflag<0.5) then 
+   write('error','Region Not Found')
+else
+   write('line3','Region Deleted')
+endif
+beepon

@@ -1,0 +1,86 @@
+"macro newautodir"
+is_submitmode:$is
+if ($is) then
+   write('error','Cannot create newautodir when in submit mode')
+   return
+endif
+
+expactive('auto'):$isauto
+if (auto='y') then $isauto=1 endif
+
+if ($# = 0) then $1='enter' endif
+if ($1='auto') and ($isauto>0) then
+   write('error','Cannot create newautodir with automation in progress')
+   return
+endif
+
+if (traydisplay='y') then
+   showtray('closesq')
+endif
+
+  if (cpglobalauto='') then
+     cpglobalauto=userdir+'/Automation'
+  endif
+  substr(cpglobalauto,1,1):$f2
+  if ($f2<>'/') then
+     cpglobalauto=userdir+'/'+cpglobalauto
+  endif
+
+  exists(cpglobalauto,'directory'):$ex
+  if ($ex=0) then
+	shell('mkdir -p '+cpglobalauto):$dum
+  	exists(cpglobalauto,'directory'):$ex
+  endif
+  if ($ex=0) then
+	write('error','Could not create %s',cpglobalauto)
+	return
+  endif
+
+  setautodirtmplt
+  $adtex = 1
+  if autodirtmplt='' then $adtex=0 endif
+  $autodirtmplt=autodirtmplt
+
+  if ($1='enter') and ($adtex) then
+	$ret=0 $s1='' $s2=''
+	strstr($autodirtmplt,'auto'):$ret,$s1,$s2
+	if ($ret) then
+	     $autodirtmplt=$s1+'enter'+$s2
+	else
+	     $adtex=0
+	endif
+  endif
+
+  if ($adtex=0) then
+    $date=''
+    shell('date +%Y%m%d'):$date
+    $automationdir=cpglobalauto+'/'+$1+'_'+$date
+  else
+    $automationdir=cpglobalauto+'/'+$autodirtmplt
+  endif
+
+  Svfname($automationdir+'_%R2%',''):$dir
+
+  $filename=''
+  if ($1='enter') then
+     globalenter=$dir
+     writeparam(userdir+'/global','globalenter','global','add')
+     shell('basename '+globalenter):$filename
+     write('line3','globalenter : %s',globalenter)
+  elseif ($1='auto') then
+     if (autodir<>'') then
+	accountLog('Done')
+     endif
+     autodir=$dir
+     cpautodir=autodir
+     writeparam(userdir+'/global','autodir cpautodir','global','add')
+     $filename='enterQ'
+     write('line3','autodir : %s',autodir)
+  endif
+
+  updateautodir($dir,$filename)
+  showtray($dir)
+  if (sqdisplay[1] = 'tray') then
+     SQDisplay('refresh')
+  endif
+

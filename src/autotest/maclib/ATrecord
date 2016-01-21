@@ -1,0 +1,82 @@
+"macro ATrecord"
+"ATrecord"
+
+" must have arguments be multiples of 2 (one title, one value)"
+$aa = $# mod 2
+if ($aa=1) then return
+elseif ($#<4)  then return
+else
+  $rtrn=''
+  exists(userdir+'/autotest/atfail','file'):$e
+  if ($e > 0.5) then
+    delete(userdir+'/autotest/atfail')
+  endif
+  $trecord='"'+systemdir+'"/tcl/bin/atrecord '+$1+' "'+$2+'" "'+userdir+'" '+owner
+  if ($#=4)  then
+    shell($trecord,'"'+$3+'"',$4):$rtrn
+  elseif ($#=6)  then
+    shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6):$rtrn
+  elseif ($#=8)  then
+    shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6,'"'+$7+'"',$8):$rtrn
+  elseif ($#=10) then
+    shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6,'"'+$7+'"',$8,'"'+$9+'"',$10):$rtrn
+  elseif ($#=12) then
+    shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6,'"'+$7+'"',$8,'"'+$9+'"',$10,'"'+$11+'"',$12):$rtrn
+  elseif ($#=14) then
+    shell($trecord,'"'+$3+'"',$4,'"'+$5+'"',$6,'"'+$7+'"',$8,'"'+$9+'"',$10,'"'+$11+'"',$12,'"'+$13+'"',$14):$rtrn
+  elseif ($#>14) then  return
+  endif
+endif
+
+exists(userdir+'/autotest/atfail','file'):$e
+if ($e > 0.5) then
+  delete(userdir+'/autotest/atfail')
+  $rtrn='Fail'
+endif
+if ($rtrn='Fail') then
+   ATgetdate:$date
+   $failreport=autotestdir+'/FAILREPORT'
+   exists($failreport,'file'):$e
+   if ($e=0) then 
+    cp(autotestdir+'/texts/reportform',$failreport)
+    shell('hostname'):$hostname
+    shell('date'):$Date
+    write('file',$failreport,'%s %s %s',$Date,rev,revdate)
+    write('file',$failreport,'Run by %s on %s using %s probe at %2.1f C',at_user,$hostname,at_probetype,at_temp)
+    if at_new='y' then
+     write('file',$failreport,'WFG Config.: rfwg = %s   PFG Amplifier: gradtype = %s pfgon = %s console = %s',rfwg,gradtype,pfgon,at_consolesn)
+    else
+     write('file',$failreport,'WFG Config.: rfwg = %s   PFG Amplifier: gradtype = %s pfgon = %s dsp = %s',rfwg,gradtype,pfgon,dsp)
+    endif
+    write('file',$failreport,'   ')
+    write('file',$failreport,'Any Failures of Specifications are Listed Here   ')
+    write('file',$failreport,'**********************************************')
+    write('file',$failreport,'   ')
+   endif
+
+   $failhistory=autotestdir+'/history/'+$1
+   write('file',$failreport,'Failure Reported for the %s Test on %s',$1,$date)
+
+   lookup('mfile',$failhistory,'filekey'):$fkey  
+   lookup('mfile',$fkey,'readline'):$line1
+   lookup('mfile',$fkey,'seek','#Date','readline'):$line2
+   write('file',$failreport,$line1)
+   write('file',$failreport,$line2)
+
+   shell('tail -1 "'+$failhistory+'"'):$lastline
+
+   write('file',$failreport,$lastline)
+   write('file',$failreport,'   ')
+
+   exists(autotestdir+'/data.failed','file'):$e
+   if ($e=0) then 
+      mkdir(autotestdir+'/data.failed')
+   endif
+
+   $failfile=autotestdir+'/data.failed/'+$1+'_'+$date
+
+   svf($failfile)
+   if ((dp='y') and (fsq<>'y')) then
+      compressfid($failfile)
+   endif
+endif

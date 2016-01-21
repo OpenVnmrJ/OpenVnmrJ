@@ -1,0 +1,3522 @@
+                          Biomolecular NMR
+1.0	Philosophy
+
+Biomolecular NMR experiments utilize a wide variety of macros, menus, pulse 
+sequences, layouts, text files, parameter sets and other files for the execution of 
+experiments, typically in H2O solutions. This manual describes the nature of these files 
+for the benefit of those who wish to modify or add similar files for new experiments.
+
+The basis of the implementation of these experiments is the reproducibility and 
+predictability of the NMR console as well as the spectral nature of biologically relevant 
+materials. This combination makes possible the automatic setting of power levels, pulse 
+widths and shaped pulses present in modern pulse sequences. Several styles of pulse 
+programming are possible, depending on the preference of the user. They all have the 
+same common attribute- ease of setup and high performance.
+
+2.0	Operation
+
+All NMR experiments require, at a minimum, a compiled pulse program and a parameter 
+set. At this level, the user must make choices of parameter values.  Shaped pulse text files 
+may be required to be created, and pulse powers and pulse widths must be calibrated and 
+set. Modern pulse programs may have dozens of RF pulses and gradients so that 
+experiment setup in this manner may take several hours, even by expert operators.
+
+To make the same operation just as accurate, but have the time to set up in seconds rather 
+than hours, other types of files must be involved. At first, the user needs to "find" the 
+experiment in a menu or other visual mode. Ideally, the user would "click" on the desired 
+experiment name and the full experiment would be set up, including setting of all 
+parameters. At this stage the user would only change parameter values affecting needed 
+sensitivity and resolution (acquisition time in the detected dimension, number of 
+increments in indirect dimension(s) and the number of transients per FID).
+
+It is crucial that the performance of the experiment is not compromised by this automatic 
+setup. This can be assured by proper pulse sequence design and the predictability of the 
+spectrometer. If a user must "tweak" parameter values it is an indication of non-
+reproducibility of spectrometer manufacture or non-predictability of the hardware 
+performance.
+
+This automatic mode of experiment setup is entirely governed by macros. These macros 
+access a probe calibration file to retrieve parameter values and make experiment-specific 
+changes. The probe file can be edited manually, but automatic calibration and probefile 
+updates can be done via macros as well.
+
+
+
+
+
+3.0	Experiment Selection
+
+Experiments can be selected in a variety of ways. Since the process involves running a 
+macro, this macro could be entered on the command line. Of course, this depends on the 
+operator remembering the exact macro name (usually the name of the pulse sequence). 
+These names can be long and this mode of operation has the highest error probability. 
+
+Modern interfaces use powerful and intuitive graphical displays that can present choices 
+to the operator in an obvious manner. This is often in the form of a drop-down menu. 
+Other times it may be in the form of a selection of buttons. In all cases, a system text file 
+that is viewable and editable by the user governs the menus or button selections.
+
+4.0	Interface
+
+Two major interfaces are available within released VNMRJ software: VNMRJ and 
+"Classic VNMR". The latter interface was first released in 1987 and augmented with 
+tcl/tk in the mid-90's. It is widely used but severely restricted in possibilities and relies on 
+the operator to use command-line operation for the most part. 
+
+VNMRJ was introduced as a modern Java-based interface to overcome the limitations of 
+VNMR and offer different look-and-feel styles to different users. Based on XML files, it 
+is inherently transportable across different hardware platforms. 
+
+VNMR:
+This interface consists of a command line, a fixed menu line and a variable menu line. 
+The variable menu line permits the user to navigate through a menu "tree" toward the 
+desired experiment. For example, if the user would like to set up a 13C-edited NOESY, 
+the menu path would be:
+
+ "Main...Setup...Proteins...Standard Experiments.... 
+....HSQCs...13C3D....NOESYHSQC"
+
+Clicking the NOESYHSQC button would run the gnoesyChsqc macro, resulting in a 
+parameter set viewable in the text window. Tcl/tk panels present convenient displays of 
+parameter information (not necessarily the parameter names) with entry boxes, check 
+boxes, titles, etc., to provide ways of changing parameters or setting conditions. The tcl/tk 
+display is grid-based and has a limited number of "cells" in which to place "widgets", and 
+has a small number of possible panels.
+
+The VNMR "Classic" interface does require the operator to master hundreds of 
+commands and parameters to fully take advantage of the underlying software.
+
+
+
+
+
+VNMRJ:
+This interface is modern and "rich". The richness arises from the flexibility of the java 
+structure and the resolution of modern displays. VNMRJ uses a variety of mechanisms to 
+set up experiments. One method is to use a drop-down menu that may offer choices of 
+sub-menus. Usually, only one or two sub-menus are needed to get to the desired 
+experiment. Clicking on the name results in the experiment macro being run. In other 
+cases, experiments are set up via a button within a "Protocol" list, or present on a panel.
+
+When the new parameter set is installed the parameter area (layout panels) changes to 
+display XML files relevant to the new experiment. Some of these files might be 
+experiment-specific, others are defaults common to many other experiments. These files 
+are located in /vnmr/templates/layouts or the corresponding user directory 
+(~/vnmrsys/templates/layout). These files are editable or viewable. While these files are 
+understandable, editing them directly is not convenient or rapid. For this, a graphical 
+editor is present using "drag-and-drop" techniques for rapid user customization.
+
+The layout panels offer methods for changing all relevant parameters (entry boxes, check 
+boxes and menus). They are organized for efficient operational flow. Panels are available 
+for experiment setup, acquisition, data processing, data display and plotting, and for 
+archiving. In the most flexible types of panels, virtually any operation used by an expert 
+operator can be made without resort to the command line. Obviously, this allows all users 
+(who are expert enough in the NMR knowledge) to work from the start without spending 
+a long "apprentice" phase of learning commands and parameters.
+
+Many panels have "widgets" that initiate complex operations such as full automatic 
+calibration of all RF channels and gradients, or updating the probefile with new values. 
+These "widgets" are simple in themselves, only starting an appropriate macro.
+
+5.0	Experiment Setup Macros
+
+Since macros are the software elements that actually do the work, it is instructive to look 
+in detail at the macros involved in setting up an experiment. For this, consider the 
+NOESYHSQC experiment mentioned above. The menu used to select this experiment is 
+present as a text file. In the "Classic" mode it is a simple ASCII menu file in 
+/vnmr/menulib; in VNMRJ it is an XML submenu in /vnmr/templates/vnmj/interface. 
+Once the selection is made, in either interface, the gnoesyChsqc macro is executed. The 
+macro is a text file present in /vnmr/maclib and detailed in Table 1.
+
+
+
+
+
+
+
+
+
+
+
+
+          
+
+
+
+          Table 1.  The gnoesyChsqc macro. 
+
+All Rights Reserved." 
+
+BPrtppar('gnoesyChsqc')                   "sets up parameter set"
+
+getparam('dmf30','C13'):dmf30          "gets value from probefile"
+getparam('rf30','C13'):rf30
+getparam('dmf80','C13'):dmf80 
+getparam('rf80','C13'):rf80
+getparam('gt5','N15'):gt5
+getparam('gt0','N15'):gt0
+getparam('gzlvl5','N15'):gzlvl5
+getparam('gzlvl0','N15'):gzlvl0 
+getparam('NHgstab','N15'):gstab
+
+dof=dof-(174-35)*dfrq                  "shifts 13C offset to 35ppm"
+
+                           /* BPsetupwurst is described in Table 10 */
+BPsetwurstparams         "gets parameters for adiabatic decoupling"
+
+if dmm<>'cccp' the       "sets parameters for non-adiabatic decoupling" 
+dpwr=pwClvl-15 dmf=1e6/(2*2*1.4*pwC*compC)
+ BPcheckdpwr         "readjusts conditions if above optional limit"
+Endif
+
+dm='nnny'                      "sets C13 decoupling in acquisition"
+dm2='nnnn' dmm2='cccc'                 "no decoupling on channel 3"
+
+pwC10 = 80.5*600.0/sfrq           "recalculates shaped pulse width"
+$pw=pwC10*5.0 $pw=2.0*trunc($pw/2.0)+1.0 pwC10=($pw + 1.0)/5.0
+
+spin='n' sw2=80d       "sets up 13C indirect dimension spectral width" 
+ni=0  ni2=0 phase=1 phase2=1      "sets up for 1D spectral check"
+
+Let us now examine the elements of the gnoesyChsqc macro in detail. First, a general 
+parameter set recall macro BPrtppar is run (Table 2), specifying the gnoesyChsqc 
+parameter set. Note that in most cases the parameter set has the same name as the pulse 
+sequence. The parameter set can be present in either /vnmr/parlib or in the user's parlib, 
+depending on user preference. If no user parlib entry for gnoesyChsqc.par is present, the 
+/vnmr/parlib entry is used as default.
+
+
+
+
+
+
+
+
+                             Table 2. The BPrtppar macro  
+
+Rights Reserved."
+if $#>0.5 then             "$# is the number of arguments supplied"
+
+ $file='' $file=$1         "$1 is the argument supplied"
+ length($file):$size
+ if $size>4 then
+  $t=''
+  substr($file,$size-3,4):$t
+  if $t<>'.par' then
+    $file=$file+'.par'
+  endif
+ else
+  $file=$file+'.par'       "$file is the name of the parameter set"
+ endif
+
+ $fpath=userdir+'/parlib/'+$file
+ exists($fpath,'file'):$e            "checks for presence in user file"
+ if $e<0.5 then
+  $fpath=systemdir+'/parlib/'+$file  "uses system file if no user file"
+  exists($fpath,'file'):$f
+  if $f<0.5 then
+    write('error','%s: could not find \'%s\'',$0,$fpath)
+    return
+  endif
+ endif
+
+ "write('alpha','%s: retrieving \'%s\'',$0,$fpath)"
+ rtp($fpath)                           "actual recall of parameter set"
+ 
+if (BPinstall=1) then     "only true if the proper files are installed" 
+
+  BPupdate_from_probefile     "gets common calibrations from probefile"
+
+
+/* Refer to Bpupdate_from_probefile macro description below */
+
+
+  getparam('BPtemp','H1'):temp  "gets temp value used in autocalibrate"
+                                "or autoupdate"
+
+/* Refer to getparam macro description below */	
+
+/* Note- The "exists" macro used below finds the presence or absence of 
+parameters in the just-recalled parameter set */
+
+  exists('mag_flg','parameter'):$e             
+  if $e=1 then 
+     getparam('mag_flg','N15'):mag_flg       "needed for xyz gradients" 
+     if (mag_flg='y') then BPcheckfortriax endif
+  endif
+
+
+
+/* The Bpcheckfortriax macro makes sure a gradtable is present in 
+/vnmr/imaging/gradtables. The gradtable has the calibrations for the x, 
+y and z gradients so that the pulse sequence statement "magradpulse" 
+will work properly (used for magic-angle gradients). The probefile has 
+an entry for mag_flg. A value of 'y' indicates that the user wants to 
+use magic-angle gradients for those sequences in which they are 
+optional */
+
+  exists('pwHs','parameter'):$e       "used for selective H2O pw90"
+
+"***************Experiment uses pwHs*******************************"
+  if $e=1 then 
+   getparam('pwHs','H1'):pwHs
+   pwHs=1700*(500/sfrq)                            "scales bandwidth"
+   exists('grecov','parameter'):$e       "used in rna sequences only"
+   if $e then
+    $shape='rna_H2Osinc'
+   else
+    $shape='H2Osinc'
+   endif                           "now find if this shape exists"
+
+   exists(systemdir+'/shapelib/'+$shape+'.RF','file'):$es
+   if not($es) then
+    exists(userdir+'/shapelib/'+$shape+'.RF','file'):$es
+   endif
+
+   if $es then
+     pwsadj($shape,'pwHs')     "adjusts pwHs for multiple of 200nsec"
+   endif
+
+   exists('tpwrsf','parameter'):$e
+   if $e=1 then getparam('tpwrsf','H1'):tpwrsf endif
+
+  endif
+/*****************end of check for pwHs***********************/ 
+
+ /* Make sure fine power parameters are present for possible use */	
+
+   exists('tpwrsf_t','parameter'):$e
+   if $e=0 then create('tpwrsf_t','real') tpwrsf_t=4095 endif
+
+   exists('tpwrsf_i','parameter'):$e
+   if $e=0 then create('tpwrsf_i','real') tpwrsf_i=4095 endif
+
+   exists('tpwrsf_u','parameter'):$e
+   if $e=0 then create('tpwrsf_u','real') tpwrsf_u=4095 endif
+
+   exists('tpwrsf_d','parameter'):$e
+   if $e=0 then create('tpwrsf_d','real') tpwrsf_d=4095 endif
+
+   exists('tpwrsf_n','parameter'):$e
+   if $e=0 then create('tpwrsf_n','real') tpwrsf_n=4095 endif
+
+
+
+
+
+/* Find if user or /vnmr probefile is used */
+
+   $probe=probe
+   exists(systemdir+'/bin','file','rwx'):$e
+
+   if $e then
+    $sysadd = 1
+    $probedir = systemdir + '/probes'
+   else
+    $sysadd = 0
+    $probedir = userdir + '/probes'
+   endif
+
+   $result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+   $probefile = $probedir + '/' + $probe + '/' + $probe
+
+
+/* Get fine power values from probefile, if present ($num*=1) */
+   lookup('file',$probefile)
+   lookup('seek','H1tpwrsf_i','read'):$result,$numi
+   lookup('file',$probefile)
+   lookup('seek','H1tpwrsf_t','read'):$result,$numt
+   lookup('file',$probefile)
+   lookup('seek','H1tpwrsf_u','read'):$result,$numu
+   lookup('file',$probefile)
+   lookup('seek','H1tpwrsf_d','read'):$result,$numd
+   lookup('file',$probefile)
+   lookup('seek','H1tpwrsf_n','read'):$result,$numn
+
+/* Add probefile entry if needed ($num*=0), else get value */
+
+   if $numi=0 then
+     $tpwrsf_i='' format(tpwrsf_i,4,0):$tpwrsf_i 
+     addparams('tpwrsf_i',$tpwrsf_i,'H1') 
+   else
+     getparam('tpwrsf_i','H1'):tpwrsf_i
+   endif
+   if $numt=0 then
+     $tpwrsf_t='' format(tpwrsf_t,4,0):$tpwrsf_t 
+     addparams('tpwrsf_t',$tpwrsf_t,'H1') 
+   else
+     getparam('tpwrsf_t','H1'):tpwrsf_t
+   endif
+   if $numu=0 then
+     $tpwrsf_u='' format(tpwrsf_u,4,0):$tpwrsf_u 
+     addparams('tpwrsf_u',$tpwrsf_u,'H1') 
+   else
+     getparam('tpwrsf_u','H1'):tpwrsf_u
+   endif
+   if $numd=0 then
+     $tpwrsf_d='' format(tpwrsf_d,4,0):$tpwrsf_d 
+     addparams('tpwrsf_d',$tpwrsf_d,'H1') 
+   else
+     getparam('tpwrsf_d','H1'):tpwrsf_d
+   endif
+
+
+   if $numn=0 then
+     $tpwrsf_n='' format(tpwrsf_n,4,0):$tpwrsf_n 
+     addparams('tpwrsf_n',$tpwrsf_n,'H1') 
+   else
+     getparam('tpwrsf_n','H1'):tpwrsf_n
+   endif
+
+
+  exists('pwHs2','parameter'):$e
+  if $e=1 then 
+   getparam('pwHs2','H1'):pwHs2
+   exists('finepwrf','parameter'):$e
+   if $e=1 then getparam('finepwrf','H1'):finepwrf endif
+  endif
+ 
+ /* Set up reasonable weighting function */ 
+
+  sb=-at sbs=sb gf='n' awc='n' lb='n'
+
+
+/* Set up user's desired solvent suppression filter */ 
+
+  getparam('ssfilter','H1'):ssfilter
+  getparam('ssntaps','H1'):ssntaps
+  getparam('ssorder','H1'):ssorder
+  getparam('sslsfrq','H1'):sslsfrq
+  
+/* Make sure gradient shimming parameters are present */ 
+  exists('gzsize','parameter'):$e
+  if $e=0 then create('gzsize','real') endif
+  exists('gzwin','parameter'):$e
+  if $e=0 then create('gzwin','real') endif
+ 
+
+/* destroy nv parameters if they are present (for proper ft3d) */ 
+
+  exists('nv2','parameter'):$e
+  if $e then destroy('nv2') endif
+  exists('nv','parameter'):$e
+  if $e then destroy('nv') endif
+
+/* Make sure powers are within user-defined limits */
+
+  BPcheck
+
+  endif       "end of Bpinstall=1 section"
+endif         "end of arguments>0 section"
+
+r1=0 r2=0 r3=0 r4=0 r5=0 r6=0  "reset variables"
+wnt='' wexp=''
+pmode='full'   
+sw=sw  "forces oversamp calculation"
+dn='C13' "prevents 1H on channel 2 with obs 1H on channel 1"
+bs='n'   "makes sure bs='n' for 2D/3D"
+
+
+The BPupdate_from_probefile macro is detailed in Table 3. It serves to retrieve the 
+values of commonly used parameters from the probefile. In many cases the retrieved 
+parameters may not be used in the pulse sequence, but the information is useful and is 
+displayed in a common format within the parameter panels. Thus, the 13C pw90 is 
+always available in the "Decoupler" tcl/tk panel, or the "Channels" VNMRJ panel.
+
+
+                     Table 3  The BPupdate_from_probefile macro  
+
+
+"BPupdate_from_probefile  gets common parameters values from probefile"
+
+/* Gets common acquisition parameter values */
+
+getparam('rof1','H1'):rof1
+getparam('rof2','H1'):rof2
+getparam('alfa','H1'):alfa
+getparam('sw','H1'):sw
+getparam('at','H1'):at
+getparam('BPd1','H1'):d1
+getparam('BPgain','H1'):gain
+
+/* Gets common RF parameter values */
+
+getparam('ref_pw90','H1'):ref_pw90
+getparam('ref_pwr','H1'):ref_pwr
+getparam('pw90','H1'):pw
+getparam('pw90','H1'):pw90
+getparam('tpwr','H1'):tpwr
+getparam('tofH2O','H1'):tof
+getparam('compH','H1'):compH
+
+getparam('pwC','C13'):pwC
+getparam('pwClvl','C13'):pwClvl
+getparam('compC','C13'):compC
+getparam('dofCO','C13'):dof      "always start with dof=174ppm for 13C"
+
+getparam('pwN','N15'):pwN
+getparam('pwNlvl','N15'):pwNlvl
+getparam('compN','N15'):compN
+getparam('dofN15','N15'):dof2
+getparam('dpwr2NH','N15'):dpwr2
+getparam('dmm2NH','N15'):dmm2
+getparam('dres2NH','N15'):dres2
+getparam('dmf2NH','N15'):dmf2
+
+
+
+
+
+
+
+/* Gets common gradient parameter values */
+
+exists('gzcal','parameter'):$e
+if $e then
+ getparam('BPgzcal','N15'):gzcal
+endif
+exists('grecov','parameter'):$e
+if $e then
+ getparam('NHgstab','N15'):grecov
+endif
+exists('gstab','parameter'):$e
+if $e then
+ getparam('NHgstab','N15'):gstab
+endif
+
+/* Gets STUD Decoupling parameter values, if appropriate */
+
+exists('STUD','parameter'):$e
+if $e then
+ exists('dmf140','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf140','real')
+ endif
+ exists('dmf80','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf80','real')
+ endif
+ exists('dmf30','parameter'):$ex
+ if $ex<0.5 then 
+  create('dmf30','real')
+ endif
+ exists('rf140','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf140','real')
+ endif
+ exists('rf80','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf80','real')
+ endif
+ exists('rf30','parameter'):$ex
+ if $ex<0.5 then 
+  create('rf30','real')
+ endif
+ getparam('dmf140','C13'):dmf140
+ getparam('dmf80','C13'):dmf80
+ getparam('dmf30','C13'):dmf30
+ getparam('rf140','C13'):rf140
+ getparam('rf80','C13'):rf80
+ getparam('rf30','C13'):rf30
+endif
+
+
+
+
+
+Experiment setup macros and the BPrtppar macro all use the getparam macro. This macro 
+is the fundamental tool for accessing the probefile. It requires the name of the parameter 
+stored in the probefile, as well as the section (by nucleus) in which it is stored. The output 
+of the macro is the value of the parameter that is placed in the parameter specified. A 
+similar macro, addparams, is used to add a parameter to the probefile. It accepts only text 
+strings so it is common to prepare a text string using the format command prior to using 
+addparams. If the parameter is already present as a text string, for example dmm, the 
+formatting is not necessary. 
+
+6.0 Use of the Probefile
+
+As indicated above, most macros involved in experiment setup retrieve parameters values 
+from information stored in a probefile. This file is located in /vnmr/probes or 
+~/vnmrsys/probes (the user file). Different probes directories can be stored here. While 
+typically these are physically different probes, this is not required. The probefile names 
+could be for different samples, for example, so that by changing probe "names" one can 
+return to a desired set of conditions or calibrations. VNMRJ offers a probe popup utility 
+in the hardware bar that has a menu widget showing all system or user probefiles. Just 
+clicking the appropriate probefile name changes the value of "probe" in the user's 
+~/vnmrsys/global. In "Classic" VNMR, the probe name can be changed directly on the 
+command line.
+
+The default name for the probefile for biomolecular experiments is "HCN". Once this 
+probefile has been created (see below) the name can be changed by using a UNIX shell 
+and the "mv" command to any desired name. All macros use only the name contained in 
+the global variable "probe", rather than looking for a specific "HCN" file.
+
+The probefile must be updated with calibrations appropriate for the current instrument, 
+after the probefile is created. This is done first by making sure that the current parameter 
+set has all the common parameters stored in the probefile (typically, this is true for the 
+ghn_co.par parameter set). Therefore, to update the probefile, either use a menu button 
+for "HNCO" (Classic VNMR), use the drop-down VNMRJ menu to select Triple-
+Resonance/NH-Detected/HNCO, or use the macro "ghn_co" on the command line. In all 
+cases the ghn_co macro is executed.
+
+ If the biomolecular files have just been installed (the global variable BPinstall=0), the 
+ghn_co macro (Table 4) runs BPbiopack1a (Table 5) that, in turn, runs BPaddprobe 
+(Table 6), if necessary. 
+
+ Once the calibrated or approximate calibrations are entered, the user should update the 
+probefile using either the menu button (Classic VNMR) or the button present in the 
+"Globals&Probefile" panel in the "Setup" folder. This runs the macro BPbiopack2 (Table 
+7).
+
+
+
+                        Table 4  The ghn_co macro  
+BPrtppar('ghn_co')
+Bpsetampmode           "sets ampmode parameter value to match hardware"
+
+if BPinstall=0 then                             "need to prepare files"
+ BPbiopack1a('y')
+else             "BioNMR files already installed so can setup ghn_co  "
+ getparam('NHgrad1_time','N15'):gt1   "Gets parameters needed for 
+ghn_co"
+ getparam('NHgrad1_lvl','N15'):gzlvl1    "coherence transfer gradients"
+ getparam('NHgrad2_lvl','N15'):gzlvl2 
+ getparam('NHgstab','N15'):gstab
+ getparam('swN','N15'):sw2                "typical 15N spectral window"
+ getparam('waltzB1','H1'):waltzB1    "proton decoupling field strength"
+ dm2='nny'                  "sets up for 15N decoupling in acquisition"
+ 
+ getparam('gt5','N15'):gt5          "get values for crusher gradiensts"
+ getparam('gt0','N15'):gt0
+ getparam('gzlvl5','N15'):gzlvl5
+ getparam('gzlvl0','N15'):gzlvl0
+
+/* Recalculates pulse widths using same equations as used for */
+/* making shapes so no timing errors are generated at "go" */
+
+ pwC3 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+ $pw = pwC3*5.0   $pw = trunc($pw + 0.5) pwC3 = $pw/5.0
+ pwC3a = pwC3
+ pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+ $pw = pwC4*5.0   $pw =     trunc($pw + 0.5)   pwC4 = $pw/5.0
+ pwC5 = 88.8*600.0/sfrq
+ $pw = pwC5*5.0   $pw = 2.0*trunc($pw/2.0)+1.0 pwC5 = ($pw+1.0)/5.0
+ pwC6 = 88.8*600.0/sfrq
+ $pw = pwC6*5.0   $pw = 2.0*trunc($pw/2.0)+1.0 pwC6 = ($pw+1.0)/5.0
+ pwC7 = 80.5*600.0/sfrq
+ $pw = pwC7*5.0   $pw = 2.0*trunc($pw/2.0)+1.0 pwC7 = ($pw+1.0)/5.0
+ pwC7a = pwC7
+ pwC8 = 80.5*600.0/sfrq
+ $pw = pwC8*5.0   $pw = 2.0*trunc($pw/2.0)+1.0 pwC8 = ($pw+1.0)/5.0
+ pwC8a = pwC8
+ pwC9 = 80.5*600.0/sfrq
+ $pw = pwC9*5.0   $pw = 2.0*trunc($pw/2.0)+1.0 pwC9 = ($pw+1.0)/5.0
+ pwC9a = pwC9
+ spin='n' ni=0  ni2=0 phase=1 phase2=1
+ if (numrfch>3) then         "only get 2H parameters if  >3channels"
+  getparam('dof3D','H2'):dof3
+  getparam('dmm3D','H2'):dmm3
+  getparam('dmf3D','H2'):dmf3
+  getparam('dpwr3D','H2'):dpwr3
+  getparam('dres3D','H2'):dres3
+  getparam('dseq3D','H2'):dseq3
+ else
+  exists('ampmode','parameter'):$e  "don't need ampmode if <4 channels"
+  if ($e=1) then destroy('ampmode') endif
+ endif
+endif
+ 
+
+                        Table 5.  The BPbiopack1a macro  
+
+ if ($#=0) then      "This is done by the Activate Biopack menu button"
+
+/* This section runs relevant sections of the ghn_co macro */
+/* No probefile likely exists so no getparam statements are used */
+/* It is run only once, to setup ghn_co and create the probefile */
+
+  BPrtppar('ghn_co') 
+          
+  fn=np np=fn fn=2*np
+
+  pwC3 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC3*5.0      $pw = trunc($pw + 0.5)    pwC3 = $pw/5.0
+  pwC3a = pwC3
+  pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC4*5.0      $pw = trunc($pw + 0.5)    pwC4 = $pw/5.0
+  pwC5 = 88.8*600.0/sfrq
+  $pw = pwC5*5.0 $pw = 2.0*trunc($pw/2.0) + 1.0 pwC5 = ($pw + 1.0)/5.0
+  pwC6 = 88.8*600.0/sfrq
+  $pw = pwC6*5.0 $pw = 2.0*trunc($pw/2.0) + 1.0 pwC6 = ($pw + 1.0)/5.0
+  pwC7 = 80.5*600.0/sfrq
+  $pw = pwC7*5.0 $pw = 2.0*trunc($pw/2.0) + 1.0 pwC7 = ($pw + 1.0)/5.0
+  pwC7a = pwC7
+  pwC8 = 80.5*600.0/sfrq
+  $pw = pwC8*5.0 $pw = 2.0*trunc($pw/2.0) + 1.0 pwC8 = ($pw + 1.0)/5.0
+  pwC8a = pwC8
+  pwC9 = 80.5*600.0/sfrq
+  $pw = pwC9*5.0 $pw = 2.0*trunc($pw/2.0) + 1.0 pwC9 = ($pw + 1.0)/5.0
+  pwC9a = pwC9
+  spin='n' ni=0  ni2=0 phase=1 phase2=1
+endif
+
+exists('waltzB1','parameter'):$e
+if $e=0 then create('waltzB1','real') waltzB1=5p endif
+exists('dmf30','parameter'):$e
+if $e=0 then create('dmf30','real') endif
+exists('rf30','parameter'):$e
+if $e=0 then create('rf30','real') endif
+exists('dmf80','parameter'):$e
+if $e=0 then create('dmf80','real') endif
+exists('rf80','parameter'):$e
+if $e=0 then create('rf80','real') endif
+
+exists('dmf140','parameter'):$e
+if $e=0 then create('dmf140','real') endif
+exists('rf140','parameter'):$e
+if $e=0 then create('rf140','real') endif
+
+tn=tn dn=dn dn2=dn2    "make sure proper frequencies are set"
+setfrq
+if (numrfch>3) then dn3=dn3 endif
+exists('reffrq','parameter'):$e
+if ($e=0) then create('reffrq','real') endif
+reffrq=sfrq
+
+ if (BPinstall=0) then               "only true at installation"
+
+/* This section creates the HCN probefile with parameters */
+
+  write('line3','New "HCN" probe file being created')
+  BPaddprobe('HCN')
+  write('line3','BioPack parameters added to new probe file')
+
+/* This section sets typical offsets and sw's for magnet used */
+
+    "values of dof,dof2 and tof are ok for 800,750,600 and 500"
+
+  if (h1freq=900) then
+    sw=14500 np=2048 dof=dof dof2=dof2 tof=tof
+  endif
+  if (h1freq=800) then
+    sw=13000 np=2048 dof=17400 dof2=2240 tof=-288
+  endif
+  if (h1freq=750) then
+    sw=12000 np=2048 dof=17700 dof2=2230 tof=-288
+  endif
+  if (h1freq=700) then
+    sw=11500 np=2048 dof=dof dof2=dof2 tof=tof
+  endif
+  "parameters are OK already for 600 MHz"
+  if (h1freq=500) then
+    sw=8000 np=1024 dof=9620 dof2=1050 tof=-172
+  endif
+  if (h1freq=400) then
+    sw=7000 np=1024 dof=8700 dof2=800 tof=-288
+  endif
+  if (h1freq=300) then
+    sw=5000 np=512 dof=5700 dof2=600 tof=-288
+  endif
+endif
+
+setref
+
+BPinstall=1      "sets global parameter showing installation is done"          
+
+pw=pw90                         "sets pw if pw was 0 at installation"
+printon man('BioPacklist') printoff
+man('BioPack.update')
+banner('Check printed list for important parameters.\\Then update 
+parameter values.\\For VNMRJ:\\click "BioPack Options" tab in Acquire 
+Pages.\\     \\Click appropriate "Update" button to finish probefile 
+update')
+if ($#=0) then menu('BioPack1a') endif
+
+
+
+
+
+
+
+
+
+
+
+                             Table 6  The BPaddprobe macro   
+
+"BPaddprobe(probename)- macro to add a probe file"
+
+/* This section figures out the active probe directory */
+
+exists(systemdir+'/bin','file','rwx'):$e
+if $e then
+  $sysadd = 1
+  $probedir = systemdir + '/probes'
+else
+  $sysadd = 0
+  $probedir = userdir + '/probes'
+endif
+exists($probedir,'file'):$e
+if not($e) then
+  mkdir($probedir)
+endif
+
+/* This section backs up existing probefile */
+
+$probe =$1 
+$date=''
+BPgetdate:$date
+$probename=$probedir+'/'+$probe
+exists($probename,'file'):$e
+if $e then
+  mv($probename,$probename+'.bkup_'+$date)
+  if $sysadd then
+    write('line3','existing system probe file backed up as 
+%s',$probe+'.bkup_'+$date)
+  else
+    write('line3','existing user probe file backed up as 
+%s',$probe+'.bkup_'+$date)
+  endif
+endif
+
+if $sysadd then
+  exists(userdir+'/probes/'+$probe,'file'):$e
+  if $e then
+    
+mv(userdir+'/probes/'+$probe,userdir+'/probes/'+$probe+'.bkup_'+$date)
+    write('line3','existing user probe file backed up as 
+%s',$probe+'.bkup_'+$date)
+  endif
+endif
+
+
+
+
+
+/* This section makes the new probefile */
+
+
+mkdir($probedir+'/'+$probe)
+$probefile = $probedir + '/' + $probe + '/' + $probe
+write('reset',$probefile)
+write('file',$probefile,'NAME:           %s',$probe)
+
+exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+if $e then
+ shell('cat '+userdir+'/manual/probe.tmplt >> '+$probefile):$dum
+else
+ shell('cat '+'/vnmr/manual/probe.tmplt >> '+$probefile):$dum
+endif
+
+exists('probe','parameter','global'):$e
+if $e<0.5 then
+  create('probe','string','global')
+  setprotect('probe','on',8,'global')
+endif  
+probe = $probe
+_probe
+$file=$probedir + '/' + $probe + '/safety_levels'
+write('reset',$file)
+write('file',$file,'# Probe protection parameters')
+write('file',$file,'# High band power level for 2 Watt')
+write('file',$file,'# Low  band power level for 2 Watt')
+write('file',$file,'# High band coil energy limit')
+write('file',$file,'# Low  band coil energy limit')
+exists(systemdir+'acqqueue/acq.conf','file'):$e
+if ($e > 0.5) then
+  shell('showconsole 1'):$amt
+else
+  $amt=0
+endif
+if ($amt=12) then
+  write('file',$file,'# For 100W high band/300W low band amplifier')
+  write('file',$file,'46.0 42.0 15.0 15.0')
+else
+  write('file',$file,'# For 50W high band/300W low band amplifier')
+  write('file',$file,'49.0 42.0 15.0 15.0')
+endif
+
+if $sysadd then
+  write('line3','system level probe file %s updated',$probe)
+else
+  write('line3','user level probe file %s updated',$probe)
+endif
+
+
+banner('Now adding parameters and values to probefile.\\Please wait for 
+end message')
+
+
+
+
+
+
+/* This section writes out parameter values to probefile */
+
+
+pw=trunc(10*pw + 0.5)/10
+pw90=trunc(10*pw90 + 0.5)/10
+pwC=trunc(10*pwC + 0.5)/10
+pwN=trunc(10*pwN + 0.5)/10
+ref_pw90=trunc(10*pw*compH + 0.5)/10 ref_pwr=tpwr
+
+$gf='' format(gf,4,4):$gf
+addparams('gf',$gf,'H1')
+$gfs='' format(gfs,4,4):$gfs
+addparams('gfs',$gfs,'H1')
+$sb='' format(sb,4,4):$sb
+addparams('sb',$sb,'H1')
+$sbs='' format(sbs,4,4):$sbs
+addparams('sbs',$sbs,'H1')
+$lb='' format(lb,4,4):$lb
+addparams('lb',$lb,'H1')
+
+$ssfilter='' format(ssfilter,4,0):$ssfilter
+addparams('ssfilter',$ssfilter,'H1')
+$ssntaps='' format(ssntaps,4,0):$ssntaps
+addparams('ssntaps',$ssntaps,'H1')
+$sslsfrq='' format(sslsfrq,4,4):$sslsfrq
+addparams('sslsfrq',$sslsfrq,'H1')
+$ssorder='' format(ssorder,2,0):$ssorder
+addparams('ssorder',$ssorder,'H1')
+
+$rof1='' format(rof1,4,2):$rof1
+addparams('rof1',$rof1,'H1')
+$rof2='' format(rof2,4,2):$rof2
+addparams('rof2',$rof2,'H1')
+$alfa='' format(alfa,4,2):$alfa
+addparams('alfa',$alfa,'H1')
+$sw='' format(sw,6,1):$sw
+addparams('sw',$sw,'H1')
+$at='' format(at,5,3):$at
+addparams('at',$at,'H1')
+
+$ref_pw90='' format(ref_pw90,2,1):$ref_pw90
+addparams('ref_pw90',$ref_pw90,'H1')
+$ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+addparams('ref_pwr',$ref_pwr,'H1')
+$pw90='' format(pw90,2,1):$pw90
+addparams('pw90',$pw90,'H1')
+addparams('wetpw','6000','H1')
+$BPd1='' format(d1,4,4):$BPd1
+addparams('BPd1',$BPd1,'H1')
+$tpwr='' format(tpwr,2,0):$tpwr
+addparams('tpwr',$tpwr,'H1')
+addparams('wetpwr','12.0','H1')
+addparams('wetshape','gauss','H1')
+$tpwrsf='' format(tpwrsf,4,0):$tpwrsf
+addparams('tpwrsf',$tpwrsf,'H1')
+$phincr_i='' format(0.0,2,2):$phincr_i
+addparams('phincr_i',$phincr_i,'H1')
+$phincr_t='' format(0.0,2,2):$phincr_t
+addparams('phincr_t',$phincr_t,'H1')
+$phincr_u='' format(0.0,2,2):$phincr_u
+addparams('phincr_u',$phincr_u,'H1')
+$phincr_d='' format(0.0,2,2):$phincr_d
+addparams('phincr_d',$phincr_d,'H1')
+$phincr_n='' format(0.0,2,2):$phincr_n
+addparams('phincr_n',$phincr_n,'H1')
+$tpwrsf_i='' format(tpwrsf,4,0):$tpwrsf_i
+addparams('tpwrsf_i',$tpwrsf_i,'H1')
+$tpwrsf_t='' format(tpwrsf,4,0):$tpwrsf_t
+addparams('tpwrsf_t',$tpwrsf_t,'H1')
+$tpwrsf_u='' format(tpwrsf,4,0):$tpwrsf_u
+addparams('tpwrsf_u',$tpwrsf_u,'H1')
+$tpwrsf_d='' format(tpwrsf,4,0):$tpwrsf_d
+addparams('tpwrsf_d',$tpwrsf_d,'H1')
+$tpwrsf_n='' format(tpwrsf,4,0):$tpwrsf_n
+addparams('tpwrsf_n',$tpwrsf_n,'H1')
+addparams('finepwrf',$tpwrsf,'H1')
+$pwHs='' format(pwHs,2,1):$pwHs
+addparams('pwHs',$pwHs,'H1')
+addparams('pwHs2',$pwHs,'H1')
+$waltzB1='' format(waltzB1,6,0):$waltzB1
+addparams('waltzB1',$waltzB1,'H1')
+$tofH2O='' format(tof,4,1):$tofH2O
+addparams('tofH2O',$tofH2O,'H1')
+$compH='' format(compH,4,3):$compH
+addparams('compH',$compH,'H1')
+$BPgain='' format(gain,2,0):$BPgain
+addparams('BPgain',$BPgain,'H1')
+$rna_gain='' format(gain,2,0):$rna_gain
+addparams('rna_gain',$rna_gain,'H1')
+$BPtemp='' format(temp,3,1):$BPtemp
+addparams('BPtemp',$BPtemp,'H1')
+
+$pwC='' format(pwC,2,1):$pwC
+addparams('pwC',$pwC,'C13')
+$pwC3db='' format(1.4*pwC,2,1):$pwC3db
+addparams('pwC3db',$pwC3db,'C13')
+$pwClvl='' format(pwClvl,2,0):$pwClvl
+addparams('pwClvl',$pwClvl,'C13')
+$compC='' format(compC,4,3):$compC
+addparams('compC',$compC,'C13')
+$compC3db='' format(compC,4,3):$compC3db
+addparams('compC3db',$compC3db,'C13')
+$dofCO='' format(dof,4,1):$dofCO
+addparams('dofCO',$dofCO,'C13')
+$swCO='' format(sw1,4,1):$swCO
+addparams('swCO',$swCO,'C13')
+addparams('phi7cal','0.0','C13')
+addparams('phi7calP','60.0','C13')
+addparams('phi_CO','0.0','C13')
+addparams('phi_Ca','0.0','C13')
+addparams('phshift3','O.0','C13')
+
+
+"next three will be set by autocalibrate of gChsqc"
+$CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+addparams('CHgrad1_time',$CHgrad1_time,'C13')
+$CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+addparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+$CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+addparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+$CHgstab='' format(gstab,6,6):$CHgstab
+addparams('CHgstab',$CHgstab,'C13')
+
+"next three will be used by ghcch_tocsy"
+$hcch_gtime='' format(0.0008,8,6):$hcch_gtime
+addparams('hcch_gtime',$hcch_gtime,'C13')
+$hcch_gzlvl1='' format(gzlvl1,6,0):$hcch_gzlvl1
+addparams('hcch_gzlvl1',$hcch_gzlvl1,'C13')
+$hcch_gzlvl2='' format(gzlvl2,6,0):$hcch_gzlvl2
+addparams('hcch_gzlvl2',$hcch_gzlvl2,'C13')
+
+$spinlock='' format(BPspinlock,4,1):$spinlock
+addparams('spinlock',$spinlock,'C13')
+$dmf30='' format(dmf30,4,1):$dmf30
+addparams('dmf30',$dmf30,'C13')
+$dmf80='' format(dmf80,4,1):$dmf80
+addparams('dmf80',$dmf80,'C13')
+$dmf140='' format(dmf140,4,1):$dmf140
+addparams('dmf140',$dmf140,'C13')
+$rf30='' format(rf30,4,1):$rf30
+addparams('rf30',$rf30,'C13')
+$rf80='' format(rf80,4,1):$rf80
+addparams('rf80',$rf80,'C13')
+$rf140='' format(rf140,4,1):$rf140
+addparams('rf140',$rf140,'C13')
+
+$pwN='' format(pwN,2,1):$pwN
+addparams('pwN',$pwN,'N15')
+$pwNlvl='' format(pwNlvl,2,0):$pwNlvl
+addparams('pwNlvl',$pwNlvl,'N15')
+$compN='' format(compN,4,3):$compN
+addparams('compN',$compN,'N15')
+$dofN15='' format(dof2,4,1):$dofN15
+addparams('dofN15',$dofN15,'N15')
+$swN='' format(sw2,4,1):$swN
+addparams('swN',$swN,'N15')
+$dpwr2NH='' format(dpwr2,2,0):$dpwr2NH
+addparams('dpwr2NH',$dpwr2NH,'N15')
+addparams('dmm2NH',dmm2,'N15')
+$dres2NH='' format(dres2,5,1):$dres2NH
+addparams('dres2NH',$dres2NH,'N15')
+$dmf2NH='' format(dmf2,3,1):$dmf2NH
+addparams('dmf2NH',$dmf2NH,'N15')
+$JNH='' format(JNH,3,1):$JNH
+addparams('JNH',$JNH,'N15')
+
+
+
+
+
+$gt0='' format(gt0,1,6):$gt0
+addparams('gt0',$gt0,'N15')
+$gt5='' format(gt5,1,6):$gt5
+addparams('gt5',$gt5,'N15')
+$gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+addparams('gzlvl5',$gzlvl5,'N15')
+$gzlvl0='' format(gzlvl0,6,0):$gzlvl0
+addparams('gzlvl0',$gzlvl0,'N15')
+$gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+addparams('gzlvl5',$gzlvl5,'N15')
+$NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+addparams('NHgrad1_time',$NHgrad1_time,'N15')
+$NHgrad1_lvl='' format(gzlvl1,4,0):$NHgrad1_lvl
+addparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+$NHgrad2_lvl='' format(gzlvl2,4,0):$NHgrad2_lvl
+addparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+$BPgzcal='' format(gzcal,6,6):$BPgzcal
+addparams('BPgzcal',$BPgzcal,'N15')
+$NHgstab='' format(gstab,6,6):$NHgstab
+addparams('NHgstab',$NHgstab,'N15')
+addparams('mag_flg',mag_flg,'N15')
+
+$dres3D='' format(dres3,2,1):$dres3D
+addparams('dres3D',$dres3D,'H2')
+$dpwr3D='' format(dpwr3,2,0):$dpwr3D
+addparams('dpwr3D',$dpwr3D,'H2')
+$dmf3D='' format(dmf3,5,1):$dmf3D
+addparams('dmf3D',$dmf3D,'H2')
+$dof3D='' format(dof3,5,1):$dof3D
+addparams('dof3D',$dof3D,'H2')
+addparams('dseq3D',dseq3,'H2')
+addparams('dmm3D',dmm3,'H2')
+
+banner('probefile setup finished.')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             Table 7.  The BPbiopack2 macro  
+
+
+"BPbiopack2 updates parameters values in probefile"
+"using parameter values in current parameter table"
+
+$probename=probe
+if ($probename='') then
+  banner('No Probe is specified. New Probefile "HCN" is being created')
+  BPaddprobe('HCN')
+endif
+banner('Probe File Is Being Updated with These Calibrations')
+
+/* This section creates parameters if missing */
+
+"add new parameters if missing"
+exists('autocal','parameter'):$e
+ if $e=0 then create('autocal','string') autocal='y' endif
+exists('checkofs','parameter'):$e
+ if $e=0 then create('checkofs','string') checkofs='n' endif
+exists('JNH','parameter'):$e
+ if $e=0 then create('JNH','real') JNH=93 endif
+exists('waltzB1','parameter'):$e
+ if $e=0 then create('waltzB1','real') waltzB1=5p endif
+exists('dmf30','parameter'):$e
+ if $e=0 then create('dmf30','real') dmf30=0 endif
+exists('dmf80','parameter'):$e
+ if $e=0 then create('dmf80','real') dmf80=0 endif
+exists('dmf140','parameter'):$e
+ if $e=0 then create('dmf140','real') dmf140=0 endif
+exists('rf30','parameter'):$e
+ if $e=0 then create('rf30','real') rf30=0 endif
+exists('rf80','parameter'):$e
+ if $e=0 then create('rf80','real') rf80=0 endif
+exists('rf140','parameter'):$e
+ if $e=0 then create('rf140','real') rf140=0 endif
+
+/* This section makes sure pulse widths are multiple of 0.1usec */
+
+pw=trunc(10*pw + 0.5)/10
+pw90=trunc(10*pw + 0.5)/10
+pwC=trunc(10*pwC + 0.5)/10
+pwN=trunc(10*pwN + 0.5)/10
+ref_pw90=trunc(10*pw*compH + 0.5)/10 ref_pwr=tpwr
+
+/* Saves ghn_co parameter set in user (or vnmr) parlib */
+
+if seqfil='ghn_co' then
+ BPsvp('ghn_co')   "saves in either /vnmr/parlib or user account"
+endif
+
+/* This section updates processing parameters */
+
+$lb='' format(lb,4,4):$lb
+setparams('lb',$lb,'H1')
+$gf='' format(gf,4,4):$gf
+setparams('gf',$gf,'H1')
+$gfs='' format(gfs,4,4):$gfs
+setparams('gfs',$gfs,'H1')
+$sb='' format(sb,4,4):$sb
+setparams('sb',$sb,'H1')
+$sbs='' format(sbs,4,4):$sbs
+setparams('sbs',$sbs,'H1')
+
+
+$ssfilter='' format(ssfilter,4,0):$ssfilter
+setparams('ssfilter',$ssfilter,'H1')
+$ssntaps='' format(ssntaps,4,0):$ssntaps
+setparams('ssntaps',$ssntaps,'H1')
+$sslsfrq='' format(sslsfrq,4,4):$sslsfrq
+setparams('sslsfrq',$sslsfrq,'H1')
+$ssorder='' format(ssorder,2,0):$ssorder
+setparams('ssorder',$ssorder,'H1')
+
+/* This section updates acquisition parameters */
+
+$rof1='' format(rof1,4,2):$rof1
+setparams('rof1',$rof1,'H1')
+$rof2='' format(rof2,4,2):$rof2
+setparams('rof2',$rof2,'H1')
+$alfa='' format(alfa,4,2):$alfa
+setparams('alfa',$alfa,'H1')
+$sw='' format(sw,6,1):$sw
+setparams('sw',$sw,'H1')
+$at='' format(at,5,3):$at
+setparams('at',$at,'H1')
+$BPd1='' format(d1,2,3):$BPd1
+setparams('BPd1',$BPd1,'H1')
+$BPgain='' format(gain,2,0):$BPgain
+setparams('BPgain',$BPgain,'H1')
+$BPtemp='' format(temp,3,1):$BPtemp
+setparams('BPtemp',$BPtemp,'H1')
+
+
+/* This section updates 1H RF parameters */
+
+$ref_pw90='' format(ref_pw90,2,1):$ref_pw90
+setparams('ref_pw90',$ref_pw90,'H1')
+$ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+setparams('ref_pwr',$ref_pwr,'H1')
+$pw90='' format(pw90,2,1):$pw90
+setparams('pp',$pw90,'H1')
+setparams('pw90',$pw90,'H1')
+$waltzB1='' format(waltzB1,6,0):$waltzB1
+setparams('waltzB1',$waltzB1,'H1')
+$tpwr='' format(tpwr,2,0):$tpwr
+setparams('tpwr',$tpwr,'H1')
+setparams('pplvl',$tpwr,'H1')
+$dmf=1e6/(pw*10*compH) $dpwr=tpwr-20
+$dmfH1='' format($dmf,5,0):$dmfH1
+$dpwrH1='' format($dpwr,2,0):$dpwrH1
+setparams('dmf',$dmfH1,'H1')
+setparams('dpwr',$dpwrH1,'H1')
+$tofH2O='' format(tof,4,1):$tofH2O
+setparams('tofH2O',$tofH2O,'H1')
+$compH='' format(compH,4,3):$compH
+setparams('compH',$compH,'H1')
+setparams('tpwr_cf',$compH,'H1')
+
+/* This section updates 13C RF parameters */
+
+$pwC='' format(pwC,2,1):$pwC
+setparams('pwC',$pwC,'C13')
+setparams('pw90',$pwC,'C13')
+setparams('pwx',$pwC,'C13')
+$pwClvl='' format(pwClvl,2,0):$pwClvl
+setparams('pwClvl',$pwClvl,'C13')
+setparams('tpwr',$pwClvl,'C13')
+setparams('pwxlvl',$pwClvl,'C13')
+$compC='' format(compC,4,3):$compC
+setparams('compC',$compC,'C13')
+setparams('pwxlvl_cf',$compC,'C13')
+
+/* This section updates 15N RF parameters */
+
+$pwN='' format(pwN,2,1):$pwN
+setparams('pwN',$pwN,'N15')
+setparams('pw90',$pwN,'N15')
+setparams('pwx',$pwN,'N15')
+$pwNlvl='' format(pwNlvl,2,0):$pwNlvl
+setparams('pwNlvl',$pwNlvl,'N15')
+setparams('tpwr',$pwNlvl,'N15')
+setparams('pwxlvl',$pwNlvl,'N15')
+$compN='' format(compN,4,3):$compN
+setparams('compN',$compN,'N15')
+setparams('pwxlvl_cf',$compN,'N15')
+$dpwr2NH='' format(dpwr2,2,0):$dpwr2NH
+setparams('dpwr2NH',$dpwr2NH,'N15')
+setparams('dmm2NH',dmm2,'N15')
+setparams('dmm',dmm2,'N15')
+setparams('dpwr',$dpwr2NH,'N15')
+setparams('dmm',dmm2,'N15')
+$dres2NH='' format(dres2,5,1):$dres2NH
+setparams('dres2NH',$dres2NH,'N15')
+setparams('dres',$dres2NH,'N15')
+$dmf2NH='' format(dmf2,3,1):$dmf2NH
+setparams('dmf2NH',$dmf2NH,'N15')
+setparams('dmf',$dmf2NH,'N15')
+
+/* This section updates gradient parameters */
+
+$BPgzcal='' format(gzcal,8,6):$BPgzcal
+setparams('gcal',$BPgzcal,'Probe')
+setparams('gradient','y','Probe')
+setparams('BPgzcal',$BPgzcal,'N15')
+setparams('mag_flg',mag_flg,'N15')
+
+
+
+
+
+/* This section updates parameters used by ghn_co */
+
+if (seqfil='ghn_co') then
+  $pwHs='' format(pwHs,2,1):$pwHs
+  setparams('pwHs',$pwHs,'H1')
+  $tpwrsf='' format(tpwrsf,4,0):$tpwrsf
+  setparams('tpwrsf',$tpwrsf,'H1')
+  $dofCO='' format(dof,4,1):$dofCO
+  setparams('dofCO',$dofCO,'C13')
+  $swCO='' format(sw1,4,1):$swCO
+  setparams('swCO',$swCO,'C13')
+  $spinlock='' format(BPspinlock,4,1):$spinlock
+  setparams('spinlock',$spinlock,'C13')
+  $dofN15='' format(dof2,4,1):$dofN15
+  setparams('dofN15',$dofN15,'N15')
+  $swN='' format(sw2,4,1):$swN
+  setparams('swN',$swN,'N15')
+  $JNH='' format(JNH,3,1):$JNH
+  setparams('JNH',$JNH,'N15')
+  $NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+  setparams('NHgrad1_time',$NHgrad1_time,'N15')
+  $NHgrad1_lvl='' format(gzlvl1,6,0):$NHgrad1_lvl
+  setparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+  $NHgrad2_lvl='' format(gzlvl2,6,0):$NHgrad2_lvl
+  setparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+  $NHgstab='' format(gstab,6,4):$NHgstab
+  setparams('NHgstab',$NHgstab,'N15')
+  $gt5='' format(gt5,1,6):$gt5
+  setparams('gt5',$gt5,'N15')
+  $gt0='' format(gt0,1,6):$gt0
+  setparams('gt0',$gt0,'N15')
+  $gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+  setparams('gzlvl5',$gzlvl5,'N15')
+  $gzlvl0='' format(gzlvl0,6,0):$gzlvl0
+  setparams('gzlvl0',$gzlvl0,'N15')
+  $dres3D='' format(dres3,2,1):$dres3D
+  setparams('dres3D',$dres3D,'H2')
+  $dpwr3D='' format(dpwr3,2,0):$dpwr3D
+  setparams('dpwr3D',$dpwr3D,'H2')
+  $dmf3D='' format(dmf3,5,1):$dmf3D
+  setparams('dmf3D',$dmf3D,'H2')
+  $dof3D='' format(dof3,5,1):$dof3D
+  setparams('dof3D',$dof3D,'H2')
+  if dseq3='' then dseq3='garp1' endif
+  setparams('dseq3D',dseq3,'H2')
+  setparams('dmm3D',dmm3,'H2')
+
+/* This section makes RF shapes and Decoupling shapes using 
+calibrations present in this parameter set (See Tables 8 and 9) */
+
+  BPsetupshapes                   "makes Pbox waveforms"  
+  BPcal                           "makes rf waveforms"
+
+
+
+
+/* This section makes STUD shapes and stores calibrations for STUD */
+  BPmakeSTUDpp "makes STUD waveforms and sets dmf30, rf30, etc"
+  $dmf30='' format(dmf30,4,1):$dmf30
+  setparams('dmf30',$dmf30,'C13')
+  $dmf80='' format(dmf80,4,1):$dmf80
+  setparams('dmf80',$dmf80,'C13')
+  $dmf140='' format(dmf140,4,1):$dmf140
+  setparams('dmf140',$dmf140,'C13')
+  $rf30='' format(rf30,4,1):$rf30
+  setparams('rf30',$rf30,'C13')
+  $rf80='' format(rf80,4,1):$rf80
+  setparams('rf80',$rf80,'C13')
+  $rf140='' format(rf140,4,1):$rf140
+  setparams('rf140',$rf140,'C13')
+endif
+
+/* BPbiopack2 can be called from autocalibration involving the RNA 
+sequences "rna_gNhsqc" or "rna_gChsqc", so current parameters are not 
+for ghn_co */
+
+if (seqfil='rna_gNhsqc') then
+  $NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+  setparams('NHgrad1_time',$NHgrad1_time,'N15')
+  $NHgrad1_lvl='' format(gzlvl1,6,0):$NHgrad1_lvl
+  setparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+  $NHgrad2_lvl='' format(gzlvl2,6,0):$NHgrad2_lvl
+  setparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+  $NHgstab='' format(grecov,6,4):$NHgstab
+  setparams('NHgstab',$NHgstab,'N15')
+endif
+if (seqfil='rna_gChsqc') then
+  $CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+  setparams('CHgrad1_time',$CHgrad1_time,'C13')
+  $CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+  setparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+  $CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+  setparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+  $CHgstab='' format(grecov,6,4):$CHgstab
+  setparams('CHgstab',$CHgstab,'C13')
+  BPcal        "makes rf waveforms"
+  BPmakeSTUDpp "makes STUD waveforms and sets dmf30, rf30, etc"
+  $dmf30='' format(dmf30,4,1):$dmf30
+  setparams('dmf30',$dmf30,'C13')
+  $dmf80='' format(dmf80,4,1):$dmf80
+  setparams('dmf80',$dmf80,'C13')
+  $dmf140='' format(dmf140,4,1):$dmf140
+  setparams('dmf140',$dmf140,'C13')
+  $rf30='' format(rf30,4,1):$rf30
+  setparams('rf30',$rf30,'C13')
+  $rf80='' format(rf80,4,1):$rf80
+  setparams('rf80',$rf80,'C13')
+  $rf140='' format(rf140,4,1):$rf140
+  setparams('rf140',$rf140,'C13')
+endif
+write('line3','Probefile Update Finished')
+banner('Probe File Updated with These Calibrations')
+                      
+6.0	Making Shapelib Files: RF and Decoupling Waveforms
+
+Several macros are used within the probefile update process. BPsetupshapes and BPcal 
+are macros that create waveforms for decoupling and band-selective excitation. They are
+executed during the probefile update because this is when (possibly) new calibrations 
+have been determined. Since decoupling waveforms depend on reference pw90's, power 
+levels and compression factors, having the waveforms recreated during BPbiopack2 
+execution guarantees that the waveforms and their internal parameters are consistent with 
+probe calibrations. Once the waveforms have been created, the BPsetwurstparams macro 
+can be used in experiment setup macros (e.g. "gChsqc") to install calibrated parameter 
+values for decoupling and spinlocks.
+
+                          Table 8. The BPsetupshapes macro  
+
+/* BPsetupshapes.     For alphas,aliphatics, aromatics or allC, this 
+creates waveforms WURSTxx.DEC, where xx is the number of 13C ppm 
+bandwidth. if BPpwrlimits=1, power levels may reduced, but bandwidths 
+remain, at the expense of increased sidebands*/
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+/* The section checks for value of global variable BPspinlock and
+   makes the 13C Spinlock waveform cctocsy.DEC. It then stores it in 
+   either the system shapelib( if vnmr1) or the user shapelib. */ 
+
+
+exists('BPspinlock','parameter','global'):$e2
+if $e2=1 then
+   if BPspinlock=0 then "set C13 spinlock bandwidth to default value"
+    BPspinlock=50d        
+   endif
+else 
+   create('BPspinlock','real','global')
+   BPspinlock=50d     "set C-13 spinlock bandwidth to default value"
+endif
+format(BPspinlock,9,1):$bw  
+
+
+
+
+
+
+
+
+
+
+ $wave = 'WURST2m' + $bw + '/0.08ms'
+ opx			          " setup CC spinlock "
+ setwave($wave)  
+ pbox_rst
+ pboxpar('name', 'cctocsy.DEC')
+ pboxpar('stepsize', '1.0')
+ pboxpar('sfrq', dfrq)
+ pboxpar('sucyc', 't9,t5,m4')
+ pboxpar('ref_pwr', pwClvl)
+ pboxpar('ref_pw90', pwC*compC)
+ " pboxpar('reps', '0')  - to suppress the Pbox output "
+ shell('Pbox')
+ if BPpwrlimits=1 then
+  BPpboxget('cctocsy.DEC'):$name,$par,$dpwr,$par,$par,$par
+  if $dpwr>BPdpwrmax then             "recreate shape at lower power"
+     pboxpar('attn',$attn)
+     echo($attn)
+     shell('Pbox')
+  endif
+ endif
+ BPmoveshape('cctocsy.DEC')            "puts shape in proper shapelib"
+
+/* The section prepares broadband 13C decoupling waveforms in the form 
+   of wurstxx.DEC where xx is the bandwidth in ppm. It then stores each
+   in either the system shapelib (if vnmr1) or the user shapelib. */ 
+
+format(90.0*sfrq/4.0,9,1):$bw  "set C13 bandwidth to 80 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') " can omit for less power, but > sideband"
+endif
+pboxpar('name', 'wurst80.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst80.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst80.DEC')
+
+
+
+
+
+format(130.0*sfrq/4.0,9,1):$bw      " set C13 bandwidth to 110 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'wurst110.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst110.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst110.DEC')
+
+format(60.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 50 
+ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') " can omit for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst50.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst50.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst50.DEC')
+
+
+
+
+
+
+format(45.0*sfrq/4.0,9,1):$bw    " set C13 bandwidth to 40 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') " can omit for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst40.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst40.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst40.DEC')
+
+
+
+format(160.0*sfrq/4.0,9,1):$bw    " set C13 bandwidth to 140 ppm "
+if BPpwrlimits=1 then
+ $wave = 'WURST40' + $bw + '/1.4ms'
+else
+ $wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=0 then
+ pboxpar('$1 adb','3.0') "can omit for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst140.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst140.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst140.DEC')
+
+
+
+/* The section prepares band-selective 13C decoupling waveforms. It 
+then stores each in either the appropriate shapelib */
+opx			          " set COCb decoupling "
+setwave('WURST2 20p/5m 175p')  " CO decoupling "
+setwave('WURST2 22p/5m 36p')   " main Cb band "
+setwave('WURST2  6p/5m 71p')   " Threonines "
+setwave('WURST2  6p/5m 15p')   " Alanines "
+pbox_rst
+pboxpar('name', 'cocbdec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+pboxpar('$3 adb', '1.2')
+pboxpar('$4 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cocbdec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cocbdec.DEC')
+
+opx			          " set COCa decoupling "
+setwave('WURST2 20p/5m 174p')  " CO decoupling "
+setwave('WURST2 22p/5m 30p')   " Ca decoupling "
+pbox_rst
+pboxpar('name', 'cocadec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '56p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+pboxpar('$2 adb', '1.2')
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('cocadec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('cocadec.DEC')
+
+
+
+opx			          " set CO decoupling "
+setwave('WURST2 20p/5m 174p')  " CO decoupling "
+pbox_rst
+pboxpar('name', 'codec.DEC')
+pboxpar('stepsize', '4.0')
+pboxpar('sfrq', dfrq)
+pboxpar('refofs', '35p')
+pboxpar('sucyc', 't5')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+pboxpar('$1 adb', '2.0') "more power for CO dec as it is further away"
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('codec.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('codec.DEC')
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+$dmmyshp=''
+$freq = -(150-46)*dfrq  " distance from Cab to the CO/ aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 0' "ph=0 st=0"
+opx
+setwave($wave1)
+pbox_rst
+pboxpar('name', 'CgCO1.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+shell('Pbox')
+
+$bw1 = ''
+$wave1 = ''
+$offset = ''
+$freq = -(150-46)*dfrq  " distance from Cab to the CO/ aromatic region"
+format(80.0*dfrq,9,1):$bw1   " set decoupling bandwidth to 90 ppm "
+format($freq,9,1):$offset
+$wave1 = 'g3' + $bw1 + '/0.005' + $offset +'0 1' "ph=0 st=1 time-
+inversed"
+
+opx
+setwave($wave1)
+pbox_rst
+pboxpar('name', 'CgCO2.RF')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+shell('Pbox')
+BPmoveshape('CgCO1.RF')
+BPmoveshape('CgCO2.RF')
+
+"make CaCO.DEC"
+$bw1 = ''
+$bw2 = ''
+$wave1 = ''
+$wave2 = ''
+$offset = ''
+$freq = -(174-56)*dfrq           " distance to alpha carbon region"
+format(40.0*dfrq,9,1):$bw1   " set Ca decoupling bandwidth to 40 ppm "
+format(20.0*dfrq,9,1):$bw2   " set CO decoupling bandwidth to 20 ppm "
+format($freq,9,1):$offset   
+$wave1 = 'WURST2' + $bw1 + '/1.01ms' + $offset
+$wave2 = 'WURST2' + $bw2 + '/1.01ms'
+opx
+setwave($wave1)
+setwave($wave2)
+pbox_rst
+pboxpar('name', 'CaCO.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+shell('Pbox')
+BPmoveshape('CaCO.DEC')
+
+/* The section prepares solvent suppression 1H waveforms. It then 
+stores each in either the appropriate */ 
+if (sfrq>810) then
+   opx('S_at_12p')
+   setwave('s 0.000064')
+   cpx(pw*compH,tpwr)
+ endif
+ if ((sfrq>760) and (sfrq<810)) then
+   opx('S_at_12p')
+   setwave('s 0.000072')
+   cpx(pw*compH,tpwr)
+ endif
+ if ((sfrq>590) and (sfrq<610)) then
+   opx('S_at_12p')
+   setwave('s 0.000096')
+   cpx(pw*compH,tpwr)
+ endif
+ if ((sfrq>490) and (sfrq<510)) then
+   opx('S_at_12p')
+   setwave('s 0.000115')
+   cpx(pw*compH,tpwr)
+ endif
+ if ((sfrq>390) and (sfrq<410)) then
+   opx('S_at_12p')
+   setwave('s 0.000144')
+   cpx(pw*compH,tpwr)
+ endif
+ if ((sfrq>290) and (sfrq<310)) then
+   opx('S_at_12p')
+   setwave('s 0.000192')
+   cpx(pw*compH,tpwr)
+ endif
+BPmoveshape('S_at_12p.RF')
+n3=$n3                        "n3 was memorized above. Now is restored"
+
+         Table 9.  The BPcal macro  
+
+/* This macro runs other macros, each of which produces an RF shaped 
+   pulse file that is stored in the appropriate shapelib. The basis of
+   this is that sfrq is known to the macro so that phase-ramped shaped
+   pulses may be created with proper pulse widths and phase ramps to 
+   achieve the desired excitation. Pulse widths can be calculated in 
+   each macro for the desired effect. The same equations are used in 
+   the experiment setup macros. Shapes are first created for the 
+   maximum number of steps possible (200nsec per step) and these are
+   usually rectangular or sinc-shaped. If off-resonance excitation is
+   desired, a phase ramp is imposed on the shape using the BPconvolute
+   macro. The end results are shapes that are used with specific pulse
+   widths, but the amplitudes are not determined. These are determined
+   by the pulse sequence code itself (except for those sequences 
+   directly using Pbox to produce the shaped pulses). See Table 10 */
+
+exists(userdir+'/shapelib','directory'):$exists
+if $exists<1 then mkdir(userdir+'/shapelib') endif
+
+/* 180 degree inversion pulse across 200ppm, centered on dof, to invert  
+all C13 nuclei when dof=70ppm */
+BPmakestC200
+
+/* 180 degree inversion pulse across 140ppm, centered on dof, to invert  
+all C13 nuclei when dof=70ppm */
+BPmakestC140
+
+/* 180 degree inversion pulse across 80ppm, centered on dof, to invert  
+all aliphatic C13 nuclei without perturbing protein aromatic or CO 
+C13 nuclei when dof=35ppm*/
+BPmakestC80
+
+/* 180 degree inversion pulse across 30ppm, centered on dof, to invert  
+all aromatic C13 nuclei without perturbing protein aliphatic C13
+nuclei when dof=125ppm, OR to invert Ca's without perturbing protein
+aromatic or CO  C13 nuclei when dof=56ppm*/
+BPmakestC30
+
+/* 3 ms 180 degree pulse across 50ppm, with the 10% left-hand edge of    
+the inversion at 50 ppm when dof=56ppm, to invert Cb's to the right of 
+the Ca's */
+BPmakestC50_3r
+
+/* 5 ms 180 degree pulse across 50ppm, with the 3% left-hand edge of 
+the inversion at 50 ppm when dof=56ppm, to invert Cb's to the right of 
+the Ca's */
+BPmakestC50_5r
+
+/* 3 ms 180 degree pulse across 50ppm, with the 10% right-hand edge of 
+the inversion at 63 ppm when dof=56ppm, to invert Cb's to the left of 
+the Ca's. A narrower inversion can be used, but it is handy for all 
+other aspects to be the same as stC50r"
+BPmakestC50_3l
+
+
+
+/* 5 ms 180 degree pulse across 50ppm, with the 3% right-hand edge of 
+the inversion at 63 ppm when dof=56ppm, to invert Cb's to the left of 
+the Ca's. A narrower inversion can be used, but it is handy for all 
+other aspects to be the same as stC50r*/
+BPmakestC50_5l
+
+/* 10 ms 180 degree pulse across 12.5ppm, from 50ppm to 62.5ppm for to 
+dof at 35ppm, to invert Ca's and not touch almost all Cb's  */
+BPmakestC12_10
+
+/* 180 degree inversion pulse across 30ppm, centered on dof, to invert  
+"all RNA aromatic C2/C6/C8 (dof=150ppm) C13 nuclei without perturbing 
+RNA pyrimidine C5 and ribose C13 nuclei */
+rna_makestC30
+
+/* 180 degree inversion pulse across 50ppm, centered on dof, to invert  
+all RNA ribose and pyrimidine C5 (dof=85ppm) C13 nuclei without 
+perturbing RNA aromatic C2/C6/C8 C13 nuclei */
+rna_makestC50
+
+/* 180 degree inversion pulse across 80ppm, centered on dof, to invert  
+all RNA aromatic C5/C6/C8 (dof=125ppm) C13 nuclei without perturbing 
+RNA ribose nuclei */
+rna_makestC80
+
+/* 180 degree inversion pulse across 60ppm, centered on dof, to invert  
+all RNA ribose C1' and aromatic C6/C8 (dof=115ppm) C13 nuclei without 
+perturbing RNA ribose C2' and aromatic C2 C13 nuclei */
+rna_makestC60
+
+/* 180 degree inversion pulse across 140ppm, centered on dof, to invert  
+all C13 nuclei when dof=110ppm */
+rna_makestC140
+
+/* 180 degree inversion pulse across 50ppm, centered on dof2, to invert  
+all aromatic N1/N9 N15 nuclei when dof2=155ppm */
+rna_makestN50
+
+/* 180 degree inversion pulse across 100ppm, centered on dof2 
+*/rna_makestN100
+
+/*90 degree selective one-lobe pulse on H2O (1.2 ppm), < 1% excitation 
+off resonance*/
+rna_makeH2Osinc
+
+/*90 degree selective one-lobe pulse on H2O (0.5 ppm), < 1% excitation 
+off resonance*/
+rna_makeH2Osinc1     
+
+/*flopsy8 decoupling pattern will be made only if not already present*/
+rna_makeflopsy8
+
+/*dipsi2 decoupling pattern will be made only if not already present*/
+rna_makedipsi2
+
+
+
+/*90 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency 
+at CO. Generates offC13.RF*/
+BPmake90Ca_CO
+
+/*180 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency 
+at CO. Generates offC3.RF*/
+BPmake180Ca_CO
+
+/*180 degree square pulse on Ca, null at CO, 118ppm away. C13 frequency 
+at Cab. Generates offC4.RF*/
+BPmake180Ca
+
+/*90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 
+frequency at Ca. Generates offC2.RF*/ 
+BPmake90CO_Ca
+
+/*90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13  
+frequency at Cab. Generates offC5.RF*/
+BPmake90CO
+
+/*90 degree selective sinc one-lobe pulse on CO, first null at Ca.  C13 
+frequency at CO. Generates offC6.RF*/
+BPmake90CO_CO
+
+/*180 degree selective sinc one-lobe pulse on Cab.  C13 frequency at 
+CO.  Generates offC27.RF*/
+BPmake180Cab_CO
+
+/*180 degree selective sinc one-lobe pulse on CO, first null at Ca.*/ 
+      /*C13 frequency at Cab.  Generates offC7.RF*/
+         BPmake180CO
+      /*C13 frequency at CO.  Generates offC8.RF*/
+         BPmake180CO_CO 
+/*180 degree selective sinc one-lobe pulse on Ca, first null at CO.*/
+      /*C13 frequency at CO.  Generates offC17.RF*/
+         BPmake180Ca_Cos
+
+/*180 degree selective sinc one-lobe pulse on CO, first null at Ca.*/
+      /*C13 frequency at Ca.  Generates offC9.RF*/
+         BPmake180CO_Ca
+      /*C13 frequency at 35ppm.  Generates offC10.RF*/
+         BPmake180COa
+
+/*90 degree selective one-lobe pulse on H2O */
+if (wexp<>'BP10')     "wexp=BP10 for autocalibrate process where" 
+ then BpmakeH2Osinc   "H2Osinc.RF is made"
+endif     
+BPmakeH2Osinc1
+
+/*dipsi2 decoupling pattern will be made only if not already present*/
+BPmakedipsi2
+
+/*180-degree cosine-modulated pulse on NH, leaving H2O unaffected 
+(180's at +4ppm and -4ppm from H2O)*/
+BPmakecosinemodulate 
+
+
+         Table 10.  The BPmake90CO_Ca macro 
+
+"Carrier on Ca, 90 degree sinc pulse on CO 118ppm away, null at Ca."
+"The carrier should be set to 56ppm."
+
+$pwC2 = 80.5*600.0/sfrq    "proper pulse width for this excitation"
+                             "make maximum number of 200nsec steps"
+$steps2 = $pwC2*5.0   $steps2 = 2.0*trunc($steps2/2.0) + 1.0
+$pwC2 = ($steps2 + 1.0)/5.0     "find actual pulse width that fits"
+$rf2 = 1023.0                           "maximum power in waveform"
+BPmakesinc($steps2, $rf2) "makes a sinc pulse with correct # steps"
+
+$stps2 = ''     
+format($steps2,0,0):$stps2 "make a text piece with correct numbers"
+$shape2 = 'sincs' + $stps2      "make a name using number of steps"
+
+$freq2 = dfrq*118.0     "desired off-resonance shift in excitation" 
+BPconvolute($shape2,'offC2',$pwC2,$freq2) "make phase-ramped shape"
+BPmoveshape('offC2.RF')       "store shape in appropriate shapelib"
+
+shell('rm -f',userdir+'/shapelib/'+$shape2+'.RF'):$dum
+write('line3','The SLP pulse "shapelib/offC2.RF" has been created')
+
+
+         Table 11.  The BPsetwurstparams macro 
+
+/* The macro obtains decoupling channel parameters directly from the
+   waveform specified, depending on the name of the pulse sequence. The
+   macro BPpboxget looks in the header of the shape file to find values
+   and installs them in a specific order. Variables preceded by $ are 
+   not set. BPsetwurstparams is used in experiment setup macros  */ 
+
+if ((seqfil='hbcbcgcdceheA') or (seqfil='hbcbcgcdhdA')) then
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='hbcbcacocahaA') or (seqfil='hacahbA') or 
+(seqfil='noesyCA')) then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='gChsqc') or (seqfil='gChsqcP') or (seqfil='gChsqcA')) then
+ if arom='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if alphaC='y' then 
+   BPpboxget('wurst50.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if allC='y' then 
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if aliph='y' then 
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+endif
+
+
+if (seqfil='gChmqc') then
+ if arom='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if aliph='y' then 
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+endif
+
+if ((seqfil='gCfhsqc') or (seqfil='gCfhsqcA') or 
+(seqfil='CNnoesy_interintraA')) then
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='CTgChmqc') then
+ if arom='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if aliph='y' then 
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+ if allC='y' then 
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+endif
+if ((seqfil='ghca_co') or (seqfil='ghca_co_n'))  then
+   BPpboxget('wurst50.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='ghca_coA') or (seqfil='ghca_co_nA'))  then
+   BPpboxget('wurst50.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='ghn_ca') then
+   BPpboxget('cocbdec.DEC'):Cbdseq,$dmmy,Cbdpwr,$dmmy,Cbdres,Cbdmf
+endif
+
+if (seqfil='gChmqcnoesyNhsqc') then
+   BPpboxget('codec.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='gNhmqcnoesyNhsqc') then
+   BPpboxget('cocadec.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='gnoesyChsqcA') or (seqfil='gnoesyCNhsqcA') or
+    (seqfil='gChsqcnoesyA') or (seqfil='gNhsqctocsyA') or
+    (seqfil='gChsqctocsyA') or (seqfil='gtocsyChsqcA')) then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='gnoesyChsqc') or (seqfil='gnoesyCNhsqc') or 
+(seqfil='gLRCC') or
+    (seqfil='gChsqcnoesy') or (seqfil='gLRCH') or
+    (seqfil='gNhsqctocsy') or (seqfil='gNhsqctocsyA') or
+    (seqfil='gNhsqcnoesy') or (seqfil='gNhsqcnoesyA') or
+    (seqfil='rna_hmqc_tocsy') or
+    (seqfil='gChsqctocsy') or (seqfil='gtocsyChsqc')) then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='ghcch_tocsy') or (seqfil='ghcch_tocsySP') or 
+(seqfil='hcch_tocsy') or (seqfil='hcch_tocsySP') then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='hcch_tocsyA') or (seqfil='hcch_cosyA')) then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='tnnoesy') or (seqfil='SSnoesy') or
+    (seqfil='tntocsy') or (seqfil='tnroesy') or
+    (seqfil='qwnoesy') or (seqfil='qwnoesyA') or
+    (seqfil='tndqcosy') or (seqfil='tnmqcosy')) then 
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='wgnoesy') or (seqfil='zdipsitocsy') or
+    (seqfil='wroesy') or (seqfil='wnoesy') or
+    (seqfil='qwnoesy') or (seqfil='wgtocsy') or (seqfil='water')) then 
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+if (seqfil='hcch_tocsyP') then
+   BPpboxget('cctocsy.DEC'):mixpat,pwmix,mixpwr,mixpwrf,mixres,mixdmf
+endif
+
+if (seqfil='ghn_coca_cb') then
+   BPpboxget('CgCO1.RF'):$dmmyshp,pwCgCO,pwCgCO_lvl
+endif
+
+if ((seqfil='rna_gChsqc') or (seqfil='rna_gCtrosy')) then
+ if aromatic='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ else
+ if allC='y' then 
+   BPpboxget('wurst110.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ else
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif endif endif
+
+if (seqfil='rna_gCtrosy') then
+   if (aromatic_C5='y') then 
+    BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+   endif
+endif
+
+if ((seqfil='rna_gnoesyChsqc') or (seqfil='rna_gnoesyChsqcA')) then
+   BPpboxget('wurst140.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='rna_hcch_tocsy') then
+ if AH2H8='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ else
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif endif
+
+if ((seqfil='rna_gChmqc') or (seqfil='rna_hcch_cosy')) then
+ if aromatic='y' then 
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ else
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif endif
+
+if ((seqfil='rna_Ahnctocsyc') or (seqfil='rna_HCN') or 
+(seqfil='rna_HCP'))  then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if ((seqfil='rna_CUhnccch') or (seqfil='rna_Ghnctocsyc'))  then
+   BPpboxget('wurst40.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+if (seqfil='rna_ghcch_tocsy')  then
+   BPpboxget('wurst80.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+endif
+
+
+
+ if ((seqfil='rna_tnnoesy') or (seqfil='rna_wetnoesy') or
+    (seqfil='rna_wettntocsy') or (seqfil='tnroesy') or 
+    (seqfil='rna_tndqcosy') or (seqfil='rna_wroesy') or
+    (seqfil='tnmqcosy')) then 
+      BPpboxget('wurst110.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+
+ if ((seqfil='wgnoesy') or (seqfil='rna_WGnoesy') or (seqfil='wnoesy')
+   or (seqfil='qwnoesy') or (seqfil='wgtocsy') or (seqfil='rna_water'))
+ then 
+    BPpboxget('wurst110.DEC'):dseq,$dmmy,dpwr,$dmmy,dres,dmf
+ endif
+
+
+
+7.0	Updating the Probefile after a new PW90 is Determined
+
+It is possible to update the probefile after determining a new RF 
+calibration without doing a full update. The BPXupdatepw90 macros, 
+where X=H1,C13,N15 do an update of all parameters depending on the 
+specified nucleus calibration, including re-creation of waveforms. 
+These macros are detailed in Table 12.
+
+
+
+
+
+
+
+
+
+
+     Table 12. BPXupdatepw90 (for X=H1,C13 or N15) 
+
+
+/* BPH1updatepw90: updates proton pulse parameters values in probefile.
+Updates probefile with tof,tpwr,compH values in this parameter set. 
+pw90 is updated to pw value and stored in probefile. finepower values 
+in  probefile adjusted. ref_pw90 and ref_pwr values in probefile 
+updated*/
+
+ "read old H1pw and store in p1"
+ getparam('pw90','H1'):$pw90_probefile
+
+ "ratio of new and old pw"
+ $ratio=pw/$pw90_probefile
+ pw=trunc(100*pw)/100
+ pw90=trunc(100*pw)/100
+ ref_pw90=trunc(100*pw*compH)/100 ref_pwr=tpwr
+
+ "load H1tpwrsf values into $tpwrsf values"
+ getparam('tpwrsf','H1'):$tpwrsf_probefile
+ getparam('tpwrsf_u','H1'):$tpwrsf_u_probefile
+ getparam('tpwrsf_d','H1'):$tpwrsf_d_probefile
+ getparam('tpwrsf_i','H1'):$tpwrsf_i_probefile
+ getparam('tpwrsf_t','H1'):$tpwrsf_t_probefile
+ getparam('tpwrsf_n','H1'):$tpwrsf_n_probefile
+
+ "Calculate updated H1tpwrsf"
+ $tpwrsf_probefile=trunc($tpwrsf_probefile*$ratio)
+ $tpwrsf_u_probefile=trunc($tpwrsf_u_probefile*$ratio)
+ $tpwrsf_d_probefile=trunc($tpwrsf_d_probefile*$ratio)
+ $tpwrsf_i_probefile=trunc($tpwrsf_i_probefile*$ratio)
+ $tpwrsf_t_probefile=trunc($tpwrsf_t_probefile*$ratio)
+ $tpwrsf_n_probefile=trunc($tpwrsf_n_probefile*$ratio)
+
+ getparam('finepwrf','H1'):$finepwrf_probefile
+
+ "calculate updated H1finepwrf"
+ $finepwrf_new=trunc($finepwrf_probefile*$ratio)
+
+ $tpwrsf='' format($tpwrsf_probefile,4,1):$tpwrsf
+ setparams('tpwrsf',$tpwrsf,'H1')
+ $tpwrsf_u='' format($tpwrsf_u_probefile,4,1):$tpwrsf_u
+ setparams('tpwrsf_u',$tpwrsf_u,'H1')
+ $tpwrsf_d='' format($tpwrsf_d_probefile,4,1):$tpwrsf_d
+ setparams('tpwrsf_d',$tpwrsf_d,'H1')
+ $tpwrsf_i='' format($tpwrsf_i_probefile,4,1):$tpwrsf_i
+ setparams('tpwrsf_i',$tpwrsf_i,'H1')
+ $tpwrsf_t='' format($tpwrsf_t_probefile,4,1):$tpwrsf_t
+ setparams('tpwrsf_t',$tpwrsf_t,'H1')
+ $tpwrsf_n='' format($tpwrsf_n_probefile,4,1):$tpwrsf_n
+ setparams('tpwrsf_n',$tpwrsf_n,'H1')
+ $finepwrf='' format($finepwrf_new,4,1):$finepwrf
+ setparams('finepwrf',$finepwrf,'H1')
+ $ref_pw90='' format(ref_pw90,2,2):$ref_pw90
+ setparams('ref_pw90',$ref_pw90,'H1')
+ $ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+ setparams('ref_pwr',$ref_pwr,'H1')
+ $pw90='' format(pw90,2,2):$pw90
+ setparams('pp',$pw90,'H1')
+ setparams('pw90',$pw90,'H1')
+ $tpwr='' format(tpwr,2,0):$tpwr
+ setparams('tpwr',$tpwr,'H1')
+ setparams('pplvl',$tpwr,'H1')
+ $dmf=trunc(1e6/(pw*10*compH)) $dpwr=tpwr-20
+ $dmfH1='' format($dmf,5,0):$dmfH1
+ $dpwrH1='' format($dpwr,2,0):$dpwrH1
+ setparams('dmf',$dmfH1,'H1')
+ setparams('dpwr',$dpwrH1,'H1')
+ $tofH2O='' format(tof,4,1):$tofH2O
+ setparams('tofH2O',$tofH2O,'H1')
+ $compH='' format(compH,4,3):$compH
+ setparams('compH',$compH,'H1')
+ setparams('tpwr_cf',$compH,'H1')
+
+ write('line3','H1 Probefile Update Finished')
+ banner('H1 Probe File Parameters Updated using This pw90')
+
+
+
+/*BP15Nupdatepw90- updates probefile values based on pwN/pwNlvl/compN. 
+Updates decoupling parameters in probefile to local values*/
+
+pwN=trunc(10*pwN + 0.5)/10
+
+$dmm2=dmm2
+length(dmm2):$length
+substr(dmm2,$length,1):$mode  "last character"
+$pwNdec=1/(4*18*dfrq2)  "pw90 for 18ppm 15N decoupling field "
+ln((1e6*$pwNdec)/(compN*pwN)):$ln
+dpwr2=pwNlvl - 20.0*$ln/2.303
+dpwr2=trunc(dpwr2+0.5)
+dmf2=trunc(1/$pwNdec)   
+
+"  if BPpwrlimits=1, limit dpwr2 tp BPdpwr2max and adjust dmf2 "
+if BPpwrlimits=1 then
+  if BPdpwr2max<dpwr2 then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr2-BPdpwr2max)
+    exp($exp):$factor
+    dmf2=trunc(dmf2/$factor)
+    dpwr2=BPdpwr2max
+  endif
+endif
+
+dmm2='cc'+$mode dseq2='' dres2=1.0 dm2='nny'
+
+$compN='' format(compN,4,3):$compN
+$pwN='' format(pwN,3,1):$pwN
+$dmf2='' format(dmf2,5,0):$dmf2
+$dpwr2='' format(dpwr2,5,0):$dpwr2
+$pwNlvl='' format(pwNlvl,2,0):$pwNlvl
+$dres2='' format(dres2,5,1):$dres2
+
+
+setparams('compN',$compN,'N15')
+setparams('pw90',$pwN,'N15')
+setparams('pwx',$pwN,'N15')
+setparams('pwN',$pwN,'N15')
+setparams('pwNlvl',$pwNlvl,'N15')
+setparams('tpwr',$pwNlvl,'N15')
+setparams('pwxlvl',$pwNlvl,'N15')
+setparams('pwxlvl_cf',$compN,'N15')
+setparams('dpwr2NH',$dpwr2,'N15')
+setparams('dpwr',$dpwr2,'N15')
+setparams('dmm',dmm2,'N15')
+setparams('dmm2NH',dmm2,'N15')
+setparams('dres2NH',$dres2,'N15')
+setparams('dres',$dres2,'N15')
+setparams('dmf2NH',$dmf2,'N15')
+setparams('dmf',$dmf2,'N15')
+
+
+dmm2=$dmm2
+banner('N15 Pulse and Decoupling Probefile Parameters Updated ')
+
+
+"BPC13updatepw90"
+pwC=trunc(10*pwC + 0.5)/10
+
+$pwC='' format(pwC,3,1):$pwC
+$pwClvl='' format(pwClvl,2,0):$pwClvl
+
+setparams('pw90',$pwC,'C13')
+setparams('pwx',$pwC,'C13')
+setparams('pwC',$pwC,'C13')
+setparams('pwClvl',$pwClvl,'C13')
+setparams('tpwr',$pwClvl,'C13')
+setparams('pwxlvl',$pwClvl,'C13')
+
+BPsetupshapes "recreate *.DEC shapes with new pwC"
+banner('C13 Pulse Probefile Parameters Updated and Decoupling Shapes 
+Re-created')
+
+
+8.0	AutoCalibration
+
+The above sections describe how a probefile is created and updated. It describes how 
+experiments are setup using macros, and the steps involved along the way. If a user had 
+to manually perform all the RF and gradient calibrations, as well as any small-angle 
+phase corrections necessary for some pulse sequences, the potential for error is large, not 
+to consider the time necessary for the activity. For this reason, several macros are 
+provided to perform automatic RF and gradient calibrations. In addition, any small-angle 
+phase shifts necessary are determined. All results are stored in the probefile and these 
+results are accessed by the experiment setup macros. Since these calibrations and settings 
+are used by the experiment setup macros, a full autocalibration should be done on a 
+doubly-labeled (13C and 15N) protein or RNA. If such a sample is not available, 
+calibrations may be performed on a 13C- or 15N-labeled compound giving a mechanism 
+for obtaining all the RF and gradient calibrations. The full autocalibration method should 
+be used on a doubly-labeled compound before any triple-resonance experiments utilizing 
+specific small-angle phase corrections. If there is any doubt, examine the setup macro 
+(same name as the pulse sequence) for any small-angle phase correction statements.
+
+Autocalibration is performed by the BPAutoProteinCal macro (Table 14). There are 
+several options available and these are passed to the macro as arguments ($1). The 
+possible options are listed in Table 13.
+
+                      Table 13   BPAutoProteinCal Options
+
+Option($1) specified 
+   None                 Full calibration (use probefile values)
+   2                    Full calibration (use current tof) 
+   3                    Full calibration (use current tof,pw)
+   4                    Fast Option   (RF only)
+5	1H only 
+6	N15 only
+7	C13 only
+ BioNMR                 Use BioNMR (*P.c) sequences within calibration
+
+Full calibration is possible using all starting values obtained from the probefile ($1=0). 
+Sometimes a user might have determined a new value for the H2O frequency and in this 
+case this new value of tof (in the current parameter set would be used ($1=2). Similarly, 
+if the user had also determined a new pw90 for 1H, the $1=3 option permits the 
+calibration to use this information as the starting point. 
+
+Full calibration results in all the RF calibrations for 1H, 13C and 15N (pw90's and 
+amplifier compression factors), fine power values for various H2O selective pulses, 
+small-angle phase shifts optimization for these selective pulses, gradient values for 
+coherent transfer gradients in sensitivity-enhanced experiments for 13C and 15N, Bloch-
+Seigert phase corrections for several sequences involving shaped pulses, 1D first 
+increment spectra for a large number of double- and triple-resonance experiments and 
+comparisons of intrinsic sensitivities of different pulse sequences relative to HSQC for 
+the appropriate nucleus.
+
+Once a full calibration has been performed there is usually no need for small-angle phase 
+corrections, gradient values and 1D spectra to be redetermined since these are 
+independent of sample. Therefore, the Fast Option ($1=4) can be used to characterize a 
+new sample(perhaps after the spectrometer has been used by another operator).
+
+If there is only a sample change and probe (1H) retuning, the 1H-only option ($1=5) is a 
+fast way to redetermine the 1H pw90 and update the probefile for all parameters 
+depending on the 1H pw90. Similar options for 13C and 15N ($1=6 and 7) permit 
+recalibration of these nuclei and updating of relevant probefile values.
+
+BioNMR is not an option of BpUutoProteinCal, but its (global) value is checked in 
+determining if *P.c sequences are used instead of the *.c sequences. The BioNMR 
+sequences calculate needed shapes "on-the-fly" at "go" instead of using shapes produced 
+by BPcal. BioNMR has values of 0 and 1 and is a global variable.
+       
+
+
+
+                      Table 14   BPAutoProteinCal 
+
+"BPAutoProteinCal(<option>)"
+
+
+$date=''
+BPgetdate:$date                "this gets the date/time as text string"
+if ($#>0) then                                      "An option is used"
+  if $1=4 then                                            "Fast Option"
+    if (BPBioNMR) then                                "BioNMR selected"
+      printon man('proteinpreface4P') printoff     "prints cover sheet"
+    else
+      printon man('proteinpreface4') printoff
+    endif                   
+  else           "other option"
+    if (BPBioNMR) then                                "BioNMR selected"
+      printon man('proteinprefaceP') printoff
+    else
+      if $1=5 then  "1H pw90-only Option"
+          printon man('proteinpreface5') printoff
+      elseif $1=6 then
+          printon man('proteinpreface6') printoff
+      elseif $1=7 then
+          printon man('proteinpreface7') printoff
+      else
+          printon man('proteinpreface') printoff
+      endif
+    endif                   
+  endif
+else                                                "Full calibration"
+  if (BPBioNMR) then                                 "BioNMR selected"
+    printon man('proteinprefaceP') printoff
+  else
+    printon man('proteinpreface') printoff
+  endif    
+endif
+
+BPdeuterated=0            "not used for autocalibrates (is used in 2D)"
+cd(userdir)  "Back up existing file and makes fresh directory for data"
+exists('AutoTripRes','file'):$e
+if ($e=1) then
+  exists('BioPack.dir/backups','directory'):$e
+  if not($e) then
+    shell('mkdir -p BioPack.dir/backups'):$dum
+  endif
+  mv('AutoTripRes','BioPack.dir/backups/AutoTripRes_'+$date)
+endif
+mkdir('AutoTripRes')       
+$tof=tof $pw=pw            "memorize current tof and pw in case needed"
+hcch_tocsy                                 "runs the hcch_tocsy macro "
+$vtset=''                                    "find the current temp " 
+shell('showstat > ',curexp+'/stat'):$dummy
+lookup('file',curexp+'/stat','VT','active:','read'):$vtset,$ret
+delete(curexp+'/stat')
+if $ret then
+  format($vtset,0,1):temp            "updates temp with current value"
+endif
+if ($#>0) then
+  "No argument uses standard values for pw/tof in hcch_tocsy parameter 
+set"
+  if $1=2 then tof=$tof endif
+  if $1=3 then tof=$tof pw=$pw endif
+  if $1=4 then r7=1 endif      "For Fast RF-Only Calibration (stops at 
+BP5d)"
+  if $1=5 then r7=2 endif    "For 1H pw90 Calibration only (not compH)"
+  if $1=6 then          "For 1H/15N Calibraion on 15N-labeled compound"
+     gNfhsqc dm2='nnn' r7=6          "Change to fast hsqc for 15N-only"
+                     "r7 is set to be able to check later for stopping"
+     wnt='wft select(1) setref sp=6p wp=4p vsadj(50) dssh'
+  endif    
+  if $1=7 then r7=7 endif       "For 1H/13C Calibration on 13C-labeled 
+compound. r7 is set for checking later for stopping"
+endif
+
+if (seqfil='hcch_tocsy') then
+ dm='nnn' ncyc=0 ni2=0 phase2=1            "no spinlock or decoupling"
+ wnt='wft select(1) setref sp=-1p wp=5.3p vsadj(50) dssh'
+endif
+
+ni=0 phase=1 
+pw=trunc(10*pw + 0.5)/10 "ensures pw is multiple of 100nsec"
+nt=2 array('pw',15,pw-0.35*pw,0.05*pw)    
+f ss=4 ssfilter=500 ssntaps=200 ssorder='n' full av
+vp=0 cdc f fn=4*np 
+wexp='BP1'                      "run this macro at end of experiment"
+spin='n'
+au                   "begin and use wexp value for processing at end"
+
+
+The full AutoCalibration process is performed at least once immediately after installation 
+and a probefile update. This ensures that all necessary calibrations are performed. It does 
+require a doubly-labelled sample. If one is not available, the 13C or 15N options above 
+should be used. No triple-resonance experiments involving small-angle phase corrections 
+should be done until this full calibration is performed.
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+9.0	2H AutoCalibration
+
+2H decoupling during a pulse sequence is often desirable, particularly for large 
+deuterated proteins. The hardware necessary to do this is typically a broadband channel 4 
+or a lock/decoupler. In some cases channel 3 might be used. There are macros provided 
+for all of these hardware cases. In each case, the 2H present in the solvent (typically 
+D2O) provides a strong 2H signal via direct observe using the decoupling channel. Here, 
+a single pulse is delivered via the decoupling channel using the same RF path used for 
+decoupling. The signal is detected using the same RF path used for 2H observe for 
+gradient shimming. Only one cable change is necessary to fully automate this calibration. 
+Fortunately, the double-tuned 1H/2H coil is so heavily weighted toward 1H that the 2H 
+calibration is insensitive to sample so the calibration need not be done as often as for 1H. 
+
+The cable change is described in the manual pages and these can be displayed by clicking 
+the proper menu button (VNMR) or by clicking the "Instructions" button (VNMRJ). In 
+both cases the file is displayed in the text window.
+
+In VNMR the user navigates the menu: 
+Main...Setup...Proteins...Calibrate...Other...Deuterium...Direct Detection using 2H 
+Obs...Instructions. 
+
+In VNMRJ the user selects the "Calibrations" page within the Setup folder. The 
+"Instructions" button is displayed within the 2H AutoCalibration group.
+
+In both cases there will be displayed directions for the cable change. This involves 
+moving the decoupling channel RF amplifier output (thick cable) from the top to the 
+bottom of the K5022 RF relay at the back of the box near the magnet. The cable normally 
+attached at the bottom is left unattached. Once this cable is moved the decoupling 
+channel RF will be routed to the lock coil, and yet 2H observe (tn='lk') is still active. 
+Remember to restore the cables to normal position after the calibration is complete.
+
+The process is initiated by using the proper button for the RF channel to be used for 
+decoupling (In VNMR use the menu button "Direct 2H (channel 3(4,lock/decoupler)" or 
+in VNMRJ use the relevant button in the "Calibrations" page within the Setup folder.
+
+The autocalibration consists of an experiment to find the 2H signal, and then for a fixed 
+pulse width, the power level is varied. After the signal goes through a maximum the 
+experiment is automatically stopped and a pulse width array spanning the expected 
+pw360 is set up at the power giving the maximum signal. The null spectrum in this new 
+experiment gives pw360. Then a macro updates the probefile with dpwr3 and dmf3 based 
+on an appropriate decoupling bandwidth. In addition, the dof3 probefile value is updated 
+and set to 2.5ppm in the 2H spectum. Henceforth, any experiment setup macro for an 
+experiment potentially involving 2H decoupling obtains calibrated values for these 
+parameters so 2H decoupling is obtainable by just setting dm3='nyn' (see pulse 
+sequences for details. dm3 is used only as a flag and is not using the normal "status" 
+control.) 
+Calibration via Indirect 2H Detection using 13C Observe:
+
+A pulse sequence (*ddec_pwxcal.c) is supplied that can be used on a C6D6 or CDCl3 
+sample. Cable the probe for C13 observe and connect the channel 4 output to the 2H 
+Decoupling Accessory (coupler box). Connect the lock cable normally connected to the 
+probe to the same box, and connect the box to the probe at the lock BNC. Use the 2H 
+reject filter and low-pass filter at the BB preamp.
+
+Use the menu buttons (VNMR 6.1) or dropdown menu (VNMRJ) for parameters. Adjust
+The C13 pw to the value of a 90 degree pulse and any other appropriate parameters.
+The C6D6 or CDCl3 triplet exhibits a nulling with increasing pw(2H), but the outer lines 
+null at a longer time than the inner lines. Use the outer lines to find a null and this occurs 
+at pw90 (2H).  Use this value to determine dmf3 (dmf3=1e6/pw90) at the power dpwr3.
+
+Control of 2H Decoupling in Pulse Sequences
+
+Deuterium decoupling is optional for spectrometers having 4 channels and may be 
+applied in triple-resonance experiments while CaCb magnetization is transverse, and 
+during any 1H shift evolution, for many BioPack sequences (ghn_co which does not 
+generate transverse CaCb magnetization).  
+
+Note that 2H decoupling is done via dm3='nyn'. No status(B) statement is present in the 
+pulse sequences but dm3 is just used as a flag to call the setstatus statement. All the 
+normal decoupling parameters such as dpwr3, dof3, dmm3, dmf3 etc. are active, 
+however, and should be set properly. The 2H Decoupling Accessory should be used to 
+couple in Channel 4 and the Lock to the lock circuitry of the probe.  The parameter 
+"ampmode" should be set to 'dddp' when 2H decoupling is used with a BB 4th channel. If 
+a lock/decoupler is used, ampmode='dddd'.  This parameter is present and is set by the 
+macro BPsetampmode for all parameter sets having 2H decoupling as an option.
+
+The 2H magnetization is preserved in all sequences except hcch_tocsy and ghcch_tocsy. 
+In the latter cases disturbance of the lock signal may be observed. In sequences where 
+preservation of 2H magnetization is achieved, trim gradients around refocusing pulses are 
+switched off during the 2H decoupling, so additional artifacts are possible.
+
+Testing 2H Decoupling
+
+The parameter set *ddec_s2pul.par uses the pulse sequence *ddec_s2pul.c (s2pul.c with 
+amplifier unblanking and lock sample/hold for channel 4's amp). You can verify the 
+proper dof3 value by adjusting the dof3 array values so that the results are symmetric 
+with respect to dof3. This means that the center value of dof3 corresponds to ~7ppm in 
+the 2H spectrum(for decoupling 13CDCl3 or 13C6D6). 
+
+The dpwr3 and corresponding dmf3 should be large enough to cover about 7-8ppm
+with dof3 set at 3ppm in the 2H spectrum. (It is not necessary to
+decouple over the full 10ppm range since 2H decoupling is usually used to decouple only 
+aliphatic deuterons). Once you have set the 2H calibrations you can then check the 
+decoupling efficiency using your values of dpwr3, dmf3 and dof3.
+
+If the 2H channel on the probe has been retuned, or if calibrations are done manually, the 
+probefile should be updated using the BPbiopack2 macro (via buttons) to update the 
+channel 4 parameters. No change in parameters should be necessary from sample to 
+sample.
+
+2H broadband decoupling is handled internally within the pulse sequences by the 
+"setstatus" psg command, not by the usual "status" approach. Thus, "dps" and "pps" show 
+only status A and C. The dm3 parameter is only used to determine that decoupling is 
+desired during relevant portions of the pulse sequence and is requested by setting 
+dm3='nyn'. Use of the normal status approach will result in other channels being reset to 
+their status values, since all channels are set at the same time by any change in status on 
+any channel. Hence, C13 decoupling that is initiated by waveform generator psg 
+commands (decprgon) at an earlier time would be turned off since dm='n' when there 
+would be a normal status change on any other channel.
+
+
+
+10.0	  Power Limits and the ampmode parameter
+
+The BPpwrlimits parameter (a global variable) has possible values of 0 and 1. If the 
+value is 1 several macros will act accordingly, checking for possible power limit 
+violations. These can arise if a decoupling waveform generated that requires a power in 
+excess of the limit or if a power level is explicitly set. The power limits are not encoded 
+into system-level software or pulse sequences and are only checked when the probefile is 
+updated or an experiment setup macro is run. Each of the first three channels has a global 
+parameter: BPtpwrmax, BPdpwrmax and BPdpwr2max and these are displayed in the 
+"Decoupling" tcl/tk panels (for VNMR) or the "Globals and Settings" page within the 
+VNMRJ Setup folder.  The first macro, BPcheck, is called when an experiment setup 
+macro is run (at the end of BPrtppar) and is described in Table 15.
+
+
+
+                              Table 15   The BPcheck macro  
+
+" BPcheck "
+"This is a macro that will run before every BPsvp"
+"and after every BPrtppar"
+
+if BPpwrlimits=1 then                        "Power limits are desired"
+ if (tpwr>BPtpwrmax) then            "only for case of too much power"
+    ln(10):$ln10    "this section figures out new pw90 for lower power" 
+    $exp=$ln10/20*(tpwr-BPtpwrmax)
+    exp($exp):$factor     
+    pw90=pw90*$factor
+    tpwr=BPtpwrmax       "tpwr is now set to user-defined power limit"
+ endif
+ if (dpwr>BPdpwrmax) then            "only for case of too much power"
+  if ((dmm<>'ccp')or(dmm<>'cccp')or(dmm<>'cpcp'))  "only for non-
+waveform modulation (waveform operation handled by BPsetupshapes"
+   then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr-BPdpwrmax)
+    exp($exp):$factor
+    dmf=dmf/$factor
+    dpwr=BPdpwrmax
+  endif
+ endif
+ if dpwr2>BPdpwr2max then            "only for case of too much power"
+  if ((dmm2<>'ccp')or(dmm2<>'cccp')or(dmm2<>'cpcp'))  "only for non-
+waveform modulation"
+   then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr2-BPdpwr2max)
+    exp($exp):$factor
+    dmf2=dmf2/$factor
+    dpwr2=BPdpwr2max
+  endif
+ endif
+endif
+
+The macros BPcheckdpwr and BPcheckdpwr2 perform similar 
+operations and are used within experiment setup macros for different
+decoupling conditions.
+
+
+Amplifiers can operate in either "pulsed" (blanked) mode or "cw" (unblanked) mode. The 
+ampmode parameter, if existing, allows overriding of default conditions. Normally this is 
+unnecessary for 1H, 13C and 15N, but 2H must be treated differently because of potential 
+interference with lock performance. Normally the ampmode parameter does not exist in a 
+parameter set. If must be created and set properly for 2H decoupling. The BPsetampmode (Table 
+16) macro is used for this purpose. It is called in the experiment setup macros for those sequences 
+having programmed 2H decoupling
+
+
+
+
+                Table 16.  The BPsetampmode macro 
+
+
+" BPsetampmode "
+if (numrfch>3) then                  "only relevant for 4 channels"
+  exists('ampmode','parameter'):$e
+  if $e=0 then create('ampmode','string') endif
+  substr(rftype,4,1):$ddec             "figure out type of channel"
+  if $ddec='l' then                   "Channel 4 is lock/decoupler"
+    dn3='H2'                   "Channel 4 is set for lock normally"
+    ampmode='dddd'            "use default mode for lock/decoupler"
+  else
+    dn3=''                   "Disable Channel 4 except when needed"
+    ampmode='dddp'             "use pulsed mode for normal channel"
+  endif
+else
+  exists('ampmode','parameter'):$e             "ampmode not needed"
+  if $e=1 then destroy('ampmode') endif
+endif
+
+exists('reffrq','parameter'):$e
+if ($e=0) then create('reffrq','real') endif
+reffrq=sfrq
+
+The lock/decoupler can only be in one state or the other. Therefore it cannot affect the lock and 
+the amplifier can be in a default mode. However, a broadband channel needs to have the amplifier 
+in the "pulsed" or "blanked" mode to prevent noise from being picked up in the lock preamp. The 
+name "pulsed" does not mean that only pulses can be applied, it just refers to the blanking mode.
+
+If a "normal" broadband channel is used for 2H decoupling, the user must set dn3='H2' and 
+dm3='nyn' after running the experiment setup macro. Use "dps" to verify activity on channel 4. 
+If the 2H AutoCalibration was performed previously, the dpwr/dmf/dres parameters will be 
+automatically set, leaving only dn3 and dm3 to be set.
+
+
+
+11.0	  Understanding Automated Operations
+
+The above sections describe many of the important macros used in seting up of 
+experiments, their execution and the use of the probefile. Autocalibration, Auto1D, 
+Auto2D and sequence-specific automated operations all use the same basic construct: the 
+experiment is begun with the "au" command. This command is an alias of "go" but will 
+execute any text string present in the wexp, wnt, wbs and werr parameters. These 
+parameters are visible in the VNMR tcl/tk panels "Flags and Cond." And in the VNMRJ 
+"Future Actions" page within the Acquire folder.
+
+All automated experiments have setup macros that set the value of wexp. Often, wnt is 
+set to show updated spectral displays during the acquisition of an array. Experiments can
+be halted  during an acquisition and another Experiment joined without any problem, as 
+long as the the original experiment is restarted by "au" (the wexp/wnt values are still the 
+same). If there is a problem with something failing it can be diagnosed by determining 
+when the failure occurred. If the wexp macro fails, the data is still present and a new "wft 
+dssh" will show the data. Since the data is present the failure must be within the 
+execution of the macro specified by wexp. Sometimes, just looking at the data manually 
+will reveal the source of the problem. If the spectral intensities should rise and fall as a 
+function of the arrayed parameter, but steadily rise or fall, the wexp may fail or determine 
+an incorrect value within its execution. The proper strategy is to examine the failed data 
+set, determine the macro to be executed by wexp and then look at that macro. Examine its 
+operation step-by-step. Sometimes parts of the macro will execute and  evidence of this 
+gives a clue to the failure point. Error messages are often given to help in the diagnosis. 
+
+Autocalibration operations usually generate plots containing parameter tables. These can 
+be examined for the values of wexp so that the operative macro is known.  If a failure 
+occurs, examine that last plotted spectrum. Look for the value of wexp and read that 
+macro. It will have a line containing BPsvf which is the macro saving the data. This gives 
+the name of the fid that then can be recalled with "rt". The data can then be processed 
+manually. If a value of "wnt" is specified in the recalled data, the command "{wnt}" will 
+execute the contents of wnt. If the data look normal, execute the command "{wexp}" 
+which will execute the contents of wexp. This should allow you to view the error 
+condition and take appropriate steps.
+
+12.0	  Experiments Performed During AutoCalibration
+
+The above sections describe in general the experiment setup philosophy and important 
+macros used to manage the probefile. In this section we will cover the actual experiments 
+used for AutoCalibration.
+
+Since a doubly-labeled compound (typ. ~1mM in 90% H2O) will be used, pulse 
+sequences are selected that produce single-transient spectra that do not need to be phase-
+cycled. This means that, apart from the residual water signal, larger signal intensity 
+indicates a more suitable value for a parameter when the parameter is arrayed. This will 
+be the case for all experiments used in this process. Data are stored in the AutoTripRes 
+directory in the user's vnmrsys (any existing directory is moved to the BioPack.dir 
+directory). Each experiment is stored for future examination. Data are processed and 
+plotted as part of the AutoCalibration.
+
+1H, 13C and 15N RF Calibrations
+
+The first experiment set up is hcch_tocsy. While normally this involves a 13C spinlock, 
+this is disabled and 13C decoupling is turned off. Therefore, the experiment is essentially 
+a 13C HSQC. This pulse sequence is used because the 13C transmitter is set in the 
+aliphatic region and therefore resonance offset effects are small (calibrating 13C pulses 
+that are off-resonance will lead to errors, particularly at high field or when pwC values 
+are >10-15usec). The 1H resonance offset effect is small enough to be ignored for 
+pw<10usec.
+
+The BPAutoProteinCal macro sets up the hcch_tocsy experiment using the calibrations 
+and settings found in the active probefile and then sets up a pw (1H) array of 15 values 
+centered around the probefile pw value. It then sets wexp='BP1' and begins the 
+experiment with the "au" command. At the completion of the experiment the BP1 macro 
+executes. It measures the peak height of the tallest peak upfield from the water and uses 
+this pw to set up a new array with smaller step sizes. After this new experiment runs, the 
+BP2 macro does the same analysis and stores the value in the pw90 parameter. The power 
+is then dropped 12dB and a new 90-degree pulse is determined (BP2a and BP2b) in the 
+same manner. The ratio of this new pw90 and the one at higher power permits calculation 
+of compH, the amplifier compression factor for 1H.
+
+This factor should be 1.000 under ideal conditions. However, if the tpwr value is near the 
+top of the range, depending on the amplifier, there may be some "compression" of the 
+amplitude, leading to a longer pw90 at the higher power than would be calculated (12dB 
+should mean a factor of 4 in pulse width). For example, if the pw90 at higher power was 
+6usec and at lower power it was 20, the compression factor would be 20/(4*6), or 0.83. A 
+perfect amplifier would have pw90 at high power be 5usec (the lower power is usually a 
+safer and more accurate power for calibration purposes). For any channel, once 
+compression factors are determined they do not change as a function of sample if the 
+same power values are used.
+
+Following the above experiments, pwC (the 13C pw90) is arrayed around the probefile 
+value over a large range (for example, from 6-28usec). A usuable probe will have pwC 
+fall within this range, and a signal maximum will occur near the correct pwC value. 
+Again, this new value is used as the center of a new pwC array with smaller step size and 
+the best value in this new experiment is "memorized" and stored in the parameter set 
+(macros BP3 and BP4).
+
+Some pulse sequences involving simultaneous 13C and 15N pulses automatically drop 
+powers on these channels 3dB for probe protection. Therefore, pwC is then arrayed at this 
+new power, a maximum found, and a new array with smaller step size performed (macros 
+BP4aa and BP4aaa).  An estimate of the 13C amplifier compression factor, compC , is 
+also determined.
+
+At this point the gNfhsqc experiment is set up and a pwN array set up around the 
+probefile value for pwN. This pulse sequence is used because it only depends on pw and 
+pwN to give signal and does not depend on a gradient calibration. It uses watergate 3919 
+which uses "hard" pulses so no additional calibration is necessary. Macros BP6 and BP6a 
+are used to determine pwN and the probefile pwNlvl value, and also at a power 6dB 
+lower in order to calculate the compression factor for the 15N amplifier, compN. This 
+value of compN is used for accurate calculation of decoupling parameters for 15N.
+
+Selective Pulses on H2O
+
+Many experiments use selective 90-degree pulses on the H2O. These are used to preserve 
+water magnetization along the +Z-axis so that exchangeable NH protons are not partially 
+saturated. No presaturation is used typically so water magnetization is aligned along +Z 
+at the end of the relaxation delay. While pulses within the pulse sequence do affect the 
+water magnetization, in most cases (a "water-friendly" sequence) the water magnetization 
+is restored to +Z as soon as possible, and certainly before acquisition. This not only 
+preserves the magnetization but minimizes the detected water signal.
+
+Different pulse sequences use different selective pulses, because the type of phase control 
+used is different (examine the pulse sequence code or use "dps" to see how the selective 
+pulses are used). For this reason, five different selective pulse types are used, and five 
+different shaped pulse files must be created. This is done in the AutoCalibrate process. 
+The pulse sequence (flipback_cal) has different options for different cases (governed by 
+the satmode parameter). Each shaped pulse can be phase-corrected within the sequence 
+and fine power adjustment is also possible. A satmode value of "i","t" or "n" produces a 
+soft pulse immediately following an 1H-15N INEPT transfer (often used in the ghn* and 
+gNhsqc sequences) followed by acquisition. A satmode value of "u" produces a "hard" 
+pw90 followed by a "flip-up" selective pulse. A satmode value of "d" produces a "flip-
+down" selective pulse followed by a "hard" pw90. In all cases the water signal is 
+monitored. Minimum water signal indicates the most +Z H2O magnetization.  The pulses 
+are listed in table 17.
+
+                                 Table 17. Selective Pulses on H2O
+
+                  Satmode                    Nature of the Pulse          Shape Created
+
+                     i                     following an INEPT                   H2Osinc_i.RF
+                     t                     in ghn* TROSY's, gNhsqc        H2Osinc_t.RF
+                     u                    following an hard 90                  H2Osinc_u.RF
+                     d                    prior to a hard 90                        H2Osinc_d.RF
+                     n                    in gNhsqc TROSY                     H2Osinc_n.RF
+
+The macro BP6a sets up the flipback_cal experiments as a triple array: satmode, phincr 
+and tpwrsf, and uses the H2Osinc.RF shape which is a "standard" shape already created 
+by the BPcal macro in the probefile update. This pulse has no phase correction within the 
+shape. For each value of satmode (pulse sequence type), the fine power is varied around 
+the value of 2000 (the course attenuator value is calculated within the pulse sequence 
+from tpwr/pw/compH). The phincr phase correction parameter is set to a constant value.
+At the end of the experiment the BP4a macro determines the optimal fine powers by 
+looking for the minimum water signals. It then sets up a new array for each type of 
+selective pulse, using the just-determined fine powers for each, but varying the phincr 
+parameter from +60 to -60 degrees. After this data set is acquired, the BP4a1 macro 
+determines the best phincr values for each shape and calls Pbox to create new versions of 
+the shapes (listed in Table 17) that incorporate the phase shift into the pulse shape itself. 
+This means that the shapes can be used in any sequence without needing small-angle 
+phase correction statements. 
+
+As a final optimization, the fine power is re-arrayed for each of the newly-created shape 
+files. At the end of this experiment the BP4b2 macro determines the best fine power for 
+each of the shapes and updates the probefile with these values. 
+
+At low field and/or with a low-Q probe, these power values will be very similar because 
+it is radiation damping that is responsible for the variation. Radiation damping will tend 
+to restore the water magnetization to +Z and can operate in milliseconds at very high 
+field. Use of a high-Q probe also enhances this effect. Thus, it takes more power to do a 
+"flip-down" pulse than predicted. Conversely, it takes less power to do a "flip-up" pulse. 
+Therefore, the fine power optimization can produce values differing by 50% and this 
+calibration is very important in these cases.
+
+Separate flipback pulse optimization is also available. A menu button (VNMR) or panel 
+button (VNMRJ) can run just this section, calibrating the flipback pulses and creating 
+shapes, even on an unlabeled sample (in H2O). 
+
+NH Coherence Transfer Gradients
+
+Many experiments use gradients in lieu of phase-cycling to select specific magnetization. 
+The experiments that detect NH protons can use 1H and 15N pulses along with a gradient 
+pair having amplitude/time ratios set to refocus NH magnetization and diphase all others. 
+The next experiment is set up by the BP4b2 macro and uses the ghn_co pulse sequence. 
+All information necessary to do this experiment has now been determined, except for the 
+gradient amplitude ratio. So a gzlvl2 array is set up around the probefile value and the 
+BP5 macro analyzes the acquired data to determine the optimal value of gzlvl2. It is 
+refined in a new array with smaller steps and the BP5a macro obtains the best gzlvl2 
+value. Following this, a compC array is set up around the probefile value. All 13C pulses 
+in this pulse sequence have compC involved in determining their amplitudes, so varying 
+compC directly produces a simple means for optimizing this parameter (macros BP5c and 
+BP5d). 
+
+HSQC's
+
+Following the above, a gNhsqc experiment is set up, now using the gzlvl2 value 
+determined above, and a double array of d1 and nt is set. Three spectra are obtained for 
+d1=.4 nt=16, d1=1 nt=8 and d1=2.1 nt=4. Each experiment takes the same time so the 
+BP7a macro can analyze for best s/n to determine the best d1 value to use in subsequent 
+experiments.
+
+The gNhsqc pulse sequence has an option for NH2-only, so the BP7a macro sets up 
+NH2only='y','n' and the resulting data is processed by the BP8 macro, showing NH2-
+only data as well as NH /NH2 1D data.
+
+At this point the BP8 macro sets up the gChsqc experiment for the option SE='y' 
+(sensitivity enhanced). This option uses a gradient pair for refocusing CH magnetization 
+and this gradient level is arrayed. The resulting spectra are analyzed by the BP8a macro 
+for the best gzlvl2 value and the probefile updated. (This same optimization is later done 
+using the ghcch_tocsy pulse sequence). Then, six 1D spectra are taken for the cases of 
+detecting protons attached to "all carbons", "aliphatic carbons only", "aliphatic CH2's", 
+"alpha carbons only", "alpha carbon CH2's" and "aromatic carbons".
+
+Probefile Update
+
+Following the above calibrations, the ghn_co experiment is set up with the new 
+calibrations and then the macro BPbiopack2 is executed (see above). The probefile is 
+fully updated and all waveforms are recalculated using the new pulse calibrations. All 
+decoupling power levels etc. are updated at the same time, for both 13C and 15N. 
+
+First Increment Spectra from Triple-Resonance Experiments
+
+The next part of the process is to collect a variety of first increment (ni=1 ni2=1) spectra 
+under identical conditions (gain, sw, nt, at,....). The spectra are plotted with parameter 
+sets, pulse sequences and scales.  These data provide the input for the side-by-side 
+comparison plotted at the end of the process.
+
+Small-Angle Phase Shifts
+
+Several sequences use small-angle phase shifts prior to certain pulses on 13C. This is to 
+accommodate a "Bloch-Seigert" phase shift induced by the use of band-selective pulses. 
+This use may be avoided by using pairs of band-selective pulses, but this adds complexity 
+and length to a pulse sequence. The amount of correction is determined by the frequency 
+(magnet) and is, to first-order, taken care of in the pulse sequnce code. However, a user-
+determined shift is provided, and this is calibrated by varying the phase shift to obtain a 
+maximum signal for ni=1 or ni2=1, or  a minimum signal followed by subtraction of 90 
+degrees. After the phase shift is determined the value is stored in the probefile. Any 
+experiment using these values has part of the setup macro accessing the probefile value.
+
+Experiment "Receptivity" Plot
+
+The final plots are side-by-side comparisons of intrinsic pulse sequence "sensitivity" for 
+the sample used. The N15 HSQC data is scaled to 150mm and the resulting vertical scale 
+(vs) is used on subsequent NH-detected plots. Since all spectra were obtained using the 
+same gain and nt values, this plot permits the user to assess the relative sensitivities. 
+These vary because of losses from relaxation (T2) and are most severe for those 
+sequences that have the desired magnetization spending more time in the backbone 
+carbon framework. A similar plot of CH-detected data is made using the 13C HSQC as a 
+base.
+
+The final printout is a report showing the probefile and stored calibrations and settings.
+
+Offsets for RNA and DNA
+
+The spectral widths provided are adequate for 600 MHz so they can be scaled to your 
+sfrq. The value of dof2 should be 200 ppm for all experiments. All dof values are 
+110ppm. These are changed appropriately in the psglib code for the specific pulse 
+sequences 
+
+It is not necessary to use an RNA or DNA sample for AutoCalibration. A dilabeled 
+protein sample can be used. RNA and DNA sequences use the same parameters as used 
+by the protein experiments. Only spectral widths and offsets are different and these are 
+handled by the experiment setup macros.
+
+
+13.0	  Auto1D and Auto2D
+
+One of the useful features of the full AutoCalibration is the comparison of "receptivities" 
+of a given sample to different pulse sequences. This is plotted automatically at the end of 
+the autocalibration as two stacked plots, one for NH-detection and one for CH-detection. 
+Each includes a first increment HSQC. All spectra have the same receiver gain, number 
+of transients and vertical scale. Therefore, the sensitivities can be directly compared to 
+evaluate the benefit of a given pulse sequence. This experiment has an option for first 
+determining the 1H pw90 (perhaps because a new sample has been used and the probe 
+retuned) followed by a series of first increment spectra and the "receptivity" plots. Thus, 
+a new sample can be rapidly screened for sensitivity. All data acquired are stored in the 
+user's vnmrsys/AutoTripRes1D directory. As in the case of the full autocalibration, any 
+existing AutoTripRes1D file is backed up in the BioPack.dir directory present in the 
+user's vnmrsys prior to a new run.
+
+Given that a new sample has been through an autocalibration, the Auto2D options permit 
+a user to survey 2D "receptivities" as well. In this case the nature of the 2D spectra is of 
+interest, perhaps indicating the relaxation or aggregation properties of the sample. Upon 
+selecting the option, at the end of the series of 2D acquisitions the data can be 
+automatically processed and plotted. By adjusting the d1 delay, options are available for 
+4,8 and 16 hour runs. This is automatically done by selecting the 4, 8 or 16 hour buttons. 
+In all cases, the ni and ni2 values are pre-selected to provide adequate resolution. The nt 
+values are pre-selected based on the relative sensitivities of the experiments. The 
+automatic processing is provided for as a convenience to the user. Individual data sets can 
+be manually processed to reveal the full quality of the data.
+
+14.0	  Understanding What Happens "at the Click of a Button"
+
+The most direct and easy way to perform all the above operations is to use the menu 
+buttons (for VNMR). VNMRJ offers much more "obvious" control in the "Globals and 
+Probefile" and "Calibrations" Setup pages through the use of entry boxes, displayed 
+parameter values (textmessages), checkboxes and buttons. Even in VNMR in the tcl/tk 
+"dg" panels there are similar controls. VNMRJ substantially expands the use of 
+"obvious" control elements and has many more pages to contain them. This leads to the 
+ability to run all BioMolecular NMR experiments without recourse to a command line.
+
+For those needing to go beyond this interface and find out what is actually done when a 
+button is clicked or an entry box filled in, the panel or page editors are useful. In VNMR 
+there is a tcl/tk editor that is activated by holding down the "control" key and clicking the 
+desired tab at the right. Two popup windows are generated. The first is a "cell-based" 
+window that shows how the tcl/tk window is broken up. Clicking on a cell makes the 
+second window show the details, including vnmr variables, commands and macros. This 
+should be the first step in getting an understanding. 
+
+There is a similar editor for VNMRJ. This is activated by the Edit function of the 
+MainMenu (top line in the VNMRJ display). Use the Parameter Panel selection and a 
+popup will appear. Double-clicking on the widget of interest will show the details in the 
+popup. 
+
+In either case, the underlying macro (in most cases) is displayed and it can then be read 
+and understood using any editor program. These interfaces can be customized by the user 
+to add new buttons or other widgets to run user-created macros, adding to the usability of 
+the interface.
+  
+15.0	  Other Files
+
+BioMolecular NMR experiments require, at a minimum, a compiled pulse sequence and 
+an appropriate parameter set that includes all parameters used by the pulse sequence. In 
+principle, it is not even necessary for the user to be able to view the values of parameters 
+for the experiment to function. O course, this is not acceptable, so visual displays are 
+necessary to review the parameter values before beginning the experiment.
+
+Parameter Sets
+The oldest display of parameters is the "dg"-style of text output. The display is static, but 
+is updated by VNMR/VNMRJ as appropriate. Not all parameters need to be present in 
+the "dg" panels, but important parameters should be visible. The command 
+"paramvi('dg')" permits the user to edit the "dg" parameter to add new parameters. There 
+always is a "dg" parameter in the parameter set (in the "procpar" file) and this parameter 
+can be modified by the editing process. Analogously, the "ap" parameter can be edited in 
+the same way for the printed parameter table. New pulse sequence parameter sets should 
+always have a proper "dg" family and "ap" parameters for useful and accurate display 
+and reporting. After editing these files the parameter set should be saved to avoid future 
+need to repeat the editing. (The "dg"-style of display involves parameter names and 
+values, but not descriptive "NMR language" phrases that can appear on buttons or next to 
+entry boxes. These capabilities are present in the tcl/tk (VNMR) and java xml (VNMRJ) 
+panels.)
+
+
+
+ Help Files
+New experiments should have a "manual" file present in either /vnmr/manual or 
+~/vnmrsys/manual. This text file is often the top part of a pulse sequence showing any 
+comments provided by the author and gives suggestions as to parameter values, 
+processing information and other points peculiar to the pulse sequence. This file is 
+displayed in the text window by the "man('name')" command. This command is often 
+used within an experiment setup macro.
+
+Menus for Experiment Selection
+The user should not have to use the command line to set up the experiment. This means 
+that the programmable menu in VNMR or the drop-down menu in VNMRJ should be 
+edited to include a function to run any new setup macro. The VNMR menus are stored in 
+either /vnmr/menulib or ~/vnmrsys/menulib as simple text files, or in 
+/vnmr/templates/vnmrj/interface/MainMenu.xml or 
+~/vnmrsys/templates/vnmrj/interface/MainMenu.xml. These latter files may call 
+submenus. They may be inspected or changed to provide additional entries. All of these 
+include statements that permit the execution of experiment setup macros.
+
+Parameter Panels
+The above section 14.0 on understanding what happens when a button is "clicked" details 
+the editing function that permits seeing the macros used. This editing  function is also 
+used to add new functions or new parameter entry boxes. When the panels are "saved" 
+the relevant text files are stored in ~/vnmrsys/templates/dg (for VNMR) or 
+~/vnmrsys/templates/layout (for VNMRJ). They are stored under the pulse sequence 
+name. When the collection of files is complete the directory may be copied to 
+/vnmr/user_templates/dg (for VNMR) or /vnmr/templates/layout (for VNMRJ) for use by 
+all users. 
+
+These files should be created for maximum clarity and performance. The latter is 
+accomplished by having the widgets run macros that use vnmr variables and Magical 
+commands to make a task easy to do, but accurate and reliable. For example, one might 
+have a button to set up an array, perform and acquisition and at the end perform 
+processing that obtains a calibration value. Or, when a variable has a finite list of options, 
+a radio button widget permits the variable to be set at one click, where the user sees the 
+options with descriptive text alongside.
+
+Again, it is not necessary to have these panels for a new sequence to run. The default 
+panels will be used by the software, but the power of the interface will be severely 
+compromised
+
+Shapes
+Any shapes required by a pulse sequence must reside in either /vnmr/shapelib or 
+~/vnmrsys/shapelib. These may be derived "on-the-fly" by Pbox statements within the 
+pulse sequence code, or by the setup macro calling Pbox or a user-written program. As 
+discussed above, the AutoUpdate (BPbiopack2) or AutoCalibrate macros run the macros 
+BPsetupshapes and BPcal that produce any shapes needed by the pulse sequences 
+provided.
+
+16.0	  Pulse Sequence Design
+
+BioMolecular NMR experiments can be designed (through pulse sequences) in a variety 
+of ways. The traditional approach is to design elements that have parameter control and 
+to build the sequence by constructing a series of delays, power statements, pulses etc. that 
+leave the operator to set specific values for all parameters. Thus, the user must calibrate 
+the system to provide the "hard pulse" pw90's on all channels (this can be automated, as 
+discussed above). However, sequence-specific elements such as region-selective pulses, 
+water flipback pulses, decoupling and gradients would require the user to create text files 
+for shapes and predict approximate power levels and pulse widths for the RF elements. 
+This can be tedious and error-prone. A linear and predictable RF system, coupled with 
+powerful pulse sequence and macro languages, permits the use of mathematics to 
+calculate these values from the primary calibrations obtained by the user.
+
+The underlying basis for the success of the BioNMR experiment is the predictability of 
+spectrometer output. This means that calibrations of pulse widths at single power levels 
+are sufficient for prediction of power levels for region-selective pulses. This is highly 
+relevant for 13C in all of these experiments, but also for protons, where soft selective 
+pulses are done on the water and spinlock periods are employed. 
+
+The other factor allowing parameter prediction is that natural resonance frequencies for 
+carbon and proton nuclei in proteins are observed to fall in specific regions with few but 
+predictable exceptions. Each of these experiments is designed so that the 13C frequency 
+is set at a specific 13C chemical shift (e.g. 56 ppm for alpha carbons in HNCA). The 
+proton frequency is always placed at the water position and the 15N frequency in the 
+center of the amide region. Hence, the frequency change to the C=O region is known at 
+the existing magnetic field( e.g. (174-56)*dfrq in Hz).
+
+ Since all of these sequences involve region-selective 90's and 180's on the carbonyl, 
+alpha, or alpha/beta carbon regions, the lengths of the pulses can be easily and 
+automatically calculated so as to provide the required excitation nulls (e.g. at 600 Mhz a 
+55 usec 90 degree pulse centered at 56 ppm has its first excitation null at 174 ppm). The 
+BPcal macro, for example, uses the spectrometer frequency "sfrq" to automatically create 
+all shapes needed by many pulse sequences. Similarly, the BPsetupshapes macro can 
+calculate decoupling waveforms for many types of band-selective 13C decoupling. In 
+principle, the *.RF files need only be created once since the magnetic field and offset 
+positions (in ppm) are not changed. This forms the basis for the first implementation of 
+BioMolecular NMR sequences currently used (as developed by Robin Bendall).
+
+The power levels necessary for these pulses do need to be determined so that the proper 
+flip angles are generated. This operation is done as a part of "go" within the pulse 
+sequence, based on the tpwr, pwClvl, pwNlvl and amplifier compression values. The 
+coarse attenuators are not changed and all power levels are adjusted via the linear 
+modulators present on each channel, or Pbox can be called within the pulse program to 
+generate the shapes (based on the same calibrations) and obtain the parameters for power 
+and pulse timing(see below). Thus, as long as the "hardpulse" pulse widths are calibrated, 
+nothing else is required.  The flexibility necessary to do this is, of course, a property of 
+the "c" or SpinCAD language used in the pulse program. 
+
+Pbox-based Designs
+
+Two alternative methods of using phase-ramped pulses are included. These methods call 
+Pbox for shape creation at the time of "dps" and "go". No shapes are required in shapelib 
+for this method. These sequences have a "P" (BioNMR) or "A" (AutoCalibrated or Pbox-
+based) appended to the normal names. SpinCAD also incorporates Pbox and uses 
+"AutoShaped Pulse" tools. Biomolecular SpinCAD sequences have are included in the 
+software and can be compared with the relevant "c" versions.
+
+BioNMR Versions:
+
+ The "*P.c" sequences must be compiled the "bionmr.h" include file, while the "*A.c" 
+sequences requires the "Pbox_bio.h" include file.
+
+The "P", or BioNMR, versions use new psg elements that are written with protein 13C 
+bandwidths pre-defined so that terms such as "ca", "co" an "cacb" are used. The 
+operation, parameters and performance of these are at least as good as the original 
+sequences. The only differences are that the phi7cal value may be different, and that the 
+"dof" value is always set to the carbonyl carbon frequency for all experiments (for the 
+*P.c sequences). The virtue of this approach is that new sequences can be written using 
+high-level elements without involving mathematical expressions to calculate power levels 
+or pulse widths, and that no shapes need be prepared ahead of time. P sequence codes are 
+typically half the length of the original versions.
+
+BioNMR parameter sets are accessible directly either by directly entering the macro, e.g.
+ghn_co_caP, by using the VNMR menu buttons:  Setup....Proteins...BioNMR Expts
+followed by choosing the desired button, or in VNMRJ by selecting the BioNMR Version 
+button in the Pulse Sequence page in the Acquire folder after selecting the experiment 
+from the drop-down menu.
+
+REMEMBER: the dof value for all *P.c pulse sequences should be set for the carbonyl 
+region. The BPbiopack2 macro does update the probefile for this offset, and experiment 
+setup macros for *P.c sequences set dof to this value.
+
+The phi7cal value in either standard or BioNMR parameter sets is determined in the 
+automatic calibration process, which updates the probefile. BioNMR experiments using 
+phi7cal should use the phi7cal value determined in the AutoCalibrate in which BioNMR 
+sequences are selected (via the menu in VNMR or in the Globals and Probfile page of the 
+Setup Folder in VNMRJ).
+
+Summary of BioNMR psg elements:
+
+Offset:
+set_c13offset(fband)
+
+C13 Pulses:
+c13pulsepw(excband, nullband, c13shape, c13flip) 
+c13pulse(excband, nullband, c13shape, c13flip, phase2, rofa, rofb) 
+c13adiab_inv_pulse(excband, bandwidth, c13shape, pulsewidth, phase2, rofa, rofb)
+
+Simultaneous 1H/13C Pulses:
+sim_c13pulse(obsshape, excband, nullband, c13shape, obspw, c13flip ,phase1, phase2,
+               rofa, rofb) 
+sim_c13adiab_inv_pulse(obsshape, excband, bandwidth, c13shape, obspw, pulsewidth, 
+                                         phase1, phase2, rofa,rofb) 
+
+Simultaneous 1H/13C/15N Pulses:
+sim3_c13pulse(obsshape, excband, nullband, c13shape, dec2shape,  
+               obspw, c13flip, dec2pw, phase1, phase2, phase3, rofa, rofb) 
+sim3_c13adiab_inv_pulse(obsshape, excband, bandwidth, c13shape, dec2shape,  
+               obspw, pulsewidth, dec2pw, phase1, phase2, phase3, rofa, rofb)
+
+Frequency-Shifted 1H Shaped Pulse:
+shiftedpulse(anyshape, pwbw, flip, shift, phase1, rofa, rofb) 
+
+Frequency-Shifted 13C Shaped Pulse:
+decshiftedpulse(anyshape, pwbw, flip, shift, phase2, rofa, rofb) 
+
+Frequency-Shifted 15N Shaped Pulse:
+dec2shiftedpulse(anyshape, pwbw, flip, shift, phase3, rofa, rofb) 
+
+Frequency-Shifted 1H/13C/15N Simultaneous Centered Shaped Pulses:
+sim3shiftedpulse(obsshape, anyshape, dec2shape, obspw, pwbw, flip, shift, 
+                                dec2pw, phase1, phase2, phase3, rofa, rofb) 
+
+13C Decoupling:
+c13decon(decband, c13shape, decbandwidth)
+c13decoff()
+c13decouple(decband, c13shape, decbandwidth, duration)
+
+1H Decoupling:
+h1decon(h1shape, decbandwidth, shift)
+h1decoff()
+h1decouple(h1shape, decbandwidth, shift, duration)
+h1waltzon(h1shape, decbandwidth, shift)
+h1waltzoff(h1shape, decbandwidth, shift)
+
+N15 t2 Evolution with 13C Refocussing and Sensitivity-Enhancement
+nh_evol_se_train(excband, nullband)
+
+Identify Desired Decoupling Waveform for Pbox
+installdecshape(decshape)
+
+Shape File Parameter Extraction Tools
+              (to obtain parameters from Pbox-generatedshapes)
+c13shapefiles(excband, nullband, c13shape, c13flip);
+fshapefiles(anyshape, pwbw, flip, shift)
+c13adiab_files(excband, bandwidth, c13shape, pulsewidth)
+c13decfiles(decband, c13shape, decbandwidth)
+h1decfiles(h1shape, decbandwidth, shift)
+
+
+
+
+
+
+Automatic Pbox-Based Designs (the "AutoCal" approach)
+
+The "A" versions include a header section in the pulse sequence where all shapes are 
+created and the parameter values from these shapes are obtained at "go" time. This mode 
+of operation allows the conversion of existing pulse sequences of any style to "A" 
+versions without modification of the underlying codes (developed by Eriks Kupce, 
+Varian). The difference between an 'A'-sequence and the corresponding "BioNMR' 
+sequence is that the later introduces a completely new syntax for executing shaped pulses, 
+whereas the 'A' sequence requires minimal interference with the existing pulse sequence 
+code. Therefore, the syntax that is used in the 'A'  sequences provides a quick and easy 
+way to convert long and extensive pulse programs into spectrometer-frequency 
+independent, fully automatic experiments using the same parameter names and 
+calibrations as standard experiments. The ultimate goal of such experiments is to reduce 
+the portability issues of complex multi-dimensional bio-NMR experiments.
+
+Below is a typical example showing relevant modifications to a cutomer-written pulse 
+sequence. This sequence involves two "shaped" pulses on the 13C channel. The "shape" 
+might only involve phase-ramping, or both phase and amplitude modulation. Both are 
+illustrated below.
+
+
+/*************This part is added to the top of the existing code***************/
+   
+#include "Pbox_bio.h"        /* include standard BioPack functions */
+static double   H1ofs=4.7, C13ofs=46.0, N15ofs=120.0, H2ofs=0.0; 
+static shape offC3, offC6;
+
+/*******************************************************************/
+
+pulsesequence()
+{
+    double    bw, ofs, ppm, ...         /* bandwidth, offset, ppm  are only new parameters*/
+    ...
+    ...
+    /* existing code statements for parameter declarations go here*/
+    /* existing statements for parameter getvals/getstrs go here*/
+    ...
+    ...
+    pwC3 = getval("pwC3");                                                                   /* existing code *
+    rf3  = (compC*4095.0*pwC*2.0)/pwC3;                                          /* existing code *
+    pwC6 = getval("pwC6");                                                                   /* existing code *
+    pwC6pwr = getval("pwC6pwr");                                                       /* existing code *
+    ...
+    ...
+    ...
+    ...
+    setautocal();                 /* activate auto-calibration flags */ 
+    ...
+    ...
+    ...
+    ...
+
+  /**************After parameter declarations are made****************/
+    
+  if (autocal[0] <> 'n')                                             /* specifies automatic setup */ 
+  {
+    if(FIRST_FID)                            /* calculate all shapes and do it only once */
+    {
+      ppm = getval("dfrq");               /* have Pbox use 13C frequencies, not 1H*/
+      bw = 118.0*ppm; ofs = -118.0*ppm;                    /* calculate bw and ofs */
+
+                                                                             /* Use Pbox to create shape */
+      offC3 = pbox_make("offC3", "square180n", bw, ofs, compC*pwC, pwClvl);
+      offC6 = pbox_make("offC6", "sinc90n",       bw, 0.0, compC*pwC, pwClvl);
+
+      ....
+      ....
+
+      if (dm3[B] == 'y') H2ofs = 3.2;         
+      ofs_check(H1ofs, C13ofs, N15ofs, H2ofs);                 /* check all offsets */
+    }
+                 /* Obtain parameter values from shape file header */
+    pwC3 = offC3.pw; rf3 = offC3.pwrf;      
+    pwC6 = offC6.pw; rf6 = offC6.pwrf;    
+      ....
+  }
+/**************************************************************/
+ /* The rest of pulse sequence follows as originally written. The same parameter */
+ /* names are used, but their values are obtained from the shape files produced by */
+/* Pbox using the calibrations pwC/pwClvl/compC       */
+/**************************************************************/
+
+Automatic Pbox-based Pulse Sequence Definitions
+
+setautocal() - Sets up the autocal and checkofs flags. 
+Syntax:  (void) setautocal();
+
+Description: Creates the autocal and checkofs flags and checks whether  they are set in 
+the current experiment. If the flags are not set, they  are defaulted to 'y' (yes). The 
+available options for the checkofs flag  are: 'y' (yes - by default) and 'n' (no). For the 
+autocal flag the  available options are: 'y' (yes - by default), 'q' (quiet mode - suppress  
+Pbox output), 'r' (read from file, no new shapes are created), 's' (semi- automatic mode - 
+allows access to user defined parameters) and 'n' (no -  use full manual setup).
+
+ofs_check() - Checks carrier frequencies on all 4 channels.
+Syntax: (void) ofs_check(H1ofs, C13ofs, N15ofs, H2ofs); 
+             double H1ofs, C13ofs, N15ofs, H2ofs;
+
+Description: The ofs_check() function checks the settings of tof, dof,  dof2 and dof3 of 
+four RF channels against the values (in ppm) provided  as arguments. The allowed 
+deviations are set internally to 0.2 ppm for  H-1 and H-2 and to 2.0 ppm for C-13 and N-
+15. It is assumed that  channel 1 is H1, channel 2 is C-13, channel 3 is N-15 and channel 
+4  is H-2. The offset (tof, dof, dof2 and dof3) checks can be switched  off individually by 
+setting the corresponding argument to zero (0.0),  or collectively by setting the checkofs 
+flag to 'n'; 
+
+pbox_make() - Create and calibrate a shaped pulse.
+Syntax: 
+  shape   shp;
+  char    shn[MAXSTR], wvn[MAXSTR];
+  double  bw, ofs, ref_pw90, ref_pwr;
+  shp = pbox_make(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description: 
+shp -          pre-defined shape structure containing all the experimental parameters that are
+                  are required in order to execute a shaped pulse or a decoupling waveform. 
+                  The shp must be declared as a shape.
+shn -           output shape name as used in the pulse sequence;
+wvn -         waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz); alternatively pulse duration in seconds can
+                  also  be used;
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The pbox_make() function returns a shape structure (as defined in Pbox_psg.h) that 
+contains all parameters required by the experiment.. For frequency-shifted pulses the 
+maximum phase increment is internally restricted to 10 degrees, which guarantees a 
+proper RF performance. The shapes are calibrated to use a fixed course attenuator setting 
+that is set at ref_pwr level and a variable fine attenuator setting.
+
+pbox_makeA() - Create and calibrate an adiabatic pulse. 
+Syntax:
+  shape    shp; 
+  char      shn[MAXSTR], wvn[MAXSTR];
+  double  bw, pws, ofs, ref_pw90, ref_pwr, nst;
+
+  shp =    pbox_makeA(shn, wvn, bw, pws, ofs, ref_pw90, ref_pwr, nst);
+
+Description:    
+shp -           pre-defined shape structure containing all the parameters that are 
+                   required in order to execute a shaped pulse or a decoupling waveform. The 
+                   shp must be declared as a shape.
+shn -           output shape name as used in the pulse sequence;
+wvn -         waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz);
+pws -          pulse duration (in seconds);
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -  reference power level, e.g. pwClvl;
+nst -           number of steps
+
+The same as pbox_make(), except simultaneous definition of bandwidth (bw) and pulse 
+duration (pws) is allowed. This function is used to create and calibrate adiabatic pulses 
+and waveforms. The nst parameter allows to define the number of steps in the shapefile. 
+If nst is set to zero, the required number of steps is calculated by Pbox. 
+
+pbox_makeR() - Create and calibrate a shaped pulse
+Syntax: 
+   shape    shp;
+   char      shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+   shp  =   pbox_makeR(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description:    
+shn -          output shape name as used in the pulse sequence;
+wvn -        waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz); alternatively pulse duration in 
+                  seconds can also be used;
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The same as pbox_make(), except the status parameter is set to 1. The result is a time-
+reversed (de-excitation) pulse.
+
+pbox_Rsh() - Create and calibrate a shaped pulse using course power
+Syntax:
+   shape    shp;
+   char      shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+   shp =    pbox_Rsh(shn, wvn, bw, ofs, ref_pw90, ref_pwr)   
+
+Description: 
+shn -           output shape name as used in the pulse sequence;
+wvn -         waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz); alternatively pulse duration in 
+                  seconds can also be used;
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The same as pbox_make(), except the shapes are calibrated to use the course attenuator 
+setting. The fine attenuator setting remains at 4095.0 and internal fine attenuation is used 
+instead.
+
+pbox_Dsh() - Create and calibrate a .DEC waveform using course power
+Syntax:
+   shape    shp;
+   char      shn[MAXSTR], wvn[MAXSTR];
+   double  bw, ofs, ref_pw90, ref_pwr;
+   shp =    pbox_Dsh(shn, wvn, bw, ofs, ref_pw90, ref_pwr);
+
+Description: 
+shn -           output shape name as used in the pulse sequence;
+wvn -         waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz); alternatively pulse duration in 
+                  seconds can also be used;
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The same as pbox_Rsh(), except .DEC type shape file is produced in the
+output.
+
+
+
+
+
+pbox_Dec() - Create and calibrate a .DEC waveform for a given course 
+                        power setting.
+Syntax:
+   shape    shp;
+   char      shn[MAXSTR], wvn[MAXSTR];
+   double  bw, decpwr, ref_pw90, ref_pwr;
+   shp  =   pbox_Dec(shn, wvn, bw, decpwr, ref_pw90, ref_pwr);
+
+Description: 
+shn -           output shape name as used in the pulse sequence;
+wvn -         waveform name as in /vnmr/wavelib;
+bw -           excitation bandwidth (in Hz); alternatively pulse duration in 
+                  seconds can also be used;
+ofs -           excitation offset (in Hz) from the carrier frequency; 
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The pbox_Dec() function is used to create decoupling and mixing waveforms. If a 
+positive decpwr value is supplied, the dmf and dres parameters are calibrated as for the 
+given decpwr; alternatively the required decoupling bandwidth can be used to calculate 
+dpwr, dmf and dres. Note that in mixing experiments the effective mixing bandwidth is 
+usually 2*B1(max) or less. This should be used to set up the bw parameter. The fine 
+attenuator should be set to 4095.0;
+
+pbox_Dcal() - decoupling calibration routine
+Syntax:
+   shape    shp;
+   char      wvn[MAXSTR];                         /* parameter names */
+   double  bw, decpwr, ref_pw90, ref_pwr;
+   shp  =   pbox_Dcal(wvn, bw, decpwr, ref_pw90, ref_pwr);
+
+Description: 
+wvn -         waveform name as in /vnmr/wavelib;
+bw -            required decoupling bandwidth (in Hz), if 0.0 then not used;
+decpwr -     required decoupler power, if 0.0 then not used;
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The same as pbox_Dsh(), except no shapefile is created in the output. The experimental 
+parameter set is returned in the form of the shape structure, that contains shape.pwr 
+(course power), shape.pwrf (fine power, set to 4095), shape.dres (dres parameter) and 
+shape.dmf (dmf parameter); 
+
+
+
+
+
+pbox_Rcal() - selective pulse calibration routine
+Syntax:
+   shape    shp;
+   char      wvn[MAXSTR];                         /* parameter names */
+   double  bw, ref_pw90, ref_pwr;
+   shp  =    pbox_Rcal(wvn, bw, ref_pw90, ref_pwr);
+
+Description: 
+wvn -        waveform name as in /vnmr/wavelib;
+bw -           required decoupling bandwidth; alternatively pulse duration in 
+                  seconds can also be used;
+ref_pw90 - reference pulse length, e.g. compC*pwC;
+ref_pwr  -   reference power level, e.g. pwClvl;
+
+The same as pbox_Dcal() except the shapes are calibrated to use a fixed course attenuator 
+setting set at ref_pwr level and a variable fine attenuator setting, as used in bio-pack 
+sequences. The returned shape structure contains parameters required for .RF shape 
+format:shape.pwr (course power), shape.pwrf (fine power), shape.pw (pulseduration). No 
+shapefile is produced in the output.
+
+BioPack		3/15/04
+	62 of  68

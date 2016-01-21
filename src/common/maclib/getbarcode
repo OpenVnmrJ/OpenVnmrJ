@@ -1,0 +1,50 @@
+"macro getbarcode"
+// read barcodes
+
+if (traymax <> 768) then  // only used for 768 AS
+  return
+endif
+
+// check if barcode in use
+$usebarcode=0
+$bfile=systemdir+'/asm/info/configInfo'
+exists($bfile,'file'):$e
+if $e>0.5 then
+  lookup('mfile',$bfile,'seek','Use','seek','Barcodes:','read'):$usebarcode
+endif
+
+if ($usebarcode>0.5) then
+
+  exists('barcode','parameter'):$e
+  if $e<0.5 then create('barcode','string') endif
+  barcode=''
+
+  exists('studypar','parameter','global'):$e
+  if $e>0.5 then
+    $psize=size('studypar')
+    $j=0 $eb=0
+    while ($j < $psize) do
+      $j=$j+1
+      if studypar[$j]='barcode' then $eb=1 endif
+    endwhile
+    if $eb=0 then studypar=studypar,'barcode' endif
+  endif
+
+// read barcode file and set parameter
+  xm1('studydir'):$sdir
+  $barfile=$sdir+'/barcode'
+  exists($barfile,'file'):$e
+  if $e>0.5 then
+    $barcode=''
+    lookup('mfile',$barfile,'readline'):$barcode,$ret
+    if $ret<0.5 then $barcode='' endif
+    barcode=$barcode
+  endif
+
+  $file=file
+  strstr($file,'.fid'):$e
+  if $e<0.5 then $file=$file+'.fid' endif
+  exists($file+'/procpar','file'):$e
+  if $e>0.5 then fsave($file+'/procpar') endif
+
+endif

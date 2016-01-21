@@ -1,0 +1,42 @@
+"macro mkfidlog"
+pwd:$curdir
+$fidlog='dirinfo/fidlog'
+$fidlist='dirinfo/fidlist'
+if ($# > 0) then
+   cd($1):$dum
+endif
+write('reset','/vnmr/tmp/fidlist')
+shell('(cat '+$fidlist+' | awk \'{print $5}\' > /vnmr/tmp/fidlist)'):$dum
+$fids='' $s1='' $total=0
+readfile($fidlist,'$fids','$s1','','local'):$total
+shell('rm -f /vnmr/tmp/fidlist'):$dum
+
+if ($total) then
+   $i=1
+   repeat
+	$isthere=0
+	shell('(cat '+$fidlog+' | grep -wc \"'+$fids[$i]+'\")'):$isthere
+	if ($isthere=0) then
+	   exists($fids[$i]+'.fid','directory'):$direx
+	   if ($direx=0) then
+		exists($fids[$i]+'.rec','directory'):$direx
+		if ($direx=0) then
+		    exists($fids[$i]+'.REC','directory'):$direx
+		endif
+	   endif
+	   if ($direx) then
+	     	rtv($fids[$i],'pslabel'):$pslabel
+		write('file',$fidlog,'%s: %s',$pslabel,$fids[$i])
+	   endif
+	endif
+	$i=$i+1
+   until $i > $total
+endif
+
+exists($fidlog,'file','w'):$writable
+if ($writable) then
+	shell('chmod g+w '+$fidlog):$dum
+endif
+
+cd($curdir):$dum
+

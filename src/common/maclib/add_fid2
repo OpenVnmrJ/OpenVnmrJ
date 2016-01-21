@@ -1,0 +1,328 @@
+"macro add_fid2"
+"*************************************************************"
+"       MACRO TO ADD FIDS                                     "
+"       Update of the PROCPAR (NT)                            "
+"       Written by: Ivan Tkac                                 "
+"       Last modification: Oct 30, 2007                       " 
+"*************************************************************"
+
+jexp:$exp
+
+if ($exp = addsubexp) then
+   clear(4)
+   write('line3','ERROR: Start FID adding in another experiment!!!!')
+   write('line3','ERROR: addsub exp must be free for the results')
+   write('alpha','ERROR: Start FID adding in another experiment!!!!')
+   write('alpha','ERROR: addsub exp must be free for the results')
+   abort
+endif
+
+exists('add_counter','parameter','global'):$ex
+if $ex = 0 then
+   create('add_counter','integer','global')
+   setgroup('add_counter','processing','global')
+   add_counter = 0
+endif
+
+$clear = ''
+input('Clear buffer? (y/n): (<ret> yes) '):$clear
+
+if (($clear = 'y') or ($clear = '')) then
+   clradd
+   add_counter = 0
+endif
+
+clear
+write('alpha','Number of measured FIDs = %3d',celem)
+write('alpha','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+$min = '' 
+$max = ''
+$incr = ''
+
+$report = file + '/add_report'
+exists($report,'file'):$e
+if ($e = 1) then
+   write('reset',$report)
+endif
+
+write('file',$report,'SUMMATION REPORT')
+write('file',$report,'FILE: %s',file)
+
+repeat
+   write('line3','Number of measured FIDs = %3d',celem)
+   write('line3','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+   if (arraydim > 1) then
+      
+      $fid_min = 1
+      $fid_max = celem
+      $increment = 1
+      
+      input('FID(min): (<ret> default) '):$min
+      if not ($min = '') then
+         exec('$fid_min = ' + $min)
+      endif
+      
+      if ($fid_min > celem) then
+         write('line3','ERROR: FID(min) > arraydim!!!')
+         input('FID(min): (<ret> default) '):$min
+         if not ($min = '') then
+            exec('$fid_min = ' + $min)
+         endif
+         if ($fid_min > celem) then
+            write('alpha','ERROR: FID(min) > arraydim, PROGRAM ABORTED!')
+            abort
+         endif
+      endif
+      
+      input('FID(max): (<ret> default) '):$max
+      if not ($max = '') then
+         exec('$fid_max = ' + $max)
+      endif
+            
+      if ($fid_max > celem) then
+         write('line3','ERROR: FID(max) > arraydim!!!')
+         input('FID(max): (<ret> default) '):$max
+         if not ($max = '') then
+            exec('$fid_max = ' + $max)
+         endif
+         if ($fid_max > celem) then
+            write('alpha','ERROR: FID(max) > arraydim, PROGRAM ABORTED!')
+            abort
+         endif
+      endif
+      
+      if ($fid_max > $fid_min) then
+         input('Increment: (<ret> default) '):$incr
+         if not ($incr = '') then
+            exec('$increment = ' + $incr)
+         endif
+      
+         if (($fid_min + $increment) > celem) then
+            write('line3','ERROR: second FID# > arraydim!!!')
+            input('Increment: (<ret> default) '):$incr
+            if not ($incr = '') then
+               exec('$increment = ' + $incr)
+            endif
+            if (($fid_min + $increment) > celem) then
+               write('line3','ERROR: Only FID(min) will be added')
+            endif
+         endif
+      endif
+   else
+      $fid_min = 1
+      $fid_max = 1
+      $increment = 1
+   endif
+
+   write('alpha','Current setting: FID(min)=%d  FID(max)=%d  Increment=%d',$fid_min,$fid_max,$increment)
+   
+   if ($increment = 0) then
+      write('line3','ERROR: Increment must be > 0')
+      clear(4)
+      write('alpha','ERROR: Increment must be > 0')
+      abort
+   endif
+   
+   $i = $fid_min
+   while ($i < ($fid_max + 1)) do
+         df($i) 
+         add
+         write('alpha','counter = %3d     FID # = %3d',add_counter+1,$i)
+         write('file',$report,'counter = %3d     FID # = %3d',add_counter+1,$i) 
+         $i = $i+$increment
+         add_counter = add_counter + 1
+   endwhile
+
+   $fin = ''
+   input('Finish in current exp? (y/n): (<ret> YES) '):$fin
+   if not (($fin = 'n') or ($fin = 'y') or ($fin = '')) then
+      write('line3','***** Incorrect input! *****')
+      input('Do you want to finish adding in current exp? (y/n): (<ret> abort) '):$fin
+      if not (($fin = 'n') or ($fin = 'y')) then
+         clear(4)
+         write('alpha','Incorrect input, macro aborted!')
+         abort
+      endif
+   endif
+   
+   $new_exp = 'n'
+   if (($fin = 'y') or ($fin = '')) then
+      input('Continue adding from a new exp? (y/n): (<ret> NO) '):$new_exp
+      if not (($new_exp = 'n') or ($new_exp = 'y') or ($new_exp = '')) then
+         write('line3','***** Incorrect input! *****')
+         input('Do you want to continou in new exp? (y/n): (<ret> abort) '):$new_exp
+         if not (($new_exp = 'n') or ($new_exp = 'y')) then
+            clear(4)
+            write('alpha','Incorrect input, macro aborted!')
+            abort
+         endif
+      endif
+      if ($new_exp = 'y') then
+         $expno = 1
+         input('Set exp number to continue adding: '):$expno
+         jexp($expno)
+         jexp:$exp
+         write('line3','Current exp number: %d',$exp)
+      endif
+   endif
+until ((($fin = 'y') or ($fin = '')) and (($new_exp ='n') or ($new_exp ='')))
+
+write('line3','TOTAL NUMBER OF FIDS = %d',add_counter)
+
+if (($fin = 'y') or ($fin = '')) then
+   $text1 = ''
+   text:$text1
+   $text2 = ''
+   $fcounter = ''
+   $fnt = ''
+   format(add_counter,3,0):$fcounter
+   format(nt,3,0):$fnt
+   $text2 = 'NT =' + $fcounter + ' x' + $fnt
+   
+   $dir = ''
+   $filename = ''
+   pwd:$dir
+   length($dir):$dir_length
+   length(file):$file_length
+   substr(file,$dir_length+2,$file_length-$dir_length-5):$filename
+   $filename = 'SUM_' + $filename
+
+   jaddsub
+   $newfile=''
+   write('line3','Default filename: %s',$filename + '.fid')
+   input('Set a filename for the new file: (<ret> default) '):$newfile
+   if ($newfile = '') then
+      $newfile = $filename
+      write('alpha','NEW FILENAME: %s',$newfile + '.fid')
+   endif
+   
+   lp=0 rp=0 ph
+   lb='n' gf=0.15 gfs=0
+   text($text1 + $text2)
+   svf($newfile)
+   $newfile = $newfile + '.fid'
+   rt($newfile)
+   $filename=file
+   cd($filename)
+   $ex = 1
+   exists('procpar.tmp','file'):$ex
+   if ($ex = 0) then
+      shell('cp procpar procpar.tmp')
+   endif
+   procpar_nt(add_counter,$fid_min)
+   fidheader_update(add_counter)
+   shell('rm procpar.tmp')
+   pwd:$curdir
+   shell('mv ' + $report + ' ' + $curdir)
+   cd('..')
+   rt($newfile)
+   //spec
+   ft
+   dg
+   text
+   ds dscale
+   
+"************ Automatic ECC correction *******************"
+   $ecc = ''
+   input('Do you want to performed ECC? (y/n): (<ret> yes) '):$ecc
+   if not (($ecc = 'y') or ($ecc = '')) then
+      write('line3','ECC was not applied!')
+      abort
+   endif
+   $file_exp=''
+   $filename_exp=''
+   $ext=''
+   $length=0
+   $file_exp = $newfile
+   $filename_exp = $file_exp
+   length($file_exp):$length
+   substr($file_exp,$length-2,3):$ext
+   if ($ext <> 'fid') then
+      write('line3','ERROR: Wrong type of selected file!')
+      abort
+   else
+      $file_ref=''
+      substr($file_exp,1,$length-4):$file_ref
+      $file_ref = $file_ref + '_w1.fid'
+      $ex=0
+      exists($file_ref,'directory'):$ex
+      if ($ex = 0) then
+         substr($file_exp,5,$length-8):$file_ref
+         $file_ref = $file_ref + '_w2.fid'
+         $ex=0
+         exists($file_ref,'directory'):$ex
+         if ($ex = 0) then
+            write('line3','ERROR: File %s does not exists!',$file_ref)
+            input('Filename of the water reference: '):$file_ref
+            $file_ref = $file_ref + '.fid'
+            exists($file_ref,'directory'):$ex
+            if ($ex = 0) then
+               write('line3','ERROR: File %s does not exists!',$file_ref)
+               write('alpha','Program aborted, ECC was not performed!')
+               abort
+            endif
+         endif
+      else
+         $dir=''
+         pwd:$dir
+         $file_exp = $dir + '/' + $file_exp
+         $file_ref = $dir + '/' + $file_ref
+      endif
+   endif
+
+   write('line3','File to be corrected: %s',$file_exp)
+   write('line3','File used as a reference: %s',$file_ref)
+
+   $lsfid1 = 0
+   rtv($file_exp,'lsfid')
+   on('lsfid'):$on1
+   if ($on1 = 1) then
+      $lsfid1 = lsfid
+   endif
+
+   $lsfid2 = 0
+   rtv($file_ref,'lsfid')
+   on('lsfid'):$on2
+   if ($on2 = 1) then
+      $lsfid2 = lsfid
+   endif
+
+   $flsfid1 = ''
+   $flsfid2 = ''
+   format($lsfid1,3,0):$flsfid1
+   format($lsfid2,3,0):$flsfid2
+   write('line3','lsfid(M) = %d  lsfid(W) = %s',$flsfid1,$flsfid2)
+
+//   $homedir=''
+//   shell('echo $HOME'):$homedir
+//   $program = $homedir + '/bin/ecc4'
+   exists('ecc4','bin'):$e,$program
+   
+   $fid_exp = $file_exp + '/fid'
+   $fid_tmp = $file_exp + '/fid.tmp'
+   $fid_ref = $file_ref + '/fid'
+   
+   shell('mv ' + $fid_exp + ' ' + $fid_tmp)
+   shell($program,$fid_tmp,$fid_ref,$fid_exp,$flsfid1,$flsfid2)
+
+   write('line3','EDDY CURRENT CORRECTION PERFORMED ON "%s" !!',$filename_exp)
+
+   rt($file_exp)
+   lp=0 rp=0
+   f full vp=10
+   lb='n' gf=0.15 gfs=0.0 fn=32767
+   ph wft vsadj(150) dscale dc
+   dg
+   ds dscale
+   
+   $ok = 'n'
+   input('Is the eddy current correction OK? (y/n): (<ret> yes) '):$ok
+   if (($ok = 'y') or ($ok = '')) then
+      shell('rm ' + $fid_tmp)
+   else
+      shell('mv ' + $fid_tmp + ' ' + $fid_exp)
+   endif
+endif
+

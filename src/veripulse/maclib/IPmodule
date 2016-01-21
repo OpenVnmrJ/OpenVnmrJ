@@ -1,0 +1,82 @@
+"macro IPmodule"
+
+getsampglobal('IPrunid')
+if ($1='savetune4sched' or $1='save4sched') then
+   $moduledir=userdir+'/csvlib'
+   $tuneinfofile=userdir+'/csvlib/IPtuneinfo'
+else
+   $moduledir=autodir+'/IPmodule_'+IPrunid
+   $tuneinfofile=$moduledir+'/IPtuneinfo'
+endif
+$modulefile=$moduledir+'/IPpars'
+
+IF ($1='get') THEN
+
+   exists($modulefile,'file'):$modex1
+   if ($modex1>0.5) then
+	getmodule('IPpars',$moduledir)
+	return
+   else "Is there one in the csvlib directory?"
+        $moduledir=userdir+'/csvlib'
+        $modulefile=$moduledir+'/IPpars'
+        exists($modulefile,'file'):$modex2
+        if ($modex2>0.5) then
+	    getmodule('IPpars',$moduledir)
+	    return
+	endif
+   endif
+
+ELSEIF ($1='save') THEN
+
+   module('setup','IPpars','basic')
+   exists($moduledir,'directory'):$modex2
+   if ($modex2<0.5) then mkdir($moduledir) endif
+   savemodule('IPpars',$moduledir)
+
+ELSEIF ($1='save4sched') THEN
+
+   //Is this line needed
+   module('setup','IPpars','basic')
+   exists($moduledir,'directory'):$modex2
+   if ($modex2<0.5) then mkdir($moduledir) endif
+   savemodule('IPpars',$moduledir)
+
+ELSEIF ($1='savetestlist') THEN
+
+  $showfile=userdir+'/persistence/IPtestschedule'
+  shell('cp '+$showfile+' '+$moduledir):$dum
+
+ELSEIF ($1='savetuneinfo' or $1='savetune4sched') THEN
+
+   $sampdesc=$2
+   $tunenuc=$3
+   exists($moduledir,'directory'):$modex2
+   if ($modex2<0.5) then mkdir($moduledir) endif
+   exists($tuneinfofile,'file'):$ex
+   if ($ex<0.5) then write('reset',$tuneinfofile) endif
+   write('file',$tuneinfofile,'%s %s',$tunenuc,$sampdesc)
+
+ELSEIF ($1='gettuneinfo') THEN
+
+   $runid=$2
+   $moduledir=autodir+'/IPmodule_'+$runid
+   $modulefile=$moduledir+'/IPpars'
+   $tuneinfofile=$moduledir+'/IPtuneinfo'
+   $sampdesc='' $tunenuc='' $nuc1='' $nuc2=''
+   exists($tuneinfofile,'file'):$ex
+   if ($ex<0.5) then write('error','No tune info file') return endif
+   readfile($tuneinfofile,'$tunenuc','$sampdesc','','local'):$num
+   $nextsamp=$sampdesc[1]
+   strstr($tunenuc[1],','):$ret,$nuc1,$nuc2
+   if ($num>1) then
+      //Now rewrite tuneinfofile
+      write('reset',$tuneinfofile)
+      $i=2
+      repeat
+	   write('file',$tuneinfofile,'%s %s',$tunenuc[$i],$sampdesc[$i])
+	   $i=$i+1
+      until ($i>$num)
+   endif 
+   return($nextsamp,$nuc1,$nuc2)
+
+ENDIF

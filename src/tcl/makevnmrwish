@@ -1,0 +1,182 @@
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+#---PAID sccs home---
+SCCSDIR=$(sccsdir)
+MAKEFILE=makevnmrwish
+SDIR=$(sccsdir)/tcl/SCCS/s.
+TCL_GET=sccs -p$(sccsdir)/tcl/SCCS get
+
+TCL_VER=8.3
+
+TCL_LIB=libtcl$(TCL_VER).so
+TK_LIB=libtk$(TCL_VER).so
+BLT_LIB=libBLT24.so
+TIX_LIB=libtix4.1.8.3.so
+TCL_BYTECODE_VER=tbcload13
+
+TK_STATIC_LIB=libtk$(TCL_VER).a
+TCL_STATIC_LIB=libtcl$(TCL_VER).a
+DYNAMICLIBS = $(TCL_LIB) $(TK_LIB) $(BLT_LIB) $(TIX_LIB)
+
+TCLDIR=$(commondir)/tcl/srcTcl
+TKDIR=$(commondir)/tcl/srcTk
+TIXDIR=$(commondir)/tcl/srcTix
+BLTDIR=$(commondir)/tcl/srcBlt
+SRC_DIR=$(sourcedir)/systcl
+ACQCOMMDIR=$(solobjdir)/proglib/ncomm
+ 
+# These are the names of the dynamic libraries in TCLDIR, TKDIR, etc. for our
+# particular architecture.
+# The following are good for Solaris:
+TCLLIB=$(TCL_LIB)
+TKLIB=$(TK_LIB)
+BLTLIB=$(BLT_LIB)
+TIXLIB=$(TIX_LIB)
+
+OPENWINHOME=/usr/openwin
+
+STATICLIBS = $(TCLDIR)/$(TCL_STATIC_LIB) $(TKDIR)/$(TK_STATIC_LIB)
+
+LIBS = -lacqcomm -lX11 -lsocket -lnsl -ldl -lm
+SOL_LIBS = -ltk$(TCL_VER) -ltcl$(TCL_VER) -l$(TCL_BYTECODE_VER) -lacqcomm -lX11 -lsocket -lnsl -ldl -lm
+
+#-- Normal operational compile flags
+TARGET_ARCH=
+CFLAGS= -O
+CPPFLAGS= -I$(OPENWINHOME)/include -I$(TCLDIR) -I$(TKDIR)
+LDFLAGS= -L$(OPENWINHOME)/lib -L$(ACQCOMMDIR) -L$(TKDIR) -L$(TCLDIR) -R /vnmr/lib:/usr/openwin/lib
+COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+LINK.c= $(CC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH)
+
+#---debugging with DBXTOOL compile flags
+#CFLAGS= -c -g
+
+#--- TCL scripts needed for "vnmrwish" applications
+TCL_SCRIPTS=			\
+		at.tcl		\
+		atrecord.tcl	\
+		atregbuilt.tcl	\
+		combiplate.tcl	\
+		decctool.tcl	\
+		Dg		\
+		dg.tcl		\
+		dgconf.tcl	\
+		dpsgen.tcl	\
+		enter.tcl	\
+		fileListen.tcl	\
+		plate_glue.tcl	\
+		status.tcl	\
+		pl_color.tcl	\
+		add_printer.tcl	\
+		nms.tcl		\
+		spin.tcl	\
+		gilson.tcl	\
+		xcal2.tcl	\
+		temp.tcl
+
+TCL_LIB_SCRIPTS=		\
+		collection.tcl	\
+		composite.tcl	\
+		docker.tcl	\
+		popup.tcl	\
+		psgcolor.tcl	\
+		psghelp.tcl	\
+		splash.tcl	\
+		combi.help	\
+		combi.m.xbm	\
+		dirview.tk	\
+		scroll2.tk	\
+		accnt_helpTip	\
+		menu2.tk	\
+		deck.tk		\
+		arrow.bmp	\
+		arrow2.bmp
+
+#---object modules needed for "vnmrwish"
+TCL_SRC=                       \
+		vnmrAppInit.c
+
+TCL_OBJ=                       \
+		vnmrAppInit.o
+
+ALLSRC = $(TCL_SCRIPTS) $(TCL_SRC) $(TCL_LIB_SCRIPTS)
+
+std SOLARIS: $$(MAKEFILE) Source vnmrwish_sol
+	@echo "NMR_ID Solaris Vnmrwish complete --------------------------"
+
+LIB_SOLARIS: $$(MAKEFILE) $(DYNAMICLIBS)
+	@echo "NMR_ID Solaris Tcl libraries complete --------------------------"
+
+AIX : $$(MAKEFILE)
+	( $(MAKE) -f $(MAKEFILE) \
+	"CPPFLAGS= -I$(TCLDIR) -I$(TKDIR)" \
+	"LDFLAGS= " \
+	"STATICLIBS = $(ibmobjdir)/proglib/vnmr/libacqcomm.a $(TKDIR)/libtk_IBM.a $(TCLDIR)/libtcl_IBM.a" \
+	"LIBS = -lX11 -ldl -lm" \
+	  vnmrwish )
+	@echo "NMR_ID AIX Vnmrwish complete --------------------------"
+
+LIB_AIX :
+
+IRIX : $$(MAKEFILE)
+	( $(MAKE) -f $(MAKEFILE) \
+	"CPPFLAGS= -DIRIX -I$(TCLDIR) -I$(TKDIR)" \
+	"LDFLAGS= " \
+	"STATICLIBS = $(sgiobjdir)/proglib/vnmr/libacqcomm.a $(TKDIR)/libtk_SGI.a $(TCLDIR)/libtcl_SGI.a $(TCLDIR)/lib$(TCL_BYTECODE_VER)_SGI.a" \
+	"LIBS = -lX11 -lm" \
+	  vnmrwish )
+	@echo "NMR_ID IRIX Vnmrwish complete --------------------------"
+
+LIB_IRIX :
+
+vnmrwish : $(TCL_OBJ)
+	 (umask 2; $(LINK.c) -o vnmrwish $(TCL_OBJ) $(STATICLIBS) $(LIBS) )
+
+vnmrwish_sol : $(TCL_OBJ)
+	 (umask 2; $(LINK.c) -o vnmrwish $(TCL_OBJ) $(SOL_LIBS) )
+
+vnmrAppInit.o: $(@:.o=.c)
+	  (umask 2; $(COMPILE.c) vnmrAppInit.c)
+
+# No obvious way to get the dependency names for libraries automatically
+# ... not to mention the names stripped of version numbers, so just
+# write it all out.
+$(TCL_LIB) : $(TCLDIR)/$(TCLLIB)
+	rm -f $@
+	cp $? $@
+	rm -f libtcl.so
+	ln -s $@ libtcl.so
+$(TK_LIB) : $(TKDIR)/$(TKLIB)
+	rm -f $@
+	cp $? $@
+	rm -f libtk.so
+	ln -s $@ libtk.so
+$(BLT_LIB) : $(BLTDIR)/$(BLTLIB)
+	rm -f $@
+	cp $? $@
+	rm -f libBLT.so
+	ln -s $@ libBLT.so
+$(TIX_LIB) : $(TIXDIR)/$(TIXLIB)
+	rm -f $@
+	cp $? $@
+	rm -f libtix.so
+	ln -s $@ libtix.so
+
+
+Source :
+	(cd $(SRC_DIR) ;$(MAKE) -e -f $(MAKEFILE) src);
+
+src : $$(MAKEFILE) $(ALLSRC)
+	( rm -rf vnmr; mkdir vnmr; cp $(TCL_LIB_SCRIPTS) vnmr);
+	@echo Sources up to date...
+
+$(TCL_SCRIPTS) $(TCL_LIB_SCRIPTS) vnmrAppInit.c: $(SDIR)$$@
+	$(TCL_GET) $@

@@ -1,0 +1,58 @@
+"macro setDicomsetup"
+" Usage: setDicomsetup('storage', 'HOST','$VALUE') "
+
+if($# > 2.5) then
+   $type = $1
+   $name = $2
+   $value = $3
+elseif($# > 1.5) then
+   $type = 'storage'
+   $name = $1
+   $value = $2
+else
+   return
+endif
+
+" Get the path for the appropriate dicom_store.cfg file based "
+" on the appdir scheme "
+if($type = 'storage') then
+   exists('dicom_store.cfg', 'dicom/conf'):$e,$file
+elseif($type = 'print') then
+   exists('dicom_print.cfg', 'dicom/conf'):$e,$file
+else
+   return
+endif
+
+" We know it exists now, is it writable? "
+exists($file,'file','rw'):$e
+if($e < 0.5) then
+   return 
+endif
+
+$tmpfile = '/tmp/dicomsetup'
+exists($tmpfile,'file','rw'):$e
+if($e > 0.5) then
+   shell('rm '+$tmpfile)
+endif
+
+lookup('file',$file, 'readline',1):$line
+
+$s = ''
+while ($line <> '') do
+   substr($line,1):$s
+   if($s = $name) then
+     substr($line,3):$s
+     if($s = $value) then
+	return
+     else
+        write('file', $tmpfile,'%s : %s',$name, $value)
+     endif
+   else
+     write('file', $tmpfile,'%s',$line)
+   endif
+   lookup('readline',1):$line
+endwhile
+
+shell('rm '+$file)
+shell('mv '+$tmpfile+' '+$file)
+shell('chmod 644 '+$file)

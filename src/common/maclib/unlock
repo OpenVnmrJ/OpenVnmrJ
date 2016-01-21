@@ -1,0 +1,28 @@
+"macro unlock"
+" ************************************************************* "
+" This macro replaces the vnmr command - unlock - and calls 	"
+" the new vnmr command vnmr_unlock.  It then checks that the 	"
+" the experiment has been unlocked and joined .			"
+" ************************************************************* "
+
+if ($# < 1) or ($# > 2)  then
+   write('error',`usage - unlock(n) or unlock(n,'force') for n = [1,9999]`)
+endif
+
+" Unlock "
+if ($# = 1) then
+  vnmr_unlock($1)
+else
+  vnmr_unlock($1,$2)
+endif
+
+" Check to see that the new experiment has been joined,	"
+" which implies that it has been unlocked. If it has	"
+" clear screen and display dg screen.			"
+$r1=0
+$exp_num=''
+jexp:$r1
+if ( $r1 = $1) then
+   format($r1,1,0):$exp_num
+   {'jexp'+$exp_num}
+endif

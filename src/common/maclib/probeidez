@@ -1,0 +1,1307 @@
+"macro probeidez"
+//
+// Probe ID implementation that uses the native file system by maintaining
+// the probe ID in the probe file.  
+//
+// The term "probe" here refers to the physcial probe.  The value of the
+// global parameter "probe" refers to a probe file, of which there can be
+// more than one per physical probe.
+//
+//***** Publicly used actions:
+//
+// 'add'
+//	Add the probe ID and probe file name to the probe file.
+//
+// 'attach'
+//	Make the currently attached probe the currently selected probe.
+//      A probe is "selected" when the user has 
+//
+// 'attribute'
+//	Returns 1 if the probe is in online or offline.
+//
+// 'enable'
+//	Enable probeid and start the probe server.
+//
+// 'enabled'
+//	Returns 1 if probeid is in non-native mode, 0 otherwise
+//
+// 'disable'
+//	Disable probeid.
+//
+// 'flush'
+// 	Write the probe file and related tuning files to the probe.
+//
+// 'getTargets'
+//	Initialize probe calibration targets in the probeidCalTargetName and
+//	probeIdCalTargetValue global arrays.
+//
+// 'native'
+//	Returns 1 if probeid is in native mode, 0 otherwise.
+//
+// 'offline' or 'relax'
+//	Take probeid 'offline' so that probe can be edited.
+//
+// 'online' or 'strict'
+//	Put probeid into 'online' mode, where only probe files associated
+//	with the attached probes can be used.
+//
+// 'protection'
+//	Returns a path to the file with probe protection values for the
+//      current probe.
+//
+// 'selectable'
+// 	Returns 1 if probeid is disabled or in offline mode or probe
+//	is attached.  In 'connected' mode it returns 0 if the probe
+//	is disconnected.  Used by Probe.xml.
+//
+// 'set'
+//	Associate the probe file with the current physical probe.
+//
+// 'tunedir'
+//	Returns a tune directory that holds the channel and motor files
+//      for the current probe file.
+//
+//***** Internally used actions:
+//
+// 'attr'
+//	Return the probeid attribute names and values for ID, Serial Number, 
+//	Part Number, Description, Manufacture Date into $3 and $4, respectively,
+//	prefixing the attribute names with $1 to indicate that they are
+//	read-only.
+//
+// 'check'
+//	Verify that the probe server is active and disable probeid mode
+//	if it isn't.
+//
+// 'cleanup'
+//	Remove a temporary file, making sure it really is a Probe ID
+//	temporary file.
+//
+// 'connected'
+//	Returns 1 if a probe is currently connected, 0 otherwise.
+//
+// 'id'
+//	Returns the currently connected probeid.
+//
+// 'init'
+//	Initialize the Probe ID cache for this probe.
+//
+// 'lookup'
+//	Returns 1 if a probe ID file exists on the probe file system.
+//
+// 'ls'
+//	List probes or probe files associated with the specified probe.
+//
+// 'require'
+//	Verify that specified probe attachment requirements have been met.
+//
+// 'recall'
+//	Restore the previous probe file as the current probe file.
+//
+// 'remember'
+//	Store the value of the last probe file name associated with
+//	the currently selected probe.
+//
+// 'target'
+//	Return probe calibration target.
+//
+// 'template'
+//	Get a probe file template from the probe.
+//
+// 'touchtest'
+//	Returns 1 if the current user has permission to add system level
+//	files.
+//
+// 'verify'
+//	Verify that the probe is online and the selected probe matches
+//	the attached probe.
+//
+//***** Called by the probe server:
+//
+// 'connect'
+//	Notify VnmrJ that a new probe file has been connected.
+//
+// 'disconnect'
+//	Notify VnmrJ that the currently connected probe has been disconnected.
+//
+$probeidattr_ex=0
+if $#=0 then $1='id' endif
+
+exists('probeidattr','parameter','global'):$probeidattr_ex
+if $probeidattr_ex then
+  if size('probeidattr') < 8 then
+    // an obsolete version of probeidattr detected
+    if probeidattr[1]='y' then
+      write('error','Detected an obsolete probeid configuration: please reenable probeid and retry')
+      return
+    endif
+    destroy('probeidattr','global')
+    create('probeidattr','string','global')
+    probeidattr='n','','','','','offline','','a'
+  endif
+  $enforce=(probeidattr[6]='online')
+else
+  create('probeidattr','string','global')
+  probeidattr='n','','','','','offline','','a'
+endif
+
+$probeid_probes=systemdir+'/probeid/cache'
+$probeid_mnt=systemdir+'/probeid/mnt'
+$probeid_file='ProbeId'
+$probeid_path=$probeid_mnt+'/'+$probeid_file
+$probeid=''
+$NonProbeID=':others:'
+$NonProbeIDDesc=':Probes without Probe ID:'
+
+if ($1='enabled') then
+    //-- return whether probe ID is enabled or disabled.
+    //   Transitional tool to allow probeid filesystem version to
+    //   coexist with integrated native filesystem.
+    $probeiden=(probeidattr[1]='y')
+    // allow GUI to specify negative return code
+    if $# < 2 then $no=0 else $no=$2 endif 
+
+    if $## = 0 then
+      $mode='' if probeidattr[6] <> '' then $mode=' ('+probeidattr[6]+')' endif
+      if $probeiden > 0.5 then
+        write('line3','probe ID is enabled '+$mode)
+      else
+        write('line3','probe ID is not enabled')
+      endif
+    endif
+    if not $probeiden then $probeiden = $no endif
+    return($probeiden)
+
+elseif ($1='native') then
+    //-- query or set native mode
+    if $#>1 then $no=$2 else $no=0 endif
+    $probeidnative=(probeiden and probeidattr[1]='native')
+    if $##=0 then
+      write('line3',probeidattr[1]='native')
+    endif
+    if $probeidnative then return(1) else return($no) endif
+
+elseif ($1='lookup') then
+    //-- look for a Probe ID tag in the specified or current probe file
+    if $#<2 then $2=probe endif
+    if $2='' or $2=' ' then return(0) endif
+    $file='' exists($2,'probes'):$e,$file
+    if $e then 
+      $file = $file + '/' + $2
+      exists($file,'file'):$e
+      if not $e then return(0) endif
+    endif
+    $id='' lookup('mfile',$file,'seekcs','ID:','read'):$id
+    if $id<>'' then return(1,$id) endif
+    return(0)
+
+elseif ($1='remember') then
+    if probeidattr[1]='n' then 
+      $probeidname=$NonProbeID $probeidfile=':none:' $e=0
+      if not(probe='' or probe=' ') then
+        exists(probe,'probes'):$e,$probeidfile
+      endif
+      if $e then $probeidfile=$probeidfile+'/'+probe endif
+    else
+      $probeidname=probeidattr[4]
+      $probeidfile=probeidattr[2]
+    endif
+    if $probeidfile='' or $probeidfile=' ' or 
+       $probeidname='' or $probeidname=' ' then return(0) 
+    endif
+
+    // save the last probe file associated with this probe
+    exists('probeidname','parameter','global'):$e
+    if not $e then
+      create('probeidname','string','global'):$ok
+      create('probeidfile','string','global'):$ok
+      $i=1
+    else
+      $i=0 teststr('probeidname',$probeidname,'global'):$i
+    endif
+    if $i=0 then 
+      $i=size('probeidfile')+1
+    endif
+    probeidname[$i]=$probeidname
+    $firstchar='' substr(probeidattr[3],1,1):$firstchar
+    if $firstchar='/' and probeidattr[1]='native' then
+      $probeidfile=probeidattr[3]+'/'+probeidattr[2]
+      probeidfile[$i]=$probeidfile
+    else // it's :none: or '' or ' '
+      probeidfile[$i]=$probeidfile
+    endif
+    return(1)
+
+elseif ($1='set') then
+    //-- set probeidez probe file for use with probeidez
+    if probeidattr[1]<>'native' then return endif
+    if $#<2 then $2=probe endif
+    if $2='' or $2=' ' then
+      $tmp=probeidattr[5]
+      probeidattr[2]=':none:' probeidattr[3]='' probeidattr[5]=''
+      {$0}('cleanup',$tmp)
+      return
+    endif
+    if $#<3 then
+      $3='' exists($2,'probes'):$e,$3
+    endif
+    probeidattr[2]=$2
+    probeidattr[3]=$3
+    return
+    
+elseif ($1='protection') then
+    //-- return a path to the file with probe protection values
+    $probe=probe $e=0 $auto=0 $id=''
+    if $#>1 then $probe=$2 endif
+    if probe<>'' and probe<>' ' then {$0}('lookup',$probe):$e,$id endif
+    if not $e then                        // imaging doesn't use probe files
+      $auto=(probeiden and probeidattr[1]='native' and probeidattr[6]='online')
+      {$0}('id'):$id                      // read the probe's ID
+      strstr($id,':'):$i                  // check for non-ID tags like ':all:'
+      $e=($auto and $i=0)
+    endif
+    if $e then
+      $probeid_cache=$probeid_probes+'/'+$id
+      $template=$probeid_cache+'/Varian/parameters'
+      exists($template,'file'):$e
+      if $e then return($e,$template) endif
+    endif
+    return(0)
+endif
+
+if ($1='connected') then
+  {$0}('id'):$probeid
+  $probeid_ex=($probeid<>'' and $probeid<>' ')
+  if $##=0 then write('line3',$probeid_ex) endif
+  return($probeid_ex)
+
+elseif ($1='id') then
+  //-- We could read from the probe directly, but that could lead to 
+  //   really long NFS timeouts if the probe's Network Attached Storage
+  //   server is misbehaving.  The -timeout parameter to probe server
+  //   specifies the timeout in seconds if it is under 100, otherwise in
+  //   milliseconds.  The probeid shell script also has a timeout feature
+  //   of the form -t <secs> -timer, but this doesn't work when invoked
+  //   from the shell from VnmrJ.
+  $probeid='' shell('probeid -id -timeout 5'):$probeid,$err
+  if $##=0 then write('line3','\''+$probeid+'\'') endif
+  probeid=$probeid
+  return($probeid)
+
+elseif ($1='verify') then
+    $ok=1
+    {$0}('native'):$enabled
+    if not $enabled then return(1) endif
+    if probeidattr[6]='online' then
+      if $##>0 then     // only generate a warning
+      	{$0}('require','attached',':warn:'):$ok // probe physically connected to console
+        if $ok then     // make sure selected probeid id matches actual
+       	  {$0}('require','match',':warn:')
+        else
+          write('line3','Warning: No probe is attached')
+        endif
+      else              // report an error and abort
+      	{$0}('require','attached',':warn:') // probe physically connected to console
+      	{$0}('require','match',':warn:')    // selected probeid id matches actual
+      endif
+    else                // probe is in offline mode
+      {$0}('require','probeid')              // some probe should have been selected
+    endif
+    return($ok)
+
+elseif ($1='require') then
+    //-- check with server if the probe is in the state specified by $1
+    $prefix='' $errlog='error' $quiet=0 $abort=0
+    // change the user requested warnings only as the last param
+    if ${$#}=':warn:' then $errlog='line3' $prefix='Warning: ' endif
+    if ${$#}=':quiet:' then $quiet=1 endif
+    if ${$#}=':abort:' then $abort=1 endif
+
+    if $2='probeid' then
+      // check that a probe has been defined
+      if probeidattr[4]='' or probeidattr[4]=':all:' then
+        if probeidattr[6]='offline' then
+           write($errlog,$prefix+'No offline probe has been selected')
+           if $abort then abort else return(0) endif
+        endif
+        return(0)
+      endif
+      return(1)
+
+    elseif $2='attached' then
+      // check if a probe is physically connected
+      {$0}('id'):$probeid
+      $attached=(probeid<>'' and probeid<>' ')
+      if not $attached then
+   	 $msg='No probe is attached'
+         if $##=0 or not($quiet) then
+      	    write($errlog,$prefix+$msg)
+         endif
+         if probeidattr[6]='online' then
+	   // TODO: prompt if in foreground mode with a command-line
+	   //$prompt='Please attach a probe and hit return >'
+	   //input($prompt):$dum
+	   if $abort then abort else return(0) endif
+         endif
+	 return(0)
+      endif
+      return(1,$probeid)
+
+    elseif $2='match' or $2='auto' then
+      // check if the attached probe matches the currently assumed probe
+      {$0}('id'):$probeid
+      $connected=($probeid<>'' and $probeid<>' ')
+      {$0}('lookup'):$e,$expected
+      if not $e then $expected=probeidattr[4] endif // fall-back
+
+      $match=($probeid=$expected)
+      if not($match) then
+      	 if $2='auto' then // automatically detect the attached probe
+           if $connected<>'' then
+             if $connected<>$expected then
+      	       write($errlog,'probe \''+$expected+'\' was detached and \''
+                                       +$connected+'\' is attached')
+	     else
+      	       write('line3','Warning: probe '+$expected+' was reattached')
+             endif
+             {$0}('attach'):$attached
+           else
+             $msg='probe '+$expected+' was detached'
+             if (probeidattr[6]='online') then
+      	       write($errlog,$prefix+$msg) else write('line3','Warning: '+$msg)
+             endif
+           endif
+      	 else
+           if ($# < 3) then $3='' endif
+   	   $msg='probe '+$expected+ ' is not attached, please detach '+$probeid+' and attach '+$expected
+           if $# > 2 then
+      	      write($errlog,$prefix+$0+' '+$3+': '+$msg)
+           else
+      	      write($errlog,$prefix+$0+': '+$msg)
+           endif
+           if probeidattr[6]='online' then
+             if $##>0 or not($abort) then return(0) else abort endif
+           else	
+	     return(0)
+           endif
+         endif
+      else
+        if $# < 3 then write('line3','Probe '+$expected+' detected') endif
+      endif
+    else 
+      write('error','%s: invalid option \'%s\'',$0,$1)
+      abort
+    endif
+    return(1)
+
+elseif ($1='ls') then  // check unguarded called from Probe.xml
+  //-- list probes or probe files
+  $dir = userdir+'/persistence'
+  exists($dir,'directory'):$d
+  if not ($d) then mkdir('-p',$dir) endif
+  $ok=0
+  if $#<2 then $2='probes' endif
+  if $#>1 then
+    if $2='probes' then      	// list all known probe IDs in the cache
+      {$0}('init')           	// make sure we're current in case of new probe
+      $file='probes.list'    	// output file
+      if probeidattr[6]='online' then
+        {$0}('id'):$probeid
+        return($probeid)
+      endif
+      $out = $dir+'/'+$file
+      shell('(cd '+$probeid_probes+'; /bin/ls -1 | grep -v -E \'^null$\' | awk \'{ printf "\\"%s\\" \\"%s\\"\\n", $0, $0 }\') > '+$out):$ok
+      shell('printf "\\\"'+$NonProbeIDDesc+'\\\" \\\"'+$NonProbeID+'\\\"\\n\\\":All Probes:\\\" \\\":all:\\\"\\n" >> '+$out):$ok2
+      return($ok)
+
+    elseif $2='probefiles' then // find probe files with matching probe ID
+      // filter out all files that have a line leading with "ID:" and that
+      // end with the probe ID, with any amount of intervening white space
+      // $3 is the probes directory (system, user, appdir)
+      // $4 is the target file (probe_list_user, probe_list_system)
+      // $5 is the optional probeid to list
+      if $#<5 then $5=probeidattr[4] endif
+      if $5=':all:' then            // don't filter any files
+	$grep=''
+      elseif $5=$NonProbeID then    // filter non-probeid probes
+        $grep='|xargs -r grep -L -E \'^ID[:][[:space:]]+\' '
+      else  // filter for probe files with matching Probe ID ($5)
+        $grep='|xargs -r grep -l -E \'^ID[:][[:space:]]+'+$5+'[[:space:]]*$\' '
+      endif
+      exists($3,'directory'):$d
+      if $d then
+      	$chdir='cd '+$3+'; '
+      	$files='/bin/ls -1 |grep -v probe.tmplt |awk \'{ print $1 "/" $1}\' '
+      	$fix  ='| sed \'s/^.*\\///\''
+      	$cmd  ='('+ $chdir + $files + $grep + $fix + ') 2>/dev/null > '+$4
+      	shell($cmd)
+      else
+        shell('echo "" > '+$4)
+      endif
+      return
+    elseif $2='connected' then
+      {$0}('id'):$probeid
+      return($probeid)
+    endif
+  endif
+
+  return($ok)
+
+elseif ($1='recall') then
+    //-- restore the previous probe file as the current probe file
+    if $#<2 then 
+      {$0}('id'):$probeid
+      $2=$probeid 
+    endif
+    exists('probeidname','parameter','global'):$en
+    exists('probeidfile','parameter','global'):$ef
+    if $en and $ef then
+      $i=0 teststr('probeidname',$2,'global'):$i
+      if $i<>0 then
+        $fistchar='' substr(probeidfile[$i],1,1):$firstchar
+        if $firstchar='/' then
+          $e=0 $probe=':none:' $path=''
+          exists(probeidfile[$i],'file'):$e,$path
+          if $e then
+            strstr(probeidfile[$i],'/','last'):$e,$path,$probe
+            probeidattr[2]=$probe
+            probeidattr[3]=$path
+            return(1)
+          endif
+        endif
+      endif
+    endif
+    probeidattr[2]=''
+    probeidattr[3]=':none:'
+    return(0)
+
+elseif ($1='selectable') then
+    //-- returns 1 if probeid is disabled or in offline mode or probe
+    //   is attached.  In 'connected' mode it returns 0 if the probe
+    //   is disconnected.  Used by Probe.xml.
+    $ok=1
+    if probeidattr[1]='native' and probeidattr[6]='online' then 
+      $ok=(probeid<>'' and probeid<>' ')
+      if (not $ok) then 
+        if $##=0 then write('error','Probe ID is disconnected') endif
+      endif
+    endif
+    return($ok)
+
+elseif ($1='attach') then
+    //-- make the indicated probe the currently selected probe
+    if $#<2 then 
+      {$0}('id'):$probeid
+      $2=$probeid 
+    elseif probeidattr[6]='online' then // 'online' implies a physical probe
+      {$0}('id'):$probeid
+      if $2<>$probeid then               
+      	write('error','Probe ID of selected probe \''+$2+'\''
+      		      + ' does not match connected probe \''+$probeid+'\'')
+        return
+      endif
+    endif
+    {$0}('remember'):$ok            // remember the current probe
+    if probeidattr[4]<>$2 then      // do some housekeeping
+      {$0}('cleanup',probeidattr[5])
+      probeidattr[4]=$2
+      probeidattr[2]='' probeidattr[3]='' probeidattr[5]=''
+    endif
+    {$0}('recall',$2):$ok           // try to restore previous state for this probe
+    if $ok then 
+      probe=probeidattr[2]          // remember the last one if available
+    else 
+      probe=''
+    endif
+    {$0}('update')                  // update VnmrJ probe GUI elements
+    {$0}('getTargets'):$ok
+    return($2)
+    
+elseif ($1='cleanup') then
+    //-- remove temporary file
+    if $2='' or $2=' ' then return endif
+    exists($2,'file'):$e
+    if $e then 
+      probeid_tmp($2):$is_tmp
+      if $is_tmp then shell('rm -f '+$2) endif
+    endif
+    return
+
+elseif ($1='attribute') then
+    if $2='online' then 
+      return(probeiden and probeidattr[1]='native' and probeidattr[6]='online') 
+    endif
+    if $2='offline' then return(probeidattr[6]='offline') endif
+    write('error','No info for Probe ID attribute '+$2)
+    abort
+    return
+
+elseif ($1='init') then
+    //-- initialize the probe cache if it hasn't already been
+    //   If the probe server isn't running, assume an error has occurred
+    $ok=0 probeserver('check'):$ok
+    if (not $ok) then return(0) endif
+    $ok=0 $probeid='' {$0}('require','attached',':quiet:'):$ok,$probeid
+    if (not $ok) or ($probeid='') or ($probeid=' ') then return(0) endif
+
+    // allow a forced "restore from factory defaults"
+    $force=0 if ${$#}='force' then $force=1 endif 
+
+    $tmplt_dir='Varian'
+    $probeid_cache=$probeid_probes+'/'+$probeid
+    $probeid_tmplt=$probeid_cache+'/'+$tmplt_dir
+    exists($probeid_cache+'/ProbeId','file'):$e
+    if $e then 
+      if not $force then return(0) endif // already initialized
+    else
+      write('line3','Warning: configuring probe '+$probeid)
+      {$0}('touchtest',$probeid_probes):$rw
+      if not($rw) then
+        write('error','No write permission on Probe ID directory '+$probeid_cache)
+        return(0)
+      endif
+    endif
+    exists($probeid_cache,'dir'):$e
+    if not $e then
+      shell('mkdir -p '+$probeid_cache):$ok
+      exists($probeid_cache,'directory'):$e
+      if not $e then
+        write('error','Couldn\'t create the Probe ID cache '+$probeid_cache)
+        return(0)
+      endif
+    endif
+
+    exists($probeid_cache+'/'+$probeid_file,'file'):$e
+    if not $e then
+      $probeid_copy=$probeid_cache+'/'+$probeid_file
+      cp($probeid_path,$probeid_copy):$ok
+      exists($probeid_copy,'file'):$e
+      if not $e then
+        write('error','Couldn\'t initialize the Probe ID cache file '+$probeid_cache+'/'+$probeid_file)
+        return(0)
+      endif
+      shell('sed -i.dos "s/\\\r//" '+$probeid_copy)
+    endif
+
+    // read the list of directories to copy to the cache from the probe file
+    $copylist=$tmplt_dir
+    $copylist_filename='Copy'
+    $copylist_file=$probeid_mnt+'/'+$copylist_filename
+    exists($copylist_file,'file'):$e
+    if $e then
+      // copy the import list to cache to convert DOS to UNIX end-of-line
+      cp($copylist_file,$probeid_cache):$ok
+      if not $ok then
+        write('error','Error initializing local probe file '+$copylist_file)
+      else
+        $copylist_file=$probeid_cache+'/Copy'
+        shell('sed -i.dos "s/\\\r//" '+$copylist_file)
+      endif
+      $copyplus='' // not used but required by readfile
+      readfile($copylist_file,'$copylist','$copyplus','','local'):$copylist_sz
+    endif
+    teststr('$copylist',$tmplt_dir,'local'):$e
+    if not $e then $copylist=$copylist,$tmplt_dir endif
+
+    $i=0 while $i<size('$copylist') do $i=$i+1 // for each $copylist entry
+      $src=$copylist[$i]
+      $srcpath=$probeid_mnt+'/'+$src
+      exists($srcpath,'directory'):$esd
+      exists($srcpath,'file'):$esf
+      $dst_path=$probeid_cache+'/'+$src
+      exists($dst_path,'directory'):$edd
+      exists($dst_path,'file'):$edf
+      if (($esd or $esf) and (not($edd or $edf) or $force)) then
+        // source exists and destination doesn't exist or force overwrite
+        if $edd or $edf then // dst dir or dst file exists
+          $src=$probeid_mnt
+          $dst=$probeid_cache
+          shell('(tar -C '+$src+' -cf - . | tar -C '+$dst+' -xmf - )'):$ok
+
+        else
+          cp('-a',$probeid_mnt+'/'+$src,$probeid_cache):$ok
+        endif
+        exists($dst_path,'directory'):$e
+        if not $e then
+          write('error','Couldn\'t initialize the Probe ID '+$dst_path)
+          return(0)
+        endif
+      endif
+    endwhile
+
+    // clean potential DOS end-of-line characters from files
+    $template=$probeid_tmplt+'/parameters'
+    exists($template,'file'):$e
+    if $e then shell('sed -i.dos "s/\\\r//" '+$template) endif
+
+    $targets=$probeid_tmplt+'/Targets'
+    exists($targets,'file'):$e
+    if $e then shell('sed -i.dos "s/\\\r//" '+$targets) endif
+
+    return(1)
+
+elseif ($1='template') then
+    //-- grab a template from the probeid directory
+    $tune='' $pex=0
+    if probeidattr[1]='native' then
+      $id=probeidattr[4]
+      if $id='' or $id=' ' then
+        write('error','No Probe ID was selected')
+        return(0)
+      endif
+      if probeidattr[4]=$NonProbeID then // non-probe-ID probe
+      	$template=systemdir+'/probes/probe.tmplt'
+      elseif probeidattr[4]=':all:' then
+        write('error','No Probe ID selected - select a valid Probe ID or \''+$NonProbeIDDesc+'\' in the Probe Window Probe ID pulldown menu')
+	return(0)
+      else
+        $probeid_cache=$probeid_probes+'/'+$id
+        $e=0 $template='' {$0}('parameters'):$e,$template
+        if not $e then
+       	  $template=$probeid_cache+'/Varian/parameters'
+        endif
+        $tune=$probeid_cache+'/Varian/Tune'
+      endif
+      exists($template,'file'):$tex
+      if not $tex then
+        write('error','No template for Probe ID '+$id)
+        return(0)
+      endif
+      if $tune<>'' then
+      	exists($tune,'directory'):$pex
+      	if $pex then
+      	  return($tex,$template,$tune)
+        endif
+      endif
+      if not $pex then
+      	write('line3','Warning: no tuning information for Probe ID '+$id)
+      	return($tex,$template)
+      endif
+    else
+      write('error','Probe ID template requires native mode')
+      return(0)
+    endif
+
+elseif ($1='add') then
+    // add name and ID to probe template
+    $id=probeidattr[4]
+    if $id='' or $id=' ' then
+      write('error','No probe was selected')
+      return(0)
+    endif
+    if probeidattr[4]=':all:' then
+      write('error','No probe selected - select a valid Probe ID or \''+$NonProbeIDDesc+'\' in the Probe Window Probe ID pulldown menu')
+      return(0)
+    endif
+    $tex=0 $template='' $tune='' $tunesrc=''
+    {$0}('template'):$tex,$template,$tunesrc
+    if $#<3 then $3=probe endif
+    // create the probe file $3 from $id, $2, and $template
+    if probeidattr[4]<>$NonProbeID then
+      write('file',$3,'%-17s %s\n\n','ID:',$id)
+    endif
+    write('file',$3,'%-17s %s\n\n','NAME:',$2)
+    shell('cat '+$template+' >> '+$3):$ok
+    return(1)
+
+elseif ($1='touchtest') then
+    $ok=0 $touchtest=$2+'/touchtest'
+    shell('touch '+$touchtest+' 2> /dev/null'):$dum
+    exists($touchtest,'file'):$e
+    if ($e > 0.5) then
+      delete($touchtest)
+      $ok=1
+    else
+      write('error','No permission to add system level tuning information')
+    endif
+    return($ok)
+
+elseif ($1='check') then
+    //-- verify that the probe server is active and responding
+    //   If not, disable probeid so that some semblance of normal
+    //   processing can proceed.
+    probeserver('check'):$ok,$err
+    if (not $ok) then // try to (re)start the probee server
+      write('line3','Warning: '+$err)
+      write('line3','Warning: restarting probe server')
+      probeserver('start')
+      probeserver('verify'):$ok,$err
+      if not $ok then
+        write('error','Disabling Probe ID: could not start probe server')
+	{$0}('disable')
+        return(0)
+      endif
+    endif
+    if probeidattr[8]='a' then probeidattr[8]='b' else probeidattr[8]='a' endif
+    if $##=0 then write('line3','ok') endif
+    return(1)
+
+elseif ($1='update') then
+    //-- update the menus
+    exists('probeid_updating','parameter','current'):$e
+    if not($e) then
+      create('probeid_updating','integer','current',0)
+    endif
+    $updating = probeid_updating  // to debug: grep updating /tmp/vj.vnmr1.dbg
+    if $#<2 then
+      if probeid_updating < 1 then
+        probeid_updating = 1
+      	if probeidattr[6]='online' then     // update the list of probes
+      	  exec($0+'(\'ls\',\'connected\')') // just the connected probe
+      	else
+      	  exec($0+'(\'ls\',\'probes\')')    // all known probes
+      	endif
+      	exec('probelist(\'makenucmenu\')')  // update GUI probe selection
+      	vnmrjcmd('pnew','probe')            // alert the media
+        probeid_updating = 0                
+      endif
+    elseif $2='clear' then // recover from an aborted 'update'
+      probeid_updating = 0
+    endif
+    $updating = probeid_updating
+    return
+
+elseif ($1='exists') then
+    //-- check if probe exists
+    exists(probe,'probes'):$exists,$where
+    return($exists,$where)
+
+elseif ($1='enable') then
+    //-- enable probeid native
+    rights('mayenableprobeid'):$ok
+    if $ok <> 1 then
+      write('error',operator+' does not have sufficient rights to disable probe ID')
+      abort
+    endif
+
+    probeserver('start')         // monitor the probe connection
+
+    if not(probeiden) then
+      if probeidattr[6]='online' then 
+        write('error','No Probe ID hardware configured')
+        return
+      else
+        write('line3','Warning: no probeid hardware configured')
+      endif
+    elseif probeiden<>1 then
+      write('error',$0+': Probe ID is not in \'native\' mode')
+      abort                      // this shouldn't happen
+    endif
+
+    {$0}('remember'):$ok         // remember the current probe
+    probeidattr[1]='native'      // enabled
+
+    exists('probeid','parameter','systemglobal'):$probeidex
+    if not $probeidex then
+      create('probeid','string','systemglobal',''):$ok
+      if not $ok then 
+        write('error','Could not initialize probeid global parameter')
+        abort 
+      endif
+    endif
+    {$0}('recall',probeidattr[4])// recall the last probeid probe file
+    probe=probeidattr[2]         // recover previous probe selection
+    {$0}('id'):probeid
+    {$0}('update')               // update VnmrJ probe list elements
+    return
+
+elseif ($1='disable') then
+    // disable probeid - TODO: flush
+    rights('mayenableprobeid'):$ok
+    if $ok <> 1 then
+      write('error','You do not have permission to disable probeid')
+      abort
+    endif
+    exists('probeidattr','parameter','global'):$probeattrex
+    if not $probeattrex then
+      create('probeidattr','string','global'):$ok
+      probeidattr='n','',probe,'','','',''
+    endif
+    {$0}('remember'):$ok         // remember the current probe
+    probeidattr[1]='n' 		 // disable probeid
+    {$0}('recall',$NonProbeID)   // recall the last non-probeid probe file
+    probe=probeidattr[2]         // assign it to the current probe
+    {$0}('update')               // update VnmrJ probe elements
+    return
+
+elseif ($1='relax' or $1='offline') then
+    //-- allow operation from cache - the probe does not need to be
+    //   physically attached in this mode.
+    rights('enableprobeidoffline'):$rights
+    if not $rights then
+      write('error',operator+' does not have sufficient rights to operate with Probe ID disconnected from the console')
+      return(0)
+    endif
+    if probeidattr[1]<>'native' then
+      write('error','Probe ID is not enabled')
+      return(0)
+    endif
+    write('line3','Warning: Probe ID is in offline mode - check for connected and matching probe ID will not be performed')
+    if probeidattr[6]<>'offline' then
+      probeidattr[6]='offline'
+      {$0}('update')           // update the list of probe files
+    endif
+    return(1)
+
+elseif ($1='strict' or $1='online') then
+    //- require the probe to be attached for any command that
+    //  touches the probe file
+    rights('enableprobeidoffline'):$rights
+    if not $rights then
+      write('error','Insufficient rights to set Probe ID to online mode')
+      return(0)
+    endif
+    if probeidattr[1]<>'native' then
+      write('error','Probe ID is not enabled')
+      abort
+    endif
+    if probeidattr[6]<>'online' then
+      // do in GUI to avoid a race condition
+      probeidattr[6]='online'
+    endif
+    {$0}('attach')             // attach the connected probe as 'online'
+    return(1)
+
+elseif ($1='attr') then
+    $id='' $idx=0 
+    teststr($3,'ID:',$5):$idx
+    if $idx>0 then 
+       $id={$4}[$idx] 
+    else
+       write('line3','Warning: Probe file '+probe+' does not have a probe ID')
+       return(size($3))
+    endif
+    $probeid_cache=$probeid_probes+'/'+$id
+    $probeid_path=$probeid_cache+'/'+$probeid_file
+    exists($probeid_cache,'directory'):$d
+    if not $d then
+      write('line3','Warning: Probe file '+probe+': probe with ID '+$id+' is not initialized on this system')
+      return(size($3))
+    endif
+    $pid_attr='' $pid_val=''
+    readfile($probeid_path,'$pid_attr','$pid_val','','local'):$pid_sz
+    $i=0 while ($i < $pid_sz) do $i=$i+1
+      $pid_attr[$i]= $2 + $pid_attr[$i]
+    endwhile
+    
+    {$3} = $pid_attr, {$3}
+    {$4} = $pid_val, {$4}
+    return(size($3))
+
+elseif ($1='production') then
+    //-- return path to production data archive
+    $id=probeidattr[4]
+    if $id=':all:' or $id=':others:' or $id='' then
+      write('line3','Error: Cannot determine production data without Probe ID')
+      return(0)
+    endif
+    $probeid_cache=$probeid_probes+'/'+$id
+    $probeid_archive=$probeid_cache+'/Data/test.zip'
+    return($probeid_archive)
+
+elseif ($1='target') then
+    //-- get Probe ID supplied calibration target values
+    $precision=2 
+    if $#>2 then $precision=$3 endif
+    exists('probeidCalTargetName','parameter','global'):$en
+    exists('probeidCalTargetVal','parameter','global'):$ev
+    if not($ev and $en) then 
+      {$0}('getTargets'):$ok
+      if not $ok then return(0) endif
+    endif
+
+    if size('probeidCalTargetName') then
+      teststr('probeidCalTargetName',$2,'global'):$match
+      if $match > 0 then
+        $name = probeidCalTargetName[$match]
+        $value = probeidCalTargetValue[$match]
+        format($value,'isreal'):$isreal
+        if not $isreal then
+          error('Invalid non-numeric target value \''+$value+'\'')
+          return(0)
+        endif
+        format(probeidCalTargetValue[$match],3,$precision):$r
+        $spec = 'probeSpec_' + $name
+        destroy($spec,'global')
+        create($spec,'real','global',$r)
+        return($match,$r)
+      endif
+    endif
+    return(0)
+
+elseif ($1='get') then
+    $attr='' $id=probeidattr[4]
+    if $#>1 then $attr=$2 endif
+    if $#>2 then $id=$3 endif
+    
+    if $id='' or $id=' ' then return endif
+    $probeid_cache=$probeid_probes+'/'+$id
+    $probeid_path=$probeid_cache+'/'+$probeid_file
+    exists($probeid_cache,'directory'):$d
+    if not $d then
+      write('line3','Warning: Probe file '+probe+': probe with ID '+$id+' is not initialized on this system')
+      return(size($3))
+    endif
+    $pid_attr='' $pid_val=''
+    readfile($probeid_path,'$pid_attr','$pid_val','','local'):$pid_sz
+
+    if $attr='' then return($pid_sz,$pid_attr,$pid_val) endif
+    $i=0 teststr('$pid_attr',$attr,'local'):$i
+    if $i then
+      if $##=0 then write('line3',$pid_val[$i]) endif
+      if $i then return($pid_val[$i]) endif
+    endif
+    return(0)
+
+elseif ($1='getTargets') then
+    //-- initialize probe calibration target specs.
+    probeid_target('init')
+    create('probeidCalTargetName','string','global'):$en
+    create('probeidCalTargetValue','string','global'):$ev
+    if probe='' or probe=' ' then return(0) endif
+    exists(probe,'probes'):$e,$file
+    if $e then 
+      $file = $file + '/' + probe 
+    else 
+      return(0) 
+    endif
+    lookup('mfile',$file,'seekcs','ID:','read'):$id
+    if $id='' then return(0) endif
+
+    $probeid_cache=$probeid_probes+'/'+$id
+    $probeid_tmplt=$probeid_cache+'/Varian'
+    $targets=$probeid_tmplt+'/Targets'
+    exists($targets,'file'):$e
+    if not $e then
+      write('line3','Warning: No calibration targets found for '+$id)
+      return(0)
+    endif
+    if $#>1 then $filt=$2 else $filt='' endif
+    readfile($targets,'probeidCalTargetName','probeidCalTargetValue',$filt,'global'):$n
+    $changed=0 {$0}('synonyms','probeidCalTargetName'):$changed
+    $addenda=0 {$0}('addenda','probeidCalTargetName','probeidCalTargetValue'):$addenda
+    probeid_target('set','probeidCalTargetName','probeidCalTargetValue')
+    if $##=0 then 
+      write('line3','Read %d calibration target specs for %s', $n, $id)
+    endif
+    if $n>0 then
+      return($n,probeidCalTargetName,probeidCalTargetValue)
+    endif
+    return($caltargetnum)
+
+elseif ($1='synonyms') then
+    //
+    // resolve common alternative (mis)spellings of Probe ID target files
+    //
+    // usage:
+    //    if $in[1]='zer0' $in[1]='0ne' $in[2]='two' and the synonyms file 
+    //    contains the two lines:
+    //       zer0 zero
+    //       0ne  one
+    //    then
+    //    	 probeidez('synonyms','zer0'):$out,$changed
+    //    	 probeidez('synonyms','zer0','/vnmr/probeid/synonyms'):$out,$changed
+    //    	 probeidez('synonyms',$in):$out,$changed
+    //    	 probeidez('synonyms',$in,'/vnmr/probeid/synonyms'):$out,$changed
+    //    all produce an output of $out='zero','one','two', with $changed=1 when the
+    //    2nd argument is 'zer0' in this example, or $changed=2 for the 2nd argument of $in.
+    //
+    if $#<2 then return endif
+    if $#<3 then $synfile='/vnmr/probeid/synonyms' else $synfile=$3 endif
+    $changed=0
+
+    // if the synonym file doesn't exist then assume the input is correct
+    exists($synfile,'file'):$e
+    if not $e then return($changed) endif
+
+    $probeid_synonym='' $probeid_canonical=''
+    $n=0 readfile($synfile,'$probeid_synonym','$probeid_canonical','','local'):$n
+
+    $i=0 while $i<size($2) do $i=$i+1
+      $done=0
+      $result[$i]={$2}[$i]
+      $j=0 while $j<$n and not $done do $j=$j+1
+        if {$2}[$i] = $probeid_synonym[$j] then
+          $result[$i] = $probeid_canonical[$j]
+	  if $##<2 then {$2}[$i] = $probeid_canonical[$j] endif
+          $done=1
+          $changed=$changed+1
+        endif
+      endwhile
+    endwhile
+    if $##>1 then
+      return($changed,$result)
+    else
+      return($changed)
+    endif
+
+elseif ($1='addenda') then
+    // $2 = keys, $3 = values, $4 = optional path to addenda file
+    //
+    if $#<3 then return endif
+    if $#<4 then $omfile='/vnmr/probeid/addenda' else $omfile=$4 endif
+    $changes=0
+    $probe_type='' {$0}('get','Type'):$probe_type
+    $probe_pn='' {$0}('get','PN'):$probe_pn
+    $probeid_omkey='' $probeid_omval=''
+    $n=0 readfile($omfile,'$probeid_omkey','$probeid_omval','','local'):$n
+    $type=':none:'
+    $i=0 while $i<$n do $i=$i+1
+      $hdr=0 $probe_type='' $label='' $t=''
+      strstr($probeid_omkey[$i],':'):$hdr,$label,$t
+      if ($hdr) then // either a PN or a Probe Type
+        $type=$label
+      elseif $type=$probe_type or $type=$probe_pn then
+        // see if it is already in the cal data from the probe
+	$nomatch=1 $k=0 while $k<size($2) and $nomatch do $k=$k+1
+          if {$2}[$k]=$probeid_omkey[$i] then 
+            $nomatch=0
+            {$2}[$k]=$probeid_omkey[$i]
+            {$3}[$k]=$probeid_omval[$i]
+	  endif
+        endwhile
+        if $nomatch then
+          $j=size($2)+1
+          {$2}[$j]=$probeid_omkey[$i]
+	  {$3}[$j]=$probeid_omval[$i]
+	  $changes=$changes+1
+        endif
+      endif
+    endwhile
+    return($changes)
+
+elseif ($1='parameters') then
+    // $2 = keys, $3 = values, $4 = optional path to addenda file
+    //
+    if $#>1 then 
+      $param_file=$2
+      $e=0 exists($param_file,'file'):$e
+      if not $e then
+        write('error','probe parameter file '+$2+' does not exist')
+        return(0,'')
+      endif
+    else
+      $param_dir = systemdir+'/probeid/parameters'
+      $e=0 exists($param_dir,'directory'):$e
+      if not $e then return(0,'') endif
+      $probe_pn='' {$0}('get','PN'):$probe_pn
+      if $probe_pn = '' then
+        write('error','probeid failed to read probe part number from probe')
+        return(0,'')
+      endif
+      $param_file=$param_dir+'/'+$probe_pn
+      exists($param_file,'file'):$e
+      if not $e then return(0,'') endif
+    endif
+    
+    return(1,$param_file)
+
+elseif ($1='connect') then
+    //-- Called by the probe server when a probe is physically connected.
+    write('line3','Warning: probe \''+probeid+'\' connected')
+    if (probeiden and probeidattr[1]='native') then
+      if (probeidattr[6]='online') then
+        if (probeid<>probeidattr[4]) then
+          {$0}('attach',probeid)           // reconnect previous probe
+        endif
+      	//if (probeid=probeidattr[4]) then // reconnected previous probe
+      	//  probe=probeidattr[2]           // so also use previous probe file
+        //else
+	//  probe=''                       // otherwise no probe is selected
+      	//endif
+        dousermacro('probe_connected')
+      endif
+    endif // user has enabled probeid
+    return
+
+elseif ($1='disconnect') then
+    //-- called by probe server when a probe is physically disconnected
+    //   In 'offline' mode the user is still allowed to work with the
+    //   probe file
+    write('line3','Warning: probe disconnected - limited probe functionality')
+    if (probeidattr[6]='offline' and probeidattr[1]='y') then
+      probe=probeidattr[2]
+    endif
+    dousermacro('probe_disconnected')
+    return
+
+elseif ($1='notice') then
+    //-- 
+    if $#<2 then 
+      write('error',$0+' '+$1+' requires 2 parameters')
+      return
+    endif
+    if $2='timeout' then 
+      // the probe server encountered an unrecoverable error (such as an
+      // Network Attached Probe Unit hardware failure) and needs to restart.
+      if (probeidattr[6]='online') then
+        write('line3','Warning: Go to manual Probe ID selection')
+      endif
+      write('error','Probe ID hardware error - stopping the Probe ID server')
+      probeserver('stop')
+      write('error','Restarting Probe ID server')
+      probeserver('start')
+      probeserver('check')
+    elseif $2='shutdown' then
+      write('line3','Warning: Probe ID server stopped')
+    endif
+    return
+
+elseif ($1='tunedir') then
+    //-- provide the best match for a system tune directory
+    if probe='' or probe=' ' then write('error','No probe is currently selected') return('') endif
+    $sysdir=systemdir+'/tune/'+probe
+    exists($sysdir,'directory'):$d
+    if $d then return($sysdir) endif
+    {$0}('lookup'):$e,$id
+    if $e then
+      $probeid_cache=$probeid_probes+'/'+$id
+      $factory=$probeid_cache+'/Varian/Tune'
+      exists($factory,'directory'):$e
+      if $e then return($factory) endif
+    endif
+    return('')
+
+elseif ($1='tcalib_dir') then
+    {$0}('lookup'):$e,$id
+    if $e then
+      $probeid_cache=$probeid_probes+'/'+$id
+      $factory=$probeid_cache+'/Varian/temp_calib'
+      exists($factory,'directory'):$e
+      if $e then return($factory) endif
+    endif
+    return('')
+
+elseif ($1='exit') then
+    //-- called by the exit macro when vnmrj shuts down
+    if probeidattr[1]<>'native' then return endif
+    // {$0}('flush') is slow for large files - so let users flush explicitly for now
+    //probeserver('stop')
+    return
+
+elseif ($1='flush') then
+    if probeidattr[1]<>'native' then return(0) endif
+    $ok=0 {$0}('require','attached',':quiet'):$ok,$probeid // check if probe is attached
+    if $ok then
+      if $#<2 then $2='probe' endif
+      if $2='' or $2=' ' then return endif
+
+      if $2='probe' then
+        if $#<3 then $3=probe endif           // $3 is the probe file to flush
+        {$0}('lookup',$3):$e,$id
+        if not $e then return(0) endif        // probe file has no probe ID
+        if $id<>$probeid then return(0) endif // probe file ID doesn't match attached
+
+        // get the id of the selected probe
+        probeid_subdir:$e,$sub
+        if not $e then return(0) endif
+        $top=userdir $sys='-usr'
+        if $e=2 then
+          $top=systemdir $sys='-usr'
+        endif
+
+        // list of probe directories
+        $dirs = ['probes/'+$3, 'tune/'+$3, 'tune/tunecal_'+$3]
+        $i=0 while($i < size('$dirs')) do $i=$i+1
+          $path=$top+'/'+$dirs[$i]
+          shell('probeid -flush '+$path+' -opt '+$dirs[$i]+' '+$sys)
+        endwhile
+      else
+      	$list_usr=userdir+'/vnmrsys/persistence/flush_list_usr'
+      	$list_sys=systemdir+'/vnmrsys/persistence/flush_list_sys'
+      	{$0}('ls','probefiles',userdir+'/probes',$list_usr,$probeid)
+      	{$0}('ls','probefiles',systemdir+'/probes',$list_sys,$probeid)
+      	//shell('probeid -flush native -sys '+$list_sys+' -usr '+$list_usr)
+      endif
+    endif
+    return($ok)
+
+elseif ($1='print') then
+    if $#<2 then return endif
+    $columns=0
+    $i=1 while($i<$#) do $i=$i+1
+      $columns[$i-1]=0
+      $rows=size(${$i})
+      $j=0 while($j<$rows) do $j=$j+1
+        length({${$i}}[$j]):$strlen
+        if ($strlen > $columns[$i-1]) then 
+          $columns[$i-1]=$strlen
+          //write('line3','length of'+{${$i}}+' is %f',$columns[$i-1])
+        endif
+      endwhile
+    endwhile
+    write('line3','writing %s,... to alpha display',$2)
+    $j=0 while($j<size($2)) do $j=$j+1
+      $c1='' format($columns[1],0,0):$c1
+      if $#=2 then
+        write('alpha','%'+$c1+'s',{$2}[$j])
+      elseif $#=3 then
+        $c2='' format($columns[2],0,0):$c2
+        write('alpha','%'+$c1+'s %'+$c2+'s',{$2}[$j],{$3}[$j])
+      elseif $#=4 then
+        $c2='' format($columns[2],0,0):$c2
+        $c3='' format($columns[3],0,0):$c3
+        write('alpha','%'+$c1+'s %'+$c2+'s %'+$c3+'s',{$2}[$j],{$3}[$j],{$4}[$j])
+      endif
+    endwhile
+
+elseif ($1='config') then
+    $usage = 'usage: '+$0+'(\''+$1+'\',\'tunedir\',<tuning configuration>)'
+    if $#<2 then 
+      write('error',$usage)
+      return(0)
+    endif
+    if $2='tunedir' then
+      // create a symbolic link from the potential Tune directories to the cache
+      exists('probeiden','parameter','systemglobal'):$e
+      if not $e then write('error','probeid is not configured') return endif
+      if not probeiden then write('error','probeid is not configured') return endif
+      exists('probeid','parameter','systemglobal'):$have_probeid
+      if not $have_probeid then write('error','probeid is not available') return endif
+      if probeid='' or probeid=' ' then write('error','probeid not connected?') return(0) endif
+      $id=probeid
+      if $have_probeid then
+        $probeid_cache=$probeid_probes+'/'+$id
+        $top=$probeid_cache+'/Varian'
+	$options='Tune.d'
+        $options_path=$top+'/'+$options
+        exists($options_path,'directory'):$e
+	if not $e then
+          write('error','The attached probe does not have selectable tuning capability')
+          return(0)
+        endif
+        $link='Tune'
+        $link_path=$top+'/'+$link
+        exists($link_path,'directory'):$link_exists
+        if $#<3 then
+	  shell('(/bin/ls -m '+$options_path+')'):$dirs
+	  $chosen='' shell('(basename `readlink '+$link_path+'`)'):$chosen
+          if $link_exists then 
+            write('error','current configuration: '+$chosen)
+	  else $chosen='' endif
+  	  write('error','available tuning configurations are: '+$dirs)
+          return($dirs,$chosen)
+        endif
+        $selection=$options_path+'/'+$3
+	exists($selection,'directory'):$e
+	if not $e then
+	  shell('(/bin/ls -m '+$options_path+')'):$dirs
+ 	  write('error',$3+' is not a valid tuning configuration, select one of: '+$dirs)
+          return(0)
+        else
+          shell('rm -f '+$link_path)
+          shell('(cd '+$top+' ; ln -s '+$options+'/'+$3+' '+$link+')'):$ok
+	  write('error','Warning: probe '+$id+' configured for '+$3)
+          return(1)
+        endif
+      endif
+    else // unknown option
+      write('error',$usage)
+      return(0)
+    endif
+    return(0)
+
+else 
+    write('error',$0+': unknown command \''+$1+'\'')
+    abort
+endif

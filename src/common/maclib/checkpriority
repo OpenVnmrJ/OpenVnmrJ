@@ -1,0 +1,31 @@
+"macro checkpriority"
+
+if ($# < 2) then $2='' endif
+if ($# < 3) then $3=1 endif
+
+$traymax=traymax
+if (traymax=97) then $traymax=96 endif
+if ($2='') then
+   if (wqinit='auto') then
+      $autodir=autodir+'/enterQ'
+   elseif (wqinit='enter') then
+      shell('basename '+globalenter):$autodir
+      $autodir=globalenter+'/'+$autodir
+   else
+      return(1,$traymax)
+   endif
+else
+   $autodir=$2
+endif
+
+getadminfo('prioritytotal'):$ptotal
+if ($ptotal=0) then return(1,$traymax) endif
+
+$pr=0
+shell('(cat '+$autodir+'.macdir/currentsampleinfo | grep -w USER: | grep '+$1+' | grep -c priority)'):$pr
+shell('(cat '+$autodir+' | grep -w USER: | grep '+$1+' | grep -c priority)'):$pr2
+if ($pr+$pr2+$3 > $ptotal) then
+   return(0,$ptotal)
+else
+   return(1,$ptotal)
+endif

@@ -1,0 +1,82 @@
+/*  rna_CUhnccch.c
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    Base-correlation from Uridine-imino to H6 or Cytidine-amino to H6 with
+    options for the initial H->N transfer.
+
+    H   -->   N   -->   C4   -->   C5   -->   C6   -->   H6 - det
+    t1  CP        CP        INEPT      INEPT     re-INEPT
+	or
+	INEPT
+
+
+                      NOTE dof MUST BE SET AT 110ppm ALWAYS
+                      NOTE dof2 MUST BE SET AT 200ppm ALWAYS
+
+
+    pulse sequence:	Simorre, J.P. et al, J. Biom. NMR, 6 (1995), 427-32.
+
+
+                  CHOICE OF DECOUPLING AND 2D MODES
+
+    Set dm = 'nny', dmm = 'ccg' (or 'ccw', or 'ccp') for 13C decoupling.
+    Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+
+    Must set phase = 1,2  for States-TPPI acquisition in t1 [H1].
+
+    The flag f1180 should be set to 'y' if t1 is to be started at halfdwell
+    time. This will give -90, 180 phasing in f1. If it is set to 'n' the
+    phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in H1.  f1180='y' is ignored if ni=0.
+
+
+
+                  DETAILED INSTRUCTIONS FOR USE OF rna_CUhnccch
+
+
+    1. Obtain a printout of the Philosopy behind the RnaPack development,
+       and General Instructions using the macro:
+                                      "printon man('RnaPack') printoff".
+       These Detailed Instructions for rna_gChsqc may be printed using:
+                                      "printon man('rna_CUhnccch') printoff".
+
+    2. Apply the setup macro "rna_Chnccch" for the Cytidine and "rna_Chnccch"
+       for the Uridine correlation experiment.  This loads the relevant
+       parameter set and also sets ni=0 and phase=1 ready for a 1D spectral check.
+
+    3. Centre H1 frequency on H2O (4.7ppm), N15 frequency on the aromatic N
+       region (200 ppm), and C13 frequency on 110ppm.
+
+    4. CHOICE of transfer and CYT/URA options:
+
+       CP='y' uses CP for imino/amino H1 -> N15 transfer.
+       ncyc_hn should be set to ~7.5ms (1 or 2 at 500MHz) for J(H-N) = 95Hz.
+
+       INEPT='y' uses INEPT for imino/amino H1 -> N15 transfer.
+
+       URA='y' gives a spectrum of uridine correlations.
+       ncyc_nc should be set to ~90ms (6 at 500MHz) for J(N1-C4) = 10Hz.
+       INEPT is generally better for uridine.		Set sw1 to 4ppm.
+
+       CYT='y' gives a spectrum of cytidine correlations.
+       ncyc_nc should be set to ~45ms (3 at 500MHz) for J(N4-C4) = 20Hz.
+       CP is generally better for cytidine.            Set sw1 to 4ppm.
+
+    5. GRADIENTS:
+       G3 and G4 should be optimized for sufficient water suppression.
+       Typical values are G3=12G/cm and G4:-28G/cm.
+
+       G5 and G0 should be 2-3G/cm. 
+
+       Gr suppresses radiation damping during t1 and should be 0.5 G/cm.
+
+       In general, gradient-levels should be as low as possible.
+
+
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        @                                                      @
+        @   Rewritten for RnaPack by Peter Lukavsky (10/98).   @
+        @                                                      @
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+*/

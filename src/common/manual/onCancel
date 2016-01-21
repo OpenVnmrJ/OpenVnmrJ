@@ -1,0 +1,94 @@
+
+*************************************************************************
+onCancel  -  Specify special functions and Labels for the "Cancel Command" button
+*************************************************************************
+
+The onCancel command can specify a shell command to execute when the
+Cancel Command button is clicked. It can also set the message displayed
+when the Cancel Command button is clicked. Finally, it can control whether
+the standard "Cancel Command" mechanism will be used. The onCancel
+command is only active for the duration of the macro execution, including
+the duration of any macros called by the initial macro. It can be called
+multiple times to set different behaviors in different sections of the macros.
+The onCancel command is ignored if called from background or automation.
+
+The first argument specifies a shell call to be made, that is, it is like an
+argument to the shell command. If this special function is selected, it is only
+invoked the first time the Cancel Command is clicked. After that, the standard
+Cancel Command function will be used. Using '' as the first argument reselects
+the standard cancel mechanism.
+
+The second argument specifies the message to be displayed if the Cancel Command
+button is clicked.  The default is '', which means use the standard message.
+This message will be displayed until the standard cancel mechanism is used and
+then the standard message will be displayed.  If the second argument is ' ',
+that is, a single space, then Cancel Command messages will be suppressed. 
+
+The third argument specifies the action of the standard Cancel Command mechanism.
+The value 'yes' selects the standard mechanism in addition to the cancel mechanism
+specified by the first argument.
+The value 'no' disables the standard mechanism. The cancel mechanism specified by the
+argument argument will be invoked the first time the Cancel Command is clicked and the
+standard mechanism will be invoked on subsequent clicks of the Cancel Command button.
+The value 'off' disables the standard mechanism until the macro finishes.
+The default value is 'no'.
+
+The onCancel call with no arguments resets everything to default behavior. It is
+equivalent to onCancel('','','yes').
+
+A typical example might be for a macro to look for a file in order to decide
+if it needs to quit. For this example, the following might be used.
+
+shell('rm -f '+curexp+'/cancelMyMacro'):$e
+onCancel('touch '+curexp+'/cancelMyMacro','Cancelling myMacro')
+$cancel=0
+while (<some conditions>) and ($cancel = 0) do
+   // Do macro stuff
+
+   // Check for cancel
+   exists(curexp+'/cancelMyMacro','file'):$e
+   if ($e) then
+     shell('rm -f '+curexp+'/cancelMyMacro'):$e
+     $cancel = 1
+   endif
+endwhile
+
+To suppress the Cancel Command button, the following could be used.
+
+onCancel('','Critical section. Cannot cancel command','off')
+
+The first argument specifies no special cancel function. The second argument displays
+a message and the third argument turns off the standard cancel mechanism. Since the 
+standard cancel mechanism is turned off, the supplied message will be displayed every time
+the Cancel Command button is clicked. To resume standard cancel mechanisms later in the
+macro, the onCancel command with no arguments, or onCancel('','','yes'), or some other
+variant can be used.
+
+Another example is when a macro calls external programs via the shell command.
+
+exists('myProgA','bin'):$e,$pathMyProgA
+if ($e) then
+  exists('killMyProgA','bin'):$e,$killpath
+  onCancel($killpath,'Terminating myProgA')
+  shell($pathMyProgA):$e
+endif
+exists('myProgB','bin'):$e,$pathMyProgB
+if ($e) then
+  exists('killMyProgB','bin'):$e,$killpath
+  onCancel($killpath,'Terminating myProgB')
+  shell($pathMyProgB):$e
+endif
+onCancel // re-select deafult behavior
+
+This assumes shell scripts killMyProgA and killMyProgB have been written to terminate
+the respective programs. The default third argument is 'no', so if myProgA is cancelled,
+the macro continues and myProgB will execute. If a 'yes' had been supplied to the
+first onCancel call, then if the Cancel Command button were clicked while myProgA was
+executing, killMyProgA would have been called and the standard cancel mechanism would
+have aborted the macro. Following completion of myProgB, the default cancel mechanism
+is selected.
+
+To just change the message that is displayed when the Cancel Command button is clicked,
+use
+
+onCancel('','Macro '+$0+' canceled','yes')

@@ -1,0 +1,43 @@
+"macro xmgetatts"
+"get attribute(s) from a node"
+"id=$1 attr=$2,$3,..., must have return arguments"
+$maxargs=9  "maximum number of return arguments"
+xm1('studydir'):$sdir
+$f=$sdir+'/info/'+$1+'/prop'
+$attr='' $val='' $arg=''
+$a='' $v='' $z='' 
+$i=0
+repeat
+  $i=$i+1
+  $attr[$i]='' $val[$i]='' $z[$i]=''
+until ($i>=$maxargs)
+exists($f,'file'):$e
+if $e>0.5 then
+  readfile($f,'$attr','$val','','local'):$size
+  if $size>0.5 then
+    $i=$size+1
+    repeat
+      $i=$i-1
+      $attr[$i+1]=$attr[$i]
+      $val[$i+1]=$val[$i]
+    until ($i <= 1)
+  endif
+  $attr[1]='id'
+  $val[1]=$1
+  $size=size('$attr')
+
+  $j=1
+  repeat
+    $j=$j+1
+    if (($j <= $#) and ($j <= 9)) then
+      $arg=${$j}
+      $i=0 $found=0
+      repeat
+        $i=$i+1
+        if $arg=$attr[$i] then $found=1 endif
+      until ($found=1 or $i>=$size)
+      if $found=1 then $z[$j-1]=$val[$i] endif
+    endif
+  until ($j >= $maxargs)
+endif
+return($z[1],$z[2],$z[3],$z[4],$z[5],$z[6],$z[7],$z[8],$z[9])

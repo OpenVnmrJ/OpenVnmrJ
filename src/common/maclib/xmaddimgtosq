@@ -1,0 +1,47 @@
+"macro xmaddimgtosq"
+
+" Add a .img directory to the Study Queue"
+
+if($# < 0.5) then
+    write('error', 'Usage: xmaddimgtosq(\'fullpath(of .img or .fdf)\')')
+    return('')
+endif
+
+if($#>1.5) then
+  if($2='new') then 
+    xmaddpartosq($1,$2)
+    return
+  endif
+endif
+
+" If this is an .fdf path, we need to get the .img dir path"
+$dir=$1
+" Force base to be a string in case the base name ends up being a numeric"
+$base=''
+substr($1, 'basename'):$base,$ext
+if($ext='fdf') then
+    substr($1, 'dirname'):$dir,$base
+   " write('line3', 'test: %s  %s', $dir, $base) "
+endif
+
+" dir is the .img directory path now whether we started with that or the .fdf"
+" If dir has .img, remove it.  Also get the basename of the dir"
+substr($dir, 'basename'):$base,$ext
+if($ext='img') then
+    " We want the base directory plus the basename without the .img"
+    substr($dir, 'dirname'):$basedir,$name
+    $dir=$basedir + '/' + $base
+else
+    write('error', 'xmaddimgtosq requires a .img directory')
+    return('')
+endif
+
+"Make a node and manually set its title"
+xmmakenode('new','action'):$id
+if ($id<>'null' and $id<>'') then
+  xmsetatts($id, 'title', $base)
+  xmsetatts($id, 'data', $dir)
+  xmsetatts($id, 'type', 'LIB')
+  xmsetatts($id, 'status', 'Completed')
+  xmsetatts($id, 'lock', 'on')
+endif

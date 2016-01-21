@@ -1,0 +1,84 @@
+"macro dgm"
+"*******************************************************************"
+"  dgm                                                              "
+"                                                                   "
+"  Macro to construct a menu of all parameters beginning with the   "
+"  characters 'dg'.  There is no limit on the number of such dg     "
+"  groups.  Button labels are given the name of the dg parameter,   "
+"  or may be given an arbitrary name by adding the keyword 'label'  "
+"  as the first element in the dg string, e.g.:                     "
+"                                                                   "
+"        1(zero):label Gradients :zero;                             "
+"                                                                   "
+"  Here, a 'zero' parameter is used to prevent display of the       "
+"  label name 'Gradients'.                                          "
+"*******************************************************************"
+
+
+"** Initialize Variables **********************************"
+$count = 0
+$procpar = curexp+'/curpar'
+$outfile = '/tmp/dg'
+
+"** The tempdg parameter will hold the menu labels and   **"
+"** action strings for the complete set of dg's, in case **"
+"** there are more than 7 dg groups.                     **"
+exists('tempdg','parameter','global'):$ex
+if ($ex = 0) then
+  create('tempdg','string','global')
+  setgroup('tempdg','display','global')
+endif
+tempdg = ''
+
+"** First flush all of the parameters out to disk.       **"
+flush
+
+"** Grep all of the lines which start with the           **"
+"** characters 'dg', then sort alphabetically and count  **"
+"** the number of lines with wc.                         **"
+shell('grep \\^dg "'+$procpar+'" > '+$outfile):$junk
+shell('sort +0 -1 '+$outfile+' -o '+$outfile):$junk
+shell('wc -l <'+$outfile+';cat'):$lines
+
+"** Lookup the first word in each line, and make a list  **"
+"** using the variable $dgstring.                        **"
+lookup('file',$outfile)
+repeat
+  $count = $count + 1
+  lookup('read',1,'readline'):$dgstring[$count]
+until ($count = $lines)
+
+"** Check the value of the first line in each $dgstring  **"
+"** parameter.  If the keyword 'label' is found, use the **"
+"** next word as the button label, otherwise use the name**"
+"** of the dg parameter itself as the label.  The action **"
+"** string for each button is then set.  n3 is used to   **"
+"** store the displayed dg parameter for printing        **"
+$i = 0
+repeat
+  $i = $i + 1
+  substr({$dgstring[$i]}[1],9,5):$label
+  if ($label = 'label') then
+    substr({$dgstring[$i]}[1],2):$label
+    tempdg[2*$i-1] = $label
+  else
+    tempdg[2*$i-1] = $dgstring[$i]
+  endif
+  tempdg[2*$i] = 'n3=\''+$dgstring[$i]+'\' dg(\''+$dgstring[$i]+'\')'
+until ($i = $lines)
+
+"** The temporary parameter 'indexdg' is used by the     **"
+"** menus 'dgm' and 'dgm_more' to keep track of the      **"
+"** current menu display when there are more than 7      **"
+"** entries, otherwise the menu update following the     **"
+"** button selection cycles to the next set of menu items**"
+"** once more than desired.                              **"
+exists('indexdg','parameter','global'):$ex
+if ($ex = 0) then
+  create('indexdg','real','global')
+endif
+indexdg = 0
+
+"** Fire up the new menu **********************************"
+menu('dgm')
+rm($outfile)

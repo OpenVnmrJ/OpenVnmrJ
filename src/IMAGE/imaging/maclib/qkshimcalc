@@ -1,0 +1,68 @@
+"macro qkshimcalc"
+
+"********************************************************************"
+" qkshimcalc - Calculations for quick shim
+
+" Usage: qkshim_calc(i) - i=1,2,3 for x,y,z
+ 
+"********************************************************************"
+
+$macro=$0
+
+$shim=shimno
+
+$arraydim = size('del')  "no of fids"
+av
+wft('nods') 
+"vsadj
+"dssh dssl
+$counter=1
+select(1) vsadj(10) $high=10
+$highest=1
+repeat
+    select($counter)
+    peak:$ht
+    if $ht>$high then $high=$ht $highest=$counter endif
+    $counter=$counter+1
+until $counter > $arraydim
+
+$gstep=del[$highest]
+wft('nods',$highest)
+lb=4
+aph0
+ph
+nl dres
+if(show = 'y') then
+  wft('nods') select($highest) 
+  vsadj
+  dssh dssl f full
+endif
+if($shim = 1) then
+  gbasex = gbasex+$gstep
+elseif($shim = 2) then
+  gbasey = gbasey+$gstep
+elseif($shim = 3) then
+  gbasez = gbasez+$gstep
+endif
+write('line3','highest %2.0f, x %4.0f, y %4.0f, z %4.0f',$highest,
+			gbasex/shimscale,gbasey/shimscale,gbasez/shimscale)
+if($highest < 3) or ($highest > ($arraydim-2)) then
+  "repeat shim iteration"
+  shimpass = shimpass-1
+  repeats = repeats+1
+  if(shimno = 1) then
+    write('line3','Repeating shim X measurement:%2.0f',repeats)
+  elseif(shimno = 2) then
+    write('line3','Repeating shim Y measurement:%2.0f',repeats)
+  elseif(shimno = 3) then
+    write('line3','Repeating shim Z measurement:%2.0f',repeats)
+  endif
+  if(repeats > 5) then
+    write('error', '%s: Aborting - No. of iterations per shim exceeded',$macro)
+    abort
+  endif
+else
+  repeats = 0
+endif
+
+

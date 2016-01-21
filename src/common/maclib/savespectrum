@@ -1,0 +1,64 @@
+"macro savespectrum"
+
+  if ($# < 1) then $1='' endif
+  isnewexp:$new
+  if $new and auto<>'y' then return endif
+  if (auto='y') then
+        $archsamp=archivedir+'/'+sample
+  else
+        shell('dirname '+file):$archsamp
+  endif
+  exists($archsamp,'directory'):$adirex
+  if ($adirex=0) then
+	write('line3','%s directory not found',$archsamp)
+	return
+  endif
+  $bname='' $dname='' substr(file,'dirname'):$dname,$bname,$ext
+  if $ext='vfs' then 
+	write('error','Data in curexp is not a fid')
+	return
+  endif
+  if auto<>'y' then
+	exists(curexp+'/acqfil/fid','file'):$fidex
+	if not $fidex then
+	    write('error','Data in curexp is not a fid')
+	    return
+	endif
+  endif
+  exists($dname+'/'+$bname+'.fid','directory'):$fidex
+  if not $fidex then
+     exists($dname+'/'+$bname+'.rec','directory'):$fidex
+  endif
+  if not $fidex then
+     exists($dname+'/'+$bname+'.REC','directory'):$fidex
+  endif
+  if not $fidex then
+	write('error','The fid directory for the data in curexp is not found')
+	return
+  endif
+  exists($dname+'/'+$bname+'.vfs','file'):$specex
+  if $specex then
+	write('error','%s/%s.vfs exists',$dname,$bname)
+	return
+  endif
+
+  if ($1='') then
+    if (auto='y') then
+	cplog(pslabel,'last'):$1
+	$bname=$1
+    else
+	$1=$bname
+    endif
+  endif
+  Autockdir($archsamp)
+
+    $name=''
+    Svfname($archsamp+'/'+$1,'.vfs','.fid, .vfs'):$name
+    svvfs($name)
+    substr($name,'basename'):$bname2,$ext
+    cplog($bname2,'spectrum',$bname)
+    datamirror($archsamp+'/'+$bname2+'.vfs','spectrum')
+
+    dousermacro($0)
+    return($name)
+

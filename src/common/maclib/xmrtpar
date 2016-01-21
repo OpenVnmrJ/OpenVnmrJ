@@ -1,0 +1,32 @@
+"macro xmrtpar"
+"Used by all applications (Imaging, Liquids, etc.)."
+"retrieve parameters for study"
+$prescan=prescan
+xm1('studydir'):$sdir
+$i=0 teststr('sqattr','id','global'):$i
+$file=$sdir+'/info/'+sqval[$i]+'/savepar'
+$savedtext=$sdir+'/info/'+sqval[$i]+'/text'   
+$currenttext=curexp+'/text'   
+exists($file,'file'):$e
+if $e<0.5 then
+  write('line3','%s could not find %s',$0,$file)
+else
+  "if text has been saved, retrieve it also"
+  exists($savedtext,'file'):$etxt
+  if $etxt>0.5 then
+    shell('cp -p '+$savedtext+' '+$currenttext)         
+  endif
+  fread($file,'current','reset')
+  updtgcoil
+  newdg "update panels"
+  dg "update title bar"
+" delete($file)"
+  prescan=$prescan
+  if (appmode='imaging') then
+    "Allow apptype specific action on xmrtpar"
+    exists(apptype,'maclib'):$ex
+    if ($ex) then {apptype}('rtpar') endif
+    "Allow sequence specific action on xmrtpar"
+    execseq('rtpar')
+  endif
+endif

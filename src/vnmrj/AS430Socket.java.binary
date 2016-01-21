@@ -1,0 +1,233 @@
+/*
+ * %Z%%M% %I% %G% Copyright (c) 2003-2004 Varian,Inc. All Rights Reserved
+ * 
+ * Varian,Inc. All Rights Reserved.
+ * This software contains proprietary and confidential
+ * information of Varian, Inc. and its contributors.
+ * Use, disclosure and reproduction is prohibited without
+ * prior consent.
+ *
+ */
+package vnmr.lc;
+
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+import vnmr.util.Messages;
+
+public class AS430Socket{
+
+    private final static int SOCKET_TIMEOUT = 1000; // milliseconds
+    
+    private Socket m_connection = null;
+    private TimeOut m_connectTO = null;
+    
+    
+    private InputStream m_instream;
+    private OutputStream m_outstream;
+    private int newByte;
+    
+    /**
+     * Keeps trying to make connection.
+     * @param host hostname
+     * @param port port number 
+     */
+    public void connect(String host, int port){  
+        if (m_connectTO != null) {
+            m_connectTO.cancel();
+            m_connectTO = null;
+        }
+        try{
+            m_connectTO = new TimeOut(5, host, port);
+        } catch (Exception e){
+            return;
+        }
+    }
+
+    public boolean makeConnection(String host, int port){
+        if (host == null) {
+            Messages.postError("AS430Socket: makeConnection given null host");
+            return false;
+        }
+        if(!isConnected()) {
+            //remoteHost = host;
+            //port_num = port;
+
+            SocketAddress socketAddr;
+            socketAddr = new InetSocketAddress(host, port);
+            m_connection = new Socket();
+            try{
+                m_connection.connect(socketAddr, SOCKET_TIMEOUT);
+            } catch (UnknownHostException e){
+                Messages.postError("AS430Socket: Don't know about host: "
+                                   + host);
+                return false;
+            } catch (IOException e) {
+                Messages.postError("AS430Socket: no connection to: "
+                                   + host + ":" + port);
+                return false;
+            }
+            try{
+                m_instream = m_connection.getInputStream();
+                m_outstream = m_connection.getOutputStream(); 
+            } catch (Exception e){
+                Messages.postError("AS430Socket: Error getting IO Streams");
+                return false;
+            }
+            Messages.postDebug("430Comm", "Made AS430 connection");     
+            return true;
+        } else {
+            //SDM DEBUG System.out.println("Connection != null");
+            return false;
+        } 
+    }
+
+    public boolean isConnected(){
+        if(m_connection != null){
+            return m_connection.isConnected();
+        } else return false;
+    }
+
+    public void disconnect(){
+        boolean wasConnected = isConnected();
+        if (m_connectTO != null) {
+            m_connectTO.cancel();
+            m_connectTO = null;
+        }
+        try{
+            if (m_connection != null) {
+                m_connection.close();
+            }
+            if (m_instream != null) {
+                m_instream.close();
+            }
+            if (m_outstream != null) {
+                m_outstream.close();
+            }
+            m_connection = null;
+        } catch (IOException e){
+            Messages.postDebug("IO exception disonnecting from AS430");
+        }
+        if (wasConnected) {
+            Messages.postDebug("430Comm", "Closed AS430 connection");
+        }
+    }
+
+    public boolean byteAvailable(){
+        int num=0;
+
+        try{
+            num= m_instream.available();
+        } catch (Exception e){
+            Messages.postError("Error getting message from AS430");
+        }
+
+        if(num>0){
+            return true;
+        } else return false;
+
+    }
+
+    /**get a byte from the socket**/
+    public int getByte(){
+        TimeOut to;
+
+        try{
+            to= new TimeOut(1);
+            while(!to.done){
+                if(byteAvailable()){
+                    newByte= m_instream.read();
+                    Messages.postDebug("430Comm", "Got byte: " + newByte);
+                    to.cancel();
+                } else {
+                    newByte= 0;
+                }
+            }
+        } catch(Exception e){
+            Messages.postDebug("Error getting message from autosampler");
+            newByte = 0;
+        } 
+        return newByte;
+    }
+
+    /** send a byte to the socket**/
+    public boolean putByte(int sendByte) {
+        try{
+            m_outstream.write(sendByte);
+            return true;       
+        } catch (Exception e){
+            System.out.println("Error writing message to autosampler.\n");
+            return false;
+        } 
+    }
+
+    /** send a byte to the socket**/
+    public boolean write(byte[] buf) {
+        try{
+            m_outstream.write(buf);
+            return true;       
+        } catch (Exception e){
+            System.out.println("Error writing message to autosampler");
+            return false;
+        } 
+    }
+
+    /**
+     * TimeOut class for waiting for bytes and connection.
+     */
+    public class TimeOut {
+        public boolean done;
+
+        private Timer mm_timer;
+        private String mm_host;
+        private int mm_port;
+
+        /**
+         * Constructor for getting a byte from the socket.
+         * @param seconds How long to wait between retrys. 
+         */
+        public TimeOut(int seconds) {
+            done= false;
+            mm_timer = new Timer();
+            mm_timer.schedule(new CheckTO(), 0, seconds * 1000);
+        }
+
+        /**
+         * Constructor for getting a connection to the AS 430.
+         * @param seconds How long to wait between retrys. 
+         */
+        public TimeOut(int seconds, String host, int port) {
+            done= false;
+            mm_timer = new Timer();
+            mm_timer.schedule(new CheckConnection(), 0, seconds * 1000);
+            mm_host= host;
+            mm_port= port;
+        }
+
+        public void cancel(){
+            mm_timer.cancel();
+            done= true;
+        }
+
+        class CheckTO extends TimerTask {
+            public void run() {
+                mm_timer.cancel();
+                done= true;
+            }
+        }
+
+        class CheckConnection extends TimerTask {
+            public void run() {
+                if(makeConnection(mm_host, mm_port)){
+                    mm_timer.cancel(); 
+                } else {
+                    Messages.postDebug("430Comm", "AS430 connection failed");
+                }
+            }
+        }
+
+    }
+    
+}

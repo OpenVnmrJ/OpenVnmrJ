@@ -1,0 +1,138 @@
+"macro grid"
+" grid               - draw a grid over a 2D display"
+" plgrid             - plot a grid"
+" <pl>grid<(gridspacing<,'color>)> or"
+" <pl>grid<(startf2,incrf2,startf1,incrf1<,'color'>)> or"
+" <pl>grid<('color')>"
+"                    - draw a grid over a 2D display with input arguments"
+"                      to override defaults for grid spacing and grid color"
+" pen color can be only argument, second argument, or fifth argument"
+" gridspacing is in cm; 1 is the default"
+
+$grids=10                     "10*spacing in cm"
+if $0='plgrid' then
+   $device='plotter'
+   $color='pen1'
+else
+   $device='graphics'
+   $color='blue'
+endif
+if ($#=1) then
+   if typeof('$1') then
+      $color=$1
+   else
+      $grids=10*$1
+   endif
+endif
+if ($#=2) then
+   $grids=10*$1
+   $color=$2
+endif
+if ($#=5) then
+   $color=$5
+endif
+pen($device,$color)          "select output and default color"
+
+if $#<4 then                 "calculate f2 defaults"
+   axis('fn'):$label,$nufrq
+   $wpppm=wp/$nufrq
+   if trace='f2' then
+      $maxtics=wc/$grids     "no more than 1 per cm"
+   else
+      $maxtics=wc2/$grids
+   endif
+   $incr=$wpppm/$maxtics
+   $mult=1
+   while $incr<1 do
+      $mult=$mult*10 $incr=$incr*10
+   endwhile
+   while $incr>10 do
+      $mult=$mult/10 $incr=$incr/10
+   endwhile
+   if $incr<=2 then
+      $incr=2/$mult
+   else
+      if $incr<=5 then
+         $incr=5/$mult
+      else
+         $incr=10/$mult
+      endif
+   endif
+   $incr=$incr*$nufrq        "increment in hz"
+   if sp<0 then
+      $add=-0.99
+   else
+      $add=0.99
+   endif
+   $freq=$incr*trunc(sp/$incr+$add)
+   if $freq<=sp then
+      $freq=$freq+$incr
+   endif
+else
+   $freq=$1
+   $incr=$2
+endif
+
+while ($freq < sp + wp) do   "draw the f2 grid lines"
+   if (trace='f2') then
+      move(wcmax-sc-wc*($freq - sp)/wp,sc2)
+      draw(wcmax-sc-wc*($freq - sp)/wp,sc2+wc2)
+   else
+      move(wcmax-sc,sc2+wc2-wc2*($freq - sp)/wp)
+      draw(wcmax-sc-wc,sc2+wc2-wc2*($freq - sp)/wp)
+   endif
+   $freq = $freq + $incr
+endwhile
+
+if $#<4 then                 "calculate f1 defaults"
+   axis('fn1'):$label,$nufrq
+   $wpppm=wp1/$nufrq
+   if trace='f2' then
+      $maxtics=wc2/$grids    "no more than 1 per cm"
+   else
+      $maxtics=wc/$grids
+   endif
+   $incr=$wpppm/$maxtics
+   $mult=1
+   while $incr<1 do
+      $mult=$mult*10
+      $incr=$incr*10
+   endwhile
+   while $incr>10 do
+      $mult=$mult/10
+      $incr=$incr/10
+   endwhile
+   if $incr<=2 then
+      $incr=2/$mult
+   else
+      if $incr<=5 then
+         $incr=5/$mult
+      else
+         $incr=10/$mult
+      endif
+   endif
+   $incr=$incr*$nufrq        "increment in hz"
+   if sp1<0 then
+      $add=-0.99
+   else
+      $add=0.99
+   endif
+   $freq=$incr*trunc(sp1/$incr+$add)
+   if $freq<=sp1 then
+      $freq=$freq+$incr
+   endif
+else
+   $freq=$3
+   $incr=$4
+endif
+
+while ($freq < sp1 + wp1) do "draw the f1 grid lines"
+   if (trace='f1') then
+      move(wcmax-sc-wc*($freq - sp1)/wp1,sc2)
+      draw(wcmax-sc-wc*($freq - sp1)/wp1,sc2+wc2)
+   else
+      move(wcmax-sc,sc2+wc2-wc2*($freq - sp1)/wp1)
+      draw(wcmax-sc-wc,sc2+wc2-wc2*($freq - sp1)/wp1)
+   endif
+   $freq = $freq + $incr
+endwhile

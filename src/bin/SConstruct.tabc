@@ -1,0 +1,51 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# targets
+tabcTarget = 'tabc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['data.h']
+# source files
+tabcFileList = ['tabc.c']
+
+# build environments
+tabcEnv = Environment(CCFLAGS = '-O -m32',
+                      LINKFLAGS = '-m32',
+                      CPPPATH = [cwd])
+
+
+if ('interix' in platform):    # Interix
+   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+   tabcEnv.Replace( CC=interixgcc )
+   tabcEnv.Replace(  LINKFLAGS='-O -m32' )
+   tabcEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
+   tabcEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib')
+ ]  )
+
+
+# actual builds
+tabc = tabcEnv.Program(target = tabcTarget,
+                       source = [tabcFileList],
+                       LIBS   = ['m'])
+
+buildMethods.makeSymLinks(tabcEnv, tabc, cwd, vnmrPath, vnmrHdrList)
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+tabcEnv.AddPostAction(tabc,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, tabcTarget))))
+

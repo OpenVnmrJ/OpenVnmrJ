@@ -1,0 +1,33 @@
+"macro fixcsvfile"
+$origfilename=$1
+$filename=$2
+$d2u=''
+getbinpath('tr'):$ok
+if ($ok) then
+    $d2u='tr -d "\r"'
+    shell('('+$d2u+' <'+$origfilename+' >'+$filename+');cat'):$dum
+else
+    shell('cp '+$origfilename+' '+$filename):$dum
+endif
+
+        "Delete any line that has no entries"
+$input=$filename
+$output=$input+'.tmp'
+write('reset',$output)
+$key=$input
+$done=0
+while $done<1 do
+   $line=''
+   lookup('mfile',$key,'readline',1,'filekey'):$line,$key,$ret
+   if ($ret<2) then $done=1 else
+	fixcsventry($line):$line
+	$line2='' $line3=''
+	strsv2array($line,','):$line2
+	array2string($line2):$line2
+	substr($line2,1):$line3
+	if ($line3<>'') then
+		write('file',$output,'%s',$line)
+	endif
+   endif
+endwhile
+shell('mv '+$output+' '+$input):$dum

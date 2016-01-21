@@ -1,0 +1,92 @@
+"macro cpxJ"
+" **************************************************************** "
+" ***           cpxJ - close Pbox.inp file for VnmrJ           *** "
+" **************************************************************** "
+" Usage : cpxJ                                                     "
+" or      cpxJ(ref_pw90, ref_pwr)                                  "
+" or      cpxJ('g') - for gradient shapes                          "
+
+$filepath = userdir+'/shapelib/pbox.fid'
+exists($filepath,'file'):$e
+if $e>0.5 then rm($filepath) endif
+$inputfile = userdir+'/shapelib/Pbox.inp'
+
+" +----------------------------+ "
+" | check for calibration data | "
+" +----------------------------+ "
+
+$tp=''
+$usecalib=1 
+
+if $#=1 then 
+  $tp=$1 
+  if $tp='g' then 
+    $usecalib=0 
+    $ref_pw90=0
+  endif
+else 
+  if $#=2 then 
+    $ref_pw90=$1
+    $ref_pwr=$2
+    if (typeof('$ref_pw90')) or (typeof('$ref_pwr')) then 
+      $usecalib=1 
+    else
+      $usecalib=0 
+    endif
+  endif
+endif
+
+if $usecalib>0 then
+  exists('ref_pw90','parameter'):$e
+  if not($e) then
+    create('ref_pw90','pulse')
+    setgroup('ref_pw90','processing')
+    input('Enter reference 90 degrees pulse width (usec): '):$ref_pw90
+    if (typeof('$ref_pw90')) then
+      ref_pw90=0
+      $usecalib=0
+    else
+      ref_pw90=$ref_pw90
+    endif
+  endif
+  exists('ref_pwr','parameter'):$e
+  if not($e) then
+    create('ref_pwr','integer')
+    setgroup('ref_pwr','processing')
+    if not($usecalib) then
+      ref_pwr=0
+    else
+      input('Enter reference power level: '):$ref_pwr
+      if (typeof('$ref_pwr')) then 
+        ref_pwr=0
+      else
+        ref_pwr=$ref_pwr
+      endif
+    endif
+  endif
+
+  " add calibration data, if present "
+  if ref_pw90 > 0.01 then
+    write('file',$inputfile,' ')
+    write('file',$inputfile,'RF Calibration :') 
+    write('file',$inputfile,'----------------') 
+    $rpwr='' format(ref_pwr,2,0):$rpwr
+    pboxpar('ref_pwr', $rpwr)
+    $rpw90='' format(ref_pw90,5,2):$rpw90
+    pboxpar('ref_pw90', $rpw90)
+    write('line3','Calibration based on ref_pw90 = %s, ref_pwr = %s',
+	     $rpw90, $rpwr)
+  endif
+else
+  if $ref_pw90 > 0.01 then
+    write('file',$inputfile,' ')
+    write('file',$inputfile,'RF Calibration :') 
+    write('file',$inputfile,'----------------') 
+    $rpwr='' format($ref_pwr,2,0):$rpwr
+    pboxpar('ref_pwr', $rpwr)
+    $rpw90='' format($ref_pw90,5,2):$rpw90
+    pboxpar('ref_pw90', $rpw90)
+    write('line3','Calibration based on ref_pw90 = %s, ref_pwr = %s',
+	     $rpw90, $rpwr)
+  endif
+endif

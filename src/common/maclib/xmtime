@@ -1,0 +1,636 @@
+"macro xmtime"
+"update study queue times"
+// no arguments
+//   xmtime - calculate total studytime
+// one argument
+//   xmtime('queue') - return formatted studytime
+//   xmtime('getq') - return which queue, current time
+//   xmtime('daystart') - return formatted time next dayQ submission will start
+//   xmtime('daystarttime') - return numeric time next dayQ submission will start
+//   xmtime('nightstart') - return time next nightQ submission will start
+//   xmtime('daymax') - return DayQ button enabled or not
+//   xmtime('nightmax') - return NightQ button enabled or not
+//   xmtime('update') - update accumulated dayQ/nightQ times
+//   xmtime('startstudy') - update the time a sample started
+//   xmtime('readconf') - read conffile"
+//   xmtime('daystep') - get dayQ step time
+//   xmtime('oneq') - return OneQ enabled or not
+// two arguments
+//   xmtime('formathr',$time) - return formatted dayQ/nightQ time
+//   xmtime('getsec',$timestr) - return time in seconds from formatted timestr
+//   xmtime('addday',$time) - add time to dayQ accumulated time
+//   xmtime('addnight',$time) - add time to nightQ accumulated time
+//   xmtime('savepar',$time) - save time into studypar file
+
+"total SQ time, dayQ start time, nightQ start time"
+$tot='' $day='' $night=''  "do I need these?"
+xm1('studydir'):$sdir
+
+exists('studytime','parameter'):$e
+if $e<0.5 then
+  create('studytime','real')
+" setgroup('studytime','display')"
+endif
+
+$conffile=systemdir+'/adm/users/operators/automation.conf'
+$activestudy=activestudy[1]
+if (appmode='walkup' or appmode='lc') then
+  $activestudy=studyid
+  $timefile=autodir+'/sqtime'
+else
+  $timefile=$sdir+'/sqtime'
+endif
+
+$qfile=$sdir+'/enterSQ'
+exists($qfile,'file'):$eqf
+
+if ($# = 0) then
+
+  $totalsec=0
+  if ($eqf>0.5) then
+    $ids='' $s1='' $st='' $ti=''
+    readfile($qfile,'$ids','$s1','','local'):$qsize
+    if $qsize>0.5 then
+      $i=0
+      repeat
+        $i=$i+1
+        xmgetatts($ids[$i],'status','time'):$st,$ti
+        if (($st<>'protocol' and $st<>'Skipped') and ($ti<>'' and $ti<>'null')) then
+          xmtime('getsec',$ti):$val
+          $totalsec=$totalsec+$val
+        endif
+      until ($i>=$qsize)
+
+"     add time if Hprescan=minsw etc. is set?"
+"     pad z0,gmap time"
+"     only need if prescan[1],[2] on - esp. if non-automation"
+      if ($totalsec>0 and appmode<>'imaging') then
+        $file=systemdir+'/adm/users/operators/automation.conf'
+        lookup('file',$file,'ChangeTime','read'):$sctime
+        $totalsec=$totalsec+$sctime
+        $psize=size('prescan')  // add protune time
+        if ($psize>3.5) then if (prescan[4]='y') then
+          $totalsec=$totalsec+120
+        endif endif
+      endif
+    endif
+  endif
+  if $##>0.5 then
+    return($totalsec)
+  else
+    studytime = $totalsec
+  endif
+
+elseif ($# = 1) then
+
+  $totalsec = studytime
+
+  if ($1 = 'queue') then
+
+" output total time text"
+    if ($totalsec<0.5 or $activestudy='null' or $eqf<0.5) then
+      return('')
+    endif
+    $tot=''
+    formattime($totalsec,'minutes'):$tot
+    return($tot)
+
+  endif
+
+" find start times for dayQ, nightQ"
+  exists($conffile,'file'):$e
+  if $e<0.5 then
+    write('line3','Could not find file %s.',$conffile)
+    return
+  endif
+
+  if ($1 = 'oneq') then
+    $oneq='n'
+    lookup('mfile',$conffile,'OneQueue','read'):$oneq
+    substr($oneq,1,1):$oneq
+    return($oneq)
+  endif
+
+  $wkdaystr='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
+  $dayhm='' $weekday='' $wkdaynum=0 $wkhr=0 $wkmin=0
+  shell('date "+%u %H %M"'):$dayhm
+  substr($dayhm,1):$wkdaynum
+  if ($wkdaynum>0.5 and $wkdaynum<7.5) then
+    $weekday=$wkdaystr[$wkdaynum]
+  endif
+  substr($dayhm,2):$wkhr
+  substr($dayhm,3):$wkmin
+  $curmin = $wkhr * 60 + $wkmin
+
+  $daycmin=0 $nightcmin=0 $daystep=30 $curQ=''
+  if ($1<>'nightmax' and $1<>'startstudy' and $1<>'readconf') then
+    xmtime('readconf'):$daycmin,$daystep,$nightcmin,$curQ
+    if $1='getq' then
+      return($curQ,$curmin)
+    endif
+  endif
+
+"if $1<>'readconf' then write('line3','%s(%s) called',$0,$1) endif"
+
+  if ($1 = 'readconf') then
+
+    $daymin=0 $nightmin=0 $dstep=60*8 $currentQ=''
+    $t1='' $t2='' $t3='' $t4='' $t5='' $t6=''
+    $v1=0 $v2=0 $v3=0 $v4=0 $v5=0 $v6=0 $nret=0
+    lookup('mfile',$conffile,'delimiter',' :\n\r\t','seek',$weekday,'read',6):$t1,$t2,$t3,$t4,$t5,$t6,$nret
+    if ($nret > 5.5) then
+      format($t1,1,0):$v1 format($t2,1,0):$v2
+      format($t3,1,0):$v3 format($t4,1,0):$v4
+      format($t5,1,0):$v5 format($t6,1,0):$v6
+    endif
+    $daymin   = $v1 * 60 + $v2  "day conf minutes"
+    $dstep    = $v3 * 60 + $v4  "day step conf minutes"
+    $nightmin = $v5 * 60 + $v6  "night conf minutes"
+    if ($dstep > ($nightmin - $daymin)) then
+      $dstep = $nightmin - $daymin
+    endif
+    if ($dstep < 4) then
+      $dstep = 4  "minimum day step of 4 minutes"
+    endif
+    xmtime('oneq'):$oneq
+    if (traymax=0) or ($oneq='y') or ($curmin > $daymin and $curmin < $nightmin) then
+      $currentQ='day'
+    else
+      $currentQ='night'
+    endif
+    return($daymin,$dstep,$nightmin,$currentQ)
+
+  elseif ($1 = 'daystep') then
+
+    $daystep = 0
+    $t1='' $t2='' $t3='' $t4='' $t5='' $t6=''
+    $v1=0 $v2=0 $v3=0 $v4=0 $v5=0 $v6=0 $nret=0
+    lookup('mfile',$conffile,'delimiter',' :\n\r\t','seek',$weekday,'skip',2,'read',2):$t3,$t4,$nret
+    if ($nret > 1.5) then
+      format($t3,1,0):$v3 format($t4,1,0):$v4
+      $daystep = $v3 * 60 + $v4  "day step conf minutes"
+    endif
+    if ($daystep < 4) then
+      $daystep = 4  "minimum day step of 4 minutes"
+    endif
+    return($daystep)
+
+  elseif ($1 = 'daystart') then
+"format time the next dayQ submission will start"
+
+    $day='' $time=0
+    if (traymax>1.5 and $activestudy<>'null' and $eqf>0.5 and $totalsec>0.5) then
+      xmtime('daymax'):$enable
+      if ($enable = 1) then
+        xmtime('daystarttime'):$time
+      else
+        xmtime('nightmax'):$nm,$m,$time
+        $time=$time*60
+      endif
+      if ($time > 0.5) then
+        xmtime('formathr',$time):$day
+      endif
+    endif
+    return($day,$nightcmin-$time/60)
+"return dayQ start time, remaining time in dayQ"
+
+  elseif ($1 = 'daystarttime') then
+"time the next dayQ submission will start"
+
+"$daysec - remaining dayQ study time in seconds"
+"$studystartsec - time the last study acquisition started in seconds"
+"$daycmin - time the dayQ starts, from conf file in minutes"
+"$curmin - current time in minutes"
+"expactive('auto'):$acq $acq=0 or 1"
+"$daysec=0 means there were no studies submitted"
+"$totalsec=0 (studytime=0) means there is no current study"
+
+    $time=0 $daysec=0 $studystartsec=0
+    $nret=0 $t1='' $t2=''
+    exists($timefile,'file'):$e
+    if $e>0.5 then
+      lookup('mfile',$timefile,'dayremain','read','skip',3,'read'):$t1,$t2,$nret
+      if $nret>1.5 then
+        format($t1,'isreal'):$isr  "1 isreal, 0 is string"
+        if $isr>0.5 then format($t1,1,0):$daysec endif
+        format($t2,'isreal'):$isr
+        if $isr>0.5 then format($t2,1,0):$studystartsec endif
+      endif
+    endif
+
+    if ($curQ = 'day') then
+      expactive('auto'):$acq
+      if ($acq=0 or $daysec<0.5) then  "dayQ empty"
+        $time = $curmin * 60
+      else                   "dayQ not empty"
+        $time = $studystartsec + $daysec
+      endif
+    else "$curQ = 'night'"
+      if ($daysec<0.5) then  "dayQ empty"
+        $time = $daycmin * 60
+      else                   "dayQ not empty"
+        $time = $daycmin * 60 + $daysec
+      endif
+    endif
+    return($time)
+
+  elseif ($1 = 'nightstart') then
+"time the next nightQ submission will start"
+"$nightsec - remaining nightQ study time in seconds"
+"$nightcmin - time the nightQ starts, from conf file in minutes"
+
+    $night='' $time=0
+    if $eqf<0.5 then return($night) endif
+    $nightsec=0 $daysec=0 $studystartsec=0
+    $nret=0 $t1='' $t2=''
+    exists($timefile,'file'):$e
+    if $e>0.5 then
+      lookup('mfile',$timefile,'nightremain','read','skip','read'):$t1,$t2,$nret
+      if $nret>1.5 then
+        format($t1,'isreal'):$isr
+        if $isr>0.5 then format($t1,1,0):$nightsec endif
+        format($t2,'isreal'):$isr
+        if $isr>0.5 then format($t2,1,0):$studystartsec endif
+      endif
+    endif
+    if ($curQ = 'night') then
+      expactive('auto'):$acq
+      if ($acq=0 or $nightsec<0.5) then  "nightQ empty"
+        $time = $curmin * 60
+      else                     "nightQ not empty"
+        $time = $studystartsec + $nightsec
+      endif
+    else "$curQ = 'day'"
+      if ($nightsec<0.5) then  "nightQ empty"
+        $time = $nightcmin * 60
+      else                     "nightQ not empty"
+        $time = $nightcmin * 60 + $nightsec
+      endif
+    endif
+    if ($totalsec<0.5) then
+      $night=''
+    else
+      xmtime('formathr',$time):$night
+    endif
+    return($night)
+
+  elseif ($1 = 'daymax') then
+"dayQ button enabled or disabled"
+
+    $daymax=1
+    $totalmin = $totalsec / 60
+    $dayremain = $daystep-$totalmin
+    if (sqsaveid<>'null' and actionid<>'null') then
+      $dir='' $dir=sqsaveid
+      $ch='' strstr($dir,1,1):$ch
+      if $ch<>'/' then $dir=autodir+'/'+$dir endif
+      if $dayremain<0 then $dayremain=0 endif
+      $aq='' $aqfile=$dir+'/studypar'
+      exists($aqfile,'file'):$e
+      if ($e) then
+        rtv($aqfile,'queue'):$aq
+      endif
+      if ($aq<>'dayQ') then
+        $daymax = -1
+      endif
+      return($daymax,$dayremain)
+    endif
+
+    if ($curQ<>'day' or $activestudy='null' or traymax<0.5 or $eqf<0.5) then
+      $daymax = -1
+    else
+      if ($totalmin>$daystep or $totalmin<=0) then
+        $daymax = -1  "and ($daystep > 0) ?"
+        $dayremain = $daystep-$totalmin
+      else
+        xmtime('daystarttime'):$dayremain
+        if ($dayremain/60 + $totalmin > $nightcmin) then
+          $daymax = -1
+        endif
+      endif
+    endif
+    if $dayremain<0 then $dayremain=0 endif
+    return($daymax,$dayremain)
+
+  elseif ($1 = 'nightmax') then
+"nightQ button enabled or disabled"
+"only checks time for one sample, not multiple samples - check in xmsubmit?"
+"studyQ tooltip could have total nightQ time, in time format?"
+
+    $nightmax=1 $max=0 $dtime=0
+    if ($activestudy='null' or traymax<0.5 or (($totalsec<=0 or $eqf<0.5) and (sqsaveid='null' or actionid='null'))) then
+      $nightmax = -1
+    else
+
+      $fullday=24*60  "full day in minutes"
+"read time configuration for whole week"
+      lookup('mfile',$conffile,'seek','NightQ','skip',2,'filekey'):$key
+      $nret=0 $v1=0 $v2=0 $t1='' $t2='' $isr=1
+      $daym=0 $nightm=0 $nightlen=0 $wkday='' $inf=0
+      $t1='' $t2='' $t3='' $t4='' $t5='' $t6='' $t7='' $t8='' $t9=''
+      $v2=0 $v3=0 $v6=0 $v7=0 $v8=0 $v9=0 $nret=0
+      $i=0
+      repeat
+        $i=$i+1
+        lookup('mfile',$key,'delimiter',' :\n\r\t','read',9,'filekey'):$t1,$t2,$t3,$t4,$t5,$t6,$t7,$t8,$t9,$key,$nret
+        if ($nret > 9.5) then
+          format($t2,1,0):$v2 format($t3,1,0):$v3
+          format($t6,1,0):$v6 format($t7,1,0):$v7
+          format($t8,1,0):$v8 format($t9,1,0):$v9
+          $daym[$i]     = $v2 * 60 + $v3  "day conf minutes"
+          $nightm[$i]   = $v6 * 60 + $v7  "night conf minutes"
+          $nightlen[$i] = $v8 * 60 + $v9  "nightq length minutes"
+          if ($daym[$i] > $fullday) then $daym[$i]=0 endif
+          if ($nightm[$i] > $fullday) then $nightm[$i]=0 endif
+          if ($nightlen[$i]>0 and $nightlen[$i]<$fullday) then $inf=1 endif
+          $wkday[$i]  = $t1
+        endif
+      until ($i>=7 or $nret<9.5)
+      if ($nret>9.5 and $i>=7) then
+        $i=0
+        repeat
+          $i=$i+1
+          $daym[$i+7]     = $daym[$i]
+          $nightm[$i+7]   = $nightm[$i]
+          $nightlen[$i+7] = $nightlen[$i]
+          $wkday[$i+7]    = $wkday[$i]
+        until ($i>=7)
+      endif
+      $today=0 $i=0
+      repeat
+        $i=$i+1
+        if ($wkday[$i] = $weekday) then $today=$i endif
+      until ($i>=7 or $today>0)
+
+      if ($inf = 0) then  "24 hr all 7 days, nightq always enabled"
+        $nightmax=1 $dtime=$daym[$today] $max=100000
+        return($nightmax,$max,$dtime)
+      endif
+
+      if (sqsaveid<>'null' and actionid<>'null') then
+        $max=100000 $dtime=$daym[$today]
+        $dir='' $dir=sqsaveid
+        $ch='' strstr($dir,1,1):$ch
+        if $ch<>'/' then $dir=autodir+'/'+$dir endif
+        $aq='' $aqfile=$dir+'/studypar'
+        exists($aqfile,'file'):$e
+        if ($e) then
+          rtv($aqfile,'queue'):$aq
+        endif
+        if ($aq<>'nightQ') then
+          $nightmax = -1
+        endif
+        return($nightmax,$max,$dtime)
+      endif
+
+      expactive('auto'):$acq
+      $dayqtime=0 $nightqtime=0 $curqtime=0
+"what should values be if no studies submitted yet?"
+      exists($timefile,'file'):$ex
+      if $ex>0.5 then
+        $s1='' $s2='' $s3='' $nret=0
+        lookup('mfile',$timefile,'skip','read','skip','read','skip','read'):$s1,$s2,$s3,$nret
+        if $nret>2.5 then
+          format($s1,'isreal'):$isr  "seconds"
+          if $isr>0.5 then format($s1,1,0):$dayqtime endif
+          format($s2,'isreal'):$isr  "seconds"
+          if $isr>0.5 then format($s2,1,0):$nightqtime endif
+          format($s3,'isreal'):$isr  "seconds"
+          if $isr>0.5 then format($s3,1,0):$curqtime endif
+        endif
+      endif
+
+      if (traymax=0) or ($curmin>$daym[$today] and $curmin<$nightm[$today]) then
+        $curQ='day'
+      else
+        $curQ='night'
+      endif
+
+      if ($today > 0) then
+        if ($curQ = 'day') then
+          $curm = $nightqtime / 60 + $nightm[$today]
+"time used in night queue already"
+        else  "$curQ = 'night'"
+          if ($acq > 0.5) then
+            $curm = ($curqtime + $dayqtime + $nightqtime) / 60
+"time queue will be done"
+          else
+            $curm = $curmin + ($dayqtime + $nightqtime) / 60
+"           $curm = $curmin"
+"time now, or when queue will be done"
+"dayqtime, nightqtime should be zero if acq not running, may be leftover?"
+          endif
+        endif
+
+        while ($curm > $fullday) do
+          $curm = $curm - $fullday
+          $today = $today + 1
+        endwhile
+        if ($today > 7) then
+          $today = $today mod 7
+          if $today=0 then $today=7 endif
+        endif
+
+        $max=0  "total time available in nightQ"
+        $j=$today-1
+        if ($curm > $nightm[$today]) then
+          $max = $max + ($fullday - $curm)
+          $j=$j+1
+        elseif ($curm >= $daym[$today]) then
+          $max = $max + ($fullday - $nightm[$today])
+          $j=$j+1
+        endif
+        $do=1 $k=0
+        while ($do=1 and $j<=14 and $k<6) do
+          $j=$j+1 $k=$k+1
+          if ($nightlen[$j]=0 or $nightlen[$j]=$fullday) or ($daym[$j] >= $nightm[$j]) then
+            $max = $max + $fullday
+          else
+            $max = $max + $daym[$j]
+            $do = 0
+          endif
+        endwhile
+        if ($curm < $daym[$j]) then
+          $max = $max - $curm
+        endif
+
+"write('line3','max available nightq time = %g min (%g hr)',$max,$max/60)"
+        if (($totalsec / 60 > $max) and $max>0) then
+          $nightmax = -1
+        endif
+        $dtime = $daym[$j]
+
+      endif
+    endif
+
+    return($nightmax,$max,$dtime)
+
+  elseif ($1 = 'update') then
+" subtract from $timefile, update time display"
+" called when study is done (xmnext), could be called if delete from enterQ"
+
+    $studytime=0
+    xm1('studydir'):$sdir
+    $queue=''
+    $sqpar=$sdir+'/studypar'
+    exists($sqpar,'file'):$qx
+    if $qx>0.5 then
+      rtv($sdir+'/studypar','studytime','queue'):$studytime,$queue
+    endif
+    $studytime = -$studytime
+    if ($queue='nightQ') then
+      xmtime('addnight',$studytime) "read/write file - out of synch?"
+    else  "dayQ"
+      xmtime('addday',$studytime) "read/write file - out of synch?"
+    endif
+    xmtime('startstudy') "read/write file - out of synch?"
+    return
+
+  elseif ($1 = 'startstudy') then
+" write study start time into file, called from startq"
+
+    exists($timefile,'file'):$ex
+    $daysec='0' $nightsec='0' $t1='' $t2='' $nret=0
+    if $ex>0.5 then
+      lookup('mfile',$timefile,'skip','read','skip','read'):$t1,$t2,$nret
+      if $nret>1.5 then
+        $daysec=$t1 $nightsec=$t2
+      endif
+    endif
+    write('reset',$timefile+'2')
+    write('file',$timefile+'2','dayremain %s\nnightremain %s\nstudystart %g',$daysec,$nightsec,$curmin*60)
+"daysec, nightsec in seconds; curmin in minutes"
+    mv($timefile+'2',$timefile)
+    xm1('sendcmd','xmtime')  "don't need this if shown only for tmpstudy?"
+    return
+
+  endif
+
+elseif ($# = 2) then
+
+  if ($1 = 'formathr') then
+
+    $sec=0 $sec=$2 "check if real"
+    if ($sec < 0.5) then
+      $out=''
+    else
+      $hr=0 $min=0
+      $hr = trunc($sec / 3600)
+      $sec = $sec - 3600 * $hr
+      $min = trunc($sec / 60)
+
+      $hrs='' $mins=''
+      format($min,1,0):$mins
+      if ($min < 10) then
+        $mins='0'+$mins
+      endif
+      $hr12 = ($hr mod 12)
+      if $hr12=0 then $hr12=12 endif
+      $hr24 = ($hr mod 24)
+      format($hr12,1,0):$hrs
+      if ($hr24>11) then
+        $ampm='pm'
+      else
+        $ampm='am'
+      endif
+      $out=$hrs+':'+$mins+$ampm
+    endif
+    return($out)
+
+  elseif ($1='getsec') then
+
+    format($2,'isreal'):$isr
+    if ($isr) then
+      return(0)
+    endif
+    $totalsec=0
+    $ti='' $ti=$2
+    $end='q1W2e3R4'
+    $time=$ti+' '+$end
+    $j=0
+    repeat
+      $val=0 $unit=''
+      $j=$j+1
+      substr($time,$j):$unit
+      if ($unit<>$end and $j<6) then
+        format($unit,'isreal'):$is
+        if ($is=1) then
+          format($unit,1,0):$val
+          $j=$j+1
+          substr($time,$j):$unit
+          if ($unit<>$end and $j<7) then
+            if ($unit='hr' or $unit='hr,') then
+              $totalsec = $totalsec + 3600 * $val
+            elseif ($unit='min' or $unit='min,') then
+              $totalsec = $totalsec + 60 * $val
+            else // $unit='sec'
+              $totalsec = $totalsec + $val
+            endif
+          endif
+        endif
+      endif
+    until ($unit=$end or $j>=6)
+    return($totalsec)
+
+  elseif ($1='addday' or $1='addnight') then
+
+    $delta=0 $delta=$2
+    $dayqtime=0 $nightqtime=0 $curtime=0
+    exists($timefile,'file'):$ex
+    if $ex>0.5 then
+      $s1='' $s2='' $s3='' $nret=0
+      lookup('mfile',$timefile,'skip','read','skip','read','skip','read'):$s1,$s2,$s3,$nret
+      if $nret>2.5 then
+        format($s1,'isreal'):$isr
+        if $isr>0.5 then format($s1,1,0):$dayqtime endif
+        format($s2,'isreal'):$isr
+        if $isr>0.5 then format($s2,1,0):$nightqtime endif
+        format($s3,'isreal'):$isr
+        if $isr>0.5 then format($s3,1,0):$curtime endif
+      endif
+    else
+      xmtime('getq'):$curQ,$curtime
+      $curtime = $curtime * 60
+    endif
+
+    if ($1 = 'addday') then
+      $dayqtime = $dayqtime + $delta
+      if ($dayqtime < 0) then $dayqtime=0 endif
+    elseif ($1 = 'addnight') then
+      $nightqtime = $nightqtime + $delta
+      if ($nightqtime < 0) then $nightqtime=0 endif
+    endif
+
+    write('reset',$timefile+'3')
+    write('file',$timefile+'3','dayremain %g\nnightremain %g\nstudystart %g',$dayqtime,$nightqtime,$curtime)
+    mv($timefile+'3',$timefile)
+
+  elseif ($1 = 'savepar') then
+// save studytime into studypar file
+
+    format($2,'isreal'):$ir
+    $aqfile=$sdir+'/studypar'
+    exists($aqfile,'file'):$e
+    if ($e) and ($ir) then
+      $studytime=0 $studytime=$2
+      $str='' $val='' $asize=0 $tpos=0
+      readfile($aqfile,'$str','$val','','local'):$asize
+      teststr('$str','studytime','local'):$tpos
+      $hlines='' $tlines=''
+      format($tpos,0,0):$hlines
+      format($asize-$tpos-1,0,0):$tlines
+      $hfile=$aqfile+'.h'
+      $tfile=$aqfile+'.t'
+      $ifile=$aqfile+'.i'
+      write('reset',$ifile)
+      write('file',$ifile,'1 %g',$studytime)
+      $cmd='head -'+$hlines+' "'+$aqfile+'" > "'+$hfile+'";'
+      $cmd=$cmd+'tail -'+$tlines+' "'+$aqfile+'" > "'+$tfile+'";'
+      $cmd=$cmd+'cat "'+$hfile+'" "'+$ifile+'" "'+$tfile+'" > "'+$aqfile+'";'
+      $cmd=$cmd+'rm "'+$aqfile+'".*'
+      shell($cmd):$x
+    endif
+
+  endif
+
+endif

@@ -1,0 +1,28 @@
+"macro setcurrentQ"
+
+$pqatnight='no'
+getadminfo('prioritysampleatnight'):$pqatnight
+$cQ='bothQ'
+
+if ($pqatnight='no') then
+    $AUTOGLOBAL=autodir+'/enterQ.macdir/AUTOGLOBAL'
+    $longrun='n'
+    exists($AUTOGLOBAL,'file'):$aex
+    if ($aex) then
+    	lookup('mfile',$AUTOGLOBAL,'seekcs','LONGRUN:','read',1):$longrun
+    endif
+    $ns=0
+    getautoinfo:$ds,$dt,$ns
+    if ($longrun='y') then $cQ='nightQ' elseif ($ns>24*3600) then $cQ='dayQ' endif
+endif
+
+if ($## > 0) then return($cQ) endif
+
+exists('currentQ','parameter'):$parex
+if ($parex) then
+    $oldcQ=currentQ
+    if (clonemod='no') and (currentQ<>$cQ) then 
+	currentQ=$cQ 
+	if $oldcQ='nightQ' then longQ='n' endif
+    endif
+endif

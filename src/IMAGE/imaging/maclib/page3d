@@ -1,0 +1,171 @@
+"macro page3d"
+"************************************************************************"
+"	page3d: Macro to page through a series of phase files            "
+
+
+"       arg1: This is the base part of the file name for the             "
+"	      phasefiles ie: myfile.fs for the series of files           "
+"             myfile.fs_0001 onward                                      "
+
+"	arg2: is the starting index for the series of files              "
+
+"       arg3: is the stop index for the sries of files                   "
+
+"	NOTE: The program expects to find your files in the directory    "
+"             curexp+'/planes'. The command drives a menu and can be     "
+"             called from this menu with a different argument structure: " 
+
+"       MENU COMMANDS:                                                   "
+
+"	page3d('next'):   go to next slice in series                     "
+
+"       page3d('prev'):   go to previous slice in series                 "
+
+"       page3d('jump'):   jump to new slice position in the stack        "
+
+"       The menu used to drive page3d is called page3d_menu              "
+
+"       Version 1: For SPARC 3D WIP                                      "
+"                  @(#)page3d.mac	3.1    4/16/93 "
+
+"************************************************************************"
+
+
+"*Constants**************************************************************"
+$prog='page3d: '
+$targetdir=curexp+'/planes'
+$indexs=''
+
+
+
+"*Input Scan*************************************************************"
+
+"*Invalid Cases*"
+if ($# < 0.5) or ($# > 3.5)
+then
+   write('error','%s',$prog+'Use page3d("phase file name",start,stop)')
+   abort
+endif
+
+if ($# > 1.5) and ($# < 2.5)
+then
+   write('error','%s',$prog+'Use page3d("phase file name",start,stop)')
+   abort
+endif
+
+
+"*Case I: ***************************************************************"
+if ($# > 2.5) and ($# < 3.5)
+then "*BEGIN Case I************************"
+   file=$1+'_'
+   
+   if ($2 < $3)
+   then
+       $start=$2
+       $stop=$3 
+   else
+       $start=$3
+       $stop=$2
+   endif
+
+   $index=$start
+   r2=$start 
+   r3=$start
+   r4=$stop
+
+   exists($targetdir,'file'):$ex1
+   if ($ex1 < 0.5)
+   then
+      write('error','%s',$prog+'Cannot find planes directory: '+$targetdir)
+      abort
+   endif
+
+endif "*END Case I**************************"
+  
+
+"*Case II: page3d(arg1)*************************************************"
+if ($# > 0.5) and ($# < 1.5)
+then "*BEGIN Case II*********************"
+    $argok='no'
+    
+    if ($1 = 'next')
+    then
+       $index=r2+1
+       if ($index > r4) then $index=r3 endif
+       r2=$index
+       $argok='yes'
+    endif
+
+    if ($1 = 'prev')
+    then
+        $index=r2-1
+        if ($index < r3) then $index=r4 endif
+        r2=$index
+        $argok='yes' 
+    endif
+
+    if ($1='jump')
+    then
+       input('Jump to plane number :> '):$index
+
+       while (($index < r3 ) or ($index > r4))
+       do
+          input('New start number :> '):$start
+          input('New stop number :> '):$stop
+   
+          if ($start < $stop)
+          then r3=$start r4=$stop
+          else r3=$stop r4=$start
+          endif
+       endwhile
+ 
+       r2=$index 
+       $argok='yes' 
+    endif
+
+    if ($argok='no') 
+    then
+        write('error','%s',$prog+'Use page3d("phase file name",start,stop)')
+        abort
+    endif
+     
+endif "*END Case II**********************"
+
+
+
+
+"*Construct Filename & Locate File***************************************"
+if ($index < 10)
+then format($index,1,0):$indexs $indexs='000'+$indexs endif
+
+if ($index > 9) and ($index < 100) 
+then format($index,2,0):$indexs $indexs='00'+$indexs endif
+
+if ($index > 99) and ($index < 1000) 
+then format($index,3,0):$indexs $indexs='0'+$indexs endif
+
+if ($index > 999)
+then format($index,4,0):$indexs endif
+
+
+$rtfile=file+$indexs
+
+exists($targetdir+'/'+$rtfile,'file'):$ex2
+if ($ex2 < 0.5)
+then
+   write('error','%s',$prog+'Cannot find file: '+$rtfile)
+   abort
+endif
+
+
+
+
+"*Load File*************************************************************"
+write('line3','%s',$prog+'Showing plane: '+$rtfile)
+rtphf($rtfile)
+dcon('linear','gray')
+menu('page3d_menu')
+
+
+
+"********************************THE END********************************"

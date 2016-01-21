@@ -1,0 +1,52 @@
+"macro getprotection"
+// get probe protection values for the current or specified probe
+if $#<2 then
+  write('error','usage: '+$0+'(<nucleus>,<param>)')
+  abort
+endif
+
+$nuc=${$#-1}
+$param=${$#}
+
+if $#>2 then // recursive call
+  if $1=':getparam:' then // read the specified parameter from file $2
+    if $#<>4 then 
+      write('error',$0+' '+$1+': invalid parameters')
+      abort 
+    endif
+    $path=$2
+    exists($2,'file'):$e
+    if $e then
+      $attr='' $val=''
+      readfile($path,'$attr','$val',$nuc,'local'):$sz
+      if $sz>0 then
+        teststr('$attr',$nuc+$param,'local'):$i
+        if $i>0 then
+          return(1,$val[$i])
+        endif
+      endif
+    endif
+    return(0)
+  endif
+endif
+
+$probe=probe
+if $#>3 then $probe=$3 endif
+
+$e=0 
+if probe<>'' and probe<>' ' then exists($probe,'probes'):$e,$path endif
+if $e then
+  $path=$path+'/'+$probe
+  exists($path,'file'):$e
+  if $e then
+    {$0}(':getparam:',$path,$nuc,$param):$e,$value
+    if $e then return(1,$value) endif
+  endif
+endif
+
+probeidez('protection'):$e,$pro
+if $e then
+  {$0}(':getparam:',$pro,$nuc,$param):$e,$value
+  if $e then return(1,$value) endif
+endif
+return(0)

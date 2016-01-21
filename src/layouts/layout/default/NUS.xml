@@ -1,0 +1,646 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="NUS" element="pages" type="acquisition" >
+  <group size="820 273"
+    style="Heading1"
+    label="NUS"
+    vq="personaType"
+    show="$S=1 exists('sampling','parameter'):$parex if ($parex=0) then $S=0 else PersonaManager('showInPanel','acquire','nus'):$S endif $SHOW=$S"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="NUS"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    rows="1"
+    columns="1"
+    >
+    <group loc="5 20" size="801 248"
+      border="None"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Untitled"
+      rows="1"
+      columns="1"
+      >
+      <group loc="15 5" size="450 160"
+        style="Heading1"
+        label="t₁ sampling schedule"
+        vq="sampling"
+        show="if sampling='sparse' then $SHOW=1 else $SHOW=0 endif"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="sparse_acquire2"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <check loc="21 130" size="233 25"
+          style="PlainText"
+          label="Use advanced schedule options"
+          vq="CStype CSwt"
+          vc="CStype='i' exists('CSwt','parameter'):$e if not ($e) then module('add','par2D') endif"
+          vc2="CStype='a' CSwt='n' if (CSseed&lt;0) then CSseed=-CSseed endif CSschedule"
+          set="if ((CStype='a') and (CSwt='n')) then $VALUE=0 else $VALUE=1 endif"
+          />
+        <menu loc="286 25" size="60 20"
+          style="PlainText"
+          vq="ni CSdensity"
+          vc="ni=$VALUE  setLP1andWindow NUSdensity:CSdensity if (CStype='a' or CStype='y' or CStype='') then CSschedule endif EXPtime:ACQtime"
+          set="$VALUE=ni"
+          editable="No"
+          >
+          <mlabel 
+            label="32"
+            chval="32"
+            />
+          <mlabel 
+            label="64"
+            chval="64"
+            />
+          <mlabel 
+            label="128"
+            chval="128"
+            />
+          <mlabel 
+            label="200"
+            chval="200"
+            />
+          <mlabel 
+            label="256"
+            chval="256"
+            />
+          <mlabel 
+            label="512"
+            chval="512"
+            />
+        </menu>
+        <entry loc="236 25" size="50 20"
+          style="PlainText"
+          vq="ni"
+          vc="ni=$VALUE setLP1andWindow NUSdensity:CSdensity if (CStype='a' or CStype='y' or CStype='') then CSschedule endif EXPtime:ACQtime"
+          set="$VALUE=ni"
+          disable="Grayed out"
+          />
+        <button loc="266 130" size="178 25"
+          style="Heading2"
+          label="Show schedule text file"
+          vc="NUSshowschedule"
+          bg="transparent"
+          decor1="yes"
+          halignment="Center"
+          valignment="Center"
+          />
+        <textmessage loc="30 95" size="399 20"
+          style="PlainText"
+          label="( 64 increments recorded; total experiment time 1.9 min )"
+          vq="CSdensity ni ACQtime"
+          set="$exptimes='' format(ACQtime/60,1,1):$exptimes $phasesize=size('phase') $numinc=CSdensity/100*ni $numincs='' format($numinc,1,0):$numincs $VALUE='( '+$numincs+' increments recorded; total experiment time '+$exptimes+' min )'"
+          />
+        <entry loc="120 75" size="55 20"
+          style="PlainText"
+          vq="CSdensity ni"
+          vc="CSdensity=$VALUE NUSdensity:CSdensity if (CStype='a' or CStype='y' or CStype='') then CSschedule endif EXPtime:ACQtime"
+          set="$VALUE=CSdensity"
+          digits="2"
+          />
+        <menu loc="175 75" size="70 20"
+          style="PlainText"
+          vq="CSdensity ni"
+          vc="CSdensity=$VALUE NUSdensity:CSdensity  if (CStype='a' or CStype='y' or CStype='') then CSschedule endif EXPtime:ACQtime"
+          set="$VALUE=CSdensity"
+          editable="No"
+          >
+          <mlabel 
+            label="6.25"
+            chval="6.25"
+            />
+          <mlabel 
+            label="12.5"
+            chval="12.5"
+            />
+          <mlabel 
+            label="25"
+            chval="25"
+            />
+          <mlabel 
+            label="37.5"
+            chval="37.5"
+            />
+          <mlabel 
+            label="50"
+            chval="50"
+            />
+          <mlabel 
+            label="62.5"
+            chval="62.5"
+            />
+          <mlabel 
+            label="75"
+            chval="75"
+            />
+          <mlabel 
+            label="100"
+            chval="100"
+            />
+        </menu>
+        <label loc="245 75" size="20 20"
+          style="Label1"
+          label="%"
+          justify="Center"
+          />
+        <label loc="10 75" size="110 20"
+          style="Label1"
+          label="Sampling density"
+          />
+        <textmessage loc="30 45" size="360 20"
+          style="PlainText"
+          label="( Resolution: 50.1 Hz/pt; Max. evolution time: 0.01981 s )"
+          vq="ni sw1 CSdensity"
+          set="$tmp=sw1/ni $tmp2=(ni-1)/sw1 $tmps='' $tmp2s='' format($tmp,1,1):$tmps format($tmp2,1,5):$tmp2s $VALUE='( Resolution: '+$tmps+' Hz/pt; Max. evolution time: '+$tmp2s+' s )'"
+          />
+        <label loc="10 25" size="225 20"
+          style="Label1"
+          label="No. increments in reconstructed data"
+          justify="Left"
+          />
+      </group>
+      <group loc="15 170" size="450 70"
+        style="Heading1"
+        label="Schedule builder"
+        vq="CStype CSwt"
+        show="if ((CStype='a') and (CSwt='n')) then $SHOW=0 else $SHOW=1 endif"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="ScheduleBuilder"
+        useref="no"
+        subtype="Untitled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <group loc="381 12" size="65 55"
+          vq="CStype"
+          show="if (CStype='p1'  or CStype='p2') then $SHOW=0 else $SHOW=1 endif"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          rows="1"
+          columns="1"
+          >
+          <button loc="2 27" size="60 25"
+            style="Heading2"
+            label="Delete"
+            vc="CSrmsch"
+            bg="transparent"
+            decor1="no"
+            halignment="Center"
+            valignment="Center"
+            />
+          <button loc="2 2" size="60 25"
+            style="Heading2"
+            label="Build"
+            vc="jexp:$curexp expactive($curexp):$isactive if ($isactive&lt;0.5) then CSmksch else write('error','Schedule cannot be built while current experiment is active') endif"
+            bg="transparent"
+            decor1="no"
+            halignment="Center"
+            valignment="Center"
+            />
+        </group>
+        <group loc="5 5" size="185 60"
+          style="Heading1"
+          label="Schedule type"
+          border="Etched"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Titled"
+          rows="1"
+          columns="1"
+          >
+          <radio loc="15 15" size="80 25"
+            style="PlainText"
+            label="Random"
+            vq="CStype CSwt"
+            vc="CStype='i' CSwt='n'"
+            set="if CStype='i' then $VALUE=1 else $VALUE=0 endif"
+            />
+          <radio loc="15 35" size="95 25"
+            style="PlainText"
+            label="Poisson gap"
+            vq="CStype CSwt"
+            vc="CStype='p2' CSwt='n'"
+            vc2="CStype='i' "
+            set="if (CStype='p1'  or CStype='p2') then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+        <group loc="195 5" size="185 60"
+          style="Heading1"
+          label="Schedule order"
+          border="Etched"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Titled"
+          rows="1"
+          columns="1"
+          >
+          <radio loc="15 35" size="80 25"
+            style="PlainText"
+            label="Random"
+            vq="CSseed"
+            vc="abs(CSseed):CSseed CSseed=-CSseed"
+            vc2="abs(CSseed):CSseed"
+            set="if CSseed &lt;= 0  then $VALUE=1 else $VALUE=0 endif"
+            />
+          <radio loc="15 15" size="95 25"
+            style="PlainText"
+            label="Sequential"
+            vq="CSseed"
+            vc="abs(CSseed):CSseed"
+            vc2="abs(CSseed):CSseed CSseed=-CSseed"
+            set="if CSseed &gt;0  then $VALUE=1 else $VALUE=0 endif"
+            />
+        </group>
+      </group>
+      <group loc="475 5" size="310 51"
+        style="Heading1"
+        label="Schedule weighting"
+        vq="CStype"
+        show="if (CStype='p1' or CStype='p2') then $SHOW=1 else $SHOW=0 endif"
+        border="Etched"
+        tab="no"
+        enable="no"
+        reference="Scheduleweighting"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <radio loc="96 19" size="80 25"
+          style="PlainText"
+          label="Sine"
+          vq="CStype"
+          vc="CStype='p1'"
+          set="if (CStype='p1') then $VALUE=1 else $VALUE=0 endif"
+          />
+        <radio loc="15 19" size="95 25"
+          style="PlainText"
+          label="Cosine"
+          vq="CStype"
+          vc="CStype='p2'"
+          set="if (CStype='p2') then $VALUE=1 else $VALUE=0 endif"
+          />
+      </group>
+      <group loc="475 5" size="295 235"
+        style="Heading1"
+        label="Schedule weighting"
+        vq="CStype"
+        show="if (CStype='p1' or CStype='p2' or CStype='a') then $SHOW=0 else $SHOW=1 endif"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="NUSProfileBuilder2"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        rows="1"
+        columns="1"
+        >
+        <radio loc="97 20" size="120 25"
+          style="PlainText"
+          label="Window function"
+          vq="CSinp CSwt"
+          vc="CSinp='n' CSwt='y'"
+          vc2="CSinp=''"
+          set="if (CSinp='n' and CSwt='y') then $VALUE=1 else $VALUE=0 endif"
+          />
+        <group loc="10 170" size="265 35"
+          label="Profile"
+          vq="CSwt"
+          show="if CSwt='y' then $VALUE=1 else $VALUE=0 endif"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          reference="Profile"
+          useref="no"
+          subtype="Untitled"
+          expanded="yes"
+          rows="1"
+          columns="1"
+          >
+          <button loc="65 5" size="125 25"
+            style="Heading2"
+            label="Generate window"
+            vq="CSwt"
+            vc="jexp:$curexp expactive($curexp):$isactive if ($isactive&lt;0.5) then CSmkpro else write('error','Profile cannot be made while current experiment is active') endif"
+            show="if CSwt='y' then $SHOW=1 else $SHOW=0 endif"
+            bg="transparent"
+            decor1="no"
+            halignment="Center"
+            valignment="Center"
+            />
+        </group>
+        <group loc="18 51" size="273 63"
+          vq="CSinp CSwt"
+          show="if (CSwt='y' and CSinp='') then $SHOW=1 else $SHOW=0 endif"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          rows="1"
+          columns="1"
+          >
+          <group loc="3 29" size="220 30"
+            vq="CSshape"
+            show="if CSshape='Pbox' then $SHOW=1 else $SHOW=0 endif"
+            border="None"
+            tab="no"
+            enable="no"
+            reference="Pboxinputfilename:"
+            useref="no"
+            subtype="Untitled"
+            expanded="yes"
+            rows="1"
+            columns="1"
+            >
+            <label loc="0 0" size="125 25"
+              style="PlainText"
+              label="Pbox input filename:"
+              justify="Left"
+              />
+            <entry loc="125 0" size="85 25"
+              style="PlainText"
+              vq="CSinp"
+              vc="CSinp='$VALUE'"
+              set="$VALUE=CSinp"
+              show="$ENABLE=1"
+              disable="Grayed out"
+              />
+          </group>
+          <group loc="95 4" size="120 25"
+            vq="CSshape"
+            show="if(CSshape='jsin') or (CSshape='jcos') then $SHOW=1 else $SHOW=0 endif"
+            border="None"
+            tab="no"
+            enable="no"
+            useref="no"
+            subtype="Untitled"
+            rows="1"
+            columns="1"
+            >
+            <entry loc="30 0" size="45 25"
+              style="PlainText"
+              vq="r7"
+              vc="r7=$VALUE"
+              set="$VALUE=r7"
+              />
+            <label loc="75 0" size="30 25"
+              style="PlainText"
+              label="(Hz)"
+              vq="dimension"
+              justify="Left"
+              />
+            <label loc="5 0" size="25 25"
+              style="PlainText"
+              label="J ="
+              justify="Left"
+              />
+          </group>
+          <selmenu loc="2 4" size="90 25"
+            style="PlainText"
+            vq="CSshape"
+            vc="CSshape='$VALUE'"
+            set="$VALUE=CSshape"
+            bg="VJBackground"
+            editable="Yes"
+            >
+            <mlabel 
+              label="exp05"
+              chval="gexp-0.5"
+              />
+            <mlabel 
+              label="exp1"
+              chval="gexp"
+              />
+            <mlabel 
+              label="exp2"
+              chval="gexp-2"
+              />
+            <mlabel 
+              label="hgaus"
+              chval="ghgaus"
+              />
+            <mlabel 
+              label="cos"
+              chval="gcos"
+              />
+            <mlabel 
+              label="cos2"
+              chval="gcos2"
+              />
+            <mlabel 
+              label="ramp"
+              chval="grampd"
+              />
+            <mlabel 
+              label="sin(J)"
+              chval="jsin"
+              />
+            <mlabel 
+              label="cos(J)"
+              chval="jcos"
+              />
+            <mlabel 
+              label="Pbox"
+              chval="Pbox"
+              />
+          </selmenu>
+        </group>
+        <group loc="10 45" size="275 125"
+          vq="CSinp CStype CSwt"
+          show="if (CSwt='y' and CSinp='n' and CStype='i') then $SHOW=1 else $SHOW=0 endif"
+          border="None"
+          tab="no"
+          enable="no"
+          reference="Sinebell"
+          useref="no"
+          subtype="Untitled"
+          expanded="yes"
+          rows="1"
+          columns="1"
+          >
+          <group loc="10 10" size="200 40"
+            vq="CSinp CSwt"
+            show="if (CSinp='n' and CSwt='y') then $SHOW=1 else $SHOW=0 endif"
+            border="None"
+            tab="no"
+            enable="no"
+            useref="no"
+            subtype="Untitled"
+            expanded="yes"
+            rows="1"
+            columns="1"
+            >
+            <label loc="2 20" size="175 20"
+              style="PlainText"
+              label="then click Generate window"
+              vq="dimension"
+              justify="Left"
+              />
+            <label loc="2 0" size="170 25"
+              style="PlainText"
+              label="Set window functions below"
+              vq="dimension"
+              justify="Left"
+              />
+          </group>
+          <label loc="10 78" size="55 20"
+            style="Label1"
+            label="Sinebell"
+            justify="Left"
+            />
+          <check loc="220 98" size="20 20"
+            style="Label1"
+            vq="gfs1"
+            vc="gfs1='y'"
+            vc2="gfs1='n'"
+            set="on('gfs1'):$VALUE"
+            />
+          <entry loc="170 98" size="50 20"
+            style="PlainText"
+            vq="gf1 gfs1"
+            vc="gfs1=$VALUE"
+            set="$VALUE=gfs1"
+            show="onparams('gf1','gfs1'):$VALUE"
+            disable="Grayed out"
+            />
+          <label loc="135 98" size="35 20"
+            style="Label1"
+            label="shift"
+            justify="Center"
+            />
+          <check loc="220 78" size="20 20"
+            style="Label1"
+            vq="sbs1"
+            vc="sbs1='y'"
+            vc2="sbs1='n'"
+            set="on('sbs1'):$VALUE"
+            />
+          <entry loc="170 78" size="50 20"
+            style="PlainText"
+            vq="sb1 sbs1"
+            vc="sbs1=$VALUE"
+            set="$VALUE=sbs1"
+            show="onparams('sb1','sbs1'):$VALUE"
+            disable="Grayed out"
+            />
+          <label loc="135 78" size="35 20"
+            style="Label1"
+            label="shift"
+            justify="Center"
+            />
+          <check loc="115 98" size="20 20"
+            style="Label1"
+            vq="gf1 gfs1"
+            vc="gf1='y'"
+            vc2="gf1='n'"
+            set="on('gf1'):$VALUE"
+            />
+          <entry loc="65 98" size="50 20"
+            style="PlainText"
+            vq="gf1"
+            vc="gf1=$VALUE"
+            set="$VALUE=gf1"
+            show="on('gf1'):$VALUE"
+            disable="Grayed out"
+            />
+          <label loc="10 98" size="55 20"
+            style="Label1"
+            label="Gaussian"
+            justify="Left"
+            />
+          <check loc="115 78" size="20 20"
+            style="Label1"
+            vq="sb1 sbs1"
+            vc="sb1='y'"
+            vc2="sb1='n'"
+            set="on('sb1'):$VALUE"
+            />
+          <check loc="115 58" size="20 20"
+            style="Label1"
+            vq="lb1"
+            vc="lb1='y'"
+            vc2="lb1='n'"
+            set="on('lb1'):$VALUE"
+            />
+          <entry loc="65 78" size="50 20"
+            style="PlainText"
+            vq="sb1"
+            vc="sb1=$VALUE"
+            set="$VALUE=sb1"
+            show="on('sb1'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="65 58" size="50 20"
+            style="PlainText"
+            vq="lb1"
+            vc="lb1=$VALUE"
+            set="$VALUE=lb1"
+            show="on('lb1'):$VALUE"
+            disable="Grayed out"
+            />
+          <label loc="10 58" size="55 20"
+            style="Label1"
+            label="Line bd."
+            justify="Left"
+            />
+        </group>
+        <radio loc="230 20" size="55 25"
+          style="PlainText"
+          label="Pbox"
+          vq="CSinp CSwt"
+          vc="CSinp='' CSwt='y'"
+          vc2="CSinp='n'"
+          set="if (CSinp='' and CSwt='y') then $VALUE=1 else $VALUE=0 endif"
+          />
+        <radio loc="25 20" size="75 25"
+          style="PlainText"
+          label="None"
+          vq="CSwt CStype"
+          vc="CSwt='n'"
+          vc2="CSwt='y'"
+          set="if CSwt='n' then $VALUE=1 else $VALUE=0 endif"
+          />
+      </group>
+    </group>
+    <check loc="10 0" size="220 25"
+      style="Label1"
+      label="Enable non-uniform sampling"
+      vq="sampling"
+      vc="cpsetNUS('on')"
+      vc2="cpsetNUS('off')"
+      set="if sampling='sparse' then $VALUE=1 else $VALUE=0 endif"
+      />
+  </group>
+</template>

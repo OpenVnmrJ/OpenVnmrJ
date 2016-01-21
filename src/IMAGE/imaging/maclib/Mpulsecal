@@ -1,0 +1,265 @@
+"macro Mpulsecal"
+" Ancestry: pulsecal	8.1 4/16/93   Spectroscopy Imaging Systems"
+"**************************************************************"
+" Mpulsecal: Macro to update and display pulse calibration      "
+"           data file vnmrsys/pulsecal.                        "
+"                                                              "
+" Examples:                                                    "
+"                                                              "
+" [1] pulsecal                                                 "  
+"                                                              "
+" List the entries in the file userdir+'/pulsecal'             "
+"                                                              "
+" [2] pulsecal('name','remove')                                "
+"                                                              "
+" Remove the calibration entries associated with the name      "
+" given by arg1.                                               "
+"                                                              "
+" [3] pulsecal('name','pattern',length,flip,power)             "
+"                                                              "
+" Enter calibration values derived from arg2,arg3,arg4 & arg5  "
+" under name (arg1) into the file userdir+'/pulsecal. The      "
+" values entered into the pulsecal file are calculated from    "
+" arg2,arg3,arg4,arg5. The length and flip entries are simply  "
+" arg3 & arg4. The power entry is computed from the template   "
+" information (arg2) and arg5. The power entry represents the  "
+" power level that required for a 'square' pulse of the same   "
+" length as the calibrated pulse. If arg2 <> 'square' this     "
+" value will usually be lower than that supplied as arg4.      "
+"**************************************************************"
+
+
+"-- Constants ---------------------------------------------"
+$prog = 'PULSECAL: '
+$pulsecal = userdir+'/pulsecal'
+$tmp = userdir+'/pulsecal.old'
+$datfile = userdir+'/pulsecal.date'
+$fmt2 = '%10s  %10d  %10d  %10d  %10d' 
+
+
+"-- Check existence of the pulsecal file ------------------"
+exists($pulsecal,'file'):$ex_cal
+
+if ($# <> 5) then
+  write('line3','Usage: pulsecal(name,pattern,length,flip,power)')
+endif
+
+if ($# < 1  and  $ex_cal < 0.5) then
+  write('line3','pulsecal file does not exist.')
+  abort
+endif
+
+
+"-- List the pulsecal file --------------------------------"
+if ($ex_cal > 0  and  $# = 0) then
+  clear(4)
+  shell('cat "'+$pulsecal+'"')
+  abort
+endif
+
+if ($ex_cal > 0) then
+  nrecords($pulsecal):$lines
+  $lines = $lines - 4
+endif
+
+
+"----------------------------------------------------------"
+" Create a new calibration entry in the pulsecal           "
+" data base file                                           "
+"----------------------------------------------------------"
+if ($# > 4.5) and ($# < 5.5) then
+  $name = $1
+  $pattern = $2
+  $length = $3
+  $flipangle = $4
+  $power = $5
+
+  $usrpat = userdir+'/shapelib/'+$pattern+'.RF'
+  $syspat = systemdir+'/shapelib/'+$pattern+'.RF'
+  exists($usrpat,'file'):$ex1
+  exists($syspat,'file'):$ex2
+
+  if ($ex1 > 0.5) then
+    $file = $usrpat
+  else if ($ex2 > 0.5) then
+    $file = $syspat
+  else 
+    write('error',$prog+'cannot find RF pattern "'+$pattern+'".')
+    abort
+  endif endif
+
+  "-- Read keyword values from RF pattern file ------------"
+  lookup('file',$file,'count','MODULATION'):$mod_count
+  lookup('file',$file,'count','INTEGRAL'):$integral_count
+  if ($mod_count = 0  or  $integral_count = 0) then
+    $message='RF template "'+$pattern+'" cannot be used for calibration'
+    write('error','%s',$prog+$message)
+    abort
+  endif
+    
+  lookup('file',$file,'MODULATION','read'):$mod
+  lookup('file',$file,'INTEGRAL','read'):$integral
+
+  "-- Check for amplitude modulated pulse -----------------"
+  if ($mod <> 'amplitude') or ($integral <= 0) then
+    $message='RF template "'+$pattern+'" cannot be used for calibration'
+    write('error','%s',$prog+$message)
+    abort
+  endif
+
+  "-- Calculate the new calibration values ----------------"
+  ln(10.0):$ln10
+  ln($integral):$ln_integral
+  $pwr = $power + 20*$ln_integral/$ln10
+  $ipwr = trunc($pwr + 0.5)
+  $exp = $ln10*($pwr - $ipwr)/20
+  exp($exp):$length_ratio
+  $length = $length*$length_ratio
+
+  "-- Get the date from UNIX ------------------------------"
+  $date = ''
+  shell('date +%m%d%y'):$date_val
+  format($date_val,0,0):$date
+
+
+  if ($pattern <> 'square') then
+    write('line3','Power adjusted to reflect a square RF pulse')
+  endif
+
+  "-- Check pulsecal for the requested name ---------------"
+  $count = 0
+  if ($ex_cal > 0.5) then
+    lookup('file',$pulsecal,'count',$name):$count
+
+    if ($count > 0) then
+      "-- Name already exists as an entry ---------------------"
+      "-- If TCL-DG mode auto replace entry -------------------"
+      exists('rfupdate','parameter'):$ex
+      $rfupdate = 0
+      if($ex = 1) then
+        if (rfupdate = 'y') then
+          $rfupdate = 1
+        endif
+      endif
+       
+      if($rfupdate = 1) then
+        "** auto replace if tcldg mode **"
+        write('line3','Replacing pulsecal entry ['+$name+']')
+      else
+        write('error','Pulsecal entry "'+$name+'" already exists')
+        input('Do you want to replace it? (y, n, or q to quit now): '):$replace
+        if ($replace = 'q'  or  $replace = 'Q') then
+          abort
+        endif
+        if ($replace = 'n'  or  $replace = 'N') then
+          input('Please enter a new name: '):$name
+          $count = 0
+        endif
+        if ($replace = ''  or  $replace = ' ') then   "** quit if no input **"
+          abort
+        endif  
+      endif      
+    endif
+  endif
+
+  "-- Replace an old calibration entry --------------------"
+  if ($count > 0) then
+    cp($pulsecal,$tmp)
+    write('reset',$pulsecal)
+        
+    write('file',$pulsecal,'     PULSE CALIBRATION VALUES')
+    write('file',$pulsecal,'')
+    $title2 = '     rfcoil      length        flip       power      date'
+    write('file',$pulsecal,$title2)
+    write('file',$pulsecal,'')
+
+    $k=1 $l=0 $f=0 $p=0 $d=0 $n=''
+    lookup('file',$tmp)
+    lookup('skip',8)
+    repeat
+
+      lookup('read',5):$n,$l,$f,$p,$d
+      if ($n <> $name) then
+        write('file',$pulsecal,$fmt2,$n,$l,$f,$p,$d)
+      endif
+      $k = $k + 1
+    until ($k > $lines)
+
+    write('file',$pulsecal,$fmt2,$name,$length,$flipangle,$ipwr,$date)
+    rm ($tmp)
+
+  else
+
+    "-- Write the new calibration entry ---------------------"
+    if ($ex_cal = 0) then
+      write('file',$pulsecal,'     PULSE CALIBRATION VALUES')
+      write('file',$pulsecal,'')
+      $title2 = '     rfcoil      length        flip       power      date'
+      write('file',$pulsecal,$title2)
+      write('file',$pulsecal,'')
+    endif
+
+    write('file',$pulsecal,$fmt2,$name,$length,$flipangle,$ipwr,$date)
+
+  endif
+
+  "-- List pulsecal file ----------------------------------"
+  clear(4)
+  shell('cat "'+$pulsecal+'"')
+
+endif
+
+
+"-- Remove a calibration entry ----------------------------"
+if ($2 = 'remove') then
+
+  $name = $1
+  if ($ex_cal < 0.5) then
+      write('error',$prog+'Cannot find pulsecal file')
+      abort
+  endif
+
+  $count=0
+  lookup('file',$pulsecal,'count',$name):$count
+
+  if ($count = 0) then
+      write('line3','%s','Calibration entry "'+$name+'" not found')
+      abort
+  endif
+
+  cp($pulsecal,$tmp)
+  write('reset',$pulsecal)
+        
+  write('file',$pulsecal,'     PULSE CALIBRATION VALUES')
+  write('file',$pulsecal,'')
+  $title2 = '     rfcoil      length        flip       power      date'
+  write('file',$pulsecal,$title2)
+  write('file',$pulsecal,'')
+
+  $k=1 $l=0 $f=0 $p=0 $d=0 $n=''
+  lookup('file',$tmp)
+  lookup('skip',8)
+
+  repeat
+      lookup('read',5):$n,$l,$f,$p,$d
+      if ($n <> $name) then
+          write('file',$pulsecal,$fmt2,$n,$l,$f,$p,$d)
+      endif
+      $k = $k + 1
+  until ($k > $lines)
+
+  rm ($tmp)
+
+  "-- List pulsecal file ----------------------------------"
+  clear(4)
+  shell('cat "'+$pulsecal+'"')
+
+endif
+
+"**************************************************************************"
+"                Modification History"
+" 
+" 990409(ss) - rfupdate flag checked for auto replacing pulsecal entry"
+"
+"**************************************************************************"
+

@@ -1,0 +1,22 @@
+"macro BPautofinddof2"
+"BPautofinddof2"
+wft
+$bestone=1 $counter=1
+
+crl f cr=sw/2 rl(4.66p) cz z(11p,5.5p)
+select(1) bc vsadj(20)
+integ(7.4p,9p):$in if $in<0 then $in=-$in endif $best=$in
+
+repeat
+  select($counter) bc
+  integ(7.4p,9p):$in if $in<0 then $in=-$in endif
+  if $in<$best then $best=$in $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+
+$b=$bestone-18 if $b>0 then $b=$b else $b=$bestone+18 endif
+av select($b) vsadj(50) ph
+sp=7.5p wp=2p vp=30
+dssh('dodc')
+write('line3','Proper dof value gives minimum intensity')
+BPsvf(userdir+'/AutoTripRes/ghn_co_find_best_dof')

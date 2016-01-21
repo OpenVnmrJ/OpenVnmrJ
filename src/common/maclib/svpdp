@@ -1,0 +1,181 @@
+"macro svpdp"
+//  A return argument suppress messages
+
+$dum='' $devnull=''
+is_submitmode:$submit
+if $submit then return endif
+
+if ($#<1) then $1='log' endif
+if ($1='nolog') then
+    exists('sampling','parameter'):$samplingex
+    if $samplingex then
+	if sampling='sparse' then return endif
+    endif
+endif
+
+isnewexp:$isnew
+isFDAdata:$p11
+if($p11>0 and $isnew=0 and procdim>0) then
+  // save changes with svr command
+  CPdndfid_process
+  saveREC
+endif
+
+canWrite(file):$e
+// if (auto='y') then $isnew=1 endif
+if (($isnew or $e<0.5) and ($1<>'nolog') and ($##<1)) then
+  write('line3','Cannot save parameters to file \'%s\'',file)
+  return
+endif
+
+if ((studyowner<>operator) and 
+    (operator<>owner) and 
+    ($1<>'nolog') and 
+    (auto<>'y')) then
+    $ok2edit=1
+    operights('editallopstudies'):$ok2edit
+    if ($ok2edit<0.5) then
+	write('error','Study owned by %s.  %s does not have rights to update',studyowner,operator)
+	return
+    endif
+endif
+
+$archsamp='' $name=''
+substr(file,'dirname'):$archsamp,$name,$ext
+
+exists($archsamp+'/'+$name+'.fid','directory'):$fidex
+if ($fidex=0) then return endif
+
+$listparam='' $lex=0
+getbinpath('listparam'):$lex,$listparam
+if ($lex=0) then return endif
+
+pwd:$curdir
+cd($archsamp):$dum
+
+flush
+$file=file
+
+svf('/vnmr/tmp/'+$name,'nodb','force'):$dum
+
+file=$file
+write('reset','/vnmr/tmp/diffpars')
+write('reset','/vnmr/tmp/procpars')
+write('reset','/vnmr/tmp/disppars')
+write('reset','/vnmr/tmp/newpars')
+write('reset','/vnmr/tmp/newpars2')
+write('reset','/vnmr/tmp/newpars3')
+
+	"The there are too many parameters different,then -list option may cause problem"
+	"   So, do it 10 parameters at a time"
+
+$parlist='' $s2='' $proclist='' $displist=''
+shell('diffparams /vnmr/tmp/'+$name+'.fid '+$name+'.fid > /vnmr/tmp/diffpars'):$devnull
+shell('diffparams -active /vnmr/tmp/'+$name+'.fid '+$name+'.fid >> /vnmr/tmp/diffpars'):$devnull
+
+shell('(cat /vnmr/tmp/diffpars | grep -vw "undefined" | grep -v "^file" > /vnmr/tmp/diffpars2)'):$devnull
+rename('/vnmr/tmp/diffpars2','/vnmr/tmp/diffpars'):$dum
+
+shell('(cat /vnmr/tmp/diffpars | grep -v "^time_" > /vnmr/tmp/diffpars2)'):$devnull
+rename('/vnmr/tmp/diffpars2','/vnmr/tmp/diffpars'):$dum
+
+shell('(cat /vnmr/tmp/diffpars | grep -vw "inactive" > /vnmr/tmp/diffpars2)'):$devnull
+rename('/vnmr/tmp/diffpars2','/vnmr/tmp/diffpars'):$dum
+
+readfile('/vnmr/tmp/diffpars','$parlist','$s2','','local')
+rm('-f','/vnmr/tmp/diffpars'):$dum 
+
+shell('('+$listparam+' '+$name+'.fid/procpar processing | sed -e \'s|\\[| |g\' > /vnmr/tmp/procpars)'):$devnull
+readfile('/vnmr/tmp/procpars','$proclist','$s2','','local')
+rm('-f','/vnmr/tmp/procpars'):$dum
+
+shell('('+$listparam+' '+$name+'.fid/procpar display | sed -e \'s|\\[| |g\' > /vnmr/tmp/disppars)'):$devnull
+readfile('/vnmr/tmp/disppars','$displist','$s2','','local')
+rm('-f','/vnmr/tmp/disppars'):$dum
+
+$procdisplist=$proclist,$displist
+        "Exclude any specific parameters - more parameters can be added"
+teststr('$parlist','text_string','local'):$istxt
+$exclude='text_string','apptype','execprocess','execplot'
+if ($parlist[1]<>'') then
+   $parlisttotal=size('$parlist')
+   $i=1 $i2=1 $parlist2=''
+   repeat
+	$ispd=0
+	teststr('$procdisplist',$parlist[$i],'local'):$ispd
+	teststr('$exclude',$parlist[$i],'local'):$isex
+	if ($ispd>0) and not $isex then $parlist2[$i2]=$parlist[$i] $i2=$i2+1 endif
+	$i=$i+1
+   until $i>$parlisttotal
+   $parlist=$parlist2
+endif
+"*************************************************************************"
+if ($parlist[1]<>'') then
+   writeparam($name+'.fid/procpar','$parlist','current','add')
+   writeparam('/vnmr/tmp/newpars3','$parlist','current','add')
+   if ($##<1) then
+   	write('line3','%s is updated.',$archsamp+'/'+$name+'.fid/procpar')
+   endif
+
+	$parlist3=''
+	shell('diffparams -list -active /vnmr/tmp/'+$name+'.fid '+$name+'.fid'):$parlist3
+	string2array($parlist3):$parlist3
+	write('file','/vnmr/tmp/newpars','Parameter values before update:')
+	shell('diffparams /vnmr/tmp/newpars3 /vnmr/tmp/newpars2 | sed -e \'s|undefined||g\' >> /vnmr/tmp/newpars'):$devnull
+	$parlist4='' $s2=''
+	readfile('/vnmr/tmp/newpars','$parlist4','$s2','','local'):$ntot
+	if ($ntot>0) and ($parlist3[1]<>'') then
+	   $i=1
+	   repeat
+		teststr('$parlist3',$parlist4[$i],'local'):$ret
+		if ($ret) then
+		    on($parlist4[$i]):$ison
+		    if ($ison) then
+			write('file','/vnmr/tmp/newpars','%s\t\tinactive',$parlist4[$i])
+		    else
+			write('file','/vnmr/tmp/newpars','%s\t\tactive',$parlist4[$i])
+		    endif
+		endif
+		$i=$i+1
+	   until $i > $ntot
+	endif
+
+else
+   if ($## < 1) then
+        write('line3','%s is up to date.',$archsamp+'/'+$name+'.fid/procpar')
+   endif
+endif
+
+if ($istxt) then
+	write('file','/vnmr/tmp/newpars','Text changed from:')
+	shell('(cat '+$name+'.fid/text >> /vnmr/tmp/newpars)'):$devnull
+        puttxt($name+'.fid')
+endif
+if ($parlist[1]<>'') or ($istxt) then
+    if ($1<>'nolog') then
+        cplog($name,'parud','/vnmr/tmp/newpars')
+    endif
+    isFDAsystem:$p11
+    if($p11) then
+      samplemirror
+    else
+      $mirror='no'
+      getadminfo('datamirror'):$mirror
+      exists('adir2tmplt','parameter'):$ad2ex
+      if ($ad2ex) then 
+        if (adir2tmplt='') then $ad2ex=0 endif
+      endif
+      if ($ad2ex) and ($mirror='yes') then
+	samplemirror
+      endif
+    endif
+endif
+
+rm('-rf','/vnmr/tmp/'+$name+'.fid'):$dum
+rm('-f','/vnmr/tmp/newpars'):$dum
+rm('-f','/vnmr/tmp/newpars1'):$dum
+rm('-f','/vnmr/tmp/newpars2'):$dum
+rm('-f','/vnmr/tmp/newpars3'):$dum
+
+cd($curdir):$dum
+

@@ -1,0 +1,22 @@
+"macro SetUplc1d"
+if ($# < 1) then $arg='findfrq' else $arg=$1 endif
+
+   flush
+   $curexplist=explist
+   lc1dproc($arg,'nogo')
+   $explist=''
+
+   $head='' $next=''
+   strstr(wexp,'lc1dproc'):$is,$head,$next
+   seqfil=seqfil
+   if ($is=1) then
+     $md=archivedir+'/'+sample+'/dirinfo/macdir'
+     cpexplist('read',$md):$explist
+     explist=pslabel+'scout','SetUp',$explist
+     write('file',$md+'/alias','SetUp: SetUpwet1D%s',$next)
+     cpexplist('write',$md)
+     explist=$curexplist
+   endif
+   wexp='chempackQ'
+   wdone=''
+

@@ -1,0 +1,54 @@
+The testControllers script will check for the presence of each of the controller boards in your console
+(using the list in /etc/hosts as a basis set) and then flood ping each in turn to check the communications
+with the PC.  On a properly working system you should see no packet loss at all.  Some accessories
+(e.g. the cryogen monitor) can respond more slowly.  Significant loss of packets suggests a bad Ethernet
+connection due to one of the controller boards, the network switch or one of the Ethernet cables.
+The script must be run with superuser privileges in order to flood ping.
+
+To use the script, as root
+cd /vnmr/adm/acq
+./testControllers
+
+Version History:
+Version 2.02 - 21-Aug-15 - Added options for timeout, help and version information
+Version 2.01 - 18-Aug-15 - Added optional parameter to specify number of packets [ Heiko Schill ]
+Version 2.00 - 13-Feb-15 - Now works for any IP address range, has more user-friendly output,
+                           checks for minimum master1, rfx and ddrx on direct drive systems and
+                           checks for non-contiguous rfx or ddrx controllers
+Version 1.01 - 30-May-14 - Now checks both the 172.16.0.x and 10.0.0.x subnets for controllers
+Version 1.00 - 30-May-14 - Initial release
+
+Usage:
+testControllers [options]
+
+Options:
+Display this help message
+-c, --count <packetcount> The number of packets to send (default: 5000) 
+-h, --help Display this help message 
+-v, --version Display version information 
+-w, --wait <timeout> The timeout for each flood ping in seconds (default: 20) 
+
+Sample output for VNMRS:
+
+Determining which network addresses are active...................................................
+
+Active addresses: wormhole master1 rf1 rf2 rf3 pfg1 lock1 ddr1 V-Protune
+wormhole : 5000 packets transmitted, 5000 received, 0% packet loss, time 33ms
+master1 : 5000 packets transmitted, 5000 received, 0% packet loss, time 980ms
+rf1 : 5000 packets transmitted, 5000 received, 0% packet loss, time 976ms
+rf2 : 5000 packets transmitted, 5000 received, 0% packet loss, time 978ms
+rf3 : 5000 packets transmitted, 5000 received, 0% packet loss, time 971ms
+pfg1 : 5000 packets transmitted, 5000 received, 0% packet loss, time 974ms
+lock1 : 5000 packets transmitted, 5000 received, 0% packet loss, time 1002ms
+ddr1 : 5000 packets transmitted, 5000 received, 0% packet loss, time 975ms
+V-Protune : 5000 packets transmitted, 5000 received, 0% packet loss, time 9543ms
+Done.
+
+Sample output for INOVA:
+Determining which network addresses are active..........
+
+Active addresses: wormhole inova inovaauto
+wormhole : 5000 packets transmitted, 5000 received, 0% packet loss, time 28ms
+inova : 5000 packets transmitted, 5000 received, 0% packet loss, time 3197ms
+inovaauto : 3427 packets transmitted, 3426 received, 0% packet loss, time 20000ms
+Done.

@@ -1,0 +1,27 @@
+"macro gxyzcheckseq"
+$diff='' $date='' $recompile=0
+shell('date +%d%m%y_%H:%M:%S'):$date
+
+exists($0,'maclib'):$ex,$macropath
+shell('dirname '+$macropath):$maclibpath
+$appdirpsglibpath=$maclibpath+'/../psglib/gmapxyz.c'
+$localpsglibpath=userdir+'/psglib/gmapxyz.c'
+
+exists(userdir+'/psglib/gmapxyz.c','file'):$ex
+if ($ex > 0.5) then
+   shell('diff '+$appdirpsglibpath+' '+$localpsglibpath):$diff
+   if ($diff<>'') then
+	$recompile=1
+	write('line3','Appdir and userdir psglib files differ')
+	write('line3','Backing up local pulse sequence and recompiling appdir version')
+	shell('mv '+$localpsglibpath+' '+$localpsglibpath+'.'+$date):$dum
+   endif
+else
+   write('line3','Copying appdir pulse sequence to local psglib and recompiling')
+   $recompile=1
+endif
+
+if ($recompile) then
+   shell('cp '+$appdirpsglibpath+' '+$localpsglibpath):$dum
+   seqgen('gmapxyz')
+endif

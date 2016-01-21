@@ -1,0 +1,51 @@
+"macro BP8b"
+" BP8b "
+
+ssfilter=100 wft f full select(1)
+setref wc=.7*wc  lp=0 vp=0 vo=30 ho=0
+BPaph2(1) vsadj(30)
+ds pl pscale pap dscale
+$count=2
+repeat
+  select($count)
+  BPaph2($count)
+  vp=vp+vo
+  dssn($count,$count) pl($count)
+  $count=$count+1
+until $count>5
+select(6) BPaph2(6)
+vp=vp+vo dssn(6,6) pl(6)
+vp=0
+write('graphics',80,vp+10,'All Carbons')
+write('graphics',80,vp+10+vo,'Aliphatic Carbons Only')
+write('graphics',80,vp+10+2.0*vo,'Aliphatic CH2 Carbons Only')
+write('graphics',80,vp+10+3.0*vo,'Alpha Carbons Optimized')
+write('graphics',80,vp+10+4.0*vo,'Alpha CH2 Carbons Optimized')
+write('graphics',80,vp+10+5.0*vo,'Aromatic Carbons Only')
+write('plotter',140,vp+10,'All Carbons')
+write('plotter',140,vp+10+vo,'Aliphatic Carbons Only')
+write('plotter',140,vp+10+2.0*vo,'Aliphatic CH2 Carbons Only')
+write('plotter',140,vp+10+3.0*vo,'Alpha Carbons Optimized')
+write('plotter',140,vp+10+4.0*vo,'Alpha CH2 Carbons Optimized')
+write('plotter',140,vp+10+5.0*vo,'Aromatic Carbons Only')
+BPpage
+BPsvf(userdir+'/AutoTripRes/gChsqc_1Ds')
+allC='y' aliph='n' arom='n' alphaC='n' CH2only='n'
+BPsetwurstparams
+dp='y' SE='n' ZZ='y'
+$d1=d1 $nt=nt
+
+$CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+BPsetparams('CHgrad1_time',$CHgrad1_time,'C13')
+$CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+BPsetparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+$CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+BPsetparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+
+rtp(userdir+'/AutoTripRes/ghn_co')
+text('HNCO')
+banner('Updating Probefile')
+s1 f ph full
+BPbiopack2
+r1
+d1=$d1 nt=$nt  au

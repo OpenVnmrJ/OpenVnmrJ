@@ -1,0 +1,64 @@
+"macro probe_which"
+// macro to select a user or system probe
+//
+// This macro has supports several modalities:
+//  - legacy mode with probeattr
+//      probe file was selected with the probe menu in legacy mode
+//      probeattr[1] indicates whether a system or user probe is used.
+//
+//  - legacy mode without probeattr
+//      probe file was selected by assigning to probe parameter
+//
+//  - probeid in 'appdir' mode (experimental)
+//      leverage the fact that probeid already touches every macro that
+//      touches probe files to supply an appdir version of a probe file.
+//      Probeid does not use the probe server, but only legacy probes.
+//
+//  - probeid mode (not appdir)
+//      use standard probeid probe file search approach
+//
+probeid('enabled'):$probeid
+$owner='' $ok=0
+if $# = 0 then $1=probe endif
+
+// check if it's been selected via probelist
+// probeattr[1] may be 'user' even if probeattr[6] is 'system'
+// if the user doesn't have sufficient privileges for the system probe
+if $1=probe then
+  $e=0 exists('probeattr','parameter','global'):$e
+  if $e and size('probeattr') > 5 then
+    if $probeid then
+      if probeattr[6]='appdir' then // legacy-mode appdir search path
+        exists($1,'probes'):$ok,$owner
+      else
+        probeid('fexists',probe,'probes/'+probe,probeattr[1]):$ok
+      endif
+    else
+      if probeattr[1]='system' then
+        exists(systemdir+'/probes/'+probe,'file'):$ok
+      else
+        exists(userdir+'/probes/'+probe,'file'):$ok
+      endif
+    endif
+    if $ok then $owner = probeattr[1] endif
+  endif
+endif
+
+// use default approach
+if $owner='' then 
+  if $probeid then
+    probeid('fexists',$1):$ok,$owner
+  else
+    exists($1,'probes'):$ok,$owner
+  endif
+endif
+
+if $##=0 then 
+  if $ok then 
+    write('line3',$owner)
+  else
+    write('line3','probe file does not exist')
+  endif
+endif
+if $owner<>'' then return($ok,$owner) endif
+return($ok)

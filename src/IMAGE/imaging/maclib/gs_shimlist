@@ -1,0 +1,71 @@
+"macro gs_shimlist"
+"**************************************************************************"
+"                                                                          "
+" gs_shimlist  - Copies Zero shimfile to ~/vnmrsys/shims and makes a list  "
+"                of suitable shim files in ~/vnmrsys/shims                 "
+"                                                                          "
+"**************************************************************************"
+
+$action='makelist'
+
+if ($#>1) then $action=$1 endif
+
+if ($action='makelist') then
+  $shims=''
+  if ($#>0) then $shims=$1 endif
+  if ($shims<>'') then
+    exists(userdir+'/shims/'+$shims,'file'):$e 
+    if ($e=0) then shims=$shims svs($shims,'force') endif 
+  endif
+
+  shell('cp /vnmr/shims/reg0 ~/vnmrsys/shims/Zero')
+  shell('rm ~/vnmrsys/gshimdir/templist'):$trash
+  shell('rm ~/vnmrsys/gshimdir/shimList'):$trash
+  shell('ls ~/vnmrsys/shims/ > ~/vnmrsys/gshimdir/templist')
+
+  $line=''
+  lookup('file',userdir+'/gshimdir/templist','readline'):$line[1]
+  $i=1
+  while ($line[$i]<>'') do
+    $write=1
+    if ($line[$i]='fastmap.log') then $write=0 endif "Don't include fastmap log file"
+    if ($line[$i]='start0') then $write=0 endif      "Don't include start0 file"
+    gs_shimlist('gs_shims',$line[$i]):$gswrite
+    gs_shimlist('fm_shims',$line[$i]):$fmwrite  
+    if ($gswrite = 0 OR $fmwrite = 0) then $write=0 endif
+    if ($write=1) then
+      write('file',userdir+'/gshimdir/shimList','"'+$line[$i]+'" "'+$line[$i]+'"')
+    endif
+    $i=$i+1
+    lookup('readline'):$line[$i]
+  endwhile
+
+  shell('rm ~/vnmrsys/gshimdir/templist'):$trash
+
+endif
+
+if ($action='gs_shims') then
+  $test=0
+  exists('gs_shims','parameter'):$e
+  if ($e=0) then $test=1 elseif (gs_shims<>'y') then $test=1 endif
+  if ($test=1) then
+    if ($2='gs_start1') then return(0) endif
+    if ($2='gs_start2') then return(0) endif
+    if ($2='gs_start3') then return(0) endif
+    if ($2='gs_start4') then return(0) endif
+  endif
+  return(1)
+endif
+
+if ($action='fm_shims') then
+  $test=0
+  exists('fm_shims','parameter'):$e
+  if ($e=0) then $test=1 elseif (fm_shims<>'y') then $test=1 endif
+  if ($test=1) then
+    if ($2='fm_start1') then return(0) endif
+    if ($2='fm_start2') then return(0) endif
+    if ($2='fm_start3') then return(0) endif
+    if ($2='fm_start4') then return(0) endif
+  endif
+  return(1)
+endif

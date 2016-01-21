@@ -1,0 +1,87 @@
+"macro addPeakNode"
+if ($#<1) then $1='' endif
+whichtail:$tailX
+
+is_submitmode:$submit
+if ($submit=0) then return endif
+$xml=cursqexp+'/tmpstudy/study.xml'
+$xml2=cursqexp+'/tmpstudy/study.xml2'
+$esq=cursqexp+'/tmpstudy/enterSQ'
+$cpnodes=cursqexp+'/tmpstudy/cpnodeinfo'
+
+shell('(cat '+$xml+' | wc -l)'):$lines
+if ($lines=0) then
+   $samplename=samplename
+   $gtitle=samplename
+   if ($gtitle='') then $gtitle='New Sample' endif
+
+   sqdir=cursqexp+'/tmpstudy'
+   write('reset',$xml)
+   write('file',$xml,'<?xml version="1.0" encoding="UTF-8"?>')
+   write('file',$xml,'<!DOCTYPE template>')
+   write('file',$xml,'')
+   write('file',$xml,'<template>')
+   write('fileline',$xml,'  <protocol title="%s" ',$gtitle)
+   write('fileline',$xml,'type="protocol" exp="grandparent" lock="off" ')
+   write('fileline',$xml,'id="tmpstudy" tooltext="%s" expanded="true">\n',$samplename)
+   write('reset',$esq)
+   write('reset',$cpnodes)
+
+   $atx=1
+   $attr[$atx]='tooltext','Change Sample Info' $atx=$atx+2
+   $attr[$atx]='title','SampleInfo'  $atx=$atx+2
+   $attr[$atx]='time',''  $atx=$atx+2
+   xmhaha_addnode('SampInfo',$attr,'',$xml)
+   shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+   $tot=0 $tot2=0 $tot3=0
+   shell('(cat '+$esq+' | grep -w parent | grep \'^loc\' | wc -l)'):$tot2
+   shell('(cat '+$esq+' | grep -w parent | grep \'^Qn004\' | wc -l)'):$tot3
+   $tot=$tot2+$tot3
+   $start=$tot
+   shell('cp '+$xml+' '+$xml2):$dum
+else
+   $tot=0 $tot2=0 $tot3=0
+   shell('(cat '+$esq+' | grep -w parent | grep \'^loc\' | wc -l)'):$tot2
+   shell('(cat '+$esq+' | grep -w parent | grep \'^Qn004\' | wc -l)'):$tot3
+   shell('(cat '+$esq+' | grep -w parent | grep Peak | wc -l)'):$tot
+   $tot=$tot+$tot2+$tot3
+   $start=$tot
+
+   shell('(cat '+$xml+' | wc -l)'):$tot
+   $done=0 $i=0
+   while $done<1 do
+      $head='' format($tot-$i,0,0):$head
+      $line=''
+      shell('(head -n '+$head+' '+$xml+' | '+$tailX+' -n 1)'):$line
+      strstr($line,'</protocol>'):$done
+      $i=$i+1
+      if ($i > $tot) then $done=1 endif
+   endwhile
+   $head='' format($tot-$i,0,0):$head
+   shell('(head -'+$head+' '+$xml+' > '+$xml2+')'):$dum
+
+endif
+
+//  nextlocQ:$next
+  $next=1
+  write('reset',$cpnodes)
+  $node='' format($start+$next,0,0):$node
+  if ($start<10) then $node='0'+$node endif
+  $node='Peak_'+$node
+  $atx=1
+  $pattr[$atx]='title',$node $atx=$atx+2
+  $pattr[$atx]='CPnode',$node $atx=$atx+2
+  $pattr[$atx]='expanded','true' $atx=$atx+2
+  $pattr[$atx]='EstRetTime','' $atx=$atx+2
+  xmhaha_addnode('Peak','',$pattr,$xml2,'n%R3%','protocol')
+  write('file',$xml2,'</protocol>')
+
+  shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3" "$4}\' >> '+$esq+')'):$dum
+  write('file',$xml2,'</protocol>')
+  write('file',$xml2,'</template>')
+  shell('mv '+$xml2+' '+$xml)
+  vnmrjcmd('SQ read '+cursqexp+'/tmpstudy/study.xml')
+
+if ($1<>'noscout') then
+   walkupQ('add','Autoscout')
+endif

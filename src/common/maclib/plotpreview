@@ -1,0 +1,77 @@
+"macro plotpreview"
+"*********************************"
+" plotpreview - plot into a PDF and show via Acrobat reader "
+"*********************************"
+
+if ($#<1) then pageview('auto') return endif
+
+$ps2pdf='' $convert='' $acro=''
+shell('which ps2pdfwr'):$ps2pdf
+if $ps2pdf='' then
+  write('error','No PDF converter found - please install Ghostscript first!') return
+endif
+shell('which convert'):$convert
+if $convert='' then
+  write('error','No file converter found - must have a "convert" program!') return
+endif
+//shell('which acroread'):$acro
+//if $acro='' then
+//  write('error','"acroread" not found - please install an Acrobat reader!') return
+//endif
+
+resetplotter('setup')
+exists('previewdir','parameter'):$epdir
+if not $epdir then create('previewdir','string') endif
+
+exists('pltmod','parameter'):$ep
+if $ep then
+  if pltmod='off' then 
+    pltmod='fixed'
+    write('line3','pltmod was set to "off" - resetting to "fixed"!')
+  endif
+endif
+
+Svfname:$next_saved_fid length($next_saved_fid):$ln
+substr($next_saved_fid,$ln-4,1):$numstr
+substr($next_saved_fid,1,$ln-5):$current_fid
+$num=1      format($numstr,'lower'):$num $num=$num-1
+$numstr2='' format($num,'lower'):$numstr2
+$current_fid=$current_fid+$numstr2+'.fid'
+
+exists($current_fid,'directory'):$ef
+exists(file,'directory'):$efile
+
+if file='exp' and $ef then
+  previewdir=$current_fid
+elseif file<>'exp' and $efile then
+  previewdir=file
+else
+  previewdir='/vnmr/tmp'
+endif
+$tmpps='/vnmr/tmp/tmpplot.ps'
+$tmppdf='/vnmr/tmp/tmpplot.pdf'
+
+exists($tmpps,'file'):$eold
+if $eold then shell('rm -f '+$tmpps) endif
+
+if $#>0 then $arg=$1 else $arg='auto' endif
+
+if $arg='auto' then
+  $ret=1
+  checkplotter('setup'):$new,$ret
+  if $ret=0 then return endif
+  plot
+else
+  plotlogo
+  page($tmpps)
+endif
+shell($ps2pdf+' '+$tmpps+' '+$tmppdf)
+shell('chmod 777 '+$tmpps+' '+$tmppdf)
+
+pwd:$pwd
+cd(previewdir):$dum
+//shell('acroread '+$tmppdf+' &')
+shell('vnmr_open '+$tmppdf+' ')
+checkplotter('exit')
+resetplotter
+cd($pwd):$dum

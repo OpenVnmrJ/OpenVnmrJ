@@ -1,0 +1,46 @@
+*******************************************************************************
+hidecommand	- 	rename a builtin Vnmr command so that a macro with
+                        this same name will be executed
+*******************************************************************************
+
+  Usage -- hidecommand(commandname)<:$newname>
+           hidecommand('?')
+
+  hidecommand will rename a builtin command.  For example, suppose
+  one wants to write a macro named 'svs' which saves shims to a 
+  pre-defined directory.  When svs is entered, the list of
+  builtin commands is searched first, and the svs command which
+  saves shims in the shims directory will be called instead of the
+  custom svs macro.
+  hidecommand('svs') will rename the builtin 'svs' command so that the
+  macro will be executed.  If a return argument is appended to the
+  hidecommand command, it will be set to the new name of the builtin
+  command.  Calling hidecommand with the new name of a hidden builtin
+  command will reset the builtin command to it's original name.
+
+  hidecommand('?') displays a list of all of the renamed builtin commands
+  and the original names.
+  
+  hidecommand may have several possible uses.  One may be to permanently
+  remove access to a command.  For example, perhaps the rm command
+  is not desired.  This could be removed for all users be including the line
+  hidecommand('rm') in the system bootup macro. Alternatively, it could be
+  removed for selected uses by putting the same line in the user's login macro.
+  Another use would be for a macro to temporarily disable a command. For
+  example, consider the following five macro lines.
+
+  hidecommand('svs'):$newname
+  svs
+  exec($newname)
+  hidecommand($newname)
+  svs
+
+  The first hides the builtin command svs.  The second calls a user's svs
+  macro.  The third calls the builtin svs command with it's new name.
+  The fourth resets the builtin command to its original svs name.
+  The fifth calls the builtin svs command with it's original svs name.
+  
+  Programming note: The command is hidden by changing the case of the first
+  letter of the command.  That is, the builtin svs command is hidden by renaming
+  it to Svs.  Access is still available to the builtin command with the new
+  name.

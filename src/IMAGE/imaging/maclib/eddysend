@@ -1,0 +1,39 @@
+"macro eddysend"
+""
+"macro eddysend"
+"  Eddy Current Handling - EccTool or manual "
+"  uImaging Macro "
+""
+""
+$t=''
+$tmp=''
+if $#<>2
+then
+  if $#=0
+  then
+    $xx=curecc
+  else
+    $xx=$1
+  endif
+  $t=systemdir+'/imaging/eddylib/'+$xx
+  exists($t,'file'):$e
+  if $e=0 
+  then
+    write('error','no ecc file %s',$t)
+    abort
+  endif
+  $tmp=systemdir+'/bin/eccsend  '+ $t
+  shell($tmp)
+  write('error','Eddysend executes a setup on %s!',$xx)
+  su
+  curecc = $xx
+  write('error','%s finished!',$xx)
+endif
+" eccTool section "
+if $#=2
+then
+  write('error','EccTool executes an automatic setup on %s!',$1)
+  su
+  curecc = $1
+  write('error','EccTool setup on %s finished!  ',$1)
+endif

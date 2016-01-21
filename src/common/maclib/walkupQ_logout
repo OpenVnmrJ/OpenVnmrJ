@@ -1,0 +1,62 @@
+"macro walkupQ_logout"
+"****************************************************************"
+"   walkupQ_logout - logout of submission mode    "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+"****************************************************************"
+
+  walkupQ('clear')
+  if ($# < 1) then $1='' endif
+  if ($1='check') then
+      operights('canexitsubmitmode'):$ok
+      if ($ok<1) then
+	  write('error','%s does not have the rights to exit submit mode',operator)
+	  return
+      endif
+  endif
+
+  shell('rm '+$expfile):$dum
+  shell('rm '+$lngfile):$dum
+  shell('rm '+$timefile):$dum
+  shell('rm '+$expdeledit):$dum
+  shell('rm '+$lngdeledit):$dum
+  shell('rm '+$curfidlist):$dum
+  shell('rm -f '+cursqexp+'/day2nightLIST'):$dum
+  shell('rm -rf '+$maclibdir):$dum
+  shell('rm -rf '+$maclibdir+'long'):$dum
+  shell('rm -f '+cursqexp+'/walkupQnewpars'):$dum
+
+  showtray('close')
+  rmpar('prioritysample longQ resumeQ layoutarg replaceQ DEname autodir_ activestudy_')
+  if (wqinit='enter') then
+	autodir=cpautodir
+	globalenter=globalenter
+  endif
+  customflag='n'
+  cppauseflg='n'
+  wqinit=''
+//  if (jviewports[1] > 1) then
+//	vnmrjcmd('window',jviewports[3],jviewports[4])
+//  endif
+  newdg
+  if (seqfil='Startq') or (seqfil='Submitq') then
+        seqfil='s2pul'
+	newdg
+  endif
+
+  tmpsqreturn('OrigExpPar')
+  module('list','walkupQpars'):$wqlist
+  $wqlist='chreqexp '+$wqlist
+  rmpar($wqlist)
+
+"****************************************************************"
+
+  SQDisplay('normal')

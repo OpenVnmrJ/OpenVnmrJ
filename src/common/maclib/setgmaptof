@@ -1,0 +1,57 @@
+"macro setgmaptof"
+
+if ($#<0.5) then $function='init' else $function=$1 endif
+
+if ($function='init') then
+   if (seqfil='gmapz') then
+	$tn=tn $tpwr=tpwr $pw=pw $pw90=pw90
+        tmpsave('gmapz')
+ 	PROTON
+	tn=$tn
+	tpwr=$tpwr
+	pw=$pw
+	pw90=$pw90
+	nt=1
+	ss=0
+	spin='n'
+	gain='n'
+	tof=0
+	sw=30p
+	setref
+	wexp='setgmaptof(`showspec`)'
+	au('wait','next')
+   else
+      return 
+   endif
+endif
+
+if ($function='showspec') then
+   write('line3','Place cursors around signal and click \'Select\' then \'Close\'')
+   av
+   f full
+   wft
+   vsadj
+   vnmrjcmd('popup','mode:modeless','file:selgshim.xml','pnewupdate:true','rebuild:yes','title:Gradient Shimming Band Selection','close:'+$0+'(`setoffsetnshape`)','ok:'+$0+'(`settof`)')
+   
+endif 
+
+if ($function='showsel') then
+   r4=(cr-delta/2)/sfrq
+   ds
+   ds('toggle')
+   write('graphics',10,wc2max-20,'Center frequency %.1f ppm, bandwidth: %.1f Hz',r4,delta)
+endif
+
+if ($function='setoffsetnshape') then
+   //$offset=r4
+   $bw=delta
+   split movetof
+   $tof=tof
+   tmpreturn('gmapz')
+   //setoffset(tn,$offset):tof
+   tof=$tof
+   setgmapshapes($bw)     
+   dps 
+endif
+
+   

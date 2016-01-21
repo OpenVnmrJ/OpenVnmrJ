@@ -1,0 +1,30 @@
+"macro setdorient"
+"***************************************************************"
+" setdorient                                                     "
+"                                                               "
+" Macro to set the value of the dorient parameter to reflect the "
+" state of the Euler angles                                     "
+"***************************************************************"
+
+
+"-- Set dorient parameter ----------------------------------"
+
+if (dpsi = 0.0  and  dphi = 0.0  and  dtheta = 0.0) then 
+    dorient = 'trans'
+else if (dpsi = 0.0  and  dphi = 0.0  and  dtheta = 90.0) then
+    dorient = 'cor'
+else if (dpsi = 90.0  and  dphi = 0.0  and  dtheta = 90.0) then
+    dorient = 'sag'
+else
+    dorient='oblique'
+endif endif endif
+
+
+"-- Check for oblique capabilities ------------------------"
+
+if ((dpsi % 90) <> 0) or ((dphi % 90) <> 0) or ((dtheta % 90) <> 0) then
+    if (gradstepsz < 2049) then
+        $mess='Oblique imaging not supported with 12 bit DACS'
+        write('error','%s',$0+': '+$mess)
+    endif
+endif

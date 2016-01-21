@@ -1,0 +1,259 @@
+"macro emessage"
+"emessage macro."
+
+// This does not support attachment.  For attachments, use vnmremail
+//   utility.
+
+// Usage:  emessage($arg1,<address,<messagefile>>'):$returnvalue
+//  One argument is REQUIRED
+//  The following arguments are keywords for $1
+//	error, paused, done, daydone, start, LCdone
+//  The other $1 are freeflow but will be evaluated against
+//	eOptions parameter.  If arg1 is not one of the values
+//	in eOptions, the macro will do nothing
+
+// If $2 is not supplied or an empty string, it will be set to
+//   emailaddr parameter value
+// Non-keyworded $1 must have the message file as $3
+// Non-keyworded $1 will not send email to administrator
+
+// NOTE:  For now emessage is OFF if auto='n'. 
+//		Comment out the first line if that is required
+
+if (auto='n') then return(0) endif
+
+if ($# < 2) then $2='' endif
+if $2='' then $2=emailaddr endif
+$eaddr=$2 
+if (emessage='n') then $eaddr='' endif
+
+$adminaddr=''
+if (adminemailflag='y') then
+    getemailaddr(owner):$adminaddr
+endif
+
+$keyword=0
+// These are keywords
+IF (($1='error') or
+    ($1='paused') or
+    ($1='done') or
+    ($1='daydone') or
+    ($1='start') or
+    ($1='LCdone')) THEN
+
+    $keyword=1
+	// keystrings for emailwhen
+	//  start done lcrun peak 
+    $chk=$1
+    $ok=0
+    if ($1='daydone') then $chk='done' endif
+    if ($1='error') or ($1='paused') then
+    	$ok=1
+    endif
+    if (appmode='lc') then
+    	if ($1='done') then $chk='peak' endif
+    	if ($1='LCdone') then $chk='lcrun' endif
+    endif
+    if not ($ok) then
+    	strstr(emailwhen,$chk):$ok
+    endif
+    if not ($ok) then $eaddr='' endif
+
+	// keystrings for adminemailwhen
+	//  start done lcrun peak 
+
+    $chk=$1
+    $ok=0
+    if ($1='daydone') then $chk='done' endif
+    if ($1='error') or ($1='paused') then
+    	$ok=1
+    endif
+    if (appmode='lc') then
+    	if ($1='done') then $chk='peak' endif
+    	if ($1='LCdone') then $chk='lcrun' endif
+    endif
+    if not ($ok) then
+    	strstr(adminemailwhen,$chk):$ok
+    endif
+    if not ($ok) then $adminaddr='' endif
+ELSE
+//  Admin option is turned off for non-keyworded emessages
+//  But this can be changed by commenting out the following line
+    $adminaddr=''
+
+// 3 arguments must be supplied
+    if ($# < 3) then $adminaddr='' $eaddr='' endif
+    teststr('eOptions',$1):$ok
+    if not $ok then $adminaddr='' $eaddr='' endif
+ENDIF
+if ($eaddr='') and ($adminaddr='') then return(0) endif
+
+if (emailflag='n') then
+        write('line3','Email option is NOT turned on')
+        return(0)
+endif
+$system=''
+shell('uname -n'):$system
+$subject=''
+$date=''
+shell('date "+%a %b %e %H:%M"'):$date
+
+$etmp='/vnmr/tmp/email_temp'
+write('reset',$etmp)
+
+IF not $keyword THEN
+//  Put all other emessage options here
+//  $etmp is the file that will be emailed
+
+	cp($3,$etmp):$dum
+
+ELSEIF (auto <> 'y') THEN 
+
+	$currentQ=curexp+'/currentQ'
+	$sampleinfo = curexp+'/sampleInfo'
+	shell('rm -rf '+$sampleinfo):$dum
+	write('file',$sampleinfo,'Sample: %s',sample)
+	write('file',$sampleinfo,'Archive Directory: %s',archivedir)
+	write('file',$sampleinfo,'Text:')
+	shell('cat '+curexp+'/text >> '+$sampleinfo):$dum
+        write('file',$sampleinfo,'---------------------------------------')
+
+ELSE 
+	$sampleinfo=autodir+'/enterQ.macdir/currentsampleinfo'
+	$currentQ=autodir+'/enterQ.macdir/currentQ'
+	exists($sampleinfo,'file'):$fex
+	if $fex then lookup('mfile',$sampleinfo,'seekcs','SampleDir:','read',1):$subject endif
+ENDIF
+    
+IF ($1 = 'start') THEN
+
+   $totline='' $TIME=0
+   shell('(cat '+$currentQ+' | grep -w TOTAL)'):$totline
+   if ($totline<>'') then
+      substr($totline,2):$TIME
+   endif
+   formattime($TIME):$totline
+
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'Your sample started:  %s',$date)
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'')
+   shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+   write('file',$etmp,'Experiments in the queue for this sample')
+   shell('cat '+$currentQ+' >> '+$etmp):$dum
+   write('file',$etmp,'---------------------------------------')
+   write('file',$etmp,'Estimated run time: %s',$totline)
+   write('file',$etmp,'---------------------------------------')
+
+ELSEIF ($1 = 'error') THEN
+
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'Your sample DID NOT run due to an ERROR')
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'')
+   shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+
+
+ELSEIF ($1 = 'done') THEN
+
+   if (appmode<>'lc') then
+     if (auto = 'y') then
+   	write('file',$etmp,'****Remove your sample from the Sample Changer****')
+     else
+	write('file',$etmp,'****Remove your sample from the magnet****')
+     endif
+     write('file',$etmp,'')
+     write('file',$etmp,'')
+     write('file',$etmp,'***************************************')
+     write('file',$etmp,'Sample completed at: %s',$date)
+     write('file',$etmp,'***************************************')
+     write('file',$etmp,'')
+     shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+   else
+//     exists('emailwhen','parameter'):$parex
+//     if ($parex=0) then $email=1 
+//     else
+//	if (emailwhen='') then $email=1
+//	else strstr(emailwhen,'peak'):$email
+//	endif
+//     endif
+//     if ($email) then
+        write('file',$etmp,'')
+        write('file',$etmp,'***************************************')
+        write('file',$etmp,'Peak %d (RTime: %s) completed at: %s',lcpeak,retentiontime_,$date)
+        write('file',$etmp,'***************************************')
+        write('file',$etmp,'')
+        shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+//     endif
+   endif
+
+ELSEIF ($1 = 'LCdone') THEN
+   if (appmode='lc') then
+//     exists('emailwhen','parameter'):$parex
+//     if ($parex=0) then $email=1
+//     else
+//        if (emailwhen='') then $email=1
+//        else strstr(emailwhen,'lcrun'):$email
+//        endif
+//     endif
+//     if ($email) then
+        write('file',$etmp,'')
+        write('file',$etmp,'***************************************')
+        write('file',$etmp,'LCrun completed at: %s',$date)
+        write('file',$etmp,'***************************************')
+        write('file',$etmp,'')
+        shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+//     endif
+   endif
+
+ELSEIF ($1 = 'daydone') THEN
+
+   if (auto = 'y') then
+        write('file',$etmp,'****DayQ is done.  NightQ is still pending****')
+	write('file',$etmp,'****DO NOT REMOVE YOUR SAMPLE FROM THE SAMPLE CHANGER****')
+   else
+        write('file',$etmp,'****Remove your sample from the magnet****')
+   endif
+   write('file',$etmp,'')
+   write('file',$etmp,'')
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'DaySample completed at: %s',$date)
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'')
+   shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+
+ELSEIF ($1 = 'paused') THEN
+
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'Your sample Queue is PAUSED by administrator')
+   write('file',$etmp,'***************************************')
+   write('file',$etmp,'')
+   shell('cat '+$sampleinfo+' >> '+$etmp):$dum
+
+ENDIF
+
+if ($keyword) and (auto='y') then
+    $locdir=''
+    getlocid('current'):$loc,$locdir
+    if $locdir<>'' then
+	$elog=autodir+'/enterQ.macdir/'+$locdir+'/eventLog'
+	exists($elog,'file'):$eventex
+	if $eventex then
+	    shell('(cat '+$elog+' >> '+$etmp+')'):$devnull
+	endif
+    endif
+endif
+substr($subject,1):$subject
+
+   if ($adminaddr<>'') then
+	vnmremail('-m','-s '+$subject,$etmp,$adminaddr)
+   endif
+   if ($eaddr<>'') then
+   	vnmremail('-m','-s '+$subject,$etmp,$eaddr)
+   endif
+   if (auto <> 'y') and ($keyword) then
+	shell('rm -rf '+$sampleinfo):$dum
+   endif
+
+write('line3','%s Email sent',$1)
+return(1)

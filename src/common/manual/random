@@ -1,0 +1,35 @@
+
+*******************************************************************************
+random<(max <,'real'>)>:val   -	return a random number
+*******************************************************************************
+
+  Return a random number.  By default, it returns a random
+  integer between 0 and 2^31-1. (2^31-1 is 2147483647 or,
+  in hexadecimal, 0x7fffffff).  If an optional number is
+  supplied, the returned value will be between 0 and that value.
+  If an optional keyword 'real' is supplied, the random number
+  will be returned as a real number.  For example, to return a random
+  real number between 0.0 and 1.0, use
+    random(1,'real'):$val
+
+  The difference between random(10) and random(10,'real') is that the
+  first will only return whole numbers between 0 to 10.  The second
+  call, with the 'real' option, will return fractional numbers such
+  as 2.342, 7.324, etc.
+
+  If a max value is supplied, the conversions are slightly different
+  if a real number or integer is returned.  This is to avoid trucation
+  problems with integer math.
+
+     For real numbers:
+     double val = random();
+     val = val / 2147483647.0;  /* results in value from 0.0 to 1.0 */
+     val = val * max;           /* scales from 0.0 to max (max may be negative) */
+
+     For integers:
+     long val = random();
+     long range = 2147483647 / (abs(max) + 1);  /* determine size of max + 1 ranges of integers */
+     val = val / range;
+     if (max < 0)
+        val = -val;
+

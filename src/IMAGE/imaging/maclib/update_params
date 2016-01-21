@@ -1,0 +1,93 @@
+"macro update_params"
+//This macro updates protocols for SVS sequences
+//created on June 25, 2010, LK
+if (seqfil='press') then
+create('te1','delay','current',0.020)
+setgroup('te1','acquisition')
+te1=te  //old te is now te1
+te=te1+te2  //new te is now te1+te2
+exists('csd_ppm','parameter'):$e //check to see if this macro has been run already
+
+  if ($e > 0) then
+  write('line3','Parameters for PRESS have been created already')  
+  abort
+  endif
+endif
+"Done with checking specific parameters for press"
+lro=10  //increase lro to be able to see profile
+//Acquisition parameters common to all SVS experiments in vJ 3.1
+create('csd_ppm','real','current',0)  //chemical shift correction for TX
+create('pcflag','flag','current','y')  //pcflag='y', phase cycling is on
+create('autoph','flag','current','y')  //pcflag='y', phase cycling is on
+create('wsrf','flag','current','y')  //wsrf='y', ws RF pulses are on
+create('ws_tm','flag','current','y')  //ws is on during TM for steam, isis, special
+create('wref','flag','current','y')  //wref='y' the sequence will collect additional water scan
+create('wrefarray','flag','current','y')  //wrefarray='y' the water scan will be arrayed
+create('ovsgap','real','current',1)
+create('restol','real','current',0)   //local frequency offset in addition to resto value
+create('roffadjust','real','current',0)
+create('rfladjust','real','current',0)
+create('rfloffset','real','current',0)
+create('tcrushro','real','current',0.001)
+create('ws_delta','real','current',0)
+create('refval','real','current',0)
+create('sprof','integer','current',0)
+create('rprof','integer','current',0)
+create('pprof','integer','current',0)
+create('profile_vox','flag','current','n')
+create('profile_ovs','flag','current','n')
+create('profile_combo','flag','current','n')
+create('wrefgain','integer','current',2)
+create('wrefnt','integer','current',2)
+create('scantime','string','current','')
+
+
+
+create('ntopt','integer','current',0) //this is sequence dependent
+//if ntopt=1, then nt is used for optimization for isis
+
+//Processing parameters for freq/phase/eddy current
+
+create('a_dmg_default','flag','current','y')
+setgroup('a_dmg_default','processing')
+
+
+create('a_repeat','flag','current','n')
+setgroup('a_repeat','processing')
+
+"This is phase align params in Correction panel"
+
+create('a_no_points','integer','current',100) //number of data points for phase correction
+setgroup('a_no_points','processing')
+
+create('a_no_skip','integer','current',6)  //number of skipped data points in the beginning of FID
+setgroup('a_no_skip','processing')
+
+create('a_rmsd','integer','current',200) //number of data points for noise level calculation
+setgroup('a_rmsd','processing')
+
+create('a_s2n','integer','current',5)  //multiplication factor for S/N
+setgroup('a_s2n','processing')
+
+create('a_fid_no','integer','current',2) //reference FID# for phase list
+setgroup('a_fid_no','processing')
+
+"This is sum params"
+create('a_increment','integer','current',1)  //increment for addition
+setgroup('a_increment','processing')
+
+create('a_fid_min','integer','current',1)  //first fid #
+setgroup('a_fid_min','processing')
+
+create('a_fid_max','integer','current',1)  //last fid #
+setgroup('a_fid_max','processing')
+
+create('a_sum_all','flag','current','y')
+setgroup('a_sum_all','processing')
+
+"This is ecc params"
+
+create('a_watref','flag','current','y')  // flag to use wrefname
+setgroup('a_watref','processing')
+
+

@@ -1,0 +1,44 @@
+"macro settnbip"
+"***************************************************"
+" settnbip - macro for setting up BIP 180 pulses "
+"   usage: settnbip(<nucleus><,probe>)             "
+"***************************************************"
+module('add','bip','basic')
+if ($# < 1) then $1=tn endif
+
+if ($1 = 'H1') then
+  tnbipshp = 'bip60us'
+  tnbippw = 60
+  $pwr180 = 25000
+elseif ($1 = 'F19') then
+  tnbipshp = 'bip192us'
+  tnbippw = 192
+  $pwr180 = 20000
+elseif ($1 = 'C13') then
+  tnbipshp = 'bip125us'
+  tnbippw = 125
+  $pwr180 = 15500
+else
+  tnbipshp = ''
+  tnbippw = 2*pw90
+  tnbippwr = tpwr
+endif
+
+if (tnbipshp <> 'hard') and (tnbipshp<>'') then
+  $shapeex=0
+  getfilepath(tnbipshp+'.RF','shapelib'):$shapeex,$shape
+
+  if ($shapeex=0) then
+    write('error','Shape file "%s" does not exist!', $shape)
+    tnbipshp = ''
+    tnbippw = 2*pw90
+    tnbippwr = tpwr
+    return
+  endif
+
+  if ($# > 1) then
+    setpower($pwr180,$1,$2):tnbippwr
+  else
+    setpower($pwr180,$1):tnbippwr
+  endif
+endif

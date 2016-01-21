@@ -1,0 +1,46 @@
+"macro paramtovp"
+/***************************************************************"
+ paramtovp
+ 
+ macro to set a parameter value in any or all imaging viewports
+
+ Usage:  paramtovp('param',value,'1'|'2'|'3'|'all')
+"***************************************************************/
+
+"Check arguments"
+if ($# <> 3) then
+  write('line3','Usage: paramtovp(param,value,1/2/3/`ALL`)')
+  abort
+endif
+
+$vp = ''          // declare vp as a string
+$valstr = ''      // declare valstr as a string
+$param = $1       // parameter name
+$value = $2       // value to be assigned to param
+$viewport = $3    // which viewport(s) to assign param
+
+if (typeof('$param') <> 1) then
+"First argument must be the name of a parameter"
+  write('error','paramtovp: first argument must be a string')
+  abort
+endif
+
+"param can be real or string, handle both cases"
+if (typeof('$value') = 0) then
+  format($value,0,6):$valstr    // if value is real
+else
+  $valstr = '\''+$value+'\''    // else value is string, must be quoted in cmd
+endif
+
+"Cycle through all 3 viewports, and pass cmd string if they match $viewport
+$i = 0
+repeat
+  $i = $i + 1
+  format($i,0,0):$vp
+  if (($vp = $viewport) or ($viewport = 'all')) then
+    $cmd = 'VP '+$vp+' '+$param+'='+$valstr
+    vnmrjcmd($cmd)
+  endif
+until ($i = 3)
+
+

@@ -1,0 +1,87 @@
+"macro dpl_NOESY1D"
+$hires='hires'
+if ($# > 0) then 
+ if typeof('$1') then $hires=$1 endif
+endif
+$sub5='' $error=0
+
+substr($hires,1,3):$sub5
+if ($hires <> 'hires') then
+ if ($hires <> 'nohires') then
+   if ($sub5 <> 'exp') then
+    $error=1
+   endif
+ endif
+endif
+
+if ($sub5 = 'exp') then
+    exists(userdir+'/'+$hires,'directory'):$expex
+    if ($expex=0) then
+     $hires='nohires'
+    endif
+endif
+
+if ($error) then
+ write('error','Wrong usage of the macro.  Aborted')
+ return
+endif
+
+if ($hires = 'hires') then
+ AutoCheck('PROTON','fid'):$hexist,$Hfile
+ if ($hexist = 0) then $hires='nohires' else $hires=$Hfile endif
+endif
+
+$array=''
+if (arraydim > 1) then
+ $mixsize = size('mix')
+ if ($mixsize <> arraydim) then
+  $selshapesize = size('selshape')
+  if ($selshapesize <> arraydim) then
+   write('error','data cannot be automatically plotted.   Try manual')
+   return
+  else
+   $array='selshape'
+  endif
+ else
+  $array='mix'
+ endif
+else
+ $array = 'none'
+endif
+
+intmod='off'
+exists('parstyle','parameter','global'):$e
+if ($e) then
+   if (parstyle <> '') then
+   exec(parstyle) endif
+   if (parstyle='bpa') then vp=wc2max*.15 endif
+else
+   pltext
+endif
+
+select(1)  
+if ($array = 'none') then 
+ noislm 
+ if ($hires <> 'nohires') then vp=wc2max/2 cutoff=0.9*vp,0.2*vp endif
+else 
+ noislm(2/arraydim+0.5) 
+ dssa 
+ if ($hires <> 'nohires') then vp=vo dssa cutoff=0.9*vo,0.2*vo dssa endif
+endif
+
+
+if ($array = 'none') then pl
+" elseif ($array = 'mix') then "
+"   pl('all')  "
+  else 
+   select(1) aph0 pl(1) $ix=2
+   repeat
+    select($ix) aph0 vp=vp+vo 
+    noislm(2/arraydim+0.5) pl($ix) $ix=$ix+1
+   until $ix > arraydim
+endif
+
+plothires($hires)
+pscale(0) 
+page
+

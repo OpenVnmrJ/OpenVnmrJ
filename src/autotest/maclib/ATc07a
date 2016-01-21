@@ -1,0 +1,237 @@
+"macro ATc07a"
+"ATc07a" "Noise Test: Noise measurement on FID with variable power C13/N15 decoupling "  
+"        No 1H pulse applied. 100msec acquisition time"
+"        13C decoupling power <= defined maximum limit"
+"        15N decoupling power <= defined maximum limit"
+"        13C/15N decoupling power <= 3dB below defined maximum limit"
+"  For 2-channel probe, skip the 15N tests by setting max 15N pulse power to 0.0"
+
+if (at_c13tests='n') then ATnext return endif
+if ($#=0) then
+   ATrtp('standard')
+   beepon:$on
+   if $on=1 then beepoff endif
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+   seqfil='s2pul'
+   text('Spectral Purity Test: No Decoupling')
+   d1=1 at=.1 
+   dn='C13' dm='nny' dmm='ccc' dpwr=1
+   dn2='N15' dm2='nnn' dmm='ccc' dpwr2=1
+   gain=at_gain pw=0 nt=1 sw=80p full 
+
+   $outfile=curexp+'/noisefileC'
+   write('reset',$outfile)
+   write('file',$outfile,'C13 Decoupling Power')
+   write('file',$outfile,'FID RMS noise ')
+   write('file',$outfile,'1 %2.0f',at_max_dpwr)
+   n1=$outfile
+
+   $outfile=curexp+'/noisefileN'
+   write('reset',$outfile)
+   write('file',$outfile,'N15 Decoupling Power')
+   write('file',$outfile,'FID RMS noise ')
+   write('file',$outfile,'1 %2.0f',at_max_dpwr2)
+   n2=$outfile
+
+   if (at_max_dpwr>at_max_dpwr2)
+    then $trials=at_max_dpwr2  else $trials=at_max_dpwr endif
+
+   $outfile=curexp+'/noisefileCN'
+   write('reset',$outfile)
+   write('file',$outfile,'C13(N15) Decoupling Power')
+   write('file',$outfile,'FID RMS noise ')
+   write('file',$outfile,'1 %2.0f',$trials-6)
+   n3=$outfile
+
+   r1=0 r2=0 r3=0 
+   wnt=''
+   wexp='ATc07a(`PART1`)'
+   ss=0
+   ATcycle
+   au
+elseif ($1='PART1') then
+
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1                        "keep track of #fids"
+   write('file',n1,'%2.0f       %2.2f  ',dpwr,$noise)
+   if ((dpwr=1) and (dm='nny')) then
+      ATsvf('noise_C__c_nodec') 
+      r4=trunc(100*$noise)/100                          "no-decoupling noise level"
+      r5=$noise                                         "no-decoupling noise level"
+   else
+      if $noise>(2.0*r5) then           "advise if noise increases too much"
+       ATfail('noise_C__c_dec') 
+       banner('Decoupling noise has increased >= 100 percent')
+      endif
+   endif
+   r1=r1+$noise
+   dpwr=dpwr+1
+   if dpwr=at_max_dpwr then
+    wexp='ATc07a(`PART2`)'
+   endif
+   ATcycle
+   au
+elseif ($1='PART2') then
+
+   ATsvf('noise_C_c')
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1
+   write('file',n1,'%2.0f       %2.2f  ',dpwr,$noise)
+   write('file',n1,'%2.0f       %2.2f  ',dpwr,$noise)
+   r5=($noise/r5-1)*100                               "percent increase in noise at max dpwr"
+   r5=trunc(r5*10)/10
+   r1=r1+$noise r1=r1/at_max_dpwr   "average noise level"
+   r1=trunc(r1*100)/100
+
+ if at_max_pwx2lvl=0.0 then
+    full cp(curexp+'/noisefileC',curexp+'/regression.inp') expl('regression','nocurve')
+    write('graphics',10,wc2max-5,'Average RMS Noise = %4.2f',r1)
+    write('graphics',10,wc2max-15,'Incr.at at_max_dpwr = %2.1f %%',r5)
+
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+      pap ATpltext
+      pps(120,0,wcmax-120,90) ATpage
+    endif
+ 
+    full cp(curexp+'/noisefileC',curexp+'/regression.inp') pexpl('regression','nocurve')
+    write('plotter',10,wc2max-5,'Average RMS Noise = %4.2f',r1)
+    write('plotter',10,wc2max-10,'Increase at maximum')
+    write('plotter',10,wc2max-15,' permitted power = %2.1f %%',r5)
+    ATpage
+   endif
+   beepon
+   cp(curexp+'/noisefileC',autotestdir+'/data/noisefileC')
+   ATrecord('NOISE_C_c','FID Noise Test: As Function of 13C Decoupling Power','pct_inc_at_max_pwr',r5,'  av_noise_w_dec',r1,' av_noise_nodec',r4,' ratio_(w:wo)',trunc(100*r1/r4)/100,' Oversampling',oversamp)
+   write('file',autotestdir+'/REPORT','NoiseTest (Vary 13C Dec Power):     %% Inc.=%2.1f  AV.RMS noise = %4.2f oversamp = %2.0f',r5,r1,oversamp)
+
+   ATnext return    "skips 15N-related tests for 2-channel probe"
+ endif
+
+   dm='nnn' dmm='ccc' dpwr=1
+   dn2='N15' dm2='nny' dmm='ccc' dpwr2=1
+   
+   wexp='ATc07a(`PART3`)'
+   ATcycle
+   au
+elseif ($1='PART3') then
+
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1
+   write('file',n2,'%2.0f       %2.2f  ',dpwr2,$noise)
+   if ((dpwr2=1) and (dm2='nny')) then
+    r6=$noise                                        "no decoupling noise level"
+   else
+      if $noise>(2.0*r6) then           "advise if noise increases too much"
+       ATfail('noise_N__c_dec') 
+       banner('Decoupling noise has increased >= 100 percent')
+      endif
+   endif
+   r2=r2+$noise
+   dpwr2=dpwr2+1
+   if dpwr2=at_max_dpwr2 then
+    wexp='ATc07a(`PART4`)'
+   endif
+   ATcycle
+   au
+elseif ($1='PART4') then
+
+   ATsvf('noise_N_c')
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1
+   write('file',n2,'%2.0f       %2.2f  ',dpwr2,$noise)
+   r6=($noise/r6-1)*100                                 "percent increase in noise at max dpwr2"
+   r6=trunc(r6*10)/10
+   r2=r2+$noise r2=r2/at_max_dpwr2  "average noise level"
+   r2=trunc(r2*100)/100
+   dm='nny' dpwr=1 dpwr2=1
+   wexp='ATc07a(`PART5`)'
+   ATcycle
+   au
+elseif ($1='PART5') then
+
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1
+   write('file',n3,'%2.0f       %2.2f  ',dpwr,$noise)
+   if ((dm2='nny') and (dm='nny') and (dpwr=1) and (dpwr2=1)) then
+    r7=$noise                                         "no decoupling noise level"
+   else
+      if $noise>(2.0*r7) then           "advise if noise increases too much"
+       ATfail('noise_CN__c_dec') 
+       banner('Decoupling noise has increased >= 100 percent')
+      endif
+   endif
+   r3=r3+$noise
+   dpwr2=dpwr2+1 dpwr=dpwr+1
+   if ((dpwr=at_max_dpwr-3) or (dpwr2=at_max_dpwr2-3)) then
+    wexp='ATc07a(`PART6`)'
+   endif
+   ATcycle
+   au
+elseif ($1='PART6') then
+   ATsvf('noise_CN_c')
+   noise:$dum1,$dum2,$dum3,$dum4,$noise
+   $noise=trunc($noise*100)/100
+   slw=slw+1
+   write('file',n3,'%2.0f       %2.2f  ',dpwr,$noise)
+   r7=($noise/r7-1)*100               "percent increase in noise at lower of max dpwr2 or max dpwr"
+   r7=trunc(r7*10)/10
+   if (dpwr<dpwr2) then $trials=dpwr else $trials=dpwr2 endif
+   r3=r3+$noise r3=r3/$trials  "average noise level"
+   r3=trunc(r3*100)/100
+
+
+   left wc=60 sc=190 s1 sc=sc-107 s2 sc=0 s3
+   r1 cp(curexp+'/noisefileC',curexp+'/regression.inp') expl('regression','nocurve')
+   write('graphics',10,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('graphics',10,wc2max-15,'Incr.at at_max_dpwr = %2.1f %%',r5)
+   r2 cp(curexp+'/noisefileN',curexp+'/regression.inp') expl('regression','nocurve','noclear')
+   write('graphics',107,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('graphics',107,wc2max-15,'Incr. at at_max_dpwr2 = %2.1f %%',r6)
+   r3 cp(curexp+'/noisefileCN',curexp+'/regression.inp') expl('regression','nocurve','noclear')
+   write('graphics',190,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('graphics',190,wc2max-15,'Incr. at 6dB below lower')
+   write('graphics',190,wc2max-20,'maximum permitted power = %2.1f %%',r7)
+
+  if (at_plotauto='y') then
+   if (at_printparams='y') then
+     pap ATpltext
+     pps(120,0,wcmax-120,90) ATpage
+   endif
+
+   r1 cp(curexp+'/noisefileC',curexp+'/regression.inp') pexpl('regression','nocurve')
+   write('plotter',10,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('plotter',10,wc2max-10,'Increase at maximum')
+   write('plotter',10,wc2max-15,' permitted power = %2.1f %%',r5)
+   r2 cp(curexp+'/noisefileN',curexp+'/regression.inp') pexpl('regression','nocurve','noclear')
+   write('plotter',107,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('plotter',107,wc2max-10,'Increase at maximum ')
+   write('plotter',107,wc2max-15,' permitted power = %2.1f %%',r6)
+   r3 cp(curexp+'/noisefileCN',curexp+'/regression.inp') pexpl('regression','nocurve','noclear')
+   write('plotter',170,wc2max-5,'Average RMS Noise = %4.2f',r1)
+   write('plotter',190,wc2max-10,'Increase at 6dB below lower')
+   write('plotter',190,wc2max-15,' maximum permitted power = %2.1f %%',r7)
+
+    ATpage
+  endif
+  beepon
+  cp(curexp+'/noisefileC',autotestdir+'/data/noisefileC')
+  cp(curexp+'/noisefileN',autotestdir+'/data/noisefileN')
+  cp(curexp+'/noisefileCN',autotestdir+'/data/noisefileCN')
+ 
+     ATrecord('NOISE_C_c','FID Noise Test: As Function of 13C Decoupling Power','pct_inc_at_max_pwr',r5,'  av_noise_w_dec',r1,' av_noise_nodec',r4,' ratio_(w:wo)',trunc(100*r1/r4)/100,' Oversampling',oversamp)
+     write('file',autotestdir+'/REPORT','Noise vs. power (13C Dec):     %% Incr.=%2.1f  AV.RMS noise = %4.2f oversamp = %2.0f',r5,r1,oversamp)
+
+     ATrecord('NOISE_N_c','FID Noise Test: As Function of 15N Decoupling Power','pct_inc_at_max_pwr',r6,'  av_noise_w_dec',r2,' av_noise_nodec',r4,' ratio_(w:wo)',trunc(100*r1/r4)/100,' Oversampling',oversamp)
+     write('file',autotestdir+'/REPORT','Noise vs. power (15N Dec):     %% Incr.=%2.1f  AV.RMS noise = %4.2f oversamp = %2.0f',r6,r2,oversamp)
+
+     ATrecord('NOISE_CN_c','FID Noise Test: As Function of 13C/15N Decoupling Power','pct_inc_at_max_pwr',r7,'  av_noise_w_dec',r3,' av_noise_nodec',r4,' ratio_(w:wo)',trunc(100*r1/r4)/100,' Oversampling',oversamp)
+     write('file',autotestdir+'/REPORT','Noise vs. power (13C/15N Dec): %% Incr.=%2.1f  AV.RMS noise = %4.2f oversamp = %2.0f',r7,r3,oversamp)
+
+   ATnext
+endif

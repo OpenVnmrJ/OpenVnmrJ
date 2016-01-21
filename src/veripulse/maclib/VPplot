@@ -1,0 +1,70 @@
+"macro VPplot"
+"Agilent VeriPulse plot"
+
+exists('VPspecinfo','parameter'):$e
+if not $e then
+  write('line3','Data set must be reprocessed manually')
+  return
+endif
+$macro=VPspecinfo[1]+'_plot'
+$plot='y'
+$resave='n'
+if ($#=1) then 
+  $macro=$1+'_plot'
+endif
+if ($# > 1) then
+  if ($1<>'') then
+    $macro=$1+'_plot'
+  endif
+  if ($2 = 'view') then
+    $plot='n'
+  endif
+  if ($2 = 'resave') then
+    $resave='y'
+  endif
+endif
+
+exists($macro,'maclib'):$ex
+if ($ex>0.5) then
+  exec($macro)
+else
+   $sc=sc $wc=wc
+   $ho=ho
+   $vo=vo
+   $dss_wc=dss_wc
+   $dss_sc=dss_sc
+   full
+   dss_wc=(wc-15)/arraydim
+   dss_sc=wc-dss_wc
+   if (arraydim>1) then
+     ho=-dss_wc - 15/(arraydim-1)
+   else
+     ho=-dss_wc
+   endif
+   vo=0
+   if (arraydim>10) then
+     $plotoptions='logo','header','plarray','comments_page1','miniplot','params'
+   else
+     $plotoptions='logo','header','plarray','axis','comments_page1','miniplot','params'
+   endif
+   doplotoption($plotoptions)
+   ho=$ho
+   vo=$vo
+   sc=$sc
+   wc=$wc
+   dss_wc=$dss_wc
+   dss_sc=$dss_sc
+endif
+if ($plot='y') then
+  if $resave='y' then
+    $path=archivedir+'/'+sample+'/plots/'+filename+'_plot01.pdf'
+    rm('-f',$path):$e
+    $path2=archivedir+'/Plots/'+filename+'_plot01.pdf'
+    rm('-f',$path2):$e
+    autopage('','save','')
+  else
+    page
+  endif
+else
+  pageview
+endif

@@ -1,0 +1,49 @@
+"macro ATgycal"
+"ATgycal"  
+
+ATwft vsadj dtext
+select(1) peak:$ht,cr
+dres(cr,.01):$width1
+select(2) peak:$ht,cr
+dres(cr,.01):$width2
+if $width1<14000 then
+  if (gzlvl1[1]>20000) then 
+    write('line3','Gradient Test Failed: Check Gradient Amplifier Switch')
+    write('file',autotestdir+'/REPORT','Y-axis Gradient Calibration failed. AutoTest Run Aborted. Check Hardware ')
+    abort
+   else
+    gzlvl1=2*gzlvl1,-2*gzlvl1
+    wnt='ATwft vp=0 select(1) vsadj dssh dtext'
+    wexp='AT90(`PART1`)'
+    au
+  endif
+else
+   $gammabar=(sfrq*1000000)/(234.94*h1freq)
+   $gcal1=$width1/($gammabar*gzlvl1[1]*0.42)
+   if $gcal1 < 0 then $gcal1 = -1.0*$gcal1 endif
+   $gcal2=$width2/($gammabar*gzlvl1[2]*0.42)
+   if $gcal2 < 0 then $gcal2 = -1.0*$gcal2 endif
+   ATsvf   vp=0 
+
+    if (at_plotauto='y') then
+     if (at_printparams='y') then
+      dn2='' pap ATpltext
+      pps(120,0,wcmax-120,90) ATpage
+     endif 
+     full vp=0 ho=0 vo=0 pl('all') crl rfl=sw/2 rfp=0 axis='h'
+     pscale 
+     vp=30 pscale ATpltext pap
+     ATpage
+   endif
+   $posdac=trunc(10/$gcal1)
+   $negdac=trunc(10/$gcal2)
+   $cal1=trunc(1000000*$gcal1)/1000000
+   $cal2=trunc(1000000*$gcal2)/1000000
+   at_gycal=$cal1  
+   ATrecord('YGRADCALIB','Y-axis Gradient DAC Calibrations','   +10G/cm   ',$posdac,'gcal+      ',$cal1,'-10G/cm  ',$negdac,'gcal- ',$cal2)
+
+   write('file',autotestdir+'/REPORT','Y-axis Gradient Calibration (DAC for 10G/cm): %5.0f gycal=%1.6f ',10/at_gycal,at_gycal)
+   dsp=at_dsp             "restore dsp value"
+   su shell('sleep 2')
+   ATnext
+endif

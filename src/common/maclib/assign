@@ -1,0 +1,122 @@
+"macro assign"
+
+"  assign - no argument - assigns most lines from the last 'nll' or 'dll' to "
+"	A nearby calculated transition in 'cfreq'. (oct 19, 90)"
+"  assign('mark') runs spinll('mark') which gets experimental lines from"
+"	mark1d.out"
+"  assign(#c,#s) runs 'spa' to assign calculated transition '#c' to "
+"  	experimental line '#s' (oct 19,90)"
+
+if $#=2 then
+   spa($1,$2)
+   return
+else 
+   if ($#>0) then
+     if ($1<>'mark') then
+         write('line3','Wrong number of arguments: %d',$#)
+         return
+     endif
+   endif
+endif
+
+isvnmrj:$j
+
+if (sth<0.05) or (sth>.9) then 
+   $tempsth = th*svs/68.0
+   if ($tempsth<.05)  then
+      $tempsth=.05
+   else 
+      if ($tempsth>.9) then
+         $tempsth = 0.9
+      endif
+   endif
+   sth = $tempsth
+   write('line3','sth=%3.3f svs=%3.3f',sth,svs)
+endif
+
+spins
+if ($j) then
+  dsp vsadj dss
+else
+  dsp('intensmax') // does not display
+endif
+
+menu('off')
+if ($#=1) then
+  if ($1='mark') then spinll('mark','nodla')
+  else spinll('nodla')
+  endif
+else spinll('nodla')
+endif
+$llfreqsize=size('llfrq')
+$slfreqsize=size('slfreq')
+$rflrfp =rfl -rfp
+$clasize=size('cla')
+
+"  clfreq VALUES MUST BE ORDERED BY VALUE FROM HIGH TO LOW  "
+
+   "  assign  a calculated transition to most measured lines  "
+   "  $i is index for measured lines  "
+   "  $j is index for calculated transitions  "
+   $i=1
+   repeat
+      clindex[$i]=0
+      $i=$i+1
+   until $i > $clasize
+
+   $i=1 $j=1
+   $jassigned = 0
+   $dx = slfreq[$i] - clfreq[$j] 
+   if ($dx < 0) and ($dx + 3*slw > 0) then
+     clindex[$j]=$i
+     $jassigned = 1
+     $i = $i+1
+     $j = $j+1
+   endif
+   repeat
+      $done=0
+      repeat
+         $dx = slfreq[$i] - clfreq[$j] 
+	 if ($dx > 0) then
+	    if ($jassigned<>0) then 
+	       if (clfreq[$jassigned]-clfreq[$j] < slw/2) then
+		 $j = $j+1
+	       else
+		 $done = 1
+	       endif
+	    else
+	       $done = 1
+            endif
+         else
+	    $j = $j+1 
+         endif
+         "write('alpha','i=%2d j=%2d dx=%8.2f  %8.2f %8.2f %8.2f',"
+	    "$i,$j,$dx,clfreq[$j-1],slfreq[$i],clfreq[$j])"
+      until ($done>0) or ($j>$clasize)
+      if $dx < 0 then $dx= -$dx endif
+      $dz = slfreq[$i] - clfreq[$j-1]
+      if $dz < 0 then $dz = -$dz endif 
+      $assign = 1
+      if ($dz<$dx) then
+         if ($jassigned < $j-1) then $j = $j-1 else $assign = 0 endif
+
+      endif
+
+      "write('alpha','i=%2d j=%2d jasg=%2d $assign=%2d  dx=%8.2f dz=%8.2f   %8.2f %8.2f',"
+"	    $i,$j,$jassigned,$assign,$dx,$dz,slfreq[$i],clfreq[$j])"
+
+      if ($assign) and ($j>$jassigned) and ($j <= $clasize) then
+         if $dz>$dx then
+	    repeat
+	      $du = slfreq[$i+1] - clfreq[$j] 
+	      if ($du>0) then $i=$i+1 endif
+	    until $du<0
+ 	 endif
+         clindex[$j]=$i
+         "write('alpha','i=%d j=%d cla[j]=%d',$i,$j,cla[$j])"
+         $jassigned = $j
+      endif
+      $i =$i+1
+   until ($i>=$slfreqsize) or ($j>=$clasize)
+   dla
+   if not ($j) then menu('spins2') endif

@@ -1,0 +1,485 @@
+"macro aipSaveOutput"
+"*************************************************************************"
+"                                                                         "
+" aipSaveOutput - macro to save data according to specified format        "
+"                 Formats: FDF, Analyze7.5, NIFTI-1, Dicom (& to Server)  "
+"                                                                         "
+"       Argument                                                          "
+"         'save':  save the specified data according to selected format   "
+"  'getinputdir':  get input directory according to selected parameters   "
+" 'getinputpath':  get input path according to selected parameters        "
+"  'addinputdir':  add input directory to input path (path is 2nd arg)    "
+" 'getoutputdir':  set output directory according to selected parameters  "
+"    'checkpath':  check output path exists                               "
+" 'aipPathwrite':  test write permission to specified output path         "
+"       'format':  set parameters according to selected format            "
+"         'type':  set Type menu appropriately                            "
+"     'setpaths':  set parameters according to selected study             "
+"       'outdir':  set output directory extension (basename is 2nd arg)   "
+"    'setoutdir':  set output directory appropriately                     "
+"      'addtosq':  determines if add to SQ checkbox should be displayed   "
+"      'proctag':  determines if Procpar Tag checkbox should be displayed "
+"    'aipFormat':  used in enable condition field of Format Menu in GUI   " 
+"       'fixpar':  fix parameters                                         "
+"    'genglobal':  generate the global parameters required                "
+"                                                                         "
+"*************************************************************************"
+
+$action=''
+if ($#>0) then $action=$1 endif
+
+
+if ($action = 'save') then
+
+  if (aipFormat='') then 
+    write('error','aipSaveOutput: Select required Format')
+    abort
+  endif
+
+  if (aipFormat='fdf') then 
+    "Save the displayed FDF data"
+    if (aipOutDir='') then
+      write('error','aipSaveOutput: Please supply Output Directory name')
+      abort
+    endif
+    "Test there is write permission to aipOutPath"
+    aipSaveOutput('aipPathwrite')
+    aipWriteFmtConvert='fdf'
+    $fdfdir=aipOutPath+'/'+aipOutDir+'.img'
+    aipWriteData($fdfdir,'slice'):$str 
+    if ($str <> '') then write('line3','Last data file written: '+$str) endif
+    "Check there is output"
+    exists($fdfdir+'/slice.0001.fdf','file'):$e
+    if ($e=1) then
+      "If data is saved to current study then add node to SQ"
+      aipSaveOutput('addtosq'):$ok
+      if ($ok=1 AND aipFDFtosq='y') then
+        xmaddimgtosq($fdfdir)
+      endif
+    endif
+  endif
+
+  if (aipFormat='nifti' OR aipFormat='analyze') then
+    if (aipFormat='nifti') then
+      $command='fdf2nifti'
+    else
+      $command='fdf2avw'
+    endif
+    "Set input directory"
+    aipSaveOutput('getinputdir'):$indir
+    "Set up output directory"
+    aipSaveOutput('getoutputdir'):$outdir
+    "Test there is write permission to aipOutPath"
+    aipSaveOutput('aipPathwrite')
+    "Set cmd"
+    $cmd='aipOut "'+$command+'" "-in" "'+$indir+'" "-out" "'+$outdir+'"'
+    write('line3','aipOutput: executing %s ....',$cmd)
+    "Execute cmd"
+    shell($cmd+' >'+curexp+'/aipOutput.txt 2>&1')
+    if (aipDebug) then
+      clear
+      cat(curexp+'/aipOutput.txt')
+      write('line3','aipOutput: .... done.  Check Text Ouput for debug messages')
+    else
+      write('line3','aipOutput: .... done')
+    endif
+  endif
+
+  if (aipFormat='dicom' OR aipFormat='dicom2server') then 
+    if (aipFormat='dicom') then
+      $command='FdfToDcm'
+    else
+      $command='FdfToDcmToServer'
+    endif
+    "Set input directory"
+    aipSaveOutput('getinputdir'):$indir
+    "Set up output directory"
+    if (aipFormat='dicom') then
+      aipSaveOutput('getoutputdir'):$outdir
+    else
+      $outdir=curexp+'/dicom2server.dmc'
+    endif
+    "Test there is write permission to aipOutPath"
+    aipSaveOutput('aipPathwrite')
+    "save procpar as tag or not "
+    $ptag=''
+    if(aipPTag = 'n') then $ptag='"-np"' endif
+    "Set dicom server configuration directory"
+    $conf_dir=''
+    if (aipFormat='dicom2server') then
+      " A second arg can be passed to dicom_store, the appropriate "
+      " appdir dicom directory where conf/dicom_store.cfg can be found. "
+      " Be sure the file exists "
+      exists('dicom_store.cfg', 'dicom/conf'):$ex,$conf_file
+      if($ex > 0.5) then
+        "Get the path to the parent conf dir, not the file"
+        substr($conf_file,'dirname'):$conf_dir
+        $conf_dir=' "-cfg" "'+$conf_dir+'"'
+      endif
+    endif
+    "Set cmd"
+    $cmd='aipOut "'+$command+'" "-'+aipType+'" '+$ptag+' "-in" "'+$indir+'" "-out" "'+$outdir+'"'+$conf_dir
+    write('line3','aipOutput: executing %s ....',$cmd)
+    "Execute cmd"
+    shell($cmd+' >'+curexp+'/aipOutput.txt 2>&1')
+    if (aipDebug) then
+      clear
+      cat(curexp+'/aipOutput.txt')
+      write('line3','aipOutput: .... done.  Check Text Ouput for debug messages')
+    else
+      write('line3','aipOutput: .... done')
+    endif
+  endif
+
+endif
+
+
+if ($action='getinputdir') then
+  if (aipType='fdf' AND aipFDF='') then
+    write('error','aipSaveOutput: Input Study %s lacks FDF data or Input Scan not selected',aipInPath)
+    abort
+  endif
+  if (aipType='fid' AND aipFid='') then
+    write('error','aipSaveOutput: Input Study %s lacks fid data or Input Scan not selected',aipInPath)
+    abort
+  endif
+  "Set up full path to input directory"
+  $indir=aipInPath
+  "Add input directory"
+  aipSaveOutput('addinputdir',$indir):$indir
+  exists($indir,'directory'):$e
+  if ($e=0) then
+    write('error','aipSaveOutput: Cannot find input data %s',$indir)
+    abort
+  endif
+  return($indir)
+endif
+
+
+if ($action='getinputpath') then
+  if (aipInput='loaded') then
+    "aipCurrentKey gives the loaded data that is displayed"
+    substr(aipCurrentKey,1):aipInPath
+  endif
+
+  "Strip the trailing / if there is one in the directory name"
+  length(aipInPath):$len
+  $char=''
+  substr(aipInPath,$len,1):$char
+  if ($char='/') then 
+    substr(aipInPath,1,$len-1):aipInPath
+  endif
+
+  "If there is .img or .fid extension at end of aipInPath assume it belongs to the base scan"
+  $name=''
+  substr(aipInPath,'basename'):$name,$ext
+  if ($ext = 'img' OR $ext = 'fid') then
+    substr(aipInPath,'dirname'):aipInPath
+    aipFDF=$name+'.img'
+    aipFid=$name+'.fid'
+  else
+    if (aipFormat<>'fdf') then
+      "If in userdir/exp then data directories may not have .img or .fid extension"
+      $expdir=userdir+'/exp'
+      strstr(aipInPath,$expdir):$isexp
+      length($name):$len
+      $exp=''
+      if ($len>3) then substr($name,1,3):$exp endif
+      if ($isexp=1 AND $exp<>'exp') then
+        substr(aipInPath,'dirname'):aipInPath
+        aipFDF=$name
+        aipFid=$name
+      else
+        aipFDF='all'
+        aipFid='all'
+      endif
+    endif
+  endif 
+
+  return(aipInPath)
+
+endif
+
+
+if ($action='addinputdir') then
+  $indir=$2
+  if (aipFormat='fdf' OR aipFormat='nifti' OR aipFormat='analyze') then
+    aipType='fdf'
+    if (aipFDF<>'' AND aipFDF <> 'all') then
+      $indir=$indir+'/'+aipFDF
+    endif
+  else
+    if (aipType='fdf') then 
+      if (aipFDF<>'' AND aipFDF <> 'all') then
+        $indir=$indir+'/'+aipFDF
+      endif
+    endif
+    if (aipType='fid') then
+      if (aipFid<>'' AND aipFid <> 'all') then
+        $indir=$indir+'/'+aipFid
+      endif
+    endif
+  endif
+  return($indir)
+endif
+
+
+if ($action='getoutputdir') then
+  $outdir=''
+  if (aipOutDir='') then
+    "Set output directory"
+    aipSaveOutput('setoutdir')
+  else
+    $outdir=aipOutDir
+  endif
+  if (aipType='fdf' AND aipFDF='all') then $outdir='' endif 
+  if (aipType='fid' AND aipFid='all') then $outdir='' endif 
+  if ($outdir='') then
+    $outdir=aipOutPath
+  else
+    $outdir=aipOutPath+'/'+$outdir
+  endif
+  return($outdir)
+endif
+
+
+if ($action='checkpath') then
+  "Strip the trailing / if there is one in the directory name"
+  length(aipOutPath):$len
+  $char=''
+  substr(aipOutPath,$len,1):$char
+  if ($char='/') then 
+    substr(aipOutPath,1,$len-1):aipOutPath
+  endif
+  exists(aipOutPath,'directory'):$e
+  if ($e=0) then
+    write('error','aipSaveOutput: Output directory %s does not exist, creare directory or enter new ouput path',aipOutPath)
+    abort
+  endif
+endif
+
+
+if ($action='aipPathwrite') then
+  "Make sure the aipOutPath directory exists"
+  exists(aipOutPath,'directory'):$e
+  if ($e=0) then
+    mkdir(aipOutPath):$ok
+    if ($ok=0) then
+      write('error','aipSaveOutput: Can not create %s',aipOutPath)
+    endif
+  endif
+  "Test there is write permission to aipOutPath"
+  $testfile=aipOutPath+'/this_is_a_test_write_file'
+  shell('touch '+$testfile)
+  exists($testfile,'file'):$e
+  if ($e=0) then
+    write('error','aipSaveOutput: Write to %s not permitted, enter new ouput path',aipOutPath)
+    abort
+  else
+    rm($testfile):$trash
+  endif
+endif
+
+
+if ($action='format') then
+
+  "Don't use Type menu unless dicom"
+  aipSaveOutput('type')
+
+  $vp = ''  
+  xm1('vp'):$vp
+  $inpathSave='aipInPath_'+$vp
+  $fdfSave='aipFDF_'+$vp
+  $fidSave='aipFid_'+$vp
+  $outpathSave='aipOutPath_'+$vp
+
+  if (aipFormat<>'fdf') then
+    "If a saved copy of aipInPath, aipFDF and aipFid exist restore values"
+    exists($inpathSave,'parameter','global'):$e
+    if ($e=1) then aipInPath={$inpathSave} destroy($inpathSave,'global') endif
+    exists($fdfSave,'parameter','global'):$e
+    if ($e=1) then aipFDF={$fdfSave} destroy($fdfSave,'global') endif
+    exists($fidSave,'parameter','global'):$e
+    if ($e=1) then aipFid={$fidSave} destroy($fidSave,'global') endif
+    exists($outpathSave,'parameter','global'):$e
+    if ($e=1) then aipOutPath={$outpathSave} destroy($outpathSave,'global') endif
+  endif
+
+  if (aipFormat='fdf') then
+    create($inpathSave,'string','global',aipInPath)
+    create($fdfSave,'string','global',aipFDF)
+    create($fidSave,'string','global',aipFid)
+    create($outpathSave,'string','global',aipOutPath)
+    aipInPath='' aipFDF='' aipFid=''
+    aipOutPath=sqdir
+    aipOutDir=''
+    return
+  endif
+
+  if (aipInput='loaded') then
+    "Set aipInPath and aipOutPath"
+    aipSaveOutput('setpaths')
+    return
+  endif
+
+  if (aipAutoOutDir='y') then
+    "Set output directory"
+    aipOutDir=''
+    aipSaveOutput('setoutdir')
+  endif
+
+endif
+
+
+if ($action = 'type') then
+  if (aipFormat='dicom' OR aipFormat='dicom2server') then
+    aipTypeMenu='on'
+  else
+    aipType='fdf'
+    aipTypeMenu='off'
+  endif
+endif
+
+if ($action = 'setpaths') then
+  if (aipAutoOutPath='y') then
+    "Set input and output path"
+    aipSaveOutput('getinputpath'):$aipOutPath
+    $base=''
+    substr($aipOutPath,'basename'):$base,$ext
+    if ($ext='img') then
+      substr($aipOutPath,'dirname'):aipOutPath
+      aipOutPath=aipOutPath+'/'+$base
+      if (aipFormat='nifti') then aipOutPath=aipOutPath+'.nii' endif
+      if (aipFormat='analyze') then aipOutPath=aipOutPath+'.avw' endif
+      if (aipFormat='dicom') then aipOutPath=aipOutPath+'.dcm' endif
+    else
+      aipOutPath=$aipOutPath
+    endif
+  else
+    "Set input path"
+    aipSaveOutput('getinputpath')
+  endif
+  if (aipAutoOutDir='y') then
+    "Set output directory"
+    aipSaveOutput('setoutdir')
+  endif
+endif
+
+
+if ($action = 'outdir') then
+  $base=$2
+  if (aipFormat='' OR aipFormat='fdf' OR aipFormat='dicom2server') then 
+    aipOutDir='' 
+    return 
+  endif
+  $ext=''
+  if (aipFormat='nifti') then $ext='.nii' endif
+  if (aipFormat='analyze') then $ext='.avw' endif
+  if (aipFormat='dicom') then $ext='.dcm' endif
+  if ($base<>'') then
+    aipOutDir=$base+$ext
+  else
+    aipOutDir=''
+  endif
+endif
+
+
+if ($action = 'setoutdir') then
+  $base=''
+  if (aipType='fdf') then
+    if (aipFDF='all') then aipOutDir='' return endif
+    substr(aipFDF,'basename'):$base,$ext
+  else
+    if (aipFid='all') then aipOutDir='' return endif
+    substr(aipFid,'basename'):$base,$ext
+  endif
+  aipSaveOutput('outdir',$base)
+endif
+
+
+if ($action = 'addtosq') then
+  $study=''
+  $sqdir=''
+  substr(aipOutPath,'basename'):$study
+  substr(sqdir,'basename'):$sqdir
+  if (activestudy <> 'null') AND (activestudy = studyid_) AND (activestudy = $sqdir) AND (activestudy = $study) then 
+    return(1)
+  endif
+  return(-1)
+endif
+
+
+if ($action = 'proctag') then
+  strstr(aipFormat,'dicom'):$ret
+  return($ret)
+endif
+
+
+if ($action = 'aipFormat') then
+  aipSaveOutput('format')    
+  return(1)
+endif
+
+
+if ($action = 'fixpar') then
+
+  "Remove pevious incarnation of current parameters"
+  exists('aipInput','parameter','current'):$e
+  if ($e) then destroy('aipInput','current') endif
+  exists('aipStudy','parameter','current'):$e
+  if ($e) then destroy('aipStudy','current') endif
+  exists('aipStudyMenu','parameter','current'):$e
+  if ($e) then destroy('aipStudyMenu','current') endif
+  exists('aipTypeMenu','parameter','current'):$e
+  if ($e) then destroy('aipTypeMenu','current') endif
+  exists('aipType','parameter','current'):$e
+  if ($e) then destroy('aipType','current') endif
+  exists('aipFDF','parameter','current'):$e
+  if ($e) then destroy('aipFDF','current') endif
+  exists('aipFDFMenu','parameter','current'):$e
+  if ($e) then destroy('aipFDFMenu','current') endif
+  exists('aipFid','parameter','current'):$e
+  if ($e) then destroy('aipFid','current') endif
+  exists('aipFidMenu','parameter','current'):$e
+  if ($e) then destroy('aipFidMenu','current') endif
+  exists('aipFormat','parameter','current'):$e
+  if ($e) then destroy('aipFormat','current') endif
+  exists('aipPath','parameter','current'):$e
+  if ($e) then destroy('aipPath','current') endif
+  exists('aipDir','parameter','current'):$e
+  if ($e) then destroy('aipDir','current') endif
+  exists('aipSubdir','parameter','current'):$e
+  if ($e) then destroy('aipSubdir','current') endif
+  exists('aipFDFtosq','parameter','current'):$e
+  if ($e) then destroy('aipFDFtosq','current') endif
+  exists('aipRunTime','parameter','current'):$e
+  if ($e) then destroy('aipRunTime','current') endif
+  exists('aipPTag','parameter','current'):$e
+  if ($e) then destroy('aipPTag','current') endif
+
+  "Remove menus"
+  rm(curexp+'/aipStudyList'):$trash
+  rm(curexp+'/aipFDFList'):$trash
+  rm(curexp+'/aipFidList'):$trash
+
+endif
+
+if ($action = 'genglobal') then
+  "Create the required global parameters"
+  create('aipFormat','string','global','nifti')
+  create('aipInput','string','global','loaded')
+  create('aipInPath','string','global','')
+  create('aipFDF','string','global','')
+  create('aipFid','string','global','')
+  create('aipTypeMenu','string','global','off')
+  create('aipType','string','global','fdf')
+  create('aipAutoOutPath','string','global','y')
+  create('aipOutPath','string','global','')
+  create('aipAutoOutDir','string','global','y')
+  create('aipOutDir','string','global','')
+  create('aipFDFtosq','string','global','')
+  create('aipPTag','string','global','n')
+  create('aipRunTime','string','global','dicom')
+  create('NIFTI','string','global','')
+  create('DICOM','string','global','')
+endif

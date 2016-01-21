@@ -1,0 +1,68 @@
+"macro dmfadj"
+"*************************************************"
+"						  "
+"	    dmfadj(<tip_angle_resoln>)		  "
+"	    dmf2adj(<tip_angle_resoln>)		  "
+"	    dmf3adj(<tip_angle_resoln>)		  "
+"	    dmf4adj(<tip_angle_resoln>)		  "
+"						  "
+"  This macro adjusts dmf to yield no fractional  "
+"  error with the requested, or default, degree   "
+"  degree of tip-angle precision.		  "
+"						  "
+"*************************************************"
+
+if ($0 = 'dmfadj') then
+   $dmfx='dmf'
+   $dresx='dres'
+elseif ($0 = 'dmf2adj') then
+   $dmfx='dmf2'
+   $dresx='dres2'
+elseif ($0 = 'dmf3adj') then
+   $dmfx='dmf3'
+   $dresx='dres3'
+elseif ($0 = 'dmf4adj') then
+   $dmfx='dmf4'
+   $dresx='dres4'
+else
+  write('error','macro dmfadj does not support %s',$0)
+  ABORT
+endif
+
+exists($dmfx,'parameter'):$e
+if ($e = 0) then
+   write('error','%s  -  the parameter `%s` does not exist',$0,$dmfx)
+   return
+endif
+
+if ($# < 1) then
+   exists($dresx,'parameter'):$e
+   if ($e = 0) then
+      $resoln = 1.0
+   else
+      $resoln = {$dresx}
+   endif
+else
+   $resoln = $1
+endif
+
+if ( ($resoln < 0.7) or ($resoln > 360.0) ) then
+   write('error','%s  -  tip-angle precision out of range:  0.7 - 360',$0)
+   return
+endif
+if (fifolpsize > 2000) then
+   $wfgres = 2e7                "50 ns resolution WFG"
+else
+   $wfgres = 1e7                "100 ns resolution WFG"
+endif
+
+$i = 1
+repeat
+   $subdmf = {$dmfx}[$i]
+   $tmp = ($resoln/(90*$subdmf))*$wfgres
+   $tmp = trunc($tmp + 0.5)	"rounds value to the stepsize of WFG"
+   if ($tmp <> 0) then
+     {$dmfx}[$i] = ($resoln/(90*$tmp))*$wfgres
+   endif
+   $i = $i + 1
+until ($i > size($dmfx))

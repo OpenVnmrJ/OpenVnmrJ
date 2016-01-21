@@ -1,0 +1,51 @@
+"macro tropt"
+"***************************************************************"
+" tropt                                                         "
+"                                                               "
+" Determine optimum repetition time (tr) to give maximum        "
+" signal-to-noise in a multi-transient or multi-increment       "
+" experiment.                                                   "
+"                                                               "
+" Data for tropt should be collected as a series of arrayed     "
+" spectra or imaging projections with an array of tr values.    "
+" Select a moderate number of transients to ensure good         "
+" averaging of equilibrium conditions, 4 or 8 is usually        "
+" adequate.  Array tr values in descending order to help        "
+" establish equilibrium at the next shortest value.             "
+"                                                               "
+" tropt displays a series of spectra with the vertical scale of "
+" each adjusted in inverse proportion to the square root of the "
+" tr.  If the spectra or projections have been acquired with    "
+" the same number of transients, the tr of the spectrum having  "
+" the greatest displayed height will give the maximum SNR for   "
+" the complete experiment.                                      "
+"                                                               "
+" Usage:  tropt                                                 "
+"***************************************************************"
+
+$i = 0
+$maxheight = 0
+$vsorig = vs
+dssh
+$sc = sc
+
+repeat
+  $i = $i + 1
+  select($i)
+  peak:$height
+  $height = $height/sqrt(tr[$i])
+  if ($height > $maxheight) then
+    $maxheight = $height
+  endif
+until ($i = arraydim)
+
+clear(2)
+$i = 0
+repeat
+  $i = $i + 1
+  vs = $vsorig*0.8*wc2max/$maxheight/sqrt(tr[$i])
+  dssn($i,$i,1)
+  sc = sc + ho
+until ($i = arraydim)
+vs = $vsorig
+sc = $sc

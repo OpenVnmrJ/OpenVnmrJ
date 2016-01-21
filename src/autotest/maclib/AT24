@@ -1,0 +1,29 @@
+"macro AT24"
+"AT24" "Small-Angle Phase Shift Test (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Small-Angle Phase Shift Test (channel 2) ')
+   dpwr=tpwr dof=tof
+   seqfil='ATphtest'
+   dec='y'
+   at_currenttest='phasetest_ch2'
+   stpsiz=1 cancel='n' dec='y'
+   array('mphase',37,0,10)
+   wnt='ATwft crl rfl=sw/2 rfp=0 sp=-.5p wp=1p select(1) ph aph0 vp=70 vsadj(50) dssh dtext'
+   wexp='AT24(`PART1`)'
+   ATcycle
+   au
+   write('line3','Small-Angle Phase Shift Test (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   ATplot
+
+ATnext
+endif

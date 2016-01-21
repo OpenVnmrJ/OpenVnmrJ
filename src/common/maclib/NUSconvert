@@ -1,0 +1,158 @@
+"macro NUSconvert"
+"Take a non-NUS dataset, NUS it and (optionally) reconstruct it"
+
+$makeschedule='makeschedule'
+$readschedule='no'
+$reconstruct='no'
+$do3D=0
+$schedpath=curexp+'/sampling.sch'
+$proc1=proc1
+
+groupcopy('current','processed','acquisition')
+
+exists('ni2','parameter'):$ni2ex
+if ($ni2ex) then
+  if (ni>1 and ni2>1) then $do3D=1 endif
+  $rp2=rp2 $lp2=lp2
+endif
+$rp1=rp1 $lp1=lp1
+
+$x = 1
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'reconstruct' then $reconstruct=$val
+ elseif $val = 'makeschedule' then $makeschedule=$val
+ elseif $val = 'readschedule' then
+	$readschedule=$val
+  $schedpath=${$x+1}
+	exists($schedpath,'file'):$schedex
+	if ($schedex<0.5) then
+	   write('error','Specified sampling schedule not found - exiting')
+	   return
+	endif
+ endif
+ $x=$x+1
+endwhile
+
+exists(curexp+'/procdir','directory'):$ex
+if ($ex>0.5) then
+   shell('rm -r '+curexp+'/procdir'):$dum
+endif
+mkdir(curexp+'/procdir')
+
+if CStype<>'a' then $makeschedule='no' endif
+if ($makeschedule='makeschedule') then CSschedule endif
+if (CS_dpars='y') then NUSdefpars endif
+// get the number of lines in the schedule
+shell('(cat '+$schedpath+' | wc -l)'):$numincs
+on('nimax'):$e
+if $e<0 then
+  if ($do3D) then
+      CSdensity=$numincs*100/ni
+      CSdensity2=$numincs*100/ni2/ni
+      setvalue('CSdensity',CSdensity,'processed')
+      setvalue('CSdensity2',CSdensity2,'processed')
+  elseif ($ni2ex) then
+    if (ni2>1) then
+  	  CSdensity2=$numincs*100/ni2
+      setvalue('CSdensity2',CSdensity2,'processed')
+    else
+  	  CSdensity=$numincs*100/ni
+  	  setvalue('CSdensity',CSdensity,'processed')
+    endif
+  else
+    CSdensity=$numincs*100/ni
+    setvalue('CSdensity',CSdensity,'processed')
+  endif
+endif
+	
+//Save full data to procdir
+svf(curexp+'/procdir/orig')
+
+if ($readschedule='readschedule') then
+   //Copy predefined schedule to orig.fid directory
+   shell('cp '+$schedpath+' '+curexp+'/procdir/orig.fid'):$dum
+else "create sampling schedule in curexp based on current param settings"
+   //Take newly created schedule and copy to orig.fid directory
+   shell('cp '+curexp+'/sampling.sch '+curexp+'/procdir/orig.fid'):$dum
+   //shell('rm '+curexp+'/sampling.sch'):$dum
+endif
+
+//Zero fid elements
+//NUSdeflate creates zeroed dataset deflate.fid in procdir
+NUSdeflate
+//Retrieve zeroed data
+write('line3','Retrieving zeroed data')
+rt(curexp+'/procdir/deflate')
+
+if ($reconstruct='reconstruct') then
+
+   if (CSreconmethod='CLEAN') then
+
+	write('line3','Processing data using CLEAN')
+	//Generate rsw.fid dataset in procdir
+	//CSwp=0
+	NUSrsw
+
+	//Copy sampling schedule to rsw.fid
+	shell('cp '+curexp+'/procdir/deflate.fid/sampling.sch '+curexp+'/procdir/rsw.fid'):$dum
+	//Move rsw.fid to inf.fid - cln2d expects a file called inf.fid as input
+	shell('mv '+curexp+'/procdir/rsw.fid '+curexp+'/procdir/inf.fid'):$dum
+
+   	//Run CLEAN
+   	cln2d
+   	// copy schedule to prevent removal 
+   	// - if no schedule exists in source dir rt will delete schedule in destination dir
+   	shell('cp '+curexp+'/procdir/inf.fid/sampling.sch '+curexp+'/procdir/cln2d.fid'):$dum   
+   	//Retrieve CLEANed data
+   	write('line3','Retrieving reconstructed data')
+   	rt(curexp+'/procdir/cln2d')   
+
+    elseif (CSreconmethod='IST') then
+
+	write('line3','Processing data using IST')
+	//Avoid calling bg IST processing
+	$wexp=wexp
+	wexp=''
+	NUSprocIST
+	exists('NUSsimulatedone','parameter'):$e
+	if not ($e) then
+  	    create('NUSsimulatedone','string')
+	endif
+	wexp=$wexp
+	NUSsimulatedone='y'
+	return
+
+    endif
+
+endif
+
+//Process
+if not ($do3D) then
+  if not ($ni2ex) then
+	  rp1=$rp1 lp1=$lp1
+	  proc1=$proc1
+  	  setLP1andWindow
+	  wft2da
+  else
+	  if (ni2>1) then
+	    rp2=$rp2 lp2=$lp2
+	    wft2da('ni2')
+	  else
+	    rp1=$rp1 lp1=$lp1
+	    wft2da
+	  endif
+  endif
+  full
+  if (dmg='av') and (dmg1='av1') and (fn=fn1) then
+    foldt
+  endif   
+  if CSdnoise='y' then nm2d(64) else nm2d endif
+  dconi
+endif
+
+exists('NUSsimulatedone','parameter'):$e
+if not ($e) then
+  create('NUSsimulatedone','string')
+endif
+NUSsimulatedone='y'

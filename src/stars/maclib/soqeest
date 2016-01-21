@@ -1,0 +1,28 @@
+"macro soqeest"
+"H. Bildsoe, Aarhus University, Denmark, march 1995"
+"soqeest(<site_no>) - esimate SOQE parameter for site=site_no from center of gravity of two transitions"
+
+if (ival<1.5) then write('error','Error: Illegal value for ival') abort endif
+if ($#=1) then
+  $site=$1
+  else if (sites<>1) then
+  input('Site 1 or 2? '):$site
+  else
+  $site=1
+  endif endif
+
+if ($site>sites or $site<1) then
+  write('error','Error: Illegal site number')
+  abort
+  endif
+
+if ($site=1) then $soqe='soqe' else $soqe='soqe2' endif
+
+input('input m-values for the two involved transitions'):$m1,$m2
+input('and the differential 2.nd order shift'):$f1
+r1=$m1 r2=$m2 r3=$f1
+$a=40*sfrq*$f1/($m1*($m1-1)-$m2*($m2-1))/27.0
+if $a<0 then $a=-$a endif
+{$soqe}=ival*(2*ival-1)*sqrt($a)/1000.0
+dg('dgstars')
+

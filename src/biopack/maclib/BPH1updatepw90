@@ -1,0 +1,225 @@
+"macro BPH1updatepw90"
+
+"BPH1updatepw90: updates proton pulse parameters values in probefile"
+
+"                updates probefile with tof,tpwr,compH values in this parameter set"
+"                pw90 is updated to pw value and stored in probefile"
+"                finepower values in  probefile adjusted so same pwHs value used"
+"                ref_pw90 and ref_pwr values in probefile updated"
+
+"read old H1pw and store in p1"
+getparam('pw90','H1'):$pw90_probefile
+
+"ratio of new and old pw"
+if $pw90_probefile>0 then
+ $ratio=pw/$pw90_probefile
+else
+ $ratio=1   "user has not updated probefile properly, but let macro run"
+endif
+pw=trunc(100*pw)/100
+pw90=trunc(100*pw)/100
+ref_pw90=trunc(100*pw*compH)/100 ref_pwr=tpwr
+
+"find if user has done automatic flipback calibration"
+$probe=probe
+exists(userdir+'/probes/'+$probe,'file','r-x'):$e
+if not($e) then
+   $sysadd = 1
+   $probedir = systemdir + '/probes'
+else
+   $sysadd = 0
+   $probedir = userdir + '/probes'
+endif
+
+$result='' $num1=0 $num2=0 
+
+$probefile = $probedir + '/' + $probe + '/' + $probe
+lookup('file',$probefile)
+lookup('seek','H1tpwrsf_i','read'):$result,$num1
+lookup('file',$probefile)
+lookup('seek','H1finepwrf','read'):$result,$num2
+if (($num1=1) and ($num2=1)) then
+  "user has done automatic flipback calibration and"
+  "probefile has entries for fine powers"
+  "load H1tpwrsf values into $tpwrsf values"
+  getparam('tpwrsf','H1'):$tpwrsf_probefile
+  getparam('tpwrsf_u','H1'):$tpwrsf_u_probefile
+  getparam('tpwrsf_d','H1'):$tpwrsf_d_probefile
+  getparam('tpwrsf_i','H1'):$tpwrsf_i_probefile
+  getparam('tpwrsf_t','H1'):$tpwrsf_t_probefile
+  getparam('tpwrsf_n','H1'):$tpwrsf_n_probefile
+ 
+  "Calculate updated H1tpwrsf"
+  $tpwrsf_probefile=trunc($tpwrsf_probefile*$ratio)
+  $tpwrsf_u_probefile=trunc($tpwrsf_u_probefile*$ratio)
+  $tpwrsf_d_probefile=trunc($tpwrsf_d_probefile*$ratio)
+  $tpwrsf_i_probefile=trunc($tpwrsf_i_probefile*$ratio)
+  $tpwrsf_t_probefile=trunc($tpwrsf_t_probefile*$ratio)
+  $tpwrsf_n_probefile=trunc($tpwrsf_n_probefile*$ratio)
+ 
+  getparam('finepwrf','H1'):$finepwrf_probefile
+ 
+  "calculate updated H1finepwrf"
+  $finepwrf_new=trunc($finepwrf_probefile*$ratio)
+ 
+  $tpwrsf='' format($tpwrsf_probefile,4,1):$tpwrsf
+  BPsetparams('tpwrsf',$tpwrsf,'H1')
+  $tpwrsf_u='' format($tpwrsf_u_probefile,4,1):$tpwrsf_u
+  BPsetparams('tpwrsf_u',$tpwrsf_u,'H1')
+  $tpwrsf_d='' format($tpwrsf_d_probefile,4,1):$tpwrsf_d
+  BPsetparams('tpwrsf_d',$tpwrsf_d,'H1')
+  $tpwrsf_i='' format($tpwrsf_i_probefile,4,1):$tpwrsf_i
+  BPsetparams('tpwrsf_i',$tpwrsf_i,'H1')
+  $tpwrsf_t='' format($tpwrsf_t_probefile,4,1):$tpwrsf_t
+  BPsetparams('tpwrsf_t',$tpwrsf_t,'H1')
+  $tpwrsf_n='' format($tpwrsf_n_probefile,4,1):$tpwrsf_n
+  BPsetparams('tpwrsf_n',$tpwrsf_n,'H1')
+  $finepwrf='' format($finepwrf_new,4,1):$finepwrf
+  BPsetparams('finepwrf',$finepwrf,'H1')
+else
+"if probefile parameters do not exist, make"
+"new probefile entries using typical values"
+
+ $tpwrsf_typical=2048  "for no Radiation Damping"
+ $tpwrsf='' format($tpwrsf_typical,4,1):$tpwrsf
+ BPsetparams('tpwrsf',$tpwrsf,'H1')
+ BPsetparams('tpwrsf_u',$tpwrsf,'H1')
+ BPsetparams('tpwrsf_d',$tpwrsf,'H1')
+ BPsetparams('tpwrsf_i',$tpwrsf,'H1')
+ BPsetparams('tpwrsf_t',$tpwrsf,'H1')
+ BPsetparams('tpwrsf_n',$tpwrsf,'H1')
+ BPsetparams('finepwrf',$tpwrsf,'H1')
+endif
+
+$ref_pw90='' format(ref_pw90,2,2):$ref_pw90
+BPsetparams('ref_pw90',$ref_pw90,'H1')
+$ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+BPsetparams('ref_pwr',$ref_pwr,'H1')
+$pw90='' format(pw90,2,2):$pw90
+BPsetparams('pp',$pw90,'H1')
+BPsetparams('pw90',$pw90,'H1')
+$tpwr='' format(tpwr,2,0):$tpwr
+BPsetparams('tpwr',$tpwr,'H1')
+BPsetparams('pplvl',$tpwr,'H1')
+$dmf=trunc(1e6/(pw*10*compH)) $dpwr=tpwr-20
+$dmfH1='' format($dmf,5,0):$dmfH1
+$dpwrH1='' format($dpwr,2,0):$dpwrH1
+BPsetparams('dmf',$dmfH1,'H1')
+BPsetparams('dpwr',$dpwrH1,'H1')
+$gain='' format(gain,2,0):$gain
+BPsetparams('BPgain',$gain,'H1')
+BPsetparams('rna_gain',$gain,'H1')
+$tofH2O='' format(tof,4,1):$tofH2O
+BPsetparams('tofH2O',$tofH2O,'H1')
+$compH='' format(compH,4,3):$compH
+BPsetparams('compH',$compH,'H1')
+BPsetparams('tpwr_cf',$compH,'H1')
+
+
+$pw1='' $pw2=''
+$pw3='' $pw4=''
+
+"243usec ok for 600MHz for SS pw90 at 12ppm"
+$pw12ss=0.000243*(600/sfrq)
+"pw90 for excitation at 7.5ppm is 7.5/2.5 longer"
+$pw7ss=(7.5/2.5)*$pw12ss
+format($pw12ss,1,6):$pw1
+format($pw7ss,1,6):$pw2
+
+"122usec ok for 600MHz for S pw90 at 12ppm"
+$pw12s=0.000122*(600/sfrq)
+"pw90 for excitation at 7.5ppm is 7.5/2.5 longer"
+$pw7s=(7.5/2.5)*$pw12s
+format($pw12s,1,6):$pw3
+format($pw7s,1,6):$pw4
+
+$ss_wave12='ss '+$pw1
+$ss_wave7='ss '+$pw2
+$s_wave12='s '+$pw3
+$s_wave7='s '+$pw4
+
+opx('SS_at_12p') setwave($ss_wave12) cpx(pw*compH,tpwr)
+pbox_rst
+opx('SS_at_7.5p') setwave($ss_wave7) cpx(pw*compH,tpwr)
+pbox_rst
+opx('S_at_12p') setwave($s_wave12) cpx(pw*compH,tpwr)
+pbox_rst
+opx('S_at_7.5p') setwave($s_wave7) cpx(pw*compH,tpwr)
+pbox_rst
+
+BPmoveshape('S_at_12p.RF')
+BPmoveshape('S_at_7.5p.RF')
+BPmoveshape('SS_at_12p.RF')
+BPmoveshape('SS_at_7.5p.RF')
+
+exists('probeConnect','parameter','global'):$e
+if ($e>0) then
+ BPsetparams('probeConnect',probeConnect,'H1')
+endif
+
+"Biopack power limits are active if BPpwrlimits=1 "
+exists('BPpwrlimits','parameter','global'):$e
+if ($e>0) then
+ $BPpwrlimits='' format(BPpwrlimits,1,0):$BPpwrlimits
+ BPsetparams('BPpwrlimits',$BPpwrlimits,'H1')
+endif
+
+"1H and 13C spinlock upper limits if BPpwrlimits=1 "
+exists('BPtpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrspinlock='' format(BPtpwrspinlock,5,0):$BPtpwrspinlock
+ BPsetparams('BPtpwrspinlock',$BPtpwrspinlock,'H1')
+endif
+
+"default values for 13C and 1H spinlock fields"
+
+exists('BP1Hspinlock','parameter','global'):$e
+if ($e>0) then
+ $BP1Hspinlock='' format(BP1Hspinlock,6,0):$BP1Hspinlock
+ BPsetparams('BP1Hspinlock',$BP1Hspinlock,'H1')
+endif
+
+"1H and 13C decoupling power upper limits if BPpwrlimits=1 "
+exists('BPtpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrmax='' format(BPtpwrmax,2,0):$BPtpwrmax
+ BPsetparams('BPtpwrmax',$BPtpwrmax,'H1')
+endif
+
+"System power limits"
+exists('maxattench1','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench1='' format(maxattench1,2,0):$maxattench1
+ BPsetparams('maxattench1',$maxattench1,'H1')
+endif
+
+ if BPplot='off' then BPplot='' endif  "reset plotter"
+ //BPcal // hell no, just water pulses
+
+"90 degree selective one-lobe pulse on H2O (1.2 ppm), < 1% excitation off resonance"
+rna_makeH2Osinc
+
+"90 degree selective one-lobe pulse on H2O (0.5 ppm), < 1% excitation off resonance"
+rna_makeH2Osinc1     
+
+"flopsy8 decoupling pattern will be made only if not already present"
+rna_makeflopsy8
+
+"dipsi2 decoupling pattern will be made only if not already present"
+rna_makedipsi2
+"90 degree selective one-lobe pulse on H2O, < 1% excitation off resonance"
+if (wexp<>'BP10')     "wexp=BP10 for autocalibrate process where H2Osinc.RF is made"
+ then BPmakeH2Osinc endif     
+
+BPmakeH2Osinc1
+
+"dipsi2 decoupling pattern will be made only if not already present"
+BPmakedipsi2
+
+"180-degree cosine-modulated pulse on NH, leaving H2O unaffected (180's at"
+" +4ppm and -4ppm from H2O"
+BPmakecosinemodulate 
+
+ write('line3','H1 Probefile Update Finished')
+ banner('H1 Probe File Parameters Updated using This pw90')
+

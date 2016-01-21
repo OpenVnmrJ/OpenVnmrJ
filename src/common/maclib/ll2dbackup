@@ -1,0 +1,42 @@
+"macro ll2dbackup"
+"****************************************************************************"
+"  ll2dbackup - copies current ll2d peak file to another filename            "
+"****************************************************************************"
+
+exists('index2','parameter'):$e		"check if 3D data present"
+if ($e) then				"and set $defname to correct filename"
+  if (index2 > 0) then
+    exists('plane','parameter'):$e
+    if ($e) then
+      $index2 = ''
+      format(index2,1,0):$index2
+      if ((plane = 'f1f3') or (plane = 'f3f1')) then
+        $defname = 'peaks_f1f3_'+$index2+'.bin'
+      else if ((plane = 'f2f3') or (plane = 'f3f2')) then
+	     $defname = 'peaks_f2f3_'+$index2+'.bin'
+	   else if ((plane = 'f1f2') or (plane = 'f2f1')) then
+		  $defname = 'peaks_f1f2_'+$index2+'.bin'
+		else
+		  write('error','Error in determining peak filename for plane.')
+		  return
+		endif
+	   endif
+      endif
+    endif
+  endif
+else		"otherwise, 2D data"
+  $defname = 'peaks.bin'
+endif
+
+if ($# = 1) then
+  $filename = $1
+else                "prompt for filename to copy to"
+  $str = 'Enter filename for backup peak file (Default is "'+$defname+'.bck") : '
+  input($str):$filename
+endif
+"do the copy to the default filename or $filename"
+if ($filename = '') then
+  cp(curexp+'/ll2d/'+$defname,$defname+'.bck')
+else
+  cp(curexp+'/ll2d/'+$defname,$filename)
+endif

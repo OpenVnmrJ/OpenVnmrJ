@@ -1,0 +1,44 @@
+"macro reorder3D"
+   "reorder3D - reorder fids to exchange order of gzlvl1 and phase"
+
+jexp:$exp3D
+df2d(1)
+$elems=arraydim/ni
+$ni=ni $arrayarray='' $ch=''
+$i=1 length(array):$len
+$j=1
+repeat
+  substr(array,$i,1):$ch
+  if $ch<>',' then
+    $arrayarray[$j]=$arrayarray[$j]+$ch
+  else
+    $j=$j+1
+    $arrayarray[$j]=''
+  endif
+  $i=$i+1
+until $i>$len
+echo($arrayarray[1])
+echo($arrayarray[2])
+$p1size=size($arrayarray[1])
+$p2size=size($arrayarray[2])
+echo($p1size)
+echo($p2size)
+
+clradd
+$i=1
+repeat
+  $ix=1
+  repeat
+    $fid=(($ix-1) % $p1size)*$p2size +(($ix-1)/$p1size)+1+($i-1)*$p1size*$p2size
+    select($fid) add('new')
+    $ix=1+$ix
+  until $ix>($p1size*$p2size)
+  $i=$i+1
+until $i>ni
+
+jaddsub $ct=ct
+array=$arrayarray[2]+','+$arrayarray[1]
+ni=$ni setvalue('ct',$ct) calcdim
+"abort"
+groupcopy('current','processed','acquisition')
+

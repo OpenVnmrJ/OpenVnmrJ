@@ -1,0 +1,177 @@
+"macro addmaps"
+ampdir:$ampname,$rfchnl,$canwrite,$olddir,$dirname
+
+$icat='tpwr.map'
+$dest=''
+$amp=''
+if $#>2 then
+    $icat=$1
+    $amp=$2
+    $dest=$3
+elseif $#>1 then
+    $icat=$1
+    $amp=$2
+elseif $#>0 then
+    $icat=$1
+endif
+
+pwd:$cdir
+cd($ampname)
+
+$tables='tables.map'
+
+exists($icat,'file'):$filex
+if not $filex then
+   write('error','file not found: %s ',$icat)
+   return(0)
+endif
+
+$size=0
+
+lookup('file',$icat,'countline'):$size
+lookup('mfile',$icat,'filekey'):$keya
+
+$icat_errs=0
+
+$j=1
+while ($j <= $size) do
+   lookup('mfile',$keya,'read',2,'filekey'):$tpwr,$word2,$keya,$morea
+   $icat_errs[$j]=$word2
+   $j=$j+1
+endwhile
+
+$deltas=0
+// get deltas
+exists($tables,'file'):$tbls
+if $tbls and amptables=1 then
+    $nmaps=0
+    $val1=0
+    $val2=0
+    lookup('file',$tables,'seek','nmaps','read',1):$nmaps
+    write('line3','%d',$nmaps)
+
+    $i=1   
+    repeat
+        $deltas[$i]=0
+        $i=$i+1
+    until $i>$nmaps
+    $i=1    
+    repeat
+        lookup('read','skip','read','skip'):$val1,$val2
+        $indx=$nmaps-$i+1
+        $delta=$val2-$val1
+        $deltas[$indx]=$delta
+        $i=$i+1
+    until $i>$nmaps
+
+    $delta=$deltas[$nmaps]
+    repeat 
+        $deltas[$i]=$delta
+        $i=$i+1
+    until $i>$size
+    $j=1
+    $tpwr=63
+    $tstr='' $vstr='' $estr='' $nstr=''
+    $mintpwr=-37
+    $tpwrstep=0.5
+    $maxtpwr=63
+    while $j <= $size do
+         $delta=$deltas[$j]
+         $tpwr_out=$tpwr+$delta
+         if $tpwr_out < $mintpwr then
+             $tpwr_out = $mintpwr
+         endif
+         $tpwr_err=$icat_errs[$j]
+         $tpwr_adj=$tpwr_out
+         $tpwr_new=$tpwr_adj
+         if $tpwr_adj>$mintpwr and $tpwr_adj<=$maxtpwr then
+             $err_id= ($maxtpwr-$tpwr_adj)/$tpwrstep+1
+             $tpwr_err=$icat_errs[$err_id]
+             $tpwr_new=$tpwr_adj+$tpwr_err
+             while $tpwr_new < $tpwr_out and $tpwr_new <= $maxtpwr and $tpwr_new > $mintpwr do
+                $err_id=$err_id-1
+                $tpwr_err=$icat_errs[$err_id]
+                $tpwr_adj=$tpwr_adj+$tpwrstep
+                $tpwr_new=$tpwr_adj+$tpwr_err
+             endwhile
+        endif
+        $err=2*($tpwr_adj-$tpwr)
+        if $dest='' then
+            format($tpwr,2,1):$tstr
+            format($tpwr_out,2,1):$vstr
+            format($tpwr_adj,2,1):$nstr           
+            format($tpwr_err,2,3):$estr
+            write('alpha','%s %s %s %s',$tstr,$vstr,$estr,$nstr)
+        endif
+        $deltas[$j]=$err
+        $j=$j+1
+        $tpwr=$tpwr-0.5
+    endwhile
+endif
+
+if not $dest='' then
+    write('reset',$dest)
+endif
+
+$tpwr = 0
+$word2 = 0
+$word3 = 0
+
+if not $amp='' then
+    $amp_errs=0
+    $j=1
+    $i=1
+    $adj_errs=0
+
+    exists($amp,'file'):$filex
+    if not $filex then
+       write('error','file not found: %s ',$amp)
+       return(0)
+    endif
+
+    lookup('file',$amp,'countline'):$size2
+    lookup('mfile',$amp,'filekey'):$keyb
+
+    while ($j <= $size2) do
+       lookup('mfile',$keyb,'read',2,'filekey'):$tpwr,$word3,$keyb,$moreb
+       $amp_errs[$j]=$word3
+       $j=$j+1
+    endwhile
+    $j=1
+    $word3=0
+    $tpwr=63
+    $delta=0
+    while ($j <= $size) do
+        if size('$deltas') > 1 then
+            $delta=$deltas[$j]
+        endif
+        $k=$delta+$j
+        if $k >=1 and $k <= $size2 then
+            $word3=$amp_errs[$k]
+        endif  
+        $err=$icat_errs[$j]+$word3
+        //format($tpwr,0,3):$tstr
+        //format($delta,0,1):$vstr
+        //format($err,0,3):$estr
+        //write('line3','%s %s %s',$tstr,$vstr,$estr)
+     
+        $adj_errs[$j]=$err
+        $j=$j+1
+        $tpwr=$tpwr-0.5
+    endwhile
+    $j=1
+    $tpwr=63
+    while ($j <= $size) do
+        $val=$adj_errs[$j]
+        format($tpwr,0,3):$tstr
+        format($val,0,5):$vstr
+        if not $dest='' then 
+            write('file',$dest,'%s %s ',$tstr,$vstr)
+        //else
+        //    write('alpha','%4s  %s',$tstr,$vstr)
+        endif
+        $tpwr=$tpwr-0.5
+        $j=$j+1
+    endwhile
+endif
+cd($cdir)

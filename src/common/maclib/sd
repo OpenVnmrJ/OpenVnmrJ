@@ -1,0 +1,52 @@
+"macro sd"
+
+"*********************"
+" sd - set decoupler  "
+" sd2 - set second decoupler  "
+" sd3 - set third decoupler  "
+"*********************"
+if ($0 = 'sd') then
+   $dofx='dof'
+   $dnx='dn'
+   dof=tof
+   $dfrq=dfrq
+   $decup='first'
+else if ($0 = 'sd2') then
+   $dofx='dof2'
+   $dnx='dn2'
+   dof2=tof
+   $dfrq=dfrq2
+   $decup='second'
+else if ($0 = 'sd3') then
+   $dofx='dof3'
+   $dnx='dn3'
+   dof3=tof
+   $dfrq=dfrq3
+   $decup='third'
+else
+  write('error','macro sd does not support %s',$0)
+  ABORT
+endif
+endif
+endif
+
+exists($dnx,'parameter'):$e
+if ($e = 0) then
+   write('error','Parameters for %s decoupler do not exist',$decup)
+   return
+endif
+
+if (tn<>{$dnx}) then
+  write('error','Cannot set decoupler this way in heteronuclear experiment')
+  return
+  endif
+
+"*** calculate Frequency of cursor ***"
+" (sfrq*1.0e6 - sw/2) - 	Frequency at far right in Hz"
+" (rfl-rfp) - 			referencing"
+$abscr=(sfrq*1.0e6 - sw/2) + cr + (rfl-rfp)	"cursor frequency"
+
+"*** Now time to calc dof setting ***"
+{$dofx} = $abscr - $dfrq*1e6 + tof
+axis('fn'):$label,$frq_scl
+write('line3','%s set to %1.1f, decoupling at %1.2f %s',$dofx,{$dofx},cr/$frq_scl,$label)

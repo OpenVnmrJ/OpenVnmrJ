@@ -1,0 +1,478 @@
+"macro ProbePopup"
+
+create('ProbeAttr','string','global','')
+setprotect('ProbeAttr','on',256,'global')
+$dirPath=userdir+'/persistence/'+$0
+exists($dirPath,'directory'):$direx
+if ($direx=0) then
+    shell('mkdir -p '+$dirPath):$dum
+endif
+
+if ($# < 1) then $1='init' endif
+"*************************************************************************"
+IF ($1='init') or ($1='refresh') THEN
+
+    $menu=$dirPath+'/probe_list'
+    $menu2=$dirPath+'/allprobe_list'
+    $menu3=$dirPath+'/writable_appdirs'
+    $menu4=$dirPath+'/probeid_list'
+    $menu5=$dirPath+'/probeIDs'
+    $menu6=$dirPath+'/probeStyleList'
+
+    operights('canmanageprobe'):$ok
+    if ($ok=0) then
+	write('error','Operator \'%s\' cannot manage probe files',operator)
+	return
+    endif
+
+// ProbeAttr parameter is used ONLY by this and ProbeEdit utilities
+//	Primarily used for popup convenience
+// Value1 - Fullpathname of probe file to edit/show/delete
+// Value2 - name for a new probe to create or an existingprobe to copy
+// Value3 - For copy option, current appdirpath of an existing probe
+// Value4 - A keyword flag to decide create or copy option
+// Value5 - Default shim filename
+// Value6 - For create/copy option, destination appdir path
+// Value7 - A keyword flag to decide edit or show option
+// Value8 - probeid message OR menu option 
+// Value9 - probe style
+
+    ProbeAttr='','','','none','',userdir,'','',''
+
+    getparam('defaultshims','Probe'):ProbeAttr[5]
+    if (probe<>'') then
+	ProbePopup('getProbePath'):$pex,ProbeAttr[1]
+    endif
+
+// The tmpfile will have all probes directories in all valid appdirs
+    $tmpfile=$dirPath+'/tmpfile'
+    write('reset',$tmpfile)
+    getappdirs:$atot,$adirs,$alabels
+
+    if ($atot>0) then
+	$i=1
+	repeat
+	    shell('(ls -1d '+$adirs[$i]+'/probes/* | grep -v probe.tmplt >> '+$tmpfile+')'):$dum
+	    $i=$i+1
+	until $i > $atot
+    endif
+
+    probeidez('native'):$probeidez
+
+//  Now write the menu widgets
+    write('reset',$menu)
+    write('reset',$menu2)
+    write('reset',$menu3)
+    write('reset',$menu4)
+    write('reset',$menu5)
+    write('reset',$menu6)
+
+    if $probeidez then ProbeAttr[8]=probeid else ProbeAttr[8]='nOprObEId' endif
+    if ProbeAttr[8]='' then ProbeAttr[8]='nOprObEId' endif
+    if probeiden=0 then ProbeAttr[8]='nOprObEId' endif
+
+    $s1='' $s2=''
+    $bname=''
+    readfile($tmpfile,'$s1','$s2','','local'):$total
+    write('reset',$tmpfile)
+    if ($total>0) then
+	$i=1 $j=1
+	$tmpprobe=''
+	repeat
+	    substr($s1[$i],'basename'):$bname
+	    exists($s1[$i]+'/'+$bname,'file'):$ok
+	    if ($ok) then
+		//	This is a valid probe file
+		$s3='' $s4='' $s5=''
+		strstr($s1[$i],'/probes/'):$ret,$s3
+		teststr('$adirs',$s3,'local'):$ret
+		$s4='' substr($alabels[$ret],1):$s4
+		shell('(cat '+$s1[$i]+'/'+$bname+' | grep \'^ID:\' | awk \'{print $2}\')'):$s5
+		$s3=$bname+'  ('+$s4+')'
+		if ($s5 <>'') then 
+		    $s3=$s3+'  [ID: '+$s5+']'
+		endif
+		substr($s3,1,58):$s4 if ($s4<>$s3) then $s4=$s4+'..' endif
+		write('file',$menu2,'"%s" "%s/%s"',$s4,$s1[$i],$bname)
+		ProbePopup('getProbePath',$bname):$pex,$ppath
+		teststr('$tmpprobe',$ppath,'local'):$isin
+		if ($isin=0) then
+		    $tmpprobe[$j]=$ppath $j=$j+1
+		    strstr($ppath,'/probes/'):$ret,$s3
+                    teststr('$adirs',$s3,'local'):$ret
+                    $s4='' substr($alabels[$ret],1):$s4
+                    $s3=$bname+'  ('+$s4+')'
+                    write('file',$menu,'"%s" "%s"',$s3,$bname)
+		endif
+
+		if ($probeidez) then
+		    $curid='' $curs1='' $ok2=0
+		    readfile($s1[$i]+'/'+$bname,'$curs1','$curid','ID:','local'):$ok2
+		    if ($ok2) then
+			if ($curid<>probeid) then $ok2=0 endif
+		    endif
+		    if ($ok2) then
+			write('file',$tmpfile,'%s',$s1[$i])
+		    endif
+		else
+		    write('file',$tmpfile,'%s',$s1[$i])
+		endif
+	    endif
+	    $i=$i+1
+	until $i > $total
+    endif
+    shell('(sort '+$menu+' -o '+$menu+'_sort; mv '+$menu+'_sort '+$menu+')'):$dum
+    shell('(sort '+$menu2+' -o '+$menu2+'_sort; mv '+$menu2+'_sort '+$menu2+')'):$dum
+    write('file',$menu,'"" ""')
+    write('file',$menu2,'"" ""')
+    $s1='' $s2=''
+    readfile($tmpfile,'$s1','$s2','','local'):$total
+    shell('rm -f '+$tmpfile):$dum
+    if ($total>0) then
+        $i=1 $j=1
+        $tmpprobe=''
+        repeat
+            substr($s1[$i],'basename'):$bname
+	    teststr('$tmpprobe',$bname,'local'):$isin
+	    if ($isin=0) then
+		$tmpprobe[$j]=$bname $j=$j+1
+                strstr($s1[$i],'/probes/'):$ret,$s3
+                teststr('$adirs',$s3,'local'):$ret
+                $s4='' substr($alabels[$ret],1):$s4
+		$s5=''
+                shell('(cat '+$s1[$i]+'/'+$bname+' | grep \'^ID:\' | awk \'{print $2}\')'):$s5
+		$s3=$bname
+                if ($s5 <>'') and ($probeidez<0.5) then
+                    $s3=$s3+'  [ID: '+$s5+']'
+                endif
+                write('file',$menu4,'"%s" "%s"',$s3,$bname)
+            endif
+            $i=$i+1
+        until $i > $total
+    endif
+    shell('(sort '+$menu4+' -o '+$menu4+'_sort; mv '+$menu4+'_sort '+$menu4+')'):$dum
+    write('file',$menu4,'"" ""')
+
+    $i=1
+    repeat
+       exists($adirs[$i],'file','w'):$writable
+       if ($writable) then
+           write('file',$menu3,'"%s" "%s"',$alabels[$i],$adirs[$i])
+       endif
+       $i=$i+1
+    until $i > $atot
+    shell('(sort '+$menu3+' -o '+$menu3+'_sort; mv '+$menu3+'_sort '+$menu3+')'):$dum
+    write('file',$menu3,'"" ""')
+
+    if (probeiden) then
+        $probeid_probes=systemdir+'/probeid/cache'
+        shell('(cd '+$probeid_probes+'; /bin/ls -1 | grep -v -E \'^null$\' | awk \'{ printf "\\"%s\\" \\"%s\\"\\n", $0, $0 }\') > '+$menu5):$ok
+	shell('(sort '+$menu5+' -o '+$menu5+'_sort; mv '+$menu5+'_sort '+$menu5+')'):$dum
+    endif
+    write('file',$menu5,'"Probe without ID" "nOprObEId"')
+    shell('(cat '+$menu5+' | wc -l)'):$ids
+    if ($ids<2) then shell('rm -f '+$menu5):$dum endif
+
+    exists('ProbeStyleList','adm/walkupadm'):$ex,$path
+    $s1='' $s2='' $tot=0
+    if $ex then
+	readfile($path,'$s1','$s2','','local'):$tot
+    endif
+    if not $tot then
+	$s1='one','id','hcn','db','cold'
+	$s2='st12 lohi-fine 20 ;OneNMR'
+	$s2=$s2,'st12 lohi-fine 18 ;Indirect detection'
+	$s2=$s2,'st1 high-fine 18 ;Triple resonance (HCN)'
+	$s2=$s2,'st12 lohi-fine 18 ;Dual broadband'
+	$s2=$s2,'st12 high-fine 17 ;Cold'
+	$tot=size('$s1')
+    endif
+    $i=1
+    repeat
+	substr($s2[$i],'wc','delimiter',';'):$ret
+	substr($s2[$i],$ret,'delimiter',';'):$s3
+	write('file',$menu6,'"%s" "%s"',$s3,$s1[$i])
+	$i=$i+1
+    until $i > $tot
+    write('file',$menu6,'"" ""')
+
+//  Menu widgets are written
+//    vnmrjcmd('pnew','ProbeAttr','probe')
+    vnmrjcmd('pnew','ProbeAttrRef','probe')
+    if ($1='init') then
+	ProbeEdit('cleanup')
+    	vnmrjcmd('popup','mode:modeless','file:ProbePopup.xml','location:controlPanel','pnewupdate:true','rebuild:yes','close:'+$0+'(`close`)','title:Probe')
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='close') THEN
+    ProbeAttr[1]=''
+    return
+ENDIF
+
+IF ($1='getProbePath') THEN
+
+    if ($# < 2) then $2=probe endif
+    if ($# < 3) then $3='' endif
+    $pex=0 $rw=0 $ppath=''
+    getProbePath($2,$3):$pex,$ppath,$rw
+    return($pex,$ppath,$rw)
+
+ENDIF
+"************************************************************************"
+IF ($1='setProbe') THEN
+    probe=$2
+    ProbeAttr[5]=''
+    getparam('defaultshims','Probe'):ProbeAttr[5]
+    vnmrjcmd('pnew','ProbeAttrRef')
+    return
+ENDIF
+"************************************************************************"
+IF ($1='loadShims') THEN
+    expactive('current'):$active
+    if ($active=0) then
+	rts(ProbeAttr[5])
+	setallshims
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='ok2edit') THEN
+    if ($# < 2) then
+	$2=probe
+    endif
+    if ($2='') then return(0) endif
+    operights('candocalibrations'):$ok
+    if ($ok) then
+	ProbePopup('getProbePath',$2):$e,$ppath,$ok
+    endif
+    return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='ok2calibrate') THEN
+    if ($# < 2) then
+        $2=probe
+    endif
+    if ($2='') then return(0) endif
+    operights('candocalibrations'):$ok
+    if ($ok) then
+        ProbePopup('getProbePath',$2):$e,$ppath,$ok
+    endif
+    return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='calibrate') THEN
+    if (probeidattr[1]='native') then probeidez('getTargets') endif
+    macro=''
+    vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:calibrate.xml', 'location:topMenuBar','help:/vnmr/jhelp/dialog/calibrate.html', 'title:Calibrate Probe')
+ENDIF
+"************************************************************************"
+IF ($1='ok2show') THEN
+    if ($# < 2) then
+        $2=probe
+    endif
+    if ($2='') then return(0) endif
+    ProbePopup('getProbePath',$2):$e,$ppath,$ok
+    return($e)
+ENDIF
+"************************************************************************"
+IF ($1='getID') THEN
+    $id=''
+    if ($# < 2) then 
+	$2=probe
+    endif
+    if ($2='') then return($id) endif
+    ProbePopup('getProbePath',$2):$e,$ppath,$ok
+    if ($e) then
+	$s1='' $s2=''
+	readfile($ppath,'$s1','$s2','ID','local')
+	teststr('$s1','ID:','local'):$ok
+	if ($ok) then $id=$s2[$ok] endif
+    endif
+    return($id)
+ENDIF
+"************************************************************************"
+IF ($1='ok2delete') THEN
+    if ($# < 2) then
+        $2=probe
+    endif
+    if ($2='') then return(0) endif
+    operights('candocalibrations'):$ok
+    if ($ok) then
+        ProbePopup('getProbePath',$2):$e,$ppath,$ok
+    endif
+    return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='ok2create') THEN
+    if (ProbeAttr[4]<>'make') then return(0) endif
+    operights('candocalibrations'):$ok
+    return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='ok2copy') THEN
+    if (ProbeAttr[4]<>'copy') then return(0) endif
+    operights('candocalibrations'):$ok
+    return($ok)
+ENDIF
+"************************************************************************"
+IF ($1='evalNewName') THEN
+    probeidez('native'):$probeidez
+    $appdir=ProbeAttr[6]
+    if ($appdir='') then $appdir=userdir endif
+    getappdirs:$atot,$adirs,$alabels
+    teststr('$adirs',$appdir,'local'):$ret
+    if ($2='') then 
+	ProbeAttr[3]=''
+	ProbeAttr[4]='none'
+	vnmrjcmd('pnew','ProbeAttrRef')
+	return($2)
+    endif
+    getfilepath($2,'probes/'+$2):$ok,$ppath
+    if ($ok=0) then
+	ProbeAttr[3]=''
+        if $probeidez then ProbeAttr[8]=probeid else ProbeAttr[8]='nOprObEId' endif
+        if ProbeAttr[8]='' then ProbeAttr[8]='nOprObEId' endif
+	if ProbeAttr[8]<>'nOprObEId' then
+		// The style must come from probeID when it is ready
+		//  Include a section to derive style value from the ID here
+		//  and put it in ProbeAttr[9]
+	    ProbeAttr[9]=ProbeAttr[9]
+	endif
+        if ProbeAttr[9]='' then ProbeAttr[9]='one' endif
+	ProbeAttr[4]='make'
+	vnmrjcmd('pnew','ProbeAttrRef')
+	return($2)
+    endif
+    $id=''
+    ProbePopup('getID',$ppath):$id
+    if ($id='') then $id='nOprObEId' endif
+    ProbeAttr[8]=$id
+    ProbeAttr[9]='one'
+
+    if ProbeAttr[8]<>'nOprObEId' then
+		// The style must come from probeID when it is ready
+		//  Include a section to derive style value from the ID here
+		//  and put it in ProbeAttr[9]
+        ProbeAttr[9]=ProbeAttr[9]
+    else
+	getparam('style','Probe',$ppath):ProbeAttr[9]
+    endif
+
+    strstr($ppath,'/probes/'):$ok,$s1
+    teststr('$adirs',$s1,'local'):$ret
+    if ($adirs[$ret]=$appdir) then
+	ProbeAttr[4]='none'
+    else
+	ProbeAttr[4]='copy'
+    endif
+    ProbeAttr[3]=$2+' exists in '+$alabels[$ret]
+    vnmrjcmd('pnew','ProbeAttrRef')
+    return($2)
+ENDIF
+"************************************************************************"
+IF ($1='editProbe') OR ($1='showProbe') THEN
+    if ($1='editProbe') then ProbeAttr[7]='edit'
+    else ProbeAttr[7]='show' endif
+    if ($# < 2) then $2=ProbeAttr[1] endif
+    ProbeEdit($2)
+    vnmrjcmd('pnew','ProbeAttrRef')
+    return
+ENDIF
+"************************************************************************"
+IF ($1='editshowCurrentProbe') THEN
+    ProbePopup('getProbePath'):$e,$path,$ok
+    if ($e=0) then return endif
+    if ($ok) then
+	ProbePopup('editProbe',$path)
+    else
+	ProbePopup('showProbe',$path)
+    endif
+ENDIF
+"************************************************************************"
+IF ($1='deleteProbe') THEN
+    $path=$2
+    exists($path,'file'):$ok
+    if ($ok) then
+	$date=''
+	shell('date +%Y-%m-%d-%H%M%S'):$date
+	shell('mv '+$path+' '+$path+'.'+$date):$dum
+	write('line3','%s successfully removed',$path)
+	ProbePopup('refresh')
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='makeProbe') or ($1='copyProbe') THEN
+    if ($# < 3) then $3=ProbeAttr[6] endif
+    if $3='' then $3=userdir endif
+
+    substr($2,'basename'):$2
+    $arg3='' $arg4=''
+    if ($1='copyProbe') then
+	ProbePopup('getProbePath',$2):$e,$arg3
+	if ($e=0) then $arg3='' endif
+    else
+	if (ProbeAttr[8]<>'nOprObEId') then $arg4=ProbeAttr[8] endif
+    endif
+    ProbePopup('AddProbe',$2,$3,$arg3,$arg4):$ret
+    if ($ret) then
+       ProbePopup('refresh')
+    endif
+    return
+ENDIF
+"************************************************************************"
+IF ($1='AddProbe') THEN
+
+//   Arg2 is the probe file name
+//   Arg3 is an appdir path (optional)
+//   Arg4 is an existing probepath (this would mean copy)
+//   Arg5 is the probeid to create the file via probeidez
+// Usage:  ProbePopup('AddProbe',probename, <<destination appdir>,existingProbeFilePath,ProbeID>)
+//	The default value of arg3 is userdir
+
+    if ($# < 3) then $3=userdir endif
+    if ($3='') then $3=userdir endif
+    if ($#<4) then $4='' endif
+    if ($# < 5) then $5='' endif
+    $pname=$2
+    $whereto=$3
+    $wherefrom=$4
+    $pid=$5
+    $ppath=''
+    addprobe($pname,$whereto,$wherefrom,$pid):$ret,$ppath
+		// If this is a new probe set certain parameters
+    if $ret and $wherefrom='' and ProbeAttr[9]<>'' then
+	$style=ProbeAttr[9]
+	addparams('style',$style,'Probe',$ppath)
+    	exists('ProbeStyleList','adm/walkupadm'):$ex,$path
+        $s1='' $s2='' $tot=0
+    	if $ex then
+            readfile($path,'$s1','$s2',$style,'local'):$tot
+	    lookup('mfile',$path,'readline',1):$header
+    	endif
+        if not $tot then
+            $s2='st12','20'
+	    $header='wtune','rfsize'
+	else
+		// get rid of leading # from the header
+	    substr($header,1,'delimiter','#'):$header
+		// get rid of the tailing Description
+	    substr($header,1,'delimiter',';'):$header
+	    string2array($header):$header
+	    $header[1]='' array2array($header):$header
+	    substr($s2,1,'delimiter',';'):$s2
+	    string2array($s2):$s2
+	endif
+	$tot=size('$header')
+	if $header[1]='' then $tot=0 endif
+	$i=1
+	while $i <=$tot do
+	    addparams($header[$i],$s2[$i],'Probe',$ppath)
+	    $i=$i+1
+	endwhile
+    endif
+    return($ret)
+
+ENDIF

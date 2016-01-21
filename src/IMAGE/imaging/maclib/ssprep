@@ -1,0 +1,643 @@
+"macro ssprep"
+" Ancestry: setup        8.2 9/29/93   Spectroscopy Imaging Systems"
+"**********************************************************************"
+" ssprep                                                               "
+"                                                                      "
+" Macro to do the following general setup for an experiment:           "
+"   1. Set up RF power levels for all pulses on plist                  "
+"   2. Set up slice gradient levels for imaging                        "
+"   3. Set up gradient levels for voxel selection                      "
+"   Note: Similar to imprep but gro and gpe are not calculated         "
+"                                                                      "
+"**********************************************************************"
+
+"** Initialize variables ********************************************"
+$prog='imprep: '                                        "*Program ID*"
+
+ln(10.0):$ln10                                "*log to ln conversion*"
+$small=1e-6                                      "*rounding constant*"
+$big=1e6                                              "*large number*"
+
+" Create B0 parameter if nonexistent "
+exists('B0','parameter','current'):$ex
+if ($ex < 1) then
+  create('B0','real','current')
+endif
+$protongamma = 234.94   "Gauss/MHz"
+B0 = $protongamma*h1freq
+
+$gamma=(sfrq*1e6/B0)                           "*nuclear gamma factor"
+$mm_cm=0.1                              "*millimeters to centimeters*"
+$cm_mm=10.0                             "*centimeters to millimeters*"
+$us_s=1e-6                                  "microseconds to seconds*"
+
+"*BEGIN: Detect Parameter Set Problems*******************************"
+"       The correspondence between plist, patlist, pwrlist,          "
+"       fliplist & sslist could be wrong; check it and stop setup    "
+"       if it is wrong.                                              "
+
+"       The gradient calibration values gmax and trise could be   "
+"       set to zero. This is not allowed.                            "
+"********************************************************************"
+
+"*Plist Problem************************************"
+$str='plist','patlist','pwrlist','fliplist','sslist'
+
+$k=2 $klim = size('$str')
+$listsize[1] = size($str[1])
+repeat
+  $listsize[$k]=size($str[$k])
+  if ($listsize[$k] <> $listsize[1]) then
+    $mess='Mismatch in dimensions of pulse list parameters'
+    write('error','%s',$prog+$mess)
+    abort
+  endif
+$k=$k+1
+until ($k > $klim)
+
+
+"*Check gcoil against sysgcoil *****************"
+if (gcoil <> sysgcoil) then
+  if (sysgcoil = '') then
+    write('error','The system gradient coil (sysgcoil) has not been configured.')
+    abort
+  endif
+  gcoil = sysgcoil
+  write('error',$prog+'ADVISORY: gcoil has been updated to `'+gcoil+'`.')
+endif
+
+"*Gradient Calibration Failure******************"
+if (gmax <= 0.0) or (trise <= 0.0) then
+  if (trise > 0.0) then
+    write('error','Gradient calibration parameter gmax (%f) must be greater than zero',gmax)
+  else
+    $mess='Gradient calibration parameters (gmax and trise) cannot be less than zero'
+    write('error','%s',$prog+$mess)
+  endif
+  abort
+endif
+
+"*Detect And Clear flash_converted**************"
+exists('flash_converted','parameter'):$ex1
+if ($ex1 > 0.5) then 
+  setloop
+endif
+
+
+
+"*BEGIN:Obtain RF Pulse Template Data********************************"
+"       The RF templates specified in the parameter patlist have     "
+"       meta data in their file headers. Read this data into the     "
+"       arrays for use in setting RF power levels and setting        "
+"       slice & voxel selection gradient levels.                     "
+
+"       NOTE: Both system & user shapelib are searched             "
+"********************************************************************"
+
+$k=1 $klim=size('patlist')
+repeat 
+        "*Locate Current RF Pattern*****************"
+        $usrpat=userdir+'/shapelib/'+{patlist[$k]}+'.RF'
+        $syspat=systemdir+'/shapelib/'+{patlist[$k]}+'.RF'
+        exists($usrpat,'file'):$ex1
+        exists($syspat,'file'):$ex2
+
+        if ($ex1 > 0.5)
+        then    $file=$usrpat
+        else
+                if ($ex2 > 0.5)
+                then    $file=$syspat
+                else    $file='nofile'
+                endif
+        endif
+
+
+        "*Check Format Of RF Pattern***************"
+        $words=0
+        if ($file <> 'nofile')
+        then
+                lookup('file',$file,'count','TYPE'):$count
+                $words=$words+$count
+                lookup('file',$file,'count','MODULATION'):$count
+                $words=$words+$count
+                lookup('file',$file,'count','EXCITEWIDTH'):$count
+                $words=$words+$count
+                lookup('file',$file,'count','INVERTWIDTH'):$count
+                $words=$words+$count
+                lookup('file',$file,'count','INTEGRAL'):$count
+                $words=$words+$count
+        endif
+
+        "*Read Meta Data From RF Template*********"
+        if ($words < 4.5) or ($words > 5.5)
+        then 
+                $type[$k]='no'
+                $mod[$k]='values'
+                $ebw[$k]=-1
+                $ibw[$k]=-1
+                $ff[$k]=-1
+        else
+                lookup('file',$file,'seek','TYPE','read',1):$type[$k]
+                lookup('file',$file,'seek','MODULATION','read',1):$mod[$k]
+                lookup('file',$file,'seek','EXCITEWIDTH','read',1):$ebw[$k]
+                lookup('file',$file,'seek','INVERTWIDTH','read',1):$ibw[$k]
+                lookup('file',$file,'seek','INTEGRAL','read',1):$ff[$k]
+        endif
+
+
+$k=$k+1
+until ($k > $klim) 
+
+"*END:Obtain RF Pulse Template Data*********************************"
+
+
+
+"BEGIN: Get RF Pulse Calibration Data*********************************"
+"       The rfcoil parameter contains the name of the current RF      "
+"       calibration. This calibration will be located in a database   "
+"       file called pulsecal. Read in the calibration data for use    "
+"       in setting RF power levels                                    "
+
+"       NOTE: Both system & user directories are searched             "
+"*********************************************************************"
+
+"*Locate Pulsecal Database File****"
+$usr=userdir+'/pulsecal'
+$sys=systemdir+'/pulsecal'
+exists($usr,'file'):$ex1
+exists($sys,'file'):$ex2
+
+if ($ex1 > 0.5)
+then $file=$usr
+else
+        if ($ex2 > 0.5)
+        then $file=$sys
+        else $file='nofile'
+        endif
+endif
+
+
+"*Read In RF Calibration Data******"
+$calarea=1
+
+if (rfcoil = '') then
+    write('error','Please set rfcoil parameter.  Setup aborted.')
+    abort
+endif
+
+if ($file='nofile')
+then
+        write('error','Pulsecal database file not found.  Setup aborted.')
+	abort
+else
+        $count=0.0
+        lookup('file',$file,'count',rfcoil):$count
+        
+        if ($count > 0.5)
+        then
+                lookup('file',$file,'seek',rfcoil,'read',3):$i,$j,$k
+                $calpw=$i
+                $calflip=$j
+                $calpwr=$k
+        else
+    $mes = 'rfcoil entry \''+rfcoil+'\' not found in pulsecal.  Setup aborted.'
+          write('error',$prog+$mes)
+	  abort
+        endif
+endif
+
+
+"*Check Calibration Data For Problems******"
+if ($calpw <= 0.0) or ($calflip <= 0.0)
+then
+        write('error','%s',$prog+'RF pulse calibration cannot be used')
+        abort
+endif
+
+"END: Get RF Pulse Calibration Data***********************************"
+
+
+
+"*BEGIN:Algorithm For Setting RF Power Levels************************"
+"       For each RF pulse defined in the lists plist, patlist,       "
+"       pwrlist, calculate the RF power level required to obtain     "
+"       the flip angle defined in fliplist.                          "
+"********************************************************************"
+
+$k=1 $klim=size('plist')
+repeat
+        $error='no'
+
+        "*Check The Return Values: type & mod****"
+        if ($type[$k]='no') and ($mod[$k]='values')
+        then 
+                $error='yes' 
+        endif
+
+
+        "*CASES I & II****************************" 
+        "  selective or nonselective amplitude    "
+        "  modulated pulses                       "
+        "*****************************************"
+        if  ($mod[$k]='amplitude') and ($error='no')
+        then
+                if ($ff[$k] > 0)
+                then
+                        $x1=(fliplist[$k]/$calflip)
+                        $x1=$x1*($calpw/{plist[$k]})*($calarea/$ff[$k]) 
+                        ln($x1):$x2
+                        $pwr=$calpwr+20*$x2/$ln10
+                else    
+                        $error='yes'
+                endif
+        endif     
+
+
+        "*CASES III & IV***************************" 
+        " selective or nonselective adiabatic      "
+        " pulses                                   "
+        "******************************************" 
+        if ($mod[$k]='adiabatic') and ($error='no')
+        then
+                if ($ff[$k] < 0.0)
+                then    $pwr=$calpwr
+                else
+                        $x1=($calpw/{plist[$k]})*($calarea/$ff[$k])
+                        ln($x1):$x2
+                        $pwr=$calpwr+20*$x2/$ln10
+                endif
+        endif
+
+
+        "CASES V & VI*******************************" 
+        " selective or nonselective phase modulated "
+        " pulses. These are not supported yet       "
+        "*******************************************"
+        if ($mod[$k]='phase')
+        then 
+                $error='yes' 
+        endif
+
+
+        "*Set Parameters****************************"
+        if ($error='no')
+        then    {pwrlist[$k]}=$pwr
+                $str=''
+                format($pwr,3,0):$str
+                $mess=pwrlist[$k]+' set to '+$str+' units'
+                "echo($mess)"
+        else
+                $mess=pwrlist[$k]+' could not be set'
+                echo($mess)     
+        endif           
+
+$k=$k+1
+until ($k > $klim)
+
+"*END:Algorithm For Setting RF Power Levels**************************"
+
+
+"*BEGIN: Identify Which Selection Gradients Are Used******************"
+"       Scan the selection gradient list parameter sslist and         "
+"       which of the standard selection gradients are used.           "
+"       Create a pair of lists: gradient & thickness with the names   "
+"       of the parameters to be used by the selection gradient        "
+"       set up algorithm.                                             "
+"*********************************************************************"
+$used='no','no','no','no'
+
+$k=1 $klim=size('sslist')
+repeat
+        if (sslist[$k]='gss')   then $used[1]='gss'   endif
+        if (sslist[$k]='gvox1') then $used[2]='gvox1' endif
+        if (sslist[$k]='gvox2') then $used[3]='gvox2' endif
+        if (sslist[$k]='gvox3') then $used[4]='gvox3' endif
+$k=$k+1
+until ($k > $klim)
+
+$gradient=''
+
+$k=1 $j=1 $klim=size('$used')
+repeat
+        if ($used[$k] <> 'no')
+        then
+                $gradient[$j]=$used[$k]
+                $j=$j+1
+        endif
+$k=$k+1
+until ($k > $klim)
+
+$thickness=''
+
+$k=1 $klim=size('$gradient')
+repeat
+        if ($gradient[$k]='gss')   then $thickness[$k]='thk'  endif
+        if ($gradient[$k]='gvox1') then $thickness[$k]='vox1' endif
+        if ($gradient[$k]='gvox2') then $thickness[$k]='vox2' endif
+        if ($gradient[$k]='gvox3') then $thickness[$k]='vox3' endif
+$k=$k+1
+until ($k > $klim)
+
+if ($gradient='') and ($thickness='')
+then
+    write('line3','Setup complete')
+    abort
+endif
+
+"*END: Identify Which Selection Gradients Are Used********************"
+
+
+
+"*BEGIN:Identify The RF Pulses Used With Each Gradient*****************"
+"       For each gradient on the gradient set up list ($gradient)      "
+"       find the indices of the corresponding RF pulses conjugate      "
+"       to that gradient.                                              "
+
+"       NOTE: the expression ${$gradient[$k]+'index'} evaluates to     "
+"             $gssindex, $gvox1index etc. These variables hold the     "
+"             indices of the RF pulses on plist, patlist etc.          "
+"**********************************************************************"
+$k=1 $klim=size('$gradient')
+repeat
+        $i=1 
+        $j=1 $jlim=size('sslist')
+        repeat
+                if ($gradient[$k]=sslist[$j])
+                then
+                        ${$gradient[$k]+'index'}[$i]=$j
+                        $i=$i+1
+                endif
+
+        $j=$j+1
+        until ($j > $jlim)
+$k=$k+1
+until ($k > $klim)
+
+"*END:Identify The RF Pulses Used With Each Gradient*******************"
+
+
+"*BEGIN: Algorithm To Find Limiting Pulse Bandwidth For Each Gradient**"
+"       Assemble lists of pulse banwidth values for each gradient      "
+"       that must be set. Search these lists for the minimum.          "
+
+"       NOTE: The expression ${$gradient[$k]+'bw'}[$j] evaluates       "
+"             to $gssbw[1], $gssbw[2] ... $gvox1bw[1] .... etc         "
+"             and allows the index $i to be converted into a           "
+"             bandwidth parameter for each pulse index correlated      "
+"             with a given gradient.                                   "
+
+"       NOTE: ${$bw} is a shorthand form of ${$gradient[$k]+'bw'}      "
+"             $i is a shorthand for the index of the pulse in plist    "
+"             given by the expression ${$gradient[$k]+'index'}[$j]     "
+
+"**********************************************************************"
+
+$k=1 $klim=size('$gradient')
+repeat
+
+        $j=1 $jlim=size('$'+$gradient[$k]+'index')
+        repeat
+                $i=${$gradient[$k]+'index'}[$j]
+                $bw=$gradient[$k]+'bw'
+        
+                if ($type[$i]='no') or ($type[$i]='nonselective')
+                then
+                        ${$bw}[$j]=$big
+                else
+                        if ($ebw[$i] <= 0) and ($ibw[$i] <= 0)
+                        then
+                                ${$bw}[$j]=$big
+                        endif
+
+                        if ($ebw[$i] > 0) and ($ibw[$i] <= 0)
+                        then
+                                $pulse={plist[$i]}*$us_s
+                                
+                                if ($pulse <> 0)
+                                then    ${$bw}[$j]=$ebw[$i]/$pulse
+                                else    ${$bw}[$j]=$big
+                                endif
+                        endif
+
+                        if ($ebw[$i] <= 0) and ($ibw[$i] > 0)
+                        then
+                                $pulse={plist[$i]}*$us_s
+                                
+                                if ($pulse <> 0)
+                                then    ${$bw}[$j]=$ibw[$i]/$pulse
+                                else    ${$bw}[$j]=$big
+                                endif
+                        endif
+
+                        if ($ebw[$i] > 0) and ($ibw[$i] > 0)
+                        then
+                                $pulse={plist[$i]}*$us_s
+
+                                if (fliplist[$i] > 135) and (fliplist[$i] < 225)
+                                then    $ew=$ibw[$i]
+                                else    $ew=$ebw[$i]
+                                endif
+                                
+                                if ($pulse <> 0)
+                                then    ${$bw}[$j]=$ew/$pulse
+                                else    ${$bw}[$j]=$big
+                                endif
+                        endif
+                
+                endif
+        
+        $j=$j+1
+        until ($j > $jlim)
+
+$k=$k+1
+until ($k > $klim)
+
+
+
+"*Search Bandwidth Lists For Each Gradient For A Minimum**"
+$k=1 $klim=size('$gradient')
+repeat
+        $bw=$gradient[$k]+'bw'
+        $minbw[$k]=$big
+
+        $j=1 $jlim=size('$'+$gradient[$k]+'index')
+        repeat
+                if (${$bw}[$j] < $minbw[$k])
+                then
+                        $minbw[$k]=${$bw}[$j]
+                endif
+        $j=$j+1
+        until ($j > $jlim)
+
+$k=$k+1
+until ($k > $klim)
+
+"*END: Algorithm To Find Limiting Pulse Bandwidth For Each Gradient****"
+
+
+
+"*BEGIN: Determine Slice Select Gradient Strengths*******************"
+"  The slice thickness parameter and conjugate gradient level are    "
+"  related by the minimum RF bandwidth found above. Calculate an     "
+"  array of conjugate  gradient values for an array of thickness     "
+"********************************************************************"
+$k=1 $klim=size('$gradient')
+repeat
+        {$gradient[$k]}=0
+        $error='no'
+
+        $j=1 $jlim=size($thickness[$k])
+        repeat
+                if ({$thickness[$k]}[$j] > 0.0) and ($error='no')
+                then
+                        if ($minbw[$k] >= $big-1)
+                        then    $error='yes'
+                        else
+                                $thk={$thickness[$k]}[$j]*$mm_cm
+                                $grad=$minbw[$k]/($gamma*$thk)
+
+                                if ($grad > gmax)
+                                then
+                                        $mess='Thickness too small'
+                                        write('error','%s',$prog+$mess)
+
+                                        $thk= $cm_mm*$minbw[$k]/($gamma*gmax)
+                                        {$thickness[$k]}[$j]=$thk
+                                        {$gradient[$k]}[$j]=gmax
+                                else
+                                        {$gradient[$k]}[$j]=$grad
+                                endif
+                        endif
+                else
+                        $error='yes'
+                endif
+
+        $j=$j+1
+        until ($j > $jlim)
+
+
+        "*Make A Report***************************"
+        if ($error='no')
+        then
+                if ($jlim > 1)
+                then    echo($gradient[$k]+' set as an array')
+                else
+                        $str='' format({$gradient[$k]},6,3):$str
+                        "echo($gradient[$k]+' set to '+$str+' G/cm')"
+                endif
+        else
+                echo($gradient[$k]+' could not be set')
+        endif
+
+$k=$k+1
+until ($k > $klim)
+
+"*END: Determine Slice Select Gradient Strengths*********************"
+
+
+
+"*BEGIN:Set Up Array For Multiple Voxels*********************************"
+"       If the user has chosen to acquire multiple voxels then           "
+"       the array parameter needs to be set to accomodate this           "
+"************************************************************************"
+$voxelset='no'
+$k=1 $klim=size('$gradient') 
+repeat
+        if ($gradient[$k]='gvox1') or ($gradient[$k]='gvox2')
+        then $voxelset='yes' endif
+
+        if ($gradient[$k]='gvox3')
+        then $voxelset='yes' endif
+$k=$k+1
+until ($k > $klim)
+
+
+
+if ($voxelset='yes')
+then 
+        "*Build Up The Array Parameter Value******"
+        $array='('
+        $mistake='no'
+        
+        $k=1    $klim=3 
+        repeat
+                $str=''
+                format($k,1,0):$str
+        
+                $grd='gvox'+$str  $pos='pos'+$str   $vox='vox'+$str
+                $sizeG=size($grd) $sizeP=size($pos) $sizeV=size($vox)
+        
+                if ($sizeV <> $sizeP)
+                then
+                        if ($sizeV > 1) and ($sizeP > 1) 
+                        then $mistake=$str endif
+                
+                        if ($sizeV > $sizeP)
+                        then $dim[$k]=$sizeV
+                        else $dim[$k]=$sizeP
+                        endif
+                else 
+                        $dim[$k]=$sizeV
+                endif
+
+                if ($sizeG > 1) then $array=$array+$grd+',' endif
+                if ($sizeP > 1) then $array=$array+$pos+',' endif
+                if ($sizeV > 1) then $array=$array+$vox+',' endif
+
+        $k=$k+1
+        until ($k > $klim)
+
+
+        "*Report Problems***************************************"
+        $fault='no'
+        $k=1 $klim=3 
+        repeat
+                $j=1 $jlim=3
+                repeat
+                        if ($dim[$k] > 1) and ($dim[$j] > 1) 
+                        then
+                                if ($dim[$k] <> $dim[$j])
+                                then $fault='yes' endif
+                        endif
+                $j=$j+1
+                until ($j > $jlim)
+        $k=$k+1
+        until ($k > $klim)
+        
+        if ($mistake <> 'no')
+        then
+                $message='Mistake in vox'+$str+' & pos'+$str+' arrays'
+                write('error','%s',$prog+$message)
+        endif
+
+        if ($fault='yes')
+        then
+                $message='Array dimensions, not suitable for diagonal arrays'
+                write('error','%s',$prog+$message)
+        endif
+
+
+
+        "*Terminate & Set Array Parameter***********"
+        if ($mistake ='no') and ($fault='no')
+        then
+                length($array):$len
+                if ($len > 1)
+                then
+                        $array1=''
+                        substr($array,1,$len-1):$array1
+                        $array1=$array1+')'
+                        array=$array1
+                endif
+
+                length(array):$len
+                if ($len > 1)
+                then
+                        echo('array set to '+array)
+                endif
+        endif
+
+endif
+
+write('line3','Setup complete')
+"*END:Set Up Array For Multiple Voxels*********************************"

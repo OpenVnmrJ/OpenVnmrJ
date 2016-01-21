@@ -1,0 +1,75 @@
+"macro diffarray"
+"*********************************************************************"
+"                                                                     "
+" diffarray: Macro to save/set diffusion arrays and settings          "
+"                                                                     "
+"            diffarray('save') saves arrays and settings              "
+"            diffarray('set')  restores arrays and settings           "
+"                                                                     "
+"            Arrays and settings are stored in parameters that have   "
+"            the suffix 'Save' appended to them                       "
+"                                                                     "
+"*********************************************************************"
+
+"Default option"
+$action = 'set'
+
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action = 'save') then
+
+  "Create *Save parameters (if required)"
+  create('droSave','real','current',0) setprotect('droSave','on',256)
+  create('dpeSave','real','current',0) setprotect('dpeSave','on',256)
+  create('dslSave','real','current',0) setprotect('dslSave','on',256)
+  create('nbvalSave','real','current',0)
+  create('nbzeroSave','real','current',0)
+  create('nbdirsSave','real','current',0)
+
+  "Set *Save parameters"
+  droSave=dro dpeSave=dpe dslSave=dsl
+  nbvalSave=nbval
+  nbzeroSave=nbzero
+  nbdirsSave=nbdirs
+
+endif
+
+if ($action = 'set') then
+
+  "seprep sets appropriate te from te1 for spin echo preparation"
+  "seprep requires parameter te1 to exist"
+  seprep
+
+  exists('droSave','parameter'):$e1
+  exists('dpeSave','parameter'):$e2
+  exists('dpeSave','parameter'):$e3
+  $e=$e1+$e2+$e3
+
+  if ($e=3) then
+
+    "Turn _dro, _dpe and _dsl off to eliminate set_gf_array errors"
+    setprotect('dro','off',8)
+    setprotect('dpe','off',8)
+    setprotect('dsl','off',8)
+
+    dro=droSave dpe=dpeSave dsl=dslSave
+
+    "Turn _dro, _dpe and _dsl back on"
+    setprotect('dro','on',8)
+    setprotect('dpe','on',8)
+    setprotect('dsl','on',8)
+
+    set_gf_array
+
+  endif
+
+  exists('nbvalSave','parameter'):$e
+  if ($e=1) then nbval=nbvalSave endif
+  exists('nbzeroSave','parameter'):$e
+  if ($e=1) then nbzero=nbzeroSave endif
+  exists('nbdirsSave','parameter'):$e
+  if ($e=1) then nbdirs=nbdirsSave endif
+
+endif

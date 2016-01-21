@@ -1,0 +1,33 @@
+"macro p11write"
+if($# < 0.5) then return endif
+isFDAsystem:$e
+if($e < 0.5) then return endif
+
+substr($1,1,1):$s
+$autosessionpath = userdir + '/persistence/autoSessionAudit.vaudit'
+if($s = '/') then
+   exists($1,'file'):$e
+   if($e > 0.5) then
+      shell('cat "'+$1+'" >> "' +$autosessionpath+'"'):$x
+   endif
+elseif($1 = 'savesession') then
+   $sessionpath = userdir + '/persistence/SessionAudit.vaudit'
+   exists($autosessionpath,'file'):$e
+   if($e > 0.5) then
+      shell('cat "'+$autosessionpath+'" >> "' +$sessionpath+'"'):$x
+      rm('-rf',$autosessionpath):$x
+   endif
+else
+   $date = ''
+   shell('date +D%Y-%m-%dT%H:%M:%S'):$date
+   if($# > 1.5) then $cmd = $2 else $cmd = 'xmsubmit' endif
+   $line = $date+' audit: '+$cmd+' '+$cmd
+   shell('echo '+$line+' >> "' +$autosessionpath+'"'):$x
+   $line = '           orig path: '+$1
+   shell('echo '+$line+' >> "' +$autosessionpath+'"'):$x
+
+   strstr(autodir,'/','last'):$n,$s1,$name
+   svaction('data', svfdir+'/'+$name+'/'+studyid_+'/data', svfname):$dest
+   $line = '           dest path: '+$dest
+   shell('echo '+$line+' >> "' +$autosessionpath+'"'):$x
+endif

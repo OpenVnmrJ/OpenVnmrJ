@@ -1,0 +1,257 @@
+Protocol: AhXX  Sequence: ahXX.c  Apptype: solidseq1d
+
+Description: 
+
+A multifunctional 2D sequence to provide XX correlation, using DARR, 
+C7, rfdr, PAR, PARIS or SPC5. The C7 amd SPC7 can be executed optionally
+with or without a double quantum filter. The F1 period follows HX CP 
+and F2 acquisition follows the XX mixing. Decoupling on dec during F1 and F2
+uses either SPINAL or TPPM and a constant time option is provided. 
+
+Acknowledgement:
+
+Sequence provided by Chad Reinstra UIUC as hXX.c.
+
+Setup:
+
+Load an exisiting dataset or type Settancpx. Type HXX, select 
+the desired options and determine calibrations for the desired
+experiment. 
+
+DecouplingH: Hseq='tppm' or 'spinal'.
+Constant Time: uses tRF
+Mixing: mMix = 'rad','c7','c6','spc5','rfdr','par','paris'
+Double Quantum Mixing (C6,C7 and SPC5) '1' is regular and '2' 
+is double quantum. 
+
+Parameter Groups: 
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be set
+              - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore function: _cp_(hx,phHhx,phXhx); phHhx is the overall phase
+              table for the H channel and phXhx is that for the X channel.
+
+c7X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel during XX mixing. 
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+c6X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel during XX mixing. 
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+spc5X:  Module:  yes
+Sequence:  inad2dspc5.c
+Description:  Implements the SPC5 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXspc5 - amplitude of obs pulses.
+       pwXspc5 - 360-degree flip on obs.
+       qXspc5 - SPC5 cycles represented in the .DEC file.
+       ofXspc5 - overall frequency offset.
+       chXspc5 = 'obs' must be set (not shown).
+Implementation: MPSEQ spc5 = getspc5("spc5X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+mixX:  Module:  no
+Sequence:  tancp2drad.c
+Description:  Implements a mixing delay in sequences where mixing occurs
+              among the obs nuclei. CW decoupling is allowed on DEC.
+              Typically used for DARR (RAD) mixing periods where decoupling
+              at a field strength of srate/2.0 enhances obs spin diffusion.
+Parameters:  Sequence Page
+       tXmix - the mixing delay time. The delay may or may not be rotor
+              synchronized, depending on the sequence.
+       aHmix - amplitude of decoupling.
+
+rfdrX:  Module:  yes
+Sequence:  rocsa2d.c
+Description:  Implements RFDR with a single pi pulse per rotor period
+              and an XY8 phase cycle.
+Parameters:  Sequence Page
+       aXrfdr - amplitude of obs pulses.
+       pwXrfdr - 180-degree flip on obs.
+       qXrfdr - RFDR cycles represented in the .DEC file.
+       ofXrfdr - overall frequency offset.
+       chXrfdr = 'obs' must be set (not shown).
+Implementation: MPSEQ rfdr = getrfdr("rfdrX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+Yseq:  Module: yes (implementation 2 for SPINAL (2-angle) TPPM and WALTZ) 
+Sequence:  ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec2 channel during acquisition.
+Parameters:   Sequence Page - the Yspinal, Ytppm and other groups
+              overlap.  Yseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec2 = getdseq("Y"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec2 = getdseq2("Y"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec2); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec2); runs dec2prgoff();
+Underscore functions2:  _dseqon2(dec2); runs _tppm(); _spinal2(); or _waltz()
+             _dseqoff(dec2); runs dec2prgoff();
+
+Yspinal:  Module: yes
+Sequence:  ahX.c
+Description:  Implements SPINAL decoupling on the dec2 channel during
+              acquisition. Implements SPINAL2 (2-ANGLE) decoupling with 
+              getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aYspinal - amplitude of the dec2 channel.
+       pwYspinal - approximate 180-degree flip.
+       phYspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phYspinal or (2) is implemented with phases = +/- phYspinal, 
+              +/- (phYspinal + alpYspinal) and +/- (phYspinal + 2.0*alpYspinal).
+       alpYspinal - second angle - set 0.0 for TPPM and phYspinal/2.0
+                     for standard SPINAL64.             
+       chYspinal = 'dec2' must be set (not shown).
+Implementation: SPINAL dec2 = getspinal("Y"); or DSEQ dec2 = getdseq("Y");
+Implementation2: SPINAL2 dec2 = getspinal2s("Y"); or DSEQ dec2 = getdseq2("Y");
+Underscore functions: _spinal(dec2); and dec2prgoff(); or _dseqon(dec2);
+             and _dseqoff(dec2);
+Underscore functions2: _spinal2(dec2); and dec2prgoff(); or _dseqon2(dec2);
+             and _dseqoff2(dec2);
+        
+Ytppm:  Module: yes
+Sequence:  ahX.c
+Description:  Implements TPPM decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aYtppm - amplitude of the dec2 channel.
+       pwYtppm - approximate 180-degree flip angle on resonance.
+       phYtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phYtppm for alternating
+              pulses.
+       chYtppm = 'dec2' must be set (not shown).
+Implementation: TPPM dec2 = gettppm("Y"); or DSEQ dec2 = getdseq("Y");
+Implementation2: DSEQ dec2 = getdseq2("Y");
+Underscore functions: _tppm(dec2); and dec2prgoff(); or _dseqon(dec2); and
+              _dseqoff(dec2);
+Underscore functions2: _dseqon2(dec2); and _dseqoff2(dec2);
+
+Ywaltz:  Module:  yes
+Sequence: ahX.c
+Description:  Implements WALTZ16 decoupling on the dec2 channel during
+              acquisition.
+Parameters:  Sequence Page
+       aYwaltz - amplitude of the dec2 channel.
+       pwYwaltz - 90-degree flip angle on resonance.       
+       chYwaltz = 'dec2' must be set (not shown).
+Implementation: WALTZ dec2 = getwaltz("Y"); or DSEQ dec = getdseq("Y");
+Implementation2: DSEQ dec = getdseq2("Y");
+Underscore functions: _waltz(dec2); and dec2prgoff(); or _dseqon(dec2);
+              and _dseqoff(dec2);
+Underscore functions2: _dseqon2(dec2); and _dseqoff2(dec2);
+
+Hseq:  Module: yes (implementation 2 for SPINAL (2-angle) and TPPM)
+Sequence:  tancpx.c and ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec channel during acquisition.
+Parameters:   Sequence Page - The Hspinal, Htppm and other groups
+              overlap.  Hseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec = getdseq("H"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec = getdseq2("H"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec); runs decprgoff(dec);
+Underscore functions2:  _dseqon2(dec); runs _tppm(); _spinal2() or _waltz();
+             _dseqoff2(dec); runs decprgoff();
+
+Hseq:  Module: yes (implementation 2 for SPINAL (2-angle) and TPPM)
+Sequence:  tancpx.c and ahX.c
+Description:  Chooses SPINAL, SPINAL2, TPPM or WALTZ decoupling on 
+              the dec channel during acquisition.
+Parameters:   Sequence Page - The Hspinal, Htppm and other groups
+              overlap.  Hseq chooses the decoupling sequences TPPM
+              SPINAL, SPINAL2 or WALTZ. 
+Implementation:  DSEQ dec = getdseq("H"); The router implements
+              getspinal(), getspinal2(), gettppm() or getwaltz(), as
+              selected.
+Implementation2: DSEQ dec = getdseq2("H"); The router implements
+              getspinal2s(), gettppm() or getwaltz(), as selected.
+Underscore functions:  _dseqon(dec); runs _tppm(); _spinal(); _spinal2 
+              or _waltz, as selected. dseqoff(dec); runs decprgoff(dec);
+Underscore functions2:  _dseqon2(dec); runs _tppm(); _spinal2() or _waltz();
+             _dseqoff2(dec); runs decprgoff();
+
+Hspinal:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition. Implements SPINAL2 (2-angle) decoupling with 
+              getdseq2() or getspinal2s().
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip.
+       phHspinal - +/- small angle phase. SPINAL64 (1) is implemented
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times
+              phHspinal or (2) is implemented with phases = +/- phHspinal, 
+              +/- (phHspinal + alpHspinal) and +/- (phHspinal + 2.0*alpHspinal).
+       alpHspinal - second angle - set 0.0 for TPPM and phHspinal/2.0
+                     for standard SPINAL64.             
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = getdseq("H");
+Implementation2: SPINAL2 dec = getspinal2s("H"); or DSEQ dec = getdseq2("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+             and _dseqoff(dec);
+Underscore functions2: _spinal2(dec); and decprgoff(); or _dseqon2(dec);
+             and _dseqoff2(dec);
+        
+Htppm:  Module: yes
+Sequence:  tancpx.c and ahX.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating
+              pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Implementation2: DSEQ dec = getdseq2("H");
+Underscore functions: _tppm(dec); and decprgoff(); or _dseqon(dec); and
+              _dseqoff(dec);
+Underscore functions2: _dseqon2(dec); and _dseqoff2(dec);
+

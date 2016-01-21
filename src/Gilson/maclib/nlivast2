@@ -1,0 +1,33 @@
+"macro nlivast2"
+" ******************************************************"
+"nlivast2 - produce a text file containing the integral of the partial regions"
+" ******************************************************"
+$lastwell=96
+numreg:$numregions
+if $#>0 then $refregion=$1 else $refregion=$numregions endif
+$file=curexp+'/integ.out'
+write('reset',$file)
+write('file',$file,'%2d Integral Regions (ppm)',$numregions)
+$index=0
+repeat
+  $index=$index+1
+  getreg($index):$high,$low
+  write('file',$file,'%4d %10.2f %10.2f',$index,$high/sfrq,$low/sfrq)
+until $index >= $numregions
+write('file',$file,'Integral Values')
+sp=-1p wp=10p
+$well=0
+repeat
+  $well=$well+1
+  select($well)
+"  bc  "
+  dc
+  nli
+  $index=0
+  write('file',$file,'Well Number %d',$well)
+  repeat
+  $index=$index+1
+    write('file',$file,'%4d %10.2f',$index,ins*liamp[$index*2]/liamp[$refregion*2])
+  until $index >= $numregions
+until $well = $lastwell
+

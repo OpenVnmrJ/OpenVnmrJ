@@ -1,0 +1,130 @@
+Protocol: Lgcp  Sequence: lgcp.c  Apptype: solidseq1d
+
+Description:
+
+X Lee-Goldburg cross polarization (CP) between protons and X with a
+choice of SPINAL or TPPM decoupling. Used for selective CP with
+suppression of homonuclear dipolar interactions and for setup of Lee-
+Goldburg HETCOR.
+
+Setup:
+
+Load a calibrated data set and select the protocol Lgcp. For a new
+nucleus calibrate CP with Onepul and Tancpx and then select Lgcp.
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file
+onepul describes calibration of decoupling.
+
+Before running Lee-Goldburg CP use Tancpx to calibrate aHhx with a
+known field strength.  This can be done by calibrating CP with aH90 =
+aHhx and then determining pwH90.  The proton field strength is ?B1H =
+1/(4.0*pwH90). Match the Hartmann Hahn condition by varying aXhx as
+needed.  It is helpful to array aXhx and note the positions of the
+intensity maxima.
+
+Select the protocol Lgcp. Set ofHX = ?B1H/sqrt(2) and continue to use
+aHhx from the previous step.  Note that ofHX = - ?B1H/sqrt(2) is
+incorrect relative to the phase cycles of pwH90 and pwHtilt.
+
+Recalibrate the proton excitation pulse pwH90 to the value usually used
+for proton excitation if desired.
+
+After recalibration of pwH90 set pwHtilt = pwH90*35.3/90.0.  Set Shape
+= 'const' and Channel = 'from'. Match the Hartmann-Hahn condition by
+varying aXhx as needed. It is helpful to array aXhx and note the
+positions of the intensity maxima. You will note that the pattern is
+shifted to higher amplitude because of the offset.   Choose one of the
+maxima for CP.
+
+Note: the CP module only allows an offset on the channel selected in
+Channel.  Since this must be 'from' or protons, a ramped amplitude
+cannot be applied to X.  It is possible to use a ramp on protons,
+though that is not a usual practice for Lee-Goldburg CP.
+
+Array the contact time tXhx for the Lee-Goldburg CP. You will find that
+non-protonated X nuclei cross polarize weakly for all contact times and
+that protonated nuclei polarize to their fullest extent with a short
+contact time.
+
+Lee-Goldburg CP cross polarization can only occur through an X-H
+dipolar mechanism and X-H-H three spin CP is suppressed. A long contact
+time however can increase the importance of long range X-H
+interactions. This distinction is important when using Lee Goldburg CP
+for Lee-Goldburg HETCOR. Spin diffusion is suppressed and long distance
+X-H correlations can be recognized.
+
+Note that signal to noise of Lgcp is about 50% of that of Tancpx.
+
+Parameter Groups:
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:  Provides a 90-degree pulse on dec that can be used as a
+              preparation pulse. Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with
+                      chHX.
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown)
+       toHX = 'obs' -  channel with the final polarization (must be set
+              - not shown).
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore functions: _cp_(hx,phHhx,phXhx);
+
+Hseq:  Module:  yes
+Sequence: tancpx.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.
+Parameters: Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+              getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();
+
+Hspinal: Module:  yes
+Sequence:  tancpx.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition.
+Parameters: Sequence Page
+       aHspinal - amplitude of the dec channel.
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description: Implements TPPM decoupling on the dec channel during
+             acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+             with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+             and _dseqoff(dec);
+

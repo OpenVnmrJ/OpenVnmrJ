@@ -1,0 +1,55 @@
+"macro mqf1ref7qs"
+"mqf1ref7qs -  references F1 of 7Q MQMAS spectra for spin"
+"values I = 7/2 and 9/2 using the method of Amoureux etal." 
+
+"The value of 'ratio' is the shearing constant 'k'. B/A = ratio"
+"where A/(A+B) is the 7Q dwell and B/(A+B) is the time during" 
+"the acquisition to refocus the 1Q coherence." 
+
+"scalesw = 1/ABS(mQ - ratio) where mQ = 7. mQ = -7 if ival = |mQ|/2."
+"$mqscale = ABS(mQ - ratio) where mQ = 7. mQ = -7 if ival = |mQ|/2." 
+
+exists('ival','parameter'):$ival
+if ($ival=0) then 
+   create('ival')
+   setgroup('ival','processing')
+   ival=0.5
+endif
+
+exists('scalesw1','parameter'):$scalesw1
+if ($scalesw1=0) then
+   create('scalesw1')
+   setgroup('scalesw1','processing')
+endif
+
+if (ival = 3.5) then     "ratio = 161/45"
+   scalesw1 = 45/476
+   $mqscale = 476/75
+   write('line3','Scaling and Referencing MQMAS f1 axis for Spin 7/2')
+else
+   if (ival = 4.5) then     "ratio = 7/18" 
+      scalesw1 = 18/119
+      $mqscale = 119/18
+      write('line3','Scaling and Referencing MQMAS f1 axis for Spin 9/2')
+   else
+      write('error','Set ival to the correct spin number (3.5 to 4.5).')
+   endif
+endif
+
+rfl=rfl-rfp
+$delta_rfl = rfl - sw/2
+rfp=0.0
+
+exists('refpos','parameter'):$refpos
+if ($refpos>0.0) then 
+   reffrq = sfrq + $delta_rfl/1e6
+   refpos = 0.0
+endif
+
+$delta_rfl1=$delta_rfl*$mqscale
+rfl1 = $delta_rfl1 + sw1/2
+exists('lsfrq1','parameter'):$lsfrq1
+if ($lsfrq1 > 0) then 
+   rfl1 = rfl1 + lsfrq1
+endif
+rfp1 = 0.0

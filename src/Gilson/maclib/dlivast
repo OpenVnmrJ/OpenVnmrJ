@@ -1,0 +1,42 @@
+"macro dlivast"
+" ******************************************************"
+"dlivast(last) "
+"    - produce a text file containing the integral of the partial regions"
+"      processes last wells. Default last=96"
+" ******************************************************"
+
+if $#>0 then $lastwell=$1 else $lastwell=96 endif
+numreg:$numregions
+$file=curexp+'/integ.out'
+write('reset',$file)
+write('file',$file,'%2d Integral Regions (ppm)',$numregions+1)
+$index=0
+repeat
+  $index=$index+1
+  getreg($index):$high,$low
+  if $index=1 then $llow=$low endif
+  write('file',$file,'%4d %10.2f %10.2f',$index,$high/sfrq,$low/sfrq)
+until $index >= $numregions
+write('file',$file,'%4d %10.2f %10.2f',$index+1,$high/sfrq,$llow/sfrq)
+write('file',$file,'Integral Values')
+"sp=-1p wp=10p"
+$well=0
+repeat
+  $well=$well+1
+  select($well)
+  $sum=0
+  bc "dc"
+  dli
+  $index=0
+  write('file',$file,'Well Number %d',$well)
+  repeat
+  $index=$index+1
+  $integ=liamp[$index*2]
+  if $integ<0.0 then $integ=0.0 endif
+  $sum=$sum+$integ
+    write('file',$file,'%4d %10.2f',$index,$integ)
+  until $index >= $numregions
+$sum=$sum-$integ
+  write('file',$file,'%4d %10.2f',$index+1,$sum)
+until $well = $lastwell
+

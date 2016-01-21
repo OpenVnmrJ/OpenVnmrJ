@@ -1,0 +1,51 @@
+"macro BPxmhaha"
+// BP append to xmhaha macro
+// Usage:  BPxmhaha('actionkeyword',arg2-argN)
+
+isCPon:$iscp
+if ($iscp=0) then
+	// This is prevj3 and chempack appdir is OFF
+	// Simply execute the macro
+    exec($2)
+    return
+endif
+
+IF ($1='setupexp') THEN
+	// arg2 - macro to be executed or added to queue
+	// arg3 - (optional) protocol name for automatic dialog option
+	//		arg3 is applicable only in submit mode
+
+    is_submitmode:$submit
+    if ($submit=0) then
+		// Not in submit mode.  Execute macro.
+		// save and recall sampleglobal
+	if ($## < 1) then
+	    write('line3','Executing %s',$2)
+	endif
+	savesampglobal('cp')
+	exec($2)
+"	getsampglobal('cp')"   "uncomment if sampleglobal parameters (including text) are desired"
+	file='exp'
+    else
+		// In submit mode.  Add to SQ
+	if ($# < 3) then $3='' endif
+	if (cppauseflg='y') then show_n_pause('close') endif
+	if (customflag='y') then customizepar('savequit') endif
+	if (seqfil='Submitq') or (seqfil='Startq') then
+	    if ($## < 1) then
+		if ($3<>'') then
+		    write('line3','Adding %s to queue',$3)
+		else
+		    write('line3','Adding %s to queue',$2)
+		endif
+	    endif
+	    $pex=0 $ppath=''
+	    if ($3<>'') then
+		getfilepath($3+'.xml','templates/vnmrj/protocols'):$pex,$ppath
+	    endif
+	    $xml='no' if ($ppath<>'') then $xml=$ppath endif
+	    walkupQ('add',$2,$xml)
+	endif
+    endif
+
+ENDIF

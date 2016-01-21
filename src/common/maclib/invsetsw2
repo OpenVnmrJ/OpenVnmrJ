@@ -1,0 +1,76 @@
+"macro invsetsw2"
+"invsetsw2 - invert setsw2"
+"see setsw2 macro (it came first)"
+"setsw2(dn2,$2,$3):dof -> (sw2,dof)"
+"given (sw2,dof2) -> find ($frq1,$frq2)"
+"  setsw2 may use dn2,dof2"
+
+$round=0.01
+// $round is a rounding factor in ppm for output
+if $#>0.5 then
+  if ($1>0.001 and $1<1000) then
+    $round=$1
+  endif
+endif
+
+if ($#>2.5) then
+  $dn=$2  "dn3"
+  $dof=$3 "dof3"
+else
+  if (refsource2 = 'dfrq') then
+    $dn=dn $dof=dof
+  elseif (refsource2 = 'dfrq2') then
+    $dn=dn2 $dof=dof2
+  elseif (refsource2 = 'dfrq3') then
+    $dn=dn3 $dof=dof3
+  else
+    $dn=tn $dof=tof
+  endif
+endif
+
+$solv='' format(solvent,'lower'):$solv
+if $solv='none' then $tsolv=solvent solvent='cdcl3' endif
+if ($dn='none') then
+  $rfl2=0 $rfp2=0 $refpos2=0
+  if (refsource2='') then
+    $reffrq2=dfrq2
+  else
+    $reffrq2={refsource2}
+  endif
+else
+  setref($dn):$rfl2,$rfp2,$reffrq2,$refpos2
+endif
+if $solv='none' then solvent=$tsolv endif
+if ($rfl2 < -2e7 or $rfl2 > 2e7 or $reffrq2=0) then
+  return(0,0)
+endif
+$frq1 = (($dof+$rfp2-$rfl2) + 0.5*sw2) / $reffrq2
+$frq2 = (($dof+$rfp2-$rfl2) - 0.5*sw2) / $reffrq2
+
+$rinv=1/$round
+if ($frq1 > 0) then
+  $frq1 =  $round * trunc( $rinv * $frq1 + 0.1)
+else
+  $frq1 = -$round * trunc(-$rinv * $frq1 + 0.1)
+endif
+if ($frq2 > 0) then
+  $frq2 =  $round * trunc( $rinv * $frq2 + 0.1)
+else
+  $frq2 = -$round * trunc(-$rinv * $frq2 + 0.1)
+endif
+
+return($frq1,$frq2)
+
+"How to use this macro in entry boxes:"
+" Box one shows $1, box two shows $2"
+" Box one: "
+"  Value of element = $frq1"
+"  Command: Enter $1, calculate setsw2(dn, $1, $frq2):dof2"
+" Box two: "
+"  Value of element = $frq2"
+"  Command: Enter $2, calculate setsw2(dn, $frq1, $2):dof2"
+"How to use this macro in a menu:"
+" Construct a string to match menu choice:"
+" i.e. $s1='' $s2='' "
+" format($frq1,1,1):$s1 format($frq2,1,1):$s2"
+" Value of element = $s1+','+$s2"

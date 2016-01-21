@@ -1,0 +1,90 @@
+Protocol: Presto3cp  Sequence: presto3cp.c  Apptype: solidseq1d
+
+Description: 
+
+   A selective "X" to "H" CP using PRESTO3, R1825 on "H", with SPINAL or
+   TPPM decoupling.
+
+Additional Software
+
+   reset_r18 - This macro uses the calibrated values of pwH90, aH90 and 
+   srate to set up the R18 recoupling sequence. The macro is executed by 
+   the protocol.
+
+Parameter Groups:
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+pto3HX:  Module:  no
+Sequence:  presto3cp.c
+Description:  Implements a PRESTO3 polarization transfer from dec to
+              obs using R1825 on the dec channel. Requires implementation
+              of r18H.
+Parameters:  Sequence Page
+       aXhxpto3 - the amplitude of the obs channel pulses.
+       pw1Xhxpto3 - a 180-degree flip angle on the obs channel.
+       pw2Xhxpto3 - a 90-degree flip angle on the obs channel.
+       t1HXpto3 - delay around the first obs refocusing pulse.
+       t2HXpto3 - delay around the second obs refocusing pulse.
+
+r18H:  Module:  yes
+Sequence:  presto1cp.c
+Description:  Implements the R1825 recoupling sequence on the dec
+              channel.
+Parameters:  Sequence Page
+       aHr18 - amplitude of dec pulses.
+       pwHr18 - 360-degree flip on dec.
+       qHr18 - R18 cycles represented in the .DEC file.
+       ofHr18 - overall frequency offset.
+       chHr18 = 'dec' must be set (not shown).
+Implementation: MPSEQ r1825 = getr1825("r18H",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+Hseq:  Module:  yes 
+Sequence:  tancpx.c      
+Description: Chooses SPINAL or TPPM decoupling on the dec channel 
+             during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL. 
+Implementation:  DSEQ dec = getdseq("H");  The router implements 
+             getspinal() or gettppm(). 
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();_
+             dseqoff(dec); runs decprgoff();  
+
+Hspinal:  Module:  yes 
+Sequence: tancpx.c  
+Description:  Implements SPINAL decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance. 
+       phHspinal - +/- small angle phase. SPINAL64 is implemented 
+              with phases = +/- 1.0, +/- 1.5 and +/-2.0 times 
+              phHspinal. 
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec = 
+              getdseq("H");  
+Underscore functions: _spinal(dec); and decprgoff(); or 
+             _dseqon(dec); and _dseqoff(dec);   
+
+Htppm:  Module:  yes 
+Sequence:  tancpx.c      
+Description:  Implements TPPM decoupling on the dec channel during 
+              acquisition.  
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel. 
+       pwHtppm - approximate 180-degree flip angle on resonance. 
+       phHtppm - +/- small angle phase. TPPM is implemented 
+              with phases = +/- 1.0 times phHtppm for alternating 
+              pulses.  
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");   
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);   

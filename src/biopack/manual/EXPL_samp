@@ -1,0 +1,180 @@
+
+
+EXPLICIT SAMPLING 
+
+The processing of conventional multidimensional NMR spectra 
+is based on series of one dimensional Fourier Transforms. 
+This approach requires time domain points lying on Cartesian 
+grid. This limitation could be omitted by application of the 
+Multidimensional Fourier Transform. The most important 
+feature of MFT is ability to have processing time domain data 
+points of any distribution.
+
+The conventional programming of multidimensional pulse 
+sequences relies on implicitly incremented evolution delays 
+(i.e. d2, d3, d4). For the ith-dimension the increments of 
+1/(swi) are calculated automatically and added in consecutive 
+steps of time domain sampling. Therefore, the user controls the 
+experiment by specifying number of increments in each 
+dimension (ni, ni2, ni3). 
+
+The maximum evolution time might be evaluated as 
+(number of increments -1)/spectral width, while the total 
+number of data points in the indirectly sampled time domains 
+equals the product of numbers of increments (i.e. ni*ni2*ni3).
+
+Since the MFT could be performed using any sampling scheme 
+it enables one to choose time coordinates for each time 
+domain point and acquire data in any order. The time domain 
+points coordinates are listed explicitly in the text file, 
+the numbers are normalized to [0,1] range. 
+
+Note that this approach allows one for planning any sampling 
+pattern, from conventional, radial (used in Projection 
+Reconstruction techniques), spiral etc., to random distributions. 
+Any sampling pattern stored in the file is possible without 
+the need of changing pulse sequence code. 
+
+The macro "BP_ESset" should be executed first. It could be 
+entered from command line or by selecting Explicit Sampling
+in the "Select Sampling" menu in "Digital Filter" page.  
+
+It creates all required parameters and produces the pulse
+sequence(if necessary). It may rarely happen that the sequence 
+does not convert successfully. In such case see the file manual/ 
+EXPL_samp_seq.
+
+The total number of acquired points is controlled only by ni 
+(note that ni2, and ni3 should be set to 1). The textfile path 
+name containing time domain points coordinates must be specified 
+in the string parameter timetab_name, eg. timetab_name= 
+userdir+'/tablib/EStablename’. The same file is 
+necessary for proper Multidimensional FT processing. The 
+general rule is to set the smallest possible nt (to accomplish 
+the basic phase cycle) and ni the highest possible for the given 
+experimental time.
+
+Real time, rather that constant time evolution should be used. 
+(e.g. for 13C) and semi-constant time (available in 
+many experiments for 15N) instead of constant time.
+
+How to create a time table file:
+********************************
+
+The time table file should be set in the entry box in
+the "Digital Filter" page. Using the same name of the
+output file will result in the existing file
+being overwritten. The number of points 
+(ni) should be entered and the sampling type should be chosen.  
+For most types there are some extra parameters. Available types 
+of sampling are:
+
+radial (points on a few lines) – parameters: phi_0 (angle of 
+       first line), d_phi (angular step), n_phi (number of lines)
+
+spiral (points on two spirals, clockwise and anticlockwise) 
+      – parameter: n_rounds (number of rounds of each spiral)
+
+random (uniform distribution in both dimensions) – no 
+       additional parameters
+
+gauss (gaussian distribution in both dimensions, with maximum in 
+      t=0) – parameter: sigma (the probability is proportional 
+      to exp(-t^2/(2sigma^2))
+
+exp   (exponential distribution in both dimensions) – 
+      parameter: sigma (rate of decay, the probability is 
+      proportional to exp(-t/sigma))
+
+g-r   (uniform in first dimension and gaussian in second 
+      one) – parameter: sigma (for the first dimension)
+
+e-r   (uniform in first dimension and exponential in second 
+       one) – parameter: sigma (for the first dimension)
+
+For random, gaussian and exponential type of sampling
+it is recommended to use the option of optimizng
+the points distribution (see J Magn Reson 188: 344-356 (2007)),
+by activating the "opt" check box.
+
+All tables are created using maximum times equal to 1, the 
+sigma parameter should be adjusted to this value. Of course, a 
+table of any set of points can be also created outside VnmrJ, 
+but then maximum times should also be 1.
+
+The button "Create Schedule" creates the sampling schedule using
+the specified "ni" and sampling method (and any associated 
+parameters) under the name and location specified by the
+Sampling Schedule File entry box.
+
+The button "View Schedule" displays a plot of time domain data 
+points. It requires installed gnuplot.
+
+The button "Relative points density" allows for calculating
+the ratio of current density (ni/t1max/t2max) to Nyquist density
+(1/sw1/sw2). It is realiable to perform the experiments with
+the density smaller then 1.
+
+Starting the experiment.
+************************
+
+The maximum evolution times should be set by parameters t1max 
+and t2max. These should be set in view of the natural decay times.
+They are not related to ni/sw1 or ni2/sw2 as in normal sampling,
+but are used to set the evolution times within the t1/t2 
+distribution. 
+
+In order to enable quadrature detection the array parameter 
+should be left as in conventional experiment, i.e array=’phase,phase2’  
+for three dimensional experiments. Thus, in a 3D experiment four fids 
+are acquired for each time domain point. The phase variables should 
+be set identically to those in conventional experiments, allowing for 
+echo-antiecho selection or switching between sine- and cosine-modulated 
+spectra in the States method. 
+
+The f2coef 3D parameter should be present in the procpar file. It
+describes the way of getting frequency signs (quadrature) 
+in the last indirectly detected dimension, and depends on the 
+actual pulse sequence. Standard BioPack sequences have f1coef and
+f2coef set properly by default.
+ 
+For example: 
+
+f2coef = ‘1 0 -1 0 0 -1 0 -1’ for echo-antiecho or 
+f2coef = ‘1 0 0 0 0 0 -1 0’ for States method. 
+
+The current version of MFT processing module so far supports only 
+one phase modulation (echo-antiecho) – in the last indirectly 
+detected dimension. Quadrature in other dimensions, i.e. F1 in 3D,
+is assumed to be accomplished by the States technique. 
+
+We advise first acquiring 2D spectra for 0/90 deg. projection 
+(i.e. F1F3 and F2F3 planes in the 3D case) using the conventional 
+sequence. The data should be transformed, referenced and phased
+with the same parameters determining phases. 
+
+Then, if desired, copy the parameter
+set to a different "exp" and select "Explicit Sampling" from the
+menu in the "Digital Filter" page in the "Acquire" folder. The
+values of rp,lp for directly detected dimension and rp1,lp1,rp2,lp2 
+are then present in procpar file and are used in MFT processing.
+
+The experiment is begun by using the "Begin Experiment" button. This
+does an ordinary "go" as well as copying the time domain points
+file (the full path is visible in the Sample Schedule File entry box).
+This latter function is not necessary for collection of the data, but
+it ensures that a copy of the relevant evolution time values is kept
+unchanged until the next "go" in the current experiment.
+
+If the resulting FID is stored by the BioPack BPsvf macro, the time 
+domain points file is stored together with fid. 
+
+
+For more information see nmr700.chem.uw.edu.pl or email to 
+kozmin (at) chem.uw.edu.pl
+
+If you are using MFT package please cite following works:
+Kazimierczuk K, Kozminski W, Zhukov I, J Magn Reson 179: 323-328 (2006)
+Kazimierczuk K, Zawadzka A, Kozminski W, Zhukov I,J Biomol NMR 36: 157-168 (2006)
+Kazimierczuk K, Zawadzka A, Kozminski W, Zhukov I, J Magn Reson 188: 344-356 (2007)
+Kozminski W, Zhukov I, J. Biomol. NMR 26: 157-166, (2003). (2D-quadrature)

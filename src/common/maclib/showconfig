@@ -1,0 +1,153 @@
+"macro showconfig"
+
+   clear
+
+   shell('uname -n'):$host
+   shell('date'):$date
+   write('alpha','Configuration for %s on %s\n',$host,$date)
+   write('alpha','System                 %s',system)
+   write('alpha','Proton Fequency        %d',h1freq)
+   if (vttype>0) then
+     write('alpha','VT Controller          Present')
+   else
+     write('alpha','VT Controller          Not Present')
+   endif
+   $i=1
+   $val=''
+   $axis[1]='X' $axis[2]='Y' $axis[3]='Z'
+   $grad=''
+   while ($i<4) do
+     substr(gradtype,$i,1):$val
+     if ($val='n') then
+        $grad[1]='Not Present'
+     elseif ($val='w') then
+        $grad='WFG + +GCU'
+     elseif ($val='r') then
+        $grad='Grad. Coordinate Rotator'
+     elseif ($val='l') then
+        $grad='Performa I'
+     elseif ($val='p') then
+        $grad='Performa II/III'
+     elseif ($val='q') then
+        $grad='Performa II/III + WFG'
+     elseif ($val='c') then
+        $grad='Performa IV'
+     elseif ($val='d') then
+        $grad='Performa IV + WFG'
+     elseif ($val='t') then
+        $grad='Performa XYZ'
+     elseif ($val='u') then
+        $grad='Performa XYZ + WFG'
+     elseif ($val='h') then
+        $grad='Homospoil'
+     endif
+     write('alpha','%s Axis Gradient        %s',$axis[$i],$grad)
+     $i=$i+1
+   endwhile
+   write('alpha','System Gradient Coil   %s',sysgcoil)
+   if (traymax=0) then 
+      $sc='None'
+   elseif (traymax=12) then
+      $sc='7510-AS (12 samples)'
+   elseif (traymax=97) then
+      $sc='7600-AS (96 samples)'
+   elseif (traymax=9) then
+      $sc='Carousel'
+   elseif (traymax=50) then
+      $sc='SMS 50 Sample'
+   elseif (traymax=100) then
+      $sc='SMS 100 Sample'
+   elseif (traymax=96) then
+      $sc='VAST'
+   elseif (traymax=48) then
+      $sc='NMS'
+   elseif (traymax=1) then
+      $sc='LC-NMR'
+   elseif (traymax=768) then
+      $sc='768 AS'
+   else
+      $sc='Unknown'
+   endif
+   write('alpha','Sample Changer         %s',$sc)
+   // write('alpha','Sample Changer Port    %d',numrfch)
+   shimset:$shim
+   write('alpha','Shim Set               %s',$shim)
+   write('alpha','Number of Receivers    %d',numrcvrs)
+   write('alpha','Max Spectral Width     %d',parmax[5])
+   if (rotorsync>0) then
+     write('alpha','Rotor Synchronization  Present')
+   else
+     write('alpha','Rotor Synchronization  Not Present')
+   endif
+   write('alpha','IF Frequency           %f MHz',iffreq)
+   write('alpha','Lock Frequency         %f MHz',lockfreq)
+   write('alpha','\n')
+   
+   $val=''
+   $tmpString = ''
+   $i=0
+   while ($i<numrfch) do
+      format ($i+1,1,0):$val
+      $tmpString = $tmpString+' Chan '+$val+'      '
+      $i=$i+1
+   endwhile
+   write('alpha','                       %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=0
+   while ($i<numrfch) do
+      substr(rfchtype[$i+1],4,7):$val
+      $tmpString = $tmpString+$val+'      '
+      $i=$i+1
+   endwhile
+   write('alpha','Type of RF             %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=1
+   while ($i<=numrfch) do
+      format (ptsval[$i],1,0):$val
+      $tmpString = $tmpString +$val+'          '
+      $i=$i+1
+   endwhile
+   write('alpha','Synthesizer            %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=0
+   while ($i<numrfch) do
+      $tmpString = $tmpString +'Not Present  '
+      $i=$i+1
+   endwhile
+   write('alpha','Frequency Overrange    %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=0
+   $x[1]=17
+   $x[2]=9
+   $x[3]=18
+   $x[4]=21
+   $x[5]=23
+   while ($i<numrfch) do
+        $y=$x[$i+1]
+        format (parmax[$y],2,0):$val
+      $tmpString = $tmpString +$val+'           '
+      $i=$i+1
+   endwhile
+   write('alpha','Maximum Power          %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=0
+   while ($i<numrfch) do
+      $tmpString = $tmpString +'Not Present  '
+      $i=$i+1
+   endwhile
+   write('alpha','Waveform Generator     %s ', $tmpString)
+   
+   $tmpString = ''
+   $i=0
+   while ($i<numrfch) do
+      substr(amptype,$i+1,1):$val
+      $tmpString = $tmpString +$val+'            '
+      $i=$i+1
+   endwhile
+   write('alpha','Type of Amplifier      %s ', $tmpString)
+

@@ -1,0 +1,54 @@
+"macro isadj"
+"***************************************************"
+" isadj<(max<,negmax>)> - adjust is		    "
+" isadj2<(max<,negmax>)> - adjust is by powers of 2 "
+"***************************************************"
+
+" determine final size of desired integral"
+if $#>0 then				       "take argument 1, if entered"
+  $newmax=$1
+else
+  $newmax=(wc2max-5-io-vp-sc2)*.75 "otherwise calculate maximum size that fits"
+  $newmax=trunc($newmax/10)		     "round down to multiples of 10"
+  $newmax=10*$newmax
+endif
+$limit=10					     "calculate value/limit" 
+if $newmax<$limit then $newmax=$limit endif	      "for default argument"
+
+if $#>1 then
+  $negmax=$2
+else
+  if io<10 then					    "for negative integrals"
+    $negmax=10		 "desired maximum size of biggest negative integral"
+  else
+    $negmax=io-5
+  endif
+  $negmax=trunc($negmax/5+0.5)		     "round down to multiples of 10"
+  $negmax=5*$negmax
+endif
+
+is=100 integ(sp,(sp+wp)):$oldmax		      "get tallest integral"
+
+" first check whether we have to scale on the negative integrals or not "
+if ($oldmax < 0.0) then 
+  $newmax=$negmax				     "use negative integral"
+  $oldmax= -$oldmax 
+endif
+if ($oldmax=0) then 
+    $oldmax=$newmax				    "avoid division by zero"
+  endif
+
+if $0='isadj' then					    "recalculate is"
+  is=is*$newmax/$oldmax
+else			  "isadj2 - do the same thing, but by powers of two"
+  $is0=is
+  while $oldmax<=$newmax/2 do
+    is=2*is
+    $oldmax=2*$oldmax
+  endwhile
+  while $oldmax>$newmax do
+    is=is/2
+    $oldmax=$oldmax/2
+  endwhile
+  return(is/$is0)
+endif

@@ -1,0 +1,133 @@
+"macro csapar"
+"H. Bildsoe, Aarhus Unversity, Denmark,  march 1995"
+"csapar- estimate viso, csa and etas from 1.st, 2.nd and 3.rd moments"
+
+if (ival>0.5) then
+  write('error','Error: Estimation af csa parameters requires ival=0.5')
+  abort endif
+mval=0.5  "mval must be 0.5"
+
+$ssbfile=curexp+'/expint'  "file of ssb integrals"
+exists($ssbfile,'file'):$a
+if ($a<0.5) then 
+  write('error','Error: No file of ssb-integrals')
+  abort endif
+$newfile=curexp+'/newfile'   "updated file of ssb integrals"
+
+"Check the format of the file of ssb intensities and if a site number"
+"is given when sites=1"
+shell('awk \'{if (NR==1) print NF; else exit} \' "'+$ssbfile+'"'):$fform
+if (sites=2 and $fform<>3) then
+  write('error','Error: Missing site number in the file of ssb intensities')
+  abort 
+  else if ($fform<2 or $fform>3) then
+  write('error','Error: Wrong format in the file of ssb intensities') 
+  endif endif
+
+nrecords($ssbfile):$ssbnr  "number of ssb intensities"
+$r=0  "control variable, used for illegal site numbers"
+$sites=1
+repeat 
+  if ($sites = 1) then
+    $csa='csa' $etas='etas' $viso='viso' 
+    else
+    $csa='csa2' $etas='etas2' $viso='viso2' endif
+  $m0=0 $m1=0 
+  lookup('file',$ssbfile) "read ssb intensities and calculate 1.st moment"
+  $i=0
+  $l = 0
+  repeat
+    $i=$i+1
+    if ($fform=2) then
+      lookup('read',2):$j,$int
+      $k=1
+      else lookup('read',3):$k,$j,$int
+      endif
+    if ($k>sites or $k<1) then $r=$r+1 endif  "illegal site number"
+    if ($k=$sites) then
+      $l = $l+1
+      $m0=$m0+$int          "Find total intensity (used to scale the moments)"
+      $m1=$m1+$j*$int       "and the 1.st moment"
+      endif
+    until $i>=$ssbnr
+  if ($l=0) then
+    write('line3','WARNING: No data for site number %2.0f',$sites)
+    else
+    $a=$m1/$m0              "correction to viso in units of srate"
+    if $a<0 then 
+      $offs=trunc($a-0.5)
+      else 
+      $offs=trunc($a+0.5)
+      endif
+    {$viso}={$viso}+srate*$offs
+
+    $m2=0 $m3=0  "calculate 2'nd and 3'rd moment"
+    lookup('file',$ssbfile)
+    $i=0
+    repeat
+      $i=$i+1
+      if ($fform=2) then
+        lookup('read',2):$j,$int
+        $k=1
+        else
+        lookup('read',3):$k,$j,$int
+        endif
+      if ($k=$sites) then
+        $j=$j-$offs               "ssb order corrected for new viso"
+        if ($fform=2) then
+          write('file',$newfile,'%6.0f %15.6f',$j,$int)  "write to new file"
+          else
+          write('file',$newfile,'%2.0f %6.0f %15.6f',$k,$j,$int) 
+          endif
+        $m2=$m2+$j*$j*$int        "2.nd moment"
+        $m3=$m3+$j*$j*$j*$int     "3.rd moment"
+        endif
+      until $i>=$ssbnr 
+    $m2=$m2/$m0
+    $m3=$m3/$m0
+"calculation of csa and etas from 2.nd and 3.rd moments"
+"we get the three principal elements ($cxx, $cyy, $czz) as the solutions to a 3.rd order equation"
+    $a=sqrt(5*$m2)
+    $c3t=7*$m3/(2*$a*$m2)
+    if (($c3t>1.0) or ($c3t<-1.0)) then 
+      if ($c3t>1.0) then $t=0.0
+        else $t=3.1415926 endif
+      else
+      $s3t=sqrt(1-$c3t*$c3t)
+      if ($s3t>0.9999) then
+        $t=3.1415926/2
+        else
+        atan($s3t/$c3t):$t
+        if $t<0 then $t=$t+3.1415926 endif
+        endif
+      endif
+    $t=$t/3
+    $b=$a*srate/sfrq
+    cos($t):$cxx
+    $cxx=-$cxx*$b
+    cos($t+2*3.1415926/3):$cyy
+    $cyy=-$cyy*$b
+    cos($t+4*3.1415926/3):$czz
+    $czz=-$czz*$b
+
+"sort the elements in increasing order"
+    if $cxx>$cyy then
+      $t=$cxx $cxx=$cyy $cyy=$t endif
+    if $cyy>$czz then
+      $t=$czz $czz=$cyy $cyy=$t endif
+    if $cxx>$cyy then
+      $t=$cxx $cxx=$cyy $cyy=$t endif
+
+    if $cyy<0.0 then  "implying two principal elements to the left of viso"
+      {$csa}=$czz {$etas}=($cyy-$cxx)/{$csa}
+      else
+      {$csa}=$cxx {$etas}=($cyy-$czz)/{$csa}
+      endif
+    endif " end of no data for this site"
+
+  $sites = $sites+1
+  until $sites>sites
+mv($newfile,$ssbfile) 
+dgstars 
+if ($r>0) then write('line3','Warning: Deleting data for unknown site') endif
+

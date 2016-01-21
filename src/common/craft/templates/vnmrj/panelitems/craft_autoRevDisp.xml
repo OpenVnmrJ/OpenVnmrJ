@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoRevDisp" element="groups" type="acquisition" >
+
+    <group size="400 120"
+      vq="craftnmrparRef"
+      style="Heading1"
+      reference="craft_autoRevDisp"
+      bg="transparent"
+      expanded="yes"
+      useref="no"
+      >
+          <group loc="20 20" size="175 20" >
+            <radio loc="0 0" size="350 20"
+              style="Label1"
+              label="Current workspace"
+              vq="craftnmrparRef craftAutoPar"
+              vc="craftAutoPar[2]='n' craft_clear craftDispPar[15]='' craft('setworkspace',craftAutoPar[3]) craft('displayorigdata') craft_ZOOM('full')"
+              set="$VALUE=(craftAutoPar[2]='n')"
+              />
+            </group>
+          <group loc="200 20" size="175 20" >
+            <radio loc="0 0" size="350 20"
+              style="Label1"
+              label="Previous analysis"
+              vq="craftnmrparRef craftAutoPar"
+              vc="craftAutoPar[2]='y' craft_clear"
+              set="$VALUE=(craftAutoPar[2]='y')"
+              />
+            </group>
+          <filemenu loc="15 41" size="365 20"
+	    style="PlainText"
+	    vq="craftnmrparRef craftAutoPar"
+	    vc="craft_clear craftDispPar[15]='' craft('setworkspace','$VALUE')"
+	    set="$VALUE=craftnmrpar[17]"
+	    file="$VALUE=userdir+'/cnmrmodels/Files4xml/workspaceMenu4'"
+	    show="$ENABLE=(craftAutoPar[2]='y')*2-1"
+	    type="file"
+	    vq2="craftnmrparRef craftAutoPar"
+	    />
+	  <label loc="20 70" size="80 20"
+	    label="Display"
+	    style="Heading1"
+	    />
+	  <group loc="100 70" size="300 20"
+	    vq="craftnmrparRef craftAutoPar"
+	    show="$SHOW=(craftAutoPar[2]='y')"
+	    >
+            <button loc="0 0" size="255 20"
+              style="Heading2"
+              label="Initial data in workspace"
+              vq="craftnmrparRef craftDispPar"
+              vc="if (craftDispPar[15]&lt;&gt;'Review OrigData') then craftDispPar[15]='Review OrigData' craft('displayorigdata') endif"
+              bg="transparent"
+              />
+	    <group loc="260 0" size="20 20"
+	      >
+	      <group loc="0 0" size="20 20"
+	        vq="craftnmrparRef craftDispPar"
+	        show="$SHOW=(craftDispPar[15]='Review OrigData')"
+	        >
+	        <label loc="0 0" size="20 20" icon="tick.png" />
+	        </group>
+<!--
+	      <group loc="5 5" size="10 10"
+	        bg="transparent"
+	        border="Etched"
+	        vq="craftnmrparRef craftDispPar"
+	        show="$SHOW=(craftDispPar[15]&lt;&gt;'Review OrigData')"
+	        />
+-->
+	      </group>
+	    </group>
+
+	  <group loc="100 70" size="300 20"
+	    vq="craftnmrparRef craftAutoPar"
+	    show="$SHOW=(craftAutoPar[2]='n')"
+	    >
+	    <group loc="0 0" size="255 20"
+	      vq="craftnmrparRef"
+	      show="is_craft:$craftver $SHOW=($craftver&gt;1.5)"
+	      >
+              <button loc="0 0" size="255 20"
+                style="Heading2"
+                label="Initial data in workspace"
+                vq="craftnmrparRef craftDispPar"
+                vc="if (craftDispPar[15]&lt;&gt;'Process OrigData') then craftDispPar[15]='Process OrigData' craft('displayorigdata') craft_ZOOM('full') else craft('asp1D','Process') endif aspSetState('aspRoi2craft') aspRoi('autoadjust','on')"
+                bg="transparent"
+                />
+	      </group>
+	    <group loc="0 0" size="255 20"
+	      vq="craftnmrparRef"
+	      show="is_craft:$craftver $SHOW=($craftver&lt;1.5)"
+	      >
+              <button loc="0 0" size="255 20"
+                style="Heading2"
+                label="Initial data in workspace"
+                vq="craftnmrparRef craftDispPar"
+                vc="graphis:$ds $v='' substr(craftDispPar[15],2):$v if ($v&lt;&gt;'OrigData') then craftDispPar[15]='Process OrigData' craft('displayorigdata') craft_ZOOM('full') elseif ($ds&lt;&gt;'ds') then ds endif"
+                bg="transparent"
+                />
+	      </group>
+	    <group loc="260 0" size="20 20"
+	      >
+	      <group loc="0 0" size="20 20"
+	        vq="craftnmrparRef craftDispPar"
+	        show="$v='' substr(craftDispPar[15],2):$v $SHOW=(($v='OrigData') or (craftDispPar[15]=''))"
+	        >
+	        <label loc="0 0" size="20 20" icon="tick.png" />
+	        </group>
+<!--
+	      <group loc="5 5" size="10 10"
+	        bg="transparent"
+	        border="Etched"
+	        vq="craftnmrparRef craftDispPar"
+	        show="$v='' substr(craftDispPar[15],2):$v $SHOW=(($v&lt;&gt;'OrigData') and (craftDispPar[15]&lt;&gt;''))"
+	        />
+-->
+	      </group>
+	    </group>
+
+        <button loc="100 92" size="255 20"
+          style="Heading2"
+          label="CRAFT analysis results"
+          vq="craftnmrparRef craftDispPar"
+          vc="if (craftDispPar[15]&lt;&gt;'Review Models') then craftDispPar[15]='Review Models' craft('displaymodels') endif"
+          show="$lock=0 craft('islock',craftnmrpar[17]):$lock $ENABLE=(($lock&lt;0.5) and ((craftnmrpar[14]='') or (craftnmrpar[14]='none')))*2-1"
+          bg="transparent"
+          />
+	<group loc="360 92" size="20 20"
+	  >
+	  <group loc="0 0" size="20 20"
+	    vq="craftnmrparRef craftDispPar"
+	    show="$SHOW=(craftDispPar[15]='Review Models')"
+	    >
+	    <label loc="0 0" size="20 20" icon="tick.png" />
+	    </group>
+<!--
+	  <group loc="5 5" size="10 10"
+	    bg="transparent"
+	    border="Etched"
+	    vq="craftnmrparRef craftDispPar"
+	    show="$SHOW=(craftDispPar[15]&lt;&gt;'Review Models')"
+	    >
+	    </group>
+-->
+	  </group>
+
+      </group>
+
+</template>

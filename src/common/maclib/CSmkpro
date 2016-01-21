@@ -1,0 +1,126 @@
+"macro CSmkpro"
+"CS_pbox - create sampling profile using Pbox. EK July 2012, Oxford"
+
+if (CSinp='n') then 
+  CSwmpro
+  return
+endif
+
+$nimax=0
+$maxsize=''
+$key='' 
+
+if(CSdomain=1) then
+  $key='n1'
+  on('nimax'):$e
+  if $e>0 then
+     $at = nimax/sw1
+     format(nimax,3,0):$maxsize
+     $nimax=nimax
+  else
+    on('CSdensity'):$e
+    if $e>0 then
+      $at = 0.01*CSdensity*ni/sw1
+      format(ni,3,0):$maxsize
+      $nimax=ni
+    endif
+  endif
+elseif(CSdomain=2) then
+  $key='n2'
+  on('ni2max'):$e
+  if $e>0 then
+     $at = ni2max/sw2
+     format(ni2max,3,0):$maxsize
+     $nimax=ni2max
+  else
+    on('CSdensity2'):$e
+    if $e>0 then
+      $at = 0.01*CSdensity2*ni2/sw2
+      format(ni2,3,0):$maxsize
+      $nimax=ni2
+    endif
+  endif
+elseif(CSdomain=3) then
+  $key='n3'
+  on('ni3max'):$e
+  if $e>0 then
+     $at = ni3max/sw3
+     format(ni3max,3,0):$maxsize
+     $nimax=ni3max
+  else
+    on('CSdensity3'):$e
+    if $e>0 then
+      $at = 0.01*CSdensity3*ni3/sw3
+      format(ni2,3,0):$maxsize
+      $nimax=ni2
+    endif
+  endif
+endif
+
+$log = curexp + '/CSmkpro_'+$key+'.log'
+
+if(CSshape='jcos') or (CSshape='jsin') then
+  $j=r7 
+  if($j<0.01) then
+    write('error','J-coupling must be > 0')
+    return
+  endif
+  opx
+  $ofs=$j/2  
+  if(CSshape='jcos') then
+    putwave('square90',0.0,$at,$ofs,1)
+    $ofs=-$ofs
+    putwave('square90',0.0,$at,$ofs,1)
+  elseif(CSshape='jsin') then
+    putwave('square90',0.0,$at,$ofs,1,90)
+    $ofs=-$ofs
+    putwave('square90',0.0,$at,$ofs,1,270.0)
+  endif
+  r7=$j
+  $cmd='Pbox -steps '+$maxsize
+    write('reset', $log)
+  write('file',$log,'%s', $cmd)
+  $cmd = $cmd + ' >> ' + $log 
+  shell($cmd)
+elseif (CSshape='Pbox') then   " use input file "
+  $f=userdir+'/shapelib/'+CSinp
+  exists($f,'file'):$e
+  if not ($e) then
+    write('error','Pbox input file %s not found', $f)
+    return
+  endif
+  $cmd='Pbox -f '+ CSinp +' -steps '+$maxsize
+  write('reset', $log)
+  write('file',$log,'%s', $cmd)
+  $cmd = $cmd + ' >> ' + $log
+  shell($cmd)
+else
+  $ofs = 0.0
+  $ss = 100.0    "stepsize in us"
+  $at = $nimax*$ss/1000000.0
+  opx
+  putwave(CSshape,0.0,$at,$ofs,0)
+  pboxpar('stepsize',$ss)
+  $cmd='Pbox -type w'
+  write('reset', $log)
+  write('file',$log,'%s', $cmd)
+  $cmd = $cmd + ' >> ' + $log  
+  shell($cmd)
+  wt2fid
+endif
+
+CSfid2pro 
+CSprofile[CSdomain]=CSshape
+CSprosize[CSdomain]=$nimax
+
+if(CSshowpro='y') then
+  CSdpro
+endif
+
+//Catch for BioPack sequences - use BioPack panels for processing instead
+exists('pwC','parameter'):$ex
+if not ($ex) then
+     write('line3','Now click \'Build\' button on \'NUS\' panel')
+     write('graphics',0.2*wcmax,0.2*wc2max,'Click \'Build\' button on \'NUS\' panel to build a sampling schedule weighted according to the displayed function')
+endif
+

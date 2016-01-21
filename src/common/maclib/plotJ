@@ -1,0 +1,45 @@
+"macro plotJ"
+" plotJ - universal automatic plotting macro using jplot templates      "
+
+$seqfil='' $seqfil=seqfil
+if ($seqfil = 's2pul') then
+ if (tn = 'H1') then $seqfil='PROTON' endif
+ if (tn = 'F19') then $seqfil='FLUORINE' endif
+ if (tn = 'C13') then $seqfil='CARBON' endif
+ if (tn = 'P31') then $seqfil='PHOSPHORUS' endif
+endif
+$userjplot=userdir+'/templates/plot/'
+$sysjplot=systemdir+'/user_templates/plot/'
+
+"First see if there is sequence specific plot template"
+
+exists($userjplot+$seqfil,'file'):$e1
+exists($sysjplot+$seqfil,'file'):$e2
+if ($e1) or ($e2) then
+ jplot($seqfil)
+ return
+endif
+
+getdim:$dim
+$defaultj=''
+
+if $dim=1 then
+  if arraydim=1 then		" non-arrayed 1D spectra "
+    $defaultj='chemP1d'
+  else
+    $defaultj='chemParray'
+  endif
+elseif $dim=2 then
+   $defaultj = 'chemP2d'
+endif
+
+if ($defaultj <> '') then
+  exists($userjplot+$defaultj,'file'):$e1
+  exists($sysjplot+$defaultj,'file'):$e2
+  if ($e1) or ($e2) then
+   jplot($defaultj)
+   return
+  endif
+endif
+
+plot

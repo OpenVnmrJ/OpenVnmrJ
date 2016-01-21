@@ -1,0 +1,329 @@
+"macro xmHprescan"
+"setup and process Proton/Minsw/Presat/Wet1d/Lc1d prescans"
+
+exists('Hprescan','parameter'):$e
+if $e<0.5 then
+  create('Hprescan','string')
+  setgroup('Hprescan','processing')
+  Hprescan='off','auto','off','','Complete','Complete'
+" Hprescan[1]=minsw (off/auto)"
+" Hprescan[2]=type of Hprescan[3] (auto/solvent/manual)"
+" Hprescan[3]=wet1D/presat/lc1d/off"
+" Hprescan[4]=parameter storage directory"
+" Hprescan[5]=Hprescan[1] (minsw) Complete or Not done"
+" Hprescan[6]=Hprescan[3] (wet/presat) Complete or Not done"
+endif
+if (size('Hprescan')<5.5) then
+  Hprescan[5]='Complete' Hprescan[6]='Complete'
+endif
+
+if $#=0 then $1='setup' endif
+
+if $1='setup' then  "select a prescan checkbox"
+
+  $prescan=prescan
+  $Hprescan=Hprescan
+  $actionid=actionid
+  Hprescan[5]='Complete'
+  Hprescan[6]='Complete'
+
+  prescan[7]='Complete'
+  if (Hprescan[3]='off') then
+    if (seqfil<>'s2pul') then
+      Proton
+    endif
+  elseif (Hprescan[3]='presat') then
+    if (seqfil<>'PRESAT') then
+      Presat
+    endif
+    wexp='xmHprescan(\'proc\')'
+    prescan[7]='Not done'
+    prescan[10]='xmHprescan(\'scout\')'
+    Hprescan[6]='Not done'
+  elseif (Hprescan[3]='wet1D') then
+    if (seqfil<>'wet1D') then
+      wet1D
+    endif
+    wexp='xmHprescan(\'proc\')'
+    prescan[7]='Not done'
+    prescan[10]='xmHprescan(\'scout\')'
+    Hprescan[6]='Not done'
+  elseif (Hprescan[3]='lc1d') then
+    if (seqfil<>'lc1d') then
+      write('line3','loading Autoscout')
+      cqexp('Autoscout','lcapp')
+    endif
+    wexp='xmHprescan(\'proc\')'
+    prescan[7]='Not done'
+    prescan[10]='xmHprescan(\'scout\')'
+    Hprescan[6]='Not done'
+  endif
+  if $Hprescan[1]='auto' then
+    prescan[7]='Not done'
+    Hprescan[5]='Not done'
+    wexp='xmHprescan(\'proc\')'
+  elseif (Hprescan[3]='off') then
+    prescan[7]='Complete'
+    Hprescan[5]='Complete'
+    wexp=''
+  endif
+
+  if (Hprescan[3]<>'lc1d') then
+    setref('setup')
+  endif
+  $pre7=prescan[7] $pre10=prescan[10]
+  prescan=$prescan
+  prescan[7]=$pre7 prescan[10]=$pre10
+  $Hpre5=Hprescan[5] $Hpre6=Hprescan[6]
+  Hprescan=$Hprescan
+  Hprescan[5]=$Hpre5 Hprescan[6]=$Hpre6
+  actionid=$actionid
+
+elseif $1='off' then  // turn off all Hprescans, minsw
+
+  Hprescan='off','auto','off','','Complete','Complete'
+  prescan[7]='Complete'
+  if wexp='xmHprescan(\'proc\')' then
+    wexp=''
+  endif
+
+elseif $1='setupminsw' then
+
+  $setup='on'
+  if $#>1.5 then $setup=$2 endif
+
+  if (Hprescan[1]='auto' and $setup='on') then
+    prescan[7]='Not done'
+    Hprescan[5]='Not done'
+    wexp='xmHprescan(\'proc\')'
+  else
+    Hprescan[5]='Complete'
+    if (Hprescan[3]='off') then
+      prescan[7]='Complete'
+      Hprescan[6]='Complete'
+      if wexp='xmHprescan(\'proc\')' then
+        wexp=''
+      endif
+    endif
+  endif
+
+elseif $1='scout' then
+
+  xm1('studydir'):$sdir
+  $h3=Hprescan[3]
+  if ($h3='wet1D' or $h3='presat' or $h3='lc1d') then
+
+    exists('Scout','parlib'):$e,$path
+    if $e<0.5 then
+      write('error','Scout parameters do not exist')
+      return
+    endif
+
+    $pwr=tpwr
+    getparam('tpwr',tn):$pwr
+    getparam('pw90',tn):pw90  "already done in execsetup?"
+    if ($h3 <> 'lc1d') then
+      exists('tpwr_cf','parameter'):$e
+      if not ($e) then
+        create('tpwr_cf')
+      endif
+      tpwr_cf = 1
+      getparam('tpwr_cf',tn):tpwr_cf
+      setprotect('tpwr_cf','on',16384)
+      ref_pwr=$pwr
+      ref_pw90=pw90*tpwr_cf
+    endif
+
+    Hprescan[4]='info/'+actionid+'/wetpar'
+    if $h3='presat' then
+      setpower(presatgh2,tn):$satpwr
+      $satpwr=$satpwr+1
+      if $satpwr<parmin[17] then $satpwr=parmin[17] endif
+      satpwr=$satpwr
+      Hprescan[4]='info/'+actionid+'/presatpar'
+    endif
+    if (alock='u' and solvent<>'none') then
+      alock='n'
+    endif
+    $svfile=$sdir+'/'+Hprescan[4]
+    if (studyid<>'tmpstudy') then
+      fsave($svfile)
+    endif
+    $prescan=prescan
+    $Hprescan=Hprescan
+    $actionid=actionid
+
+"   setprotect('','clear',16384)"
+"   rtx($path,'current','keep','clear')"
+    $scoutlist='d1 gain nt pltmod pslabel pw satmode ss tpwr wet'
+    readparam($path+'/procpar',$scoutlist)
+
+    if ($h3='lc1d') then
+      resetlcarrays  // from getwet
+      setscout
+      pw=pw90
+    else
+      tpwr=ref_pwr-10
+      pw=pw90/9
+      gain=0
+    endif
+    setrc
+
+    prescan=$prescan
+    Hprescan=$Hprescan
+    actionid=$actionid
+    wexp='xmHprescan(\'proc\')'
+    prescan[7]='Not done'
+
+  endif
+
+elseif $1='proc' then  "Hprescan processing"
+
+  $actionid=actionid
+  $prescan=prescan
+  $Hprescan=Hprescan
+  xm1('studydir'):$sdir
+
+  if (Hprescan[3]<>'lc1d') then
+    setref('setup')
+  endif
+
+  if (studyid='null' or actionid='null') then
+    wft
+    return
+  endif
+
+  if (Hprescan[6]<>'Complete') then  // process scout data
+
+    $svfile=$sdir+'/'+Hprescan[4]
+    exists($svfile,'file'):$esv
+    if (Hprescan[4]='' or actionid='null') then
+      $esv=0
+    endif
+
+    if (Hprescan[3]='lc1d') then
+
+      wft
+      setprotect('','clear',16384)
+      lcsetwet
+//    setexport
+      setprotect('file','on',16384)
+      setprotect('actionid','on',16384)
+      setprotect('wetfrq','on',16384)
+      setprotect('wetpwr','on',16384)
+      setprotect('pwwet','on',16384)
+      setprotect('wetshape','on',16384)
+      if (Console='mercury') then
+        setprotect('wetshape1','on',16384) setprotect('wetshape2','on',16384) setprotect('wetshape3','on',16384) setprotect('wetshape4','on',16384)
+        setprotect('wetpwr1','on',16384) setprotect('wetpwr2','on',16384) setprotect('wetpwr3','on',16384) setprotect('wetpwr4','on',16384)
+        setprotect('pwwet1','on',16384) setprotect('pwwet2','on',16384) setprotect('pwwet3','on',16384) setprotect('pwwet4','on',16384)
+      endif
+      if $esv>0.5 then
+        rtx($svfile,'current','rt','noclear')
+      endif
+      $prescan[10]=''
+      $Hprescan[6]='Complete'
+      pslabel='Lc1d'
+
+    elseif (Hprescan[3]='wet1D') then
+
+      wetit
+      setprotect('','clear',16384)
+      setprotect('file','on',16384)
+      setprotect('actionid','on',16384)
+      setprotect('wetfrq','on',16384)
+      setprotect('wetpwr','on',16384)
+      setprotect('pwwet','on',16384)
+      setprotect('wetshape','on',16384)
+      if (Console='mercury') then
+        setprotect('wetshape1','on',16384) setprotect('wetshape2','on',16384) setprotect('wetshape3','on',16384) setprotect('wetshape4','on',16384)
+        setprotect('wetpwr1','on',16384) setprotect('wetpwr2','on',16384) setprotect('wetpwr3','on',16384) setprotect('wetpwr4','on',16384)
+        setprotect('pwwet1','on',16384) setprotect('pwwet2','on',16384) setprotect('pwwet3','on',16384) setprotect('pwwet4','on',16384)
+      endif
+      if $esv>0.5 then
+        rtx($svfile,'current','rt','noclear')
+      endif
+      $prescan[10]=''
+      $Hprescan[6]='Complete'
+
+    elseif (Hprescan[3]='presat') then
+
+      if (Hprescan[6]<>'Last') then "Hprescan[6]='Not done'"
+
+        xmsatfrq('move')
+        setprotect('','clear',16384)
+        setprotect('file','on',16384)
+        setprotect('actionid','on',16384)
+        setprotect('satfrq','on',16384)
+        if $esv>0.5 then
+          rtx($svfile,'current','rt','noclear')
+        endif
+        satmode='ynn'
+        $prescan[10]=''
+        $Hprescan[6]='Complete'
+
+        if (presatgh2 > 20) then
+          Hprescan[6]='Last'
+          $Hprescan[6]='Last'
+          gain=0
+          if nt>2 then nt=2 endif
+        endif
+      endif
+
+      if (Hprescan[6]='Last') then
+
+        if (size('satfrq')<1.5) then
+          gain=0
+          xmsatfrq('array')
+          pslabel='Presat_Array'
+        else
+          xmsatfrq('findpeak')
+          setprotect('','clear',16384)
+          setprotect('file','on',16384)
+          setprotect('actionid','on',16384)
+          setprotect('satfrq','on',16384)
+          setprotect('tof','on',16384)
+          if $esv>0.5 then
+            rtx($svfile,'current','rt','noclear')
+          endif
+          $Hprescan[6]='Complete'
+          pslabel='Presat'
+        endif
+
+      endif
+
+    endif
+
+  elseif (Hprescan[5]='Not done') then "minsw"
+
+    cqminsw
+    if Hprescan[3]='wet1D' then
+"     wetit('minsw')"
+      wetit('recalc')
+    elseif Hprescan[3]='presat' then
+      if (presatgh2 > 20) then
+        xmsatfrq('minsw20')
+      else
+        xmsatfrq('minsw')
+      endif
+    endif
+    pslabel=pslabel+'_Minsw'
+    dg
+    $Hprescan[5]='Complete'
+
+  endif
+
+  if alock='y' then alock='n' endif
+  actionid=$actionid
+  prescan=$prescan
+  Hprescan=$Hprescan
+  if (Hprescan[5]='Complete' and Hprescan[6]='Complete') then
+    prescan[7]='Last'
+  endif
+  if (Hprescan[3] <> 'lc1d') then
+    setref('setup')
+  endif
+
+  xm1('dofidsave')
+
+endif

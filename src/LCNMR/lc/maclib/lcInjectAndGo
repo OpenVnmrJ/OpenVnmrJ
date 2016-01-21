@@ -1,0 +1,54 @@
+"macro lcInjectAndGo"
+/*-*- MAGICAL -*-*/
+"macro lcInjectAndGo"
+
+// Call lcInjectAndGo('start'), or without args, for first run.
+// Call lcInjectAndGo('next') at end of run to (maybe) do next run.
+// Calling lcInjectAndGo('next') when there is no autosampler and/or
+// no "lc/autosampler" file will do nothing.
+
+$func = 'start'
+$runarg = ''
+$stri = ''
+$i = 0
+while ($i < $#) do
+    $i = $i + 1
+    format($i,0,0):$stri
+    $stri = '$' + $stri
+    if typeof($stri) then
+        $func = {$stri}
+    else
+        $strval = ''
+        format({$stri},0,0):$strval
+        $runarg = '(' + $strval + ')'
+    endif
+endwhile
+
+// TODO: Initialize Pump and Detector and wait for them to be ready
+
+$goCommand = 'lcgo lcStartRun' + $runarg
+if (lcAutoSampler = '0' and $func = 'start') then
+    // No autosampler -- just go
+    {$goCommand}
+elseif (lcAutoSampler <> '0') then
+    // We have an autosampler
+    $stat = 'none'
+    lcNextAutoSample:$stat  // Set parameters for next sample
+
+    if ($func = 'start') then
+        // Download inject method, inject, and go when ready
+        lccmd('clearPlots')
+        setNewLcid
+        lcdownloadMethod('as', $goCommand)
+    elseif ($func = 'next') then
+        if ($stat = 'ok') then
+            // Download inject method, inject, and go when ready
+            lccmd('clearPlots')
+            setNewLcid
+            lcdownloadMethod('as', $goCommand)
+        elseif ($stat = 'done') then
+            // Have just finished all the samples
+            write('line3','All queued samples have been run')
+        endif // NB: No message if $stat = 'old' or 'none'
+    endif
+endif

@@ -1,0 +1,320 @@
+"macro doplotoption"
+
+$mode=''
+if ($#=0) then
+  $mode='all'
+else
+  $num=size('$1')
+  if ($num > 2) then
+    $mode='all'
+  elseif $num > 1 then
+    // if 2 values, make sure it not one of the 2 keywords
+    if ($1<>'custompl') and ($1<>'customminipl') then
+	$mode='all'
+    endif
+  endif
+endif
+if ($mode = 'all' ) then
+  if ($#) then
+    $plotoption=$1
+  else
+    exists('plotoption','parameter'):$e
+    if (not $e) then return endif
+    $plotoption=plotoption
+  endif
+
+	// make sure that vp is adjusted for 1D
+        teststr('$plotoption','pl','local'):$e
+        teststr('$plotoption','intval','local'):$e2
+        exists('intstyle','parameter'):$pex
+        if $pex then
+            if intstyle='' then $e2=0 endif
+        endif
+	if $e2 and not $e then
+	    $plotoption[$e2]=''
+	    array2array($plotoption):$plotoption
+	    $e2=0
+	endif
+        if $e and $e2 then
+            if vp<12 then vp=12 endif
+        endif
+
+  // Do first page if one of these is requested
+  if (plduplex = 2) then
+    $dopage1='molecule','comments_page1','comments','params','intlist','linelist','pl','plfid','plarray','axis','intval','pklabels','pl2d','custompl'
+    $dopage1=$dopage1,'plfidarray','axisf'
+    // Order of plot components on page 1. No miniplot if only one page.
+    $plpage1='logo','header',$dopage1
+    // No second page
+    $dopage2=''
+    $plpage2=''
+  else
+    $dopage1='molecule','comments_page1','pl','plfid','plarray','axis','intval','pklabels','pl2d','custompl'
+    $dopage1=$dopage1,'plfidarray','axisf'
+    // Order of plot components on page 1
+    $plpage1='logo','header',$dopage1
+    // Do second page if one of these is requested
+    $dopage2='comments','params','intlist','linelist'
+    // Order of plot components on page 2
+    $plpage2='logo','header','miniplot',$dopage2
+  endif
+
+  // There are mutually exclusive plotoption.  reconcile them here
+    teststr('$plotoption','plfid','local'):$plfidex
+    teststr('$plotoption','plarray','local'):$plarrayex
+    teststr('$plotoption','pl','local'):$plex
+    teststr('$plotoption','custompl','local'):$customplex
+    teststr('$plotoption','axis','local'):$axisex
+    if $customplex and $plfidex then 
+		// custompl and plfid are mutually exclusive
+		// suppress plfid
+	$plotoption[$plfidex]='' $plfidex=0 
+    endif
+    if $plfidex and $plarrayex then 
+		// plarray and plfid are mutually exclusive
+		// suppress plarray
+	$plotoption[$plfidex]='plfidarray' 
+	$plotoption[$plarrayex]='' $plarrayex=0
+    endif
+    if $plfidex and $plex then 
+		// pl and plfid are mutually exclusive
+		// suppress pl
+	$plotoption[$plex]='' $plex=0
+    endif
+    if $plfidex and $axisex then  
+		// plfid should have axisf instead axis
+	$plotoption[$axisex]='axisf'
+    endif
+    array2array($plotoption):$plotoption
+    teststr('$plotoption','plfid','local'):$plfidex
+    if not $plfidex then
+	teststr('$plotoption','plfidarray','local'):$plfidex
+    endif
+    if $plfidex then
+//  Now turn off pklabels and intval option
+	teststr('$plotoption','intval','local'):$intvalex
+	if $intvalex then $plotoption[$intvalex]='' endif
+	teststr('$plotoption','pklabels','local'):$pklabelex
+	if $pklabelex then $plotoption[$pklabelex]='' endif
+	array2array($plotoption):$$plotoption
+    endif
+
+  // DONE
+
+  $p1size=size('$plpage1')
+  $p2size=size('$plpage2')
+  $do1size=size('$dopage1')
+  $do2size=size('$dopage2')
+  $opsize=size('$plotoption')
+
+  $page1=0
+  $i=0
+  while ($i < $do1size) and ($page1=0) do
+    $i=$i+1
+    teststr('$plotoption',$dopage1[$i],'local'):$e
+    if ($e) then
+      $page1=1
+    endif
+  endwhile
+
+  $page2=0
+  $i=0
+  while ($i < $do2size) and ($page2=0) do
+    $i=$i+1
+    teststr('$plotoption',$dopage2[$i],'local'):$e
+    if ($e) then
+      $page2=1
+    endif
+  endwhile
+
+  $minipl=''
+  if ($page1) then
+    $i=0
+    while ($i < $p1size) do
+      $i=$i+1
+      teststr('$plotoption',$plpage1[$i],'local'):$e
+      if ($e) then
+	 if $plpage1[$i]='custompl' then
+	    if $minipl='' then
+	    	$minipl=$plotoption[$e+1]
+	    	strstr($minipl,'plot2D'):$ok
+	    	if $ok then $minipl='miniplot2D' endif
+		strstr($minipl,'dept'):$ok
+	 	if $ok then $minipl='pl(`all`)' endif
+		strstr($minipl,'DEPT'):$ok
+		if $ok then $minipl='pl(`all`)' endif
+	    endif
+	    {$0}('custompl',$plotoption[$e+1])
+	 else
+	    if ($plpage1[$i]='pl') then
+		$minipl='pl'
+	    elseif ($plpage1[$i]='plarray') or ($plpage1[$i]='pldeptarray') then
+		$minipl='pl(`all`)'
+	    elseif ($plpage1[$i]='plot2d') then
+		$minipl='miniplot2D'
+	    endif
+	    {$0}($plpage1[$i])
+	 endif
+      endif
+    endwhile
+  endif
+
+  if ($page2) then
+    if ($page1) then
+      setpage('newpage')
+    endif
+    $i=0
+    while ($i < $p2size) do
+      $i=$i+1
+      teststr('$plotoption',$plpage2[$i],'local'):$e
+      if ($e) then
+         if $plpage2[$i]='miniplot' then
+		// call customminipl with exactly same plot call
+		// Allow only certain minipl options
+	     if (($minipl<>'pl') and 
+		 ($minipl<>'pl(`all`)') and 
+		 ($minipl<>'miniplot2D')) then
+	        $minipl=''
+	     endif
+	     {$0}('customminipl',$minipl)
+	 else
+             {$0}($plpage2[$i])
+	 endif
+      endif
+    endwhile
+  endif
+  rm('-f',curexp+'/plheader'):$e
+
+  return
+endif
+
+teststr('plotoption','plarray'):$plarray
+if($plarray=0) then
+  teststr('plotoption','plfidarray'):$plarray
+  if($plarray=0) then
+    teststr('plotoption','plfid'):$plarray
+  endif
+endif
+
+IF ($1='pl') THEN
+    pl
+
+ELSEIF ($1='plfid') THEN
+    select:$ix
+    $intmod=intmod $pkpick=pkpick
+    intmod='off' pkpick=''
+    plfid($ix)
+    intmod=$intmod pkpick=$pkpick
+
+ELSEIF ($1='plfidarray') THEN
+    $intmod=intmod $pkpick=pkpick
+    intmod='off' pkpick=''
+    plfid('all')
+    intmod=$intmod pkpick=$pkpick
+
+ELSEIF ($1='intval' and $plarray=0) THEN
+    if intstyle='pirN' then
+	on('insref'):$n
+	insref='n'
+	exec(intstyle):$dum
+	if($n) then insref='y' else insref='n' endif
+    elseif intstyle<>'' then
+	on('insref'):$n
+	insref='y'
+	exec(intstyle):$dum
+	if($n) then insref='y' else insref='n' endif
+    endif
+
+ELSEIF ($1='pklabels' and $plarray=0) THEN
+    if pkpick<>'' then
+	exec(pkpick)
+    else 
+	ppf
+    endif
+
+ELSEIF ($1='plarray') THEN
+    pldeptarray
+
+ELSEIF ($1='plot2d') THEN
+    plot2D
+
+ELSEIF ($1='axis') THEN
+    pscale
+
+ELSEIF ($1='axisf') THEN
+    pscale('fid')
+
+ELSEIF ($1='params') THEN
+    $partemplate='ap'
+    exists('partemplate','parameter'):$partex
+    if ($partex) then $partemplate=partemplate endif
+    ap($partemplate,curexp+'/ap.dat',0)
+    setpage('parameter',curexp+'/ap.dat')
+    rm(curexp+'/ap.dat'):$e
+
+//ELSEIF ($1='miniplot') THEN
+// miniplot is obsolete
+
+//    teststr('$plotoption','plarray','local'):$e
+//    if ($e) then
+//      setpage('miniplot','pl(\'all\')')
+//    else
+//      setpage('miniplot','pl')
+//    endif
+//ELSEIF ($1='minipl') THEN
+// minipl is obsolete
+//    setpage('miniplot','pl')
+//ELSEIF ($1='miniplall') THEN
+// miniplall is obsolete
+//      setpage('miniplot','pl(\'all\')')
+ELSEIF ($1='customminipl') THEN
+    if $# < 2 then return endif
+    if $2='' then return endif
+
+    setpage('miniplot',$2)
+
+ELSEIF ($1='custompl') THEN
+    if $# < 2 then return endif
+    if $2='' then return endif
+    exec($2):$dum
+
+ELSEIF ($1='intlist' and $plarray=0) THEN
+    dli
+    setpage('integral',curexp+'/dli.out')
+
+ELSEIF ($1='linelist' and $plarray=0) THEN
+    exists('dllcmd','parameter','global'):$e
+    if($e) then
+	if(dllcmd <> '') then exec(dllcmd)
+    	else dll endif
+    else
+	dll
+    endif
+    setpage('peak',curexp+'/dll.out')
+
+ELSEIF ($1='comments') or ($1='comments_page1') THEN
+    shell('fold -s '+curexp+'/text > '+curexp+'/ftext;cat'):$e
+    setpage('text', curexp+'/ftext')
+    rm(curexp+'/ftext'):$e
+
+ELSEIF ($1='molecule') THEN
+    imagefile('plotall')
+
+ELSEIF ($1='header') THEN
+    plheader(curexp+'/plheader')
+    setpage('header', curexp+'/plheader')
+
+ELSEIF ($1='logo') THEN
+    exists('plotlogo','parameter','global'):$e
+    if ($e) then
+      if (plotlogo<>'') then
+        setpage('logo',plotlogo,0,wc2max,plotlogox,plotlogoy)
+      endif
+    else
+      setpage('logo')
+    endif
+   
+ELSEIF ($1<>'') THEN
+    exec($1):$dum 
+
+ENDIF

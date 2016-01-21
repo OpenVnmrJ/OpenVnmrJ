@@ -1,0 +1,54 @@
+"macro VPscheduledtests"
+"VPscheduledtests - submit csvfile to VeriPulse tests"
+
+exists('IPscheduledtests.csv','csvlib'):$e,$path
+if $e then
+  write('line3','Submitting VeriPulse tests...')
+
+  //Take IPscheduledtests.csv and copy to IPselectedtests_IPrunid.csv
+  shell('dirname '+$path):$csvdir
+  $IPrunid=''
+  systemtime('%Y_%m_%d_%H_%M_%S'):$IPrunid
+  $csvfile=$csvdir+'/IPselectedtests_'+$IPrunid+'.csv'
+  $modulefile=$csvdir+'/IPpars'
+  exists($modulefile,'file'):$modfex
+  if not ($modfex) then write('error','IPpars module not found - exiting') return endif
+  $tmpfile=$csvdir+'/tmpcsv'
+  $sedstr='cat '+$path+' | sed -e \'/RUNID/s/RUNID/'+$IPrunid+'/g\' > '+$tmpfile
+  shell('('+$sedstr+')'):$dum
+  shell(' mv '+$tmpfile+' '+$csvfile):$dum
+
+  //Copy IPpars module from csvdir to autodir/IPmodule_IPrunid
+  //Copy IPtuneinfo from csvdir to autodir/IPmodule_IPrunid
+  $tuneinfofile=userdir+'/csvlib/IPtuneinfo'
+  $moduledir=autodir+'/IPmodule_'+$IPrunid
+  exists($moduledir,'directory'):$direx
+  if not ($direx) then mkdir($moduledir) endif
+  cp($modulefile,$moduledir)
+  cp($tuneinfofile,$moduledir)
+
+  if ($#) then
+    csv2cpQ($csvfile,'rpv','VeriPulse')
+  else
+    nextexp:$exp
+    CEXP($exp)
+    jexp($exp)
+    bootup(1)
+
+    //Rename testlist file to use actual runid
+    create('IPdatadir','string'):$ret
+    readparam($modulefile,'IPdatadir')
+    $tmpfile=IPdatadir+'/'+probe+'/History/RUNID.testlist'
+    $testfile=IPdatadir+'/'+probe+'/History/'+$IPrunid+'.testlist'
+    mv($tmpfile,$testfile)
+  
+    //Multi-submit must be switched on
+    cpADMIN('Start') cpprefs[46]='yes' cpADMIN('save')
+    csv2cpQ($csvfile,'rpv','VeriPulse')
+    //Multi-submit must be switched off afterwards
+    cpADMIN('Start') cpprefs[46]='no' cpADMIN('save')
+    DELEXP('auto')
+  endif
+else
+  write('line3','IPscheduledtests.csv file not found')
+endif

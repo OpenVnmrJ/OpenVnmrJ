@@ -1,0 +1,141 @@
+"macro fm_dssl"
+"***************************************************************"
+" dssl:                                                         "
+"                                                               "      
+" Display a label for each element in a set of stacked spectra. "
+" The label will be an integer value starting with 1 and        "
+" extending up to the number of spectra in the display.         "
+"                                                               "
+" Several options are available to control the position of the  "
+" displayed index relative to each spectrum.                    "
+" Positional options are: 'center','left','right','top',        "
+" 'bottom','above','below'.                                     "
+"                                                               "
+" The argument 'value' will produce a display of the values of  "
+" of each array element, instead of an integer index.           "
+"                                                               "
+" The argument 'list=xxx' will produce a display of the values  "
+" contained in the arrayed parameter xxx.                       "
+"                                                               "
+" The argument 'format=yyy' will use the format yyy to control  "
+" the display of each label.                                    "
+"                                                               "
+" Examples:                                                     "
+"   dssl                                                        "
+"   dssl('top','left')                                          "
+"   dssl('value','format=%3.1f')                                "
+"                                                               "
+"***************************************************************"
+
+write('graphics',0,0,''):$htchar
+$novals = arraydim
+$string = ''
+$list = ''
+$format = '%d'
+
+"** $scale is used here as an attempt to get around a bug *"
+"** in write positioning with wysiwyg='n'.  It was ********"
+"** determined empirically for a large screen, and is not *"
+"** guaranteed to be correct for all displays. When this **"
+"** bug is fixed, $scale should be removed. ***************"
+if (wysiwyg = 'n') then
+  $scale = 0.545*wcmax/wc2max
+else
+  $scale = 1
+endif
+
+"** Default starting positions ****************************"
+$xstart = wcmax - sc - wc*0.8
+$ystart = vp*$scale - 1.2*$htchar
+
+$ydelta = vo*$scale
+"** Check for command line arguments **********************"
+if ($# > 0) then
+  $i = 0
+  $argno = ''
+  repeat
+    $i = $i + 1
+    if ($i > 9) then
+      format({'$i'},2,0):$argno
+    else
+      format({'$i'},1,0):$argno
+    endif
+			  
+    if (typeof('$'+$argno) = 0) then
+      $novals = ${$i}
+    else
+      if (${$i} = 'center') then
+	$xstart = wcmax - sc - wc/2
+      endif
+      if (${$i} = 'left') then
+	$xstart = wcmax - sc - wc
+      endif
+      if (${$i} = 'right') then
+	$xstart = wcmax - sc
+      endif
+      if (${$i} = 'top') then
+	$ystart = wc2max*$scale
+	$ydelta = 0
+      endif
+      if (${$i} = 'bottom') then
+	$ystart = -18
+	$ydelta = 0
+      endif
+      if (${$i} = 'above') then
+	$ystart = vp*$scale + 0.2*$htchar
+	$ydelta = vo*$scale
+      endif
+      if (${$i} = 'below') then
+	$ystart = vp*$scale - 1.2*$htchar
+	$ydelta = vo*$scale
+      endif
+      if (${$i} = 'value') then
+	$list = array
+      endif
+      "** Look for 'list=x' syntax ******************************"
+      substr(${$i},1,4):$string
+      if ($string = 'list') then
+        substr(${$i},6,10):$list
+      endif
+      "** Look for 'format=x' syntax ****************************"
+      substr(${$i},1,6):$string
+      if ($string = 'format') then
+        substr(${$i},8,10):$format
+      endif
+    endif
+  until ($i = $#)
+endif
+
+if (ni=6) then
+  $list[1]='X'
+  $list[2]='res'
+  $list[3]='Y'
+  $list[4]='res'
+  $list[5]='Z'
+  $list[6]='res'
+endif
+
+if (ni=12) then
+  $list[1]='XY'
+  $list[2]='res'
+  $list[3]='YX'
+  $list[4]='res'
+  $list[5]='YZ'
+  $list[6]='res'
+  $list[7]='ZY'
+  $list[8]='res'
+  $list[9]='XZ'
+  $list[10]='res'
+  $list[11]='ZX'
+  $list[12]='res'
+endif
+$count = 1
+$x = $xstart
+$y = $ystart
+repeat
+  "** Write label to each spectrum **************************"
+    write('graphics',$x,$y,$list[$count])
+  $x = $x - ho
+  $y = $y + $ydelta
+  $count = $count + 1
+until (($x < 0) or ($x > wcmax) or ($count > $novals) or ($count > ni))

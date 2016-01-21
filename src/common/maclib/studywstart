@@ -1,0 +1,39 @@
+"macro studywstart"
+
+   if (sample<>'') and (archivedir<>'') then
+	is_cpsample(archivedir+'/'+sample):$cp,$archsamp
+   else
+	$cp=0
+   endif
+   if ($cp=0) then
+	checktemplates:$return
+	if ($return=0) then abort endif
+   	Automkdir
+	$archsamp=archivedir+'/'+sample
+   endif
+    $rbld=0
+    fixcpQnodes:$rbld
+    if ($rbld) then
+	xmhaha_subSQ(archivedir+'/'+sample)
+    endif
+
+    $md=$archsamp+'/dirinfo/macdir'
+
+   $expfile=cursqexp+'/EXPLIST'
+   $s1='' $explist=''
+   readfile($expfile,'$explist','$s1','','local')
+   $macexpfile=$md+'/EXPLIST'
+   $maclngfile=$md+'/LONGLIST'
+   $macalias=$md+'/EXPalias'
+   shell('touch '+$macexpfile):$dum
+   shell('touch '+$maclngfile):$dum
+   shell('touch '+$macalias):$dum
+   shell('(cat '+$expfile+' | grep -w Queued >> '+$macexpfile+')'):$dum
+   shell('(cat '+$expfile+' | grep -w Queued | awk \'{print $1" "$3}\' >> '+$macalias+')'):$dum
+   shell('cp '+cursqexp+'/macdir/* '+$md):$dum
+
+    explist=$explist
+    explist[1]=''
+    cpexplist('write',$md)
+    explist=$explist[1]
+    wexp='chempackQ'

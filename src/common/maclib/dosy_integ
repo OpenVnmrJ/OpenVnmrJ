@@ -1,0 +1,31 @@
+"macro dosy_integ"
+"GMfptmp - Find peak integrals and write to file fp.out"
+"macro requires resets to be set at the appropriate range"
+"and sends midpoint of each integral region to dosyfit"
+
+" use same format as dosy_in GAM 6i04 "
+
+$nints=(size('lifrq')-1)/2
+$out=curexp+'/fp.out'
+write('reset',$out)
+write('file',$out,'List of %d lines in spectrum 1 to spectrum %d',$nints,arraydim)
+write('file',$out,'peak         frequency (Hz)')
+$i=1
+repeat
+  write('file',$out,'%4d%18.2f',$i,(lifrq[2*$i-1]+lifrq[2*$i])/2-rfl+rfp)
+  $i=$i+1
+until $i>$nints
+write('file',$out,'line    spectrum     amplitude (mm)')
+$i=1
+mark('reset')
+repeat
+  $j=1
+  repeat
+    select($j) 
+    nli
+    write('file',$out,'%4d%12d%13.4f',$i,$j,liamp[2*$i])
+    $j=$j+1
+  until $j>arraydim
+  $i=$i+1
+until $i>$nints
+mark('reset')

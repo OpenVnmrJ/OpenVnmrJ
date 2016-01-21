@@ -1,0 +1,35 @@
+"macro BPfind1Hpw90"
+if (arraydim>1) then
+ banner('Remove Array. Then Restart')
+ return
+endif
+readhw('status'):$status
+if $status<>10 then
+ banner('Stop Acquisition Before using "Find PW90"')
+ return
+endif
+exists(curexp+'/temp.par','file'):$e
+getlimit('tpwr'):$max,$min,$stepsize
+setlimit('hdpwr',tpwr,0,$stepsize)
+if $e=1 then
+ mv(curexp+'/temp.par',curexp+'/temp.par.save')
+endif
+svp(curexp+'/temp')
+seqfil='s2pul'
+sw=20p
+gf=.025 sb='n' lb='n' gfs='n'
+at=.05 ssfilter=200 ssorder='n' gain=0
+homo='y' hdpwr=tpwr
+hdof=tof ss=1
+hdseq='cw'
+exists('ni','parameter'):$e
+if ($e=1) then ni=1 endif
+exists('ni2','parameter'):$e
+if ($e=1) then ni2=1 endif
+exists('phase','parameter'):$e
+if ($e=1) then phase=1 endif
+exists('phase2','parameter'):$e
+if ($e=1) then phase2=1 endif
+d2=0 nt=1 d1=0.1 p1=0 pw=0 
+wexp='BPfind1Hpw90proc'
+au

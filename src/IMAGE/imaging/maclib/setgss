@@ -1,0 +1,216 @@
+"macro setgss"
+"***************************************************************"
+" setgss                                                      "
+"	Used to be named setsgrad.				"
+"                                                               "
+" Macro to set slice gradient                                   "
+"                                                               "
+" Examples:                                                     "
+"                                                               "
+" setgss('gradient','thickness')                              "
+"                                                               "
+" gradient: Name of gradient parameter, e.g., gss, gvox1        "
+" thickness: Name of slice or voxel thickness, e.g., thk or vox1"
+"                                                               "
+" Program allows the use of arrayed thickness values and        "
+" creates an array of conjugate gradient values as required     "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog = 'setgss: '          "*Program ID*"
+$gamma = sfrq*1e6/B0          "*Nuclear gamma factor*"
+$us_s = 1e-6                  "*Microseconds to seconds   *"
+$mm_cm = 0.1                  "*Millimeters to centimeters*" 
+$cm_mm = 10.0                 "*Centimeters to millimeters*"
+$big = 1e6                    "*Bandwidth value of nonselective pulse*"
+
+
+"-- Input Check -------------------------------------------"
+" If there are two arguments, then use these as parameter  "
+" names; if not, request input.                            "
+"----------------------------------------------------------"
+if ($# < 1.5) or ($# > 2.5) then
+    $message = 'Enter name of the gradient level parameter (string) :> '
+    input($message):$gradient
+    $message='Enter the name of the thickness parameter (string) :> '
+    input($message):$thickness
+endif
+
+if ($# > 1.5) and ($# < 2.5) then
+    $gradient = $1
+    $thickness = $2
+endif
+
+
+"-- Determine the bandwidth factors which apply -----------"
+" Search the conjugate gradient list sslist to find out    "
+" which pulses use the conjugate gradient selected.        "
+" Extract the template parameters for the RF template at   "
+" the corresponding locations in the patlist parameter.    "
+"----------------------------------------------------------"
+$k=1
+$limit = size('sslist')
+repeat
+
+  "-- Locate current RF pattern -----------------------------"
+  $usrpat = userdir+'/shapelib/'+{patlist[$k]}+'.RF'
+  $syspat = systemdir+'/shapelib/'+{patlist[$k]}+'.RF'
+  exists($usrpat,'file'):$ex1
+  exists($syspat,'file'):$ex2
+
+  if ($ex1 > 0.5) then
+      $file = $usrpat
+  else if ($ex2 > 0.5) then
+      $file = $syspat
+  else
+      $file = 'nofile'
+  endif endif
+
+  "-- Default values for no pattern or keywords -------------"
+  $type[$k] = 'no'
+  $exw[$k] = -1
+  $inw[$k] = -1
+
+  "-- Read keyword information from RF pattern --------------"
+  if ($file <> 'nofile') then
+
+      lookup('file',$file,'count','TYPE'):$count
+      if ($count >= 1) then
+          lookup('file',$file,'TYPE','read'):$type[$k]
+      endif
+
+      lookup('file',$file,'count','EXCITEWIDTH'):$count
+      if ($count >= 1) then
+          lookup('file',$file,'EXCITEWIDTH','read'):$exw[$k]
+      endif
+
+      lookup('file',$file,'count','INVERTWIDTH'):$count
+      if ($count >= 1) then
+          lookup('file',$file,'INVERTWIDTH','read'):$inw[$k]
+      endif
+  endif
+
+$k = $k + 1
+until ($k > $limit)
+
+
+"-- Determine the bandwidths of all RF pulses -------------"
+$k = 1
+$pulses = 0
+repeat
+        
+  if (sslist[$k] = $gradient) then 
+
+      "-- CASE 1: No template data ------------------------------"
+      if ($type[$k] = 'no') then
+          $pbw[$k] = $big
+      endif
+
+      "-- CASE 2: Non-selective pulse ---------------------------"
+      if ($type[$k] = 'nonselective') then
+          $pbw[$k] = $big
+      endif
+
+      "-- CASE 3: Selective pulse -------------------------------"
+      if ($type[$k] = 'selective') then
+
+          if ($exw[$k] <= 0) and ($inw[$k] <=0) then
+              $pbw[$k] = $big
+
+          else if ($exw[$k] > 0) and ($inw[$k] <= 0) then 
+              $pbw[$k] = $exw[$k]
+              $pulses = $pulses + 1
+
+          else if ($exw[$k] <=0) and ($inw[$k] > 0) then 
+              $pbw[$k] = $inw[$k] 
+              $pulses = $pulses + 1
+
+          else if ($exw[$k] > 0) and ($inw[$k] > 0) then
+              if (fliplist[$k] > 135.0) and (fliplist[$k] < 225.0) then
+                  $pbw[$k] = $inw[$k] 
+              else
+                  $pbw[$k] = $exw[$k]
+              endif
+              $pulses = $pulses + 1
+          endif endif endif endif
+      endif
+  else
+      $pbw[$k]=$big
+  endif
+
+$k=$k+1
+until ($k > $limit)
+
+
+"-- Determine the smallest pulse bandwidth ----------------"
+" Of the RF pulses used with the specified conjugate       "
+" gradient, select the one which gives the smalles pulse   "
+" bandwidth.  This is assumed to set the overall slice     "
+" thickness.                                               "
+"----------------------------------------------------------"
+if ($pulses > 0.5) then
+
+  $limit = size('$pbw')
+  $k = 1
+  $minbw = $big
+  repeat
+      if ({plist[$k]} > 0.0) then
+          $bw[$k] = $pbw[$k]/({plist[$k]}*$us_s)
+      else
+          $bw[$k] = $big
+      endif
+
+      if  ($bw[$k] < $minbw)  then  $minbw=$bw[$k]  endif
+      $k=$k+1
+  until ($k > $limit)
+
+else
+    $message = 'All RF templates used with "'+$gradient+'" are non selective.'
+    write('error','%s',$prog+$message)
+    abort
+endif
+
+if ($minbw <= 0.01) then
+    $message='Sequence pulse bandwidth too small, please check plist'
+    write('error',$prog+$message)
+    abort
+endif
+
+
+"-- Determine the Slice Select Gradient strength ----------"
+" The thickness parameter may have multiple values.  If    "
+" so, set up an array in the conjugate gradient variable.  "
+" Warn the user to set the array string properly for a     "
+" simultaneous array.                                      "
+"----------------------------------------------------------"
+$k = 1
+{$gradient} = 0
+$limit = size($thickness)
+repeat
+
+  if ({$thickness}[$k] > 0.0) then
+      $thk = {$thickness}[$k]*$mm_cm
+      $grad = $minbw/($gamma*$thk)
+
+      if ($grad > gmax) then
+          $message = 'Slice thickness too small for gmax.  It has been reset.'
+          write('error','%s',$prog+$message)
+
+          {$thickness}[$k] = $cm_mm*$minbw/($gamma*gmax)
+          {$gradient}[$k] = gmax
+      else
+          {$gradient}[$k]=$grad
+      endif
+  else
+      $message='Zero '+$thickness+' values are not allowed'
+      write('error',$prog+$message)
+      abort
+  endif
+
+$k=$k+1
+until ($k > $limit)
+
+if ($limit > 1) then
+    $message = 'ADVISORY: Set "array" for simultaneous variation of'
+    write('line3','%s %s and %s',$message,$gradient,$thickness)
+endif

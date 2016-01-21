@@ -1,0 +1,144 @@
+"macro im2Dfse_22c"
+"Setup and processing for 2D Fast-Spin echo type of imaging sequences"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+isvnmrj:$vj
+exists('profile','parameter'):$profile
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  imprep('esp')
+  calcdim
+
+  if (nv > 0) then
+    exists('kzero','parameter'):$e
+    if ($e = 0) then
+      create('kzero','integer')
+      kzero=1
+    endif
+    if ((kzero < 1) or (kzero > etl)) then
+      write('line3','ERROR (%s): kzero must be >= 1 and <= %d',$0,etl)
+      abort
+    endif
+
+    write('line3','fse%d_%d_%d',nv,etl,kzero):petable
+    exists(userdir+'/tablib/'+petable,'file'):$e
+    if ($e = 0) then
+      tabfsems(petable,nv,etl,kzero)
+    endif
+  endif
+
+  "Set up real-time recon (for VnmrJ) if compressed in PE"
+  wnt = ''  "default"
+  if ($vj > 0) AND ($do = '') AND (nv > 0) then
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    if ($seqcon = 'c') then
+      if (arraydim > 1) then
+        wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+      endif
+    endif
+  endif
+    
+ "Execute any sequence specific preparation"
+  execseq('prep')  
+
+  if ($do = 'profile') then
+    if ($profile > 0) then
+      profile = 'y'
+    else
+      petable = ''
+      writeparam(curexp+'/im2Dfse_params.par','nv')
+      nv = 0
+      nf = etl * ns
+    endif
+
+    wexp    = 'im2Dfse(`proc`,`profile`)'
+    wdone   = ''
+    werr    = ''
+  else
+    if ($profile > 0) then 
+      profile = 'n' 
+    endif
+  endif "profile prep"
+
+  setloop  "update nf and ni"
+
+  "and allow for standard 'peloop'"
+  $seqcon = ''
+  substr(seqcon,3,1):$seqcon
+  if ($seqcon = 's') then
+    nf = nf * etl
+    ni = ni/etl
+    if (ni = 1) then
+      ni = 0
+    endif
+  endif
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($do = 'profile') then
+    cf = 1
+    vp = 0
+    flashc('rare',ns,etl)
+    av ft f full vsadj dscale dssh
+
+    if ($profile = 0) then
+      rtv(curexp+'/im2Dfse_params.par','nv') setloop
+    endif
+        
+    return
+  endif "profile proc"
+
+  if (nv > 0) then
+    if ($vj > 0) then
+      if (wnt = '') then  "not real-time recon"
+        aipDeleteData
+        aipSplitWindow(aipWindowSplit[1], aipWindowSplit[2])
+        recon_all
+      else
+        wnt = ''
+        setvalue('wnt','','processed')  "otherwise <Reprocess> won't work"
+      endif
+    else
+      rarec
+      dmi
+    endif
+  else
+    cf = 1
+    av ft f full vsadj dscale
+  endif
+
+  execseq('proc')  "Execute any sequence specific processing"
+  
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  if (prescan_exec[prescan_control[2]] = 'gain') then
+    im2Dfse('prep','profile')
+    wnt   = ''
+    werr  = ''
+    wdone = ''
+    if (ssc = 0) then ssc = 2 endif
+  endif "gain prep"
+endif

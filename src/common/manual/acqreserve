@@ -1,0 +1,45 @@
+******************************************************************************
+acqreserve             - Reserve the acquisition console for the current owner
+******************************************************************************
+
+acqreserve controls reservation of the NMR acquisition console, allowing a
+user sole access.  It reserves the console for the current user, as specified
+by the owner parameter.  This user / owner will have access to the acquisition
+commands to acquire data, lock, shim, set temperature, etc.
+
+If the console is reserved, any VnmrJ session with a different user / owner
+will be forced into a datastation mode.  Access to acquisition related commands
+and acquisition related panels will be prevented in this datastation mode.
+
+Any background processing will not be subject to acqreserve restrictions.
+That is, automation and other background processing, such as processing
+associated with wexp or werr processing, will continue even if the console
+is reserved by someone else.
+
+acqreserve takes up to three optional arguments. The first argument is 'on',
+'off', or 'autooff'. If no argument is given, the default is 'on'.
+acqreserve('on') makes the reservation.  acqreserve('off') removes the
+reservation.  acqreserve('autooff') is described below.  The other
+optional arguments are 'noAutoOff' and 'force'. They can be provided in
+either order, following the 'on', 'off', or 'autooff' argument.
+
+By default, a console reservation will be removed when the user / owner exits
+from the current VnmrJ session. Using the acqreserve('on','noAutoOff') option
+causes the reservation to remain intact, even after the user / owner exits.
+For example, they will maintain the console reservation while they travel and
+start a new session at a remote site. If they do not exit from the first VnmrJ
+session and start a second session somewhere else, that second session will
+share the reservation.  The reservation does not need to be turned off from
+the VnmrJ that started it. The capitalization in the second argument is ignored.
+The argument 'noautooff' also works. The invocation acqreserve('autooff') is
+used when the user exits. This will turn off the reservation, as long as it
+was not turned on with the 'noAutoOff' option.
+
+A force option will turn the reservation on or off, even if the current
+user / owner is not the one that made the original reservation. A record
+will be kept of forced reservation events.  
+
+If acqreserve is never used, or after acqreserve('off') is issued, access
+to the console will be available on a first come first served basis. As soon
+as the console becomes "Idle", any user not in datastation mode will be able
+to access it.

@@ -1,0 +1,84 @@
+"macro cqexp"
+"retrieve and set parameters for a pulse sequence in a chemistry study"
+
+if ($# < 0.5) then
+  write('error','%s requires a pulse sequence name as an argument',$0)
+  return
+endif
+
+$actionid=actionid
+xm1('studydir'):$sdir
+exists(curexp+'/text','file'):$e
+exists($sdir,'directory'):$e2
+if (auto<>'y' and $e>0.5 and $e2>0.5) then
+  cp(curexp+'/text',$sdir+'/text')
+endif
+
+exists('macro','parameter'):$e
+if $e<0.5 then
+  create('macro','string')
+  setgroup('macro','display')
+  setprotect('macro','on',3)
+endif
+
+$oldapptype=apptype
+apptype=''
+macro=$1
+if ($# > 1.5) then
+  apptype=$2
+endif
+newdg
+
+$solv=solvent $alock=alock "$wshim=wshim"
+$samplename=samplename
+"many experiments turn off alock, wshim, only need it first scan"
+
+$prescan=prescan
+cqsavestudy('paronly')
+exists('execsetup','parameter'):$j
+if ($j < 0.5) or ($oldapptype <> apptype) then
+  execpars
+endif
+on('execsetup'):$j
+if ($j > 0.5) then
+  exec(execsetup)
+  exists('execsetup','parameter'):$j
+  if ($j < 0.5) then
+    execpars
+  endif
+endif
+
+$prescan7=prescan[7]
+$prescan10=prescan[10]
+
+exists($sdir+'/studypar','file'):$ex
+if $ex>0.5 then
+  fread($sdir+'/studypar')
+endif
+prescan=$prescan
+prescan[7]=$prescan7
+prescan[9]='off'
+prescan[10]=$prescan10
+
+solvent=$solv alock=$alock "wshim=$wshim"
+samplename=$samplename
+
+"user preferences for process/plot"
+$size=size('doprocess')
+if $size<2.5 then
+  doprocess[3]='y'
+  doprocess[4]='y'
+endif
+
+if (prescan[3] = 'y') then
+  if pltmod='off' then pltmod='full' endif
+else
+  pltmod='off'
+endif
+
+exists($sdir+'/text','file'):$e
+if $e>0.5 then
+  cp($sdir+'/text',curexp+'/text')
+  if auto<>'y' then vnmrjcmd('pnew','curexp') endif
+endif
+actionid=$actionid

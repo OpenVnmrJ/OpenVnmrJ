@@ -1,0 +1,44 @@
+"macro testMacro"
+"macro "
+getdirs('maclib',systemdir):$dirs
+$num=size('$dirs')
+$j=0
+$tot=0
+$faillog=curexp+'/faillog'
+write('reset',$faillog)
+while ($j < $num) do
+  $j = $j+1
+  $dir = $dirs[$j]
+  getfile($dir):$nfiles
+  write('line3','Macro syntax of %s',$dir):$msg
+  vvLog('Test',$msg)
+  $pass=0
+  $fail=0
+  $i=0
+  while ($i<$nfiles) do
+     $i=$i+1
+     getfile($dir,$i):$macro_name
+     macrold($dir+$macro_name):$e
+     if ($e) then
+       $pass=$pass+1
+     else
+       $fail=$fail+1
+       write('file',$faillog,'failed macro: %s',$dir+$macro_name)
+     endif
+     purge($macro_name)
+  endwhile
+  if ($pass) then
+    write('line3','%d macros',$pass):$msg
+    vvLog('Pass',$msg)
+  endif
+  if ($fail) then
+    write('line3','%d macros',$fail):$msg
+    vvLog('Fail',$msg)
+    vvLog:$path
+    shell('cat '+$faillog+' >> '+$path+';cat'):$e
+    write('reset',$faillog)
+  endif
+  $tot=$tot+$pass+$fail
+endwhile
+write('line3','Tested a total of %d macros',$tot):$msg
+vvLog('Test',$msg)

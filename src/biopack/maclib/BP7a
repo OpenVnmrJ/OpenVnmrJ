@@ -1,0 +1,30 @@
+"macro BP7a"
+" BP7a "
+wft f setref 
+select(2)
+BPaph(2) vsadj(80) vp=0 dssh('dodc')
+f cr=3p delta=3p
+select(1) dsn:$sn1
+select(2) dsn:$sn2
+select(3) dsn:$sn3
+if ($sn1>$sn2) then $bestone=1
+  if $sn1>$sn3 then $bestone=1 else $bestone=3 endif
+else $bestone=2
+  if $sn2>$sn3 then $bestone=2 else $bestone=3 endif
+endif
+d1=d1[$bestone]
+select($bestone) dsn:$bestsn
+BPaph($bestone) nm vsadj(100) sc=110 wc=50 ho=-55 dss('dodc')
+vo=0 pl('all','dodc') pap BPpage
+BPsvf(userdir+'/AutoTripRes/gNhsqc_find_best_d1')
+$BPd1='' format(d1,4,4):$BPd1
+BPsetparams('BPd1',$BPd1,'H1')
+ai vsadj
+if $bestsn<30 then
+  nt=nt[$bestone]*(30/$bestsn)*(30/$bestsn)
+  nt=nt/4 nt=nt*4
+else
+  nt=8
+endif
+NHonly='y','n' NH2only='n'
+wexp='BP8' au

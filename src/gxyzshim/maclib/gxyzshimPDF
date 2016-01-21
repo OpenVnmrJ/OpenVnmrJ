@@ -1,0 +1,87 @@
+"macro gxyzshimPDF"
+
+$arg='make'
+if $#>0 then $arg=$1 endif
+exists(gxyzshimPDF,'file'):$epdf
+$base='/vnmr/tmp/gxyzshimPS_tmp'
+exists($base,'directory'):$edir
+if not $edir then shell('mkdir '+$base+'; chmod g+w '+$base) endif
+
+if $arg='make' then
+	pwd:$cwd
+	cd($base)
+	if $epdf then shell('rm -f '+gxyzshimPDF) endif
+
+        $n='' format(gxyzshimPSn,'lower'):$n		"include shim log file here"
+	getplottertype(printer,'papersize'):$papersize
+	strstr($papersize,'-'):$ret,$dum,$papertype
+	if ($papertype='letter') then $papertype='Letter' else format($papertype,'upper'):$papertype endif
+	shell('enscript -M '+$papertype+' -o '+gxyzshimPS+$n+'.ps '+userdir+'/3Dshimlib/calibs/shimlog.txt')
+	gxyzshimPSn=gxyzshimPSn+1
+shell('sleep 1')
+write('line3','gxyzshimPSn=%s',gxyzshimPSn)
+	$max=gxyzshimPSn-1
+	$i=1 $in='' $cmd='cat '
+	repeat
+		format($i,'lower'):$in
+		$cmd=$cmd+' PS'+$in+'.ps'
+		$i=$i+1
+	until $i=$max+1
+	$cmd=$cmd+' > gxyzshimAll.ps'
+echo($cmd)
+
+	shell($cmd):$dum
+	shell('ps2pdf gxyzshimAll.ps '+gxyzshimPDF)
+
+	cd($cwd):$dum
+	write('line3','Summary PDF file stored as %s',gxyzshimPDF)
+	newdg
+
+elseif $arg='show' then
+	if $epdf then shell('acroread '+gxyzshimPDF+' &') endif
+
+elseif $arg='cleanup' then
+	exists(gxyzshimPS+'1.ps','file'):$eps
+	exists(gxyzshimPS+'1.txt','file'):$etxt
+	if $eps or $etxt then shell('rm -f '+gxyzshimPS+'*') endif
+	if $epdf then shell('rm -f '+gxyzshimPDF) endif
+
+elseif $arg='check' then
+  $pltype=0
+  getplottertype(plotter):$pltype	// check if Postscript plotter exists
+  if ($pltype=3) or ($pltype=4) then
+    $ret=1
+  else
+    $newplotter='' $ret=0
+    $plotters=''   $ps2pdfpath=''
+    vjplotmenu:$plotters
+    $total=size('$plotters')
+    if ($total) then
+      $i=1
+      repeat
+        $host='' $type=''
+        if ($plotters[$i]='Email') then
+           lookup('mfile','/vnmr/devicenames','seekcs','Email','seekcs','Host','read',1):$host
+           lookup('mfile','/vnmr/devicenames','seekcs','Email','seekcs','Type','read',1):$type
+        endif
+        if ($host<>'dummy') and ($type<>'PS_AR') then
+           getplottertype($plotters[$i]):$pltype
+           if ($pltype=3) or ($pltype=4) then
+                $newplotter=$plotters[$i]
+                $ret=1 $i=$total
+           endif
+        endif
+        $i=$i+1
+      until $i > $total
+    endif
+  endif
+  shell('which ps2pdf;cat'):$ps2pdfpath	//check if ps2pdfwr exists
+  exists($ps2pdfpath,'file'):$ps2pdfex
+
+  if $ps2pdfex=0 or $ret=0 then
+    return(0)
+  else
+    return(1)
+  endif
+
+endif

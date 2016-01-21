@@ -1,0 +1,23 @@
+"macro findselfrq"
+if ($# < 1) then return endif
+if (procdim<>1) then return endif
+
+$retppm=0 $retwidth=0
+
+$total=size('$1')
+$i=1
+$width=50
+repeat
+	$freq=$1[$i]*reffrq
+	peak($freq-$width/2,$freq+$width/2):$ht,$offset
+	dres($offset,0.1):$basewidth
+	$basewidth=2*$basewidth
+	if ($basewidth < 25) then $basewidth=25 endif
+
+	$retppm[$i]=$offset/reffrq
+	$retwidth[$i]=$basewidth
+	$i=$i+1
+until $i > $total
+
+return($retppm,$retwidth)
+

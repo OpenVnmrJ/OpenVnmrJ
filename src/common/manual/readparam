@@ -1,0 +1,100 @@
+
+***************************************************************************************
+readparam(file,parlist[,tree[,type]])	- 	read one of more parameters from a file
+***************************************************************************************
+
+  The readparam command will read one or more parameters from a specified
+  file.  The first argument is the name of the file.  The second argument
+  is either a list of the names of the parameters to be read or it is the
+  name of an arrayed temporary $ variable.  If it is a list, it is a
+  string parameter and the names can be separated either by a space or a comma.
+  If it is an arrayed temporary $ varaible, each array element is a single parameter
+  name.  If a parameter in the list or array is not present in the file being
+  read, no error is generated.
+  The optional third argument is the tree into which the parameters are
+  read.
+  The variable trees are 'current', 'global'. 'processed' and 'systemglobal'.
+
+  The optional fourth argument controls the behavior of the readparam command.
+  The options are 'read', 'replace', 'add', 'list', and 'alist $par'. 
+  The default type is 'read'.  In order to specify a type other than 'list' or
+  'alist', the tree must also be specified.
+
+  The list and alist types is somewhat special, since they only return the list of parameter
+  names in the file. They does not actually set any parameters in any tree. The tree
+  argument can be included or not. It is not used. The second argument also is not
+  used by the list or alist types. It can be passed as a empty string. The typical
+  invocations will be  readparam(file,'','list'):$parlist or
+  readparam(file,'','alist $parlist'):$num
+  In the 'list' case, the $parlist return variable will be set to a space separated
+  list of parameter names. If the specified file does not contain any parameters,
+  or the file does not exist, $parlist will be returned as an empty string ($parlist='').
+  In the 'alist $parlist' case, the $num return variable will be set to the number of
+  returned values. The actual values will be returned as an array in the $parlist variable.
+  If the specified file does not contain any parameters,
+  or the file does not exist, $parlist will be returned as an empty string ($parlist='').
+
+  The behaviors are best illustrated with specific examples.  Lets say that there
+  is a temporary file containing only the parameters a and b.  We are going to
+  use the readparam command to read parameters into a current tree which contains
+  the parameters a and c but does not contain the parameters b and d. This can
+  be summarized as:
+
+  Parameters in mypar:                  a=1   b=2
+  Initial parameters in current tree:   a=4        c=8   (b and d do not exist)
+
+  Example 1.  readparam(curexp+'/mypar','a b c d','current','read')
+  Parameter a in current tree is replaced with parameter from mypar.
+  Parameter b in current tree is read in from mypar
+  Parameter c in current tree is unaltered
+  Parameter d in current tree still does not exist.
+  Final parameters in current tree:     a=1   b=2  c=8   (d does not exist)
+
+  Example 2.  readparam(curexp+'/mypar','a b c d','current','replace')
+  Parameter a in current tree is replaced with parameter from mypar.
+  Parameter b in current tree still does not exist.
+  Parameter c in current tree is deleted.
+  Parameter d in current tree still does not exist.
+  Final parameters in current tree:     a=1              (b c and d do not exist)
+
+  Example 3.  readparam(curexp+'/mypar','a b c d','current','add')
+  Parameter a in current tree is unaltered.
+  Parameter b in current tree is read in from mypar
+  Parameter c in current tree is unaltered.
+  Parameter d in current tree still does not exist.
+  Final parameters in current tree:     a=4   b=2  c=8   (d does not exist)
+
+  Example 4.
+    $list='a b c d'
+    readparam(curexp+'/mypar',$list,'current','add')
+    This is the same as Example 4.
+
+    $arraylist='a','b','c','d'
+    readparam(curexp+'/mypar','$arraylist','current','add')
+    This is also the same as Example 3, however the variable names are passed
+    as an arrayed temporary $ variable $arraylist. Note the single quotes
+    around the second argument to readparam. The name of the local temporary
+    $variable is passed to the command, not its value.  This format is useful
+    if the list of parameters to read becomes large.
+ 
+  This command may be used to read temporary values which have been saved with
+  the writeparam command.
+
+  More Examples:
+
+    readparam(curexp+'/mypar','in')       reads the parameter in from the file
+                                           mypar in the current experiment directory.
+
+    readparam(curexp+'/mypar','sw ct np','processed')
+                                           reads the parameters sw, ct, and np into
+                                           the processed tree from the file mypar
+                                           in the current experiment directory.
+
+    readparam(curexp+'/mypar','','list'):$parlist
+                                           sets $parlist='a b in sw ct np'
+
+    readparam(curexp+'/mypar','','alist $parlist'):$num
+                                           sets $num=6
+                                           sets $parlist='a','b','in','sw','ct','np'
+
+

@@ -1,0 +1,219 @@
+"macro apply_sum"
+"*************************************************************"
+"       MACRO TO ADD FIDS                                     "
+"       Update of the PROCPAR (NT)                            "
+"       Written by: Ivan Tkac                                 "
+"       Last modification: Oct 30, 2007                       " 
+"*************************************************************"
+
+if (arraydim < 2) then
+   
+   
+   write('line3','Number of FIDs < 2, program was aborted!')
+   write('alpha','Number of FIDs < 2, program was aborted!')
+   clear
+   abort
+endif
+
+//save the filename 
+$file=file
+
+//Check that you are not in addsubexp and memorize which experiment existed
+ jexp:$exp,$nam
+ if ($exp=addsubexp) then
+  nextexp:$expfound,$expfounds
+  cexp($expfound)
+  
+  $nam='exp'+$expfounds
+  
+  {'j'+ $nam}
+  rt($file)
+
+  
+  write('line3','Exiting addsub experiment...')
+ endif
+
+
+
+ 
+
+
+
+
+
+
+
+
+ //Check to see if the sum was carried out already
+   $dir=''
+   $filename = ''
+   substr(file,'basename'):$filename
+   substr(file,'dirname'):$dir
+   $filename = 'SUM_'+$filename
+   $fullnew=$dir+'/'+$filename
+   exists($fullnew,'file'):$exname
+   if ($exname=1) then
+      if a_repeat='n' then
+         write('line3','SUM file already created, select "Allow Repeat Action') 
+         abort
+      elseif a_repeat='y' then
+
+        write('line3','SUM file %s will be created again',$fullnew)
+     $str1='rm -r'+' '+$fullnew
+      shell($str1)
+      endif
+   endif
+
+
+
+ exists('add_counter','parameter','global'):$ex
+ if $ex = 0 then
+   create('add_counter','integer','global')
+   setgroup('add_counter','processing','global')
+   add_counter = 0
+ endif
+
+
+
+   clradd
+   add_counter = 0
+
+
+clear
+write('alpha','Number of measured FIDs = %3d',celem)
+write('alpha','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+$min = '' 
+$max = ''
+$incr = ''
+
+$report = file + '/add_report'
+exists($report,'file'):$e
+if ($e = 1) then
+   write('reset',$report)
+endif
+
+
+
+write('file',$report,'SUMMATION REPORT')
+write('file',$report,'FILE: %s',file)
+
+
+//repeat
+   write('line3','Number of measured FIDs = %3d',celem)
+   write('line3','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+   //if (arraydim > 1) then
+      
+      
+      
+      if (a_fid_min > celem) then
+         write('line3','ERROR: FID(min) > arraydim!!!')
+         
+      endif
+      
+      
+            
+      if (a_fid_max > celem) then
+         write('line3','ERROR: FID(max) > arraydim!!!')
+         abort
+      endif
+      
+      
+
+   write('line3','Current setting: FID(min)=%d  FID(max)=%d  Increment=%d',a_fid_min,a_fid_max,a_increment)
+   
+   if (a_increment = 0) then
+      write('line3','ERROR: Increment must be > 0')
+      clear(4)
+      write('alpha','ERROR: Increment must be > 0')
+      abort
+   endif
+
+
+ 
+
+   //Done with establishing min, max and increment of addition, now do the actual addition
+   
+   $i = a_fid_min
+   while ($i < (a_fid_max + 1)) do
+         df($i) 
+         add
+         write('alpha','counter = %3d     FID # = %3d',add_counter+1,$i)
+        
+         write('file',$report,'counter = %3d     FID # = %3d',add_counter+1,$i) 
+         $i = $i+a_increment
+         add_counter = add_counter + 1
+   endwhile
+
+
+
+ 
+
+  write('line3','TOTAL NUMBER OF FIDS = %d',add_counter)
+
+
+   $text1 = ''
+   text:$text1
+   $text2 = ''
+   $fcounter = ''
+   $fnt = ''
+   format(add_counter,3,0):$fcounter
+   format(nt,3,0):$fnt
+   $text2 = 'NT =' + $fcounter + ' x' + $fnt
+   
+   
+   //Name of the summed file fid
+   $dir=''
+   $filename = ''
+   substr(file,'basename'):$filename
+   substr(file,'dirname'):$dir
+   $filename = 'SUM_'+$filename
+
+   write('line3','Default filename : %s',$filename)
+
+  jaddsub
+  
+  $fullnew=$dir+'/'+$filename
+
+ 
+ 
+  //exists($fullnew,'file'):$exname
+ 
+//  if ($exname=1) then
+  //write('line3','SUM file already created, exiting...') //this is the end of the routine
+  //abort
+  //else
+ 
+   
+   
+   lp=0 rp=0 ph
+  // lb='n' gf=0.15 gfs=0
+   text($text1 + $text2)
+
+   svf($fullnew)
+
+   rt($fullnew)
+   $filename=file
+   cd($filename)
+   $ex = 1
+   exists('procpar.tmp','file'):$ex
+   if ($ex = 0) then
+      shell('cp procpar procpar.tmp')
+   endif
+   
+   procpar_nt(add_counter,a_fid_min)
+   fidheader_update(add_counter)
+   shell('rm procpar.tmp')
+   pwd:$curdir
+   shell('mv ' + $report + ' ' + $curdir)
+   cd('..')
+   
+   {'j'+ $nam} //go back to the original experiment
+
+   rt($fullnew)
+
+   wft
+   ds dscale
+  //endif
+

@@ -1,0 +1,35 @@
+"macro HTfla"
+"HTfla - calculate the flipangle. EK "
+
+wft('nods')
+select($1-1) f peak:$r1
+select($1)   f peak:$r2
+select($1+1) f peak:$r3 
+
+$r1=$r1/$r2  "normalize"
+$r3=$r3/$r2
+$r2=1
+
+$a=80.0 $r=3.14159/180.0 $best=100000
+repeat
+
+  $a2=$a*$r
+  sin($a2*0.891232):$x1
+  sin($a2*1.12204):$x3
+  sin($a2):$x2
+
+  $x1 = $r1/$x1 
+  $x2 = $r2/$x2
+  $x3 = $r3/$x3
+
+  $sum = $x1*$x1 + $x2*$x2 + $x3*$x3
+  
+  if ($sum < $best) then
+    $best = $sum
+    $aa = $a
+  endif
+  
+  $a=$a+1
+until($a>100)
+
+return($aa)

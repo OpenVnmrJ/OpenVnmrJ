@@ -1,0 +1,52 @@
+"macro ATreadlk"
+alock='n' $filename=curexp+'/regression.inp'
+write('reset',$filename)
+write('file',$filename,'Lock Power value')
+write('file',$filename,'Lock Response in dB')
+write('file',$filename,'1 %4.0f',30)
+
+if (at_coilsize >16) then
+ $powerdiff=40-lockpower          "lockpower 40 should be the highest value used"
+ lockpower=40 lockgain=lockgain-$powerdiff
+else
+ $powerdiff=45-lockpower          "lockpower 45 should be the highest value used"
+ lockpower=45 lockgain=lockgain-$powerdiff
+endif
+sethw('lockpower',lockpower) sethw('lockgain',lockgain) shell('sleep 4')
+
+readlk:$lkfirst
+if $lkfirst>99 then
+ repeat
+  sethw('lockpower',lockpower-1) shell('sleep 2')
+  readlk:$lka
+ until $lka<100
+else
+ if (lockgain<2) then
+  sethw('lockgain',0) shell('sleep 2')
+ else
+  sethw('lockgain',lockgain-2) shell('sleep 2')
+ endif
+ repeat
+  sethw('lockgain',lockgain+1) shell('sleep 2')
+  readlk:$lkb
+ until ($lkb>85) or (lockgain >= 48)
+endif
+$lockpower=lockpower
+$lockgain=lockgain
+
+repeat
+  readlk:$lk
+  $lk=trunc($lk*10)
+  echo('lock level =',$lk/10)
+  echo('at lock power ',lockpower)
+  if $lk>0 then ln(100*$lk):$lnlk else ln(-100*$lk):$lnlk endif
+  $resp=trunc(200*$lnlk/2.303)
+  $resp=$resp/10
+  write('file',$filename,'%10s  %5.4f',lockpower,$resp)
+  lockpower=lockpower-1 
+  sethw('lockpower',lockpower) shell('sleep 4')
+until lockpower=$lockpower-30
+cp(curexp+'/regression.inp',autotestdir+'/data/lockpowertest')
+lockpower=$lockpower lockgain=$lockgain
+sethw('lockpower',lockpower)
+sethw('lockgain',lockgain) shell('sleep 2')

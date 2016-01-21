@@ -1,0 +1,32 @@
+"macro solppm"
+"************************************************************"
+"solppm - return ppm and peak width (in hz) of solvent signal"
+"************************************************************"
+$sw2=2/at                             "twice spectral resolution"
+$midppm=(0.5*sw-rfl+rfp)/reffrq
+format(solvent,'lower'):$solv
+if (tn<>'H1')and(tn<>'C13') then
+  return(0,0)
+elseif $solv ='cdcl3' then
+  if tn<>'C13' then return(7.27,2*$sw2) else return(77,64+$sw2) endif
+elseif $solv ='c6d6' then
+  if tn<>'C13' then return(7.15,2+$sw2) else return(128,48+$sw2) endif
+elseif $solv='dmso' then
+  if tn<>'C13' then return(2.49,6.8+$sw2) else return(40,126+$sw2) endif
+elseif $solv='acetone' then
+  if tn<>'C13' then return(2.04,8.8+$sw2) else return(30,120+$sw2) endif
+elseif $solv='cd2cl2' then
+  if tn<>'C13' then return(5.32,2+$sw2) else return(53.8,108+$sw2) endif
+elseif $solv='d2o' or $solv='d2o_10' then
+  if tn<>'C13' then return(4.63,4*$sw2) else return($midppm,0) endif
+elseif ($solv='cd3od')or($solv='methanol') then
+  if tn<>'C13' then return(3.30,10+$sw2) else return(49,129+$sw2) endif
+elseif ($solv='cyclohexane')or($solv='c6d12') then
+  if tn<>'C13' then return(1.38,2*$sw2) else return(26.4,76+$sw2) endif
+elseif ($solv='cd3cood')or($solv='acetic_acid') then
+  if tn<>'C13' then return(2.03,8+$sw2) else return(20,120+$sw2) endif
+elseif $solv='cd3cn' then
+  if tn<>'C13' then return(1.95,2*$sw2) else return(118.7,63+$sw2) endif
+else
+  return($midppm,0)
+endif

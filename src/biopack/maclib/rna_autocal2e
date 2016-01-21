@@ -1,0 +1,16 @@
+"macro rna_autocal2e"
+f $bestone=1 $counter=1
+select(1) vsadj(50) $best=50
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+BPsvf(userdir+'/AutoRna/pwC90cal_highpower_fine')
+write('plotter',100,wc2max,'Determination of 13C pw90 at pwClvl (fine)')
+select($bestone) vsadj(50)  dssh('dodc') pl('all','dodc') pap BPpage 
+pwC=pwC[$bestone] r5=pwC  "r5 stores high power calibration for pwC"
+pwClvl=pwClvl-12
+array('pwC',2.0*pwC,pwC,2.0)
+wexp='rna_autocal2f' au

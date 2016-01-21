@@ -1,0 +1,27 @@
+"macro mt"
+"************************************"
+" mt - move text between experiments "
+"************************************"
+if ($#<1)or($#>2) then
+  write('error','usage: mt(n) or mt(n,m)')
+else
+  $t='' $s='' $curexp=''
+  jexp:$curexp
+  if $#<2 then
+    $target=$1
+    $s=$curexp
+  else
+    $source=$1
+    format($source,1,0):$s
+    $target=$2
+  endif
+  format($target,1,0):$t
+  if $s=$t then
+    write('error','mt: source and target are identical')
+    return
+  endif
+  cp(userdir+'/exp'+$s+'/text',userdir+'/exp'+$t+'/text')
+  if $curexp=$t then
+    text
+  endif
+endif

@@ -1,0 +1,68 @@
+"macro digfilt"
+
+"Interface to postprocessing digital filtering and downsampling with"
+"  copying FID to another experiment to allow saving of the filtered FID."
+
+if ($# < 1) then
+  write('error','Error - must specify destination experiment number')
+  return
+endif
+
+$expno = $1
+if (typeof('$expno')) then
+  write('error','Error - first argument must be destination experiment number')
+  return
+endif
+
+$args[1] = ''
+$twoddc = 0
+
+$i = 1
+$numargs = 0
+
+while ($i < $#) do
+  $i = $i + 1
+  $strval = ${$i}
+  if ($strval <> 't2dc') then
+    $numargs = $numargs + 1
+    $args[$numargs] = $strval
+  else
+    $twoddc = 1
+  endif
+endwhile
+
+exists('ni','parameter'):$e
+if ($e) then
+  if (ni > 1 and $twoddc = 0) then
+    $numargs = $numargs + 1
+    $args[$numargs] = 'nodc'
+  endif
+endif
+
+$i = 0
+while ($i < $numargs) do
+  $i = $i + 1
+  write('alpha','%s',$args[$i])
+endwhile
+
+if ($numargs = 0) then
+  wft('downsamp',$expno)
+endif
+if ($numargs = 1) then
+  wft('downsamp',$expno,$args[1])
+endif
+if ($numargs = 2) then
+  wft('downsamp',$expno,$args[1],$args[2])
+endif
+if ($numargs = 3) then
+  wft('downsamp',$expno,$args[1],$args[2],$args[3])
+endif
+if ($numargs = 4) then
+  wft('downsamp',$expno,$args[1],$args[2],$args[3],$args[4])
+endif
+if ($numargs = 5) then
+  wft('downsamp',$expno,$args[1],$args[2],$args[3],$args[4],$args[5])
+endif
+if ($numargs > 5) then
+  write('error','more than 10 args not supported by macro "digfilt"')
+endif

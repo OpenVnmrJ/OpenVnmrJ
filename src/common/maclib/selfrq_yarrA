@@ -1,0 +1,109 @@
+"macro selfrq_yarrA"
+$maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+$nextexp=$1
+if ($# < 2) then $2='suselfrq' endif
+$ppmpar='selfrqppm' 
+$frqpar='selfrqc' 
+$widthpar='selfrqw'
+if ($2='suselfrq1') then 
+	$ppmpar='selfrq1ppm' 
+	$frqpar='selfrq1c' 
+	$widthpar='selfrq1w' 
+endif
+
+"********Do nothing if selfrqppm and selfrqc are OFF****"
+   on($ppmpar):$on1
+   on($frqpar):$on2
+   if ($on1<1) and ($on2<1) then
+	write('error','%s - selective frequency not defined',$0)
+   	return(0)
+   endif
+
+"*********Do nothing if there is only one element*****"
+   if ($on1>0) then 
+	$selpar=$ppmpar {$frqpar}=0 off($frqpar) 
+   else 
+	$selpar=$frqpar {$ppmpar}=0 off($ppmpar) 
+   endif
+   $size=size($selpar)
+   if ($size<2) then return(1) endif
+
+"*******Do nothing if it can't find current node *******"
+
+   exists($maclibdir+'/EXPLIST','file'):$fileex
+   exists($maclibdir+'/LONGLIST','file'):$fileex2
+   if ($fileex=0) and ($fileex2=0) then 
+	write('error','%s - EXPLIST/LONGLIST not found',$0)
+	return(0) 
+   endif
+   $s1='' $s2=''
+   readfile($maclibdir+'/EXPLIST','$s1','$s2','','local')
+   teststr('$s1',$nextexp,'local'):$ret
+   if ($ret=0) then 
+	$s1='' $s2=''
+	readfile($maclibdir+'/LONGLIST','$s1','$s2','','local')
+	teststr('$s1',$nextexp,'local'):$ret
+   endif
+   if ($ret=0) then
+	write('error','%s - %s not found in EXPLIST/LONGLIST',$0,$nextexp)
+	return(0) 
+   endif
+   substr($s2[$ret],1):$acqtime
+
+"******make node copy********"
+   $newnode='' $ok=0
+   nodecopy($nextexp,$nextexp,$size-1):$ok,$newnode
+   if ($ok=0) then return(0) endif
+
+"*****Adjust selfrqw if needed******"
+   $swsize=size($widthpar)
+   if ($swsize<$size) then
+        $x=$swsize+1
+	repeat
+	   {$widthpar}[$x]={$widthpar}[$swsize]
+	   $x=$x+1
+	until $x > $size
+   endif
+
+"****** Now ready to make multiple copies *****"
+   $parval={$selpar} $selfrqw={$widthpar}
+   ACQtime=$acqtime/$size
+   exists('Array','parameter'):$Arrayex
+   if ($Arrayex) then Array=0 endif
+
+		"Put the current node with adjusted time"
+   $macro=$maclibdir+'/'+$nextexp+'acq'
+   exists($macro,'file'):$macex
+   if ($macex=0) then
+	$macro=$maclibdir+'/maclib_attic/'+$nextexp+'acq'
+   endif
+   {$selpar}=$parval[1]  
+   {$widthpar}=$selfrqw[1]
+   writeparam($macro+'pars',$ppmpar+' '+$widthpar+' '+$frqpar,'current','add')
+   writeparam($macro+'pars','Array wstart wds ACQtime','current','add')
+   write('file',$macro,'ACQtime=%d',ACQtime)
+
+		"Put all new nodes"
+   $i=2
+   repeat
+	$macro=$maclibdir+'/'+$newnode[$i-1]+'acq'
+	{$selpar}=$parval[$i]
+	{$widthpar}=$selfrqw[$i]
+	writeparam($macro+'pars',$ppmpar+' '+$widthpar+' '+$frqpar,'current','add')
+   	writeparam($macro+'pars','Array wstart wds ACQtime','current','add')
+	write('file',$macro,'ACQtime=%d',ACQtime)
+//	$time[$i-1]=$acqtime
+	$time[$i-1]=ACQtime
+	$i=$i+1
+   until $i > $size
+
+   $adjnodes=$nextexp,$newnode
+   $adjtime=ACQtime,$time
+//   explist_adjtime($newnode,$maclibdir,$time)
+   explist_adjtime($adjnodes,$maclibdir,$adjtime)
+
+"*******DONE, but leave the first value in selpar*****"
+   {$selpar}=$parval[1]
+   {$widthpar}=$selfrqw[1]
+
+   return(1)

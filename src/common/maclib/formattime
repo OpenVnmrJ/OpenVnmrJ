@@ -1,0 +1,66 @@
+"macro formattime"
+$stime='unknown'
+$stime2='0:00'
+if ($1 > 0) then
+  $usesec='y'
+  if $#>1.5 then if $2='minutes' then
+    $usesec='n'
+  endif endif
+
+  $minutes= $1 / 60
+  $hours= $minutes / 60
+  $minutes= $minutes % 60
+  $seconds= $1 % 60
+
+  if ($usesec='n' and $seconds>30) then
+    $minutes = $minutes + 1
+  endif
+
+  $smin='' $shrs='' 
+  format($minutes,0,0):$smin
+  format(trunc($hours),0,0):$shrs
+
+  $stime = $shrs+' hr'
+  if $minutes>0 then
+    $stime = $stime + ', '+$smin+' min'
+  endif
+
+  if $hours < 1 then
+    if ($usesec='n') then
+      if ($minutes<1 and $seconds<=30) then
+        $smin = '1'
+      endif
+      $stime = $smin+' min'
+    else
+      $ssec=''
+      format($seconds,0,0):$ssec
+      $stime = $smin +' min, '+$ssec+' sec'
+      if $minutes < 1 then
+        format($1,0,0):$smin
+        if $1<1 then $smin='1' endif
+        $stime = $smin +' sec'
+      endif
+    endif
+  endif
+
+  $hours=trunc($1/3600)
+  $minutes=trunc($1/60)
+  $minutes=$minutes%60
+  $seconds=$1%60
+  $sh='' $sm='' 
+  if ($hours>0) then 
+     format($hours,0,0):$sh
+  endif
+  format($minutes,0,0):$sm
+  format($seconds,0,0):$stime2
+  if ($seconds<10) then $stime2='0'+$stime2 endif
+  $stime2=$sm+':'+$stime2
+  if ($sh<>'') then
+	if ($minutes<10) then
+		$stime2='0'+$stime2
+	endif
+	$stime2=$sh+':'+$stime2
+  endif
+endif
+
+return($stime,$stime2)

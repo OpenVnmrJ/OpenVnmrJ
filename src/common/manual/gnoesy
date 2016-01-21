@@ -1,0 +1,44 @@
+*****************************************************************
+*
+*	gnoesy:  sets up a gnoesy parameter set.
+*
+*	Syntax:	gnoesy  (no arguments)	
+*
+*****************************************************************
+   Description:	This macro converts a 1D-s2pul parameter set into a parameter
+		set ready to run a Pulsed Field Gradient NOESY
+		experiment, either absolute value or phase sensitive.	
+
+    Parameters:	
+
+      gzlvl1, gzlvl2, gzlvl3 =
+	       gradient amplitude (-32768 to +32768; use 30000 for Performa II)
+                                  ( -2048 to  +2047; use  2000 for Performa I)
+      gt1, gt3 =
+	      gradient time (duration) in seconds (0.003 for Performa II)
+						  (0.009 for Performa I)
+      gt2   = gradient time (duration) in seconds (0.012 for Performa II)
+						  (0.036 for Performa I)
+      grise = gradient rise and fall time (in seconds; 0.00001)
+      gstab = optional delay for stability (in seconds)
+      phase = 1 (selects echo N-type coherence selection; default)
+            = 2 (selects antiecho P-type coherence selection)
+            = 1,2 (selects phase sensitive acquisition (N,P))
+
+	   for working with organic samples try:
+					   Performa II	   Performa I
+                gzlvl1 = gzlvl2 = gzlvl3    10000            2000
+                gt1 = gt3                   0.003 	     0.003
+                gt2                         0.012            0.012
+
+	   for working with H2O sample try:
+		gzlvl1 = gzlvl2 = gzlvl3    30000	     2000
+		gt1 = gt3                   0.003	     0.009
+		gt2                         0.012	     0.036
+
+        process N-type data with wft2d(1,0,0,1)
+        process P-type data with wft2d(1,0,0,-1)
+                   the ('t2dc') argument to wft2d may be useful
+
+        process phase sensitive data (phase = 1,2) with:
+		wft2d(1,0,0,1,0,1,1,0) (wft2dnp)

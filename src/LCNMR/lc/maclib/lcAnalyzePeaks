@@ -1,0 +1,52 @@
+"macro lcAnalyzePeaks"
+/*-*- MAGICAL -*-*/
+"macro lcAnalyzePeaks"
+
+// Do LC peak analysis with the Galaxie software
+//
+//lcAnalyzePeaks(['off',] chan [[, 'off',] chan] ...)
+// 1 <= chan <= lcMaxNumChans
+
+$nargs = $#
+$off = 0
+$cmd = 'lccmd(\'analyzeLc\',\'' + lcDataFile + '\''
+
+$iarg = 1
+while ($iarg <= $nargs) do
+    // Find the type of the next argument
+    $siarg = ''
+    format($iarg, 0, 0):$siarg // Arg number as a string
+    $qarg = '$' + $siarg // Name of next arg
+    //$qarg? // DBG
+    if (typeof($qarg)) then
+        // arg is a string
+        $sarg = ${$iarg}
+        if ($sarg = 'off') then
+	    $off = 1
+        endif
+    else
+        // arg is a real -- check if it's a valid trace number
+        $arg = ${$iarg}
+        if ($arg <= 0 or $arg > lcMaxNumChans) then
+            write('error', 'Bad lcAnalyzePeak command')
+            return
+        endif
+        // arg is a valid trace number
+        $sarg = ''
+        format($arg, 0, 0):$sarg  // Trace # as a string
+        if ($off) then
+            // Clear analysis for this trace
+            $cmd = $cmd + ',\'off\',' + $sarg
+        else
+            // Analyze this trace
+            $cmd = $cmd + ', lcAnalysisThreshold[' + $sarg + ']'
+            $cmd = $cmd + ', lcAnalysisWidth[' + $sarg + ']'
+            $cmd = $cmd + ', ' + $sarg
+        endif
+    endif
+    $iarg = $iarg + 1
+endwhile
+
+$cmd = $cmd + ')'
+write('line3',$cmd)
+{$cmd}

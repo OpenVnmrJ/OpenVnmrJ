@@ -1,0 +1,42 @@
+"macro readprobe"
+"  Optional 2nd argument can be given to get the information from a specific "
+"   probe file"
+
+
+$str='' $val='' $ok=0 $file=''
+if ($# < 1) then
+   return($str,$val,$ok)
+endif
+if ($# < 2) then $2=probe endif
+if ($2='') then
+   return($str,$val,$ok)
+endif
+if ($# < 3) then $3='' endif
+
+$file=''
+$firstchar=''
+substr($2,1,1):$firstchar
+if ($firstchar='/') then
+	"explicit path for probe file"
+	" trumps all other options"
+     $file=$2
+endif
+
+if ($file <> '') then
+	"explicit path for probe file"
+	" trumps all other options"
+     exists($file,'file'):$ok
+else
+   if ($3='Study') then
+	Studyprobe('is',$2):$ok,$file
+   else
+	getProbePath($2):$ok,$file
+   endif
+endif
+
+if ($ok=0) then
+   return($str,$val,$ok)
+endif
+
+readfile($file,'$str','$val',$1,'local')
+return($str,$val,$ok)

@@ -1,0 +1,185 @@
+"macro cpreact"
+"cpreact - recover from error conditions during werr processing"
+
+"no action if high noise"
+
+if (acqstatus[ 2 ] = 102) then
+    return
+endif
+
+
+"In automation mode,  certain errors must cause the automation"
+"run to be terminated.  Errors larger than 900 are unrecoverable"
+"The 500 series of errors are sample changer errors.  All sample"
+"changer errors except one will abort an automation run.  The"
+"exception (error 521) occurs if the sample changer attempts to"
+"take a sample from the tray but fails to find one there.  In that"
+"case,  that sample is aborted but the automation run continues"
+
+if (auto = 'y') then
+  if ( (acqstatus[ 2 ] >= 900) or
+       ((acqstatus[ 2 ] >= 500) and (acqstatus[ 2 ] < 600)) ) then
+    if (acqstatus[ 2 ] <> 521) and (acqstatus[ 2 ] <> 575) then
+      autosa
+    endif
+    if (acqstatus[2]=593) then
+// If the error is due to a sample not ejecting from the magnet
+//  put the current sample information back on top of the enterQ
+//  There is no reason to penalize current sample because the
+//  previous sample didn't come out.  Cannot use error2submit as that
+//  would put the current sample at the end of the queue
+        autoq('add',autodir+'/enterQ.macdir/currentsampleinfo','priority')
+	updatestatus(autodir,loc,'',vzone,vrack)
+    else
+        cpwerr
+    endif
+    geterror:$error
+    eventLog('ExpError',$error)
+    sqLog('ExpError',$error)
+    return('abort')
+  endif
+endif
+
+"if abort acquisition, check for special error messages	     "
+"acqstatus[3] is used by previous     "
+"use of react macro to generate a proper error message on    "
+"abort (otherwise the abort message itself would immediately "
+"erase the message of interest). in automation mode (auto=y),"
+"messages are written directly into the log file"
+
+"since the error codes now go up to 1104, "
+"acqstatus[3] receives 10000 + error code value. "
+
+$ret=''
+if (acqstatus[ 1 ] = 16) then
+    getvalue('acqstatus','size','processed'):$size
+    if ($size = 3) then
+      getvalue('acqstatus',3):$prev
+      destroy('acqstatus','current',3):$e
+      destroy('acqstatus','processed',3):$e
+    else
+      $prev = 0
+    endif
+    if ($prev=10103)or($prev=10104) then         "high gain abort"
+        write('line3','signal too large - reduce gain or pulse width')
+    endif
+    if $prev=10801 then                          "autogain abort"
+        write('line3','signal too large - reduce pulse width or concentration')
+    endif
+    if $prev=10001 then                          "gain reduced"
+        if gain>5 then
+            gain=gain-6
+        else
+            gain=0
+        endif
+        au('restart')
+        write('line3','gain reduced and experiment resubmitted')
+    elseif $prev=10002 then                       "pw reduced"
+	pw=0.5*pw
+        au('restart')
+        write('line3','pw reduced and experiment resubmitted')
+    else
+      cpwerr
+      $ret='next'
+    endif
+    return($ret)
+endif
+
+"try to optimize lock conditions if lock lost"
+getdim:$dim
+if (acqstatus[ 2 ] = 201) and (acqstatus[ 1 ] = 15) then
+    if alock<>'a' and $dim=1 then
+      alock='a' wshim='e'
+      au('restart')
+    else
+      cpwerr
+      geterror:$error
+      eventLog('ExpError',$error)
+      sqLog('ExpError',$error)
+      $ret='next'
+    endif
+    return($ret)
+endif
+
+if (acqstatus[2]=301) or (acqstatus[2]=302) then
+  if (acqstatus[1]<>14) then
+    if ($dim=1) then
+       spin=0 alock='y' wshim='n'
+       au('restart')
+    endif
+  endif
+  return
+endif
+
+exists('werrADC','parameter'):$e
+if ($e) then
+  if (werrADC<>'y') then return endif
+endif
+
+"find out if it's 1D or 2D"
+
+if ( ($dim > 1) or (arraydim > 1) ) and
+   ( (acqstatus[ 2 ] = 103) or (acqstatus[ 2 ] = 104) or (acqstatus[ 2 ] = 801) ) then
+    setvalue('acqstatus',acqstatus[ 2 ]+10000,3,'processed')
+    geterror:$error
+    eventLog('ExpError',$error)
+    sqLog('ExpError',$error)
+    aa                            "abort acquisition"
+    return                        "which causes this macro to be reexecuted"
+endif
+
+if (acqstatus[ 2 ] = 103) or      "receiver or adc overload,"
+   (acqstatus[ 2 ] = 104) then    "should only get this condition"
+                                  "if not in autogain mode"
+    if gain<>0 then
+        setvalue('acqstatus',10001,3,'processed')
+        getvalue('ct'):ct
+        if ct=0 then
+	  aa			"Abort current acquisition"
+        endif
+        return
+    else                          "gain at minimum, reduce pw"
+        if pw<2 then
+            setvalue('acqstatus',10801,3,'processed')
+            geterror:$error
+            eventLog('ExpError',$error)
+            sqLog('ExpError',$error)
+            aa                    "abort acquisition"
+            return
+        else
+	    getvalue('ct'):ct
+            setvalue('acqstatus',10002,3,'processed')
+	    if ct=0 then
+	      aa		"Abort current acquisition"
+	    endif
+            return
+        endif
+    endif
+endif
+
+if (acqstatus[ 2 ] = 801) then    "autogain fail: gain=0 and still overloaded"
+    if pw<2 then
+        write('line3','signal too large - reduce concentration')
+        resume
+        return
+    endif
+    pw=0.5*pw                     "reduce pulse width and try again"
+    setvalue('acqstatus',10002,3,'processed')
+    write('line3','pulse width lowered and experiment resubmitted')
+    au('restart')
+    return
+endif
+
+if (acqstatus[ 2 ] = 200) then                      "max transients accumulated"
+    dp='y' 
+    write('line3','double precision acquisition selected; experiment resubmitted')
+    au('restart')
+    return
+endif
+
+if (acqstatus[ 1 ] = 14) then   // warning
+    return
+endif
+cpwerr
+return('next')
+

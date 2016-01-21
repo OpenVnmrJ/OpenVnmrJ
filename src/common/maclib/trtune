@@ -1,0 +1,353 @@
+"macro trtune"
+"Driver macro for multi-trace trtune"
+"temp/spin/zero line fixed"
+$action = 'setup'
+if ($# > 0) then
+  $action = $1
+endif 
+
+$nettune_max=2
+
+$hfmode='n'
+if $action = 'setup' then
+" save current experiment/test4 trtune/setup pars "
+  $temp=temp $pslabel=pslabel
+
+  exists('hfmode','parameter','current'):$e
+  if ($e) then
+    $hfmode=hfmode
+  endif
+
+  on('temp'):$tempon
+  exists(curexp+'/tutmp','directory'):$e
+  if ($e < 0.5) then
+    tmpsave('tutmp')
+    exists(curexp+'/tmptext','file'):$e
+    if $e then rm(curexp+'/tmptext'):$x endif
+    cp(curexp+'/text',curexp+'/tmptext')
+  endif
+
+  exists('lasttrtune','parlib'):$e,$path
+  if ($e) then
+    rtp($path)
+    if (seqfil <> 'trtune') then
+      exists('trtune','parlib'):$e,$path
+      if ($e) then
+        rtp($path)
+        banner('trtune ready using default parameters')
+      else
+        write('error','parameters for trtune do not exist')
+        return
+      endif
+    else
+      banner('trtune ready using previous parameters')
+    endif
+  else
+    exists('trtune','parlib'):$e,$path
+    if ($e) then
+      rtp($path)
+      banner($0+' ready using default parameters')
+    else
+      write('error','parameters for trtune do not exist')
+      return
+    endif
+  endif
+
+  if $tempon then
+    temp = $temp
+  else
+    temp = 'n'
+  endif
+
+  if ($hfmode <> 'n') then
+    hfmode=$hfmode
+  endif
+
+  full
+  in='n' 
+  spin = 'n'
+  ss = 0
+  nt = 1e6
+  pad = 0 
+  bs = 1
+  // these should not exist unless we're tuning remotely
+  destroy('nettune_i','global'):$e
+  destroy('nettune_files','global'):$e
+  destroy('nettune_requests','global'):$e
+  // post tuning results for Remote Status Unit if nmrwebd is running
+  //$pid=0 shell('ps -o pid= `/bin/cat /vnmr/web/run/nmrwebd.pid`'):$pid
+  //if $pid then 
+    //write('line3','to display tuning data remotely run '+$0+'(remotely)')
+    // {$0}('remotely',$pid) 
+  //endif
+endif
+
+if $action = 'remotely' then
+  if $# < 2 then // called from command line with 'remotely'
+    {$0}('setup')
+    $pid=0 shell('ps -o pid= `/bin/cat /vnmr/web/run/nmrwebd.pid`'):$pid
+    if $pid = 0 then
+      write('error','nmrwebd is not running - remote tuning is not available')
+      return
+    endif
+  endif
+  create('nettune_i','real','global'):$e
+  create('nettune_files','string','global'):$e
+  create('nettune_requests','real','global'):$e
+  nettune_i=-1
+  nettune_files=''
+  nettune_requests=-1
+
+  {$0}('tunesw')
+  {$0}('net.update')
+
+  $port='' serverport:$port
+  write('net',instrument,'5555','set '+username+'.vnmrj.trtune '+$port)
+  write('net',instrument,'5555','set trtune '+username)
+  write('net',instrument,'5555','set trtune.port '+username+' '+$port)
+endif
+
+if $action = 'net.update' then
+  $e_tn=0 exists('tn','parameter'):$e_tn
+  if $e_tn then 
+    write('net',instrument,'5555','set tn '+tn) 
+  endif
+
+  $e_dn=0 exists('dn','parameter'):$e_dn
+  if $e_dn then 
+    if dn <> '' then
+      write('net',instrument,'5555','set dn '+dn) 
+    endif
+  endif
+
+  $e_dn2=0 exists('dn2','parameter'):$e_dn2
+  if $e_dn2 then 
+    if dn2 <> '' then
+      write('net',instrument,'5555','set dn2 '+dn2) 
+    endif
+  endif
+
+  $e_dn3=0 exists('dn3','parameter'):$e_dn3
+  if $e_dn3 then
+    if dn3 <> '' then
+      write('net',instrument,'5555','set dn3 '+dn3)
+    endif
+  endif
+
+  $e_dn4=0 exists('dn4','parameter'):$e_dn4
+  if $e_dn4 then
+    if dn4 <> '' then
+      write('net',instrument,'5555','set dn4 '+dn4)
+    endif
+  endif
+
+  $e_nf=0 exists('nf','parameter'):$e_nf
+  if $e_nf then
+    $nf='' format(nf,0,0):$nf
+    write('net',instrument,'5555','set nf '+$nf)
+  endif
+endif
+
+if $action = 'start' then
+  acqmode='trtune'
+  wbs='trtune(`process`)'
+  wexp='trtune(`reset`)'
+  au('silent','tune','bsclear')
+  clear(2)
+endif
+
+if $action = 'tunesw' then
+  if $# > 1 then
+    tunesw=$2 setvalue('tunesw',tunesw,'processed'):$e halt('  ')
+  endif
+
+  $e_remotely=0 exists('nettune_requests','parameter','global'):$e_remotely
+  $e_tunesw=0 exists('tunesw','parameter'):$e_tunesw
+  if $e_remotely and $e_tunesw then 
+    $tunesw='' format(tunesw,5,0):$tunesw
+    write('net',instrument,'5555','set tunesw '+$tunesw)
+  endif
+endif
+
+if $action = 'reset' then
+  $e_remotely=0 exists('nettune_requests','parameter','global'):$e_remotely
+  if $e_remotely then
+    {$0}('net.update')
+  endif
+  banner('reset')
+  au('silent','tune','bsclear')
+  clear(2)
+endif
+
+if ($action = 'net') then
+  $e_remotely=0 exists('nettune_requests','parameter','global'):$e_remotely
+  if not $e_remotely then return endif
+  if nettune_i < nettune_requests then
+    writespectrum
+    $src=curexp+'/spec1'
+    $cf='' format(cf,1,0):$cf
+    $dst=curexp+'/spec'+$cf+'.dat'
+    mv($src,$dst)
+    // write('line3','spectrum written to '+$dst) // uncomment to monitor spectra sent to web clients
+    nettune_files = nettune_files + ' ' + $dst
+    if ($#>1) then 
+      if ($2) then {$0}('net.send') endif
+    endif
+  endif
+endif
+
+if ($action = 'net.request') then
+  // called by client to request a list of files
+  $e_remotely=0 exists('nettune_requests','parameter','global'):$e_remotely
+  if $e_remotely then
+    if ($#>1)
+      then nettune_requests = $2 
+      else nettune_requests = nettune_requests + 1 
+    endif
+  endif
+endif
+
+if ($action = 'net.send') then
+  // called by {$0} (i.e. trtune) to send list of files to clients
+  $cnt='' format(nettune_requests,0,0):$cnt
+  $nf='' format(nf,0,0):$nf
+  write('net',instrument,'5555','set nf '+$nf)
+  write('net',instrument,'5555','set files '+$cnt+' '+nettune_files)
+
+  nettune_files=''
+  nettune_i=nettune_requests
+  return
+endif
+
+if ($action = 'net.init') then
+  // called by client via a network port to initialize
+  $e_nettune_files=0 exists('nettune_files','parameter','global'):$e_nettune_files
+  if $e_nettune_files then
+    write('net',instrument,'5555',nettune_files)
+    nettune_files=''
+    nettune_i=-1
+    nettune_requests=-1
+  endif
+  return
+endif
+
+if ($action = 'process') then
+  jFunc(62,3)
+  cf = 1
+  av
+  ft('noft','fidshim','nods','nopars')
+  dss('fidshim','spectrum')
+  {$0}('net',cf=nf)
+  if (seqfil <> 'spmtune') then
+    dscale('rev','delta MHz',0,-tunesw/2*1e-6,tunesw*1e-6,'scale')
+  else
+    dscale('rev','milliseconds',0,0,at*1000*fn/np,'scale')
+  endif
+
+  write('graphics','spectrum',wcmax-80,10,'%s',tn)
+  pen('graphics','scale')
+  move(wcmax-sc-wc/2,0)
+  draw(wcmax-sc-wc/2,wc2max-10)
+  pen('graphics','cyan')
+  move(wcmax-sc-10,vp)
+  draw(wcmax-sc-wc+10,vp)
+
+  if (nf < 2) then
+    jFunc(62,1)
+    return
+  endif
+
+  cf = 2
+  ft('noft','fidshim','nods','nopars')
+  {$0}('net',cf=nf)
+  dssn('fidshim','integral')
+
+  write('graphics','integral',wcmax-60,10,'%s',dn)
+
+  if (nf < 3) then
+    jFunc(62,1)
+    return
+  endif
+
+  cf = 3
+  ft('noft','fidshim','nods','nopars')
+  {$0}('net',cf=nf)
+  dssn('fidshim','imaginary')
+  write('graphics','imaginary',wcmax-40,10,'%s',dn2)
+
+  if (nf < 4) then
+    jFunc(62,1)
+    return
+  endif
+
+  cf = 4
+  ft('noft','fidshim','nods','nopars')
+  {$0}('net',cf=nf)
+  dssn('fidshim','cursor')
+
+  write('graphics','cursor',wcmax-20,10,'%s',dn3)
+  jFunc(62,1)
+  endif
+" end of process "
+
+if ($action = 'getfreq') then
+  return(3)
+endif
+
+if ($action = 'getnuc') then
+  return('h3')
+endif
+
+if ($action = 'autoscale') then 
+  if (nf < 2) then return endif
+  cf = 1
+  ft('noft','fidshim','nods','nopars')
+  vsadj
+  ln(10.0):$a
+  fidmax:$fm1
+  ln($fm1):$fm1
+  cf = 2
+  fidmax:$fm2
+  ln($fm2):$fm2
+  "2 db steps add 1 for rounding"
+  gaind = -20*($fm2-$fm1)/$a + gaind + 1
+  if (numrfch < 3) or (nf < 3) then halt(' ') return endif
+  cf = 3
+  fidmax:$fm3
+  ln($fm3):$fm3
+  gaind2 = -20*($fm3-$fm1)/$a + gaind2 + 1
+  if (numrfch < 4) or (nf < 4) then halt(' ') return endif
+  cf = 4
+  fidmax:$fm4
+  ln($fm4):$fm4
+  gaind3 = -20*($fm4-$fm1)/$a + gaind3 + 1
+  if (numrfch < 5) or (nf < 5) then halt(' ') return endif
+  cf = 4
+  fidmax:$fm5
+  ln($fm5):$fm5
+  gaind4 = -20*($fm5-$fm1)/$a + gaind4 + 1
+  halt(' ') 
+endif
+"-------------------------------------"
+if ($action = 'quit') then
+  clear(2)
+  if (acqmode='trtune') then 
+    aa('you should Stop first')
+  endif
+  "protect against double button press"
+  if (seqfil = 'trtune') then
+     svp(userdir+'/parlib/lasttrtune','force')
+  endif  
+  acqmode=''
+  tmpreturn('tutmp')
+  cp(curexp+'/tmptext',curexp+'/text')
+  newdg dg su
+  $e_remotely=0 exists('nettune_requests','parameter','global'):$e_remotely
+  //if $e_remotely then // let nmrwebd know tuning is done
+  //  write('net',instrument,'5555','bye '+username+'.vnmrj.trtune '+$port)
+  //endif
+  destroy('nettune_i','global'):$e
+  destroy('nettune_files','global'):$e
+  destroy('nettune_requests','global'):$e
+  return
+endif

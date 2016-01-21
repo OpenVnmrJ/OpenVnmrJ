@@ -1,0 +1,63 @@
+"macro QKexp"
+
+$macro='AuHexp(solvent)'
+
+"Check the arguments to decide macro"
+
+$proton='n' $carbon='n' $fluorine='n' $phosphorus='n'
+$i=1
+repeat
+  if ${$i} = 'PROTON' then $proton='y'
+  elseif ${$i} = 'CARBON' then $carbon='y'
+  elseif ${$i} = 'FLUORINE' then $fluorine='y'
+  elseif ${$i} = 'PHOSPHORUS' then $phosphorus='y'
+  endif
+  $i=$i+1
+until $i > $#
+
+if ($proton = 'y') then $macro='AuHexp(solvent)'
+elseif ($carbon='y') then $macro='AuCexp(solvent)'
+elseif ($fluorine='y') then $macro='AuF(solvent)'
+elseif ($phosphours='y') then $macro='AuP(solvent)'
+endif
+
+"Execute macro"
+
+exec($macro)
+shell('echo $USER'):sample
+Automkdir
+$sysname=''
+shell('uname -n'):$sysname
+text(sample+'\\ Data saved in:\\  '+$sysname+':'+archivedir)
+
+"For additional experiments - first check "
+" if PFGflg is ON for gradient experiments "
+" If NOT, do non-gradient experiments   "
+$i=1
+repeat
+  length(${$i}):$explength
+  substr(${$i},1,1):$grad
+  if ($grad='g') then
+   if (PFGflg='n') then
+     substr(${$i},2,$explength-1):${$i}
+   endif
+  endif
+  AutoAddEXP(${$i},'nodialog')
+  $i=$i+1
+until $i > $#
+
+
+"Set up autolock and autoshimming and start acquisition"
+
+wshim='e' 
+alock='a'
+
+explist
+$tune='n'
+getparam('tuneflg','Probe'):$tune
+if ($tune='n') then
+ gmapshim_au 
+else
+  su  
+  banner('Tune probe now')    
+endif

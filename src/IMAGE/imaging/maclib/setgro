@@ -1,0 +1,163 @@
+"macro setgro"
+
+/*******************************************************************
+setgro
+  
+Macro to set readout gradient and bandwidth (sw)
+The values of gro, sw, and at are adjusted by this macro. 
+ 
+There are two modes of operation:
+setgro(value) sets gro to the value of the supplied argument, and
+calculates sw based on lro.  np is held at its current value, with
+at adjusted to match the new sw.
+ 
+setgro with no argument invokes the automated calculation of gro based
+on the following parameters:
+ 
+grocalc: A string parameter which sets the priority for adjusting gro.
+grocalc may have the following values:
+ 
+'gro': set sw and at from the current value of gro, holding np constant
+
+'sw': set gro and at from the current value of sw, holding np constant
+ 
+'min': minimum duration (useful for achieving shortest te/tr).  If 'm' is
+part of the grocalc string, the parameter grocalc_min specifies the 
+allowed increase in minimum time (can reduce gro substantially for a 
+small increase in duration).  grocalc_min is the allowed fractional 
+increase, e.g., 1.1 would be a 10% increase over the minimum duration.
+ 
+'csd': chemical shift displacement.  If 'c' is part of the grocalc string, 
+the parameter grocalc_mm specifies the maximum allowed chemical shift 
+displacement along the readout dimension, in mm.  If it exists, the 
+parameter grocalc_ppm specifies the chemical shift difference to be used 
+in the calculation (default value of 3.3 ppm).
+ 
+In all cases, the operator is free to set lro and np (matrix size)
+independently.  If setgro is called with no argument, or grocal is blank,
+the default behavior is 'sw'.
+ 
+ARR   Version 2.0   2/12/07 
+*******************************************************************/
+
+"-- Constants & variable initialization -------------------"
+$gamma = sfrq*1e6/B0
+$swmax = parmax[5]
+$slew = gmax/trise
+$np = np
+
+"-- Check and create parameters ---------------------------"
+exists('grocalc','parameter'):$ex      // calculation flag
+if ($ex = 0) then
+  create('grocalc','string')
+endif
+exists('grocalc_min','parameter'):$ex  // allowed minimum time increase
+if ($ex = 0) then
+  create('grocalc_min')
+  grocalc_min = 1
+endif
+exists('grocalc_mm','parameter'):$ex   // desired chemical shift displacement
+if ($ex = 0) then
+  create('grocalc_mm')
+  grocalc_mm = 3
+endif
+exists('grocalc_ppm','parameter'):$ex   // desired water/fat ppm difference
+if ($ex = 0) then
+  create('grocalc_ppm')
+  grocalc_ppm = 3.3
+endif
+
+"-- Argument and parameter check --------------------------"
+if ($# > 0) then
+  if (typeof('$1') = 0) then
+    $gro = $1
+    $grocalc = 'gro'
+    grocalc = 'gro'
+  else
+    write('error','setgro: specify gro as a numerical argument')
+  endif  
+else
+  "-- Check grocalc string ----------------------------------"
+  if (grocalc='auto') or (grocalc='gro') or (grocalc='sw') or (grocalc='min') or (grocalc='csd') then
+    $grocalc = grocalc
+    $gro = gro
+  elseif (grocalc = '') then   // grocalc is empty, default to sw
+    grocalc = 'sw'
+    $grocalc = 'sw'
+  else
+    write('error','setgro: grocalc set to unrecognized value')
+    abort
+  endif
+endif
+
+"-- Find minimum duration and gro value -------------------"
+$gro_tmin = sqrt(nv*$slew/(2*$gamma*lro))
+
+"-- Auto calculation of gro -------------------------------"
+if (grocalc = 'auto') then
+  $gro_csd = 3.3*sfrq/(0.03*lro*$gamma)  // max 3% of FOV displacement
+  $gro_bw = 50e3/($gamma*lro)            // gro at 50kHz bandwidth
+  $tmin = sqrt(2*nv/($slew*$gamma*lro))
+  $gro_te = $gro_tmin*(2*$tmin/te) // allow duration to increase with te
+$gro_te = 1   // not happy with te dependence, needs more work
+  if ($gro_csd > $gro_bw) then $gro = $gro_csd else $gro = $gro_bw endif
+  if ($gro_te > $gro) then $gro = $gro_te endif  // find largest value
+  $grocalc = 'gro'
+
+"-- gro for minimum duration ------------------------------"
+elseif ($grocalc = 'min') then
+  if (grocalc_min < 1) then
+    grocalc_min = 1
+  endif
+
+  $gro_factor = grocalc_min - sqrt(grocalc_min*grocalc_min - 1)
+  $gro = $gro_tmin*$gro_factor   //decrease gro by [A - sqrt(A^2-1)]
+  $grocalc = 'gro'
+
+"-- gro for Chemical Shift Displacement -------------------"
+" csd(mm) = 10*delta_ppm*sfrq/(gamma*gro) "
+elseif (grocalc = 'csd') then
+  if (grocalc_mm <= 0) then
+    grocalc_mm = 3
+    write('error','setgro: grocalc_mm reset to 3 mm')
+  endif
+  "-- grocalc_ppm is the ppm difference for CSD -------------"
+  if (grocalc_ppm <= 0) then
+    grocalc_ppm = 3.3   // default ppm difference
+    write('error','setgro: grocalc_ppm set to 3.3')
+  endif
+
+  $gro = 10*grocalc_ppm*sfrq/($gamma*grocalc_mm)
+  $grocalc = 'gro'
+endif
+
+"-- Set sw from gro ---------------------------------------"
+if ($grocalc = 'gro') then
+  if ($gro < 0.0) then $gro = -$gro endif  // absolute value
+  if ($gro > gmax) then  // check for gro > gmax
+    $gro = gmax
+    write('error','gro exceeds maximum gradient, reset to gmax')
+  endif
+  if ($gro > $swmax/($gamma*lro)) then  // maximum sw limit
+      $gro = $swmax/($gamma*lro)
+  endif
+  if (np > 1024) then  // make sure user wants very large matrix
+      write('line3','%s','setgro: ADVISORY: np is rather large for imaging')
+  endif
+
+  "-- Hold np fixed, calculate sw, readjust gro for new sw --"
+  sw = .999*$gro*$gamma*lro   // sw always rounds up, so set it low
+  gro = sw/($gamma*lro)
+
+"-- Set gro from sw ---------------------------------------"
+elseif ($grocalc = 'sw') then
+  $gro = sw/($gamma*lro)
+  if ($gro > gmax) then  // check for gro > gmax
+    gro = gmax
+    write('error','gro exceeds maximum gradient, reset to gmax')
+  else
+    gro = $gro
+  endif
+endif
+
+np = $np

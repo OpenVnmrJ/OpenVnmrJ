@@ -1,0 +1,56 @@
+"macro lcFlowCal"
+/*-*- MAGICAL -*-*/
+"macro lcFlowCal"
+
+// Usage: lcFlowCal('read'|'save' [, <filepath>])
+// Used to save and recall the transfer delay calibrations.
+// Calibrations are saved globally in /vnmr/lc/FlowCal.
+
+// All values are kept in the lcXferDelay array in mL.
+// Three slots are allocated for each channel, although not every
+// channel uses all its slots.  The channel number cycles slowest, so
+// that the number of channels can be easily extended.
+
+// The three slots are for the three "lcXferDelayType"s, representing
+// different flow geometries: 
+//  0 Stop-flow (and others with same flow geometry)
+//  1 Analyte Collection
+//  2 Analyte Elution
+
+// For stop-flow and analyte-elution, the delays are the volumes between
+// the specified channel and the NMR.  For analyte-collection, they are
+// the volumes between the channel and the collection loop.
+// The channel numbers are:
+//  1 other1
+//  2 other2
+//  3 other3
+//  4 UV (or PDA)
+//  5 MS
+//  6 pump-to-loop (for analyte collection) or loop-to-nmr (for elution)
+
+$parlist = 'operator lcNmrProbeVolume lcXferDelay'
+$parpath = systemdir + '/lc/FlowCal'
+
+$func = 'read'
+if ($# >= 1) then
+    $func = $1
+endif
+
+if ($# >= 2) then
+    $parpath = $2
+endif
+
+if ($func = 'read') then
+    exists($parpath,'file'):$e
+    if ($e) then
+        fread($parpath, 'global')
+    endif
+    // The pump-to-loop value should come from lcColumnDeadVolume
+    lcXferDelay('set', 'vol', 'loop', 1, lcColumnDeadVolume)
+
+elseif ($func = 'save') then
+    exists($parpath,'file','rw'):$e
+    if ($e) then
+      writeparam($parpath, $parlist, 'global')
+    endif
+endif

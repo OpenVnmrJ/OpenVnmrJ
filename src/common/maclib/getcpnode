@@ -1,0 +1,123 @@
+"macro getcpnode"
+$tailX='tail'
+whichtail:$tailX
+
+"*******************************************************************"
+IF ($1 <> 'sq') THEN
+   $expfile=$2+'/EXPLIST'
+   $lngfile=$2+'/LONGLIST'
+   $tmpfile=$2+'/EXPLONGLIST'
+   write('reset',$tmpfile)
+   exists($expfile,'file'):$fileex
+   if ($fileex) then
+  	shell('cat '+$expfile+' > '+$tmpfile):$dum
+   endif
+   exists($lngfile,'file'):$fileex
+   if ($fileex) then
+  	shell('cat '+$lngfile+' >> '+$tmpfile):$dum
+   endif
+ENDIF
+"*******************************************************************"
+IF ($1='sq') THEN
+		"Creates a sq node.  "
+//		" arg2 - expname "
+//		" arg3 - cpnode (becomes title for Action node)"
+//		" arg4 - day, night or '' (ext. to Protocol node)"
+//		" arg5 - formatted time (time for Action node)"
+//		" arg6 - insert node	"
+
+                " Uses new xmhaha_mknode"
+                " arg2 - expname "
+                " arg3 - cpnode "
+                " arg4 - attributes and values as pairs of array"
+                " arg5 - insert node    "
+	"This is more or less obsolete funtion"
+$s1='' $cpnode=''
+strstr($3,'_','last'):$ret,$s1,$cpnode
+$return='xx'+$cpnode
+if (appmode='imaging') then return($return) endif
+
+$return=''
+//xmhaha('mknode',$2,$3,$4,$5,$6):$return
+xmhaha('mknode',$2,$4,$5):$return
+
+return($return)
+"*******************************************************************"
+ELSEIF ($1='cp') THEN
+		"This gives new cpnode.  "
+		"  arg1 - location of EXPLIST/LONGLIST	"
+		"  arg2 - expname 		      "
+
+is_submitmode:$submit
+if ($submit<1) then
+   shell('(cat '+$2+'/ACQlist >> '+$tmpfile+')'):$dum
+endif
+$return=''
+shell('(cat '+$tmpfile+' | wc -l)'):$oldstuff
+if ($oldstuff=0) then
+   shell('rm -f '+$tmpfile):$dum
+   $return=$3+'_001'
+   $ext='001'
+   return($return,$ext)
+endif
+
+$node='' $dum=''
+readfile($tmpfile,'$node','$dum',$3+'_','local')
+shell('rm -f '+$tmpfile):$dum
+
+if ($node[1]<>'') then
+  $total=size('$node')
+  $nodenum=0 $nodeorder=0
+  if ($total > 1) then
+     sort($node,'r'):$nodeorder,$node
+  endif
+  $snode='' $s1=''
+  strstr($node[1],'_','last'):$ret,$s1,$snode
+  format($snode,'isreal'):$isreal
+  if ($isreal) then
+      format($snode,'lower'):$nodenum
+  endif
+  $nodenum=$nodenum+1
+  $newnode=''
+  format($nodenum,0,0):$newnode
+  if ($nodenum<100) then $newnode='0'+$newnode endif
+  if ($nodenum<10) then $newnode='0'+$newnode endif
+else
+   $newnode='001'
+endif
+
+$return=$3+'_'+$newnode
+return($return,$newnode)
+
+"*******************************************************************"
+ELSEIF ($1 = 'rev') THEN
+		"This gives cpnode for a given sqnode"
+		" arg2 - location of EXPLIST/LONGLIST"
+		" arg3 - is sqnode"
+		"   2nd return argument specifies whether the cpnode"
+		"	is in longQ (long) or shortQ (no)	"
+
+shell('rm -f '+$tmpfile):$dum
+$return=''
+shell('(cat '+$expfile+' | grep -w '+$3+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$return
+if ($return<>'') then return($return,'no') endif
+
+shell('(cat '+$lngfile+' | grep -w '+$3+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$return
+if ($return<>'') then return($return,'long') endif
+return($return,'no')
+
+"*******************************************************************"
+ELSEIF ($1 = 'rev2') THEN
+		"This gives sqnode for a given cpnode "
+		" arg2 - location of EXPLIST/LONGLIST "
+		" arg3 - cpnode"
+
+$return=''
+shell('(cat '+$tmpfile+' | grep \'^'+$3+'\' | '+$tailX+' -n 1 | awk \'{print $4}\')'):$return
+shell('rm -f '+$tmpfile):$dum
+if ($return='') then
+	$return='xx000'
+endif
+return($return)
+
+ENDIF

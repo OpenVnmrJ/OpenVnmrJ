@@ -1,0 +1,49 @@
+"macro probeid_sim"
+// simulate probe attachment
+if $# < 1 then
+  write('error',$0+' requires at least 1 argument')
+  abort
+endif
+
+probeid('status','mountDir'):$mnt     // grey-box test: mount point
+$cmd='probeid -sim '
+if $1='connect' then
+  // first disconnect, just to be on the safe side
+  {$0}('disconnect')
+
+  // connect the specified simulated "probe"
+  if $# < 1.5 then
+    write('error',$0+' \''+$1+'\' requires at least 2 arguments')
+    abort
+  endif
+
+  // build the shell command
+  $cmd = $cmd + '-connect ' + $2
+
+  // if the probe doesn't already exist, make an unitialized version of it
+  strstr($2,'/'):$pos
+  if $pos=0 then // not a path variable
+    $probe = $mnt+'/../'+$2
+    exists($probe,'directory'):$e
+    if not($e) then
+      mkdir($probe)
+    endif    
+  endif
+
+elseif $1='disconnect' then
+  $cmd = $cmd + '-disconnect'
+
+elseif $1='blank' then
+  $cmd = $cmd + '-blank'
+  if $#>1.5 then 
+    $cmd=$cmd+' '+$2                 // specify an unmounted probe directory
+  endif
+
+else // invalid sim command
+  write('error','probeid sim : unknown command')
+  abort
+endif
+
+info('probeid sim: '+$cmd)
+$r='' shell($cmd):$r
+info('probeid sim: '+$cmd+' returned '+$r)

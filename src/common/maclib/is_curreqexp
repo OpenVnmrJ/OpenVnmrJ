@@ -1,0 +1,37 @@
+"macro is_curreqexp"
+	seqfil=seqfil
+        $reqexp='' $return=0
+	$a='' $t=0 $tn='' $dn='' $refsource1=''
+
+        if ($# > 2) then
+            $node=$2
+            $maclib=$3
+            exists($maclib+'/'+$node+'acqpars','file'):$acqex
+            if ($acqex) then
+                rtv($maclib+'/'+$node+'acqpars','noabort','REQexp'):$reqexp
+                $reqexp=$reqexp[1]
+            endif
+        endif
+	if ($reqexp='') then
+	    getEXPinfo($1):$reqexp,$t,$a,$tn,$dn,$refsource1
+	endif
+	format($reqexp,'lower'):$reqexp
+	if ($reqexp[1]='') then return(-1) endif
+	format(pslabel,'lower'):$pslabel
+	format(seqfil,'lower'):$seqfil
+        string2array($reqexp[1]):$reqexp
+        $total=size('$reqexp')
+           $i=1
+           repeat
+		if (($reqexp[$i]=$pslabel) or 
+		    ($reqexp[$i]=$seqfil)) then
+		    if ($refsource1='dfrq') then
+			if (dn=$dn) then $return=1 $i=$total endif
+		    else
+			$return=1
+			$i=$total
+		    endif
+		endif
+		$i=$i+1
+	   until $i>$total
+	return($return)

@@ -1,0 +1,59 @@
+"macro cptmp"
+"  cptmp - copy experiment files in experiment subdirectory; the argument "
+"	   passed is used to determine the name of the	temporary files	  "
+"	   (default: {tn} for seqfil='s2pul', {seqfil} otherwise.	  "
+"	   The combination of svtmp and rttmp allows an	 experiment to be "
+"	   used without having to redo an FT on the original data.	  "
+"  svtmp - same, but moves data instead of coying them			  "
+
+" flush data to disk "
+flush
+
+exists(curexp + '/acqfil/fid','file'):$efid
+if auto='n' then
+   if $efid then
+      " determine file name "
+      if ($# = 0) then
+	 if seqfil='s2pul' then
+	    $file = tn
+	 else
+	    $file = seqfil
+	 endif
+      else
+	 $file = $1
+      endif
+   
+      " create subdirectories "
+      $file = curexp + '/subexp/' + $file
+      exists(curexp+'/subexp','directory'):$isthere
+      if not($isthere) then
+	 mkdir(curexp+'/subexp'):$res
+      endif
+      exists($file,'file'):$isthere
+      if $isthere then
+	 rm('-r',$file):$res
+      endif
+      mkdir($file)
+   
+      " save data "
+      cp(curexp+'/curpar',     $file + '/curpar')
+      cp(curexp+'/text',       $file + '/text')
+      if $0='svtmp' then
+	 mv(curexp+'/procpar', $file + '/procpar')
+	 mv(curexp+'/acqfil',  $file + '/acqfil')
+	 mv(curexp+'/datdir',  $file + '/datdir')
+	 mkdir(curexp + '/acqfil')
+	 mkdir(curexp + '/datdir')
+      else  "cptmp"
+	 cp(curexp+'/procpar', $file + '/procpar')
+	 cp('-r', curexp+'/acqfil', $file + '/acqfil')
+	 cp('-r', curexp+'/datdir', $file + '/datdir')
+      endif
+   else
+      write('error','%s: no current fid file - no data saved',$0)
+      return('')
+   endif
+else
+   $file=file
+endif
+return($file)

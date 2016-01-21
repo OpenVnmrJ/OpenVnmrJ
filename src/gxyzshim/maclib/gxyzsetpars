@@ -1,0 +1,74 @@
+"macro gxyzsetpars"
+"gxyzsetpars"
+"Sets parameters for 3D shimming nucleus and gradient parameters for 3D shimming"
+"PJB"
+
+if ($# = 1) then
+	if ($1='H2HS') then
+		steflg='y'
+		//gradtype='aah' gradtypelocal=gradtype
+		if lkflg='y' then tn='lk' else tn='H2' endif
+		sw=1200 np=128 gt3=0.2 del=0.6 fn=512 sinebell
+		gt1=0.2 d4=0.025 
+		tpwr=lktpwr pw=lkpw90 tau=0,0.04 dn='H1' gain=20
+		write('line3','Parameters selected for homospoil H2')
+		gxyzfieldvar=0.6
+		dps
+	endif
+	if ($1='H2PFG') then
+		steflg='y'
+		$zgradtype=''
+		substr(gradtype,3,1):$zgradtype
+		if lkflg='y' then tn='lk' else tn='H2' endif
+		//gradtype='aa'+$zgradtype gradtypelocal=gradtype 
+		dn='H1' gain=2
+		gt1=0.2 d4=0.025 
+		sw=1500 np=256 del=0.15 fn=256 sinebell
+		pfgon='nny' 
+		tpwr=lktpwr pw=lkpw90 tau=0,0.04
+		if ($zgradtype='t' or $zgradtype='p' or $zgradtype='q' or $zgradtype='u' or $zgradtype='c' or $zgradtype='d') then gt3=0.003 gzlvl1=175 gzlvl3=25000 
+		else if ($zgradtype='l') then gt3=0.005 gzlvl1=35 gzlvl3=2000
+		else write('error','gradtype not recognised! - aborting') abort
+		endif
+		endif
+		write('line3','Parameters selected for Z-PFG H2')
+		gxyzfieldvar=0.6
+		dps
+	endif
+	if ($1='H1HS') then
+		steflg='y'
+		//gradtype='aah' gradtypelocal=gradtype
+		tn='H1' dn='C13'
+		sw=6000 np=256 gt3=0.12 del=0.6 fn=512 sinebell 
+		tau=0,0.01 gain=10
+		gt1=0.2 d4=0.025 
+		getparam('pw90','H1'):pw90
+		pw(90)
+		getparam('tpwr','H1'):tpwr
+		write('line3','Parameters selected for homospoil H1')
+		gxyzfieldvar=6.5
+		dps
+	endif
+	if ($1='H1PFG') then
+		steflg='y'
+		$zgradtype=''
+		substr(gradtype,3,1):$zgradtype
+		//gradtype='aa'+$zgradtype gradtypelocal=gradtype
+		tn='H1' dn='C13'
+		getparam('pw90','H1'):pw90
+		pw(90)
+		getparam('tpwr','H1'):tpwr
+		sw=6000 np=256 fn=512
+		gt1=0.2 d4=0.025 
+		del=0.15 tau=0,0.01 sinebell
+		pfgon='nny' gain=10
+		if ($zgradtype='t' or $zgradtype='p' or $zgradtype='q' or $zgradtype='u' or $zgradtype='c' or $zgradtype='d') then gt3=0.002 gzlvl3=15000 gzlvl1=125 
+		else if ($zgradtype='l') then gt3=0.004 gzlvl3=2000 gzlvl1=25
+		else write('error','gradtype not recognised! - aborting') abort
+		endif
+		endif
+		gxyzfieldvar=6.5
+		write('line3','Parameters selected for Z-PFG H1')
+		dps
+	endif
+endif

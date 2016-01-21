@@ -1,0 +1,103 @@
+"macro BPsetparams"
+"***************************************************************************"
+"*	addparams    -	adds new parameter name and value to an 	   *"
+"*			existing probe file 				   *"
+"***************************************************************************"
+
+$file='' $dir='' $probe='' $probedir=''
+if ($# > 3) then
+ if ($4 = 'tmplt') then
+  $probe='/probes/probe.tmplt'
+  $probedir='/probes'
+ else
+  $probe='/probes/'+probe+'/'+probe
+  $probedir='/probes/'+probe
+ endif
+else
+  $probe='/probes/'+probe+'/'+probe
+  $probedir='/probes/'+probe
+endif
+
+exists(userdir+$probe,'file'):$e
+
+if ($# > 4) then
+ if ($5 = 'system') then
+  $e=0
+ endif
+endif
+
+if $e>0 then
+  $file  = userdir+$probe 
+  $dir   = userdir+$probedir
+else
+ exists(systemdir+$probe,'file'):$e2
+ if ($e2 > 0) then
+  $file  = systemdir + $probe
+  $dir   = systemdir + $probedir
+ else
+  write('error','probe file %s does not exist.',probe)
+  return
+ endif
+endif
+
+$nuc=''
+$param=''
+$value=''
+$ret=''
+
+if ($# < 3) then
+  write('error','addparams needs a minimum three of arguments')
+  return
+else
+  $param = $1 $value = $2 $nuc=$3
+endif
+
+$param = $nuc + $param
+$datepar = $nuc+'date'
+$dateline =''
+lookup('mfile',$file,$datepar,'readline'):$dateline
+if $dateline<>'' then
+  $dateline=$datepar+' '+$dateline
+endif
+
+if ($dateline = '') then
+  $date=''
+  shell('date +%d-%b-%Y'):$date
+  write('file',$file,'%s:      Parameters',$nuc)
+  write('file',$file,'%s      %s',$datepar,$date)
+  write('file',$file,' ')
+  lookup('mfile',$file,$datepar,'readline'):$dateline
+  if $dateline<>'' then
+    $dateline=$datepar+' '+$dateline
+  endif
+endif  
+if ($dateline='') then
+  write('error','Could not add %s table to probe file',$nuc)
+  return
+endif  
+lookup('mfile',$file,$param,'readline'):$ret
+if $ret<>'' then $ret=$param+' '+$ret endif
+
+if ($ret = '') then
+ $probe1=$dir+'/probe1'
+ $parfile=$dir+'/parfile'
+ $full = $param+'       '+$value
+ shell('sed "s/'+$dateline+'/'+$full+$dateline+'/1" '+$file+' > '+$probe1):$junk
+ $string=`sed '/`+$full+$dateline+`/c\\`
+ write('fileline',$parfile,$string+'\n')
+ $string=$full+'\\'
+ write('fileline',$parfile,$string+'\n')
+ $string=$dateline+'\' '+$probe1+' > '+$file
+ write('fileline',$parfile,$string+'\n')
+ shell('chmod 755 '+$parfile):$junk
+ shell($parfile):$junk
+ rm($parfile,$probe1):$junk
+else
+ if $# > 3 then
+  if $4 <> 'tmplt' then
+   setparams($1,$2,$3)
+  endif
+ else
+   setparams($1,$2,$3)
+ endif
+endif

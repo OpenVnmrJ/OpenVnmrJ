@@ -1,0 +1,355 @@
+"macro epiarray"
+"*********************************************************************"
+"                                                                     "
+" epiarray: Macro to set/strip/clear reference scans for epi          "
+"                                                                     "
+"           epiarray('set')   sets arrays according to epiref_type    "
+"           epiarray('strip') strips arrays according to epiref_type  "
+"           epiarray('clear') clears all arrays                       "
+"                                                                     "
+"           Arrays are set according to epiref_type as follows:       "
+"             'manual': Does nothing                                  "
+"             'single': Multiplies arrays by images (repetitions)     "
+"                       and puts single reference scan at front       "
+"                       Reference uses first of arrayed values        "
+"             'triple': Multiplies arrays by images (repetitions)     "
+"                       and puts three reference scans at front       "
+"                       References use first of arrayed values        "
+"             'fulltriple': Doubles array size to give a reference    "
+"                           scan for each array element,              "
+"                           multiplies by images (repetitions)        "
+"                           and puts two reference scans at front     "
+"                                                                     "
+"*********************************************************************"
+
+"Default option"
+$action = 'set'
+
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action = 'set') then
+
+  "Create epiref_type if it doesn't exist"
+  create('epiref_type','string','current','manual')
+
+  "Return if epiref_type is set to 'manual'"
+  if (epiref_type = 'manual') then return endif
+
+  "Create parameters for standard gradient echo reference scan if need be"
+  create('sgeref','string','current','n')
+  create('sgepreps','string','current','n') "with preparation modules"
+
+  "Use arrayparse to get arrayed parameters, acquisition order and size"
+  $arraypar = ''
+  arrayparse:$arraypar,$arrayrank,$arraysize
+
+  "Set the number of arrayed parameters"
+  $npars = size('$arraypar')
+
+  "Set $npars=0 if the array string is empty"
+  if (array = '') then $npars=0 endif
+
+  "Return if image parameter is already in the array"
+  $i=1
+  while ($i <= $npars) do
+    if ($arraypar[$i] = 'image') then return endif
+    $i=$i+1
+  endwhile
+
+  "Check epiarray, arraysize and arraycycles parameters exist"
+  epiarray('checkpars')
+
+  "Store the array string so we can easily restore the array when we strip"
+  epiarray=array
+
+  "Likewise we will store the array size of each arrayed parameter"
+  arraysize=$arraysize
+
+  "We will also store how each arrayed parameter cycles"
+  arraycycles=1
+
+  "Now figure how often each array parameter cycles"
+  $i=1
+  while ($i <= $npars) do
+    arraycycles[$i]=1
+    $rank=$arrayrank[$i]
+    $j=$i+1     
+    while ($j <= $npars) do
+      if ($arrayrank[$j]>$rank) then 
+        arraycycles[$i]=arraycycles[$i]*arraysize[$j]
+        $rank=$rank+1
+      endif
+      $j=$j+1
+    endwhile
+    $i=$i+1
+  endwhile
+
+  "Turn _dro, _dpe and _dsl off to eliminate set_gf_array errors"
+  setprotect('dro','off',8)
+  setprotect('dpe','off',8)
+  setprotect('dsl','off',8)
+
+  "Temporarily reset array parameter to eliminate parallel arrays"
+  "(arrays must be parallel if reference scans are included)"
+  aipXrecon('nrcvrs'):$nr
+  $arraydim=arraydim/$nr
+  $array=''
+  $par = 1
+  if ($npars > 0) then
+    $array=$arraypar[$par]
+    $par = $par + 1
+  endif
+  if ($npars > 1) then
+    repeat
+      $array = $array + ',' + $arraypar[$par]
+      $par = $par + 1
+    until ($par > $npars)
+  endif  
+  array=$array
+
+  "Set up for parallel arrays of all the arrayed parameters"
+  if (epiref_type = 'fulltriple') then $ref=2 else $ref=1 endif
+  $par = 1
+  while ($par <= $npars) do
+    $i = 1
+    isreal($arraypar[$par]):$real
+    if ($real) then 
+      $value=0
+      while ($i <= $arraydim*images*$ref) do
+        $value[$i] = {$arraypar[$par]}[((($i-1)/(arraycycles[$par]*$ref)) mod arraysize[$par])+1]    
+        $i = $i + 1
+      endwhile
+      {$arraypar[$par]} = $value
+    else
+      $str=''
+      while ($i <= $arraydim*images*$ref) do
+        $str[$i] = {$arraypar[$par]}[((($i-1)/(arraycycles[$par]*$ref)) mod arraysize[$par])+1]    
+        $i = $i + 1
+      endwhile
+      {$arraypar[$par]} = $str
+    endif
+    $par = $par + 1
+  endwhile
+
+  "Add reference values to array elements"
+  $par = 1
+  while ($par <= $npars) do
+    isreal($arraypar[$par]):$real
+    if ($real) then 
+      $refval={$arraypar[$par]}[1]
+      {$arraypar[$par]} = $refval,{$arraypar[$par]}
+      if (epiref_type = 'triple') then
+        {$arraypar[$par]} = $refval,$refval,{$arraypar[$par]}
+      elseif (epiref_type = 'fulltriple') then
+        {$arraypar[$par]} = $refval,{$arraypar[$par]}
+      endif
+      if (sgeref = 'y') then
+        {$arraypar[$par]} = $refval,{$arraypar[$par]}
+      endif
+    else
+      $refstr={$arraypar[$par]}[1]
+      {$arraypar[$par]} = $refstr,{$arraypar[$par]}
+      if (epiref_type = 'triple') then
+        {$arraypar[$par]} = $refstr,$refstr,{$arraypar[$par]}
+      elseif (epiref_type = 'fulltriple') then
+        {$arraypar[$par]} = $refstr,{$arraypar[$par]}
+      endif
+      if (sgeref = 'y') then
+        {$arraypar[$par]} = $refstr,{$arraypar[$par]}
+      endif
+    endif
+    $par = $par + 1
+  endwhile            
+
+  "Turn _dro, _dpe and _dsl back on"
+  setprotect('dro','on',8)
+  setprotect('dpe','on',8)
+  setprotect('dsl','on',8)
+
+  "Array image"
+  if (epiref_type = 'fulltriple') then
+    array('image',$arraydim*images*2,1,0,'noda')
+    $i = 1
+    while ($i < $arraydim*images*2) do
+      image[$i] = -1
+      $i = $i+2
+    endwhile
+  else
+    array('image',$arraydim*images,1,0,'noda')
+  endif
+
+  if (epiref_type = 'single') then
+    image = 0,image
+  elseif (epiref_type = 'triple') then
+    image = 0,-2,-1,image
+  elseif (epiref_type = 'fulltriple') then
+    image = 0,-2,image
+  endif
+  if (sgeref = 'y') then
+    if (sgepreps = 'y') then 
+      image = -4,image
+    else
+      image = -3,image
+    endif
+  endif
+     
+  "Reset array parameter to include image if required"
+  $par = 1
+  if ($array <> '') then
+    $array = '(image'
+    repeat
+      $array = $array + ',' + $arraypar[$par]
+      $par = $par + 1
+    until ($par > $npars)
+    array = $array + ')'
+  endif
+
+endif
+
+if ($action = 'strip') then
+
+  "Create epiref_type if it doesn't exist"
+  create('epiref_type','string','current','manual')
+
+  "Return if epiref_type is set to 'manual'"
+  if (epiref_type = 'manual') then return endif
+
+  "Create parameter for standard gradient echo reference scan if need be"
+  create('sgeref','string','current','n')
+
+  "Determine the number of reference scans at start of array"
+  if (epiref_type = 'single') then
+    $nref = 1
+  elseif (epiref_type = 'triple') then
+    $nref = 3
+  elseif (epiref_type = 'fulltriple') then
+    $nref = 2
+  endif
+  if (sgeref = 'y') then
+    $nref = $nref+1
+  endif
+
+  "Return if image array appears not to be set"
+  if (size('image') < images+$nref) then return endif
+
+  "Eliminate image from the array"
+  image=0
+
+  $arraypar = ''
+  arrayparse:$arraypar,$arrayrank,$arraysize
+  $npars = size('$arraypar')
+
+  "Turn _dro, _dpe and _dsl off to eliminate set_gf_array errors"
+  setprotect('dro','off',8)
+  setprotect('dpe','off',8)
+  setprotect('dsl','off',8)
+
+  "temporarily reset array parameter to eliminate parallel arrays"
+  "(arrays must be parallel if reference scans are included)"
+  $i = 1
+  $array=''
+  if (array <> '') then
+    $array=$arraypar[1]
+    $i = 2
+  endif
+  if ($npars > 1) then
+    repeat
+      $array = $array + ',' + $arraypar[$i]
+      $i = $i + 1
+    until ($i > $npars)
+  endif  
+  array=$array
+
+  "Reset array elements"
+  if (epiref_type = 'fulltriple') then $ref=2 else $ref=1 endif
+  $par = 1
+  if (array <> '') then
+    while ($par <= $npars) do
+      $i = 1
+      isreal($arraypar[$par]):$real
+      if ($real) then
+        $value=0
+        while ($i <= arraysize[$par]) do
+          $value[$i] = {$arraypar[$par]}[($i-1)*arraycycles[$par]*$ref+$nref+1]    
+          $i = $i + 1
+        endwhile
+        {$arraypar[$par]} = $value  
+      else
+        $str=''
+        while ($i <= arraysize[$par]) do
+          $str[$i] = {$arraypar[$par]}[($i-1)*arraycycles[$par]*$ref+$nref+1]    
+          $i = $i + 1
+        endwhile
+        {$arraypar[$par]} = $str
+      endif  
+      $par = $par + 1
+    endwhile
+  endif
+
+  "Reset the array string"
+  array=epiarray
+
+  "Turn _dro, _dpe and _dsl back on"
+  setprotect('dro','on',8)
+  setprotect('dpe','on',8)
+  setprotect('dsl','on',8)
+
+  image = 1
+
+endif
+
+if ($action = 'clear') then
+  
+  "Use arrayparse to get arrayed parameters, acquisition order and size"
+  $arraypar = ''
+  arrayparse:$arraypar,$arrayrank,$arraysize
+
+  "Set the number of arrayed parameters"
+  $npars = size('$arraypar')
+
+  "Set $npars=0 if the array string is empty"
+  if (array = '') then $npars=0 endif
+
+  "Turn _dro, _dpe and _dsl off to eliminate set_gf_array errors"
+  setprotect('dro','off',8)
+  setprotect('dpe','off',8)
+  setprotect('dsl','off',8)
+
+  "Now clear each array parameter"
+  $i=1
+  while ($i <= $npars) do
+    {$arraypar[$i]} = {$arraypar[$i]}[1]
+    $i=$i+1
+  endwhile
+
+  "Reset array parameter"
+  array=''
+
+  "Check epiarray, arraysize and arraycycles parameters exist"
+  epiarray('checkpars')
+
+  "Reset the shadow array string"
+  epiarray=array
+
+  "Reset the array size of each arrayed parameter"
+  arraysize=1
+
+  "Reset how each arrayed parameter cycles"
+  arraycycles=1
+
+  "Turn _dro, _dpe and _dsl back on"
+  setprotect('dro','on',8)
+  setprotect('dpe','on',8)
+  setprotect('dsl','on',8)
+
+endif
+
+if ($action = 'checkpars') then
+  create('epiarray','string','current','')
+  create('arraysize','real','current',1)
+  create('arraycycles','real','current',1)
+  setprotect('arraysize','on',256)
+  setprotect('arraycycles','on',256)
+endif

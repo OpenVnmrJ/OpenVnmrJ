@@ -1,0 +1,89 @@
+"macro setgn"
+"************************************************************************"
+" setgn - macro to set the gain						 "
+"************************************************************************"
+$arr=''
+if (array <> '') then
+  $arr = array
+  array=''
+endif
+$setnv=0
+$setnv2=0
+$setss=0
+ldrf
+if ((seqfil = 's2pul') OR (seqfil = 'spuls') OR (seqfil = 'gecc') OR (seqfil = 'fastestmap')) then
+  exists('presig','parameter'):$ex
+  if ($ex > 0) then
+    presig='h'
+  endif
+  if (seqfil = 'gecc') then ssprep endif
+  wnt='ph f full ft vp=0 vsadj ds'
+  wexp='wnt=`` gain=`y`'
+elseif (seqfil = 'press') OR (seqfil='steam') OR (seqfil='isis') then
+  _nv
+  imprep
+  wnt='f full ft vp=0 vsadj ds'
+  wexp='wnt=`` gain=`y`'
+else
+  "** initialize some parameters "
+  " 4 steady state scans"
+  exists('ss_o','parameter'):$e
+  if ($e =0) then
+    create('ss_o','integer')
+  endif
+  $setss = 1
+  ss_o = ss   "save original ss value"
+  if (ss = 0) then
+    ss = 2
+    if (seqfil = 'ge3d') then ss = 10 endif
+  endif
+  substr(seqfil,1,3):$ch
+  if ($ch = 'epi') then
+    ssprep
+    wnt=''
+    wexp = 'ss=ss_o gain=`y`'
+    image=0
+  else
+    imprep
+    "wnt = 'av ft f full vp=0 vsadj ds dscale' "
+    wexp = 'wnt=`` ss=ss_o gain=`y`'
+    exists('nv','parameter'):$ex
+    if ($ex) then
+        exists('nv_1','parameter'):$e
+        if ($e = 0) then
+                create('nv_1','real')
+        endif
+        nv_1 = nv
+        nv = 0
+        $setnv=1
+        wexp = wexp + ' nv=nv_1'
+    endif
+    exists('nv2','parameter'):$ex
+    if ($ex) then
+        exists('nv_2','parameter'):$e
+        if ($e = 0) then
+                create('nv_2','real')
+        endif
+        nv_2 = nv2
+        nv2 = 0
+        $setnv2=1
+        wexp = wexp + ' nv2=nv_2'
+    endif
+  endif
+
+endif
+
+gain='n'
+if ($arr <> '') then
+  wexp = wexp + ' array=`' + $arr + '`'
+endif
+ABORTOFF
+au
+ABORTON
+gain='y'
+if ($arr <> '') then
+  array = $arr
+endif
+if ($setnv = 1) then nv=nv_1 endif
+if ($setnv2 = 1) then nv2=nv_2 endif
+if ($setss = 1) then ss=ss_o endif

@@ -1,0 +1,133 @@
+"macro vjcloneQ"
+$dum='' $devnull=''
+    expactive('current'):$expactive,$user
+    if ($expactive>0) and ($user=owner) then
+       write('error','%s has an active experiment running: Aborted',$user)
+       return
+    endif
+
+$editok=0
+operights('canclonestudies'):$editok
+if ($editok<0.5) then
+   write('error','%s cannot clone study queue.',operator)
+   return
+endif
+
+walkupQ_init
+IF $# < 1 then
+   vnmrjcmd('submitstudy '+$0)
+   vnmrjcmd('tray update')
+   return
+ENDIF
+
+$loc=''
+if not typeof('$4') then
+     format($4,0,0):$loc
+else
+     $loc=$4
+endif
+$rack='' $zone=''
+if (traymax=96) or (traymax=768) then
+   format($2,'lower'):$rack
+   format($3,'lower'):$zone
+endif
+substr($loc,1):$loc
+if ($loc = '0') or ($loc='') then
+        write('error','Select location to clone')
+        return
+endif
+
+is_submitmode:$submit
+if ($submit) then
+   if (customflag='y') or (cppauseflg='y') then
+	customizepar('quit')
+   endif
+   $ok=0
+   submitagain('',$2,$3,$4):$ok
+   if ($ok>0) then walkupQ('savestudy') endif
+   return
+endif
+
+"***Where to get info****"
+strstr(autodir,'studytray'):$isenter
+if ($isenter=0) then
+  $dir=autodir
+  $file='enterQ'
+else
+  $dir=globalenter
+  substr(globalenter,'basename'):$file
+endif
+
+$autofile=$dir+'/'+$file
+$samplename='' $locdir='' $status='' $who=operator
+checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+
+if ($status='') then
+        updatestatus($dir,$loc,'Empty',$zone,$rack)
+        write('error','Sample %s not found',$loc)
+        return
+endif
+
+updatestatus($dir,$loc,$status,$zone,$rack)
+if ($samplename='ReFeReNCe') then
+        write('error','Loc %s is a reference location',$loc)
+        return
+endif
+
+$macdir=$autofile+'.macdir'
+$maclibdir=$macdir+'/'+$locdir+'/day'
+$maclibdirlong=$macdir+'/'+$locdir+'/night'
+
+$expfile=$maclibdir+'/EXPLIST'
+$lngfile=$maclibdir+'/LONGLIST'
+
+rm('-rf',cursqexp):$dum
+walkupQ_init
+mkdir('-p',cursqexp+'/macdir'):$dum
+mkdir('-p',cursqexp+'/macdirlong'):$dum
+
+shell('(cat '+$expfile+' | grep -w Queued > '+cursqexp+'/EXPLIST)'):$devnull
+shell('(cat '+$lngfile+' | grep -w Queued > '+cursqexp+'/LONGLIST)'):$devnull
+
+"************Copy all customization***************"
+shell('cp -r '+$maclibdir+'/* '+cursqexp+'/macdir'):$devnull
+shell('cp -r '+$maclibdirlong+'/* '+cursqexp+'/macdirlong'):$devnull
+rm('-f',cursqexp+'/macdir/EXPLIST'):$dum
+rm('-f',cursqexp+'/macdir/LONGLIST'):$dum
+rm('-f',cursqexp+'/macdirlong/EXPLIST'):$dum
+rm('-f',cursqexp+'/macdirlong/LONGLIST'):$dum
+
+module('add','sampleglobal','basic')
+
+getsampglobal($maclibdir)
+sample='' archivedir=''
+        "The following is needed to make sure if any _parameters"
+        "  need to be executed.  As well as for panel updates"
+        "  But check to makes sure that protection bit 2 is not ON"
+  $list='' $list2=''
+  module('arraylist','sampleglobal'):$list
+  module('arraylist','usersampleglobal'):$list2
+  $list=$list,$list2
+  $list2=''
+  setprotect('','list',4):$list2
+  string2array($list2):$list2
+  $total=size('$list')
+  $i=1
+  repeat
+	if ($list[$i]<>'') then
+           teststr('$list2',$list[$i],'local'):$ret
+           if ($ret=0) then {$list[$i]}={$list[$i]} endif
+	endif
+        $i=$i+1
+  until $i > $total
+
+$LIST='EXPLIST','LONGLIST'
+if (sqdisplay[1]='sample') then
+   xmhaha('readloc',$maclibdir,$samplename)
+endif
+
+   makeStudy('init','Clone StudyQueue')
+   cpstudyname='NeWSTuDYCLoNe','ok2save','0','','no','q'
+   makeStudy('shownew')
+
+

@@ -1,0 +1,48 @@
+"macro mz"
+"*****************************************************"
+" mz - move integral reset points between experiments "
+"*****************************************************"
+" check arguments "
+if ($#<1)or($#>2) then
+  write('error','usage: mz(n) or mz(n,m)')
+  return
+endif
+$t='' $s='' $curexp=''
+jexp:$curexp
+if $#<2 then
+  $target=$1
+  $s=$curexp
+else
+  $source=$1
+  format($source,1,0):$s
+  $target=$2
+endif
+format($target,1,0):$t
+if $s=$t then
+  write('error','mz: source and target are identical')
+  return
+endif
+" save current experiment (parameters) on disk "
+fsave(curexp+'/curpar','current')
+
+" if necessary, read source parameters "
+if $curexp<>$s then
+  fread(userdir+'/exp'+$s+'/curpar','current','reset')
+endif
+
+" remember integration parameters "
+on('lifrq') on('liamp')
+$lifrq=lifrq $liamp=liamp
+
+" read in parameters from target experiment "
+fread(userdir+'/exp'+$t+'/curpar','current','reset')
+
+" transfer integration poarameters "
+lifrq=$lifrq off('lifrq')
+liamp=$liamp off('liamp')
+
+" if necessary, save target data and restore current experiment params "
+if $curexp<>$t then
+  fsave(userdir+'/exp'+$t+'/curpar','current')
+  fread(curexp+'/curpar','current','reset')
+endif

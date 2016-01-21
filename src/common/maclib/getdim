@@ -1,0 +1,71 @@
+"macro getdim"
+" getdim - macro that determines dimensionality of data in experiment "
+
+" Usage: getdim:$dim							"
+"   returns 1 for 1D, 2 for 2D, 3 for 3D, 4 for 4D			"
+
+$dim=1
+if $# < 1 then
+	// without an argument, evaluate current tree
+    calcdim
+    $tree='current'
+else
+    $tree='usertree'
+    fread('',$tree)
+	// the input could be the fid path or the procpar path
+	// Read the parameter file into usertree and evaluate usertree
+    exists($1+'/procpar','file'):$fex
+    if not $fex then
+	exists($1,'file'):$fex
+	if not $fex then 
+	    return(0) 
+	else
+	    fread($1,$tree)
+	endif
+    else
+	fread($1+'/procpar',$tree)
+    endif
+endif
+
+
+// The following is morphed from the original getdim macro
+//  Generic to current tree or usertree
+$nf=1
+exists('nf','parameter',$tree):$e
+if ($e > 0.5) then
+  getvalue('nf',$tree):$nf
+endif
+exists('arraydim','parameter',$tree):$e
+if ($e>0.5) then
+    getvalue('arraydim',$tree):$arraydim
+    if $arraydim=1 and $nf=1 then
+	if $tree='usertree' then fread('',$tree) endif
+        return(1)
+    endif
+endif
+
+$ni=0 $ni2=0 $ni3=0
+exists('ni','parameter',$tree):$eni
+if $eni>0 then
+  $ni=1
+  getvalue('ni',$tree):$ni
+  if $ni>1 then $dim=$dim+1 endif
+endif
+exists('ni2','parameter',$tree):$eni2
+if $eni2>0 then
+  $ni2=1
+  getvalue('ni2',$tree):$ni2
+  if $ni2>1 then $dim=$dim+1 endif
+endif
+exists('ni3','parameter',$tree):$eni3
+if $eni3>0 then
+  $ni3=1
+  getvalue('ni3',$tree):$ni3
+  if $ni3>1 then $dim=$dim+1 endif
+endif
+if ($nf > 8) then
+  $dim=$dim+1
+endif
+if $tree='usertree' then fread('',$tree) endif
+return($dim,$ni,$ni2,$ni3)
+

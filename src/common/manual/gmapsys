@@ -1,0 +1,243 @@
+*******************************************************************************
+* gmapsys        -          System Gradient Shimming                          *
+*******************************************************************************
+
+SHORT DIRECTIONS to make a shim map
+     -Set parameters.  Type gmapsys, click on "Set Params", then click
+	on "Go, dssh".
+     -Make a shimmap.  Click on "Shim Maps", then click on "Automake Shimmap".
+	Enter mapname when prompted.
+
+AUTOMATION
+     -You must have the deuterium gradient shimming module installed to
+         perform deuterium gradient shimming in automation.  
+     -Find your 90 degree pulse on deuterium.  Enter s2pul tn='lk' tpwr=42
+         pw=200 gain=20.  Enter ga.  Array pw to find the 90 degree pulse.
+     -Set parameters.  Type gmapsys, click on "Set Params", then click on
+        "Gradient,Nucleus".  If you have pulsed field gradients, click on
+        "Pfg H2" to select parameters for deuterium with pfg.  If you have
+        homospoil gradients, select "Homospoil H2" instead.  Set tpwr and
+        pw for 90 degree pulse, and set gain as appropriate for your solvent.
+        Then click on "Return", and click on "Go,dssh" to test the parameters.
+        You should see two top-hat profile spectra.  Adjust gain and nt to
+        see good signal-to-noise with no ADC overflow.
+     -Recommended parameters for different solvents.
+           Solvent           d1   nt     Inova     Mercury
+           --------------    --   ----   -------   -------
+           chloroform        3    8-16   gain=36   gain=18
+           dmso              3    4      gain=28   gain=10
+           d2o or benzene    3    1      gain=24   gain=6
+           acetone           6    1      gain=24   gain=6
+           --------------    --   ----   -------   -------
+      (NOTE: Actual parameters may vary, depending on solvent concentration,
+        probe, and system hardware.)
+     -Make a shimmap for a particular solvent using parameters for good
+        signal-to-noise.  If the solvent you use most often has weak signal,
+        make the map on a solvent with more signal.  To make the map, click
+        on "Shim Maps", then click on "Automake Shimmap".  Enter a mapname
+        when prompted.
+     -Test autoshimming.  Type "gmapsys", then click on "Autoshim on Z".
+     -When you are satisfied autoshimming works well for your particular
+        solvent, go to a shell window and edit the "gmapz" macro.  Go to
+        the bottom of the macro, and uncomment the section appropriate for
+        your solvent (the solvent the shimmap was made on).  
+     -Edit the "setlk" macro and uncomment the section setting lockpower,
+        lockgain, and z0 for different solvents (you must first determine
+        appropriate values for different solvents).
+     -Change the appropriate parameter sets in /vnmr/stdpar to use wshim='g'
+        spin='y' spin=20 (or other appropriate spin value).  Use alock='y'
+        if you use the "setlk" macro.  
+
+gmapsys - enter gradient shimming system menu for:
+     setting parameters
+     making a shimmap
+     performing autoshimming
+
+Usage:
+     gmapsys - enter gradient shimming system menu.  If the 'gmapz' pulse
+	    sequence is not loaded, retrieve parameters from the last 
+	    shimmap used (see current mapname), or from gmapz.par if no
+	    shimmap exists.  This is the only entry point to this menu.
+     gmapsys('addpar') - add gradient shimming parameters to current 
+	    parameter set.
+     gmapsys('setHSforH1') or gmapsys('setHSforH2') - set acquisition
+	    parameters for homospoil (HS) gradients for H1 or H2 (same
+            as the Homospoil H1 or Homospoil H2 buttons).  Note that 
+	    gradtype='nnh' is not set by the macro or buttons, and must be
+	    set manually.  On Varian 18 to 40 channel shims, make sure the
+            homospoil strength is set (pot resistor HOMO on Z0 board).
+     gmapsys('vi') - edit the file gshim.list, for editing shim offsets,
+	    mapname, or selecting coarse/fine shims.
+     gmapsys('findgzlvl') - run experiment to calibrate gzlvl, gzwin, and tof
+	    to optimize the spectral window.
+     gmapsys('findgzwin') - run experiment to calibrate gzwin and tof to
+	    optimize the spectral window.
+     gmapsys('findtof') - run experiment to center tof on the edges of the 
+	    gradient.
+     gmapsys('shimmap'<,'auto'|'manual'|'overwrite'|mapname>) - run a shim 
+	    mapping experiment, save and display results (Make Shimmap 
+	    button).  The user is first queried for a mapname.  If mapname
+	    is given as second argument, the user is not queried for one.  
+	    If the second argument is 'auto', first calibrate gzwin 
+	    (Automake Shimmap button).  If 'manual', use shim offset values 
+	    set manually from file gshim.list and not default values.
+	    If 'overwrite', overwrite the current mapname if it exists.  
+     gmapsys('shim') - start autoshimming (Autoshim on Z button).  
+     gmapsys('rec') - display the record of shim adjustments from the previous
+	    gradient shimming run.
+     gmapsys('writeb0') - display the b0 plot calculated from the first two
+	    array elements.
+     gmapsys('quit') - quit gradient shimming and retrieve previous
+	    parameter set, same as Quit button and gmapshim('quit').
+
+Related macros:
+     gmapshim - start autoshimming
+     gmapz - retrieve standard gradient shimming parameters
+
+Standard setup:
+     Use a long water sample (recommended for first use).
+     DO NOT SPIN the sample.
+     If the sample is completely unshimmed, shim z1, z2, x1, and y1.  This 
+	is important only for shim mapping, not for autoshimming.
+     Check pulsed field gradient setup (pfgon, gradtype, gzlvl).
+     Check pulse sequence.  Type gmapsys, click on "Set Params", then click
+        on "Set H1" to select proton observe parameters.  Check your 90
+        degree pulse, power level, and gain.  Then click on "Go, dssh" to
+        produce two profile spectra.
+     Check acquisition parameters for adequate signal, and to avoid 
+	receiver overflow (tpwr, pw, gain, nt, ss, d1).
+
+Make a shimmap:
+     Click on "Shim Maps" and then "Automake Shimmap" to map the shims.  
+	Enter a mapname when prompted, which sets the current mapname.  
+	First, an experiment is run to calibrate gzwin and tof, which 
+	set the active spectral window.  Next, the shim mapping experiment 
+	begins.  The file is automatically processed and saved when done.
+     Click on "Shimmap Files" to find and load previous shimmaps and 
+	parameters.
+
+Gradient autoshimming:
+     Once a shimmap is made, click on "Autoshim on Z".  This starts 
+	autoshimming with the current parameter set.  Convergence is 
+	typically achieved when the rms err number is less than 1.0.  The
+	shim errors estimate how well each shim may be set by this method.  
+     If a shim goes out-of-range, the shim is set to full scale, and 
+	shimming is continued with lower order shims.
+     If more than four shims are used, autoshimming is first done on z1-z4.
+	After the shims have converged, autoshimming is restarted using the 
+	higher-order shims for tighter convergence.
+
+Parameters (see dg2):
+     gzsize - number of z-axis shims to adjust
+     gzlvl - gradient strength
+     gzwin - percentage of spectral window used for processing
+     tof - center of excitation window
+     d2 - gradient stabilization time
+     d3 - phase accumulation time, arrayed with two values
+
+Files:
+     A directory "gshimlib" is created in the user directory.  Under 
+	gshimlib is a directory "shimmaps", for storing shimmaps made 
+	by gradient shimming.  There is also a directory "data", for 
+	storing data files used by gradient shimming.  Some of 
+	the files in "data" are displayed by expl('file',filename),
+	see "Display" button under gmapsys.  Files are as follows:
+	     gshim.amp   - input file (expl)
+	     gshim.phase - input file (expl)
+	     gshim.bas   - input file, contains shim map (expl)
+	     gshim.fit   - output file (expl)
+	     gshim.list  - contains shim adjustments and current mapname
+	     gshim.rec   - record of shim adjustments
+	     gshim.startshims - starting shim values
+	The files gshim.list and gshim.bas are updated when a shimmap
+	is loaded.
+
+How a shimmap file is made:
+     When you click on "Make Shimmap", you are prompted for a mapname, which 
+	may be any string valid in a file name, i.e. 5mm_TrPFG_01, or the 
+	probe serial number.  This name is specific to the probe, and may be
+	recalled for future autoshimming.  
+     At the end of the experiment, the spectra are automatically processed,
+	and a file is stored in the user directory as:
+
+	    'gshimlib/shimmaps/' + mapname + '.fid'
+
+	In addition to the usual files stored under '.fid', the files 
+	gshim.list and gshim.bas are also stored.  The file gshim.bas
+	is displayed at the end of the experiment, with curves
+	#1 as z1, #2 as z2, etc.  Coarse shims are used if present.
+	Fine shims may be used by editing the shims with gmapsys('vi'), 
+	and making a shimmap with gmapsys('shimmap','manual').
+     To make a shimmap accessible to all users, make a directory 
+	/vnmr/gshimlib/shimmaps (click on "Shimmap Files" and
+	"Make Systemdir", you must have write permission), and copy 
+	shimmap files into the directory (or click on "Copy to System").
+     Once the shimmap is done, gradient shimming may be run using this
+	shimmap from any other experiment by typing "gmapshim", or by 
+	clicking on "Setup" and then "Shim" from the main menu, and then 
+	clicking on "Gradient Autoshim on Z".
+     When a mapname is retrieved by a gradient shimming macro or menu, the
+	parameters are usually retrieved, and the files gshim.list and 
+	gshim.bas are copied from the shimmaps directory to the data directory 
+	in gshimlib.  These files must be present while autoshimming.  The 
+	parameters used to make the shimmap are the same ones used for 
+	autoshimming, unless altered by the user.
+     To remove a shim map, remove the file mapname+'.fid' or 
+	mapname+'.par' in the shimmaps directory.
+
+Hints:
+     The parameter gzwin must be calibrated before running the shimmap 
+	experiment.  tof may be different than on resonance with solvent.
+	The profile should be symmetric in the spectral window.
+     The number of shims to shim on may be adjusted using the parameter
+	gzsize, and does not require making a new shimmap if gzsize is
+	smaller than the shimmap.
+     Make sure the probe is in the same position as when the shimmap was made.
+     To manually set the shim offsets, use gmapsys('vi') to edit the file 
+	gshim.list and change the values in the "Offset" column.  Then type 
+	gmapsys('shimmap','manual') to start the shimmap.  The user is not 
+	queried for a new mapname.
+     Increase the number of transients nt or signal-to-noise to reduce the 
+	shim errors.  Typically, one may first shim with small nt, and then 
+	increase nt to obtain greater precision.  Increasing the value of 
+	d3[2] may also increase signal-to-noise, unless T2* is too short.  
+	To save a shimmap with a different nt or other parameters for later 
+	use, load a shimmap, change the parameters, then click on "Shim Maps" 
+	and then "Save As".
+     Evaluate a set of shims for a specific application (i.e. presat).  
+	Results may vary with application.
+     To use homospoil gradients, set gradtype='nnh' and enter 
+	gmapsys('setHSforH1') or gmapsys('setHSforH2') to select starting 
+	parameters.  Use the 'Go, dssh' button to first obtain good para-
+	meters before attempting to make a shimmap.  On the Varian 13 and 
+	Oxford 18 shims, homospoil strength may be too weak.  The parameters 
+	needed may also be hardware dependent.  (See Liquids manual.)
+     Manual adjustment of the non-spin (xy) shims, especially the low-order 
+	shims, may be necessary.  The non-spins also contain some z-components,
+	and additional gradient shimming on z may be necessary.
+
+To shim samples other than water:
+     Make a shimmap on a water sample of equal height, then insert sample,
+	adjust parameters to obtain sufficient signal, and start autoshimming.
+     Set parameters to obtain sufficient proton signal, then make a shimmap 
+	and start autoshimming.
+     Use gradient shimming on another sample of equal height, then insert the 
+	sample and adjust low-order shims using other methods.
+     Set the observe transmitter to deuterium.  Click on "Set Params" and
+	"Set H2" to set reasonable starting parameters.  You may need to
+	disconnect the lock and recable the system to pulse on deuterium using 
+	the lock coil.  Use "Go, dssh" to check the parameters.  Then follow 
+	the usual procedures to make a shimmap and autoshim, both of which 
+	should be performed while pulsing on deuterium.
+
+Troubleshooting:
+     Make sure the gradients are active (check gradtype, pfgon).
+     DO NOT SPIN while running gradient shimming experiments.  This may
+	result in data artifacts.
+     Gradient shimming is very sensitive to sample geometry and probe
+	positioning.  
+
+Click on "Help" for help with menu buttons.
+
+Other Related Macros:
+     gmapauto gmapauto_ez gmapdisp gmaprep gmapset gmapshims

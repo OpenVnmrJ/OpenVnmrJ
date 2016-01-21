@@ -1,0 +1,195 @@
+"macro nodecopy"
+"************************************************************************"
+"nodecopy - make multiple copy of a cp node"
+"  should be used at runtime "
+"  This is not intended to be node copy of experiments"
+"  waiting the in the queue.  That should be done via"
+"  user interface.  This should be used by macros to do"
+"  decisions as the queue is running.  For example"
+"  repeating an experiment over and over until some condition"
+"  is reached.  OR making copies of a node so several selective"
+"  frequency experiments are run in a chain instead of an array"
+"  The plan is to use this via a CMD node that makes a runtime decision"
+"  Usage:  nodecopy(copynode,<insertnode>,<howmanyrepeats>)  "
+"************************************************************************"
+$tailX='tail'
+whichtail:$tailX
+
+$startnode=$1
+if ($# < 2) then $2=$startnode endif
+if ($# < 3) then $3=1 endif
+$maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+$endnode=$2
+$repeats=$3
+$where='day'
+
+"***********Do some checks*************************************************"
+exists($maclibdir+'/EXPLIST','file'):$fileex
+if ($fileex=0) then
+    write('error','%s: %s/EXPLIST not found',$0,$maclibdir)
+    return(0,'')
+endif
+
+$explist=''
+cpexplist('read',$maclibdir):$explist
+
+"***********Make sure startnode is in the queue***********************"
+$ret1=0
+if ($startnode=explist) then 
+   $ret1=1 
+   if ($endnode=$startnode) then $endnode='next' endif
+endif
+if ($ret1=0) then
+    shell('(cat '+$maclibdir+'/ACQlist | grep \'^'+$startnode+' \' | grep -wc Completed)'):$ret1
+endif
+if ($ret1=0) then
+    teststr('$explist',$startnode,'local'):$ret1
+endif
+if ($ret1) then
+    $s2=''
+    shell('(cat '+$maclibdir+'/EXPLIST | grep \'^'+$startnode+' \' | '+$tailX+' -n 1)'):$s2
+    if ($s2='') then
+	shell('(cat '+$maclibdir+'/LONGLIST | grep \'^'+$startnode+' \' | '+$tailX+' -n 1)'):$s2
+	$where='night'
+    endif
+    if ($s2='') then $ret1=0 endif
+endif
+if ($ret1=0) then
+	write('error','%s: %s is not in Completed OR Queued LIST',$0,$strtnode)
+	return(0,'')
+endif
+
+"**********Where will the copy be done?********************************"
+if ($endnode<>$startnode) and ($endnode<>'next') and ($endnode<>'last') then
+   $ret2=0
+   if ($endnode=explist) then $ret2=1 endif
+   if ($ret2=0) then
+	teststr('$explist',$endnode,'local'):$ret2
+   endif
+   if ($ret2=0) then
+	write('line3','%s: %s not in queue.  New nodes will be added at the end of the queue',$0,$endnode)
+	$endnode='last'
+   endif
+endif
+
+"***************Proceed***************************************"
+$macro=$maclibdir+'/'+$startnode+'acq'
+exists($macro,'file'):$macex
+if ($macex=0) then
+    exists($maclibdir+'/maclib_attic/'+$startnode+'acq','file'):$macex
+    if ($macex) then
+	$macro=$maclibdir+'/maclib_attic/'+$startnode+'acq'
+    endif
+endif
+$macpar=$macro+'pars' 
+$attr=$maclibdir+'/'+$startnode+'_Attr'
+exists($attr,'file'):$macex
+if ($macex=0) then
+    exists($maclibdir+'/maclib_attic/'+$startnode+'_Attr','file'):$macex
+    if ($macex) then
+	$attr=$maclibdir+'/maclib_attic/'+$startnode+'_Attr'
+    endif
+endif
+
+shell('touch '+$macro):$dum
+shell('touch '+$macpar):$dum
+exists($attr,'file'):$macmacex
+
+"******Find information for current experiment node*******"
+   $s3='' string2array($s2):$s3
+   $acqtime=0
+   format($s3[2],'lower'):$acqtime
+   $pslabel=$s3[3]
+   getcpnode('cp',$maclibdir,$pslabel):$node,$ext
+   length($ext):$extsize
+   $rext=0
+   format($ext,'lower'):$rext
+
+   $efile=$maclibdir+'/EXPLIST1'
+   $efile1=$maclibdir+'/EXPLIST'
+   if ($where='night') then
+	$efile1=$maclibdir+'/LONGLIST'
+   endif
+   $efile2=$maclibdir+'/EXPalias'
+   write('reset',$efile)
+
+"*********Where to insert new nodes?************"
+   $etot=size('$explist')
+
+   $s4='' $s5=''
+   readfile($efile1,'$s4','$s5','','local'):$total
+   $ipoint=0
+   if ($endnode='last') then 
+     teststr('$s4',$explist[$etot],'local'):$ipoint 
+   elseif ($endnode='next') then
+     teststr('$s4',$explist[1],'local'):$ipoint
+     $ipoint=$ipoint-1
+   else
+     teststr('$s4',$endnode,'local'):$ipoint
+   endif
+   if ($ipoint<1) then $ipoint=$total endif
+	
+                "First put everything above the insert point"
+
+   if ($ipoint>0) then
+	$head='' format($ipoint,0,0):$head
+	shell('(cat '+$efile1+' | head -n '+$head+' > '+$efile+')'):$dum
+   endif
+
+		"Put all new nodes"
+   $newnode=''
+   $i=1
+   repeat
+       	$node='' $snode='n' $ext=''
+	format($rext,0,0):$ext
+	if ($extsize>1) then
+	   if ($rext<10) then $ext='0'+$ext endif
+	endif
+	if ($extsize>2) then
+	   if ($rext<100) then $ext='0'+$ext endif
+	endif
+	$node=$pslabel+'_'+$ext
+       	$snode='xx'+$ext
+	$newnode[$i]=$node
+	$newmacro=$maclibdir+'/'+$node+'acq'
+	write('reset',$newmacro)
+	write('reset',$newmacro+'pars')
+	shell('cp '+$macro+' '+$newmacro):$dum
+	shell('cp '+$macpar+' '+$newmacro+'pars'):$dum
+	if ($macmacex) then
+	    shell('cp '+$attr+' '+$maclibdir+'/'+$node+'_Attr'):$dum
+	else
+	    cpattribute('clear',$maclibdir+'/'+$node)
+	    cpattribute('set',$maclibdir+'/'+$node,'SetupMacro '+$pslabel)
+	endif
+	write('file',$efile,'%s  %d  %s  %s  Queued',$node,$acqtime,$pslabel,$snode)
+	write('file',$efile2,'%s  %s',$node,$pslabel)
+	$rext=$rext+1
+	$i=$i+1
+   until $i > $repeats
+
+		"Put everything after the current node"
+   if (($total-$ipoint) > 0) then
+	$tail='' format($total-$ipoint,0,0):$tail
+	shell('(cat '+$efile1+' | '+$tailX+' -n '+$tail+' >> '+$efile+')'):$dum
+   endif
+   shell('mv '+$efile+' '+$maclibdir+'/EXPLIST'):$dum
+
+"********Adjust explist parameter file********************"
+   $origexplist=explist
+   if ($endnode='next') then
+	explist=$newnode,$explist
+   elseif ($endnode='last') then
+	explist=$explist,$newnode
+   else
+	teststr('$explist',$endnode,'local'):$nodewhere
+	array2string($newnode):$allnodes
+	$allnodes=$endnode+' '+$allnodes
+	$explist[$nodewhere]=$allnodes
+	explist=$explist
+   endif
+   cpexplist('write',$maclibdir)
+   explist=$origexplist
+
+"*********************************************************"
+   return(1,$newnode)

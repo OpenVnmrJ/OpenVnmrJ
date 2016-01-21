@@ -1,0 +1,344 @@
+"macro probeparamgroup"
+// probeparamgroup -  Get or set a group of parameter values from or into the 
+//                    current probe file (either user or system). This macro is 
+//                    is used in several ways to perform the typical uses of 
+//                    setparams, addparams or getparam with multiple parameters at
+//                    once. The macro also recognizes the syntax of SolidsPack and 
+//                    it can be used to store parameters of the same "group" with 
+//                    multiple prefixes. 
+//
+//                    All parameters are stored or recognized with a a label 
+//                    (appended with an underscore to the probe-file parameter name)
+//                    that designates the transmitter channel, C1,C2, etc. Calibrations
+//                    of the same nucleus but different transmitter are unique.
+//                  
+//                    Optionally groups of parameters can also be saved with a common 
+//                    base label, which is appended to the probe-file parameter name 
+//                    between the underscore and the channel label.  
+//                   
+//                    Argument 1 is the action: 'get', 'getlocal', 'set', 'setlocal', 
+//                    or 'setstring'. 
+//
+//                    Argument 2 is a string that is interpreted as the basename of a
+//                    label for all of the parameters to be saved in the probe file.  It 
+//                    is placed after the underscore before the channel label. 
+//
+//                    Argument 3 is a string to represent the nucleus directly or the 
+//                    or the nucleus parameter in single quotes (i.e. 'tn','dn','dn2'
+//                    or 'dn3'). If the latter, the macro chooses the value of 
+//                    the nucleus based on the value of the designated nucleus 
+//                    parameter. If the nucleus parameter does not exist or has a 
+//                    value '' or 'none', the macro aborts with no action. A nucleus 
+//                    that is entered directly must be associated with a channel. If 
+//                    if it is not, the macro aborts with no action. 
+//
+//                    If the nucleus exists, the macro determines the transmitter 
+//                    channel that corresponds to the nucleus and appends the number
+//                    '1','2', etc to the label after a 'C'. This designation will
+//                    provide separate entries for a nucleus used with two different 
+//                    transmitter channels.
+//
+//             Note:  When the action is 'getlocal' or 'setlocal' probparamgroup may
+//                    be dealing with a local macro parameter. Nevertheless if argument 
+//                    $3 is a nucleus or the nucleus parameter the designated nucleus 
+//                    must be present in the current workspace and be associated with a
+//                    channel through probeConnect or rfchannel. probeparamgroup remains
+//                    tied to a particular workspace and will give an error for nuclei
+//                    not in the workspace. 
+//
+//                    Argument 4 is an optional string to represent a parameter group 
+//                    name that uses SolidsPack conventions. If argument 4 has a value,
+//                    then the remaing arguments (5 and above) are strings to represent
+//                    parameter prefixes that use SolidsPack conventions. If argument 
+//                    4 is '', the remaining arguments are interpreted as full parameter 
+//                    names. The parameter goup name is a group of lower-case characters 
+//                    ("suffix") followed by one or more upper-case "channel identifiers" 
+//                    (see the SolidsPack documentation).
+//
+//                    The macro aborts if the probe file does not exist. If the action
+//                    is 'set' and the nucleus does not exist in the probe file, the nucleus
+//                    is added to the probe file. If the parameter designation does not
+//                    exist in the probe file it is created with addparams. 
+//                    
+//                    If argument 1 is 'get', the value in the probe file for a 
+//                    parameter is used to directly set the parameter value. 
+//
+//                    If argument 1 is 'getlocal' the value in the probe file 
+//                    for a parameter is returned to a designated return parameter.
+//                  . This syntax is used to set local variables in a Magical macro 
+//                    from the probe file. One instance of the macro can return up 
+//                    to 10 values.
+//
+//                    If argument 1 is 'set', the parameter value is written
+//                    into the probe file with the designated name.  
+//   
+//                    If argument 1 is 'setlocal' arguments 5 and above are 
+//                    interpreted as (name, value) pairs. The name must be a string 
+//                    containing the prefix or full parameter name as described above.
+//                    The value is a numeric or string value (or a variable name 
+//                    containing the value - no quotes in this case!) to be written
+//                    into the probe file for the designated parameter name. This 
+//                    syntax is used to set the probe file using local variables 
+//                    in a Magical macro. 
+//                    
+//                    If argument 1 is 'setstring' the arguments are (name, value) 
+//                    pairs where the value is a formatted string to represent the
+//                    parameter value.  This mode has operation similar to setparams. 
+//                    The value string for a numeric value must be created separately
+//                    with the format statement. For all other modes numeric values
+//                    are represented automatically with 7 places after the decimal. 
+//                      
+
+"******** Determine the existence of the probe file ********
+
+exists('probe','parameter','global'):$probe
+if ($probe<0.5) then 
+   write('error','Error: Probe parameter does not exist')
+   abort
+else
+   if (probe='') then
+      write('error','Error: Probe parameter not set')
+      abort
+   endif
+endif
+
+$probedir=''
+exists(userdir+'/probes/'+ probe,'file'):$e
+if ($e > 0.5) then
+   $probedir = userdir+'/probes/'+ probe
+else 
+   exists(systemdir+'/probes/'+ probe,'file'):$e1
+   if $e1 > 0.50 then  
+      $probedir = systemdir+'/probes/'+ probe
+   else
+      write('error','Error: Probe directory %s not found',probe)
+      abort
+   endif
+endif
+
+$probefile = $probedir + '/' + probe
+exists($probefile,'file'):$e2
+if ($e2<0.5) then
+   write('error', 'Error: Probefile is missing from probe directory')
+   abort
+endif
+
+$probefile = $probedir + '/' + probe
+exists($probefile,'file'):$e2
+if ($e2<0.5) then
+   write('error', 'Error: Probefile is missing from probe directory')
+   abort
+endif
+
+"******** Obtain the Nucleus and Transmitter Channel ********"
+exists('tempnuc','parameter'):$etempnuc
+if ($etempnuc < 0.5) then 
+   create('tempnuc','string')
+endif 
+tempnuc = $3
+if (tempnuc = 'tn') then 
+   tempnuc = {tn}
+endif 
+if (tempnuc = 'dn') then 
+   tempnuc = {dn}
+endif 
+if (tempnuc = 'dn2') then 
+   tempnuc = {dn2}
+endif 
+if (tempnuc = 'dn3') then 
+   tempnuc = {dn3}
+endif 
+if ((tn <> tempnuc) and (dn <> tempnuc) and (dn2 <> tempnuc) and (dn3 <> tempnuc)) then 
+   write('error','Error: Nucleus %s is Not Present in the Experiment',tempnuc)
+   abort
+endif  
+if (tempnuc = '') or (tempnuc = 'none') then 
+   write('error','Error: The Nucleus %s has No Value for This Channel',tempnuc)
+endif
+$chnllabel = ''
+$chnlval= 0  
+nm1('tempnuc'):$chnlval
+format($chnlval,1,0):$chnllabel
+$nuc = tempnuc
+exists('tempnuc','parameter'):$etempnuc
+if ($etempnuc > 0.5) then 
+   destroy('tempnuc')
+endif 
+
+"******** Add Nucleus to Probefile if Necessary and Check ********"
+
+if ($1 = 'set') then
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$nuc +':','skip',1,'read'):$returnstring
+   if ($returnstring = '') then 
+      addnucleus($nuc)
+      write('line3','Adding Nucleus %s to the Probe File\n',$nuc)
+   endif
+   lookup('file',$probefile)
+   lookup('seek',$nuc +':','skip',1,'read'):$returnstring
+   length($nuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring <> $nuc) then 
+      write('error','Abort: Nucleus %s Not Found in Probe File\n',$nuc)
+      abort
+   endif
+endif
+
+"********* Obtain the Group Label for the ProbeFile ********"
+
+$label = $2
+$label = '_' + $label + 'C' + $chnllabel
+
+"******** Obtain and Parse the Parameter-Group Name ********"
+
+$groupname = $4
+length($groupname):$groupnamelength
+$char =''
+$char1 = ''
+$chnl = ''
+$suffix = ''
+$index = 1
+while ($index <= $groupnamelength) do
+   substr($groupname,$index,1):$char
+   format($char,'lower'):$char1
+   if ($char <> $char1) then
+      $chnl = $chnl + $char
+      $index = $index + 1
+   else
+      if ($chnl = '') then
+         $suffix = $suffix + $char
+         $index = $index + 1
+      else
+         $index = $groupnamelength + 1
+      endif
+   endif
+endwhile
+
+$lchnl =''
+format($chnl,'lower'):$lchnl
+
+"******** Read or Write Parameters in the Probe File *********" 
+
+$index = 5
+$index2 = 1
+$indexstring = ''
+$parname = '' 
+$parlabel = ''
+$string = ''
+$frstchar = ''
+$varname = ''
+$parvalue1 = ''
+$argname = ''
+$parvalue2 = 0.0
+$flag = 0
+$argnumber = 0
+
+while ($index <= $#) do
+   format($index,1,0):$indexstring 
+   $index = $index + 1
+   $indexstring = '$' + $indexstring
+   $parname = {$indexstring}  
+   length($parname):$parnamelength
+   $index2 = 1
+   while ($index2 <= $parnamelength) do
+      substr($parname,$index2,1):$char
+      format($char,'lower'):$char1
+      if ($char <> $char1) then
+         $flag = 1
+      endif 
+      $index2 = $index2 + 1
+   endwhile
+   if ($flag > 0.5) then
+      $parname = $parname + $lchnl + $suffix
+      $flag = 0
+   else 
+      $parname = $parname + $chnl + $suffix
+   endif
+   $parlabel = $parname + $label
+   if ($1 = 'get') then
+      getparam($parlabel,$nuc):{$parname}
+   elseif ($1 = 'getlocal') then 
+      format(($index-5.0),1,0):$indexstring
+      $argstring = '$arg' + $indexstring
+//      write('line3','%s',$argstring)
+//      write('line3','parlabel=%s nuc=%s\n',$parlabel,$nuc)
+      getparam($parlabel,$nuc):{$argstring}  
+      $argnumber = $argnumber + 1
+//      write('line3','%d',$argnumber) 
+   elseif ($1 = 'setlocal') then           //increment the index to get    
+      format($index,1,0):$indexstring      //the value (global or local variables)
+      $index = $index + 1                  
+      $indexstring = '$' + $indexstring
+      if (typeof($indexstring)) then
+         $string = {$indexstring}
+      else
+         format({$indexstring},1,7):$string
+      endif
+      lookup('file',$probefile)
+      lookup('count',$nuc + $parlabel):$e
+      if ($e > 0.0) then
+         setparams($parlabel,$string,$nuc)
+      else 
+         addparams($parlabel,$string,$nuc)
+      endif
+   elseif ($1 = 'setstring') then           //increment the index to get    
+      format($index,1,0):$indexstring       //the value (global or local variables)
+      $index = $index + 1                   //the value must be a string or a string           
+      $indexstring = '$' + $indexstring     //to represent a numeric parameter
+      $string = {$indexstring}
+      lookup('file',$probefile)
+      lookup('count',$nuc + $parlabel):$e
+      if ($e > 0.0) then 
+         setparams($parlabel,$string,$nuc)
+      else 
+         addparams($parlabel,$string,$nuc)
+      endif
+   elseif ($1 = 'set') then                //use the value of $parname to get 
+      if (typeof($parname)) then           //the value (global variables only)
+         $string = {$parname} 
+      else 
+         format({$parname},1,7):$string
+      endif
+      lookup('file',$probefile)
+      lookup('count',$nuc + $parlabel):$e
+      if ($e > 0.0) then 
+         setparams($parlabel,$string,$nuc)
+      else 
+         addparams($parlabel,$string,$nuc)
+      endif
+   else 
+      write('error','Error: Action Argument %s Not Found\n',$1)
+      return
+   endif
+endwhile
+if ($argnumber = 0) then 
+   return
+elseif ($argnumber = 1) then
+   return($arg1)
+elseif ($argnumber = 2) then
+   return($arg1,$arg2)
+elseif ($argnumber = 3) then
+   return($arg1,$arg2,$arg3)
+elseif ($argnumber = 4) then
+   return($arg1,$arg2,$arg3,$arg4)
+elseif ($argnumber = 5) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5)
+elseif ($argnumber = 6) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6)
+elseif ($argnumber = 7) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7)
+elseif ($argnumber = 8) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8)
+elseif ($argnumber = 9) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9)
+elseif ($argnumber = 10) then
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+else
+   write('error','Warning: Nunber of requested values %d exceeds 10',$argnumber)
+   return($arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$arg7,$arg8,$arg9,$arg10)
+endif 
+
+
+
+

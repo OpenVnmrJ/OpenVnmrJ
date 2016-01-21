@@ -1,0 +1,256 @@
+"macro SQDisplay"
+
+// Changes the SQ Display mode.
+//
+// Sets the sqdisplay parameter.
+// Usually sets sqdisplay=$1 and assures that it is not arrayed.
+// If called with $1='submit', leaves sqdisplay[1] alone and
+// sets sqdisplay[2]='submit'. This is to remember the value to
+// go back to when called with $1='normal'.
+// If called with $1='normal', resets $1=sqdisplay[1] and proceeds.
+
+bgmode_is:$bg
+if ($bg) then return endif
+jexp:$exp
+if (not $exp) then return endif
+
+if ($# < 1) then
+    write('error', '"SQDisplay" command requires one argument')
+    return
+endif
+
+if (activeviewport <> jviewport) then
+    return
+endif
+
+// Make sure sqdisplay parameter is set to a legal value
+$legalModes = 'sample','tray','active','cluster'
+$isLegal = 0
+$i = 1
+while ($i <= size('$legalModes')) do
+    if (sqdisplay[1] = $legalModes[$i]) then
+        $isLegal = 1
+        $i = size('$legalModes')
+    endif
+    $i = $i + 1
+endwhile
+if (not $isLegal) then
+    sqdisplay[1] = $legalModes[1]
+endif
+
+SQWatch('off')
+walkupQ_init
+$refresh = 0
+
+//vjactiveQ should always preform quietly
+// unless active study display is explicitly requested
+$arg2='quiet'
+if ($1='active') then $arg2='' endif
+
+if ($1 = 'normal') then
+    $1=sqdisplay[1]
+//    if (size('sqdisplay') > 1) then
+//        $1 = sqdisplay[1]
+//    else
+//        $1 = 'sample'
+//    endif
+//When switchover from submit to normal mode
+//   do the vjactiveQ quietly.  Else this causes
+//   unnecessary confusing error messages
+//   in foreground while background acq has not yet begun
+
+//    $arg2='quiet'
+elseif ($1 = 'refresh') then
+    $refresh = 1
+    is_submitmode:$isSubmit
+    if (size('sqdisplay') > 1) then
+        if (not $isSubmit) then
+            sqdisplay = sqdisplay[1]
+            $1 = sqdisplay
+        else
+            $1 = sqdisplay[2]
+        endif
+    elseif ($isSubmit and size('sqdisplay') = 1) then
+        sqdisplay[2] = 'submit'
+        $1 = sqdisplay[2]
+    else
+        $1 = sqdisplay[1]
+    endif
+    if $1='cluster' then $1='sample' endif
+endif
+
+if (appmode='lc') and ($1='active') then
+        $1='tray'
+endif
+
+if ($1='cluster') then
+    exists('lastclusterdir','parameter','global'):$cluster
+    if ($cluster) then if lastclusterdir[1]='' then $cluster=0 endif endif
+    if ($cluster) then
+	exists(lastclusterdir[1]+'/dirinfo/clusterfids','file'):$cluster
+	if ($cluster=0) then 
+	    write('error','%s not found',lastclusterdir[1])
+	endif
+    endif
+    if ($cluster=0) then
+	lastclusterdir[1]=''
+	$1='sample'
+    endif
+endif
+
+if ($1 = 'sample') then
+    xmhaha('normalmode')
+    $datadir=''
+    iscurrentfid('',archivedir+'/'+sample):$iscurrent
+    if ($iscurrent) then
+	$datadir=archivedir+'/'+sample
+    else
+        isnewexp:$new
+        if ($new) then
+      	    $datadir = archivedir + '/' + sample
+    	else
+	    substr(file,'dirname'):$datadir
+    	endif
+    endif
+    $s1='' $scout=0
+    strstr($datadir,'/scoutfids'):$scout,$s1
+    if ($scout) then $datadir=$s1 endif
+    if (appmode='lc') then
+	exists($datadir+'/../lcdata','file'):$lcdata
+	if ($lcdata) then SQDisplay('tray') return endif
+    endif
+    setvalue('sqdisplay', 'sample', 0, 'global')
+    xmhaha('clearSQ') // Make sure SQ looks empty if there's nothing to display
+    xmhaha_sqwatch('Clear')
+    getvalue('CFIDlist','size','current'):$cfex
+    if $cfex then
+	exists($datadir+'/dirinfo/clusterfids','file'):$cfex
+    endif
+    if $cfex then
+	studyCluster('studyqueue',$datadir)
+//	setvalue('sqdisplay','sample',0,'global')
+    else
+      exists($datadir+'/dirinfo/macdir','directory'):$ex
+      if ($ex > 0) then
+//        iscurrentfid('',$datadir):$iscurrent
+//	shell('rm -rf '+cursqexp+'/*'):$dum
+        $sqok = 1
+        exists('sqflag','parameter','global'):$sqfex
+        if ($sqfex) then
+            $sqok = (sqflag <> 'n')
+        endif
+        if (not $sqok) then
+            write('line3','sqflag is set to \"n\". Sample View is suppressed')
+	    if (cpautodir<>autodir) then
+            	showtray('close')
+	    endif
+        else
+	    if ($iscurrent) then
+		$ret=0 $datadir=''
+		vjactiveQ('current',$arg2):$ret,$datadir
+	    else
+            	xmhaha_buildSQ($datadir,'','lock')
+		$ret=1
+	    endif
+	    if ($ret>0) and ($datadir<>'') then
+		if (cpautodir<>autodir) then
+            	    showtray('close')
+		endif
+            	xmhaha_sqwatch('Write','sample',$datadir)
+	    endif
+        endif
+      endif
+    endif
+
+elseif ($1='cluster') then
+    xmhaha('normalmode')
+    setvalue('sqdisplay','cluster',0,'global')
+    xmhaha('clearSQ')
+//    shell('rm -rf '+cursqexp+'/*'):$dum
+    studyCluster('studyqueue',lastclusterdir[1])
+    xmhaha_sqwatch('Clear')
+
+elseif ($1 = 'tray') then
+  if $# < 2 then $2=0 endif
+  if not $refresh then $2=0 endif
+  if $2>0.5 then
+        write('line3','%s/studies/exp%d',userdir,$2):$start
+        exists($start,'directory'):$dirok
+        if not $dirok then $2=0 endif
+  endif
+  if $2>0.5 then
+        setvalue('sqdisplay', 'tray' , 0, 'global')
+        write('line3','%s/studies/exp%d',userdir,$2):$start
+        $end=cursqexp
+        exists($end,'directory'):$direx2
+        if $direx2 then rm('-rf',$end):$dum endif
+        rename($start,$end):$dum
+        mkdir($start):$dum
+  else
+    xmhaha('normalmode')
+    setvalue('sqdisplay', 'tray' , 0, 'global')
+    xmhaha('clearSQ')
+//    shell('rm -rf '+cursqexp+'/*'):$dum
+    xmhaha('autoSQ',autodir)
+    xmhaha_sqwatch('Clear')
+    if (cpautodir=autodir) then
+        xmhaha_sqwatch('Write','tray',autodir)
+    endif
+  endif
+elseif ($1='clusterQ') then
+    if (sqflag='n') then
+        xmhaha('normalmode')
+        return
+    endif
+    xmhaha('submitmode')
+    setvalue('sqdisplay',$1,2,'global')
+    xmhaha_sqwatch('Clear')
+
+elseif ($1 = 'active') then
+  if $# < 2 then $2=0 endif
+  if not $refresh then $2=0 endif
+  if $2>0.5 then
+        write('line3','%s/studies/exp%d',userdir,$2):$start
+        exists($start,'directory'):$dirok
+        if not $dirok then $2=0 endif
+  endif
+  if $2>0.5 then
+        setvalue('sqdisplay', 'active' , 0, 'global')
+        write('line3','%s/studies/exp%d',userdir,$2):$start
+        $end=cursqexp
+        exists($end,'directory'):$direx2
+        if $direx2 then rm('-rf',$end):$dum endif
+        rename($start,$end):$dum
+        mkdir($start):$dum
+  else
+    xmhaha('normalmode')
+    setvalue('sqdisplay', 'active', 0, 'global')
+    xmhaha('clearSQ')
+    xmhaha_sqwatch('Clear')
+    $datadir='' $ret=0
+//    shell('rm -rf '+cursqexp+'/*'):$dum
+    vjactiveQ('current',$arg2):$ret,$datadir
+    if ($ret>0) and ($datadir<>'') then
+        xmhaha_sqwatch('Write','active',$datadir)
+    endif
+  endif
+elseif ($1 = 'location') then
+    xmhaha('normalmode')
+    setvalue('sqdisplay', 'location', 2, 'global')
+    xmhaha_sqwatch('Clear')
+elseif ($1 = 'submit') then
+    if (sqflag='n') then 
+	xmhaha('normalmode') 
+	return
+    endif
+    xmhaha('submitmode')
+    setvalue('sqdisplay', 'submit', 2, 'global')
+    if ($refresh) then
+        xmhaha('refreshSQ')
+    endif
+    xmhaha_sqwatch('Clear')
+endif
+
+// We send the pnew on the pseudo-parameter sqdisplayRef to avoid side-effects.
+// The widgets in StudyQueueSelect listen for it.
+vnmrjcmd('pnew','sqdisplayRef')

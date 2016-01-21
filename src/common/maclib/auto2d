@@ -1,0 +1,25 @@
+"macro auto2d"
+"***************************************************************"
+" auto2d - automatic 2d setup					"
+" first argument - experiment to be done			"
+" second argument - 2d plot mode				"
+"  0 for no plot; 1 for 2d plot only; 2 for 2d and 1d plots	"
+"***************************************************************"
+if ($#<1) then $experiment='cosy' else $experiment=$1 endif
+if ($#<2) then $plotmode='full' else $plotmode=$2 endif  "default to fancy plot"
+"if auto='n' then"
+ "sysinf(exp):intmod"                "intmod remembers 1d exp"
+ "mf(intmod,4) jexp4"                "transfer fid to exp4"
+"endif"
+fn=sw/3 wft                        "re-transform at low res."
+region(-1,0,3)                     "ignore small peaks"
+minsw                              "minimize spectral width"
+if $experiment='cosy' then cosy else
+if $experiment='dqcosy' then dqcosy else
+if $experiment='noesy' then noesy else
+if $experiment='hom2dj' then hom2dj else
+if $experiment='cosyps' then cosyps
+endif endif endif endif endif      "set up desired experiment"
+pltmod=$plotmode                   "select plot mode at end"
+"if auto='y' then text('automated 2d experiment') endif"
+au('next')                         "start 2d acquisition"

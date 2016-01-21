@@ -1,0 +1,435 @@
+"macro vjresubmitQ"
+$tailX='tail'
+whichtail:$tailX
+
+
+   $locno=''
+   if typeof('$1') then
+	$locno=$1
+   else
+	format($1,0,0):$locno
+   endif
+   $rack='' $zone=''
+   format($2,'lower'):$zone
+   format($3,'lower'):$rack
+
+   $eQ=autodir+'/enterQ'
+   $macdir=$eQ+'.macdir'
+   $nQ=$macdir+'/overniteQ'
+   $errorQ=$macdir+'/cperrorQ'
+   $reuseQ=$macdir+'/reuselocQ'
+
+   $status='' $locdir=''
+   checklocstatus($eQ,$locno,$zone,$rack):$status,$who,$sampname,$locdir
+   if ($status<>'Error') then return endif
+   if ($locdir='') then return endif
+
+   $newstatus=$status
+   $PT=0 $DT=0 $NT=0
+   readTtimeQ($macdir):$PT,$DT,$NT
+
+   pwd:$curdir
+   cd($macdir):$dum
+
+   shell('(cat '+$locdir+'/day/EXPLIST | wc -l)'):$dayex
+   shell('(cat '+$locdir+'/night/LONGLIST | wc -l)'):$nightex
+   if ($dayex=0) and ($nightex=0) then
+        cd($curdir):$dum
+        return
+   endif
+
+"******Use a copy to do the work************"
+   $locdircopy=$locdir+'_copy'
+   shell('cp -r '+$locdir+' '+$locdircopy):$dum
+
+   $dayinfo=$locdircopy+'/day/sampleinfo'
+   $nightinfo=$locdircopy+'/night/sampleinfo'
+   shell('(cat cpdonedayQ | grep -wc '+$locdir+')'):$daydone
+   $priority=0
+   shell('(cat '+$dayinfo+' | grep -w USER: | grep -c priority)'):$priority
+
+"**Get the list of completed experiments for ACQlist********"
+   $archive='' $sample='' $acqnode='' $acqex=0
+   exists($locdircopy+'/sampleglobal','file'):$sgex
+   if ($sgex) then
+      rtv($locdircopy+'/sampleglobal','noabort','archivedir'):$archive
+      rtv($locdircopy+'/sampleglobal','noabort','sample'):$sample
+   endif
+   if ($archive<>'') and ($sample<>'') then
+      $acqlist=$archive+'/'+$sample+'/dirinfo/macdir/ACQlist'
+      exists($acqlist,'file'):$acqex
+      if ($acqex) then
+         shell('(cat '+$acqlist+' | grep -w Completed > /vnmr/tmp/tmpacqlist)'):$dum
+	 $s2=''
+	 readfile('/vnmr/tmp/tmpacqlist','$acqnode','$s2','','local'):$acqex
+	 shell('rm -f /vnmr/tmp/tmpacqlist'):$dum
+      endif
+   endif
+
+"*****Adjust EXPLIST and LONGLIST and remove all completed experiments***"
+"** Perhaps an error happened during an experiment, in which case***"
+"*** Do not repeat completed experiment again****"
+"****  and adjust time accordingly****"
+
+   $dt=0 $nt=0 $pt=0
+   readTtimeQ($locdircopy+'/day'):$pt,$dt,$nt
+   $origdt=$dt $orignt=$nt $origpt=$pt
+
+   if ($acqex) then
+	$EXPLIST=$locdircopy+'/day/EXPLIST'
+	$LONGLIST=$locdircopy+'/day/LONGLIST'
+   	$s1='' $s2=''
+   	readfile($EXPLIST,'$s1','$s2','','local'):$expnode
+   	if ($expnode>0) then
+	   write('reset',$EXPLIST+'1')
+	   $i=1
+	   repeat
+		teststr('$acqnode',$s1[$i],'local'):$is
+		if ($is=0) then
+                   write('file',$EXPLIST+'1','%s  %s',$s1[$i],$s2[$i])
+		else
+		   $time=0
+		   substr($s2[$i],1):$time
+		   $dt=$dt-$time
+		endif
+		$i=$i+1
+	   until $i > $expnode
+	   shell('mv '+$EXPLIST+'1 '+$EXPLIST):$dum
+	   shell('cat '+$EXPLIST+' > '+$locdircopy+'/night/EXPLIST'):$dum
+	endif
+
+        $s1='' $s2=''
+        readfile($LONGLIST,'$s1','$s2','','local'):$expnode
+        if ($expnode>0) then
+           write('reset',$LONGLIST+'1')
+           $i=1
+           repeat
+                teststr('$acqnode',$s1[$i],'local'):$is
+                if ($is=0) then
+                   write('file',$LONGLIST+'1','%s  %s',$s1[$i],$s2[$i])
+		else
+                   $time=0
+                   substr($s2[$i],1):$time
+                   $nt=$nt-$time
+                endif
+                $i=$i+1
+           until $i > $expnode
+           shell('mv '+$LONGLIST+'1 '+$LONGLIST):$dum
+           shell('cat '+$LONGLIST+' > '+$locdircopy+'/night/LONGLIST'):$dum
+        endif
+	cd($macdir):$dum
+   endif
+   if ($dt<0) then $dt=0 endif
+   if ($nt<0) then $nt=0 endif
+   if ($priority) then $pt=$dt else $pt=0 endif
+
+"********If dayQ is already done at this locdir, resubmit*******"
+"**an errored nightQ in the same locdir**********"
+
+if ($daydone) then
+   if ($nt=0) or ($nt<0) then $ok=1
+   else
+   	checktime($eQ,$nt,'night'):$ok
+   endif
+   if ($ok) then
+	shell('cp '+$locdircopy+'/day/LONGLIST '+$locdir+'/day'):$dum
+	shell('cp '+$locdircopy+'/night/LONGLIST '+$locdir+'/night'):$dum
+	autoq('add',$locdir+'/night/sampleinfo')
+//	shell('cat '+$locdir+'/night/sampleinfo >> '+$eQ):$dum
+	$DT=$DT+$nt
+	writeTtimeQ($macdir,$PT,$DT,$NT)
+	updatestatus(autodir,$locno,'NightQueue',$zone,$rack)
+	$samplocq='SAMPLE#: '+$locno
+	shell('touch '+$errorQ):$dum
+	shell('(cat '+$errorQ+' | grep -vw '+$locdir+' > '+$errorQ+'1)'):$dum
+	shell('mv '+$errorQ+'1 '+$errorQ):$dum
+	shell('chmod g+rw '+$errorQ):$dum
+	shell('touch '+$reuseQ):$dum
+        shell('(cat '+$reuseQ+' | grep -vw "'+$samplocq+'" > '+$reuseQ+'1)'):$dum
+	shell('mv '+$reuseQ+'1 '+$reuseQ):$dum
+	shell('chmod g+rw '+$reuseQ):$dum
+// write location path in sample directory
+        if ($archive<>'') and ($sample<>'') then
+             $locpath=$archive+'/'+$sample+'/dirinfo/locationpath'
+             write('reset',$locpath)
+             write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$locdir)
+        endif
+	$logmsg='' write('line3','%s Resubmitted after error',$sample):$logmsg
+	eventLog('StudySubmit',$logmsg,$locdir)
+// write sub xml file
+        xmhaha_subautoSQ(autodir,'',$locdir)
+        xmhaha_asx(autodir,'overniteQ')
+   else
+	write('line3','No time left to resubmit errored %s',$locdir)
+   endif
+   shell('rm -rf '+$locdircopy):$dum
+   cd($curdir):$dum
+   RETURN
+endif
+
+"********Prepare sampleinfo file***********"
+"********and new locdir *******************"
+
+   Svfname($macdir+'/loc'+$locno+'_%R3%',''):$newlocdir
+   shell('basename '+$newlocdir):$newlocdir
+
+   $dayinfo=$locdircopy+'/day/sampleinfo'
+   $nightinfo=$locdircopy+'/night/sampleinfo'
+
+   $sedcmd='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$newlocdir+'\',\'day\')|\"'
+   shell('('+$sedcmd+' '+$dayinfo+' > '+$dayinfo+'1)'):$dum
+   shell('mv '+$dayinfo+'1 '+$dayinfo):$dum
+
+   $sedcmd='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$newlocdir+'\',\'night\')|\"'
+   shell('('+$sedcmd+' '+$nightinfo+' > '+$nightinfo+'1)'):$dum
+   shell('mv '+$nightinfo+'1 '+$nightinfo):$dum
+
+if ($dayex=0) then
+"*************NO EXPLIST -It must be a nightQ error"
+"*********Submit if there is time ***********"
+   if ($nt=0) or ($nt<0) then $ok=1 else
+   	checktime($eQ,$nt,'night'):$ok
+   endif
+   if ($ok) then
+	shell('cp -r '+$locdircopy+' '+$newlocdir):$dum
+	shell('chmod g+rw '+$newlocdir):$dum
+	autoq('add',$newlocdir+'/night/sampleinfo')
+//        shell('cat '+$newlocdir+'/night/sampleinfo >> '+$eQ):$dum
+        $DT=$DT+$nt
+        writeTtimeQ($macdir,$PT,$DT,$NT)
+	updatestatus(autodir,$locno,'NightQueue',$zone,$rack)
+        $samplocq='SAMPLE#: '+$locno
+        shell('touch '+$errorQ):$dum
+        shell('(cat '+$errorQ+' | grep -vw '+$locdir+' > '+$errorQ+'1)'):$dum
+        shell('mv '+$errorQ+'1 '+$errorQ):$dum
+	shell('chmod g+rw '+$errorQ):$dum
+        shell('touch '+$reuseQ):$dum
+        shell('(cat '+$reuseQ+' | grep -vw "'+$samplocq+'" > '+$reuseQ+'1)'):$dum
+        shell('mv '+$reuseQ+'1 '+$reuseQ):$dum
+	shell('chmod g+rw '+$reuseQ):$dum
+//write location path in sample directory
+        if ($archive<>'') and ($sample<>'') then
+             $locpath=$archive+'/'+$sample+'/dirinfo/locationpath'
+             write('reset',$locpath)
+             write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$newlocdir)
+        endif
+        $logmsg='' write('line3','%s Resubmitted after error',$sample):$logmsg
+	eventLog('StudySubmit',$logmsg,$newlocdir)
+
+//write sub xml file
+	xmhaha_subautoSQ(autodir,'',$newlocdir,$locdir)
+	xmhaha_asx(autodir,'enterQ')
+   else
+        write('line3','No time left to resubmit errored %s',$locdir)
+   endif
+   shell('rm -rf '+$locdircopy):$dum
+   cd($curdir):$dum
+   RETURN
+endif
+
+"***********EXPLIST exists.  -It must be a dayQ error"
+"***There are several scenario"
+" 1. dayQ is priority or not"
+" 2. nightQ may already be in enterQ (the automerge happened before dayQ is done)"
+" 3. nightQ is in overniteQ (the automerge had not happened)"
+" 4. There is no nightQ			"
+"***********************************************************"
+
+$longrun='n'
+$AUTOGLOBAL=$macdir+'/AUTOGLOBAL'
+lookup('mfile',$AUTOGLOBAL,'seekcs','LONGRUN:','read',1):$longrun
+shell('(cat '+$locdircopy+'/day/sampleinfo | wc -l)'):$linespersamp
+shell('(cat '+$eQ+' | grep -wc SAMPLE#:)'):$totdaysamples
+shell('(cat '+$nQ+' | grep -wc SAMPLE#:)'):$totnitesamples
+shell('(cat '+$eQ+' | grep -w USER: | grep -wc priority)'):$prsamples
+
+if ($nightex) then
+	$nt=$nt-$orignt
+endif
+
+if ($dt=0) or ($dt<0) then $ok=1 else
+   checktime($eQ,$dt,'day'):$ok
+endif
+if ($nt=0) or ($nt<0) then $ok2=1 else
+   checktime($eQ,$nt,'night'):$ok2
+endif
+
+if ($ok) and ($ok2) then
+   shell('cp -r '+$locdircopy+' '+$newlocdir):$dum
+   shell('chmod g+rw '+$newlocdir):$dum
+   write('reset','temp_enterQ')
+   if ($nightex=0) then 
+		"No night queue.  Submit dayQ"
+	autoq('lock')
+	if ($priority) then
+	    $head=''
+	    if ($prsamples>0) then
+		format($prsamples*$linespersamp,0,0):$head
+		shell('(head -n '+$head+' '+$eQ+' >> temp_enterQ)'):$dum
+	    endif
+	    shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+	    if ($totdaysamples-$prsamples > 0) then
+		$tail=''
+		format(($totdaysamples-$prsamples)*$linespersamp,0,0):$tail
+		shell('('+$tailX+' -n '+$tail+' '+$eQ+' >> temp_enterQ)'):$dum
+	    endif
+	    $DT=$DT+$dt
+	    $PT=$PT+$pt
+	else
+	    shell('(cat '+$eQ+' >> temp_enterQ)'):$dum
+            shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+	    $DT=$DT+$dt
+	endif
+	write('reset',$eQ)
+	autoq('add','temp_enterQ')
+	autoq('unlock')
+//     	shell('cat temp_enterQ > '+$eQ):$dum
+     	shell('rm -f temp_enterQ'):$dum
+        writeTtimeQ($macdir,$PT,$DT,$NT)
+        updatestatus(autodir,$locno,'Queued',$zone,$rack)
+        $samplocq='SAMPLE#: '+$locno
+        shell('touch '+$errorQ):$dum
+        shell('(cat '+$errorQ+' | grep -vw '+$locdir+' > '+$errorQ+'1)'):$dum
+        shell('mv '+$errorQ+'1 '+$errorQ):$dum
+	shell('chmod g+rw '+$errorQ):$dum
+        shell('touch '+$reuseQ):$dum
+        shell('(cat '+$reuseQ+' | grep -vw "'+$samplocq+'" > '+$reuseQ+'1)'):$dum
+        shell('mv '+$reuseQ+'1 '+$reuseQ):$dum
+	shell('chmod g+rw '+$reuseQ):$dum
+        $logmsg='' write('line3','%s Resubmitted after error',$sample):$logmsg
+	eventLog('StudySubmit',$logmsg,$newlocdir)
+
+// write sub xml file
+	xmhaha_subautoSQ(autodir,'',$newlocdir,$locdir)
+	xmhaha_asx(autodir,'enterQ')
+   else
+     autoq('lock')
+     if ($longrun='y') then
+	$s1='' $s2=''
+	readfile($eQ,'$s1','$s2','MACRO:','local'):$totmacros
+	$niteloc=0
+	if ($totmacros) then
+	    $i=1
+	    repeat
+		strstr($s2[$i],$locdir):$is
+		if ($is) then $niteloc=$i $i=$totmacros endif
+		$i=$i+1
+	    until $i > $totmacros
+	endif
+        if ($priority) then
+            $head=''
+            if ($prsamples>0) then
+                format($prsamples*$linespersamp,0,0):$head
+                shell('(head -n '+$head+' '+$eQ+' >> temp_enterQ)'):$dum
+            endif
+            shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+            if ($niteloc-$prsamples-1 > 0) then
+                $tail='' $head=''
+		format(($niteloc-1)*$linespersamp,0,0):$head
+                format(($niteloc-$prsamples-1)*$linespersamp,0,0):$tail
+                shell('(head -n '+$head+' '+$eQ+' | '+$tailX+' -n '+$tail+' >> temp_enterQ)'):$dum
+            endif
+	    shell('(cat '+$newlocdir+'/night/sampleinfo >> temp_enterQ)'):$dum
+	    if ($totdaysamples-$niteloc > 0) then
+		$tail=''
+		format(($totdaysamples-$niteloc)*$linespersamp,0,0):$tail
+                shell('('+$tailX+' -n '+$tail+' '+$eQ+' >> temp_enterQ)'):$dum
+	    endif
+	    $DT=$DT+$dt+$nt
+	    $PT=$PT+$dt
+        else
+	    if ($niteloc-1 > 0) then
+		$head=''
+		format(($niteloc-1)*$linespersamp,0,0):$head
+                shell('(head -n '+$head+' '+$eQ+' >> temp_enterQ)'):$dum
+	    endif
+            shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+            shell('(cat '+$newlocdir+'/night/sampleinfo >> temp_enterQ)'):$dum
+            if ($totdaysamples-$niteloc > 0) then
+                $tail=''
+                format(($totdaysamples-$niteloc)*$linespersamp,0,0):$tail
+                shell('('+$tailX+' -n '+$tail+' '+$eQ+' >> temp_enterQ)'):$dum
+            endif
+            $DT=$DT+$dt+$nt
+        endif
+     else
+        if ($priority) then
+            $head=''
+            if ($prsamples>0) then
+                format($prsamples*$linespersamp,0,0):$head
+                shell('(head -n '+$head+' '+$eQ+' >> temp_enterQ)'):$dum
+            endif
+            shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+            if ($totdaysamples-$prsamples > 0) then
+                $tail=''
+                format(($totdaysamples-$prsamples)*$linespersamp,0,0):$tail
+                shell('('+$tailX+' -n '+$tail+' '+$eQ+' >> temp_enterQ)'):$dum
+            endif
+            $DT=$DT+$dt
+            $PT=$PT+$dt
+        else
+            shell('(cat '+$eQ+' >> temp_enterQ)'):$dum
+            shell('(cat '+$newlocdir+'/day/sampleinfo >> temp_enterQ)'):$dum
+            $DT=$DT+$dt
+        endif
+        $s1='' $s2=''
+        readfile($nQ,'$s1','$s2','MACRO:','local'):$totmacros
+        $niteloc=0
+        if ($totmacros) then
+            $i=1
+            repeat
+                strstr($s2[$i],$locdir):$is
+                if ($is) then $niteloc=$i $i=$totmacros endif
+                $i=$i+1
+            until $i > $totmacros
+        endif
+	write('reset','temp_niteQ')
+        if ($niteloc-1 > 0) then
+                $head=''
+                format(($niteloc-1)*$linespersamp,0,0):$head
+                shell('(head -n '+$head+' '+$nQ+' >> temp_niteQ)'):$dum
+        endif
+        shell('(cat '+$newlocdir+'/night/sampleinfo >> temp_niteQ)'):$dum
+        if ($totnitesamples-$niteloc > 0) then
+                $tail=''
+                format(($totnitesamples-$niteloc)*$linespersamp,0,0):$tail
+                shell('('+$tailX+' -n '+$tail+' '+$nQ+' >> temp_niteQ)'):$dum
+        endif
+	shell('cat temp_niteQ > '+$nQ):$dum
+	shell('rm -f temp_niteQ'):$dum
+	$NT=$NT+$nt
+     endif
+     write('reset',$eQ)
+     autoq('add','temp_enterQ')
+     autoq('unlock')
+//     shell('cat temp_enterQ > '+$eQ):$dum
+     shell('rm -f temp_enterQ'):$dum
+     writeTtimeQ($macdir,$PT,$DT,$NT)
+     updatestatus(autodir,$locno,'NightQueue',$zone,$rack)
+        $samplocq='SAMPLE#: '+$locno
+        shell('touch '+$errorQ):$dum
+        shell('(cat '+$errorQ+' | grep -vw '+$locdir+' > '+$errorQ+'1)'):$dum
+        shell('mv '+$errorQ+'1 '+$errorQ):$dum
+	shell('chmod g+rw '+$errorQ):$dum
+        shell('touch '+$reuseQ):$dum
+        shell('(cat '+$reuseQ+' | grep -vw "'+$samplocq+'" > '+$reuseQ+'1)'):$dum
+        shell('mv '+$reuseQ+'1 '+$reuseQ):$dum
+	shell('chmod g+rw '+$reuseQ):$dum
+        $logmsg='' write('line3','%s Resubmitted after error',$sample):$logmsg
+	eventLog('StudySubmit',$logmsg,$newlocdir)
+//write sub xml file
+	xmhaha_subautoSQ(autodir,'',$newlocdir,$locdir)
+	xmhaha_asx(autodir,'enterQ')
+	xmhaha_asx(autodir,'overniteQ')
+   endif
+//write location path in sample directory
+   if ($archive<>'') and ($sample<>'') then
+             $locpath=$archive+'/'+$sample+'/dirinfo/locationpath'
+             write('reset',$locpath)
+             write('file',$locpath,'%s/enterQ.macdir/%s',autodir,$newlocdir)
+   endif
+else
+        write('line3','No time left to resubmit errored %s',$locdir)
+endif
+shell('rm -rf '+$locdircopy):$dum
+cd($curdir):$dum

@@ -1,0 +1,56 @@
+"macro listtmpltpars"
+
+$par1=''
+$par2=''
+$par3=''
+$par4=''
+$allpars=''
+$reqpars=''
+
+$adirtmplt=adirtmplt
+$sdirtmplt=sdirtmplt
+$svftmplt=svftmplt
+$adir2tmplt=''
+exists('adir2tmplt','parameter'):$ad2ex
+if $ad2ex then $adir2tmplt=adir2tmplt endif
+
+if ($# > 0) then
+    fread('','usertree')
+    fread($1,'usertree')
+    exists('adirtmplt','parameter','usertree'):$pex
+    if $pex then getvalue('adirtmplt','usertree'):$adirtmplt endif
+    exists('adir2tmplt','parameter','usertree'):$pex
+    if $pex then getvalue('adir2tmplt','usertree'):$adir2tmplt endif
+    exists('sdirtmplt','parameter','usertree'):$pex
+    if $pex then getvalue('sdirtmplt','usertree'):$sdirtmplt endif
+    exists('svftmplt','parameter','usertree'):$pex
+    if $pex then getvalue('svftmplt','usertree'):$svftmplt endif
+    fread('','usertree')
+endif
+   
+
+    chkname($adirtmplt,'alnum-/'):$n1,$n2,$par1
+    if ($ad2ex>0) then
+    	chkname($adir2tmplt,'alnum-/'):$n1,$n2,$par4
+    endif
+    chkname($sdirtmplt,'alnum-'):$n1,$n2,$par2
+    chkname($svftmplt,'alnum-'):$n1,$n2,$par3
+    string2array($par1):$par1
+    string2array($par2):$par2
+    string2array($par3):$par3
+    string2array($par4):$par4
+
+module('arraylist','reqparvals'):$reqpars
+$allpars=$par1,$par2,$par3,$par4,$reqpars
+teststr('$allpars','nameprefix','local'):$nmix
+teststr('$allpars','samplename','local'):$snix
+if ($nmix) and ($snix) then
+   $allpars[$nmix]=''
+endif
+array2array($allpars):$allpars
+$totpars=size('$allpars')
+if ($totpars > 1) then
+  sort($allpars,'u'):$index,$allpars
+endif
+
+return($allpars,$par1,$par2,$par3,$par4,$reqpars)

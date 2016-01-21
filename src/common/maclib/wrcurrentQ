@@ -1,0 +1,49 @@
+"macro wrcurrentQ"
+"*************************************************************"
+" wrcurrentQ  -  List out the experiments and time in currentQ  "
+"*************************************************************"
+
+  $maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+  cpexplist('read',$maclibdir):$explist
+  $elsize=size('$explist')
+
+  $currentQ=''
+  $time=0 
+  $totaltime=0
+
+  $currentQ=curexp+'/currentQ'
+  if (auto = 'y') then
+    $currentQ=autodir+'/enterQ.macdir/currentQ'
+  endif
+  write('reset',$currentQ)
+
+    $ppt=60
+    getadminfo('prpltime'):$ppt
+
+    if ($1 = 'auto') then
+        $time=180
+        getadminfo('samplechangetime'):$time
+	$time=$time+pad
+        write('file',$currentQ,'SAMPLE_CHANGE_TIME %d',$time)
+        $totaltime=$totaltime+$time
+    endif
+
+	EXPtime:$time
+    if ($1='auto') then $time=$time-pad endif
+	$time=$time+$ppt
+	$totaltime=$totaltime+$time
+	write('file',$currentQ,'%s %d',explist[1],$time)
+
+    $i=1
+    $time=0
+    if ($elsize > $i) then
+      repeat
+        cpexptime($explist[$i+1],$maclibdir):$time 
+	$time=$time+$ppt
+        $totaltime=$totaltime+$time
+        write('file',$currentQ,'%s %d',$explist[$i+1],$time)
+        $i=$i+1
+      until $i = $elsize
+    endif
+    write('file',$currentQ,'TOTAL %d',$totaltime)
+

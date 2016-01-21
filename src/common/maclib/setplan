@@ -1,0 +1,92 @@
+"macro setplan"
+" iplan will set mpro etc... , arrays of size mstack. "
+" this macro set pro etc... to mpro[$ind] "
+
+$ind = 1
+if(mstack > 0 and mstack <= mcoils) then
+   $ind = mstack 
+elseif(mcoil > 0 or mcoil <= mcoils) then
+   $ind = mcoil 
+endif
+
+if(size('mpro') >= $ind) then
+  setvalue('pro', mpro[$ind])
+endif
+
+if(size('mppe') >= $ind) then
+  setvalue('ppe', mppe[$ind])
+endif
+
+if(size('mpss') >= $ind) then
+  setvalue('pss0', mpss[$ind])
+endif
+
+if(size('mlro') >= $ind) then
+  setvalue('lro', mlro[$ind])
+endif
+
+if(size('mlpe') >= $ind) then
+  setvalue('lpe', mlpe[$ind])
+endif
+
+if(size('mlpe2') >= $ind) then
+  setvalue('lpe2', mlpe2[$ind])
+endif
+
+if(size('mthk') >= $ind) then
+  setvalue('thk', mthk[$ind])
+endif
+
+$s=''
+$s1=''
+$s2=''
+if(size('mtheta') >= $ind) then
+  strstr(mtheta[$ind], ' '):$n,$s1,$s2
+  $i = 0
+  while($n > 0.5) do
+    $i = $i + 1
+    $s = $s2
+    substr($s1, 1):theta[$i]
+    strstr($s, ' '):$n,$s1,$s2
+    if($n = 0) then
+      $i = $i + 1
+      substr($s, 1):theta[$i]
+    endif
+  endwhile
+endif
+
+if(size('mpsi') >= $ind) then
+  strstr(mpsi[$ind], ' '):$n,$s1,$s2
+  $i = 0
+  while($n > 0.5) do
+    $i = $i + 1
+    $s = $s2
+    substr($s1, 1):psi[$i]
+    strstr($s, ' '):$n,$s1,$s2
+    if($n = 0) then
+      $i = $i + 1
+      substr($s, 1):psi[$i]
+    endif
+  endwhile
+endif
+
+if(size('mphi') >= $ind) then
+  strstr(mphi[$ind], ' '):$n,$s1,$s2
+  $i = 0
+  while($n > 0.5) do
+    $i = $i + 1
+    $s = $s2
+    substr($s1, 1):phi[$i]
+    strstr($s, ' '):$n,$s1,$s2
+    if($n = 0) then
+      $i = $i + 1
+      substr($s, 1):phi[$i]
+    endif
+  endwhile
+endif
+
+if(iplanType = 0 and mcoils > 1) then
+   setpss(0.0, size('pss'))
+elseif(iplanType = 0) then
+   setpss(pss0, ns)
+endif

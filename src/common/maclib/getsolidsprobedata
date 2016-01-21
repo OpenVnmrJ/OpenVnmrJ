@@ -1,0 +1,284 @@
+"macro getsolidsprobedata"
+//**************************************************************************
+//getsolidsprobedata (M) - Get basic solids calibrations from the probe file
+//**************************************************************************
+//
+//        If argument 1 is 'tn', this  macro gets the values of tpwr, tof,
+//        aX90 and pwX90 for the obs channel from the probe file. The macro 
+//        is usually run from the solids Channels page of the Acquire tab, 
+//        using the "get" button. 
+//
+//        For an argument 'dn', the parameters are dpwr, dof, aH90, aH90. 
+//        For an argument 'dn2', the parameters are dpwr2, dof2, aY90, aY90. 
+//        For an argument 'dn3', the parameters are dpwr3, dof3, aZ90, aZ90. 
+//        For an argument 'dn4', the parameters are dpwr4, dof4, aW90, aW90. 
+//
+//        Values are obtained with the nucleus appropriate for the channel and 
+//        with a suffix C#, where # = 1,2,3,4 etc. The values refer to the 
+//        transmitter number as determined from by the nm1 macro from rfchannel
+//        or probeConnect. 
+//
+
+exists('probe','parameter','global'):$probe
+if ($probe<0.5) then 
+   write('error','Error: Probe parameter does not exist')
+   abort
+else
+   if (probe='') then
+      write('error','Error: Probe parameter not set')
+      abort
+   endif
+endif
+
+$probedir=''
+exists(userdir+'/probes/'+ probe,'file'):$e
+if ($e > 0.5) then
+   $probedir = userdir+'/probes/'+ probe
+else 
+   exists(systemdir+'/probes/'+ probe,'file'):$e1
+   if $e1 > 0.50 then  
+      $probedir = systemdir+'/probes/'+ probe
+   else
+      write('error','Error: Probe directory %s not found',probe)
+      abort
+   endif
+endif
+
+$probefile = $probedir + '/' + probe
+exists($probefile,'file'):$e2
+if ($e2<0.5) then
+   write('error', 'Probefile is missing from probe directory')
+   abort
+endif
+
+$probefile = $probedir + '/' + probe
+exists($probefile,'file'):$e2
+if ($e2<0.5) then
+   write('error', 'Probefile is missing from probe directory')
+   abort
+endif
+
+"******** get the appropriate nucleus ********"
+
+$obsnuc = ''
+$decnuc = ''
+$dec2nuc = ''
+$dec3nuc = ''
+$dec4nuc = ''
+$channel = ''
+if ($# > 0) then
+   $channel = $1
+endif
+
+exists('tn','parameter'):$tn
+if (($tn > 0.5) and ($channel = 'tn')) then 
+   $obsnuc = tn
+endif
+
+exists('dn','parameter'):$dn
+if (($dn > 0.5) and ($channel = 'dn')) then 
+   $decnuc = dn
+endif
+
+exists('dn2','parameter'):$dn2
+if (($dn2 > 0.5) and ($channel = 'dn2')) then 
+   $dec2nuc = dn2
+endif
+
+exists('dn3','parameter'):$dn3
+if (($dn3 > 0.5) and ($channel = 'dn3')) then 
+   $dec3nuc = dn3
+endif
+
+exists('dn4','parameter'):$dn4
+if (($dn4 > 0.5) and ($channel = 'dn4')) then 
+   $dec4nuc = dn4
+endif
+
+"******** get values for the observe nucleus ********"
+
+if ($obsnuc<>'') then 
+
+   $obslabel = ''
+   nm1('tn'):$obsval
+   format($obsval,1,0):$obslabel
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$obsnuc +':','skip',1,'read'):$returnstring
+   length($obsnuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring = $obsnuc) then
+      $ret = '' $num = 0.0 $num1 = 1.0
+      lookup('mfile',$probefile,'seek',$obsnuc + 'ofC' + $obslabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$obsnuc + 'pwrC' + $obslabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$obsnuc + 'a90C' + $obslabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$obsnuc + 'pw90C' + $obslabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      if ($num1 > 0.0) then  
+         getparam('ofC' + $obslabel,$obsnuc):tof
+         getparam('pwrC' + $obslabel,$obsnuc):tpwr
+         getparam('a90C' + $obslabel,$obsnuc):aX90
+         getparam('pw90C' + $obslabel,$obsnuc):pwX90
+         write('line3','"%s" calibrations have been obtained from probe file: "%s"\n',$obsnuc,probe)
+      else
+         write('error','Error: "%s" parameters for channel "%s" not present.',$obsnuc,$obslabel)
+      endif
+   else
+      write('error','Error: Nucleus "%s" is not present in probe file: "%s"',$obsnuc,probe)
+   endif
+endif
+
+"******** get values for the decoupler nucleus ********"
+
+if ($decnuc<>'') then 
+
+   $declabel = ''
+   nm1('dn'):$decval
+   format($decval,1,0):$declabel
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$decnuc +':','skip',1,'read'):$returnstring
+   length($decnuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring = $decnuc) then
+      $ret = '' $num = 0.0 $num1 = 1.0
+      lookup('mfile',$probefile,'seek',$decnuc + 'ofC' + $declabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$decnuc + 'pwrC' + $declabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$decnuc + 'a90C' + $declabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$decnuc + 'pw90C' + $declabel,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      if ($num1 > 0.0) then   
+         getparam('ofC' + $declabel,$decnuc):dof
+         getparam('pwrC' + $declabel,$decnuc):dpwr
+         getparam('a90C' + $declabel,$decnuc):aH90
+         getparam('pw90C' + $declabel,$decnuc):pwH90
+         write('line3','"%s" calibrations have been obtained from probe file: "%s"\n',$decnuc,probe)
+      else
+         write('error','Error: "%s" parameters for channel "%s" not present.',$decnuc,$declabel)
+      endif
+   else
+      write('error','Error: Nucleus "%s" is not present in probe file: "%s"',$decnuc,probe)
+   endif
+endif
+
+"******** get values for the decoupler2 nucleus ********"
+
+if ($dec2nuc<>'') then 
+
+   $dec2label = ''
+   nm1('dn2'):$dec2val
+   format($dec2val,1,0):$dec2label
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$dec2nuc +':','skip',1,'read'):$returnstring
+   length($dec2nuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring = $dec2nuc) then
+      $ret = '' $num = 0.0 $num1 = 1.0
+      lookup('mfile',$probefile,'seek',$dec2nuc + 'ofC' + $dec2label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec2nuc + 'pwrC' + $dec2label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec2nuc + 'a90C' + $dec2label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec2nuc + 'pw90C' + $dec2label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      if ($num1 > 0.0) then   
+         getparam('ofC' + $dec2label,$dec2nuc):dof2
+         getparam('pwrC' + $dec2label,$dec2nuc):dpwr2
+         getparam('a90C' + $dec2label,$dec2nuc):aY90
+         getparam('pw90C' + $dec2label,$dec2nuc):pwY90
+         write('line3','"%s" calibrations have been obtained from probe file: "%s"\n',$dec2nuc,probe)
+      else
+         write('error','Error: "%s" parameters for channel "%s" not present.',$dec2nuc,$dec2label)
+      endif
+   else
+      write('error','Error: Nucleus "%s" is not present in probe file: "%s"',$dec2nuc,probe)
+   endif
+endif
+
+"******** get values for the decoupler3 nucleus ********"
+
+if ($dec3nuc<>'') then 
+
+   $dec3label = ''
+   nm1('dn3'):$dec3val
+   format($dec3val,1,0):$dec3label
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$dec3nuc +':','skip',1,'read'):$returnstring
+   length($dec3nuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring = $dec3nuc) then
+      $ret ='' $num = 0.0 $num1 = 1.0
+      lookup('mfile',$probefile,'seek',$dec3nuc + 'ofC' + $dec3label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec3nuc + 'pwrC' + $dec3label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec3nuc + 'a90C' + $dec3label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec3nuc + 'pw90C' + $dec3label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      if ($num1 > 0.0) then   
+         getparam('ofC' + $dec3label,$dec3nuc):dof3
+         getparam('pwrC' + $dec3label,$dec3nuc):dpwr3
+         getparam('a90C' + $dec3label,$dec3nuc):aZ90
+         getparam('pw90C' + $dec3label,$dec3nuc):pwZ90
+         write('line3','"%s" calibrations have been obtained from probe file: "%s"\n',$dec3nuc,probe)
+      else
+         write('error','Error: "%s" parameters for channel "%s" not present.',$dec3nuc,$dec3label)
+      endif
+   else
+      write('error','Error: Nucleus "%s" is not present in probe file: "%s"',$dec3nuc,probe)
+   endif
+endif
+
+"******** get values for the decoupler3 nucleus ********"
+
+if ($dec4nuc<>'') then 
+
+   $dec4label = ''
+   nm1('dn4'):$dec4val
+   format($dec4val,1,0):$dec4label
+   $returnstring=''
+   lookup('file',$probefile)
+   lookup('seek',$dec4nuc +':','skip',1,'read'):$returnstring
+   length($dec4nuc):$nuclength 
+   substr($returnstring,1,$nuclength):$returnstring
+   if ($returnstring = $dec4nuc) then
+      $ret ='' $num = 0.0 $num1 = 1.0
+      lookup('mfile',$probefile,'seek',$dec4nuc + 'ofC' + $dec4label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec4nuc + 'pwrC' + $dec4label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec4nuc + 'a90C' + $dec4label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      lookup('mfile',$probefile,'seek',$dec4nuc + 'pw90C' + $dec4label,'read'):$ret,$num
+      if ($num = 0.0) then $num1 = 0.0 endif
+      if ($num1 > 0.0) then   
+         getparam('ofC' + $dec4label,$dec4nuc):dof3
+         getparam('pwrC' + $dec4label,$dec4nuc):dpwr3
+         getparam('a90C' + $dec4label,$dec4nuc):aZ90
+         getparam('pw90C' + $dec4label,$dec4nuc):pwZ90
+         write('line3','"%s" calibrations have been obtained from probe file: "%s"\n',$dec4nuc,probe)
+      else
+         write('error','Error: "%s" parameters for channel "%s" not present.',$dec4nuc,$dec4label)
+      endif
+   else
+      write('error','Error: Nucleus "%s" is not present in probe file: "%s"',$dec4nuc,probe)
+   endif
+endif
+
+
+
+
+
+
+   
+

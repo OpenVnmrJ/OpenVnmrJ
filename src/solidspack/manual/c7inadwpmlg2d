@@ -1,0 +1,94 @@
+Protocol: C7inadwpmlg1d  Sequence: c7inadwpmlg1d.c  Apptype: solidseq1d
+
+Description:
+
+   A 2Q-1Q correlation using C7 mixing on "X", PMLG during F1 on "X" and 
+   wPMLG during F2.
+
+Additional Software
+
+reset_c7inadwpmlg2d - This macro uses the calibrated values of pwX90, aX90 and 
+srate to set up the C7 recoupling mixing sequence, PMLG for F1 and Windowed 
+PMLG with tilt pulses for F2 The macro is executed by the protocol.
+
+Parameter Groups
+
+prep1X:  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Implements a composite pulse consisting of a 90-degree
+              flip followed by a smaller flip-angle to implement quadrature
+              detection about a tilted precession axis.  Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep1 - the amplitude of the obs pulses.
+       pw1Xprep1 - 90-degree flip on the obs channel.
+       pw2Xprep1 - smaller flip on the obs channel.
+       phXprep1 - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+pmlgX:  Module:  yes
+Sequence:  c7inad2dwpmlg.c
+Description:  Implements "phase modulated Lee Goldburg", PMLG,
+              homonuclear decoupling on the obs channel.
+Parameters:  Sequence Page
+       aXpmlg - amplitude of PMLG obs pulses.
+       pwXpmlg - 360-degree flip on obs, off resonance (the length of
+              each of the two PMLG pulses).
+       nXpmlg - PMLG cycles represented in the .DEC file.
+       qXpmlg - number of phase steps in that make up pwXpmlg. A
+              negative value implements descending phases in the
+              first pulse.
+       chXpmlg = 'dec' must be set (not shown).
+Implementation: MPSEQ pmlg = getpmlg("pmlgX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+scalef1X: (processing)  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the
+              inverse of the mutiple-pulse scale factor.
+
+c7X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+wpmlgX:  Module:  yes
+Sequence:  wpmlg1d.c
+Description:  Implements windowed PMLG homonuclear decoupling with 
+              acquisition in the window.
+Parameters:  Sequence Page
+       aXwpmlg - amplitude of PMLG on obs.
+       pwXwpmlg - 360-degree flip on obs, off resonance (the length of
+              each of the two PMLG pulses).
+       qXwpmlg - number of phase steps that make up pwXpmlg. A negative
+              value implements descending phases in the first pulse.
+       r1Xwpmlg - prepulse delay (similar to rof1).
+       r2Xwpmlg - postpulse delay (similar to rd or rof2).
+       r3Xwpmlg - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined.
+       tauXwpmlg - time for one PMLG cycle including the window.
+       npaXwpmlg - number of 100 ns ticks in the detection window.
+       chXwpmlg = 'obs' must be set (not shown).
+Implementation:  WMPA wpmlg = getwpmlg("wpmlgX");
+Underscore function: _wpmlg(wpmlg,phXwpmlg);  phXwpmlg is the overall
+              phase table.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+

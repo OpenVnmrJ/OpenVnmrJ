@@ -1,0 +1,54 @@
+"macro BPmk_mdd_scr"
+"BPmk_mdd_scr - make a shell script for mdd processing. Eriks Kupce, Oxford, May 2009 "
+
+$fnm = ''
+$ext = ''
+$target = ''
+$sw_ppm = sw/sfrq 
+$ppm_per_point = $sw_ppm*2/fn 
+
+if($# < 1) then
+  write('error','usage: BPmk_mdd_src fname.fid size(pts)')
+  return
+endif
+
+$target = $1
+$size = $2/2
+
+getext($target):$fnm,$ext
+if not ($ext = 'fid') then
+  $target = $target+'.fid'
+endif
+
+$size_ppm = $ppm_per_point*$size  
+$filepath = $target + '/BPmdd_scr'
+
+write('reset',$filepath)
+write('file',$filepath,'#!/bin/csh')
+write('file',$filepath,'# shell script for mdd processing of Agilent Technologies data sets ')
+write('file',$filepath,' ')
+write('file',$filepath,'#  ------------------- Definitions and names ------------- ')
+write('file',$filepath,'# these environment variables are recognized by proslib ')
+write('file',$filepath,' ')
+write('file',$filepath,'setenv selection_file nls.hdr_3      # NLS schedule file ')
+write('file',$filepath,'setenv in_file nls.in ')
+write('file',$filepath,'setenv FTX_2D fid.v2m                # input data ')
+write('file',$filepath,'setenv XDimSize %4d                 # ROI size in points ', $size)
+write('file',$filepath,'setenv FTXTREC fid.m2v               # output reconstruction ')
+write('file',$filepath,'setenv ROISW %.2f                    # size of selected ROI in ppm ', $size_ppm)
+write('file',$filepath,'setenv NITER 200                     # number of iterations ')
+write('file',$filepath,'setenv NCOMP 24                      # number of components per region ')
+write('file',$filepath,'setenv SRSIZE 0.15                   # size of sub-region in ppm ')
+write('file',$filepath,'setenv mddMEMORY 500                 # memory allocation for mdd calculations')
+write('file',$filepath,'if( ! -d MDD ) mkdir MDD ')
+write('file',$filepath,'############### end of definitions ################################## ')
+write('file',$filepath,'mddnmr4varian  0   # prints actual settings of all parameters ')
+write('file',$filepath,'mddnmr4varian  2   # fast; prepare files for MDD calculations ')
+write('file',$filepath,'regions.runs       # slow; this shell script runs the MDD calculations ')
+write('file',$filepath,'mddnmr4varian  4   # fast; time domain reconstruction; file fid.m2v is produced ')
+write('file',$filepath,' ')
+write('file',$filepath,'exit ')
+write('file',$filepath,' ')
+$cmd = 'chmod +x ' + $filepath
+shell($cmd)
+

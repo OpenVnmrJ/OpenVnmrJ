@@ -1,0 +1,165 @@
+********************************************
+psMain     Prescan controlling macro
+psCmd      utility macro for prescans
+psLock     Prescan for autolock
+psGain     Prescan fo rreceiver gain
+psTune     Prescan for probe tuning
+psGshim    Prescan for gradient shimming
+psPreacq   Prescan for pre-acquisition delay
+
+psEdit     Prescan editor
+********************************************
+
+Prior to acquiring data, a number of operations may be performed
+to condition the data acquisition. These may include probe tuning,
+acquiring a lock, shimming, adjusting receiver gain, and performing
+an equilibration delay. These operations are collectively referred
+to as prescan operations. The order of executing the various prescans,
+and the name of the macro to call for a specific prescan, is defined
+in the "templates/vnmrj/choicefiles" application directory by the
+prescanInfo file.
+
+The psMain macro is the controlling macro that executes each prescan.
+The individual prescans are controlled by macros, conventionally named
+psX, where X is Gain, Lock, etc.
+
+Calling the psMain macro with no arguments will execute all defined
+prescans, in the order given in the prescanInfo file. Calling
+psMain with the name of a specific prescan, or a list of specific
+prescans, will execute those. For example, psMain('psGain') will
+execute the autogain prescan. psMain('psTune psLock') will tune the
+probe and then autolock.
+
+The prescan process can also be executed in steps. psMain('setup')
+initializes the prescans, but does not start the process. At this
+point, the setup may be customized. For example, a specific prescan
+could be removed from the list with the command psCmd('remove','psTune').
+The command psMain('start'):$ret starts the execution. Depending
+an what specific prescans are requested, a data acquisition may or may
+not be started. Depending on whether the prescans start an acquisition
+or not, the $ret value will be set to 'psAcquiring' or 'psDone',
+respectively.  In the case of 'psAcquiring', you can schedule the
+post-prescan acquisition with psMain('acquireAfterPs') See the cpgo
+macro for an example.
+
+psEdit is a popup editor that allows one to enable, disable, or
+remove prescans, add new prescans, and reorder prescans.
+
+
+The prescan macros
+==================
+
+Each prescan will be controlled by a specific prescan macro (psX).
+A prototype psX macro is below.  This macro will be called by psMain
+with one of three arguments: init, exp, err. These macros should not set
+wexp or werr.  However, the macro will be called with the exp argument
+when wexp processing is triggered.  Similarly, the macro will be called
+with the err argument when and if werr processing is triggered.
+For the init stage, the macro should not assume anything about the
+current parameters.  Also, there is no need for the psX macros to
+worry about saving and restoring global parameters.
+The psX macros can set wbs and wnt. They might include appropriate
+elseif branches.  For example.
+   wbs=$0+`('bs')`
+   wnt=$0+`('nt')`
+If the psX has no special error handling, it can omit the err branch.
+
+A psCmd command is provided as a tool set for psX macros.
+
+psCmd('rtp')
+    command to do an rtp on various SQ based parameter sets.
+    psCmd('rtp') defaults to psCmd('rtp','current')
+    psCmd('rtp','current') retrieves parameters for the protocol
+    for which the prescan is running.
+    psCmd('rtp','start') retrieves parameters for the "start"
+    parameter set for the protocol.
+    psCmd('rtp','name') retrieves parameters for the name protocol.
+psCmd('remove','psX')
+    remove prescan psX from the list of ones to execute.
+psCmd('record',macroline)
+    Execute the "macroline" in the context of the parameters for the
+    protocol for which these prescans are being executed. For example,
+    The PROTON proton may run the autogain prescan (psGain). This prescan
+    determines a new value for the gain parameter. Use the record argument
+    to transfer the gain value to the PROTON parameter set. Any parameter
+    changes made by a prescan will not be transferred to the main protocol
+    parameter set unless they are transferred with the 'record' mechanism.
+    In the case of autogain, the call is psCmd('record','gain='+$val) where
+    $val is a string holding the calculated gain value.
+psCmd('active'):$ret
+    Returns to the calling macro whether the psMain macro is currently
+    executing prescans. This is useful if a macro needs to decide if it
+    is being called via psMain or not.
+psCmd('set','name','value')
+    Set values for later use.  Can set up to five name:values pairs
+    in one call.  There are a couple of special name values.
+    These are 'auArgs', 'errors','acqpause', and 'stage'. See below.
+psCmd('get','name'):$value
+    Get values.  Can get up to five values in one call. If a single
+    call returns more than one value, the values should all be either
+    string or real.  If 'name' has never been 'set', a null string ''
+    is returned.
+psCmd('set','auArgs','au argument list')
+    The psX macros can specify the arguments to be used by the
+    au command. For example,
+    psCmd('set','auArgs','next wait shimming autogain')
+psCmd('set','errors','error number list')
+    The psX macros can select which errors they want to handle.
+    All other errors will be handled by the werr parameter of
+    the original protocol. For example, psCmd('set','errors','102 106')
+    will call psX('err') if errors 102 or 106 occur. All other
+    errors will be handled by the standard mechanisms. The
+    argument 'all' will send all errors to the psX macro.
+psCmd('set','acqpause',timestamp)
+    The psX macros can specify that the final prescan will start
+    only after a certain clock time. This might be used to allow
+    time for the magnet to settle after making changes to shim
+    values or z0 values. See psLock for an example.
+psCmd('set','stage','newStage')
+    Some prescans proceed in multiple stages. This command
+    can be used to track this. See example below.
+
+The psX macro should always return one of the following keywords.
+ return('done')
+    This prescan is done. The prescan mechanism should
+    proceed to the next prescan or the actual protocol if all
+    prescans are complete.
+ return('doau')
+    The prescan wants the prescan mechanism to do an au.
+    The psX macros should not call au directly. If the auArgs value
+    is set, it will be supplied as an argument to the au command.
+ return('quit')
+    Finish with this prescan and continue.  This suggests an error.
+ return('abort')
+    Finish with this prescan and stop the queue. It should be rare
+    for any prescan to use this option.
+
+
+// Prototype prescan macro.
+
+
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else 
+  psCmd('get','stage'):$stage
+  if ($1 = 'exp') and ($stage <> '') then
+    $action = $stage       // exp processing may have multiple stages
+  else
+    $action = $1
+  endif
+endif
+
+if ($action = 'init') then
+  psCmd('rtp')   // get current protocol parameters
+  psCmd('errors','103 104 801')   // subscribe to specific errors
+  return('doau')
+
+elseif ($action = 'exp') then
+  // Perform wexp style processing 
+  return('done')
+
+elseif ($action = 'err') then
+  // If it gets here, it must be error 103 104 or 801
+endif
+

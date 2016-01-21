@@ -1,0 +1,36 @@
+*******************************************************************************
+wbs	-  Specify action to take when 'bs' transients have accumulated
+werr	-  Specify action to take if an error occurs
+wnt	-  Specify action to take when 'nt' transients have accumulated
+wexp	-  Specify action to take when the entire (acquisition) experiment
+	   completes
+wexp:$active - return whether macro is executed as part of "when" processing.
+*******************************************************************************
+
+These commands specify what action to take when the indicated acquisition
+event occurs.  Each command requires a single argument, a string containing
+the command or macro to be executed when this event happens.  Since strings
+must be enclosed in single quotes, the reverse quote can be used to indicate
+the single quote character.
+Thus:
+      wexp('ft(`all`)')
+tells the system to transform all FIDs when the acquisition completes.
+
+Each command sets the corresponding parameter value.  Using the command,
+rather than setting the value explicitly, will notify the acquisition
+process that the associated parameter's value has changed.  Thus by using
+the command, the desired operation can be effected, even if the experiment
+has already started.
+
+If wexp is called with no arguments but with a return value, as in wexp:$active,
+then it tests whether the macro that issued the wexp call is running as part of
+any "when processing". It will return a 1 if it is executing from within a
+"when processing" macro. It will return a 0 otherwise. For example, if
+wexp='doMyProcessing' and the doMyProcessing calls wexp:$active, then when
+one enters au and at the end of the acquisition, when wexp processing occurs,
+wexp:$active will set $active=1.  However, if one just enters doMyProcessing
+from the command line, wexp:$active will return a 0. Note that the wexp:$active
+does not distinguish what kind of "when processing" is occurring. It will return
+a 1 if it is called from a macro running as part of wbs, wnt, wexp, or werr
+processing.
+

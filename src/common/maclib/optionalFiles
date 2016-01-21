@@ -1,0 +1,278 @@
+"macro optionalFiles"
+// optionalFiles('update') updates global parameters std11files and optfiles 
+//	based on part11Config and recConfig files. 
+//	If a "file" is "yes" in part11Config, it is add to stdfiles (required files).
+//	If a "file" is "no" in part11Config, it is add to optfiles (optional files).
+// optionalFiles('panel') builds a panel for the user to select optional files.
+//	This panel is built based on stdfiles and optfiles parameters. 
+//	Before building the panel, optionalFiles('update') is called to update 
+//	these two parameters according to part11Config and recConfig files.  
+//	This panel displays stdfiles as labels, and optfiles as checkboxes.
+// optionalFiles('save') saves user selection from optfiles parameter to recConfig file.
+//	This is called when the panel is dismissed by "Ok" button.
+
+if($# < 1) then $action = 'panel' else $action=$1 endif
+
+isFDAsystem:$p11
+
+if($action = 'update') then
+
+   exists('stdfiles','parameter','global'):$e
+   if($e < 1) then
+      create('stdfiles','string','global')
+   endif
+   setprotect('stdfiles','set',65808,'global')
+   stdfiles=''
+
+   exists('optfiles','parameter','global'):$e
+   if($e < 1) then
+      create('optfiles','string','global')
+   endif
+   setprotect('optfiles','set',65808,'global')
+   optfiles=''
+
+   if($p11 > 0) then
+      $path = systemdir+'/p11/part11Config'
+      exists($path,'file'):$e
+      if($e < 1) then
+         write('line3','Error: missing configuration file.')
+         return(0) 
+      endif
+
+      lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+      while ($ret = 2) do
+         substr($line,1,1):$ch
+         if ($ch <> '#') then
+            strstr($line,':'):$ret
+            if ($ret > 1) then
+              substr($line,1,'delimiter',':\n'):$t1
+              substr($line,2,'delimiter',':\n'):$t2
+	      if($t1='file' and $t2='standard') then
+                 substr($line,3,'delimiter',':\n'):$name
+                 substr($line,4,'delimiter',':\n'):$value
+		 if($value='yes') then
+		    setvalue4name('stdfiles',$name,$value)
+		 else
+		    setvalue4name('optfiles',$name,$value)
+		 endif
+	      endif
+            endif
+         endif
+         lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      stdfiles=stdfiles
+      optfiles=optfiles
+
+   else // not p11 system. use recConfig only.
+
+      stdfiles = 'fid:yes','log:yes','procpar:yes','text:yes'
+      optfiles=''
+
+   endif
+
+   // Note, at this point, optfiles is either empty (if $p11<1), or contains
+   // files not selected in system file part11Config. 
+   // The following will update optfiles with user file recConfig.
+
+   $path = systemdir+'/templates/vnmrj/properties/recConfig'
+   exists($path,'file'):$e
+   if($e > 0) then
+      lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+      $num=size('stdfiles')
+      while ($ret = 2) do
+         substr($line,1,1):$ch
+         if ($ch <> '#') then
+            strstr($line,':'):$ret
+            if ($ret > 1) then
+              substr($line,1,'delimiter',':\n'):$t1
+              substr($line,2,'delimiter',':\n'):$t2
+	      if($t1='file' and ($t2='optional' or $t2='standard')) then
+                 substr($line,3,'delimiter',':\n'):$name
+                 substr($line,4,'delimiter',':\n'):$value
+
+		 // exclude files already in p11fles
+		 $v=''
+		 if($num > 0) then 
+		    getvalue4name('stdfiles',$name):$v
+		 endif
+		 if($v = '') then // $name is not in stdfiles. 
+		    setvalue4name('optfiles',$name,$value)
+		 endif
+
+	      endif
+            endif
+         endif
+         lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      optfiles=optfiles
+   endif
+
+   optionalFiles('getUserFile'):$e,$path
+   if($e > 0) then
+      lookup('mfile',$path,'readline','filekey'):$line,$key,$ret
+      $num=size('stdfiles')
+      while ($ret = 2) do
+         substr($line,1,1):$ch
+         if ($ch <> '#') then
+            strstr($line,':'):$ret
+            if ($ret > 1) then
+              substr($line,1,'delimiter',':\n'):$t1
+              substr($line,2,'delimiter',':\n'):$t2
+	      if($t1='file' and ($t2='optional' or $t2='standard')) then
+                 substr($line,3,'delimiter',':\n'):$name
+                 substr($line,4,'delimiter',':\n'):$value
+
+		 // exclude files already in p11fles
+		 $v=''
+		 if($num > 0) then 
+		    getvalue4name('stdfiles',$name):$v
+		 endif
+		 if($v = '') then // $name is not in stdfiles. 
+		    setvalue4name('optfiles',$name,$value)
+		 endif
+
+	      endif
+            endif
+         endif
+         lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+      endwhile
+      optfiles=optfiles
+   endif
+
+   return(size('stdfiles')+size('optfiles')) 
+   
+elseif($action = 'save') then // save user selection to recConfig file.
+   $path = userdir+'/templates/vnmrj/properties'
+   exists($path,'file'):$e
+   if($e < 1) then
+     shell('mkdir -p '+$path)
+   endif
+
+   $path = $path+'/recConfig'
+   exists($path,'file'):$e
+   if($e > 0) then
+     delete($path)
+   endif
+
+   $size = size('optfiles')
+   $i=0
+   while($i < $size) do 
+     $i=$i+1
+     substr(optfiles[$i],1,'delimiter',':\n'):$name
+     substr(optfiles[$i],2,'delimiter',':\n'):$value
+     write('file',$path,'file:optional:%s:%s',$name,$value)
+   endwhile 
+
+elseif($action = 'panel') then // write xmlfile
+
+   $xmlfile = userdir+'/optionFiles.xml'
+   exists($xmlfile,'file'):$e
+   if($e > 0) then
+      delete($xmlfile)
+   endif
+
+   optionalFiles('update'):$num 
+
+   isFDAsystem:$p11
+   if($p11>0) then
+      $ext='.REC'
+   else 
+      $ext='.fid'
+   endif
+
+   $ysize = 60 + $num*20
+   $ys = ''
+   format($ysize,0,0):$ys
+   $ybut = ''
+   format(20,0,0):$ybut
+   write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+   <template name="Flags" element="pages" type="acquisition" >  \n\
+     <group size="250 `+$ys+`"  \n\
+      style="Heading2"  \n\
+      label="Appdir"  \n\
+      vq="panellevel"  \n\
+      bg="transparent"  \n\
+      border="None"  \n\
+      side="Top"  \n\
+      justify="Left"  \n\
+      tab="yes"  \n\
+      enable="no"  \n\
+      reference="Flags"  \n\
+      useref="no"  \n\
+      subtype="Convenience"  \n\
+      expanded="yes"  \n\
+      >  
+   \n\ `)
+
+   $i=0
+   $yp = ''
+   if(stdfiles <> '') then
+      write('file',$xmlfile,`\n
+      <label loc="30 10" size="220 20" \n\
+       style="PlainText" \n\
+       label="Standard files in `+$ext+` directory :" \n\
+       justify="Left" \n\
+       /> `)
+
+      $lines=size('stdfiles')
+      while ($i < $lines) do
+   	    $i=$i+1
+            $ypos = 10 + $i * 20
+            format($ypos,0,0):$yp
+            substr(stdfiles[$i],1,'delimiter',':\n'):$name
+            substr(stdfiles[$i],2,'delimiter',':\n'):$value
+   	    write('file',$xmlfile,`\n
+      		<label loc="60 `+$yp+`" size="160 20" \n\
+          	style="PlainText" \n\
+          	label="`+$name+`" \n\
+          	justify="Left" \n\
+          	/>
+	    `)
+      endwhile
+   endif
+
+   $i=$i+1
+   $ypos = 20 + $i * 20
+   format($ypos,0,0):$yp
+   write('file',$xmlfile,`\n
+   <label loc="30  `+$yp+`" size="220 20" \n\
+    style="PlainText" \n\
+    label="Optional files in `+$ext+` directory :" \n\
+    justify="Left" \n\
+    /> `)
+
+   $k=0
+   $kstr=''
+   $lines=size('optfiles')
+   while ($k < $lines) do
+   	 $i=$i+1
+   	 $k=$k+1
+         $ypos = 20 + $i * 20
+         format($ypos,0,0):$yp
+         format($k,0,0):$kstr
+         substr(optfiles[$k],1,'delimiter',':\n'):$name
+         substr(optfiles[$k],2,'delimiter',':\n'):$value
+   	 write('file',$xmlfile,`\n
+      	    <check loc="60 `+$yp+`" size="160 20" \n\
+             style="PlainText" \n\
+             label="`+$name+`" \n\
+             vc="optfiles[`+$kstr+`]='`+$name+`:yes'" \n\
+             vc2="optfiles[`+$kstr+`]='`+$name+`:no'" \n\
+             set="$VALUE=(optfiles[`+$kstr+`]='`+$name+`:yes')" \n\
+             justify="Left" \n\
+             />`)
+   endwhile
+
+   write('file',$xmlfile,'  </group>\n</template>')
+
+   vnmrjcmd('popup', 'mode:modal','file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', 'help:/vnmr/jhelp/dialog/optionalFiles.html', \
+   'pnewupdate:true', 'ok:optionalFiles(`save`)','title:Files saved with FID')
+
+elseif($action = 'getUserFile') then
+   $path = userdir+'/templates/vnmrj/properties/recConfig'
+   exists($path,'file'):$e
+   if(not $e) then return(0,'') endif
+
+   return(1,$path)
+endif

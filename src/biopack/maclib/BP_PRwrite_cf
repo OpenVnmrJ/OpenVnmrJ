@@ -1,0 +1,47 @@
+"macro BP_PRwrite_cf"
+"write control file for all the anlges we just collected"
+
+"write header"
+s1=svfdir +'/'+ samplename + '_' + seqfil + '_cf'  
+write('file',s1,'prcalc version 1')
+write('file',s1,'')
+write('file',s1,'expt dims = 4')
+exists('swCb','parameter'):$e
+if ($e=1) then
+ write('file',s1,'{ label = Cb     sw = %6.1f  size = 256   tilt = 1 sf=%6.2f centerppm=46 }',swCb,dfrq)
+endif
+exists('swCa','parameter'):$e
+if ($e=1) then
+ write('file',s1,'{ label = Ca     sw = %6.1f  size = 256   tilt = 1 sf=%6.2f centerppm=46 }',swCa,dfrq)
+endif
+exists('swN','parameter'):$e
+if ($e=1) then
+ write('file',s1,'{ label = N      sw = %6.1f  size = 256   tilt = 1 sf=%6.2f centerppm=120 }',swN,dfrq2)
+endif
+write('file',s1,'{ label = HN     sw = %6.1f  size = 256   tilt = 1 sf=%6.2f centerppm=4.67 }',sw/2,sfrq)
+write('file',s1,'')
+"write('file',s1,'proj   1  dims = 2 { angles =  *,  90.00, 00.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = hnnplane.dat')"
+"write('file',s1,'proj   2  dims = 2 { angles =  *,  90.00, 90.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = hncbplane.dat')"
+"write('file',s1,'proj   3  dims = 2 { angles =  *,  00.00, 90.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = hncaplane.dat')"
+write('file',s1,'proj   1  dims = 2 { angles =  *,  90.00, 00.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = plane1.dat')
+write('file',s1,'proj   2  dims = 2 { angles =  *,  90.00, 90.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = plane2.dat')
+write('file',s1,'proj   3  dims = 2 { angles =  *,  00.00, 90.00, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } scale = 4.0 file = plane3.dat')
+
+r1=4
+r2=4
+
+repeat
+
+r3={PR_arrayname1}[r1]  "angle1"
+r4={PR_arrayname2}[r1]  "angle2"
+write('file',s1,'proj %3d  dims = 2 { angles = %7.3f , %7.3f, *, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } file = test_%d--+.dat',r2,r3*-1,r4*-1,r1)
+r2=r2+1
+write('file',s1,'proj %3d  dims = 2 { angles = %7.3f , %7.3f, *, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } file = test_%d+-+.dat',r2,r3,r4*-1,r1)
+r2=r2+1
+write('file',s1,'proj %3d  dims = 2 { angles = %7.3f , %7.3f, *, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } file = test_%d-++.dat',r2,r3*-1,r4,r1)
+r2=r2+1
+write('file',s1,'proj %3d  dims = 2 { angles = %7.3f , %7.3f, *, 90.00 } { angles = 90.00, 90.00, 90.00, 00.00 } file = test_%d+++.dat',r2,r3,r4,r1)
+r2=r2+1
+r1=r1+1
+
+until r1>PR_nTilts

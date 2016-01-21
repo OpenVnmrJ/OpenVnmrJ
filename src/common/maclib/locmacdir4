@@ -1,0 +1,30 @@
+"macro locmacdir4"
+"***************************************************************"
+"locmacdir4 -       Makes copy of the current custom macro dir   "
+"		    to selected location directories		"
+"***************************************************************"
+
+if $2 = 'remove' then
+        shell('rm -rf '+$1+'.macdir/curloc/*'):$dum
+        shell('rm -rf '+$1+'.macdir/curloclong/*'):$dum
+   return
+endif
+
+$curloc=$1+'.macdir/curloc'
+
+$ext=''
+if ($3='long') then $ext='long' endif
+"********************************************************"
+$directory=$1+'.macdir/'+$2
+$fromdir=$curloc+$ext
+exists($directory,'directory'):$direx
+if ($direx) then
+        shell('rm -rf '+$directory):$dum
+endif
+shell('mkdir -p '+$directory):$dum
+exists($fromdir,'directory'):$curlocex
+if ($curlocex) then
+	shell('cp -r '+$fromdir+'/* '+$directory):$dum
+endif
+"********************************************************"
+

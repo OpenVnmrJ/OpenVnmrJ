@@ -1,0 +1,32 @@
+"macro is_activeQ"
+$archsamp=$1
+$auser='' $active=0 $aexp=''
+expactive('current'):$active
+
+if ($active=0) then
+    return(0,$auser,$aexp)
+endif
+
+$activeexp=$archsamp+'/dirinfo/activeexp'
+exists($activeexp,'file'):$fileex
+if ($fileex) then
+   readfile($activeexp,'$aexp','$auser','','local'):$fileex
+endif
+if ($fileex=0) then return(0,$auser,$aexp) endif
+
+strstr($aexp,'/enterQ.macdir/'):$isauto
+if ($isauto) then
+    $procpar=$aexp+'.fid/procpar'
+else
+    $procpar=$aexp+'/procpar'
+endif
+exists($procpar,'file'):$pex
+if ($pex=0) then return(0,$auser,$aexp) endif
+
+$archive='' $sample=''
+rtv($procpar,'noabort','archivedir'):$archive
+rtv($procpar,'noabort','sample'):$sample
+if ($archive+'/'+$sample <> $archsamp) then
+	return(0,$auser,$aexp)
+endif
+return(1,$auser,$aexp)

@@ -1,0 +1,235 @@
+
+----------------------------------------
+	======================
+	Welcome to CombiPlate.
+	======================
+
+Before getting started, there are a few
+hints that may help.
+
+The plate is currently filled with
+synthetic data. This will give it an 
+evenly graded color scheme running from
+green in the top left to yellow (top
+right), light blue (bottom left) and
+white (bottom right). If the color 
+gradation is not smooth, you have run
+out of color map entries, and so color
+coding of the results may not be 
+correct.
+
+The solution is to exit CombiPlate, 
+find some other application that uses a
+lot of colors and quit that. Restarting
+CombiPlate then should give the desired
+color scheme. Netscape is a common 
+villain. If VNMR is running, it too may
+take too many colors. For this reason,
+you may wish to save results and then
+inspect them again later when VNMR is 
+not active.
+
+As a further indicator for this problem,
+CombiPlate will issue a warning whenever
+it thinks that it has run out of
+colors. This warning is in red in the
+text window.
+
+CombiPlate may either be initiated by
+VNMR or may be started as as separate
+application.
+
+	Standalone Operation
+	====================
+
+Type - 
+combiplate
+
+Now the normal order of things will be
+to load a data file, display and then
+scale one or more regions for visual 
+display, and then finally to either use
+snapshot to capture the result or save
+the results for later redisplay.
+
+There are 2 kinds of file you can load, 
+VNMR output or CombiPlate output.
+
+Select Load... and then click on the 
+type that you will load. A file browser
+will pop up and you can mouse your way
+to the file you wish to load.
+
+Once this file has been selected, if it
+is a VNMR file, it may not be of a full
+plate. You will need to identify its
+scope to CombiPlate in the input screen.
+
+Once this is done, the file is opened 
+and its vital statistics are displayed 
+in the text window at the lower right.
+
+You can select a field for one or more
+colors by typing the field number in
+the appropriate space, followed by a 
+return. (The return actually loads
+the data, so don't forget it!)
+
+Each color has 3 selections, 0, 100% or
+variable. These turn the color off, 
+full on or link it to the value loaded.
+If more than one color is set to other
+than 0, the display will be the color
+sum of them.
+
+The variable color is not initially 
+scaled. You must do this in one of two
+ways. You can either move the scale to
+log10 of the biggest value expected and
+then click Display, or mouse-click the
+plate cell where the expected largest
+value is. Then you alter the "Current
+Cell" Weight to 95 and follow it with 
+a return. The data will then be 
+redisplayed.
+
+The buttons along the bottom are fairly
+self explanatory. 
+
+Load...
+=======
+Load new data, either from VNMR or
+previously saved from CombiPlate.
+
+Save...
+=======
+Save one or more colors for later 
+recall.
+
+Display
+=======
+Refresh the display. It may not be
+automatic, so this is a manual control.
+
+Clear
+=====
+Clears the plate of data so you can
+start from fresh. Not doing this before
+loading in new data is a way of 
+overlapping different plates of data.
+
+Exit
+====
+Finishes a CombiPlate session.
+
+
+Running Combiplate from VNMR
+============================
+
+There are a number of macros provided 
+to facilitate this.
+
+Processing plate Data
+=====================
+
+Assembly of fids
+----------------
+1st the fids need to be glued together.
+There are a number of ways. The base 
+macro is "glue". Variants include 
+"vastglue", "vastglue2" and "varglue".
+
+"glue" is for LC-NMR
+
+"vastglue(no)" concatenates the fids 
+0102 through ""no"02 in the current 
+directory and places the result as a 
+pseudo 2D in  exp5. 
+Default is no=96. It requires and 
+alters ni, arraydim and sw1. It gets 
+times from the log files.
+
+"vastglue2(no)" the same as vastglue, 
+but looks for autoname[A-H][1-12]. 
+
+"varglue(dir)" glues together all fids 
+in the directory "dir". The order of 
+glueing is the directory slot order. 
+This may be inspected by ls -f. As 
+this order may not be that desired, 
+you may have to reorder by using --
+
+tar cvf scr.tar dir/*
+rm -rf dir
+tar xvf scr.tar
+
+	Processing data
+	===============
+
+"combi_preproc" transforms the spectra 
+and also builds the sum in exp5
+
+"dlivast(no)" forms a file of integral 
+regions for the wells. Integrals 
+should be predefined. Adds extra region
+which is the sum of all defined regions
+for that well.
+
+"nlivast(no)" As above, but no sum 
+region.
+
+"nlivast2(no) As for nlivast, but 
+normalized to well "no".
+
+"nlivast3(no) As for nlivast2, but 
+referenced to the integral of no =1000.
+
+	Displaying Data
+	===============
+
+"combishow(r,g,b)" display regions 
+r, g and b as red, green and blue in 
+combiplate. Combiplate will read in 
+the regions automatically. The regions 
+are integral regions displayed on the 
+spectrum. 1, 2 0r 3 regions may be 
+designated.
+
+"combds(no,r,g,b)" display the 
+spectrum for well "no" along with 
+expansions for r, g and b.
+
+	Simple Procedure
+	================
+	
+1. Acquire spectra into a single 
+  directory.
+
+2. Set up transform parameters - 
+  weighting, solvent subtraction, etc.
+  
+3. Glue the fids together using -
+  glue vastglue vastglue2 or varglue 
+  as appropriate.
+  
+4. Run combi_preproc. Note that in 6.1B
+  exp5 will be displayed in another
+  window, so can be readily inspected.
+  
+5. If desired, set integral regions in 
+  exp5 and use mp to tranfer them to the
+  working experiment.
+  
+6. Run dlivast to generate the integral 
+  file used as input for CombiPlate.
+  
+7. Run combishow with 1 - 3 integral
+  regions as parameters. Remember that
+  you can alter these once CombiPlate
+  is running.
+  
+8. Click on any well in CombiPlate to
+  see the spectrum and current regions
+  as expansions in VNMR.
+
+

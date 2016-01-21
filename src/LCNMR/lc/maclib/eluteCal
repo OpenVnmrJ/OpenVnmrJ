@@ -1,0 +1,30 @@
+"macro eluteCal"
+/*-*- MAGICAL -*-*/
+"macro eluteCal"
+
+
+if ($# = 0) then
+  lccmd('ManualFlowControl','y')
+  lccmd('PeakAction','eluteCal(2)')
+  lccmd('toCollector')
+  lccmd('toNmr')
+elseif ($1 = 2) then
+  write('line3', 'eluteCal(2) called')
+  lccmd('PauseRun')
+  lccmd('gpib ' + lcPump + ' stop')
+  if (msSelection <> '0') then
+    lccmd('makeupPumpOff')
+  endif
+  lccmd('toColumn')
+  lccmd('toWaste')
+  lccmd('waitForTime', 1.0, 'lcHoldCount', 'eluteCal(3)')
+elseif ($1 = 3) then
+  write('line3', 'eluteCal(3) called')
+  lccmd('toCollector')
+  lccmd('toNmr')
+  lccmd('gpib ' + lcPump + ' start')
+  if (msSelection <> '0') then
+    lccmd('makeupPumpOn', msPumpFlow)
+  endif
+  lccmd('RestartRun')
+endif

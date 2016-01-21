@@ -1,0 +1,171 @@
+"macro g3Dcalib"
+"gxyzautocalib"
+"Performs autocalibrations for 3D shimming"
+"version 28x10"
+
+if ($# < 1) then $1='init' endif
+
+if $1='init' then
+// This section is similar to the init section in autocalibration macro
+
+    if (gcflg='y') then
+        walkupQ('readlist'):$exp1,$exp2
+        $t1=size('$exp1') if ($exp1[1]='') then $t1=0 endif
+        $t2=size('$exp2') if ($exp2[1]='') then $t2=0 endif
+        if ($t1+$t2 > 1) then
+            write('error','Autocalibration cannot be queued with another experiment in the same study')
+                // Don't abort it.  This will put the SQ in a limbo
+//          abort
+        endif
+    endif
+    getProbePath(probe,'alert'):$e,$ppath,$rw
+    if ($rw=0) then abort endif
+    operights('candocalibrations'):$right
+    if ($right<0.5) and (auto='n') then
+        write('error','%s cannot do calibrations',operator)
+        abort
+    endif
+    shell('basename '+probe):$probe
+    if (gcflg='n') then
+        cleanexp
+        if (auto='n') then
+            shell('rm -f '+curexp+'/sampleglobal'):$dum
+        else
+            shell('rm -f '+autodir+'/sampleglobal'):$dum
+        endif
+    endif
+
+    PROTON
+
+    gxyzmapsys
+    resetsampglobal
+    gxyzsamplename='astm'
+    gxyzcalibset('add','pw90')
+    gxyzcalibset('add','xycalib')
+    gxyzcalibset('add','1Dautoshim')
+    exists('gxyzdo3Dshim','parameter'):$ex
+    if ($ex<0.5) then create('gxyzdo3Dshim','flag') endif
+    gxyzdo3Dshim='y'
+    gxyzmake1Dmap='y'
+    gxyzdoscset='n'
+    gxyzsetsamplepars
+    explist=$0
+    module('add','calibpars','basic')
+    module('add','g3Dcalib','basic')
+    macro=$0
+    caliblist=$0
+    wstart='xmhaha_calib'
+    $date=''
+    shell('date +%d%b%Y'):$date
+    $text='Calibration for '+probe+' on '+$date
+    text($text)
+    setvalue('samplename',$probe+'_calib')
+    sdirtmplt='$samplename$_%DATE%_'
+    svftmplt='$caliblist$$calibnode$_'
+    CalibrationResults=''
+    setadirtmplt
+    file='exp'
+    vs=10000 vp=0
+
+    dg
+
+    wnt=''
+    wexp='chempackQ'
+    create('execprocess','string','current','')
+    create('execplot','string','current','')
+    setgroup('execprocess','display')
+    setgroup('execplot','display')
+    execprocess='execprocess=\'\''
+    execplot='execplot=\'\''
+    prtmod='n'
+    if (gcflg='n') then
+        if (auto='n') then
+            savesampglobal('cp')
+            SQDisplay('refresh')
+        endif
+    else
+        savesampglobal('cp','solvent samplename sdirtmplt adirtmplt svftmplt')
+	$alist='solvent','samplename','sdirtmplt','adirtmplt','svftmplt'
+        writeparam(cursqexp+'/startqpar1/curpar','$alist','current','add')
+        writeparam(cursqexp+'/startqpar1/procpar','$alist','current','add')
+    endif
+
+endif
+
+if ($1='wstart') then
+ // This is the branch off from xmhaha_calib wstart section
+	if gxyzsamplename='' then
+	    write('error','3D shimming sample is not specified')
+	    abort
+	endif
+
+        $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+	savemodule('calibpars')
+	savemodule('g3Dcalib')
+	gxyzsetsamplepars(gxyzsamplename)
+	werr='return'
+	sinebell
+	create('execprocess','string','current',''):$dum
+	create('execplot','string','current',''):$dum
+	setgroup('execprocess','display')
+	setgroup('execplot','display')
+	$wstart=wstart $wds=wds
+	wstart='' wds='' vp=0 vs=10000
+	pslabel=seqfil
+	svp(archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit','force')
+	wstart=$wstart wds=$wds
+	gxyzcalibset('check','pw90'):$dopw90
+	gxyzcalibset('check','1Dautoshim'):$do1Dautoshim
+	gxyzcalibset('check','xycalib'):$doxycalib
+        // Do we need to change any property to this node?
+	$macro='gXYZ_mkmap'
+	$nodes='' $done=0
+	if ($dopw90) then 
+	    $macro='gXYZ_'+tn+'pw90'
+	    $done=1
+	endif
+	if ($do1Dautoshim) then 
+	    if not $done then
+	    	$macro='gXYZ_gmap1Dinit'
+		$done=1
+	    else
+		$nodes=$nodes,'gXYZ_gmap1Dinit'
+	    endif
+	endif
+	if ($doxycalib) then 
+            if not $done then
+	    	$macro='gXYZ_xycalib'
+		$done=1
+	    else
+		$nodes=$nodes,'gXYZ_xycalib'
+	    endif
+	endif
+	if $done then
+		$nodes=$nodes,'gXYZ_mkmap'
+	endif
+	
+	//write('line3','%s',$macro)
+	$wexp=wexp
+	exec($macro):$dum
+	wexp=$wexp
+	explist=$macro
+  	$alias=$macdir+'/alias'
+	getsampglobal($macdir)
+	array2array($nodes):$nodes
+	$tot=size('$nodes')
+	if $nodes[1]='' then $tot=0 endif
+	$i=1 $t=120
+	if $tot then
+	  repeat
+            $r=0 $n=''
+	    write('line3','Adding node %s to SQ',$nodes[$i])
+            walkupQ_runtime('add',$nodes[$i],'last','no',$t,'nocheck','quiet'):$r,$n
+            if ($r) then
+                write('file',$alias,'%s: %s',$n,$nodes[$i])
+                write('file',$macdir+'/'+$n+'acq','wshim=\'n\' alock=\'n\' wtune=\'n\'')
+            endif
+	    $i=$i+1
+	  until $i > $tot
+	endif
+	    
+endif

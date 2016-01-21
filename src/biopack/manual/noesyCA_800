@@ -1,0 +1,108 @@
+ noesyCA_800.c   auto-calibrated version of noesy_C_chirp_purge_lek_v3a.c (D2O,800MHz) 
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    3D noesy from unlabeled to labeled (13C) in D2O. Note the corresponding
+        expt. for water samples is noesy_NC_chirp_purge_lek_500.c
+	
+	purging and INEPT transfer is achieved by carbon CHIRP inversion pulses
+	well-suited for D2O-SAMPLES!!
+
+                       F1      1H
+                       F2      13C
+                       F3(acq) 1H
+
+    NOTE: cnoesy_3c_sed_pfg(1).c 3D C13 edited NOESYs with separation via the
+          carbon of the origination site. (D2O experiments)
+
+    Uses three channels:
+         1)  1H             - carrier @ water  
+         2) 13C             - carrier @ 67 ppm 
+         3) 15N             - carrier @ 119ppm [centre of amide N]
+
+
+    Set dm = 'nny', dmm = 'ccp' [13C decoupling during acquisition].
+    Set dm2 = 'nnn', dmm2 = 'ccc' 
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [H]  and t2 [C and N].
+  
+    Flags
+         fsat       'y' for presaturation of H2O
+         fscuba     'y' to apply scuba pulse after presaturation of H2O
+         mess_flg   'y' for 1H (H2O) purging pulse before relaxation delay
+         f1180      'y' for 180deg linear phase correction in F1
+                        otherwise 0deg linear phase correction
+         f2180      'y' for 180deg linear phase correction in F2
+         c180_flg   'y' when recording F1,F3 2D.
+
+    Standard Settings:
+       fsat='n', fscuba='n', mess_flg='y', f1180='y', f2180='y'
+       c180_flg='n'
+         
+
+    Set f1180 = 'y' and f2180 = 'y' for (-90,180) in F1 and (-90,180) in  F2.   
+    Note: Zero order phase correct may not be exactly -90 in F2 due to seduce.
+
+    Modified by L.E. Kay on Aug. 15, 1994 from noesyc_pfg_h2o_NC+.c 
+
+    Modified by L. E. Kay on March 6, 1995 to include 15N purging
+
+    Modified by L.E.Kay on April 2, 1996 to include additional N purging
+
+    Modified by R.Konrat on May, 1996 to include CHIRP pulses,
+	 (improves INEPT transfer &  B1-sensitivity)
+
+	NOTE: CHIRP-inversion is achieved using the decoupler (decprgon)
+
+	PROGRAM: apod_chirp_dec creates the necessary .DEC-shape
+                 (only for non-autocalibrated mode (autocal='n'))
+
+  Please check with the paper for details concerning the construction
+      of the pulses for your specific field (different adiabatic pulse
+      lengths are used at different magnetic fields)
+
+   Adiabatic pulses are used for both purging and the INEPT transfers
+     from 1H ----> 13C and from 13C ----> 1H. 
+ 
+    Example: For Purging for labeled protein/unlabeled peptide
+       Carbon carrier is placed at 67 ppm throughout the expt. The center
+       of the adiapatic pulse (purging) is at 0 ppm and covers a sweep of
+       60 KHz (centered about 0 ppm). I recommend a taua delay of 2.1ms
+       and a sweep rate of 2.980 *107 Hz/s and a adiabatic pulse width of
+       2.013 ms. We have also optimized a taua of 2.0 ms and a sweep
+       rate of 3.729*107Hz/s with a width of 1.609 ms. (600 MHz) Note that
+       different rates are needed for different fields. 
+ 
+       apod_chirp_dec 2013 1000 -40090.0 60000.0 20 0 1 
+ 
+       will generate a pulse of 2.013 ms with 1000 steps starting
+       -40090 Hz from 67 ppm (ie, 30 KHz downfield of 0 ppm) with a
+       sweep of 60 KHz and the first 20% and last 20% of the pulse
+       is multiplied by a sine funtion.
+ 
+       For the adiabatic pulses used for the INEPT transfers we use pulses
+       of duration 500 us and a 60 KHz sweep centered at 0 ppm for protein/
+       peptide work.
+ 
+       Note: Optmized taua/pw_chirp and rates must be employed.
+ 
+       Use a 5 KHz field for chirp 
+
+    Modified by L.E.Kay, based on noesy_NC+_chirp_purge_rk.c on Sept. 6, 96
+
+    Modified by  L. E. Kay on Nov 27, 1996 to allow for fast chirps for the inept
+     transfers
+
+   Modified by C. Zwahlen & S. Vincent on March 18, 1997, to allow two
+   two different chirps for purging
+
+
+       The autocal flag is generated automatically in Pbox_bio.h
+       If this flag does not exist in the parameter set, it is automatically 
+       set to 'y' - yes. In order to change the default value, create the  
+       flag in your parameter set and change as required. 
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       and 'n' (no - use full manual setup, equivalent to 
+       the original code).  E.Kupce, Varian
+

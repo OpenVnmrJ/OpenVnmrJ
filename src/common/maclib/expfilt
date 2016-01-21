@@ -1,0 +1,111 @@
+"macro expfilt"
+" expfilt - exponential decay filter data processing "
+
+$acq='acq' $f1='f1' $f2='f2'
+$at=at $ni=0 $ni2=0
+
+getdim:$dim
+
+if ($# > 2) then 
+  write('error','Only 2 arguments are supported')
+  return
+endif
+
+$arg1='real'
+IF ($# > 0) THEN
+  if typeof('$1') then $arg1='string' endif
+ENDIF
+
+IF ($arg1='string') THEN
+  $f1='n' $f2='n' $acq='n'
+  if ($1 = 'f1') then 
+    $f1='f1' 
+    if ($# < 2) then
+      exists('proc1','parameter'):$ex
+      if ($ex) then
+      if (proc1 = 'lp') then
+       if (lpopt1 = 'f') then
+        $ni = strtext1+lpext1-1
+       endif
+      endif
+      endif
+    else
+      $ni=$2
+    endif
+
+  elseif ($1 = 'f2') then
+    if ($dim=2) then $acq='acq' $f2='n'
+	if ($# > 1) then $at=$2 endif
+    elseif ($dim=3) then 
+      $f2='f2' 
+      if ($# < 2) then
+       exists('proc2','parameter'):$ex
+       if ($ex) then
+       if (proc2 = 'lp') then
+        if (lpopt2 = 'f') then
+         $ni2 = strtext2+lpext2-1
+        endif
+       endif
+       endif
+      else
+       $ni2=$2
+      endif
+    endif
+
+  elseif ($1 = 'acq') then
+    $acq='acq'
+	if ($# > 1) then $at=$2 endif
+
+  elseif ($1 = 'f3') and ($dim=3) then 
+    $acq='acq'
+	if ($# > 1) then $at=$2 endif
+  endif
+
+ELSE
+
+if ($# < 2) then
+ exists('proc2','parameter'):$ex
+ if ($ex) then
+ if (proc2 = 'lp') then
+  if (lpopt2 = 'f') then
+   $ni2 = strtext2+lpext2-1
+  endif
+ endif
+ endif
+else
+ $ni2=$2
+endif
+
+if ($# < 1) then
+ exists('proc1','parameter'):$ex
+ if ($ex) then
+ if (proc1 = 'lp') then
+  if (lpopt1 = 'f') then
+   $ni = strtext1+lpext1-1
+  endif
+ endif
+ endif
+else
+ $ni=$1
+endif
+
+ENDIF
+
+if ($dim = 1) then $f1='n' $f2='n' endif
+if ($dim = 2) then $f2='n' endif
+
+if ($acq='acq') then
+lb  = 1/$at gf='n' gfs='n' sb='n' sbs='n' awc='n'
+$np=$at*sw*2
+on('fn'):$fnon if ($fnon) and ($np > fn) then lb=lb*$np/fn endif
+endif
+
+if ($f1 = 'f1') then
+if ($ni=0) then $ni=ni endif
+lb1=$ni/sw1 gf1='n' gfs1='n' sb1='n' sbs1='n' awc1='n'
+endif
+
+if ($f2 = 'f2') then
+if ($ni2=0) then $ni2=ni2 endif
+lb2=$ni2/sw2 gf2='n' gfs2='n' sb2='n' sbs2='n' awc2='n'
+endif

@@ -1,0 +1,628 @@
+"macro RQaction"
+
+ 
+" RQaction($key, $arg1, $arg2, ....) is a command used to load adn display "
+" images and manupulate the Review Queue (RQ) through Image Brower (IB) "
+" command aipRQcommand. These commands work exactly the same for all "
+" viewports, i.e., RQ exists for all viewports."
+
+" The only thing that is special about Review Viewport is that it has a "
+" RQ panel where the user can manipulate RQ, while as other viewports does "
+" not have RQ panel (but has a invisible default RQ). When double click "
+" Locator, SQ, or RQ data, Review Viewport will load the data without remove "
+" the old data, while as other viewports will remove old data. "
+
+if($# < 0.5) then return endif
+
+if($1 = 'init') then
+   " load data from previous session (saved as xml in $path)"
+   " load only if it has less than 100 images "
+   $vp=''
+"   format(jviewport, 1, 0):$vp"
+"   $path = userdir + '/persistence/RQtree' +$vp + '.xml' "
+"   shell('wc -l '+$path):$s"
+"   substr($s,1):$n"
+"   if($n < 110) then"
+"         aipRQcommand('read', $path)"
+"   endif"
+
+  return
+elseif($1 = 'moveFrame' and $# > 4.5) then
+   " executed by hand mode to move (drag) an image to a different frame "
+   " $2, $3 are orig x, y, $4, $5 are dest x, y " 
+   aipRQcommand('move', $2, $3, $4, $5)
+
+  return
+elseif($1 = 'copyFrame' and $# > 4.5) then
+   " executed by hand mode to copy (ctrl drag) an image to a different frame "
+   " $2, $3 are orig x, y, $4, $5 are dest x, y " 
+   aipRQcommand('copy', $2, $3, $4, $5)
+
+  return
+elseif($1 = 'remove' and $# > 2.5) then
+   " executed by hand mode to remove an image frame to trashcan "
+   " $2, $3 are image x, y " 
+   aipRQcommand('remove', $2, $3)
+
+  return
+elseif($1 = 'remove' and $# > 1.5) then
+   " remove a RQ node to trashcan "
+   " $2 is the key (path plus 0) of the node " 
+   aipRQcommand('remove', $2)
+
+  return
+elseif($1 = 'setvalue' and $# > 3.5) then
+   " 'setvalue' is sent when mouse click RQ. IB need to know if a node is open/close"
+   " this is just for IB to write out a correct xml for RQ to display. "
+   " $2 is key, $3 is attribute name (in this case 'expand') "
+   " $4 is value (in this case yes/no) "
+   aipRQcommand('setvalue', $2, $3, $4)
+   if($3='display') then
+       strstr($2,'.fid'):$fid
+       if($fid) then return endif
+       if($4='yes') then 
+         // call this in case protocol browser is open
+         vnmrjcmd('LOC protocolBrowserClose')
+         // use RQaction('loadData', $2, 'dnd') instead of aipRQcommand('display','rq'), 
+	 // so the scans will be displayed in the order of loading.
+         //RQaction('loadData', $2, 'dnd','',1)
+         // see whether $fdfpath is for extracted planes
+         strstr($2,'xy'):$xy
+         strstr($2,'xz'):$xz
+         strstr($2,'yz'):$yz
+         RQaction('is3D',$2):$is3D,$fdfpath
+	 if($is3D and $xy=0 and $xz=0 and $yz=0) then
+           aipLoadDir($fdfpath)
+           imagedir=$fdfpath
+           aipAutoLayout=1
+           aipShow3PCursors(0)
+           showObliquePlanesPanel=0
+	   aipExtract('xy',0,-1,1)
+	   aipExtract('xz',0,-1,1)
+	   aipExtract('yz',0,-1,1)
+	 else
+             aipRQcommand('display','rq') // display what is selected in RQ
+	 endif
+       else
+         aipShow3PCursors(0)
+           aipRQcommand('display','rq') // display what is selected in RQ
+       endif
+   elseif($3='images' or $3='slices' or $3='echoes' or $3='array') then
+           aipRQcommand('display','rq') // display what is selected in RQ
+   elseif($3='frames') then
+         aipRQcommand('display','rqframes') // display what is selected in RQ
+   endif 
+
+  return
+elseif($1 = 'set' and $# > 3.5) then
+   aipRQcommand('set', $2, $3, $4)
+
+elseif($1 = 'moveNode' and $# > 2.5) then
+   " move a RQ node to a different locator in RQ"
+   " $2, $3, x, y of the RQ node "
+   aipRQcommand('move', $2, $3)
+
+  return
+elseif($1 = 'copyNode' and $# > 2.5) then
+   " copy a RQ node to a different locator in RQ"
+   " $2, $3, x, y of the RQ node "
+   aipRQcommand('copy', $2, $3)
+
+elseif($1 = 'dnd' and $# > 3.5) then
+   " dnd from locator or SQ to the canvas "
+   " $2 is path, $3, $4 are x, y of drop location "
+   RQaction('loadData', $2, 'dnd', '', $3, $4)
+
+  return
+elseif($1 = 'RQdnd' and $# > 3.5) then
+   " dnd from RQ to the canvas "
+   " $2 is key, $3, $4 are x, y of drop location "
+   RQaction('loadData', $2, 'dnd', '', $3, $4)
+elseif($1 = 'moddnd' and $# > 3.5) then
+   " $2 is key or path, $3, $4 are x, y of drop location "
+   aipOverlayGroup($2)
+  return
+elseif(($1 = 'doubleclick' or $1 = 'doubleclickgroup') and $# > 1.5) then
+  // $2 is the key
+  RQaction('loadData', $2, 'DoubleClick')
+  return
+
+elseif($1 = 'shiftdoubleclick' and $# > 1.5) then
+   RQaction('loadfid', $2)
+
+  return
+elseif($1 = 'ctrldoubleclick' and $# > 1.5) then
+   RQaction('loadfid', $2)
+
+  return
+elseif($1 = 'altdoubleclick' and $# > 1.5) then
+   RQaction('loadfid', $2)
+
+  return
+elseif($1 = 'loadStudyData' and $# > 1.5) then
+   aipRQcommand('load', $2, '', 1)
+  return
+elseif($1 = 'loadData' and $# > 1.5) then
+   " $2 is path or key, $3 is the action $4 nodeid $5 frame (or $5=x,$6=y)"
+    
+  $isKey=0
+  $dir=''
+  $name=''
+  substr($2,1):$dir
+  substr($2,2):$name
+  if($name='') then // $2 is path
+    $path=$dir
+  else 		// $2 is key
+    $isKey=1
+    $path=$dir+'/'+$name
+  endif
+  
+   $action='DoubleClick'
+   if($# > 2) then 
+     if($3='dnd' or $3='dndRQ' or $3='DragNDrop') then $action=$3 endif
+   endif
+   if($action<>'dndRQ') then
+     // call this in case protocol browser is open
+     vnmrjcmd('LOC protocolBrowserClose')
+   else
+     // $path maybe relative (only happy when SQ is running)
+     exists($path,'directory'):$ex
+     if(not $ex) then
+       $s1='' $s2=''
+       strstr($path,'/'):$n1,$s1,$s2
+       strstr($s2,'/'):$n2
+       if($n1=0 or $n2=0) then 
+         xm1('studydir'):$sdir
+         $path=$sdir+'/'+$path
+       endif
+     endif
+   endif
+
+   " suffix is .fid if path from locator, is .img or .fdf if from RQ or SQ"
+   " replace .fid with .img if necessary "
+   strstr($path,'.fid','last'):$n,$s1,$s2
+   length($path):$l
+   if($n = ($l-3)) then
+     $path = $s1+'.img'
+   elseif($n and jviewport > 1.5 and jviewport < 2.5) then
+	write('error','join review viewport')
+	return
+   endif
+
+   csiCmd('getCSIPath',$path):$csidir
+
+   strstr($path,'.img'):$n,$base,$s1
+   if($n>0 and $base<>'' and $s1='') then // $path is an img directory
+     exists($path,'directory'):$ex
+     if($ex < 0.5 and $csidir='') then // but $path does not exist and is not a csidir
+       // load fid and return 
+       $fidpath=$base+'.fid'
+       exists($fidpath,'directory'):$ex
+       if($ex) then
+         aipRQcommand('loadfid',$fidpath)
+         if($action<>'dndRQ') then
+           RQaction('loadfid',$fidpath)
+	   CPdndfid_process
+	 endif
+       endif
+       return
+     endif
+   endif
+
+   if($action = 'dndRQ') then // load to RQ but not display
+     if($csidir<>'') then $path=$csidir+'/maps' endif
+     exists($path,'directory'):$e
+     if($e < 0.5) then
+       exists($path,'file'):$e
+     endif
+     if($e) then
+      aipRQcommand('load', $path)
+     endif
+     return
+   endif
+   
+   $is3D=0
+   exists($path+'/aipList','file'):$ei
+   if($action='DoubleClick' and $ei) then
+     lookup('file',$path+'/aipList','read',1):$name,$ei
+     if($ei) then
+       $imgdir=$path+'/'+$name
+       exists($imgdir,'directory'):$ei
+       RQaction('is3D',$imgdir):$is3D,$fdfpath
+       if($ei and $is3D) then
+	 $path=$imgdir
+       else
+	 $is3D=0
+       endif
+     endif
+   endif
+
+   strstr($path,'.fdf','last'):$fdf
+
+   if($fdf=0 and $csidir<>'') then
+     csiLoad($csidir, $action) // this will rt if needed
+     return
+   elseif($fdf=0 and $action='DoubleClick') then
+     aipShowSpec:$n,$split
+     if($split) then
+       jFunc(88,0)
+       aipSetState(1)
+     endif
+   endif 
+
+   if($action='DoubleClick' and jviewport=3) then
+     RQaction('loadfid',$path)
+   endif
+
+   if($action = 'DoubleClick') then
+     aipClearFrames
+     if(jviewport<3) then
+        aipDeleteData('all')
+     else
+	aipRQcommand('unselectDisplay')
+     endif
+   endif
+
+   " see whether it is 3D data, if so call aipShow and return "
+   if($is3D=0) then
+      RQaction('is3D',$path):$is3D,$fdfpath
+   endif
+   if($is3D) then
+     if(jviewport<3) then // delete previous data in Plan viewport
+       aipDeleteData('all')
+     endif
+     imagedir=$fdfpath
+     exists($path,'directory'):$e
+     if($e < 0.5) then
+       exists($path,'file'):$e
+     endif
+     if(not $e) then // data is extracted
+       aipLoadDir($fdfpath)
+       aipAutoLayout=1
+       // see whether $path is for extracted planes
+       strstr($path,'xy'):$xy
+       strstr($path,'xz'):$xz
+       strstr($path,'yz'):$yz
+       if($xy>0) then
+	  aipExtract('xy',0,-1,1)
+	  aipOrient='xy'
+	  return
+       elseif($xz>0) then 
+	  aipExtract('xz',0,-1,1)
+	  aipOrient='xz'
+	  return
+       elseif($yz>0) then 
+          aipExtract('yz',0,-1,1) 
+	  aipOrient='yz'
+	  return
+       endif
+     else  
+       if(not $isKey) then // data is already in RQ
+          aipRQcommand('load',$path) // load all .fdfs in dir
+       endif
+       aipLoadDir($fdfpath) // load specific fdf
+       if($action = 'DoubleClick') then
+	  showObliquePlanesPanel=1
+          aipShow3PCursors(1)
+          aipStartExtract
+       else 
+          aipShow3PCursors(0)
+          showObliquePlanesPanel=0
+          aipExtract('xy',0,-1,1)  "Display ROxPE images"
+          aipExtract('xz',0,-1,1)  "Display ROxPE2 images"
+          aipExtract('yz',0,-1,1)  "Display PExPE2 images"
+          aipOrient='yz'
+       endif
+     endif
+     return
+   endif
+
+   if($fdf<>0) then 
+     $canOverlay=1 // could use a global parameter 
+     if($canOverlay) then
+       aipAutoLayout=0
+       if($#>5.5) then
+	aipGetFrame($5, $6):$f
+       elseif($#>4.5) then
+        $f=$5-1  // assume start frame 1
+       else
+	aipGetFrame:$f
+       endif
+     else
+       aipAutoLayout=1
+       aipGetFrameToStart:$f
+     endif
+     RQaction('loadImage',$path,$f+1)
+     return
+   endif
+
+   // auto layout when load dir
+   //aipAutoLayout=1
+
+   // if gets here, $path is a directory
+   // $5,$6 are not used
+   if($action = 'DoubleClick') then
+     // start from 1, layout enough frames
+     if aipAutoLayout=1 then
+       $f=-1 
+     else
+       $f=1
+     endif
+   else 
+     aipAutoLayout=1
+     // start from next new frame (not to override current display)
+     // and layout enough frames 
+     aipGetFrameToStart:$f
+     if($f < 0.5) then $f = -$f endif
+     $f=$f+1
+   endif
+
+   if($isKey) then // data is already in RQ
+      aipRQcommand('display', $2, $f)
+   else
+      aipRQcommand('load', $path, '', $f)
+   endif
+
+   return
+
+elseif($1 = 'reconDisplay') then			
+     aipBatch = 1
+
+"uncomment the following to relayout frames if not enough " 
+"    aipRQcommand('get', 'selectedImages'):$ni		"
+"    $nf = aipWindowSplit[1]*aipWindowSplit[2]		"
+"    if(aipLayoutPolicy > 0.5 and $ni > $nf) then	"
+"	aipAutoLayout = 1				"
+"	aipRQcommand('display', 'selected')		"
+"    endif 						"
+
+   return
+endif
+
+if($1='is3D' and $#>1) then
+
+   // $2 could be a key. convert it to path as needed.
+   $name=''
+   $dir=''
+   substr($2,1):$dir
+   substr($2,2):$name
+   if($name<>'') then
+     $path=$dir+'/'+$name
+   else
+     $path=$dir
+   endif
+   
+   $fdfpath = '' 
+   strstr($path,'.fdf','last'):$n,$s1,$s2
+   if($n > 0.5) then 
+      $fdfpath = $s1+'.fdf'
+   else // path can be a .fid or .img directory
+      strstr($path,'.img','last'):$n,$s1,$s2
+      if($n < 0.5) then
+         strstr($path,'.fid','last'):$n,$s1,$s2
+      endif
+      $dir=$path // init $dir
+      $isDir=1 // init $isDir ($path is dir)
+      // now figure out actual $dir that contains directly fdf file(s)
+      if($n > 0.5) then // 3D fdfs are in .img
+	   if($s2<>'') then
+	     $isDir=0
+	     strstr($s2,'/','last'):$n,$s3
+	     if($n) then // 3D fdfds are in a subdir of .img
+		$dir=$s1+'.img'+$s3
+	     else
+		$dir=$s1+'.img'
+	     endif
+	   else
+	     $dir=$s1+'.img'
+	   endif
+      else
+	strstr($dir,'xy'):$xy	
+	strstr($dir,'xz'):$xz	
+	strstr($dir,'yz'):$yz	
+        if($xy or $xz or $yz) then
+	   strstr($dir,'/','last'):$n,$s
+	   if($n) then
+		$dir=$s
+	   endif
+        endif
+      endif
+
+      $found=0
+      exists($dir+'/imgList','file'):$e
+      if($e) then
+        lookup('file',$dir+'/imgList','read',1):$name,$e
+	if($e>0) then
+	  $fdfpath = $dir +'/'+$name
+	  $found=1
+	endif 
+      endif
+      if(not $found) then
+        getfile($dir):$count
+        $i=0
+        length($path):$l
+        while($i<$count and $found < 1) do
+	     $i=$i+1
+             getfile($dir,$i):$file,$ext
+   	     length($file):$fl
+	     strstr($path,$file,'last'):$n
+	     if(not $isDir and $n = ($l-$fl+1) and $ext='fdf') then
+               $fdfpath = $dir +'/'+$file+'.'+$ext
+	       $found=1
+	     elseif($isDir and $ext='fdf') then
+               $fdfpath = $dir +'/'+$file+'.'+$ext
+	       $found=1
+             endif
+        endwhile
+      endif
+   endif 
+   
+   if($fdfpath <> '') then 
+     $e3D=0
+     exists($fdfpath,'file'):$e "lookup header rank"
+     if $e>0.5 then
+       $str=''
+       lookup('mfile',$fdfpath,'rank','skip','read'):$str
+       if ($str = '3;') then $e3D=1 else $e3D=0 endif
+     endif
+     if($e3D > 0.5) then
+	exists('imagedir','parameter','global'):$e
+        if $e<0.5 then
+          create('imagedir','string','global')
+          setprotect('imagedir','set',256,'global')
+          setprotect('imagedir','set',32768,'global')
+        endif
+	imagedir=$fdfpath
+        return(1,$fdfpath)
+     endif
+   endif
+   return(0,$fdfpath) 
+endif
+
+// e.g. RQaction('layout','Auto')
+//      RQaction('layout','1x2')
+if($1='layout' and $#>1) then
+  if(typeof('$2')) then
+    if($2='Auto') then
+      aipAutoLayout=1
+    else
+      aipAutoLayout=0
+      strstr($2,'x'):$n,$rows,$cols
+      if($n) then
+        aipSplitWindow($rows,$cols)
+        aipDefaultWindowSplit[1]=$rows
+        aipDefaultWindowSplit[2]=$cols
+      endif
+    endif
+  elseif($#>2) then
+      aipAutoLayout=0
+      aipSplitWindow($2,$3)
+      aipDefaultWindowSplit[1]=$2
+      aipDefaultWindowSplit[2]=$3
+  endif
+  aipRQcommand('display')
+  return
+endif
+
+// e.g. RQaction('layout'):$str
+if($1='layout') then
+  if(aipAutoLayout>0) then
+    return('Auto')
+  else
+    $rows=''
+    $cols=''
+    format(aipWindowSplit[1],0,0):$rows
+    format(aipWindowSplit[2],0,0):$cols
+    return ($rows+'x'+$cols)
+  endif
+endif
+
+// e.g. RQaction('display',path)
+//      RQaction('display',mode)
+// mode=1,2,3,4,5 for "all","group","selected in RQ","selected frames","select."
+if($1='display') then
+   if($#>1) then
+     $s=''
+     substr($2,1,1):$s
+     if($s='/') then
+       RQaction('doubleclick',$2) // $2 is path
+     else
+       aipRQcommand('display',$2) // $2 is mode
+     endif
+   else // display whatever is in RQ 
+     aipRQcommand('display')
+   endif
+endif
+
+if($1='loadImage' and $#>2) then
+   $name=''
+   $dir=''
+   substr($2,1):$dir
+   substr($2,2):$name
+   if($name<>'') then
+     $path=$dir+'/'+$name
+   else
+     $path=$dir
+   endif
+   aipRQcommand('loadImage',$path,$3)
+endif
+
+if($1='loadfid' and $#>1) then
+
+   //save current fidpath
+   $curfid=file
+
+   $name=''
+   $dir=''
+   substr($2,1):$dir
+   substr($2,2):$name
+   if($name<>'') then
+     $path=$dir+'/'+$name
+   else
+     $path=$dir
+   endif
+   $fid=0 $img=0
+   strstr($path,'.fid','last'):$fid,$base,$s2
+   if(not $fid) then 
+     strstr($path,'.img','last'):$img,$base,$s2
+     if(not $img) then 
+       $base=$path 
+     endif
+   endif
+
+   $path=$base+'.img'
+   $fidpath = $base+'.fid'
+
+   exists($fidpath,'directory'):$yes
+   if(not $yes) then
+      $parfile=$path+'/procpar'
+      exists($parfile,'file'):$e
+      if($e) then 
+	readparam($parfile,'file')
+      endif
+      strstr(file,'.fid'):$e
+      substr(file,1,1):$s
+      if($e and $s='/') then // file is fullpath
+	$fidpath = file
+	exists($fidpath,'directory'):$yes
+      elseif($e) then // search 1 or 2 level up $base for a fid of given name
+        strstr($base,'/','last'):$n,$s1 
+        $fidpath = $s1+'/'+file
+	exists($fidpath,'directory'):$yes
+        if(not $yes) then
+          strstr($s1,'/','last'):$n,$s2
+          $fidpath = $s2+'/'+file
+	  exists($fidpath,'directory'):$yes
+	endif
+      else
+	strstr(file,'exp'):$e
+        if(file<>'' and not $e) then // file may be a fid name without .fid 
+          strstr($base,'/','last'):$n,$s1 
+          $fidpath = $s1+'/'+file+'.fid'
+	  exists($fidpath,'directory'):$yes
+          if(not $yes) then
+            strstr($s1,'/','last'):$n,$s2
+            $fidpath = $s2+'/'+file+'.fid'
+	    exists($fidpath,'directory'):$yes
+	  endif
+	endif
+      endif
+   endif
+
+   if($yes and $fidpath <> $curfid) then
+      rt($fidpath)
+      write('line3','rt %s',$fidpath)
+   elseif($yes) then
+      file=$fidpath 
+   else
+      file=$curfid  // restore file param
+      write('line3','no fid data')
+   endif
+
+   // highligh node
+   if(jviewport=3 and $yes and $img) then
+        vnmrjcmd('RQ rt',$base+'.img')
+   elseif(jviewport=3 and $yes) then
+        vnmrjcmd('RQ rt',$base+'.fid')
+   endif
+endif

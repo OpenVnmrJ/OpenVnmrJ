@@ -1,0 +1,69 @@
+"macro lcLambda"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcLambda"
+
+// Reconciles the lcTraceXLambda parameters with the lcLambdaX parameters.
+// It has two modes, either setting the instrument wavelength (lcLambda
+// or lcLambda2) from a lcTraceXLambda setting and then reconciling all
+// the lcTraceXLambda parameters that use this lcLambdaX, or setting the
+// lcTraceXLambda for the given trace according to the lcLambdaX that it
+// uses.
+// Take 2 arguments:
+// 1> String to specify which to set and which is master:
+//    'setTrace' or 'setInst'(default).
+// 2> String containing the integer index of the trace (from 1).
+//    
+
+$setWhich = 'setInst'
+if ($# > 0) then
+  $setWhich = $1
+endif
+
+$tr = 1
+if ($# > 1) then
+  $tr = $2
+endif
+
+$str = ''
+//write('line3','lcLambda: mode=%s, trace=%d', $setWhich, $tr)//DBG
+
+if ($setWhich = 'setTrace') then
+  // Set Lambda for this trace according to the input we selected
+  // ':uv1' or ':uv2' string in lcTrace means we want the 1st or 2nd wavelength
+  strstr(lcTrace[$tr],':uv'):$isuv
+  if ($isuv > 0) then
+    substr(lcTrace[$tr], $isuv+3, 1):$str
+    if ($str = '1') then
+      lcTraceLambda[$tr] = lcLambda
+    elseif ($str = '2') then
+      lcTraceLambda[$tr] = lcLambda2
+    endif
+  endif
+
+elseif ($setWhich = 'setInst') then
+  // Set Lambda for the instrument to the value set in this trace.
+  strstr(lcTrace[$tr],':uv'):$isuv
+  if ($isuv > 0) then
+    $lambda = lcTraceLambda[$tr]
+    // Which instrument wavelength to set (lcLambda or lcLambda2) is
+    // determined by the lcTrace[i] choice for this trace.
+    substr(lcTrace[$tr], $isuv+3, 1):$str
+    if ($str = '1') then
+      lcLambda = $lambda
+    elseif ($str = '2') then
+      lcLambda2 = $lambda
+    endif
+    // Now set every other trace wavelength that is using this choice
+    $choice = ':uv'+$str
+    $i = 1
+    while ($i <= 3) do
+      if ($i <> $tr) then
+        strstr(lcTrace[$i], $choice):$using
+        if ($using) then
+          lcTraceLambda[$i] = $lambda
+        endif
+      endif
+      $i = $i + 1
+    endwhile
+  endif
+endif

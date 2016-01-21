@@ -1,0 +1,227 @@
+"macro getsqdata"
+"sqgetdata - macro to find fid data within automation run/study queue"
+"The list of matching data files is written into $datalist file."
+
+"Usage: getsqdata(<rack<, zone<, operator<, loc(s)<, string<, 'first' | 'all'>>>>>>)"
+"all arguments are optional, can take between 1 and 6 arguments"
+"If rack or zone is -1, use all racks or zones."
+"If operator is '', use all operators."
+"Format for loc is a string of individual values (e.g. '3 4 5 8')"
+"  or a range of values (e.g. '1-20' or '1 - 20'))"
+"Format for string is any string to match in data field, e.g. pslabel."
+" 'first' finds only first data set to match string in a sample."
+" 'all' or '' finds all data sets to match string in a sample."
+
+"Examples: getsqdata(1,3,'','3 4 5 8')"
+"  finds all data sets for samples in rack 1, zone 3, loc 3, 4, 5, 8"
+"          getsqdata(2,-1,'','10-30','Proton','first')"
+"  finds the first Proton data set in rack 2, all zones, loc 10 through 30"
+"          getsqdata(3,-1,'','10-30','','','append')"
+"  finds all data from rack 3, loc 10 through 30, appends to datalist"
+
+
+$datalist=userdir+'/sq_datalist'
+
+"where should datalist be? must be writable by the user"
+"could be sorting an autodir from another user"
+"may not be able to write to autodir+'/datalist' "
+"could put it in userdir+'/persistence/sq_datalist' to hide it? "
+
+
+$dir=autodir
+exists($dir,'directory'):$e
+if $e=0 then
+  write('error','autodir %s not found',autodir)
+  return
+endif
+
+$afile=$dir+'/autostudies'
+exists($afile,'file','r'):$e
+if $e=0 then
+  write('error','cannot read autostudies in %s',autodir)
+  return
+endif
+
+"use arguments to sort the datalist to match the following"
+" rack, zone, operator, loc, pslabel, etc."
+$findrack = -1
+$findzone = -1
+$findop   = ''
+$findloc  = -1
+$sizeloc  =  0
+$findps   = ''
+$sortps   = ''  "values are 'first', ''  ('' means all data, not just first)"
+$append   = ''  "values are 'append', '' "
+
+if ($# > 0.5) then
+  $findrack = $1
+endif
+if ($# > 1.5) then
+  $findzone = $2
+endif
+if ($# > 2.5) then
+  $findop = $3
+endif
+if ($# > 3.5) then
+"sort list of locs"
+  if ($4 <> '-1') then
+    $found=0 $start='' $stop=''
+    strstr($4,'-'):$found,$start,$stop
+    if ($found > 0.5) then
+      $beg=1 $end=1
+      format($start,1,0):$beg
+      format($stop,1,0):$end
+      $sizeloc = $end-$beg+1
+      $i=0
+      repeat
+        $i=$i+1
+        $findloc[$i]=$beg + $i - 1
+      until ($i>=$sizeloc)
+    else
+      length($4):$len
+      $str='' $i=0
+      $end='q1W2t5Y6'
+      $4=$4+' '+$end
+      while ($str='' and $i<$len) do
+        $i=$i+1
+        substr($4,$i):$str
+        if ($str<>$end) then
+          format($str,1,0):$num
+          $findloc[$i]=$num
+          $str=''
+        endif
+      endwhile
+    endif
+    $sizeloc=size('$findloc')
+  endif
+endif
+if ($# > 4.5) then
+  $findps = $5
+endif
+if ($# > 5.5) then
+  $sortps = $6
+endif
+if ($# > 6.5) then
+  $append = $7
+endif
+"write('line3','%s: frack=%g fzone=%g fop=%s floc[1]=%g size=%g',$0,$findrack,$findzone,$findop,$findloc[1],$sizeloc)"
+
+"currently only allows you to match files in one rack or all racks"
+" or one zone or all zones"
+" to match multiple racks and zone without getting all, "
+" you could pass an argument not to delete $datalist file? "
+
+"read list of studies in autodir"
+$slist='' $field='' $ssize=0
+readfile($afile,'$slist','$field','','local'):$ssize
+
+if ($append <> 'append') then
+  rm('-f',$datalist):$x
+endif
+
+"need to keep sqdir"
+$sqdir=sqdir
+
+$name='' $sstatus=''
+$i=0
+repeat
+  $i=$i+1
+  $name=$slist[$i]
+  $id=$name
+  substr($name,1,1):$s
+  if $s<>'/' then
+    $name=$dir+'/'+$name
+  endif
+  $sst=''
+  $sfile=$name+'/studypar'
+  $efile=$name+'/enterSQ'
+  exists($sfile,'file'):$f1
+  exists($efile,'file'):$f2
+  if ($f1=1 and $f2=1) then
+
+"   can sort on any attributes stored in studypar - $studyid is the same as $id"
+    $sst='' $studyid='' $op='' $loc=-1 $rack=-1 $zone=-1
+    rtv($sfile,'studystatus','studyid_','operator_','loc_','vrack_','vzone_'):$sst,$studyid,$op,$loc,$rack,$zone
+
+    if ($sst='Completed' or $sst='Error' or $sst='Active') then
+
+      $readstudy = 'y'
+      if (($findrack > -1) and ($rack <> $findrack)) then
+        $readstudy = 'n'
+      elseif (($findzone > -1) and ($zone <> $findzone)) then
+        $readstudy = 'n'
+      elseif (($findop <> '') and ($op <> $findop)) then
+        $readstudy = 'n'
+      elseif ($sizeloc > 0) then
+        $readstudy = 'n'
+        $j=0
+        repeat
+          $j=$j+1
+          if ($findloc[$j] = $loc) then
+            $readstudy = 'y'
+          endif
+        until ($j>=$sizeloc or $readstudy='y')
+      endif
+
+      if ($readstudy = 'y') then
+
+"read data list in study"
+"       write('line3','reading study %s',$name)"
+"       write('line3','reading study %s, zone=%g findzone=%g rack=%g findrack=%g',$studyid,$zone,$findzone,$rack,$findrack)"
+        $node='' $field='' $qsize=0
+        readfile($efile,'$node','$field','','local'):$qsize
+        if $qsize>0.5 then
+          $continue = 'y'
+          $j=0
+          repeat
+            $j=$j+1
+            sqdir=$name  "temporarily set sqdir"
+            $st='' $data=''
+            xmgetatts($node[$j],'status','data'):$st,$data
+
+"only check for data if status is Completed"
+            if ($st='Completed') then
+              $matchps = 'y'
+              if ($findps <> '') then
+                $foundps = 0
+                strstr($data,$findps):$foundps
+                if ($foundps > 0.5) then
+                  $matchps = 'y'
+                else
+                  $matchps = 'n'
+                endif
+              endif
+"matchps search not quite what's needed? "
+              if ($matchps = 'y') then
+                substr($data,1,1):$s
+                if $s<>'/' then
+                  $data=$name+'/'+$data
+                endif
+                $data=$data+'.fid'
+                exists($data,'directory'):$e
+                if ($e > 0.5) then
+
+"display all fid files found"
+"                 write('line3','data = %s',$data)"
+"write all matching fid files to datalist"
+                  write('file',$datalist,'%s',$data)
+
+                  if ($sortps = 'first') then
+                    $continue = 'n'
+                  endif
+
+                endif
+              endif
+            endif
+          until ($j>=$qsize or $continue='n')
+        endif
+      endif  " end $readstudy = 'y' "
+
+    endif
+  endif
+
+until ($i >= $ssize)
+
+"restore value of sqdir"
+sqdir=$sqdir
+

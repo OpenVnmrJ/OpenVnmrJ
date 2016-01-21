@@ -1,0 +1,79 @@
+"macro wet_module"
+"wet_module - This is a setup macro for wet module"
+
+$module='wet'
+
+/*
+  $module='' $s2='' $ret=0
+  strstr($0,'_module'):$ret,$module,$s2
+*/
+
+"*******************************************************"
+IF ($1 = 'setup') THEN
+
+  if ($# < 2) then $2='' endif
+  if ($# < 3) then $3='' endif
+  module('genericadd',$module,$2,$3)
+
+  "The previous line is a loop-back call to module macro"
+  "  - since the module macro called this macro "
+  "   This is deliberate to allow for module specific "
+  "   customized options in the lines below"
+  "****Add here any module specific setup options***"
+ 
+"*******************************************************"
+ELSEIF ($1 = 'acquisition') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific acquisition options ***"
+     format(pslabel,'lower'):$pslabel
+     strstr($pslabel,'presat'):$is
+     strstr($pslabel,'wet'):$is2
+     if (($is) or ($is2)) and (apptype='lstd1D') then
+        "Setup presat parameters ONLY if pslabel='PRESAT' or 'wet1D'"
+	if (tn='H1') and (procdim<1) then off('gain') endif
+        parfidss ssfilter=50 ssntaps=20
+        ssorder='n' ssfilter='n'
+        slpname=''
+        wetfrq=0 off('wetfrq')
+        wetfrqw=100 wetfrqs='seduce'
+	off('wetpeaks')
+        fixgrd(25):gzlvlw
+        if (wet='y') then
+	    wstart='wet1Dproc(\'wstart\')'
+	    doscout=0
+        endif
+	mkpar('frequency','tofh2o',tof)
+	tofh2o=tof
+	getparam('tofh2o',tn):tofh2o
+	if pwwet=0 then pwwet=1000 endif
+	if pwwet1=0 then pwwet1=1000 endif
+	if pwwet2=0 then pwwet2=1000 endif
+	if pwwet3=0 then pwwet3=1000 endif
+	if pwwet4=0 then pwwet4=1000 endif
+	wet1Dproc('setwetcf')
+	wet1Dproc('makecompshp')
+      endif
+      if dn<>'C13' then c13wet='n' endif
+      exists('nullflg','parameter'):$nullflgex
+      if ($nullflgex) and (wet='y') then
+	 nullflg='n'
+      endif
+
+"*******************************************************"
+ELSEIF ($1 = 'process') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific process options ***"
+
+"*******************************************************"
+ELSEIF ($1 = 'display') THEN
+
+   module('isthere',$module):$argex
+   if ($argex=0) then return endif
+  "****Add here any module specific display options ***"
+
+"*******************************************************"
+ENDIF

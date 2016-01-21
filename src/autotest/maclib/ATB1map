@@ -1,0 +1,60 @@
+"macro ATB1map"
+"ATB1map" "B1 map "
+
+if (at_cycletest='yy') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')
+   text('B1 map')
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then
+      at_sysgcoil=sysgcoil
+      gcoil='' sysgcoil=''
+   endif   
+   at_currenttest='B1_map'
+   par_2d seqfil='ATB1profile'
+   sw=100000 sw1=4e6 ni=1000
+   create('scalesw','real')
+   scalesw=3.5536e-5  "empirical setting for 16mm coil height"
+   scalesw=scalesw*(sfrq/600)*(16/at_coilsize)
+   d1=at_T1/2
+   vchannelmap='0','z'
+   tpwr=tpwr-6
+   pw=0
+   at=.00256 fn=2048 fn1=4096
+   ss=4 gzlvl1=10/at_gzcal    "10G/cm gradient"
+   sb=at/2 sbs='n' lb='n'
+   crl1 rfl1=sw1/2 rfp1=0
+   av right axis='hh'
+   wexp='ATB1map(`PART1`)'
+   wnt=''
+   crl rfl=sw/2 rfp=0 
+   wp=sw
+   sp1=-40000 wp1=80000
+   ATcycle
+   au
+   write('line3','Determining B1 map')
+   dps
+elseif ($1='PART1') then
+   wft2d
+   nm2d th=th-4
+   left dpcon(30,1.1)
+   write('graphics',70,wc2max-2,'Vertical Axis in cm    Horizontal Axis: B1 Field Strength')
+   s1 right vs2d=vs2d/100 s2 ds2dn
+   if (at_plotauto='y') then
+    if (at_printparams='y') then
+     dn2='' dn='' pap ATpltext2('B1_map')
+     pps(120,0,wcmax-120,90)
+     ATpage
+   endif 
+   write('plotter',70,wc2max-2,'Vertical Axis in cm    Horizontal Axis: B1 Field Strength')
+   r1 pcon(30,1.1) r2 pl2d ATpage
+   endif
+   ATsvf
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+   ATnext
+endif
+
+
+

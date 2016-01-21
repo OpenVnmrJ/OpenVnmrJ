@@ -1,0 +1,337 @@
+"macro mref"
+" mref - move referencing between experiments "
+"        sets referencing in an experiment based on referencing "
+"  	 in a stored data set or in a different experiment      "
+"        also works across different nuclei and different lock  "
+"        frequencies or different spectrometers                 "
+" Revision history: "
+"   2001-11-23: r.kyburz "
+"   2002-04-18: r.kyburz, improved error handling, illegal tn values"
+
+
+" +-------------------+ "
+" | check argument(s) | "
+" +-------------------+ "
+if ($#<1)or($#>2) then
+  write('error','usage: %s(n) or %s(n,m)',$0,$0)
+  if not($##) then
+    return
+  else
+    return('')
+  endif
+endif
+$t='' $s='' $curexp='' $ext=''
+$lit='' $refcmpd=''
+jexp:$curexp
+if $#<2 then
+  if typeof('$1') then
+    $target=$curexp
+    $source=-1
+    $s='-1'
+    length($1):$len
+    if $len>4 then
+      substr($1,$len-3,4):$ext
+    else
+      $ext=''
+    endif
+    if $ext<>'.fid' then
+      $fiddir=$1+'.fid'
+    else
+      $fiddir=$1
+    endif
+    $sourcepar=$fiddir+'/procpar'
+  else
+    $target=$1
+    $s=$curexp
+    $fiddir=userdir+'/exp'+$s
+    $sourcepar=$fiddir+'/curpar'
+  endif
+else
+  $source=$1
+  format($source,1,0):$s
+  $fiddir=userdir+'/exp'+$s
+  $sourcepar=$fiddir+'/curpar'
+  $target=$2
+endif
+format($target,1,0):$t
+$targetexp=userdir+'/exp'+$t
+
+" +----------------------------------------------------+ "
+" | check conditions / presence of files & experiments | "
+" +----------------------------------------------------+ "
+$OK=1
+if $s=$t then
+  $OK=0
+  write('error','%s: source and target are identical',$0)
+endif
+exists($sourcepar,'file'):$e
+if not($e) then
+  $OK=0
+  exists($fiddir,'directory'):$e
+  if $s='-1' then
+    if not($e) then
+      write('error','%s: %s not found',$0,$fiddir)
+    else
+      write('error','%s: %s could not be read',$0,$sourcepar)
+    endif
+  else
+    if not($e) then
+      write('error','%s: exp%s not defined',$0,$s)
+    else
+      write('error','%s: %s could not be read',$0,$sourcepar)
+    endif
+  endif
+endif
+if $OK then
+  exists($targetexp,'directory'):$e
+  if not($e) then
+    $OK=0
+    write('error','%s: exp%s not defined',$0,$t)
+  else
+    exists($targetexp+'/curpar','file'):$e
+    if not($e) then
+      $OK=0
+      write('error','%s: %s could not be read',$0,$targetexp+'/curpar')
+    endif
+  endif
+endif
+if not($OK) then
+  if not($##) then
+    return
+  else
+    return('')
+  endif
+endif
+
+" +----------------------------------------------+ "
+" | save current experiment (parameters) on disk | "
+" +----------------------------------------------+ "
+fsave(curexp+'/curpar','current')
+
+" +--------------------------------------+ "
+" | if necessary, read source parameters | "
+" +--------------------------------------+ "
+if $curexp<>$s then
+  fread($sourcepar,'current','reset')
+endif
+
+" +-----------------------------------------+ "
+" | first check whether tn has usable value | "
+" +-----------------------------------------+ "
+if (tn='')or(tn='none')or(tn='UNKNOWN') then
+  fread(curexp+'/curpar','current','reset')
+  write('error','%s cannot work with tn=\'%s\'',$0,tn)
+  if not($##) then
+    return
+  else
+    return('')
+  endif
+endif
+
+" +---------------------------------------------------+ "
+" | read referencing information from source data set | "
+" +---------------------------------------------------+ "
+exists('lockfreq_','parameter'):$e
+if $e then
+  $srclockfreq=lockfreq_
+else
+  $srclockfreq=lockfreq
+endif
+exists('z0_','parameter'):$e
+if $e then
+  on('z0_'):$z0on
+else
+  on('z0','global'):$z0on
+endif
+if not($z0on) then
+  $lkof=0
+  exists('lkof_','parameter'):$e
+  if $e then
+    $lkof=lkof_ 
+  else
+    exists('lkof','parameter','global'):$e
+    if $e then
+      $lkof=lkof
+    endif
+  endif
+  $srclockfreq = $srclockfreq + $lkof/1e6
+else
+  exists('h1freq_','parameter'):$e
+  if $e then
+    $h1freq = h1freq_
+  else
+    $h1freq = h1freq
+  endif
+  " section for UNITY / VXR-S systems "
+  if ($srclockfreq < 1.5) or (($srclockfreq > 150) and ($h1freq = 600)) then
+    if $h1freq=200 then if ($srclockfreq < 1) then $srclockfreq = 1.21 endif
+                            $srclockfreq = $srclockfreq + 29.5    " 1.210 -> 30.710 "
+    elseif $h1freq=300 then $srclockfreq = 47.25 - $srclockfreq   " 1.206 -> 46.044 "
+    elseif $h1freq=400 then $srclockfreq = $srclockfreq + 60.25   " 1.145 -> 61.395 "
+    elseif $h1freq=500 then $srclockfreq = $srclockfreq + 75.25   " 1.479 -> 76.729 "
+    elseif $h1freq=600 then $srclockfreq = $srclockfreq - 61.75 " 153.845 -> 92.095 "
+    endif
+  endif
+endif
+$srcnuc = tn
+exists('reffrq','parameter'):$e
+if $e then
+  $srcreffrq = reffrq
+else
+  $srcreffrq = sfrq - (sw/2 - rfl + rfp)/1e6
+endif
+
+" +-------------------------------------------+ "
+" | read in parameters from target experiment | "
+" +-------------------------------------------+ "
+fread($targetexp+'/curpar','current','reset')
+
+" +--------------------------------------------------+ "
+" | check whether reference nucleus has usable value | "
+" +--------------------------------------------------+ "
+if (tn='')or(tn='none')or(tn='UNKNOWN') then
+  fread(curexp+'/curpar','current','reset')
+  write('error','%s cannot work with tn=\'%s\'',$0,tn)
+  if not($##) then
+    return
+  else
+    return('')
+  endif
+endif
+
+" +---------------------------------------+ "
+" | read information from target data set | "
+" +---------------------------------------+ "
+exists('lockfreq_','parameter'):$e
+if $e then
+  $tgtlockfreq=lockfreq_
+else
+  $tgtlockfreq=lockfreq
+endif
+exists('z0_','parameter'):$e
+if $e then
+  on('z0_'):$z0on
+else
+  on('z0','global'):$z0on
+endif
+if not($z0on) then
+  $lkof=0
+  exists('lkof_','parameter'):$e
+  if $e then
+    $lkof=lkof_ 
+  else
+    exists('lkof','parameter','global'):$e
+    if $e then
+      $lkof=lkof
+    endif
+  endif
+  $tgtlockfreq = $tgtlockfreq + $lkof/1e6
+else
+  exists('h1freq_','parameter'):$e
+  if $e then
+    $h1freq = h1freq_
+  else
+    $h1freq = h1freq
+  endif
+  " section for UNITY / VXR-S systems "
+  if ($tgtlockfreq < 1.5) or (($tgtlockfreq > 150) and ($h1freq = 600)) then
+    if $h1freq=200 then if ($tgtlockfreq < 1) then $tgtlockfreq = 1.21 endif
+                            $tgtlockfreq = $tgtlockfreq + 29.5    " 1.210 -> 30.710 "
+    elseif $h1freq=300 then $tgtlockfreq = 47.25 - $tgtlockfreq   " 1.206 -> 46.044 "
+    elseif $h1freq=400 then $tgtlockfreq = $tgtlockfreq + 60.25   " 1.145 -> 61.395 "
+    elseif $h1freq=500 then $tgtlockfreq = $tgtlockfreq + 75.25   " 1.479 -> 76.729 "
+    elseif $h1freq=600 then $tgtlockfreq = $tgtlockfreq - 61.75 " 153.845 -> 92.095 "
+    endif
+  endif
+endif
+exists('reffrq','parameter'):$e
+if not($e) then
+  create('reffrq','real')
+endif
+exists('refpos','parameter'):$e
+if not($e) then
+  create('refpos','frequency')
+endif
+
+" +-------------------------+ "
+" | CALCULATE NEW REFERENCE | "
+" +-------------------------+ "
+$OK = 1
+$tgtnuc=tn
+if $srcnuc=$tgtnuc then
+  reffrq = $srcreffrq/$srclockfreq*$tgtlockfreq
+  refpos = 0
+  rfp = 0
+  rfl = sw/2 - (sfrq - reffrq)*1e6
+  exists('lsfrq','parameter'):$e
+  if $e then
+    on('lsfrq'):$shifted
+    if $shifted then rfl = rfl + lsfrq endif
+  endif
+else
+
+  " +----------------------------------------------------+ "
+  " | extract source and target Xi values from nuctabref | "
+  " +----------------------------------------------------+ "
+  $srcfreq=0 $freq2=0 $found=0 $found1=0
+  getXi($srcnuc):$found,$srcfreq
+  getXi($tgtnuc):$found1,$freq2,$refcmpd,$lit
+  if not($found) then
+    write('error','%s: \'%s\' not defined.',$0,$srcnuc)
+    $OK = 0
+  endif
+  if not($found1) then
+    write('error','%s: \'%s\' not defined.',$0,$tgtnuc)
+    $OK = 0
+  endif
+
+  if $OK then
+    reffrq = $srcreffrq/$srcfreq*$freq2
+    reffrq = reffrq/$srclockfreq*$tgtlockfreq
+    refpos = 0
+    rfl = sw/2 - (sfrq - reffrq)*1e6
+    rfp = 0
+    exists('lsfrq','parameter'):$e
+    if ($e > 0.5) then
+      on('lsfrq'):$shifted
+      if $shifted then rfl = rfl + lsfrq endif
+    endif
+  endif
+endif
+
+" +----------------------------------------------------------------------+ "
+" | if necessary, save target data and restore current experiment params | "
+" +----------------------------------------------------------------------+ "
+if $curexp<>$t then
+  fsave($targetexp+'/curpar','current')
+  fread(curexp+'/curpar','current','reset')
+endif
+
+" +--------------------------------------------+ "
+" | report completion of referencing operation | "
+" +--------------------------------------------+ "
+if not($OK) then
+  if not($##) then
+    return
+  else
+    return('')
+  endif
+endif
+$str='Spectrum'
+if $curexp<>$t then
+  $str=$str+' in exp'+$t
+endif
+$str=$str+' referenced based on'
+if $srcnuc<>$tgtnuc then
+  $str=$str+' '+$srcnuc
+endif
+if $s='-1' then
+  $str=$str+' reference from '+$fiddir
+else
+  $str=$str+' reference in exp'+$s
+endif
+if not($##) then
+  write('line3','%s',$str)
+else
+  return($str)
+endif

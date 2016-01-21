@@ -1,0 +1,63 @@
+"macro reset_c7inadwpmlg2d"
+//Set the C7 pulses from the Spin Rate
+
+if (srate>500) then 
+   $pwXc7 = 1.0e6/(7.0*srate)
+   pwXc7 = 0.1*trunc($pwXc7/0.1 + 0.5)
+   srate = 1.0e6/(7.0*pwXc7)
+   aXc7 = aX90*(4.0*pwX90)/pwXc7
+   if (aXc7 = 4095) then 
+      write('error','reset_c7 Error: aXc7 is >= to 4095')
+   endif
+endif
+
+// Set pmlgX
+
+aXpmlg = aX90
+$pwXpmlg = sqrt(2.0/3.0)*4.0*pwX90
+pwXpmlg = 0.1*trunc($pwXpmlg/0.1 + 0.5)
+if (nXpmlg < 1.0) then nXpmlg = 1 endif
+if ((qXpmlg > -1.0) and (qXpmlg < 1.0)) then qXpmlg = 1 endif
+
+// Reset the PMLG amplitude to match the rounded 2pi pulse.
+
+$aXpmlg = ($pwXpmlg/pwXpmlg)*aXpmlg
+aXpmlg = trunc($aXpmlg + 0.5)
+
+// Set wpmlgX
+
+aXwpmlg = aX90
+$pwXwpmlg = sqrt(2.0/3.0)*4.0*pwX90
+if ((qXwpmlg > -1.0) and (qXwpmlg < 1.0)) then qXwpmlg = 1 endif
+pwXwpmlg = 0.0125*qXwpmlg*trunc($pwXwpmlg/(qXwpmlg*0.0125) + 0.5)
+
+// Reset the wpmlgX amplitude to match the rounded 2pi pulse.
+
+$aXwpmlg = ($pwXwpmlg/pwXwpmlg)*aXwpmlg
+aXwpmlg = trunc($aXwpmlg + 0.5)
+
+// set tau to add a 2-step window or 4us (whichever is less)
+
+tauXwpmlg = 0.0125*trunc(2.0*pwXwpmlg*(qXwpmlg+1)/(qXwpmlg*0.0125) + 0.5)
+if (tauXwpmlg < 2.0*pwXwpmlg + 4.0) then tauXwpmlg = 2.0*pwXwpmlg+4.0 endif
+sw = 1/(tauXwpmlg*1e-6)
+if (npaXwpmlg < 10) then npaXwpmlg = 10 endif
+
+// Synchronize the F1 dwell with the PMLG Cycle
+
+if (pwXpmlg > 0.0) then 
+   sw1 = 1.0/(2.0*pwXpmlg*1e-6)
+endif
+
+// Reset the prep pulses
+
+aXprep1 = aX90
+pw1Xprep1 = pwX90
+pw2Xprep1 = pwX90*54.7/90.0
+phXprep1 = 0.0
+
+// Reset the tilt pulse 
+
+pwXtilt = pwX90*54.7/90.0
+
+

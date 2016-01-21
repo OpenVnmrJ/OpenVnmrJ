@@ -1,0 +1,76 @@
+"macro filter"
+" Ancestry: filter      7.1  7/1/91     Spectroscopy Imaging Systems"
+"*************************************************************************"
+"*     filter: set gf/gfs and gf1/gfs1 parameters to give a gaussian     *"
+"*             low pass filter for wft2d command. Arguement given as     *"
+"*             dB reduction at edge of window.                           *"
+"*             Now also sets gf2/gfs2      11/2009 M.R.Kritzer           *"
+"*************************************************************************"
+
+"[0] Constants"
+ln(10.0):$ln10
+$factor=0.1*$ln10
+$gfmax=1000.0
+$gfmin=0
+$gfstep=0.00001
+$gfsmax=1000.0
+$gfsmin=-1000.0
+$gfsstep=0.00001
+
+
+"[1] Arguement Trap"
+if $# < 0.5
+then
+input('Signal reduction at window edge (dB) :> '):$reduction
+endif
+
+if ($# > 0.5) and ($# < 1.5)
+then
+$reduction=$1
+endif
+
+if ($# > 1.5)
+then
+write('error','%s','filter: Use filter(<reduction (dB)>)')
+abort
+endif
+
+
+"[2] Set parameter limits "
+setlimit('gf',$gfmax,$gfmin,$gfstep,'current')
+setlimit('gfs',$gfsmax,$gfsmin,$gfsstep,'current')
+
+
+"[3] Calculation of filter parameters"
+if $reduction > 0
+then
+$reduction=$reduction*$factor
+else
+$reduction=(0.0-$reduction)*$factor
+endif
+
+if ($reduction/$factor) < 0.01
+then
+   gfs='n'
+   gf='n'
+   gf1='n'
+   gfs1='n'
+   gf2='n'
+   gfs2='n'	
+else
+   $root=sqrt($reduction)
+   if (sw2 < 0.01) then
+    sw2=1.0
+   endif
+   gfs=0.5*at
+   gfs1=0.5*(nv/sw1)
+   gfs2=0.5*(nv2/sw2)
+   gf=(at-gfs)/$root
+   gf1=((nv/sw1)-gfs1)/$root
+   gf2=((nv2/sw2)-gfs2)/$root
+endif
+"****************************THE END**************************************"
+
+
+
+

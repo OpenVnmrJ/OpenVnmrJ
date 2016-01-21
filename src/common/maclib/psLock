@@ -1,0 +1,207 @@
+"macro psLock"
+" in a deuterium spectrum.  Arguments: 'init': record the initial "
+" spectrum; 'exp': process spectrum, set z0 and restore initial "
+" parameters. "
+
+if ($# = 0) then
+ write('error','Do not call %s directly. Use prescan.',$0)
+ abort
+else
+ psCmd('get','stage'):$stage
+ if ($1 = 'exp') and ($stage <> '') then
+   $action = $stage       // exp processing may have multiple stages
+ else
+   $action = $1
+ endif
+endif
+
+$setup='no'
+if $action = 'setup' then $setup='setup' $action='init' endif
+
+ IF ($action = 'init') then
+
+    if (alock='n') or (alock='u') or (alock='y') then return('done') endif
+    if (tn='lk') then alock='n' return('done') endif
+    $hzdac=0
+    getparam('hzdac','lk'):$hzdac
+    if ($hzdac=0) then
+      write('error','Hz to DAC calibration does not exist. Abort findz0')
+      return('quit')
+    endif
+
+   savesampglobal('cp')
+   exists('s2pul','parlib'):$sparex,$prunepar
+   $prunepar=$prunepar+'/procpar'
+   wdone=''
+
+       prune($prunepar)
+	exists('proc1','parameter'):$ex
+	if ($ex) then proc1='ft' endif
+       fixpar
+   getsampglobal('cp')
+
+      seqfil='findz0'
+      tn='lk' sw=100*sfrq np=16k
+
+    dn='H1' gain=10 dm='nnn'
+    homo='n'
+    nt=1 ss=0 at=2 wshim='n' d1=2
+    if (Console = 'g2000') then alock ='n' gain=0
+    elseif (Console = 'mercury') then
+      gain=0
+      exists('/vnmr/acqbin/Expproc','file'):$expprocex
+      if ($expprocex) then alock = 'u' else alock = 'n' endif
+    else
+      alock='u' 
+    endif
+    getparam('solv','lk'):solvent
+    solvent=solvent
+    //getparam('z0','lk'):z0
+    //getparam('tof','lk'):tof
+    tof=0
+    getparam('tpwr','lk'):tpwr
+    getparam('pw90','lk'):pw
+    if (rof2 < 10) then rof2=10 endif
+    //sethw('z0',z0):$e
+    wnt=''
+    wbs=''
+    array=''
+    p1=0 sb='n' dmg='ph' fn=2*np lp=0
+
+    if (auto = 'y') then
+          on('pad'):$pad_on
+          if ($pad_on>0.5 and pad[1]>0.5) then
+	    psCmd('set','findz0_padon','padon')
+           pad = pad[1]
+          endif
+       if $#>3 then
+          if $4='d2o' then
+              pad=120  "Wait 120 sec. for the temperature to settle"
+          endif
+       endif
+
+//	  if d1 < 10 then d1=10 endif
+	  psCmd('set','autoname',autoname)
+         if (traymax = 1) then
+           autoname = '_FINDZ0_FILE_%PEAK#:%'
+	  elseif (traymax = 96) or (traymax = 768) then
+           autoname = '_FINDZ0_FILE_%SAMPLE#:%_%RACK:%_%ZONE:%'
+	  else
+           autoname = '_FINDZ0_FILE_%SAMPLE#:%'
+         endif
+    endif
+
+
+    //$sampChange=0
+    //if (traymax=12) or (traymax=97) then
+      //on('loc','global'):$locon
+      //if ($locon > 0.5) and (loc > 0) then
+        //readhw('loc'):$currentSample
+        //if (loc <> $currentSample) then
+          //$sampChange=1
+        //endif
+      //endif
+    //endif
+
+    //PJB remove 15 s pad
+    //if ($sampChange=0) then
+      //if (pad+d1 < 15.5) then pad=15.5-d1 endif
+    //endif
+
+    spin='n' in='n'
+    if ($setup <> 'setup') then
+      banner('Finding z0')
+      psCmd('set','auArgs','wait shimming findz0')
+      return('doau')
+    endif
+    return('done')
+
+ ELSEIF ($action = 'exp') then
+
+   "process H2 spectrum, calculate new z0"
+
+   f expfilt proc='ft'
+   lsfrq='n'
+   lb=1/at
+   wft('nods') lp = 0  av
+
+   rfl = sw/2  rfp = 0  
+   dsn(-rfl+110,-rfl+10):$sn
+   if ($sn < 25) then
+     write('line3','S/N too low; z0 not changed')
+     dg
+     psCmd('set','errormessage','Findz0 failed - low S/N')
+   else
+    "makes result independent of referencing in the parameter set"
+     peak:$hgt,cr
+     ph
+     getparam('hzdac','lk'):$hzdac
+     $diff=(sfrq-lockfreq)*1e6
+     $deltaz0=($diff+cr)/$hzdac
+     $newz0 = z0 - $deltaz0 
+     "hz_per_dac must be calibrated and set in the findz0 parameters "
+     z0=$newz0
+     sethw('z0',$newz0):$e
+     write('line3','z0 set to %d', $newz0)
+     dg
+	"Sleep for 15 sec if a real acquisition "
+	"   immediately follows sethw.  Else there "
+	"   will not be enough time to settle z0"
+     systemtime:$t2
+     psCmd('set','acqpause',$t2+16)
+   endif
+   exec($0+`('done')`)
+   return('done')
+
+ELSEIF ($action = 'done') THEN
+  clear(2)
+  $lkfile = file
+  psCmd('rtp','current')
+  if (auto = 'y') then
+    $file= $lkfile+'.fid'
+    exists($file,'file'):$e
+    if $e<0.5 then
+      $file=autodir+'/'+ $lkfile+'.fid'
+      exists($file,'file'):$e
+      if $e<0.5 then
+        $file=curexp+'/'+ $lkfile+'.fid'
+        exists($file,'file'):$e
+        if $e<0.5 then
+          write('error','file not found, cannot remove: %s',$lkfile)
+        endif
+      endif
+    endif
+    if $e>0.5 then
+      shell('rm -rf '+$file):$dum
+    endif
+    $padon=''
+    psCmd('get','findz0_padon'):$padon
+    if $padon<>'' then
+      pad[1]=0.5
+      EXPtime:ACQtime
+      psCmd('record','pad[1]=0.5')
+      write('line3','ACQtime=%g',ACQtime):$msg
+      psCmd('record',$msg)
+    endif
+  endif
+
+  getlkpars 
+  if (auto='y') then
+    alock='y'
+    sethw('lockpower',lockpower,'lockgain',lockgain,'lockphase',lockphase):$e
+    psCmd('record','alock=y')
+  else
+    sethw('lock','on','lockpower',lockpower,'lockgain',lockgain,'lockphase',lockphase):$e
+    alock='n'
+    psCmd('record','alock=n')
+  endif
+  dsp=dsp
+  psCmd('get','errormessage'):$errval
+  if ($errval<>'') and (auto='y') then
+    $loc='' $locdir='' $when=''
+    getlocid:$loc,$locdir,$when
+    $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
+    write('file',$errlog,'%s',$errval)
+  endif
+
+ENDIF

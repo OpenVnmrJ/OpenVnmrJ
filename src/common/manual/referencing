@@ -1,0 +1,140 @@
+
+Setting Reference and Transmitter Frequencies
+
+								He Liu 08/02/2010 
+
+********** 1.Summary *****************
+
+The goal of re-implementing VJ referencing is to make it transparent, reliable, and support solids applications better. Here is a summary.
+ 
+1) The calculation of standard reference frequencies (based on lock frequency, solvent PPM and IUPAC recommended frequency ratios) remains the same as the old code.
+
+2) By setting uselockref='n', the transmitter and reference frequencies will be calculated from a "base reference frequency" pre-calculated based on a known peak, instead of lockfreq. 
+
+3) User referencing is done through refpos parameter, i.e., reffrq=reffrq0+refpos*1e-6.
+setrefpos macro without any argument simply sets reffrq=reffrq0. (note, reffrq0 is not a parameter. It is calculated when needed).
+
+4) Proton reference frequency H1reffrq is used as the "base reference frequency". H1reffrq is an acquisition parameter calculated (based on lockfreq) when transmitter frequency sfrq is calculated. It will be used to calculate reffrq0 for acquired data. 
+
+5) sreffrq,dreffrq,dreffrq2,… are calculated whenever sfrq,dfrq,dfrq2,… are calculated (by setfrq). They are reference frequencies for rf channels. Whereas reffrq,reffrq1,reffrq2,… are reference frequencies for spectrum dimensions, and are calculated by setfrqCmd(‘setref’) or setfrqCmd(‘setref_go’), or setref, setref1, setref2. For some experiments, reffrq,reffrq1,reffrq2 may not correspond to sreffrq,dreffrq,dreffrq2. The parameter axis (or refsource,refsource1,refsource2) are used to map reffrq,reffrq1,reffrq2 to sreffrq,dreffrq,dreffrq2. 
+
+6) reffrq, rfl, rfp, reffrq1,rfl1,rfp1,… are automatically calculated in go/ga/au macro for non-imaging and when refpos parameter is on (active).. 
+
+7) To support backward compatibility (i.e., minimize the change of existing macros), the syntax and functionalities of referencing macros (setref, rl, etc…) are not changed, but the implementation is changed.
+
+8) Reference standard is specified by global parameter refstd. The parameter bioref will be If refstd does not exist, or refstd='' or refstd='default', then nuctabref table will be used. If refstd='XXX', then nuctabrefXXX table will be used. 
+Reference standard can be set for all nuclei or for individual nucleus. 
+For example,
+refstd='Bio' will use nuctabrefBio for all nuclei.
+refstd='N15:Bio' will use nuctabrefBio for 15N only.
+refstd='N15:Bio','C13:Bio' will use nuctabrefBio for 15N and 13C.
+refstd='Bio','C13:default' will use nuctabrefBio for all nuclei except 13C.
+9) A "Select Reference Standard..." popup is available from Tools menu for the user to select reference standard for all nuclei or individual nucleus.
+
+
+************** 2.Calculation of transmitter Frequencies **************
+
+Transmitter frequencies sfrq, dfrq, … are determined by the “base frequency” of a nucleus, plus an offset, i.e., sfrq=”base frequency of tn” + tof*10e-6. 
+Base frequency is used internally by Varian. Users adjust the offset to obtain the desired transmitter frequencies. 
+
+The command setfrq is used to calculate transmitter frequencies. If the nucleus name is given as an argument and the return value is requested, e.g. setfrq(tn):$frq, then base frequency is returned, otherwise sfrq, dfrq,… are calculated for given offsets tof, dof,…
+
+Note, “base frequency” is not reference frequency or “base reference frequency”. So tof cannot be set directly using chemical shift scale of the spectrum (i.e., tof=5p won’t work). But users can use movetof or  movedof, i.e., movetof(5) or movedof(40) to set tof or dof, where 5 and 40 are PPM values of the spectrum. 
+
+The details for how base frequency is calculated are given here (though users do not need to concern about this):
+
+baseFreq=freq_x*(1.0+lockFactor)*(1.0-solventFactor), where
+lockFactor=(lockfreq-freq_lk)/freq_lk,
+solventFactor=(solventPPM-5.0)*1e-6,
+freq_x and freq_lk are frequency ratios (normalized so that H1 is 1000) in /vnmr/nuctables/nuctable file. lockfreq is a system global parameter, and
+solventPPM is the solvent chemical shift in PPM in /vnmr/solvents file.
+
+If lock is not used, then baseFreq=freq_x * H2reffrq*(1.0+5.0e-6)/freq_lk, where
+H2reffrq=H1reffrq*Xi_lk/Xi_H1, and H1reffrq is determined by a known peak.
+
+Note, /vnmr/nuctables/nuctable is differ from IUPAC recommended /vnmr/nuctables/nuctabref table, which is used to calculate reference frequencies. For backward compatibility, we continue to use /vnmr/nuctables/nuctable to calculate transmitter base frequencies.
+
+************* 3.Calculation of reference Frequencies ************
+
+Reference frequency reffrq, reffr1, … are calculated as the following:
+
+reffrq=H1reffrq*Xi_x/Xi_H1 + refpos*1e-6, where
+H1reffrq=lockfreq/ (1+solventPPM*1e-6) * Xi_H1/Xi_lk,
+Xi_x, Xi_H1, and Xi_H2 are frequency ratios (normalized so Xi_H1 is 100) found in /vnmr/nuctables/nuctabref+redstd file, and refpos is a user specified correction (using rl macro) to the standard reference frequency.
+
+/vnmr/nuctables/nuctabref table contains IUPAC recommended frequency ratios. Alternative table nuctabrefXXX can be specified by a global parameter refstd. If refstd=’Bio’, then nuctabrefBio will be used. If refstd=’’ or ‘default’, then nuctabref will be used.
+
+In generally, if reffrq for nucleus x is known, then reffrq for nucleus y can be determined by
+reffrq_y=reffrq_x * Xi_y/Xi_x, where Xi depends on refstd.
+
+If lock is not used (indicated by global parameter uselockref=’n’), then H1reffrq will be calculated from a known peak (move cursor on the peak, then type setBaseref and the known PPM or frequency). H1reffrq=reffrq*Xi_H1/Xi_x.
+
+setref macro is used to calculate reference frequencies based on H1reffrq (or lockfreq_ if H1reffrq is not available). This macro also recalculates rfl and rfp parameters based on reffrq (so spectrum will be displayed with proper referencing). Note, rfl anf rfp are used to calculate dscale (spectrum display scale), cr (cursor position) and sp (spectrum start position).
+
+But regardless how reffrq is calculated, users can manipulate dscale by directly setting rfl and rfp parameters.
+ 
+**************** 4.Related Parameters ****************************
+
+uselockref (global) – if uselockref=’n’, then lockfreq will not be used to calculate sfrq or reffrq.
+refstd (global) – if refstd=’XXX’, then nuctabrefXXX will be used.
+sfrq,dfrq… (acquisition) - transmitter frequencies.
+tof, dof… (acquisition) - transmitter offset.
+H1reffrq (acquisition) – base reference frequency.
+sreffrq, dreffrq… (acquisition) - reference frequencies for observe and decoupler channels.
+reffrq, reffrq1,… (display) - reference frequencies for direct and indirect dimensions.
+refpos, refpos1… (display) - user correction to the original reference frequency.
+rfl, rfl1… (display) – reference peak position.
+rfp, rfp1… (display) – reference peak frequency.
+
+*********************** 5.Commands and Macros ****************
+
+setfrqCmd is the underline macro with all functions used by needed for referencing. Other macros simply call setfrqCmd with appropriate options and arguments.
+
+setfrq<(channel/nucleus)><:$sfrq,$dfrq,..> - calculate sfrq, H1reffrq, sreffrq
+
+When called without an argument, or with channel number as the argument, and is called without a return value, then sfrq, dfrq,… and sreffrq, dreffrq,… parameters will be set. 
+
+When called with nucleus name, or/and with return value(s), baseFreq (without tof) will be returned, but sfrq, dfrq, or sreffrq, sreffrq parameters will not be set.
+
+setref<(axis/nucleus)><:$rfl,$rfp,$reffrq,$refpos> - calculate reffrq, rfl, rfp
+
+If setref is called without an argument, or with axis as the argument (0, 1, 2 for direct, indirect1, indirect2), then pre-go determined H1reffrq (or lockfreq_) is used calculate reffrq for acquired data.
+ 
+If called with nucleus name, reference will be calculated using current lockfreq and solvent for next “go”. 
+
+If return values are requested, then reffrq parameter will not be changed. 
+
+setref also calculates rfl and rfp, rfl-rfp=(reffrq-sfrq)*1e6+0.5*sw 
+
+setref1, setref2 are similar to setref.
+
+rl<(freq)> rl1<(freq)>,… - set user referencing (refpos) based on a known peak.
+frequency can be entered in PPM with ‘p’ or ‘d’.
+
+setrefpos<(freq)>, setrefpos1<(freq)>, … - directly set refpos to a given value.
+
+reference will be recalculated. 
+frequency can be entered in PPM with ‘p’ or ‘d’.
+
+movetof<(centerPPM)>
+movetof without argument sets tof, sfrq to cr position.
+movetof(centerPPM) sets tof, sfrq to given centerPPM.
+
+movedof<(centerPPM)> sets dof, dfrq.
+movedof2<(centerPPM)> sets dof2, dfrq2.
+
+movesw<(lowPPM,upPPM)>
+
+movesw without argument sets tof and sfrq to the center defined by cr and delta.
+movesw(lowPPM, upPPM) sets tof and sfrq to the center defined by lowPPM and upPPM.
+
+Upon successful setting of transmitter frequency, movesw sets sw to the given width.
+
+movesw1<(lowPPM,upPPM)> sets sw1 and transmitter for first indirect dimension
+movesw2<(lowPPM,upPPM)> sets sw2 and transmitter for second indirect dimension
+
+Note, centerPPM or lowPPM, upPPM are in PPM without ‘p’ or ‘d’.
+
+setBaseref – calculate H1reffrq based on a known peak.
+
+

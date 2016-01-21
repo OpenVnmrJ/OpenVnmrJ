@@ -1,0 +1,50 @@
+"macro AT53"
+"AT53" "Gaussian SLP Phase Stability (13 Degree) Test  "
+ 
+if ($#=0) then
+   ATrtp('standard')
+   text('Gaussian SLP Phase Stability Test on Channel 1')
+   at_currenttest='gauss_13deg_SLP_ch1'
+   tpwr=tpwr-20 pw=24*pw90
+   exists(userdir+'/shapelib','file'):$shapelib
+   if $shapelib=0 then mkdir(userdir+'/shapelib') endif
+   exists(userdir+'/shapelib/gauss.RF','file'):$e
+   if ($e=0) then cp('/vnmr/shapelib/gauss.RF',userdir+'/shapelib/gauss.RF') endif
+   substr(rfwg,1,1):$waveform
+   if ($waveform='n') then
+    tpwr=tpwr-9 pw=2*1.4*pw   "makes sure pw is long enough to do by psg"
+   endif
+   ATconvolute('gauss','gaussSLP',pw,tof+1000)
+   seqfil='sh2pul' pwpat='gaussSLP'  
+   p1pat='gaussSLP' p1=pw
+   tof=tof+37 d2=.001
+   array('nt',20,1,0)
+   wnt='AT53(`WNT`)'
+   wexp='AT53(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining Gaussian SLP Phase Stability ')
+   dps
+elseif ($1='WNT') then
+   ATwft
+   select(1)
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   vsadj dssh dtext
+elseif ($1='PART1') then
+
+   wft
+   av
+   f peak:$ht,$frq
+   wp=2p sp=$frq-1p
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   $phstab=trunc(1000*$stddev/7.1)/1000
+   ATrecord('PSTAB90G_SLPch1','Gaussian SLP Phase Stability ','stab_(deg)',$phstab,'height  ',$avht,'std_dev.  ',$stddev)
+   write('file',autotestdir+'/REPORT','Gaussian SLP Stability             : %2.3f Degree',$phstab)
+
+ATnext
+endif

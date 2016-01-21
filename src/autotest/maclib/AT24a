@@ -1,0 +1,92 @@
+"macro AT24a"
+"AT24a" "90 Degree Quadrature Test(channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='ATphtest'
+   text('90-Degree Phase Test for Channel 2')
+   at_currenttest='90quadtest_ch2'
+   dec='y' dpwr=tpwr dof=tof dpwrf=tpwrf dn=tn
+   stpsiz=1 cancel='n' 
+   mphase=0,90,180,270 
+   full
+   array('nt',8,1,0)
+   crl rfl=sw/2 rfp=0
+   vp=90 th=40
+   wnt='ATwft f select(1) aph0 vsadj(50) dssh dtext'
+   wexp='AT24a(`PART1`)'
+   ATcycle
+   au
+   write('line3','Testing 90-Degree Quadrature Phase Shifts (channel 2)')
+   dps
+elseif ($1='PART1') then
+
+   wft crl rfl=sw/2 rfp=0 f
+   ATsvf
+   sp=-1p wp=2p
+   select(1) aph0 vsadj(100)
+   $count=1 $sum=0 $int=0 $av1=0
+   repeat
+    select($count)
+    peak:$int
+    $sum=$int+$sum
+    $count=$count+1
+   until $count=9
+   $av1=trunc(10*$sum/8)/10
+
+   $count=9 $sum=0 $int=0 $av2=0
+   repeat
+    select($count)
+    nll:$lines
+    $i=1 $best=0
+    repeat
+     getll($i):$inti
+     if $inti>$best then $best=$inti endif
+     $i=$i+1
+    until $i>$lines
+    $sum=$best+$sum
+    $count=$count+1
+   until $count=17
+   $av2=trunc(10*$sum/8)/10
+
+   $count=17 $sum=0 $int=0 $av3=0
+   repeat
+    select($count)
+    peak:$int
+    $sum=$int+$sum
+    $count=$count+1
+   until $count=25
+   $av3=trunc(10*$sum/8)/10
+
+   $count=25 $sum=0 $int=0 $av4=0
+   repeat
+    select($count)
+    nll:$lines
+    $i=1 $best=0
+    repeat
+     getll($i):$inti
+     if $inti>$best then $best=$inti endif
+     $i=$i+1
+    until $i>$lines
+    $sum=$best+$sum
+    $count=$count+1
+   until $count=33
+   $av4=trunc(10*$sum/8)/10
+
+   if (at_plotauto='y') then
+    vs=vs/2
+    pl('all') pltext ATpage
+    if (at_printparams='y') then
+      dn2='' pap ATpltext 
+      pps(120,0,wcmax-120,90)
+      ATpage
+    endif
+   endif
+
+  ATrecord('QUADch2','90-degree Quadrature Phase Shift Test (channel 2)','0deg_int',$av1,' 90deg_int',$av2,' 180deg_int',$av3,' 270deg_int',$av4)
+  
+  write('file',autotestdir+'/REPORT','Quad Test (channel 2): 0deg= %2.1f; 90deg= %2.1f; 180deg= %2.1f; 270deg= %2.1f',$av1,$av2,$av3,$av4)
+ ATnext
+endif

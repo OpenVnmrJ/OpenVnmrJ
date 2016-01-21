@@ -1,0 +1,56 @@
+
+*******************************************************************************
+ reff1 - Reference f1 Indirect Dimension from Observe Dimension  (M)
+ reff2 - Reference f2 Indirect Dimension from Observe Dimension  (M)
+*******************************************************************************
+
+      Syntax: reff1<(refsource1)>
+              reff2<(refsource2)>
+
+ Description: These macros use the ratio of the Xi values for the relevant
+	      nuclei (as derived from "refsource1" / "refsource2" or from the
+	      reference source specified in the argument) to determine the
+	      reference frequency in the f1 / f2 indirect dimensions directly
+	      from the reference frequency in the observe dimension, using the
+	      formula
+			reffrq1 = reffrq / Xi[tn] * Xi[nucf1]
+			rfp1=0
+			rfl1 = sw1/2 - (frq[f1] - reffrq1)*1e6
+	      If the referencing in the observe dimension was determined
+	      using "setref", then this method should be identical to using
+	      "setref1" / "setref2" (apart from minor round-off errors).
+	      HOWEVER, if the observe dimension was referenced using an
+	      internal reference standard as proposed by IUPAC, then these
+	      macros permit referencing ALL DIMENSIONS to that single
+	      reference signal, whereas "setref1" / "setref2" would still
+	      produce estimates the same way as "setref". Note that (provided
+	      the sample was referenced empirically), these macros do NOT rely
+	      upon a locked sample. One could probably replace "setref1" /
+	      "setref2" by these macros - however, as these macros do
+	      completely different things, we decided to use new names.
+	      Limitations: "reff1" / "reff2" should also work on data that
+	      have been recalled from an archive, or which have been acquired
+	      on an other system - however, the macros fail on spectra that
+	      have been referenced with VNMR releases older than VNMR 6.1C.
+              If a global (or local) flag "bioref" exists and is set to 'y',
+              bio-NMR referencing (based on "nuctables/nuctabrefBio") is used
+              rather than standard IUPAC / organic chemistry referencing
+              (based on "nuctables/nuctabref").
+
+    Argument: If no argument is specified, the reference source is determined
+	      from "refsource1" (for "reff1") or "refsource2" (for "reff2").
+	      If the relevant parameter is missing, the macros try to determine
+	      the (indirect) reference source from the "axis" parameter. A
+	      reference source can also be specified as argument (one of
+	      'sfrq', 'dfrq', 'dfrq2', 'dfrq3', or 'dfrq4').
+
+    Examples: reff1
+	      reff1('sfrq')
+	      reff2('dfrq3')
+
+     Related: setref -  Set Frequency Referencing for Proton Spectra (M)
+	      setref1 - Set Frequency Referencing for f1 Evolution Dimension (M)
+	      setref2 - Set Frequency Referencing for f2 Evolution Dimension (M)
+	      mref - Set Referencing Based on Spectrum from the Same Sample (M)
+              bioref - Flag for Bio-NMR Referencing (P)
+

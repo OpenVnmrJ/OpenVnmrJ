@@ -1,0 +1,57 @@
+*******************************************************************************
+dll:number,scale	-	Display listed line frequencies and intensities
+nll:number,scale	-	Find line frequencies and intensities
+getll<(n)>:ht,frq	-	Get a line's frequency and intensity
+nl<:ht<,frq>>		-	Put the cursor at the nearest line
+nl2<:ht<,frq>>		-	Put the right cursor (delta) at the nearest line
+fp<(<'phase'>,indexes)>	-	Find peak heights or phases
+dels(index1,...)	-	Delete spectra from T1 or T2 analysis
+*******************************************************************************
+
+  "dll" displays a list of line frequencies and amplitudes that are
+  above a threshold defined by the parameter "th".  The frequency units
+  displayed are determined by the parameter "axis".  dll('pos') lists only
+  positive lines.  dll(noisemult) will suppress noise peaks on broad, noisy
+  peaks.  The default value of noisemult is 3.  A smaller value will result
+  in more peaks, a larger value will result in fewer peaks, and a value of
+  0.0 will result in a line listing containing all peaks above the threshold.
+  Negative values of noisemult default to 3.  The results of dll are stored
+  in the parameters "llfrq" and "llamp".  The frequencies are stored as hertz
+  and are not referenced to "rfl" and "rfp".  The amplitudes are stored as the
+  actual data point value; they are not scaled by "vs".  The number of lines
+  can be returned to the caller if the command is suffixed with a colon and
+  parameter names. A scaling factor for line amplitudes can be returned as
+  a second variable.  This scaling factor accounts for vs and whether the
+  lines are listed in absolute intensity mode or normalized mode.
+
+  "nll" is equivalent to "dll" except that the line list is not displayed
+  or printed.  The results are stored in the parameters "llfrq" and "llamp".
+
+  "getll" finds the height and frequency of nth line.  It assumes a
+  previous "dll". The value of the height and frequency of the specified
+  line can be returned to the caller if the command is suffixed with
+  a colon and parameter names.
+
+  "nl" moves the cursor to the nearest calculated line position.
+  Optional arguments return height and frequency of the line.
+
+  "nl2" moves the right cursor to the nearest calculated line position.
+  It adjusts the delta parameter, not the cr parameter.
+  Optional arguments return height and frequency of the line. To calculate
+  delta, take cr - <returned frequency>.
+
+  "fp", following a line listing (either "dll" or "nll"), will measure
+  either the height (default) or phase (if the 'phase' option is specified)
+  of each peak in an array of spectra.  If optional line indexes are supplied
+  as arguments, only the heights or phases of the corresponding lines will
+  be measured.  "fp" produces a text file 'fp.out' in the current experiment
+  directory, which contains the result of the analysis.
+  If the parameter "npoint" is defined in the current parameter set and
+  this parameter is "on", it determines the range of data points over
+  which a maximum is searched when determining peak heights.  The possible
+  values of "npoint" are 1 to fn/4.  The default is 2.
+
+  "dels(index1,...)" deletes the spectra selected by the indexes from
+  the output file of "fp", 'fp.out', used by the "t1" 
+  or "t2" analysis.  Spectra may be restored by rerunning "fp".
+

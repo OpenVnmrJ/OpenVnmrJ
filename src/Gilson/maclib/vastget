@@ -1,0 +1,75 @@
+"macro vastget"
+if $# >= 0 then
+  length($1):$stringlength
+  
+  
+  if $stringlength >3 then 
+   $i=1
+   $lab='' $onedone=0 $j=1 
+   repeat
+  
+   $ch=''
+   substr($1,$i,1):$ch
+
+   if $ch <> ' ' then $lab=$lab+$ch  else $onedone=1  endif
+   if $onedone then 
+     $request[$j]=$lab
+     $onedone=0 $lab=''
+     $j=$j+1
+   endif
+   $i=$i+1
+   until $i > $stringlength
+   if $lab <> ' ' then $request[$j]=$lab endif
+   $numscans=$j
+ 
+  else
+    $numscans=$#
+    $i=1
+    repeat
+    $request[$i]=${$i}
+    $i=$i+1
+    until $i > $#
+  endif
+else write('line3','You must specify a label') abort endif
+write('graphics',0,0,''):$htchar
+full
+clear(2)
+$vp=vp
+$vpinc=wc2max/$numscans
+vp=vp+($numscans-1)*$vpinc
+$glueorderarraysize=size('glueorderarray')
+$inverseorder=0
+$i=1
+repeat
+  $ch=''
+  substr($request[$i],1,1):$ch
+  substr($request[$i],2,2):$ch2
+  if $ch='H' then $col=1
+  elseif $ch='H' then $col=1
+  elseif $ch='G' then $col=2
+  elseif $ch='F' then $col=3
+  elseif $ch='E' then $col=4
+  elseif $ch='D' then $col=5
+  elseif $ch='C' then $col=6
+  elseif $ch='B' then $col=7
+  elseif $ch='A' then $col=8
+  endif
+  $row=0
+  format($ch2,2,0):$row
+  $loc=($row-1)*8+$col
+  $j=1
+  repeat
+    $match=glueorderarray[$j]=$loc
+    if $match then $inverseorder=$j endif
+    $j=$j+1
+  until (($match) or ($j>$glueorderarraysize))
+  dssn($inverseorder)
+  write('graphics',wcmax-sc-wc,vp-$htchar,$request[$i])
+  vp=vp-$vpinc
+  $i=$i+1
+until $i > $numscans 
+select($inverseorder)
+vp=$vp
+dscale
+
+

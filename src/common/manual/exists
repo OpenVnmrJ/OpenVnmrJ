@@ -1,0 +1,114 @@
+
+*******************************************************************************
+exists(name,'parameter'[,tree]):$x	- does a parameter exist?
+exists(name,'file'<,perm>):$x		- does a file exist?
+exists(name,'ascii'):$x			- is a file an ASCII text file
+exists(name,'directory'):$x		- is a file a directory
+exists(name,'parlib'):$x,$path		- does a parlib entry exist
+exists(name,'psglib'):$x,$path		- does a psglib entry exist
+exists(name,'command'):$x		- does a command or macro exist?
+exists(name,'maclib'):$x		- does a macro exist?
+exists(name,directory<,'errval'>):$x	- does a file or directory exist in
+                                          one of the "applications directories"
+*******************************************************************************
+
+  Allows checking for the existence of a parameter, file, command, parlib entry,
+  or macro from within a macro.  Allow checking if a file is an ASCII text file
+  or is a directory.
+  Returns 1, if file or parameter exists, or the query is true; else 0.
+  If the 'parameter' keyword is used,  an optional variable tree name
+  can be supplied. The variable trees are 'current', 'global', 'processed',
+  'usertree', and 'systemglobal'.  The default tree is 'current'.
+
+  If the 'file' keyword is used, an optional permission test can be supplied.
+  Without the permission test, simple existence of the file is checked.
+  Access permission can be checked by passing the character r for read
+  permission, w for write permission, and x for execute permission.  One, two,
+  or three characters can be passed in a single argument.  For example,
+  exists('/vnmr/conpar','file','rw') checks not only that the file /vnmr/conpar
+  exists, but also that the current user has read and write access to that file.
+
+  The ascii option checks if the named file is an ascii file. The directory
+  option checks if the named file is a directory.
+
+  The parlib name will be searched for. If it is not found,  a .par will
+  be appended and the appended name will be searched for.  The parlib option
+  will also return the absolute path of the parameter set.  The search path
+  for parlib is defined by the VnmrJ administrator interface, using the
+  "applications directories", or appdirs.
+
+  The psglib name will be searched for. If it is not found,  a .c will
+  be appended and the appended name will be searched for.  The psglib option
+  will also return the absolute path of the parameter set.  The search path
+  for psglib is defined by the VnmrJ administrator interface, using the
+  "applications directories", or appdirs.
+
+  Macros may reside in various places, as determined by the "applications
+  directories", or appdirs.  Typical places include the users vnmrsys/maclib
+  directory and /vnmr/maclib.
+  When macros are executed,  the appdirs are searched in order.  Exists
+  will return a 0 if the macro is not found in any of the appdirs.  It
+  will return a 1, 2, or larger integer, depending on if it is found
+  in the first, second, third, etc appdir.
+
+  The command keyword is very similar to the maclib keyword, except that
+  it firsts checks to see if the name represents a built-in Vnmr command.
+  If the name is neither a built-in command nor a macro, exists will return
+  a 0.  If the name represents a built-in command, exists will return a 1.
+  If name is a macro, exists will return either 2, 3, 4, or 5.  The return
+  value identifies in which directory the macro is located.  The number is
+  1 greater than the value returned by the maclib keyword.  That is, if the
+  command exists('macroname','maclib'):r1 sets r1 equal to 1, then the command
+  exists('macroname','command'):r1 will set r1 equal to 2.
+  See the which macro for an example on the use of the command keyword.
+
+  The exists command with the maclib keyword is a specific case of a general
+  mechanism to search for files and directories in the "applications
+  directories", or appdirs.  The first argument to exists is a file name
+  and the second argument is any subdirectory in an appdir.  For example,
+  the second argument could be the following.
+      shapelib -  to search for shapes.
+      manual   -  to search for manuals
+      probes   -  to search for probes
+      shims    -  to search for shims
+  It can be any directory in an appdir.  It need not be a standard directory.
+  For example, it could be bin to search for standalone executable programs.
+  One could execute these standalone executable programs using a construction
+  along the following lines.
+
+  exists($myprog,'bin'):$e,$myprogPath
+  if ($e) then
+    shell($myprogPath):$res
+  else
+    write('line3','%s: Program %s has not been installed',$0,$myprog)
+  endif
+
+  The second argument to exists can be set to '' to search for files
+  in the top-level of the appdirs.  For example,
+     exists('pulsecal','')
+  will search for pulsecal in the top-level of all appdirs.  The
+  directory name can also be multi-level, as in
+     exists(probename,'probes/'+probe)
+  The first argument may also be set to '', in which case exists will
+  check for directories in the appdirs.
+
+  This generic form of exists will return one or two values to the calling
+  macro.  The first return value is an integer indicating in which
+  appdir the file is found. The exists command will return a 0 if the file
+  is not found.  It will return a 1, 2, or larger integer, depending on
+  if it is found in the first, second, third, etc appdir.  An optional
+  third argument can be provided.  This will be the return value if the
+  file is not found. For example,
+
+  exists('nomacro','maclib',-1):$ok
+
+  will set $ok to -1 if the "nomacro" does not exist in any of the appdirs.
+  This can be used by the interface designed so that a button may be either
+  "grayed out" of removed if a macro or some other file does not exist.
+
+  The second optional return value is the absolute path to the found
+  file. If the file does not exist, the second return value will not
+  be set.
+
+
+  

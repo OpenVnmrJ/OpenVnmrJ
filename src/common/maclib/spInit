@@ -1,0 +1,68 @@
+"macro spInit"
+// spInit
+
+
+// These are the adjustable parameters
+if (spParNames='') then
+  spParNames= 'x1 y1 xy xz yz x2y2'
+endif
+
+getlimit('z1'):$max
+if spRange=0 then
+  spRange = $max /150 
+endif
+
+if spTol = 0 then
+  if ($max > 16000) then
+    spTol = 100
+  else
+    spTol = 10
+  endif
+endif
+
+systemtime:$start
+spTime = $start
+spTime[2]=35*60    // 35 minutes
+spTime[3]=spTime[1]
+
+// Give access to the adjustable parameters 
+exists('spLocal','maclib'):$e
+if ($e) then
+  spLocal
+endif
+
+// These parameters need to be initialized
+spSetVecs
+spIter = 0
+spMaxIter = 10
+spTolExp = 0
+spTolExpIndex = 0
+spHi = 0
+spLo = 0
+spNextHi = 0
+if (spDim = 1) then
+  spStage = 'initramp'
+else
+  spCalcPsum
+  spStage = 'evalVec'
+endif
+spVertex = 1
+if ($1 = 'lock') then
+  $delayval=0
+  shiminfo(spParNames):$step,$delayval
+  if (spStep=0) then
+    spStep=$step
+  endif
+  if (spDelay='0') then
+     format($delayval,0,0):spDelay
+  endif
+  spEval='spLkValue'
+  spSet='spLkSet'
+else
+  if (spStep=0) then
+    spStep=spRange
+  endif
+  spDelay='0'
+  spEval='spFidValue'
+  spSet='spFidSet'
+endif

@@ -1,0 +1,157 @@
+"macro pwr_opt"
+"*******************************************************************"
+"                                                                   "
+" pwr_opt - macro to determine the optimum pulse power for imaging  "
+"                                                                   "
+" Usage:   pwr_opt('tpwr','tpwrf')                                  "
+"                                                                   "
+"*******************************************************************"
+
+$action='run'
+if ($# = 1) then $action=$1 endif
+if ($1='proc') then $action='proc' endif
+
+$paramfile  = 'PWR_params.par'
+$paramlist1 = 'lb ss nt dmg wnt wsrf vp presig'         "writeparam writes multiple params"
+$paramlist2 = 'lb','ss','nt','dmg','wnt','wsrf','vp','presig'   "rtv needs individual params"
+
+
+
+
+
+if ($action='run') then
+  if ($# <> 2) then
+    write('line3','%s',`Use two input parameters (eg. pwr_opt('tpwr','tpwrf'))`)
+    abort
+  endif
+
+  "Check the input parameters exist"
+  exists($1,'parameter'):$e
+  if ($e=0) then write('line3','%s%s%s',`parameter `,$1,` doesn't exist`) abort endif
+  exists($2,'parameter'):$e
+  if ($e=0) then write('line3','%s%s%s',`parameter `,$2,` doesn't exist`) abort endif
+
+  pwr_opt('savepars')
+
+  "Assume that power levels have been set automatically by SGL"
+
+  "Check fine power level to figure how to set coarse power"
+  if ({$2} < 2850) then $dB=-2  // covers first two values of the array, 2650 and 2800
+  elseif ({$2} > 3800) then $dB=1  // covers last two values of the array
+  
+  else $dB = 0
+  endif //
+
+  "Add $dB to coarse power if we can"
+  if ({$1}+$dB <= 63) then {$1}={$1}+$dB else {$1}=63 endif
+
+  "Now array fine power"
+
+  create('ntopt','integer','current',0)
+  if(ntopt=0) then nt=1 ss=2 endif    //this is the case if ntopt doesn't exist, which only isis and special need 
+
+
+
+  lb=5 sglpower=1 wsrf='n' vp=0
+ 
+  array($2,8,2650,200) 
+
+
+  "Check for the specific isis condition where tpwr1=tpwr2=tpwr3"
+  if(seqfil='isis' ) then 
+    presig='h'  //make sure that high signal doesn't saturate the receiver for isis only
+     if($2='tpwr2f') then
+     tpwr1={$1}
+     tpwr3={$1}
+     array('tpwr1f',8,2650,200)
+     array('tpwr3f',8,2650,200)
+     array='(tpwr2f,tpwr1f,tpwr3f)'
+    endif //end of fine power
+  endif  //end of isis condition
+
+  "End of the isis settings"
+  wnt = 'av ft select(1) vsadj vs=vs*0.3 dssh'
+  $wexp=`pwr_opt('proc','`+$2+`')`
+  wexp=$wexp
+  wdone='wexp=``'
+  au
+
+  elseif ($action='proc') then
+  pwr_opt('findhighest'):$nr,$rec,$highest
+  ph wft select($rec) aph vp=10 vsadj vs=vs*0.3  "phase display"
+ 
+
+  select($nr*($highest-1)+$rec)  
+  vsadj 
+
+  dssh($rec,arraydim,$nr) dssl('list='+$2) 
+  {$2} = {$2}[$highest]  
+  pwr_opt('resetpars')
+  write('line3','Highest signal is #%d: %4.3f',$highest,{$2})
+  return
+
+elseif ($1 = 'findhighest') then
+  aipXrecon('nrcvrs'):$nr
+  "For multiple receivers figure which is giving highest signal"
+  $rec = 1
+  wft('nods') vsadj
+  if ($nr>1) then
+    av dssh(1,$nr,1)
+    $counter=1
+    $high=0
+    repeat
+      select($counter) peak:$ht  "Find peak"
+      if ($ht > $high) then 
+        $high = $ht 
+        $rec = $counter 
+      endif
+      $counter=$counter+1
+    until ($counter > $nr)
+  endif
+  select($rec) vsadj(10)
+  av dssh($rec,arraydim,$nr) dssl
+  "For that receiver now figure which is giving highest signal"
+  $counter=0
+  $high=0
+  repeat
+    select($counter*$nr+$rec) peak:$ht  "Find peak"
+    if ($ht > $high) then 
+      $high = $ht 
+      $highest = $counter+1 
+    endif
+    $counter=$counter+1
+  until ($counter = arraydim/$nr)
+  return($nr,$rec,$highest)
+
+elseif ($action = 'resetpars') then
+
+array=arraySave //Restore array
+arraySave='' //Empty arraySave
+
+  exists(curexp+'/'+$paramfile,'file'):$ex
+  if ($ex=1) then
+    $n = size('$paramlist2')
+    $inx = 1
+    repeat
+      rtv(curexp+'/'+$paramfile,$paramlist2[$inx])
+      $inx = $inx + 1
+    until ($inx > $n)
+    delete(curexp+'/'+$paramfile)
+  endif
+
+elseif ($action = 'savepars') then
+
+  
+    create('arraySave','string','current','') 
+    arraySave=array 
+    array=''
+  
+
+  exists(curexp+'/'+$paramfile,'file'):$ex
+  if ($ex=0) then  
+    writeparam(curexp+'/'+$paramfile,$paramlist1) 
+    array=''
+  endif
+
+endif
+

@@ -1,0 +1,375 @@
+"macro blackbox"
+$tailX='tail'
+whichtail:$tailX
+
+is_postvj22b:$isvj22c
+
+if ($# < 1) then $1='init' endif
+
+IF ($1='init') OR ($1='refresh') THEN
+
+   exists('CPbbx','parameter','global'):$parex
+   if ($parex=0) then
+	create('CPbbx','string','global')
+   	CPbbx='open'
+   endif
+
+   exists('CPbbxvals','parameter','global'):$parex
+   if ($parex=0) then
+	create('CPbbxvals','string','global')
+   endif
+   setprotect('CPbbxvals','on',256,'global')
+
+   CPbbxvals[1]=CPbbx
+   CPbbxvals[2]=''
+   CPbbxvals[3]=''
+
+   getfilepath('exppanels','adm/walkupadm'):$expex,$exppanels
+   if ($expex=0) then
+       getfilepath('exppanels.CP','adm/walkupadm'):$expex,$exppanels
+   endif
+   if ($expex=0) then return endif
+
+   exists(userdir+'/adm/walkupadm','directory'):$direx
+   if ($direx=0) then
+        shell('mkdir -p '+userdir+'/adm/walkupadm'):$dum
+   endif
+   $bbxpanelstemp=userdir+'/persistence/bbxpanels'
+   shell('touch '+$bbxpanelstemp):$dum
+
+ if ($1='init') then
+   write('reset',$bbxpanelstemp)
+   $bbxpanels=userdir+'/adm/walkupadm/bbxpanels'
+   exists($bbxpanels,'file'):$expex
+   if ($expex=0) then
+	getfilepath('bbxpanels.CP','adm/walkupadm'):$expex2,$cpbbx
+	if ($expex2) then
+	   shell('cp '+$cpbbx+' '+$bbxpanels):$dum
+	endif
+   endif
+   exists($bbxpanels,'file'):$expex
+   if ($expex) then
+	shell('cp '+$bbxpanels+' '+$bbxpanelstemp):$dum
+   else
+	shell('touch '+$bbxpanelstemp):$dum
+   endif
+ endif
+
+   $bbxexpts=''
+   $s2=''
+   readfile($bbxpanelstemp,'$bbxexpts','$s2','','local'):$total
+
+   $s1='' $s2=''
+   readfile($exppanels,'$s1','$s2','','local'):$total
+   $experiments=''
+   if ($total=0) then return endif
+   $i=1
+   repeat
+	$exparray=''
+	string2array($s2[$i]):$exparray
+	$exparray[1]=''
+	$experiments=$experiments,$exparray
+	$i=$i+1
+   until $i>$total
+   array2array($experiments):$experiments
+
+   $bbxfile=userdir+'/persistence/bbxexp_no'
+   $bbxfile2=userdir+'/persistence/bbxexp_yes'
+
+   $total=size('$bbxexpts')
+   write('reset',$bbxfile2)
+   if ($bbxexpts[1]<>'') then
+   	$i=1
+   	repeat
+	   write('file',$bbxfile2,'"%s" "%s"',$bbxexpts[$i],$bbxexpts[$i])
+	   teststr('$experiments',$bbxexpts[$i],'local'):$ret
+	   if ($ret) then $experiments[$ret]='' endif
+	   $i=$i+1
+	until $i > $total
+	array2array($experiments):$experiments
+   endif
+   write('file',$bbxfile2,'"" ""')
+
+   $total=size('$experiments')
+   write('reset',$bbxfile)
+   if ($experiments[1]<>'') then
+	$i=1
+	repeat
+	   write('file',$bbxfile,'"%s" "%s"',$experiments[$i],$experiments[$i])
+	   $i=$i+1
+	until $i > $total
+   endif
+   write('file',$bbxfile,'"" ""')
+
+   vnmrjcmd('pnew','CPbbxval')
+   if ($1='init') then
+      vnmrjcmd('popup','mode:modeless','file:bbxsetup.xml','rebuild:yes','pnewupdate:true','location:controlPanel','title: "Exp for simplified inerface"')
+   endif
+
+ELSEIF ($1='add') THEN
+
+    $bbxpanelstemp=userdir+'/persistence/bbxpanels'
+    shell('touch '+$bbxpanelstemp):$dum
+    $is=0 $max=9
+    if ($isvj22c>0) then $max=10 endif
+    shell('(cat '+$bbxpanelstemp+' | grep -cw '+$2+')'):$is
+    if ($is=0) then
+	shell('(cat '+$bbxpanelstemp+' | wc -l)'):$total
+	if ($total> $max-1) then
+	   write('error','Maximum %d experiments in the panel',$max)
+	else
+	   write('file',$bbxpanelstemp,'%s',$2)
+	endif
+    endif
+    blackbox('refresh')
+
+ELSEIF ($1='delete') THEN
+
+    $bbxpanelstemp=userdir+'/persistence/bbxpanels'
+    shell('touch '+$bbxpanelstemp):$dum
+    shell('touch '+$bbxpanelstemp+'1'):$dum
+
+    shell('(cat '+$bbxpanelstemp+' | grep -vw '+$2+' > '+$bbxpanelstemp+'1)'):$dum
+    shell('mv '+$bbxpanelstemp+'1 '+$bbxpanelstemp):$dum
+    blackbox('refresh')
+
+ELSEIF ($1='save') THEN
+
+    $adm=userdir+'/adm/walkupadm'
+    exists($adm,'directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$adm):$dum
+    endif
+    $bbxpanels=userdir+'/adm/walkupadm/bbxpanels'
+    $bbxpanelstemp=userdir+'/persistence/bbxpanels'
+    shell('cp '+$bbxpanelstemp+' '+$bbxpanels):$dum
+    if ($isvj22c<1) then
+       blackbox('mkpanels')
+       write('line3','Experiment preferences saved')
+       banner('Restart VNMRJ')
+    endif
+
+ELSEIF ($1='profiles') THEN
+
+        $updir=userdir+'/adm/users/userProfiles'
+        $profiles='AllLiquids'
+        $operators=owner
+        $s1='' $s2=''
+        $oplist=systemdir+'/adm/users/profiles/'+owner
+        exists($oplist,'file'):$fileex
+        if ($fileex) then
+           $line=''
+           lookup('mfile',$oplist,'seekcs','operators','readline',1):$line
+           $operators=$operators+' '+$line
+        endif
+        string2array($operators):$operators
+
+       $oplist=systemdir+'/adm/users/operators/operatorlist'
+        exists($oplist,'file'):$oplistex
+        $s1='' $s2=''
+        if ($oplistex) then
+           readfile($oplist,'$s1','$s2','','local'):$oplistex
+        endif
+
+        $optot=size('$operators')
+        $i=1
+        repeat
+           $profiles[$i]='AllLiquids'
+           if ($oplistex>1) then
+                teststr('$s1',$operators[$i],'local'):$ret
+                if ($ret) then
+                    $lists=''
+                    strsv2array($s2[$ret]):$lists
+                    $lsize=size('$lists')
+                    if ($lsize>5) then
+                        $profiles[$i]=$lists[6]
+                    endif
+                endif
+           endif
+           $i=$i+1
+        until $i > $optot
+	$ptot=size('$profiles')
+	if ($ptot>1) then
+	    sort($profiles,'u'):$index,$profiles
+	endif
+	return($profiles)
+
+ELSEIF ($1='clrprofiles') THEN
+
+        $updir=userdir+'/adm/users/userProfiles'
+	$profiles='AllLiquids'
+	blackbox('profiles'):$profiles
+        $proftot=size('$profiles')
+        $i=1
+        repeat
+           if ($profiles[$i] <>'') then
+                $file=$updir+'/'+$profiles[$i]+'.xml'
+                exists($file,'file'):$fex
+                if ($fex) then
+                        shell('rm -f '+$file):$dum
+                endif
+	   endif
+	   $i=$i+1
+	until $i>$proftot
+        return($profiles)
+
+ELSEIF ($1='setup') THEN
+
+    $int=userdir+'/templates/vnmrj/interface'
+    exists($int,'directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$int):$dum
+    endif
+    $toppanel=$int+'/TopPanel.xml'
+    $return=0 if ($2<>CPbbx) then $return=1 endif
+    CPbbx=$2
+    if (CPbbx='open') THEN
+       exists($toppanel,'file'):$fileex
+       if ($fileex) then
+	   $isbbx=0
+           shell('(cat '+$toppanel+' | grep -c bbox_action)'):$isbbx
+           if ($isbbx) then shell('rm -f '+$toppanel):$dum endif
+       endif
+       if ($isvj22c>0) then blackbox('clrprofiles') endif
+    elseif (CPbbx='close') THEN
+       exists($toppanel,'file'):$fileex
+       if ($fileex) then
+	   $isbbx=0
+           shell('(cat '+$toppanel+' | grep -c bbox_action)'):$isbbx
+	   if ($isbbx=0) then
+		shell('mv '+$toppanel+' '+$toppanel+'_saved'):$dum
+	   endif
+	endif
+    	write('reset',$toppanel)
+    	write('file',$toppanel,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+   	write('file',$toppanel,'<toppanel>')
+    	write('file',$toppanel,'<panel name="Setup" file="bbox.xml"')
+    	write('file',$toppanel,'   actionfile="bbox_action.xml"')
+    	write('file',$toppanel,'   param="seqfil" type="acquisition">')
+    	write('file',$toppanel,'<\/panel>')
+    	write('file',$toppanel,'<\/toppanel>')
+        if ($isvj22c>0) then 
+		$profiles='AllLiquids'
+		blackbox('clrprofiles'):$profiles
+		blackbox('mkprofiles',$profiles) 
+	endif
+    endif
+    return($return)
+
+ELSEIF ($1='mkpanels') THEN
+
+    $bbxpanels=userdir+'/adm/walkupadm/bbxpanels'
+    exists($bbxpanels,'file'):$bbex
+    if ($bbex=0) then return endif
+    $exp='' $s2=''
+    readfile($bbxpanels,'$exp','$s2','','local'):$total
+    if ($exp[1]='') then $total=0 endif
+    if ($total=0) then return endif
+
+  if ($# < 2) then
+    $int=userdir+'/templates/vnmrj/interface'
+    exists($int,'directory'):$direx
+    if ($direx=0) then
+        shell('mkdir -p '+$int):$dum
+    endif
+
+    $xml=$int+'/MainMenuExptsBbx.xml'
+    write('reset',$xml)
+    write('file',$xml,'<mainmenu>')
+    $i=1
+    repeat
+	write('file',$xml,'<mchoice label="%s" vc="%s" style="Menu4" />',$exp[$i],$exp[$i])
+	$i=$i+1
+    until $i > $total
+    write('file',$xml,'</mainmenu>')
+    blackbox('mkpanels','Startq')
+    blackbox('mkpanels','Submitq')
+  else
+    $layout1=userdir+'/templates/layout/'+$2
+    exists($layout1,'directory'):$direx
+    if ($direx=0) then
+	shell('mkdir -p '+$layout1):$dum
+    endif
+
+    getfilepath('bbxpagehead','templates/layout/'+$2+'.CP'):$pex,$pagehead
+    getfilepath('bbxpagetail','templates/layout/'+$2+'.CP'):$pex2,$pagetail
+    getfilepath('GENERIC1','templates/layout/'+$2+'.CP'):$gex,$generic
+
+    if ($pex=0) or ($gex=0) or ($pex2=0) then return endif
+
+    $xml=$layout1+'/Quickbasic.xml'
+    $tmpfile=userdir+'/persistence/tmpxml'
+    $head='1'
+    shell('(cat -n '+$pagehead+' | grep \'<\/group>\' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$head
+    $rhead=0 format($head,'lower'):$rhead
+    format($rhead-1,0,0):$head
+    if ($head='0') then return endif
+
+    shell('(head -n '+$head+' '+$pagehead+' > '+$xml+')'):$dum
+    shell('(cat '+$pagetail+' >> '+$xml+')'):$dum
+
+//    shell('(cat '+$pagehead+' > '+$xml+')'):$dum
+    $x=15 $y=15
+    $i=1
+    repeat
+	$y=$y+20
+	write('file',$xml,'\t <group size="110 20" loc="%d %d"',$x,$y)
+	$sedcmd='sed -e \'s|GENERIC|'+$exp[$i]+'|g\''
+	shell($sedcmd+' '+$generic+' >> '+$xml):$dum
+	$i=$i+1
+    until ($i>5 or $i>$total)
+    if ($total>5) then
+      $x=130 $y=35
+      repeat
+        $y=$y+20
+        write('file',$xml,'\t <group size="110 20" loc="%d %d"',$x,$y)
+        $sedcmd='sed -e \'s|GENERIC|'+$exp[$i]+'|g\''
+        shell($sedcmd+' '+$generic+' >> '+$xml):$dum
+        $i=$i+1
+      until ($i>9 or $i>$total)
+    endif
+    write('file',$xml,'    </group>')
+    write('file',$xml,'  </group>')
+    write('file',$xml,'</template>')
+  
+  endif
+
+ELSEIF ($1='mkprofiles') THEN
+
+        $profiles=$2
+	getfilepath('bbxpanels','adm/walkupadm'):$bbex,$bbxpanels
+	if ($bbex=0) then return endif
+	$exp='' $s2=''
+	readfile($bbxpanels,'$exp','$s2','','local'):$total
+	if ($exp[1]='') then $total=0 endif
+	if ($total=0) then return endif
+
+	$updir=userdir+'/adm/users/userProfiles'
+	exists($updir,'directory'):$direx
+	if ($direx=0) then
+	    shell('mkdir -p '+$updir):$dum
+	endif
+	$proftot=size('$profiles')
+	$i=1
+	repeat
+	   if ($profiles[$i] <>'') then
+		$file=$updir+'/'+$profiles[$i]+'.xml'
+		getfilepath($profiles[$i]+'.xml','adm/users/userProfiles'):$fex,$fpath
+		if ($fex) then
+		    shell('(cat '+$fpath+' | grep -v \'<protocol\' | grep -v \'<\\\/rights-\' > '+$file+')'):$dum
+		else
+		    write('reset',$file)
+		    write('file',$file,'<?xml version="1.0" ?>')
+		    write('file',$file,'<rights-list>')
+		endif
+		$j=1
+		repeat
+		   write('file',$file,'  <protocol name="%s" dirLabel="CPsimple" apptype="Experiments" approve="true" \/>',$exp[$j])
+		   $j=$j+1
+		until $j > $total
+		write('file',$file,'<\/rights-list>')
+	    endif
+	    $i=$i+1
+	until $i > $proftot
+	
+ENDIF

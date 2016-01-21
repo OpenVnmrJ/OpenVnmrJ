@@ -1,0 +1,215 @@
+"macro relax"
+// relaxation apptype
+$action = 'setup'
+$do = ''
+if ($# > 0) then
+  $action = $1
+  if ($# > 1) then
+    $do = $2
+  endif
+endif
+
+if ($action = 'setup') then
+
+  $solvent=solvent
+  if ($do = '') then
+    $do = macro
+  endif
+  exists($do,'parlib'):$e,$path
+  if $e then
+    if spintype='tach' then $spin=spin endif
+    rtx($path,'current','rt','clear')
+    if spintype='tach' then spin=$spin endif
+  else
+    write('error','parameters for %s do not exist',macro)
+    return
+  endif
+  solvent=$solvent
+
+  $PFGflg=''
+  homo='n'  "is this for all pulse sequences?"
+  getparam('gradient','Probe'):$PFGflg
+  if ($PFGflg = '') then
+    $PFGflg='n'
+  endif
+  PFGflg=$PFGflg
+
+  substr(pfgon,3,1):$pfgon
+  if ($pfgon = 'n') then
+    if (PFGflg = 'y') then
+      pfgon='nny'
+    endif
+  endif
+
+  exists('Gmap','parameter'):$gmapex
+  if ($gmapex = 0) then
+    create('Gmap','string')
+    Gmap='no'
+    setprotect('Gmap','on',1)
+  endif
+  setGmap:Gmap
+
+  getparam('pw90',tn):pw90
+  getparam('tpwr',tn):tpwr
+  write('line3','pw90 = %s tpwr = %s ',pw90,tpwr)
+
+  if (tn='H1' or tn='F19') then
+    exists('tpwr_cf','parameter'):$e 
+    if not $e then 
+      create('tpwr_cf')
+    endif 
+    tpwr_cf = 1
+    getparam('tpwr_cf',tn):tpwr_cf
+    setprotect('tpwr_cf','on',16384) 
+  else
+    exists('pwxlvl_cf','parameter'):$e 
+    if not $e then 
+      create('pwxlvl_cf')
+    endif 
+    pwxlvl_cf = 1
+    getparam('pwxlvl_cf',tn):pwxlvl_cf
+    setprotect('pwxlvl_cf','on',16384) 
+  endif
+
+  pw(90)
+  satfrq=tof
+
+  " dn is H1 if the system is H/C gemini "
+  " for other systems dn is set to C13   "
+  if (tn = 'H1') then
+    if (rftype <> 'ee') then
+      dn='C13'
+    elseif (Console <> 'g2000') then
+      dn='C13'
+    endif
+  endif
+
+  setdecpars
+  setrc
+
+  if (tn <> 'H1') then
+    $sfactor=1 $spfactor=0 $solv=''
+    format(solvent,'lower'):$solv
+    getparam($solv,'SF'):$sfactor
+    pw90=pw90*$sfactor
+    getparam($solv,'SP'):$spfactor
+    tpwr=tpwr+$spfactor
+  endif
+
+  if (auto <> 'y' and system <> 'datastation') then
+    off('temp')
+    if (vttype > 0) then
+      vnmrinfo('get','tempExpControl'):$tempon
+      if ($tempon) then
+        vnmrinfo('get','tempOnOff'):$vtison
+        if ($vtison = 1) then
+          vnmrinfo('get','tempSetPoint'):temp
+          on('temp') 
+        endif
+      endif
+    endif
+  endif
+
+  if (traymax=96 or traymax=768) then spin=0 endif
+  on('wrtp'):$e
+  if $e then
+    exec(wrtp)
+  endif
+  setref('setup')
+  sf=0 wf=np/sw/2
+  sp=rfp-rfl wp=sw
+  execseq('setup')  // Execute any sequence specific setup
+  exists('oversamp','parameter'):$e
+  if ($e and il='y') then oversamp=1 endif
+  dps newdg dg
+
+elseif ($action = 'process') then
+
+  xm1('studydir'):$sdir
+  setref('setup')
+  if (seqfil='T1meas') then
+    wft select(arraydim)
+    aph:$x           " phasing "
+    if $x<0.5 then
+      aph0:$x
+      if $x<0.5 then
+        write('line3','Cannot phase spectrum')
+      endif
+    endif
+    ds(arraydim)
+    vsadj
+    thadj(wcmax/4,4)
+    dpf dll fp t1s  // t1 or t1s?
+  elseif (seqfil='T2meas') then
+    wft select(1)
+    aph:$x           " phasing "
+    if $x<0.5 then
+      aph0:$x
+      if $x<0.5 then
+        write('line3','Cannot phase spectrum')
+      endif
+    endif
+    ds(1)
+    vsadj
+    thadj(wcmax/4,4)
+    dpf dll fp t2s  // t2 or t2s?
+  else
+
+    if (arraydim > 1) then
+      procarray
+    else
+      format(tn,'lower'):$tn
+      $procmacro=$tn+'p'
+      exists($procmacro,'maclib'):$e
+      if $e then
+        exec($procmacro)
+      else
+        wft f ai         " transform "
+        aph:$x           " phasing "
+        if $x<0.5 then
+          aph0:$x
+          if $x<0.5 then
+            write('line3','Cannot phase spectrum')
+          endif
+        endif
+        integrate        " integration "
+        vsadj noislm     " vs control "
+        thadj            " th control (if required) "
+      endif
+    endif
+
+  endif
+
+  if (auto='y' or sqmode='go') then
+    $file=file
+    exists($file,'directory'):$e
+    if $e<0.5 then
+      $file=$file+'.fid'
+      exists($file,'directory'):$e
+    endif
+    if $e then
+      groupcopy('current','processed','display')
+      fsave($file+'/procpar')  "save lifrq etc."
+    endif
+  endif
+
+  execseq('proc') // Execute any sequence specific processing
+
+elseif ($action = 'plot') then
+
+  if (seqfil='T1meas') then
+    printon t1s printoff
+  elseif (seqfil='T2meas') then
+    printon t2s printoff
+  endif
+
+  if arraydim=1 then		" non-arrayed 1D spectra "
+    plot1d			" other non-arrayed 1D spectra "
+  else				" arrayed 1D spectra "
+    plarray			" other arrayed 1D spectra "
+  endif
+
+  execseq('plot') // Custom  sequence-based plots if desired
+
+endif
+

@@ -1,0 +1,732 @@
+"macro xmtune"
+"tune prescan in study queue - liquids only"
+
+if ($# = 0) then
+  $arg = 'check'
+else
+  $arg = $1
+endif
+
+if (appmode='imaging' or atune='n') then
+  if ($arg='getval') then
+    return(0)
+  else
+    return('y')
+  endif
+endif
+
+// default parameter values
+$wtunedef='st1'
+$tunemethoddef='lohi'
+
+$dir=systemdir+'/acqqueue'
+
+IF ($arg = 'addpar') THEN  // add parameters
+
+  exists('wtune','parameter'):$e
+  if $e<0.5 then
+    create('wtune','flag')
+    setenumeral('wtune',11,'s','t','e','i','n','o','v','1','2','3','4')
+    wtune=$wtunedef
+  endif
+  exists('tunemethod','parameter'):$e
+  if $e<0.5 then
+    create('tunemethod','string')
+  endif
+  if (tunemethod='') then
+    $tunemet=''
+    getparam('tunemethod','Probe'):$tunemet
+    if ($tunemet = '') then $tunemet=$tunemethoddef endif
+    tunemethod=$tunemet
+  endif
+  xmtune('filemenu')
+
+ELSEIF ($arg = 'addstudypar') THEN  // add study parameters
+
+  exists('studypar','parameter','global'):$e
+  if $e>0.5 then
+    $fw='n' $fm='n'
+    $psize=size('studypar')
+    $j=0
+    while ($j < $psize) do
+      $j=$j+1
+      if studypar[$j]='wtune' then $fw='y' endif
+//    if studypar[$j]='tunemethod' then $fm='y' endif
+    endwhile
+    if $fw='n' then studypar=studypar,'wtune' endif
+//  if $fm='n' then studypar=studypar,'tunemethod' endif
+  endif
+
+ELSEIF ($arg = 'setdefault') THEN
+
+  wtune=$wtunedef
+  $tunemet=''
+  getparam('tunemethod','Probe'):$tunemet
+  if ($tunemet = '') then $tunemet=$tunemethoddef endif
+  tunemethod=$tunemet
+
+ELSEIF ($arg = 'autoinit') THEN  // initialize values for automation run
+
+  $parfile=$dir+'/wtunepars'
+  exists($parfile,'file'):$e
+  if $e>0.5 then rm($parfile):$x endif
+
+  xmtune('addpar')
+  $wtune=''
+  getparam('wtune','Probe'):$wtune
+  if ($wtune = '') then
+    $wtune=$wtunedef
+  endif
+  wtune=$wtune
+
+ELSEIF ($arg = 'initstudy') THEN
+// initialize prescan to repeat gradient shim if protune selected
+  if (prescan[2]='Not done' and prescan[4]='y') then
+    prescan[6]='y'
+  else
+    prescan[6]='n'
+  endif
+// if (prescan[1]='Complete' and prescan[4]='y') then
+//   unixtime:$utime  // flag for protune is first prescan
+//   $startfile = systemdir+'/tmp/ptuneStart'
+//   write('reset',$startfile)
+//   write('file',$startfile,'%10.3f',$utime)
+//   shell('chmod 666 '+$startfile):$x
+// endif
+// read wtunepars, resave with studyid='null', if automation not active?
+
+ELSEIF ($arg = 'getval') THEN  // get wtune value for panel
+// if 'n' is a value in wtune, no options are enabled
+
+  $val=0
+  if ($# > 1.5) then
+    strstr(wtune,'n'):$getn
+    if ($getn > 0.5) then
+      if $2='n' then
+        $val=1
+      endif
+    else
+      strstr(wtune,$2):$get
+      if $get>0.5 then
+        $val=1
+      endif
+    endif
+  endif
+  return($val)
+
+ELSEIF ($arg = 'setval') THEN  // set wtune value from panel
+
+  if ($# > 1.5) then
+    if ($2 = 'n') then
+      wtune='n'
+    else
+      length(wtune):$len
+      strstr(wtune,'n'):$getn
+      if ($getn>0.5 and $len>1.5) then
+        wtune='n'
+      else
+        strstr(wtune,$2):$get
+        if ($get<0.5) then
+          if ($len<1.5 and $getn>0.5) then
+            wtune=$2
+          else
+            wtune=wtune+$2
+          endif
+        endif
+      endif
+    endif
+  endif
+  if (wtune<>'n' and wtune<>'') then
+    prescan[4]='y'
+  else
+    prescan[4]='n'
+  endif
+
+ELSEIF ($arg = 'rmval') THEN  // remove wtune value from panel
+
+  $wtune=''
+  if ($#>1.5) then
+    strstr(wtune,$2):$get
+    length(wtune):$len
+    if $get>1.5 then
+      $w1='' substr(wtune,1,$get-1):$w1
+      $w2='' substr(wtune,$get+1,$len):$w2
+      $wtune=$w1+$w2
+    elseif $get>0.5 then
+      substr(wtune,2,$len-1):$wtune
+    endif
+    if $wtune='' then
+      wtune='n'
+    else
+      wtune=$wtune
+    endif
+  endif
+  if (wtune<>'n' and wtune<>'') then
+    prescan[4]='y'
+  else
+    prescan[4]='n'
+  endif
+
+ELSEIF ($arg = 'checkpar') THEN
+// check parameters, check tunemethod file
+
+  $val='n'
+  exists('protune','maclib'):$e
+  if $e<0.5 then
+    write('error','protune not installed')
+    return($val)
+  endif
+  xmtune('addpar')
+  if (tunemethod='') then
+    $tunemet=''
+    getparam('tunemethod','Probe'):$tunemet
+    if ($tunemet = '') then $tunemet=$tunemethoddef endif
+    tunemethod=$tunemet
+  endif
+  $metfile=tunemethod
+  $c='' substr($metfile,1,1):$c
+  if $c='/' then
+    exists($metfile,'file'):$e
+  else
+    $metfile=userdir+'/tune/methods/'+tunemethod
+    exists($metfile,'file'):$e
+    if $e<0.5 then
+      $metfile=systemdir+'/tune/methods/'+tunemethod
+      exists($metfile,'file'):$e
+    endif
+  endif
+  if $e>0.5 then
+    $val=$metfile
+  endif
+  if $val='n' then
+    if (auto='y') then
+      $out = 'alpha'
+      write($out,'')
+    else
+      $out = 'line3'
+    endif
+    write($out,'File not found for tunemethod "%s"',tunemethod)
+  endif
+  return($val)
+
+ELSEIF ($arg = 'writepars') THEN  // write parameter file
+
+  $end='n'
+  if $#>1.5 then if $2='end' then
+    $end='y'
+  endif endif
+
+  $parfile=$dir+'/wtunepars'
+  exists('dn2','parameter'):$ed2
+  exists('dn3','parameter'):$ed3
+  exists('dn4','parameter'):$ed4
+  on('loc','global'):$locon
+
+  $parlist='studyid_ actionid loc_ vrack_ vzone_ operator_ temp solvent tn dn'
+  if $ed2>0.5 then $parlist=$parlist+' dn2' endif
+  if $ed3>0.5 then $parlist=$parlist+' dn3' endif
+  if $ed4>0.5 then $parlist=$parlist+' dn4' endif
+  $parlist=$parlist+' wtune tunemethod'
+
+  exists('operator_','parameter'):$e
+  if $e<0.5 then create('operator_','string') endif
+  setvalue('operator_',operator)
+  exists('studyid_','parameter'):$e
+  if $e<0.5 then create('studyid_','string') endif
+  setvalue('studyid_',studyid)
+  exists('vrack_','parameter'):$e
+  if $e<0.5 then create('vrack_','integer') endif
+  setvalue('vrack_',vrack)
+  exists('vzone_','parameter'):$e
+  if $e<0.5 then create('vzone_','integer') endif
+  setvalue('vzone_',vzone)
+  exists('loc_','parameter'):$e
+  if $e<0.5 then create('loc_','integer') endif
+  setvalue('loc_',loc)
+  if $locon<0.5 then off('loc_') else on('loc_') endif
+
+  if $end='y' then
+    $actionid=actionid
+    actionid='null'
+  endif
+
+  writeparam($parfile,$parlist)
+  shell('chmod 666 "'+$parfile+'"'):$x
+
+  if $end='y' then
+    actionid=$actionid
+  endif
+
+ELSEIF ($arg='filemenu' and auto='n') THEN  // create tunemethod filemenu
+
+  $file=userdir+'/persistence'
+  exists($file,'file'):$e
+  if $e<0.5 then mkdir($file) endif
+  $file=$file+'/wtune'
+  shell('touch '+$file)
+
+  // If someone else is doing this now, just skip it
+  $islocked=0
+  shell('ln '+$file+' '+$file+'_lock; echo $?'):$islocked
+  if (not $islocked) then
+    rm($file):$x
+
+    $rfile=userdir+'/tune/methods'
+    exists($rfile,'file'):$e
+    if $e>0.5 then
+      shell('ls "'+$rfile+'" > "'+$file+'_init"'):$x
+      lookup('mfile',$file+'_init','filekey'):$key,$nret
+      if $nret>0.5 then
+        $word=''
+        $i=0
+        repeat
+          $i=$i+1
+          lookup('mfile',$key,'read','filekey'):$word,$key,$nret
+          if $nret>1.5 then
+            write('file',$file,'"%s" "%s"',$word,$word)
+          endif
+        until ($nret<1.5 or $i>=1000)
+      endif
+    endif
+    $rfile=systemdir+'/tune/methods'
+    exists($rfile,'file'):$e
+    if $e>0.5 then
+      shell('ls "'+$rfile+'" > "'+$file+'_init"'):$x
+      lookup('mfile',$file+'_init','filekey'):$key,$nret
+      if $nret>0.5 then
+        $word=''
+        $i=0
+        repeat
+          $i=$i+1
+          lookup('mfile',$key,'read','filekey'):$word,$key,$nret
+          if $nret>1.5 then
+            write('file',$file,'"%s" "%s"',$word,$word)
+          endif
+        until ($nret<1.5 or $i>=1000)
+      endif
+    endif
+    write('file',$file,'"none" "none"')
+
+    tunemethod=tunemethod
+    rm($file+'_init'):$x
+    rm($file+'_lock'):$x
+  endif
+
+ELSEIF ($arg = 'methodname') THEN  // find method name for filemenu
+
+  $name=tunemethod
+  exists(userdir+'/tune/methods/'+$name,'file'):$e
+  if $e<0.5 then
+    exists(systemdir+'/tune/methods/'+$name,'file'):$e
+  endif
+  if tunemethod='' then
+    $e=0 $name='none'
+  endif
+  return($name,$e)
+
+ELSEIF ($arg='getnucband' or $arg='getnuclist') THEN  // find hi,lo band nuclei from tn,dn
+// H1 499.8, F19 470.3, P31 202.3, C13 125.7, lk/H2 76.7, N15 50.7
+//     1.00       0.94       0.41       0.25        0.15      0.10
+// if dn2='' then dfrq2=0
+//
+// there are two uses:
+//  (1) 'getnucband' - find nucleus for 'hi' 'lo' etc. in tunemethod
+//  (2) 'getnuclist' - get list of nuclei in numerical order
+
+  $is3=0 $is4=0 $is5=0
+  if numrfch>2.5 then
+    exists('dn2','parameter'):$is3
+  endif
+  if numrfch>3.5 then
+    exists('dn3','parameter'):$is4
+  endif
+  if numrfch>4.5 then
+    exists('dn4','parameter'):$is5
+  endif
+
+  $tn_orig=tn $dn_orig=dn
+  $tn=tn[1] $dn=dn[1] $dn2='' $dn3='' $dn4=''
+  if ($is3) then $dn2=dn2[1] $dn2_orig=dn2 endif
+  if ($is4) then $dn3=dn3[1] $dn3_orig=dn3 endif
+  if ($is5) then $dn4=dn4[1] $dn4_orig=dn4 endif
+  if $#>1.5 then $tn=$2 endif
+  if $#>2.5 then $dn=$3 endif
+  if $#>3.5 then $dn2=$4 endif
+  if $#>4.5 then $dn3=$5 endif
+  if $#>5.5 then $dn4=$6 endif
+  tn=$tn dn=$dn
+  if ($is3) then dn2=$dn2 endif
+  if ($is4) then dn3=$dn3 endif
+  if ($is5) then dn4=$dn4 endif
+
+  $nuclist='' $hi='n' $lo='n'
+  $llfrq=llfrq on('llfrq'):$on
+  llfrq=0
+  llfrq[1]=sfrq llfrq[2]=dfrq $nuc=tn $nuc[2]=dn
+  if ($is3) then if (dn2<>'') then llfrq[3]=dfrq2 $nuc[3]=dn2 endif endif
+  if ($is4) then if (dn3<>'') then llfrq[4]=dfrq3 $nuc[4]=dn3 endif endif
+  if ($is5) then if (dn4<>'') then llfrq[5]=dfrq4 $nuc[5]=dn4 endif endif
+
+  $size=size('llfrq')
+  $i=1 $nuclist=$nuc[1]
+  repeat
+    $i=$i+1
+    $nuclist=$nuclist+' '+$nuc[$i]
+  until ($i>=$size)
+
+  $hiband='' $loband=''
+  if ($arg='getnucband') then
+    $i=0
+    repeat
+      $i=$i+1
+      if (llfrq[$i] > 0.8 * h1freq) then
+        $hiband=$hiband+' '+$nuc[$i]
+      else
+        $loband=$loband+' '+$nuc[$i]
+      endif
+    until ($i>=$size)
+  endif
+
+  llfrq=$llfrq if not ($on) then off('llfrq') endif
+  tn=$tn_orig dn=$dn_orig
+  if ($is3) then dn2=$dn2_orig endif
+  if ($is4) then dn3=$dn3_orig endif
+  if ($is5) then dn4=$dn4_orig endif
+
+  if ($arg='getnucband') then
+    return($hiband,$loband)
+  else
+    return($nuclist)
+  endif
+
+ELSEIF ($arg = 'check') THEN
+// check to see if tune needs to be done
+
+  xmtune('checkpar'):$metfile
+  if ($metfile='n') then
+    return('n')
+  endif
+
+// check parameter files
+  $parfile=$dir+'/wtunepars'
+
+  $dotune='n'
+
+// check previous state - if wtune='n'
+  strstr(wtune,'n'):$getn
+  if ($getn < 0.5) then
+
+    exists($parfile,'file'):$e
+    if $e<0.5 then
+//    no previous state, start tune
+      $dotune='y'
+    else
+
+      on('loc','global'):$locon
+      on('temp'):$tempon
+      $ed2=0 $ed3=0 $ed4=0
+      if numrfch>2.5 then
+        exists('dn2','parameter'):$ed2
+      endif
+      if numrfch>3.5 then
+        exists('dn3','parameter'):$ed3
+      endif
+      if numrfch>4.5 then
+        exists('dn4','parameter'):$ed4
+      endif
+
+//    read parameter file
+      $studyid='' $op='' $tn='' $dn='' $dn2='' $dn3='' $dn4=''
+      rtv($parfile,'studyid_','actionid','operator_','loc_','vrack_','vzone_','temp','solvent','tn','dn'):$studyid,$actionid,$op,$loc,$vrack,$vzone,$temp,$solvent,$tn,$dn
+      $tn=$tn[1] $dn=$dn[1]
+      if ($ed2) then
+        lookup('mfile',$parfile,'seek','dn2','read'):$find,$n
+        if $n>0.5 then
+          rtv($parfile,'dn2'):$dn2 $dn2=$dn2[1]
+        endif
+      endif
+      if ($ed3) then
+        lookup('mfile',$parfile,'seek','dn3','read'):$find,$n
+        if $n>0.5 then
+          rtv($parfile,'dn3'):$dn3 $dn3=$dn3[1]
+        endif
+      endif
+      if ($ed4) then
+        lookup('mfile',$parfile,'seek','dn4','read'):$find,$n
+        if $n>0.5 then
+          rtv($parfile,'dn4'):$dn4 $dn4=$dn4[1]
+        endif
+      endif
+      lookup('mfile',$parfile,'seek','loc_','skip',8,'read'):$locon_old
+      lookup('mfile',$parfile,'seek','temp','skip',8,'read'):$tempon_old
+      vnmrinfo('get','tempExpControl'):$tempctrlon
+      vnmrinfo('get','tempOnOff'):$vtison  // not needed?
+
+// Tune when changing any nucleus of [tn dn dn2 dn3 dn4]
+      $new_nucleus=0
+//    xmtune('getnuclist'):$nuclist
+      $nuclist=$tn+' '+$dn+' '+$dn2+' '+$dn3+' '+$dn4
+      strstr($nuclist,tn):$exnuc    // check if nucleus exists in list
+      if ($exnuc>0.5) then strstr($nuclist,dn):$exnuc endif
+      if ($exnuc>0.5) and ($ed2) then strstr($nuclist,dn2):$exnuc endif
+      if ($exnuc>0.5) and ($ed3) then strstr($nuclist,dn3):$exnuc endif
+      if ($exnuc>0.5) and ($ed4) then strstr($nuclist,dn4):$exnuc endif
+
+      $new_nucleus = not ($exnuc)
+
+//    check previous state - all wtune values
+      length(wtune):$len
+      $i=0 $c=''
+      repeat
+        $i=$i+1
+        substr(wtune,$i,1):$c
+        if ($c = 'e') then      // experiment
+          if (actionid <> $actionid) then
+            $dotune='y'
+          endif
+        elseif ($c = 's') then  // sample
+          if (studyid<>$studyid or $locon_old<0.5 or loc<>$loc or vrack<>$vrack or vzone<>$vzone) then
+//        if (studyid <> $studyid) then // or loc=0 ??
+            $dotune='y'
+          endif
+        elseif ($c = 'o') then  // operator
+          if (operator <> $op) then
+            $dotune='y'
+          endif
+        elseif ($c = 'v') then  // solvent
+          if (solvent <> $solvent) then
+            $dotune='y'
+          endif
+        elseif ($c = 't') then  // temperature
+          if (vttype>0.5 and $tempctrlon>0.5) then
+            if ($tempon>0.5 and ($tempon_old<0.5 or temp<>$temp)) then
+              $dotune='y'
+            endif
+          endif
+        elseif ($c = 'i') then  // LC/NMR sample injection
+//        test what parameter? ignore for now
+          if (traymax=1) then
+            $dotune=$dotune
+          endif
+        elseif ($c = '1') then  // any nucleus of [tn dn dn2 dn3 dn4]
+          if ($new_nucleus) then
+            $dotune='y'
+          endif
+        elseif ($c = '2') then  // force tuning
+            $dotune='y'
+        endif
+      until ($i>=$len or $dotune='y')
+
+    endif  //end if $parfile exists
+
+  endif  //end if strstr(wtune,'n')
+
+  xmtune('writepars')
+
+// start tuning, if requested
+  if ($dotune = 'y') then
+    $file=$dir+'/wtunekey'
+    write('reset',$file)
+    write('file',$file,'%s',$metfile)
+    shell('chmod 666 "'+$file+'"'):$x
+    xmtune('next'):$reply
+    return($reply)
+  else
+    return('n')
+  endif
+
+ELSEIF ($arg = 'next') THEN
+// read next entry of tunemethod file, start tuning
+
+  $val='n'
+  exists('protune','maclib'):$e
+  if $e<0.5 then
+    write('error','protune not installed')
+    return($val)
+  endif
+
+  wdone=''
+  
+  // Put lookup's "filekey" into $key (originally set by xmtune('check')
+  //   to the filepath of the tunemethod file).
+  // Update $key whenever we read from the tunemethod file.
+  $file=$dir+'/wtunekey'
+  exists($file,'file'):$e
+  if $e>0.5 then
+    lookup('mfile',$file,'readline'):$key
+    $ch=''
+    repeat
+      // Read a tunemethod line
+      lookup('mfile',$key,'readline','filekey'):$line,$key,$n
+      substr($line,1,1):$ch  // comment line starts with '#'
+    until ($ch<>'#' or $line='' or $n<1.5)
+    write('reset',$file)
+    write('file',$file,'%s',$key)  // Save updated filekey in wtunekey file
+
+    if ($line='' or $n<1.5) then
+    
+      // Reached end of tunemethod
+      rm($file):$x
+      if prescan[6]='y' then
+        prescan[2]='Not done'  // repeat gradshim
+      endif
+      cqsavestudy('paronly')
+      wdone='xmtune(\'quit\')'  // uncomment for real application
+      return($val)
+    else
+    
+      // Decode the tunemethod line
+      $parfile=$dir+'/wtunepars'
+      fread($parfile)
+      xmtune('getnucband'):$hiband,$loband
+
+      $nuc='H1' $band='' $nval='' $methodkey=''
+      substr($line,1):$methodkey
+      if ($methodkey = 'exec') then
+        // Just execute whatever is on the rest of the line
+        $methodcmd=''
+        length($line):$len
+        substr($line, 6, $len-5):$methodcmd
+        {$methodcmd}  // Execute the command
+        $val='y'
+
+      else
+
+        // Decode lines of the form:
+        // "tune highband within 2 percent of optimum pw"
+        // or "tune highband Fine"
+        substr($line,2):$nval
+        substr($nval,1,2):$band  // band is 'hi' 'lo'
+        substr($nval,1,3):$bandc // bandc is 'hig' 'hi2' 'hi3' 'low' 'lo2' 'lo3' 'lo4'
+        $chan=1                  // chan is 1 2 3 4 ...
+        substr($bandc,3,1):$ch3  // ch3 is '2' '3' '4' or character
+        format($ch3,'isreal'):$realc
+        if ($realc) then $chan=$ch3 endif
+
+        $lvl = ''
+        substr($line,4):$lvl
+        format($lvl,'isreal'):$isreal
+        if ($isreal) then
+            format($lvl,0,3):$lvl // $lvl is pct of optimum w/ decimal point
+        else
+            substr($line,3):$lvl // $lvl is Coarse, Medium, or Fine
+        endif
+
+        if ($band='hi') then
+          substr($hiband,$chan):$nuc
+        elseif ($band='lo') then
+          substr($loband,$chan):$nuc
+        elseif ($nval='tn' or $nval='dn' or $nval='dn2' or $nval='dn3' or $nval='dn4') then
+          $nuc = {$nval}
+        else
+          $nuc = $nval
+        endif
+        actionid='null'
+
+        // Check if there is another line to do
+        $ch=''
+        repeat
+          lookup('mfile',$key,'readline','filekey'):$line,$key,$n
+          substr($line,1,1):$ch  // comment line starts with '#'
+        until ($ch<>'#' or $line='' or $n<1.5)
+
+        // Where to write our informative output:
+        if (auto='y') then
+          $out = 'alpha'
+          write($out,'')
+        else
+          $out = 'line3'
+        endif
+
+        if ($line='' or $n<1.5) then
+
+          // Only one line found; execute protune for that line
+          if ($isreal) then
+            write($out,'Tuning %s to within %s percent of optimum\n',$nuc,$lvl)
+          else
+            write($out,'Tuning %s to %s criterion', $nuc, $lvl)
+          endif
+          protune('nucleus',$nuc,$lvl) //uncomment for real application
+          $val='y'
+
+        else
+
+          // Second line was found; decode it too
+          write('reset',$file)
+          write('file',$file,'%s',$key)
+
+          $nuc2='H1' $band='' $nval=''
+          substr($line,2):$nval
+          substr($nval,1,3):$band  // band is 'hig' 'hi2' 'hi3' 'low' 'lo2' 'lo3' 'lo4'
+          $chan=1                  // chan is 1 2 3 4 ...
+          substr($band,3,1):$c3    // c3 is '2' '3' '4' or character
+          format($c3,'isreal'):$realc
+          if ($realc) then $chan=$c3 endif
+          substr($nval,1,2):$band  // band is 'hi' 'lo'
+
+          $lvl2 = ''
+          substr($line,4):$lvl2
+          format($lvl2,'isreal'):$isreal2
+          if ($isreal2) then
+              format($lvl2,0,1):$lvl2 // $lvl2 is pct of optimum w/ decimal point
+          else
+              substr($line,3):$lvl2 // $lvl2 is Coarse, Medium, or Fine
+          endif
+
+          if ($band='hi') then
+            substr($hiband,$chan):$nuc2
+          elseif ($band='lo') then
+            substr($loband,$chan):$nuc2
+          elseif ($nval='tn' or $nval='dn' or $nval='dn2' or $nval='dn3' or $nval='dn4') then
+            $nuc2 = {$nval}
+          else
+            $nuc2 = $nval
+          endif
+
+          // Execute protune for the two tunemethod lines
+          if ($isreal) then
+            write('line3','Tuning %s within %s percent of optimum\n',$nuc,$lvl)
+          else
+            write('line3','Tuning %s to %s criterion\n',$nuc,$lvl)
+          endif
+          if ($isreal2) then
+            write('line3','Tuning %s within %s percent of optimum\n',$nuc2,$lvl2)
+          else
+            write('line3','Tuning %s to %s criterion\n',$nuc2,$lvl2)
+          endif
+          protune('nucleus',$nuc,$lvl,$nuc2,$lvl2)
+          $val='y'
+        endif
+      endif
+    endif
+  endif
+  return($val)
+
+ELSEIF ($arg = 'quit') THEN  // quit tuning in automation
+
+  if auto<>'y' then dg newdg endif
+  if (auto='y') then
+    $file=file $ext=''
+    length($file):$len
+    if $len>4 then
+      substr($file,$len-3,4):$ext
+    endif
+    if ($ext <> '.par') then
+      exists($file,'file'):$e
+      if ($e<0.5 and $ext<>'.fid') then
+        $ext='.fid'
+        $file=$file+'.fid' 
+        exists($file,'file'):$e
+      endif
+      if ($e>0.5 and $ext='.fid') then
+        flush
+        rm('-r',$file):$x
+      endif
+    endif
+  endif
+  if (auto='y' or (activestudy[1]<>'null' and sqmode='go')) then
+    xmnext  // not xmprescan('next')
+  endif
+
+ENDIF
+return('y')

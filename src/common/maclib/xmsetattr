@@ -1,0 +1,71 @@
+"macro xmsetattr"
+"set a value for an attribute"
+"  assumes sqattr,sqval have been loaded by xmreadnode"
+"  set into sqattr,sqval parameters"
+"  set into SQ display"
+"  write into prop file"
+
+if ($# < 1.5) then return endif
+if (auto<>'y' and (appmode='walkup' or appmode='lc') and autodir<>activestudy[1]) then
+  return
+endif
+
+$i=0
+teststr('sqattr','id','global'):$i
+if $i=0 then return endif
+$id=sqval[$i]
+
+if (jviewport > 1.5) then
+  $cmd='xmsetatts(\''+$id+'\''
+  $j=0
+  repeat
+    $j=$j+1
+    $cmd=$cmd+',\''+${$j}+'\''
+  until ($j >= $#)
+  $cmd=$cmd+')'
+  vnmrjcmd('VP 1 '+$cmd)
+endif
+
+$dotool='n'
+"check pairs of arguments, set values for attributes"
+$j=0
+repeat
+  $j=$j+1
+  $attr=${$j}
+  $j=$j+1
+  if ($j <= $#) then
+    $val=${$j}
+    if ($attr<>'id' and $attr<>'node') then
+      $i=0
+      teststr('sqattr',$attr,'global'):$i
+      if $i>0.5 then
+        sqval[$i]=$val
+"xm1 sends only some attributes to sq for display"
+        if (jviewport<1.5) then
+          xm1('set',$id,sqattr[$i],sqval[$i])
+        endif
+      else
+        $isize=size('sqval')+1
+        sqattr[$isize]=$attr sqval[$isize]=$val
+        if (jviewport<1.5) then
+          xm1('set',$id,sqattr[$isize],sqval[$isize])
+        endif
+      endif
+    endif
+    if ($attr='title' or $attr='id' or $attr='status') then
+      $dotool='y'
+    endif
+  endif
+until ($j >= $#)
+if (jviewport>1.5) then return endif
+if $dotool='y' then
+  teststr('sqattr','title','global'):$i
+  $tt=sqval[$i]+' '
+  teststr('sqattr','id','global'):$i
+  $tt=$tt+sqval[$i]
+  teststr('sqattr','status','global'):$i
+  if (sqval[$i]<>'protocol') then $tt=$tt+' ['+sqval[$i]+']' endif
+  xm1('set',$id,'tooltext',$tt)
+endif
+
+xmwritenode

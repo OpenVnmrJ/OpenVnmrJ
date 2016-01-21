@@ -1,0 +1,80 @@
+*******************************************************************************
+* gmapz              -           Gradient Shimming                            *
+*******************************************************************************
+
+Usage:
+   gmapz - retrieve standard gradient shimming parameters from gmapz.par
+   gmapz(mapname) - load shimmap files and retrieve parameters from gradient 
+	shimmap mapname, which must exist in shimmap directories
+
+
+                   ****                                at
+                   *  *                          *************
+                   *  *                          *           *
+B1  ****************  ****************************           *****************
+
+                                                    at+2*d2
+                                              *******************
+                          d3               d2 *                 *
+Gz  ****************************         ******                 **************
+                               *         * 
+                               *********** 
+                                 at/2+d2
+
+                      *******************************************
+                      *                                         *
+dB  *******************                                         **************
+
+
+Gradient shimming uses phase accumulation from shim gradients present during 
+phase-sensitive slice selection.  Phase accumulation from all gradients 
+is as follows:
+
+   phi  =  z Gz (-at/2 - d2 + t)  +  dB (d3 + at/2 + 3*d2 + t)
+
+           Gz is the z-axis pulsed field gradient strength 
+           dB is the sum of the shim gradient fields, shown as being on
+		during relevant times in the pulse sequence
+           t is the time during acquisition time at
+
+The effect of the shim gradients dB may be isolated by arraying d3, and 
+taking the difference in the phases.
+
+   phi2 - phi1  =  dB * (d3[2] - d3[1])
+   i.e.  (phi2 - phi1) ~ 2pi * 100Hz * 10 ms ~ 2pi radians
+
+The effect of any one shim gradient may be isolated by arraying that 
+particular shim, and taking the difference in the phase differences.  
+
+   (phi4-phi3) - (phi2-phi1) = dB[2]*(d3[2] - d3[1]) - dB[1]*(d3[2] - d3[1])
+                             = (dB[2] - dB[1]) * (d3[2] - d3[1])
+
+By arraying all the shim values, a set of shim maps may be constructed for 
+a given set of shims.  Shimming may then be performed by constructing a field 
+map for the starting shim values (phi2 - phi1), and fitting the result to the 
+shim maps.  The calculation time is usually much shorter than the data
+acquisition time, so the entire process typically takes only a few minutes!
+
+Parameters (see dg2):
+   gzsize  -  number of z-axis shims to adjust
+   gzlvl   -  gradient strength
+   gzwin   -  percentage of spectral window used for phase map 
+	        calculation, relevant slice profile
+   d2	   -  gradient stabilization time
+   d3	   -  phase accumulation time, arrayed to two values
+   pw	   -  pulse length, need not be 90 if p1=0
+   p1	   -  if > 0, it is used between the gradient pulses as a 180
+		refocusing pulse, and the gradients have the same sign
+
+Related Macros:
+   gmapshim  -  run autoshimming using last gradient shimming parameters
+   gmapsys   -  enter system menu to set up gradient shimming
+
+Menu Buttons:
+   Gradient Autoshim on Z  -  same as gmapshim
+
+Recommendations: 
+   -Check that the pulsed field gradients are active (pfgon, gradtype).
+   -DO NOT SPIN.
+   -Current implementation is for z-gradients only.  Manual adjustment 
+      of the non-spin (xy) shims may also be necessary.  

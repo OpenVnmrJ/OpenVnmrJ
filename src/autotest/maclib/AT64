@@ -1,0 +1,51 @@
+"macro AT64"
+"AT64" "Gaussian Excitation Predictability (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+
+if ($#=0) then
+   ATrtp('standard')
+   text('Gaussian Excitation Predictability on Channel 2')
+   at_currenttest='gauss_tpwr+pw_90degree_flips_ch2'
+   seqfil='ATdsh2pul' pwpat='gauss32' p1pat='hard'
+   pw=2.4*4*at_pw90_ch2         
+   tpwr=tpwr-12                 "avoid amplifier compression and allow for no wfg"
+   vchannelmap='1' dof=tof
+   tpwr=tpwr,tpwr-3,tpwr-6,tpwr-9,tpwr-12,tpwr-15,tpwr-18,tpwr-21,tpwr-24
+   pw=pw,1.4*pw,2*pw,2.8*pw,4*pw,4*1.4*pw,8*pw,8*1.4*pw,16*pw
+   array='(tpwr,pw)'
+   $i=1
+   repeat
+    p1=pw[$i]
+    pwsadj('gauss32','p1')
+    pw[$i]=p1
+    $i=$i+1
+   until $i=10
+   p1=0
+   cdc 
+   wnt='ATwft select(1) av vsadj  dssh dtext'
+   wexp='AT64(`PART1`)'
+   ATcycle
+   au
+   write('line3','Gaussian Excitation Predicatbility on (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   th=50 fp
+  if (at_plotauto='y') then
+   vsadj(100) pl('all') pltext(100,wc2max-2)
+   if (at_printparams='y') then
+    dn2='' pap ATpltext
+    pps(120,0,wcmax-120,90) ATpage
+   endif 
+   ATpltext(0,wc2max-2)
+   ATplfp
+   ATpage
+  endif
+
+ATnext
+endif

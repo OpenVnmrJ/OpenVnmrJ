@@ -1,0 +1,43 @@
+"macro getProbePath"
+//  A generic macro that will return the absolute pathname
+//    of a probe file.  This will support an argument 
+//  A 2nd optional argument of 'alert' will give error messages
+//  The return values are:
+//    ret1. Does a file exist (1 or 0)
+//    ret2. Pathname of the file
+//    ret3. Does the file have write access
+//	- Krish
+
+    $pex=0 $ppath='' $ret3='' $rw=0
+    if ($# < 1) then $1=probe endif
+    if ($# < 2) then $2='' endif
+
+    $firstchar='' substr($1,1,1):$firstchar
+// arg1 is an empty string
+    if ($1='') then
+        $pex=0 $rw=0 $ppath=''
+// arg1 is an absolute path
+    elseif ($firstchar='/') then
+	exists($1,'file'):$pex
+	exists($1,'file','w'):$rw
+	$ppath=$1
+// arg1 is not an absolute path
+    else
+        getfilepath($1,'probes/'+$1):$pex,$ppath
+	if ($pex) then
+	    exists($ppath,'file','w'):$rw
+	endif
+    endif
+    if ($pex=0) then $rw=0 endif
+
+    if ($2='alert') then
+        if ($ppath='') then
+            write('error','Probe parameter not set, please set with "addprobe"')
+	elseif ($pex=0) then
+            write('error','Probe file for %s could not be found',$1)
+	elseif ($rw=0) then
+            write('error','%s has no write permission to %s',owner,$ppath)
+	endif
+    endif
+
+    return($pex,$ppath,$rw)

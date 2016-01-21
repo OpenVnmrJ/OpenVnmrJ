@@ -1,0 +1,59 @@
+"macro xmpref"
+// set and get operator preferences for study queue
+
+if $#<1.5 then return endif
+if ($1<>'get' and $1<>'set') then $1='get' endif
+
+$op=operator
+exists('operator_','parameter'):$e
+if (auto='y') and ($e) then
+  $op=operator_
+endif
+$preffile = userdir+'/persistence/pref_'+$op
+exists($preffile,'file'):$ex
+
+if $1='get' then
+
+// most preferences are 'n' or 'y'
+  $val='n'
+  if ($ex) then
+    $str='' $n=0
+    lookup('mfile',$preffile,$2,'read'):$str,$n
+    if $n>0.5 then $val=$str endif
+  endif
+  return($val)
+
+elseif $1='set' and $#>2.5 then
+
+  $type='' $val=''
+  substr($2,1):$type
+// substr($3,1):$val
+  $val = $3
+  if ($ex) then
+    $types='' $vals='' $size=0 $found=0
+    readfile($preffile,'$types','$vals','','local'):$size
+    if ($size>0.5) then
+      teststr('$types',$type,'local'):$found
+      if ($found) then
+        $vals[$found] = $val
+      else
+        $size = $size+1
+        $types[$size] = $type
+        $vals[$size] = $val
+      endif
+      write('reset',$preffile)
+      $i=0
+      repeat
+        $i=$i+1
+        write('file',$preffile,'%-20s %s',$types[$i],$vals[$i])
+      until ($i>=$size)
+    else
+      write('reset',$preffile)
+      write('file',$preffile,'%-20s %s',$type,$val)
+    endif
+  else
+    write('file',$preffile,'%-20s %s',$type,$val)
+  endif
+  vnmrjcmd('pnew','operator')
+
+endif

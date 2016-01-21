@@ -1,0 +1,67 @@
+"macro Mprocess_element"
+"Mprocess_element - Process one element in an image."
+
+
+$seqcon = ''
+$flashc = 0
+seqcon('pe'):$seqcon
+
+
+"If compressed in phase encoding direction, then run flashc"
+if ($seqcon = 'c') then
+  exists('flash_converted','parameter'):$flashc
+  if ($flashc = 0) then
+    flashc('ms',ns)
+  endif
+endif
+
+"At this point, the data is in the 'ncsnn' format"
+
+
+
+
+$oneD='n'
+if ($# > 0.5) then
+  if ($1 = '1st') then
+    $oneD='y'
+  elseif ($1 = 'select') then
+    cf = ns/2
+    element = nv/2
+    ft(element)
+    f full
+    vsadj
+    return 
+  endif
+endif
+
+$usewt = 'y'
+exists('ftproc','parameter'):$e
+if $e > 0.5 then
+  if ftproc[1] = 0 then
+    $usewt = 'n'
+  endif
+endif
+
+if $oneD='y' then
+  if $usewt = 'y' then
+    wft1d(element)
+  else
+    ft1d(element)
+  endif
+  f full
+  imconi
+  write('line3','Position Cursor to select trace in 2nd dimension')
+else
+/*
+  if $usewt = 'y' then
+    wft2d(element)
+  else
+    ft2d(element)
+  endif
+  f full
+  imconi
+*/
+  ftproc[1] = 1
+  process
+endif
+

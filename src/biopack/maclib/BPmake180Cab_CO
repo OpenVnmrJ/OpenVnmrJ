@@ -1,0 +1,22 @@
+"macro BPmake180Cab_CO"
+
+"For version 5.1 software and later"
+
+"Calculates the following shaped SLP pulse and stores it in your shapelib:"
+"Carrier on CO, 180 degree pulse on Cab 128ppm away."
+
+"The carrier should be set to 174ppm."
+
+"The fine attenuator setting must be set in the pulse sequence during the"
+" pulse."
+
+$pwCab180 = 72*600.0/sfrq
+$steps7 = $pwCab180*5.0   $steps7 = 2.0*trunc($steps7/2.0) + 1.0
+$pwCab180 = ($steps7 + 1.0)/5.0 
+$rf7 = 1023.0
+BPmakesinc($steps7, $rf7)
+$stps7 = ''     format($steps7,0,0):$stps7     $shape7 = 'sincs' + $stps7
+$freq7 = -dfrq*128.0      BPconvolute($shape7,'offC27',$pwCab180,$freq7)
+BPmoveshape('offC27.RF')
+shell('rm -f',userdir+'/shapelib/'+$shape7+'.RF'):$dum
+write('line3','The SLP pulse "shapelib/offC27.RF" has been created')

@@ -1,0 +1,21 @@
+"macro BPmake180Ca"
+
+"For version 5.1 software."
+
+"Calculates the following SLP pulse and stores it in your shapelib:"
+"Carrier on Cb, 180 degree pulse on Ca 10ppm away, null at CO, 128ppm away."
+
+"The carrier should be set to 46ppm."
+
+"The fine attenuator setting must be set in the pulse sequence during the"
+" pulse."
+
+$pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+$steps4 = $pwC4*5.0      $steps4 = trunc($steps4)    $pwC4 = $steps4/5.0
+$rf4 = 1023.0
+BPmakehard($steps4, $rf4)
+$stps4 = ''    format($steps4,0,0):$stps4      $shape4 = 'hard' + $stps4
+$freq4 = dfrq*10.0      BPconvolute($shape4,'offC4',$pwC4,$freq4)
+BPmoveshape('offC4.RF')
+shell('rm -f',userdir+'/shapelib/'+$shape4+'.RF'):$dum
+write('line3','The SLP pulse "shapelib/offC4.RF" has been created')

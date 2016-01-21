@@ -1,0 +1,123 @@
+"macro ATc34_10usec"
+"ATc34_10usec" "C13 Decoupling Heating Test "  
+"       (limited by max user-defined decoupling power)"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='s2pul'
+   text('C13 Decoupling Heating Test')
+   at_currenttest='Decoupler_heating_c' 
+   ss=64 nt=1 f full 
+   tof=at_tof
+   wnt=''
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   wexp='ATc34_10usec(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+
+ wft av sp=2.5 wp=0.8p 
+ getll(1):$int,cr  sp=cr-0.02p wp=.1p
+ lb='n' sb=.205 at=.8 
+ vsadj th=40 nll
+ d1=1.5-at-0.07 ss=1 wp=wp/2
+ vp=0 wc=80 sc=0 fn=2*np axis='h' 
+ create('scalesw','real') scalesw=100/(1.11696*sfrq)
+ vo=1 th=10
+
+ at=.82 d2=.075 d1=.605 sb=.205 fn='n'
+ lb='n' 
+ ss=2
+ dn='C13' 
+
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   if sfrq<700 then
+    $pwx=1e6/(4.0*40*dfrq)  "40ppm 13C RF Field is adequate for garp"
+    else
+    $pwx=1e6/(4.0*6000)  "6kHz maximum power for higher field spectrometers"
+   endif
+
+  ln($pwx/at_pwx90Lowpower_10usec_c):$ln   "use power-limited results for pulse power/pw90"
+  dpwr=at_pwx90Lowpowerlvl_10usec_c-20.0*$ln*0.43429
+  dpwr=trunc(dpwr)
+  dmf=1e6/$pwx
+  n1='' n2=''
+
+ if (dpwr>at_max_dpwr) then
+  write('line3','Decoupling Power Requested Exceeds Defined Power Limit (%s)',at_max_dpwr)
+  write('line3',' Power Reduced to Permitted Level:%s',at_max_dpwr)
+  format(at_max_dpwr,3,0):n3
+  n1='Decoupling Power Requested Exceeds User-Defined Power Limit for 13C Decoupling:'+n3
+  n2=' Power Reduced to Permitted Level for 13C Decoupling:'+n3
+  $diff=dpwr - at_max_dpwr
+  $count=1
+  repeat
+    $pwx=$pwx*1.12 
+     dmf=dmf/1.12
+    dpwr=dpwr - 1
+    $count=$count+1
+  until $count>$diff
+ endif
+ dmm='ccc' 
+
+ r1=1 repeat
+  dm[r1]='nyn'
+  r1=r1+1
+ until r1>100
+ r1=101 repeat
+  dm[r1]='nnn' r1=r1+1
+ until r1>200
+ text('Test of 13C Decoupler Heating Using an RF Field sufficient to decouple 13C \\over a 160 ppm. One spectrum every 1.5 seconds with 75 msec\\13C decoupling for first 100 spectra and no decoupling in last 100 spectra\\Scale in Degrees Centigrade')
+ 
+ atext(n1) atext(n2)
+ 
+ wnt='ATdec_heat'
+ wexp='ATc34_10usec(`PART2`)' 
+ ATcycle dtext au
+
+elseif ($1='PART2') then
+
+ wft
+ select(arraydim/2) peak:$ht,r3
+ if r3<0 then r3=0 endif
+ r3=trunc(100*r3*scalesw)/100
+ ATrecord('DEC_HEATINGc_10usec','C13 Decoupler Heating Test','Temp_Rise',r3)
+ write('file',autotestdir+'/REPORT','Temperature Rise with 13C Decoupling= %1.1f ',r3)
+
+ if (at_plotauto='y') then
+  if (at_printparams='y') then
+   dn2='' pap(0,wc2max-40) ATpltext 
+   pps(180,0,wcmax-180,90)
+   ATpage 
+  endif
+  pltext(0,wc2max-5)
+  ATpltext
+  r1 sc=sc+30 plww(1,100) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  0.0 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  150 sec')
+  write('plotter',wcmax-sc-wc,wc2max-55,'Heating:  13C Decoupling')
+  write('plotter',wcmax-sc-wc,wc2max-60,'First 100 Spectra')
+  write('plotter',wcmax-sc-wc/2,wc2max-63,'Maximum Heating From 13C Decoupling = %2.1f Degrees',r3)
+  r2  sc=sc+60 plww(101,200) pscale
+  write('plotter',wcmax-sc,vp,'<--Time =  151.5 sec')
+  write('plotter',wcmax-sc,vp+99,'<--Time =  300 sec')
+  write('plotter',wcmax-sc-wc,wc2max-55,'Cooling: No 13C Decoupling')
+  write('plotter',wcmax-sc-wc,wc2max-60,'Last 100 Spectra')
+  ATpage 
+ endif
+
+ ATsvf
+
+ATnext
+endif

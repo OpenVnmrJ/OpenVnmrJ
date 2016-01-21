@@ -1,0 +1,677 @@
+"macro Ndec"
+
+$probe='' shell('basename '+probe):$probe
+
+mkpar('string','execprocess','','execplot','')
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+execplot='execplot=\'\''
+
+getlimit('pwxlvl'):$max,$min,$dbstep
+if (console='inova') or (console='mercury') then $dbstep=1 endif
+// For now force dbstep to integer or 0.5
+if $dbstep>0.5 then $dbstep=trunc($dbstep+0.5) else $dbstep=0.5 endif
+is_IP:$isIP
+
+$arg=''
+if ($# < 1) then
+    if $isIP then
+        $arg='1'
+    else
+    	$pwxlvl=0
+    	getparam('pwxlvl','N15'):$pwxlvl
+    	if ($pwxlvl=0) then $arg='1' else $arg='init' endif
+    endif
+else
+    if not typeof('$1') then
+        format($1,0,0):$arg
+    else
+        $arg=$1
+    endif
+endif
+
+$bio=0    // Check for Bio-NMR referencing (liquid NH3)
+getrefcmpd('N15'):$ref
+if $ref='NH3 (liquid), ext.' then $bio=1 endif
+
+"*****************************************************************"
+IF ($arg = '1') THEN
+
+        $fileex=0 $file='' $asdir=''
+        cplog('PROTON','first'):$file,$asdir
+        if ($file<>'') then rt($asdir+'/'+$file) else return endif
+        wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        $solv=''
+        format(solvent,'lower'):solvent
+	solvent=solvent
+	dn='N15'
+	getparam('tpwr',tn):tpwr
+	getparam('pw90',tn):pw90
+	pw=pw90
+
+	seqfil='pwxcalib'
+	ds dm='nnn' dmm='ccc' pwxlvl=N15pwxlvl vp=wc2max/2
+	f vsadj
+	setref
+
+	if solvent='dmso' then        // ID2 sample
+//  	    setsw(0,9)
+//  	    peak(7.95p,8.15p):$ht,cr
+  	    if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  	    wp=0.2p sp=7.95p
+  	    j1xh=90
+	elseif solvent='d2o' then     // Autotest sample
+//  	    peak(1.80p,2.2p):$ht,cr
+//  	    setsw(0,3.8)
+  	    if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  	    wp=1p sp=1.4p
+  	    //j1xh=2.8
+  	    j1xh=2
+  	    lb=2 vs=vs*10
+	else
+  	    write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+  	    abort
+	endif
+
+	array('pwx',50,2,2)
+	ai fn=8k at=.2 av sinebell vp=0
+	wnt='wft(`acq`) select(1) vsadj(30) dssh dssl(`value`)'
+	caliblist=$0
+	xmhaha_calib('synonym',$0):caliblist
+	calibnode='_iteration'
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Ndec(2)')
+	alock='n' wshim='n' r1=1 r3=1
+        if Console='vnmrs' then ddrtc=alfa endif
+	clear(2)
+
+"********************************************************"
+ELSEIF ($arg = '2') THEN
+
+        $file='' $asdir=''
+        cplog('pwxcalib','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        wft select(1) aph0 av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+        $counter=1
+        $stop=0
+        repeat
+            select($counter)
+            if ($stop < 4) then
+                peak(sp,wp+sp):$ht
+                if $counter=1 then $minht = $ht $pwx=pwx[1] $maxht=$ht
+                else
+                    if $ht<$minht then
+			$stop=0
+                        $minht=$ht $pwx=pwx[$counter]
+                    else
+                        $stop=$stop+1
+                    endif
+                endif
+            endif
+            $counter=$counter+1
+        until ($counter>arraydim)
+
+    	if $minht/$maxht > 0.5 then
+            write('error','Autocalibration failed (min/max > 0.5) - determine manually')
+	    if ($isIP) then
+                write('line3','15N pw90 (indirect) calibration failed, target pulse width not achievable'):$str
+		atext($str)
+	        VPlog('ExpError',$str)
+	        IPdoemail('FAIL')
+	     endif
+            abort
+    	endif
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	select(1) 
+
+	if ($pwx > 2*N15pwx) then
+  	    if (r1 < 2) and (pwxlvl < 57) then
+    		r1 = r1+1
+    		pwxlvl=pwxlvl+6
+                write('line3','_pwxlvl%g',pwxlvl):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+                xmhaha_calib('addNode','Ndec(2)')
+		return
+	    else
+    		write('error','Autocalibration failed on second try - determine manually')
+	        if ($isIP) then
+                    write('line3','15N pw90 (indirect) calibration failed, target pulse width not achievable'):$str
+		    atext($str)
+	            VPlog('ExpError',$str)
+	            IPdoemail('FAIL')
+	        endif
+    		abort
+	    endif
+  	endif
+
+        PWRcalib($pwx,N15pwx,'pwxlvl'):$pwxlvldiff,$adim,$pwinc
+        if $pwxlvldiff=0 then
+            Ndec(3,$pwx)
+        else
+            pwxlvl=pwxlvl+$pwxlvldiff
+	    array('pwx',$adim/2,1,$pwinc)
+            clear(2)
+            write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Ndec(4)')
+        endif
+
+"********************************************************"
+ELSEIF ($arg = '3') THEN
+
+	$pwx=$2
+	sinebell av ds(1)
+	array('pwx',31,0.7*$pwx,0.02*$pwx)
+	clear(2) full
+	da
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Ndec(5)')
+
+"********************************************************"
+ELSEIF ($arg = '4') THEN
+
+	if $# < 2 then $2='' endif
+        cplog('pwxcalib','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        clear(2)
+        sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        $counter=1
+        $stop=0
+        repeat
+            select($counter)
+            if ($stop < 4) then
+                peak(sp,wp+sp):$ht
+                if $counter=1 then $minht = $ht $pwx=pwx[1]
+                else
+                    if $ht<$minht then $minht=$ht $pwx=pwx[$counter]
+                    else $stop=$stop+1
+                    endif
+                endif
+            endif
+            $counter=$counter+1
+        until ($counter>arraydim)
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	select(1) 
+
+// if this is the last iteration, STOP !
+        PWRcalib($pwx,N15pwx,'pwxlvl'):$pwxlvldiff,$adim,$pwinc
+	if $2='last' and $pwxlvldiff>0 then $pwxlvldiff=0 endif
+        if $pwxlvldiff=0 then
+                Ndec(3,$pwx)
+        else
+                pwxlvl = pwxlvl+$pwxlvldiff
+		array('pwx',$adim/2,1,$pwinc)
+                clear(2)
+                write('line3','_pwxlvl%g',pwxlvl):calibnode
+                chkname(calibnode,'alnum-'):calibnode
+// if pwrdiff is negative 1 dbstep
+// This would be the last iteration
+                if $pwxlvldiff>=-1*$dbstep and $pwxlvldiff<0 then
+		    $2='last'
+		endif
+		$arg2='Ndec(4,`'+$2+'`)'
+		xmhaha_calib('addNode',$arg2)
+        endif
+
+"********************************************************"
+ELSEIF ($arg = '5') THEN
+
+        cplog('pwxcalib','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        clear(2)
+        sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        $counter=1
+        repeat
+            select($counter)
+            peak(sp,wp+sp):$ht
+            if $counter=1 then $minht = $ht $pwx=pwx[1]
+            else
+                if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+            endif
+            $counter=$counter+1
+        until $counter>arraydim
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+	if ($pwx > N15pwx) then
+ 	    if (pwxlvl < 63) then
+  		pwxlvl = pwxlvl+$dbstep
+  		array('pwx',31,0.7*$pwx,0.02*$pwx)
+		write('line3','_pwxlvl%g',pwxlvl):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+		xmhaha_calib('addNode','Ndec(5)')
+		return
+	    endif
+	endif
+
+	$diff = pwx[2] - pwx[1]
+	if ($diff > 0.25) then
+ 	    array('pwx',31,$pwx-3,0.2)
+	    write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+	    xmhaha_calib('addNode','Ndec(5)')
+	    return
+	endif
+
+	N15pwx=$pwx
+	select(1)
+
+	clear(2)
+	pwxlvl=pwxlvl-12 $pwx=N15pwx*4
+	array('pwx',41,0.5*$pwx,0.025*$pwx)
+	clear(2) full
+	da
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Ndec(6)')
+
+"********************************************************"
+ELSEIF ($arg = '6') THEN
+
+        cplog('pwxcalib','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        clear(2)
+        sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        $counter=1
+        repeat
+            select($counter)
+            peak(sp,wp+sp):$ht
+            if $counter=1 then $minht = $ht $pwx=pwx[1]
+            else
+                if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+            endif
+            $counter=$counter+1
+        until $counter>arraydim
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+        array('pwx',31,$pwx-6,0.4)
+        write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	execprocess='Ndec(7)'
+
+"********************************************************"
+ELSEIF ($arg = '7') THEN
+
+        clear(2)
+        sinebell wft select(1) av
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        $counter=1
+        repeat
+            select($counter)
+            peak(sp,wp+sp):$ht
+            if $counter=1 then $minht = $ht $pwx=pwx[1]
+            else
+                if $ht<$minht then $minht=$ht $pwx=pwx[$counter] endif
+            endif
+            $counter=$counter+1
+        until $counter>arraydim
+
+        select(1)
+        $ref_pwx90=$pwx
+        $ref_pwxlvl=pwxlvl
+
+	$pwxlvl_cf = $pwx/4/N15pwx
+	pwxlvl=pwxlvl+12
+	pwx=N15pwx
+
+
+        $line=''
+        write('line3','%s - refpwxlvl:%g  refpwx:%0.1f',caliblist,$ref_pwxlvl,$ref_pwx90):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - compression factor: %0.4f',caliblist,$pwxlvl_cf):$line
+        CalibrationResults=CalibrationResults,$line
+
+	wnt='wft(`acq`) select(1) ph aph0 dssh dssl(`value`)' 
+	$strpwx='' $strpwxlvl='' $strref_pwxlvl='' $strref_pwx90=''
+	$strdmf='' $strdpwr='' $sdres='' $strpwxlvl_cf=''
+        write('line3','%0.1f',N15pwx):$strpwx
+        write('line3','%g',pwxlvl):$strpwxlvl
+        write('line3','%g',$ref_pwxlvl):$strref_pwxlvl
+        write('line3','%0.1f',$ref_pwx90):$strref_pwx90
+//	format(N15pwx,0,1):$strpwx
+//	format(pwxlvl,0,0):$strpwxlvl
+//	format($ref_pwxlvl,0,0):$strref_pwxlvl
+//	format($ref_pwx90,0,1):$strref_pwx90
+	format($pwxlvl_cf,0,4):$strpwxlvl_cf
+	setparams('pwx',$strpwx,'N15')
+	setparams('pwxlvl',$strpwxlvl,'N15')
+	setparams('pwxlvl_cf',$strpwxlvl_cf,'N15')
+
+	calcdecshape
+	Ndec('finish')
+
+"********************************************************"
+"AuNdec: N15 decoupler Autocalibration macro "
+" options/arguments: "
+" (none) : initial setup "
+" 'pwxcal' : calculate/refine pwx;  save data when complete "
+" 'decset' : initial set up of decoupling calibration "
+" 'deccal' : process/save decoupling calibration result, continue "
+"	with remaining calibration(s) "
+
+ELSEIF ($arg = 'init') THEN
+  "initial setup of N15 decoupler calibration "
+
+        $fileex=0 $file='' $asdir=''
+        cplog('PROTON','first'):$file,$asdir
+        if ($file<>'') then rt($asdir+'/'+$file) else return endif
+        wft
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+        setref
+	dn='N15'
+	f full
+	if solvent='dmso' then        // ID2 sample
+  	    wp=0.2p sp=7.95p
+  	    if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  	    j1xh=90
+	elseif solvent='d2o' then     // Autotest sample
+  	    wp=1p sp=1.4p
+  	    if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  	    //j1xh=2.8
+  	    j1xh=2
+  	    lb=2 vs=vs*10
+	else
+  	    write('error','Wrong solvent and/or sample? Solvent must be DMSO or D2O!')
+	    abort
+	endif
+
+	getparam('tpwr',tn):tpwr
+	getparam('pw90',tn):pw90
+	pw=pw90
+	if pw=0 then
+  	    write('error','1H pw = 0 - Please run 1H autocalibration first!')
+	    abort
+	endif
+
+	seqfil='pwxcalib'
+	ph dm='nnn' dmm='ccc' pwxlvl=N15pwxlvl vp=wc2max/2
+
+	$step = trunc(2*N15pwx + 0.5)/10
+	array('pwx',15,0,$step)
+
+	ai fn = 4*np
+        if Console='vnmrs' then ddrtc=alfa endif
+	wnt='wft(`acq`) select(1) aph0 phase(180) vsadj dssh dssl(`value`)'
+	caliblist=$0
+	xmhaha_calib('synonym',$0):caliblist
+	calibnode='_iteration'
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	xmhaha_calib('addNode','Ndec(\'pwxcal\')')
+	alock='n' wshim='n' r1=1 r3=1
+	clear(2)
+
+"*****************************************************************"
+ELSEIF ($arg = 'pwxcal') then
+
+        cplog('pwxcalib','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+	wft select(1) aph0 phase(180) vsadj thadj nll
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	fp pw360cal:$pwx
+	if ($pwx < 1) then  " unreliable result! "
+    	    write('error','Autocalibration failed - determine manually')
+    	    abort
+	endif
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        writeparam($asdir+'/'+$file+'.fid/procpar','CalibrationResults','current','add')
+
+
+	if ($pwx > 2*N15pwx) then
+  	    if (pwxlvl < 56) then
+    	    	pwxlvl=pwxlvl+6
+                write('line3','_pwxlvl%g',pwxlvl):calibnode
+	        chkname(calibnode,'alnum-'):calibnode
+                xmhaha_calib('addNode','Ndec(\'pwxcal\')')
+                write('alpha','calibrating decoupler pulses at power %g',pwxlvl)
+                return
+	else
+                write('error','Autocalibration failed -- determine manually')
+                abort
+            endif
+        endif
+
+        PWRcalib($pwx,N15pwx,'pwxlvl'):$pwxlvldiff
+
+        if ($pwxlvldiff) then
+            pwxlvl=pwxlvl+$pwxlvldiff
+            write('line3','_pwxlvl%g',pwxlvl):calibnode
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('addNode','Ndec(\'pwxcal\')')
+            write('alpha','calibrating decoupler pulses at power %g',pwxlvl)
+            return
+        else
+   	    $strpwx='' $strpwxlvl=''
+   	    format($pwx,0,1):$strpwx
+   	    format(pwxlvl,0,0):$strpwxlvl
+   	    setparams('pwx',$strpwx,'N15')
+   	    setparams('pwxlvl',$strpwxlvl,'N15')
+
+   	    Ndec('decset',$pwx)  "continue with dpwr/dmf/pwxlvl_cf calibrations"
+   	    return
+ 	endif
+
+"*****************************************************************"
+ELSEIF ($arg = 'decset') then
+
+ 	$pwx=$2
+ 	pwxlvl=pwxlvl-12 $pwx=$pwx*4
+ 	$step = trunc(2*$pwx + 0.5)/10
+ 	array('pwx',21,0,$step)
+	write('line3','_pwxlvl%g',pwxlvl):calibnode
+        chkname(calibnode,'alnum-'):calibnode
+	execprocess='Ndec(\'deccal\')'
+
+"*****************************************************************"
+ELSEIF ($arg = 'deccal') then
+	wft select(1) aph0 phase(180) vsadj thadj nll
+	fp pw360cal:$pwx
+	if ($pwx < 1) then  " unreliable result! "
+    	    write('error','Autocalibration failed - determine manually')
+    	    abort
+	endif
+
+	getparam('pwx','N15'):$N15pwx
+	$cf = $pwx/4/$N15pwx
+        $strcf = ''
+        format($cf,0,3):$strcf
+        setparams('pwxlvl_cf',$strcf,dn)
+
+        $line=''
+        write('line3','%s - pwxlvl:%g  pwx:%0.1f',caliblist,pwxlvl,$pwx):$line
+        CalibrationResults=CalibrationResults,$line
+        $line=''
+        write('line3','%s - compression factor: %s',caliblist,$strcf):$line
+        CalibrationResults=CalibrationResults,$line
+
+	getparam('pwxlvl','N15'):pwxlvl
+	pwx=$N15pwx
+
+	calcdecshape
+	Ndec('finish')
+
+"*****************************************************************"
+ELSEIF ($arg='finish') THEN
+
+	$CalibrationResults=CalibrationResults
+            cplog('PROTON','first'):$file,$asdir
+            writeparam($asdir+'/'+$file+'.fid/procpar','pwx','current','add')
+            writeparam($asdir+'/'+$file+'.fid/procpar','N15pwx','current','add')
+            tmpsave('Ndec')
+            rt($asdir+'/'+$file)
+            wft
+	    dn='N15'
+            execprocess='wft dssh darray(\'CalibrationResults\')'
+            execplot='execplot=\'\''
+            xmhaha_calib('synonym',$0):caliblist
+            getparam('tpwr'):tpwr
+            getparam('pw90'):pw90
+            pw=pw90
+            setdecpars
+	    setref
+	    if solvent='dmso' then        // ID2 sample
+//  	    setsw(0,9)
+//  	    peak(7.95p,8.15p):$ht,cr
+  	       if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+  	       wp=0.2p sp=7.95p
+  	       j1xh=90
+	    elseif solvent='d2o' then     // Autotest sample
+//  	    peak(1.80p,2.2p):$ht,cr
+//  	    setsw(0,3.8)
+  	       if $bio then setoffset(234.4,dn):dof else setoffset(-146,dn):dof endif
+  	       wp=1p sp=1.4p
+  	       //j1xh=2.8
+  	       j1xh=2
+  	       lb=2 vs=vs*10
+            endif
+
+	    seqfil='pwxcalib'
+	    vp=wc2max/2
+	    wnt='wft(`acq`) select(1) vsadj ph aph0 dssh dssl(`value`)'
+
+	    $pwinc= trunc((pwx/6)+0.5)
+	    array('pwx',50,$pwinc,$pwinc)
+	    gaussian ph
+            if Console='vnmrs' then ddrtc=alfa endif
+	    fn=2*np
+
+            $ep='' write('line3','wft wp=%0.1f sp=%0.1f select(1) aph0 vsadj(100) dssh',wp,sp):$ep
+            execprocess=$ep+' darray(\'CalibrationResults\')'
+            execplot='cpplss'
+            CalibrationResults=$CalibrationResults
+            calibnode='_PWXnutation'
+
+	    // Test for VeriPulse environment
+            is_IP:$isIP
+            if ($isIP) then
+               execplot='calibplot'
+               profileflg='y'
+	       at=1 nt=4 d1=1 fn=4*np
+	       getparam('pwx','N15'):$N15pwx
+	       $pwinc=($N15pwx/11)
+   	       format($pwinc,2,1):$pwinc
+   	       array('pwx',111,0,$pwinc)
+	       calibnode='_pwx90_RFhomo'
+               wnt=''
+               substr(ap,'find','pwx(pwx):3','delimiter',',;'):$e
+               if ($e=0) then
+                 substr(ap,'find','p1(p1):3','delimiter',',;'):$e,$index,$len
+                 substr(ap,$index,$len,'p1(p1):3,pwx(pwx):3'):ap
+               endif
+               $strpwx='' $strpwxlvl=''
+               $pwxlvl=0 $pwx90=0
+               getparam('pwx','N15'):$pwx90
+               getparam('pwxlvl','N15'):$pwxlvl
+               write('line3','%0.1f',$pwx90):$strpwx
+               write('line3','%g',$pwxlvl):$strpwxlvl
+               setparams('pw90',$strpwx,'N15')
+               setparams('tpwr',$strpwxlvl,'N15')
+
+	       $ep='' write('line3','wft wp=%0.1f sp=%0.1f select(1) vsadj dssh N15rfhomo_process(\'activestudy\') rmh',wp,sp):$ep
+
+               execprocess=$ep+' darray(\'CalibrationResults\')'
+	       wstart='eOptions=IPeOptions'
+
+            endif
+            execprocess=$ep+' darray(\'CalibrationResults\')'
+            execplot='calibplot'
+
+            xmhaha_calib('savePar','N15pwx')
+
+	if (solvent='dmso') then
+	    Ndec('profile')
+            mkpar('string','execprocess','','execplot','')
+            setgroup('execprocess','display')
+            setgroup('execplot','display')
+            if (dseq='g') then $dseq='garp1'
+            else
+                strstr(dseq,'W40'):$wok
+                if ($wok) then $dseq='WURST40'
+                else $dseq=dseq endif
+            endif
+	    wstart=''
+            $ep='' write('line3','wft wp=%0.1f sp=%0.1f select(21) vsadj(100) dssh',wp,sp):$ep
+            execprocess=$ep+' darray(\'CalibrationResults\')'
+            execplot='cpplss'
+            CalibrationResults=$CalibrationResults
+            calibnode='_'+$dseq+'_Profile'
+            chkname(calibnode,'alnum-'):calibnode
+            xmhaha_calib('savePar','N15dec_profile')
+	endif
+
+	tmpreturn('Ndec')
+"*******************************************************************"
+ELSEIF ($arg = 'profile') THEN
+	dn='N15'
+	gHMQC
+	ni=1 phase=1 nullflg='n' ss=2 array=''
+	vp=0 dm='nny' dmm='ccp'
+	if $bio then setoffset(105.4,dn):dof else setoffset(-275,dn):dof endif
+	wp=0.6p sp=7.65p nt=2 
+
+	wnt='wft(`acq`) select(1) ph aph0 vsadj(20) dssh dssl(`value`)'
+	$dof=dof+(300*dfrq)
+	array('dof',41,$dof,-15*dfrq)
+	at=.2 d1=2 gaussian
+	$strdmf='' $strdpwr=''
+	format(dpwr,0,0):$strdpwr
+
+        exp((pwxlvl-dpwr)*2.303/20):$mult
+        $pwx=pwx*$mult*pwxlvl_cf
+        format(250000/$pwx,0,0):$strdmf
+
+        cplog('PROTON','first'):$file,$asdir
+        gettxt($asdir+'/'+$file)
+	$text=dseq+' N15 decoupling profile:'
+	$atext='  +/- 200 ppm from on-resonance'
+	$atext0='    in 10 ppm steps'
+	$atext1='N15 dec. gammaH2: '+$strdmf
+	$atext2 ='   at power level: '+$strdpwr
+	atext($text)
+	atext($atext) atext($atext0) atext($atext1) atext($atext2)
+
+"****************************************************************"
+ENDIF

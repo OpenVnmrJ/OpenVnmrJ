@@ -1,0 +1,145 @@
+"macro ATc30"
+"ATc30" "Find C13 pw90 ,power level, and BB amplifier compression"
+"new globals: at_max_pwxlvl   Maximum pulse power"
+"             at_max_dpwr  Maximum decoupling power"
+"new versions of existing parameters:   "              
+"             at_pwx90c        High power 13C pwx90"
+"             at_pwx90lvlc     High power 13C level"
+"             at_pwx90Lowpowerc  Low power 13C pwx90"
+"             at_pwx90Lowpowerlvlc Lower power level
+"             at_LBampl_comprc   Low Band Amplifier Compression"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   at_currenttest='c13pw90c_1'
+   dn='C13' 
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+   seqfil='ATrfhomo' 
+   text('Finding Null for 15 usec 13C Pulse (vary 13C Pulse Power)')
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   exists('maxattench2','parameter','global'):$e
+   if ($e=1) then
+    if (at_max_pwxlvl<maxattench2) then
+      $maxpower=at_max_pwxlvl
+    else
+      $maxpower=maxattench2
+    endif
+   else
+      $maxpower=at_max_pwxlvl
+   endif
+
+   write('line3','Finding Proper Power Level for pw(C13)=15 usec')
+   pwx=15 array('pwxlvl',21,$maxpower-20,1)
+   lb='n' sb=at/4 s1 av
+   r1=1
+      
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='ATc30(`PART1`)'
+   text 
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   ATsvf
+   $pwxlvlmax=pwxlvl[21]
+   write('line3','Finding C13 pwx90 (Channel 2)')
+   exists('maxattench2','parameter','global'):$e
+   if ($e=1) then
+    if (at_max_pwxlvl<maxattench2) then
+      $maxpower=at_max_pwxlvl
+    else
+      $maxpower=maxattench2
+    endif
+   else
+      $maxpower=at_max_pwxlvl
+   endif
+
+   ATpwx90cal('pwxlvl'):$pwxlvl
+   pwxlvl=$pwxlvl
+   if ((pwxlvl=$pwxlvlmax) and (r1=1))then
+    pwx=pwx*1.12            " increase pwx once (typ. for 8mm/10mm probes "
+    array('pwxlvl',21,$maxpower-20,1)
+    at_currenttest='c13pw90c_1a'
+    r1=4
+    ATcycle au return
+   endif
+   at_currenttest='c13pw90c_2'
+                          "use old value if close"
+   if ((pwxlvl=at_pwx90lvlc+1.0) or (pwxlvl=at_pwx90lvlc-1.0)
+    or (pwxlvl=at_pwx90lvlc+2.0) or (pwxlvl=at_pwx90lvlc-2.0))
+     then pwxlvl=at_pwx90lvlc
+   else
+     at_pwx90lvlc=pwxlvl
+   endif
+
+   text('Finding 90 Degree 13C Pulse Width')
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+
+   wexp='ATc30(`PART2`)'
+   ATcycle au
+ 
+elseif ($1='PART2') then
+   ATsvf
+   at_currenttest='c13pw90c_3'
+   write('line3','Determining C13 pwx90 at Reduced Power (Channel 2)')
+   av
+   ATpwx90cal('pwx'):pwx r4=pwx
+   text('Finding 90 Degree 13C Pulse Width at lower power')
+
+   at_pwx90c=trunc(10*pwx)/10
+   pwx=pwx*4.0 pwxlvl=pwxlvl-12
+   array('pwx',31,0.5*pwx,0.03*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='ATc30(`PART3`)'
+   ATcycle au
+ 
+elseif ($1='PART3') then
+   ATsvf
+   at_currenttest='c13pw90c_4'
+
+   ATpwx90cal('pwx'):pwx 
+   array('pwx',21,pwx-0.1*pwx,0.01*pwx)
+   wnt='ATwft select(1) f vsadj peak:$ht,cr rl(0) sp=-1.8p wp=.7p vsadj dssh dtext'
+   wexp='ATc30(`PART4`)'
+   ATcycle au
+
+elseif ($1='PART4') then
+   av
+   ATpwx90cal('pwx'):$pwx 
+   pwx=$pwx
+
+   at_pwx90Lowpowerc=trunc(10*pwx)/10
+   at_pwx90Lowpowerlvlc=pwxlvl
+
+   write('line3','C13 pw90 (Channel 2) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+
+   if (at_plotauto='y') then
+      printon
+         echo('Pulse Calibration Data for 13C on Channel 2')
+         echo('For the probe   ',at_probetype)
+         echo('Based on Finding a 90 Degree Pulse  =  ',pwx)
+         echo('At Power Level',pwxlvl) 
+         echo('Done on    ',date)
+         ATatten(pwx,pwxlvl)
+      printoff
+   else
+      ATatten(pwx,pwxlvl)
+   endif
+   at_LBampl_comprc=trunc(100*pwx/(4.0*at_pwx90c))/100 
+   ATrecord('LOAMPCOMPc','Low-Band Amplifier Compression','compression',at_LBampl_comprc,'at_power',pwxlvl+12)
+   write('file',autotestdir+'/REPORT','Low-Band Amplifier Compression = %1.2f at power level: %2.0f ',at_LBampl_comprc,pwxlvl+12)
+   ATsvf
+   ATrecord('C13PW90c','C13 Pulse Width Calibration and Amplifier Compression using Channel 2','pw90_hi',at_pwx90c,'power1',at_pwx90lvlc,'pw90_low',pwx,'power2  ',pwxlvl,'comp_power1',at_LBampl_comprc)
+   write('file',autotestdir+'/REPORT','C13 pw90 = %2.1f  at power level: %2.0f ',r4,pwxlvl+12)
+
+ATnext
+endif

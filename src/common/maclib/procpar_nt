@@ -1,0 +1,135 @@
+"macro procpar_nt"
+"************************************************************"
+"           MACRO FOR UPDATING NT IN THE PROCPAR FILE        "
+"           Last update: Feb 07, 2003                        "
+"           Written by:  Ivan TKAC                           "
+"************************************************************"
+
+
+if ($# <> 2) then
+   clear(4)
+   write('line3','ERROR (procpar_nt): Incorrect number of arguments')
+   write('alpha','ERROR (procpar_nt): Incorrect number of arguments')
+   abort
+endif
+
+$ex = 1
+exists('procpar.tmp','file'):$ex
+if ($ex = 0) then
+   shell('cp procpar procpar.tmp')
+endif
+
+$file1 = ''
+$file1 = file + '/procpar.tmp'
+$file2 = file + '/procpar'
+$line = ''
+$text = ''
+$str = ''
+
+write('reset',$file2)
+
+lookup('file',$file1)
+
+$ret = 0
+$str_arr = ''
+lookup('seek','array','readline','skip'):$str_arr,$ret
+if ($ret = 0) then
+   write('line3','"ARRAY" parameter was not found')
+   abort
+endif
+
+
+"****** READ ARRAYED PARAMETERS ********"
+lookup('delimiter',' ,()"\n\t\r')
+$counter = 0
+repeat
+      $counter = $counter + 1      
+      $str[$counter] = ''
+      lookup('read'):$str[$counter],$ret
+      if ($ret = 0) then
+         write('alpha','ERROR in array reading!')
+         abort
+      endif
+      if ($counter = 1) then
+         write('alpha','counter   return   arrayed parameter')
+      endif
+      if ($str[$counter] <> '0') then
+         write('alpha','  %2d        %d        %s = %s ',$counter,$ret,$str[$counter],{$str[$counter]}[$2])
+      endif
+      if ($counter > 1000) then abort endif
+until ($str[$counter] = '0')
+
+
+"****** SEARCH FOR ARRAYED PARAMETERS *******"
+lookup('file',$file1)
+repeat
+   lookup('readline'):$line,$ret
+   if ($ret > 0) then
+      write('file',$file2,'%s',$line)
+      
+      $skip = 0
+      substr($line,1,9):$text
+      if ($text = 'arraydim ') then
+         write('file',$file2,'1 1')
+         $skip = 1
+      endif
+      
+      substr($line,1,6):$text
+      if ($text = 'array ') then
+         write('file',$file2,'1 ""')
+         $skip = 1
+      endif
+
+      substr($line,1,6):$text
+      if ($text = 'celem ') then
+         write('file',$file2,'1 1')
+         $skip = 1
+      endif
+      
+      substr($line,1,3):$text
+      if ($text = 'nt ') then
+         $size = size('nt')
+         if ($size = 1) then
+            write('file',$file2,'1 %d',$1*nt[1])
+            write('line3','NT WAS UPDATED:  nt = %d',$1*nt[1])
+            write('alpha','NT WAS UPDATED:  nt = %d',$1*nt[1])
+         endif
+         $skip = 1
+      endif
+
+      $i = 1
+      $trunc = 0
+      while ($i < $counter) do
+            length($str[$i]):$str_length
+            substr($line,1,$str_length+1):$text
+            if ($text = $str[$i] + ' ') then
+               if ($text = 'nt ') then
+                  write('file',$file2,'1 %d',$1*nt[$2])
+                  write('line3','NT WAS UPDATED:  nt = %d',$1*nt[$2])
+                  write('alpha','NT WAS UPDATED:  nt = %d',$1*nt[$2])
+               else
+                  write('file',$file2,'1 %s',{$str[$i]}[$2])
+               endif
+               $skip = 2
+            endif
+            $i = $i + 1
+      endwhile
+               
+      if ($skip = 1) then
+         lookup('readline',1):$skip_line,$ret
+      endif
+      
+      if ($skip = 2) then
+         lookup('read',1):$arr
+         $j = 0
+         while ($j < $arr) do
+               lookup('read',1):$skip_word
+               $j = $j + 1
+         endwhile
+      endif
+               
+   endif
+until ($ret = 0)
+
+write('line3','PROCPAR UPDATED!!!!!!!!')
+

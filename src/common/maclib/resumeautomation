@@ -1,0 +1,33 @@
+"macro resumeautomation"
+"resumeautomation "
+" Usage: resumeautomation('<arg1>')"
+"  arg1 - service (defaut) - conditional resume automation"
+"		ONLY if autosaflag is service"
+"		 (i.e., automation was stopped for service)"
+"  arg1 - admin - unconditional resume automation"
+
+if ($# < 1) then $1='service' endif
+
+$autosaflag='none'
+getautosaflag(autodir+'/enterQ'):$autosaflag
+if ($autosaflag='admin') and ($1='service') then
+	return
+endif
+//if ($autosaflag='none') then return endif
+
+setautosaflag(autodir+'/enterQ','none')
+autora
+atcmd('resumeautomation','cancel')
+
+if ($autosaflag='service') then
+   $date=''
+   shell('date +%Y%m%d'):$date
+   $servicefile=autodir+'/enterQ.macdir/SERVICE_'+$date
+   exists($servicefile,'file'):$eqex
+   if ($eqex) then
+        shell('mv '+$servicefile+' '+$servicefile+'_done'):$dum
+   endif
+else
+   shell('rm -f '+autodir+'/enterQ.macdir/cppauseQ'):$dum
+endif
+

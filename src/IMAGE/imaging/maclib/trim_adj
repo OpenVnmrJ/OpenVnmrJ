@@ -1,0 +1,46 @@
+"macro trim_adj"
+"This macro arrays fx,fy,fz trim factors (20 steps) or (8 steps for LASER) for the gradient refocusing/crushers"
+"Requires arrdispfids macro to display the fids properly"
+if ($#<0.5) or ($#>1.5) then
+  write('error','Usage: trim_adj(index)')
+  write('error','       index = 1 to begin with fx, 2 with fy, 3 with fz')
+  abort
+endif
+r1=0
+wexp=''
+wnt=''
+gain=2
+nt=1
+ss=2
+if (seqfil='steam2') then
+ws='n'
+ws_tm='n'
+$start=0.85
+$end=1.1
+$steps=20
+elseif (seqfil='laser') then
+$start=0.5
+$end=3
+$steps=8
+endif
+
+roff=roff+500
+$n=$1
+if ($n=1) then $var='fx' endif
+if ($n=2) then $var='fy' endif
+if ($n=3) then $var='fz' endif
+
+$inc=($end-$start)/$steps
+setarray($var,$start,$inc,($steps+1))
+da
+wbs='' wexp=''
+if ($var = 'fx') then
+wnt='arrdispfids(1)'
+endif
+if ($var = 'fy') then
+wnt='arrdispfids(2)'
+endif
+if ($var = 'fz') then
+wnt='arrdispfids(3)'
+endif
+au

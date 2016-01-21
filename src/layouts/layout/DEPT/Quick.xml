@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="Quick" element="pages" type="acquisition" >
+  <group size="650 265"
+    style="Heading1"
+    label="Defaults"
+    bg=""
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="Quick"
+    useref="no"
+    subtype="Basic"
+    expanded="yes"
+    >
+    <group loc="5 5" size="620 25"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="tndndisplay"
+      useref="no"
+      subtype="Basic"
+      expanded="yes"
+      >
+      <textmessage loc="10 0" size="355 25"
+        style="PlainText"
+        label="Experiment: DEPT   Solvent: cdcl3"
+        vq="pslabel"
+        set="$VALUE='Experiment: '+pslabel+'   Solvent: '+solvent"
+        />
+      <textmessage loc="380 0" size="235 25"
+        style="PlainText"
+        label="Observe: C13          Decoupler: H1"
+        vq="tn dn"
+        set="$VALUE='Observe: '+tn+'          Decoupler: '+dn"
+        />
+    </group>
+    <group loc="5 35" size="395 220"
+      style="Heading1"
+      label="Acquisition Options"
+      bg=""
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <group loc="10 30" size="365 180"
+        bg=""
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="DEPTacq"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <label loc="30 130" size="140 20"
+          style="Heading1"
+          label="Quat. 13C relax delay"
+          vq="qphase"
+          justify="Left"
+          />
+        <menu loc="170 110" size="175 20"
+          style="PlainText"
+          label="menu"
+          vq="qphase"
+          vc="if ($VALUE=2) then qphase=1,-1 else qphase=$VALUE endif"
+          set="$qsize=size('qphase') if ($qsize&gt;1) then $VALUE=2 else $VALUE=qphase endif"
+          editable="No"
+          >
+          <mlabel 
+            label="Enable editing"
+            chval="2"
+            />
+          <mlabel 
+            label="Suppress"
+            chval="0"
+            />
+          <mlabel 
+            label="Antiphase"
+            chval="-1"
+            />
+          <mlabel 
+            label="In-phase"
+            chval="1"
+            />
+        </menu>
+        <menu loc="170 85" size="175 20"
+          style="PlainText"
+          label="menu"
+          vq="mult"
+          vc="$mval='$VALUE' if ($mval='full') then mult=0.5,1,1,1.5 elseif ($mval='oddevench') then mult=1,1.5 elseif ($mval='oddeven') then mult=1.5 elseif ($mval='ch') then mult=1 elseif ($mval='ap') then mult=0.5 endif"
+          set="$msize=size('mult') if ($msize&gt;2) then $VALUE='full' elseif ($msize &gt; 1) then $VALUE='oddevench' elseif (mult[1]=1.5) then $VALUE='oddeven' elseif (mult[1]=1) then $VALUE='ch' elseif (mult[1]=0.5) then $VALUE='ap' else $VALUE='' endif"
+          editable="No"
+          >
+          <mlabel 
+            label="Full Edit"
+            chval="full"
+            />
+          <mlabel 
+            label="XH/XH3 up &amp; XH2 down"
+            chval="oddeven"
+            />
+          <mlabel 
+            label="XH only"
+            chval="ch"
+            />
+          <mlabel 
+            label="No Edit"
+            chval="ap"
+            />
+        </menu>
+        <group loc="25 5" size="310 40"
+          bg=""
+          border="None"
+          tab="no"
+          enable="no"
+          reference="swentry"
+          useref="no"
+          subtype="Convenience"
+          expanded="yes"
+          >
+          <label loc="270 0" size="35 20"
+            style="Heading1"
+            label="ppm"
+            justify="Left"
+            />
+          <label loc="270 20" size="35 20"
+            style="Label1"
+            label="ppm"
+            justify="Left"
+            />
+          <entry loc="215 20" size="50 20"
+            style="PlainText"
+            vq="rfl rfp reffrq sw"
+            vc="invsetsw:$f1,$f2 setsw($VALUE,$f2)"
+            set="invsetsw:$f1,$f2 $VALUE=$f1"
+            digits="1"
+            disable="Grayed out"
+            />
+          <label loc="195 20" size="20 20"
+            style="Label1"
+            label="to"
+            justify="Center"
+            />
+          <entry loc="145 20" size="50 20"
+            style="PlainText"
+            vq="rfl rfp reffrq"
+            vc="invsetsw:$f1,$f2 setsw($f1,$VALUE)"
+            set="invsetsw:$f1,$f2 $VALUE=$f2"
+            digits="1"
+            disable="Grayed out"
+            />
+          <menu loc="145 0" size="120 20"
+            style="PlainText"
+            label="menu"
+            vq="obsSW"
+            vc="exec('$VALUE')"
+            set="$VALUE=''"
+            editable="No"
+            >
+            <mlabel 
+              label="-15  -&gt;  235"
+              chval="setsw(235,-15)"
+              />
+            <mlabel 
+              label="-10  -&gt;  200"
+              chval="setsw(200,-10)"
+              />
+            <mlabel 
+              label="-25  -&gt;  250"
+              chval="setsw(250,-25)"
+              />
+          </menu>
+          <label loc="15 20" size="115 20"
+            style="Label1"
+            label="(...or enter)"
+            justify="Right"
+            />
+          <label loc="5 0" size="135 20"
+            style="Label1"
+            label="Spectral Width (select)"
+            justify="Left"
+            />
+        </group>
+        <menu loc="170 45" size="90 20"
+          style="PlainText"
+          label="menu"
+          vq="nt"
+          vc="nt=$VALUE"
+          set="$VALUE=nt"
+          editable="No"
+          >
+          <mlabel 
+            label="8"
+            chval="8"
+            />
+          <mlabel 
+            label="16"
+            chval="16"
+            />
+          <mlabel 
+            label="32"
+            chval="32"
+            />
+          <mlabel 
+            label="64"
+            chval="64"
+            />
+          <mlabel 
+            label="128"
+            chval="128"
+            />
+          <mlabel 
+            label="256"
+            chval="256"
+            />
+          <mlabel 
+            label="512"
+            chval="512"
+            />
+          <mlabel 
+            label="1024"
+            chval="1024"
+            />
+          <mlabel 
+            label="2048"
+            chval="2048"
+            />
+        </menu>
+        <menu loc="170 65" size="90 20"
+          style="PlainText"
+          label="menu"
+          vq="d1"
+          vc="d1=$VALUE"
+          set="$VALUE=d1"
+          editable="No"
+          >
+          <mlabel 
+            label="1"
+            chval="1"
+            />
+          <mlabel 
+            label="0"
+            chval="0"
+            />
+          <mlabel 
+            label="2"
+            chval="2"
+            />
+          <mlabel 
+            label="3"
+            chval="3"
+            />
+          <mlabel 
+            label="5"
+            chval="5"
+            />
+          <mlabel 
+            label="25"
+            chval="25"
+            />
+        </menu>
+        <label loc="30 65" size="125 20"
+          style="Label1"
+          label="Relaxation Delay"
+          justify="Left"
+          />
+        <label loc="30 45" size="120 20"
+          style="Label1"
+          label="Number of scans"
+          justify="Left"
+          />
+        <label loc="30 85" size="135 20"
+          style="Label1"
+          label="XH Multiplicity editing"
+          justify="Left"
+          />
+        <label loc="30 110" size="125 20"
+          style="Label1"
+          label="Quaternary Carbons"
+          justify="Left"
+          />
+        <label loc="265 130" size="30 20"
+          style="Label1"
+          label="s"
+          justify="Left"
+          />
+        <entry loc="170 130" size="90 20"
+          style="PlainText"
+          vq="qrelax qphase d1"
+          vc="qrelax=$VALUE"
+          set="if (qrelax&gt;d1) then $VALUE=qrelax else $VALUE=d1 endif"
+          show="$ENABLE=(qphase&lt;&gt;0)*2-1"
+          digits="1"
+          />
+        <label loc="265 65" size="30 20"
+          style="Label1"
+          label="s"
+          justify="Left"
+          />
+      </group>
+    </group>
+    <group loc="400 35" size="235 220"
+      bg=""
+      border="None"
+      tab="no"
+      enable="no"
+      reference="custompar5a"
+      useref="no"
+      subtype="Convenience"
+      expanded="yes"
+      >
+      <label loc="5 0" size="135 20"
+        style="Heading1"
+        label="Receiver Gain (dB)"
+        justify="Right"
+        />
+      <entry loc="145 0" size="50 20"
+        style="PlainText"
+        vq="gain"
+        vc="on('gain'):$gainon if ($gainon) then gain=$VALUE else setvalue('gain',$VALUE) endif"
+        set="$VALUE=gain"
+        show="on('gain'):$ENABLE"
+        digits="0"
+        />
+      <check loc="145 20" size="80 20"
+        style="Label1"
+        label="Autogain"
+        vq="gain arraydim"
+        vc="if (arraydim=1) then off('gain') else write('line3','arraydim greater than 1') on('gain') endif"
+        vc2="on('gain')"
+        set="on('gain'):$gainon if ($gainon=0) then $VALUE=1 else $VALUE=0 endif"
+        />
+      <group loc="5 45" size="220 175"
+        vq="customflag"
+        show="$SHOW=(customflag='y')"
+        bg=""
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="customizepar2"
+        useref="no"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <label loc="0 150" size="220 20"
+          style="Heading1"
+          label="More Options: PlotProcAdv page"
+          justify="Center"
+          />
+        <textmessage loc="10 105" size="200 25"
+          style="PlainText"
+          vq="samplename"
+          set="$VALUE=samplename"
+          />
+        <textmessage loc="5 25" size="130 20"
+          style="PlainText"
+          vq="pslabel"
+          set="$VALUE='After '+pslabel+' acq:'"
+          />
+        <textmessage loc="5 5" size="130 20"
+          style="PlainText"
+          vq="pslabel"
+          set="$VALUE='Before '+pslabel+' acq:'"
+          />
+        <check loc="140 25" size="75 20"
+          style="Label1"
+          label="Autoplot"
+          vq="pltopt"
+          vc="pltopt='y'"
+          vc2="pltopt='n'"
+          set="$VALUE=(pltopt='y')"
+          />
+        <check loc="140 5" size="75 20"
+          style="Label1"
+          label="Re-shim"
+          vq="wshim"
+          vc="wshim='e'"
+          vc2="wshim='n'"
+          set="if (wshim='n') then $VALUE=0 else $VALUE=1 endif"
+          />
+        <textmessage loc="140 125" size="65 20"
+          style="PlainText"
+          vq="SQalock SQwshim"
+          set="$VALUE=SQalock+' / '+SQwshim"
+          />
+        <label loc="5 85" size="125 20"
+          style="Label1"
+          label="Samplename:"
+          />
+        <label loc="5 125" size="130 20"
+          style="Label1"
+          label="start of Q lock/shim?"
+          />
+        <label loc="5 45" size="85 20"
+          style="Label1"
+          label="Starting with:"
+          />
+        <textmessage loc="10 65" size="200 20"
+          style="PlainText"
+          vq="strtpar REQexp chreqexp"
+          set="if (strtpar='') or (strtpar='other') or (strtpar='default') then $VALUE=REQexp[1] else $VALUE=strtpar endif"
+          />
+      </group>
+    </group>
+  </group>
+</template>

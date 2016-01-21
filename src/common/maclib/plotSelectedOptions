@@ -1,0 +1,123 @@
+"macro plotSelectedOptions"
+/*-*- MAGICAL -*-*/
+"macro plotSelectedOptions"
+
+page('clear'):$page
+$intmod = intmod
+intmod='off'
+$vp = vp
+$vsproj = vsproj
+
+
+setDefaultXmlDir
+if (defaultXmlDir = 'default') then
+
+  // Set position
+  if ((plotOptions[6] = 'hscaled') and (vp < 12)) then
+    vp = 12
+  endif
+
+
+  // Spectrum plot
+  if (plotOptions[1] = 'single') then
+    ds
+    pl
+  elseif (plotOptions[1] = 'array') then
+    pl('all')
+  endif
+  
+  // Spectrum scale
+  if (plotOptions[2] = 'scale') then
+    pscale
+  endif
+
+  // Parameter and Text display
+  if (plotOptions[3] = 'basic') then
+    ppa
+  elseif (plotOptions[3] = 'full') then
+    pap
+  elseif (plotOptions[3] = 'hboxed') then
+    bpa
+  elseif (plotOptions[3] = 'vboxed') then
+    bpav
+  elseif (plotOptions[3] = 'text') then
+    pltext
+  endif
+
+  // Peak labels
+  if (plotOptions[4] = 'label') then
+    if (plotOptions[1] = 'single') then
+      ppf('top')
+    endif
+  elseif (plotOptions[4] = 'list') then
+    pll
+  endif
+  
+  if (plotOptions[1] = 'single') then
+    // Integrals
+    if (plotOptions[5] = 'partial') then
+      intmod = 'partial'
+      pl('int')
+      intmod = 'off'
+    endif
+    
+    // Integral values
+    if (plotOptions[6] = 'hscaled') then
+      pir
+    elseif (plotOptions[6] = 'vscaled') then
+      piv
+    elseif (plotOptions[6] = 'hnorm') then
+      pirn
+    elseif (plotOptions[6] = 'vnorm') then
+      pivn
+    endif
+  endif
+  
+elseif (defaultXmlDir = 'default2d') then
+  write('line3','Warning: 2D Plot Processing')
+  
+  // Spectrum plotting
+  if (plotOptions2D[1] = 'single') then
+    select:$v pl($v)
+    pscale
+  elseif (plotOptions2D[1] = 'stack') then
+    pl2d
+  elseif (plotOptions2D[1] = 'posneg') then
+    pcon(20, 1.3)
+  endif
+  
+  // Parameter and Text display
+  if (plotOptions2D[3] = 'basic') then
+    ppa
+  elseif (plotOptions2D[3] = 'full') then
+    pap
+  elseif (plotOptions2D[3] = 'hboxed') then
+    bpa
+  elseif (plotOptions2D[3] = 'vboxed') then
+    bpav
+  elseif (plotOptions2D[3] = 'text') then
+    pltext
+  endif
+  
+  // Trace and Projection display
+  if (plotOptions2D[6] <> '') then
+    {'vs' + plotOptions2D[6]} = vsproj
+  endif
+  if (plotOptions2D[4] = 'hproj') then
+    vsproj = vshproj_max
+    dconi('hproj_max') dconi('plot')
+  elseif (plotOptions2D[4] = 'trace') then
+    vsproj = vstrace
+    dconi('trace') dconi('plot')
+  endif
+  if (plotOptions2D[5] = 'vproj') then
+    vsproj = vsvproj_max
+    dconi('vproj_max') dconi('plot')
+  endif
+
+endif
+
+intmod=$intmod
+vp = $vp
+vsproj = $vsproj
+

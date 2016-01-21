@@ -1,0 +1,29 @@
+"macro nrkp"
+"allow user to pause/run compensation"
+$key=''
+$val=''
+$opstr=''
+$exps=''
+readfile('/vnmr/tmp/ntest','$key','$val','','local'):$res
+if $res > 0 then
+$num = size('$key')
+teststr('$key','env','local'):r1
+if (r1 > 0) then
+$exps=$val[r1]
+endif
+teststr('$key','op','local'):r1
+if (r1 > 0) then 
+$opstr=$val[r1]
+endif
+else
+write('line3','did not find control file /vnmr/tmp/ntest')
+$exps = '1000' "the default"
+endif
+if $opstr <>  $1 then
+"operator has requested a change"
+$opstr = $1
+shell('rm /vnmr/tmp/ntest')
+write('file','/vnmr/tmp/ntest','env  %s',$exps)
+write('file','/vnmr/tmp/ntest','op   %s',$opstr)
+write('line3','command %s sent',$opstr)
+endif

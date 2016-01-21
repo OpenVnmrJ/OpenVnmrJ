@@ -1,0 +1,626 @@
+"***************************************************************"
+"  Builds studyQ in sqdir/tmpstudy based on the LIST		"
+"	supplied as an array in arg2				"
+"	Supported LISTs are SampInfo,fidlog,ACQlist,explist,	"
+"		EXPLIST and LONGLIST AND explicit path		"
+"		for EXPLIST/LONGLIST				"
+"	IF an optional arg3 is supplied and is set to 'lock'	"
+"	  then all nodes are locked - i.e., queue is for	"
+"		display/convenience ONLY			"
+"***************************************************************"
+
+timeit($0+' started')
+if ($# < 3) then $3='nolock' endif
+if ($3='lock') then
+        $forcelock='yes'
+else
+        $forcelock='no'
+endif
+if ($# < 4) then $4='' endif
+$gtitle=$4 
+if ($# < 5) then $5='' endif
+$5size=size('$5')
+
+if ($# < 2) then
+	write('error','Minimum 2 args must be supplied')
+	return
+endif
+
+$archsamp=$1
+exists($1,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+
+"**************************************************************"
+"  Find out what info should be used to build SQ	"
+
+$sampinfo='noSampInfo'
+teststr('$2','SampInfo','local'):$ret
+if ($ret) then $2[$ret]='' $sampinfo='SampInfo' endif
+
+$usefidlog='no'
+$usecmdnodes='no'
+teststr('$2','fidlog','local'):$ret
+if ($ret) then $2[$ret]='' $usefidlog='yes' $usecmdnodes='yes' endif
+
+$useexplist='no'
+teststr('$2','explist','local'):$ret
+if ($ret) then $2[$ret]='' $useexplist='yes' endif
+
+$useEXPLIST='no'
+teststr('$2','EXPLIST','local'):$ret
+if ($ret) then $2[$ret]='' $useEXPLIST='yes' endif
+
+$useACQlist='no'
+teststr('$2','ACQlist','local'):$ret
+if ($ret) then $2[$ret]='' $useACQlist='yes' endif
+
+$useLONGLIST='no'
+teststr('$2','LONGLIST','local'):$ret
+if ($ret) then $2[$ret]='' $useLONGLIST='yes' endif
+
+$fidlog='' 
+$fidlist=''
+$explistpar=''
+$acqlog=''
+$cmdnodes=''
+$EXPLIST=''
+$LONGLIST=''
+$sample='' $archive='' $samplename=''
+"**************************************************************"
+$tmpfile='/vnmr/tmp/tmpfile'
+
+strstr($archsamp,'.macdir'):$ret
+if ($ret) then  
+		"The info is collected from autodir"
+        rtv($archsamp+'/sampleglobal','noabort','sample'):$sample
+        rtv($archsamp+'/sampleglobal','noabort','archivedir'):$archive
+	rtv($archsamp+'/sampleglobal','noabort','samplename'):$samplename
+        $archivedirsample=$archive+'/'+$sample
+    	$usefidlog='no'
+	$usecmdnodes='no'
+    	$useACQlist='no'
+    	$useexplist='no'
+
+	$fidlog='fidlog'
+	$fidlist='fidlist'
+        $explistpar='explist'
+	$cmdnodes='CMDnodes'
+        $acqlog='ACQlist'
+        $EXPLIST='EXPLIST'
+        $LONGLIST='LONGLIST'
+else
+	shell('dirname '+$archsamp):$archive
+	shell('basename '+$archsamp):$sample
+	$archivedirsample=$archsamp
+	$samplename=samplename
+
+	$fidlog='dirinfo/fidlog'
+	$fidlist='dirinfo/fidlist'
+	$explistpar='dirinfo/macdir/explist'
+	$cmdnodes='dirinfo/macdir/CMDnodes'
+        $acqlog='dirinfo/macdir/ACQlist'
+	$EXPLIST='dirinfo/macdir/EXPLIST'
+        $LONGLIST='dirinfo/macdir/LONGLIST'
+endif
+
+strstr($archivedirsample,userdir+'/data/'):$ret,$s1,$ppath
+if ($ret=0) then $ppath=$archivedirsample endif
+$ppath=$ppath+'/'
+
+exists($archsamp+'/'+$fidlog,'file'):$fex
+exists($archsamp+'/'+$fidlist,'file'):$f2ex
+if ($fex=0) and ($f2ex>0) then
+   mkfidlog($archsamp)
+endif
+
+"*****All local variable defined, proceed***"
+"**********************************************************************"
+pwd:$curdir
+cd($archsamp):$dum
+
+$cpnames='' $pslabel='' $acqtime='' $acqtime2='' $acqtimeR=0 
+$type='' $cnodes=''
+$status='' $lock='' $when='' $j=1
+$ampm=''
+$actives='' $k=1
+$path='' $title=''
+
+exists($cmdnodes,'file'):$cmdex
+$s1='' $cnodetot=0
+if ($cmdex) then
+   readfile($cmdnodes,'$cnodes','$s1','','local'):$cnodetot
+endif
+
+"*************************************************************************"
+	"***Get a list all completed experiments from fidlog***"
+exists($fidlog,'file'):$fex
+
+if ($usefidlog='no') then $fex=0 endif
+
+$total=0
+$s1='' $fids=''
+if ($fex) then
+   readfile($fidlog,'$s1','$fids','','local'):$total
+endif
+if ($total=0) then $fex=0 endif
+
+   if ($total) then
+	$i=1
+	repeat
+	   exists($fids[$i]+'.fid','directory'):$fidex
+	   if ($fidex) then
+		$n1='' $n2='' $r1=0
+		rtv($fids[$i]+'.fid/procpar','noabort','explist'):$n1
+		rtv($fids[$i]+'.fid/procpar','pslabel'):$n2
+		rtv($fids[$i]+'.fid/procpar','noabort','ACQtime'):$r1
+		if ($n1<>'') then
+			teststr('$cpnames',$n1,'local'):$isret
+			if ($isret) then $n1='' endif
+		endif
+		if ($n1='') then $n1=$n2 endif
+		$cpnames[$j]=$n1 
+		$pslabel[$j]=$n2 
+		$acqtimeR[$j]=$r1
+		formattime($r1):$acqtime2[$j],$acqtime[$j]
+		if ($acqtimeR[$j]=0) then $acqtime[$j]='' $acqtime2[$j]='' endif
+		$acqtime[$j]='' $acqtime2[$j]=''
+		$status[$j]='Completed'
+		$path[$j]=$ppath+$fids[$i]
+		$title[$j]=$fids[$i]
+		$type[$j]='LIB'
+		$when[$j]=''
+		$lock[$j]='on'
+		$j=$j+1
+	   endif
+	   $i=$i+1
+	until $i>$total
+   endif
+
+"*************************************************************************"
+	"***Get a list of all Active/Errored experiments from ACQlist***"
+	"   The ACQlist is maintained at run time by cpgo"
+	"   All other experiments will be in explist/EXPLIST/LONGLIST"
+
+exists($acqlog,'file'):$aex
+if ($useACQlist='no') then $aex=0 endif
+
+$etot=0
+if ($aex) then
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlog+' | grep -w Error  > '+$tmpfile+')'):$dum
+    shell('(cat '+$acqlog+' | grep -w Active  >> '+$tmpfile+')'):$dum
+    $enodes='' $enodes2='' $etot=0
+    readfile($tmpfile,'$enodes','$enodes2','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+endif
+if ($etot=0) then $aex=0 endif
+
+    if ($etot) then
+	$i=1
+	repeat
+           $n1='' $n2='' $r1=0
+	   $n1=$enodes[$i]
+	   substr($enodes2[$i],2):$n2
+	   substr($enodes2[$i],1):$r1
+	   if ($n2<>'') then
+		$actives[$k]=$n1
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		strstr($enodes2[$i],'Error'):$iserror
+		$iscurfid=0 $fidpath='null'
+		if ($iserror) then
+		    $status[$j]='Error'
+		elseif ($i = $etot) then
+			$status[$j]='Executing'
+			expactive('auto'):$isauto
+			expactive:$isactive
+			if ($isauto>0) or ($isactive<0) then
+			    iscurrentfid($cpnames[$j],$archsamp):$iscurfid,$fidpath
+			    if ($fidpath='') then $fidpath='null' endif
+			endif
+		else
+			$status[$j]='Error'
+		endif
+		$when[$j]=''
+		$type[$j]='LIB'
+		$path[$j]=$fidpath
+		$title[$j]=$n1
+		$lock[$j]='on'
+                $j=$j+1
+		$k=$k+1
+	   endif
+	   $i=$i+1
+	until $i > $etot
+    endif
+
+"*************************************************************************"
+	"*** Insert CMD nodes at appropriate places"
+
+if ($usecmdnodes='no') or ($aex=0) or ($cnodetot=0) then $cmdex=0 endif
+
+$etot=0
+if ($cmdex) then
+    write('reset',$tmpfile)
+    shell('(cat '+$acqlog+' | grep -w Completed | grep CMD_  > '+$tmpfile+')'):$dum
+    $enodes='' $enodes2='' $etot=0
+    readfile($tmpfile,'$enodes','$enodes2','','local'):$etot
+    shell('rm -f '+$tmpfile):$dum
+endif
+if ($etot=0) then $cmdex=0 endif
+if ($cmdex>0) then
+   $i=$cnodetot
+   repeat
+	$cptotal=size('$cpnames')
+	teststr('$enodes',$cnodes[$i],'local'):$isdone
+	if ($isdone) then
+	   $nextwhere=0
+	   substr($enodes2[$isdone],2):$cmdnextnode
+	   strstr($cmdnextnode,'CMD_'):$ret,$s1,$nextnode
+	   if ($ret) then 
+		teststr('$cpnames',$nextnode,'local'):$nextwhere
+	   endif
+	   if ($nextwhere) then
+		$oldcpnames=$cpnames
+		$oldpslabel=$pslabel
+		$oldacqtimeR=$acqtimeR
+		$oldacqtime=$acqtime
+		$oldacqtime2=$acqtime2
+		$oldstatus=$status
+		$oldpath=$path
+		$oldtype=$type
+		$oldtitle=$title
+		$oldwhen=$when
+		$oldlock=$lock
+		$m=$nextwhere
+		$n=$nextwhere
+		$cpnames[$m]=$cnodes[$i]
+		strstr($cnodes[$i],'_','last'):$ret,$s1,$s2
+		if ($ret) then $pslabel[$m]=$s1 else $pslabel[$m]=$cnodes[$i] endif
+		$acqtimeR[$m]=0
+		formattime($acqtimeR[$m]):$acqtime2[$m],$acqtime[$m]
+		$status[$m]='Completed'
+		$path[$m]=''
+		$type[$m]='CMD'
+		$when[$m]=$when[$n]
+		$title[$m]=$cpnames[$m]
+		$lock[$m]='on'
+		$m=$m+1
+		repeat
+		   $cpnames[$m]=$oldcpnames[$n]
+		   $pslabel[$m]=$oldpslabel[$n]
+		   $acqtimeR[$m]=$oldacqtimeR[$n]
+		   $acqtime2[$m]=$oldacqtime2[$n]
+		   $acqtime[$m]=$oldacqtime[$n]
+		   $status[$m]=$oldstatus[$n]
+		   $path[$m]=$oldpath[$n]
+		   $title[$m]=$oldtitle[$n]
+		   $type[$m]=$oldtype[$n]
+		   $when[$m]=$oldwhen[$n]
+		   $lock[$m]=$oldlock[$n]
+		   $m=$m+1 $n=$n+1
+		until $n > $cptotal
+		$j=$j+1
+	   endif
+	endif
+	$i=$i-1
+   until $i < 1
+endif
+
+"*************************************************************************"
+	"*** Get a list of all experiments in explist - These are***"
+	"    Queued experiments.  				"
+	"    Also note that an experiment cannot be Active and also"
+	"    in explist.  If so, it is in the SetUp mode and should"
+	"    be considered Executing or Error			"
+
+		"Get all the Queued experiments from explist"
+  exists($explistpar,'file'):$eex
+  exists($EXPLIST,'file'):$Eex
+
+if ($useexplist='no') then $eex=0 endif
+
+  if ($eex) and ($Eex) then
+    $explist=''
+    cpexplist('read','dirinfo/macdir'):$explist
+    $enodes='' $enodes2=''
+    readfile($EXPLIST,'$enodes','$enodes2','','local')
+    $etot=size('$explist')
+    if ($etot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+           $n1=$explist[$i]
+	   if ($n1 <>'') then
+		teststr('$actives',$n1,'local'):$iserror
+	 	if ($iserror>0) then $n1='' endif
+	   endif
+	   if ($n1<>'') then
+		teststr('$enodes',$n1,'local'):$ret
+		if ($ret) then
+		   substr($enodes2[$ret],2):$n2
+		   substr($enodes2[$ret],1):$r1
+		endif
+	   endif	
+           if ($n2<>'') then
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+                $status[$j]='Queued'
+		teststr('$cnodes',$n1,'local'):$ret
+		if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		$when[$j]=''
+                $path[$j]='null'
+                $title[$j]=$n1
+		$lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $etot
+    endif
+  endif
+
+"****************************************************************************"
+        "*** Get a list of all experiments in EXPLIST - These are***"
+        "    Queued experiments during DAY/Short run.                       "
+
+exists($EXPLIST,'file'):$Eex
+if ($useEXPLIST='no') then $Eex=0 endif
+
+  if ($Eex) then
+    $enodes='' $enodes2=''
+    readfile($EXPLIST,'$enodes','$enodes2','','local'):$Etot
+    if ($Etot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+	   $n1=$enodes[$i]
+           substr($enodes2[$i],2):$n2
+           substr($enodes2[$i],1):$r1
+           if ($n1<>'') then
+                teststr('$cpnames',$n1,'local'):$isthere
+                if ($isthere) then $n2='' endif
+           else
+                $n2=''
+           endif
+           if ($n2<>'') then
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$status[$j]='Queued'
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		$when[$j]='_day'
+                $path[$j]='null'
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $Etot
+    endif
+  endif
+
+"****************************************************************************"
+        "*** Get a list of all experiments in LONGLIST - These are***"
+        "    Queued experiments during NIGHT/Long run.                       "
+
+exists($LONGLIST,'file'):$Lex
+if ($useLONGLIST='no') then $Lex=0 endif
+
+  if ($Lex) then
+    $enodes='' $enodes2=''
+    readfile($LONGLIST,'$enodes','$enodes2','','local'):$Ltot
+    if ($Ltot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+           $n1=$enodes[$i]
+           substr($enodes2[$i],2):$n2
+           substr($enodes2[$i],1):$r1
+           if ($n1<>'') then
+		teststr('$cpnames',$n1,'local'):$isthere
+		if ($isthere) then $n2='' endif
+	   else
+		$n2=''
+	   endif
+	   if ($n2 <> '') then
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+		$acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		$status[$j]='Queued'
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+		$when[$j]='_night'
+                $path[$j]='null'
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $Ltot
+    endif
+  endif
+
+"****************************************************************************"
+cd($curdir):$dum
+"****************************************************************************"
+        "*** Get a list of all experiments in Other lists - These could be ***"
+        "    Queued experiments during DAY or NIGH run.                       "
+
+array2string($2):$2
+string2array($2):$2
+$leftover=size('$2')
+if ($2[1]='') then $leftover=0 endif
+
+if ($leftover>0) then
+  $lxi=1
+  repeat
+    exists($2[$lxi],'file'):$Lex
+    strstr($2[$lxi],'EXPLIST'):$isday
+    if ($Lex) then
+      $enodes='' $enodes2=''
+      readfile($2[$lxi],'$enodes','$enodes2','','local'):$Etot
+      if ($Etot) then
+        $i=1
+        repeat
+           $n1='' $n2='' $r1=0
+           $n1=$enodes[$i]
+           substr($enodes2[$i],2):$n2
+           substr($enodes2[$i],1):$r1
+           if ($n1<>'') then
+                teststr('$cpnames',$n1,'local'):$isthere
+                if ($isthere) then $n2='' endif
+           else
+                $n2=''
+           endif
+           if ($n2<>'') then
+                $cpnames[$j]=$n1
+                $pslabel[$j]=$n2
+                $acqtimeR[$j]=$r1
+                formattime($r1):$acqtime2[$j],$acqtime[$j]
+		if ($isday) then
+		   $status[$j]='Queued'
+                   $when[$j]='_day'
+		else
+		   $status[$j]='Queued'
+                   $when[$j]='_night'
+		endif
+                teststr('$cnodes',$n1,'local'):$ret
+                if ($ret) then $type[$j]='CMD' else $type[$j]='LIB' endif
+                $path[$j]='null'
+                $title[$j]=$n1
+                $lock[$j]='on'
+                $j=$j+1
+           endif
+           $i=$i+1
+        until $i > $Etot
+      endif
+    endif
+    $lxi=$lxi+1
+  until $lxi > $leftover
+endif
+"****************************************************************************"
+"  Now proceed to build the studyQ for this list"
+
+$total=size('$cpnames')
+$i=1
+repeat
+   if ($cpnames[$i]<>'') then
+	$5ret=0
+        if ($5size>1) then
+	   teststr('$5',$cpnames[$i],'local'):$5ret
+	endif
+	if ($5ret>0) then
+	   $when[$i]=$5[$5ret+1]
+	elseif ($0='xmhaha_dataQ') then
+	   $when[$i]=''
+	endif
+   endif
+   $i=$i+1
+until $i>$total
+
+if ($0='xmhaha_dataQ') then
+   return('',$pslabel,$cpnames,$status,$acqtimeR,$path,$when,$type)
+endif
+
+if ($total=1) and ($cpnames[1]='') then
+  if ($sampinfo='noSampInfo') then
+     write('line3','StudyQueue is empty in %s',$1)
+  endif
+  return
+endif
+
+$snode='' $oldnode=''
+cqinitCP
+
+if ($sampinfo = 'noSampInfo') then
+  $snode=studyid
+  if ($gtitle='') then
+	$gtitle=$sample
+  endif
+
+  $vjcmd='SQ '
+  $vjcmd=$vjcmd+'add new protocol null; '
+  $vjcmd=$vjcmd+'set new id '+$snode+'; '
+  $vjcmd=$vjcmd+'set '+$snode+' title \"'+$gtitle+'\"; '
+  $vjcmd=$vjcmd+'set '+$snode+' exp grandparent; '
+  $vjcmd=$vjcmd+'set '+$snode+' tooltext \"'+$samplename+'\"; '
+  $vjcmd=$vjcmd+'pmove '+$snode+' null; '
+  vnmrjcmd($vjcmd)
+
+  write('reset',sqdir+'/study.xml')
+  $oldnode=$snode
+endif
+
+$esq=sqdir+'/enterSQ'
+write('reset',$esq)
+
+$i=1
+timeit($0+' start mknode loop')
+repeat
+   if ($cpnames[$i]<>'') then
+	$snode=''
+		"Set all the attributes"
+	$atx=1 $attr=''
+	$attr[$atx]='protocoltitle',$pslabel[$i]+$when[$i]  $atx=$atx+2
+	$attr[$atx]='status',$status[$i]  $atx=$atx+2
+	$attr[$atx]='time',$acqtime[$i]  $atx=$atx+2
+	if ($forcelock='yes') then
+	   $attr[$atx]='lock','on'  $atx=$atx+2
+	else
+	   $attr[$atx]='lock',$lock[$i]  $atx=$atx+2
+	endif
+	if ($status[$i]='Completed') then
+	  $attr[$atx]='actiontooltext',$title[$i]  $atx=$atx+2
+	  $attr[$atx]='actiontitle',$title[$i]   $atx=$atx+2
+	else
+	  $attr[$atx]='actiontooltext',$pslabel[$i]+$when[$i] $atx=$atx+2
+          $attr[$atx]='actiontitle',$cpnames[$i]+$when[$i]  $atx=$atx+2
+	endif
+	if ($path[$i]<>'null') and ($path[$i]<>'') then
+	   $attr[$atx]='data',$path[$i]  $atx=$atx+2
+	else
+	   $attr[$atx]='data',''  $atx=$atx+2
+	endif
+	if ($type[$i]='CMD') then
+	   $attr[$atx]='actiontype','CMD' $atx=$atx+2
+	endif
+	$newnodes=''
+	xmhaha('mknode',$pslabel[$i],$attr,$oldnode,''):$snode,$newnodes
+        if ($snode<>'') then
+	    xmhaha_enterSQ($newnodes)
+            $oldnode=$snode
+        endif
+   endif
+   $i=$i+1
+until $i > $total
+timeit($0+' done mknode loop')
+is_submitmode:$submit
+if ($sample<>'') and ($submit) then
+  if (resumeQ<>'') then
+	$tooltext=$sample+' [more on this]'
+  else
+	$tooltext=$sample+' [new sample]'
+  endif
+  $studytitle=$sample
+  if (replaceQ[4]<>'') then
+	$studytitle=$sample+' (loc'+replaceQ[4]+')'
+  endif
+  $vjcmd='SQ '
+  $vjcmd=$vjcmd+'set '+studyid+' title \"'+$studytitle+'\"; '
+  $vjcmd=$vjcmd+'set '+studyid+' tooltext \"'+$tooltext+'\"; '
+  vnmrjcmd($vjcmd)
+endif
+vnmrjcmd('SQ nwrite tmpstudy '+sqdir+'/study.xml')
+//xmhaha('writesq')
+
+timeit($0+' done')
+return($oldnode,$pslabel,$cpnames,$status,$acqtimeR,$path,$when,$type)

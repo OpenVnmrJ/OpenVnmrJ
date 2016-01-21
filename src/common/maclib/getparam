@@ -1,0 +1,53 @@
+"macro getparam"
+
+"  Optional third argument can be given to get the information from a specific "
+"   probe file"
+
+$str='' $val=''
+if ($# < 1) then
+     write('line3','Minimum of 1 argument required, command aborted!!')
+     return
+endif
+
+if ($# < 2) then $2=tn endif
+$param=$2+$1
+$ret='' $num=0 $e=0
+
+if ($# < 3) then
+   readprobe($2,probe,'Study'):$str,$val
+   if ($str[1]<>'') then
+	teststr('$str',$param,'local'):$num
+	if ($num>0) then 
+		write('line3','Using value from Studyprobe_%s for %s',probe,$param)
+		$ret=$val[$num] 
+	endif
+   endif
+endif
+
+if ($num=0) then
+   if ($# > 2) then
+	readprobe($2,$3):$str,$val,$e
+   else
+	readprobe($2):$str,$val,$e
+   endif
+   if ($e=0) then
+     write('line3','No probe calibration file, please create with "addprobe"')
+     return
+   endif
+   if ($str[1]<>'') then
+        teststr('$str',$param,'local'):$num
+        if ($num>0) then $ret=$val[$num] endif
+   endif
+endif
+
+if ($num > 0) then
+   $ans=0
+   format($ret,'isreal'):$ans
+   if ($ans=0) then
+       return($ret,'string')
+   else
+       $nret=0
+       format($ret,'lower'):$nret
+       return($nret,'real')
+   endif
+endif

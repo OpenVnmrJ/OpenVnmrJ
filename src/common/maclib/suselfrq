@@ -1,0 +1,179 @@
+"macro suselfrq"
+"*********************************************************************"
+" suselfrq - macro to setup selective pulse shapes                  "
+"	for lstd1D and sel1D apptype experiments		"
+"*********************************************************************"
+
+f full intmod='off'
+$list=''
+$nexplist=''
+if (wexp='chempackQ') then
+   $list='chain'
+   $maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+   $shapedir=archivedir+'/'+sample+'/dirinfo/shapelib'
+   $nexplist=explist[1]
+   if (wstart=$0) then 
+   	cpexplist('next',$maclibdir):$nexplist
+   endif
+endif
+if ($nexplist='') then $list='' endif
+
+"************************************************************************"
+"Shapes are calculated ONLY for experiment other than PRESAT"
+"************************************************************************"
+format(pslabel,'lower'):$pslabel
+strstr($pslabel,'presat'):$ret
+if ($ret) and (apptype='lstd1D') then $ispresat=1 else $ispresat=0 endif
+strstr($pslabel,'wet'):$ret2
+if ($ret2) and (apptype='lstd1D') then $iswet=1 else $iswet=0 endif
+strstr($pslabel,'homodec'):$ret3
+if ($ret3) and (apptype='sel1D') then $ishomodec=1 else $ishomodec=0 endif
+
+IF ($iswet) THEN
+
+  setwetshape
+  off('doscout')
+
+ELSEIF ($ispresat) THEN
+  off('doscout')
+
+ELSEIF ($ishomodec) THEN
+
+	selppm2frq
+	on('selfrqc'):$ison
+	if ($ison=0) then
+		return
+	endif
+   if (Console='vnmrs') then
+	HOMODECproc('setfrq')
+   else
+	$selfrqcsize=size('selfrqc')
+        $dpwr=0 $dpw=0
+        $i=1
+        repeat
+			"limit decoupling width to 50 Hz"
+           if (selfrqw[$i] > 50) then selfrqw[$i]=50 endif 
+           setpower(1.1*selfrqw[$i],tn):$dpwr
+           dof[$i]=selfrqc[$i]
+			"Assume 12% duty cycle with homo='y'"
+           dpwr[$i]=$dpwr+18              
+           dm[$i]='nny'
+           $i=$i+1
+        until $i > $selfrqcsize
+        dof[$i]=tof dpwr[$i]=20 dm[$i]='nnn'
+        array='(dpwr,dof,dm)'
+   endif
+
+ELSE
+
+        $array=array
+        array=''
+
+		"For 2D, the shape is a multi-frequency shifted slp"
+	getdim:$dim
+	if ($dim > 1) then mfslp='y' endif
+
+	if (mfslp='n') and ($list='chain') then
+		$ok=1 wds='' wstart=$0
+		selfrq_yarrA($nexplist):$ok
+		if ($ok=0) then $list='' endif
+	endif
+
+	selppm2frq
+        on('selfrqc'):$ison
+        if ($ison=0) then
+
+//  It is potentially possible that the shape is already created
+//      and/or supplied via some other widget
+//  Check selshapeA parameter in curpar and compare it against
+//      the parameter in parlib.  If they are the same and selshapeA
+//      has a single value, then generate this error message
+
+	    $sAsize=size('selshapeA')
+	    if ($sAsize=1) then
+		$parlibshape=selshapeA[1]
+		getfilepath(pslabel,'parlib'):$ppex,$ppath
+		if ($ppex) then
+		    rtv($ppath,'noabort','selshapeA'):$parlibshape
+		endif
+		if ($parlibshape=selshapeA[1]) then
+        	    write('error','%s - selective frequency not defined',$0)
+		endif
+	    endif
+	    array = $array
+            return
+        endif
+
+	$selfrqcsize=size('selfrqc')
+     	$width=0
+
+    if (mfslp='n') then
+     	$i=1
+     	repeat
+		assignshapename(pslabel):$name
+		setselinv($name,selfrqc[$i]-tof,selfrqw[$i]):$selpwA[$i],$selpwrA[$i],$width[$i]
+	    	if ($list='chain') then
+        	   shell('cp '+userdir+'/shapelib/'+$name+'.RF '+$shapedir):$dum
+	    	endif
+		$selpwB[$i]=$selpwA[$i] 
+		$selpwrB[$i]=$selpwrA[$i]
+   		$selshapeA[$i]=$name
+		$selshapeB[$i]=$name
+		$i=$i+1
+        until $i > $selfrqcsize
+    else
+	assignshapename(pslabel):$name
+	$i=1
+	repeat
+		$frq[$i]=selfrqc[$i]-tof
+		$i=$i+1
+	until $i > $selfrqcsize
+	setselinv($name,$frq,selfrqw):$selpwA,$selpwrA,$width
+        if ($list='chain') then
+              shell('cp '+userdir+'/shapelib/'+$name+'.RF '+$shapedir):$dum
+        endif
+	$selpwB=$selpwA
+	$selpwrB=$selpwrA
+	$selshapeA=$name
+	$selshapeB=$name
+	$selfrqcsize=1
+    endif
+
+	selfrq=tof
+        selshapeA=$selshapeA selpwA=$selpwA selpwrA=$selpwrA
+        selshapeB=$selshapeB selpwB=$selpwB selpwrB=$selpwrB
+        saveshapes('add','tnshapes','selshapeA','selpwrA','selpwA')
+        saveshapes('add','tnshapes','selshapeB','selpwrB','selpwB')
+
+        if ($selfrqcsize > 1) then
+            array='(selshapeA,selpwA,selpwrA,selshapeB,selpwB,selpwrB)'
+            if ($array<>'') then array=array+','+$array endif
+        else
+            if (apptype='homo2D') then bashdbw('setsw1') endif
+            if ($array<>'') then array=$array endif
+			"Append text with selection frequency information"
+	    if (mfslp='n') then
+        	if (procdim<1) then
+        	    setppm(selfrqc[1],tn):$frq
+        	else
+        	    getppm(selfrqc[1]):$frq
+        	endif
+        	$atxt1='' format($frq,0,2):$atxt1
+        	$atxt2='' format($width[1],0,1):$atxt2
+        	$atext='  Selective band center: '+$atxt1+' (ppm); width: '+$atxt2+' (Hz)'
+	    else
+		$atext='  Multi-frequency selection'
+	    endif
+	    atext($atext)
+        endif
+     EXPtime:ACQtime
+ENDIF
+
+selfrqc=0 off('selfrqc')
+selfrqppm=0 off('selfrqppm')
+selfrqw=10
+wds='' wstart=''
+if (auto<>'y') then dps endif
+if ($ishomodec<1) then
+   write('line3','shapes are ready for %s',pslabel)
+endif

@@ -1,0 +1,260 @@
+"macro vjeditQ"
+"  This macro is applicable ONLY to SMS automation - 2005-10-03 "
+
+$mimic='no'
+getadminfo('alwaysmimic'):$mimic
+if ($mimic='yes') then
+    write('error','This system is in mimic mode. Cannot edit study')
+    return
+endif
+
+is_submitmode:$issubmit
+//if (traymax<2) then return endif
+$origautodir=autodir
+
+$editok=0
+operights('editsubmittedstudy'):$editok
+if ($editok<0.5) then
+   write('error','%s cannot edit study queue.',operator)
+   return
+endif
+operights('mayusesqtosubmit'):$editok
+if ($editok<0.5) then
+   write('error','%s cannot edit study queue.',operator)
+   return
+endif
+
+walkupQ_init
+$editq='no'
+getadminfo('editq'):$editq
+if ($editq='no') then
+   write('error','Queue edit option is turned OFF')
+   return
+endif
+
+IF $# < 1 then
+   vnmrjcmd('submitstudy '+$0)
+   vnmrjcmd('tray update')
+   return
+ENDIF
+
+$rack='' $zone='' $loc=''
+if ($# = 1 ) then
+    $firstchar=''
+    substr($1,1,1):$firstchar
+    if ($firstchar<>'/') then
+	$1=autodir+'/enterQ.macdir/'+$1
+    endif
+    if (traymax=96) and (traymax=768) then
+      format(vrack,'lower'):$rack
+      format(vzone,'lower'):$zone
+    endif
+    exists($1+'/day/sampleinfo','file'):$fileex
+    if ($fileex) then
+	$z1='' $z2=''
+	readfile($1+'/day/sampleinfo','$z1','$z2','','local')
+	teststr('$z1','SAMPLE#:','local'):$ret
+	if ($ret=0) then
+	    write('error','Sampleinfo not found in %s',$1)
+	    return
+	endif
+	$loc=$z2[$ret]
+	teststr('$z1','RACK:','local'):$ret
+	if ($ret) then
+	   $rack=$z2[$ret]
+	endif
+        teststr('$z1','ZONE:','local'):$ret
+        if ($ret) then
+           $zone=$z2[$ret]
+        endif
+    endif
+else
+   if not typeof('$4') then
+     format($4,0,0):$loc
+   else
+     $loc=$4
+   endif
+   if (traymax=96) or (traymax=768) then
+      format($2,'lower'):$rack
+      format($3,'lower'):$zone
+   endif
+endif
+
+substr($loc,1):$loc
+//if ($loc = '0') or ($loc='') then
+if ($loc='') then
+    if ($0 ='submitagain') then
+	write('error','Select location to recall')
+    else
+	write('error','Select location to edit')
+    endif
+	return
+endif
+
+"***Where to get info****"
+strstr(autodir,'studytray'):$isenter
+if ($isenter=0) then
+  $dir=autodir
+  $file='enterQ'
+else
+  $dir=globalenter
+  shell('basename '+globalenter):$file
+endif
+
+$autofile=$dir+'/'+$file
+$samplename='' $locdir='' $status='' $who=operator
+checklocstatus($autofile,$loc,$zone,$rack):$status,$who,$samplename,$locdir
+
+if ($samplename='ReFeReNCe') then
+        write('error','Loc %s is a reference location',$loc)
+        return
+endif
+operights('editallopstudies'):$opok
+if ($who<>operator) and (owner<>operator) and ($opok<0.5) then
+        write('error','%s cannot edit a Sample owned by %s',operator,$who)
+        return
+endif
+exists($autofile,'file'):$dayex
+if ($dayex=0) then
+  write('error','file %s NOT found',$autofile)
+  return
+endif
+
+if ($status='') then
+	updatestatus($dir,$loc,'Empty',$zone,$rack)
+        write('error','Sample %s not found',$loc)
+        return
+endif
+updatestatus($dir,$loc,$status,$zone,$rack)
+
+$when=''
+if ($status='Active') or ($status='preScan') then
+  if ($0='vjeditQ') then
+      write('line3','Sample %s status is %s',$loc,$status)
+  endif
+      $isnight=0 $when='day'
+      shell('(cat '+$autofile+'.macdir/currentsampleinfo | grep -w MACRO: | grep -c night)'):$isnight
+      if ($isnight>0) then $when='night' endif
+endif
+
+$macdir=$autofile+'.macdir'
+$maclibdir=$macdir+'/'+$locdir+'/day'
+$maclibdirlong=$macdir+'/'+$locdir+'/night'
+
+$sampinfo=$maclibdir+'/sampleinfo'
+$expfile=$maclibdir+'/EXPLIST'
+$lngfile=$maclibdir+'/LONGLIST'
+
+exists($sampinfo,'file'):$sampqex
+if ($sampqex=0) then
+  write('error','Sample information not found for %s',$loc)
+  return
+endif
+
+"********Get EXPLIST and LONGLIST**********************"
+shell('grep -w USER: '+$sampinfo):$user
+$priority='no'
+substr($user,3):$priority
+$solvent=''
+shell('grep -w SOLVENT: '+$sampinfo):$solvent
+substr($solvent,2):$solvent
+
+if ($issubmit<1) then
+    tmpsqcopy('OrigExpPar')
+    setProbepars('force')
+    walkupQ('clear')
+//    if (system='datastation') then
+    if ($isenter) then
+	wqinit='enter'
+    else
+	if ($loc<>'0') then
+	    wqinit='auto'
+	else
+	    wqinit='acq'
+	    wqacq='autodir',''
+	endif
+    endif
+    walkupQ('renew')
+    is_submitmode:$issubmit
+    if ($issubmit<1) then
+	return
+    endif
+else
+    walkupQ('refresh')
+endif
+
+if ($solvent<>'') then solvent=$solvent endif
+shell('cp '+$expfile+' '+cursqexp+'/EXPLIST'):$dum
+shell('cp '+$lngfile+' '+cursqexp+'/LONGLIST'):$dum
+shell('(cat '+cursqexp+'/EXPLIST | wc -l)'):$expsize
+
+"************Copy all customization***************"
+shell('cp -r '+$maclibdir+'/* '+cursqexp+'/macdir'):$dum
+shell('cp -r '+$maclibdirlong+'/* '+cursqexp+'/macdirlong'):$dum
+
+"***********Reset time display***************************"
+file='exp' strtpar=''
+getsampglobal($macdir+'/'+$locdir)
+
+exists(cursqexp+'/macdir/walkupQacqpars','file'):$wq2ex
+if ($wq2ex) then
+   fread(cursqexp+'/macdir/walkupQacqpars')
+endif
+exists(cursqexp+'/macdir/walkupQacq','file'):$wqex
+if ($wqex) then
+   macrold(cursqexp+'/macdir/walkupQacq'):$dum
+   walkupQacq
+   purge(cursqexp+'/macdir/walkupQacq')
+endif
+if ($priority='priority') then
+   prioritysample='yes','low','sample'
+else
+   prioritysample='no','low','sample'
+endif
+substr($user,4):prioritysample[2]
+
+"***************Record location # and replaceQ flag**********"
+"********replaceQ or resubmitQ flag will be used by the vjsubmitQ macro****"
+   replaceQ='','','',''
+   write('reset',cursqexp+'/nextlocQ')
+
+if ($origautodir=autodir) then
+   if ($status<>'Complete') and ($status <> 'Error') then
+        write('file',cursqexp+'/nextlocQ','%s',$loc)
+	replaceQ[1]='both' replaceQ[4]=$loc
+     if ($status='Active') or ($status='preScan') then
+        if ($when='day') then replaceQ[1]='ActiveDay'
+        elseif ($when='night') then replaceQ[1]='ActiveNight'
+	endif
+     endif
+   else
+        replaceQ[1]='resubmit'
+        replaceQ[4]=$loc
+   endif
+   if ($0='submitagain') then
+        replaceQ[1]='resubmit'
+        if ($status<>'Error') then
+           replaceQ[4]=''
+        else
+           write('reset',cursqexp+'/nextlocQ')
+        endif
+   endif
+endif
+"*******************************************************"
+
+   walkupQ('edit',$0)
+
+"***************Record location # and replaceQ flag**********"
+"********replaceQ or resubmitQ flag will be used by the vjsubmitQ macro****"
+if ($origautodir=autodir) then
+   walkupQ('gettime'):$dtime,$ltime
+   if ($status<>'Complete') and ($status <> 'Error') and ($0<>'submitagain') then
+        format($dtime,'lower'):replaceQ[2]
+        format($ltime,'lower'):replaceQ[3]
+   else
+        replaceQ[2]='0'
+        replaceQ[3]='0'
+   endif
+endif
+"*******************************************************"
+return(1)

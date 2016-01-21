@@ -1,0 +1,74 @@
+"macro resetsampglobal"
+  expactive:$active
+  if ($active > 0) then
+     write('error','Current experiment is ACTIVE!!')
+     return
+  endif
+
+  module('add','sampleglobal','basic','refresh')
+
+	"The following is needed to make sure if any _parameters"
+	"  need to be executed.  As well as for panel updates"
+        "  But check to makes sure that protection bit 2 is not ON"
+  $list='' $list2=''
+  module('arraylist','sampleglobal'):$list
+  module('arraylist','usersampleglobal'):$list2
+  $list=$list,$list2
+  $list2=''
+  setprotect('','list',4):$list2
+  string2array($list2):$list2
+  $total=size('$list')
+  $i=1
+  repeat
+    if ($list[$i]<>'') then
+   	teststr('$list2',$list[$i],'local'):$ret
+   	if ($ret=0) then {$list[$i]}={$list[$i]} endif
+    endif
+    $i=$i+1
+  until $i > $total
+	"Now check out templates"
+  setadirtmplt
+  setsvftmplt
+  setsdirtmplt
+	"Good idea to reset studyowner"
+  teststr('$list','studyowner','local'):$isop
+  if ($isop) then
+	studyowner=operator
+  endif
+	"Good idea to reset procdim"
+  procdim=0
+	"Good idea to reset curexp/text"
+  text(''):$dum
+  text_string=''
+	"Good idea to reset strtpar and file"
+  strtpar=''
+  file='exp'
+  getemailaddr(operator):emailaddr
+  emessage=emailflag
+  if (emessage='y') then getadminfo('emessage'):emessage endif
+  emailwhen=''
+  getadminfo('emailwhen'):emailwhen
+
+	"While in submit mode, set default value "
+	"   for userplotter, pltopt"
+  is_submitmode:$submit
+  if ($submit) then
+     $autosaveplot='plot'
+     getadminfo('autosaveplot'):$autosaveplot
+     strstr($autosaveplot,'plot'):$isplot
+     if ($isplot) then pltopt='y' else pltopt='n' endif
+     userplotter=plotter
+  endif
+  seteOptions
+        "Read user preferences - if any"
+	" Naturally userprefs overrides any of the above"
+  loaduserprefs
+
+  if ($# > 0) then
+     if ($1='clearSQ') then
+	$size=size('sqdisplay')
+	if ($size<2) and sqdisplay[1]='sample' then
+	    SQDisplay('refresh')
+	endif
+     endif
+  endif

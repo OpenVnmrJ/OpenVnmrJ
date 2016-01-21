@@ -1,0 +1,182 @@
+"macro xmhaha_sqwatch"
+// This is SQWatch equivalent but via send2Vnmr
+
+if ($# < 1) then $1='init' endif
+
+IF ($1='init') THEN
+   if ($# < 2) then $2='' endif
+
+   $sfile='/vnmr/acqqueue/SQwatch'
+   exists($sfile,'file'):$fileex
+   if ($fileex=0) then return endif
+
+   $tmpfile=userdir+'/persistence/SQwatch'
+
+// First send messages to all VJ's viewing the tray
+//   For every pid's in the SQwatch file, send this macro
+//   again with update argument
+   write('reset',$tmpfile)
+   $f=autodir
+   shell('(cat '+$sfile+' | grep \'^tray\' | grep -w '+$f+' | sed -e \'s|'+$f+'||g\' > '+$tmpfile+')'):$dum
+   $s1='' $s2=''
+   readfile($tmpfile,'$s1','$s2','','local'):$tot
+   if ($tot>0) then
+     $macro=$0+'(\'updateTray\',\''+$f+'\',\''+$2+'\')'
+     $i=1
+     repeat
+	write('reset',$tmpfile)
+	write('file',$tmpfile,'%s',$s2[$i])
+	$cmd='send2Vnmr '+$tmpfile+' "'+$macro+'"'
+	shell($cmd):$x
+	$i=$i+1
+     until $i > $tot
+   endif
+   shell('rm -f '+$tmpfile):$dum
+
+// Next send messages to all VJ's viewing the active study
+//   For every pid's in the SQwatch file, send this macro
+//   again with update argument
+   write('reset',$tmpfile)
+   $f=archivedir+'/'+sample
+   shell('(cat '+$sfile+' | grep \'^active\' | grep -w '+$f+' | sed -e \'s|'+$f+'||g\' > '+$tmpfile+')'):$dum
+   $s1='' $s2=''
+   readfile($tmpfile,'$s1','$s2','','local'):$tot
+   if ($tot>0) then
+     $macro=$0+'(\'updateActive\',\''+$f+'\',\''+$2+'\',\''+autodir+'\')'
+     $i=1
+     repeat
+        write('reset',$tmpfile)
+        write('file',$tmpfile,'%s',$s2[$i])
+        $cmd='send2Vnmr '+$tmpfile+' "'+$macro+'"'
+        shell($cmd):$x
+        $i=$i+1
+     until $i > $tot
+   endif
+   shell('rm -f '+$tmpfile):$dum
+
+// Next send messages to all VJ's viewing the study in sample view
+//   For every pid's in the SQwatch file, send this macro
+//   again with update argument
+   write('reset',$tmpfile)
+   $f=archivedir+'/'+sample
+   shell('(cat '+$sfile+' | grep \'^sample\' | grep -w '+$f+' | sed -e \'s|'+$f+'||g\' > '+$tmpfile+')'):$dum
+   $s1='' $s2=''
+   readfile($tmpfile,'$s1','$s2','','local'):$tot
+   if ($tot>0) then
+     $macro=$0+'(\'updateSample\',\''+$f+'\',\''+$2+'\',\''+autodir+'\')'
+     $i=1
+     repeat
+        write('reset',$tmpfile)
+        write('file',$tmpfile,'%s',$s2[$i])
+        $cmd='send2Vnmr '+$tmpfile+' "'+$macro+'"'
+        shell($cmd):$x
+        $i=$i+1
+     until $i > $tot
+   endif
+   shell('rm -f '+$tmpfile):$dum
+
+ELSEIF ($1='updateTray') THEN
+     if ($3='') or ($3='done') then
+	if (activeviewport<>jviewport) then return endif
+	xmhaha('autoSQ',$2)
+     else
+		//Change the status of the Active study nodes using changeStatus option
+	xmhaha_sqwatch('changeStatus',$2,$3)
+     endif
+ELSEIF ($1='updateActive') THEN
+    if (($3='done') or ($3='')) and (activeviewport<>jviewport) then return endif
+    if ($3='done') then
+	if ($2<>archivedir+'/'+sample) then
+                // This study is done, but study in curexp is NOT the active study
+                //   So, don't change the sqdisplay parameter value
+                //   When the next study begins, the display will switch to
+                //   new active study
+	    xmhaha_buildSQ($2)
+	else
+                // This study is done, and the study in curexp is this active study
+                //   Switch to sample view.  This way when the next study begins,
+                //   it will not switch to new active study, unless the user asks
+                //   for it via the view menu
+            SQDisplay('sample')
+	endif
+    elseif ($3='') then
+		// New nodes are added to this study.  Refresh the entire display
+	    vjactiveQ('current','quiet')
+    else
+		// No new nodes, adjust the node props using changeStatus option
+	    xmhaha_sqwatch('changeStatus',$4,$3)
+    endif
+ELSEIF ($1='updateSample') THEN
+		// Don't bother if curexp has different study
+    if (($3='done') or ($3='')) and (activeviewport<>jviewport) then return endif
+    if ($2<>archivedir+'/'+sample) then return endif
+    if ($3='done') then
+		// The study is done.  
+	    xmhaha_buildSQ($2)
+    elseif ($3='') then
+		// New nodes are added to this study.  Refresh the entire display
+	    vjactiveQ('current','quiet')
+    else
+		// No new nodes, adjust the node props using changeStatus option
+	    xmhaha_sqwatch('changeStatus',$4,$3)
+    endif
+ELSEIF ($1='changeStatus') THEN
+
+    $loc='' $locdir=''
+    getlocid($2+'/enterQ.macdir/currentsampleinfo'):$loc,$locdir
+    if ($locdir='') then return endif
+
+    $locxmlinfo=$2+'/enterQ.macdir/'+$locdir+'/xmldir/Active/info'
+    exists($locxmlinfo,'directory'):$direx
+    if ($direx=0) then return endif
+
+    $done=0 $i=1
+    while $done<1 do
+	$node=''
+	substr($3,$i):$node
+	if ($node='') then $done=1 else
+	    $from=$locxmlinfo+'/'+$node+'/prop'
+	    $to=cursqexp+'/tmpstudy/info/'+$node+'/prop'
+	    exists($from,'file'):$fileex
+	    exists($to,'file'):$fileex2
+	    if ($fileex) and ($fileex2) then
+		$s1='' $s2='' $status='' $title='' $data=''
+		readfile($from,'$s1','$s2','','local')
+		teststr('$s1','status','local'):$ret
+		$status=$s2[$ret]
+		teststr('$s1','data','local'):$ret
+		$data=$s2[$ret]
+		teststr('$s1','title','local'):$ret
+		$title=$s2[$ret]
+		$sc=' set '+$node+' status "'+$status+'";'
+		$sc=$sc+' set '+$node+' title "'+$title+'";'
+		$sc=$sc+' set '+$node+' data "'+$data+'";'
+		vnmrjcmd('SQ '+$sc)
+		shell('cp '+$from+' '+$to):$dum
+	    endif
+	    $i=$i+1
+	endif
+    endwhile
+
+ELSEIF ($1='Write') THEN
+   bgmode_is:$bg
+   if ($bg<0.5) then
+   	xmhaha_sqwatch('Clear')
+	exists('sqflag','parameter','global'):$parex
+	if ($parex) then if sqflag='n' then $parex=0 endif endif
+	if ($3='') then $parex=0 endif
+	if ($parex) then
+   	    write('file','/vnmr/acqqueue/SQwatch','%s %s %s',$2,vnmraddr,$3)
+   	    shell('chmod a+w /vnmr/acqqueue/SQwatch'):$dum
+	endif
+   endif
+
+ELSEIF ($1='Clear') THEN
+   shell('touch /vnmr/acqqueue/SQwatch'):$dum
+   shell('cp /vnmr/acqqueue/SQwatch /vnmr/tmp'):$dum
+   shell('(cat /vnmr/acqqueue/SQwatch | grep -v "'+vnmraddr+'" > /vnmr/tmp/SQwatch)'):$dum
+   shell('cp /vnmr/tmp/SQwatch /vnmr/acqqueue/SQwatch'):$dum
+   shell('rm -f /vnmr/tmp/SQwatch'):$dum
+   shell('chmod a+w /vnmr/acqqueue/SQwatch'):$dum
+
+ENDIF

@@ -1,0 +1,72 @@
+"macro ldrf"
+"*****************************************************************************"
+"                                                                             "
+" ldrf - load the transmitter offset frequency (resto) from H1offset          "
+"        and initialize the rfcoil parameter                                  "
+"                                                                             "
+" Details: The routine loads the resonance frequency offset (resto) parameter "
+"          from the global parameter H1offset.                                "
+"          If the RFCOIL parameter is set rfcoil is also initialized          "
+"          If seqfil=s2pul, tof is set to H1offset                            "
+"                                                                             "
+"          On Multi transmiter (mouse) systems:
+"          volumercv=y and volumexmt=y enable the RF transmit and receive on  "
+"          the first (top, high power) preamp module. If they are set to 'n'  "
+"          (default state) the transmit and receive will be using the 4 bottom"
+"          preamp modules.                                                    "
+"          On most standard, single transmitter systems, the default state    "
+"          will be transmit and receive on the top high band (1H) preamp      "
+"          module                                                             "
+"          You may configure the system by setting the global parameter to    "
+"          VOLUMERCV and VOLUMEXMT accordingly                                "
+"
+"*****************************************************************************"
+create('VOLUMERCV','string','global', 'y')
+create('VOLUMEXMT','string','global', 'y')
+create('RCVRS',    'string','global', 'y')
+create('volumercv','string','current','y')
+create('volumexmt','string','current','y')
+create('ampmode','flag','current','pppppppp')
+
+$global = 1
+exists('local_volumercv','parameter'):$ex
+if ($ex > 0) then $global = (local_volumercv = 'n') endif
+
+if (VOLUMEXMT <> 'l')               then volumexmt = VOLUMEXMT endif
+if (VOLUMERCV <> 'l') AND ($global) then volumercv = VOLUMERCV endif
+if (RCVRS     <> 'l') AND ($global) then rcvrs     = RCVRS     endif
+
+prescan_tn:tn                      // set nucleus specified by rfcoil in CoilTable
+$tnoffset = tn+'offset'
+create($tnoffset,'real','global',0)
+if ($# > 0.5) then
+  {$tnoffset}=$1
+  return
+endif
+
+create('resto','real','current',0)
+resto = {$tnoffset}
+
+exists('autooffset','parameter'):$ex
+if ($ex) then if (autooffset = 'y') then fsatfrq = Prescan_FatOffset endif endif
+
+tof = resto      //Set tof=resto for exact phase coherence
+reffrq = sfrq    // set frequency for ppm scale
+rfcoil = RFCOIL
+
+"** Compute maximum value of B1 for the current rfcoil **"
+b1max
+
+"See if rcvrf (frequency offset for different receivers) is set"
+"If so make sure its off"
+exists('rcvrf','parameter','global'):$expar
+if ($expar=1) then rcvrf=0 endif
+
+
+"*****************************************************************************"
+"                Modification History                                         "
+"                                                                             "
+" 970811(ss): tnoffset parameter checked and resto initialized                "
+"                                                                             "
+"*****************************************************************************"
+

@@ -1,0 +1,184 @@
+"macro xmprescan"
+"start prescan for study queue or not - always gives return argument"
+
+if $#=0 then
+  $1='chain'
+endif
+
+if $1='chain' then
+" perform global prescans before starting study"
+  if (appmode='imaging') then
+    return('yes')
+//  if (prescan[1]='Complete' and prescan[2]='Complete' and prescan[3]='Complete' and prescan[4]='Complete') then
+//    return('yes')
+//  else
+//    prescan('all')
+//    return('no') "prescan macro must eventually call acquire"
+//  endif
+  else  "liquids"
+//  $i=0 while ($i<4) do
+//    $i=$i+1 if (prescan[$i]<>'Complete') then
+//      xmprescan('savepars')
+//      exec(prescan[$i+1])
+//      return('no')
+//    endif
+//    $i=$i+1
+//  endwhile
+    xm1('studydir'):$sdir
+    exists($sdir+'/studypar','file'):$e
+    if $e>0.5 then
+      readparam($sdir+'/studypar','solvent wtune')
+    endif
+    if (prescan[1]<>'Complete') then
+      xmprescan('savepars')
+      $prescan=prescan
+      $ans=''
+      cqfindz0:$ans
+      exists($sdir+'/studypar','file'):$e
+      if $e>0.5 then fread($sdir+'/studypar') endif
+      prescan=$prescan
+      if $ans='noprobe' then
+        prescan[1]='Complete'
+        if prescan[11]='Not done' then prescan[11]='Complete' alock='y' endif
+        return('yes')
+      else
+        return('no')
+      endif
+    endif
+    if (prescan[4]='y') then "tune"
+      xmprescan('savepars')
+      $prescan=prescan
+      $ans=''
+      xmtune:$ans
+      exists($sdir+'/studypar','file'):$e
+      if $e>0.5 then fread($sdir+'/studypar') endif
+      prescan=$prescan
+      if $ans<>'n' then
+        return('no')
+      endif
+    endif
+    if (prescan[2]<>'Complete') then
+      xmprescan('savepars')
+      exists(autodir+'/gQ','file'):$e
+      if $e>0.5 then rm(autodir+'/gQ'):$x endif
+      $prescan=prescan
+      $ans=''
+      $map='' $ok=0
+      getparam(Gmap[1]+'map','Probe'):$map
+      if ($map<>'' and $map<>'n') then
+        gmapshim('findmap',$map):$ok
+        if $ok<0.5 then $map='' endif
+      endif
+      if ($map='' or $map='n') then
+        $Gmap='lk','hs','H1','H1hs'
+        $i=0
+        repeat
+          $i=$i+1
+          $map=''
+          getparam($Gmap[$i]+'map','Probe'):$map
+          if ($map<>'' and $map<>'n') then
+            gmapshim('findmap',$map):$ok
+            if $ok<0.5 then $map='' endif
+          endif
+        until ($i>=size('$Gmap') or ($map<>'' and $map<>'n'))
+      endif
+      if ($map<>'' and $map<>'n') then
+        xmprescan('savepars')
+        gmapshim('tmpsave')
+        gmapz($map)
+        $solvent=solvent
+        exists($sdir+'/studypar','file'):$e
+        if $e>0.5 then fread($sdir+'/studypar') endif
+        solvent=$solvent
+        prescan=$prescan
+        wdone=''
+        gmapshim
+        return('no')
+      else
+        xmprescan('savepars')
+        gmapshim:$ans
+        exists($sdir+'/studypar','file'):$e
+        if $e>0.5 then fread($sdir+'/studypar') endif
+        prescan=$prescan
+        if $ans='nomap' then
+          getparam(Gmap[1]+'map','Probe'):$map
+          write('line3','Cannot shim, "%s" not found.',$map)
+          if prescan[11]='Not done' then prescan[11]='Complete' alock='y' endif
+          prescan[2]='Complete'
+          return('yes')
+        else
+          return('no')
+        endif
+      endif
+    endif
+"all prescan[i] are Complete"
+//  if solvent='none' then alock='n' else alock='y' endif
+    if prescan[11]='Not done' then
+      alock='y' prescan[11]='Complete'
+    else
+      alock='n'
+    endif
+    exists(prescan[5],'directory'):$d
+    exists(prescan[5],'file'):$e
+    if ($d<0.5 and $e>0.5) then
+      rm(prescan[5]):$x
+    endif
+    prescan[5]=''
+    cqsavestudy('paronly')
+    return('yes')
+  endif
+elseif $1='alldone' then
+  if (appmode='imaging') then
+//  if (prescan[1]='Complete' and prescan[2]='Complete' and prescan[3]='Complete' and prescan[4]='Complete') then
+      return('yes')
+//  endif
+  else
+    if (prescan[1]='Complete' and prescan[2]='Complete') then
+      if prescan[11]='Not done' then prescan[11]='Complete' alock='y' endif
+      return('yes')
+    endif
+  endif
+  return('no')
+elseif $1='savepars' then
+  if (activestudy[1]<>'null' and prescan[5]='') then
+    xm1('studydir'):$sdir
+    prescan[5]=$sdir+'/info/presave'
+    exists(prescan[5],'directory'):$d
+    exists(prescan[5],'file'):$e
+    if ($d<0.5 and $e<0.5) then
+      fsave(prescan[5])
+      cqsavestudy('paronly')
+    endif
+  endif
+elseif $1='next' then
+  if (sqmode='go' or auto='y') then
+    xm1('studydir'):$sdir
+    $prescan=prescan
+    exists($sdir+'/studypar','file'):$e
+    if $e>0.5 then fread($sdir+'/studypar') endif
+    if (prescan[5]<>'') then
+      exists(prescan[5],'directory'):$d
+      exists(prescan[5],'file'):$e
+      if ($d<0.5 and $e>0.5) then
+        fread(prescan[5])
+        prune(prescan[5])
+        rm(prescan[5]):$x
+      endif
+    endif
+    prescan=$prescan
+    prescan[5]=''
+    xmprescan('chain'):$acq
+    if ($acq='yes') then
+      if (actionid='null' or actionid='' or actionid='off') then
+        xmnext
+      else
+        dg newdg
+        acquire
+      endif
+    endif
+  endif
+elseif $1='acq' then
+  if (sqmode='go' or auto='y') then
+    acquire
+  endif
+endif

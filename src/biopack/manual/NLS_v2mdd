@@ -1,0 +1,161 @@
+
+A) Using the "Sampling" page in VnmrJ (BioPack)
+================================================
+
+1) FT the first trace by wft(1). Phase and reference the 
+   spectrum and adjust the windowing parameters, solvent 
+   suppression filter, etc. 
+
+2) FT the first trace by wft(1) and choose the region of 
+   interest,i.e. if the experiment is NH-detected then set the 
+   cursors around the NH region containing all the NH proton 
+   signals (if there is little signal in the first increment 
+   use cursor positions determined from a more sensitive 
+   experiment for the same resonances. The "Points" menu
+   permits selection of a power of 2. After using the menu 
+   the cursor positions will change to reflect the chosen 
+   number of points. Otherwise,the cursors determine the 
+   selected region. The "Points" menu uses the 
+   BP_select_mdd_region macro. Once the region size is
+   selected, the left cursor may be moved to center the
+   resonances.
+
+3) Enter the path name of the directory into which the new 
+   MDD-compatible data are saved along with the desired new 
+   file name for that file. The standard VnmrJ global variables 
+   "svfname" and "svfdir" are used for these. If the directory 
+   does not exist, a button will create it.
+
+4) Select the type of data and if MDD processing is to be done.
+   For no sensitivity-enhancement in indirect dimensions use "States"
+   If the indirect dimension uses the gradient echo-antiecho 
+   (sensitivity-enhanced) method (often used for the N15
+   dimension) use the sensitivity-enhanced option. 
+
+   The macros BP_v2mdd('filename') and BP_v2mdd('filename','se'),
+   respectively, are used for the first two options in the menu.
+   
+   If MDD processing is desired automatically, use the final two
+   options which run the macro BP_mdd2v. The data is first converted to
+   an MDD-readable format and then the (user-installed MDD program)
+   is used to produce subfiles within the target fid file. This
+   may take from minutes to hours depending on the size of the data
+   set. The target fid file has a directory "MDD" that is populated
+   during the calculation. When this file stops being populated the
+   process is finished. 
+
+   To use VnmrJ to process the results of the MDD calculation, a new
+   fid file in VJ-compatible format will be created (if the MDD
+   processing is specified). This file will have the same name as
+   entered above, but it will have an "_mdd" appended.
+
+   Normal VnmrJ processing parameters and commands can be used to produce 
+   the nD spectrum. Note that the ni/ni2 parameters have been set to the 
+   nimax/ni2max values specfied when the initial data was collected. Use
+   weighting functions appropriate for these sizes.
+
+5) To view the log file generated during the conversion process 
+   use the "Show Results of Data Conversion in Text Window"
+   button. This log file is present in the *fid file generated
+   by the conversion process. The original fid file is also
+   saved in the same directory.
+
+
+B) from a shell.
+================
+The following steps need to be taken to convert the Varian data 
+into the format that is directly accessible by the mdd software.
+
+  In VnmrJ:
+
+1) FT the first trace by wft(1). Phase and reference the
+   spectrum 
+   and adjust the windowing parameters, solvent suppression
+   filter, etc. ;
+
+2) FT the first trace by wft(1) and choose the region of
+   interest, i.e. if the experiment is NH-detected then set the
+   cursors around the NH region containing all the NH proton
+   signals (if there is little signal in the first increment
+   use cursor positions determined from a more sensitive
+   experiment for the same resonances.
+
+3) FT all traces (wft) and "flush" the data (run the command
+  "flush") ;
+
+  In a shell:
+
+4) use the rsw command to cut out the region of interest, e.g.
+
+   > rsw exp20 filename.fid 810 1024
+
+   exp20 is the experiment containing the FT'd and flushed data,
+   filename.fid is the destination filename, 810 is the chosen
+   starting point of the region of interest 1024 is the size of
+   the region of interest; The filename.fid can be inspected in
+   VnmrJ using the ft('noft') and ddff(1) commands.
+
+   The -t option allows saving the data in the time domain
+   (FID) format. 
+   
+   > rsw exp20 fname.fid 810 1024 -t
+   
+   Inverse FT is applied and the processing parameters in the
+   directly detected dimension are disabled.
+
+5) for sensitivity-enhanced data in N-15 use the proc_se command
+   to convert the data into the conventional format that can be
+   used for Fourier transform:
+ 
+   > proc_se filename.fid
+  
+   The filename.fid can be inspected in Vnmr(J) using the 
+   ft('noft') and ddff(1) commands.
+
+6) convert the Varian data file into a format that can be read
+   by mdd directly:
+
+   > BP_v2mdd filename.fid
+
+7) copy the mdd parameter files from exp20 to the fname.fid
+   directory:
+
+   > cp ~/vnmrsys/exp20/*.hdr_3 filename.fid/.
+   > cp ~/vnmrsys/exp20/*.in filename.fid/.
+
+The filename.fid file now should contain the fid.v2m binary 
+file that can be read directly by the mdd software.   
+
+Reducing Data Size:
+=========================
+
+   The BP_rsw macro (in VnmrJ) runs BP_select_mdd_region and
+   the program "rsw". It is used to preserve the region of
+   interest and thus reduce the size of an nD data set. The
+   data are first processed in the directly detected dimension
+   in VnmrJ and then saved by rsw as partially transformed data
+   set for further processing. Use this macro as an
+   independent option. It is not necessary for normal use.
+
+
+Sensitivity-Enhanced Data:
+==========================
+
+  proc_se - converts a sensitivity enhanced data set into the
+  conventional format.
+
+  Usage:
+            
+  > proc_se filename.fid 
+  
+  In special cases the loop size can be passed as an argument.
+  For instance, if array = 'phase2,phase,phase3' and the
+  sensitivity enhanced dimension is associated with phase2
+  parameter, the following command should be executed:
+    
+  > proc_se fname.fid 8
+  
+  where 8 is the loop size in this particular case. 
+  If the array = 'phase2,phase' the loop size is 4.
+  The default loop size is 2 (array = 'phase,phase2').
+  

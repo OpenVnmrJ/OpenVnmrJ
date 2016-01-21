@@ -1,0 +1,37 @@
+
+*******************************************************************************
+dres(<freq<,fractional-height>>):linewidth,resolution,highfreq,lowfreq
+                                               -	Measure Linewidth 
+                                                        and Digital Resolution
+dsn(<lowfield,highfield>):signal-to-noise,noise	-	Measure Signal-to-Noise
+*******************************************************************************
+
+  "Dres" analyzes the line defined by the current cursor position ("cr")
+  for its linewidth (width at half-height).  If there is a second argument 
+  with a fractional height, the linewidth is measured at this height.
+  The digital resolution is also measured.  These measurements may be returned 
+  in the corresponding output parametersa Optional third and fourth return values
+  will return the peak frequencies at the requested height.  An optional freq
+  may be supplied to override "cr" as the line's frequency. For example, if cr
+  is set to the frequency of the line, then
+    dres:$width,$res,cr,$tmp delta=cr-$tmp
+  will set the cursors to the frequencies of the line at half-height
+
+  "Dsn" measures the signal to noise ratio of the spectrum.  This
+  calculation proceeds in two steps.  First, the intensity of the
+  largest peak in the spectral range defined by "sp" and "wp"
+  is measured.  Then the noise is measured in the spectral region
+  defined by the position of the two cursors.  This ratio may
+  be returned in an output parameter.  The noise value may also
+  be returned in a second output parameter.  The noise region may
+  be specified by supplying the lowfield and highfield frequencies
+  of that region as parameters.
+
+  The noise value returned from "dsn" is not scaled by "vs".  The
+  interrelations between the signal-to-noise ratio, the noise and
+  peak intensities may be illustrated as follows.
+
+  dsn:$sn,$noise
+  peak:$signal
+
+  In this case, $sn will be equal to $signal / $noise / vs.

@@ -1,0 +1,100 @@
+"macro checktemplates"
+if ($# < 1) then $1='current' endif
+if ($# < 2) then $2='' endif
+
+if (auto='y') then 
+     RETURN(1)
+endif
+
+
+"The following section makes sure that none of the three"
+"   templates has any string parameter with empty value"
+
+$error=''
+$return=1
+
+$ret=0 $parerror='' $nopar='' $nopar1=''
+ckreqparvals:$ret,$parerror
+if ($ret) then
+        write('error','parameters %s are empty strings',$parerror)
+	$error=$error+' '+$parerror
+	$return=0
+endif
+
+$ret=0 $parerror='' $nopar='' $nopar1='' $parerror1=''
+cktemplate(adirtmplt,2):$ret,$parerror,$nopar
+if ($ret) then
+	substr($nopar,1):$nopar1
+	if ($nopar1<>'') then
+	    write('error','parameters %s are NOT found',$nopar)
+	    $return=-1
+	else
+	    write('error','parameters %s are empty strings',$parerror)
+	    $error=$error+' '+$parerror
+            if ($return>0.5) then $return=0 endif
+	endif
+endif
+
+exists('adir2tmplt','parameter'):$parex
+if ($parex) then
+   $ret=0 $parerror='' $nopar='' $nopar1='' $parerror1=''
+   cktemplate(adir2tmplt,2):$ret,$parerror,$nopar
+   if ($ret) then
+        substr($nopar,1):$nopar1
+        if ($nopar1<>'') then
+            write('error','parameters %s are NOT found',$nopar)
+            $return=-1
+        else
+            write('error','parameters %s are empty strings',$parerror)
+            $error=$error+' '+$parerror
+            if ($return>0.5) then $return=0 endif
+        endif
+   endif
+endif
+
+$ret=0 $parerror='' $nopar='' $nopar1='' $parerror1=''
+cktemplate(sdirtmplt,1):$ret,$parerror,$nopar
+if ($ret) then
+        substr($nopar,1):$nopar1
+        if ($nopar1<>'') then
+            write('error','parameters %s are NOT found',$nopar)
+            $return=-1
+        else
+            write('error','parameters %s are empty strings',$parerror)
+            $error=$error+' '+$parerror
+            if ($return>0.5) then $return=0 endif
+        endif
+endif
+
+$ret=0 $parerror='' $nopar='' $nopar1='' $parerror1=''
+cktemplate(svftmplt,1):$ret,$parerror,$nopar
+if ($ret) then
+        substr($nopar,1):$nopar1
+        if ($nopar1<>'') then
+            write('error','parameters %s are NOT found',$nopar)
+            $return=-1
+        else
+            write('error','parameters %s are empty strings',$parerror)
+            $error=$error+' '+$parerror
+            if ($return>0.5) then $return=0 endif
+        endif
+endif
+
+if ($return=0) then
+   "There is an empty parameter.  But include ALL from reqparvals module in the parampopup"
+	$reqlist=''
+	module('list','reqparvals'):$reqlist
+	$error=$error+' '+$reqlist
+    if ($2<>'nopopup') then
+	parampopup($error,$1)
+    else
+	return(0,$error)
+    endif
+endif
+
+if ($return<0.5) then 
+	return(0) 
+else 
+	if studyowner='' then studyowner=operator endif
+	return(1) 
+endif

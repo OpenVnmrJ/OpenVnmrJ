@@ -1,0 +1,81 @@
+"macro F19pw90_process"
+//Reprocess 19F pw90 data in VeriPulse
+
+
+$phase='dophase'
+
+$x = 1
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ endif
+ $x=$x+1
+endwhile
+
+wp=0.2p
+sp=-62.6p
+
+$counter=1 //start counter with first index
+select(1)  //select first index
+peak:$bestheight //peak gives : height(mm) freq(ppm)
+$bestindex=$counter //keeps track of counter
+repeat
+   select($counter)//select index
+   peak:$ht,$freq  //define new height and freq
+   if ($ht>$bestheight) then //compare new height with previous 
+      $bestheight=$ht //if it's greater replace best height with $ht
+      $bestindex=$counter  //and replace best index with new counter
+      cr=$freq  //go to the peak
+      dres(cr,0.5):$lw  //measure linewidth
+   endif
+   $counter=$counter+1
+until ($ht<.5*$bestheight) or ($counter>arraydim)
+$firstmaxindex=$bestindex
+$firstmaxheight=$bestheight
+
+select($bestindex)
+
+if $phase='dophase' then aph endif
+
+$IPteststatus='FAIL'
+VPgettarget('F19pw90'):$target
+
+//calculate pw90
+wft
+select(1)
+VPthadj(1)
+nll
+fp
+pw360cal:$pw90
+
+exists('VParcingtest','maclib'):$arcex
+if ($arcex) then VParcingtest($pw90) endif
+
+if ($pw90<=$target) then $IPteststatus='PASS' endif
+
+//Add the sample info to the text file
+VPtext
+
+write('line3','19F 90-degree pulse width \(direct\)'):$line
+atext($line)
+CalibrationResults=$line
+write('line3','pw90: %.1f us at power level %.1f dB',$pw90,tpwr):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Target <= %.1f us',$target):$line
+atext($line)
+CalibrationResults=CalibrationResults,$line
+write('line3','Test status: %s',$IPteststatus):$line
+atext($line)
+
+//Add amp power information if calibration table exists
+exists('VPgetpower','maclib'):$vpex
+if ($vpex) then
+   VPgetpower('check'):$pwrtabex
+   if ($pwrtabex) then
+	VPgetpower(VPpowertabpath,'F19','direct',tpwr,pw90,$target):$atext
+        atext($atext)
+   endif
+endif
+
+VPhistory($pw90,tpwr)

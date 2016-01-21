@@ -1,0 +1,248 @@
+*******************************************************************************
+lookup	- 	look for and return words and lines from a text file
+*******************************************************************************
+
+  The 'lookup' program allows one to search a text file for a word and
+  return to the user subsequent words or lines.  In this context, a "word"
+  is defined as any string of characters delimited by "whitespace".
+  By default, "whitespace" includes the space character, a tab, a newline,
+  a carriage return, and a comma. The whitespace characters may also
+  be specified.  A word may, therefore, actually be a string a digits,
+  a string or letters, or a combination of letters and digits. Note
+  that punctuation marks, unless they are defined as whitespace as the comma
+  is by default, can also form words or be part of a word.  A line is any
+  string of characters from the current word to the next carriage return.
+  A line will include all "whitespace" characters except the carriage return.
+  Depending on the codeword, word searches and word counts can be case
+  insensitive or case sensitive.
+
+  The 'lookup' program recognizes nine special codewords when these
+  are supplied as arguments.  These codewords and their meaning are
+  listed below.
+
+  'file'     : this codeword specifies that the next supplied argument
+               will be the name of the text file which will be active.
+               If this codeword is used, it MUST be the first argument
+               passed to 'lookup' and the file name MUST be the second
+               argument passed to 'lookup'.  The search through a text
+               file is a top to bottom search.  The 'file' codeword
+               has the additional feature of resetting the start of a
+               search to the top of the text file.  Subsequent searches
+               through a previously accessed text file will continue
+               from where the previous search stopped, provided the
+               'file' codeword is not used. The 'file' codeword also
+               resets the whitespace characters back to their default
+               values. If the text file does not exist, lookup will
+               abort with an error.
+
+  'seek'     : this codeword causes the 'lookup' program to search the
+               text file for words which match those supplied as arguments
+               following the 'seek' codeword.  An implicit 'seek' is
+               initially assumed for each call to 'lookup'.  The 'lookup'
+               program maintains a pointer to the word following the last
+               successful 'seek'.  The first argument following an explicit
+               'seek' codeword is interpreted as a word to search for, not
+               a potential codeword. The second or later argument following
+               an explicit 'seek' will be interpreted as a codeword if it
+               matches one of the nine cases. Therefore, for example, one
+               can search for the word 'file' without having it interpreted
+               as a codeword by having it immediately follow the 'seek'
+               codeword in the argument list. This seek is case insensitive.
+
+  'seekcs'   : this codeword is the case sensitive equivalent to the seek
+               codeword.  In all other respects, it is the same as 'seek'.
+               One can alternate between case sensitive and case insensitive
+               searches.
+  
+  'skip'     : 'skip' increments the word pointer to the next word in the
+               text file.  This codeword may optionally be followed by
+               a number which will specify how many words to skip.
+
+  'read'     : 'read' returns to the user the word currently being pointed
+               to and increments the pointer to the next word in the
+               text file.  This codeword may optionally be followed by
+               a number which will specify how many words to return to
+               the user.
+
+  'readline' : 'readline' returns to the user the word currently being pointed
+               to and all following words until the end of the current line.
+               The pointer is incremented to the first word of the next line
+               in the text file.  This codeword may optionally be followed by
+               a number which will specify how many lines to return to
+               the user.
+
+  'count'   :  'count' returns to the user the number of times words in
+               the text file match the subsequent argument.  The count
+               starts at the current word pointer and proceeds to the
+               end of the text file.  The word count is case insensitive.
+               That is, if you use 'count' to count the instances of the
+               word "The", it will return the number of words that match
+               "The" and "the".
+
+  'countcs'   : this codeword is the case sensitive equivalent to the count
+               codeword.  In all other respects, it is the same as 'count'.
+               If you use 'countcs' keyword to count the instances of the
+               word "The", it will return the number of words that exactly
+               match "The".
+
+  'countline' : this codeword returns the number of lines in the file.
+               That is, it counts the number of newline characters (\n).
+               If the 'mfile' keyword is used (see below), the countline
+               will count from the current file position to the end of the
+               file.
+
+  'delimiter' : this codeword specifies that the next supplied argument
+               will be a list of characters which will be used to identify
+               the whitespace used to identify words. The newline, tab,
+               carriage return, backslash, and single quote characters are
+               specified by \n, \t, \r, \\, and \' respectively.  The two
+               arguments 'delimiter',' \t\n\r', will reselect the default
+               whitespace. The 'file' codeword will also reselect the
+               default whitespace.  The distinction is that the 'file'
+               codeword will restart the search from the beginning of
+               the file while the 'delimiter' codeword will continue
+               from the current search position. Following the 'delimiter'
+               codeword and it's argument, an implicit 'seek' is
+               assumed.
+
+  Lookup can also be used to search multiple text files and read
+  the contents of these files.  Two additional codewords
+  are used to implement this multiple file lookup. These two codewords
+  and their meaning are listed below.
+
+  'mfile'    : this codeword specifies that the next supplied argument
+               will be the filekey to select one of multiple text files
+               being accessed.
+               If this codeword is used, it MUST be the first argument
+               passed to 'lookup' and the filekey MUST be the second
+               argument passed to 'lookup'.
+               The first time a file is selected, or to restart the
+               search at the beginning of the file, the name of the file
+               is used instead of the filekey.  Subsequent calls to
+               lookup on this file would use the value returned by the
+               'filekey' codeword as the argument following the 'mfile'
+               codeword.  The 'mfile' codeword resets the whitespace
+               to the default values. If the text file does not exist,
+               lookup will abort with an error.
+
+  'filekey'  : returns to the macro the current location within the
+               file being accessed.  In combination with the 'mfile'
+               codeword, a subsequent call to lookup will start the
+               search at the location within the file specified by
+               the value of the filekey. The filekey serves both as
+               a pointer to the file and as character offset within
+               that file.
+
+   The mfile and filekey codewords can be used to access multiple text files.
+   In addition, these codewords can be used to keep track of various locations
+   within a single file, in order to restart the search from that location.
+   The mfile and file keywords can be used together.  Consider the case in
+   which a macro named macro1 uses lookup with the file codeword.  A
+   second macro, named macro2, also uses lookup, but on a separate
+   file. If macro2 uses the file codeword, and then in the middle of
+   looking up words in that file, calls macro1, the next time macro2 calls
+   lookup, the lookup command will refer to the file used by macro1.
+   Macro2 can avoid having called macros alter the file it is reading
+   by using the mfile codeword.
+
+
+Examples:
+ 
+  Examples using this text file as the object of the calls to 'lookup':
+
+lookup('file',systemdir + '/manual/lookup')
+      Select this file for the search
+
+lookup('user','skip',2,'read',2,'readline'):$n1,$n2,$n3,$ret
+      Seek is assumed with the call to lookup.  The word 'user' is found
+      on line 6.  'skip',2 causes the pointer to jump two words.  The
+      codeword 'read' causes the following word to be put into $n1.  $n1
+      therefore is set to 'or'.  The argument 2 specifies two words to be
+      read.  Therefore, $n2 is set to 'lines.'.  Note that the value of
+      $n2 includes the period.  The word pointer now points to the
+      word 'In' on line 6.  The codeword 'readline' causes the remaining
+      characters up to the next carriage return to be placed in $n3.
+      Therefore,  $n3 is set to ' In this context, a "word"'.  The pointer
+      now points to the first word in the next line,  which is "is".
+      The variable $ret is set to the number of arguments successfully
+      returned from the text file.  This value is of use when deciding
+      if you are at the end of the text file,  since the variable
+      receiving the value from the 'readline' will be set to ''.
+      In this case, $ret will be set to 3.
+
+lookup('skip',8,'read','skip',3,'read',2,'seek','comma'):$n3,$n4,$n5
+      'Skip',8 causes the pointer to jump eight words.  The 'read' sets
+      $n3 equal to 'by'.  'Skip',3 then jumps three words. 'Read',2 sets
+      $n4 equal to '"whitespace"' and $n5 equal to 'includes'.  The 'seek'
+      argument then searches for the word 'comma',  which it finds on
+      line  12.  The word pointer now points to the next word 'can'.
+      Note that this seek did not find the string 'comma.' on line 9.
+
+lookup('delimiter',' ,\'.\n\t"','seek','file','must','skip',6,'read'):$n6
+      'delimiter' and it's argument ' ,\'.\n\t"' sets whitespace to be
+      space, comma, single quote, period, newline, tab, and double quote.
+      The explicit 'seek' selects the next argument 'file' as a search word.
+      Note that this 'file' is not interpreted as a codeword. Since single
+      quotes are now whitespace, file is found on line 22. The search for
+      the word 'must' matches MUST on line 24, since the search is case
+      insensitive. 'Skip',6 jumps six words. 'Read' sets $n6 equal to
+      'lookup'. Note that it did not set $n6 equal to ''lookup'' since
+      single quotes have been chosen to be whitespace.
+
+lookup('seekcs','The','read'):$n7
+      'seekcs' is the case sensitive search.  It finds the word 'The'
+      on line 26. The 'read' sets $n7 to 'search'.  Note that the word
+      'the' on line 25 did not match the capitalized search word 'The'.
+
+As a working example of the lookup command, see the 'nextplotter' macro.
+
+The use of the mfile and filekey codewords is demonstrated by the following
+macro.  This macro reads two files, one word at a time, and puts the words
+into a third file.
+
+lookup('mfile','filea','filekey'):$keya
+lookup('mfile','fileb','filekey'):$keyb
+$morea = 2
+$moreb = 2
+$word = ''
+while (($morea=2) or $moreb=2)) do
+  if ($morea = 2) then
+     lookup('mfile',$keya,'read','filekey'):$word,$keya,$morea
+     if ($morea = 2) then
+        write('file',curexp+'/textmerge',' %s',$word)
+     endif
+  endif
+  if ($moreb = 2) then
+     lookup('mfile',$keyb,'read','filekey'):$word,$keyb,$moreb
+     if ($moreb = 2) then
+        write('file',curexp+'/textmerge',' %s',$word)
+     endif
+  endif
+endwhile
+
+In a second example, the macro calls a second macro, named macro1, and
+macro1 uses lookup with the file argument to access some file.  By using
+the mfile codeword, the lookup commands in this macro are not affected by 
+the call to macro1.
+
+lookup('mfile','file1','filekey'):$key1
+$ret = 2
+while $ret > 1 do
+   lookup('mfile',$key1,'readline','filekey'):$line,$key1,$ret
+   "do something else"
+   macro1
+endwhile
+
+Note that the 'filekey' codeword can by placed anywhere after the first
+two arguments. Several 'filekeys' can be specified and be used to start
+searches at specific locations in a file.  For example,
+
+lookup('mfile','filea','filekey'):$key
+lookup('mfile',$key,'seek','First','filekey','Second','filekey'):$key1,$key2
+
+lookup(''mfile',$key1, ...) will start the search in filea after the first
+occurrence of the word "First".
+lookup(''mfile',$key2, ...) will start the search in filea after the first
+occurrence of the word "Second".
+
+

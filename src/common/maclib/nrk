@@ -1,0 +1,73 @@
+"macro nrk"
+"nrk v0.3 cross compensation macro"
+"tune and off immune"
+"  pah - 4/7/2009"
+"multi time constants"
+"pause/run via arg1'
+$i = 1
+readhw('status'):$status
+"OK to run ? "
+if ($status > 1) and ($status < 30) then
+$last = updtt
+systemtime:updtt
+$date=''
+shell('date +%x,%T'):$date
+" per minute basis "
+$dur = (updtt - $last)/3600.0
+logt = logt + $dur
+readhw('z1','z2','z3','z4','z5','z6'):$u1,$u2,$u3,$u4,$u5,$u6
+readhw('x1','y1'):$shimx,$shimy
+$lockval = 49
+readlk:$lockval
+"if z4 or z6 has moved bump z2 energy after current correction"
+"this implies the change happened at the front of interval "
+if ($u4 <> z4l) then
+   z2delt = z2delt + c24*($u4-z4l)
+endif
+if ($u6 <> z6l) then
+   z2delt = z2delt + c26*($u6-z6l)
+endif
+if ($u5 <> z5l) then
+   z1delt = z1delt + c15*($u5-z5l)
+   z1epsi = z1epsi + d15*($u5-z5l)
+endif
+" adjust for hand adjustments of z1"
+abs($u1 - z1prec):$t
+if ($t > 1) then
+z1prec = $u1
+endif
+" adjust for hand adjustments of z2"
+abs($u2 - z2prec):$t
+if ($t > 1) then
+z2prec = $u2
+endif
+
+" if z1prec z1 diff by 1 more set z1prec to z1 "
+" could bias z1delt by change by z1deltref - correction size"
+"compute updated z1delt from z5 - z5 last"
+"compute new z1,z2 - update z1 energy  z2 energy"
+exp(-$dur/tau1):$frac1
+exp(-$dur/tau2):$frac2
+exp(-$dur/mu1):$frac3
+$z1xa = z1delt*(1-$frac1)
+$z1xb = z1epsi*(1-$frac3)
+$z1x = $z1xa + $z1xb
+z1prec = z1prec + $z1x
+$z2x = z2delt*(1-$frac2)
+z2prec = z2prec + $z2x
+"this is all it does for pause - just skip"
+if $1 = 'run' then
+sethw('z1',z1prec,'nowait'):$e
+sethw('z2',z2prec,'nowait'):$e
+endif
+"reset for next interval"
+z1delt = z1delt - $z1xa
+z1epsi = z1epsi - $z1xb
+z2delt = z2delt - $z2x
+z4l = $u4
+z5l = $u5
+z6l = $u6
+endif
+write('fileline',curexp+'/fclog.csv','%20s, %9.3f,  %5.1f,  %5.1f,   %5.1f,   %5.1f,   %5.1f, %5.1f, %5.1f,',$date,logt, $lockval,  z1prec, z2prec, $u3,  z4l, z5l, z6l)
+write('fileline',curexp+'/fclog.csv',' %5.1f, %5.1f,   %5.2f,   %5.3f,   %5.3f, %5.2f,  %5.3f, %12.0f,',z1delt,z2delt,c15,tau1,c24,tau2,c26,updtt)
+write('file',curexp+'/fclog.csv',' %5.1f, %5.1f,   %5.2f,   %5.0f,   %5.0f',z1epsi,mu1,d15,$shimx,$shimy)

@@ -1,0 +1,83 @@
+"macro probeserver"
+if $#=0 then $1='start' endif
+
+if $1='start' then
+   // start the server; trickier than it looks because the server gets
+   // started in the background, creating a race condition with the
+   // synchronization
+   {$0}('refresh')
+   if $#<2 then $2='' endif
+
+   write('line3','Starting the probe server')
+   shell('probeid -mount')
+   $start='probeid -start -wait'
+   
+   // use the linux flock mechanism if available
+   $flock='' shell('sh -c "type -tf flock"'):$flock
+   $lock=''  shell('probeid -lockfile'):$lock
+   if $flock<>'' and $lock<>'' and $2<>'noflock' then 
+      // synch with server
+      shell('flock '+$lock+' -c "'+$start+' -nolock" &')
+   else // use a cruder synchronization mechanism
+      shell('probeid -start -wait&'):$ret  // start the server
+      shell('sleep 3')                     // give server a chance to start
+   endif
+   shell('probeid -sync'):$s,$v            // wait for lock to clear
+   return($s)
+
+elseif $1='stop' then
+   // ask the server to stop
+   {$0}('refresh')                         
+   {$0}('check'):$ok
+   if not $ok then return endif            // probe server isn't running
+   $cmd = 'probeid -quit'
+   
+elseif $1='kill' then
+   // stop the server
+   $cmd = 'probeid -kill'
+
+elseif $1='refresh' then
+   // set up or reset communications to VnmrJ
+   $talk2vj=userdir+'/probes/.talk'
+   write('reset',$talk2vj)
+   write('file',$talk2vj,'%s',vnmraddr)
+   return
+
+elseif $1='check' then
+   exists('probeid','bin'):$ok
+   if not $ok then
+     return(0,'')
+   endif
+   shell('probeid -check'):$ok,$msg
+   if $ok then {$0}('verify'):$ok,$msg endif
+
+   if $## = 0 then write('line3',$msg) endif
+   return($ok,$msg)
+
+elseif $1='verify' then
+   //-- try writing to the probe server
+   $ping='ping'
+   shell('probeid -echo ping'):$echo
+   $ok=($ping=$echo)
+   return($ok)
+
+elseif $1='bootup' then
+   //-- conditionally start probe server (from bootup)
+   exists('probeiden','parameter','systemglobal'):$ene
+   exists('probeidattr','parameter','global'):$ate
+   if $ene and $ate then
+     if probeiden then
+       if probeidattr[1]='y' or probeidattr[1]='native' then 
+         {$0}('start')
+       endif
+     endif
+   endif
+   return
+
+else
+   write('error',$0+': '+$1+' is an invalid option')
+   abort
+endif
+
+shell($cmd):$ret
+return($ret)

@@ -1,0 +1,362 @@
+"macro reset_dcp2tan3drad"
+// reset_dcp2tan3drad: reset functions for the sequence dcp2tan3drad.c
+
+//             Create BioPack globals
+
+if ($#=0) then 
+
+exists('investigator','parameter','global'):$e
+if $e < 0.5 then
+   create('investigator','string','global')
+   investigator=''
+endif 
+
+exists('notebook','parameter'):$e
+if $e < 0.5 then
+   create('notebook','string','global')
+   notebook=''
+endif 
+
+exists('page','parameter'):$e
+if $e < 0.5 then
+   create('page','string','global')
+   page=''
+endif 
+
+// Add Parameters for NMR Pipe Script Control. 
+
+$Spars='BPpipe_controls','n',\
+       'BPpipe_editor','gedit',\
+       'BPpipe_fidscript','vj_fid.com', \
+       'BPpipe_XYscript', 'vj_xy_user.com',\
+       'BPpipe_XZscript','vj_xz_user.com',\
+       'BPpipe_3Dscript','vj_xyz_user.com',\
+       'BPpipe_strips_script','vj_scroll_user.com',\
+       'BPpipe_4Dscript','vj_xyza_user.com',\
+       'BPpipe_pipeDir','pipe',\
+       'BPpipe_solids','y',\
+       'BPpipe_fidDir','acqfil/fid',\
+       'BPpipe_par','curpar',\
+       'BPpipeSOL','n' 
+            
+$nSpars=size('$Spars')
+$i=1
+while ($i<$nSpars) do
+   exists($Spars[$i],'parameter'):$e       
+   if not $e then
+      create($Spars[$i],'string') 
+      setprotect( $Spars[$i] ,'on',256) 
+      {$Spars[$i]}=$Spars[$i+1]   
+   endif
+   setgroup($Spars[$i],'processing')
+   $i=$i+2
+endwhile
+groupcopy('current','processed','all')
+flush 
+
+// Add Dimension 
+ 
+exists('dimension','parameter'):$e
+if not $e then
+   create('dimension','string')
+   setprotect('dimension','on',256)
+   dimension=''
+endif
+
+// Add Parameters for Pipe Information
+ 
+exists('BPpipeprocinfo','parameter'):$e   
+if not $e then
+   create('BPpipeprocinfo','string')
+   setprotect('BPpipeprocinfo','on',256)
+   BPpipeprocinfo=''
+endif
+
+exists('BPpipedrawinfo','parameter'):$e     
+if not $e then
+   create('BPpipedrawinfo','string')
+   setprotect('BPpipedrawinfo','on',256)
+   BPpipedrawinfo=''
+endif
+
+exists('BPpipetype','parameter'):$e
+if not $e then
+   create('BPpipetype','string')
+   setprotect('BPpipetype','on',256)
+   BPpipetype=''
+endif
+
+exists('BPpipetype','parameter','processed'):$e
+if not $e then
+   create('BPpipetype','string','processed')
+   setprotect('BPpipetype','on',256,'processed')
+   BPpipetype=''
+endif
+
+exists('BPpipeautoproc','parameter'):$e
+if not $e then
+   create('BPpipeautoproc','flag')
+   setprotect('BPpipeautoproc','on',256)
+   BPpipeautoproc = 'n'
+endif
+
+exists('BPpipeproc','parameter'):$e
+if not $e then
+   create('BPpipeproc','real')
+   setprotect('BPpipeproc','on',256)
+   BPpipeproc =1
+endif
+
+exists('BPpipedraw','parameter'):$e
+if not $e then
+   create('BPpipedraw','flag')
+   BPpipedraw = 'n'
+endif
+
+exists('BPpipevjdisp','parameter'):$e
+if not $e then
+   create('BPpipevjdisp','flag')
+   setprotect('BPpipevjdisp','on',256)
+   BPpipevjdisp = 'n'
+endif
+
+exists('BPpipevjproc','parameter'):$e
+if not $e then
+   create('BPpipevjproc','flag')
+   BPpipevjproc = 'n'
+endif
+
+exists('BPpipeexport','parameter'):$e
+if not $e then
+   create('BPpipeexport','flag')
+   setprotect('BPpipeexport','on',256)
+endif
+BPpipeexport='n'
+
+exists('BPpipeexportexp','parameter'):$e
+if not $e then
+   create('BPpipeexportexp','string')
+   setprotect('BPpipeexportexp','on',256)
+endif
+BPpipeexportexp='5'
+
+exists('BPpipenexp','parameter'):$e
+if not $e then
+   create('BPpipenexp','integer')
+   BPpipenexp = 1
+endif
+
+exists('BPpipeexp','parameter'):$e
+if not $e then
+   create('BPpipeexp','string')
+   setprotect('BPpipeexp','on',256)
+   BPpipeexp = '','','','','','','','','','','',''
+endif
+
+exists('BPpipeexp1','parameter'):$e
+if not $e then
+   create('BPpipeexp1','real')
+   setprotect('BPpipeexp1','on',256)
+endif
+BPpipeexp1=1
+  
+exists('BPpipeexp2','parameter'):$e
+if not $e then
+   create('BPpipeexp2','real')
+   setprotect('BPpipeexp2','on',256)
+endif
+BPpipeexp2=2
+  
+exists('BPpipeexp3','parameter'):$e
+if not $e then
+   create('BPpipeexp3','real')
+   setprotect('BPpipeexp3','on',256)
+endif
+BPpipeexp3=3
+  
+exists('BPpipeexp4','parameter'):$e
+if not $e then
+   create('BPpipeexp4','real')
+   setprotect('BPpipeexp4','on',256)
+endif
+BPpipeexp4=4
+  
+exists('BPpipeexp5','parameter'):$e
+if not $e then
+   create('BPpipeexp5','real')
+   setprotect('BPpipeexp5','on',256)
+endif
+BPpipeexp5=5
+  
+exists('BPpipeexp6','parameter'):$e
+if not $e then
+   create('BPpipeexp6','real')
+   setprotect('BPpipeexp6','on',256)
+endif
+BPpipeexp6=6
+  
+exists('BPpipeexp7','parameter'):$e
+if not $e then
+   create('BPpipeexp7','real')
+   setprotect('BPpipeexp7','on',256)
+endif
+BPpipeexp7=7
+  
+exists('BPpipeexp8','parameter'):$e
+if not $e then
+   create('BPpipeexp8','real')
+   setprotect('BPpipeexp8','on',256)
+endif
+BPpipeexp8=8
+  
+exists('BPpipeexp9','parameter'):$e
+if not $e then
+   create('BPpipeexp9','real')
+   setprotect('BPpipeexp9','on',256)
+endif
+BPpipeexp9=9
+  
+exists('BPpipeexp10','parameter'):$e
+if not $e then
+   create('BPpipeexp10','real')
+   setprotect('BPpipeexp10','on',256)
+endif
+BPpipeexp10=10
+  
+exists('BPpipeexp11','parameter'):$e
+if not $e then
+   create('BPpipeexp11','real')
+   setprotect('BPpipeexp11','on',256)
+endif
+BPpipeexp11=11
+  
+exists('BPpipeexp12','parameter'):$e
+if not $e then
+   create('BPpipeexp12','real')
+   setprotect('BPpipeexp12','on',256)
+endif
+BPpipeexp12=12
+
+exists('BPpiperegion','parameter'):$e
+if not $e then
+   create('BPpiperegion','flag')
+   BPpiperegion='n'
+endif
+
+exists('BPpipepage','parameter'):$e
+if not $e then
+   create('BPpipepage','integer')
+   setprotect('BPpipepage','on',256)
+   BPpipepage=1
+else
+   setprotect('BPpipepage','on',256)
+endif
+
+// Create Reference Parameters for Pipe.
+
+exists('h1reff1','parameter'):$e
+if $e=0 then create('h1reff1','real') endif
+exists('h1reff2','parameter'):$e
+if $e=0 then create('h1reff2','real') endif
+exists('h1reff3','parameter'):$e
+if $e=0 then create('h1reff3','real') endif
+exists('c13reff1','parameter'):$e
+if $e=0 then create('c13reff1','real') endif
+exists('c13reff2','parameter'):$e
+if $e=0 then create('c13reff2','real') endif
+exists('c13reff3','parameter'):$e
+if $e=0 then create('c13reff3','real') endif
+exists('n15reff1','parameter'):$e
+if $e=0 then create('n15reff1','real') endif
+exists('n15reff2','parameter'):$e
+if $e=0 then create('n15reff2','real') endif
+exists('n15reff3','parameter'):$e
+if $e=0 then create('n15reff3','real') 
+endif
+exists('obscenterppm','parameter'):$e
+if $e=0 then create('obscenterppm','real')
+endif
+
+// Create Local Sample Filename 
+
+   exists('samplefilename','parameter'):$e
+   if $e < 0.5 then
+      create('samplefilename','string')
+      page=''
+   endif 
+
+// Create Global Sample Filename 
+
+   exists('SPsamplefilename','parameter','global'):$e
+   if $e < 0.5 then
+      create('SPsamplefilename','string','global')
+      page=''
+   endif 
+
+   write('line3','Macro %s is complete\n',$0)
+endif
+
+// Define Panel Macros
+
+if ($#>0) then 
+
+// Make or Edit the Sample Module
+
+   if ($1 = 'makemod') then 
+      paramgroup('params','',                'C13d1','delay',-1,
+                                             'N15d1','delay',-1,
+                                             'C13nt','integer',-1,
+                                             'N15nt','integer',-1,
+                                             'C13np','integer',-1,
+                                             'N15np','integer',-1,
+                                             'C13at','delay',-1,
+                                             'N15at','delay',-1,
+                                             'C13ni','integer',-1,
+                                             'N15ni','integer',-1)
+
+      paramgroup('params','',                'C13ni2','integer',-1,
+                                             'N15ni2','integer',-1,
+                                             'C13sw','frequency',-1,
+                                             'N15sw','frequency',-1,
+                                             'C13sw1','frequency',-1,
+                                             'N15sw1','frequency',-1,
+                                             'C13sw2','frequency',-1,
+                                             'N15sw2','frequency',-1)
+
+      $paramlist='C13d1 N15d1 C13nt N15nt C13np N15np C13at N15at C13ni N15ni '
+      $paramlist=$paramlist + 'C13ni2 N15ni2 C13sw N15sw C13sw1 N15sw1 C13sw2 N15sw2'
+
+      $sampmodname=userdir+'/modules/'+SPsamplefilename 
+      exists($sampmodname,'file'):$e
+      if ($e>0.5) then 
+         shell('touch '+$sampmodname):$dum
+         fread($sampmodname)
+         write('line3','Read Module %s\n',SPsamplefilename)
+      else
+         write('line3','Creating Module %s\n',SPsamplefilename)
+      endif
+      writeparam($sampmodname,$paramlist)
+      $ok = 'reset_ahYXX(\'savemod\')'
+      $cancel='reset_ahYXX(\'cleanmod\')'
+      parampopup($paramlist,'enter','modal',$ok,$cancel)
+   endif
+
+// Save the Sample Module in the Modules Directory
+
+   if ($1 = 'savemod') then
+      $sampmodname=userdir+'/modules/'+SPsamplefilename
+      $paramlist=''
+      module('list',SPsamplefilename):$paramlist 
+      write('line3','Saving Module %s\n',SPsamplefilename)
+      writeparam($sampmodname,$paramlist,'current')
+      destroy($paramlist)
+   endif
+
+   if ($1 = 'cleanmod') then 
+      $sampmodname=userdir+'/modules/'+SPsamplefilename
+      $paramlist=''
+      module('list',SPsamplefilename):$paramlist
+      write('line3','Exit Module %s\n',SPsamplefilename)
+      destroy($paramlist)
+   endif
+endif

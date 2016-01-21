@@ -1,0 +1,128 @@
+"macro bvalue"
+"**************************************************************************"
+"
+" bvalue - macro to calculate bvalue s.mm-2"
+"          assume ideal stejkal-tanner experiment"
+"          gradient rise times, imaging gradients are not accounted for"
+"          tdelta and tDELTA must be defined in current exp"
+"
+"**************************************************************************"
+
+"** check parameters **"
+if ($# < 0.5) or ($# > 1.5) then
+	$gradvalue = gdiff[0]
+else
+	$gradvalue = $1
+endif
+exists('gdiff','parameter'):$e
+if ($e <> 1) then
+  write('error','gdiff parameter not present')
+  abort
+endif
+exists('tDELTA','parameter'):$e
+if ($e <> 1) then
+  write('error','tDELTA parameter not present')
+  abort
+endif
+exists('tdelta','parameter'):$e
+if ($e <> 1) then
+  write('error','tdelta parameter not present')
+  abort
+endif
+exists('bvalue','parameter'):$e
+if ($e <> 1) then
+  create('bvalue')
+endif
+exists('max_bval','parameter'):$e
+if ($e <> 1) then
+  create('max_bval')
+endif
+exists('g_squared','parameter'):$e
+if ($e = 0) then
+  $gs = 1
+else
+  $gs = g_squared
+endif
+
+"** calculate b-values **"
+$gsize = size('gdiff')
+exists('dro','parameter'):$e_dro
+if ($e_dro = 1) then
+  max(size('dro'),size('dpe')):$fsize
+  max(size('dsl'),$fsize):$fsize
+else
+  $fsize = 1
+endif
+
+"** For now, tdelta and tDELTA cannot be arrayed **"
+"This would change the timing of the sequence from one"
+"array value to the next and thus not keep the same"
+"T2-weighting. (Maj Hedehus)"
+
+$a = tDELTA - (tdelta/3.0)
+$gamma = 2.6752e4
+$a = $gamma*$gamma*tdelta*tdelta*$a
+
+$ginx  = 1
+bvalue = 0
+$binx  = 1
+$max_bvalue = 0
+
+$gx = 1
+$gy = 1
+$gz = 1
+
+repeat
+  $g    = gdiff[$ginx]/10
+  $finx = 1
+  repeat
+    if ($e_dro = 1) then
+      if (size('dro') = $fsize) then
+        $gx = dro[$finx]
+      else
+        $gx = dro[1] "if it's not arrayed with dpe and dsl, it should be a scalar"
+      endif
+      if (size('dpe') = $fsize) then
+        $gy = dpe[$finx]
+      else
+        $gy = dpe[1]
+      endif
+      if (size('dsl') = $fsize) then
+        $gz = dsl[$finx]
+      else
+        $gz = dsl[1]
+      endif
+
+      $gs = $gx*$gx + $gy*$gy + $gz*$gz
+    endif
+
+    $b[$binx] = $g*$g*$a*$gs
+    if ($b[$binx] > $max_bvalue) then $max_bvalue = $b[$binx] endif
+    bvalue[$binx] = $b[$binx]
+    write('line3','(%.1f, %.1f, %.1f): bvalue[%d] = %.2f',$gx,$gy,$gz,$binx,$b[$binx])
+    $finx = $finx + 1
+    $binx = $binx + 1
+  until ($finx > $fsize)
+  $ginx = $ginx + 1
+
+until ($ginx > $gsize)
+
+exists('sviblist','parameter'):$e
+if ($e <> 1) then
+  create('sviblist','string')
+endif
+sviblist='dro,dpe,dsl,bvalue'
+
+max_bval = $max_bvalue
+write('line3','MAX bvalue = %.2f',max_bval)
+
+"**************************************************************************"
+"                     Modification History                                 "
+"                                                                          "
+" 010308(mh) Started with original bvalue macro                            "
+"            Set up bvalue as an array                                     "
+"            Use variable max_bval to hold the maximum bvalue used         "
+"            Use variable g_squared to hold max dro^2 + dpe^2 + dsl^2      "
+"                - initialized in get_max_gf                               "
+"                                                                          "
+"**************************************************************************"

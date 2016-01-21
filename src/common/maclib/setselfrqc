@@ -1,0 +1,179 @@
+"macro setselfrqc"
+"**********************************************************************"
+" setselfrqc - sets selective frequency for selective excitation       "
+"		Used in glide after tocsy1d and noesy1d selection      "
+"		Selected frequencies and widths are stored in the      "
+"		parameters selfrqc and selfrqw as arrays to be used    "
+"		by suselfrq macro			               "
+"**********************************************************************"
+$crmode=1
+if (crmode='c') then $crmode=0 endif
+
+format(pslabel,'lower'):$pslabel
+strstr($pslabel,'presat'):$ret
+if ($ret) and (apptype='lstd1D') then $ispresat=1 else $ispresat=0 endif
+strstr($pslabel,'wet'):$ret2
+if ($ret2) and (apptype='lstd1D') then $iswet=1 else $iswet=0 endif
+
+if ($ispresat) or ($iswet) then $crmode=1 endif
+
+if ($# = 1) then
+  if typeof('$1') then
+    if ($1='clear') then
+	resetselfrq
+	if ($iswet) or ($ispresat) then 
+		resetselfrq('wet') 
+		resetselfrq('presat') 
+	endif
+        return
+    endif
+  endif
+endif
+
+if ($# = 2) then
+ $cr=$1 $delta=$2
+else
+ if ($crmode=0) then
+   write('error','You MUST use 2 cursors - Please make selection again')
+   crmode='b'
+   ds('restart')
+   return
+ endif
+ if (crmode = 'c') then 
+    $cr=cr dres(cr):$delta
+    if $ispresat then
+    	$delta=5*$delta
+    else
+	$delta=3*$delta
+    endif
+ else
+    $delta=delta 
+    $cr=cr-($delta/2)
+   if ($iswet) then
+      peak($cr-($delta/2),$cr+($delta/2)):$ht,$cr
+      cr=$cr+($delta/2)
+   endif
+ endif
+endif
+
+$rflrfp = rfl-rfp
+$center = sw/2-$rflrfp
+$selfrqc  = tof+$cr-$center
+
+"*******Adjust $selfrqc and $cr for PRESAT ONLY****"
+if ($ispresat) then
+  peak($cr-($delta/2),$cr+($delta/2)):$ht,$cr
+  if ($delta > 100) then $delta=100 endif
+  if ($delta < 10) then $delta=10 endif
+  peak($cr-($delta/2),$cr+($delta/2)):$ht,$cr
+  $selfrqc = tof+$cr-$center
+endif
+
+"*******Following section for single frequency PRESAT ****"
+if ($ispresat) then
+  if (slpsat='n') then
+    mkpar('real','presatgh2',10)
+    presatgh2=$delta
+    setpower(presatgh2,tn):satpwr,$pw
+    if (Console = 'mercury') and (satpwr<0) then
+	satpwr=0
+    endif
+    getpower(satpwr,tn):presatgh2
+    $satfrqsize=size('satfrq')
+    if (satfrq=0) then $count=1 else $count=$satfrqsize+1 endif
+    $count=1
+    satfrq[$count]  = $selfrqc            "set satfrq"
+    on('selfrqc')
+    write('line3','satfrq set to %1.1f; irrad. at %1.2f ppm; presatgh2: %0.1f Hz',satfrq[$count],$cr/reffrq,presatgh2)
+    clear(2) ds
+    showfreq('satfrq')
+    ds('restart')
+    return
+  endif
+endif
+"**********single frequency PRESAT section is DONE *****************"
+
+"*********The following section is for wet ONLY *****"
+if ($iswet) then
+ if (Console = 'mercury') then
+   $maxfreqs=3
+   $sizewetfrq=size('wetfrq')
+   if ($sizewetfrq > $maxfreqs-1) then
+     write('error','No more than 3 wet frequencies for Mercury')
+     return
+   endif
+ endif
+  if ($delta < 10) then $delta=10 endif
+  on('wetfrq'):$wetfrqactive
+  if ($wetfrqactive) then
+    wetfrq=wetfrq,$selfrqc
+    wetfrqw=wetfrqw,$delta
+    wetfrqs=wetfrqs,'seduce'
+  else
+    wetfrq=$selfrqc
+    wetfrqw=$delta
+    wetfrqs='seduce'
+  endif
+  clear(2) ds
+  showfreq('wetfrq')
+  ds('restart')
+  return
+endif
+"**********wet section DONE *************************"
+
+"******The following is for non-WFG systems ONLY *****"
+$rfwg=0
+isrfwg('tn'):$rfwg
+if ($rfwg=0) and ($# = 0) and (pslabel <> 'HOMODEC') and ($ispresat=0) then   
+   		"This is only for mercury without WFG"
+    $shape='' $width=$delta
+    pickshape($selfrqc-tof,$delta):$shape,$width
+    if ($width > $delta) then
+      delta=$width cr=cr+(($width-$delta)/2) 
+      $menu='ds_selfrq'
+      clear(2) ds 
+      write('graphics',10,wc2max*0.9,'The requested bandwidth is too small for this offset. Select again')
+      write('error','The requested bandwidth is too small for this offset. Select again.')
+      return
+    else
+      $delta=$width
+    endif
+endif
+"********non-WFG section done************************"
+
+write('line3','The band [width: %6.1f] centered at %4.1f ppm selected',$delta,$cr/reffrq)
+on('selfrqc'):$selfrqcon
+if ($selfrqcon) then
+ selfrqc = selfrqc,$selfrqc
+ selfrqw = selfrqw,$delta
+else
+ selfrqc = $selfrqc
+ selfrqw = $delta
+endif
+
+"**********Set presatgh2/satpwr/satfrq for mf PRESAT**************"
+if ($ispresat) then
+  if (slpsat='y') then
+    sort(selfrqw,'r'):$index,$selfrqw
+    presatgh2=$selfrqw[1]
+    setpower(presatgh2,tn):satpwr,$pw
+		"Adjust satpwr to accomodate number of frequencies"
+    $selfrqsize=size('$selfrqw')
+    ln($selfrqsize):$lnsize
+    $attnval=trunc(20*0.43429*$lnsize)
+    satpwr=satpwr+$attnval+1
+    if (Console = 'mercury') and (satpwr<0) then
+        satpwr=0
+    endif
+    if (satpwr > 30) then satpwr=30 endif
+		"satpwr adjusted"
+
+    getpower(satpwr,tn):presatgh2
+    satfrq=tof
+    pstof=selfrqc
+  endif
+endif
+
+clear(2) ds
+showfreq('selfrqc')
+ds('restart')

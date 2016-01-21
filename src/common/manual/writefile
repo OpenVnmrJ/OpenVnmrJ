@@ -1,0 +1,37 @@
+
+
+******************************************************************************
+writefile	write formatted text to a file
+******************************************************************************
+
+The writefile command is similar to the write command, except that it only writes to a text file.
+It also requires formatted text as input. The benefit it that it can be faster than the
+write command if one is writing a lot of text to the file.
+
+writefile('open','filename'):$e    Open a file for writing. The file will be created if it does not
+exist. The current contents will be removed if it does exist. An optional return argument will
+be set to 1 if the operation succeeded. It will be set to 0 if it failed.
+
+writefile('append','filename'):$e    Open a file for writing. The file will be created if it does not
+exist. The current contents will be appended to if it does exist. An optional return argument will
+be set to 1 if the operation succeeded. It will be set to 0 if it failed.
+
+write('line','formatted text line to write to the file')  Write a line of text to the previously opened
+file. A carriage return will automatically be added at the end of the supplied line.
+
+writefile('close')  Close the file. Until this step is done, other commands that may access the file, such
+as the lookup command, may give un-reliable results.
+
+An example of the usage is shown below. It assumes the $re and $im parameters have been set to the
+real and imaginary components of a data set. It uses the 'line3' option of the write command to
+format the text line for the writefile command.
+
+writefile('open',curexp+'/textData')
+$i=0
+$line=''
+while ($i < np) do
+  $i = $i + 1
+  write('line3','%0.4f %0.1f',$re[$i],$im[$i]):$line
+  writefile('line',$line)
+endwhile
+writefile('close')

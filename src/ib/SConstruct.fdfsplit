@@ -1,0 +1,54 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+fdfsplitTarget = 'fdfsplit'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+vnmrPath    = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList = ['data.h']
+
+fdfsplitFileList = ['fdfsplit.c']
+
+fdfCommonFileList = ['crc.c',
+                     'getreply.c',
+                     'nfgets.c',
+                     'error.c']
+
+# build environments
+splitcEnv = Environment(CCFLAGS    = '-O -m32 -g',
+                        CPPDEFINES = ['LINUX', 'MAIN', 'DEBUG'],
+                        LINKFLAGS  = '-m32',
+                        CPPPATH    = [cwd])
+
+# actual builds
+fdfCommonObjs = []
+for i in fdfCommonFileList:
+   tempObj = splitcEnv.StaticObject(target = i + '-split.o',
+                                    source = i)
+   fdfCommonObjs.append(tempObj)
+
+   buildMethods.makeSymLinks(splitcEnv, tempObj, cwd, vnmrPath, vnmrHdrList)
+
+fdfsplit = splitcEnv.Program(target  = fdfsplitTarget,
+                             source  = [fdfsplitFileList,
+                                        fdfCommonObjs],
+                             LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+splitcEnv.AddPostAction(fdfsplit,
+                        Action(Copy(installPath, os.path.join(cwd, fdfsplitTarget))))
+

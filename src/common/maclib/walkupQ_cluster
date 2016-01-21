@@ -1,0 +1,85 @@
+"macro walkupQ_cluster"
+"****************************************************************"
+"   walkupQ_cluster - Prepare cursqexp for new cluster     "
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+  expactive:$active
+  if ($active > 0) then
+     write('error','Current experiment is ACTIVE.  Please join another experiment')
+     return
+  endif
+
+  $editok=0
+  operights('canmakestudyclusters'):$editok
+  if ($editok<0.5) then
+     write('error','%s cannot create study clusters.',operator)
+     return
+  endif
+
+  tmpsqcopy('OrigExpPar')
+  walkupQ('clear','all')
+
+  $solvent=solvent
+  rtppar('PROTON') tn='H1' dn='C13'
+  solvent=$solvent
+  resetsampglobal
+  adirtmplt=userdir+'/clusterlib'
+  exists(adirtmplt,'directory'):$direx
+  if ($direx=0) then shell('mkdir -p '+adirtmplt):$dum endif
+  settemp
+
+  if (numrfch > 2) then dn2='N15' endif
+  emessage=emailflag
+  if (emessage='y') then getadminfo('emessage'):emessage endif
+  emailwhen=''
+  getadminfo('emailwhen'):emailwhen
+  getemailaddr(operator):emailaddr
+  module('add','walkupQpars','basic')
+  clonemod='no'
+  clustermod='yes'
+  wshim='e' alock='a'
+  $pad=pad
+  gain='y' pltopt='y'
+  module('add','cpQdefaults','basic','refresh')
+  $autosaveplot='plot'
+  getadminfo('autosaveplot'):$autosaveplot
+  strstr($autosaveplot,'plot'):$isplot
+  if ($isplot) then pltopt='y' else pltopt='n' endif
+  setProbepars('force')
+  getadminfo('protuneatstart'):ptuneatsample
+  userplotter=plotter
+  setvalue('wqacq','curexp',1)
+  loaduserprefs
+  exists('setcustompars','maclib'):$ex
+  if ($ex) then
+    setcustompars
+  endif
+
+  longQ='n'
+  prioritysample='no','low','sample'
+  clear(2)
+  wqinit='acq'
+  seqfil='Submitq'
+  walkupQ('renew')
+  shell('rm -f '+cursqexp+'/walkupQnewpars'):$dum
+  fsave(cursqexp+'/walkupQnewpars','current')
+  newdg
+  if (sqflag='y') then
+     xmhaha('grandma','ClusterInfo')
+  endif
+  vnmrjcmd('setpage','Start')
+  vnmrjcmd('setpage','Start','Standard')
+  vnmrjcmd('setpage','Setup')
+  vnmrjcmd('setpage','Setup','Standard')
+
+"****************************************************************"

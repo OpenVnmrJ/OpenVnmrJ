@@ -1,0 +1,40 @@
+"macro rt"
+" rt - retrieve data set"
+
+if ($# > 0.5) then
+  $args = 'RT(\''+$1
+  $i = 1
+  while ($i<$#) do
+    $i = $i + 1
+    $args = $args+'\',\''+${$i}
+  endwhile
+  $args = $args+'\')'
+  exec($args):$ret
+  if (not $ret) then abort endif
+else
+  RT
+endif
+actionid='null'
+
+$name=''
+$ext=''
+strstr(file,'.','last'):$e,$name,$ext
+$lcdata=$name+'.fid/lcdata'
+exists($lcdata,'file'):$e
+if $e then
+  shell('chmod u+w '+curexp+'/lcdata'):$dum
+  copy($lcdata,curexp+'/lcdata')
+  shell('chmod u+w '+curexp+'/lcdata'):$dum
+else
+  exists(curexp+'/lcdata','file'):$e
+  if $e then rm(curexp+'/lcdata') endif
+endif
+$lcrunlog=$name+'.fid/lcrunlog'
+exists($lcrunlog,'file'):$e
+if $e then
+  copy($lcrunlog,curexp+'/lcrunlog')
+else
+  exists(curexp+'/lcrunlog','file'):$e
+  if $e then rm(curexp+'/lcrunlog') endif
+endif
+dousermacro($0)

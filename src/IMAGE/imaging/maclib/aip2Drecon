@@ -1,0 +1,128 @@
+"macro aip2Drecon"
+"*****************************************************************************"
+"
+" aip2Drecon - macro to set 2D recon parameters"
+"
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action='set') then
+  aip2Drecon('genpars')
+  if (recon='sense') then 
+    exists('/vnmr/imaging/maclib/acq2Dsense','file'):$file
+    if ($file > 0) then 
+      accelread=initaread 
+      accelphase=initaphase
+    else
+      recon='external'
+    endif 
+  else 
+    exists('foldnp','parameter'):$e if ($e>0) then foldnp=np endif
+    exists('foldnv','parameter'):$e if ($e>0) then foldnv=nv endif
+  endif   
+endif
+
+if ($action='allvolumes') then
+  aip2Drecon('genpars')
+  startvol=1
+  aip2Drecon('getnvols'):endvol
+endif
+
+if ($action='checkvols') then
+  aip2Drecon('genpars')
+  aip2Drecon('getnvols'):$nvols
+  if (startvol < 1) then startvol = 1 endif
+  if (startvol > $nvols) then startvol = 1 endif
+  if (endvol > $nvols) then endvol = $nvols endif
+  if (endvol < 1) then endvol = $nvols endif
+  if (startvol > endvol) then
+    $temp = startvol
+    startvol = endvol
+    endvol = $temp
+  endif
+  if (startvol > 1) OR (endvol < $nvols) then 
+    allvolumes='n'
+  else
+    allvolumes='y'
+  endif
+endif
+
+if ($action='getnvols') then
+
+  "number of echoes"
+  $ne=ne
+  "echo train length"
+  exists('etl','parameter'):$e 
+  if ($e=0) then $etl=1 else $etl=etl endif
+  if ($etl<1) then $etl=1 endif
+  "number of slices"
+  $ns=size('pss')
+  "number of receivers"
+  aip2Drecon('nrcvrs'):$nr
+  
+  "use arraydim to calculate the number of volumes"
+  $nvols=arraydim
+  
+  "multiple echoes generate $ne volumes that are not arrayed"
+  $nvols=$nvols*$ne
+  
+  "multiple receivers generate $nr volumes included in arraydim"
+  $nvols=$nvols/$nr
+  
+  "check for standard slice and phase loops as these generate volumes included in arraydim"
+  $str=''
+  substr(seqcon,2,1):$str
+  if ($str = 's') then $nvols=$nvols/$ns endif
+  substr(seqcon,3,1):$str
+  if ($str = 's') then $nvols=$nvols/nv endif
+  
+  return($nvols)
+  
+endif
+
+if ($action='nrcvrs') then
+  $nr=0
+  length(rcvrs):$len
+  $i=1
+  while ($i <= $len) do
+    $str=''
+    substr(rcvrs,$i,1):$str
+    if ($str = 'y') then $nr=$nr+1 endif
+    $i=$i+1
+  endwhile
+  return($nr)
+endif
+
+if ($action='genpars') then
+
+  "Recon type"
+  exists('recon','parameter'):$e if ($e=0) then create('recon','string') endif
+
+  "Volumes"
+  exists('allvolumes','parameter'):$e if ($e=0) then create('allvolumes','string') allvolumes='y' endif
+  exists('startvol','parameter'):$e if ($e=0) then create('startvol','real') startvol = 1 endif
+  exists('endvol','parameter'):$e if ($e=0) then create('endvol','real') endvol = 1 endif
+
+  "Output types"
+  exists('imMG','parameter'):$e if ($e=0) then create('imMG','string') imMG='n' endif 
+  exists('imPH','parameter'):$e if ($e=0) then create('imPH','string') imPH='n' endif
+  exists('imRE','parameter'):$e if ($e=0) then create('imRE','string') imRE='n' endif
+  exists('imIM','parameter'):$e if ($e=0) then create('imIM','string') imIM='n' endif
+  exists('rawMG','parameter'):$e if ($e=0) then create('rawMG','string') rawMG='n' endif
+  exists('rawPH','parameter'):$e if ($e=0) then create('rawPH','string') rawPH='n' endif
+  exists('rawRE','parameter'):$e if ($e=0) then create('rawRE','string') rawRE='n' endif
+  exists('rawIM','parameter'):$e if ($e=0) then create('rawIM','string') rawIM='n' endif
+
+  "Individual receiver output flags"
+  exists('imIR','parameter'):$e if ($e=0) then create('imIR','string') imIR='n' endif
+  exists('rawIR','parameter'):$e if ($e=0) then create('rawIR','string') rawIR='n' endif
+
+  "Recon_all"
+  exists('raw','parameter'):$e if ($e=0) then create('raw','string') endif
+  exists('rcvrout','parameter'):$e if ($e=0) then create('rcvrout','string') endif
+
+endif

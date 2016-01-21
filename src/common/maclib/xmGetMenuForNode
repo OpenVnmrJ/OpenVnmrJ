@@ -1,0 +1,112 @@
+"macro xmGetMenuForNode"
+/*-*-MAGICAL-*-*/
+
+// Used to bring up a context (pop-up) menu in the VJ Study Queue.
+// $1 the X coordinate of the menu in the Study Queue tree.
+// $2 the Y coordinate of the menu in the Study Queue tree.
+// $3 The space-separated list of nodes to operate on.
+//    The the first node in the list is the one to operate on if the
+//    user chooses an option that only operates on one node.
+//    The nodes 2 - n are to be operated on in order for commands
+//    that operate on all selected nodes. The first node appears
+//    again somewhere in this group.
+//
+// $1 and $2 are just passed back to VJ in the showContextMenu call
+//    so that VJ knows where to put the menu.
+// $3 is also passed back to VJ.
+// VJ is also passed the path to a file describing the menu to show.
+//
+// The menu file has lines of the form "Label=Command"
+// It is expected that this macro may want to check the node ID(s) to
+// customize the menu.
+
+$path = userdir + '/persistence/sqContextMenu'
+write('reset', $path)
+rights('CanEditProtocols'):$editOK
+
+// Iff $3 contains >2 words, there are multiple nodes selected
+$wd=''
+substr($3, 3):$wd
+$multipleSelections = ($wd <> '')
+
+if (appmode = 'imaging') then
+//    if ($editOK) then
+//        write('file', $path, 'Edit=xmmenuaction(`open`,`%s`)', $3)
+//    endif
+    write('file', $path, 'Clone=xmmenuaction(`clone`,`%s`)', $3)
+    write('file', $path, 'Collapse Nodes=xmmenuaction(`squish`,`%s`)', $3)
+    write('file', $path, 'Expand Nodes=xmmenuaction(`unsquish`,`%s`)', $3)
+    Acq('go','vpcheck'):$exp
+    if ($exp) then
+       expactive($exp):$start
+    else
+       $start=0
+    endif
+    if ($start) then
+      write('file', $path, 'Queue=xmmenuaction(`start`,`%s`)', $3)
+    else
+      write('file', $path, 'Queue=xmmenuaction(`queue`,`%s`)', $3)
+    endif
+    write('file', $path, 'Dequeue=xmmenuaction(`dequeue`,`%s`)', $3)
+    write('file', $path, 'Copy Slice Plan=xmmenuaction(`fovslice`,`%s`)', $3)
+    write('file', $path, 'Copy Voxel Plan=xmmenuaction(`fovvoxel`,`%s`)', $3)
+    write('file', $path, 'Copy Volume Plan=xmmenuaction(`fovvolume`,`%s`)', $3)
+    write('file', $path, 'Delete=xmmenuaction(`delete`,`%s`)', $3)
+else
+    write('file', $path, 'Open Experiment=xmmenuaction(`open`,`%s`)', $3)
+    if ($multipleSelections) then
+        write('file', $path, 'Delete Experiments=xmmenuaction(`delete`,`%s`)', $3)
+        write('file', $path, 'Collapse Nodes=xmmenuaction(`squish`,`%s`)', $3)
+        write('file', $path, 'Expand Nodes=xmmenuaction(`unsquish`,`%s`)', $3)
+    else
+        write('file', $path, 'Delete Experiment=xmmenuaction(`delete`,`%s`)', $3)
+        write('file', $path, 'Collapse Node=xmmenuaction(`squish`,`%s`)', $3)
+        write('file', $path, 'Expand Node=xmmenuaction(`unsquish`,`%s`)', $3)
+    endif
+    write('file', $path, 'Show Attributes=xmmenuaction(`attribute`,`%s`)', $3)
+    if (size('sqdisplay') > 1 ) then
+        if (sqdisplay[2] = 'submit') then
+            if ($multipleSelections) then
+                write('file', $path, 'Clone Experiments=xmmenuaction(`clone`,`%s`)', $3)
+            else
+                write('file', $path, 'Clone Experiment=xmmenuaction(`clone`,`%s`)', $3)
+            endif
+	    exists('getcpnode','maclib'):$macex
+	    if ($multipleSelections) or ($macex=0) then
+	        write('file',$path,'Swap DayQ/NightQ=xmmenuaction(`swapqueue`,`%s`)', $3)
+	    else
+		$when='' $ret=''
+		$sqnode='' substr($3,1):$sqnode
+		getcpnode('rev',cursqexp,$sqnode):$ret,$when
+		if ($ret<>'') then
+		    if ($when='long') then
+			write('file',$path,'Move to DayQ=xmmenuaction(`swapqueue`,`%s`)',$3)
+		    else
+			write('file',$path,'Move to NightQ=xmmenuaction(`swapqueue`,`%s`)',$3)
+		    endif
+		else
+		    write('file',$path,'Swap DayQ/NightQ=xmmenuaction(`swapqueue`,`%s`)',$3)
+		endif
+	    endif
+        endif
+    else
+	if sqdisplay[1]='sample' then
+	    SampleViewPref('get','error'):$err
+	    if ($err) then
+		write('file',$path,'Hide Errored Nodes=SampleViewPref(`hide`,`error`)')
+	    else
+                write('file',$path,'Show Errored Nodes=SampleViewPref(`unhide`,`error`)')
+	    endif
+//            write('file',$path,'Hide/Show Errors=SampleViewPref(`toggle`,`error`)')
+            SampleViewPref('get','scout'):$sct
+            if ($sct) then
+                write('file',$path,'Hide Scout Fids=SampleViewPref(`hide`,`scout`)')
+            else
+                write('file',$path,'Show Scout Fids=SampleViewPref(`unhide`,`scout`)')
+            endif
+	endif
+    endif
+endif
+
+//write('line3','SQ showContextMenu, %s, %s, "%s", "%s"', $1, $2, $3, $path)
+vnmrjcmd('SQ showContextMenu', $1, $2, '"'+$3+'"', '"'+$path+'"')

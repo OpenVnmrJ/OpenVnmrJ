@@ -1,0 +1,80 @@
+"macro absEccEval"
+"absEccEval (srcAxis, dstAxis, time) "
+
+$src=$1
+$dst=$2
+$time=$3
+
+$y=0 $t=-$time
+
+$terms=6,3,3,3,6,3,3,3,6,4,4,4,4
+
+if ($dst='x') then
+   $d=1
+elseif ($dst='y') then
+   $d=2
+elseif ($dst='z') then
+   $d=3
+elseif ($dst='b0') then
+   $d=4
+else
+   write('error','invalid dst in absEccEval')
+endif
+
+
+$i=1
+$r=size('$src')+1
+//write('line3','1 from=%s to=%s arraysize is %d',$1,$2, $r)
+while $i<$r do
+   if ($src[$i]='x') then
+      $s=1
+   elseif ($src[$i]='y') then
+      $s=2
+   elseif ($src[$i]='z') then
+      $s=3
+   elseif ($src[$i]='b0') then
+      $s=4
+   else
+      write('error','invalid src in absEccEval')
+   endif
+
+   $n=($d-1)*3+$s
+   $j=1 $index=0
+   while ($j<$n) do
+      $index=$index + $terms[$j]
+      $j=$j+1
+   endwhile
+   $yi=0
+   $j=1
+   $nterm=$terms[$n]
+//write('line3','1 nterms=%d',$nterm)
+   while($j<=$nterm) do
+//write('line3','1 index=%d',$index+$j)
+      $amp = ampls[$index+$j]
+      if ($dst<>'b0') then
+         $sgain=scales[7+$s]
+         $dgain=scales[7+$d]
+         $amp = $amp * $sgain / $dgain
+      endif
+      
+      if ($amp<>0.0) and (enabled[$index+$j]='y') then
+          $tau = taus[$index+$j]
+          if ($tau=0) then
+             $e=0
+          else
+             exp($t/$tau):$e
+          endif
+          $yi = $yi + $amp * $e
+      endif
+      $j=$j+1
+    endwhile
+    abs($yi):$ayi
+//write('line3','ayi=%f',$ayi)
+    $y = $y + $ayi
+    $i=$i+1
+endwhile
+//write('line3','absEccEval: y=%f',$y)
+return($y)
+
+      
+   

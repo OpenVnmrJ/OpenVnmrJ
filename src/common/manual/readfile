@@ -1,0 +1,92 @@
+
+readfile(path, 'par1', 'par2', <,cmpstr <,tree> >):num
+readfile(path, 'par1', 'par2', 'JCAMP' <,tree> >):num  reads a JCAMP file
+
+readfile reads the contents of a file and puts the contents into two
+supplied parameters.  The first word on each line in the file is placed in the
+first parameter.  The remainder of the line is placed in the second parameter.
+An optional fourth argument specifies a string which is used to match the
+first word of the line.  For example, if the file contained
+H1pw   10
+H1pwr  55
+C13pw  14
+C13pwr 50
+and the comparison string was set to H1, only the lines starting with H1
+would be put into the parameters.  Namely, H1pw and H1pwr.
+
+Arguments:
+ path is the path name of the file to read.
+ par1 is the name of the parameter to hold the first word of the line.
+ par2 is the name of the parameter to hold the remainder of each line.
+ cmpstr is the optional comparison string for matching the first word.
+ tree is an optional parameter to select the tree for par1 and par2.
+    The possibilities are current, global, and local.  Current is the
+    default.  Local is used if the parameters are $ macro parameters.
+    If tree is used, the cmpstr must also be supplied.  If cmpstr is
+    '', then it is ignored.
+
+The par1 and par2 parameters must already exist. If par1 or par2 are
+defined as a real parameter, as opposed to a string parameter, then
+if the value does not have a number as the first word, a zero will be
+assigned.
+
+num will be set to the number of items in the arrayed params par1 and par2.
+
+Lines which only contain whitspace are not added to the parameters.
+Lines which start with a # are not added to the parameters.  Lines
+which start with a # can be used as comment lines.
+If a line only contains a single word, that word is put into the
+first parameter.  The corresponding array element of the second
+parameter will be set to an empty string.
+
+The readfile will return the number of lines added to the parameters.
+
+Examples using a prototype file containing the following.
+
+           # A readfile test case
+
+           # Proton values
+           H1pw   10
+           H1pwr  55
+
+           # Carbon values
+           C13pw  14
+           C13pwr 50
+
+           H1macro  ft f full aph vsadj
+           End
+
+readfile(systemdir+'/probes/testcase','attr','vals')
+
+This sets the attr and vals parameters to arrays of six strings.
+attr='H1pw','H1pwr','C13pw','C13pwr','H1macro','End'
+vals='10','55','14','50','ft f full aph vsadj',''
+
+readfile(systemdir+'/probes/testcase','$attr','$vals','H1','local')
+
+This sets the temporary $attr and $vals parameters to arrays of three strings.
+$attr='H1pw','H1pwr','H1macro'
+$vals='10','55','ft f full aph vsadj'
+
+The readfile command might be used in conjunction with the teststr
+command.  The teststr command can be used to search an arrayed
+parameter to determine the index of a specified element.
+For example,
+teststr(attr,'H1pwr'):$e
+
+vals[$e] will be the value of 'H1Pwr'
+
+If the cmpstr is set to JCAMP, then readfile expects the input file to
+be a JCAMP file. Lines with # are no longer comment lines. Comments start
+with $$. The attr parameter will be set to the Labelled-Data-Record (LDR)
+label and the vals parameter will contain the LDR value. LDR's that are
+defined between the ## and = (i.e., global LDR) or between ##. and =
+(i.e., datatype specific LDR) will be converted according to the JCAMP rules
+(all upper case, remove spaces, dashes, slashes, and underlines).
+LDR's that are defined between ##$ and = (i.e., private LDR) will be returned
+as is. This command only recognizes data sets stored as NTUPLES. It will
+store the data as real - imaginary pairs as an ASCII file in the current
+experiment with the name jcampData. The jcampData file can be used by the
+makefid command to read the data into an experiment. If readfile has an
+error while reading a JCAMP file, it will return a 0 to the calling macro.
+On success, it will return the number of LDRs in the JCAMP file.

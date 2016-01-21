@@ -1,0 +1,596 @@
+"macro ProbeEdit"
+// ProbeEdit - macro to edit a probe file
+//   using xml panel
+//
+// usage: ProbeEdit(< probe_name >)
+//   If no probe_name is specified, use current probe.
+//   If probe_name is specified, edit probe_name.
+//
+// second usage: ProbeEdit('probe', probe_name)
+//   Note you only need to use two arguments if
+//   probe_name is one of the keywords:
+//     'make' 'open' 'ok' 'cancel' 'cleanup' 'initpar'
+//     'save' 'get' 'set' 'update' 'build' 'probe'
+
+if $#<0.5 then $1='make' endif
+
+"********************************************************"
+if $1='make' then  // edit current probe file
+
+  {$0}('cleanup')  // clean up previous probe edit
+  {$0}('initpar',probe)  // set parameters
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif $1='open' then      
+// open dialog
+
+  exists('probedtmp','parameter','global'):$e
+  if not($e) then
+      write('error',$0+' \'open\' expects initpar to be called first')
+      abort
+  endif
+  getappdirs:$atot,$adirs,$alabels
+  $probe=probedtmp
+  strstr($probe,'/probes/'):$ret,$appdir
+  if ($ret) then
+	shell('basename '+$probe):$probe
+	teststr('$adirs',$appdir,'local'):$ret2
+	if ($ret2) then
+	    $probe=$probe+' ['+$alabels[$ret2]+']'
+	endif
+  endif
+
+  $xml=userdir+'/templates/vnmrj/interface/ProbeEdit.xml'
+  exists($xml,'file'):$fileex
+  if ($fileex=0) then
+      exists('ProbeEdit.xml','templates/vnmrj/interface'):$fileex,$xml
+  endif
+  if ($fileex) then
+      vnmrjcmd('pnew','probedattr','probedval','probedNewNuc','probedNewAttr')
+      $cmd = 'vnmrjcmd(\'popup\', \'mode:modeless\',
+        \'file:'+$xml+'\',
+    	\'rebuild:yes\',
+    	\'pnewupdate:true\',
+    	\'location:controlPanel\',
+	\'close:'+$0+'(`cleanup`)\',
+    	\'help:/vnmr/jhelp/dialog/probe.html\',
+    	\'title:Probe Edit -  '
+  	$cmd=$cmd+$probe+'\''+')'
+
+     exec($cmd)
+  endif
+
+"********************************************************"
+elseif $1='ok' then
+
+  {$0}('save')     // save probe file
+  {$0}('cleanup')  // clean up probe edit
+
+"********************************************************"
+elseif $1='cancel' then
+  {$0}('cleanup')  // clean up probe edit
+
+"********************************************************"
+elseif $1='cleanup' then
+// clean up probe edit
+
+  destroy('probedtmp','global'):$dum
+  destroy('probedattr','global'):$dum
+  destroy('probedval','global'):$dum
+  destroy('probedNewNuc','global'):$dum
+  destroy('probedNewAttr','global'):$dum
+  $dir = userdir+'/templates/vnmrj/interface'
+  $xfile = $dir+'/ProbeEdit.xml'
+  shell('rm -f '+$xfile):$dum
+  $pfile=userdir+'/persistence/ProbeEdit_probe'
+  shell('rm -f '+$pfile):$dum
+
+"********************************************************"
+elseif $1='initpar' then
+// create, initialize global parameters from probe file
+
+  $probe=probe
+  if $#>1.5 then
+    $probe=$2
+  endif
+
+  ProbePopup('getProbePath',$probe):$e,$file
+  if ($e=0) then 
+	write('error','Probefile for %s not found',$probe)
+	abort 
+  endif
+
+  exists('probedattr','parameter','global'):$e
+  if not ($e) then
+    create('probedattr','string','global')
+  endif
+  setgroup('probedattr','display','global')
+  setprotect('probedattr','on',16+256+32768,'global')
+
+  exists('probedval','parameter','global'):$e
+  if not ($e) then
+    create('probedval','string','global')
+  endif
+  setgroup('probedval','display','global')
+  setprotect('probedval','on',16+256+32768,'global')
+
+  exists('probedtmp','parameter','global'):$e
+  if not($e) then
+      create('probedtmp','string','global')
+  endif
+  setgroup('probedtmp','display','global')
+  setprotect('probedtmp','on',32768,'global')
+  probedtmp=$file
+
+  exists('probedNewNuc','parameter','global'):$e
+  if not($e) then
+      create('probedNewNuc','string','global')
+  endif
+  setgroup('probedNewNuc','display','global')
+  setprotect('probedNewNuc','on',32768,'global')
+  probedNewNuc=''
+
+  exists('probedNewAttr','parameter','global'):$e
+  if not($e) then
+      create('probedNewAttr','string','global')
+  endif
+  setgroup('probedNewAttr','display','global')
+  setprotect('probedNewAttr','on',256+32768,'global')
+  probedNewAttr='','',''
+
+  readfile($file,'probedattr','probedval','','global'):$size
+
+  teststr('probedattr','ID:','global'):$idex
+  if ($idex) then
+	if (probedval[$idex]='') then $idex=0 endif
+  endif
+  if ($idex) then
+// Include ProbeID attributes for display purpose
+        $probeid_path=systemdir+'/probeid/cache/'+probedval[$idex]+'/ProbeId'
+        exists($probeid_path,'file'):$pex
+        if ($pex) then
+            $idattr='' $idval=''
+            readfile($probeid_path,'$idattr','$idval','','local'):$idsize
+            $i=0
+            while ($i < $idsize) do
+                $i=$i+1
+                $idattr[$i]='_'+$idattr[$i]
+            endwhile
+            probedattr=$idattr,probedattr
+            probedval=$idval,probedval
+            $size=size('probedattr')
+        endif
+  endif
+  
+"********************************************************"
+elseif $1='addnuc' then
+//	This is like addnucleus
+  $nfile=userdir+'/persistence/ProbeEdit_NewNuc'
+  write('reset',$nfile)
+  if ($# < 2) then $2=probedNewNuc endif
+  if ($2='') then return endif
+
+  teststr('probedattr',$2+':','global'):$isin
+  if ($isin) then
+	write('error','%s already exists in this probe file',$2)
+	if ($# < 2) then probedNewNuc='' endif
+	return
+  endif
+
+  $gH=1
+  $nucfrq=0
+  getXi($2):$found,$nucfrq
+  if ($found=0) then 
+	write('error','%s not a valid nucleus in nuctabref',$2)
+	if ($# < 2) then probedNewNuc='' endif
+	return 
+  endif
+  if ($nucfrq <> 0) then $gH=100.0/$nucfrq endif
+
+  write('file',$nfile,$2+':           Parameters')
+  write('file',$nfile,$2+'pw90           00')
+  write('file',$nfile,$2+'tpwr           00')
+  write('file',$nfile,$2+'dmf            00')
+  write('file',$nfile,$2+'dpwr           00')
+  write('file',$nfile,$2+'pwx            00')
+  write('file',$nfile,$2+'pwxlvl         00')
+  write('file',$nfile,$2+'pwxlvl_cf      1')
+  write('file',$nfile,$2+'gHratio        %f',$gH)
+  write('file',$nfile,$2+'dmm            g')
+  write('file',$nfile,$2+'dseq           garp1')
+  write('file',$nfile,$2+'decwave         g')
+  write('file',$nfile,$2+'dres           1')
+  if (Console='vnmrs') or (Console='mr400') then
+     $srof2='25'
+     teststr('probedattr','Probeminrof2','global'):$ret
+     if ($ret) then
+	$srof2=probedval[$ret]
+     endif
+     write('file',$nfile,$2+'minrof2       %s',$srof2)
+     write('file',$nfile,$2+'minalfa        10')
+  endif
+  $date='' shell('date +%d-%b-%Y-%T'):$date
+  write('file',$nfile,$2+'date           %s',$date)
+
+  $nnattr='' $nnval=''
+  readfile($nfile,'$nnattr','$nnval','','local'):$ns2
+  if ($ns2>0) then
+        probedattr=probedattr,$nnattr
+        probedval=probedval,$nnval
+  endif
+  shell('rm -f '+$nfile):$dum
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+  if ($# < 2) then probedNewNuc='' endif
+
+"********************************************************"
+elseif ($1='delnuc') then
+//  This is like deletenucleus
+  if ($# < 2) then $2=probedNewNuc endif
+  if ($2='') then return endif
+
+  teststr('probedattr',$2+':','global'):$found
+  if ($found=0) then 
+	write('error','%s is not in this probe file',$2)
+	return 
+  endif
+  $size=size('probedattr')
+  $probedattr='' $probedval='' $j=1
+  if ($found>1) then
+    $i=1
+    repeat
+       $probedattr[$j]=probedattr[$i]
+	$probedval[$j]=probedval[$i]
+	$i=$i+1 $j=$j+1
+    until $i > $found-1
+  endif
+ 
+  $i=$found+1
+  $done=0
+  repeat
+//  The assumption is, until next header is found
+//   all probedattr values belong to $2
+     strstr(probedattr[$i],':'):$hdr
+     if ($hdr) then $done=1 endif
+     if ($done) then
+	$probedattr[$j]=probedattr[$i]
+        $probedval[$j]=probedval[$i]
+	$j=$j+1
+     endif
+     $i=$i+1
+  until $i > $size
+  probedattr=$probedattr
+  probedval=$probedval
+  probedNewNuc=''
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif ($1='isnuc') then
+
+  if ($# < 2) then return endif
+  getXi($2):$found,$nucfrq
+  if ($found) then probedNewNuc=$2 else probedNewNuc='' endif
+
+"********************************************************"
+elseif ($1='isnucAttr') then
+  if ($# < 2) then return endif
+  if ($2='') then return(0,0) endif
+  teststr('probedattr',$2+':','global'):$ok2
+  teststr('probedattr',$2+'date','global'):$ok
+  if ($ok2=0) or ($ok=0) then return(0,0) endif
+  return($ok2,$ok)
+
+"********************************************************"
+elseif ($1='addnucAttr') then
+   if (probedNewAttr[1]='') then
+	write('error','Please provide a valid probe group')
+	return
+   endif
+   if (probedNewAttr[2]='') or (probedNewAttr[3]='') then
+	write('error','Please provide a valid attribute and value')
+	return
+   endif
+   ProbeEdit('isnucAttr',probedNewAttr[1]):$ok2,$ok
+   if ($ok=0) then
+	write('error','%s is not a valid probe group',probedNewAttr[1])
+	return
+   endif	
+   $dattr=probedNewAttr[1]+probedNewAttr[2]
+   teststr('probedattr',$dattr,'global'):$found
+   if ($found) then
+        probedNewAttr='','',''
+        return
+   endif
+
+  $found=$ok
+  $size=size('probedattr')
+  $probedattr='' $probedval='' $j=1
+  $i=1
+  repeat
+       $probedattr[$j]=probedattr[$i]
+        $probedval[$j]=probedval[$i]
+        $i=$i+1 $j=$j+1
+  until $i > $found-1
+  $probedattr[$j]=$dattr
+  $probedval[$j]=probedNewAttr[3]
+  $j=$j+1
+  $i=$found
+  repeat
+     $probedattr[$j]=probedattr[$i]
+     $probedval[$j]=probedval[$i]
+     $j=$j+1
+     $i=$i+1
+  until $i > $size
+  probedattr=$probedattr
+  probedval=$probedval
+  probedNewAttr='','',''
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif ($1='delnucAttr') then
+   if (probedNewAttr[2]='date') or (probedNewAttr[2]=':') then
+	probedNewAttr='','',''
+	return
+   endif
+   $dattr=probedNewAttr[1]+probedNewAttr[2]
+   teststr('probedattr',$dattr,'global'):$found
+   if ($found=0) then 
+	probedNewAttr='','',''
+ 	return 
+   endif
+  $size=size('probedattr')
+  $probedattr='' $probedval='' $j=1
+    $i=1
+    repeat
+       $probedattr[$j]=probedattr[$i]
+        $probedval[$j]=probedval[$i]
+        $i=$i+1 $j=$j+1
+    until $i > $found-1
+
+    $i=$found+1
+    repeat
+       $probedattr[$j]=probedattr[$i]
+        $probedval[$j]=probedval[$i]
+        $i=$i+1 $j=$j+1
+    until $i > $size
+
+  probedattr=$probedattr
+  probedval=$probedval
+  probedNewAttr='','',''
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif $1='save' then
+// Save new values into the probe file
+    $size = size('probedattr')
+    $file=probedtmp
+    if ($file='') then return endif
+    $tfile=userdir+'/persistence/ProbeEdit'
+    write('reset',$tfile)
+    $i=1
+    $first=0
+    repeat
+        $firstchar=''
+        substr(probedattr[$i],1,1):$firstchar
+        if ($firstchar<>'_') then
+            if ($first=0) then
+                write('file',$tfile,'%-17s %s',probedattr[$i],probedval[$i])
+                $first=1
+            else
+                strstr(probedattr[$i],':'):$hdr
+                if ($hdr) then write('file',$tfile,'') endif
+                write('file',$tfile,'%-17s %s',probedattr[$i],probedval[$i])
+            endif
+        endif
+        $i=$i+1
+    until $i > $size
+    write('file',$tfile,'')
+    $date=''
+    shell('date +%Y_%m_%d_%H%M%S'):$date
+    cp($file,$file+'.'+$date):$dum
+    mv($tfile,$file)
+    write('line3','Changes to %s saved',$file)
+    substr($file,'basename'):$probe
+    if ($probe = probe) then
+      _probe
+    endif
+    substr($file,'basename'):$probe
+    if ($probe = probe) then
+      _probe
+    endif
+
+"********************************************************"
+elseif $1='get' then
+// get probe value from parameters, similar to getparam
+
+  $ret=''
+  if $#<2.5 then return($ret) endif
+  teststr('probedattr',$3+$2,'global'):$found
+  if ($found) then
+    write('line3',probedval[$i]):$ret
+  endif
+  return($ret)
+
+"********************************************************"
+elseif $1='set' then
+// set probe value into parameters, similar to setparams
+  if $#<3.5 then return endif
+
+  teststr('probedattr',$3+$2,'global'):$found
+  if ($found) then
+	probedval[$found]=$4
+  endif
+
+"********************************************************"
+elseif $1='update' then
+// update parameter value and time stamp
+// $2=$attribute, $3='nuc' $4=$VALUE
+// arg3 is needed only for the time stamp
+
+  if ($# < 4) then return endif
+  if ($3='') then return endif
+    teststr('probedattr',$2,'global'):$i
+    if ($i=0) then return endif
+    $val='' $oldval=''
+    write('line3',$4):$val
+    write('line3',probedval[$i]):$oldval
+    if ($val <> $oldval) then  // update parameter
+	probedval[$i]=$val
+	teststr('probedattr',$3+'date','global'):$i
+	if ($i) then
+           $date=''
+           shell('date +%d-%b-%Y-%T'):$date
+	   probedval[$i]=$date
+	endif
+        vnmrjcmd('pnew','probedval')
+  endif
+
+"********************************************************"
+elseif $1='build' then
+// build xml file
+
+  $file=probedtmp
+  exists('ProbeAttr','parameter','global'):$parex
+  $enable=0
+  if ($parex) then
+     $size=size('ProbeAttr')
+     if ($size>6) then
+	if (ProbeAttr[7]='edit') then $enable=1 else $enable=-1 endif
+     endif
+  endif
+  if ($enable=0) then
+      exists($file,'file','rw'):$ep
+      $enable = 2 * $ep - 1
+  endif
+  $dir = userdir+'/templates/vnmrj/interface'
+  exists($dir,'directory'):$d
+  if not ($d) then
+    mkdir('-p',$dir)
+  endif
+
+  // loop through headers and lines
+  probeid_linect('probedattr'):$maxlines,$hdrlen,$id,$name
+  $maxx = $hdrlen
+  if $maxx<460 then $maxx=460 endif
+  if $maxlines<10 then $maxlines=10 endif
+  $maxy = 20 * $maxlines
+
+  ProbeEdit('xml',$maxx,$maxy,$enable)
+
+"********************************************************"
+elseif ($1='xml') then
+//  This section is identical to probeid_xml, but adds a a few buttons
+//	to add/delete nuclei as well as save button.  Hence it is a modeless popup
+
+  $dir=userdir+'/templates/vnmrj/interface'
+  $a='probedattr'
+  $v='probedval'
+  $maxx=$2
+  $maxy=$3
+  $enable=$4
+  $xfile = $dir+'/ProbeEdit.xml'
+
+  write('reset',$xfile)
+  write('file',$xfile,'<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>')
+  write('file',$xfile,'<template element="panels" type="probe parameters">')
+  write('file',$xfile,'  <group loc="%g 15" size="87 22">',$maxx-70)
+  write('file',$xfile,'  </group>\n')
+  $id='Probe without ID'
+  $id=''
+  teststr('probedattr','ID:','global'):$idpos
+  if ($idpos) then $id='Probe ID:  '+probedval[$idpos] endif
+  write('file',$xfile,'   <textmessage loc="%g 10" size="400 25" style="PlainText" set="$VALUE=\'%s\'" />',($maxx-400)/2,$id)
+
+  write('file',$xfile,'  <folder loc="10 40" size="%g %g">',$maxx,$maxy+60)
+
+  $limits=0
+  $psize = size($a)
+  $first = 1
+
+  $i=0 $hdr=0 $hct=0 $lct=0
+  $t=''
+  repeat
+    $readonly=0
+    $i=$i+1
+    $name = {$a}[$i]
+    if ($name <> 'NAME:') and($name <> 'ID:') then
+      $lct=$lct+1
+      strstr($name,':'):$hdr
+      if ($hdr and not $first) then
+        write('file',$xfile,'      </group>\n    </group>\n')
+      endif
+      if ($hdr) then
+        $first=0
+        $lct=0
+        substr($name,1,$hdr-1):$name
+        $t=$name
+	$s1='' $fchar=0 $s2=''
+	strstr($name,'_'):$fchar,$s1,$s2
+        if ($fchar=1) then
+	  $name=$s2
+        endif
+        write('file',$xfile,'    <group loc="%g 10" size="%g %g" value="%s">',2*$hct,$maxx-5,$maxy+20,$name)
+        write('file',$xfile,'      <group loc="5 0" size="%g %g">',$maxx-10,$maxy+10)
+        $hct=$hct+1
+      else
+        $yc=10*$lct
+        substr($name,1,1):$firstchar
+        if ($firstchar='_') then     // if it starts with an '_' it's read-only
+          length($name):$namelen
+          $readonly=1
+          substr($name,2,$namelen-1):$name
+        endif
+        write('file',$xfile,'        <label loc="10 %g" size="120 20" style="Label1" value="%s" />',$yc,$name)
+        strstr($name,'date'):$isdate
+        if ($enable=1) and not ($isdate) and not ($readonly) then
+          write('file',$xfile,'        <entry loc="160 %g" size="220 20" style="PlainText" vq="%s" vc="ProbeEdit(\'update\',\'%s\',\'%s\',\'$VALUE\')" set="$VALUE=%s[%g]" />',$yc,$v,$name,$t,$v,$i)
+        else
+          write('file',$xfile,'        <textmessage loc="162 %g" size="280 20" style="PlainText" vq="%s" set="$VALUE=%s[%g]" />',$yc,$v,$v,$i)
+        endif
+        $lct=$lct+1
+      endif
+      if ($i=$psize) then
+        write('file',$xfile,'      </group>\n    </group>')
+      endif
+    endif
+  until ($i >= $psize)
+
+  write('file',$xfile,'  </folder>')
+
+  if ($enable>0) then
+     write('file',$xfile,'  <group loc="%g %g" size="410 90">',($maxx-410)/2,$maxy+100)
+
+     write('file',$xfile,'  <label loc="55 10" size="70 20" style="Label1" label="Nucleus" />')
+     write('file',$xfile,'  <entry loc="130 10" size="60 20" style="PlainText" vq="probedNewNuc" vc="probedNewNuc=\'$VALUE\'" set="$VALUE=probedNewNuc" />')
+     write('file',$xfile,'  <button loc="195 10" size="80 20" style="Heading2" label="Add" vq="probedNewNuc" vc="ProbeEdit(\'addnuc\',probedNewNuc)" />')
+     write('file',$xfile,'  <button loc="280 10" size="80 20" style="Heading2" label="Delete" vq="probedNewNuc" vc="ProbeEdit(\'delnuc\',probedNewNuc)" />')
+     write('file',$xfile,'  <button loc="90 40" size="230 30" style="Heading2" label="Save changes" vc="ProbeEdit(\'save\')" />')
+     write('file',$xfile,'  </group>\n')
+//     $delta=50
+  endif
+  write('file',$xfile,'</template>')
+
+"********************************************************"
+elseif ($1='probe' and $#>1.5) then
+// second argument is probe name
+
+  {$0}('cleanup')         // clean up previous probe edit
+  {$0}('initpar',$2)  // set parameters
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+else
+// first argument is probe name
+
+  {$0}('cleanup')         // clean up previous probe edit
+  {$0}('initpar',$1)  // set parameters
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+endif

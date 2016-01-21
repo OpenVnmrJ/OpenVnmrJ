@@ -1,0 +1,221 @@
+"macro psPshim"
+// Proshim prescan
+
+if ($# = 0) then
+  write('error','Do not call %s directly. Use prescan.',$0)
+  abort
+else
+  $action = $1
+endif
+
+if ($action = 'init') then
+  if (method='') or (wshim='n') or (wshim='g') then
+    return('done')
+  endif
+  exists(method,'proshimmethods'):$e,$spath
+  if (not $e) then return('done') endif
+  $abortFile=systemdir+'/acqqueue/shimfitAbort'
+  exists($abortFile,'file'):$e
+  if ($e>0.5) then
+    rm($abortFile):$e
+  endif
+  sethw('lock','on'):$e
+  spPars
+  spLogFile = systemdir+'/tmp/spLog'
+  spFileIndex=0
+  spIter=0
+  write('reset',spLogFile)
+  lookup('mfile',$spath,'filekey'):spFileKey
+  {$0}('next'):$ret
+  psCmd('record','load=\'n\'')
+  psCmd('record','wshim=\'n\'')
+  return($ret)
+
+elseif ($action = 'next') then
+  $res='done'
+  $val=''
+  spPars('save')
+  psCmd('rtp','current')
+  spPars
+  spPars('rtp')
+  if (spFileIndex = 0) then
+    spNumSteps=5
+    spStep=0
+    spDelay='0'
+  endif
+  readallshims
+  bgmode_is:$bg
+  repeat
+    $filekey=spFileKey
+    lookup('mfile',spFileKey,'readline','filekey'):$line,spFileKey,$ret
+    if ($ret = 2) then
+      $type=''
+      substr($line,1,'delimiter',' \t='):$type,$dum1,$dum2,$val
+      format($type,'lower'):$type
+      if $type='fid' or $type='fid1d' or $type='lock' or $type='lock1d' then
+        checkshimnames($val):$val
+      endif
+      if ($type='fid') then
+        spParNames=$val
+        psCmd('set','errors','103 104')
+        spShimmer='spFidShim'
+        wshim='n'
+        spFidShim:$res
+      elseif ($type='fid1d') then
+        if (spFileIndex=0) then
+          spFileIndex=1
+        endif
+        $val1=''
+        substr($val,spFileIndex):$val1
+        if ($val1<>'') then
+          spFileIndex= spFileIndex+1
+          spFileKey=$filekey
+          spParNames=$val1
+          psCmd('set','errors','103 104')
+          spShimmer='spFidShim'
+          wshim='n'
+          spFidShim:$res
+        else
+          spFileIndex=0
+        endif
+      elseif ($type='lock') then
+        set_lockpars('gainonly')
+        sethw('status','shim'):$e
+        spParNames=$val
+        spShimmer='spLkShim'
+        spLkShim:$res
+        if ($bg) then
+          while ($res='recall') do
+            spLkShim('exp'):$res
+          endwhile
+          sethw('status','idle'):$e
+        endif
+      elseif ($type='lock1d') then
+        if ($bg) then 
+          substr($val,'wc'):$num
+          $i = 0
+          $res=''
+          set_lockpars('gainonly')
+          sethw('status','shim'):$e
+          while ($i < $num) and ($res<>'quit') do
+            $i=$i+1
+            substr($val,$i):$val1
+            spParNames=$val1
+            spShimmer='spLkShim'
+            spLkShim:$res
+            while ($res='recall') do
+              spLkShim('exp'):$res
+            endwhile
+          endwhile
+          sethw('status','idle'):$e
+        else
+          if (spFileIndex=0) then
+            spFileIndex=1
+            set_lockpars('gainonly')
+          endif
+          $val1=''
+          substr($val,spFileIndex):$val1
+          if ($val1<>'') then
+            spFileKey=$filekey
+            spParNames=$val1
+            spShimmer='spLkShim'
+            if (spIter = 0) then
+              sethw('status','shim'):$e
+              spLkShim:$res
+            else
+              spLkShim('exp'):$res
+            endif
+            spFileIndex= spFileIndex+1
+          else
+            spIter=0
+            spFileIndex=0
+            sethw('status','idle'):$e
+          endif
+        endif
+      elseif ($type='pfg') then
+        $filekey=spFileKey
+        psGshim('init')
+        spPars
+        spFileKey=$filekey
+        spShimmer='psGshim'
+        $res='doau'
+      elseif ($type='gxyz') then
+        if (solvent = 'd2o_10') then
+          exists('psGshim3D','maclib'):$e
+          if ($e) then
+            $filekey=spFileKey
+            $r=''
+            psGshim3D('init'):$r
+            if ($r = 'doau') then
+              spPars
+              spFileKey=$filekey
+              spShimmer='psGshim3D'
+              $res='doau'
+            endif
+          endif
+        endif
+      elseif ($type='spin') then
+        $set=''
+        readhw('spin'):$s,$stat,$set
+        if ($set <> $val) or ($stat <> 1) then
+          vnmrinfo('get','spinExpControl'):$e
+          if ($e) then
+            sethw('spin',$val):$dum
+          else
+            vnmrinfo('get','spinSetSpeed'):$sp
+            sethw('spin',$val):$dum
+            vnmrinfo('set','spinSetSpeed',$sp)
+          endif
+          if ($val='0') then
+            shell('sleep 4'):$dum
+          else
+            shell('sleep 20'):$dum
+          endif
+        endif
+      elseif ($type='range') then
+        format($val,0,0):spRange
+        spStep = spRange / 2
+      elseif ($type='tol') then
+        format($val,0,0):spTol
+      elseif ($type='numsteps') then
+        format($val,0,0):spNumSteps
+      elseif ($type='delay') then
+        spDelay = $val
+      elseif ($type='exec') then
+        exec($val):$e
+      else
+        substr($type,1,1):$ch
+        if ($ch <> '#') and ($ch<>'') then
+          sethw('status','shim'):$e
+          spParNames=$line
+          spShimmer='spLkShim'
+          spLkShim:$res
+          while ($res='recall') do
+            spLkShim('exp'):$res
+          endwhile
+          sethw('status','idle'):$e
+        endif
+      endif
+    endif
+  until ($res<>'done') or ($ret<>2)
+  return($res)
+
+elseif ($action = 'exp') then
+  $res='done'
+  spPars('save')
+  {spShimmer}('exp'):$res
+  spPars('rtp')
+  if ($res='quit') or ($res='done') then
+    sethw('status','idle'):$e
+  endif
+  if $res='done' then
+    {$0}('next'):$res
+  endif
+  return($res)
+
+elseif ($action = 'err') then
+  $res='done'
+  {spShimmer}('err'):$res
+  return($res)
+
+endif

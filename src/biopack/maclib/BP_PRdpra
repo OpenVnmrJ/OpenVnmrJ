@@ -1,0 +1,155 @@
+"macro BP_PRdpra"
+" ************************************************************* "
+" ***    dpra - display predicted best projection angle     *** "
+" ***           Eriks Kupce, adapted from dshape            *** "
+" ************************************************************* "
+$bpra=0.0
+$filepath=$1
+$bpra = $2
+exists($filepath,'file'):$e
+if not($e) then
+  write('error','dpra: input file %s not found', $filepath)
+  return
+endif
+
+write('alpha','displaying data from %s',$filepath)
+
+" check command name, determine output device-specific parameters "
+if $0='BP_PRdpra' then
+  clear(2)
+  $device='graphics'
+  $axiscolor='magenta'
+  $txtcolor='green'
+  $rcolor='cyan'
+  $icolor='yellow'
+  $xcolor='red'
+else   " ppra "
+  write('line3','%s: drawing shape, please wait ... ',$0)
+  $device='plotter'
+  $axiscolor='pen2'
+  $txtcolor='pen3'
+  $rcolor='pen1'
+  $icolor='pen3'
+  $icolor='pen4'
+endif
+write($device,0,0,''):$ys	" line height for text "
+
+" define path names "
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+
+" temporarily save experiment data and parameters "
+flush
+copy($fid,$fid+'.tmp')
+rm($fid)
+copy($procpar,$procpar+'.bk')
+copy($curpar,$curpar+'.bk')
+copy($data,$data+'.bk')
+copy($phasefile,$phasefile+'.bk')
+
+" find the number of lines (slices) in the shape definition "
+nrecords($filepath):$nstp
+
+" fix acquisition parameters to match the pseudo-dataset "
+setvalue('dp','n','processed')
+setvalue('np',$nstp*2,'processed')
+off('fpmult')
+setvalue('at',($nstp-1)/sw)
+setvalue('nt',1)
+setvalue('ct',1)
+setvalue('array','')
+setvalue('arraydim',1)
+
+" create an fid from the pulse shape "
+makefid($filepath,'dp=n')
+
+setvalue('np',$nstp*2)
+
+" set up processing and display parameters "
+phfid=0		" we want to be looking at the real part when we mean it "
+fn=2*$nstp	" adjust fn "
+if fn<2*$nstp then fn=2*fn endif
+
+exists('ssfilter','parameter'):$e	"check if present"
+if ($e<>0) then ssfilter='n' endif
+exists('lsfrq','parameter'):$e		"check is present"
+if ($e<>0) then lsfrq='n' endif
+lsfid='n' proc='ft' 
+
+ft('noft','nodc',1)	" ft without FT, no DC correction "
+wp=((np-1)/fn)*sw
+sp=sw-rfl+rfp-wp	" don't want to see the zerofilled part "
+rp=0 lp=0		" look at the 'pure' real part first "
+cdc lvl=0 tlt=0		" avoid dc corrections upon display "
+$x0=3			" leave a little gap at both sides "
+
+" scale shape by looking at noth the real and the imaginary part "
+peak:$max		" size of real part "
+$ymax=wc2max-5		" desired height "
+vs=vs*$ymax/$max	" scale display size "
+
+" display the pulse shape "
+full wc=wcmax-2*$x0 sc=$x0
+vp=0 rp=0			
+if $device='graphics' then
+  dss($rcolor)
+else
+  pl($rcolor)
+endif
+
+" label plot / display "
+write($device,$icolor,$x0+2,wc2max-8,'Npks')
+write($device,$icolor,$x0+wc-15, -6,'pra')
+
+" draw axes "
+pen($device,$axiscolor)
+move($x0,vp)
+draw($x0,vp+$ymax)
+move($x0,vp)
+draw($x0+wc,vp)
+draw($x0+wc-1,vp)
+
+$i = 1
+$x1 = $x0
+$incr = wc/9.0
+$length = 3
+repeat
+  $x1 = $x1 + $incr
+  move($x1,vp)
+  draw($x1,vp+$length)
+  $i = $i + 1
+until ($i=9)
+
+$x1 = $x0+wc*$bpra/90.0 - 1
+write($device,$xcolor,$x1-2,$ymax,'*')
+
+$y1 = 1
+$length = 3
+$y2 = $ymax - $length
+pen($device,$xcolor)
+repeat
+  move($x1,$y1)
+  $y1 = $y1 + $length
+  draw($x1,$y1)
+  $y1 = $y1 + $length
+until ($y1 > $y2)
+
+$xpra=''
+format($bpra,4,1):$xpra
+write($device,$txtcolor,$x1+5, 30,'best')
+write($device,$txtcolor,$x1+5, 20,'pra')
+write($device,$txtcolor,$x1+5, 10,$xpra)
+  
+" restore experiment data "
+flush
+rm($fid)	rename($fid+'.tmp',$fid)
+rm($procpar)	rename($procpar+'.bk',$procpar)
+rm($curpar)	rename($curpar+'.bk',$curpar)
+rm($data)	rename($data+'.bk',$data)
+rm($phasefile)	rename($phasefile+'.bk',$phasefile)
+fread($procpar,'processed')
+fread($curpar,'current')
+vp=0 full

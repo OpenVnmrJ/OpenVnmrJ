@@ -1,0 +1,404 @@
+"macro ATc37"
+"ATc37"  "SN with 13C decoupling"
+
+"        SN of the H2O is measured for fixed 3ppm noise region"
+"        First, dpwr is varied from 1dB to user-defined maximum 13C decoupling power"
+"        with decoupling flag set to 'n', giving multiple measurements of the H2O SN"
+"        Next, the decoupling is turned on and the same array of powers used (cw modulation)"
+"        Next, the decoupling is turned on and the same array of powers used (waltz modulation)"
+"        Next, the decoupling is turned on and the same array of powers used (wfg waltz modulation)"
+"        if SN degrades by >= 50% the data is saved "
+
+if (at_c13tests='n') then ATnext return endif
+
+if ($#=0) then
+
+   ATrtp('standard') 
+   lb='n'
+   create('drop_cw','real')
+   create('drop_waltz_mod','real')
+   create('drop_waltz_wfg','real')
+   seqfil='s2pul'
+   text('SN decoupling test: \\spectra without 13C decoupling')
+   sw=68p at=.1 fn=np np=fn sb=-at sbs=sb 
+   array('dpwr',at_max_dpwr,1,1)
+   dmm='ccc' dm='nnn' dn='C13' dof=0 
+   tof=at_tof tpwr=at_tpwr pw90=at_pw90 pw(90)
+   d1=1 d2=.001 nt=1 ss=4
+   wnt=''
+   wexp='ATc37(`PART1`)'
+   at_currenttest='SNdpwrtest'
+   ATcycle
+   au
+   text dps
+
+elseif ($1='PART1') then
+
+   wft 
+   vp=10 dssh r1=sc r3=ho r2=wc dtext 
+   f select(arraydim) ph
+   aph0:$ok if $ok then aph0 endif
+   peak:$ht,cr rl(4.66p)
+   vsadj
+   cz z(17p,1p) bc 
+
+
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'trial')
+    write('file',$filename,'nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+  clear(2)
+
+   $spectrum=1
+   $snav=0 f
+   sp=0p wp=30p
+   cr=30p delta=5p 
+   sc=r1 wc=r2
+   s1
+   $yg2=0
+   $yp2=0
+   $yp1=195
+   repeat
+    select($spectrum)
+    aph0:$ok if $ok then aph0 endif
+    bc
+    peak:$ht,cr dres:$res $res=trunc(10*$res)/10 cr=30p
+    dssn($spectrum,$spectrum)
+      dsn:$sn
+      if ($spectrum=1) then            
+       $standard=$sn
+      else
+       if ($sn<0.5*$standard) then  
+         ATfail('SN_c13_nodec_c')
+       endif
+      endif
+      $snav=$snav+$sn
+      $yg=6*$spectrum
+      $yp=4*$spectrum
+      write('graphics',$yp1-50,wc2max-$yg,'for dpwr=%d  s:n=%6.1f  res=%2.1f',dpwr[$spectrum],$sn,$res)
+      if (at_plotauto='y') then
+       write('plotter',$yp1,wc2max-$yp,'for dpwr=%d  s:n=%6.1f res=%2.1f',dpwr[$spectrum],$sn,$res)
+      endif
+      write('file',$filename,'%10s  %5.1f',dpwr[$spectrum],$sn)
+    if (at_plotauto='y') then
+     sp=25p wp=5p vs=vs*1000
+     bc pl($spectrum)
+     sp=0 wp=30p vs=vs/1000
+    endif
+    sc=sc+ho
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+    if (at_plotauto='y') then
+      select(1) nll fp
+      pltext(curexp+'/fp.out',125,wc2max-40)
+      write('plotter',0,50,'Noise plotted x1000 for region from 30ppm to 8ppm for each trial')
+      write('plotter',0,48,'Decoupling power increases from left to right')
+      ATpltext(0,70,'SN_c13_nodec_c')
+      pap 
+      ATpage('SN_c13_nodec_c')
+    endif
+
+
+   r7=$snav/arraydim
+
+   ATsvf('SN_c13_nodec_c')
+   full expl('regression')
+   cp(curexp+'/regression.inp',curexp+'/regression.dm=nnn')
+   text('SN with cw 13C-decoupling:\\ Vary dpwr from 1dB to at_max_dpwr')
+   ai
+   at_currenttest='SNdpwrtest2'
+   wexp='ATc37(`PART2`)'
+   ATcycle
+   dm='nyy'
+   au
+   write('line3','Repeating Test with cw 13C Decoupling at Variable Power')
+
+elseif ($1='PART2') then
+
+   wft 
+   vp=10 dssh r1=sc r3=ho r2=wc dtext 
+   select(arraydim) ph
+   aph0:$ok if $ok then aph0 endif
+   peak:$ht,cr rl(4.66p)
+   vsadj
+   cz z(17p,1p) bc sp=3.6p wp=6.4p 
+   clear(2)
+
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'dpwr value')
+    write('file',$filename,'nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+   $spectrum=1
+   $snav=0 f
+   sp=0p wp=30p
+   cr=30p delta=5p 
+   sc=r1 wc=r2
+   $yg2=0
+   $yp2=0
+   $yp1=195
+   repeat
+    select($spectrum)
+    aph0:$ok if $ok then aph0 endif bc
+    peak:$ht,cr dres:$res $res=trunc(10*$res)/10 cr=30p
+    dssn($spectrum,$spectrum)
+      dsn:$sn
+      if ($spectrum=1) then            
+       $standard=$sn
+      else
+       if ($sn<0.5*$standard) then  "probably arcing"
+         ATfail('SN_c13_cw_c')
+         banner('Noise from decoupling too large.')
+       endif
+      endif
+      $snav=$snav+$sn
+      $yg=6*$spectrum
+      $yp=4*$spectrum
+      write('graphics',$yp1-50,wc2max-$yg,'for dpwr=%d  s:n=%6.1f  res=%2.1f',dpwr[$spectrum],$sn,$res)
+      if (at_plotauto='y') then
+       write('plotter',$yp1,wc2max-$yp,'for dpwr=%d  s:n=%6.1f res=%2.1f',dpwr[$spectrum],$sn,$res)
+      endif
+      write('file',$filename,'%10s  %5.1f',dpwr[$spectrum],$sn)
+    if (at_plotauto='y') then
+     sp=25p wp=5p vs=vs*1000
+     bc pl($spectrum)
+     sp=0 wp=30p vs=vs/1000
+    endif
+    sc=sc+ho
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+    if (at_plotauto='y') then
+      select(1) nll fp
+      pltext(curexp+'/fp.out',125,wc2max-40)
+      write('plotter',0,50,'Noise plotted x1000 for region from 30ppm to 8ppm for each decoupling power level')
+      write('plotter',0,48,'Decoupling power increases from left to right')
+      ATpltext(0,70,'SN_c13_cw_c')
+     pap 
+     ATpage('SN_c13_cw_c')
+    endif
+    
+    r6=$snav/arraydim
+   ATsvf('SN_c13_cw_c')
+   cp(curexp+'/regression.inp',curexp+'/regression.dm=nny')
+
+   clear(2)
+    if (at_plotauto='y') then
+      right wc=100 pltext pexpl('regression') 
+      left wc=100 sc=sc+25 
+      cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+      pexpl('regression')
+      write('plotter', 30,wc2max-15, 'No 13C-decoupling: Average S/N = %6.0f', r7)
+      write('plotter', 150,wc2max-15, 'With cw 13C-decoupling: Average S/N = %6.0f', r6)
+      ATpage('SN_c13_cw_c_reg')
+    endif
+    cp(curexp+'/regression.dm=nny',curexp+'/regression.inp')
+    right wc=100 expl('regression','nocurve')
+    write('graphics',115,175,' Average S/N=%6.0f (with cw 13C-decoupling) ',r6)
+    write('graphics',0,175,'Average S/N=%6.0f (with no 13C-decoupling)',r7)
+    cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+    left wc=100 sc=sc+25 expl('regression','noclear')
+    r7=trunc(r7) r6=trunc(r6)
+    drop_cw=100 - trunc(100*r6/r7)
+    text('SN: waltz-16 modulator 13C-decoupling \\ Vary dpwr from 1dB to at_max_dpwr')
+    dmm='cww' dm='nns'  "use synchronus decoupling (s) instead of asynchronus (y)" 
+    wexp='ATc37(`PART3`)'
+    ATcycle
+    au
+elseif ($1='PART3') then
+
+   wft 
+   vp=10 dssh dtext r1=sc r3=ho r2=wc 
+   select(arraydim) ph 
+   aph0:$ok if $ok then aph0 endif
+   peak:$ht,cr rl(4.66p)
+   vsadj
+   cz z(17p,1p) bc sp=3.6p wp=6.4p 
+   clear(2)
+
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'dpwr value')
+    write('file',$filename,'nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+   $spectrum=1
+   $snav=0 f
+   sp=0p wp=30p
+   cr=30p delta=5p 
+   sc=r1 wc=r2
+   $yg2=0
+   $yp2=0
+   $yp1=195
+   repeat
+    select($spectrum)
+    aph0:$ok if $ok then aph0 endif
+    bc
+    peak:$ht,cr dres:$res $res=trunc(10*$res)/10 cr=30p
+    dssn($spectrum,$spectrum)
+      dsn:$sn
+      if ($spectrum=1) then            
+       $standard=$sn
+      else
+       if ($sn<0.5*$standard) then  "probably arcing"
+         ATfail('SN_c13_waltz_mod_c')
+         banner('Noise from decoupling too large.')
+       endif
+      endif
+      $snav=$snav+$sn
+      $yg=6*$spectrum
+      $yp=4*$spectrum
+      write('graphics',$yp1-50,wc2max-$yg,'for dpwr=%d  s:n=%6.1f  res=%2.1f',dpwr[$spectrum],$sn,$res)
+      if (at_plotauto='y') then
+       write('plotter',$yp1,wc2max-$yp,'for dpwr=%d  s:n=%6.1f res=%2.1f',dpwr[$spectrum],$sn,$res)
+      endif
+      write('file',$filename,'%10s  %5.1f',dpwr[$spectrum],$sn)
+    if (at_plotauto='y') then
+     sp=25p wp=5p vs=vs*1000
+     bc pl($spectrum)
+     sp=0 wp=30p vs=vs/1000
+    endif
+    sc=sc+ho
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+    if (at_plotauto='y') then
+      select(1) nll fp
+      pltext(curexp+'/fp.out',125,wc2max-40)
+      write('plotter',0,50,'Noise plotted x1000 for region from 30ppm to 8ppm for each decoupling power level')
+      write('plotter',0,48,'Decoupling power increases from left to right')
+      ATpltext(0,70,'SN_c13_waltz_mod_c')
+     pap 
+     ATpage('SN_c13_waltz_mod_c_reg')
+    endif
+    
+    r5=$snav/arraydim
+   ATsvf('SN_c13_waltz_mod_c')
+   cp(curexp+'/regression.inp',curexp+'/regression.dm=nny')
+
+   clear(2)
+    if (at_plotauto='y') then
+      right wc=100 pltext pexpl('regression') 
+      left wc=100 sc=sc+25 
+      cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+      pexpl('regression')
+      write('plotter', 30,wc2max-15, 'No 13C-decoupling: Average S/N = %6.0f', r7)
+      write('plotter', 150,wc2max-15, 'With waltz16 modulator 13C-decoupling: Average S/N = %6.0f', r5)
+      ATpage('SN_c13_waltz_mod_c_reg')
+    endif
+    cp(curexp+'/regression.dm=nny',curexp+'/regression.inp')
+    right wc=100 expl('regression','nocurve')
+    write('graphics',115,175,' Average S/N=%6.0f (13C-decoupling: waltz16 modulator)',r5)
+    write('graphics',0,175,'Average S/N=%6.0f (with no 13C-decoupling)',r7)
+    cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+    left wc=100 sc=sc+25 expl('regression','noclear')
+    r7=trunc(r7) r5=trunc(r5)
+    drop_waltz_mod=100 - trunc(100*r5/r7)
+
+    wexp='ATc37(`PART4`)'
+    dmm='cpp' dseq='waltz16' dres2=90.0 dm='nny'
+    text('SN: waveform waltz-16 13C-decoupling \\ Vary dpwr from 1dB to at_max_dpwr')
+    ATcycle
+    au
+
+elseif ($1='PART4') then
+
+   wft 
+   dssh r1=sc r3=ho r2=wc 
+   select(arraydim) ph 
+   aph0:$ok if $ok then aph0 endif
+   peak:$ht,cr rl(4.66p)
+   vsadj
+   cz z(17p,1p) bc 
+   clear(2)
+
+    $filename=curexp+'/regression.inp'
+    write('reset',$filename)
+    write('file',$filename,'dpwr value')
+    write('file',$filename,'nmr signal-to-noise ratio')
+    write('file',$filename,'1 %4.0f',arraydim)
+
+   $spectrum=1
+   $snav=0 f
+   sp=0p wp=30p
+   cr=30p delta=5p 
+   sc=r1 wc=r2
+   $yg2=0
+   $yp2=0
+   $yp1=195
+   repeat
+    select($spectrum)
+    aph0:$ok if $ok then aph0 endif
+    bc
+    peak:$ht,cr dres:$res $res=trunc(10*$res)/10 cr=30p
+    dssn($spectrum,$spectrum)
+      dsn:$sn
+      if ($spectrum=1) then            
+       $standard=$sn
+      else
+       if ($sn<0.5*$standard) then  "probably arcing"
+         ATfail('SN_c13_waltz_wfg_c')
+         banner('Noise from decoupling too large.')
+       endif
+      endif
+      $snav=$snav+$sn
+      $yg=6*$spectrum
+      $yp=4*$spectrum
+      write('graphics',$yp1-50,wc2max-$yg,'for dpwr=%d  s:n=%6.1f  res=%2.1f',dpwr[$spectrum],$sn,$res)
+      if (at_plotauto='y') then
+       write('plotter',$yp1,wc2max-$yp,'for dpwr=%d  s:n=%6.1f res=%2.1f',dpwr[$spectrum],$sn,$res)
+      endif
+      write('file',$filename,'%10s  %5.1f',dpwr[$spectrum],$sn)
+    if (at_plotauto='y') then
+     sp=25p wp=5p vs=vs*1000
+     bc pl($spectrum)
+     sp=0 wp=30p vs=vs/1000
+    endif
+    sc=sc+ho
+    $spectrum=$spectrum + 1
+   until $spectrum>arraydim
+    if (at_plotauto='y') then
+      select(1) nll fp
+      pltext(curexp+'/fp.out',125,wc2max-40)
+      write('plotter',0,50,'Noise plotted x1000 for region from 30ppm to 8ppm for each decoupling power level')
+      write('plotter',0,48,'Decoupling power increases from left to right')
+      ATpltext(0,70,'SN_c13_waltz_wfg_c')
+     pap 
+     ATpage('SN_c13_waltz_wfg_c')
+    endif
+    
+    r4=$snav/arraydim
+   ATsvf('SN_c13_waltz_wfg_c')
+   cp(curexp+'/regression.inp',curexp+'/regression.dm=nny')
+
+   clear(2)
+    if (at_plotauto='y') then
+      right wc=100 pltext pexpl('regression') 
+      left wc=100 sc=sc+25 
+      cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+      pexpl('regression')
+      write('plotter', 30,wc2max-15, 'No 13C-decoupling: Average S/N = %6.0f', r7)
+      write('plotter', 150,wc2max-15, 'With waveform waltz16 13C-decoupling: Average S/N = %6.0f', r4)
+      ATpage('SN_c13_waltz_wfg_c_reg')
+    endif
+    cp(curexp+'/regression.dm=nny',curexp+'/regression.inp')
+    right wc=100 expl('regression','nocurve')
+    write('graphics',115,175,' Average S/N=%6.0f (waveform waltz-16 13C-decoupling)',r4)
+    write('graphics',0,175,'Average S/N=%6.0f (with no 13C-decoupling)',r7)
+    cp(curexp+'/regression.dm=nnn',curexp+'/regression.inp')
+    left wc=100 sc=sc+25 expl('regression','noclear')
+    r7=trunc(r7) r4=trunc(r4)
+    drop_waltz_wfg=100 - trunc(100*r4/r7)
+    write('line3','Test Complete')
+
+    ATrecord('SN_13Cdec_cw_c','SN as function of dpwr (cw)','Pct.Loss', drop_cw,' coupled',r7, ' decoupled', r6)
+    ATrecord('SN_13Cdec_mod_c','SN as function of dpwr (waltz16 via modulator)','Pct.Loss',drop_waltz_mod,' coupled',r7, ' decoupled', r5)
+    ATrecord('SN_13Cdec_wfg_c','SN as function of dpwr (waltz16 via waveform)','Pct.Loss',drop_waltz_wfg,' coupled',r7, ' decoupled',r4)
+    write('file',autotestdir+'/REPORT','SN_13CdecTest: SN(no dec) = %5.0f SN(cw dec)        = %5.0f Percent Loss = %2.0f',r7,r6,drop_cw)
+    write('file',autotestdir+'/REPORT','SN_13CdecTest: SN(no dec) = %5.0f SN(waltz mod dec) = %5.0f Percent Loss = %2.0f',r7,r5,drop_waltz_mod)
+    write('file',autotestdir+'/REPORT','SN_13CdecTest: SN(no dec) = %5.0f SN(waltz wfg dec) = %5.0f Percent Loss = %2.0f',r7,r4,drop_waltz_wfg)
+
+ATnext
+endif
+

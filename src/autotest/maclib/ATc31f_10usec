@@ -1,0 +1,114 @@
+"macro ATc31f_10usec"
+"ATc31f_10usec" "Find C13 RF Homogeneity"
+"       Uses power-limited value for power "
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   at_currenttest='c13rfhomo1f_10usec_c'
+   dn='C13' 
+   seqfil='ATrfhomo' 
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+
+   pwxlvl=at_max_pwxlvl dpwrf=at_dpwrf_10usec_c j=142
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   lb='n' sb=at/4 s1 av
+   wnt=''
+   wexp='ATc31f_10usec(`PART1`)'
+   dtext
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft f vsadj peak:$ht,cr rl(0)
+   sp=-1500 wp=1300 vsadj 
+   th=100 nll
+   getll(1):$int,cr 
+   cr=cr-71
+   movetof
+   axis='h'
+   sp=-175 wp=350
+   $step=trunc(110*at_pwx90_10usec_c/55)/10
+   array('pwx',55,0,$step)
+   text('X Coil RF Homogeneity:\\ 13C flip angles incremented From 0 to > 899 degrees ')
+   wexp='ATc31f_10usec(`PART2`)' 
+   wnt='ATwft f select(1) vsadj peak:$int,cr rl(0) sp=-1.8p wp=0.6p vsadj dssh(`dodc`)'
+   dtext
+   ATcycle au
+
+elseif ($1='PART2') then
+
+   wft dssh
+   s1
+   if ((at_plotauto='y') and (at_printparams='n'))
+    then ATpltext(wcmax-95,wc2max-6)
+   endif
+   ATplot
+   av
+   ATsvf
+   ATxrfhomocal:$pwx90,$pwx360,$pwx720,$ratio1,$ratio2
+   echo($pwx720)
+   array('pwx',22,($pwx360-.2*$pwx360),(0.02*$pwx360))
+   pwx[1]=0
+   text('C13 RF homogeneity: 0 degree, 360 array, 720 array')
+   $pwx720=2*$pwx360 $base=$pwx360
+   pwx[23]=$pwx720-.1*$base,$pwx720-.09*$base,$pwx720-.08*$base,$pwx720-.07*$base,$pwx720-.06*$base,$pwx720-.05*$base,$pwx720-.04*$base,$pwx720-.03*$base,$pwx720-.02*$base,$pwx720-.01*$base,$pwx720,$pwx720+.01*$base,$pwx720+.02*$base,$pwx720+.03*$base,$pwx720+.04*$base,$pwx720+.05*$base,$pwx720+.06*$base,$pwx720+.07*$base,$pwx720+.08*$base,$pwx720+.09*$base,$pwx720+.1*$base
+   r1
+   wnt='ATwft select(1) vsadj dssh dtext'
+   at_currenttest='c13rfhomo2f_10usec_c'
+   wexp='ATc31f_10usec(`PART3`)'
+   ATcycle au
+
+elseif ($1='PART3') then
+
+   wft dssh
+   ATxrfhomocal3:$pwx90,$pwx360,$pwx720,$ratio1,$ratio2,$arc
+   if $arc=1 then
+    ATfail('C13RFHOMOfc_10usec')
+    banner('C13 pulses had arcing. AutoTest run aborted')
+    abort
+   endif
+   array('pwx',22,($pwx360-.1*$pwx360),(0.01*$pwx360))
+   pwx[1]=0
+   text('C13 RF homogeneity: 0 degree, 360 array, 720 array')
+   $pwx720=trunc(20*$pwx360)/10 $base=trunc(10*$pwx360)/10
+   pwx[23]=$pwx720-.1*$base,$pwx720-.09*$base,$pwx720-.08*$base,$pwx720-.07*$base,$pwx720-.06*$base,$pwx720-.05*$base,$pwx720-.04*$base,$pwx720-.03*$base,$pwx720-.02*$base,$pwx720-.01*$base,$pwx720,$pwx720+.01*$base,$pwx720+.02*$base,$pwx720+.03*$base,$pwx720+.04*$base,$pwx720+.05*$base,$pwx720+.06*$base,$pwx720+.07*$base,$pwx720+.08*$base,$pwx720+.09*$base,$pwx720+.1*$base
+   r1
+   wnt='ATwft select(1) vsadj dssh dtext'
+   wexp='ATc31f_10usec(`PART4`)'
+   ATcycle au
+
+elseif ($1='PART4') then
+
+   wft dssh
+   ATxrfhomocal3:$pwx90,$pwx360,$pwx720,$ratio1,$ratio2,$arc
+   if $arc=1 then
+    ATfail('C13RFHOMOfc')
+    banner('C13 pulses had arcing. AutoTest run aborted')
+    abort
+   endif
+
+   ATsvf
+   $pwx90=trunc(10*$pwx90)/10
+   $pwx360=trunc(10*$pwx360)/10
+   $pwx720=trunc(10*$pwx720)/10
+   ATrecord('C13RFHOMOfc_10usec','C13 RF Homogeneity','power',pwxlvl,' fine_power',dpwrf,' pwx90',$pwx90,'pwx360',$pwx360,'pwx720',$pwx720)
+   ATrecord('C13RFHOMOf2c_10usec','C13 RF Homogeneity','power',pwxlvl,' fine_power',dpwrf,' pwx90',$pwx90,'360/0',$ratio1,'720/0',$ratio2)
+   write('file',autotestdir+'/REPORT','C13 RF HOMO: pw90=%2.1f pw360=%2.1f 360/0=%1.2f pw720=%3.1f 720/0=%1.2f                power=%2.0f finepower=%4.0f',$pwx90,$pwx360,$ratio1,$pwx720,$ratio2,pwxlvl,dpwrf)
+   write('line3','C13 pw90 = %2.1f ',$pwx90)
+   if ((at_plotauto='y') and (at_printparams='n'))
+    then ATpltext(wcmax-70,wc2max-6)
+   endif
+   r1
+   ATplot
+
+ATnext
+endif

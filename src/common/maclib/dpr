@@ -1,0 +1,26 @@
+"macro dpr"
+"dpr - default process.  This is called by process macro "
+"      dpr_seqfil macro is used if it exists      "
+"       else the macro returns to process macro            "
+
+$seqfil='' $seqfil=seqfil
+if ($seqfil = 's2pul') then
+ if (tn = 'H1') then $seqfil='PROTON' endif
+ if (tn = 'F19') then $seqfil='FLUORINE' endif
+ if (tn = 'C13') then $seqfil='CARBON' endif
+ if (tn = 'P31') then $seqfil='PHOSPHORUS' endif
+endif
+
+if ($seqfil = 'PRESAT') then
+ if (tn = 'H1') then $seqfil='PROTON' endif
+endif
+
+$seqproc='dpr_'+$seqfil
+exists($seqproc,'maclib'):$seqprocex
+if ($seqprocex) then
+ exec($seqproc)
+ return(1)
+else
+ return(0)
+endif
+

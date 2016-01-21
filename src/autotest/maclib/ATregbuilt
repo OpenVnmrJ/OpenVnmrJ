@@ -1,0 +1,22 @@
+"macro ATregbuilt"
+"ATregbuilt will write average and standard deviation values to curexp/avrgstdev.inp file "
+"ATregbuilt('fullname_histfile',colm#)"
+
+exists($1,'file'):$e
+if ($e=1) then
+  nrecords($1):$lines
+else
+  $lines = 0
+endif
+if ($lines<9) then "4 (#) lines, 2 ( ) line and 3 (data) line"
+  exists(curexp+'/regression.inp','file'):$e
+  if $e=1 then rm(curexp+'/regression.inp'):$e endif
+  return
+else
+  $tmp=''
+  format($2,2,0):$tmp
+  $regbuilt=systemdir+'/tcl/bin/atregbuilt'
+  "shell($regbuilt + ' ' +$1+ ' ' +$tmp+ ' ' +$3+ ' ' +$4+ ' ' +$5+ ' ' + vnmraddr + ''):$dum"
+
+  shell($regbuilt + ' "' +$1+ '" ' +$tmp+ ' at_reg_avrg ' + ' at_reg_stdev "' + curexp + '" "' + vnmraddr + '"'):$dum
+endif

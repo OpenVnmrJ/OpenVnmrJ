@@ -1,0 +1,72 @@
+
+*******************************************************************************
+clradd<:$stat,$message>	-	clear the add/subtract experiment
+jaddsub -       join the add/subtract experiment
+add<(multiplier <,'new'>)>  - add the current FID to the add/subtract experiment
+sub<(multiplier <,'new'>)>  - subtract the current FID from the add/subtract
+                              experiment
+add<(multiplier <,'trace',index>)>  - add the current FID to the "index" element
+                                      in the add/subtract experiment
+sub<(multiplier <,'trace',index>)>  - subtract the current FID from the "index"
+                                      element in the add/subtract
+addsubexp - global integer identifying the add/subtract experiment
+            The default is 5
+*******************************************************************************
+
+"clradd" deletes the add-subtract experiment. The add-subtract experiment
+number is defined by the global addsubexp parameter. The clradd program uses
+the delexp command to delete the add-subtract experiment. It takes the same
+return values as the delexp command. These can be used to suppress messages.
+See the manual for delexp to a description of the return values.
+
+"jaddsub" joins the add-subtract experiment, as defined by the global
+addsubexp parameter. jaddsub will create this parameter if it does not exist,
+and set it to a default value of 5. jaddsub with an argument, as in jaddsub('silent')
+will not clear the graphics, text window, or menu system. It does not matter
+what the argument is.
+
+The last displayed or selected FID is added to ("add") or subtracted
+from ("sub") the current contents of the add/subtract experiment.
+Am optional argument allows the FID to be first multiplied by a 'multiplier'.
+The FID data are divided by the number of time averages of the data, reflected
+in the parameter ct.  To get unscaled data, use a multiplier of ct.
+The parameters lsfid and phfid may be used to shift or phase rotate the
+selected FID before it is combined with the data in the add/subtract experiment.
+The add and sub commands use the cexp command to create the add-subtract experiment.
+They take the same return values as the cexp command. These can be used to
+suppress messages.  See the manual for cexp to a description of the return values.
+
+A multi-fid add/subtract experiment may be created with the add or sub command.
+The optional argument 'new' will create a new FID element in the add/subtract
+experiment.  For example,  the commands clradd select(1) add from some
+experiment will create the add/subtract experiment with a single FID in it.
+If the next commands typed are select(2) add,  then a single FID which is
+the sum of the original FIDs one and two will be made in the add/subtract
+experiment.  If, on the other hand,  the commands select(2) add('new')
+were typed,  then the add/subtract experiment will contain an array
+of two FIDs corresponding to the original FIDs one and two, respectively.
+One detail is that the arraydim parameter may need to be updated after
+constructing a multi-fid add/subtract experiment.  The recipe for doing
+this is to join the add/subtract experiment (jaddsub) and enter
+ setvalue('arraydim',<num>,'processed')
+where <num> is replaced by the number of FIDs in that experiment.
+For example, if twelve FIDs were put into the add/subtract experiment,
+one would enter
+ setvalue('arraydim',12,'processed')
+Individual FIDs in a multi-fid add/subtract experiment may subsequently be added
+to and subtracted from.  The add and sub command without a 'trace' argument
+will add or subtract from the first FID in the add/subtract experiment.
+Adding the 'trace' argument followed by a required index number will select
+another FID to be the target of the add/subtract.  For example, select(4)
+add('trace',6) will take the fourth FID from the current experiment and add
+it to the sixth FID in the add/subtract experiment.  When using the 'trace'
+argument, that FID must already exist in the add/subtract experiment by
+using an appropriate number of add('new') or sub('new') commands.
+
+
+Examples
+           clradd:$stat,$message
+           add:$stat,$message
+           sub(0.75)
+           add('new')
+           add('trace',2)

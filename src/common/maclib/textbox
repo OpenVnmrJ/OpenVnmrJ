@@ -1,0 +1,130 @@
+"macro textbox"
+//
+// this macro is called by vnmrj canvas.
+//
+// if text is from a template:
+// textbox('update', id, templatename, filename)
+//   if templatename is not fullpath 
+//     path = userdir +'/templates/vnmrj/textbox/templates/'+templatename+'/'+filename 
+//   otherwise
+//     path = templatename +'/'+ filename
+//
+// if text is not saved to a template yet:
+// textbox('update', id, filename)
+//   if filename is not fullpath 
+//     path = userdir +'/templates/vnmrj/textbox/tmp/'+filename 
+//   otherwise
+//     path = filename
+//
+//   if filename = 'text', file curexp+'/text' is used.
+
+if($# < 0.5) then return endif
+
+if($1 = 'update' and $# > 3.5) then
+
+   format($2, 0, 0):$idStr
+   $templatename = $3
+   $filename = $4
+
+   if($filename = 'text') then
+       $path = curexp +'/text'
+   else
+       substr($templatename,1,1):$s
+       if($s <> '/') then
+	   $path = userdir +'/templates/vnmrj/textbox/templates/'+$templatename+'/'+$filename
+       else
+   	   $path = $templatename+'/'+$filename
+       endif
+   endif
+
+   exists($path, 'file'):$e
+   if($e < 0.5) then
+	write('line3', 'missing textfile %s', $path)
+	return
+   endif
+ //  $newpath = $path + '.p'
+   $newpath = userdir +'/templates/vnmrj/textbox/tmp/'+$filename+$idStr + '.p'
+   textbox('parseText', $path, $newpath)
+   
+   vnmrjcmd('canvas textBox display' + $idStr + $newpath)
+
+   return
+endif
+
+if($1 = 'update' and $# > 2.5) then
+
+   $idStr = ''
+   format($2, 0, 0):$idStr
+   substr($3,1,1):$s
+   if($3 = 'text') then
+       $path = curexp +'/text' 
+       $newpath = userdir +'/templates/vnmrj/textbox/tmp/tmp'+$idStr + '.p'
+   elseif($s <> '/') then
+       $path = userdir +'/templates/vnmrj/textbox/'+$3
+       $newpath = userdir +'/templates/vnmrj/textbox/tmp/tmp'+$idStr + '.p'
+   else
+       $path = $3
+       $newpath = $path + '.p'
+   endif
+  
+   exists($path, 'file'):$e
+   if($e < 0.5) then
+	write('line3', 'missing textfile %s', $path)
+	return
+   endif
+ //  $newpath = $path + '.p'
+   textbox('parseText', $path, $newpath)
+   
+   vnmrjcmd('canvas textBox display ' + $idStr +' '+ $newpath +' '+ $path)
+
+   return
+endif
+
+if($1 = 'parseText' and $# > 2.5) then
+" if $file is not a fullpath, check annotation dirs "
+   $file = $2
+   substr($file, 1, 1):$s
+   if($s <> '/') then
+	return
+   endif
+
+   // shell('rm -f ' + $3)
+
+   $ok = 1
+   $t=''
+   $s1=''
+   $s2=''
+   $s3=''
+   $par=''
+   lookup('file',$file)
+   repeat
+      lookup('readline'):$t,$ok
+      if ($ok = 1) then
+
+   " skip comments "
+       substr($t, 1, 1):$s
+       if($s <> '#') then
+" parameter name inside {} will be replaced by its value. "
+         strstr($t, '{'):$n,$s1,$s2
+         if($n > 0.5) then
+           strstr($s2,'}'):$n,$par,$s3
+           if($n > 0.5) then
+              $n = -1
+              $n = typeof($par)
+              if($n > 0.5) then
+                 $t = $s1 + {$par} + $s3
+              elseif($n > -0.5) then
+                 $f = {$par}
+                 format($f, 0, 3):$s2
+                 $t = $s1 + $s2 + $s3
+              endif
+           endif
+         endif
+         write('file',$3, $t)
+       endif
+      endif
+   until ($ok = 0)
+
+   return
+endif
+

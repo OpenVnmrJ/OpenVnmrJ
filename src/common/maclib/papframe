@@ -1,0 +1,27 @@
+"macro papframe"
+"***********************************************"
+" papframe - print all parameters into text file"
+"***********************************************"
+
+exists('plotfile','parameter'):$exf
+if $exf then $plotfile=plotfile endif
+groupcopy('processed','current','acquisition')
+groupcopy('processed','current','processing')
+if $exf then plotfile=$plotfile endif
+
+exists(userdir+'/templates/vnmrj','directory'):$vnmrj
+if not $vnmrj then shell('mkdir '+userdir+'/templates/vnmrj') endif
+exists(userdir+'/templates/vnmrj/textbox','directory'):$textbox
+if not $textbox then shell('mkdir '+userdir+'/templates/vnmrj/textbox') endif
+exists(userdir+'/templates/vnmrj/textbox/templates','directory'):$templ
+if not $templ then shell('mkdir '+userdir+'/templates/vnmrj/textbox/templates') endif
+exists(userdir+'/templates/vnmrj/textbox/templates/AllParams','directory'):$all
+if $all then
+  shell('rm -rf '+userdir+'/templates/vnmrj/textbox/templates/AllParams')
+endif
+
+shell('cp -r /vnmr/templates/vnmrj/textbox/templates/AllParams '+userdir+'/templates/vnmrj/textbox/templates')
+
+write('reset',curexp+'/paptext')
+ap('ap',curexp+'/paptext')
+shell('cp '+curexp+'/paptext '+userdir+'/templates/vnmrj/textbox/templates/AllParams/box1')

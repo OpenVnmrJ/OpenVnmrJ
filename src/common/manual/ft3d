@@ -1,0 +1,123 @@
+*********************************************************
+*                                                       *
+*  ft3d   -   perform a 3D FT on a 3D FID data set      *
+*                                                       *
+*********************************************************
+
+ft3d:	usage  -  ft3d(<'datadir'>)
+		  ft3d(<nfiles>)
+		  ft3d(<'nocoef'>)
+                  ft3d(<'t1t2' or 't2t1'>)
+
+		  ft3d(<'f1f3'>)
+		  ft3d(<'f2f3'>)
+		  ft3d(<'f1f2'>)
+		  ft3d(<'xall'>)
+		  ft3d(<'fg'>)
+		  ft3d(<'noft'>)
+
+
+ft3d is a macro which executes the program ft3d in the VNMR system
+`bin` directory ($vnmrsystem/bin).  The environmental parameter PATH
+specifies the list of directories through which UNIX searches until
+it finds an executable ft3d program.  The first string argument which
+is a non-keyword is 'datadir'.  'datadir' (without the /data sub-
+directory appended) is an optional argument which specifies the output
+directory for the 3D spectral data file(s).  The default directory for
+the 3D spectral data is curexp/datadir3D.  nfiles (an integer) is an
+optional argument which specifies the number of 3D data files (data1
+to data`nfiles`) used to store the transformed 3D data.  nfiles must
+be <= 32.  If nfiles is entered, distributed F1F2 processing will be
+performed by the ft3d program if possible.
+
+If the optional keyword 'nocoef' is submitted as an argument to the
+ft3d macro, VNMR will not create a 3D coefficient file prior to invoking
+the ft3d program.  This is useful if one has modified an existing 3D
+coefficient file and does not want it to be overwritten prior to the
+3D transform.  By default, ft3d calls the make3dcoef macro to create
+a coefficient file using f1coef and f2coef string parameter values.
+
+The 't1t2' and 't2t1' are optional arguments to explicitly
+define the order of t1 and t2 arrays (other than ni and ni2).
+By default the macro looks at array parameter to make a
+decision and in that case if any parameter other than phase
+and phase2 are arrayed the macro aborts.
+
+The next set of optional keywords for ft3d pertain to plane extraction
+following the complete 3D FT.  'xall' indicates that all three 2D plane
+types, F1F3, F2F3, and F1F2, are to be automatically extracted at the
+end of the 3D FT.  The output directory for the extracted 2D planes is
+the same as that for the 3D spectral data except that the former uses
+the /extr subdirectory whereas the latter uses the /data subdirectory.
+'f1f3', 'f2f3', and 'f1f2' can be used to select any combination of
+plane types to be extracted.  The ft3d macro allows the user to submit
+any of these keywords more than once.  The program getplane, however,
+will display an error and abort if any one plane type is multiply de-
+fined for extraction.
+
+The 3D FID data must be loaded into the experiment in which the ft3d
+macro is to be run.  The ft3d program is started up in background mode
+by this macro so that VNMR remains free for interactive processing.
+In other words, one can start a 3D transform from within exp4 and, at
+the same time, continue with any 1D or 2D processing of the 3D FID
+data within the same experiment using VNMR.  If the 'fg' argument is
+given to ft3d, then the processing is done if foreground.  No additional
+processing will be possible until the ft3d program has finished.
+
+The optional 'noft' argument is similar to the 'noft' arguments to ft2d
+and ft. The Fourier transform step will be skipped in all three dimensions.
+In contradistinction to the 1D and 2D analogs, the 'noft' argument to
+ft3d causes all processing to be skipped; no weighting, phasing, etc.
+are performed.  All axes will be treated as frequency axes.
+
+Within the /data 3D data subdirectory, there are the following files
+and further subdirectories:
+
+
+	1. data1 through data#:
+
+	   These are the actual binary 3D spectral data files.
+	   The number of data files depends upon the size of
+	   the largest 2D plane and the value for the UNIX
+	   environmental parameter `memsize` if nfiles is not
+	   entered.
+
+
+	2. info:
+
+	   This is a directory which stores the 3D coefficient
+	   text file (coef), the binary information file (procdat),
+	   the 3D parameter set (procpar3d), and the automation
+	   file (auto).  The first three files are created by
+	   the set3dproc() command within VNMR.  The last file
+	   is created by the ft3d program.
+
+
+	3. log:
+
+	   This is a directory which stores the log files produced
+	   by the ft3d program.  f3 contains all log output for
+	   the F3 transform.  For the F2 and F1 transforms, there
+	   are two log file for each data file, one for the F2
+	   transform (f2.#) and one for the F1 (f1.#).  The master
+	   one for the F2 transform and one for the F1.  The
+	   file contains all the log output produced by the master
+	   ft3d program.
+
+
+The order of the arguments to the ft3d macro is not important.
+
+
+
+Related Manual Entries:		set3dproc		(command)
+				killft3d		(macro)
+				getplane		(macro)
+				make3dcoef		(macro)
+				fiddc3d			(parameter)
+				specdc3d		(parameter)
+				ptspec3d		(parameter)
+				ssfilter		(parameter)
+				ssorder			(parameter)
+				ntype3d			(parameter)
+				f1coef			(parameter)
+				f2coef			(parameter)

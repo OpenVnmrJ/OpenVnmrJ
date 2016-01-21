@@ -1,0 +1,90 @@
+"macro cpsave"
+
+$saveopt='y'
+exists('saveopt','parameter'):$saveoptex
+if ($saveoptex) then  
+// Always remove the saveopt parameter, so it is NEVER
+//  probagated to anywhere else
+    $saveopt=saveopt 
+    destroy('saveopt'):$dum
+    destroy('saveopt','processed'):$dum
+endif
+
+if ($saveopt<>'n') then
+"******************************************************************"
+                "This is a scout experiment, saveit in "
+                " scoutfids subdirectory and move on"
+   $md=archivedir+'/'+sample+'/dirinfo/macdir'
+   strstr(explist[1],pslabel+'scout'):$isscout
+   if ($isscout) then
+	$nextexp=''
+	cpexplist('next',$md):$nextexp
+	strstr($nextexp,'SetUp'):$isscout
+   endif
+   if ($isscout) then
+	cpqadjexpfile(explist[1],$md,'')
+	$wexp=wexp wexp='procsave'
+	setvalue('wexp',wexp,'processed')
+	savescoutfid(svftmplt,'new'):$return
+	wexp=$wexp
+        setvalue('wexp',wexp,'processed')
+	exptimelog('saved')
+	if (auto='y') then
+	    if ($return=0) then
+		eventLog('ExpError','saving scout fid')
+	    else
+		$fname='' shell('basename '+file):$fname
+		eventLog('ExpDone',$fname+' - scoutfid')
+	    endif
+	endif
+	return
+   endif
+"******************************************************************"
+
+   execpslabel('save')
+   $wexp=wexp wexp='procsave'
+   setvalue('wexp',wexp,'processed')
+   savefid(svftmplt,'new'):$return
+   $name='' shell('basename '+file+' .fid'):$name
+   wexp=$wexp
+   setvalue('wexp',wexp,'processed')
+   sqLog('ExpEnd')
+
+   if ($return=0) then
+	write('line3','Error in saving %s data',explist[1]):$msg
+	if (auto='y') then eventLog('ExpError','saving data') endif
+        write('line3',$msg)
+        sqLog('ExpError',$msg)
+	emessage('error')
+	return
+   endif
+   if (auto='y') then eventLog('ExpDone',$name) endif
+   exptimelog('saved')
+
+   $maclibdir=archivedir+'/'+sample+'/dirinfo/macdir'
+   cpqadjexpfile(explist[1],$maclibdir,'Completed')
+   shell('rm -f '+archivedir+'/'+sample+'/dirinfo/activeexp'):$dum
+   if (procdim>0) then
+	teststr('eOptions','savejcamp'):$issave
+	teststr('eOptions','emailjcamp'):$isemail
+//	$dxsave='none'
+//	getadminfo('autosavedx'):$dxsave
+//	strstr($dxsave,'save'):$issave
+//	strstr($dxsave,'email'):$isemail
+	if ($isemail) then
+		savejcamp($name,'email')
+	elseif ($issave) then
+		savejcamp($name)
+	endif
+	teststr('eOptions','savespec'):$specsave
+//	$specsave='no'
+//	getadminfo('autosavespec'):$specsave
+	exists('savespec','maclib'):$macex
+//	if ($specsave='yes') and ($macex) then
+	if ($specsave) and ($macex) then
+		savespec($name)
+	endif
+   endif
+
+"******************************************************************"
+endif

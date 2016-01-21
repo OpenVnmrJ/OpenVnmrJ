@@ -1,0 +1,113 @@
+"macro pi3ssbsq"
+"**************************************************************"
+"pi3ssbsq - macro to set both F1 and F2 windows to be          "
+"           pi/3 shifted sine-bell squared functions           "
+"usage    - pi3ssbsq(<number of increments used>)              "
+"**************************************************************"
+
+$acq='acq' $f1='f1' $f2='f2'
+$at=at $ni=0 $ni2=0
+
+getdim:$dim
+
+if ($# > 2) then 
+  write('error','Only 2 arguments are supported')
+  return
+endif
+
+$arg1='real'
+IF ($# > 0) THEN
+  if typeof('$1') then $arg1='string' endif
+ENDIF
+
+IF ($arg1='string') THEN
+  $f1='n' $f2='n' $acq='n'
+  if ($1 = 'f1') then 
+    $f1='f1' 
+    if ($# < 2) then
+      exists('proc1','parameter'):$ex
+      if ($ex) then
+      if (proc1 = 'lp') then
+       if (lpopt1 = 'f') then
+        $ni = strtext1+lpext1-1
+       endif
+      endif
+      endif
+    else
+      $ni=$2
+    endif
+
+  elseif ($1 = 'f2') then
+    if ($dim=2) then $acq='acq' $f2='n'
+	if ($# > 1) then $at=$2 endif
+    elseif ($dim=3) then 
+      $f2='f2' 
+      if ($# < 2) then
+       exists('proc2','parameter'):$ex
+       if ($ex) then
+       if (proc2 = 'lp') then
+        if (lpopt2 = 'f') then
+         $ni2 = strtext2+lpext2-1
+        endif
+       endif
+       endif
+      else
+       $ni2=$2
+      endif
+    endif
+
+  elseif ($1 = 'acq') then
+    $acq='acq'
+	if ($# > 1) then $at=$2 endif
+  elseif ($1 = 'f3') and ($dim=3) then 
+    $acq='acq'
+        if ($# > 1) then $at=$2 endif
+  endif
+
+ELSE
+
+if ($# < 2) then
+ exists('proc2','parameter'):$ex
+ if ($ex) then
+ if (proc2 = 'lp') then
+  if (lpopt2 = 'f') then
+   $ni2 = strtext2+lpext2-1
+  endif
+ endif
+ endif
+else
+ $ni2=$2
+endif
+
+if ($# < 1) then
+ exists('proc1','parameter'):$ex
+ if ($ex) then
+ if (proc1 = 'lp') then
+  if (lpopt1 = 'f') then
+   $ni = strtext1+lpext1-1
+  endif
+ endif
+ endif
+else
+ $ni=$1
+endif
+
+ENDIF
+
+if ($dim = 1) then $f1='n' $f2='n' endif
+if ($dim = 2) then $f2='n' endif
+
+if ($acq='acq') then
+gf='n' lb='n' awc='n' sb=-$at*5/6 sbs=-$at*2/3
+$np=$at*sw*2
+on('fn'):$fnon if ($fnon) and ($np > fn) then sb=sb*fn/$np sbs=sbs*fn/$np endif
+endif
+if $f1='f1' then
+if ($ni=0) then $ni=ni endif
+gf1='n' lb1='n' awc1='n' sb1=-$ni*5/(sw1*6) sbs1=-$ni*2/(sw1*3)
+endif
+if $f2='f2' then
+if ($ni2=0) then $ni2=ni2 endif
+gf2='n'  lb2='n' awc2='n' sb2=-$ni2*5/(sw2*6) sbs2=-$ni2*2/(sw2*3)
+endif
+

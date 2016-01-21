@@ -1,0 +1,35 @@
+"macro BPautoWet"
+"BPautoWet(<anything (for vnmrj)>)"
+BPgettemp:$temp
+if ($#=0) then
+  water
+endif
+if (seqfil='water') then
+  wet='y' presat='n' watergate='n' jumpret='n' shaped='n'
+else
+  wet='y' autosoft='n' 
+endif
+if autosoft='n' then
+  setlimit('wetpw',50000,0,.1)
+  $wetpw=1000*pw90
+
+  $factor = wetpw/$wetpw
+  ln($factor):$lnfactor
+  $tpwrdiff = trunc(20*0.43429*$lnfactor)
+
+  array('wetpwr',21,tpwr-64-$tpwrdiff,1) nt=1 gain=12
+  if (wetshape='hard') then
+    wetpwr=0
+    array('wetpwr',11,tpwr-64-$tpwrdiff,1) nt=1 gain=12
+  endif
+  if ((wetshape='gauss') or (wetshape='H2Osinc')) then
+    wetpwr=0
+    array('wetpwr',11,tpwr-58-$tpwrdiff,1) nt=1 gain=12
+  endif
+  temp=$temp
+  ssfilter='n'
+  wexp='BPautoWetproc1' wnt='f wft select(1) av vsadj dssh'
+  dg dps dtext au
+else
+  ph nt=4 getparam('BPgain','H1'):gain ga
+endif

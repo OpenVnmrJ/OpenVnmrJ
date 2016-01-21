@@ -1,0 +1,86 @@
+"macro Studyprobecal"
+"***********************************************************************"
+"  Studyprobecal - manages a probe calibration table that  		"
+"	 	can be unique to a given sample. This need 		"
+"		not be a full probe file				"
+"  Studyprobe is usually in sample/dirinfo/macdir directory		"
+"	or cursqexp (while in submit mode)				"
+"  Studyprobecal - display Studyprobe_(probename) file for 		"
+"		   the current sample/submission			"
+"  Studyprobecal('clear') - Clears any Studyprobe_(probename) file entry	"
+"  Studyprobecal('H1','tpwr',42) - writes to Studyprobe_(probename)	"
+"***********************************************************************"
+
+if (probe='') then 
+    write('error','probe is not defined')
+    return
+endif
+
+is_submitmode:$submit
+if ($submit) then
+   walkupQ_init
+   $file=cursqexp+'/macdir/Studyprobe_'+probe
+else
+//   $newexp=0
+//   isnewexp:$newexp
+//   if ($newexp) then return endif
+   $file=archivedir+'/'+sample+'/dirinfo/macdir/Studyprobe_'+probe
+   exists(archivedir+'/'+sample+'/dirinfo/macdir','directory'):$direx
+   if ($direx=0) then return endif
+endif
+exists($file,'file'):$fileex
+"************************************************************"
+if ($# < 1) then
+   if ($fileex) then
+     shell('gedit '+$file+'&'):$dum
+   endif
+   return
+endif
+
+"************************************************************"
+if ($#<3) then
+   if ($1='clear') then
+	write('reset',$file)
+   endif
+   if ($1='copy') and ($submit=0) then
+	exists($file,'file'):$fileex
+	if ($fileex) then shell('cp '+$file+' '+$2):$dum endif
+   endif
+   if ($1='delete') and ($submit=0) then
+	exists($2+'/Studyprobe_'+probe,'file'):$fileex
+	if ($fileex) then shell('rm -f '+$2+'/Studyprobe_'+probe):$dum endif
+   endif
+   return
+endif
+
+"************************************************************"
+$val=''
+format($3,'isreal'):$real
+if ($real) then
+   format($3,'lower'):$val
+else
+   $val=$3
+endif
+$str=$1+$2
+$x=0 $tot=0
+$s1='' $s2=''
+if ($fileex) then
+   readfile($file,'$s1','$s2','','local'):$tot
+   teststr('$s1',$str,'local'):$x
+endif
+if ($x=0) and ($val<>'') then
+   write('file',$file,'%s    %s',$str,$val)
+else
+   $s2[$x]=$val
+   if ($val='') then $s1[$x]='' endif
+   write('reset',$file)
+   if ($tot>0) then
+     $i=1
+     repeat
+	write('file',$file,'%s    %s',$s1[$i],$s2[$i])
+	$i=$i+1
+     until $i > $tot
+   endif
+endif
+
+"************************************************************"

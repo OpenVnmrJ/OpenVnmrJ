@@ -1,0 +1,445 @@
+"macro editprotocol"
+$dum='' $devnull=''
+
+$vj22c=0
+is_postvj22b:$vj22c
+if ($vj22c=0) then return endif
+
+operights('canclonestudies'):$editok
+if ($editok=0) then
+    write('error','%s does not have permission to clone',operator)
+    return
+endif
+
+if ($# < 1) then $1='init' endif
+$cdir=userdir+'/persistence/CloneManager'
+exists($cdir,'directory'):$cdirex
+if ($cdirex=0) then mkdir($cdir) endif
+
+exists('editprotpars','parameter','global'):$parex
+if ($parex=0) then
+    create('editprotpars','string','global')
+endif
+setprotect('editprotpars','on',256,'global')
+$protfile=$cdir+'/protocol_list'
+
+exists($protfile,'file'):$pfex
+if not $pfex then
+    write('reset',$protfile)
+endif
+
+IF ($1='init') or ($1='refresh') THEN
+"*************************************************************************"
+
+//	The editprotpars is an arrayed global parameter
+//	[1] - protocol name for LIB protocol (default value is pslabel)
+//		Can be changed in the popup
+//	[2] - tab name (default value is apptype)
+//		If apptype is empty string, the value would be 'Generic'
+//	[3] - Exp time in readable format
+//	[4] - Exp time in seconds
+//	[5] - Macro for LIB protocol
+//		(default value is pslabel - if macro exists; else
+//		default value would be empty string)
+//		Can be changed in the popup
+//	[6] - A flag used by the popup to decide if rtp should be used
+//		instead of executing a macro
+//	[7] - CMD protocol or LIB protocol
+//	[8] - Used by popup.  The value for the menu selection
+//	[9] - protocol name for CMD protocol
+//	[10] - Macro for CMD protocol
+//	[11] - Req Experiment
+//	[12] - appdir path where the protocol will be created
+//      [13] - appdir label for display
+//	[14] - tabname for the menu widget
+//	[15] - menu (menu1) level
+//	[16] - submenu (menu2) level
+//	[17] - label
+//	[18] - dodialog option (automatically prompt customization when added to SQ)
+
+   editprotpars[1]=pslabel
+   editprotpars[2]=apptype
+   if (apptype='') then editprotpars[2]='Generic' endif
+   EXPtime:$rt formattime($rt):editprotpars[3]
+   format($rt,0,0):editprotpars[4]
+   $macro=pslabel
+   exists($macro,'maclib'):$macex
+   if ($macex=0) then
+       $macro=''
+   endif
+   editprotpars[5]=$macro
+   editprotpars[6]='n'
+   editprotpars[7]='LIB'
+   editprotpars[8]=''
+   editprotpars[9]=''
+   editprotpars[10]=''
+   editprotpars[11]=''
+   editprotpars[12]=userdir
+   editprotpars[13]='Home account'  
+   if (editprotpars[2]='Generic') then
+	editprotpars[14]='NeWTaBNaMe'
+   else
+   	editprotpars[14]=editprotpars[2]
+   endif
+   editprotpars[15]=''
+   editprotpars[16]=''
+   editprotpars[17]=editprotpars[1]
+   editprotpars[18]='no'
+
+   getappdirs:$atot,$adirs,$alabels
+   teststr('$adirs',userdir,'local'):$ret
+   if ($ret) then editprotpars[13]=$alabels[$ret] endif
+
+   exists('REQexp','parameter'):$reqex
+   if ($reqex) then editprotpars[11]=REQexp[1] endif
+
+   editprotocol('getlist')
+
+   if ($1='init') then
+    	$appdirlist=$cdir+'/writable_appdirs'
+//    	getappdirs:$atot,$adirs,$alabels
+    	write('reset',$appdirlist)
+    	$i=1
+    	repeat
+     	   exists($adirs[$i],'file','w'):$writable
+           if ($writable) then
+          	write('file',$appdirlist,'"%s" "%s"',$alabels[$i],$adirs[$i])
+           endif
+           $i=$i+1
+    	until $i > $atot
+    	write('file',$appdirlist,'"" ""')
+
+   	vnmrjcmd('pnew','editprotpars')
+   	vnmrjcmd('popup','mode:modeless','file:editprotocol.xml','rebuild:yes','pnewupdate:true','close:editprotocol(`close`)','title:Protocol')
+   else
+	vnmrjcmd('pnew','editprotpars')
+   endif
+
+ELSEIF ($1='setvalue') THEN
+
+   ckstring($2,5):$2
+   editprotpars[$3]=$2
+   vnmrjcmd('pnew','editprotpars')
+
+ELSEIF ($1 = 'close') THEN
+   editprotpars=''
+
+ELSEIF ($1 = 'save') THEN
+"*************************************************************************"
+
+   $type=editprotpars[7]
+   $macro=editprotpars[5]
+   $tabname=editprotpars[2]
+   $menu=editprotpars[15]
+   $submenu=editprotpars[16]
+   $label=editprotpars[17]
+   $dialog=editprotpars[18]
+
+   $time=0 format(editprotpars[4],'lower'):$time
+
+   if ($# > 1) then $pname=$2
+   elseif ($type='CMD') then
+	$pname=editprotpars[9]
+	$macro=editprotpars[10]
+	$time=0
+        if ($macro='') then $macro=$pname endif
+//	$tabname='UserCMD'
+   else
+	$pname=editprotpars[1]
+   endif
+
+  $1char='' substr($pname,1,1):$1char
+  format($1char,'isreal'):$real
+  if ($real) then
+        write('error','protocol name cannot start with a number. aborted')
+        vnmrjcmd('pnew','editprotpars')
+        return
+  endif
+  
+   $seqfil=seqfil
+   $protex=0 $protpath=''
+   iscpprotocol($pname):$protex,$protpath
+   if ($protex) then
+	substr($protpath,'dirname'):$protdir
+        write('error','A protocol exists for %s in %s',editprotpars[1],$protdir)
+        vnmrjcmd('pnew','editprotpars')
+        return
+   endif
+   if ($macro='') then $macro=$pname endif
+   if ($label='') then $label=$pname endif
+
+   if (editprotpars[6]='y') then
+	$macro=$pname
+//  	$studydir=userdir+'/studylib/'+$pname
+	getfilepath($pname,'studylib'):$direx,$studydir
+//   	exists($studydir,'directory'):$direx
+   	if ($direx) then
+            write('error','%s is an existing study!',$pname)
+            vnmrjcmd('pnew','editprotpars')
+            return
+   	endif
+	exists($macro,'maclib'):$macex
+	if ($macex) then
+	    write('error','%s is an existing macro.  Use different name.',$macro)
+            vnmrjcmd('pnew','editprotpars')
+            return
+	endif
+   else
+        exists($macro,'maclib'):$macex
+   	if ($macex=0) then
+            write('error','macro %s does not exist',$macro)
+            vnmrjcmd('pnew','editprotpars')
+            return
+   	endif
+   endif
+   $req=editprotpars[11]
+   $appdir=editprotpars[12]
+   $pdir=$appdir+'/templates/vnmrj/protocols'
+   $studydir=$appdir+'/studylib/'+$pname
+   if ($type<>'LIB') then $req='' 
+	strstr($label,'(CMD)'):$ok
+	if not ($ok) then $label=$label+' (CMD)' endif
+   endif
+   mkCPprotocol($pname,$pdir,$tabname,$time,$seqfil,$type,$macro,$req,$label,$menu,$submenu,$dialog):$ok
+   if ($ok) then
+     if (editprotpars[6]='y') and ($type<>'CMD') then
+   	setprotect('','clear',16384,'current')
+	$tmpfile=curexp+'/tmppar'
+	$params='newmodules','apptype','file','wds','wstart','lockfreq_','probe_'
+	$params=$params,'tnshapes','dnshapes','dn2shapes','dn3shapes'
+	writeparam($tmpfile,'$params','current')
+
+        mkdir('-p',$studydir+'/macdir'):$dum
+        mkdir('-p',$studydir+'/macdirlong'):$dum
+        $parpath=$studydir+'/'+$pname
+        savesampglobal('cp')
+        resetsampglobal
+        wds='' wstart='' newmodules='' apptype=''
+        rmpar('lockfreq_ probe_')
+        tnshapes='' dnshapes='' dn2shapes='' dn3shapes=''
+        ACQtime=$time
+        svp($parpath)
+        getsampglobal('cp')
+	fread($tmpfile)
+	rm('-f',$tmpfile):$dum
+        write('reset',$studydir+'/EXPLIST')
+        write('file',$studydir+'/EXPLIST','%s_01  %d  %s  xx001  Queued',$pname,ACQtime,$pname)
+        write('reset',$studydir+'/LONGLIST')
+        write('reset',$studydir+'/macdir/'+$pname+'acq')
+        write('file',$studydir+'/macdir/'+$pname+'acq','ACQtime=%d',ACQtime)
+	exists($appdir+'/maclib','directory'):$macdirex
+	if ($macdirex=0) then mkdir($appdir+'/maclib'):$dum endif
+        write('reset',$appdir+'/maclib/'+$pname)
+        write('file',$appdir+'/maclib/'+$pname,'studysetup($0)')
+        write('reset',$studydir+'/sampleglobal')
+        copy($appdir+'/templates/vnmrj/protocols/'+$pname+'.xml',$studydir):$dum
+     endif
+	write('line3','protocol %s successfully added to %s tab',$pname,$tabname)
+        // Put protocol into Experiment Selector
+        vnmrjcmd('util','updateexpsel', $pname, $label, $tabname, $menu, $submenu)
+	editprotocol('refresh')
+     	if ($type='CMD') then
+		editprotpars[7]=$type
+		editprotpars[9]=$pname
+		editprotpars[10]=$macro
+		editprotpars[17]=$label
+		vnmrjcmd('pnew','editprotpars')
+     	endif
+   else
+	write('error','protocol creation failed')
+	vnmrjcmd('pnew','editprotpars')
+   endif
+
+"*************************************************************************"
+ELSEIF ($1 = 'delete') THEN
+
+   $appdir=editprotpars[12]
+   $dir1=$appdir+'/templates/vnmrj/protocols'
+   $dir2=$dir1+'_backup'
+   $file=editprotpars[8]
+   if ($# > 1) then $file=$2 endif
+   if ($file='') then return endif
+   exists($dir1+'/'+$file,'file'):$fileex
+   if ($fileex=0) then
+	$file=$file+'.xml'
+	exists($dir1+'/'+$file,'file'):$fileex
+   endif
+   if ($fileex=0) then 
+	getfilepath($file,'templates/vnmrj/protocols'):$fileex,$filepath
+	if ($fileex) then 
+	    strstr($filepath,'/templates/vnmrj'):$f2ex,$appdir
+	    if ($f2ex=0) then return endif
+	else
+	    return
+	endif
+   endif
+   $dir1=$appdir+'/templates/vnmrj/protocols'
+   $dir2=$dir1+'_backup'
+
+   exists($dir2,'directory'):$direx
+   if ($direx=0) then
+	mkdir('-p',$dir2):$dum
+   endif
+   rename($dir1+'/'+$file,$dir2+'/'+$file):$dum
+   $filename='' substr($file,'basename'):$filename,$ext
+   vnmrjcmd('util','removeexpsel',$filename)
+
+   exists($appdir+'/studylib/'+$filename,'directory'):$studyex
+   if ($studyex) then
+        exists($appdir+'/studylib_bkup','directory'):$dir2ex
+        if ($dir2ex=0) then
+            mkdir($appdir+'/studylib_bkup'):$dum
+        endif
+	rename($appdir+'/studylib/'+$filename,$appdir+'/studylib_bkup/'+$filename):$dum
+	rm('-f',$appdir+'/maclib/'+$filename):$dum
+   endif
+
+   write('line3','protocol %s successfully backedup in the %s appdir',$filename,$appdir)
+   getfilepath($filename+'.xml','templates/vnmrj/protocols'):$stillthere,$stillpath
+   if ($stillthere) then
+	write('error','protocol %s still exists. %s',$filename,$stillpath)
+   else
+	vnmrjcmd('util','removeexpsel',$filename)
+   endif
+   editprotocol('getlist')
+   editprotpars[8]=''
+   editprotpars[12]=userdir
+   editprotpars[13]='Home Account'
+   vnmrjcmd('pnew','editprotpars')
+
+"*************************************************************************"
+ELSEIF ($1 = 'getlist') THEN
+
+   getappdirs:$atot,$adirs
+   $adirs2=''
+   $i=1 $j=1
+   repeat
+	exists($adirs[$i],'file','w'):$ok
+	if ($ok) then $adirs2[$j]=$adirs[$i] $j=$j+1 endif
+	$i=$i+1
+   until $i > $atot
+   $adirs=$adirs2
+   $atot=size('$adirs')
+
+   write('reset',$protfile)
+   write('reset',$protfile+'_tmp')
+   $j=1
+   repeat
+      exists($adirs[$j]+'/templates/vnmrj/protocols','directory'):$pdirex
+      if ($pdirex) then
+        shell('(ls -1 '+$adirs[$j]+'/templates/vnmrj/protocols/*.xml >> '+$protfile+'_tmp)'):$devnull
+      endif
+      $j=$j+1
+   until $j > $atot
+
+	$s1='' $s2=''
+	readfile($protfile+'_tmp','$s1','$s2','','local'):$total
+	if ($total) then
+	   $i=1
+	   repeat
+		substr($s1[$i],'basename'):$pname,$ext
+		getfilepath($pname,'studylib'):$isstudy
+		iscpprotocol($s1[$i]):$iscp
+		if ($iscp) and ($isstudy=0) then
+		   write('file',$protfile,'"%s" "%s"',$pname,$pname)
+		endif
+		$i=$i+1
+	   until $i > $total
+	endif
+	rm('-f',$protfile+'_tmp'):$dum
+        write('file',$protfile,'"" ""')
+	getTabList(apptype)
+
+ELSEIF ($1 = 'getinfo') THEN
+"*************************************************************************"
+//   $dir1=userdir+'/templates/vnmrj/protocols'
+   $file=editprotpars[8]
+   if ($# > 1) then $file=$2 endif
+   if ($file='') then return endif
+   $key=''
+   getfilepath($file+'.xml','templates/vnmrj/protocols'):$fileex,$key
+   if ($fileex=0) then return endif
+   strstr($key,'/templates/vnmrj/protocols/'):$fileok,$dir1
+   $pname='' substr($key,'basename'):$pname,$ext
+   iscpprotocol($key):$iscp
+   if ($iscp=0) then
+	write('error','%s is not a valid protocol',$pname)
+	return
+   endif
+
+   getfilepath($pname,'studylib'):$studyex
+   if ($studyex) then
+       getfilepath($pname,'maclib'):$macex,$macpath
+       if ($macex) then
+	   shell('(cat '+$macpath+' | grep -c studysetup)'):$studyex
+       else
+	   $studyex=0
+       endif
+   endif
+
+   $stime='unknown' $time=0
+   getattr($key,'action','time'):$stime
+   invformattime($stime):$time
+
+   $tabname=''
+   getattr($key,'template','tabname'):$tabname
+   if ($tabname='') then
+      getattr($key,'template','apptype'):$tabname
+   endif
+   $label='' $menu='' $submenu=''
+   getattr($key,'template','menu1'):$menu
+   getattr($key,'template','menu2'):$submenu
+   getattr($key,'template','label'):$label
+   if ($label='') then $label=$pname endif
+
+   $seqfil=''
+   getattr($key,'template','seqfil'):$seqfil
+
+   $type=''
+   getattr($key,'action','type'):$type
+
+   $macro=''
+   getattr($key,'action','macro'):$macro
+   $dialog='no'
+   getattr($key,'action','dodialog'):$dialog
+
+   if ($tabname='') or ($seqfil='') or ($type='') or ($macro='') then
+	write('error','Error reading %s',$file)
+	return
+   endif
+
+   if ($type='CMD') then
+   	editprotpars[9]=$pname
+   	editprotpars[10]=$macro
+	editprotpars[11]=''
+   else
+	editprotpars[1]=$pname
+   	editprotpars[2]=$tabname
+   	editprotpars[3]=$stime
+   	format($time,0,0):editprotpars[4]
+   	strstr($macro,'rtppar('):$ret
+   	if ($ret) or ($studyex) then
+   		editprotpars[5]=''
+		editprotpars[6]='y'
+   	else
+   		editprotpars[5]=$macro
+		editprotpars[6]='n'
+   	endif
+	$reqexp=''
+	getEXPinfo($pname):$reqexp
+	editprotpars[11]=$reqexp[1]
+   endif
+   editprotpars[7]=$type
+   editprotpars[8]=$file
+   getappdirs:$atot,$adirs,$alabels
+   editprotpars[12]=$dir1
+   teststr('$adirs',$dir1,'local'):$ret1
+   if ($ret1) then editprotpars[13]=$alabels[$ret1] endif
+   editprotpars[14]=editprotpars[2]
+   editprotpars[15]=$menu
+   editprotpars[16]=$submenu
+   editprotpars[17]=$label
+   editprotpars[18]=$dialog
+   vnmrjcmd('pnew','editprotpars')
+
+ENDIF

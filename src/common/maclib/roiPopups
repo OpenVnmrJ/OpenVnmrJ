@@ -1,0 +1,30 @@
+"macro roiPopups"
+
+"$nsel, # of selected rois "
+"$nname, # of roi names "
+"$names, roi names "
+
+aipSomeInfoUpdate('roiInfo'):$nsel,$nname,$names
+
+if($nname > 0) then
+   $np=0
+   $nl=0
+   $nh=0
+   $i=1
+   while($i <= $nname) do
+     substr($names, $i):$name
+     if($name = 'Point' and $np = 0) then
+       vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:aipPt.xml', 'location:topMenuBar', 'title:Point Info')
+       $np = $np + 1
+     elseif(($name = 'Line' or $name='Polyline') and $nl = 0) then
+       vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:aipLine.xml', 'location:shuffler', 'title:Line Profile')
+       $nl = $nl + 1
+     elseif($nh = 0) then
+       vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:aipStat.xml', 'location:controlPanel', 'title:Image Statistics')
+       $nh = $nh + 1
+     endif
+     $i = $i + 1
+   endwhile
+else
+   vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:aipStat.xml', 'location:topMenuBar', 'title:Image Statistics')
+endif

@@ -1,0 +1,71 @@
+"macro BPSSshim"
+"BPSSshim  A macro that runs once to set up shimming without gradients"
+"          and then returns normal gradients (and go) on second action"
+"          ss is used as the determining factor. if ss=32767 then the "
+"          macro assumes that acquisition for shimming going on and   "
+"          the second half of the macro executes, resetting gradient  "
+"          activity. Otherwise, gradients are disabled and ss=32767   "
+"          is set, followed by go to permit manual shimming under     "
+"          typically decoupling conditions. This is useful for cold   "
+"          probes to accomodate z1 shifts coming from X coil heating  "
+
+"          If the global gradientdisable flag is not present, pfgon   "
+"          is reset temporarily to 'nnn' and reset to stored value    "
+"          upon the second use of BPSSshim                            "
+""
+"	   Modified 04/05 to set ni,ni2 and ni3 to zero for the first "
+"	   dummy run. Marco Tonelli @NMRFAM"
+
+
+if ss<32767 then
+  A=ss   "memorize normal ss"
+  ss=32767 
+
+"if they exist and are set >1 memorize ni, ni2 and ni3, then set them to 0"
+  exists('ni','parameter'):$e
+  if $e>0.5 then 
+    if ni>1 then r5=ni ni=0 endif
+  else r5=41600
+  endif
+  exists('ni2','parameter'):$e
+  if $e>0.5 then 
+    if ni2>1 then r6=ni2 ni2=0 endif
+  else r6=201201
+  endif
+  exists('ni3','parameter'):$e
+  if $e>0.5 then
+    if ni3>1 then r7=ni3 ni3=0 endif
+  else r7=120895
+  endif
+
+"turn off gradients"
+  exists('gradientdisable','parameter','global'):$e
+  if $e=1 then
+   gradientdisable='y'
+  else
+   spinsys=pfgon pfgon='nnn'
+  endif
+
+  go
+else
+  halt
+
+"restore ss"
+  ss=A A=0
+
+"restore ni, ni2 and ni3 values"
+  if (r5<>41600)  then ni=r5  r5=0 endif
+  if (r6<>201201) then ni2=r6 r6=0 endif
+  if (r7<>120895) then ni3=r7 r7=0 endif
+
+"turn gradients back on"
+  exists('gradientdisable','parameter','global'):$e
+  if $e=1 then
+   gradientdisable='n'
+  else
+   pfgon=spinsys
+  endif
+  shell('sleep 2')
+
+  go
+endif

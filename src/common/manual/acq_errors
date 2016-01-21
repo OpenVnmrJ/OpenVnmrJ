@@ -1,0 +1,224 @@
+		Acquisition Done and Error Codes
+		--------------------------------
+
+ Whenever wbs, wnt, wexp, or werr processing occurs,  the acquisition
+ condition which initiated that processing is available from the
+ parameter acqstatus.  This acquisition condition is represented by
+ two numbers,  a "done" code and an "error" code.  The done code is
+ set in acqstatus[1] and the error code is set in acqstatus[2].  Macros
+ may take different action depending on the acquisition condition.
+ The done codes and error codes are listed below.  As an example,  a
+ werr macro could specify special processing if the maximum number
+ of transients of accumulated.  The appropriate test in the macro
+ would be:
+
+ if (acqstatus[2] = 200) then
+    "do special processing,  e.g. dp='y' au"
+    endif
+
+ The acquisition error messages printed by Vnmr may be modified by
+ creating an "acqerrmsgs" file with substitute messages.  Each line in
+ the file contains an error code followed by the text of the desired
+ message.  Error codes that do not occur in the acqerrmsgs file will
+ continue to produce the standard messages.  Vnmr first searches for
+ the acqerrmsgs file in the user's "$vnmruser/templates" directory; if
+ the file is not there Vnmr looks the the system directory
+ "$vnmrsystem/user_templates".  Entries are taken only from one file
+ or the other, their contents are not "merged".  A typical entry in
+ the file would be:
+
+ 301	Can't spin the spinner
+
+
+ Error codes marked with an asterisk (*) are not used on Mercury and
+ GEMINI 2000
+ 
+ Done Codes:
+
+       11. FID Complete.
+       12. Block Size Complete.	(error code indicates BS # completed)
+       13. Soft Error.
+       14. Warning.
+       15. Hard Error.
+       16. Experiment Aborted.
+       17. Setup Completed.     (error code indicates type of setup completed)
+      101. Experiment Complete.
+      102. Experiment Started.
+ 
+
+ Error codes:
+   Note: WARNINGS   - Experiment acquisition continues.
+         SOFTERRORS - Experiment acquisition is stopped.
+
+   WARNINGS:
+      101. Low Noise Signal.
+      102. High Noise Signal.
+      103. ADC overflow occurred.
+      104. Receiver overflow occurred.*
+
+   SOFTERROR:
+	
+      200. Maximum Transient Completed for Single Precision Data.
+
+
+   WARNINGS or SOFTERRORS: (User selectable)
+
+      201. Lost Lock during experiment.  (LOCKLOST)
+
+
+      300. Spinner Errors:
+      301. Sample failing to spin after three attempts of repositioning.
+           (BUMPFAIL)
+      302. Spinner did not regulate in the allowed time period. (RSPINFAIL)*
+      303. Spinner went out of regulation during the experiment. (SPINOUT)*
+      395. Unknown Spinner device specified.   (SPINUNKNOWN)*
+      396. Spinner device is not powered up.   (SPINNOPOWER)*
+      397. RS232 Cable not connected between console and Spinner device.
+           (SPINRS232)*
+      398. Spinner does not acknowledge commands. (SPINTIMEOUT)*
+
+
+      400. VT Errors:
+      400. VT did not regulate in the given time 'vttime' after being set.
+      401. VT went out of regulation during the experiment.   (VTOUT)
+      402. VT is in manual mode after the automatic command given.
+		(see oxford manual)*
+      403. VT Safety Sensor has reached limit. (see oxford manual)*
+      404. VT can not turn on cooling gas. (see oxford manual)*
+      405. VT main sensor on bottom limit. (see oxford manual)*
+      406. VT main sensor on top limit. (see oxford manual)*
+      407. VT sc/ss error. (see oxford manual)*
+      408. VT oc/ss error. (see oxford manual)*
+      495. Unknown VT device specified.   (VTUNKNOWN)*
+      496. VT device is not powered up.   (VTNOPOWER)*
+      497. RS232 Cable not connected between console and VT device. (VTRS232)*
+      498. VT does not acknowledge commands. (VTTIMEOUT)
+
+
+
+   SOFTERROR:
+
+      500. Sample Changer Errors:
+      501. Sample changer has no sample to retrieve.
+      502. Sample changer arm unable to move up during retrieve.
+      503. Sample changer arm unable to move down during retrieve.
+      504. Sample changer arm unable to move sideways during retrieve.
+      505. Invalid sample number during retrieve.
+      506. Invalid temperature during retrieve.
+      507. Gripper abort during retrieve.
+      508. Sample out of range during automatic retrieve.
+      509. Illegal command character during retrieve.*
+      510. Robot arm failed to find home position during retrieve.*
+      511. Sample tray size is not consistent.*
+      512. Sample changer power failure during retrieve.*
+      513. Illegal sample changer command during retrieve.*
+      514. Gripper failed to open during retrieve.*
+      515. Air supply to sample changer failed during retrieve.*
+      525. Tried to insert invalid sample number.*
+      526. Invalid temperature during sample changer insert.*
+      527. Gripper abort during insert.*
+      528. Sample out of range during automatic insert.
+      529. Illegal command character during insert.*
+      530. Robot arm failed to find home position during insert.*
+      531. Sample tray size is not consistent.*
+      532. Sample changer power failure during insert.*
+      533. Illegal sample changer command during insert.*
+      534. Gripper failed to open during insert.*
+      535. Air supply to sample changer failed during insert.*
+      593. Failed to remove sample from the magnet.*
+      594. Sample failed to spin after automatic insert.
+      595. Sample failed to insert properly.
+      596. Sample changer not turned on.
+      597. Sample changer not connected to RS-232 interface.
+      598. Sample changer not responding.*
+
+      600. Shimming Errors:
+      601. Shimming User Aborted.*
+      602. Lost Lock while Shimming.*
+      604. Lock Saturation while Shimming.*
+      608. A Shim Coil DAC limit hit while Shimming.*
+
+      700. Auto-Lock Errors:
+      701. User Aborted.		     (ALKABORT)*
+      702. Auto Lock Failure in finding resonance of sample. (ALKRESFAIL)
+      703. Auto Lock Failure in lock power adjustment. (ALKPOWERFAIL)*
+      704. Auto Lock Failure in lock phase adjustment. (ALKPHASFAIL)*
+      705. Auto Lock Failure, lock lost in finial gain adjustment. 
+           (ALKGAINFAIL)*
+
+      800. Auto-Gain Errors.
+      801. Auto-Gain failure, gain driven to zero, reduce pulse width (pw).
+           (AGAINFAIL)
+
+
+      HARDERRORS:
+
+      901. Incorrect PSG version for Acquisition.
+      902. Sum-to-Memory Error, Number of points acquired not equal to np.
+      903. Fifo Underflow Error. (A delay too small?). *
+      904. Requested number of data points (np) to acquire is too large 
+	   for acquisition.*
+      905. Acquisition Bus Trap (Experiment maybe lost). *
+
+      1000.  SCSI Errors
+      1001.  Recoverable SCSI read transfer from Console Occurred. *
+      1002.  Recoverable SCSI write transfer from Console Occurred. *
+      1003.  Unrecoverable SCSI read transfer Error. *
+      1004.  Unrecoverable SCSI write transfer Error. *
+      
+      1100.  Host disk errors
+      1101.  Error opening disk file. (most likely a Unix premission problem.)*
+      1102.  Error on closing disk file.*
+      1103.  Error on reading from  disk file.*
+      1104.  Error on writing to disk file.*
+
+      1400. RF Monitor errors (only on Inova systems with RF monitor)
+      1400. An RF monitor trip occurred but the error status is OK
+      1401. Reserved RF monitor trip A occurred
+      1402. Reserved RF monitor trip B occurred
+      1404. Excessive reflected power at quad hybrid
+      1405. STOP button pressed at operator station
+      1406. Power for RF Monitor board (RFM) failed
+      1407. Attenuator control or readback failed
+      1408. Quad reflected power monitor bypassed (Warning)
+      1409. Power supply monitor for RF Monitor board (RFM) bypassed (Warning)
+      1410. Ran out of memory to report RF monitor errors
+      1411. No communication with RF monitor system
+      1421. Reserved RF monitor trip A1 occurred on observe channel
+      1422. Reserved RF monitor trip B1 occurred on observe channel
+      1423. Reserved RF monitor trip C1 occurred on observe channel
+      1424. RF Monitor board (PALI/TUSUPI) missing on observe channel
+      1425. Excessive reflected power on observe channel
+      1426. RF amplifier gating disconnected on observe channel
+      1427. Excessive power detected by PALI on observe channel
+      1428. RF Monitor system (TUSUPI) heartbeat stopped on observe channel
+      1429. Power supply for PALI/TUSUPI failed on observe channel
+      1430. PALI asserted REQ_ERROR on observe channel (should never occur)
+      1431. Excessive power detected by TUSUPI on observe channel
+      1432. RF power amp: overdrive on observe channel
+      1433. RF power amp: excessive pulse width on observe channel
+      1434. RF power amp: maximum duty cycle exceeded on observe channel
+      1435. RF power amp: overheated on observe channel
+      1436. RF power amp: power supply failed on observe channel
+      1437. RF power monitoring disabled on observe channel (Warning)
+      1438. Reflected power monitoring disabled on observe channel (Warning)
+      1439. RF power amp monitoring disabled on observe channel (Warning)
+      1461. Reserved RF monitor trip A2 occurred on decouple channel
+      1462. Reserved RF monitor trip B2 occurred on decouple channel
+      1463. Reserved RF monitor trip C2 occurred on decouple channel
+      1464. RF Monitor board (PALI/TUSUPI) missing on decouple channel
+      1465. Excessive reflected power on decouple channel
+      1466. RF amplifier gating disconnected on decouple channel
+      1467. Excessive power detected by PALI on decouple channel
+      1468. RF Monitor system (TUSUPI) heartbeat stopped on decouple channel
+      1469. Power supply for PALI/TUSUPI failed on decouple channel
+      1470. PALI asserted REQ_ERROR on decouple channel (should never occur)
+      1471. Excessive power detected by TUSUPI on decouple channel
+      1472. RF power amp: overdrive on decouple channel
+      1473. RF power amp: excessive pulse width on decouple channel
+      1474. RF power amp: maximum duty cycle exceeded on decouple channel
+      1475. RF power amp: overheated on decouple channel
+      1476. RF power amp: power supply failed on decouple channel
+      1477. RF power monitoring disabled on decouple channel (Warning)
+      1478. Reflected power monitoring disabled on decouple channel (Warning)
+      1479. RF power amp monitoring disabled on decouple channel (Warning)

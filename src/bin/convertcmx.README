@@ -1,0 +1,295 @@
+# 
+# Copyright (c) 1991-1994 Varian Assoc.,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential
+# information of Varian Assoc., Inc. and its contributors.
+# Use, disclosure and reproduction is prohibited without
+# prior consent.
+#
+******************************************************************************
+NMR data file transfer and conversion utilities             v2.75 STM  8/13/98
+******************************************************************************
+
+This is a program which translates data files from several formats into a
+Varian format suitable for importing into VNMR.  Currently supported formats
+are Chemagnetics CMX (1-D and 2-D time-domain data from Spinsight, CMXW, and
+spec), NMR1 (1-D, as created by Chemagnetics M-100 spectrometers for
+processing on a Vax), SMIS (1-D and 2-D), and Bruker Aspect-based (1-D only).
+A variety of optional transformations are allowed on the data.
+
+Also included are utilities which execute Ethernet file transfers of the
+dataset to be converted from the remote spectrometer to a Sun.  File transfer
+is initiated from the VNMR command line and the data is automatically read
+into VNMR.
+
+******************************************************************************
+
+New in version 2.75:
+
+Arrayed and 2-D Spinsight data are now converted more reliably and correctly.
+
+Version 2.75 is Y2K-compatible for old Spinsight data containing 2-digit
+years.  There are no other known Y2K issues.
+
+******************************************************************************
+
+New in versions 2.60 through 2.70:
+
+Chemagnetics CMX conversion has been extended from the original Intel-based
+"spec" format to Sun-based CMXW and Spinsight.  Both ordinary and arrayed
+1-D are handled.  2-D should work also but has not been tested extensively.
+
+Version 2.70 has some unfinished, experimental features corresponding to the
+-ov and -x commandline options.
+
+******************************************************************************
+
+Installation locations
+----------------------
+
+This release uses the Unix "make" program to install the files into the
+proper places automatically.  You can change these places to suit your needs
+by editing in the file "Makefile" in this directory.  The installation
+locations are easy to spot at the top of the Makefile.  The default places,
+and the corresponding Makefile fields to change, are:
+
+executable binary programs:
+	/usr/local/bin (Makefile field:  BINDIR).  Make sure it has
+	permissions such that the NMR users have at least r-x permission for
+	it.  It must be placed in the "path" environment variable in each
+	user's .cshrc, .login, or .profile file.  You may install the
+	executable into whatever alternative directory you like (perhaps
+	/usr/local), as long as it's on the users' search path.
+
+executable shell scripts:
+	/usr/local (Makefile field:  SCRDIR).  Make sure it has permissions
+	such that the NMR users have at least r-x permission for it.  It must
+	be placed in the "path" environment variable in each user's .cshrc,
+	.login, or .profile file.  You may install the scripts into whatever
+	alternative directory you like, as long as it's on the users' search
+	path.
+
+VNMR macros
+	/home/vnmr1/vnmrsys/maclib (Makefile field:  MACLIB).  It is best not
+	to use /vnmr/maclib, since there the macros would be destroyed by
+	VNMR upgrades.
+
+template VNMR parameter sets
+	/home/vnmr1/vnmrsys/parlib (Makefile field:  PARLIB).  It is best not
+	to use /vnmr/parlib, since there the macros would be destroyed by
+	VNMR upgrades.  You should create this directory if it does not
+	already exist.
+
+You will need a working C compiler to compile the program.  For SunOS 4.1.x,
+the compiler that comes with SunOS works fine; just edit the Makefile,
+uncomment the line "CC=cc", and comment out the line "CC=gcc".  For Solaris
+2.x, the compiler I use is GNU's.  If you have a standalone version of gcc,
+edit the Makefile, uncomment the line "CC=gcc", and comment out the line
+"CC=cc".  You can also use the version of gcc which comes with VNMR.  Edit
+the Makefile as for standalone gcc, then do the following to make sure
+gcc can find all of its component pieces:
+
+    set path = ( /vnmr/gnu/bin $path)
+    setenv GCC_EXEC_PREFIX /vnmr/gnu/lib/gcc-lib/sparc-sun-solaris2.3/2.6.3/
+
+Installation instructions
+-------------------------
+
+1.  Cd to the directory containing this file (e.g. /usr/local/source/convert).
+
+2.  Edit the Makefile and set path and GCC_EXEC_PREFIX if necessary.
+
+3.  Converted datasets will need a set of template VNMR parameters to "fill in 
+    the gaps" by providing parameters needed by VNMR which were not in the
+    original dataset.  Several are provided in the "parlib" subdirectory.
+    Examine these and decide which ones you will need.
+
+4.  VNMR macros control the transfer of the data to the Sun, the conversion
+    to VNMR format, and the retrieval of the converted dataset into your
+    current experiment.  There are several examples in the "maclib"
+    subdirectory.  Examine these and decide which if any you need.  They may
+    need minor changes to adapt to your particular system.
+
+5.  If your foreign data is in a directory on the Sun (or NFS-mounted by it),
+    no data transfer is necessary.  Otherwise, you will need some sort of
+    data transfer, probably via "ftp".  Unix shell scripts perform the actual
+    data transfer when instructed by the appropriate VNMR macro.  Several
+    scripts are provided in the "script" subdirectory; they include examples
+    of transfers via ftp (for CMX, Vax, and SMIS) and Bruknet.  They all
+    require, as a minimum, that you edit them to add the hostname, login id,
+    and password for logging into the spectrometer.  These are easy to spot
+    in the comments near the top of the scripts.  Decide which ones you need,
+    and either edit them or make new ones.
+
+6.  Then type the following three commands to compile the "convert" program, 
+    install it, and clean up the directory:
+
+	make
+	make install
+	make clean
+
+    "make install" will ask you whether you want to install parameter sets,
+    macros, and scripts.  If you answer "y", it will ask in turn about every
+    file it finds in the appropriate subdirectory, so you can add your own
+    files there and they can be installed.
+
+******************************************************************************
+
+Usage from VNMR
+---------------
+
+Normally a VNMR macro executes the data transfer, runs the convert program,
+and reads the converted data into the current experiment in VNMR.  The "cmx",
+"m100", "smis", and "bruker" macros provided all work similarly.
+
+The usage of "cmx" is:
+
+      cmx('/usr/nmr/data/jun90/crampstest')
+  or  cmx('crampstest')
+
+This looks for a CMX file (directory, really) named "crampstest" in the
+indicated location, or in VNMR's current directory on the Sun, respectively.
+If "crampstest" is not found there, "cmx" will stop with an error message.
+Some of the other macros, like "smis", will launch a script ("get_smis")
+to transfer a copy of the file to the Sun, where it is placed in VNMR's
+current directory.  You will need to adapt the system to fit the situation
+in your laboratory.
+
+After the file is transferred, if necessary, it is converted using the
+"convert" program.  This produces a new directory (within VNMR's current
+directory) named "crampstest.cv".  This is a dataset in VNMR's "sread"
+import/export format.  Any previous version of "crampstest.cv" will be
+overwritten by this process.
+
+When the conversion is done, the VNMR command "sread" is used to merge
+"crampstest.cv" with the template parameter set, "cmx.par", and retrieve the
+result into the current experiment.  It is expected that cmx.par will be
+found in the parlib subdirectory of VNMR's "userdir", generally
+/home/vnmr1/vnmrsys/parlib.
+
+The other macros differ only in the template parameter set, data transfer
+script, and the default directory on the spectrometer.  As supplied, they
+are:
+
+	         template     transfer     transfer   default
+	macro    params       script       method     directory
+	------   ----------   ----------   --------   -------------
+	cmx      cmx.par      get_cmx      ftp        /usr/nmr/data
+	m100     m100.par     get_uvax     ftp        [m100]
+	smis     smis.par     get_smis     ftp        c:\smis\data
+	bruker   bruker.par   get_bruker   bruknet    none
+
+Using the transfer scripts directly
+-----------------------------------
+
+This is normally not necessary, except for debugging, since the macros do
+this for you.  Should you need to execute them directly, the data transfer
+scripts "get_cmx", "get_uvax", "get_smis", and "get_bruker" all follow the
+same usage; for example:
+
+      get_cmx myfid
+  or  get_cmx /usr/nmr/data/myfid
+  or  get_cmx /usr/nmr/data/myfid /home/vnmr1/vnmrsys/data/mynewfid
+
+In all three cases, /usr/nmr/data/myfid is transferred from the spectrometer
+(since /usr/nmr/data is the default directory on the CMX).  In the first two
+cases, the transferred fid is placed in the current directory and is called
+"myfid".  In the third form it is given a different name on the Sun.
+
+Using the convert program directly
+----------------------------------
+
+This is also not normally done, since the macro invokes "convert" for you.
+One possible reason to use "convert" directly is to do unusual
+transformations on the data, like scaling or spectrum reversing.
+
+"Convert" is a binary executable program (not to be confused with the VNMR
+command "convert", which deals with VXR-4000 style data).  Currently it
+converts CMX, Bruker, NMR1, and SMIS datasets into Varian's "sread" format.
+
+The sread format is used by Varian to port data between different generations
+of their spectrometers.  The "sread" and "swrite" commands are built into
+VNMR but are not documented per se, although they are mentioned in the
+"convertbru" manual page; you don't need to use them directly since they are
+called from the appropriate macros.  The sread format is documented in the
+files sread.c and swrite.c, available in the Source Code kit.  The format is
+similar to but simpler than the VNMR format.  Datasets are directories
+(conventionally named "<filename>.cv") containing two files:  "sdata", a
+headerless binary file of 32-bit integer fid data; and "stext", a plain ASCII
+file containing parameters in a nearly free format.
+
+The command line for "convert" requires some control flags followed by the
+input and output file names.  The control flags are:
+
+  -b	Bruker input file                       ]
+  -c	CMX input directory (Intel/spec style)  ]
+  -cw	CMX input directory (Sun/cmxw style)    ] one of these is required
+  -cs	CMX input directory (Sun/Spinsight)     ]
+  -i	SMIS input file                         ]
+  -m	NMR1 input file                         ]
+  -os	output Varian SREAD format (default; others not implemented yet)
+  --	negate the imaginaries, causing spectrum reverse
+  -+	do not negate the imaginaries (to override a default)
+  -a	(alternate) negate both real and imaginary parts of every second
+	complex point ("Redfield trick", for Bruker data; resulting
+	data must receive a real FT:  "proc='rft' wft")
+  -A	do not do Redfield trick (to override a default)
+  -r	byte-reverse input words (e.g. 0123 -> 3210, 012 -> 210)
+  -R	do not do byte-reverse (to override a default)
+  -fr number	multiply all reals by number
+  -fi number	multiply all imaginaries by number
+  -#	print the program's version number on stderr
+
+Default conversions are:
+      Bruker:  byte reverse, expand 24-bit to 32-bit integers, spectrum
+               reverse, Redfield
+      CMX:     byte reverse (if Intel data), shuffle, spectrum reverse,
+               fix floats if necessary
+      NMR1:    convert from Vax D_float, shuffle, spectrum reverse
+      SMIS:    byte reverse, spectrum reverse
+
+A typical command line to convert CMX data would be:
+      convert -cs -os crampstest crampstest.cv
+
+Once you have done the conversion manually, the VNMR command which reads the
+".cv" file is:
+      sread('crampstest.cv','/home/vnmr1/vnmrsys/parlib/cmx')
+where "cmx" should be replaced by the appropriate template parameter set
+name, without its ".par" suffix.
+
+******************************************************************************
+
+Some modifications might be desired as you adapt "convert" to your system. 
+One is to modify the default types of translations applied to various types of
+data.  I have tried to use the appropriate translations for each vendor, but I
+may not have seen all the possible permutations of spectrum reversals, byte
+ordering, etc.  If you find you need different translations, they are set in
+the "type" variable by the function parse_commandline() in convert.c; the
+keywords are in convert.h.  Only a minimal knowledge of C is needed to change
+these.
+
+Some fids need to be scaled up or down in order to behave comfortably within
+VNMR.  If you find that your data needs unusually large values of "vs" or
+"vf", or you experience jerkiness in phasing or integral leveling, the data
+probably needs to be scaled up before importation.  I find that both M-100
+and SMIS data are best scaled up by a factor of about 100.  Look in the m100
+and smis macros for examples of this.
+
+Another modification concerns treatment of non-VNMR parameters.  The approach
+I have taken is that most foreign parameters are imported verbatim into
+VNMR.  Those that have VNMR equivalents which I understand are translated,
+with appropriate conversions (e.g. CMX "al" is multiplied by 2 to become VNMR
+"np").  Often I import the untranslated version as well.  This work is done
+by long, repetitive functions near the end of bruker.c, cmx.c, smis.c, and
+nmr1.c.  You can probably figure out from the examples how to add additional
+conversions.
+
+In any case, please let me know what changes you find useful; I'd like to
+incorporate them into future versions.  Please call if you have any problems. 
+I'll be interested to hear what your experiences are.
+
+
+
+Stephen T. McKenna
+voice 630-961-7846
+fax   630-420-5252
+stmckenna@amoco.com

@@ -1,0 +1,60 @@
+"macro paramest"
+"H. Bildsoe, Aarhus University, Denmark,  march 1995"
+"paramest($1) -  estimate csa or quadrupole parameters for site number $1"
+
+if (ival=0.5) then
+  csapar   "csa parameters from moment analysis"
+  else if mval<>0.5 then 
+  menu('qestimate')   "quadrupole parameters from satellite ssbs"
+  else  "quadrupole parameters from analysis of central transition lineshape"
+
+if (theta<>0.0) then
+  write('line3','This procedure is for MAS conditions only, i.e. theta=0.0')
+  abort endif
+
+if ($#=1) then
+  $sites=$1
+  else
+  if (sites<>1) then
+    input('Site 1 or 2? '):$sites
+    else
+    $sites=1
+    endif
+  endif
+if ($sites>2 or $sites<1) then
+  write('error','Error: Illegal site number')
+  abort
+  endif
+
+lookup('file',curexp+'/mark1d.out','skip',7,'read','skip','read','skip','read'):$f1,$f2,$f3
+$lab1='' $lab2='' $lab3=''
+input('Label the three singularities (f2,p2,p1,s1,f1)? '):$lab1,$lab2,$lab3
+exists(userdir+'/maclib/qest','file'):$a
+if $a>0.5 then rm(userdir+'/maclib/qest') endif
+exists(curexp+'/qest.dat','file'):$a
+if $a>0.5 then rm(curexp+'/qest.dat') endif
+write('file',curexp+'/qest.dat','%2d',$sites)
+write('file',curexp+'/qest.dat','%12.6g %2s',$f1,$lab1)
+write('file',curexp+'/qest.dat','%12.6g %2s',$f2,$lab2)
+write('file',curexp+'/qest.dat','%12.6g %2s',$f3,$lab3)
+write('file',curexp+'/qest.dat','%5.1f %8.3f',ival,sfrq)
+shell('"'+systemdir+'/bin/qpar" "'+curexp+'/qest.dat" "'+userdir+'/maclib/qest"'):$shellres 
+length($shellres):r1
+if (r1>0) then
+  substr($shellres,1,7):n1
+  if (n1='warning') then
+    write('line3','%s',$shellres)
+  else
+    write('error','%s',$shellres)
+    abort
+  endif
+endif
+exists(userdir+'/maclib/qest','file'):$a
+if $a>0.5 then 
+  qest "results from qpar is in the form of a macro, qest"
+  rm(userdir+'/maclib/qest') endif
+rm(curexp+'/qest.dat')
+write('alpha','cr=ri (i=1 to 5) shows the position of the i`th singularity')
+ds
+endif
+endif

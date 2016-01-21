@@ -1,0 +1,41 @@
+
+*******************************************************************
+dousermacro('rootName' <,args>)
+*******************************************************************
+  
+Certain VnmrJ operations have software hooks to allow for easy user
+customization.  For example, the svf operation will call a macro
+named usersvf, if it exists. That usersvf macro could copy additional
+files into the .fid directory, write a log file, or email a message.
+It is up to the user to decide how they may want to customize the
+operation.
+
+The mechanism we use to provide this customization is dousermacro.
+This macro is often called with the syntax dousermacro($0) where
+$0 is the name of the macro being executed (svf in the example above.)
+The dousermacro prepends the string 'user' to the first passed
+argument and then checks if that macro exists. If it does, it is
+executed. If any additional arguments are passed to dousermacro,
+these are passed along to the 'user'+rootName macro.
+
+Some of the operations that have these dousermacro hooks include:
+
+bootup
+calibrate
+operatorlogin
+operatorlogout
+plot
+process
+rt
+rtp
+savefid
+svf
+updateprobe
+
+Creating a local macro named, for example, userplot will allow
+customization any time the plot macro is called.  There are several
+other macros that call dousermacro. They generally require a fairly
+good understanding of how these other macros are used in order to
+effectively use the dousermacro tool. You can find all the macros
+that call dousermacro by executing:  grep dousermacro /vnmr/maclib/*
+from a shell tool.

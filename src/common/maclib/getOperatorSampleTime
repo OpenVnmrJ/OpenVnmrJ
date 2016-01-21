@@ -1,0 +1,68 @@
+"macro getOperatorSampleTime"
+
+if ($# < 1) then $1=autodir+'/enterQ' endif
+if ($# < 2) then $2=operator endif
+$bname=''
+substr($1,'basename'):$bname
+if ($bname='enterQ') then $auto=1 else $auto=0 endif
+
+$remtime=0 
+$cloc='' $clocdir=''
+$cwhen='' $czone='' $crack=''
+$cowner='' $cpriority=''
+if ($auto) then
+    getlocid:$cloc,$clocdir,$cwhen,$czone,$crack,$cowner,$cpriority
+    if ($cowner=$2) then
+	currentQtime($1):$remtime
+    endif
+endif
+
+$dtime=0 $ntime=0
+$dtotal=0 $ntotal=0
+
+// Take into account current sample
+if ($remtime>0.5) then
+    if ($cwhen='night') then
+    	$ntime=$ntime+$remtime
+	$ntotal=1
+    else
+    	$dtime=$dtime+$remtime
+	$dtotal=1
+    endif
+endif
+
+$loc='' $locdir=''
+$when='' $zone='' $rack=''
+$owner='' $priority=''
+
+// Get all the info from enterQ
+$l='' $ld='' $w='' $z='' $r='' $o='' $p=''
+getlocid($1):$l,$ld,$w,$z,$r,$o,$p
+$loc=$loc,$l $locdir=$locdir,$ld
+$when=$when,$w $zone=$zone,$z $rack=$rack,$r
+$owner=$owner,$o $priority=$priority,$p
+
+// Get all the info from overnightQ
+$l='' $ld='' $w='' $z='' $r='' $o='' $p=''
+getlocid($1+'.macdir/overniteQ'):$l,$ld,$w,$z,$r,$o,$p
+$loc=$loc,$l $locdir=$locdir,$ld
+$when=$when,$w $zone=$zone,$z $rack=$rack,$r
+$owner=$owner,$o $priority=$priority,$p
+
+$total=size('$owner')
+$i=1
+repeat
+    if ($owner[$i]=$2) then
+	$dt=0 $pt=0 $nt=0
+	readTtimeQ($1+'.macdir/'+$locdir[$i]+'/'+$when[$i]):$pt,$dt,$nt
+	if ($when[$i]='night') then
+	    $ntime=$ntime+$nt
+	    $ntotal=$ntotal+1
+	else
+	    $dtime=$dtime+$dt
+	    $dtotal=$dtotal+1
+	endif
+    endif
+    $i=$i+1
+until $i > $total
+return($dtotal,$dtime,$ntotal,$ntime)

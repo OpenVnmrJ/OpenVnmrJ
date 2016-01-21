@@ -1,0 +1,38 @@
+import os
+
+#get current working directory
+cwd = os.getcwd()
+
+# get the envirionment
+env = Environment()
+
+#
+fileList = ['bootr',
+		      'checkspace',
+		      'chksystempkgs',
+		      'setupbashenv',
+		      'dbsetup',
+		      'kill_insvnmr',
+		      'mkvnmrjadmin',
+		      'vnmrsetup']
+
+#		      'setup',     put remounting within vnmrsetup directly
+
+# used by xmessage in vnmrsetup.sh aka load.nmr
+textList = [ 'rpmInstruction.txt' ]
+
+optionsCodePath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','code')
+if not os.path.exists(optionsCodePath) :
+    os.makedirs(optionsCodePath)
+
+for i in fileList:
+   dest = os.path.join(optionsCodePath,i)
+   Execute(Copy(dest,i+'.sh'))
+   Execute(Chmod(dest,0755))
+
+for i in textList:
+   dest = os.path.join(optionsCodePath,i)
+   Execute(Copy(dest,i))
+   Execute(Chmod(dest,0644))
+
+

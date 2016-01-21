@@ -1,0 +1,51 @@
+"macro setHTfreqs"
+exists('is_cpsample','maclib'):$cp
+if (not $cp) then return endif
+
+$pex=0 $ppath='' $ext=''
+getHTfrqpath($1):$pex,$ppath
+//AutoCheck($1):$pex,$ppath
+getext($ppath):$ppath,$ext
+if ($pex) then
+   if ($ext<>'REC') and ($ext<>'rec') then
+   	readparam($ppath+'.fid/procpar','htfrq1 htbw1')
+   else
+	readparam($ppath+'.'+$ext+'/acqfil/procpar','htfrq1 htbw1')
+   endif
+   setHTni
+   if (refsource1='dfrq') then
+      rtv($ppath,'noabort','httof'):dof
+      rtv($ppath,'noabort','htsw'):sw1
+      dof=dof sw1=sw1
+   elseif (refsource1='sfrq') then
+      rtv($ppath,'noabort','httof'):tof
+      rtv($ppath,'noabort','htsw'):sw1
+      tof=tof sw1=sw1 sw=sw1
+   endif
+endif
+
+"checkhtfreq - macro to determine separations in htfrq1 list - added here rather than as a call"
+"macro checkhtfreq is included as a utility. It is just the rest of this macro"
+
+$bw=htbw1
+
+$numfrq=size('htfrq1')
+
+$i=1
+$j=2
+$minbw=htbw1
+
+while ($j <= $numfrq) do
+  $frqa = htfrq1[$i]
+  $frqb = htfrq1[$j]
+  $diff = $frqa - $frqb
+  if $diff < $minbw then $minbw = $diff endif
+  $i=$i+1
+  $j=$j+1
+endwhile
+
+write('line3','minimum separation of htfrequencies is %d',$minbw)
+
+$r=2*sw1/$minbw fn1=$r if(fn1<$r) then fn1=2*fn1 endif 
+
+

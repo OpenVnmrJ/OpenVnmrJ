@@ -1,0 +1,36 @@
+"macro GetFirstFids"
+exists(savefile,'directory'):$direx
+if ($direx=0) then return('') endif
+
+$datalist=userdir+'/persistence/sq_datalist'
+$peakfidlog=savefile+'/dirinfo/peakfidlog'
+exists($peakfidlog,'file'):$fileex
+if ($fileex=0) then return('') endif
+
+$s1='' $s2=''
+readfile($peakfidlog,'$s1','$s2','','local'):$total
+if ($total=0) then return('') endif
+
+$s3='' $index=0
+sort($s1,'u'):$index,$s3
+$total=size('$index')
+if ($index[1]=0) then $total=0 endif
+if ($total=0) then return('') endif
+
+write('reset',$datalist)
+$i=1 $ok=0
+repeat
+   $sx=$index[$i]
+   $fidname='' substr($s2[$sx],2):$fidname
+   if ($fidname<>'') then
+     exists($fidname+'.fid','directory'):$fidex
+     if ($fidex) then
+	write('file',$datalist,'%s.fid',$fidname)
+	$ok=1
+     endif
+   endif
+   $i=$i+1
+until $i > $total
+if ($ok=0) then shell('rm -f '+$datalist) return('') endif
+
+return($datalist)

@@ -1,0 +1,22 @@
+"macro settemp"
+
+"***********Set temperature if auto='n'******************"
+
+if (auto<>'y') then
+  expactive:$isactive
+  if ($isactive > -1) then
+    off('temp')
+    if (vttype > 0) then
+      vnmrinfo('get','tempExpControl'):$tempon
+      if ($tempon) then
+        vnmrinfo('get','tempOnOff'):$vtison
+        if ($vtison = 1) then
+          vnmrinfo('get','tempSetPoint'):temp
+	  checktemplimit
+          on('temp')
+        endif
+      endif
+    endif
+  endif
+endif
+getparam('vtc','Probe'):vtc

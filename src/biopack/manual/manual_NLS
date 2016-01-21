@@ -1,0 +1,309 @@
+21.0 Non-Linear Sampling (NLS)
+Introduction
+
+Normal multi-dimensional data sets are collected using regular (linear) incrementation of 
+(an) evolution time(s) because a "Fast Fourier Transform" algorithm is used for 
+processing. Other processing methods have become available (Maximum Entropy, Multi-
+Dimensional Decomposition, etc.) that are able to process non-linearly sampled data. 
+This can represent a significant timesaving in acquisition if only 5-50% of the data needs 
+to be sampled and the data can be accurately processed. 
+The flexibility of the pulse programming language of VnmrJ has allowed a 
+straightforward and generic implementation of acquisition of NLS data. In particular, the 
+evolution time(s) for a specific fid are looked up from a text file, rather than being 
+calculated from ni(2) and sw(2). All that is necessary is for the sequence to be modified 
+to replace the internally calculated evolution time(s) with ones from a text file.
+Vladislav Orekhov and Victor Jaravine (Swedish NMR Center, Gothenburg, Sweden) 
+have implemented the idea and contributed scripts and macros to BioPack that convert an 
+existing pulse sequence into a NLS version. BioPack has all the necessary files to make 
+this process easy to use. All sequences have a "Digital Filter" page in the Acquire folder. 
+This has a button to facilitate setting up an NLS experiment.
+This button runs a macro that checks to see if the NLS version of the sequence is present 
+as a compiled version. If it is not present, the current pulse sequence code is copied into 
+the user's ~/vnmrsys/psglib under the same name, but with "_S" appended. A script is 
+run to insert a couple of sections into the code and the new sequence is compiled. These 
+changes do not affect the original operation of the sequence and it can be run as before by 
+setting SPARSE='n' (the parameter SPARSE is created, if necessary, by the BPrtppar 
+macro that runs in the experiment setup macro). The execution of the code is different for 
+SPARSE='y', however, in that a text file containing the evolution times is necessary.
+
+The macro also creates a ~/vnmrsys/templates/layout file under the new sequence name 
+that has all the same files as the original sequence. Therefore, the panels visible will look
+Identical.
+
+The Acquire folder now has a "Digital Filter/NLS" page visible for the new sequence.
+This page is used to set the acquisition parameters for the multi-dimensional experiment. 
+The number of dimensions should be set for the total dimensionality of the experiment 
+(e.g. "3" for ghn_co_S). The maximum number of increments (nimax, ni2max or 
+ni3max) would be that for a normal linearly sampled data set (these determine the real 
+resolution in the indirect dimensions). The "increment multipliers" (stored as ni, ni2 and 
+ni3) would be the reduced number. Please note that for 3D NLS acquisition the only 
+purpose of these values is to define the total number of actually acquired FID's and only 
+the product of these numbers is important. For example, combinations 32, 32 and 16, 64 
+give exactly the same sampling schedule.
+
+ The "Estimated T2" should be set relative to the estimated T2's of the signals in the 
+specified evolutions. This permits the software to make a more intelligent choice of 
+which evolution times to select. In non constant-time evolution times, signals may go 
+through a null because of an active coupling. In these cases the coupling information can 
+also permit the software to make a more intelligent choice of which evolution times to 
+select.
+
+ A menu is provided to specify which evolution times have a constant-time character. 
+This information is not used for acquisition, but to notify the MDD processing software 
+that mirror imaging of the time domain signal is possible. 
+
+Similarly, a menu is provided to specify if similar intensity cross-peaks are to be 
+expected (cexp='y' - R-MDD processing would be used) or if the cross-peaks are of 
+widely differing amplitude (cexp='n' - MDD processing would be used). The former case 
+would prevail for experiments such as ghn_co, while the latter case would be appropriate 
+for the NOE plane of gnoesyNhsqc. This information is later used by MDD processing 
+and may have important effect on the sampling scheme. It affects the checking and 
+corrections of "holes" in the sampling scheme, which are situations when a certain row or 
+column in the sampling scheme matrix has no or too few data measurements. The 
+uncorrected holes lead to serious problems during MDD processing. In case of cexp='y', 
+the check is more relaxed, which means that data recorded with cexp='n' can be later 
+processed using both cexp='n' and 'y', but data recorded with cexp='y' can only be 
+processed with cexp='y'. On the other hand, cexp='n' typically requires significantly 
+more data points in NLS schedule, i.e. sparse levels >=10-20%. Note that a cexp value is 
+needed for each dimension, i.e. for ghn_co_S cexp='nyn' (for t1, t2 and t3). The final 
+value in the cexp text string is always 'n'.
+
+Once the parameters have been entered the "Set Sampling Schedule" button runs a script 
+to generate the necessary subfiles including the text file specifying the evolution times. 
+At this time information is displayable in the Text Output window. A full NLS parameter 
+list is also generated in the Text Output window when the "All parameters" button is 
+used.
+
+The "Check Conditions" button runs "go('check')" to check for error conditions such as 
+too many increments in an indirect dimension (normally limited in constant-time 
+evolutions). The TextOutput page displays any error messages. The error condition 
+checking would give the same error for the non-NLS version and its nature depends on 
+how the pulse program was coded, not the NLS part of the sequence. If the number of
+increments (nimax, ni2max or ni3max) in a specific evolution period is too large, reduce 
+the number until no error results when using the "Check Conditions" button.
+
+At this time the experiment can be started normally. Data will be acquired and stored as 
+in any other experiment. Data may be processed normally using wft and wft1da, but note 
+that the first increment is usually not for d2=0, and therefore data may be modulated. Use 
+"dps" to verify the actual evolution time. While wft1da may be used to examine the entire 
+data set, do not use wft2da. 2D processing will require NLS-compatible software. 
+
+Use the macro BPsvf (normal BioPack "Save Fid" button", not the command "svf") to 
+save the data. Apart from the FID, the macro also saves the sampling schedule and other 
+important files.
+
+Reference material for learning about the NLS schedule and data processing can be found 
+at:
+
+1.	Orekhov, V. Y.; Ibraghimov, I.; Billeter, M., Optimizing resolution in multidimensional 
+NMR by three-way decomposition. J. Biomol. NMR 2003, 27, 165-173.
+2.	Tugarinov, V.; Kay, L. E.; Ibraghimov, I.; Orekhov, V. Y., High-resolution four-dimensional 
+H-1-C-13 NOE spectroscopy using methyl-TROSY, sparse data acquisition, and 
+multidimensional decomposition. J. Am. Chem. Soc. 2005, 127, 2767-2775.
+3.	Jaravine V, Ibraghimov I, Orekhov VY. Removal of a time barrier for high-resolution multi-
+dimensional NMR spectroscopy. Nature Methods, 2006, 3: 605-607. 
+
+
+NLS Parameters, Macros, Files and Commands
+
+SPARSE is a flag used by the pulse sequence in order to run a normal linearly sampled 
+('n') experiment or an NLS experiment ('y'). SPARSE is set to 'y' when using the 
+button in the "Digital Filter" page.
+
+nimax, ni2max and ni3max define final dimensions of the  spectrum  (this would be the 
+numbers for the desired resolution in the linear sampling case).
+
+ni, ni2 and ni3 affect only the number of actually recorded FIDs and consequently the 
+total measurement time (use the "time" command as usual). The values are not used by 
+the pulse sequence if SPARSE='y'. While ni is used for a 2D NLS experiment, only the 
+product nixni2(xni3) is used for 3D (or 4D) experiments to determine the number of FIDs 
+to be acquired. Therefore, specify the desired resolution by setting the nimax parameters.
+
+There are two parameters that affect the sampling schedule:
+  T2sp - estimated T2 time. Use large value in case of CT evolution (e.g. 1 second). 
+  Jsp  - estimated J-coupling constant, e.g. in case of 13C evolution, e.g. in 
+        non-constant time HNCA it is 35 Hz. Use Jsp=0 if the coupling is not relevant.
+  
+The proper value of the "cexp" parameter should be set depending on the nature of the 
+sequence (see above).
+
+The macro BP_NLSset generates the sampling schedule (via the button).
+
+The "All Parameters" button runs the macro "dgnls" which shows parameters and
+their values in the Text Output window.
+
+Text files *.hdr_2, *.hdr_3 and *.in are automatically created in the
+current experiment ( * is the pulse sequence name). These store the
+sampling schedule and an input file for NLS processing.
+
+The processing of the sparse data must be performed by using non-FT
+software.
+
+
+Files:
+bin-
+ init_SP.gawk, runspheader.sh, spheader, spheaderLNX,
+ spheaderMAC, spheaderSUN, split_dims.sh
+
+maclib-
+ BP_NLSinit                 a macro to convert a pulse sequence to NLS capability
+ BP_NLSset                  a macro to set up a sampling schedule
+ BP_NLScheck            a macro to run go('check') for ni*max values
+ BP_NLSstop               a macro to switch back to parent sequence
+ BPsvf                          saves NLS text files from current exp along with fid, etc.
+ BPrtppar                     creates SPARSE flag (BPrtppar is called in BioPack experiment 
+                                     setup macros
+ dgnls                           a macro to display NLS parameters in text window
+
+
+Command Line Operation:
+                        1. use experiment setup macro (e.g. ghn_co_ca)
+                        2. enter BP_NLSinit
+                        3. enter parameters (use dgnls to view)
+                        4. enter BP_NLSset to create sampling schedule
+                        5. enter BP_NLScheck to check limits on increments
+                        6. acquire data with "go"
+                        7. save fid with BPsvf(name)
+
+
+APPENDIX:
+
+Definitions and Descriptions of NLS Operation
+
+
+Description of the algorithm for the generation of the NLS schedule 
+
+For the case of a three-dimensional spectrum the schedule matches a two-dimensional 
+probability density function for the indirect evolution dimensions. The function is defined 
+on a two- dimensional grid (t1, t2) determined by spectral widths and maximal 
+acquisition times  (t1max, t2max) in the two dimensions. Sampling on a grid, which we 
+define as "sparse sampling", is a special case of a more general non-uniform sampling 
+that allows sampling at arbitrary selected time points. The distribution is obtained as a 
+product of the two envelopes, P(t1,t2) = P1(t1) x P2(t2). The envelope functions P1(t1) 
+and P2(t2) are  devised to match the signal coherences in the indirect dimensions for a 
+particular system  and experiment. Currently three possibilities are implemented: 
+
+i.	mono-exponential relaxation:                    P (t1) = exp(-t/T2) 
+ii.	modulation by the one-bond J-coupling:    P(t2) = cos(t pi/J) 
+iii.	The J-modulation can be combined with the relaxation decay 
+
+The transverse relaxation time T2 and value of the J coupling are parameters of the 
+procedure. For a given probability distribution, we use the following procedure to 
+generate the NUS schedules. First, a pair of integer indices is randomly selected that 
+corresponds to the acquisition times (t1, t2). Then the pair is added to the sampling 
+schedule table if the corresponding value of the probability distribution P(t1,t2) is larger 
+than another randomly generated number ranging between 0  and 1; otherwise, the index 
+pair is discarded. This process is repeated until the sampling table contains the requested 
+number of data points. Thus, a NLS schedule is a table of evolution delays (t1, t2) 
+spanning maximal acquisition times and spectral widths in the indirect dimensions. 
+
+
+runspheader.sh, a csh script to generate NLS
+
+The non-uniform sampling scheme is produced by the runspheader.sh script, which takes 
+all needed parameters from an input file (sequence name appended by ".in",e.g. 
+ghn_co_S.in,  present in the current experiment)
+
+For example,         runspheader.sh ghn_co_S.in
+
+The function of the runspheader.sh script is to call the program spheader with appropriate  
+parameters. Normally, the input file is produced by a spectrometer program (e.g. 
+BioPack), which also starts runspheader.sh . However the script can be run directly from 
+a Unix shell window, provided the input file is prepared (see below). The script produces 
+several header files with names (defined by the file parameter present in the input file) 
+with extensions .hdr_X X=1-5. The file *.hdr_3 is the most relevant.  It contains "t1 t2 
+[t3...]" indexes of time evolution points in the indirect spectral dimensions. If needed, the 
+evolution delays can be produced by multiplying these indexes by the corresponding 
+dwell times (i.e. 1/sw1).
+
+Description of the input file format - input for runspheader.sh
+
+The file contains lines started by keywords followed by a list of parameters values. All 
+the keywords given below are mandatory. 
+
+Below, several examples of input files are presented. The examples can be found in the 
+mddnmr  software version 1.3 (Sep 2006). 
+
+3D NOESY-HSQC 
+160 x 44 complex points in 1H(NOE) x 15N dimensions. Ratio  NI/NIMAX=45/160 
+gives ~ 28% sparse level 
+(see example 3, azurin3dNOESY/az15n2_5%2_nohsqc_3d/az15n2.in)
+
+file  az15n2                            this is root name for all header files
+NDIM  3                                dimensionality of the experiment
+seed  4321                             seed for random number generator. 
+SPARSE n                             reserved parameter for spectrometer software
+sptype shuffle                        reserved parameter
+f180  nnn                               180 degree flag for corresponding dimension if 
+                                              evolution time  is started at half a dwell time.
+CT_SP nnn                            constant time flag. MUST be nnn for NOESY-HSQC
+CEXP  nnn                             must be nnn for NOESY-HSQC
+NIMAX 160 44 1                  final time domain dimensions (1=direct dimension)
+NIMIN 0  0  0                        reserved parameter
+NI    45  44 1                         the product of the numbers relative to the.
+                                              NIMAX product. It determines the sparse level as 
+                                              s=(NI1*NI2)/(NI1max*NI2max) 
+                                              IMPORTANT NOTE: only first numbers in NIMAX and
+                                              NI can be different  for NOESY-HSQC
+SW 8000.0 2000 8000.0       Spectral widths for all dimensions
+T2    0.05 0.1 1                     estimated T2s for indirect dimensions
+Jsp   0 0 0                             one-bond coupling. 
+
+3D HNCO 
+(see example 2, ubidemo/ubi_ghnco_3d_600Y.fid/ghnco.in)
+
+file  ubi_ghnco_3d_600Y
+NDIM   3                              3 dimensions:  C' N  Hn
+seed   54321
+SPARSE n                            y/n toggles NUS/uniform mode
+sptype shuffle                       modes of NUS - reg/shuffle/over (default is
+                                             shuffle); shuffle=matched no repeats; 
+                                             over=matched with repeats; reg=uniform
+f180   nnn                             180 degree flag for corresponding dimension
+                                             if evolution time is started at half dwell time
+CT_SP  nyn                          CT evolution in 15N
+CEXP   yyn                           R-MDD mode for 13C and 15N dimensions
+NIMAX  64 32 1
+NIMIN  0  0  0 
+NI     7  32 1                          sparse level 11 percent  (7*32/(64*32))
+SW     1500.0 1499.981 12001.2 
+T2     0.05 1 1                       T2=50ms for 13C and 1s for 15N 
+                                            (CT implies no decay in evolution) 
+Jsp    0 0 0
+
+Processing of NLS spectra using MDDNMR software
+
+Processing of spectra recorded using NUS can be performed using mddnmr v1.3 (or 
+higher). The software is available. Contact: 
+
+Vladislav Y. Orekhov
+Associate Professor
+Swedish NMR Centre at Gothenburg University
+Box 465, Gothenburg
+SE 40530, Sweden
+E-mail: orov[at]nmr.gu.se
+
+
+Structure of the NLS (*hdr.3) table
+
+The NLS table is an ASCII file, where every line contains integer increments 
+corresponding to evolution times for all indirect dimensions. The number of entries in the 
+table corresponds to a complete uniformly sampled experiment with dimensions NI x NI2 
+[ x NI3 ...] for t1, t2 [,t3 ...]. However, values of the indexes in the table vary in the range 
+from zero to NImax, NI2max,[NI3max ...], respectively. Thus, the scheme is generically 
+applicable to any existing pulse sequence. Uniformly incremented indexes in the pulse 
+sequence must be substituted by the values from the NLS table for every new FID. This 
+means that the original values of the evolution incremental delays are not used. New 
+evolution delays are produced by multiplying these indexes by corresponding dwell time 
+(i.e. 1/sw1).
+
+Implementation in BioPack
+
+The BioPack implementation features automatic creation of a new NLS version of any 
+multi-dimensional pulse sequence by use of a button in the DigitalFilter page in the 
+Acquire Folder of VnmrJ. After specifying the number of increments, etc., a single button 
+is used to generate all the NLS files including the table of increments (*hdr_3) via the 
+"Set Sampling Schedule" button in the same page.  Acquisition is performed in the 
+normal manner. Saving of the data using the BioPack macro "BPsvf" also saves the NLS 
+files and a script to permit easy processing by the MDD software.
+

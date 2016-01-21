@@ -1,0 +1,157 @@
+"macro AT450"
+"AT450 Calibrates 2H pw90 using Lock/Decoupler. The 2H rf is routed"   
+"      to 2H Automation Relay which sends it to the diplexer box and"
+"      then to lock BNC on the probe. Thus the calibration is valid for 2H "
+"      pw90 or decoupling rf field when using Lock/Decoupler for 2H"
+"      Use AT430 for channel 3 calibrations and AT440 for Channel 4 calibrations"
+"      For 2H observe calibrations, use AT410"
+
+
+
+"  Either of two methods must be used for this test to run properly "
+
+"  Method #1: Disable Relay
+"  In order to use this test, the cable connected to port 14 "
+"  on the Magnet Relay Driver Board in the magnet leg has to be disconnected. "
+"  This cable drives the Deuterium Automation Relay (K5020) at the back of the "
+"  magnet leg (look for the label on the driver cable). The cable connection "
+"  is made on a small circuit board mounted next to the manual sample eject "
+"  control. This permits the 2H pulse to be delivered by the 2H decoupler, even "
+"  when using tn=lk for 2H observe. Otherwise, the relay switches to route the "
+"  first broadband amplifier to the lowband module for low band observe. "
+
+"  Method #2: Re-route Decoupler RF
+"  Move the Decoupler cable from the top of relay K5022 at the back of the magnet "
+"  leg to the bottom position of relay K5022. This will permit the RF to proceed to
+"  the lock diplexer box when tn=lk"
+
+"  In either case remember to restore the cable to normal position after the test"
+
+if ($#=0) then
+   if numrfch=2 then ATnext return endif "macro likely entered by mistake"
+   if at_new='y' then ATnext return endif "macro likely entered by mistake"
+   ATrtp('standard')
+   text('Finding 2H pulse power on Lock/Decoupler ')
+   gain=10 sw=4000 np=8192
+   at_currenttest='H2pw90_lkdec_1'
+   if sfrq>600 then pw=200 else pw=125 endif 
+   tn='lk' sethw('lock','off'):$xxx
+   seqfil='AT_lkdec'
+   d3=numrfch    "d3 used in pulse sequence for numrfch"
+   r4=z0 lockpower=0
+   sethw('nowait','lockpower',lockpower):$x
+   if numrfch=5 then dpwr4=40 dn4='H2' dn3='' dn2='' dn='' dof4=0 endif
+   if numrfch=4 then dpwr3=40 dn3='H2' dn2='' dn='' dof3=0 endif
+   if numrfch=3 then dpwr2=40 dn2='H2' dn='' dof2=0 endif
+   rof2=300
+   av
+   wnt=''
+   wexp='AT450(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   wft f vsadj(100) peak:$ht,cr movetof
+   at_H2tof=tof 
+   if (numrfch=5) then 
+    exists('maxattench5','parameter','global'):$e
+    if $e=1 then $start=maxattench5-33 else $start=34 endif
+    array('dpwr4',34,$start,1) dof4=tof
+   endif
+   if (numrfch=4) then 
+    exists('maxattench4','parameter','global'):$e
+    if $e=1 then $start=maxattench4-33 else $start=34 endif
+    array('dpwr3',34,$start,1) dof3=tof 
+   endif
+   if (numrfch=3) then 
+    exists('maxattench3','parameter','global'):$e
+    if $e=1 then $start=maxattench3-33 else $start=34 endif
+    array('dpwr2',34,$start,1) dof2=tof 
+   endif
+   d1=6*d1   "account for 2H relaxation ~6x longer than 1H"
+   wnt='wft sp=3p wp=3p select(1) vsadj(0.1) ATfind2Hpwr av dssh' 
+   write('line3','Determining estimate of 2H pw90 power using Lock/Decoupler ')
+   vp=0 
+   wexp='AT450(`PART2`)'
+   au
+
+elseif ($1='PART2') then
+   wft
+   ATsvf
+   ATfind2Hpw90:$best 
+   av
+   "force power to previous level if close"
+   if numrfch=5 then dpwr4=dpwr4[$best]
+    if ((dpwr4=at_H2tpwr_lkdec+1.0) or (dpwr4=at_H2tpwr_lkdec-1.0)
+     or (dpwr4=at_H2tpwr_lkdec+2.0) or (dpwr4=at_H2tpwr_lkdec-2.0))
+    then dpwr4=at_H2tpwr_lkdec
+    endif
+    r3=dpwr4
+   endif
+   if numrfch=4 then dpwr3=dpwr3[$best]
+    if ((dpwr3=at_H2tpwr_ch4+1.0) or (dpwr3=at_H2tpwr_ch4-1.0)
+     or (dpwr3=at_H2tpwr_ch4+2.0) or (dpwr3=at_H2tpwr_ch4-2.0))
+    then dpwr3=at_H2tpwr_ch4
+    endif
+    r3=dpwr3
+   endif
+   if numrfch=3 then dpwr2=dpwr2[$best]
+    if ((dpwr2=at_H2tpwr_ch3+1.0) or (dpwr2=at_H2tpwr_ch3-1.0)
+     or (dpwr2=at_H2tpwr_ch3+2.0) or (dpwr2=at_H2tpwr_ch3-2.0))
+    then dpwr2=at_H2tpwr_ch3
+    endif
+    r3=dpwr2
+   endif
+
+   select($best) vsadj(80) vp=0 dssh
+  if (at_plotauto='y') then
+      pap
+      pps(120,90,wcmax-120,70)
+      pl('all') ATpage
+  endif
+   write('line3','finding first estimate of 2H pw360 using Lock/Decoupler')
+   text('Finding estimate of 2H pw360 using Lock/Decoupler')
+   array('pw',16,3.0*pw,0.1*pw)
+   wnt='ATwft select(1) vsadj(80) dssh'
+   at_currenttest='H2pw90_lkdec_2'
+   wexp='AT450(`PART3`)'
+   au
+
+elseif ($1='PART3') then
+   wft
+   write('line3','calculating first estimate of pw360  using Lock/Decoupler')
+   ATsvf
+  if (at_plotauto='y') then
+      pap
+      pps(120,90,wcmax-120,70)
+      pl('all') ATpage
+  endif
+   AT2Hpw90cal('pw'):pw av
+   write('line3','finding second estimate of 2H pw360 using Lock/Decoupler ')
+   array('pw',10,3.8*pw,0.04*pw)
+   at_currenttest='H2pw90_lkdec_3'
+   wexp='AT450(`PART4`)'
+   av au
+
+elseif ($1='PART4') then
+   sethw('z0',r4):$x
+   wft
+   write('line3','calculating final estimate of H2 pw360 using Lock/Decoupler')
+   text('Determination of 2H pw360 using Lock/Decoupler')
+   ATsvf
+  if (at_plotauto='y') then
+      pap ATpltext
+      pps(120,90,wcmax-120,70)
+      pl('all') ATpage
+  endif
+   
+   sethw('lockpower',at_lockpower):$xx
+   AT2Hpw90cal('pw'):at_H2pw90_lkdec at_H2tpwr_lkdec=r3
+   pw=at_H2pw90_lkdec at_H2pw90_lkdec=pw  "force 0.1usec stepsize"
+   at_H2pw90_lkdec=trunc(100*at_H2pw90_lkdec)/100
+   ATrecord('H2PW90_lkdec','2H pw360/4','pw360/4',at_H2pw90_lkdec,' at_H2tpwr_lkdec',r3)
+   write('file',autotestdir+'/REPORT','H2 pw360/4 (CH4) = %3.2f at power = %2.0f  ',at_H2pw90_lkdec,r3)
+   write('line3','H2pw90 (CH4) = %2.2f',at_H2pw90_lkdec)
+   tn='H1' sethw('lock','on'):$xxx
+  ATnext
+endif

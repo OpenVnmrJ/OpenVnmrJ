@@ -1,0 +1,179 @@
+"macro dshapei"
+" ************************************************************* "
+" ***       dshapei - display Pbox shape interactively      *** "
+" ***          this overwrites the existing data !          *** "
+" ***             Eriks Kupce &  Rolf Kyburz                *** "
+" ************************************************************* "
+
+$ok=''
+write('error','')
+input('OK to overwrite the data file (y/n) : '):$ok
+if $ok = 'y' then  
+  input('pulsewidth (sec) : '):$pulsewidth
+  if $pulsewidth < 0.0000002 then
+     $pulsewidth = ($nstp)/sw
+  endif
+else 
+  write('line3','Use the dshape macro')
+  return
+endif
+
+" argument checking "
+$shape='Pbox'
+if $#>0 then
+  $shape=$1
+endif
+getext($shape):$body,$ext
+substr($shape,1,1):$firstch
+
+" try finding the input file: "
+"   file can be given with or without extension,   "
+"   with absolute or relative pathname, or just as "
+"   basename (in which case it is first searched   "
+"   locally, then in the user's shapelib, then in  "
+"   /vnmr/shapelib; if no extension is given,	   "
+"   dshape first looks for *.RF, then for *.DEC,   "
+"   and finally for *.GRD			   "
+if $ext='' then
+  " no extension was given - try .RF extension first "
+  $ext='.RF'
+  $shape=$body+$ext
+  if $firstch='/' then
+    exists($shape,'file'):$e
+  else
+    exists($shape,'file'):$e
+    if not($e) then
+      $shape=userdir+'/shapelib/'+$shape
+      exists($shape,'file'):$e
+      if not($e) then
+	$shape=userdir+'/shapelib/'+$body+$ext
+	exists($shape,'file'):$e
+	if not($e) then
+	  $shape=systemdir+'/shapelib/'+$body+$ext
+	  exists($shape,'file'):$e
+	endif
+      endif
+    endif
+  endif
+  " no extension was given - try .DEC extension next " 
+  if not($e) then
+    $ext='.DEC'
+    $shape=$body+$ext
+    if $firstch='/' then 
+      exists($shape,'file'):$e 
+    else   
+      exists($shape,'file'):$e
+      if not($e) then 
+        $shape=userdir+'/shapelib/'+$shape 
+        exists($shape,'file'):$e 
+        if not($e) then   
+          $shape=userdir+'/shapelib/'+$body+$ext
+          exists($shape,'file'):$e 
+          if not($e) then 
+            $shape=systemdir+'/shapelib/'+$body+$ext 
+            exists($shape,'file'):$e
+          endif 
+        endif 
+      endif   
+    endif
+  endif
+  " no extension was given - try .DEC extension next " 
+  if not($e) then
+    $ext='.GRD'
+    $shape=$body+$ext 
+    if $firstch='/' then  
+      exists($shape,'file'):$e  
+    else    
+      exists($shape,'file'):$e 
+      if not($e) then  
+        $shape=userdir+'/shapelib/'+$shape  
+        exists($shape,'file'):$e  
+        if not($e) then    
+          $shape=userdir+'/shapelib/'+$body+$ext 
+          exists($shape,'file'):$e  
+          if not($e) then  
+            $shape=systemdir+'/shapelib/'+$body+$ext  
+            exists($shape,'file'):$e 
+          endif  
+        endif  
+      endif    
+    endif    
+  endif
+else
+  " extension was given in the argument "
+  $ext='.'+$ext
+  if $firstch='/' then 
+    exists($shape,'file'):$e 
+  else   
+    exists($shape,'file'):$e
+    if not($e) then 
+      $shape=userdir+'/shapelib/'+$shape 
+      exists($shape,'file'):$e 
+      if not($e) then 
+        $shape=userdir+'/shapelib/'+$body+$ext
+        exists($shape,'file'):$e 
+        if not($e) then 
+          $shape=systemdir+'/shapelib/'+$body+$ext 
+          exists($shape,'file'):$e
+        endif 
+      endif 
+    endif   
+  endif
+endif
+if not($e) then
+  write('error','dshapei: input file %s not found', $1)
+  return
+endif
+
+" define path names "
+$filepath = userdir+'/shapelib/pbox.fid'
+$fid=curexp+'/acqfil/fid'
+$data=curexp+'/datdir/data'
+$phasefile=curexp+'/datdir/phasefile'
+$procpar=curexp+'/procpar'
+$curpar=curexp+'/curpar'
+
+" now convert the input file to an FID text file "
+write('line3','%s: displaying shape, from %s... ',$0, $shape)
+shell('Pxfid', '"'+$shape+'"'):$x
+nrecords($filepath):$nstp
+write('line3','%d complex data points in %s',$nstp, $shape)
+
+" check command name, determine output device-specific parameters "
+clear(2)
+$device='graphics'
+$axiscolor='magenta'
+$rcolor='cyan'
+$icolor='yellow'
+write($device,0,0,''):$ys	" line height for text "
+
+" fix acquisition parameters to match the pseudo-dataset "
+rm($fid)
+fn = 'n'
+setvalue('np',$nstp*2)
+setvalue('at',$pulsewidth)
+setvalue('sw',$nstp/$pulsewidth)
+setvalue('sw',$nstp/$pulsewidth,'processed')
+
+setvalue('dp','n','processed')
+off('fpmult')
+setvalue('np',$nstp*2,'processed')
+setvalue('at',$pulsewidth,'processed')
+setvalue('nt',1,'processed')
+setvalue('ct',1,'processed')
+setvalue('array','','processed')
+setvalue('arraydim',1,'processed')
+
+" create an fid from the pulse shape "
+makefid($filepath,'dp=n')
+full phfid=0 vf=2400 vpf=0 vpfi=0 sf=0 wf=$pulsewidth
+
+df
+df('imaginary')
+
+$x0=1
+" label plot / display "
+write($device,$rcolor,$x0+2,wc2max-8,'Real')
+write($device,$icolor,$x0+2,wc2max-8-$ys,'Imaginary')
+
+dscale

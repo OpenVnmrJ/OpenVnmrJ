@@ -1,0 +1,983 @@
+"macro wet1Dproc"
+"*********************************************************************"
+"wet1Dproc macro - This macro navigate all prep actions for wet1D"
+"	There are a few obsolete sections - noted appropriately"
+//  Following arg1 are supported
+
+//  init (default) - Reset parameters to do scout experiment
+//  findfrq - find peaks as dictated by slpname or wetpeaks
+//  pickpeaks - find peaks based on threshold cursor
+//  makeshape - make wet shape based on wetfrq, wetfrqw
+//  cfarray - array wet_cf around +/- 0.1
+//  cfoptimize - calculate shapes for all wet_cf values
+//  c13wetpar - calculate 13C decoupler parameter values for c13wet
+//  makedecshape - makes decoupler shape/power/dmf
+//  cfdisplay - display compression factor array for panels
+//  tunecf - find the optimal wet_cf from arrayed spectra
+//  addwetsolv - add a given solvent to slpname
+//  delwetsolv - delete a given solvent from slpname
+//  iswetsolv - is a given solvent already in slpname?
+//  wstart - decision tree argument for different options
+//  wds - display spectrum to let user pick peaks
+//  darray - display wet information
+//  wetinfo - write wet information to a file [for display purpose]
+//  final - wet at tofh2o (panel entry or probe file)
+//  doscout - obsolete option
+//  tunepwr - obsolete option
+//  acquire - obsolete option
+//  check - obsolete option
+
+"*********************************************************************"
+if (seqfil='PRESAT') then
+   if ($# < 1) then
+	PRESATproc
+   elseif ($#=1) then
+	PRESATproc($1)
+   elseif ($# = 2) then
+        PRESATproc($1,$2)
+   elseif ($# = 3) then
+        PRESATproc($1,$2,$3)
+   else
+	PRESATproc($1)
+   endif
+   return
+endif
+"*********************************************************************"
+if ($# < 1) then $arg='init' else $arg=$1 endif
+if (auto='y') then 
+	$tmpfile=autodir+'/'+$0+'_tmp'
+else 
+	$tmpfile=curexp+'/'+$0+'_tmp' 
+endif
+"*********************************************************************"
+IF ($arg = 'setwetcf') THEN
+        wet_cf=1
+        getparam('tpwr_cf',tn):wet_cf
+//  Radiation damping fudge is 15%
+        wet_cf=wet_cf*1.15
+	return
+ENDIF
+"*********************************************************************"
+IF ($arg = 'makecompshp') THEN
+   $wfm = ' ' $pwr = ' ' $ofs = ' '
+   format(1.025*250000/pw90, 5,2):$ofs
+   $wfm = 'square n ' + $ofs + ' n 60 360 n 0.4u 0.4u'
+   opx('compshape.RF')
+   putwave($wfm)
+   pboxpar('stepsize', 0.2)
+   format(tpwr,2,2):$pwr
+   pboxpar('attn',$pwr+'d')
+   if (composit='n') then
+      cpx(pw90,tpwr):$ret
+   else
+      cpx(pw90,tpwr)
+   endif
+   compshape='compshape'
+   return
+ENDIF
+
+"*********************************************************************"
+IF ($arg = 'init') THEN
+	"Reset parameters to do scout experiment"
+//  on('gain'):$gainon
+//  if (Console='mercury') then gain=4 else gain=24 endif
+//  if ($gainon<1) then gain='n' endif
+  writeparam($tmpfile,'nt pw d1 composit MinSW pltopt gain werr')
+  writeparam($tmpfile,'execprocess execplot execprep execprescan execsetup','current','add')
+  CPwtmenu('acq','save')
+  execpars('delete')
+  is_param('spintype'):$isst
+  if ($isst>0) then
+      if (spintype<>'tach') then spin=0 endif
+  else
+      spin=0
+  endif
+  d1=1 nt=1 pw=1 
+  ss=0 pltopt='n'
+  wet='n'
+  MinSW='off'
+  strtpar=''
+  parfidss
+  ssfilter='n'
+  $solv='' format(solvent,'lower'):$solv
+  if ($solv='d2o_10') then $solv='d2o' endif
+  array2array(slpname):slpname
+  pw(5) ss=1 gain=0
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$isweton
+  if ($isweton=0) then $wetpeaks=0 endif
+  if (doscout=0) or ($wetpeaks>0) then
+     wexp='wet1Dproc(\'findfrq\')'
+  else
+     wexp='wet1Dproc(\'wds\')'
+  endif
+  wetfrq=0 off('wetfrq')
+  off('doscout')
+  explist=pslabel+'scout'
+  wstart='' wds=''
+  wdone='' werr='return'
+
+"*********************************************************************"
+ELSEIF ($arg = 'findfrq') THEN
+	"Find all frequencies, as dictated either by"
+	" wetpeaks or slpname			"
+	" For threshold based peakpicking see peakpick argument"
+
+  $newtof=tof
+  $lowppm=9999 $hippm=-9999
+  wetfrq=0 off('wetfrq')
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif
+  CPwtmenu('acq','set','none')
+
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$isweton
+  if ($isweton=0) then $wetpeaks=0 endif
+  if ($wetpeaks > 0) then
+		"Find tallest peaks (number dictated by wetpeaks)"
+     on('lb') if (lb<10) then lb=10 endif
+     wft('nods')
+     f dc aph0 vsadj(110) th = 100
+	peak:$ht,$tallpk
+     if (Console = 'mercury') then $maxpeaks=3 else $maxpeaks=7 endif
+     if wetpeaks > $maxpeaks then wetpeaks=$maxpeaks endif
+     $i=1
+     repeat
+	nll:$count
+	if $count < wetpeaks then th=th/2 endif
+     until $count >= wetpeaks or $i> 7
+     CPwtmenu('acq','read')
+     wft('nods')
+
+     if ($count < wetpeaks) then wetpeaks=$count endif
+     sort('llamp','r'):$index
+     $llfrq=llfrq[$index[1]]
+     $i=1
+     repeat
+	$llfrq[$i]=llfrq[$index[$i]]
+//	crmode='c'
+//	cr=llfrq[$index[$i]]-rfl+rfp
+//	setselfrqc
+	$i=$i+1
+     until $i> wetpeaks
+     if (wetpeaks>1) then
+        sort($llfrq,'r'):$index,$llfrq
+     endif
+     wet1Dproc('pickpeaks',$llfrq)
+
+  else
+		"Find peaks based on slpname and solventppm table"
+     array2array(slpname):slpname
+     $tallht=0
+     noisemult
+     wft 
+     if (console='vnmrs') then aph0
+     else aph:$ok
+        if not ($ok) then aph0 endif
+     endif
+     setref f full vsadj peak:$ht,$tallpk
+     crl rfl=sw/2 f dc peak(-sw/2,-sw/2+0.5p):$noise
+     if ($noise < 0) then $noise=-$noise endif
+     setref f full
+     $solv='' format(solvent,'lower'):$solv
+     if ($solv='d2o_10') then $solv='d2o' endif
+     $i=1 $i2=1
+     if (slpname[1] = 'h2o') or (slpname[1] = 'hdo') or (slpname[1]='d2o') then
+    	getsolvinfo(slpname[1]):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+    	if ($sok) then
+      	  peak($ppm*reffrq-0.5p,$ppm*reffrq+0.5p):$ht,$offset
+      	  if ($ht < 0) then $ht=-$ht endif
+      	  if ($ht > noisemult*$noise) then   "there is a peak"
+            if ($solv = 'd2o') then
+	      if (h1freq = 500) and (slpname[1] = 'h2o') then
+	        $offset=$offset "+10 "
+	      endif
+	      if ($ht > $tallht) then
+		$tallht=$ht
+		$tallpk=$offset
+	      endif
+	      getoffset($offset):$offset
+              $newtof=$offset
+            endif
+	    wetfrq=$offset wetfrqw=$width wetfrqs=$shape
+	    $i2=2
+          endif
+          $i=2
+    	endif
+     endif
+     $slpnamesize=size('slpname')
+     if ($slpnamesize > $i-1) then
+       repeat
+         $sok=0
+         getsolvinfo(slpname[$i]):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+         if ($sok) then
+	   if ($cppm <> 9999) then
+	     if ($lowppm > $cppm) then $lowppm=$cppm endif
+	     if ($hippm < $cppm) then $hippm = $cppm endif
+	   endif 
+	   peak($ppm*reffrq-0.2p,$ppm*reffrq+0.2p):$ht,$offset 
+	   if ($ht < 0) then $ht=-$ht endif
+	   if ($ht > noisemult*$noise) then	"there is a peak"
+	     $overlap=0
+	     if ($ht > $tallht) then
+		$tallht=$ht
+		$tallpk=$offset
+	     endif
+	     getoffset($offset):$offset
+	     if ($i > 1) then	"Check for overlap only from 2nd wetfrq"
+	       $x=1
+	       $wetfrqsize=size('wetfrq')
+	       repeat
+	         $edge=wetfrq[$x]+wetfrqw[$x]/2,wetfrq[$x]-wetfrqw[$x]/2
+	         if not (($offset > $edge[1]) or ($offset < $edge[2])) then
+		   $overlap=1
+	         endif
+	         $x=$x+1
+	       until $x > $wetfrqsize
+	     endif
+  	     if ($overlap = 0) then
+	       wetfrq[$i2]=$offset
+	       wetfrqw[$i2]=$width
+	       wetfrqs[$i2]=$shape
+	       $i2=$i2+1
+	     endif
+	   endif
+//	   $i=$i+1
+         endif
+	 $i=$i+1
+       until ($i > $slpnamesize)
+     endif
+
+  endif
+
+  off('wetpeaks')
+  tof=$newtof setref
+  $wetfrqsize=size('wetfrq')
+  wet1Dproc('wetinfo')
+//  dtext(curexp+'/wetinfo')
+  wet1Dproc('makeshape') 
+//  seqfil='wet1D' wet='y'
+  wet='y'
+//  setvch('tn','dn','z','dn')
+//  numvch=4,3,1,0
+  if ($wetpeaks=0) then
+  	wet1Dproc('c13wetpar',$lowppm,$hippm)
+  endif
+
+  if (Console <> 'mercury') and (wetfly='y') then
+		"Do compression factor optimization"
+        wet1Dproc('cfarray')
+	wet1Dproc('cfoptimize')
+	wexp='wet1Dproc(`tunecf`)'
+	werr='return'
+	explist=pslabel+'scout_tunecf'
+	scoutinfo='cf_optimization'
+	wdone=''
+	sp=$tallpk-100 wp=200
+	mkpar('real','tallpeak',$tallpk)
+	tallpeak=$tallpk
+	if ($GO = 'go') then
+		cpgo
+	endif
+	return
+  endif
+		"Reset stored parameters and move on"
+  nt=8 d1=1.5 
+//  fn=32k np=fn fn='n' 
+  sw=sw ss=2
+  shell('touch '+$tmpfile):$dum
+  fread($tmpfile)
+  rm($tmpfile):$dum
+  CPwtmenu('acq','read')
+  CPwtmenu('acq','purge')
+
+//  gain=24
+//  if (Console='mercury') then gain=4 endif
+  pw=pw90
+  dg
+  wexp='wft'
+  explist=pslabel
+  wdone=''
+  if (alock<>'u') then alock='n' endif
+  wshim='n'
+  if ($GO = 'go') then
+	cpgo
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'pickpeaks') THEN
+	"Set wetfrq parameter based on peakpick over threshold"
+
+  wetfrq=0 off('wetfrq')
+  wetfrqw=80  off('wetfrqw')
+  wetfrqs='seduce'
+
+  nll:$numpeaks
+  $llfrq=llfrq
+  if ($# > 1) then $llfrq=$2 $numpeaks=size('$2') endif
+  $i=1 $i2=1
+    repeat
+        dres($llfrq[$i]-rfl+rfp):$width
+        $width=3*$width
+        if $width < 10 then $width=10 endif
+	$firstwidth=$width
+	$lastwidth=$width
+        $bigwidth=$width
+	$firstfrq=$llfrq[$i]-rfl+rfp
+        $lastfrq=$llfrq[$i]-rfl+rfp
+        $curfrq=$llfrq[$i]-rfl+rfp
+      if ($i < $numpeaks) then 	"Check peaks for overlap"
+        $x=$i+1
+        repeat
+	  $nextfrq=$llfrq[$x]-rfl+rfp
+	  if ($curfrq-$nextfrq) < $width then
+	     dres($nextfrq):$lastwidth
+	     $lastwidth=3*$lastwidth
+	     if ($lastwidth < 10) then $lastwidth=10 endif
+	     $lastfrq=$nextfrq
+	     if ($bigwidth < $lastwidth) then $bigwidth=$lastwidth endif
+	     $width=$lastwidth
+	     $x=$x+1
+	     $i=$i+1
+	  else
+	     $x=$numpeaks+1
+	  endif
+	until $x > $numpeaks
+      endif
+
+      $offset=($firstfrq+$lastfrq)/2
+      $newwidth=($firstfrq-$lastfrq)
+      if ($newwidth < 0) then $newwidth=-1*$newwidth endif
+      $newwidth=$newwidth+$firstwidth/2+$lastwidth/2
+      if ($newwidth < $bigwidth) then
+	$newwidth=$bigwidth
+      endif
+      getoffset($offset):$offset
+      $shape='seduce'
+	
+      wetfrq[$i2]=$offset
+      wetfrqw[$i2]=$newwidth
+      wetfrqs[$i2]=$shape
+      $i2=$i2+1
+      $i=$i+1
+    until ($i > $numpeaks)
+    $wetfrqsize=size('wetfrq')
+
+ if ($# < 2) then
+    wet1Dproc('wetinfo')
+    write('line3','A shape for %d offsets will be generated',$wetfrqsize)
+ endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'makeshape') THEN
+	"make wetshape"
+  $wetfrqsize=size('wetfrq')
+  if ($# > 1) then
+	setwetshape($2)
+  else
+	setwetshape
+  endif
+
+"setting sslsfrq here added by SK Aug 15 2003"
+	"set ssfilter parameters, but turned OFF"
+ exists('sslsfrq','parameter'):$ex
+ if not $ex then addpar('ss') endif
+ $i=1
+ repeat
+    sslsfrq[$i]=tof-wetfrq[$i]
+    $i=$i+1
+ until $i>$wetfrqsize
+ ssntaps=201
+ ssfilter='n'
+
+  off('wetfrq')
+  off('wetfrqw')
+
+"*********************************************************************"
+ELSEIF ($arg = 'cfarray') THEN
+	"Array compression factor"
+  $tpwrsize=size('wet_cf')
+  if ($tpwrsize>1) then
+	wet1Dproc('setwetcf')
+  endif
+        format(wet_cf,0,2):wet_cf
+        $start=wet_cf-0.1
+        $steps=0.01
+        array('wet_cf',21,$start,$steps)
+        da
+
+"*********************************************************************"
+ELSEIF ($arg = 'cfoptimize') THEN
+	"Calculate shapes for all compression factors"
+
+  $cfsize=size('wet_cf')
+  if ($cfsize>1) and (Console='mercury') then
+	write('error','wet_cf array not available for Mercury')
+	wet1Dproc('setwetcf')
+	$cfsize=1
+  endif
+  if ($cfsize = 1) then
+	wet1Dproc('makeshape')
+  else
+        $shape='' $cf=1
+        $wetshape='' $wetpwr=0 $pwwet=10
+        $i=1
+	repeat
+		$cf=wet_cf[$i]
+		format($i,'lower'):$shape
+		if $i < 10 then $shape='0'+$shape endif
+		$shape='wet_cf_'+$shape
+		setwetshape($cf,$shape):$pwwet[$i],$wetpwr[$i],$wetshape[$i]
+		$i=$i+1
+	until $i > $cfsize
+	pwwet=$pwwet
+	wetpwr=$wetpwr
+	wetshape=$wetshape
+	array='(pwwet,wetpwr,wetshape,wet_cf)'
+	da
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'c13wetpar') THEN
+	"Calculate c13wet paramters based on solventppm table"
+
+  if ($2 = 9999) then $2=0 endif
+  if ($3 = -9999) then $3=0 endif
+
+  $centerppm=($2+$3)/2
+  $widthppm=($3-$2) + 5
+  dbwwet=$widthppm*dfrq*1.1
+  if dbwwet>19000 then dbwwet=19000 endif
+  if dbwwet<5*dfrq then dbwwet=5*dfrq endif
+  setoffset(dn,$centerppm):dofwet
+  dpatwet='waltz16'
+  if (dbwwet>2000) then dpatwet='garp1' endif
+  wet1Dproc('makedecshape')
+
+"*********************************************************************"
+ELSEIF ($arg = 'makedecshape') THEN
+
+  isrfwg('dn'):$rfwg
+  if dbwwet>19000 then dbwwet=19000 endif
+  if dbwwet<5*dfrq then dbwwet=5*dfrq endif
+
+  if ($rfwg) then
+     exists('dpatwet','parameter'):$rfwg
+  endif
+  if ($rfwg) then
+     if (dpatwet='') then 
+	dpatwet='waltz16'
+	if (dbwwet>2000) then dpatwet='garp1' endif
+     endif
+  endif
+  if ((dpatwet='waltz16') or
+      (dpatwet='garp1') or
+      (dpatwet='mlev16') or
+      (dpatwet='xy32')) then
+	$rfwg=0
+  endif
+  if ($rfwg) then
+        $sband='' format(dbwwet,0,0):$sband
+	assignshapename('c13wet','DEC'):$shape
+	opx($shape+'.DEC')
+	strstr(dpatwet,'WURST'):$isw
+	if ($isw) then
+	    $wave=dpatwet+' 0.0014/'+$sband
+	else
+	    $wave=dpatwet+' '+$sband
+	endif
+	setwave($wave)
+	cpx(pwx*pwxlvl_cf,pwxlvl):$dum
+	pbox_pwr($shape+'.DEC'):dpwrwet
+	pbox_dmf($shape+'.DEC'):dmfwet
+	pbox_dres($shape+'.DEC'):dreswet
+	dseqwet=$shape
+  else
+	exists('dpatwet','parameter'):$dpatex
+	if ($dpatex) then dseqwet=dpatwet endif
+	if (dseqwet='') then dseqwet='waltz16' dpatwet='waltz16' endif
+	if (dbwwet>2000) and dseqwet='waltz16' then
+		dseqwet='garp1' dpatwet='garp1'
+	endif
+	if (dbwwet<2000.1) and dseqwet<>'waltz16' then
+		dseqwet='waltz16' dpatwet='waltz16'
+	endif
+	$gb2=dbwwet/2
+	dreswet=90
+	if (dseqwet='garp1') then
+		$gb2=dbwwet/4
+		dreswet=1
+	elseif (dseqwet='xy32') then
+		$gb2=dbwwet/4
+	endif
+	setpower($gb2,dn):dpwrwet,$pw90wet
+	$dmf=dmf dmf=1e6/$pw90wet dmfadj(dreswet) dmfwet=dmf dmf=$dmf
+	substr(dseqwet,1,1):dmmwet
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'cfdisplay') THEN
+		"Display compression factor in the panel"
+        $size=size('wet_cf')
+        $first='' $last='' $steps=''
+        format(wet_cf[1],0,2):$first
+        format(wet_cf[$size],0,2):$last
+	if ($size > 1) then
+	    format(wet_cf[2]-wet_cf[1],0,2):$steps
+	endif
+        $return=$first+' to '+$last+' in steps of '+$steps
+        if ($size > 1) then return($return) else return('') endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'tunecf') THEN
+	"Find the best compression factor and move on"
+
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif 
+  wft f av ai
+  on('tallpeak'):$tallon
+  if ($tallon>0) then
+	sp=tallpeak-100 wp=200
+	rmpar('tallpeak')
+  endif
+  vp=0 $counter=1
+  select(1) vsadj(180) $best=180
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$best then $best=$ht $bestone=$counter endif
+    $counter=$counter+1
+  until $counter>arraydim
+  ph
+  wet_cf=wet_cf[$bestone]
+  wetpwr=0 pwwet=10 wetshape='seduce'
+  wet1Dproc('makeshape',wet_cf)
+
+  composit='n'
+  nt=8 d1=1.5 
+//  fn=32k np=fn fn='n'
+  sw=sw ss=2
+  shell('touch '+$tmpfile):$dum
+  fread($tmpfile)
+  rm($tmpfile):$dum
+  CPwtmenu('acq','read')
+  CPwtmenu('acq','purge')
+//  gain=24
+//  if (Console='mercury') then gain=4 endif
+  pw=pw90
+  f full
+  dg
+  wexp='wft'
+  explist=pslabel
+  wdone=''
+  if (alock<>'u') then alock='n' endif
+  wshim='n'
+  if ($GO = 'go') then
+        cpgo
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'addwetsolv') THEN
+	"Add wetsolvent to slpname"
+
+  format($2,'lower'):$2
+  getsolvinfo($2):$ppm,$width,$gh2,$cppm,$gmap,$shape,$ok
+  if ($ok=0) then
+	write('error','Solvent %s not found in solventppm table',$2)
+ 	return
+  endif
+  teststr('slpname',$2,'current'):$isthere
+  if ($isthere=0) then slpname=slpname,$2 endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'iswetsolv') THEN
+	"Is the solvent already selected?"
+
+  format($2,'lower'):$2
+  teststr('slpname',$2,'current'):$isthere
+  if ($isthere=0) then
+	format($2,'upper'):$2
+	teststr('slpname',$2,'current'):$isthere
+  endif
+  return($isthere)
+
+"*********************************************************************"
+ELSEIF ($arg = 'delwetsolv') THEN
+	"Delete wetsolvent from slpname"
+
+  format($2,'lower'):$2
+  $slpsize=size('slpname')
+  $i=1
+  repeat
+	if (slpname[$i]=$2) then slpname[$i]='' endif
+	$i=$i+1
+  until $i > $slpsize
+  array2array(slpname):slpname
+
+"*********************************************************************"
+ELSEIF ($arg = 'wstart') THEN
+	"This is where it begins - make decision on how to proceed"
+
+  on('wetfrq'):$ison
+  if ($ison) then 
+	suselfrq
+	off('doscout')
+	return 
+  endif
+
+  $wexp=wexp
+  $wetpeaks=wetpeaks
+  on('wetpeaks'):$wetison
+  if ($wetison=0) then $wetpeaks=0 endif
+
+  on('doscout'):$scoutON
+  if ($scoutON) then
+     if (doscout>-1) then $scoutON=0 endif
+  endif
+  if ($scoutON) then
+        format(solvent,'lower'):$solv
+        strstr($solv,'d2o'):$scoutON
+  endif
+  if ($scoutON) and (tn='H1') then
+    wet1Dproc('final')
+    if ($wexp='chempackQ') then
+	wexp='chempackQ'
+    endif
+    return
+  endif
+
+  if (auto='y') then
+	doscout=0
+    if ($wetpeaks > 0) then
+	slpname[1]=''
+    else
+        if (slpname[1]='') then
+            format(solvent,'lower'):slpname[1]
+            if (slpname[1]='d2o_10') then slpname[1]='h2o' endif
+            if (slpname[1]='dmso') then slpname[1]='wetdmso' endif
+        endif
+    endif
+  endif
+
+  if (slpname[1]='') and ($wetpeaks=0) then doscout=1 endif
+
+		"if solvent is D2O then H2O or HDO or D2O is the first solvent"
+  if (doscout=0) and ($wetpeaks=0) then
+	$solv='' format(solvent,'lower'):$solv
+  	if ($solv='d2o_10') then $solv='d2o' endif
+	if ($solv='d2o') then
+		wet1Dproc('iswetsolv','h2o'):$isthere
+		if ($isthere) then
+			wet1Dproc('delwetsolv','h2o')
+			wet1Dproc('delwetsolv','hdo')
+			wet1Dproc('delwetsolv','d2o')
+			slpname='h2o',slpname
+		endif
+		wet1Dproc('iswetsolv','hdo'):$isthere
+		if ($isthere) then
+			wet1Dproc('delwetsolv','hdo')
+			wet1Dproc('delwetsolv','d2o')
+			slpname='hdo',slpname
+		endif
+                wet1Dproc('iswetsolv','d2o'):$isthere
+                if ($isthere) then
+                        wet1Dproc('delwetsolv','d2o')
+                        slpname='d2o',slpname
+                endif
+	endif
+  else
+	slpname=''
+  endif
+
+  wet1Dproc('init')
+  scoutinfo=''
+  if ($wexp='chempackQ') then
+   	$explist=explist
+	$md=archivedir+'/'+sample+'/dirinfo/macdir'
+   	cpexplist('read',$md):explist
+   	if (doscout=0) or ($wetpeaks>0) then
+		write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'findfrq\')',$0)
+		explist=pslabel+'scout','SetUp',explist
+	else
+		write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'wds\')',$0)
+		explist=pslabel+'scout','SetUp',explist
+   	endif
+   	cpexplist('write',$md)
+   	explist=$explist
+	scoutinfo='Scout1D'
+	wexp='chempackQ'
+   	wds='' wstart=''
+   endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'wds') THEN
+	"Display spectrum and let the user pick the peaks"
+	" wds is set to suselfrq and will take care of generating"
+	" the shape"
+
+  wft 
+  if (console='vnmrs') then aph0
+  else aph:$ok
+     if not ($ok) then aph0 endif
+  endif
+  setref f full vsadj
+//  seqfil='wet1D' wet='y'
+  wet='y'
+//  setvch('tn','dn','z','dn')
+//  numvch=4,3,1,0
+
+  nt=8 d1=1.5 
+// fn=32k np=fn fn='n'
+  sw=sw ss=2
+  shell('touch '+$tmpfile):$dum
+  fread($tmpfile)
+  rm($tmpfile):$dum
+  CPwtmenu('acq','read')
+  CPwtmenu('acq','purge')
+  pw=pw90
+//  gain=24
+//  if (Console='mercury') then gain=4 endif
+  mkpar('string','wds','')
+  setgroup('wds','processing')
+  strtpar=''
+  setstrtpar
+//  shell('basename '+file):strtpar
+  wds='suselfrq'
+  wetfrq=0 off('wetfrq')
+  ds 
+  newdg
+  wexp='wft'
+  explist=pslabel
+  if (alock<>'u') then alock='n' endif
+  wshim='n'
+
+"*********************************************************************"
+ELSEIF ($arg = 'continue') THEN
+  iscpwet('processed'):$ret
+  if ($ret=0) then
+        write('error','Spectrum in curexp is not a wet spectrum with apptype=\'lstd1D\'')
+        return
+  endif
+  if (procdim=0) then
+	wft
+  endif
+  if (procdim<>1) then
+	write('error','a processed 1D spectrum is not in curexp')
+	return
+  endif
+	wds='suselfrq'
+	on('wetfrq')
+	showfreq('wetfrq')
+	
+"*********************************************************************"
+ELSEIF ($arg = 'darray') THEN
+	"display wet information"
+
+  mkpar('real','wetfrqppm',0)
+  $wetfrqsize=size('wetfrq')
+  $i=1
+  repeat
+   getppm(wetfrq[$i]):wetfrqppm[$i]
+   $i=$i+1
+  until $i > $wetfrqsize
+  on('wetfrq'):$ison
+  if ($ison) then
+  darray('wetfrq',10,0.9*wc2max,1):$x1
+  darray('wetfrqppm',$x1,0.9*wc2max,2):$x2
+  darray('wetfrqw',$x2,0.9*wc2max,0):$x3
+  darray('wetfrqs',$x3)
+  endif
+  rmpar('wetfrqppm')
+
+"*********************************************************************"
+ELSEIF ($arg = 'wetinfo') THEN
+	"Write to wetinfo file for display"
+
+ $action='write'
+ if ($# > 1) then
+	$action=$2
+ endif
+ $wetfile=curexp+'/wetinfo'
+ if (auto <> 'y') then
+  if ($action='write') then 
+   on('wetfrq'):$ison
+   if ($ison) then
+    write('reset',$wetfile)
+    write('file',$wetfile,'  freq.   [ppm]  width  shape')
+    write('file',$wetfile,' -----------------------------')
+    $wetfrqsize=size('wetfrq')
+    $i=1
+    repeat
+      getppm(wetfrq[$i]):$wetppm[$i]
+      write('file',$wetfile,'%8.1f %6.2f %3.0f Hz  %s',wetfrq[$i],$wetppm[$i],wetfrqw[$i],wetfrqs[$i])
+      $i=$i+1
+    until $i > $wetfrqsize
+   endif
+  endif
+  if ($action = 'display') then
+    exists($wetfile,'file'):$ex
+    if ($ex) then 
+	graphis('ds'):$dson
+	if ($dson) then ds endif
+	dtext($wetfile)
+    endif
+  endif
+ endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'doscout') THEN
+        "This section is OBSOLETE"
+
+  wds='suselfrq'
+  wet1Dproc('start')
+
+"*********************************************************************"
+ELSEIF ($arg = 'final') THEN
+
+   wet='y'
+   wetfrq=tofh2o
+   tof=wetfrq
+   write('line3','wet frequency at %0.1f',tofh2o)
+
+   getsolvinfo('h2o'):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+   if ($sok) then
+      wetfrqw=150
+      wetfrqs='seduce'
+   else
+      wetfrqw=$width
+      wetfrqs=$shape
+   endif
+   pw=pw90
+   wetpeaks=0 off('wetpeaks')
+   wet1Dproc('makeshape')
+   doscout=0 off('doscout')
+   wexp='wft' wnt=''
+   wstart='' wds=''
+   wdone=''
+   dg
+
+"*********************************************************************"
+ELSEIF ($arg = 'tunepwr') THEN
+	"This section is OBSOLETE"
+
+  $GO='go'
+  if ($# > 1) then $GO=$2 endif
+  if ($GO='go') then saveAsScout endif
+  wft f av ai
+  vp=0 $counter=1 sp=4p wp=2p
+  select(1) vsadj(180) $best=180
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht<$best then $best=$ht $bestone=$counter endif
+    $counter=$counter+1
+  until $counter>arraydim
+  ph
+  wetpwr=wetpwr[$bestone]
+  composit='n'
+  nt=8 d1=1.5 
+//  fn=32k np=fn fn='n' 
+  sw=sw ss=2
+//  readparam($tmpfile,'nt d1 pw composit MinSW pltopt')
+  shell('touch '+$tmpfile):$dum
+  fread($tmpfile)
+  rm($tmpfile):$dum
+  pw=pw90
+//  gain=24
+//  if (Console='mercury') then gain=4 endif
+  dg
+  wexp='wft'
+  explist=pslabel
+  wdone=''
+  if (alock<>'u') then alock='n' endif
+  wshim='n'
+  if ($GO = 'go') then
+        cpgo
+  endif
+
+"*********************************************************************"
+ELSEIF ($arg = 'acquire') THEN
+        "This section is OBSOLETE"
+
+   exec(wstart)
+   off('doscout')
+   cpgo
+
+"*********************************************************************"
+ELSEIF ($arg = 'check') THEN
+	"This section is OBSOLETE"
+  $skip='ok'
+  $error=''
+  $slpname=''
+  $solv=''
+  format(solvent,'lower'):$solv
+  if ($solv='d2o_10') then $solv='d2o' endif
+  $H2O=$solv
+  $i=1 $i2=1
+  $done=0
+  repeat
+    $name=''
+    substr(slpname,$i):$name
+    if ($name = '') then $done=1 else
+      getsolvinfo($name):$ppm,$width,$gh2,$cppm,$gmap,$shape,$sok
+      if ($sok = 0) then
+        $error='Solvent '+$name+' is NOT in the solventppm table'
+        write('error','%s',$error)
+        $done=1
+        $skip='skip'
+      else
+        if (Gmap <> 'H1') then
+                is_gmap($gmap):$gok
+                if ($gok) then Gmap=$gmap endif
+        endif
+      endif
+      if ($name = 'h2o') or ($name = 'hdo') or ($name='d2o') then
+        $H2O=$name
+      elseif (($name = 'hdo') or ($name='d2o')) and ($solv = 'd2o') then
+        $H2O=$name
+      else
+        $slpname[$i2]=$name
+        $i2=$i2+1
+      endif
+    endif
+    $i=$i+1
+  until $done > 0
+
+  if ($H2O = 'h2o') or ($H2O='hdo') or ($H2O='d2o') then
+    if ($slpname[1]<> '') then
+      slpname=$H2O,$slpname
+    else
+      slpname=$H2O
+    endif
+  else
+    slpname=$slpname
+  endif
+  if slpname='' then
+    $skip='skip'
+    $error='No Solvent was selected for WET'
+    write('error','%s',$error)
+  endif
+  $slpsize=size('slpname')
+  if ($slpsize > 7) then
+    $error='A maximum of 7 solvent peaks allowed in wet suppression'
+    write('error','%s',$error)
+    $skip='skip'
+  endif
+
+  if $slpsize > 3 then
+        $rfwg=0
+        isrfwg('tn'):$rfwg
+    if ($rfwg=0) then
+      $error='Multiple (>3) solvent wet requires WFG in H1 channel'
+      write('error','%s',$error)
+      $skip='skip'
+    endif
+  endif
+
+  return($skip,$error)
+
+"***********************************************************************"
+ENDIF
+

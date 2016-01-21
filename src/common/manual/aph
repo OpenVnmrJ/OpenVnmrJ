@@ -1,0 +1,63 @@
+
+*******************************************************************************
+aph<(arguments):$ok,$rp,$lp>	- Automatic Phase of "rp" and "lp"
+aph<('lp',arguments):$ok,$rp,$lp> - Automatic Phase of "rp" and "lp"
+aph<('peakmax',arguments):$ok,$rp,$lp> - Automatic Phase of "rp" and "lp"
+aph0<(arguments):$ok,$rp,$lp>	- Automatic Phase Zero-Order Term ("rp" only)
+*******************************************************************************
+
+  "aph" automatically calculates the phase parameters "lp" and "rp" required
+  to produce an absorption mode spectrum.  The values of "lp" and "rp"
+  calculated by "aph" do not depend on the initial values of these parameters.
+  The "aph0" (aph-zero) command calculates only the "zero-order" frequency-
+  independent term "rp", and does not rely on the frequency-dependent term
+  "lp" being previously adjusted.  The three return values are :
+	$ok - success of "aph" or "aph0" = 1 (successful) or 0 (failed)
+	$rp - calculated value of "rp"
+	$lp - calculated value of "lp" (aph) or current value of "lp" (aph0)
+  The optional arguments are the same as those listed for the "region"
+  command.
+
+  For systems with a direct digital receiver, such as the vnmrs system,
+  the correct value of lp is generally 0.0. Using aph on data collected
+  by one of these systems will set lp=0.0 and optimize rp. Providing the
+  'lp' argument to aph, as in aph('lp'), causes aph to optimize the lp
+  parameter, rather than simply setting it to 0.0. If the 'lp' argument
+  is given, it must preceed any 'select', 'ignore', or "region" arguments
+  as described below. On non-direct digital receiver systems, such as the
+  Inova or Mercury systems, aph and aph('lp') both optimize the lp parameter.
+
+  The argument 'peakmax' instructs aph and aph0 to optimize the rp parameter
+  to maximize the height of the largest peak. The 'lp' and 'peakmax' arguments
+  must preceed any other parameters such as 'select' or 'ignore', as described below.
+
+  aph and aph0 can select or ignore portions of the spectrum during optimization.
+  For water suppressed data, the center region is often distorted and it
+  could be ignored. aph and aph0 accept an 'ignore' argument followed by
+  pairs of frequencies which define regions to ignore. aph and aph0 also accept
+  a 'select' argument, followed by pairs of frequencies. The 'ignore' or 'select'
+  argument must follow any optional "region" arguments. The 'ignore' and 'select'
+  arguments can be intermixed. If the first one encountered is 'ignore', an
+  implicit 'select' is done to select the entire spectrum. If the first one
+  encountered is 'select', an implicit 'ignore' is done to ignore the entire
+  spectrum. Some examples include:
+    aph('select',10p,7p,5p,3p,'ignore',4p,4.5p)
+    aph('ignore',4p,4.5p)
+  Note that the order of calling 'select' and 'ignore' is important. Assume
+  a spectrum from 10 ppm to 0 ppm. The following two calls are not the same.
+    aph('select',8p,2p,'ignore',4.5p,5.5p)
+    aph('ignore',4.5p,5.5p,'select',8p,2p)
+  In the first case, an implicit 'ignore' ignores all data. The 'select'
+  selects data from 8 ppm to 2 ppm. The 'ignore' ignores data from
+  4.5 ppm to 5.5 ppm. The net result is that data from 8 ppm to 5.5 ppm
+  and 4.5 ppm to 2 ppm are selected for phase optimization.
+  In the second case, an implicit 'select' selects all data. The 'ignore'
+  ignores data from 4.5 ppm to 5.5 ppm. The 'select' selects data from
+  8 ppm to 2 ppm, negating the effect of the 'ignore' The net result is
+  that all data from 10 ppm to 0 ppm are selected for phase optimization.
+
+  The action of "aph" or "aph0" depends on the number of return values
+  requested.  If 0 or 1 return values are requested, the parameters "rp" and
+  "lp" are set to the values calculated by "aph" or "aph0".  If 2 or 3 return
+  values are requested, "aph" or "aph0" returns the calculated values of "rp"
+  and "lp", but does not change the values of the parameters "rp" and "lp".

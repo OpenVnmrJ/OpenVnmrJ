@@ -1,0 +1,38 @@
+"macro getint"
+"H. Bildsoe, Aarhus University, Denmark, march 1995 "
+"getint- macro for retrieval of integrals"
+
+$cd=curexp+'/expint'  "file of ssb integrals"
+exists($cd,'file'):$a
+if ($a>0.5) then
+  rm($cd)
+  endif
+$sites = 1
+repeat 
+  if ($sites=1) then
+    $viso=viso else $viso=viso2 endif
+  $ssbnr=trunc((swsim+spsim-$viso)/srate) "maximum positive ssb no"
+  numreg:$nr
+  $i=1
+  repeat
+    getreg($i):$min,$max "end points for region $i"
+    $f1=$ssbnr*srate+$viso  "frequency for ssb no $ssbnr"
+    if (($min<$f1) and ($max>$f1)) then  "is the ssb inside the region?"
+      integ($min,$max):$amp              "yes"
+      if (sites=1) then
+        write('file',$cd,' %10.0f %15.6f',$ssbnr,$amp)
+        else write('file',$cd,' %2.0f %10.0f %15.6f',$sites,$ssbnr,$amp) endif
+      $ssbnr=$ssbnr-1
+      $i=$i+1
+      else if ($max<$f1) then  "no, region is at lower frequencies"
+      repeat                 "check next ssb at lower frequency"
+        $ssbnr=$ssbnr-1
+        $f1=$ssbnr*srate+$viso
+        until (($f1<=$max) or ($f1<spsim))
+      else
+      $i=$i+1  "region is at higher frequencies than the ssb. check next region"
+      endif endif
+    until (($i>$nr) or ($f1<spsim)) 
+  $sites=$sites+1
+  until $sites>sites
+menu('stars2')

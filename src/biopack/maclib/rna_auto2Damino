@@ -1,0 +1,70 @@
+"macro rna_auto2Damino"
+"Agilent"
+
+ptext(userdir+'/manual/rnapreface4a')
+exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+  if $e then
+   ptext(userdir+'/manual/rnapreface4a')
+  else
+   ptext('/vnmr/manual/rnapreface4a')
+endif
+rt('rna_gNhmqc_amino')
+ph ph1
+crl1 rfl1=sw1/2 rfp1=85*dfrq2
+setref sp=5.5p wp=4.5p
+wft(1)
+rp=-90 lp=0 
+lp1=0 rp1=0
+wp1=sw1 rna_auto2dstackamino
+shell('rm -r $HOME/vnmrsys/AutoRNA_H2O_2D/rna_gNhmqc_amino.fid'):$dum
+BPsvf(userdir+'/AutoRNA_H2O_2D/rna_gNhmqc_amino')
+
+rt('rna_gNhsqc_amino')
+ph ph1
+crl1 rfl1=sw1/2 rfp1=85*dfrq2
+lp1=0 rp1=0
+setref sp=5.5p wp=4.5p
+wft(1)
+ lp=0 select(1) BPaph0
+peak:$int
+if $int<0 then rp=rp-180 endif
+wp1=sw1 rna_auto2dstackamino
+shell('rm -r $HOME/vnmrsys/AutoRNA_H2O_2D/rna_gNhsqc_amino.fid'):$dum
+BPsvf(userdir+'/AutoRNA_H2O_2D/rna_gNhsqc_amino')
+
+rt('rna_CPMGgNhsqc_amino')
+ph ph1
+crl1 rfl1=sw1/2 rfp1=85*dfrq2
+full if (f1180='n') then
+lp1=0 rp1=0
+else
+lp1=-180 rp1=90
+endif
+setref sp=5.5p wp=4.5p 
+wft(1)
+ lp=0 rp=0
+peak:$int
+if $int<0 then rp=rp-180 endif
+wp1=sw1 rna_auto2dstackamino
+shell('rm -r $HOME/vnmrsys/AutoRNA_H2O_2D/rna_CPMGgNhsqc_amino.fid'):$dum
+BPsvf(userdir+'/AutoRNA_H2O_2D/rna_CPMGgNhsqc_amino')
+
+rt('rna_WGgNhsqc_amino')
+ph ph1
+crl1 rfl1=sw1/2 rfp1=85*dfrq2
+if (f1180='n') then
+lp1=0 rp1=0
+else
+lp1=-180 rp1=90
+endif
+setref sp=5.5p wp=4.5p
+wft(1)
+ lp=0 select(1) BPaph0
+peak:$int
+if $int<0 then rp=rp-180 endif
+wp1=sw1 rna_auto2dstackamino
+shell('rm -r $HOME/vnmrsys/AutoRNA_H2O_2D/rna_WGgNhsqc_amino.fid'):$dum
+BPsvf(userdir+'/AutoRNA_H2O_2D/rna_WGgNhsqc_amino')
+
+banner('Automatic 2D Processing/Plotting Finished')
+write('line3','Automatic 2D Processing and Plotting Finished')

@@ -1,0 +1,79 @@
+"macro testprofile1D"
+wexp=''
+wdone=''
+profile_vox='y'
+
+
+
+//First, check to make sure that you are saving the spec parameters, and not residual voxel profile parameters
+if (sw<99000) then
+
+create('specnt','integer','current',1) specnt=nt 
+create('specpresig','flag','current',1) specpresig=presig
+create('specws','flag','current','y') specws=ws 
+create('specwsrf','flag','current','y') specwsrf=wsrf 
+create('specsw','real','current',4000) specsw=sw 
+create('specnp','integer','current',4000) specnp=np 
+create('specgain','integer','current',2) specgain=gain 
+create('arraySave','string','current','') arraySave='' arraySave=array 
+else
+write('line3','Use Set All Freq button in Setup to reset spectroscopy values') 
+abort
+endif
+
+//Now set the parameters for the profile acquisition
+ws='y'
+wsrf='n' 
+//empty array
+array=''
+
+
+if (seqfil='isis' or seqfil='special') then
+presig='h'
+endif
+
+sw=100000
+np=512 
+gain=2
+crl cr=sw/2 rl(0) axis='c' 
+
+//only allow array of the profiles
+if (profile_combo='y') then
+profile_ovs='y','n'
+endif
+
+
+go('check')
+
+
+
+
+im1D('prep')
+
+//tell the system which nt to use
+create('ntopt','integer','current',0)
+if(ntopt=0) then nt=1 endif
+
+
+
+if (array='profile_ovs') then
+sglarray=1 //only for this experiment
+wexp='av ft f full vsadj dss dscale profile_vox=`n` profile_ovs=`n` profile_combo=`n` wsrf=specwsrf ws=specws gain=specgain sw=specsw np=specnp nt=specnt array=arraySave sglarray=0 presig=specpresig '
+
+else
+
+
+wexp='av ft f full vsadj profile_vox=`n` profile_ovs=`n` profile_combo=`n` wsrf=specwsrf ws=specws gain=specgain sw=specsw np=specnp nt=specnt array=arraySave presig=specpresig'
+endif
+
+
+
+
+
+wdone='wexp=``  destroy(`specnt specgain`):$ok' "this is not to have wexp hanging around" 
+
+
+au
+
+
+

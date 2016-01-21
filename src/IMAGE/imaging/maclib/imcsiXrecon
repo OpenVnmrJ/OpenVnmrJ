@@ -1,0 +1,607 @@
+"macro imcsiXrecon"
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do     = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+exists('profile','parameter'):$profile
+exists('recon','parameter'):$exrecon
+if ($exrecon) then $recon = recon else $recon = 'internal' endif
+
+"**********************************************************"
+" Is this FSE or multi-echo type of experiment?            "
+"**********************************************************"
+$is_fse = 0
+$is_ne  = 0
+$nfids  = 1
+exists('etl','parameter'):$ex_etl
+exists('ne','parameter'):$ex_ne
+
+if ($ex_etl>0) then $is_fse = (etl > 1) endif
+if ($ex_ne >0) then $is_ne  = (ne  > 1) endif
+
+if ($is_fse AND $is_ne) then
+  write('error','Cannot handle data with both etl and ne > 1')
+  abort
+endif
+if ($is_fse) then $nfids = etl endif
+if ($is_ne) then  $nfids = ne  endif
+
+exists('navigator','parameter'):$nav
+if ($nav>0) then
+  if (navigator='y') then
+    exists('nav_echo','parameter'):$ex
+    if ($ex>0) then $nfids=$nfids+size('nav_echo') endif
+  endif
+endif
+
+"**********************************************************"
+" load original raw fid file if needed                     "
+"**********************************************************"
+if ($action = 'rp') then
+
+  exists('reproc','parameter'):$ee
+  if $ee <  0.5 then
+   create('reproc','string')
+   create('reproc','string','processed')	
+ endif
+  reproc='true'
+  setvalue('reproc','true','processed')
+
+endif
+
+"**********************************************************"
+" make and load integral map                              "
+"**********************************************************"
+if ($action = 'mlmap') then
+  liMMap(cr)
+  csiMapSel=csiMapSel
+  aipDeleteData
+  csiCmd('getCSIPath'):$s
+  RQaction('doubleclick',$s+'/maps/'+csiMapSel) 
+
+endif
+
+"**********************************************************"
+" load spatial fid file                                    "
+"**********************************************************"
+if ($action = 'rprep') then
+  return
+  if(file <> csiOrigFile)then
+    rt(csiOrigFile)
+  endif
+endif
+
+"**********************************************************"
+" load spatial fid file                                    "
+"**********************************************************"
+if ($action = 'sprep') then
+  return
+  strstr(file,'spatial'):$ee
+  if $ee < 0.5 then
+    rt(curexp+'/test.csi/spatial')
+  endif
+endif
+
+"**********************************************************"
+" Do reconstruction                                        "
+"**********************************************************"
+if ($action = 'recon') then
+
+  aipDeleteData
+
+  // check for valid csiOrigFile
+  substr(csiOrigFile,1,1):$s
+  strstr(csiOrigFile,'.fid'):$n
+  if($n=0 or $s<>'/') then // bad csiOrigFile
+    csiOrigFile=file	
+  endif
+
+
+  write('line3','spatial processing '+csiOrigFile)
+
+
+  groupcopy('current','processed','processing')
+  flush
+
+ // save original procpar and rewrite it if necessary
+   if(reRecon) then
+     $cmd = 'mv '+csiOrigFile+'/procpar '+csiOrigFile+'/procpar.ORIG'
+     shell($cmd)
+     $cmd = 'cp '+curexp+'/procpar '+csiOrigFile+'/procpar'
+     shell($cmd)
+   endif
+
+  "Clear old data"
+  aipXrecon('cleardata')
+  $cmd = 'Xrecon '+csiOrigFile+' >'+curexp+'/Xrecon.txt 2>&1'
+  shell($cmd):$trash
+
+
+ // restore original procpar
+   if(reRecon) then
+     $cmd = 'mv '+csiOrigFile+'/procpar.ORIG '+csiOrigFile+'/procpar'
+     shell($cmd)
+   endif
+
+
+
+$dir1 = curexp+'/test.csi'
+  exists($dir1,'directory'):$ee
+if $ee < 0.5 then
+  $cmd = 'mkdir '+$dir1
+  shell($cmd):$trash
+endif
+
+$dir1 = curexp+'/test.csi/spatial.fid/'
+  exists($dir1,'directory'):$ee
+if $ee < 0.5 then
+  $cmd = 'mkdir '+$dir1
+  shell($cmd):$trash
+endif
+
+  $cmd = 'mv '+csiOrigFile+'/newfid '+$dir1+'/fid'
+  shell($cmd):$trash
+
+" doctor up some parameters to reflect one fid per block "
+
+  $nblks=1
+
+  $isactive=0
+  on('fn1'):$isactive
+  if ($isactive > 0.5) then 
+    $nv = fn1/2
+  else
+    $nv = nv    
+  endif
+
+  $ppe=ppe
+  $lpe=lpe
+  exists('cnv','parameter'):$ee
+  if $ee > 0.5 and $nv > 0 then
+   on('cnv'):$isactive
+   if($isactive) then
+     $ppe=ppe+(snv+0.5*cnv-0.5*$nv)*lpe/$nv
+     $lpe=lpe*cnv/$nv
+     $nv = cnv
+     setvalue('ppe',$ppe,'processed')
+     setvalue('lpe',$lpe,'processed')
+   endif
+  endif
+
+  exists('dppe','parameter'):$ee
+  if $ee > 0.5 and $nv > 0 then
+   on('dppe'):$isactive
+   if($isactive) then
+     $ppe=$ppe + dppe*$lpe/$nv
+     setvalue('ppe',$ppe,'processed')
+   endif
+  endif
+
+  // check for epsi type
+  $epsi=0
+  exists('epsi','parameter'):$ee
+  if ($ee > 0.5) then
+    if (epsi='y') then
+       $epsi=1
+    endif
+  endif
+  
+
+
+  $isactive=0
+  on('fn2'):$isactive
+  $nv2 = nv2
+  if ($epsi=1 and reRecon = 0) then
+    $nv2 = np/2
+write('line3','$nv2 for epsi is %d',$nv2)
+  endif
+  if ($isactive > 0.5) then 
+    $nv2 = fn2/2
+  endif
+
+  $ppe2=ppe2
+  $lpe2=lpe2
+  exists('cnv2','parameter'):$ee
+  if $ee > 0.5 and $nv2 > 0 then
+   on('cnv2'):$isactive
+   if($isactive) then
+     $ppe2=ppe2+(snv2+0.5*cnv2-0.5*$nv2)*lpe2/$nv2
+     $lpe2=lpe2*cnv2/$nv2
+     $nv2 = cnv2
+     setvalue('ppe2',$ppe2,'processed')
+     setvalue('lpe2',$lpe2,'processed')
+   endif
+  endif
+
+  exists('dppe2','parameter'):$ee
+  if $ee > 0.5 and $nv2 > 0 then
+   on('dppe2'):$isactive
+   if($isactive) then
+     $ppe2=$ppe2 + dppe2*$lpe2/$nv2
+     setvalue('ppe2',$ppe2,'processed')
+   endif
+  endif
+
+  $isactive=0
+  on('fn3'):$isactive
+  $nv3 = nv3
+  if ($epsi=1 and reRecon = 0) then
+    $nv3 = nv2
+write('line3','$nv3 for epsi %d',$nv3)
+  endif
+  if ($isactive > 0.5) then 
+    $nv3 = fn3/2
+  endif
+
+  $ppe3=ppe3
+  $lpe3=lpe3
+  exists('cnv3','parameter'):$ee
+  if $ee > 0.5 and $nv3 > 0 then
+   on('cnv3'):$isactive
+   if($isactive) then
+     $ppe3=ppe3+(snv3+0.5*cnv3-0.5*$nv3)*lpe3/$nv3
+     $lpe3=lpe3*cnv3/$nv3
+     $nv3 = cnv3
+     setvalue('ppe3',$ppe3,'processed')
+     setvalue('lpe3',$lpe3,'processed')
+   endif
+  endif
+
+  exists('dppe3','parameter'):$ee
+  if $ee > 0.5 and $nv3 > 0 then
+   on('dppe3'):$isactive
+   if($isactive) then
+     $ppe3=$ppe3 + dppe3*$lpe3/$nv3
+     setvalue('ppe3',$ppe3,'processed')
+   endif
+  endif
+
+  $nblks = $nv*$nv2*ns	
+
+// get array size from other than enoding
+  $arsz = arraydim
+  $kreduced = 0
+
+  substr(seqcon,2,1):$ss
+  if($ss = 's') then
+       $ar = trunc($arsz/ns)
+       if(($ar * ns) <> $arsz)then $kreduced=1 endif
+       $arsz = $ar  
+  endif
+
+
+  substr(seqcon,3,1):$ss
+  if($ss = 's') then
+       $ar = trunc($arsz/nv) 
+       if(($ar * nv) <> $arsz)then $kreduced=1 endif
+       $arsz = $ar  
+  endif
+
+
+  substr(seqcon,4,1):$ss
+  if($ss = 's') then
+       $ar = trunc($arsz/nv2) 
+       if(($ar * nv2) <> $arsz)then $kreduced=1 endif
+       $arsz = $ar  
+  endif
+
+
+  substr(seqcon,5,1):$ss
+  if($ss = 's') then
+      $ar = trunc($arsz/nv3) 
+       if(($ar * nv3) <> $arsz)then $kreduced=1 endif
+       $arsz = $ar  
+    $nblks = $nblks*$nv3
+  endif
+
+
+// account for reduced k-space
+  if($kreduced > 0) then $arsz=1 endif
+
+// make seqcon reflect a standard acq 
+  $sqcon=seqcon
+  substr($sqcon,3,1,'s'):$sq
+  substr($sq,4,1,'s'):$sq
+
+
+// 3d case
+  if($ss = 'c') then
+    $nblks = $nblks*$nv3
+    substr($sq,5,1,'s'):$sq
+  endif
+
+  fnv=$nv
+  fnv2=$nv2
+  fnv3=$nv3
+
+// update processing params
+  groupcopy('current','processed','processing')
+
+  seqcon=$sq
+  setvalue('seqcon',$sq,'processed')
+  setvalue('ni',$nblks,'processed')
+  setvalue('ni2',1,'processed')
+  exists('ni3','parameter','processed'):$e
+  if($e) then
+    setvalue('ni3',1,'processed')
+  endif
+	
+  setvalue('reRecon',0,'processed')
+  setvalue('procdim',0,'processed')
+
+// adjust ns to include any arrayed parameter, this is a kludge
+  $ns = ns*$arsz
+  $arsz = $nblks/ns
+  ns=$ns
+  setvalue('ns',$ns,'processed')
+
+  	
+  setvalue('arraydim',$arsz*ns,'processed')  
+  if($epsi=1 and reRecon=0) then
+    setvalue('np',nv3*2,'processed')
+    np=nv3*2
+    setvalue('ns',$nv3,'processed')
+    ns=$nv3
+    setvalue('nv3',$nv3	,'processed')
+    nv3=$nv3	
+    setvalue('nv2',$nv2	,'processed')
+    nv2=$nv2	
+
+  endif
+
+  flush
+
+  $cmd = 'cp '+curexp+'/procpar '+$dir1
+  shell($cmd):$trash
+
+  $cmd = 'cp '+curexp+'/text '+$dir1
+  shell($cmd):$trash
+  $cmd = 'cp '+curexp+'/acqfil/log '+$dir1
+  shell($cmd):$trash
+
+  return($dir1)
+
+endif
+
+
+"**********************************************************"
+" Display All                                              "
+"**********************************************************"
+if ($action = 'displayall') then
+  aipDeleteData('all')              "clear images"
+  aipRQcommand('set','sort','yes')  "enable sorting"
+  rqsort=1                          "sort by slices"
+  rqsort2=1                         "sort by slices"
+  "Figure the number of receivers"
+  aipXrecon('nrcvrs'):$nr
+  "Find the number of images and split window accordingly"
+  $cmd='a="" ; for i in '+curexp+'/recon/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nframes
+  aipSplitWindow($nframes,2,1)
+  "Load and display data"
+  $ext=''
+  $reconflag=0	    
+
+  "Magnitude output is treated differently: "
+  "There is the option to display combined receiver output"
+  im2Dxrecon('displayMGdir','recon','imMG','imIR',$nr):$reconflag
+  im2Dxrecon('displaydir','reconPH','imPH',$nr):$reconflag
+  im2Dxrecon('displaydir','reconRE','imRE',$nr):$reconflag
+  im2Dxrecon('displaydir','reconIM','imIM',$nr):$reconflag
+  im2Dxrecon('displayMGdir','rawMG','rawMG','rawIR',$nr):$reconflag
+  im2Dxrecon('displaydir','rawPH','rawPH',$nr):$reconflag
+  im2Dxrecon('displaydir','rawRE','rawRE',$nr):$reconflag
+  im2Dxrecon('displaydir','rawIM','rawIM',$nr):$reconflag
+
+  if ($reconflag) then
+    aipRQcommand('load',curexp+'/recon',-1)
+  endif
+  aipDisplay('all')                 "display"
+
+endif
+
+"**********************************************************"
+" Display Directory                                        "
+"**********************************************************"
+if ($action = 'displaydir') then
+
+  if ($# > 4) OR ($# < 4) then return endif
+
+  $dir=$2
+  $flag=$3
+  $nr=$4
+
+  exists($flag,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag} = 'y') then
+      if ($nr > 1) then
+        $i=1
+	$ext=''
+        while ($i <= $nr) do
+          format($i+1000,4,0):$ext
+          substr($ext,2,4):$ext
+          exists(curexp+'/'+$dir+$ext,'directory'):$e
+	  if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+          $i=$i+1
+        endwhile
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+	if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      return(0)		
+    endif
+  endif
+
+endif
+
+"**********************************************************"
+" Display Magnitude Directory                              "
+"**********************************************************"
+if ($action = 'displayMGdir') then
+
+  if ($# > 5) OR ($# < 5) then return endif
+
+  $dir=$2
+  $flag1=$3
+  $flag2=$4
+  $nr=$5
+
+  exists($flag1,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag1} = 'y') then
+      if ($nr > 1) then
+        exists($flag2,'parameter'):$e
+        if ($e > 0) then
+          if ({$flag2} = 'y') then
+            $i=1
+            $ext=''
+            while ($i <= $nr) do
+              format($i+1000,4,0):$ext
+              substr($ext,2,4):$ext
+              exists(curexp+'/'+$dir+$ext,'directory'):$e
+	      if ($e < 1) then return endif
+              aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+              $i=$i+1
+            endwhile
+          else
+            exists(curexp+'/'+$dir,'directory'):$e
+	    if ($e < 1) then return endif
+            aipRQcommand('load',curexp+'/'+$dir,-1)
+          endif
+        else
+          exists(curexp+'/'+$dir,'directory'):$e
+          if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir,-1)
+        endif
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+        if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      if ($dir <> 'recon') then return(0) endif		
+    else
+      if ($dir = 'recon') then return(1) endif		    
+    endif
+  else
+    if ($dir = 'recon') then return(1) endif		    
+  endif
+
+endif
+
+"**********************************************************"
+" Number of Receivers Acquiring Data                       "
+"**********************************************************"
+if ($action = 'nrcvrs') then
+  $nr=0
+  length(rcvrs):$len
+  $i=1
+  while ($i <= $len) do
+    $str=''
+    substr(rcvrs,$i,1):$str
+    if ($str = 'y') then $nr=$nr+1 endif
+    $i=$i+1
+  endwhile
+  return($nr)
+endif
+
+"**********************************************************"
+" Display Profiles                                         "
+"**********************************************************"
+if ($action = 'displayprofiles') then
+  seqcon('slice'):$slice
+  if ($do = 'scale') then
+    aipXrecon('nrcvrs'):$nr 
+    if (slices='all') and ($slice='c') then
+      if ($recon = 'internal') OR ($recon = '') then 
+        ft('nf',rc) dssh
+      else "external recon"
+        $start=(rc-1)*ns*$nfids+1 $end=(rc-1)*ns*$nfids+ns*$nfids $step=1
+        dssh($start,$end,$step)
+        if ($start=$end) then dscale endif
+      endif
+    elseif (arraydim>$nr) then
+      im2Dxrecon('displayprofiles','echo')
+    else
+      if ($recon = 'internal') OR ($recon = '') then 
+        ft('nf',rc) 
+        if (slices='all') then dssh 
+        else dssh(sl*$nfids-$nfids+1,sl*$nfids,1) endif
+      else "external recon"
+        if (slices='all') then $start=(rc-1)*ns*$nfids+1 $end=(rc-1)*ns*$nfids+ns*$nfids
+        else $start=(rc-1)*ns*$nfids+sl*$nfids-$nfids+1 $end=(rc-1)*ns*$nfids+sl*$nfids endif
+        $step=1
+        dssh($start,$end,$step)
+        if ($start=$end) then dscale endif
+      endif
+    endif
+  endif
+  if ($do = 'slice') then
+    if (sl<1) then sl=1 endif 
+    if (sl>ns) then sl=ns endif 
+    if (slices='single') then
+      aipXrecon('nrcvrs'):$nr
+      if (arraydim>$nr) then
+        im2Dxrecon('displayprofiles','echo')
+      else
+        if ($slice='c') then
+          if ($recon = 'internal') OR ($recon = '') then 
+            ft('nf',rc) f full dssh(sl*$nfids-$nfids+1,sl*$nfids,1)
+          else "external recon"
+            $start=(rc-1)*ns*$nfids+sl*$nfids-$nfids+1 $end=(rc-1)*ns*$nfids+sl*$nfids $step=1
+            f full dssh($start,$end,$step)
+            if ($start=$end) then dscale endif
+          endif
+        endif
+      endif
+    endif
+  endif
+  if ($do = 'allslices') then
+    if ($slice='c') then 
+      if ($recon = 'internal') OR ($recon = '') then 
+        ft('nf',rc) dssh
+      else "external recon"
+        $start=(rc-1)*ns*$nfids+1 $end=(rc-1)*ns*$nfids+ns*$nfids $step=1
+        dssh($start,$end,$step)
+        if ($start=$end) then dscale endif
+      endif
+    endif
+  endif
+  if ($do = 'echo') then
+    if (ec<1) then ec=1 endif 
+    if (ec>$nfids) then ec=$nfids endif 
+    if (slices='single') or ($slice='s') then
+      aipXrecon('nrcvrs'):$nr 
+      if ($recon = 'internal') OR ($recon = '') then 
+        cf=(sl-1)*$nfids+ec
+        ft dssh(rc,arraydim,$nr)
+      else "external recon"
+        $start=(rc-1)*ns*$nfids+sl*$nfids-$nfids+ec $end=ns*$nfids*arraydim $step=ns*$nfids*$nr
+        dssh($start,$end,$step)
+        if ($start=$end) then dscale endif
+      endif
+    endif
+  endif
+  if ($do = 'rcvr') then
+    if (rc<1) then rc=1 endif 
+    aipXrecon('nrcvrs'):$nr 
+    if (rc>$nr) then rc=$nr endif 
+    if (slices='all') and ($slice='c') then 
+      im2Dxrecon('displayprofiles','allslices')
+    else
+      im2Dxrecon('displayprofiles','slice')      
+    endif
+  endif
+endif

@@ -1,0 +1,46 @@
+"macro mparval"
+"*****************************************************"
+" mparval - move parameter value between experiments "
+"*****************************************************"
+" check arguments "
+if ($#<2)or($#>3) then
+  write('error','usage: mparval(parname,n) or mparval(parname,n,m)')
+  return
+endif
+$t='' $s='' $curexp=''
+jexp:$curexp
+if $#<3 then
+  $target=$2
+  $s=$curexp
+else
+  $source=$2
+  format($source,1,0):$s
+  $target=$3
+endif
+format($target,1,0):$t
+if $s=$t then
+  write('error','mparval: source and target are identical')
+  return
+endif
+" save current experiment (parameters) on disk "
+fsave(curexp+'/curpar','current')
+
+" if necessary, read source parameters "
+if $curexp<>$s then
+  fread(userdir+'/exp'+$s+'/curpar','current','reset')
+endif
+
+" remember parameter value "
+$parval={$1}
+
+" read in parameters from target experiment "
+fread(userdir+'/exp'+$t+'/curpar','current','reset')
+
+" transfer integration poarameters "
+{$1}=$parval
+
+" if necessary, save target data and restore current experiment params "
+if $curexp<>$t then
+  fsave(userdir+'/exp'+$t+'/curpar','current')
+  fread(curexp+'/curpar','current','reset')
+endif

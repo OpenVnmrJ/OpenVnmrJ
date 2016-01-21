@@ -1,0 +1,91 @@
+"macro findstarttime"
+"Returns approximate time for day and night queue next submission"
+"  Applicable ONLY for enterQ submission "
+
+shell('basename '+$1):$basename
+if ($basename<>'enterQ') then return endif
+
+$AUTOGLOBAL=$1+'.macdir/AUTOGLOBAL'
+exists($AUTOGLOBAL,'file'):$AUTOGLOBALex
+$longrun='n'
+if ($AUTOGLOBALex) then
+  lookup('mfile',$AUTOGLOBAL,'seekcs','LONGRUN:','read',1):$longrun
+endif
+
+
+"************Initialize times***********************************"
+"  $currenttime is current time                    		"
+"  $remtime is the remaining time for the current sample        "
+"  $daytime is the current total daytime in queue		"
+"  $nighttime is the current total nighttime in queue		"
+"***************************************************************"
+$day='' shell('date +%a'):$day
+	"Find current time"
+shell('date +%H'):$hour shell('date +%M'):$minute shell('date +%S'):$second
+$nowhour=$hour
+$currenttime=$hour*3600+$minute*60+$second
+
+$servicestart=0 $serviceduration=0
+$remtime=0 $daytime=0 $nighttime=0 $prioritytime=0
+
+servicetime($1):$servicestart,$serviceduration
+	"Find remaining time for current sample"
+currentQtime($1):$remtime
+
+"Find out how much total time is in the queue "
+"  this is for the samples already in the enterQ/overniteQ "
+"  or in the automation file			           "
+"  Times may be supplied as argument - useful for estimated"
+"    time for a given location"
+
+if ($# > 3) then
+   $prioritytime=$2
+   $daytime=$3
+   $nighttime=$4
+else
+   readTtimeQ($1+'.macdir'):$prioritytime,$daytime,$nighttime
+endif
+
+$daytime=$daytime+$remtime
+$prioritytime=$prioritytime+$remtime
+
+if ($servicestart<>0) and ($serviceduration<>0) then
+				"Past service time"
+	if ($currenttime+1  > ($servicestart +$serviceduration)) then
+		$daytime=$daytime
+		$prioritytime=$prioritytime
+				"During Service time"
+	elseif ($currenttime+1 > $servicestart) then
+		$daytime=$daytime+($servicestart+$serviceduration-$currenttime)
+		$prioritytime=$prioritytime+($servicestart+$serviceduration-$currenttime)
+				"Prior to Service time"
+	else
+	   if ($currenttime+$daytime-1 < $servicestart) then
+		$daytime=$daytime
+	   else
+		$daytime=$daytime+$serviceduration
+	   endif
+	   if ($currenttime+$prioritytime-1 < $servicestart) then
+		$prioritytime=$prioritytime
+	   else
+		$prioritytime=$prioritytime+$serviceduration
+	   endif
+	endif
+endif
+		
+"Find out how much more time left for next day automation"
+
+getautoinfo:$sstarttime,$a2,$lstarttime
+if ($longrun='y') then
+   $nighttime=$daytime+$nighttime
+else
+   $lstime=$lstarttime-$currenttime
+   if ($lstime>$daytime) then
+        $nighttime=$lstime+$nighttime
+   else
+        $nighttime=$daytime+$nighttime
+   endif
+endif
+
+return($prioritytime,$daytime,$nighttime,$currenttime)
+

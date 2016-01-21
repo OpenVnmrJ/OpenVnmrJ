@@ -1,0 +1,93 @@
+"macro proc2d"
+" proc2d - wft2d with folding for av spectra, normalization "
+
+exists('f1coef','parameter'):$f1coefex
+$coef=0
+if ($f1coefex > 0) then
+  if (f1coef <> '') then
+    $coef=1
+  endif
+endif
+
+$dot2dc=0
+if (nt=1) then
+  $seqsub=''
+  substr(seqfil,1,1):$seqsub
+  if ($seqsub='g') then
+    $dot2dc=1
+  endif
+endif
+
+$ptype = 0
+exists('phase','parameter'):$phased
+if $phased>0 then 
+  if size('phase')>1 then
+    $phased=1
+  else
+    $phased=0
+    if phase=0 then
+      $ptype=1
+    endif
+  endif
+endif
+
+if seqfil='hom2dj' then
+  av wft2d('ptype')		"hom2dj"
+elseif seqfil='het2dj' then
+  ph wft2d(1,0,0,0)		"het2dj"
+elseif ($coef > 0) then
+  if ((refsource1='sfrq') and (dmg = 'ph')) then
+    cfpmult
+    dg
+  endif
+  if ($dot2dc) then
+    wft2da('t2dc')
+  else
+    wft2da
+  endif
+elseif $phased>0 then
+  ph 
+  if (refsource1='sfrq') then
+    cfpmult
+    dg
+  endif
+  wft2da			"phase-sensitive 2d"
+elseif (seqfil='cosyps')and($ptype=1) then
+  av wft2d('ptype')	 "cosy"
+else			"other 2d"
+  av wft2d
+endif
+
+if (refsource1='sfrq') then     "cosy,noesy,etc."
+  if (dmg='av') and (dmg1='av1') and (fn=fn1) then
+    exists('foldflg','parameter'):$fold
+    if ($fold>0) then
+      if (foldflg='y') then foldt endif
+    else
+      foldt
+    endif
+  endif
+  fullsq
+else
+  if (tn='C13') then
+    trace='f2'			"hetcor type data use f2 mode"
+  endif
+  if fn>fn1 then
+    trace='f2'
+  endif
+  fullt
+endif
+
+if (dmg <> 'av') and (console = 'mercury') then
+  if (size('lifrq') > 2) then
+    bc2d('f2')
+  endif
+endif
+
+f ai
+nm2d
+full
+bgmode_is:$bg
+if ($bg=0) then
+  dconi
+endif

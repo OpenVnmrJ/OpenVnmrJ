@@ -1,0 +1,62 @@
+"macro wetghsqc"
+"ghsqc - setup macro"
+"wetghsqc - modified for LCNMR "
+"PAKeifer 950718 "
+
+
+if ($# = 1) then
+   if ($1 = 15) then $name='hmqc'+'15'
+      else $name='hmqc'+'13' endif
+endif
+if ($# = 0) then $name='hmqc'+'13' endif
+if ($# > 1) then
+   write('line3','Only C13 and N15 are supported by this macro for HMQC.')
+   return
+endif
+ 
+lcpar2d
+refsource1='dfrq'
+lcpsgset($name,'array')
+lcpsgset($name,'dn','j','pwxlvl','pwx','dof','sw1','ni')
+lcpsgset($name,'phase','dg','ap','d1','at','dgs','hs')
+lcpsgset($name,'dg1','dgs','pwx','pwxlvl','dres','dseq')
+dof=dof*sfrq/500  sw1=sw1*sfrq/500  ni=ni*sfrq/500
+np=2*at*sw
+if ((sw/np) > 4) then
+   at=(sw*at/4)/np
+   np=2*at*sw
+endif
+if ((at/(d1+at)) > 0.15) then
+   d1=(0.85*at)/0.15
+endif
+lcset2d($name)
+fn=2000 fn1=1000
+axis='pd' spin=0 pw=pw90
+
+lcpsgset('ghsqc','gzlvl1','gzlvl2','gt1','gt2')
+lcpsgset('ghsqc','dg','dg2','ap','pfgon')
+lcpsgset('ghsqc','pwx','pwxlvl','phase','array')
+lcpsgset('ghsqc','dn','dof','dm','dmm','dpwr','dmf','dseq','sw1')
+lcpsgset('ghsqc','hs','dcrmv','bigt','f1180')
+lcpsgset('ghsqc','satmode','satdly','satpwr','satfrq')
+"adjust for performa I"
+$ss=''
+substr(gradtype,3,1):$ss
+if $ss='l' 
+then
+  gzlvl1 = gzlvl1 * 0.2
+  gzlvl2 = gzlvl2 * 0.2
+  setlimit('gzlvl1',2047.0,-2047.0,1.0)
+  setlimit('gzlvl2',2047.0,-2047.0,1.0)
+endif
+f 
+fn1=1024
+j=140 ss=64 ni=256 dmm='ccg'
+pmode='full'
+
+lcpsgset('wetghsqc','pwxpwr','dg','ap','dg2','dglc','edit','fad')
+
+seqfil='wetghsqc'
+dg
+man('wetghsqc')
+write('line3','Parameters created for a WET PFG HSQC')

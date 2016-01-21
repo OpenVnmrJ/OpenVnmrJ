@@ -1,0 +1,80 @@
+Special versions of Vnmrbg are put in executables: Vnmrbg.gxyzfit###
+
+Corresponding versions of gxyzmap###.c may be found also.
+
+Changes:
+001: gxyzfit accepts 2 arguments:
+    First is # of shims
+        -- defaults to value from file
+	-- ignored if there is a second argument.
+    Second argument is the minimum weight singular value to accept,
+    relative to the largest weight. Vectors with weights less than
+    (tol * maxWt) will not contribute to the solution. Try 0.02.
+
+002: gxyzfit accepts 2 arguments:
+    First is # of shims
+        -- defaults to value from file
+	-- ignored if it's value is 0.
+    Second argument is the significance value a solution vector
+    must have to be included in the solution. Try 0.90.
+
+003: Combine 001 and 002; gxyzfit accepts 3 arguments:
+    1. # of shims or 0
+    2. Min singular value to accept as fraction of max singular value (e.g. 0.02).
+    3. Min significance probability to include a vector in solution matrix (e.g. 0.95).
+
+004: Arguments same as 003.
+    Does fit using shimmaps that are divided by their respective offset values.
+    This should avoid introducing a bias towards using a shim coil that needs more
+    current to produce a similar effect as another shim coil.
+
+005: Added optional 4th argument
+    Set 4th arg to the string 'zero' to make the fit routine try to back out the
+    unneeded high order shims. It probably only makes sense to do this once,
+    as a first step in the gradient shimming. But maybe it could be beneficial
+    later on also. I think it will always need to be followed by some normal
+    iterations to get a good fit. Try:
+    gxyzfit(0, 0.001, 0.99, 'zero')
+
+gxyzfit.009: Adds required "shimtype" argument
+    The usage is now:
+        gzxyfit <shimset> <shimtype> <minWeight> <minProbability> ['zero']
+    shimset: the vnmr parameter value, e.g.: 9
+    shimtype: vnmr parameter, e.g.: Oxford40
+    minWeight: the min weight singular value to keep in the solution vector,
+               relative to the largest weighted term, e.g.: 0.001
+    minProbability: the min probability of statistical significance to keep
+                    a term in the solution vector, e.g.: 0.99
+    'zero': optional argument biases the algorithm towards minimizing the
+            shim currents, instead of minimizing the incremental change in
+	    the currents. Recommendation: use this argument.
+
+    This version _requires_ that the shim power data be in the system
+    directory under gxyzshim: e.g.: /vnmr/gxyzshim/shimtab/shimset9_Oxford40
+
+
+gxyzfit.010: Adds required "minChisq" argument
+   New usage:
+        gzxyfit <shimset> <shimtype> <minWeight> <minProbability> <minChisq> ['zero']
+    shimset: the vnmr parameter value, e.g.: 9
+    shimtype: vnmr parameter, e.g.: Oxford40
+    minWeight: the min weight singular value to keep in the solution vector,
+               relative to the largest weighted term, e.g.: 0.001
+    minProbability: the min probability of statistical significance to keep
+                    a term in the solution vector, e.g.: 0.99
+    minChisq: the min chi-square improvement that a term must provide in order
+              to be included in the fit, as a fraction of the minimum chi-square.
+	      This measures whether a term is important to the fit, rather than
+	      just statistically significant, e.g.: 0.1
+    'zero': optional argument biases the algorithm towards minimizing the
+            shim currents, instead of minimizing the incremental change in
+	    the currents. Recommendation: use this argument.
+
+    Fixes a problem in 009 where the fitted values were not printed properly in
+    the xyshim.fit file.
+
+    In this version, the shim power values are read by default from the file
+    ".../vnmrsys/3Dshimlib/data/shimpower". I recommend that the appropriate
+    ".../shimsetN_SHIMTYPE" file be copied to this location before calling
+    gxyzfit. For the final version, compiled into Vnmrbg, the gxyzshimpwr
+    macro may be modified to return power factors for each shim.

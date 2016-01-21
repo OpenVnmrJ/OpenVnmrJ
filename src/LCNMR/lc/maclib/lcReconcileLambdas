@@ -1,0 +1,34 @@
+"macro lcReconcileLambdas"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcReconcileLambdas"
+
+if ($# = 2) then
+    setlimit('lcLambdaMin', $2, $1, 1, 'global')
+    setlimit('lcLambdaMax', $2, $1, 1, 'global')
+else
+    lcGetDetectorInfo(lcDetector):$key,$pdaFlag,$min,$max,$nLambda,$nAdc,$label
+    setlimit('lcLambdaMin', $max, $min, 1, 'global')
+    setlimit('lcLambdaMax', $max, $min, 1, 'global')
+endif
+
+if (lcDetector = '9050') then
+    // For this detector, range is always set to max
+    lcLambdaMin = 0
+    lcLambdaMax = 9999
+else
+    lcLambdaMin=lcLambdaMin
+    lcLambdaMax=lcLambdaMax
+endif
+
+if (lcLambdaMin > lcLambdaMax) then
+    $tmp = lcLambdaMin
+    lcLambdaMin = lcLambdaMax
+    lcLambdaMax = $tmp
+endif
+
+setlimit('lcLambda', lcLambdaMax, lcLambdaMin, 1, 'global')
+setlimit('lcLambda2', lcLambdaMax, lcLambdaMin, 1, 'global')
+setlimit('lcTraceLambda', lcLambdaMax, lcLambdaMin, 1, 'global')
+lcLambda = lcLambda
+lcLambda2 = lcLambda2
+lcTraceLambda = lcTraceLambda

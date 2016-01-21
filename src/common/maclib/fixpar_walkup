@@ -1,0 +1,150 @@
+"macro fixpar_walkup"
+
+module('add','ChemPack sampleglobal','basic')
+
+setprotect('samplename','on',8)
+setprotect('nameprefix','on',8)
+
+// if layout is an empty string, set equal to seqfil
+// This may not ever be necessary as fixpar_walkup is
+//  typically called by fixpar
+if layout='' then layout=seqfil endif
+
+        "The following is for back compatibility"
+if (samplename='') and (nameprefix<>'') then
+   samplename=nameprefix
+   exists('nameprefix','parameter','processed'):$ispr
+   exists('samplename','parameter','processed'):$ispr2
+   if ($ispr) and ($ispr2=0) then
+	create('samplename','string','processed')
+	setprotect('samplename','on',8,'processed')
+	setvalue('samplename',samplename,'processed')
+   endif
+endif
+
+setprotect('parlabel','on',4)
+exists('parlabel','parameter','processed'):$ispr
+if ($ispr) then
+   setprotect('parlabel','on',4,'processed')
+endif
+
+        "The following is for back compatibility"
+	" switchover from operator_ to studyowner"
+if (studyowner='') then studyowner=operator endif
+exists('studyowner','parameter','processed'):$ispr
+exists('operator_','parameter','processed'):$ispr2
+if ($ispr=0) and ($ispr2) then
+	create('studyowner','string','processed')
+	$oper=''
+	getvalue('operator_','processed'):$oper
+	setvalue('studyowner',$oper,'processed')
+endif
+
+exists('sampleowner','parameter','processed'):$ispr
+if ($ispr=0) then
+	create('sampleowner','string','processed')
+	setvalue('sampleowner',sampleowner,'processed')
+endif
+
+exists('researchgroup','parameter','processed'):$ispr
+if ($ispr=0) then
+        create('researchgroup','string','processed')
+        setvalue('researchgroup',researchgroup,'processed')
+endif
+exists('faculty','parameter','processed'):$ispr
+if ($ispr=0) then
+        create('faculty','string','processed')
+        setvalue('faculty',faculty,'processed')
+endif
+setprotect('eOptions','on',264)
+setgroup('eOptions','display')
+exists('eOptions','parameter','processed'):$ispr
+if ($ispr=0) then
+	create('eOptions','string','processed')
+	setprotect('eOptions','on',264,'processed')
+	setgroup('eOptions','display','processed')
+endif
+if plotoption='' then plotoption('default','') endif
+
+// protection bit on for concentration parameter
+// just in case the data is old
+setprotect('concentration','on',8)
+exists('concentration','parameter','processed'):$ispr
+if ($ispr>0.5) then
+    setprotect('concentration','on',8,'processed')
+endif
+
+exists('density','parameter','processed'):$ispr
+if ($ispr=0) then
+	create('density','real','processed')
+	setvalue('density',density,'processed')
+endif
+
+if explabel='' then explabel=pslabel endif
+exists('explabel','parameter','processed'):$ispr
+if ($ispr=0) then
+	create('explabel','string','processed')
+	setvalue('explabel',explabel,'processed')
+endif
+exists('prgflg','parameter'):$ispr
+if ($ispr) then
+   setprotect('prgflg','on',8)
+endif
+exists('prgflg','parameter','processed'):$ispr
+if ($ispr) then
+   setprotect('prgflg','on',8,'processed')
+endif
+
+
+setgroup('emailaddr','display')
+on('emailaddr','processed'):$ispr
+if ($ispr>-1) then
+   setgroup('emailaddr','display','processed')
+endif
+
+setgroup('customflag','display')
+on('customflag','processed'):$ispr
+if ($ispr>-1) then
+  setgroup('customflag','display','processed')
+endif
+
+setgroup('wqinit','display')
+on('wqinit','processed'):$ispr
+if ($ispr>-1) then
+  setgroup('wqinit','display','processed')
+endif
+
+setgroup('cppauseflg','display')
+on('cppauseflg','processed'):$ispr
+if ($ispr>-1) then
+  setgroup('cppauseflg','display','processed')
+endif
+
+plt2Darg
+
+exists('prescan','parameter'):$pex
+if ($pex) then
+   setprotect('prescan','on',256)
+   setgroup('prescan','processing')
+   prescan='Not done','Not done','off', 'off','off','off', 'off','on','on','',''
+endif
+
+setprotect('text_string','on',256)
+on('text_string','processed'):$ispr
+if ($ispr>-1) then
+   setprotect('text_string','on',256,'processed')
+endif
+
+setgroup('apptype','acquisition')
+setprotect('apptype','on',1)
+on('apptype','processed'):$ispr
+if ($ispr>-1) then
+   setgroup('apptype','acquisition','processed')
+   setprotect('apptype','on',1,'processed')
+endif
+
+module('add','parlp parlp1 parlp2','basic')
+
+$refunits=''
+parunits('get','ref'):$refunits
+if ($refunits='ppm2') then parunits('set','ref','ppm1') endif

@@ -1,0 +1,86 @@
+"macro plc"
+" ********************************** "
+" plc(pltmod,nopage) - plot carbon spectrum "
+" any second argument suppresses parameters and page command "
+" ********************************** "
+
+//Plotting options
+//Customize this string to customize output 
+//Defaults
+$plotoptions='molecule','pl','axis','comments','params','logo','header','miniplot'
+
+$pltmod=pltmod $vp=vp $wc=wc $vs=vs $is=is $io=io
+if ($#>0) then
+   if (($1='off') or ($1='full') or ($1='fixed') or ($1='variable') or
+       ($1='user')) then	   "use argument as pltmod"
+      $pltmod=$1
+   endif
+endif
+if $pltmod='off' then return endif
+if ($pltmod='variable') then	   "for variable plot range"
+   numreg:$numreg		   "must have regions to adjust width"
+   if $numreg>0.5 then		   "there are regions"
+      getreg($numreg):$start	   "last region"
+      if $start<2*sfrq then
+	 sp=-2.0*sfrq
+      else
+	 sp=0
+      endif
+      if $start<sp then
+	 sp=$start
+      endif
+      getreg(1):$dum,$end	   "first region"
+      if $end>195*sfrq then
+	 wp=$end-sp
+      else
+	 wp=200*sfrq-sp
+      endif
+      if $end<(50*sfrq-sp) then
+	 wp=100*sfrq-sp
+      endif
+   else
+      $plotmod='full'
+   endif
+endif
+if ($pltmod='full') then
+   sp=rfp-rfl
+   wp=sw
+endif
+				   "pltmod='fixed' leaves sp,wp as is"
+if (rfl<>0) or (rfp<>0) then "referenced"
+   axis='p'
+endif
+
+if intmod='full' then
+   integ(sp,sp+wp):$maxint
+   cz
+   isadj($maxint)
+endif
+if intmod<>'off' then
+   isadj(wc2max/5) 
+endif
+if intmod = 'partial' then
+  numreg:$numreg                    "must have regions for pir"
+  if ($numreg > 0.5) then           "there are regions"
+    if vp < 12 then vp=12 endif
+    exists('intstyle','parameter','global'):$e
+    if $e then
+      exec(intstyle)
+    else
+      $plotoptions=$plotoptions,'intlist'
+    endif
+  endif
+endif
+exists('pkpick','parameter','global'):$e
+if $e then
+   if pkpick<>'' then
+      exec(pkpick)
+      $plotoptions=$plotoptions,'linelist'
+   endif
+endif
+
+doplotoption($plotoptions)
+page
+
+vp=$vp wc=$wc vs=$vs is=$is io=$io
+

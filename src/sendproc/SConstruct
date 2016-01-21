@@ -1,0 +1,133 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file name
+procTarget = 'Sendproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+
+# library dependancies
+# build ncomm library
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+
+# Communications libraries
+ncommHdrList = [ 
+                 'chanLib.h',
+                 'chanLibP.h',
+                 'errLogLib.h',
+                 'eventHandler.h',
+                 'eventQueue.h',
+                 'eventQueueP.h',
+                 'hhashLib.h',
+                 'ipcKeyDbm.h',
+                 'ipcMsgQLib.h',
+                 'listObj.h',
+                 'mfileObj.h',
+                 'msgQLib.h',
+                 'sendAsync.h',
+                 'semLib.h',
+                 'shrMLib.h',
+                 'sockets.h' ]
+
+ncommFileList = ['errLogLib.c',
+                 'hhashLib.c',
+                 'ipcKeyDbm.c',
+                 'ipcMsgQLib.c',
+                 'listObj.c',
+                 'mfileObj.c',
+                 'semLib.c',
+                 'msgQLib.c',
+                 'shrMLib.c',
+                 'asyncIo.c',
+                 'eventHandler.c',
+                 'eventQueue.c',
+                 'chanLib.c',
+                 'signals.c',
+                 'fdmask.c',
+                 'sockets.c' ]
+
+#                 'sendAsync.c' ]
+
+
+expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = [ 'commfuncs.h',
+                   'expentrystructs.h',  
+                   'expQfuncs.h',  
+                   'hostMsgChannels.h',  
+                   'parser.h',  
+                   'shrexpinfo.h' ]
+
+expProcFileList = [ 'commfuncs.c',
+                    'excepthandler.c',
+                    'parser.c',
+                    'daemon.c' ]
+ 
+
+vwAcqPath     = os.path.join(cwd, os.pardir, 'vwacq')
+vwAcqHdrList = [ 'hostAcqStructs.h' ]
+
+
+#---- All Sources and headers required for compilation -----
+
+sendprocFileList = [ 
+		'sendcmds.c',
+		'sendproc.c',
+		'sendfuncs.c' ]
+
+
+# build environment
+env = Environment(CCFLAGS    = '-O2 -m32',
+                  CPPDEFINES = ['LINUX', 'DEBUG' ],
+                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib' ,
+                  CPPPATH    = [cwd])
+
+
+# actual builds
+envProg = env.Program(target  = procTarget,
+                           source  = [
+                                      expProcFileList,
+                                      sendprocFileList],
+                           LIBPATH = [cwd,
+                                      ncommPath],
+                           LIBS    = ['acqcomm', 'm'])
+
+
+buildMethods.makeSymLinks(env, procTarget, cwd, vwAcqPath, vwAcqHdrList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, ncommPath, ncommHdrList)
+# buildMethods.makeSymLinks(env, procTarget, cwd, ncommPath, ncommFileList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, procProcPath, procProcHdrList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, procProcPath, procProcFileList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, acqProcPath, acqProcHdrList)
+#buildMethods.makeSymLinks(env, procTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcFileList)
+
+
+# define with absolute path where built files will be copied
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))

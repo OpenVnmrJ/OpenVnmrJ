@@ -1,0 +1,168 @@
+
+*******************************************************************************
+dss<(start,finish,step)><(all)><(select)>	-	Display Spectra
+dssa<(start,finish,step)><(all)><(select)>-	Display Spectra Automatically
+dssh<(start,finish,step)><(all)><(select)>-	Display Spectra Horizontally
+dsww<(start,finish,step)><(all)><(select)>-	Display White-washed Spectra
+dssl<(start,finish,step)>       -       Display Arrayed Numbers/Values 
+
+pl<(start,finish,step)><(all)><(select)> -	Plot Spectra
+plww<(start,finish,step)><(all)><(select)>-	Plot White-washed Spectra
+pssl<(start,finish,step)>       -       Plot Arrayed Numbers/Values
+*******************************************************************************
+
+** dss/dssa/dssh **
+
+  "dss", "dssa", and "dssh" display one or more spectra.
+  "pl" will plot one or more spectra.  When a single spectrum is
+  displayed or plotted, integral display is controlled by the
+  parameter "intmod". "intmod" can have the following values.
+    intmod="off"       turns off the integral display.
+    intmod="full"      displays the entire integral.
+    intmod="partial"   displays every other integral region.
+  If 'int' is supplied as an argument to dss, dssh, dssa, or pl,
+  then only the integral is displayed or plotted,  independently
+  of the value of "intmod".
+  For arrayed 1-D spectra or for 2-D spectra, a particular trace can
+  be viewed by supplying the index number as an argument.
+  For 2-D data sets, spectra can be displayed from either the f1 or f2
+  domain by setting "trace" equal to 'f1' or 'f2', respectively.
+  Following the command "ft1d", interferograms may be viewed by
+  setting "trace='f1'" and then typing "dss".
+  Multiple spectra can be displayed by supplying the indexes of the
+  first and last spectra.  The optional "step" argument is the increment
+  for the spectral index (default is 1).  For example, to display 
+  every third spectrum, use "dss(1,arraydim,3)".  (arraydim is set to the
+  total number of spectra).  The argument 'all' may be used to display
+  all of the spectra.
+
+  The indexes of the displayed or plotted spectra are put into the
+  "dsSelect" parameter. This parameter is created by dss if it is needed.
+  For example, if one has an array of 64 spectra, and issues the
+  command dssh(1,12,3), four spectra will be displayed and dsSelect will
+  be set to 1,4,7,10.  Alternatively, one can set the dsSelect parameter
+  and call dss('select') to use the values from the parameter. For example,
+  to display spectra 8, 22, 29, and 51, use dsSelect=8,22,29,51 dss('select')
+
+  The position of the first spectrum is governed by the parameters
+  "dss_wc", "dss_sc", and "vp".  For 1D data, subsequent spectra are positioned
+  relative to the preceding spectrum by the parameters "vo" (vertical offset)
+  and "ho" (horizontal offset).  For 2D data, the parameter "ho" defines
+  the total horizontal offset between the first and last spectrum.  Also
+  for 2D data,  the parameter "vo" is inactive while the parameter "wc2"
+  defines the total vertical offset between the first and last spectrum.
+
+  The letter 'a' in the command name automatically adjusts the parameters
+  "vo" and "ho" to fill the screen in a lower left to upper right
+  presentation ("dss_wc" must be set to less than full screen width for this
+  to work).
+  The letter 'h' in the command name causes "vo" to be set to zero. "ho",
+  "dss_sc", and "dss_wc" are adjusted to fill the screen from left to right with
+  the entire array.  That is, the spectra are displayed horizontally.
+
+  A final letter 'n' in the command name prevents the graphics screen
+  from being erased.  This allows "composite displays" of many spectra
+  to be created.
+
+  The parameter 'cutoff', if it exists and it is active, defines the
+  distance above and below the current vertical position "vp" at which
+  peaks will be truncated.  By arraying the parameter cutoff to have
+  two different values,  the truncation limits above and below the
+  current vertical position may be controlled independently.
+  For example, cutoff = 50 will truncate peaks at vp + 50 and vp - 50
+  millimeters. Cutoff = 50,10 will truncate peaks at vp + 50 and vp - 10
+  millimeters.
+
+  The optional arguments 'top' or 'side' may be supplied to dss or pl.
+  This causes the spectrum to be displayed or plotted either above or
+  at the left edge of a contour plot.  This assumes that the parameters
+  sc, wc, sc2, and wc2 are those used to position the contour plot.
+
+  The optional argument 'dodc' may be supplied.  This causes all spectra
+  to be drift corrected independently.
+
+  The optional argument 'nopars' may be supplied. This prevents the
+  display  commands from drawing the parameters at the bottom of the
+  graphics screen.
+
+  An optional color or pen number can be supplied to dss or pl.  The
+  available colors and pens are:
+  	'red','green','blue','cyan','magenta','yellow','orange','black','white'
+        'cursor','integral','threshold','scale','fid','spectrum','imaginary','parameter'
+        'pen1','pen2','pen3','pen4','pen5','pen6','pen7','pen8'
+  This list includes eight symbolic color names (cursor, integral, etc). The actual
+  colors associated with the symbolic names may be set with the "Display options..."
+  tool in the Edit menu. The advantage of using the symbolic names is that they
+  are probably adjusted to look good with the chosen background color. For example,
+  using the color white for drawing on the graphics screen may look fine with a
+  dark background, but will be invisible if the background is white.  Using the
+  color 'spectrum' will probably look good for both light and dark backgrounds.
+  The default colors are 'spectrum' for drawing the spectrum and 'integral' for
+  drawing the integral.
+
+
+** dssl **
+
+dssl displays the running number in an array ("dssl" without argument) or
+the actually arrayed values of the array ("dss('value')"). The values of
+up to two simultaneous arrays can be displayed, diagonal arrays are allowed
+(the second parameter will be shown in different color). The name of the
+arrayed parameter(s) is shown, too.
+If used on a one-dimensional array representation of a 2D spectrum, "ni" 
+is shown as well as the "phase" parameter in case of phase sensitive 2Ds.
+The same <start,finish,step> values can be entered as the last 1-3 
+arguments, like "dssl(1,50,5)" to show the correct numbers when showing
+spectra width, for example, "dssh('value',1,50,5)". 
+
+The number s can be placed with respect to the respective spectrum using
+several options: "left", "right", "center", "top", "bottom", "above",
+"below" and "custom".
+"left/right/center" moves the numbers to the left/right borders of the
+individual spectra.
+"top/bottom" shows the numbers on the top/bottom of the graphics canvas.
+"above/below" shifts the numbers right above or below the spectra.
+Some of these options can be combined: "dssl('right','above',1,10)"
+will show the first 10 numbers on the right hand side of every spectrum,
+a bit above noise level.
+The "custom" option shows the numbers in a more flexible way, using the
+parameters "shownumx" (x position) and "shownumy" (y position), counting
+from bottom left of every spectrum.
+
+The text can be rotated by 90° using the 'reverse' option - this can be
+handy if the arrayed parameter values are long with respect to the width
+of the individual sub-spectra.
+
+
+** dssw **
+
+  dsww is a command which provides "white-washing",  that is,  spectra
+  after the first one are blanked out in regions in which they are
+  "behind" the earlier spectra.  plww is the equivalent command which
+  causes the "white-washed" spectra to be plotted.
+
+
+** plotting **
+
+  When plotting to a Postscript plotter with the pl command, two global
+  parameter can be used to control the plot. The pslw (PostScript Line Width)
+  parameter controls the linewidth of the plot.  It can have values
+  from 0 - 100.
+  The global parameter pshr (PostScript Hi-Resolution) controls whether
+  a 1D spectrum is plotted in hi-resolution mode or not. A hi-resolution
+  plot is one in which every data point is represented in the plot.
+  The standard resolution plot determines maximum and minimum values
+  over small regions and plots those. The parameter pshr can have the
+  values 1 or 2 for hi-res and 0 for standard plot. Some PostScript interpreters
+  can lose accuracy when there are a large number of data points to be
+  drawn.  This results in the length of the plot being smaller than it should
+  be. It would be seen as the spectrum being shorter than the corresponding
+  pscale display.  Using pshr=1 overcomes these errors at the expense of
+  generating a larger PostScript file. If the PostScript interpreter you are
+  using does not suffer from these in-accuracies, you can set pshr=2 to
+  make a hi-res Postscript file that is about one third the size of the
+  fie generated with pshr=1.
+  The plww command will plot in low-resolution, independent of the value
+  of the pshr parameter.
+
+  "pssl" plots the numbers/values in the same way "dssl" shows them on
+  the screen. The same options are allowed.

@@ -1,0 +1,204 @@
+# '@(#)p_install '
+# 
+#
+
+# The p_install file is an optional file called by patchinstall.
+# The patchinstall script installs the content of the patch. This file
+# is used to handle miscellanous tasks, such as removing files, changing
+# permissions on files, etc.
+
+# The parameter $vnmrsystem will be set. Its typical value will be /vnmr
+# The parameter $tmp_save is the directory into which any files should be put.
+
+# Files should not be deleted, but moved to the $tmp_save directory.
+# That way, patchuninstall can move the file back. The commented example
+# illustrates removing a macro.
+
+# if [ ! -d $tmp_save/maclib ]
+# then
+#    mkdir -p $tmp_save/maclib
+# fi
+# mv $vnmrsystem/maclib/macroA $tmp_save/maclib/macroA
+
+if [ -f $vnmrsystem/templates/layout/hsqcadtoxy.zip ]
+then
+  (cd $vnmrsystem/templates/layout; rm -f HSQCADTOXY/acq.xml; unzip -q hsqcadtoxy.zip; rm -f hsqcadtoxy.zip)
+fi
+
+(cd $vnmrsystem; zip -q layout.zip templates/layout/*/Quickbasic*.xml templates/layout/*/bbox*.xml >& /dev/null)
+if [ -f $vnmrsystem/layout.zip ]
+then
+  mv  $vnmrsystem/layout.zip $tmp_save
+  (cd $tmp_save; unzip -q layout.zip; rm -r layout.zip)
+  rm -f $vnmrsystem/templates/layout/*/Quickbasic*.xml
+  rm -f $vnmrsystem/templates/layout/*/bbox*.xml
+fi
+
+if [ -f $vnmrsystem/templates/layout/gHMBCRELAY/Proc2Ddefault.xml ]
+then
+  if [ ! -d $tmp_save/templates/layout/gHMBCRELAY ]
+  then
+    mkdir -p $tmp_save/templates/layout/gHMBCRELAY
+  fi
+  mv $vnmrsystem/templates/layout/gHMBCRELAY/Proc2Ddefault.xml $tmp_save/templates/layout/gHMBCRELAY/.
+fi
+
+if [ -f $vnmrsystem/imaging/maclib/becc ]
+then
+   if [ ! -d $tmp_save/imaging/maclib ]
+   then
+      mkdir -p $tmp_save/imaging/maclib
+   fi
+   mv -f $vnmrsystem/imaging/maclib/becc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/cecc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/ceccdif $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/ecctool $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/fecc $tmp_save/imaging/maclib/.
+   mv -f $vnmrsystem/imaging/maclib/showecc $tmp_save/imaging/maclib/.
+fi
+if [ -f $vnmrsystem/conpar.new ]
+then
+  cp $vnmrsystem/conpar $tmp_save/.
+  printf "rm -f $vnmrsystem/conpar.new $vnmrsystem/conpar.400mr.new\n" >> $tmp_save/p_uninstall
+  source $vnmrsystem/user_templates/.vnmrenvsh; Vnmrbg -mback -n1 "config('auto')"
+fi
+if [ -f $vnmrsystem/veripulse/maclib/C13SN_process ]
+then
+  rm -f $vnmrsystem/veripulse/maclib/C13SN_process
+  (cd $vnmrsystem/veripulse/maclib; ln -s C13sens_process C13SN_process)
+fi
+if [ -f $vnmrsystem/veripulse/proshimmethods/shimdss ]
+then
+  if [ ! -d $tmp_save/veripulse/proshimmethods ]
+  then
+     mkdir -p $tmp_save/veripulse/proshimmethods
+  fi
+  mv $vnmrsystem/veripulse/proshimmethods/shimdss $tmp_save/veripulse/proshimmethods/.
+fi
+
+if [ -d $vnmrsystem/veripulse/templates/layout ]
+then
+  if [ ! -d $tmp_save/veripulse/templates ]
+  then
+     mkdir -p $tmp_save/veripulse/templates
+  fi
+  mv $vnmrsystem/veripulse/templates/layout $tmp_save/veripulse/templates/.
+fi
+
+if [ -f $vnmrsystem/gxyzshim/maclib/gxyzsetshimtype ]
+then
+  if [ ! -d $tmp_save/gxyzshim/maclib ]
+  then
+     mkdir -p $tmp_save/gxyzshim/maclib
+  fi
+  mv $vnmrsystem/gxyzshim/maclib/gxyzsetshimtype $tmp_save/gxyzshim/maclib/gxyzsetshimtype
+  if [ ! -d $tmp_save/gxyzshim/templates/layout/gmapxyz ]
+  then
+     mkdir -p $tmp_save/gxyzshim/templates/layout/gmapxyz
+  fi
+  mv $vnmrsystem/gxyzshim/templates/layout/gmapxyz/shim3d.xml $tmp_save/gxyzshim/templates/layout/gmapxyz/shim3d.xml
+fi
+
+if [ -f $vnmrsystem/gxyzshim/shimtab.zip ]
+then
+  mv $vnmrsystem/gxyzshim/shimtab $tmp_save/gxyzshim/.
+  (cd $vnmrsystem/gxyzshim; unzip -q shimtab.zip; rm -f shimtab.zip)
+  printf "rm -rf $vnmrsystem/gxyzshim/shimtab\n" >> $tmp_save/p_uninstall
+fi
+
+if [ -f $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml ]
+then
+  mv $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape_fast.xml
+ printf "mv $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape_fast.xml $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape_fast.xml\n" >> $tmp_save/p_uninstall
+fi
+if [ -f $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml ]
+then
+  mv $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape.xml
+ printf "mv $vnmrsystem/service/templates/vnmrj/protocols/fidshim_lineshape.xml $vnmrsystem/templates/vnmrj/protocols/fidshim_lineshape.xml\n" >> $tmp_save/p_uninstall
+fi
+
+if [ ! -d $tmp_save/maclib ]
+then
+   mkdir -p $tmp_save/maclib
+fi
+if [ -f $vnmrsystem/maclib/walkup ]
+then
+   mv $vnmrsystem/maclib/walkup $tmp_save/maclib/. >& /dev/null
+   mv $vnmrsystem/maclib/gettext $tmp_save/maclib/. >& /dev/null
+fi
+if [ -f $vnmrsystem/maclib/mqf1ref3qsp ]
+then
+   mv $vnmrsystem/maclib/mqf1ref3qsp $tmp_save/maclib/. >& /dev/null
+   mv $vnmrsystem/maclib/mqf1ref5qsp $tmp_save/maclib/. >& /dev/null
+fi
+
+if [ -f $vnmrsystem/manual/acqmeter ]
+then
+   if [ ! -d $tmp_save/manual ]
+   then
+      mkdir -p $tmp_save/manual
+   fi
+   mv $vnmrsystem/manual/acqmeter $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/acqstat $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/convert $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/cpos_cvt $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/decomp $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Tapedata $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape.half $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/tape.quarter $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Tapetext $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/Totape $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/To_VXR4000 $tmp_save/manual/. >& /dev/null
+   mv $vnmrsystem/manual/walkup $tmp_save/manual/. >& /dev/null
+fi
+
+if [ ! -f $vnmrsystem/manual/readf1 ]
+then
+  (cd $vnmrsystem/manual; ln -s writef1 readf1)
+  printf "rm -f $vnmrsystem/manual/readf1\n" >> $tmp_save/p_uninstall
+fi
+if [ ! -f $vnmrsystem/manual/systemtime ]
+then
+  (cd $vnmrsystem/manual; ln -s unixtime systemtime)
+  printf "rm -f $vnmrsystem/manual/systemtime\n" >> $tmp_save/p_uninstall
+fi
+
+if [ -f $vnmrsystem/biopack/maclib/NUSprocIST ]
+then
+  if [ ! -d $tmp_save/biopack/maclib ]
+  then
+    mkdir -p $tmp_save/biopack/maclib
+  fi
+  mv $vnmrsystem/biopack/maclib/NUSprocIST $tmp_save/biopack/maclib/.
+fi
+
+# The patchinstall script may run fixpsg and display messages about
+# rebooting the console or restarting the acquisition communication
+# programs (the "procs"). Setting the following three variables to
+# yes will select those actions. This is typically done automatically
+# by the patchinstall script. You can also set them to "no" to turn of
+# the actions.
+
+# fix_psg="yes"
+# reboot="yes"
+# su_acqproc="yes"
+
+# fix_psg="no"
+reboot="no"
+# su_acqproc="no"
+
+
+# If an action cannot be undone by reloading the contents of the
+# saved patch directory back onto $vnmrsystem (/vnmr), then an
+# appropriate action should be saved in the p_uninstall script to undo
+# the action. For example, lets say the permissions on bin fileX
+# are 644 and they should be 664. The following will accomplish that.
+# Another example is renaming bin fileA to fileB.
+
+# chmod 664 $vnmrsystem/bin/fileX
+# printf "chmod 644 $vnmrsystem/bin/fileX\n" >> $tmp_save/p_uninstall
+
+# mv $vnmrsystem/bin/fileA $vnmrsystem/bin/fileB
+# printf "mv $vnmrsystem/bin/fileB $vnmrsystem/bin/fileA\n" >> $tmp_save/p_uninstall
+

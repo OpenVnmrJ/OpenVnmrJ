@@ -1,0 +1,149 @@
+"macro eventLog"
+
+//  Optional 3 arguments
+//      arg1 - keyword [default is Files]
+//      arg2 - additional messages to be passed on
+//      arg3 - location directory [default is current locdir]
+//              if empty string set to current locdir
+
+//  This is for VJ32, where local variables are
+//  allowed in templates.  This uses the sqLog approach
+	$arg='postvj31'
+
+// Uncomment the following line for preVJ32.  hardcoded script
+//	$arg=''
+
+"**************************************************************************"
+// predeclaration of arguments is useful in the event
+//   templates use $$2$ kind of structures.
+
+    if ($# < 1) then $1='File' endif
+    if ($# < 2) then $2='' endif
+    if ($# < 3) then $3='' endif
+
+// If $3 is an empty string set that to current locdir
+    if (auto='y') and ($3='') then
+        $loc=''
+        getlocid('current'):$loc,$3
+    endif
+
+// Make sure Automation directory eventLog is always included
+    $autofile=autodir+'/enterQ'
+// Adjust $autofile for AutomationFile entries
+    strstr(autodir,'studytray'):$isenter
+    if ($isenter) then
+        shell('basename '+globalenter):$autofile
+        $autofile=globalenter+'/'+$autofile
+    endif
+
+"***************************************************************************"
+
+// New sqLog style logging
+
+    $header=''
+    $text=''
+    $attr=''
+    $vals=''
+
+  if ($arg='postvj31') then
+    exists($0,'templates/vnmrj/loginfo'):$e,$path
+    if ($e=0) then return('') endif
+    readfile($path,'$attr','$vals','','local'):$num
+  else
+    $datestamp='' shell('date +%F'):$datestamp
+    $timestamp='' shell('date +%H-%M-%S'):$timestamp
+
+    $attr[1]='1Header'          $vals[1]='Date: '+$datestamp+' at '+$timestamp+','
+    $attr[2]='1File'            $vals[2]=autodir+'/enterQ.macdir/eventLog'
+    $attr[3]='1Message'         $vals[3]=$2
+    $attr[4]='1StudySubmit'	$vals[4]=$2
+    $attr[5]='1StudyStart'      $vals[5]=sample+' '+$2+' Submitted'
+    $attr[6]='1StudyDone'       $vals[6]=sample+' '+$2+' Completed'
+    $attr[7]='1StudyError'      $vals[7]=sample+' (Error) '+$2
+    $attr[8]='1StudyMessage'    $vals[8]=sample+' '+$2
+    $attr[9]='1ExpSetup'        $vals[9]=sample+': '+explist[1]+' '+$2+' Setup'
+    $attr[10]='1ExpStart'       $vals[10]=sample+': '+explist[1]+' '+$2+' Acquisition started'
+    $attr[11]='1ExpEnd'         $vals[11]=sample+': '+explist[1]+' '+$2+' Acquisition completed'
+    $attr[12]='1ExpDone'        $vals[12]=$2+' Saved'
+    $attr[13]='1ExpError'       $vals[13]=sample+': '+explist[1]+' (Error) '+$2
+    $attr[14]='1ExpMessage'     $vals[14]=sample+': '+explist[1]+' '+$2
+    $attr[15]='1PreScan'        $vals[15]='Prescan: '+$2
+    $attr[16]='1Ifcondition'    $vals[16]='None'
+  endif
+
+    teststr('$attr','1File','local'):$e
+    if (not $e) then return('') endif
+
+    $logfile=$vals[$e]
+  if ($arg='postvj31') then
+    chkname($logfile,'none'):$logfile
+  endif
+    if ($logfile='') then return('') endif
+
+    if ($1='File') then return($logfile) endif
+
+// Make sure Automation directory eventLog is always included
+    $subfile=$autofile+'.macdir/eventLog'
+    if ($isenter) then $logfile=$subfile endif
+
+//  But avoid double entries
+    teststr('$logfile',$subfile,'local'):$isin
+    if (not $isin) then
+	$logfile=$logfile,$subfile
+    endif
+
+    teststr('$attr','1Ifcondition','local'):$e
+    if ( $e) then
+	if ($1='Ifcondition') and ($##=1) then return($vals[$e]) endif
+  	if (($vals[$e]<>'') and ($vals[$e]<>'None')) then
+    	    $cmd='if (not '+$vals[$e]+ ' ) then return endif'
+    	    {$cmd}
+  	endif
+    endif
+
+    teststr('$attr','1Header','local'):$e
+    if ($e) then
+	$header=$vals[$e]
+      if ($arg='postvj31') then
+  	chkname($header,'none'):$header
+      endif
+    endif
+    if ($1='Header') and ($##=1) then return($header) endif
+
+    teststr('$attr','1'+$1,'local'):$e
+    if ($e) then
+	$text=$vals[$e]
+      if ($arg='postvj31') then
+  	chkname($text,'none'):$text
+      endif
+    else
+// Disable Keywords from loginfo to suppress specific messages
+  	return
+    endif
+
+    $str='' write('line3','%s %s',$header,$text):$str
+    if ($##=1) then return($str) endif
+
+// write to locdir eventLog if locdir is known
+    if ($3<>'') then
+	exists($autofile+'.macdir/'+$3,'directory'):$direx
+	if ($direx=0) then $3='' endif
+    endif
+    if ($3<>'') then
+	write('file',$autofile+'.macdir/'+$3+'/eventLog','%s',$str)
+	$str=$str+' ['+$3+']'
+    endif
+
+// write to all Files
+    $tot=size('$logfile')
+    $i=1
+    repeat
+    	write('file',$logfile[$i],'%s',$str)
+	$i=$i+1
+    until $i > $tot
+    if (auto='y') then
+    	    write('line3','%s',$str)
+    endif
+
+    return
+"***************************************************************************"

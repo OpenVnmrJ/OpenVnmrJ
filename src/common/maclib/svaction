@@ -1,0 +1,354 @@
+"macro svaction"
+
+" Usage:  svaction(vobj, paramName):$value  "
+" Usage:  svaction(type, dir, name):$path  "
+" Usage:  svaction(type, dir, name1, name2):$path  "
+
+if($# < 0.5) then 
+    return 
+elseif($1 = 'done') then
+    flush
+elseif($1 = 'getValue' and $# > 2.5) then
+   $s1='' $s1=$2 
+   $s2='' $s2={$3} 
+   return($s1 +' '+ $s2)
+elseif($1 = 'autosavefid' and $# > 1.5) then 
+    $dest='' $dest = $2
+    
+    strstr($dest,'.fid'):$e
+    if($e > 0.5) then
+	mv(acqpath,$dest)
+    else
+	svr_r($dest):$path
+        p11write($path+'/auditTrail')
+        locadd($path, 'vnmr_rec_data')
+	rm('-rf',acqpath):$x
+    endif
+elseif($1 = 'autosavespec' and $# > 1.5) then 
+    $dest='' $dest = $2
+    
+    strstr($dest,'.fid'):$e
+    if($e < 0.5) then
+	svr_p($dest):$path
+        p11write($path+'/auditTrail')
+        locadd($path, 'vnmr_rec_data')
+    endif
+elseif($1 = 'wdone') then 
+    isFDAsystem:$e
+    if(auto <> 'y' or $e < 0.5) then return endif
+
+    exists(acqpath,'file'):$e
+    if($e < 0.5) then return endif
+
+    $s=''
+    $s1=''
+    $dir=''
+    $name=''
+    strstr(acqpath, '.fid', 'last'):$n,$s
+    if($n = 0) then return endif
+
+    strstr($s, '/auto_','last'):$n,$dir,$s1
+    $name = 'auto_'+$s1
+    "strstr($s1, '/','first'):$n,$dir,$name"
+
+    $dest = ''
+    
+    isFDAdir(svfdir):$e
+    if($e > 0.5) then
+	$ext = '.REC'
+        $savespec = (procdim>0)
+    elseif(recordSave > 0.5) then
+	$ext = '.rec'
+        $savespec = (procdim>0)
+    else
+	$ext = '.fid'
+        $savespec = 0
+    endif
+    $dest = svfdir+'/'+$name+$ext
+
+    exists($dest,'file'):$e
+    if($e > 0.5) then 
+	strstr($dest,$ext):$n,$s1
+	Svfname($s1,$ext,$ext):$dest
+    endif
+ 
+    file = $dest
+    svaction('autosavefid', $dest)
+    if ($savespec) then
+      svaction('autosavespec', $dest)
+    endif
+
+    if (actionid<>'null' and actionid<>'') then 
+       xmsetatts(actionid,'data',$dest)
+    endif
+   
+elseif($1 = 'getautodir') then 
+   $globalauto=''
+   $autodir=''
+   if($# > 1.5) then
+	$globalauto = $2	
+   else
+	$globalauto = globalauto	
+   endif
+   
+   if(appmode = 'walkup') then
+        if autodir<>'' then
+           $autodir = autodir
+        elseif $globalauto<>'' then
+           $date=''
+           shell('date +%Y.%m.%d'):$date
+           $autodir = $globalauto + '/auto_' + $date
+        else
+           $date=''
+           shell('date +%Y.%m.%d'):$date
+           $autodir = userdir + '/data/studies' +'/auto_' + $date
+        endif
+   elseif(appmode = 'imaging') then
+        if $globalauto<>'' then
+           $autodir = $globalauto
+        else
+           $autodir = userdir + '/data/studies'
+        endif
+   else
+        $autodir = userdir + '/data'
+   endif
+   return($autodir) 
+elseif($1 = 'fixdatadir' and $# > 1.5) then
+
+    $autodir=''
+    $s=''
+    substr($2,1,1):$s
+    if($s = '$') then
+	if(appmode = 'walkup') then
+           if autodir<>'' then
+              $autodir = autodir + '/' +$2
+           elseif globalauto<>'' then
+              $date=''
+              shell('date +%Y.%m.%d'):$date
+              $autodir = globalauto + '/auto_' + $date + '/' +$2
+	   else
+	      $autodir = userdir + '/data/studies/'+$2
+	   endif
+ 	elseif(appmode = 'imaging') then
+           if globalauto<>'' then
+	      $autodir = globalauto +'/'+ $2
+	   else
+	      $autodir = userdir + '/data/studies/' +$2
+	   endif
+	else
+	   $autodir = userdir + '/data/studies/' +$2
+	endif
+    elseif($s <> '/') then
+	$autodir = userdir + '/data'
+    else
+	$autodir = $2
+    endif
+    return($autodir)
+elseif($1 = 'ok' and $# > 2.5) then
+   if($2 = 'globalauto') then
+      globalauto = $3
+   elseif($2 = 'sqname') then
+      sqname = $3
+   elseif($2 = 'autoname') then
+      autoname = $3
+   elseif($2 = 'svfdir') then
+      svaction('fixdatadir',$3):$s
+      svfdir = $s
+   elseif($2 = 'svfname') then
+      svfname = $3
+   endif
+elseif($1 = 'nextautostudy' and $# > 2.5) then
+   $value = ''
+   $globalauto=''
+   $autodir=''
+   $sqname=''
+   $s=''
+   if($2 <> '') then $globalauto = $2 else $globalauto = globalauto endif
+   if($3 <> '') then $sqname = $3 else $sqname = sqname endif
+   substr($sqname,1,1):$s
+   if($s = '/') then
+      Svfname($sqname,'',''):$value
+   else
+    substr($globalauto,1,1):$s
+    if($s = '/') then
+       $date=''
+       shell('date +%Y.%m.%d'):$date
+       $autodir = $globalauto + '/auto_' + $date
+    else
+       $autodir = userdir + '/data/studies'
+    endif
+    Svfname($autodir+'/'+$sqname,'',''):$value
+   endif
+   return($value)
+elseif($1 = 'study' and $# > 2.5) then
+   $value = ''
+   $globalauto=''
+   $autodir=''
+   $sqname=''
+   $s=''
+   if($2 <> '') then $globalauto = $2 else $globalauto = globalauto endif
+   if($3 <> '') then $sqname = $3 else $sqname = sqname endif
+   substr($sqname,1,1):$s
+   if($s = '/') then
+      Svfname($sqname,'',''):$value
+   else
+    substr($globalauto,1,1):$s
+    if($s <> '/') then
+	$globalauto = userdir + '/data/studies'
+    endif
+    svaction('getautodir',$globalauto):$autodir
+    Svfname($autodir+'/'+$sqname,'',''):$value
+   endif
+   return($value)
+elseif($1 = 'studydata' and $# > 3.5) then
+   $value = ''
+   $globalauto=''
+   $sqname=''
+   $autoname=''
+   if($2 <> '') then $globalauto = $2 else $globalauto = globalauto endif
+   if($3 <> '') then $sqname = $3 else $sqname = sqname endif
+   if($4 <> '') then $autoname = $4 else $autoname = autoname endif
+   if(recordSave > 0.5) then
+      $suffix = '.rec'
+   else
+      $suffix = '.fid'
+   endif
+   $s=''
+   substr($autoname,1,1):$s
+   if($s = '/') then
+
+      isFDAdir($autoname):$e
+      if ($e>0.5) then
+         $suffix = '.REC'
+      endif
+
+      $st=''
+      $studyid=''
+      svaction('study', autodir, $sqname):$st
+      $studyid=studyid
+      studyid=$st
+      Svfname($autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+      studyid=$studyid
+   else
+        substr($globalauto,1,1):$s
+        if($s <> '/') then
+	   $globalauto = userdir + '/data/studies'
+        endif
+        if appmode='walkup' then
+	   svaction('study', $globalauto, $sqname):$s
+
+           isFDAdir($s):$e
+           if ($e>0.5) then
+              $suffix = '.REC'
+           endif
+
+           Svfname($s+'/'+$autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+        else
+	   svaction('study', $globalauto, $sqname):$s
+
+           isFDAdir($s):$e
+           if ($e>0.5) then
+              $suffix = '.REC'
+           endif
+
+           Svfname($s+'/'+$autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+        endif
+
+   endif
+   return($value)
+elseif($1 = 'p11studydata' and $# > 3.5) then
+   $value = ''
+   $svfdir=''
+   $sqname=''
+   $autoname=''
+   $s=''
+   if($2 <> '') then $svfdir = $2 else $svfdir = svfdir endif
+   if($3 <> '') then $sqname = $3 else $sqname = sqname endif
+   if($4 <> '') then $autoname = $4 else $autoname = autoname endif
+   if(recordSave > 0.5) then
+      $suffix = '.rec'
+   else
+      $suffix = '.fid'
+   endif
+   substr($autoname,1,1):$s
+   if($s = '/') then
+
+      isFDAdir($autoname):$e
+      if ($e>0.5) then
+         $suffix = '.REC'
+      endif
+
+      $st=''
+      $studyid=''
+      svaction('study', svfdir, $sqname):$st
+      $studyid=studyid
+      studyid=$st
+      Svfname($autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+      studyid=$studyid
+   else
+        substr($svfdir,1,1):$s
+        if($s <> '/') then
+           $svfdir = userdir + '/data/studies'
+        endif
+        svaction('getautodir'):$s
+        strstr($s,'/auto_','last'):$n,$s1,$s2
+        $svfdir = $svfdir +'/auto_'+$s2
+        if appmode='walkup' then
+           Svfname($svfdir+'/'+$sqname,'',''):$s
+           isFDAdir($s):$e
+           if ($e>0.5) then
+              $suffix = '.REC'
+           endif
+
+           Svfname($s+'/'+$autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+        else
+           Svfname($svfdir+'/'+$sqname,'',''):$s
+
+           isFDAdir($s):$e
+           if ($e>0.5) then
+              $suffix = '.REC'
+           endif
+
+           Svfname($s+'/'+$autoname,$suffix,'.fid, .img, .rec, .REC'):$value
+        endif
+
+   endif
+   return($value)
+
+elseif($# > 2.5) then
+
+   $value = ''
+   $svfdir = ''
+   $svfname = ''
+   $s = ''
+   if($2 <> '') then $svfdir = $2 else $svfdir = svfdir endif
+   if($3 <> '') then $svfname = $3 else $svfname = svfname endif
+
+   if(recordSave > 0.5) then
+      $suffix = '.rec'
+   else 
+      $suffix = '.fid'
+   endif
+   substr($svfname,1,1):$s
+   if($s = '/') then
+
+      isFDAdir($svfname):$e
+      if ($e>0.5) then
+         $suffix = '.REC'
+      endif
+
+      Svfname($svfname,$suffix,'.fid, .img, .rec, .REC'):$value
+
+   else
+
+    svaction('fixdatadir', $svfdir):$s
+
+    isFDAdir($s):$e
+    if ($e>0.5) then
+       $suffix = '.REC'
+    endif
+
+    Svfname($s+'/'+$svfname,$suffix,'.fid, .img, .rec, .REC'):$value
+   endif
+   return($value)
+endif

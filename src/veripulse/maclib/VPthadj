@@ -1,0 +1,44 @@
+"macro VPthadj"
+"***********************************************************"
+" thadj(arg1,arg2) - arg1=max. peaks, arg2=noise multiplier "
+"***********************************************************"
+if $#<1 then $maxpeak=88 else $maxpeak=$1 endif
+if $#<2 then $noismult=3 else $noismult=$2 endif
+peak(0.95*sw-rfl+rfp,sw-rfl+rfp):$peak1
+peak(0.90*sw-rfl+rfp,0.95*sw-rfl+rfp):$peak2
+if $peak1<0 then $peak1=-$peak1 endif
+if $peak2<0 then $peak2=-$peak2 endif
+if $peak1>$peak2 then $peak1=$peak2 endif
+th=$noismult*$peak1
+if th<0.03 then th=0.03 endif
+nll:$numpeak1 th=0.7*th nll:$numpeak2
+if ($numpeak2>1.2*$numpeak1) and ($numpeak1>0.5) then
+  th=1.4*th $numpeak2=$numpeak1
+endif
+$minth=0
+if $numpeak1>$maxpeak then
+   $minth=th
+   repeat
+      th=1.4*th nll:$numpeak1
+      if ($numpeak1>$maxpeak) then
+        $minth=th
+      endif
+   until $numpeak1<=$maxpeak
+endif
+if ($numpeak1<$maxpeak) and ($minth<>0) then
+  $maxth=th
+  $i=0
+  while ($numpeak1 <> $maxpeak) and ($i<5) do
+    $i=$i+1
+    th=$minth+($maxth-$minth)/2
+    nll:$numpeak1
+    if ($numpeak1<$maxpeak) then
+        $maxth=th
+    elseif ($numpeak1>$maxpeak) then
+        $minth=th
+    endif
+  endwhile
+endif
+if $## < 1 then
+  write('line3','threshhold has been adjusted to  %1.1f',th)
+endif

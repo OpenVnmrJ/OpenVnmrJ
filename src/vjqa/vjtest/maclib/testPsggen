@@ -1,0 +1,20 @@
+"macro testPsggen"
+" Agilent test"
+
+$j=0
+$file=curexp+'/fixpsglog'
+write('reset',$file)
+vvLog('Test','psggen')
+shell('rm -rf '+userdir+'/vnmrsys/psg')
+shell('psggen >& '+$file):$e
+$res=''
+shell('grep "PSG Library Complete" ' + $file):$res
+if ($res<>'') then
+  vvLog('Pass','psggen')
+else
+  vvLog('Fail','psggen')
+  vvLog:$path
+  shell('cat '+$file+' >> '+$path+';cat'):$e
+endif
+shell('rm -f '+$file):$e
+shell('rm -rf '+userdir+'/vnmrsys/psg')

@@ -1,0 +1,45 @@
+"macro miniplot2D"
+// miniplot2D - similar to plot2D('plt2Darg'), but uses only certain options
+//    from the plt2Darg parameter
+
+exists('plt2Darg','parameter'):$parex
+if not $parex then return endif
+
+$resize='resize'
+$levels=7
+$spacing=1.5
+$contour='both'
+$top1d='notop'
+$side1d='noside'
+$topvsadj='novsadj'
+$sidevsadj='novsadj'
+
+$parsize=size('plt2Darg')
+$contour=plt2Darg[1]
+if $parsize>1 then format(plt2Darg[2],'lower'):$levels endif
+if $parsize>2 then format(plt2Darg[3],'lower'):$spacing endif
+if ($contour <> 'pos') and ($contour <> 'neg') then
+     $contour='both'
+endif
+
+$wcbak=wc $wc2bak=wc2 $scbak=sc $sc2bak=sc2
+full wc2=wc2max*0.8 sc2=wc2max*0.1 vp=0
+wc=wcmax*0.8 sc=wcmax*0.1
+if (dmg = 'av') then $contour ='' endif
+if ($contour = 'both') then
+  if (maxpen = 1) then
+    pcon('pos',$levels,$spacing)
+    $axis=axis axis='nn'
+    pcon('neg',1)
+    axis=$axis
+  else
+    pcon($levels,$spacing)
+  endif
+else
+  if ($contour <> '') then
+    pcon($contour,$levels,$spacing)
+  else
+    pcon($levels,$spacing)
+  endif
+endif
+wc=$wcbak wc2=$wc2bak sc=$scbak sc2=$sc2bak

@@ -1,0 +1,92 @@
+
+**********************************************************************
+*								     *
+*   phfid  -  zero-order phasing constant for "np" FID		     *
+*   lsfid  -  number of complex points to left-shift "np" FID	     *
+*   lsfrq  -  frequency shift of the "fn" spectrum in Hz             *
+*  phfid1  -  zero-order phasing constant for "ni" interferogram     *
+*  lsfid1  -  number of complex points to left-shift "ni"            *
+*             interferogram                                          *
+*  lsfrq1  -  frequency shift of the "fn1" spectrum in Hz            *
+*  phfid2  -  zero-order phasing constant for "ni2" interferogram    *
+*  lsfid2  -  number of complex points to left-shift "ni2"           *
+*             interferogram                                          *
+*  lsfrq2  -  frequency shift of the "fn2" spectrum in Hz            *
+*								     *
+*  lsfid(points<,datapath>) - command to shift an FID                *
+*								     *
+**********************************************************************
+
+All six of these parameters are in the processing group.  phfid, lsfid,
+and lsfrq operate on complex "np" FID data, referred to as the t2 dimen-
+sion in a 2D experiment or as the t3 dimension in a 3D experiment.  The
+parameters phfid1, lsfid1, and lsfrq1 operate on "ni" interferogram data,
+both hypercomplex and complex.  "ni" interferogram data are referred to
+as the t1 dimension in both a 2D and a 3D experiment.  phfid2, lsfid2,
+and lsfrq2 operate on "ni2" interferogram data, both hypercomplex and
+complex.  "ni2" interferogram data are referred to as the t2 dimension
+in a 3D experiment.  All six of these parameters are properly handled
+by a WTI operation (display), i.e., a WTI operation on an "ni" inter-
+ferogram applies the parameters phfid1, lsfid1, and lsfrq1, if selected,
+to the time-domain data prior to the Fourier transformation.
+
+phfid, phfid1, and phfid2 can take values from -360.0 to +360.0 and spec-
+ify the angle of zero-order rotation in degrees.  This zero-order rotation
+is executed as a part of retrieving the time-domain data into the active
+region of the VNMR memory and can be used instead of "rp" (phfid), "rp1"
+"rp1" (phfid1), or "rp2" (phfid2) applied to the frequency-domain data.
+lsfrq, lsfrq1, and lsfrq2 are the time-domain equivalents of "lp", "lp1",
+and "lp2" within VNMR and result in a frequency shift of the spectral data.
+phfid is used only in a complex phase rotation; phfid1 and phfid2 are
+used in a complex phase rotation for complex t1/t2 interferograms and in
+a hypercomplex phase rotation for hypercomplex t1/t2 interferograms.
+
+lsfid can take values from -fn/2 to np/2 (or -fn/2 to fn/2 if fn < np)
+and specifies the number of complex points (not real points) that the
+"np" FID is to be either left-shifted (lsfid > 0) or right-shifted (lsfid
+< 0).  lsfid1 can take values from -fn1/2 to ni (or -fn1/2 to fn1/2 if
+fn1 < 2*ni) and specifies the number of hypercomplex (for hypercomplex
+interferogram data) or complex (for complex interferogram data) points
+that the "ni" interferogram is to be either left-shifted (lsfid1 > 0) or
+right-shifted (lsfid1 < 0).  lsfid2 can take values from -fn2/2 to ni2
+(or -fn2/2 to fn2/2 if fn2 < 2*ni2) and specifies the number of hypercom-
+plex (for hypercomplex interferogram data) or complex (for complex inter-
+ferogram data) points that the "ni2" interferogram is to be either left-
+shifted (lsfid2  > 0) or right-shifted (lsfid2 < 0).
+
+lsfrq, lsfrq1, and lsfrq2 can in principle take any real value, either
+positive or negative.  A negative value results in peaks being shifted
+upfield (to the right); a positive value, in peaks being shifted down-
+field (to the left).  These 3 parameters store the value of the frequency
+shift in Hz.
+
+
+******************************************************************************
+ 
+The lsfid command will either left-shift (points>0) or right-shift (points<0)
+an FID.  A right shift adds zeros to the front of the FID. The points argument
+in the number of complex points (real and imaginary) to shift.
+
+An optional second argument specifies the filename of an FID file.
+If there is no second argument, lsfid will shift the FID
+in the current experiment.
+
+If an optional second argument is given and if there is a procpar in the
+same directory, the "np" and "at" parameters in that procpar will be updated.
+Also, the "lsfid" parameter in that procpar will be set to "Not used".
+
+If no second argument is given, the "current" and "processed" values
+of "np" and "at" parameters will be updated. The "lsfid" parameter
+will be set to "Not used".
+
+If no second argument is given, this command will overwrite acqfil/fid
+and acqfil/procpar in curexp.  If acqfil/fid is linked to a saved fid file,
+the link will be replaced by a copy, so the original fid will not be overwritten.
+ 
+This command can be repeated to further shift the fid.
+
+Examples:
+
+ lsfid(2)   // left-shift FID in current experiment by 2 complex data points.
+ lsfid(-3,userdir+'/data/myfid.fid/fid') // right-shift FID in saved data set
+

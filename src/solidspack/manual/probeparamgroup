@@ -1,0 +1,105 @@
+******************************************************************************
+probeparamgroup - A macro to get and set parameter values into the probe file.
+****************************************************************************** 
+
+Syntax 1: 
+probeparamgroup(<<<'get' or 'set', 'labelstring', 'nucleus','grouplabelstring',
+                   'prefix1'>'prefix2'>, ...etc>)
+Syntax 2:
+probeparamgroup(<<<'get' or 'set', 'labelstring', 'nucleus', '', 'param1'>, 
+                   'param2'>, etc>)
+
+The remaining syntax lines can use a grouplabelstring and prefixes as well a '' 
+and parameters. 
+
+Syntax 3:
+probeparamgroup(<<<'getlocal', 'labelstring', 'nucleus', '', 'param1'>, 
+                   'param2'>, etc>):$ret1,$ret2... etc. 
+Syntax 4:
+probeparamgroup(<<<'setlocal', 'labelstring', 'nucleus', '', 'param1', value1,>, 
+                   'param2', value2>, etc>)
+Syntax 5
+probeparamgroup(<<<'setstring', 'labelstring', 'nucleus', '', 'param1', 'formatvalue1',>, 
+                   'param2', 'formatvalue2'>, etc>)
+
+probeparamgroup -   Get or set a group of parameter values from or into the 
+                    current probe file (either user or system). This macro is 
+                    is used in several ways to perform the typical uses of 
+                    setparams, addparams or getparam with multiple parameters at
+                    once. The macro also recognizes the syntax of SolidsPack and 
+                    it can be used to store parameters of the same "group" with 
+                    multiple prefixes. 
+
+                    All parameters are stored or recognized with a a label 
+                    (appended with an underscore to the probe-file parameter name)
+                    that designates the transmitter channel, C1,C2, etc. Calibrations
+                    of the same nucleus but different transmitter are unique.
+                  
+                    Optionally groups of parameters can also be saved with a common 
+                    base label, which is appended to the probe-file parameter name 
+                    between the underscore and the channel label.  
+                   
+                    Argument 1 is the action: 'get', 'getlocal', 'set', 'setlocal', 
+                    or 'setstring'. 
+
+                    Argument 2 is a string that is interpreted as the basename of a
+                    label for all of the parameters to be saved in the probe file.  It 
+                    is placed after the underscore before the channel label. 
+
+                    Argument 3 is a string to represent the nucleus directly or the 
+                    or the nucleus parameter in single quotes (i.e. 'tn','dn','dn2'
+                    or 'dn3'). If the latter, the macro chooses the value of 
+                    the nucleus based on the value of the designated nucleus 
+                    parameter. If the nucleus parameter does not exist or has a 
+                    value '' or 'none', the macro aborts with no action. A nucleus 
+                    that is entered directly must be associated with a channel. If 
+                    if it is not, the macro aborts with no action. 
+
+                    If the nucleus exists, the macro determines the transmitter 
+                    channel that corresponds to the nucleus and appends the number
+                    '1','2', etc to the label after a 'C'. This designation will
+                    provide separate entries for a nucleus used with two different 
+                    transmitter channels.
+
+                    Argument 4 is an optional string to represent a parameter-group 
+                    name that uses SolidsPack conventions. If argument 4 has a value,
+                    then the remaing arguments (5 and above) are strings to represent
+                    parameter prefixes that use SolidsPack conventions. If argument 
+                    4 is '', the remaining arguments are interpreted as full parameter 
+                    names. The parameter goup name is a group of lower-case characters 
+                    ("suffix") followed by one or more upper-case "channel identifiers" 
+                    (see the SolidsPack documentation).
+
+                    The macro aborts if the probe file does not exist. If the action
+                    is 'set' and the nucleus does not exist in the probe file, the nucleus
+                    is added to the probe file. If the parameter designation does not
+                    exist in the probe file it is created with addparams. 
+                    
+                    If argument 1 is 'get', the value in the probe file for a 
+                    parameter is used to directly set the parameter value. 
+
+                    If argument 1 is 'getlocal' the value in the probe file 
+                    for a parameter is returned to a designated return parameter.
+                  . This syntax is used to set local variables in a Magical macro 
+                    from the probe file. One instance of the macro can return up 
+                    to 10 values.
+
+                    If argument 1 is 'set', the parameter value is written
+                    into the probe file with the designated name.  
+   
+                    If argument 1 is 'setlocal' arguments 5 and above are 
+                    interpreted as (name, value) pairs. The name must be a string 
+                    containing the prefix or full parameter name as described above.
+                    The value is a numeric or string value (or a variable name 
+                    containing the value - no quotes in this case!) to be written
+                    into the probe file for the designated parameter name. This 
+                    syntax is used to set the probe file using local variables 
+                    in a Magical macro. 
+                    
+                    If argument 1 is 'setstring' the arguments are (name, value) 
+                    pairs where the value is a formatted string to represent the
+                    parameter value.  This mode has operation similar to setparams. 
+                    The value string for a numeric value must be created separately
+                    with the format statement. For all other modes numeric values
+                    are represented automatically with 7 places after the decimal. 
+                   

@@ -1,0 +1,32 @@
+"macro findwin"
+" ******************************************************"
+" findwin(expno):winno - return window number of 1st occurence for"
+"    expno. If no occurence exists and no spare window, winno=0 "
+"    If no occurence and there is a spare winno=-n where n is "
+"            the spare window number"
+" ******************************************************"
+$map=size('mapwin')
+$act=curwin[2]*curwin[3]
+$unass=$act-$map
+
+$i=1
+$ret=0
+repeat
+ if ($1 = mapwin[$i]) then
+  $ret=$i
+  $i=$map
+ else
+  $i=$i+1
+ endif
+until $i > $map
+if $ret > 0 then return($ret) endif
+$i=1
+repeat
+ if (mapwin[$i] = 0) then return(-$i) endif
+ $i=$i+1
+until $i > $map
+if ($unass > 0) then
+ return(-($map+1))
+else
+ return(0)
+endif

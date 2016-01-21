@@ -1,0 +1,37 @@
+"macro go_gc2h2bcme"
+" go_gc2h2bcme - run time macro to ensure ni does not exceed what BigT allows "
+
+if (dn = 'C13') and (tn = 'H1') then
+setref(dn):$rfl,$rfp,$reffrq
+$center=(dof+$rfp-$rfl)/$reffrq
+mkpar('delay','tauC',0)
+setlimit('tauC',8190,-8190,1.25e-8)
+tauC = 0.0007*(90-$center)/90
+if (tauC < 0) then
+   tauC = (trunc((tauC*1e6)-0.5))/1e6
+else
+   tauC = (trunc((tauC*1e6)+0.5))/1e6
+endif
+if (tauC < -1.0*pwx180r/1e6) or (tauC > pwx180r/1e6) then
+  write('error','tauC exceeds the length of pwx180r. aborted')
+  abort
+endif
+endif
+
+
+$maxni = (BigT/2  - 2/(j1min+j1max) - tauC - pwx180r*1e-6)*2*sw1-2
+
+if (ni > $maxni) then
+  ni = $maxni
+  write('error','Warning: ni exceeded what BigT allows.  Reset to %d',ni)
+  setLP1
+  gaussian('f1')
+endif
+if (array='phase,mult') then array='mult,phase' endif
+$msize=size('mult')
+if ($msize>1) then
+   f1coef='1 0 1 0 0 0 0 0 0 1 0 -1 0 0 0 0'
+else
+   f1coef='1 0 1 0 0 1 0 -1'
+endif
+

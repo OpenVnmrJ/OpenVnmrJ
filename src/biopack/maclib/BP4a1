@@ -1,0 +1,189 @@
+"macro BP4a1"
+" BP4a1 "
+$counter=1 $vs=vs
+select(1) vsadj(50) $best=50 $bestone=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>41
+$phincr_i_best=phincr[$bestone]
+select(42) $counter=42 peak:$best,cr $bestone=42
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>82
+$phincr_t_best=phincr[$bestone-41]
+select(83) $counter=83 peak:$best,cr $bestone=83
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>123
+$phincr_u_best=phincr[$bestone-82]
+select(124) $counter=124 peak:$best,cr $bestone=124
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>164
+$phincr_d_best=phincr[$bestone-123]
+select(165) $counter=165 peak:$best,cr $bestone=165
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+$phincr_n_best=phincr[$bestone-164]
+BPsvf(userdir+'/AutoTripRes/flipback_cal1a')
+vs=$vs
+wc=3.9 sc=wcmax-164+wc ho=-4.0 vo=0
+write('plotter',sc+40,-2,'INEPT- Soft Pulse: Phase Optimization (flip-up) = %2.1f',$phincr_i_best)
+vp=0 dss(1,41,'dodc') pl(1,41,'dodc')
+write('plotter',sc+40,28,'INEPT- Soft Pulse (TROSY): Phase Optimization (flip-down) = %2.1f',$phincr_t_best)
+vp=30 dssn(42,82,'dodc') pl(42,82,'dodc')
+write('plotter',sc+40,58,'Hard Pulse - Soft Pulse: Phase Optimization (flip-up) = %2.1f',$phincr_u_best)
+vp=60 dssn(83,123,'dodc') pl(83,123,'dodc')
+write('plotter',sc+40,88,'Soft Pulse - Hard Pulse: Phase Optimization (flip-down) = %2.1f',$phincr_d_best)
+vp=90 dssn(124,164,'dodc') pl(124,164,'dodc')
+write('plotter',sc+40,118,'INEPT - Soft Pulse (gNhsqc): Phase Optimization (flip-up) = %2.1f',$phincr_n_best)
+vp=120 dssn(165,arraydim,'dodc') pl(165,arraydim,'dodc')
+pap BPpage
+$r7=r7   "Pbox uses r7 so must save value"
+
+phincr=$phincr_i_best
+$phincr_i='' format(phincr,2,2):$phincr_i
+BPsetparams('phincr_i',$phincr_i,'H1')
+$pwHs='' $phase='' $name='' $wave=''
+
+   if (pwHs >= 1000) then
+     format(pwHs,4,0):$pwHs
+     $pwHs='0.00'+$pwHs
+   else    "@900MHz pwHs < 1000 us - Marco@NMRFAM"
+     format(pwHs,3,0):$pwHs
+     $pwHs='0.000'+$pwHs
+   endif
+   if ((phincr>9) or (phincr<-9)) then
+    format(phincr,2,0):$phase
+   else
+    format(phincr,1,0):$phase
+   endif
+   $name='H2Osinc_i'  "used for flipbacks following INEPT"
+   $wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 ' +$phase
+   opx($name)
+   setwave($wave)
+   cpx(pw*compH,tpwr)
+   BPmoveshape($name+'.RF')
+
+phincr=$phincr_t_best
+
+$phincr_t='' format(phincr,2,2):$phincr_t
+BPsetparams('phincr_t',$phincr_t,'H1')
+
+$pwHs='' $phase='' $name='' $wave=''
+
+   if (pwHs >= 1000) then
+     format(pwHs,4,0):$pwHs
+     $pwHs='0.00'+$pwHs
+   else    "@900MHz pwHs < 1000 us - Marco@NMRFAM"
+     format(pwHs,3,0):$pwHs
+     $pwHs='0.000'+$pwHs
+   endif
+   if ((phincr>9) or (phincr<-9)) then
+    format(phincr,2,0):$phase
+   else
+    format(phincr,1,0):$phase
+   endif
+   $name='H2Osinc_t'  "used for flipbacks following INEPT for TROSY"
+   $wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 ' +$phase
+   opx($name)
+   setwave($wave)
+   cpx(pw*compH,tpwr)
+   BPmoveshape($name+'.RF')
+
+phincr=$phincr_u_best
+$phincr_u='' format(phincr,2,2):$phincr_u
+BPsetparams('phincr_u',$phincr_u,'H1')
+$pwHs='' $phase='' $name='' $wave=''
+
+   if (pwHs >= 1000) then
+     format(pwHs,4,0):$pwHs
+     $pwHs='0.00'+$pwHs
+   else    "@900MHz pwHs < 1000 us - Marco@NMRFAM"
+     format(pwHs,3,0):$pwHs
+     $pwHs='0.000'+$pwHs
+   endif
+   if ((phincr>9) or (phincr<-9)) then
+    format(phincr,2,0):$phase
+   else
+    format(phincr,1,0):$phase
+   endif
+   $name='H2Osinc_u'  "used for flipbacks following single hard 90"
+   $wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 ' +$phase
+   opx($name)
+   setwave($wave)
+   cpx(pw*compH,tpwr)
+   BPmoveshape($name+'.RF')
+
+phincr=$phincr_d_best
+$phincr_d='' format(phincr,2,2):$phincr_d
+BPsetparams('phincr_d',$phincr_d,'H1')
+$pwHs='' $phase='' $name='' $wave=''
+
+   if (pwHs >= 1000) then
+     format(pwHs,4,0):$pwHs
+     $pwHs='0.00'+$pwHs
+   else    "@900MHz pwHs < 1000 us - Marco@NMRFAM"
+     format(pwHs,3,0):$pwHs
+     $pwHs='0.000'+$pwHs
+   endif
+   if ((phincr>9) or (phincr<-9)) then
+    format(phincr,2,0):$phase
+   else
+    format(phincr,1,0):$phase
+   endif
+   $name='H2Osinc_d'  "used for flipbacks prior to hard 90"
+   $wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 ' +$phase
+   opx($name)
+   setwave($wave)
+   cpx(pw*compH,tpwr)
+   BPmoveshape($name+'.RF')
+
+phincr=$phincr_n_best
+$phincr_n='' format(phincr,2,2):$phincr_n
+BPsetparams('phincr_n',$phincr_n,'H1')
+$pwHs='' $phase='' $name='' $wave=''
+
+   if (pwHs >= 1000) then
+     format(pwHs,4,0):$pwHs
+     $pwHs='0.00'+$pwHs
+   else    "@900MHz pwHs < 1000 us - Marco@NMRFAM"
+     format(pwHs,3,0):$pwHs
+     $pwHs='0.000'+$pwHs
+   endif
+   if ((phincr>9) or (phincr<-9)) then
+    format(phincr,2,0):$phase
+   else
+    format(phincr,1,0):$phase
+   endif
+   $name='H2Osinc_n'  "used for flipback in gNhsqc (TROSY='n')"
+   $wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 ' +$phase
+   opx($name)
+   setwave($wave)
+   cpx(pw*compH,tpwr)
+   BPmoveshape($name+'.RF')
+
+r7=$r7           "used to stop Fast RF-only Autocalibrate"
+phincr=0 shape='H2Osinc_i'
+r2=tpwrsf[2] r3=tpwrsf[3] r4=tpwrsf[4] r5=tpwrsf[5]
+satmode='i'
+array('tpwrsf',20,tpwrsf[1]+300,-30)
+array='tpwrsf'
+vp=0
+wexp='BP4b'  au

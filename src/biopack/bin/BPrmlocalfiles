@@ -1,0 +1,515 @@
+#!/bin/sh
+#
+# BPrmlocalfiles - remove local BioPack files after an installation of
+#		   BioPack 2.x in /vnmr
+#
+# Revision history:
+#	2003-01-11 - rk (reworked to back out files rather than interactively
+#		     removing duplicate local subfiles)
+#       2003-01-15 - rk (rearranged for improved output)
+#	2003-01-30 - rk (adjusted for BioPack.dir)
+#	2003-01-31 - rk (expanded to remove compiled C and SpinCAD sequences
+#		     from local seqlib, with associated *.c, *.errors files)
+#       2003-03-09 - rk (fixed counting of deleted "seqfil" files)
+#       2003-03-21 - rk (minor touch-up on closing message)
+#       2005-01-12 - rk (fixed Linux issues)
+#       2005-01-13 - rk (fixed more Linux issues)
+#       2005-05-27 - rk (minor enhancements)
+#       2009-02-22 - rk (adjusted for "appdirs" approach)
+#
+
+
+#------------------------------------------------------------------------------
+#  Compatibility section
+#------------------------------------------------------------------------------
+
+echo=`which echo`
+tail=`which tail`
+pwd=`which pwd`
+if [ `uname` = SunOS ]; then
+  awk=nawk
+  tail=/usr/xpg4/bin/tail
+elif [ `uname` = Linux ]; then
+  echo="$echo -e"
+  awk=awk
+else
+  awk=awk
+fi
+
+
+#------------------------------------------------------------------------------
+# global settings etc.
+#------------------------------------------------------------------------------
+
+cmd=`basename $0`
+if [ x$vnmrsystem = x ]; then
+  vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = x ]; then
+  vnmruser=$HOME/vnmrsys
+fi
+BPdir=BioPack.dir
+tmp=$vnmrsystem/tmp/$cmd.$$
+tmplist=$vnmrsystem/tmp/$cmd.$$.shapes
+backuppath=$vnmruser/$BPdir/backups
+date=`date +%Y-%m-%d_%H:%M`
+bkdir=$backuppath/$date
+
+
+#==============================================================================
+# function that REMOVES duplicates from one subdirectory
+#==============================================================================
+
+rmfiles() {
+  # arg1: subdirectory, e.g.: maclib, psglib, templates/dg
+  subdir=$1
+  vdir=$1
+  vdb=`basename $vdir`
+  vdd=`dirname $vdir`
+
+  # arg2: subdirectory listing, e.g.: [Biopack.dir/BP_files/]maclib,
+  #	  [Biopack.dir/BP_files/]psglib, [Biopack.dir/BP_files/]templates/dg
+  list=$2
+
+  # "templates" vs. "user_templates" in /vnmr
+  if [ $vdd = templates ]; then
+    if [ ! -d $vnmrsystem/$vdir ]; then
+      vdir=user_templates/$vdb
+    fi
+  fi
+
+  #----------------------------------------------------------------------------
+  # Removing local files that are identical to [BioPack] files in /vnmr
+  #----------------------------------------------------------------------------
+  $echo "${subdir}:" | $awk '{printf("   %18s",$1)}'
+  fcount=0
+  dcount=0
+  seqrm=0
+  nchecks=`wc -l < $list`
+  for f in `cat $list`; do
+    if [ -f $f -a -f $vnmrsystem/$vdir/$f ]; then
+      if [ `diff $f $vnmrsystem/$vdir/$f | wc -l` -eq 0 ]; then
+	rm -f $f
+	fcount=`expr $fcount + 1`
+        if [ $vdir = psglib ]; then
+          b=`basename $f .c`
+          fc=`ls ../seqlib/$b ../seqlib/$b.c ../seqlib.$b.errors 2>/dev/null | wc -l`
+          rm -f ../seqlib/$b ../seqlib/$b.c ../seqlib.$b.errors
+          seqrm=`expr $seqrm + $fc`
+        elif [ $vdir = spincad/psglib ]; then
+          fc=`ls ../../seqlib/$f.psg ../../seqlib/${f}_dps.psg 2> /dev/null | wc -l`
+          rm -f ../../seqlib/$f.psg ../../seqlib/${f}_dps.psg
+          seqrm=`expr $seqrm + $fc`
+        fi
+      fi
+    elif [ -f $f -a -f $vnmrsystem/biopack/$vdir/$f ]; then
+      if [ `diff $f $vnmrsystem/biopack/$vdir/$f | wc -l` -eq 0 ]; then
+	rm -f $f
+	fcount=`expr $fcount + 1`
+        if [ $vdir = psglib ]; then
+          b=`basename $f .c`
+          fc=`ls ../seqlib/$b ../seqlib/$b.c ../seqlib.$b.errors 2>/dev/null | wc -l`
+          rm -f ../seqlib/$b ../seqlib/$b.c ../seqlib.$b.errors
+          seqrm=`expr $seqrm + $fc`
+        elif [ $vdir = spincad/psglib ]; then
+          fc=`ls ../../seqlib/$f.psg ../../seqlib/${f}_dps.psg 2> /dev/null | wc -l`
+          rm -f ../../seqlib/$f.psg ../../seqlib/${f}_dps.psg
+          seqrm=`expr $seqrm + $fc`
+        fi
+      fi
+    elif [ -d $f -a -d $vnmrsystem/$vdir/$f ]; then 
+      if [ `diff -r $f $vnmrsystem/$vdir/$f 2>&1 | grep -cv '^Common'` -eq 0 ]
+      then
+        rm -rf $f
+        dcount=`expr $dcount + 1`
+      fi
+    elif [ -d $f -a -d $vnmrsystem/biopack/$vdir/$f ]; then 
+      if [ `diff -r $f $vnmrsystem/biopack/$vdir/$f 2>&1 | grep -cv '^Common'` -eq 0 ]
+      then
+        rm -rf $f
+        dcount=`expr $dcount + 1`
+      fi
+    fi
+  done
+  if [ $nchecks -eq 1 ]; then
+    $echo "   1 entry   checked,\c"
+  else
+    $echo $nchecks | $awk '{printf(" %3d entries checked,",$1)}'
+  fi
+  if [ $fcount -eq 0 -a $dcount -eq 0 ]; then
+    $echo " none removed."
+  else
+    if [ $fcount -eq 1 ]; then
+      $echo "   1 file \c"
+    elif [ $fcount -gt 1 ]; then
+      $echo $fcount | $awk '{printf(" %3d files",$1)}'
+    fi
+    if [ $fcount -gt 0 -a $dcount -gt 0 ]; then
+      $echo ",\c"
+    fi
+    if [ $dcount -eq 1 ]; then
+      $echo "   1 subdirectory\c"
+    elif [ $dcount -gt 1 ]; then
+      $echo $dcount | $awk '{printf(" %3d subdirectories",$1)}'
+    fi
+    $echo " removed."
+  fi
+  if [ $seqrm -gt 0 ]; then
+    $echo "                     \c"
+    if [ $seqrm -gt 1 ]; then
+      if [ $vdir = psglib ]; then
+        $echo $seqrm | $awk '{printf(" %3d compiled C pulse sequences\n",$1)}'
+      else
+        $echo $seqrm | $awk '{printf(" %3d compiled SpinCAD pulse sequences\n",$1)}'
+      fi
+      $echo "                          and related files\c"
+    else
+      if [ $vdir = psglib ]; then
+	$echo "   1 compiled C pulse sequence"
+      else
+        $echo "   1 compiled SpinCAD pulse sequence"
+      fi
+      $echo "                          or related file\c"
+    fi
+    $echo " removed from \"seqlib\""
+  fi
+  rmcount=`expr $fcount + $dcount`
+  return $rmcount
+}
+# end of function "rmfiles"
+
+
+#==============================================================================
+# function that BACKS OUT duplicates from one subdirectory
+#==============================================================================
+
+backoutfiles() {
+  # arg1: subdirectory, e.g.: maclib, psglib, templates/dg
+  subdir=$1
+  vdir=$1
+  vdb=`basename $vdir`
+  vdd=`dirname $vdir`
+
+  # arg2: subdirectory listing, e.g.: [Biopack.dir/BP_files/]maclib,
+  #	  [Biopack.dir/BP_files/]psglib, [Biopack.dir/BP_files/]templates/dg
+  list=$2
+
+  # directory for backing out files, e.g.:
+  #	~/vnmrsys/BioPack.dir/backups/2003-01-11_11:12/templates/dg
+  backupdir=$bkdir/$subdir
+
+  # "templates" vs. "user_templates" in /vnmr
+  if [ $vdd = templates ]; then
+    if [ ! -d $vnmrsystem/$vdir ]; then
+      vdir=user_templates/$vdb
+    fi
+  fi
+
+  #----------------------------------------------------------------------------
+  # Backing out remaining duplicates (local mods or local files that are
+  #	different from those in /vnmr otherwise (such as older versions)
+  #----------------------------------------------------------------------------
+  ls -d `cat $list` 2>/dev/null > $tmp
+  if [ `wc -w < $tmp` -gt 0 ]; then
+    if [ ! -d $backupdir ]; then
+      mkdir -p $backupdir
+    fi
+    for subf in `cat $tmp`; do
+      if [ -h $subf ]; then
+        rm -f $backupdir/$subf
+	mv $subf $backupdir/$subf
+      elif [ -d $subf ]; then
+	tar cf - $subf | (cd $backupdir; tar xfBp -)
+	if [ `diff -r $subf $backupdir/$subf 2>/dev/null | \
+	      egrep -v '^Common|^diff' | wc -w` -eq 0 ]; then
+	  rm -rf $subf
+	else
+          # lack of disk space for backout copy?
+	  #    Don't want to use "mv" on directories.
+          $echo ""
+          $echo "Could not back out $subdir/$subf; remove file? (y|n) [y] \c"
+	  read answer
+	  if [ "$answer" != n -a "$answer" != N ]; then
+	    rm -rf $subf
+	  fi
+        fi
+      elif [ -f $subf ]; then
+        rm -f $backupdir/$subf
+	mv $subf $backupdir
+      fi
+    done
+
+    # rm subdirectory, if empty (no backups)
+    rmdir $backupdir 2>/dev/null
+    if [ -d $backupdir ]; then
+      cd $bkdir
+      ls -Cd $subdir/* 2>/dev/null | sed "s/^/  /"
+      cd $backupdir
+      numfiles=`ls -d1 * 2>/dev/null | wc -l | $awk '{print $1}'`
+    else
+      numfiles=0
+    fi
+  else
+    numfiles=0
+  fi
+  rm -f $tmp
+  return $numfiles
+}
+# end of function "backoutfiles"
+
+
+#------------------------------------------------------------------------------
+# Argument checking
+#------------------------------------------------------------------------------
+
+wait=0
+prompt=1
+while [ x`$echo $1 | $awk '{print substr($1,1,1)}'` = "x-" -a $# -gt 0 ]; do
+  if [ x$1 = x-h ]; then
+    wait=1
+  elif [ x$1 = x-f ]; then
+    prompt=0
+  fi
+  shift
+done
+if [ $# -eq 0 ]; then
+  lastpsglist=`ls -trd $vnmruser/biopack/$BPdir/BP_files/psglib \
+                $vnmruser/$BPdir/BP_files/psglib \
+                $vnmrsystem/$BPdir/BP_files/psglib \
+                $vnmrsystem/biopack/$BPdir/BP_files/psglib \
+                $vnmrsystem/BioPack_files/psglib 2>/dev/null | \
+        $tail -n 1`
+  if [ "x${lastpsglist}" = x ]; then
+    $echo "$0 error: list of BioPack files not found - aborting."
+    if [ $wait -eq 1 ]; then
+      sleep 5
+    fi
+    exit 1
+  fi
+  filedir=`dirname $lastpsglist`
+  parentdir=`dirname $filedir`
+  shapelist=${parentdir}/BP_shapes
+  if [ ! -f $shapelist ]; then
+    shapelist=""
+    $echo "$0 - note: shapelist not found!"
+  fi
+else
+  filedir=$1
+  ch1=`$echo $filedir | cut -c1,1`
+  if [ x$ch1 != x. -a x$ch1 != x/ ]; then
+    filedir=`$pwd`/$filedir
+  fi
+  shapelist=`dirname $filedir`
+  shapelist=$shapelist/BP_shapes
+  if [ ! -f $shapelist -a -s $vnmrsystem/$BPdir/BP_shapes ]; then
+    shapelist=$vnmrsystem/$BPdir/BP_shapes
+  fi
+  if [ ! -f $shapelist -a -s $vnmruser/$BPdir/BP_shapes ]; then
+    shapelist=$vnmruser/$BPdir/BP_shapes
+  fi
+fi
+if [ ! -s $shapelist ]; then
+  $echo "$0 - note: shapelist not found!"
+fi
+if [ ! -d $backuppath ]; then
+  mkdir -p $backuppath
+fi
+if [ -d $vnmruser/BioPack.bkups ]; then
+  mv $vnmruser/BioPack.bkups/* $backuppath 2>/dev/null
+  rmdir $vnmruser/BioPack.bkups
+fi
+if [ ! -d $bkdir ]; then
+  mkdir -p $bkdir
+fi
+
+
+#------------------------------------------------------------------------------
+# check whether BioPack file list exists in /vnmr
+#------------------------------------------------------------------------------
+
+if [ ! -d $filedir ]; then
+  $echo "$cmd: directory $filedir not found - aborting"
+  if [ $prompt -eq 1 -o $wait -eq 1 ]; then
+    sleep 5
+  fi
+  exit
+fi
+
+
+#------------------------------------------------------------------------------
+# find conflicting files according to BioPack file list: files to be removed
+#------------------------------------------------------------------------------
+
+cd $vnmruser
+if [ $prompt -eq 1 ]; then
+  cat << %
+
+==============================================================================
+ $cmd - Removing local BioPack Files:
+==============================================================================
+ This utility removes local files from earlier BioPack or ProteinPack /
+ RnaPack installations. It is meant to be called PRIOR to using BioPack
+ for the first time. If called AFTER you have started using BioPack, it
+ may remove data that BioPack deposits in the user's "vnmrsys", such as
+ calibrations and customized macros and other files.
+%
+  $echo "   ==> OK to proceed? (y|n) [y] \c"
+  read ans
+  if [ "$ans" = n -o "$ans" = N ]; then
+    $echo "$cmd: aborting."
+    if [ $prompt -eq 1 -o $wait -eq 1 ]; then
+      sleep 5
+    fi
+    exit
+  else
+    $echo
+  fi
+fi
+
+$echo "Looking for local BioPack files that are identical to those in /vnmr:"
+totalrm=0
+for dir in `(cd $filedir; find * -type f)`; do
+  list=$filedir/$dir
+  case $dir in
+    templates/dg_default)      dir=templates/dg/default ;;
+    templates/layout_default)  dir=templates/layout/default ;;
+    templates/vnmrj_interface) dir=templates/vnmrj/interface ;;
+  esac
+  if [ $dir = bin -a -d $HOME/bin ]; then
+    cd $HOME/bin
+    if [ `wc -l < $list` -gt 0 ]; then
+      rmfiles $dir $list
+      totalrm=`expr $totalrm + $?`
+    fi
+    cd $vnmruser
+  elif [ -d $dir ]; then
+    cd $dir
+    if [ `wc -l < $list` -gt 0 ]; then
+      rmfiles $dir $list
+      totalrm=`expr $totalrm + $?`
+    fi
+    cd $vnmruser
+  fi
+done
+cd $vnmruser
+if [ -s $shapelist -a -d $vnmruser/shapelib ]; then
+  cd shapelib
+  rmfiles shapelib $shapelist
+  totalrm=`expr $totalrm + $?`
+  if [ `ls sincs*.RF rna_sincs*.RF hard*.RF 2>/dev/null | wc -l` -gt 0 ]; then
+    ls sincs*.RF rna_sincs*.RF hard*.RF 2>/dev/null > $tmplist
+    rmfiles shapelib $tmplist
+    totalrm=`expr $totalrm + $?`
+  fi
+  cd $vnmruser
+fi
+if [ $totalrm -gt 0 ]; then
+  $echo "       Total: $totalrm local Biopack files removed"
+fi
+$echo ""
+
+
+#------------------------------------------------------------------------------
+# find conflicting files according to BioPack file list: files to be backed out
+#------------------------------------------------------------------------------
+
+cd $vnmruser
+$echo "Backing out local BioPack files that differ from those in /vnmr:"
+totalbk=0
+for dir in `(cd $filedir; find * -type f)`; do
+  list=$filedir/$dir
+  if [ $dir = bin -a -d $HOME/bin ]; then
+    cd $HOME/bin
+    if [ `wc -l < $list` -gt 0 ]; then
+      backoutfiles $dir $list
+      totalbk=`expr $totalbk + $?`
+    fi
+    cd $vnmruser
+ elif [ -d $dir ]; then
+    cd $dir
+    if [ `wc -l < $list` -gt 0 ]; then
+      backoutfiles $dir $list
+      totalbk=`expr $totalbk + $?`
+    fi
+    cd $vnmruser
+  fi
+done
+if [ -s $shapelist -a -d $vnmruser/shapelib ]; then
+  cd shapelib
+  backoutfiles shapelib $shapelist
+  totalbk=`expr $totalbk + $?`
+  cd $vnmruser
+  if [ -s $tmplist ]; then
+    cd shapelib
+    backoutfiles shapelib $tmplist
+    totalbk=`expr $totalbk + $?`
+  fi
+  cd $vnmruser
+fi
+if [ -d templates/dg ]; then
+  extrafiles=`find * -prune -type f -a -name 'dg.*' | wc -l`
+  if [ $extrafiles -gt 0 ]; then
+    $echo templates/dg | $awk '{printf("   %18s",$1)}'
+    if [ ! -d $bkdir/templates/dg ]; then
+      mkdir -p $bkdir/templates/dg
+    fi
+    ls -C `find * -prune -type f -a -name 'dg.*'` | sed "s/^/  /"
+    mv `find * -prune -type f -a -name 'dg.*'` $bkdir/templates/dg
+    totalbk=`expr $totalbk + $extrafiles`
+  fi
+fi
+rm -f $tmplist
+
+# rm backout directory, if empty
+rmdir $bkdir 2>/dev/null
+
+# report number of backed out files (& directories)
+if [ -d $bkdir ]; then
+  $echo "        $totalbk local Biopack files backed out; backup directory:"
+  $echo "            $bkdir"
+else
+  $echo "        No local files were backed out."
+fi
+$echo ""
+
+
+#------------------------------------------------------------------------------
+# remove local Proteinpack / RnaPack legacy files
+#------------------------------------------------------------------------------
+cd $vnmruser
+if [ -x $vnmrsystem/bin/BPrmlegacyfiles -a \
+     -f $vnmrsystem/$BPdir/legacy_files ]; then
+  $vnmrsystem/bin/BPrmlegacyfiles $vnmrsystem/$BPdir/legacy_files $bkdir
+fi
+
+
+#------------------------------------------------------------------------------
+# Remove traces from login macro
+#------------------------------------------------------------------------------
+cd $vnmruser/maclib
+if [ -s login ]; then
+  cat login | grep -v PPglobalpar > login.tmp
+  cat login.tmp | sed 's/^ [ ]*BPglobalpar[ ]*$/  $echo/' > login
+  rm login.tmp
+  if [ `wc -w < login` -eq 0 ]; then
+    rm login
+  fi
+fi
+
+
+#------------------------------------------------------------------------------
+# finally, remove local BioPack revision date file, if present
+#------------------------------------------------------------------------------
+
+cd $vnmruser
+rm -f BioPack_rev BioPack*.README
+if [ -d $BPdir ]; then
+  cd $BPdir
+  rm -rf BP_rev BioPack*.README BP_doc
+  cd ..
+fi
+if [ $wait -eq 1 ]; then
+  $echo
+  $echo 'Type [Return] to close window and complete process: \c'
+  read a
+fi

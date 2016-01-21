@@ -1,0 +1,41 @@
+"macro spSetVecs"
+// spSetVecs
+
+$i = 0
+$index = ''
+$vec = 'spVec1'
+{$vec}=0
+repeat
+  $var = ''
+  substr(spParNames,$i+1):$var
+  if ($var <> '') then
+    $val = {$var}
+    $i = $i + 1
+    {$vec}[$i] = $val
+  endif
+until ($var = '')
+spDim = $i
+spYval=0
+if (spDim=1) then return endif
+
+$i = 1
+while ($i < spDim+1) do
+  $i = $i + 1
+  format($i,0,0):$index
+  $vec = 'spVec' + $index
+  $j = 0
+  {$vec}=0
+  while ($j < spDim) do
+    $j = $j + 1
+//    random(2 * spRange):$val
+//    {$vec}[$j] = $val - spRange
+    random(spRange):$val                           // 0 to spRange
+    $val = $val - spRange/2                        // -spRange/2 to +spRange/2
+    if ($val < 0) then
+      {$vec}[$j] = spVec1[$j] + $val - spRange/2   // -SpRange/2 to -spRange
+    else
+      {$vec}[$j] = spVec1[$j] + $val + spRange/2   // +SpRange/2 to +spRange
+    endif
+  endwhile
+  spYval[$i] = 0
+endwhile

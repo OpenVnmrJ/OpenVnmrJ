@@ -1,0 +1,65 @@
+"macro AT451"
+"AT451 Stability of 2H pw90 using Lock/Decoupler. The 2H rf is routed"   
+"      to 2H Automation Relay which sends it to the diplexer box and"
+"      then to lock BNC on the probe. Thus the calibration is valid for 2H "
+"      pw90 or decoupling rf field when using lock/decoupler for 2H"
+
+"      AT450 macro must have run to establish calibrations before this test is used"
+
+
+"  Either of two methods must be used for this test to run properly "
+
+"  Method #1: Disable Relay
+"  In order to use this test, the cable connected to port 14 "
+"  on the Magnet Relay Driver Board in the magnet leg has to be disconnected. "
+"  This cable drives the Deuterium Automation Relay (K5020) at the back of the "
+"  magnet leg (look for the label on the driver cable). The cable connection "
+"  is made on a small circuit board mounted next to the manual sample eject "
+"  control. This permits the 2H pulse to be delivered by the 2H decoupler, even "
+"  when using tn=lk for 2H observe. Otherwise, the relay switches to route the "
+"  first broadband amplifier to the lowband module for low band observe. "
+
+"  Method #2: Re-route Decoupler RF
+"  Move the Decoupler cable from the top of relay K5022 at the back of the magnet "
+"  leg to the bottom position of relay K5022. This will permit the RF to proceed to
+"  the lock diplexer box when tn=lk"
+
+"  In either case remember to restore the cable to normal position after the test"
+
+if ($#=0) then
+   if at_new='y' then ATnext return endif "macro likely entered by mistake"
+   if numrfch=2 then ATnext return endif "macro likely entered by mistake"
+   ATrtp('standard')
+   text('2H 90 degree pulse stability using lock/decoupler')
+   gain=10 sw=4000 np=8192
+   at_currenttest='H2pw90stab90_lkdec'
+   pw=at_H2pw90_lkdec tn='lk' sethw('lock','off'):$xxx
+   seqfil='AT_lkdec'
+   r4=z0 lockpower=0 tof=at_H2tof
+   sethw('nowait','lockpower',lockpower):$x
+   d3=numrfch    "d3 used in pulse sequence for numrfch"
+   if numrfch=5 then dpwr4=at_H2tpwr_lkdec dn4='H2' dn3='' dn2='' dn='' dof4=at_H2tof endif
+   if numrfch=4 then dpwr3=at_H2tpwr_lkdec dn3='H2' dn2='' dn='' dof3=at_H2tof endif
+   if numrfch=3 then dpwr2=at_H2tpwr_lkdec dn2='H2' dn='' dof2=at_H2tof endif
+   av
+   rof2=300
+   array('nt',20,1,0)
+   wnt='wft av f vsadj dssh'
+   wexp='AT451(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   wft f vp=0 vsadj(100)
+   sp=3p wp=3p ATsvf
+   sethw('lockpower',at_lockpower):$xx
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('H2STAB90lkdec','90 Degree Pulse Stability (From Lock/Dec)','stability',100-
+$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','2H 90 Degree Pulse Stability (Lock/Dec): %3.2f percent',100-$stddev)
+
+   tn='H1' sethw('lock','on'):$xxx
+  ATnext
+endif

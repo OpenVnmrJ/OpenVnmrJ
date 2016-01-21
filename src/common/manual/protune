@@ -1,0 +1,143 @@
+***********************************************************************
+ protune - Run protune experiment (M)
+***********************************************************************
+
+Protune is a feature to automatically tune a probe in automation.
+To run protune, you must have the protune hardware and software 
+installed.  Also, the appropriate protune calibrations must be 
+performed on the probe.  
+
+The following parameters are used for protune in automation.
+
+atune (P)   Protune hardware present or not.  Value is 'y' or 'n'.
+    Set using System config in System settings under Utilities menu.
+
+wtune (P)   WHEN to tune in automation.  Automatic probe tuning
+    will occur when one of the following parameters changes, if
+    wtune contains the corresponding character.
+
+          's' - sample number
+          'e' - experiment
+          'o' - operator
+          'v' - solvent
+          't' - temperature
+          '1' - nucleus (any of tn, dn, dn2, dn3, dn4)
+          'n' - do not tune
+
+    To set the wtune parameter, open the Auto Tune Setup dialog 
+    with Utilities -> Probe tuning -> Auto tune setup.  Select a
+    check box corresponding to when you would like tuning to occur.
+    Click the Reset button to set wtune to a default value.
+
+    A default wtune parameter may be set in the probe file with
+    the name 'Probewtune'.  
+
+
+tunemethod (P)  METHOD to use when tuning in automation.  Set the
+    tunemethod parameter from the Acquire -> Defaults page.  The
+    parameter sets which nuclei to tune, and the tune target levels.
+    The parameter specifies a tune method file, which is stored in
+    vnmrsys/tune/methods or /vnmr/tune/methods.  Tune method files
+    have the following format.
+
+        # this is a comment line.
+        tune band1 within X percent of optimum
+        tune band2 within Y percent of optimum
+
+    band1 or band2 is highband, lowband, hi2band, lo2band, lo3band,
+    lo4band (only the first three characters are needed).  The cutoff
+    between highband and lowband is 0.8 * h1freq.  hi2band, lo2band,
+    etc. are the nuclei within (tn, dn, dn2, etc.) sorted by frequency
+    within the highband or lowband range.  
+
+    band1 or band2 also may be a nucleus parameter name (tn, dn, dn2,
+    dn3, dn4), or the value of a particular nucleus (H1, C13, etc.).
+
+    X or Y is a number between 0.1 and 100.0.  It specifies the
+    target level to which a nucleus will be tuned, as a percent of
+    the optimum pw for ideal tuning and matching.  Typical target
+    levels are 5 (coarse), 2 (medium), or 0.5 (fine).
+
+    Comments are allowed in the tune method file with any line that
+    starts with a '#'.
+
+    Tune method files may have as few or as many lines as desired.
+
+    A default tunemethod parameter may be set in the probe file 
+    with the name 'Probetunemethod'.  
+
+
+General example: wtune='st1' tunemethod='lohi'
+  Tune method file lohi:
+      # this is the most common tune method
+      tune lowband within 2 percent of optimum
+      tune highband within 2 percent of optimum
+
+  When the sample number, temperature, or nucleus (tn, dn, etc.)
+  parameter changes during an automation run, first the lowband
+  nucleus will be tuned within 2 percent of optimum, then the
+  highband nucleus will be tuned within 2 percent of optimum.  Then
+  the experiments on the sample will continue.  
+
+
+Specific example: wtune='st1' tunemethod='lohi'
+
+  Select the Tune prescan check box on the Start -> Study page.
+  Submit the following protocols on a sample.
+
+    Proton (tn='H1' dn='C13')
+    Carbon (tn='C13' dn='H1')
+    Ghsqc  (tn='H1' dn='C13')
+    Ghsqc  (tn='H1' dn='N15')
+
+  Before the first Proton, C13 is tuned to 2 percent of optimum,
+  then H1 is tuned to 2 percent of optimum.  The Proton, Carbon,
+  and C13-Ghsqc experiments are then performed.
+
+  Before the second Ghsqc, N15 is tuned to 2 percent of optimum,
+  then H1 is retuned to 2 percent of optimum.  The N15-Ghsqc
+  experiment is then performed.  
+
+
+The following options are available in the protune macro for
+probe tuning without automation.
+
+  protune or protune('popup') : If no arguments are given, or if
+    the first argument is 'popup', protune opens a dialog for
+    tuning a probe to a specific nucleus.  The dialog may also be
+    opened from the menu system using Utilities -> Probe Tuning
+    -> Tune probe.
+
+    In the upper panel of the dialog, click on a nucleus button
+    (e.g. H1) to tune the probe to a nucleus using a coarse
+    target level (5 percent of optimum).  In the lower panel of
+    the dialog, if present, enter a nucleus (e.g.  H1), select a
+    tune criterion from the menu (e.g. Medium), and then click
+    the Tune to Criterion button to tune the probe.
+
+  protune('calibrate') : Run probe tuning using protune cali-
+    bration graphical user interface.  This option is used mostly
+    during installation.
+
+  protune('nucleus', $nucleus <, $target > ) : Run probe tuning
+    on a nucleus specified by $nucleus (e.g. 'H1', 'C13').  If
+    $target is specified, it sets the target level for tuning
+    as a percentage of optimum pw.  If $target is not specified,
+    a default target of 5 percent is used.
+
+  Other protune arguments are used to run protune in automation,
+  and are not usually used from the command line.  When protune
+  is run from automation, the manual protune graphical user
+  interface is not displayed during tune operations.
+
+
+Related macros:
+  protunegui - same as protune, except display the manual protune
+    graphical user interface
+  settune    - set up tune parameters for automation
+  xmtune     - check tune parameters during automation
+
+See also:
+  Protune Installation manual.
+  Walkup/Automation manual.
+

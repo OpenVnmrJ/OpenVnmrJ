@@ -1,0 +1,98 @@
+"macro fixpar5rf"
+" ************************* "
+" **** macro fixpar5rf **** "
+" ************************* "
+
+if (numrfch < 5) then
+   write('error','fixpar5rf is only used for systems with a fifth RF channel')
+   return
+endif
+
+length(rfband):$len
+if ($len < 5) then
+   rfband='ccccc'
+endif
+
+"Parameters for Fifth Channel"
+exists('dpwr4','parameter'):$e
+if ($e = 0) then
+   create('dpwr4','real')
+   setprotect('dpwr4','on',2)
+   setlimit('dpwr4',23)
+   dpwr4=1
+endif
+
+exists('dof4','parameter'):$e
+if ($e = 0) then
+   create('dof4','frequency')
+   setlimit('dof4',22)
+   setprotect('dof4','on',10)
+   setvalue('dof4',0.0)
+endif
+
+exists('dfrq4','parameter'):$e
+if ($e = 0) then
+   create('dfrq4','real')
+   setlimit('dfrq4',1000000000,0,0)
+   setprotect('dfrq4','on',9)
+endif
+
+exists('homo4','parameter'):$e
+if ($e = 0) then
+   create('homo4','flag')
+   setenumeral('homo4',2,'n','y')
+   homo4 = 'n'
+endif
+
+exists('dm4','parameter'):$e
+if ($e) then
+   $dm4 = dm4
+   destroy('dm4')
+else
+   $dm4 = 'n'
+endif
+create('dm4','flag')
+setenumeral('dm4',4,'a','n','s','y')
+dm4 = $dm4
+
+exists('dmm4','parameter'):$e
+if ($e = 0) then 
+   create('dmm4','flag') 
+   substr(rftype,5,1):$rfchar
+   if ($rfchar='d') then
+      setenumeral('dmm4',9,'c','f','g','m','p','r','u','w','x')
+   endif
+   if ($rfchar='l') then 
+      setenumeral('dmm4',8,'c','f','g','m','r','u','w','x')
+   else
+      setenumeral('dmm4',5,'c','f','n','p','w')
+   endif
+   dmm4 = 'c'
+endif
+
+exists('dmf4','parameter'):$e
+if ($e = 0) then 
+   create('dmf4','integer')
+   setlimit('dmf4',2e+6,1,0)
+   setprotect('dmf4','on',2)
+   dmf4 = dmf
+endif
+
+exists('dseq4','parameter'):$e
+if ($e = 0) then
+   create('dseq4','string')
+endif
+
+exists('dres4','parameter'):$e
+if ($e = 0) then
+   create('dres4','integer')
+   setlimit('dres4',360,1,0)
+   dres4 = 1
+endif
+
+exists('dn4','parameter'):$e
+if ($e = 0) then
+   create('dn4','string')
+   setprotect('dn4','on',8)
+   dn4 = ''
+endif

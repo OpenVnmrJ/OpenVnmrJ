@@ -1,0 +1,89 @@
+
+*********************************************************
+*							*
+*	pmode  -  processing mode for 2D data		*
+*							*
+*********************************************************
+
+The parameter pmode is in the processing group and specifies the type
+of 2D spectral data that the 2D-FT will yield.  pmode can take the
+string values '', 'partial', and 'full'.  If the parameter pmode does
+not exist, it is assigned a value of 'partial' internal to Vnmr.
+
+
+
+PMODE = '':
+
+In this processing mode, it is not possible to change either the F2
+or F1 display mode after the 2D FT.  If the F2 display mode has been
+set to phased (dmg = 'ph'), each F2 spectrum is phase rotated using
+the phase constants "rp" and "lp" prior to the FT along the second
+dimension.  If the F2 display mode has been set to power or absolute
+value (dmg = 'pwr' or 'av' respectively), however, the F2 spectrum is
+not processed any further after the first FT.  The complex t1 inter-
+ferograms are handled in a similar manner.  If the F1 display mode has
+been set to phased (dmg1 = 'ph1'), each F1 spectrum is phased using the
+phase constants "rp1" and "lp1".  If the display mode has been set to
+power (dmg1 = 'pwr1') or to absolute value, the appropriate magnitude
+calculation is performed, with the result being placed in the REAL part
+of the appropriate complex datum and a 0 being placed in the IMAGINARY
+part. At the end of the 2D transform, the spectral data file (datdir/data)
+is reduced from complex data to real data (Vnmr REDUCE display message).
+
+
+
+PMODE = 'partial':
+
+In this processing mode, it is not possible to change the F2 display
+mode after the 2D FT; it is possible, however, to select between the
+three F1 display modes without having to reprocess the 2D data.  If
+the F2 display mode has been set to phased (dmg = 'ph'), each F2 spectrum
+is phase rotated using the phase constants "rp" and "lp" prior to the
+FT along the second dimension.  If the F2 display mode has been set to
+power or absolute value (dmg = 'pwr' or 'av' respectively), the F2
+spectrum is not processed any further after the first FT.  Regardless of
+the requested F1 display mode, no further processing is performed by
+FT2D on the F1 spectra after the second FT.  The calculations on the
+2D spectral data necessary to achieve the requested F1 display mode are
+performed by DCON or DCONI.
+
+
+
+PMODE = 'full':
+
+In this processing mode, it is possible to select between the three
+display modes for each dimension without having to reprocess the 2D
+data.  Regardless of any requested display mode, no display mode pro-
+cessing is performed by FT2D on the F2 spectra after the first or
+second FT.  Display mode processing is performed exclusively by DCON
+or DCONI.
+
+The hypercomplex data structure for the 2D time domain data is
+
+	{Re(t1)Re(t2), Re(t1)Im(t2), Im(t1)Re(t2), Im(t1)Im(t2)}
+
+and is experimentally composed by the PSG arraying mechanism.  The
+hypercomplex data structure for the t1 interferograms is
+
+	{Re(t1)Re(F2), Re(t1)Im(F2), Im(t1)Re(F2), Im(t1)Im(F2)}
+
+where Re represents the Real part and Im, the imaginary part.  A hyper-
+complex FT along t1 yields a hypercomplex 2D spectrum with the following
+data structure per hypercomplex point:
+
+	{Re(F1)Re(F2), Re(F1)Im(F2), Im(F1)Re(F2), Im(F1)Im(F2)}
+
+Note that if pmode='full',  the ft2d program will require an array
+index or coefficients for the construction of the t1 interferograms.
+
+
+Related Manual Entries:		dmg
+				dmg1
+				ph
+				av
+				pwr
+				ph1
+				av1
+				pwr1
+				(w)ft2d
+				(w)ft1d

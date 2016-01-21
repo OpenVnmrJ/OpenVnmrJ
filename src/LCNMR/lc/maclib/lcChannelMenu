@@ -1,0 +1,57 @@
+"macro lcChannelMenu"
+/*-*- Mode: MAGICAL -*-*/
+"macro lcChannelMenu"
+
+// Constructs a lcChannelMenu file giving choices for ADC connections.
+// Based on values of lcDetector and msSelection parameters and on
+// info in the user's lcDetectorInfo file.
+// Puts in a separate line for each analog-out on a module.
+// 
+
+mkdir('-p',userdir+'/lc')
+filepath(userdir, 'lc', 'lcChannelMenu'):$file
+write('reset', $file)
+write('file', $file, '#')
+write('file', $file, '# This file was made by the macro "lcChannelMenu".')
+write('file', $file, '# Do not edit.')
+write('file', $file, '#')
+
+$line=''
+
+// Put in lines for UV detector/PDA
+lcGetDetectorInfo(lcDetector):$key,$pdaFlag,$min,$max,$nLambda,$nAdc,$label
+lcReconcileLambdas($min, $max)
+$i = 1
+while ($i <= $nAdc) do
+  if ($nAdc > 1) then
+    write('line3','%s Out-%d', $label, $i):$l
+  else
+    $l = $label
+  endif
+  write('line3','"%s" ":uv%d:adc%%%%d: %s"\n', $l, $i, $l):$tmp
+  $line = $line + $tmp
+  $i = $i + 1
+endwhile
+
+// Put in lines for MS
+lcGetDetectorInfo(msSelection):$key,$dum1,$dum2,$dum3,$dum4,$nAdc,$label
+$i = 1
+while ($i <= $nAdc) do
+  if ($nAdc > 1) then
+    write('line3','%s Out-%d', $label, $i):$l
+  else
+    $l = $label
+  endif
+  write('line3','"%s" ":ms%d:adc%%%%d: %s"\n', $l, $i, $l):$tmp
+  $line = $line + $tmp
+  $i = $i + 1
+endwhile
+
+// Put in line for 'Other'
+write('line3','"Other" ":other:adc%%%%d: Other"\n'):$tmp
+$line = $line + $tmp
+
+$line = $line + '"None" "none"\n'
+
+echo($line)
+write('fileline', $file, $line)

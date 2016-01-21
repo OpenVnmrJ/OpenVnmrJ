@@ -1,0 +1,105 @@
+
+BioPackExpress 
+
+	majority of experiments use a small set of generic
+	panels for acquisition and processing. 
+	Experiment-specific content in those panels (i.e. axis names) is 
+        generated from parameters from that particular experiment.
+
+        setup/processing panels have several checks for correctness 
+        of conditions and few fool-prof checks.
+	Examples:  
+		3D-related widgets are not visible on a 2D experiment panel
+		widgets related to 2D processing on ni axis are disabled on
+                datasets that contain only ni2*np (F2F3) plane from 3D experiment  
+		2X Linear prediction takes care of truncated datasets 
+
+        Setting up acquisition using BioPackExpress  buttons:
+	Number of incriments in ni/ni2 dimension is defined by 
+        the parameter at_ni/at_ni2:
+	ni=at_ni*sw1
+	ni2=at_ni2*sw2	 
+
+ 
+        Processing using BioPackExpress  buttons:
+
+        Number of processed points in dimension np/ni/ni2 is defined by
+        the parameter fn_obs/fn_ni/fn_ni2 
+	Weighting/Apodisation function in dimension np/ni/ni2  is
+         defined by a string parameter proc_obs/proc_ni/proc_ni2 
+	Linear prediction in ni/ni2 dimension is set by the macro 
+        BP_set_2x_lp('ni'|'ni2')
+
+        Generic pereparation of the experiment for BioPackExpress framework:
+	1. Load parameterset YYY
+	2. Run macro BPexperss_update_parameters
+           that will create BioPackExpress parameters and set
+           initial default values
+	3. Save paremeter set
+ 
+
+	Example:
+		
+	In VNMRJ:
+            rtp('ghn_ca')
+	    BPexpress_update_parameters('HN','CA','N','dummy','reset')
+	    Check/set parameters at_ni,at_ni2
+	    svp('ghn_ca')
+
+Parameters related to 'express' interface 
+        (check BPexpress_update_parameters macro for further details)
+
+BPexpress_gui - 
+        integer. If this paremeter exists and BPexpress_gui=1  
+        then "BioPackExpress" page will show in Setup tab.
+
+at_obs, at_ni, at_ni2 -
+        acquisition times in respective  dimension
+        used in experiment ACQUIRE panel to define ni, ni2 etc. 
+
+nuc_obs, nuc_ni, nuc_ni2 -
+	String label for a nuclei in respective dimensions.
+	Used for INFORMATION purposes in ACQUIRE/PROCESS panels. 
+        Examples: nuc_obs='HN', nuc_ni2='CA'.
+
+	Note: when biopack-express-related parameters are created by the 
+        macro 'BPexpress_update_parameters',
+	default values for at_obs, at_ni, at_ni2 are set according to nuc_obs, 
+        nuc_ni, nuc_ni2 parameters, respectively. 
+	
+proc_obs, proc_ni, proc_ni2 -
+	String paremeters that specify processing command in the 
+        respective dimensions.
+	used by 'Process' panel.
+	example:
+          proc_ni = 'fn1=fn_ni lb1='n'   gf1='n' sb1=-ni/sw1  sbs1=-0.9*ni/sw1 
+          if(proc1='lp')  then sb1=-2.0*ni/sw1 sbs1=-2.0*0.9*ni/sw1   endif '
+
+fn_obs, fn_ni, fn_ni2 -
+	number of points in the processed dimensions.
+	When processing is done via BioPack-express 'Process' panel, 
+	following parameters are set: 
+		 fn=fn_obs fn1=fn_ni fn2=fn_ni2
+
+Related macros:
+
+BPexpess_update_parameters(obs_nuc,nuc_ni,nuc_ni2,nuc_ni3,[no]reset)
+	macro for creating parameters related to biopack-express panels.
+        Codeword 'reset' forces any existing parameters to defaults.
+	Example of creating 'express' parameters for HNCACB experiment:
+                	
+	BPexpress_update_parameters('HN','CACB','N','dummy','reset')
+
+BP_set_2x_lp('ni'|'ni2')
+	sets up a 2X linear prediction in specified dimension.
+	Takes care of truncated (not fully acquired, interrupted 2D-3D datasets),
+	Several sanity/foolprof checks.
+	This macro is used by the BioPack-express 'processing' interface. 
+
+Affected standard BioPack interface/control files:
+
+templates/layout/default/Globals_BioPack.xml
+	added button for "Use Simple Setup/processing interface"
+
+templates/vnmrj/interface/TopPanel.xml
+	changed '... param="seqfil"...'   to  '... param="layout" ...'

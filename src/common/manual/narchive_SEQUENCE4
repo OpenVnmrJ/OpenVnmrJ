@@ -1,0 +1,112 @@
+******************************************************************
+narchive_SEQUENCE4 - a macro to back up a Solids sequence and protocol 
+                     into a compressed file for "extract".
+******************************************************************
+
+  narchive_SEQUENCE4 - a macro to back up a Solids sequence and protocol 
+     from a user or applications directory into a compressed file for 
+     "extract". The output is a "tar.Z" file and a ".README" file 
+     (if it exists) in the directory ~/vnmrsys/ARCHIVE/EXP_OUTPUT. 
+     The two files are suitable for submission to the userlib if the 
+     .README file exists and  uses the correct format. Also the 
+     uncompressed directory is found in ~/vnmrsys/ARCHIVE named 
+     with the sequence name with an upper-case first character. 
+
+  narchive_SEQUENCE4 requires the sequence file name in psglib as the
+  first argument with or without the .c extension.  The first character
+  can be upper or lower case. For other characters, case is significant 
+  to the name. 
+
+  Examples: 
+
+     narchive_SEQUENCE4('tancpx.c')
+     narchive_SEQUENCE4('tancpx')
+     narchive_SEQUENCE4('Tancpx')
+
+  narchive_SEQUENCE4 looks for the seqname.c file of the sequence in a psglib
+  directory in user and the enabled applications directories - in the order 
+  as they appear in the Edit Applications" window. Usually the user is first 
+  followed by open applications directories and then /vnmr. 
+
+  The input path for all the other directories is the same as the psglib 
+  directory. *Files must all have the same input path*. 
+
+  Examples inputpath = :
+
+      userdir
+      ~/vnmrsys
+      /vnmr/solidspack
+      /vnmr
+
+  The following files are compressed automatically for "seqname.c" with 
+  protocol Seqname: 
+
+      inputpath + /maclib/seqname - the setup macro for the sequence. 
+      inputpath + /maclib/seqname.README - the userlib submission form. 
+      inputpath + /psglib/seqname.c - the C-code pulse sequence file. 
+      inputpath + /parlib/Seqname.par - the parameter file for use with the 
+         protocol. 
+      inputpath + /manual/seqname - the manual file for the sequence.
+      inputpath + /templates/vnmrj/layout/seqname - the template file for
+         the acquisition tab. 
+      inputpath + /templates/vnmj/protocols/Seqname.xml - the protocol for 
+         the experiment selector.
+
+   If seqname.c is not found the macro will return with a message on line3. 
+   Only seqname.c is needed to generate a valid archive. If other files are
+   not found, output will indicate that on "line3". "Archive Complete" 
+   indicates that the macro is finished.  
+
+   Additional files to compress can be entered as additional arguments to 
+   narchive_SEQUENCE4. Include the filename with extension in quotes.  
+   Names are assumed to be macros in inputpath + /maclib if no other information
+   is provided. 
+
+   Example: 
+
+      narchive_SEQUENCE4('hetcorlgcp2d','reset_hetcor')
+
+   The path names for macros and other types of files can be specified with
+   keywords.  All files following the keyword are assumed to have the path 
+   designated by that word until another keyword is read.  
+
+   Allowed keywords are: 
+
+      'PKM' - designates a macro in inputpath + /maclib. 
+      'PKPI' - designates a panelitem in inputpath + /templates/vnmrj/panelitems
+     *'PKPSG - designates a C source file in inputpath + /psg
+      'PKP' - designates a .xml protocol file in inputpath + /templates/vnmrj/protocols
+      'PKSTDY' - designates a study in inputpath + /studylib
+      'PKMOD' - deignates a module in  inputpath + /modules
+
+   * the standard psg files in solidstandard.h are found in /vnmr. They must be copied to 
+     the user or appdir before archiving and that is not a usual practice. A user 
+     may wish to archive their own seqname.h in ~/vnmsys/psg with their own custom 
+     functions. 
+
+
+   If a keyword is not found or if the file is not found in the directory given
+   by the keword,  output will be generated on "line3" and in the text area.  
+
+   Additional files from the above directories may need to be supplied if 
+   versions are not present in /vnmr of VNMRJ2.2A or are not in solidslib2.1b
+   for VNMRJ2.1B. 
+
+   Example: 
+
+      narchive_SEQUENCE4('tancpxflip','PKM','cpHXtancpxflip','PKP,'CpsH1C13allSPINAL) 
+
+   In the example the tancpxflip sequence is archived with its general automation 
+   setup macro and a protocol that calls the automation setup macro. For sequences
+   with many associated automation protocols the narchive_SEQUENCE4 call can be very 
+   lengthy. The macro archive_SEQNAME is often used for a sequence with a single 
+   lengthy call to narchive_SEQUENCE4. See, for example, archive_TANCPX in the maclib
+   of the solidspack appdir. 
+   
+
+
+
+
+
+                                       
+         

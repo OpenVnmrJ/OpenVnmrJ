@@ -1,0 +1,29 @@
+"macro checkmaclib"
+"macro checkmaclibs"
+
+$dir=userdir+'/maclib'
+appdir('info'):$apps
+getfile($dir):$entrys
+$temp=0
+$i = 0
+while ($i < $apps) do
+  $i=$i+1
+  appdir('info',$i):$label,$ipath
+  $dir=$ipath+'/maclib'
+  getfile($dir):$entrys
+  $temp=0
+  while ($temp < $entrys) do
+    $temp=$temp+1
+    getfile($dir,$temp):$file
+    $j=$i
+    while ($j < $apps) do
+      $j=$j+1
+      appdir('info',$j):$label,$jpath
+      exists($jpath+'/maclib/'+$file,'file'):$e
+      if ($e) then
+        write('line3','macro %s in %s/maclib masks macro in %s/maclib',$file,$ipath,$jpath)
+      endif
+    endwhile
+  endwhile
+endwhile
+write('line3','%s complete',$0)

@@ -1,0 +1,62 @@
+"macro csiSave"
+// $1 is keyword
+// $2 is path
+
+if($#<1) then $1='all' endif
+
+if($#<2) then
+  $2=file
+endif
+csiCmd('getCSIPath',$2):$csidir
+
+on('bcmode'):$bc
+if(bcmode[1]<0) then $bc=0 endif
+on('blockph'):$bph
+if(blockph<1) then $bph=0 endif
+
+csiCmd('ft')
+
+if($bph) then
+  $bphPath = curexp + '/datdir/bph.txt'
+  exists($bphPath,'file'):$e
+  if($e) then
+    shell('cp '+$bphPath+' '+$csidir + '/bph.txt') 
+    shell('rm -f '+$bphPath)
+  endif
+endif
+
+if($bc) then
+    if(size('lifrq')=1) then region endif
+    bc('all')
+    $bcPath = curexp + '/datdir/bc.fdf'
+    exists($bcPath,'file'):$e
+    if($e) then
+      shell('cp '+$bcPath+' '+$csidir + '/base.fdf') 
+      shell('rm -f '+$bcPath)
+      aipLoadSpec($csidir + '/base.fdf','base')
+      bc('apply','base')
+      csiShow('specData',1)
+    endif
+endif
+
+csiCmd('saveProc')
+
+savefdfspec
+
+$specPath = curexp + '/datdir/spec.fdf'
+exists($specPath,'file'):$e
+if($e) then
+    shell('cp '+$specPath+' '+$csidir + '/spec.fdf') 
+    shell('rm -f '+$specPath)
+endif
+
+if($1='update') then 
+
+    aipRemoveSpec('all')
+    aipLoadSpec($specPath,'spec')
+    if($bc) then
+      aipLoadSpec($bcPath,'base')
+    endif
+    csiShow('gridData', csiDisMode)
+
+endif

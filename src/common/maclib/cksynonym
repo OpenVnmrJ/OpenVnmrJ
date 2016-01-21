@@ -1,0 +1,43 @@
+"macro cksynonym"
+getfilepath('csv2cpQ_synonyms','adm/walkupadm'):$fileex,$file
+
+$return=$1
+if ($# < 2) then return($return) endif
+
+if ($2='parameter') then 
+   $tag='PARAM_'
+//   format($return,'lower'):$return
+elseif ($2='solvent') then
+   $tag='SOLV_'
+//   format($return,'lower'):$return
+elseif ($2='experiment') then
+   $tag='EXP_'
+else
+   return($return)
+endif
+
+substr($return,1):$return
+format($return,'lower'):$return1
+format($return,'upper'):$return2
+
+if ($fileex) and ($1<>'') then
+  $s1='' $s2=''
+  readfile($file,'$s1','$s2',$tag,'local')
+  teststr('$s1',$tag+$return,'local'):$ret
+  if ($ret=0) and ($2<>'experiment') then
+	teststr('$s1',$tag+$return1,'local'):$ret
+  endif
+  if ($ret=0) and ($2<>'experiment') then
+	teststr('$s1',$tag+$return2,'local'):$ret
+  endif
+  if ($ret) then
+	$return=$s2[$ret]
+  else
+	$return=$1
+  endif
+  if ($2='solvent') then
+	format($return,'lower'):$return
+  endif
+endif
+
+return($return)

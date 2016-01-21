@@ -1,0 +1,73 @@
+"macro BP_PRvs2d"
+" BP_PRvs2d macro adjusts the vertical scale of a 2D NH experiment "
+" Eriks Kupce, Oxford, July 2006 "
+
+$maxpks=0
+
+$sp=sp $wp=wp $sp1=sp1 $wp1=wp1 $tr=trace
+if($# > 0) then
+  $maxpks=$1
+endif
+
+f
+if(ni>1) then
+  sp1=sp1+0.2*wp1
+  wp1=wp1*0.6
+else
+  sp2=sp2+0.2*wp2
+  wp2=wp2*0.6
+endif
+
+trace='f1' 
+trace='f2'
+sp=0p wp=2p
+th=3
+vs2d=100
+ll2d:$npeaks
+ll2d('reset')
+
+if($npeaks=0) then
+  repeat
+    vs2d=vs2d*2.0
+    ll2d:$npeaks
+    ll2d('reset')
+  until ($npeaks > 0)
+  repeat
+    vs2d=vs2d/1.1  
+    ll2d:$npeaks
+    ll2d('reset')
+  until ($npeaks = 0)  
+else
+  repeat
+    vs2d=vs2d/2.0
+    ll2d:$npeaks
+    ll2d('reset')
+  until ($npeaks=0)
+  repeat
+    vs2d=vs2d*1.1  
+    ll2d:$npeaks
+    ll2d('reset')
+  until ($npeaks>0)  
+  vs2d=vs2d/1.1
+endif
+
+sp=$sp wp=$wp sp1=$sp1 wp1=$wp1 trace=$tr
+dconi
+
+if($maxpks>1) then
+  ll2d:$npeaks
+  ll2d('reset')
+  if($npeaks>$maxpks) then
+    repeat
+      vs2d=vs2d/2.0
+      ll2d:$npeaks
+      ll2d('reset')
+    until ($npeaks < $maxpks)
+    repeat
+      vs2d=vs2d*1.1  
+      ll2d:$npeaks
+      ll2d('reset')
+    until ($npeaks > $maxpks)  
+  endif
+endif
+

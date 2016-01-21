@@ -1,0 +1,35 @@
+"macro BP_select_mdd_region"
+"*************************************************************************"
+" BP_set_mdd_region - starting point and size of the region between cursors is printed  "
+"*************************************************************************"
+if($# > 0) then $sze = $1/2
+else $sze = 0 
+endif
+
+$fn = fn/2
+$s2 = $fn*delta/sw 
+
+$rflrfp = rfl-rfp		
+$s1 = sw - cr - $rflrfp 
+$s1 = $fn*$s1/sw
+
+if($# > 0) then
+  delta = $sze*sw/$fn
+  cr = cr + sw*($sze - $s2)/($fn*2)
+  $s1 = $s1 - ($sze - $s2)/2
+  $s2 = $sze
+  if(($s1+$s2) > $fn) then
+    $s1 = $fn - $s2
+  endif
+  if($s1 < 0) then 
+    $s1 = 0
+  endif
+  ds 
+endif
+
+$s1 = trunc($s1)
+$s2 = trunc($s2)
+$s1 = $s1*2
+$s2 = $s2*2
+write('line3','spectral window from: %.0f width: %.0f', $s1, $s2)
+return($s1,$s2)

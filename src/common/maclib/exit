@@ -1,0 +1,84 @@
+"macro exit"
+" *** macro exit *** "
+// For foreground, the java interface will call each viewport with
+//  exit with an argument ($# > 0) and then call vnmrexit.
+
+operights('canexitvnmrj'):$right
+if ($right<0.5) and (owner<>operator) then 
+    write('error','%s cannot exit VnmrJ',operator)
+    return
+endif
+
+if (jviewport <> 1) then
+  if ($# = 0) then
+    exists('getadminfo','maclib'):$e
+    if ($e) then
+      $vp1=''
+      getadminfo('walkuplogin'):$vp1
+      if ($vp1='newsample') then
+        vnmrjcmd('vpactive',1)
+        vnmrjcmd('VP 1 exit')
+        return
+      endif
+    endif
+    vnmrjcmd('exit')          // Tell java to tell all viewports to exit
+  endif
+  return
+endif
+
+bgmode_is:$b
+if ($b=0) and ($#=0) then
+  vnmrjcmd('exit')            // Tell java to tell all viewports to exit
+  return
+endif
+
+exists('pageview','maclib'):$e
+if ($e) then
+  pageview('clear')
+endif
+$line=''
+$file=userdir+'/persistence/.talk2j'
+exists($file,'file'):$e
+if ($e>0.5 and $b<0.5 and auto='n') then
+  lookup('mfile',$file,'readline'):$line
+  if ($line = vnmraddr) then
+    rm('-f',$file):$x
+  endif
+endif
+if ($b<0.5) and (auto='n') and (appmode<>'imaging') then
+  xmhaha_sqwatch('Clear')
+endif
+
+if (appmode='lc') then
+  sqfilemenu('Clear Study','silent')
+  substr(autodir,1,1):$s
+  if ($s='/') then  
+    xm1('write "'+autodir+'/auto.xml"')
+  endif
+  if (appmode='lc') then lcRunActive=0 endif
+elseif appmode='imaging' then
+  exists('activestudy','parameter','global'):$e1
+  exists('jcurwin','parameter','global'):$e3
+  if ($e3) then
+     if (jcurwin[jviewport] = 0) then
+       $e1 = 0 // skip saving the study xml
+     endif
+  endif
+  exists('studyid','parameter','global'):$e2
+  if ($line=vnmraddr and $e1 and $e2) then
+    $sdir='' xm1('studydir'):$sdir
+    if (activestudy[1]<>'null' and activestudy[1]=studyid and $sdir<>'') then
+      xm1('write','"'+$sdir+'/study.xml"')
+    endif
+  endif
+endif
+
+acct('done')
+
+probeid('exit') // shut down probeid's probe server
+
+if ($b) then
+  vnmrexit
+else
+  acqreserve('autooff')
+endif

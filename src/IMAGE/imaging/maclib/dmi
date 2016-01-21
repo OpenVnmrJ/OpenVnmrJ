@@ -1,0 +1,232 @@
+"macro dmi"
+"***************************************************************"
+" dmi: Multiple image display                                   "
+"                                                               "
+" Non-interactive display of multiple images from a single      "
+" arrayed and/or multislice/multiecho experiment in the Vnmr    "
+" graphics window.                                              "
+"                                                               "
+" Image size and layout are determined to maximize image        "
+" display size.                                                 "
+"                                                               "
+" Usage:  dmi                                                   "
+"                                                               "
+"***************************************************************"
+
+
+"-- Decode the seqcon parameter ---------------------------"
+" The seqcon string is checked for length and dissected    "
+" into its five standard component fields (assumed to be   "
+" the first five characters). The component fields are     "
+" checked for validity. Seqcon should be composed of 's',  "
+" 'c' & 'n' values only. These indicate n=non loop,        "
+" s=standard loop/array, c=compressed loop.                "
+"----------------------------------------------------------"
+length(seqcon):$length
+$k = 1
+while ($k <= $length) do
+    $seqcon[$k] = ''
+    substr(seqcon,$k,1):$seqcon[$k]
+    $k = $k + 1
+endwhile
+
+if ($seqcon[4] <> 'n') or ($seqcon[5] <> 'n') then
+   write('error','Macro does not support 3D or 4D')
+   abort
+endif
+
+" Check for standard flash conversion "
+exists('flash_converted','parameter','processed'):$e
+if ($e > 0.5) and (ni > 1) then
+    $seqcon[3] = 's'
+endif
+
+" Check for compressed flash conversion "
+if ($e > 0.5) and ($seqcon[2] = 'c') and ($seqcon[3] = 'c') then
+    $seqcon[2] = 's'
+endif
+
+if ($seqcon[2] = 'c') and ($seqcon[3] = 'c') then
+    write('error','Macro does not support compressed compressed data')
+   abort
+endif
+
+"** Determine number of images to be displayed ************"
+if ($seqcon[3] = 'c') then
+   $arraysize = arraydim
+   $number = $arraysize
+else
+  if (array <> '') then
+  	$arraysize = arraydim/nv
+  else
+  	$arraysize = 1
+  endif
+  $number = nf*$arraysize
+endif
+
+
+$start = 1
+$end = $number
+$skip = 1
+if ($# > 0) then
+  $start = $1
+  $end = $2
+  if ($end > $number) then $end = $number endif
+  if ($# = 3) then $skip = $3 endif
+  $number = trunc(($end - $start + $skip)/$skip)
+endif
+
+$wcmax = wcmax
+$wc2max = wc2max
+if (wysiwyg = 'n') then
+  wcmax = 330
+  wc2max = 180
+endif
+
+"** Determine optimum display layout **********************"
+if (trace = 'f2') then
+  $wp1 = wp/sw*lro
+  $wp = wp1/sw1*lpe
+  $aspect = $wp/$wp1
+else
+  $wp = wp/sw*lro
+  $wp1 = wp1/sw1*lpe
+  $aspect = $wp/$wp1
+endif
+$rows = sqrt($number/$aspect*wc2max/wcmax)
+$cols = sqrt($number*$aspect*wcmax/wc2max)
+
+"** Rows and columns are now correct, but must be made ****"
+"** integral.  Pick the maximum wc for the floor and   ****"
+"** ceiling integer values of whichever is smaller,    ****"
+"** rows or cols.                                      ****"
+if ($rows > $cols) then
+  "** Integer floor for columns, then compute rows       ****"
+  $cols0 = trunc($cols)
+  if ($cols0 < 1)  then  $cols0 = 1  endif
+  $rows0 = trunc($number/$cols0 + 0.9999)
+else
+  "** Integer floor for rows, then compute columns       ****"
+  $rows0 = trunc($rows)
+  if ($rows0 < 1)  then  $rows0 = 1  endif
+  $cols0 = trunc($number/$rows0 + 0.9999)
+endif
+
+"** Now determine maximum allowable wc which does not  ****"
+"** exceed wc2max.                                     ****"
+$wc0 = wcmax/$cols0
+if ($wc0*$aspect*$rows0 < wc2max) then
+  $wc20 = $wc0*$aspect
+else 
+  $wc20 = wc2max/$rows0
+  $wc0 = $wc20/$aspect
+endif
+
+"** Repeat for the integer ceiling value of rows or cols **"
+if ($rows > $cols) then
+  $cols1 = $cols0 + 1
+  $rows1 = trunc($number/$cols1 + 0.9999)
+else
+  $rows1 = $rows0 + 1
+  $cols1 = trunc($number/$rows1 + 0.9999)
+endif
+
+$wc1 = wcmax/$cols1
+if ($wc1*$aspect*$rows1 < wc2max) then
+  $wc21 = $wc1*$aspect
+else 
+  $wc21 = wc2max/$rows1
+  $wc1 = $wc21/$aspect
+endif
+
+"** Use row and column values which maximize wc ***********"
+if ($wc1 > $wc0) then
+  $wc = $wc1
+  $wc2 = $wc21
+  $cols = $cols1
+  $rows = $rows1
+else
+  $wc = $wc0
+  $wc2 = $wc20
+  $cols = $cols0
+  $rows = $rows0
+endif
+
+"** Setup boundaries and spacing between images ***********"
+$leftgap = 0.05*$wc
+if ($rows > 1) then
+  $rowgap = 0.1*wc2max/$rows
+else
+  $rowgap = 0
+endif
+if ($cols > 1) then
+  $colgap = 0.1*(wcmax - $leftgap)/($cols - 1)
+else
+  $colgap = 0
+endif
+$wc = 0.9*(wcmax - $leftgap)/$cols
+$wc2 = 0.9*wc2max/$rows
+setvalue('wc',$wc)
+setvalue('wc2',$wc2)
+
+"** Initialize counters ***********************************"
+$colcount = 0
+$rowcount = 0
+$count = $start - $skip
+
+"** Determine slice position index ************************"
+sort('pss'):$sliceindex,$slicevalue
+
+"** Starting point chart positions ************************"
+$sc = wcmax + $colgap - $leftgap
+$sc2 = wc2max
+clear(2)
+
+"** Slow outer row loop ***********************************"
+repeat
+
+  "** Move to new row position ******************************"
+  "** setvalue is used to bypass parameter limits and type **"
+  $sc2 = $sc2 - $wc2 - $rowgap
+  setvalue('sc2',$sc2)
+  $rowcount = $rowcount + 1
+
+  "** Fast inner column loop ********************************"
+  repeat
+
+    "** Move to new column position ***************************"
+    "** setvalue is used to bypass parameter limits and type **"
+    $sc = $sc - $wc - $colgap
+    setvalue('sc',$sc)
+
+    "** Update counters, compute array and cf indeces *********"
+    $count = $count + $skip
+    $colcount = $colcount + 1
+    if ($seqcon[3] = 'c') then
+       $array = 1 + trunc( ($count - 1))
+       wft2d('nf',$array)
+    else
+       $array = 1 + trunc( ($count - 1)/nf)
+       $cf = 1 + ($count - 1) % nf
+       $echo = 1 + ($cf - 1) % ne
+       $slice = trunc(($cf - 1)/ne) + 1
+
+       "** Actual cf value to give correct positional slice order "
+       cf = ne*($sliceindex[$slice] - 1) + $echo
+
+       "** Flip alternate echoes *********************************"
+       if ($echo % 2)  then  $fttype = 'ntype'  else  $fttype = 'ptype'  endif
+
+       "** Transform and display next image **********************"
+       wft2d($fttype,$array)
+    endif
+    dconn('gray','linear','noaxis')
+
+  until ($colcount = $cols  or  ($count + $skip) > $end)
+  $sc = wcmax + $colgap - $leftgap
+  $colcount = 0
+
+until ($rowcount = $rows)
+
+wcmax = $wcmax
+wc2max = $wc2max

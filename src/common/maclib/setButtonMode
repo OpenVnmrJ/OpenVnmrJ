@@ -1,0 +1,102 @@
+"macro setButtonMode"
+
+" 0 - MODELESS (original mode) "
+" 1 - SELECT_MODE (default mode)"
+" 2 - ZOOM_MODE "
+" 3 - PAN_MODE "
+" 4 - INSET_MODE "
+" 5 - VS_MODE  (not used because it is always middle mouse) "
+" 6 - STRETCH_MODE  (not used because it is done in PAN_MODE) "
+" 7 - PHASE_MODE "
+" 8 - THRESHOLD_MODE "
+" 9 - REGION_MODE "
+" 10 - LVLTLT_MODE "
+" 11 - TRACE_MODE "
+" 12 - SPWP_MODE "
+" 13 - SCWC_MODE "
+" 14 - USER_MODE "
+
+if($# < 0.5) then return endif
+
+exists('buttonMode','parameter','global'):$e
+if (not $e) then
+   mfpars
+endif
+
+if($1>0) then
+  buttonMode = $1
+else
+  buttonMode = 0 
+endif
+
+$s=''
+graphis:$s
+substr($s,1,1):$s
+if($s<>'d') then
+   buttonMode = 0 
+   vnmrjcmd('canvasCursor', 'pointer')
+   vnmrjcmd('writeToFrameTitle','')
+   return
+elseif(buttonMode>0) then
+   aspSetState(0)
+endif
+
+$cursorname=''
+$macro=''
+if(buttonMode = 2) then // zoom mode
+   $cursorname='zoom'
+elseif(buttonMode = 3) then // pan mode
+   $cursorname='upDownCursor'
+elseif(buttonMode = 4) then //inset('frame')
+   $cursorname='copy'
+elseif(buttonMode = 7) then //ds('phase')
+   $cursorname='phasing' 
+elseif(buttonMode = 8) then //ds('thresh')
+   $cursorname='pointer'
+elseif(buttonMode = 9) then //ds('z')
+   $cursorname='pointer'
+elseif(buttonMode = 10) then //ds('lvltlt')
+   $cursorname='pointer'
+elseif(buttonMode = 11) then //dconi('trace')
+   $cursorname='pointer'
+elseif(buttonMode = 12) then //dconi('spwp')
+   $cursorname='pointer'
+elseif(buttonMode = 13) then //dconi('scwc')
+   $cursorname='pointer'
+elseif(buttonMode = 14 and $# > 1) then // set user mode and register a macro
+   setButtonState($1,$2)
+   $macro=$2
+   $cursorname='pointer'
+else // ds('toggle')
+   $cursorname='pointer'
+endif
+
+$text=''
+if(buttonMode = 2) then // zoom mode
+   $text='mouse:  [LEFT] drag or double-click to zoom in     [RIGHT] click to zoom out     [MIDDLE] click or scroll to scale'
+elseif(buttonMode = 3) then // pan mode
+   $text='mouse:  [LEFT] drag to pan     [RIGHT] drag to stretch     [MIDDLE] click or scroll to scale'
+elseif(buttonMode = 4) then //inset('frame')
+   $text='mouse:  [LEFT] drag to create inset'
+elseif(buttonMode = 7) then //ds('phase')
+   $text='[ZERO ORDER] click and drag downfield peak  [FIRST ORDER] click and drag upfield peak  |  mouse: [LEFT] coarse [RIGHT] fine'
+elseif(buttonMode = 8) then //ds('thresh')
+   $text='mouse:  [LEFT] click or drag threshold to adjust     [MIDDLE] click or scroll to scale'
+elseif(buttonMode = 9) then //ds('z')
+   $text='mouse:  [LEFT/RIGHT] click to cut/uncut integral region     [MIDDLE] click or scroll to scale'
+elseif(buttonMode = 10) then //ds('lvltlt')
+   $text='mouse:  [LEFT/RIGHT] click or drag to adjust coarse/fine lvl/tlt of integral     [MIDDLE] click or scroll to scale integrals'
+elseif(buttonMode = 11) then //dconi('trace')
+   $text='mouse:  [LEFT] click to select trace     [RIGHT] click to select zoom region     [MIDDLE] click or scroll to scale'
+elseif(buttonMode = 12) then //dconi('spwp')
+   $text='mouse:  [LEFT] click or drag to pan inset     [RIGHT] drag to stretch inset'
+elseif(buttonMode = 13) then //dconi('scwc')
+   $text='mouse:  [LEFT] click to move inset     [RIGHT] click to expand inset'
+elseif(buttonMode = 14) then //dconi('scwc')
+   $text='user mode: ' + $macro
+elseif(buttonMode >= 0) then // ds('toggle')
+   $text='mouse:  [LEFT] click to set first cursor   [RIGHT] click to set second cursor     [MIDDLE] click or scroll to scale'
+endif
+
+vnmrjcmd('canvasCursor', $cursorname)
+vnmrjcmd('writeToFrameTitle',$text)

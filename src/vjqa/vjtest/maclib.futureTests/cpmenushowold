@@ -1,0 +1,233 @@
+return(1)
+echo('cpmenushow')
+$xml='MainMenu'+$1+'.xml'
+//findxmlmenu($xml,'show'):$SH
+exists($xml,'templates/vnmrj/interface'):$SH
+write('alpha','SH=%d',$SH)
+if ($SH=0) then return(-1) endif
+
+exists('seqfil','parameter'):$e
+if ($e>0.5) then
+   write('alpha','seqfil=%s',seqfil)
+else
+   write('alpha','seqfil does not exist')
+endif
+
+exists('customflag','parameter'):$e
+if ($e>0.5) then
+   write('alpha','customflag=%s',customflag)
+else
+   write('alpha','customflag does not exist')
+endif
+exists('CPbbx','parameter'):$e
+if ($e>0.5) then
+   write('alpha','CPbbx=%s',CPbbx)
+else
+   write('alpha','CPbbx does not exist')
+endif
+"*******************************************************************"
+IF ($1='File') THEN
+  if ((seqfil<>'Submitq') and
+        (seqfil<>'Startq') and
+        (customflag='n') and
+        (CPbbx='open')) then
+		return(1)
+  else
+	return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='File2') THEN
+  if   ((seqfil='Submitq') or
+    	(seqfil='Startq') or
+    	(customflag='y')) and
+    	(CPbbx='open') then
+        	return(1)
+  else
+        return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='FileBbx') THEN
+  if (CPbbx<>'open') then
+	return(1)
+  else
+	return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Edit') THEN
+  if (panellevel<10) or (CPbbx<>'open') then
+	return(-1)
+  elseif ((seqfil<>'Submitq') and
+	  (seqfil<>'Startq') and
+	  (customflag='n')) then
+		return(1)
+  else
+	return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Edit2') THEN
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif    ((seqfil='Submitq') or
+             (seqfil='Startq') or
+             (customflag='y')) then
+                return(1)
+  else
+        return(-1)
+  endif
+
+"*******************************************************************"
+// ELSEIF ($1='EditBbx') THEN
+//   if (CPbbx<>'open') then
+//         return(1)
+//   else
+//         return(-1)
+//   endif
+
+"*******************************************************************"
+ELSEIF ($1='View') THEN
+  if ((seqfil<>'Submitq') and
+        (seqfil<>'Startq') and
+        (customflag='n') and
+        (CPbbx='open')) then
+                return(1)
+  else
+        return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='ViewBbx') THEN
+  if (CPbbx<>'open') then
+        return(1)
+  else
+        return(-1)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Expts') THEN
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='ExptsBbx') THEN
+     if (CPbbx<>'open') then
+	if (FASTuser<>'') then
+	    return(1)
+	else
+	    return(0)
+	endif
+     else
+	return(-1)
+     endif
+
+"*******************************************************************"
+ELSEIF ($1='Acquire') THEN
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Auto') THEN
+   if  ((seqfil<>'Startq') and
+	(seqfil<>'Submitq') and
+	(customflag='n') and
+	((CPbbx='open') or 
+	   ((CPbbx<>'open') and 
+	    (owner=operator) and 
+	    (FASTuser=operator)))) then
+
+		return(1)
+   else
+	if (jviewports[1]>1) or (CPbbx<>'open') then
+		return(-1)
+	else
+		return(0)
+	endif
+   endif
+
+"*******************************************************************"
+ELSEIF  ($1='Auto2') THEN
+   if  ((seqfil='Submitq') or
+        (seqfil='Startq') or
+        (customflag='y')) then
+
+		if (jviewport[1]>1) then
+			return(1)
+		else
+			return(-1)
+		endif
+   else
+	return(-1)
+   endif
+
+"*******************************************************************"
+ELSEIF ($1='Process') THEN
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Display') THEN
+	return(-1)
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Tools') THEN
+  if (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ELSEIF ($1='Help') THEN
+	return($SH)
+
+"*******************************************************************"
+ELSE
+  if (panellevel<10) or (CPbbx<>'open') then
+        return(-1)
+  elseif ((seqfil<>'Submitq') and
+          (seqfil<>'Startq') and
+          (customflag='n')) then
+                return(1)
+  else
+        return(0)
+  endif
+
+"*******************************************************************"
+ENDIF

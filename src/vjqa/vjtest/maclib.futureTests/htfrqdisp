@@ -1,0 +1,198 @@
+"Copyright (c) Varian Assoc., Inc.  All Rights Reserved."
+// Write Hadamard frequencies to line3 or into file for display.
+// Use htfrq1 parameter.
+
+$arg='line3'
+if $#>0.5 then
+  $arg=$1  // 'read', 'write', 'line3'
+endif
+$par='htfrq1'
+if $#>1.5 then
+  $par=$2  // 'htfrq1'
+endif
+$bwpar=''
+if $#>2.5 then
+  $bwpar=$3  // 'htbw1'
+endif
+
+// Usage:
+//  htfrqdisp                                - display htfrq1 on line3
+//  htfrqdisp('line3','htfrq1' | 'htbw1')    - display htfrq1 on line3
+//  htfrqdisp('read','htfrq1'<,'htbw1'>)   - read htfrq1 from $file, set into htfrq1 parameter
+//  htfrqdisp('write','htfrq1'<,'htbw1'>):$v - write htfrq1 into $file, set $v=$file
+//  if 'htbw1' is given as optional argument, and the
+//    htbw1 parameter is arrayed, read/write/display htbw1
+//    - also editht('saveni') needs to save htbw1 if exists
+//
+
+exists($par,'parameter'):$e
+if $e<0.5 then
+  write('line3','parameter %s does not exist',$par)
+  return('')
+endif
+if $bwpar<>'' then
+  exists($bwpar,'parameter'):$e
+  if $e<0.5 then
+    $bwpar=''
+  endif
+endif
+
+$file = curexp+'/'+$par+'.ll'  // userdir+'/persistence/'+$par+'.ll'
+
+$sw = sw/2
+exists('sw1','parameter'):$exsw1
+if $exsw1>0.5 then
+  $sw = sw1/2
+endif
+substr($par,1,2):$sf
+if ($sf='ll') then $sw=0 endif
+
+$ref = reffrq
+exists('reffrq1','parameter'):$eref
+if $eref>0.5 then
+  $ref = reffrq1
+endif
+
+parunits('get',$par):$units  // 'ppm1' 'ppm' 'Hz'
+substr($units,1,3):$un
+if $un='ppm' then $units='ppm' endif
+
+if $arg='line3' then
+  $out=$par+' in '+$units
+  if $units='Hz' then $out=$out+' from center' endif
+  $out=$out+': '
+  substr($par,1,4):$sub
+  if $sub='htbw' then
+    $out=$par+' in Hz: '
+  endif
+  $size=size($par)
+  on($par):$on
+  if ($size=1 and {$par}[1]=0 and $on=0) then
+    $out=$out+'none defined'
+  else
+    $i=0 $str=''
+    repeat
+      $i=$i+1
+      $val = {$par}[$i]
+      if $sub<>'htbw' then
+        if $units='ppm' then
+          $val = $val + $sw - rfl + rfp
+          $val = $val / $ref
+        endif
+      endif
+      if $units='Hz' then
+        format($val,2,2):$str
+      else
+        format($val,3,3):$str
+      endif
+      $out=$out+' '+$str
+    until ($i>=$size)
+  endif
+  write('line3','%s',$out)
+
+elseif $arg='read' then
+  exists($file,'file'):$e
+  if $e<0.5 then
+    write('line3','cannot read file %s',$file)
+    return
+  endif
+  $oldunits=$units
+  lookup('mfile',$file,'filekey'):$key
+  $i=0 $n=2 $val=0 $sval='' $str='' $idx='' $bwstr='' $bwval=''
+  {$par}={$par}[1]
+  if $bwpar<>'' then {$bwpar}={$bwpar}[1] endif
+  repeat
+    lookup('mfile',$key,'readline','filekey'):$sval,$key,$n
+    if $n>1.5 then
+      substr($sval,1):$str
+      format($str,'isreal'):$isr
+      if $bwpar<>'' then
+        substr($sval,2):$bwstr
+      endif
+      if not ($isr) then
+        $bwstr=''
+        $str='' substr($sval,2):$str
+        if $str='' then substr($sval,1):$str endif
+        if $str<>'' then $units=$str endif
+        if $units<>$oldunits then
+          if ($units='ppm' or $units='PPM' or $units='[ppm]' or $units='[PPM]') then
+            $units='ppm' $un='ppm1'
+          else
+            $units='Hz' $un='Hz'
+          endif
+          parunits('set','htfrq1',$un)
+        endif
+      else
+        $i=$i+1
+        format($str,3,3):$val
+        if $units='ppm' then
+          $val = $val * $ref
+          $val = $val + rfl - rfp - $sw
+        endif
+        format($val,3,3):$sval
+        format($i,1,0):$idx
+        $str=$par+'['+$idx+']='+$sval
+
+        if $bwpar<>'' then
+          format($bwstr,'isreal'):$isbw
+          if ($isbw) then
+            $bwval=$bwstr
+          endif
+          if ($bwstr<>'') then
+            $str=$str+' '+$bwpar+'['+$idx+']='+$bwval
+          endif
+          if ($i=1) then $bwstr='' endif
+        endif
+
+        exec($str)
+      endif
+    endif
+  until ($n<1.5 or $i>10000)
+
+elseif $arg='write' then
+  write('reset',$file)
+  on($par):$on
+  $size=size($par)
+  if ($size=1 and {$par}[1]=0 and $on=0) then
+    return($file)
+  else
+    $bwsize=0 $bwstr=''
+    if $bwpar<>'' then $bwsize=size($bwpar) endif
+    if $bwsize>1.5 then
+      if $units='Hz' then
+        write('file',$file,'freq [%s from center]  bw [Hz]',$units)
+      else
+        write('file',$file,'freq [%s]   bw [Hz]',$units)
+      endif
+    else
+      if $units='Hz' then
+        write('file',$file,'freq [%s from center]',$units)
+      else
+        write('file',$file,'freq [%s]',$units)
+      endif
+    endif
+    $i=0 $str=''
+    repeat
+      $i=$i+1
+      $val = {$par}[$i]
+      if $units='ppm' then
+        $val = $val - rfl + rfp + $sw
+        $val = $val / $ref
+        format($val,3,3):$str
+      else
+        format($val,2,2):$str
+      endif
+      if $bwsize>1.5 then
+        if $i<=$bwsize then
+          $bwval = {$bwpar}[$i]
+          format($bwval,2,0):$bwstr
+        endif
+        write('file',$file,'%s           %s',$str,$bwstr)
+      else
+        write('file',$file,'%s',$str)
+      endif
+    until ($i>=$size)
+  endif
+  return($file)
+
+endif

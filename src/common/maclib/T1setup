@@ -1,0 +1,84 @@
+"macro T1setup"
+"T1setup - setup a t1 experiment"
+
+"usage: T1setup(min. t1 expected, max. t1 expected, total time (hours))"
+     "or T1setup  (in this case, interactive input is invoked)"
+
+"s.l.patt, 15 april 1987"
+" I Goljer Nov 2004 added progressive saturation " 
+
+$invrec=''
+exists('T1min','parameter'):$epar
+
+if $#=4 "expect four arguments"
+then "read arguments"
+  $mint1=$1 $maxt1=$2 $time=$3 $invrec=$4
+elseif ($#=0 and $epar) then 
+  $mint1=T1min $maxt1=T1max $time=T1exptime $invrec=T1invrec 
+else "interactive input if three arguments not present"
+  input('Enter minimum T1 expected (s): '):$mint1
+  input('Enter maximum T1 expected (s): '):$maxt1
+  input('Enter total experiment time (hours): '):$time
+  input('Do inversion recovery  (y/n) '):$invrec
+endif
+
+if $mint1=0 then
+  write('error','Min T1 must be > 0!') return
+endif
+
+"calculate tau values"
+$ntaus=1 d2=0 array='d2' "reset array"
+d2[1]=$mint1/8
+repeat "set up array"
+  $ntaus=$ntaus+1
+  d2[$ntaus]=2*d2[$ntaus-1]
+until (d2[$ntaus]>3.5*$maxt1) and ($ntaus>5)
+
+"set pulse sequence parameters"
+if ($invrec='y') then  "do inversion recovery"
+  pw=pw90 p1=2*pw90 d1=4*$maxt1
+else  "do progressive saturation"
+  pw=pw90 p1=pw90 d1=$maxt1
+endif
+
+"set display parameters"
+vp=wc2max/2 th=wc2max/8 ai vo=0
+"calculate nt based on time desired"
+$averagetau=2*d2[$ntaus]/$ntaus
+$time_per_transient=$ntaus*(at+d1+$averagetau)
+$nt=(($time*3600)/$time_per_transient)+0.5
+
+gain='y'
+if $nt>3 then
+  $nt=$nt/4 format($nt,0,0):nt nt=4*nt  "make nt a multiple of 4"
+else
+  format($nt,0,0):nt
+endif
+
+if (nt>4 and dsp<>'i' and fsq<>'y') then
+  if Console='vnmrs' then il='n' else il='y' endif bs=4
+  while bs<nt/8 do
+    bs=bs+4
+  endwhile
+else
+  il='n'
+endif
+
+$invrecstr=''
+if ($invrec='y') then  "do inversion recovery"
+  $invrecstr='Doing Inversion Recovery'
+else
+  $invrecstr='Doing Progressive Saturation'
+endif
+$hours=(nt*$time_per_transient)/3600
+$hours=trunc($hours)
+$minutes=(nt*$time_per_transient)/60 - 60*$hours
+
+if auto='y' then
+  write('alpha','%s',$invrecstr)
+  write('alpha','Experiment set up using %d tau values',$ntaus)
+  write('alpha','Approximate acquisition time %.0f hours %.0f minutes',$hours,$minutes)
+else
+  write('line3','%s using %d tau values, acquisition time approx. %.0f h %.0f min',$invrecstr,$ntaus,$hours,$minutes)
+endif
+

@@ -1,0 +1,355 @@
+"macro msSetMethod"
+/*-*- MAGICAL -*-*/
+"macro msSetMethod"
+
+" Set the Mass Spectrometer method "
+
+// Usage: msSetMethod			Download current method
+//	 msSetMethod('init')		Download current method and mode
+//	 msSetMethod(<'init',> name)	Get method 'name' first
+
+if (msSelection = '0') then
+    return
+endif
+
+$argsused = 0
+$strarg = ''
+
+$init = 0	"If init is true, we set the MS mode also"
+$save = 0
+$keyword = 1
+while ($keyword) do
+    $keyword = 0
+    if ($# > $argsused) then
+	format($argsused+1,0,0):$strarg
+	if ({'$'+$strarg} = 'init') then
+	    $init = 1
+	    $argsused = $argsused + 1
+            $keyword = 1
+	endif
+	if ({'$'+$strarg} = 'save') then
+	    $save = 1
+	    $argsused = $argsused + 1
+            $keyword = 1
+	endif
+    endif
+endwhile
+
+
+$file = ''
+if ($# > $argsused) then
+    format($argsused+1,0,0):$strarg
+    $file = {'$'+$strarg}
+    $argsused = $argsused + 1
+endif
+
+
+//
+// First, if requested, read in method from file
+//
+if ($file <> '') then
+    if ($init) then
+	msMethod('read', $file)
+	msSetMode			"Set the mode first"
+    else
+	msMethod('readmethodonly', $file)
+    endif
+    msCurrentMethod = $file
+endif
+
+
+//
+// Validate the scans
+//
+$veryLastMass=1500	" Maximum mass we can handle "
+$ceLimit=50		" Maximum collision energy "
+$maxScans=10		" Number of lines in panel "
+
+" Scan types, for internal bookeeping "
+$q1ms = 1
+$q3ms = 2
+$parent = 3
+$daughter = 4
+$neutralLoss = 5
+
+$pfm=0
+$plm=0
+$dfm=0
+$dlm=0
+$ce=0
+$count = 0
+$i = 1
+while ($i <= $maxScans) do
+    $spfm=''
+    $splm=''
+    $sdfm=''
+    $sdlm=''
+    $sce=''
+
+    substr(msQ1MassStart[$i], 1):$spfm
+    if ($spfm = '') then $spfm = '0' endif
+    format($spfm, 0, 9):$pfm[$i]
+
+    substr(msQ1MassEnd[$i], 1):$splm
+    if ($splm = '') then $splm = '0' endif
+    format($splm, 0, 9):$plm[$i]
+
+    substr(msQ3MassStart[$i], 1):$sdfm
+    if ($sdfm = '') then $sdfm = '0' endif
+    format($sdfm, 0, 9):$dfm[$i]
+
+    substr(msQ3MassEnd[$i], 1):$sdlm
+    if ($sdlm = '') then $sdlm = '0' endif
+    format($sdlm, 0, 9):$dlm[$i]
+
+    substr(msCollisionEnergy[$i], 1):$sce
+    if ($sce = '') then $sce = '0' endif
+    format($sce, 0, 9):$ce[$i]
+    if ($ce[$i] < 0) then
+	$ce[$i] = 0
+    elseif ($ce[$i] > $ceLimit) then
+	$ce[$i] = $ceLimit
+    endif
+
+    $type[$i] = 0
+
+    " Ignore lines with all 0's "
+    if ($pfm[$i]+$plm[$i]+$dfm[$i]+$dlm[$i] <> 0 or $ce[$i] <> 0) then
+	" Legal masses are 0 or 1 <= m <= $veryLastMass "
+	if ($pfm[$i] > 0 and $pfm[$i] < 1) then
+	    $pfm[$i]=1
+	elseif ($pfm[$i] > $veryLastMass) then
+	    $pfm[$i]=$veryLastMass
+	elseif ($pfm[$i] < 0) then
+	    $pfm[$i] = 0
+	endif
+
+	if ($plm[$i] > 0 and $plm[$i] < 1) then
+	    $plm[$i]=1
+	elseif ($plm[$i] > $veryLastMass) then
+	    $plm[$i]=$veryLastMass
+	elseif ($plm[$i] < 0) then
+	    $plm[$i] = 0
+	endif
+
+	if ($dfm[$i] > 0 and $dfm[$i] < 1) then
+	    $dfm[$i]=1
+	elseif ($dfm[$i] > $veryLastMass) then
+	    $dfm[$i]=$veryLastMass
+	elseif ($dfm[$i] < 0) then
+	    $dfm[$i] = 0
+	endif
+
+	if ($dlm[$i] > 0 and $dlm[$i] < 1) then
+	    $dlm[$i]=1
+	elseif ($dlm[$i] > $veryLastMass) then
+	    $dlm[$i]=$veryLastMass
+	elseif ($dlm[$i] < 0) then
+	    $dlm[$i] = 0
+	endif
+
+	" Switch first <--> last masses, if appropriate "
+	if ($plm[$i] > 0 and ($pfm[$i] > $plm[$i] or $pfm[$i] = 0)) then
+	    $r1=$pfm[$i]
+	    $pfm[$i]=$plm[$i]
+	    $plm[$i]=$r1
+	endif
+	if ($dlm[$i] > 0 and ($dfm[$i] > $dlm[$i] or $dfm[$i] = 0)) then
+	    $r1=$dfm[$i]
+	    $dfm[$i]=$dlm[$i]
+	    $dlm[$i]=$r1
+	endif
+
+	" Correct neutral loss "
+	if ($pfm[$i] > 0 and $plm[$i] > $pfm[$i] and $dfm[$i] > 0 and $dlm[$i] > $dfm[$i]) then
+	    if ($dlm[$i] <> $dfm[$i] + $plm[$i] - $pfm[$i]) then
+		$dlm[$i] = $dfm[$i] + $plm[$i] - $pfm[$i]
+	    endif
+	    if ($dlm[$i] > $veryLastMass) then
+		$dlm[$i] = $veryLastMass
+		$dfm[$i] = $veryLastMass - ($plm[$i] - $pfm[$i])
+	    endif
+	endif
+
+	" Remember the scan type "
+	if ($pfm[$i] = 0) then
+	    $type[$i] = $q3ms
+	elseif ($dfm[$i] = 0) then
+	    $type[$i] = $q1ms
+	elseif ($dfm[$i] <> $dlm[$i] and ($plm[$i] = $pfm[$i] or $plm[$i] = 0)) then
+	    $type[$i] = $daughter
+	elseif ($pfm[$i] <> $plm[$i] and ($dlm[$i] = $dfm[$i] or $dlm[$i] = 0)) then
+	    $type[$i] = $parent
+	else
+	    $type[$i] = $neutralLoss
+	endif
+
+	" Update interface "
+	if ($pfm[$i] = 0) then
+	    msQ1MassStart[$i]=''
+	elseif ($pfm[$i] - trunc($pfm[$i]) = 0) then
+	    format($pfm[$i],0,0):msQ1MassStart[$i]
+	else
+	    format($pfm[$i],0,2):msQ1MassStart[$i]
+	endif
+	if ($plm[$i] = 0) then
+	    msQ1MassEnd[$i]=''
+	elseif ($plm[$i] - trunc($plm[$i]) = 0) then
+	    format($plm[$i],0,0):msQ1MassEnd[$i]
+	else
+	    format($plm[$i],0,2):msQ1MassEnd[$i]
+	endif
+	if ($dfm[$i] = 0) then
+	    msQ3MassStart[$i]=''
+	elseif ($dfm[$i] - trunc($dfm[$i]) = 0) then
+	    format($dfm[$i],0,0):msQ3MassStart[$i]
+	else
+	    format($dfm[$i],0,2):msQ3MassStart[$i]
+	endif
+	if ($dlm[$i] = 0) then
+	    msQ3MassEnd[$i]=''
+	elseif ($dlm[$i] - trunc($dlm[$i]) = 0) then
+	    format($dlm[$i],0,0):msQ3MassEnd[$i]
+	else
+	    format($dlm[$i],0,2):msQ3MassEnd[$i]
+	endif
+	if ($ce[$i] = 0) then
+	    msCollisionEnergy[$i]=''
+	elseif ($ce[$i] - trunc($ce[$i]) = 0) then
+	    format($ce[$i],0,0):msCollisionEnergy[$i]
+	else
+	    format($ce[$i],0,2):msCollisionEnergy[$i]
+	endif
+	
+
+	" Calculate scan order ($order[$i] is the index of the i'th scan) "
+        $order[$count+1] = 1	" Dummy to keep magical happy "
+        $j = 1
+	if ($pfm[$i] <> 0) then
+	    " Sort by parent first mass ... "
+	    while ($j <= $count and $pfm[$order[$j]] < $pfm[$i]) do
+		$j = $j + 1
+	    endwhile
+	    " ... and by daughter first mass. "
+	    while ($j <= $count and $pfm[$order[$j]] = $pfm[$i] and $dfm[$order[$j]] <= $dfm[$i]) do
+		$j = $j + 1
+	    endwhile
+	else
+	    " Put scans without parent masses at end ... "
+	    while ($j <= $count and $pfm[$order[$j]] > 0) do
+		$j = $j + 1
+	    endwhile
+	    " ... sorted by daughter first mass. "
+	    while ($j <= $count and $dfm[$order[$j]] <= $dfm[$i]) do
+		$j = $j + 1
+	    endwhile
+	endif
+	" Push down end of list "
+	$k = $count
+	while ($k >= $j) do
+	    $order[$k+1] = $order[$k]
+	    $k = $k - 1
+	endwhile
+	$order[$j] = $i
+	$count = $count + 1
+    endif "Ignore lines ..."
+    $i = $i + 1
+endwhile
+
+" Maybe check with user about CID gas - may abort "
+$warn = 1
+$i = 1
+while ($i <= $count and $warn) do
+    if (msCidGasOn = 'y') then
+        if ($type[$i] and $type[$i] <> $q1ms and $type[$i] <> $q3ms) then
+	    $warn = 0
+	endif
+    else
+	if ($type[$i] and $type[$i] <> $parent and $type[$i] <> $daughter and $type[$i] <> $neutralLoss) then
+	    $warn = 0
+	endif
+    endif
+    $i = $i + 1
+endwhile
+if ($warn) then
+    if (msCidGasOn = 'y') then
+	confirm('CID gas is on in MS mode - continue?'):$ok
+    else
+	confirm('CID gas is off in MS-MS mode - continue?'):$ok
+    endif
+    if (not $ok) then
+	return
+    endif
+endif
+
+
+//
+// Finally, send commands to set the method
+//
+if ($init) then
+    msSetMode	" Set mode first "
+endif
+
+pmlcmd('ions')				"Clear table"
+$i = 1
+while ($i <= $count) do
+    format($pfm[$order[$i]],0,1):$spfm
+    format($plm[$order[$i]],0,1):$splm
+    format($dfm[$order[$i]],0,1):$sdfm
+    format($dlm[$order[$i]],0,1):$sdlm
+    format($ce[$order[$i]],0,1):$sce
+    $cmd = 'ions '+$spfm+','+$splm+','+$sdfm+','+$sdlm+','+$sce
+    echo($cmd)
+    pmlcmd($cmd)
+    $i = $i + 1
+endwhile
+
+
+if (msPolarity = '+') then
+    pmlcmd('pos')
+else
+    pmlcmd('neg')
+endif
+
+pmlcmd('detector=', msDetectorVoltage)
+
+pmlcmd('scan_time=', msScanTime)
+
+"pmlcmd('capillary=', msCapillaryVoltage)" "TODO: WHAT IS THE COMMAND?"
+
+format(msQ1PeakWidth, 'isreal'):$real
+if (not $real) then
+    msQ1PeakWidth = '0'
+endif
+pmlcmd('ion_res(1)=' + msQ1PeakWidth)
+
+format(msQ3PeakWidth, 'isreal'):$real
+if (not $real) then
+    msQ3PeakWidth = '0'
+endif
+pmlcmd('ion_res(3)=' + msQ3PeakWidth)
+
+// Turn CID gas on or off
+// Don't send 'cidon/off' commands unnecessarily, because they cause a delay
+if (msCidGasOn <> msStatusCidGas) then
+    msStatusCidGas = msCidGasOn
+    if (msCidGasOn = 'y') then
+        pmlcmd('cidon')
+    else
+        pmlcmd('cidoff')
+    endif
+endif
+
+//
+// Notify VJ of the change.
+// If we're in a run, it will be put in the LC Method table.
+//
+lccmd('downloadMsMethod', msCurrentMethod)
+
+//
+// Save the method in the lcid directory
+//
+if ($save) then
+    filepath(svfdir, lcid, $file):$path
+    msMethod('save', $path)
+endif

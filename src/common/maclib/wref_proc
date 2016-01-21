@@ -1,0 +1,331 @@
+"macro wref_proc"
+"***************************************************"
+"       MACRO: wref_proc                            "
+"       B0 and phase correction                     "
+"       Written by: Ivan Tkac                       "
+"       Last update: Oct 14, 2007                   "
+"***************************************************"
+
+jexp:$exp
+
+if ($exp = addsubexp) then
+   clear(4)
+   write('line3','ERROR: Start FID adding in another experiment!!!!')
+   write('line3','ERROR: addsub exp must be free for the results')
+   write('alpha','ERROR: Start FID adding in another experiment!!!!')
+   write('alpha','ERROR: addsub exp must be free for the results')
+   abort
+endif
+
+// line
+fn=256k
+lb='n' gf=.1
+wft
+vp=10 vsadj(150)
+ho=0 vo=0 dss
+
+$cont = ''
+input('Continue (y/n)? (<ret> yes): '):$cont
+if not (($cont = '') or ($cont = 'y') or ($cont = 'yes')) then
+       write('line3','PROGRAM ABORTED!')
+       abort
+endif
+
+
+"***************** B0 CORRECTION ********************"
+B0_calc
+
+
+"*************** PHASE CORRECTION *******************"
+"-------------------------------------------------------------"
+"   BACKUP OF RAW FID                                         "
+"-------------------------------------------------------------"
+$sp=sp $wp=wp $vs=vs $sc=sc $wc=wc $vp=vp $lp=lp $rp=rp
+$gf=gf $gfs=gfs $lb=lb $fn=fn
+$axis=axis $rfp=rfp $rfl=rfl
+
+if (celem < 2) then
+   clear
+   write('line3','Number of FIDs < 2, program was aborted!')
+   write('alpha','Number of FIDs < 2, program was aborted!')
+endif
+
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+
+$ex = 1
+exists('fid.raw','file'):$ex
+if ($ex = 0) then
+   exists('fid.orig','file'):$ex
+   if ($ex = 1) then
+      input('Save FID backup from fid.orig? (y/n) '):$orig
+      if ($orig = 'y') then
+         shell('mv fid.orig fid.raw')
+      endif
+   else
+      shell('cp fid fid.raw')
+   endif
+endif
+
+exists('phase_list','file'):$ex
+if ($ex = 1) then
+   write('line3','Phase correction already performed!')
+   $reprocess = 'n'
+   input('Do you want to start the phase correction once again? (y/n) '):$reprocess
+   if ($reprocess = 'n') then
+      write('line3','Program Aborted!')
+      abort
+   else
+      shell('mv phase_list phase_list.old')
+   endif
+endif
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION PARAMETERS                               "
+"-------------------------------------------------------------"
+$pointsF = '100'
+$skipF = '6'
+$rmsdF = '200'
+$s2nF = '5'
+$fidnoF = '2'
+
+$ph_file = 'ph_list' + $fidnoF
+
+$ph_list = 'phase_list'
+
+
+"-------------------------------------------------------------"
+"   PHASE CORRECTION CALCULATION                              "
+"-------------------------------------------------------------"
+shell('mv fid fid.tmp')
+
+// $homedir=''
+// shell('echo $HOME'):$homedir
+// $program = $homedir + '/bin/phcor5'
+exists('phcor5','bin'):$e,$program
+
+shell($program,'fid.tmp','fid',$pointsF,$skipF,$rmsdF,$s2nF,$ph_file,$fidnoF,$ph_list)
+write('line3','PHASE CORRECTION PERFORMED !')
+cd('..')
+rt($filename)
+
+
+"-------------------------------------------------------------"
+"   DISPLAY PHASE CORRECTED SPECTRA                           "  
+"-------------------------------------------------------------"
+ho=0 vo=0
+sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+lb=0 lb='n' gf=$gf gfs=$gfs fn=$fn
+axis=$axis rfp=$rfp rfl=$rfl
+wft dss dscale
+
+$ok = ''
+input('Is the result of phase correction OK? (y/n): (<ret> yes) '):$ok
+if (($ok = 'y') or ($ok = '')) then
+   shell('rm '+$filename+'/fid.tmp')
+   clear
+   write('alpha','Phase correction was performed')
+else
+   shell('rm '+$filename+'/fid')
+   shell('mv '+$filename+'/fid.tmp '+$filename+'/fid')
+   rt($filename)
+   write('line3','Original data retrieved!')
+   ho=0 vo=0
+   sp=$sp wp=$wp vs=$vs sc=$sc wc=$wc vp=$vp lp=$lp rp=$rp
+   lb=$lb gf=$gf gfs=$gfs fn=$fn
+   axis=$axis rfp=$rfp rfl=$rfl ph
+   wft dss dscale
+endif
+
+
+
+"*************** SUM FIDS IN ARRAY ******************"
+exists('add_counter','parameter','global'):$ex
+if $ex = 0 then
+   create('add_counter','integer','global')
+   setgroup('add_counter','processing','global')
+   add_counter = 0
+endif
+
+clradd
+add_counter = 0
+
+clear
+write('alpha','Number of measured FIDs = %3d',celem)
+write('alpha','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+$min = '' 
+$max = ''
+$incr = ''
+
+$report = file + '/add_report'
+exists($report,'file'):$e
+if ($e = 1) then
+   write('reset',$report)
+endif
+
+write('file',$report,'SUMMATION REPORT')
+write('file',$report,'FILE: %s',file)
+
+
+write('line3','Number of measured FIDs = %3d',celem)
+write('line3','Default setting: FID(min)=1  FID(max)=%d  Increment=1',celem)
+
+$fid_min = 1
+$fid_max = celem
+$increment = 1
+
+$sum_all=''
+input('SUM all FIDs (y/n)? (<ret> yes): '):$sum_all
+if not (($sum_all = '') or ($sum_all = 'y') or ($sum_all = 'yes')) then
+      input('FID(min): (<ret> default) '):$min
+      if not ($min = '') then
+         exec('$fid_min = ' + $min)
+      endif
+      
+      if ($fid_min > celem) then
+         write('line3','ERROR: FID(min) > arraydim!!!')
+         input('FID(min): (<ret> default) '):$min
+         if not ($min = '') then
+            exec('$fid_min = ' + $min)
+         endif
+         if ($fid_min > celem) then
+            write('alpha','ERROR: FID(min) > arraydim, PROGRAM ABORTED!')
+            abort
+         endif
+      endif
+      
+      input('FID(max): (<ret> default) '):$max
+      if not ($max = '') then
+         exec('$fid_max = ' + $max)
+      endif
+            
+      if ($fid_max > celem) then
+         write('line3','ERROR: FID(max) > arraydim!!!')
+         input('FID(max): (<ret> default) '):$max
+         if not ($max = '') then
+            exec('$fid_max = ' + $max)
+         endif
+         if ($fid_max > celem) then
+            write('alpha','ERROR: FID(max) > arraydim, PROGRAM ABORTED!')
+            abort
+         endif
+      endif
+      
+      if ($fid_max > $fid_min) then
+         input('Increment: (<ret> default) '):$incr
+         if not ($incr = '') then
+            exec('$increment = ' + $incr)
+         endif
+      
+         if (($fid_min + $increment) > celem) then
+            write('line3','ERROR: second FID# > arraydim!!!')
+            input('Increment: (<ret> default) '):$incr
+            if not ($incr = '') then
+               exec('$increment = ' + $incr)
+            endif
+            if (($fid_min + $increment) > celem) then
+               write('line3','ERROR: Only FID(min) will be added')
+            endif
+         endif
+      endif
+endif
+
+
+write('alpha','Current setting: FID(min)=%d  FID(max)=%d  Increment=%d',$fid_min,$fid_max,$increment)
+   
+if ($increment = 0) then
+   write('line3','ERROR: Increment must be > 0')
+   clear(4)
+   write('alpha','ERROR: Increment must be > 0')
+   abort
+endif
+   
+$i = $fid_min
+while ($i < ($fid_max + 1)) do
+      df($i) 
+      add
+      write('alpha','counter = %3d     FID # = %3d',add_counter+1,$i)
+      write('file',$report,'counter = %3d     FID # = %3d',add_counter+1,$i) 
+      $i = $i+$increment
+      add_counter = add_counter + 1
+endwhile
+
+write('line3','TOTAL NUMBER OF FIDS = %d',add_counter)
+
+$text1 = ''
+text:$text1
+$text2 = ''
+$fcounter = ''
+$fnt = ''
+format(add_counter,3,0):$fcounter
+format(nt,3,0):$fnt
+$text2 = 'NT =' + $fcounter + ' x' + $fnt
+   
+$dir = ''
+$filename = ''
+pwd:$dir
+length($dir):$dir_length
+length(file):$file_length
+substr(file,$dir_length+2,$file_length-$dir_length-5):$filename
+$filename = 'SUM_' + $filename
+
+jaddsub
+$newfile=''
+write('line3','Default filename: %s',$filename + '.fid')
+input('Set a filename for the new file: (<ret> default) '):$newfile
+if ($newfile = '') then
+   $newfile = $filename
+   write('alpha','NEW FILENAME: %s',$newfile + '.fid')
+endif
+   
+lp=0 rp=0 ph
+lb='n' gf=0.15 gfs=0
+text($text1 + $text2)
+svf($newfile)
+$newfile = $newfile + '.fid'
+rt($newfile)
+$filename=file
+substr($filename,'basename'):$base,$ext
+if ($ext = '') then
+  $filename = $filename+'.fid'
+endif
+
+cd($filename)
+$ex = 1
+exists('procpar.tmp','file'):$ex
+if ($ex = 0) then
+   shell('cp procpar procpar.tmp')
+endif
+procpar_nt(add_counter,$fid_min)
+fidheader_update(add_counter)
+shell('rm procpar.tmp')
+pwd:$curdir
+shell('mv ' + $report + ' ' + $curdir)
+cd('..')
+rt($newfile)
+// line
+wft
+dg
+text
+ds dscale
+
+
+"**************** RETURN TO PREVIOUS EXP ***************"
+$ok = ''
+input('Is the final spectrum OK (y/n)? (<ret> yes): '):$ok
+if (($ok = '') or ($ok = 'y') or ($ok = 'yes')) then
+   jexp($exp)
+endif
+
+dg
+// files('files_main')
+menu('main')
+
+

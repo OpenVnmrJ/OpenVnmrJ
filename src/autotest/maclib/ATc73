@@ -1,0 +1,190 @@
+"macro ATc73"
+"ATc73" "Field Recovery Time and Field Shift Following a 30G/cm sine.(z-axis) gradient "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   at_pfgon=pfgon
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Gradient test skipped' ) 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+   lb='n'
+   r1=0 r2=0 
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+   nt=1 ss=2 rof1=0.5
+   wnt='wft f full select(1) aph0 vsadj(100)'
+   text('Field Recovery Time following\\ a 30G/cm 1msec Sine Shaped Z-axis Gradient')
+   gt1=.001
+   seqfil='ATg2pul' gzlvl1=trunc(30/at_gzcal)
+   array('gzlvl1',26,gzlvl1,0) gzlvl1[26]=0   "last spectrum is reference spectrum"
+   d2=0.0000008,0.000002,0.000004,.000008,0.000016,0.000025,.000032,.000041,.000052,.000066,.000084,.00010,.000137,.000174,.000223,.000284,.000362,.0005,.00064,.000750,.001,.00122,.00155,.002,.00253,1
+   array='(gzlvl1,d2)'
+   shaped='y' gradaxis='z'
+   wnt='ATwft select(1) av dssh dtext'
+   at_currenttest='grec_+z_sine_30c'
+   wexp='ATc73(`PART1`)'
+   ATcycle
+   au
+   write('line3','Field Recovery Time following a +30G/cm 1 msec sine-shaped Z-axis Gradient')
+   dps
+
+elseif ($1='PART1') then
+   ATwft f
+   select(arraydim) 
+   peak:$ht,cr 
+   ph aph0:$ok
+   if $ok then  aph0 else av endif
+   vsadj(100)
+   dssh dtext ATsvf
+   s1
+   if (at_plotauto='y') then
+    dn2='' dn='' pap ATpltext2(100,wc2max,'grec_sine_z') 
+    pps(0,0,80,80)
+    sc=135 wc=5 ho=-6 
+    sp=3.66p wp=2p
+    pl('all','dodc') 
+    pen('plotter','pen1')
+    write('plotter',wcmax-110,100,'Reference Level for Spectra (no gradient) is Top of Box')
+   endif
+   r1
+   select(arraydim)
+   nll fp t1 full expl('nocurve')
+   scalelimits(0,0.0026,-30,110) 
+   expl('nocurve') 
+   ATgrec:r1       
+   if (at_plotauto='y') then sc=0 wc=140 sc2=0 wc2=100 pexpl('nocurve') 
+    write('plotter',wcmax-70,wc2max,'Signal Recovers to 95 percent in %3.1f usec',r1*1e6)
+    write('plotter',wcmax-70,wc2max-10,'        Delay      Intensity')
+    ATpltext3(curexp+'/analyze.inp',wcmax-70,wc2max-5)
+    pap ATpage
+   endif
+   r1 ft
+   sc=0 wc=150 sp=4.66p-50 wp=100 select(arraydim) aph0
+   vsadj(100) vo=2.5 ho=0 axis='h' dss dscale dtext
+   if (at_plotauto='y') then
+    pl('all') pscale pap
+    write('plotter',wcmax-70,wc2max,'Signal Recovers to 95 percent in %3.1f usec',r1*1e6)
+    write('plotter',wcmax-70,wc2max-10,'        Delay      Intensity')
+    ATpltext3(curexp+'/analyze.inp',wcmax-70,wc2max-5)
+    $spectrum=1 $y=3
+    write('plotter',0,65,'Peak Frequencies')
+    repeat
+     select($spectrum)
+     th=30 peak:$ht,$freq 
+     if ($spectrum=12) then r3=trunc(10*$freq)/10 endif
+     if ($spectrum=18) then r4=trunc(10*$freq)/10 endif
+     if ($spectrum=21) then r5=trunc(10*$freq)/10 endif
+     if ($spectrum=24) then r6=trunc(10*$freq)/10 endif
+     write('plotter',0,65-$y,'spectrum # %2.0f : Position = %3.1f Hz ',$spectrum,$freq)
+     $y=$y+3
+     $spectrum=$spectrum+1
+    until $spectrum>arraydim 
+   at_currenttest='grec_+z_sine_30c_1'
+   ATpage
+   else
+    $spectrum=1
+    repeat
+     select($spectrum)
+     th=30 peak:$ht,$freq 
+     if ($spectrum=12) then r3=trunc(10*$freq)/10 endif
+     if ($spectrum=18) then r4=trunc(10*$freq)/10 endif
+     if ($spectrum=21) then r5=trunc(10*$freq)/10 endif
+     if ($spectrum=24) then r6=trunc(10*$freq)/10 endif
+     $spectrum=$spectrum+1
+    until $spectrum>arraydim 
+   endif
+   r1
+   array('gzlvl1',26,-gzlvl1[1],0) gzlvl1[26]=0 array='(gzlvl1,d2)'
+   at_currenttest='grec_sine_-z_30c'
+   wnt='ATwft dssh dtext'
+   wexp='ATc73(`PART2`)'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   text('Field recovery time\\following a 1 msec -30 G/cm \\Sine-shaped Z gradient pulse')
+   select(arraydim)
+   ph aph0:$ok
+   if $ok then  aph0 else av endif
+   vsadj(100)
+   dssh dtext ATsvf
+   if (at_plotauto='y') then
+    dn2='' dn='' pap ATpltext2(100,wc2max,'grec_sine_z') 
+    pps(0,0,80,80)
+    sp=4.66p-1p wp=2p
+    sc=135 wc=5 ho=-6
+    pl('all','dodc')
+    pen('plotter','pen1')
+    write('plotter',wcmax-110,100,'Reference Level for Spectra (no gradient) is Top of Box')
+   endif
+   r1
+   select(arraydim)
+   nll fp t1 full expl('nocurve')
+   scalelimits(0,0.0026,-30,110) 
+   expl('nocurve')
+   ATgrec:r2       
+   gzlvl1=trunc(gzlvl1) 
+   r1=trunc(1e6*r1)
+   r2=trunc(1e6*r2)
+   if (at_plotauto='y') then sc=0 wc=140  sc2=0 wc2=100 pexpl('nocurve') 
+    write('plotter',wcmax-70,wc2max,'Signal Recovers to 95 percent in %3.1f usec',r2)
+    write('plotter',wcmax-70,wc2max-10,'        Delay      Intensity')
+    ATpltext3(curexp+'/analyze.inp',wcmax-70,wc2max-5)
+    pap  ATpage
+   endif
+   r1 ft
+   sc=0 wc=150 sp=4.66p-50 wp=100 select(arraydim) aph0
+   vsadj(100) vo=2.5 ho=0 axis='h' dss dscale dtext
+   if (at_plotauto='y') then
+    pl('all') pscale pap
+    write('plotter',wcmax-70,wc2max,'Signal Recovers to 95 percent in %3.1f usec',r2)
+    write('plotter',wcmax-70,wc2max-10,'        Delay      Intensity')
+    ATpltext3(curexp+'/analyze.inp',wcmax-70,wc2max-5)
+    $spectrum=1 $y=5
+    write('plotter',0,65,'Peak Frequencies')
+    repeat
+     select($spectrum)
+     th=30 peak:$ht,$freq 
+     if ($spectrum=12) then $r3=trunc(10*$freq)/10 endif
+     if ($spectrum=18) then $r4=trunc(10*$freq)/10 endif
+     if ($spectrum=21) then $r5=trunc(10*$freq)/10 endif
+     if ($spectrum=24) then $r6=trunc(10*$freq)/10 endif
+     write('plotter',0,65-$y,'spectrum # %2.0f : Position = %3.1f Hz ',$spectrum,$freq)
+     $y=$y+3
+     $spectrum=$spectrum+1
+    until $spectrum>arraydim 
+    at_currenttest='grec_sine_-z_30c_1'
+    ATpage
+   else
+    $spectrum=1
+    repeat
+     select($spectrum)
+     th=30 peak:$ht,$freq 
+     if ($spectrum=12) then $r3=trunc(10*$freq)/10 endif
+     if ($spectrum=18) then $r4=trunc(10*$freq)/10 endif
+     if ($spectrum=21) then $r5=trunc(10*$freq)/10 endif
+     if ($spectrum=24) then $r6=trunc(10*$freq)/10 endif
+     $spectrum=$spectrum+1
+    until $spectrum>arraydim 
+   endif
+   ATrecord('ZRECOVSINE30Gc','Z-Recovery: Time for signal to recover to >95 percent (30G/cm sine gradient):','Time ',r1,'at_Gz_level',-gzlvl1,'Time  ',r2,'at_Gz_level',gzlvl1)
+   ATrecord('ZRECOVSINE+30G_B0c','Field Shift (Hz) for delay after +30G/cm sine gradient:','100usec ',r3,'500usec ',r4,'1msec ',r5,'2msec ',r6,'Gz_level',-gzlvl1)
+   ATrecord('ZRECOVSINE-30G_B0c','Field Shift (Hz) for delay after -30G/cm sine gradient:','100usec ',$r3,'500usec ',$r4,'1msec ',$r5,'2msec ',$r6,'Gz_level',gzlvl1)
+   write('file',autotestdir+'/REPORT','Z Gradient Rec.(30G/cm sine): %3.1f usec (Gz= %5.0f); %3.1f usec (Gz= %5.0f) ',r1,-gzlvl1,r2,gzlvl1)
+   write('file',autotestdir+'/REPORT','B0 Shift following +30G/cm (sine): %2.1f Hz (100usec);%2.1f Hz (500usec);              gradient level %5.0f         %2.1f (1msec);  %2.1f Hz (2msec)',r3,r4,gzlvl1,r5,r6)
+   write('file',autotestdir+'/REPORT','B0 Shift following -30G/cm (sine): %2.1f Hz (100usec);%2.1f Hz (500usec);              gradient level %5.0f         %2.1f (1msec);  %2.1f Hz (2msec)',$r3,$r4,-gzlvl1,$r5,$r6)
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+ATnext
+endif

@@ -1,0 +1,94 @@
+"macro movesw"
+"*************************************************************************"
+" movesw - move tof and adjust sw, so that region between cursors is used "
+"*************************************************************************"
+
+"Do any special movesw "
+if ($# = 1) then
+  graphis('ds'):$dson
+  if typeof('$1') then
+    if ($1='check') then
+	if (crmode<>'b') then
+   	    write('error','Cannot execute movesw with crmode<>\'b\'')
+   	    return
+	endif
+    	exists('MinSW','parameter'):$mex
+    	if ($mex) then MinSW='off' endif
+    	graphis('ds'):$dson
+    	exists('wds','parameter'):$wds
+    	if ($wds) then
+	    strstr(wds,'SetUpMinSW'):$wds
+    	endif
+    	if ($wds) then
+	    $cmd=wds wds=''
+	    exec($cmd)
+	    if ($dson) then ds endif
+	    return
+    	endif
+    	exists('MinSW','parameter'):$mex
+    	if ($mex) then MinSW='off' endif
+	movesw
+	if ($dson) then ds endif
+	return
+    endif
+  endif
+endif
+
+$macro='movesw'+pslabel
+exists($macro,'maclib'):$ex
+IF ($ex) THEN
+   exec($macro) 
+
+ELSEIF($#>1) THEN
+  setfrqCmd('movesw',0,$1,$2):$e //$1,$2 are lf,uf
+
+ELSE
+   "  Continue with normal movesw "
+
+   $rflrfp = rfl-rfp			"referencing"
+   $center = cr-delta/2			"center between cursors"
+   $oldtof = tof
+   $oldsw  = sw
+   $newtof = $oldtof + $center - (sw/2) + $rflrfp
+   if ($#>0) then
+      $newsw=$1                        "set new sw"
+   else
+      $newsw=2*(cr-$center)
+      if (2*($center-(cr-delta))>$newsw) then
+         $newsw=2*($center-(cr-delta))
+      endif
+   endif
+   sw=$newsw
+   $shift  = ($oldsw/2-sw/2)-($oldtof-$newtof)
+   if (rfl<>0)or(rfp<>0) then rfl = rfl-$shift endif
+   wp      = sw
+   sp      = $shift+rfp-rfl
+   cr      = cr+$shift
+   if (tn = 'none') then
+      sfrq = sfrq + ($newtof * 1e-6)
+   else
+      tof = $newtof
+      on('fn'):$fnon
+      if ($fnon<1) then
+        	//  Readjust np ONLY if fn is OFF
+        	//  When fn is OFF, it is a good idea
+        	//     to collect data with np set to nearest
+        	//     (higher) Fourier number to avoid
+        	//     truncation artificats after FT
+        	//  However, respect user setting if fn is ON
+        	//         - Krish Dec, 2007
+   	$np=np fn=np np=fn fn='n'
+   	if (np > 1.5*$np) then
+   	   np=$np/2 fn=np np=fn fn='n'
+   	endif
+	sw=sw
+      endif
+   endif
+ENDIF
+
+proc='ft' setddrtc:$dum
+// setref
+setobsSW 
+if ($## < 1) then
+    write('line3','spectral window moved as requested')
+endif

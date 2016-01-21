@@ -1,0 +1,80 @@
+"macro BP_PRupdate"
+" BP_PRupdate('anglevariable1','anglevariable2',$VALUE1,$VALUE2) "
+" $VALUE1 and $VALUE2 are new values entered or "
+" BP_PRupdate('anglevariable1',$VALUE1) "
+
+" ProjRecon.xml page uses widget that runs "
+" BP_PRupdate(PRvar1,PRvar2,{PRvar1},{PRvar2})  for PR42* exps, or "
+" BP_PRupdate(PRvar1,{PRvar1}) for PR43* exps "
+
+if ($#=4) then
+  PRvar1=$1 PRvar2=$2
+  PR_impossible='n'
+
+  cos(3.14159265*$3/180):$PR_cos1
+  if $PR_cos1<0.01 then $PR_cos1=0.0 endif
+  cos(3.14159265*$4/180):$PR_cos2
+  if $PR_cos2<0.01 then $PR_cos2=0.0 endif
+
+  if ( ($4 < 0 ) or ( $4 > 90) ) then
+	PR_impossible='y' 
+	echo($2 +' must be between 0 and 90 degrees')
+	PR_message=$2+' must be 0-90'
+  endif
+  if ( ($3 < 0 ) or ( $3 > 90) ) then 
+	PR_impossible='y' 
+	echo($1+' must be between 0 and 90 degrees')
+	PR_message=$1+ ' must be 0-90'
+  endif
+  if ( 1.00 < ($PR_cos2*$PR_cos2+ $PR_cos1*$PR_cos1) ) then
+	PR_impossible='y'
+	echo('impossible angle combination')
+	PR_message='impossible combination'
+  endif
+
+  if (PR_impossible='n') then
+        {$2}=$4 {$1}=$3
+        length($1):$l1
+        "assume string is angle_****, therefore subtract 6 characters to get name"
+        $name1a='' substr($1,7,$l1-6):$name1a   "should be something like Ca"
+        $name1=''
+        $name1='PR_cos'+$name1a {$name1}=$PR_cos1
+        echo($name1)
+        length($2):$l2
+        $name2a='' substr($2,7,$l2-6):$name2a   "should be something like Cb"
+        $name2=''
+        $name2='PR_cos'+$name2a {$name2}=$PR_cos2
+        echo($name2)
+	PR_cosN = sqrt(1-($PR_cos2*$PR_cos2+ $PR_cos1*$PR_cos1))
+        echo(PR_cosN)
+	acos(PR_cosN):PR_acos
+	PR_aN = 180*PR_acos/3.14159265
+	PR_message=''
+  endif
+else   "two arguments"
+  PR_impossible='n'
+  PRvar1=$1
+  cos(3.14159265*$2/180):$PR_cos1
+  if $PR_cos1<0.01 then $PR_cos1=0.0 endif
+
+  if ( ($2 < 0 ) or ( $2 > 90) ) then
+	PR_impossible='y' 
+	echo($2 +' must be between 0 and 90 degrees')
+	PR_message=$2+' must be 0-90'
+  endif
+
+  if (PR_impossible='n') then
+        {$1}=$2
+        length($1):$l1
+        "assume string is angle_****, therefore subtract 6 characters to get name"
+        $name1a='' substr($1,7,$l1-6):$name1a   "should be something like Ca"
+        $name1=''
+        $name1='PR_cos'+$name1a {$name1}=$PR_cos1
+        echo($name1)
+	PR_cosN = sqrt(1-$PR_cos1*$PR_cos1)
+        echo(PR_cosN)
+	acos(PR_cosN):PR_acos
+	PR_aN = 180*PR_acos/3.14159265
+	PR_message=''
+  endif
+endif

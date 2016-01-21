@@ -1,0 +1,260 @@
+"macro xmaction"
+"Used by all applications (Imaging, Liquids, etc.)"
+"xmaction is called by mouse event in study queue"
+if ($# < 1.5) then
+  write('error','%s: at least two arguments needed',$0)
+  return
+endif
+"$1 is action: click, doubleclick, move, copy, delete"
+"$2 is node id"
+
+"sqattr sqval - parameters used in study node (new format VnmrJ 1.1c 1/2003)"
+"$id=sqval[1]    $type=sqval[2] $status=sqval[3]  - fixed position"
+"$title=sqval[4] $time=sqval[5] $macro=sqval[6]   - variable position"
+"$data=sqval[7]  $lock=sqval[8] $element=sqval[9] - variable position"
+"actionid=node id of study element to use for acq "
+"activeid=node id of active study element (Next clicked, Acq not done)"
+"  activeid null -> Next Scan possible, activeid not null -> Acquire possible"
+
+if ($# > 1.5) then
+  if ($2 = 'null') then return endif
+  exists('copyid','parameter','global'):$e
+  if $e < 0.5 then
+    create('copyid','string','global')
+    setgroup('copyid','processing','global')
+    setprotect('copyid','on',16+256+32768,'global')
+    copyid='null','null'
+  endif
+  $activestudy=activestudy
+
+  if ((appmode='walkup' or appmode='lc') and auto<>'y') then
+//  sqsaveid='null' // keep or not?
+    $ret=1
+    $dst='null' if $#>2.5 then $dst=$3 endif
+    xmactionw($1,$2,$dst):$ret
+    if $ret=0 then
+      return
+    endif
+  endif
+
+  if ($1 = 'click') then
+    copyid[1]=$2
+    return
+  elseif ($1 = 'select11b') then
+    $type='' $i=0 teststr('sqattr','type','global'):$i
+    if $i>0.5 then $type=sqval[$i] else $type='null' endif
+    if ($2='delete') then
+      $id='' $i=0 teststr('sqattr','id','global'):$i
+      if $i>0.5 then $id=sqval[$i] endif
+      xm1('delete',$id)
+    elseif ($type = 'protocol') then
+      write('line3','Cannot %s a protocol',$2)
+    elseif ($type = 'LIB') or ($type = 'REQ') then
+      xmselect($2)
+    endif
+    return
+  endif
+
+"check if $activestudy<>'null'? check if old node format?"
+  if ($activestudy='null') then
+"   if ($1='copy' or $1='move' or $1='delete') then"
+    if ($1='copy' or $1='move') then
+      write('line3','Cannot %s node unless study is continued.',$1)
+"     if ($1='copy') then xm1('delete',$2) endif"  "which $id?"
+      return
+    endif
+  endif
+
+  if ($1 = 'copy' and $2 = 'last') then
+    xm1('get all nodes id sqattr $i=size(`sqattr`) xmaction(`copy`,sqattr[$i])')
+    return
+  endif
+
+  if ($1 = 'copy') then
+    if (copyid[1] = actionid + ' au') then
+      copyid[1] = actionid
+      sqval[1] = $2  "use teststr?"
+"     sqval[2] = 'LIB'"
+"     sqval[3] = 'Ready'"
+      xmcopy
+      return
+    endif
+  endif
+
+  $gplan=0
+  if ($1 = 'copy') then
+    xmreadnode(copyid[1]):$ret  "assigns sqattr sqval"
+    if $ret<1 then return endif
+    $i=0 teststr('sqattr','id','global'):$i
+    sqval[$i] = $2
+  else
+    xmreadnode($2):$ret  "assigns sqattr sqval"
+
+    if (($ret>3) and ($1='doubleclick' or $1='dnd')) then
+      if(appmode='imaging' and sqval[3]='Submitted') then
+        teststr('sqattr','data','global'):$i
+        if $i>0.5 then
+          if (sqval[$i]<>'') then
+            acqdequeue(sqval[$i]):$e
+            if ($e) then
+               // write('line3','acqdequeued %s',sqval[1])
+               sqval[3]='Customized'
+               sqval[$i]=''
+               xmsetatts(sqval[1],'status','Customized','data','','lock','off')
+            endif
+          endif
+        endif
+      endif
+      $status = sqval[3]
+      if(jviewport=1 and appmode='imaging' and $status<>'Complete') then
+        gplan('isGplan'):$gplan
+        if($gplan) then
+          gplan('clearStacks')
+          //gplan('getCurrentStacks')
+        endif
+      endif
+    endif
+ 
+    if ($ret < -0.5 and ($1='doubleclick' or $1='dnd' or $1='delete')) then  "old study format"
+      $cmd='get '+$2+' sqattr sqval xmaction(`select11b`,`'+$1+'`)'
+      xm1($cmd)
+      return
+    endif
+  endif
+
+  teststr('sqattr','type','global'):$i
+  if $i>0.5 then $type=sqval[$i] else $type='null' endif
+
+  if ($1 = 'sqpath' and $#>1) then
+    // sqdirs is a global parameter created by sqpars
+    exists('sqdirs','parameter','global'):$e
+    if($e) then
+      sqdirs[jviewport]=$2
+    endif
+  elseif ($1 = 'copy') then
+
+    if ($activestudy='null') then
+      write('line3','Cannot copy when not in study mode')
+    else
+      if ($type = 'protocol') then "worked with old version, but didn't mkdir"
+        write('line3','Cannot copy a protocol')
+        return
+      endif
+      xmcopy
+    endif
+
+  elseif ($1 = 'testmove') then
+
+    $src=$2
+    $dest='null'
+    if $#>2.5 then $dest=$3 endif
+    vnmrjcmd('SQ move '+$src+' '+$dest)
+
+  elseif ($1 = 'move') then
+
+    xmwritesq
+
+  elseif ($1='doubleclick' or $1='dnd') then
+    graphis:$display
+    if ($display = 'ds') then
+      ds('exit')
+    endif
+
+    length($type):$len
+    if ($type = 'protocol') then
+      write('line3','Cannot open a parent protocol')
+      return
+    elseif ($type='LIB' or $type='REQ' or $type='CMD') then
+      xmselect($1)
+    endif
+
+    if (appmode='imaging' and $gplan) then gplan('addType',iplanType) endif    // turn on graphical planning if it was on in the previously loaded node
+
+  elseif (($1 = 'fovslice') or ($1 = 'fovvoxel') or ($1 = 'fovvolume')) then
+    sqcopyparams($1,$2)
+    gplan('addType',iplanType)
+
+  elseif ($1 = 'delete') then
+
+    if ($activestudy='null') then
+      write('line3','Cannot delete nodes while study is not active.')
+      return
+    endif
+
+    exists('trashnodepref','parameter','global'):$e
+    if $e<0.5 then  "trashnodemode?"
+      create('trashnodepref','string','global')
+      setprotect('trashnodepref','set',256,'global')
+      trashnodepref='Skip','RemoveData','Delete'  "values are: Delete,Skip/RemoveData,No"
+                "1st value for Ready/Customized, 2nd for Completed/Error nodes"
+                "3rd for composite protocols (Delete/No) - do not use"
+    endif
+
+    if (appmode='walkup' or appmode='lc') then
+      $cmd='VP 1 vnmrjcmd(`VP 1 xmtime`)'
+      vnmrjcmd($cmd)
+    endif
+
+    if $ret<3 then return endif  "xmreadnode failed"
+    $i=0 teststr('sqattr','id','global'):$i
+    $id = sqval[$i]
+    $i=0 teststr('sqattr','type','global'):$i
+    $type = sqval[$i]
+    if ($type = 'protocol') then
+
+      if (trashnodepref[1]='No' and trashnodepref[2]='No') then
+        write('line3','Cannot delete protocol')
+        return
+      endif
+      exists('sqtval','parameter','global'):$x
+      if $x<0.5 then
+        create('sqtval','string','global')
+        setprotect('sqtval','on',16+256+32768,'global')
+      endif
+      $cmd='get actions in ' +$2+ ' id sqtval xmdelete(`req`,`' +$2+ '`)'
+      xm1($cmd)
+
+    else "if ($type='LIB' or $type='REQ' or $type='RTCMD') then"
+
+      if $ret<0.5 then xm1('delete',$2) endif  "xmreadnode failed"
+      $status = sqval[3]
+      if ($status='Ready' or $status='Customized' or $status='Active' or $status='Skipped') then
+        if (trashnodepref[1]='No') then
+          write('line3','Cannot delete %s nodes',$status)
+        elseif (trashnodepref[1]='Skip') then
+          xmdelete('emptytrash')
+          xmdelete('backupxml')
+          xmdelete('backupnode',$id)
+          xmsetattr('status','Skipped','lock','off')
+        else  "trashnodepref[1]='Delete'"
+          xmdelete('one',$id)
+          xmwritesq
+        endif
+      else "if ($status='Completed' or $status='Error' or $status='Executing') then"
+        if ($status='Executing') then
+          readhw('status'):$val
+          if ($val <> 10) then
+            write('line3','Cannot delete Executing node while acquisition is running')
+            return
+          endif
+        endif
+        if (trashnodepref[2]='No') then
+          write('line3','Cannot delete %s nodes',$status)
+        elseif (trashnodepref[2]='RemoveData') then
+          xmdelete('emptytrash')
+          xmdelete('backupxml')
+          xmdelete('backupnode',$id)
+          $i=0
+          teststr('sqattr','data','global'):$i
+          if $i>0.5 then
+            xmdelete('data',sqval[$i])
+          endif
+          xmsetattr('data','null','status','Customized','lock','off')
+        else  "trashnodepref[2]='Delete'"
+          xmdelete('one',$id)
+          xmwritesq
+        endif
+      endif
+    endif
+  endif
+endif

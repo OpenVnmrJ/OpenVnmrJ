@@ -1,0 +1,31 @@
+"macro findreqexp"
+
+if ($1[1]='') or ($2[1]='') then
+   return(0)
+endif
+
+$tot=size('$1')
+$tot2=size('$2')
+
+$i=1 $found=0 $1d=''
+repeat
+	$reqexp=''
+	getEXPinfo($1[$i]):$reqexp
+	$i2=1
+	repeat
+	   shell('(echo "'+$reqexp+'" | grep -wc '+$2[$i2]+')'):$found
+	   if ($found) then
+		AutoCheck($2[$i2]):$found,$1d
+	   endif
+	   if ($found=0) then
+		$1d=''
+	   else
+		$i=$tot $i2=$tot2
+	   endif
+	   $i2=$i2+1
+	until $i2 > $tot2
+	$i=$i+1
+until $i > $tot
+
+return($found,$1d)
+

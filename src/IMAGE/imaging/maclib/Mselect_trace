@@ -1,0 +1,90 @@
+"macro Mselect_trace"
+/*******************************************************/
+/* Mselect_trace:                                      */
+/* Select trace to display:                            */
+/* Center echo of center slice of center array element */
+/*******************************************************/
+$action = ''
+if ($# > 0) then $action = $1 endif
+
+/* Run flashc if compressed in phase encoding dimension */
+$c='' 
+seqcon(3):$c 
+if ($c = 'c') then 
+  exists('flash_converted','parameter'):$ex
+  if ($ex = 0) then
+    exists('etl','parameter'):$ex
+    if ($ex > 0) then
+      if (etl > 0) then
+        rarec  // FSE type of experiment
+	write('line3','running rarec')
+      endif
+    else
+      write('line3','running flashc')
+      flashc('ms',ns) 
+    endif
+  endif
+endif 
+
+/* Get "correct" arraydim */
+if (ni > 0) then
+  $arraydim = arraydim/ni
+endif
+
+/* Create ktrace if necessary */
+exists('ktrace','parameter'):$ex 
+if ($ex=0) then 
+  create('ktrace','integer') 
+  ktrace = nv/2 
+endif 
+
+
+/* Select slice, trace, and array element to use */
+if ($action = 'auto') then
+  slice   = ns/2 
+  ktrace  = nv/2 
+  element = $arraydim/2
+endif
+if (element = 0) then element = 1 endif
+
+/* Check that slice, element, and ktrace are within range */
+if (slice > ns) then
+  write('line3','warning: slice reset to max of %d',ns)
+  slice = ns
+endif
+if (ktrace > nv) then
+  write('line3','warning: ktrace reset to max of %d',nv)
+  ktrace = nv
+endif
+if (element > $arraydim) then
+  write('line3','warning: element reset to max of %d',$arraydim)
+  element = $arraydim
+endif
+
+$slice   = slice
+$element = element
+$ktrace  = ktrace
+
+
+/**************************************************/
+/* Select FID from the entire data set            */
+/**************************************************/
+/* Compressed in slice dimension? */
+seqcon(2):$c 
+if ($c='s') then // assume slice is outside array loop
+  cf = 1
+  ftproc[2] = ns*$arraydim*($ktrace-1) + $slice*($element-1) + $slice
+else // compressed
+  cf = $slice
+  ftproc[2] = ($ktrace-1)*$arraydim + $element 
+endif
+
+//write('line3','select trace %d',ftproc[2])
+
+/* Display profile */
+ft 
+ds(ftproc[2])
+f full 
+av av1
+vsadj
+

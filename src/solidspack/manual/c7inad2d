@@ -1,0 +1,133 @@
+Protocol: C7inad2d  Sequence: c7inad2d.c  Apptype: solidseq1d
+
+Description:
+
+A sequence to correlate X-nucleus pairs with double quantum filtering.
+F1 is the evolution of double-quantum coherence and F2 is single
+quantum chemical shift. The spectral appearance is similar to the
+INADEQUATE experiment. Polarization along the Z axis is created with a
+constant, linear or tangent ramped CP followed by a flip-back pulse on
+X. C7 is used to recouple double quantum coherence and a second pulse
+returns polarization to X.  TPPM or SPINAL decoupling is applied
+during acquisition and CW decoupling with an amplitude aHmix is applied
+during C7.
+
+Additional Software:
+
+reset_c7 - This macro uses the calibrated values of pwX90, aX90 and 
+srate to set up the C7 recoupling sequence.  The amplitude aHmix is set
+to aH90. The macro is executed by the protocol.
+
+Setup:
+
+Load a calibrated data set and select the protocol C7inad2d. For a new 
+nucleus calibrate CP with Onepul and Tancpx and then select C7inad2d.
+
+Select the desired decoupling method, TPPM or SPINAL. The manual file
+onepul describes calibration of decoupling.
+
+Be sure the MAS Rate on the Acquisition page is set correctly.
+
+The macro reset_c7 is run by the protocol and performs the next steps.
+
+1. Set pwXc7 = 1.0e6/(7.0*srate) where srate is the current MAS Rate on
+the Acquisition page.  The value of pwXc7 is rounded to a 100 ns grid.
+2. Set aXc7 = aX90*4.0*pwX90/pwXc7.  
+3. Set aHmix = aX90.  aHmix is the amplitude of CW decoupling during
+the C7 pulses.
+
+Array qXc7 to determine the value that provides the maximum signal
+
+Set qXc7 to the desired value.  Set sw1 = 2.0*sw, ni = 64-256 and phase
+= 1,2.
+
+Collect the 2D data set and process with wft2da.  Coupled nuclei will
+appear as pairs in F2 traces and will be shifted in F1 by twice the
+median chemical shift.
+
+Parameter Groups:
+
+90H:  Module:  no
+Sequence:  tancpx.c
+Description:   Provides a 90-degree pulse on dec that can be used as a
+               preparation pulse. Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs.
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the
+              channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to.
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).
+       dHX - amplitude width of the ramp. A negative width sets a ramp
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be
+              set - not shown).
+       toHX = 'obs' -  channel with the final polarization (must be set 
+              - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1);
+Underscore functions: _cp_(hx,phHhx,phXhx);
+
+c7X:  Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+aHmix: (parameter) is the amplitude of CW proton decoupling during C7.
+
+Hseq:  Module:  ye
+Sequence:  tancpx.c
+Description:  Chooses SPINAL or TPPM decoupling on the dec channel
+              during acquisition.
+Parameters:  Sequence Page - the Hspinal and Htppm groups overlap.
+       Hseq - chooses the decoupling sequence, TPPM or SPINAL.
+Implementation:  DSEQ dec = getdseq("H");  The router implements
+              getspinal() or gettppm().
+Underscore functions: _dseqon(dec); runs _tppm(); or _spinal();
+              _dseqoff(dec); runs decprgoff();
+
+Hspinal:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements SPINAL decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHspinal - amplitude of the dec channel. 
+       pwHspinal - approximate 180-degree flip angle on resonance.
+       phHspinal - +/- small angle phase. SPINAL64 is implemented with
+              phases = +/- 1.0, +/- 1.5 and +/-2.0 times phHspinal.
+       chHspinal = 'dec' must be set (not shown).
+Implementation: SPINAL dec = getspinal("H"); or DSEQ dec =
+              getdseq("H");
+Underscore functions: _spinal(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);
+
+Htppm:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements TPPM decoupling on the dec channel during
+              acquisition.
+Parameters:  Sequence Page
+       aHtppm - amplitude of the dec channel.
+       pwHtppm - approximate 180-degree flip angle on resonance.
+       phHtppm - +/- small angle phase. TPPM is implemented
+              with phases = +/- 1.0 times phHtppm for alternating pulses.
+       chHtppm = 'dec' must be set (not shown).
+Implementation: TPPM dec = gettppm("H"); or DSEQ dec = getdseq("H");
+Underscore functions: _tppmon(dec); and decprgoff(); or _dseqon(dec);
+              and _dseqoff(dec);

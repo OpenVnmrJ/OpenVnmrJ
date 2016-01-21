@@ -1,0 +1,52 @@
+"macro xmhaha_addQ"
+pwd:$curdir
+cd($1):$dum
+$fidlog='dirinfo/fidlog'
+exists($fidlog,'file'):$fex
+	"The following section for CP2.x data"
+$fidlist='dirinfo/fidlist'
+exists($fidlist,'file'):$f2ex
+if ($fex=0) and ($f2ex>0) then
+   mkfidlog($1)
+endif
+exists($fidlog,'file'):$fex
+
+	"Recall the first fid stored on this sample"
+if ($fex) then
+     $s1='' $s2=''
+     readfile($fidlog,'$s1','$s2','','local'):$total
+     if ($total) then
+           exists($s2[1]+'.fid','directory'):$tx
+	   if ($tx=0) then
+		exists($s2[1]+'.rec','directory'):$tx
+		if ($tx=0) then
+		    exists($s2[1]+'.REC','directory'):$tx
+		endif
+	   endif
+	   $total=$tx
+     endif
+     if ($total) then
+           rt($s2[1])
+           wft('nods',1)
+     else
+           $fex=0
+     endif
+endif
+	"Else recall the CPQ_StartPar parameter set"
+	"  This is the starting parameter for the first experiment"
+	"  in the queue for the sample"
+
+if ($fex=0) then
+     $strtpar='CPQ_StartPar'
+     exists($strtpar+'.par','directory'):$fex
+     if ($fex) then
+	rtp($strtpar)
+	file=$1+'/'+$strtpar
+	setvalue('file',file,'processed')
+	setvalue('file',file,'current')
+     endif
+endif
+
+cd($curdir):$dum
+walkupQ('addq')
+	

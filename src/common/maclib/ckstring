@@ -1,0 +1,45 @@
+"macro ckstring"
+// ckstring - eliminates not allowed characters from a string to avoid errors
+// syntax: ckstring('$VALUE',<arg2>):$return
+//	arg2=1 - Remove all special characters (default)
+//	arg2=2 - Removes all but forward slash 
+//	arg2=3 - Removes all but blank space
+//	arg2=4 - Removes selected characters
+
+if ($# < 1) then
+  write('error','%s requires an argument',$0)
+  return
+endif
+if ($# < 2) then $2=1 endif
+
+$s1='' $s2='' $r1=1
+while $r1>0 do
+    strstr($1,'`'):$r1,$s1,$s2
+    if $r1 then $1=$s1+$s2 endif
+endwhile
+$r1=1
+while $r1>0 do
+    strstr($1,`'`):$r1,$s1,$s2
+    if $r1 then $1=$s1+$s2 endif
+endwhile
+$return=$1
+
+IF ($2=1) THEN
+	shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&\/" "_______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+
+ELSEIF ($2=2) THEN
+	shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&" "______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+
+ELSEIF ($2=3) THEN
+	shell('echo "'+$1+'" |tr "\+\,\.\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&\/" "______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+ELSEIF ($2=4) THEN
+        shell('echo "'+$1+'" |tr "\+\*\{\}\<\>\~\#\$\%\&" "___________" |sed -e "s/_[_]*/_/g";cat'):$return
+ELSEIF ($2=5) then
+        shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\\\-\<\>\~\#\$\%\&\/" "________________________" |sed -e "s/_[_]*/_/g";cat'):$return
+ENDIF
+
+if ($1 <> $return) and ($## = 0) then
+  write('line3',`%s: special characters replaced: '%s' set to '%s'`,$0,$1,$return)
+endif
+
+return($return)

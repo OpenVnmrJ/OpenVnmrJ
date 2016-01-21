@@ -1,0 +1,114 @@
+"macro grec_process"
+
+$phase='dophase'
+$activestudy='no'
+
+$x = 1
+while ($x <= $#) do
+ $val = ${$x}
+ if $val = 'nophase' then $phase=$val
+ elseif $val = 'activestudy' then $activestudy=$val
+ endif
+ $x=$x+1
+endwhile
+
+lb=10
+$probestyle=''
+getparam('style','Probe'):$probestyle
+if ($probestyle='cold') then lb=1 endif
+
+fn=16k
+
+//First do positive gradient array
+$d2value=d2[arraydim/2]
+wft
+select(arraydim/2)
+vsadj(100)
+lp=0 aph0
+$rpfinal=rp
+peak(sp,sp+wp):$htfinal,$frq
+wp=500 sp=$frq-250
+$d2value_pos=d2[1]
+$d2value_neg=d2[1]
+
+//Find the initial recovery delay (> 90% of reference amplitude)
+//First for positive gradient
+$i=arraydim/2-1 $stop=0
+repeat
+   select($i)
+   aph0
+   $rp=rp
+   $phasediff=$rp-$rpfinal
+   abs($phasediff):$phasediff
+   peak(sp,sp+wp):$ht,$frq
+   if ($ht<0.90*$htfinal) then $d2value_pos=d2[$i+1] $stop=1 endif
+   $i=$i-1
+until (($i<1) or ($stop))
+
+//Now for negative gradient
+select(arraydim)
+vsadj(100)
+lp=0 aph0
+$rpfinal=rp
+peak(sp,sp+wp):$htfinal,$frq
+$i=arraydim-1 $stop=0
+repeat
+   select($i)
+   aph0
+   $rp=rp
+   $phasediff=$rp-$rpfinal
+   abs($phasediff):$phasediff
+   peak(sp,sp+wp):$ht,$frq
+   if ($ht<0.90*$htfinal) then $d2value_neg=d2[$i-arraydim/2+1] $stop=1 endif
+   $i=$i-1
+until (($i<arraydim/2) or ($stop))
+
+//Take the longer of the two values as the recovery time
+if ($d2value_pos >= $d2value_neg) then $d2value=$d2value_pos else $d2value=$d2value_neg endif
+
+
+substr(gradtype,3,1):$gradtype3
+VPgettarget('grec',$gradtype3):$targetvalue
+$targetvalues=''
+format($targetvalue,1,0):$targetvalues
+
+$recoverytime=$d2value*1e6
+write('line3','The gradient recovery delay needed for the signal to recover to >= 90%% is %d us',$recoverytime) 
+
+if (VPspecinfo[5]<>'N/A') then
+   if ($recoverytime <= $targetvalue) then $IPteststatus='PASS' else $IPteststatus='FAIL' endif
+   write('line3','Test status: %s',$IPteststatus)
+endif
+
+select(arraydim)
+aph0
+vsadj
+dssh
+
+$recoverytimes=''
+format($recoverytime,1,0):$recoverytimes
+
+VPtext
+$text='Gradient Recovery Test'
+atext($text)
+$text='Signal recovers to >= 90 % full amplitude in <= '+$recoverytimes+' us'
+atext($text)
+if ($gradtype3='l') then $gradamp='18' else $gradamp='30' endif
+$text='after '+$gradamp+' G/cm, 1 ms gradient pulse'
+atext($text)
+
+if (VPspecinfo[5]<>'N/A') then
+   $text='Test status: '+$IPteststatus
+   atext($text)
+   write('line3','Gradient recovery time <= %g us  Target <= %g us - %s',$recoverytime,$targetvalue,$IPteststatus):CalibrationResults
+   darray('CalibrationResults')
+endif
+
+if $activestudy<>'activestudy' then return endif
+
+execprocess='wft dssh darray(\'CalibrationResults\')'
+setvalue('execprocess',execprocess,'processed')
+
+VPhistory($recoverytime)
+
+return($recoverytime)

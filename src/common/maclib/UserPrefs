@@ -1,0 +1,559 @@
+"macro UserPrefs"
+$dum='' $devnull=''
+$tailX='tail'
+whichtail:$tailX
+is_submitmode:$is
+//if ($is) then
+//    write('error','curexp is in submit mode.  Cannot manage preferences')
+//    return
+//endif
+
+if ($# < 1) then $1='user' endif
+
+exists(userdir+'/user_preferences','directory'):$direx
+if ($direx=0) then
+	mkdir('-p',userdir+'/user_preferences'):$dum
+endif
+
+$admindir=userdir+'/persistence/cpADMIN'
+exists($admindir,'directory'):$pdirex
+if ($pdirex=0) then mkdir('-p',$admindir):$dum endif
+
+
+"************************************************************************"
+IF ($1='default') or ($1='user') THEN
+   if ($# < 2) then $2='' endif
+
+   $oplist1='' $oplist2='' $oplist=''
+   $locallist='' $globallist='' $alllist=''
+
+   module('add','localprefs','basic','refresh')
+
+   $defaultpref=''
+   exists('defaultlocalprefs','user_preferences'):$fileex,$defaultpref
+   if ($fileex) then
+	fread($defaultpref)
+   endif
+   if ($1='user') then
+	$localpref=''
+	exists(operator+'localprefs','user_preferences'):$fileex,$localpref
+   	if ($fileex) then
+		readparam($localpref,'','alist $oplist1'):$num
+		fread($localpref)
+   	endif
+   endif
+
+   $defaultpref=''
+   exists('defaultglobalprefs','user_preferences'):$fileex,$defaultpref
+   if ($fileex) then
+	$operator=operator
+        fread($defaultpref,'global')
+	setvalue('operator',$operator,'global')
+   endif
+
+   if ($1='user') then
+	$globalpref=''
+	exists(operator+'globalprefs','user_preferences'):$fileex,$globalpref
+   	if ($fileex) then
+		readparam($globalpref,'','alist $oplist2'):$num
+		$operator=operator
+        	fread($globalpref,'global')
+		setvalue('operator',$operator,'global')
+   	endif
+   endif
+
+   if ($1='user') then
+	$updatepref=''
+	exists(operator+'updateprefs','user_preferences'):$fileex,$updatepref
+        $udpreference='no'
+        if ($fileex) then
+	     lookup('mfile',$updatepref,'read',1):$udpreference
+        endif
+   endif
+
+   module('arraylist','localprefs'):$locallist
+   module('arraylist','globalprefs'):$globallist
+
+   exists('UserPrefs','parameter','global'):$ispar
+   if ($ispar=0) then
+	create('UserPrefs','string','global')
+   endif
+   setprotect('UserPrefs','on',256,'global')
+   UserPrefs='',''
+
+   $alllist=$globallist,$locallist
+//   $alllist=$globallist+' '+$locallist
+   if ($1='user') then $oplist=$oplist1,$oplist2 else $oplist=$alllist endif
+//   if ($1='user') then $oplist=$oplist1+' '+$oplist2
+//   else $oplist=$alllist endif
+
+//   string2array($alllist):$alllist
+//   string2array($oplist):$oplist
+
+   $listtot=size('$alllist')
+   if ($alllist[1]='') then
+	UserPrefs=''
+   else
+     $i=1 $j=1
+     repeat
+	UserPrefs[$j]=$alllist[$i]
+	$j=$j+1
+//	teststr('$oplist',$alllist[$i],'local'):$ret
+//	if ($ret) then
+		UserPrefs[$j]='y'
+//	else
+//		UserPrefs[$j]='n'
+//	endif
+	$j=$j+1
+   	$i=$i+1
+     until $i > $listtot
+   endif
+
+   $total=size('UserPrefs')
+   $check=($total mod 2)
+   if ($total<2) then
+	write('error','There are no operator preferences parameters')
+	return
+   endif
+   if ($check>0) then
+	write('error','An error occurred.  Redo operator preferences')
+        return
+   endif
+
+   vjplotmenu
+   copy(userdir+'/persistence/plotters',$admindir+'/upplotterlist'):$dum
+   copy(userdir+'/persistence/printers',$admindir+'/upprinterlist'):$dum
+   copy(systemdir+'/solventlist',$admindir+'/upsolventlist'):$dum
+
+"****Global UserPrefs parameter is now set**********"
+"*****Build popup xml file*********"
+
+   exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+   if ($direx=0) then
+      mkdir('-p',userdir+'/templates/vnmrj/interface'):$dum
+   endif
+   $file=userdir+'/templates/vnmrj/interface/prefparam.xml'
+   write('reset',$file)
+   write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+   write('file',$file,'<template name="prefparam" element="groups" type="acquisition" >')
+   $y=trunc($total/4 + 0.5)*30+60+40+30
+   $ytotal=$y
+
+   write('file',$file,'  <group size="750 %d"',$y)
+   write('file',$file,'    bg="transparent"')
+   write('file',$file,'    tab="no"')
+   write('file',$file,'    reference="prefparam"')
+   write('file',$file,'    useref="no"')
+   write('file',$file,'    subtype="Basic"')
+   write('file',$file,'    expanded="yes"')
+   write('file',$file,'    >')
+
+   write('file',$file,'  <button loc="290 20" size="150 25"')
+   write('file',$file,'         style="Heading2"')
+   if ($1='default') then
+        write('file',$file,'            label="Save as defaults"')
+        write('file',$file,'            vc="UserPrefs(\'savedefault\')"')
+   else
+        write('file',$file,'         label="Save selections"')
+        write('file',$file,'         vc="UserPrefs(\'saveprefs\')"')
+   endif
+   write('file',$file,'         decor1=""')
+   write('file',$file,'  />')
+
+   write('file',$file,'  <button loc="455 20" size="150 25"')
+   write('file',$file,'         style="Heading2"')
+   write('file',$file,'         label="Restore defaults"')
+   write('file',$file,'         vc="UserPrefs(\'restore\')"')
+   if ($1='default') then
+        write('file',$file,'    show="$ENABLE=-1"')
+   endif
+   write('file',$file,'         decor1=""')
+   write('file',$file,'  />')
+
+   write('file',$file,'  <textmessage loc="30 20" size="250 20"')
+   write('file',$file,'         style="Info"')
+   write('file',$file,'         vq="operator"')
+   write('file',$file,'         set="$VALUE=\'Preferences for \'+operator+\':\'"')
+   write('file',$file,'   />')
+
+   $i=1 $k=0
+   repeat
+        $y=$k*30+70 $x=5
+        write('file',$file,'     <label loc="%d %d" size="140 20"',$x,$y)
+        write('file',$file,'        style="Label1"')
+        write('file',$file,'        label="%s"',UserPrefs[$i])
+        write('file',$file,'        justify="Right"')
+        write('file',$file,'        />')
+
+        $x=$x+145
+	if ((UserPrefs[$i]='plotter') or (UserPrefs[$i]='printer') or (UserPrefs[$i]='solvent')) then
+                write('file',$file,'     <filemenu loc="%d %d" size="200 20"',$x,$y)
+		write('file',$file,'		vq2="UserPrefs %s"',UserPrefs[$i])
+		write('file',$file,'		file="$VALUE=\'%s/up%slist\'"',$admindir,UserPrefs[$i])
+	else
+                write('file',$file,'     <entry loc="%d %d" size="200 20"',$x,$y)
+	endif
+        write('file',$file,'        style="PlainText"')
+        write('file',$file,'        vq="UserPrefs %s"',UserPrefs[$i])
+        if typeof(UserPrefs[$i]) then
+            	write('file',$file,'        vc="%s=\'$VALUE\'"',UserPrefs[$i])
+        else
+               	write('file',$file,'        vc="%s=$VALUE"',UserPrefs[$i])
+        endif
+        write('file',$file,'        set="$VALUE=%s"',UserPrefs[$i])
+	write('file',$file,'	    show="$ENABLE=(UserPrefs[%d]=\'y\')*2-1"',$i+1)
+        write('file',$file,'        />')
+
+	$x=$x+145
+      	if ($1<>'default') then
+        	write('file',$file,'     <check loc="%d %d" size="20 20"',$x,$y)
+        	write('file',$file,'        style="Label1"')
+        	write('file',$file,'        label=""')
+        	write('file',$file,'        vq="UserPrefs"')
+        	write('file',$file,'        vc="UserPrefs[%d]=\'y\'"',$i+1)
+        	write('file',$file,'        vc2="UserPrefs[%d]=\'n\'"',$i+1)
+        	write('file',$file,'        set="$VALUE=(UserPrefs[%d]=\'y\')"',$i+1)
+        	write('file',$file,'        />')
+        endif
+	$i=$i+2
+
+     if ($i < $total) then
+        $x=$x+35
+        write('file',$file,'     <label loc="%d %d" size="140 20"',$x,$y)
+        write('file',$file,'        style="Label1"')
+        write('file',$file,'        label="%s"',UserPrefs[$i])
+        write('file',$file,'        justify="Right"')
+        write('file',$file,'        />')
+
+        $x=$x+145
+        if ((UserPrefs[$i]='plotter') or (UserPrefs[$i]='printer') or (UserPrefs[$i]='solvent')) then
+                write('file',$file,'     <filemenu loc="%d %d" size="200 20"',$x,$y)
+                write('file',$file,'            vq2="UserPrefs %s"',UserPrefs[$i])
+                write('file',$file,'            file="$VALUE=\'%s/up%slist\'"',$admindir,UserPrefs[$i])
+        else
+                write('file',$file,'     <entry loc="%d %d" size="200 20"',$x,$y)
+        endif
+        write('file',$file,'        style="PlainText"')
+        write('file',$file,'        vq="UserPrefs %s"',UserPrefs[$i])
+        if typeof(UserPrefs[$i]) then
+               write('file',$file,'        vc="%s=\'$VALUE\'"',UserPrefs[$i])
+        else
+               write('file',$file,'        vc="%s=$VALUE"',UserPrefs[$i])
+        endif
+        write('file',$file,'        set="$VALUE=%s"',UserPrefs[$i])
+        write('file',$file,'        show="$ENABLE=(UserPrefs[%d]=\'y\')*2-1"',$i+1)
+        write('file',$file,'        />')
+
+        $x=$x+145
+      	if ($1<>'default') then
+        	write('file',$file,'     <check loc="%d %d" size="20 20"',$x,$y)
+        	write('file',$file,'        style="Label1"')
+        	write('file',$file,'        label=""')
+        	write('file',$file,'        vq="UserPrefs"')
+        	write('file',$file,'        vc="UserPrefs[%d]=\'y\'"',$i+1)
+        	write('file',$file,'        vc2="UserPrefs[%d]=\'n\'"',$i+1)
+        	write('file',$file,'        set="$VALUE=(UserPrefs[%d]=\'y\')"',$i+1)
+        	write('file',$file,'        />')
+      	endif
+        $i=$i+2
+     endif
+     $k=$k+1
+   until $i > $total
+
+   if ($1='user') then
+	UserPrefs=UserPrefs,'UpdatePrefs',$udpreference
+                write('file',$file,'     <check loc="55 %d" size="550 20"',$ytotal-35)
+                write('file',$file,'        style="Label1"')
+                write('file',$file,'        label=" Upon operator logout, update values and recall during next login"')
+                write('file',$file,'        vq="UserPrefs"')
+                write('file',$file,'        vc="UserPrefs[%d]=\'yes\'"',$total+2)
+                write('file',$file,'        vc2="UserPrefs[%d]=\'no\'"',$total+2)
+                write('file',$file,'        set="$VALUE=(UserPrefs[%d]=\'yes\')"',$total+2)
+                write('file',$file,'        />')
+   endif
+
+   write('file',$file,'    </group>')
+   write('file',$file,'</template>')
+
+"***************xml file is now ready in templates/vnmrj/interface/prefparam******"
+   vnmrjcmd('pnew','operator','UserPrefs')
+   if ($2<>'refresh') then
+      vnmrjcmd('popup','mode:modeless','file:prefparam.xml','rebuild:yes','pnewupdate:true','location:controlPanel','title: "Operator Preferences Setup"')
+   endif
+
+"************************************************************************"
+ELSEIF ($1= 'savedefault') THEN
+
+	module('arraylist','localprefs'):$locallist
+	module('arraylist','globalprefs'):$globallist
+
+	exists(userdir+'/user_preferences','directory'):$direx
+	if ($direx=0) then
+	   mkdir(userdir+'/user_preferences'):$dum
+	endif
+	$localpref=userdir+'/user_preferences/defaultlocalprefs'
+	writeparam($localpref,'$locallist')
+        $globalpref=userdir+'/user_preferences/defaultglobalprefs'
+        writeparam($globalpref,'$globallist','global')
+	write('line3','Default preferences saved')
+	UserPrefs('default','refresh')
+
+"************************************************************************"
+ELSEIF ($1='restore') THEN
+
+	$localpref=userdir+'/user_preferences/'+operator+'localprefs'
+	write('reset',$localpref)
+        $globalpref=userdir+'/user_preferences/'+operator+'globalprefs'
+	write('reset',$globalpref)
+        $updatepref=userdir+'/user_preferences/'+operator+'updateprefs'
+	write('reset',$updatepref)
+	write('line3','Preferences restored to default values')
+	UserPrefs('user','refresh')
+
+"************************************************************************"
+ELSEIF ($1='updateprefs') THEN
+	bgmode_is:$bgmode
+	if ($bgmode) then return endif
+	exists('userremembrance','parameter','global'):$parex
+	if ($parex=0) then return endif
+	if (userremembrance<>'y') then return endif
+
+        $updatepref=userdir+'/user_preferences/'+operator+'updateprefs'
+	exists($updatepref,'file'):$fileex
+	$udpreference='no'
+	if ($fileex) then
+	     lookup('mfile',$updatepref,'read',1):$udpreference
+	endif
+	if ($udpreference='no') then return endif
+
+        $localpref=userdir+'/user_preferences/'+operator+'localprefs'
+        $globalpref=userdir+'/user_preferences/'+operator+'globalprefs'
+	$parlist=''
+	exists($localpref,'file'):$fileex
+	if ($fileex) then
+	   readparam($localpref,'','alist $parlist'):$num
+	   if ($parlist[1]<>'') then
+		writeparam($localpref,'$parlist')
+	   endif
+	endif
+        $parlist=''
+        exists($globalpref,'file'):$fileex
+        if ($fileex) then
+	   readparam($globalpref,'','alist $parlist'):$num
+           if ($parlist[1]<>'') then
+                writeparam($globalpref,'$parlist','global')
+           endif
+        endif
+
+"************************************************************************"
+ELSEIF ($1='saveprefs') THEN
+
+        module('arraylist','localprefs'):$locallist
+        module('arraylist','globalprefs'):$globallist
+
+//	string2array($locallist):$locallist
+//	string2array($globallist):$globallist
+
+	$parlist='' $parlist2=''
+	$total=size('UserPrefs')
+	if ($total>1) then
+	   $i=1
+	   repeat
+		if (UserPrefs[$i]<>'') and (UserPrefs[$i+1]='y') then
+		   teststr('$globallist',UserPrefs[$i],'local'):$ret
+		   if ($ret) then $parlist2=$parlist2,UserPrefs[$i] 
+		   else teststr('$locallist',UserPrefs[$i],'local'):$ret2
+		      if ($ret2) then $parlist=$parlist,UserPrefs[$i] endif
+		   endif
+		endif
+		$i=$i+2
+	   until $i > $total
+	endif
+	array2array($parlist):$parlist
+	array2array($parlist2):$parlist2
+
+//	array2string($parlist):$parlist
+//	array2string($parlist2):$parlist2
+
+        $localpref=userdir+'/user_preferences/'+operator+'localprefs'
+        write('reset',$localpref)
+        $globalpref=userdir+'/user_preferences/'+operator+'globalprefs'
+        write('reset',$globalpref)
+        $updatepref=userdir+'/user_preferences/'+operator+'updateprefs'
+	write('reset',$updatepref)
+
+	if ($parlist[1]<>'') then
+		writeparam($localpref,'$parlist')
+	endif
+	if ($parlist2[1]<>'') then
+		writeparam($globalpref,'$parlist2','global')
+	endif
+
+	teststr('UserPrefs','UpdatePrefs','global'):$ret
+	if ($ret) then
+	     write('file',$updatepref,'%s',UserPrefs[$ret+1])
+	endif
+	   
+	write('line3','User preferences saved')
+	UserPrefs('user','refresh')
+
+"************************************************************************"
+ELSEIF ($1='init') THEN
+
+   $adminfile=$admindir+'/cpadmin_userprefs'
+   $adminfile2=$admindir+'/cpadmin_userprefs_temp'
+   $adminfile3=$admindir+'/cpadmin_userprefs_global'
+
+   write('reset',$adminfile)
+   write('reset',$adminfile3)
+
+   $list=''
+   module('arraylist','localprefs'):$list
+//   string2array($list):$list
+   $total=size('$list')
+   $i=1
+   repeat
+        write('file',$adminfile,'%s',$list[$i])
+        $i=$i+1
+   until $i > $total
+
+   copy($adminfile,$adminfile2):$dum
+
+   $list=''
+   module('arraylist','globalprefs'):$list
+//   string2array($list):$list
+   teststr('$list','plotter','local'):$ispl
+   teststr('$list','printer','local'):$ispr
+   if ($ispl) and ($ispr) then
+	write('file',$adminfile3,'plotterprinter')
+   elseif ($ispr) then
+	write('file',$adminfile3,'printer')
+   elseif ($ispl) then
+	write('file',$adminfile3,'plotter')
+   endif
+
+
+"************************************************************************"
+ELSEIF ($1 = 'writeprpl') THEN
+
+   $adminfile3=$admindir+'/cpadmin_userprefs_global'
+   write('reset',$adminfile3)
+   if ($2<>'') then
+	write('file',$adminfile3,'%s',$2)
+   endif
+
+"************************************************************************"
+ELSEIF ($1 ='savemodule') THEN
+
+   if ($# > 1) then
+	UserPrefs('writeprpl',$2)
+   endif
+   $adminfile=$admindir+'/cpadmin_userprefs'
+   $adminfile2=$admindir+'/cpadmin_userprefs_temp'
+   $adminfile3=$admindir+'/cpadmin_userprefs_global'
+
+   exists(userdir+'/modules','directory'):$direx
+   if ($direx=0) then
+        mkdir(userdir+'/modules'):$dum
+        exists(userdir+'/modules','directory'):$direx
+   endif
+
+   $diff=0
+   shell('(diff -b '+$adminfile+' '+$adminfile2+' | wc -l)'):$diff
+   if ($diff) then
+        write('reset',userdir+'/modules/localprefs')
+        $list2='' $s2=''
+        readfile($adminfile,'$list2','$s2','','local'):$total
+        if ($total=0) then  $diff=0 endif
+   endif
+
+   $list3=''
+   if ($diff) then
+        $i=1 $j=1
+        repeat
+	  substr($list2[$i],1):$parname
+          if ($parname<>'') then
+             $where='' $is=0 $type=''
+             is_param($parname):$is,$where,$type
+             if ($is>0) then
+                if ($where<>'current') then
+                   write('error','Parameter %s is %s. Cannot use in userpreferences',$parname,$where)
+                   $is=0
+                endif
+                if ($type<>'real') and ($type<>'string') then
+                   $is=0
+                endif
+             else
+                write('error','Parameter %s not found in curpar',$parname)
+             endif
+             if ($is>0) then
+                $list3[$j]=$parname
+                $j=$j+1
+             endif
+          endif
+          $i=$i+1
+        until $i > $total
+
+        $total=size('$list3')
+        if ($list3[1]='') then $total=0 endif
+        if ($total>0) then
+           writeparam(curexp+'/cpadmintemp','$list3')
+           $i=1
+           repeat
+                $parname=$list3[$i]
+                if typeof($parname) then
+                   if ($parname<>'solvent') then
+                        {$parname}=''
+                   endif
+                else
+                   {$parname}=0
+                endif
+                $i=$i+1
+           until $i > $total
+	   writeparam(userdir+'/modules/localprefs','$list3')
+           fread(curexp+'/cpadmintemp')
+           rm('-f',curexp+'/cpadmintemp'):$dum
+           write('line3','localprefs module edited')
+        endif
+   endif
+
+   $list=''
+   module('arraylist','globalprefs'):$list
+   $prplot='' $newprplot=''
+//   string2array($list):$list
+   teststr('$list','plotter','local'):$ispl
+   teststr('$list','printer','local'):$ispr
+   if ($ispl) and ($ispr) then
+	$prplot='plotterprinter'
+	$list[$ispl]='' $list[$ispr]=''
+   elseif ($ispr) then
+	$prplot='printer'
+	$list[$ispr]=''
+   elseif ($ispl) then
+	$prplot='plotter'
+	$list[$ispl]=''
+   endif
+   shell('('+$tailX+' -n 1 '+$adminfile3+')'):$newprplot
+   substr($prplot,1):$prplot
+   if ($prplot<>$newprplot) then
+	write('reset',userdir+'/modules/globalprefs')
+	if ($newprplot='plotterprinter') then
+		$list=$list,'plotter','printer'
+	elseif ($newprplot='printer') then
+		$list=$list,'printer'
+	elseif ($newprplot='plotter') then
+		$list=$list,'plotter'
+	endif
+	array2array($list):$list
+	if ($list[1]<>'') then
+		writeparam(userdir+'/modules/globalprefs','$list','global')
+	endif
+	write('line3','globalprefs module edited')
+   endif
+	    
+   UserPrefs('init')
+   UserPrefs('default')
+
+"************************************************************************"
+
+ENDIF

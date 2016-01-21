@@ -1,0 +1,420 @@
+"macro cplcsq"
+// lcpack equivalent of lcsq.  The lcsq macro
+//   diverts several sections to cplcsq
+
+$tailX='tail'
+whichtail:$tailX
+
+if $#<0.5 then return endif
+
+"********************************************************************"
+IF ($1='initauto') THEN
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    lcpeak = 0
+    retentiontime = ''
+    sqname = 'peak$lcpeak$_'
+    if lcexp='enterA' then
+      sqname = 'loop$lcpeak$_'
+    endif
+    autoname=''
+
+    setLCnmrSampleTags
+    autodir = savefile
+    cpautodir=autodir
+    activestudy = autodir
+    xmtune('autoinit')
+
+    bgmode_is:$bg
+    if ($bg=0) then
+      $file=userdir+'/persistence/.talk2j'
+      write('reset',$file)
+      write('file',$file,'%s',vnmraddr)
+    endif
+
+// create autodir
+    exists(autodir,'directory'):$d
+    if not ($d) then
+      mkdir(autodir)
+    endif
+    updateautodir(autodir,'enterQ')
+    mkNewPeakEntry('genpeak')
+    writeparam(userdir+'/global','autodir cpautodir','global','add')
+    vnmrjcmd('LOC add automation "'+autodir+'"')
+    if (sqdisplay[1]='tray') then
+	SQDisplay('refresh')
+    endif
+
+//  What is the following doing ??
+//      if (lcexp='enterA') then
+//        lcsq('bypass','delete')
+//        lcsq('bypass','add')
+//      endif
+
+  endif
+
+"**********************************************************************"
+ELSEIF ($1='go') THEN
+  if (lcexp='stop' or lcexp='enter' or lcexp='enterA') then
+    exists(systemdir+'/tmp/Autoscout.par','file'):$e
+    if not ($e) then
+      write('error','Cannot find Autoscout.par.  Please run Trial Wet before LC-NMR run.')
+      return
+    endif
+
+    if (lcexp='stop' and lcHoldType<>'indefinite') then
+      mkNewPeakEntry('genpeak','check')
+      if (auto='n') then
+        write('reset',userdir+'/persistence/sqstop')
+      endif
+    endif
+    autodir = savefile
+    cpautodir=autodir
+    writeparam(userdir+'/global','autodir cpautodir','global','add')
+  endif
+
+"**********************************************************************"
+ELSEIF ($1='mkprotocol') THEN
+
+  iscpprotocol('Autoscout'):$xmlex,$xmlpath
+  if ($xmlex=0) then
+     $a1='Autoscout'
+     $a2=''
+     $a3='LC_NMR'
+     $a4=60
+     $a5=$a1
+     mkCPprotocol($a1,$a2,$a3,$a4,$a5)
+     vnmrjcmd('util','updateexpsel',$a1,$a1,$a3,'','')
+  endif
+  return
+
+"**********************************************************************"
+ELSEIF ($1='initstudy') THEN
+  return
+
+"**********************************************************************"
+ELSEIF ($1='convert') THEN
+  if ($# > 1) then lcpeak=$2 endif
+  mkNewPeakEntry(lcpeak)
+	
+"**********************************************************************"
+ELSEIF ($1='isLCrunning') THEN
+
+   if (lcRunActive=1) then return(1) endif
+   shell('(cat '+autodir+'/enterQ | grep -wc PEAK#:)'):$is
+   if ($is) then return(1) endif
+   shell('(cat '+autodir+'/enterQ.macdir/cpdoneQ | wc -l)'):$is
+   if ($is) then return(1) endif
+   shell('(cat '+autodir+'/enterQ.macdir/currentsamplinfo | grep -wc PEAK#:)'):$is
+   if ($is) then return(1) endif
+   return(0)
+
+"**********************************************************************"
+ELSEIF ($1='getNumPeaks') THEN
+   $ret='' $is=0
+   shell('(cat '+autodir+'/enterQ | grep -wc PEAK#:)'):$is
+   format($is,0,0):$ret
+   return($ret)
+"**********************************************************************"
+ELSEIF ($1='MethodType') THEN
+
+   $type=''
+   if (lcexp='scout') then $type='On Flow'
+   elseif (lcexp='iso') then $type='OnFlow (isocratic)'
+   elseif (lcexp='stop') then $type='Stop Flow'
+   elseif (lcexp='enter') then $type='Stop Flow'
+   elseif (lcexp='enterA') then $type='Analyte Elution'
+   elseif (lcexp='analyte') then $type='Analyte collection'
+   elseif (lcexp='lcalone') then $type='Chromatography'
+   endif
+   return($type)
+
+"**********************************************************************"
+ELSEIF ($1='BackupCursq') THEN
+    if ($2<>'clear') and ($2<>'put') and ($2<>'get') then
+	return
+    endif
+    if ($2='clear') then
+	exists(autodir+'/enterQ.macdir/cursqexp','directory'):$direx
+        if ($direx) then
+   	    shell('rm -rf '+autodir+'/enterQ.macdir/cursqexp'):$dum
+	endif
+   	return
+    endif
+    if ($2='put') then
+   	$fromdir=cursqexp
+   	$destindir=autodir+'/enterQ.macdir/cursqexp'
+    else
+   	$fromdir=autodir+'/enterQ.macdir/cursqexp'
+   	$destindir=cursqexp
+    endif
+    if ($fromdir='') or ($destindir='') then return endif
+
+    exists($fromdir,'directory'):$direx
+    if ($direx=0) then return endif
+    exists($destindir,'directory'):$direx
+    if ($direx=0) then
+   	shell('mkdir -p '+$destindir):$dum
+    endif
+
+    $files='EXPLIST','EXPdeledit','macdir','tmpstudy'
+    $ftot=size('$files')
+    pwd:$curdir
+    $i=1
+    repeat
+    	$f1=$fromdir+'/'+$files[$i]
+    	$f2=$destindir+'/'+$files[$i]
+    	exists($f1,'file'):$fex1
+    	exists($f2,'file'):$fex2
+    	if ($fex1) and ($fex2) then
+	    shell('rm -rf '+$f2):$dum
+    	endif
+    	$i=$i+1
+    until $i > $ftot
+    array2string($files):$files
+    pwd:$curdir
+    cd($fromdir):$dum
+    shell('(tar cf - '+$files+' | (cd '+$destindir+'; tar xfBp -))'):$dum
+    cd($curdir):$dum
+
+    if ($2='put') then
+	write('reset',$destindir+'/lastlcexp')
+	write('file',$destindir+'/lastlcexp','%s',lcexp)
+    endif
+
+"**********************************************************************"
+ELSEIF ($1='LastLcExp') THEN
+    $ret=''
+    $file=autodir+'/enterQ.macdir/cursqexp/lastlcexp'
+    exists($file,'file'):$fex
+    if ($fex) then
+	lookup('mfile',$file,'read',1):$ret
+    endif
+    return($ret)
+
+"**********************************************************************"
+ELSEIF ($1='done') THEN
+
+    write('reset',autodir+'/enterQ')
+    xmhaha_asx(autodir,'DayQ')
+    emessage('LCdone')
+
+    $dir=autodir+'/..'
+    exists('studyid_','parameter'):$e
+    if $e<0.5 then create('studyid_','string') endif
+    setvalue('studyid_',lcid)
+    exists('operator_','parameter'):$e
+    if $e<0.5 then create('operator_','string') endif
+    setvalue('operator_',operator)
+    $parlist = 'studyowner name ident studyid_ operator_ lcexp samplename notebook page'
+    writeparam($dir+'/lcpar',$parlist)
+    //save study to locator
+    vnmrjcmd('LOC add lcstudy "'+$dir+'"')
+
+"**********************************************************************"
+ELSEIF ($1='startnmr') THEN
+// start NMR run
+
+  $lcpeak=0 $time=''
+  if $#>1.5 then $lcpeak=$2 endif
+  if $#>2.5 then
+    format($3,5,3):$time
+  endif
+
+  retentiontime = $time
+  retentiontime_ = retentiontime
+
+  $dtrig=0
+  exists('dtrig','parameter'):$e
+  if ($e) then $dtrig=trunc(dtrig) endif
+  if ($dtrig > 0.5) then
+    write('line3','%s:  peak %g  retention time %s  equilibrating %g sec',$1,$lcpeak,$time,$dtrig)
+    $s='' format($dtrig,1,0):$s
+    shell('sleep '+$s):$x
+    shell('sync; sync; sync'):$x
+  else
+    write('line3','%s:  peak %g  retention time %s',$1,$lcpeak,$time)
+  endif
+
+  if (lcHoldType = 'indefinite') then
+    lcpeak=$lcpeak
+    if (lcexp='stop') then
+      return
+    endif
+  endif
+  exists(autodir+'/enterQ','file'):$fileex
+  if ($fileex=0) then
+	cplcsq('initauto')
+  endif
+  if (lcexp = 'stop') then
+	cplcsq('convert',$lcpeak)
+  endif
+  if (lcexp='enter' or lcexp='enterA' or lcexp='stop') then
+	$locdir='' $loc=''
+	getlocid(autodir+'/enterQ'):$loc,$locdir
+	if ($locdir[1]<>'') then
+	   $locdir=autodir+'/enterQ.macdir/'+$locdir[1]
+	   $OK=1
+	   if (lcexp='enter') then
+	   	$expectedRT=''
+	   	rtv($locdir+'/sampleglobal','noabort','retentiontime_'):$expectedRT
+		on('rettimeRange','global'):$parex
+		if ($parex>0) then
+		   if rettimeRange=0 then $parex=0 endif
+		endif
+	   	if ($expectedRT<>'') and (retentiontime_<>'') and ($parex>0) then
+		    $rtexp=0 $currt=0
+		    format($expectedRT,'lower'):$rtexp
+		    format(retentiontime_,'lower'):$currt
+		    $rtexp=$rtexp*60 $currt=$currt*60
+		    $diff=0 abs($rtexp-$currt):$diff
+		    if ($diff>rettimeRange) then
+			$OK=0
+		    endif
+		endif
+	   endif
+	   if ($OK) then
+	      writeparam($locdir+'/sampleglobal','retentiontime_','current','add')
+	      writeparam($locdir+'/day/sampleglobal','retentiontime_','current','add')
+	   else
+	      cplcsq('rearrangeEnterQ',$lcpeak,retentiontime_):$lcpeak
+	      cplcsq('convert',$lcpeak)
+	   endif
+	else
+	   cplcsq('convert',$lcpeak)
+	endif
+    	autora
+  endif
+"**********************************************************************"
+ELSEIF ($1='rearrangeEnterQ') THEN
+
+  $start=$2
+
+  $eq=autodir+'/enterQ'
+  $md=$eq+'.macdir'
+
+  $loc='' $locdirs=''
+  getlocid($eq):$loc,$locdirs
+  if ($loc[1]='') or ($loc[1]='0') then 
+//  There are no entries in enterQ
+    return($start) 
+  endif
+  $rearrange=1
+
+// First find out all peaks with expected rettime
+//  less than the current rettime.  They should be
+//  considered as errored Peaks
+  if ($3<>'') then
+    $total=size('$locdirs')
+    shell('(cat '+$eq+' | wc -l)'):$totlines
+    $linepersamp=$totlines/$total
+
+    $crt=0 format($3,'lower'):$crt
+    $crt=$crt*60
+    $elocdir='' $eloc='' $j=0
+    $i=1
+    repeat
+        $rt='' $prt=$crt
+        rtv($md+'/'+$locdirs[$i]+'/sampleglobal','noabort','retentiontime_'):$rt
+        if ($rt<>'') then $prt1=0 format($rt,'lower'):$prt1 $prt=$prt1*60 endif
+        if ($prt<$crt) then
+           $elocdir[$j+1]=$locdirs[$i]
+           $eloc[$j+1]=$loc[$i]
+           $loc[$i]='' $locdirs[$i]=''
+           $j=$j+1
+        else
+           $i=$total
+        endif
+        $i=$i+1
+    until $i > $total
+    if ($j>0) then
+        $tail='' format($totlines-($j*$linepersamp),0,0):$tail
+        shell('(cat '+$eq+' | '+$tailX+' -n '+$tail+' > '+$eq+'1)'):$dum
+        shell('mv '+$eq+'1 '+$eq):$dum
+        shell('rm -f '+$eq+'1'):$dum
+        $i=1
+        repeat
+            $sampname='' $who='' $status=''
+            checklocstatus($eq,$eloc[$i]):$status,$who,$sampname
+            updatestatus(autodir,$eloc[$i],'Error')
+            write('file',$md+'/cperrorQ','SAMPLE#: %s %s %s %s',$eloc[$i],$sampname,$elocdir[$i],$who)
+            $i=$i+1
+        until $i > $j
+        xmhaha_asx(autodir,'ErrorQ')
+	$start=$start+$j
+    	$loc='' $locdirs=''
+    	getlocid($eq):$loc,$locdirs
+    	if ($loc[1]='') or ($loc='0') then
+            $rearrange=0
+    	endif
+    endif
+  endif
+
+// Now proceed to rearrange the enterQ.  These are peaks
+//   with expected retentiontime later than the current retentiontime
+// Some assumptions made here are:
+// The enterQ is populated with Peaks in an ascending order
+// Current peak (i.e., PEAK#: being lcpeak) is in the top of the enterQ
+//   and all peak numbers in enterQ need to be incremented by 1
+
+  if ($rearrange) then
+    $total=size('$locdirs')
+    shell('(cat '+$eq+' | wc -l)'):$totlines
+    $linepersamp=$totlines/$total
+    $eq1=$eq+'1'
+    write('reset',$eq1)
+    $tail='' format($linepersamp,0,0):$tail
+    $eqtmp=$eq+'tmp'
+  
+    module('add','studypar','basic')
+    savestudypar(curexp)
+
+    $nlocdirs='' $j=1
+    $i=1
+    repeat
+	write('reset',$eqtmp)
+	$newloc='' format($start+$i,0,0):$newloc
+	Svfname($md+'/loc'+$newloc+'_%R3%',''):$nlocdir
+	shell('basename '+$nlocdir):$nlocdir
+	$nlocdirs[$j]=$nlocdir $j=$j+1
+	shell('cp -r '+$md+'/'+$locdirs[$i]+' '+$md+'/'+$nlocdir):$dum
+	shell('chmod -R g+rw '+$md+'/'+$nlocdir):$dum
+	loc_=$start+$i
+
+	$head='' format($linepersamp*$i,0,0):$head
+	shell('(head -n '+$head+' '+$eq+' | '+$tailX+' -n '+$tail+' > '+$eqtmp+')'):$dum
+
+	$sedcmd=`sed -e 's|PEAK#:.*|PEAK#: `+$newloc+`|'`
+	shell($sedcmd+` `+$eqtmp+` > `+$eqtmp+`1`):$dum
+ 	shell('mv '+$eqtmp+'1 '+$eqtmp):$dum
+
+        $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$newloc+`|'`
+        shell($sedcmd+` `+$eqtmp+` > `+$eqtmp+`1`):$dum
+        shell('mv '+$eqtmp+'1 '+$eqtmp):$dum
+
+        $sedcmd=`sed -e 's|`+$locdirs[$i]+`|`+$nlocdir+`|'`
+        shell($sedcmd+` `+$eqtmp+` > `+$eqtmp+`1`):$dum
+        shell('mv '+$eqtmp+'1 '+$eqtmp):$dum
+	
+	savestudypar($md+'/'+$nlocdir)
+	shell('mv '+$md+'/'+$nlocdir+'/studypar '+$md+'/'+$nlocdir+'/Studypar'):$dum
+	shell('cat '+$eqtmp+' > '+$md+'/'+$nlocdir+'/day/sampleinfo'):$dum
+        shell('cat '+$eqtmp+' > '+$md+'/'+$nlocdir+'/night/sampleinfo'):$dum
+
+	shell('(cat '+$eqtmp+' >> '+$eq1+')'):$dum
+	updatestatus(autodir,$newloc,'Queued')
+	$i=$i+1
+    until $i > $total
+    getstudypar(curexp)
+    shell('rm '+curexp+'/studypar'):$dum
+    shell('cp '+$eq1+' '+$eq):$dum
+    shell('rm '+$eq1):$dum
+    shell('rm '+$eqtmp):$dum
+    xmhaha_subautoSQ(autodir,'',$nlocdirs)
+    xmhaha_asx(autodir,'DayQ')
+  endif
+
+  SQDisplay('refresh')
+  return($start)
+
+"**********************************************************************"
+ENDIF

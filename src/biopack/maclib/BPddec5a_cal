@@ -1,0 +1,179 @@
+"macro BPddec5a_cal"
+"BPddec5a_cal:" 
+"      Calibrates 2H pw90 using channel 5. The 2H rf is routed"   
+"      to 2H Automation Relay which sends it to the diplexer box and"
+"      then to lock BNC on the probe. Thus the calibration is valid for"
+"      2H pw90 or decoupling rf field when using channel 5 for 2H"
+"      Use BPddec5a_cal for channel 5 calibrations"
+
+"      IMPORTANT: ampmode must be 'p' for the amplifier used for 2H."
+
+if ($#=0) then
+
+   if (BPplot='file') then
+    BPplotdir=userdir+'/AutoTripRes'
+   endif
+   exists('dofidsave','parameter'):$e
+   if $e then dofidsave='n' endif
+   water
+   ssfilter='n'
+   presat='y' satmode='nnn' watergate='n' jumpret='n' wet='n' shaped='n'
+   $date=''
+   BPgetdate:$date
+
+  $dir=userdir+'/AutoTripRes'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+        shell('mkdir -p ' +$dir2):$dum
+    endif
+    mv($dir,$dir2+'/AutoTripRes_'+$date)
+  endif
+           
+   $vtset=''
+   shell('showstat > ',curexp+'/stat'):$dummy
+   lookup('file',curexp+'/stat','VT','active:','read'):$vtset,$ret
+   delete(curexp+'/stat')
+   if $ret then
+     format($vtset,0,1):temp
+   endif
+   setfrq 
+   text('Finding 2H pulse power on channel 5\\ for pw90~150usec ')
+   r5=lockpower
+   gain=10 sw=4000 np=8192
+   if (sfrq>601) then pw=200 else pw=125 endif
+   tn='lk' sethw('lock','off'):$xxx
+   dn='H1'
+   seqfil='ddec5'
+   if numrfch<5 then 
+    write('line3','Incorrect Test: There are fewer than 5 channels')
+    banner('Incorrect test: There are fewer than 5 channels')
+    return
+   endif 
+   r4=z0 lockpower=0
+   sethw('nowait','lockpower',lockpower):$x
+   dn4='H2' dof4=0 tof=0
+   dpwr4=40  rof2=300
+   nt=1 wnt='' av
+   wexp='BPddec5a_cal(`PART1`)'
+   au
+
+elseif ($1='PART1') then
+
+   wft f  vsadj(100) ds peak:$ht,cr movetof
+   dof4=tof
+   exists('maxattench5','parameter','global'):$e
+   if $e=1 then
+    if maxattench5<50 then
+     banner('2H Maximum Power Limit Too Low, Reset>50')
+     return
+    endif
+    array('dpwr4',maxattench5-29,30,1)       
+   else
+    array('dpwr4',30,30,1)
+   endif
+   "d1=6*d1   account for 2H relaxation ~6x longer than 1H"
+   crl rfl=sw/2 rfp=0 
+   wnt='wft crl rfl=sw/2 rfp=0 dssh sp=-200 wp=400 select(1) vsadj(10)  BPfind2Hpwr' 
+   write('line3','Determining est. of 2H pw90 power using Channel 5 ')
+   vp=0 
+   wexp='BPddec5a_cal(`PART2`)'
+   au
+
+elseif ($1='PART2') then
+   wft
+   BPsvf(userdir+'/AutoTripRes/ddec5_1')
+      pap
+      pps(120,90,wcmax-120,90)
+      pl('all') BPpage
+   BPfind2Hpw90:$best dpwr4=dpwr4[$best]
+   select($best)  vsadj(80) vp=80
+   write('line3','finding first est. of 2H pw360')
+   text('Finding est. of 2H pw360 using Channel 5')
+   array('pw',16,3.0*pw,0.1*pw)
+   wnt='wft crl rfl=sw/2 rfp=0 sp=-200 wp=400 dssh' 
+   wexp='BPddec5a_cal(`PART3`)'
+   au
+
+elseif ($1='PART3') then
+   wft
+   write('line3','calculating first estimate of pw360')
+   BPsvf(userdir+'/AutoTripRes/ddec5_2')
+      pap
+      pps(120,0,wcmax-120,90)
+      pl('all') BPpage
+   BP2Hpw90cal('pw'):pw
+   write('line3','finding second estimate of 2H pw360')
+   array('pw',10,3.8*pw,0.04*pw)
+   wexp='BPddec5a_cal(`PART4`)'
+   au
+
+elseif ($1='PART4') then
+   sethw('z0',r4):$x
+   wft
+   write('line3','calculating final estimate of H2 pw360')
+   text('2H pw360')
+   seqfil='water'
+   BPsvf(userdir+'/AutoTripRes/ddec5_3')
+      pap
+      pl('all') BPpage
+   sethw('lockpower',r5):$xx
+   BP2Hpw90cal('pw'):pw 
+   pw=pw  "force 0.1usec stepsize"
+   write('line3','H2pw90 (CH5) = %2.2f at power = %2.0f',pw,dpwr4)
+
+   pw=trunc(10*pw + 0.5)/10
+
+   $pwD='' format(pw,3,1):$pwD
+   $pwDlvl='' format(dpwr4,2,0):$pwDlvl
+
+   BPsetparams('pw90',$pwD,'H2')
+   BPsetparams('pwD',$pwD,'H2')
+   BPsetparams('pwx',$pwD,'H2')
+   BPsetparams('pwxlvl',$pwDlvl,'H2')
+   BPsetparams('tpwr',$pwDlvl,'H2')
+   BPsetparams('pwDlvl',$pwDlvl,'H2')
+   dmf4=1e6/pw 
+   tn='H1' sethw('lock','on'):$xxx
+
+  if (sfrq>601) then   "700/750/800/900 probes have different design" 
+   ln(500.0/pw):$ln  "set pw90 for decoupling to 500usec (0.5kHz)"
+   dpwr4=dpwr4-20.0*$ln*0.43429
+   dpwr4=dpwr4+0.5
+   dpwr4=trunc(dpwr4)
+   dmf4=1e6/500.0
+   dmf4adj
+  else
+   ln(250.0/pw):$ln  "set pw90 for decoupling to 250usec (1kHz)"
+   $dpwr4=dpwr4-20.0*$ln*0.43429
+   dpwr4=$dpwr4+0.5
+   dpwr4=trunc(dpwr4)
+   dmf4=1e6/250.0
+   dmf4adj
+  endif
+
+" if BPpwrlimits, limit dpwr4 to BPdpwr4max and adjust dmf4 "
+  if BPpwrlimits=1 then
+   if BPdpwr4max<dpwr4 then
+    ln(10):$ln10
+    $exp=$ln10/20*(dpwr4-BPdpwr4max)
+    exp($exp):$factor
+    dmf4=dmf4/$factor
+    dmf4adj
+    dpwr4=BPdpwr4max
+   endif
+  endif
+
+   dof4=dof4-2*dfrq4   "set 2H frequency to ~2.5ppm"
+
+   $dpwr3D='' format(dpwr4,2,0):$dpwr3D
+   BPsetparams('dpwr3D',$dpwr3D,'H2')
+   $dmf3D='' format(dmf4,5,1):$dmf3D
+   BPsetparams('dmf3D',$dmf3D,'H2')
+   $dof3D='' format(dof4,5,1):$dof3D
+   BPsetparams('dof3D',$dof3D,'H2')
+
+ banner('2H AutoCalibrate and Probefile Update Finished')
+endif

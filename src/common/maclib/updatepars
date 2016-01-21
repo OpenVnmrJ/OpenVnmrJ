@@ -1,0 +1,44 @@
+"macro updatepars"
+"*************************************************************************"
+"updatepars(directory)  fixs parameters of all the parameter sets and data"
+"                       sets in the specified directory                   "
+"                       example  updatepars('/vnmr/parlib')               "
+"*************************************************************************"
+
+if ($# <> 1) then
+   write('error','A single directory name must be supplied to updatepars')
+   abort
+endif
+exists($1,'directory'):$e
+if ($e < 0.5) then
+   write('error','Directory %s does not exist',$1)
+   abort
+endif
+getfile($1):$entrys
+write('alpha','directory %s has %d entries',$1,$entrys)
+$inode = 0
+$filename = ''
+$ext = ''
+while ($inode < $entrys) do
+   $inode = $inode + 1
+   getfile($1,$inode):$filename,$ext
+   if (($ext = 'fid') or ($ext = 'par')) then
+      $path = $1 + '/' + $filename + '.' + $ext + '/procpar'
+      exists($path,'file'):$e
+   else
+      $e = 0
+   endif
+   if ($e > 0.5) then
+      write('alpha','  Entry %d: Update %s.%s',$inode,$filename,$ext)
+      fread($path)
+      prune($path)
+      parfix
+      fsave($path)
+   else
+      $notpar = $filename
+      if ($ext <> '') then
+         $notpar = $filename + '.' + $ext
+      endif
+      write('alpha','  Entry %d:  %s is not a parameter file',$inode,$notpar)
+   endif
+endwhile

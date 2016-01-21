@@ -1,0 +1,172 @@
+"macro ATsetupshapes"
+" sets up shapes  for power-limited case"
+" creates waveforms at_WURSTxx.DEC, where xx is the number of 13C ppm bandwidth"
+" sets dseq,dpwr,dres,dmf into array
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(at_max_dpwr,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+"check if parameters have been calibrated. If not skip test"
+if (at_LBampl_comprc<0.1) then ATnext return endif
+if (at_pwx90c<0.1) then ATnext return endif
+if (at_pwx90lvlc<0.1) then ATnext return endif
+
+format(60.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 50 ppm "
+ $wave = 'WURST40' + $bw + '/1.4ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst50.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+
+shell('Pbox')
+ATpboxget('at_wurst50.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst50.DEC'):dseq[1],$par,dpwr[1],$par,dres[1],dmf[1]
+
+format(60.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 50 ppm "
+ $wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst50a.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ ATpboxget('at_wurst50a.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+ATpboxget('at_wurst50a.DEC'):dseq[2],$par,dpwr[2],$par,dres[2],dmf[2]
+
+format(90.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 80 ppm "
+$wave = 'WURST40' + $bw + '/1.4ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst80.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst80.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst80.DEC'):dseq[3],$par,dpwr[3],$par,dres[3],dmf[3]
+
+format(90.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 80 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst80a.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst80a.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst80a.DEC'):dseq[4],$par,dpwr[4],$par,dres[4],dmf[4]
+
+format(130.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 110 ppm "
+$wave = 'WURST40' + $bw + '/1.4ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst110.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst110.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst110.DEC'):dseq[5],$par,dpwr[5],$par,dres[5],dmf[5]
+
+format(130.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 110 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst110a.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst110a.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst110a.DEC'):dseq[6],$par,dpwr[6],$par,dres[6],dmf[6]
+
+format(160.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 140 ppm "
+$wave = 'WURST40' + $bw + '/1.4ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst140.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst140.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst140.DEC'):dseq[7],$par,dpwr[7],$par,dres[7],dmf[7]
+
+format(160.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 140 ppm "
+$wave = 'WURST2' + $bw + '/1.01ms'
+opx
+setwave($wave)
+pbox_rst
+pboxpar('name', 'at_wurst140a.DEC')
+pboxpar('ref_pwr', at_pwx90lvlc)
+pboxpar('ref_pw90', at_pwx90c*at_LBampl_comprc)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+pboxpar('$1 adb','2.0') "this can be omitted for 2db less power, but > sideband"
+shell('Pbox')
+ATpboxget('at_wurst140a.DEC'):$name,$par,$dpwr,$par,$par,$par
+if $dpwr>at_max_dpwr then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+endif
+ATpboxget('at_wurst140a.DEC'):dseq[8],$par,dpwr[8],$pwr,dres[8],dmf[8]
+
+

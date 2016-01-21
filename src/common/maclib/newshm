@@ -1,0 +1,143 @@
+"macro newshm"
+
+"  newshm - set up shim 'method' for auto shimming"
+
+exists(userdir+'/shimmethods','directory'):$e
+if ($e=0) then
+    mkdir(userdir+'/shimmethods')
+endif
+
+repeat
+    input('create a shim method named: '):$ans1
+    $filepath=systemdir+'/shimmethods/'+$ans1
+    exists($filepath,'file'):$e
+    if ($e=0) then
+        $filepath = userdir+'/shimmethods/'+$ans1
+        exists($filepath,'file'):$e
+    endif
+    if ($e) then
+        write('line3',' \'method\' %s already exists, use another name',$ans1) 
+    endif
+until $e=0 "valid name"
+
+clear(4)
+write('reset',$filepath)
+$ans2=4
+$sss=''
+
+$3=' '
+$19=' '
+$20=0
+$setdelay = 0
+$ss5=' '
+$ss6=' '
+repeat "allow for multiple shim program calls"
+    
+    input('do you wish to do fid shimming in this operation? (y/n)? '):$ans0
+    if $ans0='y' then 
+	$fidshm=1 
+        write('alpha','FID shimming selected, allow longer shimming time')
+    else 
+	$fidshm=0
+    endif
+    if ($fidshm=0) and ($setdelay=0) then
+        write('alpha','what lock solvent should be assumed?')
+        write('alpha','    1: fast relaxing lock (d2o)')
+        write('alpha','    2: normal relaxing lock (cdcl3, c6d6, or dmso-d6)')
+        write('alpha','    3: slowly relaxing lock (acetone-d6)')
+        write('alpha','    4: use actual solvent to set rate')
+        input('your selection for solvent (1,2,3, or 4):'):$ans2
+        $delay='60'
+        if $ans2<>4 then "set up relaxation delay"
+            if $ans2=1 then 
+        	    $delay = '40'
+            else
+                if $ans2=3 then
+                    $delay = '150'
+                endif
+            endif
+    	$setdelay=1
+    	$sss=$sss+'d'+$delay+','
+        endif
+        if $ans2<>4 then $20=$20+6 endif "length of method file"
+    endif
+    
+    input(' input time limit for shimming, seconds (0 for no limit) :'):$3
+    if $3<>'0' then "set up time limit"
+	$sss=$sss+'t'+$3+','
+	$20=$20+6 "keep track of length of file"
+    endif
+    write('alpha','gradients to shim?')
+    write('alpha','    1: z1              6: z1,z2,z3')
+    write('alpha','    2: z2              7: z1,z2,z4')
+    write('alpha','    3: z3              8: z1,z2,z3,z4,z5')
+    write('alpha','    4: z4              9: 7 lowest order non-spinners')
+    write('alpha','    5: z1,z2          10: all non-spinners')
+
+    input('your choice of gradients (1 through 10): '):$2
+    if ($2<1) or ($2>10) then return endif
+
+    if $fidshm then
+        input('start of fid evaluation range, 0-90, 0 recommended: '):$ans5
+        if ($2=1) or ($2=2) or ($2=5) then
+            input('end of fid evaluation range, 2-100, 100 recommended: '):$ans6
+        else
+            input('end of fid evaluation range, 0-100, 10 recommended: '):$ans6
+ 	endif
+	if $ans6>100 then $ans6=100 endif
+	if $ans6<2 then $ans6=2 endif
+	if $ans5>$ans6-2 then $an5=$ans6-2 endif
+	if $ans5<0 then $ans5=0 endif
+	write('file','tnewshm','%d %d',$ans5,$ans6)
+	lookup('file','tnewshm','read',2):$ss5,$ss6
+	rm('tnewshm')
+	$sss=$sss+'f:'+$ss5+','+$ss6+','
+    endif
+
+    if ($2=9) or ($2=10) then
+	    $sss=$sss+'rn,'   		"turn off spinner"
+	    write('alpha','spinner turned off for selection %d',$2) 
+    else
+	    $sss=$sss+'ry,'
+    endif
+    
+    if $2=1 then $sss=$sss+'sz1' else
+    if $2=2 then $sss=$sss+'sz2' else
+    if $2=3 then $sss=$sss+'sz3' else
+    if $2=4 then $sss=$sss+'sz4' else
+    if $2=5 then $sss=$sss+'szq' else
+    if $2=6 then $sss=$sss+'szt' else
+    if $2=7 then $sss=$sss+'szb' else
+    if $2=8 then $sss=$sss+'sza' else
+    if $2=9 then $sss=$sss+'stt' else
+    if $2=10 then $sss=$sss+'st7'
+	endif endif endif endif endif endif endif endif endif endif
+
+    write('alpha','shim criteria? ')
+    write('alpha','    1: loose to loose')
+    write('alpha','    2: loose to medium')
+    write('alpha','    3: medium to medium')
+    write('alpha','    4: medium to excellent')
+    write('alpha','    5: excellent to excellent')
+    input('your choice for shim criteria (1, 2, 3, 4, or 5):'):$ans3
+    if ($ans3<1) or ($ans3>5) then return endif
+    if $ans3=1 then $sss=$sss+':cll' else
+    if $ans3=2 then $sss=$sss+':clm' else
+    if $ans3=3 then $sss=$sss+':cmm' else
+    if $ans3=4 then $sss=$sss+':cme' else
+    if $ans3=5 then $sss=$sss+':cee'
+	endif endif endif endif endif
+    $20=$20+11
+    if $20<90 then "space exists to allow more shimming"
+	input('add further shimming to this \'method\' string  (y or n)? '):$19
+    else $19='n' "must close $filepath" endif
+    if ($19='y') or ($19='yes') then
+	write('alpha',' ')
+	$sss=$sss+','
+    endif
+until ($19<>'y') and ($19<>'yes')
+write('file',$filepath,'%s;',$sss) "close method"
+dshim($ans1)
+write('alpha',' ')
+write('alpha','To shim, type: method=\'%s\' shim',$ans1)
+

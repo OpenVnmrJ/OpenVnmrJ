@@ -1,0 +1,51 @@
+Protocol: Br24  Sequence: br24.c  Apptype: solidseq1d
+
+Description:
+
+   "X" acquisition with interleaved BR24. Non-quadrature phase cycle.
+
+Additional Software:
+
+reset_br24 - This macro uses the calibrated values of pwX90 and aX90 
+to calculate the initial parameters for br24X.  This macro is run from
+the protocol.
+
+Parameter Groups:
+
+prepX:  Module:  no
+Sequence:  br24q.c
+Description:  Implements a variable length pulse to provide quadrature
+              detection about a tilted precession axis. Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses.
+       pwXprep - 90-degree flip on the obs channel.
+       phXprep - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+
+br24X: Module:  yes
+Sequence:  br24.c 
+Description:  Implements BR24 on obs with acquisition in the first
+              window.
+Parameters:  Sequence Page
+       aXbr24 - amplitude of obs pulses.
+       pwXbr24 - 90-degree flip on obs.
+       r1Xbr24 - pre-pulse delay (similar to rof1).
+       r2Xbr24 - post_pulse delay (similar to rd or rof2).
+       r3Xbr24 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3
+              is not defined). 
+       tauXbr24 - time for one "one-tau" window and pulse.
+       npaXbr24 - number of 100 ns ticks in the detection window.
+       chXbr24 = 'obs' must be set (not shown).
+ Implementation:  WMPA br24 = getbr24("br24X");
+ Underscore function: _br24(br24,phXbr24);  phXbr24 is the overall
+              phase table.
+

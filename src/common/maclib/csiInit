@@ -1,0 +1,120 @@
+"macro csiInit"
+//these are shared global parameters used by CSI macros and panels
+
+// when csiReviewMode=0 phasefile SPEC is displayed 
+// when csiReviewMode=1 fdf spec is displayed 
+exists('csiReviewMode','parameter','global'):$e
+if (not $e) then
+   create('csiReviewMode','real','global')
+   setgroup('csiReviewMode','processing','global')
+   setprotect('csiReviewMode','set',65808,'global')
+   csiReviewMode=0
+endif
+
+// csiShowOpt[1]=1/0 show/hide grid
+// csiShowOpt[2]=1/0 show/hide index 
+exists('csiShowOpt','parameter','global'):$e
+if (not $e) then
+   create('csiShowOpt','real','global')
+   setgroup('csiShowOpt','processing','global')
+   setprotect('csiShowOpt','set',65808,'global')
+   csiShowOpt=1,0
+endif
+$n = size('csiShowOpt')
+if($n<6) then csiShowOpt=1,0,0,0,0,0 endif
+
+
+// csiDisMode=0 not show data in grid 
+// csiDisMode=1 show spec in grid 
+// csiDisMode=2 show fid in grid 
+exists('csiDisMode','parameter','global'):$e
+if (not $e) then
+   create('csiDisMode','real','global')
+   setgroup('csiDisMode','processing','global')
+   setprotect('csiDisMode','set',65808,'global')
+   csiDisMode=1
+endif
+
+// specDisMode=0 default ds
+// specDisMode=1 spec ds 
+// specDisMode=2 show fid  
+// specDisMode=3 spec & baseline ds  
+exists('specDisMode','parameter','global'):$e
+if (not $e) then
+   create('specDisMode','real','global')
+   setgroup('specDisMode','processing','global')
+   setprotect('specDisMode','set',65808,'global')
+   specDisMode=1
+endif
+
+// used by mspec command
+exists('specColors','parameter','global'):$e
+if (not $e) then
+   create('specColors','string','global')
+   setgroup('specColors','processing','global')
+   setprotect('specColors','set',65808,'global')
+   specColors='`cyan`,`green`,`orange`,`magenta`,`pink`'
+endif
+
+exists('csiTraceSel','parameter','global'):$e
+if (not $e) then
+   create('csiTraceSel','string','global')
+   setgroup('csiTraceSel','processing','global')
+   setprotect('csiTraceSel','set',65808,'global')
+   csiTraceSel='spec:1'
+endif
+
+exists('csiMapSel','parameter','global'):$e
+if (not $e) then
+   create('csiMapSel','string','global')
+   setgroup('csiMapSel','processing','global')
+   setprotect('csiMapSel','set',65808,'global')
+   csiMapSel=''
+endif
+
+exists('csiMapName','parameter','global'):$e
+if (not $e) then
+   create('csiMapName','string','global')
+   setgroup('csiMapName','processing','global')
+   setprotect('csiMapName','set',65808,'global')
+   csiMapName=''
+endif
+
+exists('specShowCmd','parameter','global'):$e
+if (not $e) then
+   create('specShowCmd','string','global')
+   setgroup('specShowCmd','processing','global')
+   setprotect('specShowCmd','set',65808,'global')
+   specShowCmd='mspec(`SPEC`)'
+endif
+
+// csiMapType='li' or 'll' for integral or height
+exists('csiMapType','parameter','global'):$e
+if (not $e) then
+   create('csiMapType','string','global')
+   setgroup('csiMapType','processing','global')
+   setprotect('csiMapType','set',65808,'global')
+   csiMapType='li'
+   csiMapName='mmap_li'
+endif
+
+exists('csiProcmodule','parameter','global'):$e
+if (not $e) then
+   create('csiProcmodule','string','global')
+   setgroup('csiProcmodule','processing','global')
+   setprotect('csiProcmodule','set',65808,'global')
+   csiProcmodule='csiProc'
+endif
+
+exists('csiSpecVS','parameter','global'):$e
+if (not $e) then
+   create('csiSpecVS','real','global')
+   setgroup('csiSpecVS','processing','global')
+   setprotect('csiSpecVS','set',65808,'global')
+   csiSpecVS=256
+endif
+
+exists(userdir+'/procModules','directory'):$e
+if(not $e) then
+   shell('mkdir '+userdir+'/procModules')
+endif

@@ -1,0 +1,775 @@
+/*
+ * Copyright (C) 2015  University of Oregon
+ *
+ * You may distribute under the terms of either the GNU General Public
+ * License or the Apache License, as specified in the LICENSE file.
+ *
+ * For more information, see the LICENSE file.
+ */
+/* ghncoca_sim_trosy_4DA.c - automated version of the original pulse sequence.
+
+    This pulse sequence will allow one to perform the following experiment:
+
+    4D hncoca(co and ca are in the same residue) with trosy
+                       F1      CO
+                       F2      CA
+                       F3      15N + JNH/2
+                       F4(acq) 1H (NH) - JNH/2
+
+    This sequence uses the standard three channel configuration
+         1)  1H             - carrier (tof) @ 4.7 ppm [H2O]
+         2) 13C             - carrier (dof) @ 174 ppm [CO] or CA 56ppm
+         3) 15N             - carrier (dof2)@ 120 ppm [centre of amide 15N]  
+         4)  2H             - carrier (dof3)@ 3.2 ppm
+    
+    Set dm = 'nnnn', dmm = 'cccc' 
+    Set dm2 = 'nnnn', dmm2 = 'cccc'
+
+    Must set phase = 1,2 , phase2 = 1,2, and phase3 = 1,2 
+    for States-TPPI acquisition in t1[Co], t2[Ca], and t3[N].
+    [The fids must be manipulated (add/subtract) with 
+    'grad_sort_nd' program (or equivalent) prior to regular processing.]
+    
+    Flags
+        fsat            'y' for presaturation of H2O
+        fscuba          'y' for apply scuba pulse after presaturation of H2O
+        f1180           'y' for 180 deg linear phase correction in F1
+                            otherwise 0 deg linear phase correction
+        f2180           'y' for 180 deg linear phase coreection in F2
+                            otherwise 0 deg
+        f3180           'y' for 180 deg linear phase coreection in F3
+                            otherwise 0 deg
+	fco180		'y' for checking N/NH 2D 
+	fca180		'y' for checking N/NH 2D 
+        sel_flg         'y' for active suppression of the anti-TROSY
+        sel_flg         'n' for relaxation suppression of the anti-TROSY
+
+	Standard Settings
+        fsat='n',fscuba='n',f1180='y',f2180='y',f3180='n'
+
+    
+    Set f2180 to y for (-90,180) in Ca and f3180 to n for (0,0) in N
+    Set the carbon carrier on the C' and use the waveform to pulse the
+        c-alpha
+
+   Calibration of carbon pulses
+
+	pwc90	  delta/sqrt(15) selective pulse applied at d_c90
+	pwc180on  delta/sqrt(3) selective pulse applied at d_c180
+	pwc180off pwc180on+pad
+	pwchirp	  chirp 180 pulse (about 350 us at 600MHz) applied at d_chirp
+
+    Written By Daiwen Yang on July 12, 1999.
+
+    Modified by L. E. Kay on Aug. 22, 99 to include a sel_flg
+    Modified by L.E.Kay on Aug. 9, 2001 to separate N and adiabatic pulses; especially
+     for 800 MHz application, where the power to the probe is considerable.
+    Modified for BioPack, G.Gray Feb 2005
+
+*/
+
+#include <standard.h>
+#include "Pbox_bio.h"
+
+#define CO90    "square90n 118p"         /* square 90 on CO at 174 ppm, null at Ca, -118 ppm away */
+#define CO180   "square180n 118p"       /* square 180 on CO at 174 ppm, null at Ca, -118 ppm away */
+#define CO180ps "-stepsize 0.2 -attn d"                                /* CO 180 shape parameters */
+#define CA180   "square180n 118p -118p" /* square 180 on Ca at 58 ppm, - 118 ppm away, null at C' */
+#define CO180a  "square180n 118p 118p"  /* square 180 on CO at 174 ppm, +118 ppm away, null at Ca */
+#define CA180ps "-maxincr 2.0 -attn i"                                 /* Ca 180 shape parameters */
+#define CHIRP   "wurst180 320p/0.4m -59p"                       /* CHIRP on Ca and CO, at 117 ppm */
+#define CHIRPps "-stepsize 0.2 -attn e"
+
+static shape co90, co180, ca180, co180a, chirp;
+
+static int  phi1[2]  = {0,2},
+            phi2[2]  = {0,2},
+            phi3[4]  = {0,0,2,2},
+            phi4[1]  = {0},
+            phi5[4]  = {0,0,2,2},
+            rec[4]   = {0,0,2,2};
+
+static double d2_init=0.0, d3_init=0.0, d4_init=0.0;
+            
+pulsesequence()
+{
+/* DECLARE VARIABLES */
+
+ char       autocal[MAXSTR],  /* auto-calibration flag */
+            fsat[MAXSTR],
+	    fscuba[MAXSTR],
+            f1180[MAXSTR],    /* Flag to start t1 @ halfdwell             */
+            f2180[MAXSTR],    /* Flag to start t2 @ halfdwell             */
+            f3180[MAXSTR],    /* Flag to start t3 @ halfdwell             */
+            fco180[MAXSTR],    /* Flag for checking sequence              */
+            fca180[MAXSTR],    /* Flag for checking sequence              */
+            spca180[MAXSTR],  /* string for the waveform Ca 180 */
+            spco180[MAXSTR],  /* string for the waveform Co 180 */
+            spchirp[MAXSTR],  /* string for the waveform reburp 180 */
+            ddseq[MAXSTR],    /* 2H decoupling seqfile */
+            shp_sl[MAXSTR],   /* string for seduce shape */
+            sel_flg[MAXSTR];
+
+ int         phase, phase2, phase3, ni2, ni3, icosel,
+             t1_counter,   /* used for states tppi in t1           */ 
+             t2_counter,   /* used for states tppi in t2           */ 
+             t3_counter;   /* used for states tppi in t3           */ 
+
+ double      tau1,         /*  t1 delay */
+             tau2,         /*  t2 delay */
+             tau3,         /*  t2 delay */
+             taua,         /*  ~ 1/4JNH =  2.25 ms */
+             taub,         /*  ~ 1/4JNH =  2.25 ms */
+             zeta,        /* time for C'-N to refocuss set to 0.5*24.0 ms */
+             bigTN,       /* nitrogen T period */
+             pwc90,       /* PW90 for c nucleus @ d_c90         */
+             pwc180on,    /* PW180 at @ d_c180         */
+             pwchirp,     /* PW180 for ca nucleus @ d_creb         */
+             pwc180off,     /* PW180 at d_c180 + pad              */
+             tsatpwr,     /* low level 1H trans.power for presat  */
+             d_c90,       /* power level for 13C pulses(pwc90 = sqrt(15)/4delta)
+                             delta is the separation between Ca and Co  */
+             d_c180,      /* power level for 180 13C pulses
+				(pwc180on=sqrt(3)/2delta   */
+	     d_chirp,
+             sw1,          /* sweep width in f1                    */             
+             sw2,          /* sweep width in f2                    */             
+             sw3,          /* sweep width in f3                    */             
+             pw_sl,        /* pw90 for H selective pulse on water ~ 2ms */
+             phase_sl,     /* phase for pw_sl */
+             tpwrsl,       /* power level for square pw_sl       */
+
+	     pwDlvl,	   /* Power for D decoupling */
+	     pwD,	   /* pw90 at pwDlvl  */
+
+	     pwC, pwClvl,  /* C-13 calibration */
+	     compC, 
+
+             pwN,         /* PW90 for 15N pulse              */
+             pwNlvl,       /* high dec2 pwr for 15N hard pulses    */
+
+             gstab,       /* delay to compensate for gradient gt5 */
+
+             gt1,
+             gt2,
+             gt3,
+             gt4,
+             gt5,
+             gt6,
+             gt7,
+             gt8,
+             gt9,
+             gzlvl1,
+             gzlvl2,
+             gzlvl3,
+             gzlvl4,
+             gzlvl5,
+             gzlvl6,
+             gzlvl7, 
+             gzlvl8, 
+             gzlvl9; 
+
+/* LOAD VARIABLES */
+
+
+  getstr("autocal",autocal);
+  getstr("fsat",fsat);
+  getstr("fco180",fco180);
+  getstr("fca180",fca180);
+  getstr("f1180",f1180);
+  getstr("f2180",f2180);
+  getstr("f3180",f3180);
+  getstr("fscuba",fscuba);
+  getstr("ddseq",ddseq);
+  getstr("shp_sl",shp_sl);
+
+  getstr("sel_flg",sel_flg);
+
+  taua   = getval("taua"); 
+  taub   = getval("taub"); 
+  zeta  = getval("zeta");
+  bigTN = getval("bigTN");
+  tpwr = getval("tpwr");
+  tsatpwr = getval("tsatpwr");
+  dpwr = getval("dpwr");
+  pwN = getval("pwN");
+  pwNlvl = getval("pwNlvl");
+  pwD = getval("pwD");
+  pwDlvl = getval("pwDlvl");
+  phase = (int) ( getval("phase") + 0.5);
+  phase2 = (int) ( getval("phase2") + 0.5);
+  phase3 = (int) ( getval("phase3") + 0.5);
+  sw1 = getval("sw1");
+  sw2 = getval("sw2");
+  sw3 = getval("sw3");
+  ni2 = getval("ni2");
+  ni3 = getval("ni3");
+  pw_sl = getval("pw_sl");
+  phase_sl = getval("phase_sl");
+  tpwrsl = getval("tpwrsl");
+
+  gstab = getval("gstab");
+
+  gt1 = getval("gt1");
+  if (getval("gt2") > 0) gt2=getval("gt2");
+    else gt2=gt1*0.1;
+  gt3 = getval("gt3");
+  gt4 = getval("gt4");
+  gt5 = getval("gt5");
+  gt6 = getval("gt6");
+  gt7 = getval("gt7");
+  gt8 = getval("gt8");
+  gt9 = getval("gt9");
+
+  gzlvl1 = getval("gzlvl1");
+  gzlvl2 = getval("gzlvl2");
+  gzlvl3 = getval("gzlvl3");
+  gzlvl4 = getval("gzlvl4");
+  gzlvl5 = getval("gzlvl5");
+  gzlvl6 = getval("gzlvl6");
+  gzlvl7 = getval("gzlvl7");
+  gzlvl8 = getval("gzlvl8");
+  gzlvl9 = getval("gzlvl9");
+
+  if(autocal[0]=='n')
+  {     
+    getstr("spca180",spca180);
+    getstr("spco180",spco180);
+    getstr("spchirp",spchirp);
+    pwc90 = getval("pwc90");
+    pwc180on = getval("pwc180on");
+    pwc180off = getval("pwc180off");
+    d_c90 = getval("d_c90");
+    d_c180 = getval("d_c180");
+    pwchirp = getval("pwchirp");
+    d_chirp = getval("d_chirp");    
+  }
+  else
+  {    
+    strcpy(spca180,"Phard180ca");
+    strcpy(spco180,"Phard180co");    
+    strcpy(spchirp,"Pchirp180");    
+    
+    if (FIRST_FID)
+    {
+      pwC = getval("pwC");
+      compC = getval("compC");
+      pwClvl = getval("pwClvl");
+      co90 = pbox("cal", CO90, CO180ps, dfrq, pwC*compC, pwClvl);          
+      co180 = pbox("cal", CO180, CO180ps, dfrq, pwC*compC, pwClvl);          
+      ca180 = pbox(spca180, CA180, CA180ps, dfrq, pwC*compC, pwClvl);  
+      co180a = pbox(spco180, CO180a, CA180ps, dfrq, pwC*compC, pwClvl);                        
+      chirp = pbox(spchirp, CHIRP, CHIRPps, dfrq, pwC*compC, pwClvl);
+    }
+    pwc90 = co90.pw;         d_c90 = co90.pwr;
+    pwc180on = co180.pw;     d_c180 = co180.pwr;    
+    pwc180off = ca180.pw;            
+    pwchirp = chirp.pw;      d_chirp = chirp.pwr;    
+  }   
+
+/* LOAD PHASE TABLE */
+
+  settable(t1,2,phi1);
+  settable(t2,2,phi2);
+  settable(t3,4,phi3);
+  settable(t4,1,phi4);
+  settable(t5,4,phi5);
+  settable(t6,4,rec);
+
+/* CHECK VALIDITY OF PARAMETER RANGES */
+
+
+    if( bigTN - (ni3-1)*0.5/sw3 - WFG3_START_DELAY < 0.2e-6 )
+    {
+        text_error(" ni3 is too big\n");
+        text_error(" please set ni3 smaller or equal to %d\n",
+			(int) ((bigTN -WFG3_START_DELAY)*sw3*2.0) +1 );
+        psg_abort(1);
+    }
+
+
+    if((dm[A] == 'y' || dm[B] == 'y' || dm[C] == 'y' || dm[D] == 'y' ))
+    {
+        text_error("incorrect dec1 decoupler flags!  ");
+        psg_abort(1);
+    }
+
+    if((dm2[A] == 'y' || dm2[B] == 'y' || dm2[C] == 'y' || dm2[D] == 'y'))
+    {
+        text_error("incorrect dec2 decoupler flags! Should be 'nnnn' ");
+        psg_abort(1);
+    }
+
+
+    if( tsatpwr > 6 )
+    {
+        text_error("TSATPWR too large !!!  ");
+        psg_abort(1);
+    }
+
+    if( dpwr > 46 )
+    {
+        text_error("don't fry the probe, DPWR too large!  ");
+        psg_abort(1);
+    }
+
+    if( dpwr2 > 46 )
+    {
+        text_error("don't fry the probe, DPWR2 too large!  ");
+        psg_abort(1);
+    }
+
+    if( dpwr3 > 50 )
+    {
+        text_error("don't fry the probe, dpwr3 too large!  ");
+        psg_abort(1);
+    }
+
+    if( d_c90 > 62 )
+    {
+        text_error("don't fry the probe, DHPWR too large!  ");
+        psg_abort(1);
+    }
+
+    if( pw > 200.0e-6 )
+    {
+        text_error("dont fry the probe, pw too high ! ");
+        psg_abort(1);
+    } 
+    if( pwN > 200.0e-6 )
+    {
+        text_error("dont fry the probe, pwN too high ! ");
+        psg_abort(1);
+    } 
+    if( pwc90 > 200.0e-6 )
+    {
+        text_error("dont fry the probe, pwc90 too high ! ");
+        psg_abort(1);
+    } 
+    if( pwc180off > 200.0e-6 )
+    {
+        text_error("dont fry the probe, pwc180 too high ! ");
+        psg_abort(1);
+    } 
+
+    if( gt3 > 2.5e-3 ) 
+    {
+        text_error("gt3 is too long\n");
+        psg_abort(1);
+    }
+    if( gt1 > 10.0e-3 || gt2 > 10.0e-3 || gt4 > 10.0e-3 || gt5 > 10.0e-3
+        || gt6 > 10.0e-3 || gt7 > 10.0e-3 || gt8 > 10.0e-3
+	|| gt9 > 10.0e-3)
+    {
+        text_error("gt values are too long. Must be < 10.0e-3 or gt11=50us\n");
+        psg_abort(1);
+    } 
+
+    if((fca180[A] == 'y') && (ni2 > 1))
+    {
+        text_error("must set fca180='n' to allow Calfa evolution (ni2>1)\n");
+        psg_abort(1);
+    } 
+
+    if((fco180[A] == 'y') && (ni > 1))
+    {
+        text_error("must set fco180='n' to allow CO evolution (ni>1)\n");
+        psg_abort(1);
+    } 
+
+
+/*  Phase incrementation for hypercomplex 2D data */
+
+    if (phase == 2) tsadd(t1,1,4);
+
+    if (phase2 == 2) tsadd(t5,1,4);
+
+    if (phase3 == 2) { tsadd(t4, 2, 4); icosel = 1; }
+      else icosel = -1;
+
+/*  Set up f1180  tau1 = t1               */
+   
+    tau1 = d2;
+    if((f1180[A] == 'y') && (ni > 1)) {
+      if (pwc180off > 2.0*pwN) 
+        tau1 += (1.0/(2.0*sw1) - 4.0*pwc90/PI - pwc180off 
+	      - WFG3_START_DELAY - WFG3_STOP_DELAY - 4.0e-6 - 2.0*POWER_DELAY - 4.0e-6);
+      else 
+        tau1 += (1.0/(2.0*sw1) - 4.0*pwc90/PI - 2.0*pwN 
+              - WFG3_START_DELAY - WFG3_STOP_DELAY - 4.0e-6 - 2.0*POWER_DELAY - 4.0e-6);
+
+        if(tau1 < 0.2e-6) {
+         tau1 = 0.4e-6;
+	 text_error("tau1 could be negative");
+	}
+    }
+    else
+    {
+
+      if (pwc180off > 2.0*pwN)
+        tau1 = tau1 - 4.0*pwc90/PI - pwc180off
+              - WFG3_START_DELAY - WFG3_STOP_DELAY - 4.0e-6 - 2.0*POWER_DELAY - 4.0e-6;
+      else
+        tau1 = tau1 - 4.0*pwc90/PI - 2.0*pwN 
+              - WFG3_START_DELAY - WFG3_STOP_DELAY - 4.0e-6 - 2.0*POWER_DELAY - 4.0e-6;
+ 
+        if(tau1 < 0.2e-6) tau1 = 0.4e-6;
+     }
+
+        tau1 = tau1/2.0;
+
+/*  Set up f2180  tau2 = t2               */
+
+    tau2 = d3;
+    if((f2180[A] == 'y') && (ni2 > 1)) {
+	if (pwc180off > 2.0*pwN)
+          tau2 += ( 1.0 / (2.0*sw2) - 4.0*pwc90/PI - 4.0e-6
+		 - 2.0*POWER_DELAY
+		 - WFG3_START_DELAY - pwc180off - WFG3_STOP_DELAY - 4.0e-6);
+	else
+          tau2 += ( 1.0 / (2.0*sw2) - 4.0*pwc90/PI - 4.0e-6
+                 - 2.0*POWER_DELAY
+                 - WFG3_START_DELAY - 2.0*pwN - WFG3_STOP_DELAY - 4.0e-6);
+        if(tau2 < 0.2e-6) {
+	  tau2 = 0.4e-6;
+	  text_error("tau2 could be negative");
+ 	} 
+
+    }
+    else
+    {
+        if (pwc180off > 2.0*pwN)
+          tau2 = tau2 - 4.0*pwc90/PI - 4.0e-6
+                 - 2.0*POWER_DELAY
+                 - WFG3_START_DELAY - pwc180off - WFG3_STOP_DELAY - 4.0e-6;
+        else
+          tau2 = tau2 - 4.0*pwc90/PI - 4.0e-6
+                 - 2.0*POWER_DELAY
+                 - WFG3_START_DELAY - 2.0*pwN - WFG3_STOP_DELAY - 4.0e-6;
+        if(tau2 < 0.2e-6) tau2 = 0.4e-6;
+    }
+
+        tau2 = tau2/2.0;
+
+/*  Set up f3180  tau3 = t3               */
+ 
+    tau3 = d4;
+    if ((f3180[A] == 'y') && (ni3 > 1)) {
+        tau3 += ( 1.0 / (2.0*sw3) );
+        if(tau3 < 0.2e-6) tau3 = 0.4e-6;
+    }
+        tau3 = tau3/2.0;
+
+/* Calculate modifications to phases for States-TPPI acquisition          */
+
+   if( ix == 1) d2_init = d2 ;
+   t1_counter = (int) ( (d2-d2_init)*sw1 + 0.5 );
+   if(t1_counter % 2) {
+      tsadd(t1,2,4);     
+      tsadd(t6,2,4);    
+    }
+
+   if( ix == 1) d3_init = d3 ;
+   t2_counter = (int) ( (d3-d3_init)*sw2 + 0.5 );
+   if(t2_counter % 2) {
+      tsadd(t5,2,4);
+      tsadd(t6,2,4);
+    }
+
+   if( ix == 1) d4_init = d4 ;
+   t3_counter = (int) ( (d4-d4_init)*sw3 + 0.5 );
+   if(t3_counter % 2) {
+      tsadd(t2,2,4);  
+      tsadd(t6,2,4);    
+    }
+
+/* BEGIN ACTUAL PULSE SEQUENCE */
+
+status(A);
+   obsoffset(tof);
+   decoffset(dof);		/* set Dec1 carrier at Co		      */
+   obspower(tsatpwr);      /* Set transmitter power for 1H presaturation */
+   decpower(d_chirp);      /* Set Dec1 power for hard 13C pulses         */
+   dec2power(pwNlvl);      /* Set Dec2 power for 15N hard pulses         */
+
+/* Presaturation Period */
+
+   if (fsat[0] == 'y')
+     {
+      delay(2.0e-5);
+      rgpulse(d1,zero,2.0e-6,2.0e-6); /* presaturation */
+      obspower(tpwr);      /* Set transmitter power for hard 1H pulses */
+      delay(2.0e-5);
+      if (fscuba[0] == 'y')
+        {
+         delay(2.2e-2);
+         rgpulse(pw,zero,2.0e-6,0.0);
+         rgpulse(2*pw,one,2.0e-6,0.0);
+         rgpulse(pw,zero,2.0e-6,0.0);
+         delay(2.2e-2);
+        }
+     }
+    else
+     {
+      delay(d1);
+     }
+
+   obspower(tpwr);           /* Set transmitter power for hard 1H pulses */
+   txphase(zero);
+   dec2phase(zero);
+   delay(1.0e-5);
+
+/* Begin Pulses */
+
+status(B);
+
+   rcvroff();
+   lk_hold();
+   delay(20.0e-6);
+
+   initval(1.0,v2);
+   obsstepsize(phase_sl);
+   xmtrphase(v2);
+
+   /* shaped pulse */
+   obspower(tpwrsl);
+   shaped_pulse(shp_sl,pw_sl,one,4.0e-6,0.0);
+   xmtrphase(zero);
+   obspower(tpwr);  txphase(zero);  
+   delay(4.0e-6);
+   /* shaped pulse */
+
+   rgpulse(pw,zero,0.0,0.0);                    /* 90 deg 1H pulse */
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl5,gt5);
+   delay(2.0e-6);
+
+   delay(taua - gt5 - 2.2e-6);   /* taua <= 1/4JNH */ 
+
+   sim3pulse(2*pw,0.0e-6,2*pwN,zero,zero,zero,0.0,0.0);
+
+   txphase(three); dec2phase(zero); decphase(zero); 
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl5,gt5);
+   delay(200.0e-6);
+
+   delay(taua - gt5 - 200.2e-6 - 2.0e-6); 
+
+   if (sel_flg[A] == 'n') 
+     {
+      rgpulse(pw,three,2.0e-6,0.0);
+
+      delay(0.2e-6);
+      zgradpulse(gzlvl3,gt3);
+      delay(200.0e-6);
+
+      dec2rgpulse(pwN,zero,0.0,0.0);
+
+      delay( zeta );
+  
+      dec2rgpulse(2.0*pwN,zero,0.0,0.0);
+      decshaped_pulse(spchirp,pwchirp,zero,0.0,0.0);
+
+      delay(zeta -WFG_START_DELAY -pwchirp -WFG_STOP_DELAY -2.0e-6);
+
+     dec2rgpulse(pwN,zero,2.0e-6,0.0);
+
+    }
+   else 
+    {
+     rgpulse(pw,one,2.0e-6,0.0);
+
+     initval(1.0,v3);
+     dec2stepsize(45.0); 
+     dcplr2phase(v3);
+
+     delay(0.2e-6);
+     zgradpulse(gzlvl3,gt3);
+     delay(200.0e-6);
+
+     dec2rgpulse(pwN,zero,0.0,0.0);
+     dcplr2phase(zero);
+
+     delay(1.34e-3 - SAPS_DELAY - 2.0*pw);
+
+     rgpulse(pw,one,0.0,0.0);
+     rgpulse(2.0*pw,zero,0.0,0.0);
+     rgpulse(pw,one,0.0,0.0);
+
+     delay( zeta - 1.34e-3 - 2.0*pw);
+  
+     dec2rgpulse(2.0*pwN,zero,0.0,0.0);
+     decshaped_pulse(spchirp,pwchirp,zero,0.0,0.0);
+
+     delay(zeta -WFG_START_DELAY -pwchirp -WFG_STOP_DELAY -2.0e-6);
+
+     dec2rgpulse(pwN,zero,2.0e-6,0.0);
+    }
+
+   dec2phase(zero); decphase(t1);
+   decpower(d_c90);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl8,gt8);
+   delay(200.0e-6);
+
+   decrgpulse(pwc90,t1,2.0e-6,0.0);
+/* t1 period for Co evolution begins */
+   if (fco180[A]=='n')  
+     {
+      decpower(d_c180);
+
+      delay(tau1);
+      sim3shaped_pulse("",spca180,"",0.0,pwc180off,2.0*pwN,zero,zero,zero,4.0e-6,0.0);
+
+      decpower(d_c90);
+
+       delay(tau1);
+     }
+   else /* for checking sequence */
+     {
+      decpower(d_c180);
+      decrgpulse(pwc180on,zero,4.0e-6,0.0);
+      decpower(d_c90);
+     }
+/* t1 period for Co evolution ends */
+   decrgpulse(pwc90,zero,4.0e-6,0.0);
+
+   decoffset(dof-(174-56)*dfrq);   /* change Dec1 carrier to Ca (55 ppm) */
+   delay(0.2e-6);
+   zgradpulse(gzlvl4,gt4);
+   delay(150.0e-6);
+
+   /* Turn on D decoupling using the third decoupler */
+   dec3phase(one);
+   dec3power(pwDlvl);
+   dec3rgpulse(pwD,one,4.0e-6,0.0);
+   dec3phase(zero);
+   dec3power(dpwr3);
+   dec3unblank();
+   setstatus(DEC3ch, TRUE, 'w', FALSE, dmf3);
+   /* Turn on D decoupling */
+
+   decrgpulse(pwc90,t5,2.0e-6,0.0);
+/* t2 period  for Ca evolution begins */
+  if (fca180[A]=='n')
+    {
+     decphase(zero); dec2phase(zero);
+     decpower(d_c180); 
+     delay(tau2);
+     sim3shaped_pulse("",spco180,"",0.0,pwc180off,2.0*pwN,zero,zero,zero,4.0e-6,0.0);
+     decpower(d_c90); 
+     delay(tau2);
+    }
+   else /* for checking sequence */
+    {
+     decpower(d_c180);
+     decrgpulse(pwc180on,zero,4.0e-6,0.0);
+     decpower(d_c90);
+    }
+/* t2 period  for Ca evolution ends */
+   decrgpulse(pwc90,zero,4.0e-6,0.0);
+ 
+   /* Turn off D decoupling */
+   setstatus(DEC3ch, FALSE, 'c', FALSE, dmf3);
+   dec3blank();
+   dec3phase(three);
+   dec3power(pwDlvl);
+   dec3rgpulse(pwD,three,4.0e-6,0.0);
+   /* Turn off D decoupling */
+
+   decoffset(dof);   /* set carrier back to Co */
+   decpower(d_chirp);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl9,gt9);
+   delay(150.0e-6);
+
+/* t3 period begins */
+   dec2rgpulse(pwN,t2,2.0e-6,0.0);
+
+   dec2phase(t3);
+
+   delay(bigTN - tau3);
+
+   dec2rgpulse(2.0*pwN,t3,0.0,0.0);
+   decshaped_pulse(spchirp,pwchirp,zero,0.0,0.0);
+
+   txphase(zero);
+   dec2phase(t4);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl1,gt1);
+   delay(500.0e-6);
+
+   delay(bigTN - WFG_START_DELAY - pwchirp - WFG_STOP_DELAY
+         -gt1 -500.2e-6 -2.0*GRADIENT_DELAY);
+
+   delay(tau3);
+
+   sim3pulse(pw,0.0e-6,pwN,zero,zero,t4,0.0,0.0);
+/* t3 period ends */
+
+   decpower(d_c90);
+   decrgpulse(pwc90,zero,4.0e-6,0.0);
+   decoffset(dof-(174-56)*dfrq);
+   decrgpulse(pwc90,zero,20.0e-6,0.0);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl6,gt6);
+   delay(2.0e-6);
+
+   dec2phase(zero);
+   delay(taub - POWER_DELAY - 4.0e-6 - pwc90 - 20.0e-6 - pwc90 - gt6 - 2.2e-6);
+
+   sim3pulse(2*pw,0.0e-6,2*pwN,zero,zero,zero,0.0,0.0);
+
+   decoffset(dof);
+   delay(0.2e-6);
+   zgradpulse(gzlvl6,gt6);
+   delay(200.0e-6);
+   
+   txphase(one);
+   dec2phase(one);
+
+   delay(taub - gt6 - 200.2e-6);
+
+   sim3pulse(pw,0.0e-6,pwN,one,zero,one,0.0,0.0);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl7,gt7);
+   delay(2.0e-6);
+ 
+   txphase(zero);
+   dec2phase(zero);
+
+   delay(taub - gt7 - 2.2e-6);
+
+   sim3pulse(2*pw,0.0e-6,2*pwN,zero,zero,zero,0.0,0.0);
+
+   delay(0.2e-6);
+   zgradpulse(gzlvl7,gt7);
+   delay(200.0e-6);
+
+   delay(taub - gt7 - 200.2e-6);
+
+   sim3pulse(pw,0.0e-6,pwN,zero,zero,zero,0.0,0.0);
+
+   delay(gt2 +gstab -0.5*(pwN -pw) -2.0*pw/PI);
+
+   rgpulse(2*pw,zero,0.0,0.0);
+
+   delay(2.0e-6);
+   zgradpulse(icosel*gzlvl2,gt2);
+   decpower(dpwr);
+   dec2power(dpwr2);
+   delay(gstab -2.0e-6 -2.0*GRADIENT_DELAY -2.0*POWER_DELAY);
+
+   lk_sample();
+/* BEGIN ACQUISITION */
+status(C);
+   setreceiver(t6);
+
+}

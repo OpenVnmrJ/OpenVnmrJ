@@ -1,0 +1,153 @@
+  ghn_cocoA.c
+
+    3D (HN)CO(CO)NH gradient sensitivity enhanced version.
+
+
+    Standard features include maintaining the 13C carrier in the CO region
+    throughout using off-res SLP pulses; square pulses on Ca with first
+    null at 13CO; one lobe sinc pulses on 13CO with first null at Ca; one lobe
+    sinc pulse to put H2O back along z (the sinc one-lobe is significantly more
+    selective than gaussian, square, or seduce 90 pulses); preservation of H20
+    along z during t1 and t2; waltz H1 decoupling during N15 evolution to
+    decrease S/N loss via H1 exchange with H2O.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option NOT implemented.
+ 
+    pulse sequence: Bax, & Grzesiek, J. Biomol. NMR, 9, 207-211 (1997)            
+    SLP pulses:     J Magn. Reson. 96, 94-102 (1992)
+ 
+    The sequence is modified to do Kay type Gradient enhancement.
+    Auto-calibrated version, E.Kupce, 27.08.2002.
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    The waltz16 field strength is enterable (waltzB1).
+    Typical values would be ~6-8ppm, (3500-5000 Hz at 600 MHz).
+  
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+
+    Must set phase = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [C13]  and t2 [N15].
+    
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give -90, 180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in C13 and f2180='n' for (0,0) in N15.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+          	  DETAILED INSTRUCTIONS FOR USE OF ghn_coco
+
+         
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghn_co may be printed using:
+                                      "printon man('ghn_co') printoff".
+             
+    2. Apply the setup macro "ghn_coco".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+       At the middle of the t1 period, the 180 degree pulses on Ca and 15N are 
+       swapped to a 180 degree pulse on CO, for the first increment of t1, to 
+       refocus CO chemical-shift evolution ensuring a zero first-order phase
+       correction in F1. This is also the case for the 1D spectral check, or 
+       for 2D/15N spectra, when ni=0.
+
+    3. Centre H1 frequency on H2O (4.7ppm), C13 frequency on 174ppm, and N15 
+       frequency on the amide region (120 ppm).  The C13 frequency remains at 
+       174ppm, ie at CO throughout the sequence.
+
+    4. The normal 13C 180 degree pulse on Ca at the middle of t1 induces a
+       phase shift, which should be field-invariant, and so this phase shift has
+       been calibrated and compensated in the pulse sequence. This phase shift 
+       can be checked by setting ni=1 whereby a special 1D method is invoked
+       in which both the 13C Ca 180 degree pulse and the simultaneous 15N 180
+       degree pulse are applied just as for all t1 times other than t1=0.  First
+       eliminate the Ca pulse by setting pwC3=0 and obtain a 1D spectrum. This
+       spectrum will have reduced intensity compared to ni=0 because of 13Ca
+       chemical-shift evolution during the time of the 180 pulses. If the 
+       phase shift is adequately compensated, a second very similar 1D spectrum 
+       will be obtained with pwC3=pwC3a. As in point 5, a more sensitive 
+       comparison of the two spectra with pwC3=0,pwC3a can be obtained with
+       phase=2.  If not adequately compensated, the first increment will be out
+       of phase with all succeeding increments and a zero-order phase-shift will
+       be necessary in F1, which is easily done after the 2D/3D transform.
+       Alternatively, change the calibration by changing the phshift3 parameter
+       in the INITIALIZE VARIABLES section of the code. The pulse pwC3 is
+       automatically reset to its calibrated value (=pwC3a) within the pulse
+       sequence code for 3D work and 2D/t1 studies.  DO NOT CHANGE pwC3a from
+       its calibrated value.  NOTE THAT dof MUST BE ACCURATELY CALIBRATED (to 	
+       1ppm) BEFORE THE phshift3 CALIBRATION.  S/N can also be maximized by
+       arraying compC when ni=1;pwC3=pwC3a.
+
+    5. dof may be calibrated accurately to the center of the CO region, 
+       when ni=1, by using the 13CO chemical shift evolution during a period of
+       (1/dfrq*80). Set ni=1 and pwC3=1 and obtain a well-phased absorption mode
+       1D spectrum.  Now set phase=2 and obtain an array of spectra with dof
+       varied by up to 20ppm either side of your best guess. dof will be correct
+       when the integral from 7.4 to 9ppm in the 1H spectrum is close to zero -
+       this spectrum will have the appearance of a broad "noisy" dispersion mode
+       signal caused by some signals having a +ve shift and some a -ve shift
+       relative to dof.  Ignore the NH2 signals at about 7.1ppm. If phase=2 is
+       also to be used for the phshift3 check as in point 4, it is handy to set
+       dof using this method first before resetting pwC3=pwC3a.  Note also that
+       dof can be set with more sensitivity with ni=1;pwC3=pwC3a because there
+       is a longer period of 13CO shift evolution. 
+
+    6. A similar method can be used to calibrate dof2.  Set ni=ni2=0 and
+       phase=phase2=1 and obtain a well=phased absorption mode 1D spectrum.  
+       Set d3=0.0001 and phase2=1,2, sum the two resulting spectra and display
+       with a 90 degree phase shift:
+       clradd select(1) spadd select(2) spadd jexp5 full rp=rp+90 ds   
+       dof2 will be in the middle of the NH region when the signals between
+       7.4 and 9ppm in the 1H spectrum are roughly balanced between +ve and
+       -ve signals as in point 5.  Note that the same method with d3=0 should 
+       give a zero spectrum.  Don't forget to reset d3=0 when you have finished.
+
+    7. H2O preservation is achieved according to Kay et al, except that a sinc
+       one-lobe selective pulse is used to put H2O back along z.  This is much
+       more selective than a hard, Seduce1, or gaussian pulse.
+
+    8. Another difference from the work of Kay et al is that the phases of both
+       CO 90 degree pulses are alternated to eliminate artifacts from the Ca
+       180 degree pulse.
+
+    9. timeTN (12 ms) was determined for alphalytic protease and is listed in 
+       dg2 for possible readjustment by the user.
+
+   10. The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+   11. Radiation Damping:
+       At fields 600MHz and higher with high-Q probes, radiation damping is a
+       factor to be considered. Its primary effect is in the flipback pulse
+       calibration. Radiation damping causes a rotation back to the +Z axis
+       even without a flipback pulse. Hence, the pwHs pulse often needs to 
+       be reduced in its flip-angle. This can be accomplished by using the
+       parameter tpwrsf. If this value is less than 4095.0 the value of tpwrs
+       (calculated in the psg code) is increased by 6dB, thereby permitting
+       the value of tpwrsf to be optimized to obtain minimum H2O in the 
+       spectrum. The value of tpwrsf is typically lower than 2048 (half-maximum
+       to compensate for the extra 6dB in tpwrs). 
+
+   12. The autocal and checkofs flags are generated automatically in Pbox_bio.h
+       If these flags do not exist in the parameter set, they are automatically 
+       set to 'y' - yes. In order to change their default values, create the  
+       flag(s) in your parameter set and change them as required. 
+       The available options for the checkofs flag are: 'y' (yes) and 'n' (no). 
+       The offset (tof, dof, dof2 and dof3) checks can be switched off  
+       individually by setting the corresponding argument to zero (0.0).
+       For the autocal flag the available options are: 'y' (yes - by default), 
+       'q' (quiet mode - suppress Pbox output), 'r' (read from file, no new  
+       shapes are created), 's' (semi-automatic mode - allows access to user  
+       defined parameters) and 'n' (no - use full manual setup, equivalent to 
+       the original code).

@@ -1,0 +1,39 @@
+"macro reset_sr4"
+//Set the SR4 pulses from the Spin Rate
+
+if (srate > 500) then
+   $pwHsr4 = 2.0e6/(4.0*srate)
+   pwHsr4 = 0.1*trunc($pwHsr4/0.1 + 0.5)
+   srate = 2.0e6/(4.0*pwHsr4)
+   aHsr4 = aH90*(4.0*pwH90)/pwHsr4
+   if (aHsr4= 4095) then
+      write('error','reset_sr4 Error: aHsr4 is >= to 4095')
+   endif
+endif
+
+if (qHsr4 < 24) then qHsr4 = 24 endif
+
+if (pwHsr4 > 0.0) then 
+   sw1 = srate
+endif   
+
+// Synchronize t1Xecho and t2Xecho
+
+if (srate > 500) then 
+   $t1Xecho = t1Xecho
+   $t2Xecho = t2Xecho
+   $acqplus = 1.0e6*(ni/sw1 + 1.0/srate)
+   if ($t1Xecho < $acqplus) then 
+      $t1Xecho = $acqplus
+   endif
+   if ($t2Xecho < $acqplus) then
+      $t2Xecho = $acqplus
+   endif 
+   t1Xecho = trunc($t1Xecho*1.0e-6*srate + 0.5)/(1.0e-6*srate)
+   t2Xecho = trunc($t2Xecho*1.0e-6*srate + 0.5)/(1.0e-6*srate)
+endif
+
+
+
+
+

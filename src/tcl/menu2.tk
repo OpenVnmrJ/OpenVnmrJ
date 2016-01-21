@@ -1,0 +1,129 @@
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+proc selectMenu2Entry {winDesc ag bg} {
+   global menu2Index
+
+  set win [eval $winDesc]
+  if {($win != "") && (("[winfo parent $win]" == ".menu2") || \
+       ("[winfo parent $win]" == ".menu2.op"))} then { 
+     if {$menu2Index == -1} then {
+        set menu2Index $win
+        $win configure -background $ag
+     } elseif {$menu2Index != $win} {
+        $menu2Index configure -background $bg
+        $win configure -background $ag
+        set menu2Index $win
+     }
+  } elseif {$menu2Index != -1} then {
+        $menu2Index configure -background $bg
+        set menu2Index -1
+  }
+}
+
+proc exit_menu2 {win cmd id} {
+   global menu2Index
+   if {$menu2Index != -1} then {
+      if {[scan $menu2Index ".menu2.label(%d)" index] == 1} {
+         set ans [$menu2Index cget -text]
+         $win configure -text $ans
+         eval "$cmd $id $index"
+      }
+   }
+   set menu2Index -1
+   destroy .menu2
+}
+
+proc menu2_popup {parent entrys} {
+   set x [expr [winfo rootx $parent] + [winfo width $parent]]
+   set y [winfo rooty $parent]
+
+   catch {destroy .menu2}
+   toplevel .menu2
+   wm overrideredirect .menu2 1
+   set num [llength $entrys]
+   set maxLen 1
+   for {set i 0} {$i < $num} {incr i} {
+      set test [lindex $entrys $i]
+      set len [string length $test]
+      if {$len > $maxLen} then {
+         set maxLen $len
+      }
+   }
+
+   if {$num > 10} then {
+     set cols 1
+     while {$cols < $num} {
+        incr cols
+        set numperrow [expr int(($num + $cols -1) / $cols) ]
+        if {$numperrow <= 10} then break
+     }
+   } else {
+      set numperrow $num
+   }
+   frame .menu2.frame -relief raised -borderwidth 3
+   set j 0
+   set i 0
+   for {set index 0} {$index < $num} {incr index} {
+      set var [lindex $entrys $index]
+      label .menu2.label($index) -text $var -padx 2 -pady 2 -anchor w
+      grid .menu2.label($index) -row $i -column $j -in .menu2.frame -sticky news
+      incr i
+      if {$i == $numperrow} then {
+         set i 0
+         incr j
+      }
+   }
+   set width [winfo screenwidth .]
+   set height [winfo screenheight .]
+   set popHeight [winfo height $parent]
+   if {$numperrow == 0} {
+      set numperrow 1
+   }
+   set popWidth [expr $popHeight * int(($num + $numperrow -1) / $numperrow) * $maxLen /2]
+   set popHeight [expr $popHeight * $numperrow]
+   if {[expr $x + $popWidth] > $width } then {
+      set x [expr $width - $popWidth]
+   }
+   if {[expr $y + $popHeight] > $height } then {
+      set y [expr $height - $popHeight]
+   }
+   wm geometry .menu2 +$x+$y
+   pack .menu2.frame
+}
+
+proc menu2 { win entrys cmd id args} {
+   global menu2Index
+
+   set menu2Index -1
+   menu .dumm
+   set ag [.dumm cget -activebackground]
+   destroy .dumm
+   if {[llength $args] != 0} then {
+      eval "label $win -relief raised -borderwidth 3 $args"
+   } else {
+      label $win -relief raised -borderwidth 3
+   }
+   label $win.op -relief raised -highlightthickness 0
+   place $win.op -in $win -width 16 -height 5 -rely 0.5 -y -2 -relx .95 -anchor ne
+   set bg [$win cget -background]
+   bind $win <Enter> "$win configure -background $ag"
+   bind $win <Leave> "$win configure -background $bg "
+   bind $win <1> "menu2_popup $win {$entrys}"
+   bind $win <ButtonRelease-1> "exit_menu2 $win $cmd $id"
+   bind $win.op <1> "menu2_popup $win {$entrys}"
+   bind $win.op <ButtonRelease-1> "exit_menu2 $win $cmd $id"
+   set select selectMenu2Entry
+   lappend select {winfo containing %X %Y}
+   lappend select $ag
+   lappend select $bg
+   bind $win <Motion> "$select"
+   bind $win.op <Motion> "$select"
+}

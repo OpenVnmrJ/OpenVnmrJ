@@ -1,0 +1,32 @@
+"macro rna_aph"
+if ($#=0) then $1=1 endif
+select($1) 
+rp=0 lp=0 
+cz ph
+if ((seqfil='ghcch_tocsy') or (seqfil='hcch_tocsy') or (seqfil='hcch_cosy')) then
+ z(6p,0p) $start=-1p $end=6p 
+else if (seqfil='gChsqc') then
+ z(9p,0p)    $start=0p   $end=9p
+else
+ z(11p,5.5p) $start=6p $end=11p
+endif endif
+if (seqfil='ghca_co') or (seqfil='ghca_co_n') then
+ cz z(6p,-2p) $start=-2p $end=6p 
+endif
+bc
+$bestrp=0
+integ($start,$end):$intbest
+repeat
+ rp=rp+10 bc integ($start,$end):$int
+ if ($int>$intbest) then $intbest=$int $bestrp=rp endif
+until rp>360
+rp=$bestrp-16 
+integ($start,$end):$intbest
+$intbest=.8*$intbest
+$best=rp
+repeat
+ rp=rp+2 bc integ($start,$end):$int
+ if ($int>$intbest) then $intbest=$int $best=rp endif
+until rp>=$bestrp+16
+rp=$best
+ 

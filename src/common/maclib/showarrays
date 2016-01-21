@@ -1,0 +1,151 @@
+"macro showarrays"
+if $#>0 then $arg=$1
+else $arg='redisplay' endif
+
+getMaxIndex:$maxindex
+//$stop=$maxindex
+
+//if celem=0 then $stop=arraydim else $stop=celem endif
+
+exists('showarray','parameter'):$e
+module('add','showarrays','basic')
+
+if(not $e) then // do this only if showarray is first created.
+  if (ho<1 and ho>-1) then showarray='vert'
+  elseif (vo<1 and vo>-1) then showarray='horiz' 
+  else showarray='auto' endif
+  arraystop=$maxindex
+endif
+
+$ctraces='' 
+arraymax=$maxindex
+
+exists('arraycolors','parameter','global'):$e
+  if $e > 0.5 then  
+    if arraycolors >0 then  
+      $ctraces=',`color`' 
+    endif
+endif
+
+if $arg='setup' then return endif
+
+if arraystop>$maxindex then arraystop=$maxindex endif
+if arraystart>arraystop then arraystart=1 write('error','Array Start > Stop: reset to 1!') endif 
+if arraydelta>(arraystop-arraystart) then 
+  arraydelta=1 
+  if($maxindex > 1) then
+     write('error','Array Delta > Stop - Start: reset to 1!') 
+  endif
+endif
+
+$rev='' $val='' $style='' $dss='' $dssl='' $pl='' $pssl='' $plww=''
+if showcontent='f' then 
+  $dis1='df' 
+else 
+  $dis1='ds' 
+endif
+if arraydodc='y' then 
+  $dc=',`dodc`' 
+else 
+  $dc='' 
+endif
+
+if arraywhitewash='y' then 
+  dss
+  $dis2='ww' 
+  $plww='ww' 
+else
+  $dis2='s' 
+endif
+
+if shownumbers='v' then 
+  $val='`value`,' 
+endif
+if shownumstyle<>'auto' then 
+  $style='shownumstyle,' 
+endif
+if arrayflip='y' then 
+  $rev='`reverse`,' 
+endif
+
+if $arg='popup' then 
+  vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:ShowArraysV.xml', 'title:Show Arrays') return
+
+elseif $arg='redisplay' then
+
+  if (procdim=0 and showcontent='s') then return endif
+  graphis:$g,$n2 substr($g,1,2):$s
+
+  // dfww does not work if nothing was displayed 
+  if($g='' and showcontent='f') then 
+    df
+    graphis:$g,$n2 substr($g,1,2):$s
+  endif
+
+  $dcmd=$dis1+$dis2
+  length($dcmd):$len
+
+  if (showcontent='f') then
+     if ($len=2) then
+        df
+     else
+        menu('dfid')
+     endif
+  elseif (showcontent='s') then
+     if ($len=2) then
+        ds
+     else
+        menu('ds_1')
+     endif
+  endif
+
+  exists('dsSelect','parameter'):$e
+  if($e and $n2) then
+    $dss=$dcmd+'(`select`)'
+    exec($dss)
+  else
+    $dss=$dcmd+'(arraystart,arraystop,arraydelta'+$dc+$ctraces+')'
+    exec($dss)
+    if shownumbers='v' or shownumbers='s' then
+      $dssl='dssl('+$style+''+$val+''+$rev+'arraystart,arraystop,arraydelta)'
+      exec($dssl)
+    endif
+    if arraydscale='y' then
+/*
+      if showcontent='f' then dscale(-vo*arraystop/arraydelta)
+      else dscale
+      endif
+*/
+      dscale
+    endif
+  endif
+
+elseif $arg='plot' then
+
+  tmpsave('arraytmp')
+  if parstyle<>'' then exec(parstyle) endif
+  tmpreturn('arraytmp')
+
+  if showcontent='f' then 
+    if $plww='ww' then $pl='pfww' else $pl='plfid' endif
+  else $pl='pl'+$plww 
+  endif
+  $pl=$pl+'(arraystart,arraystop,arraydelta'+$dc+')'
+  exec($pl)
+
+  if shownumbers<>'n' then
+    $pssl='pssl('+$style+''+$val+''+$rev+'arraystart,arraystop,arraydelta)'
+    exec($pssl)
+  endif
+  if arraydscale='y' then pscale endif
+  showarrays('redisplay')
+
+elseif $arg='reset' then
+
+setvalue('arraystart',1,'processed'):$e arraystart=1
+setvalue('arraydelta',1,'processed'):$e arraydelta=1
+if celem=0 then $arraystop=arraydim else $arraystop=celem endif
+setvalue('arraystop',$arraystop,'processed'):$e arraystop=$arraystop
+showarrays('redisplay')
+
+endif

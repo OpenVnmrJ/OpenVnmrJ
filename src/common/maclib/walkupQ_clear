@@ -1,0 +1,69 @@
+"macro walkupQ_clear"
+"****************************************************************"
+"   walkupQ_clear - clear cursqexp Queue information    "
+"	This does not clear sample information		"
+"****************************************************************"
+
+"****The following are common for all walkupQ_xxxx macros*****"
+        $expfile=cursqexp+'/EXPLIST'
+        $lngfile=cursqexp+'/LONGLIST'
+        $timefile=cursqexp+'/EXPTIME'
+        $expdeledit=cursqexp+'/EXPdeledit'
+        $lngdeledit=cursqexp+'/LONGdeledit'
+        $curfidlist=cursqexp+'/FIDlist'
+        $maclibdir=cursqexp+'/macdir'
+        $longQ=longQ $resume=resumeQ
+"****************************************************************"
+   if ($# < 1) then $1='' endif
+
+   if (cppauseflg='y') then show_n_pause('close') endif
+   if (customflag='y') then customizepar('quit') endif
+
+   customflag='n'
+   cppauseflg='n'
+   shell('(cat '+$expfile+' | grep -vw Queued > '+$expfile+'1)'):$dum
+   shell('mv '+$expfile+'1 '+$expfile):$dum
+   write('reset',$lngfile)
+   write('reset',$timefile)
+   write('reset',$expdeledit)
+   write('file',$expdeledit,'"None" "NULL"')
+   write('reset',$lngdeledit)
+   shell('rm -f '+cursqexp+'/day2nightLIST'):$dum
+   shell('rm -f '+cursqexp+'/DAYLIST'):$dum
+   shell('rm -f '+cursqexp+'/NIGHTLIST'):$dum
+   rm('-rf',cursqexp+'/NodeModules'):$dum
+   write('file',$lngdeledit,'"None" "NULL"')
+   vnmrjcmd('pnew','cursqexp','curexp')
+   write('reset',$curfidlist)
+   exists('htlist2cpq','maclib'):$macex
+   if ($macex) then
+   	htlist2cpq('clear')
+   endif
+   daytime='' nighttime=''
+   if (replaceQ[4]<>'') then
+	shell('cp '+$maclibdir+'/sampleinfo '+cursqexp+'/info1'):$dum
+        shell('cp '+$maclibdir+'long/sampleinfo '+cursqexp+'/info2'):$dum
+   endif
+   if ($1='all') then
+        shell('rm -rf '+$maclibdir+'/*'):$dum
+        shell('rm -rf '+$maclibdir+'long/*'):$dum
+        write('reset',$expfile)
+        if (traymax > 0) then loc=0 endif
+        off('loc','global')
+        if (traymax=96) or (traymax=768) then
+                getadminfo('defaultrack'):vrack
+                getadminfo('defaultzone'):vzone
+        endif
+   endif
+   if (replaceQ[4]<>'') then
+        shell('mv '+cursqexp+'/info1 '+$maclibdir+'/sampleinfo'):$dum
+        shell('mv '+cursqexp+'/info2 '+$maclibdir+'long/sampleinfo'):$dum
+   endif
+   if ($1<>'partial') then
+	$seqfil=seqfil
+	cqinitCP
+	xmhaha('pause')
+	xmhaha('emptytrash')
+	seqfil=$seqfil
+   endif
+"****************************************************************"

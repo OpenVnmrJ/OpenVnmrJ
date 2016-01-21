@@ -1,0 +1,42 @@
+"macro rna_auto1d9"
+
+ssfilter=100 wft f full select(1)
+lp=0 ph  clear(2)
+setref wc=.7*wc vp=0 vo=90 ho=0 
+sp=0p wp=10p
+pscale pap dscale
+ select(1) BPaph0
+ vsadj(30)
+ dssn(1,1) pl(1) 
+ select(2) BPaph0
+ vp=vp+vo
+ dssn(2,2) pl(2) 
+vp=0
+write('graphics',80,vp+10,'Imino NHs Optimized')
+write('graphics',80,vp+10+vo,'Amino NHs Optimized')
+write('plotter',80,vp+10,'Imino NHs Optimized')
+write('plotter',80,vp+10+vo,'Amino NHs Optimized')
+BPpage
+BPsvf(userdir+'/AutoRNA_1D/rna_CPMGgNhsqc_1Ds')
+
+$nt=nt $d1=d1 $gain=gain $temp=temp
+rna_hcch_tocsy
+wexp='rna_auto1d10'
+ribose='y','n' AH2H8='n','y' array='(ribose,AH2H8)'
+d1=$d1 dmm='ccp' dres=9.0
+nt=$nt gain=$gain temp=$temp
+
+dm='nny' ribose='y' AH2H8='n' BPsetwurstparams
+$dmfribose=dmf $dseqribose=dseq $dpwrribose=dpwr
+dm='nny' ribose='n' AH2H8='y' BPsetwurstparams
+$dmfAH2H8=dmf $dseqAH2H8=dseq $dpwrAH2H8=dpwr
+wnt='wft setref select(1) vsadj(80) f full dssa' 
+  ribose='y','n'
+  AH2H8 ='n','y'
+  ncyc=2,5
+dmf=$dmfribose,$dmfAH2H8
+dpwr=$dpwrribose,$dpwrAH2H8
+dseq='wurst80','wurst40'
+
+array='(ribose,AH2H8,dmf,dpwr,dseq,ncyc)'
+au

@@ -1,0 +1,130 @@
+"macro BPbiopack1a"
+"BPbiopack1a(<y>)"
+ "BPbiopack1a('y') is run by VNMRJ to activate BioPack from MainMenu"
+ "BPglobalpar is run by selecting Activate Biopack from MainMenu"
+
+  BPglobalpar
+  BPrtppar('ghn_co')        
+  clear(2)
+  fn=np np=fn fn=2*np
+  pwC3 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC3*5.0      $pw = trunc($pw + 0.5)    pwC3 = $pw/5.0
+  pwC3a = pwC3
+  pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC4*5.0      $pw = trunc($pw + 0.5)    pwC4 = $pw/5.0
+  pwC5 = 88.8*600.0/sfrq
+  $pw = pwC5*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC5 = ($pw + 1.0)/5.0
+  pwC6 = 88.8*600.0/sfrq
+  $pw = pwC6*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC6 = ($pw + 1.0)/5.0
+  pwC7 = 80.5*600.0/sfrq
+  $pw = pwC7*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC7 = ($pw + 1.0)/5.0
+  pwC7a = pwC7
+  pwC8 = 80.5*600.0/sfrq
+  $pw = pwC8*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC8 = ($pw + 1.0)/5.0
+  pwC8a = pwC8
+  pwC9 = 80.5*600.0/sfrq
+  $pw = pwC9*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC9 = ($pw + 1.0)/5.0
+  pwC9a = pwC9
+  spin='n' ni=0  ni2=0 phase=1 phase2=1
+exists('waltzB1','parameter'):$e
+if $e=0 then create('waltzB1','real') waltzB1=5p endif
+exists('dmf30','parameter'):$e
+if $e=0 then create('dmf30','real') endif
+exists('rf30','parameter'):$e
+if $e=0 then create('rf30','real') endif
+exists('dmf80','parameter'):$e
+if $e=0 then create('dmf80','real') endif
+exists('rf80','parameter'):$e
+if $e=0 then create('rf80','real') endif
+exists('dmf140','parameter'):$e
+if $e=0 then create('dmf140','real') endif
+exists('rf140','parameter'):$e
+if $e=0 then create('rf140','real') endif
+
+tn=tn dn=dn dn2=dn2    "make sure proper frequencies are set"
+setfrq
+if (numrfch>3) then dn3=dn3 endif
+exists('reffrq','parameter'):$e
+if ($e=0) then create('reffrq','real') endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+if (BPinstall=0) then    "only true at installation"
+  write('line3','New "HCN" probe file being created')
+  BPaddprobe('HCN')
+  probe='HCN'
+  write('line3','BioPack parameters added to new probe file')
+
+    "values of dof,dof2 and tof are ok for 800,750,600 and 500"
+  BP1Hspinlock=12p BPtpwrspinlock=12p
+  if (h1freq=900) then
+    sw=14500 np=2048 
+    BPspinlock=8000 BPdpwrspinlock=8000
+  endif
+  if (h1freq=800) then
+    sw=13000 np=2048 
+    BPspinlock=8000 BPdpwrspinlock=8000
+  endif
+  if (h1freq=750) then
+    sw=12000 np=2048 
+    BPspinlock=8000 BPdpwrspinlock=8000
+  endif
+  if (h1freq=700) then
+    sw=11500 np=2048 
+    BPspinlock=7500 BPdpwrspinlock=7500
+  endif
+  if (h1freq=600) then
+    BPspinlock=7000 BPdpwrspinlock=7000
+  endif
+  if (h1freq=500) then
+    sw=8000 np=1024 
+    BPspinlock=6000 BPdpwrspinlock=6000
+  endif
+  if (h1freq=400) then
+    sw=7000 np=1024 
+    BPspinlock=5000 BPdpwrspinlock=5000
+  endif
+  if (h1freq=300) then
+    sw=5000 np=512 
+    BPspinlock=4000 BPdpwrspinlock=4000
+  endif
+endif
+
+BPpwrlimits=1   "set power limits as default"
+"using pulse/power values in current parameter set for C/N"
+"these will be modified by the BPbiopack2 macro later"
+
+"overwrite BPdpwr*max to safe values for C13"
+if (sfrq<650) then
+ ln(50.0/(compC*pwC)):$ln   "5kHz"
+else
+ ln(60.0/(compC*pwC)):$ln   "4.2 kHz"
+endif
+
+$BPdpwrmax=trunc(pwClvl - 20.0*$ln/2.303)
+if BPdpwrmax>$BPdpwrmax then BPdpwrmax=$BPdpwrmax endif
+
+ln(250.0/(compN*pwN)):$ln   "1kHz for N15"
+$BPdpwr2max=trunc(pwNlvl - 20.0*$ln/2.303)
+if BPdpwr2max>$BPdpwr2max then BPdpwr2max=$BPdpwr2max endif
+
+
+
+"set limits for 1H/2H"
+BPdpwr3max=50
+BPtpwrmax=63
+ 
+"use setoffset statement to calculate offsets"
+setoffset('C13',174):dof
+setoffset('N15',120):dof2
+setoffset('H2',4):dof3
+setoffset('H1',4.66):tof
+
+setref
+pw=pw90      "sets pw if pw was 0 at installation"
+BPbiopack2             "makes sure shapes are created at least once"
+BPinstall=1            "indicates installation is done"          
+
+printon man('BioPacklist') printoff
+man('BioPack.update')
+
+banner('A new user probefile has been created\\ \\Check printed list for important parameters.\\Then update parameter values in this parameter set.\\    \\Click "Update Probefile with These Parameters"\\menu button to finish probefile update\\  \\Exit and Re-start VNMRJ after updating\\  \\THIS IS REQUIRED BEFORE ANY EXPERIMENT OR CALIBRATION IS DONE')

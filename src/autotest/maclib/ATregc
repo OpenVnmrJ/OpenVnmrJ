@@ -1,0 +1,27 @@
+"macro ATregc"
+" ATregc - Amplifier linearity regression analysis"
+" takes log of B1 (dB) and correlates with power level in pwxlvl"
+$filename=curexp+'/regression.inp'
+repeat
+select($i)
+peak:$hgt
+if $hgt>0 then ln(100*$hgt):$lnhgt else ln(-100*$hgt):$lnhgt endif
+if (array='tpwr') then
+ $attv=tpwr[$i]
+else
+ $attv=dpwr[$i]
+endif
+$resp=20*$lnhgt/2.303
+write('file',$filename,'%10s  %5.4f',$attv,$resp)
+$i=$i+1
+until $i>$end
+full
+expl('regression') analyze('expfit','regression','poly1','list') expl
+sc=100 wc=100
+ 
+lookup('file',curexp+'/analyze.list')
+lookup('skip',23,'read',1):$corrcoef
+lookup('skip',3,'read',1):$corrcoefdev
+$corrcoef=trunc(1000*$corrcoef)/1000
+$corrcoefdev=trunc(1000*$corrcoefdev)/1000
+return($corrcoef,$corrcoefdev)

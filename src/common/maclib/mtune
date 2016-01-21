@@ -1,0 +1,171 @@
+"macro mtune"
+
+// probe tune
+$action = 'setup'
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action = 'setup') then
+  "create marker persistence file"
+  $out=userdir+'/persistence/mtune_nuc'
+  getProbePath:$e,$probe
+  if ($e=0) then $probe='none' endif
+
+  write('reset',$out)
+  if $probe='none' then     "For imaging, no probe file set"
+    write('file',$out,'"H1" H1')
+    write('file',$out,'"H2" H2')
+    write('file',$out,'"C13" C13')
+    write('file',$out,'"F19" F19')
+    write('file',$out,'"P31" P31')
+    write('file',$out,'"Na23" Na23')
+    write('file',$out,'"Xe129" Xe129')
+  else                      "Read nuclei present in probe file"
+    lookup('file',$probe)
+    repeat
+      lookup('readline'):$string,$nret
+      $b=''
+      strstr($string,'dmf '):$a,$b
+      if ($b<>'') and ($b<>'lkgn_') and ($b<>'lkpwr_') then
+        write('file',$out,'"'+$b+'" '+$b)
+      endif
+    until ($nret=0)
+  endif
+
+  $temp=temp
+  on('temp'):$tempon
+  if (seqfil<>'mtune' and seqfil<>'qtune') then
+    exists(curexp+'/tutmp','file'):$e
+    if $e>0.5 then rm('-rf',curexp+'/tutmp') endif
+    tmpsave('tutmp')
+    cp(curexp+'/text',curexp+'/tutmp/text')
+  endif
+  exists('qtune','parlib'):$e,$path
+  if ($e) then
+    rtp($path)
+  else
+    write('error','parameters for qtune do not exist')
+    return
+  endif
+  if ($tempon) then
+    temp = $temp
+  else
+    temp = 'n'
+  endif
+  if Console='mercury' then
+    tugain=0
+  endif
+  gain = tugain
+  werr=''
+  wdone=''
+  np=512
+  in='n'
+  pad=0
+  spin = 'n'
+  ss = 0
+  nt = 1e6
+  bs=1
+  full
+  av
+  "create parameters for markers"
+  exists('marker1','parameter'):$marker
+  if ($marker < 0.5) then
+    create('marker1','string')
+    create('marker2','string')
+    create('markerfrq1','real')
+    create('markerfrq2','real')
+    setgroup('marker1','display')
+    setgroup('marker2','display')
+    setgroup('markerfrq1','display')
+    setgroup('markerfrq2','display')
+    marker1=''
+    marker2=''
+  endif
+elseif ($action = 'start') then
+  wbs='mtune(`process`)'
+  wexp='mtune(`reset`)'
+  acqmode='tune'
+  au('silent','tune','bsclear')
+  f
+elseif ($action = 'reset') then
+  au('silent','tune','bsclear')
+elseif ($action = 'process') then
+  ft('noft','nodc')
+  dss
+  dscale('rev','magenta','MHz',0,sfrq-tunesw/2*1e-6,tunesw*1e-6)
+  pen('graphics','magenta')
+  move(wcmax-sc-wc/2,-20)
+  draw(wcmax-sc-wc/2,wc2max)
+  if (marker1 <> '') and (marker1 <> 'none') then
+    $markerset1=wcmax-sc-wc/2-(sfrq-markerfrq1)/tunesw*1e6*wc
+    move($markerset1,-20)
+    draw($markerset1,wc2max)
+    write('graphics',$markerset1 +2,wc2max-10,'%s',marker1)
+  endif
+  if (marker2 <> '') and (marker2 <> 'none') then
+    $markerset2=wcmax-sc-wc/2-(sfrq-markerfrq2)/tunesw*1e6*wc
+    move($markerset2,-20)
+    draw($markerset2,wc2max)
+    write('graphics',$markerset2 +2,wc2max-10,'%s',marker2)
+  endif
+elseif ($action = 'changemarker1') then
+  aa('Marker1 changed')
+  if (marker1 <> '') and (marker1 <> 'none')  then
+    $nuc=tn
+    $freq=sfrq
+    tn=marker1
+    markerfrq1=sfrq
+    sfrq=$freq
+    tn=$nuc
+  elseif (marker1 <> '') or (marker1 = 'none') then
+    marker1=''
+  endif
+  mtune('start')
+elseif ($action = 'changemarker2') then
+  aa('Marker2 changed')
+  if (marker2 <> '') and (marker2 <> 'none')  then
+    $nuc=tn
+    $freq=sfrq
+    tn=marker2
+    markerfrq2=sfrq
+    sfrq=$freq
+    tn=$nuc
+  elseif (marker2 <> '') or (marker2 = 'none') then
+    marker2=''
+  endif
+  mtune('start')
+
+elseif ($action = 'setbetweenmarkers') then
+
+  if (marker1 <> '') and (marker1 <> 'none') and (marker2 <> '') and (marker2 <> 'none') then
+    if (markerfrq1 >= markerfrq2) then
+      $setfreq=markerfrq2+(markerfrq1-markerfrq2)/2
+    else
+      $setfreq=markerfrq1+(markerfrq2-markerfrq1)/2
+    endif
+    sfrq=$setfreq setvalue('sfrq',sfrq,'processed')
+    halt('  ')
+  else
+    write('error','Two markers needed!')
+  endif
+
+
+elseif ($action = 'quit') then
+  expactive:$e
+  if ($e) then
+    aa('Tuning Complete')
+  endif
+  clear(2)
+  acqmode=''
+  $temp=temp
+  on('temp'):$tempon
+  cp(curexp+'/tutmp/text',curexp+'/text')
+  tmpreturn('tutmp')
+  if ($tempon) then
+    temp = $temp
+  else
+    temp = 'n'
+  endif
+  dg newdg
+endif

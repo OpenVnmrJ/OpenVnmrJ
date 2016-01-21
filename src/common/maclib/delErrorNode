@@ -1,0 +1,36 @@
+"macro delErrorNode"
+
+$archsamp=$2
+exists($archsamp+'/dirinfo','directory'):$ok
+if ($ok=0) then
+    return
+endif
+
+exists($archsamp+'/dirinfo/macdir','file','w'):$ok
+if ($ok) then
+    exists($archsamp+'/dirinfo/xmldir','file','w'):$ok
+endif
+if ($ok=0) then
+    return
+endif
+
+shell('(cat "'+$archsamp+'/dirinfo/xmldir/errorlog" | grep -c \'^'+$1+'\')'):$ok
+if ($ok=0) then return endif
+exists($archsamp+'/dirinfo/xmldir/info/'+$1+'/prop','file'):$ok
+if ($ok=0) then return endif
+
+$attr='' $val=''
+readfile($archsamp+'/dirinfo/xmldir/info/'+$1+'/prop','$attr','$val','','local')
+teststr('$attr','CPnode','local'):$ok
+if ($ok=0) then return endif
+if $val[$ok]='' then return endif
+$ACQlist=$archsamp+'/dirinfo/macdir/ACQlist'
+shell('(cat '+$ACQlist+' | grep -w Error | grep -c \'^'+$1+'\')'):$ok
+if ($ok=0) then return endif
+
+shell('(cat '+$ACQlist+' | grep -v \'^'+$1+'\' > '+$ACQlist+'1)'):$dum
+shell('mv '+$ACQlist+'1 '+$ACQlist):$dum
+return(1)
+//xmhaha_subSQ($archsamp,'ACQlist')
+//xmhaha_fullSQ('set',$archsamp+'/dirinfo/xmldir')
+//SQDisplay('refresh')

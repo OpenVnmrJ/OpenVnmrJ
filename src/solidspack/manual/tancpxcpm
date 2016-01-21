@@ -1,0 +1,106 @@
+Protocol: Tancpxcpm  Sequence: tancpxcpm.c  Apptype: solidseq1d
+
+Description: 
+
+Constant, linear or tangent-ramped cross polarization (CP) with a
+CPM decoupling. Used for calibration of the Hartmann-Hahn Match 
+and calibration ofthe 90-degree pulse width pwH90 with X detection.
+
+This Version uses the SHAPE module cpmH rather than the DSEQ router.
+
+Setup: 
+
+Load a calibrated data set and select the protocol Tancpxcpm. For a 
+new nucleus first use Onepul to calibrate pwX90.  Select 'H1' as 
+the observe nucleus and calibrate pwX90 again for protons. Reselect
+the X nucleus and copy pwH90 = pwX90 (of protons) and aH90 = aX90
+(of protons) to transfer the calibrations to the decoupler. It is
+helpful to calibrate pwH90 with the same value as pwX90. 
+
+After calibration select the protocol Tancpxcpm. Select the desired
+decoupling method, TPPM or SPINAL. The manual file Onepulcpm describes
+calibration of decoupling and the method can also be applied with 
+Tancpxcpm. 
+
+To run constant-amplitude CP select Shape = 'const' and Channel =
+'from'.  Set aHhx to the desired proton amplitude during CP and 
+set aXhx to the desired X amplitude during CP.  A good starting 
+value for aXhx is a calibrated value of aX90 that produces a 
+pulse width in the range 4 to 5 us.  A good value of aHhx is the
+calibrated value of aH90 that produces the same pulse width as
+aXhx.  After setting the match, leave pwH90 and aH90 at their 
+calibrated values. pwH90 is used as the proton excitation pulse.
+Optionally reset aH90 and pwH90 for a different calibration 
+if that is desired.  Set the contact time tHX for maximum 
+sensitivity.  A good starting value is 1.0 ms. 
+
+Array either aHhx or aXhx to provide a fine calibration of the 
+Hartmann-Hahn match. When the sample is spinning the optimum match 
+will occur at two amplitudes greater and less the the Hartmann-Hahn
+match and the values will diverge for faster spinning rates.  Array
+pwH90 to provide a fine calibration of the proton excitation pulse. 
+
+To run linear-ramped-amplitude CP first calibrate constant-amplitude 
+CP. Select Shape = 'linear' and then set dHX = 100 to 400. The 
+ramped channel is designated by Channel and can be either 'from' or 
+'to' where from is protons and to is X.  The median of the ramp is 
+the appropriate value aHhx (from) or aXhx (to). Do a fine calibration 
+of dHX with an array. 
+
+To run tangent-ramped-amplitude CP first calibrate linear-ramped CP.
+Select Shape = 'tan' and set the value of bHX = 10 to 400. Calibrate
+dHX and bHX simultaneously in a double array. Tangent-ramped CP is 
+usually not used with routine samples. Note that when bHX is large
+(>10000) a linear ramp and a tangent ramp are identical.  When bHX 
+approaches 0 the tangent ramp approaches constant CP. Beware that
+bHX > 0 and that if you go from Shape = 'linear' to Shape = 'tan'
+with bHX = 0 constant CP will result. 
+
+For all CP experiments do a fine calibration of tHX with an array. 
+Nuclei with attached protons obtain maximum CP at about 1.0 ms 
+or less.  Nuclei with distant protons may large values of tHX a
+pproaching 10 ms or more. 
+
+Parameter  Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used 
+              as a preparation pulse. Also used to store the dec 
+              calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on
+               the channel designated with chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX -  +/- tangent curvature (>0 to 1.0e5).  
+       dHX -  amplitude width of the ramp. A negative width sets a
+              ramp that starts high and decreases in amplitude.
+       tHX -  contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must 
+              be set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be
+              set - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx, phHhx, phXhx);  
+ 
+cpmH:  Module:  yes
+Sequence:  tancpxcpm.c
+Description: Implements CPM Decoupling - Used as an alternate to the DSEQ router.
+Parameters:  Sequence Page
+       aHcpm - amplitude of CPM.
+       pwHcpm - approximate 180-degree flip on dec.
+       phHcpm - CPM +/- phase, "phi".
+       ofHspnl - overall frequency offset.
+Implementation: SHAPE cpm = getcpm("cpmH",0.0,0.0,0,1);
+Underscore functions: _SHAPE functions.

@@ -1,0 +1,48 @@
+"macro AT25"
+"AT25" "Phase Switch Time Test (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+  ATrtp('standard')
+  text('Phase Shift Timing Test (channel 2)')
+  seqfil='ATphswitch'
+  at_currenttest='phswitch_ch2'
+  dpwr=tpwr dof=tof
+  pw=1  d2=.00002 at=1 fn='n'
+  rof1=0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,20
+  array('p1',31,1,0) p1[31]=0
+  da
+  array='(rof1,p1)'
+  wnt='ATwft f select(1) av vsadj(10) peak:$ht,cr rl(0) sp=-1p wp=2p dssh dtext'
+  wexp='AT25(`PART1`)'
+  ATcycle
+  au
+  write('line3','Phase Shift Timing Test (channel 1)')
+
+elseif ($1='PART1') then
+  wft
+
+  select(arraydim)
+  f ph aph0 vp=20
+  vsadj(150) peak:$ht,cr rl(0) sp=-1p wp=2p
+  s1
+  ATsvf
+  r1=1 $peaksum1=0 $resid=0 $residsum=0  $residsum2=0
+   select(arraydim) vsadj(100) peak:$peakht 
+  r1=3
+  repeat
+   select(r1) dc peak:$ht
+   if $ht<0 then $ht=-$ht endif
+   $residsum=$residsum+$ht
+   r1=r1+1 
+   until r1=arraydim 
+   $av2=$residsum/28 
+  $resid=trunc(10000*$av2/$peakht)/100 
+  r5=$resid
+  ATrecord('PSHIFTRESID2','Phase Shift Timing Test (channel 2): % residual signal for rof1=0.2 through 20 usec','avg_resid.',$resid)
+  write('file',autotestdir+'/REPORT','Phase-shift Timing Residual (Ch 2): %1.2f percent for rof1=0.2 through 20 usec',$resid)
+   ATplot
+
+ATnext
+endif

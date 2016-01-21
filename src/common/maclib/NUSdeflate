@@ -1,0 +1,85 @@
+"macro NUSdeflate"
+"NUSdeflate - zero parts of uniformly sampled data according to a sampling schedule"
+
+// if arraydim < ni*ni2*ni3*phasesize then data are not yet inflated
+exists('ni','parameter'):$e
+if ($e) then $ni=ni else $ni=1 endif
+exists('ni2','parameter'):$e
+if ($e) then
+   if (ni2<1) then $ni2=1 else $ni2=ni2 endif
+else
+   $ni2=1
+endif
+exists('ni3','parameter'):$e
+if ($e) then
+   if (ni3<1) then $ni3=1 else  $ni3=ni3 endif
+else
+   $ni3=1
+endif
+
+exists('phase','parameter'):$e
+if ($e) then $phasesize=size('phase') else $phasesize=1 endif
+
+//if (arraydim < $ni*$ni2*$ni3*$phasesize) then $deflate=0 else $deflate=1 endif
+//Need a new parameter to indicate whether data are inflated or not
+//arraydim now reflects final data size
+$deflate=1
+
+$inflateND='' $fn1='' $fn2='' $log='' $cmd='' $str='' $inf = 1
+getbinpath('inflateND'):$infex,$inflateND
+
+$fn1=curexp+'/procdir/orig.fid'
+$fn2=curexp+'/procdir/deflate.fid'
+$log=curexp+'/procdir/deflateND.log'
+
+exists(curexp+'/sampling.sch','file'):$e
+if not ($e) then   "try to fetch from .fid file "
+  if not (file='exp') then
+    $file=curexp+'/procdir/orig'
+    strstr($file,'.fid'):$r,$s1,$s2
+    if $s1='' then 
+      $file=$file+'.fid'
+    endif
+    $file=$file+'/sampling.sch'
+    exists($file,'file'):$e
+    if($e) then
+      write('line3','Copying schedule from %s to curexp',$file)
+      copy($file,curexp+'/sampling.sch')
+    endif
+  endif
+else
+   write('line3','Using sampling schedule in current workspace')
+endif
+
+if not ($e) then
+  write('error','NUSdeflate aborted :-o sampling schedule not found. ')
+  return (0)
+else
+  exists($fn1+'/sampling.sch','file'):$e
+  if not ($e) then
+    copy(curexp+'/sampling.sch',$fn1+'/sampling.sch')
+  endif
+endif
+
+exists($fn2,'directory'):$e
+if($e) then
+  shell('rm -r ' + $fn2)
+endif
+
+$cmd = $inflateND +' ' + $fn1 + ' ' + $fn2 + ' >> ' + $log 
+write('reset',$log)
+write('file',$log,$cmd) 
+shell($cmd) 
+
+exists($fn2+'/fid','file'):$e
+if($e) then
+  write('line3','inflateND finished.')
+  //write CSinflated to procpar
+  exists('CSinflated','parameter'):$ex
+  if ($ex<0.5) then create('CSinflated') endif
+  isInflated:CSinflated
+  writeparam($fn2+'/procpar','CSinflated','add')
+else
+  write('error','inflateND failed.')
+  dtext($log)
+endif

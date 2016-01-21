@@ -1,0 +1,82 @@
+"macro pxset"
+" ******************************************************************* "
+" ***        pxset - assign Pbox 5.2 output data to               *** "
+" ***                 experimental parameters                     *** "
+" ***             Pbox 5.2, Eriks Kupce 01/08/96                  *** "
+" ******************************************************************* "
+
+$expar=''
+$name=''
+$prom[1]='Assign pulse length to : '
+$prom[2]='Assign power to : '
+$prom[3]='Assign fine power to : '
+$prom[4]='Assign dres to : '
+$prom[5]='Assign dmf to : '
+
+$par[1]=0 $par[2]=0 $par[3]=0 $par[4]=0 $par[5]=0
+
+if($# > 0) then pboxget($1):$name,$par[1],$par[2],$par[3],$par[4],$par[5]
+else pboxget:$name,$par[1],$par[2],$par[3],$par[4],$par[5] 
+endif
+
+if $name = '' or $par[1]=0 then 
+  write('error', 'Pbox: no shape parameters in pbox.cal')
+  return 
+endif
+
+$i = 1
+repeat
+  repeat
+    if $par[$i] = 0.0 then 
+      if $i <> 2 then
+        $expar = '' 
+      else
+        if $par[3] < 0 then
+          $expar = ''
+        else
+          input($prom[$i]):$expar 
+        endif
+      endif
+    else
+      if $i = 3 and $par[3] < 0 then
+        $expar = ''
+      else
+        input($prom[$i]):$expar 
+      endif
+    endif
+    if $expar = 'q' then 
+      return 
+    else 
+      if $expar <> '' then 
+        exists($expar, 'parameter'):$e
+        if ($e) then {$expar} = $par[$i] 
+        else write('line3','... parameter %s does not exist',$expar)
+        endif
+      else
+        $e=1
+      endif
+    endif
+  until ($e)
+$i = $i + 1
+until $i > 5
+
+repeat
+  input('Assign shape name to : '):$expar
+  if $expar = 'q' then return 
+  else 
+    if $expar <> '' then 
+      exists($expar, 'parameter'):$e
+      if ($e) then {$expar} = $name 
+      else write('line3','... parameter %s does not exist',$expar)
+      endif
+    else
+      $e=1
+    endif
+  endif
+until ($e)
+
+if $par[3]<0 then 
+  write('error', 'Pbox: power not calibrated!')
+endif
+
+

@@ -1,0 +1,55 @@
+"macro compressfid"
+"***************************************************************"
+"								"
+"   compressfid  -  compresses a FID from double-precision to	"
+"		    single-precision data			"
+"                                                               "
+"   usage:   compressfid(<'input_path'>, output_path)		"
+"								"
+"***************************************************************"
+
+if (($# > 2) or ($# < 1)) then
+   write('error',
+	'compressfid:  usage  -  compressfid(<input_path>, output_path)')
+   return
+endif
+
+$outfile = ''
+$infile = ''
+$expno = ''
+jexp:$expno	"quick way to get experiment number as a string"
+
+"Set up UNIX paths to input and output files"
+if ($# = 1) then
+   $outfile = $1
+   $infile = userdir + '/exp' + $expno
+   $expinput = 1
+else
+   $outfile = $2
+   $infile = $1
+   $expinput = 0
+endif
+
+"Does the input file exist?"
+if ($expinput = 1) then
+   exists($infile +'/acqfil/fid','file'):$e
+else
+   exists($infile +'.fid/fid','file'):$e
+endif
+
+if ($e = 0) then
+   write('error','compressfid:  input file %s does not exist', $infile)
+   return
+endif
+
+"Set up the UNIX command line"
+$command = 'compressfid -f -o "' + $outfile +'"'
+if ($expinput = 1) then
+   $command = $command + ' -e ' + $expno
+   flush
+else
+   $command = $command + ' -i "' + $infile +'"'
+endif
+
+"Execute the program in background"
+shell($command + ' &'):$x

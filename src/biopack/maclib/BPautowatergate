@@ -1,0 +1,45 @@
+"macro BPautowatergate"
+" BPautowatergate(option,<anything to use current values>)"
+"use BPautomatic power calculation and H2Osinc.RF pulse"
+
+BPgettemp:$temp
+if ($#=1) then
+  water presat='n' watergate='y'
+  autosoft='y' flipshap='' flippwr='n' flipback='y'
+
+  wet='n' shaped='n' jumpret='n'
+  d3=1/14p tofwg=tof
+
+  if ($1=0) then flagsoft='y' flag3919='n' flagW5='n' endif
+  if ($1=1) then flagsoft='n' flag3919='y' flagW5='n' endif
+  if ($1=2) then flagsoft='n' flag3919='n' flagW5='y' endif
+
+  shell('pwd'):$dummy
+  input('Enter Desired Relaxation (d1) Time (sec)    '):d1
+  pw(90) p180=2*pw90
+  setlimit('flippw',50000,0,.1)
+else
+  if ($1=0) then flagsoft='y' flag3919='n' flagW5='n' endif
+  if ($1=1) then flagsoft='n' flag3919='y' flagW5='n' endif
+  if ($1=2) then flagsoft='n' flag3919='n' flagW5='y' endif
+  setlimit('flippw',50000,0,.1)
+  p180=2.0*pw
+endif
+d3=1/14p tofwg=tof
+temp=$temp
+phincr1=0 phincr2=0
+if (autosoft='y') then
+  nt=1 gain=gain-12
+  ssfilter='n' wnt='f wft select(1) av vsadj dssh'
+  BPautowatergateproc3 return
+endif
+if ((flipback='n') and ((flag3919='y') or (flagW5='y'))) then
+  BPautowatergateproc3 return
+endif
+setlimit('flippw',50000,0,.1)
+array('flippw',26,0.25*flippw,0.075*flippw) nt=1 gain=10
+ssfilter='n'
+wexp='BPautowatergateproc1' wnt='f wft select(1) av vsadj dssh'
+dg
+av
+dps dtext au

@@ -1,0 +1,32 @@
+"macro ATxarray"
+"******************************************************"
+" ATxarray - macro for easy setup of exponential arrays  "
+"******************************************************"
+" usage:  xarray                      interactive mode                     "
+"         xarray(parameter_name)      interactive, for specified parameter "
+"         xarray(parameter_name,steps,start,multiplier)                      "
+
+if ($#>1) and ($#<4) then
+ write('error','usage:  xarray<(parameter_name<,steps,start,multiplier>)>')
+ return(1)
+endif
+if $#>0 then $par=$1 else
+ input('parameter to be arrayed: '):$par
+endif
+if $#>1 then $steps=$2 $start=$3 $mult=$4
+else
+ input('enter number of steps in array: '):$steps
+ input('enter starting value: '):$start
+ input('enter array multiplier: '):$mult
+endif
+
+{$par}=0 gain='y'
+if array='' then array=$par else array=array+','+$par endif
+$count=2
+{$par}[1]=$start
+repeat
+ {$par}[$count]={$par}[$count-1]*$mult
+ $count=$count+1
+until $count>$steps
+
+da

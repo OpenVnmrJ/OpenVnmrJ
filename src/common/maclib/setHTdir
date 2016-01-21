@@ -1,0 +1,50 @@
+"macro setHTdir"
+"Varian macro setHTdir - create svfdir for HT experiments "
+// This macro is NOT used in VJ3/CP4 environment
+//  The HTdir parameter is unique to preVJ3 (nonCP4) conditions
+
+  $s1='' $s2=''
+  if ($# < 1) then $1='' endif
+
+//  exists('HTdir','parameter','global'):$e  
+//  if not ($e) then
+//    create('HTdir','integer','global')
+//  endif
+  create('HTdir','string','global',''):$e
+  if ($1='init') then
+	// This is called by autoHT at the init section
+	// The HTdir value is either an empty string OR
+	// dirname of the file parameter
+     HTdir=''
+     if (file<>'') and (file<>'exp') then
+	shell('dirname '+file):HTdir
+     endif
+  endif
+
+//  If HTdir was assinged in the panel by the user
+//	don't change its value.  If it is an empty
+//	string, assign HTdir value based on file OR Svfname
+
+  if ($1='start') and (HTdir='') then
+	//This is called by autoHT at the start section
+    if (file='') or (file='exp') then
+	// The fid is NOT saved. assign a directory path
+	//  based on svfdir parameter value
+	// This should be done via Svfname, as
+	//  svfdir is invariably a template
+
+	strstr(svfdir,'/','last'):$r,$s1,$s2
+	if ($s2='') then
+	   $svfdir=$s1
+	else
+	   $svfdir=svfdir
+	endif
+	Svfname($svfdir,''):HTdir
+	exists(HTdir,'directory'):$htdirex
+	if ($htdirex=0) then shell('mkdir -p '+HTdir):$dum endif
+    else
+      shell('dirname '+file):HTdir   
+    endif
+  endif
+
+  return(HTdir)

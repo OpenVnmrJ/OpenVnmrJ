@@ -1,0 +1,107 @@
+"macro fixpar_imaging"
+" ****************************** "
+" **** macro fixpar_imaging **** "
+" ****************************** "
+" this macro is called by fixpar which is called by the rtp (and rt) command"
+
+"run updtgcoil if it exists"
+if (jviewport<>3) then
+  exists('gcoil','parameter'):$e
+  exists('updtgcoil','maclib'):$exists
+  if ($e) and ($exists) then
+    updtgcoil  
+  endif
+else
+  groupcopy('processed','current','acquisition')
+endif
+
+"external recon parameters"
+exists('aipScale','parameter'):$e
+if (NOT $e) then aipXrecon('genpars') endif
+
+"create sense parameters for 2D"
+if (apptype='im2D') OR (apptype='im2Dfse') OR (apptype='im2Depi') then
+  exists('/vnmr/imaging/maclib/acq2Dsense','file'):$file
+  if ($file > 0) then 
+    acq2Dsense('genpars') "sense parameters"
+  endif
+endif
+
+"formatted output parameters"
+exists('aipInput','parameter','current'):$e
+if ($e) then aipSaveOutput('fixpar') endif
+
+"create showOptions param to control display of options panel groups"
+create('showOptions','integer','current',0)
+setgroup('showOptions','display')
+
+create('shimpanel','integer','current',1)   // show condition for Manual Shim panel, 0=off 1=on
+
+create('sliceorder','integer','current',0)
+setgroup('sliceorder','display')
+
+"create volumes for the number of image volumes"
+create('volumes','real','current',0)
+
+"create profile control parameters"
+create('sl','integer','current',1) setgroup('sl','processing')
+create('ec','integer','current',1) setgroup('ec','processing')
+create('rc','integer','current',1) setgroup('rc','processing')
+create('slices','string','current','single') setgroup('slices','processing')
+
+"imagemath parameters"
+imagemath('fixpar')
+
+"3D extraction parameters"
+aip3Dextract('fixpar')
+
+"create editText param to allow edit of text file"
+create('editText','integer','current',0)
+setgroup('editText','processing')
+
+"create show_rf and show_grad params to control display of RF and Gradient pages"
+create('show_rf','integer','current',0)
+create('show_grad','integer','current',0)
+
+"Make sure rof1 and rof2 are 16 us (15 us required for PDD switching)
+create('rof1','pulse','current',16) rof1=16
+create('rof2','pulse','current',16) rof2=16
+
+"create advancedRF to control display of advanced RF"
+create('advancedRF','string','current','n')
+
+"create bvalue"
+create('bvalue','real','current',0) setgroup('bvalue','processing')
+
+"create thk2fact"
+create('thk2fact','real','current',1)
+
+exists('satpos','parameter'):$ex
+if ($ex) then setprotect('satpos','off',8) endif
+
+create('d2array','integer','current',0)          // control arraying of d2 to force fast ni loop
+create('d3array','integer','current',0)          // control arraying of d3 to force fast ni loop
+create('endti','delay','current',1.5)            // end value for arraying ti in IR panel
+
+"protocol and species"
+create('protocol','string','current','') setgroup('protocol','processing')
+create('species','string','current','')
+
+exists('p1pars','parameter'):$ex1
+if ($ex1) then p1pars[1] = 0.4 endif
+exists('p2pars','parameter'):$ex2
+if ($ex2) then p2pars[1] = 0.4 endif
+
+"Set some VP specific actions when parameters are loaded"
+$vp = ''
+xm1('vp'):$vp
+"Review VP"
+if ($vp = 'review') then
+  if (apptype <> '') then
+    exists(apptype,'maclib'):$ex
+    if ($ex) then {apptype}('rtpar') endif
+  endif
+  aipXrecon('cleardata')
+  aipData='saved'
+  aip3Dfile='img'
+endif

@@ -1,0 +1,55 @@
+"macro xmhahasx_delete"
+"***************************************************************"
+" arg1 - autodir path						"
+" arg2 - locdir							"
+" arg3 - subxml file to be deleted from locdir			"
+"***************************************************************"
+
+if ($# < 3) then 
+   return
+endif
+
+$autodir=$1
+$firstchar=''
+substr($autodir,1,1):$firstchar
+if ($firstchar<>'/') then
+   if (cpglobalauto<>'') then
+        $autodir=cpglobalauto+'/'+$autodir
+   else
+        $autodir=userdir+'/Automation/'+$autodir
+   endif
+endif
+exists($autodir,'directory'):$direx
+if ($direx=0) then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+"**************************************************************"
+exists($autodir+'/enterQ.macdir','directory'):$direx
+if ($direx=0) then
+   shell('basename '+$autodir):$Qname
+else
+   $Qname='enterQ'
+endif
+$xmlinfodir=$autodir+'/'+$Qname+'.macdir/xmldir/info'
+$locdir=$autodir+'/'+$Qname+'.macdir/'+$2
+$subxml=$locdir+'/xmldir/'+$3+'.xml'
+$cpnodes=$locdir+'/xmldir/'+$3+'_SQ'
+
+"**************************************************************"
+$s1='' $s2='' $nodetot=0
+exists($cpnodes,'file'):$fileex
+if ($fileex) then
+        readfile($cpnodes,'$s1','$s2','','local'):$nodetot
+endif
+if ($nodetot>0) then
+        $i=1
+        repeat
+           exists($xmlinfodir+'/'+$s1[$i],'directory'):$direx
+           if ($direx) then shell('rm -rf '+$xmlinfodir+'/'+$s1[$i]):$dum endif
+           $i=$i+1
+        until $i > $nodetot
+endif
+shell('rm -f '+$subxml):$dum
+shell('rm -f '+$cpnodes):$dum
+

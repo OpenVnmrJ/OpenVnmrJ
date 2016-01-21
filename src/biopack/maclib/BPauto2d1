@@ -1,0 +1,77 @@
+"macro BPauto2d1"
+"BPauto2d1(hours<,deuterated,<'BioNMR'>>) Automatic 2D with option for BioNMR seq/parameters"
+
+if ($#>2) then
+  if $3='BioNMR' then BPBioNMR=1 else BPBioNMR=0 endif
+endif
+
+if ($#>1) then
+  if ($2=1) then BPdeuterated=1 else BPdeuterated=0 endif
+endif
+
+$date=''
+BPgetdate:$date
+
+exists('dofidsave','parameter'):$e
+if $e then dofidsave='n' endif
+
+
+if (BPplot='file') then
+ BPplotdir=userdir+'/AutoTripRes2D'
+endif
+ 
+$temp=temp
+
+  $dir=userdir+'/AutoTripRes2D'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+         shell('mkdir -p ' + $dir2):$dum
+    endif
+    mv($dir,$dir2+'/AutoTripRes2D_'+$date)
+  endif
+  mkdir(userdir+'/AutoTripRes2D')
+
+if BPBioNMR then
+  ghn_caP
+else
+  ghn_ca
+endif
+
+$d1=d1 ni=32 phase=1,2
+if ($1=3) then time(28) endif   "overnight  (~16 hours)"
+if ($1=2) then time(14) endif   "8 hour run "
+if ($1=1) then time(7) endif   "~4 hour run"
+nt=nt/2 nt=nt*2    "minimum and multiple of 2 scans"
+$nt=nt
+
+gNhsqc
+
+NHonly='n' NH2only='n'
+nt=$nt/4 nt=nt/4 nt=nt*4
+ni=128 phase=1,2 d1=$d1
+calcdim
+$acqtime=arraydim*nt*(d1+at+.077)/60   "minutes"
+if ($1=3) then
+  d1=d1*(24/$acqtime)       "forces a 24 minute experiment,16 hours total"
+endif
+if ($1=2) then
+  d1=d1*(12/$acqtime)       "forces a 12 minute experiment, 8 hours total"
+endif
+if ($1=1) then
+  d1=d1*(6/$acqtime)        "forces a 6 minute experiment, 4 hours total"
+endif
+d1=d1*.95                   "empirical factor to force exact time"
+
+if BPdeuterated=1 then nt=4*nt endif  "fewer experiments => more transients/experiment"
+
+$acqtime=arraydim*nt*(d1+at+.077)/60 " min"
+wexp='BPauto2d2a'
+format($acqtime,2,1):n3
+n3=n3+' minutes'
+atext('automatic NH 2D experiment taking')
+atext(n3)
+temp=$temp
+au

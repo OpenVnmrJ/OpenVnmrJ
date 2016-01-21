@@ -1,0 +1,68 @@
+"macro cpexplist"
+$arg=$1
+
+if ($# > 1) then
+   $maclib=$2
+else
+   Automacrodir:$maclib
+endif
+if ($maclib='') then return endif
+exists($maclib,'directory'):$direx
+if ($direx=0) then return endif
+
+// explist is replaced with expqueue
+exists($maclib+'/expqueue','file'):$qex
+if ($qex) then
+    $explistpar=$maclib+'/expqueue'
+else
+	// This could be a study prior to expqueue switchover
+    exists($maclib+'/explist','file'):$fex
+    if ($fex) then
+	// Make sure this is a parameter file.  It could
+	// the EXPLIST file recognized in a case-insensitive OS
+        shell('(cat '+$maclib+'/explist | grep -wc \'^explist\')'):$fex
+    endif
+    if ($fex=0) then
+	// explist doesn't exists OR is NOT a parameter file
+    	$explistpar=$maclib+'/expqueue'
+    else
+	// explist exists and is a parameter file
+    	$explistpar=$maclib+'/explist'
+    endif
+endif
+shell('touch "'+$explistpar+'" 2> /dev/null'):$dum
+
+"********************************************************"
+if ($arg = 'next') then
+  $explist=''
+  rtv($explistpar,'noabort','explist'):$explist
+  return($explist)
+
+"********************************************************"
+elseif ($arg = 'drop') then
+  $explist=explist
+  explist=''
+  readparam($explistpar,'explist')
+  explist[1]=''
+  array2array(explist):explist
+  writeparam($explistpar,'explist')
+  explist=$explist
+
+"********************************************************"
+elseif ($arg = 'read') then
+  $curexplist=explist
+  explist=''
+  readparam($explistpar,'explist')
+  $explist=explist
+  explist=$curexplist
+  return($explist)
+
+"********************************************************"
+elseif ($arg = 'write') then
+  array2array(explist):explist
+  writeparam($explistpar,'explist')
+
+"********************************************************"
+endif 
+
+

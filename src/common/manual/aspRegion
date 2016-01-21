@@ -1,0 +1,108 @@
+******************************************************************************
+aspRegion('doBC') - If baseline points or mask are defined, this command will
+                calculate baseline model based on method selected by bcmode[1] parameter,
+                and apply the correction.
+
+                If not defined, it will try to read baseline points from bcfrq and 
+                bcamp parameters. If bcfrq does not exists or is empty, baseline points 
+                will be generated automatically based on parameter bcmode[2]
+                (CWT scaling factor) and bcmode[5] (maximum number of points).
+
+                Once baseline points are defined, baseline model will be calculated
+                and baseline correction will be applied.
+
+                if aspRegion('doBC') is called repeatedly, previous correction will be
+		undone and new BC will be applied. So recursive BC is not allowed. 
+                But corrected spectrum can be saved with savefdfspec(...) command and
+                loaded back with asp1D('load',...) command. Then baseline can be modeled 
+		and applied again.
+
+                aspRegion('doBC') automatically saves baseline point to bcfrq and 
+		bcamp parameters.
+
+		For arrayed data, bseline model is calculated based on current trace
+		or first of currently displayed traces.
+		If bcmode[8]=0, correction will be applied only to the modeled trace. 
+		If bcmode[8]=1, correction will be applied to all traces.
+
+aspRegion('undoBC') - undo baseline correction. If BC is not applied, this command does nothing.
+ 
+aspRegion('CWT') - calculate and display baseline model based on CWT baseline mask 
+aspRegion(maxnum) - auto generate baseline points, where maximum is from 2 to 200.
+aspRegion('bm') - calculate and display BC model based on baseline points or mask
+                according to bcmode[1] parameter.
+
+aspRegion('save'<,path>) - if path not provided, baseline points are saved in bcfrq parameter,
+                otherwise they will be saved in curexp+'/datdir/regions'
+aspRegion('load'<,path>) - if path not provided, baseline points will be loaded from
+                bcfrq and bcamp parameters, otherwise they will be loaded from curexp+'/datdir/regions'
+aspRegion('clear') - clear baseline points and the model
+
+aspRegion('show') - display baseline points and the model
+aspRegion('hide') - hide baseline points and the model
+
+aspRegion('get',$id,$propertyName):$propertyValue - get display property (lineColor, linethickness)
+aspRegion('set',$id,$propertyName,$propertyValue) - set display property
+
+aspRegion:$e,$n - $e=1/0 if baseline model is/is not displayed, $n for number of baseline points.
+
+**********************************************************************************
+
+1. User Interface
+
+aspRegion command is implemented for interactive baseline corrections. 
+
+The command to bring up interactive BC dialog is
+
+bcpopup('init') vnmrjcmd('popup','mode:modeless','file:BCdialog.xml','rebuild:yes','close:aspRegion(
+`clear`)','title:Baseline Correction')
+
+where bcpopup('init') creates and initializes bcmode parameter, and calculated baseline model accordingly.
+
+2. Baseline Points 
+
+Baseline points can be generated automatically by specify the maximum number of points.
+Points can be modified or deleted in "modify mode". Points can be added in "creation mode". 
+
+aspSetState(1) command set mouse to baseline point modify mode.
+In this mode, hover over a baseline point will highlight it. Drag the point with
+left mouse button will reposition it. Click the point with right mouse button will delete it.
+
+aspSetState(38) command set mouse to baseline point creation mode.
+In this mode, drag over a baseline region will add points to the region. Click will add 
+a point at clicked position. Mouse mode automatically returns to modify mode upon release
+of the mouse. To override this behavior, hold CTRL key when adding baseline points.
+
+3. Baseline Mask 
+
+Alternatively, baseline can be defined by baseline mask, i.e., 1 if a data point is
+on the baseline, 0 if a data point is on a peak.
+Baseline mask is automatically calculated by CWT method, which depending on bcmode[2] parameter.
+
+4. Baseline Modeling
+
+Baseline model can be calculated based on baseline points or mask using selected method 
+such as spline, polynonial or Whittaker smoother.
+
+5. bcmode Parameter
+
+aspRegion command depends on bcmode parameter in the following fashion:
+
+bcmode[1] - select method for baseline modeling. 
+                0 CWT and Whittaker smooth  
+                1 spline
+                2 polynomial
+                3 Whittaker smooth based on user defined baseline points
+bcmode[2] - scaling factor for CWT (continues waveform transformation). default 100
+bcmode[3] - smooth factor for Whittaker smooth. default 10000.
+bcmode[4] - polynomial order (2-20)
+bcmode[5] - max # of auto generated baseline points. default is 50
+bcmode[6] - scaling factor for auto generating baseline points, default 10
+bcmode[7] - smooth factor for modeling baseline using baseline points, default 1.
+bcmode[8] - 0 to apply BC to currently modeled trace, 1 to apply BC to all traces.
+
+6. bcfrq and bcamp Parameters
+
+Baseline point frequencies are saved in bcfrq parameter or a file in ppm.
+Baseline point amplitudes are saved in bcamp parameter or a file in absolute intensity.
+

@@ -1,0 +1,28 @@
+"macro macrovi"
+
+if ($# < 1) then
+    write('error','Usage: %s(\'usermacro\')',$0)
+    abort
+endif
+
+$macropath=userdir+'/maclib/'+$1
+exists($macropath,'file'):$e
+if (not $e) then
+  shell('touch '+$macropath):$dum
+endif
+shell('uname -s'):$osname
+if ($osname = 'Darwin') then
+  write('line3','You must Quit TextEdit to resume VnmrJ')
+endif
+shelli('vnmr_vi','"'+$macropath+'"'):$dum
+$e=0
+exists($1,'maclib'):$e
+if ($e = 1) then
+    shell('wc -w '+$macropath):$ans
+    substr($ans,1):$e
+    if ($e > 0) then
+      macrold($1)
+    else
+      delete($macropath)
+    endif
+endif

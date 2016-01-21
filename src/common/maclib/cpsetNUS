@@ -1,0 +1,62 @@
+"macro cpsetNUS"
+
+if ($#<1) then write('error','Usage!') return endif
+if $1='pref' then
+    getdim:$dim
+    if $dim<2 then return endif
+    $nusdefault='no'
+    getadminfo('nusdefault'):$nusdefault
+    $psize=size('phase')
+    if ni*$psize <> arraydim then
+	$nusdefault='no'
+    endif
+    if $nusdefault='yes' then
+	{$0}('on')
+	$nusprocdefault='CLEAN'
+	getadminfo('nusprocdefault'):$nusprocdefault
+	CSreconmethod=$nusprocdefault
+//	if CSreconmethod='IST' then CS_dpars='n' endif
+    else
+	{$0}('off')
+    endif
+    return
+endif
+
+exists('execprocess','parameter'):$ex
+if ($ex<0.5) then create('execprocess','string') endif
+setgroup('execprocess','display')
+parNUS
+//Should put params in module?
+mkISTparams
+
+IF ($1 = 'on') THEN
+
+    if (sampling<>'sparse') then
+	if (CSdensity >= 100) then CSdensity=50 endif
+	CS_cln='y'
+    endif
+    sampling='sparse'
+    EXPtime:ACQtime
+    is_submitmode:$submit
+    if ($submit) then
+// Customization of a node in SQ
+    	execprocess='cpprocNUS'
+    else
+// Doing the experiment in foreground
+	strstr(wexp,'procsave'):$ps
+	if ($ps) then
+	    execprocess='cpprocNUS'
+	else
+	    execprocess='NUSproc'
+	endif
+    endif
+
+ELSEIF ($1 = 'off') THEN
+
+   sampling=''
+   CSwt='n'
+   CStype='a'
+   if (CSseed<0) then CSseed=-CSseed endif
+   execprocess=''
+
+ENDIF

@@ -1,0 +1,193 @@
+"macro fastuserlogin"
+"fastuserlogin - the gateway macro for all fastuserlogin functions"
+"*****************************************************************"
+// arg1=isthere - checks if agr2 exists in userlist
+// arg1=login   - calls operatorlogin if the arg2 exists in userlist
+// arg1=create	- writes arg2 in userlist and calls fastuserlogin with login option
+// arg1=setup	- Sets up fastuserlogin('evaluate') option in usergo
+// arg1=evaluate - if FASTenv='y' and FASTuser='' then aborts. Called by usergo/walkupQ_new
+// arg1=logout - sets FASTuser='' or FASTuser=owner
+"*****************************************************************"
+
+// This is an obsolete function. Do not remove this macro
+
+RETURN
+
+is_postvj22b:$vj22c
+
+exists('FASTenv','parameter','global'):$fex
+exists('FASTuser','parameter','global'):$fex2
+if ($fex=0) or ($fex2=0) then return endif
+bgmode_is:$bgmod
+if ($bgmod) or (auto='y') then return endif
+
+$ifile=userdir+'/adm/walkupadm/userlist'
+"*****************************************************************"
+IF ($1='isthere') THEN
+
+	if ($#<2) then return(0) endif
+	if ($2='') then return(0) endif
+	exists($ifile,'file'):$fileex
+	if ($fileex=0) then return(0) endif
+	$is=0
+	shell('(cat '+$ifile+' | grep -c \'^"'+$2+'"\')'):$is
+	if ($is) then return(1) else return(0) endif
+"*****************************************************************"
+ELSEIF ($1='login') THEN
+
+        if ($#<2) then return(0) endif
+        if ($2='') then return(0) endif
+	if ($2=owner) or ($2='admin') then
+	     write('error','Admin (%s) MUST login via switch operator interface',$2)
+ 	     FASTuser=''
+	     panellevel=10
+	     return
+	endif
+	$operator=operator
+//	if (FASTuser=operator) then return endif
+	$is=0
+	fastuserlogin('isthere',$2):$is
+	if ($is) then
+			"Get panellevel from operatorlist"
+		$oplist=systemdir+'/adm/users/operators/operatorlist'
+		exists($oplist,'file'):$fileex
+		$plvl=10 $email=email
+		if ($2=owner) then $plvl=30 endif
+		if ($fileex) then
+		   $s1='' $s2='' $s3=''
+		   readfile($oplist,'$s1','$s2','','local')
+		   teststr('$s1',$2,'local'):$ret
+		   if ($ret>0) then 
+			strsv2array($s2[$ret],';'):$s3
+			$s3size=size('$s3')
+			if ($s3size>2) then 
+			   format($s3[3],'lower'):$plvl2
+			   if not typeof('$plvl2') then
+				$plvl=$plvl2
+			   endif
+			endif
+		   endif
+		endif
+	    if (FASTuser<>$operator) then
+		setvalue('operator',$2,'global')
+	        if ($vj22c) then
+		   operatorlogin($email,$plvl)
+	        else
+	  	   operatorlogin(operator,$email,$plvl)
+	        endif
+	    else
+		email=$email
+		panellevel=$plvl
+	    endif
+		vnmrjcmd('pnew','operator')
+	else
+		write('error','%s is not in the userlist',$2)
+		FASTuser=''
+		panellevel=10
+	endif
+"*****************************************************************"
+ELSEIF ($1='create') THEN
+
+        if ($#<2) then return(0) endif
+        if ($2='') then return(0) endif
+        if ($2=owner) or ($2='admin') then
+             write('error','Admin (%s) MUST login via switch operator interface',$2)
+             FASTuser=''
+	     panellevel=10
+	     return
+        endif
+	$is=0
+	shell('(cat '+$ifile+' | grep -c \'^"'+$2+'"\')'):$is
+	if ($is=0) then
+		write('line3','Adding %s to user list',$2)
+		exists(userdir+'/adm/walkupadm','directory'):$direx
+		if ($direx=0) then 
+			shell('mkdir -p '+userdir+'/adm/walkupadm'):$dum 
+		endif
+		write('file',$ifile,'"%s" "%s"',$2,$2)
+	endif
+	fastuserlogin('login',$2)
+"*****************************************************************"
+ELSEIF ($1 = 'setup') THEN
+
+    if (FASTenv='y') then
+		"update usergo macro for evaluate option"
+	$macex=0 $macpath=''
+	getmacropath('usergo'):$macex,$macpath
+	if ($macex) then
+	   if ($macpath<>userdir+'/maclib/usergo') then
+		shell('cp '+$macpath+' '+userdir+'/maclib'):$dum
+	   endif
+        else
+	   shell('touch '+userdir+'/maclib/usergo'):$dum
+	endif
+	shell('(cat '+userdir+'/maclib/usergo | grep fastuserlogin | grep -c evaluate)'):$ok
+	if ($ok=0) then
+	    write('file',userdir+'/maclib/usergo','fastuserlogin(\'evaluate\')')
+	endif
+        exists(userdir+'/adm/walkupadm','directory'):$direx
+        if ($direx=0) then shell('mkdir -p '+userdir+'/adm/walkupadm'):$dum endif
+	shell('touch '+$ifile):$dum
+	shell('(cat '+$ifile+' | grep -cv \'^"\')'):$legacy
+	if ($legacy>0) then
+	   write('reset','/vnmr/tmp/fusrtemp')
+	   shell('(cat '+$ifile+' | grep -v \'^"\' > /vnmr/tmp/fusrtemp)'):$dum
+	   shell('(cat '+$ifile+' | grep \'^"\' > '+$ifile+')'):$dum
+	   $s1='' $s2=''
+	   readfile('/vnmr/tmp/fusrtemp','$s1','$s2','','local'):$total
+	   shell('rm -f /vnmr/tmp/fusrtemp'):$dum
+	   if ($total>0) then
+		$i=1
+		repeat
+		   write('file',$ifile,'"%s" "%s"',$s1[$i],$s1[$i])
+		   $i=$i+1
+		until $i > $total
+	   endif
+	endif
+	shell('(cat '+$ifile+' | grep -c \'^"'+operator+'"\')'):$isthere
+	if ($isthere=0) and (operator<>owner) then
+		write('file',$ifile,'"%s" "%s"',operator,operator)
+	endif
+	FASTuser=operator
+	if (operator=owner) then panellevel=100 endif
+    else
+	if (operator=owner) and (panellevel<30) then panellevel=30 endif
+    endif
+"*****************************************************************"
+ELSEIF ($1 = 'evaluate') THEN
+	if ($# < 2) then $2='abort' endif
+	if (FASTenv='y') and (FASTuser='') then
+	    if ($2='abort') then
+		write('error','User is not logged in. aborted')
+		abort
+	    else
+		return(0)
+	    endif
+	else
+	    return(1)
+	endif
+"*****************************************************************"
+ELSEIF ($1 = 'check') THEN
+	if (FASTenv='y') then 
+	   if (FASTuser=operator) then return(1) else return(0) endif
+	else
+	   return(1)
+	endif
+"*****************************************************************"
+ELSEIF ($1 = 'logout') THEN
+
+    is_submitmode:$issubmit
+    if ($issubmit) then walkupQ('logout') endif
+    if (FASTenv='y') then
+	loaduserprefs('global','default')
+	loaduserprefs('local','default')
+	FASTuser=''
+	panellevel=10
+    else
+	FASTuser=owner
+    endif
+	seqfil=seqfil
+"*****************************************************************"
+ENDIF
+
+

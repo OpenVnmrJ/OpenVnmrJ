@@ -1,0 +1,59 @@
+"macro ATc07b"
+"ATc07b" "Noise Test: Noise measurement on FID  "  
+if ($#=0) then
+   ATrtp('standard')
+   tpwr=at_tpwr pw=at_pw90 pw90=pw
+   seqfil='s2pul'
+   text('Spectral Purity (first FID) Test: No Decoupling')
+   at_currenttest='noise' 
+   lsfid=2 ph d1=1.5 at=.1 lb=1/at 
+   gain=at_gain pw=0 nt=1,1,1,1 sw=80p full 
+   wnt='ATwft f vsadj(3) dssa dtext'
+   wexp='ATc07b(`PART1`)'
+   ATcycle
+   au
+   write('line3','Spectral Purity (first FID) Test: no pulse, 80ppm Spectral Width')
+
+elseif ($1='PART1') then
+     wft
+     noise:$arg1,$arg2,$arg3,$arg4,r2,$arg6
+     $arg1=trunc($arg1*100)/100
+     $arg2=trunc($arg2*100)/100
+     $arg3=trunc($arg3*100)/100
+     $arg4=trunc($arg4*100)/100
+     r2=trunc(r2*100)/100
+     $arg6=trunc($arg6*100)/100
+
+   pap(0,wc2max-40) ATpltext(65,65)
+   pps(120,0,wcmax-120,60) 
+   right ho=0 vo=20
+   vp=80 pscale pl('all')
+   write('plotter',0,wc2max-15,'Noise (first FID) Test (No 13C or 15N Decoupling)')
+   write('plotter',0,wc2max-20,'AV.RMS noise = %4.2f  Re RMS noise = %4.2f Imag RMS noise = %4.2f re dc offset = %4.2f  imag dc offset = %4.2f  oversamp = %2.0f',r2,$arg3,$arg4,$arg1,$arg2,oversamp)
+
+   s5
+   wft vf=vs
+   sc=wcmax-25 wc=25
+   $count=1
+   vpf=-60
+   clear(2)  
+   repeat
+    dfsn($count,$count) plfid
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,40,'Real FIDs       (Above)')
+   sc=wcmax-25 wc=25
+   $count=1
+   vpfi=-70
+   clear(2)  
+   repeat
+    dfsn($count,$count,'imag') plfid('imag')
+    sc=sc-30
+    $count=$count+1
+   until $count=5
+   write('plotter',0,38,'Imaginary FIDs (Below)')
+   r5
+
+   ATpage
+endif

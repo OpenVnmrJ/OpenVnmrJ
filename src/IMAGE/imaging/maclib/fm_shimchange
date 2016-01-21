@@ -1,0 +1,40 @@
+"macro fm_shimchange"
+shimnames:$cname
+strstr($cname,'z1c'):$c2
+if ($c2 > 0.5) then
+  $coil1='z1c'
+  $coil2='z2c'
+else
+  $coil1='z1'
+  $coil2='z2'
+endif
+
+clear
+
+echo('shim           x        y        z1       xz       yz       z2       xy     x2y2  ')
+$x1='' $y1='' $z1c='' $xz='' $yz='' $z2c='' $xy='' $x2y2=''
+format(x1,8,0):$x1   format(y1,8,0):$y1   format({$coil1},8,0):$z1c
+format(DAC_xz,8,0):$xz   format(DAC_yz,8,0):$yz   format({$coil2},8,0):$z2c
+format(DAC_xy,8,0):$xy   format(DAC_x2y2,8,0):$x2y2
+echo('old    ',$x1,$y1,$z1c,$xz,$yz,$z2c,$xy,$x2y2)
+
+$ntof=0 $nx1=0 $ny1=0 $nz1c=0 $nxz=0 $nyz=0 $nz2c=0 $nxy=0 $nx2y2=0
+lookup('file', userdir + '/fastmap/change', 'read', 9):$ntof, $nx1, $ny1, $nz1c, $nxz, $nyz, $nz2c, $nxy, $nx2y2, $nret
+if $nret<8.5 then
+  write('error','%s: couldn\'t read file',$0)
+  write('file',userdir + '/fastmap/fastmap.log','%s: couldn\'t read file %s',$0,userdir+'/fastmap/change')
+  ABORT
+endif
+$ux1=x1+$nx1 $uy1=y1+$ny1 $uz1c={$coil1}+$nz1c $uxz=DAC_xz+$nxz $uyz=DAC_yz+$nyz $uz2c={$coil2}+$nz2c $uxy=DAC_xy+$nxy $ux2y2=DAC_x2y2+$nx2y2
+
+$cx1='' $cy1='' $cz1c='' $cxz='' $cyz='' $cz2c='' $cxy='' $cx2y2=''
+format($nx1,8,0):$cx1   format($ny1,8,0):$cy1   format($nz1c,8,0):$cz1c
+format($nxz,8,0):$cxz   format($nyz,8,0):$cyz   format($nz2c,8,0):$cz2c
+format($nxy,8,0):$cxy   format($nx2y2,8,0):$cx2y2
+echo('change ',$cx1,$cy1,$cz1c,$cxz,$cyz,$cz2c,$cxy,$cx2y2)
+
+$sx1='' $sy1='' $sz1c='' $sxz='' $syz='' $sz2c='' $sxy='' $sx2y2=''
+format($ux1,8,0):$sx1   format($uy1,8,0):$sy1   format($uz1c,8,0):$sz1c
+format($uxz,8,0):$sxz   format($uyz,8,0):$syz   format($uz2c,8,0):$sz2c
+format($uxy,8,0):$sxy   format($ux2y2,8,0):$sx2y2
+echo('new    ',$sx1,$sy1,$sz1c,$sxz,$syz,$sz2c,$sxy,$sx2y2)

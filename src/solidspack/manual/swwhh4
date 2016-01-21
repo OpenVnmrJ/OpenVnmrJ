@@ -1,0 +1,147 @@
+Protocol: Swwhh4  Sequence: swwhh4.c  Apptype: solidseq1d
+
+Reference: 
+
+I. Schnell, A. Lupulescu, S. Hafner, D.E. Demco, H.S. Spiess, J. Magn. 
+Reson. 133, 66-69 (1998). 
+
+Description: 
+
+Semi-windowless WaHuHa (SWWHH4) multiple-pulse acquisition for high 
+resolution proton NMR. This sequence uses quadrature preparation pulses 
+to prepare the magnetization perpendicular to the multiple-pulse axis 
+(1,1,1). SWWHH4 has a cycle time of 6-tau with 4 pulses per cycle. Set 
+phXprep = -45.0 degrees. SWWHH4 is used with medium speed spinning (8.0 
+to 14.0 kHz).
+
+Additional Software:
+
+reset_swwhh4 - This macro uses the calibrated values of pwX90 and aX90 
+to calculate the initial parameters for swwhh4X.  This macro is run 
+from the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Swwhh4. For a new 
+calibration set the observe nucleus to proton and calibrate pw90X with 
+a sample of Benzene doped with Chromium AcAc using Onepul, Xx and Xmx. 
+An alternate sample is "RTV" silicon rubber spinning at about 2.5 kHz. 
+
+An alternate calibration is to set the proton pulse width pwH90 using 
+Tancpx, a sample of Glycine and 13C observe. After calibration set the 
+nucleus to proton and set tpwr, aX90 and pwX90 (of protons) equal to 
+the calibrated values of dpwr, aH90 and pwH90 of Tancpx.  Set the 
+sequence to Onepul and turn off the decoupler.  Observe a proton 
+wideline spectrum with a 200 kHz spectral width and gain < 10. A good 
+spin rate for this measurement is 10 kHz.  
+
+Load the data set obtained with Onepul of either calibration and select 
+Swwhh4.  
+
+Set aXprep = aX90, set pwXprep = pwX90 and phXprep = 0.0. Set aXswwhh4 
+= aX90 and set pwXswwhh4 = pwX90.
+
+Optimize the sample window.  For defaults set tauXswwhh4 = 3.5 us. Set 
+r1Xswwhh4 = 1.0 us, r2Xswwhh4 = 0.5uus and r3Xswwhh4 = 1.0uus.  Set 
+rof3 = r3Xswwhh4 on the Receiver page (important!!). Set npaXswwhh4 = 
+10 for a 1.0uus reciever on-time. 
+
+Set sw = 1/(4.0*pwXswwhh4+2.0*tauXswwhh4) to obtain one point per 
+cycle. Obtain a spectrum of the glycine (spin rate 10 kHz) or doped 
+benzene with a minimum of 4 scans.  The quadrature phase cycle must be 
+used to avoid artifacts. See the discussion below to optimize the 
+spectrum.
+
+Optimizing the Spectrum: 
+
+All multiple-pulse spectra are strongly affected by phase transient of 
+the probe. The effect of phase transient is to shift the frequency of 
+the entire spectrum and increase the individual linewidths. In an 
+optimized setup, a Benzene (RTV) line should be on resonance with both 
+the sequences Onepul and Swwhh4.  Likewise a good spectrum of glycine 
+obtained with tof=0.0 and proper referencing with setref should be 
+centered around 5 ppm and have the minimum linewidths.  
+
+A spectrum that is strongly affected by phase transient will be shifted 
+to lower frequencies and it will be necessary to set an even lower 
+frequency offset to get the best linewidths.  A common practice in the 
+presence of phase transient is to shift the carrier to about -5 ppm and 
+obtain the entire spectrum at higher frequencies.  Good spectra can be 
+obtained this way and historically a low frequency carrier was needed 
+anyway for non-quadrature experiments. 
+
+Phase transient can be minimized through the adjustment of the cable 
+length between the preamp and the probe.  A small further adjustment 
+can be made by moving the center of the tuning dip off of the carrier 
+frequency. The manual file tunerp has the procedures for minimization 
+of phase transient. 
+
+Spectra obtained with Swwhh4 also can show a strong center glitch or 
+"pedestal". The pedestal is a real signal that results from spins that 
+have been spin-locked along the axis of precession of SWHH4. Spins from 
+the sample end up in pedestal if the preparation pulse pwXprep is 
+adjusted incorrectly.  Also, proton background spins from the module 
+end up along the precession axis because they have a low flip-angle and 
+are not refocused by SWWHH4. Vespel modules havea strong proton signal 
+that may be larger than the signal of the sample so pedestal removal 
+involves an exact subtraction of two large numbers. Kel-f modules have 
+fewer protons but have a 19F background.  Also, spectra that are not 
+obtained with a multiple of 4 scans will have a pedestal. 
+
+The pedestal can be removed completely, even in the presence of high 
+background, by adjustment of pwXprep if the pulses are close to 
+resonance and phase transient has been minimized.  Array pwXprep over 
+several microseconds around the 90-degree pulse. If one would rather 
+not make the effort move the carrier and pedestal to lower a frequency 
+where it is out of the spectrum. 
+
+SWWHH4 spectra are best obtained with medium speed spinning, in the 
+range 8.0 to 14 kHz. At faster speeds the rotor cycle interferes with 
+the multiple-pulse cycle and lowers performance. 
+
+Referencing and Scaling Swwhh4:   
+
+Select the optimum offset and obtain data with a multiple of 4 scans. 
+Optionally fine-adjust the scale factor with two lines of known ppm.  
+Put a cursor on each line and set scalesw  = (ppm2 - ppm1)*sfrq/delta. 
+To reference a scaled spectrum put a cursor on the line of interest and 
+type rl(ppm*sfrq/scalesw). scalesw should be about 1.4 for a good 
+SWWHH4 spectrum.
+ 
+Parameter Groups: 
+
+prepX:  Module:  no 
+Sequence:  br24q.c      
+Description:  Implements a variable length pulse to provide quadrature 
+              detection about a tilted precession axis. Typically followed
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses. 
+       pwXprep - 90-degree flip on the obs channel. 
+       phXprep - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse. 
+
+scaleX: (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.      
+   
+swwhh4X:  Module:  yes 
+Sequence:  swwhh4.c 
+Description:  Implements semiwindowless WaHuHa on obs with acquisition 
+              in the first window.
+Parameters:  Sequence Page
+       aXswwhh4 - amplitude of obs pulses.
+       pwXswwhh4 - 90-degree flip on obs.
+       r1Xswwhh4 - pre-pulse delay (similar to rof1). 
+       r2Xswwhh4 - post_pulse delay (similar to rd or rof2).
+       r3Xswwhh4 - T/R-to-rcvron delay (must equal rof3 or 2.0 us if 
+              rof3 is not defined. 
+       tauXswwhh4 - time for one "one-tau" window and pulse. 
+       npaXswwhh4 - number of 100 ns ticks in the detection window. 
+Implementation:  WMPA swwhh4 = getswwhh4("swwhh4X");
+Underscore function: _swwhh4(swwhh4,phXswwhh4);  phXswwhh4 is the 
+              overall phase table.  

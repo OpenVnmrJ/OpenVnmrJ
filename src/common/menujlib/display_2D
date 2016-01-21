@@ -1,0 +1,96 @@
+"macro display_2D"
+"  ***********************************************************  "
+"  ****  M E N U :   D I S P L A Y    2 D ,   P A R T 1   ****  "
+"  ***********************************************************  "
+
+getdim:$vjmd
+if $vjmd<1.5 then write('error','Not a 2D experiment') menu('main') return endif
+
+lastmenu=''
+mlabel=''
+mstring=''
+$vjm=1
+
+if appmode='imaging' then
+
+mlabel[$vjm]='Image Plot'
+mstring[$vjm]='dconi(`dcon`,`gray`,`linear`)'
+micon[$vjm]='2Dimage.gif'
+$vjm=$vjm+1
+
+exists('aipMode','parameter','global'):$vjme
+if $vjme>0.5 then
+  mlabel[$vjm]='Image Browser'
+  mstring[$vjm]='menu(`aip`) aipDisplay(`redisplay`)'
+  micon[$vjm]='2Dimageb.gif'
+  $vjm=$vjm+1
+endif
+
+mlabel[$vjm]='Color Map'
+mstring[$vjm]='dconi(`dcon`)'
+micon[$vjm]='dconi.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Contour Plot'
+mstring[$vjm]='dconi(`dpcon`)'
+micon[$vjm]='2Dcontour.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Stacked Plot'
+mstring[$vjm]='newmenu(`dconi`) dconi(`ds2d`)'
+micon[$vjm]='2Dstacked.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Return'
+mstring[$vjm]='menu(`main`)'
+micon[$vjm]='return.gif'
+
+else "appmode <> 'imaging'"
+
+
+mlabel[$vjm]='Contour Plot'
+mstring[$vjm]= 'exists(curexp+`/datadir3d/extr`,`file`):$e2 \
+                if ((procdim<>2) and ($e2>0.5)) then\
+                select(plane,`proj`)  write(`line3`,`Displaying a 2D projection from 3D`) nm2d endif\
+                dconi(`dpcon`)'
+
+micon[$vjm]='2Dcontour.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Color Map'
+ 
+
+mstring[$vjm]=' exists(curexp+`/datadir3d/extr`,`file`):$e2 \
+                if ((procdim<>2) and ($e2>0.5)) then\
+                select(plane,`proj`)  write(`line3`,`Displaying a 2D projection from 3D`)  nm2d endif\
+                dconi(`dcon`)'
+
+
+micon[$vjm]='dconi.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Stacked Plot'
+mstring[$vjm]='newmenu(`dconi`)\
+                exists(curexp+`/datadir3d/extr`,`file`):$e2 \
+                if ((procdim<>2) and ($e2>0.5)) then\
+                select(plane,`proj`)  write(`line3`,`Displaying a 2D projection from 3D`)  nm2d endif\
+                dconi(`ds2d`)'
+
+micon[$vjm]='2Dstacked.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Image Plot'
+mstring[$vjm]='  exists(curexp+`/datadir3d/extr`,`file`):$e2 \
+                 if ((procdim<>2) and ($e2>0.5)) then\
+                 select(plane,`proj`)  write(`line3`,`Displaying a 2D projection from 3D`) nm2d endif\
+                 dconi(`dcon`,`gray`,`linear`)'
+
+
+micon[$vjm]='2Dimage.gif'
+$vjm=$vjm+1
+
+mlabel[$vjm]='Return'
+mstring[$vjm]='menu(`main`)'
+micon[$vjm]='return.gif'
+
+endif

@@ -1,0 +1,203 @@
+"macro stdshm"
+
+"stdshm - set up shim methodology"
+"if FID shimming is selected, it sets up a 'method' string in "
+"    'vnmrsys/shimmethods' called 'fidstd' of the current user, otherwise,"
+"    it sets up 'method' string called 'std' for lock shimming." 
+
+$fidshm=0
+$ans0=''
+input('Do you wish to do fid shimming? (y/n)? '):$ans0
+clear(4)
+if $ans0='y' then 
+    $fidshm=1 
+    write('alpha','FID shimming selected')
+else
+    write('alpha','Lock shimming selected')
+endif
+$ans1a=0
+write('alpha','What will sample heights be like?')
+write('alpha','    1: all samples full height (>5.0 cm)')
+write('alpha','    2: sample heights will vary')
+input('Your choice (1 or 2 from text window):'):$ans1
+if $ans1 = 1 then
+   write('alpha','    Selected: all samples full height')
+else
+   write('alpha','    Selected: sample heights will vary')
+endif
+
+if $ans1=1 then "don't need to do all shims so ask"
+    write('alpha','How good do you want the final result?')
+    write('alpha','    1: only z1 and z2 shimming needed')
+    write('alpha','    2: adjust z1, z2, and z3 spinning shims')
+    input('Your choice (1 or 2): '):$ans1a
+endif
+"at this point, if $1=1 then shim z1z2, if $1=2 shim all z's"
+if $ans1a = 1 then
+    write('alpha','    Selected: z1,z2 shimming')
+else if $ans1a=2 then
+    write('alpha','    Selected: z1,z2,z3 shimming')
+else if $ans1a<>0 then
+    return
+endif
+endif
+endif
+
+if $fidshm then
+    write('alpha','What T1 relaxation time should be assumed?')
+    write('alpha','    1: Short T1 relaxation time < 1 second')
+    write('alpha','    2: T1 rlaxation time >1 and <5 seconds')
+    write('alpha','    3: Long relaxation time i>5 seconds')
+    input('Your choice (1,2, or 3):'):$ans2
+    if ($ans2=1) or ($ans2=2) or ($ans2=3) then
+        write('alpha','    Selected: %d',$ans2)
+    else 
+        return
+    endif
+else
+    write('alpha','What lock solvent should be assumed?')
+    write('alpha','    1: fast relaxing lock (d2o)')
+    write('alpha','    2: normal relaxing lock (cdcl3, c6d6, or dmso-d6)')
+    write('alpha','    3: slowly relaxing lock (acetone-d6)')
+    write('alpha','    4: use actual solvent to set rate')
+    input('Your choice (1,2,3, or 4):'):$ans2
+    if ($ans2=1) or ($ans2=2) or ($ans2=3) or ($ans2=4) then
+        write('alpha','    Selected: %d',$ans2)
+    else
+        return
+    endif
+endif
+
+$s[1]=' minimum shimming time'
+$s[2]=' normal shimming time'
+$s[3]=' long shimming time'
+$s[4]=' no time limit'
+write('alpha','Time limit for shimming?')
+write('alpha','    1:'+$s[1])
+write('alpha','    2:'+$s[2])
+write('alpha','    3:'+$s[3])
+write('alpha','    4:'+$s[4])
+input('your choice (1,2,3,or 4):'):$ans3
+write('alpha','    Selected:'+$s[$ans3])
+write('alpha','Now creating method "std"')
+
+"now create file"
+
+$filepath = userdir+'/shimmethods'
+exists($filepath,'file'):$e
+if ($e=0) then
+    mkdir($filepath)
+endif
+if $fidshm then
+    $filepath =$filepath+'/fidstd'
+else
+    $filepath = $filepath + '/std'
+endif
+exists($filepath,'file'):$e
+if ($e<>0) then
+    write('reset',$filepath)
+endif
+
+"now write out method to file"
+if $fidshm then
+    $delay=300  " 100 times estimated T1"
+    if $ans2<>4 then "set up relaxation delay"
+        if $ans2=1 then 
+    	$delay = 100
+        else
+            if $ans2=3 then
+    	    $delay = 1200
+            endif
+        endif
+    endif
+    
+    $time = $ans3 * $delay /2
+    if $ans3=4 then 
+        $time = $time/2
+    endif
+    if $ans1a=1 then "set up simple z1z2 shimming"
+        if $ans3<>4 then "set up time limit"
+      	    write('fileline',$filepath,'f,t%d,szq:cmm;',$time)
+        else
+            write('file',$filepath,'f,szq:cmm;')
+        endif
+    else if $ans1a=2 then "set up z1z2z3 shimming"
+        if $ans3<>4 then "set up time limit"
+      	write('fileline',$filepath, 'f:0,5,t%d,szt:cmm,',3*$time)
+      	write('file',$filepath,     'f,t%d,szq:cmm;',$time)
+        else
+            write('file',$filepath,'f:0,5,szt:cmm,f,szq:cmm;')
+        
+        endif
+        $time = 4*$time
+     
+    else "do compound shim method"
+        "time limits in 1-3-3-1 "
+        if $ans3<>4 then 
+        	write('fileline',$filepath,'t%d,',$time)	
+        endif
+        write('fileline',$filepath,'f,szq:cmm,')
+    
+        if $ans3<>4 then 
+        	 write('fileline',$filepath,'t%d,',3*$time)
+        endif
+        write('fileline',$filepath,'f:0,5,szb:cmm,szt,cmm,')
+    
+        if $ans3<>4 then 
+            write('fileline',$filepath,'t%d,',$time)
+        endif
+        write('file',$filepath,'f,szq:cmm;')
+        $time = 8*$time
+    endif
+    endif
+    $time = ($time+30)/60
+    if $time<1 then $time=1 endif
+    write('alpha','    Estimated FID shimming time:  %d minutes',$time)
+    write('alpha','To shim, type: method=\'fidstd\' shim')
+else "begin not fid shimming"
+    $delay=60 
+    if $ans2<>4 then "set up relaxation delay"
+        if $ans2=1 then 
+    	$delay = 40
+        else
+            if $ans2=3 then
+    	    $delay = 150
+            endif
+        endif
+        write('fileline',$filepath,'d%d,',$delay)
+    endif
+    
+    $time = $ans3 * $delay /2
+    if $ans1a=1 then "set up simple z1z2 shimming"
+        if $ans3<>4 then "set up time limit"
+      	write('fileline',$filepath,'t%d,',$time)
+        endif
+        write('file',$filepath,'szq:cmm;')
+    else if $ans1a=2 then "set up simple z1z2z3 shimming"
+        $time = 3*$time
+        if $ans3<>4 then "set up time limit"
+      	write('fileline',$filepath,'t%d,',$time)
+        endif
+        write('file',$filepath,'szt:cmm;')
+    else "do compound shim method"
+        "time limits in 1-3-3 "
+        if $ans3<>4 then 
+        	write('fileline',$filepath,'t%d,',$time)	
+        endif
+        write('fileline',$filepath,'szq:cmm,')
+    
+        if $ans3<>4 then 
+        	 write('fileline',$filepath,'t%d,',3*$time)
+        endif
+        write('fileline',$filepath,'szb:cmm,')
+    
+        if $ans3<>4 then 
+            write('fileline',$filepath,'t%d,',3*$time)
+        endif
+        write('file',$filepath,'szt:cmm;')
+        $time = 7*$time
+    endif
+    endif
+    write('alpha','Estimated total shimming time is %d seconds',$time)
+    write('alpha','To shim, type: method=\'std\' shim')
+endif

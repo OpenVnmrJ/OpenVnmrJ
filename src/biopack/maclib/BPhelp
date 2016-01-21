@@ -1,0 +1,28 @@
+"macro BPhelp"
+" BPhelp - displays BioPack.htm in browser window "
+$file=''
+if ($#=0) then
+  $vol='manual.htm'
+else
+  $vol=$1
+endif
+$dir=userdir+'/BioPack.dir/BP_doc'
+exists($dir,'directory'):$e
+if not($e) then
+  $dir=userdir+'/biopack/BioPack.dir/BP_doc'
+  exists($dir,'directory'):$e
+  if not($e) then
+    $dir='/vnmr/biopack/BioPack.dir/BP_doc'
+    exists($dir,'directory'):$e
+    if not($e) then
+      $dir='/vnmr/BioPack.dir/BP_doc'
+      exists($dir,'directory'):$e
+    endif
+  endif
+endif
+if $e then
+  $file=$dir+'/'+$vol
+  vnmrjcmd('help','file://'+$file)
+else
+  write('error','BioPack help not available')
+endif

@@ -1,0 +1,39 @@
+"macro Autocalnext"
+"************************************************************"
+" Autocalnext - Macro to start a calibration routine         "
+"		in a chain of autocalibration                "
+"************************************************************"
+
+$prtok=1
+exists('prtmod','parameter'):$prtok
+if ($prtok) then
+    if prtmod<>'y' then $prtok=0 endif
+endif
+
+$start=''
+if ($# > 0) then $start=$1 endif
+if ($start <> 'start') then
+  AutoDelCAL(explist[1])
+elseif (explist[1] <> '') and ($prtok) then
+  printon
+   write('alpha','Probe file before calibration')
+   catprobe
+  printoff
+endif
+explist=explist
+
+$cmd=''
+if (explist <> '') then
+ $cmd='Au'+explist[1]
+ exec($cmd)
+elseif ($prtok) then
+ printon
+  write('alpha','Probe file after calibration')
+  catprobe
+ printoff
+ banner('DONE')
+ sw=sw
+else
+ banner('DONE')
+ sw=sw
+endif

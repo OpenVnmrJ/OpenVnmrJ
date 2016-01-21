@@ -1,0 +1,67 @@
+"macro gxyzplottertype"
+"gyzplottertype - get type and mode of a plotter.			      "
+"		  $1 may be used to specify the plotter or the current plotter"
+"		  will be used. The returned raster values are:		      "
+
+" 0  -  Plotters which use the HPGL language.				      "
+" 1  -  Plotters which use the PCL language and are in portrait mode.         "
+" 2  -  Plotters which use the PCL language and are in landscape mode.        "
+" 3  -  Plotters which use the PostScript language and are in portrait mode.  "
+" 4  -  Plotters which use the PostScript language and are in landscape mode. "
+
+
+$type=''
+$raster=-1
+$plotter=plotter
+if ($plotter='none' or $plotter='') then return endif
+
+
+
+if $#>0 then
+  $plotter=$1
+endif
+
+$s1='' $s2='' $s3=''
+readfile(systemdir+'/devicenames','$s1','$s2','Name','local'):$totdev
+if ($totdev>0) then
+   $i=1
+   repeat
+   	substr($s2[$i],1):$s2[$i]
+   	$i=$i+1
+   until $i > $totdev
+endif
+
+readfile(systemdir+'/devicenames','$s1','$s3','Type','local')
+teststr('$s2',$plotter,'local'):$found
+if ($found) then
+   $type=$s3[$found]
+else
+  write('error','%s: device "%s" not defined in /vnmr/devicenames!',$0,$plotter)
+  return(-1)
+endif
+
+$return=0
+lookup('mfile',systemdir+'/devicetable','seek','example','seek',$type,'seek','raster','read'):$raster,$return
+
+if $return=0 then
+   write('error','%s: device "%s" not defined in /vnmr/devicetable!',$0,$type)
+   return(-1)
+endif
+
+if $##=0 then
+  if $raster=0 then
+    write('line3','"%s" is an HP/GL plotter',$plotter)
+  elseif $raster=1 then
+    write('line3','"%s" is a PCL plotter in portrait mode',$plotter)
+  elseif $raster=2 then
+    write('line3','"%s" is a PCL plotter in landscape mode',$plotter)
+  elseif $raster=3 then
+    write('line3','"%s" is a PostScript plotter in portrait mode',$plotter)
+  elseif $raster=4 then
+    write('line3','"%s" is a PostScript plotter in landscape mode',$plotter)
+  else
+    write('line3','"%s" is a "raster type %d" device',$plotter,$raster)
+  endif
+endif
+
+return($raster)

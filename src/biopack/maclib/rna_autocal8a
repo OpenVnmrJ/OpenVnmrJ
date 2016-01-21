@@ -1,0 +1,48 @@
+"macro rna_autocal8a"
+setref f $bestone=1 $counter=1 av
+select(1) vsadj(10) $best=10
+sp=-1p wp=5p
+repeat
+  select($counter)
+  peak:$ht
+  if $ht>$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>arraydim
+select($bestone)  
+vsadj(50)
+ 
+BPsvf(userdir+'/AutoRna/gChsqc_gzlvl2_cal')
+dssh('dodc') 
+f pl('all','dodc') pap 
+write('plotter',100,wc2max-10,' C13-HSQC(SE) Optimize Coherence Transfer Gradient')
+BPpage
+gzlvl2=gzlvl2[$bestone] 
+
+$CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+BPsetparams('CHgrad1_time',$CHgrad1_time,'C13')
+$CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+BPsetparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+$CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+BPsetparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+$nt=nt
+
+rna_gChmqc
+
+satmode='n' wet='y' jumpret='n'
+ribose='y' aromatic='n'
+dm='nny' dmm='ccp' dres=9.0 BPsetwurstparams
+r1=$nt 
+setref
+
+autosoft='n'
+setlimit('wetpw',50000,0,.1)
+wetpw=1000*pw90
+if (wetshape='hard') then
+array('wetpwr',11,tpwr-64,1) nt=1 gain=12 endif
+if (wetshape='gauss') then
+array('wetpwr',11,tpwr-58,1) nt=1 gain=12 endif
+av ssfilter='n' 
+wexp='rna_autowetproc1' wnt='f wft select(1) av vsadj dssh'
+dg
+atext('Automatic WET Calibration ') dps dtext au
+

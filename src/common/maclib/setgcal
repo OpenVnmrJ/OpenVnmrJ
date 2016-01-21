@@ -1,0 +1,39 @@
+"macro setgcal"
+"  setgcal - calculate gcal   "
+"  b0 = 234.94*h1freq                   "
+"  gcal * gradient_dac = gauss/cm       "
+""
+$answer=''
+$tag=''
+$grtype=''
+$gammabar=(sfrq*1000000)/(234.94*h1freq)
+input('What is the size of the object (cm)?'):$ext
+input('What is the frequency spread (Hz)?'):$mdelta
+input('What is the gradient value (dac#s)?'):$gval
+$tgcal=$mdelta/($gammabar*$gval*$ext)
+if $tgcal < 0 
+then 
+  $tgcal = -1.0*$tgcal
+endif
+write('line3','gcal = %9.6f',$tgcal)
+input('Set this value (y/n)?'):$answer
+if ($answer = 'y')
+then
+  gcal = $tgcal
+endif
+input('Set into text (y/n)?'):$answer
+if ($answer = 'y')
+then
+  substr(gradtype,3,1):$grtype
+  if ($grtype='l' or $grtype='s') then
+    $maxdac=2048
+  else
+    $maxdac=32768
+  endif
+  $tag=seqfil + ' - gradient calibration\ngcal = '
+  format($tgcal,2,7):$answer
+  $tag = $tag + $answer+'\nmax gradient = '
+  format($maxdac*$tgcal,6,7):$answer
+  $tag = $tag + $answer + ' gauss/cm'
+  atext($tag)
+endif

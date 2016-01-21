@@ -1,0 +1,30 @@
+"macro checkdecshape"
+
+  $decwave=dseq
+  length($decwave):$wavelength
+  if ($wavelength > 1) then
+        getProbePath:$e,$ppath
+        $waveex=0
+        if ($e) then
+	    $pdir='' substr($ppath,'dirname'):$pdir
+            $wave=$pdir+'/'+$decwave+'.DEC'
+            exists($wave,'file'):$waveex
+        endif
+        getfilepath($decwave+'.DEC','shapelib'):$shapeex,$shape
+        if ($waveex) then
+           if ($shapeex) then
+                shell('(diff '+$wave+' '+$shape+' | wc -l)'):$isdiff
+                if ($isdiff) then
+                   if ($shape=userdir+'/shapelib/'+$decwave+'.DEC') then
+                        shell('date +%Y-%m-%d_%H%M%S'):$date
+                        shell('mv '+$shape+' '+$shape+'.bkup'+$date):$dum
+                   endif
+                   $shapeex=0
+                endif
+            endif
+            if ($shapeex=0) then
+                shell('cp '+$wave+' '+userdir+'/shapelib/'+$decwave+'.DEC'):$dum
+            endif
+        endif
+  endif
+

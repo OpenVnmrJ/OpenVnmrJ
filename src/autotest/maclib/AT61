@@ -1,0 +1,38 @@
+"macro AT61"
+"AT61" "Gaussian 90 Degree Stability (channel 2) "
+
+if (at_new='y') then ATnext return endif
+
+ 
+if ($#=0) then
+   ATrtp('standard')
+   text('90-Degree Pulse Stability on Channel 2')
+   at_currenttest='gauss_90stability_ch2'
+   seqfil='ATdsh2pul' p1pat='gauss32' pw=0 pwpat='hard'
+   vchannelmap='1'
+   p1=2.4*at_pw90_ch2 cdc
+   substr(rfwg,2,1):$waveform
+   if ($waveform='n') then
+    tpwr=tpwr-12 p1=4*p1   "makes sure p1 is long enough to do by psg"
+   endif
+   dof=tof 
+   pwsadj('gauss32','p1')
+   array('nt',20,1,0)
+   wnt='ATwft sp=3.8p wp=2p select(1) av vsadj dssh dtext'
+   wexp='AT61(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining 90-Degree Gaussian Pulse Stability (channel 2)')
+   dps
+elseif ($1='PART1') then
+   wft
+   ATsvf
+   ATplot:$avht,$stddev
+   $avht=trunc(10*$avht)/10
+   $stddev=trunc(1000*$stddev)/1000
+   ATrecord('STAB90GAUSSch2','90 Degree Gaussian Pulse Stability (channel 2)','stability ',100-$stddev,'height',$avht,'std_dev.',$stddev)
+   write('file',autotestdir+'/REPORT','90 Degree Gaussian Pulse Stability (channel 2): %3.3f percent',100-$stddev)
+ 
+
+ATnext
+endif

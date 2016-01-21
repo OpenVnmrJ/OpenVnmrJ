@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_autoFreqAmpReport" element="groups" type="acquisition" >
+
+        <group size="400 350"
+          style="Heading1"
+          bg="transparent"
+	  reference="craft_autoFreqAmpReport"
+          expanded="yes"
+	  useref="no"
+          >
+	  <button loc="378 10" size="20 20"
+	    style="Heading1"
+	    label="X"
+	    tooltip="Close"
+	    vc="craft_FreqAmpReport('close')"
+	    />
+	  <group loc="10 20" size="360 45"
+	    style="Heading1"
+	    border="Etched"
+	    vq="craftAlignPar craftAlignTable"
+	    expanded="yes"
+	    useref="no"
+	    >
+	    <label loc="20 0" size="160 20"
+	      style="Heading1"
+	      label="Alignment Table"
+	      />
+	    <textmessage loc="180 0" size="200 20"
+	      style="Info"
+	      vq="craftAlignTable"
+	      set="if craftnmrpar[22]='y' then $v='' substr(craftAlignTable,'basename'):$v $VALUE=$v else $VALUE='Not applicable' endif"
+	      />
+            <button loc="30 20" size="145 20"
+              style="Heading2"
+              label="Display ROIs"
+              vq="craftAlignPar"
+              vc="craft_doAlign('displayaligninfo','',craftAlignTable)"
+              bg="transparent"
+	      show="$ENABLE=((craftAlignTable&lt;&gt;'') and (craftnmrpar[22]='y'))*2-1"
+              />
+	    <button loc="180 20" size="145 20"
+	      style="Heading2"
+	      vq="craftAlignTable"
+	      vc="craft_dsAlignSpec('after',craftAlignTable)"
+	      show="$ENABLE=((craftAlignTable&lt;&gt;'') and (craftAlignTable&lt;&gt;'none') and (craftnmrpar[22]='y'))*2-1"
+	      label="Display alignment"
+	      />
+	    </group>
+          <label loc="30 70" size="140 20"
+	    style="Label1"
+	    label="Report name template"
+	    />
+	  <entry loc="195 70" size="170 20"
+	    style="Label1"
+	    vq="craftAFTPar"
+            vc="$V='' chkname('$VALUE'):$dpar,$V craftAFTpar[25]=$V"
+	    set="$VALUE=craftAFTpar[25]"
+	    />
+
+          <button loc="195 92" size="170 21"
+            style="Heading2"
+            label="Start new report"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('startnew')"
+            />
+          <label loc="30 115" size="60 20"
+            style="Label1"
+            label="Segment"
+            />
+	  <group loc="90 115" size="250 20" >
+	    <radio loc="0 0" size="250 20"
+	      style="Label1"
+	      label="between cursors"
+	      vq="craftAFTpar"
+	      vc="craftAFTpar[19]='cursor'"
+	      vc2="craftAFTpar[19]='thresh"
+	      set="$VALUE=(craftAFTpar[19]='cursor')"
+	      />
+	     </group>
+	  <group loc="90 135" size="170 20" >
+	    <radio loc="0 0" size="170 20"
+	      style="Label1"
+	      label="peaks over threshold"
+	      vq="craftAFTpar"
+	      vc="craftAFTpar[19]='thresh'"
+	      vc2="craftAFTpar[19]='cursor"
+	      set="$VALUE=(craftAFTpar[19]='thresh')"
+	      />
+	     </group>
+	    <entry loc="245 135" size="30 20"
+	      style="PlainText"
+	      vq="craftAFTpar"
+	      show="$ENABLE=(craftAFTpar[19]='th')*2-1"
+	      vc="format('$VALUE','isreal'):$r if ($r) then craftAFTpar[20]='$VALUE' endif"
+	      set="$VALUE=craftAFTpar[20]"
+	      />
+	    <label loc="280 135" size="110 20"
+	      label="Hz segments"
+	      style="Label1"
+	      />
+          <button loc="95 160" size="200 22"
+            style="Heading4"
+            label="Extract amplitude"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('Extract')"
+            />
+          <button loc="270 185" size="100 20"
+            style="Heading2"
+            label="Clear"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('clear')"
+            />
+	  <textmessage loc="20 185" size="230 20"
+	    style="Info"
+	    vq="craftAFTpar"
+	    set="$v='' substr(craftAFTpar[16],'basename'):$v $VALUE='Current Report: '+$v"
+	    />
+          <textfile loc="20 207" size="350 110"
+            style="PlainText"
+            set="$VALUE=craftAFTpar[7]"
+            editable="no"
+            wrap="no"
+            vq="craftAFTpar"
+            />
+          <button loc="195 322" size="170 20"
+            style="Heading2"
+            label="Copy to desktop"
+            vq="craftAFTpar"
+            vc="craft_FreqAmpReport('copy2dt')"
+            />
+          <button loc="20 322" size="170 20"
+            style="Heading2"
+            label="Display CRAFT models"
+            vq="craftAFTpar"
+	    show="exists(craftAFTpar[14],'file'):$fex if $fex then lookup('mfile',craftAFTpar[14],'countline'):$fex endif $ENABLE=($fex)*2-1"
+            vc="craft_FreqAmpReport('displayfid',craftAFTpar[18])"
+            />
+        </group>
+
+</template>

@@ -1,0 +1,398 @@
+"macro operightsManager"
+
+if ($# < 1) then $1='init' endif
+exists('oprtmgr','parameter','global'):$parex
+if ($parex=0) then
+   create('oprtmgr','string','global')
+endif
+setprotect('oprtmgr','on',256,'global')
+
+$opsize=10
+$rdir=userdir+'/persistence/OperatorRights'
+exists($rdir,'directory'):$direx
+if ($direx=0) then
+    shell('mkdir '+$rdir):$dum
+endif
+
+IF ($1='init') or ($1='Start') THEN
+
+// Reserve first 10 for xml file
+   oprtmgr=operator,operator,''
+   format(panellevel,0,0):oprtmgr[4]
+   oprtmgr[5]='','','','','',''
+
+// Populate from the master list
+   $rights='' $label='' $status=''
+   {$0}('rightslist'):$rights,$label,$status
+
+// To begin with all rights are true unless denied by admin
+   $total=size('$rights')
+   if ($rights[1]='') then $total=0 endif
+   if ($total) then
+     $i=1 $j=$opsize+1
+     repeat
+	oprtmgr[$j]=$rights[$i]
+	if ($label[$i]='') then $label[$i]=$rights[$i] endif
+	$firstchar='' substr($label[$i],1,1):$firstchar
+	if ($firstchar<>'"') then $label[$i]='"'+$label[$i]+'"' endif
+	oprtmgr[$j+1]=$label[$i]
+        oprtmgr[$j+2]='true'
+	if ($status[$i]='deny') then
+	    oprtmgr[$j+2]='deny'
+	endif
+	$j=$j+3
+	$i=$i+1
+     until $i>$total
+   endif
+
+   $parsize=size('oprtmgr')
+
+// Build panelitems group 
+
+   exists(userdir+'/templates/vnmrj/panelitems','directory'):$direx
+   if ($direx=0) then
+        shell('mkdir -p '+userdir+'/templates/vnmrj/panelitems'):$dum
+   endif
+   $file2=userdir+'/templates/vnmrj/panelitems/operightsManager_panelgroup.xml'
+   write('reset',$file2)
+   if ($parsize>$opsize+2) then
+     $ysize=($parsize-$opsize)*20/3/2
+     $ysize=$ysize+10
+     write('file',$file2,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+     write('file',$file2,'<template name="operightsManager_panelgroup" element="groups" type="acquisition" >')
+     write('file',$file2,'  <group size="650 %d"',$ysize)
+     write('file',$file2,'    bg="transparent"')
+     write('file',$file2,'    border="None"')
+     write('file',$file2,'    tab="no"')
+     write('file',$file2,'    reference="operightsManager_panelgroup"')
+     write('file',$file2,'    useref="no"')
+     write('file',$file2,'    subtype="Basic"')
+     write('file',$file2,'    expanded="yes"')
+     write('file',$file2,'    >')
+     $y=-10
+     $i=$opsize+1
+     repeat
+        $y=$y+20
+        write('file',$file2,'    <check loc="5 %d"  size="300 20" style="Label1"',$y)
+        write('file',$file2,'      label=%s  vq="oprtmgr"',oprtmgr[$i+1])
+        write('file',$file2,'      vc="oprtmgr[%d]=\'true\'"  vc2="oprtmgr[%d]=\'false\'"',$i+2,$i+2)
+        write('file',$file2,'      set="$VALUE=(oprtmgr[%d]=\'true\')"',$i+2)
+        write('file',$file2,'      show="$ENABLE=(oprtmgr[%d]&lt;&gt;\'deny\')*2-1"',$i+2)
+        write('file',$file2,'      />')
+        $i=$i+3
+	if $i < $parsize then
+            write('file',$file2,'    <check loc="320 %d"  size="300 20" style="Label1"',$y)
+            write('file',$file2,'      label=%s  vq="oprtmgr"',oprtmgr[$i+1])
+            write('file',$file2,'      vc="oprtmgr[%d]=\'true\'"  vc2="oprtmgr[%d]=\'false\'"',$i+2,$i+2)
+            write('file',$file2,'      set="$VALUE=(oprtmgr[%d]=\'true\')"',$i+2)
+            write('file',$file2,'      show="$ENABLE=(oprtmgr[%d]&lt;&gt;\'deny\')*2-1"',$i+2)
+            write('file',$file2,'      />')
+	    $i=$i+3
+	endif
+     until $i > $parsize
+     write('file',$file2,'  </group>')
+     write('file',$file2,'</template>')
+
+   endif
+
+   if ($1='Start') then return($opsize) endif
+
+// Generate Operator list
+
+   $operators=''
+   {$0}('operatorlist'):$operators
+
+// Build xml file
+
+   $parsize=size('oprtmgr')
+   $usersize=size('$operators')
+
+   exists(userdir+'/templates/vnmrj/interface','directory'):$direx
+   if ($direx=0) then
+      shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum
+   endif
+
+   $file=userdir+'/templates/vnmrj/interface/operightsManager.xml'
+
+   write('reset',$file)
+   write('file',$file,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+   write('file',$file,'<template name="operightsManager" element="groups" type="acquisition" >')
+
+   $y=270+(($parsize-$opsize)*20/3)
+   $ymax=$y
+
+   write('file',$file,'  <group size="410 %d"',$y+20)
+   write('file',$file,'    bg="transparent"')
+   write('file',$file,'    border="None"')
+   write('file',$file,'    tab="no"')
+   write('file',$file,'    reference="operightsManager"')
+   write('file',$file,'    useref="no"')
+   write('file',$file,'    subtype="Basic"')
+   write('file',$file,'    expanded="yes"')
+   write('file',$file,'    >')
+
+   write('file',$file,'    <group loc="30 10" size="350 %d"',$y)
+   write('file',$file,'      bg="transparent"')
+   write('file',$file,'      border="Etched"')
+   write('file',$file,'      tab="no"')
+   write('file',$file,'      reference="operightsManager"')
+   write('file',$file,'      useref="no"')
+   write('file',$file,'      subtype="Basic"')
+   write('file',$file,'      expanded="yes"')
+   write('file',$file,'      >')
+
+   write('file',$file,'      <label loc="10 10" size="330 30" style="Label1"')
+   write('file',$file,'        justify="Center" label="Manage operator rights"')
+   write('file',$file,'        />')
+
+   write('file',$file,'      <label loc="25 50" size="200 20" style="Label1"')
+   write('file',$file,'        label="Recall current rights for:"')
+   write('file',$file,'        />')
+
+   write('file',$file,'      <menu loc="80 75" size="150 20" style="PlainText"')
+   write('file',$file,'        vq="oprtmgr operator owner"')
+   write('file',$file,'        vc="oprtmgr[1]=\'$VALUE\' oprtmgr[2]=\'$VALUE\' operightsManager(\'getlist\',oprtmgr[1])"')
+   write('file',$file,'        set="$VALUE=oprtmgr[1]"')
+   write('file',$file,'        >')
+   write('file',$file,'        <mlabel label="%s" chval="%s" />',owner,owner)
+   write('file',$file,'        <mlabel label="Default" chval="default" />')
+   $ui=1
+   repeat
+     substr($operators[$ui],1):$operators[$ui]
+     if ($operators[$ui]<>owner) and ($operators[$ui]<>'') then
+	write('file',$file,'         <mlabel label="%s" chval="%s" />',$operators[$ui],$operators[$ui])
+     endif
+	$ui=$ui+1
+   until $ui>$usersize
+   write('file',$file,'      </menu>')
+
+   if ($parsize>$opsize+2) then
+     $ysize=($parsize-$opsize)*20/3
+     $ysize=$ysize+10
+     write('file',$file,'      <group loc="30 110" size="260 %d"',$ysize)
+     write('file',$file,'        bg="transparent"')
+     write('file',$file,'        border="None"')
+     write('file',$file,'        tab="no"')
+     write('file',$file,'        reference="operightsManager_panelgroup"')
+     write('file',$file,'        useref="yes"')
+     write('file',$file,'        subtype="Basic"')
+     write('file',$file,'        expanded="no"')
+     write('file',$file,'        >')
+     write('file',$file,'      </group>')
+   endif
+
+   $y=$ymax-125
+   write('file',$file,'       <label loc="25 %d" size="200 20"',$y)
+   write('file',$file,'         style="Label1" label="Save these rights for:"')
+   write('file',$file,'         />')
+   $y=$y+25
+
+   write('file',$file,'       <menu loc="80 %d" size="150 20" style="PlainText"',$y)
+   write('file',$file,'         vq="oprtmgr operator owner"')
+   write('file',$file,'         vc="oprtmgr[2]=\'$VALUE\'" set="$VALUE=oprtmgr[2]"')
+   write('file',$file,'         >')
+   write('file',$file,'         <mlabel label="%s" chval="%s" />',owner,owner)
+   write('file',$file,'         <mlabel label="Default" chval="default" />')
+   write('file',$file,'         <mlabel label="All" chval="all" />')
+   $ui=1
+   repeat
+     if ($operators[$ui]<>owner) and ($operators[$ui]<>'') then
+        write('file',$file,'         <mlabel label="%s" chval="%s" />',$operators[$ui],$operators[$ui])
+     endif
+        $ui=$ui+1
+   until $ui>$usersize
+   write('file',$file,'       </menu>')
+
+   $y=$y+50
+   write('file',$file,'       <button loc="90 %d" size="170 25" style="Heading2"',$y)
+   write('file',$file,'         vq="oprtmgr" show="$ENABLE=(oprtmgr[2]&lt;&gt;\'\')*2-1"')
+   write('file',$file,'         label="Save"')
+   write('file',$file,'         vc="operightsManager(\'save\',oprtmgr[2])" ')
+   write('file',$file,'         />')
+
+   write('file',$file,'     </group>')
+   write('file',$file,'  </group>')
+   write('file',$file,'</template>')
+
+//  show popup
+   vnmrjcmd('pnew','oprtmgr','operator','owner')
+   vnmrjcmd('popup','mode:modeless','file:operightsManager.xml','rebuild:yes','pnewupdate:true','close:operightsManager(`close`)','title:Operator rights')
+
+//  get rights for the current operator
+   {$0}('getlist',operator)
+
+ELSEIF ($1='close') THEN
+    oprtmgr=''
+ELSEIF ($1='rightslist') THEN
+
+// rightslist come from adm/users/OwnerRights.txt
+//  Includes list from all valid adm/users directories
+
+   $atot=0 $adirs='' $alabels=''
+   getappdirs:$atot,$adirs,$alabels
+   $keywords='' $expanded='' $status=''
+   $i=1
+   $j=1
+   repeat
+      $admex=0
+      $admfile=$adirs[$i]+'/adm/users/OwnerRights.txt'
+      exists($admfile,'file'):$admex
+      $s1='' $s2='' $total=0
+      if ($admex) then
+           readfile($admfile,'$s1','$s2','','local'):$total
+      endif
+      if ($total>0) then
+	$xi=1
+        repeat
+	    teststr('$keywords',$s1[$xi],'local'):$isin
+	    if ($isin=0) then
+		$expanded[$j]=$s2[$xi]
+		$keywords[$j]=$s1[$xi]
+		$status[$j]=''
+		$j=$j+1
+	    endif
+	    $xi=$xi+1
+	until $xi > $total
+      endif
+      $i=$i+1
+   until $i > $atot
+
+   $ADMpersona='' PersonaManager('OwnerPersona'):$ADMpersona
+   if ($0<>'operightsManagerAdm') and ($ADMpersona<>'') then
+	$admin=systemdir+'/personalib/'+$ADMpersona+'/adm/opeRights_'+$ADMpersona+'.txt'
+	$s1='' $s2=''
+	exists($admin,'file'):$tot
+	if ($tot) then
+	    readfile($admin,'$s1','$s2','','local'):$tot
+	endif
+	if ($tot) then
+	    $i=1
+	    repeat
+		teststr('$keywords',$s1[$i],'local'):$ok
+		if $ok then
+		    if ($s2[$i]='false') then 
+// some operights can never be taken away from owner
+			if ($s1[$i]<>'cansetpreferences') and
+			   ($s1[$i]<>'canexitvnmrj') then
+				$status[$ok]='deny' 
+			endif
+		    endif
+		endif
+		$i=$i+1
+	    until $i > $tot
+	endif
+   endif
+   return($keywords,$expanded,$status)
+
+ELSEIF ($1='operatorlist') THEN
+
+// operatorlist come from the profiles directory in /vnmr
+   exists(userdir+'/persistence/oplist_list','file'):$oplistex
+   $operators='' $s1=''
+   if ($oplistex) then
+	readfile(userdir+'/persistence/oplist_list','$operators','$s1','','local')
+   endif
+   return($operators)
+
+ELSEIF ($1='operatormenu') THEN
+
+        $opmenu=userdir+'/persistence/oplist_menu'
+        $oplistlist=userdir+'/persistence/oplist_list'
+        write('reset',$opmenu)
+        write('reset',$oplistlist)
+        write('file',$opmenu,'"%s" "%s"',owner,owner)
+        write('file',$oplistlist,'%s',owner)
+                // operatorlist come from the profiles directory in /vnmr
+        $oplist=systemdir+'/adm/users/profiles/user/'+owner
+        exists($oplist,'file'):$opex
+        if ($opex) then
+	    write('reset',$oplistlist+'_tmp')
+	    shell('(cat '+$oplist+' | grep \'^operators\' > '+$oplistlist+'_tmp)'):$devnull
+	    $key=$oplistlist+'_tmp'
+	    $op=''
+	    lookup('mfile',$key,'seekcs','operators','read','filekey'):$op,$key,$ret
+	    while $ret>1.5 do
+		write('file',$opmenu,'"%s" "%s"',$op,$op)
+		write('file',$oplistlist,'%s',$op)
+		lookup('mfile',$key,'read','filekey'):$op,$key,$ret
+	    endwhile
+	    rm('-f',$oplistlist+'_tmp'):$dum
+	endif
+
+ELSEIF ($1='getlist') THEN
+
+// Get the current value of rights for the operator defined
+//	in arg2
+
+   $rights='' $value=''
+   $rfile=$rdir+'/opeRights_'+$2+'.txt'
+   exists($rfile,'file'):$fileex
+   if ($fileex=0) then
+   	$rfile=$rdir+'/opeRights_'+owner+'.txt'
+   	exists($rfile,'file'):$fileex
+   endif
+   if ($fileex=0) then return endif
+   readfile($rfile,'$rights','$value','','local'):$total
+
+//  Make sure these rights are not denied by admin
+   if ($total) then
+      $i=1
+      repeat
+	rights($rights[$i]):$ok
+	if ($ok < 0.5) then 
+	    $value[$i]='deny' 
+	else
+	    if $value[$i]='deny' then $value[$i]='false' endif
+	endif
+	$i=$i+1
+      until $i > $total
+   endif
+
+// Set the oprtmgr parameter values based on current rights 
+//   for this operator
+   if ($total) then
+      $i=1
+      repeat
+	if ($rights[$i]<>'') then
+	    if ($value[$i]<>'false') and ($value[$i]<>'deny') then
+		$value[$i]='true'
+	    endif
+	    teststr('oprtmgr',$rights[$i],'global'):$ex
+	    if ($ex) then oprtmgr[$ex+2]=$value[$i] endif
+	endif
+	$i=$i+1
+      until $i > $total
+   endif
+
+// update the popup
+   vnmrjcmd('pnew','oprtmgr','operator','owner')
+
+ELSEIF ($1='save') THEN
+
+// save the rights for the operator defined in arg2
+   $arg2=$2
+   if ($arg2='all') then
+// All rights come from the owner rights
+//  So remove all operators' rights definition file
+	shell('rm -f '+$rdir+'/opeRights_*.txt'):$dum
+	$arg2=owner
+   elseif ($arg2='default') then
+// Owner rights are the default for all operators
+//   if they don't have their own rights definition file
+	$arg2=owner
+   endif
+   $rfile=$rdir+'/opeRights_'+$arg2+'.txt'
+   write('reset',$rfile)
+   $parsize=size('oprtmgr')
+   if ($parsize>$opsize) then
+	$i=$opsize+1
+	repeat
+	    write('file',$rfile,'%s %s',oprtmgr[$i],oprtmgr[$i+2])
+	    $i=$i+3
+	until $i > $parsize
+   endif
+   write('line3','Rights list saved for %s',$2)
+// update the popup
+   vnmrjcmd('pnew','oprtmgr','operator','owner')
+
+ENDIF

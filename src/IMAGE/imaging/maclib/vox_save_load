@@ -1,0 +1,114 @@
+"macro vox_save_load"
+$action = ''
+
+if ($# > 0) then
+  $action = $1
+  else
+  $action='savevox'
+endif
+
+if ($action='saveshim') then
+  
+  scoutpath=scoutpaths[1] 
+  exists(userdir+'/prescan/voxel.par','directory'):$e
+  if ($e=0) then  //if directory doesn't exist
+    exists(userdir+'/prescan/voxel.par','file'):$ef
+     if ($ef>0) then
+     rm (userdir+'/prescan/voxel.par')
+     endif
+    
+     mkdir(userdir+'/prescan/voxel.par') //create directory if it doesn't exist
+  //else //if the dir does exist
+  //mkdir(userdir+'/prescan/voxel.par')  
+    
+   
+  endif  //
+  
+  writeparam(userdir+'/prescan/voxel.par/procpar','iplanDefaultType iplanType vtheta vphi vpsi vox1 vox2 vox3 pos1 pos2 pos3 scoutpath')
+  write('line3','voxel saved for shimming')
+endif
+
+if ($action='savemile') then
+  write('line3','saving milestone voxel ...')
+  gplan('saveMilestoneStacks')
+endif
+
+if ($action='loadshim') then
+  exists(userdir+'/prescan/voxel.par','directory'):$ed
+  if ($ed=0) then
+    write('line3','Voxel params were not found')
+    abort
+  else
+    rtv(userdir+'/prescan/voxel.par/procpar','iplanDefaultType','iplanType','vtheta','vphi','vpsi','vox1','vox2','vox3','pos1','pos2','pos3','scoutpath'):iplanDefaultType,iplanType,vtheta,vphi,vpsi,vox1,vox2,vox3,pos1,pos2,pos3,scoutpath
+ //   fread(userdir+'/prescan/voxel.par/procpar')
+    write('line3','shim voxel loaded')
+  endif
+ planValue='shimvoxel' gplan('setDefaultType',3) gplan('getCurrentStacks') setgplan('vorient',planValue) calcdim
+endif
+
+if ($action='loadmile') then
+  write('line3','loading milestone voxel ...')
+  iplanType=3 setgplan('standard getMilestoneStacks')
+endif
+
+if ($action='loadslab') then
+  exists(userdir+'/prescan/slab.par','file'):$e
+  if ($e=0) then 
+    gs_slice('savevoxel') 
+  else
+    fread(userdir+'/prescan/slab.par')
+    write('line3','shim slab loaded')
+  endif
+  gplan('setDefaultType', 3) iplanDefaultType=3 planValue='standard getCurrentStacks' setgplan('standard getCurrentStacks')
+endif
+
+if ($action='shregion') then
+  if (shregion[$2] = 'voxel' and shcycle[$2] = 1) then
+    if (showOptions=2 or showOptions=3) then
+      vox_save_load('loadshim')
+      vox_save_load('resetpars')
+    else 
+      gplan('clearStacks')
+      exists(userdir+'/prescan/voxel.par','file'):$e
+      if ($e=1) then fread(userdir+'/prescan/voxel.par') write('line3','shim voxel loaded') endif
+    endif
+  elseif (shregion[$2] = 'slab' and shcycle[$2] = 1) then 
+    if (showOptions=2 or showOptions=3) then
+      vox_save_load('loadslab')
+      vox_save_load('resetpars')
+    else 
+      gplan('clearStacks')
+      exists(userdir+'/prescan/slab.par','file'):$e
+      if ($e=1) then fread(userdir+'/prescan/slab.par') write('line3','shim slab loaded') endif
+    endif
+  else
+    $i=1
+    while ($i<5) do
+      if (shregion[$i] = 'voxel' and shcycle[$i] = 1) then return endif
+      if (shregion[$i] = 'slab' and shcycle[$i] = 1) then return endif
+      $i=$i+1
+    endwhile
+    gplan('clearStacks')
+  endif
+endif
+
+if ($action='reset') then
+  $i=1
+  while ($i<5) do
+    if (shregion[$i] = 'voxel' and shcycle[$i] = 1) then 
+      vox_save_load('loadshim')
+      vox_save_load('resetpars')
+      return 
+    endif
+    if (shregion[$i] = 'slab' and shcycle[$i] = 1) then 
+      vox_save_load('loadslab')
+      vox_save_load('resetpars')
+      return 
+    endif
+    $i=$i+1
+  endwhile
+endif
+
+if ($action='resetpars') then
+  vox1=vox1 vox2=vox2 vox3=vox3 pos1=pos1 pos2=pos2 pos3=pos3 vpsi=vpsi vphi=vphi vtheta=vtheta vorient=vorient
+endif

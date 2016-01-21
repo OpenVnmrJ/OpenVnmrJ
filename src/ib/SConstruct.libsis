@@ -1,0 +1,65 @@
+import os
+
+# define target file names
+libsisTarget = 'libsis.a'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+graphicsFileList = ['graphics.c',
+                    'siscms.c',
+                    'icon.c',
+                    'image.c',
+                    'image4.c',
+                    'contrast.c',
+                    'spline.c',
+                    'vscale.c',
+                    'vsfunc.c']
+
+fileFileList = ['filelist.c',
+                'expfile.c',
+                'menu_dir.c']
+
+initStartFileList = ['initstart.c']
+
+ipgFileList = ['ipgwin.c']
+
+msgPrtFileList = ['msgprt.c']
+
+primitiveFileList = ['prim_line.c']
+
+confirmWinFileList = ['confirmwin.c']
+
+# build environments
+sisEnv = Environment(CC         = 'g++',
+                     CCFLAGS    = '-m32 -O -Wno-deprecated',
+                     CPPDEFINES = ['LINUX', 'SOLARIS'],
+                     LINKFLAGS  = '-W1 -m32 -Wno-deprecated', 
+                     CPPPATH    = [cwd,
+                                   os.path.join(os.sep, 'usr', 'openwin', 'include'),
+                                   os.path.join(os.sep, 'sis', 'local', 'CC', 'incl')])
+
+# actual builds
+libsis = sisEnv.StaticLibrary(target  = libsisTarget,
+                              source  = [graphicsFileList,
+                                         fileFileList,
+                                         initStartFileList,
+                                         ipgFileList,
+                                         msgPrtFileList,
+                                         primitiveFileList,
+                                         confirmWinFileList],
+                              LIBPATH = cwd)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+sisEnv.AddPostAction(libsis,
+                     Action(Copy(installPath, os.path.join(cwd, libsisTarget))))
+

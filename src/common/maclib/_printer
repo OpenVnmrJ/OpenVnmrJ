@@ -1,0 +1,29 @@
+"macro _printer"
+"Determine printer device"
+setprintdev:$print
+if ($print = 'none') then
+  return
+endif
+
+lookup('file',systemdir+'/devicetable','seek','Example') "Skip header"
+lookup('seek',$print) "Find the printer type of interest"
+lookup('file',systemdir+'/devicenames','seek','COMMENTEND')
+$host=''
+$found=(1=0) "Used to weed out comments in the devicenames file"
+repeat
+  lookup('seek',printer,'read'):$host,$return
+  if $host='Use' then $found=(1=1) endif
+until $found or ($return=0)
+if $found then
+  lookup('seek','Host','read'):$host
+endif
+
+"Output information for feedback"
+clear(4)
+if (printer <> '') then
+$output='Printer has been set to '+printer echo($output)
+else
+$output='Printer has been set to \'\'' echo($output)
+endif
+$output='This is a '+$print+'-type printer' echo($output)
+$output='Attached to the computer named '+$host echo($output)

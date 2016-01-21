@@ -1,0 +1,35 @@
+"macro dpfgse_tocsyCN"
+"************************************************************************"
+" dpfgse_tocsyCN - convert parameter set to dpfgse noesy experiment "
+"************************************************************************"
+BPrtppar('dpfgse_tocsyCN')
+getparam('gcal','Probe'):gcal_local
+getparam('rfsize','Probe'):coil_size
+if ((compH=0)or(gcal_local=0)or(coil_size=0)) then
+        banner('Wrong data in probe file!!!!\\Please correct it first.')
+   return
+endif
+if coil_size=0 then coil_size=16 endif
+zqflg='n' 
+
+substr(gradtype,3,1):$ss
+if $ss='l' then
+  setlimit('gzlvl0',2047.0,-2047.0,1.0) gzlvl0=900
+  setlimit('gzlvl1',2047.0,-2047.0,1.0) gzlvl1=1000
+  setlimit('gzlvl2',2047.0,-2047.0,1.0) gzlvl2=1600
+endif
+np=2048
+ni=1 phase=1 f full lb='n' gf='n' sb=-at sbs=sb pmode='full' pfgon='nny'
+sw1=sw rfl1=rfl rfp1=rfp dm='n'
+dn='C13' setoffset(dn,80):dof dn2='N15' setoffset(dn2,120):dof2
+"BPmakeCshp(160) BPmakeNshp_3chan(40)"
+d1=1.5 ss=4 dg dm='nny' dm2='nny' dmm='ccp' dmm2='ccp' CNrefoc='y'
+if at>0.15 then
+     banner('Please reduce acquisition time for \\simultaneous C13&N15 decoupling!')
+else dps endif
+d1=1.5 ss=4 dg 
+BPpboxget('wurst140.DEC'):dseq,$dmmy,$dpwr,$dmmy,dres,dmf
+BPpboxget('wurst40N.DEC'):dseq2,$dmmy,$dpwr2,$dmmy,dres2,dmf2
+BPspinlock(1)
+dpwr=$dpwr dpwr2=$dpwr2
+man(seqfil)

@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="acqAdv" element="pages" type="acquisition" >
+  <group size="800 270"
+    label="Advanced"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="acqAdv"
+    useref="no"
+    subtype="Convenience"
+    expanded="yes"
+    >
+    <group loc="455 45" size="140 25"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="yes"
+      useref="no"
+      subtype="Convenience"
+      >
+      <button loc="5 0" size="120 20"
+        style="Heading3"
+        label="Show RF &amp; Grad"
+        vq="show_adv"
+        vc="exists('show_adv','parameter'):$e if ($e=0) then create('show_adv','integer') endif show_adv = 1"
+        bg="transparent"
+        decor1="no"
+        />
+    </group>
+    <group loc="220 0" size="210 225"
+      style="Heading1"
+      label="Receiver Settings"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ReceiverSettings"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <button loc="5 185" size="200 20"
+        style="Heading3"
+        label="Revert to Default Settings"
+        vc="ddrsr=5e6 ddrcr=5 ddrtc='n' dp='n' "
+        decor1="no"
+        />
+      <group loc="5 140" size="200 40"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="0 0" size="110 20"
+          style="Label1"
+          label="Filter coefficients"
+          justify="Left"
+          />
+        <textmessage loc="80 20" size="90 20"
+          style="PlainText"
+          vq="ddrmaxcr"
+          set="write('line3','(Maximum %d)',ddrmaxcr):$VALUE"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="ddrcr"
+          vc="ddrcr=$VALUE"
+          set="$VALUE=ddrcr"
+          digits="0"
+          disable="Grayed out"
+          />
+      </group>
+      <group loc="5 90" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <menu loc="110 0" size="75 20"
+          style="PlainText"
+          vq="dp"
+          vc="dp = '$VALUE'"
+          set="$VALUE = dp"
+          editable="No"
+          >
+          <mlabel 
+            label="16 Bit"
+            chval="n"
+            />
+          <mlabel 
+            label="32 Bit"
+            chval="y"
+            />
+        </menu>
+        <label loc="0 0" size="110 20"
+          style="Label1"
+          label="Data Point Size"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 60" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="0 0" size="110 20"
+          style="Label1"
+          label="Time correction"
+          justify="Left"
+          />
+        <check loc="110 0" size="20 20"
+          style="PlainText"
+          vq="ddrtc"
+          vc="ddrtc='y'"
+          vc2="ddrtc='n'"
+          set="on('ddrtc'):$VALUE"
+          />
+      </group>
+      <group loc="5 110" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <menu loc="110 0" size="75 20"
+          style="PlainText"
+          vq="ddrsr"
+          vc="if ($VALUE &gt; 0) then ddrsr = $VALUE*1e6 else ddrsr = 'n' endif"
+          set="on('ddrsr'):$on if ($on &gt; 0) then $VALUE = ddrsr/1e6 else $VALUE = 0 endif"
+          editable="No"
+          >
+          <mlabel 
+            label="Auto"
+            chval="0"
+            />
+          <mlabel 
+            label="2.5 MHz"
+            chval="2.5"
+            />
+          <mlabel 
+            label="5.0 MHz"
+            chval="5"
+            />
+        </menu>
+        <label loc="0 0" size="110 20"
+          style="Label1"
+          label="Sampling Rate"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 40" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="0 0" size="110 20"
+          style="Label1"
+          label="Min. Echo Spacing"
+          justify="Left"
+          />
+        <label loc="170 0" size="30 20"
+          style="Label1"
+          label="us"
+          justify="Left"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="skip"
+          vc="skip=$VALUE go('check')"
+          set="$VALUE=skip"
+          digits="0"
+          disable="Grayed out"
+          />
+      </group>
+      <group loc="5 20" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="0 0" size="105 20"
+          style="Label1"
+          label="Spectral Width"
+          justify="Left"
+          />
+        <label loc="170 0" size="30 20"
+          style="Label1"
+          label="Hz"
+          justify="Left"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="sw"
+          vc="$np = np sw=$VALUE np = $np ddrmaxcr = 'n' go('check')"
+          set="$VALUE=sw"
+          digits="0"
+          disable="Grayed out"
+          />
+      </group>
+    </group>
+    <group loc="5 0" size="210 225"
+      style="Heading1"
+      label="Acquisition"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Accquisition_group"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="5 195" size="200 20"
+        vq="epiref_type"
+        show="exists('epiref_type','parameter'):$VALUE"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <menu loc="110 0" size="75 20"
+          style="PlainText"
+          label="menu"
+          vq="epiref_type"
+          vc="epiref_type = '$VALUE' epi_setarray"
+          set="$VALUE = epiref_type"
+          editable="No"
+          >
+          <mlabel 
+            label="Single"
+            chval="single"
+            />
+          <mlabel 
+            label="Triple"
+            chval="triple"
+            />
+        </menu>
+        <label loc="0 0" size="95 20"
+          style="Label1"
+          label="Reference Scan"
+          />
+      </group>
+      <textmessage loc="5 175" size="200 20"
+        style="PlainText"
+        vq="petable"
+        set="write('line3','PE table %s',petable):$VALUE"
+        />
+      <group loc="5 155" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="seqcon"
+          vc="seqcon='$VALUE'"
+          set="$VALUE=seqcon"
+          digits="0"
+          disable="Grayed out"
+          />
+        <label loc="0 0" size="100 20"
+          style="Label1"
+          label="seqcon"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 130" size="195 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="170 0" size="25 20"
+          style="Label1"
+          label="%"
+          justify="Left"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="glim"
+          vc="glim = $VALUE go('check')"
+          set="$VALUE=glim"
+          digits="0"
+          disable="Grayed out"
+          />
+        <label loc="0 0" size="60 20"
+          style="Label1"
+          label="Glim"
+          />
+      </group>
+      <group loc="5 105" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <menu loc="110 0" size="75 20"
+          style="PlainText"
+          label="menu"
+          vc="presig = '$VALUE'"
+          set="$VALUE = presig"
+          editable="No"
+          >
+          <mlabel 
+            label="high"
+            chval="h"
+            />
+          <mlabel 
+            label="low"
+            chval="l"
+            />
+        </menu>
+        <label loc="0 0" size="105 20"
+          style="Label1"
+          label="Signal Level"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 85" size="200 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <label loc="0 0" size="105 20"
+          style="Label1"
+          label="Receiver Gain"
+          justify="Left"
+          />
+        <label loc="170 0" size="30 20"
+          style="Label1"
+          label="dB"
+          justify="Left"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="gain"
+          vc="gain=$VALUE"
+          set="$VALUE=gain"
+          digits="0"
+          disable="Grayed out"
+          />
+      </group>
+      <label loc="175 40" size="30 20"
+        style="Label1"
+        label="MHz"
+        justify="Left"
+        />
+      <label loc="175 60" size="30 20"
+        style="Label1"
+        label="Hz"
+        justify="Left"
+        />
+      <menu loc="115 20" size="75 20"
+        style="PlainText"
+        vq="tn"
+        vc="tn='$VALUE'"
+        set="$VALUE=tn"
+        editable="No"
+        >
+        <mlabel 
+          label="Proton"
+          chval="H1"
+          />
+        <mlabel 
+          label="F19"
+          chval="F19"
+          />
+        <mlabel 
+          label="P31"
+          chval="P31"
+          />
+        <mlabel 
+          label="C13"
+          chval="C13"
+          />
+        <mlabel 
+          label="Na23"
+          chval="Na23"
+          />
+        <mlabel 
+          label="Xe129"
+          chval="Xe129"
+          />
+      </menu>
+      <textmessage loc="115 40" size="60 20"
+        style="PlainText"
+        vq="sfrq"
+        set="$VALUE=sfrq"
+        digits="3"
+        />
+      <entry loc="115 60" size="60 20"
+        style="PlainText"
+        vq="resto"
+        vc="resto=$VALUE"
+        set="$VALUE=resto"
+        digits="1"
+        disable="Grayed out"
+        />
+      <label loc="5 20" size="110 20"
+        style="Label1"
+        label="Nucleus"
+        justify="Left"
+        />
+      <label loc="6 60" size="110 20"
+        style="Label1"
+        label="Obs Offset"
+        justify="Left"
+        />
+      <label loc="6 40" size="110 20"
+        style="Label1"
+        label="Obs Frequency"
+        justify="Left"
+        />
+    </group>
+    <button loc="460 15" size="120 20"
+      style="Label4"
+      label="Test Scans"
+      vc="imEPI('prep','refall') au"
+      bg="darkGreen"
+      decor1="no"
+      />
+  </group>
+</template>

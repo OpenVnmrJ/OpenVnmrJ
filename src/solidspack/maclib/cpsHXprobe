@@ -1,0 +1,259 @@
+"macro cpsHXprobe"
+// cpHXprobe - A macro to get or set HX standard and CP HX calibrations 
+//             to or from the probe file for 1D CP spectra. Also 
+//             set TPPM/SPINAL decoupling. 
+
+//             Argument 1 is the action:
+//                        'set' loads values into the probe file. 
+//                        'get' sets values into the workspace. 
+//                        'init' creates a complete set of parameter entries. 
+//                        'calc' sets the probe file for all parameters of a 
+//                               based on values of aH90,pwH90,dpwr,aX90,pwX90,
+//                               tpwr in the probe file and srate from the workspace.
+//                    (See below for a description of parameters and 
+//                          calculations for each action above.) 
+//
+//             Argument 2 is the region number with a default of 1. 
+//
+//        (A)  Set Parameters ('get','set','init'): 
+//                       Nucleus             Workspace <-> Probe                   Region
+//                         (H) dof,dpwr,aH90,pwH90 <-> ofH,dbH,aH90_hp,pw90_hp 
+//                                                                             (C13-alpha,carbonyl.etc)
+//                                                                             (for all params)
+//               (X = 13C,15N) tof,tpwr,aX90,pwX90 <-> ofX,dbX,aX90,pwX90                                                      
+//                         (H) chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX <->
+//                                   chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX                                
+//               (X = 13C,15N) aXhx <-> a    
+//                         (H) aHtppm,pwHtppm,phHtppm <-> aHtppm,pwHtppm,phHtppm
+//                         (H) aHspinal,pwHspinal,phHspinal <-> aHtppm,pwHtppm,phHtppm 
+//                         (H) Hseq <-> Hseq  
+   
+//        (B)  Initialize Parameters ('init') 
+//                       Nucleus             Value <-> Probe                       Region
+//                         (H) 0.0,0.0,0.0 <-> R_hp,F_hp,pwH180_hp             
+//                                                                             (C13-alpha,carbonyl,etc)
+//                                                                             (for all params)
+//                         (H) 0.0,0.0, <-> aH90_mp,pw90_mp
+//                         (H) 0.0,0.0,0.0 <-> R_mp,F_mp,pwH180_mp
+//               (X = 13C,15N) 0.0,0.0,0.0 <-> R,F,pwX180 
+//               (X = 13C,15N) 0.0,0.0 <-> aX32wr,aX52wr
+//               (X = 13C,15N) 0.0,0.0 <-> RXshp1,FXshp1
+//               (X = 13C,15N) 0.0 <-> baserefX   
+     
+//        (C)  Calculate Parameters ('calc'): 
+//                       Nucleus             Value <-> Probe                       Region
+//                         (H) (*no change) <-> ofH,dbH,aH90_hp,pw90_hp        
+//                                                                             (C13-alpha,carbonyl,etc)
+//                                                                             (for all params)
+//               (X = 13C,15N) (*no change) <-> ofX,dbX,aX90,pwX90                                                      
+//                         (H) 'fr','t','obs','dec',(*1),(*2),(*3),2000.0,0.0 <->
+//                                   chHX,shHX,toHX,frHX,aHhx,bHX,dHX,tHX,ofHX                                
+//               (X = 13C,15N) $aX90 <-> aXhx    
+//                         (H) $aH90_hp,(*4),10.0 <-> aHtppm,pwHtppm,phHtppm
+//                         (H) $aH90_hp,(*4),10.0,5.0 <-> aHtppm,pwHtppm,phHtppm,alpHspinal 
+//                         (H) 'spinal' <-> Hseq  
+//               (X = 13C,15N) (*$aXshp1),(*$dbXshp1),(*$7),0.0,0.5,0.0,(*$6) <->
+//                                   aXshp1,dbXshp1,pwXshp1,ofXshp1,stXshp1,phXshp1,wvXshp1    
+//                         (H) 1.0,4.0,2.0*$pwH90_hp <-> R_hp,F_hp,pwH180_hp
+//                         (H) $aX90,$pwX90, <-> aH90_mp,pw90_mp
+//                         (H) 1.0,4.0,2.0*$pwX90 <-> R_mp,F_mp,pwH180_mp
+//               (X = 13C,15N) 1.0,4.0,2.0*$pwX90 <-> R,F,pwX180 
+//               (X = 13C,15N) (*5),(*6) <-> aX32wr,aX52wr
+//               (X = 13C,15N) 1.0,4.0 <-> RXshp1,FXshp1
+//               (X = 13C,15N) 0.0 <-> baserefX   
+
+//             NOTES: for Calculations Above
+//             (*no change)- these values in the probe file are used for calculation
+//                           and '$' refers to input macro arguments or values 
+//                           obtained from the probe file.
+//             $srate - the value of $srate is obtained from the probe file. 
+
+//             (*1) = $aH90_hp*$pwH90/$pwX90+4.0*srate*pwH90_hp*1.0e-6*$aH90_hp      
+//             (*2) = 0.05*$aH90_hp*$pwH90/$pwX90
+//             (*3) = 0.05*$aH90_hp*$pwH90/$pwX90
+//             (*4) = 165.0*$pwH90_hp/90.0,
+//             (*$aXshp1) see line 272
+//             (*$dbXshp1) see line 275
+//             (*$6) argument 6, default = 'rsnob'
+//             (*$7) argument 7, default = 200.0
+//             (*5) = 6.0*$srate*$pwX90*1.0e-6*$aX90,
+//             (*6) = 10.0*$srate*$pwX90*1.0e-6*$aX90)
+
+// Initialize CP Parameters in the Probe File
+
+if (($#>0) and ($1='init')) then
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0  $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Initialize Standard Parameters in the Probe File.
+
+   probeparamgroup('setlocal',$reg,$tnuc,'','ofX90',tof,'dbX90',tpwr)
+   probeparamgroup('setlocal',$reg,$tnuc,'', 'aX90',aX90,
+                                            'pwX90',pwX90,
+                                            'pwX180',0.0,
+                                            'R',0.0,
+                                            'F',0.0)
+   probeparamgroup('setlocal',$reg,$dnuc,'','ofX90',dof,'dbX90',dpwr)
+   probeparamgroup('setlocal','hp'+$reg,$dnuc,'','aH90',aH90,
+                                                'pwH90',pwH90,
+                                                'pwH180',0.0,
+                                                'R',0.0,
+                                                'F',0.0)
+   probeparamgroup('setlocal','mp'+$reg,$dnuc,'','aH90',aH90*pwH90/pwX90,
+                                                'pwH90',pwX90,
+                                                'pwH180',0.0,
+                                                'R',0.0,
+                                                'F',0.0)
+   probeparamgroup('setlocal',$reg,$dnuc,'','srateHX',1000.0)
+   probeparamgroup('set',$reg,$dnuc,'HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of')
+   probeparamgroup('set',$reg,$tnuc,'HX','aX')
+   probeparamgroup('set',$reg,$dnuc,'tppmH','a','pw','ph')
+   probeparamgroup('set',$reg,$dnuc,'spinalH','a','pw','ph')
+   probeparamgroup('set',$reg,$dnuc,'','Hseq')
+   probeparamgroup('setstring',$reg,$tnuc,'','baserefX','0.0')
+endif
+
+if (($#>0) and ($1='calc')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Get Standard X $reg Parameters from the Probe file for Calculation.
+
+   probeparamgroup('getlocal',$reg,$tnuc,'','dbX90'):$tpwr
+   probeparamgroup('getlocal',$reg,$tnuc,'','aX90','pwX90'):$aX90,$pwX90
+
+// Get Standard H $reg Parameters from the Probe file for Calculation.
+
+   probeparamgroup('getlocal',$reg,$dnuc,'','dbX90'):$dpwr
+   probeparamgroup('getlocal','hp'+$reg,$dnuc,'','aH90','pwH90'):$aH90,$pwH90
+
+// Calculate Standard H hp $reg Parameters 
+
+   probeparamgroup('setlocal','hp'+$reg,$dnuc,'','aH90',$aH90,
+                                                'pwH90',$pwH90,
+                                                'pwH180',2.0*$pwH90,
+                                                'R',1.0,
+                                                'F',4.0)
+
+// Calculate Standard H mp $reg Parameters 
+
+   probeparamgroup('setlocal','mp'+$reg,$dnuc,'','aH90',$aH90*$pwH90/$pwX90,
+                                                'pwH90',$pwX90,
+                                                'pwH180',2.0*$pwX90,
+                                                'R',1.0,
+                                                'F',4.0)
+
+// Calculate HX CP $reg Parameters with Existing Spinrate
+
+   probeparamgroup('getlocal',$reg,$dnuc,'','srateHX'):$srate
+   probeparamgroup('setlocal',$reg,$dnuc,'HX','ch','fr',
+                                             'sh','t',
+                                             'to','obs',
+                                             'fr','dec',
+                                             'aH',$aH90*$pwH90/$pwX90+4.0*$srate*pwH90*1.0e-6*$aH90,
+                                             'b',0.05*$aH90*$pwH90/$pwX90,
+                                             'd',0.05*$aH90*$pwH90/$pwX90,
+                                             't',2000.0,
+                                             'of',0.0)
+   probeparamgroup('setlocal',$reg,$tnuc,'HX','aX',$aX90)
+
+// Calculate Standard X $reg Parameters
+
+   probeparamgroup('setlocal',$reg,$tnuc,'', 'aX90',$aX90,
+                                            'pwX90',$pwX90,
+                                            'pwX180',2.0*$pwX90,
+                                            'R',1.0,
+                                            'F',4.0)
+
+// Calculate H $reg tppmH and spinalH Parameters
+
+   probeparamgroup('setlocal',$reg,$dnuc,'tppmH','a',$aH90,
+                                                'pw',165.0*$pwH90/90.0,
+                                                'ph',10.0)
+   probeparamgroup('setlocal',$reg,$dnuc,'spinalH','a',$aH90,
+                                                  'pw',165.0*$pwH90/90.0,
+                                                  'ph',10.0)
+   probeparamgroup('setlocal',$reg,$dnuc,'','Hseq','spinal')
+
+// Calculate the X $reg Base Reference Parameter
+
+   probeparamgroup('setstring',$reg,$tnuc,'','baserefX','0.0')
+endif
+
+// Set CP Parameters to the Probe File
+
+if (($#>0) and ($1='set')) then 
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules 
+
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Set Standard CP and Decoupling Parameters in the Probe File
+
+   probeparamgroup('setlocal',$reg,$tnuc,'','ofX90',tof,'dbX90',tpwr)
+   probeparamgroup('set',$reg,$tnuc,'90X','a','pw')
+   probeparamgroup('setlocal',$reg,$dnuc,'','ofX90',dof,'dbX90',dpwr)
+   probeparamgroup('set','hp'+$reg,$dnuc,'90H','a','pw')
+   probeparamgroup('setlocal',$reg,$dnuc,'','srateHX',srate)
+   probeparamgroup('set',$reg,$dnuc,'HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of') 
+   probeparamgroup('set',$reg,$tnuc,'HX','aX')
+   probeparamgroup('set',$reg,$dnuc,'tppmH','a','pw','ph')
+   probeparamgroup('set',$reg,$dnuc,'spinalH','a','pw','ph')
+   probeparamgroup('set',$reg,$dnuc,'','Hseq')
+endif
+
+if (($#>0) and ($1='get')) then
+
+// Read Macro Arguments
+
+   if ($# < 2) then $2 = 1 endif
+
+// Set Sequence and Read Modules
+
+   parammodule('studydir')
+   $ret = 0 $reg = '' $tnuc = '' $dnuc = '' 
+   parammodule('setacqlabel',$2):$ret,$reg,$tnuc,$dnuc
+   parammodule('errorcheck',$ret,$2,'setacqlabel')
+
+// Obtain Standard CP and Decoupling Parameters from Probe File
+
+   probeparamgroup('getlocal',$reg,$tnuc,'','ofX90','dbX90'):tof,tpwr
+   probeparamgroup('get',$reg,$tnuc,'90X','a','pw')
+   probeparamgroup('getlocal',$reg,$dnuc,'','ofX90','dbX90'):dof,dpwr
+   probeparamgroup('get','hp'+$reg,$dnuc,'90H','a','pw')
+   probeparamgroup('getlocal',$reg,$dnuc,'','srateHX'):srate
+   probeparamgroup('get',$reg,$dnuc,'HX','ch','sh','to','fr',
+                                         'aH','b','d','t','of') 
+   probeparamgroup('get',$reg,$tnuc,'HX','aX')
+   probeparamgroup('get',$reg,$dnuc,'tppmH','a','pw','ph')
+   probeparamgroup('get',$reg,$dnuc,'spinalH','a','pw','ph')
+   probeparamgroup('get',$reg,$dnuc,'','Hseq')
+
+endif

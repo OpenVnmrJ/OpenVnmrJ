@@ -1,0 +1,44 @@
+"macro BPsetupshapes1"
+" BPsetupshapes1     for allC "
+" creates waveforms WURST140.DEC used in gChsqc in AutoCalibrate"
+" if BPpwrlimits=1, power levels may reduced, but bandwidths remain, at"
+"   the expense of increased sidebands"
+
+$bw = ''
+$wave = ''
+$name = ''
+$n3=n3
+format(BPdpwrmax,2,0):n3
+n3=n3+'d'
+$attn=n3
+
+format(140.0*sfrq/4.0,9,1):$bw    " set C-13 decoupling bandwidth to 140 ppm "
+if BPpwrlimits=1 then
+$wave = 'WURST40' + $bw + '/1.4ms'
+else
+$wave = 'WURST2' + $bw + '/1.01ms'
+endif
+opx
+setwave($wave)
+pbox_rst
+if BPpwrlimits=1 then
+pboxpar('$1 adb','3.0') "this can be omitted for 3db less power, but > sideband"
+endif
+pboxpar('name', 'wurst140.DEC')
+pboxpar('ref_pwr', pwClvl)
+pboxpar('ref_pw90', pwC*compC)
+" pboxpar('reps', '0')  - to suppress the Pbox output "
+shell('Pbox')
+if BPpwrlimits=1 then
+ BPpboxget('wurst140.DEC'):$name,$par,$dpwr,$par,$par,$par
+ if $dpwr>BPdpwrmax then
+    pboxpar('attn',$attn)
+    echo($attn)
+    shell('Pbox')
+ endif
+endif
+BPmoveshape('wurst140.DEC')
+
+
+n3=$n3
+

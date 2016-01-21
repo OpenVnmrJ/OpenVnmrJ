@@ -1,0 +1,115 @@
+"macro voxplan"
+" Ancestry: voxplan	8.1 4/16/93   Spectroscopy Imaging Systems"
+"***************************************************************"
+" voxplan                                                       "
+"                                                               "
+" Macro to plan voxel positions for localized spectroscopy      "
+"***************************************************************"
+
+"-- Constants ---------------------------------------------"
+$prog = 'voxplan: '                "program ID"
+$cm_mm = 10.0                      "cm to mm unit conversion"
+
+
+"-- Check t_mark parameter --------------------------------"
+$size = size('t_mark')
+if ( ($size % 4) <> 0) then
+  write('error',$prog+'Unusable voxel selection, please plan voxels.')
+  abort
+endif
+
+$k = 1
+$voxels = $size/4
+repeat
+  $f2h[$k] = t_mark[($k - 1)*4 + 1]
+  $f1h[$k] = t_mark[($k - 1)*4 + 2]
+  $f2l[$k] = t_mark[($k - 1)*4 + 3]
+  $f1l[$k] = t_mark[($k - 1)*4 + 4]
+  $k = $k + 1
+until ($k > $voxels)
+
+
+"-- Find Euler angles for current slice -------------------"
+" Find Values of the Euler Angles; Check if array size > 1 "
+"----------------------------------------------------------"
+$len = size('psi')
+if ($len > 1.5)  then  t_vpsi = psi[element]  else  t_vpsi = psi  endif
+
+$len = size('phi')
+if ($len > 1.5)  then  t_vphi = phi[element]  else  t_vphi = phi  endif
+
+$len = size('theta')
+if ($len > 1.5)  then  t_vtheta = theta[element]  else  t_vtheta = theta  endif
+
+
+"-- Compute logical frame coordinates & voxel sizes -------"
+" The values f2h,f2l,f1h,f1l define the sides of the voxel "
+" The center frequency of the voxel is used to calculate   "
+" the voxel logical position.                              "
+"                                                          "
+" The in plane voxel sizes are obtained from the           "
+" differences between f2h & f2l and f1h & f1l. The third   "
+" voxel size should have been set in t_vox3 via the        "
+" slice_plan & slice_plan_vox3 menus.                      "
+"----------------------------------------------------------"
+t_pos1 = 0   t_pos2 = 0   t_pos3 = 0
+t_vox1 = 0   t_vox2 = 0
+
+$k = 1
+repeat
+  $f2 = 0.5*($f2h[$k] + $f2l[$k]) + rfl - rfp
+  $f1 = 0.5*($f1h[$k] + $f1l[$k]) + rfl1 - rfp1
+  $df2 = $f2h[$k] - $f2l[$k]
+  $df1 = $f1h[$k] - $f1l[$k]
+        
+  t_pos1[$k] = pro+lro*($f2 - 0.5*sw)/sw
+  t_pos2[$k] = ppe+lpe*($f1 - 0.5*sw1)/sw1
+  t_pos3[$k] = pss[cf]
+
+  t_vox1[$k] = $cm_mm*($df2/sw)*lro
+  t_vox2[$k] = $cm_mm*($df1/sw1)*lpe
+
+  $k = $k + 1
+until ($k > $voxels)
+
+"-- Compare values in each array to see if they are equal -"
+if ($voxels > 1) then
+  $k = 1
+  $pos1=0  $pos2=0  $pos3=0  $vox1=0  $vox2=0
+  repeat
+    if ( trunc(10000*(t_pos1[$k]-t_pos1[$k+1])) <> 0)  then  $pos1 = 1  endif
+    if ( trunc(10000*(t_pos2[$k]-t_pos2[$k+1])) <> 0)  then  $pos2 = 1  endif
+    if ( trunc(10000*(t_pos3[$k]-t_pos3[$k+1])) <> 0)  then  $pos3 = 1  endif
+    if ( trunc(10000*(t_vox1[$k]-t_vox1[$k+1])) <> 0)  then  $vox1 = 1  endif
+    if ( trunc(10000*(t_vox2[$k]-t_vox2[$k+1])) <> 0)  then  $vox2 = 1  endif
+    $k = $k + 1
+  until ($k = $voxels)
+
+  "-- If all values in an array are equal, set to first -----"
+  if ($pos1 = 0)  then  t_pos1 = t_pos1[1]  endif
+  if ($pos2 = 0)  then  t_pos2 = t_pos2[1]  endif
+  if ($pos3 = 0)  then  t_pos3 = t_pos3[1]  endif
+  if ($vox1 = 0)  then  t_vox1 = t_vox1[1]  endif
+  if ($vox2 = 0)  then  t_vox2 = t_vox2[1]  endif
+endif
+
+
+"-- Create a display of results ---------------------------"
+" A string variable holding the format for a dg table to   "
+" display the results is assembled and then displayed using"
+" the dg command                                           "
+"----------------------------------------------------------"
+exists('t_dgvox','parameter'):$ex
+if ($ex = 0) then
+  create('t_dgvox','string')
+endif
+
+$k=0 t_dgvox=''
+$k=$k+1 t_dgvox[$k] = '1:VOXEL ORIENTATION:t_vpsi,t_vphi,t_vtheta;'
+$k=$k+1 t_dgvox[$k] = '2:VOXEL SIZES:[t_vox1],,[t_vox2],,[t_vox3];'
+$k=$k+1 t_dgvox[$k] = '3:VOXEL LOCATIONS:[t_pos1],,[t_pos2],,[t_pos3];'
+
+"dg('t_dgvox')"
+
+"-- Write message to command line -------------------------"
+write('line3','Target voxel setup complete.')

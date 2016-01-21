@@ -1,0 +1,1 @@
+../psglib/ssecho1d.c

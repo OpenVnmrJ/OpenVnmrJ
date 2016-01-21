@@ -1,0 +1,71 @@
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+procTarget = 'Infoproc'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+infoProcFileList = ['infoproc.c',
+                    'infoqueu.c',
+                    'info_svc.c',
+                    'infosockets.c']
+
+acqProcPath    = os.path.join(cwd, os.pardir, 'acqproc')
+acqProcHdrList = ['ACQPROC_strucs.h']
+
+vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = ['hostAcqStructs.h']
+
+expProcPath    = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = ['shrstatinfo.h']
+
+statPath    = os.path.join(cwd, os.pardir, 'stat')
+statHdrList = ['acqinfo.h']
+
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['SUN_HAL.h',
+                'ACQ_HALstruc.h']
+
+# build environment
+env = Environment(CCFLAGS    = '-m32 -O2',
+                          CPPDEFINES = ['LINUX', 'SUN', 'DATASEG'],
+                          LINKFLAGS  = '-m32',
+                          CPPPATH    = [cwd])
+
+buildMethods.makeSymLinks(env, procTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, statPath, statHdrList)
+buildMethods.makeSymLinks(env, procTarget, cwd, xracqPath, xracqHdrList)
+
+# actual builds
+envProg = env.Program(target  = procTarget,
+                               source  = [infoProcFileList])
+
+
+# define with absolute path where built files will be copied
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'inova','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))
+
+consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                        'console', 'mercury','acqbin')
+
+if not os.path.exists(consolePath):
+   os.makedirs(consolePath)
+
+# actions to be performed after targets are built
+env.AddPostAction(envProg, Action(Copy(consolePath,
+                                            os.path.join(cwd, procTarget))))

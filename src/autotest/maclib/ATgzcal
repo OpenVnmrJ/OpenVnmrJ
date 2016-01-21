@@ -1,0 +1,50 @@
+"macro ATgzcal"
+"ATgzcal"  
+
+ATwft vsadj dtext
+select(1) peak:$ht,cr
+dres(cr,.2):$width1
+select(2) peak:$ht,cr
+dres(cr,.2):$width2
+substr(gradtype,3,1):$pfgamp   "performa I has maximum of 2048($pfgamp='l')"
+if $width1<40000 then
+    if ($pfgamp<>'l') then
+      if (gzlvl1[1]>20000) then 
+       write('line3','Gradient Test Failed: Check Gradient Amplifier Switch')
+       write('file',autotestdir+'/REPORT','Z-axis Gradient Calibration failed. AutoTest Run Aborted. Check Hardware')
+       abort 
+      else
+       gzlvl1=2*gzlvl1,-2*gzlvl1
+       wnt='ATwft vp=0 select(1) vsadj dssh dtext'
+       wexp='AT70(`PART1`)'
+       ATcycle au return
+      endif
+    endif
+endif
+   $gammabar=(sfrq*1000000)/(234.94*h1freq)
+   $gcal1=$width1/($gammabar*gzlvl1[1]*at_coilsize/10)
+   if $gcal1 < 0 then $gcal1 = -1.0*$gcal1 endif
+   $gcal2=$width2/($gammabar*gzlvl1[2]*at_coilsize/10)
+   if $gcal2 < 0 then $gcal2 = -1.0*$gcal2 endif
+   ATsvf   vp=0 
+
+    if (at_plotauto='y') then
+     if (at_printparams='y') then
+      dn2='' pap ATpltext
+      pps(120,0,wcmax-120,90) ATpage
+     endif 
+     full vp=0 ho=0 vo=0 pl('all') crl rfl=sw/2 rfp=0 axis='h'
+     pscale 
+     vp=30 pscale ATpltext pap
+     ATpage
+   endif
+   $posdac=trunc(10/$gcal1)
+   $negdac=trunc(10/$gcal2)
+   $cal1=trunc(1000000*$gcal1)/1000000
+   $cal2=trunc(1000000*$gcal2)/1000000
+   at_gzcal=$cal1  
+   ATrecord('ZGRADCALIB','Z-axis Gradient DAC Calibrations','   +10G/cm   ',$posdac,'gcal+      ',$cal1,'-10G/cm  ',$negdac,'gcal- ',$cal2)
+write('file',autotestdir+'/REPORT','Z-axis Gradient Calibration (DAC for 10G/cm)= %5.0f  gzcal=%1.6f ',10/at_gzcal,at_gzcal)
+   dsp=at_dsp           "restore dsp value"
+   su shell('sleep 2')
+   ATnext 

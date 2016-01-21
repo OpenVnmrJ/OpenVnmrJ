@@ -1,0 +1,76 @@
+"macro g3dinit"
+vnmrjcmd('g3d','connect',0)
+
+$mode = 0
+$need_reset=0
+
+$newrev='3.5'
+
+//write('line3','g3dinit called')
+exists('g3dversion','parameter','global'):$e
+if ($e < 0.5) then
+  create('g3dversion','string','global')
+  g3dversion='0'
+endif
+if(g3dversion<>$newrev) then
+  setprotect('g3dversion','set',32768,'global')
+  "write('line3','new g3d version:%s <resetting parameters>',$newrev)"
+  $need_reset=1
+endif
+g3dversion=$newrev
+
+if($need_reset>0.5) then
+  g3dpars(1)
+endif
+
+"initial settings based on g3dtype"
+
+g3drestore
+ 
+$index=1
+
+g3ds[1]=4
+g3ds[6]=0
+g3ds[7]=0
+g3ds[8]=0
+repeat
+  vnmrjcmd('g3ds',$index,g3ds[$index])
+  $index=$index+1
+until $index>size('g3ds')
+
+$index=1
+
+repeat
+  vnmrjcmd('g3dp',$index,g3dp[$index])
+  $index=$index+1
+until $index>size('g3dp')
+
+if($mode=1) then
+  vnmrjcmd('g3d','connect',2)
+  return
+endif
+
+vnmrjcmd('g3d','batch',1)
+$index=1
+repeat
+  vnmrjcmd('g3dgi',$index,g3dgi[$index])
+  $index=$index+1
+until $index>size('g3dgi')
+$index=1
+
+repeat
+  vnmrjcmd('g3dgf',$index,g3dgf[$index])
+  $index=$index+1
+until $index>size('g3dgf')
+
+repeat
+  vnmrjcmd('g3df',$index,g3df[$index])
+  $index=$index+1
+until $index>size('g3df')
+
+vnmrjcmd('g3daxis',g3daxis)
+vnmrjcmd('g3dversion',g3dversion)
+vnmrjcmd('volmapdir',volmapdir)
+vnmrjcmd('g3d','batch',0)
+vnmrjcmd('g3d','connect',1)
+

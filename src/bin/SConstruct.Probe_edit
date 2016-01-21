@@ -1,0 +1,33 @@
+import os
+
+# targets
+probeTarget = 'Probe_edit'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+probeFileList = ['probe_edit.c']
+
+# build environments
+probeEnv = Environment(CCFLAGS    = '-O -m32',
+                       CPPDEFINES = ['SUN', 'LINUX'],
+                       LINKFLAGS  = '-m32')
+
+# actual builds
+probe = probeEnv.Program(target  = probeTarget,
+                         source  = probeFileList,
+                         LIBPATH = [os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
+                         LIBS    = ['Xm', 'Xt', 'X11'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+probeEnv.AddPostAction(probe,
+                       Action(Copy(vnmrInstallPath, os.path.join(cwd, probeTarget))))
+

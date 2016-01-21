@@ -1,0 +1,92 @@
+Protocol: C7inadwdumbot1d  Sequence: c7inadwdumbot1d.c  Apptype: solidseq1d
+
+Description:
+
+   A 2Q-1Q correlation using C7 on "X", DUMBO during F1 on "X" and wDUMBOt
+   during F2.
+
+Additional Softtware
+
+reset_c7inadwdumbot2d - This macro uses the calibrated values of pwX90, aX90 and 
+srate to set up the C7 recoupling mixing sequence, DUMBO for F1 and Windowed 
+DUMBO with tilt pulses for F2. The macro is executed by the protocol.
+
+Parameter Groups
+
+prepX:  Module:  no
+Sequence:  br24q.c
+Description:  Implements a variable length pulse to provide quadrature
+              detection about a tilted precession axis. Typically
+              followed by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses.
+       pwXprep - 90-degree flip on the obs channel.
+       phXprep - small-angle phase offset of the pulse. The phase must
+              be reset to zero after the pulse.
+
+dumboX: Module:  yes
+Sequence:  tancpxdumbo.c
+Description: Implements DUMBO homonuclear decoupling on the obs
+channel.
+Parameters:  Sequence Page
+       aXdumbo - amplitude of the DUMBO on obs.
+       pwXdumbo - 1080-degree flip on obs (the length of full a DUMBO
+              cycle).
+       nXdumbo - DUMBO cycles represented in the .DEC file.
+       ofXdumbo - overall frequency offset.
+       chXdumbo = 'dec' must be set (not shown).
+Implementation: MPSEQ dumbo = getdumbo("dumboX",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+scalef1X: (processing)  Module:  no
+Sequence:  c7inadwpmlg2d.c
+Description:  Shows the F1 scale factor, scalesw1, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw1 - the F1 scale factor. Typically scalesw1 is the
+              inverse of the mutiple-pulse scale factor.
+
+c7X: Module:  yes
+Sequence:  c7inad2d.c
+Description:  Implements the Post C7 recoupling sequence on the obs
+              channel.
+Parameters:  Sequence Page
+       aXc7 - amplitude of obs pulses.
+       pwXc7 - 360-degree flip on obs.
+       qXc7 - C7 cycles represented in the .DEC file.
+       ofXc7 - overall frequency offset.
+       chXc7 = 'obs' must be set (not shown).
+Implementation: MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.	      
+
+wdumbotX:  Module:  yes
+Sequence:   wdumbot1d.c
+Description:  Implements windowed DUMBO homonuclear decoupling on obs
+              with acquisition in the window.  Tilt pulses around the
+              acquisition window allow non-quadrature detection.
+Parameters:  Sequence Page
+       aXwdumbot - amplitude of DUMBO on obs.
+       pw1Xwdumbot - 1080-degree flip on obs (the length of a full
+              DUMBO cycle).
+       pw2Xwdumbot - nominal 54.7-degree flip on obs for tilt pulses.
+       r1Xwdumbot - prepulse delay (similar to rof1).
+       r2Xwdumbot - postpulse delay (similar to rd or rof2).
+       r3Xwdumbot - T/R-to-rcvron delay (must equal rof3 or 2.0 us if
+              rof3 is not defined).
+       tauXwdumbot - time for one DUMBO cycle including the window.
+       npaXwdumbot - number of 100 ns ticks in the detection window.
+       phXwdumbot - overall small-angle phase for DUMBO to align the
+              tilted precession axis in the XY plane.
+       chXwdumbot = 'obs' must be set (not shown).
+Implementation:  WMPA wdumbot = getwdumbot("wdumbotX");
+Underscore function: _wdumbot(wdumbot,phXwdumbot);  phXwdumbot is the
+              overall phase table.
+
+scaleX: (processing)  Module:  no
+Sequence:  br24.c
+Description:  Shows the F2 scale factor, scalesw, for evolution of the
+              obs nuclei under a multiple-pulse waveform.
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse
+              of the mutiple-pulse scale factor.
+

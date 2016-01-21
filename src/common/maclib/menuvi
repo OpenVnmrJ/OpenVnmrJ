@@ -1,0 +1,34 @@
+"macro menuvi"
+" ********************************** "
+" **** macro menuvi('menuname') **** "
+" ********************************** "
+
+if $#<>1 then 
+    write('error','Usage: menuvi(filename)')
+    ABORT
+endif
+
+" --- is the user's menu present ? --- "
+$filename = userdir + '/menulib/' + $1
+exists($filename,'file'):$e
+if $e = 0 then 
+" --- is the menulibpath present ? --- "
+  exists('menulibpath','parameter','global'):$e
+  if $e = 1 then
+    $filename = menulibpath + '/' + $1
+    exists($filename,'file'):$e
+    endif
+  if $e = 0 then 
+" --- is the system menu present ? --- "
+    $filename = systemdir + '/menulib/' + $1
+    exists($filename,'file'):$e
+    endif
+  endif
+
+if $e = 0 then 
+    write('error','Menu does not exist.')
+    ABORT
+endif
+
+vi($filename)
+

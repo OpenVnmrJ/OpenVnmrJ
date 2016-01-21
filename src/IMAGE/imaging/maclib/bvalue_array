@@ -1,0 +1,48 @@
+"macro bvalue_array"
+"**************************************************************************"
+"
+" bvalue_array - macro to calculate bvalue"
+"          assumes ideal stejkal-tanner experiment"
+
+" WARNING: gradient rise times, imaging gradients are not accounted for"
+"          bvalue calculation assumes constant gradients!
+"
+"**************************************************************************"
+
+"*****"
+"Create arraystring to hold all of the numerical values of"
+"the bvalue "
+"*****"
+clear
+$size = size(array)
+"** calculate b-values **"
+exists('tDELTA','parameter'):$e
+if ($e <> 1) then
+  write('error','tDELTA parameter not present')
+  abort
+endif
+exists('tdelta','parameter'):$e
+if ($e <> 1) then
+  write('error','tdelta parameter not present')
+  abort
+endif
+exists('bvalue','parameter'):$e
+if ($e <> 1) then
+  create('bvalue')
+  setgroup('bvalue','processing')
+else
+  bvalue=0
+endif
+exists('sviblist','parameter'):$e
+if ($e <> 1) then
+  create('sviblist','string')
+endif
+sviblist='bvalue'
+$a = tDELTA - (tdelta/3.0)
+$gamma = 2.6752e4
+$i = 1 
+repeat
+  bvalue[$i] = $gamma*$gamma*gdiff[$i]*gdiff[$i]/100.0*tdelta*tdelta*$a
+  $i = $i + 1
+until ($i > $size)
+

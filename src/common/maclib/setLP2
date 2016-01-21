@@ -1,0 +1,49 @@
+"macro setLP2"
+"***********************************************************************"
+"setLP2: set F1 linear prediction parameters 			        "
+"        parlp(1)), if necessary.  All arguments are optional.          "
+"  Useage: setLP2<(extended length<, current length>)>                  "
+"        'extended length' is the number of points desired after        "
+"	 the (forward) linear prediction. If not specified, the         "
+"	 interferograms will be quadrupled in length.                   "
+"        'current length' is the number of complex pts now existing.    "
+"***********************************************************************"
+
+        "Don't use getdim, it will return 2, if ni=1 and ni2>1"
+   exists('ni2','parameter'):$eni
+   if $eni=0 then
+        return
+   else
+        if ni2<2 then return endif
+   endif
+
+  if $# > 0 then if ($1=0) then proc2='ft' return endif endif
+  $ni=ni if (ni<2) then $ni=1 endif
+
+    calcdim parlp(2)
+    $elsperinc = trunc((arraydim/(ni2*$ni))+.1)
+    $celem = arraydim
+    $curlenth = trunc($celem/$elsperinc/$ni)
+    $xtndlenth=2*$curlenth
+//    if (refsource2<>'sfrq') and (dmg2<>'av1') then
+//        $xtndlenth = 4*$curlenth
+//    endif
+    if ($xtndlenth>1024) then $xtndlenth=1024 endif
+
+    if ($# > 0) then
+     $xtndlenth=$1
+     if ($# > 1) then
+      $curlenth=$2
+     endif
+    endif
+
+    lpopt2 = 'f' strtext2 = $curlenth+1  lpnupts2 = $curlenth  
+    strtlp2 = $curlenth  lpext2 = $xtndlenth - $curlenth 
+    lpfilt2 = 4 proc2='lp'
+
+    if ($# > 2) then lpfilt2=$3 endif
+
+    if (fn2 < 4*$xtndlenth) then
+      fn2 = $xtndlenth * 4   
+    endif
+

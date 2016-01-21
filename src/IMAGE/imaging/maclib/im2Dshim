@@ -1,0 +1,180 @@
+"macro im2Dshim"
+"********************************************************************
+"
+"
+" NAME:
+"    im2D
+"
+" DESCRIPTION:
+"    Setup and processing for 2D imaging sequences
+"
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do     = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+isvnmrj:$vj
+
+exists('profile','parameter'):$profile
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  Prescan_ShimMethod='gemsshim'
+  setloop  
+  ldrf
+  imprep
+  calcdim
+  
+  if (prescan_control[1] > 0) then  "Part of prescan"
+    "In future implementations (VnmrJ 1.1D) the rtv and shimorder set will be replaced by rtx"
+    "parameters initialized so correct parameters are written in .param"
+    shsel    = Prescan_ShimSelection
+    shregion = Prescan_ShimRegion
+    shcycle  = Prescan_ShimIteration
+    shdel    = Prescan_ShimDelay
+    shimcalc = 1  "flag to calculate new shim values"
+    shimload = 1  "flag to load shims"
+  endif  "part of prescan"
+
+  cnt=1  "initialize iteration counter"
+  ppe = 0.0
+  gplan('setValue','ppe',0.0) "pro not implemented; must be zero"
+  pro = 0.0
+  gplan('setValue','pro',0.0) "pro not implemented; must be zero"
+  
+  gs_acqb0map(0)   "init only"
+
+  if($do = 'shim') then
+    im2Dshim('proc','shim')
+  endif
+  
+  "Set up real-time recon (for VnmrJ) if compressed in PE"
+  wnt = ''  "default"
+  if ($vj > 0) AND ($do = '') AND (nv > 0) then
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    if ($seqcon = 'c') then
+      if (arraydim > 1) then
+        on('execprocess'):$proc
+        if ($proc=1) then 
+          wnt = 'aipDeleteData recon_all wnt=`recon_all(\'acq\')`'
+        endif
+      endif
+    endif
+  endif  
+
+  if ( (shregion[cnt] = 'orthvoxel') or (shimregion[cnt] = 'voxel') ) then
+      "Set up voxel for shimming"
+      "In the future, we should not rely on a shim voxel being defined,"
+      " but rather define it based on the current plan"
+      $shim_params = userdir + '/prescan/voxel.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Voxel for shimming has not been selected',$macro)
+        abort
+      endif
+      rtv($shim_params, 'vtheta', 'vphi', 'vpsi', 'vox1',  'vox2','vox3', 'pos1', 'pos2', 'pos3')
+
+  elseif (shregion[cnt] = 'orthslab') then
+      $shim_params = userdir + '/prescan/slab.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Voxel for shimming has not been selected',$macro)
+        abort
+      endif
+      rtv($shim_params,'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')
+  elseif (shregion[cnt] = 'slab') then
+      $shim_params = userdir + '/prescan/slab.par'
+      exists($shim_params,'file'):$e
+      if ($e = 0) then
+        write('error','%s: Slices (slab) for shimming has not been selected',$macro)
+        abort
+      endif
+      rtv($shim_params, 'orient2', 'theta2', 'phi2', 'psi2', 'lx', 'ly', 'lz', 'X0', 'Y0', 'Z0')      
+  endif      
+
+ "Execute any sequence specific preparation"
+  execseq('prep')
+  
+  if ($do = 'profile') then
+    writeparam(curexp+'/im2D_params.par','nv')
+    nv = 0
+    wexp  = 'im2D(`proc`,`profile`)'
+    wdone = ''
+    werr  = ''
+  endif "profile prep"
+
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+
+  if ($do = 'profile') then
+    if (ne > 1) then
+      flashc
+    endif
+    vp = 0
+    av ft f full vsadj dscale
+    rtv(curexp+'/im2D_params.par','nv') setloop
+    return
+  endif "profile proc"
+
+  if (nv > 0) then
+  if ($do = 'shim') then
+    if (prescan_control[1] > 0) then
+      svf(shimmapfid)
+      gs_acqb0map(shimpass)  "Updates cnt and looks at selected iterations"
+      if(cnt <= 4) then
+        au
+      else
+        if (prescan_control[1] > 0) then "Part of an auto prescan"
+          prescan_control[2]= prescan_control[2]+1
+          prescan_handler('exec')
+        endif
+      endif
+    endif
+  endif
+  else "really 1D experiment"
+    im1D('proc')
+    av
+  endif
+ 
+  execseq('proc')  "Execute any sequence specific processing"
+
+
+  
+
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  "-----------------------------------"
+  "       Gain                        "
+  "-----------------------------------"   
+  if (prescan_exec[prescan_control[2]] = 'gain') then  
+    im2D('prep')
+    writeparam(curexp+'/im2D_params.par','nv ss ssc')
+    nv = 0 
+
+    $seqcon = ''
+    substr(seqcon,3,1):$seqcon
+    $ss = 2
+    if ($seqcon = 'c') then ssc = $ss else ss = $ss endif
+
+  endif   "gain prep"
+
+endif
+
+

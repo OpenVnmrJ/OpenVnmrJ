@@ -1,0 +1,52 @@
+
+*******************************************************************************
+fitspec<('option')>	-	spectrum deconvolution
+*******************************************************************************
+
+  Fit lorentzian and/or gaussian curves to experimental data. "fitspec"
+  uses input from a text file "fitspec.inpar", which describes the
+  starting values for a number of lines, which should be fitted to an
+  experimental spectrum, and creates an output file "fitspec.outpar",
+  which contains the fitted values for these lines. Furthermore,
+  the resulting line frequencies are also stored in the parameter
+  "slfreq", and the resulting amplitudes in "sla".
+
+  The files "fitspec.inpar" and "fitspec.outpar" contain the following
+  information for each line:
+
+    frequency    intensity     line width     gaussian fraction
+
+  A * after any of the numbers indicates, that that parameter should
+  not be fitted.
+
+  The command "fitspec" in VNMR actually prepares a file "fitspec.indata",
+  which contains the spectral data (as a text file), to which the data
+  should be fit, and then executes the external program "fitspec",
+  which is stored in "/vnmr/bin". This program uses as an input the
+  files "fitspec.inpar" and "fitspec.indata", and produces after
+  completion the output file "fitspec.outpar". This file is is then
+  read by VNMR and uses to set "slfreq" and "sla".
+
+fitspec('usell')
+
+  The file "fitspec.inpar" can be prepared from a line listing
+  automatically with the command "fitspec('usell')". This option
+  of "fitspec" uses the information from the last line listing
+  (stored in "llfrq" and "llamp"), and the parameters "slw",
+  "vs", "rfl" and "rfp" to prepare that file. All lines are set
+  to the same line width "slw" and the gaussian fraction is set
+  to 0. If other starting values are required, this file should
+  be edited.
+
+fitspec('setslfreq')
+
+  If the output data from a spectrum deconvolution has to be used
+  in a spin simulation, this can be done automatically, if first
+  the spin system is defined and then the deconvolution is done,
+  because fitspec saves it's results in "slfreq" and "slamp",
+  which serve as input for the iterative spin simulation.
+  If the spin system is defined after the deconvolution is
+  complete, the contents of "slfreq" and "sla" is lost, but the
+  result of the deconvolution is still available in "fitspec.outpar".
+  In this case, the option "fitspec('setslfreq')" just copies the
+  information from "fitspec.outpar" back into "slfreq" and "sla".

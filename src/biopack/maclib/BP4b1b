@@ -1,0 +1,27 @@
+"macro BP4b1b"
+" BP4b1b"
+$counter=1
+select(1) peak:$best,cr $bestone=1
+repeat
+  select($counter)
+  peak:$ht
+  if $ht<$best then $best=$ht $bestone=$counter endif
+  $counter=$counter+1
+until $counter>20
+$bestone_d_best=tpwrsf[$bestone]
+BPsvf(userdir+'/AutoTripRes/flipback_cal2c1')
+write('plotter',sc-30,118,'Soft Pulse - Hard Pulse: Fine Power Optimization (flip-down) = %4.0f',tpwrsf[$bestone])
+write('plotter',sc-30,116,'Shape = H2Osinc_d.RF')
+dssn(1,20,'dodc') pl(1,20,'dodc')
+$tpwrsf_d=''
+tpwrsf=$bestone_d_best
+format(tpwrsf,4,0):$tpwrsf_d
+BPsetparams('tpwrsf_d',$tpwrsf_d,'H1')
+
+phincr=0 shape='H2Osinc_n'
+tpwrsf=r5
+satmode='n'
+array('tpwrsf',20,tpwrsf+300,-30)
+array='tpwrsf'
+vp=150
+wexp='BP4b2'  au

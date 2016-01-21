@@ -1,0 +1,465 @@
+"macro aip3Dextract"
+"Extraction of 2D slices from 3D imaging data"
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'display'
+$action2 = ''
+ 
+if ($# > 0) then $action = $1 endif
+if ($# > 1) then $action2 = $2 endif
+
+
+
+"**********************************************************"
+" Display                                                  "
+"**********************************************************"
+if ($action = 'display') then
+
+
+  if ($action2 = 'checkvals') then
+    "Panel items not active in plan VP"
+    $vp = ''  xm1('vp'):$vp if ($vp = 'plan') then return(-1) endif
+    "Panel items not active if nv2 does not exist"
+    exists('nv2','parameter'):$e if ($e=0) then return(-1) endif
+    "Panel items not active if nv2 < 2"
+    if (nv2<2) then return(-1) endif
+    "Panel items not active if aip3Dusedir set"
+    if (aip3Dusedir='y') then return(-1) endif
+
+    "Set $action3"
+    $action3='' if ($# > 2) then $action3 = $3 endif
+
+    if ($action3='echo') then
+      "Echo panel items not active if ne < 2"
+      if (ne<2) then return(-1) endif
+      if (echo < 1) then echo=1 endif
+      if (echo > ne) then echo=ne endif
+      return(1)
+    endif
+
+    if ($action3='slab') then
+      "Slan panel items not active if size('pss') < 2"
+      if (size('pss')<2) then return(-1) endif
+      if (slabix < 1) then slabix=1 endif
+      if (slabix > size('pss')) then slabix=size('pss') endif
+      return(1)
+    endif
+
+    $nelem=volumes/ne
+    $nelem=$nelem/size('pss')
+    if ($nelem = 0) then return(-1) endif
+    if (element < 1) then element = 1 endif
+    if (element > $nelem) then element = $nelem endif
+    if ($nelem > 1) then return(1) else return(-1) endif
+  endif
+
+  "Store the 'last' values so they can be reset (bug workaround)"
+  $aipXYlast=aipXYlast $aipXZlast=aipXZlast $aipYZlast=aipYZlast
+
+  "Set XYfirst,XYlast,XYincr,XZfirst,XZlast,XZincr,YZfirst,YZlast,YZincr"
+  if ($action2 = 'xy') then
+    $XYfirst=$3          $XYlast=$4         $XYincr=$5
+    $XZfirst=aipXZfirst  $XZlast=aipXZlast  $XZincr=aipXZincr
+    $YZfirst=aipYZfirst  $YZlast=aipYZlast  $YZincr=aipYZincr
+  elseif ($action2 = 'xz') then
+    $XYfirst=aipXYfirst  $XYlast=aipXYlast  $XYincr=aipXYincr
+    $XZfirst=$3          $XZlast=$4         $XZincr=$5
+    $YZfirst=aipYZfirst  $YZlast=aipYZlast  $YZincr=aipYZincr
+  elseif ($action2 = 'yz') then
+    $XYfirst=aipXYfirst  $XYlast=aipXYlast  $XYincr=aipXYincr
+    $XZfirst=aipXZfirst  $XZlast=aipXZlast  $XZincr=aipXZincr
+    $YZfirst=$3          $YZlast=$4         $YZincr=$5
+  elseif ($action2 = 'all') then
+    $XYfirst=$3          $XYlast=$4         $XYincr=$5
+    $XZfirst=$6          $XZlast=$7         $XZincr=$8
+    $YZfirst=$9          $YZlast=$10        $YZincr=$11
+  else
+    $XYfirst=aipXYfirst  $XYlast=aipXYlast  $XYincr=aipXYincr
+    $XZfirst=aipXZfirst  $XZlast=aipXZlast  $XZincr=aipXZincr
+    $YZfirst=aipYZfirst  $YZlast=aipYZlast  $YZincr=aipYZincr
+  endif
+
+  "In plan we just extract"
+  $vp = ''
+  xm1('vp'):$vp
+  if ($vp = 'plan') then
+    "Extract"
+    aip3Dextract('extract',$action2,$XYfirst,$XYlast,$XYincr,$XZfirst,$XZlast,$XZincr,$YZfirst,$YZlast,$YZincr) 
+    "Reset the 'last' values (bug workaround)"
+    aipXYlast=$aipXYlast aipXZlast=$aipXZlast aipYZlast=$aipYZlast
+    return
+  endif
+
+  "If directory is specified use that"
+  if (aip3Dusedir='y') then
+
+    "Check directory exists"
+    exists(aip3Ddirectory,'directory'):$e
+    if ($e=0) then write('error','Browse for a directory that contains 3D FDF files') return endif
+
+    "Check directory contains .fdf files"
+    $cmd = 'ls '+aip3Ddirectory+'/*.fdf | echo `wc -l` '
+    shell($cmd):$nfiles
+    if ($nfiles=0) then 
+      "Check for .img directories containing .fdf files"
+      $cmd = 'ls '+aip3Ddirectory+'/*.img/*.fdf | echo `wc -l` '
+      shell($cmd):$nfiles
+    endif
+    if ($nfiles=0) then write('error','Browse for a directory that contains 3D FDF files') return endif
+
+    "Check file list has been generated"
+    $3DList=curexp+'/aip3DList'
+    $cmd = 'cat '+$3DList+' | echo `wc -l` '
+    shell($cmd):$nlines
+    if ($nfiles+1<>$nlines) then write('error','Browse for a directory that contains 3D FDF files') return endif
+
+    "Extract"
+    $data='' $curdata='' $name='' $file=''
+    if (aipFDF='all') then
+      aipVsMode='individual' "Set individual scaling"
+      lookup('file',$3DList,'readline'):$line
+      $i=1
+      while ($i <= $nfiles) do
+        lookup('readline'):$name
+        substr($name,2):$name
+        substr($name,1,'delimiter','"'):$name
+        $file = aip3Ddirectory+'/'+$name+'.fdf'
+        substr($file,'dirname'):$curdata
+        if ($curdata<>$data) then $data=$curdata aipRQcommand('remove',$data) endif
+        aip3Dextract('checkfile',$file)
+        aipLoadFile($file)
+        aip3Dextract('extract',$action2,$XYfirst,$XYlast,$XYincr,$XZfirst,$XZlast,$XZincr,$YZfirst,$YZlast,$YZincr)
+        $i=$i+1
+      endwhile  
+      aipVsMode='groups' "Set groups scaling"
+    else
+      substr(aipFDF,'dirname'):$data
+      aipRQcommand('remove',aip3Ddirectory+'/'+$data)
+      $file = aip3Ddirectory+'/'+aipFDF+'.fdf'
+      aip3Dextract('checkfile',$file)
+      aipLoadFile($file)
+      aip3Dextract('extract',$action2,$XYfirst,$XYlast,$XYincr,$XZfirst,$XZlast,$XZincr,$YZfirst,$YZlast,$YZincr)
+    endif
+
+    "Reset the 'last' values (bug workaround)"
+    aipXYlast=$aipXYlast aipXZlast=$aipXZlast aipYZlast=$aipYZlast
+
+    return
+  endif
+
+  "Otherwise" 
+
+  "Select type of image to display"
+  $type = 'img'
+  if ($action2 <> '') then
+    $type = $action2
+  endif
+
+  "Figure directory to load from"
+  if ($vp = 'review' AND aipData='saved') then
+    length(file):$len
+    substr(file,1,$len-3):$dir
+    $dir=$dir+'img'
+    substr(imagedir,'dirname'):$dir
+
+  else
+    if (recon = 'internal') OR (recon = '') then
+      $dir = curexp+'/datadir3d/data'
+    else
+      if ($type = 'rawmag' OR $type = 'rawphs') then $dir = curexp+'/raw'
+      else $dir = curexp+'/recon'
+      endif
+    endif
+  endif
+  if (recon <> 'internal' AND recon <> '') then
+    if ($type = 'imgphs' OR $type = 'rawphs') then $dir=$dir+'PH' endif
+    if ($type = 'rawmag') then $dir=$dir+'MG' endif
+    aipXrecon('nrcvrs'):$nr 
+    if (($type = 'imgphs' OR $type = 'rawphs') AND $nr>1) then $dir=$dir+'001' endif
+    if ($type = 'rawmag' AND rawIR='y' AND $nr>1) then $dir=$dir+'001' endif 
+  endif
+
+  "Check if directory exists"
+  exists($dir,'directory'):$ex
+  if ($ex = 0) then
+    write('error',`Directory %s doesn't exist, reprocess or load from Study?`,$dir)
+    return
+  endif
+
+  "Select image to display"
+  aip3Dextract('display','checkvals')
+
+if($type= 'converted') then
+          $file = $dir+'/pseudo3D.fdf'
+        aip3Dextract('checkfile',$file)
+        aipLoadFile($file)
+        aip3Dextract('extract',$action2,$XYfirst,$XYlast,$XYincr,$XZfirst,$XZlast,$XZincr,$YZfirst,$YZlast,$YZincr) 
+else
+
+  if (aipAllelements = 'y') then
+    $elstart=1 $elend=volumes/ne $elend=$elend/size('pss')
+  else
+    $elstart=element $elend=element
+  endif
+  if (aipAllechoes = 'y') then
+    $ecstart=1 $ecend=ne
+  else
+    $ecstart=echo $ecend=echo
+  endif
+  if (aipAllslabs = 'y') then
+    $slstart=1 $slend=size('pss')
+  else
+    $slstart=slabix $slend=slabix
+  endif
+
+  while ($elend >= $elstart) do
+
+    $s1='' shell('printf %03.0f ',$elstart):$s1
+    $i=$ecstart
+    while ($ecend >= $i) do
+
+      $s2='' shell('printf %03.0f ',$i):$s2
+      $j=$slstart
+      while ($slend >= $j) do
+
+        $s3='' shell('printf %03.0f ',$j):$s3
+        if (recon = 'internal') OR (recon = '') then
+          $file = $dir+'/'+$type+'_slab'+$s3+'image'+$s1+'echo'+$s2+'.fdf'
+        else
+          $file = $dir+'/'+'slab'+$s3+'image'+$s1+'echo'+$s2+'.fdf'
+        endif
+        aip3Dextract('checkfile',$file)
+        aipLoadFile($file)
+        aip3Dextract('extract',$action2,$XYfirst,$XYlast,$XYincr,$XZfirst,$XZlast,$XZincr,$YZfirst,$YZlast,$YZincr) 
+        $j=$j+1
+
+      endwhile
+      $i=$i+1
+
+    endwhile
+    $elstart=$elstart+1
+
+  endwhile
+endif
+
+
+  "Reset the 'last' values (bug workaround)"
+  aipXYlast=$aipXYlast aipXZlast=$aipXZlast aipYZlast=$aipYZlast
+
+endif
+
+"**********************************************************"
+" Extract Slices                                           "
+"**********************************************************"
+if ($action = 'extract') then
+
+  if ($#<11) then 
+    write('error',`Usage: aip3Dextract('extract','all|xy|xz|yz',XYfirst,XYlast,XYincr,XZfirst,XZlast,XZincr,YZfirst,YZlast,YZincr)`) 
+    return 
+  endif
+  if ($action2 <> 'all' AND $action2 <> 'xy' AND $action2 <> 'xz' AND $action2 <> 'yz') then
+    if (aipAllorients='y') then $action2='all' else $action2=aipOrient endif
+  endif
+
+  if ($action2 = 'all') then
+    $aipXYfirst=$3  $aipXYlast=$4  $aipXYincr=$5
+    $aipXZfirst=$6  $aipXZlast=$7  $aipXZincr=$8
+    $aipYZfirst=$9  $aipYZlast=$10 $aipYZincr=$11
+    if (aipMIP = 'y') then
+      aipExtractMip('xy',$aipXYfirst,$aipXYlast,$aipXYincr) 
+      aipExtractMip('xz',$aipXZfirst,$aipXZlast,$aipXZincr)  
+      aipExtractMip('yz',$aipYZfirst,$aipYZlast,$aipYZincr) 
+    else
+      aipExtract('xy',$aipXYfirst,$aipXYlast,$aipXYincr) 
+      aipExtract('xz',$aipXZfirst,$aipXZlast,$aipXZincr)  
+      aipExtract('yz',$aipYZfirst,$aipYZlast,$aipYZincr) 
+    endif
+  else
+    if ($action2 = 'xy') then $first=$3 $last=$4 $incr=$5 endif
+    if ($action2 = 'xz') then $first=$6 $last=$7 $incr=$8 endif
+    if ($action2 = 'yz') then $first=$9 $last=$10 $incr=$11 endif
+    if (aipMIP = 'y') then 
+      aipExtractMip($action2,$first,$last,$incr) 
+    else
+      aipExtract($action2,$first,$last,$incr)
+    endif
+  endif
+
+endif
+
+
+"**********************************************************"
+" Set 3D Scan List                                         "
+"**********************************************************"
+if ($action='set3Dfiles') then
+
+  "Remove the file list"
+  rm(curexp+'/aip3DList'):$trash
+
+  "Strip the trailing / if there is one in the directory name"
+  length(aip3Ddirectory):$len
+  substr(aip3Ddirectory,$len,1):$char
+  if ($char='/') then 
+    substr(aip3Ddirectory,1,$len-1):aip3Ddirectory
+  endif
+
+  $append=''
+  "Check for .img directories containing .fdf files"
+  $cmd = 'ls '+aip3Ddirectory+'/*.img/*.fdf | echo `wc -l` '
+  shell($cmd):$nfiles
+
+  if ($nfiles>0) then
+
+    write('file',curexp+'/aip3DList','"All" "all"')
+
+    "Check for list of 3D .img directories"
+    $datalist=aip3Ddirectory+'/aipList'
+    exists($datalist,'file'):$ex
+
+    "Set $ndirs to the number of directories and $data array to their names"
+    if ($ex=1) then
+      $cmd = 'cat '+ $datalist+' | echo `wc -l` '
+      shell($cmd):$ndirs
+      $data='' $file='' $name=''
+      if ($ndirs>0) then lookup('file',$datalist,'readline'):$data endif
+      $i=2 while ($i <= $ndirs) do lookup('readline'):$data[$i] $i=$i+1 endwhile
+    else
+      $command='ls '+aip3Ddirectory+' >'+curexp+'/templist'
+      shell($command)
+      $cmd = 'cat '+curexp+'/templist | echo `wc -l` '
+      shell($cmd):$n
+      if ($n>0) then lookup('file',curexp+'/templist','readline'):$name endif
+      $i=2 while ($i <= $n) do lookup('readline'):$name[$i] $i=$i+1 endwhile
+      rm(curexp+'/templist'):$trash
+      $i=1 $ndirs=0 $data=''
+      while ($i <= $n) do
+        strstr($name[$i],'.img'):$pos
+        if ($pos>0) then $ndirs=$ndirs+1 $data[$ndirs]=$name[$i] endif 
+        $i=$i+1
+      endwhile
+    endif
+
+    "Add the files in each directory to menu aip3DList in curexp"
+    $i=1
+    while ($i <= $ndirs) do
+      "List the .fdf files"
+      $command='ls '+aip3Ddirectory+'/'+$data[$i]+'/*.fdf >'+curexp+'/templist'
+      shell($command)
+      $cmd = 'cat '+curexp+'/templist | echo `wc -l` '
+      shell($cmd):$nvals
+      $file=''
+      if ($nvals>0) then lookup('file',curexp+'/templist','readline'):$file endif
+      $j=2 while ($j <= $nvals) do lookup('readline'):$file[$j] $j=$j+1 endwhile
+      $j=1
+      while ($j <= $nvals) do
+        substr($file[$j],'basename'):$name,$ext
+        write('file',curexp+'/aip3DList','"'+$name+'" "'+$data[$i]+'/'+$name+'"')
+        $j=$j+1
+      endwhile
+      rm(curexp+'/templist'):$trash
+      $i=$i+1
+    endwhile
+
+    "Flag that any additional files are to be appended"
+    $append='append'
+
+  endif
+
+  aipFDF='all'
+
+  "Add any additional files in main directory"
+  aip3Dextract('addfiles',$append)
+
+endif
+
+"**********************************************************"
+" Add Scans to List                                        "
+"**********************************************************"
+if ($action='addfiles') then
+
+  "Check to see if directory contains .fdf files"
+  $cmd = 'ls '+aip3Ddirectory+'/*.fdf | echo `wc -l` '
+  shell($cmd):$nfiles
+
+  "If there are no files to add return, perhaps writing an empty list"
+  if ($nfiles=0) then
+    "If there are no files at all write an empty list"
+    if ($action2<>'append') then write('file',curexp+'/aip3DList','"" ""') aipFDF='' endif
+    return
+  endif
+
+  "List the .fdf files"
+  $command='ls '+aip3Ddirectory+'/*.fdf >'+curexp+'/templist'
+  shell($command)
+  lookup('file',curexp+'/templist','readline'):$file
+  $name=''
+  substr($file,'basename'):$name,$ext
+  if ($action2<>'append') then write('file',curexp+'/aip3DList','"All" "all"') endif
+  write('file',curexp+'/aip3DList','"'+$name+'" "'+$name+'"')
+  $i=2
+  while ($i <= $nfiles) do
+    lookup('readline'):$file
+    substr($file,'basename'):$name,$ext
+    write('file',curexp+'/aip3DList','"'+$name+'" "'+$name+'"')
+    $i=$i+1
+  endwhile
+  rm(curexp+'/templist'):$trash
+
+  aipFDF='all'
+
+endif
+
+"**********************************************************"
+" Check File                                               "
+"**********************************************************"
+if ($action='checkfile') then
+  $file=$action2
+  exists($file,'file'):$ex
+  if ($ex = 0) then
+    write('error','File %s does not exists, set flags and reprocess?',$file)
+    abort
+  endif
+endif
+
+"**********************************************************"
+" Enable Menus                                             "
+"**********************************************************"
+if ($action='enablemenus') then
+  $vp = ''  
+  xm1('vp'):$vp 
+  if ($vp = 'plan') then return(-1) endif
+  if (aip3Dusedir='y') then return(-1) endif
+  return(1)
+endif
+
+"**********************************************************"
+" Fix Parameters                                           "
+"**********************************************************"
+if ($action='fixpar') then
+  "Reset some globals"
+  aip3Dusedir='n'
+  aip3Ddirectory=''
+  aipAllelements='n'
+  aipAllechoes='n'
+  aipAllslabs='n'
+  create('slabix','integer','current',1) setgroup('slabix','processing') slabix=1
+  create('element','integer','current',1) setgroup('element','processing') element=1
+  create('echo','integer','current',1) setgroup('echo','processing') echo=1
+endif
+
+"**********************************************************"
+" Generate Global Parameters                               "
+"**********************************************************"
+if ($action='genglobal') then
+  create('aip3Dusedir','string','global','n') aip3Dusedir='n'
+  create('aip3Ddirectory','string','global','') aip3Ddirectory=''
+  create('aip3Dfile','string','global','img')
+  create('aipMIP','string','global','n')
+  create('aipAllorients','string','global','n')
+  create('aipAllelements','string','global','n') aipAllelements='n'
+  create('aipAllechoes','string','global','n') aipAllechoes='n'
+  create('aipAllslabs','string','global','n') aipAllslabs='n'
+endif

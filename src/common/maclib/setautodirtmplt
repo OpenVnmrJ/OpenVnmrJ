@@ -1,0 +1,99 @@
+"macro setautodirtmplt"
+"  $cpglobalauto$ string is removed from autodirtmplt"
+"  Then all '/' are replaced with '_'"
+"  Any tailing %Rn% is removed"
+
+
+if ($# > 0) then
+   $autodirtmplt=$1
+else
+   $autodirtmplt=autodirtmplt
+endif
+
+string2array($autodirtmplt):$autodirtmplt
+array2strsv($autodirtmplt,'_'):$autodirtmplt
+
+"**************Remove $cpglobalauto$ from the template******************"
+if ($autodirtmplt='') then $autodirtmplt='auto_%DATE%' endif
+$ret=0 $s1='' $s2=''
+strstr($autodirtmplt,'$cpglobalauto$'):$ret,$s1,$s2
+if ($ret) then
+	$fs2=''
+	substr($s2,1,1):$fs2
+	if ($fs2='/') then
+		strstr($s2,'/'):$rx,$sx,$s2
+	endif
+	if ($s1='') or ($s1='/') then
+		$autodirtmplt=$s2
+	else
+		strstr($s1,'/'):$rx,$sx,$sy
+		if ($rx=1) then $s1=$sy endif
+		strstr($s1,'/','last'):$rx,$sx,$sy
+		if ($rx>0) and ($sy='') then
+			$s1=$sx
+		endif
+		$autodirtmplt=$s1+'/'+$s2
+	endif
+endif
+
+"**************Remove any /'s from the template******************"
+if ($autodirtmplt='') then  $autodirtmplt='auto_%DATE%' endif
+$rx=1 $sx='' $sy=''
+while $rx>0 do
+   strstr($autodirtmplt,'/'):$rx,$sx,$sy
+   if ($rx) then
+        $autodirtmplt=$sx+'_'+$sy
+   endif
+endwhile
+
+$rx=1 $sx='' $sy=''
+while $rx>0 do
+   strstr($autodirtmplt,'\\'):$rx,$sx,$sy
+   if ($rx) then
+        $autodirtmplt=$sx+$sy
+   endif
+endwhile
+
+"*************Remove any %Rn%**********************"
+if ($autodirtmplt='') then  $autodirtmplt='auto_%DATE%' endif
+
+strstr($autodirtmplt,'%R'):$rx2
+if ($rx2>0) then
+   $i=0
+   repeat
+	$rxi='' format($i,0,0):$rxi
+	$rx=1 $sx='' $sy=''
+	while $rx>0 do
+	    strstr($autodirtmplt,'%R'+$rxi+'%'):$rx,$sx,$sy
+	    if ($rx) then
+		$autodirtmplt=$sx+'_'+$sy
+	    endif
+	endwhile
+	$i=$i+1
+   until $i > 9
+endif
+
+"*************Remove any tailing _**********************"
+if ($autodirtmplt='') then  $autodirtmplt='auto_%DATE%' endif
+
+$rx=1 $sx='' $sy=''
+while $rx>0 do
+   strstr($autodirtmplt,'_','last'):$ret,$sx,$sy
+   if ($ret) then
+	if ($sy<>'') then $rx=0
+	else $autodirtmplt=$sx endif
+   else
+	$rx=0
+   endif
+endwhile
+
+"*************************************************************"
+chkname($autodirtmplt,'alnum-/'):$sdum,$autodirtmplt
+if ($autodirtmplt='') then  $autodirtmplt='auto_%DATE%' endif
+if ($## > 0) then
+	return($autodirtmplt)
+else
+	autodirtmplt=$autodirtmplt
+endif
+"*************************************************************"
+

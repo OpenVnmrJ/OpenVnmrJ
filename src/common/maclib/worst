@@ -1,0 +1,67 @@
+"macro worst"
+"calculate Worst excursion value "
+
+" set msg 'Worst excursion %.3g%%'+$max "
+//write('line3','step 1 for %d',$3)
+
+$src=$1
+$dst=$2
+
+if ($dst='x') then
+   $ax=1
+elseif ($dst='y') then
+   $ax=2
+elseif ($dst='z') then
+   $ax=3
+elseif ($dst='b0') then
+   $ax=4
+endif
+
+$limit=scales[$ax]/2.0	"sxales[X/Y/Z]/2"
+
+$showWarn=1
+
+//write('line3','step 2')
+
+if ($dst='b0') and ($src<>'dummy') then
+"this is X->B0, Y->B0 or z->B0 supposedly?? "
+   $axislist=$src
+else
+   $axislist='x','y','z'
+endif   
+
+//write('line3','step 3')
+absEccEval($axislist, $dst, 0):$max
+//write('line3','step 4')
+
+$step=2.718281828459
+$a=0
+
+$fa=$max
+$b=0.01
+absEccEval2($axislist, $dst, $b):$fb,$ffb
+//write('line3','step 5')
+
+$break=0
+repeat
+   $c = $b * $step
+   absEccEval2($axislist, $dst, $c):$fc,$ffc
+//write('line3','step 6')
+   if ($fa < $fb) and ($fb > $fc) then
+      brent($a, $b, $c, $fa, $fb, $fc, $axislist, $dst):$mx
+//write('line3','step 7')
+      abs($mx):$abs
+      if ( $abs > $max) then
+          $max = $abs
+      endif
+   endif
+   if ($ffb <= $max ) then
+      $break=1
+   endif
+   $a=$b $fa=$fb $ffb=$ffc
+   $b=$c $fb=$fc
+until ($break=1)
+
+return($max)
+
+   

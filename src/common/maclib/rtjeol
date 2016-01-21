@@ -1,0 +1,113 @@
+"macro rtjeol"
+"rtjeol - convert and read a Jeol file into the current experiment."
+"        Call with the name of the Jeol data 'file'.  The file may be"
+"        specified as an absolute pathname or as one relative to the current directory."
+"        The pathname should end with .jdf"
+"        If a second argument is given with the value of 'df', then 'df' adjustments"
+"        are made during the conversion"
+
+$name=''
+if $# < 1 then
+   input('File name (enter name and <return>)? '):$name
+   $l=0
+   length($name):$l
+   if ($l < 1) then
+    write('error','No file name given, command aborted')
+    abort
+   endif
+else
+  $name=$1
+endif
+exists($name,'file'):$e
+if ($e < 0.5) then
+   write('error','Jeol data file %s does not exist',$name)
+   abort
+endif
+
+$os=''
+shell('uname -s'):$os
+if $os='Darwin' then
+  $prog=systemdir+'/nmrpipe/nmrbin.mac/delta2pipe'
+else
+  $prog=systemdir+'/nmrpipe/nmrbin.linux9/delta2pipe'
+endif
+exists($prog,'file'):$e
+if ($e < 0.5) then
+   write('error','Jeol data conversion program (nmrPipe) not installed')
+   abort
+endif
+
+$pars=curexp+'/jeol_pars'
+$data=curexp+'/jeol_data'
+shell('rm -f '+$pars+' '+$data):$dum
+$df=''
+if ($# = 2) then
+  if ($2 = 'df') then
+    $df='-df'
+  endif
+endif
+shell($prog+' -nofs -all '+$df+' -in '+$name+' -out '+$data+' >& '+$pars+';cat'):$dum
+
+$sval=''
+lookup('mfile',$pars,'filekey'):$key
+lookup('mfile',$key,'seek','DataUnits','skip','read'):$val
+if ($val = 28) then
+  $type='FID data'
+else
+  $type='Spectral data'
+endif
+jread($data,1,'rev')   // time domain
+
+setvalue('file',$name)
+setvalue('file',$name,'processed')
+exists('console','parameter'):$e
+if $e then
+  console='jeol' 
+  create('console','string','processed',''):$dum
+  setvalue('console','jeol','processed')
+endif
+
+
+lookup('mfile',$key,'seek','BaseFreq','skip','read'):$val
+setvalue('sfrq',$val)
+setvalue('sfrq',$val,'processed')
+
+lookup('mfile',$key,'seek','"CLIPPED"','skip',6,'read'):$sval
+if ($sval = 'TRUE') then
+  $swname='"X_SWEEP_CLIPPED"'
+else
+  $swname='"X_SWEEP"'
+endif
+
+lookup('mfile',$key,'seek',$swname,'skip',6,'read'):$val
+setvalue('sw',$val)
+setvalue('sw',$val,'processed')
+
+lookup('mfile',$key,'seek','"DIGITAL_FILTER"','skip',6,'read'):$sval
+if ($sval = 'TRUE') then
+   setvalue('lsfid',20)
+   on('lsfid')
+else
+   off('lsfid')
+endif
+
+lookup('mfile',$key,'seek','"X_DOMAIN"','skip',6,'read'):$sval
+if ($sval = '1H') then
+   setvalue('tn','H1')
+else
+   setvalue('tn','C13')
+endif
+setvalue('tn',tn,'processed')
+
+lookup('mfile',$key,'seek','"X_SWEEP_CLIPPED"','skip',6,'read'):$val
+wp=$val
+lookup('mfile',$key,'seek','"X_Offset"','skip',6,'read'):$val
+$tofp=$val*sfrq
+rfp=0
+rfl=sw/2 - $tofp
+sp=$tofp - wp/2
+write('line3','offset = %3.2f ppm and displayed window will be %4.2f Hz',$val,wp)
+
+if ($## = 0) then
+  write('line3','Finished reading JEOL '+$type)
+endif

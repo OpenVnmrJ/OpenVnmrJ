@@ -1,0 +1,107 @@
+sqLog(event<,args>)      - log automation events
+sqLog(event<,args>):$res - return automation events to calling macro
+sqLog:$path              - return log file path
+editLog                  - Customize the log details.
+
+The sqLog macro records specific events from a study queue.
+The messages and details of the logging are customizable with the
+editLog utility.
+
+The sqLog facility will record the following events.
+
+SampleStart
+SampleEnd
+ExpStart
+ExpEnd
+ExpError
+
+Each event recorded in the logfile may may be preceded by header information.
+This may include things like the date, time, user, etc. This header information
+is also customizable.
+
+The sqLog macro is very generic. It gets all of its details from a
+file written be the editLog utility. This file has the same name as the macro
+and is in the <appdir>/templates/vnmrj/loginfo directory. For example,
+the current sqLog file is:
+
+# Formatting statements for automation log files.
+#
+1Header Date: %MOC% %DAY% %YR% at %HR%:%MIN%:%SEC%, User: $operator$, Sample: $samplename$,
+1SampleStart Start new sample at location $loc$.
+1SampleEnd Finish sample at location $loc$\\####
+1ExpStart Experiment $pslabel$ started.
+1ExpEnd Experiment $pslabel$ complete.
+1ExpError Experiment error: $$2$
+1ExpPrescan Prescan:
+1File $autodir$/logfile
+1Ifcondition (auto='y')
+
+Lines starting with a hash mark (#) are comments. The first character
+of each non-comment line is a 1 or 0, indicating enabled or disabled.
+The rest of the first word, following the 1 or 0, is a keyword that is
+passed to the sqLog macro. The remainder of a line is the
+template for writing the log file. The template is passed to the chkname
+command for translation.
+
+The File keyword defines where the log file will be saved. If this keyword
+is disabled, all of the sqLog event logging will be disabled.
+Disabling other keywords only disables that specific event or feature.
+The Ifcondition keyword allows the logging mechanism to make decisions
+as to whether to log the event. For example, in the case of sqLog,
+we only log events during an automation run. Logging will occur only if
+the Ifcondition is true. A special keyword of "None" for the Ifcondition
+specifies no special conditions. That is, events are always logged.
+
+The sqLog macro is called from appropriate places in the
+software. It is called with the keyword as the first argument. If the
+template uses passed arguments, they can be passed to the sqLog macro.
+For example, the ExpError template includes the second argument in
+its templates, which contains the actual error. This would be called as:
+
+  geterror:$err
+  sqLog('ExpError',$err)
+
+During an automation run, messages written to 'line3', which puts them into
+the "acqlog".  If sqLog is called with no arguments but one return value, the
+pathname of the log file, defined by the File keyword, is returned.
+
+If sqLog is passed an event keyword, with optional additional arguments,
+and requests a return value, the message will not be written into the log file
+(nor on line3 for automation runs), but will be returned to the calling macro.
+An example would be:
+
+  sqLog('SampleStart'):$res
+
+As defined above, sqLog saves logging information only for
+automation runs. By changing the File attribute to your userdir
+directory, and setting the Ifcondition to None, all study queue
+activities will be logged, both automation and foreground.
+
+The log editor can handle menus of choices.  Files in
+templates/vnmrj/loginfo with the same name as the keyword will be
+used to make menus of choices to select from within the editLog editor.
+Files prefixed with the name of the logging macro, for example
+sqLog will make a File menu specific for editLog('sqLog')
+
+The logging macro, along with the editLog editor are very general and
+can be used to log other events. As an example, suppose one wants to
+monitor access to the VnmrJ program.  A "loginLog" could be made as
+follows. Make a copy of the sqLog macro called loginLog. Add a
+loginLog file describing the events to logged to the
+<appdir>/templates/vnmrj/loginfo.  An example of such a file may be:
+
+# Formatting statements for login log files.
+# 
+1Header Date: %MOC% %DAY% %YR% at %HR%:%MIN%:%SEC%, User: $operator$
+1Login Login
+1Logout Logout
+1File $systemdir$/acqqueue/loginLog
+1Ifcondition ((auto='n') and (jviewport=1))
+
+The only remaining task is to place calls to the loginLog macro in various
+other macros. In this case, one might call loginLog('Login'):$res from
+the bootup macro and loginLog('Logout'):$res from the exit macro. If one
+wanted to monitor "operator" logins, one could and additional keywords
+such as Operatorlogin and Operatorlogout to the above file and then call
+loginLog('Operatorlogin'):$res from the operatorlogin macro and call
+loginLog('Operatorlogout'):$res from the operatorlogout macro.

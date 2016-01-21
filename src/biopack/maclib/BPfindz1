@@ -1,0 +1,133 @@
+"macro BPfindz1"
+"BPfindz1(<increment>) - macro to ramp z1 to compensate decoupling effects"
+"10 readlks used to average jumping effects"
+"r crouch 20 aug 04 version 1.0"
+"g gray 27 aug 04 for BioPack: uses current seqfil and parameters, just no pfg"
+"bug fixed by p. sandor 22.Feb.2005 "
+
+if ($#=0) then $inc=20 else $inc=$1 endif
+
+$z1=z1 
+$nt=nt nt=4444 
+clear
+write('alpha','Correcting z1 shift on heating!')
+write('alpha',' ')
+
+  exists('gradientdisable','parameter','global'):$e
+  if $e=1 then
+   gradientdisable='y'
+  else
+   $pfgon=pfgon pfgon='nnn'
+  endif
+$i=1 $lklvltot=0
+repeat
+    shell('sleep 1'):$dum
+    readlk:$lklvl
+    $lklvltot=$lklvltot+$lklvl
+    $i=$i+1
+until $i=11
+$strtlvl=$lklvltot/10
+write('alpha','Check lock level without heating.')
+write('alpha','     Starting z1 value: %6.0f   Corresponding average lock level: %6.3f',z1,$strtlvl)
+
+go
+"start the probe cooking"
+
+write('line3','Working...be patient.')
+shell('sleep 30'):$dum
+
+"Average 10 readlks, increment z1 and repeat until we get past the maximum"
+
+$best=5 
+
+if ($#=0) then
+    $i=1 $lklvltot=0
+     repeat
+        shell('sleep 1'):$dum
+        readlk:$lklvl
+        $lklvltot=$lklvltot+$lklvl
+        $i=$i+1
+     until $i=11
+    $curlvl1=$lklvltot/10
+    write('alpha','Check lock level with sequence heating.')
+    write('alpha','     Current z1 value: %6.0f   Corresponding average lock level: %6.3f',z1,$curlvl1)
+
+    sethw('z1',$z1+100)
+    shell('sleep 6'):$dum
+    $i=1 $lklvltot=0
+     repeat
+        shell('sleep 1'):$dum
+        readlk:$lklvl
+        $lklvltot=$lklvltot+$lklvl
+        $i=$i+1
+     until $i=11
+    $curlvl2=$lklvltot/10
+    write('alpha','Check lock level with sequence heating and z1 offset by +100.')
+    write('alpha','     Current z1 value: %6.0f   Corresponding average lock level: %6.3f',z1,$curlvl2)
+
+    sethw('z1',$z1-100)
+    shell('sleep 6'):$dum
+    $i=1 $lklvltot=0
+     repeat
+        shell('sleep 1'):$dum
+        readlk:$lklvl
+        $lklvltot=$lklvltot+$lklvl
+        $i=$i+1
+     until $i=11
+    $curlvl3=$lklvltot/10
+    write('alpha','Check lock level with sequence heating and z1 offset by -100.')
+    write('alpha','     Current z1 value: %6.0f   Corresponding average lock level: %6.3f',z1,$curlvl3)
+    if $curlvl3>$curlvl2 then $inc=-$inc endif
+
+    sethw('z1',$z1+$inc) "restore to initial value"
+    shell('sleep 6'):$dum
+endif
+
+write('alpha','Optimize z1 for maximum lock level:')
+repeat
+    $i=1 $lklvltot=0
+     repeat
+        shell('sleep 1'):$dum
+        readlk:$lklvl
+        $lklvltot=$lklvltot+$lklvl
+        $i=$i+1
+     until $i=11
+    $curlvl=$lklvltot/10
+write('alpha','     Current z1 value: %6.0f   Corresponding average lock level: %6.3f',z1,$curlvl)
+    if ($curlvl>$best) then $best=$curlvl $bestz1=z1 endif
+
+    sethw('z1',z1+$inc)
+    shell('sleep 6'):$dum
+until ($curlvl<$best)
+
+sethw('z1',$bestz1)
+    echo('Optimum z1 value is set to: ',z1)
+echo('Starting z1 shim DAC value is',$z1)
+echo('Lock level with no decoupling',$strtlvl) 
+echo('Lock level with decoupling',$curlvl1)
+echo('Lock level for z1 +100 DAC units',$curlvl2)
+echo('Lock level for z1 -100 DAC units',$curlvl3)
+echo('Lock level for z1 optimized',$best)
+echo('Change in z1 shim is',z1-$z1)
+echo('New z1 value is stored in parameter "zcomp"')
+
+aa
+shell('sleep 1'):$dum
+su
+
+"restore parameters"
+exists('gradientdisable','parameter','global'):$e
+if $e=1 then
+ gradientdisable='n'
+else
+ pfgon=$pfgon
+endif
+nt=$nt
+exists('zcomp','parameter'):$e
+if ($e=0) then create('zcomp') endif
+zcomp=$bestz1
+
+$z1adj=$z1-zcomp
+write('line3','Z1 shim compensation required %s DAC units',$z1adj)
+write('line3','Best Z1 shim = %s and is stored in zcomp value ',zcomp)
+

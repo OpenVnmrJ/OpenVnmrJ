@@ -1,0 +1,112 @@
+"macro imadc"
+"**********************************************************"
+"Setup and Processing Diffusion Coefficient using a spectroscopy sequence"
+
+" Details: Run the adcpuls sequence and set parameters
+"       p1 - 90 deg pulse
+"       p2 - 180 deg pulse equal to p1*2
+"       tpwr1 - power levels calculated by imprep
+"       diff - diffusion flag
+"       gd - selects diffusion gradient X,Y,Z,n
+"       gdarray - diffusion gradient (gdiff) array
+"       tDELTA,tdelta - separation, gradient duration
+"
+" gdarray is set and diffusion data collected
+" The spectral peak is found and diffusion coef calculated from the spectra
+" gdiff is the acquisition parameter, set to gdarray[i] value
+
+" The sample must be shimmed to a single peak
+" or else diffusion coef's for multiple peaks are printed
+" The threshold is set manually by the user
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  diff = 'y'  "diffusion flag on"
+  ldrf
+  tof=resto-restol
+  rfl=rfl+rfladjust+rfloffset rfladjust=0 rfloffset=0
+  roff=roff+roffadjust roffadjust=0
+  imprep
+  
+  wysiwyg='n'
+  gdiff = gdarray  "gradient amplitude"
+  bvalue   "generate bvalue array"
+  
+  execseq('prep')  "Execute any sequence specific preparation"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  clear
+  if(fidfit = 'y') then
+    adcfit
+  else
+   f full wft(1) ph aph0 "phase reference"
+   wft select(1) vsadj(40) dssh  "display all spectra"
+
+   write('line3','calculating  Diffusion coef.')
+   av
+   select(1) vsadj(90)
+
+   text('Diffusion Coef. Determination (ADC = 1/T2)')
+
+//   th=30  "threshold"
+   clear
+   dll    "line listing"
+   ph 
+   fp     "find peak => fp.out"
+          "t2 is an exponential analysis routine"
+   analyze('expfit','bvalue','T2','list')   "ADC analysis; uses b-value array; => analyze.out"
+   cat(curexp+'/analyze.list')
+
+   center 
+   expl   "exponential/polynomial curve display "
+   wc=80
+
+   "extract the ADC value from the analyze.out file"
+   exists('adc','parameter'):$ex
+   if($ex < 1) then
+     create('adc')
+   endif
+
+   lookup('file',curexp+'/analyze.out')
+   lookup('skip',10,'read',1):adc
+   adc = 1/adc
+   write('line3','Diffusion coefficient measured: %1.6f mm2/sec ',adc)
+   adc=trunc(100000*adc)/100000
+
+   fn=4*np ft(arraydim) ph aph0 f vsadj peak:$ht,cr
+   if ($ht<0) then rp=rp+180 endif
+   dres
+   vp=0 f full
+   wexp=''
+   wnt=''
+   expl
+  
+   execseq('proc')  "Execute any sequence specific processing"
+  endif
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  imadc('prep')
+  
+  wexp = ''
+endif

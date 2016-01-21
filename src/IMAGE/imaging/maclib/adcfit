@@ -1,0 +1,103 @@
+"macro adcfit"
+
+"**************************************************************************
+"
+" adcfit - Macro to process ADC data (time domain)
+
+" Details - The ADC time domain data is collected
+"	    The echo (signal) max is used in the ADC analysis
+"	    lsfid parameter is used to indicate the no of fid points to skip
+"	    The magnitude of the fid point is put in 
+"	    analyze.inp, which has the format:
+
+"	    no_of_peaks no_of_pairs
+"	    peaks
+"	    time   echo_amplitude
+
+"	    analyze is called to do the fitting
+
+"**************************************************************************
+
+$macro = $0
+"get no of fid points (re+im) to skip"
+on('lsfid'):$e
+if($e = 0) then
+  $skip = 0
+else
+//  write('error','lsfid must be set to 0 or \'n\' ')
+//  abort
+  if(lsfid > 32) then	"arbitrary limit, 32"
+    write('error','%s: lsfid=$d exceeds limit',$macro,lsfid)
+  endif
+  $skip = lsfid * 2
+endif
+
+text('Diffusion Coef. Determination  (ADC = 1/T2)')
+$name = curexp+'/fp.out'
+shell('rm -f '+$name)
+$name2 = curexp+'/adc.out'
+shell('rm -f '+$name2)
+
+"fp.out comments not valid for fids"
+write('reset',$name)
+write('file',$name,'List of 1 lines in spectrum 1 to spectrum %d',arraydim)
+write('file',$name,'line    frequency    (Hz)')
+write('file',$name,'1    %d',arraydim)
+write('file',$name,'line spectrum amplitude (mm)')
+write('reset',$name2)
+
+f full
+df(1)
+$t = 1
+while($t <= arraydim) do
+  shell('rm -rf /vnmr/tmp/t')
+  select($t)			"select fid"
+  writefid('/vnmr/tmp/t',$t)	"write fid values as ascii file"
+  lookup('file','/vnmr/tmp/t')	"skip points=lsfid"
+  lookup('skip',$skip)
+
+  $rs='' $is=''
+  lookup('read',2):$rs,$is	"read real+imag pair"
+
+  format($rs,0,6):$r
+  format($is,0,6):$i
+
+  $m = sqrt(($r*$r)+($i*$i))	"magnitude"
+  if($t = 1) then
+    $m1 = $m
+  endif
+
+
+  write('file',$name,'1        %d             %f',$t,$m)
+  write('file',$name2,'%f    %f',bvalue[$t],$m)
+  $t = $t + 1
+endwhile
+
+clear
+analyze('expfit','bvalue','T2','list')  "T2 routine; exponential fit"
+
+
+"extract the adc(=1/T2) value from the analyze.out file"
+exists('adc','parameter'):$ex
+if($ex < 1) then
+ create('adc')
+endif
+
+lookup('file',curexp+'/analyze.out')
+lookup('skip',10,'read',1):adc
+adc = 1/adc
+adc=trunc(100000*adc)/100000
+write('line3','ADC estimate is %1.6f mm2/sec ',adc)
+echo('ADC estimate is ',adc,'mm2/sec ')
+echo(' ')
+echo(' ')
+echo('ADC = 1/T2,  bvalue = time')
+
+cat(curexp+'/analyze.list')
+center 
+expl   "exponential/polynomial curve display "
+wc=80  
+  
+
+
+

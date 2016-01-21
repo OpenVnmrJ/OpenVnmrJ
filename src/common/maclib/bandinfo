@@ -1,0 +1,60 @@
+"macro bandinfo"
+""
+"	get bandwidth pulse information 	"
+"       bandinfo(['name','width'])		"
+"	if no args, enquires 	"
+""
+$comment=''
+$tgroup=''
+$tgroup ='RF'
+$tname=''
+$rpwr=55
+if $# = 0 
+then
+   input('Name of the pulse? '):$tname
+   input('Bandwidth in Hz?'):$tbw
+else
+   if $# > 1
+   then
+       $tname = $1
+       $tbw=$2
+   else
+      write('error','bandinfo needs arguments name and bandwidth')
+      abort
+   endif
+   if $# > 2
+   then
+      $rpwr = $3
+   endif
+endif
+""
+lookup('file',systemdir + '/shapelib/shapeinfo')
+lookup('seek',$tgroup)
+lookup('seek',$tname)
+""
+lookup('read',5):$tpbw,$ltpwr,$ltfrac,$nsteps,$comment,$ret
+if $ret <> 5  then
+   write('line3','%s (%s) not found or incomplete!',$tname,$tgroup)
+   abort
+endif
+"  -------------------- "
+$tpw=$tpbw/$tbw
+ln(pw90/$tpw):$xx
+$xx=20*0.43429*$xx
+""
+" db lowered / raised via pulse width requirements "
+""
+$xx = $xx + $rpwr  + $ltpwr + 0.5
+
+if $# = 0 
+then
+  clear
+  write('alpha','-----------------------------------------')
+  write('alpha','|  %7s  width =  %8.1f',$tname,$tpw)
+  write('alpha','|  bandwidth is %7.2f hz',$tbw)
+  write('alpha','|   90 degree power = %5.0f',$xx)
+  write('alpha','|  180 degree power = %5.0f',$xx+6)
+  write('alpha','-----------------------------------------')
+endif
+return($tpw,$xx)
+

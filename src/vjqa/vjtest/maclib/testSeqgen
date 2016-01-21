@@ -1,0 +1,73 @@
+"macro testSeqgen"
+" Agilent test"
+
+vvCopyAppdir('appdir_vnmr1.seqgen')
+getdirs('psglib'):$dirs
+$num=size('$dirs')
+$j=0
+$faillog=curexp+'/faillog'
+$warnlog=curexp+'/warnlog'
+write('reset',$faillog)
+write('reset',$warnlog)
+shell('rm -f '+userdir+'/psglib/*'):$e
+shell('rm -f '+userdir+'/seqlib/*'):$e
+while ($j < $num) do
+  $j = $j+1
+  $dir = $dirs[$j]
+  getfile($dir):$nfiles
+  if ($nfiles > 0) then
+    write('line3','Seqgen syntax of %s with %d sequences',$dir,$nfiles):$msg
+    write('line3','Seqgen syntax of %s with %d sequences',$dir,$nfiles)
+    vvLog('Test',$msg)
+  endif
+  $pass=0
+  $fail=0
+  $warn=0
+  $i=0
+  while ($i<$nfiles) do
+     $i=$i+1
+     getfile($dir,$i):$name
+     seqgen($name)
+     write('line3','%s is number %d of %d sequences',$name,$i,$nfiles)
+     $cfile=userdir+'/seqlib/'+$name
+     $file=userdir+'/psglib/'+$name+'.errors'
+     exists($cfile,'file'):$ce
+     exists($file,'file'):$e
+     if (not $e) and ($ce) then
+       $pass=$pass+1
+     else
+       $res = '0'
+       shell('grep ": error: " ' + $file + '| wc -l ; cat'):$res
+       if ($res <> '0') then
+         $fail=$fail+1
+         write('file',$faillog,'failed : %s',$dir+$name)
+         shell('cat '+$file+' >> '+$faillog+';cat'):$e
+       else
+         $warn=$warn+1
+         write('file',$warnlog,'warn  : %s',$dir+$name)
+         shell('cat '+$file+' >> '+$warnlog+';cat'):$e
+       endif
+     endif
+  endwhile
+  if ($pass) then
+    write('line3','%d pulse sequences',$pass):$msg
+    vvLog('Pass',$msg)
+  endif
+  if ($fail) then
+    write('line3','%d pulse sequences',$fail):$msg
+    vvLog('Fail',$msg)
+    vvLog:$path
+    shell('cat '+$faillog+' >> '+$path+';cat'):$e
+    write('reset',$faillog)
+  endif
+  if ($warn) then
+    write('line3','%d pulse sequences',$warn):$msg
+    vvLog('Warn',$msg)
+    vvLog:$path
+    shell('cat '+$warnlog+' >> '+$path+';cat'):$e
+    write('reset',$warnlog)
+  endif
+endwhile
+shell('rm -f '+userdir+'/psglib/*'):$e
+shell('rm -f '+userdir+'/seqlib/*'):$e
+vvCopyAppdir('appdir_vnmr1')

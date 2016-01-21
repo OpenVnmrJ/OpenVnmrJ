@@ -1,0 +1,244 @@
+"macro gXYZ_lkpw90"
+"gXYZ_lkpw90"
+// Factorized from gxyzautocalib.  only the lkpw90 section
+
+werr='return'
+gxyzsetlocalpars
+
+create('execprocess','string','current',''):$dum
+create('execplot','string','current',''):$dum
+setgroup('execprocess','display')
+setgroup('execplot','display')
+
+if $# < 1 then $1='init' endif
+
+if ($1 = 'init') then
+// NOTE: Is this needed here?
+	if (seqfil <> 'gmapxyz') then
+		write('error','Not a 3D shimming experiment!')
+		abort
+	endif
+
+	on('temp'):$tempon
+	if $tempon >0.5 then $temp=temp endif
+	$nuc=''
+	$solv=''
+	$solv=solvent
+// NOTE:  What is lkflg doing here?
+	$nuc='lk'
+	exists('lkflg','parameter'):$parex
+	if $parex then
+	    if lkflg='n' then $nuc='H2' else $nuc='lk' endif
+	endif
+	$nuc=tn
+        $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+	PROTON
+        getsampglobal($macdir)
+        getmodule('calibpars')
+        getmodule('g3Dcalib')
+        create('execprocess','string','current',''):$dum
+        create('execplot','string','current',''):$dum
+        setgroup('execprocess','display')
+        setgroup('execplot','display')
+	gain=10
+	pw=1 d1=0.5
+	lb=1/at
+	exists('maxattench1','parameter','global'):$maxattenex
+        if ($maxattenex) then
+                on('maxattench1','global'):$maxattenon
+                if ($maxattenon) then
+                        if maxattench1<55 then tpwr=maxattench1 endif
+                endif
+        else
+                tpwr=55
+        endif
+
+	if $tempon >0.5 then temp=$temp endif
+	tn=$nuc
+	if tn='lk' or tn='H2' then tpwr=42 pw=100 dn='H1' endif
+	nt=1 alock='n' wshim='n' spin=0 dm='nnn' ai lsfrq=0
+	pslabel='lkpw90cal'
+	werr='return'
+	"Read shims before acquiring"
+        expactive:$active
+        if $active > -0.5 then readallshims endif
+	clear(2)
+	setlimit('pad',172800,0,1.25e-8)
+// Added by Krish
+        exists('gxyzwaitflg','parameter'):$parex
+        if $parex then
+            if gxyzwaitflg='y' then
+                pad=gxyzwait
+                gxyzwaitflg='n'
+            endif
+        else
+           pad=0.5
+        endif
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tofAdjust'
+        xmhaha_calib('addNode',$0+'(\'lkpw90cal1\')','next',120)
+	create('GradTypeOverride','string','current',''):$dum
+	GradTypeOverride='aa'
+	auargs('gradtype_aa')
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'lkpw90cal1') then
+
+	cplog('lkpw90cal','last'):$file,$asdir
+	rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	lsfrq=0
+	ft('nods') f full lp=0
+	abortoff aph0 aborton
+	dc res
+	dres(cr,0.5):$lw
+	lb=$lw
+	movetof
+	pw=200 "Try and get a 200 us pw90"
+	"Check to see if a Cold Probe - lock coil can tolerate higher power than RT probes, apparently"
+	$cryo=systemdir+'/acqqueue/Cryosafty'
+	$iscryo='no'
+	exists($cryo,'file'):$cpex
+	if $cpex > 0.5 then shell('grep yes '+$cryo):$iscryo endif
+        $probestyle=''
+	getparam('style','Probe'):$probestyle
+	if ($iscryo='yes' or $probestyle='cold') then array('tpwr',17,36,1) else array('tpwr',13,36,1) endif
+	$solvent=''
+	format(solvent,'lower'):$solvent
+	if $solvent='acetone' then d1=10 else d1=4 endif
+	pad=0.5
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr='return'
+
+// Added by Krish
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tpwrOptimization'
+        xmhaha_calib('addNode',$0+'(\'lkpw90cal2\')','next',120)
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'lkpw90cal2') then
+
+// Added by Krish
+        cplog('lkpw90cal','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $tpwr=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $tpwr=tpwr[$i] $index=$i endif
+		$i=$i+1
+	until $i > arraydim
+	tpwr=$tpwr 
+	array('pw',15,50,50)
+	calcdim
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr='return'
+// Added by Krish
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_tpwrOptimization'
+        xmhaha_calib('addNode',$0+'(\'lkpw90cal3\')','next',120)
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'lkpw90cal3') then
+
+// Added by Krish
+        cplog('lkpw90cal','last'):$file,$asdir
+        rt($asdir+'/'+$file)
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $pw90est=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $pw90est=pw[$i] $index=$i endif
+		$i=$i+1
+	until $i > arraydim
+	if $index=arraydim then "Maximum not found"
+		write('error','Autocalibration failed, determine manually')
+		abort
+	endif
+	write('line3','pw90 estimated to be %d us at %d dB, now refining estimate',$pw90est,tpwr)
+	array('pw',11,$pw90est-50,10) "To nearest 10 us OK"
+	calcdim
+	wnt='wft(`acq`,1,celem) select(1) aph vsadj(wc2max/3) dssh'
+	werr='return'
+
+// Added by Krish
+        caliblist=$0
+        xmhaha_calib('synonym',$0):caliblist
+        calibnode='_pwOptimization'
+        xmhaha_calib('addNode',$0+'(\'lkpw90cal3\')','next',120)
+        create('GradTypeOverride','string','current',''):$dum
+        GradTypeOverride='aa'
+	auargs('gradtype_aa')
+
+        execprocess=$0+'(\'lkpw90cal4\')'
+        execplot='execplot=\'\''
+
+endif
+if ($1 = 'lkpw90cal4') then
+
+        execprocess='wft dssh darray(\'CalibrationResults\')'
+        execplot='execplot=\'\''
+
+	f full wft
+	aph select(1)
+	vsadj thadj(1)
+	$i=1
+	$maxht=0 $pw90=0 $index=0
+	repeat
+		select($i)
+		peak:$ht,$freq
+		if $ht>$maxht then $maxht=$ht $pw90=pw[$i] endif
+		$i=$i+1
+	until $i > arraydim
+	$tpwr=tpwr
+	write('line3','pw90 = %d us at %d dB',$pw90,tpwr)
+
+	$lkpw90calibfile=userdir+'/3Dshimlib/calibs/lkpw90_'+probe
+	write('reset',$lkpw90calibfile)
+	write('file',$lkpw90calibfile,'%.0f\t%d',$pw90,$tpwr)
+
+// NOTE: is the right?
+	fread('','usertree')
+	fread(archivedir+'/'+sample+'/dirinfo/parlib/gxyzInit.par/procpar','usertree')
+	getvalue('tn','usertree'):$tn
+	if $tn='lk' or $tn='H2' then
+	    setvalue('pw',$pw90,'usertree')
+	    servalue('tpwr',tpwr,'usertree')
+	    fsave(archivedir+'/'+samle+'/dirinfo/parlib/gxyzInit.par/procpar','usertree')
+	endif
+	fread('','usertree')
+
+endif

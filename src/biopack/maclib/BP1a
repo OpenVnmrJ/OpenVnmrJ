@@ -1,0 +1,81 @@
+"macro BP1a"
+"BP1a(<y>)"
+clear(2)
+if ($#=0) then         "BP1a('y') called when ghn_co parameters"
+  BPrtppar('ghn_co')            " are recalled by MainMenu (VNMRJ)"
+  pwC3 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC3*5.0      $pw = trunc($pw + 0.5)    pwC3 = $pw/5.0
+  pwC3a = pwC3
+  pwC4 = 1.0e6*sqrt(3.0)/(2.0*118.0*dfrq)
+  $pw = pwC4*5.0      $pw = trunc($pw + 0.5)    pwC4 = $pw/5.0
+  pwC5 = 88.8*600.0/sfrq
+  $pw = pwC5*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC5 = ($pw + 1.0)/5.0
+  pwC6 = 88.8*600.0/sfrq
+  $pw = pwC6*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC6 = ($pw + 1.0)/5.0
+  pwC7 = 80.5*600.0/sfrq
+  $pw = pwC7*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC7 = ($pw + 1.0)/5.0
+  pwC7a = pwC7
+  pwC8 = 80.5*600.0/sfrq
+  $pw = pwC8*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC8 = ($pw + 1.0)/5.0
+  pwC8a = pwC8
+  pwC9 = 80.5*600.0/sfrq
+  $pw = pwC9*5.0   $pw = 2.0*trunc($pw/2.0) + 1.0   pwC9 = ($pw + 1.0)/5.0
+  pwC9a = pwC9
+  spin='n' ni=0  ni2=0 phase=1 phase2=1
+endif
+tn=tn dn=dn dn2=dn2    "make sure proper frequencies are set"
+setfrq
+if (numrfch>3) then dn3=dn3 endif
+exists('reffrq','parameter'):$e
+if ($e=0) then create('reffrq','real') endif
+reffrq=sfrq-(sw/2-rfl+rfp)/1e6
+
+if (pw=0) then    "only true at installation"
+  write('line3','New "HCN" probe file being created')
+  BPaddprobe('HCN')
+  write('line3','BioPack parameters added to new probe file')
+
+    "values of dof,dof2 and tof are ok for 800,750,600 and 500"
+  if (h1freq=900) then
+    sw=14500 np=2048 dof=dof dof2=dof2 tof=tof
+  endif
+  if (h1freq=800) then
+    sw=13000 np=2048 dof=17400 dof2=2240 tof=-288
+  endif
+  if (h1freq=750) then
+    sw=12000 np=2048 dof=17700 dof2=2230 tof=-288
+  endif
+  if (h1freq=700) then
+    sw=11500 np=2048 dof=dof dof2=dof2 tof=tof
+  endif
+  "parameters are OK already for 600 MHz"
+  if (h1freq=500) then
+    sw=8000 np=1024 dof=9620 dof2=1050 tof=-172
+  endif
+  if (h1freq=400) then
+    sw=7000 np=1024 dof=8700 dof2=800 tof=-288
+  endif
+  if (h1freq=300) then
+    sw=5000 np=512 dof=5700 dof2=600 tof=-288
+  endif
+endif
+
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then
+  exists(userdir+'/BioPack.dir/BP_rev','file'):$e
+  if $e then
+    $global=0
+  else
+    $global=1
+  endif
+else
+  $global=0
+endif
+
+pw=pw90      "sets pw if pw was 0 at installation"
+printon man('BioPacklist') printoff
+man('BioPack.update')
+banner('Check printed list for important parameters. Then update parameter values. For VNMRJ, click "BioPack Options" tab in Acquire Pages. Click appropriate "Update" button to finish probefile update')
+if ($#=0) then menu('BioPack1a') endif

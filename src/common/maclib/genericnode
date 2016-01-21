@@ -1,0 +1,69 @@
+"macro genericnode"
+
+is_submitmode:$submit
+if ($submit<0.5) then 
+    write('error','Cannot use %s outside of submit mode',$0)
+    return
+endif
+
+create('GenNodePar','string','global',''):$dum
+setprotect('GenNodePar','on',256,'global')
+
+if ($# < 1) then $1='popup' endif
+if ($1='popup') or ($1='init') then
+    is_submitmode:$submit
+    if ($submit<0.5) then
+    	write('error','Cannot use %s outside of submit mode',$0)
+        return
+    endif
+
+    GenNodePar[1]=''	// node name
+    GenNodePar[2]=''	// node macro
+    GenNodePar[3]='0'	// Time
+    GenNodePar[4]='LIB'	// CMD or LIB
+
+    if $1='popup' then
+  	 $vjcmd='vnmrjcmd(\'popup\',\'mode:modal\',
+        	\'file:GenNode.xml\',
+        	\'rebuild:yes\',
+        	\'pnewupdate:true\',
+        	\'cancel:'+$0+'(`cancel`)\',
+        	\'ok:'+$0+'(`ok`)\',
+        	\'title:Generic Node\')'
+   	exec($vjcmd)
+   	vnmrjcmd('pnew','GenNodePar')
+    endif
+    return
+endif
+
+if ($1='ok') then
+    if (GenNodePar[2]<>'') then
+    	if (GenNodePar[1]='') then GenNodePar[1]='GenNode' endif
+	ckstring(GenNodePar[1]):GenNodePar[1]
+	format(GenNodePar[3],'isreal'):$real
+	$time=0
+	if ($real) then
+	    format(GenNodePar[3],'lower'):$time
+	endif
+	if GenNodePar[4]<>'LIB' and GenNodePar[4]<>'CMD' then GenNodePar[4]='LIB' endif
+	$node=''
+	walkupQ('add',GenNodePar[1],$time,GenNodePar[4],'noreqcheck','nostudycheck','nodialog'):$node
+	if ($node<>'') then
+	    $macdir=cursqexp+'/macdir'
+	    if longQ='y' then $macdir=$macdir+'long' endif
+	    getcpnode('rev',cursqexp,$node):$cpnode
+	    $cpnode=$macdir+'/'+$cpnode
+	    cpattribute('reset',$cpnode)
+	    $attr='' write('line3','SetupMacro %s',GenNodePar[2]):$attr
+	    cpattribute('set',$cpnode,$attr)
+	endif
+    endif
+    genericnode('cancel')
+    return
+endif
+
+if ($1='cancel') then
+    GenNodePar=''
+    return
+endif
+

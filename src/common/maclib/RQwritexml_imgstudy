@@ -1,0 +1,203 @@
+"macro RQwritexml_imgstudy"
+" RQwritexml_imgstudy(path) "
+" RQwritexml_imgstudy(path, #_of_files) "
+
+if($# < 1.5) then return('') endif
+
+$path = $1
+
+strstr($path, '/','last'):$e,$dir,$name
+
+if($e < 0.5) then return endif
+
+$type = ''
+
+$scanext=''
+$scanname=''
+$imgname=''
+strstr($name,'.img'):$scan,$scanname
+strstr($name,'.fdf'):$img,$imgname
+isStudy($path):$study
+length($name):$len
+$len = $len-3
+if ($scan <> 0 and $scan = $len) then
+   $scanext='.img'
+   isScan($path):$scan,$file
+"only if a fdf file exists."
+   if($scan = 1) then
+     $type='scan'
+   endif
+elseif ($img <> 0 and $img = $len) then
+   $type = 'img'
+elseif $study = 1 then
+   $type = 'study'
+else
+   isScan($path):$scan,$file
+   if($scan = 1) then
+     $scanname = $name
+     $type='scan'
+   else
+     return('')
+   endif
+endif
+   
+" there is a procpar in .img dir. $count means # of fdf files "
+" can be wrong if other files exist. it will be reset to ns*ne*na"
+$icount = $2-1
+$display = $3
+$first = $4
+
+if $type = 'study' then
+     return('<filenode dir="'+$dir+'" name="'+$name+'" type="study" display="'+$display+ '" expand="yes">')
+elseif $type = 'scan' then
+
+     $ne = 1
+     $ns = 1
+     $na = -1
+     $copies='0'
+"use $5 if fdf file is passed as an argument."
+     if($# > 4.5 ) then
+	$file = $5
+     endif
+     exists($path+'/'+$file, 'file'):$e
+     if($e > 0.5) then
+      aipNumOfCopies($path+'/'+$file):$copies
+      aipGetHeaderParam($path+' '+$file+' '+$copies,'slices'):$ns
+      aipGetHeaderParam($path+' '+$file+' '+$copies,'echoes'):$ne
+      aipGetHeaderParam($path+' '+$file+' '+$copies,'array_dim'):$na
+      if($ns < 0.5) then $ns = 1 endif
+      if($ne < 0.5) then $ne = 1 endif
+      if($na < 0.5) then
+        write('line3', 'Warning: data processed by VJ1.1c may not have correct header info.')
+" figure out $na from number of fdf files."
+        $na = 0
+	$i = 0
+	getfile($path):$icount
+        while($i < $icount) do
+          $i = $i + 1
+          getfile($path,$i):$file,$ext
+          if $ext = 'fdf' then
+	     $na = $na + 1
+	  endif
+	endwhile
+        $na = $na/($ns*$ne) 
+      endif
+
+     else
+"use procpar if 'slice001image001echo001.fdf' does not exist."
+"procpar in some old .img dirs are not right, use that in .fid if exists" 
+       $file=$dir+'/'+$scanname+'.fid'
+       exists($file,'directory'):$e
+       if($e < 0.5) then $file = $path endif
+
+       readpars($file,'ne','ns','arraydim','nv'):$ne,$ns,$arraydim,$nv
+
+       if($nv > 0.5 and $arraydim >= $nv) then
+          $na=$arraydim/$nv
+       else
+	  $na=$arraydim
+       endif
+     endif
+
+     $icount = $ns*$ne*$na
+// do the following if slices are repeated in pss instead of arrayed
+     if($na = 1) then
+	$newNS = $ns
+	$newNA = $na
+	$newSlices = $ns
+	readPss($path):$newNS,$newNA,$newSlices
+	if($newNS < $ns and $newNA > 1) then
+	   $ns = newNS
+	   $na = newNA
+	   $icount = $newSlices*$ne
+	endif
+     endif
+
+     rqcount[1] = rqcount[1] + $icount
+     $count=''
+     format($icount,0,0):$count
+
+     $nestr=''
+     $nsstr=''
+     $nastr=''
+     format($ns,0,0):$nsstr
+     format($ne,0,0):$nestr
+     format($na,0,0):$nastr
+
+     $slices = '1'
+     if($ns <> 1) then $slices = '1-'+$nsstr+':1' endif
+     $array = '1'
+     if($na <> 1) then $array = '1-'+$nastr+':1' endif
+     $echoes = '1'
+     if($ne <> 1) then $echoes = '1-'+$nestr+':1'endif
+     $tot = $ne*$ns*$na
+     $totstr = ''
+     format($tot,0,0):$totstr 
+     $images = '1'
+     if($tot <> 1) then $images = '1-'+$totstr+':1' endif
+
+     $fstr1 = ''
+     format(1+rqcount[1]+$first-$icount,0,0):$fstr1 
+     $fstr2 = ''
+     format(rqcount[1]+$first,0,0):$fstr2 
+     $frames = $fstr1+'-'+$fstr2
+
+     $str='<filenode dir="'+$dir+'" name="'+$scanname+'" type="scan" group="'+$count+'" display="'+$display+ '" sort="yes" images="'+$images+'" slices="'+$slices+'" array="'+$array+'" echoes="'+$echoes+'" expand="no" na="'+$nastr+'" ne="'+$nestr+'" ns="'+$nsstr+'" frames="'+$frames+'" ext="'+$scanext+'" >'
+
+     rqcount[2] = $na
+     rqcount[3] = $ns 
+     rqcount[4] = $ne 
+
+     return($str)
+
+elseif $type = 'img' then
+
+     $islice= 1
+     $iecho= 1
+
+     $slice= '1'
+     $echo= '1'
+     $image=''
+     $ns= '1'
+     $ne= '1'
+     $na= '' 
+     $copies=''
+     aipNumOfCopies($dir+'/'+$name):$copies
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'slice_no'):$islice
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'echo_no'):$iecho
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'array_index'):$image
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'slices'):$ns
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'echoes'):$ne
+     aipGetHeaderParam($dir+' '+$name+' '+$copies,'array_dim'):$na
+     format($islice,0,0):$slice 
+     format($iecho,0,0):$echo 
+
+"rqcount[2] is na passed from scan node, rqcount[3] is previous ns, rqcount[4] is previous ne"
+
+     if($image = '' or $na = '') then
+       strstr($imgname,'slice'):$n1
+       strstr($imgname,'image'):$n2
+       strstr($imgname,'echo'):$n3
+       if($n1 = 1 and $n2 = 9 and $n3 = 17) then
+"file name is slicexxximagexxxechoxxx.fdf"
+	substr($imgname, 14, 3):$image
+       elseif($n2 = 1) then
+"file name is imagexxxx.fdf this may not work for multi echo"
+   	length($imgname):$n2
+	substr($imgname, 6, $n2-5):$tmpimage
+	$n1 = 1 + ($tmpimage - rqcount[2]*rqcount[3]*($iecho-1) - $islice)/rqcount[3]
+	format($n1,0,0):$image
+       endif
+     endif
+
+     if($na = '' and rqcount[2] > 0) then
+        format(rqcount[2],0,0):$na 
+     elseif($na = '') then
+	$na = '1'
+     endif
+
+     return('<filenode dir="'+$dir+'" name="'+$imgname+'" type="img" expend="no" image="'+$image+'" ns="'+$slice+'" ne="'+$echo+'" na="'+$image+'" slice="'+$slice+'" echo="'+$echo+'" copies=" '+$copies+'" ext=".fdf" />')
+else
+    return ('')
+endif
+

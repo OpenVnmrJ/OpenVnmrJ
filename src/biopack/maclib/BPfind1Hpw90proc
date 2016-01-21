@@ -1,0 +1,32 @@
+"macro BPfind1Hpw90proc"
+exists('dutyc','parameter'):$e
+av
+fn=2*np
+wft('dodc','nods')
+crl rfl=sw/2 rfp=0 axis='h'
+sp=-sw/2 wp=sw/2-500    "look upfield "
+vsadj(100)
+peak:$int,$upfield
+sp=500 wp=sw/2-500      "look downfield "
+peak:$int,$downfield
+$diff=$downfield-$upfield
+
+" dutyc can be created as a real and set 0-.4"
+" the default value is 0.1 (ten percent on time)"
+" Factor of 2 is from twice the offset from zero"
+" Reference: Eriks Kupce, Private Communciation, 1995"
+" Reference: Wu and Otting, JMR, 176, 115(2005)"
+
+if $e=1 then
+ $pw90=dutyc/(2*$diff)
+else 
+ $pw90=0.1/(2*$diff)
+endif
+rtp(curexp+'/temp')
+shell('rm -r '+curexp+'/temp.par')
+pw90=trunc($pw90*1e6*10)/10
+pw=pw90
+ref_pw90=trunc($pw90*compH*1e6*10)/10
+banner('1H PW90 Now Calibrated')
+write('line3','PW90 = %2.1f',pw)
+ph

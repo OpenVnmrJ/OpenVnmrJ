@@ -1,0 +1,538 @@
+# 
+#
+#makenvpsg
+
+vnmrsystem	=  /vnmr
+SHELL		=  /bin/sh
+MAKEFILE	=  makenvpsg.lnx
+###  MONKEY THESE FOR LOCAL CONFIGURATION
+###
+##GNUDIR		=  /usr/local
+GNUDIR	=  /usr
+CC		=  $(GNUDIR)/bin/gcc
+#CCC		=  $(GNUDIR)/bin/g++32
+CCC		=  $(GNUDIR)/bin/c++
+
+## ORIGINAL SCCSDIR		=  $(sccsdir)
+SCCSDIR		=  $(sccsdir)
+SCCSJDIR	=  $(sccsjdir)
+SRC_DIR		=  ./
+LNXOBJDIR=$(lnxobjdir)
+NVPSG_SRC_DIR   =  /common/sysnvpsg/
+
+# Shared Library version number   E.G.  3.2 -> libparam.so.3.2,libpsglib.so.3.2
+SHAREDLIB_VER=$(psg_so_ver)
+
+LIBS            =
+
+CINCLDIR    = -I./ 
+
+CDEFINE     = -DPSG_LC -DULONG
+CPPDEFINE   = -DSUN -DLINUX
+NVFLAGS = -Dcodeint=int -Dcodelong=int
+CFLAGS= -O -DPSG_LC -DULONG -w -m32 -Wall -fPIC -DNVPSG
+CPPFLAGS=  -DSUN -DLINUX -m32
+
+LDOPTIONS   = -O
+LDFLAGS     = -m32
+
+COMPILE.c   = $(CC)  $(CFLAGS) $(CPPFLAGS) $(NVFLAGS) -c
+COMPILE.cc  = $(CCC) $(CFLAGS) $(CPPFLAGS) -c
+LINK.c      = $(CCC) $(LDFLAGS) 
+
+#################
+# implicit dependencies
+#################
+.SUFFIXES:
+.SUFFIXES: .c .cpp .o
+.c.o:
+.cpp.o:
+#################
+
+#--- SCCS Sources ----  
+VNMR_SCCS_SRC      = $(SCCSDIR)/vnmr/SCCS/s.
+XRACQ_SCCS_SRC     = $(SCCSDIR)/xracq/SCCS/s.
+PSG_SCCS_SRC       = $(SCCSDIR)/psg/SCCS/s.
+PSGSEQ_SCCS_SRC    = $(SCCSDIR)/psglib/SCCS/s.
+NCOMM_SCCS_SRC     = $(SCCSDIR)/ncomm/SCCS/s.
+EXPPROC_SCCS_SRC   = $(SCCSDIR)/expproc/SCCS/s.
+VWACQ_SCCS_SRC     = $(SCCSDIR)/vwacq/SCCS/s.
+NACQI_SCCS_SRC     = $(SCCSDIR)/nacqi/SCCS/s.
+SCRIPT_SCCS_SRC	   = $(SCCSDIR)/scripts/SCCS/s.
+NVPSG_SCCS_SRC     = $(SCCSDIR)/nvpsg/SCCS/s.
+NVACQ_SCCS_SRC     = $(SCCSDIR)/nvacq/SCCS/s.
+
+#---  SCCS Extraction Commands for Sources Needed.  -------
+ACQI_SGET       = sccs -p$(SCCSDIR)/acqi/SCCS get
+ACQPROC_SGET    = sccs -p$(SCCSDIR)/acqproc/SCCS get
+VNMR_SGET       = sccs -p$(SCCSDIR)/vnmr/SCCS get
+VNMRBG_SGET     = sccs -p$(SCCSDIR)/vnmrbg/SCCS get
+XRACQ_SGET      = sccs -p$(SCCSDIR)/xracq/SCCS get
+PSG_SGET        = sccs -p$(SCCSDIR)/psg/SCCS get
+PSGSEQ_SGET     = sccs -p$(SCCSDIR)/psglib/SCCS get
+NCOMM_SGET      = sccs -p$(SCCSDIR)/ncomm/SCCS get
+EXPPROC_SGET    = sccs -p$(SCCSDIR)/expproc/SCCS get
+VWACQ_SGET      = sccs -p$(SCCSDIR)/vwacq/SCCS get
+NACQI_SGET      = sccs -p$(SCCSDIR)/nacqi/SCCS get
+NVPSG_SGET      = sccs -p$(SCCSDIR)/nvpsg/SCCS get
+NVACQ_SGET      = sccs -p$(SCCSDIR)/nvacq/SCCS get
+SCRIPT_SGET     = sccs -p$(SCCSDIR)/scripts/SCCS get
+
+#------------------------------------------------------------------------
+#--- VNMR sources that are needed for PSG
+#------------------------------------------------------------------------
+VNMR_SRC=                       \
+                asmfuncs.c      \
+                assign.c        \
+                allocate.c      \
+                lockfreqfunc.c  \
+                pvars.c         \
+                shims.c        \
+                symtab.c        \
+                tools.c         \
+                vfilesys.c      \
+                variables1.c
+
+VNMR_OBJ= $(VNMR_SRC:.c=.o)
+
+VNMR_HDR=                       \
+                allocate.h      \
+                asm.h           \
+                data.h          \
+                dpsdef.h        \
+                errorcodes.h    \
+                graphics.h      \
+                group.h         \
+                init.h          \
+                params.h        \
+                shims.h         \
+                symtab.h        \
+                tools.h         \
+                vfilesys.h      \
+                variables.h     \
+                wjunk.h
+
+PSG_SRC_NOT_USED=		\
+                apuserdev.c	\
+		attn_device.c\
+		convertapbout.c \
+                convertipa.c    \
+                status.c        \
+		decfuncs.c      \
+                formXLwords.c   \
+		freq_list.c     \
+                lintfile.c	\
+                revmode.c	\
+                shape_pulse.c   \
+                sis_loop.c      \
+                sis_misc.c      \
+                sis_oblique.c   \
+                ssha.c          \
+		initobjects.c   \
+		gatedecoupler.c \
+		initfreqobj.c   \
+                spcl3rdattn.c	\
+		decfuncs.c      \
+		freq_device.c   \
+		gradient.c      \
+		convert.c       \
+		ap_device.c     \
+                apbit_device.c  \
+		initrf.c        \
+                attr_funcs.c    \
+		initfunc.c      \
+		rcvrfuncs.c     \
+		attr_valtype.c  \
+		rfchan_device.c \
+		freqsweep.c     \
+		phaseing.c      \
+		setHSlines.c	\
+		device.c        \
+		timerwords.c    \
+		event_device.c  \
+		offset.c        \
+		stubs.c         \
+		offset.c        \
+                lc_index.c      \
+		sisrfpatterns.c \
+		phaseutility.c  \
+		rfchanconst.c   \
+		objerror.c      \
+		hwlooping.c     \
+                lk_sh.c         \
+                interlktests.c  \
+		sli_device.c    \
+		crb_setup.c     
+		
+
+PSG_SRC=                        \
+                abort.c         \
+                active.c        \
+                autofuncs.c     \
+		ecc_setup.c     \
+		ecc_worstCase.c	\
+                eventoverhead.c \
+                freqfuncs.c     \
+                getparm.c       \
+                hash.c          \
+                init_u_glbl.c   \
+                initauto.c      \
+                pre_exp_seq.c   \
+                pre_fid_seq.c   \
+                presequence.c   \
+                P_receive.c     \
+                Pbox_HT.c       \
+                Pbox_psg.c      \
+                sendasync.c     \
+                setparm.c       \
+                signalhandler.c \
+                sis_initpar.c   \
+                sis_position.c  \
+		treefuncs.c     \
+                wetfuncs.c      \
+                xmath.c         \
+                x_ps.c
+
+PSG_OBJ= $(PSG_SRC:.c=.o)
+
+
+SPEC_PSG_SRC=                   \
+                psg4dps.c       \
+                dummyfunc4dps.c
+
+SPEC_PSG_OBJ= $(SPEC_PSG_SRC:.c=.o)
+
+PSG_HDR_NOT_USED=		\
+		apbit_device.p  \
+		common.p        \
+		attn_device.p   \
+		device.p        \
+		event_device.p  \
+		freq_device.p   \
+		lc_index.h	\
+		rfchan_device.p	\
+		design_flowcomp.h \
+		ge3dshim.h 	\
+		gradient.h 	\
+		gradient_library.h \
+		chanstruct.h    \
+		fcprint.h       \
+		ap_device.p     
+
+PSG_P_HDR=                      \
+
+PSG_HDR=                        \
+                Pbox_HT.h      \
+                Pbox_psg.h      \
+                REV_NUMS.h      \
+                abort.h         \
+                apdelay.h       \
+                cmed.h          \
+                dsp.h           \
+                ecc.h		\
+                objerror.h      \
+                oopc.h          \
+                power.h         \
+                prescan.h       \
+                psg_utils.h     \
+                rfconst.h       \
+                standard.h      \
+                vnmrsys.h       \
+                wetfuncs.h
+
+NVPSG_SRC=			\
+                aptable.c   \
+                arrayfuncs.c   \
+		chempack.c	\
+                cps.c   \
+                initacqparms.c   \
+                lc_hdl.c   \
+		lockfuncs.c	\
+                math.c          \
+                nvstubs.c	\
+		spinfuncs.c	\
+                vtfuncs.c       \
+                rtcontrol.c
+
+NVPSG_OBJ= $(NVPSG_SRC:.c=.o)
+
+NVPSG_CPP_NEEDS_WORK=		\
+		main.cpp
+
+
+NVPSG_CPP_SRC=		 	\
+		AcodeBuffer.cpp	\
+		AcodeManager.cpp	\
+		Bridge.cpp	\
+		Console.cpp	\
+		Controller.cpp	\
+		DDRController.cpp	\
+		InitAcqObject.cpp	\
+		GradientController.cpp	\
+		GradientBridge.cpp	\
+		GradientBase.cpp	\
+		LockController.cpp	\
+		MasterController.cpp	\
+		PFGController.cpp	\
+		RFController.cpp	\
+		psgmain.cpp
+
+NVPSG_CPP_OBJ= $(NVPSG_CPP_SRC:.cpp=.o)
+#---------------------------------------------------------------------
+#   psg source code that can be included in Users Pulse Sequences
+#   i.e. C header files
+#---------------------------------------------------------------------
+NVPSG_HDR=                      \
+		ACode32.h	\
+		AcodeBuffer.h	\
+		AcodeManager.h	\
+		Bridge.h	\
+		Console.h	\
+		Controller.h	\
+		DDRController.h	\
+		FFKEYS.h	\
+		GradientBridge.h	\
+		GradientBase.h		\
+		GradientController.h	\
+		LockController.h	\
+		InitAcqObject.h	\
+		MasterController.h	\
+		PFGController.h	\
+		PSGFileHeader.h	\
+		RFController.h	\
+                acodes.h        \
+		acqparms.h	\
+		aptable.h	\
+		chempack.h	\
+		cpsg.h	\
+		lc.h	\
+		macros.h	\
+		mpobjects.h	\
+                pvars.h		\
+		sgl.c		\
+		sgl.h		\
+		sgl_ws.c	\
+		sglWrappers.c	\
+		sglWrappers.h	\
+		sglCommon.c	\
+		sglCommon.h	\
+		sglHelper.c	\
+		sglHelper.h	\
+		sglPrepulses.c	\
+		sglPrepulses.h	\
+		sglRF.c		\
+		sglRF.h		\
+		sglEPI.c	\
+		sglEPI.h	\
+		sglAdditions.c	\
+		sglAdditions.h	\
+		sglGradientLists.c	\
+		sglGradientLists.h	\
+		sglDutyCycle.c	\
+		sglDutyCycle.h	\
+		soliddecshapes.h	\
+		soliddefs.h	\
+		solidelements.h	\
+		solidmpseqs.h	\
+		solidobjects.h	\
+		solidpulses.h	\
+		solidshapegen.h	\
+		solidstandard.h	\
+		solidstates.h	\
+		tangentcp1.h
+
+
+EXPPROC_HDR=                    \
+		shrexpinfo.h    \
+                expDoneCodes.h 
+
+EXPPROC_SRC=
+
+EXPPROC_OBJ= $(EXPPROC_SRC:.c=.o)
+
+#------------------------------------------------------------------------
+#--- NCOMM Sources that are needed
+#------------------------------------------------------------------------
+# Communications libraries
+NCOMM_HDR=                      \
+                mfileObj.h
+
+#----- xracq header files that are needed
+XRACQ_HDR=                      \
+                ACQ_SUN.h
+
+#----- nvacq header files that are needed
+
+NVACQ_HDR=        \
+		ddr_fifo.h	\
+		ddr_symbols.h \
+		spinner.h
+
+#----- PSG source files that are needed
+PSGSEQ_SRC=                     \
+                s2pul.c
+
+PSGSEQ_OBJ= $(PSGSEQ_SRC:.c=.o)
+
+#----- PSG SEQUENCE header files that are needed
+PSGSEQ_HDR=
+
+#---- Vnmr Headers Needed for User Programming
+USR_VNMR_HDR=                   \
+                asm.h           \
+                data.h          \
+                errorcodes.h    \
+                group.h         \
+                params.h        \
+                pvars.h         \
+                shims.h         \
+                symtab.h        \
+                dpsdef.h        \
+                variables.h
+
+#---- PSG Sources Needed for User Programming but not used in psglib.
+USR_PSG_SRC=                    \
+
+LINTLIB_SRC=                    \
+
+#---- seqgen utilities needed -------------------------
+SEQGEN_MAKE=                    \
+                seqgenmake
+
+SEQGEN_UTIL=                    \
+                seqgen.sh
+
+#---- All Sources and headers required for compilation -----
+ALLSRC= $(VNMR_SRC) $(VNMR_HDR) $(PSG_SRC) $(PSG_HDR) $(PSG_HDR_C) \
+        $(XRACQ_HDR) $(NVACQ_HDR) $(DPS_DUMMY_SRC) $(EXPPROC_HDR) \
+        $(EXPPROC_SRC) $(NCOMM_HDR)     \
+        $(PSGSEQ_SRC) $(PSGSEQ_HDR) $(LINTLIB_SRC)      \
+	    $(NVPSG_SRC) $(NVPSG_CPP_SRC) $(NVPSG_HDR)	\
+        $(SEQGEN_MAKE) $(SEQGEN_UTIL) makeuserpsg.lnx
+
+ALL_C_SRC= $(VNMR_SRC) $(PSG_SRC)  $(PSG_HDR_C)  \
+         $(EXPPROC_SRC) $(PSGSEQ_SRC) $(LINTLIB_SRC) $(SHORT_PSG_SRC) $(DPS_DUMMY_SRC)	\
+	 $(NVPSG_SRC) $(NVPSG_CPP_SRC)
+
+USERPSRC= $(PSG_SRC) $(PSG_HDR) $(PSG_HDR_C) $(USR_PSG_SRC) $(USR_VNMR_HDR) \
+          $(XRACQ_HDR) $(DPS_DUMMY_SRC) $(EXPPROC_HDR) \
+          $(EXPPROC_SRC) $(NCOMM_HDR) $(LINTLIB_SRC) $(USR_VNMR_SRC)  \
+            makeuserpsg.lnx
+
+DPS_C_SRC=  $(PSG_HDR_C)  $(SHORT_PSG_SRC) $(DPS_DUMMY_SRC) \
+	$(XRACQ_HDR) $(VNMR_HDR) $(PSG_HDR)
+
+# excludes s2pul.o
+
+ALLOBJS= $(PSG_OBJ) $(DPS_DUMMY_OBJ) \
+         $(EXPPROC_OBJ) $(VNMR_OBJ) $(NVPSG_OBJ)
+
+ALL_CPP_OBJS= $(NVPSG_CPP_OBJ)
+
+DPS_OBJS=  $(SHORT_PSG_OBJ)  $(DPS_DUMMY_OBJ)
+
+LIBS= -lstdc++ -lm
+
+#--- make Targets ----------------------------------------------
+
+std all LINUX : $(MAKEFILE) Source $(ALLOBJS) $(ALL_CPP_OBJS) s2pul
+	echo "+++++++++++++++ DO target $@ --------------------------"
+	@echo "DONE target $@ --------------------------"
+
+local	: $(MAKEFILE) $(ALLOBJS) $(ALL_CPP_OBJS) s2pul
+	echo "+++++++++++++++ DO target $@ --------------------------"
+
+Source src: $(MAKEFILE) $(ALLSRC)
+	@echo "Sources are up to date........."
+
+clean:
+	rm *.o
+
+superclean:
+	rm *.o libpsg*
+
+testclean:
+	rm -f $(PSG_SRC_NOT_USED)
+	rm -f $(PSG_HDR_NOT_USED)
+
+
+# For the makedepend we define a bunch of stuff at once to get the
+# "worst case" dependency list.
+# The -Y for makedepend keeps it from looking for include files in the
+# standard system places, so we will not get any dependencies on
+# system header files.  However, this results in warnings about not
+# being able to find any system header files.  So we send complaints
+# to /dev/null.
+#
+# NB: This target depends on "makedepend" being in your PATH.
+#
+depend:
+	makedepend -f $(MAKEFILE) -Y $(CDEFINE) $(ALLSRC) 2>/dev/null
+
+#--- Object Targets ---------------------------
+
+$(ALLOBJS) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) $(@:.o=.c) )
+
+$(ALL_CPP_OBJS) : $(@:.o=.cpp)
+	(umask 2; $(COMPILE.cc) $(@:.o=.cpp) )
+
+$(PSGSEQ_OBJ) : $(@:.o=.c)
+	(umask 2; $(COMPILE.c) -I. $(@:.o=.c) )
+
+libparam.a : $(VNMR_OBJ)
+	- (umask 2; rm -f $@)
+	@(umask 2; ar r $@ $(VNMR_OBJ))
+
+libparam.so : libparam.a
+	- (umask 2; rm -f $@*)
+	@(umask 2; $(LINK.c) -shared $(LDSOFLAGS) -o $@.$(SHAREDLIB_VER) $(VNMR_OBJ); \
+                ln -s $@.$(SHAREDLIB_VER) $@; )
+
+libpsglib.so : libpsglib.a
+	- (umask 2; rm -f $@)
+	@(umask 2; $(LINK.c) -shared $(LDSOFLAGS) -o $@.$(SHAREDLIB_VER)           \
+                        $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ);                  \
+                ln -s $@.$(SHAREDLIB_VER) $@; )
+
+libpsglib.a : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+	- (umask 2; rm -f $@)
+	@(umask 2; ar r $@ $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+
+s2pul : libpsglib.a libpsglib.so libparam.a libparam.so s2pul.o
+	(umask 2; $(LINK.c)  -o  $@  -Wl,-rpath /vnmr/lib -L$(LNXOBJDIR)/proglib/ncomm -L.  $(PSGSEQ_OBJ) $(DPS_DUMMY_OBJ) -lpsglib -lparam -lacqcomm $(LIBS) )
+
+
+#------------ SCCS source extraction ---------------
+
+$(VNMR_SRC) $(VNMR_HDR) : % :$(VNMR_SCCS_SRC)%
+	$(VNMR_SGET) $@
+
+$(PSGSEQ_SRC) $(PSGSEQ_HDR) : % :$(PSGSEQ_SCCS_SRC)%
+	$(PSGSEQ_SGET) $@
+
+$(EXPPROC_SRC) $(EXPPROC_HDR) : % :$(EXPPROC_SCCS_SRC)%
+	$(EXPPROC_SGET) $@
+
+
+$(NCOMM_HDR) : % :$(NCOMM_SCCS_SRC)%
+	$(NCOMM_SGET) $@
+
+$(XRACQ_HDR) : % :$(XRACQ_SCCS_SRC)%
+	$(XRACQ_SGET) $@
+
+$(NVACQ_HDR) : % :$(NVACQ_SCCS_SRC)%
+	$(NVACQ_SGET) $@
+
+$(PSG_SRC) $(PSG_HDR) $(PSG_HDR_C) $(DPS_DUMMY_SRC) $(SPEC_PSG_SRC) \
+$(USR_PSG_SRC) $(LINTLIB_SRC) $(WFG_PSG_SRC) : % :$(PSG_SCCS_SRC)%
+	$(PSG_SGET) $@
+
+$(NVPSG_SRC) $(NVPSG_CPP_SRC) $(NVPSG_HDR) makeuserpsg.lnx \
+$(SEQGEN_MAKE) : % :$(NVPSG_SCCS_SRC)%
+	$(NVPSG_SGET) $@
+
+$(SEQGEN_UTIL) : % :$(SCRIPT_SCCS_SRC)%
+	$(SCRIPT_SGET) $@
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.

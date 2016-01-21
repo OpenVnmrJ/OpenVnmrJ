@@ -1,0 +1,115 @@
+"macro prescan_init"
+"***********************************************************************"
+"  prescan_init - set initial prescan parameters to default values
+
+" Details: If the prescan default parameters are not initialized
+"	   correctly, prescan routines may fail. The macro checks the
+"	   parameters and sets them to reasonable starting values
+"	   You may edit this macro to set your own defaults
+"	   These parameters are generally used as a starting point.
+"	   Once the initial parameters are loaded modify them using the
+"	   Prescan Setup page and Save it in the new Coil-table.
+"	   During power prescan the tpwrf is arrayed from 1000 to 4000
+"	   in 15, 200 unit steps. The maximum power is defined by 
+"	   power_limit_dB
+"          Options 'coilname' - sets new RFCOIL 
+"	            power_limit - power_limit(%) for 180 deg pulse
+
+" Usage:   prescan_init  - Initialize the prescan parameters to default
+"	   prescan_init(power_limit) - set power limit in percent
+"	   prescan_init(power_limit,'coil_name') - power_limit(%) for 180 pulse,
+"	                                           set RFCOIL name 
+"	                                           
+" Example: prescan_init(50) - set default power limit to 50% 
+"          prescan_init(60,'quad14cm')   - sets RFCOIL to quad14cm; power limit to 60% 
+"************************************************************************"
+
+if (size('coil_param') < 26) then
+  $i = 0
+  repeat
+    $i = $i + 1
+    coil_param[$i] = 0
+  until ($i = 26)
+endif
+
+if ($# = 0) then
+  create('Prescan_ss','integer','global',1)
+  Prescan_ss = 1
+  
+  "Gain"
+  Prescan_GainScale = 80    "Gain scale (%)"
+
+  "Frequency"
+  coil_param[18] = 1            "nucleus, default to proton"
+  coil_param[9]  = 1.0		"TR sec"
+  coil_param[10] = 10		"RF Hard pulse width"
+  coil_param[8]  = 40		"RF Power (dB)"
+  coil_param[6]  = 0		"receiver gain (dB)"
+  Prescan_SliceSelect = 'n'	"slice select flag"
+
+  Prescan_SNRThreshold = 20.0	"snr threshold"
+  Prescan_FatThreshold = 0.05	"fat threshold, fraction"
+  Prescan_maxTries     = 5
+
+  "Slice selection parameters for frequency/power prescan"
+  Prescan_Orient      = 'trans'
+  Prescan_SliceOffset = 0.0
+  Prescan_Thickness   = 4       "slice thickness (mm)"
+  Prescan_FOV         = 12	"FOV for profile (cm); used in power prescan"
+
+  "Power"
+  coil_param[7]  = 0.8		"TR"
+  coil_param[11] = 4000		"pulse width"
+  coil_param[12] = 90		"Calibration flag"
+  coil_param[1]  = 40		"maximum power for 90deg pulse (dB); +6 for 180"
+  gcal = 0.5                    "maximum power (fraction) for 180 deg pulse"
+  coil_param[2] = 4095		"fine power, limit"
+  coil_param[3] = 400		"fine power, initial value"
+  coil_param[4] = 400		"fine power, step size"
+  coil_param[5] = 10		"fine power, steps"
+
+  "Miscellaneous"
+  Prescan_Ticks    = 0          "triggering"
+  Prescan_Display  = 1		"flag to display data"
+  Prescan_LogError = 1		"flag to save log information"
+  Prescan_CleanUp  = 1		
+
+  "Shim"
+  coil_param[13] = 50		"shim power"
+  coil_param[14] = 10		"shim gain"
+  coil_param[15] = 10		"shim FOV"
+  coil_param[16] = 0.2		"shim thk"
+  coil_param[17] = 0.007	"shim tau"
+  Prescan_ShimMethod    = ''
+  Prescan_ShimDelay     = 500,200,100,50  "del delay for 3D shim or shim step for quickshim"
+  Prescan_ShimIteration = 0,1,0,0	    "Iteration flag"
+
+  coil_param[19] = 1                 "default number of receivers to 1"
+  coil_param[20] = 1                 "default coil_type to transmit/receive"
+  coil_param[21] = Prescan_FOV       "default to 120mm"
+  coil_param[22] = parmax[17]        "default to max allowed coarse power to 63"
+  coil_param[23] = Prescan_Thickness "default to 4mm thickness"
+  coil_param[24] = 10                "default FOV cm"
+  coil_param[25] = 2                 "default slice thickness mm"
+  coil_param[26] = 10                "default voxel size mm"
+
+else
+  gcal = $1/100.0
+  if(($1 > 100.0) or ($1 < 0)) then
+    write('error','llegal power limit %4.2f \%',$1) 
+    gcal = 0.5   "set 180 pulse power (fraction) to default value"   
+    abort
+  elseif ($1 > 99) then
+    $pwr = 63
+    gcal = 1.0
+  else
+    ln($1/100):$lx
+    $p = 63+(10 * 0.43429 * $lx)    
+    format($p,2,0):$pwr
+  endif
+  coil_param[1]  = $pwr - 6	"maximum power for 90deg pulse (dB); +6 for 180"
+endif
+
+  
+  
+

@@ -1,0 +1,212 @@
+"macro xmhahasx_Qnodes"
+"***************************************************************"
+"  arg1 - Full path name of xml file 				"
+"  arg2 (optional) - # of samples				"
+"  arg3 (optional) - toottext extension				"
+"***************************************************************"
+
+$autodir='' $Qname=''
+$studyxml=$1
+$queue='' $sqdir=''
+
+shell('basename '+$studyxml+' .xml'):$queue
+shell('dirname '+$studyxml):$sqdir
+$esq=$sqdir+'/'+$queue+'_SQ'
+if ($queue='ActiveQ') then
+    Svfname($sqdir+'/'+$queue,'','.xml'):$newqueue
+    $studyxml=$newqueue+'.xml'
+    $esq=$newqueue+'_SQ'
+endif
+
+strstr($sqdir,'.macdir'):$ret,$autodir
+shell('basename '+$autodir):$Qname
+shell('dirname '+$autodir):$autodir
+exists($autodir,'directory'):$direx
+if ($direx=0) or ($autodir='') or ($Qname='') then
+   write('line3','Directory %s not found',$1)
+   return
+endif
+getAutoTraymax($autodir+'/'+$Qname):$thistray
+if ($thistray=1) then $islcauto=1 else $islcauto=0 endif
+"**************************************************************"
+$xmlinfodir=$autodir+'/'+$Qname+'.macdir/xmldir/info'
+$cpdoneq=$autodir+'/'+$Qname+'.macdir/cpdoneQ'
+$cpdonedayq=$autodir+'/'+$Qname+'.macdir/cpdonedayQ'
+$enterq=$autodir+'/'+$Qname
+$nightq=$autodir+'/'+$Qname+'.macdir/overniteQ'
+$cperrorq=$autodir+'/'+$Qname+'.macdir/cperrorQ'
+$xmldir=$autodir+'/'+$Qname+'.macdir/xmldir'
+$xmlinfodir=$xmldir+'/info'
+
+$sqinfo=$sqdir+'/info'
+exists($sqinfo,'directory'):$direx
+if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
+
+"*************************************************************"
+   $totS='' $title='' $tt='' $node='' $xml='' $time=''
+   if ($# < 4) then $4='' endif
+   $nodename='Studies'
+   if ($islcauto) then $nodename='Peaks' endif
+   if ($#>1) then
+	format($2,'isreal'):$real
+	if ($real) then
+	   format($2,0,0):$totS
+	   $totS=' ('+$totS+' Samples)'
+	else
+	   $totS=$2
+	endif
+   endif
+   if ($#>2) then $time=$3 endif
+   if ($queue='DoneQ') or ($queue='RevDoneQ') then
+     	if ($totS='') then
+		shell('(cat '+$cpdoneq+' | wc -l)'):$totS
+		$totS=' ('+$totS+' Samples)'
+     	endif
+	$tt='Completed '+$nodename
+	$node='Qn001'
+	if ($queue='RevDoneQ') then
+	    $node='Qn011'
+	endif
+	$time=''
+   endif
+   if ($queue='DoneDayQ') or ($queue='RevDoneDayQ') then
+        if ($totS='') then
+   		shell('(cat '+$cpdonedayq+' | wc -l)'):$totS
+                $totS=' ('+$totS+' Samples)'
+	endif
+        $tt=$nodename+' in progress'
+        $node='Qn002'
+	if ($queue='RevDoneDayQ') then
+	    $node='Qn012'
+	endif
+	$time=''
+   endif
+   if ($queue='ChronQ') then
+	$tt='Pending '+$nodename
+	$node='Qn009'
+	$time=''
+   endif
+   if ($queue='ErrorQ') or ($queue='RevErrorQ') then
+        if ($totS='') then
+        	shell('(cat '+$cperrorq+' | wc -l)'):$totS
+                $totS=' ('+$totS+' Samples)'
+	endif
+	$tt='Errored '+$nodename
+        $node='Qn003'
+	if ($queue='RevErrorQ') then
+	    $node='Qn013'
+	endif
+	$time=''
+   endif
+   if ($queue='ActiveQ') then
+	if ($islcauto) then $tt='Active Peak'
+	else $tt='Active Study' endif
+	$node='Qn004'
+   endif
+   if ($queue='DefPeakQ') then
+	$tt='Default Experiments'
+	$node='Qn010'
+   endif
+
+   if (($queue='PriorityQ') or ($queue='DayQ') or ($queue='NightQ')) and ($time='') then
+     if ($time='') then
+        $prioritytime='' $daytime='' $nighttime=''
+   	$timeX=''
+   	$rday=0 $rnight=0 $rpriority=0
+   	readTtimeQ($autodir+'/'+$Qname+'.macdir'):$rpriority,$rday,$rnight
+   	formattime($rpriority):$timeX,$prioritytime
+   	formattime($rday-$rpriority):$timeX,$daytime
+   	formattime($rnight):$timeX,$nighttime
+   	$prioritytime=' (QueueTime: '+$prioritytime+')'
+   	$daytime=' (QueueTime: '+$daytime+')'
+   	$nighttime=' (QueueTime: '+$nighttime+')'
+     endif
+   endif
+   if ($queue='PriorityQ') then
+        if ($totS='') then
+   		shell('(cat '+$enterq+' | grep USER: | grep -wc priority)'):$totS
+                $totS=' ('+$totS+' Samples)'
+	endif
+        $tt='Priority '+$nodename
+        $node='Qn005'
+	if ($time='') then $time=$prioritytime endif
+   endif
+   if ($queue='DayQ') then
+	$isnight='n'
+     	if ($Qname='enterQ') then
+                lookup('mfile',$autodir+'/enterQ.macdir/AUTOGLOBAL','seekcs','LONGRUN:','read',1):$isnight
+                $Nx=0
+                shell('(cat '+$autodir+'/enterQ.macdir/overniteQ | grep -wc SAMPLE#:)'):$Nx
+                if ($Nx>0) then $isnight='n' endif
+     	endif
+        if ($totS='') then
+        	shell('(cat '+$enterq+' | grep USER: | grep -v priority | wc -l)'):$totS
+                $totS=' ('+$totS+' Samples)'
+	endif
+	if ($isnight='y') then
+	   $tt=$nodename+' in queue'
+	else
+	   $tt=$nodename+' in day queue'
+	endif
+        $node='Qn006'
+	if ($time='') then $time=$daytime endif
+    endif
+    if ($queue='NightQ') then
+        if ($totS='') then
+                shell('(cat '+$nightq+' | grep -wc USER:)'):$totS
+                $totS=' ('+$totS+' Samples)'
+        endif
+        $tt=$nodename+' in night queue'
+        $node='Qn007'
+	if ($time='') then $time=$nighttime endif
+   endif
+   if ($queue='FidQ') or ($queue='RevFidQ') then
+        $tt='Chronological list of FIDs'
+	$node='Qn008'
+	if ($queue='RevFidQ') then
+	    $node='Qn018'
+	endif
+	if ($totS='') then
+		shell('(cat '+$autodir+'/enterQ.macdir/expfidlog | wc -l)'):$totS
+		$totS=' ('+$totS+' Fids)'
+	endif
+	$time=''
+//	exists($esq,'file'):$esqex
+//	$s3='' $s4=''
+//	if ($esqex) then 
+//		readfile($esq,'$s3','$s4','','local'):$esqtot 
+//		if ($esqtot>0) then
+//		    $ei=1
+//		    repeat
+//			shell('rm -rf '+$xmlinfodir+'/'+$s3[$ei]):$dum
+//			$ei=$ei+1
+//		    until $ei>$esqtot
+//		endif
+//	endif
+   endif
+
+   if ($islcauto) then 
+	$totS='' 
+	if ($queue='ActiveQ') then
+		$totS=$time
+		$time=''
+	endif
+   endif
+   write('reset',$studyxml)
+   write('reset',$esq)
+   $attr3='' $atx3=1
+   $attr3[$atx3]='name',$4 $atx3=$atx3+2
+   $attr3[$atx3]='title',$tt+$totS  $atx3=$atx3+2
+   $attr3[$atx3]='tooltext',$tt+$time $atx3=$atx3+2
+   $attr3[$atx3]='CPnode',$queue $atx3=$atx3+2
+   if ($queue<>'DefPeakQ') then
+      $attr3[$atx3]='expanded','true' $atx3=$atx3+2
+   endif
+   $attr3[$atx3]='sqnode',$node $atx3=$atx3+2
+//   xmhaha_addnode('AutoPriorityQ','',$attr3,$studyxml,'','protocol')
+   xmhaha_addnode($queue,'',$attr3,$studyxml,'','protocol')
+   shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' > '+$esq+')'):$dum
+   shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
+   shell('cp -r '+$xmlinfodir+'/'+$node+' '+$sqinfo):$dum
+   return($studyxml,$esq)
+"*************************************************************"

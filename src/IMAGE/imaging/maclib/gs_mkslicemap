@@ -1,0 +1,206 @@
+"macro gs_mkslicemap"
+"***************************************************************************"
+"
+" gs_mkslicemap - macro to generate a single field map from slices"
+" 		
+" Details: Each slice is FT'ed and binary file containing R and I data"
+"	   is generated. All slices corresponding to each tau value is"
+"	   cat and saved into mapname.{1,A,B}.ri"
+"	   1,A,B correspond to tau=0,delref,del respectively"
+"	   
+" 	   input: mapname.{1,A,B}.fid mapname.param shimmap.param"
+" 	   output: mapname.{1,A,B}.{ph,mag,wf}.{fdf}"
+
+"          mapname.f{.fdf}   - frequency file"
+"	   file.param should contain matrix size and tau value"
+"	   cleanup='y' will not generate intermediate files"
+"	   cleanup='n' will keep all files including fdf files"
+
+"	   delref>0 will use ref scan for unwrapping"
+"	   3 fid files are used by gsfield to estimate phase"
+"	   mapname.mag created from mapname.B.mag for thresholding"
+
+"	   gsft2d - FT's the multi-slice data. The output .ri files
+"	   are rearranged as r,p,s dimensions.
+"	   gsphtofield routine creates the mapname.f file"
+"	   mapname.wf files are also created for debugging and analysis"
+
+"	   shimmap file is specified in the Settings page as shimmap.gcoil+shimpar"
+"
+"	   B0.r1.{f,mag}  - remapped image to shimmap grid"
+"	   B0.r2.{mag,mask}  - segmented, oblique voxel or slab image/mask"
+"	   B0.r1.f and B0.r2.f are the same
+"	   B0.r.{f,mag} - either .r1 or .r2 image for gscalcshim"
+
+"	   Limitation: Acquired 2D-image/fieldmap data cannot be viewed
+"
+" Usage:   gs_mkslicemap('mapname')"
+"
+"
+"***************************************************************************"
+$fdf = 'y'    "generate fdf files for viewing, y/n"
+$cleanup = 'y'  "delete all intermediate files, y/n"
+$macro = $0
+
+$GSDIR = userdir+'/gshimdir/data/'
+$GSCAL = userdir+'/gshimdir/calib/'
+$VCAL = '/vnmr/gshimdir/calib/'
+$logfile = $GSDIR+'/gemsshim.log' 
+$rootname = $GSDIR+$1
+$rootnameR = $rootname+'.r'
+$rootname1 = $rootname+'.1'
+$rootname2 = $rootname+'.2'
+$rootnameB = $rootname+'.B'
+$rootnameA = $rootname+'.A'
+
+rm('-f',$rootname+'.?.bin'):$x
+rm('-f',$rootname+'.?.mag'):$x
+rm('-f',$rootname+'.?.ph'):$x
+rm('-f',$rootname+'.wf'):$x
+rm('-f',$rootname+'.f'):$x
+rm('-f',$rootname+'*.mag'):$x
+rm('-f',$rootname+'.*.fdf'):$x     "remove all B0.*.fdf files"
+
+$slices = ns  "$slices = size('pss')"
+if (orient = '3orthogonal') then
+  $totslices = $slices * 3
+else
+  $totslices = $slices
+endif
+
+"generate int data file from .fid file"
+if (nt = 1) then 
+  "dc correction"
+  shell('gsbin "'+$rootname1+'" "'+$rootname1+'.bin" dc'):$x  "B0.1._"
+  shell('gsbin "'+$rootnameB+'" "'+$rootnameB+'.bin" dc'):$x  "B0.B._"
+  shell('gsbin "'+$rootnameA+'" "'+$rootnameA+'.bin" dc'):$x  "B0.A._"
+else
+  shell('gsbin "'+$rootname1+'" "'+$rootname1+'.bin"'):$x  "B0.1._"
+  shell('gsbin "'+$rootnameB+'" "'+$rootnameB+'.bin"'):$x  "B0.B._"
+  shell('gsbin "'+$rootnameA+'" "'+$rootnameA+'.bin"'):$x  "B0.A._"
+endif
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: %s.param ',$macro,$rootname)
+shell('cat "'+$rootname+'.param" >> "'+$logfile+'"'):$x
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsbin => ',$macro)
+shell('ls -l "'+$rootname+'".?.bin >> "'+$logfile+'"'):$x
+rm('-f','B0sl.*.ri'):$x
+"multi-slice data FT'ed and rearranged, ro,pe,ss"
+shell('gsft2d "'+$rootname+'"'):$x    " => B0sl.{1,A,B}.ri "
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsft2d => ',$macro)
+shell('ls -l "'+$rootname+'".?.ri >> "'+$logfile+'"'):$x
+
+$cmd = 'gsphtofield "'+$rootname+'"'
+shell($cmd):$x
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: gsphtofield => ',$macro)
+shell('ls -l "'+$rootname+'".*.wf >> "'+$logfile+'"'):$x
+shell('ls -l "'+$rootname+'".*.mag >> "'+$logfile+'"'):$x
+shell('ls -l "'+$rootname+'".*.f >> "'+$logfile+'"'):$x
+
+
+"B0sl.{1,A,B}.ri => B0sl.{A,B}.{wf,B.mag}, B0sl.f"
+"fdf files cannot be viewed directly because concatenated multi_slice data"   
+"the unwrapped .wf files are also created for debugging purposes"
+"*** temporary: create fdf files; note hdr_test created manually for debugging"
+"concatenated multi-slice data output from gsft2d"
+" span{lro, lpe*ns}  matrix{np/2, nv*ns}; use gems to create dummy header"
+"$hdr = $GSDIR+'hdr_test'
+"shell('fdfgluer '+$hdr+' '+$rootname+'.f '+$rootname+'.f.fdf')
+
+"remap slices onto shimmap grid"
+rm('-f',$rootname+'.mag'):$x
+"longer te image(.B) used for threshold"	
+shell('ln -s "'+$rootnameB+'.mag" "'+$rootname+'.mag"'):$x
+$cmd = 'gsreformat "'+$rootname+'" "'+$GSDIR+'shimmap"'
+shell($cmd):$x
+rm('-f',$rootnameR+'.f',$rootnameR+'.mag'):$x
+rm('-f',$rootname+'.r1.f'):$x
+rm('-f',$rootname+'.r1.mag'):$x
+"B0sl.r1 remapped data"
+mv('-f',$rootname+'.f.r1',$rootname+'.r1.f')
+mv('-f',$rootname+'.mag.r1',$rootname+'.r1.mag')
+cp($rootname+'.r1.f',$rootnameR+'.f')    ".r. files used by gshimcalc"
+cp($rootname+'.r1.mag',$rootnameR+'.mag')
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: shimregion=%s; gsreformat => ',$macro,shimregion) 
+shell('ls -l "'+$rootname+'".r1.* >> "'+$logfile+'"'):$x
+
+rm('-f',$rootname+'*.r2.*'):$x
+if(shimregion = 'roi') then
+  write('error','%s: Shimregion "roi" not supported',$macro)
+  abort
+endif
+if(shimregion = 'voxel') then
+  "generate magnitude mask of oblique voxel shim ROI"
+  /* gsmapmask B0.r.mag shimmap.param shimroi.param */
+  shell('gsmapmask "'+$rootnameR+'.mag" "'+$GSDIR+'shimmap" "'+$GSDIR+'/shimroi"'):$x  "=> B0.r.mag.r2, ..mask"  
+  mv($rootnameR+'.mag.r2',$rootname+'.r2.mag')
+  cp($rootname+'.r2.mag',$rootnameR+'.mag') "shim roi mask - image"
+  mv($rootnameR+'.mag.r2.mask',$rootname+'.r2.mask') "shim roi mask"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; gsmapmask => ',$macro,shimregion) 
+  shell('ls -l "'+$rootname+'".r2.* >> "'+$logfile+'"'):$x
+endif
+
+if(shimregion = 'slab') then
+  "generate magnitude mask of oblique slab shim ROI"
+  /* gsmapmask B0.r.mag shimmap.param shimroi.param */
+  shell('gsmapmask "'+$rootnameR+'.mag" "'+$GSDIR+'shimmap" "'+$GSDIR+'/shimroi"'):$x  "=> B0.mag.r2"  
+  mv($rootnameR+'.mag.r2',$rootname+'.r2.mag')
+  cp($rootname+'.r2.mag',$rootnameR+'.mag')  "shim roi mask - image"
+  mv($rootnameR+'.mag.r2.mask',$rootname+'.r2.mask')  "shim roi mask"
+  write('file',$logfile,'*******************************************************')
+  write('file',$logfile,'%s: shimregion=%s; gsmapmask => ',$macro,shimregion) 
+  shell('ls -l "'+$rootname+'".r2.* >> "'+$logfile+'"'):$x
+endif
+
+cp($rootname+'.param',$rootnameR+'.param') "=>B0.r.param for gscalc"
+
+"shimmap.hdr created by gs_calcslice=>gs_refhdr"
+$refhdr = $GSDIR+'/shimmap.hdr'
+"images after remapping"
+shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r1.mag" "'+$rootname+'.r1.mag.fdf"'):$x
+shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r1.f" "'+$rootname+'.r1.f.fdf"'):$x
+
+"segmented images for oblique voxel/slab shim region for gshimcalc" 
+if(shimregion = 'voxel') or (shimregion = 'slab') then
+  shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r2.mag" "'+$rootname+'.r2.mag.fdf"'):$x
+  shell('fdfgluer "'+$refhdr+'" "'+$rootname+'.r2.mask" "'+$rootname+'.r2.mask.fdf"'):$x
+endif
+
+"input images for gshimcalc"
+"shell('fdfgluer '+$refhdr+' '+$rootnameR+'.mag '+$rootnameR+'.mag.fdf')
+"shell('fdfgluer '+$refhdr+' '+$rootnameR+'.f '+$rootnameR+'.f.fdf')
+
+"*** temporary: create fdf files; note hdr2d created manually for debugging"
+"concatenated multi-slice data"
+" span{lro, lpe*ns}  matrix{np/2, nv*ns}; use gems to create dummy header"
+$hdr = $GSDIR+'hdr_test'
+shell('fdfgluer "'+$hdr+'" "'+$rootnameB+'.mag" "'+$rootnameB+'.mag.fdf"'):$x
+shell('fdfgluer "'+$hdr+'" "'+$rootnameA+'.wf" "'+$rootnameA+'.wf.fdf"'):$x
+shell('fdfgluer "'+$hdr+'" "'+$rootnameB+'.wf" "'+$rootnameB+'.wf.fdf"'):$x
+
+"delete intermediate files "
+if ($cleanup = 'y') then
+  rm('-f',$rootname+'*.ph'):$x
+  rm('-f',$rootname+'A.mag'):$x  "B.mag used by gshimcalc for threshold"
+  rm('-f',$rootname+'*.wf'):$x
+  rm('-f',$rootname+'*.bin'):$x
+  rm('-f',$GSDIR+'shimmap.f'):$x
+endif
+
+write('file',$logfile,'*******************************************************')
+write('file',$logfile,'%s: fdf files:',$macro) 
+shell('ls -l "'+$rootname+'".*.fdf >> "'+$logfile+'"'):$x
+
+write('line3','3D Field map created')
+
+"************************************************************************"
+"		Modifications History"
+
+" 20050805(ss) - Modified for arbitrary FOV"
+
+"*************************************************************************"

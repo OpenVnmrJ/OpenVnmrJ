@@ -1,0 +1,81 @@
+
+*******************************************************************************
+unixtime:r1,r2	- Return marker for current time to a Magical variable
+systemtime:r1,r2   - synonym for unixtime
+
+unixtime('format'):$str - Return current time as a formatted string.
+systemtime('format'):$str - Return current time as a formatted string.
+
+unixtime('format','string'):$sec - Return arbitrary time as elapsed seconds since 1970
+unixtime('format',seconds):$str  - Convert arbitrary elapsed seconds since 1970 to a formatted time
+systemtime('format','string'):$sec - Return arbitrary time as elapsed seconds since 1970
+systemtime('format',seconds):$str  - Convert arbitrary elapsed seconds since 1970 to a formatted time
+*******************************************************************************
+
+unixtime and systemtime are two names for the same function. Everything
+described for unixtime also applies to the systemtime command. They determine
+the current date and time as a system-dependent integer. The return value
+is in seconds. This value is usually defined as the elapsed time from an
+"epoch", which is often 1970. A second return value will give a microsecond
+value, for higher resolution.
+
+The unixtime command helps time the execution of commands.  It returns a
+marker representing the current time, in seconds.  Call unixtime at the
+start and the end of a sequence of operation and then subtract the starting
+from the ending time to get the elapsed time.
+
+unixtime accesses only the wall clock time, not the CPU time or any other
+statistic connected with the current process.  The units for values returned
+are seconds and values should be accurate to within a few milliseconds.
+
+Be aware that unixtime cannot time operations that run in background, for
+example, the ft3d command or go and its aliases.
+
+The following Magical code fragment illustrates how you time something:
+
+
+    $t1 = 0
+    $t2 = 0
+    $t3 = 0
+    unixtime:$t1
+    ft2d
+    unixtime:$t2
+    $t3=$t2-$t1
+    write('line3','elapsed time for ft2d is %f secs',$t3
+
+For more information, consult the UNIX manual entries time and gettimeofday.
+
+If a single argument is provided, it is used to format the current time as a text
+string. Various conversion characters can be used to format the time.
+For example
+  unixtime('%F %T'):$time
+returns $time= '2011-01-12 15:29:55'
+Some of the common conversions are
+  %a   abbreviated weekday name
+  %b   abbreviated month name
+  %m   month as an integer (01 - 12)
+  %d   day of the month (01 - 31)
+  %y   year as two digit number
+  %Y   year as four digit number
+  %F   Same as %Y-%m-%d
+  %H   hour (00 - 23)
+  %M   minute (00 - 59)
+  %S   second (00 - 61)
+  %T   Same as %H:%M:%S
+For a complete list of the format options, consult the UNIX manual entry strftime.
+
+If two arguments are given, the behavior of unixtime depends on whether the second
+argument is a number or a formatted time string. In both cases, the first argument
+is a format string as for the case above. If the second argument is a number, then
+unixtime uses its value as the elapsed time since 1970 to format a string  based
+on the first format argument. for example, using the examples above
+  unixtime('%T',$t1):$str
+would set $str to the hr:min:sec just before the ft2d program was called.
+If the second argument is a formatted string, then unixtime will return the elapsed
+seconds since 1970. For example,
+  unixtime('%a %b %d %T %Y:','Tue Dec 14 16:13:01 2010:'):$sec
+will set $sec to the elapsed seconds from 1970 to the data and time of the second argument.
+Note the the format conversion specification of the first argument must match the
+formatted second argument. If it does not match, or if there is not enough information
+to determine the number of seconds since 1970, a -1 is returned.
+

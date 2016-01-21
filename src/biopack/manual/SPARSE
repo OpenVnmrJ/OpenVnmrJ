@@ -1,0 +1,199 @@
+Setting Up Sparse Sampling 
+
+   This manual describes software that will allow implementation 
+of sparse sampling with minimal user interference and coding 
+requirements. It supports 2D to 4D experiments at the current 
+stage with a potential to be expanded to higher dimensionality.
+
+Pulse sequences
+
+   A very simple modification is required to the existing pulse 
+sequences.
+1) An include file "CompSens.h" is added just after the "standard.h"
+2) The get_RS(); statement is put just before any modifications to 
+the evolution delays (d2,d3,d4) are made. 
+
+This will automatically generate the sampling schedule and modify 
+the evolution delays accordingly. The same statement will read 
+external user-defined sampling schedules.
+
+Automatic pulse sequence modification is available in the 
+experimental setup panel "Sampling" via the "Recompile Sequence" 
+button which activates the psg4cs script. This is normally not 
+necessary since the sequence is compiled when the SPARSE(Kupce) 
+option is selected from the "Select Indirect Dimension Sampling" 
+menu. In addition to the two modifications described above it 
+will add the following conditional statement(s): 
+if(nimax>ni) ni=nimax; 
+This insures that any subsequent statements involving the 
+ni (ni2, ni3) counters work properly. Note that the maximum 
+evolution delay is now determined by nimax (ni2max, ni3max) 
+rather than ni. While this is a "quick and dirty" approach 
+designed to provide maximum convenience to the user, 
+a proper coding of the pulse sequences is left in the safe 
+hands of the facility managers. 
+
+The psg4cs command is executed in a shell as follows:
+>psg4cs hsqc.c     	
+ - this modifies the hsqc.c pulse sequence to allow random sampling;
+>psg4cs hsqc.c -u	
+ - this will un-modify the hsqc.c pulse sequence;
+
+Both commands can be executed multiple times with no harm to the code.
+
+
+The sampling schedule, sampling.sch is stored in the current 
+experiment as a text file. The number of columns corresponds 
+to the number of randomly sampled dimensions. The following 
+formats are accepted. (1) The sampling schedule is defined by
+integers that represent the sampling increments. For instance, 
+in a 3D experiment the t1 and t2 increments in that order 
+are represented as follows:
+	5	8
+	7	2
+	1	29
+	...
+Alternatively, the evolution delays t1 and t2 (in that order) 
+can be set out explicitly:
+
+	0.00402	0.00208
+	0.00711	0.00116
+	0.01789	0.00292
+	...
+The number of rows should be equal to the number of 
+sampling points (ni*ni2). The sampling.sch file is required 
+for subsequent data processing! If the file is accidentally 
+lost, it can be restored, e.g., by using the dps command. 
+The file is stored in the .fid file by the BioPack macro BPsvf.
+   
+Experiment setup
+   The "Sampling" panel display is governed by the choice 
+from the "Select Indirect Dimension Sampling" menu. This sets 
+the SPARSE parameter (flag) to SPARSE=‘y’ for the Kupce or 
+Orekhov method. When the Kupce method is chosen the proper 
+panel display is displayed.  A number of entry boxes for ni 
+and nimax parameters appear depending on the presence or 
+absence of the corresponding parameters in the current 
+parameter set. The ni (ni2,ni3) parameter represents the 
+number of increments that will be executed by the pulse 
+sequence. The nimax (ni2max, ni3max) parameter represents 
+the number of data points that the data set will be 
+expanded to ("inflated") at the "Process Data" stage. 
+It is this parameter that will define the spectral resolution.
+
+The check boxes "Hypercomplex" set phase=1,2 (phase2, phase3). 
+Note that currently the CLEAN processing supports only 
+hypercomplex data sets. 
+
+The radio buttons "Auto" and "other" allow user to select 
+the sampling scheduler for the experiment. The "Auto" button 
+sets stype="a" that ensures automatic (Kupce) sampling 
+scheduling. The sampling schedule is generated "on-the-fly" 
+either at "dps" or "go" time. The "other" (stype='n') button 
+allows for externally (user) created sampling schedules to be 
+used in the current experiment, provided the sampling.sch file 
+format complies with the rules described in the "Pulse sequences" 
+section above. Any user-created schedule must use the name 
+"sampling.sch" and must be present in the current experiment.
+
+The sampling schedule "Show" button and the subsequent entry box 
+will display the requested number of lines from the sampling.sch 
+file that must be present in the current experiment. The 
+"Sequential" check box determines whether the sampling schedule 
+is run sequentially or randomly.  The sampling schedulers 
+typically require an arbitrary number (seed) that is used by 
+random number generators. This parameter, skey usually does 
+not require changing and for the sake of keeping the panels 
+simple is not represented in the current panel, but can be 
+changed via the command line. 
+   
+   
+CLEAN Parameters
+
+All the parameters in this section are activated and set via 
+the graphical user interface, but can be accessed also via 
+the command line. 
+
+SPARSE   flag (y or n) indicating whether sparse sampling 
+is used in the current experiment. The flag is used to 
+activate sparse sampling panels.
+
+stype	  flag indicating the sampling type
+   	y or a indicates automatic sampling scheduling;
+   	n and any other letter except y and a indicates 
+        that an existing schedule is used.
+   
+skey	- parameter (integer) containing the seed for the 
+          random number generator used to create the sampling 
+          schedules. A positive number indicates that the sampling 
+          schedule is executed sequentially. A negative number 
+          indicates that the sampling schedule is applied randomly.
+nimax	- the maximum number of data points in the t1 domain 
+          that the data set is to be expanded to. This defines 
+          the maximum evolution time in t1.
+CSlines	- (integer) contains the number of sampling schedule lines 
+          to be displayed in the text window at the user request.
+CSsp	- (integer) contains the starting point of the region 
+          of interest (in real data points).
+CSwp	- (integer) contains the width of the region of interest 
+          (in real data points).
+CS_se 	- flag (y or n) indicating whether the sensitivity 
+          enhanced processing will be activated.
+CS_inf	- flag (y or n) indicating whether the data need be inflated.
+CS_cln	- flag (y or n) indicating whether CLEAN processing 
+          will be activated.
+CS_dpars -flag (y or n) indicating whether default processing 
+          parameters will be used.
+CSdnoise -flag (y or n) indicating whether de-noising option 
+          in the CLEAN processing. If CSdnoise is set to y, the 
+          residual noise is not added to the final spectrum. 
+          This reduces the appearance of the t1-noise like artefacts 
+          in the final spectrum and helps when displaying and 
+          plotting spectra with high dynamic range. Note however 
+          that depending on the CSthr setting the noise floor may 
+          contain individual noise spikes that can resemble weak 
+          peaks and the line shape may appear somewhat distorted 
+          particularly in non-constant time experiments. Some weaker 
+          peaks may be lost.
+CSthr -   parameter (real); sets the relative threshold with respect 
+          to the noise level for CLEAN processing. A higher threshold 
+          speeds up the processing whereas a lower number makes the 
+          result more accurate. The minimum allowed threshold is set 
+          to 1.0 and the recommended values are 2.0 for 2D processing 
+          and 4.0 for 3D processing.
+
+CLEAN Macros
+
+All the macros in the CLEAN software are designed for use with 
+the panels and are not expected to be used manually. Therefore 
+this section is rather technical and for documentation purposes only.
+
+parCS 	- creates the parameters required for random sampling 
+          and CLEAN processing.
+cln2d 	- executes 2D CLEAN processing; executes the cln2d command 
+          in a shell.
+cln3d 	- executes 3D CLEAN processing; executes the cln3d command 
+          in a shell; activates the processing monitoring script 
+          cln3dwait which reports end of the cln3d processing.
+CScoef	- checks f1coef, f2coef and f3coef settings and indicates 
+          if any sensitivity enhanced experiment domains are present. 
+          The macro is used to set up flags for the proc_se command.
+CSdensity - calculates the sampling density; used to display sampling 
+          density in the acquisition panel. 
+CSdpars - sets the default processing parameters for the CLEAN processing
+CSinflate - sets up the data expansion options and executes the inflateND 
+          command in a shell;
+CSppp 	- sets up the flags for CLEAN processing panels.
+CSproc	- controls the CLEAN processing flow; executes the individual 
+          processing macros.
+CSproc_se - executes proc_se command in a shell; called by the CSproc macro.
+CSrsw 	- executes rsw command in a shell; Called by the CSproc macro.
+CS_select - selects the region of interest and sets the CSsp 
+          and CSwp parameters. 
+print_sch - prints a number of lines from the sampling.sch file 
+          in the text (alpha) window.
+psg4cs	- modifies an existing pulse sequence to allow use of a 
+          sampling schedule; executes the psg4cs command in a shell; 
+          used by the "psg check" button in the experiment setup panel. 
+xcln3d 	- terminates the 3D CLEAN processing; used by the "Abort" button 
+          in the processing panels.

@@ -1,0 +1,94 @@
+"macro AT76"
+"AT76" "Phase-cycle cancellation after gradient pulse (lock test) "
+
+if (at_gradtests='n') then ATnext return endif  "optional skipping"
+
+   at_pfgon=pfgon
+   substr(pfgon,3,1):$zon
+   if ($zon)='n' then
+     write('line3','Z-axis is disabled. Re-set "pfgon". Gradient test skipped ') 
+     ATnext return
+   endif
+
+if ($#=0) then
+   ATrtp('standard')
+    exists('sysgcoil','parameter','systemglobal'):$present
+    if $present=1 then
+       at_sysgcoil=sysgcoil
+       sysgcoil='' gcoil=''
+    endif          "memorize existing sysgcoil value (restored at end by ATnext)"
+
+    is_IP:$isIP
+    if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+    endif
+
+   text('Phase-cycle cancellation (test of lock)\\10G/cm 1msec z-axis rectangular gradient\\applied 100 usec prior to RF pulse.\\Pulse cycled 0,2,1,3.\\ Signal should cancel in 2 or 4 transients')
+   seqfil='ATgcancel'
+   vchannelmap='0','z'
+   at_currenttest='gcancel'
+   d1=20*at_T1-at d2=.0001
+    exists('gradientshaping','parameter','global'):$e
+    if ($e=1 and gradientshaping='y') then
+      shaped='s' else shaped='n'
+    endif
+   gt1=.001 gzlvl1=10/at_gzcal  "10G/cm"
+   ss=4 nt=1,1,1,1,2,2,2,2,4,4,4,4
+   wnt='ATwft sp=3.8p wp=2p select(1) av vsadj dssh dtext'
+   wexp='AT76(`PART1`)'
+   ATcycle
+   au
+   write('line3','Phase-cycle cancellation following gradient pulse')
+   dps
+elseif ($1='PART1') then
+  wft
+  if (at_plotauto='y') then
+   if (at_printparams='y') then dn2='' pap 
+      pps(120,0,wcmax-120,90)
+      ATpltext ATpage
+   endif
+  endif
+  atext('vertical scale x100 in expansions')
+  if (at_plotauto='y') then
+   pl('all') ATpltext(100,wc2max-20)
+   dssh dtext
+   vp=vp+30 sc=146 vs=vs*100 pl(5,12) dssn(5,12) ATpage
+  endif
+  r1=1 $htsum1=0 $htsum2=0 $htsum3=0
+  repeat
+   select(r1) peak:$ht $htsum1=$htsum1+$ht
+   r1=r1+1 
+   until r1=5 
+  r1=5
+  repeat
+   select(r1) peak:$ht $htsum2=$htsum2+$ht
+   r1=r1+1 
+   until r1=9 
+  r1=9
+  repeat
+   select(r1) peak:$ht $htsum3=$htsum3+$ht
+   r1=r1+1 
+   until r1=13 
+  $av1=$htsum1/4 $av2=$htsum2/4 $av3=$htsum3/4
+  $resid2=trunc(100*100*$av2/$av1)/100  $resid3=trunc(100*100*$av3/$av1)/100
+if shaped='s' then
+  ATrecord('GCANCELs','Residual Signal in Autoshaped Gradient Phase-Cycle Cancellation Test','2_scans',$resid2,'4_scans',$resid3) 
+   write('file',autotestdir+'/REPORT','Cancellation (Autoshaped Gradient) 2 scans:%1.3f percent;4 scans:%1.3f percent',$resid2,$resid3)
+else
+  ATrecord('GCANCEL','Residual Signal in Gradient Phase-Cycle Cancellation Test','2_scans',$resid2,'4_scans',$resid3) 
+   write('file',autotestdir+'/REPORT','Cancellation (after Gradient) 2 scans:  %1.3f percent ; 4 scans: %1.3f percent',$resid2,$resid3)
+endif
+   ATsvf
+
+   exists('sysgcoil','parameter','systemglobal'):$present
+   if $present=1 then  sysgcoil=at_sysgcoil gcoil=sysgcoil endif "restore sysgcoil value"
+
+   is_IP:$isIP
+   if (($isIP) and auto='y')  then
+       savemodule('atglobal',userdir+'/modules','global')
+       xmhaha('sendcmd','IPupdateATglobalfg')
+   endif
+
+ATnext
+endif

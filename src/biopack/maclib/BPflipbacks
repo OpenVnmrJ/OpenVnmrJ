@@ -1,0 +1,110 @@
+"macro BPflipbacks"
+"BPflipbacks  -a macro to handle H2O soft pulses"
+
+  exists('pwHs','parameter'):$e
+    if $e=1 then
+      getparam('pwHs','H1'):pwHs
+"      pwHs=1700*(500/sfrq)  "  "use probefile value"
+      exists('grecov','parameter'):$e  "rna sequence"
+      if $e then
+        $shape='rna_H2Osinc'
+      else
+        $shape='H2Osinc'
+      endif
+      exists(systemdir+'/shapelib/'+$shape+'.RF','file'):$es
+      if not($es) then
+        exists(userdir+'/shapelib/'+$shape+'.RF','file'):$es
+      endif
+      if $es then
+        pwsadj($shape,'pwHs')
+      endif
+      exists('tpwrsf','parameter'):$e
+      if $e=1 then getparam('tpwrsf','H1'):tpwrsf endif
+    endif
+
+    exists('tpwrsf_t','parameter'):$e
+    if $e=0 then create('tpwrsf_t','real') tpwrsf_t=4095 endif
+
+    exists('tpwrsf_i','parameter'):$e
+    if $e=0 then create('tpwrsf_i','real') tpwrsf_i=4095 endif
+
+    exists('tpwrsf_u','parameter'):$e
+    if $e=0 then create('tpwrsf_u','real') tpwrsf_u=4095 endif
+
+    exists('tpwrsf_d','parameter'):$e
+    if $e=0 then create('tpwrsf_d','real') tpwrsf_d=4095 endif
+
+    exists('tpwrsf_n','parameter'):$e
+    if $e=0 then create('tpwrsf_n','real') tpwrsf_n=4095 endif
+
+    exists('tpwrsf_a','parameter'):$e
+    if $e=0 then create('tpwrsf_a','real') tpwrsf_a=4095 endif
+
+    $probe=probe
+    exists(userdir+'/probes/'+$probe,'file','r-x'):$e
+    if not($e) then
+      $sysadd = 1
+      $probedir = systemdir + '/probes'
+    else
+      $sysadd = 0
+      $probedir = userdir + '/probes'
+    endif
+
+    $result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+
+    $probefile = $probedir + '/' + $probe + '/' + $probe
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_i','read'):$result,$numi
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_t','read'):$result,$numt
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_u','read'):$result,$numu
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_d','read'):$result,$numd
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_a','read'):$result,$numa
+    lookup('file',$probefile)
+    lookup('seek','H1tpwrsf_n','read'):$result,$numn
+    if $numi=0 then
+      $tpwrsf_i='' format(tpwrsf_i,4,0):$tpwrsf_i
+      addparams('tpwrsf_i',$tpwrsf_i,'H1')
+    else
+      getparam('tpwrsf_i','H1'):tpwrsf_i
+    endif
+    if $numt=0 then
+      $tpwrsf_t='' format(tpwrsf_t,4,0):$tpwrsf_t
+      addparams('tpwrsf_t',$tpwrsf_t,'H1')
+    else
+      getparam('tpwrsf_t','H1'):tpwrsf_t
+    endif
+    if $numu=0 then
+      $tpwrsf_u='' format(tpwrsf_u,4,0):$tpwrsf_u
+      addparams('tpwrsf_u',$tpwrsf_u,'H1')
+    else
+      getparam('tpwrsf_u','H1'):tpwrsf_u
+    endif
+    if $numd=0 then
+      $tpwrsf_d='' format(tpwrsf_d,4,0):$tpwrsf_d
+      addparams('tpwrsf_d',$tpwrsf_d,'H1')
+    else
+      getparam('tpwrsf_d','H1'):tpwrsf_d
+    endif
+    if $numa=0 then
+      $tpwrsf_a='' format(tpwrsf_a,4,0):$tpwrsf_a
+      addparams('tpwrsf_a',$tpwrsf_a,'H1')
+    else
+      getparam('tpwrsf_a','H1'):tpwrsf_a
+    endif
+    if $numn=0 then
+      $tpwrsf_n='' format(tpwrsf_n,4,0):$tpwrsf_n
+      addparams('tpwrsf_n',$tpwrsf_n,'H1')
+    else
+      getparam('tpwrsf_n','H1'):tpwrsf_n
+    endif
+
+    exists('pwHs2','parameter'):$e
+    if $e=1 then
+      getparam('pwHs2','H1'):pwHs2
+      exists('finepwrf','parameter'):$e
+      if $e=1 then getparam('finepwrf','H1'):finepwrf endif
+    endif

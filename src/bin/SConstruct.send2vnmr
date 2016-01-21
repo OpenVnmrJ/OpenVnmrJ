@@ -1,0 +1,60 @@
+import os
+import sys
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# targets
+send2VnmrTarget = 'send2Vnmr'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+send2VnmrFileList = ['send2Vnmr.c']
+
+# build environments
+env = Environment(CCFLAGS    = '-O2 -m32',
+                  CPPDEFINES = ['LINUX'],
+                  LINKFLAGS  = '-O -m32 -g -Wl,-rpath,/vnmr/lib',
+                  LIBPATH = [ncommPath],
+                  LIBS = [ 'm', 'acqcomm' ])
+
+
+
+if ('interix' in platform):    # Interix
+   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+   LibAcqCom=File(os.path.join(os.pardir,'ncomm','libacqcomm.a'))
+   env.Replace( CC=interixgcc )
+   env.Replace(  LINKFLAGS='-O -m32' )
+   env.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
+   env.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
+   env.Replace( LIBS= ['stdc++','socket','m',LibAcqCom ])
+   # print "CC is:", env['CC']
+   # print "C++ is:", env['CXX']
+
+
+# actual builds
+send2Vnmr = env.Program(target  = send2VnmrTarget,
+                        source  = [send2VnmrFileList],
+                       )
+
+#                        LIBPATH = [ncommPath],
+#                        LIBS    = Libs )
+
+#                        LIBS    = ['m', 'acqcomm'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+env.AddPostAction(send2Vnmr,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, send2VnmrTarget))))
+

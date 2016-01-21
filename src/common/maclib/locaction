@@ -1,0 +1,452 @@
+"macro locaction"
+
+if $# < 6 then
+    write('line3','usage: locaction(action, objtype, hostname, fullpath, target), [source]')
+    return
+endif
+
+" Arguments"
+"   $1 = action"
+"   $2 = category"
+"   $3 = hostname (empty string for macros)"
+"   $4 = filepath"
+"   $5 = target"
+"   $6 = command"
+
+" Possible values for arguments"
+"   action"
+"     Click"
+"     DoubleClick"
+"     DragNDrop"
+"     Open"
+"   category"
+"     vnmr_data (.fid file)"
+"     vnmr_par  (.par file)"
+"     workspace"
+"     shims"
+"     command_n_macro"
+"     pulse_sequence_macro"
+"     study"
+"     protocol"
+"     automation"
+"     lcstudy"
+"     vnmr_record  (double click handled in java)"
+"     vnmr_rec_data"
+"     panels_n_components (handled in java)"
+"     directory"
+"   target"
+"     Default"
+"     Canvas"
+"     TrashCan"
+"     Delete"
+"     Line3"
+"     ShimPanel"
+"     StudyQueue"
+"     ProtocolEditor"
+"     ReviewQueue"
+"   source  [optional arg]"
+"     PROTOCOLBROWSER"
+"     EXPSELECTOR"
+"     BROWSER    (File Browser)"
+
+" To have a locator statement use a different macro, add a line like the"
+" following to the locator_statement_xxx.xml file for the statement desired:"
+"     <ActionMacro value=locaction2/>  "
+" Or, you can have a given statement execute a command instead of a macro"
+" by adding a line like the following for the statement desired, where"
+" the '+' signs should really be double quotes: "
+"     <ActionCommand value=+vnmrjcmd('window','1 2')+/>  "
+
+/*
+ if $# = 6 then
+   write('line3','%s(%s,%s,%s,%s,%s,%s)',$0,$1,$2,$3,$4,$5,$6)
+ elseif $# = 7 then
+   write('line3','%s(%s,%s,%s,%s,%s,%s,%s)',$0,$1,$2,$3,$4,$5,$6,$7)
+ endif
+*/
+
+if (appmode <> 'imaging') then
+  exists('xmhaha','maclib'):$macex
+  if ($macex) then
+    $ret=0
+    if ($2 = 'study') then
+        xmhaha('readstudy',$4,$5):$ret
+    else
+	xmhaha($2,$4,$1,$5):$ret
+//    elseif (($2='protocol') or
+//            ($2='vnmr_data') or
+//            ($2='vnmr_record') or
+//            ($2='vnmr_rec_data') or
+//            ($2='directory') or
+//	    ($2='vfs') or
+//            ($2='unknown') or
+//            ($2='file')) then
+//                xmhaha($2,$4):$ret
+    endif
+    if ($ret) then return endif
+  endif
+elseif($2='vnmr_data') then // see whether .csi exists
+  csiCmd('getCSIPath',$4):$csidir
+  if($csidir<>'') then
+    csiLoad($csidir, $1)
+    return
+  endif
+elseif($2='directory') then // see whether is csi dir
+  csiCmd('isCSIDir',$4):$n
+  if($n) then
+    csiLoad($4, $1)
+    return
+  endif
+endif
+
+$activestudy=activestudy[1]
+
+if (($5 = 'TrashCan') or ($5 = 'Delete')) then
+    dndtr($3, $2, $4, $5)
+elseif $5 = 'Line3' then
+    if ($2 = 'vnmr_data') then
+         dndfid($4)
+    elseif ($2 = 'vnmr_par') then
+	 dndpar($4)
+    elseif ($2 = 'shims') then
+	 dndshims($4)
+    elseif ($2 = 'protocol') then
+	 locprotoexec($4)
+    elseif ($2 = 'lcstudy') then
+        rtlcnmr($4)
+    else
+	 write('line3','%s not implemented for %s', $1, $2)
+    endif
+elseif ($5 = 'Default') then
+    if ($2 = 'vnmr_data') then
+         dndfid($4)
+    elseif ($2 = 'vnmr_par') then
+	 dndpar($4)
+    elseif ($2 = 'workspace') then
+	 dndjoin($4)
+    elseif ($2 = 'shims') then
+	 dndshims($4)
+    elseif (($2 = 'vnmr_record') or ($2 = 'vnmr_rec_data')) then
+         if(appmode = 'imaging') then
+           RQaction('loadData', $4, $1)
+         else
+           if ($2 = 'vnmr_record') then
+               rtv($4+'/acqfil/procpar','noabort','operator_'):$op
+           else
+               rtv($4+'/procpar','noabort','operator_'):$op
+           endif
+           if (operator = $op) then
+               dndfid($4,$2)
+           else
+             rights('openotheroperatorrecords'):$others
+             if ($others = 1) then
+               dndfid($4,$2)
+             else
+               write('error', 'This operator not authorized to open others records.')
+             endif
+           endif
+	 endif
+    elseif (($2='command_n_macro') or ($2='pulse_sequence_macro')) then
+	 exec($4)
+    elseif ($2 = 'lcstudy') then
+         rtlcnmr($4)
+    elseif ($2 = 'study') then
+          if (system = 'spectrometer') then
+            readhw('status'):$hwval
+            if ($hwval>0.5 and $hwval<>10 and $hwval<>17) then
+              write('line3','Cannot load studies while acquiring.')
+              return
+            endif
+          endif
+          if ($activestudy <> 'null') then
+            if (sqmode='go') then
+              write('line3','Cannot load studies while a study is active.')
+              return
+            endif
+            sqend
+          endif
+ 	  vnmrjcmd('SQ read "' + $4 +'/study.xml"')
+          sqdir=$4
+          if appmode='imaging' then sqpars else cqpars endif
+          exists(sqdir+'/studypar','file'):$e
+          if ($e > 0.5) then
+            fread(sqdir+'/studypar')
+            studyid=studyid_
+            vnmrjcmd('pnew','layout')
+          endif
+          sqfilemenu('init')
+          write('line3','Loaded study %s.',sqdir)
+          copyid = 'null','null'
+          actionid = 'null'
+    elseif ($2 = 'protocol') then
+        if ($activestudy='null') then
+          if (appmode='walkup') then
+            write('line3','Use New Study')
+          elseif (appmode='lc') then
+            write('line3','Use Start Run')
+          elseif appmode='imaging' then
+            $begin='n'
+            if (size('activestudy')>1.5) then if activestudy[2]='beginstudy' then
+              $begin='y'
+            endif endif
+            if ($begin='y') then
+              write('line3','%s(\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\'',$0,$1,$2,$3,$4,$5,$6):$cmd
+              $reqparReturnValue=0
+              reqpartest($cmd):$reqparReturnValue
+              if ($reqparReturnValue > 0) then
+                 return
+              endif
+              xmcreate
+              exec($cmd):$e
+            else
+              write('line3','Use New Study')
+            endif
+          else
+            locprotoexec($4)
+          endif
+        else
+          if (appmode='imaging') or ((appmode='walkup' or appmode='lc') and testacquire<>'y') then
+            xmmakenode('xml',$4,$6)
+            if (appmode='walkup' or appmode='lc') then
+              $cmd='VP 1 vnmrjcmd(`VP 1 xmtime`)'
+              vnmrjcmd($cmd)
+            endif
+          else
+            locprotoexec($4)
+          endif
+        endif
+    elseif ($2 = 'molecule') or ($2 = 'icon') then
+	showicon($2, $4)
+    elseif ($2 = 'image_file') then
+	lookup('mfile',$4,'seek','spec_display_rank','read',2):$s,$k,$f
+	if($f=2 and $k='1;') then //load 1D spectral data
+          write('line3', 'Load spectral data %s.',$4)
+	  asp1D('load',$4)
+	elseif($f=2) then
+	  $key='spec'
+	  strstr($4,'/','last'):$n,$s1,$s2
+	  if($n) then 
+	    strstr($s2,'.fdf'):$n,$s1
+            if($n) then $key=$s1 endif
+	  endif
+          write('line3', 'Load spectral data %s.',$4)
+	  aipLoadSpec($4,$key)
+	else
+          RQaction('loadData', $4, $1)
+	endif
+    elseif ($2 = 'image_dir') then
+      RQaction('loadData', $4, $1)
+    elseif ($2 = 'unknown') then
+        " File types which are not locator files, will come here with a"
+	" type of (unknown).  It is possible to add code here to determine"
+	" if the file is some specifictype of file and then do some specific"
+	" operation on it."
+        write('line3','File type (unknown) found in macro locaction for %s with destination %s' , $4,$5 )
+        write('line3','You may modify the macro locaction if necessary to handle this type file.')
+    else
+      substr($4, 'dirname'):$dir,$file
+      substr($dir, 'basename'):$base,$ext
+      if($file='procpar' and ($ext='img' or $ext='par' or $ext='fid')) then
+        xmaddimgtosq($4,'new')
+      else
+        exists('procmodule','parameter'):$e
+        if($e) then
+	  if($file=procmodule) then
+	    csiCmd('rtProc',procmodule)
+	  endif
+        endif 
+      endif
+    endif
+
+elseif ($5 = 'Canvas') then
+    if ($2 = 'vnmr_data') then
+         dndfid($4)
+    elseif ($2 = 'vnmr_par') then
+	 dndpar($4)
+    elseif ($2 = 'workspace') then
+	 dndjoin($4)
+    elseif ($2 = 'shims') then
+	 dndshims($4)
+    elseif (($2 = 'vnmr_record') or ($2 = 'vnmr_rec_data')) then
+         if(appmode = 'imaging') then
+           RQaction('loadData', $4, $1)
+         else
+           if ($2 = 'vnmr_record') then
+               rtv($4+'/acqfil/procpar','noabort','operator_'):$op
+           else
+               rtv($4+'/procpar','noabort','operator_'):$op
+           endif
+           if (operator = $op) then
+               dndfid($4,$2)
+           else
+             rights('openotheroperatorrecords'):$others
+             if ($others = 1) then
+               dndfid($4,$2)
+             else
+               write('error', 'This operator not authorized to open others records.')
+             endif
+           endif
+         endif
+    elseif (($2='command_n_macro') or ($2='pulse_sequence_macro')) then
+	 exec($4)
+    elseif ($2 = 'study') then
+        if(jviewport=3 and appmode = 'imaging') then
+          RQaction('loadStudyData', $4, $1)
+	else
+	  write('line3','%s not implemented for %s', $1, $2)
+	endif
+    elseif ($2 = 'lcstudy') then  // for lcnmr
+         rtlcnmr($4)
+    elseif ($2 = 'molecule') or ($2 = 'icon') then
+	 showicon($2, $4)
+    elseif ($2 = 'protocol') then
+	 locprotoexec($4)
+    elseif ($2 = 'unknown') then
+        " File types which are not locator files, will come here with a"
+	" type of (unknown).  It is possible to add code here to determine"
+	" if the file is some specifictype of file and then do some specific"
+	" operation on it."
+        write('line3','File type (unknown) found in macro locaction for %s with destination %s' , $4,$5)
+        write('line3','You may modify the macro locaction if necessary to handle this type file.')
+    endif
+elseif ($5 = 'ShimPanel') then
+    if ($2 = 'shims') then
+	 dndshims($4)    
+    elseif ($2 = 'vnmr_data') then
+	 dndshims($4)    
+    elseif ($2 = 'unknown') then
+        " File types which are not locator files, will come here with a"
+	" type of (unknown).  It is possible to add code here to determine"
+	" if the file is some specifictype of file and then do some specific"
+	" operation on it."
+        write('line3','File type (unknown) found in macro locaction for %s with destination %s' , $4,$5)
+        write('line3','You may modify the macro locaction if necessary to handle this type file.')
+    endif
+elseif ($5 = 'StudyQueue') then
+    if ($2 = 'study') then
+          if (appmode = 'walkup') then
+write('line3','%s: %s of %s not enabled',$0,$1,$2)
+            return
+          endif
+          if (system = 'spectrometer') then
+            readhw('status'):$hwval
+            if ($hwval>0.5 and $hwval<>10 and $hwval<>17) then
+              write('line3','Cannot load studies while acquiring.')
+              return
+            endif
+          endif
+          if ($activestudy <> 'null') then
+            if (sqmode='go') then
+              write('line3','Cannot load studies while a study is active.')
+              return
+            endif
+            sqend
+          else // remove 'beginstudy'
+	    if(size('activestudy')>1.5) then
+	        if(activestudy[2]='beginstudy') then
+		  activestudy='null'
+		endif
+            endif
+          endif
+ 	  vnmrjcmd('SQ read "' + $4 +'/study.xml"')
+          sqdir=$4
+          if appmode='imaging' then sqpars else cqpars endif
+          exists(sqdir+'/studypar','file'):$e
+          if ($e > 0.5) then
+            fread(sqdir+'/studypar')
+            studyid=studyid_
+            vnmrjcmd('pnew','layout')
+          endif
+          sqfilemenu('init')
+          write('line3','Loaded study %s.',sqdir)
+          copyid = 'null','null'
+          actionid = 'null'
+    elseif ($2 = 'protocol') then
+        if ($activestudy='null') then
+          if (appmode='walkup') then
+            write('line3','Use New Study')
+          elseif (appmode='lc') then
+            write('line3','Use Start Run')
+          elseif appmode='imaging' then
+            $begin='n'
+            if (size('activestudy')>1.5) then if activestudy[2]='beginstudy' then
+              $begin='y'
+            endif endif
+            if ($begin='y') then
+              write('line3','%s(\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')',$0,$1,$2,$3,$4,$5,$6):$cmd
+              $reqparReturnValue=0
+              reqpartest($cmd):$reqparReturnValue
+              if ($reqparReturnValue > 0) then
+                 return
+              endif
+              xmcreate
+              exec($cmd):$e
+            else
+              write('line3','Use New Study')
+            endif
+          else
+	    locprotoexec($4)
+          endif
+        else
+          if (appmode='imaging') or ((appmode='walkup' or appmode='lc') and testacquire<>'y') then
+            xmmakenode('xml',$4,$6)
+            if ($#=7 and appmode='imaging') then logprotocol($4,$7) endif
+            if (appmode='walkup' or appmode='lc') then
+              $cmd='VP 1 vnmrjcmd(`VP 1 xmtime`)'
+              vnmrjcmd($cmd)
+            endif
+          else
+            locprotoexec($4)
+          endif
+        endif
+    elseif ($2 = 'automation') then
+      if (autodir<>'') then
+        if (autodir=$activestudy) then
+          sqfilemenu('Clear Study')
+        endif
+        substr(autodir,1,1):$s
+        if $s='/' then
+          xm1('write "'+autodir+'/auto.xml"')
+        endif
+      endif
+      if ($activestudy=$4 and autodir<>$activestudy) then
+        expactive('auto'):$ea
+        if ($ea>0.5 and size('activestudy')>1.5) then
+          $id=activestudy[2]
+          xmconvert('updatestudy',$activestudy,$id)
+        endif
+      endif
+      autodir=$4
+      vnmrjcmd('LOCTRASH autodir sqloaded "'+autodir+'"')
+      xm1('showautoq')
+"     fread(autodir+'/autopar')"
+      vnmrjcmd('tray update') "don't do this?"
+      write('line3','Loaded automation run %s',$4)
+    elseif ($2 = 'lcstudy') then
+      rtlcnmr($4)
+    elseif ($2 = 'image_dir') then
+      xmaddimgtosq($4,'new')
+    elseif (($2 = 'vnmr_data') or ($2 = 'vnmr_par')) then
+      xmaddpartosq($4,'new')
+    elseif ($2 = 'unknown') then
+        " File types which are not locator files, will come here with a"
+	" type of (unknown).  It is possible to add code here to determine"
+	" if the file is some specifictype of file and then do some specific"
+	" operation on it."
+        write('line3','File type (unknown) found in macro locaction for %s with destination %s' , $4,$5)
+        write('line3','You may modify the macro locaction if necessary to handle this type file.')
+    else
+      substr($4, 'dirname'):$dir,$file
+      substr($dir, 'basename'):$base,$ext
+      if($file='procpar' and ($ext='img' or $ext='par' or $ext='fid')) then
+        xmaddimgtosq($4,'new')
+      else
+        exists('procmodule','parameter'):$e
+        if($e) then
+	  if($file=procmodule) then
+	    csiCmd('rtProc',procmodule)
+	  endif
+        endif 
+      endif
+    endif
+endif

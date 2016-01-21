@@ -1,0 +1,100 @@
+Protocol: Xmx  Sequence: xmx.c  Apptype: solidseq1d
+
+Description: 
+
+X pulses with interleaved acquisition and alternating phase.  Used for 
+multi-pulse calibration to minimize phase transient. Usually performed 
+with a liquid sample or a sample of RTV silicon rubber with slow 
+spinning. Xmx can also be used to examine sampling windows and set the 
+blank/unblank delays r1Xxmx and r2Xxmx. 
+
+Xmx subtracts probe ring-down with a two-scan (0,2) phase cycle of the 
+preparation pulse and the receiver.  The xmxX has zero phase for all 
+scans.  For very short values of tauXxmx and when probe proton 
+background is present the oscillating pattern will not be symmetric 
+about zero due to a constant signal from probe ringing and background. 
+Use 1 scan to see the signal without ringing. 
+
+Additional Software:
+
+reset_xmx - If the current experiment is Xx this macro copies the 
+values of xxX to xmxX. Otherwise the values of aXxmx and pwXxmx are set 
+from aX90 and pwX90. This macro is run from the protocol. 
+
+Setup: 
+
+Load a calibrated data set and select the protocol Xmx. For a new 
+nucleus set the desired Observe nucleus select Onepul to array pwX90 
+for a rough calibration before using Xmx. 
+
+Set aXprep = aX90 and set pwXprep = pwX90. Set phXprep = 0. Set aXxmx = 
+aX90 and set pwXxmx = pwX90 and nt = 2.  
+
+Set tauXxmx = 10 us and set npaXxmx = 10.  Set r1Xxmx = 1.0us, r2Xxmx = 
+0.5uus and r3Xxmx = 1.0uus.  Set rof3 = r3Xxmx on the Receiver page 
+(important!!).  It may be necessary to fine adjust r1Xxmx and r2Xxmx to 
+eliminate ring down from the sampling periods.
+
+Set sw = 1/tauXxmx to obtain one point per sampling period or set sw = 
+5.0e6 to observe the sampling windows. Note that because the DDR allows 
+only specific dwell times, it may be necessary to choose sw first and 
+set tauXxmx = 1/sw. If tauXxmx does not equal the dwell the FID output 
+will not appear accurate. A sw = 5.0e6 can be used to finely digitize 
+the acquisition windows and can be used for any value of tauXxmx.
+
+Obtain 2 scans. Adjust aXxmx or pwXxmx to obtain a FID that contains 
+alternating positive and zero points, "tram tracks".  Adjust probe 
+tuning or spectrometer cable length to straighten the tracks.  
+
+Use Xmx to view the sampling window that will be used for multi-pulse 
+ecperiments. . Set tauXxx to a value that will create a window similar 
+to that of the multi-pulse experiment (c.f. 6.0-8.0 ms for Br24q, etc).  
+Note that the actual window between pulses for Xx is (tauXxmx - 
+pwXxmx).  Set sw = 5.0e6. Adjust npaXxx to open or close the sampling 
+window. One unit of npaXxx corresponds to 100 ns of acquisition.  The 
+FID will now contain multiple points in each acquisition period and 
+appear as a series of square pulses.  If the value of npaXxx is too 
+large or tauXxx is too small, one will see distortion from ring-down in 
+the first points of each sampling window. Determine the best 
+acquisition window with the shortest tauXxx.
+
+Parameter Groups: 
+
+prepX:  Module:  no 
+Sequence:  br24q.c      
+Description:  Implements a variable length pulse to provide quadrature 
+              detection about a tilted precession axis. Typically followed 
+              by a windowed multiple-pulse acquisition.
+Parameters:  Sequence Page
+       aXprep - the amplitude of the obs pulses. 
+       pwXprep - 90-degree flip on the obs channel. 
+       phXprep - small-angle phase offset of the pulse. The phase must 
+              be reset to zero after the pulse. 
+
+scaleX: (processing)  Module:  no 
+Sequence:  br24.c    
+Description:  Shows the F2 scale factor, scalesw, for evolution of the 
+              obs nuclei under a multiple-pulse waveform. 
+Parameters:  Sequence Page
+       scalesw - the F2 scale factor. Typically scalesw is the inverse 
+              of the mutiple-pulse scale factor.  
+       
+xmxX:  Module:  yes
+Sequence:  xmx.c 
+Description:  Implements alternating X and -X pulses on obs with 
+              acquisition in each window. Used for removal of phase 
+              transient.
+Parameters:  Sequence Page
+       aXxmx - amplitude of the obs pulses.
+       pwXxmx - 90-degree flip on obs.
+       r1Xxmx - pre-pulse delay (similar to rof1). 
+       r2Xxmx - post_pulse delay (similar to rd or rof2).
+       r3Xxmx - T/R-to-rcvron delay (must equal rof3 or 2.0 us if rof3 
+              is not defined). 
+       tauXxmx - cycle time for one window and one pulse. 
+       npaXxmx - number of 100 ns ticks in the detection window. 
+       chXxmx = 'obs' must be set (not shown).
+Implementation:  WMPA xmx = getxmx("xmxX");
+Underscore function: _xmx(xmx,phXxmx);   phXxmx is the overall phase 
+              table.  
+  

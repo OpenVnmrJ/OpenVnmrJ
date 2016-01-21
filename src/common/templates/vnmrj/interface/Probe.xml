@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ !
+ ! Copyright (C) 2015  University of Oregon
+ ! You may distribute under the terms of either the GNU General Public
+ ! License or the Apache License, as specified in the LICENSE file.
+ ! For more information, see the LICENSE file.
+ !
+ -->
+
+<template name="probe" element="pages" type="acquisition" >
+  <!--group size="376 360" style="Heading3"-->
+  <group size="380 360" style="Heading1"
+    label="Probe"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    reference="probe"
+    useref="no"
+    >
+    <group loc="16 152" size="364 204"
+      style="Heading1"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      >
+      <!-- start of probe edit panel -->
+      <group loc="0 0" size="328 196"
+        style="Heading1"
+        vq="probeidattr"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        useref="no"
+        >
+        <!-- start top probe edit panel elements with probeid -->
+      	<check loc="16 8" size="64 24" 
+      	  style="Label1"
+      	  label="Edit"
+      	  vq="probeattr"
+      	  vc="probeattr[3]='y'"
+      	  vc2="probeattr[3]='n'"
+      	  set="$VALUE=(probeattr[3]='y')"
+      	  />
+      	<group loc="88 4" size="240 40" 
+      	  style="Heading1"
+      	  vq="probeattr probeidattr"
+      	  show="$SHOW=(probeattr[3]='y')"
+      	  border="None"
+      	  side="Top"
+      	  justify="Left"
+      	  tab="no"
+      	  useref="no"
+      	  subtype="Basic"
+      	  >
+      	  <button loc="9 4" size="96 24" 
+      	    style="Heading2"
+      	    label="Edit probe file"
+      	    vq="probeattr probe"
+      	    vc="probe_edit"
+            show="$sel=(not(probe='' or probe=' '))*2-1 if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $ENABLE=($ok*$sel)"
+      	    enabled="yes"
+      	    />
+      	  <group loc="124 2" size="120 28" 
+      	    style="Heading1"
+      	    vq="probeattr probeidattr"
+      	    show="exists(systemdir+'/conpar','file','rw'):$SHOW"
+      	    border="None"
+      	    side="Top"
+      	    justify="Left"
+      	    tab="no"
+      	    useref="no"
+      	    >
+      	    <button loc="4 2" size="112 24" 
+      	      style="Heading2"
+      	      label="Copy to system"
+      	      vq="probeattr probe probeidattr probeid"
+      	      vc="probelist('copy')"
+      	      show="exists(systemdir+'/conpar','file','rw'):$vjprobe probelist('probeex'):$eprobe if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $SHOW=(probeattr[1]='user' and $vjprobe and ($eprobe=1) and $ok)*2-1"
+
+      	      enabled="yes"
+      	      />
+      	  </group>
+      	</group>
+        <!-- probe list elements: show either (1) a menu (2) a file or (3) an error message -->
+      	<group loc="8 30" size="328 32" 
+      	  style="Heading1"
+      	  vq="probeattr probeidattr"
+      	  show="$SHOW=((probeidattr[1]='y' or probeidattr[1]='native') and probeattr[3]='y') if probeidattr[1]='native' then probeidez('ls','probes') else probeid('ls','probes') endif"
+      	  border="None"
+      	  side="Top"
+      	  justify="Left"
+      	  tab="no"
+      	  useref="no"
+          >
+      	  <label loc="8 8" size="80 24"
+      	    style="Heading1"
+      	    label="Probe ID"
+      	    justify="Left"
+      	    />
+          <group loc="88 8" size="232 24"
+        	  vq="probeidattr probeid"
+        	  bg=""
+        	  border="None"
+                  show="$SHOW=(not probeidattr[6]='online')*2-1"
+        	  tab="no"
+        	  enable="no"
+        	  useref="no"
+        	  subtype="Untitled"
+        	  expanded="yes"
+            >
+	  <filemenu loc="0 0" size="232 24" 
+	    style="PlainText"
+	    vq="probeidattr"
+            name="ListOfProbes"
+	    vc="if probeidattr[1]='native' then probeidez('attach','$VALUE') else probeid('attach','$VALUE') endif"
+	    set="$VALUE=probeidattr[4]"
+	    file="$VALUE=userdir+'/persistence/probes.list'"
+	    type="file"
+	    bg=""
+	    vq2="probeattr"
+	    />
+          </group>
+          <group loc="88 8" size="232 24"
+        	  vq="probeidattr probeid"
+        	  bg=""
+        	  border="None"
+                  show="$SHOW=(probeidattr[6]='online' and (probeid=' ' or probeid=''))*2-1"
+        	  tab="no"
+        	  enable="no"
+        	  useref="no"
+        	  subtype="Untitled"
+        	  expanded="yes"
+            >
+            <textmessage loc="0 0" size="232 24"
+              style="PlainText"
+              vq="probeid"
+              set="$VALUE='Error: Probe is NOT connected'"
+              />
+          </group>
+          <group loc="88 8" size="232 24"
+        	  vq="probeidattr probeid"
+        	  bg=""
+        	  border="None"
+                  show="$SHOW=(probeidattr[6]='online' and not(probeid=' ' or probeid=''))*2-1"
+        	  tab="no"
+        	  enable="no"
+        	  useref="no"
+        	  subtype="Untitled"
+        	  expanded="yes"
+            >
+            <textmessage loc="0 0" size="232 24"
+              style="PlainText"
+              vq="probeid"
+              set="$VALUE=probeid"
+              />
+          </group>
+        </group>
+        <!-- start bottom probe panel elements with probeid -->
+      	<group loc="0 52" size="328 168" 
+      	  style="Heading1"
+      	  vq="probeattr probeidattr"
+      	  show="$SHOW=not(probeidattr[1]='n' or probeidattr[1]='')"
+      	  border="None"
+      	  side="Top"
+      	  justify="Left"
+      	  tab="no"
+      	  useref="no"
+      	  >
+      	  <group loc="8 8" size="328 148"
+      	    style="Heading1"
+      	    vq="probeattr"
+      	    show="$SHOW=(probeattr[3]='y')"
+      	    border="None"
+      	    side="Top"
+      	    justify="Left"
+      	    tab="no"
+      	    useref="no"
+      	    >
+      	    <label loc="8 8" size="80 24"
+      	      style="Heading1"
+      	      label="Probe file"
+      	      justify="Left"
+      	      />
+      	    <entry loc="88 8" size="232 24" 
+      	      style="PlainText"
+      	      vq="probe probeidattr probeid"
+      	      vc="probe='$VALUE'"
+      	      set="$VALUE=probe"
+              show="if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $SHOW=($ok)*2-1"
+      	      disable="Grayed out"
+      	      />
+      	    <group loc="192 40" size="128 24" 
+      	      style="Heading1"
+      	      vq="probeattr"
+      	      show="exists(systemdir+'/conpar','file','rw'):$VALUE"
+      	      border="None"
+      	      side="Top"
+      	      justify="Left"
+      	      tab="no"
+      	      useref="no"
+      	      >
+      	      <label loc="12 0" size="40 24" 
+      	        style="Heading1"
+      	        label="Level"
+      	        justify="Left"
+      	        />
+      	      <menu loc="52 0" size="76 24" 
+      	        style="PlainText"
+      	        label="menu"
+      	        vq="probeattr probeidattr probeid"
+      	        vc="probeattr[1]='$VALUE'"
+      	        set="$VALUE=probeattr[1]"
+		show="if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $ENABLE=($ok)*2-1"
+      	        >
+      	        <mlabel label="User" chval="user"/>
+      	        <mlabel label="System" chval="system"/>
+      	      </menu>
+      	    </group>
+      	    <button loc="184 80" size="136 24" 
+      	      style="Heading2"
+      	      label="Delete probe file"
+      	      vq="probeattr probe probeidattr probeid"
+      	      vc="probelist('rm')"
+      	      show="if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif probelist('probeex'):$ex $SHOW=$ok*$ex"
+      	      enabled="yes"
+      	      />
+      	    <button loc="8 80" size="136 24" 
+      	      style="Heading2"
+              vq="probeidattr probeid"
+              show="$sel=(not(probeidattr[4]='' or probeidattr[4]=' '))*2-1 if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $SHOW=($ok*$sel)"
+      	      label="New probe file"
+      	      vc="probelist('add')"
+      	      enabled="yes"
+      	      />
+      	    <label loc="8 40" size="80 24" 
+      	      style="Label1"
+      	      label="Parameters"
+      	      justify="Left"
+      	      />
+      	    <menu loc="88 40" size="96 24" 
+      	      style="PlainText"
+      	      label="menu"
+      	      vq="probeattr probeidattr probeid"
+      	      vc="probeattr[2]='$VALUE'"
+      	      set="$VALUE=probeattr[2]"
+	      show="if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $SHOW=$ok*2-1"
+      	      >
+      	      <mlabel label="From probe" chval="zero"/>
+      	      <mlabel label="Standard" chval="stdpar"/>
+      	    </menu>
+      	    <button loc="8 110" size="136 24" 
+      	      style="Heading2"
+      	      label="Setup calibrations..."
+      	      vc = "if probeidattr[1]='native' then probeidez('getTargets') endif macro='' vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:calibrate.xml', 'location:topMenuBar','help:/vnmr/jhelp/dialog/calibrate.html', 'title:Calibrate Probe')"
+      	      vq="probeattr probe system"
+      	      show="probelist('probeex'):$SH $SHOW=($SH=1 and system='spectrometer')*2-1"
+      	      decor1=""
+      	      />
+      	  </group>
+	</group>
+        <!-- start bottom probe panel elements without probeid -->
+      	<group loc="0 0" size="328 168" 
+      	  style="Heading1"
+      	  vq="probeattr probeidattr"
+      	  show="$SHOW=((probeidattr[1]='n' or probeidattr[1]='') and probeattr[3]='y')"
+      	  border="None"
+      	  side="Top"
+      	  justify="Left"
+      	  tab="no"
+      	  useref="no"
+      	  >
+      	  <group loc="8 32" size="328 148" 
+      	    style="Heading1"
+      	    vq="probeattr"
+      	    show="$SHOW=(probeattr[3]='y')"
+      	    border="None"
+      	    side="Top"
+      	    justify="Left"
+      	    tab="no"
+      	    useref="no"
+      	    >
+      	    <button loc="8 110" size="136 24" 
+      	      style="Heading2"
+      	      label="Setup calibrations..."
+      	      vc = "macro='' vnmrjcmd('popup', 'mode:modeless', 'rebuild:yes', 'file:calibrate.xml', 'location:topMenuBar','help:/vnmr/jhelp/dialog/calibrate.html', 'title:Calibrate Probe')"
+      	      vq="probeattr probe system"
+      	      show="probelist('probeex'):$SH $SHOW=($SH=1 and system='spectrometer')*2-1"
+      	      decor1=""
+      	      />
+      	    <group loc="192 40" size="128 24" 
+      	      style="Heading1"
+      	      vq="probeattr"
+      	      show="exists(systemdir+'/conpar','file','rw'):$VALUE"
+      	      border="None"
+      	      side="Top"
+      	      justify="Left"
+      	      tab="no"
+      	      useref="no"
+      	      >
+      	      <label loc="12 0" size="40 24" 
+      	        style="Heading1"
+      	        label="Level"
+      	        justify="Left"
+      	        />
+      	      <menu loc="52 0" size="76 24" 
+      	        style="PlainText"
+      	        label="menu"
+      	        vq="probeattr"
+      	        vc="probeattr[1]='$VALUE'"
+      	        set="$VALUE=probeattr[1]"
+      	        >
+      	        <mlabel label="User" chval="user"/>
+      	        <mlabel label="System" chval="system"/>
+      	      </menu>
+      	    </group>
+      	    <button loc="184 80" size="136 24" 
+      	      style="Heading2"
+      	      label="Delete probe file"
+      	      vq="probeattr probe"
+      	      vc="probelist('rm')"
+      	      show="probelist('probeex'):$SHOW"
+      	      enabled="yes"
+      	      />
+      	    <button loc="8 80" size="136 24" 
+      	      style="Heading2"
+      	      label="New probe file"
+      	      vc="probelist('add')"
+      	      enabled="yes"
+      	      />
+      	    <label loc="8 40" size="80 24" 
+      	      style="Label1"
+      	      label="Parameters"
+      	      justify="Left"
+      	      />
+      	    <menu loc="88 40" size="96 24" 
+      	      style="PlainText"
+      	      label="menu"
+      	      vq="probeattr"
+      	      vc="probeattr[2]='$VALUE'"
+      	      set="$VALUE=probeattr[2]"
+      	      disable="Grayed out"
+      	      >
+      	      <mlabel label="Zero" chval="zero"/>
+      	      <mlabel label="Standard" chval="stdpar"/>
+      	    </menu>
+      	    <label loc="8 8" size="80 24" 
+      	      style="Label1"
+      	      label="Probe file"
+      	      justify="Left"
+      	      />
+      	    <entry loc="88 8" size="232 24" 
+      	      style="PlainText"
+      	      vq="probe"
+      	      vc="probe='$VALUE'"
+      	      set="$VALUE=probe"
+      	      disable="Grayed out"
+      	      />
+      	  </group>
+	</group>
+        <!-- end bottom probe edit panel elements without probeid -->
+      </group>
+    </group>
+    <!-- start probe select panel -->
+    <button loc="48 120" size="128 24" 
+      style="Heading2"
+      label="Tune sweep"
+      vq="probeidattr probeid probe"
+      vc="qtune"
+      show="if probeidattr[1]='native' then probeidez('selectable'):$ok else probeid('selectable'):$ok endif $ENABLE=($ok and system='spectrometer' and not(probe='' or probe=' '))*2-1"
+      enabled="yes"
+      />
+    <label loc="216 120" size="88 24"
+      style="Label1"
+      label="Tune gain"
+      justify="Left"
+      />
+    <entry loc="280 120" size="48 24"
+      style="PlainText"
+      vq="tugain"
+      vc="tugain=$VALUE"
+      set="$VALUE=tugain"
+      show="$ENABLE=(system='spectrometer')*2-1"
+      />
+    <group loc="16 16" size="364 96"
+      style="Heading1"
+      label="Select probe file"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      useref="no"
+      subtype="Basic"
+      >
+      <check loc="16 20" size="100 24"
+        style="Label1"
+        label="Use Probe ID"
+        toolTip="Enable/Disable Probe ID database"
+        vq="probeidattr probeiden"
+        vc="if probeiden=1 then probeidez('enable') else probeid('enable') endif"
+        vc2="if probeidattr[1]='native' then probeidez('disable') else probeid('disable') endif"
+        set="$VALUE=((probeiden>0) and (not(probeidattr[1]='n' or probeidattr[1]='')))"
+        disable="Grayed out"
+        show="$ENABLE=(probeiden>0)*2-1"
+        />
+      <check loc="160 20" size="200 24"
+        style="Label1"
+        label="Enforce Probe ID connection"
+        toolTip="Require probe ID connection between probe and console"
+        vq="probeidattr probeid probeiden"
+        vc="if probeidattr[1]='native' then probeidattr[6]='online' probeidez('online') else probeid('online') endif"
+        vc2="if probeidattr[1]='native' then probeidez('offline') else probeid('offline') endif"
+        set="if probeidattr[1]='native' then probeidez('attribute','online'):$VALUE else probeid('attribute','online'):$VALUE endif"
+        disable="Grayed out"
+        show="if probeiden=1 then probeidez('native',-1):$ENABLE else probeid('enabled',-1):$ENABLE endif"
+        />
+      <filemenu loc="48 52" size="280 24" 
+        style="PlainText"
+        enable="yes"
+        vq="probe probeattr probeidattr probeid"
+        vc="probelist('selectprobe','$VALUE')"
+        set="probelist('getProbePath'):$VALUE"
+        file="$VALUE=userdir+'/persistence/probe_list'"
+        show="$ok=1 if probeidattr[1]='native' then probeidez('selectable'):$ok elseif probeidattr[1]='y' then probeid('selectable'):$ok endif $ENABLE=($ok)*2-1"
+        type="file"
+        bg=""
+        vq2="probeattr"
+        />
+    </group>
+  </group>
+</template>

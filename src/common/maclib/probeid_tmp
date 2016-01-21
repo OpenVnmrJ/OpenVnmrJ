@@ -1,0 +1,31 @@
+"macro probeid_tmp"
+// temporary file creation (for use with the probeid macro)
+$tmp_dir=userdir+'/tmp'
+$tmp_ext1='vj'
+$tmp_ext2='pio'
+//$get_tmp_file='echo '+$tmp_dir+'/'+'$$'+'.'+$tmp_ext1+'.'+$tmp_ext2
+
+if $#=0 then
+  $get_tmp_file='mktemp '+$tmp_dir+'/'+$tmp_ext1+'.'+$tmp_ext2+'.XXXXXXX'
+  shell($get_tmp_file):$tmp
+  // TODO: automatically clean up after ourselves
+  // create('vj_tmp_files','string','current'):$en  // list of tmp files
+  // vj_tmp_files[size('vj_tmp_files')+1] = $tmp
+  return($tmp)
+else
+  // return 1 if the file matches this macros format
+  substr($1,'basename'):$base,$ext
+  substr($1,'dirname'):$dir
+  $is_tmp=0
+  if ($dir=$tmp_dir and $base=$tmp_ext1+'.'+$tmp_ext2) then
+    $is_tmp=1
+  elseif $dir=$tmp_dir and $ext=$tmp_ext2 then
+    $is_tmp=1
+  endif
+  if $##=0 then
+    if $is_tmp then write('line3',$1+' is a temporary file') 
+               else write('line3',$1+' is not a temporary file') 
+    endif
+  endif
+  return($is_tmp)
+endif

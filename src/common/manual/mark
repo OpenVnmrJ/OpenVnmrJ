@@ -1,0 +1,105 @@
+
+*******************************************************************
+mark -  determine the intensity of the spectrum at a point
+        determine the integral over a region
+*******************************************************************
+
+One can perform either 1D or 2D MARK operations in CURSOR or BOX
+mode for a total of four separate functions.  In CURSOR mode, the
+intensity at a particular point is found.  In BOX mode, the integral
+over a region is calculated.  For 2D operations, this is a volume
+integral.  In addition, BOX mode finds the maximum intensity and the
+coordinate(s) of the maximum intensity.
+
+For 2D operations in BOX mode, 4 input values are required.  For 1D
+operations in CURSOR mode, only one value is needed.  The other two
+functions require two values.  If no values are entered, the command
+uses the values of parameters `cr' and `delta' (1D operations) or
+`cr1', `delta1', `cr' and `delta' (2D operations).
+
+In BOX mode, the first parameter is the position of the left edge of
+the region to be integrated.  The second is the width of the region,
+which extends to the right.  Each value must be entered in Hertz.
+
+For 2D operations in CURSOR mode, the first numeric parameter defines
+the position along the F1 axis.  The second parameter defines the
+position along the F2 axis.  For 2D operations in BOX mode, the
+first pair of parameters defines the region along the F1 axis; the
+second pair defines the region along the F2 axis.
+
+This command requires that transformed data be present in the current
+experiment.  If required, it will recompute the phase file from the
+complex data; in other words, it will rephase the data if required.
+However, the MARK command requires parameters from the command line if
+no data is displayed, i. e. if DS or DCONI has not been executed.
+
+Note that 2D operations require that 2D data be present.  This not
+only means that `ni' must be larger than 1, but also that the data
+was transformed using FT1D, FT2D or an equivalent (and not FT or its
+equivalents).
+
+The MARK command and the MARK button of DS write output to a
+file in the current experiment.  For 1D operations, the file is named
+"mark1d.out"; for 2D operations it is "mark2d.out".  If this file already
+exists, the VNMR program appends output from the current MARK operation to
+the end of the file.  (Previous versions of VNMR used "ds.out" and
+"dconi.out" as files for output from the MARK button).  Either file
+may be read by other programs at any time between operations.
+
+The MARK command returns values if requested.  For either 1D or 2D
+operations, the first will be the intensity (maximum if BOX mode was
+selected) and the second will be the integral.  In 2D mode, the third
+and fourth will be the coordinates where the maximum intensity was
+was found.  Only one value, the intensity, is returned in CURSOR mode
+for either 1D or 2D operations, since other values have no meaning in
+CURSOR mode.
+
+The following criteria establish the exact function.  The command
+checks them in the order below until it determines the exact function.
+
+    1.  Number of numeric parameters
+    2.  Number of return values called out
+    3.  Which display command (DS or DCONI) was last used
+    4.  Nature of the data in the experiment
+
+The first two only serve to distinguish between BOX mode and CURSOR mode.
+The nature of the data in the experiment and the last display command
+which was entered determines whether a 1D or a 2D operation is selected.
+
+Use the `trace' keyword to select a 1D operation if 2D data is present.
+It must be either the first or the last parameter to the command.  The
+current experiment must contain 2D data for the `trace' keyword to be
+used.  Example:
+
+    mark('trace',400)	   "intensity at 400 Hz in the current trace"
+
+
+The `reset' keyword erases the output files from the MARK command.  No
+other parameter or argument can be used with this keyword.  Use the VNMR
+command MV to rename the current MARK output files:
+
+    mv(curexp+'/mark1d.out',curexp+'/mark.16.01.89')
+
+Examples:
+
+   1D data sets:
+
+     mark(cr)                   "CURSOR mode for 1D data"
+     mark(cr,delta)             "BOX mode for 1D data"
+
+   2D data sets (2D mode):      Note:  in this mode,  the order of the
+                                arguments to mark is independent of the
+                                trace parameter.
+
+     mark(cr1,cr)               "CURSOR mode for 2D data"
+     mark(cr1,delta1,cr,delta)  "BOX mode for 2D data"
+
+   2D data sets (1D mode):      Note:  in this mode,  the selection of the
+                                arguments to mark is dependent on the
+                                trace parameter.  If trace='f2',  then cr,
+                                delta, sp, or wp would be appropriate.
+                                If trace='f1', then cr1, delta1, sp1,
+                                and / or wp1 would be appropriate.
+
+     mark('trace',cr)           "CURSOR mode for selected 2D trace"
+     mark('trace',cr1,delta1)   "BOX mode for selected 2D trace"

@@ -1,0 +1,288 @@
+"macro aspCmd"
+if($#<1) then return endif
+
+if($1='isAsp') then
+  if(aspMode>0) then return(1)
+  else return(0) endif 
+endif
+
+if($1='isArray') then
+  $n=0
+  asp1D('traces'):$n
+  if($n>1) then return($n) endif
+
+  $fdf=0 $n=0
+  asp1D('fdf'):$fdf,$n
+  dssi:$a
+  if($fdf=0 and $a>1) then return($a) endif 
+  return($n)
+endif
+
+//aspSel[1] = 1,2,3,4 if trace,roi, thresh or frame is selected
+//aspSel[2] is the index of selected item. index starts frome zero
+if($1='trace' and $#>3) then
+  aspSel=1,$2+1,$3,$4 
+  vnmrjcmd('mouseMenu','MouseMenuTrace.xml',$3,$4)
+  return
+elseif($1='roi' and $#>3) then
+  aspSel=2,$2+1,$3,$4 
+  vnmrjcmd('mouseMenu','MouseMenuRoi.xml',$3,$4)
+  return
+elseif($1='thresh' and $#>3) then
+  aspSel=3,$2+1,$3,$4 
+  vnmrjcmd('mouseMenu','MouseMenuThresh.xml',$3,$4)
+  return
+elseif($1='frame' and $#>3) then
+  aspSel=4,$2+1,$3,$4 
+  aspRegion:$n
+  if($n) then return endif
+  aspAnno('paste'):$n
+  if($n) then
+    vnmrjcmd('mouseMenu','MouseMenuFramePaste.xml',$3,$4)
+  else
+    vnmrjcmd('mouseMenu','MouseMenuFrame.xml',$3,$4)
+  endif
+  return
+elseif($1='peak' and $#>3) then
+  $i=$2+1
+  aspSel=5,$i,$3,$4 
+  // peakProperty[1] is default label
+  aspPeaks('label',$i):peakProperty[2]
+  aspPeaks('vert'):peakProperty[3]
+  aspPeaks('mark'):peakProperty[4]
+  aspPeaks('nolink'):peakProperty[5]
+  aspPeaks('noisemult'):peakProperty[6]
+  aspPeaks('posPeaks'):peakProperty[7]
+  vnmrjcmd('mouseMenu','MouseMenuPeak.xml',$3,$4)
+  return
+elseif($1='anno' and $#>3) then // right mouse menu to popup editor 
+  $i=$2+1
+  aspSel=6,$i,$3,$4 
+  aspAnno('get',$i,'type'):aspProperty[1]
+  aspAnno('get',$i,'fontColor'):aspProperty[4]
+  aspAnno('get',$i,'lineColor'):aspProperty[9]
+  aspAnno('get',$i,'roundBox'):aspProperty[13]
+/*
+  aspAnno('get',$i,'label'):aspProperty[2]
+  aspAnno('get',$i,'fontSize'):aspProperty[3]
+  aspAnno('get',$i,'fontName'):aspProperty[5]
+  aspAnno('get',$i,'fontStyle'):aspProperty[6]
+  aspAnno('get',$i,'showLabel'):aspProperty[7]
+  aspAnno('get',$i,'vert'):aspProperty[8]
+  aspAnno('get',$i,'lineThickness'):aspProperty[10]
+  aspAnno('get',$i,'showRoi'):aspProperty[11]
+  aspAnno('get',$i,'showLink'):aspProperty[12]
+  aspAnno('get',$i,'fill'):aspProperty[14]
+  aspAnno('get',$i,'transparency'):aspProperty[15]
+  aspAnno('get',$i,'mm'):aspProperty[16]
+  aspAnno('get',$i,'arrows'):aspProperty[17]
+*/
+  vnmrjcmd('mouseMenu','MouseMenuAnno.xml',$3,$4)
+  return
+elseif($1='annoText' and $#>3) then // text created, auto popup editor
+  $i=$2+1
+  aspSel=6,$i,$3,$4 
+  aspAnno('get',$i,'type'):aspProperty[1]
+  aspCmd('editAnno') 
+  return
+elseif($1='annoModified' and $#>3) then // anno coordinate modified. 
+  $i=$2+1
+  if($i=aspSel[2]) then // this anno may have the editor open, so trigger update 
+     aspSel=6,$i,$3,$4 
+  endif
+  return
+elseif($1='integ' and $#>3) then
+  $i=$2+1
+  aspSel=7,$i,$3,$4 
+  // integProperty[1] is value
+  aspInteg('get',$i,'label'):integProperty[2]
+  aspInteg('integ'):integProperty[3]
+  aspInteg('vert,value'):integProperty[4]
+  aspInteg('value'):integProperty[5]
+  aspInteg('vert,label'):integProperty[6]
+  aspInteg('label'):integProperty[7]
+  vnmrjcmd('mouseMenu','MouseMenuInteg.xml',$3,$4)
+  return
+endif
+
+if(aspSel[1]=1 and $1='hideTrace') then
+  asp1D('trace','hide', aspSel[2])
+  return
+elseif(aspSel[1]=1 and $1='removeTrace') then
+  asp1D('trace','remove', aspSel[2])
+  return
+elseif(aspSel[1]=1 and $1='editTrace') then
+write('line3','editTrace is not implemented')
+  return
+endif
+
+if($1='editPeak') then
+  vnmrjcmd('popup','mode:modeless','file:PeakProperties.xml','rebuild:no','location:expViewArea','title:Property Editor')
+  return
+endif
+
+if($1='editInteg') then
+  vnmrjcmd('popup','mode:modeless','file:IntegProperties.xml','rebuild:no','location:expViewArea','title:Property Editor')
+  return
+endif
+
+if($1='editAnno' and aspSel[1]=6) then
+  $path=userdir+'/templates/vnmrj/interface'
+  exists($path,'file'):$e
+  if(not $e) then
+        shell('mkdir -p '+$path)
+  endif
+  $path=userdir+'/templates/vnmrj/interface/AnnoProperties.xml'
+  exists($path,'file'):$e
+  if($e) then
+    delete($path)
+  endif
+
+  $name=''
+  if(aspProperty[1]='TEXT') then
+    $name='Label'
+  elseif(aspProperty[1]='POINT') then
+    $name='Point'
+  elseif(aspProperty[1]='LINE' or aspProperty[1]='POLYLINE') then
+    $name='Line'
+  elseif(aspProperty[1]='ARROW') then
+    $name='Arrow'
+  elseif(aspProperty[1]='BOX') then
+    $name='Box'
+  elseif(aspProperty[1]='OVAL') then // the same property file as line
+    $name='Line' 
+  elseif(aspProperty[1]='XBAR' or aspProperty[1]='YBAR') then
+    $name='Bar' 
+  elseif(aspProperty[1]='POLYGON') then
+    $name='Poly' 
+  endif
+
+  $file=userdir+'/templates/vnmrj/interface/Anno'+$name+'Properties.xml'
+  exists($file,'file'):$e
+  if(not $e) then
+    $file='/vnmr/templates/vnmrj/interface/Anno'+$name+'Properties.xml'
+  endif
+  exists($file,'file'):$e
+  if($e) then 
+    shell('cp -f '+$file+' '+$path)
+    exists($path,'file'):$e
+    if($e) then
+      vnmrjcmd('popup','mode:modeless','file:AnnoProperties.xml','rebuild:yes','location:expViewArea','title:Property Editor')
+    endif
+  endif
+  return
+endif
+
+if(aspSel[1]=2 and $1='hideRoi') then
+  aspRoi('hide')
+  return
+elseif($1='removeRoi') then
+  aspRoi('remove')
+  return
+elseif($1='editRoi') then
+  vnmrjcmd('popup','mode:modeless','file:AspSession.xml','rebuild:yes','location:expViewArea')
+  return
+endif
+
+if(aspSel[1]=3 and $1='hideThresh') then
+  asp1D('thresh')
+  return
+elseif($1='editThresh') then
+write('line3','editThresh is not implemented.')
+  return
+endif
+
+if(aspSel[1]=4 and $1='removeFrame') then
+write('line3','removeFrame is not implemented.')
+  return
+elseif($1='editFrame') then
+write('line3','editThresh is not implemented.')
+  return
+elseif($1='session') then
+  vnmrjcmd('popup','mode:modeless','file:AspSession.xml','rebuild:yes','location:expViewArea')
+  return
+endif
+
+if($1='ll2d') then
+  $path=curexp+'/datdir/ll2dpeaks.txt'
+  exists($path,'file'):$e
+  if($e) then
+	delete($path)
+  endif
+  ll2d('peak','volume')
+  ll2d('writetext',$path)
+  aspCmd('loadll2d',$path)
+  return
+endif
+
+if($1='loadll2d') then
+   graphis:$s
+   if($s<>'dconi') then return endif
+
+   if($#>1) then
+      $path=$2
+   else
+      $path=curexp+'/datdir/ll2dpeaks.txt'
+   endif
+   exists($path,'file'):$e
+   if(not $e) then 
+      ll2d('peak','volume')
+      ll2d('writetext',$path)
+   endif
+   if(not $e) then return endif
+
+   $file=curexp+'/datdir/anno2d'
+   if($#>2) then
+     $file=$3
+   endif
+   shell('rm -f '+$file)
+   write('file',$file,'#ll2d file %s',$path)
+
+   lookup('mfile',$path,'Amplitude','F1','read','filekey'):$line,$k,$f
+   $i=1
+   $s=''
+   while($f=2) do
+     $f=0
+     format($i,0,0):$s
+     lookup('mfile',$path,$s,'readline','filekey'):$line,$k,$f
+     if($f=2) then
+	substr($line,'wc'):$n
+	if($n=4) then
+	   substr($line,1):$freq1
+	   substr($line,2):$freq2
+	   substr($line,3):$amp
+	   substr($line,4):$vol
+           write('file',$file,'%d POINT %f %f %s 0.0 0.0 1792 0 0 0 - 0 - - - 0.0 %f %f',
+		$i,$freq2,$freq1,'%amp%',vs2d*$amp,$vol)
+	endif
+     	$i=$i+1
+     endif
+   endwhile
+   write('file',$file,'number_of_annos: %d',$i-1)
+
+   aspAnno('load',$file)
+
+   return
+endif
+
+if($1='dpf') then
+  $file=curexp+'/datdir/peaks'
+  exists($file,'file'):$e
+  if($e) then
+     aspPeaks('load',$file)
+  else
+     aspPeaks('nll')
+  endif
+  return
+endif
+
+if($1='dpir') then
+  $file=curexp+'/datdir/integs'
+  exists($file,'file'):$e
+  if($e) then
+     aspInteg('load',$file)
+  else
+     aspInteg('nli')
+  endif
+  return
+endif

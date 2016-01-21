@@ -1,0 +1,107 @@
+"macro imcpmg"
+"**********************************************************"
+"Setup and Processing for 1D CPMG T2 spectroscopy sequence"
+
+" Details: Run the cpmgt2puls sequence and set parameters
+"       p1 - 90 deg pulse
+"       p2 - 180 deg pulse equal to p1*2
+"       tpwr1 - power levels calculated by imprep
+"       bigtau - TE delay, d2 unit delay {d2-p2-d2}*n
+"
+" array is set and T2 data collected
+" The spectral peak is found and T1 calculated from the spectra
+" bigtau is the total echo-time list. d2 is used in the pulse sequence
+" The sample must be shimmed to a single peak
+" or else T2's for multiple peaks are printed
+" The threshold is set manually by the user
+
+"**********************************************************"
+" Parse input                                              "
+"**********************************************************"
+"Default options"
+$action = 'prep'
+$do = ''
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $do = $2
+endif
+
+"**********************************************************"
+" Setup                                                    "
+"**********************************************************"
+if ($action = 'prep') then
+  ldrf
+  tof=resto-restol
+  rfl=rfl+rfladjust+rfloffset rfladjust=0 rfloffset=0
+  roff=roff+roffadjust roffadjust=0
+  imprep  
+
+  wysiwyg='n'
+  bigtau=te	"echo time array"
+
+  execseq('prep')  "Execute any sequence specific preparation"
+
+"**********************************************************"
+" Processing & Display                                     "
+"**********************************************************"
+elseif ($action = 'proc') then
+  clear
+  if(fidt2 = 'y') then
+    t2fit
+  else
+   f full wft(1) ph aph0 "phase reference"
+   wft select(1) vsadj(40) dssh  "display all spectra"
+
+   write('line3','calculating  T2')
+   av
+   select(1) vsadj(90)
+
+   text('T2 Determination')
+
+//   th=30  "threshold"
+   clear
+   dll    "line listing"
+   ph 
+   fp     "find peak => fp.out"
+   t2     "T2 analysis; uses bigtau as te array; => analyze.out"
+   center 
+   expl   "exponential/polynomial curve display "
+   wc=80
+
+   "extract the t2 value from the analyze.out file"
+   exists('t2','parameter'):$ex
+   if($ex < 1) then
+     create('t2')
+   endif
+
+   lookup('file',curexp+'/analyze.out')
+   lookup('skip',10,'read',1):t2
+   write('line3','T2 estimate is %1.5f sec ',t2)
+   t2=trunc(10000*t2)/10000   "round off value"
+
+   fn=4*np ft(1) ph aph0 f vsadj peak:$ht,cr
+   if ($ht<0) then rp=rp+180 endif
+   dres
+   vp=0 f full
+   wexp=''
+   wnt=''
+   expl
+  
+   execseq('proc')  "Execute any sequence specific processing"
+  endif
+"**********************************************************"
+" Prescan                                                  "
+"**********************************************************"
+elseif ($action = 'prescan') then
+  imcpmg('prep')
+  
+  "not implemented"
+  if ($do = '') then
+    $do = prescan_exec[prescan_control[2]]
+  endif
+  
+  wexp = ''
+endif

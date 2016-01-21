@@ -1,0 +1,199 @@
+"macro quant_cal"
+"quant_cal - macro to aid qEstimate and Adaptive NMR setup"
+
+/*
+  quant_cal holds information for the panel
+  quant_cal[1] is the concentration
+  quant_cal[2] is the number of nuclei
+  quant_cal[3] is current integral
+ */
+
+if ($#=0) then $arg='show' else $arg=$1 endif
+
+IF ($arg='show') THEN
+  graphis('ds'):$e
+  if not $e then
+    write('line3','A spectrum with integrals must be diplayed for Quantitation (qNMR) calibration')
+    return
+  endif
+  create('quant_cal','string','current',''):$e
+  setgroup('quant_cal','display')
+  quant_cal='','','1'
+  exists('quantcalhelp','manual'):$e,$path
+  vnmrjcmd('popup','mode:modeless','file:quantcal.xml','pnewupdate:true','rebuild:no','location:shuffler','title: Setup qNMR Calibration','close:'+$0+'(`close`)','help:'+$path)
+
+ELSEIF ($arg='select') THEN
+  $cint=1
+  format(quant_cal[3],'lower'):$cint
+  if (intmod='partial') and (size('lifrq') > 1) then
+    $step = 2
+    if ($cint mod 2 <> 0) then
+      $cint = $step
+    endif
+  else
+    if ($cint > size('lifrq')) then
+      $cint = 1
+    endif
+    $step = 1
+  endif
+  if ($2='first') then
+    $cint= $step
+  elseif ($2 = 'last') then
+    if ($step = 1) then
+      $cint= size('lifrq')
+    else
+      $cint= size('lifrq') - 1
+    endif
+  elseif ($2 = 'prev') then
+    if ($cint >  $step) then
+      $cint=$cint- $step
+    endif
+  elseif ($2 = 'next') then
+    if ($step = 1) then
+      if $cint < size('lifrq') then
+        $cint=$cint+ $step
+      endif
+    else
+      if $cint < size('lifrq') - $step then
+        $cint=$cint+ $step
+      endif
+    endif
+  endif
+  if ($cint= 1) then
+    cr=(sw+lifrq[$cint])/2 + rfp - rfl
+  else
+    cr=(lifrq[$cint]+lifrq[$cint-1])/2 + rfp - rfl
+  endif
+  format($cint,0,0):quant_cal[3]
+
+ELSEIF ($arg='setprobe') THEN
+  $probestyle=''
+  getparam('style','Probe'):$probestyle
+  $ins1=0
+  $ins2=0
+  if ($# = 3) then
+    $ins1=$2
+    $ins2=$3
+  else
+    if (quant_cal[1]='') or (quant_cal[2]='') then
+      write('error','You must enter Concentration and Number of Nuclei')
+      return
+    endif
+    format(quant_cal[1],'isreal'):$e
+    if ($e = 0) then
+      write('error','You must enter Concentration as a real number')
+      return
+    endif
+    format(quant_cal[2],'isreal'):$e
+    if ($e = 0) then
+      write('error','You must enter Number of Nuclei as a real number')
+      return
+    endif
+    format(quant_cal[1],'lower'):$ins1
+    format(quant_cal[2],'lower'):$ins2
+  endif
+  ins = $ins1 * $ins2
+  ds_setint
+  probeid('enabled'):$probeid
+  write('line3','Updating probefile Quant parameters')
+  $probe=probe
+  if $probeid then
+    probeid('fexists',probe):$e,$sys
+  else
+    getfilepath($probe,'probes/'+$probe):$e,$probefile
+  endif
+  if ($e = 0) then
+   write('error','probe file %s does not exist.',$1)
+   return
+  endif
+
+"first set Qparameters into probefile if needed"
+ $i=1
+ $param[$i]='Qgain'   $i=$i+1
+ $param[$i]='Qmult'   $i=$i+1
+ $param[$i]='Qins'    $i=$i+1
+ $param[$i]='Qinsref' $i=$i+1
+ $param[$i]='Signal2Noise' $i=$i+1
+ $x=1
+ repeat
+   $parex=''
+   shell('grep '+tn+$param[$x]+' '+probe):$parex
+   if ($parex = '') then
+     write('line3','Adding par %s',$param[$x])
+     addparams($param[$x],'0',tn,$probe)
+   endif
+   $x=$x+1
+ until $x = $i
+
+ "Add c13sn par too"
+ if (tn='H1') then
+   $parexC='C13Signal2Noise'
+   $parex=''
+   shell('grep '+$parexC+' '+probe):$parex
+   if ($parex = '') then
+     write('line3','Adding par %s',$parexC)
+     addparams('Signal2Noise','0','C13',$probe)
+   endif
+ endif
+
+ "next pass actual values"
+ $Qgain='' $Qmult='' $Qins='' $Qinsref='' $h1sn='' $c13sn=''
+
+ if ($probestyle='one') then
+   if (sfrq<405 and sfrq>395) then
+	$h1sn='430' $c13sn='180'
+   elseif (sfrq<505 and sfrq > 495) then
+	$h1sn='650' $c13sn='260'
+   elseif (sfrq<605 and sfrq>595) then
+	$h1sn='800' $c13sn='330'
+   elseif (sfrq>605) then
+	$h1sn='1200' $c13sn='400'
+   endif
+ elseif ($probestyle='id') then
+   if (sfrq<405 and sfrq>395) then
+	$h1sn='575' $c13sn='80'
+   elseif (sfrq<505 and sfrq > 495) then
+	$h1sn='875' $c13sn='110'
+   elseif (sfrq<605 and sfrq>595) then
+	$h1sn='1100' $c13sn='150'
+   elseif (sfrq>605) then
+	$h1sn='1200' $c13sn='400'
+   endif
+ else   // DBstyle and Other
+   if (sfrq<405 and sfrq>395) then
+	$h1sn='210' $c13sn='150'
+   elseif (sfrq<505 and sfrq > 495) then
+	$h1sn='330' $c13sn='240'
+   elseif (sfrq<605 and sfrq>595) then
+	$h1sn='480' $c13sn='330'
+   elseif (sfrq>605) then
+	$h1sn='1200' $c13sn='400'
+   endif
+ endif
+ write('line3','H1 SN set %s and C13 SN set %s',$h1sn,$c13sn)
+ if (sfrq>605) then
+	write('line3','You must manually update probe file Signal2Noise values in H1 and C13 tabs')
+ endif
+ format(gain,2,0):$Qgain
+ format(pw/pw90,2,2):$Qmult
+ format(ins,6,2):$Qins
+ format(insref,10,9):$Qinsref
+ setparams('Qgain',$Qgain,tn)
+ setparams('Qmult',$Qmult,tn)
+ setparams('Qins',$Qins,tn)
+ setparams('Qinsref',$Qinsref,tn)
+ setparams('Signal2Noise',$h1sn,tn)
+ setparams('Signal2Noise',$c13sn,'C13')
+ setvalue('Qgain',gain,'processed'):$e
+ setvalue('Qmult',pw/pw90,'processed'):$e
+ setvalue('Qins',ins,'processed'):$e
+ setvalue('Qinsref',insref,'processed'):$e
+ setvalue('Qgain',gain,'current'):$e
+ setvalue('Qmult',pw/pw90,'current'):$e
+ setvalue('Qins',ins,'current'):$e
+ setvalue('Qinsref',insref,'current'):$e
+
+ELSEIF ($arg='close') THEN
+  destroy('quant_cal'):$e
+ENDIF
+

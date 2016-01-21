@@ -1,0 +1,38 @@
+"macro newreport"
+"a macro to write out results of AutoCalibration"
+exists(userdir+'/stdpar','directory'):$e
+if $e<.5 then 
+  exists('/vnmr/stdpar','directory'):$e
+    if $e<.5 then 
+      write('error','There is no /vnmr/stdpar directory!')
+      abort
+    endif
+  write('line3','Creating local stdpar')
+  cp('-r',systemdir+'/stdpar',userdir)
+endif
+
+exists(userdir+'/parlib','directory'):$e
+if $e<.5 then 
+  exists('/vnmr/parlib','directory'):$e
+    if $e<.5 then 
+      write('error','There is no /vnmr/parlib directory!')
+      abort
+    endif
+  write('line3','Creating local parlib')
+  cp('-r',systemdir+'/parlib',userdir)
+endif
+
+cd(userdir+'/stdpar')
+exists('report','file'):$e
+if $e then 
+  rm('report') endif
+$date=''
+$user=''
+$sysname=''
+shell('uname -n'):$sysname
+shell('date'):$date
+shell('echo $USER'):$user
+write('fileline','report','For Test Conducted on %s \n',$date)
+write('file','report','System name: %s',$sysname)
+write('file','report','System operator is %s \n',$user)
+

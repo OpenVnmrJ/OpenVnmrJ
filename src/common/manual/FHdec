@@ -1,0 +1,74 @@
+
+FHDec: 1H-{19F} and 19F-{1H} decoupling experiments
+
+Default 1H-{19F} and 19F-{1H} decoupling:
+
+Standard protocols have been created for: proton observe, fluorine decoupling
+(Hobs_Fdec) and fluorine observe, proton decoupling (Fobs_Hdec).
+These can be called by entering the protocol name manually in the VnmrJ command
+line.
+A standard 1-D proton or fluorine NMR experiment should be run before calling
+either protocol. (It is also recommended to reduce the spectral window to the
+region of interest before the 1D double resonance or 2D correlation setup.)
+The parameters for each protocol are based on the calibration values from the
+active probe file.  Each protocol automatically calls the makeFHdecshape macro
+that updates the default decoupling parameters.
+Default conditions and parameters:
+	dn='H1'  if tn='F19',  or dn='F19' if tn='H1'
+	dm='nny', dmm='ccp', dres=9.0, dof, dpwr
+	dseq='Fdec_W40_8kHz_dutyc.0.4'  or dseq='Hdec_W40_8kHz_dutyc.0.4'
+dutyc defaults to 0.4 (if it does not exists).  If dutyc is changed then the
+decoupler shape needs to be updated (see later).
+
+The only parameter that needs to be set is dof for 19F decoupling.  For proton
+decoupling the default dof=0 is typically sufficient for most applications 
+(see General Application Notes below).  The centerband of the decoupler region
+can be entered if necessary either in the "Default" or the "Pulse Sequence"
+panel in ppm meaning real chemical shifts (setDECoffset macro).
+The default shape decouples an 8 kHz wide range (conveniently covering the
+whole 1H spectrum) and was created such that even the biggest 19F-1H geminal
+couplings (~50 Hz) are covered.  The pulse sequence created for this application
+(FHdec) is identical to s2pul except it does not allow decoupler powers of
+above 46 dB, providing a margin of instrument safety.
+Note: Please note that the 400-MR uses a 50 kHz fixed gating frequency,
+therefore the decoupler dwell time is 20 usec. Of these, 4 usec (20%) is used
+for built in delays (homorof1, homorof2, homorof3) where neither the decoupler
+nor the receiver is on.  The duty cycle is defined as the percentage of the
+time the decoupler is on. Therefore the relevant receiver duty cycle (that
+determines S/N) is 100-20-dutyc.  Using the default parameters, the sensitivity
+of these decoupled experiments is ca. 60% that of the non-decoupled experiment.
+
+Advanced 1H-{19F} and 19F-{1H} decoupling:
+
+In case a wider 19F frequency range is to be decoupled in the absence of 
+geminal F-H couplings, or the user wants to change duty cycle (to either gain
+sensitivity or lower decoupler power) the decoupler shape needs to be
+recreated.  This can be done via the "Pulse Sequence" panel of the sequences
+using the makeFHdecshape macro which has 3 arguments, 
+	makeFHdecshape(bandwidth,maxjhf,dutyc), where:
+		bandwidth is the frequency range to be decoupled in Hz
+		maxjfh is the largest coupling constant to be decoupled
+		dutyc is the decoupler duty cycle. 
+The decoupler parameters are automatically updated. The macro aborts if the
+requested dpwr is above 46 dB.
+
+CALIBRATION
+
+Autocalibration for 1H-{19F} and 19F-{1H} double resonance, as well as for F-H
+correlation experiments are completed via the standard calibration panel using
+the 1H and 19F sensitivity samples, respectively. At the end of the calibration
+process the pwx, pwxlvl and pwxlvl_cf parameters will be added and updated to
+the currently active probe file.  (The macros involved are: AC12H, AC12F and
+AC12p.) In addition, the default decoupling shape is automatically created via
+the makeFHdecshape macro. 
+Note: If channel 2 calibration has been done before the target pw90 is pwx from
+the probe file. If pwx does not exists (or zero) then the target value is the
+relevant pw90, if no calibration at all was done on the probe then the target
+values default to the probe specifications (14 us for 1H and 18 us for 19F). 
+Autocalibration is either completed during system installation or during the
+software upgrade process, or as necessary as part of standard system maintenance,
+please refer to the NMR Spectroscopy, User Guide Pub. No. 01-999343-00, or 
+later, section 3.11 "Calibrating the Probe). The decoupler calibration
+procedure above does not replace or substitute the ordinary 1H and 19F observe
+calibration (items 1 and 3 in the Probe Calibration window). Those need
+to be completed before the channel-2 calibration is activated. 

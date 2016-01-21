@@ -1,0 +1,165 @@
+"macro xmhaha_wrattr"
+
+if ($1='exp') then
+    $afile=$2
+    $cpnode=$3
+    $macdir=$5
+
+    exists($macdir+'/'+$cpnode+'acqpars','file'):$fileex
+    $partot=0
+    if ($fileex) then
+        write('reset',cursqexp+'/'+$0)
+        write('reset',cursqexp+'/'+$0+'1')
+        shell('(diffparams '+$macdir+'/'+$cpnode+'acqpars '+cursqexp+'/'+$0+' > '+cursqexp+'/'+$0+'1)'):$dum
+        $pars='' $s1=''
+        readfile(cursqexp+'/'+$0+'1','$pars','$s1','','local'):$partot
+        rm('-f',cursqexp+'/'+$0):$dum
+        rm('-f',cursqexp+'/'+$0+'1'):$dum
+        if ($partot) then
+            $i=1
+            repeat
+                strstr($pars[$i],'time_'):$t
+                if ($t=1) then $pars[$i]='' endif
+                $i=$i+1
+            until $i > $partot
+        endif
+        array2array($pars):$pars
+        $partot=size('$pars')
+        if ($pars[1]='') then $partot=0 endif
+        fread('','usertree')
+        fread($macdir+'/'+$cpnode+'acqpars','usertree')
+        if ($partot) then
+            write('file',$afile,'## -- Customization -- ##')
+            $i=1
+            repeat
+                $val='' $size=0
+                getvalue($pars[$i],'size','usertree'):$size
+                if ($size) then
+                    $x=1
+                    repeat
+                        $v=''
+                        getvalue($pars[$i],$x,'usertree'):$v
+                        if ($x=1) then $val=$v else
+                            $val=$val+','+$v
+                        endif
+                        $x=$x+1
+                    until $x>$size
+                endif
+                write('file',$afile,'%s = %s',$pars[$i],$val)
+                $i=$i+1
+            until $i > $partot
+        endif
+        fread('','usertree')
+    endif
+    exists($macdir+'/'+$cpnode+'acq','file'):$fileex
+    if ($fileex) and ($partot) then
+        shell('(cat '+$macdir+'/'+$cpnode+'acq | grep -v ACQtime= | wc -l)'):$fileex
+    endif
+    if ($fileex) then
+        if ($partot=0) then
+           write('file',$afile,'## -- Customization -- ##')
+           shell('(cat '+$macdir+'/'+$cpnode+'acq  >> '+$afile+')'):$dum
+        else
+           shell('(cat '+$macdir+'/'+$cpnode+'acq  | grep -v ACQtime= >> '+$afile+')'):$dum
+        endif
+    endif
+
+elseif ($1='study') then
+
+    $afile=$2
+    $study=$4
+    $swhen=$5
+    $macdir=$6
+
+    exists($4,'studylib'):$stex,$spath
+    if ($stex=0) then
+	xmhaha_wrattr('exp',$2,$3,'',$6)
+	return
+    endif
+    $s1='' $s2='' $s3=''
+    readfile($spath+'/EXPLIST','$s1','$s3','','local'):$etot
+    readfile($spath+'/LONGLIST','$s2','$s3','','local'):$ltot
+
+    if ($swhen='day') then
+	if ($etot) then
+	    write('file',$afile,'%s is a composite protocol',$4)
+	    write('file',$afile,'')
+	    $i=1
+	    repeat
+		$macro=''
+		cpattribute('get',$spath+'/macdir/'+$s1[$i],'SetupMacro'):$macro
+		if ($macro='') then
+		    strstr($s1[$i],'_','last'):$ret,$macro
+		    if ($ret=0) then $macro=$s1[$i] endif
+		endif
+		write('file',$afile,'Setup Macro \t: %s',$macro)
+		xmhaha_wrattr('exp',$afile,$s1[$i],'',$spath+'/macdir')
+		write('file',$afile,'')
+		$i=$i+1
+	    until $i > $etot
+	else
+	    xmhaha_wrattr('exp',$2,$3,'',$6)
+	endif
+	return
+    elseif ($swhen='night') then
+        if ($ltot) then
+            write('file',$afile,'%s is a composite protocol',$4)
+	    write('file',$afile,'')
+            $i=1
+            repeat
+                $macro=''
+                cpattribute('get',$spath+'/macdirlong/'+$s2[$i],'SetupMacro'):$macro
+                if ($macro='') then
+                    strstr($s2[$i],'_','last'):$ret,$macro
+                    if ($ret=0) then $macro=$s2[$i] endif
+                endif
+                write('file',$afile,'Setup Macro \t: %s',$macro)
+                xmhaha_wrattr('exp',$afile,$s2[$i],'',$spath+'/macdirlong')
+		write('file',$afile,'')
+                $i=$i+1
+            until $i > $ltot
+        else
+            xmhaha_wrattr('exp',$2,$3,'',$6)
+        endif
+        return
+    else
+	if ($ltot+$etot < 0.5) then
+	    xmhaha_wrattr('exp',$2,$3,'',$5)
+	    return
+	endif
+        write('file',$afile,'%s is a composite protocol',$4)
+	write('file',$afile,'')
+        if ($etot) then
+            $i=1
+            repeat
+                $macro=''
+                cpattribute('get',$spath+'/macdir/'+$s1[$i],'SetupMacro'):$macro
+                if ($macro='') then
+                    strstr($s1[$i],'_','last'):$ret,$macro
+                    if ($ret=0) then $macro=$s1[$i] endif
+                endif
+                write('file',$afile,'Setup Macro \t: %s',$macro)
+                xmhaha_wrattr('exp',$afile,$s1[$i],'',$spath+'/macdir')
+		write('file',$afile,'')
+                $i=$i+1
+            until $i > $etot
+	endif
+        if ($ltot) then
+            $i=1
+            repeat
+                $macro=''
+                cpattribute('get',$spath+'/macdirlong/'+$s2[$i],'SetupMacro'):$macro
+                if ($macro='') then
+                    strstr($s2[$i],'_','last'):$ret,$macro
+                    if ($ret=0) then $macro=$s2[$i] endif
+                endif
+                write('file',$afile,'Setup Macro \t: %s',$macro)
+                xmhaha_wrattr('exp',$afile,$s2[$i],'',$spath+'/macdirlong')
+		write('file',$afile,'')
+                $i=$i+1
+            until $i > $ltot
+        endif
+    endif
+    return
+
+endif

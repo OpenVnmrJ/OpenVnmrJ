@@ -1,0 +1,26 @@
+"macro make_es_flipshape"
+"make_es_flipshape - macro to update the water flip back shape         "
+"                      for dpfgse water suppression sequences         "
+"   the macro takes the current shapename (flipshape) and             "
+"   pulsewidth (flippw) and receates the shape and updates the        "
+"   corresponding power level (flippwr)                               "
+"   for the shape type a sinc90 shape is set by the macro             "
+
+if (flippw<950)or(flippw>8000) then
+  write('error','Please make sure 950 < flippw < 8000 usec!')
+endif
+getparam('tpwr_cf',tn):tpwr_cf
+$flippw='' $flippwr='' $flippwban=''
+ format(flippw*1e-6,6,6):$flippw 
+ format(flippw,1,1):$flippwban
+// $wave='sinc90 '+$flippw+' 0 '
+$wave='esnob '+$flippw+' 0 '
+opx(flipshape)
+setwave($wave)
+cpx(pw*tpwr_cf, tpwr):$dum
+ pbox_pw(flipshape+'.RF'):$flippw1 flippw=$flippw1
+ pbox_pwr(flipshape+'.RF'):$flippwr1 flippwr=$flippwr1
+ format(flippwr,0,0):$flippwr
+if ($## < 1) then
+    write('line3','flipshape = %s, flippw = %s us, flippwr = %s dB (can optimize flippwrf)',flipshape,$flippwban,$flippwr)
+endif

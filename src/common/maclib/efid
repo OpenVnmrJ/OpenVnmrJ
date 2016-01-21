@@ -1,0 +1,50 @@
+"macro efid"
+/* allow to email fid in automation
+if (auto='y') then 
+   write('line3','efid is not functional under automation')
+   return
+endif
+*/
+
+if ($# < 1) then $1=emailaddr endif
+if ($1='') then
+    write('line3','Usage efid(<address>). emailaddr is empty string')
+    return
+endif
+
+if (emailflag='n') then
+	write('line3','Email option is NOT turned on')
+	return
+endif
+
+isnewexp:$isnew
+if ($isnew) then
+  write('line3','Data in curexp has not been saved. Cannot email unsaved fid')
+  return
+endif
+
+$ext='' $basename=''
+substr(file,'basename'):$expname,$ext
+if ($ext='') then
+    $file=file+'.fid'
+    exists($file,'directory'):$fidex
+    if ($fidex=0) then
+	$file=file+'.rec'
+	exsits($file,'directory'):$fidex
+	if ($fidex=0) then
+	    $file=file+'.REC'
+	    exists($file,'directory'):$fidex
+	endif
+    endif
+else
+    $file=file
+    exists($file,'directory'):$fidex
+endif
+
+if ($fidex=0) then
+    write('line3','Fid %s not found',file)
+    return
+endif
+
+vnmremail($file,$1)
+write('line3','%s sent to %s',$file,$1)

@@ -1,0 +1,188 @@
+// autoqstart macro
+
+/*  -------------------------------------------
+ * Sections of this macro will be activated as pieces are implemented
+ *
+
+// debug('c3')
+// debug('c')
+write('line3','start %s',$0)
+// There is a lot of manipulation of operator and operator_.
+// Maybe the USER: field from an automation run should be given
+// a new parameter (sampleowner?)
+
+// Handle automation pausing
+//  pauseEvent:$pause
+$pause=''
+
+// Pause after current experiment
+if ($pause = 'exp') then
+  autosa
+  return
+endif
+
+// This section will continue a chained experiment
+auto_chain:$macro,$path
+write('line3','auto_chain returns macro=%s path= %s',$macro,$path)
+if ($macro <> '') then
+   macrold($path)
+   delete($path)
+   exec($macro):$res   // The auto_chain will probably contain auto_next
+                       // Need proper handling of $res
+   purge($macro)       // Only needed if this macro is allowed for auto='n'
+write('line3','%s done after auto_chain macro',$0)
+   return
+endif
+
+// Pause after current sample
+if ($pause = 'sample') then
+  autosa
+  return
+endif
+
+ *
+ * For now, it does auto_au tasks only
+ * The auto_au_mimic part is not included
+ * --------------------------------------------
+ */
+
+// New step to get the sampleinfo from the enterQ or enterQ equivalent.
+// If there are no more samples to run, tell Autoproc. This step used to
+// be done by Autoproc.
+exists('sw','parameter','processed'):$r1
+write('line3','%s sw exists: %d',$0,$r1)
+autoq('get',curexp+'/sampleinfo'):$res
+if ($res <= 0) then
+  autosa(1)
+  write('line3','%s done: no samples',$0)
+  xm1('sendcmd',`readhw('z0','lockpower','lockgain','lockphase'):z0,lockpower,lockgain,lockphase`)
+  $lastsample='current'
+  getadminfo('lastsample'):$lastsample
+  if ($lastsample='empty') then
+    xm1('sendcmd','sampleChange')
+    write('line3','Removing final automation sample from magnet')
+  endif
+  return
+endif
+
+// This section is the old auto_au
+readhw('z0','lockpower','lockgain','lockphase'):z0,lockpower,lockgain,lockphase
+cat(curexp+'/sampleinfo')
+$s1='' $s2=''
+$cmd=''
+$locused=0
+readfile(curexp+'/sampleinfo','$s1','$s2','','local')
+
+teststr('$s1','SAMPLE#:','local'):$ret
+if ($ret) then
+  format($s2[$ret],'lower'):$loc
+  $locused=1
+endif
+teststr('$s1','RACK:','local'):$ret
+if ($ret) then
+  format($s2[$ret],'lower'):vrack
+  vrack = vrack
+endif
+teststr('$s1','ZONE:','local'):$ret
+if ($ret) then
+  format($s2[$ret],'lower'):vzone
+  vzone = vzone
+endif
+teststr('$s1','MACRO:','local'):$ret
+if ($ret) then $cmd=$s2[$ret] endif
+teststr('$s1','USER:','local'):$ret
+if ($ret) then
+  $operator=''
+  substr($s2[$ret],1):$operator
+  if ($operator<>'') then
+    setvalue('operator',$operator,'global')
+  endif
+endif
+teststr('$s1','SOLVENT:','local'):$ret
+if ($ret) then solvent=$s2[$ret] endif
+teststr('$s1','TEXT:','local'):$ret
+if ($ret) then
+  substr($s2[$ret],1,200):comment  // store at most 200 characters
+  comment=comment
+endif
+teststr('$s1','PEAK#:','local'):$ret
+if ($ret) then
+  format($s2[$ret],'lower'):lcpeak
+  lcpeak=lcpeak
+endif
+teststr('$s1','PROTOCOL:','local'):$ret
+if ($ret) then vproto=$s2[$ret] endif
+
+
+if ($locused) then
+  if typeof('$loc') then
+    vloc=$loc
+  else
+    loc=$loc
+  endif
+  if (traymax = 96) or (traymax = 768) then
+    write('file',autodir+'/locQ','SAMPLE#: %s %d %d',$loc,vrack,vzone)
+  elseif (traymax = 1) then
+    write('file',autodir+'/locQ','PEAK#: %d',lcpeak)
+    off('loc','global')
+  else
+    write('file',autodir+'/locQ','SAMPLE#: %s',$loc)
+  endif
+endif
+
+
+exec($cmd):$res      // Initialization for the sample's experiments
+dousermacro($0)
+
+"**************skip if wexp = 'AutoSKIP'*******************"
+IF (wexp <> 'AutoSKIP') THEN
+
+   if (wexp='chempackQ') then
+          if (loc=0) then loc='n' endif
+          nextgo('auto')
+   elseif (wexp = 'procplot') then
+          au('wait')
+   endif
+
+ENDIF
+
+exists(curexp+'/psgdone','file'):$e
+if ($e < 0.5) then
+  write('reset',curexp+'/psgQtmp')
+  write('file',curexp+'/psgQtmp','NOGO NOGO NOGO')
+  $key=''
+  $val=''
+  readfile(curexp+'/sampleinfo','$key','$val','','local'):$total
+  if ($total>0) then
+    teststr('$key','STATUS:','local'):$ret
+    if ($ret) then $val[$ret]='Complete' endif
+    teststr('$key','DATA:','local'):$ret
+    if ($ret) then $val[$ret]='No Data Requested' endif
+    $i=1
+    repeat
+      write('fileline',curexp+'/psgQtmp','%s %s\n',$key[$i],$val[$i])
+      $i=$i+1
+    until $i > $total
+  endif
+  shell('cat '+curexp+'/psgQtmp >> '+autodir+'/psgQ'):$dum
+  delete(curexp+'/psgQtmp')
+else
+  "Locate the .fid file by looking in curexp/psgdone, then"
+  "copy curexp/text there."
+  $file = ''
+  lookup('mfile',curexp+'/psgdone','seekcs','DATA:','readline'):$file
+  $ch1=''
+  substr($file,1,1):$ch1
+  if ($ch1 <> '/') then
+    $file = autodir + '/' + $file + '.fid'
+  else
+    $file = $file + '.fid'
+  endif
+  cp(curexp+'/text',$file)
+  delete(curexp+'/psgdone')
+endif
+
+/*  -------------------------------------------
+auto_next
+ * --------------------------------------------
+ */

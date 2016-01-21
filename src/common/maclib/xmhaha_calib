@@ -1,0 +1,294 @@
+"macro xmhaha_calib"
+
+// This is a utility macro used by calibration macros
+// The order of the $co variable is the order in which
+//   the calibrations will be run
+
+  $co='Hobs','Cdec'
+  $co=$co,'Ndec','Pdec','Fdec','Gcal'
+  $co=$co,'Cgrad','Ngrad','Pgrad','Fgrad'
+  $co=$co,'Cobs','Nobs','Pobs','Fobs','Hdec'
+  $co=$co,'QuantCal'
+  $co=$co,'HobsIFC','CdecIFC'
+  $co=$co,'GcalIFC','CgradIFC'
+  $co=$co,'CghmqcIFC','CghsqcIFC'
+// Gradient map generation and z0 calibration always trump others
+  $co='lkZ0','lkGmap',$co
+
+  $ce='H1_observe','C13_decoupler'
+  $ce=$ce,'N15_decoupler','P31_decoupler','F19_decoupler','Gradient_profile'
+  $ce=$ce,'H1C13_GradientRatio','H1N15_GradientRatio','H1P31_GradientRatio','H1F19_GradientRatio'
+  $ce=$ce,'C13_observe','N15_observe','P31_observe','F19_observe','H1_decoupler'
+  $ce=$ce,'Quantitation'
+  $ce=$ce,'Flow_H1_observe','Flow_C13_decoupler'
+  $ce=$ce,'Flow_Gradient_profile','Flow_H1C13_Gratio'
+  $ce=$ce,'Flow_H1C13_hmqcGratio','Flow_H1C13_hsqcGratio'
+// Gradient map generation and z0 calibration always trump others
+  $ce='Z0_calibration','lkGradientMap',$ce
+IF ($# < 1) then $1='wstart' endif
+
+"***************************************************************************"
+IF ($1='wstart') THEN
+
+    exists(archivedir+'/'+sample+'/dirinfo/fidlog','file'):$fidex
+    if ($fidex) then
+	lookup('mfile',archivedir+'/'+sample+'/dirinfo/fidlog','countline'):$fidex
+    endif
+    if ($fidex>0.5) then
+	write('error','%s/%s study is not a new study!',archivedir,sample)
+	write('error','Autocalibration MUST be started in a new study - aborted')
+	abort
+    endif
+
+    $return=0
+// don't check svftmplt.  This is hardcoded by the autocalibration
+    $svftmplt=svftmplt svftmplt='$pslabel$_'
+    checktemplates:$return
+    svftmplt=$svftmplt
+    if not $return then return endif
+    if macro<>'g3Dcalib' then
+        seqfil='s2pul'
+        xmhaha_calib('saveTargets')
+	xmhaha_calib('setNodes')
+	caliblist=macro
+	calibnode='_'+pslabel
+    else
+	caliblist=macro
+	xmhaha_calib('setNodes')
+	savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir')
+	g3Dcalib('wstart')
+	prtmod='n'
+    endif
+    svftmplt='$caliblist$$calibnode$_'
+    savesampglobal(archivedir+'/'+sample+'/dirinfo/macdir','svftmplt')
+    if (prtmod='y') then
+        xmhaha_calib('printProbe')
+    endif
+    if macro='LKgmapz0_calibration' then
+	{$0}('disable_locknshim')
+    endif
+    wstart=''
+
+"***************************************************************************"
+ELSEIF ($1='disable_locknshim') THEN
+
+    $mdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    exists($mdir,'directory'):$direx
+    if not $direx then return endif
+    $explist=''
+    cpexplist('next',$mdir):$explist
+    if $explist='' then return endif
+    $file=$mdir+'/'+$explist+'_walkupQacq'
+    write('file',$file,'write(\'line3\',\'Disabling lock and shim prescans for autocalibration\')')
+    write('file',$file,'alock=\'n\' wshim=\'n\'')
+    if (auto='n') then
+	Autoexmac($explist+'_walkupQ')
+	Autobkupmac($explist[1]+'_walkupQ')
+    endif
+"***************************************************************************"
+ELSEIF ($1='printProbe') THEN
+    $date=''
+    shell('date'):$date
+    printon
+        write('alpha','Probe calibrations on: %s',$date)
+        catprobe
+    printoff
+"***************************************************************************"
+ELSEIF ($1='setNodes') THEN
+
+  if (archivedir<>'') and (sample<>'') then
+       exists(archivedir+'/'+sample+'/dirinfo','directory'):$direx
+  else
+        $direx=0
+  endif
+  if ($direx=0) then Automkdir else Autockdir endif
+// add all the calibrations to the queue
+  $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+  $alias=$macdir+'/alias'
+
+// As first approximation, each node is set to 2 minute
+  $t=120
+  $size=size('$ce')
+  $i=1
+  repeat
+        teststr('caliblist',$ce[$i],'current'):$ok
+        if ($ok) then
+            $r=0 $n=''
+            walkupQ_runtime('add',$ce[$i],'last','no',$t,'nocheck','quiet'):$r,$n
+            if ($r) then
+                write('file',$alias,'%s: %s',$n,$co[$i])
+                write('file',$macdir+'/'+$n+'acq','wshim=\'n\' alock=\'n\' wtune=\'n\'')
+            endif
+        endif
+        $i=$i+1
+  until $i > $size
+  if (prtmod='y') then
+        $r=0 $n=''
+        walkupQ_runtime('add','PrintProbeFile','last','no',0,'nocheck','quiet'):$r,$n
+        if ($r) then
+            write('file',$alias,'%s: xmhaha_calib(\'printProbe\')',$n)
+            write('file',$macdir+'/CMDnodes','%s',$n)
+        endif
+  endif
+
+"***************************************************************************"
+ELSEIF ($1='savePar') THEN
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    exists($macdir,'directory'):$direx
+    if ($direx=0) then return endif
+    $par=archivedir+'/'+sample+'/'+$2
+    svp($par,'force')
+    EXPtime:$acqtime
+    if (profileflg='y') then
+        walkupQ_runtime('add',caliblist+calibnode,'last','no',$acqtime,'nocheck','quiet'):$ok,$newnode
+        if ($ok=0) then return endif
+        write('file',$macdir+'/alias','%s: rtp(\'%s\')',$newnode,$par)
+	customizedtext('write',$macdir,$newnode)
+    endif
+    return
+"***************************************************************************"
+ELSEIF ($1='addNode') THEN
+
+    if ($# < 3) then $3='next' endif
+// As a first approximation, each iteration is defaulted to 30 sec
+    if ($# < 4) then $4=30 endif
+
+    $macdir=archivedir+'/'+sample+'/dirinfo/macdir'
+    exists($macdir,'directory'):$direx
+    if ($direx=0) then return endif
+
+    $newnode='' $ok=0
+    walkupQ_runtime('add',caliblist,$3,'no',$4,'nocheck','quiet'):$ok,$newnode
+    if ($ok=0) then return endif
+    write('file',$macdir+'/alias','%s: %s',$newnode,$2)
+    return($newnode)
+
+"***************************************************************************"
+ELSEIF ($1='add') or ($1='delete') or ($1='synonym') or ($1='') THEN
+
+  $list=$2
+  teststr('$co',$list,'local'):$is
+  if ($is) then $list=$ce[$is] endif
+  if ($1='synonym') then return($list) endif
+
+  teststr('caliblist',$list,'current'):$ok
+  if ($1='add') and ($ok=0) then
+     caliblist=caliblist,$list
+  endif
+  if ($1='delete') and ($ok) then
+    caliblist[$ok]=''
+  endif
+ 
+  return($ok)
+
+"***************************************************************************"
+ELSEIF ($1='setParams') THEN
+
+    $ok=0
+    xmhaha_calib('getLastTargets'):$ok
+    if ($ok=0) then
+    	getparam('pw90','H1'):H1pw90
+        getparam('pp','H1'):H1pp
+        getparam('pw90','C13'):C13pw90
+        getparam('pwx','C13'):C13pwx
+        getparam('pw90','N15'):N15pw90
+        getparam('pwx','N15'):N15pwx
+	getparam('pw90','F19'):F19pw90
+	getparam('pwx','F19'):F19pwx
+	getparam('pw90','P31'):P31pw90
+	getparam('pwx','P31'):P31pwx
+    endif
+
+    	if (H1pw90 = 0) then H1pw90=15 endif
+        if (H1pp = 0) then H1pp = 15 endif
+        if (C13pw90 = 0) then C13pw90=15 endif
+        if (C13pwx = 0) then C13pwx = 15 endif
+        if (N15pw90 = 0) then N15pw90=25 endif
+        if (N15pwx = 0) then N15pwx = N15pw90 endif
+	if (F19pw90=0) then F19pw90=15 endif
+	if (F19pwx=0) then F19pwx=F19pw90 endif
+	if (P31pw90=0) then P31pw90=20 endif
+	if (P31pwx=0) then P31pwx=P31pw90 endif
+
+    	getparam('tpwr','H1'):H1tpwr
+    	if (H1tpwr = 0) then H1tpwr=51  else H1tpwr=H1tpwr-3 endif
+    	getparam('pplvl','H1'):H1pplvl
+    	if (H1pplvl = 0) then H1pplvl=51 else H1pplvl=H1pplvl-3 endif
+    	getparam('dpwr','H1'):H1dpwr
+    	if (H1dpwr = 0) then H1dpwr=40 else H1dpwr=H1dpwr-3 endif
+    	getparam('dmf','H1'):H1dmf
+    	if (H1dmf = 0) then H1dmf= 8000 endif
+
+    	getparam('tpwr','C13'):C13tpwr
+    	if (C13tpwr = 0) then C13tpwr = 51 else C13tpwr=C13tpwr-3 endif
+    	getparam('pwxlvl','C13'):C13pwxlvl
+    	if (C13pwxlvl = 0) then C13pwxlvl = 51 else C13pwxlvl=C13pwxlvl-3  endif
+    	getparam('dpwr','C13'):C13dpwr
+    	if (C13dpwr = 0) then C13dpwr = C13pwxlvl-20 else C13dpwr=C13dpwr-3 endif
+    	getparam('dmf','C13'):C13dmf
+    	if (C13dmf = 0) then C13dmf = 15873 endif
+
+    	getparam('tpwr','N15'):N15tpwr
+    	if (N15tpwr = 0) then N15tpwr = 51  else N15tpwr=N15tpwr-3 endif
+    	getparam('pwxlvl','N15'):N15pwxlvl
+    	if (N15pwxlvl = 0) then N15pwxlvl = N15tpwr  else N15pwxlvl=N15pwxlvl-3 endif
+    	getparam('dpwr','N15'):N15dpwr
+    	if (N15dpwr = 0) then N15dpwr = N15tpwr-15  endif
+    	getparam('dmf','N15'):N15dmf
+    	if (N15dmf = 0) then N15dmf = 40*h1freq endif
+
+        getparam('tpwr','P31'):P31tpwr
+        if (P31tpwr = 0) then P31tpwr = 51  else P31tpwr=P31tpwr-3 endif
+        getparam('pwxlvl','P31'):P31pwxlvl
+        if (P31pwxlvl = 0) then P31pwxlvl = P31tpwr  else P31pwxlvl=P31pwxlvl-3 endif
+        getparam('dpwr','P31'):P31dpwr
+        if (P31dpwr = 0) then P31dpwr = P31tpwr-15  endif
+        getparam('dmf','P31'):P31dmf
+        if (P31dmf = 0) then P31dmf = 40*h1freq endif
+
+	getparam('tpwr','F19'):F19tpwr
+        if (F19tpwr = 0) then F19tpwr = 51  else F19tpwr=F19tpwr-3 endif
+        getparam('pwxlvl','F19'):F19pwxlvl
+        if (F19pwxlvl = 0) then F19pwxlvl = F19tpwr  else F19pwxlvl=F19pwxlvl-3 endif
+        getparam('dpwr','F19'):F19dpwr
+        if (F19dpwr = 0) then F19dpwr = F19tpwr-15  endif
+        getparam('dmf','F19'):F19dmf
+        if (F19dmf = 0) then F19dmf = 40*h1freq endif
+
+	LKtpwr=0
+	getparam('tpwr','lk'):LKtpwr
+
+	if (tn='F19') then 
+	    tpwr=F19tpwr pw90=F19pw90
+	elseif (tn='P31') then
+	    tpwr=P31tpwr pw90=P31pw90
+	else
+    	    tpwr=H1tpwr pw90=H1pw90
+	endif
+	exists('probeidez','maclib'):$probeidex
+	if ($probeidex) then
+	    if (probeidattr[1]='native') then probeidez('getTargets') endif
+	endif
+
+ELSEIF ($1='saveTargets') or ($1='getLastTargets') THEN
+    $ppath='' $pdir=''
+    getProbePath(probe,'alert'):$e,$ppath
+    substr($ppath,'dirname'):$pdir
+    if ($1='saveTargets') then
+	exists($pdir,'file','rw'):$ok
+	if ($ok) then
+	    Autobackup
+	    $list=''
+    	    module('arraylist','calibpars'):$list
+	    if ($list[1]<>'') then
+    	    	writeparam($pdir+'/LastTargets','$list')
+	    endif
+	endif
+    else
+	exists($pdir+'/LastTargets','file'):$ex
+	if ($ex) then fread($pdir+'/LastTargets') endif
+	return($ex)
+    endif
+
+ENDIF

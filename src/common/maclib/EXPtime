@@ -1,0 +1,31 @@
+"macro EXPtime"
+" Adds pad to exptime output"
+"  This is a bug in exptime and this macro"
+"  should be reworked when that bug is fixed"
+$ret=0
+execpslabel('time'):$ret
+if ($ret=0) then
+   exptime:$ret
+endif
+
+if ($ret=0) then return($ret) endif
+
+// Adjust for selective frequencies if they
+// are being arrayed in foreground interactively
+// selfrqc is an array but protection bit#8 is ON
+
+exists('wds','parameter'):$ok
+if ($ok) then
+    exists('is_submitmode','maclib'):$ok
+endif
+if ($ok) then
+    is_submitmode:$submit
+    if ($submit<0.5) then
+	$size=1
+	if (wds='suselfrq') then
+	    $size=size('selfrqc')
+	endif
+   	$ret=$ret*$size
+    endif
+endif
+return($ret)

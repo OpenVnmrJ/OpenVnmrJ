@@ -1,0 +1,110 @@
+"macro AT05a"
+"AT05a" "DSP (channel 1) "
+
+if (at_new='y') then ATnext return endif
+
+if ($#=0) then
+   ATrtp('standard')
+   text('S/N with normal sampling on Channel 1')
+   at_currenttest='DSPtest_normal_sampling'
+   array('nt',20,1,0) full dsp='n'
+   sw=10000 at=.8192               " large enough to measure s/n accurately"
+   fn=16k ph
+   wnt='ATwft f select(1) aph0:$ok if $ok then aph0 else av endif vsadj dssh dtext'
+   wexp='AT05a(`PART1`)'
+   ATcycle
+   au
+   write('line3','Determining S/N under normal sampling (channel 1)')
+   dps
+elseif ($1='PART1') then
+
+   ft ATsvf
+   crl lb='n' rfl=sw/2 rfp=0 
+   cz z(1000,-1000) ph select(1) aph0:$ok if $ok then aph0 else av endif
+   sp=-1000 wp=6000
+   cr=4000 delta=2000 s1
+   $snav=0 $spectrum=1
+   repeat
+    select($spectrum)
+    bc dsn:$sn
+    $snav=$snav+$sn
+    $spectrum=$spectrum+1
+   until $spectrum>arraydim
+    r1=trunc($snav/(arraydim))
+    write('graphics',100,175,' Average S/N (normal sampling): %6.0f ',r1)
+    at_currenttest='DSPtest_normal_sampling_gain+12'
+    wexp='AT05a(`PART2`)'
+    text('S/N with normal sampling: Flip Angle Reduced to 10 degrees Gain increased by 12dB')
+    gain=gain+12 pw(10) au
+
+elseif ($1='PART2') then
+
+   ft ATsvf
+   select(1) aph0:$ok if $ok then aph0 else av endif
+   $snav=0 $spectrum=1
+   repeat
+    select($spectrum)
+    bc dsn:$sn
+    $snav=$snav+$sn
+    $spectrum=$spectrum+1
+   until $spectrum>arraydim
+    r2=trunc($snav/(arraydim))
+    gain=gain-12 pw(90)
+   text('S/N with normal sampling on Channel 1')
+  sw=8*sw         "8x oversampling"
+  fn=8*fn
+  wexp='AT05a(`PART3`)'
+  wnt=''
+  au
+   write('line3','Determining S/N with oversampling (channel 1)')
+   dps
+   at_currenttest='DSPtest_oversampled'
+
+elseif ($1='PART3') then
+
+   ft ATsvf
+   crl lb='n' rfl=sw/2 rfp=0 
+   cz z(1000,-1000) ph select(1) aph0:$ok if $ok then aph0 else av endif
+   vsadj
+   sp=-1000 wp=6000
+   cr=4000 delta=2000
+   $snav=0 $spectrum=1
+   repeat
+    select($spectrum)
+    bc dsn:$sn
+    $snav=$snav+$sn
+    $spectrum=$spectrum+1
+   until $spectrum>arraydim
+    r3=trunc($snav/(arraydim))
+    wexp='AT05a(`PART4`)'
+    text('S/N with oversampling: Gain increased by 12dB')
+    gain=gain+12 pw(10) au
+    at_currenttest='DSPtest_oversampled_gain+12'
+
+elseif ($1='PART4') then
+
+   ft ATsvf
+   select(1) aph0:$ok if $ok then aph0 else av endif
+   vsadj
+   $snav=0 $spectrum=1
+   repeat
+    select($spectrum)
+    bc dsn:$sn
+    $snav=$snav+$sn
+    $spectrum=$spectrum+1
+   until $spectrum>arraydim
+    r4=trunc($snav/(arraydim))
+    $benefit1=trunc(100*r3/r1-100)
+    $benefit2=trunc(100*r4/r2-100)
+    gain=gain-12 pw(90)
+
+   write('file',autotestdir+'/REPORT','S/N for pw90(gain/normal/oversampled/percent impr.)    = %2.0f %5.0f %5.0f %5.0f ',gain,r1,r3,$benefit1)
+   write('file',autotestdir+'/REPORT','S/N for pw10(gain+12/normal/oversampled/percent impr.) = %2.0f %5.0f %5.0f %5.0f ',gain+12,r2,r4,$benefit2)
+
+
+   ATrecord('DSP_SENSITIVITY1','DSP TEST for 90 Degree Pulse ','Benefit(pct.) ',$benefit1,'at_gain ',gain,'normal ',r1,' oversampled ',r3)
+   ATrecord('DSP_SENSITIVITY2','DSP TEST for 10 Degree Pulse ','Benefit(pct.) ',$benefit2,'at_gain ',gain+12,'normal ',r2,' oversampled ',r4)
+
+ dsp=at_dsp
+  ATnext
+endif

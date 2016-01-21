@@ -1,0 +1,38 @@
+"macro getsolvinfo"
+$ppm=-100
+$width=0
+$gh2=15
+$cppm=9999
+$gmap='lk'
+$shape='seduce'
+$ok=0
+
+format($1,'lower'):$1
+
+if ($1='') then 
+   return($ppm,$width,$gh2,$cppm,$gmap,$shape,$ok)
+endif
+getfilepath('solventppm',''):$ex,$solvtable
+if ($ex=0) then
+  return($ppm,$width,$gmap,$shape,0)
+endif
+
+$solvline='' $comment=''
+
+shell('(cat '+$solvtable+' | grep '+$1+':)'):$solvline
+if ($solvline <> '') then
+  substr($solvline,2):$ppm
+  substr($solvline,3):$width
+  substr($solvline,4):$gh2
+  substr($solvline,5):$cppm
+  substr($solvline,6):$gmap
+  substr($solvline,7):$shape
+  substr($shape,1,1):$comment
+  if ($comment='#') then $shape='' endif
+  if ($shape='') then $shape='seduce' endif
+  $ok=1
+else
+  $ok=0
+endif
+
+return($ppm,$width,$gh2,$cppm,$gmap,$shape,$ok)

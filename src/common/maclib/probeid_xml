@@ -1,0 +1,94 @@
+"macro probeid_xml"
+// generate the probeid GUI xml
+//
+// Nota Bene:
+//     <entry loc ... size="X Y"> indicates the width and height using magic
+//                                numbers in units that are both unknown and
+//                                undocumented.
+//     If "X" is too small, then the value will be cropped.
+//   
+if ($# < 7) then
+  $usage = $0+'($dir,<\'first\'|\'last\'|\'\'>,$maxx,$maxy,$attr,$val)'
+  write('line3','usage: '+$usage)
+  return
+endif
+$dir =$1
+$cmd =$2
+$maxx=$3
+$maxy=$4
+$enable=$5
+$a=$6
+$v=$7
+$readonly_always=0
+
+if $# > 7 then 
+  if $8='ro' then $readonly_always=1 endif
+endif
+
+$xfile = $dir+'/ProbeEdit.xml'
+
+if ($cmd='first' or $cmd='only') then
+  write('reset',$xfile)
+  write('file',$xfile,'<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>')
+  write('file',$xfile,'<template element="panels" type="probe parameters">')
+  write('file',$xfile,'  <group loc="%g 15" size="87 22">',$maxx-70)
+  write('file',$xfile,'  </group>\n')
+  write('file',$xfile,'  <folder loc="10 10" size="%g %g">',$maxx,$maxy+60)
+endif
+
+$limits=0
+$attr  = $a
+$val   = $v
+$psize = size($a)
+$first = 1
+
+$i=0 $hdr=0 $hct=0 $lct=0
+repeat
+  $readonly=$readonly_always
+  $i=$i+1
+  $name = {$attr}[$i]
+  if ($name <> 'NAME:') and ($name <> 'ID:') then
+    $lct=$lct+1
+    strstr($name,':'):$hdr
+    if ($hdr and not $first) then
+      write('file',$xfile,'      </group>\n    </group>\n')
+    endif
+    if ($hdr) then
+      $first=0
+      $lct=0
+      substr($name,1,$hdr-1):$name
+      substr($name,1,1):$firstchar
+      if ($firstchar='_') then     // if it starts with an '_' it's read-only
+	  length($name):$namelen
+	  substr($name,2,$namelen-1):$name
+      endif
+      write('file',$xfile,'    <group loc="%g 10" size="%g %g" value="%s">',2*$hct,$maxx-5,$maxy+20,$name)
+      write('file',$xfile,'      <group loc="5 0" size="%g %g">',$maxx-10,$maxy+10)
+      $hct=$hct+1
+    else
+      $yc=10*$lct
+      substr($name,1,1):$firstchar
+      if ($firstchar='_') then     // if it starts with an '_' it's read-only
+	  length($name):$namelen
+	  $readonly=1
+	  substr($name,2,$namelen-1):$name
+      endif
+      write('file',$xfile,'        <label loc="10 %g" size="120 20" style="Label4" value="%s" />',$yc,$name)
+      strstr($name,'date'):$isdate
+      if ($enable=1) and not ($isdate) and not ($readonly) then
+          write('file',$xfile,'        <entry loc="160 %g" size="180 20" style="Label4" vq="'+$v+'" vc="probe_edit(\'update\',\''+$a+'\',\''+$v+'\',%g,\'$VALUE\')" set="$VALUE='+$v+'[%g]" />',$yc,$i,$i)
+      else
+        write('file',$xfile,'        <textmessage loc="162 %g" size="180 20" style="Label4" vq="'+$v+'" set="$VALUE='+$v+'[%g]" />',$yc,$i)
+      endif
+      $lct=$lct+1
+    endif
+    if ($i=$psize) then
+      write('file',$xfile,'      </group>\n    </group>')
+    endif
+  endif
+until ($i >= $psize)
+
+if ($cmd='last' or $cmd='only') then
+  write('file',$xfile,'  </folder>')
+  write('file',$xfile,'</template>')
+endif

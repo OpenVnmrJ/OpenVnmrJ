@@ -1,0 +1,142 @@
+"macro AT300"
+"AT300" "Find N15 pw90 ,power level, and BB amplifier compression"
+"       Uses channel 3 rf and rfchannel to redirect ch 2 parameters"
+"       requires channel 3 which is hooked up to an 15N port on probe"
+
+if (at_n15tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')  
+   setlimit('pwx',2000,0,.1)
+   at_currenttest='n15pw90_1'
+   create('rfchannel','string') rfchannel='132'
+
+  if (numrfch>4) then rfchannel='13245' endif
+  if (numrfch=4) then rfchannel='1324' endif
+  if (numrfch=3) then rfchannel='132' endif
+
+   seqfil='ATgNhmqc' 
+   dn='N15' j=4  
+
+   "proper sfrq/dfrq for on-resonance HDO/CH3CN15 is 9.8666 at 20C"
+   "observed methyl shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/9.8666
+   dof=dof+($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+   exists('maxattench3','parameter','global'):$e
+   if $e=1 then
+     if at_max_pwx2lvl>maxattench3 then at_max_pwx2lvl=maxattench3 endif
+   endif
+   pwxlvl=at_max_pwx2lvl
+   at_n15pwx90lvl=pwxlvl
+   pwx=35 ss=4 nt=2
+   at=.3 av
+   sinebell 
+   method='z1z2' wshim='e'  "insure that shimming on z1 is ok"
+
+   fn=64k
+   pwx=40   
+   wnt='ATwft select(1)  sp=1.8p wp=1p vsadj(80) dssh dtext'
+   text('Finding 90 Degree 15N Pulse Width')
+   $step=trunc(.03*pwx*10)/10
+   array('pwx',31,0.5*pwx,0.03*pwx)
+
+   wexp='AT300(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+   wft ATsvf
+   write('line3','Determining N15 pwx90 (Channel 3)')
+   ATn1590cal('pwx'):pwx
+   pwx=trunc(pwx*10)/10
+   
+   text('Finding 90 Degree 15N Pulse Width')
+   nt=4 wshim='n'
+   $step=trunc(.01*pwx*10)/10
+   array('pwx',21,pwx-0.1*pwx,$step)
+   at_currenttest='n15pw90_2'
+   write('line3','N15 pw90 (Channel 3) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+
+   if (at_printparams='y') then
+     pap ATpltext 
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+
+   if (at_plotauto='y') then
+    pltext(0,wc2max-2)
+    ATpltext
+    write('plotter',0,wc2max-40,'N15 pw90 (Channel 3) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+    pl('all') ATpage
+   endif
+     
+   wnt='ATwft dssh dtext'
+   wexp='AT300(`PART2`)'
+   ATcycle au
+ 
+elseif ($1='PART2') then
+   wft ATsvf
+   write('line3','Determining N15 pwx90 at Reduced Power (Channel 3)')
+   ATn1590cal('pwx'):pwx r4=pwx
+   text('Finding 90 Degree 15N Pulse Width at lower power')
+
+   at_n15pwx90=trunc(pwx*10)/10
+   pwx=pwx*4.0 pwxlvl=pwxlvl-12
+   $step=trunc(.03*pwx*10)/10
+   array('pwx',31,0.3*pwx,$step)
+   at_currenttest='n15pw90_3'
+   wexp='AT300(`PART3`)'
+   ATcycle au
+ 
+elseif ($1='PART3') then
+   wft ATsvf
+   at_currenttest='n15pw90_4'
+
+   ATn1590cal('pwx'):pwx 
+   if (at_printparams='y') then
+     pap ATpltext 
+     pps(120,0,wcmax-120,90) ATpage
+   endif 
+
+   if (at_plotauto='y') then
+    pltext(0,wc2max-2)
+    ATpltext
+    write('plotter',0,wc2max-40,'N15 pw90 (Channel 3) =  %3.2f at power level  %2.0f',pwx,pwxlvl)
+    pl('all') ATpage
+   endif
+   $step=trunc(.01*pwx*10)/10
+
+   array('pwx',21,pwx-0.1*pwx,$step)
+   wexp='AT300(`PART4`)'
+   ATcycle au
+
+elseif ($1='PART4') then
+   wft ATsvf
+   ATn1590cal('pwx'):pwx 
+
+   at_n15pwx90Lowpower=trunc(10*pwx)/10
+   at_n15pwx90Lowpowerlvl=pwxlvl
+
+   write('line3','N15 pw90 (Channel 3) =  %3.2f at reduced power level  %2.0f',pwx,pwxlvl)
+
+   if (at_plotauto='y') then
+      printon
+         echo('Pulse Calibration Data for 15N on Channel 3')
+         echo('For the probe   ',at_probetype)
+         echo('Based on Finding a 90 Degree Pulse  =  ',pwx)
+         echo('At Power Level',pwxlvl) 
+         echo('Done on    ',date)
+         ATatten(pwx,pwxlvl)
+      printoff
+   else
+      ATatten(pwx,pwxlvl)
+   endif
+   at_n15LBampl_compr=trunc(100*pwx/(4.0*at_n15pwx90))/100 
+   ATrecord('N15LOAMPCOMP','Low-Band Amplifier Compression','compression',at_n15LBampl_compr,'  at_n15power',pwxlvl+12)
+   write('file',autotestdir+'/REPORT','N15 Low-Band Amplifier Compression = %1.2f at power level: %2.0f ',at_n15LBampl_compr,pwxlvl+12)
+   ATsvf
+   ATrecord('N15PW90','N15 Pulse Width Calibration and Amplifier Compression using Channel 3','pw90_hi',at_n15pwx90,'power1',at_n15pwx90lvl,'pw90_low',pwx,'power2  ',pwxlvl,'comp_power1',at_n15LBampl_compr)
+   write('file',autotestdir+'/REPORT','N15 pw90 = %2.1f  at power level: %2.0f ',r4,pwxlvl+12)
+
+ATnext
+endif

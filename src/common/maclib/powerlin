@@ -1,0 +1,296 @@
+"macro powerlin"
+/***************************************************************"
+  powerlin
+
+  Macro to set up and process data acquisition for RF linearization
+  ARR Feb, 2009
+****************************************************************/
+
+$tpwrsize = 64
+$tpwrfsize = 64
+$arraysize = $tpwrsize*$tpwrfsize
+$tpwrfmax = 4096
+$tpwrfstep = 64
+create('powerlinslope','real','current',0)    // slope of measured peak height vs applied power
+create('powerlinamp','real','current',0)      // slope of measured peak height vs applied power
+create('powerlinphase','real','current',0)    // array of measured peak phases
+create('powerlinideal','real','current',0)    // slope of measured peak height vs applied power
+create('powerlinwarp','real','current',0)     // slope of measured peak height vs applied power
+create('tpwrmap','integer','current',0)       // values for amptables.map
+create('amptables','integer','global',0)      // control use of amptables corrections
+setgroup('powerlinamp','processing')          // allow array without causing an arrayed expt
+setgroup('powerlinphase','processing')
+setgroup('powerlinideal','processing')
+setgroup('powerlinwarp','processing')
+setgroup('tpwrmap','processing')
+
+lb = 20
+fn = 8k
+
+"*** Setup block:  compute diaonal arrays of coarse and fine power, nt, and pw ***"
+if ($1 = 'setup') then
+  // Set up the dual tpwr/tpwrf arrays to acquire date for prewarping calibration
+  create('tpwrf','integer','current',4096)      // fine power
+  nt=1
+  $pwmin = 1                                     // smaller pw at higher power to keep flip angle low
+  $pwmax = 20                                    // larger pw at lower power to get enough SNR
+  $ntmin = 1                                     // small number of averages at high power
+  $ntmax = 8                                     // increase averages at low power for SNR
+  amptables = 0                                  // turn of any existing linearization tables
+  np=2048 ss=20 bs='n'                           // steady states to warm up amplifier a bit
+  $tr = 0.2
+  if (seqfil = 's2pul') then d1=$tr-at  else  tr=$tr  endif
+ 
+  setarray('tpwr',0,1,$tpwrsize)
+  setarray('tpwrf',$tpwrfstep,$tpwrfstep,$tpwrfsize)
+  setarray('pw',$pwmax,($pwmin-$pwmax)/($tpwrsize-1),$tpwrsize)
+  setarray('nt',$ntmax,($ntmin-$ntmax)/($tpwrsize-1),$tpwrsize)
+  array='(tpwr,pw,nt),tpwrf'
+endif
+
+if (($1 = 'analyze') or ($1 = 'all')) then
+  // This 'analyze' block evaluates the first run of raw data over all tpwr and tpwrf values
+  // Raw peak heights and phases are saved to the parameter arrays powerlinamp and powerlinphase.
+  // The theoretical NMR amplitude is found from each tpwr/tpwrf/pw combination, then a fit is made
+  // to find the proportionality constant between ideal and measured amplitudes.  That ratio is
+  // saved to the parameter powerlinslope for later use in generating the prewarp calibration values.
+
+  powerlinamp = 0
+  powerlinphase = 0
+  powerlinideal = 0
+  powerlinwarp = 0
+  $sumphase = 0
+
+  ds                                             // Active display for mark
+  av
+  select(arraydim)                               // Select the last spectrum
+  vsadj(10000)                                   // Scale amplitude to higest power value
+  ph aph0                                        // adjust phase to absorption mode
+  $file = curexp+'/powerlin.raw'                 // write results to powerlin.raw in current experiment
+  write('reset',$file)
+  mark('reset')
+
+  /** Find scaling factor to put phase in degrees **/
+  pa                                             // put display in phase mode
+  peak:$phasemax                                 // the maximum value is a scale factor to calibrate phase to 180 degrees
+  if ($phasemax < 0) then $phasemax = -$phasemax endif    // abs value of scale factor
+  
+  $i = 0
+  repeat                                         // Loop over tpwr array
+    $i = $i + 1
+    $j = 0
+    repeat                                       // Loop over tpwrf array
+      $j = $j + 1
+      $index = ($i-1)*$tpwrfsize + $j            // index for output arrays of amp and phase values
+
+      select($index)
+      av
+      peak:$height,cr                            // set cursor position at peak center
+      powerlinamp[$index] = $height/pw[$i]       // record array of measured peak heights over all tpwr/tpwrf
+ 
+      /** Find the phase of the peak at this tpwrf value **/
+      pa
+      mark:$phase1                               // get the phase at the center of the peak
+      cr = cr + sw/fn                            // move cursor one point left of center and get its phase
+      mark:$phase2
+      cr = cr + sw/fn                            // 2 points to the left
+      mark:$phase3
+      cr = cr - 3*sw/fn                          // 1 point to the right of center
+      mark:$phase4
+      cr = cr - sw/fn                            // 2 points to the right of center
+      mark:$phase5
+ 
+      /** average the values for better SNR, scale to degrees with the ratio 180/phasemax **/
+      $phase = 180*($phase1 + $phase2 + $phase3 + $phase4 + $phase5)/(5*$phasemax)
+      powerlinphase[$index] = $phase
+      $sumphase = $sumphase + $phase
+
+      /** Calculate ideal amplitude based on tpwr and tpwrf values **/
+      exp(2.303*tpwr[$i]/20):$coarse             // flip angle is proportional to sqrt(10^(tpwr/10))
+      $ideal = $coarse*tpwrf[$j]/$tpwrfmax       // and directly proportional to fine power value
+      powerlinideal[$index] = $ideal             // add to set of ideal values for all tpwr and tpwrf
+
+      $mark = $i % 500                           // large mark file slows down processing
+      if ($mark = 0) then mark('reset') endif
+
+      write('file',$file,'%d   %d   %.3f   %.3f',tpwr[$i],tpwrf[$j],powerlinamp[$index],powerlinphase[$index])
+
+    until ($j = $tpwrfsize)
+  until ($i = $tpwrsize)
+
+  $powerlinsize = size('powerlinamp')
+  $phaseavg = $sumphase/$powerlinsize            // subtract average from each phase value
+  $i = 0
+  repeat
+    $i = $i + 1
+    powerlinphase[$i] = powerlinphase[$i] - $phaseavg
+  until ($i = $powerlinsize)
+  powerlinslope = powerlinamp[$arraysize]/powerlinideal[$arraysize]      // conversion factor for measured vs ideal scales
+endif                                            //  end of 'analyze' or 'all'
+
+
+if (($1 = 'calib') or ($1 = 'all')) then
+  // With measured and ideal values now stored, and the proportionality constant relating them,
+  // loop through and compute the required prewarped tpwrf values at each point along the 
+  // calibration grid.  powerlinwarp will hold the set of prewarped values
+  // Repeat through all tpwr and tpwrf points, finding the bin that each prewarped point fits into
+  // in the while loop.
+
+  $file = curexp+'/powerlin'
+  write('reset',$file)
+
+  powerlinwarp = 0
+  tpwrmap = 0
+  $count = 0
+
+  $tpwrshift = 0
+  $j = 0
+  repeat                                                 // Loop over the values in the tpwr array
+    $j = $j + 1
+    $i = 0
+    $found = 0
+    if ($tpwrshift > 0) then $j=$j-1 endif               // if previous mapping was not complete, repeat at incremented tpwr
+    repeat                                               // Loop over the values in the tpwrf array
+      $count = $count + 1                                // keep count to limit runaway error
+      $i = $i + 1
+      $index = ($j-1)*$tpwrfsize + $i
+      powerlinwarp[$index] = $tpwrfmax                   // pre-set to max for those steps skipped by the while test
+      $ampwarped = powerlinideal[$index]*powerlinslope   // convert ideal value to measured units, on the linear slope
+      $k = 1                                             // k counts up through the tpwrf values
+      $offset = ($j-1+$tpwrshift)*$tpwrfsize             // offset is the starting point for a set of tpwrf at each tpwr
+      $m = $k + $offset                                  // m is the offset to current tpwr value, plus tpwrf counter
+      if (($k = 1) and ($ampwarped <= powerlinamp[$m])) then   // points that fall into the first bin
+        powerlinwarp[$index] = $tpwrfstep*($ampwarped - 0)/(powerlinamp[$m] - 0) 
+        $found = 1
+      endif
+      while (($ampwarped > powerlinamp[$m]) and ($k < $tpwrfsize)) do
+        if ($ampwarped <= powerlinamp[$m+1]) then
+          powerlinwarp[$index] = tpwrf[$k] + $tpwrfstep*($ampwarped - powerlinamp[$m])/(powerlinamp[$m+1] - powerlinamp[$m]) 
+          $k = $tpwrfsize                                // skip out of the while loop
+          $found = $found + 1                            // count successful mappings
+        endif
+        $k = $k + 1
+        $m = $m + 1
+      endwhile
+      write('file',$file,'%.3f   %.3f   %.1f',powerlinamp[$index],powerlinphase[$index],powerlinwarp[$index])
+    until ($i = $tpwrfsize)
+
+    write('line3','tpwr=%d    found=%d    tpwrshift=%d',$j,$found,$tpwrshift)
+    if ($found < $tpwrfsize) then                        // not all tpwrf values mapped to corrected values below tpwrfmax
+      $tpwrshift = $tpwrshift + 1                        // add one to coarse power and repeat mapping
+    else
+      tpwrmap[$j] = tpwr[$j+$tpwrshift]                  // value to write to amptables.map
+      $tpwrshift = 0                                     // all mapped successfully, move on to next tpwr
+    endif
+    if ($count > 20000) then
+      write('line3','Warning: Construction of RF linearization tables failed')
+      abort
+    endif
+  until ($j = $tpwrsize)
+  write('line3','Linearization tables completed successfully')
+endif   // 'calib' or 'all'
+
+
+if (($1 = 'table') or ($1 = 'all')) then
+  $filemap = userdir+'/tables.map'
+  $filetxt = userdir+'/tables.txt'
+  write('reset',$filemap)
+  write('reset',$filetxt)
+
+  $powerlinsize = size('powerlinamp')                      // size of calibration array
+  $tpwrsize = 64
+  $tpwrfsize = 64
+  $tpwrfres = 4096
+  $tmin = 0
+  $tmax = 63
+  $tstep = 1
+  $tsize = 64
+  $ntbls = 64
+  $nmaps = 64
+
+  /** Write out header for tables.map file **/
+  write('file',$filemap,'file   tables.txt')
+  write('file',$filemap,'tmin   %d',$tmin)
+  write('file',$filemap,'tmax   %d',$tmax)
+  write('file',$filemap,'tstep   %d',$tstep)
+  write('file',$filemap,'tsize   %d',$tsize)
+  write('file',$filemap,'ntbls   %d',$ntbls)
+  write('file',$filemap,'nmaps   %d',$nmaps)
+
+  // Write table mappings
+  // input power, table index, output power, fractional multiplier
+  $k = 0
+  repeat
+    $k = $k + 1
+    write('file',$filemap,'%.1f    %d    %.1f    %.4f',tpwr[$k],$k-1,tpwrmap[$k],1.0)
+  until ($k = $nmaps)
+
+  // Write calibrated values to tables.txt
+  $i = 0
+  repeat                                        // Loop over the values in the tpwr array
+    $i = $i + 1
+    write('file',$filetxt,'%.6f   %.4f',powerlinwarp[$i]/$tpwrfres,-powerlinphase[$i])
+  until (($i = $powerlinsize)  or $i > (5000))
+endif   // table or all
+
+if ($1 = 'plotraw') then
+  $limit = size('powerlinideal')
+  $file = curexp+'/regression.inp'
+  write('reset',$file)
+  write('file',$file,'Power')
+  write('file',$file,'Amplitude')
+  write('file',$file,'0    0')
+  write('file',$file,'NEXT')
+
+  $skip = trunc(arraydim/1000)
+  if ($skip = 0) then $skip = 1 endif
+  $i = $skip
+  while ($i <= $limit) do
+    write('file',$file,'%8.2f  %8.2f',powerlinideal[$i],powerlinamp[$i])
+    $i = $i + $skip
+  endwhile
+  full autoscale
+  expl('regression','tinysymbol')
+endif
+
+if ($1 = 'plotratio') then
+  $limit = size('powerlinideal')
+  $file = curexp+'/regression.inp'
+  write('reset',$file)
+  write('file',$file,'Power')
+  write('file',$file,'Measured/Ideal')
+  write('file',$file,'0    0')
+  write('file',$file,'NEXT')
+
+  $skip = trunc(arraydim/1000)
+  if ($skip = 0) then $skip = 1 endif
+  $i = $skip
+  while ($i <= $limit) do
+    $ratio = powerlinamp[$i]/powerlinideal[$i]/powerlinslope
+    write('file',$file,'%8.2f  %8.4f',powerlinideal[$i],$ratio)
+    $i = $i + $skip
+  endwhile
+  full autoscale
+  expl('regression','tinysymbol')
+endif
+
+if ($1 = 'plotphase') then
+  $limit = size('powerlinphase')
+  $file = curexp+'/regression.inp'
+  write('reset',$file)
+  write('file',$file,'Log Power')
+  write('file',$file,'Phase')
+  write('file',$file,'0    0')
+  write('file',$file,'NEXT')
+
+  $skip = trunc(arraydim/1000)
+  if ($skip = 0) then $skip = 1 endif
+  $i = $skip
+  while ($i <= $limit) do
+    write('file',$file,'%8.2f  %8.4f',powerlinideal[$i],powerlinphase[$i])
+    $i = $i + $skip
+  endwhile
+  full autoscale
+  expl('regression','tinysymbol')
+endif
+

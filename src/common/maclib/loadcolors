@@ -1,0 +1,51 @@
+"macro loadcolors"
+" loadcolors - load colors for graphics and plotters"
+
+"displayShow: selects DisplayOptions dialog group overlays"
+"   DisplayColors   0:graphics 1:ps    2:pcl    3:hpgl"
+"   2DColors        0:abs      8:phs "
+
+exists('displayShow','parameter','global'):$e
+if $e<0.5 then
+  create('displayShow','integer','global')
+  displayShow=0
+endif
+
+if ($# > 0.5) then
+   $colorname=$1
+else
+   $colorname=plotter
+endif
+if ($colorname = '') then $colorname='DEFAULT' endif
+$colorfile=userdir+'/templates/color/' + $colorname
+exists($colorfile,'file'):$e 
+if ($e < 0.5) then
+   $colorfile=systemdir+'/user_templates/color/' + $colorname
+   exists($colorfile,'file'):$e 
+endif
+if ($e < 0.5) and ($# < 0.5) then
+   $colorname='DEFAULT'
+   $colorfile=userdir+'/templates/color/' + $colorname
+   exists($colorfile,'file'):$e 
+endif
+if ($e > 0.5) then
+  $vp=''
+  format(jviewport,0,0):$vp
+  $pFile='PlOtTeR'+$vp
+  shell('rm -f /vnmr/tmp/'+$pFile):$e
+  shell('ln -s "'+$colorfile+'" /vnmr/tmp/'+$pFile):$e
+
+  macrold('/vnmr/tmp/'+$pFile):$dummy
+  exec($pFile):$e
+  purge($pFile)
+  shell('rm -f /vnmr/tmp/'+$pFile):$e
+  if (maxpen > 1) then
+     setcolor('plotter',1,3)
+  else
+     setcolor('plotter',1,0)
+  endif
+else
+  if ($# > 0.5) then
+    write('error','color file %s not found in directory %s/templates/color',$colorname,userdir)
+  endif
+endif

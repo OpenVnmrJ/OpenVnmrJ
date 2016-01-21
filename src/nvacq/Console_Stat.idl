@@ -1,0 +1,171 @@
+//@copy-c-declaration /*
+//@copy-c-declaration *
+//@copy-c-declaration * Varian,Inc. All Rights Reserved.
+//@copy-c-declaration * This software contains proprietary and confidential
+//@copy-c-declaration * information of Varian, Inc. and its contributors.
+//@copy-c-declaration * Use, disclosure and reproduction is prohibited without
+//@copy-c-declaration * prior consent.
+//@copy-c-declaration */
+//@copy-c-declaration /*
+//@copy-c-declaration *  Author: Greg Brissey  4/20/2004
+//@copy-c-declaration */
+
+// //@copy-c-declaration #include "ndds/ndds_c.h"
+//@copy-c-declaration #include "NDDS_Obj.h"
+
+
+//@copy-c-declaration /*-------------------------------------------------------------------
+//@copy-c-declaration |   acquisition status codes for status display on Host
+//@copy-c-declaration |    values assigned to 'Acqstate' in structure CONSOLE_STATUS;
+//@copy-c-declaration |    symbols and values match definitions in STAT_DEFS.h,
+//@copy-c-declaration |    SCCS category xracq
+//@copy-c-declaration +-------------------------------------------------------------------*/
+
+const long ACQ_INACTIVE = 0;
+const long ACQ_REBOOT   = 5;
+const long ACQ_IDLE 	= 10;
+const long ACQ_PARSE	= 15;
+const long ACQ_PREP 	= 16;
+const long ACQ_SYNCED = 	17;
+const long ACQ_ACQUIRE = 	20;
+const long ACQ_PAD	= 	25;
+const long ACQ_VTWAIT = 	30;
+const long ACQ_SPINWAIT = 	40;
+const long ACQ_AGAIN = 	50;
+const long ACQ_HOSTGAIN = 	55;
+const long ACQ_ALOCK = 	60;
+const long ACQ_AFINDRES = 	61;
+const long ACQ_APOWER = 	62;
+const long ACQ_APHASE = 	63;
+const long ACQ_FINDZ0 = 	65;
+const long ACQ_SHIMMING = 	70;
+const long ACQ_HOSTSHIM = 	75;
+const long ACQ_SMPCHANGE = 	80;
+const long ACQ_RETRIEVSMP = 	81;
+const long ACQ_LOADSMP = 	82;
+const long ACQ_INTERACTIVE=  90;
+const long ACQ_TUNING= 	100;
+const long ACQ_PROBETUNE= 	105;
+
+const long LSDV_EJECT=       0x40;
+const long LSDV_DETECTED=    0x4000;
+const long LSDV_LKREGULATED= 0x04;
+const long LSDV_LKNONREG=    0x08;
+const long LSDV_LKMASK=      0x0C;
+
+/* Console ID definitions */
+const long CONSOLE_VNMRS_ID  = 0;
+const long CONSOLE_400MR_ID = 1;
+const long CONSOLE_SILKVNMRS_ID = 2;
+const long CONSOLE_SILK400MR_ID = 3;
+
+//@copy-c-declaration /* topic name form */
+//@copy-c-declaration /* topic names form: h/rf1/dwnld/strm, rf1/h/dwnld/reply */
+
+const string CNTLR_PUB_STAT_TOPIC_FORMAT_STR = "master/h/constat";
+const string HOST_SUB_STAT_TOPIC_FORMAT_STR = "master/h/constat";
+
+const string CNTLR_SUB_STAT_TOPIC_FORMAT_STR = "h/master/constat";
+const string HOST_PUB_STAT_TOPIC_FORMAT_STR = "h/master/constat";
+
+ 
+//@copy-c-declaration /* download types */
+
+const long DATA_FID =  1;
+
+
+const long MAX_IPv4_UDP_SIZE_BYTES  =  65535;   /* IPv4 UDP max Packet size */
+const long NDDS_MAX_Size_Serialize = 64512;    /* serialization for NDDS  63KB */
+
+// /* const MAX_FIXCODE_SIZE = 64000;		 /* Max data size bytes */
+
+//@copy-c-declaration #ifndef MAX_SHIMS_CONFIGURED
+const long MAX_SHIMS_CONFIGURED = 48;
+//@copy-c-declaration #endif
+
+/* see hostAcqStructs.h for defined member that are replicated in the publication */
+
+struct Console_Stat {
+		long     dataTypeID;	/* from STATUS_BLOCK structure, set to STATBLK (3) */
+                long     AcqCtCnt;       /* reset from CONSOLE_STATUS structure */
+                long     AcqFidCnt;
+                long     AcqSample;
+                long     AcqLockFreqAP;
+                long     AcqLockFreq1;
+                long     AcqLockFreq2;
+                long     AcqNpErr;
+                long     AcqSpinSet;
+                long     AcqSpinAct;
+		long	AcqSpinSpeedLimit;
+                long    AcqPneuBearing;
+                long    AcqPneuStatus;
+                long    AcqPneuVtAir;
+                long    AcqTickCountError;
+		long	AcqChannelBitsConfig1;
+		long	AcqChannelBitsConfig2;
+		long	AcqChannelBitsActive1;
+		long	AcqChannelBitsActive2;
+                short   AcqRcvrNpErr;
+                short   Acqstate;
+                short   AcqOpsComplCnt;
+                short   AcqLSDVbits;
+                short   AcqLockLevel;
+                short   AcqRecvGain;
+		short   AcqSpinSpan;
+		short	AcqSpinAdj;
+		short	AcqSpinMax;
+		short	AcqSpinActSp;
+		short	AcqSpinProfile;
+                short   AcqVTSet;
+                short   AcqVTAct;
+                short   AcqVTC;
+                short   AcqPneuVTAirLimits;
+                short   AcqPneuSpinner;
+                short   AcqLockGain;
+                short   AcqLockPower;
+                short   AcqLockPhase;
+                short   AcqShimValues[MAX_SHIMS_CONFIGURED];
+                short   AcqShimSet;
+                short   AcqOpsComplFlags;
+                short   rfMonError;     /* RF Monitor error code */
+                short   rfMonitor[8];   /* Avg RF power on up to 6 channels:
+                                         * Bits 0-5: power (63 = trip level)
+                                         * 6-10: knob position
+                                         */
+                short   statblockRate;  /* Time between statblocks in ms */
+                short   gpaTuning[9];   /* 3 parameters per axis; order is:
+                                         *  x-proportional, x-integral, x-spare,
+                                         *  y-p, y-i, y-s, z-p, z-i, z-s */
+                short   gpaError;       /* Grad Power Amp error code:
+                                         * Bit 0: Amp Fault,  1: Amp Warning
+                                         * 2: Amp Comm Fault, 3: Power Fault
+                                         * 4: Power Warning,  5: PS Comm Fault
+                                         * 6: NIC Fault,      7: External Fault
+                                         * 8: No Comm w/ GPA
+                                         */
+                char  probeId1[20];
+                char  gradCoilId[12];
+                short consoleID;
+
+};
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration     extern "C" {
+//@copy-c-declaration #endif
+//@copy-c-declaration 
+//@copy-c-declaration extern void getConsole_StatInfo(NDDS_OBJ *pObj);
+//@copy-c-declaration 
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration }
+//@copy-c-declaration #endif
+
+// //@copy-c  /* Direct Code from Codes_Downld.x */
+// //@copy-c void getConsole_StatInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Console_StatNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Console_StatNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Console_StatAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Console_StatMaxSize;
+// //@copy-c }
+

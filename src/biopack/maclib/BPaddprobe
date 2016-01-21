@@ -1,0 +1,384 @@
+"macro BPaddprobe"
+"BPaddprobe(probename)- macro to add a probe file"
+
+$probedir = userdir + '/probes'
+exists($probedir,'file'):$e
+if not($e) then
+  mkdir($probedir)
+endif
+
+$probe=$1 
+$date=''
+BPgetdate:$date
+$probename=$probedir+'/'+$probe
+exists($probename,'file'):$e
+if $e then
+  mv($probename,$probename+'.bkup_'+$date)
+  write('line3','existing user probe file backed up as %s',$probe+'.bkup_'+$date)
+endif
+
+mkdir($probedir+'/'+$probe)
+$probefile = $probedir + '/' + $probe + '/' + $probe
+write('reset',$probefile)
+write('file',$probefile,'NAME:           %s',$probe)
+
+$path=''
+BPfindfile('probe.tmplt','manual'):$path
+if $path<>'' then
+ shell('cat '+$path+' >> '+$probefile):$dum
+else
+ shell('cat '+'/vnmr/probes/probe.tmplt >> '+$probefile):$dum
+endif
+ 
+exists('probe','parameter','global'):$e
+if $e<0.5 then
+  create('probe','string','global')
+  setprotect('probe','on',8,'global')
+endif  
+probe = $probe
+_probe
+$file=$probedir + '/' + $probe + '/safety_levels'
+write('reset',$file)
+write('file',$file,'# Probe protection parameters')
+write('file',$file,'# High band power level for 2 Watt')
+write('file',$file,'# Low  band power level for 2 Watt')
+write('file',$file,'# High band coil energy limit')
+write('file',$file,'# Low  band coil energy limit')
+exists(systemdir+'acqqueue/acq.conf','file'):$e
+if ($e > 0.5) then
+  shell('showconsole 1'):$amt
+else
+  $amt=0
+endif
+if ($amt=12) then
+  write('file',$file,'# For 100W high band/300W low band amplifier')
+  write('file',$file,'46.0 42.0 15.0 15.0')
+else
+  write('file',$file,'# For 50W high band/300W low band amplifier')
+  write('file',$file,'49.0 42.0 15.0 15.0')
+endif
+
+write('line3','user level probe file %s is being updated. Please wait for end message',$probe)
+
+
+ pw=trunc(10*pw + 0.5)/10
+ pw90=trunc(10*pw90 + 0.5)/10
+ pwC=trunc(10*pwC + 0.5)/10
+ pwN=trunc(10*pwN + 0.5)/10
+ ref_pw90=trunc(10*pw*compH + 0.5)/10 ref_pwr=tpwr
+ 
+ $gf='' format(gf,4,4):$gf
+ addparams('gf',$gf,'H1')
+ $gfs='' format(gfs,4,4):$gfs
+ addparams('gfs',$gfs,'H1')
+ $sb='' format(sb,4,4):$sb
+ addparams('sb',$sb,'H1')
+ $sbs='' format(sbs,4,4):$sbs
+ addparams('sbs',$sbs,'H1')
+ $lb='' format(lb,4,4):$lb
+ addparams('lb',$lb,'H1')
+ 
+ $ssfilter='' format(ssfilter,4,0):$ssfilter
+ addparams('ssfilter',$ssfilter,'H1')
+ $ssntaps='' format(ssntaps,4,0):$ssntaps
+ addparams('ssntaps',$ssntaps,'H1')
+ $sslsfrq='' format(sslsfrq,4,4):$sslsfrq
+ addparams('sslsfrq',$sslsfrq,'H1')
+ $ssorder='' format(ssorder,2,0):$ssorder
+ addparams('ssorder',$ssorder,'H1')
+ 
+ exists('ddrtc','parameter'):$e
+ if $e=1 then
+  $ddrtc='' format(ddrtc,4,2):$ddrtc
+  addparams('ddrtc',$ddrtc,'H1')
+ endif
+ $rof1='' format(rof1,4,2):$rof1
+ addparams('rof1',$rof1,'H1')
+ $rof2='' format(rof2,4,2):$rof2
+ addparams('rof2',$rof2,'H1')
+ $alfa='' format(alfa,4,2):$alfa
+ addparams('alfa',$alfa,'H1')
+ $sw='' format(sw,6,1):$sw
+ addparams('sw',$sw,'H1')
+ $at='' format(at,5,3):$at
+ addparams('at',$at,'H1')
+ 
+ $ref_pw90='' format(ref_pw90,2,1):$ref_pw90
+ addparams('ref_pw90',$ref_pw90,'H1')
+ $ref_pwr='' format(ref_pwr,2,0):$ref_pwr
+ addparams('ref_pwr',$ref_pwr,'H1')
+ $pw90='' format(pw90,2,1):$pw90
+ addparams('pw90',$pw90,'H1')
+ addparams('wetpw','6000','H1')
+ $BPd1='' format(d1,4,4):$BPd1
+ addparams('BPd1',$BPd1,'H1')
+ $tpwr='' format(tpwr,2,0):$tpwr
+ addparams('tpwr',$tpwr,'H1')
+ addparams('wetpwr','12.0','H1')
+ addparams('wetshape','gauss','H1')
+ addparams('wetpwr','12.0','H1')
+ $tpwrsf='' format(tpwrsf,4,0):$tpwrsf
+ addparams('tpwrsf',$tpwrsf,'H1')
+ $phincr1='' format(0.0,2,2):$phincr1
+ addparams('phincr1',$phincr1,'H1')
+ $wtgpwr='' format(tpwr-44,3,1):$wtgpwr
+ addparams('wtgpwr',$wtgpwr,'H1')
+ $tofwg='' format(tof,3,1):$tofwg
+ addparams('tofwg',$tofwg,'H1')
+ $flippw='' format(1500.0,4,1):$flippw
+ addparams('flippw',$flippw,'H1')
+ $p180='' format(2.0*pw90,2,1):$p180
+ addparams('p180',$p180,'H1')
+ $phincr2='' format(0.0,2,2):$phincr2
+ addparams('phincr2',$phincr2,'H1')
+ $phincr_i='' format(0.0,2,2):$phincr_i
+ addparams('phincr_i',$phincr_i,'H1')
+ $phincr_t='' format(0.0,2,2):$phincr_t
+ addparams('phincr_t',$phincr_t,'H1')
+ $phincr_u='' format(0.0,2,2):$phincr_u
+ addparams('phincr_u',$phincr_u,'H1')
+ $phincr_d='' format(0.0,2,2):$phincr_d
+ addparams('phincr_d',$phincr_d,'H1')
+ $phincr_n='' format(0.0,2,2):$phincr_n
+ addparams('phincr_n',$phincr_n,'H1')
+ $tpwrsf_i='' format(tpwrsf,4,0):$tpwrsf_i
+ addparams('tpwrsf_i',$tpwrsf_i,'H1')
+ $tpwrsf_t='' format(tpwrsf,4,0):$tpwrsf_t
+ addparams('tpwrsf_t',$tpwrsf_t,'H1')
+ $tpwrsf_u='' format(tpwrsf,4,0):$tpwrsf_u
+ addparams('tpwrsf_u',$tpwrsf_u,'H1')
+ $tpwrsf_d='' format(tpwrsf,4,0):$tpwrsf_d
+ addparams('tpwrsf_d',$tpwrsf_d,'H1')
+ $tpwrsf_n='' format(tpwrsf,4,0):$tpwrsf_n
+ addparams('tpwrsf_n',$tpwrsf_n,'H1')
+ addparams('finepwrf',$tpwrsf,'H1')
+ $pwHs='' format(pwHs,2,1):$pwHs
+ addparams('pwHs',$pwHs,'H1')
+ addparams('pwHs2',$pwHs,'H1')
+ $waltzB1='' format(waltzB1,6,0):$waltzB1
+ addparams('waltzB1',$waltzB1,'H1')
+ $tofH2O='' format(tof,4,1):$tofH2O
+ addparams('tofH2O',$tofH2O,'H1')
+ $compH='' format(compH,4,3):$compH
+ addparams('compH',$compH,'H1')
+ $BPgain='' format(gain,2,0):$BPgain
+ addparams('BPgain',$BPgain,'H1')
+ $rna_gain='' format(gain,2,0):$rna_gain
+ addparams('rna_gain',$rna_gain,'H1')
+ $BPtemp='' format(temp,3,1):$BPtemp
+ addparams('BPtemp',$BPtemp,'H1')
+ $empty_noise='' format(empty_noise,3,1):$empty_noise
+ addparams('empty_noise',$empty_noise,'H1')
+ $empty_noise='' format(empty_noise,3,1):$empty_noise
+ addparams('empty_noise',$empty_noise,'C13')
+ $empty_noise='' format(empty_noise,3,1):$empty_noise
+ addparams('empty_noise',$empty_noise,'N15')
+ $sample_noise='' format(sample_noise,3,1):$sample_noise
+ addparams('sample_noise',$sample_noise,'H1')
+ $sample_noise='' format(sample_noise,3,1):$sample_noise
+ addparams('sample_noise',$sample_noise,'C13')
+ $sample_noise='' format(sample_noise,3,1):$sample_noise
+ addparams('sample_noise',$sample_noise,'N15')
+ 
+ $pwC='' format(pwC,2,1):$pwC
+ addparams('pwC',$pwC,'C13')
+ $pwC3db='' format(1.4*pwC,2,1):$pwC3db
+ addparams('pwC3db',$pwC3db,'C13')
+ $pwClvl='' format(pwClvl,2,0):$pwClvl
+ addparams('pwClvl',$pwClvl,'C13')
+ $compC='' format(compC,4,3):$compC
+ addparams('compC',$compC,'C13')
+ $compC3db='' format(compC,4,3):$compC3db
+ addparams('compC3db',$compC3db,'C13')
+ $dofCO='' format(dof,4,1):$dofCO
+ addparams('dofCO',$dofCO,'C13')
+ $swCO='' format(sw1,4,1):$swCO
+ addparams('swCO',$swCO,'C13')
+ addparams('phi7cal','0.0','C13')
+ addparams('phi7calP','60.0','C13')
+ addparams('phi_CO','0.0','C13')
+ addparams('phi_Ca','0.0','C13')
+ addparams('phshift3','O.0','C13')
+ 
+ "next three will be set by autocalibrate of gChsqc"
+ $CHgrad1_time='' format(gt1,8,6):$CHgrad1_time
+ addparams('CHgrad1_time',$CHgrad1_time,'C13')
+ $CHgrad1_lvl='' format(gzlvl1,6,0):$CHgrad1_lvl
+ addparams('CHgrad1_lvl',$CHgrad1_lvl,'C13')
+ $CHgrad2_lvl='' format(gzlvl2,6,0):$CHgrad2_lvl
+ addparams('CHgrad2_lvl',$CHgrad2_lvl,'C13')
+ $CHgstab='' format(gstab,6,6):$CHgstab
+ addparams('CHgstab',$CHgstab,'C13')
+ 
+ "next three will be used by ghcch_tocsy"
+ $hcch_gtime='' format(0.0008,8,6):$hcch_gtime
+ addparams('hcch_gtime',$hcch_gtime,'C13')
+ $hcch_gzlvl1='' format(gzlvl1,6,0):$hcch_gzlvl1
+ addparams('hcch_gzlvl1',$hcch_gzlvl1,'C13')
+ $hcch_gzlvl2='' format(gzlvl2,6,0):$hcch_gzlvl2
+ addparams('hcch_gzlvl2',$hcch_gzlvl2,'C13')
+ 
+ $spinlock='' format(BPspinlock,4,1):$spinlock
+ addparams('spinlock',$spinlock,'C13')
+ $dmf30='' format(dmf30,4,1):$dmf30
+ addparams('dmf30',$dmf30,'C13')
+ $dmf80='' format(dmf80,4,1):$dmf80
+ addparams('dmf80',$dmf80,'C13')
+ $dmf140='' format(dmf140,4,1):$dmf140
+ addparams('dmf140',$dmf140,'C13')
+ $rf30='' format(rf30,4,1):$rf30
+ addparams('rf30',$rf30,'C13')
+ $rf80='' format(rf80,4,1):$rf80
+ addparams('rf80',$rf80,'C13')
+ $rf140='' format(rf140,4,1):$rf140
+ addparams('rf140',$rf140,'C13')
+ 
+ $pwN='' format(pwN,2,1):$pwN
+ addparams('pwN',$pwN,'N15')
+ $pwNlvl='' format(pwNlvl,2,0):$pwNlvl
+ addparams('pwNlvl',$pwNlvl,'N15')
+ $compN='' format(compN,4,3):$compN
+ addparams('compN',$compN,'N15')
+ $dofN15='' format(dof2,4,1):$dofN15
+ addparams('dofN15',$dofN15,'N15')
+ $swN='' format(sw2,4,1):$swN
+ addparams('swN',$swN,'N15')
+ $dpwr2NH='' format(dpwr2,2,0):$dpwr2NH
+ addparams('dpwr2NH',$dpwr2NH,'N15')
+ addparams('dmm2NH',dmm2,'N15')
+ addparams('dseq2NH',dseq2,'N15')
+ $dres2NH='' format(dres2,5,1):$dres2NH
+ addparams('dres2NH',$dres2NH,'N15')
+ $dmf2NH='' format(dmf2,3,1):$dmf2NH
+ addparams('dmf2NH',$dmf2NH,'N15')
+ $JNH='' format(JNH,3,1):$JNH
+ addparams('JNH',$JNH,'N15')
+ 
+ $gt0='' format(gt0,1,6):$gt0
+ addparams('gt0',$gt0,'N15')
+ $gt5='' format(gt5,1,6):$gt5
+ addparams('gt5',$gt5,'N15')
+ $gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+ addparams('gzlvl5',$gzlvl5,'N15')
+ $gzlvl0='' format(gzlvl0,6,0):$gzlvl0
+ addparams('gzlvl0',$gzlvl0,'N15')
+ $gzlvl5='' format(gzlvl5,6,0):$gzlvl5
+ addparams('gzlvl5',$gzlvl5,'N15')
+ $NHgrad1_time='' format(gt1,8,6):$NHgrad1_time
+ addparams('NHgrad1_time',$NHgrad1_time,'N15')
+ $NHgrad1_lvl='' format(gzlvl1,4,0):$NHgrad1_lvl
+ addparams('NHgrad1_lvl',$NHgrad1_lvl,'N15')
+ $NHgrad2_lvl='' format(gzlvl2,4,0):$NHgrad2_lvl
+ addparams('NHgrad2_lvl',$NHgrad2_lvl,'N15')
+ $BPgzcal='' format(gzcal,6,6):$BPgzcal
+ addparams('BPgzcal',$BPgzcal,'N15')
+ $NHgstab='' format(gstab,6,6):$NHgstab
+ addparams('NHgstab',$NHgstab,'N15')
+ addparams('mag_flg',mag_flg,'N15')
+ 
+ $dres3D='' format(dres3,2,1):$dres3D
+ addparams('dres3D',$dres3D,'H2')
+ $dpwr3D='' format(dpwr3,2,0):$dpwr3D
+ addparams('dpwr3D',$dpwr3D,'H2')
+ $dmf3D='' format(dmf3,5,1):$dmf3D
+ addparams('dmf3D',$dmf3D,'H2')
+ $dof3D='' format(dof3,5,1):$dof3D
+ addparams('dof3D',$dof3D,'H2')
+ addparams('dseq3D',dseq3,'H2')
+ addparams('dmm3D',dmm3,'H2')
+
+exists('probeConnect','parameter','global'):$e
+if ($e>0) then
+ addparams('probeConnect',probeConnect,'H1')
+endif
+
+"Biopack power limits are active if BPpwrlimits=1 "
+exists('BPpwrlimits','parameter','global'):$e
+if ($e>0) then
+ $BPpwrlimits='' format(BPpwrlimits,1,0):$BPpwrlimits
+ addparams('BPpwrlimits',$BPpwrlimits,'H1')
+endif
+
+"1H and 13C spinlock upper limits if BPpwrlimits=1 "
+exists('BPtpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrspinlock='' format(BPtpwrspinlock,5,0):$BPtpwrspinlock
+ addparams('BPtpwrspinlock',$BPtpwrspinlock,'H1')
+endif
+
+exists('BPdpwrspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrspinlock='' format(BPdpwrspinlock,5,0):$BPdpwrspinlock
+ addparams('BPdpwrspinlock',$BPdpwrspinlock,'C13')
+endif
+
+"default values for 13C and 1H spinlock fields"
+exists('BPspinlock','parameter','global'):$e
+if ($e>0) then
+ $BPspinlock='' format(BPspinlock,6,0):$BPspinlock
+ addparams('BPspinlock',$BPspinlock,'C13')
+endif
+
+exists('BP1Hspinlock','parameter','global'):$e
+if ($e>0) then
+ $BP1Hspinlock='' format(BP1Hspinlock,6,0):$BP1Hspinlock
+ addparams('BP1Hspinlock',$BP1Hspinlock,'H1')
+endif
+
+"1H and 13C decoupling power upper limits if BPpwrlimits=1 "
+exists('BPtpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPtpwrmax='' format(BPtpwrmax,2,0):$BPtpwrmax
+ addparams('BPtpwrmax',$BPtpwrmax,'H1')
+endif
+
+exists('BPdpwrmax','parameter','global'):$e
+if ($e>0) then
+ $BPdpwrmax='' format(BPdpwrmax,2,0):$BPdpwrmax
+ addparams('BPdpwrmax',$BPdpwrmax,'C13')
+endif
+
+exists('BPdpwr2max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr2max='' format(BPdpwr2max,2,0):$BPdpwr2max
+ addparams('BPdpwr2max',$BPdpwr2max,'N15')
+endif
+
+exists('BPdpwr3max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr3max='' format(BPdpwr3max,2,0):$BPdpwr3max
+ addparams('BPdpwr3max',$BPdpwr3max,'H2')
+endif
+
+exists('BPdpwr4max','parameter','global'):$e
+if ($e>0) then
+ $BPdpwr4max='' format(BPdpwr4max,2,0):$BPdpwr4max
+ addparams('BPdpwr4max',$BPdpwr4max,'H2')
+endif
+
+"System power limits"
+exists('maxattench1','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench1='' format(maxattench1,2,0):$maxattench1
+ addparams('maxattench1',$maxattench1,'H1')
+endif
+
+exists('maxattench2','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench2='' format(maxattench2,2,0):$maxattench2
+ addparams('maxattench2',$maxattench2,'C13')
+endif
+
+exists('maxattench3','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench3='' format(maxattench3,2,0):$maxattench3
+ addparams('maxattench3',$maxattench3,'N15')
+endif
+
+exists('maxattench4','parameter','global'):$e1
+if ($e1>0) then
+ $maxattench4='' format(maxattench4,2,0):$maxattench4
+ addparams('maxattench4',$maxattench4,'H2')
+endif
+
+ banner('probefile setup finished.')

@@ -1,0 +1,123 @@
+"macro ATc34a"
+"ATc34a" "C13 Decoupling Line Broadening Test "  
+"       (limited by max user-defined decoupling power)"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if ($#=0) then
+   ATrtp('standard')
+   seqfil='s2pul'
+   text('C13 Decoupling Linewidth Test')
+   at_currenttest='Decoupler_linebroadening_c' 
+   nt=1 f full 
+   wnt=''
+   tof=at_tof tpwr=at_tpwr pw90=at_pw90 pw(90)
+   wexp='ATc34a(`PART1`)'
+   ATcycle
+   au
+
+elseif ($1='PART1') then
+
+
+ wft av f  
+ lb='n' sb=.205 at=.8 
+ sp=2.5p wp=0.8p vsadj th=40 nll
+ getll(1):$int,cr  sp=cr-0.02p wp=.1p
+ vp=0 wc=120 sc=0 fn=4*np axis='h' 
+ vo=8 th=10
+
+ at=.1 d1=1.5-at sb=at fn='n'
+ lb='n' 
+ dn='C13' 
+
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   if sfrq<700 then
+    $pwx=1e6/(4.0*40*dfrq)  "40ppm 13C RF Field is adequate for garp"
+   else
+    $pwx=1e6/(4.0*6000)     "6kHz 13C RF Field at higher magnetic fields"
+   endif
+
+   ln($pwx/at_pwx90Lowpowerc):$ln   "use power-limited results for pulse power/pw90"
+   dpwr=at_pwx90Lowpowerlvlc-20.0*$ln*0.43429
+   dpwr=trunc(dpwr)
+   dmf=1e6/$pwx
+  n1='' n2=''
+
+ if (dpwr>at_max_dpwr) then
+  write('line3','Decoupling Power Requested Exceeds Defined Power Limit (%s)',at_max_dpwr)
+  write('line3',' Power Reduced to Permitted Level:%s',at_max_dpwr)
+  format(at_max_dpwr,3,0):n3
+  n1='Decoupling Power Exceeds User-Defined Power Limit for 13C Decoupling:'+n3
+  n2='Power Reduced to Permitted Level:'+n3
+  $diff=dpwr - at_max_dpwr
+  $count=1
+  repeat
+    $pwx=$pwx*1.12 
+     dmf=dmf/1.12
+    dpwr=dpwr - 1
+    $count=$count+1
+  until $count>$diff
+ endif
+
+ dmm='ccw' 
+
+ text('Test of Broadening from 13C Decoupling ')
+ array('dpwr',16,at_max_dpwr-15,1) 
+ array('dmf',16,dmf,0)
+ $count=15
+ repeat
+     dmf[$count]=dmf[$count+1]/1.12
+     $count=$count - 1
+  until $count=0
+
+ array='(dpwr,dmf)' dm='nny' 
+ fn=np np=fn fn=2*np
+ ss=-16
+ atext(n1) atext(n2)
+ 
+ wnt='ATdec_lw'
+ wexp='ATc34a(`PART2`)' 
+ ATcycle dtext au
+
+elseif ($1='PART2') then
+
+ s1 wft
+ sc=wcmax-25 wc=5 ho=-6 vo=0 dssn('all') s2 r1
+ select(1) peak:$int,cr dres:$lw1 rl(0) th=10 select(arraydim) cr=0 dres:$lw
+ $lwdiff=$lw-$lw1 
+ $lw1=trunc(10*$lw1)/10 
+ $lw=trunc(10*$lw)/10 
+ $lwdiff=trunc(10*$lwdiff)/10 
+ ATrecord('DEC_LBc','C13 Decoupler Line Broadening Test (Hz)','Change',$lwdiff,' Last',$lw,' at_Power',dpwr[arraydim],' First',$lw1,' at_Power',dpwr[1])
+ write('file',autotestdir+'/REPORT','Line Width with 13C Decoupling Power=%2.0f is %2.1fHz ',dpwr[1],$lw1)
+ write('file',autotestdir+'/REPORT','Line Width with 13C Decoupling Power=%2.0f is %2.1fHz ',dpwr[arraydim],$lw)
+ write('file',autotestdir+'/REPORT','Line Broadening:13C Decoupling Power=%2.0f is %2.1fHz ',dpwr[arraydim],$lwdiff)
+
+ if (at_plotauto='y') then
+  pap plww(1,arraydim) pscale
+  ATpltext(wcmax-60,wc2max-5)
+  r2 pl('all') r2
+  write('plotter',0,60,'Additional Broadening at Maximum Permitted Power = %2.1f Hz at power = %2.0f',$lwdiff,dpwr[arraydim])
+  write('plotter',0,-2,'dpwr =')
+  $pos=19
+  $count=1
+  repeat
+   write('plotter',$pos+wc/2,-2,'%2.0f',dpwr[$count])
+   $pos=$pos-ho
+   $count=$count+1
+  until $count>arraydim
+  ATpage 
+ endif
+
+ ATsvf
+
+ATnext
+endif

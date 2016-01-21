@@ -1,0 +1,69 @@
+import os
+import shutil
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# method to copy files to remote directory
+def copyFiles(path, fileList):
+   for i in fileList:
+      shutil.copy( i, os.path.join(path, i))
+
+# method to copy files to remote directory and remove extension
+def copyFilesRmExt(path, fileList, ext):
+   l = len(ext)
+   for i in fileList:
+      shutil.copy( i, os.path.join(path, i[:-l]) )
+
+# get options settings
+boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
+execfile(boFile)
+
+# define with absolute path where standard build files will be copied
+vnmrShufflerPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'shuffler')
+optImageShufflerPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'options','standard','IMAGE','imaging','shuffler')
+optP11ShufflerPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'options','standard','P11','shuffler')
+
+##
+## make sure the standard path(s) exist
+##
+if not os.path.exists(vnmrShufflerPath):
+   os.makedirs(vnmrShufflerPath)
+if not os.path.exists(optImageShufflerPath):
+   os.makedirs(optImageShufflerPath)
+if not os.path.exists(optP11ShufflerPath):
+   os.makedirs(optP11ShufflerPath)
+
+
+# source files
+
+MainFileList = [ 'commands.xml',
+                  'image_param_list',
+                  'locator_statements_default.xml',
+                  'locator_statements_edit_panel.xml',
+                  'locator_statements_protocols.xml',
+                  'locator_statements_trash.xml',
+                  'protocol_param_list',
+                  'ProtocolBrowserKeywords',
+                  'pulse_sequence_macros.xml',
+                  'shuffler_param_list',
+                  'study_param_list' ]
+
+ImageFileList = [ 'locator_statements_default.xml.img',
+                  'protocol_param_list.img',
+                  'ProtocolBrowserKeywords.img',
+                  'pulse_sequence_macros.xml.img',
+                  'shuffler_param_list.img',
+                  'study_param_list.img' ]
+
+P11FileList = [ 'locator_statements_default.xml.p11' ]
+
+## copy the files to vnmr and options directories
+
+copyFiles(vnmrShufflerPath, MainFileList)
+copyFilesRmExt(optImageShufflerPath, ImageFileList, ".img")
+copyFilesRmExt(optP11ShufflerPath, P11FileList, ".p11")
+

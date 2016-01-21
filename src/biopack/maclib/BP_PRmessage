@@ -1,0 +1,92 @@
+"macro BP_PRmessage"
+"BP_PRmessage    (used by Proj.Reconst.xml button)
+
+substr(seqfil,1,4):$type
+
+phase=1,2,3,4 phase2=1,2
+
+if $type='PR42' then
+    BP_PRcheck:$nimax1,$ni2max,$ni3max,$nimaxtilt 
+    echo($nimax1,$ni2max,$ni3max,$nimaxtilt)
+    if (($nimax1=1000) and ($ni2max=1000) and ($ni3max=1000) and ($nimaxtilt=1000)) then
+      banner('No Limit on # of increments for this Experiment')
+      return
+    else
+      $max1='' format($nimax1,4,0):$max1
+      $max2='' format($ni2max,4,0):$max2
+      $max3='' format($ni3max,4,0):$max3
+      $maxtilt='' format($nimaxtilt,4,0):$maxtilt
+    endif
+
+    if $nimax1=1000 then
+     $string1='' $max1=''
+    else
+     $string1=' Max. # NH Plane increments is '
+    endif 
+
+    if $ni2max=1000 then
+     $string2='' $max2=''
+    else
+     $string2='Max. # '+PRvar1+' Plane increments is '
+    endif 
+
+    if $ni3max=1000 then
+     $string3='' $max3=''
+    else
+     $string3='Max. # '+PRvar2+' Plane increments is '
+    endif 
+
+    $stringtilt='Max. # Tilted Plane increments is '
+    write('line3',$string1+$max1+' '+$stringtilt+$maxtilt)
+   echo($string1)
+   echo($string2)
+   echo($string3)
+   echo($stringtilt)
+    if (($nimax1<PR_niN) and (($nimaxtilt>PR_niTilt) or ($nimaxtilt=PR_niTilt))) then
+     banner($string1+$max1+'\\Reset Number of Increments in NH planes')
+    elseif (($ni2max<PR_ni2) and (($nimaxtilt>PR_niTilt) or ($nimaxtilt=PR_niTilt))) then
+     banner($string2+$max2+'\\Reset Number of Increments in '+PRvar1+' planes')
+    elseif (($ni3max<PR_ni3) and (($nimaxtilt>PR_niTilt) or ($nimaxtilt=PR_niTilt))) then
+     banner($string3+$max3+'\\Reset Number of Increments in '+PRvar2+' planes')
+
+    elseif (($nimaxtilt<PR_niTilt) and
+            (($nimax1>PR_niN) or ($nimax1=PR_niN)) and
+            (($ni2max>PR_ni2) or ($ni2max=PR_ni2)) and
+            (($ni3max>PR_ni3) or ($ni3max=PR_ni3)) )
+    then
+     banner($stringtilt+$maxtilt+'\\Reset Number of Increments in tilted planes')
+
+    elseif (($nimaxtilt<PR_niTilt) and ($nimax1>PR_niN)) then
+     banner($string1+$max1+'\\Reset Number of Increments in NH planes'+'\\'+$stringtilt+$maxtilt+'\\Reset Number of Increments in tilted planes')
+
+    elseif (($nimaxtilt<PR_niTilt) and ($ni2max>PR_ni2)) then
+     banner($string2+$max2+'\\Reset Number of Increments in '+PRvar1+' planes'+'\\'+$stringtilt+$maxtilt+'\\Reset Number of Increments in tilted planes')
+
+    elseif (($nimaxtilt<PR_niTilt) and ($ni3max>PR_ni3)) then
+     banner($string3+$max3+'\\Reset Number of Increments in '+PRvar2+' planes'+'\\'+$stringtilt+$maxtilt+'\\Reset Number of Increments in tilted planes')
+
+
+    else
+     banner($string1+$max1+'\\ '
+      +$string2+$max2+'\\ '
+      +$string3+$max3+'\\ '
+      +$stringtilt+$maxtilt)
+    endif
+  endif
+  if $type='PR43' then
+    BP_PRcheck:$ni2max 
+    echo($ni2max)
+    if ($ni2max=1000) then
+      banner('No Limit on # of increments for this Experiment')
+      return
+    else
+     $max='' format($ni2max,4,0):$max
+     $string='Maximum # N15 Plane increments is '
+     write('line3',$string+$max)
+     if $ni2max<PR_niN then
+      banner($string+$max+'\\Reset Number of Increments in N15 planes')
+     else
+      banner($string+$max)
+     endif
+    endif
+  endif

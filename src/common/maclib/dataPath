@@ -1,0 +1,74 @@
+"macro dataPath"
+" Varian macro to determine FID name, based on templates."
+" Optionally create the directories"
+
+if ($# < 1) then
+  write('error','%s called without arguments',$0)
+  return
+endif
+if ($1='save') then
+  getuserpref('svftmplt'):svftmplt
+  chkname(svftmplt):$svfdir,$dum,$dum2,$svfpars
+  getuserpref('tmpltParsRequired'):$req
+  if ($req = 'y') then
+    if ($svfpars<>'') then
+      return('',$svfpars)
+    endif
+  endif
+  $dir=sqdir
+  exists($dir,'directory','rw'):$e
+  if ($e < 0.5) then
+    return('','')
+  endif
+  Svfname($dir+'/././'+$svfdir,'.fid','.fid, .img, .rec, .REC'):$file
+  strstr($file,'/././'):$ret,$s1,$s2
+  substr($s2,'dirname'):$s1
+  if ($s1<>'.') then
+    $s2 = $dir+'/'+$s1
+    exists($s2,'directory'):$e
+    if ($e < 0.5) then
+      shell('mkdir -p '+$s2):$dum
+    endif
+  endif
+  Svfname($dir+'/'+$svfdir,'.fid','.fid, .img, .rec, .REC'):$file
+  return($file,'')
+elseif ($1 = 'mkdir') then
+  getuserpref('adirtmplt'):adirtmplt
+  getuserpref('sdirtmplt'):sdirtmplt
+  chkname(adirtmplt):$directory,$dum,$dum2,$apars
+  chkname(sdirtmplt):$sdir,$dum,$dum2,$spars
+  getuserpref('tmpltParsRequired'):$req
+  if ($req = 'y') then
+    if ($apars<>'') or ($spars<>'') then
+      if ($apars='') then
+        $apars = $spars
+      else
+        $apars = $apars +' '+ $spars
+      endif
+      return('',$apars)
+    endif
+  endif
+  if ($sdir <> '') then
+    $directory = $directory+'/'+$sdir
+  endif
+  Svfname($directory,'',''):$directory
+
+  substr($directory,'dirname'):$adir,$sdir
+  if ($## = 0) then
+    archivedir=$adir
+    sample=$sdir
+    sqdir=$directory
+    create('archivedir','string','processed',archivedir):$e
+    setvalue('archivedir',archivedir,'processed')
+    create('sample','string','processed',sample):$e
+    setvalue('sample',sample,'processed')
+    exists($directory,'directory'):$ex
+    if ($ex=0) then
+      shell('mkdir -p '+$directory):$dum
+      "********Other subdirectories are now created**********"
+      Autockdir($directory)
+    endif
+  else
+    return($adir,$sdir)
+  endif
+endif

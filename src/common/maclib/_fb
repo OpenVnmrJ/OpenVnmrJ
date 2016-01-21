@@ -1,0 +1,33 @@
+"macro _fb"
+" For wideline, sets the filter to a value equal to or higher"
+" than the value requested by the user"
+
+exists('maxsw_loband','parameter','systemglobal'):$x
+if ($x = 1) then
+  $maxsw_loband=maxsw_loband + 0.1
+else
+  $maxsw_loband=100000.1
+endif
+
+if (sw >= $maxsw_loband) then
+   $fb=fb
+   substr(rftype,1,1):$rfchar
+   if ($rfchar = 'd') then
+      if (fb < 256001) then fb=256000
+      else fb=1000000
+        endif
+   else
+     if (fb <= 170000) then fb=170000
+     else if (fb <= 300000) then fb=300000
+     else if (fb <= 700000) then fb=700000
+     else if (fb <= 1000000) then fb=1000000
+     else fb=2000000
+       endif
+       endif
+       endif
+       endif
+   endif
+   if ($fb <> fb) then
+       write('line3','Parameter fb set to %d; requested value of %d not available', fb, $fb)
+   endif
+endif

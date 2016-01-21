@@ -1,0 +1,164 @@
+"macro BPCCLScal3"
+"optimize flipback pulses in sensitivity enhanced 15N HSQC"
+"written by Marco Tonelli @ NMRFAM - August 2003"
+"rewritte by MT on October 2006"
+
+"continue contains the name of the parent macro"
+"r7 has the entry point to that macro"
+
+   
+$CALIBRATE=''
+if ($#>1) then
+   $CALIBRATE=$1
+else
+   $CALIBRATE='END'
+endif
+
+if ($CALIBRATE='INEPT') then
+
+   "save paramters from current experiment in temporary file"
+    exists(userdir+'/parlib/temp.par','file'):$tmpexists
+    if ($tmpexists) then
+       shell('/bin/rm -r $vnmruser/parlib/temp.par')
+    endif
+    svp(userdir+'/parlib/temp.par')
+
+   "  1       2     3       4  5        6        7        8  9        10 11    12    13   14         15    16      17"
+   "('INEPT','both',phincr0,p1,p1_phase,p2_phase,p3_phase,p4,p4_phase,gt,gzlvl,gstab,pwHs,pwHs_phase,shape,autocal,tpwrs)"
+
+    $i=1
+    $i=$i+1 $BOTH=${$i} 
+    $i=$i+1 $phincr0=${$i} 
+    $i=$i+1 $p1=${$i} 
+    $i=$i+1 $p1_phase=${$i} 
+    $i=$i+1 $p2_phase=${$i} 
+    $i=$i+1 $p3_phase=${$i}
+    $i=$i+1 $p4=${$i}
+    $i=$i+1 $p4_phase=${$i}
+    $i=$i+1 $gt=${$i} 
+    $i=$i+1 $gzlvl=${$i} 
+    $i=$i+1 $gstab=${$i}
+    $i=$i+1 $pwHs=${$i}
+    $i=$i+1 $pwHs_phase=${$i}
+    $i=$i+1 $shape='' $shape=${$i}
+    $i=$i+1 $autocal='' $autocal=${$i}
+    if ($autocal<>'y' AND $autocal<>'n') then 
+      $i=$i+1 $tpwrs=${$i}
+    endif
+
+   "read d1, at, tof, temp, compH directly from the experiment"
+    $d1=d1 $at=at $tof=tof $temp=temp $compH=compH
+    $r7=r7 "NOTE: remember r7"
+
+   "load pulse sequence to calibrate soft power and"
+   "small angle phase correction for flipback pulses"
+    BPflipback_cal
+
+   "set up parameters"
+    p1=$p1		p1_phase=$p1_phase
+    p2=2.0*$p1		p2_phase=$p2_phase
+    p3=$p1		p3_phase=$p3_phase
+    p4=$p4		p4_phase=$p4_phase
+    gt0=$gt gzlvl0=$gzlvl gstab=$gstab
+    pwHs=$pwHs pwHs_phase=$pwHs_phase
+    shape=$shape
+    autocal=$autocal
+    if (autocal<>'y' AND autocal<>'n') then tpwrs=$tpwrs endif
+
+    d1=$d1 at=$at tof=$tof temp=$temp compH=$compH
+    r7=$r7 "NOTE: remember r7"
+
+   "set up name of parent macro as a paramter"
+   "(so that the BPCCLScal2 macro can be called by different macros)"
+    exists('goback','parameter'):$e
+    if ($e=0) then
+       create('goback','string')
+    endif
+    goback='fbcal_setup'
+
+    BPCCLScal2($BOTH,$phincr0)	"call calibrating macro"
+    return
+
+else if ($CALIBRATE='WTG') then
+
+   "save paramters from current experiment in temporary file"
+    exists(userdir+'/parlib/temp.par','file'):$tmpexists
+    if ($tmpexists) then
+       shell('/bin/rm -r $vnmruser/parlib/temp.par')
+    endif
+    svp(userdir+'/parlib/temp.par')
+
+   "  1     2     3       4  5        6  7        8    9          10    11      12"
+   "('WTG','both',phincr0,p3,p3_phase,p4,p4_phase,pwHs,pwHs_phase,shape,autocal,tpwrs)"
+
+    $i=1
+    $i=$i+1 $BOTH=${$i} 
+    $i=$i+1 $phincr0=${$i} 
+    $i=$i+1 $p3=${$i}
+    $i=$i+1 $p3_phase=${$i}
+    $i=$i+1 $p4=${$i} 
+    $i=$i+1 $p4_phase=${$i}
+    $i=$i+1 $pwHs=${$i} 
+    $i=$i+1 $pwHs_phase=${$i}
+    $i=$i+1 $shape='' $shape=${$i}
+    $i=$i+1 $autocal='' $autocal=${$i}
+    if ($autocal<>'y' AND $autocal<>'n') then 
+       $i=$i+1 $tpwrs=${$i}
+    endif
+
+   "read d1, at, tof, temp, compH directly from the experiment"
+    $d1=d1 $at=at $tof=tof $temp=temp $compH=compH
+    $r7=r7 "NOTE: remember r7"
+
+   "load pulse sequence to calibrate soft power and"
+   "small angle phase correction for flipback pulses"
+    BPflipback_cal
+
+   "set up parameters"
+    p1=0.0		p1_phase=0.0
+    p2=0.0		p2_phase=0.0
+    p3=$p3		p3_phase=$p3_phase
+    p4=$p4		p4_phase=$p4_phase
+    gt0=0.0 gzlvl0=0.0 gstab=0.0
+    pwHs=$pwHs pwHs_phase=$pwHs_phase
+    shape=$shape
+    autocal=$autocal
+    if (autocal<>'y' AND autocal<>'n') then tpwrs=$tpwrs endif
+
+    d1=$d1 at=$at tof=$tof temp=$temp compH=$compH
+    r7=$r7 "NOTE: remember r7"
+
+   "set up name of parent macro as a paramter"
+   "(so that the BPCCLScal2 macro can be called by different macros)"
+    exists('goback','parameter'):$e
+    if ($e=0) then
+       create('goback','string')
+    endif
+    goback='fbcal_setup'
+
+    BPCCLScal2($BOTH,$phincr0)	"call calibrating macro"
+    return
+   
+else if ($CALIBRATE='END') then	
+    $tpwrsf=tpwrsf
+    $phincr=phincr
+    $r7=r7 "NOTE: remember r7"
+
+    rtp(userdir+'/parlib/temp.par')
+    shell('/bin/rm -r $vnmruser/parlib/temp.par')
+    svp(userdir+'/parlib/temp.par')
+
+    write('graphics', 70,80, 'Flipback calibration has been completed, please :')
+    write('graphics', 100,60, 'set fine power to ')
+    write('graphics', 200,60, '%.0f', $tpwrsf)
+    write('graphics', 100,40, 'set small angle phase to')
+    write('graphics', 200,40, '%.0f', $phincr)
+
+    r7=$r7  "NOTE: remember r7"
+    r7=r7+1 "move to calibrate next flipback pulse"
+
+   "go back to the parent macro"
+    {continue}(r7,$tpwrsf,$phincr)
+    return
+
+endif endif endif

@@ -1,0 +1,404 @@
+"macro VPstart"
+"VJstart - macro to start VeriPulse"
+
+if ($#=0) then $arg='show' else $arg=$1 endif
+
+$sys_has_probeid=0 probeidpars:$sys_has_probeid
+$probe_has_id=0 $id=''
+if ($sys_has_probeid) then "The system has probe ID"
+   probeidez('lookup'):$probe_has_id,$id "Current probe has an ID"
+endif
+
+IF ($arg='show') THEN
+  getProbePath(probe,'alert'):$e,$probepath,$rw
+  if ($e<0.5) then
+    write('error','Probe file does not exist. Create with Probe gui and restart! ')
+    return
+  endif
+  if ($rw<1) then
+    write('error','Current probe file is not writeable. Create local probe and restart')
+    return
+  endif
+
+   {$0}('ptcheck')
+   tmpsave('setupprobe')
+//   PROTON  "Clear the Decks"
+   module('add','calibpars','basic')
+   module('add','IPpars','basic')
+
+   xmhaha_calib('getLastTargets')
+   VPtest('init')
+   create('probestyle','string','current',''):$e
+   setgroup('probestyle','display')
+   
+   "Return certain values from current probe file if found"
+   $style=''
+   getparam('style','Probe'):$style
+   if ($style='') then probestyle='none' else probestyle=$style endif
+   $probelistFile=userdir+'/persistence/VPprobelist'
+   if  ($probe_has_id) then "Look up details from probe. So far, only recognize OneNMR probe"
+        rm('-f',$probelistFile):$e
+	$type='' probeidez('get','Type'):$type
+        probeidez('get','SN'):IPprobesn
+        writeparam(userdir+'/persistence/VPpars','IPprobesn','replace')
+        addparams('serialno',IPprobesn,'Probe') 
+	$isone=0 $s1='' $s2=''
+        //Work out the type of probe it is
+	strstr($type,'One'):$isone,$s1,$s2
+	strstr($type,'Dual Broadband'):$isDB,$s1,$s2
+	strstr($type,'Triple'):$istriple,$s1,$s2
+	strstr($type,'Cold'):$iscold,$s1,$s2
+	if $isone then probestyle='one'
+	elseif $isDB then probestyle='db'
+	elseif $istriple then probestyle='hcn'
+	elseif $iscold then probestyle='cold'
+        endif
+        teststr('VPprobestyle',probestyle):VPprobeindex
+        if (not VPprobeindex) then
+          write('error','ProbeID probe style is not present in list of available probe styles.')
+          return
+        endif
+	{$0}('setprobe')
+   else
+     teststr('VPprobestyle',probestyle):VPprobeindex
+     write('reset',$probelistFile)
+     $num=size('VPprobestyle')
+     $i=0
+     while ($i < $num) do
+       $i=$i+1
+       write('file',$probelistFile,'"%s" %d',VPprobelabel[$i],$i)
+     endwhile
+   endif
+   VPtestfile=VPprobetest[VPprobeindex]
+   exists(VPtestfile,'veripulse'):$e
+   if (not $e) then
+     VPtestfile='VPtests_one'
+   endif
+   VPsamplefile=VPprobesamples[VPprobeindex]
+   exists(VPsamplefile,'veripulse'):$e
+   if (not $e) then
+     VPsamplefile='VPsamples_one'
+   endif
+   VPtest('read')
+   VPtest('readsamp')
+   $pfile=userdir+'/persistence/VPpars'
+   exists($pfile,'file'):$e
+   if ($e) then
+     $val=''
+     rtv($pfile,'noabort','VPtestfile'):$val
+
+     if ($val = VPtestfile) then
+       $cb=size('VPcheckbox')
+       $cb2=size('VPcheckbox2')
+       $val1='' $val2=''
+       rtv($pfile,'noabort','VPcheckbox','$val1'):$cbr
+       rtv($pfile,'noabort','VPcheckbox2','$val2'):$cbr2
+       if ($cb = $cbr) and ($cb2 = $cbr2) then
+         fread($pfile,'current','value')
+         VPtest('makelist')
+       endif
+     endif
+   endif
+
+   if (IPdatadir='') then IPdatadir=userdir+'/data' endif
+     IParchivedir=userdir+'/VeriPulse_data_archive'
+     exists(IParchivedir,'directory'):$ex
+     if ($ex<0.5) then mkdir(IParchivedir) endif
+    
+   exists('cpprefs','parameter','global'):$cpprefex
+   if not ($cpprefex) then cpADMIN('Start') endif
+
+   if (cpprefs[14]<>'y') then
+       IPeOptions='saveplot'
+   else
+       teststr('IPeOptions','saveplot'):$ret
+       if not ($ret) then IPeOptions=IPeOptions,'saveplot' endif
+   endif
+   eOptions=IPeOptions
+   IPeOptions=eOptions
+   
+   $infodir=userdir+'/IPinfo'
+   exists($infodir,'directory'):$ex
+   if ($ex<0.5) then mkdir($infodir) endif
+   $reportlist=userdir+'/IPinfo/IPreportlist'
+   exists($reportlist,'file'):$ex
+   if ($ex<0.5) then
+	write('reset',$reportlist)
+	write('file',$reportlist,'"None" "none"')
+   endif
+
+      exists('VPversion','veripulse'):$ex,$vpath
+      if ($ex>0.5) then
+        $version=''
+        lookup('mfile',$vpath,'readline'):$version
+        $title='VeriPulse '+$version
+      else
+        $title='VeriPulse'
+      endif
+      vnmrjcmd('popup','mode:modeless','file:VPpopup.xml','pnewupdate:true','rebuild:yes','location:shuffler','title:'+$title,'close:'+$0+'(`close`)')
+   
+ELSEIF ($arg='newprobe') THEN
+   VPprobeindex=$2
+   VPtestfile=VPprobetest[VPprobeindex]
+   exists(VPtestfile,'veripulse'):$e
+   if (not $e) then
+     VPtestfile='VPtests_one'
+   endif
+   VPsamplefile=VPprobesamples[VPprobeindex]
+   exists(VPsamplefile,'veripulse'):$e
+   if (not $e) then
+     VPsamplefile='VPsamples_one'
+   endif
+   probestyle=VPprobestyle[VPprobeindex]
+   VPtest('read')
+   VPtest('readsamp')
+   {$0}('setprobe')
+ELSEIF ($arg='setprobe') THEN
+
+   teststr('VPprobestyle',probestyle):$e
+   if (not $e) then
+     return
+   endif
+
+   //Set into probe file
+   setparams('wtune',VPprobetune[$e],'Probe')
+   setparams('tunemethod',VPprobemethod[$e],'Probe')
+   setparams('rfsize',VPproberfsize[$e],'Probe')
+   setparams('style',probestyle,'Probe')
+
+ELSEIF ($arg='install_specs') THEN
+
+   if (not $probe_has_id) then
+     teststr('VPprobestyle',probestyle):$e
+     if ($e) then
+	$h1freqs=''
+	format(h1freq,1,0):$h1freqs
+	$str='Install targets for '+$h1freqs+' MHz '+VPprobelabel[$e]+'?'
+	confirm($str):$ans
+	if ($ans=0) then write('error','Set correct probe style then install targets') return endif
+     endif
+   endif
+
+   getProbePath(probe,'alert'):$e,$probepath,$rw
+   substr($probepath,'dirname'):$probedir
+   $specspath=$probedir+'/'+probe+'_specs'
+   $targetspath=$probedir+'/'+probe+'_targets'
+   
+   //write('line3','Targets stored in %s',$specspath)
+   
+   $setSpecs=1
+   exists($specspath,'file'):$ee
+   delete($specspath):$e
+
+      write('line3','Installing targets file in %s',$probedir)
+      $field=''
+      format(h1freq,1,0):$field
+
+      exists('specs_'+$field+'_'+probestyle,'probe_specs'):$et,$template
+      if ($et<0.5) then "use generic specs if one for probestyle not found"
+         exists('specs_'+$field+'_generic','probe_specs'):$et,$template
+         if ($et<0.5) then
+	   write('line3','Generic targets %s not found in probe_specs directory','specs_'+$field+'_generic')
+           return
+         endif
+	 write('line3','Generic targets installed, edit to values appropriate for probe')
+      endif
+      
+      if ($probe_has_id) then
+	  //Read template from appdir and make a copy with targets set from Probe ID
+	  $targetname='' $targetvalue=0
+          readfile($template,'$targetname','$targetvalue','','local'):$num
+	  write('reset',$specspath)
+          $i=1
+	  repeat
+	     $e=0 $targetvalue=0
+	     probeidez('target',$targetname[$i],2):$e,$targetvalue
+	     if ($e) then write('file',$specspath,'%s\t%.2f',$targetname[$i],$targetvalue) endif
+	     $i=$i+1
+	  until ($i>$num)
+      else
+          $cmd='cp '+$template+' '+$specspath
+          shell($cmd):$dum
+          IPspecpopup('setspec')
+          $setSpecs=0
+      endif
+   if ($setSpecs) then
+     {$0}('set_specs')
+   endif
+
+ELSEIF ($arg='set_specs') THEN
+   getProbePath(probe,'alert'):$e,$probepath,$rw
+   substr($probepath,'dirname'):$probedir
+   $specspath=$probedir+'/'+probe+'_specs'
+   $targetspath=$probedir+'/'+probe+'_targets'
+   shell('rm -f '+$targetspath+'; cp '+$specspath+' '+$targetspath):$dum
+   write('line3','Targets file %s installed',$specspath)
+
+   //Need to ensure that LastTargets is consistent with probe targets file
+   lookup('file',$specspath,'count','N15pw90'):$e
+   if ($e) then 
+        VPgettarget('N15pw90'):$N15pw90
+	N15pw90=$N15pw90
+	N15pwx=$N15pw90
+   endif
+   lookup('file',$specspath,'count','P31pw90'):$e
+   if ($e) then 
+        VPgettarget('P31pw90'):$P31pw90
+	P31pw90=$P31pw90
+	P31pwx=$P31pw90
+   endif
+   lookup('file',$specspath,'count','F19pw90'):$e
+   if ($e) then 
+        VPgettarget('F19pw90'):$F19pw90
+	F19pw90=$F19pw90
+	F19pwx=$F19pw90
+   endif
+   lookup('file',$specspath,'count','H1pw90'):$e
+   if ($e) then 
+        VPgettarget('H1pw90'):$H1pw90
+	H1pw90=$H1pw90
+	H1pp=$H1pw90
+   endif
+   lookup('file',$specspath,'count','C13pw90'):$e
+   if ($e) then 
+        VPgettarget('C13pw90'):$C13pw90
+	C13pw90=$C13pw90
+	C13pwx=$C13pw90
+   endif
+   
+   vnmrjcmd('pnew','IPdispsched')
+   xmhaha_calib('saveTargets')
+   if ($probe_has_id) then
+	{$0}('setprobe')
+   endif
+   IPspecpopup('display')
+
+ELSEIF ($arg='ptcheck') THEN
+
+  //if ((probestyle='one') or (probestyle='db') or (probestyle='id')) then 
+   if (atune <> 'n') then
+     "Do  a little checking of protune world"
+     $tunestuff1='/vnmr/tune/'+probe
+     $tunestuff2='/vnmr/tune/tunecal_'+probe
+     $e=0 $e2=0
+     exists($tunestuff1,'directory'):$e
+     exists($tunestuff2,'directory'):$e2
+     if not ($probe_has_id) then
+        if (($e=0) or ($e2=0)) then
+	   write('error','Tune persistence file for %s are not set up. Calibrations cannot proceed',probe)
+           abort
+        endif
+     else
+	if ($e2=0) then
+	   write('error','Tune persistence file for %s are not set up. Calibrations cannot proceed',probe)
+           abort
+	endif
+     endif
+   endif
+  //endif
+
+ELSEIF ($arg='sysok') THEN
+
+  //Check that everything is in place before running
+  //Return 0 if not
+  //ProTune setup if system has it
+  //Targets file installed
+  //probefile set up for ProTune if system has it 
+  //VT is set to be controlled from VT panel only
+  //probestyle in probe file is consistent with FG probestyle
+  //System details are populated
+  //3D shimming and autotest appdirs are enabled
+
+  $infostr='VeriPulse cannot proceed due to the following issues:',''
+  $ok=1 
+  //Probe is writeable
+  getProbePath(probe,'alert'):$e,$probepath,$rw
+  if ($rw<0.5) then
+	$ok=0
+	write('line3','-Probe is not writeable. Create a new probe file or select a different probe file'):$line
+	$infostr=$infostr,$line
+  endif
+  substr($probepath,'dirname'):$probedir
+
+  //Targets files exists
+  $specspath=$probedir+'/'+probe+'_specs'
+  exists($specspath,'file'):$ex
+  if ($ex<0.5) then
+	$ok=0
+	write('line3','-No targets file. Click \'Install...\' button to install targets'):$line
+	$infostr=$infostr,$line
+  endif
+
+  //LastTargets file exists in probe dir
+  //$LastTargets=$probedir+'/LastTargets'
+  //exists($LastTargets,'file'):$ex
+  //if ($ex<0.5) then
+	//$ok=0
+	//write('line3','\t-No LastTargets file. Open Targets window and save targets'):$line
+	//$infostr=$infostr,$line
+  //endif
+
+  //probestyle in probe is set and is consistent with FG setting
+  $probestyle=''
+  getparam('style','Probe'):$probestyle
+  if (($probestyle='') or ($probestyle<>probestyle)) then
+	$ok=0
+	write('line3','-Probe style not set correctly. Set the correct probe style first'):$line
+	$infostr=$infostr,$line
+  endif 
+
+  $type=''
+  if not ($probe_has_id) then
+     getparam('serialno','Probe'):$probesn,$type
+     if ($type='string') then
+        IPprobesn=$probesn
+     elseif ($type='real') then
+        format($probesn,0,0):IPprobesn
+     endif
+  endif
+
+  //Probe file set up for ProTune?
+  if (atune='y') then "ProTune enabled in config"
+    $tunemethod='' $wtune=''
+    getparam('wtune','Probe'):$wtune
+    getparam('tunemethod','Probe'):$tunemethod
+    if (($tunemethod='n') or ($tunemethod='') or ($wtune='n') or ($wtune='')) then
+    	$ok=0
+	write('line3','-ProTune not configured correctly. Ensure that wtune and tunemethod are set properly in the probe file'):$line
+	$infostr=$infostr,$line
+    endif
+  endif
+
+  //Check that panel is populated
+  if ((IPcustomer='') or (IPsyssn='') or (IPoperator='') or (IPsysname='') or (IPprobesn='')) then
+	$ok=0
+	write('line3','-System details incomplete. Leave no blank fields'):$line
+	$infostr=$infostr,$line
+  endif
+
+ //Check that at least one test is selected
+  if (VPtests[1]='') then
+	write('line3','-No tests selected. Select at least one test'):$line
+	$infostr=$infostr,$line
+	$ok=0
+  endif
+
+  if not $ok then 
+        IPpopup('message',$infostr)
+  endif
+
+
+  return($ok)
+    
+ELSEIF ($arg='close') THEN
+  
+  exists('IPpars','modules'):$e,$path
+  $list=''
+  readparam($path,'','list'):$list
+  $list = $list +' VPcheckbox VPcheckbox2 VPtestfile'
+  writeparam(userdir+'/persistence/VPpars',$list)
+  destroy('probestyle'):$e
+  tmpreturn('setupprobe')
+
+ENDIF
+

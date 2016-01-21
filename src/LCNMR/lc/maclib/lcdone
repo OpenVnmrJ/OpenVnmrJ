@@ -1,0 +1,56 @@
+"macro lcdone"
+
+if $# <> 3 then
+  write('error','%s must be called with three arguments',$0)
+  return
+endif
+$filedir=''
+
+$filedir = $1
+$exp=$2
+// $exp?
+$file = $3
+if ($file = 'ignore.lcd') then
+   return
+endif
+$lcfile=systemdir + '/tmp/'+$file
+
+$lcfilename=systemdir + '/tmp/lcfilename'
+$lcdatatemp=systemdir + '/tmp/lcdatatemp'
+$lcdata=$filedir+'/lcdata'
+write('reset',$lcfilename)
+write('file',$lcfilename,'%s',$file)
+$cmd='dos2unix "' + $lcfile +'" "' + $lcdatatemp+'"'
+shell($cmd):$dum
+$cmd='cat "' + $lcfilename + '" "' + $lcdatatemp + '" > "' + $lcdata+'"'
+shell($cmd):$dum
+
+rm($lcdatatemp):$dum
+rm($lcfilename):$dum
+rm($lcfile):$dum
+
+write('line3','LC run done! Transferred file %s to %s as lcdata',$file,$filedir)
+jexp:$curexp
+
+if $curexp=$exp then
+  $lcstopsnmr=lcstopsnmr
+  $scoutap=scoutap
+else
+$expno=''
+format($exp,1,0):$expno
+$file=userdir+'/exp'+$expno+'/curpar'
+rtv($file,'lcstopsnmr'):$lcstopsnmr
+rtv($file,'scoutap'):$scoutap
+endif
+write('line3',$lcstopsnmr)
+
+if $lcstopsnmr then
+  expactive($exp):$expactive
+  expactive('auto'):$autoactive
+  if $autoactive then autosa aa
+  elseif $expactive then
+    aa 
+  endif
+endif
+if $scoutap then wftlc endif
+

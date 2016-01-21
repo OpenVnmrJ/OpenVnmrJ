@@ -1,0 +1,54 @@
+"macro ATc33b"
+"ATc33b" "C13 Adiabatic Decoupling using Waveform Generators"
+"        Using user-defined power limits. Efficiency may be"
+"        compromised"
+
+if (at_c13tests='n') then ATnext return endif  "optional skipping"
+
+if (at_cycletest='yy') then ATnext return endif  "no need to repeat "
+
+if ($#=0) then
+   ATrtp('standard')  
+   seqfil='s2pul'
+   dn='C13' 
+   tpwr=at_tpwr pw90=at_pw90 pw(90)
+   at_currenttest='adiabaticsprofile2_c'
+   at=.1 sb=at sbs=-at s1 
+   text('C13 WURST Adiabatic Decoupling Profiles')
+
+
+
+   "proper sfrq/dfrq for on-resonance HDO/13CH3OD is 3.97675 at 20C"
+   "observed 13C shift is 0.01675 ppm per degree"
+
+   $dfrqcorrect=sfrq/3.9767612
+   dof=($dfrqcorrect-dfrq)*1e6
+   dof=dof+(temp-20)*(0.01675*dfrq)   "correct for temperature change"
+
+   wnt=''
+   wexp='ATc33b(`PART1`)'
+   ATcycle au
+ 
+elseif ($1='PART1') then
+
+   wft f aph0 vsadj sp=2.8p wp=.8p vsadj
+
+   array('dof',41,dof-80*dfrq,4*dfrq)
+   ATsetupshapes
+   vp=0 dmm='ccp'
+   dm='nny' 
+   wnt='ATadiab2'
+   dtext 
+   wexp='ATc33b(`PART2`)'
+   array='(dpwr,dseq,dmf,dres),dof'
+   ATcycle
+   au
+
+elseif ($1='PART2') then
+
+   wft
+   ATsvf
+   if (at_plotauto='y') then ATadiab3 endif
+
+ATnext
+endif

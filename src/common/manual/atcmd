@@ -1,0 +1,90 @@
+
+atcmd('macro','timespec')
+atcmd('macro','timespec','active')
+atcmd('macro','timespec','start')
+atcmd('macro','timespec','active','start')
+atcmd('macro','cancel')
+atcmd('macro','list')
+atcmd('macro','list'):$timestamp,$user
+atcmd
+
+The atcmd will call a macro at the specified time.  It only functions on a
+spectrometer. If the 'active' argument is given, the macro will be executed
+by the Vnmr process that specified the atcmd. If that process is no longer
+active, the macro will be removed from the database. If the 'active' argument
+is not give, then a background Vnmr will be started to execute
+the macro. This background Vnmr will not be started in an experiment.
+Therefore, the macro will need to execute a jexp or run commands or
+macros which do not need experiment parameters.  It will have access
+to global and systemglobal parameters.  The bootup macro will not be
+executed automatically. It can be called from the atcmd macro.
+
+When atcmd is called with arguments, it updates the database with the
+supplied information.  It does not start the process which will call
+the macros at the specified times, unless the 'start' option is given
+along with the 'timespec' option.  The atcmd with no arguments will also
+start the program which will call the macros at the specified times.
+
+The timespec has two different formats. One specifies an hour and minute
+when the processing will occur. The other specifies the delay, in seconds,
+from the current time when the processing will occur.
+
+The first format is:
+  hh:mm <mon tue wed thur fri sat sun>
+A 24 hour clock is used.  midnight is 0:0, noon is 12:00.
+If the optional day field is used, the command will be repeated
+on that day at the appointed time.  The day fields are case
+insensitive.  For monday, wednesday, and friday only a single
+character is needed.  More can be used.  For tuesday, thursday,
+saturday, and sunday, at least two characters must be given.
+
+The second format is simply a number, such as 0 or 10.
+
+If the cancel argument is given, it will cancel all the commands
+that match the supplied macro. For example, if you specify cmda
+to be run at 8:00 on mon and 9:00 on tue, then atcmd('cmda','cancel')
+will cancel both of them.  If the macro is '', the cancel
+option will cancel all atcmd macros.
+
+The list option will list the timespec for all the atcmds that
+match the supplied macro.  If the macro is '', the list
+option will list all of the atcmd macros and their timespecs.
+
+If the atcmd specifies a specific macro and the list option, the
+timestamp and user that submitted the atcmd can be returned to
+the macro. For example, atcmd('cmda','list'):$timestamp,$user
+would set the macro parameters. If cmda has not been specified to
+at a specified time, empty strings will be returned.
+
+When the command specified by the atcmd is executed in background,
+it will be executed using the envirnoment of the user who requested
+the atcmd.  Also, the background Vnmr will initially not be joined
+to a specific experiment.
+
+Examples:
+
+atcmd('echo(`good morning`)','8:00 mon tue wed thu fri')
+   will display a welcome message every weekday at 8:00 am.
+
+atcmd('echo(`What are you doing here on a weekend?`)','8:00 Sat Sun')
+   will question your intentions on the weekend.
+
+atcmd('startNightQueue','22:00')
+   will run the macro startNightQueue at 22 hr (10:00pm).
+
+atcmd('dosomething',0,'start')
+   will run the macro dosomething zero seconds from now, that is,
+   immediately. The 'start' option simply avoids the need to follow
+   this command with an atcmd with no arguments.
+
+atcmd('startNightQueue','cancel')
+   will cancel the scheduled startNightQueue cmd
+
+atcmd('','cancel')
+   will cancel all scheduled commands
+
+atcmd('','list')
+   will list all scheduled commands
+
+atcmd('startNightQueue','list'):$time,$user
+   will return the timestamp and own to the calling macro

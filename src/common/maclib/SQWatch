@@ -1,0 +1,61 @@
+"macro SQWatch"
+/*-*- MAGICAL -*-*/
+
+if ($# < 1) then
+    write('error', '"SQWatch" command requires at least one argument')
+    return
+endif
+// Turn OFF this functionality for fastSQ
+vnmrjcmd('SQ watch off')
+RETURN
+
+$cmd = $1
+
+if ($cmd = 'off') then
+    //write('line3','SQWatch OFF')/*DBG*/
+    vnmrjcmd('SQ watch off')
+    //sqwatch = 'n'
+else
+    is_cpsample:$iscp
+    if (not $iscp) then
+        return
+    endif
+
+    if ($cmd = 'bgstudy') then
+        //if (sample='') then
+        //    $as='' $s=''
+        //    Svfname(adirtmplt+'/'+sdirtmplt,''):$as
+        //    shell('basename '+$as):$s
+        //    $sample='('+$s+')'
+        //else
+        //    $sample=sample
+        //endif
+        //write('line3','SQWatch %s (%s)', $cmd, archivedir+'/'+sample)/*DBG*/
+        vnmrjcmd('SQ watch', $cmd, archivedir, sample)
+
+    elseif (($cmd = 'auto') and ($# > 1)) then
+        //write('line3','SQWatch %s (%s, %s, %s, %s)',
+        //      $cmd, cursqexp, autodir, archivedir, $2)/*DBG*/
+        vnmrjcmd('SQ watch', $cmd, cursqexp, autodir, archivedir, $2)
+
+    elseif ($cmd = 'build' or $cmd = 'active') then
+        if ($# = 1) then
+            $buildCmd = 'xmhaha(`refreshSQ`)'
+            vnmrjcmd('SQ watch', $cmd, cursqexp, autodir, archivedir, sample, '"'+$buildCmd+'"')
+        elseif ($# = 2) then
+            //write('line3','SQWatch %s (%s, %s, %s, %s, %s)',
+            //  $cmd, cursqexp, autodir, archivedir, sample, $2)/*DBG*/
+            vnmrjcmd('SQ watch', $cmd, cursqexp, autodir, archivedir, sample, '"'+$2+'"')
+        elseif ($# = 6) then
+            //write('line3','SQWatch %s (%s, %s, %s, %s, %s)',
+            //  $cmd, $2, $3, $4, $5, $6)/*DBG*/
+            vnmrjcmd('SQ watch', $cmd, $2, $3, $4, $5, '"'+$6+'"')
+        endif
+    else
+        //write('line3','SQWatch %s (%s, %s, %s)',
+        //      $cmd, cursqexp, autodir, archivedir)/*DBG*/
+        vnmrjcmd('SQ watch', $cmd, cursqexp, autodir, archivedir)
+        //sqwatch = 'y'
+
+    endif
+endif

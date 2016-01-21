@@ -1,0 +1,146 @@
+"macro AuCgradIFC"
+"********************************************************"
+"AuCgradIFC- Carbon/proton G ratio Autocalibration       "
+"*******************************************************"
+
+IF ($# < 1) THEN
+$1=1
+
+$fileex=0 $file=''
+AutoCheck('H1ref'):$fileex,$file
+$explist=explist
+if ($fileex) then RT($file) else return endif
+wft setref
+peak(1p,3p):$height,cr
+movetof
+explist=$explist
+
+getparam('tpwr',tn):tpwr
+getparam('pw90',tn):pw90
+getparam('pwxlvl',dn):pwxlvl
+getparam('pwx',dn):pwx
+getparam('gradient','Probe'):PFGflg
+pw=pw90
+dm='nnn' dmm='ccc'
+
+if (PFGflg = 'n') then
+ write('error','This probe is not a PFG probe.  Check probes table')
+ printon 
+  write('alpha','This probe is not a PFG probe.')
+  write('alpha','Check probes table')
+  write('alpha','Carbon gradient calibration aborted')
+ printoff
+ AutoDelCAL('CgradIFC') Autocalnext
+ return
+endif
+
+seqfil='gXHCAL'
+dm='nnn' dmm='ccc'
+j1xh=137 setoffset(dn,1.38):dof
+$gradtype3=''
+substr(gradtype,3,1):$gradtype3
+if ($gradtype3 = 'l') then
+ gzlvl1=2000
+else
+ fixgrd(30):gzlvl1
+ if (gzlvl1 < 20000) then gzlvl1=20000 endif
+endif
+
+$ratio=3.98
+"getparam('gHratio',dn):$ratio "
+gzlvl3=gzlvl1*2/$ratio
+gt1=.002 gt3=.001
+
+if ($gradtype3 = 'l') then
+ array('gzlvl3',51,gzlvl3-25,1)
+else
+ array('gzlvl3',51,gzlvl3-100,4)
+endif
+
+ai fn=8k at=.2 sinebell
+av
+wnt='array_display_C13'
+wexp='AuCgradIFC(2)'
+alock='n' wshim='n' r1=1
+clear(2)
+au('wait','next') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 2) THEN
+
+sinebell wft select(1) av 
+select(1)
+$counter=1
+$maxspec=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $maxht = $ht $gzlvl3=gzlvl3[1] else
+     if $ht>$maxht then $maxht=$ht $maxspec=$counter $gzlvl3=gzlvl3[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+
+select($maxspec) vsadj(0.8*wc2max) vp=0.1*wc2max
+dssh
+r1=$gzlvl3
+$posratio=2*gzlvl1/r1 $strposratio=''
+format($posratio,0,5):$strposratio
+n1='C/H gradient ratio: +'+$strposratio
+wexp='pl(`all`) pltext write(`plotter`,0,wc2max-30,n1) plotarray(array) page'
+
+if (pltmod = 'fixed') then exec(wexp) endif
+Autocalsave('Cgrad_pos')
+
+$diff=gzlvl3[1]-gzlvl3[2]
+$start=-gzlvl3[1]
+array('gzlvl3',arraydim,$start,$diff)
+wexp='AuCgradIFC(3)'
+au('next','wait') 
+
+ENDIF
+
+"********************************************************"
+
+IF ($1 = 3) THEN
+
+sinebell wft select(1) av 
+select(1)
+$counter=1
+$maxspec=1
+repeat
+  select($counter)
+  peak(sp,wp+sp):$ht
+  if $counter=1 then $maxht = $ht $gzlvl3=gzlvl3[1] else
+     if $ht>$maxht then $maxht=$ht $maxspec=$counter $gzlvl3=gzlvl3[$counter] 
+     endif
+  endif
+  $counter=$counter+1
+until ($counter>arraydim)
+
+r2=-$gzlvl3
+$negratio=2*gzlvl1/r2 $strnegratio=''
+format($negratio,0,5):$strnegratio
+
+select($maxspec) vsadj(0.8*wc2max) vp=0.1*wc2max dssh
+n1='C/H gradient ratio: -'+$strnegratio
+wexp='pl(`all`) pltext write(`plotter`,0,wc2max-30,n1) plotarray(array) page'
+
+if (pltmod='fixed') then exec(wexp) endif
+Autocalsave('Cgrad_neg')
+
+gzlvl3=(r1+r2)/2
+$ratio=2*gzlvl1/gzlvl3
+$strratio=''
+format($ratio,0,5):$strratio
+setparams('gHratio',$strratio,dn)
+
+ AutoDelCAL('CgradIFC') write('alpha','C/H grad cal complete') Autocalnext
+
+ENDIF
+
+"********************************************************"

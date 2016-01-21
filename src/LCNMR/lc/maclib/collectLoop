@@ -1,0 +1,143 @@
+"macro collectLoop"
+/*-*- Mode: MAGICAL -*-*/
+"macro collectLoop"
+
+" Collect a loop during an analyte collection run "
+
+if ($# = 0) then
+    // Make sure lcLoopPercentX's are dimensioned correctly
+    //$MAXLOOPS = 10
+    //$i = 1
+    //while ($i <= $MAXLOOPS) do
+    //    if (size('lcLoopPercentA') < $i) then
+    //        lcLoopPercentA[$i] = 0
+    //    endif
+    //    if (size('lcLoopPercentB') < $i) then
+    //        lcLoopPercentB[$i] = 0
+    //    endif
+    //    if (size('lcLoopPercentC') < $i) then
+    //        lcLoopPercentC[$i] = 0
+    //    endif
+    //endwhile
+    
+    " Call Java code to step to next loop, set lcLoopPercent's "
+    " Then calls us again with loop arg "
+    lccmd('collectLoop')
+    return
+endif
+
+$loop = $1
+if ($loop = 0) then
+    $loop = lcLoopIndex	" Intended for debugging w/o AC "
+endif
+if ($loop = 0) then
+    $loop = 2	" Intended for debugging w/o AC "
+endif
+if ($loop = lcBypassLoop) then
+    write('error','Cannot collect in the bypass loop')
+    return
+endif
+endloop = $loop
+
+
+" Construct the elution method for this loop "
+$strLoop = ''
+format($loop,0,0):$strLoop
+lcElutionMethods[endloop] = 'Elute' + $strLoop
+$path = userdir + '/lc/lcmethods/'
+$inpath = systemdir + '/lc/ElutionMethod'
+$outpath = $path + lcElutionMethods[$loop]
+
+fread($inpath, 'temporary')		" Read in std template method "
+
+// Save some stuff that shouldn't change with elution
+setvalue('lcLambdaMin', lcLambdaMin, 'temporary')
+setvalue('lcLambdaMax', lcLambdaMax, 'temporary')
+setvalue('lcBandwidth', lcBandwidth, 'temporary')
+setvalue('lcAdcPeriod', lcAdcPeriod, 'temporary')
+setvalue('lcPdaPeriod_ms', lcPdaPeriod_ms, 'temporary')
+
+" Modify method to make the percents correct "
+$pct = 0
+format(lcLoopPercentC[$loop],0,0):$pct
+setvalue('lcPercentC', $pct, 'temporary')
+format(lcLoopPercentB[$loop],0,0):$pct
+setvalue('lcPercentB', $pct, 'temporary')
+format(lcLoopPercentA[$loop],0,0):$pct
+setvalue('lcPercentA', $pct, 'temporary')
+
+" Set up to go to the correct loop "
+"setvalue('lcCommand', 'lccmd(\'gotoLoop\', ' + $strLoop + ')', 'temporary')"
+
+" Set the time of the stop for timed elution "
+// TODO: Check these Xfer delay calculations
+if ((lcXferRefChannel > 0) and (lcXferRefChannel <= 3)) then
+    ////" ref time index is (chan + type * nchans);  type=3, nchans=3 "
+    ////$time = lcXferDelay[7] - lcXferDelay[lcXferRefChannel + 9]
+    lcXferDelay('get', 'time', 'loop', 2):$time
+    lcXferDelay('get', 'time', 'ref', 2):$reftime
+    $time = $time - $reftime
+else
+    // Loop-to-NMR time for type=elution=2
+    lcXferDelay('get', 'time', 'loop', 2):$time
+    $time = $time + lcXferRefTime
+    ////$time = (lcXferDelayLoopToNmr + lcXferRefTime) / 60
+endif
+$time = $time / 60      // Convert time to minutes
+$time? /*CMP*/
+// NB: 2 is row of timedElution cmd in the LC method
+setvalue('lcTime', $time, 2, 'temporary')
+
+" Set run duration to a long time, it should never complete normally "
+setvalue('lcTime', 60, 3, 'temporary') "NB: 3 is last row of method"
+
+" Set parameters that should be same for collection and elution "
+" NB: All these should be un-arrayed in the template parameter set "
+" Make flow rates the same to get delays right "
+" (TODO: Adjust method table times when flow rate changes.) "
+setvalue('lcFlowRate', lcFlowRate, 1, 'temporary')
+
+setvalue('lcTrace', lcTrace[1], 1, 'temporary')
+setvalue('lcTrace', lcTrace[2], 2, 'temporary')
+setvalue('lcTrace', lcTrace[3], 3, 'temporary')
+setvalue('lcTrace', lcTrace[4], 4, 'temporary')
+setvalue('lcTrace', lcTrace[5], 5, 'temporary')
+
+$nLambdas = size('lcTraceLambda')
+$i = 1
+while ($i <= $nLambdas) do
+    setvalue('lcTraceLambda', lcTraceLambda[$i], $i, 'temporary')
+    $i = $i + 1
+endwhile
+
+//setvalue('lcEnableA', lcEnableA, 'temporary')
+//setvalue('lcEnableB', lcEnableB, 'temporary')
+//setvalue('lcEnableC', lcEnableC, 'temporary')
+//setvalue('lcEnableD', lcEnableD, 'temporary')
+//setvalue('lcEnableE', lcEnableE, 'temporary')
+
+// lcPeakDetect[1:3] have the instantaneous values of pk detect on each chan
+//setvalue('lcPeakDetectA', lcPeakDetect[1], 'temporary')
+//setvalue('lcPeakDetectB', lcPeakDetect[2], 'temporary')
+//setvalue('lcPeakDetectC', lcPeakDetect[3], 'temporary')
+
+// lcThreshold[1:5] have the instantaneous threshold values on each channel
+setvalue('lcThresholdA', lcThreshold[1], 'temporary')
+setvalue('lcThresholdB', lcThreshold[2], 'temporary')
+setvalue('lcThresholdC', lcThreshold[3], 'temporary')
+setvalue('lcThresholdD', lcThreshold[4], 'temporary')
+setvalue('lcThresholdE', lcThreshold[5], 'temporary')
+
+setvalue('msScans', msCurrentMethod, 'temporary')
+
+// DO NOT STORE PEAK DETECTION OR THRESHOLD; VALUES SET AT ELUTION
+destroy('lcPeakDetectA','temporary')
+destroy('lcPeakDetectB','temporary')
+destroy('lcPeakDetectC','temporary')
+destroy('lcPeakDetectD','temporary')
+destroy('lcPeakDetectE','temporary')
+//destroy('lcThresholdA','temporary')
+//destroy('lcThresholdB','temporary')
+//destroy('lcThresholdC','temporary')
+
+writeparam($outpath, lcMethodParameters, 'temporary')

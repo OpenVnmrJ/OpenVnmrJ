@@ -1,0 +1,84 @@
+"macro ATanalyz"
+" *ATanalyz($phasestep)-analyzes for peak height and phase deviation* "
+" returns average height and percent standard deviation"
+
+if array='' then
+  write('error','Analysis not possible for non-arrayed data set') 
+  return
+endif 
+
+$index=1 $htsum=0 $htsumsq=0 $rpsum=0 $rpsumsq=0
+$ht=0 $freq=0 $11=0 $fsum=0 $fsumsq=0 ai
+if ($#>0) then
+ $phasestep=$1
+else
+ $phasestep=10.0
+endif
+clear(2)
+select(1) aph0 vsadj(100) vp=0 s1
+dssn(1,1)
+peak:$ht,$freq
+$maxht=$ht  "keep track of min, max ht for maximum deviation calculation"
+$minht=$ht
+$htav=$ht $rp=rp
+"****Find peak ht, phase, freq, and do sums for leastsquares***********"
+$outfile = curexp + '/analyze.inp'
+write('reset',$outfile)
+write('file',$outfile,'%3.1f   %5.1f   %3.3f',$ht,$freq,rp)
+repeat
+ select($index)
+  rp=rp-(mphase[arraydim]*stpsiz/(arraydim-1))
+  peak:$ht,$freq
+  sc=sc+ho+0.2 dssn($index,$index) 
+  if (at_plotauto='y') then pl($index) endif
+  write('file',$outfile,'%3.1f   %5.1f   %3.3f',$ht,$freq,rp)
+  if $ht>$maxht then $maxht=$ht endif
+  if $ht<$minht then $minht=$ht endif
+  $htsum=$htsum+$ht $htsumsq=$htsumsq+$ht*$ht
+  $rpsum=$rpsum+rp $rpsumsq=$rpsumsq+rp*rp
+  $fsum=$fsum+$freq $fsumsq=$fsumsq+$freq*$freq
+  $index=$index+1
+until $index>arraydim
+
+"**********Calc averages ans std dev*************************************"
+
+$index=arraydim
+$htvar=($htsumsq-($htsum*$htsum)/$index)
+if $htvar<0 then $htvar=-$htvar endif
+$htsd=SQRT($htvar/($index-1))
+$fvar=($fsumsq-($fsum*$fsum)/$index)
+if $fvar<0 then $fvar=-$fvar endif
+$fsd=SQRT($fvar/($index-1))
+$htdev=$maxht-$minht
+$htav=$htsum/$index
+"  *** "
+" **** "
+
+"***********************************************************************"
+"******************output to graphics and/or plotter********************"
+
+$device='graphics'    "graphics first"
+   write($device,10,wc2max-5,'ave ht=%6.2f',$htav)
+   write($device,70,wc2max-5,'   std dev(percent)=%6.2f',100*$htsd/$htav)
+   write($device,10,wc2max-20,'ave freq =%6.2f',$fsum/$index) 
+   write($device,70,wc2max-20,'   std dev (hz)    =%6.2f',$fsd) 
+if (at_plotauto='y') then
+ $device='plotter'
+   write($device,70,wc2max-5,'ave ht=%6.2f',$htav)
+   write($device,100,wc2max-5,'   std dev(percent)=%6.2f',100*$htsd/$htav)
+   write($device,70,wc2max-15,'ave freq =%6.2f',$fsum/$index) 
+   write($device,100,wc2max-15,'   std dev (hz)    =%6.2f',$fsd) 
+   write('plotter',wcmax-90,wc2max-5,'Phase incremented by %2.3f degrees between spectra',mphase[2]*stpsiz)
+   write('plotter',wcmax-90,wc2max-10,'Step Size (stpsiz) = %1.3f ',stpsiz)
+   write('plotter',wcmax-90,wc2max-15,'Intensity   Frequency  Phase')
+   if arraydim<51 then
+    pltext(curexp+'/analyze.inp',wcmax-90,wc2max-15)
+   endif
+   pap
+   ATpage(at_currenttest+'_a')
+endif
+$htav=trunc(10*$htav)/10 
+$stab=trunc(100*100*$htsd/$htav)/100 
+$stddev=trunc(1000*$htsd/$htav)/1000 
+return($stab,$htav,$stddev)
+fr1 

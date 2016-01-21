@@ -1,0 +1,1261 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="procCSIrecon" element="pages" type="processing" >
+  <group size="855 295"
+    style="PlainText"
+    label="Process"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="procCSIrecon"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    >
+    <group loc="5 145" size="635 35"
+      style="Heading1"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="General"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <filemenu loc="95 5" size="145 25"
+        style="PlainText"
+        vq="csiProcmodule"
+        vc="csiProcmodule='$VALUE'"
+        set="$VALUE=csiProcmodule"
+        file="$VALUE=userdir+'/procModules'"
+        type="directory"
+        bg="VJBackground"
+        editable="Yes"
+        vq2="csiProcmodule"
+        statshow="no"
+        elastic="no"
+        display="yes"
+        />
+      <button loc="250 10" size="60 20"
+        style="PlainText"
+        label="Save"
+        vc="csiCmd('saveProc',procmodule,userdir+'/procModules/'+csiProcmodule)"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <button loc="315 10" size="60 20"
+        style="PlainText"
+        label="Load"
+        vc="csiCmd('rtProc',userdir+'/procModules/'+csiProcmodule)"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <label loc="400 5" size="85 25"
+        style="Heading1"
+        label="Spatial FFT"
+        />
+      <check loc="490 5" size="35 25"
+        style="PlainText"
+        vq="reRecon"
+        vc="reRecon=1"
+        vc2="reRecon=0"
+        set="$VALUE=reRecon"
+        />
+      <button loc="560 5" size="60 20"
+        style="PlainText"
+        label="Help"
+        vc="imcsiXrecon('sprep')"
+        bg="VJBackground"
+        decor1="no"
+        />
+      <label loc="5 9" size="95 20"
+        style="Heading1"
+        label="Process File"
+        />
+    </group>
+    <group loc="290 0" size="555 150"
+      bg="transparent"
+      border="None"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Dim3"
+      useref="no"
+      subtype="Minor"
+      expanded="yes"
+      >
+      <group loc="350 0" size="175 145"
+        style="Heading1"
+        label="Spatial Dim3"
+        show="$VALUE=(nv3&gt;0)"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="ZeroFill"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <entry loc="50 60" size="50 20"
+          style="PlainText"
+          vq="sb3"
+          vc="sb3=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=sb3*100.0"
+          show="on('sb3'):$VALUE"
+          disable="Grayed out"
+          />
+        <entry loc="5 80" size="45 20"
+          style="PlainText"
+          vq="snv3"
+          vc="snv3=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=snv3"
+          show="on('snv3'):$VALUE"
+          disable="Grayed out"
+          />
+        <entry loc="100 60" size="50 20"
+          style="PlainText"
+          vq="lb3 "
+          vc="lb3=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=lb3*100.0"
+          show="on('lb3'):$VALUE"
+          disable="Grayed out"
+          />
+        <entry loc="5 60" size="40 20"
+          style="PlainText"
+          vq="gf3"
+          vc="gf3=$VALUE/100.0 exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=gf3*100.0"
+          show="on('gf3'):$VALUE"
+          disable="Grayed out"
+          />
+        <label loc="95 80" size="60 20"
+          style="Label1"
+          label="Start/Size"
+          justify="Left"
+          />
+        <entry loc="50 80" size="40 20"
+          style="PlainText"
+          vq="cnv3"
+          vc="cnv3=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=cnv3"
+          show="on('cnv3'):$VALUE"
+          disable="Grayed out"
+          />
+        <menu loc="5 40" size="85 20"
+          style="PlainText"
+          label="menu"
+          vc="off('gf3') off('sb3') off('lb3') if ($VALUE = 1) then on('gf3') endif  if ($VALUE=2) then on('sb3')  endif if($VALUE=3) then on('lb3') endif  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=0"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="None"
+            chval="0"
+            />
+          <mlabel 
+            label="Gaussian"
+            chval="1"
+            />
+          <mlabel 
+            label="Sinebell"
+            chval="2"
+            />
+          <mlabel 
+            label="Lorenz"
+            chval="3"
+            />
+        </menu>
+        <menu loc="5 120" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="d3rev"
+          vc="d3rev=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=0"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="No"
+            chval="0"
+            />
+          <mlabel 
+            label="Yes"
+            chval="1"
+            />
+        </menu>
+        <group loc="5 100" size="130 20"
+          style="PlainText"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="0 0" size="40 20"
+            style="PlainText"
+            vc=" dppe3=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=dppe3"
+            show="on('ppe3'):$ENABLE"
+            disable="Grayed out"
+            />
+          <label loc="75 0" size="55 20"
+            style="Label1"
+            label="Voxels"
+            justify="Left"
+            />
+        </group>
+        <group loc="5 20" size="135 20"
+          vq="acqdim"
+          show="$VALUE=(acqdim=3)"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <textmessage loc="90 0" size="35 20"
+            style="PlainText"
+            label="(0)"
+            vq="nv3"
+            set="write('line3','(%d)',nv3):$VALUE"
+            />
+          <menu loc="0 0" size="85 20"
+            style="PlainText"
+            label="menu"
+            vq="fn3"
+            vc="if ($VALUE = 0) then fn3 = 'n' else fn3=$VALUE*2 endif exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="on('fn3'):$on if ($on) then $VALUE = fn3/2 else $VALUE=0 endif"
+            bg="VJBackground"
+            editable="No"
+            >
+            <mlabel 
+              label="Off"
+              chval="0"
+              />
+            <mlabel 
+              label="16"
+              chval="16"
+              />
+            <mlabel 
+              label="32"
+              chval="32"
+              />
+            <mlabel 
+              label="64"
+              chval="64"
+              />
+            <mlabel 
+              label="128"
+              chval="128"
+              />
+            <mlabel 
+              label="256"
+              chval="256"
+              />
+            <mlabel 
+              label="512"
+              chval="512"
+              />
+            <mlabel 
+              label="1k"
+              chval="1024"
+              />
+            <mlabel 
+              label="2k"
+              chval="2048"
+              />
+            <mlabel 
+              label="4k"
+              chval="4096"
+              />
+            <mlabel 
+              label="8k"
+              chval="8192"
+              />
+            <mlabel 
+              label="16k"
+              chval="16384"
+              />
+            <mlabel 
+              label="32k"
+              chval="32768"
+              />
+            <mlabel 
+              label="64k"
+              chval="65536"
+              />
+          </menu>
+        </group>
+      </group>
+      <group loc="175 0" size="175 145"
+        style="Heading1"
+        label="Spatial Dim 2"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="ZeroFill"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <menu loc="5 120" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="d2rev"
+          vc="d2rev=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=0"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="None"
+            chval="0"
+            />
+          <mlabel 
+            label="Reverse"
+            chval="1"
+            />
+        </menu>
+        <group loc="5 100" size="165 20"
+          style="PlainText"
+          vq="lsfrq1"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="0 0" size="50 20"
+            style="PlainText"
+            vc="dppe2=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=dppe2"
+            show="on('ppe2'):$ENABLE"
+            disable="Grayed out"
+            />
+          <label loc="75 0" size="50 20"
+            style="Label1"
+            label="Voxels"
+            justify="Left"
+            />
+        </group>
+        <group loc="5 80" size="165 20"
+          style="PlainText"
+          vq="lsfrq"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="55 0" size="45 20"
+            style="PlainText"
+            vq="cnv2"
+            vc="cnv2=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=cnv2"
+            show="on('cnv2'):$VALUE"
+            disable="Grayed out"
+            />
+          <label loc="100 0" size="60 20"
+            style="Label1"
+            label="Start/Size"
+            justify="Left"
+            />
+          <entry loc="0 0" size="50 20"
+            style="PlainText"
+            vq="snv2"
+            vc="snv2=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=snv2"
+            show="on('snv2'):$VALUE"
+            disable="Grayed out"
+            />
+        </group>
+        <group loc="5 60" size="165 20"
+          style="PlainText"
+          vq="lsfrq"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="90 0" size="50 20"
+            style="PlainText"
+            vq="lb2"
+            vc="lb2=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=lb2*100.0"
+            show="on('lb2'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="45 0" size="45 20"
+            style="PlainText"
+            vq="sb2"
+            vc="sb2=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=sb2*100.0"
+            show="on('sb2'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="0 0" size="45 20"
+            style="PlainText"
+            vq="gf2"
+            vc="gf2=$VALUE/100.0 exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=gf2*100.0"
+            show="on('gf2'):$VALUE"
+            disable="Grayed out"
+            />
+        </group>
+        <group loc="5 20" size="130 20"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <menu loc="0 0" size="85 20"
+            style="PlainText"
+            label="menu"
+            vq="fn2"
+            vc="if ($VALUE = 0) then fn2 = 'n' else fn2=$VALUE*2 endif exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="on('fn2'):$on if ($on) then $VALUE = fn2/2 else $VALUE=0 endif"
+            bg="VJBackground"
+            editable="No"
+            >
+            <mlabel 
+              label="Off"
+              chval="0"
+              />
+            <mlabel 
+              label="16"
+              chval="16"
+              />
+            <mlabel 
+              label="32"
+              chval="32"
+              />
+            <mlabel 
+              label="64"
+              chval="64"
+              />
+            <mlabel 
+              label="128"
+              chval="128"
+              />
+            <mlabel 
+              label="256"
+              chval="256"
+              />
+            <mlabel 
+              label="512"
+              chval="512"
+              />
+            <mlabel 
+              label="1k"
+              chval="1024"
+              />
+            <mlabel 
+              label="2k"
+              chval="2048"
+              />
+            <mlabel 
+              label="4k"
+              chval="4096"
+              />
+            <mlabel 
+              label="8k"
+              chval="8192"
+              />
+            <mlabel 
+              label="16k"
+              chval="16384"
+              />
+            <mlabel 
+              label="32k"
+              chval="32768"
+              />
+            <mlabel 
+              label="64k"
+              chval="65536"
+              />
+          </menu>
+          <textmessage loc="92 0" size="35 20"
+            style="PlainText"
+            label="(64)"
+            vq="nv2"
+            set="write('line3','(%d)',nv2):$VALUE"
+            />
+        </group>
+        <group loc="5 40" size="130 20"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <menu loc="0 0" size="85 20"
+            style="PlainText"
+            label="menu"
+            vc="off('gf2') off('lb2') off('sb2') if($VALUE=1) then on('gf2') endif if ($VALUE=2) then on('sb2') endif if ($VALUE=3) then on('lb2') endif  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=0"
+            bg="VJBackground"
+            editable="No"
+            >
+            <mlabel 
+              label="None"
+              chval="0"
+              />
+            <mlabel 
+              label="Gaussian"
+              chval="1"
+              />
+            <mlabel 
+              label="Sinebell"
+              chval="2"
+              />
+            <mlabel 
+              label="Lorenz"
+              chval="3"
+              />
+          </menu>
+        </group>
+      </group>
+      <group loc="0 0" size="175 145"
+        style="Heading1"
+        label="Spatial Dim 1"
+        bg="transparent"
+        border="Etched"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="ZeroFill"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <menu loc="5 120" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="d1rev"
+          vc="d1rev=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+          set="$VALUE=d1rev"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="None"
+            chval="0"
+            />
+          <mlabel 
+            label="Reverse"
+            chval="1"
+            />
+        </menu>
+        <group loc="5 60" size="160 20"
+          style="PlainText"
+          vq="lsfrq"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="45 0" size="50 20"
+            style="PlainText"
+            vq="sb1"
+            vc="sb1=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=sb1*100.0"
+            show="on('sb1'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="0 0" size="45 20"
+            style="PlainText"
+            vq="gf1"
+            vc="gf1=$VALUE/100.0 exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=gf1*100.0"
+            show="on('gf1'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="95 0" size="50 20"
+            style="PlainText"
+            vq="lb1 "
+            vc="lb1=$VALUE/100.0  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=lb1*100."
+            show="on('lb1'):$VALUE"
+            disable="Grayed out"
+            />
+        </group>
+        <group loc="5 80" size="160 20"
+          style="PlainText"
+          vq="lsfrq"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <entry loc="0 0" size="50 20"
+            style="PlainText"
+            vq="snv"
+            vc="snv=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=snv"
+            show="on('snv'):$VALUE"
+            disable="Grayed out"
+            />
+          <entry loc="60 0" size="40 20"
+            style="PlainText"
+            vq="cnv"
+            vc="cnv=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=cnv"
+            show="on('cnv'):$VALUE"
+            disable="Grayed out"
+            />
+        </group>
+        <group loc="5 40" size="130 20"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <menu loc="0 0" size="85 20"
+            style="PlainText"
+            label="menu"
+            vc="off('gf1') off('sb1') off('lb1') if ($VALUE = 1) then on('gf1') endif  if ($VALUE=2) then on('sb1')  endif if($VALUE=3) then on('lb1') endif  exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=0"
+            bg="VJBackground"
+            editable="No"
+            >
+            <mlabel 
+              label="None"
+              chval="0"
+              />
+            <mlabel 
+              label="Gaussian"
+              chval="1"
+              />
+            <mlabel 
+              label="Sinebell"
+              chval="2"
+              />
+            <mlabel 
+              label="Lorenz"
+              chval="3"
+              />
+          </menu>
+        </group>
+        <group loc="5 100" size="160 20"
+          style="PlainText"
+          vq="lsfrq"
+          bg="transparent"
+          border="None"
+          side="Top"
+          justify="Left"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <label loc="105 0" size="45 20"
+            style="Label1"
+            label="Voxels"
+            justify="Left"
+            />
+          <entry loc="0 0" size="50 20"
+            style="PlainText"
+            vc="dppe=$VALUE exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="$VALUE=dppe"
+            show="on('ppe'):$VALUE"
+            disable="Grayed out"
+            />
+        </group>
+        <group loc="5 20" size="160 20"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <menu loc="0 0" size="85 20"
+            style="PlainText"
+            label="menu"
+            vq="fn1"
+            vc="if ($VALUE = 0) then fn1 = 'n' else fn1=$VALUE*2 endif exists('reRecon','parameter'):$ex if ($ex&gt;0.5) then reRecon=1 endif"
+            set="on('fn1'):$on if ($on) then $VALUE = fn1/2 else $VALUE=0 endif"
+            bg="VJBackground"
+            editable="No"
+            >
+            <mlabel 
+              label="Off"
+              chval="0"
+              />
+            <mlabel 
+              label="16"
+              chval="16"
+              />
+            <mlabel 
+              label="32"
+              chval="32"
+              />
+            <mlabel 
+              label="64"
+              chval="64"
+              />
+            <mlabel 
+              label="128"
+              chval="128"
+              />
+            <mlabel 
+              label="256"
+              chval="256"
+              />
+            <mlabel 
+              label="512"
+              chval="512"
+              />
+            <mlabel 
+              label="1k"
+              chval="1024"
+              />
+            <mlabel 
+              label="2k"
+              chval="2048"
+              />
+            <mlabel 
+              label="4k"
+              chval="4096"
+              />
+            <mlabel 
+              label="8k"
+              chval="8192"
+              />
+            <mlabel 
+              label="16k"
+              chval="16384"
+              />
+            <mlabel 
+              label="32k"
+              chval="32768"
+              />
+            <mlabel 
+              label="64k"
+              chval="65536"
+              />
+          </menu>
+          <textmessage loc="93 0" size="35 20"
+            style="PlainText"
+            label="(32)"
+            vq="nv"
+            set="write('line3','(%d)',nv):$VALUE"
+            />
+        </group>
+        <label loc="110 80" size="60 20"
+          style="Label1"
+          label="Start/Size"
+          justify="Left"
+          />
+      </group>
+    </group>
+    <group loc="5 180" size="415 110"
+      style="Heading1"
+      label="More Filters"
+      vq="csiShowOpt"
+      show="if(csiShowOpt[4]=1) then $VALUE=1 else $VALUE=0 endif"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="MoreFilters"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="210 15" size="185 90"
+        style="Heading2"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="zWeightParameters"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <entry loc="102 67" size="55 20"
+          style="PlainText"
+          vq="gf gfs"
+          vc="gfs=$VALUE"
+          set="$VALUE=gfs"
+          show="onparams('gf','gfs'):$VALUE"
+          disable="Grayed out"
+          />
+        <check loc="162 67" size="20 20"
+          style="PlainText"
+          vq="gfs"
+          vc="gfs='y'"
+          vc2="gfs='n'"
+          set="on('gfs'):$VALUE"
+          />
+        <entry loc="102 7" size="55 20"
+          style="PlainText"
+          vq="sb"
+          vc="sb=$VALUE"
+          set="$VALUE=sb"
+          show="on('sb'):$VALUE"
+          disable="Grayed out"
+          />
+        <entry loc="102 27" size="55 20"
+          style="PlainText"
+          vq="sb sbs"
+          vc="sbs=$VALUE"
+          set="$VALUE=sbs"
+          show="onparams('sb','sbs'):$VALUE"
+          disable="Grayed out"
+          />
+        <entry loc="102 47" size="55 20"
+          style="PlainText"
+          vq="gf"
+          vc="gf=$VALUE"
+          set="$VALUE=gf"
+          show="on('gf'):$VALUE"
+          disable="Grayed out"
+          />
+        <check loc="162 47" size="20 20"
+          style="PlainText"
+          vq="gf gfs"
+          vc="gf='y'"
+          vc2="gf='n'"
+          set="on('gf'):$VALUE"
+          />
+        <check loc="162 27" size="20 20"
+          style="PlainText"
+          vq="sbs"
+          vc="sbs='y'"
+          vc2="sbs='n'"
+          set="on('sbs'):$VALUE"
+          />
+        <check loc="162 7" size="20 20"
+          style="PlainText"
+          vq="sb sbs"
+          vc="sb='y'"
+          vc2="sb='n'"
+          set="on('sb'):$VALUE"
+          />
+        <label loc="12 67" size="60 20"
+          style="PlainText"
+          label="shift"
+          justify="Left"
+          />
+        <label loc="2 47" size="80 20"
+          style="PlainText"
+          label="gaussian"
+          justify="Left"
+          />
+        <label loc="12 27" size="60 20"
+          style="PlainText"
+          label="shift"
+          justify="Left"
+          />
+        <label loc="2 7" size="80 20"
+          style="PlainText"
+          label="sinebell"
+          justify="Left"
+          />
+      </group>
+      <group loc="5 20" size="190 85"
+        style="Heading2"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        reference="AutoSelectWeighting"
+        useref="no"
+        subtype="Titled"
+        expanded="yes"
+        >
+        <button loc="100 1" size="90 20"
+          style="Label3"
+          label="gaussian"
+          vc="gaussian('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="100 21" size="90 20"
+          style="Label3"
+          label="cosine"
+          vc="cosine('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="100 41" size="90 20"
+          style="Label3"
+          label="sq-cosine"
+          vc="sqcosine('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="100 61" size="90 20"
+          style="Label3"
+          label="res-enhance"
+          vc="resenhance('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="10 61" size="90 20"
+          style="Label3"
+          label="pseudo"
+          vc="pseudoecho('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="10 41" size="90 20"
+          style="Label3"
+          label="sq-sine"
+          vc="sqsinebell('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="10 21" size="90 20"
+          style="Label3"
+          label="sine"
+          vc="sinebell('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+        <button loc="10 1" size="90 20"
+          style="Label3"
+          label="exponential"
+          vc="expfilt('acq')"
+          bg="VJBackground"
+          decor1="no"
+          />
+      </group>
+    </group>
+    <group loc="105 0" size="180 145"
+      style="Heading1"
+      label="Spectral Dim"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ZeroFill"
+      useref="no"
+      subtype="Titled"
+      expanded="yes"
+      >
+      <button loc="130 80" size="45 20"
+        style="PlainText"
+        label="cursor"
+        vc="movedssw dssp=cr-delta dswp=delta"
+        bg="VJBackground"
+        decor1="yes"
+        />
+      <group loc="5 60" size="165 20"
+        style="PlainText"
+        vq="lsfrq"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <label loc="100 0" size="30 20"
+          style="Label1"
+          label="Hz"
+          justify="Left"
+          />
+        <entry loc="0 0" size="50 20"
+          style="PlainText"
+          vq="lb"
+          vc="lb=$VALUE"
+          set="$VALUE=lb"
+          show="on('lb'):$VALUE"
+          digits="2"
+          disable="Grayed out"
+          />
+      </group>
+      <group loc="5 100" size="165 20"
+        style="PlainText"
+        vq="lsfrq"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <label loc="105 0" size="30 20"
+          style="Label1"
+          label="Hz"
+          justify="Left"
+          />
+        <entry loc="0 0" size="50 20"
+          style="PlainText"
+          vq="lsfrq"
+          vc="lsfrq=$VALUE"
+          set="$VALUE=lsfrq"
+          show="on('lsfrq'):$VALUE"
+          disable="Grayed out"
+          />
+      </group>
+      <group loc="5 80" size="165 20"
+        style="PlainText"
+        vq="lsfrq"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <group loc="100 0" size="55 20"
+          label="axis"
+          show="$VALUE=(axis='p')"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <label loc="0 0" size="35 20"
+            style="Label1"
+            label="PPM"
+            justify="Left"
+            />
+        </group>
+        <group loc="100 0" size="45 20"
+          label="axis"
+          show="$VALUE=(axis='h')"
+          bg="transparent"
+          border="None"
+          tab="no"
+          enable="no"
+          useref="no"
+          subtype="Untitled"
+          >
+          <label loc="0 0" size="35 20"
+            style="Label1"
+            label="Hz"
+            justify="Left"
+            />
+        </group>
+        <entry loc="55 0" size="45 20"
+          style="PlainText"
+          vq="dswp downsamp"
+          vc="dswp=$VALUE on('dswp'):$n if($n) then dswp=dswp*reffrq movedssw(dssp,dssp+dswp) else off('downsamp') endif"
+          set="$VALUE=dswp/reffrq"
+          show="on('downsamp'):$VALUE"
+          digits="2"
+          disable="Grayed out"
+          />
+        <entry loc="0 0" size="50 20"
+          style="PlainText"
+          vq="dssp downsamp"
+          vc="dssp=$VALUE on('dssp'):$n if($n) then dssp=dssp*reffrq movedssw(dssp,dssp+dswp) else off('downsamp') endif"
+          set="$VALUE=dssp/reffrq"
+          show="on('downsamp'):$VALUE"
+          digits="2"
+          disable="Grayed out"
+          />
+      </group>
+      <group loc="5 40" size="165 20"
+        style="PlainText"
+        vq="lsfrq"
+        bg="transparent"
+        border="None"
+        side="Top"
+        justify="Left"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <menu loc="0 0" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="gf lb gfs sb sbs awc"
+          vc="if ($VALUE = 0) then lb='n' gf='n' gfs='n' sb='n' sbs='n' awc='n' else lb='y' endif  "
+          set="on('lb'):$lb if ($lb) then $VALUE=1 else $VALUE=0 endif"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="None"
+            chval="0"
+            />
+          <mlabel 
+            label="Yes"
+            chval="1"
+            />
+        </menu>
+        <toggle loc="100 0" size="60 20"
+          style="PlainText"
+          label="More"
+          vq="csiShowOpt"
+          vc="csiShowOpt[4]=1"
+          vc2="csiShowOpt[4]=0"
+          set="$VALUE=(csiShowOpt[4]=1)"
+          enable="yes"
+          radiobutton="no"
+          subtype="no"
+          />
+      </group>
+      <group loc="5 20" size="165 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <menu loc="0 0" size="100 20"
+          style="PlainText"
+          label="menu"
+          vq="fn"
+          vc="imcsiXrecon('sprep') if ($VALUE = 0) then fn = 'n' else fn = $VALUE endif"
+          set="on('fn'):$on if ($on &gt; 0) then $VALUE = fn else $VALUE = 0 endif"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="Off"
+            chval="0"
+            />
+          <mlabel 
+            label="16"
+            chval="16"
+            />
+          <mlabel 
+            label="32"
+            chval="32"
+            />
+          <mlabel 
+            label="64"
+            chval="64"
+            />
+          <mlabel 
+            label="128"
+            chval="128"
+            />
+          <mlabel 
+            label="256"
+            chval="256"
+            />
+          <mlabel 
+            label="512"
+            chval="512"
+            />
+          <mlabel 
+            label="1k"
+            chval="1024"
+            />
+          <mlabel 
+            label="2k"
+            chval="2048"
+            />
+          <mlabel 
+            label="4k"
+            chval="4096"
+            />
+          <mlabel 
+            label="8k"
+            chval="8192"
+            />
+          <mlabel 
+            label="16k"
+            chval="16384"
+            />
+          <mlabel 
+            label="32k"
+            chval="32768"
+            />
+          <mlabel 
+            label="64k"
+            chval="65536"
+            />
+          <mlabel 
+            label="128k"
+            chval="131072"
+            />
+        </menu>
+        <textmessage loc="105 0" size="50 20"
+          style="PlainText"
+          label="(1024)"
+          vq="np"
+          set="write('line3','(%d)',np):$VALUE"
+          />
+      </group>
+    </group>
+    <label loc="5 100" size="90 20"
+      style="Heading3"
+      label="Shift"
+      />
+    <label loc="5 80" size="90 20"
+      style="Heading3"
+      label="Crop"
+      />
+    <label loc="5 60" size="105 20"
+      style="Heading3"
+      label="Filter Coeff"
+      />
+    <label loc="5 40" size="90 20"
+      style="Heading3"
+      label="Filter"
+      />
+    <label loc="5 20" size="90 20"
+      style="Heading3"
+      label="Fourier Size"
+      />
+  </group>
+</template>

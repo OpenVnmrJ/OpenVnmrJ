@@ -1,0 +1,63 @@
+"macro VPtext"
+"Agilent VPtext"
+"Put Veripulse information into text file"
+" VPtext(filename,'append') will not reset file"
+
+if ($#=1) then
+  $file=$1
+else
+  $file=curexp+'/text'
+endif
+
+if ($# < 2) then
+write('reset',$file)
+endif
+
+if (IPcustomer<>'') then
+  write('file',$file,'Customer name: %s',IPcustomer)
+endif
+if (IPsyssn<>'') then
+  write('file',$file,'Console serial no.: %s',IPsyssn)
+endif
+$text='Software version: '+rev
+write('file',$file,'%s\n',$text)
+exists('probe_','parameter'):$e
+if ($e) then
+  write('file',$file,'Probe name: %s',probe_)
+endif
+
+/*
+exists('probestyle','parameter','global'):$e
+if ($e) then
+  $style=probestyle
+  exists('VPprobes','veripulse'):$e,$path
+  if ($e) then
+    $attrs='' $val=''
+    readfile($path,'$attrs','$val','','local'):$num
+    teststr('$attrs',probestyle,'local'):$i
+    if ($i) then
+      substr($val[$i],2,'delimiter',';\n'):$style
+    endif
+  endif
+  if ($style<>'') then
+    write('file',$file,'Probe style: %s',$style)
+  endif
+endif
+ */
+
+if (IPprobesn<>'') then
+  write('file',$file,'Probe serial no.: %s',IPprobesn)
+endif
+
+if (IParchivedir<>'') then
+  write('file',$file,'Veripulse archive directory: %s',IParchivedir)
+endif
+
+if (IPoperator<>'') then
+  write('file',$file,'Operator: %s',IPoperator)
+endif
+
+VPsampleinfo:$pn,$sampname
+$text='Sample: '+$sampname+' PN: '+$pn
+write('file',$file,'%s\n',$text)
+

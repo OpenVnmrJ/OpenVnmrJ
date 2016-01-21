@@ -1,0 +1,24 @@
+"macro AC9"
+"Auto calibrate"
+
+write('error','finding estimate of pp')
+wft av vsadj
+$counter=1
+repeat
+  select($counter)
+  peak:$ht 
+  if $counter=1 then $minht = $ht $pp=pp[1] else
+     if $ht<$minht then $minht=$ht $pp=pp[$counter]
+     endif
+  endif
+  $counter=$counter+1
+until $counter>arraydim
+write('plotter',125,200,'The value of pp is %2.1f',$pp)
+ph dssh pl('all') pap page
+$strpp='' $strpplvl=''
+format($pp,0,1):$strpp
+format(pplvl,0,0):$strpplvl
+setparams('pp',$strpp,'H1')
+setparams('pplvl',$strpplvl,'H1')
+ACreport
+

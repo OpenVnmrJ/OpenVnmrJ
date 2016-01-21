@@ -1,0 +1,34 @@
+"macro sqend"
+"end a study - for imaging/liquids/walkup"
+
+$appmode=appmode
+if (appmode='lc') then $appmode='walkup' endif
+xm1('studydir'):$sdir
+exists($sdir,'directory'):$e
+exists($sdir,'file','rw'):$e2
+if ($e>0.5 and $e2>0.5) then
+  exists($sdir+'/studypar','file'):$e
+  exists($sdir+'/info','directory'):$ed
+  if ((studyid=activestudy[1] and $e<0.5 and $ed>0.5 and $sdir<>globalauto)
+       or ($appmode='walkup' and studyid='tmpstudy')) then
+    rm('-rf',$sdir):$dum
+  else
+    exists($sdir+'/studypar','file','rw'):$e2
+    if ($e2>0.5) then
+      $op='' rtv($sdir+'/studypar','noabort','operator_'):$op
+      if ($op='' or $op=operator) then
+        sqfilemenu('cleanupActive','close')
+        if $appmode='imaging' then
+          sqsavestudy
+        else
+          cqsavestudy
+        endif
+        write('line3','Saving study %s.',$sdir)
+      endif
+    endif
+  endif
+endif
+if $appmode<>'walkup' then
+  activestudy='null'
+  xm1('stop')
+endif

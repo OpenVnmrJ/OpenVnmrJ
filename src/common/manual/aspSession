@@ -1,0 +1,70 @@
+******************************************************************************
+aspSession('save', path) - save current display session to a session file.
+aspSession('savef', path) - save "full" session in a given directory, i.e., in addition
+		to the session file, procpar and fdf files are also saved.
+aspSession('load', path) - load a session file to restore a display session.
+aspSession('test', path):$sessionOk,$ntraces,$straces,$dataOk - test a session file 
+		$sessionOk=0 for bad session file, $sessionOk>0 is count of total traces.
+		$ntraces number of traces 
+		$straces number of selected traces to display
+		$dataOk = 1/0 for good/bad data file.
+
+The second argument "path" is the full path to a session file, or directory.
+If path is a directory, session file will be path/aspSession.
+If path is a file, session directory will be parent directory of given path.
+session directory will be created if not already exists.
+******************************************************************************
+
+A session file contains all information needed to restore a spectral display session.
+It assumes the spectral data are in the location specified by the session file. 
+A session may not be restored if the data are moved.
+
+A session file can be created by saving current spectral display with aspSession('save',...) command, or it can be created manually via a text editor or macro.
+
+If the graphics area has multiple frames, the session is saved/loaded to the active frame. 
+
+Example of a session file:
+--------------------------------------------------------------------
+# Created by hel on Thu Sep 19 15:56:07 2013 at machine fv-box1.
+fidFile: /home/vnmrj_4.0Test_2013-09-18/fidlib/Ethylindanone/Ethylindanone_PROTON_01.fid
+#disFlag,axisFlag,annFlag,specFlag
+disFlags: 0 132096 0 256
+#disParams vp, vo
+disParams: 22.000000 8.000000
+# traceInd,fdfpath,label,dataKey,dataInd,minX,maxX,scale,vp,color,labelFlag
+load 1 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace1 spec1 1 -2.022703 14.022636 1.000000 0.000000 11 0
+load 2 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace2 spec1 2 -2.022703 14.022636 1.000000 1.000000 16 0
+load 3 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace3 spec1 3 -2.022703 14.022636 1.000000 2.000000 17 0
+load 4 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace4 spec1 4 -2.022703 14.022636 1.000000 3.000000 257 0
+load 5 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace5 spec1 5 -2.022703 14.022636 1.000000 4.000000 258 0
+load 6 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace6 spec1 6 -2.022703 14.022636 1.000000 5.000000 259 0
+load 7 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace7 spec1 7 -2.022703 14.022636 1.000000 6.000000 260 0
+load 8 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace8 spec1 8 -2.022703 14.022636 1.000000 7.000000 261 0
+load 9 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace9 spec1 9 -2.022703 14.022636 1.000000 8.000000 262 0
+load 10 /home/heliu/vnmrsys/exp1/datdir/spec.fdf trace10 spec1 10 -2.022703 14.022636 1.000000 9.000000 261 0
+#indexes for displayed_traces
+displayed_traces: 1 2 3 4 5 6 7 8 9 10 
+#
+number_of_ROIs: 4
+roifile: /home/heliu/vnmrsys/exp1/ROIs/specRois 
+
+NOTE, the above example spec.fdf is an arrayed data of 10 traces. 
+The same key (spec1) is used for all traces. 
+This means the data spec.fdf will be loaded once. 
+But optionally, each trace may have a different key. 
+In this case, the same data spec.fdf will be loaded multiple times.
+This is necessary only if individual trace will be modified by add/sub/rep. 
+
+"load" keyword can be replaced by one of the following keywords
+
+add - add the new trace to the trace specified by traceInd 
+	(the second field, which should be the traceInd of a loaded trace) 
+sub - subtract the new trace from a trace specified by traceInd
+rep - the new trace will replace a trace specified by traceInd
+load_dc - load, then drift correction
+add_dc - drift correction, then add
+sub_dc - drift correction, then subtract
+rep_dc - drift correction, then replace
+
+NOTE, typically only a section of the spectrum, specified by minX, maxX, in ppm, will be add/sub/rep.
+

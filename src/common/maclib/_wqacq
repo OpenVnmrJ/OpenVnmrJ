@@ -1,0 +1,37 @@
+"macro _wqacq"
+if (wqinit<>'acq') then wqacq[1]='curexp','' return endif
+if (appmode='lc') then wqacq[1]='autodir','' return endif
+
+if (wqacq[1]='curexp') then wqacq[2]='' return endif
+if (wqacq[1]='newexp') then wqacq[2]='' return endif
+if (wqacq[1]='autodir') then 
+    wqacq[2]='' $ret=0
+  exists('walkupautodir','maclib'):$wex
+  if ($wex) then
+    walkupautodir:$ret
+  endif
+    if ($ret=0) then
+	wqacq='curexp','' 
+    endif
+    return
+endif
+
+$s1='' $s2='' $acqn=0
+strstr(wqacq[1],'viewport'):$ret,$s1,$s2
+if ($ret<>1) then wqacq='curexp','' return else format($s2,'lower'):$acqn endif
+if ($acqn=0) then wqacq='curexp','' return endif
+$winsize=size('jcurwin')
+if ($winsize<$acqn) then
+   write('error','viewport %d not defined',$acqn)
+   wqacq='curexp',''
+   return
+endif
+$exp='' format(jcurwin[$acqn],0,0):$exp
+wqacq[2]=$exp
+exists(userdir+'/exp'+$exp,'directory'):$expdirex
+if ($expdirex=0) then
+	write('error','Experiment %d (%s) does not exist',jcurwin[$acqn],wqacq[1])
+	wqacq='curexp',''
+	return
+endif
+

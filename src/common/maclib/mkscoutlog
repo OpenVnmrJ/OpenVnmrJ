@@ -1,0 +1,18 @@
+"macro mkscoutlog"
+$tmp=userdir+'/persistence/'+$0+'_list'
+write('reset',$tmp)
+shell('(ls -1d '+$1+'/scoutfids/*.fid > '+$tmp+')'):$dum
+$s1='' $s2=''
+readfile($tmp,'$s1','$s2','','local'):$total
+shell('rm -f '+$tmp):$dum
+write('reset',$1+'/dirinfo/scoutlog')
+if ($total=0) then return endif
+
+$i=1
+repeat
+    rtv($s1[$i],'pslabel'):$pslabel
+    $fidname='' shell('basename '+$s1[$i]+' .fid'):$fidname
+    write('file',$1+'/dirinfo/scoutlog','%s: %s',$pslabel,$fidname)
+    $i=$i+1
+until $i > $total
+shell('chmod g+rw '+$1+'/dirinfo/scoutlog'):$dum

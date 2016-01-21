@@ -1,0 +1,160 @@
+"macro _pss"
+"***************************************************************"
+" setloop                                                       "
+"                                                               "
+" Macro to manage the ne,nv,nv2,nv2,ni,nf,pss,nD and array      " 
+" parameters on changes of sequence loop control configuration  "
+" or on change of value. Use setvalue to avoid multiple calls   "
+" to the corresponding _macros                                  "
+"***************************************************************"
+
+exists('nv','parameter'):$k
+if ($k < 0.5) then
+  return
+endif
+
+"-- Decode the seqcon parameter ---------------------------"
+" The seqcon string is checked for length and dissected    "
+" into its five standard component fields (assumed to be   "
+" the first five characters). The component fields are     "
+" checked for validity. Seqcon should be composed of 's',  "
+" 'c' & 'n' values only. These indicate n=non loop,        "
+" s=standard loop/array, c=compressed loop.                "
+"----------------------------------------------------------"
+length(seqcon):$length
+$k = 1
+while ($k <= $length) do
+    $seqcon[$k] = ''
+    substr(seqcon,$k,1):$seqcon[$k]
+    $k = $k + 1
+endwhile
+
+
+"-- Multiecho loop special case ---------------------------"
+" Echo loops are always compressed, or are not present     "
+"----------------------------------------------------------"
+if ($seqcon[1] <> 'n') and ($seqcon[1] <> 'c') then
+    write('error','%s: seqcon setting "%s" for the echo loop is invalid',$0,$seqcon[1])
+    abort
+endif
+
+
+"-- Multislice loop special case --------------------------"
+" Slice loops are always either standard (pss is an array) "
+" or compressed (pss is a list)                            "  
+"----------------------------------------------------------"
+if ( ($seqcon[2] <> 'c') and ($seqcon[2] <> 's') and ($seqcon[2] <> 'n') ) then
+    write('error','%s: seqcon setting "%s" for the slice loop is invalid',$0,$seqcon[2])
+    abort
+endif
+
+"update array parameter, if slice loop is standard"
+_seqcon
+
+
+"-- Read all counter values -------------------------------"
+" Prepare to calculate ni & nf using a simple product      "
+" formulation.  ns is a special case, because ns and the   "
+" number of elements in pss must always match.             "
+"----------------------------------------------------------"
+$nf_product = 1
+$ni_product = 1
+
+"-- Echo counter ------------------------------------------"
+if ($seqcon[1] = 'n') then 
+  setvalue('ne', 1)
+else
+  $nf_product = $nf_product * ne
+endif
+
+"-- Slice counter -----------------------------------------"
+if ($seqcon[2] = 'c') then
+  $ns = size('pss') 
+  $nf_product = $nf_product * $ns
+  setvalue('ns', $ns)
+else
+  setvalue('ns', 1)
+endif
+
+"-- Update gap if slices are equally spaced -----------------"
+" i.e., gaps between slices are the same ($epsi < 0.001cm) "
+$ns = size('pss')
+if ($ns > 1) then
+  $delta = 0
+  $delta2 = 0
+  $epsi = 0
+  $e = 1
+  $k = 2
+  abs(pss[$k] - pss[$k-1]):$delta
+  while($k < $ns) do
+     $k = $k + 1
+     abs(pss[$k] - pss[$k-1]):$delta2
+     abs($delta - $delta2):$epsi
+     if($epsi > 0.001) then 
+        $e = 0 
+     endif
+  endwhile
+  if($e > 0.5) then setvalue('gap', $delta-0.1*thk) endif
+endif
+
+"-- First phase encode counter ----------------------------"
+exists('fract_ky','parameter'):$x
+if ($seqcon[3] = 'n') then
+  setvalue('nv', 0)
+elseif ($seqcon[3] = 'c'  and  nv > 0) then
+  if ($x) then
+    if fract_ky > nv/2 then
+      $fract_ky = nv/2
+    else
+      $fract_ky = fract_ky
+    endif
+    $nf_product = $nf_product*(nv/2 + $fract_ky)
+  else
+    $nf_product = $nf_product*nv
+  endif
+elseif ($seqcon[3] = 's'  and  nv > 0) then
+  $ni_product = $ni_product*nv
+endif
+
+"-- Second phase encode counter ---------------------------"
+if ($seqcon[4] = 'n') then
+  setvalue('nv2', 0)
+elseif ($seqcon[4] = 'c'  and  nv2 > 0) then
+  $nf_product = $nf_product*nv2
+elseif ($seqcon[4] = 's'  and  nv2 > 0) then
+  $ni_product = $ni_product*nv2
+endif
+
+"-- Third phase encode counter ----------------------------"
+if ($seqcon[5] = 'n') then
+  setvalue('nv3', 0)
+elseif ($seqcon[5] = 'c'  and  nv3 > 0) then
+  $nf_product = $nf_product*nv3
+elseif ($seqcon[5] = 's'  and  nv3 > 0) then
+  $ni_product = $ni_product*nv3
+endif
+
+
+"-- Calculate nf ------------------------------------------"
+" The value of nf is the product of all counts used for    "
+" compressed loops                                         "
+"----------------------------------------------------------"
+nf = $nf_product
+
+"-- Calculate ni ------------------------------------------"
+" The value of ni is the product of all counts used for    "
+" standard loops in the phase encode crib                  "
+"----------------------------------------------------------"
+if ($ni_product = 1) then
+    ni = 0
+else
+    ni = $ni_product
+endif
+
+"************************************************************************"
+"                  MODIFICATION HISTORY                                  " 
+"                                                                        " 
+"010308(mh) started from original _nv                                    "
+"010308(mh) adjust nv if fract_ky exists                                 "
+"                                                                        " 
+"************************************************************************"

@@ -1,0 +1,81 @@
+"macro scalelimits"
+" ******************************************************************"
+" *** scalelimits - used in regression to set plot scale limits *** "
+" ******************************************************************"
+"    file format is the same as in 'autoscale' "
+  if (not $#=0) and (not $#=4) then
+    write('line3',
+'usage:scalelimits(X-Axis Start,X-Axis Finish,Y-Axis Start, Y-Axis Finish)')
+    return
+  endif
+  $filepath = curexp + '/expl.out'
+  $sc=0
+  $wc=0
+  $sc2=0
+  $wc2=0
+  lookup('mfile',$filepath,'read',4,'filekey'):$sc,$wc,$sc2,$wc2,$key
+  $outfilepath = curexp + '/expl.out'
+  $xstart=''
+  $yfinish=''
+  $ystart=''
+  $yfinish=''
+  $xtype=''
+  $ytype=''
+  lookup('mfile',$key,'read',3,'filekey'):$xstart,$xfinish,$xtype,$key
+  lookup('mfile',$key,'read',3,'filekey'):$ystart,$yfinish,$ytype,$key
+  $xscaleflag=0
+  $yscaleflag=0
+  $setnum=0
+  $xxx='QQQ'
+  lookup('mfile',$key,'read','filekey'):$xxx,$key
+  if ($xxx='FLAGS') then
+      lookup('mfile',$key,'read',3,'filekey'):$xscaleflag,$yscaleflag,$setnum,$key
+  endif
+  write('file',$outfilepath,'%f %f %f %f',$sc,$wc,$sc2,$wc2)
+  
+  if $#=4 then
+      rm('-f',$outfilepath):$x
+      write('file',$outfilepath,'%f %f %f %f',$sc,$wc,$sc2,$wc2)
+      write('file',$outfilepath,'%s %s %s',$1,$2,$xtype)
+      write('file',$outfilepath,'%s %s %s',$3,$4,$ytype)
+      write('file',$outfilepath,'FLAG %d %d',0,0)
+      write('file',$outfilepath,'%d',$setnum)
+      return
+  endif
+    
+  $instring = ''
+  input('Input: X-Axis Start  X-Axis Finish: '):$instring
+  $x1=''
+  $x2=''
+  substr($instring,1):$x1
+  substr($instring,2):$x2
+"  write('alpha','strings are *%s* and *%s*',$x1,$x2) "
+  if not ($x1='') then 
+           substr($instring,1):$xstart 
+           $xscaleflag = 0
+       else $xscaleflag = 1
+  endif
+  if not ($x2='') then substr($instring,2):$xfinish endif
+
+  rm('-f',$outfilepath):$x
+  write('file',$outfilepath,'%f %f %f %f',$sc,$wc,$sc2,$wc2)
+  write('file',$outfilepath,'%s %s %s',$xstart,$xfinish,$xtype)
+  
+  $instring = ''
+  input('Input: Y-Axis Start  Y-Axis Finish: '):$instring
+  $y1=''
+  $y2=''
+  substr($instring,1):$y1
+  substr($instring,2):$y2
+" write('alpha','strings are *%s* and *%s*',$y1,$y2) "
+  if not ($y1='') then 
+	  substr($instring,1):$ystart 
+          $yscaleflag = 0
+      else $yscaleflag = 1
+  endif
+  if not ($y2='') then substr($instring,2):$yfinish endif
+  write('file',$outfilepath,'%s %s %s',$ystart,$yfinish,$ytype)
+  
+  write('file',$outfilepath,'FLAG %d %d',$xscaleflag,$yscaleflag)
+  write('file',$outfilepath,'%d',$setnum)
+  

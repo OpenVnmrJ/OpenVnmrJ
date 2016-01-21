@@ -1,0 +1,181 @@
+"macro lcNextAutoSample"
+/*-*- MAGICAL -*-*/
+"macro lcNextAutoSample"
+
+// Reads the file $vnmruser/lc/autosampler to process the next sample
+// in the list.
+// Marks line done and sets autosampler parameters for next injection.
+// 
+// File format; each row is a list of:
+//   row col vol mode flushVol method
+// Trailing values that don't change can be omitted.
+// row is number, 1-8 or letter A-H or a-h
+// col is number, 1-12
+// vol is volume to inject in uL (ignored in mode=2)
+// mode is injection mode, 1=partial, 2=full, 3-pickup
+// flushVol is the flush volume in uL
+// method is the LC method name
+//
+// If row number is a letter, space can be omitted between row and column:
+// "B4 10.1 3 30 TestMethod"
+//
+// Returns 'none' if there is no file, or just an empty file
+//         'old'  if all samples were already done
+//         'done' if active sample was marked done and no more to do
+//         'ok'   if new sample parameters were loaded.
+
+// TODO: Need to set up the enterQ
+
+filepath(userdir, 'lc', 'autosampler'):$filename
+$tmpfile = $filename + '.tmp'
+shell('rm -f "' + $tmpfile+'"'):$x
+$rtn = 'none'
+exists($filename, 'file'):$e
+if (not $e) then
+    return('none')
+else
+    lookup('file', $filename)
+    $empty = 1
+    $pfx = ''
+    $gotfile = 0
+    $donesample = 0
+    $newsample = 0
+    $eof = 0
+    repeat
+        $line = ''
+        lookup('readline'):$line
+        $token = ''
+        substr($line, 1):$token
+        if ($token <> '') then
+            $gotfile = 1  // We have a non-trivial file
+        endif
+
+        length($line):$len
+        substr($line, 1, 1):$pfx
+        if ($pfx = '#') then
+            // Just copy done line to output
+            shell('echo "' + $line + '" >> "' + $tmpfile+'"'):$x
+        elseif ($pfx = '@') then
+            // Mark previously active line done
+            $donesample = 1  // We have just finished a sample
+            substr($line, 2, $len - 1):$line
+            $line = '#' + $line
+            shell('echo "' + $line + '" >> "' + $tmpfile+'"'):$x
+        elseif ($len > 2 and $token <> '') then
+            // Set parameters for new injection
+            $newsample = 1  // We're getting a new sample
+
+            $col = 0
+            $toknum = 1
+            substr($line, $toknum):$row, $idx
+            $toknum = $toknum + 1
+            if (typeof('$row')) then
+                length($row):$toklen
+                if ($toklen > 1) then
+                    substr($row, 2, $toklen - 1):$strcol // Column number
+                    format($strcol, 0, 0):$col
+                    substr($row, 1, 1):$row  // Only first letter
+                endif
+                // Convert letter to number: a=A=1
+                format($row, 'lower'):$row
+                $table = 'abcdefghijklmnopqrstuvwxyz'
+                $j = 0
+                repeat
+                    $j = $j + 1
+                    substr($table, $j, 1):$chr
+                until ($chr = $row or $j = 26)
+                lcSampleNumber[1] = $j
+            else
+                lcSampleNumber[1] = $row
+            endif
+
+            if ($col = 0) then
+                substr($line, $toknum):$col, $idx
+                $toknum = $toknum + 1
+            endif
+            lcSampleNumber[2] = $col
+
+            $idx2 = 0
+            substr($line, $toknum):$vol, $idx2
+            $toknum = $toknum + 1
+            if ($idx2 > $idx) then
+                lcSampleVolume = $vol
+                $idx = $idx2
+                substr($line, $toknum):$mode, $idx2
+                $toknum = $toknum + 1
+                if ($idx2 > $idx) then
+                    lcInjectionType = $mode
+                    $idx = $idx2
+                    substr($line, $toknum):$flushVol, $idx2
+                    $toknum = $toknum + 1
+                    if ($idx2 > $idx) then
+                        lcFlushVolume = $flushVol
+                        $idx = $idx2
+                        substr($line, $toknum):$method, $idx2
+                        $toknum = $toknum + 1
+                        if ($idx2 > $idx) then
+                            lcMethodFile = $method
+                        endif
+                    endif
+                endif
+            endif
+            lcMethod('read',lcMethodFile)  // Load the LC method
+
+            // Got all parameters from line
+            substr($line, 1, 2):$pfx
+            if ($pfx = '  ') then
+                substr($line, 3, $len - 2):$line  // Trim off front padding
+            endif
+            $line = '@ ' + $line  // Mark this as the active line
+            shell('echo "' + $line + '" >> "' + $tmpfile+'"'):$x
+            $rtn = 'ok'
+        else 
+            // Reached the end of the file (no blank lines allowed!)
+            $eof = 1
+        endif
+    until ($newsample or $eof)
+
+    // Read the rest of the lines and append them
+    $eof = 0
+    repeat
+        lookup('readline'):$line, $nargs
+        length($line):$len
+        if ($len > 2) then
+            substr($line, 1, 2):$pfx
+            $pfx1=''
+            substr($line, 1, 1):$pfx1
+            if ($pfx1 = '@') then
+                substr($line, 2, $len - 1):$line
+                $line = '#' + $line
+                $pfx1 = '#'
+            endif
+            if ($pfx <> '  ' and $pfx1 <> '#') then
+                // Prefix line with 2 spaces to make things line up
+                $line = '  ' + $line
+            endif
+            shell('echo "' + $line + '" >> "' + $tmpfile+'"'):$x
+        else
+            $eof = 1
+        endif
+    until ($eof)
+
+    // Replace input file with modified version in $tmpfile
+    exists($tmpfile, 'file'):$e
+    if ($e) then
+        shell('mv -f "' + $tmpfile + '" "' + $filename+'"'):$x
+    endif
+endif
+lcSampleFile = $filename
+
+if ($gotfile) then
+    if ($newsample) then
+        $rtn = 'ok'
+    elseif ($donesample) then
+        $rtn = 'done'
+    else
+        $rtn = 'old'
+    endif
+else
+    $rtn = 'none'
+endif
+return($rtn)

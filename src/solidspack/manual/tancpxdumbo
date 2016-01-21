@@ -1,0 +1,63 @@
+Protocol: Tancpxdumbo  Sequence: tancpxdumbo.c  Apptype: solidseq1d
+
+Description: 
+
+   A tangent CP preparation with DUMBO decoupling during acquisition.
+
+Additonal Software: 
+
+  reset_pmlg - sets the values of DUMBO from aH90 and pwH90. 
+
+Parameter Groups: 
+
+90H:  Module:  no
+Sequence:  tancpx.c  
+Description:  Provides a 90-degree pulse on dec that can be used as a 
+              preparation pulse.  Also used to store the dec calibration.
+Parameters:  Channels Page
+       aH90  - the amplitude of the pulse.
+       pwH90 - the pulse length.
+
+cpHX:  Module:  yes
+Sequence:  tancpx.c
+Description:  Implements constant, linear or tangent-ramped cross 
+              polarization from dec to obs. 
+Parameters:  Sequence Page
+       shHX - 'c', constant, 'l', linear and 't', tangent shape on the 
+channel designated with 
+                      chHX. 
+       chHX - the variable-amplitude channel, 'fr' from or 'to', to. 
+       aHhx - median amplitude of the dec channel.
+       aXhx - median amplitude of the obs channel.
+       bHX - +/- tangent curvature (>0 to 1.0e5).  
+       dHX - amplitude width of the ramp. A negative width sets a ramp 
+              that starts high and decreases in amplitude.
+       tHX - contact time
+       ofHX - overall offset on the variable channel
+       frHX = 'dec' -  channel with the initial polarization (must be 
+             set - not shown).           
+       toHX = 'obs' -  channel with the final polarization (must be set 
+             - not shown). 
+Implementation:  CP hx = getcp("HX",0.0,0.0,0,1); 
+Underscore functions: _cp_(hx,phHhx,phxhx);  
+ 
+dumboH:  Module:  yes
+Sequence:  tancpxdumbo.c
+Description:  Implements DUMBO homonuclear decoupling on the dec
+              channel.
+Parameters:  Sequence Page
+       aHdumbo - amplitude of the DUMBO on dec.
+       pwHdumbo - 1080-degree flip on dec (the length of full a DUMBO
+              cycle).
+       nHdumbo - DUMBO cycles represented in the .DEC file.
+       ofHdumbo - overall frequency offset.
+       chHdumbo = 'dec' must be set (not shown).
+Implementation:  MPSEQ dumbo = getdumbo("dumboH",0,0.0,0.0,0,1);
+Underscore functions: _MPSEQ functions.
+
+  
+
+
+ 
+
+

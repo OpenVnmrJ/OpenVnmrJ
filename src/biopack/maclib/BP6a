@@ -1,0 +1,197 @@
+"macro BP6a"
+" BP6a "
+$r7=r7   "memorize autocal option value"
+if r7=8 then
+  $date=''
+  BPgetdate:$date
+  if ((BPplot='plot') or (BPplot='on')) then
+   printon man('proteinpreface_flipback') printoff
+  endif
+
+  exists('dofidsave','parameter'):$e
+   if $e then dofidsave='n' endif
+
+  if (BPplot='file') then
+   BPplotdir=userdir+'/AutoTripRes'
+  endif
+  $dir=userdir+'/AutoTripRes'
+  $dir2=userdir+'/BioPack.dir/backups'
+  exists($dir,'file'):$e
+  if ($e=1) then
+    exists(userdir+'/BioPack.dir/backups','directory'):$e
+    if not($e) then
+      shell('mkdir -p ' +$dir2):$dum
+    endif
+    mv($dir,$dir2+'/AutoTripRes_'+$date)
+  endif
+  mkdir(userdir+'/AutoTripRes')
+  $vtset=''
+  shell('showstat > ',curexp+'/stat'):$dummy
+  lookup('file',curexp+'/stat','VT','active:','read'):$vtset,$ret
+  delete(curexp+'/stat')
+  if $ret then
+    format($vtset,0,1):temp
+  endif
+else
+  $bestone=1 $counter=1
+  av
+  select(1) vsadj(20) $best=20
+  repeat
+    select($counter)
+    peak:$ht
+    if $ht>$best then $best=$ht $bestone=$counter endif
+    $counter=$counter+1
+  until $counter>arraydim
+  select($bestone) ph
+  BPaph0
+  vsadj(50)
+
+  BPsvf(userdir+'/AutoTripRes/pwN90cal_lowpwr')
+  dssh('dodc') pl('all','dodc') pap BPpage
+  pwN=pwN[$bestone]
+  $compC=compC compN=pwN/(2.0*r1)
+  pwNlvl=pwNlvl+6 pwN=r1
+  
+  BPN15updatepw90  "Updates probefile"
+  
+endif
+
+
+ghn_co   "insures pulse widths are calculated"
+
+$probe=probe
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then		   "system admin is doing calibration"
+  $sysadd = 1
+  $probedir = systemdir + '/probes'
+  exists($probedir + '/' + $probe + '/' +$probe,'file'):$e
+  if $e=0 then "no probefile in /vnmr/probes. use VnmrJ admin probefile"
+    shell('ls -l /vnmr/vnmrrev | awk \'{print $3}\';cat'):$admin
+    shell('/bin/csh -c "echo ~'+$admin+'"'):$adminhome
+    $probedir = $adminhome + '/vnmrsys' + '/probes'
+  endif
+else
+  $sysadd = 0
+  $probedir = userdir + '/probes'
+endif
+$probefile = $probedir + '/' + $probe + '/' + $probe
+
+
+nt=1
+sp=3p wp=3p
+gain=0 ss=0
+ssfilter='n' wnt='wft f av select(1) vsadj(40) dssh'
+seqfil='flipback_cal'
+array('tpwrsf',18,3800,-200)
+satmode='i','t','u','d','n'   "for INEPT, TROSY, hard-soft, soft-hard, and gNhsqc"
+array='satmode,tpwrsf'
+exists('phincr','parameter'):$e
+if $e=0 then
+  create('phincr','real') phincr=0
+endif
+exists('phincr_t','parameter'):$e
+if $e=0 then
+  create('phincr_t','real') phincr_t=0
+endif
+exists('phincr_i','parameter'):$e
+if $e=0 then
+  create('phincr_i','real') phincr_i=0
+endif
+exists('phincr_n','parameter'):$e
+if $e=0 then
+  create('phincr_n','real') phincr_n=0
+endif
+exists('phincr_u','parameter'):$e
+if $e=0 then
+  create('phincr_u','real') phincr_u=0
+endif
+exists('phincr_d','parameter'):$e
+if $e=0 then
+  create('phincr_d','real') phincr_d=0
+endif
+
+$result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+lookup('file',$probefile)
+lookup('seek','H1phincr_i','read'):$result,$numi
+if $numi=0 then
+  $phincr_i='' format(phincr_i,2,2):$phincr_i 
+  addparams('phincr_i',$phincr_i,'H1') 
+  phincr_i=0
+else
+  getparam('phincr_i','H1'):phincr_i
+endif
+
+$result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+lookup('file',$probefile)
+lookup('seek','H1phincr_t','read'):$result,$numi
+if $numi=0 then
+  $phincr_t='' format(phincr_t,2,2):$phincr_t 
+  addparams('phincr_t',$phincr_t,'H1') 
+  phincr_t=0
+else
+  getparam('phincr_t','H1'):phincr_t
+endif
+
+$result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+lookup('file',$probefile)
+lookup('seek','H1phincr_n','read'):$result,$numi
+if $numi=0 then
+  $phincr_n='' format(phincr_n,2,2):$phincr_n 
+  addparams('phincr_n',$phincr_n,'H1') 
+  phincr_n=0
+else
+  getparam('phincr_n','H1'):phincr_n
+endif
+
+$result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+lookup('file',$probefile)
+lookup('seek','H1phincr_u','read'):$result,$numi
+if $numi=0 then
+  $phincr_u='' format(phincr_u,2,2):$phincr_u 
+  addparams('phincr_u',$phincr_u,'H1') 
+  phincr_u=0
+else
+  getparam('phincr_u','H1'):phincr_u
+endif
+
+$result='' $numi=0 $numt=0 $numu=0 $numd=0 $numn=0
+lookup('file',$probefile)
+lookup('seek','H1phincr_d','read'):$result,$numi
+if $numi=0 then
+  $phincr_d='' format(phincr_d,2,2):$phincr_d 
+  addparams('phincr_d',$phincr_d,'H1') 
+  phincr_d=0
+else
+  getparam('phincr_d','H1'):phincr_d
+endif
+phincr=phincr_i,phincr_t,phincr_u,phincr_d,phincr_n
+
+array='(satmode,phincr),tpwrsf'
+exists('shape','parameter'):$e
+if $e=0 then
+  create('shape','string')
+endif
+shape='H2Osinc'
+"H2Osinc without any phase shift"
+$pwHs='' $name='' $wave=''
+
+if (pwHs >= 1000) then
+  format(pwHs,4,0):$pwHs  
+  $pwHs='0.00'+$pwHs
+else	"@900MHz pwHs < 1000 us - Marco@NMRFAM"
+  format(pwHs,3,0):$pwHs  
+  $pwHs='0.000'+$pwHs
+endif
+
+$name='H2Osinc' 
+$wave='sinc '+ $pwHs +' 0.0 ' +' 0.0 '
+opx($name)
+setwave($wave)
+cpx(pw*compH,tpwr)
+BPmoveshape($name+'.RF')
+r7=$r7  "Pbox uses r7, so must restore here"
+wexp='BP4a' au
+BPcheck
+

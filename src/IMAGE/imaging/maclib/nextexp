@@ -1,0 +1,16 @@
+"macro nextexp"
+"This macro finds the next available experiment and avoids addsubexp"
+$found=0
+$expn=''
+$expi=2
+exists('addsubexp','parameter','global'):$addsubex
+if ($addsubex) then $addsubexp=addsubexp endif
+        repeat
+         format($expi,0,0):$expn
+         $newexp='exp'+$expn
+         exists(userdir+'/'+$newexp,'file'):$exist
+         if $expi=$addsubexp then $exist=1 endif
+         if ($exist=0) then $found = 1 else $expi=$expi+1 endif
+        until (($found = 1) or ($expi>9999))
+if ($found=0) then $expi=0 $expn='' endif
+return($expi,$expn)

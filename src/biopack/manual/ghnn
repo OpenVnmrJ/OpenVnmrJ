@@ -1,0 +1,94 @@
+  ghnn.c
+
+    3D HNN gradient sensitivity enhanced version.
+
+    Correlates N(i), NH(i) with N(i-1), NH(i-1), and N(i+1), NH(i+1).  Uses constant time
+    evolution for the 15N shifts.
+
+    t1 not limited by kappa
+
+    Standard features include maintaining the 13C carrier in the Ca region
+    throughout using off-res SLP pulses; square pulses on Ca with first
+    null at 13CO; one lobe sinc pulses on 13CO with first null at Ca; one lobe
+    sinc pulse to put H2O back along z (the sinc one-lobe is significantly more
+    selective than gaussian, square, or seduce 90 pulses); optional 2H 
+    decoupling when CaCb magnetization is transverse for 4 channel 
+    spectrometers.  
+
+    Magic-angle option for coherence transfer gradients.  TROSY option for
+    N15/H1 evolution/detection.
+ 
+
+    pulse sequence :
+	  Sanjay C. Panchal, Neel S. Bhavesh, Ramkrishna V. Hosur, J. Biomol. NMR, 20, 135-147 (2001)
+
+
+        	  CHOICE OF DECOUPLING AND 2D MODES
+
+    	Set dm = 'nnn', dmm = 'ccc' 
+    	Set dm2 = 'nny', dmm2 = 'ccg' (or 'ccw', or 'ccp') for 15N decoupling.
+	Set dm3 = 'nnn' for no 2H decoupling, or
+		  'nyn'  and dmm3 = 'cwc' for 2H decoupling. 
+  
+
+    The waltz16 field strength is enterable (waltzB1).
+    Typical values would be ~6-8ppm, (3500-5000 Hz at 600 MHz).
+  
+    Must set = 1,2 and phase2 = 1,2 for States-TPPI acquisition in
+    t1 [15N]  and t2 [15N].
+
+    The flag f1180/f2180 should be set to 'y' if t1/t2 is to be started at
+    halfdwell time. This will give 90, -180 phasing in f1/f2. If it is set to
+    'n' the phasing should be 0,0 and will still give a perfect baseline.  Thus,
+    set f1180='n' for (0,0) in 15N and f2180='n' for (0,0) in 15N.  f1180='y' is
+    ignored if ni=0, and f2180='y' is ignored if ni2=0.
+
+
+
+           	  DETAILED INSTRUCTIONS FOR USE OF ghnn
+
+    1. Obtain a printout of the Philosopy behind the BioPack development,
+       and General Instructions using the macro: 
+                                      "printon man('BioPack') printoff".
+       These Detailed Instructions for ghnn may be printed using:
+                                      "printon man('ghnn') printoff".
+             
+    2. Apply the setup macro "ghnn".  This loads the relevant parameter set
+       and also sets ni=ni2=0 and phase=phase2=1 ready for a 1D spectral check.
+
+    3. Center H1 frequency on H2O (4.7ppm), C13 on 56ppm,  and N15 frequency
+       on the amide region (120ppm). The C13 frequency remains at 56ppm,
+       ie at Ca throughout the sequence.
+
+    4. timeTN (14 ms) was determined for alphalytic protease using ghn_ca and is listed in 
+       dg2 for possible readjustment by the user. timeCN is typ. 10-15msec.
+
+    8. The coherence-transfer gradients using power levels
+       gzlvl1 and gzlvl2 may be either z or magic-angle gradients. For the
+       latter, a proper /vnmr/imaging/gradtable entry must be present and
+       syscoil must contain the value of this entry (name of gradtable). The
+       amplitude of the gzlvl1 and gzlvl2 should be lower than for a z axis
+       probe to have the x and y gradient levels within the 32k range. For
+       any value, a dps display (using power display) shows the x,y and z
+       dac values. These must be <=32k.
+
+    9. TROSY:
+       Set TROSY='y' and dm2='nnn' for a TROSY spectrum of the bottom right
+       peak of the 2D coupled NH quartet (high-field H1, low-field N15).  The 
+       TROSY spectrum gives 50% S/N compared to the decoupled spectrum for a 
+       small peptide.  To select any of the other three peaks of the 2D coupled
+       quartet, in a clockwise direction from bottom right, change t4/t10
+       from x/y to x/-y to -x/-y to -x/y.  NOTE, the phases of the SE train
+       are almost the same as those determined for the gNhsqc sequence.  The
+       major difference is that kappa is eliminated compared to normal
+       ghnn so the N15 magnetization has not evolved with respect to the 
+       attached H's.  I.e. the N15 state would be Ix rather than IySz if there 
+       was no coherence gradient - this imparts a 90 degree shift so t8 is 
+       changed to y (from x in the normal spectrum).  Also gzlvl1 is after the
+       180 N15 pulse rather than before as in gNhsqc, so the sign of icosel 
+       and the t4/t10 phase2 increments are also swapped compared to gNhsqc.
+       For ghn_c... type sequences, H1 decoupling during the first timeTN is
+       replaced by a pi pulse at kappa/2 to reduce S/N loss for large molecules
+       during the first TN period.  For these sequences H2O flipback is 
+       achieved with two sinc one-lobe pulses, an additional one just before
+       the SE train, similar to gNhsqc.

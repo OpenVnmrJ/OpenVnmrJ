@@ -1,0 +1,63 @@
+"macro isspincad"
+"isspincad                                                "
+"macro to check if current sequence is a spincad sequence "
+"retuns 1 if spincad,   0 if C,   -1 if no compiled file  "
+
+$spincadpsgfile  = 0
+$verbose = 1
+
+"get pulse sequence name"
+if ( $# = 1 ) then
+  $psname = $1
+elseif ($# = 2) then
+  $psname = $1
+  if ($2 = 'quiet') then
+    $verbose = 0
+  endif
+else
+  $psname = seqfil
+endif
+
+"check the local seqlib directory first"
+exists(userdir+'/seqlib/'+$psname+'.psg','file'):$spincadpsgfile
+if ($spincadpsgfile = 1) then
+  "is a spincad seq"
+  if ($verbose = 1) then
+    write('line3','%s is a spincad sequence',$psname)
+  endif
+  return(1)
+else
+  exists(userdir+'/seqlib/'+$psname,'file'):$spincadpsgfile
+  if ($spincadpsgfile = 1) then
+    "is a C seq"
+    if ($verbose = 1) then
+      write('line3','%s is a C psg sequence',$psname)
+    endif
+    return(0)
+  endif
+endif
+
+"check the system seqlib directory"
+exists(systemdir+'/seqlib/'+$psname+'.psg','file'):$spincadpsgfile
+if ($spincadpsgfile = 1) then
+  "is a spincad seq"
+  if ($verbose = 1) then
+    write('line3','%s is a spincad sequence',$psname)
+  endif
+  return(1)
+else
+  exists(systemdir+'/seqlib/'+$psname,'file'):$spincadpsgfile
+  if ($spincadpsgfile = 1) then
+    "is a C seq"
+    if ($verbose = 1) then
+      write('line3','%s is a C psg sequence',$psname)
+    endif
+    return(0)
+  endif
+endif
+
+if ($verbose = 1) then
+  write('line3','compiled pulse sequence file for %s not found',$psname)
+endif
+return(-1)
+

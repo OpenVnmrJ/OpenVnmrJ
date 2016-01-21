@@ -1,0 +1,120 @@
+"macro updaterev"
+"updaterev - update experiment parameters and global file"
+
+$explist=''
+$expn=1
+$wordnumber=1
+$e=0
+jexp:$curexp
+
+write('line3','updating global parameters')
+fread(systemdir+'/user_templates/global','global','reset')
+$sav=saveglobal
+fread(userdir+'/global','global','value')
+saveglobal=$sav
+fread(userdir+'/global','global','newonly')
+
+if (dsp='i' or dsp='r') then
+  exists(systemdir+'/psg/psmain.cpp','file'):$e
+  if ($e) then
+    dsp='n'
+  endif
+endif
+
+$file=userdir+'/persistence/Graphics'
+exists($file,'file'):$e
+if ($e) then
+  $usercolor=''
+  $userval=''
+  readfile($file,'$usercolor','$userval','','local'):$num
+  $syscolor=''
+  $sysval=''
+  readfile(systemdir+'/templates/themes/Graphics/Default','$syscolor','$sysval','','local'):$sysnum
+  $i=0
+  while ($i<$sysnum) do
+    $i=$i+1
+    teststr('$usercolor',$syscolor[$i],'local'):$e
+    if (not $e) then
+      write('file',$file,'%s %s',$syscolor[$i], $sysval[$i])
+    endif
+  endwhile
+endif
+
+exists('BPinstall','parameter','global'):$e
+if ($e > 0.5) then
+  BPinstall=0
+endif
+exists('appmode','parameter','global'):$e
+if ($e < 0.5) then
+  create('appmode','string','global')
+  appmode=''
+endif
+if (appmode='') then   // only set appmode if it is not already set
+  exists(systemdir+'/adm/users/profiles/system/'+owner,'file'):$e
+  if ($e > 0.5) then
+    $etype=''
+    lookup('file',systemdir+'/adm/users/profiles/system/'+owner,'itype','read'):$etype,$res
+    if ($res < 0.5) then
+      lookup('file',systemdir+'/adm/users/profiles/user/'+owner,'itype','read'):$etype,$res
+    endif
+    if ($res > 0.5) then
+      if ($etype = 'Imaging') then
+        appmode='imaging'
+      elseif ($etype = 'LC-NMR/MS') then
+        appmode='lc'
+      else
+        appmode='walkup'
+      endif
+    endif
+  endif
+endif
+if (appmode='') then
+  appmode='walkup'
+endif
+getshimmethods // Update file for shim methods
+
+
+"Caution: This construct presents problems if the list of experiments"
+"is longer than 1023 characters, or about 120 to 150 experiments."
+"The ls command imposes line breaks, based on the width of the window"
+"from which Vnmr was run.  The shell command only captures the first"
+"line of output, so in general using the ls command instead of echo"
+"will not give satisfactory results."
+
+shell('cd '+userdir+'; echo exp[0-9] exp[0-9][0-9] exp[0-9][0-9][0-9] exp[0-9][0-9][0-9][0-9]'):$explist
+flush		"Insure current experiment written to disk"
+repeat               "For each experiment..."
+    $exp=''
+    $expnum=''
+    substr($explist,$wordnumber):$exp
+    substr($exp,4,4):$expnum
+    exists(userdir+'/exp'+$expnum,'directory'):$e
+    if ($e <> 0) then
+       substr($exp,4,4):$expn
+       ABORTOFF jexp($expn) ABORTON
+       jexp:$ex
+       if ($ex = $expn) then
+         write('line3','updating exp %d',$expn)
+         ABORTOFF fixpar ABORTON
+       endif
+    endif
+    $wordnumber=$wordnumber+1
+until $exp = ''
+
+exists('jviewports','parameter','global'):$e
+if ($e > 0.5) then
+  $i=0
+  repeat
+    $i=$i+1
+    jcurwin[$i]=jviewports[$i+4]
+  until $i=jviewports[1]
+  jviewports[1]=1
+endif
+
+exists('activeviewport','parameter','global'):$e
+if ($e > 0.5) then
+  activeviewport=1
+endif
+
+jexp($curexp)
+fsave(userdir+'/global','global')

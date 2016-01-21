@@ -1,0 +1,171 @@
+"macro config"
+" config('display') does not require updating the system global "
+" parameter tree.  All other invocations do require an update.  "
+" Unless display was requested, insert a console writeback file "
+" argument (cwbf) to receive value to be written to the console "
+
+operights('cansetpreferences'):$c
+if $c=0 then 
+    write('error','Operator %s may not change preferences!',operator) 
+    return 
+endif
+
+isvnmrj:$e
+if ($e > 0.5) then
+   exists(systemdir+'/psg/cps.c','file'):$e
+   if ($e < 0.5) then
+      if ($#>0) then
+         mconfig($1)
+      else
+         mconfig
+      endif
+   else
+      exists(systemdir+'/psg/psgmain.cpp','file'):$e
+      if ($e > 0.5) then
+         if ($#>0) then
+            vconfig($1)
+         else
+            vconfig
+         endif
+      else
+         if ($#>0) then
+            iconfig($1)
+         else
+            iconfig
+         endif
+      endif
+   endif
+   return
+endif
+
+$base=curexp
+exists(curexp,'directory'):$d
+if $d<0.5 then $base=userdir endif
+$shell_file=$base+'/config.sh'
+$out_file=  $base+'/config.out'
+$error_file=$base+'/config.err'
+$cwb_file=  $base+'/config.cwb'
+
+if ($# < 1) then
+    exists(systemdir+'/conpar','file','rw'):$update
+    if (Console = 'mercury') then $update=1 endif
+    if ($update = 1) then
+       $tmpstr='vconfig cwbf ' + $cwb_file + ' interactive'
+    else
+       $tmpstr='vconfig  display'
+    endif
+else
+    if ($1 = 'display') then
+        $update=0
+        $tmpstr='vconfig ' + $1
+    else
+        if ($1 <> 'interactive') then
+            write('error','%s: cannot use argument of %s',$0,$1)
+            abort
+        else
+            $update=1
+            $tmpstr='vconfig cwbf ' + $cwb_file + ' ' + $1
+        endif
+    endif
+endif
+
+"save the old value of traymax ..."
+"do it now, before reading the previous version of conpar"
+
+$oldtray=traymax
+$oldport=smsport
+
+if ($update <> 0) then
+   exists(systemdir+'/conpar.prev','file','rw'):$e
+   if ($e > 0.5) then
+      $rev=rev $revdate=revdate
+      fread(systemdir+'/conpar','systemglobal','reset')
+      fread(systemdir+'/conpar.prev','systemglobal','value')
+      delete(systemdir+'/conpar.prev')
+      rev=$rev revdate=$revdate
+      fsave(systemdir+'/conpar','systemglobal')
+   endif
+endif
+
+write('reset',$shell_file)
+write('file',$shell_file,'%s > %s 2> %s;cat',$tmpstr,$out_file, $error_file)
+shell('sh "'+ $shell_file+'"'):$dum
+delete($shell_file)
+
+nrecords($out_file):$len
+if ($len > 0.5) then
+   cat($out_file)
+endif
+nrecords($error_file):$len
+if ($len > 1.5) then
+   cat($error_file)
+endif
+if ($update <> 0) then
+  fread(systemdir+'/conpar','systemglobal')
+  isvnmrj:$j
+  if ($j > 0.5) then
+    $j = 1
+    $j2 = ''
+    write('line3',' fread(`%s/conpar`,`systemglobal`)',systemdir):$cmd
+    while ($j <= jviewports[1]) do
+      if ($j <> jviewport) then
+        format($j,1,0):$j2
+        vnmrjcmd('VP ' + $j2 + $cmd)
+      endif
+      $j = $j + 1
+    endwhile
+  endif
+endif
+
+" If the console writeback file exists, send its contents to the console "
+
+$e=0
+exists($cwb_file,'file'):$e
+if ($e <> 0) then
+    wsram($cwb_file)
+    delete($cwb_file)
+    exists(systemdir+'/acqqueue/acq.conf','file','rw'):$e
+    if ($e > 0.5) then
+       delete(systemdir+'/acqqueue/acq.conf')
+    endif
+endif
+
+"if traymax changed, write a new smsport file"
+
+if (traymax <> $oldtray) or (smsport <> $oldport) then
+    write('reset',systemdir+'/smsport')
+    if (traymax = 768) then
+        write('file',systemdir+'/smsport','%s HRM',smsport)
+    else
+        if (traymax = 96) then
+            write('file',systemdir+'/smsport','%s GIL',smsport)
+        else
+            if (traymax = 48) then
+                write('file',systemdir+'/smsport','%s NMS',smsport)
+            else
+                write('file',systemdir+'/smsport','%s SMS',smsport)
+            endif
+        endif
+    endif
+endif
+
+" If the error file exists and is not empty, write "
+" its first line in the VNMR status window "
+$e=0
+exists($error_file,'file'):$e
+if ($e <> 0) then
+    $n=0
+    $line=''
+    shell( 'wc -l "' + $error_file + '"'):$line
+    substr($line,1):$n
+    if ($n > 0) then
+        $tmpstr_2=''
+        lookup('file',$error_file,'readline'):$tmpstr_2
+        substr($tmpstr_2,1):$tmpstr
+        if ($tmpstr <> 'XView') then
+          write('error','%s',$tmpstr_2)
+        endif
+    endif
+    delete($error_file)
+endif
+delete($out_file)

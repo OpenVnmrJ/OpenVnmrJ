@@ -1,0 +1,49 @@
+"macro quantsaveprotocol"
+"quantsaveprotocol - macro to make protocol to remember quantitation stuff"
+"personality of quant apptype is to just rtp, keep gain fixed and not redo integrals"
+
+ apptype='quant' gain='y'
+ exists('probe_','parameter'):$exprobe
+ if not $exprobe then
+   create('probe_','string')
+ endif
+ exists('solvent_','parameter'):$exs
+ if not $exs then
+   create('solvent_','string')
+ endif
+
+ $probe=probe
+ setvalue('probe_',$probe)
+ $solvent=solvent
+ setvalue('solvent_',$solvent)
+
+  "the quant apptype macro will warn if a sample is run with a different probe"
+  " we are going to remember the probe here"
+  "is probe_ used by any other macro.."
+ if (quantsavefile<>'') then
+    pslabel=quantsavefile
+ else
+    pslabel=''
+ endif
+
+ "clear previous customizations as std1d a likely starting point"
+ exists('wrtp','parameter'):$x
+ if ($x<0.5) then
+   create('wrtp','string')
+   setgroup('wrtp','display')
+ endif
+ wrtp=''
+
+"Lets call the create protocol popup with things all set for this apptype"
+if pslabel<>'' then
+  exists(pslabel,'maclib'):$e
+  if ($e) then
+    $ans=''
+    input('macro '+pslabel+' exists, overwrite [n] ? '):$ans
+    substr($ans,1,1):$ans
+    if $ans<>'y' then return endif
+  endif
+  cqprotocol(pslabel,0)
+  dg newdg
+endif
+

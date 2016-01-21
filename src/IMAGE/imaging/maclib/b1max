@@ -1,0 +1,58 @@
+"macro b1max"
+"********************************************************************
+" NAME:
+"   b1max
+"
+" DESCRIPTION:
+"   Compute maximum value of B1 based on pulsecal entry for current rfcoil
+"   Store in b1max parameter for informational purposes about the coil
+"   performance capabilities
+"
+" ARR 1/30/09
+"********************************************************************
+
+$file = userdir+'/pulsecal'
+
+if ($# < 2) then
+  $rfcoil=rfcoil
+  $b1maxpar='b1max'
+  $tpwrmax=63
+endif
+if ($# = 2) then
+  $rfcoil=$1
+  $b1maxpar=$2
+  $tpwrmax=63
+endif
+if ($# > 2) then
+  $rfcoil=$1
+  $b1maxpar=$2
+  $tpwrmax=$3
+endif
+
+"** check if pulsecal file exists ****************************"
+exists($file,'file'):$ex
+if ($ex < 1) then
+  write('line3','b1max: pulsecal file not found')
+  return
+endif
+
+"** Read entries for rfcoil **********************************"
+lookup('file',$file,'seek',$rfcoil,'read',4):$pw,$flip,$tpwr,$date,$ret
+
+if ($ret < 4) then
+  write('line3','b1max: rfcoil %s not found in pulsecal file',$rfcoil)
+  return
+endif
+
+"** Calculate reduction factor at max power ******************"
+ln(10.0):$ln10
+$tpwrdelta = $tpwrmax - $tpwr
+exp($tpwrdelta*$ln10/20):$pwratio
+
+"** b1max is 1/pulselength for a 360 degree pulse ************"
+$pwmin = $pw/$pwratio
+$b1max = 1e6/($pwmin*360/$flip)
+
+"** Create b1max parameter if it doesn't already exist *******"
+create($b1maxpar,'real','current',0)
+{$b1maxpar} = $b1max

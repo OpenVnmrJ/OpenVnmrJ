@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template name="craft_setReference" element="groups" type="acquisition" >
+      <group size="400 575"
+        bg="transparent"
+        border="Etched"
+        vq="craftnmrparRef"
+	reference="craft_setReference"
+        subtype="Basic"
+        expanded="yes"
+        >
+        <group loc="1 1" size="398 24"
+          border="Raised"
+          vq="craftPopupPar"
+          show="$SHOW=(craftPopupPar&lt;&gt;'')"
+          bg="darkGray"
+          />
+	<group loc="1 1" size="398 24"
+	  border="Raised"
+          vq="craftPopupPar"
+          show="$SHOW=(craftPopupPar='')"
+	  bg="darkGray"
+	  >
+	  <label loc="10 2" size="360 20"
+	    style="Heading3"
+	    label="External Amplitude Reference"
+	    />
+	  <button loc="376 2" size="20 20"
+	    style="Heading2"
+	    label="X"
+	    tooltip="Close"
+	    vc="craft_setReference('close')"
+	    />
+	  </group>
+	  <label loc="15 73" size="325 20"
+	    style="Label1"
+	    label="Reference spectrum:"
+	    />
+	  <textmessage loc="40 93" size="325 20"
+	    style="Label1"
+	    set="if craftRefPar[9]='f' then $VALUE=craftRefPar[11] else $VALUE='' endif"
+	    vq="craftRefPar"
+	    />
+          <group loc="15 30" size="380 40"
+	    vq="craftRefPar"
+	    show="$SHOW=(craftRefPar[10]&lt;&gt;'1')"
+	    >
+	    <label loc="0 0" size="380 20"
+	      label="Display"
+	      style="Label1"
+	      />
+	    <group loc="40 20" size="90 20" >
+	      <radio loc="0 0" size="90 20"
+	        style="Label1"
+	        label="All traces"
+	        vq="craftRefPar"
+	        vc="craftRefPar[9]='c' craft_setReference('toggle2this')"
+	        vc2="craftRefPar[9]='f' craft_setReference('toggle2this')"
+	        set="$VALUE=(craftRefPar[9]='c')"
+	        />
+	      </group>
+	    <group loc="130 20" size="250 20" >
+	      <radio loc="0 0" size="20 20"
+	        style="Label1"
+	        vq="craftRefPar"
+	        vc2="craftRefPar[9]='c' craft_setReference('toggle2this')"
+	        vc="craftRefPar[9]='f' craft_setReference('toggle2this')"
+	        set="$VALUE=(craftRefPar[9]='f')"
+	        />
+	      <textmessage loc="25 0" size="65 20"
+	        style="Label1"
+	        set="$VALUE='Trace# '+craftRefPar[8]"
+	        vq="craftRefPar"
+	        />
+              <button loc="90 0" size="65 20"
+                style="Heading2"
+                label="Prev"
+                vq="craftRefPar"
+                vc="craft_setReference('toggleprev')"
+	        show="$ENABLE=(craftRefPar[9]='f')*2-1"
+                />
+              <button loc="160 0" size="65 20"
+                style="Heading2"
+                label="Next"
+                vq="craftRefPar"
+                vc="craft_setReference('togglenext')"
+	        show="$ENABLE=(craftRefPar[9]='f')*2-1"
+                />
+	      </group>
+	    </group>
+
+
+        <label loc="10 120" size="380 20"
+          style="Info"
+          label="Use two cursors to define reference segment"
+	  justify="Center"
+          />
+        <group loc="5 145" size="390 300"
+          >
+          <label loc="10 5" size="370 25"
+            style="Label1"
+            label=" External reference"
+            />
+	  <group loc="0 30" size="390 25"
+	    vq="craftRefPar"
+	    show="$SHOW=(craftRefPar[7]='')"
+	    >
+            <button loc="20 0" size="350 25"
+	      style="Heading2"
+	      vq="craftRefPar"
+	      show="$ENABLE=(craftRefPar[9]='f')*2-1"
+	      label="Extract frequency/amplitude and set as reference"
+	      vc="craft_setReference('ok')"
+	      />
+	    </group>
+	  <group loc="0 30" size="390 50"
+	    vq="craftRefPar"
+	    show="$SHOW=(craftRefPar[7]&lt;&gt;'')"
+	    >
+	    <textmessage loc="35 0" size="250 20"
+	      style="Info"
+	      vq="craftRefPar"
+	      set="$ppm='' substr(craftRefPar[7],1):$ppm $VALUE='External reference: Signal at '+$ppm+' ppm'"
+	      />
+            <button loc="290 0" size="80 20"
+	      style="Heading2"
+	      vq="craftRefPar"
+	      label="Clear"
+	      vc="craftRefPar[7]=''"
+	      />
+            <check loc="40 22" size="20 20"
+	      vq="craftRefPar"
+	      vc="craftRefPar[13]='y'"
+	      vc2="craftRefPar[13]='n'"
+	      set="$VALUE=(craftRefPar[13]='y')"
+	      />
+	    <label loc="65 22" size="130 20"
+	      style="Label1"
+	      label="Set spin concentration"
+	      />
+	    <entry loc="200 22" size="50 20"
+	      style="Label1"
+	      vq="craftRefPar"
+	      vc="$v='$VALUE' format($v,'isreal'):$real if $real then craftRefPar[3]=$v endif" 
+	      show="$ENABLE=(craftRefPar[13]='y')*2-1"
+	      />
+	    <label loc="255 22" size="30 20"
+	      style="Label1"
+	      label="mM"
+	      />
+	    </group>
+
+          <label loc="10 90" size="50 20"
+      	    style="Label1"
+      	    label="Name"
+      	    />
+          <entry loc="60 90" size="220 20"
+            style="PlainText"
+            vq="craftRefPar"
+            vc="chkname('$VALUE','alnum-'):$V craftRefPar[4]=$V"
+	    show="$ENABLE=(craftRefPar[7]&lt;&gt;'')*2-1"
+            set="$VALUE=craftRefPar[4]"
+            />
+          <button loc="290 90" size="80 20"
+            style="Heading2"
+            label="Save"
+            vq="craftRefPar"
+	    show="$ENABLE=((craftRefPar[7]&lt;&gt;'') and (craftRefPar[4]&lt;&gt;''))*2-1"
+            vc="craft_setReference('save')"
+            />
+           </group>
+        </group>
+</template>

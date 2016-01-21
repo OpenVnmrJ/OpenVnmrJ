@@ -1,0 +1,43 @@
+"macro nrkr"
+"back ground task re-scheduler "
+$a=0
+$ans=0
+$key=''
+$val=''
+$exps = '1000'
+$opstr = 'run'
+$res=0
+readfile('/vnmr/tmp/ntest','$key','$val','','local'):$res
+"env block"
+if $res > 0 then
+teststr('$key','env','local'):$ans
+if ($ans > 0) then
+$exps = $val[$ans]
+endif
+"end env start op "
+teststr('$key','op','local'):$ans
+if ($ans > 0) then 
+$opstr=$val[$ans]
+endif
+"end op" 
+endif "readfile " 
+shell('date +"%k\n%M"'):$hr,$min
+$min = $min + 2
+" adjust constant to change rate "
+$hr = ($hr + trunc($min / 60)) % 24
+$min = $min % 60
+write('line3','%d:%d',$hr,$min):$acmd
+jexp($exps)
+nrk($opstr)
+atcmd('nrkr',$acmd)
+atcmd
+"wipe out the control file"
+shell('rm /vnmr/tmp/ntest')
+write('file','/vnmr/tmp/ntest','env  %s',$exps)
+write('file','/vnmr/tmp/ntest','op   %s',$opstr)
+write('file','/vnmr/tmp/ntest','z1delt   %f',z1delt)
+write('file','/vnmr/tmp/ntest','z1epsi   %f',z1epsi)
+write('file','/vnmr/tmp/ntest','z2delt   %f',z2delt)
+jexp0
+"atcmd('nrkr',120,'start') - newer releases"
+

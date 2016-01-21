@@ -1,0 +1,86 @@
+"macro autostopNgo"
+"stopsaveNgo(<arg1>)"
+"    arg1 - saveresume (default) - stop, save and resume "
+"    arg1 - save - stop and save (automation is left in paused mode)"
+"    arg1 - resume - stop and resume (current acq is discarded)"
+"    arg1 - stop - stop (current acq is discarded, automation is left in paused mode)"
+"    Note stop is always implicit. Executed via autopause('stop') "
+
+if ($# < 1) then $1='saveresume' endif
+is_submitmode:$is
+if ($is) then 
+    write('error','curexp is in submit mode.  Cannot execute %s',$0)
+    return
+endif
+
+$actexp=0 $who=''
+expactive('current'):$actexp,$who
+if ($who<>'auto') then
+    write('error','Current acquisition is not by automation.')
+    return
+endif
+
+expactive:$active
+if ($active > 0) then
+   write('error','Current experiment is ACTIVE.  Please join another experiment')
+   return
+endif
+
+"*****Stop automation"
+$locdir='' $when='' $stopexp=''
+$samploc=''
+autopause('stop'):$locdir,$when,$stopexp
+
+"*****Save current acquisition"
+if ($locdir<>'') and ($when<>'') and ($stopexp<>'') then
+   $samploc='' $zone='' $rack=''
+   $archivedir='' $sample=''
+   pwd:$curdir
+   cd(autodir+'/enterQ.macdir'):$dum
+   getsampglobal($locdir,'archivedir'):$archivedir
+   getsampglobal($locdir,'sample'):$sample
+   getlocid($locdir+'/'+$when+'/sampleinfo'):$samploc,$dum1,$dum2,$zone,$rack
+   $md=$archivedir+'/'+$sample+'/dirinfo/macdir'
+   cd($curdir):$dum
+   if ($1<>'save') and ($1<>'saveresume') then
+	cpqadjexpfile($stopexp,$md,'Error')
+   else
+   	$curfid='enterQ.macdir/'+$locdir+'/current.fid'
+   	exists(autodir+'/'+$curfid+'/procpar','file'):$fidex
+   	if ($fidex) then
+	   showtray('close')
+       	   tmpsave('autopause')
+	   $ret=0
+	   rtNprocess(autodir+'/'+$curfid,'noprocess'):$ret
+	   if $ret then
+      	   	$operator=''
+      	   	getsampglobal($md,'studyowner'):$operator
+      	   	if ($operator<>'') and ($operator<>studyowner) then
+              	    setvalue('studyowner',$operator,'current')
+              	    setvalue('studyowner',$operator,'processed')
+           	endif
+	   	setvalue('file','exp','current')
+	   	setvalue('file','exp','processed')
+	  	   "process/save/plot as usual"
+           	procsaveplot
+	   else
+		cpqadjexpfile($stopexp,$md,'Error')
+	   endif
+           tmpreturn('autopause')
+	   showtray('auto')
+	endif
+   endif
+endif
+// Irrespective of what happens in autopause('stop')
+//  resume automation if it is warranted.
+if ($1='saveresume') or ($1='resume') then
+	if $samploc<>'' and $locdir<>'' then
+       	    write('file',autodir+'/enterQ.macdir/cpstartQ','SAMPLE#: %s %s',$samploc,$locdir)
+	endif
+	$saflag='none'
+	getautosaflag(autodir+'/enterQ'):$saflag
+	if $saflag='admin' then
+       	    autopause('resume')
+       	    write('error','Automation resumed')
+	endif
+endif

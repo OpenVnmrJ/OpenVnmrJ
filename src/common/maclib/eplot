@@ -1,0 +1,41 @@
+"macro eplot"
+if (auto='y') then 
+   write('line3','eplot cannot be used under automation')
+   return
+endif
+
+if (emailflag='n') then
+   write('line3','Email option is NOT turned on')
+   return
+endif
+
+if ($# < 1) then $1=emailaddr endif
+if ($# < 2) then $2='' endif
+if ($1='') then $1=emailaddr endif
+
+if ($1='') then
+   write('line3','Usage eplot(<address>). Parameter emailaddr is empty string')
+   return
+endif
+
+$plotter=plotter
+is_psplotter:$newplotter,$ret
+if ($ret=0) then
+        write('line3','A PS plotter is NOT defined')
+	return
+endif
+
+if ($newplotter<>$plotter) then
+       s9
+       $wc2max=wc2max $wcmax=wcmax $wc2=wc2 $wc=wc
+       plotter=$newplotter
+       wc=$wc*wcmax/$wcmax wc2=$wc2*wc2max/$wc2max
+endif
+
+docpplot('epage(`'+$1+'`,`'+$2+'`)')
+
+if ($newplotter<>$plotter) then
+	plotter=$plotter
+	r9
+endif
+

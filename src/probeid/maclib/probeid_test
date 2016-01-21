@@ -1,0 +1,1241 @@
+// Non-GUI Probe ID integration tests
+//
+// The frequent instances of the form {$0}(arg1, ...) in the macro code
+// below are where this macro calls itself recursively - this is the
+// Magical alternative to function calls.
+//
+// $tst is the test id for the selector
+// $sub is the subtest id
+// $pre is the preconditions
+// $post is the postcondition
+//
+// How to run these tests
+//  1) To run all of the tests, from the command line issue the command
+//        magtst('probeid_test')
+//
+//  2) To run a sub-test, issue the command magtst('probeid_test','<subtest>')
+//     For example, to run the probelist set of tests:
+//        magtst('probeid_test','probelist')
+//
+// How to debug these tests:
+//  1) Start ProbeIdIO in VnmrJ with the parameters
+//      -start -nocrypto -mnt /vnmr/probeid/mnt -cache /vnmr/probeid/cache -v
+//
+//  2) Set a breakpoint in ProbeIdIO or wherever else is convenient and useful
+//
+//  3) From the VnmrJ command line: dbg magtst('probeid_test','<subtest>'),
+//     i.e. dbg magtst('probeid_test','match')
+//
+//  4) In an editor window open /tmp/vj.vnmr1.log, whose last line should be
+//     the macro line that issued the ProbeId server request that caused the
+//     breakpoint to be hit.
+//
+// If you have a test that requires a lot of passes over the same code before
+// you get to a suspected trouble spot, you can
+//  5) Insert "probeid('echo','<some tag>') right before the trouble spot,
+//
+//  6) Then uncheck the too-frequently encountered Java breakpoints in the 
+//     Eclipse Breakpoints window.
+//
+//  7) Set a breakpoint in the ProbeIdIO parse(String[]) on the line where
+//     the "echo" command is parsed.  When that breakpoint is hit, re-enable
+//     the Java breakpoints you're interested in.
+//
+if $# < 1 then $1='all' endif
+
+$ret   = 0                       // default test or sub-test result
+
+// shared variables
+$tst_usr      = 'tst_usr'     	 // user probe tags (i.e. directories)
+$tst_usr_2    = 'tst_usr_2'      // user probe 
+$tst_sys      = 'tst_sys'     	 // system probe tags
+$tst_both     = 'tst_both'    	 // user and system probe tags
+$tst_leg_usr  = $tst_usr+'_leg'  // probeid name needs to be part and
+$tst_leg_sys  = $tst_sys+'_leg'  //   parcel of probeid name for a
+$tst_leg_both = $tst_both+'_leg' //   'diff' on files to work properly
+$tmp_usr      = '/tmp/probeid_test.'+$tst_usr
+$tmp_sys      = '/tmp/probeid_test.'+$tst_sys
+$tst_probe    = 'autox400DB'     // standard simulated probe
+$tst_blank_1  = 'test_1'         // 1st uninitialized simulated probe
+$tst_blank_2  = 'test_2'         // 2nd uninitialized simulated probe
+
+listenon                         // enable send2Vnmrj
+
+"-------------------------------<define test suite>---------------------------"
+//-- run this target to initiate the test suite from probeid_test directly
+if $1='all' then
+  //-- run the tests from probeid_test directly
+  magtst('init',$0)              // configure test-suite level test fixtures
+  {$0}('@tests')
+  magtst('done')                 // clean-up test-suite level test fixtures
+  
+elseif $1='@tests' then          // all tests
+  //-- run all of the probeid integration tests
+  // put the test actively being developed first
+  magtst('test','HardwareBar')
+
+  // otherwise go from most basic to most complex
+  magtst('test','echo')
+  magtst('test','addprobe')
+  magtst('test','addparams')
+  magtst('test','addnucleus')
+  magtst('test','addlkpars')
+  magtst('test','blob')
+  magtst('test','getparam')
+  magtst('test','update')
+  magtst('test','probelist')
+  magtst('test','calibrate')
+  magtst('test','protune')
+  magtst('test','permissions')
+  magtst('test','setparams')
+  magtst('test','setprobe')
+  magtst('test','getpower')
+  magtst('test','setpower')
+  magtst('test','chempack.catprobe')
+  magtst('test','deletenucleus')        // todo: real work!
+  magtst('test','inept')
+  magtst('test','userprobecal')         // nothing to do
+  magtst('test','userprobe')            // nothing to do
+  magtst('test','add_ecc')              // tested as part of setparams
+  magtst('test','chempack.readprobe')   // todo: real work!
+  magtst('test','setpw180ad')
+  magtst('test','setpwx180ad')
+  magtst('test','setsolids1d')
+  magtst('test','setdec2pars')
+  magtst('test','AC10C')
+  magtst('test','AC12p')
+  magtst('test','ACreport')
+  magtst('test','AuCALch3i')            // todo: real work! // calls setup()
+  magtst('test','AuCALch3oh')           // todo: real work! 
+  magtst('test','AuCdec')
+  magtst('test','Augmapz0')
+  magtst('test','Aumakegmap')
+  magtst('test','Aunogmapz0')
+  magtst('test','Autocalpar')
+  magtst('test','Autobackup')      //
+  magtst('test','SFSPorrect')
+  magtst('test','setup')           // setup macro
+  magtst('test','cache')           // cache behavior when probe disconnects
+  magtst('test','match')           // disconnect probe mid-operation
+  magtst('test','new study')       // new study
+  magtst('test','continue study')  // continue study
+
+  //magtst('todo','send2vnmrj')
+
+  return
+endif
+
+"---------------------------------<test fixtures>-----------------------------"
+if $1='@before' then
+  // run before each individual test
+  if $# < 2 then $2='initializing test infrastructure' endif
+  magtst('info',$2)
+
+  // recover from aborted prior tests
+  probeid('update','clear')
+
+  // simulate physically connecting the simulated probe
+  probeid('connect',$tst_probe)
+
+  // tell the server to start using the probe
+  probeid('attach')
+
+  // reinitialize probeattr to known starting values
+  probeattr[1]='user'   // 'user', 'local', or 'system'
+  probeattr[2]='stdpar' // 'zero' or 'stdpar'
+
+  // grey-box setup
+  // set up probe cfg exlusive to user
+  // set up probe cfg exclusive to system
+  // set up probe cfg for both user and system
+  create('tst_dirs','string','current'):$e1
+  create('tst_sys','string','current'):$e2
+  create('tst_usr','string','current'):$e3
+
+  if not($e1 and $e2 and $e3) then
+    magtst('abort','couldn\'t create tst_dirs arrays - already exist?')
+    magtst('abort','try running with debug(\'c3\') - see man(\'debug\')')
+    abort
+  endif
+  tst_sys = [$tst_sys, $tst_both] // system probe configurations
+  tst_usr = [$tst_usr, $tst_both] // user probe configurations
+
+  probeid('query','cache'):$cache // get probeid cache (for grey-box testing)
+  probeid('query','mount'):$mount // get probeid mount point (grey-box testing)
+
+  probeid('probedirs',tst_usr):$usr_dirs // list of user probe subdirectories
+  probeid('probedirs',tst_sys):$sys_dirs // list of system probe subdirectories
+
+  probeid_util($sys_dirs,'ins',$mount+'/'):$sysmount
+  probeid_util($sys_dirs,'ins',$cache+'/'):$syscache
+  probeid_util($usr_dirs,'ins',$mount+'/'):$usrmount
+  probeid_util($usr_dirs,'ins',$cache+'/'):$usrcache
+  tst_dirs = [$sysmount, $syscache, $usrmount, $usrcache]
+  //probeid_util(tst_usr,'print','user:   ')  // lotsa output - fuhgetaboutit
+  //probeid_util(tst_sys,'print','system: ')
+  return
+
+elseif $1='@beforeall' then
+  //dbg                             // turn on debug output and reset debug file
+  //magtst('log')                   // turn on log file create to default file
+
+  // disable VnmrJ messaging to avoid long I/O delays in the probe server
+  shell('probeid -info2vnmr 0'):$o
+
+  // clean up any remaining cruft from a previous test run  
+  {$0}('@after','pretest cleanup')
+  
+  // attach the test probe
+  setvalue('probe',' ','global')
+  probeid('reset')                // reset the server
+  probeid('connect',$tst_probe)   // connect the simulated test probe
+
+  // perform "factory initialization"
+  probeid('init','autox400DB','ID-AX12345','SN-AX12345')
+  
+  // "physically attach" the probe
+  probeid('attach')
+
+  // import an initial probe configuration
+  probeid('import','probe','autox400DB')
+
+  return
+
+elseif $1='@after' then
+  // run before all tests start and after each individual test
+  if $# < 2 then $2=' performing cleanup' endif
+  if $# < 3 then $3='' endif
+  magtst('info',$2)
+  exists('tst_dirs','parameter','current'):$e0
+  exists('tst_usr','parameter','current'):$e1
+  exists('tst_sys','parameter','current'):$e2
+  destroy('tst_dirs','current'):$ok
+  probeid('connect',$tst_probe)
+  probeid('attach')
+  if $e1 then
+    magtst('info','removing probeid user test directories')
+    probeid_util(tst_usr,'probeid','rm')
+    destroy('tst_usr','current'):$ok
+  endif
+  if $e2 then
+    magtst('info','removing probeid system test directories')
+    probeid_util(tst_sys,'probeid','rm!')
+    destroy('tst_sys','current'):$ok
+  endif
+
+  // blank the dynamically created simulated test probes
+  probeid('blank',$tst_blank_1)                   
+  probeid('blank',$tst_blank_2)
+
+  // connect standard simulated test probe and delete test probe configurations
+  probeid('connect',$tst_probe)          // simulate connecting test probe
+  probeid('attach')                      // tell probe to accept connect
+  probeid('rm',$tst_usr):$o              // delete from simulated probe
+  probeid('rm',$tst_usr_2):$o
+  probeid('rm',$tst_both):$o
+  probeid('rm',$tst_usr,'system'):$o     // only needed when there's a bug
+  probeid('rm',$tst_both,'system'):$o
+  probeid('rm',$tst_sys,'system'):$o
+  probeid('rm',$tst_sys):$o              // system probe copied from user
+  probeid('rm',$tst_leg_usr):$o
+
+  rm('-r',userdir+'/probes/'+$tst_usr):$o
+  rm('-r',userdir+'/probes/'+$tst_both):$o
+  rm('-r',systemdir+'/probes/'+$tst_both):$o
+  rm('-r',systemdir+'/probes/'+$tst_sys):$o
+  rm('-r',userdir+'/probes/'+$tst_sys):$o     // system probe copied from user
+  rm('-r',userdir+'/probes/'+$tst_leg_usr):$o
+  rm('-r',userdir+'/probes/'+$tst_leg_both):$o
+  rm('-r',systemdir+'/probes/'+$tst_leg_both):$o
+  rm('-r',systemdir+'/probes/'+$tst_leg_sys):$o
+  rm('-r',userdir+'/probes/'+$tst_leg_sys):$o // system probe copied from user
+  rm('-r',userdir+'/probes/'+$tst_usr_2):$o   // dual-use name
+  rm('-r',$tmp_usr):$o
+  rm('-r',$tmp_sys):$o
+
+  // remove the probe lists, since they are regenerated and otherwise
+  // might be contaminated by test file names
+  rm(userdir+'/persistence/probe_list_user')
+  rm(userdir+'/persistence/probe_list_system')
+  rm(userdir+'/persistence/probe_list')
+  
+  // take the probe configuration out of the probe list
+  $filter_a = 'egrep -v -e \'^'
+  $filter_o = '$\' '
+  $list     = userdir+'/persistence/probe_list_'
+  $list_sys = $list+'system'
+  $list_usr = $list+'user'
+  $sys_out  = ' > '+$list_sys
+  $usr_out  = ' > '+$list_usr
+  shell($filter_a + $tst_usr  +	$filter_o + $list_sys + $sys_out)
+  shell($filter_a + $tst_usr  +	$filter_o + $list_usr + $usr_out)
+  shell($filter_a + $tst_sys  +	$filter_o + $list_sys + $sys_out)
+  shell($filter_a + $tst_sys  +	$filter_o + $list_usr + $usr_out)
+  shell($filter_a + $tst_both +	$filter_o + $list_usr + $sys_out)
+  shell($filter_a + $tst_both +	$filter_o + $list_usr + $usr_out)
+
+  if $3 = 'logfile' then
+    rename($logvile,$logfile+'.backup')
+  endif
+  return
+
+elseif $1='@afterall' then
+  return
+
+"------------------------------<integration tests>----------------------------"
+elseif $1='addnucleus' then
+  //--
+  $nuc='Te'
+  $nuc_pw90='pw90'
+
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  addnucleus($nuc)
+  destroy('$nuc_leg_pw90_out'):$e // $nuc_leg_pw90_out=''
+  getparam($nuc_pw90,$nuc):$nuc_leg_pw90_out
+  $leg_path  = systemdir+'/probes/'+$tst_leg_sys+'/'+$tst_leg_sys
+
+  probeid('enable')
+  addprobe($tst_usr)
+  addnucleus($nuc)
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+
+  destroy('$nuc_pw90_out'):$e // $nuc_pw90_out=''
+  getparam($nuc_pw90,$nuc):$nuc_pw90_out
+  exists('$nuc_pw90_out','parameter'):$e0
+  exists('$nuc_leg_pw90_out','parameter'):$e1
+  magtst('assert',$e0 = $e1)
+  if $e0 and $e1 then
+    if $nuc_pw90_out <> $nuc_leg_pw90_out then
+      magtst('fail','addnucleus \''+$tst_usr+' \''+$nuc+'\'')
+    else
+      magtst('info','probeid test addnucleus compare is \''+$nuc_leg_pw90_out+'\'='+$nuc_pw90_out+'\'')
+      magtst('compare',$tst_usr,$tmp_usr,$leg_path):$ret
+    endif
+  endif
+  return($ret)
+  
+elseif $1='add_ecc' then // a generic form of addnucleus
+  //--
+  probeid('disable')
+  addprobe($tst_usr_leg)
+  probe=$tst_usr_leg
+  add_ecc_probepars  
+
+  probeid('enable')
+  addprobe($tst_usr)
+  probe=$tst_usr
+  probeid('addnucleus',probe,'probes/'+probe,'user','ECC',
+  	  ': Parameters',
+  	  'tc1 00',
+  	  'tc2 00',
+  	  'tc3 00',
+  	  'tc4 00',
+  	  'amp1 00',
+  	  'amp2 00',
+  	  'amp3 00',
+  	  'amp4 00',
+  	  'date 00-00-0000'):$ret
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+  magtst('compare',$tst_usr,$tmp_usr,$leg_path):$ret
+  return($ret)
+
+elseif $1='addprobe' then
+  //--
+  //  usage: probe_test('addprobe'<,'subtest1< subtest2 <...>>')
+  //   optional 2nd argument can be used to specify a subtest to run,
+  //   otherwise run a default set of sub-tests
+  // sub-tests are combinations of 'legacy'|'probeid'+'system|user'
+  //
+  //  debug notes: since this is a triple-nested recursive call, it
+  //               it may prove helpful to add an input line to prompt, i.e.
+  //       input('--hit enter to continue--> '):$dum
+  //
+  //               and then run with the debug macro, i.e.
+  //       dbg magtst('probeid_test','addprobe')
+  //               or
+  //       dbg magtst('probeid_test','addprobe','probeid+system')
+  //               and then look at the debug log file /tmp/vj.$USERNAME.dbg
+  //               to trace the behavior of the macro as it is running
+  //
+  //               Don't forget to remove the "input" line when you are done!
+  //
+  if $# < 2 then     // use a set of default sub-tests
+    // TODO: change this to use teststr?
+    $sub='legacy+system legacy+user probeid+system probeid+user probeid+both'
+  elseif $# < 3 then // use caller-supplied sub-test
+    $sub=$2
+  endif
+  $r=0
+
+  if $# < 3 then // 2nd level test
+    magtst('info','running addprobe tests '+$sub)
+    
+    // perform legacy addprobe tests if indicated
+    $base_case = 'legacy+user' // need this one to set up expected value(s)
+    substr($sub,'find','legacy+user'):$do_leg_usr
+    if $do_leg_usr or $base_case='legacy+user' then
+      probeid('disable') // legacy mode
+      destroy('H1dres_expected'):$ok
+      {$0}('addprobe','legacy',$tst_leg_usr,'local','stdpar'):$rv1
+      probe=$tst_leg_usr
+      create('H1dres_expected')
+      getparam('dres','H1'):H1dres_expected // set up spot check
+
+      // check that $tst_usr is in userdir
+      $legacy_usr = userdir+'/probes/'+$tst_leg_usr
+      exists($legacy_usr,'file'):$legacy_usr_ex   // should exist
+      magtst('assert', $legacy_usr_ex,
+			   'expected legacy user probe file at '+$legacy_usr)
+  
+      // verify it wasn't added to the probe
+      probeid('exists',$tst_leg_usr):$probeid_usr_nex // shouldn't exist
+      magtst('assert', not($probeid_usr_nex),
+                       'legacy user probe file not expected in probeid db'):$r
+      $ret = $ret and $r
+    endif
+    
+    // perform probeid addprobe tests if indicated
+    substr($sub,'find','probeid+user'):$do_probeid_usr
+    if $do_probeid_usr then
+      probeid('enable')  // probeid mode
+      {$0}('addprobe','probeid',$tst_usr,'user','stdpar'):$rv3
+      probeid('exists',$tst_usr,'user'):$probeid_usr_ex    // should exist
+      magtst('assert', $probeid_usr_ex,
+			    'probeid user probe file in probeid db'):$r
+      $ret = $ret and $r
+    endif
+
+    $base_case = 'legacy+system' // need this one to set up expected value(s)
+    substr($sub,'find','legacy+system'):$do_leg_sys
+    if $do_leg_sys or $base_case='legacy+system' then
+      probeid('disable') // legacy mode
+      destroy('H1dres_expected'):$ok
+      {$0}('addprobe','legacy',$tst_leg_sys,'system','zero'):$rv2
+      create('H1dres_expected')
+      getparam('dres','H1'):H1dres_expected // set up spot check
+
+      // check that $tst_leg_sys is in systemdir
+      $legacy_sys = systemdir+'/probes/'+$tst_leg_sys
+      exists($legacy_sys,'file'):$legacy_sys_ex // should exist
+      magtst('assert', $legacy_sys_ex,
+                         'expected legacy system probe file at '+$legacy_sys)
+  
+      // verify that they weren't added to the probe
+      probeid('fexists',$tst_leg_sys,'system'):$probeid_sys_nex // shouldn't exist
+      magtst('assert', not($probeid_sys_nex),
+			    'legacy system probe file not in probeid db'):$r
+      $ret = $ret and $r
+    endif
+
+    substr($sub,'find','probeid+system'):$do_probeid_sys
+    if $do_probeid_sys then
+      probeid('enable')  // probeid mode
+      {$0}('addprobe','probeid',$tst_sys,'system','zero'):$rv4
+      probeid('exists', $tst_sys, 'system'):$probeid_sys_ex  // should exist
+      magtst('assert', $probeid_sys_ex,
+	                    'probeid system probe file in probeid db'):$r
+      $ret = $ret and $r
+    endif
+
+    // compare legacy and probeid user probes if possible
+    if $do_probeid_usr and $do_leg_usr then
+      probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+      $leg_path  = userdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+      magtst('compare', $tmp_usr, $tmp_usr, $leg_path,
+		      'probeid user configuration',
+		      'legacy user probe file'):$r
+      $ret = $ret and $r
+    endif
+
+    // compare legacy and probeid sytem probes if possible
+    if $do_probeid_sys and $do_leg_sys then
+      probeid('export',$tst_sys,'probes/'+$tst_sys,$tmp_sys,'system')
+      $leg_path  = systemdir+'/probes/'+$tst_leg_sys+'/'+$tst_leg_sys
+      magtst('compare', $tst_sys, $tmp_sys, $leg_path,
+		       'probeid system configuration',
+		       'legacy system probe file'):$r
+      $ret = $ret and $r
+    endif
+
+    // cleanup not handled by @before*, @after*, and test framework
+    destroy('H1dres_expected'):$ok
+    return $ret
+    
+  else // 3rd level test
+    if $# < 3.5 then
+      write('error','probeid_test addprobe 3rd level test requires 4 args')
+      write('error','  remember to combine multiple sub-tests in same string')
+      abort
+    endif
+    probeattr[1]=$4       // 'user', 'local', or 'system'
+    probeattr[2]=$5       // 'zero' or 'stdpar'
+    probe=$3              // set the probe configuration name system global
+
+    probelist('add')      // add the probe
+    $sub=$2+' \'probelist add\' ' // provide a sub-test description
+    $sub=$sub + 'with probeattr=[\''+probeattr[1]+'\',\''+probeattr[2]+'\']'
+    exists('H1dres_expected','parameter'):$e
+
+    if $e then  // spot check equivalence
+      $H1dres=0 getparam('dres','H1'):$H1dres
+      magtst('assertEqual',$H1dres,H1dres_expected,
+				$3+' '+$4+' $H1dres=H1dres_expected'):$match
+    endif
+  endif // 3rd level
+  return $ret
+
+elseif $1='addparams' then
+  //-- test probeid addparam
+  // 1. add a new probe
+  // 2. add a new parameter to that probe
+  // 3. verify the new parameter
+  // 4. delete the probe
+  // 5. repeat test with legacy probe
+  // 6. compare results
+  $tstdesc = 'addparams'
+  $nuc     = 'Ca43'
+  $param   = 'Test'
+  $val     = 'test'
+  $getparam_leg_out = ''
+  $getparam_out     = ''
+
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  addparams($param,$val,$nuc,$tst_leg_usr,'local')
+  getparam($param,$nuc):$getparam_leg_out
+
+  probeid('enable')
+  addprobe($tst_usr)
+  addparams($param,$val,$nuc,$tst_usr,'user')
+  getparam($param,$nuc):$getparam_out
+
+  if $getparam_out <> $val then
+    magtst('fail',$nuc+$param+' probeid value not set (\''+$getparam_out+'\' vs. \''+$val+'\''):$r1
+    return($r1)
+  endif
+  magtst('assert',$getparam_out=$getparam_leg_out
+		 ,$nuc+$param+' probeid value matches legacy'):$r1
+  return $r1
+
+elseif $1='setparams' then
+  //-- use put_ecc_probefile macro to test setparams, since it uses setparams
+  if $# = 1 then // start of test
+    $tst='put_ecc_probefile'
+    destroy('amp1'):$a1  destroy('amp2'):$a2
+    destroy('amp3'):$a3  destroy('amp4'):$a4
+    destroy('tc1'):$t1   destroy('tc2'):$t2 
+    destroy('tc3'):$t3   destroy('tc4'):$t4
+    ecc_localpars        // create ECC params for both legacy and probeid
+
+    probeid('disable')
+    $tc1_leg_out='' $val_leg='' $date_leg=''
+    addprobe($tst_leg_usr)
+    magtst('assertEqual',$tst_leg_usr,probe)
+    getparam('tc1','ECC'):$tc1_leg_out     // sanity check: no 'ECCtc1' yet
+    {$0}($1,'legacy'):$val_leg,$date_leg   // setparams in recursive call
+    magtst('assertEqual',$tc1_leg_out,'')
+
+    probeid('enable')
+    $tc1_out='' $val='' $date=''
+    addprobe($tst_usr)
+    magtst('assertEqual',$tst_usr,probe)
+
+    getparam('tc1','ECC'):$tc1_out     	   // sanity check: no 'ECCtc1' yet
+    magtst('assertEqual',$tc1_out,'')
+    {$0}($1,'probeid'):$val,$date      	   // setparams in recursive call
+
+    // compare the return values from the last setparams call
+    magtst('assertEqual',$val,$val_leg,'legacy and probeid ECCamp4'):$rv
+    magtst('assertEqual',$date,$date_leg,'legacy and probeid dates'):$rd
+    magtst('assert',$tc1_out=$tc1_leg_out
+           ,'ECCtc1 probeid value matches legacy after put_ecc_probefile'):$r1
+
+    // compare probeid and legacy versions post-setparam
+    probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+    $leg_path  = userdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+
+    magtst('compare',$tst_usr,$tst_leg_usr,$leg_path
+    	          ,'probeid setparam probe file'
+    		  ,'legacy setparam probe file'):$r2
+    return($r1 and $r2 and $rd and $rv)
+
+  else // 2nd-level call that does the heavy lifting (from put_ecc_probefile)
+    magtst('info','performing put_ecc_probefile in \''+$2+'\' mode')
+    add_ecc_probepars
+    $tc1='' $tc2='' $tc3='' $tc4=''
+    $amp1='' $amp2='' $amp3='' $amp4=''
+
+    format(tc1,6,5):$tc1
+    format(tc2,6,5):$tc2
+    format(tc3,6,5):$tc3
+    format(tc4,6,4):$tc4
+
+    format(amp1,6,4):$amp1
+    format(amp2,6,4):$amp2
+    format(amp3,6,4):$amp3
+    format(amp4,6,4):$amp4
+
+    $oldval='' $olddate=''
+    setparams('tc1',$tc1,'ECC')
+    setparams('tc2',$tc2,'ECC')
+    setparams('tc3',$tc3,'ECC')
+    setparams('tc4',$tc4,'ECC')
+    setparams('amp1',$amp1,'ECC')
+    setparams('amp2',$amp2,'ECC')
+    setparams('amp3',$amp3,'ECC')
+    setparams('amp4',$amp4,'ECC'):$oldval,$olddate
+    return($oldval,$olddate)
+  endif
+
+elseif $1='addlkpars' then
+  //-- 
+  $tstdesc  = 'addlkpars'
+  $nonuc    = 'Te43'        // shouldn't find this
+  $noparam  = 'Test'
+  $val      = 'test'
+  $lkparam  = 'pwr_acetone' // by visually inspecting the addlkpars macro file
+  $lknuc    = 'lk'
+  $lkval    = '0'
+  $getparam_leg_out = ''  $pre_getparam_leg_out = ''
+  $getparam_out     = ''  $pre_getparam_out     = ''
+
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  getparam($lkparam,$lknuc):$pre_getparam_leg_out
+  addlkpars($tst_leg_usr)
+  getparam($noparam,$nonuc):$getparam_leg_out
+  getparam($lkparam,$lknuc):$getlkparam_leg_out
+
+  probeid('enable')
+  addprobe($tst_usr)
+  getparam($lkparam,$lknuc):$pre_getparam_out
+  addlkpars($tst_usr)
+  getparam($noparam,$nonuc):$getparam_out
+  getparam($lkparam,$lknuc):$getlkparam_out
+
+  magtst('assertEqual',$pre_getparam_leg_out,'','parameter value')
+  magtst('assertEqual',$pre_getparam_out,'','parameter value')
+  magtst('assertEqual',$getparam_out,'','parameter value')
+  magtst('assertEqual',$getlkparam_out,0,'lk paramter value')
+  magtst('assert',($getparam_leg_out=$getparam_out),'legacy and probe id parameters')
+  magtst('assert',($getlkparam_leg_out=$getlkparam_out),'legacy and probe id lk parameters')
+  
+  // compare and contrast
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+  $leg_path = userdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+  magtst('compare',$tst_usr,$tmp_usr,$leg_path,
+                   'probeid user probe file','legacy user probe file'):$ret
+
+  return($ret)
+
+elseif $1='getparam' then
+  //-- verify getparam
+  $nuc         = 'C13'
+  $nuc_pw90    = 'pw90'
+  $nuc_nothing = 'st'
+
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  $nuc_leg_pw90_out=0
+  $nuc_leg_nothing_out=''
+  getparam($nuc_pw90,$nuc):$nuc_leg_pw90_out
+  getparam($nuc_nothing,$nuc):$nuc_leg_nothing_out
+  $leg_path  = systemdir+'/probes/'+$tst_leg_sys+'/'+$tst_leg_sys
+
+  // getparam output may be real, string, or have no return values
+  // for the C13pw90 values we're expectign real values, but non-existing
+  // values don't have a return value and therefore don't modify the
+  // string passed in.
+  probeid('enable')
+  addprobe($tst_usr)
+
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+  $nuc_pw90_out=0       //destroy('$nuc_pw90_out')
+  $nuc_nothing_out=''   //destroy('$nuc_nothing_out')
+  getparam($nuc_pw90,$nuc):$nuc_pw90_out
+
+  getparam($nuc_nothing,$nuc):$nuc_nothing_out
+  magtst('assertEqual',$nuc_pw90_out, $nuc_leg_pw90_out
+    		 ,$nuc+$nuc_pw90+' probeid value matches legacy'
+		 ,$nuc+$nuc_pw90+' probeid value doesn\'t match legacy value'):$r1
+
+  magtst('assertEqual',$nuc_nothing_out,$nuc_leg_nothing_out
+   		 ,$nuc+$nuc_nothing+' probeid value matches legacy'
+    		 ,$nuc+$nuc_nothing+' probeid value doesn\'t match legacy value \''):$r2
+
+  return($r1 and $r2)
+
+elseif $1='update' then
+  // preliminaries
+  $numrfch_was = numrfch
+  $probe_was = probe
+  $nuc_param = 'dmf2'
+  $nuc       = 'P31'
+
+  // legacy behavior as a gold standard
+  probeid('disable')
+  numrfch = 2
+  addprobe($tst_leg_usr)
+  probe = $tst_leg_usr
+  numrfch = 4                // cause 'updateprobe' to add additional values
+  updateprobe
+  getparam($nuc_param,$nuc):$updated_val_leg // spot check
+
+  // probeid 
+  probeid('enable')    
+  numrfch = 2
+  addprobe($tst_usr)
+  probe = $tst_usr
+  numrfch = 4
+  updateprobe
+  getparam($nuc_param,$nuc):$updated_val     // spot check
+
+  // compare and contrast
+  magtst('assert',($updated_val = 200 and $updated_val = $updated_val_leg)
+  		 , $nuc+$nuc_param+' matches'
+    		 , $nuc+$nuc_param+' don\'t match'):$spot
+      
+  // compare and contrast
+  $leg_path = userdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+  probeid('export',$tst_usr,'probes/'+$tst_usr,$tmp_usr)
+  magtst('compare',$tst_usr,$tmp_usr,$leg_path,
+       'probeid user probe file','legacy user probe file'):$ret
+
+  numrfch = $numrfch_was
+  probe = $probe_was
+  return($spot and $ret)
+
+elseif $1='setprobe' then
+  // test that setprobe produces the same results with and without probeid
+  magtst('fail','not implemented yet'):$ret
+  return($ret)
+
+elseif $1='calibrate' then
+  magtst('todo','nothing to do for calibrate'):$ret
+  return($ret)
+
+elseif $1='Autobackup' or $1='autobackup' then
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  probe = $tst_leg_usr
+  Autobackup:$tst_leg_backup
+  $src_leg=''
+  exists(userdir+'/probes/'+$tst_leg_usr,'file'):$src_leg
+  magtst('assert',$src_leg<>'')
+  
+  probeid('enable')
+  addprobe($tst_usr)
+  probe = $tst_usr
+  Autobackup:$tst_backup
+  $src=0
+  probeid('fexists',$tst_backup,'probes/'+$tst_usr,'user'):$src
+  magtst('assert',$src=1)
+  
+  return
+
+elseif $1='setpwx180ad' then
+  //-- test power settings by fooling the macro into looking at RF files
+  //   on the probe
+  $shapes='hrm180','sech180','club180','hard'
+  $nuc='C13'
+
+  // entry point to recursive call to set up initial power values
+  if ($# > 1) then
+    if $2='setup' then
+      // set up some bogus power specification files and related parameters
+      addparams('pwx180ad',$3+'tst',$nuc)
+      addparams('pwx180ref',$4+'tst',$nuc)
+    else // invalid sub-command in $2
+      magtst('error','unknown unit-test sub-command '+$0+' '+$1+' '+$2)
+    endif
+    return
+  endif
+
+  $numrfch_was = numrfch
+  numrfch = 2
+  $srcdir=systemdir+'/shapelib/'
+
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  probe=$tst_leg_usr
+
+  // test non-'hard' RF files
+  // seed the probe directory with some starting RF files
+  $dstdir=userdir+'/probes/'+probe+'/'
+  $cpout0=0 $cpout1=0 $cpout2=0
+  cp($srcdir+'hrm180.RF',$dstdir+'hrm180tst.RF'):$cpout0
+  // don't: cp($srcdir+'sech180.RF',$dstdir+'sech180tst.RF'):$cpout1
+  cp($srcdir+'club180.RF',$dstdir+'club180tst.RF'):$cpout2
+  magtst('assert',$cpout0 and not($cpout1),'copy shapes to '+$dstdir)
+  {$0}($1,'setup','hrm180tst','sech180tst')
+  setpwx180ad('C13')
+  exists(systemdir+'/probes/hrm180tst.RF','file'):$ex0d
+  exists(systemdir+'/probes/'+probe+'/hrm180tst.RF','file'):$ex0p
+  //magtst('assertFalse',$ex0d,'RF files in '+systemdir+'/probes/hrm180tst.RF')
+  //magtst('assertFalse',$ex0p,'Rf files in '+systemdir+'/probes/'+probe+'/hrm180tst.RF')
+
+  probeid('enable')
+  addprobe($tst_leg)
+  probe=$tst_usr
+  $subdir = 'probes/'+probe+'/'
+  probeid('import','file',$srcdir+'hrm180.RF',$subdir+'hrm180tst.RF'):$cpout0
+  // don't: probeid('import','file',$srcdir+'sech180.RF',$subdir+'sech180tst.RF'):$cpout1
+  magtst('assert',$cpout0 and $cpout1 and $cpout2,'import shapes to probe '+$subdir)
+  setpwx180ad('C13')
+  probeid('fexists','hrm180tst.RF','probes'):$pex0d
+  probeid('fexists','hrm180tst.RF','probes/'+probe):$pex0p
+  magtst('assertEqual',$ex0d,$pex0d,'legacy and probeid system probe RF files')
+  magtst('assertEqual',$ex0p,$pex0p,'legacy and probeid system probe '+probe)
+
+  // test 'hard' RF files
+  probeid('disable')
+  {$0}('setup','hard','club180tst')
+  setpwx180ad('C13')
+  exists(userdir+'clup180tst','file')
+  magtst('assertTrue',0) // TODO: check whether the files are in the probe dirs
+
+  probeid('enable')
+  {$0}('setup','hard','club180tst')
+  setpwx180ad('C13')
+
+  // restore previous numrfch value
+  numrfch = $numrfch_was // restore numrfch
+
+  return
+
+elseif $1='blob' then
+  addprobe($tst_usr)        // create a user-level probe file
+  magtst('tmpfile'):$tmp    // get temp file from the test infrastructure
+  write('file',$tmp,'hello world'):$w
+
+  // test blob import
+  magtst('tmpfile'):$tmp    // get temp file from the test infrastructure
+  $blob='blob.RF'
+  $path='probes/'+$tst_usr
+  probeid('blob:import',$tmp,$blob,$path,'user')
+  probeid('fexists',$blob,$path):$e
+  magtst('assert',$e,$blob+' created')
+
+  // test blob handle
+  probeid('blob:r',$blob,$path):$handle
+  $attr='' $vals=''
+  readfile($handle,'$attr','$vals'):$e
+  magtst('assertEqual',$attr[1],'hello')
+  magtst('assertEqual',$vals[1],'world')
+
+  // test blob deletion
+  probeid('rm',$blob,'probes/'+$tst_usr):$r
+  probeid('fexists',$blob,'probes/'+$tst_usr):$d
+  magtst('assert',$d,$blob+' destroyed')
+  return
+
+elseif $1='setup' then
+  magtst('fail','TODO: FINISH THIS TEST THEN \'setprobe\'')
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  probe=$tst_leg_usr
+  tn='some weird nucleus XYZ <> H1 and <> F19'
+  setparam('dmf',250)
+  setup
+  probeid('assert',dmf=200)
+
+  probeid('enable')
+  addprobe($tst_usr)
+  probe=$tst_usr
+  tn='some weird nucleus XYZ'
+  setparam('dmf',250)
+  getparam('dmf',XYZ)
+  setup
+  return($ret)
+
+elseif $1='protune' then
+  magtst('todo','not implemented yet'):$ret
+  return($ret)
+
+"-------------------------------<probelist tests>-----------------------------"
+elseif $1='HardwareBar' then
+  //--
+  // Probe.xml has buttons for 
+  //   probelist('selectprobe','$VALUE')
+  //           references userdir+'persistence/probe_list'
+  //           sets probe to selected $VALUE
+  //   probelist('rm')
+  //   probelist('probeex')
+  //   probelist('copy')
+  //   probelist('add')
+
+  $menu_file = userdir+'/persistence/probe_list'
+  if $# < 2 then
+    // initialize the 2 probes
+    probeid('connect',$tst_blank_2)
+    probeid('init','autox400DB','ID-Test2','SN-Test2')
+    probeid('attach')
+    addprobe($tst_usr_2)
+
+    probeid('connect',$tst_blank_1)
+    probeid('init','autox400DB','ID-Test1','SN-Test1')
+    probeid('attach')
+
+    // simulate typing the probe name in the Probe Name text box
+    setvalue('probe',$tst_usr,'global')
+    probelist('add')          // simulate pressing "New configuration" button
+    probelist('copy')         // simulate pressing "Copy to system" button
+
+    // verify that probe_list has been updated tst_blank_1:tst_usr
+    probelist('init')
+    $lu1o=0 lookup('mfile',$menu_file,'count','"'+$tst_usr+'"'):$lu1o
+
+    // expect two versions of it, 'system' and 'user'
+    magtst('assertTrue',$lu1o=2,'two "'+$tst_usr+'" configurations listed')
+
+    {$0}($1,'check',$tst_usr) // probe id shouldn't be in the probe file
+    {$0}($1,'connect 2nd')
+    return
+    
+  elseif $2='connect 2nd' then
+    // connect probe tst_blank_2
+    probeid('connect',$tst_blank_2)
+    //----input('set break point and hit enter>'):$dummy
+    probeid('id'):$id         // nudge the probe to update its id
+    //----input('lookup>'):$dummy
+
+    // expect tst_usr probe file in userdir+'/persistence/probe_list' menu
+    $lu2o=0 lookup('mfile',$menu_file,'count','"'+$tst_usr_2+'"'):$lu2o,$lu2n
+
+    // expect only a single version of it ('user')
+    magtst('assertTrue',$lu2o=1,'one "'+$tst_usr_2+'" configuration listed')
+    {$0}($1,'check',$tst_usr_2)
+    return
+
+  elseif $2='check' then
+    // verify that the probe ID info is not in the probe file
+    // (it should be dynamically merged in)
+    if $# < 3 then 
+      magtst('abort',$0+' \''+$1+'\' requires 3rd probe file arg')
+    endif
+    magtst('tmpfile'):$tmp    // get temp file from the test infrastructure
+    $probeHd='' $probeID = '' $probeSN='' $probePN='' $probeDesc='' $probeDate=''
+    probeid('export',$3,'probes/'+$3,$tmp)
+    lookup('mfile',$tmp,'ID:','read','readline'):$probeHd
+    lookup('mfile',$tmp,'ProbeID','read','readline'):$probeID
+    lookup('mfile',$tmp,'SN','read','readline'):$probeSN
+    lookup('mfile',$tmp,'PN','read','readline'):$probePN
+    lookup('mfile',$tmp,'Desc','readline'):$probeDesc
+    lookup('mfile',$tmp,'Manufacturedate','readline'):$probeDate
+    magtst('assertTrue',$probeHd='',$3+': no probe ID header '+$probeHd)
+    magtst('assertTrue',$probeSN='',$3+': no probe ID field '+$probeID)
+    magtst('assertTrue',$probePN='',$3+': no probe SN field '+$probeSN)
+    magtst('assertTrue',$probeDesc='',$3+': no probe description '+$probeDesc)
+    magtst('assertTrue',$probeDate='',$3+': no probe date '+$probeDate)
+    return
+
+  elseif $2='print' then // print the list of menu items
+    info('physical probe '+$tst_blank_2+': menu displays ')
+    lookup('file',$menu_file)
+    repeat
+      $n=0 $lu2o_a='' lookup('readline'):$lu2o_a,$n
+      if $n>0 then info($lu2o_a) endif
+    until ($n < 1)
+  endif
+
+  magtst('abort',$2+' is an invalid '+$0+' \''+$1+'\' option')
+  return
+
+elseif $1='probelist' then
+  magtst('test','rm')
+  magtst('test','copy')
+  magtst('todo','other probelist subtests not implemented yet'):$ret
+  return($ret)
+  // TODO: (most are implicitly tested as parts of other tests)
+  {$0}('makenucmenu')
+  {$0}('selectprobe')
+  {$0}('add')
+  {$0}('probeex')
+  {$0}('check')
+  probelist
+  return($ret)
+
+elseif $1='probe button' then
+  probelist('init')
+  return
+
+elseif $1='readprobe' then
+  //-- chempack readprobe is complex because it uses a mixed environment
+  //   where some probe files are read from 
+  //       archivedir+'/'+sample+'/dirinfo/macdir/userprobe_+$2  and
+  //       autodir+'/enterQ.macdir/'+$locdir+$2     (getlocdir:$locdir)
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  addprobe($tst_leg_both)
+
+  probeid('enable')
+  addprobe($tst_usr)
+  addprobe($tst_both)
+
+  magtst('fail','on the short list')
+  return
+
+elseif $1='rm' then
+  //-- tests probelist('rm')
+  if $# > 1 then
+    probe = $2
+    probeattr[1] = $3       // 'user', 'local', or 'system'
+    probeattr[2] = $4       // 'zero' or 'stdpar'
+    probelist('rm')
+    return
+  endif
+  
+  // run test with probeid disabled
+  probeid('disable')
+  addprobe($tst_leg_usr)                  // add a control group probe :-)
+  addprobe($tst_leg_both)                 // add a probe file to delete
+  probelist('copy',$tst_leg_both)         // copy it to system area
+  $sys_leg_path = systemdir+'/probes/'+$tst_leg_both+'/'+$tst_leg_both
+
+  {$0}($1,$tst_leg_both,'user','stdpar')  // remove user file
+  exists($sys_leg_path,'file'):$ebs1
+  exists($tst_leg_both,'probes'):$ebu1
+  exists($tst_leg_usr,'probes'):$euu1
+  magtst('assert',$ebu1<>0 and $euu1<>0 and $ebs1<>0,
+	 'only legacy user probe file deleted')
+
+  {$0}($1,$tst_leg_both,'system','zero')  // remove system file
+  exists($tst_leg_both,'probes'):$ebb0
+  exists($sys_leg_path,'file'):$ebs0
+  magtst('assert',$ebs0=0 and $ebb0=0,'only legacy system file deleted')
+  
+  // run test with probeid enabled
+  probeid('enable')
+  addprobe($tst_usr)
+  addprobe($tst_both)
+  probelist('copy',$tst_both)
+  probeid('fexists',$tst_both,'probes/'+$tst_both,'system'):$e
+  magtst('assert',$e,$tst_both+' copied to system probe file')
+
+  {$0}($1,$tst_both,'user','stdpar')      // remove user file
+  probeid('fexists',$tst_both):$pbu1      // still have 1 copy of $tst_both
+    // verify that system $tst_both hasn't been deleted
+  probeid('fexists',$tst_both,'probes/'+$tst_both,'system'):$pbs1
+    // verify that user $tst_both has been deleted
+  probeid('fexists',$tst_both,'probes/'+$tst_both,'user'):$pbu0
+  probeid('fexists',$tst_usr):$pu1        // $tst_usr should be untouched
+
+  magtst('assert',$pbu1<>0,'one copy of user,system remains')
+  magtst('assert',$pbs1<>0,'system copy was not deleted')
+  magtst('assert',$pbu0=0,'user copy was deleted')
+  magtst('assert',$pu1<>0,'unrelated probe file was not deleted')
+  
+  {$0}($1,$tst_both,'system','zero')      // remove sytem file
+  probeid('fexists',$tst_both):$pbs0_     // should be no $tst_both copies left
+  probeid('fexists',$tst_usr):$pu1_       // $tst_usr should be untouched
+
+  magtst('assert',$pbs0_=0,'both probe files deleted')
+  magtst('assert',$pu1_<>0,'unrelated copy not deleted')
+
+  return
+
+elseif $1='copy' then
+  //-- copy probe from user to system area
+
+  // run test with probeid disabled
+  $leg_usr_path  = userdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+  $leg_sys_path  = systemdir+'/probes/'+$tst_leg_usr+'/'+$tst_leg_usr
+  probeid('disable')
+  addprobe($tst_leg_usr)
+  exists($leg_usr_path,'file'):$usrex
+  exists($leg_sys_path,'file'):$sysex
+  if not($usrex) and $sysex then
+    magtst('error','preconditions not met: '+$leg_usr_path+' or '+$leg_sys_path)
+    return(0)
+  endif
+  probelist('copy')
+  // confirm
+  exists($leg_sys_path,'file'):$sysex
+  if $sysex then
+    magtst('compare',$tst_leg_usr,$leg_usr_path,$leg_sys_path,
+         'legacy user probe file','legacy system probe file'):$r
+  else
+    magtst('fail','copy legacy probe '+$tst_leg_usr+' failed')
+  endif
+
+  // run test with probeid enabled
+  probeid('enable')
+  probeid('fexists',$tst_usr,'probes/'+$tst_usr,'system'):$sys_nex
+  probeid('fexists',$tst_usr,'probes/'+$tst_usr):$usr_ex
+  if $sys_nex then
+    magtst('fail',$tst_usr+' not copied')
+  endif
+  
+  addprobe($tst_usr)
+  probeid('fexists',$tst_usr,'probes/'+$tst_usr):$usr_ex
+  if $sys_nex then
+    magtst('fail',$tst_usr+' not added as expected')
+    return(0)
+  endif
+  probelist('copy')
+  probeid('fexists',$tst_usr,'probes/'+$tst_usr,'system'):$sys_ex
+  if not $sys_ex then
+    magtst('fail',$tst_usr+' didn\'t get copied to sytem directory'):$ret
+    return($ret)
+  endif
+
+  // confirm
+  write('line3','probeid test copy compare')
+  magtst('compare',$tst_usr,$tst_sys,$leg_sys_path
+                  ,'legacy user probe file','legacy system probe file'):$ret
+
+  magtst('todo','test that shape files are copied')
+  return $ret
+
+"----------------------------<baseline sanity tests>--------------------------"
+elseif $1='echo' then
+  // simple echo test
+  $in = 'hello'
+  probeid('echo',$in):$out
+  magtst('assert',$out = $in
+		 ,'echo '+$in+' = '+$out, 'echo '+$in+' = '+$out):$ret
+  return $ret
+
+elseif $1='send2vnmrj' then
+  // probe server/VnmrJ command interface
+  // Issue the Vnmrj command 
+  //   "create('probeServerVnmrjTst','string','global','hello')
+  // from the probe server
+  //
+  $vjvar  = 'vjptst'
+  $vjval  = 'hello'
+  destroy($vjvar,'global'):$ok
+  $vjcmd  = 'create' //\(\''+$vjvar+'\',\'string\',\'global\',\''+$vjval+'\'\)'
+  $vjargs = '\''+$vjvar+'\',\'string\',\'global\',\''+$vjval+'\''
+  $vjtest = $vjcmd+'('+$vjargs+')'
+
+  // sanity test: make sure the command actually works
+  {$vjtest}
+  getvalue($vjvar,'global'):$val
+  magtst('assert',$val=$vjval,$vjcmd+' succeeded',$vjcmd+' failed')
+  destroy($vjvar,'global'):$ok
+
+  // execute the command from the probe server
+  //$vj     = $vjcmd+'\\\('+$vjargs+'\\\)'
+  info('$args='+$vjargs)
+  $vj     = '"\\"'+$vjcmd+'('+$vjargs+')\\""'
+  $pscmd  ='probeid(\'vnmrj\',\''+$vj+'\')'
+  magtst('info','probe server request \''+$vj+'\'')
+  magtst('info',$pscmd)
+  //probeid('vnmrj','"\\"create(\''+$vjvar+'\',\'string\',\'global\',\'hohoho\')\\\""'):$ret
+  probeid('vnmrj','"\\"probeid(\'createglobal\',\''+$vjvar+'\',\'string\',\'global\',\'hohoho\')\\\""'):$ret
+  getvalue($vjvar,'global')
+  magtst('assert',$val=$vjval,$pscmd+' succeeded',$pscmd+' failed')
+  return
+
+"-----------------------------------<cache>-----------------------------------"
+elseif $1='cache' then
+  // deleted file from cache should also be delete from probe upon flush
+  magtst('todo','cache delete test')
+
+  // delete file twice to get an error 2nd time around
+  magtst('todo','cache delete twice')
+
+  // delete a file, then add it back, make sure it gets to probe
+  magtst('todo','cache delete then add')
+  return
+
+"-----------------------------------<match>-----------------------------------"
+elseif $1='match' then
+  // deleted file from cache should also be delete from probe upon flush
+  probeid('enable')
+
+  // initialize the 2 probes
+  probeid('connect',$tst_blank_1)
+  probeid('init','autox400DB','ID-Test1','SN-Test1')
+  probeid('connect',$tst_blank_2)
+  probeid('init','autox400DB','ID-Test2','SN-Test2')
+
+  // reconnect 1st probe
+  probeid('connect',$tst_blank_1)
+  probeid('attach')
+  addprobe($tst_usr)
+  probeid('fexists',$tst_usr):$tu1e1
+  probeid('id'):$id1
+  probeid('query','match'):$mat1      // check if expected and actual id match
+  probeid('query','connected'):$con1  // check if probe is physically connected
+  probeid('query','attached'):$at1    // check if probe is mounted
+  probeid('query','expected'):$ex1    // get the expected probe id
+  magtst('assertTrue',$con1):$c1o
+  magtst('assertTrue',$mat1):$m1o
+  magtst('assertTrue',$ex1='ID-Test1'):$e1o
+
+  // disconnect 1st probe and reconnect 2nd probe
+  probeid('connect',$tst_blank_2)
+  probeid('query','match'):$mat2
+  probeid('query','connected'):$con2
+  probeid('echo','hello')  // facilitate setting a temporally useful breakpoint
+  probeid('query','expected'):$ex2
+
+  magtst('assertTrue',$con2,$tst_blank_2+' connected'):$c2o
+  magtst('assertFalse',$mat2,$tst_blank_2+' no match'):$m2o
+  magtst('assertTrue',$ex2='ID-Test1',' expected'):$e2o
+
+  probeid('attach')                   // formally "attach" probe to VnmrJ
+  probeid('query','connected'):$con2b
+  probeid('query','attached'):$at2b
+  probeid('query','match'):$mat2b
+  probeid('query','expected'):$ex2b
+  magtst('assertTrue',$con2b,' still connected'):$c2bo
+  magtst('assertTrue',$mat2b,' match'):$m2bo
+  magtst('assertTrue',$ex2b='ID-Test2'):$e1o
+
+  addprobe($tst_usr_2)
+  probeid('exists',$tst_usr):$tu1e2
+  probeid('exists',$tst_usr_2):$tu2e2
+  probeid('id'):$id2
+
+  magtst('assertFalse',$tu1e2):$ret
+
+  return($ret)
+
+"---------------------------------<disconnect>--------------------------------"
+elseif $1='connect' then
+  magtst('tmpfile'):$tmp
+  $tmp1=$tmp+'.probe_1'
+  $tmp2=$tmp+'.probe_2'
+  mkdir($tmp1)
+  mkdir($tmp2)
+  probeid('sim','connect',$tmp1):$con1 // simulate connecting an uninitialized probe
+  probeid('create','autox400DB')       // initialize the probe as an autox400DB
+  probeid('sim','disconnect'):$dis1    // simulate disconnecting initialized probe
+
+  probeid('sim','connect',$tmp2):$con2
+  probeid('create','generic')
+  probeid('sim','disconnect'):$dis2
+
+  // disconnect probe during an experiment
+  magtst('todo','probe disconnected during experiment')
+
+  // disconnect one probe and replace it with another during the experiment
+  magtst('todo','probe replacement during experiment')
+  return
+
+"---------------------------------<permission>--------------------------------"
+elseif $1='permissions' then
+  magtst('todo','permission test')
+  return
+
+"--------------------------------<study queue>--------------------------------"
+elseif $1='new study' then
+  magtst('todo','Study Queue: new study')
+  return
+
+elseif $1='continue study' then
+  magtst('todo','Study Queue: continue study')
+  return
+
+"-----------------------------------<wrap-up>---------------------------------"
+else
+  write('error','invalid '+$0+' paramter \''+$1+'\'')
+  magtst('todo',$1+' test')
+  return  // formerly abort, but that leads to too many abort counts
+
+endif

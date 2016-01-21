@@ -1,0 +1,55 @@
+"macro rna_makestC50"
+"rna_makestC50 - makes sech-amplitude/tanh-frequency swept pulse with 2 microsec  "
+"	                steps, 30 ppm bandwidth, and 1.0 millisec pulselength  "
+"           In macro, units are kHz for bandwidth and ms for pulselength       "
+
+"         		R. Bendall, JCU, Jan 1998		               "
+
+"From Bendall, JMR A116, 46 (1995) and STUD papers:			       "
+"   Using Pulsetool RFmax was determined for average -0.995 inversion across   "
+"   the effecive bandwidth for Tp = 1.0 ms.				       "
+
+"   Using these values, bwdth/Tp(RFmax)^2 = 0.41   at bwdth = 13 kHz           "
+"                                         = 0.53   at bwdth = 7  kHz.          "
+"   				So use 0.41	  			       "
+
+"   A 1.0ms pulse length was determined suitable for the stC200 pulse so       "
+"			 Tp = $t = 1.0 ms  below. 			       "           
+"      effective bandwidth(for -0.95 inversion) = bwdth - 3.85 kHz             "
+"                           effective bandwidth = 7.5*sfrq/600                 "
+"      so,                bwdth = (7.5*sfrq/600) + 3.85 = $b below             "
+
+"   This ensures that at 400 MHz there is 0.95 retention, or 2.5% inversion at "
+"   71.5ppm if dof=125ppm, so aliphatics are not inverted. There is even better"
+"   selectivity at higher field strength.				       "
+
+"   In pulse sequences, bwdth/(RFmax)^2 = 0.41 so 			       "
+"			   RFmax = sqrt[(7.5*sfrq/600+3.85)/0.41]            "
+
+"   For 500, 600, and 800 MHz systems, reduced constant, Jr, for stC200 varies "
+"   from 0.92J on resonance, to 0.89J at s=+/-0.5, to 0.83 at s=+/-0.8.  For   "
+"   the stC80 pulse at 600 the nos. are 0.89J, 0.86J and 0.80J and for stC30   "
+"   they are 0.87J, 0.84J and 0.78J.  So in pulse sequences assume Jr = 0.86J  "
+"   as a compromise and 140us extra J delay required for each 1.0ms sech/tanh  "
+"   pulse.								       "
+
+
+$a = 5.2982937*2.0    "gives an amplitude threshold of 0.01, ie sech($a/2)=0.01"
+
+$file=userdir+'/shapelib/rna_stC50.RF'
+write('line3','Writing data to %s...',$file)
+write('reset',$file)  
+
+ 
+$i=1   repeat
+$x=$a*(-0.5 + ($i-1)/(500-1))    exp($x):$y    $z=($y + (1/$y))/2.0    ln($z):$w
+$amp = 1023.0/$z     $amp = trunc($amp + 0.5)
+
+$b = ((7.5*sfrq/600.0)+3.85)   $t = 1.0   "bandwidth and pulselength as above"
+    
+$p = 360.0*$b*$t*$w/(2.0*$a)    $phase = (trunc(2.0*$p + 0.5))/2.0
+write('file',$file,'%5.1f\t%6.1f\t1.0',$phase,$amp)
+$i=$i+1   until $i>500
+
+BPmoveshape('rna_stC50.RF')
+write('line3','Done!')     dg

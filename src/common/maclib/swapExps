@@ -1,0 +1,49 @@
+"macro swapExps"
+// swap exp in two viewports
+// before swap, vp1 has exp1, vp2 has exp2. 
+// Note, 1 and 2 represent any two numbers.
+
+if($# < 4) then
+   write('line3','Usage: swapExps\(vp1,exp1,vp2,exp2\)')
+endif
+
+// convert integers to strings
+$vp1=''
+$vp2=''
+$exp1=''
+$exp2=''
+format($1,0,0):$vp1
+format($2,0,0):$exp1
+format($3,0,0):$vp2
+format($4,0,0):$exp2
+
+// jexp commands
+$jexp1='jexp'+$exp1 + ' disExp'
+$jexp2='jexp'+$exp2 + ' disExp'
+$jexp3=''
+
+// find an unused exp as $jexp3
+$i=1
+$found=0
+while($found=0 and $i<100) do
+  $s=''
+  format($i,0,0):$s
+  $lpath = userdir + '/lock_' + $s +'.primary'
+  exists($lpath, 'file'):$e
+  if($e=0) then
+    $jexp3='jexp'+$s
+    exists($jexp3,'maclib'):$e
+    if(not $e) then
+      cexp($i) 
+    endif
+    $found=1
+  endif
+  $i=$i+1 
+endwhile
+
+// Note, vnmrjcmds are nested to avoid race condition. 
+$cmd=$jexp3 + ' vnmrjcmd(`VP ' + $vp1 +'\`,\`' + $jexp2 + ` vnmrjcmd(\\'VP ` + $vp2 +`\\',\\'` + $jexp1 +`\\')\`)\')`
+
+//write('line3', $cmd)
+
+vnmrjcmd('VP '+$vp2, $cmd)

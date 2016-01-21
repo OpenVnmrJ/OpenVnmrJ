@@ -1,0 +1,471 @@
+"macro prescan_frequency"
+"********************************************************************
+"
+" NAME:
+"    prescan_frequency
+"
+" DESCRIPTION:
+"    Do a center frequency experiment
+"
+" Ex.: prescan_frequency(<arg 1>,<arg2>)
+"
+"    <arg 1> = 'proc'- Process the acquired center frequency data
+"    <arg 1> = 'exp' - Acquire center frequency data
+"    <arg 2> = 'man' - optional, is used to analyze the data without 
+"                      invocation of the next prescan step
+"
+"********************************************************************
+$action = 'exp'
+$flag   = 'null'
+
+
+if ($# > 0) then
+  $action = $1
+endif
+if ($# > 1) then
+  $flag = $2
+endif
+if ($action <>  'proc' and $action <> 'exp') then
+     write('error','Invalid 1st argument -> Arg1 = proc |exp')
+     prescan_exit('abort')
+endif
+if ($flag <>  'ver' and $flag <> 'null' and $flag <> 'man' and $flag <> 'nogo') then
+     write('error','Invalid 1st argument -> Arg1 = null | man | ver | nogo')
+     prescan_exit('abort')
+endif
+$macro_name = $0
+
+"--------------------------------------------------------------------------------------"
+"                     I N I T I A L I Z E    V A R I A B L E S                         "
+"--------------------------------------------------------------------------------------"
+sw                       = 100000                    "set spectral width"
+np                       = 120000                    "set number of sample points"
+tr                       = coil_param[9]             "set TR for center frequency search" 
+$centerfreq              = sfrq                      "spectrometer frequency"
+$offset_limit            = 0.9                       "Offset limit for search"
+$coarse_power_step       = 3.0                       "Coarse power step size for correction"
+$search_window_upper     = 4.0                       "Upper limit of window for fat peak search in ppm"
+$search_window_lower     = 2.5                       "Lower limit of window for fat peak search in ppm"
+Prescan_FatOffset        = 0.0                       "Fat Offset"
+$temp_str                = ''                        "Temporary string varaible for output formating"
+$cp                      = 0.0                        "Temporary string varaible for output formating"   
+$update                  = 0                         "CoilTable update flag"
+$fat_ppm                 = 3.35                      "Theoretical Fat Offset for spectrometer"
+$fat                     = $fat_ppm*sfrq             "ppm -> Hz"         
+$fatfreq                 = -$fat                     "Default fat offset"
+$temp_str                = ''                        "temporary string"
+$start                   = $search_window_lower*sfrq "switch to Hz"
+$end                     = $search_window_upper*sfrq
+$cur_index               = 2                         "index holding current module to be executed"
+$prescan_flag            = 1                         "Prescan flag -> 1 = user prescan"
+$replace                 = 0                         "Coil Table update flag [1] = update ; [0] - no update "
+"--------------------------------------------------------------------------------------"
+"                     P E R F O R M     E X P E R I M E N T                            "
+"--------------------------------------------------------------------------------------"
+if ($action = 'exp') then
+     write('line3','ACQUIRE FREQUENCY')
+     Prescan_AcqStatus = 0                      "Reset acquisition status"
+     ldrf 
+volumercv = 'y'   "force receive on volume coil for now"
+rcvrs='y'
+     tof=0
+     resto  = 0                                 "set offset frequency to 0"
+     if (Prescan_SliceSelect = '') then
+       Prescan_SliceSelect = 'n'
+     endif
+     slice_select = Prescan_SliceSelect     
+     gain   = coil_param[6]
+
+     if (slice_select = 'n') then               "slice select -> OFF"
+	 gss = 0                                "Slice select gradient = 0"
+         p1 = coil_param[10]                    "set pulse width for hard pulse"
+     else                                       "slice select -> ON"
+	 p1     = coil_param[11] 	
+         thk    = Prescan_Thickness             "set slice thickness"
+         orient = Prescan_Orient                "set orientation"
+	 pss    = Prescan_SliceOffset/10
+	 lro    = Prescan_FOV
+         setgss('gss','thk')
+     endif
+      
+     
+     $tpwr = coil_param[8]                      "initialize current power with center freq power"
+     if ($tpwr > coil_param[22]) then               "if max power > CF power setting reduce"
+          $tpwr = coil_param[22]
+          write('error','Frequency Prescan: Coarse power exceeds allowed maximum, resetting to maximum')
+     endif	
+      
+     tpwr1 =  $tpwr                             "adjust the transmitter power"
+     
+     ticks = Prescan_Ticks
+     
+     Prescan_numberTries = 1                    "count this as a try"
+     Prescan_AcqStatus   = 0
+     
+     $message='prescan center frequency ; Transmitter Freq ='
+     format($centerfreq,12,9):$temp_str
+     prescan_log('acquire',$macro_name,$message+$temp_str)
+     werr('prescan_status')                   "handle acquisition errors in this macro"
+     execprocess=`prescan_frequency('proc','null')`
+     wdone=''
+     wexp = 'process'
+     if ($flag <> 'nogo') then
+       au
+     endif
+     
+"--------------------------------------------------------------------------------------"
+"                          A N A L Y S E   E X P E R I M E N T                         "
+"--------------------------------------------------------------------------------------"
+else 
+     if ($action = 'proc') then
+           $gain = gain
+           $tpwr = tpwr1
+           write('line3','PROCESS FREQUENCY')
+	   "----------------------------------------"
+	   " Check acquisition error                "
+	   "----------------------------------------"
+	   if (Prescan_AcqStatus = 2) then
+		prescan_log('abort',$macro_name,'Abort prescan due to acquisition error')
+		prescan_exit('abort')
+	   endif
+	   "----------------------------------------"
+	   " Check for ADC overflow                 "
+	   "----------------------------------------"
+	   if (Prescan_AcqStatus = 1) then
+	        if ($flag = 'man') then
+		     write('line3','Aquisition Error - ADC overflow ')
+		     Prescan_AcqStatus = 0
+		     abort
+		endif
+	        Prescan_numberTries = Prescan_numberTries + 1		 "Increment trial counter"
+		"----------------------------------------------"
+		" Retry if max number of tries is not exceeded "
+		"----------------------------------------------"       
+		if (Prescan_numberTries < Prescan_maxTries) then          "Retry if number of tries is not exceeded"	
+		     $gain = trunc($gain/2)   "Reduce Gain"
+		     "----------------------------------------"
+		     " Check if Gain is min.-> reduce Power "
+		     "----------------------------------------"	    
+		     if ($gain <= 0) then                 "receiver gain is at minimum"
+        		  $gain = 0
+			  $tpwr = $tpwr - $coarse_power_step   "reduce power"
+                	  "--------------------------------"
+			  "if both at minimum report error "
+                	  "--------------------------------"		 
+			  if ($tpwr < 1) then                    "Power too low"
+	        	       if (slice_select= 'n') then 
+				    slice_select='y'
+				    prescan_log('change',$macro_name,'Turn slice select on -> [y]')
+			       else
+			            prescan_log('error',$macro_name,'Signal strength too large')
+     			            write('error','PRESCAN FREQUENCY - Signal strength to large!')
+				    prescan_exit('abort')
+			       endif
+			  endif   
+                     endif
+		     "-----------------"
+		     " re-acquire data "  
+		     "-----------------"
+		     write('line3','RE-ACQUIRE FREQUENCY')
+		     $message = 'Re-acquire center frequency  - Gain : '
+		     format($gain,0,0):$temp_str
+		     $message = $message + $temp_str + '; Power (coarse): '
+		     format($tpwr,0,0):$temp_str
+		     $message = $message + $temp_str
+	             write('line3',$message)
+		     prescan_log('re-try',$macro_name,$message)     "log event"
+		     Prescan_AcqStatus = 0                          "reset acquisition status"
+		     gain = $gain                                   "set new receiver gain"
+		     tpwr1 = $tpwr                                  "set nwe transmitter power (coarse)"
+        	     wexp = 'process'                               "come back here when done"
+		     au                                             "submit the new experiment"
+        	     return   
+	        else
+        	     "-------------------------------------------------"
+        	     " if  max number of tries is exceeded report error"
+        	     "-------------------------------------------------"	    
+		     wexp = ''
+		     $message ='Exceeded maximum number of tries ! Trial ='
+		     format(Prescan_numberTries,0,0):$temp_str
+		     prescan_log('error',$macro_name,$message+$temp_str)				  "log event"
+		     write('error','%s: No valid signal found after maximum number of tries',$macro_name) "display error"
+		     prescan_exit('abort')
+		endif
+	   endif
+	  
+	  "------------------------"
+	  "save center frequency   "
+	  "------------------------"
+	  vp = 0
+          lb = 20
+          ph
+	  $txfreq = $centerfreq          
+          if (Prescan_Display = 1) or ($flag='man') then
+	    axis='h'
+            vp = 0
+            crl
+	    f full                           "full spectra"
+	    //av                               "absolute mode"
+            wft                               "FT with display"
+            aph0
+	    vsadj                            "auto-adjust vertical scaling"
+	    dss(1)
+            dscale
+	  else    
+	    wft('nods')                  "FFT with no display"
+	    f full
+	    //av                               "absolute mode"
+            aph0
+            vsadj                            "auto-adjust vertical scaling"
+          endif	       
+	 
+	  "----------------------------------------"
+	  " Check for a sufficiently strong signal "
+	  "----------------------------------------"
+	  cr = sp
+          rl
+	  $SNR = 0
+          dsn(wp-1000, wp-5000):$SNR,$n
+	  if ($SNR < Prescan_SNRThreshold) then     "signal too weak, run again after adjusting gain"
+	       $message = 'Center Frequency - Signal too weak ! SNR = '
+	       format($SNR,6,3):$temp_str
+	       prescan_log('warning',$macro_name,$message+$temp_str)
+	       write('line3',$message+$temp_str)
+	       write('line3','SECOND: %s',$flag)
+               if ($flag = 'man') then
+	            write('line3','Insufficient signal!')
+		    abort
+	       endif
+  	       "----------------------------------------------"
+ 	       " Retry if max number of tries is not exceeded "
+               "----------------------------------------------"   
+	       if (Prescan_numberTries < Prescan_maxTries) then
+		    $tpwr = $tpwr + $coarse_power_step
+		    Prescan_numberTries = Prescan_numberTries + 1
+		    
+		    "---------------------------------"
+		    " check if max Power is exceeded  "
+		    "---------------------------------"		    
+		    if ($tpwr > parmax[17]) or ($tpwr > coil_param[22]) then
+        		 wexp = ''
+			 $message = 'Reached max Power ! Power = '
+			 format($tpwr,0,0):$temp_str
+        		 prescan_log('error',$macro_name,$message+$temp_str)				"log event"
+        		 write('error','%s: No signal found with maximum transmitter power',$macro_name)
+			 prescan_exit('abort')
+		    else
+                	 "-----------------"
+			 " re-acquire data "  
+                	 "-----------------"
+			 $message = 'Signal to weak - Retry with higher Power ! Power = '
+			 format($tpwr,0,0):$temp_str
+			 $message=$message+$temp_str+'; Trial = '
+			 format(Prescan_numberTries,0,0):$temp_str
+			 prescan_log('increase',$macro_name,$message+$temp_str)				"log event"
+			 write('error',$message+$temp_str)
+                	 write('line3','RE-ACQUIRE FREQUENCY')
+			 prescan_log('re-try',$macro_name,$message)     "log event"
+			 Prescan_AcqStatus = 0                          "reset acquisition status"
+			 gain = $gain                                   "set new receiver gain"
+			 tpwr1 = $tpwr                                  "set nwe transmitter power (coarse)"
+        		 wexp = 'process'                               "come back here when done"
+			 au            		   
+			 return
+		    endif
+	       else
+		    wexp = ''
+		    $message ='Exceeded maximum number of tries ! Trial ='
+		    format(Prescan_numberTries,0,0):$temp_str
+		    prescan_log('error',$macro_name,$message+$temp_str)				"log event"
+		    write('error','%s: No signal found after maximum number of tries',$macro_name)
+		    prescan_exit('abort')
+	       endif
+	  endif
+
+	  "------------------------------------"
+	  " Find the water and fat frequencies "
+	  "------------------------------------"
+	  crl
+          vsadj(100)
+	  peak:$height,$peakfreq                   // get freq at at tallest peak
+	  cr = $peakfreq
+	  offset('silent'):$peakoffset             // offset of tallest peak
+
+          th = 100*Prescan_FatThreshold
+          llamp = 'y'
+          llfrq = 'y'
+          nll(10):$npeaks,$scale                   // get line listing for all peaks
+          if (($npeaks = 1) or (tn <> 'H1')) then  // for single peak or X-nucleus just use tallest peak
+            $waterfreq = $peakoffset
+            $fatfreq = $fatfreq
+          else
+            sort(llamp,'r'):$index,$amplist        // sort from tallest to smallest peak
+            $i = 1
+            $done = 0
+            repeat                                // find difference between tallest and smaller peaks
+              $i = $i + 1
+              $delta = llfrq[$index[1]] - llfrq[$index[$i]]
+              abs($delta):$absdelta
+              if (($absdelta >= $start) AND ($absdelta <= $end)) then
+                $done = 1                         // first peak within start/end ppm range is the one
+              endif
+            until (($i >= $npeaks) OR $done)
+
+            if ($done = 0) then                   // no fat peak found within range on either side
+              $waterfreq = $peakoffset
+              $fatfreq = $fatfreq
+            elseif ($delta > 0) then              // smaller peak found to the right of tallest peak
+              $waterfreq = $peakoffset
+              $fatfreq = -$delta
+            else                                  // smaller peak found to the left of tallest peak
+              $waterfreq = $peakoffset - $delta
+              $fatfreq = $delta
+            endif
+          endif
+
+	  "-------------"
+	  " log result  "
+	  "-------------"
+	  $message = 'Water offset = '
+	  format($waterfreq,6,2):$temp_str
+	  $message = $message + $temp_str +'; Fat offset = '
+	  $tempfreq = $waterfreq + $fatfreq
+	  format($tempfreq,6,2):$temp_str
+	  $message = $message + $temp_str
+	  prescan_log('result',$macro_name,$message)
+
+	  $toflim = $offset_limit * (sw/2)          "offset limit set to 90% of sw"
+	  $tt = $waterfreq                          "make tx_offset positive and assigne to tt"
+	  if ($tt < 0 ) then
+	       $tt = -$tt
+	  endif
+	  "------------------------------------------------------"
+	  " Outside of allowed offset range, signal an error (?) "
+	  "------------------------------------------------------"
+          if ($tt > $toflim) then
+	       vsadj f full ds
+	       $message='Offset too large ! Offset ='
+	       format($tt,9,3):$temp_str
+	       prescan_log('error',$macro_name,$message+$temp_str)
+	       write('error','%s: Offset too large, check spectrum or increase bandwidth',$macro_name)
+	       prescan_exit('abort')
+	  endif
+
+	  "----------------------------------------"
+	  " Create {tn}offset parameter if necessary "
+	  "----------------------------------------"
+	  $tnoffset = tn+'offset'
+	  exists($tnoffset,'parameter','global'):$e
+	  if ($e = 0) then
+	       create($tnoffset,'real','global')
+	  endif
+	  {$tnoffset}= $waterfreq
+	  wexp = ''
+
+	  "-----------------------"
+	  " Save the values found "
+	  "-----------------------"
+	  $centerfreq   = $txfreq
+	  Prescan_FatOffset    = $fatfreq
+          
+	  $message='Center Frequency : Frequency = '
+	  format($centerfreq,12,9):$temp_str
+	  $message = $message + $temp_str + '; Offset = '
+	  format($waterfreq,12,3):$temp_str
+	  $tempfreq=$waterfreq + Prescan_FatOffset
+	  $message = $message + $temp_str + '; Fat Offset = '
+	  format($tempfreq,12,3):$temp_str
+	  prescan_log('freq',$macro_name,$message+$temp_str)
+
+ 
+	   "-----------------------------------------------------------"
+           " Save prescan data                                         "
+           "-----------------------------------------------------------"
+           execplot = 'im1D(`proc`)'
+	   prescan_data('save','freq')
+
+	    
+	   "-----------------------------------------------------------"
+	   " Update with results from center frequency                 "
+	   "-----------------------------------------------------------"
+           if ($flag <> 'man') then
+	        resto = $waterfreq
+		$fatoffset = Prescan_FatOffset
+		$centerfreq = sfrq + $waterfreq/1e6                         "update center frequency"
+                $message = 'New Center Frequency = '
+		format($centerfreq,12,9):$temp_str
+		$message =$message + $temp_str +' Fat Offset = '
+		$tempfreq= Prescan_FatOffset
+		format($tempfreq,6,3):$temp_str
+      		prescan_log('update',$macro_name,$message+$temp_str)	             "log new center frequency"	
+           endif
+	   write('line3','-----------Center Frequency Results ---------')
+	   write('line3','Frequency offset : %3.2f [Hz]',$waterfreq)
+	   write('line3','Fat offset : %3.2f [Hz]',Prescan_FatOffset)
+	   write('line3','Center Frequency : %9.6f',sfrq + $waterfreq/1e6 )  
+	   write('line3','---------------------------------------------')
+	   "-----------------------------------------------------------"
+	   " Update CoilTable if necessary                             "
+	   "-----------------------------------------------------------"
+	   if (($gain <> coil_param[6]) or ($tpwr <> coil_param[8])) and ($flag <> 'man') then 
+		if (coil_param[6] > 0) then
+		     $diff = $gain - coil_param[6]
+		     abs($diff):$diff
+		     $change = $diff / coil_param[6]
+		     if ($change > 0.2) then
+	        	  $update = 1
+			  $message = 'Suggest to change Receiver Gain from  '
+		          format(coil_param[6],0,0):$temp_str
+			  $message = $message + $temp_str + ' to '
+			  format($gain,0,0):$temp_str
+		          $message = $message + $temp_str 
+			  write('line3',$message)
+		     endif 
+		endif
+write('line3','coil_param8 = %f, tpwr = %f',coil_param[8],$tpwr)
+		if (coil_param[8] > 0) then     
+		     $diff = $tpwr - coil_param[8]
+		     abs($diff):$diff
+		     $change = $diff / coil_param[8]
+		     write('line3','Power change %f',$change)
+		     if ($change > 0.2) then
+		          $update = 1
+			  $message = 'Suggest to change Power (coarse) from  '
+		          format(coil_param[8],0,0):$temp_str
+			  $message = $message + $temp_str + ' to '
+			  format($tpwr,0,0):$temp_str
+		          $message = $message + $temp_str 
+			  write('line3',$message)
+		     endif 
+		endif     
+               "-----------------------"
+	       " Update CoilTable      "
+               "-----------------------"	       
+	       if ($update <> 0) then            "request user input if chagnes are large"
+		    $message = 'CoilTable entries changed by more than 20%. \n ' + $message
+		    confirm($message):$replace
+	       else
+	            $replace = 1
+	       endif	
+	       if ($replace = 1 ) then
+	            coil_param[6] = $gain
+	            coil_param[8] = $tpwr
+		    prescan_CoilTable('update',rfcoil)
+	       endif
+          endif
+	  if ($flag <> 'man') then
+	       "------------------------------------------------"
+               " Reset prescan parameter and log end of prescan "
+               "------------------------------------------------"
+               prescan_control[$cur_index]= prescan_control[$cur_index]+1	  	       
+               prescan_handler('exec')
+	  endif       
+     endif                                                              "end if"
+endif                                                                   "end else" 
+
+"********************************************************************************************
+"               Modification History
+
+" 20061121(ss) - ldrf included to set volumercv and volumexmt
+
+"********************************************************************************************
